@@ -1,0 +1,37 @@
+NEW
+
+10 SUM = 0
+15 NL = 0
+15 DUP = 0
+20 INPUT "Line (empty to stop):"; LINE$
+22 IF LINE$ = "" THEN GOTO 200
+25 NL = NL + 1
+30 L = LEN(LINE$)
+40 HALF = L / 2
+50 FH$ = LEFT$(LINE$, HALF)
+60 SH$ = RIGHT$(LINE$, HALF)
+
+65 PRINT "Halves: "; FH$; ", "; SH$
+
+70 FOR I = 1 TO HALF
+80 C$ = MID$(LINE$, I, 1)
+90 FOR J = HALF + 1 TO L
+100 O$ = MID$(LINE$, J, 1)
+110 IF C$ = O$ THEN GOTO 140
+120 NEXT J
+130 NEXT I
+135 PRINT "Did not find duplicate!"
+136 GOTO 20
+
+140 DUP = DUP + 1
+142 V = ASC(C$)
+145 PRIO = 0
+150 IF V > 96 THEN PRIO = V - 96
+160 IF V < 91 THEN PRIO = V - 38
+170 SUM = SUM + PRIO
+
+175 PRINT "Found ";C$;"
+180 PRINT NL; " lines ";DUP;" dups"
+
+190 GOTO 20
+200 PRINT "Sum is: ";SUM
