@@ -38,3 +38,6 @@ On the laptop, send the data file, one line every 7 seconds, 30ms between each c
 ```
 ascii-xfr -nsv -l 7000 -c 30 inputs/3.txt > /dev/ttyUSB0
 ```
+
+Result: 
+![Result of the algorithm on the Apple //c screen](images/0a31609a44893454.jpeg)
