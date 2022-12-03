@@ -26,8 +26,17 @@ NEW
 140 DUP = DUP + 1
 142 V = ASC(C$)
 145 PRIO = 0
+
+146 REM Ascii code for "a" is 97
+147 REM prio for a-z is 1-26
+148 REM hence substract 96
 150 IF V > 96 THEN PRIO = V - 96
+
+156 REM Ascii code for "A" is 65
+157 REM prio for A-Z is 27-52
+158 REM hence substract 65-27
 160 IF V < 91 THEN PRIO = V - 38
+
 170 SUM = SUM + PRIO
 
 175 PRINT "Found ";C$;"
