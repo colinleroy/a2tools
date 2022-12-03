@@ -2,7 +2,7 @@ NEW
 
 10 SUM = 0
 15 NL = 0
-15 DUP = 0
+17 DUP = 0
 20 INPUT "Line (empty to stop):"; LINE$
 22 IF LINE$ = "" THEN GOTO 200
 25 NL = NL + 1
