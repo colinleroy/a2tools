@@ -1,0 +1,36 @@
+NEW
+
+10 SUM = 0
+
+20 DIM P$(2)
+30 DIM F(2)
+40 DIM L(2)
+
+50 INPUT "Parts:"; P$(1),P$(2)
+60 IF P$(1) = "" THEN GOTO 3000
+
+80 FOR I = 1 TO 2
+
+90 FOR J = 1 TO LEN(P$(I))
+
+100 C$ = MID$(P$(I), J, 1)
+110 IF C$ = "-" GOTO 1000
+160 NEXT J
+170 NEXT I
+
+200 IF F(1) >= F(2) AND L(1) <= L(2) GOTO 2000
+210 IF F(2) >= F(1) AND L(2) <= L(1) GOTO 2000
+
+500 GOTO 50
+
+1000 F$ = LEFT$(P$(I), J - 1)
+1010 L$ = MID$(P$(I), J + 1, LEN(P$(I)))
+1020 F(I) = VAL(F$)
+1030 L(I) = VAL(L$)
+1040 GOTO 170
+
+2000 SUM = SUM + 1
+2010 PRINT P$(1);" and ";P$(2);" overlap"
+2020 GOTO 500
+
+3000 PRINT "Sum is: ";SUM
