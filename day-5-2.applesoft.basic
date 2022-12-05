@@ -1,6 +1,6 @@
 10 REM ************** Stack init **************
 20 HOME
-
+30 SPC$="                               "
 50 NSTACK = 0
 
 190 REM Read loop
@@ -13,6 +13,7 @@
 250 FOR I = 1 TO NSTACK
 260 LTR$ = MID$(SLINE$, 2 + ((I - 1) * 4), 1)
 270 IF LTR$ >= "A" AND LTR$ <= "Z" THEN GOSUB 2000
+275 GOSUB 9000
 280 NEXT I
 300 GOTO 200
 
@@ -34,9 +35,12 @@
 
 4000 GOSUB 9000
 
+4100 HTAB 1:VTAB 21
+4200 PRINT "Crate move, ENTER when done           "
+4210 PRINT
 5000 REM ************** Read moves **************
-5010 HTAB 1:VTAB 21
-5020 INPUT "Crate move (ENTER when done): ";MOVE$
+5010 HTAB 1:VTAB 22
+5020 INPUT "> ";MOVE$
 5040 IF MOVE$ = "" THEN GOSUB 10000
 
 5050 REM Get the number to move
@@ -64,7 +68,6 @@
 
 6000 REM ************** Handle N moves ****************
 6030 GOSUB 7000
-6035 GOSUB 9000
 
 6999 GOTO 5000
 
@@ -77,11 +80,23 @@
 7100 STACK$(SRC) = LEFT$(STACK$(SRC), LSTACK(SRC) - NMOVE)
 
 7200 LSTACK(SRC) = LSTACK(SRC) - NMOVE
+7201 CLR$ = STACK$(SRC)+LEFT$(SPC$, NMOVE)
+7202 HTAB 3 : VTAB SRC
+7203 IF LSTACK(SRC) + NMOVE > 38 GOTO 7206
+7204 PRINT CLR$;
+7205 GOTO 7207
+7206 CLR$ = LEFT$(CLR$, 38) : PRINT CLR$;
+7207 HTAB 3 : VTAB DST
 7210 LSTACK(DST) = LSTACK(DST) + NMOVE
+7211 IF LSTACK(DST) > 37 GOTO 7214
+7212 PRINT STACK$(DST);
+7213 GOTO 7220
+7214 SS$ = LEFT$(STACK$(DST),37)
+7215 PRINT SS$;"+";
 7220 RETURN
 
 9000 REM ************** Display stacks ****************
-9010 HOME
+9010 HTAB 1:VTAB 1
 9020 FOR K = 1 TO NSTACK
 9030 PRINT K;" ";STACK$(K)
 9040 NEXT K
