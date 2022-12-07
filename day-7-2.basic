@@ -1,0 +1,68 @@
+10 REM Init counters
+20 CURDEPTH=0
+21 DIM SUM(512)
+22 DIM CURDIR$(512)
+23 LDIRSUM=0
+
+24 REM Reusing Total found on first run
+25 REM to avoid having to loop twice
+26 TUSE=42586708
+27 TSZ = 70000000
+28 NEEDSZ = 30000000
+29 NEEDRM = TUSE - (TSZ - NEEDSZ)
+
+30 REM What is the smallest fitting dir
+31 SMALLEST=70000000
+
+50 DEBUG = 0
+
+100 REM Read one line
+110 INPUT LINE$
+
+200 REM What did we read
+210 IF LINE$ = "" THEN GOTO 3000 :REM Exit dir (end of input)
+220 IF ASC(LINE$) = ASC("$") THEN GOTO 1000 :REM Command
+230 GOTO 5000 :REM Handle file
+
+299 REM Read next line
+300 GOTO 100
+
+1000 REM Command
+1005 IF DEBUG = 1 THEN PRINT "Command: ";LINE$
+1009 REM We ignore "ls"
+1010 IF ASC(MID$(LINE$, 3, 1)) = ASC("l") THEN GOTO 100
+1020 DIRNAME$ = MID$(LINE$, 6, LEN(LINE$) - 5)
+1029 REM If DIRNAME starts with '.' we go up
+1030 IF ASC(DIRNAME$) = ASC(".") THEN GOTO 3000
+1039 REM otherwise we go down
+1040 GOTO 2000
+
+2000 REM Enter dir
+2010 CURDEPTH = CURDEPTH + 1
+2020 SUM(CURDEPTH) = 0
+2030 CURDIR$(CURDEPTH) = DIRNAME$
+2040 IF DEBUG = 1 THEN PRINT "Enter ";DIRNAME$
+2049 REM Read next line
+2050 GOTO 100
+
+3000 REM Exit dir
+3020 PRINT "Exit ";CURDIR$(CURDEPTH);" of size ";SUM(CURDEPTH)
+3029 REM Update parent's total
+3030 IF CURDEPTH > 1 THEN SUM(CURDEPTH - 1) = SUM(CURDEPTH - 1) + SUM(CURDEPTH)
+3039 REM Find if dir is big enough to fit the bill
+3040 IF SUM(CURDEPTH) >= NEEDRM AND SUM(CURDEPTH) < SMALLEST THEN SMALLEST=SUM(CURDEPTH)
+3050 CURDEPTH = CURDEPTH - 1
+3059 REM We just exited /
+3060 IF CURDEPTH = 0 THEN GOTO 6000: REM End
+3069 REM Read next line
+3070 GOTO 100
+
+5000 REM Read file
+5009 REM We ignore "dir"
+5010 IF ASC(LINE$) = ASC("d") THEN GOTO 100 :REM Read next line
+5020 SUM(CURDEPTH) = SUM(CURDEPTH) + VAL(LINE$)
+5030 IF DEBUG = 1 THEN PRINT "Counted ";LINE$
+5039 REM Read next line
+5040 GOTO 100
+
+6000 PRINT "Smallest fitting: ";SMALLEST
