@@ -1,6 +1,6 @@
-1 HOME
-
-2 TEXT
+1 LOMEM: 16384 :REM Protect hgr1
+2 HOME
+3 TEXT
 
 8 INPUT "Length: ";L
 12 TP = 1 : LFT = 2 : RGT = 3 : BTM = 4
@@ -32,8 +32,8 @@
 101 NVISIBLE=0
 
 105 HOME
-120 HGR2
-121 AW%=280 : AH%=190
+120 HGR
+121 AW%=280 : AH%=160
 122 TX% = (AW% - L) /2 : TY% = (AH% - L) /2
 123 HCOLOR = 3
 
