@@ -14,7 +14,7 @@
 81 PRINT CHR$(4);"OPEN ";INFILE$
 82 PRINT CHR$(4);"READ ";INFILE$
 
-83 ONERR GOTO 191
+83 IF SIM = 1 THEN ONERR GOTO 191
 
 89 IF SIM = 0 THEN DIM MOV%(NMOV%,2) : MOV%(1,1) = X%(T) : MOV%(1,2) = Y%(T)
 
@@ -25,8 +25,6 @@
 110 DLTA% = VAL(MID$(MV$, 3, 5))
 120 GOSUB 9000
 
-125 IF SIM = 1 THEN NMOV% = NMOV% + DLTA% : GOTO 185
-
 130 FOR N = 1 TO DLTA%
 
 150 X%(H) = X%(H) + DX% : Y%(H) = Y%(H) + DY%
@@ -35,9 +33,9 @@
 
 170 X%(T) = X%(T) + WX% : Y%(T) = Y%(T) + WY%
 
-171 NMOV% = NMOV% + 1
+171 IF WX% <> 0 OR WY% <> 0 THEN NMOV% = NMOV% + 1
 
-173 GOSUB 6000
+173 IF SIM = 0 THEN GOSUB 6000
 
 180 NEXT N
 185 PRINT "Did line ";I;" visited: ";NVIS%
@@ -45,7 +43,7 @@
 190 GOTO 100
 
 191 POKE 216,0 : PRINT CHR$(4);"CLOSE ";INFILE$
-193 IF SIM = 1 THEN PRINT "Sim done. Number of moves ";NMOV% : SIM = 0 : GET C$: GOTO 80
+193 IF SIM = 1 THEN PRINT "Sim done. Number of moves ";NMOV% : SIM = 0 : GOTO 80
 
 260 PRINT "Tail visited ";NVIS%;" spots"
 
