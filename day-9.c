@@ -32,7 +32,7 @@ int n_mov = 0;
 int lnum = 0;
 int n_visited = 0;
 int minx = 1, maxx = 0, miny = 1, maxy = 0, xlen = 0, ylen = 0, sim = 1, xoff = 0, yoff = 0;
-short *visited = NULL, visited_len = 0, rem_visited_len = 0;
+char *visited = NULL, visited_len = 0, rem_visited_len = 0;
 
 static int check_visited(short x, short y, int set) {
   int offset = ((ylen + 1) * (x+xoff-1)) + (y+yoff-1);
@@ -135,8 +135,8 @@ end_sim:
     ylen = abs(maxy - miny);
     xoff = -minx + 1;
     yoff = -miny + 1;
-    visited = malloc(xlen*ylen);
-    memset(visited, 0, xlen*ylen);
+    visited = malloc(((xlen+2)*(ylen+2))/8);
+    memset(visited, 0, ((xlen+2)*(ylen+2))/8);
     goto again;
   } else {
     int i, j;
