@@ -1,0 +1,50 @@
+
+
+const top 0, left 1, right 2, bottom 3
+
+highest(DIRECTION, INDEX) = 0 partout
+
+h(horiz,vert) = 0
+
+row = 1
+
+ligne_suivante:
+
+pour col dans chaque ligne
+    
+    si h(col, row) > highest(top, col):
+        highest(top, col) = h(col, row)
+        visible = true
+        
+    si h(col, row) > highest(left, row):
+        highest(left, row) = h(col, row)
+        visible = true
+
+    si visible, on enregistre dans la var: h(col, row) += 10 
+fin col
+
+s'il reste des lignes:
+    row ++
+    goto ligne suivante
+    
+pour row de num_row à 1
+    pour col de num_col à 1
+        cur_h = h(col, row)
+        si cur_h > 9 
+            cur_h -= 10
+        si cur_h > highest(bottom, col):
+            highest(bottom, col) = cur_h
+            visible = true
+        
+        si cur_h > highest(right, row):
+            highest(right, row) = cur_h
+            visible = true
+
+        si visible, on enregistre dans la var: h(col, row) += 10 
+
+pour row de 1 à num_row
+    pour col de 1 à num_col
+        si h(col, row) > 10:
+            n_visible ++
+
+        
