@@ -4,6 +4,7 @@
 #include <conio.h>
 #include <string.h>
 #include <dbg.h>
+#include "../lib/bool_array.h"
 
 #define HEAD 0
 #define N_KNOTS 10
@@ -36,39 +37,7 @@ int lnum = 0;
 int n_visited = 0;
 int minx = 1, maxx = 0, miny = 1, maxy = 0, sim = 1, xoff = 0, yoff = 0;
 size_t xlen = 0, ylen = 0;
-char *visited = NULL, visited_len = 0, rem_visited_len = 0;
-
-static void *bool_array_alloc(int xlen, int ylen) {
-    size_t tmp, allocsize;
-    char *array = NULL;
-    int asize = _heapmaxavail();
-
-    tmp = 1 + (xlen+2)/8;
-    allocsize = tmp*(ylen+3);
-
-    array = malloc(allocsize);
-    if (array == NULL) {
-      return NULL;
-    }
-    memset(array, 0, allocsize);
-    return array;
-}
-
-static int bool_array_access(char *array, int x, int y, int set, int val) {
-  /* FIXME The offsets should be in the callers */
-  long offset = ((ylen + 1) * (x+xoff-1)) + (y+yoff-1);
-  size_t byte = 1 + (offset / 8);
-  size_t bit = offset % 8;
-
-  if (set) {
-    if (val) {
-      array[byte] |= (1 << bit);
-    } else {
-      array[byte] &= ~(1 << bit);
-    }
-  }
-  return (array[byte] & (1 << bit)) != 0;
-}
+bool_array *visited = NULL;
 
 static void update_boundaries(int x, int y) {
   if (x < minx) minx = x;
@@ -107,7 +76,7 @@ static void handle_line() {
         }
         n_mov++;
         if (sim == 0 && t == N_KNOTS - 1) {
-          bool_array_access(visited, x[t], y[t], 1, 1);
+          bool_array_set(visited, x[t] + xoff - 1, y[t] + yoff - 1, 1);
         }
       }
     }
@@ -133,7 +102,7 @@ again:
   n_mov = 0;
   lnum = 0;
   if (sim == 0) {
-    n_visited += bool_array_access(visited, 1, 1, 1, 1);
+    n_visited += bool_array_set(visited, 1 + xoff - 1, 1 + yoff - 1, 1);
   }
   for (t = 0; t < N_KNOTS; t++) {
     x[t] = 1; y[t] = 1;
@@ -186,7 +155,6 @@ end_loop:
     total_lines = lnum;
 
     printf("Map is %d x %d, hit ENTER\n", xlen, ylen);
-    cgetc();
     visited = bool_array_alloc(xlen, ylen);
 
     goto again;
@@ -196,7 +164,7 @@ end_loop:
     for (i = minx; i <= maxx; i++) {
       printf("counting line %d...\n", i);
       for (j = miny; j <= maxy; j++) {
-        n_visited += bool_array_access(visited, i, j, 0, 0);
+        n_visited += bool_array_get(visited, i + xoff - 1, j + yoff - 1);
       }
     }
   }

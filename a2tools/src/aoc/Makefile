@@ -1,7 +1,7 @@
 PROGRAM=day9.bin
 SOURCES := day-9.c
 DEPS := $(topdir)../../drivers/a2.ssc.o \
-	$(topdir)../lib/extended_conio.o
+	$(topdir)../lib/bool_array.o
 
 CC65_TARGET = apple2
 CC      = cl65
