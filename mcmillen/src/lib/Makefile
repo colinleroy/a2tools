@@ -1,4 +1,5 @@
-SOURCES := simple_serial.c
+SOURCES := simple_serial.c \
+	extended_conio.c
 DEPS := $(topdir)../../drivers/a2.ssc.o
 
 CC65_TARGET = apple2

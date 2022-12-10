@@ -4,7 +4,7 @@
 #include <string.h>
 #include <stdio.h>
 
-#define NCYCLES_PER_SEC 300U
+#define NCYCLES_PER_SEC 3000U
 
 static struct ser_params default_params = {
     SER_BAUD_9600,     /* Baudrate */
@@ -133,7 +133,7 @@ static size_t __simple_serial_read_with_timeout(char *ptr, size_t size, size_t n
 
   while (i < (nmemb - 1)) {
     b = __simple_serial_getc_with_timeout(with_timeout);
-    if (b == EOF){
+    if (b == EOF) {
       break;
     }
     ptr[i] = (char)b;
