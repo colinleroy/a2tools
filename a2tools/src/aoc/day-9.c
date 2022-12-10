@@ -148,15 +148,21 @@ end_loop:
   if (sim == 1) {
     rewind(infp);
     sim = 0;
-    xlen = abs(maxx - minx);
-    ylen = abs(maxy - miny);
+    xlen = abs(maxx - minx) + 1;
+    ylen = abs(maxy - miny) + 1;
     xoff = -minx + 1;
     yoff = -miny + 1;
     total_lines = lnum;
 
     printf("Map is %d x %d, hit ENTER\n", xlen, ylen);
     visited = bool_array_alloc(xlen, ylen);
-
+    printf("x %d to %d, y %d to %d\n", minx, maxx, miny, maxx);
+    printf("shift x %d, y %d\n", xoff - 1, miny, yoff - 1 );
+    cgetc();
+    if (visited == NULL) {
+      printf("Coudn't allocate array :(\n");
+      exit(1);
+    }
     goto again;
   } else {
     int i, j;

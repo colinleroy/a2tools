@@ -32,6 +32,8 @@ read_again:
   printf("\nReady to receive (Ctrl-reset to abort)\n");
 
   if (simple_serial_gets(filename, BUF_SIZE) != NULL) {
+    if (strlen(filename) > 8)
+      filename[7] = '\0';
     printf("Filename   '%s'\n", filename);
   }
   if (simple_serial_gets(filetype, BUF_SIZE) != NULL) {
