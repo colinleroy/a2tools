@@ -118,3 +118,27 @@ I made myself a checklines.sh helper to verify I don't overwrite a line by
 having two of them numbered identically.
 
 Sent data with `-l 1000 -c 350`.
+
+== Day 9 ==
+
+Day 9 was worse. 
+
+Simple way to count "squares I've been in" without counting some squares multiple
+times is to push ones in a bidimensional array, then walk the array. BUT. The
+rope moves around a 267x220 rectangle (for my input), which means 57kB of data,
+which does NOT fit in the Apple //c.
+
+The worst way is to push each square in an array *if* it's not there already. 
+Fine, but that makes the algorithm O(n^3), which is a big turnoff for me even on
+a 4 GHz CPU, let alone a 1MHz CPU running interpreted code. I've still tried it,
+it was agonizing and I aborted the run.
+
+In the end, I ditched BASIC for C, using cc65. This allowed me to make my own
+makeshift bidimensional array of... booleans. This of course required quite a bit
+of pointer arithmetic, then quite a bit of debugging as variable overflows occur
+really easily when sizeof(int) == 2...
+
+But in the end it works, and best of all, it works for both parts!
+
+Debugging via printf: 
+![Debugging via printf](images/day-9-1.png)
