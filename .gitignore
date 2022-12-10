@@ -1,6 +1,8 @@
 a.out
 *.s
 *.o
-AppleCommander-ac-1.8.0.jar
+*.map
+*.bin
+*.dsk
 inputs
 cc65
