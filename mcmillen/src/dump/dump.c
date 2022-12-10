@@ -22,7 +22,7 @@ int main(void) {
   }
 
   printf("Enter filename: ");
-  cgets(buf, BUF_SIZE);
+  cgets(filename, BUF_SIZE);
 
   _filetype = PRODOS_T_TXT;
 
@@ -34,18 +34,22 @@ int main(void) {
   }
   
   while (fgets(buf, DATA_SIZE, infp) != NULL) {
-    l++;
+    int line_len;
     printf("%s", buf);
-    b += strlen(buf);
+    line_len = strlen(buf);
+    b += line_len;
 
-    if (l == 23) {
+    l+= 1 + line_len/40;
+
+    if (l >= 23) {
       printf("(Hit a key to continue)\n");
       while(!kbhit());
       cgetc();
-      gotoxy(0,24);
+      gotoxy(0,22);
       l = 0;
     }
   }
+
   if (feof(infp)) {
     printf("\n(End of file. %d bytes read)\n", b);
   } else if (ferror(infp)) {

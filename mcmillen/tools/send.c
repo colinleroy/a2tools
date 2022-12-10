@@ -7,6 +7,9 @@
 #include <libgen.h>
 #include <string.h>
 
+#define DELAY_MS 3
+#define LONG_DELAY_MS 50
+
 int main(int argc, char **argv) {
   FILE *fp, *outfp;
   char *filename;
@@ -48,13 +51,13 @@ int main(int argc, char **argv) {
 
   /* Send filename */
   fprintf(outfp, "%s\n", filename);
-  printf("Filename sent: %s\n", filename);
-  sleep(1);
+  printf("Filename sent:    %s\n", filename);
+  usleep(LONG_DELAY_MS*1000);
 
   /* Send filetype */
   fprintf(outfp, "%s\n", filetype);
-  printf("Filetype sent: %s\n", filetype);
-  sleep(1);
+  printf("Filetype sent:    %s\n", filetype);
+  usleep(LONG_DELAY_MS*1000);
 
   if (!strcasecmp(filetype, "BIN")) {
     char buf[58];
@@ -67,6 +70,11 @@ int main(int argc, char **argv) {
     }
   }
 
+  /* Send data length */
+  fprintf(outfp, "%ld\n", statbuf.st_size - ftell(fp));
+  printf("Data length sent: %ld\n", statbuf.st_size - ftell(fp));
+  usleep(LONG_DELAY_MS*1000);
+
   while(fread(&c, 1, 1, fp) > 0) {
     fwrite(&c, 1, 1, outfp);
     fflush(outfp);
@@ -74,7 +82,7 @@ int main(int argc, char **argv) {
     if (count % 512 == 0) {
       printf("Wrote %d bytes...\n", count);
     }
-    usleep(10*1000);
+    usleep(DELAY_MS*1000);
   }
 
   fclose(fp);

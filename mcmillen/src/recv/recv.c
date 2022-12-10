@@ -7,15 +7,17 @@
 #include <apple2.h>
 
 #define BUF_SIZE 255
-#define DATA_SIZE 16385
+#define MAX_DATA_SIZE 16385
 
 int main(void) {
   int r, w, exit_code = 0;
   char *filename = malloc(BUF_SIZE);
   char *filetype = malloc(BUF_SIZE);
+  char *s_len = malloc(BUF_SIZE);
+  size_t data_len = 0;
   FILE *outfp;
 
-  char *data = malloc(DATA_SIZE);
+  char *data = malloc(MAX_DATA_SIZE);
 
   if (data == NULL) {
     printf("Couldn't allocate data.\n");
@@ -26,13 +28,23 @@ int main(void) {
 
   simple_serial_set_timeout(10);
 
-  printf("Ready for reception\n");
+read_again:
+  printf("\nReady to receive (Ctrl-reset to abort)\n");
 
   if (simple_serial_gets(filename, BUF_SIZE) != NULL) {
-    printf("Filename '%s'\n", filename);
+    printf("Filename   '%s'\n", filename);
   }
   if (simple_serial_gets(filetype, BUF_SIZE) != NULL) {
-    printf("Filetype '%s'\n", filetype);
+    printf("Filetype   '%s'\n", filetype);
+  }
+
+  if (simple_serial_gets(s_len, BUF_SIZE) != NULL) {
+    data_len = atoi(s_len);
+    printf("Data length %d\n", data_len);
+  }
+
+  if (data_len + 1 >= MAX_DATA_SIZE) {
+    printf("Data too long (max %d bytes).\n", MAX_DATA_SIZE);
   }
 
   if (!strcasecmp(filetype, "TXT")) {
@@ -51,7 +63,7 @@ int main(void) {
   }
 
   printf("Reading data...\n");
-  r = simple_serial_read_with_timeout(data, sizeof(char), DATA_SIZE);
+  r = simple_serial_read_with_timeout(data, sizeof(char), data_len + 1);
 
   printf("Read %d bytes. Opening %s...\n", r, filename);
 
@@ -72,6 +84,8 @@ int main(void) {
     printf("Close error %d: %s\n", errno, strerror(errno));
     exit_code = 1;
   }
+  
+  goto read_again;
 
 err_out:
   free(filename);
