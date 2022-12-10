@@ -9,28 +9,39 @@ struct _bool_array {
 };
 
 bool_array *bool_array_alloc(int xlen, int ylen) {
-    size_t tmp, allocsize;
-    bool_array *array = malloc(2*sizeof(int));
+    size_t allocsize;
+    bool_array *array = malloc(sizeof(void *));
     char *data = NULL;
 
-    tmp = 1 + (xlen+2)/8;
-    allocsize = tmp*(ylen+3);
+    allocsize = 1 + (xlen / 8);
+    allocsize = allocsize * ylen;
 
     data = malloc(allocsize);
+
     if (data == NULL) {
       return NULL;
     }
     memset(data, 0, allocsize);
-    array->data = data;
+
     array->y_len = ylen;
+    array->data = data;
+
     return array;
 }
 
+void bool_array_free(bool_array *array) {
+  if (array != NULL) {
+    if (array->data != NULL) {
+      free(array->data);
+    }
+    free(array);
+  }
+}
+
 static int bool_array_access(bool_array *array, int x, int y, int set, int val) {
-  /* FIXME The offsets should be in the callers */
-  long offset = ((array->y_len + 1) * x) + y;
-  size_t byte = 1 + (offset / 8);
-  size_t bit = offset % 8;
+  long offset = (long)((long)(array->y_len) * (long)x) + (long)y;
+  size_t byte = (long)offset / (long)8;
+  size_t bit = (long)offset % (long)8;
 
   if (set) {
     if (val) {
