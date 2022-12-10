@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include "extended_conio.h"
 
 char *cgets(char *buf, size_t size) {
@@ -8,14 +9,14 @@ char *cgets(char *buf, size_t size) {
     while(!kbhit());
     c = cgetc();
 
-    if (c == '\n') {
+    if (c == '\r') {
       break;
     }
-
+    cputc(c);
     buf[i] = c;
     i++;
   }
-  
+  printf("\n");
   buf[i] = '\0';
 
   return buf;
