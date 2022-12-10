@@ -1,5 +1,7 @@
-SUBDIRS = drivers src
-PROGS = src/recvtxt/recvtxt.bin
+SUBDIRS = drivers src tools
+PROGS = src/recv/recv.bin \
+	src/dump/dump.bin
+
 DISK = disks/adtpro.dsk
 
 .PHONY: all clean

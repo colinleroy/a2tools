@@ -1,5 +1,5 @@
-PROGRAM=recvtxt.bin
-SOURCES := recvtxt.c
+PROGRAM=recv.bin
+SOURCES := recv.c
 DEPS := $(topdir)../../drivers/a2.ssc.o \
 	$(topdir)../lib/simple_serial.o
 

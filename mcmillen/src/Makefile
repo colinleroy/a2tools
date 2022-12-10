@@ -1,4 +1,4 @@
-SUBDIRS = lib recvtxt
+SUBDIRS = lib recv dump
 
 .PHONY: all clean
 
