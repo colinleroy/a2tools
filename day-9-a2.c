@@ -63,6 +63,7 @@ static void *bool_array_alloc(int xlen, int ylen) {
 }
 
 static int bool_array_access(char *array, int x, int y, int set, int val) {
+  /* FIXME The offsets should be in the callers */
   long offset = ((ylen + 1) * (x+xoff-1)) + (y+yoff-1);
   size_t byte = 1 + (offset / 8);
   size_t bit = offset % 8;
