@@ -6,9 +6,50 @@
 #include <unistd.h>
 #include <libgen.h>
 #include <string.h>
+#include <termios.h>
+#include <fcntl.h>
+#include <errno.h>
 
 #define DELAY_MS 3
 #define LONG_DELAY_MS 50
+
+/* TODO stty -F /dev/ttyUSB0 9600 cs8 -onlcr */
+
+static void setup_tty(char *ttypath) {
+  struct termios tty;
+  int port = open(ttypath, O_RDWR);
+
+  if(tcgetattr(port, &tty) != 0) {
+    printf("tcgetattr error: %s\n", strerror(errno));
+    close(port);
+    exit(1);
+  }
+  cfsetispeed(&tty, B9600);
+  cfsetospeed(&tty, B9600);
+
+  tty.c_cflag &= ~PARENB;
+  tty.c_cflag &= ~CSTOPB;
+  tty.c_cflag |= CS8;
+  tty.c_cflag &= ~CRTSCTS;
+  tty.c_cflag |= CREAD | CLOCAL;
+
+  tty.c_lflag &= ~ICANON;
+  tty.c_lflag &= ~ECHO;
+  tty.c_lflag &= ~ISIG;
+
+  tty.c_iflag &= ~(IXON | IXOFF | IXANY);
+  tty.c_iflag &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP|INLCR|IGNCR|ICRNL);
+
+  tty.c_oflag &= ~OPOST;
+  tty.c_oflag &= ~ONLCR;
+
+  if (tcsetattr(port, TCSANOW, &tty) != 0) {
+    printf("tcgetattr error: %s\n", strerror(errno));
+    close(port);
+    exit(1);
+  }
+  close(port);
+}
 
 int main(int argc, char **argv) {
   FILE *fp, *outfp;
@@ -42,6 +83,8 @@ int main(int argc, char **argv) {
   } else {
     filetype = "TXT";
   }
+
+  setup_tty(argv[2]);
 
   outfp = fopen(argv[2], "r+b");
   if (outfp == NULL) {
@@ -79,6 +122,7 @@ int main(int argc, char **argv) {
     fwrite(&c, 1, 1, outfp);
     fflush(outfp);
     count++;
+
     if (count % 512 == 0) {
       printf("Wrote %d bytes...\n", count);
     }
