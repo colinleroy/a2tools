@@ -220,7 +220,8 @@ static void count_inspections(int num) {
     printf("Monkey %d inspected items %d times.\n", monkeys[i]->monkey_num,
            monkeys[i]->num_inspections);
   
-  printf("Monkey business is %ld\n",
+  printf("Monkey business is: \n%ld * %ld = %ld\n",
+          (long)monkeys[num-1]->num_inspections, (long)monkeys[num-2]->num_inspections,
           (long)monkeys[num-1]->num_inspections * (long)monkeys[num-2]->num_inspections);
 }
 
@@ -234,8 +235,10 @@ static long find_lcm(int num_monkeys) {
   printf("searching for LCM starting at %ld\n", max);
 again:
   for (i = 0; i < num_monkeys; i++) {
-    if (max % monkeys[i]->test_operand != 0) {
-
+    if ((long)max % (long)monkeys[i]->test_operand != 0) {
+      if ((long)max % 10000U == 0) {
+        printf("still searching... %ld\n", max);
+      }
       max++;
       goto again;
     }
@@ -264,7 +267,9 @@ int main(void) {
 
   /* Do a round */
   for (num_round = 0; num_round < NUM_ROUNDS; num_round++) {
-    printf("Round %d\n", num_round + 1);
+    if (debug_round) {
+      printf("Round %d\n", num_round + 1);
+    }
     do_round(num_monkeys);
   }
 
