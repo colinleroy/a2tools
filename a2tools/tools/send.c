@@ -19,6 +19,11 @@ static void setup_tty(char *ttypath) {
   struct termios tty;
   int port = open(ttypath, O_RDWR);
 
+  if (port < 0) {
+    printf("Cannot open %s: %s\n", ttypath, strerror(errno));
+    exit(1);
+  }
+
   if(tcgetattr(port, &tty) != 0) {
     printf("tcgetattr error: %s\n", strerror(errno));
     close(port);

@@ -1,7 +1,8 @@
 PROGRAM=day11.bin
 SOURCES := day11.c
 DEPS := $(topdir)../../lib/array_sort.o \
-	$(topdir)../../lib/extended_string.o
+	$(topdir)../../lib/extended_string.o \
+	$(topdir)../../lib/bigint.o
 
 CC65_TARGET = apple2
 CC      = cl65

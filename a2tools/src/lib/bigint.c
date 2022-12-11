@@ -1,9 +1,16 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include "bigint.h"
 
-char *bigint_new(const char *a) {
+bigint *bigint_new(const char *a) {
   return strdup(a);
+}
+
+bigint *bigint_new_from_long(long a) {
+  char *buf = malloc(255);
+  sprintf(buf, "%ld", a);
+  return buf;
 }
 
 char *trim_leading_zeroes(char *a) {

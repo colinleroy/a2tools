@@ -8,6 +8,7 @@
 #include <apple2.h>
 #endif
 #include "day11.h"
+#include "bigint.h"
 
 /* prototypes */
 static void send_item(long item, monkey *m);
@@ -212,6 +213,7 @@ static int monkey_activity_sorter(void *monkey_a, void *monkey_b) {
 }
 
 static void count_inspections(int num) {
+  bigint *n_insp_a, *n_insp_b, *business;
   int i;
   
   bubble_sort_array((void **)&monkeys, num, monkey_activity_sorter);
@@ -220,31 +222,26 @@ static void count_inspections(int num) {
     printf("Monkey %d inspected items %d times.\n", monkeys[i]->monkey_num,
            monkeys[i]->num_inspections);
   
-  printf("Monkey business is: \n%ld * %ld = %ld\n",
+  n_insp_a = bigint_new_from_long((long)monkeys[num-1]->num_inspections);
+  n_insp_b = bigint_new_from_long((long)monkeys[num-2]->num_inspections);
+  business = bigint_mul(n_insp_a, n_insp_b);
+  printf("Monkey business is: \n%ld * %ld = %s\n",
           (long)monkeys[num-1]->num_inspections, (long)monkeys[num-2]->num_inspections,
-          (long)monkeys[num-1]->num_inspections * (long)monkeys[num-2]->num_inspections);
+          business);
+  free(business);
+  free(n_insp_a);
+  free(n_insp_b);
 }
 
 static long find_lcm(int num_monkeys) {
-  long max = 0;
+  long d = 1;
   int i = 0;
   for (i = 0; i < num_monkeys; i++) {
-    if (monkeys[i]->test_operand > max)
-      max = monkeys[i]->test_operand;
+    d = d * (long)monkeys[i]->test_operand;
   }
-  printf("searching for LCM starting at %ld\n", max);
-again:
-  for (i = 0; i < num_monkeys; i++) {
-    if ((long)max % (long)monkeys[i]->test_operand != 0) {
-      if ((long)max % 10000U == 0) {
-        printf("still searching... %ld\n", max);
-      }
-      max++;
-      goto again;
-    }
-  }
-  printf("found LCM: %ld\n", max);
-  return max;
+  
+  printf("found LCM: %ld\n", d);
+  return d;
 }
 
 int main(void) {
@@ -267,7 +264,7 @@ int main(void) {
 
   /* Do a round */
   for (num_round = 0; num_round < NUM_ROUNDS; num_round++) {
-    if (debug_round) {
+    if (debug_round || num_round % 500 == 0) {
       printf("Round %d\n", num_round + 1);
     }
     do_round(num_monkeys);

@@ -1,6 +1,7 @@
 typedef char bigint;
 
 bigint *bigint_new(const bigint *a);
+bigint *bigint_new_from_long(long a);
 bigint *trim_leading_zeroes(bigint *a);
 bigint *bigint_add(const bigint *a, const bigint *b);
 int bigint_bigger(const bigint *a, const bigint *b);
