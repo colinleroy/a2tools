@@ -3,7 +3,8 @@ SOURCES := simple_serial.c \
 	extended_string.c \
 	bool_array.c \
 	array_sort.c \
-	bool_array_test.c
+	bool_array_test.c \
+	bigint.c
 
 DEPS := $(topdir)../../drivers/a2.ssc.o
 
