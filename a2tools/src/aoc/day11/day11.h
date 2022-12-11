@@ -1,5 +1,6 @@
 /* types */
 typedef struct _monkey {
+  int monkey_num;
   long *items;
   int n_items;
 

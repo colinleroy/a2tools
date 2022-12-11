@@ -15,8 +15,13 @@ static void free_monkeys(int num);
 static void free_monkey(monkey *monkey);
 static void dump_monkey(int num, monkey *monkey);
 
+#define NUM_ROUNDS 10000
+#define HAVE_RELIEF 0
+
 int debug_turn = 0;
-int debug_round = 1;
+int debug_round = 0;
+
+long lcm;
 
 char line[255];
 monkey *monkeys[8];
@@ -38,6 +43,7 @@ static int read_file(FILE *fp) {
       case PARSE_MONKEY:
         monkeys[num_monkey] = malloc(sizeof(monkey));
         memset(monkeys[num_monkey], 0, sizeof(monkey));
+        monkeys[num_monkey]->monkey_num = num_monkey;
         break;
       case PARSE_ITEMS:
         for (i = ITEMS_START_TOKEN; i < n_tokens; i++) {
@@ -138,10 +144,16 @@ static void do_monkey_turn(int num_monkey) {
       exit(1);
     }
 
+#if HAVE_RELIEF
     /* I get relieved */
     item_worry_level = (long)item_worry_level / (long)3;
     if (debug_turn) printf("    Monkey gets bored with item. Worry level is divided by 3 to %ld\n",
            item_worry_level);
+#else
+    item_worry_level = (long)item_worry_level % (long)lcm;
+    if (debug_turn) printf("    Worry level is divided by %ld to %ld for sanity\n",
+         lcm, item_worry_level);
+#endif
 
     /* Monkey ponders who to send to */
     dest_monkey = NULL;
@@ -205,11 +217,31 @@ static void count_inspections(int num) {
   bubble_sort_array((void **)&monkeys, num, monkey_activity_sorter);
 
   for (i = 0; i < num; i++)
-    printf("Monkey %d inspected items %d times.\n", i, 
+    printf("Monkey %d inspected items %d times.\n", monkeys[i]->monkey_num,
            monkeys[i]->num_inspections);
   
   printf("Monkey business is %ld\n",
           (long)monkeys[num-1]->num_inspections * (long)monkeys[num-2]->num_inspections);
+}
+
+static long find_lcm(int num_monkeys) {
+  long max = 0;
+  int i = 0;
+  for (i = 0; i < num_monkeys; i++) {
+    if (monkeys[i]->test_operand > max)
+      max = monkeys[i]->test_operand;
+  }
+  printf("searching for LCM starting at %ld\n", max);
+again:
+  for (i = 0; i < num_monkeys; i++) {
+    if (max % monkeys[i]->test_operand != 0) {
+
+      max++;
+      goto again;
+    }
+  }
+  printf("found LCM: %ld\n", max);
+  return max;
 }
 
 int main(void) {
@@ -228,8 +260,10 @@ int main(void) {
   
   num_monkeys = read_file(fp);
   
+  lcm = find_lcm(num_monkeys);
+
   /* Do a round */
-  for (num_round = 0; num_round < 20; num_round++) {
+  for (num_round = 0; num_round < NUM_ROUNDS; num_round++) {
     printf("Round %d\n", num_round + 1);
     do_round(num_monkeys);
   }
