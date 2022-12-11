@@ -1,21 +1,9 @@
-PROGRAM=day9.bin
-SOURCES := day-9.c
-DEPS := $(topdir)../../drivers/a2.ssc.o \
-	$(topdir)../lib/bool_array.o
-
-CC65_TARGET = apple2
-CC      = cl65
-CFLAGS  = -t $(CC65_TARGET) -I ../lib
-LDFLAGS = -t $(CC65_TARGET) -m $(PROGRAM).map
+SUBDIRS = day9 \
+	day10
 
 .PHONY: all clean
-all: $(PROGRAM)
 
-%.o: %.c
-	$(CC) -c $(CFLAGS) -o $@ $<
-
-$(PROGRAM): $(SOURCES:.c=.o)
-	$(CC) $(LDFLAGS) -o $@ $^ $(DEPS)
-
-clean:
-	rm -f $(PROGRAM) *.o *.map
+all clean:
+	for dir in $(SUBDIRS); do \
+		$(MAKE) -C $$dir -f Makefile $@; \
+	done

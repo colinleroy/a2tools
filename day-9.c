@@ -1,10 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <errno.h>
-#include <conio.h>
 #include <string.h>
-#include <dbg.h>
-#include "../lib/bool_array.h"
 
 #define HEAD 0
 #define N_KNOTS 10
@@ -31,13 +27,27 @@ char dir;
 char s_num[4];
 int cur_num = 0;
 int delta, dx, dy, wx, wy, xdif, ydif;
-int x[N_KNOTS], y[N_KNOTS];
+short x[N_KNOTS], y[N_KNOTS];
 int n_mov = 0;
 int lnum = 0;
 int n_visited = 0;
-int minx = 1, maxx = 0, miny = 1, maxy = 0, sim = 1, xoff = 0, yoff = 0;
-size_t xlen = 0, ylen = 0;
-bool_array *visited = NULL;
+int minx = 1, maxx = 0, miny = 1, maxy = 0, xlen = 0, ylen = 0, sim = 1, xoff = 0, yoff = 0;
+char *visited = NULL, visited_len = 0, rem_visited_len = 0;
+
+static int check_visited(short x, short y, int set, int val) {
+  int offset = ((ylen + 1) * (x+xoff-1)) + (y+yoff-1);
+  int byte = 1 + (offset / 8);
+  int bit = offset % 8;
+  
+  if (set) {
+    if (val) {
+      visited[byte] |= (1 << bit);
+    } else {
+      visited[byte] &= ~(1 << bit);
+    }
+  }
+  return (visited[byte] & (1 << bit)) != 0;
+}
 
 static void update_boundaries(int x, int y) {
   if (x < minx) minx = x;
@@ -47,11 +57,10 @@ static void update_boundaries(int x, int y) {
 }
 
 static void handle_line() {
-  int i,t;
   dx = get_dx(dir);
   dy = get_dy(dir);
   delta = atoi(s_num);
-
+  int i,t;
   for (i = 1; i <= delta; i++) {
     x[HEAD] += dx; y[HEAD] += dy;
 
@@ -76,7 +85,7 @@ static void handle_line() {
         }
         n_mov++;
         if (sim == 0 && t == N_KNOTS - 1) {
-          bool_array_set(visited, x[t] + xoff - 1, y[t] + yoff - 1, 1);
+          check_visited(x[t], y[t], 1, 1);
         }
       }
     }
@@ -86,46 +95,25 @@ static void handle_line() {
   }
   lnum++;
 }
-int main(void) {
-  int t,total_lines = 0;
-  extern char a2_ssc;
-  FILE *infp;
+int main(int argc, char **argv) {
   sim = 1;
 
-  _filetype = PRODOS_T_TXT;
-  infp = fopen("IN9","r");
-
-  if (infp == NULL) {
-    printf("Error opening file: %s\n", strerror(errno));
-  }
 again:
   n_mov = 0;
   lnum = 0;
   if (sim == 0) {
-    n_visited += bool_array_set(visited, 1 + xoff - 1, 1 + yoff - 1, 1);
+    n_visited += check_visited(1, 1, 1, 1);
   }
-  for (t = 0; t < N_KNOTS; t++) {
+  for (int t = 0; t < N_KNOTS; t++) {
     x[t] = 1; y[t] = 1;
   }
-  printf("Starting run\n");
-  while (1) {
-    int r;
-    
-    r = fgetc(infp);
-    if (r == EOF) {
-      if (sim == 1) {
-          printf("End of sim\n");
-          goto end_loop;
-      } else {
-          printf("End of run\n");
-          goto end_loop;
-      }
-    }
-    c = (char)r;
-
+  while ((c = fgetc(stdin)) != EOF) {    
     switch (parse_step) {
       case 0:
         dir = c;
+        if (c == '\n') {
+          goto end_sim;
+        }
         /* fallback intended */
       case 1:
         parse_step++;
@@ -144,37 +132,30 @@ again:
         break;
     }
   }
-end_loop:
+end_sim:
   if (sim == 1) {
-    rewind(infp);
+    int i, j;
     sim = 0;
-    xlen = abs(maxx - minx) + 1;
-    ylen = abs(maxy - miny) + 1;
+    xlen = abs(maxx - minx);
+    ylen = abs(maxy - miny);
     xoff = -minx + 1;
     yoff = -miny + 1;
-    total_lines = lnum;
-
-    printf("Map is %d x %d, hit ENTER\n", xlen, ylen);
-    visited = bool_array_alloc(xlen, ylen);
-    printf("x %d to %d, y %d to %d\n", minx, maxx, miny, maxx);
-    printf("shift x %d, y %d\n", xoff - 1, miny, yoff - 1 );
-    cgetc();
-    if (visited == NULL) {
-      printf("Coudn't allocate array :(\n");
-      exit(1);
+    visited = malloc(((xlen+2)*(ylen+2))/8);
+    printf("Map is %d x %d, needs %d bytes\n", xlen, ylen, ((xlen+2)*(ylen+2))/8);
+    for (i = minx; i <= maxx; i++) {
+      for (j = miny; j <= maxy; j++) {
+        n_visited += check_visited(i,j,1,0);
+      }
     }
     goto again;
   } else {
     int i, j;
     n_visited = 0;
     for (i = minx; i <= maxx; i++) {
-      printf("counting line %d...\n", i);
       for (j = miny; j <= maxy; j++) {
-        n_visited += bool_array_get(visited, i + xoff - 1, j + yoff - 1);
+        n_visited += check_visited(i,j,0,0);
       }
     }
   }
   printf("nvisited: %d\n", n_visited);
-  fclose(infp);
-  exit(0);
 }
