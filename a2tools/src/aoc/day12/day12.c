@@ -8,36 +8,58 @@
 // Djikstra implementation
 
 #define DATASET "IN12"
-
 #define BUFSIZE 255
+#define DEBUG
+
 char buf[BUFSIZE];
 
-node ***nodes = NULL;
+char **nodes = NULL;
+char **visited = NULL;
+int **distances = NULL;
+
+static void free_all(void);
+
 int max_x = 0, max_y = 0;
 
-node *start_node = NULL, *end_node = NULL;
+int start_x, start_y;
+int end_x, end_y;
 
-static node ***read_file(FILE *fp);
-static node *node_new(int x, int y, char height);
-static void node_free(node *n);
-static void nodes_free(node ***nodes);
+static void read_file(FILE *fp);
 
-static void build_all_neighbors(void);
-#ifdef DEBUG
-static void print_node_list(slist *list);
-#endif
-static path *path_new(void);
-static path *add_step_to_path(path *p, node *n);
-static void path_free(path *p);
-static path *path_copy(path *p);
+static slist *build_neighbors_list(char n, int x, int y);
 
-static node *find_closest_node(void);
+static void find_closest_node(int *closest_x, int *closest_y);
 static void calculate_path_lengths();
+
+#ifdef DEBUG
+static void dump_maps(void) {
+  int i, j;
+  printf("nodes map of %d * %d\n", max_x, max_y);
+  for (i = 0; i < max_y; i++) {
+    for (j = 0; j < max_x; j++) {
+      printf("%c",nodes[i][j]);
+    }
+    printf("\n");
+  }
+  printf("Visited map:\n");
+  for (i = 0; i < max_y; i++) {
+    for (j = 0; j < max_x; j++) {
+      printf("%c",visited[i][j] == 0 ? '0':'1');
+    }
+    printf("\n");
+  }
+  printf("Distances map:\n");
+  for (i = 0; i < max_y; i++) {
+    for (j = 0; j < max_x; j++) {
+      printf("%d ",distances[i][j]);
+    }
+    printf("\n");
+  }
+}
+#endif
 
 int main(void) {
   FILE *fp;
-  int i,j;
-  path *p;
 
 #ifdef PRODOS_T_TXT
   _filetype = PRODOS_T_TXT;
@@ -48,202 +70,107 @@ int main(void) {
     exit(1);
   }
   
-  nodes = read_file(fp);
+  read_file(fp);
 
   fclose(fp);
   
-  printf("read map of %d * %d\n", max_x, max_y);
-  for (i = 0; i < max_y; i++) {
-    for (j = 0; j < max_x; j++) {
-      printf("%c",nodes[i][j]->height);
-    }
-    printf("\n");
-  }
-
-  build_all_neighbors();
-
-#if DEBUG
-  for (i = 0; i < max_x; i++) {
-    for (j = 0; j < max_y; j++) {
-      printf("neighbors of (%d,%d) of height %c:\n", i, j, nodes[j][i]->height);
-      print_node_list(nodes[j][i]->neighbors);
-    }
-    printf("\n");
-  }
+#ifdef DEBUG
+  dump_maps();
 #endif
 
   calculate_path_lengths();
 
-#if DEBUG
-  for (i = 0; i < max_y; i++) {
-    for (j = 0; j < max_x; j++) {
-      if (nodes[i][j]->visited == 0) {
-        printf("We did not visit (%d,%d) :( \n", j, i);
-      }
-    }
-  }
-#endif
-  
-  printf("\nShortest path to %d,%d\n", end_node->x, end_node->y);
-  p = end_node->shortest_path;
-  if (p != NULL) {
-    slist *step = p->steps;
-    for (; step; step = step->next) {
-      node *n = step->data;
-      printf(" => %c [%d, %d]\n", n->height, n->x, n->y);
-    }
-    printf("total: %d steps\n", p->length);
-  }
+  printf("\nShortest path to %d,%d : %d\n", end_x, end_y, distances[end_y][end_x]);
 
-  nodes_free(nodes);
+  free_all();
 
   exit (0);
 }
 
-static node *find_closest_node(void) {
+static void find_closest_node(int *closest_x, int *closest_y) {
   int min_distance = -1;
-  node *closest_node = NULL;
   int x, y;
 
+  *closest_x = -1;
+  *closest_y = -1;
+  
   for (x = 0; x < max_x; x++) {
     for (y = 0; y < max_y; y++) {
-      node *n = nodes[y][x];
-      if (n->visited)
+      if (visited[y][x])
         continue;
-      if (!n->shortest_path)
+      if (distances[y][x] < 0)
         continue;
-      if (n->shortest_path->length <= min_distance || min_distance == -1) {
-        min_distance = n->shortest_path->length;
-        closest_node = n;
+      if (distances[y][x] <= min_distance || min_distance == -1) {
+        min_distance = distances[y][x];
+        *closest_x = x;
+        *closest_y = y;
       }
     }
   }
-  if (closest_node == NULL) {
+  if (*closest_x < 0 || *closest_y < 0) {
     printf("We shouldn't be there...\n");
     exit(1);
   }
-
-  return closest_node;
 }
 
 static void calculate_path_lengths(void ) {
-  int visited_count = 1;
-  start_node->shortest_path = add_step_to_path(NULL, start_node);
+  int visited_count = 0;
+  distances[start_y][start_x] = 0;
 
-  while (visited_count <= max_x*max_y) {
-    node *cur = find_closest_node();
-    slist *w;
+  printf("\n\nSTARTING.\n");
 
-    cur->visited = 1;
+  while (visited_count < max_x*max_y) {
+    int cur_x, cur_y;
+    slist *neighbors, *w;
+
+    find_closest_node(&cur_x, &cur_y);
+
+    visited[cur_y][cur_x] = 1;
     visited_count ++;
 
-    printf("Visiting node (%d,%d)...\n", cur->x, cur->y);
+    printf("Visiting node (%d,%d) (%d / %d visited)...\n", cur_x, cur_y, visited_count, max_x*max_y);
 
-    w = cur->neighbors;
-    for(; w; w = w->next) {
-      node *neighbor = (node *)w->data;
+    neighbors = build_neighbors_list(nodes[cur_y][cur_x], cur_x, cur_y);
+    for(w = neighbors; w; w = w->next) {
+      int *neighbor = (int *)w->data;
+      int neighbor_y = neighbor[0];
+      int neighbor_x = neighbor[1];
 
-      if (!neighbor->visited && cur->shortest_path != NULL) {
-        int cur_len = cur->shortest_path->length;
-        int neighbor_len = -1;
-        if (neighbor->shortest_path != NULL)
-          neighbor_len = neighbor->shortest_path->length;
+      if (!visited[neighbor_y][neighbor_x] && distances[cur_y][cur_x] > -1) {
+        int cur_len = distances[cur_y][cur_x];
+        int neighbor_len = distances[neighbor_y][neighbor_x];
+
         if (cur_len + 1 < neighbor_len || neighbor_len < 0) {
-          path_free(neighbor->shortest_path);
-          
-          neighbor->shortest_path = path_copy(cur->shortest_path);
-          add_step_to_path(neighbor->shortest_path, neighbor);
-#if DEBUG
+          distances[neighbor_y][neighbor_x] = cur_len + 1;
+#ifdef DEBUG
           printf("%s shortest_path to (%d,%d) is now %d\n",
                  neighbor_len < 0 ? "New" : "Updated",
-                 neighbor->x, neighbor->y, neighbor->shortest_path->length);
+                 neighbor_x, neighbor_y, distances[neighbor_y][neighbor_x]);
 #endif
         }
       }
+      free(neighbor);
     }
+    slist_free(neighbors);
   }
 }
 
-static node *node_new(int x, int y, char height) {
-  node *n = malloc(sizeof(node));
-  if (n == NULL) {
-    printf("Couldn't allocate node (%d,%d)\n", x, y);
-    exit(1);
-  }
-  n->x = x;
-  n->y = y;
-  n->height = height;
-  n->neighbors = NULL;
-  
-  n->visited = 0;
-  n->shortest_path = NULL;
-  return n;
-}
-
-static void nodes_free(node ***n) {
-  int i, j;
+static void free_all() {
+  int i;
   for (i = 0; i < max_y; i++) {
-    for (j = 0; j < max_x; j++) {
-      node_free(n[i][j]);
-    }
-    free(n[i]);
+    free(nodes[i]);
+    free(visited[i]);
+    free(distances[i]);
   }
-  free(n);
+  free(nodes);
+  free(visited);
+  free(distances);
 }
 
-static void node_free(node *n) {
-  if (n == NULL) {
-    return;
-  }
-  slist_free(n->neighbors);
-  path_free(n->shortest_path);
-  free(n);
-}
-
-static path *path_new(void) {
-  path *p = malloc(sizeof(path));
-  if (p == NULL) {
-    printf("Couldn't allocate path\n");
-    exit(1);
-  }
-  p->steps = NULL;
-  p->length = 0;
-  return p;
-}
-
-static path *add_step_to_path(path *p, node *n) {
-  if (p == NULL) {
-    p = path_new();
-  } else {
-    p->length++;
-  }
-  p->steps = slist_append(p->steps, n);
-  return p;
-}
-
-static void path_free(path *p) {
-  if (p == NULL) {
-    return;
-  }
-  slist_free(p->steps);
-  free(p);
-}
-
-static path *path_copy(path *p) {
-  path *new;
-  if (p == NULL) {
-    return NULL;
-  }
-  new = path_new();
-  new->steps = slist_copy(p->steps);
-  new->length = p->length;
-  
-  return new;
-}
-
-static node ***read_file(FILE *fp) {
-  node ***nodes = NULL;
-  node **node_line = NULL;
+static void read_file(FILE *fp) {
+  char *node_line = NULL;
+  char *visited_line = NULL;
+  int *distances_line = NULL;
   int i;
   while (NULL != fgets(buf, sizeof(buf), fp)) {
     if (max_x == 0) {
@@ -255,79 +182,91 @@ static node ***read_file(FILE *fp) {
     }
     buf[max_x] = '\0';
 
-    nodes = realloc(nodes, (1 + max_y)*sizeof(node **));
+    nodes = realloc(nodes, (1 + max_y)*sizeof(char *));
+    visited = realloc(visited, (1 + max_y)*sizeof(char *));
+    distances = realloc(distances, (1 + max_y)*sizeof(int *));
+
     if (nodes == NULL) {
       printf("Couldn't realloc nodes\n");
       exit(1);
     }
+    if (visited == NULL) {
+      printf("Couldn't realloc visited\n");
+      exit(1);
+    }
+    if (distances == NULL) {
+      printf("Couldn't realloc distances\n");
+      exit(1);
+    }
     
-    node_line = malloc( (1 + max_x)*sizeof(node *));
+    node_line = strdup(buf);
+    visited_line = malloc( (1 + max_x)*sizeof(char));
+    distances_line = malloc( (1 + max_x)*sizeof(int));
     if (node_line == NULL) {
       printf("Couldn't allocate node_line (%d)\n", 1 + max_x);
       exit(1);
     }
+    if (visited_line == NULL) {
+      printf("Couldn't allocate visited_line (%d)\n", 1 + max_x);
+      exit(1);
+    }
+    if (distances_line == NULL) {
+      printf("Couldn't allocate distances_line (%d)\n", 1 + max_x);
+      exit(1);
+    }
+
     nodes[max_y] = node_line;
+    visited[max_y] = visited_line;
+    distances[max_y] = distances_line;
     for (i = 0; i < max_x; i++) {
-      node *n = node_new(i, max_y, buf[i]);
-      
-      if (buf[i] == 'S') {
-        n->height = 'a';
-        start_node = n;
-      } else if (buf[i] == 'E') {
-        n->height = 'z';
-        end_node = n;
+      if (node_line[i] == 'S') {
+        node_line[i] = 'a';
+        start_x = i;
+        start_y = max_y;
+      } else if (node_line[i] == 'E') {
+        node_line[i] = 'z';
+        end_x = i;
+        end_y = max_y;
       }
       
-      node_line[i] = n;
+      visited_line[i] = 0;
+      distances_line[i] = -1;
     }
     max_y++;
   }
-  
-  return nodes;
 }
 
-#ifdef DEBUG
-static void print_node_list(slist *list) {
-  slist *w = list;
-  while (w != NULL) {
-    node *n = (node *)w->data;
-    printf(" (%d,%d) : %c", n->x, n->y, n->height);
-    w = w->next;
-  }
-  printf("\n");
-}
-#endif
-
-static slist *build_neighbors_list(node *n)
-{ int x = n->x, y = n->y;
+static slist *build_neighbors_list(char n, int x, int y) {
   slist *neighbors = NULL;
 
   /* consider all directions */
-  if (x > 0 && (nodes[y][x-1]->height <= n->height || nodes[y][x-1]->height == n->height + 1)) {
-    neighbors = slist_prepend(neighbors, nodes[y][x-1]);
+  if (x > 0 && (nodes[y][x-1] <= n + 1)) {
+    int *coords = malloc(2*sizeof(int));
+    coords[0] = y;
+    coords[1] = x-1;
+    neighbors = slist_prepend(neighbors, coords);
   }
 
-  if (x < max_x - 1 && (nodes[y][x+1]->height <= n->height || nodes[y][x+1]->height == n->height + 1)){
-    neighbors = slist_prepend(neighbors, nodes[y][x+1]);
+  if (x < max_x - 1 && (nodes[y][x+1] <= n + 1)){
+    int *coords = malloc(2*sizeof(int));
+    coords[0] = y;
+    coords[1] = x+1;
+    neighbors = slist_prepend(neighbors, coords);
   }
 
-  if (y > 0 && (nodes[y-1][x]->height <= n->height || nodes[y-1][x]->height == n->height + 1)){
-    neighbors = slist_prepend(neighbors, nodes[y-1][x]);
+  if (y > 0 && (nodes[y-1][x] <= n + 1)){
+    int *coords = malloc(2*sizeof(int));
+    coords[0] = y-1;
+    coords[1] = x;
+    neighbors = slist_prepend(neighbors, coords);
   }
 
-  if (y < max_y - 1 && (nodes[y+1][x]->height <= n->height || nodes[y+1][x]->height == n->height + 1)){
-    neighbors = slist_prepend(neighbors, nodes[y+1][x]);
+  if (y < max_y - 1 && (nodes[y+1][x] <= n + 1)){
+    int *coords = malloc(2*sizeof(int));
+    coords[0] = y+1;
+    coords[1] = x;
+    neighbors = slist_prepend(neighbors, coords);
   }
 
   return neighbors;
-}
-
-static void build_all_neighbors(void) {
-  int i, j;
-
-  for (i = 0; i < max_y; i++) {
-    for (j = 0; j < max_x; j++) {
-      nodes[i][j]->neighbors = build_neighbors_list(nodes[i][j]);
-    }
-  }
 }
