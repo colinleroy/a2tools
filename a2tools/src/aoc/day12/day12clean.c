@@ -48,11 +48,11 @@ int main(void) {
     printf("Error %d\n", errno);
     exit(1);
   }
-
+  
   nodes = read_file(fp);
 
   fclose(fp);
-
+  
   printf("read map of %d * %d\n", max_x, max_y);
   for (i = 0; i < max_y; i++) {
     for (j = 0; j < max_x; j++) {
@@ -85,9 +85,10 @@ int main(void) {
   }
 #endif
 
-  printf("\nPart 1: Shortest path between %d,%d and %d,%d\n",
+  printf("\nPart 1: Shortest path between %d,%d and %d,%d : %d\n",
          start_node->x, start_node->y,
-         end_node->x, end_node->y);
+         end_node->x, end_node->y,
+         end_node->shortest_path->length);
 
     for (i = 0; i < max_y; i++) {
       for (j = 0; j < max_x; j++) {
@@ -100,7 +101,7 @@ int main(void) {
       }
     }
 
-  printf("Part2: Shortest path to an 'a' is now to %d,%d : %d\n",
+  printf("Part 2: Shortest path to an 'a' is now to %d,%d : %d\n",
         closest_a->x,
         closest_a->y,
         closest_a->shortest_path->length);
@@ -128,6 +129,7 @@ static node *find_closest_node(void) {
       }
     }
   }
+
   return closest_node;
 }
 
