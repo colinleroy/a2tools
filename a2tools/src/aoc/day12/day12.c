@@ -23,6 +23,7 @@ int max_x = 0, max_y = 0;
 
 int start_x, start_y;
 int end_x, end_y;
+int i, j;
 
 static void read_file(FILE *fp);
 
@@ -60,6 +61,7 @@ static void dump_maps(void) {
 
 int main(void) {
   FILE *fp;
+  int closest_a = -1;
 
 #ifdef PRODOS_T_TXT
   _filetype = PRODOS_T_TXT;
@@ -69,19 +71,29 @@ int main(void) {
     printf("Error %d\n", errno);
     exit(1);
   }
-  
+
   read_file(fp);
 
   fclose(fp);
-  
+
 #ifdef DEBUG
   dump_maps();
 #endif
 
   calculate_path_lengths();
 
-  printf("\nShortest path to %d,%d : %d\n", end_x, end_y, distances[end_y][end_x]);
+  printf("\nPart1: Shortest path to %d,%d : %d\n", end_x, end_y, distances[end_y][end_x]);
 
+  for (i = 0; i < max_y; i++) {
+    for (j = 0; j < max_x; j++) {
+        if (nodes[i][j] == 'a' && distances[i][j] >= 0) {
+          if (closest_a < 0 || distances[i][j] < closest_a) {
+            closest_a = distances[i][j];
+            printf("Part2: Shortest path to an 'a' is now to %d,%d : %d\n", j, i, distances[i][j]);
+          }
+        }
+    }
+  }
   free_all();
 
   exit (0);
@@ -90,26 +102,26 @@ int main(void) {
 static void find_closest_node(int *closest_x, int *closest_y) {
   int min_distance = -1;
   int x, y;
-
+  int c_v = 0, c_d = 0;
   *closest_x = -1;
   *closest_y = -1;
-  
+
   for (x = 0; x < max_x; x++) {
     for (y = 0; y < max_y; y++) {
-      if (visited[y][x])
+      if (visited[y][x]) {
+        c_v++;
         continue;
-      if (distances[y][x] < 0)
+      }
+      if (distances[y][x] < 0) {
+        c_d++;
         continue;
+      }
       if (distances[y][x] <= min_distance || min_distance == -1) {
         min_distance = distances[y][x];
         *closest_x = x;
         *closest_y = y;
       }
     }
-  }
-  if (*closest_x < 0 || *closest_y < 0) {
-    printf("We shouldn't be there...\n");
-    exit(1);
   }
 }
 
@@ -119,11 +131,15 @@ static void calculate_path_lengths(void ) {
 
   printf("\n\nSTARTING.\n");
 
-  while (visited_count < max_x*max_y) {
-    int cur_x, cur_y;
+  while (1) {
+    int cur_x = -1, cur_y = -1;
     slist *neighbors, *w;
 
     find_closest_node(&cur_x, &cur_y);
+
+    if (cur_x < 0 && cur_y < 0) {
+      return;
+    }
 
     visited[cur_y][cur_x] = 1;
     visited_count ++;
@@ -198,7 +214,7 @@ static void read_file(FILE *fp) {
       printf("Couldn't realloc distances\n");
       exit(1);
     }
-    
+
     node_line = strdup(buf);
     visited_line = malloc( (1 + max_x)*sizeof(char));
     distances_line = malloc( (1 + max_x)*sizeof(int));
@@ -221,14 +237,14 @@ static void read_file(FILE *fp) {
     for (i = 0; i < max_x; i++) {
       if (node_line[i] == 'S') {
         node_line[i] = 'a';
-        start_x = i;
-        start_y = max_y;
-      } else if (node_line[i] == 'E') {
-        node_line[i] = 'z';
         end_x = i;
         end_y = max_y;
+      } else if (node_line[i] == 'E') {
+        node_line[i] = 'z';
+        start_x = i;
+        start_y = max_y;
       }
-      
+
       visited_line[i] = 0;
       distances_line[i] = -1;
     }
@@ -240,28 +256,28 @@ static slist *build_neighbors_list(char n, int x, int y) {
   slist *neighbors = NULL;
 
   /* consider all directions */
-  if (x > 0 && (nodes[y][x-1] <= n + 1)) {
+  if (x > 0 && (nodes[y][x-1] >= n - 1)) {
     int *coords = malloc(2*sizeof(int));
     coords[0] = y;
     coords[1] = x-1;
     neighbors = slist_prepend(neighbors, coords);
   }
 
-  if (x < max_x - 1 && (nodes[y][x+1] <= n + 1)){
+  if (x < max_x - 1 && (nodes[y][x+1] >= n - 1)){
     int *coords = malloc(2*sizeof(int));
     coords[0] = y;
     coords[1] = x+1;
     neighbors = slist_prepend(neighbors, coords);
   }
 
-  if (y > 0 && (nodes[y-1][x] <= n + 1)){
+  if (y > 0 && (nodes[y-1][x] >= n - 1)){
     int *coords = malloc(2*sizeof(int));
     coords[0] = y-1;
     coords[1] = x;
     neighbors = slist_prepend(neighbors, coords);
   }
 
-  if (y < max_y - 1 && (nodes[y+1][x] <= n + 1)){
+  if (y < max_y - 1 && (nodes[y+1][x] >= n - 1)){
     int *coords = malloc(2*sizeof(int));
     coords[0] = y+1;
     coords[1] = x;
