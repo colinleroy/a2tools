@@ -236,11 +236,11 @@ static void count_inspections(int num) {
 static long find_lcm(int num_monkeys) {
   long d = 1;
   int i = 0;
+
   for (i = 0; i < num_monkeys; i++) {
     d = d * (long)monkeys[i]->test_operand;
   }
-  
-  printf("found LCM: %ld\n", d);
+
   return d;
 }
 

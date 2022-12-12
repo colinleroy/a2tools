@@ -4,6 +4,7 @@ SOURCES := simple_serial.c \
 	bool_array.c \
 	array_sort.c \
 	bool_array_test.c \
+	slist.c \
 	bigint.c
 
 DEPS := $(topdir)../../drivers/a2.ssc.o
