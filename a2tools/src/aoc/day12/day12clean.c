@@ -2,12 +2,15 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#ifdef __CC65__
+#include <conio.h>
+#endif
 #include "day12.h"
 #include "slist.h"
 
 // Djikstra implementation
 
-#define DATASET "IN12"
+#define DATASET "IN12E"
 
 #define BUFSIZE 255
 char buf[BUFSIZE];
@@ -33,12 +36,14 @@ static void path_free(path *p);
 static path *path_copy(path *p);
 
 static node *find_closest_node(void);
-static void calculate_path_lengths();
+static void calculate_path_lengths(void);
+
+static void show_map(node *cur, node *visiting);
+void show_path(path *path);
 
 int main(void) {
   FILE *fp;
   int i,j;
-  path *p;
 
 #ifdef PRODOS_T_TXT
   _filetype = PRODOS_T_TXT;
@@ -52,18 +57,16 @@ int main(void) {
   nodes = read_file(fp);
 
   fclose(fp);
-  
-  printf("read map of %d * %d\n", max_x, max_y);
-  for (i = 0; i < max_y; i++) {
-    for (j = 0; j < max_x; j++) {
-      printf("%c",nodes[i][j]->height);
-    }
-    printf("\n");
-  }
+
+#ifdef __CC65__
+  clrscr();
+#endif
+
+  show_map(NULL, NULL);
 
   build_all_neighbors();
 
-#if DEBUG
+#ifdef DEBUG
   for (i = 0; i < max_x; i++) {
     for (j = 0; j < max_y; j++) {
       printf("neighbors of (%d,%d) of height %c:\n", i, j, nodes[j][i]->height);
@@ -75,7 +78,7 @@ int main(void) {
 
   calculate_path_lengths();
 
-#if DEBUG
+#ifdef DEBUG
   for (i = 0; i < max_y; i++) {
     for (j = 0; j < max_x; j++) {
       if (nodes[i][j]->visited == 0) {
@@ -85,7 +88,12 @@ int main(void) {
   }
 #endif
 
-  printf("\nPart 1: Shortest path between %d,%d and %d,%d : %d\n",
+#ifdef __CC65__
+  show_map(NULL, NULL);
+
+  gotoxy(2,21);
+#endif
+  cprintf("Part 1: (%d,%d) => (%d,%d): %d steps",
          start_node->x, start_node->y,
          end_node->x, end_node->y,
          end_node->shortest_path->length);
@@ -101,11 +109,38 @@ int main(void) {
       }
     }
 
-  printf("Part 2: Shortest path to an 'a' is now to %d,%d : %d\n",
-        closest_a->x,
-        closest_a->y,
+#ifdef __CC65__
+  gotoxy(2,22);
+#endif
+  cprintf("Part 2: (%d,%d) => (%d,%d): %d (ENTER)",
+        start_node->x, start_node->y,
+        closest_a->x, closest_a->y,
         closest_a->shortest_path->length);
 
+#ifdef __CC65__
+  cgetc();
+  gotoxy(1,21);
+  cputc('*');
+  show_path(end_node->shortest_path);
+
+  cgetc();
+  gotoxy(1,21);
+  cputc(' ');
+  show_map(NULL, NULL);
+
+  cgetc();
+  gotoxy(1,21);
+  cputc('*');
+  show_path(closest_a->shortest_path);
+  
+  cgetc();
+#else
+  printf("\nPart 1:\n");
+  show_path(end_node->shortest_path);
+  printf("Part 2:\n");
+  show_path(closest_a->shortest_path);
+#endif
+  
   nodes_free(nodes);
 
   exit (0);
@@ -145,10 +180,14 @@ static void calculate_path_lengths(void ) {
       return;
     }
 
+    show_map(cur, NULL);
+
     cur->visited = 1;
     visited_count ++;
 
+#ifdef DEBUG
     printf("Visiting node (%d,%d)...\n", cur->x, cur->y);
+#endif
 
     w = cur->neighbors;
     for(; w; w = w->next) {
@@ -164,14 +203,25 @@ static void calculate_path_lengths(void ) {
 
           neighbor->shortest_path = path_copy(cur->shortest_path);
           add_step_to_path(neighbor->shortest_path, neighbor);
-#if DEBUG
+#ifdef DEBUG
           printf("%s shortest_path to (%d,%d) is now %d\n",
                  neighbor_len < 0 ? "New" : "Updated",
                  neighbor->x, neighbor->y, neighbor->shortest_path->length);
 #endif
+          show_map(cur, neighbor);
+          
+          /* Shortcut */
+          if (neighbor == start_node) {
+#ifdef DEBUG
+            printf("arrived at start (%d,%d), taking shortcut\n", neighbor->x, neighbor->y);
+#endif
+            show_map(neighbor, NULL);
+            return;
+          }
         }
       }
     }
+    show_map(cur, NULL);
   }
 }
 
@@ -340,5 +390,56 @@ static void build_all_neighbors(void) {
     for (j = 0; j < max_x; j++) {
       nodes[i][j]->neighbors = build_neighbors_list(nodes[i][j]);
     }
+  }
+}
+
+int x_orig, y_orig;
+void show_map(node *cur, node *visiting) {
+#ifdef __CC65__
+  int i, j;
+  
+  x_orig = (40 - max_x) / 2;
+  y_orig = (24 - max_y) / 2;
+
+  for (i = 0; i < max_y; i++) {
+    for (j = 0; j < max_x; j++) {
+      gotoxy(x_orig + j, y_orig + i);
+      if (cur == nodes[i][j])
+        printf("*",nodes[i][j]->height);
+      else if (visiting == nodes[i][j])
+        printf("?",nodes[i][j]->height);
+      else
+        printf("%c",nodes[i][j]->height);
+    }
+  }
+#endif
+}
+
+static void show_dot(node *n, node *prev) {
+#ifdef __CC65__
+  int i;
+  for (i = 0; i < 200; i++) {
+    gotoxy(x_orig + n->x, y_orig + n->y);
+    printf("*");
+  }
+  if (prev != NULL) {
+    for (i = 0; i < 25; i++) {
+      gotoxy(x_orig + prev->x, y_orig + prev->y);
+      printf("%c", n->height);
+    }
+  }
+#else
+  printf("=> (%d, %d) \n", n->x, n->y);
+#endif
+}
+
+void show_path(path *path) {
+  slist *w;
+  node *prev = NULL;
+
+  for(w = path->steps; w; w = w->next) {
+    node *n = (node *)w->data;
+    show_dot(n, prev);
+    prev = n;
   }
 }

@@ -1,5 +1,5 @@
 PROGRAM=day12.bin
-SOURCES := day12.c
+SOURCES := day12clean.c
 DEPS := $(topdir)../../lib/slist.o 
 
 CC65_TARGET = apple2
