@@ -142,3 +142,38 @@ But in the end it works, and best of all, it works for both parts!
 
 Debugging via printf: 
 ![Debugging via printf](images/day-9-1.png)
+
+== Day 10 ==
+
+Day 10 was nice and easy.
+
+== Day 11 ==
+
+Implementing the parser was a good occasion to add strsplit() and trim() to my
+own little library for the Apple //c.
+
+Part 2 had me hit a wall really hard, implementing an extremely slow bigint
+library working on... strings and doing grade schooler additions and multiplications
+in it, before I FINALLY thought of the correct solution to have this finish 
+before 2026 (even on the laptop it wouldn't go past round 7/10000 in less than
+a minute).
+
+== Day 12 ==
+
+For day 12 I implemented a simply-linked list in order to code cleanly and be
+able to retrace the shortest path. But as much as it worked on the sample input,
+it was much too much large in RAM to run on the Apple. So I made another dirty
+version using simples tables, counting steps and not being able to retrace the
+path. (19kB in RAM instead of 9.6MB...).
+
+== Day 13 ==
+
+I didn't figure out the smart way to get the answer to part 2 without sorting
+the whole dataset (you can. I figured it out later).
+
+So instead I did an external sort, where the dataset is pre-sorted by manageable
+chunks of 10 packets into files saved to ... the floppy.
+Then files are read in pair and merge sorted into a new set of twice-bigger files.
+Then again, and again until there's one file left with the whole dataset. It's
+really easy on the RAM but of course, given the latency and bandwidth of an 1980
+5.25" floppy disk drive, it's not real fast (25 minutes).
