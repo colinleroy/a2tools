@@ -78,12 +78,12 @@ static element *parse(char *parser_cur, char **out_cur) {
       if (c != ',')
         parser_cur--;
 
-      values = slist_append(values, parse(parser_cur, &parser_cur));
+      values = slist_prepend(values, parse(parser_cur, &parser_cur));
     }
     if (out_cur != NULL) {
       *out_cur = parser_cur;
     }
-    return element_new(-1, values);
+    return element_new(-1, slist_reverse(values));
   } else {
     int val = c - '0';
     while ((c = *(parser_cur++)) >= '0' && c <= '9') {
