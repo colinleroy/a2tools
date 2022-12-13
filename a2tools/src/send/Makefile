@@ -1,11 +1,11 @@
-PROGRAM=day13.bin
-SOURCES := day13-smart.c
-DEPS := $(topdir)../../lib/array_sort.o \
-	$(topdir)../../lib/slist.o \
+PROGRAM=send.bin
+SOURCES := send.c
+DEPS := $(topdir)../../drivers/a2.ssc.o \
+	$(topdir)../lib/simple_serial.o
 
 CC65_TARGET = apple2
 CC      = cl65
-CFLAGS  = -t $(CC65_TARGET) -I ../../lib
+CFLAGS  = -t $(CC65_TARGET) -I ../lib
 LDFLAGS = -t $(CC65_TARGET) -m $(PROGRAM).map
 
 .PHONY: all clean
