@@ -7,7 +7,6 @@
 #include <apple2.h>
 
 #define BUF_SIZE 255
-#define MAX_DATA_SIZE 16385
 
 int main(void) {
   int r, w, exit_code = 0;
@@ -16,13 +15,8 @@ int main(void) {
   char *s_len = malloc(BUF_SIZE);
   size_t data_len = 0;
   FILE *outfp;
+  char *data;
 
-  char *data = malloc(MAX_DATA_SIZE);
-
-  if (data == NULL) {
-    printf("Couldn't allocate data.\n");
-    exit (1);
-  }
 
   simple_serial_open(2, SER_BAUD_9600);
 
@@ -45,8 +39,11 @@ read_again:
     printf("Data length %d\n", data_len);
   }
 
-  if (data_len + 1 >= MAX_DATA_SIZE) {
-    printf("Data too long (max %d bytes).\n", MAX_DATA_SIZE);
+  data = malloc(data_len);
+
+  if (data == NULL) {
+    printf("Couldn't allocate %d bytes of data.\n", data_len + 1);
+    exit (1);
   }
 
   if (!strcasecmp(filetype, "TXT")) {
@@ -81,6 +78,8 @@ read_again:
     printf("Only wrote %d bytes. Error %d: %s\n", w, errno, strerror(errno));
     exit_code = 1;
   }
+
+  free(data);
 
   if (fclose(outfp) != 0) {
     printf("Close error %d: %s\n", errno, strerror(errno));
