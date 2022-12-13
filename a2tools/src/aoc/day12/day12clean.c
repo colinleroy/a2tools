@@ -10,7 +10,7 @@
 
 // Djikstra implementation
 
-#define DATASET "IN12E"
+#define DATASET "IN12"
 
 #define BUFSIZE 255
 char buf[BUFSIZE];
@@ -92,11 +92,11 @@ int main(void) {
   show_map(NULL, NULL);
 
   gotoxy(2,21);
-#endif
   cprintf("Part 1: (%d,%d) => (%d,%d): %d steps",
          start_node->x, start_node->y,
          end_node->x, end_node->y,
          end_node->shortest_path->length);
+#endif
 
     for (i = 0; i < max_y; i++) {
       for (j = 0; j < max_x; j++) {
@@ -111,13 +111,11 @@ int main(void) {
 
 #ifdef __CC65__
   gotoxy(2,22);
-#endif
   cprintf("Part 2: (%d,%d) => (%d,%d): %d (ENTER)",
         start_node->x, start_node->y,
         closest_a->x, closest_a->y,
         closest_a->shortest_path->length);
 
-#ifdef __CC65__
   cgetc();
   gotoxy(1,21);
   cputc('*');
