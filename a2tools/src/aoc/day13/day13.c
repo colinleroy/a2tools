@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include "slist.h"
 #include "array_sort.h"
+#include "file_sorter.h"
 
 #define DATASET "IN13"
 #define BUFSIZE 255
@@ -64,6 +65,11 @@ static void element_dump(element *e, FILE *fp) {
     }
     fprintf(fp, "]");
   }
+}
+
+static void element_dump_ln(element *e, FILE *fp) {
+  element_dump(e, fp);
+  fprintf(fp, "\n");
 }
 
 static void element_free(element *e) {
@@ -211,111 +217,14 @@ out:
   return result;
 }
 
-static FILE *open_out(int num_file, char *mode) {
-  char *filename = malloc(BUFSIZE);
-  FILE *fp;
-
-  sprintf(filename, "out%d", num_file);
-
-  printf("Opening file %d for %s\n", num_file, mode);
-
-#ifdef PRODOS_T_TXT
-  _filetype = PRODOS_T_TXT;
-#endif
-  fp = fopen(filename, mode);
-  if (fp == NULL) {
-    printf("Error opening %s %s: %d\n", filename, mode, errno);
-    exit(1);
-  }
-  free(filename);
-  return fp;
-}
-
-static void delete_out(int num_file) {
-  char *filename = malloc(BUFSIZE);
-
-  printf("Deleting file %d\n", num_file);
-  sprintf(filename, "out%d", num_file);
-  unlink(filename);
-  free(filename);
-}
-
 char buf[BUFSIZE];
-static int sort_files(int start, int num_files) {
-  int new_start = num_files;
-  int created_files = new_start;
-  int i;
-  element *l_val = NULL, *r_val = NULL;
-
-  if (start == num_files) {
-    printf("all done!");
-    return start;
+static element *read_element(FILE *fp){
+  buf[0] = '\0';
+  fgets(buf, sizeof(buf), fp);
+  if (buf[0] != '\0') {
+    return parse(buf, NULL);
   }
-
-  for (i = start; i <= num_files; i+=2) {
-    FILE *in1, *in2, *out;
-
-    in1 = open_out(i, "r");
-    if (i + 1 <= num_files)
-      in2 = open_out(i + 1, "r");
-
-    created_files++;
-    out = open_out(created_files, "w");
-
-    do {
-      if (l_val == NULL && !feof(in1)) {
-        buf[0] = '\0';
-        fgets(buf, sizeof(buf), in1);
-        if (buf[0] != '\0') {
-          l_val = parse(buf, NULL);
-        }
-      }
-      if (in2 != NULL && r_val == NULL && !feof(in2)) {
-        buf[0] = '\0';
-        fgets(buf, sizeof(buf), in2);
-        if (buf[0] != '\0') {
-          r_val = parse(buf, NULL);
-        }
-      }
-
-      if (l_val != NULL && r_val != NULL) {
-        if (compare(l_val, r_val) != NOT_ORDERED) {
-            element_dump(l_val, out);
-            element_free(l_val);
-            l_val = NULL;
-        } else {
-            element_dump(r_val, out);
-            element_free(r_val);
-            r_val = NULL;
-        }
-      } else if (l_val != NULL) {
-        element_dump(l_val, out);
-        element_free(l_val);
-        l_val = NULL;
-      } else if (r_val != NULL) {
-        element_dump(r_val, out);
-        element_free(r_val);
-        r_val = NULL;
-      } else {
-        break;
-      }
-      fprintf(out, "\n");
-    } while (1);
-    fclose(in1); 
-    in1 = NULL;
-    if (in2 != NULL) {
-      fclose(in2);
-      in2 = NULL;
-    }
-    fclose(out);
-    delete_out(i);
-    if (i + 1 <= num_files){
-      delete_out(i+1);
-    }
-  }
-  if (start < num_files) {
-    return sort_files(new_start + 1, created_files);
-  }
+  return NULL;
 }
 
 static void read_file(FILE *fp) {
@@ -325,32 +234,26 @@ static void read_file(FILE *fp) {
   char skip[2];
   int i = 0;
   int num_files = 0, lines_in_file = 0;
-  FILE *outfp;
   element **packets = NULL, **sorted = NULL;
-  int sorted_file;
-
+  char *sorted_file;
+  file_sorter *sorter;
+  element **divs = malloc(2*sizeof(element *));
   sum = 0;
 
+   sorter = file_sorter_new(compare,
+                  (read_object_func)read_element,
+                  (write_object_func)element_dump_ln,
+                  (free_func)element_free);
   do {
     if (lines_in_file > 18) {
 flush_last_packets:
-      printf("Sorting %d packets...\n", lines_in_file);
-      sorted = packets;
-      bubble_sort_array((void **)sorted, lines_in_file, compare);
-
-      printf("Writing to file %d\n", num_files);
-      outfp = open_out(num_files, "w");
+      file_sorter_add_data(sorter, lines_in_file, (void **)packets);
       for (i = 0; i < lines_in_file; i++) {
-        element_dump(sorted[i], outfp);
-        fprintf(outfp, "\n");
-        element_free(sorted[i]);
+        element_free(packets[i]);
       }
       free(packets);
       packets = NULL;
 
-
-      fclose(outfp);
-      num_files++;
       lines_in_file = 0;
 
       if (feof(fp)) {
@@ -360,10 +263,8 @@ flush_last_packets:
     }
     lines_in_file += 2;
 
-    fgets(buf, sizeof(buf), fp);
-    l_val = parse(buf, NULL);
-    fgets(buf, sizeof(buf), fp);
-    r_val = parse(buf, NULL);
+    l_val = read_element(fp);
+    r_val = read_element(fp);
 
     packets = realloc(packets, lines_in_file*sizeof(element *));
     if (packets == NULL) {
@@ -384,15 +285,16 @@ flush_last_packets:
   goto flush_last_packets;
 
 end_write_files:
-  outfp = open_out(num_files, "w");
-  fputs("[[2]]\n", outfp);
-  fputs("[[6]]\n", outfp);
-  fclose(outfp);
+  divs[0] = parse("[[2]]", NULL);
+  divs[1] = parse("[[6]]", NULL);
+  file_sorter_add_data(sorter, 2, (void **)divs);
+  element_free(divs[0]);
+  element_free(divs[1]);
+  free(divs);
+  printf("xSum is: %ld\n", sum);
   
-  printf("Sum is: %ld\n", sum);
-  
-  sorted_file = sort_files(0, num_files);
-  fp = open_out(sorted_file, "r");
+  sorted_file = file_sorter_sort_data(sorter);
+  fp = fopen(sorted_file, "r");
   cur_idx = 1;
   while (1) {
     fgets(buf, sizeof(buf), fp);
@@ -405,6 +307,8 @@ end_write_files:
     cur_idx++;
   }
   fclose(fp);
-  delete_out(sorted_file);
+  unlink(sorted_file);
+  file_sorter_free(sorter);
+  free(sorted_file);
   printf("Code is %ld\n", sum);
 }
