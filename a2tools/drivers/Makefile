@@ -1,4 +1,4 @@
-OBJS := a2.ssc.o
+OBJS := a2.ssc.o a2.hi.o
 
 all: $(OBJS)
 
@@ -7,6 +7,9 @@ all: $(OBJS)
 
 a2.ssc.s:
 	co65 --code-label _a2_ssc a2.ssc.ser
+
+a2.hi.s:
+	co65 --code-label _a2_ssc a2.hi.tgi
 
 clean:
 	rm *.o *.s
