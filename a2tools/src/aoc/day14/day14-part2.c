@@ -24,7 +24,7 @@ int main(void) {
   bool_array *obstacles;
   int count = 0;
   char c;
-#ifdef __CC65__
+#ifdef DO_TGI 
   unsigned char palette[2] = { TGI_COLOR_WHITE, TGI_COLOR_BLACK };
 #endif
 
@@ -40,9 +40,10 @@ int main(void) {
   obstacles = read_file(fp);
 
   printf("Ready.\n");
-#ifdef __CC65__
+#ifdef DO_TGI
   tgi_install(a2_hi_tgi);
   tgi_init ();
+  tgi_setpalette(palette);
   tgi_setcolor(TGI_COLOR_BLACK);
   tgi_clear();
   tgi_setcolor(TGI_COLOR_WHITE);
@@ -50,14 +51,12 @@ int main(void) {
 
   print_obstacles(obstacles);
 
-#ifdef __CC65__
-  tgi_setcolor(TGI_COLOR_ORANGE);
-#endif
   while (sand_fall(count, obstacles)) {
     count ++;
   }
+  count++;
 
-#ifdef __CC65__
+#ifdef DO_TGI
   tgi_done();
 #endif
 
@@ -71,6 +70,7 @@ static int x_offset, y_offset;
 static int map_w, map_h;
 static int mid_screen_x;
 static int mid_screen_y;
+static int bottom_line;
 
 #define OFF_X(x) (x - x_offset)
 #define OFF_Y(y) (y - y_offset)
@@ -120,15 +120,20 @@ static bool_array *read_file(FILE *fp) {
   } while (1);
   printf("\n");
 
+  bottom_line = max_y + 2;
+  min_x = 500 - bottom_line;
+  max_x = 500 + bottom_line;
+  
   x_offset = min_x;
   y_offset = min_y;
   map_w = max_x - min_x;
-  map_h = max_y - min_y;
+  map_h = bottom_line - min_y;
 
-  mid_screen_x = ((240 - map_w) / 2) + 1;
-  mid_screen_y = ((190 - map_h) / 2);
+  mid_screen_x = (240 - map_w) / 2;
+  mid_screen_y = (190 - map_h) / 2;
 
   printf("Map coords: (%d,%d) to (%d,%d).\n", min_x, min_y, max_x, max_y);
+  printf("Floor: %d.\n", bottom_line);
   printf("Shifted map by (%d,%d)\n", x_offset, y_offset);
   printf("Map is now (%d,%d) to (%d,%d)\n", OFF_X(min_x), OFF_Y(min_y),
           OFF_X(max_x), OFF_Y(max_y));
@@ -211,7 +216,7 @@ static void print_obstacles(bool_array *obstacles) {
 
   for (y = 0; y <= map_h; y++) {
     for (x = 0; x <= map_w; x++) {
-#ifdef __CC65__
+#ifdef DO_TGI
       if (bool_array_get(obstacles, x, y) == 1) {
         tgi_setpixel(x + mid_screen_x, y + mid_screen_y);
       }
@@ -219,58 +224,51 @@ static void print_obstacles(bool_array *obstacles) {
       printf("%c", (bool_array_get(obstacles, x, y) == 1) ? '#':' ');
 #endif
     }
-#ifndef __CC65__
+#ifdef DO_TGI
+    tgi_line(0, OFF_Y(bottom_line) + mid_screen_y, 
+             240, OFF_Y(bottom_line) + mid_screen_y);
+#else
     printf(" %d\n", y);
 #endif
   }
 }
 
 static void update_sand(int x, int y) {
-#ifdef __CC65__
+#ifdef DO_TGI
   if (x > 0 && y > 0) {
-    tgi_setpixel(OFF_X(x) + mid_screen_x, OFF_Y(y) + mid_screen_y);
+    tgi_setpixel(OFF_X(x), OFF_Y(y));
   }
 #endif
 }
 
 static int sand_fall(int num, bool_array *obstacles) {
   int x = 500, y = 0;
-  int prev_x = x;
-  int prev_y = y;
 
   do {
-    if (bool_array_get(obstacles, OFF_X(x), OFF_Y(y + 1)) == 0
-           && OFF_Y(y) <= map_h) {
+    if (y < bottom_line - 1 && bool_array_get(obstacles, OFF_X(x), OFF_Y(y + 1)) == 0) {
       y++;
     } else {
-      if (OFF_X(x) > 0 && !bool_array_get(obstacles, OFF_X(x - 1), OFF_Y(y + 1))) {
+      if (y < bottom_line - 1 && !bool_array_get(obstacles, OFF_X(x - 1), OFF_Y(y + 1))) {
         x--;
         y++;
-      } else if (OFF_X(x) < map_w && !bool_array_get(obstacles, OFF_X(x + 1), OFF_Y(y + 1))) {
+      } else if (y < bottom_line - 1 && !bool_array_get(obstacles, OFF_X(x + 1), OFF_Y(y + 1))) {
         x++;
         y++;
-      } else if (OFF_X(x) <= 0) {
-        x--;
-        y++;
-      } else if (OFF_X(x) >= map_w) {
-        x++;
-        y++;
-      } else {
-#ifndef __CC65__
-        printf("grain of sand %d stopped at (%d,%d)\n", num, x, y);
+      } else if (x == 500 && y == 0) {
+#ifndef DO_TGI
+          printf("sand %d can't fall anymore (%d,%d)\n", num, x, y);
 #endif
+          return 0;
+        } else {
         update_sand(x, y);
         bool_array_set(obstacles, OFF_X(x), OFF_Y(y), 1);
+#ifndef DO_TGI
+        if (num % 20 == 0) {
+          printf("grain of sand %d stopped at (%d,%d)\n\n\n", num, x, y);
+        }
+#endif
         return 1;
       }
-      if (OFF_X(x) < 0 || OFF_X(x) >= map_w || OFF_Y(y) > map_h) {
-#ifndef __CC65__
-        printf("grain of sand %d fell out at (%d,%d)\n", num, x, y);
-#endif
-        return 0;
-      }
-      prev_x = x;
-      prev_y = y;
     }
   } while(1);
 }
