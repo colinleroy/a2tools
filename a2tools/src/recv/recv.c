@@ -7,6 +7,7 @@
 #include <apple2.h>
 
 #define BUF_SIZE 255
+#define DATA_SIZE 16384
 
 int main(void) {
   int r, w, exit_code = 0;
@@ -14,13 +15,13 @@ int main(void) {
   char *filetype = malloc(BUF_SIZE);
   char *s_len = malloc(BUF_SIZE);
   size_t data_len = 0;
-  FILE *outfp;
-  char *data;
+  FILE *outfp = NULL;
+  char *data = NULL;
 
 
   simple_serial_open(2, SER_BAUD_9600);
 
-  simple_serial_set_timeout(10);
+  simple_serial_set_timeout(30);
 
 read_again:
   printf("\nReady to receive (Ctrl-reset to abort)\n");
@@ -39,13 +40,6 @@ read_again:
     printf("Data length %d\n", data_len);
   }
 
-  data = malloc(data_len);
-
-  if (data == NULL) {
-    printf("Couldn't allocate %d bytes of data.\n", data_len + 1);
-    exit (1);
-  }
-
   if (!strcasecmp(filetype, "TXT")) {
     _filetype = PRODOS_T_TXT;
     _auxtype  = PRODOS_AUX_T_TXT_SEQ;
@@ -61,25 +55,38 @@ read_again:
     goto err_out;
   }
 
-  printf("Reading data...\n");
-  r = simple_serial_read_with_timeout(data, sizeof(char), data_len + 1);
+  while (data_len > 0) {
+    size_t block = (data_len > DATA_SIZE ? DATA_SIZE : data_len);
+    data = malloc(block + 1);
 
-  printf("Read %d bytes. Opening %s...\n", r, filename);
+    if (data == NULL) {
+      printf("Couldn't allocate %d bytes of data.\n", block);
+      exit (1);
+    }
 
-  outfp = fopen(filename,"w");
-  if (outfp == NULL) {
-    printf("Open error %d: %s\n", errno, strerror(errno));
-    exit_code = 1;
-    goto err_out;
+    printf("Reading data...\n");
+    r = simple_serial_read_with_timeout(data, sizeof(char), block + 1);
+
+    printf("Read %d bytes. Writing %s...\n", r, filename);
+
+    if (outfp == NULL)
+      outfp = fopen(filename,"w");
+    if (outfp == NULL) {
+      printf("Open error %d: %s\n", errno, strerror(errno));
+      exit_code = 1;
+      goto err_out;
+    }
+
+    w = fwrite(data, 1, r, outfp);
+    if (w < r) {
+      printf("Only wrote %d bytes. Error %d: %s\n", w, errno, strerror(errno));
+      exit_code = 1;
+      goto err_out;
+    }
+
+    free(data);
+    data_len -= r;
   }
-  
-  w = fwrite(data, 1, r, outfp);
-  if (w < r) {
-    printf("Only wrote %d bytes. Error %d: %s\n", w, errno, strerror(errno));
-    exit_code = 1;
-  }
-
-  free(data);
 
   if (fclose(outfp) != 0) {
     printf("Close error %d: %s\n", errno, strerror(errno));
