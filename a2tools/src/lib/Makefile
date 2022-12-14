@@ -5,13 +5,14 @@ SOURCES := simple_serial.c \
 	array_sort.c \
 	bool_array_test.c \
 	slist.c \
-	bigint.c
+	bigint.c \
+	file_sorter.c
 
 DEPS := $(topdir)../../drivers/a2.ssc.o
 
 CC65_TARGET = apple2
 CC      = cl65
-CFLAGS  = -t $(CC65_TARGET) 
+CFLAGS  = -t $(CC65_TARGET)
 LDFLAGS = -t $(CC65_TARGET)
 
 .PHONY: all clean

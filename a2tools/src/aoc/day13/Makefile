@@ -1,7 +1,8 @@
 PROGRAM=day13.bin
-SOURCES := day13-smart.c
+SOURCES := day13.c
 DEPS := $(topdir)../../lib/array_sort.o \
 	$(topdir)../../lib/slist.o \
+	$(topdir)../../lib/file_sorter.o \
 
 CC65_TARGET = apple2
 CC      = cl65
