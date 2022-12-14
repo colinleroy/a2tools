@@ -1,4 +1,4 @@
-PROGRAM=day14.bin
+PROGRAM=day14.bin day14x2.bin
 SOURCES := day14.c
 DEPS := $(topdir)../../lib/slist.o \
 	$(topdir)../../lib/bool_array.o \
@@ -7,8 +7,8 @@ DEPS := $(topdir)../../lib/slist.o \
 
 CC65_TARGET = apple2
 CC      = cl65
-CFLAGS  = -t $(CC65_TARGET) -C ../../../drivers/apple2-hgr.cfg -I ../../lib
-LDFLAGS = -t $(CC65_TARGET) -C ../../../drivers/apple2-hgr.cfg -m $(PROGRAM).map
+CFLAGS  = -t $(CC65_TARGET) -I ../../lib
+LDFLAGS = -t $(CC65_TARGET) 
 
 .PHONY: all clean
 all: $(PROGRAM)
@@ -16,8 +16,11 @@ all: $(PROGRAM)
 %.o: %.c
 	$(CC) -c $(CFLAGS) -o $@ $<
 
-$(PROGRAM): $(SOURCES:.c=.o)
-	$(CC) $(LDFLAGS) -o $@ $^ $(DEPS)
+day14.bin: day14.o
+	$(CC) $(LDFLAGS) -m day14.bin.map -C ../../../drivers/apple2-hgr.cfg -o $@ $^ $(DEPS)
+
+day14x2.bin: day14-part2.o
+	$(CC) $(LDFLAGS) -m day14_2.bin.map -o $@ $^ $(DEPS)
 
 clean:
 	rm -f $(PROGRAM) *.o *.map
