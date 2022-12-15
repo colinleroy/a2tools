@@ -18,6 +18,7 @@ slist *slist_reverse(slist *list);
 slist *slist_copy(slist *list);
 
 slist *slist_find(slist *list, void *data);
+long slist_length(slist *list);
 
 slist *slist_remove(slist *list, slist *elt);
 slist *slist_remove_data(slist *list, void *data);

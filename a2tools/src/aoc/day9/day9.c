@@ -102,7 +102,8 @@ again:
   n_mov = 0;
   lnum = 0;
   if (sim == 0) {
-    n_visited += bool_array_set(visited, 1 + xoff - 1, 1 + yoff - 1, 1);
+    bool_array_set(visited, 1 + xoff - 1, 1 + yoff - 1, 1);
+    n_visited ++;
   }
   for (t = 0; t < N_KNOTS; t++) {
     x[t] = 1; y[t] = 1;
