@@ -85,7 +85,7 @@ read_again:
     }
 
     free(data);
-    data_len -= r;
+    data_len -= block;
   }
 
   if (fclose(outfp) != 0) {

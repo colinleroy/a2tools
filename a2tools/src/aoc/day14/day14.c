@@ -212,11 +212,11 @@ static void print_obstacles(bool_array *obstacles) {
   for (y = 0; y <= map_h; y++) {
     for (x = 0; x <= map_w; x++) {
 #ifdef __CC65__
-      if (bool_array_get(obstacles, x, y) == 1) {
+      if (bool_array_get(obstacles, x, y)) {
         tgi_setpixel(x + mid_screen_x, y + mid_screen_y);
       }
 #else
-      printf("%c", (bool_array_get(obstacles, x, y) == 1) ? '#':' ');
+      printf("%c", (bool_array_get(obstacles, x, y)) ? '#':' ');
 #endif
     }
 #ifndef __CC65__
@@ -239,7 +239,7 @@ static int sand_fall(int num, bool_array *obstacles) {
   int prev_y = y;
 
   do {
-    if (bool_array_get(obstacles, OFF_X(x), OFF_Y(y + 1)) == 0
+    if (!bool_array_get(obstacles, OFF_X(x), OFF_Y(y + 1))
            && OFF_Y(y) <= map_h) {
       y++;
     } else {
