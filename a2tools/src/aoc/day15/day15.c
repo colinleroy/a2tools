@@ -112,11 +112,11 @@ static int out_of_sensor_ranges(slist *reports, long x, long y) {
 
   for (w = reports; w; w = w->next) {
     report *r = (report *)w->data;
-    long x_dist   = abs(r->sx - r->bx);
-    long y_dist   = abs(r->sy - r->by);
+    long x_dist   = labs(r->sx - r->bx);
+    long y_dist   = labs(r->sy - r->by);
     long known_man_dist = x_dist + y_dist;
-    long test_x_dist = abs(r->sx - x);
-    long test_y_dist = abs(r->sy - y);
+    long test_x_dist = labs(r->sx - x);
+    long test_y_dist = labs(r->sy - y);
     long test_man_dist = test_x_dist + test_y_dist;
     
     if (known_man_dist >= test_man_dist) {
@@ -174,8 +174,8 @@ static void read_file(FILE *fp) {
 /* Part 1*/
   for (w = reports; w; w = w->next) {
     report *r = (report *)w->data;
-    long x_dist   = abs(r->sx - r->bx);
-    long y_dist   = abs(r->sy - r->by);
+    long x_dist   = labs(r->sx - r->bx);
+    long y_dist   = labs(r->sy - r->by);
     long man_dist = x_dist + y_dist;
     long delta_y, row_dist;
     long sx_left, sx_right;
@@ -184,13 +184,13 @@ static void read_file(FILE *fp) {
     printf("Doing report: Sensor at %ld,%ld, beacon at %ld,%ld\n",
           r->sx, r->sy, r->bx, r->by);
 
-    delta_y = abs(r->sy - ROWNUM);
+    delta_y = labs(r->sy - ROWNUM);
     if (delta_y > man_dist) {
       printf("  Row %ld too far.\n", ROWNUM);
       continue;
     }
 
-    row_dist = abs(man_dist - delta_y);
+    row_dist = labs(man_dist - delta_y);
 
     printf(" X distance is %lu, Y distance %ld, Manhattan distance %ld, delta y %ld, row_dist %ld\n",
           x_dist, y_dist, man_dist, delta_y, row_dist);
@@ -248,10 +248,10 @@ static void read_file(FILE *fp) {
         printf("\n");
       }
     }
-    printf(" Range length %ld\n",abs(ranges[i]->end - ranges[i]->start) + (long)1);
+    printf(" Range length %ld\n",labs(ranges[i]->end - ranges[i]->start) + (long)1);
     n_beacons = count_beacons_in_range(beacons, ROWNUM, ranges[i]->start, ranges[i]->end);
     printf(" Substracting %d beacon(s)\n", n_beacons);
-    sum1 += abs(ranges[i]->end - ranges[i]->start) + 1 - n_beacons;
+    sum1 += labs(ranges[i]->end - ranges[i]->start) + 1 - n_beacons;
     last_end = ranges[i]->end;
     free(ranges[i]);
   }
