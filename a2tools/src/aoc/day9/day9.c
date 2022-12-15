@@ -170,7 +170,8 @@ end_loop:
     for (i = minx; i <= maxx; i++) {
       printf("counting line %d...\n", i);
       for (j = miny; j <= maxy; j++) {
-        n_visited += bool_array_get(visited, i + xoff - 1, j + yoff - 1);
+        if (bool_array_get(visited, i + xoff - 1, j + yoff - 1))
+          n_visited ++;
       }
     }
   }
