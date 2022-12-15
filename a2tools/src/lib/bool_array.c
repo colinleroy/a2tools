@@ -48,26 +48,23 @@ void bool_array_free(bool_array *array) {
   }
 }
 
-static int bool_array_access(bool_array *array, int x, int y, int set, int val) {
-  long offset = (long)((long)(array->y_len) * (long)x) + (long)y;
-  size_t byte = (long)offset / (long)8;
-  size_t bit = (long)offset % (long)8;
+#define BOOL_ARRAY_SET_BIT(a,x,y) (a->data[x] |= (1 << (y)))
+#define BOOL_ARRAY_CLR_BIT(a,x,y) (a->data[x] &= ~(1 << (y)))
+#define BOOL_ARRAY_GET_BIT(a,x,y) (a->data[x] & (1 << (y)))
 
-  if (set) {
-    if (val) {
-      array->data[byte] |= (1 << bit);
-    } else {
-      array->data[byte] &= ~(1 << bit);
-    }
-  }
+static long ba_offset;
 
-  return (array->data[byte] & (1 << bit)) != 0;
+void __fastcall__ bool_array_set(bool_array *array, int x, int y, int val) {
+  ba_offset = (long)((long)(array->y_len) * (long)x) + (long)y;
+
+  if (val == 0)
+    BOOL_ARRAY_CLR_BIT(array, ba_offset >> 3, ba_offset & 7);
+  else
+    BOOL_ARRAY_SET_BIT(array, ba_offset >> 3, ba_offset & 7);
 }
 
-int bool_array_set(bool_array *array, int x, int y, int val) {
-  return bool_array_access(array, x, y, 1, val);
-}
+int __fastcall__ bool_array_get(bool_array *array, int x, int y) {
+  ba_offset = (long)((long)(array->y_len) * (long)x) + (long)y;
 
-int bool_array_get(bool_array *array, int x, int y) {
-  return bool_array_access(array, x, y, 0, 0);
+  return BOOL_ARRAY_GET_BIT(array, ba_offset >> 3, ba_offset & 7);
 }
