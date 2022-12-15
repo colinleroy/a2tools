@@ -1,6 +1,6 @@
 PROGRAM=day15.bin
 SOURCES := day15.c
-DEPS := ../../lib/slist.o ../../array_sort.o
+DEPS := ../../lib/slist.o ../../lib/array_sort.o
 
 CC65_TARGET = apple2
 CC      = cl65
@@ -13,8 +13,8 @@ all: $(PROGRAM)
 %.o: %.c
 	$(CC) -c $(CFLAGS) -o $@ $<
 
-day15.bin: day15.o
-	$(CC) $(LDFLAGS) -m day14_2.bin.map -o $@ $^ $(DEPS)
+$(PROGRAM): $(SOURCES:.c=.o)
+	$(CC) $(LDFLAGS) -m $(PROGRAM).map -o $@ $^ $(DEPS)
 
 clean:
 	rm -f $(PROGRAM) *.o *.map

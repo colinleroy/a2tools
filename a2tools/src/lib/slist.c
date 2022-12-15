@@ -65,6 +65,15 @@ slist *slist_reverse(slist *list) {
   return rev;
 }
 
+long slist_length(slist *list) {
+  int count = 0;
+  while (list != NULL) {
+    count++;
+    list = list->next;
+  }
+  return count;
+}
+
 slist *slist_remove(slist *list, slist *elt) {
   slist *orig = list;
   slist *prev = NULL;

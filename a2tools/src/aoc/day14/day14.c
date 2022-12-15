@@ -8,24 +8,23 @@
 #include <apple2.h>
 #include <tgi.h>
 #endif
-#include "slist.h"
 #include "bool_array.h"
 #include "extended_string.h"
 
 #define DATASET "IN14"
 #define BUFSIZE 300
 
+static int part = 2;
 static bool_array *read_file(FILE *fp);
 static void print_obstacles(bool_array *obstacles);
 static int sand_fall(int num, bool_array *obstacles);
+static int simulate_sand(bool_array *obstacles);
 
 int main(void) {
   FILE *fp;
   bool_array *obstacles;
   int count = 0;
-  char c;
 #ifdef __CC65__
-  unsigned char palette[2] = { TGI_COLOR_WHITE, TGI_COLOR_BLACK };
 #endif
 
 #ifdef PRODOS_T_TXT
@@ -40,26 +39,22 @@ int main(void) {
   obstacles = read_file(fp);
 
   printf("Ready.\n");
-#ifdef __CC65__
-  tgi_install(a2_hi_tgi);
-  tgi_init ();
-  tgi_setcolor(TGI_COLOR_BLACK);
-  tgi_clear();
-  tgi_setcolor(TGI_COLOR_WHITE);
-#endif
 
-  print_obstacles(obstacles);
-
+  if (part == 1) {
+    while (sand_fall(count, obstacles)) {
+      count ++;
+    }
+  } else {
 #ifdef __CC65__
-  tgi_setcolor(TGI_COLOR_ORANGE);
+    tgi_install(a2_hi_tgi);
+    tgi_init ();
+    tgi_setcolor(TGI_COLOR_WHITE);
 #endif
-  while (sand_fall(count, obstacles)) {
-    count ++;
+    count = simulate_sand(obstacles);
+#ifdef __CC65__
+    tgi_done();
+#endif
   }
-
-#ifdef __CC65__
-  tgi_done();
-#endif
 
   printf("Count: %d\n", count);
   bool_array_free(obstacles);
@@ -125,7 +120,7 @@ static bool_array *read_file(FILE *fp) {
   map_w = max_x - min_x;
   map_h = max_y - min_y;
 
-  mid_screen_x = ((240 - map_w) / 2) + 1;
+  mid_screen_x = ((260 - map_w) / 2) + 1;
   mid_screen_y = ((190 - map_h) / 2);
 
   printf("Map coords: (%d,%d) to (%d,%d).\n", min_x, min_y, max_x, max_y);
@@ -134,7 +129,7 @@ static bool_array *read_file(FILE *fp) {
           OFF_X(max_x), OFF_Y(max_y));
 
   obstacles = bool_array_alloc(map_w + 1, map_h + 1);
-
+  printf("Obstacles array %p - %d\n", obstacles, bool_array_get_storage_size(obstacles));
   rewind(fp);
 
   printf("Setting up segments...");
@@ -225,14 +220,6 @@ static void print_obstacles(bool_array *obstacles) {
   }
 }
 
-static void update_sand(int x, int y) {
-#ifdef __CC65__
-  if (x > 0 && y > 0) {
-    tgi_setpixel(OFF_X(x) + mid_screen_x, OFF_Y(y) + mid_screen_y);
-  }
-#endif
-}
-
 static int sand_fall(int num, bool_array *obstacles) {
   int x = 500, y = 0;
   int prev_x = x;
@@ -259,7 +246,6 @@ static int sand_fall(int num, bool_array *obstacles) {
 #ifndef __CC65__
         printf("grain of sand %d stopped at (%d,%d)\n", num, x, y);
 #endif
-        update_sand(x, y);
         bool_array_set(obstacles, OFF_X(x), OFF_Y(y), 1);
         return 1;
       }
@@ -273,4 +259,91 @@ static int sand_fall(int num, bool_array *obstacles) {
       prev_y = y;
     }
   } while(1);
+}
+
+#define LINE_ARRAY_OFF(a) (a-(500-(map_h+2)))
+static int simulate_sand(bool_array *obstacles) {
+  int max_line_w = ((map_h + 2) * 2) + 1;
+  bool_array *line, *prev_line;
+  int line_min_x, line_max_x, x, y;
+  int count = 0;
+  int ba_x, ba_y, l_x;
+
+  prev_line = bool_array_alloc(max_line_w, 1);
+  
+  /* top line */
+  bool_array_set(prev_line, LINE_ARRAY_OFF(500), 0, 1);
+  line_min_x = 500;
+  line_max_x = 500;
+
+  /* go down to bottom */
+  for (y = 0; y <= map_h + 1; y++) {
+    line = bool_array_alloc(max_line_w, 1);
+
+#ifndef __CC65__
+    for (int i = 0; i <= LINE_ARRAY_OFF(line_min_x); i++) {
+      printf(" ");
+    }
+#endif
+
+    for (x = line_min_x; x <= line_max_x; x++) {
+      ba_x = OFF_X(x);
+      ba_y = OFF_Y(y);
+      l_x = LINE_ARRAY_OFF(x);
+
+      /* is this an obstacle ? */
+      if (ba_x >= 0 && ba_x <= map_w && bool_array_get(obstacles, ba_x, ba_y)) {
+#ifndef __CC65__
+        printf("#");
+#else
+        tgi_setpixel(ba_x + mid_screen_x, ba_y + mid_screen_y);
+#endif
+        continue;
+      }
+      /* was there a grain of sand ? */
+      if (bool_array_get(prev_line, l_x, 0) == 0) {
+#ifndef __CC65__
+        printf(" ");
+#endif
+        continue;
+      } else {
+          count++;
+#ifndef __CC65__
+        printf("o");
+#else
+        if (ba_x + mid_screen_x >= 0 && ba_x + mid_screen_x < 280) {
+          tgi_setpixel(ba_x + mid_screen_x, ba_y + mid_screen_y);
+        } else {
+          tgi_setpixel(1, ba_y + mid_screen_y);
+        }
+#endif
+      }
+
+      if (y < map_h+1) {
+        /* is there an obstacle at the left ? */
+        if (bool_array_get(line, l_x - 1, 0) == 0 && (ba_x - 1 < 0 || ba_x - 1 > map_w || !bool_array_get(obstacles, ba_x-1, ba_y+1))) {
+          
+          bool_array_set(line, l_x - 1, 0, 1);
+        } 
+        /* is there an obstacle just under ? */
+        if (bool_array_get(line, l_x, 0) == 0 && (ba_x < 0 || ba_x > map_w || !bool_array_get(obstacles, ba_x, ba_y+1))) {
+          bool_array_set(line, l_x, 0, 1);
+        } 
+        /* is there an obstacle at the right ? */
+        if (ba_x +1 < 0 || ba_x +1 > map_w || !bool_array_get(obstacles, ba_x + 1, ba_y + 1)) {
+          bool_array_set(line, l_x + 1, 0, 1);
+        }
+      }
+    }
+#ifndef __CC65__
+    printf(" %d\n", y);
+#endif
+    bool_array_free(prev_line);
+    prev_line = line;
+    line = NULL;
+    line_min_x--;
+    line_max_x++;
+  }
+  bool_array_free(prev_line);
+  return count;
 }
