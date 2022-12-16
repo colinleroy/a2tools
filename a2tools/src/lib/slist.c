@@ -119,6 +119,7 @@ slist *slist_find(slist *list, void *data) {
   while (list != NULL) {
     if (list->data == data)
       return list;
+    list = list->next;
   }
   return NULL;
 }
