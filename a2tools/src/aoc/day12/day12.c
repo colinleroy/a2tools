@@ -102,18 +102,15 @@ int main(void) {
 static void find_closest_node(int *closest_x, int *closest_y) {
   int min_distance = -1;
   int x, y;
-  int c_v = 0, c_d = 0;
   *closest_x = -1;
   *closest_y = -1;
 
   for (x = 0; x < max_x; x++) {
     for (y = 0; y < max_y; y++) {
       if (visited[y][x]) {
-        c_v++;
         continue;
       }
       if (distances[y][x] < 0) {
-        c_d++;
         continue;
       }
       if (distances[y][x] <= min_distance || min_distance == -1) {
