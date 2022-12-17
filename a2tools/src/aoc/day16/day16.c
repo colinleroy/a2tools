@@ -98,36 +98,43 @@ static void bfs_distances(short start_valve) {
   visited = NULL;
 }
 
-static int find_optimal_flow(short start_valve, short time, char *targets, int depth) {
+static int find_optimal_flow(short start_valve, short time, short *targets, int num_targets, int depth) {
   int optimal_flow = 0, i;
   char *prefix = malloc(depth+2);
   int time_rem;
+  int start_valve_in_targets = -1;
+  short cur_valve;
   for (i = 0; i < depth; i++) {
     prefix[i] = ' ';
   }
   prefix[i] = '\0';
+  
+  for (i = 0; i < num_targets; i++) {
+    if(targets[i] == start_valve) {
+      start_valve_in_targets = i;
+    }
+  }
 
-  targets[start_valve] = 0;
+  targets[start_valve_in_targets] = -1;
 
-  for (i = 0; i < num_valves; i++) {
-    if (targets[i] == 0) {
-      /* we don't care */
+  for (i = 0; i < num_targets; i++) {
+    if (targets[i] < 0) {
       continue;
     }
-
+    cur_valve = targets[i];
     /* time to travel + time to open */
-    time_rem = time - distances[start_valve][i] - 1;
+    time_rem = time - distances[start_valve][cur_valve] - 1;
     if (time_rem > 0) {
-      int path_flow = valve_flow[i] * time_rem;
+      int path_flow = valve_flow[cur_valve] * time_rem;
 //      printf("%sopen valve %s (%d * %d = %d) + \n", prefix, valve_name[i], valve_flow[i], time_rem, valve_flow[i] * time_rem);
-      path_flow += find_optimal_flow(i, time_rem, targets, depth + 1);
+      path_flow += find_optimal_flow(cur_valve, time_rem, targets, num_targets, depth + 1);
 //      printf("%stotal = %d\n", prefix, path_flow);
       if (path_flow > optimal_flow) {
         optimal_flow = path_flow;
       }
     }
   }
-  targets[start_valve] = 1;
+  targets[start_valve_in_targets] = start_valve;
 
 //  printf("%soptimum found = %d\n", prefix, optimal_flow);
   free(prefix);
@@ -138,7 +145,8 @@ static void read_file(FILE *fp) {
   char *buf = malloc(BUFSIZE);
   char **valve_destinations_str = NULL;
   short count = 0;
-  char *targets;
+  short *targets = NULL;
+  int num_targets = 0;
   short start_valve;
 
   while (fgets(buf, BUFSIZE-1, fp) != NULL) {
@@ -148,6 +156,7 @@ static void read_file(FILE *fp) {
     char **paths = NULL;
     int i, num_paths;
     char *targets;
+    int num_targets = 0;
 
     *strchr(name, ' ') ='\0';
     *strchr(flow_rate, ';') = '\0';
@@ -206,14 +215,14 @@ static void read_file(FILE *fp) {
   }
   
   /* Do the thing */
-  targets = malloc(num_valves * sizeof(char));
-  memset(targets, 0, num_valves * sizeof(char));
 
   start_valve = get_valve_by_name("AA");
-  bfs_distances(start_valve);
+  bfs_distances(start_valve); /* FIXME in loop */
   for (count = 0; count < num_valves; count++) {
-    if (valve_flow[count] > 0) {
-      targets[count] = 1;
+    if (valve_flow[count] > 0 || count == start_valve) {
+      targets = realloc(targets, (num_targets + 1) * sizeof(short));
+      targets[num_targets] = count;
+      num_targets++;
     }
     if (count != start_valve) {
       bfs_distances(count);
@@ -234,8 +243,7 @@ static void read_file(FILE *fp) {
     }
   }
   printf("Graph fully connected with %d (num_valves %d) connections\n", num_c, num_valves);
-  targets[start_valve] = 1;
-  printf("best flow in part 1: %d\n", find_optimal_flow(start_valve, 30, targets, 0));
+  printf("best flow in part 1: %d\n", find_optimal_flow(start_valve, 30, targets, num_targets, 0));
   
   /* free; keep Valgrind happy */
   for (count = 0; count < num_valves; count++) {
