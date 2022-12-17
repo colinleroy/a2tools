@@ -80,41 +80,20 @@ static void bfs_distances(short start_valve) {
   visited[start_valve] = 1;
 
   while (queue) {
-    short next_valve = (short)(queue->data);
+    short next_valve = (short)(long)(queue->data);
     queue = slist_remove(queue, queue);
     cur_len = distances[start_valve][next_valve] + 1;
     for (i = 0; i < valve_num_destinations[next_valve]; i++) {
       short dest_valve = valve_destinations[next_valve][i];
       if (!visited[dest_valve]) {
         distances[start_valve][dest_valve] = cur_len;
-        printf("distance %s => %s = %d\n", valve_name[start_valve], valve_name[dest_valve], cur_len);
+//        printf("distance %s => %s = %d\n", valve_name[start_valve], valve_name[dest_valve], cur_len);
         visited[dest_valve] = 1;
         queue = slist_append(queue, (void *)(long)dest_valve);
       }
     }
     cur_len++;
   }
-  // memset(visited, 0, num_valves * sizeof(char));
-  // distances[start_valve][start_valve] = 0;
-  // 
-  // while (1) {
-  //   short next_valve = find_closest_valve(start_valve, visited);
-  //   if (next_valve < 0) {
-  //     break;
-  //   }
-  //   cur_len = distances[start_valve][next_valve];
-  //   visited[next_valve] = 1;
-  // 
-  //   for (i = 0; i < valve_num_destinations[next_valve]; i++) {
-  //     short dest_valve = valve_destinations[next_valve][i];
-  //     distances[next_valve][dest_valve] = 1;
-  //     if (distances[start_valve][dest_valve] == -1
-  //      || distances[start_valve][dest_valve] > cur_len + 1) {
-  //        distances[start_valve][dest_valve] = cur_len + 1;
-  //        printf("distance %s => %s = %d\n", valve_name[start_valve], valve_name[dest_valve], cur_len + 1);
-  //      }
-  //   }
-  // }
   free(visited);
   visited = NULL;
 }
@@ -128,13 +107,6 @@ static int find_optimal_flow(short start_valve, short time, char *targets, int d
     prefix[i] = ' ';
   }
   prefix[i] = '\0';
-
-  printf("%stargets from %s: [", prefix, valve_name[start_valve]);
-  for (i = 0; i < num_valves; i++) {
-    if (targets[i])
-      printf("%s,", valve_name[i]);
-  }
-  printf("\n");
 
   sub_targets = malloc(num_valves * sizeof(char));
   memcpy(sub_targets, targets, num_valves * sizeof(char));
@@ -150,9 +122,9 @@ static int find_optimal_flow(short start_valve, short time, char *targets, int d
     time_rem = time - distances[start_valve][i] - 1;
     if (time_rem > 0) {
       int path_flow = valve_flow[i] * time_rem;
-      printf("%sopen valve %s (%d * %d = %d) + \n", prefix, valve_name[i], valve_flow[i], time_rem, valve_flow[i] * time_rem);
+//      printf("%sopen valve %s (%d * %d = %d) + \n", prefix, valve_name[i], valve_flow[i], time_rem, valve_flow[i] * time_rem);
       path_flow += find_optimal_flow(i, time_rem, sub_targets, depth + 1);
-      printf("%stotal = %d\n", prefix, path_flow);
+//      printf("%stotal = %d\n", prefix, path_flow);
       if (path_flow > optimal_flow) {
         optimal_flow = path_flow;
       }
@@ -160,7 +132,7 @@ static int find_optimal_flow(short start_valve, short time, char *targets, int d
   }
   free(sub_targets);
 
-  printf("%soptimum found = %d\n", prefix, optimal_flow);
+//  printf("%soptimum found = %d\n", prefix, optimal_flow);
   free(prefix);
   return optimal_flow;
 }
@@ -225,11 +197,11 @@ static void read_file(FILE *fp) {
 
   for (count = 0; count < num_valves; count++) {
     int num_dest, i;
-    printf("valve %d: %s, flow %d, destinations: ", count, valve_name[count], valve_flow[count]);
+//    printf("valve %d: %s, flow %d, destinations: ", count, valve_name[count], valve_flow[count]);
     for (i = 0; i < valve_num_destinations[count]; i++) {
-      printf("%d (%s),", valve_destinations[count][i], valve_name[valve_destinations[count][i]]);
+//      printf("%d (%s),", valve_destinations[count][i], valve_name[valve_destinations[count][i]]);
     }
-    printf("\n");
+//    printf("\n");
     distances[count] = malloc(num_valves * sizeof(short));
     for (i = 0; i < num_valves; i++) {
       distances[count][i] = -1;
@@ -279,4 +251,5 @@ static void read_file(FILE *fp) {
   free(valve_destinations);
   free(valve_num_destinations);
   free(valve_flow);
+  free(targets);
 }
