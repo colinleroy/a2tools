@@ -4,10 +4,6 @@
 #include "bfs.h"
 #include "slist.h"
 
-/* Warning : no copy of elements, caller has
- * to keep them allocated.
- */
-
 struct _bfs {
   short **dests;
 
