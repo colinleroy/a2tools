@@ -100,7 +100,6 @@ static void bfs_distances(short start_valve) {
 
 static int find_optimal_flow(short start_valve, short time, char *targets, int depth) {
   int optimal_flow = 0, i;
-  char *sub_targets;
   char *prefix = malloc(depth+2);
   int time_rem;
   for (i = 0; i < depth; i++) {
@@ -108,12 +107,10 @@ static int find_optimal_flow(short start_valve, short time, char *targets, int d
   }
   prefix[i] = '\0';
 
-  sub_targets = malloc(num_valves * sizeof(char));
-  memcpy(sub_targets, targets, num_valves * sizeof(char));
-  sub_targets[start_valve] = 0;
+  targets[start_valve] = 0;
 
   for (i = 0; i < num_valves; i++) {
-    if (sub_targets[i] == 0) {
+    if (targets[i] == 0) {
       /* we don't care */
       continue;
     }
@@ -123,14 +120,14 @@ static int find_optimal_flow(short start_valve, short time, char *targets, int d
     if (time_rem > 0) {
       int path_flow = valve_flow[i] * time_rem;
 //      printf("%sopen valve %s (%d * %d = %d) + \n", prefix, valve_name[i], valve_flow[i], time_rem, valve_flow[i] * time_rem);
-      path_flow += find_optimal_flow(i, time_rem, sub_targets, depth + 1);
+      path_flow += find_optimal_flow(i, time_rem, targets, depth + 1);
 //      printf("%stotal = %d\n", prefix, path_flow);
       if (path_flow > optimal_flow) {
         optimal_flow = path_flow;
       }
     }
   }
-  free(sub_targets);
+  targets[start_valve] = 1;
 
 //  printf("%soptimum found = %d\n", prefix, optimal_flow);
   free(prefix);
