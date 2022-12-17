@@ -2,7 +2,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#ifdef __CC65__
+#include <apple2.h>
 #include <conio.h>
+#endif
 
 char line[255];
 
@@ -17,14 +20,18 @@ int main(void) {
   int col, row = -1;
   FILE *fp;
 
+#ifdef __CC65__
   _filetype = PRODOS_T_TXT;
+#endif
   fp = fopen("IN10", "r");
   if (fp == NULL) {
     printf("Error %d\n", errno);
     exit(1);
   }
   
+#ifdef __CC65__
   clrscr();
+#endif
 
   do {
     if (instruction == 0) {
