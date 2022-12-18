@@ -48,8 +48,7 @@ int main(void) {
 int max_x = 0, max_y = 0, max_z = 0;
 
 static int is_outside_reachable(char ***cubes, int x, int y, int z, int d) {
-  int num_unsure_neighbors = 0, result = UNSURE;
-  int num_neighbors = 0, num_investigating_neighbors = 0;
+  int result = UNSURE;
 
   if (!IS_EMPTY(cubes[x][y][z]))
     return UNREACHABLE;
@@ -61,10 +60,8 @@ static int is_outside_reachable(char ***cubes, int x, int y, int z, int d) {
   if (x == 0 || x >= max_x
    || y == 0 || y >= max_y
    || z == 0 || z >= max_z) {
-     cubes[x][y][z] &= ~UNSURE;
-     cubes[x][y][z] |= REACHABLE;
      result = REACHABLE;
-     goto out;
+     goto yes;
    }
 
   cubes[x][y][z] |= INVESTIGATING;
@@ -73,70 +70,38 @@ static int is_outside_reachable(char ***cubes, int x, int y, int z, int d) {
     result = is_outside_reachable(cubes, x-1, y, z, d + 1);
     if (result == REACHABLE)
       goto yes;
-    else if (result == UNSURE)
-      num_unsure_neighbors++;
-  } else if (result != REACHABLE ){
-    result = UNSURE;
   }
   if (IS_EMPTY(cubes[x+1][y][z]) && !IS_INVESTIGATING(cubes[x+1][y][z])) {
     result = is_outside_reachable(cubes, x+1, y, z, d + 1);
     if (result == REACHABLE)
       goto yes;
-    else if (result == UNSURE)
-      num_unsure_neighbors++;
-  } else if (result != REACHABLE ){
-    result = UNSURE;
   }
   if (IS_EMPTY(cubes[x][y-1][z]) && !IS_INVESTIGATING(cubes[x][y-1][z])) {
     result = is_outside_reachable(cubes, x, y-1, z, d + 1);
     if (result == REACHABLE)
       goto yes;
-    else if (result == UNSURE)
-      num_unsure_neighbors++;
-  } else if (result != REACHABLE ){
-    result = UNSURE;
   }
   if (IS_EMPTY(cubes[x][y+1][z]) && !IS_INVESTIGATING(cubes[x][y+1][z])) {
     result = is_outside_reachable(cubes, x, y+1, z, d + 1);
     if (result == REACHABLE)
       goto yes;
-    else if (result == UNSURE)
-      num_unsure_neighbors++;
-  } else if (result != REACHABLE ){
-    result = UNSURE;
   }
   if (IS_EMPTY(cubes[x][y][z-1]) && !IS_INVESTIGATING(cubes[x][y][z-1])) {
     result = is_outside_reachable(cubes, x, y, z-1, d + 1);
     if (result == REACHABLE)
       goto yes;
-    else if (result == UNSURE)
-      num_unsure_neighbors++;
-  } else if (result != REACHABLE ){
-    result = UNSURE;
   }
   if (IS_EMPTY(cubes[x][y][z+1]) && !IS_INVESTIGATING(cubes[x][y][z+1])) {
     result = is_outside_reachable(cubes, x, y, z+1, d + 1);
     if (result == REACHABLE)
       goto yes;
-    else if (result == UNSURE)
-      num_unsure_neighbors++;
-  } else if (result != REACHABLE ){
-    result = UNSURE;
   }
 
-  if (result == UNREACHABLE){
-     cubes[x][y][z] &= ~UNSURE;
-     cubes[x][y][z] |= UNREACHABLE;
-     result = UNREACHABLE;
-     goto out;
-   } else 
-     return UNREACHABLE;
+  return UNREACHABLE;
+   
 yes:
-   cubes[x][y][z] &= ~UNSURE;
-   cubes[x][y][z] |= REACHABLE;
-
-out:
-
+  cubes[x][y][z] &= ~UNSURE;
+  cubes[x][y][z] |= REACHABLE;
   cubes[x][y][z] &= ~INVESTIGATING;
 
   return result;
@@ -148,19 +113,19 @@ int num_neighbors(char ***cubes, int x, int y, int z) {
   if (x > 0) {
     n += (!IS_EMPTY(cubes[x-1][y][z]));
   }
-  if (x < max_x + 1) {
+  if (x < max_x) {
     n += (!IS_EMPTY(cubes[x+1][y][z]));
   }
   if (y > 0) {
     n += (!IS_EMPTY(cubes[x][y-1][z]));
   }
-  if (y < max_y + 1) {
+  if (y < max_y) {
     n += (!IS_EMPTY(cubes[x][y+1][z]));
   }
   if (z > 0) {
     n += (!IS_EMPTY(cubes[x][y][z-1]));
   }
-  if (z < max_z + 1) {
+  if (z < max_z) {
     n += (!IS_EMPTY(cubes[x][y][z+1]));
   }
 
@@ -170,11 +135,11 @@ int num_neighbors(char ***cubes, int x, int y, int z) {
 static void dump_data(char *** cubes) {
   int x, y, z;
   clrscr();
-  for (z = 0; z <= max_z + 1; z++) {
+  for (z = 0; z <= max_z; z++) {
     printf("z %2d | x 012345678901234567890 y\n", z);
-    for (y = 0; y <= max_y + 1; y++) {
+    for (y = 0; y <= max_y; y++) {
       printf("         ");
-      for (x = 0; x <= max_x + 1; x++) {
+      for (x = 0; x <= max_x; x++) {
         if (IS_EMPTY(cubes[x][y][z])) {
           if (CAN_REACH_OUTSIDE(cubes[x][y][z]) == REACHABLE) {
             printf(".");
@@ -200,10 +165,7 @@ static void read_file(FILE *fp) {
   int exterior_surface_area = 0;
   char *s_x, *s_y, *s_z;
   int x, y, z;
-  int num_empty_cubes_that_reach_outside = 0;
-  int num_empty_cubes_unsure_reach_outside = 0;
-  int num_empty_cubes_that_cant_reach_outside = 0;
-  int must_recheck = 0;
+
   clrscr();
   while (fgets(buf, BUFSIZE-1, fp) != NULL) {
     s_x = buf;
@@ -228,16 +190,16 @@ static void read_file(FILE *fp) {
   }
 
   /* X dimension */
-  cubes = realloc(cubes, (max_x + 2) * sizeof(char ***));
-  memset(cubes, 0, (max_x + 2) * sizeof(char ***));
-  for (i = 0; i < max_x + 2; i++) {
+  cubes = realloc(cubes, (max_x + 1) * sizeof(char ***));
+  memset(cubes, 0, (max_x + 1) * sizeof(char ***));
+  for (i = 0; i < max_x + 1; i++) {
     /* Y dimension per X*/
-    cubes[i] = realloc(cubes[i], (max_y + 2) * sizeof(char **));
-    memset(cubes[i], 0, (max_y + 2) * sizeof(char **));
-    for (j = 0; j < max_y + 2; j++) {
+    cubes[i] = realloc(cubes[i], (max_y + 1) * sizeof(char **));
+    memset(cubes[i], 0, (max_y + 1) * sizeof(char **));
+    for (j = 0; j < max_y + 1; j++) {
       /* Z dimension per X, Y */
-      cubes[i][j] = realloc(cubes[i][j], (max_z + 2) * sizeof(char *));
-      memset(cubes[i][j], EMPTY, (max_z + 2) * sizeof(char *));
+      cubes[i][j] = realloc(cubes[i][j], (max_z + 1) * sizeof(char *));
+      memset(cubes[i][j], EMPTY, (max_z + 1) * sizeof(char *));
     }
   }
   rewind(fp);
@@ -269,11 +231,13 @@ static void read_file(FILE *fp) {
     if (z < max_z) num_connected_faces += ((int)cubes[x][y][z+1] * 2);
   
   }
+  free(buf);
+  fclose(fp);
 
   /* compute which empty places can't reach outside */
-  for (x = 0; x <= max_x + 1; x++) {
-    for (y = 0; y <= max_y + 1; y++) {
-      for (z = 0; z <= max_z + 1; z++) {
+  for (x = 0; x <= max_x; x++) {
+    for (y = 0; y <= max_y; y++) {
+      for (z = 0; z <= max_z; z++) {
         is_outside_reachable(cubes, x, y, z, 0);
       }
     }
@@ -282,43 +246,28 @@ static void read_file(FILE *fp) {
 
   exterior_surface_area = 0;
   interior_surface_area = 0;
-  num_empty_cubes_that_reach_outside = 0;
-  num_empty_cubes_that_cant_reach_outside ++;
 
   /* count the out of bounds air */
-  for (x = 0; x <= max_x + 1; x++) {
-    for (y = 0; y <= max_y + 1; y++) {
-      for (z = 0; z <= max_z + 1; z++) {
+  for (x = 0; x <= max_x; x++) {
+    for (y = 0; y <= max_y; y++) {
+      for (z = 0; z <= max_z; z++) {
         if (!IS_EMPTY(cubes[x][y][z])) {
           /* count the surface out of bounds */
-          if (x == 0 || y == 0 || z == 0) {
+          if (x == 0 || y == 0 || z == 0
+           || x == max_x || y == max_y || z == max_z) {
             exterior_surface_area++;
           }
           continue;
         }
-        if (CAN_REACH_OUTSIDE(cubes[x][y][z]) == REACHABLE)
-          num_empty_cubes_that_reach_outside ++;
-        else if (CAN_REACH_OUTSIDE(cubes[x][y][z])== UNREACHABLE)
-          num_empty_cubes_that_cant_reach_outside ++;
-        else if (CAN_REACH_OUTSIDE(cubes[x][y][z]) == UNSURE
-               ||CAN_REACH_OUTSIDE(cubes[x][y][z]) == 0) {
-          /* check again */
-          cubes[x][y][z] &= ~INVESTIGATING;
-        }
 
-        /* calculate cube surfaces */
-        if (CAN_REACH_OUTSIDE(cubes[x][y][z]) == UNREACHABLE) {
-          interior_surface_area += num_neighbors(cubes, x, y, z);
-        }
         if (CAN_REACH_OUTSIDE(cubes[x][y][z]) == REACHABLE) {
           exterior_surface_area += num_neighbors(cubes, x, y, z);
+        } else {
+          interior_surface_area += num_neighbors(cubes, x, y, z);
         }
       }
     }
   }
-  free(buf);
-  fclose(fp);
-
   surface_area = num_faces - num_connected_faces;
 
   printf("\n");
@@ -331,8 +280,8 @@ static void read_file(FILE *fp) {
          surface_area, interior_surface_area,
          exterior_surface_area);
 
-  for (i = 0; i < max_x + 2; i++) {
-    for (j = 0; j < max_y + 2; j++) {
+  for (i = 0; i < max_x + 1; i++) {
+    for (j = 0; j < max_y + 1; j++) {
       free(cubes[i][j]);
     }
     free(cubes[i]);
