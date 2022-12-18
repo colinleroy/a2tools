@@ -45,9 +45,9 @@ int main(void) {
 #define ACCOUNTED_FOR        (1<<4)
 #define IS_ACCOUNTED_FOR(i)  ((i & ACCOUNTED_FOR) != 0)
 
-int max_x = 0, max_y = 0, max_z = 0;
+char max_x = 0, max_y = 0, max_z = 0;
 
-static int is_outside_reachable(char ***cubes, int x, int y, int z, int d) {
+static char is_outside_reachable(char ***cubes, char x, char y, char z, char d) {
   char result = UNSURE;
 
   if (!IS_EMPTY(cubes[x][y][z]))
@@ -107,7 +107,7 @@ yes:
   return result;
 }
 
-int num_neighbors(char ***cubes, int x, int y, int z) {
+char num_neighbors(char ***cubes, char x, char y, char z) {
   char n = 0;
 
   if (x > 0) {
@@ -222,7 +222,7 @@ static void read_file(FILE *fp) {
 
   for (z = 0; z <= max_z; z++) {
     clrscr();
-    printf("z %2d | x 012345678901234567890 y\n", z);
+    printf("z %2d - x 012345678901234567890 y\n", z);
     for (y = 0; y <= max_y; y++) {
       printf("         ");
       for (x = 0; x <= max_x; x++) {
