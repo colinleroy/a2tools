@@ -8,6 +8,7 @@
 #include <conio.h>
 #endif
 #include "bool_array.h"
+#include "extended_conio.h"
 #include "math.h"
 
 #define BUFSIZE 10100
@@ -17,7 +18,7 @@
 
 static void read_file(FILE *fp);
 
-#define DATASET "IN17"
+#define DATASET "IN17E"
 
 int shape_masks[5][4][4] = {
   {{0,0,0,0},
@@ -48,7 +49,7 @@ int shape_masks[5][4][4] = {
 };
 
 int shape_widths[5]  = {4, 3, 3, 1, 2};
-int shape_heights[5] = {4, 3, 3, 4, 2};
+int shape_heights[5] = {1, 3, 3, 4, 2};
 
 int main(void) {
   FILE *fp;
@@ -74,41 +75,50 @@ static char *blank_line = NULL;
 static char *cutoff_line = NULL;
 static char *bottom_line = NULL;
 
+static void setup_viz(void) {
+  clrscr();
+  cvlinexy(0, 0, 23);
+  chlinexy(1, 22, 7);
+  cvlinexy(8, 0, 23);
+  printfat(WALLS_WIDTH + 10, 12, 1, "Iterations");
+  printfat(WALLS_WIDTH + 10, 13, 1, "    Height");
+  printfat(WALLS_WIDTH + 10, 15, 1, "      Wind");
+}
+
 #define VIZ
 #ifdef VIZ
-int going_fast = 0;
+static int going_fast = 0;
+static int viz_is_setup = 0;
 static int round_fh = 0;
 static void viz(char *msg, int iterations, bool_array *table, int cur_shape, int cur_shape_left, int cur_shape_bottom, int cur_wind, int floor_height) {
   int cur_shape_top = cur_shape_bottom + 4;
   int max_fh = floor_height;
   int line = max_fh + 10;
-  int x, y;
-
+  int x, y, s_x, s_y;
+  int zone_x_s, zone_y_s, zone_x_e, zone_y_e;
+  int debug = 0;
 #ifdef __CC65__
   gotoxy(1, 1);
   if (kbhit()) {
     cgetc();
     going_fast = !going_fast;
     clrscr();
+    viz_is_setup = 0;
   }
   if (going_fast) {
-    gotoxy(2,10);
-    printf("Computing really fast behind the scene\n");
-    gotoxy(6,12);
-    printf("Iterations: %d, Height: %d\n", iterations, floor_height);
+    printfat(2, 10, 1, "Computing really fast behind the scene\n");
+    printfat(6, 12, 1, "Iterations: %d, Height: %d\n", iterations, floor_height);
     return;
   }
 #endif
-  if (iterations != NUM_ITERATIONS) {
-    if (iterations > 10 && iterations % 9)
-      return;
-    else if (iterations > 100 && iterations % 99)
-      return;
-  }
+  // if (iterations != NUM_ITERATIONS) {
+  //   if (iterations > 10 && iterations % 9)
+  //     return;
+  //   else if (iterations > 100 && iterations % 99)
+  //     return;
+  // }
 
-  if (!strcmp(msg,"start round")) {
-    round_fh = cur_shape_top;
-  }
+#ifndef __CC65__
   printf("\n");
   for (y = max(round_fh, 19); y >= round_fh - 15 && y >= 0; y--) {
     printf("I");
@@ -129,6 +139,80 @@ static void viz(char *msg, int iterations, bool_array *table, int cur_shape, int
     printf("|%s|\n", cutoff_line);
   }
   printf("+%s+ (0) - %s (%d,%d)\n", bottom_line, msg, iterations, floor_height);
+#else
+  if (!strcmp(msg,"start round")) {
+    if(!viz_is_setup) {
+      setup_viz();
+      viz_is_setup = 1;
+    }
+    round_fh = cur_shape_top;
+
+    zone_y_s = max(round_fh, 22); s_y = 0;
+    zone_y_e = max(round_fh, 22) - 21;
+
+    //clrzone(1,0,7,22); /* Useless as I'll rewrite it all */
+    zone_x_s = 0; s_x = 1;
+    zone_x_e = WALLS_WIDTH;
+
+    printfat(WALLS_WIDTH +2, 0, 0, "%d    ", zone_y_s);
+    printfat(WALLS_WIDTH +2, 22, 0, "%d    ", zone_y_e - 1);
+
+    /* 12 = strlen("Iterations") + 2 */
+    printfat(WALLS_WIDTH + 10 + 12, 12, 0, "%d  ", iterations);
+    printfat(WALLS_WIDTH + 10 + 12, 13, 0, "%d  ", floor_height);
+    debug = 0;
+  } else {
+    int d_y;
+    if(!viz_is_setup) {
+      /* we need a round start to determine offsets */
+      return;
+    }
+
+    zone_y_s = max(round_fh, 22); s_y = 0;
+    zone_y_e = max(round_fh, 22) - 21;
+
+    /* Narrow to current shape + 1 border w/h */
+    zone_x_s = max(cur_shape_left - 1, 0);    s_x = zone_x_s + 1;
+    zone_x_e = min(cur_shape_left + shape_widths[cur_shape] + 1, WALLS_WIDTH);
+
+#if 0
+    if (zone_y_s > 22) {
+      debug = 1;
+    }
+#endif
+    if (debug) {
+      printfat(WALLS_WIDTH +2, 2, 1, "SHAPE BTM/HGT: %d/%d", cur_shape_bottom, shape_heights[cur_shape]);
+      printfat(WALLS_WIDTH +2, 3, 1, "TAB ZONEY: %d-%d", zone_y_s, zone_y_e);
+      printfat(WALLS_WIDTH +2, 4, 1, "SCR ZONEY: %d", s_y);
+    }
+    d_y       = zone_y_s - (cur_shape_bottom + shape_heights[cur_shape]);
+    zone_y_s  = cur_shape_bottom + shape_heights[cur_shape];
+    s_y      += d_y;
+
+    zone_y_e = max(zone_y_s - shape_heights[cur_shape] - 1, 1);
+
+    if (debug) {
+      printfat(WALLS_WIDTH +2, 5, 1, "TAB ZONEY NOW: %d-%d", zone_y_s, zone_y_e);
+      printfat(WALLS_WIDTH +2, 6, 1, "SCR ZONEY: %d", s_y);
+      printfat(WALLS_WIDTH +2, 7, 1, "OFFSET: %d", d_y);
+    }
+  }
+  for (y = zone_y_s; y >= zone_y_e && y >= 0; y--, s_y++) {
+    gotoxy(zone_x_s + 1, s_y);
+    for (x = zone_x_s; x < zone_x_e; x++, s_x++) {
+      if (y <= cur_shape_top - 1 && y > cur_shape_bottom - 1
+       && x >= cur_shape_left && x < cur_shape_left + shape_widths[cur_shape]
+       && shape_masks[cur_shape][cur_shape_top - y - 1][x - cur_shape_left]) {
+        cputc('o');
+      } else if (bool_array_get(table, x, y)) {
+        cputc('+');
+      } else {
+        cputc(' ');
+      }
+    }
+  }
+  printfat(WALLS_WIDTH + 10 + 12, 15, 1, "%c", cur_wind == WIND_LEFT ? '<':'>');
+#endif
 }
 #else
 #define viz(msg, iterations, table, cur_shape, cur_shape_left, cur_shape_bottom, cur_wind, floor_height) do {} while (0)
@@ -224,7 +308,7 @@ static void simulate_falls(bool_array *wind, bool_array *table, int wind_pattern
           iterations, table, cur_shape, cur_shape_left, cur_shape_bottom, cur_wind, floor_height);
 
     while (1) {
-      cur_wind = (bool_array_get(wind, wind_count, 0)) == 0;
+      cur_wind = (bool_array_get(wind, wind_count, 0)) == 0 ? WIND_LEFT:WIND_RIGHT;
       /* get pushed */
       if (cur_wind == WIND_RIGHT && can_move_right(table, cur_shape, cur_shape_left, cur_shape_bottom)) {
         cur_shape_left++;
@@ -269,7 +353,7 @@ static void read_file(FILE *fp) {
   wind = bool_array_alloc(12000, 1);
 
   while ((c = fgetc(fp)) != '\n' && c != '\0') {
-    bool_array_set(wind, i++, 0, (c == '<'));
+    bool_array_set(wind, i++, 0, (c == '>'));
     wind_pattern_length++;
   }
 

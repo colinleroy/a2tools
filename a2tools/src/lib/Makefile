@@ -23,5 +23,8 @@ all: $(SOURCES:.c=.o) \
 clean:
 	rm -f $(PROGRAM) *.o *.map
 
-bool_array_test: bool_array.o extended_conio.o bool_array_test.o
+bat.bin: bool_array.o extended_conio.o bool_array_test.o
+	$(CC) $(LDFLAGS) -o $@ $^ $(DEPS)
+
+ect.bin: extended_conio.o extended_conio_test.o
 	$(CC) $(LDFLAGS) -o $@ $^ $(DEPS)
