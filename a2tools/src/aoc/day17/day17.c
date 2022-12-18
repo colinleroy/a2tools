@@ -337,7 +337,7 @@ static void simulate_falls(bool_array *wind, bool_array *table, int wind_pattern
 
     iterations++;
     cur_shape = (cur_shape + 1) % 5;
-  } while (iterations < NUM_ITERATIONS);
+  } while (iterations <= NUM_ITERATIONS);
   
   viz("done!", 
         iterations, table, cur_shape, cur_shape_left, cur_shape_bottom, cur_wind, floor_height);
