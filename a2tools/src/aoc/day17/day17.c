@@ -8,6 +8,7 @@
 #include <conio.h>
 #endif
 #include "bool_array.h"
+#include "math.h"
 
 #define BUFSIZE 10100
 
@@ -16,7 +17,7 @@
 
 static void read_file(FILE *fp);
 
-#define DATASET "IN17E"
+#define DATASET "IN17"
 
 int shape_masks[5][4][4] = {
   {{0,0,0,0},
@@ -69,116 +70,119 @@ int main(void) {
 #define WIND_RIGHT 1
 #define WIND_LEFT 0
 
-
-#define VIZ
-#ifdef VIZ
 static char *blank_line = NULL;
 static char *cutoff_line = NULL;
 static char *bottom_line = NULL;
+
+#define VIZ
+#ifdef VIZ
+int going_fast = 0;
+static int round_fh = 0;
 static void viz(char *msg, int iterations, bool_array *table, int cur_shape, int cur_shape_left, int cur_shape_bottom, int cur_wind, int floor_height) {
   int cur_shape_top = cur_shape_bottom + 4;
   int max_fh = floor_height;
   int line = max_fh + 10;
-  int i, c;
   int x, y;
 
 #ifdef __CC65__
   gotoxy(1, 1);
+  if (kbhit()) {
+    cgetc();
+    going_fast = !going_fast;
+    clrscr();
+  }
+  if (going_fast) {
+    gotoxy(2,10);
+    printf("Computing really fast behind the scene\n");
+    gotoxy(6,12);
+    printf("Iterations: %d, Height: %d\n", iterations, floor_height);
+    return;
+  }
 #endif
-  // if (iterations != NUM_ITERATIONS) {
-  //   if (iterations > 10 && iterations % 10)
-  //     return;
-  //   else if (iterations > 100 && iterations % 100)
-  //     return;
-  // }
-  for (x = 0; x < WALLS_WIDTH; x++) {
-    printf("%d", x);
+  if (iterations != NUM_ITERATIONS) {
+    if (iterations > 10 && iterations % 9)
+      return;
+    else if (iterations > 100 && iterations % 99)
+      return;
+  }
+
+  if (!strcmp(msg,"start round")) {
+    round_fh = cur_shape_top;
   }
   printf("\n");
-  for (y = max_fh + 7; y >= max_fh - 19 && y >= 0; y--) {
+  for (y = max(round_fh, 19); y >= round_fh - 15 && y >= 0; y--) {
+    printf("I");
     for (x = 0; x < WALLS_WIDTH; x++) {
       if (y <= cur_shape_top - 1 && y > cur_shape_bottom - 1
        && x >= cur_shape_left && x < cur_shape_left + shape_widths[cur_shape]
        && shape_masks[cur_shape][cur_shape_top - y - 1][x - cur_shape_left]) {
-        printf("#");
+        printf("o");
       } else if (bool_array_get(table, x, y)) {
-        printf("@");
+        printf("+");
       } else {
-        printf(".");
+        printf(" ");
       }
     }
-    printf(" (%d)\n", y);
+    printf("I (%d)\n", y);
   }
-  printf("+%s+ (0) - %s (%d,%d)\n", bottom_line, msg, cur_shape_left, cur_shape_bottom);
-  getc(stdin);
+  if (y > 1) {
+    printf("|%s|\n", cutoff_line);
+  }
+  printf("+%s+ (0) - %s (%d,%d)\n", bottom_line, msg, iterations, floor_height);
 }
 #else
-#define viz(msg, iterations, table, cur_shape, cur_shape_left, cur_shape_bottom, cur_wind) do {} while (0)
+#define viz(msg, iterations, table, cur_shape, cur_shape_left, cur_shape_bottom, cur_wind, floor_height) do {} while (0)
 #endif
 
 static int can_move_left(bool_array *table, int shape, int x, int y) {
-  int i, d_x;
-  if (x == 0) {
-    return 0;
-  }
+  int i, col, row, d_x, d_y;
 
-  /* check each row */
-  for (i = 0; i < shape_heights[shape]; i++) {
-    /* shift to first block of shape at that line */
-    int shape_left_start;
-    for (shape_left_start = 0, d_x = x; 
-         shape_left_start < shape_widths[shape] && d_x < WALLS_WIDTH
-         && shape_masks[shape][3 - i][shape_left_start] == 0;
-         shape_left_start++, d_x++);
-    if (bool_array_get(table, d_x - 1, y) != 0) {
-      return 0;
+  if (x == 0)
+    return 0;
+
+  /* check each column from down to top */
+  for (row = 3; row >= 0; row --) {
+    d_y = y + 3 - row;
+    for (col = 0; col < 4; col ++) {
+      d_x = x + col;
+      if (shape_masks[shape][row][col] && bool_array_get(table, d_x - 1, d_y))
+        return 0;
     }
   }
   return 1;
 }
 
 static int can_move_right(bool_array *table, int shape,int x, int y) {
-  int i, d_x;
-  if (x + shape_widths[shape] == WALLS_WIDTH) {
+  int i, col, row, d_x, d_y;
+
+  if (x + shape_widths[shape] == 7)
     return 0;
-  }
 
-
-  /* check each row */
-  for (i = 0; i < shape_heights[shape]; i++) {
-    /* shift to first block of shape at that line */
-    int shape_right_start = 4 - shape_widths[shape];
-    int d_x = x + shape_widths[shape];
-
-    while (shape_right_start >= 0 && shape_masks[shape][3 - i][shape_right_start] == 0) {
-      shape_right_start--;
-      d_x--;
-    }
-
-    if (bool_array_get(table, d_x + 1, y) != 0) {
-      return 0;
+  /* check each column from down to top */
+  for (row = 3; row >= 0; row --) {
+    d_y = y + 3 - row;
+    for (col = 0; col < 4; col ++) {
+      d_x = x + col;
+      if (shape_masks[shape][row][col] && bool_array_get(table, d_x + 1, d_y))
+        return 0;
     }
   }
   return 1;
 }
 
 static int can_move_down(bool_array *table, int shape, int x, int y) {
-  int i;
+  int col, row, d_x, d_y;
 
-  /* check each column */
-  for (i = 0; i < shape_widths[shape]; i++) {
-    /* shift to first block of shape at that line */
-    int shape_bottom_start = 3;
-    int d_y = y;
-    
-    while (shape_bottom_start >= 0 && shape_masks[shape][shape_bottom_start][i] == 0) {
-      shape_bottom_start--;
-      d_y++;
-    }
-    
-    if (bool_array_get(table, x + i, d_y - 1) != 0) {
-      printf("can't move down! %d,%d is blocked\n", x, d_y-1);
-      return 0;
+  if (y == 1)
+    return 0;
+
+  /* check each column from down to top */
+  for (row = 3; row >= 0; row --) {
+    d_y = y + 3 - row;
+    for (col = 0; col < 4; col ++) {
+      d_x = x + col;
+      if (shape_masks[shape][row][col] && bool_array_get(table, d_x, d_y - 1))
+        return 0;
     }
   }
   return 1;
@@ -207,6 +211,10 @@ static void simulate_falls(bool_array *wind, bool_array *table, int wind_pattern
   char cur_wind;
   int cur_shape_bottom, cur_shape_left;
   int must_land;
+
+#ifdef __CC65__
+  clrscr();
+#endif
 
   do {
     cur_shape_bottom = 4 + floor_height;
@@ -253,26 +261,19 @@ static void simulate_falls(bool_array *wind, bool_array *table, int wind_pattern
 }
 
 static void read_file(FILE *fp) {
-  char *buf = malloc(BUFSIZE);
   bool_array *wind, *table;
-  char *c;
+  char c;
   int i = 0;
   int wind_pattern_length = 0;
 
-  fgets(buf, BUFSIZE-1, fp);
+  wind = bool_array_alloc(12000, 1);
+
+  while ((c = fgetc(fp)) != '\n' && c != '\0') {
+    bool_array_set(wind, i++, 0, (c == '<'));
+    wind_pattern_length++;
+  }
 
   fclose(fp);
-
-  *(strchr(buf, '\n')) = '\0';
-  wind_pattern_length = strlen(buf);
-
-  wind = bool_array_alloc(wind_pattern_length, 1);
-  c = buf;
-  while (*c != '\n' && *c != '\0') {
-    bool_array_set(wind, i++, 0, (*c == '<'));
-    c++;
-  }
-  free(buf);
 
   table = bool_array_alloc(7, 5000);
 
