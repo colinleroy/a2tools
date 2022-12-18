@@ -1,0 +1,17 @@
+for each cube
+  num_faces += 6
+  search for cube at x-1, y, z
+    if yes => num_faces_connected += 2
+  search for cube at x+1, y, z
+    if yes => num_faces_connected += 2
+  search for cube at x, y-1, z
+    if yes => num_faces_connected += 2
+  search for cube at x, y+1, z
+    if yes => num_faces_connected += 2
+  search for cube at x, y, z-1
+    if yes => num_faces_connected += 2
+  search for cube at x, y, z+1
+    if yes => num_faces_connected += 2
+
+num_faces = 12
+num_faces_connected = 2
