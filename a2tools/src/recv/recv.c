@@ -92,6 +92,8 @@ read_again:
     printf("Close error %d: %s\n", errno, strerror(errno));
     exit_code = 1;
   }
+
+  outfp = NULL;
   
   goto read_again;
 
