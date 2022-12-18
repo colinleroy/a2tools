@@ -48,7 +48,7 @@ int main(void) {
 int max_x = 0, max_y = 0, max_z = 0;
 
 static int is_outside_reachable(char ***cubes, int x, int y, int z, int d) {
-  int result = UNSURE;
+  char result = UNSURE;
 
   if (!IS_EMPTY(cubes[x][y][z]))
     return UNREACHABLE;
@@ -108,7 +108,7 @@ yes:
 }
 
 int num_neighbors(char ***cubes, int x, int y, int z) {
-  int n = 0;
+  char n = 0;
 
   if (x > 0) {
     n += (!IS_EMPTY(cubes[x-1][y][z]));
@@ -132,39 +132,15 @@ int num_neighbors(char ***cubes, int x, int y, int z) {
   return n;
 }
 
-static void dump_data(char *** cubes) {
-  int x, y, z;
-  clrscr();
-  for (z = 0; z <= max_z; z++) {
-    printf("z %2d | x 012345678901234567890 y\n", z);
-    for (y = 0; y <= max_y; y++) {
-      printf("         ");
-      for (x = 0; x <= max_x; x++) {
-        if (IS_EMPTY(cubes[x][y][z])) {
-          if (CAN_REACH_OUTSIDE(cubes[x][y][z]) == REACHABLE) {
-            printf(".");
-          } else {
-            printf("~");
-          }
-        } else {
-          printf("#");
-        }
-      }
-      printf("  %d\n", y);
-    }
-  }
-}
-
 static void read_file(FILE *fp) {
   char *buf = malloc(BUFSIZE);
-  int num_cubes = 0, i, j;
+  char i, j;
   char ***cubes = NULL;
-  int num_faces = 0, num_connected_faces = 0;
+  int num_cubes = 0;
   int surface_area = 0;
-  int interior_surface_area = 0;
   int exterior_surface_area = 0;
   char *s_x, *s_y, *s_z;
-  int x, y, z;
+  char x, y, z;
 
   clrscr();
   while (fgets(buf, BUFSIZE-1, fp) != NULL) {
@@ -204,10 +180,10 @@ static void read_file(FILE *fp) {
   }
   rewind(fp);
 
-  clrscr();
+  clrscr(); i = 0;
   while (fgets(buf, BUFSIZE-1, fp) != NULL) {
     s_x = buf;
-
+    i++;
     s_y = strchr(s_x, ',') + 1;
     s_z = strchr(s_y, ',') + 1;
     *strchr(s_x, ',') = '\0';
@@ -221,14 +197,14 @@ static void read_file(FILE *fp) {
 
     gotoxy(0,0);
     printf("Building map at %d,%d,%d (%d/%d)    \n", x, y, z, i, num_cubes);
-    num_faces += 6;
+    surface_area += 6;
 
-    if (x > 0)     num_connected_faces += ((int)cubes[x-1][y][z] * 2);
-    if (x < max_x) num_connected_faces += ((int)cubes[x+1][y][z] * 2);
-    if (y > 0)     num_connected_faces += ((int)cubes[x][y-1][z] * 2);
-    if (y < max_y) num_connected_faces += ((int)cubes[x][y+1][z] * 2);
-    if (z > 0)     num_connected_faces += ((int)cubes[x][y][z-1] * 2);
-    if (z < max_z) num_connected_faces += ((int)cubes[x][y][z+1] * 2);
+    if (x > 0)     surface_area -= ((int)cubes[x-1][y][z] * 2);
+    if (x < max_x) surface_area -= ((int)cubes[x+1][y][z] * 2);
+    if (y > 0)     surface_area -= ((int)cubes[x][y-1][z] * 2);
+    if (y < max_y) surface_area -= ((int)cubes[x][y+1][z] * 2);
+    if (z > 0)     surface_area -= ((int)cubes[x][y][z-1] * 2);
+    if (z < max_z) surface_area -= ((int)cubes[x][y][z+1] * 2);
   
   }
   free(buf);
@@ -242,42 +218,42 @@ static void read_file(FILE *fp) {
       }
     }
   }
-  dump_data(cubes);
-
   exterior_surface_area = 0;
-  interior_surface_area = 0;
 
-  /* count the out of bounds air */
-  for (x = 0; x <= max_x; x++) {
+  for (z = 0; z <= max_z; z++) {
+    clrscr();
+    printf("z %2d | x 012345678901234567890 y\n", z);
     for (y = 0; y <= max_y; y++) {
-      for (z = 0; z <= max_z; z++) {
-        if (!IS_EMPTY(cubes[x][y][z])) {
+      printf("         ");
+      for (x = 0; x <= max_x; x++) {
+        if (IS_EMPTY(cubes[x][y][z])) {
+          if (CAN_REACH_OUTSIDE(cubes[x][y][z]) == REACHABLE) {
+            printf(" ");
+            exterior_surface_area += num_neighbors(cubes, x, y, z);
+          } else {
+            printf(".");
+          }
+        } else {
           /* count the surface out of bounds */
           if (x == 0 || y == 0 || z == 0
            || x == max_x || y == max_y || z == max_z) {
             exterior_surface_area++;
           }
-          continue;
-        }
-
-        if (CAN_REACH_OUTSIDE(cubes[x][y][z]) == REACHABLE) {
-          exterior_surface_area += num_neighbors(cubes, x, y, z);
-        } else {
-          interior_surface_area += num_neighbors(cubes, x, y, z);
+          printf("*");
         }
       }
+      printf("  %d\n", y);
     }
+  cgetc();
   }
-  surface_area = num_faces - num_connected_faces;
-
+  
   printf("\n");
   printf("Map size %d*%d*%d\n", max_x, max_y, max_z);
-  printf("Map has %d cubes, %d faces,\n"
+  printf("Map has %d cubes,\n"
          "%d total surface area,\n"
-         "%d interior surface area,\n"
          "%d exterior surface area.\n",
-         num_cubes, num_faces,
-         surface_area, interior_surface_area,
+         num_cubes,
+         surface_area,
          exterior_surface_area);
 
   for (i = 0; i < max_x + 1; i++) {
@@ -287,5 +263,4 @@ static void read_file(FILE *fp) {
     free(cubes[i]);
   }
   free(cubes);
-
 }
