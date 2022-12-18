@@ -4,7 +4,7 @@ DEPS :=
 
 CC65_TARGET = apple2
 CC      = cl65
-CFLAGS  = -t $(CC65_TARGET) -I ../../lib -Oi -Os
+CFLAGS  = -t $(CC65_TARGET) -I ../../lib
 LDFLAGS = -t $(CC65_TARGET) 
 
 .PHONY: all clean
