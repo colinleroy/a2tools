@@ -8,9 +8,11 @@
 
 #define BUF_SIZE 255
 #define DATA_SIZE 16384
+#define FLOPPY_DELAY 300000
 
 int main(void) {
   int r, w, exit_code = 0;
+  int floppy_delay;
   char *filename = malloc(BUF_SIZE);
   char *filetype = malloc(BUF_SIZE);
   char *s_len = malloc(BUF_SIZE);
@@ -29,13 +31,19 @@ read_again:
   if (simple_serial_gets(filename, BUF_SIZE) != NULL) {
     if (strlen(filename) > 8)
       filename[7] = '\0';
+    if (strchr(filename, '\n'))
+      *strchr(filename, '\n') = '\0';
     printf("Filename   '%s'\n", filename);
   }
   if (simple_serial_gets(filetype, BUF_SIZE) != NULL) {
+    if (strchr(filetype, '\n'))
+      *strchr(filetype, '\n') = '\0';
     printf("Filetype   '%s'\n", filetype);
   }
 
   if (simple_serial_gets(s_len, BUF_SIZE) != NULL) {
+    if (strchr(s_len, '\n'))
+      *strchr(s_len, '\n') = '\0';
     data_len = atoi(s_len);
     printf("Data length %d\n", data_len);
   }
@@ -90,6 +98,13 @@ read_again:
 
     free(data);
     data_len -= block;
+    if (data_len > 0) {
+      for (floppy_delay = FLOPPY_DELAY; floppy_delay > 0; floppy_delay--) {
+        /* Wait for floppy to be done */
+      }
+      printf("Telling sender we're ready\n");
+      simple_serial_puts("READY\n");
+    }
   }
 
   if (fclose(outfp) != 0) {

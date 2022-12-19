@@ -14,9 +14,7 @@
  */////////////////////
 int main(void) {
 //  int r, w, exit_code = 0;
-  int exit_code = 0, e;
-  char c;
-  int j;
+  int exit_code = 0;
   char *buf = malloc(BUF_SIZE);
 
   printf("Opening serial port\n");
@@ -28,15 +26,10 @@ int main(void) {
   while (1) {
     printf("> ");
     if (simple_serial_gets_with_timeout(buf, BUF_SIZE) != NULL) {
-      char i;
-      printf("%s\n", buf);
 
-      for (i = 'a'; i < 'h'; i++) {
-        ser_put(i);
-      }
-      ser_put('\n');
+      printf("%s", buf);
 
-      for (j = 0; j < 5000; j++);
+      simple_serial_puts(buf);
     }
   }
 
