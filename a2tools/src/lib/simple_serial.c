@@ -6,6 +6,10 @@
 
 #define NCYCLES_PER_SEC 3000U
 
+/* Setup */
+static int last_slot = 2;
+static int last_baudrate = SER_BAUD_9600;
+
 static struct ser_params default_params = {
     SER_BAUD_9600,     /* Baudrate */
     SER_BITS_8,         /* Number of data bits */
@@ -25,11 +29,17 @@ int simple_serial_open(int slot, int baudrate) {
     return err;
 
   default_params.baudrate = baudrate;
-  return ser_open (&default_params);
+
+  err = ser_open (&default_params);
+
+  last_slot = slot;
+  last_baudrate = baudrate;
+
+  return err;
 }
 
 int simple_serial_close(void) {
-  return ser_uninstall();
+  return ser_close();
 }
 
 static long timeout_cycles = -1;
@@ -59,6 +69,7 @@ static void serial_timeout_reset(void) {
   timeout_cycles = -1;
 }
 
+/* Input */
 static int __simple_serial_getc_with_timeout(int with_timeout) {
     char c;
 
@@ -149,4 +160,24 @@ size_t simple_serial_read_with_timeout(char *ptr, size_t size, size_t nmemb) {
 
 size_t simple_serial_read(char *ptr, size_t size, size_t nmemb) {
   return __simple_serial_read_with_timeout(ptr, size, nmemb, 0);
+}
+
+/* Output */
+int simple_serial_putc(char c) {
+  if ((ser_put(c)) == SER_ERR_OVERFLOW) {
+    return EOF;
+  }
+  return c;
+}
+
+/* This is completely buggy */
+int simple_serial_puts(char *buf) {
+  int i, r, len = strlen(buf);
+
+  for (i = 0; i < len; i++) {
+    if ((r = simple_serial_putc(buf[i])) == EOF)
+      return EOF;
+  }
+
+  return len;
 }
