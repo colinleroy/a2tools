@@ -18,7 +18,7 @@ LDFLAGS = -t $(CC65_TARGET)
 
 .PHONY: all clean
 all: $(SOURCES:.c=.o) \
-	bool_array_test
+	bat.bin ect.bin
 
 clean:
 	rm -f $(PROGRAM) *.o *.map
