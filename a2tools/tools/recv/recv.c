@@ -73,17 +73,20 @@ int main(int argc, char **argv) {
   
   setup_tty(argv[1]);
 
-  fp = fopen(argv[1], "w");
+  fp = fopen(argv[1], "r+b");
   if (fp == NULL) {
     printf("Can't open %s\n", argv[1]);
     exit(1);
   }
 
-  sleep(3);
-  fputs("hello", fp);
   while (1) {
-//    fgets(buf, sizeof(buf), fp);
-    printf("Received '%s'\n", buf);
+    if (fgets(buf, sizeof(buf), stdin)) {
+      printf("< %s\n", buf);
+      fputs(buf, fp);
+    }
+    if (fgets(buf, sizeof(buf), fp)) {
+      printf("> %s\n", buf);
+    }
   }
   fclose(fp);
 
