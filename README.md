@@ -177,3 +177,17 @@ Then files are read in pair and merge sorted into a new set of twice-bigger file
 Then again, and again until there's one file left with the whole dataset. It's
 really easy on the RAM but of course, given the latency and bandwidth of an 1980
 5.25" floppy disk drive, it's not real fast (25 minutes).
+
+== Day 18 ==
+
+My process for "successfully run my code on the Apple //c" has now quite a few steps:
+
+- Figure out the algorithm (often the hardest part)
+- Figure out how to do it in a reasonable number of cycles and bytes of RAM
+- Program, do not go any further until the compiler gives 0 warning
+- Program, do every local test run using `valgrind --leak-check=full --show-leak-kinds=all`, do not go any further as long as it says anything else than "ERROR SUMMARY: 0 errors from 0 contexts".
+- Revert to gdb for debugging purposes
+- Run `rm callgrind.out.* ; valgrind --tool=callgrind ./a.out && kcachegrind callg*`, do not go any further if the number of CPU cycles seems really crap (100M is crap but tolerable, it means approx. 2 hours runtime. 10M is OK.)
+- Run `rm mass*; valgrind --tool=massif ./a.out && massif-visualizer mass*`, do not go any further if the RAM use is way off. You get about 22k useable for malloc()ing with the normal linking. This steps may require a bit of math because 80k of `char` on the PC means 80k of `char` on the Apple //c, but 80k of `void *` on the PC means 20k of `void *` on the Apple //c, as pointers are 16bit there. (reminder: sizeof(char) = 1, sizeof(short) = 2, sizeof(int) = 2, sizeof(long) = 4, sizeof(void *) = 2).
+
+But it was not enough for day18, where the recursive DFS reached really deep levels, which happily grew the stack in the rest of the RAM and crashed. So I'll be adding `--check-stack` to cc65's CFLAGS to this process, and get a much quicker idea of the problem when I'm suddenly dropped to the asm debug prompt of the Apple //c (had to sleep on it for day18's problem).
