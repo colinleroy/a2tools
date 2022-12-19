@@ -86,6 +86,9 @@ int main(int argc, char **argv) {
   } else {
     filetype = "TXT";
   }
+  if (!strcmp(filetype, "system")) {
+    filetype = "SYS";
+  }
 
   setup_tty(argv[2]);
 

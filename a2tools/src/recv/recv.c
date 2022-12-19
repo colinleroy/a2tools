@@ -48,6 +48,10 @@ read_again:
     /* FIXME This shouldn't be hardcoded */
     _auxtype = 0x0803;
   } else if (!strcasecmp(filetype,"SYS")) {
+    char *tmp = malloc(BUF_SIZE);
+    sprintf(tmp, "%s.system", filename);
+    free(filename);
+    filename = tmp;
     _filetype = PRODOS_T_SYS;
   } else {
     printf("Filetype is unsupported.\n");
