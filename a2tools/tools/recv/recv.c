@@ -80,12 +80,13 @@ int main(int argc, char **argv) {
   }
 
   while (1) {
+    printf("> "); fflush(stdout);
     if (fgets(buf, sizeof(buf), stdin)) {
-      printf("< %s\n", buf);
+      printf("sending\n");
       fputs(buf, fp);
     }
     if (fgets(buf, sizeof(buf), fp)) {
-      printf("> %s\n", buf);
+      printf("< %s\n", buf);
     }
   }
   fclose(fp);

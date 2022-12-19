@@ -1,7 +1,6 @@
 PROGRAM=recv.bin
 SOURCES := recv.c
-DEPS := $(topdir)../../drivers/a2.ssc.o \
-	$(topdir)../lib/simple_serial.o
+DEPS := $(topdir)../lib/simple_serial.o
 
 CC65_TARGET = apple2
 CC      = cl65

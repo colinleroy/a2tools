@@ -5,7 +5,7 @@ SOURCES := send.c
 all: $(PROGRAM)
 
 %.o: %.c
-	$(CC) -c $(CFLAGS) -o $@ $<
+	$(CC) -c $(CFLAGS) -g -O0 -o $@ $<
 
 $(PROGRAM): $(SOURCES:.c=.o)
 	$(CC) $(LDFLAGS) -o $@ $^ $(DEPS)

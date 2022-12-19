@@ -3,8 +3,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <apple2.h>
 
-#define NCYCLES_PER_SEC 3000U
+#define NCYCLES_PER_SEC 10000U
 
 /* Setup */
 static int last_slot = 2;
@@ -19,10 +20,9 @@ static struct ser_params default_params = {
 };
 
 int simple_serial_open(int slot, int baudrate) {
-  extern char a2_ssc;
   int err;
   
-  if ((err = ser_install(&a2_ssc)) != 0)
+  if ((err = ser_install(&a2_ssc_ser)) != 0)
     return err;
 
   if ((err = ser_apple2_slot(slot)) != 0)
@@ -113,11 +113,13 @@ static char *__simple_serial_gets_with_timeout(char *out, size_t size, int with_
       /* ignore \r */
       continue;
     }
+
+    out[i] = c;
+    i++;
+
     if (c == '\n') {
       break;
     }
-    out[i] = c;
-    i++;
   }
   out[i] = '\0';
 
@@ -163,10 +165,16 @@ size_t simple_serial_read(char *ptr, size_t size, size_t nmemb) {
 }
 
 /* Output */
+static int send_delay;
 int simple_serial_putc(char c) {
   if ((ser_put(c)) == SER_ERR_OVERFLOW) {
     return EOF;
   }
+  for (send_delay = 0; send_delay < 200; send_delay++) {
+    /* Why do we need that.
+     * Thanks platoterm for the hint */
+  }
+
   return c;
 }
 

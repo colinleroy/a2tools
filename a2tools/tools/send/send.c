@@ -12,6 +12,7 @@
 
 #define DELAY_MS 3
 #define LONG_DELAY_MS 50
+#define DATA_SIZE 16384
 
 static void setup_tty(char *ttypath) {
   struct termios tty;
@@ -39,6 +40,7 @@ static void setup_tty(char *ttypath) {
   tty.c_lflag &= ~ICANON;
   tty.c_lflag &= ~ECHO;
   tty.c_lflag &= ~ISIG;
+  tty.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
 
   tty.c_iflag &= ~(IXON | IXOFF | IXANY);
   tty.c_iflag &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP|INLCR|IGNCR|ICRNL);
@@ -128,14 +130,29 @@ int main(int argc, char **argv) {
     fwrite(&c, 1, 1, outfp);
     fflush(outfp);
     count++;
-
+    
     if (count % 512 == 0) {
       printf("Wrote %d bytes...\n", count);
     }
     usleep(DELAY_MS*1000);
-    if (count % 16384 == 0) {
-      printf("Hit ENTER when ready to continue...\n");
-      getc(stdin);
+    if (count % DATA_SIZE == 0) {
+      /* Wait for Apple // */
+      printf("Waiting for the Apple //c...\n");
+      fflush(outfp);
+      do {
+        if (fgets(buf, sizeof(buf), outfp) != NULL) {
+          if(strchr(buf, '\n'))
+            *strchr(buf, '\n') = '\0';
+          printf("Received '%s'\n", buf);
+          if (!strcasecmp(buf, "READY"))
+            break;
+        }
+        usleep(LONG_DELAY_MS * 1000);
+      }
+      while (1);
+
+      printf("Resuming\n");
+      sleep(3);
     }
   }
 
