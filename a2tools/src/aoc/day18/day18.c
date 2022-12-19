@@ -47,7 +47,7 @@ int main(void) {
 
 char max_x = 0, max_y = 0, max_z = 0;
 
-static char is_outside_reachable(char ***cubes, char x, char y, char z, char d) {
+static char is_outside_reachable(char ***cubes, int x, int y, int z, int d) {
   char result = UNSURE;
 
   if (!IS_EMPTY(cubes[x][y][z]))
@@ -63,6 +63,11 @@ static char is_outside_reachable(char ***cubes, char x, char y, char z, char d) 
      result = REACHABLE;
      goto yes;
    }
+
+  if (d > 19) {
+    /* don't overflow stack */
+    return UNSURE;
+  }
 
   cubes[x][y][z] |= INVESTIGATING;
   
@@ -107,7 +112,7 @@ yes:
   return result;
 }
 
-char num_neighbors(char ***cubes, char x, char y, char z) {
+char num_neighbors(char ***cubes, int x, int y, int z) {
   char n = 0;
 
   if (x > 0) {
@@ -134,13 +139,13 @@ char num_neighbors(char ***cubes, char x, char y, char z) {
 
 static void read_file(FILE *fp) {
   char *buf = malloc(BUFSIZE);
-  char i, j;
+  int i, j;
   char ***cubes = NULL;
   int num_cubes = 0;
   int surface_area = 0;
   int exterior_surface_area = 0;
   char *s_x, *s_y, *s_z;
-  char x, y, z;
+  int x, y, z;
 
   clrscr();
   while (fgets(buf, BUFSIZE-1, fp) != NULL) {
@@ -199,12 +204,12 @@ static void read_file(FILE *fp) {
     printf("Building map at %d,%d,%d (%d/%d)    \n", x, y, z, i, num_cubes);
     surface_area += 6;
 
-    if (x > 0)     surface_area -= ((int)cubes[x-1][y][z] * 2);
-    if (x < max_x) surface_area -= ((int)cubes[x+1][y][z] * 2);
-    if (y > 0)     surface_area -= ((int)cubes[x][y-1][z] * 2);
-    if (y < max_y) surface_area -= ((int)cubes[x][y+1][z] * 2);
-    if (z > 0)     surface_area -= ((int)cubes[x][y][z-1] * 2);
-    if (z < max_z) surface_area -= ((int)cubes[x][y][z+1] * 2);
+    if (x > 0)     surface_area -= (cubes[x-1][y][z] * 2);
+    if (x < max_x) surface_area -= (cubes[x+1][y][z] * 2);
+    if (y > 0)     surface_area -= (cubes[x][y-1][z] * 2);
+    if (y < max_y) surface_area -= (cubes[x][y+1][z] * 2);
+    if (z > 0)     surface_area -= (cubes[x][y][z-1] * 2);
+    if (z < max_z) surface_area -= (cubes[x][y][z+1] * 2);
   
   }
   free(buf);
@@ -220,8 +225,9 @@ static void read_file(FILE *fp) {
   }
   exterior_surface_area = 0;
 
+  clrscr();
   for (z = 0; z <= max_z; z++) {
-    clrscr();
+    gotoxy(0, 0);
     printf("z %2d - x 012345678901234567890 y\n", z);
     for (y = 0; y <= max_y; y++) {
       printf("         ");
@@ -244,7 +250,6 @@ static void read_file(FILE *fp) {
       }
       printf("  %d\n", y);
     }
-  cgetc();
   }
   
   printf("\n");
