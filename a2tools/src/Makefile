@@ -1,4 +1,4 @@
-SUBDIRS = lib recv dump send
+SUBDIRS = lib recv dump mirror
 
 .PHONY: all clean
 

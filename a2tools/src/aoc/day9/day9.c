@@ -88,7 +88,6 @@ static void handle_line() {
 }
 int main(void) {
   int t,total_lines = 0;
-  extern char a2_ssc;
   FILE *infp;
   sim = 1;
 

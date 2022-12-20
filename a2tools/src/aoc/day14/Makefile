@@ -2,7 +2,6 @@ PROGRAM=day14.bin day14x2.bin
 SOURCES := day14.c
 DEPS := $(topdir)../../lib/bool_array.o \
 	$(topdir)../../lib/extended_string.o \
-	$(topdir)../../../drivers/a2.hi.o \
 
 CC65_TARGET = apple2
 CC      = cl65

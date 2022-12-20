@@ -1,4 +1,4 @@
-OBJS := a2.ssc.o a2.hi.o
+OBJS := 
 
 all: $(OBJS)
 
