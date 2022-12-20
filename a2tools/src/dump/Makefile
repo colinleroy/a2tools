@@ -1,7 +1,6 @@
 PROGRAM=dump.bin
 SOURCES := dump.c
-DEPS := $(topdir)../../drivers/a2.ssc.o \
-	$(topdir)../lib/extended_conio.o
+DEPS := $(topdir)../lib/extended_conio.o
 
 CC65_TARGET = apple2
 CC      = cl65
