@@ -112,10 +112,6 @@ static void read_file(FILE *fp) {
       item *next = cur->next;
       item *after_next = next->next;
 
-      prev = cur->prev;
-      next = cur->next;
-      after_next = next->next;
-
       if (cur == start) {
         start = next;
       }
