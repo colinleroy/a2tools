@@ -1,4 +1,4 @@
-SUBDIRS = recv send
+SUBDIRS = mirror send
 
 .PHONY: all clean
 

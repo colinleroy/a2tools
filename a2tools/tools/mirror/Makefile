@@ -1,5 +1,5 @@
-PROGRAM=recv
-SOURCES := recv.c
+PROGRAM=mirror
+SOURCES := mirror.c
 
 .PHONY: all clean
 all: $(PROGRAM)
