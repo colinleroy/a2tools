@@ -41,27 +41,21 @@ struct _item {
 void debug_array(item *cur, int n, int num_lines) {
     item *start = cur;
     int i = 0;
-    return;
-    while (i ++ < num_lines) {
-      printf("%5d\n", cur->value);
-      cur = cur->next;
+
+    if (n < 10 || 
+       (n < 100 && n % 10 == 0) ||
+       (n % 100 == 0) ||
+       n == num_lines) {
+      for (i = 0; i < 3; i++)
+        start = start->prev;
+    
+      gotoxy(0, 10);
+      for (i = 0; i < 6; i++) {
+        printf("%5d ", start->value);
+        start = start->next;
+      }
+      printf("\n\n%5d shifts/%5d done\n", n, num_lines);
     }
-    printf("\n");
-    cgetc();
-    // if (n < 10 || 
-    //    (n < 100 && n % 10 == 0) ||
-    //    (n % 100 == 0) ||
-    //    n == num_lines) {
-    //   for (i = 0; i < 3; i++)
-    //     start = start->prev;
-    // 
-    //   gotoxy(0, 10);
-    //   for (i = 0; i < 6; i++) {
-    //     printf("%5d ", start->value);
-    //     start = start->next;
-    //   }
-    //   printf("\n\n%5d shifts/%5d done\n", n, num_lines);
-    // }
     
 }
 
@@ -106,7 +100,7 @@ static void read_file(FILE *fp) {
   cur = start;
   debug_array(cur, 0, num_lines);
   do {
-    int shift, rem;
+    int shift;
 
     if (cur->value == 0) {
       zero = cur;
@@ -114,20 +108,35 @@ static void read_file(FILE *fp) {
     next_to_shift = cur->original_next;
 
     shift = cur->value;
-    rem = shift;
 
-    if (rem == 0)
+    if (shift == 0)
       goto nothing_to_do;
-    /* handle us leaving start */
+
+    /* shorten walk by avoiding doing one and
+     * a half rounds */
+    if (shift > 0 && shift > num_lines) {
+      shift = (shift % 5000) +1;
+    } else if (shift < 0 && shift < - num_lines) {
+      shift = (shift % 5000) -1;
+    }
+
+    /* shorten walk further by going the short way */
+    if (shift > 0 && shift > num_lines / 2) {
+      shift = shift - num_lines + 1;
+    } else if (shift < 0 && shift < -num_lines / 2) {
+      shift = shift + num_lines - 1;
+    }
+
+    /* handle us leaving start position */
     if (cur == start) {
-      start = rem > 0 ? start->next : start->prev;
+      start = shift > 0 ? start->next : start->prev;
     }
 
     remove_after = cur->prev;
     remove_before = cur->next;
 
-    insert_before = rem > 0 ? cur->next : cur->prev;
-    /* Pluck it for where we are */
+    insert_before = shift > 0 ? cur->next : cur->prev;
+    /* Pluck use for where we are */
     cur->prev = NULL;
     cur->next = NULL;
 
@@ -135,13 +144,12 @@ static void read_file(FILE *fp) {
     remove_after->next = remove_before;
     remove_before->prev = remove_after;
 
-    if (rem > 0) {
-      for (i = 0; i < rem; i++) {
+    if (shift > 0) {
+      for (i = 0; i < shift; i++) {
         insert_before = insert_before->next;
       }
-    }
-    if (rem < 0) {
-      for (i = rem; i < -1; i++) {
+    } else {
+      for (i = shift; i < -1; i++) {
         insert_before = insert_before->prev;
       }
     }
@@ -151,7 +159,7 @@ static void read_file(FILE *fp) {
     /* we are now like:
      *  - IA - x - IB - ... - RA - CUR - RB - ... */
     
-    /* handle us taking start's spot */
+    /* handle us taking start's position */
     if (insert_before->prev == start) {
       start = cur;
     }
@@ -164,7 +172,7 @@ static void read_file(FILE *fp) {
 
 nothing_to_do:
     shifted++;
-    debug_array(start, shifted, num_lines);
+    debug_array(cur, shifted, num_lines);
 
     cur = next_to_shift;
   } while (next_to_shift != NULL);
@@ -175,7 +183,7 @@ nothing_to_do:
 
   for (i = 0; i < 3001; i++) {
     if (i > 0 && i % 1000 == 0) {
-      debug_array(start, num_lines, num_lines);
+      debug_array(cur, num_lines, num_lines);
 
       sum += cur->value;
       gotoxy(0, 15);
@@ -186,4 +194,5 @@ nothing_to_do:
 
   printf("Code is: %d\n", sum);
 
+  cgetc();
 }
