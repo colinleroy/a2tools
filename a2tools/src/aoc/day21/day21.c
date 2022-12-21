@@ -241,7 +241,9 @@ static void read_file(FILE *fp) {
   free(monkey_names);
 
   p1res = get_result_for(root_idx);
-  
+  printf("part1: %s\n", p1res);
+  free(p1res);
+
   printf("\n");
   seen_humn = 0;
   p2res = get_result_for(monkeys[root_idx].left_operand);
@@ -257,8 +259,6 @@ static void read_file(FILE *fp) {
   p2res = invert_op(investigate_idx, ref_result);
   free(ref_result);
 
-  printf("part1: %s\n", p1res);
-  free(p1res);
   printf("part2: %s\n", p2res);
   free(p2res);
   free(monkeys);
