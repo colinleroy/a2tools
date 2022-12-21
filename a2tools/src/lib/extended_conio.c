@@ -16,6 +16,7 @@ static void cputsxy(int x, int y, char *buf) {
     buf[39 - x] = '\0';
   }
   printf("%s%s", prefix, buf);
+  free(prefix);
 }
 #endif
 
