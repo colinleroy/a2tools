@@ -349,7 +349,7 @@ static void read_file(FILE *fp) {
   my_x++;
   my_y++;
   result = (long)(my_y * 1000) + (long)(my_x * 4) + (long)(my_direction);
-  printf("(%d*1000 + %d*4 + %d) = %lu\n", my_y, my_x, my_direction, result);
+  printf("(%d*1000 + %d*4 + %d) = %d\n", my_y, my_x, my_direction, result);
   fclose(fp);
   bool_array_free(tiles);
   bool_array_free(empty);
