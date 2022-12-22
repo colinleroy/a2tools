@@ -57,7 +57,7 @@ static monkey *read_monkey(short idx) {
   monkey *m = malloc(sizeof(struct _monkey));
   memset(m, 0, sizeof(struct _monkey));
   fseek(mfp, idx * sizeof(struct _monkey), SEEK_SET);
-  printf("reading monkey %d at %ld\n", idx, idx * sizeof(struct _monkey));
+  printf("reading monkey %d at %d\n", idx, (int)(idx * sizeof(struct _monkey)));
   if (fread(m, sizeof(struct _monkey), 1, mfp) < 1) {
     printf("error reading: %s\n",strerror(errno));
   }
@@ -99,25 +99,26 @@ static bigint *compute(short left_idx, char operator, short right_idx) {
   free(right_r);
   return result;
 }
-static int seen_humn = 0;
+
 static bigint *get_result_for(short m_idx) {
   bigint *result;
   monkey *m = read_monkey(m_idx);
-  if (m_idx == humn_idx)
-    seen_humn = 1;
-  if (m->number_or_operator != 0xFF) {
-    result = compute(m->left_operand, m->number_or_operator, m->right_operand);
-  } else {
-    result = bigint_new_from_long(m->number);
-  }
+  short l_o, n_o, r_o, n;
+  l_o = m->left_operand;
+  n_o = m->number_or_operator;
+  r_o = m->right_operand;
+  n = m->number;
   free(m);
-//  printf("Result for %d: %s\n", m_idx, result);
+  
+  if (n_o != 0xFF) {
+    result = compute(l_o, n_o, r_o);
+  } else {
+    result = bigint_new_from_long(n);
+  }
+  printf("Result for %d: %s\n", m_idx, result);
 
   return result;
 }
-
-#define LEFT 0
-#define RIGHT 1
 
 static char rbuf[255];
 static void read_file(FILE *fp) {
