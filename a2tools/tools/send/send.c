@@ -63,6 +63,7 @@ int main(int argc, char **argv) {
   char c;
   int count = 0;
   char buf[128];
+  char start_addr[2];
   struct stat statbuf;
 
   if (argc < 3) {
@@ -116,6 +117,8 @@ int main(int argc, char **argv) {
     if (buf[0] == 0x00 && buf[1] == 0x05
      && buf[2] == 0x16 && buf[3] == 0x00) {
       printf("AppleSingle file detected, skipping header\n");
+      start_addr[0] = buf[56];
+      start_addr[1] = buf[57];
     } else {
       rewind(fp);
     }
@@ -126,6 +129,11 @@ int main(int argc, char **argv) {
   printf("Data length sent: %ld\n", statbuf.st_size - ftell(fp));
   usleep(LONG_DELAY_MS*1000);
 
+  if (!strcasecmp(filetype, "BIN")) {
+    fprintf(outfp, "%02x%02x\n", start_addr[0], start_addr[1]);
+    printf("Start address sent:    %02x%02x\n", start_addr[0], start_addr[1]);
+    usleep(LONG_DELAY_MS*1000);
+  }
   while(fread(&c, 1, 1, fp) > 0) {
     fwrite(&c, 1, 1, outfp);
     fflush(outfp);

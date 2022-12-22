@@ -16,6 +16,7 @@ int main(void) {
   char *filename = malloc(BUF_SIZE);
   char *filetype = malloc(BUF_SIZE);
   char *s_len = malloc(BUF_SIZE);
+  char *start_addr = malloc(BUF_SIZE);
   size_t data_len = 0;
   FILE *outfp = NULL;
   char *data = NULL;
@@ -53,8 +54,9 @@ read_again:
     _auxtype  = PRODOS_AUX_T_TXT_SEQ;
   } else if (!strcasecmp(filetype,"BIN")) {
     _filetype = PRODOS_T_BIN;
-    /* FIXME This shouldn't be hardcoded */
-    _auxtype = 0x0803;
+    simple_serial_gets(start_addr, BUF_SIZE);
+    _auxtype = strtoul(start_addr, NULL, 16);
+    printf("Start address %04x\n", _auxtype);
   } else if (!strcasecmp(filetype,"SYS")) {
     char *tmp = malloc(BUF_SIZE);
     sprintf(tmp, "%s.system", filename);
