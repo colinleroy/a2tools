@@ -115,6 +115,9 @@ static void plan_move(int num) {
   int free_dirs[4];
   int i, planned_dir;
   
+  if (num % 100 == 0) {
+    printf(".");
+  }
   fseek(elvesfp, num * sizeof(elf), SEEK_SET);
   fread(e, sizeof(elf), 1, elvesfp);
 
@@ -157,6 +160,10 @@ static int num_elf_moved = 0;
 
 static void execute_move(int elf) {
   int i, move_cancelled = 0;
+
+  if (elf % 100 == 0) {
+    printf(".");
+  }
 
   if (elves[elf].p_x == elves[elf].x && elves[elf].p_y == elves[elf].y)
     return;
@@ -205,21 +212,21 @@ static void do_round(void) {
   free(elves);
   build_cache();
 
-  printf(" Planning round...\n");
+  printf(" Planning round...");
   for (i = 0; i < num_elves; i++) {
     plan_move(i);
   }
 
-  printf(" Freeing map and loading elves...\n");
+  printf("\n Freeing map and loading elves...");
   bool_array_free(cache);
   cache = NULL;
   read_elves();
 
-  printf(" Executing round...\n");
+  printf("\n Executing round...");
   for (i = 0; i < num_elves; i++) {
     execute_move(i);
   }
-  printf(" %d elves moved.\n", num_elf_moved);
+  printf("\n %d elves moved.\n", num_elf_moved);
   prio_move = (prio_move + 1) % 4;
 }
 
@@ -311,7 +318,7 @@ static void read_file(FILE *fp) {
     round++;
   } while (num_elf_moved);
 
-  printf("We did %d rounds.\n", round + 1);
+  printf("We did %d rounds.\n", round);
   free(elves);
 
   fclose(fp);
