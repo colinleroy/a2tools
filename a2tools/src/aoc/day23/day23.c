@@ -125,6 +125,8 @@ update_plan:
   }
 }
 
+static int any_elf_moved = 0;
+
 static void execute_move(int elf) {
   int i, move_cancelled = 0;
   for (i = 0; i < num_elves; i++) {
@@ -142,6 +144,7 @@ static void execute_move(int elf) {
     elves[elf].p_x = elves[elf].x;
     elves[elf].p_y = elves[elf].y;
   } else {
+    any_elf_moved++;
     elves[elf].x = elves[elf].p_x;
     elves[elf].y = elves[elf].p_y;
 
@@ -164,14 +167,16 @@ static void execute_move(int elf) {
 static void do_round(void) {
   int i;
 
+  printf(" Planning round...\n");
   for (i = 0; i < num_elves; i++) {
     plan_move(i);
   }
 
+  printf(" Executing round...\n");
   for (i = 0; i < num_elves; i++) {
     execute_move(i);
   }
-  
+  printf(" %d elves moved.\n", any_elf_moved);
   prio_move = (prio_move + 1) % 4;
 }
 
@@ -183,20 +188,20 @@ static void dump_map(void) {
   for (y = min_y; y < max_y; y++) {
     for(x = min_x; x < max_x; x++) {
       full = has_elf(x, y);
-      printf("%c", full ? '#':'.');
+      //printf("%c", full ? '#':'.');
       if (!full) {
         free_tiles++;
       }
     }
-    printf("\n");
+    //printf("\n");
   }
-  cgetc();
+  //cgetc();
 }
 
 static void read_file(FILE *fp) {
   char *buf = malloc(BUFSIZE);
   char *c;
-  int i, round;
+  int i, round = 0;
   int x = 0, y = 0;
 
   while (fgets(buf, BUFSIZE-1, fp) != NULL) {
@@ -245,15 +250,20 @@ static void read_file(FILE *fp) {
   }
 
   printf("Initial state:\n");
-  dump_map();
+  //dump_map();
 
-  for (round = 0; round < 10; round++) {
+  do {
+    any_elf_moved = 0;
     do_round();
-    printf("\nAfter round %d:\n", round + 1);
-    dump_map();
-  }
-  
-  printf("We have %d empty tiles.\n", free_tiles);
+    printf("Finished round %d:\n", round + 1);
+    if (round + 1 == 10) {
+      dump_map();
+      printf("We have %d empty tiles.\n", free_tiles);
+    }
+    round++;
+  } while (any_elf_moved);
+
+  printf("We did %d rounds.\n", round);
   free(elves);
 
   fclose(fp);
