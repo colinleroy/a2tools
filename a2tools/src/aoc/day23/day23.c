@@ -107,37 +107,6 @@ static void build_cache(void) {
   free(e);
 }
 
-static short **planned_positions;
-static short *num_planned_positions_at;
-
-static void init_plan_hash(void) {
-  planned_positions = malloc((2 + max_x-min_x)*sizeof(short *));
-  memset(planned_positions, 0, (2 + max_x-min_x)*sizeof(short *));
-  num_planned_positions_at = malloc((2 + max_x - min_x)*sizeof(short));
-  memset(num_planned_positions_at, 0, (2 + max_x - min_x)*sizeof(short));
-}
-
-static void add_plan_at_line(int elf, int x) {
-  num_planned_positions_at[1 + x - min_x] ++;
-  planned_positions[1 + x - min_x] = realloc(planned_positions[1 + x - min_x], num_planned_positions_at[1 + x - min_x] * sizeof(short));
-  planned_positions[1 + x - min_x][num_planned_positions_at[1 + x - min_x] - 1] = elf;
-}
-
-static short *get_plans_at_line(int x, int *n) {
-  *n = num_planned_positions_at[1 + x - min_x];
-  return planned_positions[1 + x - min_x];
-  
-}
-
-static void free_plan_hash(void) {
-  int i = 0;
-  for (i = 0; i < 2 + max_x - min_x; i++) {
-    free(planned_positions[i]);
-  }
-  free(num_planned_positions_at);
-  free(planned_positions);
-}
-
 static void plan_move(int num) {
   elf *e = malloc(sizeof(elf));
   int free_dirs[4];
@@ -181,19 +150,14 @@ update_plan:
   /* save elf */
   fseek(elvesfp, num * sizeof(elf), SEEK_SET);
   fwrite(e, sizeof(elf), 1, elvesfp);
-
-  /* save plan */
-  add_plan_at_line(num, e->p_x);
   free(e);
 }
 
 static int num_elf_moved = 0;
 
-static int new_min_x, new_min_y, new_max_x, new_max_y;
-
 static void execute_move(int elf) {
-  int i, move_cancelled = 0, n;
-  short *other_plans_at_line = NULL;
+  int i, move_cancelled = 0;
+
   if (elf % 100 == 0) {
     printf(".");
   }
@@ -201,18 +165,14 @@ static void execute_move(int elf) {
   if (elves[elf].p_x == elves[elf].x && elves[elf].p_y == elves[elf].y)
     return;
 
-  other_plans_at_line = get_plans_at_line(elves[elf].p_x, &n);
-  for (i = 0; i < n; i++) {
-    int o_elf = other_plans_at_line[i];
-
-    if (o_elf < 0 || o_elf == elf) {
+  for (i = 0; i < num_elves; i++) {
+    if (i == elf) {
       continue;
-    } else if (elves[o_elf].p_x == elves[elf].p_x && elves[o_elf].p_y == elves[elf].p_y) {
+    } else if (elves[i].p_x == elves[elf].p_x && elves[i].p_y == elves[elf].p_y) {
       /* got to cancel all p_x, p_y moves */
       move_cancelled = 1;
-      elves[o_elf].p_x = elves[o_elf].x;
-      elves[o_elf].p_y = elves[o_elf].y;
-      other_plans_at_line[i] = -1;
+      elves[i].p_x = elves[i].x;
+      elves[i].p_y = elves[i].y;
     }
   }
   if (move_cancelled) {
@@ -225,17 +185,17 @@ static void execute_move(int elf) {
     elves[elf].y = elves[elf].p_y;
 
     /* update bounds */
-    if (elves[elf].x < new_min_x) {
-      new_min_x = elves[elf].x;
+    if (elves[elf].x < min_x) {
+      min_x = elves[elf].x;
     }
-    if (elves[elf].y < new_min_y) {
-      new_min_y = elves[elf].y;
+    if (elves[elf].y < min_y) {
+      min_y = elves[elf].y;
     }
-    if (elves[elf].x >= new_max_x) {
-      new_max_x = elves[elf].x + 1;
+    if (elves[elf].x >= max_x) {
+      max_x = elves[elf].x + 1;
     }
-    if (elves[elf].y >= new_max_y) {
-      new_max_y = elves[elf].y + 1;
+    if (elves[elf].y >= max_y) {
+      max_y = elves[elf].y + 1;
     }
   }
 }
@@ -249,8 +209,6 @@ static void do_round(void) {
   free(elves);
   build_cache();
 
-  init_plan_hash();
-
   printf(" Planning round...");
   for (i = 0; i < num_elves; i++) {
     plan_move(i);
@@ -261,21 +219,10 @@ static void do_round(void) {
   cache = NULL;
   read_elves();
 
-  new_min_x = min_x;
-  new_max_x = max_x;
-  new_min_y = min_y;
-  new_max_y = max_y;
   printf("\n Executing round...");
   for (i = 0; i < num_elves; i++) {
     execute_move(i);
   }
-  free_plan_hash();
-
-  min_x = new_min_x;
-  max_x = new_max_x;
-  min_y = new_min_y;
-  max_y = new_max_y;
-
   printf("\n %d elves moved.\n", num_elf_moved);
   prio_move = (prio_move + 1) % 4;
 }
