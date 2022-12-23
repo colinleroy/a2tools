@@ -14,7 +14,7 @@ DEPS :=
 
 CC65_TARGET = apple2
 CC      = cl65
-CFLAGS  = -t $(CC65_TARGET)
+CFLAGS  = -t $(CC65_TARGET) -Ois
 LDFLAGS = -t $(CC65_TARGET)
 
 .PHONY: all clean

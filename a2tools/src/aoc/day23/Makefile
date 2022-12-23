@@ -1,10 +1,10 @@
 PROGRAM=day23.bin
 SOURCES := day23.c
-DEPS := 
+DEPS := ../../lib/bool_array.o
 
 CC65_TARGET = apple2
 CC      = cl65
-CFLAGS  = -t $(CC65_TARGET) -I ../../lib
+CFLAGS  = -t $(CC65_TARGET) -Ois -I ../../lib
 LDFLAGS = -t $(CC65_TARGET) 
 
 .PHONY: all clean
