@@ -257,7 +257,7 @@ static void dump_map(int round) {
   free_tiles = 0;
 
   for (y = min_y; y < max_y; y++) {
-    if (show) gotoxy(20 - max_x/2 + min_x, y + 8 - max_y/2 + min_y);
+    if (show) gotoxy(20 - max_x/2 + min_x, y + 8 - max_y/2);
     for(x = min_x; x < max_x; x++) {
       full = has_elf(x, y);
       if (show) printf("%c", full ? '*':' ');
