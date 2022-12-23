@@ -12,7 +12,7 @@
 #define BUFSIZE 255
 static void read_file(FILE *fp);
 
-#define DATASET "IN23E"
+#define DATASET "IN23"
 
 int main(void) {
   FILE *fp;
@@ -36,20 +36,21 @@ int main(void) {
 #define WEST  2
 #define EAST  3
 
+#define NO_MOVE 4
+
 static int prio_move = NORTH;
 
 typedef struct _elf {
   short x;
   short y;
-  short p_x;
-  short p_y;
+  char planned_dir;
 } elf;
 
 static elf *elves = NULL;
 static int num_elves = 0;
 static int min_x = 0, min_y = 0, max_x = 0, max_y = 0;
 
-static int show_map;
+static int show_map = 1;
 
 static bool_array *cache = NULL;
 
@@ -85,17 +86,10 @@ static int other_elves(elf *ref_elf, int direction) {
 }
 
 static FILE *elvesfp = NULL;
+
 static void save_elves(void) {
   elvesfp = fopen("ELVES","w+b");
   fwrite(elves, sizeof(elf), num_elves, elvesfp);
-}
-
-static void read_elves(void) {
-  elves = malloc(num_elves * sizeof(elf));
-  fseek(elvesfp, 0, SEEK_SET);
-  fread(elves, sizeof(elf), num_elves, elvesfp);
-  fclose(elvesfp);
-  elvesfp = NULL;
 }
 
 static void build_cache(int round) {
@@ -124,10 +118,56 @@ static void build_cache(int round) {
   }
 }
 
+static int prev_min_x, prev_min_y, prev_max_x, prev_max_y;
+
+static short *dest_cache = NULL;
+
+static void init_dest_cache(void) {
+  int i;
+  prev_min_x = min_x;
+  prev_min_y = min_y;
+  prev_max_x = max_x;
+  prev_max_y = max_y;
+
+  dest_cache = malloc((prev_max_x - prev_min_x + 2) * (prev_max_y - prev_min_y + 2) * sizeof(short));
+  for (i = 0; i < (prev_max_x - prev_min_x + 2) * (prev_max_y - prev_min_y + 2); i++) {
+    dest_cache[i] = -1;
+  }
+}
+
+static void free_dest_cache(void) {
+  free(dest_cache);
+  dest_cache = NULL;
+}
+
+static void reserve_spot(int elf, int x, int y) {
+  int d_x = x - prev_min_x + 1;
+  int d_y = y - prev_min_y + 1;
+  int offset = d_x * (prev_max_y - prev_min_y + 2) + d_y;
+  dest_cache[offset] = elf;
+}
+
+static short get_reserved_spot(int x, int y) {
+  int d_x = x - prev_min_x + 1;
+  int d_y = y - prev_min_y + 1;
+  int offset = d_x * (prev_max_y - prev_min_y + 2) + d_y;
+  return dest_cache[offset];
+}
+
+static void get_dest(int x, int y, char dest, int *p_x, int *p_y) {
+  switch(dest) {
+    case NO_MOVE: *p_x = x;     *p_y = y; break;
+    case NORTH:   *p_x = x;     *p_y = y - 1; break;
+    case EAST:    *p_x = x + 1; *p_y = y; break;
+    case SOUTH:   *p_x = x;     *p_y = y + 1; break;
+    case WEST:    *p_x = x - 1; *p_y = y; break;
+  }
+}
+
 static void plan_move(int num) {
   elf *e;
   int free_dirs[4];
-  int i, planned_dir;
+  int i, prev_planned, planned_dir, p_x, p_y;
   
   if (!show_map) {
     e = malloc(sizeof(elf));
@@ -137,15 +177,18 @@ static void plan_move(int num) {
     e = &elves[num];
   }
 
+  prev_planned = e->planned_dir;
+
   free_dirs[NORTH] = !other_elves(e, NORTH);
   free_dirs[EAST]  = !other_elves(e, EAST);
   free_dirs[SOUTH] = !other_elves(e, SOUTH);
   free_dirs[WEST]  = !other_elves(e, WEST);
 
+  e->planned_dir = NO_MOVE;
+
   if (free_dirs[NORTH] == 1 && free_dirs[EAST] == 1 &&
       free_dirs[SOUTH] == 1 && free_dirs[WEST] == 1) {
-    if (!show_map) free(e);
-    return;
+    goto save;
   }
 
   for (i = 0; i < 4; i++) {
@@ -159,61 +202,78 @@ static void plan_move(int num) {
   if (!show_map) free(e);
   return;
 update_plan:
-  switch(planned_dir) {
-    case NORTH: e->p_y--; break;
-    case SOUTH: e->p_y++; break;
-    case EAST:  e->p_x++; break;
-    case WEST:  e->p_x--; break;
-  }
-
+  e->planned_dir = planned_dir;
+  
+  get_dest(e->x, e->y, e->planned_dir, &p_x, &p_y);
+  reserve_spot(num, p_x, p_y);
+save:
   if (!show_map) {
     /* save elf */
-    fseek(elvesfp, num * sizeof(elf), SEEK_SET);
-    fwrite(e, sizeof(elf), 1, elvesfp);
+    if (e->planned_dir != prev_planned) {
+      fseek(elvesfp, num * sizeof(elf), SEEK_SET);
+      fwrite(e, sizeof(elf), 1, elvesfp);
+    }
     free(e);
   }
 }
 
 static int num_elf_moved = 0;
 
-static void execute_move(int elf) {
-  int i, move_cancelled = 0;
-
-  if (elves[elf].p_x == elves[elf].x && elves[elf].p_y == elves[elf].y)
-    return;
-
-  for (i = 0; i < num_elves; i++) {
-    if (i == elf) {
-      continue;
-    } else if (elves[i].p_x == elves[elf].p_x && elves[i].p_y == elves[elf].p_y) {
-      /* got to cancel all p_x, p_y moves */
-      move_cancelled = 1;
-      elves[i].p_x = elves[i].x;
-      elves[i].p_y = elves[i].y;
-    }
-  }
-  if (move_cancelled) {
-    /* and cancel mine */
-    elves[elf].p_x = elves[elf].x;
-    elves[elf].p_y = elves[elf].y;
+static void execute_move(int num) {
+  int move_cancelled = 0;
+  int p_x, p_y;
+  elf *e;
+  
+  if (!show_map) {
+    e = malloc(sizeof(elf));
+    fseek(elvesfp, num * sizeof(elf), SEEK_SET);
+    fread(e, sizeof(elf), 1, elvesfp);
   } else {
+    e = &elves[num];
+  }
+
+  if (e->planned_dir == NO_MOVE) {
+    if (!show_map) free(e);
+    return;
+  }
+
+  get_dest(e->x, e->y, e->planned_dir, &p_x, &p_y);
+  if (num != get_reserved_spot(p_x, p_y)) {
+    /* got to cancel all p_x, p_y moves */
+    move_cancelled = 1;
+    e->planned_dir = NO_MOVE;
+    /* let the next ones know there was a conflict */
+    reserve_spot(num, p_x, p_y);
+  }
+  if (!move_cancelled) {
     num_elf_moved++;
-    elves[elf].x = elves[elf].p_x;
-    elves[elf].y = elves[elf].p_y;
+    switch (e->planned_dir) {
+      case NORTH: e->y--; break;
+      case EAST:  e->x++; break;
+      case SOUTH: e->y++; break;
+      case WEST:  e->x--; break;
+    }
+    e->planned_dir = NO_MOVE;
 
     /* update bounds */
-    if (elves[elf].x < min_x) {
-      min_x = elves[elf].x;
+    if (e->x < min_x) {
+      min_x = e->x;
     }
-    if (elves[elf].y < min_y) {
-      min_y = elves[elf].y;
+    if (e->y < min_y) {
+      min_y = e->y;
     }
-    if (elves[elf].x >= max_x) {
-      max_x = elves[elf].x + 1;
+    if (e->x >= max_x) {
+      max_x = e->x + 1;
     }
-    if (elves[elf].y >= max_y) {
-      max_y = elves[elf].y + 1;
+    if (e->y >= max_y) {
+      max_y = e->y + 1;
     }
+  }
+  if (!show_map) {
+    /* save elf */
+    fseek(elvesfp, num * sizeof(elf), SEEK_SET);
+    fwrite(e, sizeof(elf), 1, elvesfp);
+    free(e);
   }
 }
 
@@ -223,11 +283,9 @@ static void do_round(int round) {
 
   if (!show_map) printf(" Building map...\n");
 
-  if (!show_map) {
-    save_elves();
-    free(elves);
-  }
   build_cache(round);
+
+  init_dest_cache();
 
   if (!show_map) printf(" Planning round...");
   for (i = 0; i < num_elves; i++) {
@@ -236,16 +294,15 @@ static void do_round(int round) {
 
   if (!show_map) {
     printf("\n Freeing map and loading elves...");
-    bool_array_free(cache);
-    cache = NULL;
-    read_elves();
-  } else  {
-    bool_array_free(cache);
   }
+  bool_array_free(cache);
+  cache = NULL;
+  
   if (!show_map) printf("\n Executing round...");
   for (i = 0; i < num_elves; i++) {
     execute_move(i);
   }
+  free_dest_cache();
   if (!show_map) printf("\n %d elves moved.\n", num_elf_moved);
   prio_move = (prio_move + 1) % 4;
 }
@@ -260,7 +317,7 @@ static void dump_map(int round) {
     if (show) gotoxy(20 - max_x/2 + min_x, y + 8 - max_y/2);
     for(x = min_x; x < max_x; x++) {
       full = has_elf(x, y);
-      if (show) printf("%c", full ? '*':' ');
+      if (show) printf("%c", full ? '*':'.');
       if (!full) {
         free_tiles++;
       }
@@ -312,8 +369,7 @@ static void read_file(FILE *fp) {
       if (*c == '#') {
         elves[i].x = x;
         elves[i].y = y;
-        elves[i].p_x = x;
-        elves[i].p_y = y;
+        elves[i].planned_dir = NO_MOVE;
         i++;
       }
       x++;
@@ -326,8 +382,15 @@ static void read_file(FILE *fp) {
   clrscr();
   printfat(0, 21, 1, "Starting.\n");
 
+  save_elves();
+
   do {
     num_elf_moved = 0;
+
+    if (!show_map) {
+      free(elves);
+      elves = NULL;
+    }
     
     do_round(round);
     printfat(0, 21, 1, "Finished round %d.\n", round + 1);
@@ -335,7 +398,8 @@ static void read_file(FILE *fp) {
   } while (num_elf_moved);
 
   printfat(0, 22, 1, "We did %d rounds.\n", round);
-  free(elves);
 
+  fclose(elvesfp);
+  unlink("ELVES");
   fclose(fp);
 }
