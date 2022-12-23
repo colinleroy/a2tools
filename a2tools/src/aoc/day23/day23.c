@@ -89,9 +89,6 @@ static void plan_move(int elf) {
   free_dirs[SOUTH] = !other_elves(elf, SOUTH);
   free_dirs[WEST]  = !other_elves(elf, WEST);
 
-  elves[elf].p_x = elves[elf].x;
-  elves[elf].p_y = elves[elf].y;
-
   if (free_dirs[NORTH] == 1 && free_dirs[EAST] == 1 &&
       free_dirs[SOUTH] == 1 && free_dirs[WEST] == 1) {
     return;
@@ -119,6 +116,10 @@ static int any_elf_moved = 0;
 
 static void execute_move(int elf) {
   int i, move_cancelled = 0;
+
+  if (elves[elf].p_x == elves[elf].x && elves[elf].p_y == elves[elf].y)
+    return;
+
   for (i = 0; i < num_elves; i++) {
     if (i == elf) {
       continue;
