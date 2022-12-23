@@ -50,7 +50,7 @@ static elf *elves = NULL;
 static int num_elves = 0;
 static int min_x = 0, min_y = 0, max_x = 0, max_y = 0;
 
-static int show_map = 1;
+static int cache_elves = 1;
 
 static bool_array *cache = NULL;
 
@@ -97,14 +97,14 @@ static void build_cache(int round) {
   int i;
   cache = bool_array_alloc(max_x - min_x, max_y - min_y);
 
-  if (!show_map) {
+  if (!cache_elves) {
     e = malloc(sizeof(elf));
   }
-  if (!show_map) {
+  if (!cache_elves) {
     fseek(elvesfp, 0, SEEK_SET);
   }
   for (i = 0; i < num_elves; i++) {
-    if (!show_map) {
+    if (!cache_elves) {
       fread(e, sizeof(elf), 1, elvesfp);
     } else {
       e = &elves[i];
@@ -113,7 +113,7 @@ static void build_cache(int round) {
   }
   dump_map(round);
   
-  if (!show_map) {
+  if (!cache_elves) {
     free(e);
   }
 }
@@ -169,7 +169,7 @@ static void plan_move(int num) {
   int free_dirs[4];
   int i, prev_planned, planned_dir, p_x, p_y;
   
-  if (!show_map) {
+  if (!cache_elves) {
     e = malloc(sizeof(elf));
     fseek(elvesfp, num * sizeof(elf), SEEK_SET);
     fread(e, sizeof(elf), 1, elvesfp);
@@ -199,7 +199,7 @@ static void plan_move(int num) {
     }
   }
   /* else there is no free direction */
-  if (!show_map) free(e);
+  if (!cache_elves) free(e);
   return;
 update_plan:
   e->planned_dir = planned_dir;
@@ -207,7 +207,7 @@ update_plan:
   get_dest(e->x, e->y, e->planned_dir, &p_x, &p_y);
   reserve_spot(num, p_x, p_y);
 save:
-  if (!show_map) {
+  if (!cache_elves) {
     /* save elf */
     if (e->planned_dir != prev_planned) {
       fseek(elvesfp, num * sizeof(elf), SEEK_SET);
@@ -224,7 +224,7 @@ static void execute_move(int num) {
   int p_x, p_y;
   elf *e;
   
-  if (!show_map) {
+  if (!cache_elves) {
     e = malloc(sizeof(elf));
     fseek(elvesfp, num * sizeof(elf), SEEK_SET);
     fread(e, sizeof(elf), 1, elvesfp);
@@ -233,7 +233,7 @@ static void execute_move(int num) {
   }
 
   if (e->planned_dir == NO_MOVE) {
-    if (!show_map) free(e);
+    if (!cache_elves) free(e);
     return;
   }
 
@@ -269,7 +269,7 @@ static void execute_move(int num) {
       max_y = e->y + 1;
     }
   }
-  if (!show_map) {
+  if (!cache_elves) {
     /* save elf */
     fseek(elvesfp, num * sizeof(elf), SEEK_SET);
     fwrite(e, sizeof(elf), 1, elvesfp);
@@ -279,31 +279,31 @@ static void execute_move(int num) {
 
 static void do_round(int round) {
   int i;
-  show_map = max_x < 20;
+  cache_elves = max_x < 1000;
 
-  if (!show_map) printf(" Building map...\n");
+  if (!cache_elves) printf(" Building map...\n");
 
   build_cache(round);
 
   init_dest_cache();
 
-  if (!show_map) printf(" Planning round...");
+  if (!cache_elves) printf(" Planning round...");
   for (i = 0; i < num_elves; i++) {
     plan_move(i);
   }
 
-  if (!show_map) {
+  if (!cache_elves) {
     printf("\n Freeing map and loading elves...");
   }
   bool_array_free(cache);
   cache = NULL;
   
-  if (!show_map) printf("\n Executing round...");
+  if (!cache_elves) printf("\n Executing round...");
   for (i = 0; i < num_elves; i++) {
     execute_move(i);
   }
   free_dest_cache();
-  if (!show_map) printf("\n %d elves moved.\n", num_elf_moved);
+  if (!cache_elves) printf("\n %d elves moved.\n", num_elf_moved);
   prio_move = (prio_move + 1) % 4;
 }
 
@@ -328,8 +328,10 @@ static void dump_map(int round) {
   if (round  == 10) {
     printf("\nWe have %d empty tiles after round 10.\n", free_tiles);
     printf("Hit a key to continue.");
+#ifdef __CC65__
     cgetc();
     clrscr();
+#endif
   }
 }
 
@@ -387,7 +389,7 @@ static void read_file(FILE *fp) {
   do {
     num_elf_moved = 0;
 
-    if (!show_map) {
+    if (!cache_elves) {
       free(elves);
       elves = NULL;
     }
