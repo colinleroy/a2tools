@@ -9,11 +9,7 @@
 
 #define BUF_SIZE 255
 
-/**********************
- * NON FUNCTIONAL NOW
- */////////////////////
 int main(void) {
-//  int r, w, exit_code = 0;
   int exit_code = 0;
   char *buf = malloc(BUF_SIZE);
 
