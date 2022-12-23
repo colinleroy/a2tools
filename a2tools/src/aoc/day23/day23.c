@@ -7,6 +7,7 @@
 #include <apple2.h>
 #endif
 #include "extended_conio.h"
+#include "bool_array.h"
 
 #define BUFSIZE 255
 static void read_file(FILE *fp);
@@ -48,46 +49,81 @@ static elf *elves = NULL;
 static int num_elves = 0;
 static int min_x = 0, min_y = 0, max_x = 0, max_y = 0;
 
+static bool_array *cache = NULL;
+
 static int has_elf(int x, int y) {
   /* Fixme do I have room to optimize that */
-  int i;
-  for (i = 0; i < num_elves; i++) {
-    if (elves[i].x == x && elves[i].y == y)
-      return 1;
-  }
-  return 0;
+  return bool_array_get(cache, x - min_x, y - min_y) != 0;
 }
 
-static int other_elves(int ref_elf, int direction) {
+static int other_elves(elf *ref_elf, int direction) {
   switch(direction) {
     case NORTH:
-      return has_elf(elves[ref_elf].x - 1, elves[ref_elf].y - 1)
-          || has_elf(elves[ref_elf].x,     elves[ref_elf].y - 1)
-          || has_elf(elves[ref_elf].x + 1, elves[ref_elf].y - 1);
+      return has_elf(ref_elf->x - 1, ref_elf->y - 1)
+          || has_elf(ref_elf->x,     ref_elf->y - 1)
+          || has_elf(ref_elf->x + 1, ref_elf->y - 1);
     case EAST:
-      return has_elf(elves[ref_elf].x + 1, elves[ref_elf].y - 1)
-          || has_elf(elves[ref_elf].x + 1, elves[ref_elf].y)
-          || has_elf(elves[ref_elf].x + 1, elves[ref_elf].y + 1);
+      return has_elf(ref_elf->x + 1, ref_elf->y - 1)
+          || has_elf(ref_elf->x + 1, ref_elf->y)
+          || has_elf(ref_elf->x + 1, ref_elf->y + 1);
     case SOUTH:
-      return has_elf(elves[ref_elf].x - 1, elves[ref_elf].y + 1)
-          || has_elf(elves[ref_elf].x,     elves[ref_elf].y + 1)
-          || has_elf(elves[ref_elf].x + 1, elves[ref_elf].y + 1);
+      return has_elf(ref_elf->x - 1, ref_elf->y + 1)
+          || has_elf(ref_elf->x,     ref_elf->y + 1)
+          || has_elf(ref_elf->x + 1, ref_elf->y + 1);
     case WEST:
-      return has_elf(elves[ref_elf].x - 1, elves[ref_elf].y - 1)
-          || has_elf(elves[ref_elf].x - 1, elves[ref_elf].y)
-          || has_elf(elves[ref_elf].x - 1, elves[ref_elf].y + 1);
+      return has_elf(ref_elf->x - 1, ref_elf->y - 1)
+          || has_elf(ref_elf->x - 1, ref_elf->y)
+          || has_elf(ref_elf->x - 1, ref_elf->y + 1);
   }
   printf("unbelievable.\n");
   exit(0);
 }
 
-static void plan_move(int elf) {
+static FILE *elvesfp = NULL;
+static void save_elves(void) {
+  int i;
+  elvesfp = fopen("ELVES","w+b");
+  for (i = 0; i < num_elves; i++) {
+    fwrite((elves +i), sizeof(elf), 1, elvesfp);
+  }
+}
+
+static void read_elves(void) {
+  int i;
+  elves = malloc(num_elves * sizeof(elf));
+  fseek(elvesfp, 0, SEEK_SET);
+  for (i = 0; i < num_elves; i++) {
+    fread(&elves[i], sizeof(elf), 1, elvesfp);
+  }
+  fclose(elvesfp);
+  elvesfp = NULL;
+}
+
+static void build_cache(void) {
+  elf *e = malloc(sizeof(elf));
+  int i;
+  cache = bool_array_alloc(max_x - min_x, max_y - min_y);
+
+  fseek(elvesfp, 0, SEEK_SET);
+  for (i = 0; i < num_elves; i++) {
+    fread(e, sizeof(elf), 1, elvesfp);
+    bool_array_set(cache, e->x - min_x, e->y - min_y, 1);
+  }
+  free(e);
+}
+
+static void plan_move(int num) {
+  elf *e = malloc(sizeof(elf));
   int free_dirs[4];
   int i, planned_dir;
-  free_dirs[NORTH] = !other_elves(elf, NORTH);
-  free_dirs[EAST]  = !other_elves(elf, EAST);
-  free_dirs[SOUTH] = !other_elves(elf, SOUTH);
-  free_dirs[WEST]  = !other_elves(elf, WEST);
+  
+  fseek(elvesfp, num * sizeof(elf), SEEK_SET);
+  fread(e, sizeof(elf), 1, elvesfp);
+
+  free_dirs[NORTH] = !other_elves(e, NORTH);
+  free_dirs[EAST]  = !other_elves(e, EAST);
+  free_dirs[SOUTH] = !other_elves(e, SOUTH);
+  free_dirs[WEST]  = !other_elves(e, WEST);
 
   if (free_dirs[NORTH] == 1 && free_dirs[EAST] == 1 &&
       free_dirs[SOUTH] == 1 && free_dirs[WEST] == 1) {
@@ -102,14 +138,19 @@ static void plan_move(int elf) {
     }
   }
   /* else there is no free direction */
+  free(e);
   return;
 update_plan:
   switch(planned_dir) {
-    case NORTH: elves[elf].p_y--; break;
-    case SOUTH: elves[elf].p_y++; break;
-    case EAST:  elves[elf].p_x++; break;
-    case WEST:  elves[elf].p_x--; break;
+    case NORTH: e->p_y--; break;
+    case SOUTH: e->p_y++; break;
+    case EAST:  e->p_x++; break;
+    case WEST:  e->p_x--; break;
   }
+  /* save elf */
+  fseek(elvesfp, num * sizeof(elf), SEEK_SET);
+  fwrite(e, sizeof(elf), 1, elvesfp);
+  free(e);
 }
 
 static int any_elf_moved = 0;
@@ -158,11 +199,16 @@ static void execute_move(int elf) {
 static void do_round(void) {
   int i;
 
+  save_elves();
+  free(elves);
+  build_cache();
   printf(" Planning round...\n");
   for (i = 0; i < num_elves; i++) {
     plan_move(i);
   }
-
+  bool_array_free(cache);
+  cache = NULL;
+  read_elves();
   printf(" Executing round...\n");
   for (i = 0; i < num_elves; i++) {
     execute_move(i);
@@ -176,6 +222,10 @@ static void dump_map(void) {
   int x, y, full;
   free_tiles = 0;
 
+  save_elves();
+  free(elves);
+  build_cache();
+
   for (y = min_y; y < max_y; y++) {
     for(x = min_x; x < max_x; x++) {
       full = has_elf(x, y);
@@ -186,7 +236,9 @@ static void dump_map(void) {
     }
     //printf("\n");
   }
-  //cgetc();
+  bool_array_free(cache);
+  cache = NULL;
+  read_elves();
 }
 
 static void read_file(FILE *fp) {
@@ -241,11 +293,13 @@ static void read_file(FILE *fp) {
 
   do {
     any_elf_moved = 0;
+    
     do_round();
     printf("Finished round %d.\n", round + 1);
     if (round + 1 == 10) {
       dump_map();
       printf("We have %d empty tiles.\n", free_tiles);
+      cgetc();
     }
     round++;
   } while (any_elf_moved);
