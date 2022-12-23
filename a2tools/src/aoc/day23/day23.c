@@ -97,9 +97,6 @@ static void read_elves(void) {
 static void build_cache(void) {
   elf *e = malloc(sizeof(elf));
   int i;
-  printf(" Building cache for map of %d*%d (x %d-%d, y %d-%d)\n",
-         max_x - min_x, max_y - min_y,
-         min_x, max_x, min_y, max_y);
   cache = bool_array_alloc(max_x - min_x, max_y - min_y);
 
   fseek(elvesfp, 0, SEEK_SET);
