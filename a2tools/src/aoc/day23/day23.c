@@ -292,9 +292,6 @@ static void do_round(int round) {
     plan_move(i);
   }
 
-  if (!cache_elves) {
-    printf("\n Freeing map and loading elves...");
-  }
   bool_array_free(cache);
   cache = NULL;
   
