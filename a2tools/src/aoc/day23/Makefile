@@ -1,6 +1,6 @@
 PROGRAM=day23.bin
 SOURCES := day23.c
-DEPS := ../../lib/bool_array.o
+DEPS := ../../lib/bool_array.o ../../lib/extended_conio.o
 
 CC65_TARGET = apple2
 CC      = cl65

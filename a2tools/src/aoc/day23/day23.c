@@ -12,7 +12,7 @@
 #define BUFSIZE 255
 static void read_file(FILE *fp);
 
-#define DATASET "IN23"
+#define DATASET "IN23E"
 
 int main(void) {
   FILE *fp;
@@ -49,7 +49,11 @@ static elf *elves = NULL;
 static int num_elves = 0;
 static int min_x = 0, min_y = 0, max_x = 0, max_y = 0;
 
+static int show_map;
+
 static bool_array *cache = NULL;
+
+static void dump_map(int round);
 
 static int has_elf(int x, int y) {
   return x >= min_x && x < max_x &&
@@ -94,29 +98,44 @@ static void read_elves(void) {
   elvesfp = NULL;
 }
 
-static void build_cache(void) {
-  elf *e = malloc(sizeof(elf));
+static void build_cache(int round) {
+  elf *e;
   int i;
   cache = bool_array_alloc(max_x - min_x, max_y - min_y);
 
-  fseek(elvesfp, 0, SEEK_SET);
+  if (!show_map) {
+    e = malloc(sizeof(elf));
+  }
+  if (!show_map) {
+    fseek(elvesfp, 0, SEEK_SET);
+  }
   for (i = 0; i < num_elves; i++) {
-    fread(e, sizeof(elf), 1, elvesfp);
+    if (!show_map) {
+      fread(e, sizeof(elf), 1, elvesfp);
+    } else {
+      e = &elves[i];
+    }
     bool_array_set(cache, e->x - min_x, e->y - min_y, 1);
   }
-  free(e);
+  dump_map(round);
+  
+  if (!show_map) {
+    free(e);
+  }
 }
 
 static void plan_move(int num) {
-  elf *e = malloc(sizeof(elf));
+  elf *e;
   int free_dirs[4];
   int i, planned_dir;
   
-  if (num % 100 == 0) {
-    printf(".");
+  if (!show_map) {
+    e = malloc(sizeof(elf));
+    fseek(elvesfp, num * sizeof(elf), SEEK_SET);
+    fread(e, sizeof(elf), 1, elvesfp);
+  } else {
+    e = &elves[num];
   }
-  fseek(elvesfp, num * sizeof(elf), SEEK_SET);
-  fread(e, sizeof(elf), 1, elvesfp);
 
   free_dirs[NORTH] = !other_elves(e, NORTH);
   free_dirs[EAST]  = !other_elves(e, EAST);
@@ -125,7 +144,7 @@ static void plan_move(int num) {
 
   if (free_dirs[NORTH] == 1 && free_dirs[EAST] == 1 &&
       free_dirs[SOUTH] == 1 && free_dirs[WEST] == 1) {
-    free(e);
+    if (!show_map) free(e);
     return;
   }
 
@@ -137,7 +156,7 @@ static void plan_move(int num) {
     }
   }
   /* else there is no free direction */
-  free(e);
+  if (!show_map) free(e);
   return;
 update_plan:
   switch(planned_dir) {
@@ -147,20 +166,18 @@ update_plan:
     case WEST:  e->p_x--; break;
   }
 
-  /* save elf */
-  fseek(elvesfp, num * sizeof(elf), SEEK_SET);
-  fwrite(e, sizeof(elf), 1, elvesfp);
-  free(e);
+  if (!show_map) {
+    /* save elf */
+    fseek(elvesfp, num * sizeof(elf), SEEK_SET);
+    fwrite(e, sizeof(elf), 1, elvesfp);
+    free(e);
+  }
 }
 
 static int num_elf_moved = 0;
 
 static void execute_move(int elf) {
   int i, move_cancelled = 0;
-
-  if (elf % 100 == 0) {
-    printf(".");
-  }
 
   if (elves[elf].p_x == elves[elf].x && elves[elf].p_y == elves[elf].y)
     return;
@@ -200,55 +217,63 @@ static void execute_move(int elf) {
   }
 }
 
-static void do_round(void) {
+static void do_round(int round) {
   int i;
+  show_map = max_x < 20;
 
-  printf(" Building map...\n");
+  if (!show_map) printf(" Building map...\n");
 
-  save_elves();
-  free(elves);
-  build_cache();
+  if (!show_map) {
+    save_elves();
+    free(elves);
+  }
+  build_cache(round);
 
-  printf(" Planning round...");
+  if (!show_map) printf(" Planning round...");
   for (i = 0; i < num_elves; i++) {
     plan_move(i);
   }
 
-  printf("\n Freeing map and loading elves...");
-  bool_array_free(cache);
-  cache = NULL;
-  read_elves();
-
-  printf("\n Executing round...");
+  if (!show_map) {
+    printf("\n Freeing map and loading elves...");
+    bool_array_free(cache);
+    cache = NULL;
+    read_elves();
+  } else  {
+    bool_array_free(cache);
+  }
+  if (!show_map) printf("\n Executing round...");
   for (i = 0; i < num_elves; i++) {
     execute_move(i);
   }
-  printf("\n %d elves moved.\n", num_elf_moved);
+  if (!show_map) printf("\n %d elves moved.\n", num_elf_moved);
   prio_move = (prio_move + 1) % 4;
 }
 
 static int free_tiles;
-static void dump_map(void) {
+static void dump_map(int round) {
   int x, y, full;
+  int show = max_x < 20;
   free_tiles = 0;
 
-  save_elves();
-  free(elves);
-  build_cache();
-
   for (y = min_y; y < max_y; y++) {
+    if (show) gotoxy(20 - max_x/2 + min_x, y + 8 - max_y/2 + min_y);
     for(x = min_x; x < max_x; x++) {
       full = has_elf(x, y);
-      //printf("%c", full ? '#':'.');
+      if (show) printf("%c", full ? '*':' ');
       if (!full) {
         free_tiles++;
       }
     }
-    //printf("\n");
+    if (show) printf("\n");
   }
-  bool_array_free(cache);
-  cache = NULL;
-  read_elves();
+
+  if (round  == 10) {
+    printf("\nWe have %d empty tiles after round 10.\n", free_tiles);
+    printf("Hit a key to continue.");
+    cgetc();
+    clrscr();
+  }
 }
 
 static void read_file(FILE *fp) {
@@ -298,24 +323,18 @@ static void read_file(FILE *fp) {
   }
   free(buf);
 
-  printf("Starting.\n");
-  //dump_map();
+  clrscr();
+  printfat(0, 21, 1, "Starting.\n");
 
   do {
     num_elf_moved = 0;
     
-    do_round();
-    printf("Finished round %d.\n", round + 1);
-    if (round + 1 == 10) {
-      dump_map();
-      printf("We have %d empty tiles.\n", free_tiles);
-      printf("Hit a key to continue.");
-      cgetc();
-    }
+    do_round(round);
+    printfat(0, 21, 1, "Finished round %d.\n", round + 1);
     round++;
   } while (num_elf_moved);
 
-  printf("We did %d rounds.\n", round);
+  printfat(0, 22, 1, "We did %d rounds.\n", round);
   free(elves);
 
   fclose(fp);
