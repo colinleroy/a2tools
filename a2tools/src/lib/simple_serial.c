@@ -178,7 +178,6 @@ int simple_serial_putc(char c) {
   return c;
 }
 
-/* This is completely buggy */
 int simple_serial_puts(char *buf) {
   int i, r, len = strlen(buf);
 
