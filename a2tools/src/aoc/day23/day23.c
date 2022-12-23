@@ -35,13 +35,6 @@ int main(void) {
 #define WEST  2
 #define EAST  3
 
-static char *directions[4] = {
-  "north",
-  "south",
-  "west",
-  "east"
-};
-
 static int prio_move = NORTH;
 
 typedef struct _elf {
@@ -103,9 +96,6 @@ static void plan_move(int elf) {
       free_dirs[SOUTH] == 1 && free_dirs[WEST] == 1) {
     return;
   }
-  // printf("direction check: %s, %s, %s, %s\n",
-  //        directions[(prio_move % 4)], directions[((prio_move + 1) % 4)], 
-  //        directions[((prio_move + 2) % 4)], directions[((prio_move + 3) % 4)]);
 
   for (i = 0; i < 4; i++) {
     planned_dir = (prio_move + i) % 4;
@@ -245,17 +235,13 @@ static void read_file(FILE *fp) {
   }
   free(buf);
 
-  for (i = 0; i < num_elves; i++) {
-    printf("Elf %d: (%d,%d)\n", i, elves[i].x, elves[i].y);
-  }
-
-  printf("Initial state:\n");
+  printf("Starting.\n");
   //dump_map();
 
   do {
     any_elf_moved = 0;
     do_round();
-    printf("Finished round %d:\n", round + 1);
+    printf("Finished round %d.\n", round + 1);
     if (round + 1 == 10) {
       dump_map();
       printf("We have %d empty tiles.\n", free_tiles);
