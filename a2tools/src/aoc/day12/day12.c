@@ -100,7 +100,7 @@ static const short *calculate_path_lengths(void ) {
       free(neighbors);
     }
   }
-  bfs_dists = bfs_compute_shortest_paths(b, bfs_grid_to_node(b, start_x, start_y));
+  bfs_dists = bfs_grid_compute_shortest_paths(b, start_x, start_y);
 
   return bfs_dists;
 }
