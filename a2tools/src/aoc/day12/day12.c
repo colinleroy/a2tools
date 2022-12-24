@@ -10,10 +10,6 @@
 #define DATASET "IN12"
 #define BUFSIZE 255
 
-/* Used to flatten bidimensional array to unidimensional
- * for BFS */
-#define SINGLE_DIM(x,y,y_len) (((x) * (y_len)) + (y))
-
 char buf[BUFSIZE];
 
 char **nodes = NULL;
@@ -28,9 +24,8 @@ int i, j;
 
 static void read_file(FILE *fp);
 
-static int build_neighbors_array(char n, int x, int y, short **neighbors_array);
+static int build_neighbors_array(bfs *b, char n, int x, int y, short **neighbors_array);
 
-static void find_closest_node(int *closest_x, int *closest_y);
 static short *calculate_path_lengths();
 
 #ifdef DEBUG
@@ -45,6 +40,8 @@ static void dump_maps(void) {
   }
 }
 #endif
+
+static bfs *b = NULL;
 
 int main(void) {
   FILE *fp;
@@ -70,17 +67,18 @@ int main(void) {
 
   bfs_dists = calculate_path_lengths();
 
-  printf("\nPart1: Shortest path to %d,%d : %d\n", end_x, end_y, bfs_dists[SINGLE_DIM(end_x, end_y, max_y)]);
+  printf("\nPart1: Shortest path to %d,%d : %d\n", end_x, end_y, bfs_dists[bfs_grid_to_node(b, end_x, end_y)]);
 
   for (i = 0; i < max_y; i++) {
     for (j = 0; j < max_x; j++) {
-        if (nodes[i][j] == 'a' && bfs_dists[SINGLE_DIM(j, i, max_y)] >= 0) {
-          if (closest_a < 0 || bfs_dists[SINGLE_DIM(j, i, max_y)] < closest_a) {
-            closest_a = bfs_dists[SINGLE_DIM(j, i, max_y)];
+        if (nodes[i][j] == 'a' && bfs_dists[bfs_grid_to_node(b, j, i)] >= 0) {
+          if (closest_a < 0 || bfs_dists[bfs_grid_to_node(b, j, i)] < closest_a) {
+            closest_a = bfs_dists[bfs_grid_to_node(b, j, i)];
           }
         }
     }
   }
+  bfs_free(b);
   printf("Part2: Shortest path to an 'a' is %d\n", closest_a);
   free_all();
   free(bfs_dists);
@@ -90,21 +88,20 @@ int main(void) {
 
 static short *calculate_path_lengths(void ) {
   short *bfs_dists = NULL;
-  bfs *b = bfs_new();
+  b = bfs_new();
   int x, y;
   printf("adding %d nodes(for map of %dx%d)\n", max_x*max_y, max_x, max_y);
-  bfs_add_nodes(b, max_x * max_y);
+  bfs_set_grid(b, max_x, max_y);
 
   for (x = 0; x < max_x; x++) {
     for (y = 0; y < max_y; y++) {
       short *neighbors = NULL;
-      int num_neighbors = build_neighbors_array(nodes[y][x], x, y, &neighbors);
-      bfs_add_paths(b, SINGLE_DIM(x, y, max_y), neighbors, num_neighbors);
+      int num_neighbors = build_neighbors_array(b, nodes[y][x], x, y, &neighbors);
+      bfs_add_paths(b, bfs_grid_to_node(b, x, y), neighbors, num_neighbors);
       free(neighbors);
     }
   }
-  bfs_dists = bfs_compute_shortest_paths(b, SINGLE_DIM(start_x, start_y, max_y));
-  bfs_free(b);
+  bfs_dists = bfs_compute_shortest_paths(b, bfs_grid_to_node(b, start_x, start_y));
 
   return bfs_dists;
 }
@@ -159,31 +156,31 @@ static void read_file(FILE *fp) {
   }
 }
 
-static int build_neighbors_array(char n, int x, int y, short **neighbors_array) {
+static int build_neighbors_array(bfs *b, char n, int x, int y, short **neighbors_array) {
   int num_neighbors = 0;
   short *neighbors = NULL;
   /* consider all directions */
   if (x > 0 && (nodes[y][x-1] >= n - 1)) {
     neighbors = realloc(neighbors, (num_neighbors + 1) * sizeof(short));
-    neighbors[num_neighbors] = SINGLE_DIM(x-1, y, max_y);
+    neighbors[num_neighbors] = bfs_grid_to_node(b, x-1, y);
     num_neighbors++;
   }
 
   if (x < max_x - 1 && (nodes[y][x+1] >= n - 1)){
     neighbors = realloc(neighbors, (num_neighbors + 1) * sizeof(short));
-    neighbors[num_neighbors] = SINGLE_DIM(x+1, y, max_y);
+    neighbors[num_neighbors] = bfs_grid_to_node(b, x+1, y);
     num_neighbors++;
   }
 
   if (y > 0 && (nodes[y-1][x] >= n - 1)){
     neighbors = realloc(neighbors, (num_neighbors + 1) * sizeof(short));
-    neighbors[num_neighbors] = SINGLE_DIM(x, y-1, max_y);
+    neighbors[num_neighbors] = bfs_grid_to_node(b, x, y-1);
     num_neighbors++;
   }
 
   if (y < max_y - 1 && (nodes[y+1][x] >= n - 1)){
     neighbors = realloc(neighbors, (num_neighbors + 1) * sizeof(short));
-    neighbors[num_neighbors] = SINGLE_DIM(x, y+1, max_y);
+    neighbors[num_neighbors] = bfs_grid_to_node(b, x, y+1);
     num_neighbors++;
   }
   *neighbors_array = neighbors;
