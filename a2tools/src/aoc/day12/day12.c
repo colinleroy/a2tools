@@ -2,8 +2,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#ifdef __CC65__
+#include <apple2.h>
+#include <conio.h>
+#endif
 #include "day12.h"
 #include "bfs.h"
+#include "extended_conio.h"
 
 // Djikstra implementation
 
@@ -24,7 +29,7 @@ int i, j;
 
 static void read_file(FILE *fp);
 
-static int build_neighbors_array(bfs *b, char n, int x, int y, short **neighbors_array);
+static int build_neighbors_array(bfs *b, char n, int x, int y, int **neighbors_array);
 
 static void setup_bfs();
 
@@ -46,10 +51,12 @@ static bfs *b = NULL;
 int main(void) {
   FILE *fp;
   int closest_a = -1;
-  // short *path;
+  // int *path;
   // int path_len;
 
 #ifdef PRODOS_T_TXT
+  printf("allocable: %u\n", _heapmaxavail());
+  cgetc();
   _filetype = PRODOS_T_TXT;
 #endif
   fp = fopen(DATASET, "r");
@@ -83,7 +90,7 @@ int main(void) {
   for (i = 0; i < max_y; i++) {
     for (j = 0; j < max_x; j++) {
         if (nodes[i][j] == 'a') {
-          short d = bfs_grid_get_shortest_distance_to(b, start_x, start_y, j, i); 
+          int d = bfs_grid_get_shortest_distance_to(b, start_x, start_y, j, i); 
           if (d > -1 && (closest_a < 0 || d < closest_a)) {
             closest_a = d;
           }
@@ -101,15 +108,27 @@ static void setup_bfs(void ) {
   int x, y;
 
   b = bfs_new();
+  if (b == NULL) {
+    printf("Can't allocate bfs\n");
+    exit(1);
+  }
   printf("adding %d nodes(for map of %dx%d)\n", max_x*max_y, max_x, max_y);
-  bfs_set_grid(b, max_x, max_y);
+  if (bfs_set_grid(b, max_x, max_y) < 0) {
+    printf("Cannot allocate BFS grid\n");
+    cgetc();
+    return;
+  }
   bfs_enable_path_trace(b, 1);
 
   for (x = 0; x < max_x; x++) {
     for (y = 0; y < max_y; y++) {
-      short *neighbors = NULL;
+      int *neighbors = NULL;
       int num_neighbors = build_neighbors_array(b, nodes[y][x], x, y, &neighbors);
-      bfs_grid_add_paths(b, x, y, neighbors, num_neighbors);
+      if (bfs_grid_add_paths(b, x, y, neighbors, num_neighbors) < 0) {
+        printf("Cannot allocate BFS paths for (%d,%d) (%u remaining)\n", x, y, _heapmaxavail());
+        cgetc();
+        return;
+      }
       free(neighbors);
     }
   }
@@ -165,30 +184,30 @@ static void read_file(FILE *fp) {
   }
 }
 
-static int build_neighbors_array(bfs *b, char n, int x, int y, short **neighbors_array) {
+static int build_neighbors_array(bfs *b, char n, int x, int y, int **neighbors_array) {
   int num_neighbors = 0;
-  short *neighbors = NULL;
+  int *neighbors = NULL;
   /* consider all directions */
   if (x > 0 && (nodes[y][x-1] >= n - 1)) {
-    neighbors = realloc(neighbors, (num_neighbors + 1) * sizeof(short));
+    neighbors = realloc(neighbors, (num_neighbors + 1) * sizeof(int));
     neighbors[num_neighbors] = bfs_grid_to_node(b, x-1, y);
     num_neighbors++;
   }
 
   if (x < max_x - 1 && (nodes[y][x+1] >= n - 1)){
-    neighbors = realloc(neighbors, (num_neighbors + 1) * sizeof(short));
+    neighbors = realloc(neighbors, (num_neighbors + 1) * sizeof(int));
     neighbors[num_neighbors] = bfs_grid_to_node(b, x+1, y);
     num_neighbors++;
   }
 
   if (y > 0 && (nodes[y-1][x] >= n - 1)){
-    neighbors = realloc(neighbors, (num_neighbors + 1) * sizeof(short));
+    neighbors = realloc(neighbors, (num_neighbors + 1) * sizeof(int));
     neighbors[num_neighbors] = bfs_grid_to_node(b, x, y-1);
     num_neighbors++;
   }
 
   if (y < max_y - 1 && (nodes[y+1][x] >= n - 1)){
-    neighbors = realloc(neighbors, (num_neighbors + 1) * sizeof(short));
+    neighbors = realloc(neighbors, (num_neighbors + 1) * sizeof(int));
     neighbors[num_neighbors] = bfs_grid_to_node(b, x, y+1);
     num_neighbors++;
   }
