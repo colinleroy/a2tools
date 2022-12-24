@@ -49,7 +49,7 @@ int bfs_add_nodes(bfs *b, int num_nodes) {
 int bfs_add_paths(bfs *b, int source, int *dest_nodes, int num_dests) {
   b->num_node_dests[source] = num_dests;
   if (num_dests == 0) {
-    return;
+    return 0;
   }
   b->dests[source] = malloc(num_dests * sizeof(int));
   if (b->dests[source] == NULL) {

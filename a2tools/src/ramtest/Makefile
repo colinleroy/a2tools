@@ -1,6 +1,6 @@
 PROGRAM=ramtest.bin
 SOURCES := ramtest.c
-DEPS := $(topdir)../lib/extended_conio.o
+DEPS := $(topdir)../lib/simple_em.o
 
 CC65_TARGET = apple2
 CC      = cl65
