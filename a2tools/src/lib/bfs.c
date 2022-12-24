@@ -8,8 +8,10 @@ struct _bfs {
   short **dests;
 
   int num_nodes;
-
   int *num_node_dests;
+
+  /* for grid mode */
+  int max_y;
 };
 
 bfs *bfs_new(void) {
@@ -19,6 +21,7 @@ bfs *bfs_new(void) {
   b->num_nodes = 0;
   b->num_node_dests = NULL;
 
+  b->max_y = -1;
   return b;
 }
 
@@ -84,4 +87,17 @@ short *bfs_compute_shortest_paths(bfs *b, short start_node) {
   visited = NULL;
 
   return distances;
+}
+
+void bfs_set_grid(bfs *b, int max_x, int max_y) {
+  b->max_y = max_y;
+  bfs_add_nodes(b, max_x * max_y);
+}
+
+/* Used to flatten bidimensional array to unidimensional
+ * for BFS */
+#define SINGLE_DIM(x,y,y_len) (((x) * (y_len)) + (y))
+
+int bfs_grid_to_node(bfs *b, int x, int y) {
+  return SINGLE_DIM(x, y, b->max_y);
 }
