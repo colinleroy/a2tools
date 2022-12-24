@@ -57,8 +57,8 @@ void bfs_add_paths(bfs *b, short source, short *dest_nodes, int num_dests) {
   b->num_node_dests[source] = num_dests;
 }
 
-const short *bfs_compute_shortest_paths(bfs *b, short start_node) {
-  char *visited = malloc(b->num_nodes * sizeof(char));
+const short *bfs_compute_shortest_distances(bfs *b, short start_node) {
+  char *visited;
   int i;
   short cur_len = 0;
   slist *queue = NULL;
@@ -68,7 +68,7 @@ const short *bfs_compute_shortest_paths(bfs *b, short start_node) {
   } else if (b->distances != NULL) {
     free(b->distances);
   }
-
+  b->start_node = start_node;
   b->distances = malloc(b->num_nodes * sizeof(short));
   visited = malloc(b->num_nodes * sizeof(char));
 
@@ -120,11 +120,11 @@ void bfs_grid_add_paths(bfs *b, int x, int y, short *dest_nodes, int num_dests) 
   bfs_add_paths(b, SINGLE_DIM(x, y, b->max_y), dest_nodes, num_dests);
 }
 
-const short *bfs_grid_compute_shortest_paths(bfs *b, int x, int y) {
-  return bfs_compute_shortest_paths(b, SINGLE_DIM(x, y, b->max_y));
+const short *bfs_grid_compute_shortest_distances(bfs *b, int x, int y) {
+  return bfs_compute_shortest_distances(b, SINGLE_DIM(x, y, b->max_y));
 }
 
-short bfs_grid_get_shortest_path_to(bfs *b, int start_x, int start_y, int end_x, int end_y) {
-  bfs_compute_shortest_paths(b, SINGLE_DIM(start_x, start_y, b->max_y));
+short bfs_grid_get_shortest_distance_to(bfs *b, int start_x, int start_y, int end_x, int end_y) {
+  bfs_compute_shortest_distances(b, SINGLE_DIM(start_x, start_y, b->max_y));
   return b->distances[SINGLE_DIM(end_x, end_y, b->max_y)];
 }

@@ -224,8 +224,8 @@ static void read_file(FILE *fp) {
     free(valve_name[count]);
     free(bfs_dists[count]);
   }
-  free(enabled_targets);
   free(bfs_dists);
+  free(enabled_targets);
   free(valve_name);
   free(valve_flow);
   free(targets);
