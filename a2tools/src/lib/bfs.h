@@ -17,5 +17,5 @@ const short *bfs_compute_shortest_paths(bfs *b, short start_node);
 void bfs_set_grid(bfs *b, int max_x, int max_y);
 int bfs_grid_to_node(bfs *b, int x, int y);
 void bfs_grid_add_paths(bfs *b, int x, int y, short *dest_nodes, int num_dests);
-
+const short *bfs_grid_compute_shortest_paths(bfs *b, int x, int y);
 #endif
