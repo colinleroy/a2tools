@@ -10,8 +10,8 @@ void bfs_free(bfs *);
 void bfs_add_nodes(bfs *b, int num_nodes);
 void bfs_add_paths(bfs *b, short source, short *dest_nodes, int num_dests);
 
-/* Must be freed by caller using free */
-short *bfs_compute_shortest_paths(bfs *b, short start_node);
+/* Not to be freed */
+const short *bfs_compute_shortest_paths(bfs *b, short start_node);
 
 /* helper for grid. Use instead of bfs_add_nodes */
 void bfs_set_grid(bfs *b, int max_x, int max_y);
