@@ -115,3 +115,7 @@ void bfs_set_grid(bfs *b, int max_x, int max_y) {
 int bfs_grid_to_node(bfs *b, int x, int y) {
   return SINGLE_DIM(x, y, b->max_y);
 }
+
+void bfs_grid_add_paths(bfs *b, int x, int y, short *dest_nodes, int num_dests) {
+  bfs_add_paths(b, SINGLE_DIM(x, y, b->max_y), dest_nodes, num_dests);
+}

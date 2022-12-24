@@ -96,7 +96,7 @@ static const short *calculate_path_lengths(void ) {
     for (y = 0; y < max_y; y++) {
       short *neighbors = NULL;
       int num_neighbors = build_neighbors_array(b, nodes[y][x], x, y, &neighbors);
-      bfs_add_paths(b, bfs_grid_to_node(b, x, y), neighbors, num_neighbors);
+      bfs_grid_add_paths(b, x, y, neighbors, num_neighbors);
       free(neighbors);
     }
   }
