@@ -67,12 +67,12 @@ int main(void) {
   setup_bfs();
 
   printf("\nPart1: Shortest path to %d,%d : %d\n", end_x, end_y, 
-          bfs_grid_get_shortest_path_to(b, start_x, start_y, end_x, end_y));
+          bfs_grid_get_shortest_distance_to(b, start_x, start_y, end_x, end_y));
 
   for (i = 0; i < max_y; i++) {
     for (j = 0; j < max_x; j++) {
         if (nodes[i][j] == 'a') {
-          short d = bfs_grid_get_shortest_path_to(b, start_x, start_y, j, i); 
+          short d = bfs_grid_get_shortest_distance_to(b, start_x, start_y, j, i); 
           if (d > -1 && (closest_a < 0 || d < closest_a)) {
             closest_a = d;
           }
