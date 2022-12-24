@@ -12,6 +12,9 @@ struct _bfs {
 
   /* for grid mode */
   int max_y;
+
+  int start_node;
+  short *distances;
 };
 
 bfs *bfs_new(void) {
@@ -22,6 +25,8 @@ bfs *bfs_new(void) {
   b->num_node_dests = NULL;
 
   b->max_y = -1;
+  b->start_node = -1;
+  b->distances = NULL;
   return b;
 }
 
@@ -32,6 +37,7 @@ void bfs_free(bfs *b) {
   }
   free(b->dests);
   free(b->num_node_dests);
+  free(b->distances);
   free(b);
 }
 
@@ -51,32 +57,40 @@ void bfs_add_paths(bfs *b, short source, short *dest_nodes, int num_dests) {
   b->num_node_dests[source] = num_dests;
 }
 
-short *bfs_compute_shortest_paths(bfs *b, short start_node) {
-  short *distances = malloc(b->num_nodes * sizeof(short));
+const short *bfs_compute_shortest_paths(bfs *b, short start_node) {
   char *visited = malloc(b->num_nodes * sizeof(char));
   int i;
   short cur_len = 0;
   slist *queue = NULL;
   
+  if (start_node == b->start_node && b->distances != NULL) {
+    return b->distances;
+  } else if (b->distances != NULL) {
+    free(b->distances);
+  }
+
+  b->distances = malloc(b->num_nodes * sizeof(short));
+  visited = malloc(b->num_nodes * sizeof(char));
+
   for (i = 0; i < b->num_nodes; i++) {
     visited[i] = 0;
-    distances[i] = -1;
+    b->distances[i] = -1;
   }
 
   queue = slist_append(queue, (void *)(long)start_node);
-  distances[start_node] = 0;
+  b->distances[start_node] = 0;
   visited[start_node] = 1;
 
   while (queue) {
     short next_node = (short)(long)(queue->data);
 
     queue = slist_remove(queue, queue);
-    cur_len = distances[next_node] + 1;
+    cur_len = b->distances[next_node] + 1;
 
     for (i = 0; i < b->num_node_dests[next_node]; i++) {
       short dest_node = b->dests[next_node][i];
       if (!visited[dest_node]) {
-        distances[dest_node] = cur_len;
+        b->distances[dest_node] = cur_len;
         visited[dest_node] = 1;
         queue = slist_append(queue, (void *)(long)dest_node);
       }
@@ -86,7 +100,7 @@ short *bfs_compute_shortest_paths(bfs *b, short start_node) {
   free(visited);
   visited = NULL;
 
-  return distances;
+  return b->distances;
 }
 
 void bfs_set_grid(bfs *b, int max_x, int max_y) {

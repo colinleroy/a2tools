@@ -26,7 +26,7 @@ static void read_file(FILE *fp);
 
 static int build_neighbors_array(bfs *b, char n, int x, int y, short **neighbors_array);
 
-static short *calculate_path_lengths();
+static const short *calculate_path_lengths();
 
 #ifdef DEBUG
 static void dump_maps(void) {
@@ -46,7 +46,7 @@ static bfs *b = NULL;
 int main(void) {
   FILE *fp;
   int closest_a = -1;
-  short *bfs_dists = NULL;
+  const short *bfs_dists = NULL;
 
 #ifdef PRODOS_T_TXT
   _filetype = PRODOS_T_TXT;
@@ -81,13 +81,12 @@ int main(void) {
   bfs_free(b);
   printf("Part2: Shortest path to an 'a' is %d\n", closest_a);
   free_all();
-  free(bfs_dists);
 
   exit (0);
 }
 
-static short *calculate_path_lengths(void ) {
-  short *bfs_dists = NULL;
+static const short *calculate_path_lengths(void ) {
+  const short *bfs_dists = NULL;
   b = bfs_new();
   int x, y;
   printf("adding %d nodes(for map of %dx%d)\n", max_x*max_y, max_x, max_y);
