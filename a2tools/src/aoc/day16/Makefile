@@ -1,6 +1,6 @@
 PROGRAM=day16.bin
 SOURCES := day16.c
-DEPS := ../../lib/slist.o ../../lib/bfs.o ../../lib/extended_string.o
+DEPS := ../../lib/slist.o ../../lib/bfs.o ../../lib/extended_string.o ../../lib/bool_array.o
 
 CC65_TARGET = apple2
 CC      = cl65

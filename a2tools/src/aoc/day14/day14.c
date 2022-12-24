@@ -129,7 +129,6 @@ static bool_array *read_file(FILE *fp) {
           OFF_X(max_x), OFF_Y(max_y));
 
   obstacles = bool_array_alloc(map_w + 1, map_h + 1);
-  printf("Obstacles array %p - %d\n", obstacles, bool_array_get_storage_size(obstacles));
   rewind(fp);
 
   printf("Setting up segments...");

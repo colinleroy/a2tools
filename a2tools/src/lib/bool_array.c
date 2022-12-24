@@ -34,15 +34,6 @@ bool_array *bool_array_alloc(int xlen, int ylen) {
     return array;
 }
 
-void bool_array_clear(bool_array *array) {
-  memset(array->data, 0, alloc_size(array->x_len, array->y_len));
-}
-
-size_t bool_array_get_storage_size(bool_array *array) {
-  return sizeof(struct _bool_array)
-    + alloc_size(array->x_len, array->y_len);
-}
-
 void bool_array_free(bool_array *array) {
   if (array != NULL) {
     if (array->data != NULL) {

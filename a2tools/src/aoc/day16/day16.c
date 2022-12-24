@@ -49,7 +49,7 @@ static int get_valve_by_name(const char *name) {
   return -1;
 }
 
-static int find_optimal_flow(short start_valve, short time, short **bfs_dists, short *targets, int num_targets, short *enabled_targets, int depth) {
+static int find_optimal_flow(short start_valve, short time, int **bfs_dists, short *targets, int num_targets, short *enabled_targets, int depth) {
 #ifdef DEBUG
   char *prefix = malloc(depth+2);
 #endif
@@ -109,7 +109,7 @@ static void read_file(FILE *fp) {
   int num_targets = 0;
   short start_valve;
   bfs *b = NULL;
-  short **bfs_dists = NULL;
+  int **bfs_dists = NULL;
   short *enabled_targets;
 
 #ifdef __CC65__
@@ -151,7 +151,7 @@ static void read_file(FILE *fp) {
   for (count = 0; count < num_valves; count++) {
     int num_dest, i;
     char **dests;
-    short *valve_dests;
+    int *valve_dests;
 
 #ifdef __CC65__
     gotoxy(1,1);
@@ -159,7 +159,7 @@ static void read_file(FILE *fp) {
 #endif
 
     num_dest = strsplit(valve_destinations_str[count], ' ', &dests);
-    valve_dests = malloc(num_dest*sizeof(short));
+    valve_dests = malloc(num_dest*sizeof(int));
 
     for (i = 0; i < num_dest; i++) {
       if (strchr(dests[i],','))
@@ -185,8 +185,8 @@ static void read_file(FILE *fp) {
   }
   free(valve_destinations_str);
 
-  bfs_dists = malloc(num_valves * sizeof(short *));
-  memset(bfs_dists, 0, num_valves * sizeof(short *));
+  bfs_dists = malloc(num_valves * sizeof(int *));
+  memset(bfs_dists, 0, num_valves * sizeof(int *));
 
   enabled_targets = malloc(num_valves * sizeof(short));
 
@@ -197,7 +197,7 @@ static void read_file(FILE *fp) {
   start_valve = get_valve_by_name("AA");
   for (count = 0; count < num_valves; count++) {
     if (valve_flow[count] > 0 || count == start_valve) {
-      const short *tmp;
+      const int *tmp;
       targets = realloc(targets, (num_targets + 1) * sizeof(short));
       targets[num_targets] = count;
       num_targets++;
@@ -206,8 +206,8 @@ static void read_file(FILE *fp) {
       printf("BFS shortest paths for %s... (%d/%d)\n", valve_name[count], count, num_valves);
 #endif
       tmp = bfs_compute_shortest_distances(b, count);
-      bfs_dists[count] = malloc(num_valves * sizeof(short));
-      memcpy(bfs_dists[count], tmp, num_valves * sizeof(short));
+      bfs_dists[count] = malloc(num_valves * sizeof(int));
+      memcpy(bfs_dists[count], tmp, num_valves * sizeof(int));
       enabled_targets[count] = 1;
     } else {
       enabled_targets[count] = 0;
