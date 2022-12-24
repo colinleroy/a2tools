@@ -15,6 +15,9 @@ struct _bfs {
 
   int start_node;
   short *distances;
+
+  int trace_path;
+  short *paths;
 };
 
 bfs *bfs_new(void) {
@@ -27,6 +30,9 @@ bfs *bfs_new(void) {
   b->max_y = -1;
   b->start_node = -1;
   b->distances = NULL;
+  
+  b->trace_path = 0;
+  b->paths = NULL;
   return b;
 }
 
@@ -38,6 +44,7 @@ void bfs_free(bfs *b) {
   free(b->dests);
   free(b->num_node_dests);
   free(b->distances);
+  free(b->paths);
   free(b);
 }
 
@@ -57,6 +64,10 @@ void bfs_add_paths(bfs *b, short source, short *dest_nodes, int num_dests) {
   b->num_node_dests[source] = num_dests;
 }
 
+void bfs_enable_path_trace(bfs *b, int enable) {
+  b->trace_path = enable;
+}
+
 const short *bfs_compute_shortest_distances(bfs *b, short start_node) {
   char *visited;
   int i;
@@ -67,10 +78,17 @@ const short *bfs_compute_shortest_distances(bfs *b, short start_node) {
     return b->distances;
   } else if (b->distances != NULL) {
     free(b->distances);
+    free(b->paths);
+    b->paths = NULL;
   }
+
   b->start_node = start_node;
   b->distances = malloc(b->num_nodes * sizeof(short));
   visited = malloc(b->num_nodes * sizeof(char));
+
+  if (b->trace_path) {
+    b->paths = malloc(b->num_nodes * sizeof(short));
+  }
 
   for (i = 0; i < b->num_nodes; i++) {
     visited[i] = 0;
@@ -80,6 +98,10 @@ const short *bfs_compute_shortest_distances(bfs *b, short start_node) {
   queue = slist_append(queue, (void *)(long)start_node);
   b->distances[start_node] = 0;
   visited[start_node] = 1;
+
+  if (b->trace_path) {
+    b->paths[start_node] = start_node;
+  }
 
   while (queue) {
     short next_node = (short)(long)(queue->data);
@@ -92,6 +114,11 @@ const short *bfs_compute_shortest_distances(bfs *b, short start_node) {
       if (!visited[dest_node]) {
         b->distances[dest_node] = cur_len;
         visited[dest_node] = 1;
+
+        if (b->trace_path) {
+          b->paths[dest_node] = next_node;
+        }
+
         queue = slist_append(queue, (void *)(long)dest_node);
       }
     }
@@ -103,17 +130,47 @@ const short *bfs_compute_shortest_distances(bfs *b, short start_node) {
   return b->distances;
 }
 
-void bfs_set_grid(bfs *b, int max_x, int max_y) {
-  b->max_y = max_y;
-  bfs_add_nodes(b, max_x * max_y);
+short bfs_get_shortest_distance_to(bfs *b, short start_node, short end_node) {
+  bfs_compute_shortest_distances(b, start_node);
+  return b->distances[end_node];
+}
+
+const short *bfs_get_shortest_path(bfs *b, short start_node, short end_node, int *path_len) {
+  int i;
+  short *path;
+  short cur = end_node;
+  *path_len = 1 + bfs_get_shortest_distance_to(b, start_node, end_node);
+
+  path = malloc(*path_len * sizeof(short));
+
+  for (i = 0; i < *path_len; i++) {
+    path[(*path_len - i - 1)] = cur;
+    cur = b->paths[cur];
+  }
+
+  return path;
 }
 
 /* Used to flatten bidimensional array to unidimensional
  * for BFS */
 #define SINGLE_DIM(x,y,y_len) (((x) * (y_len)) + (y))
 
+const short *bfs_grid_get_shortest_path(bfs *b, int start_x, int start_y, int end_x, int end_y, int *path_len) {
+  return bfs_get_shortest_path(b, SINGLE_DIM(start_x, start_y, b->max_y), SINGLE_DIM(end_x, end_y, b->max_y), path_len);
+}
+
+void bfs_set_grid(bfs *b, int max_x, int max_y) {
+  b->max_y = max_y;
+  bfs_add_nodes(b, max_x * max_y);
+}
+
 int bfs_grid_to_node(bfs *b, int x, int y) {
   return SINGLE_DIM(x, y, b->max_y);
+}
+
+void bfs_node_to_grid(bfs *b, int node, int *x, int *y) {
+  *x = node / b->max_y;
+  *y = node - (*x * b->max_y);
 }
 
 void bfs_grid_add_paths(bfs *b, int x, int y, short *dest_nodes, int num_dests) {
@@ -125,6 +182,5 @@ const short *bfs_grid_compute_shortest_distances(bfs *b, int x, int y) {
 }
 
 short bfs_grid_get_shortest_distance_to(bfs *b, int start_x, int start_y, int end_x, int end_y) {
-  bfs_compute_shortest_distances(b, SINGLE_DIM(start_x, start_y, b->max_y));
-  return b->distances[SINGLE_DIM(end_x, end_y, b->max_y)];
+  return bfs_get_shortest_distance_to(b, SINGLE_DIM(start_x, start_y, b->max_y), SINGLE_DIM(end_x, end_y, b->max_y));
 }

@@ -46,6 +46,8 @@ static bfs *b = NULL;
 int main(void) {
   FILE *fp;
   int closest_a = -1;
+  // short *path;
+  // int path_len;
 
 #ifdef PRODOS_T_TXT
   _filetype = PRODOS_T_TXT;
@@ -69,6 +71,15 @@ int main(void) {
   printf("\nPart1: Shortest path to %d,%d : %d\n", end_x, end_y, 
           bfs_grid_get_shortest_distance_to(b, start_x, start_y, end_x, end_y));
 
+  // path = bfs_grid_get_shortest_path(b, start_x, start_y, end_x, end_y, &path_len);
+  // for (i = 0; i < path_len; i++) {
+  //   int cx, cy;
+  //   bfs_node_to_grid(b, path[i], &cx, &cy);
+  //   printf("(%d,%d) => ", cx, cy);
+  // }
+  // printf("\n");
+  // free(path);
+
   for (i = 0; i < max_y; i++) {
     for (j = 0; j < max_x; j++) {
         if (nodes[i][j] == 'a') {
@@ -87,10 +98,12 @@ int main(void) {
 }
 
 static void setup_bfs(void ) {
-  b = bfs_new();
   int x, y;
+
+  b = bfs_new();
   printf("adding %d nodes(for map of %dx%d)\n", max_x*max_y, max_x, max_y);
   bfs_set_grid(b, max_x, max_y);
+  bfs_enable_path_trace(b, 1);
 
   for (x = 0; x < max_x; x++) {
     for (y = 0; y < max_y; y++) {
