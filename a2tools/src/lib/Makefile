@@ -1,4 +1,5 @@
 SOURCES := simple_serial.c \
+	simple_em.c \
 	extended_conio.c \
 	extended_string.c \
 	bool_array.c \
@@ -7,7 +8,7 @@ SOURCES := simple_serial.c \
 	slist.c \
 	bigint.c \
 	file_sorter.c \
-	bfs.c
+	bfs.c \
 
 DEPS :=
 #$(topdir)../../drivers/a2.ssc.o

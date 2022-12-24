@@ -3,28 +3,34 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
-#ifdef __CC65__
 #include <apple2.h>
-#endif
-#include "extended_conio.h"
+#include "simple_em.h"
+
+static char *test_str[5] = {
+  "This is string 1.",
+  "And now number 2",
+  "we have five lines",
+  "in the 80 columns card.",
+  "finished, we're done."
+};
 
 int main(void) {
-  unsigned int total = 0;
-  while (1) {
-    char *buf;
+  int i, e;
+  if ((e = em_init()) != 0) {
+    printf("Error %d installing driver.\n", e);
+    exit(1);
+  }
+  
+  for (i = 0; i < 5; i++) {
+    printf("> %d '%s'\n", i, test_str[i]);
+    em_store_str(i, test_str[i]);
+  }
 
-    printf("Heap avail %u, max block %u\n", _heapmemavail(), _heapmaxavail());
-    cgetc();  
-    buf = malloc(1024);
-    if (buf != NULL) {
-      memset(buf, 0, 1024);
-      total += 1024;
-      printf("Allocated %u\n", total);
-    } else {
-      printf("Can't malloc\n");
-      cgetc();
-      break;
-    }
+  for (i = 0; i < 5; i++) {
+    char *data = em_read(i, 256);
+    
+    printf("%d< '%s'\n", i, data);
+    free(data);
   }
   exit (0);
 }
