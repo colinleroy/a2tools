@@ -26,7 +26,7 @@ static void read_file(FILE *fp);
 
 static int build_neighbors_array(bfs *b, char n, int x, int y, short **neighbors_array);
 
-static const short *calculate_path_lengths();
+static void setup_bfs();
 
 #ifdef DEBUG
 static void dump_maps(void) {
@@ -46,7 +46,6 @@ static bfs *b = NULL;
 int main(void) {
   FILE *fp;
   int closest_a = -1;
-  const short *bfs_dists = NULL;
 
 #ifdef PRODOS_T_TXT
   _filetype = PRODOS_T_TXT;
@@ -65,15 +64,17 @@ int main(void) {
   dump_maps();
 #endif
 
-  bfs_dists = calculate_path_lengths();
+  setup_bfs();
 
-  printf("\nPart1: Shortest path to %d,%d : %d\n", end_x, end_y, bfs_dists[bfs_grid_to_node(b, end_x, end_y)]);
+  printf("\nPart1: Shortest path to %d,%d : %d\n", end_x, end_y, 
+          bfs_grid_get_shortest_path_to(b, start_x, start_y, end_x, end_y));
 
   for (i = 0; i < max_y; i++) {
     for (j = 0; j < max_x; j++) {
-        if (nodes[i][j] == 'a' && bfs_dists[bfs_grid_to_node(b, j, i)] >= 0) {
-          if (closest_a < 0 || bfs_dists[bfs_grid_to_node(b, j, i)] < closest_a) {
-            closest_a = bfs_dists[bfs_grid_to_node(b, j, i)];
+        if (nodes[i][j] == 'a') {
+          short d = bfs_grid_get_shortest_path_to(b, start_x, start_y, j, i); 
+          if (d > -1 && (closest_a < 0 || d < closest_a)) {
+            closest_a = d;
           }
         }
     }
@@ -85,8 +86,7 @@ int main(void) {
   exit (0);
 }
 
-static const short *calculate_path_lengths(void ) {
-  const short *bfs_dists = NULL;
+static void setup_bfs(void ) {
   b = bfs_new();
   int x, y;
   printf("adding %d nodes(for map of %dx%d)\n", max_x*max_y, max_x, max_y);
@@ -100,9 +100,6 @@ static const short *calculate_path_lengths(void ) {
       free(neighbors);
     }
   }
-  bfs_dists = bfs_grid_compute_shortest_paths(b, start_x, start_y);
-
-  return bfs_dists;
 }
 
 static void free_all() {

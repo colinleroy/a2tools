@@ -121,5 +121,10 @@ void bfs_grid_add_paths(bfs *b, int x, int y, short *dest_nodes, int num_dests) 
 }
 
 const short *bfs_grid_compute_shortest_paths(bfs *b, int x, int y) {
-  return bfs_compute_shortest_paths(b, bfs_grid_to_node(b, x, y));
+  return bfs_compute_shortest_paths(b, SINGLE_DIM(x, y, b->max_y));
+}
+
+short bfs_grid_get_shortest_path_to(bfs *b, int start_x, int start_y, int end_x, int end_y) {
+  bfs_compute_shortest_paths(b, SINGLE_DIM(start_x, start_y, b->max_y));
+  return b->distances[SINGLE_DIM(end_x, end_y, b->max_y)];
 }
