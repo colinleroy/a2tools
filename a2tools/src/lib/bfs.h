@@ -29,10 +29,13 @@ void bfs_free(bfs *);
 int bfs_add_nodes(bfs *b, int num_nodes);
 int bfs_add_paths(bfs *b, int source, int *dest_nodes, int num_dests);
 void bfs_set_get_neighbors_func(bfs *b, get_neighbors_func get_neighbors);
-/* Not to be freed */
+
+/* Not to be freed by caller */
 const int *bfs_compute_shortest_distances(bfs *b, int start_node);
 int bfs_get_shortest_distance_to(bfs *b, int start_node, int end_node);
-const int *bfs_get_shortest_path(bfs *b, int start_node, int end_node, int *path_len);
+
+/* To be freed by caller */
+int *bfs_get_shortest_path(bfs *b, int start_node, int end_node, int *path_len);
 
 /* helper for grid. Use instead of bfs_add_nodes */
 

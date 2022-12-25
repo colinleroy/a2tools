@@ -176,7 +176,7 @@ int bfs_get_shortest_distance_to(bfs *b, int start_node, int end_node) {
   return b->distances[end_node];
 }
 
-const int *bfs_get_shortest_path(bfs *b, int start_node, int end_node, int *path_len) {
+int *bfs_get_shortest_path(bfs *b, int start_node, int end_node, int *path_len) {
   int i;
   int *path;
   int cur = end_node;
