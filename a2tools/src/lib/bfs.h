@@ -19,13 +19,11 @@ struct _bfs {
 };
 
 /* Must be freed by caller using bfs_free */
-bfs *bfs_new(void);
+bfs *bfs_new(int trace_path);
 void bfs_free(bfs *);
 
 int bfs_add_nodes(bfs *b, int num_nodes);
 int bfs_add_paths(bfs *b, int source, int *dest_nodes, int num_dests);
-
-void bfs_enable_path_trace(bfs *b, int enable);
 
 /* Not to be freed */
 const int *bfs_compute_shortest_distances(bfs *b, int start_node);
@@ -37,7 +35,6 @@ const int *bfs_get_shortest_path(bfs *b, int start_node, int end_node, int *path
 /* Used to flatten bidimensional array to unidimensional
  * for BFS */
 #define SINGLE_DIM(x,y,y_len) (((x) * (y_len)) + (y))
-
 
 int bfs_set_grid(bfs *b, int max_x, int max_y);
 

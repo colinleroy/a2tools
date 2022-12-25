@@ -2,17 +2,16 @@
 #include <stdio.h>
 #include <string.h>
 #include "bfs.h"
-#include "slist.h"
 #include "bool_array.h"
 
-bfs *bfs_new(void) {
+bfs *bfs_new(int enable_path_trace) {
   bfs *b = malloc(sizeof(bfs));
   if (b == NULL) {
     return NULL;
   }
 
   memset(b, 0, sizeof(bfs));
-
+  b->trace_path = enable_path_trace;
   return b;
 }
 
@@ -60,15 +59,32 @@ int bfs_add_paths(bfs *b, int source, int *dest_nodes, int num_dests) {
   return 0;
 }
 
-void bfs_enable_path_trace(bfs *b, int enable) {
-  b->trace_path = enable;
+static int *queue_in(int *queue, int *queue_len, int value) {
+  queue = realloc(queue, (*queue_len + 1) * sizeof(int));
+  queue[*queue_len] = value;
+  *queue_len = *queue_len + 1;
+  return queue;
+}
+
+static int *queue_out(int *queue, int *queue_len) {
+  if (*queue_len == 1) {
+    free(queue);
+    *queue_len = 0;
+    return NULL;
+  }
+  memmove(queue, queue + 1, (*queue_len - 1) * sizeof(int));
+  queue = realloc(queue, (*queue_len) * sizeof(int));
+  *queue_len = *queue_len - 1;
+  
+  return queue;
 }
 
 const int *bfs_compute_shortest_distances(bfs *b, int start_node) {
-  bool_array *visited;
+  char *visited;
   int i;
   int cur_len = 0;
-  slist *queue = NULL;
+  int *node_queue = NULL;
+  int node_queue_len = 0;
   
   if (b->distances != NULL) {
     if (start_node == b->start_node) {
@@ -85,11 +101,11 @@ const int *bfs_compute_shortest_distances(bfs *b, int start_node) {
   if (b->distances == NULL) {
     return NULL;
   }
-  visited = bool_array_alloc(b->num_nodes, 1); {
-    if (visited == NULL) {
-      return NULL;
-    }
+  visited = malloc(b->num_nodes);
+  if (visited == NULL) {
+    return NULL;
   }
+  memset(visited, 0, b->num_nodes);
 
   if (b->trace_path) {
     b->paths = malloc(b->num_nodes * sizeof(int));
@@ -99,40 +115,41 @@ const int *bfs_compute_shortest_distances(bfs *b, int start_node) {
   }
 
   for (i = 0; i < b->num_nodes; i++) {
-    bool_array_set(visited, i, 0, 0);
     b->distances[i] = -1;
   }
 
-  queue = slist_append(queue, (void *)(long)start_node);
+  node_queue = queue_in(node_queue, &node_queue_len, start_node);
+
   b->distances[start_node] = 0;
-  bool_array_set(visited, start_node, 0, 1);
+  visited[start_node] = 1;
 
   if (b->trace_path) {
     b->paths[start_node] = start_node;
   }
 
-  while (queue) {
-    int next_node = (int)(long)(queue->data);
+  while (node_queue_len) {
+    int next_node = node_queue[0];
 
-    queue = slist_remove(queue, queue);
+    node_queue = queue_out(node_queue, &node_queue_len);
+
     cur_len = b->distances[next_node] + 1;
 
     for (i = 0; i < b->num_node_dests[next_node]; i++) {
       int dest_node = b->dests[next_node][i];
-      if (!bool_array_get(visited, dest_node, 0)) {
+      if (!visited[dest_node]) {
         b->distances[dest_node] = cur_len;
-        bool_array_set(visited, dest_node, 0, 1);
+        visited[dest_node] = 1;
 
         if (b->trace_path) {
           b->paths[dest_node] = next_node;
         }
 
-        queue = slist_append(queue, (void *)(long)dest_node);
+        node_queue = queue_in(node_queue, &node_queue_len, dest_node);
       }
     }
     cur_len++;
   }
-  bool_array_free(visited);
+  free(visited);
 
   return b->distances;
 }

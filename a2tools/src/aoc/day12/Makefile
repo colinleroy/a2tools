@@ -1,6 +1,6 @@
 PROGRAM=day12.bin
 SOURCES := day12.c
-DEPS := $(topdir)../../lib/bfs.o $(topdir)../../lib/slist.o ../../lib/bool_array.o
+DEPS := ../../lib/bfs.o
 
 CC65_TARGET = apple2
 CC      = cl65
