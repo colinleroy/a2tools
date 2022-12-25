@@ -2,22 +2,17 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
-#ifdef __CC65__
-#include <apple2.h>
 #include <conio.h>
-#include <em.h>
-#endif
-#include "day12.h"
 #include "bfs.h"
-#include "extended_conio.h"
 
-// Djikstra implementation
-
-#define DEBUG
-#define DATASET "IN12E"
+#define DATASET "IN12"
 #define BUFSIZE 255
 
 char buf[BUFSIZE];
+
+char **nodes = NULL;
+
+static void free_all(void);
 
 int max_x = 0, max_y = 0;
 
@@ -29,17 +24,13 @@ static void read_file(FILE *fp);
 
 static int build_neighbors_array(bfs *b, char n, int x, int y, int **neighbors_array);
 
-static void setup_bfs();
-
 #ifdef DEBUG
 static void dump_maps(void) {
   int i, j;
   printf("nodes map of %d * %d\n", max_x, max_y);
   for (i = 0; i < max_y; i++) {
-    char *em_nodeline = em_map(i);
-    printf("loaded %d: %s\n", i, em_nodeline);
     for (j = 0; j < max_x; j++) {
-      printf("%c", em_nodeline[j]);
+      printf("%c",nodes[i][j]);
     }
     printf("\n");
   }
@@ -50,14 +41,9 @@ static bfs *b = NULL;
 
 int main(void) {
   FILE *fp;
-  int closest_a = -1;
-  int i, j;
-  // int *path;
-  // int path_len;
+  int closest_a = -1, x, y;
 
 #ifdef PRODOS_T_TXT
-  printf("allocable: %u\n", _heapmaxavail());
-  cgetc();
   _filetype = PRODOS_T_TXT;
 #endif
   fp = fopen(DATASET, "r");
@@ -66,31 +52,6 @@ int main(void) {
     exit(1);
   }
 
-  if (em_install(a2_auxmem_emd) != 0) {
-    printf("cannot install auxmem driver\n");
-  }
-
-  for (i = 0; i < 10; i++) {
-    register unsigned *page = em_use(i);
-    if (page == NULL) {
-      printf("?????\n");
-    }
-    printf("writing %c in page %d\n", 'A'+i, i);
-    for (j = 0; j < 10; j++) {
-      page[j]=('A'+i+j);
-    }
-    page[j] = 0;
-    em_commit();    
-  }
-
-  for (i = 0; i < 10; i++) {
-    register unsigned *page = em_map(i);
-    if (page == NULL) {
-      printf("!!!!!!\n");
-    }
-    printf("read %s in page %d\n", page, i);
-  }
-  cgetc();
   read_file(fp);
 
   fclose(fp);
@@ -99,9 +60,27 @@ int main(void) {
   dump_maps();
 #endif
 
-  setup_bfs();
+  b = bfs_new(1);
+  if (b == NULL) {
+    exit(1);
+  }
+  printf("%d nodes (%d*%d)\n", max_x*max_y, max_x, max_y);
+  if (bfs_set_grid(b, max_x, max_y) < 0) {
+    exit(1);
+  }
 
-  printf("\nPart1: Shortest path to %d,%d : %d\n", end_x, end_y, 
+  for (x = 0; x < max_x; x++) {
+    for (y = 0; y < max_y; y++) {
+      int *neighbors = NULL;
+      int num_neighbors = build_neighbors_array(b, nodes[y][x], x, y, &neighbors);
+      if (bfs_grid_add_paths(b, x, y, neighbors, num_neighbors) < 0) {
+        exit(1);
+      }
+      free(neighbors);
+    }
+  }
+
+  printf("\nPart1: %d,%d : %d\n", end_x, end_y, 
           bfs_grid_get_shortest_distance_to(b, start_x, start_y, end_x, end_y));
 
   // path = bfs_grid_get_shortest_path(b, start_x, start_y, end_x, end_y, &path_len);
@@ -114,9 +93,8 @@ int main(void) {
   // free(path);
 
   for (i = 0; i < max_y; i++) {
-    char *em_nodeline = em_map(i);
     for (j = 0; j < max_x; j++) {
-        if (em_nodeline[j] == 'a') {
+        if (nodes[i][j] == 'a') {
           int d = bfs_grid_get_shortest_distance_to(b, start_x, start_y, j, i); 
           if (d > -1 && (closest_a < 0 || d < closest_a)) {
             closest_a = d;
@@ -125,111 +103,71 @@ int main(void) {
     }
   }
   bfs_free(b);
-  printf("Part2: Shortest path to an 'a' is %d\n", closest_a);
-
+  printf("Part2: %d\n", closest_a);
+  free_all();
+  cgetc();
   exit (0);
 }
 
-static void setup_bfs(void ) {
-  int x, y;
-
-  b = bfs_new();
-  if (b == NULL) {
-    printf("Can't allocate bfs\n");
-    exit(1);
+static void free_all() {
+  int i;
+  for (i = 0; i < max_y; i++) {
+    free(nodes[i]);
   }
-  printf("adding %d nodes(for map of %dx%d)\n", max_x*max_y, max_x, max_y);
-  if (bfs_set_grid(b, max_x, max_y) < 0) {
-    printf("Cannot allocate BFS grid\n");
-    cgetc();
-    return;
-  }
-  bfs_enable_path_trace(b, 1);
-
-  for (y = 0; y < max_y; y++) {
-    char *em_nodeline = em_map(y);
-    for (x = 0; x < max_x; x++) {
-      int *neighbors = NULL;
-      int num_neighbors = build_neighbors_array(b, em_nodeline[x], x, y, &neighbors);
-      if (bfs_grid_add_paths(b, x, y, neighbors, num_neighbors) < 0) {
-        printf("Cannot allocate BFS paths for (%d,%d) (%u remaining)\n", x, y, _heapmaxavail());
-        cgetc();
-        return;
-      }
-      free(neighbors);
-    }
-  }
+  free(nodes);
 }
 
 static void read_file(FILE *fp) {
-  char *em_nodeline = NULL;
+  char *node_line = NULL;
   int i;
   while (NULL != fgets(buf, sizeof(buf), fp)) {
-    if (max_x == 0) {
-      max_x = strlen(buf);
-      /* is there a return line */
-      if (buf[max_x - 1] == '\n') {
-        max_x--;
-      }
-    }
-    buf[max_x] = '\0';
+    *strchr(buf, '\n') = '\0';
+    max_x = strlen(buf);
 
-    em_nodeline = em_map(max_y);
-    memset(em_nodeline, 0, 256);
-    strcpy(em_nodeline, buf);
+    nodes = realloc(nodes, (1 + max_y)*sizeof(char *));
+
+    node_line = strdup(buf);
+
+    nodes[max_y] = node_line;
     for (i = 0; i < max_x; i++) {
-      if (em_nodeline[i] == 'S') {
-        em_nodeline[i] = 'a';
+      if (node_line[i] == 'S') {
+        node_line[i] = 'a';
         end_x = i;
         end_y = max_y;
-      } else if (em_nodeline[i] == 'E') {
-        em_nodeline[i] = 'z';
+      } else if (node_line[i] == 'E') {
+        node_line[i] = 'z';
         start_x = i;
         start_y = max_y;
       }
     }
-    printf("copied %s to %s at %d\n", buf, em_nodeline, max_y);
-    em_commit();
-
     max_y++;
   }
 }
 
+static void add_neighbor(bfs *b, int x, int y, int **neighbors, int *num_neighbors) {
+  *neighbors = realloc(*neighbors, ((*num_neighbors) + 1) * sizeof(int));
+  (*neighbors)[*num_neighbors] = bfs_grid_to_node(b, x, y);
+  *num_neighbors = *num_neighbors + 1;
+}
+
 static int build_neighbors_array(bfs *b, char n, int x, int y, int **neighbors_array) {
   int num_neighbors = 0;
-  int *neighbors = NULL;
-  char *em_nodeline = em_map(y);
   /* consider all directions */
-  if (x > 0 && (em_nodeline[x-1] >= n - 1)) {
-    neighbors = realloc(neighbors, (num_neighbors + 1) * sizeof(int));
-    neighbors[num_neighbors] = bfs_grid_to_node(b, x-1, y);
-    num_neighbors++;
+  if (x > 0 && (nodes[y][x-1] >= n - 1)) {
+    add_neighbor(b, x - 1, y, neighbors_array, &num_neighbors);
   }
 
-  if (x < max_x - 1 && (em_nodeline[x+1] >= n - 1)){
-    neighbors = realloc(neighbors, (num_neighbors + 1) * sizeof(int));
-    neighbors[num_neighbors] = bfs_grid_to_node(b, x+1, y);
-    num_neighbors++;
+  if (x < max_x - 1 && (nodes[y][x+1] >= n - 1)){
+    add_neighbor(b, x + 1, y, neighbors_array, &num_neighbors);
   }
 
-  if (y > 0) {
-    em_nodeline = em_map(y - 1);
-    if(em_nodeline[x] >= n - 1) {
-      neighbors = realloc(neighbors, (num_neighbors + 1) * sizeof(int));
-      neighbors[num_neighbors] = bfs_grid_to_node(b, x, y-1);
-      num_neighbors++;
-    }
+  if (y > 0 && (nodes[y-1][x] >= n - 1)){
+    add_neighbor(b, x, y - 1, neighbors_array, &num_neighbors);
   }
 
-  if (y < max_y - 1) {
-    em_nodeline = em_map(y + 1);
-    if (em_nodeline[x] >= n - 1) {
-      neighbors = realloc(neighbors, (num_neighbors + 1) * sizeof(int));
-      neighbors[num_neighbors] = bfs_grid_to_node(b, x, y+1);
-      num_neighbors++;
-    }
+  if (y < max_y - 1 && (nodes[y+1][x] >= n - 1)){
+    add_neighbor(b, x, y + 1, neighbors_array, &num_neighbors);
   }
-  *neighbors_array = neighbors;
 
   return num_neighbors;
 }
