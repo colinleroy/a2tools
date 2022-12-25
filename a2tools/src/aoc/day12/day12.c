@@ -44,8 +44,8 @@ static bfs *b = NULL;
 
 int main(void) {
   FILE *fp;
-  int closest_a = -1, x, y;
-  int *path;
+  int closest_a = -1;
+  const int *path;
   int path_len;
 
 #ifdef PRODOS_T_TXT
