@@ -16,13 +16,14 @@ bfs *bfs_new(int enable_path_trace) {
 }
 
 void bfs_free(bfs *b) {
-  do {
-    b->num_nodes--;
-    free(b->dests[b->num_nodes]);
-  } while (b->num_nodes > 0);
-
-  free(b->dests);
-  free(b->num_node_dests);
+  if (b->dests) {
+    do {
+      b->num_nodes--;
+      free(b->dests[b->num_nodes]);
+    } while (b->num_nodes > 0);
+    free(b->dests);
+    free(b->num_node_dests);
+  }
   free(b->distances);
   free(b->paths);
   free(b);
@@ -31,17 +32,19 @@ void bfs_free(bfs *b) {
 int bfs_add_nodes(bfs *b, int num_nodes) {
   b->num_nodes = num_nodes;
 
-  b->dests = malloc(num_nodes * sizeof(int *));
-  if (b->dests == NULL) {
-    return -1;
-  }
-  memset(b->dests, 0, num_nodes * sizeof(int));
+  if (b->get_neighbors == NULL) {
+    b->dests = malloc(num_nodes * sizeof(int *));
+    if (b->dests == NULL) {
+      return -1;
+    }
+    memset(b->dests, 0, num_nodes * sizeof(int));
 
-  b->num_node_dests = malloc(num_nodes * sizeof(int));
-  if (b->num_node_dests == NULL) {
-    return -1;
+    b->num_node_dests = malloc(num_nodes * sizeof(int));
+    if (b->num_node_dests == NULL) {
+      return -1;
+    }
+    memset(b->num_node_dests, 0, num_nodes * sizeof(int));
   }
-  memset(b->num_node_dests, 0, num_nodes * sizeof(int));
   return 0;
 }
 
@@ -57,6 +60,10 @@ int bfs_add_paths(bfs *b, int source, int *dest_nodes, int num_dests) {
   memcpy(b->dests[source], dest_nodes, num_dests * sizeof(int));
 
   return 0;
+}
+
+void bfs_set_get_neighbors_func(bfs *b, get_neighbors_func get_neighbors) {
+  b->get_neighbors = get_neighbors;
 }
 
 static int *queue_in(int *queue, int *queue_len, int value) {
@@ -129,13 +136,20 @@ const int *bfs_compute_shortest_distances(bfs *b, int start_node) {
 
   while (node_queue_len) {
     int next_node = node_queue[0];
-
+    int num_neighbors = 0;
+    int *neighbors = NULL;
     node_queue = queue_out(node_queue, &node_queue_len);
 
     cur_len = b->distances[next_node] + 1;
 
-    for (i = 0; i < b->num_node_dests[next_node]; i++) {
-      int dest_node = b->dests[next_node][i];
+    if (!b->get_neighbors) {
+      num_neighbors = b->num_node_dests[next_node];
+      neighbors = b->dests[next_node];
+    } else {
+      num_neighbors = b->get_neighbors(b, next_node, &neighbors);
+    }
+    for (i = 0; i < num_neighbors; i++) {
+      int dest_node = neighbors[i];
       if (!visited[dest_node]) {
         b->distances[dest_node] = cur_len;
         visited[dest_node] = 1;
@@ -146,6 +160,9 @@ const int *bfs_compute_shortest_distances(bfs *b, int start_node) {
 
         node_queue = queue_in(node_queue, &node_queue_len, dest_node);
       }
+    }
+    if (b->get_neighbors) {
+      free(neighbors);
     }
     cur_len++;
   }

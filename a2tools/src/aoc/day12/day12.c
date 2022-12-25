@@ -2,7 +2,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#ifdef __CC65__
 #include <conio.h>
+#endif
 #include "bfs.h"
 
 #define DATASET "IN12"
@@ -23,6 +25,7 @@ int i, j;
 static void read_file(FILE *fp);
 
 static int build_neighbors_array(bfs *b, char n, int x, int y, int **neighbors_array);
+static int get_neighbors_bfs (bfs *b, int node, int **neighbors);
 
 #ifdef DEBUG
 static void dump_maps(void) {
@@ -65,20 +68,22 @@ int main(void) {
     exit(1);
   }
   printf("%d nodes (%d*%d)\n", max_x*max_y, max_x, max_y);
+  bfs_set_get_neighbors_func(b, get_neighbors_bfs);
+
   if (bfs_set_grid(b, max_x, max_y) < 0) {
     exit(1);
   }
-
-  for (x = 0; x < max_x; x++) {
-    for (y = 0; y < max_y; y++) {
-      int *neighbors = NULL;
-      int num_neighbors = build_neighbors_array(b, nodes[y][x], x, y, &neighbors);
-      if (bfs_grid_add_paths(b, x, y, neighbors, num_neighbors) < 0) {
-        exit(1);
-      }
-      free(neighbors);
-    }
-  }
+  
+  // for (x = 0; x < max_x; x++) {
+  //   for (y = 0; y < max_y; y++) {
+  //     int *neighbors = NULL;
+  //     int num_neighbors = build_neighbors_array(b, nodes[y][x], x, y, &neighbors);
+  //     if (bfs_grid_add_paths(b, x, y, neighbors, num_neighbors) < 0) {
+  //       exit(1);
+  //     }
+  //     free(neighbors);
+  //   }
+  // }
 
   printf("\nPart1: %d,%d : %d\n", end_x, end_y, 
           bfs_grid_get_shortest_distance_to(b, start_x, start_y, end_x, end_y));
@@ -105,7 +110,9 @@ int main(void) {
   bfs_free(b);
   printf("Part2: %d\n", closest_a);
   free_all();
+#ifdef __CC65__
   cgetc();
+#endif
   exit (0);
 }
 
@@ -170,4 +177,10 @@ static int build_neighbors_array(bfs *b, char n, int x, int y, int **neighbors_a
   }
 
   return num_neighbors;
+}
+
+static int get_neighbors_bfs (bfs *b, int node, int **neighbors) {
+  int x, y;
+  bfs_node_to_grid(b, node, &x, &y);
+  return build_neighbors_array(b, nodes[y][x], x, y, neighbors);
 }
