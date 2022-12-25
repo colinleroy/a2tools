@@ -24,7 +24,6 @@ int i, j;
 
 static void read_file(FILE *fp);
 
-static int build_neighbors_array(bfs *b, char n, int x, int y, int **neighbors_array);
 static int get_neighbors_bfs (bfs *b, int node, int **neighbors);
 
 #ifdef DEBUG
@@ -148,30 +147,30 @@ static void add_neighbor(bfs *b, int x, int y, int **neighbors, int *num_neighbo
   *num_neighbors = *num_neighbors + 1;
 }
 
-static int build_neighbors_array(bfs *b, char n, int x, int y, int **neighbors_array) {
+static int get_neighbors_bfs (bfs *b, int node, int **neighbors) {
+  int x, y;
+  char n;
   int num_neighbors = 0;
+
+  bfs_node_to_grid(b, node, &x, &y);
+
+  n = nodes[y][x];
   /* consider all directions */
   if (x > 0 && (nodes[y][x-1] >= n - 1)) {
-    add_neighbor(b, x - 1, y, neighbors_array, &num_neighbors);
+    add_neighbor(b, x - 1, y, neighbors, &num_neighbors);
   }
 
   if (x < max_x - 1 && (nodes[y][x+1] >= n - 1)){
-    add_neighbor(b, x + 1, y, neighbors_array, &num_neighbors);
+    add_neighbor(b, x + 1, y, neighbors, &num_neighbors);
   }
 
   if (y > 0 && (nodes[y-1][x] >= n - 1)){
-    add_neighbor(b, x, y - 1, neighbors_array, &num_neighbors);
+    add_neighbor(b, x, y - 1, neighbors, &num_neighbors);
   }
 
   if (y < max_y - 1 && (nodes[y+1][x] >= n - 1)){
-    add_neighbor(b, x, y + 1, neighbors_array, &num_neighbors);
+    add_neighbor(b, x, y + 1, neighbors, &num_neighbors);
   }
 
   return num_neighbors;
-}
-
-static int get_neighbors_bfs (bfs *b, int node, int **neighbors) {
-  int x, y;
-  bfs_node_to_grid(b, node, &x, &y);
-  return build_neighbors_array(b, nodes[y][x], x, y, neighbors);
 }
