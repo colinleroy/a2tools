@@ -45,6 +45,8 @@ static bfs *b = NULL;
 int main(void) {
   FILE *fp;
   int closest_a = -1, x, y;
+  int *path;
+  int path_len;
 
 #ifdef PRODOS_T_TXT
   _filetype = PRODOS_T_TXT;
@@ -73,29 +75,18 @@ int main(void) {
   if (bfs_set_grid(b, max_x, max_y) < 0) {
     exit(1);
   }
-  
-  // for (x = 0; x < max_x; x++) {
-  //   for (y = 0; y < max_y; y++) {
-  //     int *neighbors = NULL;
-  //     int num_neighbors = build_neighbors_array(b, nodes[y][x], x, y, &neighbors);
-  //     if (bfs_grid_add_paths(b, x, y, neighbors, num_neighbors) < 0) {
-  //       exit(1);
-  //     }
-  //     free(neighbors);
-  //   }
-  // }
+
+  path = bfs_grid_get_shortest_path(b, start_x, start_y, end_x, end_y, &path_len);
+  for (i = 0; i < path_len; i++) {
+    int cx, cy;
+    bfs_node_to_grid(b, path[i], &cx, &cy);
+    printf("(%d,%d) => ", cx, cy);
+  }
+  printf("\n");
+  free(path);
 
   printf("\nPart1: %d,%d : %d\n", end_x, end_y, 
           bfs_grid_get_shortest_distance_to(b, start_x, start_y, end_x, end_y));
-
-  // path = bfs_grid_get_shortest_path(b, start_x, start_y, end_x, end_y, &path_len);
-  // for (i = 0; i < path_len; i++) {
-  //   int cx, cy;
-  //   bfs_node_to_grid(b, path[i], &cx, &cy);
-  //   printf("(%d,%d) => ", cx, cy);
-  // }
-  // printf("\n");
-  // free(path);
 
   for (i = 0; i < max_y; i++) {
     for (j = 0; j < max_x; j++) {

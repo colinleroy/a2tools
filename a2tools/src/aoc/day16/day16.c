@@ -145,7 +145,7 @@ static void read_file(FILE *fp) {
 
   num_valves = count;
 
-  b = bfs_new();
+  b = bfs_new(0);
   bfs_add_nodes(b, num_valves);
 
   for (count = 0; count < num_valves; count++) {
