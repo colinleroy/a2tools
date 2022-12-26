@@ -1,4 +1,4 @@
-SUBDIRS = mirror send
+SUBDIRS = mirror a2send
 
 .PHONY: all clean
 
