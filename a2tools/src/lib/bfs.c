@@ -87,7 +87,7 @@ static int *queue_out(int *queue, int *queue_len) {
 }
 
 const int *bfs_compute_shortest_distances(bfs *b, int start_node) {
-  char *visited;
+  bool_array *visited;
   int i;
   int cur_len = 0;
   int *node_queue = NULL;
@@ -108,11 +108,10 @@ const int *bfs_compute_shortest_distances(bfs *b, int start_node) {
   if (b->distances == NULL) {
     return NULL;
   }
-  visited = malloc(b->num_nodes);
+  visited = bool_array_alloc(b->num_nodes, 1);
   if (visited == NULL) {
     return NULL;
   }
-  memset(visited, 0, b->num_nodes);
 
   if (b->trace_path) {
     b->paths = malloc(b->num_nodes * sizeof(int));
@@ -128,7 +127,7 @@ const int *bfs_compute_shortest_distances(bfs *b, int start_node) {
   node_queue = queue_in(node_queue, &node_queue_len, start_node);
 
   b->distances[start_node] = 0;
-  visited[start_node] = 1;
+  bool_array_set(visited, start_node, 0, 1);
 
   if (b->trace_path) {
     b->paths[start_node] = start_node;
@@ -150,9 +149,9 @@ const int *bfs_compute_shortest_distances(bfs *b, int start_node) {
     }
     for (i = 0; i < num_neighbors; i++) {
       int dest_node = neighbors[i];
-      if (!visited[dest_node]) {
+      if (!bool_array_get(visited, dest_node, 0)) {
         b->distances[dest_node] = cur_len;
-        visited[dest_node] = 1;
+        bool_array_set(visited, dest_node, 0, 1);
 
         if (b->trace_path) {
           b->paths[dest_node] = next_node;
@@ -166,7 +165,7 @@ const int *bfs_compute_shortest_distances(bfs *b, int start_node) {
     }
     cur_len++;
   }
-  free(visited);
+  bool_array_free(visited);
 
   return b->distances;
 }
