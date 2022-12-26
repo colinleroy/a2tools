@@ -1,26 +1,24 @@
-PROGRAM=day21.bin
-SOURCES := day21.c
-DEPS := ../../lib/bigint.o 
+READER=day21rd.bin
+READER_SOURCES := day21rd.c ../../lib/bigint.o
+
+WRITER=day21wr.bin
+WRITER_SOURCES := day21wr.c ../../lib/bigint.o
+
+DEPS := 
 
 CC65_TARGET = apple2
 CC      = cl65
-CFLAGS  = -t $(CC65_TARGET) -I ../../lib #--check-stack
-LDFLAGS = -t $(CC65_TARGET) 
+READER_CFLAGS  = -t $(CC65_TARGET) -I ../../lib  -Wl -D,__STACKSIZE__=0x6100 --check-stack
+WRITER_CFLAGS  = -t $(CC65_TARGET) -I ../../lib
 
 .PHONY: all clean
-all: $(PROGRAM) day21rd.bin day21wr.bin
+all: $(READER) $(WRITER)
 
-%.o: %.c
-	$(CC) -c $(CFLAGS) -o $@ $<
+$(READER): $(READER_SOURCES)
+	$(CC) $(READER_CFLAGS) -m $(PROGRAM).map -o $@ $^
 
-$(PROGRAM): $(SOURCES:.c=.o)
-	$(CC) $(LDFLAGS) -m $(PROGRAM).map -o $@ $^ $(DEPS)
-
-day21rd.bin: day21rd.o
-	cl65 -t apple2 -m day21rd.bin.map -Wl -D,__STACKSIZE__=0x6100 -Wl -D,__HIMEM__=0xBF00 -o day21rd.bin day21rd.o ../../lib/bigint.o
-
-day21wr.bin: day21wr.o
-	$(CC) $(LDFLAGS) -m day21wr.bin.map -o $@ $^
+$(WRITER): $(WRITER_SOURCES)
+	$(CC) $(WRITER_CFLAGS) -m $(PROGRAM).map -o $@ $^
 
 clean:
-	rm -f $(PROGRAM) day21rd.bin day21wr.bin *.o *.map
+	rm -f $(READER) $(WRITER) *.o *.map

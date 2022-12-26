@@ -1,20 +1,16 @@
 PROGRAM=day15.bin
-SOURCES := day15.c
-DEPS := ../../lib/slist.o ../../lib/array_sort.o
+SOURCES := day15.c ../../lib/slist.c ../../lib/array_sort.c
+DEPS := 
 
 CC65_TARGET = apple2
 CC      = cl65
 CFLAGS  = -t $(CC65_TARGET) -I ../../lib
-LDFLAGS = -t $(CC65_TARGET) 
 
 .PHONY: all clean
 all: $(PROGRAM)
 
-%.o: %.c
-	$(CC) -c $(CFLAGS) -o $@ $<
-
-$(PROGRAM): $(SOURCES:.c=.o)
-	$(CC) $(LDFLAGS) -m $(PROGRAM).map -o $@ $^ $(DEPS)
+$(PROGRAM): $(SOURCES)
+	$(CC) $(CFLAGS) -m $(PROGRAM).map -o $@ $^
 
 clean:
 	rm -f $(PROGRAM) *.o *.map

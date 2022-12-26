@@ -11,7 +11,6 @@ SOURCES := simple_serial.c \
 	bfs.c \
 
 DEPS :=
-#$(topdir)../../drivers/a2.ssc.o
 
 CC65_TARGET = apple2
 CC      = cl65
