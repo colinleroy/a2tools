@@ -8,3 +8,6 @@ massif.*
 callgrind.*
 inputs
 cc65
+tools/send/send
+tools/recv/recv
+IN*
