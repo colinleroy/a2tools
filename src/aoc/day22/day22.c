@@ -5,9 +5,9 @@
 #include <unistd.h>
 #ifdef __CC65__
 #include <apple2.h>
-#include <conio.h>
 #include <tgi.h>
 #endif
+#include "extended_conio.h"
 #include "bool_array.h"
 
 #define BUFSIZE 255
@@ -253,7 +253,11 @@ static void read_file(FILE *fp) {
   int x = 0, y = 0;
   char c;
   int i, walk;
+#ifdef __CC65__
   unsigned long result;
+#else
+  unsigned int result;
+#endif
 
   /* get map size */
   printf("Sizing map...\n");

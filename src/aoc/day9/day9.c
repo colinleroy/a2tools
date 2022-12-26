@@ -1,9 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
-#include <conio.h>
 #include <string.h>
-#include <dbg.h>
+#ifdef __CC65__
+#include <apple2.h>
+#endif
+#include "extended_conio.h"
 #include "bool_array.h"
 
 #define HEAD 0
@@ -36,7 +38,7 @@ int n_mov = 0;
 int lnum = 0;
 int n_visited = 0;
 int minx = 1, maxx = 0, miny = 1, maxy = 0, sim = 1, xoff = 0, yoff = 0;
-size_t xlen = 0, ylen = 0;
+int xlen = 0, ylen = 0;
 bool_array *visited = NULL;
 
 static void update_boundaries(int x, int y) {
@@ -91,7 +93,9 @@ int main(void) {
   FILE *infp;
   sim = 1;
 
+#ifdef PRODOS_T_TXT
   _filetype = PRODOS_T_TXT;
+#endif
   infp = fopen("IN9","r");
 
   if (infp == NULL) {
@@ -157,7 +161,7 @@ end_loop:
     printf("Map is %d x %d, hit ENTER\n", xlen, ylen);
     visited = bool_array_alloc(xlen, ylen);
     printf("x %d to %d, y %d to %d\n", minx, maxx, miny, maxx);
-    printf("shift x %d, y %d\n", xoff - 1, miny, yoff - 1 );
+    printf("shift x %d, y %d\n", xoff - 1, yoff - 1 );
     cgetc();
     if (visited == NULL) {
       printf("Coudn't allocate array :(\n");

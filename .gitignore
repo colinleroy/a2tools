@@ -3,6 +3,7 @@ a.out
 *.o
 *.map
 *.bin
+*.x86_64
 *.dsk
 massif.*
 callgrind.*

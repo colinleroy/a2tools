@@ -1,16 +1,21 @@
-PROGRAM=day14.bin
+PROGRAM=day14
 SOURCES := day14.c ../../lib/bool_array.c ../../lib/extended_string.c
 DEPS := 
 
 CC65_TARGET = apple2
-CC      = cl65
-CFLAGS  = -t $(CC65_TARGET) -I ../../lib -C ../../../config/apple2-hgr.cfg 
+CFLAGS  = -I ../../lib
+CLCFLAGS = -t $(CC65_TARGET) -C ../../../config/apple2-hgr.cfg 
+GCCCFLAGS = -g -O0 -Werror
 
 .PHONY: all clean
-all: $(PROGRAM)
 
-$(PROGRAM): $(SOURCES)
-	$(CC) $(CFLAGS) -m $(PROGRAM).map -o $@ $^
+all: $(PROGRAM).bin $(PROGRAM).x86_64
+
+$(PROGRAM).bin: $(SOURCES)
+	cl65 $(CFLAGS) $(CLCFLAGS) -m $(PROGRAM).map -o $@ $^
+
+$(PROGRAM).x86_64: $(SOURCES)
+	gcc $(CFLAGS) $(GCCCFLAGS) -o $@ $^
 
 clean:
-	rm -f $(PROGRAM) *.o *.map
+	rm -f $(PROGRAM).bin $(PROGRAM).x86_64 *.o *.map

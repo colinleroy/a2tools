@@ -1,16 +1,20 @@
-PROGRAM=day10.bin
+PROGRAM=day10
 SOURCES := day10.c ../../lib/bool_array.c
 DEPS := 
 
 CC65_TARGET = apple2
-CC      = cl65
-CFLAGS  = -t $(CC65_TARGET) -I ../../lib
+CFLAGS  = -I ../../lib
+CLCFLAGS = -t $(CC65_TARGET)
+GCCCFLAGS = -g -O0 -Werror
 
 .PHONY: all clean
-all: $(PROGRAM)
+all: $(PROGRAM).bin $(PROGRAM).x86_64
 
-$(PROGRAM): $(SOURCES)
-	$(CC) $(CFLAGS) -m $(PROGRAM).map -o $@ $^
+$(PROGRAM).bin: $(SOURCES)
+	cl65 $(CFLAGS) $(CLCFLAGS) -m $(PROGRAM).map -o $@ $^
+
+$(PROGRAM).x86_64: $(SOURCES)
+	gcc $(CFLAGS) $(GCCCFLAGS) -o $@ $^
 
 clean:
-	rm -f $(PROGRAM) *.o *.map
+	rm -f $(PROGRAM).bin $(PROGRAM).x86_64 *.o *.map
