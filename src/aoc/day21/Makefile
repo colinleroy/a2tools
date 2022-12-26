@@ -1,24 +1,31 @@
-READER=day21rd.bin
-READER_SOURCES := day21rd.c ../../lib/bigint.o
+READER=day21rd
+READER_SOURCES := day21rd.c ../../lib/bigint.c
 
-WRITER=day21wr.bin
-WRITER_SOURCES := day21wr.c ../../lib/bigint.o
+WRITER=day21wr
+WRITER_SOURCES := day21wr.c ../../lib/bigint.c
 
 DEPS := 
 
 CC65_TARGET = apple2
-CC      = cl65
-READER_CFLAGS  = -t $(CC65_TARGET) -I ../../lib  -Wl -D,__STACKSIZE__=0x6100 --check-stack
-WRITER_CFLAGS  = -t $(CC65_TARGET) -I ../../lib
+CFLAGS = -I ../../lib
+GCCCFLAGS = -g -O0 -Werror
+READER_CLCFLAGS  = -t $(CC65_TARGET)  -Wl -D,__STACKSIZE__=0x6100 --check-stack
+WRITER_CLCFLAGS  = -t $(CC65_TARGET)
 
 .PHONY: all clean
-all: $(READER) $(WRITER)
+all: $(READER).bin $(READER).x86_64 $(WRITER).bin $(WRITER).x86_64
 
-$(READER): $(READER_SOURCES)
-	$(CC) $(READER_CFLAGS) -m $(PROGRAM).map -o $@ $^
+$(READER).bin: $(READER_SOURCES)
+	cl65 $(READER_CLCFLAGS) $(CFLAGS) -m $(READER).map -o $@ $^
 
-$(WRITER): $(WRITER_SOURCES)
-	$(CC) $(WRITER_CFLAGS) -m $(PROGRAM).map -o $@ $^
+$(WRITER).bin: $(WRITER_SOURCES)
+	cl65 $(WRITER_CLCFLAGS) $(CFLAGS) -m $(WRITER).map -o $@ $^
+
+$(READER).x86_64: $(READER_SOURCES)
+	gcc $(GCCCFLAGS) $(CFLAGS) -o $@ $^
+
+$(WRITER).x86_64: $(WRITER_SOURCES)
+	gcc $(GCCCFLAGS) $(CFLAGS) -o $@ $^
 
 clean:
-	rm -f $(READER) $(WRITER) *.o *.map
+	rm -f $(READER).bin $(WRITER).bin $(READER).x86_64 $(WRITER).x86_64 *.o *.map
