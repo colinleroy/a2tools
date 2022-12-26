@@ -16,7 +16,7 @@
 
 static int part = 2;
 static bool_array *read_file(FILE *fp);
-static void print_obstacles(bool_array *obstacles);
+
 static int sand_fall(int num, bool_array *obstacles);
 static int simulate_sand(bool_array *obstacles);
 
@@ -200,25 +200,6 @@ static bool_array *read_file(FILE *fp) {
   return obstacles;
 }
 
-static void print_obstacles(bool_array *obstacles) {
-  int x, y;
-
-  for (y = 0; y <= map_h; y++) {
-    for (x = 0; x <= map_w; x++) {
-#ifdef __CC65__
-      if (bool_array_get(obstacles, x, y)) {
-        tgi_setpixel(x + mid_screen_x, y + mid_screen_y);
-      }
-#else
-      printf("%c", (bool_array_get(obstacles, x, y)) ? '#':' ');
-#endif
-    }
-#ifndef __CC65__
-    printf(" %d\n", y);
-#endif
-  }
-}
-
 static int sand_fall(int num, bool_array *obstacles) {
   int x = 500, y = 0;
   int prev_x = x;
@@ -242,9 +223,7 @@ static int sand_fall(int num, bool_array *obstacles) {
         x++;
         y++;
       } else {
-#ifndef __CC65__
         printf("grain of sand %d stopped at (%d,%d)\n", num, x, y);
-#endif
         bool_array_set(obstacles, OFF_X(x), OFF_Y(y), 1);
         return 1;
       }

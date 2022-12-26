@@ -1,22 +1,16 @@
 PROGRAM=day11.bin
-SOURCES := day11.c
-DEPS := $(topdir)../../lib/array_sort.o \
-	$(topdir)../../lib/extended_string.o \
-	$(topdir)../../lib/bigint.o
+SOURCES := day11.c ../../lib/array_sort.c ../../lib/extended_string.c ../../lib/bigint.o
+DEPS := 
 
 CC65_TARGET = apple2
 CC      = cl65
 CFLAGS  = -t $(CC65_TARGET) -I ../../lib
-LDFLAGS = -t $(CC65_TARGET) -m $(PROGRAM).map
 
 .PHONY: all clean
 all: $(PROGRAM)
 
-%.o: %.c
-	$(CC) -c $(CFLAGS) -o $@ $<
-
-$(PROGRAM): $(SOURCES:.c=.o)
-	$(CC) $(LDFLAGS) -o $@ $^ $(DEPS)
+$(PROGRAM): $(SOURCES)
+	$(CC) $(CFLAGS) -m $(PROGRAM).map -o $@ $^
 
 clean:
 	rm -f $(PROGRAM) *.o *.map
