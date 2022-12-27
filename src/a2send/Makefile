@@ -1,5 +1,5 @@
 PROGRAM=a2send
-SOURCES := a2send.c ../lib/simple_serial.c
+SOURCES := a2send.c ../lib/simple_serial.c ../lib/extended_conio.c
 
 CC65_TARGET = apple2
 CFLAGS  = -I ../lib
