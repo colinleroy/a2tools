@@ -2,15 +2,16 @@
 #include <stdlib.h>
 #include "simple_serial.h"
 #include <string.h>
-#include <dbg.h>
 #include <errno.h>
+#ifdef __CC65__
 #include <apple2.h>
+#endif
 
 #define BUF_SIZE 255
 #define DATA_SIZE 16384
 #define FLOPPY_DELAY 300000
 
-int main(void) {
+int main(int argc, char **argv) {
   int r, w, exit_code = 0;
   int floppy_delay;
   char *filename = malloc(BUF_SIZE);
@@ -22,8 +23,15 @@ int main(void) {
   char *data = NULL;
 
 
+#ifdef __CC65__
   simple_serial_open(2, SER_BAUD_9600);
-
+#else
+if (argc < 2) {
+  printf("Usage: %s [input tty]\n", argv[0]);
+  exit(1);
+}
+  simple_serial_open(argv[1], B9600);
+#endif
   simple_serial_set_timeout(30);
 
 read_again:
@@ -46,9 +54,10 @@ read_again:
     if (strchr(s_len, '\n'))
       *strchr(s_len, '\n') = '\0';
     data_len = atoi(s_len);
-    printf("Data length %d\n", data_len);
+    printf("Data length %d\n", (int)data_len);
   }
 
+#ifdef __CC65__
   if (!strcasecmp(filetype, "TXT")) {
     _filetype = PRODOS_T_TXT;
     _auxtype  = PRODOS_AUX_T_TXT_SEQ;
@@ -68,13 +77,19 @@ read_again:
     exit_code = 1;
     goto err_out;
   }
+#else
+  char *tmp = malloc(BUF_SIZE);
+  sprintf(tmp, "%s.%s", filename, filetype);
+  free(filename);
+  filename = tmp;
+#endif
 
   while (data_len > 0) {
     size_t block = (data_len > DATA_SIZE ? DATA_SIZE : data_len);
     data = malloc(block + 1);
 
     if (data == NULL) {
-      printf("Couldn't allocate %d bytes of data.\n", block);
+      printf("Couldn't allocate %d bytes of data.\n", (int)block);
       exit (1);
     }
 

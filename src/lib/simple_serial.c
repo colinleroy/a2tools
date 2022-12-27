@@ -3,6 +3,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdarg.h>
+
+#ifdef __CC65__
 #include <apple2.h>
 
 #define NCYCLES_PER_SEC 10000U
@@ -86,14 +89,6 @@ static int __simple_serial_getc_with_timeout(int with_timeout) {
     return (int)c;
 }
 
-int simple_serial_getc_with_timeout(void) {
-  return __simple_serial_getc_with_timeout(1);
-}
-
-char simple_serial_getc(void) {
-  return (char)__simple_serial_getc_with_timeout(0);
-}
-
 static char *__simple_serial_gets_with_timeout(char *out, size_t size, int with_timeout) {
   int b;
   char c;
@@ -126,14 +121,6 @@ static char *__simple_serial_gets_with_timeout(char *out, size_t size, int with_
   return out;
 }
 
-char *simple_serial_gets_with_timeout(char *out, size_t size) {
-  return __simple_serial_gets_with_timeout(out, size, 1);
-}
-
-char *simple_serial_gets(char *out, size_t size) {
-  return __simple_serial_gets_with_timeout(out, size, 0);
-}
-
 static size_t __simple_serial_read_with_timeout(char *ptr, size_t size, size_t nmemb, int with_timeout) {
   int b;
   size_t i = 0;
@@ -154,14 +141,6 @@ static size_t __simple_serial_read_with_timeout(char *ptr, size_t size, size_t n
   }
 
   return i;
-}
-
-size_t simple_serial_read_with_timeout(char *ptr, size_t size, size_t nmemb) {
-  return __simple_serial_read_with_timeout(ptr, size, nmemb, 1);
-}
-
-size_t simple_serial_read(char *ptr, size_t size, size_t nmemb) {
-  return __simple_serial_read_with_timeout(ptr, size, nmemb, 0);
 }
 
 /* Output */
@@ -187,4 +166,149 @@ int simple_serial_puts(char *buf) {
   }
 
   return len;
+}
+
+#else
+#include <termios.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <unistd.h>
+
+#define DELAY_MS 3
+#define LONG_DELAY_MS 50
+
+static FILE *ttyfp = NULL;
+static void setup_tty(const char *ttypath, int baudrate) {
+  struct termios tty;
+  int port = open(ttypath, O_RDWR);
+
+  if (port < 0) {
+    printf("Cannot open %s: %s\n", ttypath, strerror(errno));
+    exit(1);
+  }
+
+  if(tcgetattr(port, &tty) != 0) {
+    printf("tcgetattr error: %s\n", strerror(errno));
+    close(port);
+    exit(1);
+  }
+  cfsetispeed(&tty, baudrate);
+  cfsetospeed(&tty, baudrate);
+
+  tty.c_cflag &= ~PARENB;
+  tty.c_cflag &= ~CSTOPB;
+  tty.c_cflag |= CS8;
+  tty.c_cflag &= ~CRTSCTS;
+  tty.c_cflag |= CREAD | CLOCAL;
+
+  tty.c_lflag &= ~ICANON;
+  tty.c_lflag &= ~ECHO;
+  tty.c_lflag &= ~ISIG;
+  tty.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
+
+  tty.c_iflag &= ~(IXON | IXOFF | IXANY);
+  tty.c_iflag &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP|INLCR|IGNCR|ICRNL);
+
+  tty.c_oflag &= ~OPOST;
+  tty.c_oflag &= ~ONLCR;
+
+  if (tcsetattr(port, TCSANOW, &tty) != 0) {
+    printf("tcgetattr error: %s\n", strerror(errno));
+    close(port);
+    exit(1);
+  }
+  close(port);
+}
+
+int simple_serial_open(const char *tty, int baudrate) {
+  setup_tty(tty, baudrate);
+
+  ttyfp = fopen(tty, "r+b");
+  if (ttyfp == NULL) {
+    printf("Can't open %s\n", tty);
+    return -1;
+  }
+
+  return 0;
+}
+
+int simple_serial_close(void) {
+  if (ttyfp) {
+    fclose(ttyfp);
+  }
+  ttyfp = NULL;
+  return 0;
+}
+
+void simple_serial_set_timeout(int timeout) {
+  printf("Not implemented.\n");
+}
+
+/* Input */
+int __simple_serial_getc_with_timeout(int timeout) {
+  return fgetc(ttyfp);
+}
+
+char *__simple_serial_gets_with_timeout(char *out, size_t size, int timeout) {
+  return fgets(out, size, ttyfp);
+}
+
+
+size_t __simple_serial_read_with_timeout(char *ptr, size_t size, size_t nmemb, int timeout) {
+  return fread(ptr, size, nmemb, ttyfp);
+}
+
+/* Output */
+int simple_serial_putc(char c) {
+  int r = fputc(c, ttyfp);
+  fflush(ttyfp);
+
+  usleep(DELAY_MS*1000);
+  return r;
+}
+int simple_serial_puts(char *buf) {
+  int r = fputs(buf, ttyfp);
+  fflush(ttyfp);
+
+  usleep(LONG_DELAY_MS*1000);
+  return r;
+}
+
+#endif
+
+int simple_serial_getc_with_timeout(void) {
+  return __simple_serial_getc_with_timeout(1);
+}
+
+char simple_serial_getc(void) {
+  return (char)__simple_serial_getc_with_timeout(0);
+}
+
+char *simple_serial_gets_with_timeout(char *out, size_t size) {
+  return __simple_serial_gets_with_timeout(out, size, 1);
+}
+
+char *simple_serial_gets(char *out, size_t size) {
+  return __simple_serial_gets_with_timeout(out, size, 0);
+}
+
+size_t simple_serial_read(char *ptr, size_t size, size_t nmemb) {
+  return __simple_serial_read_with_timeout(ptr, size, nmemb, 0);
+}
+
+size_t simple_serial_read_with_timeout(char *ptr, size_t size, size_t nmemb) {
+  return __simple_serial_read_with_timeout(ptr, size, nmemb, 1);
+}
+
+static char simple_serial_buf[255];
+int simple_serial_printf(const char* format, ...) {
+  va_list args;
+
+  va_start(args, format);
+  vsnprintf(simple_serial_buf, 255, format, args);
+  va_end(args);
+
+  return simple_serial_puts(simple_serial_buf);
 }
