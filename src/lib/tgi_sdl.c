@@ -36,28 +36,61 @@ static int cur_color = 0;
 void tgi_setcolor(int color) {
   switch (color) {
     case TGI_COLOR_BLACK:
+    case TGI_COLOR_BLACK2:
       cur_color = SDL_MapRGB(screen->format, 0x00, 0x00, 0x00);
       break;
 
-    case TGI_COLOR_GREEN:
-    case TGI_COLOR_VIOLET:
+    case TGI_COLOR_GREEN: //11c407
+      cur_color = SDL_MapRGB(screen->format, 0x11, 0xc4, 0x07);
+      break;
+
+    case TGI_COLOR_VIOLET: //94035c
+      cur_color = SDL_MapRGB(screen->format, 0x94, 0x03, 0x5c);
+      break;
+
     case TGI_COLOR_WHITE:
     case TGI_COLOR_WHITE2:
       cur_color = SDL_MapRGB(screen->format, 0xff, 0xff, 0xff);
       break;
 
-    case TGI_COLOR_BLACK2:
-    case TGI_COLOR_ORANGE:
-    case TGI_COLOR_BLUE:
-    case TGI_COLOR_DARKGREEN:
-    case TGI_COLOR_GRAY:
-    case TGI_COLOR_CYAN:
-    case TGI_COLOR_BROWN:
-    case TGI_COLOR_GRAY2:
-    case TGI_COLOR_PINK:
-    case TGI_COLOR_YELLOW:
-    case TGI_COLOR_AQUA:
-      cur_color = SDL_MapRGB(screen->format, 0x00, 0xff, 0xff);
+    case TGI_COLOR_ORANGE: //e85900
+      cur_color = SDL_MapRGB(screen->format, 0x85, 0x90, 0x00);
+      break;
+
+    case TGI_COLOR_BLUE: //2392f7
+      cur_color = SDL_MapRGB(screen->format, 0x23, 0x92, 0xf7);
+      break;
+
+    case TGI_COLOR_DARKGREEN: //006f0f
+      cur_color = SDL_MapRGB(screen->format, 0x00, 0x6f, 0x0f);
+      break;
+
+    case TGI_COLOR_GRAY: //7b7b7b
+      cur_color = SDL_MapRGB(screen->format, 0x7b, 0x7b, 0x7b);
+      break;
+
+    case TGI_COLOR_CYAN: //c412f6
+      cur_color = SDL_MapRGB(screen->format, 0xc4, 0x12, 0xf6);
+      break;
+
+    case TGI_COLOR_BROWN: //4d4e01
+      cur_color = SDL_MapRGB(screen->format, 0x4d, 0x4e, 0x01);
+      break;
+
+    case TGI_COLOR_GRAY2: //b8b8b8
+      cur_color = SDL_MapRGB(screen->format, 0xb8, 0xb8, 0xb8);
+      break;
+
+    case TGI_COLOR_PINK: //f781da
+      cur_color = SDL_MapRGB(screen->format, 0xf7, 0x81, 0xda);
+      break;
+
+    case TGI_COLOR_YELLOW: //c8cd12
+      cur_color = SDL_MapRGB(screen->format, 0xc8, 0xcd, 0x12);
+      break;
+
+    case TGI_COLOR_AQUA: //4eed90
+      cur_color = SDL_MapRGB(screen->format, 0x4e, 0xed, 0x90);
       break;
   }
 }
