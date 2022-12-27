@@ -2,7 +2,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#ifndef __CC65__
 #include <libgen.h>
+#endif
 #include <stdlib.h>
 #include <string.h>
 #include "simple_serial.h"
@@ -17,25 +19,35 @@ int main(int argc, char **argv) {
   int count = 0;
   char buf[128];
   char start_addr[2];
+
+#ifdef __CC65__
+  if (simple_serial_open(2, SER_BAUD_9600) < 0) {
+    exit(1);
+  }
+#else
   struct stat statbuf;
 
   if (argc < 3) {
-    printf("Usage: %s [file] [output tty]\n", argv[0]);
+    printf("Usage: %s [output tty] [file]\n", argv[0]);
     exit(1);
   }
 
-  if (stat(argv[1], &statbuf) < 0) {
-    printf("Can't stat %s\n", argv[1]);
+  if (simple_serial_open(argv[1], B9600) < 0) {
+    exit(1);
+  }
+
+  if (stat(argv[2], &statbuf) < 0) {
+    printf("Can't stat %s\n", argv[2]);
     exit(1);
   }
   
-  fp = fopen(argv[1],"r");
+  fp = fopen(argv[2],"r");
   if (fp == NULL) {
-    printf("Can't open %s\n", argv[1]);
+    printf("Can't open %s\n", argv[2]);
     exit(1);
   }
   
-  filename = basename(argv[1]);
+  filename = basename(argv[2]);
   if (strchr(filename, '.') != NULL) {
     filetype = strchr(filename, '.') + 1;
     *(strchr(filename, '.')) = '\0';
@@ -45,10 +57,7 @@ int main(int argc, char **argv) {
   if (!strcmp(filetype, "system")) {
     filetype = "SYS";
   }
-
-  if (simple_serial_open(argv[2], B9600) < 0) {
-    exit(1);
-  }
+#endif
 
   /* Send filename */
   simple_serial_printf("%s\n", filename);
@@ -90,7 +99,7 @@ int main(int argc, char **argv) {
     
     if (count % DATA_SIZE == 0) {
       /* Wait for Apple // */
-      printf("Waiting for the Apple //c...\n");
+      printf("Waiting for receiver...\n");
 
       do {
         if (simple_serial_gets(buf, sizeof(buf)) != NULL) {
