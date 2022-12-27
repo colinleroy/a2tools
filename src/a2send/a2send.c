@@ -4,6 +4,8 @@
 #include <unistd.h>
 #ifndef __CC65__
 #include <libgen.h>
+#else
+#include "extended_conio.h"
 #endif
 #include <stdlib.h>
 #include <string.h>
@@ -24,6 +26,8 @@ int main(int argc, char **argv) {
   if (simple_serial_open(2, SER_BAUD_9600) < 0) {
     exit(1);
   }
+  printf("File to send: ");
+  cgets(buf, sizeof(buf));
 #else
   struct stat statbuf;
 
