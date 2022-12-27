@@ -4,10 +4,12 @@
 #include <errno.h>
 #include <unistd.h>
 #ifdef __CC65__
-#include <conio.h>
 #include <apple2.h>
 #include <tgi.h>
+#else
+#include "tgi_compat.h"
 #endif
+#include "extended_conio.h"
 #include "bool_array.h"
 #include "extended_string.h"
 
@@ -24,8 +26,6 @@ int main(void) {
   FILE *fp;
   bool_array *obstacles;
   int count = 0;
-#ifdef __CC65__
-#endif
 
 #ifdef PRODOS_T_TXT
   _filetype = PRODOS_T_TXT;
@@ -45,15 +45,14 @@ int main(void) {
       count ++;
     }
   } else {
-#ifdef __CC65__
+
     tgi_install(a2_hi_tgi);
     tgi_init ();
     tgi_setcolor(TGI_COLOR_WHITE);
-#endif
+
     count = simulate_sand(obstacles);
-#ifdef __CC65__
+
     tgi_done();
-#endif
   }
 
   printf("Count: %d\n", count);
@@ -258,7 +257,7 @@ static int simulate_sand(bool_array *obstacles) {
   for (y = 0; y <= map_h + 1; y++) {
     line = bool_array_alloc(max_line_w, 1);
 
-#ifndef __CC65__
+#if 0
     for (int i = 0; i <= LINE_ARRAY_OFF(line_min_x); i++) {
       printf(" ");
     }
@@ -271,7 +270,7 @@ static int simulate_sand(bool_array *obstacles) {
 
       /* is this an obstacle ? */
       if (ba_x >= 0 && ba_x <= map_w && bool_array_get(obstacles, ba_x, ba_y)) {
-#ifndef __CC65__
+#if 0
         printf("#");
 #else
         tgi_setpixel(ba_x + mid_screen_x, ba_y + mid_screen_y);
@@ -280,13 +279,13 @@ static int simulate_sand(bool_array *obstacles) {
       }
       /* was there a grain of sand ? */
       if (bool_array_get(prev_line, l_x, 0) == 0) {
-#ifndef __CC65__
+#if 0
         printf(" ");
 #endif
         continue;
       } else {
           count++;
-#ifndef __CC65__
+#if 0
         printf("o");
 #else
         if (ba_x + mid_screen_x >= 0 && ba_x + mid_screen_x < 280) {
@@ -313,7 +312,7 @@ static int simulate_sand(bool_array *obstacles) {
         }
       }
     }
-#ifndef __CC65__
+#if 0
     printf(" %d\n", y);
 #endif
     bool_array_free(prev_line);
