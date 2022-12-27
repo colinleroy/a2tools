@@ -273,6 +273,7 @@ static int simulate_sand(bool_array *obstacles) {
 #if 0
         printf("#");
 #else
+        tgi_setcolor(TGI_COLOR_WHITE);
         tgi_setpixel(ba_x + mid_screen_x, ba_y + mid_screen_y);
 #endif
         continue;
@@ -288,10 +289,9 @@ static int simulate_sand(bool_array *obstacles) {
 #if 0
         printf("o");
 #else
+        tgi_setcolor(TGI_COLOR_ORANGE);
         if (ba_x + mid_screen_x >= 0 && ba_x + mid_screen_x < 280) {
           tgi_setpixel(ba_x + mid_screen_x, ba_y + mid_screen_y);
-        } else {
-          tgi_setpixel(1, ba_y + mid_screen_y);
         }
 #endif
       }

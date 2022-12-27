@@ -6,13 +6,13 @@
 
 #else
 
-#define TGI_COLOR_BLACK         0x00
-#define TGI_COLOR_GREEN         0x01
-#define TGI_COLOR_VIOLET        0x02
-#define TGI_COLOR_WHITE         0x03
+#define TGI_COLOR_BLACK         0x00  /* Also HGR */
+#define TGI_COLOR_GREEN         0x01  /* Also HGR */
+#define TGI_COLOR_VIOLET        0x02  /* Also HGR */
+#define TGI_COLOR_WHITE         0x03  /* Also HGR */
 #define TGI_COLOR_BLACK2        0x04
-#define TGI_COLOR_ORANGE        0x05
-#define TGI_COLOR_BLUE          0x06
+#define TGI_COLOR_ORANGE        0x05  /* Also HGR */
+#define TGI_COLOR_BLUE          0x06  /* Also HGR */
 #define TGI_COLOR_WHITE2        0x07
 
 #define TGI_COLOR_MAGENTA       TGI_COLOR_BLACK2
