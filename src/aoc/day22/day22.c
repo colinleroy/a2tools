@@ -145,11 +145,7 @@ static void read_file(FILE *fp) {
   int x = 0, y = 0;
   char c;
   int i, walk;
-#ifdef __CC65__
-  unsigned long result;
-#else
-  unsigned int result;
-#endif
+  long result;
 
   /* get map size */
   printf("Sizing map...\n");
@@ -180,6 +176,7 @@ static void read_file(FILE *fp) {
 
   tgi_install(a2_hi_tgi);
   tgi_init ();
+  tgi_setcolor(TGI_COLOR_WHITE);
 
   while (fgets(buf, BUFSIZE-1, fp) != NULL) {
     int len = strlen(buf);
@@ -200,11 +197,9 @@ static void read_file(FILE *fp) {
         bool_array_set(tiles, x, y, is_open);
 
         if (is_open) {
-          tgi_setcolor(TGI_COLOR_ORANGE);
         } else {
-          tgi_setcolor(TGI_COLOR_WHITE);
+          tgi_setpixel(y + y_offset, x + x_offset); /* rotate map */
         }
-        tgi_setpixel(y + y_offset, x + x_offset); /* rotate map */
         if (is_open && my_x == -1) {
           my_x = x;
           my_y = y;
@@ -252,8 +247,8 @@ static void read_file(FILE *fp) {
   printf("I'm at (%d,%d) facing %d.\n", my_x, my_y, my_direction);
   my_x++;
   my_y++;
-  result = (long)(my_y * 1000) + (long)(my_x * 4) + (long)(my_direction);
-  printf("(%d*1000 + %d*4 + %d) = %d\n", my_y, my_x, my_direction, result);
+  result = (long)(my_y * 1000L) + (long)(my_x * 4L) + (long)(my_direction);
+  printf("(%d*1000 + %d*4 + %d) = %ld\n", my_y, my_x, my_direction, result);
   fclose(fp);
   bool_array_free(tiles);
   bool_array_free(empty);
