@@ -9,7 +9,13 @@ static SDL_Surface *screen = NULL;
 #define X_RES 280
 #define Y_RES 192
 
+static int tgi_enabled = 1;
+
 int tgi_init(void) {
+  if (getenv("DISABLE_TGI") != NULL) {
+    tgi_enabled = 0;
+    return 0;
+  }
   if (screen != NULL) {
     return -1;
   }
@@ -19,7 +25,7 @@ int tgi_init(void) {
     return -1;
   }
 
-  screen = SDL_SetVideoMode(X_RES * 2, Y_RES * 2, BPP, SDL_SWSURFACE);
+  screen = SDL_SetVideoMode(X_RES * 2, Y_RES * 2, 32, SDL_HWSURFACE | SDL_DOUBLEBUF);
   if (screen == NULL) {
     printf("Couldn't initialize screen: %s\n", SDL_GetError());
     return -1;
@@ -28,12 +34,20 @@ int tgi_init(void) {
 }
 
 int tgi_done() {
+  if (!tgi_enabled)
+    return 0;
+
   SDL_Quit();
+
+  return 0;
 }
 
 static int cur_color = 0;
 
 void tgi_setcolor(int color) {
+  if (!tgi_enabled)
+    return;
+
   switch (color) {
     case TGI_COLOR_BLACK:
     case TGI_COLOR_BLACK2:
@@ -96,15 +110,15 @@ void tgi_setcolor(int color) {
 }
 
 static void sdl_set_pixel(int x, int y) {
-  Uint32 * const target_pixel = (Uint32 *) ((Uint8 *) screen->pixels
-                                             + y * screen->pitch
-                                             + x * screen->format->BytesPerPixel);
-  *target_pixel = cur_color;
+  *((Uint32*)(screen->pixels) + x + y * screen->w) = cur_color;
 }
 
 void tgi_setpixel(int x, int y) {
   int d_x = x * 2;
   int d_y = y * 2;
+
+  if (!tgi_enabled)
+    return;
 
   SDL_LockSurface(screen);
 
@@ -119,7 +133,9 @@ void tgi_setpixel(int x, int y) {
 }
 
 void tgi_line(int start_x, int start_y, int end_x, int end_y) {
-  
+  if (!tgi_enabled)
+    return;
+
 }
 
 #endif
