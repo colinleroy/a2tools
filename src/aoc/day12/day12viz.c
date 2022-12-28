@@ -4,10 +4,8 @@
 #include <errno.h>
 #ifdef __CC65__
 #include <apple2.h>
-#include <tgi.h>
-#else
-#include "tgi_compat.h"
 #endif
+#include "tgi_compat.h"
 #include "extended_conio.h"
 
 #define DATASET "IN12"
@@ -21,6 +19,7 @@ int start_x, start_y;
 int end_x, end_y;
 
 static void read_file(FILE *fp);
+static void draw_solution(FILE *solfp);
 
 int main(void) {
   FILE *fp, *solfp;
@@ -42,26 +41,24 @@ int main(void) {
   fclose(fp);
 
   solfp = fopen(DATASET "OUT", "rb");
-  tgi_setcolor(TGI_COLOR_WHITE);
-  while (!feof(solfp)) {
-    int x, y;
-    fread(&x, sizeof(int), 1, solfp);
-    fread(&y, sizeof(int), 1, solfp);
-    printf("(%d,%d) =>", x, y);
-    tgi_setpixel(x, y);
-  }
-  printf("\n");
+  draw_solution(solfp);
   fclose(solfp);
 
   cgetc();
+  tgi_done();
   exit (0);
 }
 
+static int x_offset;
+static int y_offset;
+
 static void read_file(FILE *fp) {
   int i;
+  y_offset = (96 - 40)/2;
   while (NULL != fgets(buf, sizeof(buf), fp)) {
     *strchr(buf, '\n') = '\0';
     max_x = strlen(buf);
+    x_offset = (140 - (max_x)) / 2;
 
     for (i = 0; i < max_x; i++) {
       if (buf[i] == 'S') {
@@ -73,17 +70,31 @@ static void read_file(FILE *fp) {
         start_x = i;
         start_y = max_y;
       }
-      if (buf[i] >= 'a' && buf[i] < 'g') {
+      if (buf[i] >= 'a' && buf[i] < 'c') {
         tgi_setcolor(TGI_COLOR_BLACK);
-      } else if (buf[i] >= 'g' && buf[i] < 'o') {
+      } else if (buf[i] >= 'c' && buf[i] < 'l') {
         tgi_setcolor(TGI_COLOR_GREEN);
-      } else if (buf[i] >= 'o' && buf[i] < 'u') {
+      } else if (buf[i] >= 'l' && buf[i] < 'u') {
         tgi_setcolor(TGI_COLOR_ORANGE);
       } else if (buf[i] >= 'u') {
         tgi_setcolor(TGI_COLOR_VIOLET);
       }
-      tgi_setpixel(i, max_y);
+      tgi_setquadpixel(i + x_offset, max_y + y_offset);
     }
     max_y++;
+  }
+
+}
+
+static void draw_solution(FILE *solfp) {
+
+  tgi_setcolor(TGI_COLOR_WHITE);
+
+  while (!feof(solfp)) {
+    int x, y;
+    fread(&x, sizeof(int), 1, solfp);
+    fread(&y, sizeof(int), 1, solfp);
+    printf("(%d,%d) =>", x, y);
+    tgi_setquadpixel(x + x_offset, y + y_offset);
   }
 }
