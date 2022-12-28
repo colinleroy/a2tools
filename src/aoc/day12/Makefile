@@ -1,21 +1,31 @@
-PROGRAM=day12
+PROGRAM=day12 day12viz
 
-SOURCES := day12.c ../../lib/bfs.c ../../lib/bool_array.c
+RD_SOURCES := day12.c ../../lib/bfs.c ../../lib/bool_array.c
+VIZ_SOURCES := day12viz.c ../../lib/tgi_sdl.c
 DEPS := 
 
 CC65_TARGET = apple2
 CFLAGS  = -I ../../lib
-CLCFLAGS = -t $(CC65_TARGET)
-GCCCFLAGS = -g -O0 -Werror
+RD_CLCFLAGS = -t $(CC65_TARGET)
+VIZ_CLCFLAGS = -t $(CC65_TARGET) -C ../../../config/apple2-hgr.cfg
+RD_GCCCFLAGS = -g -O0 -Werror
+VIZ_GCCCFLAGS = -g -O0 -Werror $(shell sdl-config --cflags)
+VIZ_GCCLDFLAGS = $(shell sdl-config --libs)
 
 .PHONY: all clean
-all: $(PROGRAM).bin $(PROGRAM).x86_64
+all: day12.bin day12.x86_64 day12viz.bin day12viz.x86_64
 
-$(PROGRAM).bin: $(SOURCES)
-	cl65 $(CFLAGS) $(CLCFLAGS) -m $(PROGRAM).map -o $@ $^
+day12.bin: $(RD_SOURCES)
+	cl65 $(CFLAGS) $(RD_CLCFLAGS) -m day12.map -o $@ $^
 
-$(PROGRAM).x86_64: $(SOURCES)
-	gcc $(CFLAGS) $(GCCCFLAGS) -o $@ $^
+day12.x86_64: $(RD_SOURCES)
+	gcc $(CFLAGS) $(RD_GCCCFLAGS) $^ $(RD_GCCLDFLAGS) -o $@ 
+
+day12viz.bin: $(VIZ_SOURCES)
+	cl65 $(CFLAGS) $(VIZ_CLCFLAGS) -m day12.map -o $@ $^
+
+day12viz.x86_64: $(VIZ_SOURCES)
+	gcc $(CFLAGS) $(VIZ_GCCCFLAGS) $^ $(VIZ_GCCLDFLAGS) -o $@ 
 
 clean:
 	rm -f $(PROGRAM).bin $(PROGRAM).x86_64 *.o *.map

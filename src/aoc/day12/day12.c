@@ -42,7 +42,7 @@ static void dump_maps(void) {
 static bfs *b = NULL;
 
 int main(void) {
-  FILE *fp;
+  FILE *fp, *solfp;
   int closest_a = -1;
   int *path;
   int path_len;
@@ -75,14 +75,18 @@ int main(void) {
     exit(1);
   }
 
+  
+  solfp = fopen(DATASET "OUT", "wb");
   path = bfs_grid_get_shortest_path(b, start_x, start_y, end_x, end_y, &path_len);
   for (i = 0; i < path_len; i++) {
     int cx, cy;
     bfs_node_to_grid(b, path[i], &cx, &cy);
-    printf("(%d,%d) => ", cx, cy);
+    fwrite(&cx, sizeof(int), 1, solfp);
+    fwrite(&cy, sizeof(int), 1, solfp);
   }
   printf("\n");
   free(path);
+  fclose(solfp);
 
   printf("\nPart1: %d,%d : %d\n", end_x, end_y, 
           bfs_grid_get_shortest_distance_to(b, start_x, start_y, end_x, end_y));
