@@ -1,6 +1,13 @@
 #ifndef __tgi_compat_h
 #define __tgi_compat_h
 
+#define tgi_setquadpixel(x, y) do {             \
+  tgi_setpixel((x) * 2, (y) * 2);               \
+  tgi_setpixel(((x) * 2) + 1, ((y) * 2));       \
+  tgi_setpixel(((x) * 2), ((y) * 2) + 1);       \
+  tgi_setpixel(((x) * 2) + 1, ((y) * 2) + 1);   \
+} while (0)
+
 #ifdef __CC65__
 #include <tgi.h>
 

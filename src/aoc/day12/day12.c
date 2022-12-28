@@ -78,7 +78,8 @@ int main(void) {
   
   solfp = fopen(DATASET "OUT", "wb");
   path = bfs_grid_get_shortest_path(b, start_x, start_y, end_x, end_y, &path_len);
-  for (i = 0; i < path_len; i++) {
+  /* Writing from end to start because we BFS'd from end to start */
+  for (i = path_len -1; i >= 0; i--) {
     int cx, cy;
     bfs_node_to_grid(b, path[i], &cx, &cy);
     fwrite(&cx, sizeof(int), 1, solfp);
