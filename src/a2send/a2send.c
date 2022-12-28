@@ -13,6 +13,23 @@
 
 #define DATA_SIZE 16384
 
+static void wait_for_receiver(void) {
+  char buf[128];
+
+  printf("Waiting for receiver...\n");
+  do {
+    if (simple_serial_gets(buf, sizeof(buf)) != NULL) {
+      if(strchr(buf, '\n'))
+        *strchr(buf, '\n') = '\0';
+      if (!strcasecmp(buf, "READY"))
+        break;
+    }
+    usleep(50 * 1000);
+  }
+  while (1);
+  sleep(1);
+}
+
 int main(int argc, char **argv) {
   FILE *fp;
   char *filename;
@@ -21,6 +38,7 @@ int main(int argc, char **argv) {
   int count = 0;
   char buf[128];
   char start_addr[2];
+  int cur_file = 2;
 
 #ifdef __CC65__
   if (simple_serial_open(2, SER_BAUD_9600) < 0) {
@@ -32,7 +50,7 @@ int main(int argc, char **argv) {
   struct stat statbuf;
 
   if (argc < 3) {
-    printf("Usage: %s [output tty] [file]\n", argv[0]);
+    printf("Usage: %s [output tty] [file(s) to send]\n", argv[0]);
     exit(1);
   }
 
@@ -40,18 +58,19 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  if (stat(argv[2], &statbuf) < 0) {
-    printf("Can't stat %s\n", argv[2]);
+send_again:
+  if (stat(argv[cur_file], &statbuf) < 0) {
+    printf("Can't stat %s\n", argv[cur_file]);
     exit(1);
   }
   
-  fp = fopen(argv[2],"r");
+  fp = fopen(argv[cur_file],"r");
   if (fp == NULL) {
-    printf("Can't open %s\n", argv[2]);
+    printf("Can't open %s\n", argv[cur_file]);
     exit(1);
   }
   
-  filename = basename(argv[2]);
+  filename = basename(argv[cur_file]);
   if (strchr(filename, '.') != NULL) {
     filetype = strchr(filename, '.') + 1;
     *(strchr(filename, '.')) = '\0';
@@ -103,26 +122,20 @@ int main(int argc, char **argv) {
     
     if (count % DATA_SIZE == 0) {
       /* Wait for Apple // */
-      printf("Waiting for receiver...\n");
-
-      do {
-        if (simple_serial_gets(buf, sizeof(buf)) != NULL) {
-          if(strchr(buf, '\n'))
-            *strchr(buf, '\n') = '\0';
-          printf("Received '%s'\n", buf);
-          if (!strcasecmp(buf, "READY"))
-            break;
-        }
-        usleep(50 * 1000);
-      }
-      while (1);
-
-      printf("Resuming\n");
-      sleep(3);
+      wait_for_receiver();
     }
   }
 
   fclose(fp);
+  
+  wait_for_receiver();
+
+  if (cur_file < argc -1) {
+    cur_file++;
+    count = 0;
+    printf("\n");
+    goto send_again;
+  }
   simple_serial_close();
   printf("Wrote %d bytes.\n", count);
   exit(0);

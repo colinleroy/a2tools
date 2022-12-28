@@ -130,6 +130,9 @@ read_again:
   }
 
   outfp = NULL;
+
+  printf("Telling sender we're done\n");
+  simple_serial_puts("READY\n");
   
   goto read_again;
 
