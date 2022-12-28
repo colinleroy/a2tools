@@ -5,8 +5,8 @@
 #include <unistd.h>
 #ifdef __CC65__
 #include <apple2.h>
-#include <tgi.h>
 #endif
+#include "tgi_compat.h"
 #include "extended_conio.h"
 #include "bool_array.h"
 
@@ -38,12 +38,6 @@ int main(void) {
 #define DOWN  1
 #define LEFT  2
 #define UP    3
-static char *directions[4] = {
-  "Right",
-  "Down",
-  "Left",
-  "Up"
-};
 
 /* 1 = walkable, 0 = obstacle */
 static bool_array *tiles;
@@ -82,57 +76,7 @@ static int next_tile(int x, int y, char direction) {
   }
 }
 
-#define X_RES 280
-#define Y_RES 192
-#define X_RES_HALF 140
-#define Y_RES_HALF 96
-
-#if 0
-static int cur_draw_page = 1;
-static int num_pages = 1;
-
-static void draw_map(int x, int y) {
-  int last_color = -1, color, r, c;
-  int s_x, s_y, map_x, map_y;
-  if (num_pages < 0) {
-    return;
-  }
-  if (num_pages > 1) {
-    tgi_setdrawpage(cur_draw_page);
-  }
-  
-  for (r = 0; r < Y_RES; r++) {
-    for (c = 0; c < X_RES; c++) {
-      map_x = x - X_RES_HALF + c;
-      map_y = y - Y_RES_HALF + r;
-      s_x = map_x - x + X_RES_HALF;
-      s_y = map_y - y + Y_RES_HALF;
-      if (map_x < 0 || map_x >= max_x || map_y < 0 || map_y >= max_y
-       || is_empty(map_x, map_y)) {
-        color = TGI_COLOR_BLACK;
-      } else if (is_obstacle(map_x, map_y)) {
-        color = TGI_COLOR_WHITE;
-      } else if (map_x != x && map_y != y) {
-        color = TGI_COLOR_ORANGE;
-      } else {
-        color = TGI_COLOR_WHITE;
-      }
-      if (color != last_color) {
-        tgi_setcolor(color);
-        last_color = color;
-      }
-      tgi_setpixel(s_x, s_y);
-    }
-  }
-  if (num_pages > 1) {
-    tgi_setviewpage(cur_draw_page);
-    cur_draw_page = 1 - cur_draw_page;
-  }
-}
-#else
-static void draw_map(int x, int y) {
-}
-#endif
+static int x_offset, y_offset;
 
 static void do_walk(int steps) {
   int i, dx, dy;
@@ -161,15 +105,17 @@ static void do_walk(int steps) {
       if (old_x == my_x && old_y == my_y) {
         return;
       }
-      draw_map(my_x, my_y);
+      tgi_setcolor(TGI_COLOR_WHITE);
+      tgi_setpixel(my_y + y_offset, my_x + x_offset);
     } else if (is_obstacle(my_x + dx, my_y + dy) && !is_empty(my_x + dx, my_y + dy)) {
       /* stop at obstacle */
       return;
     } else {
       /* walk */
-      draw_map(my_x + dx, my_y + dy);
       my_x += dx;
       my_y += dy;
+      tgi_setcolor(TGI_COLOR_WHITE);
+      tgi_setpixel(my_y + y_offset, my_x + x_offset);
     }
   }
 }
@@ -193,60 +139,6 @@ static void test(int start_x, int start_y, int steps, int direction, int end_x, 
     printf("%s FAILED (expected %d,%d, got %d,%d)\n", label, end_x, end_y, my_x, my_y);
   }
 }
-
-#if 0
-static void setup_tgi(void) {
-  char tgi_e;
-  tgi_install(a2_lo_tgi);
-  if ((tgi_e = tgi_geterror()) != TGI_ERR_OK) {
-    printf("error %d installing tgi\n", tgi_e);
-    num_pages = -1;
-    goto tgi_err;
-  }
-
-  tgi_init ();
-  if ((tgi_e = tgi_geterror()) != TGI_ERR_OK) {
-    printf("error %d initializing tgi\n", tgi_e);
-    num_pages = -1;
-    goto tgi_err;
-  }
-
-  num_pages = tgi_getpagecount();
-  if ((tgi_e = tgi_geterror()) != TGI_ERR_OK) {
-    printf("error %d getting page count\n", tgi_e);
-    num_pages = -1;
-    goto tgi_err;
-  }
-
-  tgi_setdrawpage(0);
-  if ((tgi_e = tgi_geterror()) != TGI_ERR_OK) {
-    printf("error %d setting draw page\n", tgi_e);
-    num_pages = -1;
-    goto tgi_err;
-  }
-  tgi_clear();
-  if ((tgi_e = tgi_geterror()) != TGI_ERR_OK) {
-    printf("error %d clearing screen\n", tgi_e);
-    num_pages = -1;
-    goto tgi_err;
-  }
-  tgi_setviewpage(0);
-  if ((tgi_e = tgi_geterror()) != TGI_ERR_OK) {
-    printf("error %d setting view page\n", tgi_e);
-    num_pages = -1;
-    goto tgi_err;
-  }
-
-  if (num_pages > 1) {
-    tgi_setdrawpage(1);
-    tgi_clear();
-  }
-  return;
-
-tgi_err:
-  tgi_done();
-}
-#endif
 
 static void read_file(FILE *fp) {
   char *buf = malloc(BUFSIZE);
@@ -283,9 +175,11 @@ static void read_file(FILE *fp) {
   tiles = bool_array_alloc(max_x, max_y);
   empty = bool_array_alloc(max_x, max_y);
 
-#if 0
-  setup_tgi();
-#endif
+  x_offset = (192 - max_x) / 2;
+  y_offset = (280 - max_y) / 2;
+
+  tgi_install(a2_hi_tgi);
+  tgi_init ();
 
   while (fgets(buf, BUFSIZE-1, fp) != NULL) {
     int len = strlen(buf);
@@ -305,6 +199,12 @@ static void read_file(FILE *fp) {
         bool_array_set(empty, x, y, 0);
         bool_array_set(tiles, x, y, is_open);
 
+        if (is_open) {
+          tgi_setcolor(TGI_COLOR_ORANGE);
+        } else {
+          tgi_setcolor(TGI_COLOR_WHITE);
+        }
+        tgi_setpixel(y + y_offset, x + x_offset); /* rotate map */
         if (is_open && my_x == -1) {
           my_x = x;
           my_y = y;
@@ -319,7 +219,7 @@ static void read_file(FILE *fp) {
     unit_tests();
   }
 
-  printf("Starting at (%d,%d) facing %s\n", my_x, my_y, directions[my_direction]);
+  printf("Starting at (%d,%d) facing %d\n", my_x, my_y, my_direction);
   /* read the instructions */
   i = 0;
   while((c = fgetc(fp)) != '\n') {
@@ -349,7 +249,7 @@ static void read_file(FILE *fp) {
 
   /* Done */
   printf("My long walk is finished.\n");
-  printf("I'm at (%d,%d) facing %s.\n", my_x, my_y, directions[my_direction]);
+  printf("I'm at (%d,%d) facing %d.\n", my_x, my_y, my_direction);
   my_x++;
   my_y++;
   result = (long)(my_y * 1000) + (long)(my_x * 4) + (long)(my_direction);
