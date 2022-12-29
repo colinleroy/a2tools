@@ -23,7 +23,7 @@ static void cputsxy(int x, int y, char *buf) {
 char * __fastcall__ cgets(char *buf, size_t size) {
 #ifdef __CC65__
   char c;
-  size_t i = 0;
+  size_t i = 0, max_i = 0;
   int cur_x;
   int prev_cursor = 0;
   
@@ -36,14 +36,24 @@ char * __fastcall__ cgets(char *buf, size_t size) {
 
     if (c == CH_ENTER) {
       break;
-    } else if (c == CH_CURS_LEFT && i > 0) {
-      i--;
-      cur_x--;
+    } else if (c == CH_CURS_LEFT) {
+      if (i > 0) {
+        i--;
+        cur_x--;
+      }
+    } else if (c == CH_CURS_RIGHT) {
+      if (i < max_i) {
+        i++;
+        cur_x++;
+      }
     } else {
       cputc(c);
       buf[i] = c;
       i++;
       cur_x++;
+    }
+    if (i > max_i) {
+      max_i = i;
     }
     gotox(cur_x);
     
