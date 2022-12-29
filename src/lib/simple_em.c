@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <apple2.h>
+#include <apple2enh.h>
 #include <em.h>
 #include "simple_em.h"
 

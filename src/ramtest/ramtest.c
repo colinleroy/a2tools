@@ -3,7 +3,7 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
-#include <apple2.h>
+#include <apple2enh.h>
 #include "simple_em.h"
 
 static char *test_str[5] = {

@@ -1,8 +1,8 @@
 PROGRAM=httpcli
-SOURCES := http_client.c ../lib/simple_serial.c ../lib/extended_conio.c
+SOURCES := http_client.c ../lib/simple_serial.c ../lib/extended_conio.c ../lib/http.c
 DEPS := 
 
-CC65_TARGET = apple2
+CC65_TARGET = apple2enh
 CFLAGS  = -I ../lib
 CLCFLAGS = -t $(CC65_TARGET)
 GCCCFLAGS = -g -O0 -Werror

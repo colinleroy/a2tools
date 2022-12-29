@@ -4,7 +4,7 @@
 #include <errno.h>
 #include <unistd.h>
 #ifdef __CC65__
-#include <apple2.h>
+#include <apple2enh.h>
 #include <conio.h>
 #endif
 #include "bool_array.h"

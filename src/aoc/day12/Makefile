@@ -4,10 +4,10 @@ RD_SOURCES := day12.c ../../lib/bfs.c ../../lib/bool_array.c
 VIZ_SOURCES := day12viz.c ../../lib/tgi_sdl.c
 DEPS := 
 
-CC65_TARGET = apple2
+CC65_TARGET = apple2enh
 CFLAGS  = -I ../../lib
 RD_CLCFLAGS = -t $(CC65_TARGET)
-VIZ_CLCFLAGS = -t $(CC65_TARGET) -C ../../../config/apple2-hgr.cfg
+VIZ_CLCFLAGS = -t $(CC65_TARGET) -C ../../../config/apple2enh-hgr.cfg
 RD_GCCCFLAGS = -g -O0 -Werror
 VIZ_GCCCFLAGS = -g -O0 -Werror $(shell sdl-config --cflags)
 VIZ_GCCLDFLAGS = $(shell sdl-config --libs)

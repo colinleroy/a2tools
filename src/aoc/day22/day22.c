@@ -4,7 +4,7 @@
 #include <errno.h>
 #include <unistd.h>
 #ifdef __CC65__
-#include <apple2.h>
+#include <apple2enh.h>
 #endif
 #include "tgi_compat.h"
 #include "extended_conio.h"
@@ -174,7 +174,7 @@ static void read_file(FILE *fp) {
   x_offset = (192 - max_x) / 2;
   y_offset = (280 - max_y) / 2;
 
-  tgi_install(a2_hi_tgi);
+  tgi_install(a2e_hi_tgi);
   tgi_init ();
   tgi_setcolor(TGI_COLOR_WHITE);
 

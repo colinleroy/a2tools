@@ -2,7 +2,7 @@ PROGRAM=ramtest.bin
 SOURCES := ramtest.c
 DEPS := $(topdir)../lib/simple_em.o
 
-CC65_TARGET = apple2
+CC65_TARGET = apple2enh
 CC      = cl65
 CFLAGS  = -t $(CC65_TARGET) -I ../lib
 LDFLAGS = -t $(CC65_TARGET) -m $(PROGRAM).map

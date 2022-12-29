@@ -2,7 +2,7 @@ PROGRAM=a2recv
 SOURCES := a2recv.c ../lib/simple_serial.c
 DEPS := 
 
-CC65_TARGET = apple2
+CC65_TARGET = apple2enh
 CFLAGS  = -I ../lib
 CLCFLAGS = -t $(CC65_TARGET)
 GCCCFLAGS = -g -O0 -Werror

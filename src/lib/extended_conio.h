@@ -22,6 +22,7 @@
 #define chlinexy(a, b, c) do {} while(0)
 #define cvlinexy(a, b, c) do {} while(0)
 #define gotoxy(a, b) do {} while(0)
+#define cprintf printf
 #endif
 
 
