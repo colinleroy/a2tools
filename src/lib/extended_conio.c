@@ -24,18 +24,31 @@ char * __fastcall__ cgets(char *buf, size_t size) {
 #ifdef __CC65__
   char c;
   size_t i = 0;
+  int cur_x;
+  int prev_cursor = 0;
+  
+  prev_cursor = cursor(1);
+  
   while (i < size - 1) {
+    cur_x = wherex();
 
-    while(!kbhit());
     c = cgetc();
 
-    if (c == '\r') {
+    if (c == CH_ENTER) {
       break;
+    } else if (c == CH_CURS_LEFT && i > 0) {
+      i--;
+      cur_x--;
+    } else {
+      cputc(c);
+      buf[i] = c;
+      i++;
+      cur_x++;
     }
-    cputc(c);
-    buf[i] = c;
-    i++;
+    gotox(cur_x);
+    
   }
+  cursor(prev_cursor);
   printf("\n");
   buf[i] = '\0';
 
