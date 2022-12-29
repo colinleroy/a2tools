@@ -312,3 +312,18 @@ int simple_serial_printf(const char* format, ...) {
 
   return simple_serial_puts(simple_serial_buf);
 }
+
+int simple_serial_write(char *ptr, size_t size, size_t nmemb) {
+  int i;
+  if (size != 1) {
+    printf("Can only simple_serial_write chars.\n");
+    return -1;
+  }
+  for (i = 0; i < nmemb; i++) {
+    if (simple_serial_putc(ptr[i]) < 0) {
+      printf("Error sending at %d\n", i);
+      return i;
+    }
+  }
+  return i;
+}
