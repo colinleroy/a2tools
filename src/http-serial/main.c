@@ -70,6 +70,7 @@ int main(int argc, char **argv)
     }
     
     do {
+      reqbuf[0] = '\0';
       if (simple_serial_gets(reqbuf, BUFSIZE) != NULL && strcmp(reqbuf, "\n")) {
         headers = realloc(headers, (n_headers + 1) * sizeof(char *));
         headers[n_headers] = trim(reqbuf);

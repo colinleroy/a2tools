@@ -20,6 +20,22 @@ static void cputsxy(int x, int y, char *buf) {
 }
 #endif
 
+static unsigned char scrw = 255, scrh = 255;
+
+#ifndef __CC65__
+void screensize(unsigned char *w, unsigned char *h) {
+  *w = 40;
+  *h = 24;
+}
+
+void chline(int len) {
+  int i = 0;
+  for (i = 0; i < len; i++) {
+    printf("_");
+  }
+}
+#endif
+
 char * __fastcall__ cgets(char *buf, size_t size) {
 #ifdef __CC65__
   char c;
@@ -27,6 +43,10 @@ char * __fastcall__ cgets(char *buf, size_t size) {
   int cur_x, cur_y;
   int prev_cursor = 0;
   
+  if (scrw == 255 && scrh == 255) {
+    screensize(&scrw, &scrh);
+  }
+
   prev_cursor = cursor(1);
   
   while (i < size - 1) {
@@ -57,17 +77,17 @@ char * __fastcall__ cgets(char *buf, size_t size) {
       max_i = i;
     }
 
-    if (cur_x > 39) {
+    if (cur_x > scrw - 1) {
       cur_x = 0;
       cur_y++;
-      if (cur_y > 23) {
-        gotoxy(39, 23);
+      if (cur_y > scrh - 1) {
+        gotoxy(scrw - 1, scrh - 1);
         printf("\n");
-        cputcxy(39, 22, c);
+        cputcxy(scrw - 1, scrh - 2, c);
         cur_y--;
       }
     } else if (cur_x < 0) {
-      cur_x = 39;
+      cur_x = scrw - 1;
       cur_y--;
     }
     gotoxy(cur_x, cur_y);
@@ -84,7 +104,7 @@ char * __fastcall__ cgets(char *buf, size_t size) {
 }
 
 static char printfat_buf[255];
-static char clearbuf[39];
+static char clearbuf[42];
 void printfat(char x, char y, char clear, const char* format, ...) {
   int i;
   va_list args;
@@ -115,4 +135,16 @@ void __fastcall__ clrzone(char xs, char ys, char xe, char ye) {
     cputsxy(xs, ys, clearbuf);
     ys++;
   }
+}
+
+void printxcentered(int y, char *buf) {
+  int len = strlen(buf);
+  int startx;
+
+  if (scrw == 255 && scrh == 255) {
+    screensize(&scrw, &scrh);
+  }
+
+  startx = (scrw - len) / 2;
+  printfat(startx, y, 0, buf);
 }

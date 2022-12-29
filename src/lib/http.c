@@ -7,9 +7,15 @@
 
 #define BUFSIZE 255
 
+#ifndef __CC65__
+#include "http_curl.c"
+
+#else
+
 void http_connect_proxy(void) {
 #ifdef __CC65__
   simple_serial_open(2, SER_BAUD_9600);
+  simple_serial_set_timeout(10);
 #endif
 }
 
@@ -25,7 +31,13 @@ http_response *http_request(const char *method, const char *url, const char **he
   }
   simple_serial_puts("\n");
 
-  simple_serial_gets(buf, BUFSIZE);
+  simple_serial_gets_with_timeout(buf, BUFSIZE);
+  if (buf == NULL || buf[0] == '\0') {
+    resp->size = 0;
+    resp->code = 0;
+    return resp;
+  }
+
   if (strchr(buf, ',') == NULL) {
     printf("Unexpected response '%s'\n", buf);
     free(resp);
@@ -53,3 +65,4 @@ void http_response_free(http_response *resp) {
   free(resp->body);
   free(resp);
 }
+#endif
