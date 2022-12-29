@@ -2,7 +2,7 @@ PROGRAM=day9
 SOURCES := day9.c ../../lib/bool_array.c
 DEPS := 
 
-CC65_TARGET = apple2
+CC65_TARGET = apple2enh
 CFLAGS  = -I ../../lib
 CLCFLAGS = -t $(CC65_TARGET)
 GCCCFLAGS = -g -O0 -Werror

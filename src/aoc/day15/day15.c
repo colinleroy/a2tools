@@ -5,7 +5,7 @@
 #include <unistd.h>
 #ifdef __CC65__
 #include <conio.h>
-#include <apple2.h>
+#include <apple2enh.h>
 #include <tgi.h>
 #endif
 #include "array_sort.h"

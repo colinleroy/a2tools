@@ -2,7 +2,7 @@ PROGRAM=day13
 SOURCES := day13.c ../../lib/array_sort.c ../../lib/slist.c ../../lib/file_sorter.c
 DEPS := 
 
-CC65_TARGET = apple2
+CC65_TARGET = apple2enh
 CFLAGS  = -I ../../lib
 CLCFLAGS = -t $(CC65_TARGET)
 GCCCFLAGS = -g -O0 -Werror

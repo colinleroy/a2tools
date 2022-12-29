@@ -6,7 +6,7 @@ WRITER_SOURCES := day21wr.c ../../lib/bigint.c
 
 DEPS := 
 
-CC65_TARGET = apple2
+CC65_TARGET = apple2enh
 CFLAGS = -I ../../lib
 GCCCFLAGS = -g -O0 -Werror
 READER_CLCFLAGS  = -t $(CC65_TARGET)  -Wl -D,__STACKSIZE__=0x6100 --check-stack

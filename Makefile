@@ -1,4 +1,4 @@
-SUBDIRS = drivers src tools
+SUBDIRS = drivers src 
 PROGS = src/recv/recv.bin \
 	src/dump/dump.bin
 

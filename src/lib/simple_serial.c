@@ -6,7 +6,7 @@
 #include <stdarg.h>
 
 #ifdef __CC65__
-#include <apple2.h>
+#include <apple2enh.h>
 
 #define NCYCLES_PER_SEC 10000U
 
@@ -25,7 +25,7 @@ static struct ser_params default_params = {
 int simple_serial_open(int slot, int baudrate) {
   int err;
   
-  if ((err = ser_install(&a2_ssc_ser)) != 0)
+  if ((err = ser_install(&a2e_ssc_ser)) != 0)
     return err;
 
   if ((err = ser_apple2_slot(slot)) != 0)

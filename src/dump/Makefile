@@ -2,7 +2,7 @@ PROGRAM=dump.bin
 SOURCES := dump.c
 DEPS := $(topdir)../lib/extended_conio.o
 
-CC65_TARGET = apple2
+CC65_TARGET = apple2enh
 CC      = cl65
 CFLAGS  = -t $(CC65_TARGET) -I ../lib
 LDFLAGS = -t $(CC65_TARGET) -m $(PROGRAM).map

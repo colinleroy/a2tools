@@ -3,7 +3,7 @@
 #include <string.h>
 #include <errno.h>
 #ifdef __CC65__
-#include <apple2.h>
+#include <apple2enh.h>
 #include <conio.h>
 #endif
 

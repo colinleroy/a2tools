@@ -12,7 +12,7 @@ SOURCES := simple_serial.c \
 
 DEPS :=
 
-CC65_TARGET = apple2
+CC65_TARGET = apple2enh
 CC      = cl65
 CFLAGS  = -t $(CC65_TARGET)
 LDFLAGS = -t $(CC65_TARGET)

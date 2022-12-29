@@ -4,7 +4,7 @@
 #include <string.h>
 #include <unistd.h>
 #ifdef __CC65__
-#include <apple2_filetype.h>
+#include <apple2enh.h>
 #endif
 #include "array_sort.h"
 #include "file_sorter.h"

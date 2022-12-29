@@ -2,9 +2,9 @@ PROGRAM=day14
 SOURCES := day14.c ../../lib/bool_array.c ../../lib/extended_string.c ../../lib/tgi_sdl.c
 DEPS := 
 
-CC65_TARGET = apple2
+CC65_TARGET = apple2enh
 CFLAGS  = -I ../../lib
-CLCFLAGS = -t $(CC65_TARGET) -C ../../../config/apple2-hgr.cfg 
+CLCFLAGS = -t $(CC65_TARGET) -C ../../../config/apple2enh-hgr.cfg 
 GCCCFLAGS = -g -O0 -Werror $(shell sdl-config --cflags)
 GCCLDFLAGS = $(shell sdl-config --libs)
 

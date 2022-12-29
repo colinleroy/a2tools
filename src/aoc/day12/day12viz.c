@@ -3,7 +3,7 @@
 #include <string.h>
 #include <errno.h>
 #ifdef __CC65__
-#include <apple2.h>
+#include <apple2enh.h>
 #endif
 #include "tgi_compat.h"
 #include "extended_conio.h"
@@ -33,7 +33,7 @@ int main(void) {
     exit(1);
   }
 
-  tgi_install(a2_hi_tgi);
+  tgi_install(a2e_hi_tgi);
   tgi_init ();
 
   read_file(fp);

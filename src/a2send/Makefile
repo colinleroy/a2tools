@@ -1,7 +1,7 @@
 PROGRAM=a2send
 SOURCES := a2send.c ../lib/simple_serial.c ../lib/extended_conio.c
 
-CC65_TARGET = apple2
+CC65_TARGET = apple2enh
 CFLAGS  = -I ../lib
 CLCFLAGS = -t $(CC65_TARGET)
 GCCCFLAGS = -g -O0 -Werror

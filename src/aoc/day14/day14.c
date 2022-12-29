@@ -4,7 +4,7 @@
 #include <errno.h>
 #include <unistd.h>
 #ifdef __CC65__
-#include <apple2.h>
+#include <apple2enh.h>
 #include <tgi.h>
 #else
 #include "tgi_compat.h"
@@ -46,7 +46,7 @@ int main(void) {
     }
   } else {
 
-    tgi_install(a2_hi_tgi);
+    tgi_install(a2e_hi_tgi);
     tgi_init ();
     tgi_setcolor(TGI_COLOR_WHITE);
 

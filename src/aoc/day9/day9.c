@@ -3,7 +3,7 @@
 #include <errno.h>
 #include <string.h>
 #ifdef __CC65__
-#include <apple2.h>
+#include <apple2enh.h>
 #endif
 #include "extended_conio.h"
 #include "bool_array.h"
