@@ -24,13 +24,14 @@ char * __fastcall__ cgets(char *buf, size_t size) {
 #ifdef __CC65__
   char c;
   size_t i = 0, max_i = 0;
-  int cur_x;
+  int cur_x, cur_y;
   int prev_cursor = 0;
   
   prev_cursor = cursor(1);
   
   while (i < size - 1) {
     cur_x = wherex();
+    cur_y = wherey();
 
     c = cgetc();
 
@@ -55,7 +56,21 @@ char * __fastcall__ cgets(char *buf, size_t size) {
     if (i > max_i) {
       max_i = i;
     }
-    gotox(cur_x);
+
+    if (cur_x > 39) {
+      cur_x = 0;
+      cur_y++;
+      if (cur_y > 23) {
+        gotoxy(39, 23);
+        printf("\n");
+        cputcxy(39, 22, c);
+        cur_y--;
+      }
+    } else if (cur_x < 0) {
+      cur_x = 39;
+      cur_y--;
+    }
+    gotoxy(cur_x, cur_y);
     
   }
   cursor(prev_cursor);
