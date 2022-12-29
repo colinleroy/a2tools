@@ -30,3 +30,4 @@ size_t simple_serial_read_with_timeout(char *ptr, size_t size, size_t nmemb);
 int simple_serial_putc(char c);
 int simple_serial_puts(char *buf);
 int simple_serial_printf(const char* format, ...);
+int simple_serial_write(char *ptr, size_t size, size_t nmemb);
