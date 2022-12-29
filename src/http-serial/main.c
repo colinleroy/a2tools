@@ -197,8 +197,5 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
 
 static void send_response(curl_buffer *curlbuf) {
   simple_serial_printf("%d,%d\n", curlbuf->response_code, curlbuf->size);
-  printf("%d,%ld\n", curlbuf->response_code, curlbuf->size);
-
   simple_serial_write(curlbuf->buffer, sizeof(char), curlbuf->size);
-  printf("%s\n", curlbuf->buffer);
 }
