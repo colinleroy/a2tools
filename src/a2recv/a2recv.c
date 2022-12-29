@@ -39,7 +39,7 @@ read_again:
 
   if (simple_serial_gets(filename, BUF_SIZE) != NULL) {
     if (strlen(filename) > 8)
-      filename[7] = '\0';
+      filename[8] = '\0';
     if (strchr(filename, '\n'))
       *strchr(filename, '\n') = '\0';
     printf("Filename   '%s'\n", filename);
