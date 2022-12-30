@@ -77,10 +77,15 @@ slist *update_switches(void) {
 void toggle_switch(hc_switch *sw) {
   http_response *resp;
   char *url = malloc(BUFSIZE);
+  int i;
+
+  printxcenteredbox(18, 5);
+  printxcentered(12, "Toggling...");
 
   snprintf(url, BUFSIZE, HOMECONTROL_SRV"/control/toggle_switch.php?switch_number=%s", sw->id);
   resp = get_url(url);
 
   free(url);
   http_response_free(resp);
+  for (i = 0; i < 10000; i++); /* wait long enough */
 }

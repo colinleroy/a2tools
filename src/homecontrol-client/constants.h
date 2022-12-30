@@ -12,4 +12,9 @@
 
 #define REFRESH_DELAY 60000L
 
+#define MIN_TEMP 10
+#define MAX_TEMP 25
+
+#define WATER_MIN_TEMP 40
+#define WATER_MAX_TEMP 65
 #endif

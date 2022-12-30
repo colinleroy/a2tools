@@ -123,13 +123,13 @@ static void update_heating_page(int update_data) {
 
   clear_list(3);
   for (i = 0; w && i < PAGE_HEIGHT; w = w->next, i++) {
-    hc_heating *heat = w->data;
+    hc_heating_zone *heat = w->data;
 
     gotoxy(3, PAGE_BEGIN + i);
     printf("%s", heat->name);
     
     gotoxy(24, PAGE_BEGIN + i);
-    printf("%4s/%2s[C %2s%%H", heat->cur_temp, heat->set_temp, heat->cur_humidity);
+    printf("%4s/%2d[C %2s%%H", heat->cur_temp, heat->set_temp, heat->cur_humidity);
   }
   
   cur_list_length = slist_length(heating);
@@ -200,37 +200,35 @@ static void update_offset(int new_offset) {
 static void select_switch(void) {
   int i;
   slist *w = switches;
-  printxcenteredbox(18, 5);
-  printxcentered(12, "Toggling...");
 
   for (i = 0; i < cur_list_offset; i++) {
     w = w->next;
   }
 
   toggle_switch(w->data);
-
-  for (i = 0; i < 8000; i++); /* wait long enough */
 }
 
-static void select_heating_zone(void) {
-  // int i;
-  // slist *w = switches;
-  // printxcenteredbox(12, "Toggling...");
-  // 
-  // for (i = 0; i < cur_list_offset; i++) {
-  //   w = w->next;
-  // }
-  // 
-  // toggle_switch(w->data);
-  // 
-  // for (i = 0; i < 8000; i++); /* wait long enough */
+static int select_heating_zone(void) {
+  int i;
+  slist *w = heating;
+  
+  for (i = 0; i < cur_list_offset; i++) {
+    w = w->next;
+  }
+  
+  if (!configure_heating_zone(w->data)) {
+    /* Redraw on config screen */
+    update_heating_page(0);
+    return 0;
+  }
+  return 1;
 }
 
-static void select_item(void) {
+static int select_item(void) {
   switch(cur_page) {
-    case SWITCH_PAGE: select_switch();  break;
-    case SENSOR_PAGE:  /* TODO */;  break;
-    case HEATING_PAGE: select_heating_zone(); break;
+    case SWITCH_PAGE: select_switch(); return 1;
+    case SENSOR_PAGE:  /* TODO */;  return 0;
+    case HEATING_PAGE: return select_heating_zone();
   }
 }
 
@@ -261,10 +259,10 @@ update:
     case HEATING_PAGE: update_heating_page(1); break;
   }
 
-// #ifdef __CC65__
-//   gotoxy(0,0);
-//   printf("%d  ", _heapmaxavail());
-// #endif
+#ifdef __CC65__
+  gotoxy(0,0);
+  printf("%d  ", _heapmaxavail());
+#endif
 
 command:
   while (!kbhit()) {
@@ -281,7 +279,7 @@ command:
     case '1': cur_page = SWITCH_PAGE; goto update;
     case '2': cur_page = SENSOR_PAGE; goto update;
     case '3': cur_page = HEATING_PAGE; goto update;
-    case CH_ENTER: select_item(); goto update;
+    case CH_ENTER: if (select_item()) goto update; else goto command;
     case CH_CURS_UP: update_offset(-1); goto command;
     case CH_CURS_DOWN: update_offset(+1); goto command;
     default: goto command;
