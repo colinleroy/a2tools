@@ -12,6 +12,10 @@
 #define __extended_conio
 
 #ifndef __CC65__
+
+#define CH_CURS_UP    0x0B
+#define CH_CURS_DOWN  0x0A
+
 #define __fastcall__
 #define cgetc() fgetc(stdin)
 #define cputs(s) puts(s)

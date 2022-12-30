@@ -1,5 +1,6 @@
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 int strsplit(char *in, char split, char ***out) {
   int i;
@@ -21,6 +22,8 @@ int strsplit(char *in, char split, char ***out) {
       result[n_tokens] = strdup(in);
       in = in + i + 1; i = 0;
       n_tokens++;
+      if (*in == '\0')
+        break;
     }
   }
   /* last token */
