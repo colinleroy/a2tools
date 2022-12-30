@@ -5,12 +5,12 @@
 #ifndef __heating_h
 #define __heating_h
 
-typedef struct _hc_heating hc_heating;
+typedef struct _hc_heating_zone hc_heating_zone;
 
-struct _hc_heating {
+struct _hc_heating_zone {
   char *id;
   char *name;
-  char *set_temp;
+  int set_temp;
   char *cur_temp;
   char *cur_humidity;
   char manual_mode;
@@ -18,5 +18,6 @@ struct _hc_heating {
 
 slist *heating_zones_get(void);
 slist *update_heating_zones(void);
+int configure_heating_zone(hc_heating_zone *heat);
 
 #endif
