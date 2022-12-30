@@ -1,6 +1,7 @@
 #ifndef __constants_h
 #define __constants_h
 
+#define BUFSIZE 255
 #define HOMECONTROL_SRV "http://homecontrol.lan"
 #define PAGE_HEIGHT 10
 #define PAGE_BEGIN 5

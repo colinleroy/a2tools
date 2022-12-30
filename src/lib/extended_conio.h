@@ -13,8 +13,12 @@
 
 #ifndef __CC65__
 
-#define CH_CURS_UP    0x0B
-#define CH_CURS_DOWN  0x0A
+#define CH_CURS_UP     0x0B
+#define CH_CURS_DOWN   0x0A
+#define CH_CURS_LEFT   0x08
+#define CH_CURS_RIGHT  0x15
+#define CH_ENTER       0x0D
+#define CH_ESC         0x1B
 
 #define __fastcall__
 #define cgetc() fgetc(stdin)
@@ -40,6 +44,7 @@ void printfat(char x, char y, char clear, const char* format, ...);
 void __fastcall__ clrzone(char xs, char ys, char xe, char ye);
 
 void printxcentered(int y, char *buf);
+void printxcenteredbox(int y, char *buf);
 #endif
 
 #endif

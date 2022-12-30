@@ -1,9 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#ifdef __CC65__
-#include <apple2enh.h>
-#endif
 #include "simple_serial.h"
 #include "extended_conio.h"
 #include "extended_string.h"
@@ -14,6 +11,9 @@
 #include "switches.h"
 #include "sensors.h"
 #include "heating.h"
+#ifdef __CC65__
+#include <apple2enh.h>
+#endif
 
 static unsigned char scrw, scrh;
 
@@ -28,6 +28,7 @@ static int cur_list_offset = -1;
 static int cur_list_display_offset = 0;
 static int cur_list_length = -1;
 
+#define clear_list() do { clrzone(3, PAGE_BEGIN, 39, PAGE_BEGIN + PAGE_HEIGHT + 1); } while(0)
 static void update_switch_page(int update_data) {
   slist *w;
   int i;
@@ -43,12 +44,12 @@ static void update_switch_page(int update_data) {
   }
 
   if (switches == NULL) {
-    clrzone(0, PAGE_BEGIN, 39, PAGE_BEGIN + PAGE_HEIGHT + 1);
+    clear_list();
     printxcentered(12, "Can't load data.");
     return;
   }
 
-  clrzone(0, PAGE_BEGIN, 39, PAGE_BEGIN + PAGE_HEIGHT + 1);
+  clear_list();
   for (i = 0; w && i < PAGE_HEIGHT; w = w->next, i++) {
     hc_switch *sw = w->data;
 
@@ -73,7 +74,7 @@ static void update_sensor_page(int update_data) {
   w = sensors;
 
   if (sensors == NULL) {
-    clrzone(0, PAGE_BEGIN, 39, PAGE_BEGIN + PAGE_HEIGHT + 1);
+    clear_list();
     printxcentered(12, "Can't load data.");
     return;
   }
@@ -82,7 +83,7 @@ static void update_sensor_page(int update_data) {
     w = w->next;
   }
 
-  clrzone(0, PAGE_BEGIN, 39, PAGE_BEGIN + PAGE_HEIGHT + 1);
+  clear_list();
 
   for (i = 0; w && i < PAGE_HEIGHT; w = w->next, i++) {
     hc_sensor *sensor = w->data;
@@ -105,7 +106,7 @@ static void update_heating_page(int update_data) {
   w = heating;
   
   if (heating == NULL) {
-    clrzone(0, PAGE_BEGIN, 39, PAGE_BEGIN + PAGE_HEIGHT + 1);
+    clear_list();
     printxcentered(12, "Can't load data.");
     return;
   }
@@ -113,7 +114,7 @@ static void update_heating_page(int update_data) {
     w = w->next;
   }
 
-  clrzone(0, PAGE_BEGIN, 39, PAGE_BEGIN + PAGE_HEIGHT + 1);
+  clear_list();
 
   for (i = 0; w && i < PAGE_HEIGHT; w = w->next, i++) {
     hc_heating *heat = w->data;
@@ -190,6 +191,28 @@ static void update_offset(int new_offset) {
   cputc('>');
 }
 
+static void select_switch(void) {
+  int i;
+  slist *w = switches;
+  printxcenteredbox(12, "Toggling...");
+
+  for (i = 0; i < cur_list_offset; i++) {
+    w = w->next;
+  }
+
+  toggle_switch(w->data);
+
+  for (i = 0; i < 8000; i++); /* wait long enough */
+}
+
+static void select_item(void) {
+  switch(cur_page) {
+    case SWITCH_PAGE: select_switch();  break;
+    case SENSOR_PAGE:  /* TODO */;  break;
+    case HEATING_PAGE: /* TODO */; break;
+  }
+}
+
 static long refresh_counter = REFRESH_DELAY;
 int main(int argc, char **argv) {
   char command;
@@ -205,7 +228,7 @@ int main(int argc, char **argv) {
 update:
   refresh_counter = REFRESH_DELAY;
   if (cur_page != prev_page) {
-    clrzone(0, PAGE_BEGIN, 39, PAGE_BEGIN + PAGE_HEIGHT + 1);
+    clear_list();
     printxcentered(12, "Loading...");
     cur_list_offset = -1;
     cur_list_display_offset = 0;
@@ -237,8 +260,9 @@ command:
     case '1': cur_page = SWITCH_PAGE; goto update;
     case '2': cur_page = SENSOR_PAGE; goto update;
     case '3': cur_page = HEATING_PAGE; goto update;
-    case CH_CURS_UP: update_offset(- 1); goto command;
-    case CH_CURS_DOWN: update_offset(+ 1); goto command;
+    case CH_ENTER: select_item(); goto update;
+    case CH_CURS_UP: update_offset(-1); goto command;
+    case CH_CURS_DOWN: update_offset(+1); goto command;
     default: goto command;
   }
 

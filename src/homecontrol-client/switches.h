@@ -15,5 +15,5 @@ struct _hc_switch {
 
 slist *switches_get(void);
 slist *update_switches(void);
-
+void toggle_switch(hc_switch *sw);
 #endif
