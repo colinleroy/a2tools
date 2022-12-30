@@ -2,7 +2,8 @@
 #define __constants_h
 
 #define HOMECONTROL_SRV "http://homecontrol.lan"
-#define PAGE_HEIGHT 15
+#define PAGE_HEIGHT 10
+#define PAGE_BEGIN 5
 
 #define SWITCH_PAGE 1
 #define SENSOR_PAGE 2

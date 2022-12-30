@@ -40,8 +40,9 @@ http_response *http_request(const char *method, const char *url, const char **he
 
   if (strchr(buf, ',') == NULL) {
     printf("Unexpected response '%s'\n", buf);
-    free(resp);
-    return NULL;
+    resp->size = 0;
+    resp->code = 0;
+    return resp;
   }
 
   resp->size = atol(strchr(buf, ',') + 1);

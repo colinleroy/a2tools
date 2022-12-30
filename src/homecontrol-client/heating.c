@@ -33,12 +33,12 @@ static void heating_add(char *id, char *name, char *set_temp, char *cur_temp, ch
   if (strcmp(cur_temp, "n/a")) {
     heat->cur_temp     = do_round(cur_temp, 1);
   } else {
-    heat->cur_temp     = "NA";
+    heat->cur_temp     = strdup("NA");
   }
   if (strcmp(cur_humidity, "n/a")) {
     heat->cur_humidity = do_round(cur_humidity, 0);
   } else {
-    heat->cur_humidity = "NA";
+    heat->cur_humidity = strdup("NA");
   }
 
   heating_zones = slist_append(heating_zones, heat);
