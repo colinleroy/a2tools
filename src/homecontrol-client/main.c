@@ -219,7 +219,7 @@ update:
 
 #ifdef __CC65__
   gotoxy(0,0);
-  printf("%d", _heapmaxavail());
+  printf("%d  ", _heapmaxavail());
 #endif
 
 command:
