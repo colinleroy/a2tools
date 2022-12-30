@@ -48,6 +48,7 @@ slist *update_sensors(void) {
   sensors_free_all();
 
   if (resp->size == 0) {
+    http_response_free(resp);
     return NULL;
   }
   num_lines = strsplit(resp->body, '\n', &lines);
@@ -64,6 +65,8 @@ slist *update_sensors(void) {
     free(parts);
     free(lines[i]);
   }
+
+  http_response_free(resp);
   free(lines);
   return sensors;
 }

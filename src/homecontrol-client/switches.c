@@ -50,6 +50,7 @@ slist *update_switches(void) {
   switches_free_all();
 
   if (resp->size == 0) {
+    http_response_free(resp);
     return NULL;
   }
 
@@ -67,6 +68,8 @@ slist *update_switches(void) {
     free(parts);
     free(lines[i]);
   }
+
+  http_response_free(resp);
   free(lines);
   return switches;
 }
