@@ -25,18 +25,57 @@ static char *do_round(char *floatval, int num) {
   return result;
 }
 
-static void heating_add(char *id, char *name, char *set_temp, char *cur_temp, char *cur_humidity) {
+static void heating_add(char *id, char *name, char *set_temp, char *cur_temp, char *cur_humidity, char manual_mode) {
   hc_heating *heat = malloc(sizeof(hc_heating));
   heat->id           = strdup(id);
   heat->name         = strdup(name);
   heat->set_temp     = do_round(set_temp, 0);
+
   if (strcmp(cur_temp, "n/a")) {
-    heat->cur_temp     = do_round(cur_temp, 1);
+    if (strstr(cur_temp, " - ")) {
+      char **min_max;
+      int num_parts, i;
+      num_parts = strsplit(cur_temp, ' ', &min_max);
+
+      if (num_parts == 3) {
+        int avg = (atoi(min_max[2]) + atoi(min_max[0])) / 2;
+        heat->cur_temp = malloc(4);
+        sprintf(heat->cur_temp, "%d", avg);
+      } else {
+        heat->cur_temp = strdup("NA");
+      }
+
+      for (i = 0; i  < num_parts; i++) {
+        free(min_max[i]);
+      }
+      free(min_max);
+    } else {
+      heat->cur_temp = do_round(cur_temp, 0);
+    }
   } else {
     heat->cur_temp     = strdup("NA");
   }
   if (strcmp(cur_humidity, "n/a")) {
-    heat->cur_humidity = do_round(cur_humidity, 0);
+    if (strstr(cur_humidity, " - ")) {
+      char **min_max;
+      int num_parts, i;
+      num_parts = strsplit(cur_humidity, ' ', &min_max);
+
+      if (num_parts == 3) {
+        int avg = (atoi(min_max[2]) + atoi(min_max[0])) / 2;
+        heat->cur_humidity = malloc(4);
+        sprintf(heat->cur_humidity, "%d", avg);
+      } else {
+        heat->cur_humidity = strdup("NA");
+      }
+
+      for (i = 0; i  < num_parts; i++) {
+        free(min_max[i]);
+      }
+      free(min_max);
+    } else {
+      heat->cur_humidity = do_round(cur_humidity, 0);
+    }
   } else {
     heat->cur_humidity = strdup("NA");
   }
@@ -82,8 +121,8 @@ slist *update_heating_zones(void) {
     char **parts;
     int j, num_parts;
     num_parts = strsplit(lines[i],';', &parts);
-    if (num_parts == 5) {
-      heating_add(parts[0], parts[1], parts[2], parts[3], parts[4]);
+    if (num_parts == 6) {
+      heating_add(parts[0], parts[1], parts[2], parts[3], parts[4], !strcmp(parts[5], "MANUAL"));
     }
     for (j = 0; j < num_parts; j++) {
       free(parts[j]);

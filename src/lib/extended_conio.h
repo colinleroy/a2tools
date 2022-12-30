@@ -32,6 +32,7 @@
 #define cvlinexy(a, b, c) do {} while(0)
 #define gotoxy(a, b) do {} while(0)
 #define cprintf printf
+#define revers(x) 1
 
 void screensize(unsigned char *w, unsigned char *h);
 void chline(int len);
@@ -44,7 +45,7 @@ void printfat(char x, char y, char clear, const char* format, ...);
 void __fastcall__ clrzone(char xs, char ys, char xe, char ye);
 
 void printxcentered(int y, char *buf);
-void printxcenteredbox(int y, char *buf);
+void printxcenteredbox(int width, int height);
 #endif
 
 #endif
