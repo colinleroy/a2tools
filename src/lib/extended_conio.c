@@ -149,27 +149,32 @@ void printxcentered(int y, char *buf) {
   printfat(startx, y, 0, buf);
 }
 
-void printxcenteredbox(int y, char *buf) {
-  int len = strlen(buf);
-  int startx, i;
-  char *line = malloc(len + 5);
+void printxcenteredbox(int width, int height) {
+  int startx, starty, i;
+  char *line = malloc(width);
 
   if (scrw == 255 && scrh == 255) {
     screensize(&scrw, &scrh);
   }
 
-  startx = (scrw - len) / 2;
+  startx = (scrw - width) / 2;
+  starty = (scrh - height) / 2;
   
-  clrzone(startx - 2, y - 1, len + 2, y + 1);
+  clrzone(startx, starty, startx + width, starty + height + 1);
   
-  for (i = 0; i < len + 4; i++) {
+  for (i = 0; i < width; i++) {
     line[i] = '-';
   }
+  line[0] = '+';
+  line[i - 1] = '+';
   line[i] = '\0';
   
-  printfat(startx - 2, y - 1, 0, "%s", line);
-  cputsxy(startx - 2, y, "!");
-  printfat(startx, y, 0, buf);
-  cputsxy(startx + len + 1, y, "!");
-  printfat(startx - 2, y + 1, 0, "%s", line);
+  printfat(startx, starty, 0, "%s", line);
+  for (i = 1; i < height + 1; i++) {
+    cputsxy(startx, starty + i,  "!");
+    cputsxy(startx + width - 1, starty + i, "!");
+  }
+  printfat(startx, starty + height + 1, 0, "%s", line);
+  
+  free(line);
 }

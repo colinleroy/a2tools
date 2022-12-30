@@ -13,6 +13,7 @@ struct _hc_heating {
   char *set_temp;
   char *cur_temp;
   char *cur_humidity;
+  char manual_mode;
 };
 
 slist *heating_zones_get(void);
