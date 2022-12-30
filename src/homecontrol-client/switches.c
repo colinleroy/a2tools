@@ -73,3 +73,14 @@ slist *update_switches(void) {
   free(lines);
   return switches;
 }
+
+void toggle_switch(hc_switch *sw) {
+  http_response *resp;
+  char *url = malloc(BUFSIZE);
+
+  snprintf(url, BUFSIZE, HOMECONTROL_SRV"/control/toggle_switch.php?switch_number=%s", sw->id);
+  resp = get_url(url);
+
+  free(url);
+  http_response_free(resp);
+}
