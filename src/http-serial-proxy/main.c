@@ -52,6 +52,7 @@ int main(int argc, char **argv)
 
   simple_serial_open(argv[1], B9600, 1);
 
+  atexit((void *)simple_serial_close);
   curl_global_init(CURL_GLOBAL_ALL);
 
   while(1) {

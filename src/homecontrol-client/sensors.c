@@ -61,7 +61,6 @@ void sensors_free_all(void) {
 }
 
 int update_sensors(hc_sensor ***sensors_list) {
-  http_response *resp;
   char **lines = NULL;
   int i, num_lines;
   char *url;
@@ -70,16 +69,15 @@ int update_sensors(hc_sensor ***sensors_list) {
 
   url = malloc(BUFSIZE);
   snprintf(url, BUFSIZE, "%s/sensors.php", get_server_root_url());
-  resp = get_url(url);
+  sensors_data = get_url(url);
   free(url);
 
-  if (resp == NULL || resp->size == 0 || resp->code != 200) {
-    http_response_free(resp);
+  if (sensors_data == NULL) {
     *sensors_list = NULL;
     return 0;
   }
 
-  num_lines = strsplit_in_place(resp->body, '\n', &lines);
+  num_lines = strsplit_in_place(sensors_data, '\n', &lines);
   sensors = malloc(num_lines * sizeof(hc_sensor *));
 
   for (i = 0; i < num_lines; i++) {
@@ -96,10 +94,6 @@ int update_sensors(hc_sensor ***sensors_list) {
     free(parts);
   }
 
-  sensors_data = resp->body;
-  resp->body = NULL;
-
-  http_response_free(resp);
   free(lines);
 
   *sensors_list = sensors;

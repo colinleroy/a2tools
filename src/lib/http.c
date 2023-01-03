@@ -21,6 +21,7 @@
 #include "http.h"
 #include "simple_serial.h"
 #include "extended_conio.h"
+#include "math.h"
 
 #define BUFSIZE 255
 
@@ -38,9 +39,13 @@ void http_connect_proxy(void) {
   proxy_opened = 1;
 }
 
+void http_close_proxy(void) {
+  simple_serial_close();
+}
+
 static char buf[BUFSIZE];
 
-http_response *http_request(const char *method, const char *url, const char **headers, int n_headers) {
+http_response *http_start_request(const char *method, const char *url, const char **headers, int n_headers) {
   http_response *resp;
   int i;
 
@@ -53,9 +58,9 @@ http_response *http_request(const char *method, const char *url, const char **he
     return NULL;
   }
 
-  resp->body = NULL;
   resp->size = 0;
   resp->code = 0;
+  resp->cur_pos = 0;
 
   simple_serial_printf("%s %s\n", method, url);
 
@@ -79,19 +84,60 @@ http_response *http_request(const char *method, const char *url, const char **he
   *strchr(buf,',') = '\0';
   resp->code = atoi(buf);
 
-  resp->body = malloc(resp->size + 1);
-  if (resp->body == NULL) {
-    resp->code = 511;
-    return resp;
-  }
-
-  simple_serial_read(resp->body, sizeof(char), resp->size);
-  resp->body[resp->size] = '\0';
-
   return resp;
 }
 
+size_t http_receive_data(http_response *resp, char *buffer, size_t max_len) {
+  size_t to_read = min(resp->size - resp->cur_pos, max_len - 1);
+  size_t r = simple_serial_read(buffer, sizeof(char), to_read);
+  buffer[r] = '\0';
+  resp->cur_pos += r;
+
+  return r;
+}
+
+static char overwritten_char = '\0';
+static size_t overwritten_offset = 0;
+
+size_t http_receive_lines(http_response *resp, char *buffer, size_t max_len) {
+  size_t to_read = min(resp->size - resp->cur_pos, max_len - 1);
+  size_t r = 0;
+  size_t last_return = 0;
+
+  if (overwritten_char != '\0') {
+    *(buffer + overwritten_offset) = overwritten_char;
+    memmove(buffer, buffer + overwritten_offset, max_len - 1 - overwritten_offset);
+    r = max_len - 1 - overwritten_offset;
+    overwritten_char = '\0';
+    to_read -= r;
+  }
+
+  while (to_read > 0) {
+    *(buffer + r) = simple_serial_getc();
+
+    if(*(buffer + r) == '\n') {
+      last_return = r;
+    }
+
+    r ++;
+    to_read--;
+  }
+  if (last_return > 0 && last_return + 1 < max_len - 1) {
+    overwritten_offset = last_return + 1;
+    overwritten_char = *(buffer + overwritten_offset);
+    r = overwritten_offset;
+  }
+
+  buffer[r] = '\0';
+  resp->cur_pos += r;
+
+  if (resp->size == resp->cur_pos) {
+    overwritten_char = '\0';
+  }
+
+  return r;
+}
+
 void http_response_free(http_response *resp) {
-  free(resp->body);
   free(resp);
 }

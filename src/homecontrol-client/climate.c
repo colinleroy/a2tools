@@ -123,7 +123,6 @@ int climate_can_set_away(void) {
 }
 
 int update_climate_zones(hc_climate_zone ***climate_zones_list) {
-  http_response *resp;
   char **lines = NULL;
   int i, num_lines;
   char *url;
@@ -132,16 +131,15 @@ int update_climate_zones(hc_climate_zone ***climate_zones_list) {
 
   url = malloc(BUFSIZE);
   snprintf(url, BUFSIZE, "%s/climate.php", get_server_root_url());
-  resp = get_url(url);
+  climate_zones_data = get_url(url);
   free(url);
 
-  if (resp == NULL || resp->size == 0 || resp->code != 200) {
-    http_response_free(resp);
+  if (climate_zones_data == NULL) {
     *climate_zones_list = NULL;
     return 0;
   }
 
-  num_lines = strsplit_in_place(resp->body, '\n', &lines);
+  num_lines = strsplit_in_place(climate_zones_data, '\n', &lines);
 
   if (num_lines >= 3) {
     for (i = 0; i < 3; i++) {
@@ -169,10 +167,6 @@ int update_climate_zones(hc_climate_zone ***climate_zones_list) {
     free(parts);
   }
 
-  climate_zones_data = resp->body;
-  resp->body = NULL;
-
-  http_response_free(resp);
   free(lines);
   *climate_zones_list = climate_zones;
   return num_climate_zones;
@@ -180,7 +174,7 @@ int update_climate_zones(hc_climate_zone ***climate_zones_list) {
 
 
 int configure_climate_zone(hc_climate_zone *zone) {
-  http_response *resp = NULL;
+  char *response;
   char *url = NULL;
   int i;
   int new_temp = zone->set_temp;
@@ -312,10 +306,10 @@ set_temp:
                             new_mode == 'A' ? "AWAY":"HOME",
                             new_mode == 'M' ? "MANUAL":"AUTO",
                             new_temp);
-  resp = get_url(url);
+  response = get_url(url);
 
   free(url);
-  http_response_free(resp);
+  free(response);
   
   return 1;
 }

@@ -59,7 +59,6 @@ void switches_free_all(void) {
 }
 
 int update_switches(hc_switch ***switches_list) {
-  http_response *resp;
   char **lines = NULL;
   int i, num_lines;
   char *url;
@@ -68,16 +67,15 @@ int update_switches(hc_switch ***switches_list) {
 
   url = malloc(BUFSIZE);
   snprintf(url, BUFSIZE, "%s/switches.php", get_server_root_url());
-  resp = get_url(url);
+  switches_data = get_url(url);
   free(url);
 
-  if (resp == NULL || resp->size == 0 || resp->code != 200) {
-    http_response_free(resp);
+  if (switches_data == NULL) {
     *switches_list = NULL;
     return 0;
   }
 
-  num_lines = strsplit_in_place(resp->body, '\n', &lines);
+  num_lines = strsplit_in_place(switches_data, '\n', &lines);
   switches = malloc(num_lines * sizeof(hc_switch *));
 
   for (i = 0; i < num_lines; i++) {
@@ -90,9 +88,6 @@ int update_switches(hc_switch ***switches_list) {
     free(parts);
   }
 
-  switches_data = resp->body;
-  resp->body = NULL;
-  http_response_free(resp);
   free(lines);
 
   *switches_list = switches;
@@ -100,7 +95,7 @@ int update_switches(hc_switch ***switches_list) {
 }
 
 void toggle_switch(hc_switch *sw) {
-  http_response *resp;
+  char *response;
   char *url = malloc(BUFSIZE);
   int i;
 
@@ -108,10 +103,10 @@ void toggle_switch(hc_switch *sw) {
   printxcentered(12, "Toggling...");
 
   snprintf(url, BUFSIZE, "%s/switch_ctrl.php?id=%s", get_server_root_url(), sw->id);
-  resp = get_url(url);
+  response = get_url(url);
 
   free(url);
-  http_response_free(resp);
+  free(response);
 
   for (i = 0; i < 10000; i++); /* wait long enough */
 }

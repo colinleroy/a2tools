@@ -35,6 +35,7 @@ static char* server_url = NULL;
 
 static int get_metrics(const char *sensor_id, int scale, char *unit) {
   http_response *resp = NULL;
+  char *body = NULL;
   FILE *fp;
   char *buf = malloc(BUFSIZE);
   char *w;
@@ -54,7 +55,7 @@ static int get_metrics(const char *sensor_id, int scale, char *unit) {
   gotoxy(1, 12);
   printf("Fetching metrics, please be patient...");
   simple_serial_set_activity_indicator(1, -1, -1);
-  resp = http_request("GET", buf, NULL, 0);
+  resp = http_start_request("GET", buf, NULL, 0);
   simple_serial_set_activity_indicator(0, 0, 0);
   free(buf);
 
@@ -64,6 +65,9 @@ static int get_metrics(const char *sensor_id, int scale, char *unit) {
     cgetc();
     return -1;
   }
+
+  body = malloc(resp->size + 1);
+  http_receive_data(resp, body, resp->size + 1);
 
   gotoxy(12, 13);
   printf("Writing metrics...");
@@ -78,7 +82,7 @@ static int get_metrics(const char *sensor_id, int scale, char *unit) {
     return -1;
   }
 
-  w = resp->body;
+  w = body;
   while (*w) {
     char *vs;
     long v;
@@ -105,12 +109,13 @@ static int get_metrics(const char *sensor_id, int scale, char *unit) {
 
   fprintf(fp, "TIME;%ld;%ld\n", start_time, end_time);
   fprintf(fp, "VALS;%ld;%ld\n", min_val, max_val);
-  if (fwrite(resp->body, sizeof(char), resp->size, fp) < resp->size) {
+  if (fwrite(body, sizeof(char), resp->size, fp) < resp->size) {
     printf("Cannot write to file: %s\n", strerror(errno));
     cgetc();
     err = -1;
   }
   http_response_free(resp);
+  free(body);
   
   if (fclose(fp) != 0) {
     printf("Cannot close file: %s\n", strerror(errno));
@@ -163,16 +168,23 @@ int main(int argc, char **argv) {
 #ifdef __CC65__
   if (get_metrics(sensor_id, scale, unit) == 0) {
     sprintf(buf, "%s \"%s\" %d %s", sensor_id, sensor_name, scale, unit);
+    simple_serial_close();
     exec("GRPHVIEW", buf);
     free(buf); /* unreachable code anyway */
+    free(server_url);
   } else {
 err_out:
     sprintf(buf, "2 %s", sensor_id);
+    simple_serial_close();
     exec("HOMECTRL", buf);
     free(buf); /* unreachable code anyway */
+    free(server_url);
   }
 #else
   get_metrics(sensor_id, scale, unit);
+  free(buf);
+  free(server_url);
+  simple_serial_close();
 err_out:
 #endif
   exit(0);
