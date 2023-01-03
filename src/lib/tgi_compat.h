@@ -34,6 +34,7 @@
 #define TGI_COLOR_AQUA          0x0F
 
 #define tgi_install(x) do {} while(0)
+#define tgi_apple2_mix(x) do {} while(0)
 
 int tgi_init();
 int tgi_done();
@@ -41,7 +42,7 @@ int tgi_done();
 void tgi_setcolor(int color);
 void tgi_setpixel(int x, int y);
 void tgi_line(int start_x, int start_y, int end_x, int end_y);
-
+void tgi_outtextxy (int x, int y, const char* s);
 #endif
 
 #endif
