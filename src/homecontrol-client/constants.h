@@ -1,7 +1,7 @@
 #ifndef __constants_h
 #define __constants_h
 
-#define SRV_URL_FILE "SRV_URL"
+#define SRV_URL_FILE "SRVURL"
 #define BUFSIZE 255
 #define PAGE_HEIGHT 15
 #define PAGE_BEGIN 5
