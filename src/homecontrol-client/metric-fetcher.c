@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#include <limits.h>
 #ifdef __CC65__
 #include <apple2enh.h>
 #endif
@@ -14,27 +15,35 @@
 static int get_metrics(const char *sensor_number, const char *metric, int scale) {
   http_response *resp = NULL;
   FILE *fp;
-  char *url = malloc(BUFSIZE);
+  char *buf = malloc(BUFSIZE);
+  char *w;
   int err = 0;
+  static long min_val = LONG_MAX;
+  static long max_val = LONG_MIN;
+  static long start_time = -1L;
+  static long end_time = -1L;
 
-  snprintf(url, BUFSIZE, HOMECONTROL_SRV"/csv/sensor_metrics.php"
+  snprintf(buf, BUFSIZE, HOMECONTROL_SRV"/csv/sensor_metrics.php"
                          "?sensor_number=%s"
                          "&metric=%s"
                          "&scale=%d",
                          sensor_number, metric, scale);
 
-  printxcentered(12, "Fetching metrics, please be patient...");
+  gotoxy(1, 12);
+  printf("Fetching metrics, please be patient...");
   simple_serial_set_activity_indicator(1, -1, -1);
-  resp = http_request("GET", url, NULL, 0);
+  resp = http_request("GET", buf, NULL, 0);
   simple_serial_set_activity_indicator(0, 0, 0);
-  free(url);
+  free(buf);
 
   if (resp == NULL) {
     printf("Could not get response\n");
     cgetc();
     return -1;
   }
-  printxcentered(13,"Writing metrics...");
+
+  gotoxy(12, 13);
+  printf("Writing metrics...");
 
 #ifdef PRODOS_T_TXT
   _filetype = PRODOS_T_TXT;
@@ -45,6 +54,34 @@ static int get_metrics(const char *sensor_number, const char *metric, int scale)
     cgetc();
     return -1;
   }
+
+  w = resp->body;
+  while (*w) {
+    char *vs;
+    long v;
+    if (start_time == -1L)
+      start_time = atol(w);
+    end_time = atol(w);
+    vs = strchr(w, ';');
+    if (vs) {
+      vs = vs + 1;
+      v = atol(vs);
+
+      if (v < min_val) {
+        min_val = v;
+      }
+      if (v > max_val) {
+        max_val = v;
+      }
+    }
+    while (*w != '\n' && *w != '\0')
+      w++;
+    if (*w == '\n')
+      w++;
+  }
+
+  fprintf(fp, "TIME;%ld;%ld\n", start_time, end_time);
+  fprintf(fp, "VALS;%ld;%ld\n", min_val, max_val);
   if (fwrite(resp->body, sizeof(char), resp->size, fp) < resp->size) {
     printf("Cannot write to file: %s\n", strerror(errno));
     cgetc();
@@ -74,7 +111,8 @@ int main(int argc, char **argv) {
     scale = atoi(argv[3]);
     unit = argv[4];
   } else {
-    printxcentered(13,"Missing argument(s).");
+    gotoxy(12, 13);
+    printf("Missing argument(s).");
     cgetc();
     goto err_out;
   }
