@@ -80,10 +80,10 @@ static void update_switch_page(int update_data) {
 
     if (!strcmp(sw->state, "on")) {
       revers(1);
-      printf("( ON)");
+      puts("( ON)");
       revers(0);
     } else {
-      printf("(OFF)");
+      puts("(OFF)");
     }
   }
   
@@ -205,9 +205,6 @@ static void update_offset(int new_offset) {
     scroll_changed = 1;
   }
 
-  // gotoxy(30,0);
-  // printf("%d/%d/%d ", cur_list_offset, cur_list_display_offset, cur_list_length);
-
   if (scroll_changed) {
     switch(cur_page) {
       case SWITCH_PAGE:  update_switch_page(0);  break;
@@ -252,6 +249,7 @@ static void select_sensor(void) {
 #else
   /* TODO */
   printf("exec MTRCFTCH %s", params);
+  free(params);
 #endif
 }
 
@@ -340,17 +338,23 @@ command:
     case '2': cur_page = SENSOR_PAGE; goto update;
     case '3': cur_page = HEATING_PAGE; goto update;
     case CH_ENTER:
+#ifndef __CC65__
     case 'e':
+#endif
       if (select_item())
         goto update;
       else
         goto command;
     case CH_CURS_UP: 
+#ifndef __CC65__
     case 'i':
+#endif
       update_offset(-1);
       goto command;
     case CH_CURS_DOWN: 
+#ifndef __CC65__
     case 'k':
+#endif
       update_offset(+1);
       goto command;
     default: 

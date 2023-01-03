@@ -43,6 +43,22 @@ static char *do_round(char *floatval, int num) {
   return result;
 }
 
+static char *avg_vals(char *in) {
+  char **min_max, *out = NULL;
+  int num_parts;
+  num_parts = strsplit_in_place(in, ' ', &min_max);
+
+  if (num_parts == 3) {
+    int avg = (atoi(min_max[2]) + atoi(min_max[0])) / 2;
+    out = malloc(4);
+    sprintf(out, "%d", avg);
+  } else {
+    out = strdup("NA");
+  }
+  free(min_max);
+
+  return out;
+}
 static void heating_add(char *id, char *name, char *set_temp, char *cur_temp, char *cur_humidity, char manual_mode) {
   hc_heating_zone *heat = malloc(sizeof(hc_heating_zone));
   memset(heat, 0, sizeof(hc_heating_zone));
@@ -50,13 +66,7 @@ static void heating_add(char *id, char *name, char *set_temp, char *cur_temp, ch
   heat->id           = strdup(id);
   heat->set_temp     = atoi(set_temp);
   heat->manual_mode  = manual_mode;
-  if (strlen(name) >= 25) {
-    name[22]='.';
-    name[23]='.';
-    name[24]='.';
-    name[25]='\0';
-  }
-  heat->name = strdup(name);
+  heat->name         = strndup_ellipsis(name, 22);
 
   if (!strcmp(heat->id, "-1")) {
     heat->set_temp   = 21;
@@ -64,22 +74,7 @@ static void heating_add(char *id, char *name, char *set_temp, char *cur_temp, ch
 
   if (strcmp(cur_temp, "n/a")) {
     if (strstr(cur_temp, " - ")) {
-      char **min_max;
-      int num_parts, i;
-      num_parts = strsplit(cur_temp, ' ', &min_max);
-
-      if (num_parts == 3) {
-        int avg = (atoi(min_max[2]) + atoi(min_max[0])) / 2;
-        heat->cur_temp = malloc(4);
-        sprintf(heat->cur_temp, "%d", avg);
-      } else {
-        heat->cur_temp = strdup("NA");
-      }
-
-      for (i = 0; i  < num_parts; i++) {
-        free(min_max[i]);
-      }
-      free(min_max);
+      heat->cur_temp = avg_vals(cur_temp);
     } else {
       heat->cur_temp = do_round(cur_temp, 0);
     }
@@ -88,22 +83,7 @@ static void heating_add(char *id, char *name, char *set_temp, char *cur_temp, ch
   }
   if (strcmp(cur_humidity, "n/a")) {
     if (strstr(cur_humidity, " - ")) {
-      char **min_max;
-      int num_parts, i;
-      num_parts = strsplit(cur_humidity, ' ', &min_max);
-
-      if (num_parts == 3) {
-        int avg = (atoi(min_max[2]) + atoi(min_max[0])) / 2;
-        heat->cur_humidity = malloc(4);
-        sprintf(heat->cur_humidity, "%d", avg);
-      } else {
-        heat->cur_humidity = strdup("NA");
-      }
-
-      for (i = 0; i  < num_parts; i++) {
-        free(min_max[i]);
-      }
-      free(min_max);
+      heat->cur_humidity = avg_vals(cur_humidity);
     } else {
       heat->cur_humidity = do_round(cur_humidity, 0);
     }
@@ -152,19 +132,20 @@ slist *update_heating_zones(void) {
   http_response *resp;
   char **lines = NULL;
   int i, num_lines;
-  char *url = malloc(BUFSIZE);
+  char *url;
 
+  heating_zones_free_all();
+
+  url = malloc(BUFSIZE);
   snprintf(url, BUFSIZE, "%s/climate.php", get_server_root_url());
   resp = get_url(url);
   free(url);
-
-  heating_zones_free_all();
 
   if (resp == NULL || resp->size == 0) {
     http_response_free(resp);
     return NULL;
   }
-  num_lines = strsplit(resp->body, '\n', &lines);
+  num_lines = strsplit_in_place(resp->body, '\n', &lines);
   if (num_lines >= 3) {
     for (i = 0; i < 3; i++) {
       if(!strncmp(lines[i], "CAPS;", 5)) {
@@ -177,21 +158,16 @@ slist *update_heating_zones(void) {
         free(hot_water_zone);
         hot_water_zone = strdup(strchr(lines[i], ';') + 1);
       }
-    free(lines[i]);
     }
   }
   for (i = 3; i < num_lines; i++) {
     char **parts;
-    int j, num_parts;
-    num_parts = strsplit(lines[i],';', &parts);
+    int num_parts;
+    num_parts = strsplit_in_place(lines[i],';', &parts);
     if (num_parts == 5 + can_schedule) {
       heating_add(parts[0], parts[1], parts[2], parts[3], parts[4], can_schedule ? !strcmp(parts[5], "MANUAL") : 1);
     }
-    for (j = 0; j < num_parts; j++) {
-      free(parts[j]);
-    }
     free(parts);
-    free(lines[i]);
   }
 
   http_response_free(resp);
@@ -224,33 +200,33 @@ int configure_heating_zone(hc_heating_zone *heat) {
 update_mode:
   gotoxy(6, 17);
   if (can_schedule) {
-    printf("Up/Down   : mode ! Enter: OK");
+    puts("Up/Down   : mode ! Enter: OK");
 
     gotoxy(7, 9);
-    printf("Mode: ");
+    puts("Mode: ");
     
     gotoxy(12, 9);
     revers(new_mode == 'S');
-    printf("SCHEDULE");
+    puts("SCHEDULE");
 
     gotoxy(12, 10);
     revers(new_mode == 'M');
-    printf("MANUAL");
+    puts("MANUAL");
 
     if (can_set_away && !strcmp(heat->id, full_home_zone)) {
       gotoxy(12, 11);
       revers(new_mode == 'A');
-      printf("AWAY");
+      puts("AWAY");
     }
 
     revers(0);
     
   } else {
-    printf("                 ! Enter: OK");
+    puts("                 ! Enter: OK");
   }
 
   gotoxy(7, 13);
-  printf("Temperature:");
+  puts("Temperature:");
 
 set_temp:
   gotoxy(22, 13);
@@ -268,9 +244,9 @@ set_temp:
 
   gotoxy(6, 18);
   if (new_mode == 'M') {
-    printf("Left/Right:  temp! Esc: back");
+    puts("Left/Right:  temp! Esc: back");
   } else {
-    printf("                 ! Esc: back");
+    puts("                 ! Esc: back");
   }
 
   c = cgetc();

@@ -38,13 +38,7 @@ static void sensor_add(char *id, char *name, char scale, long cur_value, char *u
   sensor->scale     = scale;
   sensor->cur_value = cur_value;
   sensor->unit      = strdup(unit);
-  if (strlen(name) >= 25) {
-    name[22]='.';
-    name[23]='.';
-    name[24]='.';
-    name[25]='\0';
-  }
-  sensor->name = strdup(name);
+  sensor->name      = strndup_ellipsis(name, 25);
 
   sensors = slist_append(sensors, sensor);
 }
@@ -69,36 +63,33 @@ slist *update_sensors(void) {
   http_response *resp;
   char **lines = NULL;
   int i, num_lines;
-  char *url = malloc(BUFSIZE);
+  char *url;
 
+  sensors_free_all();
+
+  url = malloc(BUFSIZE);
   snprintf(url, BUFSIZE, "%s/sensors.php", get_server_root_url());
   resp = get_url(url);
   free(url);
-
-  sensors_free_all();
 
   if (resp == NULL || resp->size == 0) {
     http_response_free(resp);
     return NULL;
   }
-  num_lines = strsplit(resp->body, '\n', &lines);
+  num_lines = strsplit_in_place(resp->body, '\n', &lines);
 
   for (i = 0; i < num_lines; i++) {
     char **parts;
-    int j, num_parts;
+    int num_parts;
 #ifdef __CC65__
   gotoxy(0,0);
-  printf("%d/%d    ", _heapmaxavail(), _heapmemavail());
+  printf("%d/%d     ", _heapmaxavail(), _heapmemavail());
 #endif
-    num_parts = strsplit(lines[i],';', &parts);
+    num_parts = strsplit_in_place(lines[i],';', &parts);
     if (num_parts == 5) {
       sensor_add(parts[0], parts[1], atoi(parts[2]), atol(parts[3]), parts[4]);
     }
-    for (j = 0; j < num_parts; j++) {
-      free(parts[j]);
-    }
     free(parts);
-    free(lines[i]);
   }
 
   http_response_free(resp);
