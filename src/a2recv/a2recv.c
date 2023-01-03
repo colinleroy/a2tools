@@ -104,7 +104,7 @@ read_again:
 
     simple_serial_set_activity_indicator(0, -1, -1);
 
-    printf("\nRead %d bytes. Writing %s...\n", total, filename);
+    printf("\nRead %u bytes. Writing %s...\n", total, filename);
 
 
     if (outfp == NULL)
