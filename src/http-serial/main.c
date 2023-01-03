@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
 #include <curl/curl.h>
 #include "simple_serial.h" //Mostly for timings */
 #include "extended_string.h"
@@ -67,14 +68,22 @@ int main(int argc, char **argv)
         free(parts[i]);
       }
       free(parts);
+    } else {
+      printf("Read error %s\n", strerror(errno));
+      exit(1);
     }
     
     do {
       reqbuf[0] = '\0';
-      if (simple_serial_gets(reqbuf, BUFSIZE) != NULL && strcmp(reqbuf, "\n")) {
-        headers = realloc(headers, (n_headers + 1) * sizeof(char *));
-        headers[n_headers] = trim(reqbuf);
-        n_headers++;
+      if (simple_serial_gets(reqbuf, BUFSIZE) != NULL) {
+        if (strcmp(reqbuf, "\n")) {
+          headers = realloc(headers, (n_headers + 1) * sizeof(char *));
+          headers[n_headers] = trim(reqbuf);
+          n_headers++;
+        }
+      } else {
+        printf("Read error %s\n", strerror(errno));
+        exit(1);
       }
     } while (strcmp(reqbuf, "\n"));
 
