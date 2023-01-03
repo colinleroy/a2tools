@@ -93,8 +93,6 @@ static void display_graph(void) {
   gotoxy(0, 22);
   printf("Y scale = Value: %ld to %ld", (long)min_val, (long)max_val);
 
-  cgetc();
-
   tgi_init();
   tgi_apple2_mix(1);
 
