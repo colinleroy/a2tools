@@ -31,8 +31,7 @@
 static char proxy_opened = 0;
 void http_connect_proxy(void) {
 #ifdef __CC65__
-  simple_serial_open(2, SER_BAUD_9600);
-  simple_serial_set_timeout(10);
+  simple_serial_open(2, SER_BAUD_9600, 1);
 #endif
   proxy_opened = 1;
 }

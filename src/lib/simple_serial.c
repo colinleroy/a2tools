@@ -30,8 +30,6 @@ static int serial_activity_indicator_y = -1;
 #ifdef __CC65__
 #include <apple2enh.h>
 
-#define NCYCLES_PER_SEC 10000U
-
 /* Setup */
 static int last_slot = 2;
 static int last_baudrate = SER_BAUD_9600;
@@ -51,7 +49,7 @@ static void activity_cb(int on) {
   cputc(on ? activity_char[activity_count++ % 2] : ' ');
 }
 
-int simple_serial_open(int slot, int baudrate) {
+int simple_serial_open(int slot, int baudrate, int hw_flow_control) {
   int err;
   
   if ((err = ser_install(&a2e_ssc_ser)) != 0)
@@ -61,6 +59,7 @@ int simple_serial_open(int slot, int baudrate) {
     return err;
 
   default_params.baudrate = baudrate;
+  /* HW flow control ignored as it's always on */
 
   err = ser_open (&default_params);
 
@@ -74,46 +73,21 @@ int simple_serial_close(void) {
   return ser_close();
 }
 
-static long timeout_cycles = -1;
-static int timeout_secs = -1;
-
-void simple_serial_set_timeout(int timeout) {
-  timeout_secs = timeout;
-}
-
-static void serial_timeout_init() {
-  if (timeout_secs < 0)
-    return;
-
-  timeout_cycles = NCYCLES_PER_SEC * timeout_secs;
-}
-
-static int serial_timeout_reached(void) {
-  if (timeout_cycles < 0)
-    return 0;
-
-  timeout_cycles--;
-
-  return timeout_cycles == 0;
-}
-
-static void serial_timeout_reset(void) {
-  timeout_cycles = -1;
-}
+static int timeout_cycles = -1;
 
 /* Input */
 static int __simple_serial_getc_with_timeout(int with_timeout) {
     char c;
 
-    serial_timeout_init();
-    while (ser_get(&c) == SER_ERR_NO_DATA){
-      if (with_timeout && serial_timeout_reached()) {
-        serial_timeout_reset();
+    if (with_timeout)
+      timeout_cycles = 10000;
+
+    while (ser_get(&c) == SER_ERR_NO_DATA) {
+      if (with_timeout && timeout_cycles-- == 0) {
         return EOF;
       }
     }
 
-    serial_timeout_reset();
     return (int)c;
 }
 
@@ -130,6 +104,9 @@ static char *__simple_serial_gets_with_timeout(char *out, size_t size, int with_
     return NULL;
   }
 
+  if (serial_activity_indicator_enabled) {
+    activity_cb(1);
+  }
   while (i < size - 1) {
     b = __simple_serial_getc_with_timeout(with_timeout);
     if (b == EOF) {
@@ -146,9 +123,6 @@ static char *__simple_serial_gets_with_timeout(char *out, size_t size, int with_
 
     if (c == '\n') {
       break;
-    }
-    if (serial_activity_indicator_enabled && i % 100 == 0) {
-      activity_cb(1);
     }
   }
   out[i] = '\0';
@@ -174,6 +148,9 @@ static size_t __simple_serial_read_with_timeout(char *ptr, size_t size, size_t n
     return 0;
   }
 
+  if (serial_activity_indicator_enabled) {
+    activity_cb(1);
+  }
   while (i < (nmemb - 1)) {
     b = __simple_serial_getc_with_timeout(with_timeout);
     if (b == EOF) {
@@ -181,9 +158,6 @@ static size_t __simple_serial_read_with_timeout(char *ptr, size_t size, size_t n
     }
     ptr[i] = (char)b;
     i++;
-    if (serial_activity_indicator_enabled && i % 100 == 0) {
-      activity_cb(1);
-    }
   }
 
   if (serial_activity_indicator_enabled) {
@@ -215,13 +189,12 @@ int simple_serial_puts(char *buf) {
     serial_activity_indicator_y = wherey();
   }
 
+  if (serial_activity_indicator_enabled) {
+    activity_cb(1);
+  }
   for (i = 0; i < len; i++) {
     if ((r = simple_serial_putc(buf[i])) == EOF)
       return EOF;
-
-    if (serial_activity_indicator_enabled && i % 100 == 0) {
-      activity_cb(1);
-    }
   }
   if (serial_activity_indicator_enabled) {
     activity_cb(0);
@@ -242,7 +215,9 @@ int simple_serial_puts(char *buf) {
 #define LONG_DELAY_MS 50
 
 static FILE *ttyfp = NULL;
-static void setup_tty(const char *ttypath, int baudrate) {
+static int flow_control_enabled;
+
+static void setup_tty(const char *ttypath, int baudrate, int hw_flow_control) {
   struct termios tty;
   int port = open(ttypath, O_RDWR);
 
@@ -262,8 +237,14 @@ static void setup_tty(const char *ttypath, int baudrate) {
   tty.c_cflag &= ~PARENB;
   tty.c_cflag &= ~CSTOPB;
   tty.c_cflag |= CS8;
-  tty.c_cflag &= ~CRTSCTS;
   tty.c_cflag |= CREAD | CLOCAL;
+
+  if (hw_flow_control)
+    tty.c_cflag |= CRTSCTS;
+  else
+    tty.c_cflag &= ~CRTSCTS;
+
+  flow_control_enabled = hw_flow_control;
 
   tty.c_lflag &= ~ICANON;
   tty.c_lflag &= ~ECHO;
@@ -284,8 +265,8 @@ static void setup_tty(const char *ttypath, int baudrate) {
   close(port);
 }
 
-int simple_serial_open(const char *tty, int baudrate) {
-  setup_tty(tty, baudrate);
+int simple_serial_open(const char *tty, int baudrate, int hw_flow_control) {
+  setup_tty(tty, baudrate, hw_flow_control);
 
   ttyfp = fopen(tty, "r+b");
   if (ttyfp == NULL) {
@@ -302,10 +283,6 @@ int simple_serial_close(void) {
   }
   ttyfp = NULL;
   return 0;
-}
-
-void simple_serial_set_timeout(int timeout) {
-  printf("Not implemented.\n");
 }
 
 /* Input */
@@ -327,14 +304,18 @@ int simple_serial_putc(char c) {
   int r = fputc(c, ttyfp);
   fflush(ttyfp);
 
-  usleep(DELAY_MS*1000);
+  if (!flow_control_enabled)
+    usleep(DELAY_MS*1000);
+
   return r;
 }
 int simple_serial_puts(char *buf) {
   int r = fputs(buf, ttyfp);
   fflush(ttyfp);
 
-  usleep(LONG_DELAY_MS*1000);
+  if (!flow_control_enabled)
+    usleep(LONG_DELAY_MS*1000);
+
   return r;
 }
 

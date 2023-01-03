@@ -1,5 +1,5 @@
-PROGRAM=httpcli
-SOURCES := http_client.c ../lib/simple_serial.c ../lib/extended_conio.c ../lib/http.c
+PROGRAM=md5sum
+SOURCES := md5sum.c ../lib/md5.c ../lib/extended_conio.c
 DEPS := 
 
 CC65_TARGET = apple2enh

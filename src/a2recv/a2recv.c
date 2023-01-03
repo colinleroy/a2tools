@@ -42,15 +42,14 @@ int main(int argc, char **argv) {
 
 
 #ifdef __CC65__
-  simple_serial_open(2, SER_BAUD_9600);
+  simple_serial_open(2, SER_BAUD_9600, 1);
 #else
 if (argc < 2) {
   printf("Usage: %s [input tty]\n", argv[0]);
   exit(1);
 }
-  simple_serial_open(argv[1], B9600);
+  simple_serial_open(argv[1], B9600, 1);
 #endif
-  simple_serial_set_timeout(30);
 
 read_again:
   printf("\nReady to receive (Ctrl-reset to abort)\n");

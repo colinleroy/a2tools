@@ -31,11 +31,11 @@ int main(void) {
   char *buf = malloc(BUF_SIZE);
 
   printf("Opening serial port\n");
-  simple_serial_open(2, SER_BAUD_9600);
+  simple_serial_open(2, SER_BAUD_9600, 1);
 
   clrscr();
   gotoxy(0,0);
-  simple_serial_set_timeout(10);
+
   while (1) {
     printf("> ");
     if (simple_serial_gets_with_timeout(buf, BUF_SIZE) != NULL) {
