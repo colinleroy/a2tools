@@ -29,13 +29,11 @@
 #include "tgi_compat.h"
 #include "constants.h"
 #include "extended_conio.h"
+#include "http.h"
 
-static long min_val = LONG_MAX;
-static long max_val = LONG_MIN;
-static long start_time = -1L;
-static long end_time = -1L;
-
-static char *sensor_name, *unit;
+#ifdef __CC65__
+#pragma code-name (push, "LOWCODE")
+#endif
 
 #define MIN_VAL_SCR_Y 145L
 #define MAX_VAL_SCR_Y 5L
@@ -45,19 +43,19 @@ static char *sensor_name, *unit;
 
 static long val_div = -1L;
 static long val_mul = -1L;
-static int val_y(int val) {
-  if (max_val - min_val >= VAL_SCR_INTERVAL) {
+static int val_y(int val, long min, long max) {
+  if (max - min >= VAL_SCR_INTERVAL) {
     /* zoom out */
     if (val_div == -1L)
-      val_div = ((max_val - min_val) / VAL_SCR_INTERVAL);
+      val_div = ((max - min) / VAL_SCR_INTERVAL);
 
-    return max(0L,(MIN_VAL_SCR_Y - ((val - min_val) / val_div)));
+    return max(0L,(MIN_VAL_SCR_Y - ((val - min) / val_div)));
   } else {
     /* zoom in */
     if (val_mul == -1L)
-      val_mul = VAL_SCR_INTERVAL / (max_val - min_val);
+      val_mul = VAL_SCR_INTERVAL / (max - min);
 
-    return max(0L,(MIN_VAL_SCR_Y - ((val - min_val) * val_mul )));
+    return max(0L,(MIN_VAL_SCR_Y - ((val - min) * val_mul )));
   }
 }
 
@@ -69,174 +67,229 @@ static int val_y(int val) {
 #define TIME_OFFSET_INTERVAL(t) ((t - start_time) / TIME_ZOOM_FACTOR)
 #define TIME_X(t) max(0L,(MIN_TIME_SCR_X - TIME_OFFSET_INTERVAL(t)))
 
-static void display_graph(void) {
+int main(int argc, char **argv) {
+  char *server_url = NULL;
   FILE *fp;
-  char *buf, *text;
+  char *buf = NULL;
+  http_response *response = NULL;
+  char *text;
   long prev_t = -1L;
   long prev_v = -1L;
-  int line;
+  char *cur_line;
+  char header_done = 0;
+  long timestamp;
+  long value;
+  long min_val = LONG_MAX;
+  long max_val = LONG_MIN;
+  long start_time = -1L;
+  long end_time = -1L;
 
-#ifdef PRODOS_T_TXT
-  gotoxy(12, 12);
-  printf("Loading metrics...");
-  _filetype = PRODOS_T_TXT;
-#endif
-  fp = fopen(METRICS_TMPFILE, "rb"); 
-  if (fp == NULL) {
-    tgi_done();
-    printf("Error opening file: %s\n", strerror(errno));
-    cgetc();
-    return;
-  }
-
-  buf = malloc(BUFSIZE);
-  /* get mins and maxes */
-  if (fgets(buf, BUFSIZE, fp) != NULL) {
-    if(!strncmp(buf, "TIME;", 5) && strchr(buf + 6, ';')) {
-      char *w = strchr(buf, ';') + 1;
-      start_time = atol(w);
-      w = strchr(w,';') + 1;
-      end_time = atol(w);
-    }
-  }
-  if (fgets(buf, BUFSIZE, fp) != NULL) {
-    if(!strncmp(buf, "VALS;", 5) && strchr(buf + 5, ';')) {
-      char *w = strchr(buf, ';') + 1;
-      min_val = atol(w);
-      w = strchr(w,';') + 1;
-      max_val = atol(w);
-    }
-  }
-
-  line = 20;
-  gotoxy(0, line);
-  printf("%s", sensor_name);
-
-  line++;
-  gotoxy(0, line);
-  printf("X scale = Time: ");
-  text = ctime((time_t *)&start_time);
-  if (strchr(text, '\n'))
-    *strchr(text, '\n') = '\0';
-  printf("%s", text);
-  text = ctime((time_t *)&end_time);
-  if (strchr(text, '\n'))
-    *strchr(text, '\n') = '\0';
-
-  line++;
-  gotoxy(12, line);
-  printf("to: %s", text);
-
-  line++;
-  gotoxy(0, line);
-  printf("Y scale = Value: %ld to %ld %s", (long)min_val, (long)max_val, unit);
-
-  tgi_init();
-  tgi_apple2_mix(1);
-
-  text = NULL;
-  /* Draw scales */
-  tgi_setcolor(TGI_COLOR_ORANGE);
-  tgi_line(MIN_TIME_SCR_X, MIN_VAL_SCR_Y, MAX_TIME_SCR_X, MIN_VAL_SCR_Y);
-  
-  tgi_setcolor(TGI_COLOR_ORANGE);
-  tgi_line(MIN_TIME_SCR_X, MIN_VAL_SCR_Y, MIN_TIME_SCR_X, MAX_VAL_SCR_Y);
-
-  // text = malloc(BUFSIZE);
-  // 
-  // snprintf(text, BUFSIZE, "%ld", max_val);
-  // tgi_outtextxy(0, MAX_VAL_SCR_Y, text);
-  // snprintf(text, BUFSIZE, "%ld", min_val);
-  // tgi_outtextxy(0, MIN_VAL_SCR_Y, text);
-  // 
-  // snprintf(text, BUFSIZE, "%s", ctime((time_t *)&start_time));
-  // tgi_outtextxy(MIN_TIME_SCR_X, MIN_VAL_SCR_Y + 10, text);
-  // 
-  // snprintf(text, BUFSIZE, "%s", ctime((time_t *)&end_time));
-  // tgi_outtextxy(MAX_TIME_SCR_X - 60, MIN_VAL_SCR_Y + 10, text);
-  // 
-  // free(text);
-
-  tgi_setcolor(TGI_COLOR_WHITE);
-  while (fgets(buf, BUFSIZE, fp) != NULL) {
-    long timestamp;
-    long value;
-    if (strchr(buf, ';')) {
-      value = atol(strchr(buf, ';') + 1);
-      *strchr(buf, ';') = '\0';
-      timestamp = atol(buf);
-    } else {
-      continue;
-    }
-    if (prev_t == -1L && value == 0L) {
-      /* Skip first val */
-    } else {
-      if (prev_v == -1L){
-        prev_v = value;
-        prev_t = start_time;
-      }
-      if ((int)TIME_X(timestamp) - (int)TIME_X(prev_t) < 6) {
-        tgi_line((int)TIME_X(prev_t), val_y(prev_v), (int)TIME_X(timestamp), val_y(value));
-      } else {
-        tgi_line((int)TIME_X(prev_t), val_y(prev_v), (int)TIME_X(prev_t), val_y(value));
-        tgi_line((int)TIME_X(prev_t), val_y(value), (int)TIME_X(timestamp), val_y(value));
-      }
-      // printf("line from %d,%d-%d,%d (%ld,%ld-%ld,%ld)\n",
-      //         (int)TIME_X(prev_t), (int)VAL_Y(prev_v), (int)TIME_X(timestamp), (int)VAL_Y(value),
-      //         TIME_X(prev_t), VAL_Y(prev_v), TIME_X(timestamp), VAL_Y(value));
-      prev_t = timestamp;
-      prev_v = value;
-    }
-  }
-
-  free(buf);
-
-  if (fclose(fp) != 0) {
-    printf("Cannot close file: %s\n", strerror(errno));
-    cgetc();
-    return;
-  }
-  unlink(METRICS_TMPFILE);
-
-  cgetc();
-  tgi_done();
-
-}
-
-int main(int argc, char **argv) {
-  char *sensor_id;
-  char *buf = NULL;
-  int scale;
 
   tgi_install(a2e_hi_tgi);
 
   clrscr();
 
-  if (argc > 4) {
-    sensor_id = argv[1];
-    sensor_name = argv[2];
-    scale = atoi(argv[3]);
-    unit = argv[4];
-  } else {
+#if 0
+  gotoxy(5, 10);
+  printf("Max heap available: %u bytes.", _heapmaxavail());
+#endif
+
+  if (argc < 5) {
     gotoxy(12, 13);
     printf("Missing argument(s).");
     cgetc();
     goto err_out;
   }
 
-  display_graph();
+  if (server_url == NULL) {
+    server_url = malloc(BUFSIZE);
+#ifdef __CC65__
+    if (server_url == NULL) {
+      printf("Cant alloc server_url buffer. (%zu avail)", _heapmaxavail());
+    }
+#endif
+    fp = fopen(SRV_URL_FILE, "r");
+    if (fp != NULL) {
+      fgets(server_url, BUFSIZE, fp);
+      *strchr(server_url,'\n') = '\0';
+      fclose(fp);
+    } else {
+#ifdef __CC65__
+      printf("Can't load server URL (%zu avail).", _heapmaxavail());
+#endif
+      cgetc();
+      goto err_out;
+    }
+  }
+
+#ifdef PRODOS_T_TXT
+  gotoxy(10, 12);
+  printf("Loading metrics...");
+#endif
+
+  buf = malloc(BIG_BUFSIZE);
+  if (buf == NULL) {
+#ifdef __CC65__
+    printf("Cannot allocate buffer. (%zu avail)", _heapmaxavail());
+#endif
+    goto err_out;
+  }
+
+  snprintf(buf, BUFSIZE, "%s/sensor_metrics.php"
+                         "?sensor_id=%s"
+                         "&scale=%s"
+                         "&unit=%s",
+                         server_url,
+                         argv[1], argv[3], argv[4]);
+
+  response = http_start_request("GET", buf, NULL, 0);
+  if (response == NULL) {
+#ifdef __CC65__
+    printf("Cannot allocate response. (%zu avail)", _heapmaxavail());
+#endif
+    goto err_out;
+  }
+
+  if (response == NULL || response->code != 200) {
+    gotoxy(12, 10);
+    printf("Error loading metrics.");
+    cgetc();
+    http_response_free(response);
+    goto err_out;
+  }
+
+  while (http_receive_lines(response, buf, BIG_BUFSIZE - 1) > 0) {
+    cur_line = buf;
+
+    while (cur_line != NULL && *cur_line != '\0') {
+      char *next_line = NULL;
+      char *line_sep = strchr(cur_line, '\n');
+      if (line_sep) {
+        next_line = line_sep + 1;
+        *line_sep = '\0';
+      }
+
+      /* get mins and maxes */
+      if (header_done < 2) {
+        if(!strncmp(cur_line, "TIME;", 5) && strchr(cur_line + 6, ';')) {
+          char *w = strchr(cur_line, ';') + 1;
+          start_time = atol(w);
+          w = strchr(w,';') + 1;
+          end_time = atol(w);
+          header_done++;
+          cur_line = next_line;
+          continue;
+        }
+        if(!strncmp(cur_line, "VALS;", 5) && strchr(cur_line + 5, ';')) {
+          char *w = strchr(cur_line, ';') + 1;
+          min_val = atol(w);
+          w = strchr(w,';') + 1;
+          max_val = atol(w);
+          header_done++;
+          cur_line = next_line;
+          continue;
+        }
+      } 
+
+      if (header_done == 2) {
+        gotoxy(0, 20);
+        printf("%s", argv[2]);
+
+        gotoxy(0, 21);
+        printf("X scale = Time: ");
+        text = ctime((time_t *)&start_time);
+        if (strchr(text, '\n'))
+          *strchr(text, '\n') = '\0';
+        printf("%s", text);
+        text = ctime((time_t *)&end_time);
+        if (strchr(text, '\n'))
+          *strchr(text, '\n') = '\0';
+
+        gotoxy(12, 22);
+        printf("to: %s", text);
+
+        text = NULL;
+
+        gotoxy(0, 23);
+        printf("Y scale = Value: %ld to %ld %s", (long)min_val, (long)max_val, argv[4]);
+
+        tgi_init();
+        tgi_apple2_mix(1);
+
+        /* Draw scales */
+        tgi_setcolor(TGI_COLOR_ORANGE);
+        tgi_line(MIN_TIME_SCR_X, MIN_VAL_SCR_Y, MAX_TIME_SCR_X, MIN_VAL_SCR_Y);
+        
+        tgi_setcolor(TGI_COLOR_ORANGE);
+        tgi_line(MIN_TIME_SCR_X, MIN_VAL_SCR_Y, MIN_TIME_SCR_X, MAX_VAL_SCR_Y);
+
+        header_done = 3;
+      }
+
+      // text = malloc(BUFSIZE);
+      // 
+      // snprintf(text, BUFSIZE, "%ld", max_val);
+      // tgi_outtextxy(0, MAX_VAL_SCR_Y, text);
+      // snprintf(text, BUFSIZE, "%ld", min_val);
+      // tgi_outtextxy(0, MIN_VAL_SCR_Y, text);
+      // 
+      // snprintf(text, BUFSIZE, "%s", ctime((time_t *)&start_time));
+      // tgi_outtextxy(MIN_TIME_SCR_X, MIN_VAL_SCR_Y + 10, text);
+      // 
+      // snprintf(text, BUFSIZE, "%s", ctime((time_t *)&end_time));
+      // tgi_outtextxy(MAX_TIME_SCR_X - 60, MIN_VAL_SCR_Y + 10, text);
+      // 
+      // free(text);
+
+      tgi_setcolor(TGI_COLOR_WHITE);
+
+      if (strchr(cur_line, ';')) {
+        value = atol(strchr(cur_line, ';') + 1);
+        *strchr(cur_line, ';') = '\0';
+        timestamp = atol(cur_line);
+      } else {
+        continue;
+      }
+      if (prev_t == -1L && value == 0L) {
+        /* Skip first val */
+      } else {
+        if (prev_v == -1L){
+          prev_v = value;
+          prev_t = start_time;
+        }
+        if ((int)TIME_X(timestamp) - (int)TIME_X(prev_t) < 6) {
+          tgi_line((int)TIME_X(prev_t), val_y(prev_v, min_val, max_val), (int)TIME_X(timestamp), val_y(value, min_val, max_val));
+        } else {
+          tgi_line((int)TIME_X(prev_t), val_y(prev_v, min_val, max_val), (int)TIME_X(prev_t), val_y(value, min_val, max_val));
+          tgi_line((int)TIME_X(prev_t), val_y(value, min_val, max_val), (int)TIME_X(timestamp), val_y(value, min_val, max_val));
+        }
+        prev_t = timestamp;
+        prev_v = value;
+
+      }
+      cur_line = next_line;
+    }
+  }
+
+  free(buf);
+
+  cgetc();
+  tgi_done();
+
 err_out:
   tgi_uninstall();
   clrscr();
   gotoxy(12, 12);
   printf("Please wait...");
 #ifdef __CC65__
-  buf = malloc(BUFSIZE);
-  sprintf(buf, "2 %s", sensor_id);
-  exec("HOMECTRL", buf);
+  exec("HOMECTRL", "2");
   free(buf); /* unreachable code anyway */
 #else
   /* TODO */
 #endif
   exit(0);
 }
+
+#ifdef __CC65__
+#pragma code-name (pop)
+#endif
