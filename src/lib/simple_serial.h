@@ -31,3 +31,6 @@ int simple_serial_putc(char c);
 int simple_serial_puts(char *buf);
 int simple_serial_printf(const char* format, ...);
 int simple_serial_write(char *ptr, size_t size, size_t nmemb);
+
+/* Status */
+void simple_serial_set_activity_indicator(char enabled, int x, int y);

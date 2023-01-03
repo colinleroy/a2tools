@@ -21,6 +21,7 @@ int main(int argc, char **argv) {
   size_t data_len = 0;
   FILE *outfp = NULL;
   char *data = NULL;
+  unsigned int total = 0;
 
 
 #ifdef __CC65__
@@ -84,6 +85,7 @@ read_again:
   filename = tmp;
 #endif
 
+
   while (data_len > 0) {
     size_t block = (data_len > DATA_SIZE ? DATA_SIZE : data_len);
     data = malloc(block + 1);
@@ -93,10 +95,16 @@ read_again:
       exit (1);
     }
 
-    printf("Reading data...\n");
-    r = simple_serial_read_with_timeout(data, sizeof(char), block + 1);
+    simple_serial_set_activity_indicator(1, -1, -1);
 
-    printf("Read %d bytes. Writing %s...\n", r, filename);
+    printf("Reading data...");
+    r = simple_serial_read_with_timeout(data, sizeof(char), block + 1);
+    total += r;
+
+    simple_serial_set_activity_indicator(0, -1, -1);
+
+    printf("\nRead %d bytes. Writing %s...\n", total, filename);
+
 
     if (outfp == NULL)
       outfp = fopen(filename,"w");
@@ -108,7 +116,7 @@ read_again:
 
     w = fwrite(data, 1, r, outfp);
     if (w < r) {
-      printf("Only wrote %d bytes. Error %d: %s\n", w, errno, strerror(errno));
+      printf("Only wrote %d bytes: %s\n", w, strerror(errno));
       exit_code = 1;
       goto err_out;
     }

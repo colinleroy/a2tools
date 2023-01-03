@@ -4,6 +4,11 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include "extended_conio.h"
+
+static char serial_activity_indicator_enabled = 0;
+static int serial_activity_indicator_x = -1;
+static int serial_activity_indicator_y = -1;
 
 #ifdef __CC65__
 #include <apple2enh.h>
@@ -21,6 +26,13 @@ static struct ser_params default_params = {
     SER_PAR_NONE,       /* Parity setting */
     SER_HS_HW           /* Type of handshake to use */
 };
+
+static char *activity_char = " *";
+static char activity_count = 0;
+static void activity_cb(int on) {
+  gotoxy(serial_activity_indicator_x, serial_activity_indicator_y);
+  cputc(on ? activity_char[activity_count++ % 2] : ' ');
+}
 
 int simple_serial_open(int slot, int baudrate) {
   int err;
@@ -94,6 +106,10 @@ static char *__simple_serial_gets_with_timeout(char *out, size_t size, int with_
   char c;
   size_t i = 0;
 
+  if (serial_activity_indicator_x == -1) {
+    serial_activity_indicator_x = wherex();
+    serial_activity_indicator_y = wherey();
+  }
   if (size == 0) {
     return NULL;
   }
@@ -115,8 +131,14 @@ static char *__simple_serial_gets_with_timeout(char *out, size_t size, int with_
     if (c == '\n') {
       break;
     }
+    if (serial_activity_indicator_enabled && i % 100 == 0) {
+      activity_cb(1);
+    }
   }
   out[i] = '\0';
+  if (serial_activity_indicator_enabled) {
+    activity_cb(0);
+  }
 
   return out;
 }
@@ -125,6 +147,11 @@ static size_t __simple_serial_read_with_timeout(char *ptr, size_t size, size_t n
   int b;
   size_t i = 0;
   size_t tries = 0;
+
+  if (serial_activity_indicator_x == -1) {
+    serial_activity_indicator_x = wherex();
+    serial_activity_indicator_y = wherey();
+  }
 
   if (size != 1) {
     /* unsupported */
@@ -138,6 +165,13 @@ static size_t __simple_serial_read_with_timeout(char *ptr, size_t size, size_t n
     }
     ptr[i] = (char)b;
     i++;
+    if (serial_activity_indicator_enabled && i % 100 == 0) {
+      activity_cb(1);
+    }
+  }
+
+  if (serial_activity_indicator_enabled) {
+    activity_cb(0);
   }
 
   return i;
@@ -160,9 +194,21 @@ int simple_serial_putc(char c) {
 int simple_serial_puts(char *buf) {
   int i, r, len = strlen(buf);
 
+  if (serial_activity_indicator_x == -1) {
+    serial_activity_indicator_x = wherex();
+    serial_activity_indicator_y = wherey();
+  }
+
   for (i = 0; i < len; i++) {
     if ((r = simple_serial_putc(buf[i])) == EOF)
       return EOF;
+
+    if (serial_activity_indicator_enabled && i % 100 == 0) {
+      activity_cb(1);
+    }
+  }
+  if (serial_activity_indicator_enabled) {
+    activity_cb(0);
   }
 
   return len;
@@ -326,4 +372,10 @@ int simple_serial_write(char *ptr, size_t size, size_t nmemb) {
     }
   }
   return i;
+}
+
+void simple_serial_set_activity_indicator(char enabled, int x, int y) {
+  serial_activity_indicator_enabled = enabled;
+  serial_activity_indicator_x = x;
+  serial_activity_indicator_y = y;
 }
