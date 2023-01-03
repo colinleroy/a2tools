@@ -54,7 +54,7 @@ read_again:
     if (strchr(s_len, '\n'))
       *strchr(s_len, '\n') = '\0';
     data_len = atoi(s_len);
-    printf("Data length %d\n", (int)data_len);
+    printf("Data length %u\n", (unsigned int)data_len);
   }
 
 #ifdef __CC65__

@@ -117,17 +117,20 @@ send_again:
     count++;
     
     if (count % 512 == 0) {
-      printf("Wrote %d bytes...\n", count);
+      printf("\rWrote %d bytes...", count);
+      fflush(stdout);
     }
     
     if (count % DATA_SIZE == 0) {
       /* Wait for Apple // */
+      printf("\n");
       wait_for_receiver();
     }
   }
 
   fclose(fp);
   
+  printf("\n");
   wait_for_receiver();
 
   if (cur_file < argc -1) {
