@@ -59,34 +59,20 @@ static int get_metrics(int sensor_number, const char *metric, int scale) {
 }
 
 int main(int argc, char **argv) {
-  int sensor_number, scale, i;
+  int sensor_number, scale;
   char *buf = NULL;
   const char *metric = NULL;
 
   clrscr();
 
-  printf("argc %d\n", argc);
-  for (i = 0; i < argc; i++) {
-    printf("argv[%d]: %s\n", i, argv[i]);
-  }
-
   if (argc > 3) {
     sensor_number = atoi(argv[1]);
     metric = argv[2];
     scale = atoi(argv[3]);
-  } else if (argc > 1) {
-    char *tmp_metric = strchr(argv[1], ' ');
-    char *tmp_scale;
-    if (tmp_metric != NULL) {
-      tmp_scale = strchr(tmp_metric + 1, ' ');
-      if (tmp_scale != NULL) {
-        scale = atoi(tmp_scale + 1);
-      }
-      *tmp_scale = '\0';
-      metric = tmp_metric + 1;
-      tmp_metric = '\0';
-    }
-    sensor_number = atoi(argv[1]);
+  } else {
+    printxcentered(13,"Missing argument(s).");
+    cgetc();
+    goto err_out;
   }
 
   buf = malloc(BUFSIZE);
@@ -96,6 +82,7 @@ int main(int argc, char **argv) {
     exec("GRPHVIEW", buf);
     free(buf); /* unreachable code anyway */
   } else {
+err_out:
     sprintf(buf, "2 %d", sensor_number);
     exec("HOMECTRL", buf);
     free(buf); /* unreachable code anyway */
