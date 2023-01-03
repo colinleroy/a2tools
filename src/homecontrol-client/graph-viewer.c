@@ -35,7 +35,7 @@ static long max_val = LONG_MIN;
 static long start_time = -1L;
 static long end_time = -1L;
 
-static char *metric, *unit;
+static char *sensor_name, *unit;
 
 #define MIN_VAL_SCR_Y 145L
 #define MAX_VAL_SCR_Y 5L
@@ -94,7 +94,7 @@ static void display_graph(void) {
 
   line = 20;
   gotoxy(0, line);
-  printf("Metric  = %s", metric);
+  printf("%s", sensor_name);
 
   line++;
   gotoxy(0, line);
@@ -180,6 +180,7 @@ static void display_graph(void) {
     cgetc();
     return;
   }
+  unlink(METRICS_TMPFILE);
 
   cgetc();
   tgi_done();
@@ -187,7 +188,7 @@ static void display_graph(void) {
 }
 
 int main(int argc, char **argv) {
-  char *sensor_number;
+  char *sensor_id;
   char *buf = NULL;
   int scale;
 
@@ -196,8 +197,8 @@ int main(int argc, char **argv) {
   clrscr();
 
   if (argc > 4) {
-    sensor_number = argv[1];
-    metric = argv[2];
+    sensor_id = argv[1];
+    sensor_name = argv[2];
     scale = atoi(argv[3]);
     unit = argv[4];
   } else {
@@ -215,7 +216,7 @@ err_out:
   printf("Please wait...");
 #ifdef __CC65__
   buf = malloc(BUFSIZE);
-  sprintf(buf, "2 %s", sensor_number);
+  sprintf(buf, "2 %s", sensor_id);
   exec("HOMECTRL", buf);
   free(buf); /* unreachable code anyway */
 #else
