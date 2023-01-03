@@ -47,7 +47,7 @@ static int cur_list_offset = 0;
 static int cur_list_display_offset = 0;
 static int cur_list_length = -1;
 
-#define clear_list(x) do { clrzone(x, PAGE_BEGIN, 39, PAGE_BEGIN + PAGE_HEIGHT + 1); } while(0)
+#define clear_list(x) do { clrzone(x, PAGE_BEGIN, scrw, PAGE_BEGIN + PAGE_HEIGHT); } while(0)
 static void update_switch_page(int update_data) {
   int i;
 
@@ -185,7 +185,7 @@ static void update_offset(int new_offset) {
     }
   }
 
-  clrzone(1, PAGE_BEGIN, 1, PAGE_BEGIN + PAGE_HEIGHT + 1);
+  clrzone(1, PAGE_BEGIN, 1, PAGE_BEGIN + PAGE_HEIGHT);
   gotoxy(1, PAGE_BEGIN + cur_list_offset - cur_list_display_offset);
   cputc('>');
 }

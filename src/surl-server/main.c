@@ -202,7 +202,7 @@ static void curl_buffer_free(curl_buffer *curlbuf) {
 
 static void proxy_set_curl_opts(CURL *curl) {
   curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-  curl_easy_setopt(curl, CURLOPT_USERAGENT, "http-serial-proxy/1.0");
+  curl_easy_setopt(curl, CURLOPT_USERAGENT, "surl-server/1.0");
 
 }
 
