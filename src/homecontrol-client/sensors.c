@@ -27,7 +27,7 @@ static void sensor_free(hc_sensor *sensor) {
   free(sensor);
 }
 
-static void sensors_free_all(void) {
+void sensors_free_all(void) {
   slist *w;
   for (w = sensors; w; w = w->next) {
     sensor_free(w->data);
@@ -42,12 +42,12 @@ slist *sensors_get(void) {
 
 slist *update_sensors(void) {
   http_response *resp = get_url(HOMECONTROL_SRV"/csv/sensors.php");
-  char **lines;
+  char **lines = NULL;
   int i, num_lines;
   
   sensors_free_all();
 
-  if (resp->size == 0) {
+  if (resp == NULL || resp->size == 0) {
     http_response_free(resp);
     return NULL;
   }

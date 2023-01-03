@@ -18,6 +18,7 @@ struct _hc_heating_zone {
 
 slist *heating_zones_get(void);
 slist *update_heating_zones(void);
+void heating_zones_free_all(void);
 int configure_heating_zone(hc_heating_zone *heat);
 
 #endif

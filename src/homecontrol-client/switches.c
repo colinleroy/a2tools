@@ -29,7 +29,7 @@ static void switch_free(hc_switch *sw) {
   free(sw);
 }
 
-static void switches_free_all(void) {
+void switches_free_all(void) {
   slist *w;
   for (w = switches; w; w = w->next) {
     switch_free(w->data);
@@ -44,12 +44,12 @@ slist *switches_get(void) {
 
 slist *update_switches(void) {
   http_response *resp = get_url(HOMECONTROL_SRV"/csv/switches.php");
-  char **lines;
+  char **lines = NULL;
   int i, num_lines;
   
   switches_free_all();
 
-  if (resp->size == 0) {
+  if (resp == NULL || resp->size == 0) {
     http_response_free(resp);
     return NULL;
   }
