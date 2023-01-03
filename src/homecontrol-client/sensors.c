@@ -22,14 +22,14 @@
 #include "simple_serial.h"
 #include "extended_conio.h"
 #include "extended_string.h"
-#include "slist.h"
 
 #include "constants.h"
 #include "network.h"
 #include "sensors.h"
 #include "server_url.h"
 
-static slist *sensors = NULL;
+static hc_sensor **sensors = NULL;
+static int num_sensors = 0;
 
 static void sensor_add(char *id, char *name, char scale, long cur_value, char *unit) {
   hc_sensor *sensor = malloc(sizeof(hc_sensor));
@@ -40,7 +40,7 @@ static void sensor_add(char *id, char *name, char scale, long cur_value, char *u
   sensor->unit      = strdup(unit);
   sensor->name      = strndup_ellipsis(name, 25);
 
-  sensors = slist_append(sensors, sensor);
+  sensors[num_sensors++] = sensor;
 }
 
 static void sensor_free(hc_sensor *sensor) {
@@ -51,15 +51,16 @@ static void sensor_free(hc_sensor *sensor) {
 }
 
 void sensors_free_all(void) {
-  slist *w;
-  for (w = sensors; w; w = w->next) {
-    sensor_free(w->data);
+  int i;
+  for (i = 0; i < num_sensors; i++) {
+    sensor_free(sensors[i]);
   }
-  slist_free(sensors);
+  free(sensors);
   sensors = NULL;
+  num_sensors = 0;
 }
 
-slist *update_sensors(void) {
+int update_sensors(hc_sensor ***sensors_list) {
   http_response *resp;
   char **lines = NULL;
   int i, num_lines;
@@ -74,9 +75,12 @@ slist *update_sensors(void) {
 
   if (resp == NULL || resp->size == 0 || resp->code != 200) {
     http_response_free(resp);
-    return NULL;
+    *sensors_list = NULL;
+    return 0;
   }
+
   num_lines = strsplit_in_place(resp->body, '\n', &lines);
+  sensors = malloc(num_lines * sizeof(hc_sensor *));
 
   for (i = 0; i < num_lines; i++) {
     char **parts;
@@ -94,5 +98,7 @@ slist *update_sensors(void) {
 
   http_response_free(resp);
   free(lines);
-  return sensors;
+
+  *sensors_list = sensors;
+  return num_sensors;
 }

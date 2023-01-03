@@ -23,7 +23,6 @@
 #include "extended_conio.h"
 #include "extended_string.h"
 #include "math.h"
-#include "slist.h"
 #include "http.h"
 #include "constants.h"
 #include "switches.h"
@@ -40,9 +39,9 @@ static unsigned char scrw, scrh;
 static int cur_page = SWITCH_PAGE;
 static int prev_page = -1;
 
-static slist *switches = NULL;
-static slist *sensors = NULL;
-static slist *heating = NULL;
+static hc_switch **switches = NULL;
+static hc_sensor **sensors = NULL;
+static hc_heating_zone **heating_zones = NULL;
 
 static int cur_list_offset = -1;
 static int cur_list_display_offset = 0;
@@ -50,11 +49,10 @@ static int cur_list_length = -1;
 
 #define clear_list(x) do { clrzone(x, PAGE_BEGIN, 39, PAGE_BEGIN + PAGE_HEIGHT + 1); } while(0)
 static void update_switch_page(int update_data) {
-  slist *w;
   int i;
 
   if (update_data) {
-    switches = update_switches();
+    cur_list_length = update_switches(&switches);
   }
 
   if (switches == NULL) {
@@ -63,15 +61,9 @@ static void update_switch_page(int update_data) {
     return;
   }
 
-  w = switches;
-  
-  for (i = 0; i < cur_list_display_offset && w; i++) {
-    w = w->next;
-  }
-
   clear_list(3);
-  for (i = 0; w && i < PAGE_HEIGHT; w = w->next, i++) {
-    hc_switch *sw = w->data;
+  for (i = 0; i + cur_list_display_offset < cur_list_length && i < PAGE_HEIGHT; i++) {
+    hc_switch *sw = switches[i + cur_list_display_offset];
 
     gotoxy(3, PAGE_BEGIN + i);
     printf("%s", sw->name);
@@ -86,16 +78,13 @@ static void update_switch_page(int update_data) {
       puts("(OFF)");
     }
   }
-  
-  cur_list_length = slist_length(switches);
 }
 
 static void update_sensor_page(int update_data) {
-  slist *w;
   int i;
 
   if (update_data) {
-    sensors = update_sensors();
+    cur_list_length = update_sensors(&sensors);
   }
 
   if (sensors == NULL) {
@@ -104,16 +93,10 @@ static void update_sensor_page(int update_data) {
     return;
   }
 
-  w = sensors;
-
-  for (i = 0; i < cur_list_display_offset && w; i++) {
-    w = w->next;
-  }
-
   clear_list(3);
 
-  for (i = 0; w && i < PAGE_HEIGHT; w = w->next, i++) {
-    hc_sensor *sensor = w->data;
+  for (i = 0; i + cur_list_display_offset < cur_list_length && i < PAGE_HEIGHT; i++) {
+    hc_sensor *sensor = sensors[i + cur_list_display_offset];
 
     gotoxy(3, PAGE_BEGIN + i);
     printf("%s\n", sensor->name);
@@ -121,33 +104,24 @@ static void update_sensor_page(int update_data) {
     gotoxy(30, PAGE_BEGIN + i);
     printf("%ld %s", sensor->cur_value, sensor->unit);
   }
-  
-  cur_list_length = slist_length(sensors);
 }
 
 static void update_heating_page(int update_data) {
-  slist *w;
   int i;
 
   if (update_data) {
-    heating = update_heating_zones();
+    cur_list_length = update_heating_zones(&heating_zones);
   }
 
-  if (heating == NULL) {
+  if (heating_zones == NULL) {
     clear_list(0);
     printxcentered(12, "Can't load data.");
     return;
   }
 
-  w = heating;
-  
-  for (i = 0; i < cur_list_display_offset && w; i++) {
-    w = w->next;
-  }
-
   clear_list(3);
-  for (i = 0; w && i < PAGE_HEIGHT; w = w->next, i++) {
-    hc_heating_zone *heat = w->data;
+  for (i = 0; i + cur_list_display_offset < cur_list_length && i < PAGE_HEIGHT; i++) {
+    hc_heating_zone *heat = heating_zones[i + cur_list_display_offset];
 
     gotoxy(3, PAGE_BEGIN + i);
     printf("%s", heat->name);
@@ -155,8 +129,6 @@ static void update_heating_page(int update_data) {
     gotoxy(24, PAGE_BEGIN + i);
     printf("%4s/%2d[C %2s%%H", heat->cur_temp, heat->set_temp, heat->cur_humidity);
   }
-  
-  cur_list_length = slist_length(heating);
 }
 
 static void print_header(void) {
@@ -219,27 +191,15 @@ static void update_offset(int new_offset) {
 }
 
 static void select_switch(void) {
-  int i;
-  slist *w = switches;
-
-  for (i = 0; i < cur_list_offset; i++) {
-    w = w->next;
-  }
-
-  toggle_switch(w->data);
+  hc_switch *sw = switches[cur_list_offset];
+  toggle_switch(sw);
 }
 
 static void select_sensor(void) {
-  int i;
-  slist *w = sensors;
   hc_sensor *sensor;
   char *params = NULL;
 
-  for (i = 0; i < cur_list_offset; i++) {
-    w = w->next;
-  }
-
-  sensor = w->data;
+  sensor = sensors[cur_list_offset];
 
   params = malloc(BUFSIZE);
   snprintf(params, BUFSIZE, "%s \"%s\" %d %s", sensor->id, sensor->name, sensor->scale, sensor->unit);
@@ -254,14 +214,9 @@ static void select_sensor(void) {
 }
 
 static int select_heating_zone(void) {
-  int i;
-  slist *w = heating;
-  
-  for (i = 0; i < cur_list_offset; i++) {
-    w = w->next;
-  }
-  
-  if (!configure_heating_zone(w->data)) {
+  hc_heating_zone *zone = heating_zones[cur_list_offset];
+
+  if (!configure_heating_zone(zone)) {
     /* Redraw on config screen */
     update_heating_page(0);
     return 0;
@@ -311,6 +266,7 @@ update:
   switches_free_all();
   sensors_free_all();
   heating_zones_free_all();
+  cur_list_length = 0;
   switch(cur_page) {
     case SWITCH_PAGE:  update_switch_page(1);  break;
     case SENSOR_PAGE:  update_sensor_page(1);  break;

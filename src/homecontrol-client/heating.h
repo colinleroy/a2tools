@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <string.h>
-#include "slist.h"
 
 #ifndef __heating_h
 #define __heating_h
@@ -16,8 +15,7 @@ struct _hc_heating_zone {
   char manual_mode;
 };
 
-slist *heating_zones_get(void);
-slist *update_heating_zones(void);
+int update_heating_zones(hc_heating_zone ***zones_list);
 void heating_zones_free_all(void);
 int configure_heating_zone(hc_heating_zone *heat);
 

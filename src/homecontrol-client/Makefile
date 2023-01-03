@@ -5,8 +5,7 @@ homectrl_SOURCES := main.c network.c \
 	../lib/simple_serial.c \
 	../lib/extended_conio.c \
 	../lib/extended_string.c \
-	../lib/http.c \
-	../lib/slist.c
+	../lib/http.c
 
 mtrcftch_SOURCES := metric-fetcher.c \
 	../lib/simple_serial.c \
