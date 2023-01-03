@@ -6,6 +6,7 @@ struct _http_response {
   int code;
   size_t size;
   size_t cur_pos;
+  char *content_type;
 };
 
 void http_connect_proxy(void);
