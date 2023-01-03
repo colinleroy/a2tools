@@ -114,7 +114,6 @@ static int __simple_serial_getc_with_timeout(int with_timeout) {
     }
 
     serial_timeout_reset();
-
     return (int)c;
 }
 

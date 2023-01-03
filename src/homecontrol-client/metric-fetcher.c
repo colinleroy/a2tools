@@ -58,8 +58,9 @@ static int get_metrics(const char *sensor_id, int scale, char *unit) {
   simple_serial_set_activity_indicator(0, 0, 0);
   free(buf);
 
-  if (resp == NULL) {
+  if (resp == NULL || resp->code != 200) {
     printf("Could not get response\n");
+    http_response_free(resp);
     cgetc();
     return -1;
   }

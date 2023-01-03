@@ -396,7 +396,8 @@ static void read_file(FILE *fp) {
   free(buf);
 
   clrscr();
-  printfat(0, 21, 1, "Starting.\n");
+  gotoxy(0, 21);
+  puts("Starting.\n");
 
   save_elves();
 
@@ -409,11 +410,13 @@ static void read_file(FILE *fp) {
     }
     
     do_round(round);
-    printfat(0, 21, 1, "Finished round %d.\n", round + 1);
+    gotoxy(0, 21);
+    printf("Finished round %d.\n", round + 1);
     round++;
   } while (num_elf_moved);
 
-  printfat(0, 22, 1, "We did %d rounds.\n", round);
+  gotoxy(0, 22);
+  printf("We did %d rounds.\n", round);
 
   fclose(elvesfp);
   unlink("ELVES");

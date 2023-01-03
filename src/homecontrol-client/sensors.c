@@ -72,7 +72,7 @@ slist *update_sensors(void) {
   resp = get_url(url);
   free(url);
 
-  if (resp == NULL || resp->size == 0) {
+  if (resp == NULL || resp->size == 0 || resp->code != 200) {
     http_response_free(resp);
     return NULL;
   }
