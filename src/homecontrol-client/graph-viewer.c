@@ -145,13 +145,15 @@ static void display_graph(void) {
 
   free(buf);
 
+  cgetc();
+  tgi_done();
+
   if (fclose(fp) != 0) {
     printf("Cannot close file: %s\n", strerror(errno));
     cgetc();
     return;
   }
 
-  cgetc();
 }
 
 int main(int argc, char **argv) {
@@ -170,6 +172,7 @@ int main(int argc, char **argv) {
 
   display_graph();
 
+  tgi_uninstall();
 #ifdef __CC65__
   buf = malloc(BUFSIZE);
   sprintf(buf, "2 %s", sensor_number);
