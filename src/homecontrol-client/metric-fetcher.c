@@ -11,14 +11,14 @@
 #include "extended_conio.h"
 #include "simple_serial.h"
 
-static int get_metrics(int sensor_number, const char *metric, int scale) {
+static int get_metrics(const char *sensor_number, const char *metric, int scale) {
   http_response *resp = NULL;
   FILE *fp;
   char *url = malloc(BUFSIZE);
   int err = 0;
 
   snprintf(url, BUFSIZE, HOMECONTROL_SRV"/csv/sensor_metrics.php"
-                         "?sensor_number=%d"
+                         "?sensor_number=%s"
                          "&metric=%s"
                          "&scale=%d",
                          sensor_number, metric, scale);
@@ -62,16 +62,17 @@ static int get_metrics(int sensor_number, const char *metric, int scale) {
 }
 
 int main(int argc, char **argv) {
-  int sensor_number, scale;
+  int scale;
   char *buf = NULL;
-  const char *metric = NULL;
+  const char *sensor_number, *metric = NULL, *unit = NULL;
 
   clrscr();
 
-  if (argc > 3) {
-    sensor_number = atoi(argv[1]);
+  if (argc > 4) {
+    sensor_number = argv[1];
     metric = argv[2];
     scale = atoi(argv[3]);
+    unit = argv[4];
   } else {
     printxcentered(13,"Missing argument(s).");
     cgetc();
@@ -81,12 +82,12 @@ int main(int argc, char **argv) {
   buf = malloc(BUFSIZE);
 #ifdef __CC65__
   if (get_metrics(sensor_number, metric, scale) == 0) {
-    sprintf(buf, "%d %s %d", sensor_number, metric, scale);
+    sprintf(buf, "%s %s %d %s", sensor_number, metric, scale, unit);
     exec("GRPHVIEW", buf);
     free(buf); /* unreachable code anyway */
   } else {
 err_out:
-    sprintf(buf, "2 %d", sensor_number);
+    sprintf(buf, "2 %s", sensor_number);
     exec("HOMECTRL", buf);
     free(buf); /* unreachable code anyway */
   }

@@ -12,7 +12,18 @@ struct _hc_sensor {
   char *name;
 };
 
+typedef struct _hc_sensor_metric hc_sensor_metric;
+
+struct _hc_sensor_metric {
+  char *sensor_id;
+  char *id;
+  char *name;
+  int scale;
+  char *unit;
+};
+
 slist *sensors_get(void);
 slist *update_sensors(void);
+slist *update_sensor_metrics(const char *id);
 void sensors_free_all(void);
 #endif
