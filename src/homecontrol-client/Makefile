@@ -21,8 +21,8 @@ CFLAGS  = -I ../lib
 homectrl_CLCFLAGS = -t $(CC65_TARGET) -Wl -D,__STACKSIZE__=0x0400
 mtrcftch_CLCFLAGS = -t $(CC65_TARGET) -Wl -D,__STACKSIZE__=0x0400
 grphview_CLCFLAGS = -t $(CC65_TARGET) -Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-hgr.cfg
-GCCCFLAGS = -g -O0 -Werror $(shell curl-config --cflags) $(shell sdl-config --cflags)
-GCCLDFLAGS = $(shell curl-config --libs) $(shell sdl-config --libs)
+GCCCFLAGS = -g -O0 -Werror $(shell sdl-config --cflags)
+GCCLDFLAGS = $(shell sdl-config --libs)
 .PHONY: all clean
 
 all: homectrl.bin homectrl.x86_64 grphview.bin grphview.x86_64 mtrcftch.bin mtrcftch.x86_64

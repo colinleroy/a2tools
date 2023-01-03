@@ -24,14 +24,16 @@
 
 #define BUFSIZE 255
 
-#ifndef __CC65__
-#include "http_curl.c"
-
-#else
 static char proxy_opened = 0;
 void http_connect_proxy(void) {
 #ifdef __CC65__
   simple_serial_open(2, SER_BAUD_9600, 1);
+#else
+  if (getenv("SERIAL_TTY") == NULL) {
+    printf("Please export SERIAL_TTY=/dev/ttyUSB0 or something.\n");
+    exit(1);
+  }
+  simple_serial_open(getenv("SERIAL_TTY"), B9600, 1);
 #endif
   proxy_opened = 1;
 }
@@ -83,7 +85,7 @@ http_response *http_request(const char *method, const char *url, const char **he
     return resp;
   }
 
-  simple_serial_read(resp->body, sizeof(char), resp->size + 1);
+  simple_serial_read(resp->body, sizeof(char), resp->size);
   resp->body[resp->size] = '\0';
 
   return resp;
@@ -93,4 +95,3 @@ void http_response_free(http_response *resp) {
   free(resp->body);
   free(resp);
 }
-#endif
