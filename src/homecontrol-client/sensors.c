@@ -29,24 +29,22 @@
 #include "server_url.h"
 
 static hc_sensor **sensors = NULL;
+static char *sensors_data = NULL;
 static int num_sensors = 0;
 
 static void sensor_add(char *id, char *name, char scale, long cur_value, char *unit) {
   hc_sensor *sensor = malloc(sizeof(hc_sensor));
   memset(sensor, 0, sizeof(hc_sensor));
-  sensor->id        = strdup(id);
+  sensor->id        = id;
   sensor->scale     = scale;
   sensor->cur_value = cur_value;
-  sensor->unit      = strdup(unit);
-  sensor->name      = strndup_ellipsis(name, 25);
+  sensor->unit      = unit;
+  sensor->name      = ellipsis(name, 25);
 
   sensors[num_sensors++] = sensor;
 }
 
 static void sensor_free(hc_sensor *sensor) {
-  free(sensor->id);
-  free(sensor->name);
-  free(sensor->unit);
   free(sensor);
 }
 
@@ -56,7 +54,9 @@ void sensors_free_all(void) {
     sensor_free(sensors[i]);
   }
   free(sensors);
+  free(sensors_data);
   sensors = NULL;
+  sensors_data = NULL;
   num_sensors = 0;
 }
 
@@ -95,6 +95,9 @@ int update_sensors(hc_sensor ***sensors_list) {
     }
     free(parts);
   }
+
+  sensors_data = resp->body;
+  resp->body = NULL;
 
   http_response_free(resp);
   free(lines);
