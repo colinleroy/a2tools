@@ -21,4 +21,6 @@ slist *update_heating_zones(void);
 void heating_zones_free_all(void);
 int configure_heating_zone(hc_heating_zone *heat);
 
+int climate_can_schedule(void);
+int climate_can_set_away(void);
 #endif

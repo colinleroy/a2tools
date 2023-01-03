@@ -29,7 +29,11 @@
 #include "extended_conio.h"
 #include "simple_serial.h"
 
-static int get_metrics(const char *sensor_number, const char *metric, int scale) {
+/* Copied from server_url.c for code size */
+static char* server_url = NULL;
+
+
+static int get_metrics(const char *sensor_id, int scale, char *unit) {
   http_response *resp = NULL;
   FILE *fp;
   char *buf = malloc(BUFSIZE);
@@ -40,11 +44,12 @@ static int get_metrics(const char *sensor_number, const char *metric, int scale)
   static long start_time = -1L;
   static long end_time = -1L;
 
-  snprintf(buf, BUFSIZE, HOMECONTROL_SRV"/csv/sensor_metrics.php"
-                         "?sensor_number=%s"
-                         "&metric=%s"
-                         "&scale=%d",
-                         sensor_number, metric, scale);
+  snprintf(buf, BUFSIZE, "%s/sensor_metrics.php"
+                         "?sensor_id=%s"
+                         "&scale=%d"
+                         "&unit=%s",
+                         server_url,
+                         sensor_id, scale, unit);
 
   gotoxy(1, 12);
   printf("Fetching metrics, please be patient...");
@@ -118,13 +123,18 @@ static int get_metrics(const char *sensor_number, const char *metric, int scale)
 int main(int argc, char **argv) {
   int scale;
   char *buf = NULL;
-  const char *sensor_number, *metric = NULL, *unit = NULL;
+  char *sensor_id, *sensor_name, *unit = NULL;
+  FILE *fp;
+
+#ifdef PRODOS_T_TXT
+  _filetype = PRODOS_T_TXT;
+#endif
 
   clrscr();
 
   if (argc > 4) {
-    sensor_number = argv[1];
-    metric = argv[2];
+    sensor_id = argv[1];
+    sensor_name = argv[2];
     scale = atoi(argv[3]);
     unit = argv[4];
   } else {
@@ -134,20 +144,33 @@ int main(int argc, char **argv) {
     goto err_out;
   }
 
+  if (server_url == NULL) {
+    server_url = malloc(BUFSIZE);
+    fp = fopen(SRV_URL_FILE,"r");
+    if (fp != NULL) {
+      fgets(server_url, BUFSIZE, fp);
+      fclose(fp);
+    } else {
+      printf("Can't load server URL.");
+      cgetc();
+      goto err_out;
+    }
+  }
+
   buf = malloc(BUFSIZE);
 #ifdef __CC65__
-  if (get_metrics(sensor_number, metric, scale) == 0) {
-    sprintf(buf, "%s %s %d %s", sensor_number, metric, scale, unit);
+  if (get_metrics(sensor_id, scale, unit) == 0) {
+    sprintf(buf, "%s \"%s\" %d %s", sensor_id, sensor_name, scale, unit);
     exec("GRPHVIEW", buf);
     free(buf); /* unreachable code anyway */
   } else {
 err_out:
-    sprintf(buf, "2 %s", sensor_number);
+    sprintf(buf, "2 %s", sensor_id);
     exec("HOMECTRL", buf);
     free(buf); /* unreachable code anyway */
   }
 #else
-  get_metrics(sensor_number, metric, scale);
+  get_metrics(sensor_id, scale, unit);
 err_out:
 #endif
   exit(0);

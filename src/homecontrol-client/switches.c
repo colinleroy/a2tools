@@ -27,6 +27,7 @@
 #include "constants.h"
 #include "network.h"
 #include "switches.h"
+#include "server_url.h"
 
 static slist *switches = NULL;
 
@@ -60,10 +61,15 @@ slist *switches_get(void) {
 }
 
 slist *update_switches(void) {
-  http_response *resp = get_url(HOMECONTROL_SRV"/csv/switches.php");
+  http_response *resp;
   char **lines = NULL;
   int i, num_lines;
-  
+  char *url = malloc(BUFSIZE);
+
+  snprintf(url, BUFSIZE, "%s/switches.php", get_server_root_url());
+  resp = get_url(url);
+  free(url);
+
   switches_free_all();
 
   if (resp == NULL || resp->size == 0) {
@@ -99,7 +105,7 @@ void toggle_switch(hc_switch *sw) {
   printxcenteredbox(18, 5);
   printxcentered(12, "Toggling...");
 
-  snprintf(url, BUFSIZE, HOMECONTROL_SRV"/control/toggle_switch.php?switch_number=%s", sw->id);
+  snprintf(url, BUFSIZE, "%s/switch_ctrl.php?id=%s", get_server_root_url(), sw->id);
   resp = get_url(url);
 
   free(url);

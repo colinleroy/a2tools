@@ -27,6 +27,7 @@
 #include "constants.h"
 #include "network.h"
 #include "heating.h"
+#include "server_url.h"
 
 static slist *heating_zones = NULL;
 
@@ -126,11 +127,29 @@ slist *heating_zones_get(void) {
   return heating_zones;
 }
 
+static int can_set_away = 0;
+static int can_schedule = 0;
+static char *full_home_zone = NULL;
+static char *hot_water_zone = NULL;
+
+int climate_can_schedule(void) {
+  return can_schedule;
+}
+
+int climate_can_set_away(void) {
+  return can_set_away;
+}
+
 slist *update_heating_zones(void) {
-  http_response *resp = get_url(HOMECONTROL_SRV"/csv/tado_zones.php");
+  http_response *resp;
   char **lines = NULL;
   int i, num_lines;
-  
+  char *url = malloc(BUFSIZE);
+
+  snprintf(url, BUFSIZE, "%s/climate.php", get_server_root_url());
+  resp = get_url(url);
+  free(url);
+
   heating_zones_free_all();
 
   if (resp == NULL || resp->size == 0) {
@@ -138,12 +157,26 @@ slist *update_heating_zones(void) {
     return NULL;
   }
   num_lines = strsplit(resp->body, '\n', &lines);
-  for (i = 0; i < num_lines; i++) {
+  if (num_lines >= 3) {
+    for (i = 0; i < 3; i++) {
+      if(!strncmp(lines[i], "CAPS;", 5)) {
+        can_set_away = strstr(lines[i],"CAN_AWAY") != NULL;
+        can_schedule = strstr(lines[i],"CAN_SCHEDULE") != NULL;
+      } else if(!strncmp(lines[i], "FULL_HOME_ZONE;", 15)) {
+        free(full_home_zone);
+        full_home_zone = strdup(strchr(lines[i], ';') + 1);
+      } else if(!strncmp(lines[i], "HOT_WATER_ZONE;", 15)) {
+        free(hot_water_zone);
+        hot_water_zone = strdup(strchr(lines[i], ';') + 1);
+      }
+    }
+  }
+  for (i = 3; i < num_lines; i++) {
     char **parts;
     int j, num_parts;
     num_parts = strsplit(lines[i],';', &parts);
-    if (num_parts == 6) {
-      heating_add(parts[0], parts[1], parts[2], parts[3], parts[4], !strcmp(parts[5], "MANUAL"));
+    if (num_parts == 5 + can_schedule) {
+      heating_add(parts[0], parts[1], parts[2], parts[3], parts[4], can_schedule ? !strcmp(parts[5], "MANUAL") : 1);
     }
     for (j = 0; j < num_parts; j++) {
       free(parts[j]);
@@ -167,7 +200,7 @@ int configure_heating_zone(hc_heating_zone *heat) {
   int min_temp = MIN_TEMP, max_temp = MAX_TEMP;
   char c;
 
-  if (!strcmp(heat->id, "0")) {
+  if (!strcmp(heat->id, hot_water_zone)) {
     /* Domestic water */
     min_temp = WATER_MIN_TEMP;
     max_temp = WATER_MAX_TEMP;
@@ -179,29 +212,34 @@ int configure_heating_zone(hc_heating_zone *heat) {
   gotoxy(6, 16);
   chline(28);
   
-  gotoxy(6, 17);
-  printf("Up/Down   : mode ! Enter: OK");
-
 update_mode:
-  gotoxy(7, 9);
-  printf("Mode: ");
-  
-  gotoxy(12, 9);
-  revers(new_mode == 'S');
-  printf("SCHEDULE");
+  gotoxy(6, 17);
+  if (can_schedule) {
+    printf("Up/Down   : mode ! Enter: OK");
 
-  gotoxy(12, 10);
-  revers(new_mode == 'M');
-  printf("MANUAL");
+    gotoxy(7, 9);
+    printf("Mode: ");
+    
+    gotoxy(12, 9);
+    revers(new_mode == 'S');
+    printf("SCHEDULE");
 
-  if (!strcmp(heat->id, "-1")) {
-    gotoxy(12, 11);
-    revers(new_mode == 'A');
-    printf("AWAY");
+    gotoxy(12, 10);
+    revers(new_mode == 'M');
+    printf("MANUAL");
+
+    if (can_set_away && !strcmp(heat->id, full_home_zone)) {
+      gotoxy(12, 11);
+      revers(new_mode == 'A');
+      printf("AWAY");
+    }
+
+    revers(0);
+    
+  } else {
+    printf("                 ! Enter: OK");
   }
 
-  revers(0);
-  
   gotoxy(7, 13);
   printf("Temperature:");
 
@@ -232,13 +270,13 @@ set_temp:
       if (new_mode == 'S') {
         new_mode = 'M';
       } else if (new_mode == 'M') {
-        if (!strcmp(heat->id, "-1")) {
+        if (can_set_away && !strcmp(heat->id, full_home_zone)) {
           new_mode = 'A';
-        } else {
+        } else if (can_schedule) {
           new_mode = 'S';
         }
       } else if (new_mode == 'A') {
-        new_mode = 'S';
+        new_mode = can_schedule ? 'S':'M';
       }
       if (new_mode != 'M') {
         new_temp = heat->set_temp;
@@ -248,10 +286,10 @@ set_temp:
     if (c == CH_CURS_UP) {
       if (new_mode == 'A') {
         new_mode = 'M';
-      } else if (new_mode == 'M') {
+      } else if (can_schedule && new_mode == 'M') {
         new_mode = 'S';
       } else if (new_mode == 'S') {
-        if (!strcmp(heat->id, "-1")) {
+        if (can_set_away && !strcmp(heat->id, full_home_zone)) {
           new_mode = 'A';
         } else {
           new_mode = 'M';
@@ -279,12 +317,13 @@ set_temp:
     return 0;
 
   url = malloc(BUFSIZE);
-  snprintf(url, BUFSIZE, HOMECONTROL_SRV"/control/toggle_tado.php?id=%s"
-                                        "&state=%s&override=%s&temp=%d",
-                                        heat->id, 
-                                        new_mode == 'A' ? "AWAY":"HOME",
-                                        new_mode == 'M' ? "MANUAL":"AUTO",
-                                        new_temp);
+  snprintf(url, BUFSIZE, "%s/climate_ctrl.php?id=%s"
+                            "&presence=%s&mode=%s&set_temp=%d",
+                            get_server_root_url(),
+                            heat->id, 
+                            new_mode == 'A' ? "AWAY":"HOME",
+                            new_mode == 'M' ? "MANUAL":"AUTO",
+                            new_temp);
   resp = get_url(url);
 
   free(url);
