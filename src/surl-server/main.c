@@ -279,7 +279,7 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
       if (ftp_try_dir) {
         curlbuf->content_type = strdup("directory");
       } else {
-        curlbuf->content_type = "application/octet-stream";
+        curlbuf->content_type = strdup("application/octet-stream");
       }
     }
     printf("Content-Type: %s\n", curlbuf->content_type);
