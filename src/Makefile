@@ -1,8 +1,8 @@
-SUBDIRS = lib a2recv mirror http-serial-proxy homecontrol-client
+SUBDIRS = lib a2recv mirror http-serial-proxy homecontrol-client http-client
 
 .PHONY: all clean
 
 all clean:
 	for dir in $(SUBDIRS); do \
-		$(MAKE) -C $$dir -f Makefile $@; \
+		$(MAKE) -C $$dir -f Makefile $@ || exit; \
 	done

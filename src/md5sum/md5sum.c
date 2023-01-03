@@ -18,24 +18,52 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
 #include "extended_conio.h"
-#include "bool_array.h"
+#include "md5.h"
 
-char s_xlen[255], s_ylen[255];
+#define BUFSIZE 255
+static char buf[BUFSIZE];
 
-int main(void) {
-  int x = 0, y = 0;
-  
-  while (1) {
-    cgetc();
-    printfat(x, y, 1, "%d,%d-Printing at.", x, y);
-    x++;
-    y++;
-    if (y > 22)
-      y = 22;
-  clrzone(1,1,7,22);
+int main(int argc, char **argv) {
+  md5_ctxt *md5 = NULL;
+  uint8_t *md5_res = NULL;
+  char c;
+  FILE *fp;
 
+#ifdef PRODOS_T_TXT
+  _filetype = PRODOS_T_TXT;
+#endif
+
+again:
+  printf("Enter filename: ");
+  cgets(buf, BUFSIZE);
+  *strchr(buf, '\n') = '\0';
+
+  fp = fopen(buf,"rb");
+  if (fp == NULL) {
+    printf("Error: %s\n", strerror(errno));
+    goto again;
   }
 
-  return (0);
+  md5 = md5_init();
+  while(fread(&c, 1, 1, fp) > 0) {
+    md5_loop(md5, &c, 1);
+  }
+
+  md5_pad(md5);
+  
+  md5_res = md5_result(md5);
+  for (c = 0; c < 16; c++) {
+    printf("%02x", md5_res[c]);
+  }
+  printf("\n");
+  free(md5_res);
+  free(md5);
+  fclose(fp);
+  fp = NULL;
+
+  goto again;
+  
+  exit(0);
 }
