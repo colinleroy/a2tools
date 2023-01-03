@@ -1,4 +1,4 @@
-SUBDIRS = drivers src 
+SUBDIRS = src 
 PROGS = src/a2recv/a2recv.bin \
 				src/http-client/httpcli.bin \
 				src/homecontrol-client/homectrl.bin \
@@ -12,7 +12,7 @@ DISK = disks/homectrl.dsk
 
 all clean:
 	for dir in $(SUBDIRS); do \
-		$(MAKE) -C $$dir -f Makefile $@; \
+		$(MAKE) -C $$dir -f Makefile $@ || exit; \
 	done
 
 disk: all

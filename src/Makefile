@@ -1,4 +1,4 @@
-SUBDIRS = lib a2recv mirror http-serial-proxy homecontrol-client http-client
+SUBDIRS = lib a2recv mirror http-serial-proxy homecontrol-client http-client aoc
 
 .PHONY: all clean
 
