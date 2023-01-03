@@ -49,7 +49,7 @@ const char *get_server_root_url(void) {
     printf("\nURL: ");
     cgets(server_url, BUFSIZE);
 
-    fp = fopen(SRV_URL_FILE,"w");
+    fp = fopen(SRV_URL_FILE, "wb");
     if (fp != NULL) {
       fprintf(fp, "%s\n", server_url);
       fclose(fp);
