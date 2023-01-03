@@ -29,22 +29,20 @@
 #include "server_url.h"
 
 static hc_switch **switches = NULL;
+static char *switches_data = NULL;
 static int num_switches = 0;
 
 static void switch_add(char *id, char *name, char *state) {
   hc_switch *sw = malloc(sizeof(hc_switch));
   memset(sw, 0, sizeof(hc_switch));
-  sw->id    = strdup(id);
-  sw->state = strdup(state);
-  sw->name  = strndup_ellipsis(name, 25);
+  sw->id    = id;
+  sw->state = state;
+  sw->name  = ellipsis(name, 25);
 
   switches[num_switches++] = sw;
 }
 
 static void switch_free(hc_switch *sw) {
-  free(sw->id);
-  free(sw->name);
-  free(sw->state);
   free(sw);
 }
 
@@ -54,7 +52,9 @@ void switches_free_all(void) {
     switch_free(switches[i]);
   }
   free(switches);
+  free(switches_data);
   switches = NULL;
+  switches_data = NULL;
   num_switches = 0;
 }
 
@@ -90,6 +90,8 @@ int update_switches(hc_switch ***switches_list) {
     free(parts);
   }
 
+  switches_data = resp->body;
+  resp->body = NULL;
   http_response_free(resp);
   free(lines);
 

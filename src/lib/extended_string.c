@@ -95,3 +95,15 @@ char *strndup_ellipsis(char *in, int len) {
 
   return out;
 }
+
+char *ellipsis(char *in, int len) {
+  if (strlen(in) < len) {
+    return in;
+  }
+  in[len-3]='.';
+  in[len-2]='.';
+  in[len-1]='.';
+  in[len]='\0';
+
+  return in;
+}

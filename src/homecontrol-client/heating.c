@@ -29,44 +29,43 @@
 #include "server_url.h"
 
 static hc_heating_zone **heating_zones = NULL;
+static char *heating_zones_data = NULL;
 static int num_heating_zones = 0;
 
 static char *do_round(char *floatval, int num) {
-  char *result = strdup(floatval);
-  char *decdot = strchr(result, '.');
+  char *decdot = strchr(floatval, '.');
   int offset = (num > 0) ? (num + 1) : 0;
 
   if (decdot && strlen(decdot) > offset) {
     *(decdot + offset) = '\0';
   }
   
-  return result;
+  return floatval;
 }
 
 static char *avg_vals(char *in) {
-  char **min_max, *out = NULL;
+  char **min_max;
   int num_parts;
   num_parts = strsplit_in_place(in, ' ', &min_max);
 
   if (num_parts == 3) {
     int avg = (atoi(min_max[2]) + atoi(min_max[0])) / 2;
-    out = malloc(4);
-    sprintf(out, "%d", avg);
+    sprintf(in, "%d", avg);
   } else {
-    out = strdup("NA");
+    return "NA";
   }
   free(min_max);
 
-  return out;
+  return in;
 }
 static void heating_add(char *id, char *name, char *set_temp, char *cur_temp, char *cur_humidity, char manual_mode) {
   hc_heating_zone *heat = malloc(sizeof(hc_heating_zone));
   memset(heat, 0, sizeof(hc_heating_zone));
 
-  heat->id           = strdup(id);
+  heat->id           = id;
   heat->set_temp     = atoi(set_temp);
   heat->manual_mode  = manual_mode;
-  heat->name         = strndup_ellipsis(name, 22);
+  heat->name         = ellipsis(name, 22);
 
   if (!strcmp(heat->id, "-1")) {
     heat->set_temp   = 21;
@@ -79,7 +78,7 @@ static void heating_add(char *id, char *name, char *set_temp, char *cur_temp, ch
       heat->cur_temp = do_round(cur_temp, 0);
     }
   } else {
-    heat->cur_temp     = strdup("NA");
+    heat->cur_temp     = "NA";
   }
   if (strcmp(cur_humidity, "n/a")) {
     if (strstr(cur_humidity, " - ")) {
@@ -88,17 +87,13 @@ static void heating_add(char *id, char *name, char *set_temp, char *cur_temp, ch
       heat->cur_humidity = do_round(cur_humidity, 0);
     }
   } else {
-    heat->cur_humidity = strdup("NA");
+    heat->cur_humidity = "NA";
   }
 
   heating_zones[num_heating_zones++] = heat;
 }
 
 static void heating_free(hc_heating_zone *heat) {
-  free(heat->id);
-  free(heat->name);
-  free(heat->cur_temp);
-  free(heat->cur_humidity);
   free(heat);
 }
 
@@ -108,7 +103,9 @@ void heating_zones_free_all(void) {
     heating_free(heating_zones[i]);
   }
   free(heating_zones);
+  free(heating_zones_data);
   heating_zones = NULL;
+  heating_zones_data = NULL;
   num_heating_zones = 0;
 }
 
@@ -171,6 +168,9 @@ int update_heating_zones(hc_heating_zone ***heating_zones_list) {
     }
     free(parts);
   }
+
+  heating_zones_data = resp->body;
+  resp->body = NULL;
 
   http_response_free(resp);
   free(lines);
