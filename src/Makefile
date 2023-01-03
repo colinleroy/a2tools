@@ -1,4 +1,4 @@
-SUBDIRS = lib recv dump mirror
+SUBDIRS = lib a2recv mirror http-serial-proxy homecontrol-client
 
 .PHONY: all clean
 

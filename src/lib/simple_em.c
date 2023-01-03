@@ -25,7 +25,7 @@
 #define PAGE_SIZE 128
 
 int em_init(void) {
-  return em_install(a2_auxmem_emd);
+  return em_install(a2e_auxmem_emd);
 }
 
 void em_store (int page_num,  void *data, size_t count) {
