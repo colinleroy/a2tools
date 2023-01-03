@@ -110,7 +110,10 @@ int main(int argc, char **argv)
       printf("could not parse request '%s'\n", reqbuf);
       continue;
     }
-    
+
+    simple_serial_puts("WAIT\n");
+
+
     response = curl_request(method, url, headers, n_headers);
     
     simple_serial_printf("%d,%d\n", response->response_code, response->size);
