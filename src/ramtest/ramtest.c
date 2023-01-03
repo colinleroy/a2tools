@@ -1,36 +1,37 @@
+/*
+ * Copyright (C) 2022 Colin Leroy-Mira <colin@colino.net>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
 #include <apple2enh.h>
-#include "simple_em.h"
+#include <tgi.h>
 
-static char *test_str[5] = {
-  "This is string 1.",
-  "And now number 2",
-  "we have five lines",
-  "in the 80 columns card.",
-  "finished, we're done."
-};
+int main(int argc, char **argv) {
+  int i;
+  tgi_install(a2e_hi_tgi);
+  printf("heap available: %u\n", _heapmaxavail());
 
-int main(void) {
-  int i, e;
-  if ((e = em_init()) != 0) {
-    printf("Error %d installing driver.\n", e);
-    exit(1);
-  }
-  
-  for (i = 0; i < 5; i++) {
-    printf("> %d '%s'\n", i, test_str[i]);
-    em_store_str(i, test_str[i]);
+  printf(" called with: ");
+  for (i = 0; i < argc; i++) {
+    printf("%s ", argv[i]);
   }
 
-  for (i = 0; i < 5; i++) {
-    char *data = em_read(i, 256);
-    
-    printf("%d< '%s'\n", i, data);
-    free(data);
-  }
   exit (0);
 }
