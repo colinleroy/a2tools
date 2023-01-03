@@ -232,12 +232,20 @@ static int select_item(void) {
   }
 }
 
+static void cleanup(void) {
+  http_close_proxy();
+  switches_free_all();
+  sensors_free_all();
+  climate_zones_free_all();
+  printf("Cleaned up.\n");
+}
+
 static long refresh_counter = REFRESH_DELAY;
 int main(int argc, char **argv) {
   char command;
 
   http_connect_proxy();
-
+  atexit((void *)cleanup);
   clrscr();
   screensize(&scrw, &scrh);
   

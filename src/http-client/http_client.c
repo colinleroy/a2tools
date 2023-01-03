@@ -28,18 +28,25 @@ static char buf[BUFSIZE];
 int main(int argc, char **argv) {
   http_response *response = NULL;
   const char *headers[1] = {"Accept: text/*"};
-
+  char *buffer = malloc(123);
+  size_t r;
   http_connect_proxy();
 
 again:
   printf("Enter URL: ");
   cgets(buf, BUFSIZE);
+  if (*strchr(buf, '\n'))
+    *strchr(buf, '\n') = '\0';
 
-  response = http_request("GET", buf, headers, 1);
+  response = http_start_request("GET", buf, headers, 1);
 
   printf("Got response %d (%ld bytes)\n", response->code, response->size);
 
-  printf("%s\n", response->body);
+  while ((r = http_receive_lines(response, buffer, 123)) > 0) {
+    printf("%s", buffer);
+  }
+  
+  printf("done\n");
   
   http_response_free(response);
 

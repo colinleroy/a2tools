@@ -3,14 +3,18 @@
 
 typedef struct _http_response http_response;
 struct _http_response {
-  char *body;
   int code;
-  long size;
+  size_t size;
+  size_t cur_pos;
 };
 
 void http_connect_proxy(void);
+void http_close_proxy(void);
 
-http_response *http_request(const char *method, const char *url, const char **headers, int n_headers);
+http_response *http_start_request(const char *method, const char *url, const char **headers, int n_headers);
+
+size_t http_receive_data(http_response *resp, char *buffer, size_t max_len);
+size_t http_receive_lines(http_response *resp, char *buffer, size_t max_len);
 
 void http_response_free(http_response *resp);
 

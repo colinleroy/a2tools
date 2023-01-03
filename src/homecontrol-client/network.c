@@ -19,12 +19,19 @@
 #include "network.h"
 #include "simple_serial.h"
 
-http_response *get_url(const char *url) {
+char *get_url(const char *url) {
   http_response *resp;
-  
+  char *buffer = NULL;
+    
   simple_serial_set_activity_indicator(1, 39, 0);
-  resp = http_request("GET", url, NULL, 0);
+  resp = http_start_request("GET", url, NULL, 0);
   simple_serial_set_activity_indicator(0, 0, 0);
 
-  return resp;
+  if (resp->code == 200) {
+    buffer = malloc(resp->size + 1);
+    http_receive_data(resp, buffer, resp->size + 1);
+  }
+  http_response_free(resp);
+  
+  return buffer;
 }
