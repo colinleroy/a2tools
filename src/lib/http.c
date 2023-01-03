@@ -43,7 +43,6 @@ http_response *http_request(const char *method, const char *url, const char **he
 
   for (i = 0; i < n_headers; i++) {
     simple_serial_printf("%s\n", headers[i]);
-    printf("sent header %s.\n", headers[i]);
   }
   simple_serial_puts("\n");
 
@@ -63,7 +62,7 @@ http_response *http_request(const char *method, const char *url, const char **he
 
   resp->body = malloc(resp->size + 1);
   if (resp->body == NULL) {
-    printf("Could not malloc %ld bytes\n", resp->size);
+    printf("HTTP:Could not malloc %ld bytes\n", resp->size);
     free(resp);
     return NULL;
   }

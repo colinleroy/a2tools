@@ -21,7 +21,7 @@ int main(int argc, char **argv) {
   size_t data_len = 0;
   FILE *outfp = NULL;
   char *data = NULL;
-  unsigned int total = 0;
+  unsigned int total;
 
 
 #ifdef __CC65__
@@ -37,6 +37,7 @@ if (argc < 2) {
 
 read_again:
   printf("\nReady to receive (Ctrl-reset to abort)\n");
+  total = 0;
 
   if (simple_serial_gets(filename, BUF_SIZE) != NULL) {
     if (strlen(filename) > 8)
