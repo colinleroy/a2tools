@@ -19,24 +19,37 @@
 #include <stdlib.h>
 #include "extended_conio.h"
 
+static unsigned char scrw = 255, scrh = 255;
+
 #ifndef __CC65__
+  char cgetc(void) {
+    char *buf = malloc(255);
+    char c;
+    fgets(buf, 255, stdin);
+    c = buf[0];
+    free(buf);
+    return c;
+  }
 static void cputsxy(int x, int y, char *buf) {
-  char *prefix = malloc(39);
+  char *prefix;
   int i;
-  
-  for (i = 0; i < x && i < 38; i++) {
+
+  if (scrw == 255 && scrh == 255) {
+    screensize(&scrw, &scrh);
+  }
+
+  prefix = malloc(scrw);
+  for (i = 0; i < x && i < scrw - 1; i++) {
     prefix[i] = ' ';
   }
   prefix[i] = '\0';
-  if (strlen(buf) > 39 - x) {
-    buf[39 - x] = '\0';
+  if (strlen(buf) > scrw - 1 - x) {
+    buf[scrw - 1 - x] = '\0';
   }
   printf("%s%s", prefix, buf);
   free(prefix);
 }
 #endif
-
-static unsigned char scrw = 255, scrh = 255;
 
 #ifndef __CC65__
 void screensize(unsigned char *w, unsigned char *h) {
@@ -123,15 +136,19 @@ static char *clearbuf = NULL;
 void __fastcall__ clrzone(char xs, char ys, char xe, char ye) {
   int l = xe - xs + 1;
   
+  if (scrw == 255 && scrh == 255) {
+    screensize(&scrw, &scrh);
+  }
+
   if (clearbuf == NULL) {
-    clearbuf = malloc(42);
-    memset(clearbuf, ' ', 42);
+    clearbuf = malloc(scrw + 2);
+    memset(clearbuf, ' ', scrw + 2);
   }
 
   memset(clearbuf, ' ', l);
-  clearbuf[l + 1] = '\0';
+  clearbuf[l] = '\0';
 
-  while (ys < ye) {
+  while (ys < ye + 1) {
     cputsxy(xs, ys, clearbuf);
     ys++;
   }
@@ -161,7 +178,7 @@ void printxcenteredbox(int width, int height) {
   startx = (scrw - width) / 2;
   starty = (scrh - height) / 2;
   
-  clrzone(startx, starty, startx + width - 2, starty + height + 1);
+  clrzone(startx, starty, startx + width - 1, starty + height);
   
   for (i = 0; i < width; i++) {
     line[i] = '-';

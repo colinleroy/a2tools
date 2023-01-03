@@ -21,7 +21,6 @@
 #define CH_ESC         0x1B
 
 #define __fastcall__
-#define cgetc() fgetc(stdin)
 #define cputs(s) puts(s)
 #define cputc(c) putc(c, stdout)
 #define clrscr()
@@ -33,7 +32,11 @@
 #define gotoxy(a, b) do {} while(0)
 #define cprintf printf
 #define revers(x) 1
+#define videomode(x) 1
+#define VIDEOMODE_40COL 1
+#define VIDEOMODE_80COL 1
 
+char cgetc(void);
 void screensize(unsigned char *w, unsigned char *h);
 void chline(int len);
 
