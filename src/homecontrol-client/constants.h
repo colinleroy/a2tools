@@ -17,4 +17,6 @@
 
 #define WATER_MIN_TEMP 40
 #define WATER_MAX_TEMP 65
+
+#define METRICS_TMPFILE "metrics"
 #endif

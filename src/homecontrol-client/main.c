@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 #include "simple_serial.h"
 #include "extended_conio.h"
 #include "extended_string.h"
@@ -37,16 +38,16 @@ static void update_switch_page(int update_data) {
     switches = update_switches();
   }
 
-  w = switches;
-  
-  for (i = 0; i < cur_list_display_offset && w; i++) {
-    w = w->next;
-  }
-
   if (switches == NULL) {
     clear_list(0);
     printxcentered(12, "Can't load data.");
     return;
+  }
+
+  w = switches;
+  
+  for (i = 0; i < cur_list_display_offset && w; i++) {
+    w = w->next;
   }
 
   clear_list(3);
@@ -78,13 +79,13 @@ static void update_sensor_page(int update_data) {
     sensors = update_sensors();
   }
 
-  w = sensors;
-
   if (sensors == NULL) {
     clear_list(0);
     printxcentered(12, "Can't load data.");
     return;
   }
+
+  w = sensors;
 
   for (i = 0; i < cur_list_display_offset && w; i++) {
     w = w->next;
@@ -110,13 +111,14 @@ static void update_heating_page(int update_data) {
     heating = update_heating_zones();
   }
 
-  w = heating;
-  
   if (heating == NULL) {
     clear_list(0);
     printxcentered(12, "Can't load data.");
     return;
   }
+
+  w = heating;
+  
   for (i = 0; i < cur_list_display_offset && w; i++) {
     w = w->next;
   }
@@ -208,6 +210,21 @@ static void select_switch(void) {
   toggle_switch(w->data);
 }
 
+static void select_sensor(void) {
+  int i;
+  slist *w = sensors;
+
+  for (i = 0; i < cur_list_offset; i++) {
+    w = w->next;
+  }
+
+#ifdef __CC65__
+  exec("MTRCFTCH", "4 POWER_VA 1");
+#else
+  /* TODO */
+#endif
+}
+
 static int select_heating_zone(void) {
   int i;
   slist *w = heating;
@@ -227,7 +244,7 @@ static int select_heating_zone(void) {
 static int select_item(void) {
   switch(cur_page) {
     case SWITCH_PAGE: select_switch(); return 1;
-    case SENSOR_PAGE:  /* TODO */;  return 0;
+    case SENSOR_PAGE:  select_sensor();  return 0;
     case HEATING_PAGE: return select_heating_zone();
   }
 }
@@ -253,6 +270,12 @@ update:
     cur_list_display_offset = 0;
     prev_page = cur_page;
   }
+  
+  if (argc > 1) {
+    cur_page = atoi(argv[1]);
+    argc = 0; /* Only first time */
+  }
+
   switch(cur_page) {
     case SWITCH_PAGE:  update_switch_page(1);  break;
     case SENSOR_PAGE:  update_sensor_page(1);  break;

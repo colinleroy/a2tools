@@ -96,7 +96,7 @@ static void heating_free(hc_heating_zone *heat) {
   free(heat);
 }
 
-static void heating_zones_free_all(void) {
+void heating_zones_free_all(void) {
   slist *w;
   for (w = heating_zones; w; w = w->next) {
     heating_free(w->data);
@@ -111,12 +111,12 @@ slist *heating_zones_get(void) {
 
 slist *update_heating_zones(void) {
   http_response *resp = get_url(HOMECONTROL_SRV"/csv/tado_zones.php");
-  char **lines;
+  char **lines = NULL;
   int i, num_lines;
   
   heating_zones_free_all();
 
-  if (resp->size == 0) {
+  if (resp == NULL || resp->size == 0) {
     http_response_free(resp);
     return NULL;
   }

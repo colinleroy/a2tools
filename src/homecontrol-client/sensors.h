@@ -14,5 +14,5 @@ struct _hc_sensor {
 
 slist *sensors_get(void);
 slist *update_sensors(void);
-
+void sensors_free_all(void);
 #endif
