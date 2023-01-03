@@ -161,7 +161,7 @@ void printxcenteredbox(int width, int height) {
   startx = (scrw - width) / 2;
   starty = (scrh - height) / 2;
   
-  clrzone(startx, starty, startx + width, starty + height + 1);
+  clrzone(startx, starty, startx + width - 2, starty + height + 1);
   
   for (i = 0; i < width; i++) {
     line[i] = '-';
