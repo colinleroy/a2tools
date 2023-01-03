@@ -30,6 +30,8 @@ static int serial_activity_indicator_y = -1;
 #ifdef __CC65__
 #include <apple2enh.h>
 
+#pragma code-name (push, "LOWCODE")
+
 /* Setup */
 static int last_slot = 2;
 static int last_baudrate = SER_BAUD_9600;
@@ -215,14 +217,8 @@ int simple_serial_puts(char *buf) {
 static FILE *ttyfp = NULL;
 static int flow_control_enabled;
 
-static void setup_tty(const char *ttypath, int baudrate, int hw_flow_control) {
+static void setup_tty(int port, int baudrate, int hw_flow_control) {
   struct termios tty;
-  int port = open(ttypath, O_RDWR);
-
-  if (port < 0) {
-    printf("Cannot open %s: %s\n", ttypath, strerror(errno));
-    exit(1);
-  }
 
   if(tcgetattr(port, &tty) != 0) {
     printf("tcgetattr error: %s\n", strerror(errno));
@@ -257,20 +253,19 @@ static void setup_tty(const char *ttypath, int baudrate, int hw_flow_control) {
 
   if (tcsetattr(port, TCSANOW, &tty) != 0) {
     printf("tcgetattr error: %s\n", strerror(errno));
-    close(port);
     exit(1);
   }
-  close(port);
 }
 
 int simple_serial_open(const char *tty, int baudrate, int hw_flow_control) {
-  setup_tty(tty, baudrate, hw_flow_control);
 
   ttyfp = fopen(tty, "r+b");
   if (ttyfp == NULL) {
     printf("Can't open %s\n", tty);
     return -1;
   }
+
+  setup_tty(fileno(ttyfp), baudrate, hw_flow_control);
 
   return 0;
 }
@@ -285,16 +280,22 @@ int simple_serial_close(void) {
 
 /* Input */
 int __simple_serial_getc_with_timeout(int timeout) {
-  return fgetc(ttyfp);
+  int r = fgetc(ttyfp);
+  fflush(ttyfp);
+  return r;
 }
 
 char *__simple_serial_gets_with_timeout(char *out, size_t size, int timeout) {
-  return fgets(out, size, ttyfp);
+  char *r = fgets(out, size, ttyfp);
+  fflush(ttyfp);
+  return r;
 }
 
 
 size_t __simple_serial_read_with_timeout(char *ptr, size_t size, size_t nmemb, int timeout) {
-  return fread(ptr, size, nmemb, ttyfp);
+  size_t r = fread(ptr, size, nmemb, ttyfp);
+  fflush(ttyfp);
+  return r;
 }
 
 /* Output */
@@ -374,3 +375,7 @@ void simple_serial_set_activity_indicator(char enabled, int x, int y) {
   serial_activity_indicator_x = x;
   serial_activity_indicator_y = y;
 }
+
+#ifdef __CC65__
+#pragma code-name (pop)
+#endif
