@@ -69,6 +69,12 @@ http_response *http_start_request(const char *method, const char *url, const cha
   }
   simple_serial_puts("\n");
 
+  simple_serial_gets_with_timeout(buf, BUFSIZE);
+  if (buf == NULL || strcmp(buf, "WAIT\n")) {
+    resp->code = 508;
+    return resp;
+  }
+
   simple_serial_gets(buf, BUFSIZE);
   if (buf == NULL || buf[0] == '\0') {
     resp->code = 509;
