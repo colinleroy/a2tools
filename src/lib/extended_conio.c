@@ -17,7 +17,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdarg.h>
 #include "extended_conio.h"
 
 #ifndef __CC65__
@@ -120,31 +119,15 @@ char * __fastcall__ cgets(char *buf, size_t size) {
 #endif
 }
 
-static char printfat_buf[255];
-static char clearbuf[42];
-void printfat(char x, char y, char clear, const char* format, ...) {
-  int i;
-  va_list args;
-
-  va_start(args, format);
-  vsnprintf(printfat_buf, 255, format, args);
-  va_end(args);
-
-  printfat_buf[39 - x] = '\0';
-  cputsxy(x, y, printfat_buf);
-  if (clear) {
-    x = wherex();
-    i = 0;
-    while (++x < 40) {
-      clearbuf[i++] = ' ';
-    }
-    clearbuf[i++] = '\0';
-    cputs(clearbuf);
-  }
-}
-
+static char *clearbuf = NULL;
 void __fastcall__ clrzone(char xs, char ys, char xe, char ye) {
   int l = xe - xs + 1;
+  
+  if (clearbuf == NULL) {
+    clearbuf = malloc(42);
+    memset(clearbuf, '\0', 42);
+  }
+
   memset(clearbuf, ' ', l);
   clearbuf[l + 1] = '\0';
 
@@ -163,7 +146,8 @@ void printxcentered(int y, char *buf) {
   }
 
   startx = (scrw - len) / 2;
-  printfat(startx, y, 0, buf);
+  gotoxy(startx, y);
+  puts(buf);
 }
 
 void printxcenteredbox(int width, int height) {
@@ -186,12 +170,14 @@ void printxcenteredbox(int width, int height) {
   line[i - 1] = '+';
   line[i] = '\0';
   
-  printfat(startx, starty, 0, "%s", line);
+  gotoxy(startx, starty);
+  puts(line);
   for (i = 1; i < height + 1; i++) {
     cputsxy(startx, starty + i,  "!");
     cputsxy(startx + width - 1, starty + i, "!");
   }
-  printfat(startx, starty + height + 1, 0, "%s", line);
+  gotoxy(startx, starty + height + 1);
+  puts(line);
   
   free(line);
 }

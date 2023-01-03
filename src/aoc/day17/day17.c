@@ -97,9 +97,12 @@ static void setup_viz(void) {
   cvlinexy(0, 0, 23);
   chlinexy(1, 22, 7);
   cvlinexy(8, 0, 23);
-  printfat(WALLS_WIDTH + 10, 12, 1, "Iterations");
-  printfat(WALLS_WIDTH + 10, 13, 1, "    Height");
-  printfat(WALLS_WIDTH + 10, 15, 1, "      Wind");
+  gotoxy(WALLS_WIDTH + 10, 12);
+  puts("Iterations        ");
+  gotoxy(WALLS_WIDTH + 10, 13);
+  puts("    Height        ");
+  gotoxy(WALLS_WIDTH + 10, 15);
+  puts("      Wind        ");
 }
 
 #define VIZ
@@ -123,8 +126,10 @@ static void viz(char *msg, int iterations, bool_array *table, int cur_shape, int
     viz_is_setup = 0;
   }
   if (going_fast) {
-    printfat(2, 10, 1, "Computing really fast behind the scene\n");
-    printfat(6, 12, 1, "Iterations: %d, Height: %d\n", iterations, floor_height);
+    gotoxy(2, 10);
+    puts("Computing really fast behind the scene\n");
+    gotoxy(6, 12);
+    printf("Iterations: %d, Height: %d       \n", iterations, floor_height);
     return;
   }
 #endif
@@ -171,12 +176,16 @@ static void viz(char *msg, int iterations, bool_array *table, int cur_shape, int
     zone_x_s = 0; s_x = 1;
     zone_x_e = WALLS_WIDTH;
 
-    printfat(WALLS_WIDTH +2, 0, 0, "%d    ", zone_y_s);
-    printfat(WALLS_WIDTH +2, 22, 0, "%d    ", zone_y_e - 1);
+    gotoxy(WALLS_WIDTH +2, 0);
+    printf("%d    ", zone_y_s);
+    gotoxy(WALLS_WIDTH +2, 22);
+    printf("%d    ", zone_y_e - 1);
 
     /* 12 = strlen("Iterations") + 2 */
-    printfat(WALLS_WIDTH + 10 + 12, 12, 0, "%d  ", iterations);
-    printfat(WALLS_WIDTH + 10 + 12, 13, 0, "%d  ", floor_height);
+    gotoxy(WALLS_WIDTH + 10 + 12, 12);
+    printf("%d  ", iterations);
+    gotoxy(WALLS_WIDTH + 10 + 12, 13);
+    printf("%d  ", floor_height);
     debug = 0;
   } else {
     int d_y;
@@ -192,27 +201,11 @@ static void viz(char *msg, int iterations, bool_array *table, int cur_shape, int
     zone_x_s = max(cur_shape_left - 1, 0);    s_x = zone_x_s + 1;
     zone_x_e = min(cur_shape_left + shape_widths[cur_shape] + 1, WALLS_WIDTH);
 
-#if 0
-    if (zone_y_s > 22) {
-      debug = 1;
-    }
-#endif
-    if (debug) {
-      printfat(WALLS_WIDTH +2, 2, 1, "SHAPE BTM/HGT: %d/%d", cur_shape_bottom, shape_heights[cur_shape]);
-      printfat(WALLS_WIDTH +2, 3, 1, "TAB ZONEY: %d-%d", zone_y_s, zone_y_e);
-      printfat(WALLS_WIDTH +2, 4, 1, "SCR ZONEY: %d", s_y);
-    }
     d_y       = zone_y_s - (cur_shape_bottom + shape_heights[cur_shape]);
     zone_y_s  = cur_shape_bottom + shape_heights[cur_shape];
     s_y      += d_y;
 
     zone_y_e = max(zone_y_s - shape_heights[cur_shape] - 1, 1);
-
-    if (debug) {
-      printfat(WALLS_WIDTH +2, 5, 1, "TAB ZONEY NOW: %d-%d", zone_y_s, zone_y_e);
-      printfat(WALLS_WIDTH +2, 6, 1, "SCR ZONEY: %d", s_y);
-      printfat(WALLS_WIDTH +2, 7, 1, "OFFSET: %d", d_y);
-    }
   }
   for (y = zone_y_s; y >= zone_y_e && y >= 0; y--, s_y++) {
     gotoxy(zone_x_s + 1, s_y);
@@ -228,7 +221,8 @@ static void viz(char *msg, int iterations, bool_array *table, int cur_shape, int
       }
     }
   }
-  printfat(WALLS_WIDTH + 10 + 12, 15, 1, "%c", cur_wind == WIND_LEFT ? '<':'>');
+  gotoxy(WALLS_WIDTH + 10 + 12, 15);
+  printf("%c", cur_wind == WIND_LEFT ? '<':'>');
 #endif
 }
 #else
@@ -236,7 +230,7 @@ static void viz(char *msg, int iterations, bool_array *table, int cur_shape, int
 #endif
 
 static int can_move_left(bool_array *table, int shape, int x, int y) {
-  int i, col, row, d_x, d_y;
+  int col, row, d_x, d_y;
 
   if (x == 0)
     return 0;
@@ -254,7 +248,7 @@ static int can_move_left(bool_array *table, int shape, int x, int y) {
 }
 
 static int can_move_right(bool_array *table, int shape,int x, int y) {
-  int i, col, row, d_x, d_y;
+  int col, row, d_x, d_y;
 
   if (x + shape_widths[shape] == 7)
     return 0;

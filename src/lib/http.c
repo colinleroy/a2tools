@@ -65,11 +65,12 @@ http_response *http_request(const char *method, const char *url, const char **he
 
   simple_serial_gets_with_timeout(buf, BUFSIZE);
   if (buf == NULL || buf[0] == '\0') {
+    resp->code = 509;
     return resp;
   }
 
   if (strchr(buf, ',') == NULL) {
-    printf("Unexpected response '%s'\n", buf);
+    resp->code = 510;
     return resp;
   }
 
@@ -79,9 +80,8 @@ http_response *http_request(const char *method, const char *url, const char **he
 
   resp->body = malloc(resp->size + 1);
   if (resp->body == NULL) {
-    printf("HTTP:Could not malloc %ld bytes\n", resp->size);
-    free(resp);
-    return NULL;
+    resp->code = 511;
+    return resp;
   }
 
   simple_serial_read(resp->body, sizeof(char), resp->size + 1);
