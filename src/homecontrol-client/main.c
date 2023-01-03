@@ -282,10 +282,10 @@ update:
     case HEATING_PAGE: update_heating_page(1); break;
   }
 
-#ifdef __CC65__
-  gotoxy(0,0);
-  printf("%d  ", _heapmaxavail());
-#endif
+// #ifdef __CC65__
+//   gotoxy(0,0);
+//   printf("%d  ", _heapmaxavail());
+// #endif
 
 command:
   while (!kbhit()) {
