@@ -125,7 +125,7 @@ void __fastcall__ clrzone(char xs, char ys, char xe, char ye) {
   
   if (clearbuf == NULL) {
     clearbuf = malloc(42);
-    memset(clearbuf, '\0', 42);
+    memset(clearbuf, ' ', 42);
   }
 
   memset(clearbuf, ' ', l);
@@ -147,7 +147,7 @@ void printxcentered(int y, char *buf) {
 
   startx = (scrw - len) / 2;
   gotoxy(startx, y);
-  puts(buf);
+  cputs(buf);
 }
 
 void printxcenteredbox(int width, int height) {

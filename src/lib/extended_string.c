@@ -38,7 +38,7 @@ static int _strsplit_int(char *in, char split, char ***out, char in_place) {
   }
   /* last token */
   result = realloc(result, (n_tokens + 1) * sizeof(void *));
-  result[n_tokens] = strdup(in);
+  result[n_tokens] = in_place ? in : strdup(in);
   n_tokens++;
   
   *out = result;

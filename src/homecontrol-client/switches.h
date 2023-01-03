@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <string.h>
-#include "slist.h"
 
 #ifndef __switches_h
 #define __switches_h
@@ -13,8 +12,7 @@ struct _hc_switch {
   char *state;
 };
 
-slist *switches_get(void);
-slist *update_switches(void);
+int update_switches(hc_switch ***switches_list);
 void switches_free_all(void);
 void toggle_switch(hc_switch *sw);
 #endif

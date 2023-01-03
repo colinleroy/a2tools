@@ -22,14 +22,14 @@
 #include "simple_serial.h"
 #include "extended_conio.h"
 #include "extended_string.h"
-#include "slist.h"
 
 #include "constants.h"
 #include "network.h"
 #include "heating.h"
 #include "server_url.h"
 
-static slist *heating_zones = NULL;
+static hc_heating_zone **heating_zones = NULL;
+static int num_heating_zones = 0;
 
 static char *do_round(char *floatval, int num) {
   char *result = strdup(floatval);
@@ -91,7 +91,7 @@ static void heating_add(char *id, char *name, char *set_temp, char *cur_temp, ch
     heat->cur_humidity = strdup("NA");
   }
 
-  heating_zones = slist_append(heating_zones, heat);
+  heating_zones[num_heating_zones++] = heat;
 }
 
 static void heating_free(hc_heating_zone *heat) {
@@ -103,16 +103,13 @@ static void heating_free(hc_heating_zone *heat) {
 }
 
 void heating_zones_free_all(void) {
-  slist *w;
-  for (w = heating_zones; w; w = w->next) {
-    heating_free(w->data);
+  int i;
+  for (i = 0; i < num_heating_zones; i++) {
+    heating_free(heating_zones[i]);
   }
-  slist_free(heating_zones);
+  free(heating_zones);
   heating_zones = NULL;
-}
-
-slist *heating_zones_get(void) {
-  return heating_zones;
+  num_heating_zones = 0;
 }
 
 static int can_set_away = 0;
@@ -128,7 +125,7 @@ int climate_can_set_away(void) {
   return can_set_away;
 }
 
-slist *update_heating_zones(void) {
+int update_heating_zones(hc_heating_zone ***heating_zones_list) {
   http_response *resp;
   char **lines = NULL;
   int i, num_lines;
@@ -143,9 +140,12 @@ slist *update_heating_zones(void) {
 
   if (resp == NULL || resp->size == 0 || resp->code != 200) {
     http_response_free(resp);
-    return NULL;
+    *heating_zones_list = NULL;
+    return 0;
   }
+
   num_lines = strsplit_in_place(resp->body, '\n', &lines);
+
   if (num_lines >= 3) {
     for (i = 0; i < 3; i++) {
       if(!strncmp(lines[i], "CAPS;", 5)) {
@@ -160,6 +160,8 @@ slist *update_heating_zones(void) {
       }
     }
   }
+
+  heating_zones = malloc((num_lines - 3) * sizeof(hc_heating_zone *));
   for (i = 3; i < num_lines; i++) {
     char **parts;
     int num_parts;
@@ -172,7 +174,8 @@ slist *update_heating_zones(void) {
 
   http_response_free(resp);
   free(lines);
-  return heating_zones;
+  *heating_zones_list = heating_zones;
+  return num_heating_zones;
 }
 
 

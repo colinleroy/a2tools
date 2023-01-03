@@ -22,14 +22,14 @@
 #include "simple_serial.h"
 #include "extended_conio.h"
 #include "extended_string.h"
-#include "slist.h"
 
 #include "constants.h"
 #include "network.h"
 #include "switches.h"
 #include "server_url.h"
 
-static slist *switches = NULL;
+static hc_switch **switches = NULL;
+static int num_switches = 0;
 
 static void switch_add(char *id, char *name, char *state) {
   hc_switch *sw = malloc(sizeof(hc_switch));
@@ -38,7 +38,7 @@ static void switch_add(char *id, char *name, char *state) {
   sw->state = strdup(state);
   sw->name  = strndup_ellipsis(name, 25);
 
-  switches = slist_append(switches, sw);
+  switches[num_switches++] = sw;
 }
 
 static void switch_free(hc_switch *sw) {
@@ -49,19 +49,16 @@ static void switch_free(hc_switch *sw) {
 }
 
 void switches_free_all(void) {
-  slist *w;
-  for (w = switches; w; w = w->next) {
-    switch_free(w->data);
+  int i;
+  for (i = 0; i < num_switches; i++) {
+    switch_free(switches[i]);
   }
-  slist_free(switches);
+  free(switches);
   switches = NULL;
+  num_switches = 0;
 }
 
-slist *switches_get(void) {
-  return switches;
-}
-
-slist *update_switches(void) {
+int update_switches(hc_switch ***switches_list) {
   http_response *resp;
   char **lines = NULL;
   int i, num_lines;
@@ -76,10 +73,13 @@ slist *update_switches(void) {
 
   if (resp == NULL || resp->size == 0 || resp->code != 200) {
     http_response_free(resp);
-    return NULL;
+    *switches_list = NULL;
+    return 0;
   }
 
   num_lines = strsplit_in_place(resp->body, '\n', &lines);
+  switches = malloc(num_lines * sizeof(hc_switch *));
+
   for (i = 0; i < num_lines; i++) {
     char **parts;
     int num_parts;
@@ -92,7 +92,9 @@ slist *update_switches(void) {
 
   http_response_free(resp);
   free(lines);
-  return switches;
+
+  *switches_list = switches;
+  return num_switches;
 }
 
 void toggle_switch(hc_switch *sw) {
