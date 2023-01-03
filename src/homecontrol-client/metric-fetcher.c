@@ -9,6 +9,7 @@
 #include "http.h"
 #include "constants.h"
 #include "extended_conio.h"
+#include "simple_serial.h"
 
 static int get_metrics(int sensor_number, const char *metric, int scale) {
   http_response *resp = NULL;
@@ -23,7 +24,9 @@ static int get_metrics(int sensor_number, const char *metric, int scale) {
                          sensor_number, metric, scale);
 
   printxcentered(12, "Fetching metrics, please be patient...");
+  simple_serial_set_activity_indicator(1, -1, -1);
   resp = http_request("GET", url, NULL, 0);
+  simple_serial_set_activity_indicator(0, 0, 0);
   free(url);
 
   if (resp == NULL) {
@@ -89,6 +92,7 @@ err_out:
   }
 #else
   get_metrics(sensor_number, metric, scale);
+err_out:
 #endif
   exit(0);
 }
