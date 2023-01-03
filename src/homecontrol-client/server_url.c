@@ -39,7 +39,7 @@ const char *get_server_root_url(void) {
     if (fp != NULL) {
       fgets(server_url, BUFSIZE, fp);
       fclose(fp);
-
+      *strchr(server_url,'\n') = '\0';
       return server_url;
     }
 
@@ -48,6 +48,8 @@ const char *get_server_root_url(void) {
     printf("Example: http://homecontrol.lan/a2domo\n");
     printf("\nURL: ");
     cgets(server_url, BUFSIZE);
+
+    *strchr(server_url,'\n') = '\0';
 
     fp = fopen(SRV_URL_FILE, "wb");
     if (fp != NULL) {

@@ -76,7 +76,7 @@ static void update_switch_page(int update_data) {
     gotoxy(3, PAGE_BEGIN + i);
     printf("%s", sw->name);
     
-    gotoxy(34, PAGE_BEGIN + i);
+    gotoxy(30, PAGE_BEGIN + i);
 
     if (!strcmp(sw->state, "on")) {
       revers(1);
@@ -117,6 +117,9 @@ static void update_sensor_page(int update_data) {
 
     gotoxy(3, PAGE_BEGIN + i);
     printf("%s\n", sensor->name);
+
+    gotoxy(30, PAGE_BEGIN + i);
+    printf("%ld %s", sensor->cur_value, sensor->unit);
   }
   
   cur_list_length = slist_length(sensors);
@@ -307,16 +310,19 @@ update:
     argc = 0; /* Only first time */
   }
 
+  switches_free_all();
+  sensors_free_all();
+  heating_zones_free_all();
   switch(cur_page) {
     case SWITCH_PAGE:  update_switch_page(1);  break;
     case SENSOR_PAGE:  update_sensor_page(1);  break;
     case HEATING_PAGE: update_heating_page(1); break;
   }
 
-// #ifdef __CC65__
-//   gotoxy(0,0);
-//   printf("%d  ", _heapmaxavail());
-// #endif
+#ifdef __CC65__
+  gotoxy(0,0);
+  printf("%d/%d    ", _heapmaxavail(), _heapmemavail());
+#endif
 
 command:
   while (!kbhit()) {

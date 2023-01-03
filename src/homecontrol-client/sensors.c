@@ -31,13 +31,20 @@
 
 static slist *sensors = NULL;
 
-static void sensor_add(const char *id, const char *name, int scale, char *cur_value, char *unit) {
+static void sensor_add(char *id, char *name, char scale, long cur_value, char *unit) {
   hc_sensor *sensor = malloc(sizeof(hc_sensor));
+  memset(sensor, 0, sizeof(hc_sensor));
   sensor->id        = strdup(id);
-  sensor->name      = strdup(name);
   sensor->scale     = scale;
-  sensor->cur_value = strdup(cur_value);
+  sensor->cur_value = cur_value;
   sensor->unit      = strdup(unit);
+  if (strlen(name) >= 25) {
+    name[22]='.';
+    name[23]='.';
+    name[24]='.';
+    name[25]='\0';
+  }
+  sensor->name = strdup(name);
 
   sensors = slist_append(sensors, sensor);
 }
@@ -45,7 +52,6 @@ static void sensor_add(const char *id, const char *name, int scale, char *cur_va
 static void sensor_free(hc_sensor *sensor) {
   free(sensor->id);
   free(sensor->name);
-  free(sensor->cur_value);
   free(sensor->unit);
   free(sensor);
 }
@@ -80,9 +86,13 @@ slist *update_sensors(void) {
   for (i = 0; i < num_lines; i++) {
     char **parts;
     int j, num_parts;
+#ifdef __CC65__
+  gotoxy(0,0);
+  printf("%d/%d    ", _heapmaxavail(), _heapmemavail());
+#endif
     num_parts = strsplit(lines[i],';', &parts);
     if (num_parts == 5) {
-      sensor_add(parts[0], parts[1], atoi(parts[2]), parts[3], parts[4]);
+      sensor_add(parts[0], parts[1], atoi(parts[2]), atol(parts[3]), parts[4]);
     }
     for (j = 0; j < num_parts; j++) {
       free(parts[j]);

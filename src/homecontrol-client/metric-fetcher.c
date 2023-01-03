@@ -149,6 +149,7 @@ int main(int argc, char **argv) {
     fp = fopen(SRV_URL_FILE,"r");
     if (fp != NULL) {
       fgets(server_url, BUFSIZE, fp);
+      *strchr(server_url,'\n') = '\0';
       fclose(fp);
     } else {
       printf("Can't load server URL.");
