@@ -43,7 +43,7 @@ static hc_switch **switches = NULL;
 static hc_sensor **sensors = NULL;
 static hc_climate_zone **climate_zones = NULL;
 
-static int cur_list_offset = -1;
+static int cur_list_offset = 0;
 static int cur_list_display_offset = 0;
 static int cur_list_length = -1;
 
@@ -202,13 +202,14 @@ static void select_sensor(void) {
   sensor = sensors[cur_list_offset];
 
   params = malloc(BUFSIZE);
-  snprintf(params, BUFSIZE, "%s \"%s\" %d %s", sensor->id, sensor->name, sensor->scale, sensor->unit);
+  snprintf(params, BUFSIZE, "\"%s\" \"%s\" %d \"%s\"",
+                         sensor->id, sensor->name, sensor->scale, sensor->unit);
 #ifdef __CC65__
-  exec("MTRCFTCH", params);
+  exec("GRPHVIEW", params);
   free(params);
 #else
   /* TODO */
-  printf("exec MTRCFTCH %s", params);
+  printf("exec GRPHVIEW %s", params);
   free(params);
 #endif
 }
@@ -279,6 +280,9 @@ update:
     case SWITCH_PAGE:  update_switch_page(1);  break;
     case SENSOR_PAGE:  update_sensor_page(1);  break;
     case CLIMATE_PAGE: update_climate_page(1); break;
+  }
+  if (cur_list_length > 0 && cur_list_offset == -1) {
+    update_offset(+1);
   }
 
 // #ifdef __CC65__

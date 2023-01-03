@@ -27,10 +27,14 @@
     }
     if(isset($_REQUEST["scale"])) {
       $scale = $_REQUEST["scale"] * 86400;
+    } else {
+      $scale = 86400;
+    }
+
+    if ($scale > 4 * 86400) {
       $start_date = date($list["sensor_metrics"]["date_format"], strtotime("today midnight") - $scale);
       $end_date = date($list["sensor_metrics"]["date_format"], strtotime("today midnight"));
     } else {
-      $scale = 86400;
       $start_date = date($list["sensor_metrics"]["date_format"], strtotime("-".$scale." seconds"));
       $end_date = date($list["sensor_metrics"]["date_format"], strtotime("now"));
     }
