@@ -110,7 +110,7 @@ send_again:
 
   if (!strcasecmp(filetype, "BIN")) {
     simple_serial_printf("%02x%02x\n", start_addr[0], start_addr[1]);
-    printf("Start address sent:    %02x%02x\n", start_addr[0], start_addr[1]);
+    printf("Start address:    %02x%02x\n", start_addr[0], start_addr[1]);
   }
   while(fread(&c, 1, 1, fp) > 0) {
     simple_serial_putc(c);
