@@ -1,4 +1,4 @@
-PROGRAM=http_serial_proxy
+PROGRAM=surl-server
 SOURCES := main.c ../lib/extended_string.c ../lib/simple_serial.c
 
 CFLAGS= -I ../lib -g -O0 -Wall

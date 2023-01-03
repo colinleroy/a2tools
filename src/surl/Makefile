@@ -1,12 +1,12 @@
-PROGRAM=httpcli
-SOURCES := http_client.c ../lib/simple_serial.c ../lib/extended_conio.c ../lib/http.c
+PROGRAM=surl
+SOURCES := surl-client.c ../lib/simple_serial.c ../lib/extended_conio.c ../lib/surl.c
 DEPS := 
 
 CC65_TARGET = apple2enh
 CFLAGS  = -I ../lib
 CLCFLAGS = -t $(CC65_TARGET)
-GCCCFLAGS = -g -O0 -Werror $(shell curl-config --cflags) 
-GCCLDFLAGS = $(shell curl-config --libs) 
+GCCCFLAGS = -g -O0 -Werror 
+GCCLDFLAGS = 
 
 .PHONY: all clean
 

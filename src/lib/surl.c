@@ -12,13 +12,13 @@
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ * along with this program. If not, see <surl://www.gnu.org/licenses/>.
  */
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "http.h"
+#include "surl.h"
 #include "simple_serial.h"
 #include "extended_conio.h"
 #include "math.h"
@@ -26,7 +26,7 @@
 #define BUFSIZE 255
 
 static char proxy_opened = 0;
-void http_connect_proxy(void) {
+void surl_connect_proxy(void) {
 #ifdef __CC65__
   simple_serial_open(2, SER_BAUD_9600, 1);
 #else
@@ -39,22 +39,22 @@ void http_connect_proxy(void) {
   proxy_opened = 1;
 }
 
-void http_close_proxy(void) {
+void surl_close_proxy(void) {
   simple_serial_close();
 }
 
 static char buf[BUFSIZE];
 
-http_response *http_start_request(const char *method, const char *url, const char **headers, int n_headers) {
-  http_response *resp;
+surl_response *surl_start_request(const char *method, const char *url, const char **headers, int n_headers) {
+  surl_response *resp;
   char *w;
   int i;
 
   if (proxy_opened == 0) {
-    http_connect_proxy();
+    surl_connect_proxy();
   }
 
-  resp = malloc(sizeof(http_response));
+  resp = malloc(sizeof(surl_response));
   if (resp == NULL) {
     return NULL;
   }
@@ -102,7 +102,7 @@ http_response *http_start_request(const char *method, const char *url, const cha
   return resp;
 }
 
-size_t http_receive_data(http_response *resp, char *buffer, size_t max_len) {
+size_t surl_receive_data(surl_response *resp, char *buffer, size_t max_len) {
   size_t to_read = min(resp->size - resp->cur_pos, max_len);
   size_t r;
 
@@ -122,7 +122,7 @@ size_t http_receive_data(http_response *resp, char *buffer, size_t max_len) {
 static char overwritten_char = '\0';
 static size_t overwritten_offset = 0;
 
-size_t http_receive_lines(http_response *resp, char *buffer, size_t max_len) {
+size_t surl_receive_lines(surl_response *resp, char *buffer, size_t max_len) {
   size_t to_read = min(resp->size - resp->cur_pos, max_len);
   size_t r = 0;
   size_t last_return = 0;
@@ -178,7 +178,7 @@ size_t http_receive_lines(http_response *resp, char *buffer, size_t max_len) {
   return r;
 }
 
-void http_response_free(http_response *resp) {
+void surl_response_free(surl_response *resp) {
   free(resp->content_type);
   free(resp);
 }

@@ -18,8 +18,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "http.h"
-#include "simple_serial.h"
 #include "extended_conio.h"
 #include "extended_string.h"
 

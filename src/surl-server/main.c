@@ -54,7 +54,9 @@ int main(int argc, char **argv)
     exit(1);
   }
 
-  simple_serial_open(argv[1], B9600, 1);
+  if (simple_serial_open(argv[1], B9600, 1) != 0) {
+    exit(1);
+  }
 
   atexit((void *)simple_serial_close);
   curl_global_init(CURL_GLOBAL_ALL);

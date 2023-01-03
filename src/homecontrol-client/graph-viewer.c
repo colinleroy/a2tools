@@ -29,7 +29,7 @@
 #include "tgi_compat.h"
 #include "constants.h"
 #include "extended_conio.h"
-#include "http.h"
+#include "surl.h"
 
 #ifdef __CC65__
 #pragma code-name (push, "LOWCODE")
@@ -71,7 +71,7 @@ int main(int argc, char **argv) {
   char *server_url = NULL;
   FILE *fp;
   char *buf = NULL;
-  http_response *response = NULL;
+  surl_response *response = NULL;
   char *text;
   long prev_t = -1L;
   long prev_v = -1L;
@@ -142,7 +142,7 @@ int main(int argc, char **argv) {
                          server_url,
                          argv[1], argv[3], argv[4]);
 
-  response = http_start_request("GET", buf, NULL, 0);
+  response = surl_start_request("GET", buf, NULL, 0);
   if (response == NULL) {
 #ifdef __CC65__
     printf("Cannot allocate response. (%zu avail)", _heapmaxavail());
@@ -154,11 +154,11 @@ int main(int argc, char **argv) {
     gotoxy(12, 10);
     printf("Error loading metrics.");
     cgetc();
-    http_response_free(response);
+    surl_response_free(response);
     goto err_out;
   }
 
-  while (http_receive_lines(response, buf, BIG_BUFSIZE - 1) > 0) {
+  while (surl_receive_lines(response, buf, BIG_BUFSIZE - 1) > 0) {
     cur_line = buf;
 
     while (cur_line != NULL && *cur_line != '\0') {
