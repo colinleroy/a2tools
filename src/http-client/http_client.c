@@ -24,7 +24,7 @@
 #include "extended_conio.h"
 
 #define BUFSIZE 255
-static char buf[BUFSIZE];
+static char *buf;
 
 int main(int argc, char **argv) {
   http_response *response = NULL;
@@ -34,16 +34,22 @@ int main(int argc, char **argv) {
   http_connect_proxy();
 
 again:
-  printf("Enter URL: ");
-  cgets(buf, BUFSIZE);
-  if (*strchr(buf, '\n'))
+  if (argc > 1) {
+    buf = strdup(argv[1]);
+  } else {
+    buf = malloc(BUFSIZE);
+    printf("Enter URL: ");
+    cgets(buf, BUFSIZE);
+  }
+
+  if (strchr(buf, '\n'))
     *strchr(buf, '\n') = '\0';
 
   response = http_start_request("GET", buf, headers, 1);
 
-  printf("Got response %d (%zu bytes)\n", response->code, response->size);
+  printf("Got response %d (%zu bytes), %s\n", response->code, response->size, response->content_type);
   buffer = malloc(BUFSIZE);
-  while ((r = http_receive_lines(response, buffer, BUFSIZE - 1)) > 0) {
+  while ((r = http_receive_data(response, buffer, BUFSIZE - 1)) > 0) {
     printf("%s", buffer);
   }
   
@@ -51,8 +57,11 @@ again:
   
   http_response_free(response);
   free(buffer);
+  free(buf);
 
-  goto again;
+  if (argc == 1) {
+    goto again;
+  }
   
   exit(0);
 }
