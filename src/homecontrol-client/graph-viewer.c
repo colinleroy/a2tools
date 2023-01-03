@@ -8,6 +8,7 @@
 #ifdef __CC65__
 #include <apple2enh.h>
 #endif
+#include "math.h"
 #include "tgi_compat.h"
 #include "constants.h"
 #include "extended_conio.h"
@@ -25,15 +26,15 @@ static char *metric, *unit;
 
 #define VAL_ZOOM_FACTOR ((max_val - min_val) / VAL_SCR_INTERVAL)
 #define VAL_OFFSET_INTERVAL(val) ((val - min_val) / VAL_ZOOM_FACTOR)
-#define VAL_Y(val) (MIN_VAL_SCR_Y - VAL_OFFSET_INTERVAL(val))
+#define VAL_Y(val) max(0L,(MIN_VAL_SCR_Y - VAL_OFFSET_INTERVAL(val)))
 
 #define MIN_TIME_SCR_X 5L
-#define MAX_TIME_SCR_X 285L
+#define MAX_TIME_SCR_X 275L
 #define TIME_SCR_INTERVAL (MIN_TIME_SCR_X - MAX_TIME_SCR_X)
 
 #define TIME_ZOOM_FACTOR (((end_time - start_time)) / TIME_SCR_INTERVAL)
 #define TIME_OFFSET_INTERVAL(t) ((t - start_time) / TIME_ZOOM_FACTOR)
-#define TIME_X(t) (MIN_TIME_SCR_X - TIME_OFFSET_INTERVAL(t))
+#define TIME_X(t) max(0L,(MIN_TIME_SCR_X - TIME_OFFSET_INTERVAL(t)))
 
 static void display_graph(void) {
   FILE *fp;
@@ -57,30 +58,22 @@ static void display_graph(void) {
 
   buf = malloc(BUFSIZE);
   /* get mins and maxes */
-  while (fgets(buf, BUFSIZE, fp) != NULL) {
-    long timestamp;
-    long value;
-    if (strchr(buf, ';')) {
-      value = atol(strchr(buf, ';') + 1);
-      *strchr(buf, ';') = '\0';
-      timestamp = atol(buf);
-    } else {
-      continue;
-    }
-
-    if (start_time == -1) {
-      start_time = timestamp;
-    }
-    end_time = timestamp;
-
-    if (value < min_val) {
-      min_val = value;
-    }
-    if (value > max_val) {
-      max_val = value;
+  if (fgets(buf, BUFSIZE, fp) != NULL) {
+    if(!strncmp(buf, "TIME;", 5) && strchr(buf + 6, ';')) {
+      char *w = strchr(buf, ';') + 1;
+      start_time = atol(w);
+      w = strchr(w,';') + 1;
+      end_time = atol(w);
     }
   }
-  rewind(fp);
+  if (fgets(buf, BUFSIZE, fp) != NULL) {
+    if(!strncmp(buf, "VALS;", 5) && strchr(buf + 5, ';')) {
+      char *w = strchr(buf, ';') + 1;
+      min_val = atol(w);
+      w = strchr(w,';') + 1;
+      max_val = atol(w);
+    }
+  }
 
   line = 20;
   gotoxy(0, line);
@@ -142,23 +135,28 @@ static void display_graph(void) {
     } else {
       continue;
     }
-    if (prev_t == -1L) {
-      tgi_setpixel((int)TIME_X(timestamp), (int)VAL_Y(value));
-      // printf("pix at %d,%d (%ld,%ld)\n", (int)TIME_X(timestamp), (int)VAL_Y(value), TIME_X(timestamp), VAL_Y(value));
+    if (prev_t == -1L && value == 0L) {
+      /* Skip first val */
     } else {
-      tgi_line((int)TIME_X(prev_t), (int)VAL_Y(prev_v), (int)TIME_X(timestamp), (int)VAL_Y(value));
+      if (prev_v == -1L){
+        prev_v = value;
+        prev_t = start_time;
+      }
+      if ((int)TIME_X(timestamp) - (int)TIME_X(prev_t) < 6) {
+        tgi_line((int)TIME_X(prev_t), (int)VAL_Y(prev_v), (int)TIME_X(timestamp), (int)VAL_Y(value));
+      } else {
+        tgi_line((int)TIME_X(prev_t), (int)VAL_Y(prev_v), (int)TIME_X(prev_t), (int)VAL_Y(value));
+        tgi_line((int)TIME_X(prev_t), (int)VAL_Y(value), (int)TIME_X(timestamp), (int)VAL_Y(value));
+      }
       // printf("line from %d,%d-%d,%d (%ld,%ld-%ld,%ld)\n",
       //         (int)TIME_X(prev_t), (int)VAL_Y(prev_v), (int)TIME_X(timestamp), (int)VAL_Y(value),
       //         TIME_X(prev_t), VAL_Y(prev_v), TIME_X(timestamp), VAL_Y(value));
+      prev_t = timestamp;
+      prev_v = value;
     }
-    prev_t = timestamp;
-    prev_v = value;
   }
 
   free(buf);
-
-  cgetc();
-  tgi_done();
 
   if (fclose(fp) != 0) {
     printf("Cannot close file: %s\n", strerror(errno));
@@ -166,10 +164,13 @@ static void display_graph(void) {
     return;
   }
 
+  cgetc();
+  tgi_done();
+
 }
 
 int main(int argc, char **argv) {
-  int sensor_number;
+  char *sensor_number;
   char *buf = NULL;
   int scale;
 
@@ -178,17 +179,23 @@ int main(int argc, char **argv) {
   clrscr();
 
   if (argc > 4) {
-    sensor_number = atoi(argv[1]);
+    sensor_number = argv[1];
     metric = argv[2];
     scale = atoi(argv[3]);
     unit = argv[4];
   } else {
-    sensor_number=4;
+    gotoxy(12, 13);
+    printf("Missing argument(s).");
+    cgetc();
+    goto err_out;
   }
 
   display_graph();
-
+err_out:
   tgi_uninstall();
+  clrscr();
+  gotoxy(12, 12);
+  printf("Please wait...");
 #ifdef __CC65__
   buf = malloc(BUFSIZE);
   sprintf(buf, "2 %s", sensor_number);

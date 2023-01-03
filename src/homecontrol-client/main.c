@@ -26,7 +26,7 @@ static slist *sensors = NULL;
 static slist *sensor_metrics = NULL;
 static slist *heating = NULL;
 
-static hc_sensor *cur_sensor = NULL;
+static char *cur_sensor = NULL;
 static int cur_list_offset = -1;
 static int cur_list_display_offset = 0;
 static int cur_list_length = -1;
@@ -105,16 +105,16 @@ static void update_sensor_page(int update_data) {
   cur_list_length = slist_length(sensors);
 }
 
-static void update_sensor_metric_page(int update_data, hc_sensor *sensor) {
+static void update_sensor_metric_page(int update_data, char *sensor_id) {
   slist *w;
   int i;
 
-  if (sensor == NULL) {
+  if (sensor_id == NULL) {
     return;
   }
 
   if (update_data) {
-    sensor_metrics = update_sensor_metrics(sensor->id);
+    sensor_metrics = update_sensor_metrics(sensor_id);
   }
 
   if (sensor_metrics == NULL) {
@@ -260,7 +260,7 @@ static void select_sensor(void) {
   }
 
   sensor = w->data;
-  cur_sensor = sensor;
+  cur_sensor = strdup(sensor->id);
   cur_page = METRIC_PAGE;
 }
 
@@ -333,12 +333,17 @@ update:
     cur_list_display_offset = 0;
     prev_page = cur_page;
     if (cur_page != METRIC_PAGE) {
+      free(cur_sensor);
       cur_sensor = NULL;
     }
   }
   
   if (argc > 1) {
     cur_page = atoi(argv[1]);
+    if (cur_page == SENSOR_PAGE && argc > 2) {
+      cur_page = METRIC_PAGE;
+      cur_sensor = strdup(argv[2]);
+    }
     argc = 0; /* Only first time */
   }
 

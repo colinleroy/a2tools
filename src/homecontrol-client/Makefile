@@ -9,7 +9,6 @@ homectrl_SOURCES := main.c network.c \
 
 mtrcftch_SOURCES := metric-fetcher.c \
 	../lib/simple_serial.c \
-	../lib/extended_conio.c \
 	../lib/http.c
 
 grphview_SOURCES := graph-viewer.c \
