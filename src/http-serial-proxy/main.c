@@ -21,6 +21,7 @@
 #include <curl/curl.h>
 #include "simple_serial.h"
 #include "extended_string.h"
+#include "math.h"
 
 #define BUFSIZE 255
 
@@ -35,7 +36,6 @@ struct _curl_buffer {
 };
 
 static curl_buffer *curl_request(char *method, char *url, char **headers, int n_headers);
-static void send_response(curl_buffer *curlbuf);
 static void curl_buffer_free(curl_buffer *curlbuf);
 
 int main(int argc, char **argv)
@@ -44,6 +44,7 @@ int main(int argc, char **argv)
   char *method = NULL, *url = NULL;
   char **headers = NULL;
   int i, n_headers = 0;
+  int bufsize = 0, sent = 0;
 
   if (argc < 2) {
     printf("Usage: %s [serial tty]\n", argv[0]);
@@ -73,7 +74,8 @@ int main(int argc, char **argv)
     if (simple_serial_gets(reqbuf, BUFSIZE) != NULL) {
       char **parts;
       int num_parts, i;
-      
+
+new_req:
       num_parts = strsplit(reqbuf, ' ', &parts);
       if (num_parts < 2) {
         printf("Could not parse request '%s'\n", reqbuf);
@@ -112,7 +114,29 @@ int main(int argc, char **argv)
     
     response = curl_request(method, url, headers, n_headers);
     
-    send_response(response);
+    simple_serial_printf("%d,%d\n", response->response_code, response->size);
+    if (simple_serial_gets(reqbuf, BUFSIZE) != NULL) {
+      if(!strncmp("SEND ", reqbuf, 5)) {
+        bufsize = atoi(reqbuf + 5);
+        sent = 0;
+      } else {
+        goto new_req;
+      }
+    }
+    while (sent < response->size) {
+      int to_send = min(bufsize, response->size - sent);
+      sent += simple_serial_write(response->buffer + sent, sizeof(char), to_send);
+      printf("sent %d (total %d)\n", to_send, sent);
+
+      if (simple_serial_gets(reqbuf, BUFSIZE) != NULL) {
+        if(!strncmp("SEND ", reqbuf, 5)) {
+          bufsize = atoi(reqbuf + 5);
+        }
+      } else {
+        goto new_req;
+      }
+    }
+
     printf("sent %d response to %s %s (%ld bytes)\n", response->response_code, method, url, response->size);
 
     curl_buffer_free(response);
@@ -220,9 +244,4 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
 
   curl_easy_cleanup(curl);
   return curlbuf;
-}
-
-static void send_response(curl_buffer *curlbuf) {
-  simple_serial_printf("%d,%d\n", curlbuf->response_code, curlbuf->size);
-  simple_serial_write(curlbuf->buffer, sizeof(char), curlbuf->size);
 }

@@ -56,11 +56,11 @@ static int get_metrics(const char *sensor_id, int scale, char *unit) {
   printf("Fetching metrics, please be patient...");
   simple_serial_set_activity_indicator(1, -1, -1);
   resp = http_start_request("GET", buf, NULL, 0);
-  simple_serial_set_activity_indicator(0, 0, 0);
   free(buf);
 
   if (resp == NULL || resp->code != 200) {
     printf("Could not get response\n");
+    simple_serial_set_activity_indicator(0, 0, 0);
     http_response_free(resp);
     cgetc();
     return -1;
@@ -68,6 +68,7 @@ static int get_metrics(const char *sensor_id, int scale, char *unit) {
 
   body = malloc(resp->size + 1);
   http_receive_data(resp, body, resp->size + 1);
+  simple_serial_set_activity_indicator(0, 0, 0);
 
   gotoxy(12, 13);
   printf("Writing metrics...");
