@@ -5,10 +5,10 @@ homectrl_SOURCES := main.c network.c \
 	../lib/simple_serial.c \
 	../lib/extended_conio.c \
 	../lib/extended_string.c \
-	../lib/http.c
+	../lib/surl.c
 
 grphview_SOURCES := graph-viewer.c \
-	../lib/http.c \
+	../lib/surl.c \
 	../lib/simple_serial.c \
 	../lib/tgi_sdl.c
 

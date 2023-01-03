@@ -23,7 +23,7 @@
 #include "extended_conio.h"
 #include "extended_string.h"
 #include "math.h"
-#include "http.h"
+#include "surl.h"
 #include "constants.h"
 #include "switches.h"
 #include "sensors.h"
@@ -234,7 +234,7 @@ static int select_item(void) {
 }
 
 static void cleanup(void) {
-  http_close_proxy();
+  surl_close_proxy();
   switches_free_all();
   sensors_free_all();
   climate_zones_free_all();
@@ -245,7 +245,7 @@ static long refresh_counter = REFRESH_DELAY;
 int main(int argc, char **argv) {
   char command;
 
-  http_connect_proxy();
+  surl_connect_proxy();
 
   clrscr();
   screensize(&scrw, &scrh);

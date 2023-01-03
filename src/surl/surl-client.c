@@ -19,7 +19,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include "http.h"
+#include "surl.h"
 #include "simple_serial.h"
 #include "extended_conio.h"
 
@@ -27,11 +27,11 @@
 static char *buf;
 
 int main(int argc, char **argv) {
-  http_response *response = NULL;
+  surl_response *response = NULL;
   const char *headers[1] = {"Accept: text/*"};
   char *buffer;
   size_t r;
-  http_connect_proxy();
+  surl_connect_proxy();
 
 again:
   if (argc > 1) {
@@ -45,17 +45,17 @@ again:
   if (strchr(buf, '\n'))
     *strchr(buf, '\n') = '\0';
 
-  response = http_start_request("GET", buf, headers, 1);
+  response = surl_start_request("GET", buf, headers, 1);
 
   printf("Got response %d (%zu bytes), %s\n", response->code, response->size, response->content_type);
   buffer = malloc(BUFSIZE);
-  while ((r = http_receive_data(response, buffer, BUFSIZE - 1)) > 0) {
+  while ((r = surl_receive_data(response, buffer, BUFSIZE - 1)) > 0) {
     printf("%s", buffer);
   }
   
   printf("done\n");
   
-  http_response_free(response);
+  surl_response_free(response);
   free(buffer);
   free(buf);
 

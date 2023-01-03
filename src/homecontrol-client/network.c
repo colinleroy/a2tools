@@ -21,19 +21,19 @@
 #include "simple_serial.h"
 
 char *get_url(const char *url) {
-  http_response *resp;
+  surl_response *resp;
   char *buffer = NULL;
 
   simple_serial_set_activity_indicator(1, 39, 0);
-  resp = http_start_request("GET", url, NULL, 0);
+  resp = surl_start_request("GET", url, NULL, 0);
 
   if (resp != NULL && resp->code == 200) {
     buffer = malloc(resp->size + 1);
     if (buffer != NULL) {
-      http_receive_data(resp, buffer, resp->size);
+      surl_receive_data(resp, buffer, resp->size);
     }
   }
-  http_response_free(resp);
+  surl_response_free(resp);
   simple_serial_set_activity_indicator(0, 0, 0);
   return buffer;
 }
