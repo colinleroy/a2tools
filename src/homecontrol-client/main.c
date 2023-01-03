@@ -27,7 +27,7 @@
 #include "constants.h"
 #include "switches.h"
 #include "sensors.h"
-#include "heating.h"
+#include "climate.h"
 #include "server_url.h"
 
 #ifdef __CC65__
@@ -41,7 +41,7 @@ static int prev_page = -1;
 
 static hc_switch **switches = NULL;
 static hc_sensor **sensors = NULL;
-static hc_heating_zone **heating_zones = NULL;
+static hc_climate_zone **climate_zones = NULL;
 
 static int cur_list_offset = -1;
 static int cur_list_display_offset = 0;
@@ -106,14 +106,14 @@ static void update_sensor_page(int update_data) {
   }
 }
 
-static void update_heating_page(int update_data) {
+static void update_climate_page(int update_data) {
   int i;
 
   if (update_data) {
-    cur_list_length = update_heating_zones(&heating_zones);
+    cur_list_length = update_climate_zones(&climate_zones);
   }
 
-  if (heating_zones == NULL) {
+  if (climate_zones == NULL) {
     clear_list(0);
     printxcentered(12, "Can't load data.");
     return;
@@ -121,19 +121,19 @@ static void update_heating_page(int update_data) {
 
   clear_list(3);
   for (i = 0; i + cur_list_display_offset < cur_list_length && i < PAGE_HEIGHT; i++) {
-    hc_heating_zone *heat = heating_zones[i + cur_list_display_offset];
+    hc_climate_zone *zone = climate_zones[i + cur_list_display_offset];
 
     gotoxy(3, PAGE_BEGIN + i);
-    printf("%s", heat->name);
+    printf("%s", zone->name);
     
     gotoxy(24, PAGE_BEGIN + i);
-    printf("%4s/%2d[C %2s%%H", heat->cur_temp, heat->set_temp, heat->cur_humidity);
+    printf("%4s/%2d[C %2s%%H", zone->cur_temp, zone->set_temp, zone->cur_humidity);
   }
 }
 
 static void print_header(void) {
   printxcentered(0, "HOME CONTROL");
-  printxcentered(1, "1. Switches ! 2. Sensors ! 3. Heating");
+  printxcentered(1, "1. Switches ! 2. Sensors ! 3. Climate");
   gotoxy(0, 2);
   chline(scrw);
 }
@@ -181,7 +181,7 @@ static void update_offset(int new_offset) {
     switch(cur_page) {
       case SWITCH_PAGE:  update_switch_page(0);  break;
       case SENSOR_PAGE:  update_sensor_page(0);  break;
-      case HEATING_PAGE: update_heating_page(0); break;
+      case CLIMATE_PAGE: update_climate_page(0); break;
     }
   }
 
@@ -213,12 +213,12 @@ static void select_sensor(void) {
 #endif
 }
 
-static int select_heating_zone(void) {
-  hc_heating_zone *zone = heating_zones[cur_list_offset];
+static int select_climate_zone(void) {
+  hc_climate_zone *zone = climate_zones[cur_list_offset];
 
-  if (!configure_heating_zone(zone)) {
+  if (!configure_climate_zone(zone)) {
     /* Redraw on config screen */
-    update_heating_page(0);
+    update_climate_page(0);
     return 0;
   }
   return 1;
@@ -228,7 +228,7 @@ static int select_item(void) {
   switch(cur_page) {
     case SWITCH_PAGE: select_switch(); return 1;
     case SENSOR_PAGE:  select_sensor();  return 1;
-    case HEATING_PAGE: return select_heating_zone();
+    case CLIMATE_PAGE: return select_climate_zone();
   }
 }
 
@@ -265,18 +265,18 @@ update:
 
   switches_free_all();
   sensors_free_all();
-  heating_zones_free_all();
+  climate_zones_free_all();
   cur_list_length = 0;
   switch(cur_page) {
     case SWITCH_PAGE:  update_switch_page(1);  break;
     case SENSOR_PAGE:  update_sensor_page(1);  break;
-    case HEATING_PAGE: update_heating_page(1); break;
+    case CLIMATE_PAGE: update_climate_page(1); break;
   }
 
-#ifdef __CC65__
-  gotoxy(0,0);
-  printf("%d/%d    ", _heapmaxavail(), _heapmemavail());
-#endif
+// #ifdef __CC65__
+//   gotoxy(0,0);
+//   printf("%d/%d    ", _heapmaxavail(), _heapmemavail());
+// #endif
 
 command:
   while (!kbhit()) {
@@ -292,7 +292,7 @@ command:
   switch(command) {
     case '1': cur_page = SWITCH_PAGE; goto update;
     case '2': cur_page = SENSOR_PAGE; goto update;
-    case '3': cur_page = HEATING_PAGE; goto update;
+    case '3': cur_page = CLIMATE_PAGE; goto update;
     case CH_ENTER:
 #ifndef __CC65__
     case 'e':
