@@ -91,6 +91,10 @@ size_t http_receive_data(http_response *resp, char *buffer, size_t max_len) {
   size_t to_read = min(resp->size - resp->cur_pos, max_len);
   size_t r;
 
+  if (to_read == 0) {
+    return 0;
+  }
+
   simple_serial_printf("SEND %zu\n", to_read);
   r = simple_serial_read(buffer, sizeof(char), to_read);
 
@@ -114,6 +118,10 @@ size_t http_receive_lines(http_response *resp, char *buffer, size_t max_len) {
     r = max_len - overwritten_offset;
     overwritten_char = '\0';
     to_read -= r;
+  }
+
+  if (to_read == 0) {
+    return 0;
   }
 
   simple_serial_printf("SEND %zu\n", to_read);
