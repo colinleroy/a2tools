@@ -149,7 +149,7 @@ static size_t __simple_serial_read_with_timeout(char *ptr, size_t size, size_t n
   if (serial_activity_indicator_enabled) {
     activity_cb(1);
   }
-  while (i < (nmemb - 1)) {
+  while (i < nmemb) {
     b = __simple_serial_getc_with_timeout(with_timeout);
     if (b == EOF) {
       break;

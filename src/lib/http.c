@@ -69,7 +69,7 @@ http_response *http_start_request(const char *method, const char *url, const cha
   }
   simple_serial_puts("\n");
 
-  simple_serial_gets_with_timeout(buf, BUFSIZE);
+  simple_serial_gets(buf, BUFSIZE);
   if (buf == NULL || buf[0] == '\0') {
     resp->code = 509;
     return resp;
@@ -88,8 +88,11 @@ http_response *http_start_request(const char *method, const char *url, const cha
 }
 
 size_t http_receive_data(http_response *resp, char *buffer, size_t max_len) {
-  size_t to_read = min(resp->size - resp->cur_pos, max_len - 1);
-  size_t r = simple_serial_read(buffer, sizeof(char), to_read);
+  size_t to_read = min(resp->size - resp->cur_pos, max_len);
+  size_t r;
+
+  r = simple_serial_read(buffer, sizeof(char), to_read);
+
   buffer[r] = '\0';
   resp->cur_pos += r;
 
@@ -100,14 +103,14 @@ static char overwritten_char = '\0';
 static size_t overwritten_offset = 0;
 
 size_t http_receive_lines(http_response *resp, char *buffer, size_t max_len) {
-  size_t to_read = min(resp->size - resp->cur_pos, max_len - 1);
+  size_t to_read = min(resp->size - resp->cur_pos, max_len);
   size_t r = 0;
   size_t last_return = 0;
 
   if (overwritten_char != '\0') {
     *(buffer + overwritten_offset) = overwritten_char;
-    memmove(buffer, buffer + overwritten_offset, max_len - 1 - overwritten_offset);
-    r = max_len - 1 - overwritten_offset;
+    memmove(buffer, buffer + overwritten_offset, max_len - overwritten_offset);
+    r = max_len - overwritten_offset;
     overwritten_char = '\0';
     to_read -= r;
   }
@@ -131,7 +134,7 @@ size_t http_receive_lines(http_response *resp, char *buffer, size_t max_len) {
   buffer[r] = '\0';
   resp->cur_pos += r;
 
-  if (resp->size == resp->cur_pos) {
+  if (resp->cur_pos == resp->size) {
     overwritten_char = '\0';
   }
 

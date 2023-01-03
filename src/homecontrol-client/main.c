@@ -245,7 +245,7 @@ int main(int argc, char **argv) {
   char command;
 
   http_connect_proxy();
-  atexit((void *)cleanup);
+
   clrscr();
   screensize(&scrw, &scrh);
   
