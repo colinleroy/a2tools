@@ -50,6 +50,7 @@ again:
   printf("done\n");
   
   http_response_free(response);
+  free(buffer);
 
   goto again;
   
