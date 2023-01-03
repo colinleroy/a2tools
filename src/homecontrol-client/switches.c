@@ -36,13 +36,7 @@ static void switch_add(char *id, char *name, char *state) {
   memset(sw, 0, sizeof(hc_switch));
   sw->id    = strdup(id);
   sw->state = strdup(state);
-  if (strlen(name) >= 25) {
-    name[22]='.';
-    name[23]='.';
-    name[24]='.';
-    name[25]='\0';
-  }
-  sw->name = strdup(name);
+  sw->name  = strndup_ellipsis(name, 25);
 
   switches = slist_append(switches, sw);
 }
@@ -71,32 +65,29 @@ slist *update_switches(void) {
   http_response *resp;
   char **lines = NULL;
   int i, num_lines;
-  char *url = malloc(BUFSIZE);
+  char *url;
 
+  switches_free_all();
+
+  url = malloc(BUFSIZE);
   snprintf(url, BUFSIZE, "%s/switches.php", get_server_root_url());
   resp = get_url(url);
   free(url);
-
-  switches_free_all();
 
   if (resp == NULL || resp->size == 0) {
     http_response_free(resp);
     return NULL;
   }
 
-  num_lines = strsplit(resp->body, '\n', &lines);
+  num_lines = strsplit_in_place(resp->body, '\n', &lines);
   for (i = 0; i < num_lines; i++) {
     char **parts;
-    int j, num_parts;
-    num_parts = strsplit(lines[i],';', &parts);
+    int num_parts;
+    num_parts = strsplit_in_place(lines[i],';', &parts);
     if (num_parts == 3) {
       switch_add(parts[0], parts[1], parts[2]);
     }
-    for (j = 0; j < num_parts; j++) {
-      free(parts[j]);
-    }
     free(parts);
-    free(lines[i]);
   }
 
   http_response_free(resp);
@@ -117,5 +108,6 @@ void toggle_switch(hc_switch *sw) {
 
   free(url);
   http_response_free(resp);
+
   for (i = 0; i < 10000; i++); /* wait long enough */
 }

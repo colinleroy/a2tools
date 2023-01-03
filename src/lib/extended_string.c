@@ -19,24 +19,17 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-int strsplit(char *in, char split, char ***out) {
+static int _strsplit_int(char *in, char split, char ***out, char in_place) {
   int i;
-  int n_tokens = 1;
-  char **result;
+  int n_tokens;
+  char **result = NULL;
 
-
-  for (i = 0; in[i] != '\0'; i++) {
-    if (in[i] == split) {
-      n_tokens++;
-    }
-  }
-
-  result = malloc(n_tokens * sizeof(void *));
   n_tokens = 0;
   for (i = 0; in[i] != '\0'; i++) {
     if (in[i] == split) {
+      result = realloc(result, (n_tokens + 1) * sizeof(void *));
       in[i] = '\0';
-      result[n_tokens] = strdup(in);
+      result[n_tokens] = in_place ? in : strdup(in);
       in = in + i + 1; i = 0;
       n_tokens++;
       if (*in == '\0')
@@ -44,11 +37,20 @@ int strsplit(char *in, char split, char ***out) {
     }
   }
   /* last token */
+  result = realloc(result, (n_tokens + 1) * sizeof(void *));
   result[n_tokens] = strdup(in);
   n_tokens++;
   
   *out = result;
   return n_tokens;
+}
+
+int strsplit(char *in, char split, char ***out) {
+  return _strsplit_int(in, split, out, 0);
+}
+
+int strsplit_in_place(char *in, char split, char ***out) {
+  return _strsplit_int(in, split, out, 1);
 }
 
 char *trim(const char *in) {
@@ -76,5 +78,20 @@ char *trim(const char *in) {
   }
 
   out[o] = '\0';
+  return out;
+}
+
+char *strndup_ellipsis(char *in, int len) {
+  char *out;
+  if (strlen(in) < len) {
+    return strdup(in);
+  }
+  out = malloc(len + 1);
+  strncpy(out, in, len - 1);
+  out[len-3]='.';
+  out[len-2]='.';
+  out[len-1]='.';
+  out[len]='\0';
+
   return out;
 }
