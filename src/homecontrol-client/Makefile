@@ -1,6 +1,6 @@
 PROGRAM=homectrl mtrcftch grphview
 homectrl_SOURCES := main.c network.c \
-	switches.c sensors.c heating.c \
+	switches.c sensors.c climate.c \
 	server_url.c \
 	../lib/simple_serial.c \
 	../lib/extended_conio.c \

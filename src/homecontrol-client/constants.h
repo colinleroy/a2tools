@@ -8,7 +8,7 @@
 
 #define SWITCH_PAGE 1
 #define SENSOR_PAGE 2
-#define HEATING_PAGE 3
+#define CLIMATE_PAGE 3
 
 #define REFRESH_DELAY 60000L
 

@@ -25,12 +25,12 @@
 
 #include "constants.h"
 #include "network.h"
-#include "heating.h"
+#include "climate.h"
 #include "server_url.h"
 
-static hc_heating_zone **heating_zones = NULL;
-static char *heating_zones_data = NULL;
-static int num_heating_zones = 0;
+static hc_climate_zone **climate_zones = NULL;
+static char *climate_zones_data = NULL;
+static int num_climate_zones = 0;
 
 static char *do_round(char *floatval, int num) {
   char *decdot = strchr(floatval, '.');
@@ -58,55 +58,55 @@ static char *avg_vals(char *in) {
 
   return in;
 }
-static void heating_add(char *id, char *name, char *set_temp, char *cur_temp, char *cur_humidity, char manual_mode) {
-  hc_heating_zone *heat = malloc(sizeof(hc_heating_zone));
-  memset(heat, 0, sizeof(hc_heating_zone));
+static void climate_zone_add(char *id, char *name, char *set_temp, char *cur_temp, char *cur_humidity, char manual_mode) {
+  hc_climate_zone *zone = malloc(sizeof(hc_climate_zone));
+  memset(zone, 0, sizeof(hc_climate_zone));
 
-  heat->id           = id;
-  heat->set_temp     = atoi(set_temp);
-  heat->manual_mode  = manual_mode;
-  heat->name         = ellipsis(name, 22);
+  zone->id           = id;
+  zone->set_temp     = atoi(set_temp);
+  zone->manual_mode  = manual_mode;
+  zone->name         = ellipsis(name, 22);
 
-  if (!strcmp(heat->id, "-1")) {
-    heat->set_temp   = 21;
+  if (!strcmp(zone->id, "-1")) {
+    zone->set_temp   = 21;
   }
 
   if (strcmp(cur_temp, "n/a")) {
     if (strstr(cur_temp, " - ")) {
-      heat->cur_temp = avg_vals(cur_temp);
+      zone->cur_temp = avg_vals(cur_temp);
     } else {
-      heat->cur_temp = do_round(cur_temp, 0);
+      zone->cur_temp = do_round(cur_temp, 0);
     }
   } else {
-    heat->cur_temp     = "NA";
+    zone->cur_temp     = "NA";
   }
   if (strcmp(cur_humidity, "n/a")) {
     if (strstr(cur_humidity, " - ")) {
-      heat->cur_humidity = avg_vals(cur_humidity);
+      zone->cur_humidity = avg_vals(cur_humidity);
     } else {
-      heat->cur_humidity = do_round(cur_humidity, 0);
+      zone->cur_humidity = do_round(cur_humidity, 0);
     }
   } else {
-    heat->cur_humidity = "NA";
+    zone->cur_humidity = "NA";
   }
 
-  heating_zones[num_heating_zones++] = heat;
+  climate_zones[num_climate_zones++] = zone;
 }
 
-static void heating_free(hc_heating_zone *heat) {
-  free(heat);
+static void climate_zone_free(hc_climate_zone *zone) {
+  free(zone);
 }
 
-void heating_zones_free_all(void) {
+void climate_zones_free_all(void) {
   int i;
-  for (i = 0; i < num_heating_zones; i++) {
-    heating_free(heating_zones[i]);
+  for (i = 0; i < num_climate_zones; i++) {
+    climate_zone_free(climate_zones[i]);
   }
-  free(heating_zones);
-  free(heating_zones_data);
-  heating_zones = NULL;
-  heating_zones_data = NULL;
-  num_heating_zones = 0;
+  free(climate_zones);
+  free(climate_zones_data);
+  climate_zones = NULL;
+  climate_zones_data = NULL;
+  num_climate_zones = 0;
 }
 
 static int can_set_away = 0;
@@ -122,13 +122,13 @@ int climate_can_set_away(void) {
   return can_set_away;
 }
 
-int update_heating_zones(hc_heating_zone ***heating_zones_list) {
+int update_climate_zones(hc_climate_zone ***climate_zones_list) {
   http_response *resp;
   char **lines = NULL;
   int i, num_lines;
   char *url;
 
-  heating_zones_free_all();
+  climate_zones_free_all();
 
   url = malloc(BUFSIZE);
   snprintf(url, BUFSIZE, "%s/climate.php", get_server_root_url());
@@ -137,7 +137,7 @@ int update_heating_zones(hc_heating_zone ***heating_zones_list) {
 
   if (resp == NULL || resp->size == 0 || resp->code != 200) {
     http_response_free(resp);
-    *heating_zones_list = NULL;
+    *climate_zones_list = NULL;
     return 0;
   }
 
@@ -158,44 +158,44 @@ int update_heating_zones(hc_heating_zone ***heating_zones_list) {
     }
   }
 
-  heating_zones = malloc((num_lines - 3) * sizeof(hc_heating_zone *));
+  climate_zones = malloc((num_lines - 3) * sizeof(hc_climate_zone *));
   for (i = 3; i < num_lines; i++) {
     char **parts;
     int num_parts;
     num_parts = strsplit_in_place(lines[i],';', &parts);
     if (num_parts == 5 + can_schedule) {
-      heating_add(parts[0], parts[1], parts[2], parts[3], parts[4], can_schedule ? !strcmp(parts[5], "MANUAL") : 1);
+      climate_zone_add(parts[0], parts[1], parts[2], parts[3], parts[4], can_schedule ? !strcmp(parts[5], "MANUAL") : 1);
     }
     free(parts);
   }
 
-  heating_zones_data = resp->body;
+  climate_zones_data = resp->body;
   resp->body = NULL;
 
   http_response_free(resp);
   free(lines);
-  *heating_zones_list = heating_zones;
-  return num_heating_zones;
+  *climate_zones_list = climate_zones;
+  return num_climate_zones;
 }
 
 
-int configure_heating_zone(hc_heating_zone *heat) {
+int configure_climate_zone(hc_climate_zone *zone) {
   http_response *resp = NULL;
   char *url = NULL;
   int i;
-  int new_temp = heat->set_temp;
-  char new_mode = heat->manual_mode ? 'M':'S';
+  int new_temp = zone->set_temp;
+  char new_mode = zone->manual_mode ? 'M':'S';
   int min_temp = MIN_TEMP, max_temp = MAX_TEMP;
   char c;
 
-  if (!strcmp(heat->id, hot_water_zone)) {
+  if (!strcmp(zone->id, hot_water_zone)) {
     /* Domestic water */
     min_temp = WATER_MIN_TEMP;
     max_temp = WATER_MAX_TEMP;
   }
 
   printxcenteredbox(30, 12);
-  printxcentered(7, heat->name);
+  printxcentered(7, zone->name);
 
   gotoxy(6, 16);
   chline(28);
@@ -216,7 +216,7 @@ update_mode:
     revers(new_mode == 'M');
     puts("MANUAL");
 
-    if (can_set_away && !strcmp(heat->id, full_home_zone)) {
+    if (can_set_away && !strcmp(zone->id, full_home_zone)) {
       gotoxy(12, 11);
       revers(new_mode == 'A');
       puts("AWAY");
@@ -258,7 +258,7 @@ set_temp:
       if (new_mode == 'S') {
         new_mode = 'M';
       } else if (new_mode == 'M') {
-        if (can_set_away && !strcmp(heat->id, full_home_zone)) {
+        if (can_set_away && !strcmp(zone->id, full_home_zone)) {
           new_mode = 'A';
         } else if (can_schedule) {
           new_mode = 'S';
@@ -267,7 +267,7 @@ set_temp:
         new_mode = can_schedule ? 'S':'M';
       }
       if (new_mode != 'M') {
-        new_temp = heat->set_temp;
+        new_temp = zone->set_temp;
       }
       goto update_mode;
     }
@@ -277,14 +277,14 @@ set_temp:
       } else if (can_schedule && new_mode == 'M') {
         new_mode = 'S';
       } else if (new_mode == 'S') {
-        if (can_set_away && !strcmp(heat->id, full_home_zone)) {
+        if (can_set_away && !strcmp(zone->id, full_home_zone)) {
           new_mode = 'A';
         } else {
           new_mode = 'M';
         }
       }
       if (new_mode != 'M') {
-        new_temp = heat->set_temp;
+        new_temp = zone->set_temp;
       }
       goto update_mode;
     }
@@ -308,7 +308,7 @@ set_temp:
   snprintf(url, BUFSIZE, "%s/climate_ctrl.php?id=%s"
                             "&presence=%s&mode=%s&set_temp=%d",
                             get_server_root_url(),
-                            heat->id, 
+                            zone->id, 
                             new_mode == 'A' ? "AWAY":"HOME",
                             new_mode == 'M' ? "MANUAL":"AUTO",
                             new_temp);
