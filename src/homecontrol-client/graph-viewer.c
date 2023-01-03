@@ -17,6 +17,8 @@ static long max_val = LONG_MIN;
 static long start_time = -1L;
 static long end_time = -1L;
 
+static char *metric, *unit;
+
 #define MIN_VAL_SCR_Y 145L
 #define MAX_VAL_SCR_Y 5L
 #define VAL_SCR_INTERVAL (MIN_VAL_SCR_Y - MAX_VAL_SCR_Y)
@@ -38,6 +40,7 @@ static void display_graph(void) {
   char *buf, *text;
   long prev_t = -1L;
   long prev_v = -1L;
+  int line;
 
 #ifdef PRODOS_T_TXT
   gotoxy(12, 12);
@@ -79,7 +82,12 @@ static void display_graph(void) {
   }
   rewind(fp);
 
-  gotoxy(0, 20);
+  line = 20;
+  gotoxy(0, line);
+  printf("Metric  = %s", metric);
+
+  line++;
+  gotoxy(0, line);
   printf("X scale = Time: ");
   text = ctime((time_t *)&start_time);
   if (strchr(text, '\n'))
@@ -88,10 +96,14 @@ static void display_graph(void) {
   text = ctime((time_t *)&end_time);
   if (strchr(text, '\n'))
     *strchr(text, '\n') = '\0';
-  gotoxy(12, 21);
+
+  line++;
+  gotoxy(12, line);
   printf("to: %s", text);
-  gotoxy(0, 22);
-  printf("Y scale = Value: %ld to %ld", (long)min_val, (long)max_val);
+
+  line++;
+  gotoxy(0, line);
+  printf("Y scale = Value: %ld to %ld %s", (long)min_val, (long)max_val, unit);
 
   tgi_init();
   tgi_apple2_mix(1);
@@ -159,13 +171,17 @@ static void display_graph(void) {
 int main(int argc, char **argv) {
   int sensor_number;
   char *buf = NULL;
+  int scale;
 
   tgi_install(a2e_hi_tgi);
 
   clrscr();
 
-  if (argc > 3) {
+  if (argc > 4) {
     sensor_number = atoi(argv[1]);
+    metric = argv[2];
+    scale = atoi(argv[3]);
+    unit = argv[4];
   } else {
     sensor_number=4;
   }

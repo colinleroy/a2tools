@@ -23,8 +23,10 @@ static int prev_page = -1;
 
 static slist *switches = NULL;
 static slist *sensors = NULL;
+static slist *sensor_metrics = NULL;
 static slist *heating = NULL;
 
+static hc_sensor *cur_sensor = NULL;
 static int cur_list_offset = -1;
 static int cur_list_display_offset = 0;
 static int cur_list_length = -1;
@@ -101,6 +103,43 @@ static void update_sensor_page(int update_data) {
   }
   
   cur_list_length = slist_length(sensors);
+}
+
+static void update_sensor_metric_page(int update_data, hc_sensor *sensor) {
+  slist *w;
+  int i;
+
+  if (sensor == NULL) {
+    return;
+  }
+
+  if (update_data) {
+    sensor_metrics = update_sensor_metrics(sensor->id);
+  }
+
+  if (sensor_metrics == NULL) {
+    clear_list(0);
+    printxcentered(12, "Can't load data.");
+    return;
+  }
+
+  w = sensor_metrics;
+
+  for (i = 0; i < cur_list_display_offset && w; i++) {
+    w = w->next;
+  }
+
+  clear_list(3);
+
+  for (i = 0; w && i < PAGE_HEIGHT; w = w->next, i++) {
+    hc_sensor_metric *metric = w->data;
+
+    gotoxy(3, PAGE_BEGIN + i);
+    printf("%s (%d day%s, %s)\n", metric->name, metric->scale, 
+      metric->scale > 1 ? "s":"", metric->unit);
+  }
+  
+  cur_list_length = slist_length(sensor_metrics);
 }
 
 static void update_heating_page(int update_data) {
@@ -191,6 +230,7 @@ static void update_offset(int new_offset) {
       case SWITCH_PAGE:  update_switch_page(0);  break;
       case SENSOR_PAGE:  update_sensor_page(0);  break;
       case HEATING_PAGE: update_heating_page(0); break;
+      case METRIC_PAGE:  update_sensor_metric_page(0, cur_sensor); break;
     }
   }
 
@@ -213,15 +253,37 @@ static void select_switch(void) {
 static void select_sensor(void) {
   int i;
   slist *w = sensors;
+  hc_sensor *sensor;
 
   for (i = 0; i < cur_list_offset; i++) {
     w = w->next;
   }
 
+  sensor = w->data;
+  cur_sensor = sensor;
+  cur_page = METRIC_PAGE;
+}
+
+static void select_sensor_metric(void) {
+  int i;
+  slist *w = sensor_metrics;
+  hc_sensor_metric *metric;
+  char *params = NULL;
+
+  for (i = 0; i < cur_list_offset; i++) {
+    w = w->next;
+  }
+
+  metric = w->data;
+
+  params = malloc(BUFSIZE);
+  snprintf(params, BUFSIZE, "%s %s %d %s", metric->sensor_id, metric->id, metric->scale, metric->unit);
 #ifdef __CC65__
-  exec("MTRCFTCH", "4 POWER_VA 1");
+  exec("MTRCFTCH", params);
+  free(params);
 #else
   /* TODO */
+  printf("exec MTRCFTCH %s", params);
 #endif
 }
 
@@ -244,8 +306,9 @@ static int select_heating_zone(void) {
 static int select_item(void) {
   switch(cur_page) {
     case SWITCH_PAGE: select_switch(); return 1;
-    case SENSOR_PAGE:  select_sensor();  return 0;
+    case SENSOR_PAGE:  select_sensor();  return 1;
     case HEATING_PAGE: return select_heating_zone();
+    case METRIC_PAGE: select_sensor_metric(); break;
   }
 }
 
@@ -269,6 +332,9 @@ update:
     cur_list_offset = -1;
     cur_list_display_offset = 0;
     prev_page = cur_page;
+    if (cur_page != METRIC_PAGE) {
+      cur_sensor = NULL;
+    }
   }
   
   if (argc > 1) {
@@ -280,6 +346,7 @@ update:
     case SWITCH_PAGE:  update_switch_page(1);  break;
     case SENSOR_PAGE:  update_sensor_page(1);  break;
     case HEATING_PAGE: update_heating_page(1); break;
+    case METRIC_PAGE:  update_sensor_metric_page(1, cur_sensor); break;
   }
 
 // #ifdef __CC65__
@@ -302,10 +369,29 @@ command:
     case '1': cur_page = SWITCH_PAGE; goto update;
     case '2': cur_page = SENSOR_PAGE; goto update;
     case '3': cur_page = HEATING_PAGE; goto update;
-    case CH_ENTER: if (select_item()) goto update; else goto command;
-    case CH_CURS_UP: update_offset(-1); goto command;
-    case CH_CURS_DOWN: update_offset(+1); goto command;
-    default: goto command;
+    case CH_ENTER:
+    case 'e':
+      if (select_item())
+        goto update;
+      else
+        goto command;
+    case CH_ESC:
+    case 'z':
+      if (cur_page == METRIC_PAGE) {
+        cur_page = SENSOR_PAGE;
+        goto update;
+      }
+      goto command;
+    case CH_CURS_UP: 
+    case 'i':
+      update_offset(-1);
+      goto command;
+    case CH_CURS_DOWN: 
+    case 'k':
+      update_offset(+1);
+      goto command;
+    default: 
+      goto command;
   }
 
   exit(0);
