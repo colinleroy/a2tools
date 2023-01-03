@@ -45,10 +45,18 @@ static char *do_round(char *floatval, int num) {
 
 static void heating_add(char *id, char *name, char *set_temp, char *cur_temp, char *cur_humidity, char manual_mode) {
   hc_heating_zone *heat = malloc(sizeof(hc_heating_zone));
+  memset(heat, 0, sizeof(hc_heating_zone));
+
   heat->id           = strdup(id);
-  heat->name         = strdup(name);
   heat->set_temp     = atoi(set_temp);
   heat->manual_mode  = manual_mode;
+  if (strlen(name) >= 25) {
+    name[22]='.';
+    name[23]='.';
+    name[24]='.';
+    name[25]='\0';
+  }
+  heat->name = strdup(name);
 
   if (!strcmp(heat->id, "-1")) {
     heat->set_temp   = 21;
@@ -169,6 +177,7 @@ slist *update_heating_zones(void) {
         free(hot_water_zone);
         hot_water_zone = strdup(strchr(lines[i], ';') + 1);
       }
+    free(lines[i]);
     }
   }
   for (i = 3; i < num_lines; i++) {

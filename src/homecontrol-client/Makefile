@@ -19,8 +19,8 @@ DEPS :=
 
 CC65_TARGET = apple2enh
 CFLAGS  = -I ../lib
-homectrl_CLCFLAGS = -t $(CC65_TARGET)
-mtrcftch_CLCFLAGS = -t $(CC65_TARGET)
+homectrl_CLCFLAGS = -t $(CC65_TARGET) -Wl -D,__STACKSIZE__=0x0400
+mtrcftch_CLCFLAGS = -t $(CC65_TARGET) -Wl -D,__STACKSIZE__=0x0400
 grphview_CLCFLAGS = -t $(CC65_TARGET) -Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-hgr.cfg
 GCCCFLAGS = -g -O0 -Werror $(shell curl-config --cflags) $(shell sdl-config --cflags)
 GCCLDFLAGS = $(shell curl-config --libs) $(shell sdl-config --libs)

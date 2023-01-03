@@ -10,8 +10,8 @@ typedef struct _hc_sensor hc_sensor;
 struct _hc_sensor {
   char *id;
   char *name;
-  int scale;
-  char *cur_value;
+  char scale;
+  long cur_value;
   char *unit;
 };
 

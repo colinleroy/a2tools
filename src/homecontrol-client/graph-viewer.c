@@ -42,8 +42,24 @@ static char *sensor_name, *unit;
 #define VAL_SCR_INTERVAL (MIN_VAL_SCR_Y - MAX_VAL_SCR_Y)
 
 #define VAL_ZOOM_FACTOR ((max_val - min_val) / VAL_SCR_INTERVAL)
-#define VAL_OFFSET_INTERVAL(val) ((val - min_val) / VAL_ZOOM_FACTOR)
-#define VAL_Y(val) max(0L,(MIN_VAL_SCR_Y - VAL_OFFSET_INTERVAL(val)))
+
+static long val_div = -1L;
+static long val_mul = -1L;
+static int val_y(int val) {
+  if (max_val - min_val >= VAL_SCR_INTERVAL) {
+    /* zoom out */
+    if (val_div == -1L)
+      val_div = ((max_val - min_val) / VAL_SCR_INTERVAL);
+
+    return max(0L,(MIN_VAL_SCR_Y - ((val - min_val) / val_div)));
+  } else {
+    /* zoom in */
+    if (val_mul == -1L)
+      val_mul = VAL_SCR_INTERVAL / (max_val - min_val);
+
+    return max(0L,(MIN_VAL_SCR_Y - ((val - min_val) * val_mul )));
+  }
+}
 
 #define MIN_TIME_SCR_X 5L
 #define MAX_TIME_SCR_X 275L
@@ -160,10 +176,10 @@ static void display_graph(void) {
         prev_t = start_time;
       }
       if ((int)TIME_X(timestamp) - (int)TIME_X(prev_t) < 6) {
-        tgi_line((int)TIME_X(prev_t), (int)VAL_Y(prev_v), (int)TIME_X(timestamp), (int)VAL_Y(value));
+        tgi_line((int)TIME_X(prev_t), val_y(prev_v), (int)TIME_X(timestamp), val_y(value));
       } else {
-        tgi_line((int)TIME_X(prev_t), (int)VAL_Y(prev_v), (int)TIME_X(prev_t), (int)VAL_Y(value));
-        tgi_line((int)TIME_X(prev_t), (int)VAL_Y(value), (int)TIME_X(timestamp), (int)VAL_Y(value));
+        tgi_line((int)TIME_X(prev_t), val_y(prev_v), (int)TIME_X(prev_t), val_y(value));
+        tgi_line((int)TIME_X(prev_t), val_y(value), (int)TIME_X(timestamp), val_y(value));
       }
       // printf("line from %d,%d-%d,%d (%ld,%ld-%ld,%ld)\n",
       //         (int)TIME_X(prev_t), (int)VAL_Y(prev_v), (int)TIME_X(timestamp), (int)VAL_Y(value),

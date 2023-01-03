@@ -33,9 +33,16 @@ static slist *switches = NULL;
 
 static void switch_add(char *id, char *name, char *state) {
   hc_switch *sw = malloc(sizeof(hc_switch));
+  memset(sw, 0, sizeof(hc_switch));
   sw->id    = strdup(id);
-  sw->name  = strdup(name);
   sw->state = strdup(state);
+  if (strlen(name) >= 25) {
+    name[22]='.';
+    name[23]='.';
+    name[24]='.';
+    name[25]='\0';
+  }
+  sw->name = strdup(name);
 
   switches = slist_append(switches, sw);
 }
