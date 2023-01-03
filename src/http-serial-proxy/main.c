@@ -75,7 +75,6 @@ int main(int argc, char **argv)
       char **parts;
       int num_parts, i;
 
-new_req:
       num_parts = strsplit(reqbuf, ' ', &parts);
       if (num_parts < 2) {
         printf("Could not parse request '%s'\n", reqbuf);
@@ -115,18 +114,9 @@ new_req:
     response = curl_request(method, url, headers, n_headers);
     
     simple_serial_printf("%d,%d\n", response->response_code, response->size);
-    if (simple_serial_gets(reqbuf, BUFSIZE) != NULL) {
-      if(!strncmp("SEND ", reqbuf, 5)) {
-        bufsize = atoi(reqbuf + 5);
-        sent = 0;
-      } else {
-        goto new_req;
-      }
-    }
+    sent = 0;
     while (sent < response->size) {
-      int to_send = min(bufsize, response->size - sent);
-      sent += simple_serial_write(response->buffer + sent, sizeof(char), to_send);
-      printf("sent %d (total %d)\n", to_send, sent);
+      int to_send;
 
       if (simple_serial_gets(reqbuf, BUFSIZE) != NULL) {
         if(!strncmp("SEND ", reqbuf, 5)) {
@@ -135,8 +125,13 @@ new_req:
       } else {
         goto new_req;
       }
+
+      to_send = min(bufsize, response->size - sent);
+      sent += simple_serial_write(response->buffer + sent, sizeof(char), to_send);
+      printf("sent %d (total %d)\n", to_send, sent);
     }
 
+new_req:
     printf("sent %d response to %s %s (%ld bytes)\n", response->response_code, method, url, response->size);
 
     curl_buffer_free(response);
