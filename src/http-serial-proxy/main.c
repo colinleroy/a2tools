@@ -33,6 +33,8 @@ struct _curl_buffer {
 
   char *headers;
   size_t headers_size;
+
+  char *content_type;
 };
 
 static curl_buffer *curl_request(char *method, char *url, char **headers, int n_headers);
@@ -44,7 +46,8 @@ int main(int argc, char **argv)
   char *method = NULL, *url = NULL;
   char **headers = NULL;
   int i, n_headers = 0;
-  int bufsize = 0, sent = 0;
+  size_t bufsize = 0, sent = 0;
+  curl_buffer *response = NULL;
 
   if (argc < 2) {
     printf("Usage: %s [serial tty]\n", argv[0]);
@@ -57,8 +60,6 @@ int main(int argc, char **argv)
   curl_global_init(CURL_GLOBAL_ALL);
 
   while(1) {
-    curl_buffer *response;
-
     free(method);
     free(url);
     for (i = 0; i < n_headers; i++) {
@@ -72,8 +73,12 @@ int main(int argc, char **argv)
     headers = NULL;
 
     if (simple_serial_gets(reqbuf, BUFSIZE) != NULL) {
+new_req:
       char **parts;
       int num_parts, i;
+
+      curl_buffer_free(response);
+      response = NULL;
 
       num_parts = strsplit(reqbuf, ' ', &parts);
       if (num_parts < 2) {
@@ -116,29 +121,30 @@ int main(int argc, char **argv)
 
     response = curl_request(method, url, headers, n_headers);
     
-    simple_serial_printf("%d,%d\n", response->response_code, response->size);
+    simple_serial_printf("%d,%d,%s\n", response->response_code, response->size, response->content_type);
     sent = 0;
     while (sent < response->size) {
-      int to_send;
+      size_t to_send;
 
       if (simple_serial_gets(reqbuf, BUFSIZE) != NULL) {
         if(!strncmp("SEND ", reqbuf, 5)) {
           bufsize = atoi(reqbuf + 5);
+        } else {
+          printf("Aborting send\n");
+          goto new_req;
         }
       } else {
+        printf("Aborting send\n");
         goto new_req;
       }
 
       to_send = min(bufsize, response->size - sent);
       sent += simple_serial_write(response->buffer + sent, sizeof(char), to_send);
-      printf("sent %d (total %d)\n", to_send, sent);
+      printf("sent %zu (total %zu/%zu)\n", to_send, sent, response->size);
     }
 
-new_req:
     printf("sent %d response to %s %s (%ld bytes)\n", response->response_code, method, url, response->size);
 
-    curl_buffer_free(response);
-    response = NULL;
   }
 }
 
@@ -183,22 +189,46 @@ static size_t curl_write_header_cb(void *contents, size_t size, size_t nmemb, vo
 }
 
 static void curl_buffer_free(curl_buffer *curlbuf) {
+  if (curlbuf == NULL) {
+    return;
+  }
   free(curlbuf->buffer);
   free(curlbuf->headers);
+  free(curlbuf->content_type);
   free(curlbuf);
 }
 
 static void proxy_set_curl_opts(CURL *curl) {
   curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
   curl_easy_setopt(curl, CURLOPT_USERAGENT, "http-serial-proxy/1.0");
+
 }
 
 static curl_buffer *curl_request(char *method, char *url, char **headers, int n_headers) {
   CURL *curl;
   CURLcode res;
   int i;
-  curl_buffer *curlbuf = malloc(sizeof(curl_buffer));
+  curl_buffer *curlbuf;
+  int is_ftp = !strncmp("ftp", url, 3);
+  int ftp_is_maybe_dir = (is_ftp && url[strlen(url)-1] != '/');
+  int ftp_try_dir = (is_ftp && url[strlen(url)-1] == '/');
 
+  if (ftp_is_maybe_dir) {
+    /* try dir first */
+    char *dir_url = malloc(strlen(url) + 2);
+    memcpy(dir_url, url, strlen(url));
+    dir_url[strlen(url)] = '/';
+    dir_url[strlen(url) + 1] = '\0';
+    curlbuf = curl_request(method, dir_url, headers, n_headers);
+    if (curlbuf->response_code >= 200 && curlbuf->response_code < 300) {
+      return curlbuf;
+    } else {
+      /* get as file */
+      free(curlbuf);
+    }
+  }
+  
+  curlbuf = malloc(sizeof(curl_buffer));
   curlbuf->buffer = NULL;
   curlbuf->size = 0;
   curlbuf->response_code = 500;
@@ -216,13 +246,15 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
   printf("%s %s\n", method, url);
   if (curl) {
     struct curl_slist *curl_headers = NULL;
-
+    char *tmp;
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_data_cb);
     curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, curl_write_header_cb);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)curlbuf);
     curl_easy_setopt(curl, CURLOPT_HEADERDATA, (void *)curlbuf);
-  
+    if (ftp_try_dir) {
+      curl_easy_setopt(curl, CURLOPT_DIRLISTONLY, 1L);
+    }
     for (i = 0; i < n_headers; i++) {
       curl_headers = curl_slist_append(curl_headers, headers[i]);
       printf("%s\n", headers[i]);
@@ -238,6 +270,17 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
       printf("curl error %s\n", curl_easy_strerror(res));
     }
     curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &(curlbuf->response_code));
+    curl_easy_getinfo (curl, CURLINFO_CONTENT_TYPE, &tmp);
+    if (tmp != NULL) {
+      curlbuf->content_type = strdup(tmp);
+    } else {
+      if (ftp_try_dir) {
+        curlbuf->content_type = strdup("directory");
+      } else {
+        curlbuf->content_type = "application/octet-stream";
+      }
+    }
+    printf("Content-Type: %s\n", curlbuf->content_type);
   }
 
   curl_easy_cleanup(curl);
