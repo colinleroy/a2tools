@@ -42,11 +42,9 @@ static struct ser_params default_params = {
     SER_HS_HW           /* Type of handshake to use */
 };
 
-static char *activity_char = " *";
-static char activity_count = 0;
 static void activity_cb(int on) {
   gotoxy(serial_activity_indicator_x, serial_activity_indicator_y);
-  cputc(on ? activity_char[activity_count++ % 2] : ' ');
+  cputc(on ? '*' : ' ');
 }
 
 int simple_serial_open(int slot, int baudrate, int hw_flow_control) {
