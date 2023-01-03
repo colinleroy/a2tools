@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 #include "http.h"
 #include "simple_serial.h"
 #include "extended_conio.h"
@@ -28,7 +29,7 @@ static char buf[BUFSIZE];
 int main(int argc, char **argv) {
   http_response *response = NULL;
   const char *headers[1] = {"Accept: text/*"};
-  char *buffer = malloc(123);
+  char *buffer;
   size_t r;
   http_connect_proxy();
 
@@ -40,9 +41,9 @@ again:
 
   response = http_start_request("GET", buf, headers, 1);
 
-  printf("Got response %d (%ld bytes)\n", response->code, response->size);
-
-  while ((r = http_receive_lines(response, buffer, 123)) > 0) {
+  printf("Got response %d (%zu bytes)\n", response->code, response->size);
+  buffer = malloc(BUFSIZE);
+  while ((r = http_receive_lines(response, buffer, BUFSIZE - 1)) > 0) {
     printf("%s", buffer);
   }
   
