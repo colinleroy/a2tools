@@ -47,6 +47,7 @@ static char buf[BUFSIZE];
 
 http_response *http_start_request(const char *method, const char *url, const char **headers, int n_headers) {
   http_response *resp;
+  char *w;
   int i;
 
   if (proxy_opened == 0) {
@@ -87,9 +88,17 @@ http_response *http_start_request(const char *method, const char *url, const cha
   }
 
   resp->size = atol(strchr(buf, ',') + 1);
+  w = strchr(buf,',') + 1;
   *strchr(buf,',') = '\0';
   resp->code = atoi(buf);
 
+  if (strchr(w, ',') != NULL) {
+    resp->content_type = strdup(strchr(w, ',') + 1);
+    if (strchr(resp->content_type, '\n'))
+      *strchr(resp->content_type, '\n') = '\0';
+  } else {
+    resp->content_type = strdup("application/octet-stream");
+  }
   return resp;
 }
 
@@ -118,6 +127,9 @@ size_t http_receive_lines(http_response *resp, char *buffer, size_t max_len) {
   size_t r = 0;
   size_t last_return = 0;
 
+  /* If we had cut the buffer short, restore the overwritten character,
+   * move the remaining of the buffer to the start, and read what size
+   * we have left */
   if (overwritten_char != '\0') {
     *(buffer + overwritten_offset) = overwritten_char;
     memmove(buffer, buffer + overwritten_offset, max_len - overwritten_offset);
@@ -142,12 +154,20 @@ size_t http_receive_lines(http_response *resp, char *buffer, size_t max_len) {
     r ++;
     to_read--;
   }
-  if (last_return > 0 && last_return + 1 < max_len - 1) {
+  
+  /* Change the character after the last \n in the buffer
+   * to a NULL byte, so the caller gets a full line,
+   * and remember it. We'll reuse it at next read.
+   */
+  if (last_return > 0 && last_return + 1 < max_len) {
     overwritten_offset = last_return + 1;
     overwritten_char = *(buffer + overwritten_offset);
     r = overwritten_offset;
   }
 
+  if (buffer[r-1] != '\n') {
+    exit(1);
+  }
   buffer[r] = '\0';
   resp->cur_pos += r;
 
@@ -159,5 +179,6 @@ size_t http_receive_lines(http_response *resp, char *buffer, size_t max_len) {
 }
 
 void http_response_free(http_response *resp) {
+  free(resp->content_type);
   free(resp);
 }
