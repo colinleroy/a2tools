@@ -165,10 +165,6 @@ update_list:
     if (full_update) {
       clrzone(0, 2, scrw, 2 + PAGE_HEIGHT);
       for (i = 0; i + cur_display_line < num_lines && i < PAGE_HEIGHT; i++) {
-        if (i + cur_display_line == num_lines - 1
-         && *lines[i] == '\0') {
-           break;
-        }
         gotoxy(0, i + 2);
         if (i + cur_display_line == cur_line) {
           printf("> %s", lines[i]);
