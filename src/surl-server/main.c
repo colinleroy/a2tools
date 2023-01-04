@@ -45,7 +45,7 @@ int main(int argc, char **argv)
   char reqbuf[BUFSIZE];
   char *method = NULL, *url = NULL;
   char **headers = NULL;
-  int i, n_headers = 0;
+  int n_headers = 0;
   size_t bufsize = 0, sent = 0;
   curl_buffer *response = NULL;
 
@@ -62,23 +62,23 @@ int main(int argc, char **argv)
   curl_global_init(CURL_GLOBAL_ALL);
 
   while(1) {
-    free(method);
-    free(url);
-    for (i = 0; i < n_headers; i++) {
-      free(headers[i]);
-    }
-    free(headers);
-
-    method = NULL;
-    url = NULL;
-    n_headers = 0;
-    headers = NULL;
 
     if (simple_serial_gets(reqbuf, BUFSIZE) != NULL) {
 new_req:
       char **parts;
       int num_parts, i;
 
+      free(method);
+      free(url);
+      for (i = 0; i < n_headers; i++) {
+        free(headers[i]);
+      }
+      free(headers);
+
+      method = NULL;
+      url = NULL;
+      n_headers = 0;
+      headers = NULL;
       curl_buffer_free(response);
       response = NULL;
 
@@ -96,7 +96,7 @@ new_req:
       free(parts);
     } else {
       printf("Read error %s\n", strerror(errno));
-      exit(1);
+      goto new_req;
     }
     
     do {
@@ -109,7 +109,7 @@ new_req:
         }
       } else {
         printf("Read error %s\n", strerror(errno));
-        exit(1);
+        goto new_req;
       }
     } while (strcmp(reqbuf, "\n"));
 
@@ -211,7 +211,7 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
   CURLcode res;
   int i;
   curl_buffer *curlbuf;
-  int is_ftp = !strncmp("ftp", url, 3);
+  int is_ftp = !strncmp("ftp", url, 3) || !strncmp("sftp", url, 4);
   int ftp_is_maybe_dir = (is_ftp && url[strlen(url)-1] != '/');
   int ftp_try_dir = (is_ftp && url[strlen(url)-1] == '/');
 
@@ -222,11 +222,12 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
     dir_url[strlen(url)] = '/';
     dir_url[strlen(url) + 1] = '\0';
     curlbuf = curl_request(method, dir_url, headers, n_headers);
+    free(dir_url);
     if (curlbuf->response_code >= 200 && curlbuf->response_code < 300) {
       return curlbuf;
     } else {
       /* get as file */
-      free(curlbuf);
+      curl_buffer_free(curlbuf);
     }
   }
   
