@@ -1,5 +1,6 @@
 PROGRAM=day22
 SOURCES := day22.c ../../lib/bool_array.c ../../lib/tgi_sdl.c
+GCCSOURCES := ../../lib/extended_conio.c
 DEPS := 
 
 CC65_TARGET = apple2enh
@@ -16,7 +17,7 @@ all: $(PROGRAM).bin $(PROGRAM).x86_64
 $(PROGRAM).bin: $(SOURCES)
 	cl65 $(CFLAGS) $(CLCFLAGS) -m $(PROGRAM).map -o $@ $^
 
-$(PROGRAM).x86_64: $(SOURCES)
+$(PROGRAM).x86_64: $(SOURCES) $(GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@
 
 clean:

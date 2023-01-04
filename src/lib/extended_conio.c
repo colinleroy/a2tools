@@ -22,14 +22,14 @@
 static unsigned char scrw = 255, scrh = 255;
 
 #ifndef __CC65__
-  char cgetc(void) {
-    char *buf = malloc(255);
-    char c;
-    fgets(buf, 255, stdin);
-    c = buf[0];
-    free(buf);
-    return c;
-  }
+char cgetc(void) {
+  char *buf = malloc(255);
+  char c;
+  fgets(buf, 255, stdin);
+  c = buf[0];
+  free(buf);
+  return c;
+}
 static void cputsxy(int x, int y, char *buf) {
   char *prefix;
   int i;
@@ -169,7 +169,7 @@ void printxcentered(int y, char *buf) {
 
 void printxcenteredbox(int width, int height) {
   int startx, starty, i;
-  char *line = malloc(width);
+  char *line = malloc(width + 1);
 
   if (scrw == 255 && scrh == 255) {
     screensize(&scrw, &scrh);

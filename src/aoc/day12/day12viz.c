@@ -25,6 +25,11 @@
 #include "tgi_compat.h"
 #include "extended_conio.h"
 
+/* Init HGR segment */
+#pragma rodata-name (push, "HGR")
+const char hgr = 0;
+#pragma rodata-name (pop)
+
 #define DATASET "IN12"
 #define BUFSIZE 255
 
