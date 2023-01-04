@@ -76,6 +76,7 @@ char * __fastcall__ cgets(char *buf, size_t size) {
     screensize(&scrw, &scrh);
   }
 
+  memset(buf, '\0', size - 1);
   prev_cursor = cursor(1);
   
   while (i < size - 1) {
