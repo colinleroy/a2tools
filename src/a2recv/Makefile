@@ -4,7 +4,7 @@ DEPS :=
 
 CC65_TARGET = apple2enh
 CFLAGS  = -I ../lib
-CLCFLAGS = -t $(CC65_TARGET)
+CLCFLAGS = -t $(CC65_TARGET) -DSERIAL_TO_LANGCARD
 GCCCFLAGS = -g -O0 -Werror
 
 .PHONY: all clean

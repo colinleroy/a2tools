@@ -2,6 +2,8 @@ PROGRAM=day12 day12viz
 
 RD_SOURCES := day12.c ../../lib/bfs.c ../../lib/bool_array.c
 VIZ_SOURCES := day12viz.c ../../lib/tgi_sdl.c
+VIZ_GCCSOURCES := ../../lib/extended_conio.c
+
 DEPS := 
 
 CC65_TARGET = apple2enh
@@ -24,7 +26,7 @@ day12.x86_64: $(RD_SOURCES)
 day12viz.bin: $(VIZ_SOURCES)
 	cl65 $(CFLAGS) $(VIZ_CLCFLAGS) -m day12.map -o $@ $^
 
-day12viz.x86_64: $(VIZ_SOURCES)
+day12viz.x86_64: $(VIZ_SOURCES) $(VIZ_GCCSOURCES)
 	gcc $(CFLAGS) $(VIZ_GCCCFLAGS) $^ $(VIZ_GCCLDFLAGS) -o $@ 
 
 clean:

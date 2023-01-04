@@ -23,6 +23,10 @@
 #include "extended_conio.h"
 #include "math.h"
 
+#ifdef SERIAL_TO_LANGCARD
+#pragma code-name (push, "LC")
+#endif
+
 #define BUFSIZE 255
 
 static char proxy_opened = 0;
@@ -118,6 +122,11 @@ size_t surl_receive_data(surl_response *resp, char *buffer, size_t max_len) {
 
   return r;
 }
+
+//Pop early because the whole serial + surl code doesn't fit in LC
+#ifdef SERIAL_TO_LANGCARD
+#pragma code-name (pop)
+#endif
 
 static char overwritten_char = '\0';
 static size_t overwritten_offset = 0;

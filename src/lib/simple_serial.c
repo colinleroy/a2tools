@@ -30,7 +30,6 @@ static int serial_activity_indicator_y = -1;
 #ifdef __CC65__
 #include <apple2enh.h>
 
-#pragma code-name (push, "LOWCODE")
 
 /* Setup */
 static int last_slot = 2;
@@ -43,6 +42,10 @@ static struct ser_params default_params = {
     SER_PAR_NONE,       /* Parity setting */
     SER_HS_HW           /* Type of handshake to use */
 };
+
+#ifdef SERIAL_TO_LANGCARD
+#pragma code-name (push, "LC")
+#endif
 
 static void activity_cb(int on) {
   gotoxy(serial_activity_indicator_x, serial_activity_indicator_y);
@@ -376,6 +379,6 @@ void simple_serial_set_activity_indicator(char enabled, int x, int y) {
   serial_activity_indicator_y = y;
 }
 
-#ifdef __CC65__
+#ifdef SERIAL_TO_LANGCARD
 #pragma code-name (pop)
 #endif

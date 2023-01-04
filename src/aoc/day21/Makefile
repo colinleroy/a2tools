@@ -1,5 +1,6 @@
 READER=day21rd
 READER_SOURCES := day21rd.c ../../lib/bigint.c
+READER_GCCSOURCES := ../../lib/extended_conio.c
 
 WRITER=day21wr
 WRITER_SOURCES := day21wr.c ../../lib/bigint.c
@@ -21,7 +22,7 @@ $(READER).bin: $(READER_SOURCES)
 $(WRITER).bin: $(WRITER_SOURCES)
 	cl65 $(WRITER_CLCFLAGS) $(CFLAGS) -m $(WRITER).map -o $@ $^
 
-$(READER).x86_64: $(READER_SOURCES)
+$(READER).x86_64: $(READER_SOURCES) $(READER_GCCSOURCES)
 	gcc $(GCCCFLAGS) $(CFLAGS) -o $@ $^
 
 $(WRITER).x86_64: $(WRITER_SOURCES)

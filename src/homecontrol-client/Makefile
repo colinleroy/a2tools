@@ -10,14 +10,16 @@ homectrl_SOURCES := main.c network.c \
 grphview_SOURCES := graph-viewer.c \
 	../lib/surl.c \
 	../lib/simple_serial.c \
-	../lib/tgi_sdl.c
+	../lib/tgi_fastline.c
+
+grphview_GCCSOURCES := ../lib/extended_conio.c ../lib/tgi_sdl.c
 
 DEPS := 
 
 CC65_TARGET = apple2enh
-CFLAGS  = -I ../lib
-homectrl_CLCFLAGS = -t $(CC65_TARGET) -Wl -D,__STACKSIZE__=0x0400
-grphview_CLCFLAGS = -t $(CC65_TARGET) -Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-hgr.cfg
+CFLAGS  = -I ../lib 
+homectrl_CLCFLAGS = -t $(CC65_TARGET) -Wl -D,__STACKSIZE__=0x0400 -DSERIAL_TO_LANGCARD
+grphview_CLCFLAGS = -t $(CC65_TARGET) -Wl -D,__STACKSIZE__=0x0400 -DSERIAL_TO_LANGCARD -C ../../config/apple2enh-hgr.cfg
 GCCCFLAGS = -g -O0 -Werror $(shell sdl-config --cflags)
 GCCLDFLAGS = $(shell sdl-config --libs)
 .PHONY: all clean
@@ -33,7 +35,7 @@ homectrl.x86_64: $(homectrl_SOURCES)
 grphview.bin: $(grphview_SOURCES)
 	cl65 $(CFLAGS) $(grphview_CLCFLAGS) -m grphview.map -o $@ $^
 
-grphview.x86_64: $(grphview_SOURCES)
+grphview.x86_64: $(grphview_SOURCES) $(grphview_GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@
 
 clean:

@@ -27,6 +27,11 @@
 #include "extended_conio.h"
 #include "bool_array.h"
 
+/* Init HGR segment */
+#pragma rodata-name (push, "HGR")
+const char hgr = 0;
+#pragma rodata-name (pop)
+
 #define BUFSIZE 255
 static void read_file(FILE *fp);
 

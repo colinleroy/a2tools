@@ -30,6 +30,11 @@
 #include "bool_array.h"
 #include "extended_string.h"
 
+/* Init HGR segment */
+#pragma rodata-name (push, "HGR")
+const char hgr = 0;
+#pragma rodata-name (pop)
+
 #define DATASET "IN14"
 #define BUFSIZE 300
 

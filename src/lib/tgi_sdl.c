@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <SDL.h>
 #include "tgi_compat.h"
+#include "tgi_fastline.h"
 #include "math.h"
 
 static SDL_Surface *screen = NULL;
@@ -150,36 +151,8 @@ void tgi_setpixel(int x, int y) {
   SDL_UpdateRect(screen, 0, 0, X_RES * 2, Y_RES * 2);
 }
 
-void tgi_line(int start_x, int start_y, int end_x, int end_y) {
-  int width, height, steps;
-  float dx, dy;
-  float x, y;
-
-  if (!tgi_enabled)
-    return;
-
-  width = abs(end_x - start_x);
-  height = abs(end_y - start_y);
-  steps = max(width, height);
-  
-  if (steps == 0) {
-    tgi_setpixel(start_x, start_y);
-    return;
-  }
-
-  dx = (float)(end_x - start_x) / (float)steps;
-  dy = (float)(end_y - start_y) / (float)steps;
-  
-  for (x = start_x, y = start_y;
-       (int)x != end_x || (int)y != end_y;) {
-    if ((int)x != end_x) {
-      x += dx;
-    }
-    if ((int)y != end_y) {
-      y += dy;
-    }
-    tgi_setpixel((int)x, (int)y);
-  }
+void tgi_line(int x1, int y1, int x2, int y2) {
+  tgi_fastline(x1, y1, x2, y2);
 }
 
 void tgi_outtextxy (int x, int y, const char* s) {
