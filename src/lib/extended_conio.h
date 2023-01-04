@@ -13,11 +13,11 @@
 
 #ifndef __CC65__
 
-#define CH_CURS_UP     0x0B
-#define CH_CURS_DOWN   0x0A
-#define CH_CURS_LEFT   0x08
-#define CH_CURS_RIGHT  0x15
-#define CH_ENTER       0x0D
+#define CH_CURS_UP     'i'
+#define CH_CURS_DOWN   'k'
+#define CH_CURS_LEFT   'j'
+#define CH_CURS_RIGHT  'l'
+#define CH_ENTER       '\n'
 #define CH_ESC         0x1B
 
 #define __fastcall__

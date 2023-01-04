@@ -306,23 +306,14 @@ command:
     case '2': cur_page = SENSOR_PAGE; goto update;
     case '3': cur_page = CLIMATE_PAGE; goto update;
     case CH_ENTER:
-#ifndef __CC65__
-    case 'e':
-#endif
       if (select_item())
         goto update;
       else
         goto command;
     case CH_CURS_UP: 
-#ifndef __CC65__
-    case 'i':
-#endif
       update_offset(-1);
       goto command;
     case CH_CURS_DOWN: 
-#ifndef __CC65__
-    case 'k':
-#endif
       update_offset(+1);
       goto command;
     default: 
