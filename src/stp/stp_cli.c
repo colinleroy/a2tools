@@ -33,8 +33,8 @@ void stp_print_header(char *url) {
 
   clrzone(0, 0, scrw, 0);
   gotoxy(0,0);
-  if (strlen(url) > scrw - 1) {
-    char *tmp = strdup(url + strlen(url) - scrw + 4);
+  if (strlen(url) > scrw - 2 /* One char for serial act */) {
+    char *tmp = strdup(url + strlen(url) - scrw + 5);
     printf("...%s", tmp);
     free(tmp);
   } else {
@@ -45,6 +45,8 @@ void stp_print_header(char *url) {
 }
 
 void stp_print_result(surl_response *response) {
+  if (scrw == 255)
+    screensize(&scrw, &scrh);
   gotoxy(0, 18);
   chline(scrw);
   clrzone(0, 19, scrw, 20);
@@ -55,12 +57,14 @@ void stp_print_result(surl_response *response) {
     printf("Response code %d - %zu bytes,\n%s", 
             response->code,
             response->size,
-            response->content_type);
+            response->content_type != NULL ? response->content_type : "");
   }
 
 }
 
 void stp_print_footer(void) {
+  if (scrw == 255)
+    screensize(&scrw, &scrh);
   gotoxy(0, 21);
   chline(scrw);
   clrzone(0, 22, scrw, 23);
