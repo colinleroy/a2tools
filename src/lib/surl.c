@@ -66,6 +66,7 @@ surl_response *surl_start_request(const char *method, const char *url, const cha
   resp->size = 0;
   resp->code = 0;
   resp->cur_pos = 0;
+  resp->content_type = NULL;
 
   simple_serial_printf("%s %s\n", method, url);
 

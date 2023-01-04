@@ -25,6 +25,7 @@
 #endif
 #include "stp.h"
 #include "stp_cli.h"
+#include "stp_save.h"
 #include "surl.h"
 #include "simple_serial.h"
 #include "extended_conio.h"
@@ -42,9 +43,9 @@ char *get_start_url(void) {
   _filetype = PRODOS_T_TXT;
 #endif
 
-  last_start_url = malloc(BUFSIZE);
   fp = fopen(STP_URL_FILE,"r");
   if (fp != NULL) {
+    last_start_url = malloc(BUFSIZE + 1);
     fgets(last_start_url, BUFSIZE, fp);
     fclose(fp);
     *strchr(last_start_url,'\n') = '\0';
@@ -55,27 +56,28 @@ char *get_start_url(void) {
   gotoxy(0, 9);
   printf("Please enter the server's root URL,\n");
   printf("or Enter to reuse the last one:\n\n");
-  printf("%s\n", last_start_url);
+  printf("'%s'\n", last_start_url);
   printf("\n\nURL: ");
 
-  start_url = malloc(BUFSIZE);
+  start_url = malloc(BUFSIZE + 1);
   cgets(start_url, BUFSIZE);
 
-  *strchr(start_url,'\n') = '\0';
+  if (strchr(start_url,'\n'))
+    *strchr(start_url,'\n') = '\0';
+
   if (*start_url == '\0') {
     free(start_url);
     start_url = last_start_url;
   } else {
     free(last_start_url);
-  }
-
-  fp = fopen(STP_URL_FILE, "wb");
-  if (fp != NULL) {
-    fprintf(fp, "%s\n", start_url);
-    fclose(fp);
-  } else {
-    printf("Can't save URL: %s\n", strerror(errno));
-    exit(1);
+    fp = fopen(STP_URL_FILE, "w");
+    if (fp != NULL) {
+      fprintf(fp, "%s\n", start_url);
+      fclose(fp);
+    } else {
+      printf("Can't save URL: %s\n", strerror(errno));
+      exit(1);
+    }
   }
 
   return start_url;
@@ -131,13 +133,14 @@ int main(int argc, char **argv) {
   screensize(&scrw, &scrh);
 
   url = get_start_url();
-  clrscr();
+  //clrscr();
 
   stp_print_footer();
   while(1) {
     surl_response *resp = NULL;
     char *data = NULL, **lines = NULL;
     int i;
+    size_t r;
 
     num_lines = 0;
     cur_line = 0;
@@ -145,17 +148,57 @@ int main(int argc, char **argv) {
 
     stp_print_header(url);
     
+    clrzone(0, 2, scrw, 2 + PAGE_HEIGHT);
+    gotoxy(12, 12);
+    printf("Loading...");
+
+    simple_serial_set_activity_indicator(1, 39, 0);
     resp = surl_start_request("GET", url, NULL, 0);
+    simple_serial_set_activity_indicator(0, 0, 0);
     
     stp_print_result(resp);
     
     gotoxy(0, 2);
 
-    if (resp != NULL && resp->code >= 200 && resp->code < 300 && resp->size > 0) {
-      data = malloc(resp->size + 1);
+    if (resp == NULL || resp->size == 0) {
+      gotoxy(12, 12);
+      printf("Bad response.");
+      goto keyb_input;
     }
-    if (data == NULL || surl_receive_data(resp, data, resp->size) < resp->size) {
-      printf("Can not display request results.");
+
+    if (resp->content_type && strcmp(resp->content_type, "directory")) {
+      char *filename = strdup(strrchr(url, '/') + 1);
+      printxcenteredbox(30, 12);
+      printxcentered(7, filename);
+
+      gotoxy(6, 10);
+      printf("%s", resp->content_type ? resp->content_type : "");
+      gotoxy(6, 11);
+      printf("%zu bytes", resp->size);
+
+      gotoxy(6, 16);
+      chline(28);
+      gotoxy(6, 17);
+      printf("Esc: cancel  !   Enter: Save");
+      do {
+        c = cgetc();
+      } while (c != CH_ENTER && c != CH_ESC);
+      
+      if (c == CH_ENTER) {
+        stp_save(filename, resp);
+      }
+      free(filename);
+      goto up_dir;
+
+    } else {
+      data = malloc(resp->size + 1);
+      simple_serial_set_activity_indicator(1, 39, 0);
+      r = surl_receive_data(resp, data, resp->size);
+      simple_serial_set_activity_indicator(0, 0, 0);
+    }
+    if (r < resp->size) {
+      gotoxy(5, 12);
+      printf("Can not load response.");
       goto keyb_input;
     }
 
@@ -181,18 +224,19 @@ update_list:
 keyb_input:
     c = cgetc();
     switch(c) {
-      case CH_ESC: case 'z':
+      case CH_ESC:
+up_dir:
         url = url_go_up(url);
         full_update = 1;
         break;
-      case CH_ENTER: case 'e':
+      case CH_ENTER:
         url = url_enter(url, lines[cur_line]);
         full_update = 1;
         break;
-      case CH_CURS_UP: case 'i':
+      case CH_CURS_UP:
         full_update = scroll(-1);
         goto update_list;
-      case CH_CURS_DOWN: case 'k':
+      case CH_CURS_DOWN:
         full_update = scroll(+1);
         goto update_list;
       default: 
@@ -202,6 +246,8 @@ keyb_input:
     resp = NULL;
     free(data);
     data = NULL;
+    free(lines);
+    lines = NULL;
   }
 
   exit(0);

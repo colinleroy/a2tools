@@ -1,5 +1,5 @@
 PROGRAM=stp
-SOURCES := stp.c stp_cli.c \
+SOURCES := stp.c stp_cli.c stp_save.c \
 	../lib/simple_serial.c \
 	../lib/extended_conio.c \
 	../lib/extended_string.c \
@@ -8,7 +8,7 @@ SOURCES := stp.c stp_cli.c \
 DEPS := 
 
 CC65_TARGET = apple2enh
-CFLAGS  = -I ../lib
+CFLAGS  = -I ../lib -DSERIAL_TO_LANGCARD
 CLCFLAGS = -t $(CC65_TARGET)
 GCCCFLAGS = -g -O0 -Werror 
 GCCLDFLAGS = 
