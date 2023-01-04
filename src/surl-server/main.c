@@ -211,7 +211,8 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
   CURLcode res;
   int i;
   curl_buffer *curlbuf;
-  int is_ftp = !strncmp("ftp", url, 3) || !strncmp("sftp", url, 4);
+  int is_sftp = !strncmp("sftp", url, 4);
+  int is_ftp = !strncmp("ftp", url, 3) || is_sftp;
   int ftp_is_maybe_dir = (is_ftp && url[strlen(url)-1] != '/');
   int ftp_try_dir = (is_ftp && url[strlen(url)-1] == '/');
 
@@ -223,7 +224,7 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
     dir_url[strlen(url) + 1] = '\0';
     curlbuf = curl_request(method, dir_url, headers, n_headers);
     free(dir_url);
-    if (curlbuf->response_code >= 200 && curlbuf->response_code < 300) {
+    if ((curlbuf->response_code >= 200 && curlbuf->response_code < 300) || (curlbuf->response_code == 0 &&  is_sftp)) {
       return curlbuf;
     } else {
       /* get as file */
