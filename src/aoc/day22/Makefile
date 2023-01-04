@@ -1,6 +1,6 @@
 PROGRAM=day22
 SOURCES := day22.c ../../lib/bool_array.c ../../lib/tgi_sdl.c
-GCCSOURCES := ../../lib/extended_conio.c
+GCCSOURCES := ../../lib/extended_conio.c ../../lib/tgi_fastline.c
 DEPS := 
 
 CC65_TARGET = apple2enh
