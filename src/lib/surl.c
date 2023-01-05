@@ -23,6 +23,8 @@
 #include "extended_conio.h"
 #include "math.h"
 
+#define DEBUG printf
+
 #ifdef SERIAL_TO_LANGCARD
 #pragma code-name (push, "LC")
 #endif
@@ -30,17 +32,16 @@
 #define BUFSIZE 255
 
 static char proxy_opened = 0;
-void surl_connect_proxy(void) {
+int surl_connect_proxy(void) {
+  int r;
 #ifdef __CC65__
-  simple_serial_open(2, SER_BAUD_9600, 1);
+  r = simple_serial_open(2, SER_BAUD_9600, 1);
 #else
-  if (getenv("SERIAL_TTY") == NULL) {
-    printf("Please export SERIAL_TTY=/dev/ttyUSB0 or something.\n");
-    exit(1);
-  }
-  simple_serial_open(getenv("SERIAL_TTY"), B9600, 1);
+  r = simple_serial_open();
 #endif
-  proxy_opened = 1;
+  //DEBUG("connected proxy: %d\n", r);
+  proxy_opened = (r == 0);
+  return r;
 }
 
 void surl_close_proxy(void) {
@@ -51,15 +52,17 @@ static char buf[BUFSIZE];
 
 surl_response *surl_start_request(const char *method, const char *url, const char **headers, int n_headers) {
   surl_response *resp;
-  char *w;
   int i;
 
   if (proxy_opened == 0) {
-    surl_connect_proxy();
+    if (surl_connect_proxy() != 0) {
+      return NULL;
+    }
   }
 
   resp = malloc(sizeof(surl_response));
   if (resp == NULL) {
+    //DEBUG("cant alloc resp\n");
     return NULL;
   }
 
@@ -69,27 +72,57 @@ surl_response *surl_start_request(const char *method, const char *url, const cha
   resp->content_type = NULL;
 
   simple_serial_printf("%s %s\n", method, url);
-
+  //DEBUG("sent req %s %s\n", method, url);
   for (i = 0; i < n_headers; i++) {
     simple_serial_printf("%s\n", headers[i]);
+    //DEBUG("sent hdr %d %s\n", i, headers[i]);
   }
   simple_serial_puts("\n");
 
   simple_serial_gets_with_timeout(buf, BUFSIZE);
-  if (buf == NULL || strcmp(buf, "WAIT\n")) {
+  //DEBUG("read %s\n", buf);
+
+  if (buf == NULL) {
+    resp->code = 507;
+    return resp;
+  } else if (!strcmp(method, "GET") && strcmp(buf, "WAIT\n")) {
     resp->code = 508;
+    return resp;
+  } else if (!strcmp(buf, "SEND_SIZE_AND_DATA\n")) {
+    resp->code = 100;
     return resp;
   }
 
+  surl_read_response_header(resp);
+  return resp;
+}
+
+//Pop early because the whole serial + surl code doesn't fit in LC
+#ifdef SERIAL_TO_LANGCARD
+#pragma code-name (pop)
+#endif
+
+void surl_send_data_size(surl_response *resp, size_t total) {
+  simple_serial_printf("%zu\n", total);
+}
+
+size_t surl_send_data(surl_response *resp, char *buffer, size_t len) {
+  return simple_serial_write(buffer, 1, len);
+}
+
+void surl_read_response_header(surl_response *resp) {
+  char *w;
+
   simple_serial_gets(buf, BUFSIZE);
+  //DEBUG("RESPonse header %s\n", buf);
   if (buf == NULL || buf[0] == '\0') {
     resp->code = 509;
-    return resp;
+    return;
   }
 
   if (strchr(buf, ',') == NULL) {
     resp->code = 510;
-    return resp;
+    return;
   }
 
   resp->size = atol(strchr(buf, ',') + 1);
@@ -103,8 +136,7 @@ surl_response *surl_start_request(const char *method, const char *url, const cha
       *strchr(resp->content_type, '\n') = '\0';
   } else {
     resp->content_type = strdup("application/octet-stream");
-  }
-  return resp;
+  }  
 }
 
 size_t surl_receive_data(surl_response *resp, char *buffer, size_t max_len) {
@@ -123,11 +155,6 @@ size_t surl_receive_data(surl_response *resp, char *buffer, size_t max_len) {
 
   return r;
 }
-
-//Pop early because the whole serial + surl code doesn't fit in LC
-#ifdef SERIAL_TO_LANGCARD
-#pragma code-name (pop)
-#endif
 
 static char overwritten_char = '\0';
 static size_t overwritten_offset = 0;
@@ -189,6 +216,9 @@ size_t surl_receive_lines(surl_response *resp, char *buffer, size_t max_len) {
 }
 
 void surl_response_free(surl_response *resp) {
+  if (resp == NULL) {
+    return;
+  }
   free(resp->content_type);
   free(resp);
 }

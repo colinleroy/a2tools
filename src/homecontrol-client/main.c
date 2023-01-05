@@ -245,8 +245,6 @@ static long refresh_counter = REFRESH_DELAY;
 int main(int argc, char **argv) {
   char command;
 
-  surl_connect_proxy();
-
   clrscr();
   screensize(&scrw, &scrh);
   

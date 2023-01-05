@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include "extended_conio.h"
+#include "extended_string.h"
 
 static char serial_activity_indicator_enabled = 0;
 static int serial_activity_indicator_x = -1;
@@ -260,15 +261,18 @@ static void setup_tty(int port, int baudrate, int hw_flow_control) {
   }
 }
 
-int simple_serial_open(const char *tty, int baudrate, int hw_flow_control) {
+#include "simple_serial_opts.c"
 
-  ttyfp = fopen(tty, "r+b");
+int simple_serial_open(void) {
+
+  simple_serial_read_opts();
+  ttyfp = fopen(opt_tty_path, "r+b");
   if (ttyfp == NULL) {
-    printf("Can't open %s\n", tty);
+    printf("Can't open %s\n", opt_tty_path);
     return -1;
   }
 
-  setup_tty(fileno(ttyfp), baudrate, hw_flow_control);
+  setup_tty(fileno(ttyfp), opt_tty_speed, opt_tty_hw_handshake);
 
   return 0;
 }

@@ -44,11 +44,7 @@ int main(int argc, char **argv) {
 #ifdef __CC65__
   simple_serial_open(2, SER_BAUD_9600, 1);
 #else
-if (argc < 2) {
-  printf("Usage: %s [input tty]\n", argv[0]);
-  exit(1);
-}
-  simple_serial_open(argv[1], B9600, 1);
+  simple_serial_open();
 #endif
 
 read_again:
@@ -56,8 +52,10 @@ read_again:
   total = 0;
 
   if (simple_serial_gets(filename, BUF_SIZE) != NULL) {
+#ifndef __CC65__
     if (strlen(filename) > 8)
       filename[8] = '\0';
+#endif
     if (strchr(filename, '\n'))
       *strchr(filename, '\n') = '\0';
     printf("Filename   '%s'\n", filename);

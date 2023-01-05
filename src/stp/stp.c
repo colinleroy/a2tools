@@ -26,6 +26,7 @@
 #include "stp.h"
 #include "stp_cli.h"
 #include "stp_save.h"
+#include "stp_send_file.h"
 #include "surl.h"
 #include "simple_serial.h"
 #include "extended_conio.h"
@@ -34,11 +35,15 @@
 static char *url_go_up(char *url);
 static char *url_enter(char *url, char *suffix);
 
+static char *login = NULL;
+static char *password = NULL;
 char *get_start_url(void) {
   FILE *fp;
   char *start_url = NULL;
   char *last_start_url = NULL;
-
+  char *last_login = NULL;
+  char *last_password = NULL;
+  int changed = 0;
 #ifdef PRODOS_T_TXT
   _filetype = PRODOS_T_TXT;
 #endif
@@ -46,11 +51,19 @@ char *get_start_url(void) {
   fp = fopen(STP_URL_FILE,"r");
   if (fp != NULL) {
     last_start_url = malloc(BUFSIZE + 1);
+    last_login = malloc(BUFSIZE + 1);
+    last_password = malloc(BUFSIZE + 1);
     fgets(last_start_url, BUFSIZE, fp);
+    fgets(last_login, BUFSIZE, fp);
+    fgets(last_password, BUFSIZE, fp);
     fclose(fp);
     *strchr(last_start_url,'\n') = '\0';
+    *strchr(last_login,'\n') = '\0';
+    *strchr(last_password,'\n') = '\0';
   } else {
     last_start_url = strdup("ftp://ftp.apple.asimov.net");
+    last_login = strdup("");
+    last_password = strdup("");
   }
 
   gotoxy(0, 9);
@@ -61,7 +74,6 @@ char *get_start_url(void) {
 
   start_url = malloc(BUFSIZE + 1);
   cgets(start_url, BUFSIZE);
-
   if (strchr(start_url,'\n'))
     *strchr(start_url,'\n') = '\0';
 
@@ -70,14 +82,66 @@ char *get_start_url(void) {
     start_url = last_start_url;
   } else {
     free(last_start_url);
+    changed = 1;
+    
+    /* Forget login and password too */
+    free(last_login);
+    free(last_password);
+    last_login = strdup("");
+    last_password = strdup("");
+  }
+
+  if (*last_login != '\0') {
+    printf("Login (%s): ", last_login);
+  } else {
+    printf("Login (anonymous): ");
+  }
+  
+  login = malloc(BUFSIZE + 1);
+  cgets(login, BUFSIZE);
+  if (strchr(login,'\n'))
+    *strchr(login,'\n') = '\0';
+
+  if (*login == '\0') {
+    password = last_password;
+  } else {
+    password = malloc(BUFSIZE + 1);
+    printf("Password: ");
+    cgets(password, BUFSIZE);
+    free(last_password);
+    changed = 1;
+  }
+
+  if (strchr(password,'\n'))
+    *strchr(password,'\n') = '\0';
+
+  if (*login == '\0') {
+    free(login);
+    login = last_login;
+  } else {
+    free(last_login);
+    changed = 1;
+  }
+
+  if (changed) {
     fp = fopen(STP_URL_FILE, "w");
     if (fp != NULL) {
       fprintf(fp, "%s\n", start_url);
+      fprintf(fp, "%s\n", login);
+      fprintf(fp, "%s\n", password);
       fclose(fp);
     } else {
       printf("Can't save URL: %s\n", strerror(errno));
       exit(1);
     }
+  }
+  if (*login == '\0') {
+    free(login);
+    login = NULL;
+  }
+  if (*password == '\0') {
+    free(password);
+    password = NULL;
   }
 
   return start_url;
@@ -124,6 +188,31 @@ static int scroll(int shift) {
 
 static unsigned char scrw = 255, scrh = 255;
 
+static char *build_login_url(char *url) {
+  char *host = strstr(url, "://");
+  char *proto;
+  char *full_url;
+  
+  full_url = malloc(BUFSIZE);
+
+  if (host != NULL) {
+    *host = '\0';
+    /* url is now protocol */
+    proto = url;
+    host = host + 3;
+  } else {
+    proto = "ftp";
+    host = url;
+  }
+  
+  if (login)
+    snprintf(full_url, BUFSIZE, "%s://%s:%s@%s", proto, login, password, host);
+  else
+    snprintf(full_url, BUFSIZE, "%s://%s", proto, host);
+  free(url);
+  return full_url;
+}
+
 int main(int argc, char **argv) {
   char *url;
   char c;
@@ -133,6 +222,7 @@ int main(int argc, char **argv) {
   screensize(&scrw, &scrh);
 
   url = get_start_url();
+  url = build_login_url(url);
   //clrscr();
 
   stp_print_footer();
@@ -148,7 +238,7 @@ int main(int argc, char **argv) {
 
     stp_print_header(url);
     
-    clrzone(0, 2, scrw, 2 + PAGE_HEIGHT);
+    clrzone(0, 2, scrw - 1, 2 + PAGE_HEIGHT);
     gotoxy(12, 12);
     printf("Loading...");
 
@@ -167,27 +257,7 @@ int main(int argc, char **argv) {
     }
 
     if (resp->content_type && strcmp(resp->content_type, "directory")) {
-      char *filename = strdup(strrchr(url, '/') + 1);
-      printxcenteredbox(30, 12);
-      printxcentered(7, filename);
-
-      gotoxy(6, 10);
-      printf("%s", resp->content_type ? resp->content_type : "");
-      gotoxy(6, 11);
-      printf("%zu bytes", resp->size);
-
-      gotoxy(6, 16);
-      chline(28);
-      gotoxy(6, 17);
-      printf("Esc: cancel  !   Enter: Save");
-      do {
-        c = cgetc();
-      } while (c != CH_ENTER && c != CH_ESC);
-      
-      if (c == CH_ENTER) {
-        stp_save(filename, resp);
-      }
-      free(filename);
+      stp_save_dialog(url, resp);
       goto up_dir;
 
     } else {
@@ -206,7 +276,7 @@ int main(int argc, char **argv) {
 
 update_list:
     if (full_update) {
-      clrzone(0, 2, scrw, 2 + PAGE_HEIGHT);
+      clrzone(0, 2, scrw - 1, 2 + PAGE_HEIGHT);
       for (i = 0; i + cur_display_line < num_lines && i < PAGE_HEIGHT; i++) {
         gotoxy(0, i + 2);
         if (i + cur_display_line == cur_line) {
@@ -230,7 +300,8 @@ up_dir:
         full_update = 1;
         break;
       case CH_ENTER:
-        url = url_enter(url, lines[cur_line]);
+        if (lines)
+          url = url_enter(url, lines[cur_line]);
         full_update = 1;
         break;
       case CH_CURS_UP:
@@ -239,6 +310,11 @@ up_dir:
       case CH_CURS_DOWN:
         full_update = scroll(+1);
         goto update_list;
+      case 's':
+      case 'S':
+        stp_send_file(url);
+        full_update = 1;
+        break;
       default: 
         goto update_list;
     }

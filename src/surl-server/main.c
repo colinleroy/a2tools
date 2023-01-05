@@ -34,6 +34,7 @@ struct _curl_buffer {
   char *headers;
   size_t headers_size;
 
+  size_t upload_size;
   char *content_type;
 };
 
@@ -49,12 +50,7 @@ int main(int argc, char **argv)
   size_t bufsize = 0, sent = 0;
   curl_buffer *response = NULL;
 
-  if (argc < 2) {
-    printf("Usage: %s [serial tty]\n", argv[0]);
-    exit(1);
-  }
-
-  if (simple_serial_open(argv[1], B9600, 1) != 0) {
+  if (simple_serial_open() != 0) {
     exit(1);
   }
 
@@ -94,9 +90,12 @@ new_req:
         free(parts[i]);
       }
       free(parts);
-    } else {
-      printf("Read error %s\n", strerror(errno));
+    } else if (errno != EBADF) {
+      printf("Read error: %s\n", strerror(errno));
       goto new_req;
+    } else {
+      printf("Fatal read error: %s\n", strerror(errno));
+      exit(1);
     }
     
     do {
@@ -107,9 +106,12 @@ new_req:
           headers[n_headers] = trim(reqbuf);
           n_headers++;
         }
-      } else {
-        printf("Read error %s\n", strerror(errno));
+      } else if (errno != EBADF) {
+        printf("Read error: %s\n", strerror(errno));
         goto new_req;
+      } else {
+        printf("Fatal read error: %s\n", strerror(errno));
+        exit(1);
       }
     } while (strcmp(reqbuf, "\n"));
 
@@ -117,9 +119,6 @@ new_req:
       printf("could not parse request '%s'\n", reqbuf);
       continue;
     }
-
-    simple_serial_puts("WAIT\n");
-
 
     response = curl_request(method, url, headers, n_headers);
     
@@ -206,6 +205,26 @@ static void proxy_set_curl_opts(CURL *curl) {
 
 }
 
+static size_t data_send_cb(char *ptr, size_t size, size_t nmemb, void *cbdata) {
+  unsigned long nread;
+  curl_buffer *curlbuf = (curl_buffer *)cbdata;
+  size_t retcode;
+  
+  if (curlbuf->upload_size == 0) {
+    return 0;
+  }
+
+  retcode = simple_serial_read(ptr, size, min(nmemb, curlbuf->upload_size));
+
+  if(retcode > 0) {
+    nread = (unsigned long)retcode;
+    curlbuf->upload_size -= nread;
+    printf("read %lu bytes from serial\n", nread);
+  }
+
+  return retcode;
+}
+
 static curl_buffer *curl_request(char *method, char *url, char **headers, int n_headers) {
   CURL *curl;
   CURLcode res;
@@ -213,8 +232,13 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
   curl_buffer *curlbuf;
   int is_sftp = !strncmp("sftp", url, 4);
   int is_ftp = !strncmp("ftp", url, 3) || is_sftp;
-  int ftp_is_maybe_dir = (is_ftp && url[strlen(url)-1] != '/');
-  int ftp_try_dir = (is_ftp && url[strlen(url)-1] == '/');
+  int ftp_is_maybe_dir = (is_ftp && url[strlen(url)-1] != '/' && !strcmp(method, "GET"));
+  int ftp_try_dir = (is_ftp && url[strlen(url)-1] == '/' && !strcmp(method, "GET"));
+  static char *upload_buf = NULL;
+
+  if (upload_buf == NULL) {
+    upload_buf = malloc(4096);
+  }
 
   if (ftp_is_maybe_dir) {
     /* try dir first */
@@ -224,7 +248,7 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
     dir_url[strlen(url) + 1] = '\0';
     curlbuf = curl_request(method, dir_url, headers, n_headers);
     free(dir_url);
-    if ((curlbuf->response_code >= 200 && curlbuf->response_code < 300) || (curlbuf->response_code == 0 &&  is_sftp)) {
+    if (curlbuf->response_code >= 200 && curlbuf->response_code < 300) {
       return curlbuf;
     } else {
       /* get as file */
@@ -238,14 +262,51 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
   curlbuf->response_code = 500;
   curlbuf->headers = NULL;
   curlbuf->headers_size = 0;
+  curlbuf->upload_size = 0;
+  curlbuf->content_type = NULL;
 
-  if (strcmp(method, "GET")) {
+  curl = curl_easy_init();
+  proxy_set_curl_opts(curl);
+
+  if (!strcmp(method, "POST")) {
+      if (is_ftp) {
+        printf("Unsupported ftp method POST\n");
+        return curlbuf;
+      }
+      simple_serial_puts("SEND_SIZE_AND_DATA\n");
+      simple_serial_gets(upload_buf, 255);
+      curlbuf->upload_size = atol(upload_buf);
+      printf("Uploading %zu\n", curlbuf->upload_size);
+      curl_easy_setopt(curl, CURLOPT_POST, 1L);
+      curl_easy_setopt(curl, CURLOPT_READFUNCTION, data_send_cb);
+      curl_easy_setopt(curl, CURLOPT_READDATA, curlbuf);
+      curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, curlbuf->upload_size);
+  } else if (!strcmp(method, "PUT")) {
+      simple_serial_puts("SEND_SIZE_AND_DATA\n");
+      simple_serial_gets(upload_buf, 255);
+      curlbuf->upload_size = atol(upload_buf);
+      printf("Uploading %zu\n", curlbuf->upload_size);
+      curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
+      curl_easy_setopt(curl, CURLOPT_READFUNCTION, data_send_cb);
+      curl_easy_setopt(curl, CURLOPT_READDATA, curlbuf);
+      curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+      curl_easy_setopt(curl, CURLOPT_INFILESIZE, curlbuf->upload_size);
+      if (is_sftp) {
+        curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_SFTP);
+      } else if (is_ftp) {
+        curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_FTP);
+      }
+  } else if (!strcmp(method, "GET")) {
+    /* Don't send WAIT twice */
+    if (ftp_try_dir || !ftp_is_maybe_dir) {
+      simple_serial_puts("WAIT\n");
+      printf("sent WAIT\n");
+    }
+  } else {
     printf("Unsupported method %s\n", method);
     return curlbuf;
   }
 
-  curl = curl_easy_init();
-  proxy_set_curl_opts(curl);
 
   printf("%s %s\n", method, url);
   if (curl) {
@@ -271,9 +332,20 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
     curl_slist_free_all(curl_headers);
 
     if(res != CURLE_OK) {
-      printf("curl error %s\n", curl_easy_strerror(res));
+      printf("curl error %d %s\n", res, curl_easy_strerror(res));
+      /* Empty read buffer if needed */
+      while (curlbuf->upload_size > 0) {
+        data_send_cb(upload_buf, 1, 4096, curlbuf);
+      }
+      if (res == CURLE_REMOTE_ACCESS_DENIED) {
+        curlbuf->response_code = 401;
+      }
+    } else {
+      curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &(curlbuf->response_code));
+      if (curlbuf->response_code == 0) {
+        curlbuf->response_code = 200;
+      }
     }
-    curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &(curlbuf->response_code));
     curl_easy_getinfo (curl, CURLINFO_CONTENT_TYPE, &tmp);
     if (tmp != NULL) {
       curlbuf->content_type = strdup(tmp);

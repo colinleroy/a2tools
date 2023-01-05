@@ -1,5 +1,7 @@
-PROGRAM=surl
-SOURCES := surl-client.c ../lib/simple_serial.c ../lib/extended_conio.c ../lib/surl.c
+PROGRAM=surl surlput
+surl_SOURCES := surl-client.c ../lib/simple_serial.c ../lib/extended_conio.c ../lib/surl.c
+surlput_SOURCES := surl-upload.c ../lib/simple_serial.c ../lib/extended_conio.c ../lib/surl.c ../lib/get_filedetails.c
+GCCSOURCES := ../lib/extended_string.c
 DEPS := 
 
 CC65_TARGET = apple2enh
@@ -10,13 +12,19 @@ GCCLDFLAGS =
 
 .PHONY: all clean
 
-all: $(PROGRAM).bin $(PROGRAM).x86_64
+all: surl.bin surl.x86_64 surlput.bin surlput.x86_64
 
-$(PROGRAM).bin: $(SOURCES)
-	cl65 $(CFLAGS) $(CLCFLAGS) -m $(PROGRAM).map -o $@ $^
+surl.bin: $(surl_SOURCES)
+	cl65 $(CFLAGS) $(CLCFLAGS) -m surl.map -o $@ $^
 
-$(PROGRAM).x86_64: $(SOURCES)
+surl.x86_64: $(surl_SOURCES) $(GCCSOURCES)
+	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	
+
+surlput.bin: $(surlput_SOURCES)
+	cl65 $(CFLAGS) $(CLCFLAGS) -m surl.map -o $@ $^
+
+surlput.x86_64: $(surlput_SOURCES) $(GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	
 
 clean:
-	rm -f $(PROGRAM).bin $(PROGRAM).x86_64 *.o *.map
+	rm -f surl.bin surl.x86_64 surlput.bin surlput.x86_64 *.o *.map
