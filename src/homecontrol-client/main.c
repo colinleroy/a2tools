@@ -47,7 +47,7 @@ static int cur_list_offset = 0;
 static int cur_list_display_offset = 0;
 static int cur_list_length = -1;
 
-#define clear_list(x) do { clrzone(x, PAGE_BEGIN, scrw, PAGE_BEGIN + PAGE_HEIGHT); } while(0)
+#define clear_list(x) do { clrzone(x, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT); } while(0)
 static void update_switch_page(int update_data) {
   int i;
 

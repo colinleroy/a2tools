@@ -1,5 +1,6 @@
 SUBDIRS = src 
 net_disk_PROGS = src/a2recv/a2recv.bin \
+		 		src/a2send/a2send.bin \
 				src/surl/surl.bin \
 				src/stp/stp.bin \
 
@@ -17,9 +18,8 @@ all clean:
 	done
 
 net.dsk: $(net_disk_PROGS)
-homectrl.dsk: $(homectrl_disk_PROGS)
 
-%.dsk:
+net.dsk: $(net_disk_PROGS)
 	cp $(CLEANDISK) $@; \
 	java -jar bin/ac.jar -p $@ BASIC.SYSTEM SYS < bin/loader.system; \
 	for prog in $?; do \

@@ -30,7 +30,6 @@
 #include "constants.h"
 #include "extended_conio.h"
 #include "surl.h"
-#include "tgi_fastline.h"
 
 /* Init HGR segment */
 #pragma rodata-name (push, "HGR")
@@ -224,10 +223,10 @@ int main(int argc, char **argv) {
 
         /* Draw scales */
         tgi_setcolor(TGI_COLOR_ORANGE);
-        tgi_fastline(MIN_TIME_SCR_X, MIN_VAL_SCR_Y, MAX_TIME_SCR_X, MIN_VAL_SCR_Y);
+        tgi_line(MIN_TIME_SCR_X, MIN_VAL_SCR_Y, MAX_TIME_SCR_X, MIN_VAL_SCR_Y);
         
         tgi_setcolor(TGI_COLOR_ORANGE);
-        tgi_fastline(MIN_TIME_SCR_X, MIN_VAL_SCR_Y, MIN_TIME_SCR_X, MAX_VAL_SCR_Y);
+        tgi_line(MIN_TIME_SCR_X, MIN_VAL_SCR_Y, MIN_TIME_SCR_X, MAX_VAL_SCR_Y);
 
         header_done = 3;
       }
@@ -264,10 +263,10 @@ int main(int argc, char **argv) {
           prev_t = start_time;
         }
         if ((int)TIME_X(timestamp) - (int)TIME_X(prev_t) < 6) {
-          tgi_fastline((int)TIME_X(prev_t), val_y(prev_v, min_val, max_val), (int)TIME_X(timestamp), val_y(value, min_val, max_val));
+          tgi_line((int)TIME_X(prev_t), val_y(prev_v, min_val, max_val), (int)TIME_X(timestamp), val_y(value, min_val, max_val));
         } else {
-          tgi_fastline((int)TIME_X(prev_t), val_y(prev_v, min_val, max_val), (int)TIME_X(prev_t), val_y(value, min_val, max_val));
-          tgi_fastline((int)TIME_X(prev_t), val_y(value, min_val, max_val), (int)TIME_X(timestamp), val_y(value, min_val, max_val));
+          tgi_line((int)TIME_X(prev_t), val_y(prev_v, min_val, max_val), (int)TIME_X(prev_t), val_y(value, min_val, max_val));
+          tgi_line((int)TIME_X(prev_t), val_y(value, min_val, max_val), (int)TIME_X(timestamp), val_y(value, min_val, max_val));
         }
         prev_t = timestamp;
         prev_v = value;

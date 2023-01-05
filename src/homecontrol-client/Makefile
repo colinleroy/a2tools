@@ -9,10 +9,9 @@ homectrl_SOURCES := main.c network.c \
 
 grphview_SOURCES := graph-viewer.c \
 	../lib/surl.c \
-	../lib/simple_serial.c \
-	../lib/tgi_fastline.c
+	../lib/simple_serial.c
 
-grphview_GCCSOURCES := ../lib/extended_conio.c ../lib/tgi_sdl.c ../lib/extended_string.c
+grphview_GCCSOURCES := ../lib/extended_conio.c ../lib/tgi_sdl.c ../lib/extended_string.c ../lib/tgi_fastline.c
 
 DEPS := 
 
