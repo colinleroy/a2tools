@@ -12,7 +12,7 @@ grphview_SOURCES := graph-viewer.c \
 	../lib/simple_serial.c \
 	../lib/tgi_fastline.c
 
-grphview_GCCSOURCES := ../lib/extended_conio.c ../lib/tgi_sdl.c
+grphview_GCCSOURCES := ../lib/extended_conio.c ../lib/tgi_sdl.c ../lib/extended_string.c
 
 DEPS := 
 

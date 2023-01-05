@@ -11,7 +11,7 @@
 int simple_serial_open(int slot, int baudrate, int hw_flow_control);
 int simple_serial_close(void);
 #else
-int simple_serial_open(const char *tty, int baudrate, int hw_flow_control);
+int simple_serial_open(void);
 int simple_serial_close(void);
 #endif
 

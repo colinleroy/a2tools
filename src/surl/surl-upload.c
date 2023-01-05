@@ -19,18 +19,29 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/stat.h>
+#include <dirent.h>
+#ifndef __CC65__
+#include <libgen.h>
+#endif
 #include "surl.h"
+#include "get_filedetails.h"
 #include "simple_serial.h"
 #include "extended_conio.h"
 
 #define BUFSIZE 255
 static char *buf;
+static char *filename;
 
 int main(int argc, char **argv) {
   surl_response *response = NULL;
   const char *headers[1] = {"Accept: text/*"};
   char *buffer;
   size_t r;
+  unsigned long filesize;
+  unsigned char type;
+  unsigned auxtype;
+  FILE *fp;
 
 again:
   if (argc > 1) {
@@ -44,14 +55,51 @@ again:
   if (strchr(buf, '\n'))
     *strchr(buf, '\n') = '\0';
 
-  response = surl_start_request("GET", buf, headers, 1);
+  if (argc > 2) {
+    filename = strdup(argv[2]);
+  } else {
+    filename = malloc(BUFSIZE);
+    printf("Enter file to send: ");
+    cgets(filename, BUFSIZE);
+  }
+
+  if (strchr(filename, '\n'))
+    *strchr(filename, '\n') = '\0';
+    
+  if (get_filedetails(filename, &filesize, &type, &auxtype) < 0) {
+    printf("Cannot get file details.\n");
+    exit(1);
+  }
+
+  fp = fopen(filename,"r");
+  if (fp == NULL) {
+    printf("Can't open %s\n", filename);
+    exit(1);
+  }
+
+  response = surl_start_request("PUT", buf, headers, 1);
   if (response == NULL) {
     printf("No response.\n");
     exit(1);
   }
-  printf("Got response %d (%zu bytes), %s\n", response->code, response->size, response->content_type);
+
+  if (response->code != 100) {
+    printf("Unexpected response code %d\n", response->code);
+    exit(1);
+  }
 
   buffer = malloc(BUFSIZE);
+  surl_send_data_size(response, filesize);
+  while ((r = fread(buffer, 1, BUFSIZE, fp)) > 0) {
+    surl_send_data(response, buffer, r);
+  }
+
+  fclose(fp);
+
+  surl_read_response_header(response);
+
+  printf("Got response %d (%zu bytes), %s\n", response->code, response->size, response->content_type);
+
   while ((r = surl_receive_data(response, buffer, BUFSIZE - 1)) > 0) {
     printf("%s", buffer);
   }

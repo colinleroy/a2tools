@@ -23,6 +23,7 @@
 #include <apple2enh.h>
 #endif
 #include "stp_save.h"
+#include "get_buf_size.h"
 #include "simple_serial.h"
 #include "extended_conio.h"
 #include "math.h"
@@ -30,24 +31,6 @@
 #define APPLESINGLE_HEADER_LEN 58
 
 static unsigned char scrw = 255, scrh = 255;
-
-static unsigned int get_buf_size(void) {
-#ifdef __CC65__
-  unsigned int avail = _heapmaxavail();
-  if (avail > 18000)
-    return 16384;
-  if (avail > 9000)
-    return 8192;
-  if (avail > 5000)
-    return 4096;
-  if (avail > 3000)
-    return 2048;
-  
-  return 1024;
-#else
-  return 32768;
-#endif
-}
 
 char *cleanup_filename(char *in) {
   int len = strlen(in), i;
@@ -69,6 +52,32 @@ char *cleanup_filename(char *in) {
     in[i] = '.';
   }
   return in;
+}
+
+void stp_save_dialog(char *url, surl_response *resp) {
+  char *filename = strdup(strrchr(url, '/') + 1);
+  char c;
+
+  printxcenteredbox(30, 12);
+  printxcentered(7, filename);
+
+  gotoxy(6, 10);
+  printf("%s", resp->content_type ? resp->content_type : "");
+  gotoxy(6, 11);
+  printf("%zu bytes", resp->size);
+
+  gotoxy(6, 16);
+  chline(28);
+  gotoxy(6, 17);
+  printf("Esc: cancel  !   Enter: Save");
+  do {
+    c = cgetc();
+  } while (c != CH_ENTER && c != CH_ESC);
+  
+  if (c == CH_ENTER) {
+    stp_save(filename, resp);
+  }
+  free(filename);
 }
 
 void stp_save(char *full_filename, surl_response *resp) {

@@ -27,18 +27,27 @@
 static unsigned char scrw = 255, scrh = 255;
 
 void stp_print_header(char *url) {
-  
+  char *no_pass_url = strdup(url);
+
   if (scrw == 255)
     screensize(&scrw, &scrh);
 
-  clrzone(0, 0, scrw, 0);
+  if (strchr(no_pass_url, ':') != strrchr(no_pass_url,':')) {
+    /* Means there's a login */
+    char *t = strrchr(no_pass_url, ':') + 1;
+    while(*t != '@') {
+      *t = '*';
+      t++;
+    }
+  }
+  clrzone(0, 0, scrw - 1, 0);
   gotoxy(0,0);
-  if (strlen(url) > scrw - 2 /* One char for serial act */) {
-    char *tmp = strdup(url + strlen(url) - scrw + 5);
+  if (strlen(no_pass_url) > scrw - 2 /* One char for serial act */) {
+    char *tmp = strdup(no_pass_url + strlen(no_pass_url) - scrw + 5);
     printf("...%s", tmp);
     free(tmp);
   } else {
-    printf("%s",url);
+    printf("%s",no_pass_url);
   }
   gotoxy(0, 1);
   chline(scrw);
@@ -49,7 +58,7 @@ void stp_print_result(surl_response *response) {
     screensize(&scrw, &scrh);
   gotoxy(0, 18);
   chline(scrw);
-  clrzone(0, 19, scrw, 20);
+  clrzone(0, 19, scrw - 1, 20);
   gotoxy(0, 19);
   if (response == NULL) {
     printf("Unknown request error.");
@@ -67,8 +76,8 @@ void stp_print_footer(void) {
     screensize(&scrw, &scrh);
   gotoxy(0, 21);
   chline(scrw);
-  clrzone(0, 22, scrw, 23);
+  clrzone(0, 22, scrw - 1, 23);
   gotoxy(0, 22);
-  printf("Up/Down: navigate\n"
+  printf("Up/Down: navigate - S: send file\n"
        "Enter: select - Esc: back");
 }

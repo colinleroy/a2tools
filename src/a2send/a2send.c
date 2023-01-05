@@ -28,9 +28,11 @@
 #endif
 #include <stdlib.h>
 #include <string.h>
+#include "get_filedetails.h"
 #include "simple_serial.h"
 
 #define DATA_SIZE 16384
+#define BUFSIZE 32
 
 static void wait_for_receiver(void) {
   char buf[128];
@@ -53,51 +55,19 @@ static void wait_for_receiver(void) {
 #endif
 }
 
-#ifdef __CC65__
-static unsigned long get_filesize(char *file) {
-  struct dirent *d;
-  DIR *dir;
-  unsigned long size = 0;
-
-  dir = opendir(".");
-  while (d = readdir(dir)) {
-    if (!strcmp(file, d->d_name)) {
-      size = d->d_size;
-      break;
-    }
-  }
-
-  closedir(dir);
-
-  if (size == 0) {
-    printf("Can't find %s\n", file);
-    exit(1);
-  }
-  return size;
-}
-#else
-static unsigned long get_filesize(char *file) {
-  struct stat statbuf;
-
-  if (stat(file, &statbuf) < 0) {
-    printf("Can't stat %s\n", file);
-    exit(1);
-  }
-  
-  return statbuf.st_size;
-}
-#endif
-
 int main(int argc, char **argv) {
   FILE *fp;
   char *filename;
+  char *remote_filename;
   char *filetype;
   char c;
   int count = 0;
   char buf[128];
   char start_addr[2];
-  int cur_file = 2;
+  int cur_file = 1;
   unsigned long filesize;
+  unsigned char type;
+  unsigned auxtype;
 
 #ifdef __CC65__
   if (simple_serial_open(2, SER_BAUD_9600, 1) < 0) {
@@ -109,57 +79,67 @@ send_again:
   cgets(buf, sizeof(buf));
 
   filename = buf;
-
-  filesize = get_filesize(argv[cur_file]);
-
-  fp = fopen(filename,"r");
-  if (fp == NULL) {
-    printf("Can't open %s\n", argv[cur_file]);
+  if (strchr(filename, '\n')) {
+    *strchr(filename, '\n') = '\0';
+  }
+  if (get_filedetails(filename, &filesize, &type, &auxtype) < 0) {
+    printf("Can't get %s details\n", filename);
     exit(1);
   }
 
-  if (strchr(filename, '.') != NULL) {
-    filetype = strchr(filename, '.') + 1;
-    *(strchr(filename, '.')) = '\0';
-  } else {
-    filetype = "TXT";
-  }
-  if (!strcmp(filetype, "system")) {
-    char *tmp = malloc(32);
-    filetype = "SYS";
-    sprintf(tmp, "%s.system", filename);
-    free(filename);
-    filename = tmp;
+  /* We want to send raw */
+  _filetype = PRODOS_T_TXT;
+  _auxtype  = PRODOS_AUX_T_TXT_SEQ;
+  
+  fp = fopen(filename,"r");
+  if (fp == NULL) {
+    printf("Can't open %s\n", filename);
+    exit(1);
   }
   
-  if (!strcmp(filetype, "TXT")) {
-    _filetype = PRODOS_T_TXT;
-    _auxtype  = PRODOS_AUX_T_TXT_SEQ;
-  } else if (!strcmp(filetype, "BIN")) {
-    _filetype = PRODOS_T_BIN;
-  } else if (!strcmp(filetype, "SYS")) {
-    _filetype = PRODOS_T_SYS;
+  if (!strchr(filename, '.')) {
+    remote_filename = malloc(BUFSIZE);
+    if (type == PRODOS_T_SYS) {
+      snprintf(remote_filename, BUFSIZE, "%s.SYSTEM", filename);
+    } else if (type == PRODOS_T_BIN) {
+      snprintf(remote_filename, BUFSIZE, "%s.BIN", filename);
+    } else {
+      snprintf(remote_filename, BUFSIZE, "%s.TXT", filename);
+    }
+  } else {
+    remote_filename = strdup(filename);
+  }
+  if (type == PRODOS_T_SYS) {
+    filetype = "SYSTEM";
+  } else if (type == PRODOS_T_BIN) {
+    filetype = "BIN";
+  } else {
+    filetype = "TXT";
   }
 
 #else
 
-  if (argc < 3) {
-    printf("Usage: %s [output tty] [file(s) to send]\n", argv[0]);
+  if (argc < 2) {
+    printf("Usage: %s [file(s) to send]\n", argv[0]);
     exit(1);
   }
 
-  if (simple_serial_open(argv[1], B9600, 1) < 0) {
+  if (simple_serial_open() < 0) {
     exit(1);
   }
 
 send_again:
+
+  if (get_filedetails(argv[cur_file], &filesize, &type, &auxtype) < 0) {
+    printf("Can't get %s details\n", argv[cur_file]);
+    exit(1);
+  }
 
   fp = fopen(argv[cur_file],"r");
   if (fp == NULL) {
     printf("Can't open %s\n", argv[cur_file]);
     exit(1);
   }
-  filesize = get_filesize(argv[cur_file]);
 
   filename = basename(argv[cur_file]);
   if (strchr(filename, '.') != NULL) {
@@ -174,8 +154,13 @@ send_again:
 #endif
 
   /* Send filename */
+#ifdef __CC65__
+  simple_serial_printf("%s\n", remote_filename);
+  printf("Filename sent:    %s\n", remote_filename);
+#else
   simple_serial_printf("%s\n", filename);
   printf("Filename sent:    %s\n", filename);
+#endif
 
   /* Send filetype */
   simple_serial_printf("%s\n", filetype);
@@ -201,10 +186,12 @@ send_again:
 
   printf("Data length sent: %ld\n", filesize - ftell(fp));
 
+#ifndef __CC65__
   if (!strcasecmp(filetype, "BIN")) {
     simple_serial_printf("%02x%02x\n", start_addr[0], start_addr[1]);
     printf("Start address:    %02x%02x\n", start_addr[0], start_addr[1]);
   }
+#endif
 
   while(fread(&c, 1, 1, fp) > 0) {
     simple_serial_putc(c);
