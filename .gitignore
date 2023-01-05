@@ -12,3 +12,4 @@ cc65
 tools/send/send
 tools/recv/recv
 IN*
+history/
