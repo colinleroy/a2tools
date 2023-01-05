@@ -2,6 +2,7 @@ a.out
 *.s
 *.o
 *.map
+*.sym
 *.bin
 *.x86_64
 *.dsk
