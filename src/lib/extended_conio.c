@@ -22,12 +22,21 @@
 static unsigned char scrw = 255, scrh = 255;
 
 #ifndef __CC65__
+#include <termios.h>
+#include <unistd.h>
+
 char cgetc(void) {
-  char *buf = malloc(255);
   char c;
-  fgets(buf, 255, stdin);
-  c = buf[0];
-  free(buf);
+  static int unset_canon = 0;
+  static struct termios ttyf;
+
+  if (!unset_canon) {
+    tcgetattr( STDIN_FILENO, &ttyf);
+    ttyf.c_lflag &= ~(ICANON);
+    tcsetattr( STDIN_FILENO, TCSANOW, &ttyf);
+    unset_canon = 1;
+  }
+  fread(&c, 1, 1, stdin);
   return c;
 }
 static void cputsxy(int x, int y, char *buf) {
