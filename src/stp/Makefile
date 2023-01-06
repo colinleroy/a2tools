@@ -10,8 +10,9 @@ SOURCES := stp.c stp_cli.c stp_save.c stp_send_file.c \
 DEPS := 
 
 CC65_TARGET = apple2enh
-CFLAGS  = -I ../lib #-DSERIAL_TO_LANGCARD
-CLCFLAGS = -t $(CC65_TARGET)
+CFLAGS  = -I ../lib
+CLCFLAGS = -t $(CC65_TARGET) #-g --debug-info -Wl "-Ln,$(PROGRAM).lbl" -Wl "--dbgfile,$(PROGRAM).dbg" -Wl "--mapfile,$(PROGRAM).map" \
+          # -DSERIAL_TO_LANGCARD
 GCCCFLAGS = -g -O0 -Werror 
 GCCLDFLAGS = 
 
