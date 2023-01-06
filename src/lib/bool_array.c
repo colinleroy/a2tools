@@ -40,6 +40,7 @@ bool_array *bool_array_alloc(int xlen, int ylen) {
     data = malloc(allocsize);
 
     if (data == NULL) {
+      free(array);
       return NULL;
     }
     memset(data, 0, allocsize);

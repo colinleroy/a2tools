@@ -20,7 +20,7 @@ int get_filedetails(char *filename, unsigned long *size, unsigned char *type, un
   while (d = readdir(dir)) {
     if (!strcasecmp(filename, d->d_name)) {
       *type = d->d_type;
-#ifdef __CC65__
+#ifdef __APPLE2__
       *size = d->d_size;
       *auxtype = d->d_auxtype;
 #endif

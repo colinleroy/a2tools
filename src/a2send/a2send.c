@@ -182,9 +182,9 @@ send_again:
 #endif
 
   /* Send data length */
-  simple_serial_printf("%ld\n", filesize - ftell(fp));
+  simple_serial_printf("%lu\n", filesize - ftell(fp));
 
-  printf("Data length sent: %ld\n", filesize - ftell(fp));
+  printf("Data length sent: %lu\n", filesize - ftell(fp));
 
 #ifndef __CC65__
   if (!strcasecmp(filetype, "BIN")) {
