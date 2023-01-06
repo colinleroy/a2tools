@@ -20,9 +20,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
-#ifdef __CC65__
-#include <apple2enh.h>
-#endif
 #include "stp.h"
 #include "stp_cli.h"
 #include "stp_save.h"

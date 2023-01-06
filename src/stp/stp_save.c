@@ -19,9 +19,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
-#ifdef __CC65__
-#include <apple2enh.h>
-#endif
 #include "stp_save.h"
 #include "get_buf_size.h"
 #include "simple_serial.h"
@@ -105,6 +102,7 @@ void stp_save(char *full_filename, surl_response *resp) {
     filetype = "TXT";
   }
 
+#ifdef PRODOS_T_TXT
   if (!strcasecmp(filetype, "TXT")) {
     _filetype = PRODOS_T_TXT;
     _auxtype  = PRODOS_AUX_T_TXT_SEQ;
@@ -138,6 +136,7 @@ void stp_save(char *full_filename, surl_response *resp) {
     filename = strdup(full_filename);
     _filetype = PRODOS_T_TXT;
   }
+#endif
 
   filename = cleanup_filename(filename);
 #endif
