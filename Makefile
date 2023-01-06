@@ -32,3 +32,6 @@ homectrl.dsk: $(homectrl_disk_PROGS)
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 		cp $@ ~/Documents/ADTPro-2.1.0/disks/; \
 	done
+
+upload: clean all
+	scp $(net_disk_PROGS) $(homectrl_disk_PROGS) diskstation.lan:/volume1/a2repo/
