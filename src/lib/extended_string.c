@@ -23,11 +23,22 @@ static int _strsplit_int(char *in, char split, char ***out, char in_place) {
   int i;
   int n_tokens;
   char **result = NULL;
+  char **tmp;
 
   n_tokens = 0;
+  if (in == NULL)
+    goto err_out;
+
   for (i = 0; in[i] != '\0'; i++) {
     if (in[i] == split) {
-      result = realloc(result, (n_tokens + 1) * sizeof(void *));
+      tmp = realloc(result, (n_tokens + 1) * sizeof(void *));
+      if (tmp) {
+        result = tmp;
+      } else {
+        free(result);
+        n_tokens = 0;
+        goto err_out;
+      }
       in[i] = '\0';
       result[n_tokens] = in_place ? in : strdup(in);
       in = in + i + 1; i = 0;
@@ -38,11 +49,19 @@ static int _strsplit_int(char *in, char split, char ***out, char in_place) {
   }
   /* last token */
   if (in && *in) {
-    result = realloc(result, (n_tokens + 1) * sizeof(void *));
+    tmp = realloc(result, (n_tokens + 1) * sizeof(void *));
+    if (tmp) {
+      result = tmp;
+    } else {
+      free(result);
+      n_tokens = 0;
+      goto err_out;
+    }
     result[n_tokens] = in_place ? in : strdup(in);
     n_tokens++;
   }
-  
+
+err_out:  
   *out = result;
   return n_tokens;
 }
