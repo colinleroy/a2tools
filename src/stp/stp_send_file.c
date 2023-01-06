@@ -20,9 +20,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
-#ifdef __CC65__
-#include <apple2enh.h>
-#endif
 #include "stp_cli.h"
 #include "stp_send_file.h"
 #include "simple_serial.h"
@@ -99,7 +96,7 @@ void stp_send_file(char *remote_dir) {
     goto err_out;
   }
 
-#ifdef __CC65__
+#ifdef PRODOS_T_TXT
   /* We want to send raw files */
   _filetype = PRODOS_T_TXT;
   _auxtype  = PRODOS_AUX_T_TXT_SEQ;

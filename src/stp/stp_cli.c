@@ -18,9 +18,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#ifdef __CC65__
-#include <apple2enh.h>
-#endif
 #include "stp_cli.h"
 #include "extended_conio.h"
 
