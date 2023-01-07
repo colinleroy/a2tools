@@ -11,8 +11,7 @@ DEPS :=
 
 CC65_TARGET = apple2enh
 CFLAGS  = -I ../lib
-CLCFLAGS = -t $(CC65_TARGET) #-g --debug-info -Wl "-Ln,$(PROGRAM).lbl" -Wl "--dbgfile,$(PROGRAM).dbg" -Wl "--mapfile,$(PROGRAM).map" \
-          # -DSERIAL_TO_LANGCARD
+CLCFLAGS = -t $(CC65_TARGET) -g --debug-info -Wl "-Ln,$(PROGRAM).lbl" -Wl "--dbgfile,$(PROGRAM).dbg" -Wl "--mapfile,$(PROGRAM).map" -vm #-DSERIAL_TO_LANGCARD
 GCCCFLAGS = -g -O0 -Werror 
 GCCLDFLAGS = 
 
@@ -21,7 +20,7 @@ GCCLDFLAGS =
 all: $(PROGRAM).bin $(PROGRAM).x86_64
 
 $(PROGRAM).bin: $(SOURCES)
-	cl65 $(CFLAGS) $(CLCFLAGS) -m $(PROGRAM).map -o $@ $^
+	cl65 $(CFLAGS) $(CLCFLAGS) -o $@ $^
 
 $(PROGRAM).x86_64: $(SOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	
