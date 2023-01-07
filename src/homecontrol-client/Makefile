@@ -39,3 +39,6 @@ grphview.x86_64: $(grphview_SOURCES) $(grphview_GCCSOURCES)
 
 clean:
 	rm -f homectrl.bin homectrl.x86_64 grphview.bin grphview.x86_64 *.o *.map
+
+upload: all
+	scp homectrl.bin grphview.bin diskstation.lan:/volume1/a2repo/

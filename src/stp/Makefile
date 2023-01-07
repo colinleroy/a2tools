@@ -27,3 +27,6 @@ $(PROGRAM).x86_64: $(SOURCES)
 
 clean:
 	rm -f $(PROGRAM).bin $(PROGRAM).x86_64 *.o *.map
+
+upload: all
+	scp $(PROGRAM).bin diskstation.lan:/volume1/a2repo/
