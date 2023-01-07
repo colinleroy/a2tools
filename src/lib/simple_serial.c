@@ -285,9 +285,9 @@ int simple_serial_open(void) {
 
   setup_tty(fileno(ttyfp), opt_tty_speed, opt_tty_hw_handshake);
 
-  printf("Opened serial port %s at %sbps, %s\n",
+  printf("Opened %s at %sbps, CRTSCTS %s\n",
          opt_tty_path, tty_speed_to_str(opt_tty_speed),
-         opt_tty_hw_handshake ? "CRTSCTS" : "no CRTSCTS");
+         opt_tty_hw_handshake ? "on" : "off");
   return 0;
 }
 
