@@ -16,7 +16,7 @@ static const char *get_cfg_path(void) {
   return path;
 }
 
-static int get_speed(char *tmp) {
+static int tty_speed_from_str(char *tmp) {
   if (!strcmp(tmp, "300"))
     return B300;
   if (!strcmp(tmp, "600"))
@@ -37,6 +37,28 @@ static int get_speed(char *tmp) {
     return B115200;
   printf("Unhandled speed %s.\n", tmp);
   exit(1);
+}
+
+static char *tty_speed_to_str(int speed) {
+  if (speed == B300)
+    return "300";
+  if (speed == B600)
+    return "600";
+  if (speed == B1200)
+    return "1200";
+  if (speed == B2400)
+    return "2400";
+  if (speed == B4800)
+    return "4800";
+  if (speed == B9600)
+    return "9600";
+  if (speed == B19200)
+    return "19200";
+  if (speed == B57600)
+    return "57600";
+  if (speed == B115200)
+    return "115200";
+  return "???";
 }
 
 static int get_bool(char *tmp) {
@@ -82,7 +104,7 @@ static int simple_serial_read_opts(void) {
 
     if (!strncmp(buf,"baudrate:", 9)) {
       char *tmp = trim(buf + 9);
-      opt_tty_speed = get_speed(tmp);
+      opt_tty_speed = tty_speed_from_str(tmp);
       free(tmp);
     }
 
@@ -101,7 +123,7 @@ static int simple_serial_read_opts(void) {
   }
 
   if (getenv("A2_TTY_SPEED")) {
-    opt_tty_speed = get_speed(getenv("A2_TTY_SPEED"));
+    opt_tty_speed = tty_speed_from_str(getenv("A2_TTY_SPEED"));
   }
 
   if (getenv("A2_TTY_HW_HANDSHAKE")) {

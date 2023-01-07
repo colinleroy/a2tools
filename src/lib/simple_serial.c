@@ -31,12 +31,12 @@ static int serial_activity_indicator_y = -1;
 /* proto */
 static int __simple_serial_getc_with_timeout(int timeout);
 
+#ifdef __CC65__
 static void activity_cb(int on) {
   gotoxy(serial_activity_indicator_x, serial_activity_indicator_y);
   cputc(on ? '*' : ' ');
 }
 
-/* Shared for code testing */
 static char *__simple_serial_gets_with_timeout(char *out, size_t size, int with_timeout) {
   int b;
   char c;
@@ -57,6 +57,8 @@ static char *__simple_serial_gets_with_timeout(char *out, size_t size, int with_
     b = __simple_serial_getc_with_timeout(with_timeout);
     if (b == EOF) {
       break;
+    } else if (b < 0) {
+      return NULL;
     }
     c = (char)b;
     
@@ -135,7 +137,6 @@ int simple_serial_puts(char *buf) {
   return len;
 }
 
-#ifdef __CC65__
 /* Setup */
 static int last_slot = 2;
 static int last_baudrate = SER_BAUD_9600;
@@ -147,10 +148,6 @@ static struct ser_params default_params = {
     SER_PAR_NONE,       /* Parity setting */
     SER_HS_HW           /* Type of handshake to use */
 };
-
-#ifdef SERIAL_TO_LANGCARD
-#pragma code-name (push, "LC")
-#endif
 
 int simple_serial_open(int slot, int baudrate, int hw_flow_control) {
   int err;
@@ -184,6 +181,10 @@ int simple_serial_open(int slot, int baudrate, int hw_flow_control) {
 int simple_serial_close(void) {
   return ser_close();
 }
+
+#ifdef SERIAL_TO_LANGCARD
+#pragma code-name (push, "LC")
+#endif
 
 static int timeout_cycles = -1;
 
@@ -284,6 +285,9 @@ int simple_serial_open(void) {
 
   setup_tty(fileno(ttyfp), opt_tty_speed, opt_tty_hw_handshake);
 
+  printf("Opened serial port %s at %sbps, %s\n",
+         opt_tty_path, tty_speed_to_str(opt_tty_speed),
+         opt_tty_hw_handshake ? "CRTSCTS" : "no CRTSCTS");
   return 0;
 }
 
@@ -293,6 +297,18 @@ int simple_serial_close(void) {
   }
   ttyfp = NULL;
   return 0;
+}
+
+static char *__simple_serial_gets_with_timeout(char *out, size_t size, int with_timeout) {
+  return fgets(out, size, ttyfp);
+}
+
+static size_t __simple_serial_read_with_timeout(char *ptr, size_t size, size_t nmemb, int with_timeout) {
+  return fread(ptr, size, nmemb, ttyfp);
+}
+
+int simple_serial_puts(char *buf) {
+  return fputs(buf, ttyfp);
 }
 
 /* Input */

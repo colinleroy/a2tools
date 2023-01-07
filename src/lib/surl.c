@@ -97,11 +97,6 @@ surl_response *surl_start_request(const char *method, const char *url, const cha
   return resp;
 }
 
-//Pop early because the whole serial + surl code doesn't fit in LC
-#ifdef SERIAL_TO_LANGCARD
-#pragma code-name (pop)
-#endif
-
 void surl_send_data_size(surl_response *resp, size_t total) {
   simple_serial_printf("%zu\n", total);
 }
@@ -222,3 +217,7 @@ void surl_response_free(surl_response *resp) {
   free(resp->content_type);
   free(resp);
 }
+//Pop early because the whole serial + surl code doesn't fit in LC
+#ifdef SERIAL_TO_LANGCARD
+#pragma code-name (pop)
+#endif

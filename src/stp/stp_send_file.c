@@ -136,6 +136,8 @@ void stp_send_file(char *remote_dir) {
 
   surl_send_data_size(resp, filesize);
 
+  total = 0;
+
   do {
     size_t rem = (size_t)((long)filesize - (long)total);
     size_t chunksize = min(buf_size, rem);
