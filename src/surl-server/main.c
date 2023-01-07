@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
 #include <curl/curl.h>
 #include "simple_serial.h"
 #include "extended_string.h"
@@ -50,12 +51,13 @@ int main(int argc, char **argv)
   size_t bufsize = 0, sent = 0;
   curl_buffer *response = NULL;
 
-  if (simple_serial_open() != 0) {
-    exit(1);
-  }
-
-  atexit((void *)simple_serial_close);
   curl_global_init(CURL_GLOBAL_ALL);
+
+reopen:
+  simple_serial_close();
+  while (simple_serial_open() != 0) {
+    sleep(1);
+  }
 
   while(1) {
 
@@ -90,12 +92,12 @@ new_req:
         free(parts[i]);
       }
       free(parts);
-    } else if (errno != EBADF) {
+    } else if (errno != EBADF && errno != ENOENT) {
       printf("Read error: %s\n", strerror(errno));
       goto new_req;
     } else {
       printf("Fatal read error: %s\n", strerror(errno));
-      exit(1);
+      goto reopen;
     }
     
     do {
@@ -106,12 +108,12 @@ new_req:
           headers[n_headers] = trim(reqbuf);
           n_headers++;
         }
-      } else if (errno != EBADF) {
+      } else if (errno != EBADF && errno != ENOENT) {
         printf("Read error: %s\n", strerror(errno));
         goto new_req;
       } else {
         printf("Fatal read error: %s\n", strerror(errno));
-        exit(1);
+        goto reopen;
       }
     } while (strcmp(reqbuf, "\n"));
 
