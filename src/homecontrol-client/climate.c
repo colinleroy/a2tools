@@ -159,8 +159,9 @@ int update_climate_zones(hc_climate_zone ***climate_zones_list) {
     char **parts;
     int num_parts;
     num_parts = strsplit_in_place(lines[i],';', &parts);
-    if (num_parts == 5 + can_schedule) {
-      climate_zone_add(parts[0], parts[1], parts[2], parts[3], parts[4], can_schedule ? !strcmp(parts[5], "MANUAL") : 1);
+    if (num_parts >= 5) {
+      climate_zone_add(parts[0], parts[1], parts[2], parts[3], parts[4], 
+        can_schedule && num_parts > 5 ? !strcmp(parts[5], "MANUAL") : 1);
     }
     free(parts);
   }
