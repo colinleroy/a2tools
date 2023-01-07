@@ -19,6 +19,7 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
+#include <signal.h>
 #include <curl/curl.h>
 #include "simple_serial.h"
 #include "extended_string.h"
@@ -42,6 +43,34 @@ struct _curl_buffer {
 static curl_buffer *curl_request(char *method, char *url, char **headers, int n_headers);
 static void curl_buffer_free(curl_buffer *curlbuf);
 
+static void handle_signal(int signal) {
+  if (signal == SIGTERM) {
+    simple_serial_close();
+    exit(0);
+  }
+}
+
+static void install_sig_handler(void) {
+	sigset_t    mask;
+	struct sigaction act;
+
+	sigemptyset(&mask);
+
+	sigaddset(&mask, SIGTERM);
+	sigaddset(&mask, SIGINT);
+	sigaddset(&mask, SIGHUP);
+
+	act.sa_handler = handle_signal;
+	act.sa_mask    = mask;
+	act.sa_flags   = 0;
+
+	sigaction(SIGTERM, &act, 0);
+	sigaction(SIGINT, &act, 0);
+	sigaction(SIGHUP, &act, 0);
+
+	sigprocmask(SIG_UNBLOCK, &mask, 0);
+}
+
 int main(int argc, char **argv)
 {
   char reqbuf[BUFSIZE];
@@ -51,6 +80,8 @@ int main(int argc, char **argv)
   size_t bufsize = 0, sent = 0;
   curl_buffer *response = NULL;
 
+  install_sig_handler();
+
   curl_global_init(CURL_GLOBAL_ALL);
 
 reopen:
@@ -59,12 +90,16 @@ reopen:
     sleep(1);
   }
 
+  fflush(stdout);
+
   while(1) {
 
     if (simple_serial_gets(reqbuf, BUFSIZE) != NULL) {
 new_req:
       char **parts;
       int num_parts, i;
+
+      fflush(stdout);
 
       free(method);
       free(url);
@@ -92,9 +127,6 @@ new_req:
         free(parts[i]);
       }
       free(parts);
-    } else if (errno != EBADF && errno != ENOENT) {
-      printf("Read error: %s\n", strerror(errno));
-      goto new_req;
     } else {
       printf("Fatal read error: %s\n", strerror(errno));
       goto reopen;
@@ -108,9 +140,6 @@ new_req:
           headers[n_headers] = trim(reqbuf);
           n_headers++;
         }
-      } else if (errno != EBADF && errno != ENOENT) {
-        printf("Read error: %s\n", strerror(errno));
-        goto new_req;
       } else {
         printf("Fatal read error: %s\n", strerror(errno));
         goto reopen;
@@ -133,20 +162,20 @@ new_req:
         if(!strncmp("SEND ", reqbuf, 5)) {
           bufsize = atoi(reqbuf + 5);
         } else {
-          printf("Aborting send\n");
+          printf("Aborted request\n");
           goto new_req;
         }
       } else {
-        printf("Aborting send\n");
+        printf("Aborted request\n");
         goto new_req;
       }
 
       to_send = min(bufsize, response->size - sent);
       sent += simple_serial_write(response->buffer + sent, sizeof(char), to_send);
-      printf("sent %zu (total %zu/%zu)\n", to_send, sent, response->size);
     }
 
-    printf("sent %d response to %s %s (%ld bytes)\n", response->response_code, method, url, response->size);
+    printf("%s %s - %d (%ldb)\n", method, url, response->response_code, response->size);
+    fflush(stdout);
 
   }
 }
@@ -278,7 +307,8 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
       simple_serial_puts("SEND_SIZE_AND_DATA\n");
       simple_serial_gets(upload_buf, 255);
       curlbuf->upload_size = atol(upload_buf);
-      printf("Uploading %zu\n", curlbuf->upload_size);
+
+      printf("POST upload: %zu bytes\n", curlbuf->upload_size);
       curl_easy_setopt(curl, CURLOPT_POST, 1L);
       curl_easy_setopt(curl, CURLOPT_READFUNCTION, data_send_cb);
       curl_easy_setopt(curl, CURLOPT_READDATA, curlbuf);
@@ -287,7 +317,8 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
       simple_serial_puts("SEND_SIZE_AND_DATA\n");
       simple_serial_gets(upload_buf, 255);
       curlbuf->upload_size = atol(upload_buf);
-      printf("Uploading %zu\n", curlbuf->upload_size);
+
+      printf("PUT upload: %zu bytes\n", curlbuf->upload_size);
       curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
       curl_easy_setopt(curl, CURLOPT_READFUNCTION, data_send_cb);
       curl_easy_setopt(curl, CURLOPT_READDATA, curlbuf);
@@ -302,7 +333,6 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
     /* Don't send WAIT twice */
     if (ftp_try_dir || !ftp_is_maybe_dir) {
       simple_serial_puts("WAIT\n");
-      printf("sent WAIT\n");
     }
   } else {
     printf("Unsupported method %s\n", method);
@@ -310,7 +340,7 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
   }
 
 
-  printf("%s %s\n", method, url);
+  printf("%s %s - start\n", method, url);
   if (curl) {
     struct curl_slist *curl_headers = NULL;
     char *tmp;
@@ -324,7 +354,6 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
     }
     for (i = 0; i < n_headers; i++) {
       curl_headers = curl_slist_append(curl_headers, headers[i]);
-      printf("%s\n", headers[i]);
     }
     
     printf("\n");
@@ -334,7 +363,7 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
     curl_slist_free_all(curl_headers);
 
     if(res != CURLE_OK) {
-      printf("curl error %d %s\n", res, curl_easy_strerror(res));
+      printf("Curl error %d: %s\n", res, curl_easy_strerror(res));
       /* Empty read buffer if needed */
       while (curlbuf->upload_size > 0) {
         data_send_cb(upload_buf, 1, 4096, curlbuf);
@@ -358,9 +387,8 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
         curlbuf->content_type = strdup("application/octet-stream");
       }
     }
-    printf("Content-Type: %s\n", curlbuf->content_type);
   }
-
+  fflush(stdout);
   curl_easy_cleanup(curl);
   return curlbuf;
 }

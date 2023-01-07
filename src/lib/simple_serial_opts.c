@@ -6,12 +6,16 @@ static int opt_tty_hw_handshake = 1;
 static const char *get_cfg_path(void) {
   static char path[255];
 
+#ifdef CONF_FILE_PATH
+  return CONF_FILE_PATH;
+#endif
+
   if (getenv("HOME") == NULL) {
     printf("Please export $HOME.\n");
     exit(1);
   }
 
-  snprintf(path, 255, "%s/.a2tools.tty", getenv("HOME"));
+  snprintf(path, 255, "%s", getenv("HOME"));
 
   return path;
 }

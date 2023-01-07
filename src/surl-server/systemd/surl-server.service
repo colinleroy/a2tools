@@ -1,0 +1,16 @@
+[Unit]
+Description=Serial to http proxy for very old computers
+After=network.target auditd.service
+
+[Service]
+Type=simple
+SyslogIdentifier=surl-server
+ExecStart=/usr/local/bin/surl-server
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=300
+StandardOutput=journal
+
+[Install]
+WantedBy=multi-user.target
+Alias=surl-server.service
