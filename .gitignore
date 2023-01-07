@@ -3,6 +3,8 @@ a.out
 *.o
 *.map
 *.sym
+*.dbg
+*.lbl
 *.bin
 *.x86_64
 *.dsk
