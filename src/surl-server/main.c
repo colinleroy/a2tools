@@ -47,6 +47,8 @@ static void handle_signal(int signal) {
   if (signal == SIGTERM) {
     simple_serial_close();
     exit(0);
+  } else {
+    printf("Ignoring signal %d\n", signal);
   }
 }
 
@@ -57,7 +59,6 @@ static void install_sig_handler(void) {
 	sigemptyset(&mask);
 
 	sigaddset(&mask, SIGTERM);
-	sigaddset(&mask, SIGINT);
 	sigaddset(&mask, SIGHUP);
 
 	act.sa_handler = handle_signal;
@@ -65,7 +66,6 @@ static void install_sig_handler(void) {
 	act.sa_flags   = 0;
 
 	sigaction(SIGTERM, &act, 0);
-	sigaction(SIGINT, &act, 0);
 	sigaction(SIGHUP, &act, 0);
 
 	sigprocmask(SIG_UNBLOCK, &mask, 0);
