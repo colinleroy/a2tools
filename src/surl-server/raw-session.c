@@ -51,11 +51,16 @@ static char recv_char(int sockfd) {
   if (n > 0 && FD_ISSET(sockfd, &fds)) {
     char c;
     n = read(sockfd, &c, 1);
-    return n == 0 ? EOF : c;
+    if (n == 0) {
+      printf("Read error %s\n", strerror(errno));
+      return EOF;
+    }
+    return c;
   } else if (n < 0) {
     printf("Read error %s\n", strerror(errno));
+    return EOF;
   }
-  return EOF;
+  return '\0';
 }
 
 static int socket_connect(int sock, char *remote_url) {
@@ -125,13 +130,13 @@ void surl_server_raw_session(char *remote_url) {
 
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
   if (sockfd < 0) {
-    simple_serial_puts("Could not create socket.\n");
-    return;
+    simple_serial_printf("Could not create socket.\n%c", 0x04);
+    goto cleanup;
   }
 
   if (socket_connect(sockfd, remote_url) < 0) {
-    simple_serial_puts("Could not connect.\n");
-    return;
+    simple_serial_printf("Could not connect.\n%c", 0x04);
+    goto cleanup;
   }
   
   set_non_blocking(sockfd);
@@ -152,13 +157,18 @@ void surl_server_raw_session(char *remote_url) {
       send_buf(sockfd, in_buf, n_in);
     
     n_out = 0;
-    while ((o = recv_char(sockfd)) != EOF) {
+    while ((o = recv_char(sockfd)) != EOF && o != '\0') {
       out_buf[n_out++] = o;
     }
     if (n_out > 0) {
       simple_serial_write(out_buf, 1, n_out);
     }
+    if (o == EOF) {
+      simple_serial_printf("Remote host closed connection.\n%c", 0x04);
+      goto cleanup;
+    }
   } while(last_i != 0x04);
 
+cleanup:
   close(sockfd);
 }

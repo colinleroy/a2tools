@@ -192,6 +192,14 @@ int simple_serial_close(void) {
 
 static int timeout_cycles = -1;
 
+int simple_serial_getc_immediate(void) {
+  char c;
+  if (ser_get(&c) == SER_ERR_NO_DATA) {
+    return EOF;
+  } else {
+    return c;
+  }
+}
 /* Input */
 static int __simple_serial_getc_with_timeout(int with_timeout) {
     char c;
@@ -335,6 +343,11 @@ read:
     if (n > 0) goto read;
     return EOF;
   }
+}
+
+int simple_serial_getc_immediate(void) {
+  /* same thing on linux */
+  return __simple_serial_getc_with_timeout(1);
 }
 
 /* Output */
