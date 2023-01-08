@@ -96,7 +96,7 @@ again:
       }
 #endif
     }
-    while ((o = simple_serial_getc_immediate()) != EOF) {
+    while ((o = simple_serial_getc_immediate()) != EOF && o != '\0') {
       if (o == '\r' && translate_ln)
         continue;
       if (o == 0x04) {

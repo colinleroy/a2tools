@@ -146,7 +146,7 @@ void surl_server_raw_session(char *remote_url) {
     last_i = '\0';
 
     n_in = 0;
-    while ((i = simple_serial_getc_with_timeout()) != EOF && n_in < 1023) {
+    while ((i = simple_serial_getc_with_timeout()) != (char)EOF && n_in < 1023) {
       last_i = i;
       if (i == 0x04) {
         break;
@@ -157,13 +157,13 @@ void surl_server_raw_session(char *remote_url) {
       send_buf(sockfd, in_buf, n_in);
     
     n_out = 0;
-    while ((o = recv_char(sockfd)) != EOF && o != '\0') {
+    while ((o = recv_char(sockfd)) != (char)EOF && o != '\0') {
       out_buf[n_out++] = o;
     }
     if (n_out > 0) {
       simple_serial_write(out_buf, 1, n_out);
     }
-    if (o == EOF) {
+    if (o == (char)EOF) {
       simple_serial_printf("Remote host closed connection.\n%c", 0x04);
       goto cleanup;
     }
