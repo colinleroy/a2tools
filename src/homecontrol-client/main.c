@@ -191,13 +191,21 @@ static void update_offset(int new_offset) {
 }
 
 static void select_switch(void) {
-  hc_switch *sw = switches[cur_list_offset];
+  hc_switch *sw;
+
+  if (cur_list_offset < 0 || cur_list_offset >= cur_list_length)
+    return;
+
+  sw = switches[cur_list_offset];
   toggle_switch(sw);
 }
 
 static void select_sensor(void) {
   hc_sensor *sensor;
   char *params = NULL;
+
+  if (cur_list_offset < 0 || cur_list_offset >= cur_list_length)
+    return;
 
   sensor = sensors[cur_list_offset];
 
@@ -215,7 +223,12 @@ static void select_sensor(void) {
 }
 
 static int select_climate_zone(void) {
-  hc_climate_zone *zone = climate_zones[cur_list_offset];
+  hc_climate_zone *zone;
+
+  if (cur_list_offset < 0 || cur_list_offset >= cur_list_length)
+    return 0;
+
+  zone = climate_zones[cur_list_offset];
 
   if (!configure_climate_zone(zone)) {
     /* Redraw on config screen */
