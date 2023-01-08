@@ -13,5 +13,5 @@ clean:
 
 install:
 	install $(PROGRAM) /usr/local/bin/$(PROGRAM)
-	install -m 644 systemd/surl-server.service /etc/systemd/system/surl-server.service
+	install -m 644 systemd/surl-server.service /lib/systemd/system/surl-server.service
 	systemctl daemon-reload
