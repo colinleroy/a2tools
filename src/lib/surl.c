@@ -84,8 +84,8 @@ surl_response *surl_start_request(const char *method, const char *url, const cha
   simple_serial_gets_with_timeout(buf, BUFSIZE);
   //DEBUG("read %s\n", buf);
 
-  if (buf == NULL) {
-    resp->code = 507;
+  if (buf == NULL || *buf == '\0') {
+    resp->code = 504;
     return resp;
   } else if (!strcmp(method, "GET") && strcmp(buf, "WAIT\n")) {
     resp->code = 508;
