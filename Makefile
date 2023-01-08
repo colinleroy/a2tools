@@ -3,6 +3,7 @@ net_disk_PROGS = src/a2recv/a2recv.bin \
 		 		src/a2send/a2send.bin \
 				src/surl/surl.bin \
 				src/stp/stp.bin \
+				src/telnet/telnet.bin
 
 homectrl_disk_PROGS = src/a2recv/a2recv.bin \
 				src/homecontrol-client/homectrl.bin \
@@ -33,5 +34,5 @@ homectrl.dsk: $(homectrl_disk_PROGS)
 		cp $@ ~/Documents/ADTPro-2.1.0/disks/; \
 	done
 
-upload: clean all
+upload: all
 	scp $(net_disk_PROGS) $(homectrl_disk_PROGS) diskstation.lan:/volume1/a2repo/
