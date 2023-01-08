@@ -95,10 +95,10 @@ reopen:
   while(1) {
 
     if (simple_serial_gets(reqbuf, BUFSIZE) != NULL) {
-new_req:
       char **parts;
       int num_parts, i;
 
+new_req:
       fflush(stdout);
 
       free(method);
@@ -174,7 +174,7 @@ new_req:
       sent += simple_serial_write(response->buffer + sent, sizeof(char), to_send);
     }
 
-    printf("%s %s - %d (%ldb)\n", method, url, response->response_code, response->size);
+    printf("%s %s - %d (%zub)\n", method, url, response->response_code, response->size);
     fflush(stdout);
 
   }
