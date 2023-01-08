@@ -1,5 +1,5 @@
 PROGRAM=surl-server
-SOURCES := main.c ../lib/extended_string.c ../lib/simple_serial.c
+SOURCES := main.c raw-session.c ../lib/extended_string.c ../lib/simple_serial.c
 
 CFLAGS= -I ../lib -g -O0 -Wall -DCONF_FILE_PATH=\"/etc/surl-server/tty.conf\"
 .PHONY: all clean

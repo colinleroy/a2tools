@@ -229,6 +229,7 @@ int simple_serial_putc(char c) {
 #include <fcntl.h>
 #include <errno.h>
 #include <unistd.h>
+#include <sys/ioctl.h>
 
 #define DELAY_MS 3
 #define LONG_DELAY_MS 50
@@ -317,9 +318,22 @@ int simple_serial_puts(char *buf) {
 
 /* Input */
 int __simple_serial_getc_with_timeout(int timeout) {
-  int r = fgetc(ttyfp);
+  static int n = 0;
+  int r;
+
   fflush(ttyfp);
-  return r;
+  if (timeout == 0 || n > 0) {
+    r = fgetc(ttyfp);
+    fflush(ttyfp);
+    if (n > 0) {
+      n--;
+    }
+    return r;
+  } else {
+    ioctl(fileno(ttyfp), FIONREAD, &n);
+    usleep(3000);
+    return EOF;
+  }
 }
 
 /* Output */

@@ -24,6 +24,7 @@ static unsigned char scrw = 255, scrh = 255;
 #ifndef __CC65__
 #include <termios.h>
 #include <unistd.h>
+#include <sys/ioctl.h>
 
 char cgetc(void) {
   char c;
@@ -39,6 +40,12 @@ char cgetc(void) {
   fread(&c, 1, 1, stdin);
   return c;
 }
+int kbhit(void) {
+  int n;
+  
+  return (ioctl(fileno(stdin), FIONREAD, &n) == 0 && n > 0);
+}
+
 static void cputsxy(int x, int y, char *buf) {
   char *prefix;
   int i;

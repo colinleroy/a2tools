@@ -24,6 +24,7 @@
 #include "simple_serial.h"
 #include "extended_string.h"
 #include "math.h"
+#include "raw-session.h"
 
 #define BUFSIZE 255
 
@@ -152,7 +153,10 @@ new_req:
     }
 
     response = curl_request(method, url, headers, n_headers);
-    
+    if (response == NULL) {
+      printf("%s %s - nothing to send\n", method, url);
+      continue;
+    }
     simple_serial_printf("%d,%d,%s\n", response->response_code, response->size, response->content_type);
     sent = 0;
     while (sent < response->size) {
@@ -334,6 +338,14 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
     if (ftp_try_dir || !ftp_is_maybe_dir) {
       simple_serial_puts("WAIT\n");
     }
+  } else if (!strcmp(method, "RAW")) {
+    simple_serial_puts("RAW_SESSION_START\n");
+    curl_easy_cleanup(curl);
+    curl = NULL;
+
+    surl_server_raw_session(url);
+
+    return NULL;
   } else {
     printf("Unsupported method %s\n", method);
     return curlbuf;
