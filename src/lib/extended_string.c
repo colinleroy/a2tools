@@ -18,8 +18,13 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "extended_string.h"
 
-static int _strsplit_int(char *in, char split, char ***out, char in_place) {
+#ifdef __CC65__
+#pragma static-locals(push, on)
+#endif
+
+static int __fastcall__ _strsplit_int(char in_place, char *in, char split, char ***out) {
   int i;
   int n_tokens;
   char **result = NULL;
@@ -66,15 +71,15 @@ err_out:
   return n_tokens;
 }
 
-int strsplit(char *in, char split, char ***out) {
-  return _strsplit_int(in, split, out, 0);
+int __fastcall__ strsplit(char *in, char split, char ***out) {
+  return _strsplit_int(0, in, split, out);
 }
 
-int strsplit_in_place(char *in, char split, char ***out) {
-  return _strsplit_int(in, split, out, 1);
+int __fastcall__ strsplit_in_place(char *in, char split, char ***out) {
+  return _strsplit_int(1, in, split, out);
 }
 
-char *trim(const char *in) {
+char * __fastcall__ trim(const char *in) {
   int i = 0, o = 0, len = strlen(in);
   int trimmed_start = 0, last_non_sep = 0;
   char *out = strdup(in);
@@ -128,3 +133,7 @@ char *ellipsis(char *in, int len) {
 
   return in;
 }
+
+#ifdef __CC65__
+#pragma static-locals(pop)
+#endif

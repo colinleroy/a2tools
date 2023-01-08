@@ -23,7 +23,9 @@
 #include "extended_conio.h"
 #include "math.h"
 
-#define DEBUG printf
+#ifdef __CC65__
+#pragma static-locals(push, on)
+#endif
 
 #ifdef SERIAL_TO_LANGCARD
 #pragma code-name (push, "LC")
@@ -220,4 +222,8 @@ void surl_response_free(surl_response *resp) {
 //Pop early because the whole serial + surl code doesn't fit in LC
 #ifdef SERIAL_TO_LANGCARD
 #pragma code-name (pop)
+#endif
+
+#ifdef __CC65__
+#pragma static-locals(pop)
 #endif
