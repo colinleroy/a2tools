@@ -113,7 +113,8 @@ read_again:
     simple_serial_set_activity_indicator(1, -1, -1);
 
     printf("Reading data...");
-    r = simple_serial_read_with_timeout(data, sizeof(char), block + 1);
+    fflush(stdout);
+    r = simple_serial_read_with_timeout(data, sizeof(char), block);
     total += r;
 
     simple_serial_set_activity_indicator(0, -1, -1);
