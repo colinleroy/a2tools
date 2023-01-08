@@ -321,7 +321,7 @@ int __simple_serial_getc_with_timeout(int timeout) {
   static int n = 0;
   int r;
 
-  fflush(ttyfp);
+read:
   if (timeout == 0 || n > 0) {
     r = fgetc(ttyfp);
     fflush(ttyfp);
@@ -330,8 +330,9 @@ int __simple_serial_getc_with_timeout(int timeout) {
     }
     return r;
   } else {
+    fflush(ttyfp);
     ioctl(fileno(ttyfp), FIONREAD, &n);
-    usleep(3000);
+    if (n > 0) goto read;
     return EOF;
   }
 }

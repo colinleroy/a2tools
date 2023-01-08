@@ -15,7 +15,7 @@
 #include "simple_serial.h"
 #include "raw-session.h"
 
-static void send_char(int sockfd, char c) {
+static void send_buf(int sockfd, char *c, int nmemb) {
   fd_set fds;
   struct timeval timeout;
   int n;
@@ -29,7 +29,7 @@ static void send_char(int sockfd, char c) {
   n = select(sockfd + 1, NULL, &fds, NULL, &timeout);
 
   if (n > 0 && FD_ISSET(sockfd, &fds)) {
-    write(sockfd, &c, 1);
+    write(sockfd, c, nmemb);
   } else if (n < 0) {
     printf("Write error %s\n", strerror(errno));
   }
@@ -116,6 +116,9 @@ static void set_non_blocking(int sockfd) {
 
 void surl_server_raw_session(char *remote_url) {
   char i, last_i, o;
+  char *in_buf = malloc(1024);
+  char *out_buf = malloc(1024);
+  int n_in = 0, n_out = 0;
   int sockfd;
 
   printf("starting raw session.\n");
@@ -136,16 +139,24 @@ void surl_server_raw_session(char *remote_url) {
   printf("Connected to %s: %d\n", remote_url, sockfd);
   do {
     last_i = '\0';
-    while ((i = simple_serial_getc_with_timeout()) != EOF) {
+
+    n_in = 0;
+    while ((i = simple_serial_getc_with_timeout()) != EOF && n_in < 1023) {
       last_i = i;
       if (i == 0x04) {
         break;
       }
-      send_char(sockfd, i);
+      in_buf[n_in++] = i;
     }
+    if (n_in > 0)
+      send_buf(sockfd, in_buf, n_in);
     
+    n_out = 0;
     while ((o = recv_char(sockfd)) != EOF) {
-      simple_serial_putc(o);
+      out_buf[n_out++] = o;
+    }
+    if (n_out > 0) {
+      simple_serial_write(out_buf, 1, n_out);
     }
   } while(last_i != 0x04);
 

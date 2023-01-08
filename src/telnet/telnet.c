@@ -36,6 +36,11 @@ int main(int argc, char **argv) {
   char *buffer = NULL;
   size_t r, i, o;
 
+#ifdef __CC65__
+    videomode(VIDEOMODE_80COL);
+    clrscr();
+#endif
+
 #ifndef __CC65__
   static struct termios ttyf;
 
@@ -49,6 +54,7 @@ again:
     buf = strdup(argv[1]);
   } else {
     char t;
+
     buf = malloc(BUFSIZE);
     printf("Enter host:port: ");
     cgets(buf, BUFSIZE);
