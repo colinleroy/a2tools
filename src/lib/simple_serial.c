@@ -24,6 +24,10 @@
 #include "extended_conio.h"
 #include "extended_string.h"
 
+#ifdef __CC65__
+#pragma static-locals(push, on)
+#endif
+
 static char serial_activity_indicator_enabled = 0;
 static int serial_activity_indicator_x = -1;
 static int serial_activity_indicator_y = -1;
@@ -210,7 +214,7 @@ int simple_serial_putc(char c) {
   if ((ser_put(c)) == SER_ERR_OVERFLOW) {
     return EOF;
   }
-  for (send_delay = 0; send_delay < 200; send_delay++) {
+  for (send_delay = 0; send_delay < 5; send_delay++) {
     /* Why do we need that.
      * Thanks platoterm for the hint */
   }
@@ -388,4 +392,8 @@ void simple_serial_set_activity_indicator(char enabled, int x, int y) {
 
 #ifdef SERIAL_TO_LANGCARD
 #pragma code-name (pop)
+#endif
+
+#ifdef __CC65__
+#pragma static-locals(pop)
 #endif
