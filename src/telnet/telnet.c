@@ -37,8 +37,8 @@ int main(int argc, char **argv) {
   size_t r, i, o;
 
 #ifdef __CC65__
-    videomode(VIDEOMODE_80COL);
-    clrscr();
+  videomode(VIDEOMODE_80COL);
+  clrscr();
 #endif
 
 #ifndef __CC65__
@@ -56,9 +56,9 @@ again:
     char t;
 
     buf = malloc(BUFSIZE);
-    printf("Enter host:port: ");
+    cputs("Enter host:port: ");
     cgets(buf, BUFSIZE);
-    printf("Translate \\n <=> \\r\\n (Y/n)? ");
+    cputs("Translate \\n <=> \\r\\n (Y/n)? ");
     t = cgetc();
     translate_ln = (t != 'n' && t != 'N');
   }
@@ -72,24 +72,43 @@ again:
     exit(1);
   }
   i = '\0';
+#ifdef __CC65__
+  puts("\n");
+#endif
   do {
     if (kbhit()) {
       i = cgetc();
-      if (i == '\n' && translate_ln) {
-        simple_serial_putc('\r');
+      if (i == '\r') {
+        if (translate_ln) {
+          simple_serial_puts("\r\n");
+        } else {
+          simple_serial_putc('\n');
+        }
+      } else {
+        simple_serial_putc(i);
       }
-      simple_serial_putc(i);
+#ifdef __CC65__
+      /* Echo */
+      if (i == '\r') {
+        printf("\n");
+      } else {
+        cputc(i);
+      }
+#endif
     }
-    while ((o = simple_serial_getc_with_timeout()) != EOF) {
+    while ((o = simple_serial_getc_immediate()) != EOF) {
       if (o == '\r' && translate_ln)
         continue;
+      if (o == 0x04) {
+        goto remote_closed;
+      }
       fputc(o, stdout);
       fflush(stdout);
     }
   } while(i != 0x04);
 
+remote_closed:
   printf("\ndone\n");
-  
   surl_response_free(response);
   free(buffer);
   free(buf);
