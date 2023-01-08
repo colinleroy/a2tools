@@ -90,6 +90,9 @@ surl_response *surl_start_request(const char *method, const char *url, const cha
   } else if (!strcmp(method, "GET") && strcmp(buf, "WAIT\n")) {
     resp->code = 508;
     return resp;
+  } else if (!strcmp(method, "RAW") && !strcmp(buf, "RAW_SESSION_START\n")) {
+    resp->code = 100;
+    return resp;
   } else if (!strcmp(buf, "SEND_SIZE_AND_DATA\n")) {
     resp->code = 100;
     return resp;

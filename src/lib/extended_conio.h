@@ -26,7 +26,6 @@
 #define clrscr()
 #define wherex() 1
 #define wherey() 1
-#define kbhit() 1
 #define chlinexy(a, b, c) do {} while(0)
 #define cvlinexy(a, b, c) do {} while(0)
 #define gotoxy(a, b) do {} while(0)
@@ -39,7 +38,7 @@
 char cgetc(void);
 void screensize(unsigned char *w, unsigned char *h);
 void chline(int len);
-
+int kbhit(void);
 #endif
 
 

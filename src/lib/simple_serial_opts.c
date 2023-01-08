@@ -1,6 +1,6 @@
 
 static char *opt_tty_path = NULL;
-static int opt_tty_speed = 9600;
+static int opt_tty_speed = B9600;
 static int opt_tty_hw_handshake = 1;
 
 static const char *get_cfg_path(void) {
