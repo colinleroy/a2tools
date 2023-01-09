@@ -21,6 +21,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <errno.h>
 #include "extended_conio.h"
 #include "extended_string.h"
 
@@ -406,7 +407,7 @@ int simple_serial_write(char *ptr, size_t size, size_t nmemb) {
   }
   for (i = 0; i < nmemb; i++) {
     if (simple_serial_putc(ptr[i]) < 0) {
-      printf("Error sending at %d\n", i);
+      printf("Error sending at %d (%s)\n", i, strerror(errno));
       return i;
     }
   }

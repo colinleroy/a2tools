@@ -35,10 +35,12 @@ static void send_buf(int sockfd, char *c, int nmemb) {
   }
 }
 
-static char recv_char(int sockfd) {
+static int net_recv_char(int sockfd, char *c) {
   fd_set fds;
   struct timeval timeout;
   int n;
+
+  *c = '\0';
 
   FD_ZERO(&fds);
   FD_SET(sockfd, &fds);
@@ -49,18 +51,26 @@ static char recv_char(int sockfd) {
   n = select(sockfd + 1, &fds, NULL, NULL, &timeout);
 
   if (n > 0 && FD_ISSET(sockfd, &fds)) {
-    char c;
-    n = read(sockfd, &c, 1);
+    n = read(sockfd, c, 1);
     if (n == 0) {
       printf("Read error %s\n", strerror(errno));
       return EOF;
     }
-    return c;
+    return 0;
   } else if (n < 0) {
     printf("Read error %s\n", strerror(errno));
     return EOF;
   }
-  return '\0';
+  return 0;
+}
+
+static int ser_recv_char(char *c) {
+  int i = simple_serial_getc_with_timeout();
+  if (i == EOF)
+    return EOF;
+  
+  *c = i;
+  return 0;
 }
 
 static int socket_connect(int sock, char *remote_url) {
@@ -145,10 +155,11 @@ void surl_server_raw_session(char *remote_url) {
   printf("Connected to %s: %d\n", remote_url, sockfd);
   simple_serial_puts("Connected.\n");
   do {
+    int read_res;
     last_i = '\0';
 
     n_in = 0;
-    while (n_in < RAW_BUFSIZE - 1 && (i = simple_serial_getc_with_timeout()) != (char)EOF) {
+    while (n_in < RAW_BUFSIZE - 1 && ser_recv_char(&i) != EOF) {
       last_i = i;
       if (i == 0x04) {
         printf("Client closed connection.\n");
@@ -160,13 +171,15 @@ void surl_server_raw_session(char *remote_url) {
       send_buf(sockfd, in_buf, n_in);
     
     n_out = 0;
-    while (n_out < RAW_BUFSIZE - 1 && (o = recv_char(sockfd)) != (char)EOF && o != '\0') {
+    while (n_out < RAW_BUFSIZE - 1 
+           && (read_res = net_recv_char(sockfd, &o)) != EOF 
+           && o != '\0') {
       out_buf[n_out++] = o;
     }
     if (n_out > 0) {
       simple_serial_write(out_buf, 1, n_out);
     }
-    if (o == (char)EOF) {
+    if (read_res == EOF) {
       simple_serial_printf("Remote host closed connection.\n%c", 0x04);
       goto cleanup;
     }
