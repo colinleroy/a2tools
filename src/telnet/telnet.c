@@ -40,7 +40,7 @@ static int translate_ln = 0;
 
 static unsigned char scrw, scrh;
 
-static char handle_escape_sequence(void) {
+static int handle_vt100_escape_sequence(void) {
   char o;
   char cur_x = 0, cur_y = 0;
   char x = 0, y = 0;
@@ -142,20 +142,119 @@ curs_down:
       clrscr();
       break;
   }
+  return 0;
 }
 
-/* 80*25 + 1 */
-static char scrbuf[2001] = {0};
-static int scridx = 0;
-static char flush_cnt = 0;
+#define TELNET_SBE  '\360' /* 240 end of subnegociation parameters */
+#define TELNET_NOP  '\361' /* 241 No operation */
+#define TELNET_DM   '\362' /* 242 Data mark */
+#define TELNET_BRK  '\363' /* 243 Break */
+#define TELNET_INT  '\364' /* 244 Suspend, interrupt or abort */
+#define TELNET_AO   '\365' /* 245 Abort output */
+#define TELNET_AYT  '\366' /* 246 Are you there */
+#define TELNET_EC   '\367' /* 247 Erase char */
+#define TELNET_EL   '\370' /* 248 Erase line */
+#define TELNET_GA   '\371' /* 249 Go ahead */
+#define TELNET_SB   '\372' /* 250 Subnegociation */
+#define TELNET_WILL '\373' /* 251 Desire to begin performing */
+#define TELNET_WONT '\374' /* 252 Refusal to perform */
+#define TELNET_DO   '\375' /* 253 Request other party to perform */
+#define TELNET_DONT '\376' /* 254 Request other party to stop performing */
+#define TELNET_IAC  '\377' /* 255 IAC */
 
-void flush_scrbuf(void) {
-  scrbuf[scridx] = '\0';
-  ++scridx;
-  fputs(scrbuf, stdout);
-  fflush(stdout);
-  flush_cnt = 0;
-  scridx = 0;
+#define TELNET_OPT_ECHO   '\1'  /* 1 */
+#define TELNET_OPT_SUPGA  '\3'  /* 3 */
+#define TELNET_OPT_STATUS '\5'  /* 5 */
+#define TELNET_OPT_TIMING '\6'  /* 6 */
+#define TELNET_OPT_TERMT  '\30' /* 24 */
+#define TELNET_OPT_WSIZE  '\37' /* 31 */
+#define TELNET_OPT_TSPEED '\40' /* 32 */
+#define TELNET_OPT_RFLOW  '\41' /* 33 */
+#define TELNET_OPT_LMODE  '\42' /* 34 */
+#define TELNET_OPT_ENVVAR '\44' /* 36 */
+
+#define TELNET_SEND '\1'
+#define TELNET_IS '\0'
+
+static void telnet_reply(char resp_code, char opt) {
+  simple_serial_putc(TELNET_IAC);
+  simple_serial_putc(resp_code);
+  simple_serial_putc(opt);
+}
+
+static void telnet_subneg(char opt) {
+  unsigned char one = simple_serial_getc();
+  unsigned char iac = simple_serial_getc();
+  unsigned char sne = simple_serial_getc();
+  
+  switch(opt) {
+    case TELNET_OPT_TERMT:
+      simple_serial_putc(TELNET_IAC);
+      simple_serial_putc(TELNET_SB);
+      simple_serial_putc(TELNET_OPT_TERMT);
+      simple_serial_putc(TELNET_IS);
+      simple_serial_puts("VT100");
+      simple_serial_putc(TELNET_IAC);
+      simple_serial_putc(TELNET_SBE);
+      break;
+    case TELNET_OPT_WSIZE:
+      simple_serial_putc(TELNET_IAC);
+      simple_serial_putc(TELNET_SB);
+      simple_serial_putc(TELNET_OPT_WSIZE);
+      simple_serial_putc(0);
+      simple_serial_putc(scrw);
+      simple_serial_putc(0);
+      simple_serial_putc(scrh);
+      simple_serial_putc(TELNET_IAC);
+      simple_serial_putc(TELNET_SBE);
+    case TELNET_OPT_TSPEED:
+      simple_serial_putc(TELNET_IAC);
+      simple_serial_putc(TELNET_SB);
+      simple_serial_putc(TELNET_OPT_TSPEED);
+      simple_serial_putc(TELNET_IS);
+      simple_serial_puts("9600,9600");
+      simple_serial_putc(TELNET_IAC);
+      simple_serial_putc(TELNET_SBE);
+      break;
+    default:
+      /* We shouldn't be there */
+      break;
+  }
+}
+static int echo = 1;
+
+static int handle_telnet_command(void) {
+  char type;
+  char opt;
+
+  /* We're here after receiving a \377 (0xFF). Now do the telnet stuff */
+  type = simple_serial_getc();
+  opt = simple_serial_getc();
+
+  if (type == TELNET_DO) {
+    if (opt == TELNET_OPT_TERMT 
+     || opt == TELNET_OPT_WSIZE
+     || opt == TELNET_OPT_TSPEED) {
+      telnet_reply(TELNET_WILL, opt);
+    } else {
+      telnet_reply(TELNET_WONT, opt);
+    }
+  } else if (type == TELNET_SB) {
+    telnet_subneg(opt);
+    
+    /* we can turn echo off and ask remote
+     * to turn echo on */
+    echo = 0;
+#ifndef __CC65__
+    static struct termios ttyf;
+    tcgetattr( STDIN_FILENO, &ttyf);
+    ttyf.c_lflag &= ~(ECHO);
+    tcsetattr( STDIN_FILENO, TCSANOW, &ttyf);
+#endif
+
+  }
+
+  return 0;
 }
 
 int main(int argc, char **argv) {
@@ -168,16 +267,18 @@ int main(int argc, char **argv) {
 #endif
   screensize(&scrw, &scrh);
 
-#ifndef __CC65__
-  static struct termios ttyf;
-
-  tcgetattr( STDOUT_FILENO, &ttyf);
-  ttyf.c_lflag &= ~(ICANON);
-  tcsetattr( STDOUT_FILENO, TCSANOW, &ttyf);
-#endif
-
 again:
   clrscr();
+
+  /* turn echo on */
+  echo = 1;
+#ifndef __CC65__
+  static struct termios ttyf;
+  tcgetattr( STDIN_FILENO, &ttyf);
+  ttyf.c_lflag |= ECHO;
+  tcsetattr( STDIN_FILENO, TCSANOW, &ttyf);
+#endif
+
   if (argc > 1) {
     buf = strdup(argv[1]);
     argc = 1; /* Only first time */
@@ -191,6 +292,12 @@ again:
     t = cgetc();
     translate_ln = (t != 'n' && t != 'N');
   }
+
+#ifndef __CC65__
+  tcgetattr( STDOUT_FILENO, &ttyf);
+  ttyf.c_lflag &= ~(ICANON);
+  tcsetattr( STDOUT_FILENO, TCSANOW, &ttyf);
+#endif
 
   if (strchr(buf, '\n'))
     *strchr(buf, '\n') = '\0';
@@ -223,37 +330,42 @@ again:
       }
 #ifdef __CC65__
       /* Echo */
-      if (i == '\r') {
-        printf("\n");
-      } else {
-        cputc(i);
+      if (echo) {
+        if (i == '\r') {
+          printf("\n");
+        } else {
+          cputc(i);
+        }
+      }
+#else
+      if (echo) {
+        fputc(i, stdout);
       }
 #endif
     }
 
-    ++flush_cnt;
 #ifdef __CC65__
     while (ser_get(&o) != SER_ERR_NO_DATA) {
 #else
-    while ((o = simple_serial_getc_immediate()) != EOF && o != '\0') {
+    int r;
+    while ((r = simple_serial_getc_immediate()) != EOF && r != '\0') {
+      o = (char)r;
 #endif
       if (o == '\r' && translate_ln) {
         continue;
       } else if (o == 0x04) {
-        flush_scrbuf();
         goto remote_closed;
       } else if (o == CH_ESC) {
-        flush_scrbuf();
-        if (handle_escape_sequence() == (char)EOF) {
+        if (handle_vt100_escape_sequence() == EOF) {
+          goto remote_closed;
+        }
+      } else if (o == TELNET_IAC) {
+        if (handle_telnet_command() == EOF) {
           goto remote_closed;
         }
       } else {
-        if (scridx == 2000)
-          flush_scrbuf();
-        scrbuf[scridx] = o;
-        ++scridx;
-        if (o == '\n' || flush_cnt == 255)
-          flush_scrbuf();
+        fputc(o, stdout);
+        fflush(stdout);
       }
     }
   } while(i != 0x04);
@@ -263,6 +375,12 @@ remote_closed:
   surl_response_free(response);
   free(buffer);
   free(buf);
+
+#ifndef __CC65__
+  tcgetattr( STDOUT_FILENO, &ttyf);
+  ttyf.c_lflag |= ICANON;
+  tcsetattr( STDOUT_FILENO, TCSANOW, &ttyf);
+#endif
 
   goto again;
   
