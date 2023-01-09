@@ -186,12 +186,6 @@ int simple_serial_close(void) {
   return ser_close();
 }
 
-#ifdef SERIAL_TO_LANGCARD
-#pragma code-name (push, "LC")
-#endif
-
-static int timeout_cycles = -1;
-
 int simple_serial_getc_immediate(void) {
   char c;
   if (ser_get(&c) == SER_ERR_NO_DATA) {
@@ -200,6 +194,13 @@ int simple_serial_getc_immediate(void) {
     return c;
   }
 }
+
+#ifdef SERIAL_TO_LANGCARD
+#pragma code-name (push, "LC")
+#endif
+
+static int timeout_cycles = -1;
+
 /* Input */
 static int __simple_serial_getc_with_timeout(int with_timeout) {
     char c;
