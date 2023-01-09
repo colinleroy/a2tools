@@ -26,6 +26,20 @@ static unsigned char scrw = 255, scrh = 255;
 #include <unistd.h>
 #include <sys/ioctl.h>
 
+void clrscr(void) {
+  fprintf(stdout, "%c[2J", CH_ESC);
+  fprintf(stdout, "%c[%d;%dH", CH_ESC, 0, 0);
+}
+void gotoxy(int x, int y) {
+  fprintf(stdout, "%c[%d;%dH", CH_ESC, x, y);
+}
+void gotox(int x) {
+  fprintf(stdout, "%c[%d;%dH", CH_ESC, x, 0); /* fixme not 0 y */
+}
+void gotoy(int y) {
+  fprintf(stdout, "%c[%d;%dH", CH_ESC, 0, y); /* fixme not 0 x */
+}
+
 char cgetc(void) {
   char c;
   static int unset_canon = 0;
