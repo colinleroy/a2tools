@@ -23,18 +23,20 @@
 #define __fastcall__
 #define cputs(s) puts(s)
 #define cputc(c) putc(c, stdout)
-#define clrscr()
 #define wherex() 1
 #define wherey() 1
 #define chlinexy(a, b, c) do {} while(0)
 #define cvlinexy(a, b, c) do {} while(0)
-#define gotoxy(a, b) do {} while(0)
 #define cprintf printf
 #define revers(x) 1
 #define videomode(x) 1
 #define VIDEOMODE_40COL 1
 #define VIDEOMODE_80COL 1
 
+void clrscr(void);
+void gotoxy(int x, int y);
+void gotox(int x);
+void gotoy(int y);
 char cgetc(void);
 void screensize(unsigned char *w, unsigned char *h);
 void chline(int len);
