@@ -5,7 +5,7 @@ DEPS :=
 
 CC65_TARGET = apple2enh
 CFLAGS  = -I ../lib
-CLCFLAGS = -t $(CC65_TARGET)
+CLCFLAGS = -t $(CC65_TARGET) -Osir -Cl
 GCCCFLAGS = -g -O0 -Werror 
 GCCLDFLAGS = 
 

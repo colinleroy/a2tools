@@ -41,16 +41,20 @@ static int translate_ln = 0;
 static unsigned char scrw, scrh;
 
 static char handle_escape_sequence(void) {
-  int o;
-  int cur_x = 0, cur_y = 0;
-  int x = 0, y = 0;
+  char o;
+  char cur_x = 0, cur_y = 0;
+  char x = 0, y = 0;
   char command, has_bracket = 0;
   char step = CTRL_STEP_START;
 
   /* We're here after receiving an escape. Now do the vt100 stuff */
   while (step != CTRL_STEP_CMD) {
+#ifdef __CC65__
+    while (ser_get(&o) == SER_ERR_NO_DATA);
+#else
     o = simple_serial_getc();
-    if (o == EOF) {
+#endif
+    if (o == (char)EOF) {
       return EOF;
     }
     if (step == CTRL_STEP_START && o == '[') {
@@ -140,10 +144,24 @@ curs_down:
   }
 }
 
+/* 80*25 + 1 */
+static char scrbuf[2001] = {0};
+static int scridx = 0;
+static char flush_cnt = 0;
+
+void flush_scrbuf(void) {
+  scrbuf[scridx] = '\0';
+  ++scridx;
+  fputs(scrbuf, stdout);
+  fflush(stdout);
+  flush_cnt = 0;
+  scridx = 0;
+}
+
 int main(int argc, char **argv) {
   surl_response *response = NULL;
   char *buffer = NULL;
-  size_t r, i, o;
+  char i, o;
 
 #ifdef __CC65__
   videomode(VIDEOMODE_80COL);
@@ -186,6 +204,7 @@ again:
 #ifdef __CC65__
   puts("\n");
 #endif
+
   do {
     if (kbhit()) {
       i = cgetc();
@@ -196,7 +215,11 @@ again:
           simple_serial_putc('\n');
         }
       } else {
+#ifdef __CC65__
+        ser_put(i);
+#else
         simple_serial_putc(i);
+#endif
       }
 #ifdef __CC65__
       /* Echo */
@@ -208,18 +231,29 @@ again:
 #endif
     }
 
+    ++flush_cnt;
+#ifdef __CC65__
+    while (ser_get(&o) != SER_ERR_NO_DATA) {
+#else
     while ((o = simple_serial_getc_immediate()) != EOF && o != '\0') {
+#endif
       if (o == '\r' && translate_ln) {
         continue;
       } else if (o == 0x04) {
+        flush_scrbuf();
         goto remote_closed;
       } else if (o == CH_ESC) {
-        if (handle_escape_sequence() == EOF) {
+        flush_scrbuf();
+        if (handle_escape_sequence() == (char)EOF) {
           goto remote_closed;
         }
       } else {
-        fputc(o, stdout);
-        fflush(stdout);
+        if (scridx == 2000)
+          flush_scrbuf();
+        scrbuf[scridx] = o;
+        ++scridx;
+        if (o == '\n' || flush_cnt == 255)
+          flush_scrbuf();
       }
     }
   } while(i != 0x04);
