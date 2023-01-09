@@ -119,10 +119,11 @@ static void set_non_blocking(int sockfd) {
   fcntl(sockfd, F_SETFL, fcntl(sockfd, F_GETFL) | O_NONBLOCK);
 }
 
+#define RAW_BUFSIZE 1024
 void surl_server_raw_session(char *remote_url) {
   char i, last_i, o;
-  char *in_buf = malloc(1024);
-  char *out_buf = malloc(1024);
+  char *in_buf = malloc(RAW_BUFSIZE);
+  char *out_buf = malloc(RAW_BUFSIZE);
   int n_in = 0, n_out = 0;
   int sockfd;
 
@@ -142,13 +143,15 @@ void surl_server_raw_session(char *remote_url) {
   set_non_blocking(sockfd);
 
   printf("Connected to %s: %d\n", remote_url, sockfd);
+  simple_serial_puts("Connected.\n");
   do {
     last_i = '\0';
 
     n_in = 0;
-    while ((i = simple_serial_getc_with_timeout()) != (char)EOF && n_in < 1023) {
+    while (n_in < RAW_BUFSIZE - 1 && (i = simple_serial_getc_with_timeout()) != (char)EOF) {
       last_i = i;
       if (i == 0x04) {
+        printf("Client closed connection.\n");
         break;
       }
       in_buf[n_in++] = i;
@@ -157,7 +160,7 @@ void surl_server_raw_session(char *remote_url) {
       send_buf(sockfd, in_buf, n_in);
     
     n_out = 0;
-    while ((o = recv_char(sockfd)) != (char)EOF && o != '\0') {
+    while (n_out < RAW_BUFSIZE - 1 && (o = recv_char(sockfd)) != (char)EOF && o != '\0') {
       out_buf[n_out++] = o;
     }
     if (n_out > 0) {
