@@ -257,6 +257,27 @@ static int handle_telnet_command(void) {
   return 0;
 }
 
+static int handle_special_char(char i) {
+  switch(i) {
+    case CH_CURS_LEFT:
+      simple_serial_printf("%c[D", CH_ESC);
+      return 1;
+    case CH_CURS_RIGHT:
+      simple_serial_printf("%c[C", CH_ESC);
+      return 1;
+    case CH_CURS_UP:
+      simple_serial_printf("%c[A", CH_ESC);
+      return 1;
+    case CH_CURS_DOWN:
+      simple_serial_printf("%c[B", CH_ESC);
+      return 1;
+    case CH_ESC:
+      simple_serial_printf("%c ", CH_ESC);
+      return 1;
+  }
+  return 0;
+}
+
 int main(int argc, char **argv) {
   surl_response *response = NULL;
   char *buffer = NULL;
@@ -322,11 +343,13 @@ again:
           simple_serial_putc('\n');
         }
       } else {
+        if (!handle_special_char(i)) {
 #ifdef __CC65__
-        ser_put(i);
+          ser_put(i);
 #else
-        simple_serial_putc(i);
+          simple_serial_putc(i);
 #endif
+        }
       }
 #ifdef __CC65__
       /* Echo */
