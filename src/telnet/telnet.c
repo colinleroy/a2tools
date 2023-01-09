@@ -26,10 +26,119 @@
 #include <termios.h>
 #include <unistd.h>
 #endif
+#include "math.h"
 
 #define BUFSIZE 255
 static char *buf;
 static int translate_ln = 0;
+
+#define CTRL_STEP_START  0
+#define CTRL_STEP_X      1
+#define CTRL_STEP_XY_SEP 2
+#define CTRL_STEP_Y      3
+#define CTRL_STEP_CMD    4
+
+static unsigned char scrw, scrh;
+
+static char handle_escape_sequence(void) {
+  int o;
+  int cur_x = 0, cur_y = 0;
+  int x = 0, y = 0;
+  char command, has_bracket = 0;
+  char step = CTRL_STEP_START;
+
+  /* We're here after receiving an escape. Now do the vt100 stuff */
+  while (step != CTRL_STEP_CMD) {
+    o = simple_serial_getc();
+    if (o == EOF) {
+      return EOF;
+    }
+    if (step == CTRL_STEP_START && o == '[') {
+      has_bracket = 1;
+    } else if (o >= '0' && o <= '9') {
+      if (step == CTRL_STEP_START)
+        step = CTRL_STEP_X;
+      if (step == CTRL_STEP_XY_SEP)
+        step = CTRL_STEP_Y;
+      if (step == CTRL_STEP_X)
+        x = x * 10 + (o - '0');
+      else
+        y = y * 10 + (o - '0');
+    } else if (o == ';') {
+      step = CTRL_STEP_XY_SEP;
+    } else {
+      step = CTRL_STEP_CMD;
+      command = o;
+    }
+  }
+
+  /* We should have our command by now */
+  switch(command) {
+    /* cursor home */
+    case 'H':
+    case 'f':
+      gotoxy(x,y);
+      break;
+    /* cursor up */
+    case 'A':
+curs_up:
+      cur_y = wherey();
+      gotoy(min(0, cur_y - (y == 0 ? 1 : y)));
+      break;
+    /* cursor down */
+    case 'B': 
+curs_down:
+      cur_y = wherey();
+      gotoy(max(scrh - 1, cur_y + (y == 0 ? 1 : y)));
+      break;
+    /* cursor right */
+    case 'C': 
+      cur_x = wherex();
+      gotox(max(scrw - 1, cur_x + (x == 0 ? 1 : x)));
+      break;
+    /* cursor left, or down, depending on bracket */
+    case 'D': 
+      if (!has_bracket) goto curs_down;
+      cur_x = wherex();
+      gotox(min(0, cur_x - (x == 0 ? 1 : x)));
+      break;
+    /* cursor up if no bracket */
+    case 'M':
+      goto curs_up;
+      break;
+    /* next line (CRLF) if no bracket */
+    case 'E':
+      if (!has_bracket) {
+        printf("\n"); /* printf to handle scroll */
+      }
+      break;
+    /* request for status */
+    case 'n':
+      if (x == 5) {
+        /* terminal status */
+        simple_serial_printf("%c[0n", CH_ESC);
+      } else if (x == 6) {
+        /* cursor position report */
+        simple_serial_printf("%c[%d;%dR", CH_ESC, wherex(), wherey());
+      }
+      break;
+    /* request to identify terminal type */
+    case 'c':
+    case 'Z':
+      simple_serial_printf("%c[?1;0c", CH_ESC); /* VT100 */
+      break;
+    /* Erase to beginning/end of line (incl) */
+    case 'K':
+      if (x == 0) clrzone(wherex(), wherey(), scrw-1, wherey());
+      if (x == 1) clrzone(0, wherey(), wherex(), wherey());
+      if (x == 2) clrzone(0, wherey(), scrw-1, wherey());
+      break;
+    /* Erase to beginning/end of screen (incl), only full screen supported */
+    case 'J':
+      clrscr();
+      break;
+  }
+}
 
 int main(int argc, char **argv) {
   surl_response *response = NULL;
@@ -38,8 +147,8 @@ int main(int argc, char **argv) {
 
 #ifdef __CC65__
   videomode(VIDEOMODE_80COL);
-  clrscr();
 #endif
+  screensize(&scrw, &scrh);
 
 #ifndef __CC65__
   static struct termios ttyf;
@@ -50,8 +159,10 @@ int main(int argc, char **argv) {
 #endif
 
 again:
+  clrscr();
   if (argc > 1) {
     buf = strdup(argv[1]);
+    argc = 1; /* Only first time */
   } else {
     char t;
 
@@ -96,14 +207,20 @@ again:
       }
 #endif
     }
+
     while ((o = simple_serial_getc_immediate()) != EOF && o != '\0') {
-      if (o == '\r' && translate_ln)
+      if (o == '\r' && translate_ln) {
         continue;
-      if (o == 0x04) {
+      } else if (o == 0x04) {
         goto remote_closed;
+      } else if (o == CH_ESC) {
+        if (handle_escape_sequence() == EOF) {
+          goto remote_closed;
+        }
+      } else {
+        fputc(o, stdout);
+        fflush(stdout);
       }
-      fputc(o, stdout);
-      fflush(stdout);
     }
   } while(i != 0x04);
 
@@ -113,9 +230,7 @@ remote_closed:
   free(buffer);
   free(buf);
 
-  if (argc == 1) {
-    goto again;
-  }
+  goto again;
   
   exit(0);
 }
