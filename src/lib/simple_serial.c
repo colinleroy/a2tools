@@ -292,7 +292,7 @@ static void setup_tty(int port, int baudrate, int hw_flow_control) {
 int simple_serial_open(void) {
 
   simple_serial_read_opts();
-  ttyfp = fopen(opt_tty_path, "r+b");
+  ttyfp = fopen(opt_tty_path, "a+b");
   if (ttyfp == NULL) {
     printf("Can't open %s\n", opt_tty_path);
     return -1;

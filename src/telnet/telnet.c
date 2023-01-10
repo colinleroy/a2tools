@@ -36,24 +36,21 @@ static int translate_ln = 0;
 #define CTRL_STEP_X      1
 #define CTRL_STEP_XY_SEP 2
 #define CTRL_STEP_Y      3
-#define CTRL_STEP_CMD    4
+#define CTRL_STEP_CMD    5
 
 static unsigned char scrw, scrh;
-
+static unsigned char cursor_set = 0;
 static int handle_vt100_escape_sequence(void) {
   char o;
-  char cur_x = 0, cur_y = 0;
+  unsigned char cur_x = 0, cur_y = 0;
   char x = 0, y = 0;
   char command, has_bracket = 0;
   char step = CTRL_STEP_START;
+  char cmd1, cmd2;
 
   /* We're here after receiving an escape. Now do the vt100 stuff */
   while (step != CTRL_STEP_CMD) {
-#ifdef __CC65__
-    while (ser_get(&o) == SER_ERR_NO_DATA);
-#else
     o = simple_serial_getc();
-#endif
     if (o == (char)EOF) {
       return EOF;
     }
@@ -64,9 +61,10 @@ static int handle_vt100_escape_sequence(void) {
         step = CTRL_STEP_X;
       if (step == CTRL_STEP_XY_SEP)
         step = CTRL_STEP_Y;
+
       if (step == CTRL_STEP_X)
         x = x * 10 + (o - '0');
-      else
+      else if (step = CTRL_STEP_Y)
         y = y * 10 + (o - '0');
     } else if (o == ';') {
       step = CTRL_STEP_XY_SEP;
@@ -76,29 +74,45 @@ static int handle_vt100_escape_sequence(void) {
     }
   }
 
+  /* VT100 counts from 1 */
+
   /* We should have our command by now */
   switch(command) {
     /* cursor home */
+    case '?':
+      cmd1 = simple_serial_getc();
+      cmd2 = simple_serial_getc();
+      if (cmd1 == '1' && cmd2 == 'h') {
+        cursor(1);
+      }
+      if (cmd1 == '1' && cmd2 == 'l') {
+        cursor(0);
+      }
+      break;
+    case '=':
+    case '>':
+      break;
     case 'H':
+      if(!has_bracket) break;
     case 'f':
-      gotoxy(x,y);
+      gotoxy(y - 1, x - 1);
       break;
     /* cursor up */
     case 'A':
 curs_up:
       cur_y = wherey();
-      gotoy(min(0, cur_y - (y == 0 ? 1 : y)));
+      gotoy(min(0, cur_y - (x == 0 ? 1 : x)));
       break;
     /* cursor down */
     case 'B': 
 curs_down:
       cur_y = wherey();
-      gotoy(max(scrh - 1, cur_y + (y == 0 ? 1 : y)));
+      gotoy(max(scrh - 1, cur_y + (x == 0 ? 1 : x)));
       break;
     /* cursor right */
     case 'C': 
       cur_x = wherex();
-      gotox(max(scrw - 1, cur_x + (x == 0 ? 1 : x)));
+      gotox(min(scrw - 1, cur_x + (x == 0 ? 1 : x)));
       break;
     /* cursor left, or down, depending on bracket */
     case 'D': 
@@ -120,16 +134,16 @@ curs_down:
     case 'n':
       if (x == 5) {
         /* terminal status */
-        simple_serial_printf("%c[0n", CH_ESC);
+        simple_serial_puts("\33[0n");
       } else if (x == 6) {
         /* cursor position report */
-        simple_serial_printf("%c[%d;%dR", CH_ESC, wherex(), wherey());
+        simple_serial_printf("\33[%d;%dR", wherex(), wherey());
       }
       break;
     /* request to identify terminal type */
     case 'c':
     case 'Z':
-      simple_serial_printf("%c[?1;0c", CH_ESC); /* VT100 */
+      simple_serial_printf("\33[?1;0c"); /* VT100 */
       break;
     /* Erase to beginning/end of line (incl) */
     case 'K':
@@ -142,6 +156,10 @@ curs_down:
       clrscr();
       break;
   }
+  // if (!cursor_set) {
+  //   simple_serial_puts("\33[?1l");
+  //   cursor_set = 1;
+  // }
   return 0;
 }
 
@@ -258,26 +276,77 @@ static int handle_telnet_command(void) {
 }
 
 static int handle_special_char(char i) {
+#ifdef __CC65__
   switch(i) {
     case CH_CURS_LEFT:
-      simple_serial_printf("%c[D", CH_ESC);
+      simple_serial_puts("\33[D");
       return 1;
     case CH_CURS_RIGHT:
-      simple_serial_printf("%c[C", CH_ESC);
+      simple_serial_printf("\33[C");
       return 1;
     case CH_CURS_UP:
-      simple_serial_printf("%c[A", CH_ESC);
+      simple_serial_printf("\33[A");
       return 1;
     case CH_CURS_DOWN:
-      simple_serial_printf("%c[B", CH_ESC);
+      simple_serial_printf("\33[B");
       return 1;
     case CH_ESC:
-      simple_serial_printf("%c ", CH_ESC);
+      simple_serial_printf("\33");
       return 1;
   }
+#endif
   return 0;
 }
 
+static char prev_x = 255, prev_y = 255;
+static void print_char(char o) {
+#ifdef __CC65__
+  char cur_x, cur_y;
+  
+  if (prev_x != 255) {
+    /* overwrite cursor */
+    gotoxy(prev_x, prev_y);
+  } else {
+    /* init */
+    prev_x = wherex();
+    prev_y = wherey();
+  }
+
+  if (o == '\r') {
+    if (prev_x < scrw - 1) {
+      cputc(' '); /* remove cursor manually */
+    }
+    cputc(o);
+  }
+  if (o == '\n') {
+    printf("\n");
+  }
+  else if (o == '\10') {
+    cur_x = prev_x;
+    cur_y = prev_y;
+    if (cur_x == 0) {
+      cur_x = scrw - 1;
+      
+      cur_y--;
+    } else {
+      cur_x--;
+    }
+    cputcxy(cur_x, cur_y, ' ');
+    gotoxy(cur_x, cur_y); /* why not working ? */
+  } else {
+    cputc(o);
+  }
+  prev_x = wherex();
+  prev_y = wherey();
+  if (o != '\r') {
+    /* add cursor */
+    cputc(0x7F);
+  }
+#else
+  fputc(o, stdout);
+  fflush(stdout);
+#endif
+}
 int main(int argc, char **argv) {
   surl_response *response = NULL;
   char *buffer = NULL;
@@ -309,9 +378,9 @@ again:
     buf = malloc(BUFSIZE);
     cputs("Enter host:port: ");
     cgets(buf, BUFSIZE);
-    cputs("Translate \\n <=> \\r\\n (Y/n)? ");
+    cputs("Translate \\n <=> \\r\\n (N/y)? ");
     t = cgetc();
-    translate_ln = (t != 'n' && t != 'N');
+    translate_ln = (t == 'y' || t == 'Y');
   }
 
 #ifndef __CC65__
@@ -323,6 +392,7 @@ again:
   if (strchr(buf, '\n'))
     *strchr(buf, '\n') = '\0';
 
+  cursor(1);
   response = surl_start_request("RAW", buf, NULL, 0);
   if (response == NULL) {
     printf("No response.\n");
@@ -332,7 +402,8 @@ again:
 #ifdef __CC65__
   puts("\n");
 #endif
-
+  
+  cursor(1);
   do {
     if (kbhit()) {
       i = cgetc();
@@ -342,7 +413,7 @@ again:
         } else {
           simple_serial_putc('\n');
         }
-      } else {
+      } else if (i != '\0') {
         if (!handle_special_char(i)) {
 #ifdef __CC65__
           ser_put(i);
@@ -374,9 +445,7 @@ again:
     while ((r = simple_serial_getc_immediate()) != EOF && r != '\0') {
       o = (char)r;
 #endif
-      if (o == '\r' && translate_ln) {
-        continue;
-      } else if (o == 0x04) {
+      if (o == 0x04) {
         goto remote_closed;
       } else if (o == CH_ESC) {
         if (handle_vt100_escape_sequence() == EOF) {
@@ -387,8 +456,7 @@ again:
           goto remote_closed;
         }
       } else {
-        fputc(o, stdout);
-        fflush(stdout);
+        print_char(o);
       }
     }
   } while(i != 0x04);
@@ -404,7 +472,7 @@ remote_closed:
   ttyf.c_lflag |= ICANON;
   tcsetattr( STDOUT_FILENO, TCSANOW, &ttyf);
 #endif
-
+  cursor_set = 0;
   goto again;
   
   exit(0);
