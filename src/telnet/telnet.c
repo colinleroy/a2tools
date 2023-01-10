@@ -39,7 +39,7 @@ static int translate_ln = 0;
 #define CTRL_STEP_CMD    5
 
 static unsigned char scrw, scrh;
-static unsigned char cursor_set = 0;
+
 static int handle_vt100_escape_sequence(void) {
   char o;
   unsigned char cur_x = 0, cur_y = 0;
@@ -156,10 +156,6 @@ curs_down:
       clrscr();
       break;
   }
-  // if (!cursor_set) {
-  //   simple_serial_puts("\33[?1l");
-  //   cursor_set = 1;
-  // }
   return 0;
 }
 
@@ -298,32 +294,39 @@ static int handle_special_char(char i) {
   return 0;
 }
 
-static char prev_x = 255, prev_y = 255;
+static char curs_x = 255, curs_y = 255;
+static char ch_at_curs = 0;
+static char curs_on = 0;
+
+static void set_cursor(void) {
+  if (!curs_on) {
+    curs_x = wherex();
+    curs_y = wherey();
+    ch_at_curs = cpeekc();
+    cputc(0x7F);
+    curs_on = 1;
+  }
+}
+
+static void rm_cursor(void) {
+  if (curs_x != 255) {
+    gotoxy(curs_x, curs_y);
+    cputc(ch_at_curs);
+    gotoxy(curs_x, curs_y);
+    curs_x = 255;
+    curs_on = 0;
+  }
+}
+
 static void print_char(char o) {
 #ifdef __CC65__
-  char cur_x, cur_y;
-  
-  if (prev_x != 255) {
-    /* overwrite cursor */
-    gotoxy(prev_x, prev_y);
-  } else {
-    /* init */
-    prev_x = wherex();
-    prev_y = wherey();
-  }
-
-  if (o == '\r') {
-    if (prev_x < scrw - 1) {
-      cputc(' '); /* remove cursor manually */
-    }
-    cputc(o);
-  }
-  if (o == '\n') {
+  if (o == '\n')
     printf("\n");
-  }
   else if (o == '\10') {
-    cur_x = prev_x;
-    cur_y = prev_y;
+    char cur_x, cur_y;
+    cur_x = wherex();
+    cur_y = wherey();
+    
     if (cur_x == 0) {
       cur_x = scrw - 1;
       
@@ -336,17 +339,12 @@ static void print_char(char o) {
   } else {
     cputc(o);
   }
-  prev_x = wherex();
-  prev_y = wherey();
-  if (o != '\r') {
-    /* add cursor */
-    cputc(0x7F);
-  }
 #else
   fputc(o, stdout);
   fflush(stdout);
 #endif
 }
+
 int main(int argc, char **argv) {
   surl_response *response = NULL;
   char *buffer = NULL;
@@ -403,9 +401,9 @@ again:
   puts("\n");
 #endif
   
-  cursor(1);
   do {
     if (kbhit()) {
+      rm_cursor();
       i = cgetc();
       if (i == '\r') {
         if (translate_ln) {
@@ -445,6 +443,8 @@ again:
     while ((r = simple_serial_getc_immediate()) != EOF && r != '\0') {
       o = (char)r;
 #endif
+      rm_cursor();
+
       if (o == 0x04) {
         goto remote_closed;
       } else if (o == CH_ESC) {
@@ -459,6 +459,8 @@ again:
         print_char(o);
       }
     }
+
+    set_cursor();
   } while(i != 0x04);
 
 remote_closed:
@@ -472,7 +474,6 @@ remote_closed:
   ttyf.c_lflag |= ICANON;
   tcsetattr( STDOUT_FILENO, TCSANOW, &ttyf);
 #endif
-  cursor_set = 0;
   goto again;
   
   exit(0);
