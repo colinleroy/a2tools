@@ -30,7 +30,8 @@
 
 #define BUFSIZE 255
 static char *buf;
-static int translate_ln = 0;
+static char translate_ln = 0;
+static char hide_cursor = 0;
 
 #define CTRL_STEP_START  0
 #define CTRL_STEP_X      1
@@ -83,10 +84,10 @@ static int handle_vt100_escape_sequence(void) {
       cmd1 = simple_serial_getc();
       cmd2 = simple_serial_getc();
       if (cmd1 == '1' && cmd2 == 'h') {
-        cursor(1);
+        hide_cursor = 0;
       }
       if (cmd1 == '1' && cmd2 == 'l') {
-        cursor(0);
+        hide_cursor = 1;
       }
       break;
     case '=':
@@ -299,6 +300,9 @@ static char ch_at_curs = 0;
 static char curs_on = 0;
 
 static void set_cursor(void) {
+  if (hide_cursor)
+    return;
+
   if (!curs_on) {
     curs_x = wherex();
     curs_y = wherey();
@@ -468,6 +472,8 @@ remote_closed:
   surl_response_free(response);
   free(buffer);
   free(buf);
+  curs_on = 0;
+  hide_cursor = 0;
 
 #ifndef __CC65__
   tcgetattr( STDOUT_FILENO, &ttyf);
