@@ -1,5 +1,5 @@
 PROGRAM=telnet
-SOURCES := telnet.c ../lib/simple_serial.c ../lib/extended_conio.c ../lib/surl.c
+SOURCES := telnet.c ../lib/simple_serial.c ../lib/extended_conio.c ../lib/surl.c 
 GCCSOURCES := ../lib/extended_string.c
 DEPS := 
 
