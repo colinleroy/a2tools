@@ -23,6 +23,7 @@
 #define __fastcall__
 #define cputs(s) puts(s)
 #define cputc(c) putc(c, stdout)
+#define cursor(a) do {} while(0)
 #define wherex() 1
 #define wherey() 1
 #define chlinexy(a, b, c) do {} while(0)

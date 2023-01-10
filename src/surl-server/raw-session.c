@@ -153,7 +153,7 @@ void surl_server_raw_session(char *remote_url) {
   set_non_blocking(sockfd);
 
   printf("Connected to %s: %d\n", remote_url, sockfd);
-  simple_serial_puts("Connected.\n");
+  simple_serial_puts("Connected.\r\n");
   do {
     int read_res;
     last_i = '\0';
@@ -180,7 +180,7 @@ void surl_server_raw_session(char *remote_url) {
       simple_serial_write(out_buf, 1, n_out);
     }
     if (read_res == EOF) {
-      simple_serial_printf("Remote host closed connection.\n%c", 0x04);
+      simple_serial_printf("Remote host closed connection.\r\n%c", 0x04);
       goto cleanup;
     }
   } while(last_i != 0x04);
