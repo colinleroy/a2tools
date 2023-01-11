@@ -322,14 +322,17 @@ static void rm_cursor(void) {
   }
 }
 
+static char screen_scroll_at_next_char = 0;
 static void print_char(char o) {
 #ifdef __CC65__
-  if (o == '\n')
+  char cur_x, cur_y;
+  cur_x = wherex();
+  cur_y = wherey();
+
+  if (o == '\n') {
     printf("\n");
-  else if (o == '\10') {
-    char cur_x, cur_y;
-    cur_x = wherex();
-    cur_y = wherey();
+  } else if (o == '\10') {
+    /* handle incoming backspace */
     
     if (cur_x == 0) {
       cur_x = scrw - 1;
@@ -341,6 +344,22 @@ static void print_char(char o) {
     cputcxy(cur_x, cur_y, ' ');
     gotoxy(cur_x, cur_y); /* why not working ? */
   } else {
+    if (screen_scroll_at_next_char) {
+      char prev;
+      /* handle scrolling */
+      gotoxy(scrw - 1, scrh - 1);
+      prev = cpeekc();
+      printf("\n");
+      cputcxy(scrw - 1, scrh - 2, prev);
+      cur_x = 0;
+      cur_y = scrh - 1;
+      screen_scroll_at_next_char = 0;
+    }
+    if (cur_y == scrh - 1 && cur_x == scrw - 1) {
+      /* about to wrap at bottom of screen */
+      screen_scroll_at_next_char = 1;
+    }
+    
     cputc(o);
   }
 #else
