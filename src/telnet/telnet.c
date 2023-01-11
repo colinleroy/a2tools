@@ -120,7 +120,7 @@ static int handle_vt100_escape_sequence(void) {
     case 'A':
 curs_up:
       cur_y = wherey();
-      if (cur_y - (x == 0 ? 1 : x) > 0)
+      if (cur_y - (x == 0 ? 1 : x) >= 0)
         gotoy(max(0, cur_y - (x == 0 ? 1 : x)));
       else
         manual_scroll_up();
@@ -383,12 +383,16 @@ static void print_char(char o) {
       cur_y = btm_line - 1;
       screen_scroll_at_next_char = 0;
     }
-    if (cur_y == btm_line - 1 && cur_x == scrw - 1) {
+    if (o != '\r' && cur_y == btm_line - 1 && cur_x == scrw - 1) {
       /* about to wrap at bottom of screen */
       screen_scroll_at_next_char = 1;
     }
 
-    cputc(o);
+    if (o != '\r')
+      cputc(o);
+    else {
+      gotox(0);
+    }
   }
 #else
   fputc(o, stdout);
