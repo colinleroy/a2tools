@@ -46,23 +46,6 @@ static char cursor_mode = CURS_MODE_CURSOR;
 static unsigned char scrw, scrh;
 
 static unsigned char top_line = 255, btm_line = 255;
-void get_window_scroll() {
-#ifdef __CC65__
-  __asm__("lda $22"); /* get WNDTOP */
-  __asm__("sta %v", top_line);
-  __asm__("lda $23"); /* get WNDBTM */
-  __asm__("sta %v", btm_line);
-#endif
-}
-
-void set_window_scroll() {
-#ifdef __CC65__
-  __asm__("lda %v", top_line);
-  __asm__("sta $22"); /* store WNDTOP */
-  __asm__("lda %v", btm_line);
-  __asm__("sta $23"); /* store WNDBTM */
-#endif
-}
 
 static int handle_vt100_escape_sequence(void) {
   char o;
@@ -186,7 +169,8 @@ curs_down:
       if (!has_bracket)
         break;
       top_line = x - 1;
-      btm_line = y - 1;
+      btm_line = y;
+      set_scrollwindow(top_line, btm_line);
       break;
   }
   return 0;
@@ -329,15 +313,13 @@ static int handle_special_char(char i) {
 
 static char curs_x = 255, curs_y = 255;
 static char ch_at_curs = 0;
-static char curs_on = 0;
 
 static void set_cursor(void) {
-  if (!curs_on) {
+  if (curs_x == 255) {
     curs_x = wherex();
     curs_y = wherey();
     ch_at_curs = cpeekc();
     cputc(0x7F);
-    curs_on = 1;
   }
 }
 
@@ -347,7 +329,6 @@ static void rm_cursor(void) {
     cputc(ch_at_curs);
     gotoxy(curs_x, curs_y);
     curs_x = 255;
-    curs_on = 0;
   }
 }
 
@@ -409,7 +390,7 @@ int main(int argc, char **argv) {
   videomode(VIDEOMODE_80COL);
 #endif
   screensize(&scrw, &scrh);
-  get_window_scroll();
+  get_scrollwindow(&top_line, &btm_line);
 
 again:
   clrscr();
@@ -524,14 +505,13 @@ remote_closed:
   surl_response_free(response);
   free(buffer);
   free(buf);
-  curs_on = 0;
   cursor_mode = CURS_MODE_CURSOR;
   curs_x = 255;
   curs_y = 255;
 
   top_line = 0;
   btm_line = 24;
-  set_window_scroll();
+  set_scrollwindow(0, scrh);
 
 #ifndef __CC65__
   tcgetattr( STDOUT_FILENO, &ttyf);

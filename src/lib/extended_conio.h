@@ -45,7 +45,8 @@ void chline(int len);
 int kbhit(void);
 #endif
 
-
+void get_scrollwindow(unsigned char *top, unsigned char *bottom);
+void set_scrollwindow(unsigned char top, unsigned char bottom);
 char * __fastcall__ cgets(char *buf, size_t size);
 void __fastcall__ clrzone(char xs, char ys, char xe, char ye);
 

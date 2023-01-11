@@ -229,3 +229,35 @@ void printxcenteredbox(int width, int height) {
   
   free(line);
 }
+
+void get_scrollwindow(unsigned char *top, unsigned char *bottom){
+#ifdef __CC65__
+  char t, b;
+
+  __asm__("lda $22"); /* get WNDTOP */
+  __asm__("sta %v", t);
+  __asm__("lda $23"); /* get WNDBTM */
+  __asm__("sta %v", b);
+  
+  *top = t;
+  *bottom = b;
+#else
+  *top = 0;
+  *bottom = 24;
+#endif
+
+}
+
+void set_scrollwindow(unsigned char top, unsigned char bottom) {
+#ifdef __CC65__
+  char t = top, b = bottom;
+
+  if (top >= bottom || bottom > 24)
+    return;
+
+  __asm__("lda %v", t);
+  __asm__("sta $22"); /* store WNDTOP */
+  __asm__("lda %v", b);
+  __asm__("sta $23"); /* store WNDBTM */
+#endif
+}
