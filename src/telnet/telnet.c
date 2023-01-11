@@ -47,6 +47,18 @@ static unsigned char scrw, scrh;
 
 static unsigned char top_line = 255, btm_line = 255;
 
+static void manual_scroll_up(void) {
+  signed char l, x;
+  char c;
+  for (l = btm_line - top_line - 2; l >= 0; l--) {
+    for (x = 0; x < scrw; x++) {
+      gotoxy(x, l);
+      c = cpeekc();
+      cputcxy(x, l + 1, c);
+    }
+  }
+}
+
 static int handle_vt100_escape_sequence(void) {
   char o;
   unsigned char cur_x = 0, cur_y = 0;
@@ -108,7 +120,10 @@ static int handle_vt100_escape_sequence(void) {
     case 'A':
 curs_up:
       cur_y = wherey();
-      gotoy(max(top_line, cur_y - (x == 0 ? 1 : x)));
+      if (cur_y - (x == 0 ? 1 : x) > 0)
+        gotoy(max(0, cur_y - (x == 0 ? 1 : x)));
+      else
+        manual_scroll_up();
       break;
     /* cursor down */
     case 'B': 
