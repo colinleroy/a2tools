@@ -148,9 +148,11 @@ curs_down:
       break;
     /* Erase to beginning/end of line (incl) */
     case 'K':
-      if (x == 0) clrzone(wherex(), wherey(), scrw-1, wherey());
-      if (x == 1) clrzone(0, wherey(), wherex(), wherey());
-      if (x == 2) clrzone(0, wherey(), scrw-1, wherey());
+      cur_x = wherex(); cur_y = wherey();
+      if (x == 0) clrzone(cur_x, cur_y, scrw-1, cur_y);
+      if (x == 1) clrzone(0, cur_y, cur_x, cur_y);
+      if (x == 2) clrzone(0, cur_y, scrw-1, cur_y);
+      gotoxy(cur_x, cur_y);
       break;
     /* Erase to beginning/end of screen (incl), only full screen supported */
     case 'J':
@@ -300,14 +302,12 @@ static char ch_at_curs = 0;
 static char curs_on = 0;
 
 static void set_cursor(void) {
-  if (hide_cursor)
-    return;
-
   if (!curs_on) {
     curs_x = wherex();
     curs_y = wherey();
     ch_at_curs = cpeekc();
-    cputc(0x7F);
+    if (!hide_cursor)
+      cputc(0x7F);
     curs_on = 1;
   }
 }
@@ -331,18 +331,20 @@ static void print_char(char o) {
 
   if (o == '\n') {
     printf("\n");
+  } else if (o == '\7') {
+    printf("%c", '\7'); /* bell */
   } else if (o == '\10') {
     /* handle incoming backspace */
-    
-    if (cur_x == 0) {
+    /* it is not the backspace that should remove
+     * a char. It is the control code [33K.
+     * \10 just means scrollback one pos left. */
+    cur_x--;
+    if (cur_x < 0) {
       cur_x = scrw - 1;
-      
       cur_y--;
-    } else {
-      cur_x--;
     }
-    cputcxy(cur_x, cur_y, ' ');
-    gotoxy(cur_x, cur_y); /* why not working ? */
+    gotoxy(cur_x, cur_y);
+    /* and this is all. Char will be saved by set_cursor. */
   } else {
     if (screen_scroll_at_next_char) {
       char prev;
@@ -359,7 +361,7 @@ static void print_char(char o) {
       /* about to wrap at bottom of screen */
       screen_scroll_at_next_char = 1;
     }
-    
+
     cputc(o);
   }
 #else
