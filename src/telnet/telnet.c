@@ -47,21 +47,107 @@ static unsigned char scrw, scrh;
 
 static unsigned char top_line = 255, btm_line = 255;
 
-static void manual_scroll_up(void) {
+typedef struct _vt100_ctrl {
+  char way;
+  char abs;
+  char x;
+  char y;
+} vt100_ctrl;
+
+static vt100_ctrl vt100_ctrl_queue[100];
+static char n_vt100_ctrls = 0;
+
+#define CLRSCR 2
+#define SCROLL_WINDOW 3
+
+static void manual_scroll_up(int num) {
   signed char l, x;
   char c;
-  for (l = btm_line - top_line - 2; l >= 0; l--) {
+  for (l = btm_line - top_line - 1 - num; l >= 0; l--) {
     for (x = 0; x < scrw; x++) {
       gotoxy(x, l);
       c = cpeekc();
-      cputcxy(x, l + 1, c);
+      cputcxy(x, l + num, c);
     }
   }
 }
 
+static void do_move(int vt100_ctrl_index) {
+  unsigned char cur_x = 0, cur_y = 0;
+  char way = vt100_ctrl_queue[vt100_ctrl_index].way;
+  char abs = vt100_ctrl_queue[vt100_ctrl_index].abs;
+  char x = vt100_ctrl_queue[vt100_ctrl_index].x;
+  char y = vt100_ctrl_queue[vt100_ctrl_index].y;
+
+  if (way == CLRSCR) {
+    if (abs == 1) {
+      clrscr();
+    } else {
+      cur_x = wherex(); cur_y = wherey();
+      if (x == 0) clrzone(cur_x, cur_y, scrw-1, cur_y);
+      if (x == 1) clrzone(0, cur_y, cur_x, cur_y);
+      if (x == 2) clrzone(0, cur_y, scrw-1, cur_y);
+      gotoxy(cur_x, cur_y);
+    }
+  } else if (way == CH_CURS_LEFT) {
+    cur_x = wherex();
+    gotox(max(0, cur_x - x));
+  } else if (way == CH_CURS_RIGHT) {
+    cur_x = wherex();
+    gotox(min(scrw - 1, cur_x + x));
+  } else if (way == CH_CURS_UP) {
+    cur_y = wherey();
+    if (cur_y - x >= 0)
+      gotoy(max(0, cur_y - x));
+    else
+      manual_scroll_up(x);
+  } else if (way == CH_CURS_DOWN) {
+    cur_y = wherey();
+    gotoy(max(btm_line - 1, cur_y + x));
+  } else if (way == SCROLL_WINDOW) {
+    top_line = x - 1;
+    btm_line = y;
+    set_scrollwindow(top_line, btm_line);
+  } else if (abs == 1) {
+    if (x != 255 && y != 255)
+      gotoxy(x, y);
+    else if (x != 255)
+      gotox(x);
+    else if (y != 255)
+      gotoy(y);
+  }
+}
+
+static void enqueue_move(char way, char abs, char x, char y) {
+  if (n_vt100_ctrls == 99)
+    return; /* FIXME keep enqueing somehow */
+  
+  if (n_vt100_ctrls > 0 &&
+    vt100_ctrl_queue[n_vt100_ctrls - 1].way == way &&
+    vt100_ctrl_queue[n_vt100_ctrls - 1].abs == abs &&
+    vt100_ctrl_queue[n_vt100_ctrls - 1].y == 0 && 
+    abs == 0 && way != CLRSCR && way != SCROLL_WINDOW) {
+    /* merge with previous */
+    vt100_ctrl_queue[n_vt100_ctrls - 1].x++;
+  } else {
+    vt100_ctrl_queue[n_vt100_ctrls].way = way;
+    vt100_ctrl_queue[n_vt100_ctrls].abs = abs;
+    vt100_ctrl_queue[n_vt100_ctrls].x = x;
+    vt100_ctrl_queue[n_vt100_ctrls].y = y;
+    n_vt100_ctrls++;
+  }
+}
+
+static void flush_vt100_ctrls(void) {
+  char i;
+  for (i = 0; i < n_vt100_ctrls; i++) {
+    do_move(i);
+  }
+  n_vt100_ctrls = 0;
+}
+
 static int handle_vt100_escape_sequence(void) {
   char o;
-  unsigned char cur_x = 0, cur_y = 0;
   char x = 0, y = 0;
   char command, has_bracket = 0;
   char step = CTRL_STEP_START;
@@ -114,33 +200,27 @@ static int handle_vt100_escape_sequence(void) {
     case 'H':
       if(!has_bracket) break;
     case 'f':
-      gotoxy(y - 1, x - 1);
+      enqueue_move(0, 1, y -1, x - 1);
       break;
     /* cursor up */
     case 'A':
 curs_up:
-      cur_y = wherey();
-      if (cur_y - (x == 0 ? 1 : x) >= 0)
-        gotoy(max(0, cur_y - (x == 0 ? 1 : x)));
-      else
-        manual_scroll_up();
+      enqueue_move(CH_CURS_UP, 0, (x == 0 ? 1 : x), 0);
       break;
     /* cursor down */
     case 'B': 
 curs_down:
-      cur_y = wherey();
-      gotoy(max(btm_line - 1, cur_y + (x == 0 ? 1 : x)));
+      enqueue_move(CH_CURS_DOWN, 0, (x == 0 ? 1 : x), 0);
       break;
     /* cursor right */
     case 'C': 
-      cur_x = wherex();
-      gotox(min(scrw - 1, cur_x + (x == 0 ? 1 : x)));
+      enqueue_move(CH_CURS_RIGHT, 0, (x == 0 ? 1 : x), 0);
       break;
     /* cursor left, or down, depending on bracket */
     case 'D': 
-      if (!has_bracket) goto curs_down;
-      cur_x = wherex();
-      gotox(max(0, cur_x - (x == 0 ? 1 : x)));
+      if (!has_bracket)
+        goto curs_down;
+      enqueue_move(CH_CURS_LEFT, 0, (x == 0 ? 1 : x), 0);
       break;
     /* cursor up if no bracket */
     case 'M':
@@ -169,23 +249,17 @@ curs_down:
       break;
     /* Erase to beginning/end of line (incl) */
     case 'K':
-      cur_x = wherex(); cur_y = wherey();
-      if (x == 0) clrzone(cur_x, cur_y, scrw-1, cur_y);
-      if (x == 1) clrzone(0, cur_y, cur_x, cur_y);
-      if (x == 2) clrzone(0, cur_y, scrw-1, cur_y);
-      gotoxy(cur_x, cur_y);
+      enqueue_move(CLRSCR, 0, x, 0);
       break;
     /* Erase to beginning/end of screen (incl), only full screen supported */
     case 'J':
-      clrscr();
+      enqueue_move(CLRSCR, 1, 0, 0);
       break;
     /* Setwin (top-bottom lines )*/
     case 'r':
       if (!has_bracket)
         break;
-      top_line = x - 1;
-      btm_line = y;
-      set_scrollwindow(top_line, btm_line);
+      enqueue_move(SCROLL_WINDOW, 0, x, y);
       break;
   }
   return 0;
@@ -512,10 +586,11 @@ again:
           goto remote_closed;
         }
       } else {
+        flush_vt100_ctrls();
         print_char(o);
       }
     }
-
+    flush_vt100_ctrls();
     set_cursor();
   } while(i != 0x04);
 
