@@ -31,7 +31,11 @@
 #define BUFSIZE 255
 static char *buf;
 static char translate_ln = 0;
-static char hide_cursor = 0;
+
+#define CURS_MODE_CURSOR '['
+#define CURS_MODE_APPLICATION 'O'
+
+static char cursor_mode = CURS_MODE_CURSOR;
 
 #define CTRL_STEP_START  0
 #define CTRL_STEP_X      1
@@ -40,6 +44,25 @@ static char hide_cursor = 0;
 #define CTRL_STEP_CMD    5
 
 static unsigned char scrw, scrh;
+
+static unsigned char top_line = 255, btm_line = 255;
+void get_window_scroll() {
+#ifdef __CC65__
+  __asm__("lda $22"); /* get WNDTOP */
+  __asm__("sta %v", top_line);
+  __asm__("lda $23"); /* get WNDBTM */
+  __asm__("sta %v", btm_line);
+#endif
+}
+
+void set_window_scroll() {
+#ifdef __CC65__
+  __asm__("lda %v", top_line);
+  __asm__("sta $22"); /* store WNDTOP */
+  __asm__("lda %v", btm_line);
+  __asm__("sta $23"); /* store WNDBTM */
+#endif
+}
 
 static int handle_vt100_escape_sequence(void) {
   char o;
@@ -84,10 +107,10 @@ static int handle_vt100_escape_sequence(void) {
       cmd1 = simple_serial_getc();
       cmd2 = simple_serial_getc();
       if (cmd1 == '1' && cmd2 == 'h') {
-        hide_cursor = 0;
+        cursor_mode = CURS_MODE_APPLICATION;
       }
       if (cmd1 == '1' && cmd2 == 'l') {
-        hide_cursor = 1;
+        cursor_mode = CURS_MODE_CURSOR;
       }
       break;
     case '=':
@@ -102,13 +125,13 @@ static int handle_vt100_escape_sequence(void) {
     case 'A':
 curs_up:
       cur_y = wherey();
-      gotoy(min(0, cur_y - (x == 0 ? 1 : x)));
+      gotoy(max(top_line, cur_y - (x == 0 ? 1 : x)));
       break;
     /* cursor down */
     case 'B': 
 curs_down:
       cur_y = wherey();
-      gotoy(max(scrh - 1, cur_y + (x == 0 ? 1 : x)));
+      gotoy(max(btm_line - 1, cur_y + (x == 0 ? 1 : x)));
       break;
     /* cursor right */
     case 'C': 
@@ -119,7 +142,7 @@ curs_down:
     case 'D': 
       if (!has_bracket) goto curs_down;
       cur_x = wherex();
-      gotox(min(0, cur_x - (x == 0 ? 1 : x)));
+      gotox(max(0, cur_x - (x == 0 ? 1 : x)));
       break;
     /* cursor up if no bracket */
     case 'M':
@@ -157,6 +180,13 @@ curs_down:
     /* Erase to beginning/end of screen (incl), only full screen supported */
     case 'J':
       clrscr();
+      break;
+    /* Setwin (top-bottom lines )*/
+    case 'r':
+      if (!has_bracket)
+        break;
+      top_line = x - 1;
+      btm_line = y - 1;
       break;
   }
   return 0;
@@ -221,7 +251,7 @@ static void telnet_subneg(char opt) {
       simple_serial_putc(0);
       simple_serial_putc(scrw);
       simple_serial_putc(0);
-      simple_serial_putc(scrh);
+      simple_serial_putc(btm_line - top_line);
       simple_serial_putc(TELNET_IAC);
       simple_serial_putc(TELNET_SBE);
     case TELNET_OPT_TSPEED:
@@ -278,16 +308,16 @@ static int handle_special_char(char i) {
 #ifdef __CC65__
   switch(i) {
     case CH_CURS_LEFT:
-      simple_serial_puts("\33[D");
+      simple_serial_printf("\33%cD", cursor_mode);
       return 1;
     case CH_CURS_RIGHT:
-      simple_serial_printf("\33[C");
+      simple_serial_printf("\33%cC", cursor_mode);
       return 1;
     case CH_CURS_UP:
-      simple_serial_printf("\33[A");
+      simple_serial_printf("\33%cA", cursor_mode);
       return 1;
     case CH_CURS_DOWN:
-      simple_serial_printf("\33[B");
+      simple_serial_printf("\33%cB", cursor_mode);
       return 1;
     case CH_ESC:
       simple_serial_printf("\33");
@@ -306,8 +336,7 @@ static void set_cursor(void) {
     curs_x = wherex();
     curs_y = wherey();
     ch_at_curs = cpeekc();
-    if (!hide_cursor)
-      cputc(0x7F);
+    cputc(0x7F);
     curs_on = 1;
   }
 }
@@ -325,7 +354,7 @@ static void rm_cursor(void) {
 static char screen_scroll_at_next_char = 0;
 static void print_char(char o) {
 #ifdef __CC65__
-  char cur_x, cur_y;
+  unsigned char cur_x, cur_y;
   cur_x = wherex();
   cur_y = wherey();
 
@@ -338,10 +367,11 @@ static void print_char(char o) {
     /* it is not the backspace that should remove
      * a char. It is the control code [33K.
      * \10 just means scrollback one pos left. */
-    cur_x--;
-    if (cur_x < 0) {
+    if (cur_x == 0) {
       cur_x = scrw - 1;
       cur_y--;
+    } else {
+      cur_x--;
     }
     gotoxy(cur_x, cur_y);
     /* and this is all. Char will be saved by set_cursor. */
@@ -349,15 +379,15 @@ static void print_char(char o) {
     if (screen_scroll_at_next_char) {
       char prev;
       /* handle scrolling */
-      gotoxy(scrw - 1, scrh - 1);
+      gotoxy(scrw - 1, btm_line - 1);
       prev = cpeekc();
       printf("\n");
-      cputcxy(scrw - 1, scrh - 2, prev);
+      cputcxy(scrw - 1, btm_line - 2, prev);
       cur_x = 0;
-      cur_y = scrh - 1;
+      cur_y = btm_line - 1;
       screen_scroll_at_next_char = 0;
     }
-    if (cur_y == scrh - 1 && cur_x == scrw - 1) {
+    if (cur_y == btm_line - 1 && cur_x == scrw - 1) {
       /* about to wrap at bottom of screen */
       screen_scroll_at_next_char = 1;
     }
@@ -379,6 +409,7 @@ int main(int argc, char **argv) {
   videomode(VIDEOMODE_80COL);
 #endif
   screensize(&scrw, &scrh);
+  get_window_scroll();
 
 again:
   clrscr();
@@ -494,7 +525,13 @@ remote_closed:
   free(buffer);
   free(buf);
   curs_on = 0;
-  hide_cursor = 0;
+  cursor_mode = CURS_MODE_CURSOR;
+  curs_x = 255;
+  curs_y = 255;
+
+  top_line = 0;
+  btm_line = 24;
+  set_window_scroll();
 
 #ifndef __CC65__
   tcgetattr( STDOUT_FILENO, &ttyf);
