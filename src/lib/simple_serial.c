@@ -121,7 +121,12 @@ static size_t __simple_serial_read_with_timeout(char *ptr, size_t size, size_t n
 }
 
 int simple_serial_puts(char *buf) {
-  int i, len = strlen(buf);
+  static char i, len;
+  
+  if (strlen(buf) > 255) {
+    return EOF;
+  }
+  len = strlen(buf);
 
   if (serial_activity_indicator_x == -1) {
     serial_activity_indicator_x = wherex();
@@ -132,8 +137,7 @@ int simple_serial_puts(char *buf) {
     activity_cb(1);
   }
   for (i = 0; i < len; i++) {
-    if (simple_serial_putc(buf[i]) == EOF)
-      return EOF;
+    simple_serial_putc(buf[i]);
   }
   if (serial_activity_indicator_enabled) {
     activity_cb(0);
@@ -224,7 +228,7 @@ int simple_serial_putc(char c) {
   if ((ser_put(c)) == SER_ERR_OVERFLOW) {
     return EOF;
   }
-  for (send_delay = 0; send_delay < 5; send_delay++) {
+  for (send_delay = 0; send_delay < 3; send_delay++) {
     /* Why do we need that.
      * Thanks platoterm for the hint */
   }

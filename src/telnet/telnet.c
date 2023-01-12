@@ -190,11 +190,6 @@ char buffer[256];
 unsigned char buf_idx = 0;
 unsigned char cur_read_idx = 0;
 
-static void buffer_push(char o) {
-  buffer[buf_idx] = o;
-  buf_idx++;
-}
-
 static int handle_vt100_escape_sequence(char pretend) {
   char o;
   char x = 0, y = 0;
@@ -209,7 +204,7 @@ static int handle_vt100_escape_sequence(char pretend) {
       if (o == (char)EOF) {
         return EOF;
       }
-      buffer_push(o);
+      buffer[buf_idx++] = o;
     } else {
       o = buffer[cur_read_idx++];
     }
@@ -436,19 +431,19 @@ static int handle_special_char(char i) {
 #ifdef __CC65__
   switch(i) {
     case CH_CURS_LEFT:
-      simple_serial_printf("\33%cD", cursor_mode);
+      simple_serial_puts(cursor_mode == '[' ? "\33[D":"\33OD");
       return 1;
     case CH_CURS_RIGHT:
-      simple_serial_printf("\33%cC", cursor_mode);
+      simple_serial_puts(cursor_mode == '[' ? "\33[C":"\33OC");
       return 1;
     case CH_CURS_UP:
-      simple_serial_printf("\33%cA", cursor_mode);
+      simple_serial_puts(cursor_mode == '[' ? "\33[A":"\33OA");
       return 1;
     case CH_CURS_DOWN:
-      simple_serial_printf("\33%cB", cursor_mode);
+      simple_serial_puts(cursor_mode == '[' ? "\33[B":"\33OB");
       return 1;
     case CH_ESC:
-      simple_serial_printf("\33");
+      simple_serial_puts("\33");
       return 1;
   }
 #endif
@@ -570,7 +565,6 @@ static int buffer_pop() {
   return 0;
 }
 
-static char pending_vt100;
 int main(int argc, char **argv) {
   surl_response *response = NULL;
   char i, o;
@@ -627,7 +621,6 @@ again:
 #endif
   
   do {
-    pending_vt100 = 0;
     if (kbhit()) {
       i = cgetc();
       if (i == '\r') {
@@ -667,26 +660,20 @@ again:
     while (ser_get(&o) != SER_ERR_NO_DATA && buf_idx < 245) {
 #else
     int r;
-    while ((r = simple_serial_getc_immediate()) != EOF && r != '\0' && buf_idx < 245) {
+    while ((r = simple_serial_getc_immediate()) != EOF && buf_idx < 245) {
       o = (char)r;
 #endif
-      if (o == CH_ESC) {
-        buffer_push(o);
-        if (handle_vt100_escape_sequence(1) == EOF) {
-          goto remote_closed;
-        }
-        pending_vt100 = 1;
-      } else if (o == TELNET_IAC) {
+      if (o == TELNET_IAC) {
         if (handle_telnet_command() == EOF) {
           goto remote_closed;
         }
-
-      } else if (o != '\16' && o != '\17' ){
-        /* Ignored:
-         * \16 shift in 
-         * \17 shift out
-         */
-        buffer_push(o);
+      } else if (o != '\0' && o != '\16' && o != '\17') {
+        buffer[buf_idx++] = o;
+        if (o == CH_ESC) {
+          if (handle_vt100_escape_sequence(1) == EOF) {
+            goto remote_closed;
+          }
+        }
         if (o == '\n') {
           /* flush on \n */
           break;
