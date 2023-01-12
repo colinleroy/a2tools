@@ -188,7 +188,7 @@ void surl_server_raw_session(char *remote_url) {
       simple_serial_printf("Remote host closed connection.\r\n%c", 0x04);
       goto cleanup;
     }
-    if (time(NULL) - last_traffic > 10) {
+    if (time(NULL) - last_traffic > 600) {
       simple_serial_printf("Inactivity timeout.\r\n%c", 0x04);
       goto cleanup;
     }
