@@ -457,13 +457,24 @@ static int handle_special_char(char i) {
 
 static char curs_x = 255, curs_y = 255;
 static char ch_at_curs = 0;
+static int cursor_blinker = 0;
 
 static void set_cursor(void) {
   if (curs_x == 255) {
     curs_x = wherex();
     curs_y = wherey();
     ch_at_curs = cpeekc();
+    cursor_blinker = 0;
+  }
+  cursor_blinker++;
+  if (cursor_blinker == 1) {
+    gotoxy(curs_x, curs_y);
     cputc(0x7F);
+  } else if (cursor_blinker == 1501){
+    gotoxy(curs_x, curs_y);
+    cputc(ch_at_curs);
+  } else if (cursor_blinker == 3000) {
+    cursor_blinker = 0;
   }
 }
 
@@ -533,6 +544,7 @@ static int buffer_pop() {
   char o;
 
   if (buf_idx == 0) {
+    set_cursor();
     return 0;
   }
 
