@@ -37,6 +37,10 @@ static char translate_ln = 0;
 
 static char cursor_mode = CURS_MODE_CURSOR;
 
+#define AUTOWRAP_NO 'l'
+#define AUTOWRAP_YES 'h'
+static char autowrap_mode = AUTOWRAP_NO;
+
 #define CTRL_STEP_START  0
 #define CTRL_STEP_X      1
 #define CTRL_STEP_XY_SEP 2
@@ -57,27 +61,39 @@ typedef struct _vt100_ctrl {
 static vt100_ctrl vt100_ctrl_queue[100];
 static char n_vt100_ctrls = 0;
 
+#define GOTOXY 0
 #define CURSOR 1
 #define CLRSCR 2
 #define SCROLL_WINDOW 3
 #define NEXTLINE 4
 #define STATUSREQ 5
 #define TERMTYPE 6
+#define AUTOWRAP 7
+
 // Dont go up to 8 it's CH_CURS_LEFT
 
+#pragma optimize(push, on)
+static char scrollbuf[80];
 static void manual_scroll_up(int num) {
-  signed char l, x;
-  char c;
-  for (l = btm_line - top_line - 1 - num; l >= 0; l--) {
-    for (x = 0; x < scrw; x++) {
-      gotoxy(x, l);
-      c = cpeekc();
-      cputcxy(x, l + num, c);
-    }
-  }
-}
+  static signed char l, x;
+  static char h;
+  
+  h = btm_line - top_line;
 
-static void do_move(int vt100_ctrl_index) {
+  for (l = h - 1 - num; l >= 0; l--) {
+    gotoy(l);
+    for (x = 0; x < scrw; x++) {
+      gotox(x);
+      scrollbuf[x] = cpeekc();
+    }
+    scrollbuf[x] = '\0';
+    cputsxy(0, l + num, scrollbuf);
+  }
+  clrzone(0, 0, scrw - 1, num - 1);
+}
+#pragma optimize(pop)
+
+static void do_vt100_ctrl(int vt100_ctrl_index) {
   unsigned char cur_x = 0, cur_y = 0;
   char way = vt100_ctrl_queue[vt100_ctrl_index].way;
   char abs = vt100_ctrl_queue[vt100_ctrl_index].abs;
@@ -96,6 +112,8 @@ static void do_move(int vt100_ctrl_index) {
     }
   } else if (way == CURSOR) {
     cursor_mode = x;
+  } else if (way == AUTOWRAP) {
+    autowrap_mode = x;
   } else if (way == NEXTLINE) {
     printf("\n"); /* printf to handle scroll */
   } else if (way == STATUSREQ) {
@@ -116,9 +134,9 @@ static void do_move(int vt100_ctrl_index) {
     gotox(min(scrw - 1, cur_x + x));
   } else if (way == CH_CURS_UP) {
     cur_y = wherey();
-    if (cur_y - x >= 0)
+    if (cur_y - x >= top_line) {
       gotoy(max(0, cur_y - x));
-    else
+    } else
       manual_scroll_up(x);
   } else if (way == CH_CURS_DOWN) {
     cur_y = wherey();
@@ -127,7 +145,7 @@ static void do_move(int vt100_ctrl_index) {
     top_line = x - 1;
     btm_line = y;
     set_scrollwindow(top_line, btm_line);
-  } else if (abs == 1) {
+  } else if (way == GOTOXY) {
     if (x != 255 && y != 255)
       gotoxy(x, y);
     else if (x != 255)
@@ -137,7 +155,7 @@ static void do_move(int vt100_ctrl_index) {
   }
 }
 
-static void enqueue_move(char way, char abs, char x, char y) {
+static void enqueue_vt100_ctrl(char way, char abs, char x, char y) {
   if (n_vt100_ctrls == 99)
     return; /* FIXME keep enqueing somehow */
   
@@ -145,7 +163,8 @@ static void enqueue_move(char way, char abs, char x, char y) {
     vt100_ctrl_queue[n_vt100_ctrls - 1].way == way &&
     vt100_ctrl_queue[n_vt100_ctrls - 1].abs == abs &&
     vt100_ctrl_queue[n_vt100_ctrls - 1].y == 0 && 
-    abs == 0 && way != CLRSCR && way != SCROLL_WINDOW) {
+    abs == 0 && way != GOTOXY && 
+    way != CLRSCR && way != SCROLL_WINDOW) {
     /* merge with previous */
     vt100_ctrl_queue[n_vt100_ctrls - 1].x += x;
   } else {
@@ -160,16 +179,16 @@ static void enqueue_move(char way, char abs, char x, char y) {
 static void flush_vt100_ctrls(void) {
   char i;
   for (i = 0; i < n_vt100_ctrls; i++) {
-    do_move(i);
+    do_vt100_ctrl(i);
   }
   n_vt100_ctrls = 0;
 }
 
 char mid_vt100 = 0;
 
-char *buffer = NULL;
-int buf_idx = 0;
-int cur_read_idx = 0;
+char buffer[256];
+unsigned char buf_idx = 0;
+unsigned char cur_read_idx = 0;
 
 static void buffer_push(char o) {
   buffer[buf_idx] = o;
@@ -219,11 +238,13 @@ static int handle_vt100_escape_sequence(char pretend) {
     cmd2 = pretend ? simple_serial_getc() : buffer[cur_read_idx++];
 
     if (cmd1 == '1' && cmd2 == 'h') {
-      enqueue_move(CURSOR, 0, CURS_MODE_APPLICATION, 0);
+      enqueue_vt100_ctrl(CURSOR, 0, CURS_MODE_APPLICATION, 0);
     }
     if (cmd1 == '1' && cmd2 == 'l') {
-      enqueue_move(CURSOR, 0, CURS_MODE_CURSOR, 0);
+      enqueue_vt100_ctrl(CURSOR, 0, CURS_MODE_CURSOR, 0);
     }
+    enqueue_vt100_ctrl(AUTOWRAP, 0, cmd2, 0);
+    /* TODO 6 (origin), 8? (autorepeat), 9? (interlacing) */
   }
 
   if (pretend) {
@@ -240,27 +261,27 @@ static int handle_vt100_escape_sequence(char pretend) {
     case 'H':
       if(!has_bracket) break;
     case 'f':
-      enqueue_move(0, 1, y -1, x - 1);
+      enqueue_vt100_ctrl(GOTOXY, 1, (y > 0 ? y - 1 : 0), (x > 0 ? x - 1 : 0));
       break;
     /* cursor up */
     case 'A':
 curs_up:
-      enqueue_move(CH_CURS_UP, 0, (x == 0 ? 1 : x), 0);
+      enqueue_vt100_ctrl(CH_CURS_UP, 0, (x == 0 ? 1 : x), 0);
       break;
     /* cursor down */
     case 'B': 
 curs_down:
-      enqueue_move(CH_CURS_DOWN, 0, (x == 0 ? 1 : x), 0);
+      enqueue_vt100_ctrl(CH_CURS_DOWN, 0, (x == 0 ? 1 : x), 0);
       break;
     /* cursor right */
     case 'C': 
-      enqueue_move(CH_CURS_RIGHT, 0, (x == 0 ? 1 : x), 0);
+      enqueue_vt100_ctrl(CH_CURS_RIGHT, 0, (x == 0 ? 1 : x), 0);
       break;
     /* cursor left, or down, depending on bracket */
     case 'D': 
       if (!has_bracket)
         goto curs_down;
-      enqueue_move(CH_CURS_LEFT, 0, (x == 0 ? 1 : x), 0);
+      enqueue_vt100_ctrl(CH_CURS_LEFT, 0, (x == 0 ? 1 : x), 0);
       break;
     /* cursor up if no bracket */
     case 'M':
@@ -269,31 +290,31 @@ curs_down:
     /* next line (CRLF) if no bracket */
     case 'E':
       if (!has_bracket) {
-        enqueue_move(NEXTLINE, 0, 0, 0);
+        enqueue_vt100_ctrl(NEXTLINE, 0, 0, 0);
       }
       break;
     /* request for status */
     case 'n':
-      enqueue_move(STATUSREQ, 0, x, 0);
+      enqueue_vt100_ctrl(STATUSREQ, 0, x, 0);
       break;
     /* request to identify terminal type */
     case 'c':
     case 'Z':
-      enqueue_move(TERMTYPE, 0, 0, 0);
+      enqueue_vt100_ctrl(TERMTYPE, 0, 0, 0);
       break;
     /* Erase to beginning/end of line (incl) */
     case 'K':
-      enqueue_move(CLRSCR, 0, x, 0);
+      enqueue_vt100_ctrl(CLRSCR, 0, x, 0);
       break;
     /* Erase to beginning/end of screen (incl), only full screen supported */
     case 'J':
-      enqueue_move(CLRSCR, 1, 0, 0);
+      enqueue_vt100_ctrl(CLRSCR, 1, 0, 0);
       break;
     /* Setwin (top-bottom lines )*/
     case 'r':
       if (!has_bracket)
         break;
-      enqueue_move(SCROLL_WINDOW, 0, x, y);
+      enqueue_vt100_ctrl(SCROLL_WINDOW, 0, x, y);
       break;
   }
   return 0;
@@ -537,10 +558,10 @@ static int buffer_pop() {
   return 0;
 }
 
+static char pending_vt100;
 int main(int argc, char **argv) {
   surl_response *response = NULL;
   char i, o;
-  int loop_count;
 #ifdef __CC65__
   videomode(VIDEOMODE_80COL);
 #endif
@@ -584,7 +605,7 @@ again:
 
   cursor(1);
   response = surl_start_request("RAW", buf, NULL, 0);
-  if (response == NULL) {
+  if (response == NULL || response->code != 100) {
     printf("No response.\n");
     exit(1);
   }
@@ -593,10 +614,8 @@ again:
   puts("\n");
 #endif
   
-  buffer = malloc(2048);
-
-  loop_count = 0;
   do {
+    pending_vt100 = 0;
     if (kbhit()) {
       i = cgetc();
       if (i == '\r') {
@@ -617,11 +636,13 @@ again:
 #ifdef __CC65__
       /* Echo */
       if (echo) {
+        rm_cursor();
         if (i == '\r') {
           printf("\n");
         } else {
           cputc(i);
         }
+        set_cursor();
       }
 #else
       if (echo) {
@@ -631,10 +652,10 @@ again:
     }
 
 #ifdef __CC65__
-    while (ser_get(&o) != SER_ERR_NO_DATA) {
+    while (ser_get(&o) != SER_ERR_NO_DATA && buf_idx < 245) {
 #else
     int r;
-    while ((r = simple_serial_getc_immediate()) != EOF && r != '\0') {
+    while ((r = simple_serial_getc_immediate()) != EOF && r != '\0' && buf_idx < 245) {
       o = (char)r;
 #endif
       if (o == CH_ESC) {
@@ -642,36 +663,43 @@ again:
         if (handle_vt100_escape_sequence(1) == EOF) {
           goto remote_closed;
         }
+        pending_vt100 = 1;
       } else if (o == TELNET_IAC) {
         if (handle_telnet_command() == EOF) {
           goto remote_closed;
         }
-      } else {
+
+      } else if (o != '\16' && o != '\17' ){
+        /* Ignored:
+         * \16 shift in 
+         * \17 shift out
+         */
         buffer_push(o);
+        if (o == '\n') {
+          /* flush on \n */
+          break;
+        }
       }
     }
 
     /* Fixme should be a ring buffer */
-    if (loop_count++ > 400) {
-      if (buffer_pop() < 0) {
-        goto remote_closed;
-      }
-      loop_count  = 0;
+    if (buffer_pop() < 0) {
+      goto remote_closed;
     }
   } while(i != 0x04);
 
 remote_closed:
-  printf("\ndone\n");
+  top_line = 0;
+  btm_line = 24;
+  set_scrollwindow(0, scrh);
+
+  printf("\nConnection closed (Enter to continue).\n");
+  cgetc();
   surl_response_free(response);
-  free(buffer);
   free(buf);
   cursor_mode = CURS_MODE_CURSOR;
   curs_x = 255;
   curs_y = 255;
-
-  top_line = 0;
-  btm_line = 24;
-  set_scrollwindow(0, scrh);
 
 #ifndef __CC65__
   tcgetattr( STDOUT_FILENO, &ttyf);

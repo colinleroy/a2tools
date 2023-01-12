@@ -24,6 +24,6 @@ all: $(SOURCES:.c=.o) \
 clean:
 	rm -f $(PROGRAM) *.o *.map
 
-bat.bin: bool_array.o extended_conio.o bool_array_test.o
+bat.bin: bool_array.c extended_conio.c bool_array_test.c
 	$(CC) $(LDFLAGS) -o $@ $^ $(DEPS)
 	
