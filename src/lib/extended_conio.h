@@ -43,6 +43,7 @@ void gotoy(int y);
 char cgetc(void);
 void screensize(unsigned char *w, unsigned char *h);
 void chline(int len);
+void cputsxy(int x, int y, char *buf);
 int kbhit(void);
 #endif
 

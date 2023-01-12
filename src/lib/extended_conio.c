@@ -60,7 +60,7 @@ int kbhit(void) {
   return (ioctl(fileno(stdin), FIONREAD, &n) == 0 && n > 0);
 }
 
-static void cputsxy(int x, int y, char *buf) {
+void cputsxy(int x, int y, char *buf) {
   char *prefix;
   int i;
 
@@ -232,7 +232,7 @@ void printxcenteredbox(int width, int height) {
 
 void get_scrollwindow(unsigned char *top, unsigned char *bottom){
 #ifdef __CC65__
-  char t, b;
+  static char t, b;
 
   __asm__("lda $22"); /* get WNDTOP */
   __asm__("sta %v", t);
@@ -250,7 +250,9 @@ void get_scrollwindow(unsigned char *top, unsigned char *bottom){
 
 void set_scrollwindow(unsigned char top, unsigned char bottom) {
 #ifdef __CC65__
-  char t = top, b = bottom;
+  static char t, b;
+  t = top;
+  b = bottom;
 
   if (top >= bottom || bottom > 24)
     return;
@@ -259,5 +261,6 @@ void set_scrollwindow(unsigned char top, unsigned char bottom) {
   __asm__("sta $22"); /* store WNDTOP */
   __asm__("lda %v", b);
   __asm__("sta $23"); /* store WNDBTM */
+
 #endif
 }
