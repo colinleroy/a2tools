@@ -11,6 +11,7 @@
 #include <errno.h>
 #include <sys/select.h>
 #include <fcntl.h>
+#include <time.h>
 
 #include "simple_serial.h"
 #include "raw-session.h"
@@ -136,6 +137,7 @@ void surl_server_raw_session(char *remote_url) {
   char *out_buf = malloc(RAW_BUFSIZE);
   int n_in = 0, n_out = 0;
   int sockfd;
+  time_t last_traffic;
 
   printf("starting raw session.\n");
 
@@ -154,6 +156,7 @@ void surl_server_raw_session(char *remote_url) {
 
   printf("Connected to %s: %d\n", remote_url, sockfd);
   simple_serial_puts("Connected.\r\n");
+  last_traffic = time(NULL);
   do {
     int read_res;
     last_i = '\0';
@@ -166,6 +169,7 @@ void surl_server_raw_session(char *remote_url) {
         break;
       }
       in_buf[n_in++] = i;
+      last_traffic = time(NULL);
     }
     if (n_in > 0)
       send_buf(sockfd, in_buf, n_in);
@@ -175,12 +179,17 @@ void surl_server_raw_session(char *remote_url) {
            && (read_res = net_recv_char(sockfd, &o)) != EOF 
            && o != '\0') {
       out_buf[n_out++] = o;
+      last_traffic = time(NULL);
     }
     if (n_out > 0) {
       simple_serial_write(out_buf, 1, n_out);
     }
     if (read_res == EOF) {
       simple_serial_printf("Remote host closed connection.\r\n%c", 0x04);
+      goto cleanup;
+    }
+    if (time(NULL) - last_traffic > 10) {
+      simple_serial_printf("Inactivity timeout.\r\n%c", 0x04);
       goto cleanup;
     }
   } while(last_i != 0x04);
