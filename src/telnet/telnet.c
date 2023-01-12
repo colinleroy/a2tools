@@ -665,12 +665,14 @@ again:
 #endif
       if (o == TELNET_IAC) {
         if (handle_telnet_command() == EOF) {
+          printf("Telnet error\n");
           goto remote_closed;
         }
       } else if (o != '\0' && o != '\16' && o != '\17') {
         buffer[buf_idx++] = o;
         if (o == CH_ESC) {
           if (handle_vt100_escape_sequence(1) == EOF) {
+            printf("vt100 error\n");
             goto remote_closed;
           }
         }
@@ -699,6 +701,7 @@ remote_closed:
   cursor_mode = CURS_MODE_CURSOR;
   curs_x = 255;
   curs_y = 255;
+  buf_idx = 0;
 
 #ifndef __CC65__
   tcgetattr( STDOUT_FILENO, &ttyf);
