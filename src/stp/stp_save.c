@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
 #include "stp_save.h"
 #include "get_buf_size.h"
 #include "simple_serial.h"
@@ -88,7 +89,8 @@ void stp_save(char *full_filename, surl_response *resp) {
   unsigned int buf_size, i;
   unsigned long percent;
   char keep_bin_header = 0;
-  
+  char had_error = 0;
+
   if (scrw == 255)
     screensize(&scrw, &scrh);
 
@@ -148,11 +150,18 @@ void stp_save(char *full_filename, surl_response *resp) {
     gotoxy(6, 15);
     printf("%s", strerror(errno));
     cgetc();
+    had_error = 1;
     goto err_out;
   }
 
   if (keep_bin_header) {
-    fwrite(data, sizeof(char), APPLESINGLE_HEADER_LEN, fp);
+    if (fwrite(data, sizeof(char), APPLESINGLE_HEADER_LEN, fp) < APPLESINGLE_HEADER_LEN) {
+      gotoxy(6, 15);
+      printf("%s.", strerror(errno));
+      cgetc();
+      had_error = 1;
+      goto err_out;
+    }
     free(data);
   }
 
@@ -162,6 +171,8 @@ void stp_save(char *full_filename, surl_response *resp) {
   if (data == NULL) {
     gotoxy(6, 15);
     printf("Cannot allocate buffer.");
+    cgetc();
+    had_error = 1;
     goto err_out;
   }
 
@@ -183,7 +194,13 @@ void stp_save(char *full_filename, surl_response *resp) {
     total += r;
     printf("Saving %zu/%zu...", total, resp->size);
 
-    fwrite(data, sizeof(char), r, fp);
+    if (fwrite(data, sizeof(char), r, fp) < r) {
+      gotoxy(6, 15);
+      printf("%s.", strerror(errno));
+      cgetc();
+      had_error = 1;
+      goto err_out;
+    }
 
     gotoxy(6, 15);
     percent = (long)total * 28L;
@@ -197,6 +214,9 @@ void stp_save(char *full_filename, surl_response *resp) {
 
 err_out:
   fclose(fp);
+  if (had_error) {
+    unlink(filename);
+  }
   free(filename);
   free(data);
 }
