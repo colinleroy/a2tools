@@ -69,12 +69,16 @@ static char n_vt100_ctrls = 0;
 #define STATUSREQ 5
 #define TERMTYPE 6
 #define AUTOWRAP 7
-
 // Dont go up to 8 it's CH_CURS_LEFT
+// Back after CH_ESC (1B)
+#define SAVE_CURSOR 0x30
+#define RESTORE_CURSOR 0x31
+
+static char saved_vt100_curs_x = 255, saved_vt100_curs_y = 255;
 
 #pragma optimize(push, on)
 static char scrollbuf[80];
-static void manual_scroll_up(int num) {
+static void manual_scroll_up(char num) {
   static signed char l, x;
   static char h;
   
@@ -112,6 +116,13 @@ static void do_vt100_ctrl(int vt100_ctrl_index) {
     }
   } else if (way == CURSOR) {
     cursor_mode = x;
+  } else if (way == SAVE_CURSOR) {
+    saved_vt100_curs_x = wherex();
+    saved_vt100_curs_y = wherey();
+  } else if (way == RESTORE_CURSOR) {
+    if (saved_vt100_curs_x != 255) {
+      gotoxy(saved_vt100_curs_x, saved_vt100_curs_y);
+    }
   } else if (way == AUTOWRAP) {
     autowrap_mode = x;
   } else if (way == NEXTLINE) {
@@ -135,12 +146,12 @@ static void do_vt100_ctrl(int vt100_ctrl_index) {
   } else if (way == CH_CURS_UP) {
     cur_y = wherey();
     if (cur_y - x >= top_line) {
-      gotoy(max(0, cur_y - x));
+      gotoy(max(top_line, cur_y - x));
     } else
       manual_scroll_up(x);
   } else if (way == CH_CURS_DOWN) {
     cur_y = wherey();
-    gotoy(max(btm_line - 1, cur_y + x));
+    gotoy(min(btm_line - 1, cur_y + x));
   } else if (way == SCROLL_WINDOW) {
     top_line = x - 1;
     btm_line = y;
@@ -161,10 +172,9 @@ static void enqueue_vt100_ctrl(char way, char abs, char x, char y) {
   
   if (n_vt100_ctrls > 0 &&
     vt100_ctrl_queue[n_vt100_ctrls - 1].way == way &&
-    vt100_ctrl_queue[n_vt100_ctrls - 1].abs == abs &&
     vt100_ctrl_queue[n_vt100_ctrls - 1].y == 0 && 
-    abs == 0 && way != GOTOXY && 
-    way != CLRSCR && way != SCROLL_WINDOW) {
+    abs == 0 && 
+    (way == CH_CURS_UP || way == CH_CURS_DOWN || way == CH_CURS_LEFT || way == CH_CURS_RIGHT)) {
     /* merge with previous */
     vt100_ctrl_queue[n_vt100_ctrls - 1].x += x;
   } else {
@@ -186,9 +196,9 @@ static void flush_vt100_ctrls(void) {
 
 char mid_vt100 = 0;
 
-char buffer[256];
-unsigned char buf_idx = 0;
-unsigned char cur_read_idx = 0;
+char buffer[1024];
+unsigned int buf_idx = 0;
+unsigned int cur_read_idx = 0;
 
 static int handle_vt100_escape_sequence(char pretend) {
   char o;
@@ -220,6 +230,20 @@ static int handle_vt100_escape_sequence(char pretend) {
         x = x * 10 + (o - '0');
       else if (step = CTRL_STEP_Y)
         y = y * 10 + (o - '0');
+
+      if (!has_bracket && step == CTRL_STEP_X) {
+        /* we can have ^[<n>
+         * and 7 and 8 don't have a following letter */
+         if (x == 7) {
+           if (!pretend)
+            enqueue_vt100_ctrl(SAVE_CURSOR, 1, 0, 0);
+           return 0;
+         } else if (x == 8) {
+           if (!pretend)
+            enqueue_vt100_ctrl(RESTORE_CURSOR, 1, 0, 0);
+           return 0;
+         }
+       }
     } else if (o == ';') {
       step = CTRL_STEP_XY_SEP;
     } else {
@@ -232,13 +256,25 @@ static int handle_vt100_escape_sequence(char pretend) {
     cmd1 = pretend ? simple_serial_getc() : buffer[cur_read_idx++];
     cmd2 = pretend ? simple_serial_getc() : buffer[cur_read_idx++];
 
+    if (pretend) {
+      buffer[buf_idx++] = cmd1;
+      buffer[buf_idx++] = cmd2;
+      return 0;
+    }
+
     if (cmd1 == '1' && cmd2 == 'h') {
-      enqueue_vt100_ctrl(CURSOR, 0, CURS_MODE_APPLICATION, 0);
+      enqueue_vt100_ctrl(CURSOR, 1, CURS_MODE_APPLICATION, 0);
+      return 0;
     }
     if (cmd1 == '1' && cmd2 == 'l') {
-      enqueue_vt100_ctrl(CURSOR, 0, CURS_MODE_CURSOR, 0);
+      printf("s-c-to-%c", CURS_MODE_CURSOR);
+      enqueue_vt100_ctrl(CURSOR, 1, CURS_MODE_CURSOR, 0);
+      return 0;
     }
-    enqueue_vt100_ctrl(AUTOWRAP, 0, cmd2, 0);
+    if (cmd1 == '8' && (cmd2 == 'h' || cmd2 == 'l')) {
+      enqueue_vt100_ctrl(AUTOWRAP, 1, cmd2, 0);
+      return 0;
+    }
     /* TODO 6 (origin), 8? (autorepeat), 9? (interlacing) */
   }
 
@@ -285,17 +321,17 @@ curs_down:
     /* next line (CRLF) if no bracket */
     case 'E':
       if (!has_bracket) {
-        enqueue_vt100_ctrl(NEXTLINE, 0, 0, 0);
+        enqueue_vt100_ctrl(NEXTLINE, 1, 0, 0);
       }
       break;
     /* request for status */
     case 'n':
-      enqueue_vt100_ctrl(STATUSREQ, 0, x, 0);
+      enqueue_vt100_ctrl(STATUSREQ, 1, x, 0);
       break;
     /* request to identify terminal type */
     case 'c':
     case 'Z':
-      enqueue_vt100_ctrl(TERMTYPE, 0, 0, 0);
+      enqueue_vt100_ctrl(TERMTYPE, 1, 0, 0);
       break;
     /* Erase to beginning/end of line (incl) */
     case 'K':
@@ -309,7 +345,7 @@ curs_down:
     case 'r':
       if (!has_bracket)
         break;
-      enqueue_vt100_ctrl(SCROLL_WINDOW, 0, x, y);
+      enqueue_vt100_ctrl(SCROLL_WINDOW, 1, x, y);
       break;
   }
   return 0;
@@ -568,6 +604,8 @@ static int buffer_pop() {
 int main(int argc, char **argv) {
   surl_response *response = NULL;
   char i, o;
+  //DEBUG int loop_wait = 0;
+  
 #ifdef __CC65__
   videomode(VIDEOMODE_80COL);
 #endif
@@ -612,7 +650,7 @@ again:
   cursor(1);
   response = surl_start_request("RAW", buf, NULL, 0);
   if (response == NULL || response->code != 100) {
-    printf("No response.\n");
+    printf("No response (%d).\n", response ? response->code : -1);
     exit(1);
   }
   i = '\0';
@@ -627,7 +665,7 @@ again:
         if (translate_ln) {
           simple_serial_puts("\r\n");
         } else {
-          simple_serial_putc('\n');
+          simple_serial_putc('\r');
         }
       } else if (i != '\0') {
         if (!handle_special_char(i)) {
@@ -657,10 +695,10 @@ again:
     }
 
 #ifdef __CC65__
-    while (ser_get(&o) != SER_ERR_NO_DATA && buf_idx < 245) {
+    while (ser_get(&o) != SER_ERR_NO_DATA && buf_idx < 1000) {
 #else
     int r;
-    while ((r = simple_serial_getc_immediate()) != EOF && buf_idx < 245) {
+    while ((r = simple_serial_getc_immediate()) != EOF && buf_idx < 1000) {
       o = (char)r;
 #endif
       if (o == TELNET_IAC) {
@@ -675,6 +713,7 @@ again:
             printf("vt100 error\n");
             goto remote_closed;
           }
+          //DEBUG loop_wait = 800;
         }
         if (o == '\n') {
           /* flush on \n */
@@ -684,9 +723,14 @@ again:
     }
 
     /* Fixme should be a ring buffer */
-    if (buffer_pop() < 0) {
-      goto remote_closed;
-    }
+    //DEBUG if (loop_wait == 0) {
+      if (buffer_pop() < 0) {
+        goto remote_closed;
+      }
+    // }
+    // if (loop_wait > 0)
+    //   loop_wait--;
+
   } while(i != 0x04);
 
 remote_closed:
