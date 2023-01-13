@@ -199,6 +199,7 @@ int simple_serial_open(void) {
     return -1;
   }
 
+  simple_serial_flush();
   setup_tty(fileno(ttyfp), opt_tty_speed, opt_tty_hw_handshake);
 
   return 0;
@@ -216,6 +217,9 @@ int simple_serial_close(void) {
   return 0;
 }
 
+void simple_serial_flush(void) {
+  tcflush(fileno(ttyfp), TCIOFLUSH);
+}
 /* Input 
  * Very complicated because select() won't mark fd as readable 
  * if there was more than one byte available last time and we only
@@ -275,7 +279,7 @@ int simple_serial_getc_immediate(void) {
 }
 
 int __simple_serial_getc_with_timeout(int timeout) {
-  return __simple_serial_getc_with_tv_timeout(timeout, 10, 0);
+  return __simple_serial_getc_with_tv_timeout(timeout, 0, 500);
 }
 
 /* Output */

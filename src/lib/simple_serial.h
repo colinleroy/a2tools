@@ -13,6 +13,7 @@ int simple_serial_close(void);
 #else
 int simple_serial_open(void);
 int simple_serial_close(void);
+void simple_serial_flush(void);
 #endif
 
 /* Input */

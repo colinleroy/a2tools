@@ -12,6 +12,7 @@
 #include <sys/select.h>
 #include <fcntl.h>
 #include <time.h>
+#include <termios.h>
 
 #include "simple_serial.h"
 #include "raw-session.h"
@@ -168,7 +169,7 @@ maybe_finish_ctrl:
       last_i = i;
       if (i == 0x04) {
         printf("Client closed connection.\n");
-        break;
+        goto cleanup;
       }
       in_buf[n_in++] = i;
       if (o == '\33')
@@ -206,5 +207,7 @@ maybe_finish_ctrl:
   } while(last_i != 0x04);
 
 cleanup:
+  tcflush(sockfd, TCIOFLUSH);
+  simple_serial_flush();
   close(sockfd);
 }
