@@ -32,6 +32,8 @@
 
 #ifdef __CC65__
 #include <apple2enh.h>
+#else
+#include <time.h>
 #endif
 
 static unsigned char scrw, scrh;
@@ -255,6 +257,10 @@ static void cleanup(void) {
 }
 
 static long refresh_counter = REFRESH_DELAY;
+#ifndef __CC65__
+static time_t last_update = 0;
+#endif
+
 int main(int argc, char **argv) {
   char command;
 
@@ -270,6 +276,9 @@ int main(int argc, char **argv) {
 
 update:
   refresh_counter = REFRESH_DELAY;
+#ifndef __CC65__
+  last_update = time(NULL);
+#endif
   if (cur_page != prev_page) {
     clear_list(0);
     printxcentered(12, "Loading...");
@@ -303,11 +312,16 @@ update:
 
 command:
   while (!kbhit()) {
+#ifndef __CC65__
+    if (time(NULL) - last_update > REFRESH_DELAY/1000)
+      goto update;
+#else
     refresh_counter--;
     if (refresh_counter == 0) {
       
       goto update;
     }
+#endif
   }
 
   command = cgetc();
