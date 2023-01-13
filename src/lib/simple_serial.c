@@ -33,9 +33,6 @@ static char serial_activity_indicator_enabled = 0;
 static int serial_activity_indicator_x = -1;
 static int serial_activity_indicator_y = -1;
 
-/* proto */
-static int __simple_serial_getc_with_timeout(int timeout);
-
 #ifdef __CC65__
 static void activity_cb(int on) {
   gotoxy(serial_activity_indicator_x, serial_activity_indicator_y);
@@ -87,19 +84,20 @@ int simple_serial_close(void) {
   return ser_close();
 }
 
+#pragma optimize(push, on)
 int simple_serial_getc_immediate(void) {
   char c;
-  if (ser_get(&c) == SER_ERR_NO_DATA) {
-    return EOF;
-  } else {
+  if (ser_get(&c) != SER_ERR_NO_DATA) {
     return c;
   }
+  return EOF;
 }
+#pragma optimize(pop)
 
 static int timeout_cycles = -1;
 
 /* Input */
-static int __simple_serial_getc_with_timeout(int with_timeout) {
+static int __simple_serial_getc_with_timeout(char with_timeout) {
     char c;
 
     if (with_timeout)
@@ -115,20 +113,23 @@ static int __simple_serial_getc_with_timeout(int with_timeout) {
 }
 
 /* Output */
-static int send_delay;
+// static int send_delay;
+#pragma optimize(push, on)
 int simple_serial_putc(char c) {
-  if ((ser_put(c)) == SER_ERR_OVERFLOW) {
-    return EOF;
+  if ((ser_put(c)) != SER_ERR_OVERFLOW) {
+    return c;
   }
-  for (send_delay = 0; send_delay < 3; send_delay++) {
-    /* Why do we need that.
-     * Thanks platoterm for the hint */
-  }
+  // for (send_delay = 0; send_delay < 3; send_delay++) {
+  //   /* Why do we need that. (do we though?)
+  //    * Thanks platoterm for the hint */
+  // }
 
-  return c;
+  return EOF;
 }
+#pragma optimize(pop)
 
 #else
+/* POSIX */
 #include <termios.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -142,6 +143,10 @@ int simple_serial_putc(char c) {
 
 static FILE *ttyfp = NULL;
 static int flow_control_enabled;
+
+static char *readbuf = NULL;
+static int readbuf_idx = 0;
+static int readbuf_avail = 0;
 
 static void setup_tty(int port, int baudrate, int hw_flow_control) {
   struct termios tty;
@@ -196,9 +201,6 @@ int simple_serial_open(void) {
 
   setup_tty(fileno(ttyfp), opt_tty_speed, opt_tty_hw_handshake);
 
-  printf("Opened %s at %sbps, CRTSCTS %s\n",
-         opt_tty_path, tty_speed_to_str(opt_tty_speed),
-         opt_tty_hw_handshake ? "on" : "off");
   return 0;
 }
 
@@ -207,46 +209,73 @@ int simple_serial_close(void) {
     fclose(ttyfp);
   }
   ttyfp = NULL;
+  if (readbuf) {
+    free(readbuf);
+    readbuf = NULL;
+  }
   return 0;
 }
 
-/* Input */
-int __simple_serial_getc_with_timeout(int timeout) {
+/* Input 
+ * Very complicated because select() won't mark fd as readable 
+ * if there was more than one byte available last time and we only
+ * read one. So we're doing our own buffer.
+ */
+int __simple_serial_getc_with_tv_timeout(int timeout, int secs, int msecs) {
   fd_set fds;
   struct timeval tv_timeout;
   int n;
 
+  if (readbuf == NULL) {
+    readbuf = malloc(16384);
+  }
+  
+send_from_buf:
+  if (readbuf_avail > 0) {
+    int r = (unsigned char)readbuf[readbuf_idx];
+    readbuf_idx++;
+    readbuf_avail--;
+
+    return r;
+  }
+
+try_again:
   FD_ZERO(&fds);
   FD_SET(fileno(ttyfp), &fds);
 
-  tv_timeout.tv_sec  = 1;
-  tv_timeout.tv_usec = 0;
+  tv_timeout.tv_sec  = secs;
+  tv_timeout.tv_usec = msecs*1000;
 
   n = select(fileno(ttyfp) + 1, &fds, NULL, NULL, &tv_timeout);
 
-  if (!timeout || (n > 0 && FD_ISSET(fileno(ttyfp), &fds))) {
-    return fgetc(ttyfp);
+  if (n > 0 && FD_ISSET(fileno(ttyfp), &fds)) {
+    int flags = fcntl(fileno(ttyfp), F_GETFL);
+    int r;
+    flags |= O_NONBLOCK;
+    fcntl(fileno(ttyfp), F_SETFL, flags);
+    
+    r = fread(readbuf, sizeof(char), 16383, ttyfp);
+    if (r > 0) {
+      readbuf_avail = r;
+    }
+    readbuf_idx = 0;
+
+    flags &= ~O_NONBLOCK;
+    fcntl(fileno(ttyfp), F_SETFL, flags);
+
+    goto send_from_buf;
+  } else if (!timeout) {
+    goto try_again;
   }
   return EOF;
 }
 
 int simple_serial_getc_immediate(void) {
-  fd_set fds;
-  struct timeval tv_timeout;
-  int n;
+  return __simple_serial_getc_with_tv_timeout(1, 0, DELAY_MS);
+}
 
-  FD_ZERO(&fds);
-  FD_SET(fileno(ttyfp), &fds);
-
-  tv_timeout.tv_sec  = 0;
-  tv_timeout.tv_usec = DELAY_MS*1000;
-
-  n = select(fileno(ttyfp) + 1, &fds, NULL, NULL, &tv_timeout);
-
-  if (n > 0 && FD_ISSET(fileno(ttyfp), &fds)) {
-    return fgetc(ttyfp);
-  }
-  return EOF;
+int __simple_serial_getc_with_timeout(int timeout) {
+  return __simple_serial_getc_with_tv_timeout(timeout, 10, 0);
 }
 
 /* Output */
@@ -285,6 +314,7 @@ int simple_serial_puts(char *buf) {
   for (i = 0; i < len; i++) {
     simple_serial_putc(buf[i]);
   }
+
   if (serial_activity_indicator_enabled) {
     activity_cb(0);
   }
@@ -334,6 +364,7 @@ static char *__simple_serial_gets_with_timeout(char *out, size_t size, int with_
     }
   }
   out[i] = '\0';
+
   if (serial_activity_indicator_enabled) {
     activity_cb(0);
   }
@@ -422,6 +453,7 @@ int simple_serial_write(char *ptr, size_t size, size_t nmemb) {
       return i;
     }
   }
+
   return i;
 }
 
