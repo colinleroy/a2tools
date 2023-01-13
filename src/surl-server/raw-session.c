@@ -66,7 +66,7 @@ static int net_recv_char(int sockfd, char *c) {
 }
 
 static int ser_recv_char(char *c) {
-  int i = simple_serial_getc_with_timeout();
+  int i = simple_serial_getc_immediate();
   if (i == EOF)
     return EOF;
   

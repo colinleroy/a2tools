@@ -72,6 +72,8 @@ void stp_save_dialog(char *url, surl_response *resp) {
   } while (c != CH_ENTER && c != CH_ESC);
   
   if (c == CH_ENTER) {
+    gotoxy(6, 17);
+    printf("Saving file...              ");
     stp_save(filename, resp);
   }
   free(filename);
