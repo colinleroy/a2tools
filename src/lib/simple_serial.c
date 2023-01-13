@@ -42,110 +42,6 @@ static void activity_cb(int on) {
   cputc(on ? '*' : ' ');
 }
 
-static char *__simple_serial_gets_with_timeout(char *out, size_t size, int with_timeout) {
-  int b;
-  char c;
-  size_t i = 0;
-
-  if (serial_activity_indicator_x == -1) {
-    serial_activity_indicator_x = wherex();
-    serial_activity_indicator_y = wherey();
-  }
-  if (size == 0) {
-    return NULL;
-  }
-
-  if (serial_activity_indicator_enabled) {
-    activity_cb(1);
-  }
-  while (i < size - 1) {
-    b = __simple_serial_getc_with_timeout(with_timeout);
-    if (b == EOF) {
-      break;
-    } else if (b < 0) {
-      return NULL;
-    }
-    c = (char)b;
-    
-    if (c == '\r') {
-      /* ignore \r */
-      continue;
-    }
-
-    out[i] = c;
-    i++;
-
-    if (c == '\n') {
-      break;
-    }
-  }
-  out[i] = '\0';
-  if (serial_activity_indicator_enabled) {
-    activity_cb(0);
-  }
-
-  return out;
-}
-
-static size_t __simple_serial_read_with_timeout(char *ptr, size_t size, size_t nmemb, int with_timeout) {
-  int b;
-  size_t i = 0;
-
-  if (serial_activity_indicator_x == -1) {
-    serial_activity_indicator_x = wherex();
-    serial_activity_indicator_y = wherey();
-  }
-
-  if (size != 1) {
-    /* unsupported */
-    return 0;
-  }
-
-  if (serial_activity_indicator_enabled) {
-    activity_cb(1);
-  }
-  while (i < nmemb) {
-    b = __simple_serial_getc_with_timeout(with_timeout);
-    if (b == EOF) {
-      break;
-    }
-    ptr[i] = (char)b;
-    i++;
-  }
-
-  if (serial_activity_indicator_enabled) {
-    activity_cb(0);
-  }
-
-  return i;
-}
-
-int simple_serial_puts(char *buf) {
-  static char i, len;
-  
-  if (strlen(buf) > 255) {
-    return EOF;
-  }
-  len = strlen(buf);
-
-  if (serial_activity_indicator_x == -1) {
-    serial_activity_indicator_x = wherex();
-    serial_activity_indicator_y = wherey();
-  }
-
-  if (serial_activity_indicator_enabled) {
-    activity_cb(1);
-  }
-  for (i = 0; i < len; i++) {
-    simple_serial_putc(buf[i]);
-  }
-  if (serial_activity_indicator_enabled) {
-    activity_cb(0);
-  }
-
-  return len;
-}
-
 /* Setup */
 static int last_slot = 2;
 static int last_baudrate = SER_BAUD_9600;
@@ -199,10 +95,6 @@ int simple_serial_getc_immediate(void) {
     return c;
   }
 }
-
-#ifdef SERIAL_TO_LANGCARD
-#pragma code-name (push, "LC")
-#endif
 
 static int timeout_cycles = -1;
 
@@ -318,42 +210,43 @@ int simple_serial_close(void) {
   return 0;
 }
 
-static char *__simple_serial_gets_with_timeout(char *out, size_t size, int with_timeout) {
-  return fgets(out, size, ttyfp);
-}
-
-static size_t __simple_serial_read_with_timeout(char *ptr, size_t size, size_t nmemb, int with_timeout) {
-  return fread(ptr, size, nmemb, ttyfp);
-}
-
-int simple_serial_puts(char *buf) {
-  return fputs(buf, ttyfp);
-}
-
 /* Input */
 int __simple_serial_getc_with_timeout(int timeout) {
-  static int n = 0;
-  int r;
+  fd_set fds;
+  struct timeval tv_timeout;
+  int n;
 
-read:
-  if (timeout == 0 || n > 0) {
-    r = fgetc(ttyfp);
-    fflush(ttyfp);
-    if (n > 0) {
-      n--;
-    }
-    return r;
-  } else {
-    fflush(ttyfp);
-    ioctl(fileno(ttyfp), FIONREAD, &n);
-    if (n > 0) goto read;
-    return EOF;
+  FD_ZERO(&fds);
+  FD_SET(fileno(ttyfp), &fds);
+
+  tv_timeout.tv_sec  = 1;
+  tv_timeout.tv_usec = 0;
+
+  n = select(fileno(ttyfp) + 1, &fds, NULL, NULL, &tv_timeout);
+
+  if (!timeout || (n > 0 && FD_ISSET(fileno(ttyfp), &fds))) {
+    return fgetc(ttyfp);
   }
+  return EOF;
 }
 
 int simple_serial_getc_immediate(void) {
-  /* same thing on linux */
-  return __simple_serial_getc_with_timeout(1);
+  fd_set fds;
+  struct timeval tv_timeout;
+  int n;
+
+  FD_ZERO(&fds);
+  FD_SET(fileno(ttyfp), &fds);
+
+  tv_timeout.tv_sec  = 0;
+  tv_timeout.tv_usec = DELAY_MS*1000;
+
+  n = select(fileno(ttyfp) + 1, &fds, NULL, NULL, &tv_timeout);
+
+  if (n > 0 && FD_ISSET(fileno(ttyfp), &fds)) {
+    return fgetc(ttyfp);
+  }
+  return EOF;
 }
 
 /* Output */
@@ -366,9 +259,123 @@ int simple_serial_putc(char c) {
 
   return r;
 }
+
+static void activity_cb(int on) {
+  
+}
+
+#endif /* End of platform-dependant code */
+
+int simple_serial_puts(char *buf) {
+  static char i, len;
+  
+  if (strlen(buf) > 255) {
+    return EOF;
+  }
+  len = strlen(buf);
+
+  if (serial_activity_indicator_x == -1) {
+    serial_activity_indicator_x = wherex();
+    serial_activity_indicator_y = wherey();
+  }
+
+  if (serial_activity_indicator_enabled) {
+    activity_cb(1);
+  }
+  for (i = 0; i < len; i++) {
+    simple_serial_putc(buf[i]);
+  }
+  if (serial_activity_indicator_enabled) {
+    activity_cb(0);
+  }
+
+  return len;
+}
+
+#ifdef SERIAL_TO_LANGCARD
+#pragma code-name (push, "LC")
 #endif
 
-/* Common code */
+static char *__simple_serial_gets_with_timeout(char *out, size_t size, int with_timeout) {
+  int b;
+  char c;
+  size_t i = 0;
+
+  if (serial_activity_indicator_x == -1) {
+    serial_activity_indicator_x = wherex();
+    serial_activity_indicator_y = wherey();
+  }
+  if (size == 0) {
+    return NULL;
+  }
+
+  if (serial_activity_indicator_enabled) {
+    activity_cb(1);
+  }
+  while (i < size - 1) {
+    b = __simple_serial_getc_with_timeout(with_timeout);
+    if (b == EOF) {
+      break;
+    } else if (b < 0) {
+      return NULL;
+    }
+    c = (char)b;
+    
+    if (c == '\r') {
+      /* ignore \r */
+      continue;
+    }
+
+    out[i] = c;
+    i++;
+
+    if (c == '\n') {
+      break;
+    }
+  }
+  out[i] = '\0';
+  if (serial_activity_indicator_enabled) {
+    activity_cb(0);
+  }
+
+  return out;
+}
+
+static size_t __simple_serial_read_with_timeout(char *ptr, size_t size, size_t nmemb, int with_timeout) {
+  int b;
+  size_t i = 0;
+
+  if (serial_activity_indicator_x == -1) {
+    serial_activity_indicator_x = wherex();
+    serial_activity_indicator_y = wherey();
+  }
+
+  if (size != 1) {
+    /* unsupported */
+    return 0;
+  }
+
+  if (serial_activity_indicator_enabled) {
+    activity_cb(1);
+  }
+  while (i < nmemb) {
+    b = __simple_serial_getc_with_timeout(with_timeout);
+    if (b == EOF) {
+      break;
+    }
+    ptr[i] = (char)b;
+    i++;
+  }
+
+  if (serial_activity_indicator_enabled) {
+    activity_cb(0);
+  }
+
+  return i;
+}
+
+/* Wrappers */
+
 int simple_serial_getc_with_timeout(void) {
   return __simple_serial_getc_with_timeout(1);
 }
