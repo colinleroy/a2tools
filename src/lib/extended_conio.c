@@ -27,17 +27,18 @@ static unsigned char scrw = 255, scrh = 255;
 #include <sys/ioctl.h>
 
 void clrscr(void) {
-  fprintf(stdout, "%c[2J", CH_ESC);
-  fprintf(stdout, "%c[%d;%dH", CH_ESC, 0, 0);
+  fprintf(stdout, "%c[H", CH_ESC);
+  fprintf(stdout, "%c[J", CH_ESC);
+  fprintf(stdout, "%c[H", CH_ESC);
 }
 void gotoxy(int x, int y) {
-  fprintf(stdout, "%c[%d;%dH", CH_ESC, x, y);
+  fprintf(stdout, "%c[%d;%dH", CH_ESC, y + 1, x + 1);
 }
 void gotox(int x) {
-  fprintf(stdout, "%c[%d;%dH", CH_ESC, x, 0); /* fixme not 0 y */
+  fprintf(stdout, "%c[%d;%dH", CH_ESC, 1, x + 1); /* fixme not 0 y */
 }
 void gotoy(int y) {
-  fprintf(stdout, "%c[%d;%dH", CH_ESC, 0, y); /* fixme not 0 x */
+  fprintf(stdout, "%c[%d;%dH", CH_ESC, y + 1, 1); /* fixme not 0 x */
 }
 
 char cgetc(void) {
@@ -52,6 +53,20 @@ char cgetc(void) {
     unset_canon = 1;
   }
   fread(&c, 1, 1, stdin);
+  if (c == '\33') {
+    fread(&c, 1, 1, stdin);
+    if (c == '[') {
+      fread(&c, 1, 1, stdin);
+      switch (c) {
+        case 'A': return CH_CURS_UP;
+        case 'B': return CH_CURS_DOWN;
+        case 'C': return CH_CURS_RIGHT;
+        case 'D': return CH_CURS_LEFT;
+      }
+    } else {
+      return c;
+    }
+  }
   return c;
 }
 int kbhit(void) {
@@ -61,27 +76,16 @@ int kbhit(void) {
 }
 
 void cputsxy(int x, int y, char *buf) {
-  char *prefix;
   int i;
 
   if (scrw == 255 && scrh == 255) {
     screensize(&scrw, &scrh);
   }
 
-  prefix = malloc(scrw);
-  for (i = 0; i < x && i < scrw - 1; i++) {
-    prefix[i] = ' ';
-  }
-  prefix[i] = '\0';
-  if (strlen(buf) > scrw - 1 - x) {
-    buf[scrw - 1 - x] = '\0';
-  }
-  printf("%s%s", prefix, buf);
-  free(prefix);
+  gotoxy(x, y);
+  printf("%s", buf);
 }
-#endif
 
-#ifndef __CC65__
 void screensize(unsigned char *w, unsigned char *h) {
   *w = 40;
   *h = 24;
