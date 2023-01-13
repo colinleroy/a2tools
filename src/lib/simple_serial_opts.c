@@ -42,28 +42,28 @@ static int tty_speed_from_str(char *tmp) {
   printf("Unhandled speed %s.\n", tmp);
   exit(1);
 }
-
-static char *tty_speed_to_str(int speed) {
-  if (speed == B300)
-    return "300";
-  if (speed == B600)
-    return "600";
-  if (speed == B1200)
-    return "1200";
-  if (speed == B2400)
-    return "2400";
-  if (speed == B4800)
-    return "4800";
-  if (speed == B9600)
-    return "9600";
-  if (speed == B19200)
-    return "19200";
-  if (speed == B57600)
-    return "57600";
-  if (speed == B115200)
-    return "115200";
-  return "???";
-}
+// 
+// static char *tty_speed_to_str(int speed) {
+//   if (speed == B300)
+//     return "300";
+//   if (speed == B600)
+//     return "600";
+//   if (speed == B1200)
+//     return "1200";
+//   if (speed == B2400)
+//     return "2400";
+//   if (speed == B4800)
+//     return "4800";
+//   if (speed == B9600)
+//     return "9600";
+//   if (speed == B19200)
+//     return "19200";
+//   if (speed == B57600)
+//     return "57600";
+//   if (speed == B115200)
+//     return "115200";
+//   return "???";
+// }
 
 static int get_bool(char *tmp) {
   return !strcmp(tmp, "1") 
