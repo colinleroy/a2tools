@@ -154,7 +154,7 @@ new_req:
 
     response = curl_request(method, url, headers, n_headers);
     if (response == NULL) {
-      printf("%s %s - nothing to send\n", method, url);
+      printf("%s %s - done\n", method, url);
       continue;
     }
     simple_serial_printf("%d,%d,%s\n", response->response_code, response->size, response->content_type);
@@ -167,10 +167,12 @@ new_req:
           bufsize = atoi(reqbuf + 5);
         } else {
           printf("Aborted request\n");
+          simple_serial_flush();
           goto new_req;
         }
       } else {
         printf("Aborted request\n");
+        simple_serial_flush();
         goto new_req;
       }
 
