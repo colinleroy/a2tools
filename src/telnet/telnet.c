@@ -694,6 +694,9 @@ again:
 #endif
     }
 
+/* Make sure to stop reading far enough 
+ * from the buffer end, because vt100 controls
+ * can take a few bytes. */
 #ifdef __CC65__
     while (ser_get(&o) != SER_ERR_NO_DATA && buf_idx < 1000) {
 #else
@@ -723,7 +726,7 @@ again:
     }
 
     /* Fixme should be a ring buffer */
-    //DEBUG if (loop_wait == 0) {
+    //DEBUG if (loop_wait == 0 || buf_idx >= 1000) {
       if (buffer_pop() < 0) {
         goto remote_closed;
       }
