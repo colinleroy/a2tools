@@ -267,7 +267,6 @@ static int handle_vt100_escape_sequence(char pretend) {
       return 0;
     }
     if (cmd1 == '1' && cmd2 == 'l') {
-      printf("s-c-to-%c", CURS_MODE_CURSOR);
       enqueue_vt100_ctrl(CURSOR, 1, CURS_MODE_CURSOR, 0);
       return 0;
     }
