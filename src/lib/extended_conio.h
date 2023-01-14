@@ -24,10 +24,7 @@
 #define cputs(s) puts(s)
 #define cputc(c) putc(c, stdout)
 #define cursor(a) do {} while(0)
-#define wherex() 1
-#define cpeekc() 1
 #define cputcxy(a,b,c) do {} while(0)
-#define wherey() 1
 #define chlinexy(a, b, c) do {} while(0)
 #define cvlinexy(a, b, c) do {} while(0)
 #define cprintf printf
@@ -44,6 +41,8 @@ char cgetc(void);
 void screensize(unsigned char *w, unsigned char *h);
 void chline(int len);
 void cputsxy(int x, int y, char *buf);
+int wherex(void);
+int wherey(void);
 int kbhit(void);
 #endif
 
