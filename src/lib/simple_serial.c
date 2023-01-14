@@ -218,7 +218,33 @@ int simple_serial_close(void) {
 }
 
 void simple_serial_flush(void) {
+  struct termios tty;
+
+  /* Disable flow control if needed */
+  if (flow_control_enabled) {
+    if(tcgetattr(fileno(ttyfp), &tty) != 0) {
+      printf("tcgetattr error: %s\n", strerror(errno));
+    }
+
+    tty.c_cflag &= ~CRTSCTS;
+    if (tcsetattr(fileno(ttyfp), TCSANOW, &tty) != 0) {
+      printf("tcgetattr error: %s\n", strerror(errno));
+    }
+  }
+
+  /* flush */
+  printf("Flushing serial port\n");
   tcflush(fileno(ttyfp), TCIOFLUSH);
+  tcdrain(fileno(ttyfp));
+
+  /* Reenable flow control */
+  if (flow_control_enabled) {
+    tty.c_cflag |= CRTSCTS;
+
+    if (tcsetattr(fileno(ttyfp), TCSANOW, &tty) != 0) {
+      printf("tcgetattr error: %s\n", strerror(errno));
+    }
+  }
 }
 /* Input 
  * Very complicated because select() won't mark fd as readable 
