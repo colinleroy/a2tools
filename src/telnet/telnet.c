@@ -274,7 +274,25 @@ static int handle_vt100_escape_sequence(char pretend) {
       enqueue_vt100_ctrl(AUTOWRAP, 1, cmd2, 0);
       return 0;
     }
-    /* TODO 6 (origin), 8? (autorepeat), 9? (interlacing) */
+    if (cmd1 == '2') {
+      x = 0;
+      while (cmd2 >= '0' && cmd2 <= '9') {
+        x = x * 10 + (cmd2 - '0');
+        if (pretend) {
+          cmd2 = simple_serial_getc();
+          buffer[buf_idx++] = cmd2;
+        } else {
+          cmd2 = buffer[cur_read_idx++];
+        }
+      }
+      /* Now we should have 'h' or 'l' */
+      if (cmd2 == 'h' || cmd2 == 'l') {
+        /* Ignore it. It's probably \33[?2004h or 2004l,
+         *, bracketed paste mode, and I don't know what do
+         * do with it. */
+      }
+      return 0;
+    }
   }
 
   if (pretend) {
