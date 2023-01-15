@@ -170,7 +170,7 @@ static void do_walk(int steps) {
       if (old_x == my_x && old_y == my_y) {
         return;
       }
-      tgi_setcolor(TGI_COLOR_VIOLET);
+      tgi_setcolor(TGI_COLOR_PURPLE);
       tgi_setpixel(my_x + x_offset, my_y + y_offset);
     } else if (is_obstacle(my_x + dx, my_y + dy) && !is_empty(my_x + dx, my_y + dy)) {
       /* stop at obstacle */
@@ -179,7 +179,7 @@ static void do_walk(int steps) {
       /* walk */
       my_x += dx;
       my_y += dy;
-      tgi_setcolor(TGI_COLOR_VIOLET);
+      tgi_setcolor(TGI_COLOR_PURPLE);
       tgi_setpixel(my_x + x_offset, my_y + y_offset);
     }
   }

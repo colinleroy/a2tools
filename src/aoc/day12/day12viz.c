@@ -99,7 +99,7 @@ static void read_file(FILE *fp) {
       } else if (buf[i] >= 'l' && buf[i] < 'u') {
         tgi_setcolor(TGI_COLOR_ORANGE);
       } else if (buf[i] >= 'u') {
-        tgi_setcolor(TGI_COLOR_VIOLET);
+        tgi_setcolor(TGI_COLOR_PURPLE);
       }
       tgi_setquadpixel(i + x_offset, max_y + y_offset);
     }

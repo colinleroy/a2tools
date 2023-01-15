@@ -10,6 +10,7 @@
 #ifdef __CC65__
 int simple_serial_open(int slot, int baudrate, int hw_flow_control);
 int simple_serial_close(void);
+void simple_serial_flush(void);
 #else
 int simple_serial_open(void);
 int simple_serial_close(void);

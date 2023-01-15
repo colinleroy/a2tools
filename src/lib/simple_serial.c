@@ -84,6 +84,11 @@ int simple_serial_close(void) {
   return ser_close();
 }
 
+void simple_serial_flush(void) {
+  char n;
+  while(ser_get(&n) != SER_ERR_NO_DATA);
+}
+
 #pragma optimize(push, on)
 int simple_serial_getc_immediate(void) {
   char c;
@@ -486,16 +491,15 @@ int simple_serial_write(char *ptr, size_t size, size_t nmemb) {
 
   return i;
 }
+#ifdef SERIAL_TO_LANGCARD
+#pragma code-name (pop)
+#endif
 
 void simple_serial_set_activity_indicator(char enabled, int x, int y) {
   serial_activity_indicator_enabled = enabled;
   serial_activity_indicator_x = x;
   serial_activity_indicator_y = y;
 }
-
-#ifdef SERIAL_TO_LANGCARD
-#pragma code-name (pop)
-#endif
 
 #ifdef __CC65__
 #pragma static-locals(pop)
