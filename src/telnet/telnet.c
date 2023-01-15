@@ -88,7 +88,9 @@ static void manual_scroll_up(char num) {
     gotoy(l);
     for (x = 0; x < scrw; x++) {
       gotox(x);
+#ifdef __CC65__
       scrollbuf[x] = cpeekc();
+#endif
     }
     scrollbuf[x] = '\0';
     cputsxy(0, l + num, scrollbuf);
@@ -196,9 +198,10 @@ static void flush_vt100_ctrls(void) {
 
 char mid_vt100 = 0;
 
-char buffer[1024];
-unsigned int buf_idx = 0;
-unsigned int cur_read_idx = 0;
+static char buffer[1024];
+static char *buf_write;
+static char *buf_read;
+static char *buf_stop;
 
 static int handle_vt100_escape_sequence(char pretend) {
   char o;
@@ -214,9 +217,11 @@ static int handle_vt100_escape_sequence(char pretend) {
       if (o == (char)EOF) {
         return EOF;
       }
-      buffer[buf_idx++] = o;
+      *buf_write = o;
+      ++buf_write;
     } else {
-      o = buffer[cur_read_idx++];
+      o = *buf_read;
+      ++buf_read;
     }
     if (step == CTRL_STEP_START && o == '[') {
       has_bracket = 1;
@@ -253,13 +258,17 @@ static int handle_vt100_escape_sequence(char pretend) {
   }
 
   if (command == '?') {
-    cmd1 = pretend ? simple_serial_getc() : buffer[cur_read_idx++];
-    cmd2 = pretend ? simple_serial_getc() : buffer[cur_read_idx++];
-
     if (pretend) {
-      buffer[buf_idx++] = cmd1;
-      buffer[buf_idx++] = cmd2;
+      *buf_write = simple_serial_getc();
+      ++buf_write;
+      *buf_write = simple_serial_getc();
+      ++buf_write;
       return 0;
+    } else {
+      cmd1 = *buf_read;
+      ++buf_read;
+      cmd2 = *buf_read;
+      ++buf_read;
     }
 
     if (cmd1 == '1' && cmd2 == 'h') {
@@ -280,9 +289,11 @@ static int handle_vt100_escape_sequence(char pretend) {
         x = x * 10 + (cmd2 - '0');
         if (pretend) {
           cmd2 = simple_serial_getc();
-          buffer[buf_idx++] = cmd2;
+          *buf_write = cmd2;
+          ++buf_write;
         } else {
-          cmd2 = buffer[cur_read_idx++];
+          cmd2 = *buf_read;
+          ++buf_read;
         }
       }
       /* Now we should have 'h' or 'l' */
@@ -508,6 +519,7 @@ static char ch_at_curs = 0;
 static int cursor_blinker = 0;
 
 static void set_cursor(void) {
+#ifdef __CC65__
   if (curs_x == 255) {
     curs_x = wherex();
     curs_y = wherey();
@@ -524,15 +536,18 @@ static void set_cursor(void) {
   } else if (cursor_blinker == 3000) {
     cursor_blinker = 0;
   }
+#endif
 }
 
 static void rm_cursor(void) {
+#ifdef __CC65__
   if (curs_x != 255) {
     gotoxy(curs_x, curs_y);
     cputc(ch_at_curs);
     gotoxy(curs_x, curs_y);
     curs_x = 255;
   }
+#endif
 }
 
 static char screen_scroll_at_next_char = 0;
@@ -564,7 +579,9 @@ static void print_char(char o) {
       char prev;
       /* handle scrolling */
       gotoxy(scrw - 1, btm_line - 1);
+#ifdef __CC65__
       prev = cpeekc();
+#endif
       printf("\n");
       cputcxy(scrw - 1, btm_line - 2, prev);
       cur_x = 0;
@@ -591,15 +608,16 @@ static void print_char(char o) {
 static int buffer_pop() {
   char o;
 
-  if (buf_idx == 0) {
+  if (buf_write == buffer) {
     set_cursor();
     return 0;
   }
 
   rm_cursor();
-  cur_read_idx = 0;
-  while (cur_read_idx < buf_idx) {
-    o = buffer[cur_read_idx++];
+  buf_read = buffer;
+  while (buf_read < buf_write) {
+    o = *buf_read;
+    ++buf_read;
     if (o == 0x04) {
       return -1;
     } else if (o == CH_ESC) {
@@ -613,14 +631,14 @@ static int buffer_pop() {
   }
   flush_vt100_ctrls();
   set_cursor();
-  buf_idx = 0;
+  buf_write = buffer;
 
   return 0;
 }
 
 int main(int argc, char **argv) {
   surl_response *response = NULL;
-  char i, o;
+  char i;
   //DEBUG int loop_wait = 0;
   
 #ifdef __CC65__
@@ -628,6 +646,10 @@ int main(int argc, char **argv) {
 #endif
   screensize(&scrw, &scrh);
   get_scrollwindow(&top_line, &btm_line);
+
+  buf_write = buffer;
+  buf_read = buffer;
+  buf_stop = buffer + 1000;
 
 again:
   clrscr();
@@ -650,7 +672,7 @@ again:
     buf = malloc(BUFSIZE);
     cputs("Enter host:port: ");
     cgets(buf, BUFSIZE);
-    cputs("Translate \\n <=> \\r\\n (N/y)? ");
+    cputs("Translate LN <=> CRLN (N/y)? ");
     t = cgetc();
     translate_ln = (t == 'y' || t == 'Y');
   }
@@ -715,35 +737,36 @@ again:
  * from the buffer end, because vt100 controls
  * can take a few bytes. */
 #ifdef __CC65__
-    while (ser_get(&o) != SER_ERR_NO_DATA && buf_idx < 1000) {
+    while (ser_get(buf_write) != SER_ERR_NO_DATA && buf_write < buf_stop) {
 #else
     int r;
-    while ((r = simple_serial_getc_immediate()) != EOF && buf_idx < 1000) {
-      o = (char)r;
+    while ((r = simple_serial_getc_immediate()) != EOF && buf_write < buf_stop) {
+      *buf_write = (char)r;
 #endif
-      if (o == TELNET_IAC) {
+      if (*buf_write == TELNET_IAC) {
+        // Do not store that with ++buf_write;
         if (handle_telnet_command() == EOF) {
           printf("Telnet error\n");
           goto remote_closed;
         }
-      } else if (o != '\0' && o != '\16' && o != '\17') {
-        buffer[buf_idx++] = o;
-        if (o == CH_ESC) {
-          if (handle_vt100_escape_sequence(1) == EOF) {
-            printf("vt100 error\n");
-            goto remote_closed;
-          }
-          //DEBUG loop_wait = 800;
+      } else if (*buf_write == '\n') {
+        /* flush on \n */
+        ++buf_write;
+        break;
+      } else if (*buf_write == CH_ESC) {
+        ++buf_write;
+        if (handle_vt100_escape_sequence(1) == EOF) {
+          printf("vt100 error\n");
+          goto remote_closed;
         }
-        if (o == '\n') {
-          /* flush on \n */
-          break;
-        }
+      } else if (*buf_write != '\0' && *buf_write != '\16' && *buf_write != '\17') {
+        /* Standard character */
+        ++buf_write;
       }
     }
 
     /* Fixme should be a ring buffer */
-    //DEBUG if (loop_wait == 0 || buf_idx >= 1000) {
+    //DEBUG if (loop_wait == 0 || buf_write >= buf_stop) {
       if (buffer_pop() < 0) {
         goto remote_closed;
       }
@@ -765,7 +788,7 @@ remote_closed:
   cursor_mode = CURS_MODE_CURSOR;
   curs_x = 255;
   curs_y = 255;
-  buf_idx = 0;
+  buf_write = buffer;
 
 #ifndef __CC65__
   tcgetattr( STDOUT_FILENO, &ttyf);

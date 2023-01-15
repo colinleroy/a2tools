@@ -177,8 +177,8 @@ void __fastcall__ clrzone(char xs, char ys, char xe, char ye) {
   }
 
   if (clearbuf == NULL) {
-    clearbuf = malloc(scrw + 2);
-    memset(clearbuf, ' ', scrw + 2);
+    clearbuf = malloc(80 + 2);
+    memset(clearbuf, ' ', 80 + 2);
   }
 
   memset(clearbuf, ' ', l);
