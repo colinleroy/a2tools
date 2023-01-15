@@ -77,7 +77,7 @@ void tgi_setcolor(int color) {
       cur_color = SDL_MapRGB(screen->format, 0x11, 0xc4, 0x07);
       break;
 
-    case TGI_COLOR_VIOLET: //94035c
+    case TGI_COLOR_PURPLE: //94035c
       cur_color = SDL_MapRGB(screen->format, 0x94, 0x03, 0x5c);
       break;
 

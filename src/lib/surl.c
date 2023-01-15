@@ -218,6 +218,9 @@ void surl_response_free(surl_response *resp) {
   }
   free(resp->content_type);
   free(resp);
+  /* Flush serial */
+  simple_serial_flush();
+
 }
 //Pop early because the whole serial + surl code doesn't fit in LC
 #ifdef SERIAL_TO_LANGCARD

@@ -1,5 +1,5 @@
 PROGRAM=a2recv
-SOURCES := a2recv.c ../lib/simple_serial.c
+SOURCES := a2recv.c ../lib/simple_serial.c ../lib/extended_conio.c
 GCCSOURCES := ../lib/extended_string.c
 DEPS := 
 
