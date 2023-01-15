@@ -1,5 +1,6 @@
 PROGRAM=telnet
-SOURCES := telnet.c ../lib/simple_serial.c ../lib/extended_conio.c ../lib/surl.c 
+SOURCES := telnet.c ../lib/simple_serial.c ../lib/extended_conio.c ../lib/surl.c
+CC65SOURCES := ../lib/dputs.s ../lib/dputc.s
 GCCSOURCES := ../lib/extended_string.c
 DEPS := 
 
@@ -13,7 +14,7 @@ GCCLDFLAGS =
 
 all: $(PROGRAM).bin $(PROGRAM).x86_64
 
-$(PROGRAM).bin: $(SOURCES)
+$(PROGRAM).bin: $(SOURCES) $(CC65SOURCES)
 	cl65 $(CFLAGS) $(CLCFLAGS) -m $(PROGRAM).map -o $@ $^
 
 $(PROGRAM).x86_64: $(SOURCES) $(GCCSOURCES)
@@ -24,4 +25,3 @@ clean:
 
 upload: all
 	scp $(PROGRAM).bin diskstation.lan:/volume1/a2repo/
-
