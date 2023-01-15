@@ -25,6 +25,9 @@
 #define cputc(c) putc(c, stdout)
 #define cursor(a) do {} while(0)
 #define cputcxy(a,b,c) do {} while(0)
+#define dputcxy cputcxy
+#define dputsxy cputsxy
+#define dputs cputs
 #define chlinexy(a, b, c) do {} while(0)
 #define cvlinexy(a, b, c) do {} while(0)
 #define cprintf printf

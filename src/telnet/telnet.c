@@ -25,6 +25,9 @@
 #ifndef __CC65__
 #include <termios.h>
 #include <unistd.h>
+#else
+#include "dputs.h"
+#include "dputc.h"
 #endif
 #include "math.h"
 
@@ -93,6 +96,7 @@ static void manual_scroll_up(char num) {
 #endif
     }
     scrollbuf[x] = '\0';
+    // Use cput insteaf of dput because issue with scroll up
     cputsxy(0, l + num, scrollbuf);
   }
   clrzone(0, 0, scrw - 1, num - 1);
@@ -528,11 +532,9 @@ static void set_cursor(void) {
   }
   cursor_blinker++;
   if (cursor_blinker == 1) {
-    gotoxy(curs_x, curs_y);
-    cputc(0x7F);
+    dputcxy(curs_x, curs_y, 0x7F);
   } else if (cursor_blinker == 1501){
-    gotoxy(curs_x, curs_y);
-    cputc(ch_at_curs);
+    dputcxy(curs_x, curs_y, ch_at_curs);
   } else if (cursor_blinker == 3000) {
     cursor_blinker = 0;
   }
@@ -542,66 +544,10 @@ static void set_cursor(void) {
 static void rm_cursor(void) {
 #ifdef __CC65__
   if (curs_x != 255) {
-    gotoxy(curs_x, curs_y);
-    cputc(ch_at_curs);
+    dputcxy(curs_x, curs_y, ch_at_curs);
     gotoxy(curs_x, curs_y);
     curs_x = 255;
   }
-#endif
-}
-
-static char screen_scroll_at_next_char = 0;
-static void print_char(char o) {
-#ifdef __CC65__
-  unsigned char cur_x, cur_y;
-  cur_x = wherex();
-  cur_y = wherey();
-
-  if (o == '\n') {
-    printf("\n");
-  } else if (o == '\7') {
-    printf("%c", '\7'); /* bell */
-  } else if (o == '\10') {
-    /* handle incoming backspace */
-    /* it is not the backspace that should remove
-     * a char. It is the control code [33K.
-     * \10 just means scrollback one pos left. */
-    if (cur_x == 0) {
-      cur_x = scrw - 1;
-      cur_y--;
-    } else {
-      cur_x--;
-    }
-    gotoxy(cur_x, cur_y);
-    /* and this is all. Char will be saved by set_cursor. */
-  } else {
-    if (screen_scroll_at_next_char) {
-      char prev;
-      /* handle scrolling */
-      gotoxy(scrw - 1, btm_line - 1);
-#ifdef __CC65__
-      prev = cpeekc();
-#endif
-      printf("\n");
-      cputcxy(scrw - 1, btm_line - 2, prev);
-      cur_x = 0;
-      cur_y = btm_line - 1;
-      screen_scroll_at_next_char = 0;
-    }
-    if (o != '\r' && cur_y == btm_line - 1 && cur_x == scrw - 1) {
-      /* about to wrap at bottom of screen */
-      screen_scroll_at_next_char = 1;
-    }
-
-    if (o != '\r')
-      cputc(o);
-    else {
-      gotox(0);
-    }
-  }
-#else
-  fputc(o, stdout);
-  fflush(stdout);
 #endif
 }
 
@@ -625,11 +571,18 @@ static int buffer_pop() {
         return -1;
       }
     } else {
-      flush_vt100_ctrls();
-      print_char(o);
+      if (n_vt100_ctrls)
+        flush_vt100_ctrls();
+#ifdef __CC65__
+      dputc(o);
+#else
+      fputc(o, stdout);
+      fflush(stdout);
+#endif
     }
   }
-  flush_vt100_ctrls();
+  if (n_vt100_ctrls)
+    flush_vt100_ctrls();
   set_cursor();
   buf_write = buffer;
 
@@ -670,9 +623,9 @@ again:
     char t;
 
     buf = malloc(BUFSIZE);
-    cputs("Enter host:port: ");
+    dputs("Enter host:port: ");
     cgets(buf, BUFSIZE);
-    cputs("Translate LN <=> CRLN (N/y)? ");
+    dputs("Translate LN <=> CRLN (N/y)? ");
     t = cgetc();
     translate_ln = (t == 'y' || t == 'Y');
   }
@@ -720,9 +673,9 @@ again:
       if (echo) {
         rm_cursor();
         if (i == '\r') {
-          printf("\n");
+          dputs("\r\n");
         } else {
-          cputc(i);
+          dputc(i);
         }
         set_cursor();
       }
