@@ -81,6 +81,7 @@ static char saved_vt100_curs_x = 255, saved_vt100_curs_y = 255;
 
 #pragma optimize(push, on)
 static char scrollbuf[80];
+
 static void manual_scroll_up(char num) {
   static signed char l, x;
   static char h;
@@ -96,7 +97,8 @@ static void manual_scroll_up(char num) {
 #endif
     }
     scrollbuf[x] = '\0';
-    // Use cput insteaf of dput because issue with scroll up
+    /* Use cput instead of dput because we don't want
+     * to scroll on end of lines */
     cputsxy(0, l + num, scrollbuf);
   }
   clrzone(0, 0, scrw - 1, num - 1);
@@ -532,9 +534,11 @@ static void set_cursor(void) {
   }
   cursor_blinker++;
   if (cursor_blinker == 1) {
-    dputcxy(curs_x, curs_y, 0x7F);
+    /* Use cputc because we don't want the
+     * cursor to trigger scrolling */
+    cputcxy(curs_x, curs_y, 0x7F);
   } else if (cursor_blinker == 1501){
-    dputcxy(curs_x, curs_y, ch_at_curs);
+    cputcxy(curs_x, curs_y, ch_at_curs);
   } else if (cursor_blinker == 3000) {
     cursor_blinker = 0;
   }
@@ -544,7 +548,7 @@ static void set_cursor(void) {
 static void rm_cursor(void) {
 #ifdef __CC65__
   if (curs_x != 255) {
-    dputcxy(curs_x, curs_y, ch_at_curs);
+    cputcxy(curs_x, curs_y, ch_at_curs);
     gotoxy(curs_x, curs_y);
     curs_x = 255;
   }
