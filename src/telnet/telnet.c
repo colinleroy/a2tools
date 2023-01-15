@@ -738,9 +738,11 @@ remote_closed:
   btm_line = 24;
   set_scrollwindow(0, scrh);
 
+  surl_response_free(response);
+
   printf("\nConnection closed (Enter to continue).\n");
   cgetc();
-  surl_response_free(response);
+
   free(buf);
   cursor_mode = CURS_MODE_CURSOR;
   curs_x = 255;
