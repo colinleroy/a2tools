@@ -22,12 +22,14 @@
 #include "surl.h"
 #include "simple_serial.h"
 #include "extended_conio.h"
+#include "shift_char_trans.h"
 #ifndef __CC65__
 #include <termios.h>
 #include <unistd.h>
 #else
 #include "dputs.h"
 #include "dputc.h"
+#include "scroll.h"
 #endif
 #include "math.h"
 
@@ -54,16 +56,6 @@ static unsigned char scrw, scrh;
 
 static unsigned char top_line = 255, btm_line = 255;
 
-typedef struct _vt100_ctrl {
-  char way;
-  char abs;
-  char x;
-  char y;
-} vt100_ctrl;
-
-static vt100_ctrl vt100_ctrl_queue[100];
-static char n_vt100_ctrls = 0;
-
 #define GOTOXY 0
 #define CURSOR 1
 #define CLRSCR 2
@@ -79,38 +71,8 @@ static char n_vt100_ctrls = 0;
 
 static char saved_vt100_curs_x = 255, saved_vt100_curs_y = 255;
 
-#pragma optimize(push, on)
-static char scrollbuf[80];
-
-static void manual_scroll_up(char num) {
-  static signed char l, x;
-  static char h;
-  
-  h = btm_line - top_line;
-
-  for (l = h - 1 - num; l >= 0; l--) {
-    gotoy(l);
-    for (x = 0; x < scrw; x++) {
-      gotox(x);
-#ifdef __CC65__
-      scrollbuf[x] = cpeekc();
-#endif
-    }
-    scrollbuf[x] = '\0';
-    /* Use cput instead of dput because we don't want
-     * to scroll on end of lines */
-    cputsxy(0, l + num, scrollbuf);
-  }
-  clrzone(0, 0, scrw - 1, num - 1);
-}
-#pragma optimize(pop)
-
-static void do_vt100_ctrl(int vt100_ctrl_index) {
+static void do_vt100_ctrl(char way, char abs, char x, char y) {
   unsigned char cur_x = 0, cur_y = 0;
-  char way = vt100_ctrl_queue[vt100_ctrl_index].way;
-  char abs = vt100_ctrl_queue[vt100_ctrl_index].abs;
-  char x = vt100_ctrl_queue[vt100_ctrl_index].x;
-  char y = vt100_ctrl_queue[vt100_ctrl_index].y;
 
   if (way == CLRSCR) {
     if (abs == 1) {
@@ -134,7 +96,11 @@ static void do_vt100_ctrl(int vt100_ctrl_index) {
   } else if (way == AUTOWRAP) {
     autowrap_mode = x;
   } else if (way == NEXTLINE) {
-    printf("\n"); /* printf to handle scroll */
+#ifdef __CC65__
+    dputc('\n');
+#else
+    printf("\n");
+#endif
   } else if (way == STATUSREQ) {
     if (x == 5) {
       /* terminal status */
@@ -156,7 +122,12 @@ static void do_vt100_ctrl(int vt100_ctrl_index) {
     if (cur_y - x >= top_line) {
       gotoy(max(top_line, cur_y - x));
     } else
-      manual_scroll_up(x);
+      while (x != 0) {
+#ifdef __CC65__
+        scrolldn();
+#endif
+        --x;
+      }
   } else if (way == CH_CURS_DOWN) {
     cur_y = wherey();
     gotoy(min(btm_line - 1, cur_y + x));
@@ -174,42 +145,7 @@ static void do_vt100_ctrl(int vt100_ctrl_index) {
   }
 }
 
-static void enqueue_vt100_ctrl(char way, char abs, char x, char y) {
-  if (n_vt100_ctrls == 99)
-    return; /* FIXME keep enqueing somehow */
-  
-  if (n_vt100_ctrls > 0 &&
-    vt100_ctrl_queue[n_vt100_ctrls - 1].way == way &&
-    vt100_ctrl_queue[n_vt100_ctrls - 1].y == 0 && 
-    abs == 0 && 
-    (way == CH_CURS_UP || way == CH_CURS_DOWN || way == CH_CURS_LEFT || way == CH_CURS_RIGHT)) {
-    /* merge with previous */
-    vt100_ctrl_queue[n_vt100_ctrls - 1].x += x;
-  } else {
-    vt100_ctrl_queue[n_vt100_ctrls].way = way;
-    vt100_ctrl_queue[n_vt100_ctrls].abs = abs;
-    vt100_ctrl_queue[n_vt100_ctrls].x = x;
-    vt100_ctrl_queue[n_vt100_ctrls].y = y;
-    n_vt100_ctrls++;
-  }
-}
-
-static void flush_vt100_ctrls(void) {
-  char i;
-  for (i = 0; i < n_vt100_ctrls; i++) {
-    do_vt100_ctrl(i);
-  }
-  n_vt100_ctrls = 0;
-}
-
-char mid_vt100 = 0;
-
-static char buffer[1024];
-static char *buf_write;
-static char *buf_read;
-static char *buf_stop;
-
-static int handle_vt100_escape_sequence(char pretend) {
+static int handle_vt100_escape_sequence(void) {
   char o;
   char x = 0, y = 0;
   char command, has_bracket = 0;
@@ -218,17 +154,11 @@ static int handle_vt100_escape_sequence(char pretend) {
 
   /* We're here after receiving an escape. Now do the vt100 stuff */
   while (step != CTRL_STEP_CMD) {
-    if (pretend) {
-      o = simple_serial_getc();
-      if (o == (char)EOF) {
-        return EOF;
-      }
-      *buf_write = o;
-      ++buf_write;
-    } else {
-      o = *buf_read;
-      ++buf_read;
+    o = simple_serial_getc();
+    if (o == (char)EOF) {
+      return EOF;
     }
+
     if (step == CTRL_STEP_START && o == '[') {
       has_bracket = 1;
     } else if (o >= '0' && o <= '9') {
@@ -246,12 +176,10 @@ static int handle_vt100_escape_sequence(char pretend) {
         /* we can have ^[<n>
          * and 7 and 8 don't have a following letter */
          if (x == 7) {
-           if (!pretend)
-            enqueue_vt100_ctrl(SAVE_CURSOR, 1, 0, 0);
+           do_vt100_ctrl(SAVE_CURSOR, 1, 0, 0);
            return 0;
          } else if (x == 8) {
-           if (!pretend)
-            enqueue_vt100_ctrl(RESTORE_CURSOR, 1, 0, 0);
+           do_vt100_ctrl(RESTORE_CURSOR, 1, 0, 0);
            return 0;
          }
        }
@@ -264,43 +192,26 @@ static int handle_vt100_escape_sequence(char pretend) {
   }
 
   if (command == '?') {
-    if (pretend) {
-      *buf_write = simple_serial_getc();
-      ++buf_write;
-      *buf_write = simple_serial_getc();
-      ++buf_write;
-      return 0;
-    } else {
-      cmd1 = *buf_read;
-      ++buf_read;
-      cmd2 = *buf_read;
-      ++buf_read;
-    }
+    cmd1 = simple_serial_getc();
+    cmd2 = simple_serial_getc();
 
     if (cmd1 == '1' && cmd2 == 'h') {
-      enqueue_vt100_ctrl(CURSOR, 1, CURS_MODE_APPLICATION, 0);
+      do_vt100_ctrl(CURSOR, 1, CURS_MODE_APPLICATION, 0);
       return 0;
     }
     if (cmd1 == '1' && cmd2 == 'l') {
-      enqueue_vt100_ctrl(CURSOR, 1, CURS_MODE_CURSOR, 0);
+      do_vt100_ctrl(CURSOR, 1, CURS_MODE_CURSOR, 0);
       return 0;
     }
     if (cmd1 == '8' && (cmd2 == 'h' || cmd2 == 'l')) {
-      enqueue_vt100_ctrl(AUTOWRAP, 1, cmd2, 0);
+      do_vt100_ctrl(AUTOWRAP, 1, cmd2, 0);
       return 0;
     }
     if (cmd1 == '2') {
       x = 0;
       while (cmd2 >= '0' && cmd2 <= '9') {
         x = x * 10 + (cmd2 - '0');
-        if (pretend) {
-          cmd2 = simple_serial_getc();
-          *buf_write = cmd2;
-          ++buf_write;
-        } else {
-          cmd2 = *buf_read;
-          ++buf_read;
-        }
+        cmd2 = simple_serial_getc();
       }
       /* Now we should have 'h' or 'l' */
       if (cmd2 == 'h' || cmd2 == 'l') {
@@ -312,9 +223,6 @@ static int handle_vt100_escape_sequence(char pretend) {
     }
   }
 
-  if (pretend) {
-    return 0;
-  }
   /* VT100 counts from 1 */
 
   /* We should have our command by now */
@@ -326,27 +234,27 @@ static int handle_vt100_escape_sequence(char pretend) {
     case 'H':
       if(!has_bracket) break;
     case 'f':
-      enqueue_vt100_ctrl(GOTOXY, 1, (y > 0 ? y - 1 : 0), (x > 0 ? x - 1 : 0));
+      do_vt100_ctrl(GOTOXY, 1, (y > 0 ? y - 1 : 0), (x > 0 ? x - 1 : 0));
       break;
     /* cursor up */
     case 'A':
 curs_up:
-      enqueue_vt100_ctrl(CH_CURS_UP, 0, (x == 0 ? 1 : x), 0);
+      do_vt100_ctrl(CH_CURS_UP, 0, (x == 0 ? 1 : x), 0);
       break;
     /* cursor down */
     case 'B': 
 curs_down:
-      enqueue_vt100_ctrl(CH_CURS_DOWN, 0, (x == 0 ? 1 : x), 0);
+      do_vt100_ctrl(CH_CURS_DOWN, 0, (x == 0 ? 1 : x), 0);
       break;
     /* cursor right */
     case 'C': 
-      enqueue_vt100_ctrl(CH_CURS_RIGHT, 0, (x == 0 ? 1 : x), 0);
+      do_vt100_ctrl(CH_CURS_RIGHT, 0, (x == 0 ? 1 : x), 0);
       break;
     /* cursor left, or down, depending on bracket */
     case 'D': 
       if (!has_bracket)
         goto curs_down;
-      enqueue_vt100_ctrl(CH_CURS_LEFT, 0, (x == 0 ? 1 : x), 0);
+      do_vt100_ctrl(CH_CURS_LEFT, 0, (x == 0 ? 1 : x), 0);
       break;
     /* cursor up if no bracket */
     case 'M':
@@ -355,31 +263,31 @@ curs_down:
     /* next line (CRLF) if no bracket */
     case 'E':
       if (!has_bracket) {
-        enqueue_vt100_ctrl(NEXTLINE, 1, 0, 0);
+        do_vt100_ctrl(NEXTLINE, 1, 0, 0);
       }
       break;
     /* request for status */
     case 'n':
-      enqueue_vt100_ctrl(STATUSREQ, 1, x, 0);
+      do_vt100_ctrl(STATUSREQ, 1, x, 0);
       break;
     /* request to identify terminal type */
     case 'c':
     case 'Z':
-      enqueue_vt100_ctrl(TERMTYPE, 1, 0, 0);
+      do_vt100_ctrl(TERMTYPE, 1, 0, 0);
       break;
     /* Erase to beginning/end of line (incl) */
     case 'K':
-      enqueue_vt100_ctrl(CLRSCR, 0, x, 0);
+      do_vt100_ctrl(CLRSCR, 0, x, 0);
       break;
     /* Erase to beginning/end of screen (incl), only full screen supported */
     case 'J':
-      enqueue_vt100_ctrl(CLRSCR, 1, 0, 0);
+      do_vt100_ctrl(CLRSCR, 1, 0, 0);
       break;
     /* Setwin (top-bottom lines )*/
     case 'r':
       if (!has_bracket)
         break;
-      enqueue_vt100_ctrl(SCROLL_WINDOW, 1, x, y);
+      do_vt100_ctrl(SCROLL_WINDOW, 1, x, y);
       break;
   }
   return 0;
@@ -555,47 +463,12 @@ static void rm_cursor(void) {
 #endif
 }
 
-static int buffer_pop() {
-  char o;
-
-  if (buf_write == buffer) {
-    set_cursor();
-    return 0;
-  }
-
-  rm_cursor();
-  buf_read = buffer;
-  while (buf_read < buf_write) {
-    o = *buf_read;
-    ++buf_read;
-    if (o == 0x04) {
-      return -1;
-    } else if (o == CH_ESC) {
-      if (handle_vt100_escape_sequence(0) == EOF) {
-        return -1;
-      }
-    } else {
-      if (n_vt100_ctrls)
-        flush_vt100_ctrls();
-#ifdef __CC65__
-      dputc(o);
-#else
-      fputc(o, stdout);
-      fflush(stdout);
-#endif
-    }
-  }
-  if (n_vt100_ctrls)
-    flush_vt100_ctrls();
-  set_cursor();
-  buf_write = buffer;
-
-  return 0;
-}
+static char shift_up = 0;
 
 int main(int argc, char **argv) {
   surl_response *response = NULL;
-  char i;
+  char i, o;
+  char got_input;
   //DEBUG int loop_wait = 0;
   
 #ifdef __CC65__
@@ -603,10 +476,6 @@ int main(int argc, char **argv) {
 #endif
   screensize(&scrw, &scrh);
   get_scrollwindow(&top_line, &btm_line);
-
-  buf_write = buffer;
-  buf_read = buffer;
-  buf_stop = buffer + 1000;
 
 again:
   clrscr();
@@ -643,7 +512,6 @@ again:
   if (strchr(buf, '\n'))
     *strchr(buf, '\n') = '\0';
 
-  cursor(1);
   response = surl_start_request("RAW", buf, NULL, 0);
   if (response == NULL || response->code != 100) {
     printf("No response (%d).\n", response ? response->code : -1);
@@ -656,6 +524,7 @@ again:
   
   do {
     if (kbhit()) {
+input:
       i = cgetc();
       if (i == '\r') {
         if (translate_ln) {
@@ -690,52 +559,63 @@ again:
 #endif
     }
 
-/* Make sure to stop reading far enough 
- * from the buffer end, because vt100 controls
- * can take a few bytes. */
+got_input = 0;
+
+
 #ifdef __CC65__
-    while (ser_get(buf_write) != SER_ERR_NO_DATA && buf_write < buf_stop) {
+    while (ser_get(&o) != SER_ERR_NO_DATA) {
 #else
     int r;
-    while ((r = simple_serial_getc_immediate()) != EOF && buf_write < buf_stop) {
-      *buf_write = (char)r;
+    while ((r = simple_serial_getc_immediate()) != EOF) {
+      o = (char)r;
 #endif
-      if (*buf_write == TELNET_IAC) {
+      if (!got_input) {
+        got_input = 1;
+        rm_cursor();
+      }
+      if (o == TELNET_IAC) {
         // Do not store that with ++buf_write;
         if (handle_telnet_command() == EOF) {
           printf("Telnet error\n");
           goto remote_closed;
         }
-      } else if (*buf_write == '\n') {
-        /* flush on \n */
-        ++buf_write;
-        break;
-      } else if (*buf_write == CH_ESC) {
-        ++buf_write;
-        if (handle_vt100_escape_sequence(1) == EOF) {
+      } else if (o == CH_ESC) {
+        if (handle_vt100_escape_sequence() == EOF) {
           printf("vt100 error\n");
           goto remote_closed;
         }
-      } else if (*buf_write != '\0' && *buf_write != '\16' && *buf_write != '\17') {
-        /* Standard character */
-        ++buf_write;
+      } else if (o == 0x04) {
+          goto remote_closed;
+      } else if (o == '\16') {
+        shift_up = 1;
+      } else if (o == '\17') {
+        shift_up = 0;
+      } else if (shift_up) {
+#ifdef __CC65__
+        dputc(shift_trans[o]);
+#else
+        fputc(shift_trans[o], stdout);
+#endif
+      } else {
+#ifdef __CC65__
+        dputc(o);
+#else
+        fputc(o, stdout);
+#endif
       }
+      /* do we have input? */
+      if (kbhit())
+        goto input;
     }
-
-    /* Fixme should be a ring buffer */
-    //DEBUG if (loop_wait == 0 || buf_write >= buf_stop) {
-      if (buffer_pop() < 0) {
-        goto remote_closed;
-      }
-    // }
-    // if (loop_wait > 0)
-    //   loop_wait--;
-
+    if (!got_input)
+      set_cursor();
   } while(i != 0x04);
 
 remote_closed:
   top_line = 0;
   btm_line = 24;
+  shift_up = 0;
+  i = 0;
   set_scrollwindow(0, scrh);
 
   surl_response_free(response);
@@ -747,7 +627,6 @@ remote_closed:
   cursor_mode = CURS_MODE_CURSOR;
   curs_x = 255;
   curs_y = 255;
-  buf_write = buffer;
 
 #ifndef __CC65__
   tcgetattr( STDOUT_FILENO, &ttyf);

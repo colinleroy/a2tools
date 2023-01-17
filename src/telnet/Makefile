@@ -1,6 +1,6 @@
 PROGRAM=telnet
 SOURCES := telnet.c ../lib/simple_serial.c ../lib/extended_conio.c ../lib/surl.c
-CC65SOURCES := ../lib/dputs.s ../lib/dputc.s
+CC65SOURCES := ../lib/dputs.s ../lib/dputc.s ../lib/scroll.s
 GCCSOURCES := ../lib/extended_string.c
 DEPS := 
 
