@@ -97,7 +97,6 @@ int simple_serial_getc_immediate(void) {
   }
   return EOF;
 }
-#pragma optimize(pop)
 
 static int timeout_cycles = -1;
 
@@ -109,7 +108,7 @@ static int __simple_serial_getc_with_timeout(char with_timeout) {
       timeout_cycles = 10000;
 
     while (ser_get(&c) == SER_ERR_NO_DATA) {
-      if (with_timeout && timeout_cycles-- == 0) {
+      if (with_timeout && --timeout_cycles == 0) {
         return EOF;
       }
     }
@@ -119,12 +118,11 @@ static int __simple_serial_getc_with_timeout(char with_timeout) {
 
 /* Output */
 // static int send_delay;
-#pragma optimize(push, on)
 int simple_serial_putc(char c) {
   if ((ser_put(c)) != SER_ERR_OVERFLOW) {
     return c;
   }
-  // for (send_delay = 0; send_delay < 3; send_delay++) {
+  // for (send_delay = 0; send_delay < 5; send_delay++) {
   //   /* Why do we need that. (do we though?)
   //    * Thanks platoterm for the hint */
   // }
@@ -144,7 +142,6 @@ int simple_serial_putc(char c) {
 #include <sys/ioctl.h>
 
 #define DELAY_MS 3
-#define LONG_DELAY_MS 50
 
 static FILE *ttyfp = NULL;
 static int flow_control_enabled;
@@ -152,7 +149,7 @@ static int flow_control_enabled;
 static char *readbuf = NULL;
 static int readbuf_idx = 0;
 static int readbuf_avail = 0;
-
+static int bps = B9600;
 static void setup_tty(int port, int baudrate, int hw_flow_control) {
   struct termios tty;
 
@@ -163,6 +160,8 @@ static void setup_tty(int port, int baudrate, int hw_flow_control) {
   }
   cfsetispeed(&tty, baudrate);
   cfsetospeed(&tty, baudrate);
+
+  bps = baudrate;
 
   tty.c_cflag &= ~PARENB;
   tty.c_cflag &= ~CSTOPB;
@@ -319,7 +318,7 @@ int simple_serial_putc(char c) {
   fflush(ttyfp);
 
   if (!flow_control_enabled)
-    usleep(DELAY_MS*1000);
+    usleep(1000);
 
   return r;
 }
@@ -329,6 +328,10 @@ static void activity_cb(int on) {
 }
 
 #endif /* End of platform-dependant code */
+
+#ifdef __CC65__
+#pragma optimize(push, on)
+#endif
 
 int simple_serial_puts(char *buf) {
   static char i, len;
@@ -361,7 +364,7 @@ int simple_serial_puts(char *buf) {
 #pragma code-name (push, "LC")
 #endif
 
-static char *__simple_serial_gets_with_timeout(char *out, size_t size, int with_timeout) {
+static char *__simple_serial_gets_with_timeout(char *out, size_t size, char with_timeout) {
   int b;
   char c;
   size_t i = 0;
@@ -407,9 +410,10 @@ static char *__simple_serial_gets_with_timeout(char *out, size_t size, int with_
   return out;
 }
 
-static size_t __simple_serial_read_with_timeout(char *ptr, size_t size, size_t nmemb, int with_timeout) {
-  int b;
-  size_t i = 0;
+static size_t __simple_serial_read_with_timeout(char *ptr, size_t size, size_t nmemb, char with_timeout) {
+  static int b;
+  static size_t i;
+  static char *cur;
 
   if (serial_activity_indicator_x == -1) {
     serial_activity_indicator_x = wherex();
@@ -424,13 +428,15 @@ static size_t __simple_serial_read_with_timeout(char *ptr, size_t size, size_t n
   if (serial_activity_indicator_enabled) {
     activity_cb(1);
   }
+  cur = ptr;
+  i = 0;
   while (i < nmemb) {
     b = __simple_serial_getc_with_timeout(with_timeout);
     if (b == EOF) {
       break;
     }
-    ptr[i] = (char)b;
-    i++;
+    *cur = (char)b;
+    ++i; ++cur;
   }
 
   if (serial_activity_indicator_enabled) {
@@ -439,6 +445,9 @@ static size_t __simple_serial_read_with_timeout(char *ptr, size_t size, size_t n
 
   return i;
 }
+#ifdef __CC65__
+#pragma optimize(pop)
+#endif
 
 /* Wrappers */
 
