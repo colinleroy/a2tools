@@ -1,5 +1,6 @@
 ;
 ; Ullrich von Bassewitz, 06.08.1998
+; Colin Leroy-Mira <colin@colino.net>, 2023
 ;
 ; void __fastcall__ dputcxy (unsigned char x, unsigned char y, char c);
 ; void __fastcall__ dputc (char c);
@@ -8,6 +9,7 @@
         .export         _dputcxy, _dputc
         .export         dputdirect, dnewline
         .import         gotoxy, VTABZ, putchar
+        .import         _scrollup, _scrolldn
 
         .include        "apple2.inc"
 
@@ -67,11 +69,9 @@ decrh:  dec     CH
 dnewline:
         inc     CV              ; Bump to next line
         lda     CV
-        cmp     WNDBTM
+        cmp     WNDBTM          ; Are we at bottom?
         bcc     :+
-        dec     CV
-        bit     $C082
-        jsr     $FC70           ; Scroll
-        bit     $C080
+        dec     CV              ; Yes, decrement
+        jsr     _scrollup       ; and scroll
         lda     CV
 :       jmp     VTABZ
