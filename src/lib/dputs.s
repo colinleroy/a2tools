@@ -1,5 +1,6 @@
 ;
 ; Ullrich von Bassewitz, 06.08.1998
+; Colin Leroy-Mira <colin@colino.net>, 2023
 ;
 ; void cputsxy (unsigned char x, unsigned char y, const char* s);
 ; void cputs (const char* s);
