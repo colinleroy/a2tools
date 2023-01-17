@@ -1,6 +1,6 @@
 PROGRAM=mirror.bin
-SOURCES := mirror.c
-DEPS := $(topdir)../lib/simple_serial.o
+SOURCES := mirror.c ../lib/simple_serial.c
+DEPS := 
 
 CC65_TARGET = apple2enh
 CC      = cl65
