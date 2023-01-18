@@ -339,7 +339,7 @@ int simple_serial_puts(char *buf) {
     return EOF;
   }
   len = strlen(buf);
-
+#ifdef __CC65__
   if (serial_activity_indicator_x == -1) {
     serial_activity_indicator_x = wherex();
     serial_activity_indicator_y = wherey();
@@ -348,13 +348,17 @@ int simple_serial_puts(char *buf) {
   if (serial_activity_indicator_enabled) {
     activity_cb(1);
   }
+#endif
+
   for (i = 0; i < len; i++) {
     simple_serial_putc(buf[i]);
   }
 
+#ifdef __CC65__
   if (serial_activity_indicator_enabled) {
     activity_cb(0);
   }
+#endif
 
   return len;
 }
@@ -369,17 +373,21 @@ static char *__simple_serial_gets_with_timeout(char *out, size_t size, char with
   static size_t i;
   static char *cur;
 
+#ifdef __CC65__
   if (serial_activity_indicator_x == -1) {
     serial_activity_indicator_x = wherex();
     serial_activity_indicator_y = wherey();
-  }
-  if (size == 0) {
-    return NULL;
   }
 
   if (serial_activity_indicator_enabled) {
     activity_cb(1);
   }
+#endif
+
+  if (size == 0) {
+    return NULL;
+  }
+
   i = 0;
   cur = out;
   while (i < size - 1) {
@@ -404,9 +412,11 @@ static char *__simple_serial_gets_with_timeout(char *out, size_t size, char with
   }
   *cur = '\0';
 
+#ifdef __CC65__
   if (serial_activity_indicator_enabled) {
     activity_cb(0);
   }
+#endif
 
   return out;
 }
@@ -416,19 +426,22 @@ static size_t __simple_serial_read_with_timeout(char *ptr, size_t size, size_t n
   static size_t i;
   static char *cur;
 
+#ifdef __CC65__
   if (serial_activity_indicator_x == -1) {
     serial_activity_indicator_x = wherex();
     serial_activity_indicator_y = wherey();
   }
+
+  if (serial_activity_indicator_enabled) {
+    activity_cb(1);
+  }
+#endif
 
   if (size != 1) {
     /* unsupported */
     return 0;
   }
 
-  if (serial_activity_indicator_enabled) {
-    activity_cb(1);
-  }
   cur = ptr;
   i = 0;
   while (i < nmemb) {
@@ -440,9 +453,11 @@ static size_t __simple_serial_read_with_timeout(char *ptr, size_t size, size_t n
     ++i; ++cur;
   }
 
+#ifdef __CC65__
   if (serial_activity_indicator_enabled) {
     activity_cb(0);
   }
+#endif
 
   return i;
 }
