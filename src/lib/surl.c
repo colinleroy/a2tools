@@ -82,7 +82,7 @@ surl_response *surl_start_request(const char *method, const char *url, const cha
   simple_serial_puts("\n");
 
   got_buf = simple_serial_gets_with_timeout(buf, BUFSIZE) != NULL;
-  printf("buf '%s'", buf);
+
   if (!got_buf || *buf == '\0') {
     resp->code = 504;
     return resp;
