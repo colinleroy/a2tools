@@ -112,7 +112,6 @@ static int __simple_serial_getc_with_timeout(char with_timeout) {
         return EOF;
       }
     }
-
     return (int)c;
 }
 
@@ -318,7 +317,7 @@ int simple_serial_putc(char c) {
   fflush(ttyfp);
 
   if (!flow_control_enabled)
-    usleep(1500);
+    usleep(1000);
 
   return r;
 }
@@ -365,9 +364,10 @@ int simple_serial_puts(char *buf) {
 #endif
 
 static char *__simple_serial_gets_with_timeout(char *out, size_t size, char with_timeout) {
-  int b;
-  char c;
-  size_t i = 0;
+  static int b;
+  static char c;
+  static size_t i;
+  static char *cur;
 
   if (serial_activity_indicator_x == -1) {
     serial_activity_indicator_x = wherex();
@@ -380,12 +380,12 @@ static char *__simple_serial_gets_with_timeout(char *out, size_t size, char with
   if (serial_activity_indicator_enabled) {
     activity_cb(1);
   }
+  i = 0;
+  cur = out;
   while (i < size - 1) {
     b = __simple_serial_getc_with_timeout(with_timeout);
     if (b == EOF) {
       break;
-    } else if (b < 0) {
-      return NULL;
     }
     c = (char)b;
     
@@ -394,14 +394,15 @@ static char *__simple_serial_gets_with_timeout(char *out, size_t size, char with
       continue;
     }
 
-    out[i] = c;
-    i++;
+    *cur = c;
+    ++i;
+    ++cur;
 
     if (c == '\n') {
       break;
     }
   }
-  out[i] = '\0';
+  *cur = '\0';
 
   if (serial_activity_indicator_enabled) {
     activity_cb(0);

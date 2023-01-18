@@ -55,7 +55,7 @@ static char buf[BUFSIZE];
 surl_response *surl_start_request(const char *method, const char *url, const char **headers, int n_headers) {
   surl_response *resp;
   int i;
-
+  char got_buf;
   if (proxy_opened == 0) {
     if (surl_connect_proxy() != 0) {
       return NULL;
@@ -81,7 +81,9 @@ surl_response *surl_start_request(const char *method, const char *url, const cha
   }
   simple_serial_puts("\n");
 
-  if (simple_serial_gets_with_timeout(buf, BUFSIZE) == NULL || *buf == '\0') {
+  got_buf = simple_serial_gets_with_timeout(buf, BUFSIZE) != NULL;
+  printf("buf '%s'", buf);
+  if (!got_buf || *buf == '\0') {
     resp->code = 504;
     return resp;
   } else if (!strcmp(method, "GET") && strcmp(buf, "WAIT\n")) {
