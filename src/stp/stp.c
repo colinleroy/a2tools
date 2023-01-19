@@ -24,6 +24,7 @@
 #include "stp_cli.h"
 #include "stp_save.h"
 #include "stp_send_file.h"
+#include "stp_delete.h"
 #include "surl.h"
 #include "simple_serial.h"
 #include "extended_conio.h"
@@ -237,7 +238,7 @@ int main(int argc, char **argv) {
     
     clrzone(0, 2, scrw - 1, 2 + PAGE_HEIGHT);
     gotoxy(12, 12);
-    printf("Loading...");
+    printf("Loading...   ");
 
     simple_serial_set_activity_indicator(1, 39, 0);
     resp = surl_start_request("GET", url, NULL, 0);
@@ -249,12 +250,18 @@ int main(int argc, char **argv) {
 
     if (resp == NULL || resp->size == 0) {
       gotoxy(12, 12);
-      printf("Bad response.");
+      if (resp->code >= 200 && resp->code < 300) {
+        printf("Empty.       ");
+      } else {
+        printf("Bad response.");
+      }
       goto keyb_input;
     }
 
     if (resp->content_type && strcmp(resp->content_type, "directory")) {
       stp_save_dialog(url, resp);
+      clrzone(0, 2, scrw - 1, 2 + PAGE_HEIGHT);
+      stp_print_result(resp);
       goto up_dir;
 
     } else {
@@ -277,9 +284,9 @@ update_list:
       for (i = 0; i + cur_display_line < num_lines && i < PAGE_HEIGHT; i++) {
         gotoxy(0, i + 2);
         if (i + cur_display_line == cur_line) {
-          printf("> %s", lines[i]);
+          printf("> %s", lines[i + cur_display_line]);
         } else {
-          printf("  %s", lines[i]);
+          printf("  %s", lines[i + cur_display_line]);
         }
       }
     } else {
@@ -310,6 +317,12 @@ up_dir:
       case 's':
       case 'S':
         stp_send_file(url);
+        full_update = 1;
+        break;
+      case 'd':
+      case 'D':
+        if (lines)
+          stp_delete_dialog(url, lines[cur_line]);
         full_update = 1;
         break;
       default: 

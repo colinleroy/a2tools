@@ -43,6 +43,12 @@ int surl_connect_proxy(void) {
 #endif
   //DEBUG("connected proxy: %d\n", r);
   proxy_opened = (r == 0);
+
+  if (r == 0) {
+    /* Break previous session if needed */
+    simple_serial_printf("%c\n", 0x04);
+    simple_serial_flush();
+  }
   return r;
 }
 
@@ -89,6 +95,9 @@ surl_response *surl_start_request(const char *method, const char *url, const cha
   } else if (!strcmp(method, "GET") && strcmp(buf, "WAIT\n")) {
     resp->code = 508;
     return resp;
+  } else if (!strcmp(method, "DELETE") && strcmp(buf, "WAIT\n")) {
+    resp->code = 508;
+    return resp;
   } else if (!strcmp(method, "RAW") && !strcmp(buf, "RAW_SESSION_START\n")) {
     resp->code = 100;
     return resp;
@@ -101,8 +110,12 @@ surl_response *surl_start_request(const char *method, const char *url, const cha
   return resp;
 }
 
-void surl_send_data_size(surl_response *resp, size_t total) {
+int surl_send_data_size(surl_response *resp, size_t total) {
   simple_serial_printf("%zu\n", total);
+  /* Wait for go */
+  simple_serial_gets(buf, BUFSIZE);
+
+  return strcmp(buf, "UPLOAD\n");
 }
 
 size_t surl_send_data(surl_response *resp, char *buffer, size_t len) {

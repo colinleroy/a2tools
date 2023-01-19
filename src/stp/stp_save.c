@@ -56,7 +56,7 @@ void stp_save_dialog(char *url, surl_response *resp) {
   char *filename = strdup(strrchr(url, '/') + 1);
   char c;
 
-  printxcenteredbox(30, 12);
+  printxcenteredbox(30, 11);
   printxcentered(7, filename);
 
   gotoxy(6, 10);
@@ -86,8 +86,7 @@ void stp_save(char *full_filename, surl_response *resp) {
   char *filename;
   char *filetype;
   size_t r = 0, total = 0;
-  unsigned int buf_size, i;
-  unsigned long percent;
+  unsigned int buf_size;
   char keep_bin_header = 0;
   char had_error = 0;
 
@@ -176,10 +175,7 @@ void stp_save(char *full_filename, surl_response *resp) {
     goto err_out;
   }
 
-  gotoxy(6, 15);
-  for (i = 0; i < 28; i++)
-    printf("-");
-
+  progress_bar(6, 15, 28, 0, resp->size);
   do {
     simple_serial_set_activity_indicator(1, 39, 0);
 
@@ -202,14 +198,7 @@ void stp_save(char *full_filename, surl_response *resp) {
       goto err_out;
     }
 
-    gotoxy(6, 15);
-    percent = (long)total * 28L;
-    percent = percent/((long)resp->size);
-    for (i = 0; i <= ((int)percent) && i < 28; i++)
-      printf("*");
-    for (i = (int)(percent + 1L); i < 28; i++)
-      printf("-");
-
+    progress_bar(6, 15, 28, total, resp->size);
   } while (r > 0);
 
 err_out:

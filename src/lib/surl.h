@@ -19,7 +19,7 @@ void surl_read_response_header(surl_response *resp);
 size_t surl_receive_data(surl_response *resp, char *buffer, size_t max_len);
 size_t surl_receive_lines(surl_response *resp, char *buffer, size_t max_len);
 
-void surl_send_data_size(surl_response *resp, size_t total);
+int surl_send_data_size(surl_response *resp, size_t total);
 size_t surl_send_data(surl_response *resp, char *buffer, size_t len);
 
 void surl_response_free(surl_response *resp);

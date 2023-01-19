@@ -38,12 +38,10 @@ struct _curl_buffer {
   size_t headers_size;
 
   size_t upload_size;
-  char sent_upload_go;
-
   char *content_type;
 };
 
-static curl_buffer *curl_request(char *method, char *url, char **headers, int n_headers);
+static curl_buffer *setup_curl_request(char *method, char *url, char **headers, int n_headers);
 static void curl_buffer_free(curl_buffer *curlbuf);
 
 static void handle_signal(int signal) {
@@ -74,19 +72,113 @@ static void install_sig_handler(void) {
 	sigprocmask(SIG_UNBLOCK, &mask, 0);
 }
 
+enum {
+  WAITING_COMMAND,
+  READING_COMMAND,
+  SETTINGUP_COMMAND,
+  HANDLING_COMMAND,
+  RUNNING_COMMAND,
+  CLEANUP
+};
+
+enum {
+  COMMAND_NONE,
+  COMMAND_GET,
+  COMMAND_PUT,
+  COMMAND_POST,
+  COMMAND_RAW
+};
+
+/* Command format is \33\4\33,three letters, space */
+/* Don't reply anything before we get a full command */
+static int parse_command(char *buf, int *command) {
+  char *cur = buf;
+  if(!strncmp(cur, "\33\4\33", 3)) {
+    cur+=3;
+
+    if (!strncmp(cur, "GET ", 4)) {
+      *command = COMMAND_GET;
+      return READING_COMMAND;
+    } else if (!strncmp(cur, "PUT ", 4)) {
+      *command = COMMAND_PUT;
+      return READING_COMMAND;
+    } else if (!strncmp(cur, "POS ", 4)) {
+      *command = COMMAND_POST;
+      return READING_COMMAND;
+    } if (!strncmp(cur, "RAW ", 4)) {
+      *command = COMMAND_RAW;
+      return READING_COMMAND;
+    }
+  }
+
+  *command = COMMAND_NONE;
+  return WAITING_COMMAND;
+}
+
+int parse_command_parameters(char *buf, char **url, char ***headers, int *n_headers) {
+  int n_lines = 0;
+  char **lines = NULL;
+
+  n_lines = strsplit(buf, '\n', &lines);
+
+  *url = lines[0];
+  *headers = lines[1];
+  *n_headers = n_lines - 1;
+
+  /* We reply that we got the command */
+  simple_serial_puts("WAIT\n");
+
+  return SETTINGUP_COMMAND;
+}
+
+static curlbuf *cur_curl_request = NULL;
+static int cur_raw_fd = -1;
+
+int setup_command(int command, char *url, char **headers, int n_headers) {
+  if (cur_curl_request != NULL) {
+    /* cleanup curl request */
+  }
+  if (cur_raw_fd != -1) {
+    /* cleanup current fd */
+  }
+  switch (command) {
+    case COMMAND_NONE:
+      printf("Error: no command to setup\n");
+      break;
+    case COMMAND_GET:
+    case COMMAND_PUT:
+    case COMMAND_POST:
+      /* Setup the request */
+      cur_curl_request = curl_request(method, url, headers, n_headers);
+      if (command == COMMAND_GET) {
+        simple_serial_printf("%d,%d,%s\n", response->response_code, response->size, response->content_type);
+      } else {
+        simple_serial_puts("SEND_SIZE_AND_DATA\n");
+      }
+      break;
+    case COMMAND_RAW:
+      /* Setup raw fd */
+  }
+
+  return RUNNING_COMMAND;
+}
+
 int main(int argc, char **argv)
 {
-  char reqbuf[BUFSIZE];
-  char *method = NULL, *url = NULL;
+  install_sig_handler();
+  char *in_buf = malloc(1024);
+  int cur_in = 0;
+  int handled_in = 0;
+  
+  int state = READING_COMMAND;
+  int command = COMMAND_NONE;
+
+  char *url = NULL;
   char **headers = NULL;
   int n_headers = 0;
-  size_t bufsize = 0, sent = 0;
-  curl_buffer *response = NULL;
-
-  install_sig_handler();
 
   curl_global_init(CURL_GLOBAL_ALL);
-
+  
 reopen:
   simple_serial_close();
   while (simple_serial_open() != 0) {
@@ -96,105 +188,68 @@ reopen:
   fflush(stdout);
 
   while(1) {
+    int in;
 
-    if (simple_serial_gets(reqbuf, BUFSIZE) != NULL) {
-      char **parts;
-      int num_parts, i;
+    /* receive pending data */
+    while (ser_recv_char(&in) != EOF) {
+      in_buf[cur_in++] = in;
 
-new_req:
-      fflush(stdout);
+      switch(state) {
+        case WAITING_COMMAND:
+          if (cur_in == 6) {
+            state = parse_command(in_buf, &command);
+            cur_in = 0; /* Reset buffer whether or not we got a command */
+          }
+          break;
 
-      free(method);
-      free(url);
-      for (i = 0; i < n_headers; i++) {
-        free(headers[i]);
+        case READING_COMMAND:
+          /* Wait for two \n\n */
+          if (cur_in > 1 
+            && in_buf[cur_in - 1] == '\n' 
+            && in_buf[cur_in - 2] == '\n') {
+            /* End of command */
+            state = parse_command_parameters(in_buf, &url, &headers, &n_headers);
+            cur_in = 0; /* Reset buffer */
+          }
+          break;
+
+        case RUNNING_COMMAND:
+          switch()
+          break;
+
+        case SETTINGUP_COMMAND:
+          /* We shouldn't be there! */
+          printf("State error, in recv loop while setting up command.\n");
+          break;
+        case CLEANUP:
+          /* We shouldn't be there! */
+          printf("State error, in recv loop while cleaning up command.\n");
+          break;
+        default:
+          /* We shouldn't be there! */
+          printf("State error, unknown state %d.\n", state);
+          break;
       }
-      free(headers);
-
-      method = NULL;
-      url = NULL;
-      n_headers = 0;
-      headers = NULL;
-      curl_buffer_free(response);
-      response = NULL;
-
-      num_parts = strsplit(reqbuf, ' ', &parts);
-      if (num_parts < 2) {
-        if (!strcmp(reqbuf, "\4\n")) {
-          /* it's a reset */
-          continue;
-        }
-        printf("Could not parse request '%s'\n", reqbuf);
-        continue;
-      }
-      method = trim(parts[0]);
-      url = trim(parts[1]);
-      
-      for (i = 0; i < num_parts; i++) {
-        free(parts[i]);
-      }
-      free(parts);
-    } else {
-      printf("Fatal read error: %s\n", strerror(errno));
-      goto reopen;
-    }
-    
-    do {
-      reqbuf[0] = '\0';
-      if (simple_serial_gets(reqbuf, BUFSIZE) != NULL) {
-        if (!strcmp(reqbuf, "\4\n")) {
-          /* It's a reset */
-          goto reopen;
-        } else if (strcmp(reqbuf, "\n")) {
-          headers = realloc(headers, (n_headers + 1) * sizeof(char *));
-          headers[n_headers] = trim(reqbuf);
-          n_headers++;
-        }
-      } else {
-        printf("Fatal read error: %s\n", strerror(errno));
-        goto reopen;
-      }
-    } while (strcmp(reqbuf, "\n"));
-
-    if (method == NULL || url == NULL) {
-      if (!strcmp(reqbuf, "\4\n")) {
-        /* it's a reset */
-        continue;
-      }
-      printf("could not parse request '%s'\n", reqbuf);
-      continue;
     }
 
-    response = curl_request(method, url, headers, n_headers);
-    if (response == NULL) {
-      printf("%s %s - done\n", method, url);
-      continue;
+    /* do we need to setup or cleanup? */
+    switch (state) {
+      case SETTINGUP_COMMAND:
+        state = setup_command(command, url, headers, n_headers);
+        /* Setup the command */
+        break;
+      case RUNNING_COMMAND:
+        state = run_command(command);
+        break;
+      case HANDLING_COMMAND:
+        /* handle input for PUT, POST, RAW */
+      case CLEANUP_COMMAND:
+        /* Cleanup the command */
+        break;
+      default: 
+        /* Nothing to do */
+        break;
     }
-    simple_serial_printf("%d,%d,%s\n", response->response_code, response->size, response->content_type);
-    sent = 0;
-    while (sent < response->size) {
-      size_t to_send;
-
-      if (simple_serial_gets(reqbuf, BUFSIZE) != NULL) {
-        if(!strncmp("SEND ", reqbuf, 5)) {
-          bufsize = atoi(reqbuf + 5);
-        } else {
-          printf("Aborted request\n");
-          goto new_req;
-        }
-      } else {
-        printf("Aborted request\n");
-        simple_serial_flush();
-        goto new_req;
-      }
-
-      to_send = min(bufsize, response->size - sent);
-      sent += simple_serial_write(response->buffer + sent, sizeof(char), to_send);
-    }
-
-    printf("%s %s - %d (%zub)\n", method, url, response->response_code, response->size);
-    fflush(stdout);
-
   }
 }
 
@@ -263,11 +318,6 @@ static size_t data_send_cb(char *ptr, size_t size, size_t nmemb, void *cbdata) {
     return 0;
   }
 
-  if (!curlbuf->sent_upload_go) {
-    simple_serial_puts("UPLOAD\n");
-    curlbuf->sent_upload_go = 1;
-  }
-
   retcode = simple_serial_read(ptr, size, min(nmemb, curlbuf->upload_size));
 
   if(retcode > 0) {
@@ -279,7 +329,7 @@ static size_t data_send_cb(char *ptr, size_t size, size_t nmemb, void *cbdata) {
   return retcode;
 }
 
-static curl_buffer *curl_request(char *method, char *url, char **headers, int n_headers) {
+static curl_buffer *setup_curl_request(char *method, char *url, char **headers, int n_headers) {
   CURL *curl;
   CURLcode res;
   int i;
@@ -300,7 +350,7 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
     memcpy(dir_url, url, strlen(url));
     dir_url[strlen(url)] = '/';
     dir_url[strlen(url) + 1] = '\0';
-    curlbuf = curl_request(method, dir_url, headers, n_headers);
+    curlbuf = setup_curl_request(method, dir_url, headers, n_headers);
     free(dir_url);
     if (curlbuf->response_code >= 200 && curlbuf->response_code < 300) {
       return curlbuf;
@@ -317,7 +367,6 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
   curlbuf->headers = NULL;
   curlbuf->headers_size = 0;
   curlbuf->upload_size = 0;
-  curlbuf->sent_upload_go = 0;
   curlbuf->content_type = NULL;
 
   curl = curl_easy_init();
@@ -353,52 +402,24 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
       } else if (is_ftp) {
         curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_FTP);
       }
-  } else if (!strcmp(method, "DELETE")) {
-      if (is_ftp) {
-        char *dir = url;
-        char *path = strdup(url);
-        char *o_path = path;
-        char *cmd;
-
-        path = strstr(path, "://");
-        if (path) {
-          path += 3;
-          path = strchr(path, '/');
-        }
-        
-        if(strrchr(url, '/')) {
-          *(strrchr(url, '/') + 1) = '\0';
-        }
-        
-        cmd = malloc(strlen("DELE ") + strlen(path) + 1);
-        sprintf(cmd, "DELE %s", path);
-        printf("will delete %s in %s\n", path, url);
-        free(o_path);
-        curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_FTP);
-        curl_easy_setopt(curl, CURLOPT_QUOTE, curl_slist_append(NULL,cmd));
-        simple_serial_puts("WAIT\n");
-      } else {
-        printf("Unsupported method %s\n", method);
-        simple_serial_puts("ERROR\n");
-        return curlbuf;
-      }
-  } else if (!strcmp(method, "GET")) {
-    /* Don't send WAIT twice */
-    if (ftp_try_dir || !ftp_is_maybe_dir) {
-      simple_serial_puts("WAIT\n");
     }
-  } else if (!strcmp(method, "RAW")) {
-    simple_serial_puts("RAW_SESSION_START\n");
-    curl_easy_cleanup(curl);
-    curl = NULL;
-
-    surl_server_raw_session(url);
-
-    return NULL;
-  } else {
-    printf("Unsupported method %s\n", method);
-    return curlbuf;
-  }
+  // else if (!strcmp(method, "GET")) {
+  //   /* Don't send WAIT twice */
+  //   if (ftp_try_dir || !ftp_is_maybe_dir) {
+  //     simple_serial_puts("WAIT\n");
+  //   }
+  // } else if (!strcmp(method, "RAW")) {
+  //   simple_serial_puts("RAW_SESSION_START\n");
+  //   curl_easy_cleanup(curl);
+  //   curl = NULL;
+  // 
+  //   surl_server_raw_session(url);
+  // 
+  //   return NULL;
+  // } else {
+  //   printf("Unsupported method %s\n", method);
+  //   return curlbuf;
+  // }
 
 
   printf("%s %s - start\n", method, url);
@@ -426,8 +447,8 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
     if(res != CURLE_OK) {
       printf("Curl error %d: %s\n", res, curl_easy_strerror(res));
       /* Empty read buffer if needed */
-      if (curlbuf->upload_size > 0) {
-        simple_serial_puts("ERROR\n");
+      while (curlbuf->upload_size > 0) {
+        data_send_cb(upload_buf, 1, 4096, curlbuf);
       }
       if (res == CURLE_REMOTE_ACCESS_DENIED) {
         curlbuf->response_code = 401;
@@ -438,6 +459,7 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
         curlbuf->response_code = 200;
       }
     }
+
     curl_easy_getinfo (curl, CURLINFO_CONTENT_TYPE, &tmp);
     if (tmp != NULL) {
       curlbuf->content_type = strdup(tmp);

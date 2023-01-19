@@ -56,6 +56,7 @@ void __fastcall__ clrzone(char xs, char ys, char xe, char ye);
 
 void printxcentered(int y, char *buf);
 void printxcenteredbox(int width, int height);
+void progress_bar(int x, int y, int width, unsigned int cur, unsigned int end);
 #endif
 
 #endif
