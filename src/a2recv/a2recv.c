@@ -51,7 +51,11 @@ read_again:
   printf("\nReady to receive (Ctrl-reset to abort)\n");
   total = 0;
 
+read_filename_again:
   if (simple_serial_gets(filename, BUF_SIZE) != NULL) {
+    if (!strcmp(filename,"\4\n")) {
+      goto read_filename_again;
+    }
 #ifndef __CC65__
     if (strlen(filename) > 8)
       filename[8] = '\0';
@@ -114,7 +118,7 @@ read_again:
 
     printf("Reading data...");
     fflush(stdout);
-    r = simple_serial_read_with_timeout(data, sizeof(char), block);
+    r = simple_serial_read(data, sizeof(char), block);
     total += r;
 
     simple_serial_set_activity_indicator(0, -1, -1);

@@ -75,6 +75,6 @@ void stp_print_footer(void) {
   chline(scrw);
   clrzone(0, 22, scrw - 1, 23);
   gotoxy(0, 22);
-  printf("Up/Down: navigate - S: send file\n"
+  printf("Up/Down: navigate, S: send, D: delete\n"
        "Enter: select - Esc: back");
 }

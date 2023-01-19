@@ -85,8 +85,7 @@ int simple_serial_close(void) {
 }
 
 void simple_serial_flush(void) {
-  char n;
-  while(ser_get(&n) != SER_ERR_NO_DATA);
+  while(simple_serial_getc_with_timeout() != EOF);
 }
 
 #pragma optimize(push, on)
@@ -248,6 +247,7 @@ void simple_serial_flush(void) {
       printf("tcgetattr error: %s\n", strerror(errno));
     }
   }
+  while(simple_serial_getc_with_timeout() != EOF);
 }
 /* Input 
  * Very complicated because select() won't mark fd as readable 
@@ -509,7 +509,7 @@ int simple_serial_write(char *ptr, size_t size, size_t nmemb) {
   }
   for (i = 0; i < nmemb; i++) {
     if (simple_serial_putc(ptr[i]) < 0) {
-      printf("Error sending at %d (%s)\n", i, strerror(errno));
+      //printf("Error sending at %d (%s)\n", i, strerror(errno));
       return i;
     }
   }

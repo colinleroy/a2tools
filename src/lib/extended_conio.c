@@ -329,3 +329,17 @@ int wherey(void) {
   return y - 1;
 }
 #endif
+void progress_bar(int x, int y, int width, unsigned int cur, unsigned int end) {
+  unsigned long percent;
+  unsigned int i;
+
+  gotoxy(x, y);
+  percent = (long)cur * (long)width;
+  percent = percent/((long)end);
+  revers(1);
+  for (i = 0; i <= ((int)percent) && i < width; i++)
+    cputc(' ');
+  revers(0);
+  for (i = (int)(percent + 1L); i < width; i++)
+    cputc(0x7F);
+}

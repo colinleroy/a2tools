@@ -57,7 +57,6 @@ static char *stp_send_dialog() {
   return filename;
 }
 
-static unsigned long percent = 0L;
 static unsigned long filesize = 0;
 static int total = 0;
 static unsigned char type;
@@ -66,13 +65,18 @@ static int buf_size;
 static char *data = NULL;
 
 void stp_send_file(char *remote_dir) {
-  FILE *fp = NULL;
-  char *filename = NULL;
-  char *remote_filename = NULL;
-  surl_response *resp = NULL;
-  int r = 0;
-  int i;
-
+  static FILE *fp;
+  static char *filename;
+  static char *remote_filename;
+  static surl_response *resp;
+  static int r = 0;
+  
+  fp = NULL;
+  filename = NULL;
+  remote_filename = NULL;
+  resp = NULL;
+  r = 0;
+  
   if (scrw == 255)
     screensize(&scrw, &scrh);
 
@@ -123,9 +127,7 @@ void stp_send_file(char *remote_dir) {
     goto err_out;
   }
 
-  gotoxy(0, 22);
-  for (i = 0; i < scrw; i++)
-    printf("-");
+  progress_bar(0, 22, scrw, 0, filesize);
 
   resp = surl_start_request("PUT", remote_filename, NULL, 0);
   if (resp == NULL || resp->code != 100) {
@@ -134,7 +136,9 @@ void stp_send_file(char *remote_dir) {
     goto err_out;
   }
 
-  surl_send_data_size(resp, filesize);
+  if (surl_send_data_size(resp, filesize) != 0) {
+    goto finished;
+  }
 
   total = 0;
 
@@ -155,19 +159,13 @@ void stp_send_file(char *remote_dir) {
     r = surl_send_data(resp, data, r);
     simple_serial_set_activity_indicator(0, 0, 0);
 
-    percent = (long)total * (long)scrw;
-    percent = percent/((long)filesize);
-    gotoxy(0, 22);
-    for (i = 0; i <= ((int)percent) && i < scrw; i++)
-      printf("*");
-    for (i = (int)(percent + 1L); i < scrw; i++)
-      printf("-");
-
+    progress_bar(0, 22, scrw, total, filesize);
   } while (total < filesize);
   gotoxy(0, 21);
   clrzone(0, 21, scrw - 1, 21);
   printf("Sent %d/%lu.", total, filesize);
 
+finished:
   surl_read_response_header(resp);
   clrzone(0, 21, scrw - 1, 22);
   gotoxy(0, 21);
