@@ -16,6 +16,7 @@
 
 #include "simple_serial.h"
 #include "raw-session.h"
+#include "char_convert.h"
 
 static void send_buf(int sockfd, char *c, int nmemb) {
   fd_set fds;
@@ -160,10 +161,11 @@ void surl_server_raw_session(char *remote_url) {
   last_traffic = time(NULL);
   do {
     int read_res, has_escape_code = 0;
+    int rem_utf8 = 0;
     last_i = '\0';
 
     n_in = 0;
-maybe_finish_ctrl:
+maybe_finish_ctrl_ser:
     has_escape_code = 0;
     while (n_in < RAW_BUFSIZE - 1 && ser_recv_char(&i) != EOF) {
       last_i = i;
@@ -172,25 +174,48 @@ maybe_finish_ctrl:
         goto cleanup;
       }
       in_buf[n_in++] = i;
-      if (o == '\33')
+      if (i == '\33') {
         has_escape_code = 1;
+      }
       last_traffic = time(NULL);
     }
-    if (has_escape_code && n_out < RAW_BUFSIZE - 1) {
-      printf("has escape code and %d bytes, read again\n", n_out);
+    if (has_escape_code && n_in < RAW_BUFSIZE - 1) {
+      printf("has escape code and %d bytes, read ser again\n", n_in);
       usleep(10*1000);
-      goto maybe_finish_ctrl;
+      goto maybe_finish_ctrl_ser;
     }
 
-    if (n_in > 0)
+    if (n_in > 0) {
       send_buf(sockfd, in_buf, n_in);
-    
+    }
     n_out = 0;
+
+    rem_utf8 = 0;
+maybe_finish_ctrl_net:
+maybe_finish_utf8_net:
+    has_escape_code = 0;
     while (n_out < RAW_BUFSIZE - 1 
            && (read_res = net_recv_char(sockfd, &o)) != EOF 
            && o != '\0') {
       out_buf[n_out++] = o;
+      if (o == '\33') {
+        has_escape_code = 1;
+      } else if ((o & 0xC0) == 0xC0 && rem_utf8 == 0) {
+        rem_utf8 = 1;
+      } else if ((o & 0xE0) == 0xE0 && rem_utf8 == 0) {
+        rem_utf8 = 2;
+      }
       last_traffic = time(NULL);
+    }
+    if (has_escape_code && n_out < RAW_BUFSIZE - 1) {
+      printf("has escape code and %d bytes, read net again\n", n_in);
+      usleep(10*1000);
+      goto maybe_finish_ctrl_net;
+    } else if (rem_utf8 > 0 && n_out < RAW_BUFSIZE - 1) {
+      printf("has utf8 and %d bytes, read net again\n", n_in);
+      usleep(10*1000);
+      rem_utf8--;
+      goto maybe_finish_utf8_net;
     }
 
     if (n_out > 0) {
