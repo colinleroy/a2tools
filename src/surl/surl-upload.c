@@ -89,7 +89,7 @@ again:
   }
 
   buffer = malloc(BUFSIZE);
-  surl_send_data_size(response, filesize);
+  surl_send_data_params(response, filesize, 1);
   while ((r = fread(buffer, 1, BUFSIZE, fp)) > 0) {
     surl_send_data(response, buffer, r);
   }

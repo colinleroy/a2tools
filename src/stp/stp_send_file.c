@@ -58,7 +58,7 @@ static char *stp_send_dialog() {
 }
 
 static unsigned long filesize = 0;
-static int total = 0;
+static size_t total = 0;
 static unsigned char type;
 static unsigned auxtype;
 static int buf_size;
@@ -136,7 +136,7 @@ void stp_send_file(char *remote_dir) {
     goto err_out;
   }
 
-  if (surl_send_data_size(resp, filesize) != 0) {
+  if (surl_send_data_params(resp, filesize, 1) != 0) {
     goto finished;
   }
 
@@ -155,7 +155,7 @@ void stp_send_file(char *remote_dir) {
     simple_serial_set_activity_indicator(1, 39, 0);
     clrzone(0, 21, scrw - 1, 21);
     gotoxy(0, 21);
-    printf("Sending %d/%lu...", total, filesize);
+    printf("Sending %zu/%lu...", total, filesize);
     r = surl_send_data(resp, data, r);
     simple_serial_set_activity_indicator(0, 0, 0);
 
@@ -163,7 +163,7 @@ void stp_send_file(char *remote_dir) {
   } while (total < filesize);
   gotoxy(0, 21);
   clrzone(0, 21, scrw - 1, 21);
-  printf("Sent %d/%lu.", total, filesize);
+  printf("Sent %zu/%lu.", total, filesize);
 
 finished:
   surl_read_response_header(resp);

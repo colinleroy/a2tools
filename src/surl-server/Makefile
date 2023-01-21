@@ -1,12 +1,13 @@
 PROGRAM=surl-server
-SOURCES := main.c raw-session.c ../lib/extended_string.c ../lib/simple_serial.c ../lib/extended_conio.c	
+SOURCES := main.c raw-session.c char_convert.c jq.c \
+	../lib/extended_string.c ../lib/simple_serial.c ../lib/extended_conio.c	
 
 CFLAGS= -I ../lib -g -O0 -Wall -DCONF_FILE_PATH=\"/etc/surl-server/tty.conf\"
 .PHONY: all clean
 all: $(PROGRAM)
 
 $(PROGRAM): $(SOURCES)
-	gcc $(CFLAGS) $(shell curl-config --cflags) $^ $(shell curl-config --libs) -o $@
+	gcc $(CFLAGS) $(shell curl-config --cflags) $^ $(shell curl-config --libs) -ljq -o $@
 
 clean:
 	rm -f $(PROGRAM) *.o

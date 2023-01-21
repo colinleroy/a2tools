@@ -555,6 +555,7 @@ input:
 #else
       if (echo) {
         fputc(i, stdout);
+        fflush(stdout);
       }
 #endif
     }
@@ -601,6 +602,7 @@ got_input = 0;
         dputc(o);
 #else
         fputc(o, stdout);
+        fflush(stdout);
 #endif
       }
       /* do we have input? */

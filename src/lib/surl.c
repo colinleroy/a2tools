@@ -58,7 +58,7 @@ void surl_close_proxy(void) {
 
 static char buf[BUFSIZE];
 
-surl_response *surl_start_request(const char *method, const char *url, const char **headers, int n_headers) {
+surl_response *surl_start_request(const char *method, const char *url, char **headers, int n_headers) {
   surl_response *resp;
   int i;
   char got_buf;
@@ -78,11 +78,14 @@ surl_response *surl_start_request(const char *method, const char *url, const cha
   resp->code = 0;
   resp->cur_pos = 0;
   resp->content_type = NULL;
+  resp->header_size = 0;
+  resp->cur_hdr_pos = 0;
 
   simple_serial_printf("%s %s\n", method, url);
   //DEBUG("sent req %s %s\n", method, url);
   for (i = 0; i < n_headers; i++) {
-    simple_serial_printf("%s\n", headers[i]);
+    simple_serial_puts(headers[i]);
+    simple_serial_putc('\n');
     //DEBUG("sent hdr %d %s\n", i, headers[i]);
   }
   simple_serial_puts("\n");
@@ -110,8 +113,8 @@ surl_response *surl_start_request(const char *method, const char *url, const cha
   return resp;
 }
 
-int surl_send_data_size(surl_response *resp, size_t total) {
-  simple_serial_printf("%zu\n", total);
+int surl_send_data_params(surl_response *resp, size_t total, int raw) {
+  simple_serial_printf("%zu,%d\n", total, raw);
   /* Wait for go */
   simple_serial_gets(buf, BUFSIZE);
 
@@ -125,6 +128,10 @@ size_t surl_send_data(surl_response *resp, char *buffer, size_t len) {
 void surl_read_response_header(surl_response *resp) {
   char *w;
 
+  if (resp->content_type) {
+    return; // already read.
+  }
+
   simple_serial_gets(buf, BUFSIZE);
   //DEBUG("RESPonse header %s\n", buf);
   if (buf[0] == '\0') {
@@ -137,10 +144,14 @@ void surl_read_response_header(surl_response *resp) {
     return;
   }
 
-  resp->size = atol(strchr(buf, ',') + 1);
-  w = strchr(buf,',') + 1;
-  *strchr(buf,',') = '\0';
-  resp->code = atoi(buf);
+  w = buf;
+  resp->code = atoi(w);
+
+  w = strchr(w, ',') + 1;
+  resp->size = atol(w);
+
+  w = strchr(w,',') + 1;
+  resp->header_size = atol(w);
 
   if (strchr(w, ',') != NULL) {
     resp->content_type = strdup(strchr(w, ',') + 1);
@@ -214,9 +225,6 @@ size_t surl_receive_lines(surl_response *resp, char *buffer, size_t max_len) {
     r = overwritten_offset;
   }
 
-  if (buffer[r-1] != '\n') {
-    exit(1);
-  }
   buffer[r] = '\0';
   resp->cur_pos += r;
 
@@ -226,6 +234,11 @@ size_t surl_receive_lines(surl_response *resp, char *buffer, size_t max_len) {
 
   return r;
 }
+
+//Pop early because the whole serial + surl code doesn't fit in LC
+#ifdef SERIAL_TO_LANGCARD
+#pragma code-name (pop)
+#endif
 
 void surl_response_free(surl_response *resp) {
   if (resp == NULL) {
@@ -237,10 +250,53 @@ void surl_response_free(surl_response *resp) {
   simple_serial_flush();
 
 }
-//Pop early because the whole serial + surl code doesn't fit in LC
-#ifdef SERIAL_TO_LANGCARD
-#pragma code-name (pop)
-#endif
+
+size_t surl_receive_headers(surl_response *resp, char *buffer, size_t max_len) {
+  size_t to_read = min(resp->size - resp->cur_hdr_pos, max_len);
+  size_t r;
+
+  if (to_read == 0) {
+    return 0;
+  }
+
+  simple_serial_printf("HDRS %zu\n", to_read);
+  r = simple_serial_read(buffer, sizeof(char), to_read);
+
+  buffer[r] = '\0';
+  resp->cur_hdr_pos += r;
+
+  return r;
+}
+
+int surl_find_line(surl_response *resp, char *buffer, size_t max_len, char *search_str) {
+  size_t res_len = 0;
+  simple_serial_printf("FIND %zu %s\n", max_len, search_str);
+  simple_serial_gets(buffer, max_len);
+
+  if (!strcmp(buffer, "<NOT_FOUND>\n")) {
+    buffer[0] = '\0';
+    return -1;
+  }
+  res_len = atoi(buffer);
+  simple_serial_read(buffer, sizeof(char), res_len);
+  buffer[res_len - 1] = '\0';
+  return 0;
+}
+
+int surl_get_json(surl_response *resp, char *buffer, size_t max_len, char *selector) {
+  size_t res_len = 0;
+  simple_serial_printf("JSON %zu %s\n", max_len, selector);
+  simple_serial_gets(buffer, max_len);
+
+  if (!strcmp(buffer, "<NOT_FOUND>\n") || !strcmp(buffer, "<NOT_JSON>\n")) {
+    buffer[0] = '\0';
+    return -1;
+  }
+  res_len = atoi(buffer);
+  simple_serial_read(buffer, sizeof(char), res_len);
+  buffer[res_len - 1] = '\0';
+  return 0;
+}
 
 #ifdef __CC65__
 #pragma static-locals(pop)
