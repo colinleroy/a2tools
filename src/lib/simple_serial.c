@@ -322,10 +322,6 @@ int simple_serial_putc(char c) {
   return r;
 }
 
-static void activity_cb(int on) {
-  
-}
-
 #endif /* End of platform-dependant code */
 
 #ifdef __CC65__
@@ -333,11 +329,8 @@ static void activity_cb(int on) {
 #endif
 
 int simple_serial_puts(char *buf) {
-  static char i, len;
+  static int i, len;
   
-  if (strlen(buf) > 255) {
-    return EOF;
-  }
   len = strlen(buf);
 #ifdef __CC65__
   if (serial_activity_indicator_x == -1) {
@@ -491,12 +484,12 @@ size_t simple_serial_read_with_timeout(char *ptr, size_t size, size_t nmemb) {
   return __simple_serial_read_with_timeout(ptr, size, nmemb, 1);
 }
 
-static char simple_serial_buf[255];
+static char simple_serial_buf[512];
 int simple_serial_printf(const char* format, ...) {
   va_list args;
 
   va_start(args, format);
-  vsnprintf(simple_serial_buf, 254, format, args);
+  vsnprintf(simple_serial_buf, 511, format, args);
   va_end(args);
 
   return simple_serial_puts(simple_serial_buf);
