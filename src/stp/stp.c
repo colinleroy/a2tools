@@ -105,7 +105,9 @@ char *get_start_url(void) {
   } else {
     password = malloc(BUFSIZE + 1);
     printf("Password: ");
+    echo(0);
     cgets(password, BUFSIZE);
+    echo(1);
     free(last_password);
     changed = 1;
   }
