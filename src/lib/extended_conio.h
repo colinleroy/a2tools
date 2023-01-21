@@ -31,8 +31,8 @@
 #define chlinexy(a, b, c) do {} while(0)
 #define cvlinexy(a, b, c) do {} while(0)
 #define cprintf printf
-#define revers(x) 1
-#define videomode(x) 1
+#define revers(x) do {} while(0)
+#define videomode(x) do {} while(0)
 #define VIDEOMODE_40COL 1
 #define VIDEOMODE_80COL 1
 
@@ -51,12 +51,13 @@ int kbhit(void);
 
 void get_scrollwindow(unsigned char *top, unsigned char *bottom);
 void set_scrollwindow(unsigned char top, unsigned char bottom);
+void echo(int on);
 char * __fastcall__ cgets(char *buf, size_t size);
 void __fastcall__ clrzone(char xs, char ys, char xe, char ye);
 
 void printxcentered(int y, char *buf);
 void printxcenteredbox(int width, int height);
-void progress_bar(int x, int y, int width, unsigned int cur, unsigned int end);
+void progress_bar(int x, int y, int width, size_t cur, size_t end);
 #endif
 
 #endif
