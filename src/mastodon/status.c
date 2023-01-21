@@ -16,6 +16,9 @@ status *status_new(void) {
   return s;
 }
 
+#ifdef __CC65__
+#pragma static-locals (push,off) /* need reentrancy */
+#endif
 status *status_new_from_json(surl_response *resp, char *id, char is_reblog) {
   char *selector;
   status *s;
@@ -35,11 +38,12 @@ status *status_new_from_json(surl_response *resp, char *id, char is_reblog) {
     snprintf(selector, BUF_SIZE, ".[]|select(.id==\"%s\").reblog.id", id);
     surl_get_json(resp, reblog_id, BUF_SIZE, 0, 0, selector);
     if (reblog_id[0] != '\0') {
-      s->reblog = status_new_from_json(resp, reblog_id, 1);
+      s->reblog = status_new_from_json(resp, id, 1);
+      free(s->reblog->id);
+      s->reblog->id = reblog_id;
     } else {
-      
+      free(reblog_id);
     }
-    free(reblog_id);
     reblog_id = NULL;
   }
 
@@ -56,6 +60,10 @@ status *status_new_from_json(surl_response *resp, char *id, char is_reblog) {
   s->account = account_new_from_status_json(resp, id, is_reblog);
   return s;
 }
+
+#ifdef __CC65__
+#pragma static-locals (pop)
+#endif
 
 void status_free(status *s) {
   if (s == NULL)

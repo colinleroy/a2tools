@@ -147,10 +147,12 @@ static char *dump_tree(GumboNode *node, char *buffer, int plain)
 
 char *html2text(char *html) {
     char *text;
-    
+    size_t buf_size;
     GumboOutput *parsed_html = gumbo_parse(html);
 
-    text = malloc(strlen(html));
+    buf_size = strlen(html) * 2;
+    text = malloc(buf_size);
+    memset(text, 0, buf_size);
     dump_tree(parsed_html->root, text, 0);
   
     gumbo_destroy_output(&kGumboDefaultOptions, parsed_html);

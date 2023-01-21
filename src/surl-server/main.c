@@ -276,7 +276,7 @@ new_req:
                   translit ? ", translit":"",
                   result != NULL ? result:"not found");
           /* DEBUG */
-          //printf("%s\n", response->buffer);
+
           if (result) {
             if (striphtml) {
               char *text = html2text(result);
@@ -289,6 +289,10 @@ new_req:
               free(result);
               result = text;
             }
+            if (result && strlen(result) >= bufsize) {
+              result[bufsize - 1] = '\0';
+            }
+            printf(" now %s\n", result);
             simple_serial_printf("%d\n", strlen(result) + 1);
             simple_serial_puts(result);
             simple_serial_putc('\n');

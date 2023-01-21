@@ -28,7 +28,7 @@ static char *buf;
 
 int main(int argc, char **argv) {
   surl_response *response = NULL;
-  const char *headers[1] = {"Accept: text/*"};
+  char *headers[1] = {"Accept: text/*"};
   char *buffer;
   size_t r;
 

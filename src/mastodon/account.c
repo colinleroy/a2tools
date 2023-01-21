@@ -29,11 +29,9 @@ account *account_new_from_status_json(surl_response *resp, char *id, char is_reb
   snprintf(selector, BUF_SIZE, ".[]|select(.id==\"%s\").%saccount.id", id, is_reblog?"reblog.":"");
   surl_get_json(resp, a->id, 26, 0, 0, selector);
 
-  selector = malloc(BUF_SIZE);
   snprintf(selector, BUF_SIZE, ".[]|select(.id==\"%s\").%saccount.username", id, is_reblog?"reblog.":"");
   surl_get_json(resp, a->username, 26, 0, 0, selector);
 
-  selector = malloc(BUF_SIZE);
   snprintf(selector, BUF_SIZE, ".[]|select(.id==\"%s\").%saccount.display_name", id, is_reblog?"reblog.":"");
   surl_get_json(resp, a->display_name, 26, 1, 1, selector);
 
