@@ -26,6 +26,7 @@ char *jq_get(char *buffer, char *selector) {
 
   if (!jq_compile(jq, selector)) {
     jq_teardown(&jq);
+    return NULL;
   }
 
   jq_start(jq, json_data, 0);
