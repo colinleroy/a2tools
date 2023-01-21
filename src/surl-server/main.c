@@ -284,7 +284,10 @@ new_req:
               result = text;
             }
             if (translit) {
-              
+              size_t l;
+              char *text = do_apple_convert(result, OUTGOING, &l);
+              free(result);
+              result = text;
             }
             simple_serial_printf("%d\n", strlen(result) + 1);
             simple_serial_puts(result);
