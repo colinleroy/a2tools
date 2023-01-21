@@ -360,11 +360,11 @@ int register_app(void) {
     goto err_out;
   }
 
-  if (surl_get_json(resp, client_id, BUF_SIZE, ".client_id") < 0) {
+  if (surl_get_json(resp, client_id, BUF_SIZE, 0, 0, ".client_id") < 0) {
     cputs("App registration: no client_id.\r\n");
     goto err_out;
   }
-  if (surl_get_json(resp, client_secret, BUF_SIZE, ".client_secret") < 0) {
+  if (surl_get_json(resp, client_secret, BUF_SIZE, 0, 0, ".client_secret") < 0) {
     cputs("App registration: no client_secret.\r\n");
     goto err_out;
   }
@@ -439,7 +439,7 @@ int get_oauth_token(void) {
   surl_read_response_header(resp);
 
   cprintf("%d\r\n", resp->code);
-  if (surl_get_json(resp, oauth_token, BUF_SIZE, ".access_token") < 0) {
+  if (surl_get_json(resp, oauth_token, BUF_SIZE, 0, 0, ".access_token") < 0) {
     cputs("OAuth token not found.\r\n");
     goto err_out;
   } else {

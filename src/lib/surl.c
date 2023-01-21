@@ -283,9 +283,9 @@ int surl_find_line(surl_response *resp, char *buffer, size_t max_len, char *sear
   return 0;
 }
 
-int surl_get_json(surl_response *resp, char *buffer, size_t max_len, char *selector) {
+int surl_get_json(surl_response *resp, char *buffer, size_t max_len, char striphtml, char translit, char *selector) {
   size_t res_len = 0;
-  simple_serial_printf("JSON %zu %s\n", max_len, selector);
+  simple_serial_printf("JSON %zu %d %d %s\n", max_len, striphtml, translit, selector);
   simple_serial_gets(buffer, max_len);
 
   if (!strcmp(buffer, "<NOT_FOUND>\n") || !strcmp(buffer, "<NOT_JSON>\n")) {
