@@ -85,6 +85,7 @@ int api_get_timeline_posts(char *tlid, status ***posts) {
     for (i = 0; i < n_status; i++) {
       r[i] = status_new_from_json(resp, status_ids[i], 0);
     }
+    free(status_ids);
   }
   *posts = r;
 

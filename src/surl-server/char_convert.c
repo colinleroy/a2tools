@@ -11,10 +11,13 @@ static char *do_conv(char *in, char *from, char *to, size_t *new_len) {
   char *orig_out, *orig_in;
   size_t in_len, out_len;
   iconv_t conv;
-  int res;
+  size_t res;
 
   if (in == NULL) {
     return NULL;
+  }
+  if (strlen(in) == 0) {
+    return strdup(in);
   }
   orig_in = in;
 
@@ -30,7 +33,7 @@ static char *do_conv(char *in, char *from, char *to, size_t *new_len) {
   orig_out = malloc(out_len + 1);
   out = orig_out;
   res = iconv(conv, &in, &in_len, &out, &out_len);
-  if (res != (iconv_t)-1) {
+  if (res != (size_t)-1) {
     iconv_close(conv);
     *new_len = strlen(orig_out);
   } else {

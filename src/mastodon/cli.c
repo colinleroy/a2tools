@@ -45,12 +45,14 @@ static void print_timeline(char *tlid) {
       cprintf("%s shared\r\n", posts[i]->account->display_name);
       disp = posts[i]->reblog;
     }
-    cprintf("%s - %s\r\n", disp->account->display_name, posts[i]->created_at);
-    cprintf("%s\r\n", posts[i]->account->username);
-    cprintf("\r\n%s\r\n", posts[i]->content);
+    cprintf("%s - %s\r\n", disp->account->display_name, disp->created_at);
+    cprintf("%s\r\n", disp->account->username);
+    cprintf("\r\n%s\r\n", disp->content);
     
     cprintf("\r\n");
+    status_free(posts[i]);
   }
+  free(posts);
 }
 
 void cli(void) {

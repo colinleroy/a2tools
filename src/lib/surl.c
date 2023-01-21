@@ -279,7 +279,12 @@ int surl_find_line(surl_response *resp, char *buffer, size_t max_len, char *sear
   }
   res_len = atoi(buffer);
   simple_serial_read(buffer, sizeof(char), res_len);
-  buffer[res_len - 1] = '\0';
+
+  if (res_len > 0)
+    buffer[res_len - 1] = '\0';
+  else
+    buffer[0] = '\0';
+
   return 0;
 }
 
@@ -294,9 +299,14 @@ int surl_get_json(surl_response *resp, char *buffer, size_t max_len, char striph
   }
   res_len = atoi(buffer);
   simple_serial_read(buffer, sizeof(char), res_len);
-  buffer[res_len - 1] = '\0';
+
+  if (res_len > 0)
+    buffer[res_len - 1] = '\0';
+  else
+    buffer[0] = '\0';
+
   res_len = strlen(buffer);
-  if (buffer[res_len - 1] == '\n') {
+  if (res_len > 0 && buffer[res_len - 1] == '\n') {
     buffer[res_len - 1] = '\0';
   }
   return 0;

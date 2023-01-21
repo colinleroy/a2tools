@@ -34,7 +34,7 @@ char *jq_get(char *buffer, char *selector) {
   while (jv_is_valid(result = jq_next(jq))) {
     jv str;
     char *tmp;
-
+    printf("got jv kind %d\n", jv_get_kind(result));
     if (jv_get_kind(result) == JV_KIND_NULL
      || jv_get_kind(result) == JV_KIND_INVALID) {
        continue;
