@@ -21,6 +21,11 @@
 
 static unsigned char scrw = 255, scrh = 255;
 
+static char echo_on = 1;
+void echo(int on) {
+  echo_on = on;
+}
+
 #ifndef __CC65__
 #include <termios.h>
 #include <unistd.h>
@@ -70,14 +75,15 @@ char cgetc(void) {
   return c;
 }
 int kbhit(void) {
-  int n;
-  
+  static int n = 0;
+  if (n > 1) {
+    n--;
+    return 1;
+  }
   return (ioctl(fileno(stdin), FIONREAD, &n) == 0 && n > 0);
 }
 
 void cputsxy(int x, int y, char *buf) {
-  int i;
-
   if (scrw == 255 && scrh == 255) {
     screensize(&scrw, &scrh);
   }
@@ -133,7 +139,11 @@ char * __fastcall__ cgets(char *buf, size_t size) {
         cur_x++;
       }
     } else {
-      cputc(c);
+      if (echo_on) {
+        cputc(c);
+      } else {
+        cputc('*');
+      }
       buf[i] = c;
       i++;
       cur_x++;
@@ -329,7 +339,7 @@ int wherey(void) {
   return y - 1;
 }
 #endif
-void progress_bar(int x, int y, int width, unsigned int cur, unsigned int end) {
+void progress_bar(int x, int y, int width, size_t cur, size_t end) {
   unsigned long percent;
   unsigned int i;
 
