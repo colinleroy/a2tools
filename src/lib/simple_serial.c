@@ -235,7 +235,6 @@ void simple_serial_flush(void) {
   }
 
   /* flush */
-  printf("Flushing serial port\n");
   tcflush(fileno(ttyfp), TCIOFLUSH);
   tcdrain(fileno(ttyfp));
 

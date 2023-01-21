@@ -476,6 +476,10 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
       simple_serial_puts("UPLOAD\n");
       simple_serial_read(curlbuf->upload_buffer, sizeof(char), curlbuf->upload_size);
 
+      if (!strchr(upload_buf, ',')) {
+        printf("Unexpected reply\n");
+        return NULL;
+      }
       /* Massage an x-www-urlencoded form */
       if (strcmp(strchr(upload_buf, ','), ",1\n")) {
         curlbuf->upload_buffer = realloc(curlbuf->upload_buffer, curlbuf->upload_size + 1);
@@ -501,6 +505,11 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
 
       curlbuf->upload_buffer = malloc(curlbuf->upload_size);
       curlbuf->cur_upload_ptr = curlbuf->upload_buffer;
+
+      if (!strchr(upload_buf, ',')) {
+        printf("Unexpected reply\n");
+        return NULL;
+      }
 
       if (strcmp(strchr(upload_buf, ','), ",1\n")) {
         simple_serial_puts("ERROR\n");

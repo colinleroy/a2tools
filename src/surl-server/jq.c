@@ -31,10 +31,22 @@ char *jq_get(char *buffer, char *selector) {
   jq_start(jq, json_data, 0);
   
   while (jv_is_valid(result = jq_next(jq))) {
-    jv str = jv_dump_string(result, 0);
-    char *tmp = strdup(jv_string_value(str));
+    jv str;
+    char *tmp;
 
-    jv_free(str);
+    if (jv_get_kind(result) == JV_KIND_NULL
+     || jv_get_kind(result) == JV_KIND_INVALID) {
+       continue;
+    }
+
+    if (jv_get_kind(result) != JV_KIND_STRING) {
+      str = jv_dump_string(result, 0);
+      tmp = strdup(jv_string_value(str));
+      jv_free(str);
+    } else {
+      tmp = strdup(jv_string_value(result));
+      jv_free(result);
+    }
 
     out = realloc(out, out_len + strlen(tmp) + 2);
     strcpy(out + out_len, tmp);
