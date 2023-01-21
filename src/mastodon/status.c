@@ -28,12 +28,12 @@ status *status_new_from_json(surl_response *resp, char *id, char is_reblog) {
   
   selector = malloc(BUF_SIZE);
   snprintf(selector, BUF_SIZE, ".[]|select(.id==\"%s\").%screated_at", id, is_reblog?"reblog.":"");
-  surl_get_json(resp, s->created_at, 26, selector);
+  surl_get_json(resp, s->created_at, 26, 0, 0, selector);
 
   if (!is_reblog) {
     reblog_id = malloc(BUF_SIZE);
     snprintf(selector, BUF_SIZE, ".[]|select(.id==\"%s\").reblog.id", id);
-    surl_get_json(resp, reblog_id, BUF_SIZE, selector);
+    surl_get_json(resp, reblog_id, BUF_SIZE, 0, 0, selector);
     if (reblog_id[0] != '\0') {
       s->reblog = status_new_from_json(resp, reblog_id, 1);
     } else {
@@ -45,7 +45,7 @@ status *status_new_from_json(surl_response *resp, char *id, char is_reblog) {
 
   if (s->reblog == NULL) {
     snprintf(selector, BUF_SIZE, ".[]|select(.id==\"%s\").%scontent", id, is_reblog?"reblog.":"");
-    surl_get_json(resp, s->content, 1024, selector);
+    surl_get_json(resp, s->content, 1024, 1, 1, selector);
   } else {
     free(s->content);
     s->content = NULL;

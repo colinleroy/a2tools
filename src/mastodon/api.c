@@ -50,10 +50,10 @@ int api_get_profile(char **public_name, char **handle) {
   if (resp == NULL || resp->code < 200)
     goto err_out;
 
-  if (surl_get_json(resp, gen_buf, BUF_SIZE, ".display_name") == 0) {
+  if (surl_get_json(resp, gen_buf, BUF_SIZE, 1, 1, ".display_name") == 0) {
     *public_name = strdup(gen_buf);
   }
-  if (surl_get_json(resp, gen_buf, BUF_SIZE, ".username") == 0) {
+  if (surl_get_json(resp, gen_buf, BUF_SIZE, 1, 1, ".username") == 0) {
     *handle = strdup(gen_buf);
   }
 
@@ -78,7 +78,7 @@ int api_get_timeline_posts(char *tlid, status ***posts) {
   if (resp == NULL || resp->code < 200)
     goto err_out;
 
-  if (surl_get_json(resp, gen_buf, BUF_SIZE, ".[].id") == 0) {
+  if (surl_get_json(resp, gen_buf, BUF_SIZE, 0, 0, ".[].id") == 0) {
     char **status_ids = NULL;
     n_status = strsplit_in_place(gen_buf, '\n', &status_ids);
     r = malloc(n_status * sizeof(status *));

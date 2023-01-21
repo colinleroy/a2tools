@@ -27,6 +27,7 @@
 #include "math.h"
 #include "raw-session.h"
 #include "jq.h"
+#include "html2txt.h"
 
 #define BUFSIZE 1024
 
@@ -194,15 +195,21 @@ new_req:
     while (1) {
       size_t to_send;
       char *param;
+      char striphtml = 0, translit = 0;
 
       if (simple_serial_gets(reqbuf, BUFSIZE) != NULL) {
         if(!strncmp("SEND ", reqbuf, 5) 
         || !strncmp("HDRS ", reqbuf, 5)) {
           bufsize = atoi(reqbuf + 5);
-        } else if (!strncmp("FIND ", reqbuf, 5)
-                || !strncmp("JSON ", reqbuf, 5)) {
+        } else if (!strncmp("FIND ", reqbuf, 5)) {
           bufsize = atoi(reqbuf + 5);
           param = strchr(reqbuf + 5, ' ') + 1;
+          *strchr(param, '\n') = '\0';
+        } else if (!strncmp("JSON ", reqbuf, 5)) {
+          bufsize = atoi(reqbuf + 5);
+          striphtml = *(strchr(reqbuf + 5, ' ') + 1) == '1';
+          translit = *(strchr(reqbuf + 5, ' ') + 3) == '1';
+          param = strchr(reqbuf + 5, ' ') + 5;
           *strchr(param, '\n') = '\0';
         } else {
           printf("Aborted request\n");
@@ -264,10 +271,21 @@ new_req:
           simple_serial_write("<NOT_JSON>\n", sizeof(char), strlen("<NOT_JSON>\n"));
         } else {
           char *result = jq_get(response->buffer, param);
-          printf("JSON '%s' into %zu bytes: %s\n", param, bufsize, result != NULL ? result:"not found");
+          printf("JSON '%s' into %zu bytes%s%s: %s\n", param, bufsize, 
+                  striphtml ? ", striphtml":"",
+                  translit ? ", translit":"",
+                  result != NULL ? result:"not found");
           /* DEBUG */
           //printf("%s\n", response->buffer);
           if (result) {
+            if (striphtml) {
+              char *text = html2text(result);
+              free(result);
+              result = text;
+            }
+            if (translit) {
+              
+            }
             simple_serial_printf("%d\n", strlen(result) + 1);
             simple_serial_puts(result);
             simple_serial_putc('\n');
