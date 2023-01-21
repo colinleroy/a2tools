@@ -30,6 +30,7 @@
 #endif
 #include "math.h"
 #include "oauth.h"
+#include "cli.h"
 
 #define BUF_SIZE 255
 
@@ -52,7 +53,7 @@ static int save_settings(void) {
 
   fp = fopen("mastsettings", "w");
   if (fp == NULL) {
-    printf("Could not open settings file.\n");
+    dputs("Could not open settings file.\r\n");
     return -1;
   }
 
@@ -70,7 +71,7 @@ static int save_settings(void) {
                   oauth_token);
 
   if (r < 0 || fclose(fp) != 0) {
-    printf("Could not save settings file.\n");
+    dputs("Could not save settings file.\r\n");
     return -1;
   }
   return 0;
@@ -121,9 +122,9 @@ static int load_settings(void) {
 
     fclose(fp);
 
-    printf("Login as %s on %s [Y/n]? ", login, instance_url);
+    cprintf("Login as %s on %s [Y/n]? ", login, instance_url);
     c = cgetc();
-    printf("\n");
+    dputs("\r\n");
     if (c == 'n' || c == 'N') {
       goto reenter_settings;
     }
@@ -131,7 +132,7 @@ static int load_settings(void) {
     return 0;
   } else {
 reenter_settings:
-    printf("Your instance: ");
+    cputs("Your instance: ");
     cgets(instance_url, BUF_SIZE);
     *strchr(instance_url, '\n') = '\0';
 
@@ -139,8 +140,8 @@ reenter_settings:
       return -1;
     }
 
-    printf("If on a non-US keyboard, use @ instead of arobase.\n");
-    printf("Your login: ");
+    cputs("If on a non-US keyboard, use @ instead of arobase.\r\n");
+    cputs("Your login: ");
     cgets(login, BUF_SIZE);
     *strchr(login, '\n') = '\0';
     
@@ -167,10 +168,10 @@ int main(int argc, char **argv) {
       exit(1);
     }
     save_settings();
-    printf("Saved OAuth token.\n");
+    cputs("Saved OAuth token.\r\n");
   }
 
-  printf("Ready to go!\n");
+  cli();
 
   exit(0);
 }

@@ -264,7 +264,9 @@ new_req:
           simple_serial_write("<NOT_JSON>\n", sizeof(char), strlen("<NOT_JSON>\n"));
         } else {
           char *result = jq_get(response->buffer, param);
-          printf("JSON '%s' into %zu bytes: %s\n", param, bufsize, result != NULL ? "found":"not found");
+          printf("JSON '%s' into %zu bytes: %s\n", param, bufsize, result != NULL ? result:"not found");
+          /* DEBUG */
+          //printf("%s\n", response->buffer);
           if (result) {
             simple_serial_printf("%d\n", strlen(result) + 1);
             simple_serial_puts(result);

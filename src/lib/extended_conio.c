@@ -157,7 +157,7 @@ char * __fastcall__ cgets(char *buf, size_t size) {
       cur_y++;
       if (cur_y > scrh - 1) {
         gotoxy(scrw - 1, scrh - 1);
-        printf("\n");
+        cputs("\r\n");
         cputcxy(scrw - 1, scrh - 2, c);
         cur_y--;
       }
@@ -169,7 +169,7 @@ char * __fastcall__ cgets(char *buf, size_t size) {
     
   }
   cursor(prev_cursor);
-  printf("\n");
+  cputs("\r\n");
   buf[i] = '\0';
 
   return buf;

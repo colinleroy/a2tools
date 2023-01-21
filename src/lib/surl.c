@@ -295,6 +295,10 @@ int surl_get_json(surl_response *resp, char *buffer, size_t max_len, char *selec
   res_len = atoi(buffer);
   simple_serial_read(buffer, sizeof(char), res_len);
   buffer[res_len - 1] = '\0';
+  res_len = strlen(buffer);
+  if (buffer[res_len - 1] == '\n') {
+    buffer[res_len - 1] = '\0';
+  }
   return 0;
 }
 
