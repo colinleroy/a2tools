@@ -1,5 +1,9 @@
 PROGRAM=mastodon
-SOURCES := main.c oauth.c ../lib/simple_serial.c ../lib/extended_conio.c ../lib/extended_string.c ../lib/surl.c
+SOURCES := main.c oauth.c cli.c api.c \
+	account.c status.c \
+	../lib/simple_serial.c ../lib/extended_conio.c \
+	../lib/extended_string.c ../lib/surl.c
+
 CC65SOURCES := ../lib/dputs.s ../lib/dputc.s ../lib/scroll.s
 GCCSOURCES := ../lib/extended_string.c
 DEPS := 
