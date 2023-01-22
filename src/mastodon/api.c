@@ -12,6 +12,7 @@
 
 #define ACCOUNTS_ENDPOINT "/api/v1/accounts"
 #define TIMELINE_ENDPOINT "/api/v1/timelines"
+#define STATUS_ENDPOINT   "/api/v1/statuses/"
 
 static unsigned char scrw, scrh;
 
@@ -67,11 +68,11 @@ err_out:
   return r;
 }
 
-int api_get_timeline_posts(char *tlid, status ***posts) {
+int api_get_timeline_posts(char *tlid, char ***post_ids) {
   surl_response *resp;
-  status **r = NULL;
   char *endpoint;
-  int n_status, i;
+  int n_status;
+  char *raw;
 
   endpoint = malloc(BUF_SIZE);
   if (endpoint == NULL) {
@@ -79,31 +80,47 @@ int api_get_timeline_posts(char *tlid, status ***posts) {
     return -1;
   }
 
-  snprintf(endpoint, BUF_SIZE, "%s/%s?limit=5", TIMELINE_ENDPOINT, tlid);
+  snprintf(endpoint, BUF_SIZE, "%s/%s?limit=20", TIMELINE_ENDPOINT, tlid);
   resp = get_surl_for_endpoint("GET", endpoint);
   free(endpoint);
   
-  *posts = NULL;
+  *post_ids = NULL;
 
   if (resp == NULL || resp->code < 200)
     goto err_out;
 
-  if (surl_get_json(resp, gen_buf, BUF_SIZE, 0, 0, ".[].id") == 0) {
-    char **status_ids = NULL;
-    n_status = strsplit_in_place(gen_buf, '\n', &status_ids);
-    r = malloc(n_status * sizeof(status *));
-    if (r == NULL) {
-      printf("No more memory at %s:%d\n",__FILE__, __LINE__);
-      return -1;
-    }
-    for (i = 0; i < n_status; i++) {
-      r[i] = status_new_from_json(resp, status_ids[i], 0);
-    }
-    free(status_ids);
+  raw = malloc(512);
+  if (surl_get_json(resp, raw, 512, 0, 0, ".[].id") == 0) {
+    n_status = strsplit(raw, '\n', post_ids);
   }
-  *posts = r;
+  free(raw);
 
 err_out:
   surl_response_free(resp);
   return n_status;
+}
+
+status *api_get_status(char *status_id) {
+  surl_response *resp;
+  status *s;
+  char *endpoint;
+
+  endpoint = malloc(BUF_SIZE);
+  if (endpoint == NULL) {
+    printf("No more memory at %s:%d\n",__FILE__, __LINE__);
+    return NULL;
+  }
+
+  snprintf(endpoint, BUF_SIZE, "%s/%s", STATUS_ENDPOINT, status_id);
+  resp = get_surl_for_endpoint("GET", endpoint);
+  free(endpoint);
+  
+  if (resp == NULL || resp->code < 200)
+    goto err_out;
+
+  s = status_new_from_json(resp, status_id, 0);
+
+err_out:
+  surl_response_free(resp);
+  return s;
 }

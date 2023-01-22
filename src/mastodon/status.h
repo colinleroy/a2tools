@@ -11,6 +11,7 @@ struct _status {
   char *content;
   account *account;
   status *reblog;
+  signed char displayed_at;
 };
 
 status *status_new(void);
