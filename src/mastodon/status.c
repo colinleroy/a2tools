@@ -18,6 +18,7 @@ status *status_new(void) {
     return NULL;
   }
   memset(s, 0, sizeof(status));
+  s->displayed_at = -1;
   return s;
 }
 
@@ -45,7 +46,7 @@ status *status_new_from_json(surl_response *resp, char *id, char is_reblog) {
     return NULL;
   }
 
-  snprintf(selector, SELECTOR_SIZE, ".[]|select(.id==\"%s\").%screated_at", id, is_reblog?"reblog.":"");
+  snprintf(selector, SELECTOR_SIZE, ".%screated_at", is_reblog?"reblog.":"");
   surl_get_json(resp, s->created_at, 26, 0, 0, selector);
 
   if (!is_reblog) {
@@ -55,20 +56,17 @@ status *status_new_from_json(surl_response *resp, char *id, char is_reblog) {
       return NULL;
     }
 
-    snprintf(selector, SELECTOR_SIZE, ".[]|select(.id==\"%s\").reblog.id", id);
+    snprintf(selector, SELECTOR_SIZE, ".reblog.id");
     surl_get_json(resp, reblog_id, BUF_SIZE, 0, 0, selector);
     if (reblog_id[0] != '\0') {
-      s->reblog = status_new_from_json(resp, id, 1);
-      free(s->reblog->id);
-      s->reblog->id = reblog_id;
-    } else {
-      free(reblog_id);
+      s->reblog = status_new_from_json(resp, reblog_id, 1);
     }
+    free(reblog_id);
     reblog_id = NULL;
   }
 
   if (s->reblog == NULL) {
-    snprintf(selector, SELECTOR_SIZE, ".[]|select(.id==\"%s\").%scontent", id, is_reblog?"reblog.":"");
+    snprintf(selector, SELECTOR_SIZE, ".%scontent", is_reblog?"reblog.":"");
     surl_get_json(resp, s->content, TL_STATUS_MAX_LEN, 1, 1, selector);
     s->content[TL_STATUS_MAX_LEN - 4] = '.';
     s->content[TL_STATUS_MAX_LEN - 3] = '.';
@@ -78,7 +76,7 @@ status *status_new_from_json(surl_response *resp, char *id, char is_reblog) {
     s->content = NULL;
   }
 
-  s->account = account_new_from_status_json(resp, id, is_reblog);
+  s->account = account_new_from_status_json(resp, is_reblog);
   return s;
 }
 

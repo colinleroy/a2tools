@@ -289,13 +289,17 @@ new_req:
               free(result);
               result = text;
             }
+
+            char *trimmed = trim(result);
+            free(result);
+            result = trimmed;
+
             if (result && strlen(result) >= bufsize) {
               result[bufsize - 1] = '\0';
             }
-            printf(" now %s\n", result);
-            simple_serial_printf("%d\n", strlen(result) + 1);
+            printf(" sending (%d)'%s'\n", strlen(result), result);
+            simple_serial_printf("%d\n", strlen(result));
             simple_serial_puts(result);
-            simple_serial_putc('\n');
             free(result);
           } else {
             simple_serial_write("<NOT_FOUND>\n", sizeof(char), strlen("<NOT_FOUND>\n"));
