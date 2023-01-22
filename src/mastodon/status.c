@@ -25,7 +25,7 @@ status *status_new(void) {
 #ifdef __CC65__
 #pragma static-locals (push,off) /* need reentrancy */
 #endif
-status *status_new_from_json(surl_response *resp, char *id, char is_reblog) {
+status *status_new_from_json(surl_response *resp, char *id, char full, char is_reblog) {
   status *s;
   char *reblog_id;
 
@@ -40,7 +40,7 @@ status *status_new_from_json(surl_response *resp, char *id, char is_reblog) {
     printf("No more memory at %s:%d\n",__FILE__, __LINE__);
     return NULL;
   }
-  s->content = malloc(TL_STATUS_MAX_LEN);
+  s->content = malloc(full ? 2048 : TL_STATUS_MAX_LEN);
   if (s->content == NULL) {
     printf("No more memory at %s:%d\n",__FILE__, __LINE__);
     return NULL;
@@ -59,7 +59,7 @@ status *status_new_from_json(surl_response *resp, char *id, char is_reblog) {
     snprintf(selector, SELECTOR_SIZE, ".reblog.id");
     surl_get_json(resp, reblog_id, BUF_SIZE, 0, 0, selector);
     if (reblog_id[0] != '\0') {
-      s->reblog = status_new_from_json(resp, reblog_id, 1);
+      s->reblog = status_new_from_json(resp, reblog_id, full, 1);
     }
     free(reblog_id);
     reblog_id = NULL;
@@ -67,10 +67,12 @@ status *status_new_from_json(surl_response *resp, char *id, char is_reblog) {
 
   if (s->reblog == NULL) {
     snprintf(selector, SELECTOR_SIZE, ".%scontent", is_reblog?"reblog.":"");
-    surl_get_json(resp, s->content, TL_STATUS_MAX_LEN, 1, 1, selector);
-    s->content[TL_STATUS_MAX_LEN - 4] = '.';
-    s->content[TL_STATUS_MAX_LEN - 3] = '.';
-    s->content[TL_STATUS_MAX_LEN - 2] = '.';
+    surl_get_json(resp, s->content, full ? 2048 : TL_STATUS_MAX_LEN, 1, 1, selector);
+    if (!full) {
+      s->content[TL_STATUS_MAX_LEN - 4] = '.';
+      s->content[TL_STATUS_MAX_LEN - 3] = '.';
+      s->content[TL_STATUS_MAX_LEN - 2] = '.';
+    }
   } else {
     free(s->content);
     s->content = NULL;
