@@ -117,7 +117,6 @@ static void load_next_posts(char *tlid) {
 
   dputs(LOADING_TOOT_MSG);
   for (i = 0; i < shift; i++) {
-    //printf("freeing %d - %s\n", i, displayed_posts[i] ? displayed_posts[i]->id:"NULL");
     status_free(displayed_posts[i]);
     free(ids[i]);
   }
@@ -268,4 +267,32 @@ void cli(void) {
         break;
     }
   }
+}
+
+char *instance_url = NULL;
+char *client_id = NULL;
+char *client_secret = NULL;
+char *login = NULL;
+char *password = NULL;
+char *oauth_code = NULL;
+char *oauth_token = NULL;
+
+int main(int argc, char **argv) {
+  if (argc < 3) {
+    printf("Missing instance_url and/or oauth_token parameters.\n");
+  }
+
+  videomode(VIDEOMODE_80COL);
+  screensize(&scrw, &scrh);
+
+#ifdef __CC65__
+  cprintf("Available memory: %zu/%zu bytes\r\n",
+          _heapmaxavail(), _heapmemavail());
+  cgetc();
+#endif
+
+  instance_url = argv[1];
+  oauth_token = argv[2];
+  cli();
+  exit(0);
 }

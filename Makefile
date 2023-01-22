@@ -10,6 +10,7 @@ homectrl_disk_PROGS = src/a2recv/a2recv.bin \
 				src/homecontrol-client/grphview.bin \
 
 mastapple_disk_PROGS = src/mastodon/mastodon.bin \
+				src/mastodon/mastocli.bin \
 				src/stp/stp.bin \
 
 CLEANDISK = disks/basic-empty.dsk

@@ -152,7 +152,7 @@ reenter_settings:
 
 int main(int argc, char **argv) {
   surl_response *response = NULL;
-  
+  char *params = malloc(BUF_SIZE);
   videomode(VIDEOMODE_80COL);
   screensize(&scrw, &scrh);
 
@@ -184,10 +184,13 @@ int main(int argc, char **argv) {
 #ifdef __CC65__
   cprintf("Available memory: %zu/%zu bytes\r\n",
           _heapmaxavail(), _heapmemavail());
-  cgetc();
 #endif
-
-  cli();
-
+  
+  snprintf(params, BUF_SIZE, "%s %s", instance_url, oauth_token);
+#ifdef __CC65__
+  exec("mastocli", params);
+#else
+  printf("exec(mastocli %s)\n",params);
+#endif
   exit(0);
 }
