@@ -83,13 +83,53 @@ int kbhit(void) {
   return (ioctl(fileno(stdin), FIONREAD, &n) == 0 && n > 0);
 }
 
-void cputsxy(int x, int y, char *buf) {
+void cputs(char *buf) {
+  printf("%s", buf);
+  fflush(stdout);
+}
+
+void cputsxy(unsigned char x, unsigned char y, char *buf) {
   if (scrw == 255 && scrh == 255) {
     screensize(&scrw, &scrh);
   }
 
   gotoxy(x, y);
   printf("%s", buf);
+  fflush(stdout);
+}
+
+void cputcxy(unsigned char x, unsigned char y, char buf) {
+  if (scrw == 255 && scrh == 255) {
+    screensize(&scrw, &scrh);
+  }
+
+  gotoxy(x, y);
+  printf("%c", buf);
+  fflush(stdout);
+}
+
+void dputsxy(unsigned char x, unsigned char y, char *buf) {
+  if (scrw == 255 && scrh == 255) {
+    screensize(&scrw, &scrh);
+  }
+
+  gotoxy(x, y);
+  printf("%s", buf);
+  fflush(stdout);
+}
+
+void dputc(char buf) {
+  printf("%c", buf);
+  fflush(stdout);
+}
+
+void dputcxy(unsigned char x, unsigned char y, char buf) {
+  if (scrw == 255 && scrh == 255) {
+    screensize(&scrw, &scrh);
+  }
+
+  gotoxy(x, y);
+  printf("%c", buf);
   fflush(stdout);
 }
 
@@ -276,6 +316,41 @@ void set_scrollwindow(unsigned char top, unsigned char bottom) {
   __asm__("sta $22"); /* store WNDTOP */
   __asm__("lda %v", b);
   __asm__("sta $23"); /* store WNDBTM */
+
+#endif
+}
+
+void get_hscrollwindow(unsigned char *left, unsigned char *width){
+#ifdef __CC65__
+  static char l, w;
+
+  __asm__("lda $20"); /* get WNDLFT */
+  __asm__("sta %v", l);
+  __asm__("lda $21"); /* get WNDWDTH */
+  __asm__("sta %v", w);
+  
+  *left = l;
+  *width = w;
+#else
+  *left = 0;
+  *width = 80;
+#endif
+
+}
+
+void set_hscrollwindow(unsigned char left, unsigned char width) {
+#ifdef __CC65__
+  static char l, w;
+  l = left;
+  w = width;
+
+  if (l >= 79)
+    return;
+
+  __asm__("lda %v", l);
+  __asm__("sta $20"); /* store WNDLFT */
+  __asm__("lda %v", w);
+  __asm__("sta $21"); /* store WNDWDTH */
 
 #endif
 }
