@@ -165,10 +165,10 @@ int do_login(void) {
     login_required = 1;
     cputs("Login required.\r\n");
     cputs("Enter password: ");
-    password = malloc(BUF_SIZE + 1);
+    password = malloc(50);
     
     echo(0);
-    cgets(password, BUF_SIZE);
+    cgets(password, 50);
     echo(1);
     *strchr(password, '\n') = '\0';
   } else {
@@ -416,7 +416,7 @@ int get_oauth_token(void) {
   resp = NULL;
 
   if (!oauth_token) {
-    oauth_token = malloc(BUF_SIZE);
+    oauth_token = malloc(50);
   }
 
   oauth_url = malloc(BUF_SIZE);

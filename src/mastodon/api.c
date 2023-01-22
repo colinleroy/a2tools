@@ -6,8 +6,7 @@
 #include "simple_serial.h"
 #include "extended_conio.h"
 #include "extended_string.h"
-#include "account.h"
-#include "status.h"
+#include "api.h"
 
 #define BUF_SIZE 255
 
@@ -20,6 +19,8 @@ static char gen_buf[BUF_SIZE];
 
 extern char *instance_url;
 extern char *oauth_token;
+
+char selector[SELECTOR_SIZE];
 
 static surl_response *get_surl_for_endpoint(char *method, char *endpoint) {
   static char **token_hdr = NULL;
@@ -43,6 +44,10 @@ int api_get_profile(char **public_name, char **handle) {
   char *endpoint;
 
   endpoint = malloc(BUF_SIZE);
+  if (endpoint == NULL) {
+    printf("No more memory at %s:%d\n",__FILE__, __LINE__);
+    return -1;
+  }
   snprintf(endpoint, BUF_SIZE, "%s/verify_credentials", ACCOUNTS_ENDPOINT);
   resp = get_surl_for_endpoint("GET", endpoint);
   free(endpoint);
@@ -69,6 +74,11 @@ int api_get_timeline_posts(char *tlid, status ***posts) {
   int n_status, i;
 
   endpoint = malloc(BUF_SIZE);
+  if (endpoint == NULL) {
+    printf("No more memory at %s:%d\n",__FILE__, __LINE__);
+    return -1;
+  }
+
   snprintf(endpoint, BUF_SIZE, "%s/%s?limit=5", TIMELINE_ENDPOINT, tlid);
   resp = get_surl_for_endpoint("GET", endpoint);
   free(endpoint);
@@ -82,6 +92,10 @@ int api_get_timeline_posts(char *tlid, status ***posts) {
     char **status_ids = NULL;
     n_status = strsplit_in_place(gen_buf, '\n', &status_ids);
     r = malloc(n_status * sizeof(status *));
+    if (r == NULL) {
+      printf("No more memory at %s:%d\n",__FILE__, __LINE__);
+      return -1;
+    }
     for (i = 0; i < n_status; i++) {
       r[i] = status_new_from_json(resp, status_ids[i], 0);
     }

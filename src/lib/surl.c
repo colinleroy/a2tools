@@ -70,7 +70,7 @@ surl_response *surl_start_request(const char *method, const char *url, char **he
 
   resp = malloc(sizeof(surl_response));
   if (resp == NULL) {
-    //DEBUG("cant alloc resp\n");
+    printf("No more memory at %s:%d\n",__FILE__, __LINE__);
     return NULL;
   }
 

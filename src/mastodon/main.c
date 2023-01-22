@@ -88,11 +88,11 @@ static int load_settings(void) {
   fp = fopen("mastsettings", "r");
 
   instance_url  = malloc(BUF_SIZE);
-  client_id     = malloc(BUF_SIZE);
-  client_secret = malloc(BUF_SIZE);
-  login         = malloc(BUF_SIZE);
-  oauth_code    = malloc(BUF_SIZE);
-  oauth_token   = malloc(BUF_SIZE);
+  client_id     = malloc(50);
+  client_secret = malloc(50);
+  login         = malloc(50);
+  oauth_code    = malloc(50);
+  oauth_token   = malloc(50);
 
   instance_url[0] = '\0';
   client_id[0] = '\0';
@@ -169,7 +169,23 @@ int main(int argc, char **argv) {
     }
     save_settings();
     cputs("Saved OAuth token.\r\n");
+
   }
+  /* We don't need those anymore */
+  free(client_id);
+  free(client_secret);
+  free(login);
+  free(oauth_code);
+  client_id = NULL;
+  client_secret = NULL;
+  login = NULL;
+  oauth_code = NULL;
+
+#ifdef __CC65__
+  cprintf("Available memory: %zu/%zu bytes\r\n",
+          _heapmaxavail(), _heapmemavail());
+  cgetc();
+#endif
 
   cli();
 
