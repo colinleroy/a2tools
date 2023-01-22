@@ -9,6 +9,7 @@
 #include "dputc.h"
 #include "scroll.h"
 #include "api.h"
+#include "math.h"
 
 #define BUF_SIZE 255
 
@@ -89,11 +90,13 @@ static int print_status(status *s) {
     return -1;
   }
   dputs("\r\n");
-
   if (wherey() == scrh - 1) {
     return -1;
   }
   chline(scrw - LEFT_COL_WIDTH - 1);
+  if (wherey() == scrh - 1) {
+    return -1;
+  }
 
   return 0;
 }
@@ -103,20 +106,17 @@ static status **displayed_posts = NULL;
 static char last_displayed_post = 0;
 static char n_posts = 0;
 static signed char *post_height = NULL;
+#define N_STATUS_TO_LOAD 10
+#define LOADING_TOOT_MSG "Loading toot..."
+
 static void print_timeline(char *tlid) {
   static char **ids = NULL;
   int i;
   char bottom = 0;
   
   if (ids == NULL) {
-    n_posts = api_get_timeline_posts(tlid, &ids);
-    if (displayed_posts) {
-      for (i = 0; i < last_displayed_post; i++) {
-        status_free(displayed_posts[i]);
-      }
-      free(displayed_posts);
-      free(post_height);
-    }
+    ids = malloc(N_STATUS_TO_LOAD * sizeof(char *));
+    n_posts = api_get_timeline_posts(tlid, N_STATUS_TO_LOAD, NULL, ids);
     displayed_posts = malloc(n_posts * sizeof(status *));
     memset(displayed_posts, 0, n_posts * sizeof(status *));
     post_height = malloc(n_posts);
@@ -125,6 +125,7 @@ static void print_timeline(char *tlid) {
 
   /* set scrollwindow */
   set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
+update:
   gotoxy(0, 0);
   for (i = first_displayed_post; i < n_posts; i++) {
     if (!bottom) {
@@ -132,22 +133,73 @@ static void print_timeline(char *tlid) {
 
       if (displayed_posts[i] != NULL)
         disp = displayed_posts[i];
-      else
+      else {
+#ifdef __CC65__
+        cputs(LOADING_TOOT_MSG);
+        gotox(0);
+#endif
         disp = api_get_status(ids[i]);
-
+#ifdef __CC65__
+        cputs("                ");
+        gotox(0);
+#endif
+      }
       displayed_posts[i] = disp;
+
       if (bottom == 0) {
         bottom = print_status(disp);
+        //printf("showing %s\n", disp->id);
         if (!bottom) {
           post_height[i] = wherey() - disp->displayed_at;
         }
         last_displayed_post = i;
+        if (bottom && i < n_posts - 1) {
+          /* load the next one if needed */
+          if (displayed_posts[i + 1] == NULL) {
+            displayed_posts[i + 1] = api_get_status(ids[i + 1]);
+          }
+        }
       }
     }
   }
-  /* Need to free ids when refreshing */
-  // free(ids[i]);
-  // free(ids);
+  /* Load one up for fast scroll */
+  if (first_displayed_post > 0 && displayed_posts[first_displayed_post - 1] == NULL) {
+    displayed_posts[first_displayed_post - 1] = api_get_status(ids[first_displayed_post - 1]);
+  }
+
+  if (bottom == 0 && i == n_posts) {
+    char shift = N_STATUS_TO_LOAD / 2;
+    char *last_id;
+    int loaded;
+#ifdef __CC65__
+    gotox(0);
+#endif
+    dputs(LOADING_TOOT_MSG);
+    for (i = 0; i < shift; i++) {
+      //printf("freeing %d - %s\n", i, displayed_posts[i] ? displayed_posts[i]->id:"NULL");
+      status_free(displayed_posts[i]);
+      free(ids[i]);
+    }
+
+    last_id = strdup(ids[n_posts - 1]);
+    for (i = shift; i < n_posts; i++) {
+      //printf("shifting %d to %d\n", i, i-shift);
+      displayed_posts[i - shift] = displayed_posts[i];
+      post_height[i - shift] = post_height[i];
+      ids[i - shift] = ids[i];
+
+      displayed_posts[i] = NULL;
+      post_height[i] = -1;
+      ids[i] = NULL;
+    }
+
+    loaded = api_get_timeline_posts(tlid, N_STATUS_TO_LOAD / 2, last_id, ids + shift);
+    free(last_id);
+    n_posts += ((N_STATUS_TO_LOAD / 2) - loaded);
+
+    first_displayed_post -= shift;
+    goto update;
+  }
 
   set_hscrollwindow(0, scrw);
 }
@@ -156,9 +208,9 @@ static void shift_posts_down(void) {
   char i;
   char scroll_val = post_height[first_displayed_post];
   first_displayed_post++;
-  /* Remove posts scrolled up */
+  /* Remove posts scrolled up, keeping just one for fast scroll */
   if (first_displayed_post > 0) {
-    for (i = 0; i < first_displayed_post && i < last_displayed_post; i++) {
+    for (i = 0; i < first_displayed_post - 1 && i < last_displayed_post - 1; i++) {
       if (displayed_posts[i]) {
         status_free(displayed_posts[i]);
         displayed_posts[i] = NULL;
@@ -176,9 +228,9 @@ static void shift_posts_up(void) {
   int i;
   char scrollval = post_height[first_displayed_post - 1];
   first_displayed_post--;
-  /* Remove posts scrolled down */
+  /* Remove posts scrolled down, keeping just one for fast scroll */
   if (last_displayed_post > 0) {
-    for (i = last_displayed_post; i < n_posts; i++) {
+    for (i = last_displayed_post + 1; i < n_posts; i++) {
       if (displayed_posts[i]) {
         status_free(displayed_posts[i]);
         displayed_posts[i] = NULL;

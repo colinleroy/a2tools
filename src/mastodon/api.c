@@ -68,7 +68,7 @@ err_out:
   return r;
 }
 
-int api_get_timeline_posts(char *tlid, char ***post_ids) {
+int api_get_timeline_posts(char *tlid, char to_load, char *first_to_load, char **post_ids) {
   surl_response *resp;
   char *endpoint;
   int n_status;
@@ -80,18 +80,24 @@ int api_get_timeline_posts(char *tlid, char ***post_ids) {
     return -1;
   }
 
-  snprintf(endpoint, BUF_SIZE, "%s/%s?limit=20", TIMELINE_ENDPOINT, tlid);
+  snprintf(endpoint, BUF_SIZE, "%s/%s?limit=%d%s%s", TIMELINE_ENDPOINT, tlid, to_load,
+            first_to_load ? "&max_id=" : "",
+            first_to_load ? first_to_load : "");
   resp = get_surl_for_endpoint("GET", endpoint);
   free(endpoint);
   
-  *post_ids = NULL;
-
   if (resp == NULL || resp->code < 200)
     goto err_out;
 
   raw = malloc(512);
   if (surl_get_json(resp, raw, 512, 0, 0, ".[].id") == 0) {
-    n_status = strsplit(raw, '\n', post_ids);
+    char **tmp;
+    int i;
+    n_status = strsplit(raw, '\n', &tmp);
+    for (i = 0; i < n_status; i++) {
+      post_ids[i] = tmp[i];
+    }
+    free(tmp);
   }
   free(raw);
 
