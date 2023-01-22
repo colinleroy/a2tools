@@ -68,7 +68,7 @@ err_out:
   return r;
 }
 
-int api_get_timeline_posts(char *tlid, char to_load, char *first_to_load, char **post_ids) {
+int api_get_timeline_posts(char *tlid, char to_load, char *last_to_load, char *first_to_load, char **post_ids) {
   surl_response *resp;
   char *endpoint;
   int n_status;
@@ -80,9 +80,12 @@ int api_get_timeline_posts(char *tlid, char to_load, char *first_to_load, char *
     return -1;
   }
 
-  snprintf(endpoint, BUF_SIZE, "%s/%s?limit=%d%s%s", TIMELINE_ENDPOINT, tlid, to_load,
+  snprintf(endpoint, BUF_SIZE, "%s/%s?limit=%d%s%s%s%s", TIMELINE_ENDPOINT, tlid, to_load,
             first_to_load ? "&max_id=" : "",
-            first_to_load ? first_to_load : "");
+            first_to_load ? first_to_load : "",
+            last_to_load ? "&min_id=" : "",
+            last_to_load ? last_to_load : ""
+          );
   resp = get_surl_for_endpoint("GET", endpoint);
   free(endpoint);
   

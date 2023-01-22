@@ -20,6 +20,8 @@ static unsigned char scrw, scrh;
 static char *my_public_name = NULL;
 static char *my_handle = NULL;
 
+static void print_timeline(char *tlid);
+
 static void print_header(void) {
   //print_logo();
 
@@ -107,7 +109,9 @@ static status **displayed_posts = NULL;
 static char last_displayed_post = 0;
 static char n_posts = 0;
 static signed char *post_height = NULL;
-#define N_STATUS_TO_LOAD 10
+char newer_posts = 0;
+
+#define N_STATUS_TO_LOAD 6
 #define LOADING_TOOT_MSG "Loading toot..."
 
 static void load_next_posts(char *tlid) {
@@ -133,10 +137,47 @@ static void load_next_posts(char *tlid) {
   }
   last_id = ids[i - shift - 1];
 
-  loaded = api_get_timeline_posts(tlid, N_STATUS_TO_LOAD / 2, last_id, ids + shift);
+  loaded = api_get_timeline_posts(tlid, N_STATUS_TO_LOAD / 2, NULL, last_id, ids + shift);
   n_posts += ((N_STATUS_TO_LOAD / 2) - loaded);
 
   first_displayed_post -= shift;
+}
+
+static void load_prev_posts(char *tlid) {
+  char c;
+  int i;
+  set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
+
+  scrolldn();
+  scrolldn();
+  
+  gotoxy(0, 0);
+  dputs("All caught up! Maybe reload? [y/N] ");
+  gotoxy(0,1);
+  chline(scrw - LEFT_COL_WIDTH - 1);
+
+  c = cgetc();
+  
+  if (c == 'Y' || c == 'y') {
+    for (i = 0; i < n_posts; i++) {
+      free(ids[i]);
+      status_free(displayed_posts[i]);
+    }
+    free(ids);
+    free(displayed_posts);
+    free(post_height);
+    ids = NULL;
+    displayed_posts = NULL;
+    post_height = NULL;
+    clrscr();
+    return;
+  }
+
+  scrollup();
+  scrollup();
+
+  set_hscrollwindow(0, scrw);
+  print_timeline(tlid);
 }
 
 static void print_timeline(char *tlid) {
@@ -145,7 +186,7 @@ static void print_timeline(char *tlid) {
   
   if (ids == NULL) {
     ids = malloc(N_STATUS_TO_LOAD * sizeof(char *));
-    n_posts = api_get_timeline_posts(tlid, N_STATUS_TO_LOAD, NULL, ids);
+    n_posts = api_get_timeline_posts(tlid, N_STATUS_TO_LOAD, NULL, NULL, ids);
     displayed_posts = malloc(n_posts * sizeof(status *));
     memset(displayed_posts, 0, n_posts * sizeof(status *));
     post_height = malloc(n_posts);
@@ -238,7 +279,7 @@ static void shift_posts_up(void) {
     }
   }
   set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
-  for (i = 0; i < scrollval; i++) {
+  for (i = 0; scrollval > 0 && i < scrollval; i++) {
     scrolldn();
   }
   set_hscrollwindow(0, scrw);
@@ -262,8 +303,9 @@ void cli(void) {
       case CH_CURS_UP:
         if (first_displayed_post > 0)
           shift_posts_up();
-        else
-          printf("%c", 0x07);
+        else {
+          load_prev_posts(HOME_TIMELINE);
+        }
         break;
     }
   }
@@ -294,5 +336,6 @@ int main(int argc, char **argv) {
   instance_url = argv[1];
   oauth_token = argv[2];
   cli();
+  videomode(VIDEOMODE_40COL);
   exit(0);
 }
