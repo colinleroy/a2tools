@@ -101,6 +101,7 @@ static int print_status(status *s) {
   return 0;
 }
 
+static char **ids = NULL;
 static char first_displayed_post = 0;
 static status **displayed_posts = NULL;
 static char last_displayed_post = 0;
@@ -109,8 +110,37 @@ static signed char *post_height = NULL;
 #define N_STATUS_TO_LOAD 10
 #define LOADING_TOOT_MSG "Loading toot..."
 
+static void load_next_posts(char *tlid) {
+  char *last_id;
+  char shift = N_STATUS_TO_LOAD / 2;
+  int loaded, i;
+
+  dputs(LOADING_TOOT_MSG);
+  for (i = 0; i < shift; i++) {
+    //printf("freeing %d - %s\n", i, displayed_posts[i] ? displayed_posts[i]->id:"NULL");
+    status_free(displayed_posts[i]);
+    free(ids[i]);
+  }
+
+  for (i = shift; i < n_posts; i++) {
+    //printf("shifting %d to %d\n", i, i-shift);
+    displayed_posts[i - shift] = displayed_posts[i];
+    post_height[i - shift] = post_height[i];
+    ids[i - shift] = ids[i];
+
+    displayed_posts[i] = NULL;
+    post_height[i] = -1;
+    ids[i] = NULL;
+  }
+  last_id = ids[i - shift - 1];
+
+  loaded = api_get_timeline_posts(tlid, N_STATUS_TO_LOAD / 2, last_id, ids + shift);
+  n_posts += ((N_STATUS_TO_LOAD / 2) - loaded);
+
+  first_displayed_post -= shift;
+}
+
 static void print_timeline(char *tlid) {
-  static char **ids = NULL;
   int i;
   char bottom = 0;
   
@@ -168,36 +198,7 @@ update:
   }
 
   if (bottom == 0 && i == n_posts) {
-    char shift = N_STATUS_TO_LOAD / 2;
-    char *last_id;
-    int loaded;
-#ifdef __CC65__
-    gotox(0);
-#endif
-    dputs(LOADING_TOOT_MSG);
-    for (i = 0; i < shift; i++) {
-      //printf("freeing %d - %s\n", i, displayed_posts[i] ? displayed_posts[i]->id:"NULL");
-      status_free(displayed_posts[i]);
-      free(ids[i]);
-    }
-
-    last_id = strdup(ids[n_posts - 1]);
-    for (i = shift; i < n_posts; i++) {
-      //printf("shifting %d to %d\n", i, i-shift);
-      displayed_posts[i - shift] = displayed_posts[i];
-      post_height[i - shift] = post_height[i];
-      ids[i - shift] = ids[i];
-
-      displayed_posts[i] = NULL;
-      post_height[i] = -1;
-      ids[i] = NULL;
-    }
-
-    loaded = api_get_timeline_posts(tlid, N_STATUS_TO_LOAD / 2, last_id, ids + shift);
-    free(last_id);
-    n_posts += ((N_STATUS_TO_LOAD / 2) - loaded);
-
-    first_displayed_post -= shift;
+    load_next_posts(tlid);
     goto update;
   }
 
