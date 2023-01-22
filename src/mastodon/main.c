@@ -186,6 +186,11 @@ int main(int argc, char **argv) {
           _heapmaxavail(), _heapmemavail());
 #endif
   
+  if (oauth_token == NULL || oauth_token[0] == '\0') {
+    printf("Could not login :(\n");
+    exit(1);
+  }
+
   snprintf(params, BUF_SIZE, "%s %s", instance_url, oauth_token);
 #ifdef __CC65__
   exec("mastocli", params);
