@@ -1,5 +1,8 @@
-PROGRAM=mastodon
-SOURCES := main.c oauth.c cli.c api.c \
+mastodon_SOURCES := main.c oauth.c \
+	../lib/simple_serial.c ../lib/extended_conio.c \
+	../lib/extended_string.c ../lib/surl.c
+
+mastocli_SOURCES := cli.c api.c \
 	account.c status.c \
 	../lib/simple_serial.c ../lib/extended_conio.c \
 	../lib/extended_string.c ../lib/surl.c
@@ -16,16 +19,20 @@ GCCLDFLAGS =
 
 .PHONY: all clean
 
-all: $(PROGRAM).bin $(PROGRAM).x86_64
+all: mastodon.bin mastodon.x86_64 mastocli.bin mastocli.x86_64
 
-$(PROGRAM).bin: $(SOURCES) $(CC65SOURCES)
+mastodon.bin: $(mastodon_SOURCES) $(CC65SOURCES)
+	cl65 $(CFLAGS) $(CLCFLAGS) -m $(PROGRAM).map -o $@ $^
+mastocli.bin: $(mastocli_SOURCES) $(CC65SOURCES)
 	cl65 $(CFLAGS) $(CLCFLAGS) -m $(PROGRAM).map -o $@ $^
 
-$(PROGRAM).x86_64: $(SOURCES) $(GCCSOURCES)
+mastodon.x86_64: $(mastodon_SOURCES) $(GCCSOURCES)
+	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	
+mastocli.x86_64: $(mastocli_SOURCES) $(GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	
 
 clean:
-	rm -f $(PROGRAM).bin $(PROGRAM).x86_64 *.o *.map
+	rm -f *.bin *.x86_64 *.o *.map
 
 upload: all
-	scp $(PROGRAM).bin diskstation.lan:/volume1/a2repo/
+	scp masto*.bin diskstation.lan:/volume1/a2repo/
