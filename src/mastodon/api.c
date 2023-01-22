@@ -109,7 +109,7 @@ err_out:
   return n_status;
 }
 
-status *api_get_status(char *status_id) {
+status *api_get_status(char *status_id, char full) {
   surl_response *resp;
   status *s;
   char *endpoint;
@@ -127,7 +127,7 @@ status *api_get_status(char *status_id) {
   if (resp == NULL || resp->code < 200)
     goto err_out;
 
-  s = status_new_from_json(resp, status_id, 0);
+  s = status_new_from_json(resp, status_id, full, 0);
 
 err_out:
   surl_response_free(resp);

@@ -20,7 +20,20 @@ static unsigned char scrw, scrh;
 static char *my_public_name = NULL;
 static char *my_handle = NULL;
 
+#define SHOW_HOME_TIMELINE 0
+#define SHOW_FULL_STATUS   1
+#define QUIT               2
+static char cur_action;
+
+
 static void print_timeline(char *tlid);
+
+static void print_free_ram(void) {
+#ifdef __CC65__
+  gotoxy(0, 23);
+  cprintf("%zuB free     ", _heapmemavail());
+#endif
+}
 
 static void print_header(void) {
   //print_logo();
@@ -37,7 +50,20 @@ static void print_header(void) {
   cputsxy(0, 0, my_public_name);
   gotoxy(0, 1);
   cprintf("@%s\r\n", my_handle);
+  
+  #define BTM 19
+  clrzone(0, BTM, LEFT_COL_WIDTH, BTM + 4);
+  gotoxy(0,BTM);
+  if (cur_action == SHOW_HOME_TIMELINE) {
+    cputs("view toot: V/Enter \r\n");
+    cputs("scroll   : Up/down \r\n");
+    cputs("exit     : Escape  \r\n");
+  } else if (cur_action == SHOW_FULL_STATUS) {
+    cputs("Timeline : Escape \r\n");
+  }
+  print_free_ram();
   cvlinexy(LEFT_COL_WIDTH, 0, scrh);
+  
 }
 
 static int print_status(status *s) {
@@ -152,7 +178,7 @@ static void load_prev_posts(char *tlid) {
   scrolldn();
   
   gotoxy(0, 0);
-  dputs("All caught up! Maybe reload? [y/N] ");
+  dputs("All caught up! Maybe reload? (y/N) ");
   gotoxy(0,1);
   chline(scrw - LEFT_COL_WIDTH - 1);
 
@@ -208,7 +234,7 @@ update:
         cputs(LOADING_TOOT_MSG);
         gotox(0);
 #endif
-        disp = api_get_status(ids[i]);
+        disp = api_get_status(ids[i], 0);
 #ifdef __CC65__
         cputs("                ");
         gotox(0);
@@ -226,7 +252,7 @@ update:
         if (bottom && i < n_posts - 1) {
           /* load the next one if needed */
           if (displayed_posts[i + 1] == NULL) {
-            displayed_posts[i + 1] = api_get_status(ids[i + 1]);
+            displayed_posts[i + 1] = api_get_status(ids[i + 1], 0);
           }
         }
       }
@@ -234,7 +260,7 @@ update:
   }
   /* Load one up for fast scroll */
   if (first_displayed_post > 0 && displayed_posts[first_displayed_post - 1] == NULL) {
-    displayed_posts[first_displayed_post - 1] = api_get_status(ids[first_displayed_post - 1]);
+    displayed_posts[first_displayed_post - 1] = api_get_status(ids[first_displayed_post - 1], 0);
   }
 
   if (bottom == 0 && i == n_posts) {
@@ -243,6 +269,7 @@ update:
   }
 
   set_hscrollwindow(0, scrw);
+  print_free_ram();
 }
 
 static void shift_posts_down(void) {
@@ -263,6 +290,7 @@ static void shift_posts_down(void) {
     scrollup();
   }
   set_hscrollwindow(0, scrw);
+  print_free_ram();
 }
 
 static void shift_posts_up(void) {
@@ -283,20 +311,25 @@ static void shift_posts_up(void) {
     scrolldn();
   }
   set_hscrollwindow(0, scrw);
+  print_free_ram();
 }
 
-void cli(void) {
+static void show_timeline(char *tlid) {
   char c;
-  screensize(&scrw, &scrh);
-
-  clrscr();
-
   print_header();
   while (1) {
-    print_timeline(HOME_TIMELINE);
+    print_timeline(tlid);
 
     c = cgetc();
     switch(c) {
+      case CH_ENTER:
+      case 'v':
+      case 'V':
+        cur_action = SHOW_FULL_STATUS;
+        return;
+      case CH_ESC:
+        cur_action = QUIT;
+        return;
       case CH_CURS_DOWN:
         shift_posts_down();
         break;
@@ -306,6 +339,64 @@ void cli(void) {
         else {
           load_prev_posts(HOME_TIMELINE);
         }
+        break;
+    }
+  }
+}
+
+static void show_full_status(char *status_id) {
+  char c;
+  status *s;
+
+  print_header();
+  
+  s = api_get_status(status_id, 1);
+
+  print_free_ram();
+  set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
+
+  /* cleanup beneath
+   * We can assume we're first_displayed_post 
+   */
+  set_scrollwindow(post_height[first_displayed_post] - 1, scrh);
+  clrscr();
+  set_scrollwindow(0, scrh);
+
+  while (1) {
+    gotoxy(0, 0);
+    print_status(s);
+
+    c = cgetc();
+    switch(c) {
+      case CH_ESC:
+        cur_action = SHOW_HOME_TIMELINE;
+        goto out;
+    }
+  }
+out:
+  /* one less to clear end of post and ... */
+  set_scrollwindow(post_height[first_displayed_post] - 2, scrh);
+  clrscr();
+  set_scrollwindow(0, scrh);
+  
+  set_hscrollwindow(0, scrw);
+  status_free(s);
+  print_free_ram();
+}
+
+void cli(void) {
+  cur_action = SHOW_HOME_TIMELINE;
+
+  screensize(&scrw, &scrh);
+
+  clrscr();
+  while (cur_action != QUIT) {
+    switch(cur_action) {
+      case SHOW_HOME_TIMELINE:
+        show_timeline(HOME_TIMELINE);
+        break;
+      case SHOW_FULL_STATUS:
+        show_full_status(ids[first_displayed_post]);
         break;
     }
   }

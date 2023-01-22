@@ -15,7 +15,7 @@ struct _status {
 };
 
 status *status_new(void);
-status *status_new_from_json(surl_response *resp, char *id, char is_reblog);
+status *status_new_from_json(surl_response *resp, char *id, char full, char is_reblog);
 void status_free(status *s);
 
 #endif

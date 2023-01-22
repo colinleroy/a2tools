@@ -122,7 +122,7 @@ static int load_settings(void) {
 
     fclose(fp);
 
-    cprintf("Login as %s on %s [Y/n]? ", login, instance_url);
+    cprintf("Login as %s on %s (Y/n)? ", login, instance_url);
     c = cgetc();
     dputs("\r\n");
     if (c == 'n' || c == 'N') {
@@ -181,11 +181,6 @@ int main(int argc, char **argv) {
   login = NULL;
   oauth_code = NULL;
 
-#ifdef __CC65__
-  cprintf("Available memory: %zu/%zu bytes\r\n",
-          _heapmaxavail(), _heapmemavail());
-#endif
-  
   if (oauth_token == NULL || oauth_token[0] == '\0') {
     printf("Could not login :(\n");
     exit(1);
