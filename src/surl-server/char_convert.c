@@ -4,7 +4,10 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <iconv.h>
+#include <langinfo.h>
+#include <locale.h>
 #include "char_convert.h"
+#include "math.h"
 
 static char *do_conv(char *in, char *from, char *to, size_t *new_len) {
   char *out = NULL;
@@ -13,10 +16,13 @@ static char *do_conv(char *in, char *from, char *to, size_t *new_len) {
   iconv_t conv;
   size_t res;
 
+  setlocale (LC_ALL, "");
+
   if (in == NULL) {
     return NULL;
   }
   if (strlen(in) == 0) {
+    *new_len = 0;
     return strdup(in);
   }
   orig_in = in;
@@ -45,18 +51,23 @@ static char *do_conv(char *in, char *from, char *to, size_t *new_len) {
 }
 
 char *do_apple_convert(char *in, int way, size_t *new_len) {
-  char *out_iso = NULL;  
   char *out_final = NULL;
+  char *out_ascii = NULL;
+  size_t ascii_len, i;
 
   if (way == OUTGOING) {
-    out_iso = do_conv(in, "UTF-8", "ISO_8859-1//TRANSLIT", new_len);
-    out_final = do_conv(out_iso, "ISO_8859-1", "ISO646-FR1//TRANSLIT", new_len);
-    free(out_iso);
+    out_final = do_conv(in, "UTF-8", "ISO646-FR1//TRANSLIT", new_len);
+    out_ascii = do_conv(in, "UTF-8", "US-ASCII//TRANSLIT", &ascii_len);
+    
+    for (i = 0; i < min(*new_len, ascii_len); i++) {
+      if (out_final[i] == '?' && out_ascii[i] != '?')
+      out_final[i] = out_ascii[i];
+    }
+    free(out_ascii);
+    printf("iconv %s => %s\n", in, out_final);
     return out_final;
   } else {
-    out_iso = do_conv(in, "ISO646-FR1", "ISO_8859-1//TRANSLIT", new_len);
-    out_final = do_conv(out_iso, "ISO_8859-1", "UTF-8", new_len);
-    free(out_iso);
+    out_final = do_conv(in, "ISO646-FR1", "UTF-8//TRANSLIT", new_len);
     return out_final;
   }
 }
