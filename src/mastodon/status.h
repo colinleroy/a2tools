@@ -5,6 +5,9 @@
 
 typedef struct _status status;
 
+#define FAVOURITED 1<<0
+#define REBLOGGED  1<<1
+
 struct _status {
   char *id;
   char *created_at;
@@ -12,6 +15,11 @@ struct _status {
   account *account;
   status *reblog;
   signed char displayed_at;
+  char n_replies;
+  char n_reblogs;
+  char n_favourites;
+  char n_images;
+  char favorited_or_reblogged;
 };
 
 status *status_new(void);

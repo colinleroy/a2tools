@@ -13,7 +13,7 @@ DEPS :=
 
 CC65_TARGET = apple2enh
 CFLAGS  = -I ../lib
-CLCFLAGS = -t $(CC65_TARGET) -Osir -DSERIAL_TO_LANGCARD
+CLCFLAGS = -t $(CC65_TARGET) -Osir -Cl -DSERIAL_TO_LANGCARD
 GCCCFLAGS = -g -O0 -Werror 
 GCCLDFLAGS = 
 
@@ -22,9 +22,9 @@ GCCLDFLAGS =
 all: mastodon.bin mastodon.x86_64 mastocli.bin mastocli.x86_64
 
 mastodon.bin: $(mastodon_SOURCES) $(CC65SOURCES)
-	cl65 $(CFLAGS) $(CLCFLAGS) -m $(PROGRAM).map -o $@ $^
+	cl65 $(CFLAGS) $(CLCFLAGS) -m mastodon.map -o $@ $^
 mastocli.bin: $(mastocli_SOURCES) $(CC65SOURCES)
-	cl65 $(CFLAGS) $(CLCFLAGS) -m $(PROGRAM).map -o $@ $^
+	cl65 $(CFLAGS) $(CLCFLAGS) -m mastocli.map -o $@ $^
 
 mastodon.x86_64: $(mastodon_SOURCES) $(GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	

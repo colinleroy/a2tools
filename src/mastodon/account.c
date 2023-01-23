@@ -20,35 +20,37 @@ account *account_new(void) {
   return a;
 }
 
+static char gen_buf[BUF_SIZE];
 account *account_new_from_status_json(surl_response *resp, char is_reblog) {
   account *a;
+  char **lines;
+  int n_lines;
 
   a = account_new();
-  a->id = malloc(26);
-  if (a->id == NULL) {
-    printf("No more memory at %s:%d\n",__FILE__, __LINE__);
-    return NULL;
-  }
-  a->username = malloc(26);
-  if (a->username == NULL) {
-    printf("No more memory at %s:%d\n",__FILE__, __LINE__);
-    return NULL;
-  }
-  a->display_name = malloc(26);
-  if (a->display_name == NULL) {
-    printf("No more memory at %s:%d\n",__FILE__, __LINE__);
+  if (a == NULL) {
     return NULL;
   }
 
-  snprintf(selector, SELECTOR_SIZE, ".%saccount.id", is_reblog?"reblog.":"");
-  surl_get_json(resp, a->id, 26, 0, 0, selector);
+  snprintf(selector, SELECTOR_SIZE, ".%saccount.id,.%saccount.username,.%saccount.display_name",
+                                    is_reblog?"reblog.":"",
+                                    is_reblog?"reblog.":"",
+                                    is_reblog?"reblog.":"");
+  surl_get_json(resp, gen_buf, BUF_SIZE, 0, 1, selector);
+  n_lines = strsplit(gen_buf, '\n', &lines);
 
-  snprintf(selector, SELECTOR_SIZE, ".%saccount.username", is_reblog?"reblog.":"");
-  surl_get_json(resp, a->username, 26, 0, 0, selector);
+  if (n_lines < 3) {
+    while (n_lines > 0) {
+      free(lines[--n_lines]);
+    }
+    free(lines);
+    free(a);
+    return NULL;
+  }
 
-  snprintf(selector, SELECTOR_SIZE, ".%saccount.display_name", is_reblog?"reblog.":"");
-  surl_get_json(resp, a->display_name, 26, 1, 1, selector);
-
+  a->id = lines[0];
+  a->username = lines[1];
+  a->display_name = lines[2];
+  free(lines);
   return a;
 }
 
