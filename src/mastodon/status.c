@@ -46,6 +46,8 @@ status *status_new_from_json(surl_response *resp, char *id, char full, char is_r
     return NULL;
   }
 
+  /* .reblog.id is the only one that can be null (and hence not there),
+   * so put it at the end */
   snprintf(selector, SELECTOR_SIZE, ".%screated_at,.%saccount.display_name,.%sreblog.id", 
                           is_reblog?"reblog.":"", is_reblog?"reblog.":"", is_reblog?"reblog.":"");
   r = surl_get_json(resp, gen_buf, BUF_SIZE, 0, 1, selector);
