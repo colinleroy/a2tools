@@ -55,6 +55,10 @@ char *do_apple_convert(char *in, int way, size_t *new_len) {
   char *out_ascii = NULL;
   size_t ascii_len, i;
 
+  if (in == NULL) {
+    return NULL;
+  }
+
   if (way == OUTGOING) {
     out_final = do_conv(in, "UTF-8", "ISO646-FR1//TRANSLIT", new_len);
     out_ascii = do_conv(in, "UTF-8", "US-ASCII//TRANSLIT", &ascii_len);

@@ -59,7 +59,7 @@ static char *print_norm(char *buffer, const char *text)
         spaces--;
     }
     token = strtok(str, seps);
-    buffer = buffer_printf(buffer, token);
+    buffer = buffer_printf(buffer, "%s", token);
     token = strtok(NULL, seps);
     while (token) {
         buffer = buffer_printf(buffer, " %s", token);
@@ -80,7 +80,7 @@ static char *dump_tree(GumboNode *node, char *buffer, int plain)
 
     if (node->type == GUMBO_NODE_TEXT) {
         if (plain)
-            buffer = buffer_printf(buffer, node->v.text.text);
+            buffer = buffer_printf(buffer, "%s", node->v.text.text);
         else
             buffer = print_norm(buffer, node->v.text.text);
     } else if (

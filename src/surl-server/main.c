@@ -375,6 +375,7 @@ static void proxy_set_curl_opts(CURL *curl) {
   curl_easy_setopt(curl, CURLOPT_USERAGENT, "surl-server/1.0");
   curl_easy_setopt(curl, CURLOPT_COOKIEJAR, "cookies.txt");
   curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "cookies.txt");
+  curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
 }
 
 static int data_seek_cb(void *cbdata, curl_off_t offset, int origin) {
@@ -636,6 +637,8 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
       printf("Curl error %d: %s\n", res, curl_easy_strerror(res));
       if (res == CURLE_REMOTE_ACCESS_DENIED) {
         curlbuf->response_code = 401;
+      } else {
+        curlbuf->response_code = 599;
       }
     } else {
       curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &(curlbuf->response_code));
