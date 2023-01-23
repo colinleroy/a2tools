@@ -29,7 +29,8 @@ status *status_new(void) {
 #endif
 status *status_new_from_json(surl_response *resp, char *id, char full, char is_reblog) {
   status *s;
-  char *reblog_id, *w;
+  char **lines;
+  char r, n_lines;
 
   s = status_new();
   s->id = strdup(id);
@@ -37,71 +38,54 @@ status *status_new_from_json(surl_response *resp, char *id, char full, char is_r
     printf("No more memory at %s:%d\n",__FILE__, __LINE__);
   }
 
-  s->created_at = malloc(26);
-  if (s->created_at == NULL) {
-    printf("No more memory at %s:%d\n",__FILE__, __LINE__);
-    return NULL;
-  }
   s->content = malloc(full ? 4096 : TL_STATUS_MAX_LEN);
-  if (s->content == NULL) {
+  s->account = account_new();
+
+  if (s->content == NULL || s->account == NULL) {
     printf("No more memory at %s:%d\n",__FILE__, __LINE__);
     return NULL;
   }
 
-  snprintf(selector, SELECTOR_SIZE, ".%screated_at", is_reblog?"reblog.":"");
-  surl_get_json(resp, s->created_at, 26, 0, 0, selector);
-
-  if (!is_reblog) {
-    reblog_id = malloc(26);
-    if (reblog_id == NULL) {
-      printf("No more memory at %s:%d\n",__FILE__, __LINE__);
-      return NULL;
-    }
-
-    snprintf(selector, SELECTOR_SIZE, ".reblog.id");
-    surl_get_json(resp, reblog_id, BUF_SIZE, 0, 0, selector);
-    if (reblog_id[0] != '\0') {
-      s->reblog = status_new_from_json(resp, reblog_id, full, 1);
-    }
-    free(reblog_id);
-    reblog_id = NULL;
+  snprintf(selector, SELECTOR_SIZE, ".%screated_at,.%saccount.display_name,.%sreblog.id", 
+                          is_reblog?"reblog.":"", is_reblog?"reblog.":"", is_reblog?"reblog.":"");
+  r = surl_get_json(resp, gen_buf, BUF_SIZE, 0, 1, selector);
+  n_lines = strsplit_in_place(gen_buf, '\n', &lines);
+  if (r == 0 && n_lines >= 2) {
+    s->created_at = strdup(lines[0]);
+    s->account->display_name = strdup(lines[1]);
+    if (!is_reblog && n_lines > 2)
+      s->reblog = status_new_from_json(resp, lines[2], full, 1);
   }
-
+  free(lines);
+  
   if (s->reblog == NULL) {
-    snprintf(selector, SELECTOR_SIZE, "(.%smedia_attachments|map(. | select(.type==\"image\"))|length),.%sreplies_count,.%sreblogs_count,.%sfavourites_count,.%sreblogged,.%sfavourited", 
+    snprintf(selector, SELECTOR_SIZE, "(.%smedia_attachments|map(. | select(.type==\"image\"))|length),"
+                                      ".%sreplies_count,.%sreblogs_count,.%sfavourites_count,.%sreblogged,.%sfavourited,"
+                                      ".%saccount.id,.%saccount.username", 
+                              is_reblog?"reblog.":"",
+                              is_reblog?"reblog.":"",
                               is_reblog?"reblog.":"",
                               is_reblog?"reblog.":"",
                               is_reblog?"reblog.":"",
                               is_reblog?"reblog.":"",
                               is_reblog?"reblog.":"",
                               is_reblog?"reblog.":"");
-    surl_get_json(resp, gen_buf, BUF_SIZE, 1, 1, selector);
-    w = gen_buf;
-    s->n_images = atoi(w);
-    w = strchr(w, '\n') + 1;
-    if (w == (void *)1)
-      goto botch_stats;
-    s->n_replies = atoi(w);
-    w = strchr(w, '\n') + 1;
-    if (w == (void *)1)
-      goto botch_stats;
-    s->n_reblogs = atoi(w);
-    w = strchr(w, '\n') + 1;
-    if (w == (void *)1)
-      goto botch_stats;
-    s->n_favourites = atoi(w);
-    w = strchr(w, '\n') + 1;
-    if (w == (void *)1)
-      goto botch_stats;
-    if (!strcmp(w, "true")) 
-      s->favorited_or_reblogged |= REBLOGGED;
-    w = strchr(w, '\n') + 1;
-    if (w == (void *)1)
-      goto botch_stats;
-    if (!strcmp(w, "true")) 
-      s->favorited_or_reblogged |= FAVOURITED;
+    r = surl_get_json(resp, gen_buf, BUF_SIZE, 0, 0, selector);
+    n_lines = strsplit_in_place(gen_buf, '\n', &lines);
+    if (r == 0 && n_lines == 8) {
+      s->n_images = atoi(lines[0]);
+      s->n_replies = atoi(lines[1]);
+      s->n_reblogs = atoi(lines[2]);
+      s->n_favourites = atoi(lines[3]);
+      if (!strcmp(lines[4], "true")) 
+        s->favorited_or_reblogged |= REBLOGGED;
+      if (!strcmp(lines[5], "true")) 
+        s->favorited_or_reblogged |= FAVOURITED;
+      s->account->id = strdup(lines[6]);
+      s->account->username = strdup(lines[7]);
+    }
+    free(lines);
 
-botch_stats:
     snprintf(selector, SELECTOR_SIZE, ".%scontent", is_reblog?"reblog.":"");
     surl_get_json(resp, s->content, full ? 4096 : TL_STATUS_MAX_LEN, 1, 1, selector);
     if (!full) {
@@ -114,7 +98,6 @@ botch_stats:
     s->content = NULL;
   }
 
-  s->account = account_new_from_status_json(resp, is_reblog);
   return s;
 }
 

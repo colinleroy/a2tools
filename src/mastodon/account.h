@@ -10,7 +10,6 @@ struct _account {
 };
 
 account *account_new(void);
-account *account_new_from_status_json(surl_response *resp, char is_reblog);
 void account_free(account *a);
 
 #endif
