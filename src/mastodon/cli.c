@@ -524,7 +524,10 @@ void cli(void) {
         break;
       case BACK:
         if (cur_list > 0) {
-          clrzone(LEFT_COL_WIDTH + 1, 3, scrw - 1, scrh - 1);
+          if (l[cur_list]->first_displayed_post == 0)
+            clrzone(LEFT_COL_WIDTH + 1, 3, scrw - 1, scrh - 1);
+          else
+            clrzone(LEFT_COL_WIDTH + 1, 0, scrw - 1, scrh - 1);
           free_list(l[cur_list]);
           cur_list--;
           cur_action = NAVIGATE;
