@@ -9,6 +9,7 @@
 #include "dputc.h"
 #include "scroll.h"
 #include "api.h"
+#include "list.h"
 #include "math.h"
 
 #define BUF_SIZE 255
@@ -26,7 +27,7 @@ static char *my_handle = NULL;
 static char cur_action;
 
 
-static void print_timeline(char *tlid);
+static void print_list(list *l);
 
 static void print_free_ram(void) {
 #ifdef __CC65__
@@ -129,49 +130,47 @@ static int print_status(status *s) {
   return 0;
 }
 
-static char **ids = NULL;
-static char first_displayed_post = 0;
-static status **displayed_posts = NULL;
-static char last_displayed_post = 0;
-static char n_posts = 0;
-static signed char *post_height = NULL;
-char newer_posts = 0;
-
 #define N_STATUS_TO_LOAD 6
 #define LOADING_TOOT_MSG "Loading toot..."
 
-static void load_next_posts(char *tlid) {
+static void load_next_posts(list *l) {
   char *last_id;
   char shift = N_STATUS_TO_LOAD / 2;
-  int loaded, i;
+  char loaded, i;
 
   dputs(LOADING_TOOT_MSG);
   for (i = 0; i < shift; i++) {
-    status_free(displayed_posts[i]);
-    free(ids[i]);
+    status_free(l->displayed_posts[i]);
+    free(l->ids[i]);
   }
 
-  for (i = shift; i < n_posts; i++) {
-    //printf("shifting %d to %d\n", i, i-shift);
-    displayed_posts[i - shift] = displayed_posts[i];
-    post_height[i - shift] = post_height[i];
-    ids[i - shift] = ids[i];
+  for (i = shift; i < l->n_posts; i++) {
+    l->displayed_posts[i - shift] = l->displayed_posts[i];
+    l->post_height[i - shift] = l->post_height[i];
+    l->ids[i - shift] = l->ids[i];
 
-    displayed_posts[i] = NULL;
-    post_height[i] = -1;
-    ids[i] = NULL;
+    l->displayed_posts[i] = NULL;
+    l->post_height[i] = -1;
+    l->ids[i] = NULL;
   }
-  last_id = ids[i - shift - 1];
+  last_id = l->ids[i - shift - 1];
 
-  loaded = api_get_timeline_posts(tlid, N_STATUS_TO_LOAD / 2, NULL, last_id, ids + shift);
-  n_posts += ((N_STATUS_TO_LOAD / 2) - loaded);
+  switch (l->kind) {
+    case L_HOME_TIMELINE:
+      loaded = api_get_timeline_posts(HOME_TIMELINE, N_STATUS_TO_LOAD / 2, NULL, last_id, l->ids + shift);
+      break;
+    case L_FULL_STATUS:
+      /* ... */
+      break;
+  }
 
-  first_displayed_post -= shift;
+  l->n_posts += ((N_STATUS_TO_LOAD / 2) - loaded);
+
+  l->first_displayed_post -= shift;
 }
 
-static void load_prev_posts(char *tlid) {
+static int load_prev_posts(list *l) {
   char c;
-  int i;
   set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
 
   scrolldn();
@@ -185,86 +184,102 @@ static void load_prev_posts(char *tlid) {
   c = cgetc();
   
   if (c == 'Y' || c == 'y') {
-    for (i = 0; i < n_posts; i++) {
-      free(ids[i]);
-      status_free(displayed_posts[i]);
-    }
-    free(ids);
-    free(displayed_posts);
-    free(post_height);
-    ids = NULL;
-    displayed_posts = NULL;
-    post_height = NULL;
-    clrscr();
-    return;
+    set_hscrollwindow(0, scrw);
+    return 1;
   }
 
   scrollup();
   scrollup();
 
   set_hscrollwindow(0, scrw);
-  print_timeline(tlid);
+  print_list(l);
+  return 0;
 }
 
-static void print_timeline(char *tlid) {
-  int i;
-  char bottom = 0;
-  
-  if (ids == NULL) {
-    ids = malloc(N_STATUS_TO_LOAD * sizeof(char *));
-    n_posts = api_get_timeline_posts(tlid, N_STATUS_TO_LOAD, NULL, NULL, ids);
-    displayed_posts = malloc(n_posts * sizeof(status *));
-    memset(displayed_posts, 0, n_posts * sizeof(status *));
-    post_height = malloc(n_posts);
-    memset(post_height, -1, n_posts);
+static list *build_list(char kind) {
+  list *l = malloc(sizeof(list));
+  l->kind = kind;
+  l->ids = malloc(N_STATUS_TO_LOAD * sizeof(char *));
+  l->displayed_posts = malloc(N_STATUS_TO_LOAD * sizeof(status *));
+  l->post_height = malloc(N_STATUS_TO_LOAD);
+  switch (kind) {
+    case L_HOME_TIMELINE:
+      l->n_posts = api_get_timeline_posts(HOME_TIMELINE, N_STATUS_TO_LOAD, NULL, NULL, l->ids);
+      break;
+    case L_FULL_STATUS:
+      /* ... */
+      break;
   }
+  memset(l->displayed_posts, 0, l->n_posts * sizeof(status *));
+  memset(l->post_height, -1, l->n_posts);
+  l->first_displayed_post = 0;
+  l->last_displayed_post = 0;
+
+  return l;
+}
+
+static void free_list(list *l) {
+  char i;
+  for (i = 0; i < l->n_posts; i++) {
+    free(l->ids[i]);
+    status_free(l->displayed_posts[i]);
+  }
+  free(l->ids);
+  free(l->displayed_posts);
+  free(l->post_height);
+  free(l);
+}
+
+static void print_list(list *l) {
+  char i;
+  char bottom = 0;
 
   /* set scrollwindow */
   set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
 update:
   gotoxy(0, 0);
-  for (i = first_displayed_post; i < n_posts; i++) {
+  for (i = l->first_displayed_post; i < l->n_posts; i++) {
     if (!bottom) {
       status *disp;
 
-      if (displayed_posts[i] != NULL)
-        disp = displayed_posts[i];
+      if (l->displayed_posts[i] != NULL)
+        disp = l->displayed_posts[i];
       else {
 #ifdef __CC65__
         cputs(LOADING_TOOT_MSG);
         gotox(0);
 #endif
-        disp = api_get_status(ids[i], 0);
+        disp = api_get_status(l->ids[i], 0);
 #ifdef __CC65__
         cputs("                ");
         gotox(0);
 #endif
       }
-      displayed_posts[i] = disp;
+      l->displayed_posts[i] = disp;
 
       if (bottom == 0) {
         bottom = print_status(disp);
         //printf("showing %s\n", disp->id);
         if (!bottom) {
-          post_height[i] = wherey() - disp->displayed_at;
+          l->post_height[i] = wherey() - disp->displayed_at;
         }
-        last_displayed_post = i;
-        if (bottom && i < n_posts - 1) {
+        l->last_displayed_post = i;
+        if (bottom && i < l->n_posts - 1) {
           /* load the next one if needed */
-          if (displayed_posts[i + 1] == NULL) {
-            displayed_posts[i + 1] = api_get_status(ids[i + 1], 0);
+          if (l->displayed_posts[i + 1] == NULL) {
+            l->displayed_posts[i + 1] = api_get_status(l->ids[i + 1], 0);
           }
         }
       }
     }
   }
   /* Load one up for fast scroll */
-  if (first_displayed_post > 0 && displayed_posts[first_displayed_post - 1] == NULL) {
-    displayed_posts[first_displayed_post - 1] = api_get_status(ids[first_displayed_post - 1], 0);
+  if (l->first_displayed_post > 0 && l->displayed_posts[l->first_displayed_post - 1] == NULL) {
+    l->displayed_posts[l->first_displayed_post - 1] = api_get_status(l->ids[l->first_displayed_post - 1], 0);
   }
 
-  if (bottom == 0 && i == n_posts) {
-    load_next_posts(tlid);
+  if (bottom == 0 && i == l->n_posts) {
+    load_next_posts(l);
     goto update;
   }
 
@@ -272,16 +287,16 @@ update:
   print_free_ram();
 }
 
-static void shift_posts_down(void) {
+static void shift_posts_down(list *l) {
   char i;
-  char scroll_val = post_height[first_displayed_post];
-  first_displayed_post++;
+  char scroll_val = l->post_height[l->first_displayed_post];
+  l->first_displayed_post++;
   /* Remove posts scrolled up, keeping just one for fast scroll */
-  if (first_displayed_post > 0) {
-    for (i = 0; i < first_displayed_post - 1 && i < last_displayed_post - 1; i++) {
-      if (displayed_posts[i]) {
-        status_free(displayed_posts[i]);
-        displayed_posts[i] = NULL;
+  if (l->first_displayed_post > 0) {
+    for (i = 0; i < l->first_displayed_post - 1 && i < l->last_displayed_post - 1; i++) {
+      if (l->displayed_posts[i]) {
+        status_free(l->displayed_posts[i]);
+        l->displayed_posts[i] = NULL;
       }
     }
   }
@@ -293,16 +308,16 @@ static void shift_posts_down(void) {
   print_free_ram();
 }
 
-static void shift_posts_up(void) {
+static void shift_posts_up(list *l) {
   int i;
-  char scrollval = post_height[first_displayed_post - 1];
-  first_displayed_post--;
+  char scrollval = l->post_height[l->first_displayed_post - 1];
+  l->first_displayed_post--;
   /* Remove posts scrolled down, keeping just one for fast scroll */
-  if (last_displayed_post > 0) {
-    for (i = last_displayed_post + 1; i < n_posts; i++) {
-      if (displayed_posts[i]) {
-        status_free(displayed_posts[i]);
-        displayed_posts[i] = NULL;
+  if (l->last_displayed_post > 0) {
+    for (i = l->last_displayed_post + 1; i < l->n_posts; i++) {
+      if (l->displayed_posts[i]) {
+        status_free(l->displayed_posts[i]);
+        l->displayed_posts[i] = NULL;
       }
     }
   }
@@ -314,11 +329,12 @@ static void shift_posts_up(void) {
   print_free_ram();
 }
 
-static void show_timeline(char *tlid) {
+static void show_timeline(list *l) {
   char c;
   print_header();
+  
   while (1) {
-    print_timeline(tlid);
+    print_list(l);
 
     c = cgetc();
     switch(c) {
@@ -331,20 +347,22 @@ static void show_timeline(char *tlid) {
         cur_action = QUIT;
         return;
       case CH_CURS_DOWN:
-        shift_posts_down();
+        shift_posts_down(l);
         break;
       case CH_CURS_UP:
-        if (first_displayed_post > 0)
-          shift_posts_up();
+        if (l->first_displayed_post > 0)
+          shift_posts_up(l);
         else {
-          load_prev_posts(HOME_TIMELINE);
+          if (load_prev_posts(l)) {
+            return;
+          }
         }
         break;
     }
   }
 }
 
-static void show_full_status(char *status_id) {
+static void show_full_status(list *l, char *status_id) {
   char c;
   status *s;
 
@@ -358,7 +376,7 @@ static void show_full_status(char *status_id) {
   /* cleanup beneath
    * We can assume we're first_displayed_post 
    */
-  set_scrollwindow(post_height[first_displayed_post] - 1, scrh);
+  set_scrollwindow(l->post_height[l->first_displayed_post] - 1, scrh);
   clrscr();
   set_scrollwindow(0, scrh);
 
@@ -375,7 +393,7 @@ static void show_full_status(char *status_id) {
   }
 out:
   /* one less to clear end of post and ... */
-  set_scrollwindow(post_height[first_displayed_post] - 2, scrh);
+  set_scrollwindow(l->post_height[l->first_displayed_post] - 2, scrh);
   clrscr();
   set_scrollwindow(0, scrh);
   
@@ -385,6 +403,7 @@ out:
 }
 
 void cli(void) {
+  list *l;
   cur_action = SHOW_HOME_TIMELINE;
 
   screensize(&scrw, &scrh);
@@ -393,12 +412,16 @@ void cli(void) {
   while (cur_action != QUIT) {
     switch(cur_action) {
       case SHOW_HOME_TIMELINE:
-        show_timeline(HOME_TIMELINE);
+        l = build_list(L_HOME_TIMELINE);
+        show_timeline(l);
         break;
       case SHOW_FULL_STATUS:
-        show_full_status(ids[first_displayed_post]);
+        if (l)
+          show_full_status(l, l->ids[l->first_displayed_post]);
         break;
     }
+    free_list(l);
+    l = NULL;
   }
 }
 
