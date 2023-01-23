@@ -12,11 +12,14 @@ typedef struct _list list;
 
 struct _list {
   char kind;
+  char *root;
   char **ids;
-  char first_displayed_post;
+  signed char first_displayed_post;
   status **displayed_posts;
   char last_displayed_post;
   signed char *post_height;
   char n_posts;
+  char eof;
+  char scrolled;
 };
 #endif

@@ -14,8 +14,6 @@
 #define TIMELINE_ENDPOINT "/api/v1/timelines"
 #define STATUS_ENDPOINT   "/api/v1/statuses/"
 
-static unsigned char scrw, scrh;
-
 static char gen_buf[BUF_SIZE];
 
 extern char *instance_url;
@@ -44,6 +42,9 @@ int api_get_profile(char **public_name, char **handle) {
   int r = -1;
   char *endpoint;
 
+  *handle = NULL;
+  *public_name = NULL;
+
   endpoint = malloc(BUF_SIZE);
   if (endpoint == NULL) {
     printf("No more memory at %s:%d\n",__FILE__, __LINE__);
@@ -53,16 +54,18 @@ int api_get_profile(char **public_name, char **handle) {
   resp = get_surl_for_endpoint("GET", endpoint);
   free(endpoint);
 
-  if (resp == NULL || resp->code < 200)
+  if (resp == NULL || resp->code < 200 || resp->code >= 300)
     goto err_out;
 
-  if (surl_get_json(resp, gen_buf, BUF_SIZE, 1, 1, ".display_name") == 0) {
-    *public_name = strdup(gen_buf);
-  }
-  if (surl_get_json(resp, gen_buf, BUF_SIZE, 1, 1, ".username") == 0) {
-    *handle = strdup(gen_buf);
+  if (surl_get_json(resp, gen_buf, BUF_SIZE, 0, 1, ".display_name,.username") == 0) {
+    if (strchr(gen_buf,'\n')) {
+      *handle = strdup(strchr(gen_buf,'\n') + 1);
+      *(strchr(gen_buf, '\n')) = '\0';
+      *public_name = strdup(gen_buf);
+    }
   }
 
+  r = 0;
 err_out:
   surl_response_free(resp);
   return r;
@@ -77,9 +80,10 @@ int api_get_timeline_posts(char *tlid, char to_load, char *last_to_load, char *f
   endpoint = malloc(BUF_SIZE);
   if (endpoint == NULL) {
     printf("No more memory at %s:%d\n",__FILE__, __LINE__);
-    return -1;
+    return 0;
   }
 
+  n_status = 0;
   snprintf(endpoint, BUF_SIZE, "%s/%s?limit=%d%s%s%s%s", TIMELINE_ENDPOINT, tlid, to_load,
             first_to_load ? "&max_id=" : "",
             first_to_load ? first_to_load : "",
@@ -89,7 +93,7 @@ int api_get_timeline_posts(char *tlid, char to_load, char *last_to_load, char *f
   resp = get_surl_for_endpoint("GET", endpoint);
   free(endpoint);
   
-  if (resp == NULL || resp->code < 200)
+  if (resp == NULL || resp->code < 200 || resp->code >= 300)
     goto err_out;
 
   raw = malloc(512);
@@ -109,10 +113,61 @@ err_out:
   return n_status;
 }
 
+int api_get_status_and_replies(char to_load, status *root, char **post_ids) {
+  surl_response *resp;
+  char *endpoint;
+  int n_status;
+  char n_before, n_after;
+  char *raw;
+
+  endpoint = malloc(BUF_SIZE);
+  if (endpoint == NULL) {
+    printf("No more memory at %s:%d\n",__FILE__, __LINE__);
+    return 0;
+  }
+
+  n_status = 0;
+  snprintf(endpoint, BUF_SIZE, "%s/%s/context", STATUS_ENDPOINT, root->reblog ? root->reblog->id : root->id);
+  resp = get_surl_for_endpoint("GET", endpoint);
+  free(endpoint);
+  
+  if (resp == NULL || resp->code < 200 || resp->code >= 300)
+    goto err_out;
+
+  raw = malloc(512);
+  n_before = to_load/3;
+  n_after  = (2 * to_load) / 3;
+  if (n_before + n_after == to_load) {
+    n_before--;
+  }
+  snprintf(selector, SELECTOR_SIZE, "(.ancestors|.[-%d:]|.[].id),\"-\",(.descendants|.[0:%d]|.[].id)", n_before, n_after);
+  if (surl_get_json(resp, raw, 512, 0, 0, selector) == 0) {
+    char **tmp;
+    int i;
+    n_status = strsplit(raw, '\n', &tmp);
+    for (i = 0; i < n_status; i++) {
+      if (tmp[i][0] != '-') {
+        post_ids[i] = tmp[i];
+      } else {
+        post_ids[i] = strdup(root->id);
+        free(tmp[i]);
+      }
+    }
+    free(tmp);
+  }
+  free(raw);
+
+err_out:
+  surl_response_free(resp);
+  return n_status;
+}
+
 status *api_get_status(char *status_id, char full) {
   surl_response *resp;
   status *s;
   char *endpoint;
+
+  s = NULL;
 
   endpoint = malloc(BUF_SIZE);
   if (endpoint == NULL) {
@@ -124,7 +179,7 @@ status *api_get_status(char *status_id, char full) {
   resp = get_surl_for_endpoint("GET", endpoint);
   free(endpoint);
   
-  if (resp == NULL || resp->code < 200)
+  if (resp == NULL || resp->code < 200 || resp->code >= 300)
     goto err_out;
 
   s = status_new_from_json(resp, status_id, full, 0);
