@@ -80,8 +80,11 @@ static void print_header(list *l) {
 static void print_status_stats(status *s) {
   gotoxy(0, s->stats_line);
 
-  cprintf("%3d replies, %3d shares, %3d favs, %1d images",
-        s->n_replies, s->n_reblogs, s->n_favourites, s->n_images);
+  cprintf("%3d replies, %3d%s shares, %3d%s favs, %1d images      ",
+        s->n_replies,
+        s->n_reblogs, (s->favorited_or_reblogged & REBLOGGED) ? "*":"",
+        s->n_favourites, (s->favorited_or_reblogged & FAVOURITED) ? "*":"",
+        s->n_images);
 }
 
 static int print_status(status *s, char full, char *scrolled) {
