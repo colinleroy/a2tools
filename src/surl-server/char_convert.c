@@ -51,27 +51,13 @@ static char *do_conv(char *in, char *from, char *to, size_t *new_len) {
 }
 
 char *do_apple_convert(char *in, int way, size_t *new_len) {
-  char *out_final = NULL;
-  char *out_ascii = NULL;
-  size_t ascii_len, i;
-
   if (in == NULL) {
     return NULL;
   }
 
   if (way == OUTGOING) {
-    out_final = do_conv(in, "UTF-8", "ISO646-FR1//TRANSLIT", new_len);
-    out_ascii = do_conv(in, "UTF-8", "US-ASCII//TRANSLIT", &ascii_len);
-    
-    for (i = 0; i < min(*new_len, ascii_len); i++) {
-      if (out_final[i] == '?' && out_ascii[i] != '?')
-      out_final[i] = out_ascii[i];
-    }
-    free(out_ascii);
-    printf("iconv %s => %s\n", in, out_final);
-    return out_final;
+    return do_conv(in, "UTF-8", "ISO646-FR1//TRANSLIT", new_len);
   } else {
-    out_final = do_conv(in, "ISO646-FR1", "UTF-8//TRANSLIT", new_len);
-    return out_final;
+    return do_conv(in, "ISO646-FR1", "UTF-8//TRANSLIT", new_len);
   }
 }
