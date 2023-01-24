@@ -8,18 +8,13 @@
 #include "extended_string.h"
 #include "api.h"
 
-#define BUF_SIZE 255
-
-#define ACCOUNTS_ENDPOINT "/api/v1/accounts"
-#define TIMELINE_ENDPOINT "/api/v1/timelines"
-#define STATUS_ENDPOINT   "/api/v1/statuses/"
-
-static char gen_buf[BUF_SIZE];
 static char endpoint_buf[BUF_SIZE];
 
 extern char *instance_url;
 extern char *oauth_token;
 
+/* shared */
+char gen_buf[BUF_SIZE];
 char selector[SELECTOR_SIZE];
 
 static surl_response *get_surl_for_endpoint(char *method, char *endpoint) {
@@ -42,8 +37,7 @@ account *api_get_profile(char *id) {
   surl_response *resp;
   account *a = account_new();
   int r = -1;
-  int n_lines;
-  char **lines;
+  char n_lines, **lines;
 
   if (a == NULL) {
     return NULL;
@@ -74,17 +68,23 @@ err_out:
   return a;
 }
 
-int api_get_timeline_posts(char *tlid, char to_load, char *last_to_load, char *first_to_load, char **post_ids) {
+int api_get_account_posts(account *a, char to_load, char *first_to_load, char **post_ids) {
+  char buf[BUF_SIZE]; /* can't use endpoint_buf */
+
+  snprintf(buf, BUF_SIZE, "%s%s/statuses", ACCOUNTS_ENDPOINT, a->id);
+
+  return api_get_posts(buf, to_load, first_to_load, post_ids);
+}
+
+int api_get_posts(char *endpoint, char to_load, char *first_to_load, char **post_ids) {
   surl_response *resp;
   int n_status;
   char *raw;
 
   n_status = 0;
-  snprintf(endpoint_buf, BUF_SIZE, "%s/%s?limit=%d%s%s%s%s", TIMELINE_ENDPOINT, tlid, to_load,
+  snprintf(endpoint_buf, BUF_SIZE, "%s?limit=%d%s%s", endpoint, to_load,
             first_to_load ? "&max_id=" : "",
-            first_to_load ? first_to_load : "",
-            last_to_load ? "&min_id=" : "",
-            last_to_load ? last_to_load : ""
+            first_to_load ? first_to_load : ""
           );
   resp = get_surl_for_endpoint("GET", endpoint_buf);
   
@@ -108,6 +108,7 @@ err_out:
   return n_status;
 }
 
+/* FIXME get more using first_to_load and number of asc/desc... */
 int api_get_status_and_replies(char to_load, status *root, char **post_ids) {
   surl_response *resp;
   int n_status;
@@ -255,4 +256,71 @@ char api_delete_status(status *s) {
 err_out:
   surl_response_free(resp);
   return r;
+}
+
+char api_relationship_get(account *a, char f) {
+  surl_response *resp;
+  char r = 0;
+  char n_lines, **lines;
+  resp = NULL;
+
+  if ((a->relationship & RSHIP_SET) == 0) {
+    snprintf(endpoint_buf, BUF_SIZE, "%s/relationships?id[]=%s", ACCOUNTS_ENDPOINT, a->id);
+    resp = get_surl_for_endpoint("GET", endpoint_buf);
+
+    if (resp == NULL || resp->code < 200 || resp->code >= 300)
+      goto err_out;
+
+    if (surl_get_json(resp, gen_buf, BUF_SIZE, 0, 1, ".[]|.following,.followed_by,.blocking,.blocked_by,.muting,.requested") == 0) {
+      n_lines = strsplit_in_place(gen_buf,'\n',&lines);
+      if (n_lines < 6) {
+        free(lines);
+        goto err_out;
+      }
+      a->relationship |= RSHIP_SET;
+      if (lines[0][0] == 't') {
+        a->relationship |= RSHIP_FOLLOWING;
+      }
+      if (lines[1][0] == 't') {
+        a->relationship |= RSHIP_FOLLOWED_BY;
+      }
+      if (lines[2][0] == 't') {
+        a->relationship |= RSHIP_BLOCKING;
+      }
+      if (lines[3][0] == 't') {
+        a->relationship |= RSHIP_BLOCKED_BY;
+      }
+      if (lines[4][0] == 't') {
+        a->relationship |= RSHIP_MUTING;
+      }
+      if (lines[5][0] == 't') {
+        a->relationship |= RSHIP_FOLLOW_REQ;
+      }
+      free(lines);
+    }
+  }
+  r = (a->relationship & f) != 0;
+
+err_out:
+  surl_response_free(resp);
+  return r;
+}
+
+account *api_get_full_account(account *orig) {
+  surl_response *resp;
+  account *a;
+
+  a = NULL;
+
+  snprintf(endpoint_buf, BUF_SIZE, "%s/%s", ACCOUNTS_ENDPOINT, orig->id);
+  resp = get_surl_for_endpoint("GET", endpoint_buf);
+  
+  if (resp == NULL || resp->code < 200 || resp->code >= 300)
+    goto err_out;
+
+  a = account_new_from_json(resp);
+
+err_out:
+  surl_response_free(resp);
+  return a;
 }

@@ -9,14 +9,17 @@ typedef struct _list list;
 #define L_LOCAL_TIMELINE  1
 #define L_PUBLIC_TIMELINE 2
 #define L_FULL_STATUS     3
+#define L_ACCOUNT         4
 
 struct _list {
   char kind;
-  char *root;
+  char *root; /* For timelines */
+  account *account; /* For accounts */
   char **ids;
   signed char first_displayed_post;
   status **displayed_posts;
   char last_displayed_post;
+  signed char account_height;
   signed char *post_height;
   char n_posts;
   char eof;

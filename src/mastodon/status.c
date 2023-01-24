@@ -8,10 +8,8 @@
 #include "extended_string.h"
 #include "api.h"
 
-#define BUF_SIZE 255
-#define TL_STATUS_MAX_LEN 256
-
-static char gen_buf[255];
+#define TL_STATUS_SHORT_BUF 256
+#define TL_STATUS_LARGE_BUF 4096
 
 status *status_new(void) {
   status *s = malloc(sizeof(status));
@@ -38,7 +36,7 @@ status *status_new_from_json(surl_response *resp, char *id, char full, char is_r
     printf("No more memory at %s:%d\n",__FILE__, __LINE__);
   }
 
-  s->content = malloc(full ? 4096 : TL_STATUS_MAX_LEN);
+  s->content = malloc(full ? TL_STATUS_LARGE_BUF : TL_STATUS_SHORT_BUF);
   s->account = account_new();
 
   if (s->content == NULL || s->account == NULL) {
@@ -91,14 +89,17 @@ status *status_new_from_json(surl_response *resp, char *id, char full, char is_r
     free(lines);
 
     if (is_reblog) {
-      r = surl_get_json(resp, s->content, full ? 4096 : TL_STATUS_MAX_LEN, 1, 1, ".reblog.content");
+      r = surl_get_json(resp, s->content, full ? TL_STATUS_LARGE_BUF : TL_STATUS_SHORT_BUF, 1, 1, ".reblog.content");
     } else {
-      r = surl_get_json(resp, s->content, full ? 4096 : TL_STATUS_MAX_LEN, 1, 1, ".content");
+      r = surl_get_json(resp, s->content, full ? TL_STATUS_LARGE_BUF : TL_STATUS_SHORT_BUF, 1, 1, ".content");
     }
-    if (!full) {
-      s->content[TL_STATUS_MAX_LEN - 4] = '.';
-      s->content[TL_STATUS_MAX_LEN - 3] = '.';
-      s->content[TL_STATUS_MAX_LEN - 2] = '.';
+    if (!full && strlen(s->content) == TL_STATUS_SHORT_BUF - 1) {
+      s->content[TL_STATUS_SHORT_BUF - 4] = '.';
+      s->content[TL_STATUS_SHORT_BUF - 3] = '.';
+      s->content[TL_STATUS_SHORT_BUF - 2] = '.';
+      s->content[TL_STATUS_SHORT_BUF - 1] = '\0';
+    } else {
+      s->content = realloc(s->content, strlen(s->content) + 1);
     }
   } else {
     free(s->content);
