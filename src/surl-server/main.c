@@ -212,11 +212,11 @@ new_req:
           param = strchr(reqbuf + 5, ' ') + 5;
           *strchr(param, '\n') = '\0';
         } else {
-          printf("Aborted request\n");
+          printf("New request\n");
           goto new_req;
         }
       } else {
-        printf("Aborted request\n");
+        printf("New request\n");
         simple_serial_flush();
         goto new_req;
       }
@@ -271,10 +271,11 @@ new_req:
           simple_serial_write("<NOT_JSON>\n", sizeof(char), strlen("<NOT_JSON>\n"));
         } else {
           char *result = jq_get(response->buffer, param);
-          printf("JSON '%s' into %zu bytes%s%s: %s\n", param, bufsize, 
+          printf("JSON '%s' into %zu bytes%s%s: %zu bytes %s\n", param, bufsize, 
                   striphtml ? ", striphtml":"",
                   translit ? ", translit":"",
-                  result != NULL ? result:"not found");
+                  result != NULL ? min(strlen(result),bufsize) : 0,
+                  result != NULL ? "" :"not found");
           /* DEBUG */
 
           if (result) {
@@ -297,7 +298,6 @@ new_req:
             if (result && strlen(result) >= bufsize) {
               result[bufsize - 1] = '\0';
             }
-            printf(" sending (%d)'%s'\n", strlen(result), result);
             simple_serial_printf("%d\n", strlen(result));
             simple_serial_puts(result);
             free(result);
