@@ -15,7 +15,6 @@ struct _status {
   account *account;
   status *reblog;
   signed char displayed_at;
-  signed char stats_line;
   char n_replies;
   char n_reblogs;
   char n_favourites;
