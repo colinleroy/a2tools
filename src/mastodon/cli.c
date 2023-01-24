@@ -67,7 +67,7 @@ static void print_header(list *l) {
     cputs("View toot: V/Enter \r\n");
     if (l->first_displayed_post == 0) {
       cputs("Favourite: F       \r\n");
-      cputs("Share    : S       \r\n");
+      cputs("Boost    : B       \r\n");
     }
     cputs("Scroll   : Up/down \r\n");
     cputs("Back     : Escape \r\n");
@@ -75,16 +75,6 @@ static void print_header(list *l) {
   print_free_ram();
   cvlinexy(LEFT_COL_WIDTH, 0, scrh);
   
-}
-
-static void print_status_stats(status *s) {
-  gotoxy(0, s->stats_line);
-
-  cprintf("%3d replies, %3d%s shares, %3d%s favs, %1d images      ",
-        s->n_replies,
-        s->n_reblogs, (s->favorited_or_reblogged & REBLOGGED) ? "*":"",
-        s->n_favourites, (s->favorited_or_reblogged & FAVOURITED) ? "*":"",
-        s->n_images);
 }
 
 static int print_status(status *s, char full, char *scrolled) {
@@ -97,7 +87,7 @@ static int print_status(status *s, char full, char *scrolled) {
   if (s->reblog) {
     if (s->account)
       dputs(s->account->display_name);
-    dputs(" shared");
+    dputs(" boosted");
     if (wherey() == scrh - 1) {
       return -1;
     }
@@ -168,9 +158,12 @@ static int print_status(status *s, char full, char *scrolled) {
 
   if (full) {
     /* stats */
-    /* 255 replies, 255 favs, 255 shares, 2 images */
-      s->stats_line = wherey();
-      print_status_stats(s);
+    /* 255 replies, 255 favs, 255 boosts, 2 images */
+      cprintf("%3d replies, %3d%s boosts, %3d%s favs, %1d images      ",
+            s->n_replies,
+            s->n_reblogs, (s->favorited_or_reblogged & REBLOGGED) ? "*":"",
+            s->n_favourites, (s->favorited_or_reblogged & FAVOURITED) ? "*":"",
+            s->n_images);
       dputs("\r\n");
       if (wherey() == scrh - 1) {
         return -1;
@@ -495,17 +488,14 @@ static int show_list(list *l) {
         break;
       case 'F':
       case 'f':
-      case 'S':
-      case 's':
         if (l->root && l->first_displayed_post == 0) {
-          if (c == 'F' || c == 'f') {
-            api_favourite(l->displayed_posts[l->first_displayed_post]);
-          } else {
-            api_reblog(l->displayed_posts[l->first_displayed_post]);
-          }
-          set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
-          print_status_stats(l->displayed_posts[l->first_displayed_post]);
-          set_hscrollwindow(0, scrw);
+          api_favourite(l->displayed_posts[l->first_displayed_post]);
+        }
+        break;
+      case 'B':
+      case 'b':
+        if (l->root && l->first_displayed_post == 0) {
+          api_reblog(l->displayed_posts[l->first_displayed_post]);
         }
         break;
     }
