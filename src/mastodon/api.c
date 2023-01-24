@@ -38,31 +38,40 @@ static surl_response *get_surl_for_endpoint(char *method, char *endpoint) {
   return resp;
 }
 
-int api_get_profile(char **public_name, char **handle) {
+account *api_get_profile(char *id) {
   surl_response *resp;
+  account *a = account_new();
   int r = -1;
+  int n_lines;
+  char **lines;
 
-  *handle = NULL;
-  *public_name = NULL;
+  if (a == NULL) {
+    return NULL;
+  }
 
-  snprintf(endpoint_buf, BUF_SIZE, "%s/verify_credentials", ACCOUNTS_ENDPOINT);
+  snprintf(endpoint_buf, BUF_SIZE, "%s/%s", ACCOUNTS_ENDPOINT,
+              id == NULL ? "verify_credentials" : id);
   resp = get_surl_for_endpoint("GET", endpoint_buf);
 
   if (resp == NULL || resp->code < 200 || resp->code >= 300)
     goto err_out;
 
-  if (surl_get_json(resp, gen_buf, BUF_SIZE, 0, 1, ".display_name,.username") == 0) {
-    if (strchr(gen_buf,'\n')) {
-      *handle = strdup(strchr(gen_buf,'\n') + 1);
-      *(strchr(gen_buf, '\n')) = '\0';
-      *public_name = strdup(gen_buf);
+  if (surl_get_json(resp, gen_buf, BUF_SIZE, 0, 1, ".id,.display_name,.username") == 0) {
+    n_lines = strsplit_in_place(gen_buf,'\n',&lines);
+    if (n_lines < 3) {
+      account_free(a);
+      free(lines);
+      return NULL;
     }
+    a->id = strdup(lines[0]);
+    a->display_name = strdup(lines[1]);
+    a->username = strdup(lines[2]);
+    free(lines);
   }
 
-  r = 0;
 err_out:
   surl_response_free(resp);
-  return r;
+  return a;
 }
 
 int api_get_timeline_posts(char *tlid, char to_load, char *last_to_load, char *first_to_load, char **post_ids) {
@@ -183,7 +192,7 @@ err_out:
   return r;
 }
 
-void api_favourite(status *s) {
+void api_favourite_status(status *s) {
   char r;
 
   if (s->reblog) {
@@ -205,7 +214,7 @@ void api_favourite(status *s) {
   }
 }
 
-void api_reblog(status *s) {
+void api_reblog_status(status *s) {
   char r;
 
   if (s->reblog) {
@@ -225,4 +234,25 @@ void api_reblog(status *s) {
       s->n_reblogs--;
     }
   }
+}
+
+char api_delete_status(status *s) {
+  surl_response *resp;
+  char r = -1;
+
+  if (s->reblog) {
+    s = s->reblog;
+  }
+
+  snprintf(endpoint_buf, BUF_SIZE, "%s/%s", STATUS_ENDPOINT, s->id);
+  resp = get_surl_for_endpoint("DELETE", endpoint_buf);
+
+  if (resp == NULL || resp->code < 200 || resp->code >= 300)
+    goto err_out;
+
+  r = 0;
+
+err_out:
+  surl_response_free(resp);
+  return r;
 }
