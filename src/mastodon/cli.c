@@ -75,7 +75,8 @@ static void print_header(char level) {
 
 static int print_status(status *s, char full, char *scrolled) {
   char *w;
-  
+  char y;
+
   *scrolled = 0;
   s->displayed_at = wherey();
   /* reblog header */
@@ -106,10 +107,11 @@ static int print_status(status *s, char full, char *scrolled) {
     
     /* stats */
     /* 255 replies, 2 images */
-    gotox(38);
+    gotox(39);
+    y = wherey();
     cprintf("%3d replies, %1d images",
           s->n_replies, s->n_images);
-
+    gotoxy(79, y);
     if (wherey() == scrh - 1) {
       return -1;
     }
@@ -519,7 +521,7 @@ void cli(void) {
             free_list(l[cur_list]);
             cur_action = SHOW_HOME_TIMELINE;
           }
-          clrscr();
+          clrzone(LEFT_COL_WIDTH + 1, 0, scrw - 1, scrh - 1);
         }
         break;
       case BACK:

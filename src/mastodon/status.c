@@ -48,9 +48,12 @@ status *status_new_from_json(surl_response *resp, char *id, char full, char is_r
 
   /* .reblog.id is the only one that can be null (and hence not there),
    * so put it at the end */
-  snprintf(selector, SELECTOR_SIZE, ".%screated_at,.%saccount.display_name,.%sreblog.id", 
-                          is_reblog?"reblog.":"", is_reblog?"reblog.":"", is_reblog?"reblog.":"");
-  r = surl_get_json(resp, gen_buf, BUF_SIZE, 0, 1, selector);
+  if (is_reblog) {
+    r = surl_get_json(resp, gen_buf, BUF_SIZE, 0, 1, ".reblog.created_at,.reblog.account.display_name,.reblog.reblog.id");
+  } else {
+    r = surl_get_json(resp, gen_buf, BUF_SIZE, 0, 1, ".created_at,.account.display_name,.reblog.id");
+  }
+
   n_lines = strsplit_in_place(gen_buf, '\n', &lines);
   if (r == 0 && n_lines >= 2) {
     s->created_at = strdup(lines[0]);
@@ -61,18 +64,17 @@ status *status_new_from_json(surl_response *resp, char *id, char full, char is_r
   free(lines);
   
   if (s->reblog == NULL) {
-    snprintf(selector, SELECTOR_SIZE, "(.%smedia_attachments|map(. | select(.type==\"image\"))|length),"
-                                      ".%sreplies_count,.%sreblogs_count,.%sfavourites_count,.%sreblogged,.%sfavourited,"
-                                      ".%saccount.id,.%saccount.username", 
-                              is_reblog?"reblog.":"",
-                              is_reblog?"reblog.":"",
-                              is_reblog?"reblog.":"",
-                              is_reblog?"reblog.":"",
-                              is_reblog?"reblog.":"",
-                              is_reblog?"reblog.":"",
-                              is_reblog?"reblog.":"",
-                              is_reblog?"reblog.":"");
-    r = surl_get_json(resp, gen_buf, BUF_SIZE, 0, 0, selector);
+    /* Get details of original toot */
+    if (is_reblog) {
+      r = surl_get_json(resp, gen_buf, BUF_SIZE, 0, 0, "(.reblog.media_attachments|map(. | select(.type==\"image\"))|length),"
+                                        ".reblog.replies_count,.reblog.reblogs_count,.reblog.favourites_count,.reblog.reblogged,.reblog.favourited,"
+                                        ".reblog.account.id,.reblog.account.username");
+    } else {
+      r = surl_get_json(resp, gen_buf, BUF_SIZE, 0, 0, "(.media_attachments|map(. | select(.type==\"image\"))|length),"
+                                        ".replies_count,.reblogs_count,.favourites_count,.reblogged,.favourited,"
+                                        ".account.id,.account.username");
+    }
+
     n_lines = strsplit_in_place(gen_buf, '\n', &lines);
     if (r == 0 && n_lines == 8) {
       s->n_images = atoi(lines[0]);
@@ -88,8 +90,11 @@ status *status_new_from_json(surl_response *resp, char *id, char full, char is_r
     }
     free(lines);
 
-    snprintf(selector, SELECTOR_SIZE, ".%scontent", is_reblog?"reblog.":"");
-    surl_get_json(resp, s->content, full ? 4096 : TL_STATUS_MAX_LEN, 1, 1, selector);
+    if (is_reblog) {
+      r = surl_get_json(resp, s->content, full ? 4096 : TL_STATUS_MAX_LEN, 1, 1, ".reblog.content");
+    } else {
+      r = surl_get_json(resp, s->content, full ? 4096 : TL_STATUS_MAX_LEN, 1, 1, ".content");
+    }
     if (!full) {
       s->content[TL_STATUS_MAX_LEN - 4] = '.';
       s->content[TL_STATUS_MAX_LEN - 3] = '.';
