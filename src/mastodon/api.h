@@ -15,4 +15,7 @@ int api_get_timeline_posts(char *tlid, char to_load, char *last_to_load, char *f
 int api_get_status_and_replies(char to_load, status *root, char **post_ids);
 
 status *api_get_status(char *post_id, char full);
+
+void api_favourite(status *s);
+void api_reblog(status *s);
 #endif

@@ -15,6 +15,7 @@
 #define STATUS_ENDPOINT   "/api/v1/statuses/"
 
 static char gen_buf[BUF_SIZE];
+static char endpoint_buf[BUF_SIZE];
 
 extern char *instance_url;
 extern char *oauth_token;
@@ -40,19 +41,12 @@ static surl_response *get_surl_for_endpoint(char *method, char *endpoint) {
 int api_get_profile(char **public_name, char **handle) {
   surl_response *resp;
   int r = -1;
-  char *endpoint;
 
   *handle = NULL;
   *public_name = NULL;
 
-  endpoint = malloc(BUF_SIZE);
-  if (endpoint == NULL) {
-    printf("No more memory at %s:%d\n",__FILE__, __LINE__);
-    return -1;
-  }
-  snprintf(endpoint, BUF_SIZE, "%s/verify_credentials", ACCOUNTS_ENDPOINT);
-  resp = get_surl_for_endpoint("GET", endpoint);
-  free(endpoint);
+  snprintf(endpoint_buf, BUF_SIZE, "%s/verify_credentials", ACCOUNTS_ENDPOINT);
+  resp = get_surl_for_endpoint("GET", endpoint_buf);
 
   if (resp == NULL || resp->code < 200 || resp->code >= 300)
     goto err_out;
@@ -73,25 +67,17 @@ err_out:
 
 int api_get_timeline_posts(char *tlid, char to_load, char *last_to_load, char *first_to_load, char **post_ids) {
   surl_response *resp;
-  char *endpoint;
   int n_status;
   char *raw;
 
-  endpoint = malloc(BUF_SIZE);
-  if (endpoint == NULL) {
-    printf("No more memory at %s:%d\n",__FILE__, __LINE__);
-    return 0;
-  }
-
   n_status = 0;
-  snprintf(endpoint, BUF_SIZE, "%s/%s?limit=%d%s%s%s%s", TIMELINE_ENDPOINT, tlid, to_load,
+  snprintf(endpoint_buf, BUF_SIZE, "%s/%s?limit=%d%s%s%s%s", TIMELINE_ENDPOINT, tlid, to_load,
             first_to_load ? "&max_id=" : "",
             first_to_load ? first_to_load : "",
             last_to_load ? "&min_id=" : "",
             last_to_load ? last_to_load : ""
           );
-  resp = get_surl_for_endpoint("GET", endpoint);
-  free(endpoint);
+  resp = get_surl_for_endpoint("GET", endpoint_buf);
   
   if (resp == NULL || resp->code < 200 || resp->code >= 300)
     goto err_out;
@@ -115,21 +101,13 @@ err_out:
 
 int api_get_status_and_replies(char to_load, status *root, char **post_ids) {
   surl_response *resp;
-  char *endpoint;
   int n_status;
   char n_before, n_after;
   char *raw;
 
-  endpoint = malloc(BUF_SIZE);
-  if (endpoint == NULL) {
-    printf("No more memory at %s:%d\n",__FILE__, __LINE__);
-    return 0;
-  }
-
   n_status = 0;
-  snprintf(endpoint, BUF_SIZE, "%s/%s/context", STATUS_ENDPOINT, root->reblog ? root->reblog->id : root->id);
-  resp = get_surl_for_endpoint("GET", endpoint);
-  free(endpoint);
+  snprintf(endpoint_buf, BUF_SIZE, "%s/%s/context", STATUS_ENDPOINT, root->reblog ? root->reblog->id : root->id);
+  resp = get_surl_for_endpoint("GET", endpoint_buf);
   
   if (resp == NULL || resp->code < 200 || resp->code >= 300)
     goto err_out;
@@ -165,19 +143,11 @@ err_out:
 status *api_get_status(char *status_id, char full) {
   surl_response *resp;
   status *s;
-  char *endpoint;
 
   s = NULL;
 
-  endpoint = malloc(BUF_SIZE);
-  if (endpoint == NULL) {
-    printf("No more memory at %s:%d\n",__FILE__, __LINE__);
-    return NULL;
-  }
-
-  snprintf(endpoint, BUF_SIZE, "%s/%s", STATUS_ENDPOINT, status_id);
-  resp = get_surl_for_endpoint("GET", endpoint);
-  free(endpoint);
+  snprintf(endpoint_buf, BUF_SIZE, "%s/%s", STATUS_ENDPOINT, status_id);
+  resp = get_surl_for_endpoint("GET", endpoint_buf);
   
   if (resp == NULL || resp->code < 200 || resp->code >= 300)
     goto err_out;
@@ -187,4 +157,72 @@ status *api_get_status(char *status_id, char full) {
 err_out:
   surl_response_free(resp);
   return s;
+}
+
+/* Caution: does not go into s->reblog */
+static char api_status_interact(status *s, char *action) {
+  surl_response *resp;
+  char r = -1;
+
+  snprintf(endpoint_buf, BUF_SIZE, "%s/%s/%s", STATUS_ENDPOINT, s->id, action);
+  resp = get_surl_for_endpoint("POST", endpoint_buf);
+
+  surl_send_data_params(resp, 0, 1);
+  surl_send_data(resp, "", 0);
+
+  surl_read_response_header(resp);
+
+
+  if (resp == NULL || resp->code < 200 || resp->code >= 300)
+    goto err_out;
+
+  r = 0;
+
+err_out:
+  surl_response_free(resp);
+  return r;
+}
+
+void api_favourite(status *s) {
+  char r;
+
+  if (s->reblog) {
+    s = s->reblog;
+  }
+
+  if ((s->favorited_or_reblogged & FAVOURITED) == 0) {
+    r = api_status_interact(s, "favourite");
+    if (r == 0) {
+      s->favorited_or_reblogged |= FAVOURITED;
+      s->n_favourites++;
+    }
+  } else {
+    r = api_status_interact(s, "unfavourite");
+    if (r == 0) {
+      s->favorited_or_reblogged &= ~FAVOURITED;
+      s->n_favourites--;
+    }
+  }
+}
+
+void api_reblog(status *s) {
+  char r;
+
+  if (s->reblog) {
+    s = s->reblog;
+  }
+
+  if ((s->favorited_or_reblogged & REBLOGGED) == 0) {
+    r = api_status_interact(s, "reblog");
+    if (r == 0) {
+      s->favorited_or_reblogged |= REBLOGGED;
+      s->n_reblogs++;
+    }
+  } else {
+    r = api_status_interact(s, "unreblog");
+    if (r == 0) {
+      s->favorited_or_reblogged &= ~REBLOGGED;
+      s->n_reblogs--;
+    }
+  }
 }
