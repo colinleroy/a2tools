@@ -588,9 +588,8 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
         curl_easy_setopt(curl, CURLOPT_QUOTE, curl_slist_append(NULL,cmd));
         simple_serial_puts("WAIT\n");
       } else {
-        printf("Unsupported method %s\n", method);
-        simple_serial_puts("ERROR\n");
-        return curlbuf;
+        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
+        simple_serial_puts("WAIT\n");
       }
   } else if (!strcmp(method, "GET")) {
     /* Don't send WAIT twice */
