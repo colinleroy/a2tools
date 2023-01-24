@@ -18,8 +18,7 @@
 
 static unsigned char scrw, scrh;
 
-static char *my_public_name = NULL;
-static char *my_handle = NULL;
+static account *my_account = NULL;
 
 #define SHOW_HOME_TIMELINE 0
 #define SHOW_FULL_STATUS   1
@@ -39,24 +38,22 @@ static void print_free_ram(void) {
 }
 
 static void print_header(list *l) {
-  int r = 0;
-
-  if (my_public_name == NULL) {
-    r = api_get_profile(&my_public_name, &my_handle);
+  if (my_account == NULL) {
+    my_account = api_get_profile(NULL);
   }
-  if (r == 0) {
-    if (strlen(my_public_name) > LEFT_COL_WIDTH)
-      my_public_name[LEFT_COL_WIDTH] = '\0';
+  if (my_account) {
+    if (strlen(my_account->display_name) > LEFT_COL_WIDTH)
+      my_account->display_name[LEFT_COL_WIDTH] = '\0';
 
-    if (strlen(my_handle) > LEFT_COL_WIDTH)
-      my_handle[LEFT_COL_WIDTH] = '\0';
+    if (strlen(my_account->username) > LEFT_COL_WIDTH)
+      my_account->username[LEFT_COL_WIDTH] = '\0';
 
-    cputsxy(0, 0, my_public_name);
+    cputsxy(0, 0, my_account->display_name);
     gotoxy(0, 1);
-    cprintf("@%s\r\n", my_handle);
+    cprintf("@%s\r\n", my_account->username);
   }
 
-  #define BTM 17
+  #define BTM 16
   clrzone(0, BTM, LEFT_COL_WIDTH, 23);
   gotoxy(0,BTM);
   if (!l->root) {
@@ -64,10 +61,17 @@ static void print_header(list *l) {
     cputs("Scroll   : Up/down \r\n");
     cputs("Exit     : Escape  \r\n");
   } else {
+    status *root_status = l->displayed_posts[0];
+    if (root_status->reblog) {
+      root_status = root_status->reblog;
+    }
     cputs("View toot: V/Enter \r\n");
     if (l->first_displayed_post == 0) {
       cputs("Favourite: F       \r\n");
       cputs("Boost    : B       \r\n");
+      if (!strcmp(root_status->account->id, my_account->id)) {
+        cputs("Delete   : D       \r\n");
+      }
     }
     cputs("Scroll   : Up/down \r\n");
     cputs("Back     : Escape \r\n");
@@ -489,13 +493,22 @@ static int show_list(list *l) {
       case 'F':
       case 'f':
         if (l->root && l->first_displayed_post == 0) {
-          api_favourite(l->displayed_posts[l->first_displayed_post]);
+          api_favourite_status(l->displayed_posts[0]);
         }
         break;
       case 'B':
       case 'b':
         if (l->root && l->first_displayed_post == 0) {
-          api_reblog(l->displayed_posts[l->first_displayed_post]);
+          api_reblog_status(l->displayed_posts[0]);
+        }
+        break;
+      case 'D':
+      case 'd':
+        if (l->root && l->first_displayed_post == 0) {
+          if (api_delete_status(l->displayed_posts[0]) == 0) {
+            cur_action = BACK;
+            return 0;
+          }
         }
         break;
     }
