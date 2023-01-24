@@ -38,7 +38,7 @@ static void print_free_ram(void) {
 #endif
 }
 
-static void print_header(char level) {
+static void print_header(list *l) {
   int r = 0;
 
   if (my_public_name == NULL) {
@@ -56,21 +56,32 @@ static void print_header(char level) {
     cprintf("@%s\r\n", my_handle);
   }
 
-  #define BTM 19
-  clrzone(0, BTM, LEFT_COL_WIDTH, BTM + 4);
+  #define BTM 17
+  clrzone(0, BTM, LEFT_COL_WIDTH, 23);
   gotoxy(0,BTM);
-  if (level == 0) {
+  if (!l->root) {
     cputs("View toot: V/Enter \r\n");
     cputs("Scroll   : Up/down \r\n");
     cputs("Exit     : Escape  \r\n");
   } else {
     cputs("View toot: V/Enter \r\n");
+    if (l->first_displayed_post == 0) {
+      cputs("Favourite: F       \r\n");
+      cputs("Share    : S       \r\n");
+    }
     cputs("Scroll   : Up/down \r\n");
     cputs("Back     : Escape \r\n");
   }
   print_free_ram();
   cvlinexy(LEFT_COL_WIDTH, 0, scrh);
   
+}
+
+static void print_status_stats(status *s) {
+  gotoxy(0, s->stats_line);
+
+  cprintf("%3d replies, %3d shares, %3d favs, %1d images",
+        s->n_replies, s->n_reblogs, s->n_favourites, s->n_images);
 }
 
 static int print_status(status *s, char full, char *scrolled) {
@@ -155,8 +166,8 @@ static int print_status(status *s, char full, char *scrolled) {
   if (full) {
     /* stats */
     /* 255 replies, 255 favs, 255 shares, 2 images */
-      cprintf("%3d replies, %3d shares, %3d favs, %1d images",
-            s->n_replies, s->n_reblogs, s->n_favourites, s->n_images);
+      s->stats_line = wherey();
+      print_status_stats(s);
       dputs("\r\n");
       if (wherey() == scrh - 1) {
         return -1;
@@ -454,6 +465,7 @@ static int show_list(list *l) {
   char c;
   
   while (1) {
+    print_header(l);
     print_list(l);
 
     c = cgetc();
@@ -476,6 +488,21 @@ static int show_list(list *l) {
           if (load_prev_posts(l)) {
             return 1;
           }
+        }
+        break;
+      case 'F':
+      case 'f':
+      case 'S':
+      case 's':
+        if (l->root && l->first_displayed_post == 0) {
+          if (c == 'F' || c == 'f') {
+            api_favourite(l->displayed_posts[l->first_displayed_post]);
+          } else {
+            api_reblog(l->displayed_posts[l->first_displayed_post]);
+          }
+          set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
+          print_status_stats(l->displayed_posts[l->first_displayed_post]);
+          set_hscrollwindow(0, scrw);
         }
         break;
     }
@@ -510,7 +537,6 @@ void cli(void) {
         cur_action = NAVIGATE;
         break;
       case NAVIGATE:
-        print_header(cur_list);
         if (show_list(l[cur_list])) {
           if (cur_list > 0) {
             free_list(l[cur_list]);
