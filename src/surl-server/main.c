@@ -412,24 +412,41 @@ static size_t data_send_cb(char *ptr, size_t size, size_t nmemb, void *cbdata) {
   return xfr_size;
 }
 
+static char *replace_new_lines(char *in) {
+  int len = strlen(in);
+  char *out = malloc(len);
+  int i, o;
+  for (i = 0, o = 0; i < len; i++) {
+    if (in[i] == '\\' && i + 1 < len && in[i + 1] == 'n') {
+      out[o++] = '\n';
+    } else {
+      out[o++] = in[i];
+    }
+  }
+  return out;
+}
 /* we're going to url_encode and concat each line, expecting
  * an alternance of param, value
  */
 static char *prepare_post(char *buffer, size_t *len) {
-  char *tmp;
+  char *tmp, *nl;
   char *out = malloc(*len * 3);
   char *out_ptr = out;
   char **lines;
   int n_lines = strsplit_in_place(buffer, '\n', &lines);
   int i;
   for (i = 0; i < n_lines; i += 2) {
-    tmp = curl_easy_escape(NULL, lines[i], strlen(lines[i]));
+    nl = replace_new_lines(lines[i]);
+    tmp = curl_easy_escape(NULL, nl, strlen(nl));
+    free(nl);
     sprintf(out_ptr, "%s=", tmp);
     out_ptr += strlen(tmp) + 1;
     curl_free(tmp);
-    if (strlen(lines[i + 1]) > 0)
-      tmp = curl_easy_escape(NULL, lines[i + 1], strlen(lines[i + 1]));
-    else
+    if (strlen(lines[i + 1]) > 0) {
+      nl = replace_new_lines(lines[i + 1]);
+      tmp = curl_easy_escape(NULL, nl, strlen(nl));
+      free(nl);
+    } else
       tmp = strdup("");
     sprintf(out_ptr, "%s&", tmp);
     out_ptr += strlen(tmp) + 1;

@@ -11,13 +11,14 @@ extern char gen_buf[BUF_SIZE];
 
 account *api_get_profile(char *id);
 
-#define ACCOUNTS_ENDPOINT "/api/v1/accounts/"
-#define TIMELINE_ENDPOINT "/api/v1/timelines/"
-#define STATUS_ENDPOINT   "/api/v1/statuses/"
+#define ACCOUNTS_ENDPOINT "/api/v1/accounts"
+#define TIMELINE_ENDPOINT "/api/v1/timelines"
+#define STATUS_ENDPOINT   "/api/v1/statuses"
 
 #define COMPOSE_PUBLIC 0
 #define COMPOSE_UNLISTED 1
 #define COMPOSE_PRIVATE 2
+#define COMPOSE_MENTION 3
 
 #define HOME_TIMELINE "home"
 
@@ -33,4 +34,6 @@ char api_delete_status(status *s);
 
 char api_relationship_get(account *a, char f);
 account *api_get_full_account(account *a);
+
+char api_send_toot(char *buffer, char *in_reply_to_id, char compose_audience);
 #endif

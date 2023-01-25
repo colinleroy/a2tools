@@ -18,17 +18,17 @@ char gen_buf[BUF_SIZE];
 char selector[SELECTOR_SIZE];
 
 static surl_response *get_surl_for_endpoint(char *method, char *endpoint) {
-  static char **token_hdr = NULL;
+  static char **hdrs = NULL;
   surl_response *resp;
 
-  if (token_hdr == NULL) {
-    token_hdr = malloc(sizeof(char *));
-    token_hdr[0] = malloc(BUF_SIZE);
-    snprintf(token_hdr[0], BUF_SIZE, "Authorization: Bearer %s", oauth_token);
+  if (hdrs == NULL) {
+    hdrs = malloc(sizeof(char *));
+    hdrs[0] = malloc(BUF_SIZE);
+    snprintf(hdrs[0], BUF_SIZE, "Authorization: Bearer %s", oauth_token);
   }
 
   snprintf(gen_buf, BUF_SIZE, "%s%s", instance_url, endpoint);
-  resp = surl_start_request(method, gen_buf, token_hdr, 1);
+  resp = surl_start_request(method, gen_buf, hdrs, 1);
   
   return resp;
 }
@@ -71,7 +71,7 @@ err_out:
 int api_get_account_posts(account *a, char to_load, char *first_to_load, char **post_ids) {
   char buf[BUF_SIZE]; /* can't use endpoint_buf */
 
-  snprintf(buf, BUF_SIZE, "%s%s/statuses", ACCOUNTS_ENDPOINT, a->id);
+  snprintf(buf, BUF_SIZE, "%s/%s/statuses", ACCOUNTS_ENDPOINT, a->id);
 
   return api_get_posts(buf, to_load, first_to_load, post_ids);
 }
@@ -334,4 +334,69 @@ account *api_get_full_account(account *orig) {
 err_out:
   surl_response_free(resp);
   return a;
+}
+
+static char *compose_audience_str(char compose_audience) {
+  switch(compose_audience) {
+    case COMPOSE_PUBLIC:   return "public";
+    case COMPOSE_UNLISTED: return "unlisted";
+    case COMPOSE_PRIVATE:  return "private";
+    case COMPOSE_MENTION:
+    default:               return "direct";
+  }
+}
+
+char api_send_toot(char *buffer, char *in_reply_to_id, char compose_audience) {
+  surl_response *resp;
+  char *body = malloc(1024);
+  char r;
+  int i, o, len;
+  char in_reply_to_buf[48];
+
+  r = -1;
+
+  if (in_reply_to_id) {
+    snprintf(in_reply_to_buf, 48, "in_reply_to_id\n%s\n", in_reply_to_id);
+  } else {
+    in_reply_to_buf[0] = '\0';
+  }
+
+  snprintf(endpoint_buf, BUF_SIZE, "%s", STATUS_ENDPOINT);
+  resp = get_surl_for_endpoint("POST", endpoint_buf);
+
+  /* Start of status */
+  snprintf(body, 1024, "%s"
+                       "visibility\n%s\n"
+                       "status\n",
+                        in_reply_to_buf,
+                        compose_audience_str(compose_audience));
+  /* Escaped buffer */
+  len = strlen(buffer);
+  o = strlen(body);
+  for (i = 0; i < len; i++) {
+    if (buffer[i] != '\n') {
+      body[o++] = buffer[i];
+    } else {
+      body[o++] = '\\';
+      body[o++] = 'n';
+    }
+  }
+  /* End of status */
+  body[o++] = '\n';
+  len = o - 1;
+
+  surl_send_data_params(resp, len, 0);
+  surl_send_data(resp, body, len);
+
+  surl_read_response_header(resp);
+
+  if (resp == NULL || resp->code < 200 || resp->code >= 300)
+    goto err_out;
+
+  
+
+  r = 0;
+err_out:
+  surl_response_free(resp);
+  return r;
 }

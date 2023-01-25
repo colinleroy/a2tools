@@ -282,7 +282,7 @@ static char load_next_posts(list *l) {
 
   switch (l->kind) {
     case L_HOME_TIMELINE:
-      loaded = api_get_posts(TIMELINE_ENDPOINT HOME_TIMELINE, to_load, last_id, new_ids);
+      loaded = api_get_posts(TIMELINE_ENDPOINT "/" HOME_TIMELINE, to_load, last_id, new_ids);
       break;
     case L_FULL_STATUS:
       loaded = api_get_status_and_replies(to_load, l->root, l->leaf_root, last_id, new_ids);
@@ -386,7 +386,7 @@ static list *build_list(status *root, char kind) {
 
   switch (kind) {
     case L_HOME_TIMELINE:
-      l->n_posts = api_get_posts(TIMELINE_ENDPOINT HOME_TIMELINE, N_STATUS_TO_LOAD, NULL, l->ids);
+      l->n_posts = api_get_posts(TIMELINE_ENDPOINT "/" HOME_TIMELINE, N_STATUS_TO_LOAD, NULL, l->ids);
       memset(l->displayed_posts, 0, l->n_posts * sizeof(status *));
       break;
     case L_FULL_STATUS:
@@ -670,14 +670,15 @@ static int show_list(list *l) {
 #define COMPOSE_HEIGHT 12
 #define COMPOSE_FIELD_HEIGHT 7
 
-static char compose_audience = COMPOSE_PUBLIC;
+static char compose_audience = COMPOSE_MENTION;
 static void update_compose_audience(void) {
   gotoxy(0, COMPOSE_FIELD_HEIGHT + 1);
-  cprintf("Command     : Send   (%c) public  (%c) unlisted  (%c) private\r\n",
+  cputs  ("Command : Open-Apple+S: Send ; Escape: Cancel\r\n");
+  cprintf("Audience: (%c) Public  (%c) Unlisted  (%c) pRivate  (%c) Mention",
         compose_audience == COMPOSE_PUBLIC ? '*':' ',
         compose_audience == COMPOSE_UNLISTED ? '*':' ',
-        compose_audience == COMPOSE_PRIVATE ? '*':' ');
-  cputs("Open-Apple +: S       P           U             R\r\n");
+        compose_audience == COMPOSE_PRIVATE ? '*':' ',
+        compose_audience == COMPOSE_MENTION ? '*':' ');
 }
 
 char dgt_cmd_cb(char c) {
@@ -687,6 +688,7 @@ char dgt_cmd_cb(char c) {
     case 'p': compose_audience = COMPOSE_PUBLIC; break;
     case 'r': compose_audience = COMPOSE_PRIVATE; break;
     case 'u': compose_audience = COMPOSE_UNLISTED; break;
+    case 'm': compose_audience = COMPOSE_MENTION; break;
   }
   x = wherex();
   y = wherey();
@@ -699,8 +701,8 @@ char dgt_cmd_cb(char c) {
 
 static char *handle_compose_input(void) {
   char *text;
-  text = malloc(1024);
-  if (dget_text(text, 1024, dgt_cmd_cb) == NULL) {
+  text = malloc(500);
+  if (dget_text(text, 500, dgt_cmd_cb) == NULL) {
     free(text);
     text = NULL;
   }
@@ -738,7 +740,10 @@ static void compose_toot(void) {
   }
 
   set_hscrollwindow(0, scrw);
-  
+  if (text) {
+    api_send_toot(text, NULL, compose_audience);
+  }
+
   free(text);
 }
 
