@@ -274,7 +274,7 @@ static char load_next_posts(list *l) {
       loaded = api_get_posts(TIMELINE_ENDPOINT HOME_TIMELINE, N_STATUS_TO_LOAD / 2, last_id, new_ids);
       break;
     case L_FULL_STATUS:
-      loaded = api_get_status_and_replies(N_STATUS_TO_LOAD/2, l->root, l->leaf_root, NULL, new_ids);
+      loaded = api_get_status_and_replies(N_STATUS_TO_LOAD/2, l->root, l->leaf_root, last_id, new_ids);
       break;
     case L_ACCOUNT:
       loaded = api_get_account_posts(l->account, N_STATUS_TO_LOAD / 2, last_id, new_ids);
