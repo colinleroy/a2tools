@@ -14,6 +14,7 @@ typedef struct _list list;
 struct _list {
   char kind;
   char *root; /* For timelines */
+  char *leaf_root;
   account *account; /* For accounts */
   char **ids;
   signed char first_displayed_post;

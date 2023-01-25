@@ -274,7 +274,7 @@ static char load_next_posts(list *l) {
       loaded = api_get_posts(TIMELINE_ENDPOINT HOME_TIMELINE, N_STATUS_TO_LOAD / 2, last_id, new_ids);
       break;
     case L_FULL_STATUS:
-      /* TODO */
+      loaded = api_get_status_and_replies(N_STATUS_TO_LOAD/2, l->root, l->leaf_root, NULL, new_ids);
       break;
     case L_ACCOUNT:
       loaded = api_get_account_posts(l->account, N_STATUS_TO_LOAD / 2, last_id, new_ids);
@@ -353,6 +353,7 @@ static list *build_list(status *root, char kind) {
   if (kind != L_ACCOUNT) {
     if (root) {
       l->root = strdup(root->id);
+      l->leaf_root = strdup(root->reblog ? root->reblog->id : root->id);
     }
     l->first_displayed_post = 0;
   } else {
@@ -371,7 +372,7 @@ static list *build_list(status *root, char kind) {
       memset(l->displayed_posts, 0, l->n_posts * sizeof(status *));
       break;
     case L_FULL_STATUS:
-      l->n_posts = api_get_status_and_replies(N_STATUS_TO_LOAD, root, l->ids);
+      l->n_posts = api_get_status_and_replies(N_STATUS_TO_LOAD, l->root, l->leaf_root, NULL, l->ids);
       memset(l->displayed_posts, 0, l->n_posts * sizeof(status *));
       /* Load first for the header */
       l->displayed_posts[0] = api_get_status(l->ids[0], 1);
@@ -409,6 +410,7 @@ static void free_list(list *l) {
   }
   account_free(l->account);
   free(l->root);
+  free(l->leaf_root);
   free(l->ids);
   free(l->displayed_posts);
   free(l->post_height);

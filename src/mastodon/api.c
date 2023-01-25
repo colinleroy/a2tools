@@ -109,14 +109,14 @@ err_out:
 }
 
 /* FIXME get more using first_to_load and number of asc/desc... */
-int api_get_status_and_replies(char to_load, status *root, char **post_ids) {
+int api_get_status_and_replies(char to_load, char *root_id, char *root_leaf_id, char *first_to_load, char **post_ids) {
   surl_response *resp;
   int n_status;
   char n_before, n_after;
   char *raw;
 
   n_status = 0;
-  snprintf(endpoint_buf, BUF_SIZE, "%s/%s/context", STATUS_ENDPOINT, root->reblog ? root->reblog->id : root->id);
+  snprintf(endpoint_buf, BUF_SIZE, "%s/%s/context", STATUS_ENDPOINT, root_leaf_id);
   resp = get_surl_for_endpoint("GET", endpoint_buf);
   
   if (resp == NULL || resp->code < 200 || resp->code >= 300)
@@ -128,6 +128,7 @@ int api_get_status_and_replies(char to_load, status *root, char **post_ids) {
   if (n_before + n_after == to_load) {
     n_before--;
   }
+  //.descendants|.[[.[].id]|index("109748355755514564")+1:[.[].id]|index("109748355755514564")+1+to_load]|.[].id
   snprintf(selector, SELECTOR_SIZE, "(.ancestors|.[-%d:]|.[].id),\"-\",(.descendants|.[0:%d]|.[].id)", n_before, n_after);
   if (surl_get_json(resp, raw, 512, 0, 0, selector) == 0) {
     char **tmp;
@@ -137,7 +138,7 @@ int api_get_status_and_replies(char to_load, status *root, char **post_ids) {
       if (tmp[i][0] != '-') {
         post_ids[i] = tmp[i];
       } else {
-        post_ids[i] = strdup(root->id);
+        post_ids[i] = strdup(root_id);
         free(tmp[i]);
       }
     }
