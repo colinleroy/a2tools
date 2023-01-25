@@ -8,9 +8,7 @@
 #endif
 #include <string.h>
 
-#ifndef __extended_conio
-#define __extended_conio
-
+#define CH_DELETE      0x7F
 #ifndef __CC65__
 
 #define CH_CURS_UP     0x01
@@ -19,6 +17,7 @@
 #define CH_CURS_RIGHT  0x05
 #define CH_ENTER       '\n'
 #define CH_ESC         0x1B
+#define CH_LLCORNER    'L'
 
 #define __fastcall__
 #define cputc(c) putc(c, stdout)
@@ -26,6 +25,7 @@
 #define dputs cputs
 #define chlinexy(a, b, c) do {} while(0)
 #define cvlinexy(a, b, c) do {} while(0)
+#define cvline(a) do {} while(0)
 #define cprintf printf
 #define revers(x) do {} while(0)
 #define videomode(x) do {} while(0)
@@ -61,6 +61,5 @@ void __fastcall__ clrzone(char xs, char ys, char xe, char ye);
 void printxcentered(int y, char *buf);
 void printxcenteredbox(int width, int height);
 void progress_bar(int x, int y, int width, size_t cur, size_t end);
-#endif
 
 #endif

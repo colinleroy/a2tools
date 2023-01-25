@@ -15,6 +15,10 @@ account *api_get_profile(char *id);
 #define TIMELINE_ENDPOINT "/api/v1/timelines/"
 #define STATUS_ENDPOINT   "/api/v1/statuses/"
 
+#define COMPOSE_PUBLIC 0
+#define COMPOSE_UNLISTED 1
+#define COMPOSE_PRIVATE 2
+
 #define HOME_TIMELINE "home"
 
 int api_get_posts(char *endpoint, char to_load, char *first_to_load, char **post_ids);
