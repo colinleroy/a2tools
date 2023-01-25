@@ -123,13 +123,23 @@ int api_get_status_and_replies(char to_load, char *root_id, char *root_leaf_id, 
     goto err_out;
 
   raw = malloc(512);
-  n_before = to_load/3;
-  n_after  = (2 * to_load) / 3;
-  if (n_before + n_after == to_load) {
-    n_before--;
+  if (first_to_load == NULL) {
+    n_before = to_load/3;
+    n_after  = (2 * to_load) / 3;
+    if (n_before + n_after == to_load) {
+      /* remove one descendant to make room for the "-" root marker */
+      n_before--;
+    }
+    /* select n_before ascendants and n_after ascendants */
+    snprintf(selector, SELECTOR_SIZE, "(.ancestors|.[-%d:]|.[].id),\"-\","
+                                      "(.descendants|.[0:%d]|.[].id)",
+                                      n_before, n_after);
+  } else {
+    n_after = to_load;
+    snprintf(selector, SELECTOR_SIZE, ".descendants|.[[.[].id]|index(\"%s\")+1:[.[].id]"
+                                      "|index(\"%s\")+1+%d]|.[].id",
+                                      first_to_load, first_to_load, n_after);
   }
-  //.descendants|.[[.[].id]|index("109748355755514564")+1:[.[].id]|index("109748355755514564")+1+to_load]|.[].id
-  snprintf(selector, SELECTOR_SIZE, "(.ancestors|.[-%d:]|.[].id),\"-\",(.descendants|.[0:%d]|.[].id)", n_before, n_after);
   if (surl_get_json(resp, raw, 512, 0, 0, selector) == 0) {
     char **tmp;
     int i;
