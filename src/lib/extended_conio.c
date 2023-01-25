@@ -40,10 +40,12 @@ void gotoxy(int x, int y) {
   fprintf(stdout, "%c[%d;%dH", CH_ESC, y + 1, x + 1);
 }
 void gotox(int x) {
-  fprintf(stdout, "%c[%d;%dH", CH_ESC, 1, x + 1); /* fixme not 0 y */
+  int y = wherey();
+  fprintf(stdout, "%c[%d;%dH", CH_ESC, y + 1, x + 1); /* fixme not 0 y */
 }
 void gotoy(int y) {
-  fprintf(stdout, "%c[%d;%dH", CH_ESC, y + 1, 1); /* fixme not 0 x */
+  int x = wherex();
+  fprintf(stdout, "%c[%d;%dH", CH_ESC, y + 1, x + 1); /* fixme not 0 x */
 }
 
 char cgetc(void) {
@@ -151,7 +153,13 @@ char * __fastcall__ cgets(char *buf, size_t size) {
   size_t i = 0, max_i = 0;
   int cur_x, cur_y;
   int prev_cursor = 0;
-  
+  unsigned char sx, wx;
+  unsigned char sy, ey, hy;
+
+  get_hscrollwindow(&sx, &wx);
+  get_scrollwindow(&sy, &ey);
+  hy = ey - sy;
+
   if (scrw == 255 && scrh == 255) {
     screensize(&scrw, &scrh);
   }
@@ -191,17 +199,17 @@ char * __fastcall__ cgets(char *buf, size_t size) {
       max_i = i;
     }
 
-    if (cur_x > scrw - 1) {
+    if (cur_x > wx - 1) {
       cur_x = 0;
       cur_y++;
       if (cur_y > scrh - 1) {
-        gotoxy(scrw - 1, scrh - 1);
+        gotoxy(wx - 1, scrh - 1);
         cputs("\r\n");
-        cputcxy(scrw - 1, scrh - 2, c);
+        cputcxy(wx - 1, scrh - 2, c);
         cur_y--;
       }
     } else if (cur_x < 0) {
-      cur_x = scrw - 1;
+      cur_x = wx - 1;
       cur_y--;
     }
     gotoxy(cur_x, cur_y);

@@ -5,6 +5,7 @@ mastodon_SOURCES := main.c oauth.c \
 mastocli_SOURCES := cli.c api.c \
 	account.c status.c \
 	../lib/simple_serial.c ../lib/extended_conio.c \
+	../lib/dgets.c \
 	../lib/extended_string.c ../lib/surl.c
 
 CC65SOURCES := ../lib/dputs.s ../lib/dputc.s ../lib/scroll.s

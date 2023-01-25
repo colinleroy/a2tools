@@ -3,6 +3,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <ctype.h>
+#ifdef __APPLE2__
+#include <apple2enh.h>
+#endif
 #include "surl.h"
 #include "extended_conio.h"
 #include "extended_string.h"
@@ -12,7 +15,7 @@
 #include "api.h"
 #include "list.h"
 #include "math.h"
-
+#include "dgets.h"
 #define BUF_SIZE 255
 
 #define LEFT_COL_WIDTH 19
@@ -27,6 +30,7 @@ static account *my_account = NULL;
 #define NAVIGATE           8
 #define BACK               9
 #define QUIT               10
+#define COMPOSE            15
 static char cur_action;
 
 
@@ -71,7 +75,7 @@ static void print_header(list *l) {
     cprintf("@%s\r\n", my_account->username);
   }
 
-  #define BTM 13
+  #define BTM 11
   clrzone(0, BTM, LEFT_COL_WIDTH, 23);
   gotoxy(0,BTM);
 
@@ -105,6 +109,9 @@ static void print_header(list *l) {
       cputs(" Profile  : P      \r\n");
     }
   }
+  cputs("Writing:\r\n");
+  cputs(" Compose  : C      \r\n");
+
   print_free_ram();
   cvlinexy(LEFT_COL_WIDTH, 0, scrh);
   
@@ -651,9 +658,88 @@ static int show_list(list *l) {
           }
         }
         break;
+      case 'c':
+          cur_action = COMPOSE;
+          return 0;
+        break;
     }
   }
   return 0;
+}
+
+#define COMPOSE_HEIGHT 12
+#define COMPOSE_FIELD_HEIGHT 7
+
+static char compose_audience = COMPOSE_PUBLIC;
+static void update_compose_audience(void) {
+  gotoxy(0, COMPOSE_FIELD_HEIGHT + 1);
+  cprintf("Command     : Send   (%c) public  (%c) unlisted  (%c) private\r\n",
+        compose_audience == COMPOSE_PUBLIC ? '*':' ',
+        compose_audience == COMPOSE_UNLISTED ? '*':' ',
+        compose_audience == COMPOSE_PRIVATE ? '*':' ');
+  cputs("Open-Apple +: S       P           U             R\r\n");
+}
+
+char dgt_cmd_cb(char c) {
+  char x, y;
+  switch(tolower(c)) {
+    case 's': return 1;
+    case 'p': compose_audience = COMPOSE_PUBLIC; break;
+    case 'r': compose_audience = COMPOSE_PRIVATE; break;
+    case 'u': compose_audience = COMPOSE_UNLISTED; break;
+  }
+  x = wherex();
+  y = wherey();
+  set_scrollwindow(0, scrh);
+  update_compose_audience();
+  set_scrollwindow(1, COMPOSE_FIELD_HEIGHT);
+  gotoxy(x, y);
+  return 0;
+}
+
+static char *handle_compose_input(void) {
+  char *text;
+  text = malloc(1024);
+  if (dget_text(text, 1024, dgt_cmd_cb) == NULL) {
+    free(text);
+    text = NULL;
+  }
+  return text;
+}
+
+static void compose_toot(void) {
+  char i, *text;
+
+  text = NULL;
+
+  set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
+
+  for (i = 0; i < COMPOSE_HEIGHT; i++) {
+    scrolldn();
+  }
+  
+  gotoxy(0, 0);
+  chline(scrw - LEFT_COL_WIDTH - 1);
+  gotoxy(0, COMPOSE_FIELD_HEIGHT);
+  chline(scrw - LEFT_COL_WIDTH - 1);
+
+  update_compose_audience();
+  chline(scrw - LEFT_COL_WIDTH - 1);
+
+  set_scrollwindow(1, COMPOSE_FIELD_HEIGHT);
+
+  gotoxy(0, 0);
+  text = handle_compose_input();
+
+  set_scrollwindow(0, scrh);
+
+  for (i = 0; i < COMPOSE_HEIGHT; i++) {
+    scrollup();
+  }
+
+  set_hscrollwindow(0, scrw);
+  
+  free(text);
 }
 
 void cli(void) {
@@ -715,6 +801,10 @@ void cli(void) {
         } else {
           cur_action = QUIT;
         }
+        break;
+      case COMPOSE:
+        compose_toot();
+        cur_action = NAVIGATE;
         break;
       case QUIT:
         goto out;
