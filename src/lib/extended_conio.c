@@ -120,7 +120,6 @@ void dputsxy(unsigned char x, unsigned char y, char *buf) {
 
 void dputc(char buf) {
   printf("%c", buf);
-  fflush(stdout);
 }
 
 void dputcxy(unsigned char x, unsigned char y, char buf) {

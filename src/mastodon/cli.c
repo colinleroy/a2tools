@@ -44,10 +44,11 @@ static status *is_root_status_at_top(list *l) {
   char full;
 
   root_status = NULL;
-  full = (l->root && !strcmp(l->root, l->ids[l->first_displayed_post]));
+  full = (l->root && l->ids[l->first_displayed_post] &&
+         !strcmp(l->root, l->ids[l->first_displayed_post]));
   if (full) {
     root_status = l->displayed_posts[l->first_displayed_post];
-    if (root_status->reblog) {
+    if (root_status && root_status->reblog) {
       root_status = root_status->reblog;
     }
   }
@@ -251,18 +252,21 @@ static int print_status(status *s, char full, char *scrolled) {
   return 0;
 }
 
-#define N_STATUS_TO_LOAD 6
+#define N_STATUS_TO_LOAD 10
 #define LOADING_TOOT_MSG "Loading toot..."
 
 static char load_next_posts(list *l) {
   char *last_id;
   char **new_ids;
   char loaded, i;
+  char to_load;
 
   if (l->eof) {
     return 0;
   }
-  new_ids = malloc((N_STATUS_TO_LOAD / 2) * sizeof(char *));
+
+  to_load = min(N_STATUS_TO_LOAD / 2, l->first_displayed_post);
+  new_ids = malloc(to_load * sizeof(char *));
 
   dputs(LOADING_TOOT_MSG);
 
@@ -271,36 +275,43 @@ static char load_next_posts(list *l) {
 
   switch (l->kind) {
     case L_HOME_TIMELINE:
-      loaded = api_get_posts(TIMELINE_ENDPOINT HOME_TIMELINE, N_STATUS_TO_LOAD / 2, last_id, new_ids);
+      loaded = api_get_posts(TIMELINE_ENDPOINT HOME_TIMELINE, to_load, last_id, new_ids);
       break;
     case L_FULL_STATUS:
-      loaded = api_get_status_and_replies(N_STATUS_TO_LOAD/2, l->root, l->leaf_root, last_id, new_ids);
+      loaded = api_get_status_and_replies(to_load, l->root, l->leaf_root, last_id, new_ids);
       break;
     case L_ACCOUNT:
-      loaded = api_get_account_posts(l->account, N_STATUS_TO_LOAD / 2, last_id, new_ids);
+      loaded = api_get_account_posts(l->account, to_load, last_id, new_ids);
       break;
   }
 
   if (loaded > 0) {
+    char offset;
+    /* free first ones */
     for (i = 0; i < loaded; i++) {
       status_free(l->displayed_posts[i]);
       free(l->ids[i]);
     }
 
-    for (i = loaded; i < l->n_posts; i++) {
-      char offset = i - loaded;
-      l->displayed_posts[offset] = l->displayed_posts[i];
-      l->post_height[offset] = l->post_height[i];
-      l->ids[offset] = l->ids[i];
-
+    /* move last ones to first ones */
+    for (i = 0; i < l->n_posts - loaded ; i++) {
+      offset = i + loaded;
+      l->displayed_posts[i] = l->displayed_posts[offset];
+      l->post_height[i] = l->post_height[offset];
+      l->ids[i] = l->ids[offset];
+    }
+    
+    /* Set new ones at end */
+    for (i = l->n_posts - loaded; i < l->n_posts; i++) {
+      offset = i - (l->n_posts - loaded);
       l->displayed_posts[i] = NULL;
       l->post_height[i] = -1;
       l->ids[i] = new_ids[offset];
     }
 
-    l->n_posts += ((N_STATUS_TO_LOAD / 2) - loaded);
     l->first_displayed_post -= loaded;
     if (l->first_displayed_post < 0) {
+      clrscr();
       l->first_displayed_post = 0;
     }
   } else {
@@ -374,8 +385,6 @@ static list *build_list(status *root, char kind) {
     case L_FULL_STATUS:
       l->n_posts = api_get_status_and_replies(N_STATUS_TO_LOAD, l->root, l->leaf_root, NULL, l->ids);
       memset(l->displayed_posts, 0, l->n_posts * sizeof(status *));
-      /* Load first for the header */
-      l->displayed_posts[0] = api_get_status(l->ids[0], 1);
       break;
     case L_ACCOUNT:
       /* fixme */
@@ -388,6 +397,9 @@ static list *build_list(status *root, char kind) {
     for (i = 0; i < l->n_posts; i++) {
       if(!strcmp(l->ids[i], l->root)) {
           l->first_displayed_post = i;
+          /* Load first for the header */
+          status_free(l->displayed_posts[i]);
+          l->displayed_posts[i] = api_get_status(l->ids[i], 1);
           break;
       }
     }
@@ -537,6 +549,9 @@ static void shift_posts_down(list *l) {
   for (i = 0; i < scroll_val; i++) {
     scrollup();
   }
+#ifndef __CC65__
+  clrscr();
+#endif
   set_hscrollwindow(0, scrw);
   print_free_ram();
 }
@@ -574,6 +589,9 @@ static int shift_posts_up(list *l) {
   for (i = 0; scrollval > 0 && i < scrollval; i++) {
     scrolldn();
   }
+#ifndef __CC65__
+  clrscr();
+#endif
   set_hscrollwindow(0, scrw);
   print_free_ram();
   return 0;
@@ -639,12 +657,13 @@ static int show_list(list *l) {
 }
 
 void cli(void) {
-  char cur_list = 0, to_clear, to_show;
+  char cur_list, to_clear, to_show;
   list **l, *prev_list;
 
   screensize(&scrw, &scrh);
   clrscr();
 
+  cur_list = 0;
   cur_action = SHOW_HOME_TIMELINE;
   l = malloc((cur_list + 1) * sizeof(list *));
 
@@ -689,10 +708,7 @@ void cli(void) {
         break;
       case BACK:
         if (cur_list > 0) {
-          if (l[cur_list]->first_displayed_post == 0 && !l[cur_list]->account)
-            clrzone(LEFT_COL_WIDTH + 1, 3, scrw - 1, scrh - 1);
-          else
-            clrzone(LEFT_COL_WIDTH + 1, 0, scrw - 1, scrh - 1);
+          clrzone(LEFT_COL_WIDTH + 1, 0, scrw - 1, scrh - 1);
           free_list(l[cur_list]);
           --cur_list;
           cur_action = NAVIGATE;
