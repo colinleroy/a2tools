@@ -50,6 +50,9 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
     } else if (c == CH_ENTER) {
       dputc('\r');
       dputc('\n');
+      buf[i] = c;
+      i++;
+      cur_x = 0;
     } else if (c == CH_ESC) {
       return NULL;
     } else if (c == CH_CURS_LEFT) {
