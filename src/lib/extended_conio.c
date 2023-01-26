@@ -435,3 +435,7 @@ void progress_bar(int x, int y, int width, size_t cur, size_t end) {
   for (i = (int)(percent + 1L); i < width; i++)
     cputc(0x7F);
 }
+
+void nomem_msg(char *file, int line) {
+    printf("No more memory at %s:%d\n", file, line);
+}

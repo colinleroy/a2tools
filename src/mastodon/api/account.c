@@ -13,7 +13,7 @@
 account *account_new(void) {
   account *a = malloc(sizeof(account));
   if (a == NULL) {
-    printf("No more memory at %s:%d\n",__FILE__, __LINE__);
+    nomem_msg(__FILE__, __LINE__);
     return NULL;
   }
   memset(a, 0, sizeof(account));
@@ -45,12 +45,12 @@ account *account_new_from_json(surl_response *resp) {
     return NULL;
   }
   
-  r = surl_get_json(resp, gen_buf, BUF_SIZE, 0, 1, ".id,.acct,.display_name,"
-                                                   ".created_at,.followers_count,"
-                                                   ".following_count");
+  r = surl_get_json(resp, gen_buf, BUF_SIZE, 0, translit_charset,
+                    ".id,.acct,.display_name,"
+                    ".created_at,.followers_count,"
+                    ".following_count");
   n_lines = strsplit_in_place(gen_buf, '\n', &lines);
   if (r != 0 || n_lines < 6) {
-    free(lines);
     goto err_out;
   }
   a->id = strdup(lines[0]);
@@ -59,10 +59,9 @@ account *account_new_from_json(surl_response *resp) {
   a->created_at = strdup(lines[3]);
   a->followers_count = atol(lines[4]);
   a->following_count = atol(lines[5]);
-  free(lines);
 
   a->note = malloc(2048);
-  r = surl_get_json(resp, a->note, 2048, 1, 1, ".note");
+  r = surl_get_json(resp, a->note, 2048, 1, translit_charset, ".note");
   if (r != 0) {
     free(a->note);
     a->note = NULL;
@@ -74,6 +73,7 @@ account *account_new_from_json(surl_response *resp) {
 
   return a;
 err_out:
+  free(lines);
   account_free(a);
   return NULL;
 }

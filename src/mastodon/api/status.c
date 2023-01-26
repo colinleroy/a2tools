@@ -14,7 +14,7 @@
 status *status_new(void) {
   status *s = malloc(sizeof(status));
   if (s == NULL) {
-    printf("No more memory at %s:%d\n",__FILE__, __LINE__);
+    nomem_msg(__FILE__, __LINE__);
     return NULL;
   }
   memset(s, 0, sizeof(status));
@@ -33,44 +33,51 @@ status *status_new_from_json(surl_response *resp, char *id, char full, char is_r
   s = status_new();
   s->id = strdup(id);
   if (s->id == NULL) {
-    printf("No more memory at %s:%d\n",__FILE__, __LINE__);
+    nomem_msg(__FILE__, __LINE__);
   }
 
   s->content = malloc(full ? TL_STATUS_LARGE_BUF : TL_STATUS_SHORT_BUF);
   s->account = account_new();
 
   if (s->content == NULL || s->account == NULL) {
-    printf("No more memory at %s:%d\n",__FILE__, __LINE__);
+    nomem_msg(__FILE__, __LINE__);
     return NULL;
   }
 
   /* .reblog.id is the only one that can be null (and hence not there),
    * so put it at the end */
   if (is_reblog) {
-    r = surl_get_json(resp, gen_buf, BUF_SIZE, 0, 1, ".reblog.created_at,.reblog.account.display_name,.reblog.reblog.id");
+    r = surl_get_json(resp, gen_buf, BUF_SIZE, 0, translit_charset,
+                      ".reblog.created_at,.reblog.account.display_name,.reblog.reblog.id");
   } else {
-    r = surl_get_json(resp, gen_buf, BUF_SIZE, 0, 1, ".created_at,.account.display_name,.reblog.id");
+    r = surl_get_json(resp, gen_buf, BUF_SIZE, 0, translit_charset,
+                      ".created_at,.account.display_name,.reblog.id");
   }
 
   n_lines = strsplit_in_place(gen_buf, '\n', &lines);
   if (r == 0 && n_lines >= 2) {
     s->created_at = strdup(lines[0]);
     s->account->display_name = strdup(lines[1]);
-    if (!is_reblog && n_lines > 2)
+    if (!is_reblog && n_lines > 2) {
+      free(s->content);
+      s->content = NULL;
       s->reblog = status_new_from_json(resp, lines[2], full, 1);
+    }
   }
   free(lines);
   
   if (s->reblog == NULL) {
     /* Get details of original toot */
     if (is_reblog) {
-      r = surl_get_json(resp, gen_buf, BUF_SIZE, 0, 0, "(.reblog.media_attachments|map(. | select(.type==\"image\"))|length),"
-                                        ".reblog.replies_count,.reblog.reblogs_count,.reblog.favourites_count,.reblog.reblogged,.reblog.favourited,"
-                                        ".reblog.account.id,.reblog.account.username");
+      r = surl_get_json(resp, gen_buf, BUF_SIZE, 0, NULL,
+                        "(.reblog.media_attachments|map(. | select(.type==\"image\"))|length),"
+                        ".reblog.replies_count,.reblog.reblogs_count,.reblog.favourites_count,.reblog.reblogged,.reblog.favourited,"
+                        ".reblog.account.id,.reblog.account.username");
     } else {
-      r = surl_get_json(resp, gen_buf, BUF_SIZE, 0, 0, "(.media_attachments|map(. | select(.type==\"image\"))|length),"
-                                        ".replies_count,.reblogs_count,.favourites_count,.reblogged,.favourited,"
-                                        ".account.id,.account.username");
+      r = surl_get_json(resp, gen_buf, BUF_SIZE, 0, NULL,
+                        "(.media_attachments|map(. | select(.type==\"image\"))|length),"
+                        ".replies_count,.reblogs_count,.favourites_count,.reblogged,.favourited,"
+                        ".account.id,.account.username");
     }
 
     n_lines = strsplit_in_place(gen_buf, '\n', &lines);
@@ -79,9 +86,9 @@ status *status_new_from_json(surl_response *resp, char *id, char full, char is_r
       s->n_replies = atoi(lines[1]);
       s->n_reblogs = atoi(lines[2]);
       s->n_favourites = atoi(lines[3]);
-      if (!strcmp(lines[4], "true")) 
+      if (lines[4][0] == 't') 
         s->favorited_or_reblogged |= REBLOGGED;
-      if (!strcmp(lines[5], "true")) 
+      if (lines[5][0] == 't') 
         s->favorited_or_reblogged |= FAVOURITED;
       s->account->id = strdup(lines[6]);
       s->account->username = strdup(lines[7]);
@@ -89,9 +96,9 @@ status *status_new_from_json(surl_response *resp, char *id, char full, char is_r
     free(lines);
 
     if (is_reblog) {
-      r = surl_get_json(resp, s->content, full ? TL_STATUS_LARGE_BUF : TL_STATUS_SHORT_BUF, 1, 1, ".reblog.content");
+      r = surl_get_json(resp, s->content, full ? TL_STATUS_LARGE_BUF : TL_STATUS_SHORT_BUF, 1, translit_charset, ".reblog.content");
     } else {
-      r = surl_get_json(resp, s->content, full ? TL_STATUS_LARGE_BUF : TL_STATUS_SHORT_BUF, 1, 1, ".content");
+      r = surl_get_json(resp, s->content, full ? TL_STATUS_LARGE_BUF : TL_STATUS_SHORT_BUF, 1, translit_charset, ".content");
     }
     if (!full && strlen(s->content) == TL_STATUS_SHORT_BUF - 1) {
       s->content[TL_STATUS_SHORT_BUF - 4] = '.';
@@ -101,9 +108,6 @@ status *status_new_from_json(surl_response *resp, char *id, char full, char is_r
     } else {
       s->content = realloc(s->content, strlen(s->content) + 1);
     }
-  } else {
-    free(s->content);
-    s->content = NULL;
   }
 
   return s;

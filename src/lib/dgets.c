@@ -27,6 +27,7 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
   size_t i = 0, max_i = 0;
   int cur_x, cur_y;
   int prev_cursor = 0;
+  unsigned char start_x, start_y;
   unsigned char sx, wx;
   unsigned char sy, ey, hy;
 
@@ -36,7 +37,10 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
 
   memset(buf, '\0', size - 1);
   prev_cursor = cursor(1);
-  
+
+  start_x = wherex();
+  start_y = wherey();
+
   while (i < size - 1) {
     cur_x = wherex();
     cur_y = wherey();
@@ -50,11 +54,11 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
     } else if (c == CH_ENTER) {
       dputc('\r');
       dputc('\n');
-      buf[i] = c;
+      buf[i] = '\n';
       i++;
       cur_x = 0;
     } else if (c == CH_ESC) {
-      return NULL;
+      continue;
     } else if (c == CH_CURS_LEFT) {
       if (i > 0) {
         i--;

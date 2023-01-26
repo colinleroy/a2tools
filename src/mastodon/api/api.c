@@ -7,71 +7,12 @@
 #include "extended_conio.h"
 #include "extended_string.h"
 #include "api.h"
-
-static char endpoint_buf[BUF_SIZE];
-
-extern char *instance_url;
-extern char *oauth_token;
-
-/* shared */
-char gen_buf[BUF_SIZE];
-char selector[SELECTOR_SIZE];
-
-static surl_response *get_surl_for_endpoint(char *method, char *endpoint) {
-  static char **hdrs = NULL;
-  surl_response *resp;
-
-  if (hdrs == NULL) {
-    hdrs = malloc(sizeof(char *));
-    hdrs[0] = malloc(BUF_SIZE);
-    snprintf(hdrs[0], BUF_SIZE, "Authorization: Bearer %s", oauth_token);
-  }
-
-  snprintf(gen_buf, BUF_SIZE, "%s%s", instance_url, endpoint);
-  resp = surl_start_request(method, gen_buf, hdrs, 1);
-  
-  return resp;
-}
-
-account *api_get_profile(char *id) {
-  surl_response *resp;
-  account *a = account_new();
-  int r = -1;
-  char n_lines, **lines;
-
-  if (a == NULL) {
-    return NULL;
-  }
-
-  snprintf(endpoint_buf, BUF_SIZE, "%s/%s", ACCOUNTS_ENDPOINT,
-              id == NULL ? "verify_credentials" : id);
-  resp = get_surl_for_endpoint("GET", endpoint_buf);
-
-  if (resp == NULL || resp->code < 200 || resp->code >= 300)
-    goto err_out;
-
-  if (surl_get_json(resp, gen_buf, BUF_SIZE, 0, 1, ".id,.display_name,.username") == 0) {
-    n_lines = strsplit_in_place(gen_buf,'\n',&lines);
-    if (n_lines < 3) {
-      account_free(a);
-      free(lines);
-      return NULL;
-    }
-    a->id = strdup(lines[0]);
-    a->display_name = strdup(lines[1]);
-    a->username = strdup(lines[2]);
-    free(lines);
-  }
-
-err_out:
-  surl_response_free(resp);
-  return a;
-}
+#include "common.h"
 
 int api_get_account_posts(account *a, char to_load, char *first_to_load, char **post_ids) {
-  char buf[BUF_SIZE]; /* can't use endpoint_buf */
+  char *buf = malloc(128); /* can't use endpoint_buf, callers use it */
 
-  snprintf(buf, BUF_SIZE, "%s/%s/statuses", ACCOUNTS_ENDPOINT, a->id);
+  snprintf(buf, 128, "%s/%s/statuses", ACCOUNTS_ENDPOINT, a->id);
 
   return api_get_posts(buf, to_load, first_to_load, post_ids);
 }
@@ -82,7 +23,7 @@ int api_get_posts(char *endpoint, char to_load, char *first_to_load, char **post
   char *raw;
 
   n_status = 0;
-  snprintf(endpoint_buf, BUF_SIZE, "%s?limit=%d%s%s", endpoint, to_load,
+  snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s?limit=%d%s%s", endpoint, to_load,
             first_to_load ? "&max_id=" : "",
             first_to_load ? first_to_load : ""
           );
@@ -92,7 +33,7 @@ int api_get_posts(char *endpoint, char to_load, char *first_to_load, char **post
     goto err_out;
 
   raw = malloc(512);
-  if (surl_get_json(resp, raw, 512, 0, 0, ".[].id") == 0) {
+  if (surl_get_json(resp, raw, 512, 0, NULL, ".[].id") == 0) {
     char **tmp;
     int i;
     n_status = strsplit(raw, '\n', &tmp);
@@ -116,7 +57,7 @@ int api_get_status_and_replies(char to_load, char *root_id, char *root_leaf_id, 
   char *raw;
 
   n_status = 0;
-  snprintf(endpoint_buf, BUF_SIZE, "%s/%s/context", STATUS_ENDPOINT, root_leaf_id);
+  snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s/context", STATUS_ENDPOINT, root_leaf_id);
   resp = get_surl_for_endpoint("GET", endpoint_buf);
   
   if (resp == NULL || resp->code < 200 || resp->code >= 300)
@@ -140,7 +81,7 @@ int api_get_status_and_replies(char to_load, char *root_id, char *root_leaf_id, 
                                       "|index(\"%s\")+1+%d]|.[].id",
                                       first_to_load, first_to_load, n_after);
   }
-  if (surl_get_json(resp, raw, 512, 0, 0, selector) == 0) {
+  if (surl_get_json(resp, raw, 512, 0, NULL, selector) == 0) {
     char **tmp;
     int i;
     n_status = strsplit(raw, '\n', &tmp);
@@ -167,7 +108,7 @@ status *api_get_status(char *status_id, char full) {
 
   s = NULL;
 
-  snprintf(endpoint_buf, BUF_SIZE, "%s/%s", STATUS_ENDPOINT, status_id);
+  snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s", STATUS_ENDPOINT, status_id);
   resp = get_surl_for_endpoint("GET", endpoint_buf);
   
   if (resp == NULL || resp->code < 200 || resp->code >= 300)
@@ -185,7 +126,7 @@ static char api_status_interact(status *s, char *action) {
   surl_response *resp;
   char r = -1;
 
-  snprintf(endpoint_buf, BUF_SIZE, "%s/%s/%s", STATUS_ENDPOINT, s->id, action);
+  snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s/%s", STATUS_ENDPOINT, s->id, action);
   resp = get_surl_for_endpoint("POST", endpoint_buf);
 
   surl_send_data_params(resp, 0, 1);
@@ -256,7 +197,7 @@ char api_delete_status(status *s) {
     s = s->reblog;
   }
 
-  snprintf(endpoint_buf, BUF_SIZE, "%s/%s", STATUS_ENDPOINT, s->id);
+  snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s", STATUS_ENDPOINT, s->id);
   resp = get_surl_for_endpoint("DELETE", endpoint_buf);
 
   if (resp == NULL || resp->code < 200 || resp->code >= 300)
@@ -276,13 +217,13 @@ char api_relationship_get(account *a, char f) {
   resp = NULL;
 
   if ((a->relationship & RSHIP_SET) == 0) {
-    snprintf(endpoint_buf, BUF_SIZE, "%s/relationships?id[]=%s", ACCOUNTS_ENDPOINT, a->id);
+    snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/relationships?id[]=%s", ACCOUNTS_ENDPOINT, a->id);
     resp = get_surl_for_endpoint("GET", endpoint_buf);
 
     if (resp == NULL || resp->code < 200 || resp->code >= 300)
       goto err_out;
 
-    if (surl_get_json(resp, gen_buf, BUF_SIZE, 0, 1, ".[]|.following,.followed_by,.blocking,.blocked_by,.muting,.requested") == 0) {
+    if (surl_get_json(resp, gen_buf, BUF_SIZE, 0, NULL, ".[]|.following,.followed_by,.blocking,.blocked_by,.muting,.requested") == 0) {
       n_lines = strsplit_in_place(gen_buf,'\n',&lines);
       if (n_lines < 6) {
         free(lines);
@@ -323,7 +264,7 @@ account *api_get_full_account(account *orig) {
 
   a = NULL;
 
-  snprintf(endpoint_buf, BUF_SIZE, "%s/%s", ACCOUNTS_ENDPOINT, orig->id);
+  snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s", ACCOUNTS_ENDPOINT, orig->id);
   resp = get_surl_for_endpoint("GET", endpoint_buf);
   
   if (resp == NULL || resp->code < 200 || resp->code >= 300)
@@ -334,69 +275,4 @@ account *api_get_full_account(account *orig) {
 err_out:
   surl_response_free(resp);
   return a;
-}
-
-static char *compose_audience_str(char compose_audience) {
-  switch(compose_audience) {
-    case COMPOSE_PUBLIC:   return "public";
-    case COMPOSE_UNLISTED: return "unlisted";
-    case COMPOSE_PRIVATE:  return "private";
-    case COMPOSE_MENTION:
-    default:               return "direct";
-  }
-}
-
-char api_send_toot(char *buffer, char *in_reply_to_id, char compose_audience) {
-  surl_response *resp;
-  char *body = malloc(1024);
-  char r;
-  int i, o, len;
-  char in_reply_to_buf[48];
-
-  r = -1;
-
-  if (in_reply_to_id) {
-    snprintf(in_reply_to_buf, 48, "in_reply_to_id\n%s\n", in_reply_to_id);
-  } else {
-    in_reply_to_buf[0] = '\0';
-  }
-
-  snprintf(endpoint_buf, BUF_SIZE, "%s", STATUS_ENDPOINT);
-  resp = get_surl_for_endpoint("POST", endpoint_buf);
-
-  /* Start of status */
-  snprintf(body, 1024, "%s"
-                       "visibility\n%s\n"
-                       "status\n",
-                        in_reply_to_buf,
-                        compose_audience_str(compose_audience));
-  /* Escaped buffer */
-  len = strlen(buffer);
-  o = strlen(body);
-  for (i = 0; i < len; i++) {
-    if (buffer[i] != '\n') {
-      body[o++] = buffer[i];
-    } else {
-      body[o++] = '\\';
-      body[o++] = 'n';
-    }
-  }
-  /* End of status */
-  body[o++] = '\n';
-  len = o - 1;
-
-  surl_send_data_params(resp, len, 0);
-  surl_send_data(resp, body, len);
-
-  surl_read_response_header(resp);
-
-  if (resp == NULL || resp->code < 200 || resp->code >= 300)
-    goto err_out;
-
-  
-
-  r = 0;
-err_out:
-  surl_response_free(resp);
-  return r;
 }

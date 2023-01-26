@@ -6,6 +6,9 @@
 #include "simple_serial.h"
 #include "extended_conio.h"
 #include "extended_string.h"
+#ifdef __CC65__
+#include "dputs.h"
+#endif
 
 #define BUF_SIZE 255
 
@@ -49,7 +52,7 @@ static char *get_csrf_token(surl_response *resp, char *body, size_t buf_size) {
     strncpy(token, w, len);
     token[len] = '\0';
   } else {
-    cputs("Error extracting CSRF token.\r\n");
+    dputs("Error extracting CSRF token.\r\n");
   }
   return token;
 }
@@ -147,24 +150,29 @@ int do_login(void) {
   snprintf(oauth_url, BUF_SIZE, "%s%s", instance_url, OAUTH_URL);
 
 /* First request to get authorization */
-  cputs("GET "OAUTH_URL"... ");
+  dputs("GET "OAUTH_URL"... ");
   resp = surl_start_request("GET", authorize_url, NULL, 0);
   if (resp == NULL) {
-    cputs("Could not start request.\r\n");
+    dputs("Could not start request.\r\n");
     goto err_out;
   }
 
   body = malloc(buf_size + 1);
   if (body == NULL) {
-    cputs("Could not allocate body buffer.\r\n");
+    dputs("Could not allocate body buffer.\r\n");
     goto err_out;
   }
 
-  cprintf("%d\r\n", resp->code);
+  if (resp->code == 200) {
+    dputs("OK.\r\n");
+  } else {
+    dputs("Error.\r\n");
+    goto err_out;
+  }
   if (surl_find_line(resp, body, buf_size, "action=\""LOGIN_URL) == 0) {
     login_required = 1;
-    cputs("Login required.\r\n");
-    cputs("Enter password: ");
+    dputs("Login required.\r\n");
+    dputs("Enter password: ");
     password = malloc(50);
     
     echo(0);
@@ -172,7 +180,7 @@ int do_login(void) {
     echo(1);
     *strchr(password, '\n') = '\0';
   } else {
-    cputs("Login still valid.\r\n");
+    dputs("Login still valid.\r\n");
   }
 
   if (login_required) {
@@ -186,11 +194,11 @@ int do_login(void) {
     post_len = strlen(post);
     free(token);
 
-    cputs("POST "LOGIN_URL"... ");
+    dputs("POST "LOGIN_URL"... ");
     resp = surl_start_request("POST", login_url, NULL, 0);
 
     if (resp == NULL) {
-      cputs("Could not start request.\r\n");
+      dputs("Could not start request.\r\n");
       goto err_out;
     }
 
@@ -200,16 +208,17 @@ int do_login(void) {
 
     surl_read_response_header(resp);
 
-    cprintf("%d\r\n", resp->code);
     if (resp->code != 200) {
-      cprintf("Invalid response %d to POST\r\n", resp->code);
+      dputs("Invalid response to POST\r\n");
       goto err_out;
+    } else {
+      dputs("OK\r\n");
     }
 
     surl_find_line(resp, body, buf_size, "otp-authentication-form");
     if (body[0] != '\0') {
       otp_required = 1;
-      cputs("OTP required.\r\n");
+      dputs("OTP required.\r\n");
       token = get_csrf_token(resp, body, buf_size);
       if (token == NULL)
         goto err_out;
@@ -219,7 +228,7 @@ int do_login(void) {
   /* Third request for OTP */
     if (otp_required) {
       char *otp = malloc(10);
-      cputs("Enter OTP code: ");
+      dputs("Enter OTP code: ");
       cgets(otp, 9);
       *strchr(otp, '\n') = '\0';
 
@@ -228,11 +237,11 @@ int do_login(void) {
       free(token);
       free(otp);
 
-      cputs("POST "LOGIN_URL"... ");
+      dputs("POST "LOGIN_URL"... ");
       resp = surl_start_request("POST", login_url, NULL, 0);
 
       if (resp == NULL) {
-        cputs("Could not start request.\r\n");
+        dputs("Could not start request.\r\n");
         return -1;
       }
 
@@ -242,10 +251,11 @@ int do_login(void) {
 
       surl_read_response_header(resp);
 
-      cprintf("%d\r\n", resp->code);
       if (resp->code != 200) {
-        cprintf("Invalid response %d to POST\r\n", resp->code);
+        dputs("Invalid response to POST\r\n");
         goto err_out;
+      } else {
+        dputs("OK\r\n");
       }
 
       token = NULL;
@@ -255,9 +265,9 @@ int do_login(void) {
 
   if (surl_find_line(resp, body, buf_size, "action=\""OAUTH_URL) == 0) {
     oauth_required = 1;
-    cputs("OAuth authorization required.\r\n");
+    dputs("OAuth authorization required.\r\n");
   } else {
-    cputs("OAuth authorization valid.\r\n");
+    dputs("OAuth authorization valid.\r\n");
   }
 
   if (oauth_required) {
@@ -272,7 +282,7 @@ int do_login(void) {
     post_len = strlen(post);
     free(token);
 
-    cputs("POST "OAUTH_URL"... ");
+    dputs("POST "OAUTH_URL"... ");
     resp = surl_start_request("POST", oauth_url, NULL, 0);
 
     surl_send_data_params(resp, post_len, 0);
@@ -281,18 +291,19 @@ int do_login(void) {
 
     surl_read_response_header(resp);
 
-    cprintf("%d\r\n", resp->code);
     if (resp->code != 200) {
-      cprintf("Invalid response %d to POST\r\n", resp->code);
+      dputs("Invalid response to POST\r\n");
       goto err_out;
+    } else {
+      dputs("OK.\r\n");
     }
 
     if (surl_find_line(resp, body, buf_size, "input class='oauth-code") == 0) {
       free(oauth_code);
       oauth_code = get_oauth_code(body);
-      cputs("Got OAuth code.\r\n");
+      dputs("Got OAuth code.\r\n");
     } else {
-      cputs("Did not get oauth code.\r\n");
+      dputs("Did not get oauth code.\r\n");
       goto err_out;
     }
   }
@@ -340,12 +351,12 @@ int register_app(void) {
   reg_url = malloc(strlen(instance_url) + strlen(REGISTER_URL) + 1);
   sprintf(reg_url, "%s%s", instance_url, REGISTER_URL);
 
-  cputs("POST "REGISTER_URL"... ");
+  dputs("POST "REGISTER_URL"... ");
   resp = surl_start_request("POST", reg_url, NULL, 0);
   free(reg_url);
 
   if (resp == NULL) {
-    cputs("Could not start request.\r\n");
+    dputs("Could not start request.\r\n");
     return -1;
   }
 
@@ -356,16 +367,16 @@ int register_app(void) {
   surl_read_response_header(resp);
 
   if (resp->code != 200) {
-    cprintf("App registration: Invalid response %d to POST\r\n", resp->code);
+    dputs("App registration: Invalid response to POST\r\n");
     goto err_out;
   }
 
-  if (surl_get_json(resp, client_id, BUF_SIZE, 0, 0, ".client_id") < 0) {
-    cputs("App registration: no client_id.\r\n");
+  if (surl_get_json(resp, client_id, BUF_SIZE, 0, NULL, ".client_id") < 0) {
+    dputs("App registration: no client_id.\r\n");
     goto err_out;
   }
-  if (surl_get_json(resp, client_secret, BUF_SIZE, 0, 0, ".client_secret") < 0) {
-    cputs("App registration: no client_secret.\r\n");
+  if (surl_get_json(resp, client_secret, BUF_SIZE, 0, NULL, ".client_secret") < 0) {
+    dputs("App registration: no client_secret.\r\n");
     goto err_out;
   }
 
@@ -374,7 +385,7 @@ int register_app(void) {
   if (strchr(client_secret, '\n'))
     *strchr(client_secret, '\n') = '\0';
 
-  cputs("Done.\r\n");
+  dputs("Done.\r\n");
   res = 0;
 
 err_out:
@@ -423,10 +434,10 @@ int get_oauth_token(void) {
   snprintf(oauth_url, BUF_SIZE, "%s/oauth/token", instance_url);
 
 /* First request to get authorization */
-  cputs("POST "OAUTH_URL"... ");
+  dputs("POST "OAUTH_URL"... ");
   resp = surl_start_request("POST", oauth_url, NULL, 0);
   if (resp == NULL) {
-    cputs("Could not start request.\r\n");
+    dputs("Could not start request.\r\n");
     return -1;
   }
 
@@ -438,17 +449,21 @@ int get_oauth_token(void) {
 
   surl_read_response_header(resp);
 
-  cprintf("%d\r\n", resp->code);
-  if (surl_get_json(resp, oauth_token, BUF_SIZE, 0, 0, ".access_token") < 0) {
-    cputs("OAuth token not found.\r\n");
+  if (surl_get_json(resp, oauth_token, BUF_SIZE, 0, NULL, ".access_token") < 0) {
+    dputs("OAuth token not found.\r\n");
     goto err_out;
   } else {
-    *strchr(oauth_token, '\n') = '\0';
-    cputs("Got OAuth token.\r\n");
+    if (strchr(oauth_token, '\n')) {
+      *strchr(oauth_token, '\n') = '\0';
+    }
+    dputs("Got OAuth token.\r\n");
   }
   ret = 0;
 
 err_out:
+  if (ret != 0) {
+    cgetc();
+  }
   free(oauth_url);
   surl_response_free(resp);
   return ret;
