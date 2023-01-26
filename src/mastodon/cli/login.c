@@ -29,8 +29,9 @@
 #include "scroll.h"
 #endif
 #include "math.h"
+#include "api.h"
 #include "oauth.h"
-#include "cli.h"
+#include "logo.h"
 
 #define BUF_SIZE 255
 
@@ -46,10 +47,6 @@ char *oauth_token = NULL;
 static int save_settings(void) {
   FILE *fp;
   int r;
-
-#ifdef PRODOS_T_TXT
-  _filetype = PRODOS_T_TXT;
-#endif
 
   fp = fopen("mastsettings", "w");
   if (fp == NULL) {
@@ -132,6 +129,9 @@ static int load_settings(void) {
     return 0;
   } else {
 reenter_settings:
+    /* Invalidate oauth token */
+    oauth_token[0] = '\0';
+
     cputs("Your instance: ");
     cgets(instance_url, BUF_SIZE);
     *strchr(instance_url, '\n') = '\0';
@@ -153,10 +153,27 @@ reenter_settings:
 int main(int argc, char **argv) {
   surl_response *response = NULL;
   char *params = malloc(BUF_SIZE);
+  FILE *fp = NULL;
+  char buf[16];
+  char *translit_charset;
+  char y;
+
+#ifdef PRODOS_T_TXT
+  _filetype = PRODOS_T_TXT;
+#endif
+
   videomode(VIDEOMODE_80COL);
   screensize(&scrw, &scrh);
 
+  clrscr();
+  print_logo(scrw);
+  
+  y = wherey();
+  set_scrollwindow(y, scrh);
+
   if (load_settings() < 0) {
+    set_scrollwindow(0, scrh);
+    cgetc();
     exit(1);
   }
 
@@ -183,10 +200,26 @@ int main(int argc, char **argv) {
 
   if (oauth_token == NULL || oauth_token[0] == '\0') {
     printf("Could not login :(\n");
+    cgetc();
+    set_scrollwindow(0, scrh);
     exit(1);
   }
 
-  snprintf(params, BUF_SIZE, "%s %s", instance_url, oauth_token);
+  fp = fopen("clisettings", "r");
+  translit_charset = US_CHARSET;
+
+  if (fp != NULL) {
+    fgets(buf, 16, fp);
+    if (strchr(buf, '\n')) {
+      *strchr(buf, '\n') = '\0';
+    }
+    translit_charset = buf;
+    fclose(fp);
+  }
+
+  snprintf(params, BUF_SIZE, "%s %s %s", instance_url, oauth_token, translit_charset);
+
+  set_scrollwindow(0, scrh);
 #ifdef __CC65__
   exec("mastocli", params);
 #else

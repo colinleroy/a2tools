@@ -28,7 +28,7 @@ int surl_send_data_params(surl_response *resp, size_t total, int raw);
 size_t surl_send_data(surl_response *resp, char *buffer, size_t len);
 
 int surl_find_line(surl_response *resp, char *buffer, size_t max_len, char *search_str);
-int surl_get_json(surl_response *resp, char *buffer, size_t max_len, char striphtml, char translit, char *selector);
+int surl_get_json(surl_response *resp, char *buffer, size_t max_len, char striphtml, char *translit, char *selector);
 
 void surl_response_free(surl_response *resp);
 
