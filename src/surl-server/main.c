@@ -195,7 +195,8 @@ new_req:
     while (1) {
       size_t to_send;
       char *param;
-      char striphtml = 0, translit = 0;
+      char striphtml = 0;
+      char *translit = NULL;
 
       if (simple_serial_gets(reqbuf, BUFSIZE) != NULL) {
         if(!strncmp("SEND ", reqbuf, 5) 
@@ -208,8 +209,9 @@ new_req:
         } else if (!strncmp("JSON ", reqbuf, 5)) {
           bufsize = atoi(reqbuf + 5);
           striphtml = *(strchr(reqbuf + 5, ' ') + 1) == '1';
-          translit = *(strchr(reqbuf + 5, ' ') + 3) == '1';
-          param = strchr(reqbuf + 5, ' ') + 5;
+          translit = (strchr(reqbuf + 5, ' ') + 3);
+          param = strchr(translit, ' ') + 1;
+          *strchr(translit, ' ') = '\0';
           *strchr(param, '\n') = '\0';
         } else {
           printf("New request\n");
@@ -271,9 +273,9 @@ new_req:
           simple_serial_write("<NOT_JSON>\n", sizeof(char), strlen("<NOT_JSON>\n"));
         } else {
           char *result = jq_get(response->buffer, param);
-          printf("JSON '%s' into %zu bytes%s%s: %zu bytes %s\n", param, bufsize, 
+          printf("JSON '%s' into %zu bytes%s, translit: %s: %zu bytes %s\n", param, bufsize, 
                   striphtml ? ", striphtml":"",
-                  translit ? ", translit":"",
+                  translit,
                   result != NULL ? min(strlen(result),bufsize) : 0,
                   result != NULL ? "" :"not found");
           /* DEBUG */
@@ -284,9 +286,9 @@ new_req:
               free(result);
               result = text;
             }
-            if (translit) {
+            if (translit[0] != '0') {
               size_t l;
-              char *text = do_apple_convert(result, OUTGOING, &l);
+              char *text = do_apple_convert(result, OUTGOING, translit, &l);
               free(result);
               result = text;
             }
@@ -417,12 +419,17 @@ static char *replace_new_lines(char *in) {
   char *out = malloc(len);
   int i, o;
   for (i = 0, o = 0; i < len; i++) {
-    if (in[i] == '\\' && i + 1 < len && in[i + 1] == 'n') {
+    if (in[i] == '\\' && i + 3 < len 
+     && in[i + 1] == 'r'
+     && in[i + 2] == '\\'
+     && in[i + 3] == 'n') {
       out[o++] = '\n';
+      i += 3;
     } else {
       out[o++] = in[i];
     }
   }
+  out[o++] = '\0';
   return out;
 }
 /* we're going to url_encode and concat each line, expecting
@@ -436,6 +443,13 @@ static char *prepare_post(char *buffer, size_t *len) {
   int n_lines = strsplit_in_place(buffer, '\n', &lines);
   int i;
   for (i = 0; i < n_lines; i += 2) {
+    char *translit = NULL;
+    if (strstr(lines[i], "|TRANSLIT")) {
+      translit = strstr(lines[i], "|TRANSLIT") + 1;
+      translit = strchr(translit, '|') + 1;
+      
+      *strstr(lines[i], "|TRANSLIT") = '\0';
+    }
     nl = replace_new_lines(lines[i]);
     tmp = curl_easy_escape(NULL, nl, strlen(nl));
     free(nl);
@@ -443,9 +457,17 @@ static char *prepare_post(char *buffer, size_t *len) {
     out_ptr += strlen(tmp) + 1;
     curl_free(tmp);
     if (strlen(lines[i + 1]) > 0) {
+      char *translit_data;
       nl = replace_new_lines(lines[i + 1]);
-      tmp = curl_easy_escape(NULL, nl, strlen(nl));
+      if (translit) {
+        size_t tmp_len;
+        translit_data = do_apple_convert(nl, INCOMING, translit, &tmp_len);
+      } else {
+        translit_data = strdup(nl);
+      }
       free(nl);
+      tmp = curl_easy_escape(NULL, translit_data, strlen(translit_data));
+      free(translit_data);
     } else
       tmp = strdup("");
     sprintf(out_ptr, "%s&", tmp);
@@ -675,15 +697,16 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
   }
   fflush(stdout);
   curl_easy_cleanup(curl);
-  if (!strncmp(curlbuf->content_type, "text/", 5)) {
-    char *tmp;
-    size_t tmp_len;
-    tmp = do_apple_convert(curlbuf->buffer, OUTGOING, &tmp_len);
-    if (tmp) {
-      free(curlbuf->buffer);
-      curlbuf->buffer = tmp;
-      curlbuf->size = tmp_len;
-    }
-  }
+  /* FIXME Allow client to specify desired charset */
+  // if (!strncmp(curlbuf->content_type, "text/", 5)) {
+  //   char *tmp;
+  //   size_t tmp_len;
+  //   tmp = do_apple_convert(curlbuf->buffer, OUTGOING, &tmp_len);
+  //   if (tmp) {
+  //     free(curlbuf->buffer);
+  //     curlbuf->buffer = tmp;
+  //     curlbuf->size = tmp_len;
+  //   }
+  // }
   return curlbuf;
 }
