@@ -50,35 +50,55 @@ static char *do_conv(char *in, char *from, char *to, size_t *new_len) {
   return orig_out;
 }
 
-char *do_apple_convert(char *in, int way, size_t *new_len) {
+char *do_apple_convert(char *in, int way, char *a2charset, size_t *new_len) {
   char *out_final = NULL;
   char *out_ascii = NULL;
+  char translit_charset[50];
+  
   size_t ascii_len, i;
 
   if (in == NULL) {
     return NULL;
   }
-
+  snprintf(translit_charset, 50, "%s//TRANSLIT", a2charset);
   if (way == OUTGOING) {
-    out_final = do_conv(in, "UTF-8", "ISO646-FR1//TRANSLIT", new_len);
+    out_final = do_conv(in, "UTF-8", translit_charset, new_len);
     out_ascii = do_conv(in, "UTF-8", "US-ASCII//TRANSLIT", &ascii_len);
     
-    for (i = 0; i < min(*new_len, ascii_len); i++) {
-      if (out_final[i] == '?' && out_ascii[i] != '?') {
-        switch(out_ascii[i]) {
-          case '[': out_final[i] = '('; break;
-          case ']': out_final[i] = ')'; break;
-          case '{': out_final[i] = '('; break;
-          case '}': out_final[i] = ')'; break;
-          case '|': out_final[i] = '!'; break;
-          case '@':
-          case '#': out_final[i] = out_ascii[i]; break;
+    if (!strcmp(a2charset, "ISO646-FR1")) {
+      /* Adapt for legibility */
+      for (i = 0; i < min(*new_len, ascii_len); i++) {
+        if (out_final[i] == '?' && out_ascii[i] != '?') {
+          switch(out_ascii[i]) {
+            case '[': out_final[i] = '('; break;
+            case ']': out_final[i] = ')'; break;
+            case '{': out_final[i] = '('; break;
+            case '}': out_final[i] = ')'; break;
+            case '|': out_final[i] = '!'; break;
+            case '@': out_final[i] = ']'; break;
+            case '#': out_final[i] = out_ascii[i]; break;
+          }
         }
       }
     }
     free(out_ascii);
     return out_final;
   } else {
-    return do_conv(in, "ISO646-FR1", "UTF-8//TRANSLIT", new_len);
+    if (!strcmp(a2charset, "ISO646-FR1")) {
+      /* Do a step to ISO8859 to keep § and £ chars */
+      char *out;
+      char *tmp = do_conv(in, a2charset, "ISO-8859-1//TRANSLIT", new_len);
+      for (i = 0; i < strlen(tmp); i++) {
+        switch(tmp[i]) {
+          case '\247': tmp[i] = '@'; break;
+          case '\243': tmp[i] = '#'; break;
+        }
+      }
+      out = do_conv(tmp, "ISO-8859-1", "UTF-8//TRANSLIT", new_len);
+      free(tmp);
+      return out;
+    } else {
+      return do_conv(in, a2charset, "UTF-8//TRANSLIT", new_len);
+    }
   }
 }
