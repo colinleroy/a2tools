@@ -23,6 +23,8 @@
 #include "stp_cli.h"
 #include "stp_send_file.h"
 #include "simple_serial.h"
+#include "cgets.h"
+#include "clrzone.h"
 #include "extended_conio.h"
 #include "get_filedetails.h"
 #include "get_buf_size.h"

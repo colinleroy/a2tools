@@ -1,8 +1,11 @@
 #include <string.h>
-#include "extended_conio.h"
+#include "scrollwindow.h"
 #include "logo.h"
 #ifdef __CC65__
+#include <conio.h>
 #include "dputs.h"
+#else
+#include "extended_conio.h"
 #endif
 
 void print_logo(unsigned char scrw) {

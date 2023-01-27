@@ -28,7 +28,9 @@
 #include "surl.h"
 #include "simple_serial.h"
 #include "extended_conio.h"
-#include "extended_string.h"
+#include "cgets.h"
+#include "clrzone.h"
+#include "strsplit.h"
 
 static char *url_go_up(char *url);
 static char *url_enter(char *url, char *suffix);

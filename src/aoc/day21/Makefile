@@ -1,6 +1,6 @@
 READER=day21rd
 READER_SOURCES := day21rd.c ../../lib/bigint.c
-READER_GCCSOURCES := ../../lib/extended_conio.c
+READER_GCCSOURCES := ../../lib/extended_conio.c ../../lib/clrzone.c
 
 WRITER=day21wr
 WRITER_SOURCES := day21wr.c ../../lib/bigint.c

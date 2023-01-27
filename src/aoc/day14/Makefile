@@ -1,5 +1,5 @@
 PROGRAM=day14
-SOURCES := day14.c ../../lib/bool_array.c ../../lib/extended_string.c ../../lib/tgi_sdl.c ../../lib/tgi_fastline.c
+SOURCES := day14.c ../../lib/bool_array.c ../../lib/extended_string.c ../../lib/strsplit.c ../../lib/tgi_sdl.c ../../lib/tgi_fastline.c
 DEPS := 
 
 CC65_TARGET = apple2enh

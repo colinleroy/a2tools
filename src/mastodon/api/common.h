@@ -31,6 +31,7 @@ extern char arobase;
 
 #define HOME_TIMELINE "home"
 
+void nomem_msg(char *file, int line);
 surl_response *get_surl_for_endpoint(char *method, char *endpoint);
 account *api_get_profile(char *id);
 

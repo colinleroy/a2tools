@@ -21,7 +21,7 @@
 #include <unistd.h>
 #include "surl.h"
 #include "simple_serial.h"
-#include "extended_conio.h"
+#include "cgets.h"
 
 #define BUFSIZE 255
 static char *buf;

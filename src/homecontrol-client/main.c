@@ -20,8 +20,9 @@
 #include <string.h>
 #include <unistd.h>
 #include "simple_serial.h"
+#include "clrzone.h"
 #include "extended_conio.h"
-#include "extended_string.h"
+#include "strsplit.h"
 #include "math.h"
 #include "surl.h"
 #include "constants.h"

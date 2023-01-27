@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "stp_cli.h"
+#include "clrzone.h"
 #include "extended_conio.h"
 
 static unsigned char scrw = 255, scrh = 255;

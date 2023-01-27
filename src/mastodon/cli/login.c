@@ -21,12 +21,16 @@
 #include <unistd.h>
 #include "surl.h"
 #include "simple_serial.h"
-#include "extended_conio.h"
-#include "extended_string.h"
+#include "scrollwindow.h"
+#include "strsplit.h"
+#include "cgets.h"
 #ifdef __CC65__
 #include "dputs.h"
 #include "dputc.h"
 #include "scroll.h"
+#include <conio.h>
+#else
+#include "extended_conio.h"
 #endif
 #include "math.h"
 #include "api.h"
@@ -132,7 +136,7 @@ reenter_settings:
     /* Invalidate oauth token */
     oauth_token[0] = '\0';
 
-    cputs("Your instance: ");
+    dputs("Your instance: ");
     cgets(instance_url, BUF_SIZE);
     *strchr(instance_url, '\n') = '\0';
 
@@ -140,8 +144,8 @@ reenter_settings:
       return -1;
     }
 
-    cputs("If on a non-US keyboard, use @ instead of arobase.\r\n");
-    cputs("Your login: ");
+    dputs("If on a non-US keyboard, use @ instead of arobase.\r\n");
+    dputs("Your login: ");
     cgets(login, BUF_SIZE);
     *strchr(login, '\n') = '\0';
     
@@ -185,7 +189,7 @@ int main(int argc, char **argv) {
       exit(1);
     }
     save_settings();
-    cputs("Saved OAuth token.\r\n");
+    dputs("Saved OAuth token.\r\n");
 
   }
   /* We don't need those anymore */
@@ -199,7 +203,7 @@ int main(int argc, char **argv) {
   oauth_code = NULL;
 
   if (oauth_token == NULL || oauth_token[0] == '\0') {
-    printf("Could not login :(\n");
+    dputs("Could not login :(\n");
     cgetc();
     set_scrollwindow(0, scrh);
     exit(1);

@@ -28,6 +28,7 @@
 #include "slist.h"
 #include "bool_array.h"
 #include "extended_string.h"
+#include "strsplit.h"
 
 #define DATASET "IN14"
 #define BUFSIZE 300

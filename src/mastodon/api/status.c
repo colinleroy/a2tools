@@ -4,8 +4,7 @@
 #include <unistd.h>
 #include "surl.h"
 #include "simple_serial.h"
-#include "extended_conio.h"
-#include "extended_string.h"
+#include "strsplit.h"
 #include "api.h"
 
 #define TL_STATUS_SHORT_BUF 256
@@ -126,4 +125,23 @@ void status_free(status *s) {
   status_free(s->reblog);
   account_free(s->account);
   free(s);
+}
+
+status *api_get_status(char *status_id, char full) {
+  surl_response *resp;
+  status *s;
+
+  s = NULL;
+
+  snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s", STATUS_ENDPOINT, status_id);
+  resp = get_surl_for_endpoint("GET", endpoint_buf);
+  
+  if (resp == NULL || resp->code < 200 || resp->code >= 300)
+    goto err_out;
+
+  s = status_new_from_json(resp, status_id, full, 0);
+
+err_out:
+  surl_response_free(resp);
+  return s;
 }

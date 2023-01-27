@@ -7,8 +7,12 @@
 #include <apple2enh.h>
 #endif
 #include "surl.h"
+#ifdef __CC65__
+#include <conio.h>
+#else
 #include "extended_conio.h"
-#include "extended_string.h"
+#endif
+#include "strsplit.h"
 #include "api.h"
 
 char *instance_url;

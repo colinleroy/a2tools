@@ -23,6 +23,7 @@
 #include "stp_save.h"
 #include "get_buf_size.h"
 #include "simple_serial.h"
+#include "clrzone.h"
 #include "extended_conio.h"
 #include "math.h"
 

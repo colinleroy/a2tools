@@ -1,5 +1,5 @@
 PROGRAM=day16
-SOURCES := day16.c ../../lib/slist.c ../../lib/bfs.c ../../lib/extended_string.c ../../lib/bool_array.c
+SOURCES := day16.c ../../lib/slist.c ../../lib/bfs.c ../../lib/extended_string.c ../../lib/strsplit.c ../../lib/bool_array.c
 DEPS := 
 
 CC65_TARGET = apple2enh

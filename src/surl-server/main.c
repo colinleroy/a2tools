@@ -24,6 +24,7 @@
 #include "char_convert.h"
 #include "simple_serial.h"
 #include "extended_string.h"
+#include "strsplit.h"
 #include "math.h"
 #include "raw-session.h"
 #include "jq.h"

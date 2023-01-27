@@ -9,8 +9,8 @@
 #include <string.h>
 
 #define CH_DELETE      0x7F
-#ifndef __CC65__
 
+#ifndef __CC65__
 #define CH_CURS_UP     0x01
 #define CH_CURS_DOWN   0x02
 #define CH_CURS_LEFT   0x03
@@ -22,7 +22,7 @@
 #define __fastcall__
 #define cputc(c) putc(c, stdout)
 #define cursor(a) do {} while(0)
-#define dputs cputs
+#define dputs(a) cputs(a)
 #define chlinexy(a, b, c) do {} while(0)
 #define cvlinexy(a, b, c) do {} while(0)
 #define cvline(a) do {} while(0)
@@ -49,18 +49,7 @@ int wherey(void);
 int kbhit(void);
 #endif
 
-void get_scrollwindow(unsigned char *top, unsigned char *bottom);
-void set_scrollwindow(unsigned char top, unsigned char bottom);
-void get_hscrollwindow(unsigned char *left, unsigned char *width);
-void set_hscrollwindow(unsigned char left, unsigned char width);
-
-void echo(int on);
-char * __fastcall__ cgets(char *buf, size_t size);
-void __fastcall__ clrzone(char xs, char ys, char xe, char ye);
-
 void printxcentered(int y, char *buf);
 void printxcenteredbox(int width, int height);
 void progress_bar(int x, int y, int width, size_t cur, size_t end);
-
-void nomem_msg(char *file, int line);
 #endif

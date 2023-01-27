@@ -1,6 +1,6 @@
 PROGRAM=a2recv
-SOURCES := a2recv.c ../lib/simple_serial.c ../lib/extended_conio.c
-GCCSOURCES := ../lib/extended_string.c
+SOURCES := a2recv.c ../lib/simple_serial.c ../lib/clrzone.c
+GCCSOURCES := ../lib/extended_string.c ../lib/extended_conio.c
 DEPS := 
 
 CC65_TARGET = apple2enh

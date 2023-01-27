@@ -7,8 +7,12 @@
 #include <apple2enh.h>
 #endif
 #include "surl.h"
+#ifdef __CC65__
+#include <conio.h>
+#else
 #include "extended_conio.h"
-#include "extended_string.h"
+#endif
+#include "strsplit.h"
 #include "dputs.h"
 #include "dputc.h"
 #include "scroll.h"
@@ -18,7 +22,8 @@
 #include "list.h"
 #include "math.h"
 #include "dgets.h"
-
+#include "clrzone.h"
+#include "scrollwindow.h"
 
 account *my_account = NULL;
 
@@ -33,28 +38,30 @@ void compose_print_header(status *root_status) {
     if (strlen(my_account->username) > LEFT_COL_WIDTH)
       my_account->username[LEFT_COL_WIDTH] = '\0';
 
-    cputsxy(0, 0, my_account->display_name);
+    gotoxy(0, 0);
+    dputs(my_account->display_name);
     gotoxy(0, 1);
-    cprintf("%c%s\r\n", arobase, my_account->username);
+    cputc(arobase);
+    dputs(my_account->username);
   }
 
-  #define BTM 10
+  #define BTM 9
   clrzone(0, BTM, LEFT_COL_WIDTH, 23);
   gotoxy(0,BTM);
 
-  cputs("Set Audience:\r\n");
-  cputs(" Open-Apple +...\r\n");
-  cputs(" Send     : S\r\n");
-  cputs(" Cancel   : Escape\r\n");
+  dputs("Commands:\r\n");
+  dputs(" Open-Apple +...\r\n");
+  dputs(" Send     : S\r\n");
+  dputs(" Cancel   : Escape\r\n");
 
-  cputs("\r\n");
-  cputs("Set Audience:\r\n");
-  cputs(" Open-Apple +...\r\n");
-  cputs(" Public   : P\r\n");
-  cputs(" Unlisted : U\r\n");
-  cputs(" Private  : R\r\n");
-  cputs(" Mention  : M\r\n");
-  cputs("\r\n");
+  dputs("\r\n");
+  dputs("Set Audience:\r\n");
+  dputs(" Open-Apple +...\r\n");
+  dputs(" Public   : P\r\n");
+  dputs(" Unlisted : U\r\n");
+  dputs(" Private  : R\r\n");
+  dputs(" Mention  : M\r\n");
+  dputs("\r\n");
 
 
 #ifdef __CC65__

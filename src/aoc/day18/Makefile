@@ -1,5 +1,5 @@
 PROGRAM=day18
-SOURCES := day18.c ../../lib/extended_conio.c
+SOURCES := day18.c ../../lib/extended_conio.c ../../lib/clrzone.c
 DEPS := 
 
 CC65_TARGET = apple2enh

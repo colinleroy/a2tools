@@ -7,17 +7,24 @@
 #include <apple2enh.h>
 #endif
 #include "surl.h"
+#ifdef __CC65__
+#include <conio.h>
+#else
 #include "extended_conio.h"
-#include "extended_string.h"
+#endif
+#include "strsplit.h"
 #include "dputs.h"
 #include "dputc.h"
 #include "scroll.h"
 #include "cli.h"
+#include "print.h"
 #include "header.h"
 #include "api.h"
 #include "list.h"
 #include "math.h"
 #include "dgets.h"
+#include "clrzone.h"
+#include "scrollwindow.h"
 
 #define BUF_SIZE 255
 
@@ -32,7 +39,10 @@ char *oauth_token = NULL;
 #define NAVIGATE           8
 #define BACK               9
 #define QUIT               10
+#define CONFIGURE          11
 #define COMPOSE            15
+#define REPLY              16
+
 static char cur_action;
 
 static void print_list(list *l);
@@ -41,7 +51,10 @@ static status *is_root_status_at_top(list *l) {
   status *root_status;
   char full;
   char *first_id;
-  
+
+  if (l->first_displayed_post < 0) 
+    return NULL;
+
   first_id = l->ids[l->first_displayed_post];
   root_status = NULL;
   full = (l->root && first_id &&
@@ -53,39 +66,6 @@ static status *is_root_status_at_top(list *l) {
     }
   }
   return root_status;
-}
-
-#define CHECK_AND_CRLF() do { \
-  if (wherey() == scrh - 1) { \
-    return -1;                \
-  }                           \
-  dputs("\r\n");              \
-} while (0)
-
-static int print_buf(char *w, char allow_scroll, char *scrolled) {
-  while (*w) {
-    if (allow_scroll && wherey() == scrh - 2) {
-      char i;
-      cputsxy(0, scrh-1, "Hit a key to continue.");
-      cgetc();
-      cputsxy(0, scrh-1, "                      ");
-      for (i = 0; i < 10; i++) {
-        scrollup();
-      }
-      gotoxy(0, scrh - 12);
-      *scrolled = 1;
-    }
-    if (*w == '\n') {
-      CHECK_AND_CRLF();
-    } else {
-      if (wherey() == scrh - 1 && wherex() == scrw - LEFT_COL_WIDTH - 2) {
-        return -1;
-      }
-      dputc(*w);
-    }
-    ++w;
-  }
-  return 0;
 }
 
 static int print_account(account *a, char *scrolled) {
@@ -132,68 +112,6 @@ static int print_account(account *a, char *scrolled) {
   if (wherey() == scrh - 1) {
     return -1;
   }
-  return 0;
-}
-
-static int print_status(status *s, char full, char *scrolled) {
-  char y;
-
-  *scrolled = 0;
-  s->displayed_at = wherey();
-  /* reblog header */
-  if (s->reblog) {
-    dputs(s->account->display_name);
-    dputs(" boosted");
-    CHECK_AND_CRLF();
-    s = s->reblog;
-  }
-  
-  /* Display name + date */
-  dputs(s->account->display_name); 
-  dputs(" - ");
-  dputs(s->created_at); 
-  CHECK_AND_CRLF();
-
-  /* username (30 chars max)*/
-  dputc(arobase);
-  dputs(s->account->username);
-  
-  /* important stats */
-  gotox(39);
-  y = wherey();
-  cprintf("%3d replies, %1d images",
-        s->n_replies, s->n_images);
-  gotoxy(79, y);
-  CHECK_AND_CRLF();
-
-  /* Content */
-  if (print_buf(s->content, (full && s->displayed_at == 0), scrolled) < 0)
-    return -1;
-
-  CHECK_AND_CRLF();
-  if (wherey() == scrh - 1) {
-    return -1;
-  }
-
-  if (full) {
-    /* stats */
-      CHECK_AND_CRLF();
-      cprintf("%d replies, %s%d boosts, %s%d favs, %1d images      ",
-            s->n_replies,
-            (s->favorited_or_reblogged & REBLOGGED) ? "*":"", s->n_reblogs,
-            (s->favorited_or_reblogged & FAVOURITED) ? "*":"", s->n_favourites,
-            s->n_images);
-      CHECK_AND_CRLF();
-      if (wherey() == scrh - 1) {
-        return -1;
-      }
-  }
-
-  chline(scrw - LEFT_COL_WIDTH - 1);
-  if (wherey() == scrh - 1) {
-    return -1;
-  }
-
   return 0;
 }
 
@@ -300,7 +218,7 @@ static list *build_list(status *root, char kind) {
   char i;
 
   gotoxy(LEFT_COL_WIDTH - 4, scrh - 1);
-  cputs("...");
+  dputs("...");
 
   l = malloc(sizeof(list));
   memset(l, 0, sizeof(list));
@@ -312,7 +230,7 @@ static list *build_list(status *root, char kind) {
     }
     l->first_displayed_post = 0;
   } else {
-    l->account = api_get_full_account(root->reblog ? root->reblog->account : root->account);
+    l->account = api_get_full_account(root->reblog ? root->reblog->account->id : root->account->id);
     l->first_displayed_post = -1;
   }
 
@@ -353,7 +271,7 @@ static list *build_list(status *root, char kind) {
   l->scrolled = 0;
 
   gotoxy(LEFT_COL_WIDTH - 4, scrh - 1);
-  cputs("   ");
+  dputs("   ");
 
   return l;
 }
@@ -423,13 +341,13 @@ update:
         disp = l->displayed_posts[i];
       else {
         if (i > l->first_displayed_post) 
-          cputs(LOADING_TOOT_MSG);
+          dputs(LOADING_TOOT_MSG);
         gotox(0);
 
         disp = api_get_status(l->ids[i], full);
 
         if (i > l->first_displayed_post)
-          cputs("                ");
+          dputs("                ");
         gotox(0);
       }
       l->displayed_posts[i] = disp;
@@ -545,6 +463,176 @@ static void configure(void) {
 #endif
 }
 
+void launch_compose(status *s) {
+  char *params;
+  params = malloc(127);
+  snprintf(params, 127, "%s %s %s %s", instance_url, oauth_token, 
+                                       translit_charset,
+                                       s ? s->id:"");
+#ifdef __CC65__
+  exec("mastowrite", params);
+  exit(0);
+#else
+  printf("exec(mastowrite %s)\n",params);
+  exit(0);
+#endif
+}
+
+#ifndef __APPLE2ENH__
+#define STATE_FILE "mastostate"
+#else
+#define STATE_FILE "/RAM/mastostate"
+#endif
+
+static void save_state(list **lists, char cur_list) {
+  char i,j;
+  FILE *fp;
+
+#ifdef __CC65__
+  _filetype = PRODOS_T_TXT;
+#endif
+
+  clrscr();
+  printf("Saving state...");
+
+  fp = fopen(STATE_FILE,"w");
+  if (fp == NULL) {
+    return;
+  }
+
+  if (fprintf(fp, "%d\n", cur_list) < 0)
+    goto err_out;
+
+  for (i = 0; i <= cur_list; i++) {
+    list *l = lists[i];
+    if (fprintf(fp, "%d\n", l->kind) < 0)
+      goto err_out;
+    if (fprintf(fp, "%s\n", l->root ? l->root : "") < 0)
+      goto err_out;
+    if (fprintf(fp, "%s\n", l->leaf_root ? l->leaf_root : "") < 0)
+      goto err_out;
+    if (fprintf(fp, "%d\n", l->last_displayed_post) < 0)
+      goto err_out;
+    if (fprintf(fp, "%d\n", l->eof) < 0)
+      goto err_out;
+    if (fprintf(fp, "%d\n", l->scrolled) < 0)
+      goto err_out;
+    if (fprintf(fp, "%d\n", l->first_displayed_post) < 0)
+      goto err_out;
+    if (fprintf(fp, "%d\n", l->n_posts) < 0)
+      goto err_out;
+    for (j = 0; j < l->n_posts; j++) {
+      if (fprintf(fp, "%s\n", l->ids[j]) < 0)
+        goto err_out;
+      if (fprintf(fp, "%d\n", l->post_height[j]) < 0)
+        goto err_out;
+    }
+
+    if (fprintf(fp, "%s\n", l->account ? l->account->id : "") < 0)
+      goto err_out;
+    if (fprintf(fp, "%d\n", l->account_height) < 0)
+      goto err_out;
+  }
+
+  fclose(fp);
+  printf("Done.\n");
+  return;
+
+err_out:
+  fclose(fp);
+  unlink(STATE_FILE);
+  printf("Error.\n");
+}
+
+
+static int load_state(list ***lists) {
+  char i,j, num_lists;
+  FILE *fp;
+
+#ifdef __CC65__
+  _filetype = PRODOS_T_TXT;
+#endif
+
+  *lists = NULL;
+  fp = fopen(STATE_FILE,"r");
+  if (fp == NULL) {
+    return -1;
+  }
+
+  printf("Reloading state...");
+
+  fgets(gen_buf, BUF_SIZE, fp);
+  num_lists = atoi(gen_buf);
+  *lists = malloc((num_lists + 1) * sizeof(list *));
+
+  for (i = 0; i <= num_lists; i++) {
+    list *l = malloc(sizeof(list));
+    memset(l, 0, sizeof(list));
+    (*lists)[i] = l;
+
+    fgets(gen_buf, BUF_SIZE, fp);
+    l->kind = atoi(gen_buf);
+
+    fgets(gen_buf, BUF_SIZE, fp);
+    if (gen_buf[0] != '\n') {
+      *strchr(gen_buf, '\n') = '\0';
+      l->root = strdup(gen_buf);
+    }
+
+    fgets(gen_buf, BUF_SIZE, fp);
+    if (gen_buf[0] != '\n') {
+      *strchr(gen_buf, '\n') = '\0';
+      l->leaf_root = strdup(gen_buf);
+    }
+  
+    fgets(gen_buf, BUF_SIZE, fp);
+    l->last_displayed_post = atoi(gen_buf);
+
+    fgets(gen_buf, BUF_SIZE, fp);
+    l->eof = atoi(gen_buf);
+
+    fgets(gen_buf, BUF_SIZE, fp);
+    l->scrolled = atoi(gen_buf);
+
+    fgets(gen_buf, BUF_SIZE, fp);
+    l->first_displayed_post = atoi(gen_buf);
+
+    fgets(gen_buf, BUF_SIZE, fp);
+    l->n_posts = atoi(gen_buf);
+    l->ids = malloc(l->n_posts * sizeof(char *));
+    l->post_height = malloc(l->n_posts * sizeof(char));
+    l->displayed_posts = malloc(l->n_posts * sizeof(status *));
+    memset(l->displayed_posts, 0, l->n_posts * sizeof(status *));
+
+    for (j = 0; j < l->n_posts; j++) {
+      fgets(gen_buf, BUF_SIZE, fp);
+      if (gen_buf[0] != '\n') {
+        *strchr(gen_buf, '\n') = '\0';
+        l->ids[j] = strdup(gen_buf);
+      }
+      fgets(gen_buf, BUF_SIZE, fp);
+      l->post_height[j] = atoi(gen_buf);
+    }
+
+    fgets(gen_buf, BUF_SIZE, fp);
+    if (gen_buf[0] != '\n') {
+      *strchr(gen_buf, '\n') = '\0';
+      l->account = api_get_full_account(gen_buf);
+    }
+
+    fgets(gen_buf, BUF_SIZE, fp);
+    l->account_height = atoi(gen_buf);
+  }
+
+  fclose(fp);
+  unlink(STATE_FILE);
+  cur_action = NAVIGATE;
+
+  printf("Done\n");
+
+  return num_lists;
+}
+
 /* returns 1 to reload */
 static int show_list(list *l) {
   char c;
@@ -555,10 +643,10 @@ static int show_list(list *l) {
     print_header(l, root_status);
 
     gotoxy(LEFT_COL_WIDTH - 4, scrh - 1);
-    cputs("...");
+    dputs("...");
     print_list(l);
     gotoxy(LEFT_COL_WIDTH - 4, scrh - 1);
-    cputs("   ");
+    dputs("   ");
 
     c = tolower(cgetc());
     switch(c) {
@@ -600,38 +688,32 @@ static int show_list(list *l) {
         }
         break;
       case 'o':
-          configure();
-          return 0;
+        cur_action = CONFIGURE;
+        return 0;
       case 'c':
-          cur_action = COMPOSE;
-          return 0;
-        break;
+        cur_action = COMPOSE;
+        return 0;
+      case 'r':
+        cur_action = REPLY;
+        return 0;
     }
   }
   return 0;
 }
 
-void launch_compose(void) {
-  char *params;
-  params = malloc(127);
-  snprintf(params, 127, "%s %s %s", instance_url, oauth_token, translit_charset);
-#ifdef __CC65__
-  exec("mastowrite", params);
-  exit(0);
-#else
-  printf("exec(mastowrite %s)\n",params);
-  exit(0);
-#endif
-}
-
 void cli(void) {
-  char cur_list, to_clear, to_show;
+  signed char cur_list, to_clear, to_show;
   list **l, *prev_list;
   char starting = 1;
 
-  cur_list = 0;
-  cur_action = SHOW_HOME_TIMELINE;
-  l = malloc((cur_list + 1) * sizeof(list *));
+  if (starting) {
+    cur_list = load_state(&l);
+  }
+  if (cur_list == -1) {
+    cur_list = 0;
+    l = malloc((cur_list + 1) * sizeof(list *));
+    cur_action = SHOW_HOME_TIMELINE;
+  }
 
   while (cur_action != QUIT) {
     switch(cur_action) {
@@ -686,10 +768,20 @@ void cli(void) {
           cur_action = QUIT;
         }
         break;
+      case CONFIGURE:
+          save_state(l, cur_list);
+          configure();
+          cur_action = NAVIGATE;
+          break;
       case COMPOSE:
-        launch_compose();
-        cur_action = NAVIGATE;
-        break;
+          save_state(l, cur_list);
+          launch_compose(NULL);
+          cur_action = NAVIGATE;
+      case REPLY:
+          save_state(l, cur_list);
+          launch_compose(is_root_status_at_top(l[cur_list]));
+          cur_action = NAVIGATE;
+          break;
       case QUIT:
         goto out;
     }
@@ -700,12 +792,6 @@ out:
 }
 
 int main(int argc, char **argv) {
-  /* Placeholder to make sure I keep enough
-   * room for state saving */
-  FILE *fp;
-  fp = fopen("test","r");
-  fclose(fp);
-
   if (argc < 4) {
     printf("Missing instance_url, oauth_token and/or charset parameters.\n");
   }

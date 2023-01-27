@@ -23,6 +23,7 @@
 #ifdef __CC65__
 #include <apple2enh.h>
 #endif
+#include "clrzone.h"
 
 #define BUF_SIZE 255
 #define DATA_SIZE 16384

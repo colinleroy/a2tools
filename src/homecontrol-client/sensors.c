@@ -20,6 +20,7 @@
 #include <string.h>
 #include "extended_conio.h"
 #include "extended_string.h"
+#include "strsplit.h"
 
 #include "constants.h"
 #include "network.h"

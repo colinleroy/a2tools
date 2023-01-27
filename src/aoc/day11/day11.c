@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "extended_string.h"
+#include "strsplit.h"
 #include "array_sort.h"
 #include <errno.h>
 #ifdef __CC65__

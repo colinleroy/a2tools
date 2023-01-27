@@ -4,10 +4,13 @@
 #include <unistd.h>
 #include "surl.h"
 #include "simple_serial.h"
-#include "extended_conio.h"
-#include "extended_string.h"
+#include "cgets.h"
+#include "strsplit.h"
 #ifdef __CC65__
+#include <conio.h>
 #include "dputs.h"
+#else
+#include "extended_conio.h"
 #endif
 
 #define BUF_SIZE 255

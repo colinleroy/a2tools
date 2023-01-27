@@ -7,8 +7,12 @@
 #include <apple2enh.h>
 #endif
 #include "surl.h"
+#ifdef __CC65__
+#include <conio.h>
+#else
 #include "extended_conio.h"
-#include "extended_string.h"
+#endif
+#include "strsplit.h"
 #include "dputs.h"
 #include "dputc.h"
 #include "scroll.h"
@@ -18,7 +22,8 @@
 #include "list.h"
 #include "math.h"
 #include "dgets.h"
-
+#include "clrzone.h"
+#include "scrollwindow.h"
 
 account *my_account = NULL;
 
@@ -33,46 +38,49 @@ void print_header(list *l, status *root_status) {
     if (strlen(my_account->username) > LEFT_COL_WIDTH)
       my_account->username[LEFT_COL_WIDTH] = '\0';
 
-    cputsxy(0, 0, my_account->display_name);
+    gotoxy(0, 0);
+    dputs(my_account->display_name);
     gotoxy(0, 1);
-    cprintf("%c%s\r\n", arobase, my_account->username);
+    dputc(arobase);
+    dputs(my_account->username);
   }
 
-  #define BTM 10
+  #define BTM 9
   clrzone(0, BTM, LEFT_COL_WIDTH, 23);
   gotoxy(0,BTM);
 
-  cputs("General:\r\n");
-  cputs(" View toot: Enter\r\n");
-  cputs(" Scroll   : Up/dn\r\n");
+  dputs("General:\r\n");
+  dputs(" View toot: Enter\r\n");
+  dputs(" Scroll   : Up/dn\r\n");
   if (!l || !l->root) {
-    cputs(" Configure: O\r\n");
-    cputs(" Exit     : Escape \r\n");
+    dputs(" Configure: O\r\n");
+    dputs(" Exit     : Escape \r\n");
   } else {
-    cputs(" Back     : Escape \r\n");
+    dputs(" Back     : Escape \r\n");
     
     if (root_status) {
-      cputs("Toot: \r\n");
+      dputs("Toot: \r\n");
+      dputs(" Reply    : R      \r\n");
       if ((root_status->favorited_or_reblogged & FAVOURITED) != 0) {
-        cputs(" Unfav.   : F      \r\n");
+        dputs(" Unfav.   : F      \r\n");
       } else {
-        cputs(" Favourite: F      \r\n");
+        dputs(" Favourite: F      \r\n");
       }
       if ((root_status->favorited_or_reblogged & REBLOGGED) != 0) {
-        cputs(" Unboost  : B      \r\n");
+        dputs(" Unboost  : B      \r\n");
       } else {
-        cputs(" Boost    : B      \r\n");
+        dputs(" Boost    : B      \r\n");
       }
       if (!strcmp(root_status->account->id, my_account->id)) {
-        cputs(" Delete   : D      \r\n");
+        dputs(" Delete   : D      \r\n");
       }
 
-      cputs("Author:\r\n");
-      cputs(" Profile  : P      \r\n");
+      dputs("Author:\r\n");
+      dputs(" Profile  : P      \r\n");
     }
   }
-  cputs("Writing:\r\n");
-  cputs(" Compose  : C      \r\n");
+  dputs("Writing:\r\n");
+  dputs(" Compose  : C      \r\n");
 
   print_free_ram();
   cvlinexy(LEFT_COL_WIDTH, 0, scrh);
