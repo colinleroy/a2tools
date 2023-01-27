@@ -4,6 +4,10 @@ homectrl_SOURCES := main.c network.c \
 	server_url.c \
 	../lib/simple_serial.c \
 	../lib/extended_conio.c \
+	../lib/cgets.c \
+	../lib/scrollwindow.c \
+	../lib/clrzone.c \
+	../lib/strsplit.c \
 	../lib/extended_string.c \
 	../lib/surl.c
 
@@ -11,7 +15,7 @@ grphview_SOURCES := graph-viewer.c \
 	../lib/surl.c \
 	../lib/simple_serial.c
 
-grphview_GCCSOURCES := ../lib/extended_conio.c ../lib/tgi_sdl.c ../lib/extended_string.c ../lib/tgi_fastline.c
+grphview_GCCSOURCES := ../lib/extended_conio.c ../lib/clrzone.c ../lib/tgi_sdl.c ../lib/extended_string.c ../lib/tgi_fastline.c
 
 DEPS := 
 

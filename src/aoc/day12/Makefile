@@ -2,7 +2,7 @@ PROGRAM=day12 day12viz
 
 RD_SOURCES := day12.c ../../lib/bfs.c ../../lib/bool_array.c
 VIZ_SOURCES := day12viz.c ../../lib/tgi_sdl.c
-VIZ_GCCSOURCES := ../../lib/extended_conio.c ../../lib/tgi_fastline.c
+VIZ_GCCSOURCES := ../../lib/extended_conio.c ../../lib/clrzone.c ../../lib/tgi_fastline.c
 
 DEPS := 
 

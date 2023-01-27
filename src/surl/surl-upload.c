@@ -24,6 +24,7 @@
 #ifndef __CC65__
 #include <libgen.h>
 #endif
+#include "cgets.h"
 #include "surl.h"
 #include "get_filedetails.h"
 #include "simple_serial.h"

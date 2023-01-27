@@ -3,9 +3,14 @@ SOURCES := stp.c stp_cli.c stp_save.c stp_send_file.c stp_delete.c \
 	../lib/simple_serial.c \
 	../lib/get_buf_size.c \
 	../lib/extended_conio.c \
-	../lib/extended_string.c \
+	../lib/strsplit.c \
 	../lib/get_filedetails.c \
+	../lib/cgets.c \
+	../lib/clrzone.c \
+	../lib/scrollwindow.c \
 	../lib/surl.c
+
+GCC_SOURCES = ../lib/extended_string.c
 
 DEPS := 
 
@@ -22,7 +27,7 @@ all: $(PROGRAM).bin $(PROGRAM).x86_64
 $(PROGRAM).bin: $(SOURCES)
 	cl65 $(CFLAGS) $(CLCFLAGS) -o $@ $^ 
 
-$(PROGRAM).x86_64: $(SOURCES)
+$(PROGRAM).x86_64: $(SOURCES) $(GCC_SOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	
 
 clean:

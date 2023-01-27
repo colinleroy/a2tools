@@ -4,8 +4,7 @@
 #include <unistd.h>
 #include "surl.h"
 #include "simple_serial.h"
-#include "extended_conio.h"
-#include "extended_string.h"
+#include "strsplit.h"
 #include "api.h"
 #include "common.h"
 
@@ -20,6 +19,10 @@ extern char *oauth_token;
 /* shared */
 char gen_buf[BUF_SIZE];
 char selector[SELECTOR_SIZE];
+
+void nomem_msg(char *file, int line) {
+    printf("No more memory at %s:%d\n", file, line);
+}
 
 surl_response *get_surl_for_endpoint(char *method, char *endpoint) {
   static char *hdrs[1] = {NULL};

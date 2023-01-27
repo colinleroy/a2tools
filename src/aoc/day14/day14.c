@@ -29,6 +29,7 @@
 #include "extended_conio.h"
 #include "bool_array.h"
 #include "extended_string.h"
+#include "strsplit.h"
 
 /* Init HGR segment */
 #pragma rodata-name (push, "HGR")

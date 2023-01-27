@@ -4,8 +4,7 @@
 #include <unistd.h>
 #include "surl.h"
 #include "simple_serial.h"
-#include "extended_conio.h"
-#include "extended_string.h"
+#include "strsplit.h"
 #include "api.h"
 #include "common.h"
 
@@ -100,25 +99,6 @@ int api_get_status_and_replies(char to_load, char *root_id, char *root_leaf_id, 
 err_out:
   surl_response_free(resp);
   return n_status;
-}
-
-status *api_get_status(char *status_id, char full) {
-  surl_response *resp;
-  status *s;
-
-  s = NULL;
-
-  snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s", STATUS_ENDPOINT, status_id);
-  resp = get_surl_for_endpoint("GET", endpoint_buf);
-  
-  if (resp == NULL || resp->code < 200 || resp->code >= 300)
-    goto err_out;
-
-  s = status_new_from_json(resp, status_id, full, 0);
-
-err_out:
-  surl_response_free(resp);
-  return s;
 }
 
 /* Caution: does not go into s->reblog */
@@ -258,13 +238,13 @@ err_out:
   return r;
 }
 
-account *api_get_full_account(account *orig) {
+account *api_get_full_account(char *id) {
   surl_response *resp;
   account *a;
 
   a = NULL;
 
-  snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s", ACCOUNTS_ENDPOINT, orig->id);
+  snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s", ACCOUNTS_ENDPOINT, id);
   resp = get_surl_for_endpoint("GET", endpoint_buf);
   
   if (resp == NULL || resp->code < 200 || resp->code >= 300)

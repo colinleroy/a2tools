@@ -24,8 +24,9 @@
 #ifndef __CC65__
 #include <libgen.h>
 #else
-#include "extended_conio.h"
+#include <apple2enh.h>
 #endif
+#include "cgets.h"
 #include <stdlib.h>
 #include <string.h>
 #include "get_filedetails.h"

@@ -4,8 +4,7 @@
 #include <unistd.h>
 #include "surl.h"
 #include "simple_serial.h"
-#include "extended_conio.h"
-#include "extended_string.h"
+#include "strsplit.h"
 #include "compose.h"
 #include "common.h"
 

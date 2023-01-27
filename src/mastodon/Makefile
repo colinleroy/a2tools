@@ -1,28 +1,28 @@
 mastodon_SOURCES := cli/login.c api/oauth.c cli/logo.c \
-	../lib/simple_serial.c ../lib/extended_conio.c \
-	../lib/extended_string.c ../lib/surl.c
+	 ../lib/clrzone.c ../lib/scrollwindow.c ../lib/cgets.c \
+	../lib/simple_serial.c ../lib/strsplit.c ../lib/surl.c
 
 mastocli_SOURCES := cli/tl.c api/api.c \
 	api/account.c api/status.c api/common.c \
-	cli/header.c \
-	../lib/simple_serial.c ../lib/extended_conio.c \
-	../lib/extended_string.c ../lib/surl.c
+	cli/header.c cli/print.c \
+	../lib/clrzone.c ../lib/scrollwindow.c ../lib/cgets.c \
+	../lib/simple_serial.c ../lib/strsplit.c ../lib/surl.c
 
 mastowrite_SOURCES := cli/compose.c cli/compose_header.c \
 	api/compose.c api/account.c api/status.c api/common.c \
-	../lib/simple_serial.c ../lib/extended_conio.c \
-	../lib/dgets.c \
-	../lib/extended_string.c ../lib/surl.c
+	../lib/dgets.c ../lib/clrzone.c ../lib/scrollwindow.c \
+	cli/print.c \
+	../lib/simple_serial.c ../lib/strsplit.c ../lib/surl.c
 
-mastoconf_SOURCES := cli/config.c cli/logo.c ../lib/extended_conio.c
+mastoconf_SOURCES := cli/config.c cli/logo.c ../lib/clrzone.c ../lib/scrollwindow.c
 
 CC65SOURCES := ../lib/dputs.s ../lib/dputc.s ../lib/scroll.s
-GCCSOURCES := 
+GCCSOURCES := ../lib/extended_conio.c ../lib/extended_string.c
 DEPS := 
 
 CC65_TARGET = apple2enh
 CFLAGS  = -I ../lib -I api -I cli
-CLCFLAGS = -t $(CC65_TARGET) -Osir -Cl -Wl -D,__STACKSIZE__=0x0400 -DSERIAL_TO_LANGCARD
+CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x0400 -DSERIAL_TO_LANGCARD
 GCCCFLAGS = -g -O0 -Werror 
 GCCLDFLAGS = 
 

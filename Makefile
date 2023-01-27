@@ -35,6 +35,7 @@ net.dsk: $(net_disk_PROGS)
 homectrl.dsk: $(homectrl_disk_PROGS)
 	cp $(CLEANDISK) $@; \
 	java -jar bin/ac.jar -p $@ BASIC.SYSTEM SYS < bin/loader.system; \
+	java -jar bin/ac.jar -p $@ SRVURL TXT < src/homecontrol-client/SRVURL; \
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 		cp $@ ~/Documents/ADTPro-2.1.0/disks/; \

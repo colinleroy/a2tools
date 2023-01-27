@@ -25,6 +25,7 @@
 #include <conio.h>
 #endif
 #include "bfs.h"
+#include "strsplit.h"
 #include "extended_string.h"
 #include "slist.h"
 

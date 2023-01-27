@@ -18,9 +18,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#ifdef __CC65__
-#include "extended_conio.h"
-#endif
+#include "cgets.h"
+#include "clrzone.h"
 #include "bool_array.h"
 
 char s_xlen[255], s_ylen[255];

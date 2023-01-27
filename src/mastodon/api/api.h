@@ -16,5 +16,5 @@ void api_reblog_status(status *s);
 char api_delete_status(status *s);
 
 char api_relationship_get(account *a, char f);
-account *api_get_full_account(account *a);
+account *api_get_full_account(char *id);
 #endif

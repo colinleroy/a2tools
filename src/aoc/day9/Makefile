@@ -1,6 +1,6 @@
 PROGRAM=day9
 SOURCES := day9.c ../../lib/bool_array.c
-GCCSOURCES := ../../lib/extended_conio.c
+GCCSOURCES := ../../lib/extended_conio.c ../../lib/clrzone.c
 DEPS := 
 
 CC65_TARGET = apple2enh

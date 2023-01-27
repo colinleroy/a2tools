@@ -186,10 +186,11 @@ size_t surl_receive_lines(surl_response *resp, char *buffer, size_t max_len) {
   size_t to_read = min(resp->size - resp->cur_pos, max_len);
   size_t r = 0;
   size_t last_return = 0;
-
+  char *w;
   /* If we had cut the buffer short, restore the overwritten character,
    * move the remaining of the buffer to the start, and read what size
    * we have left */
+
   if (overwritten_char != '\0') {
     *(buffer + overwritten_offset) = overwritten_char;
     memmove(buffer, buffer + overwritten_offset, max_len - overwritten_offset);
@@ -202,17 +203,19 @@ size_t surl_receive_lines(surl_response *resp, char *buffer, size_t max_len) {
     return 0;
   }
 
+  w = buffer + r;
   simple_serial_printf("SEND %zu\n", to_read);
 
   while (to_read > 0) {
-    *(buffer + r) = simple_serial_getc();
+    *w = simple_serial_getc();
 
-    if(*(buffer + r) == '\n') {
+    if(*w == '\n') {
       last_return = r;
     }
 
-    r ++;
-    to_read--;
+    ++w;
+    ++r;
+    --to_read;
   }
   
   /* Change the character after the last \n in the buffer

@@ -1,5 +1,5 @@
 PROGRAM=day17
-SOURCES := day17.c ../../lib/bool_array.c ../../lib/extended_conio.c
+SOURCES := day17.c ../../lib/bool_array.c ../../lib/extended_conio.c ../../lib/clrzone.c
 DEPS := 
 
 CC65_TARGET = apple2enh

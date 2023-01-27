@@ -20,7 +20,12 @@
 #include <string.h>
 #include <errno.h>
 #include "constants.h"
+#ifdef __CC65__
+#include <conio.h>
+#else
 #include "extended_conio.h"
+#endif
+#include "cgets.h"
 
 static char* server_url = NULL;
 const char *get_server_root_url(void) {
