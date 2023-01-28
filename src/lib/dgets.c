@@ -152,7 +152,8 @@ up_a_line:
       gotoxy(cur_x, cur_y);
     } else if (c == CH_CURS_RIGHT) {
       if (i < max_i) {
-        i++;
+        if (buf[i] != '\n') /* are we on an empty line? */
+          i++;
         cur_x++;
 down_a_line:
         has_nl = (buf[i] == '\n');
@@ -161,11 +162,7 @@ down_a_line:
         cur_x = 0;
         cur_y++;
         if (has_nl) {
-          has_nl = 0;
           i++; /* one more char forward */
-          if (i < max_i && buf[i] == '\n') {
-            goto down_a_line;
-          }
         }
       }
       /* Handle scroll up if needed */
@@ -234,7 +231,7 @@ down_a_line:
   }
 out:
   cursor(prev_cursor);
-  buf[i] = '\0';
+  buf[max_i] = '\0';
 
   return buf;
 #else
