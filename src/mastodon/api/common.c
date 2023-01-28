@@ -53,9 +53,11 @@ account *api_get_profile(char *id) {
               id == NULL ? "verify_credentials" : id);
   resp = get_surl_for_endpoint("GET", endpoint_buf);
 
-  if (resp == NULL || resp->code < 200 || resp->code >= 300)
+  if (resp == NULL || resp->code < 200 || resp->code >= 300) {
+    account_free(a);
+    a = NULL;
     goto err_out;
-
+  }
   if (surl_get_json(resp, gen_buf, BUF_SIZE, 0, translit_charset, ".id,.display_name,.username") == 0) {
     n_lines = strsplit_in_place(gen_buf,'\n',&lines);
     if (n_lines < 3) {

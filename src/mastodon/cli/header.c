@@ -45,39 +45,38 @@ void print_header(list *l, status *root_status) {
     dputs(my_account->username);
   }
 
-  #define BTM 9
+  #define BTM 8
   clrzone(0, BTM, LEFT_COL_WIDTH, 23);
   gotoxy(0,BTM);
 
   dputs("General:\r\n");
   dputs(" View toot: Enter\r\n");
   dputs(" Scroll   : Up/dn\r\n");
+  dputs(" Configure: O\r\n");
   if (!l || !l->root) {
-    dputs(" Configure: O\r\n");
     dputs(" Exit     : Escape \r\n");
   } else {
     dputs(" Back     : Escape \r\n");
-    
-    if (root_status) {
-      dputs("Toot: \r\n");
-      dputs(" Reply    : R      \r\n");
-      if ((root_status->favorited_or_reblogged & FAVOURITED) != 0) {
-        dputs(" Unfav.   : F      \r\n");
-      } else {
-        dputs(" Favourite: F      \r\n");
-      }
-      if ((root_status->favorited_or_reblogged & REBLOGGED) != 0) {
-        dputs(" Unboost  : B      \r\n");
-      } else {
-        dputs(" Boost    : B      \r\n");
-      }
-      if (!strcmp(root_status->account->id, my_account->id)) {
-        dputs(" Delete   : D      \r\n");
-      }
-
-      dputs("Author:\r\n");
-      dputs(" Profile  : P      \r\n");
+  }
+  if (root_status) {
+    dputs("Toot: \r\n");
+    dputs(" Reply    : R      \r\n");
+    if ((root_status->favorited_or_reblogged & FAVOURITED) != 0) {
+      dputs(" Unfav.   : F      \r\n");
+    } else {
+      dputs(" Favourite: F      \r\n");
     }
+    if ((root_status->favorited_or_reblogged & REBLOGGED) != 0) {
+      dputs(" Unboost  : B      \r\n");
+    } else {
+      dputs(" Boost    : B      \r\n");
+    }
+    if (!strcmp(root_status->account->id, my_account->id)) {
+      dputs(" Delete   : D      \r\n");
+    }
+
+    dputs("Author:\r\n");
+    dputs(" Profile  : P      \r\n");
   }
   dputs("Writing:\r\n");
   dputs(" Compose  : C      \r\n");

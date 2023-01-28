@@ -47,24 +47,17 @@ static char cur_action;
 
 static void print_list(list *l);
 
-static status *is_root_status_at_top(list *l) {
+static status *get_top_status(list *l) {
   status *root_status;
-  char full;
-  char *first_id;
 
   if (l->first_displayed_post < 0) 
     return NULL;
 
-  first_id = l->ids[l->first_displayed_post];
-  root_status = NULL;
-  full = (l->root && first_id &&
-         !strcmp(l->root, first_id));
-  if (full) {
-    root_status = l->displayed_posts[l->first_displayed_post];
-    if (root_status && root_status->reblog) {
-      root_status = root_status->reblog;
-    }
+  root_status = l->displayed_posts[l->first_displayed_post];
+  if (root_status && root_status->reblog) {
+    root_status = root_status->reblog;
   }
+
   return root_status;
 }
 
@@ -265,6 +258,8 @@ static list *build_list(status *root, char kind) {
           break;
       }
     }
+  } else {
+    l->displayed_posts[0] = api_get_status(l->ids[0], 0);
   }
   l->last_displayed_post = 0;
   l->eof = 0;
@@ -527,7 +522,7 @@ err_out:
 
 
 static int load_state(list ***lists) {
-  char i,j, num_lists;
+  char i,j, num_lists, loaded;
   FILE *fp;
 
 #ifdef __CC65__
@@ -596,8 +591,14 @@ static int load_state(list ***lists) {
 
       if (l->root && !strcmp(l->root, l->ids[j])) {
         l->displayed_posts[j] = api_get_status(l->ids[j], 1);
+        loaded = 1;
       }
     }
+    if (!loaded && l->first_displayed_post > -1) {
+      l->displayed_posts[l->first_displayed_post] = 
+          api_get_status(l->ids[l->first_displayed_post], 1);
+    }
+
 
     fgets(gen_buf, BUF_SIZE, fp);
     if (gen_buf[0] != '\n') {
@@ -640,7 +641,7 @@ static int show_list(list *l) {
   
   while (1) {
     status *root_status;
-    root_status = is_root_status_at_top(l);
+    root_status = get_top_status(l);
     print_header(l, root_status);
 
     gotoxy(LEFT_COL_WIDTH - 4, scrh - 1);
@@ -787,7 +788,7 @@ void cli(void) {
           cur_action = NAVIGATE;
       case REPLY:
           save_state(l, cur_list);
-          launch_compose(is_root_status_at_top(l[cur_list]));
+          launch_compose(get_top_status(l[cur_list]));
           cur_action = NAVIGATE;
           break;
       case QUIT:
