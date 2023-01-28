@@ -119,7 +119,8 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
       continue;
     } else if (c == CH_CURS_LEFT) {
       if (i > 0) {
-        i--;
+        if (buf[i] != '\n') /* are we on a line start */
+          i--;
         cur_x--;
 up_a_line:
         has_nl = (buf[i] == '\n');
@@ -140,13 +141,15 @@ up_a_line:
               has_nl = 0;
               i--; /* one more char back */
             } else {
-              cur_x--;
-              if (cur_x < 0) {
+              if (cur_x > 0) {
+                cur_x--;
+              } else {
                 i--;
-                goto up_a_line;
+                break; /* another empty line */
               }
             }
           }
+          gotoxy(cur_x, cur_y);
         }
       }
       gotoxy(cur_x, cur_y);
