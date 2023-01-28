@@ -7,7 +7,7 @@
 #include "strsplit.h"
 #include "api.h"
 
-#define TL_STATUS_SHORT_BUF 256
+#define TL_STATUS_SHORT_BUF 512
 #define TL_STATUS_LARGE_BUF 4096
 
 status *status_new(void) {

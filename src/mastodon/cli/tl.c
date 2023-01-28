@@ -376,7 +376,7 @@ update:
 }
 
 static void shift_posts_down(list *l) {
-  char i, end_loop;
+  char i;
   char scroll_val;
 
   if (l->first_displayed_post == l->n_posts)
@@ -388,16 +388,6 @@ static void shift_posts_down(list *l) {
     scroll_val = l->post_height[l->first_displayed_post];
   }
   l->first_displayed_post++;
-  /* Remove posts scrolled up, keeping just one for fast scroll */
-  if (l->first_displayed_post > 0) {
-    end_loop = min(l->first_displayed_post - 1, l->last_displayed_post - 1);
-    for (i = 0; i < end_loop; i++) {
-      if (l->displayed_posts[i]) {
-        status_free(l->displayed_posts[i]);
-        l->displayed_posts[i] = NULL;
-      }
-    }
-  }
   set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
   for (i = 0; i < scroll_val; i++) {
     scrollup();
@@ -429,15 +419,6 @@ static int shift_posts_up(list *l) {
     scrollval = scrh;
   }
   l->first_displayed_post--;
-  /* Remove posts scrolled down, keeping just one for fast scroll */
-  if (l->last_displayed_post > 0) {
-    for (i = l->last_displayed_post + 1; i < l->n_posts; i++) {
-      if (l->displayed_posts[i]) {
-        status_free(l->displayed_posts[i]);
-        l->displayed_posts[i] = NULL;
-      }
-    }
-  }
   set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
   for (i = 0; scrollval > 0 && i < scrollval; i++) {
     scrolldn();
@@ -637,6 +618,22 @@ static int load_state(list ***lists) {
   return num_lists;
 }
 
+static void background_load(list *l) {
+  char i;
+  for (i = 0; i < l->n_posts; i++) {
+    if (l->displayed_posts[i] == NULL) {
+      gotoxy(LEFT_COL_WIDTH - 4, scrh - 1);
+      dputs("...");
+
+      l->displayed_posts[i] = api_get_status(l->ids[i], 0);
+
+      gotoxy(LEFT_COL_WIDTH - 4, scrh - 1);
+      dputs("   ");
+      break; /* background load one by one to check kb */
+    }
+  }
+}
+
 /* returns 1 to reload */
 static int show_list(list *l) {
   char c;
@@ -652,6 +649,10 @@ static int show_list(list *l) {
     gotoxy(LEFT_COL_WIDTH - 4, scrh - 1);
     dputs("   ");
 
+    while (!kbhit()) {
+      background_load(l);
+      print_free_ram();
+    }
     c = tolower(cgetc());
     switch(c) {
       case CH_ENTER:
@@ -740,7 +741,10 @@ void cli(void) {
         l[cur_list] = build_list(prev_list->displayed_posts[prev_list->first_displayed_post],
                    to_show);
         clrzone(LEFT_COL_WIDTH + 1, to_clear, scrw - 1, scrh - 1);
-        compact_list(prev_list);
+        /* free status on list n-2 */
+        if (cur_list > 1) {
+          compact_list(l[cur_list - 2]);
+        }
         cur_action = NAVIGATE;
         break;
       case NAVIGATE:
