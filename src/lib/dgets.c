@@ -22,6 +22,36 @@
 #include "dputc.h"
 #include "clrzone.h"
 #include "scrollwindow.h"
+#include "scroll.h"
+
+static void rewrite_end_of_buffer(char *buf, size_t i, size_t max_i, unsigned char wx, unsigned char hy) {
+  size_t k;
+  unsigned char x, y;
+
+  for (k = i; k < max_i; k++) {
+    x = wherex();
+    y = wherey();
+    if (buf[k] == '\n') {
+      clrzone(x, y, wx - 1, y);
+      gotoxy(x, y);
+    }
+    if (x == wx) {
+      if (y + 1 < hy - 1) {
+        clrzone(0, y + 1, wx - 1, y + 1);
+        gotoxy(x, y);
+      }
+    }
+    if (buf[k] == '\n') {
+      cputc('\r');
+    }
+    y = wherey();
+    cputc(buf[k]);
+    if (y == hy - 1 && wherey() == 0) {
+      /* overflowed bottom */
+      break;
+    }
+  }
+}
 
 char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
 #ifdef __CC65__
@@ -31,8 +61,9 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
   char has_nl = 0;
   int prev_cursor = 0;
   unsigned char start_x, start_y;
-  unsigned char sx, wx, x;
-  unsigned char sy, ey, hy, y;
+  unsigned char sx, wx;
+  unsigned char sy, ey, hy;
+  char scrolled_up = 0;
 
   get_hscrollwindow(&sx, &wx);
   get_scrollwindow(&sy, &ey);
@@ -105,10 +136,22 @@ down_a_line:
       if (cur_x > wx - 1) {
         cur_x = 0;
         cur_y++;
+        gotoxy(cur_x, cur_y);
       }
-      gotoxy(cur_x, cur_y);
+      scrolled_up = 0;
+      while (cur_y > hy - 1) {
+        cur_y--;
+        scrollup();
+        gotoxy(cur_x, cur_y);
+        scrolled_up = 1;
+      }
+      if (scrolled_up) {
+        rewrite_end_of_buffer(buf, i, max_i, wx, hy);
+        gotoxy(cur_x, cur_y);
+      }
     } else {
       if (i < max_i) {
+        /* Insertion. Use cputc to avoid autoscroll there */
         if (c == CH_ENTER) {
           /* Clear to end of line */
           clrzone(cur_x, cur_y, wx - 1, cur_y);
@@ -117,40 +160,20 @@ down_a_line:
             clrzone(0, cur_y + 1, wx - 1, cur_y + 1);
           }
           gotoxy(cur_x, cur_y);
-          dputc('\r');
-          dputc('\n');
+          cputc('\r');
+          cputc('\n');
         } else {
           /* advance cursor */
           dputc(c);
         }
-        /* insert */
+        /* insert char */
         if (max_i < size - 1)
           max_i++;
         for (k = max_i - 2; k >= i; k--) {
           buf[k + 1] = buf[k];
         }
-        for (k = i + 1; k < max_i; k++) {
-          x = wherex();
-          y = wherey();
-          if (buf[k] == '\n') {
-            clrzone(x, y, wx - 1, y);
-            gotoxy(x, y);
-          }
-          if (x == wx) {
-            if (y + 1 < hy- 1) {
-              clrzone(0, y + 1, wx - 1, y + 1);
-              gotoxy(x, y);
-            } else {
-              /* we scrolled */
-              cur_y--;
-              break;
-            }
-          }
-          if (buf[k] == '\n') {
-            dputc('\r');
-          }
-          dputc(buf[k]);
-        }
+
+        rewrite_end_of_buffer(buf, i + 1, max_i, wx, hy);
         gotoxy(cur_x, cur_y);
         /* put back inserted char for cursor
          * advance again */
