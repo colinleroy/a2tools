@@ -49,9 +49,7 @@ static void update_compose_audience(void) {
   gotoxy(0, top + COMPOSE_FIELD_HEIGHT + 3);
   dputs(translit_charset);
   if(!strcmp(translit_charset, "ISO646-FR1")) {
-    dputs(": Use ] to mention, and # for hashtags.\r\n");
-  } else {
-    dputs("\r\n");
+    dputs(": Use ] to mention, and # for hashtags.");
   } /* FIXME add other local charsets */
 }
 
@@ -95,7 +93,6 @@ void compose_toot(void) {
   chline(scrw - LEFT_COL_WIDTH - 1);
 
   update_compose_audience();
-  chline(scrw - LEFT_COL_WIDTH - 1);
 
   set_scrollwindow(top + 1, top + COMPOSE_FIELD_HEIGHT);
 
@@ -138,10 +135,11 @@ int main(int argc, char **argv) {
 
     print_status(reply_to, 0, &scrolled);
 
-    if (wherey() > scrh - COMPOSE_HEIGHT - 2) {
-      clrzone(0, scrh - COMPOSE_HEIGHT - 2, scrw - LEFT_COL_WIDTH - 2, scrh - 1);
-      gotoxy(0, scrh - COMPOSE_HEIGHT - 2);
+    if (wherey() > scrh - COMPOSE_HEIGHT) {
+      clrzone(0, scrh - COMPOSE_HEIGHT, scrw - LEFT_COL_WIDTH - 2, scrh - 1);
+      gotoxy(0, scrh - COMPOSE_HEIGHT);
     }
+    chline(scrw - LEFT_COL_WIDTH - 1);
     dputs("Your reply:\r\n");
   }
 
