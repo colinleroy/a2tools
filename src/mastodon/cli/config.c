@@ -14,6 +14,7 @@
 #endif
 #include "strsplit.h"
 #include "api.h"
+#include "logo.h"
 
 char *instance_url;
 char *oauth_token;
@@ -51,6 +52,9 @@ static char *cli() {
 again:
   clrscr();
   gotoxy(0, 0);
+
+  print_logo(scrw);
+
   cprintf("Please choose your keyboard layout:\r\n");
   cprintf("0. US QWERTY     ("US_CHARSET" charset)\r\n");
   cprintf("1. French AZERTY ("FR_CHARSET" charset)\r\n");
