@@ -146,7 +146,8 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
               cur_x++; /* goto right of last char */ 
             } else {
               cur_x--;
-              if (cur_x == 0) {
+              if (cur_x == -1) {
+                cur_x++;
                 break; /* another empty line */
               }
             }
@@ -196,6 +197,8 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
         rewrite_end_of_buffer(buf, i, max_i, wx, hy);
         gotoxy(cur_x, cur_y);
       }
+    } else if (c == CH_CURS_UP || c == CH_CURS_DOWN) {
+      /* maybe we'll handle that later */
     } else {
       if (i < max_i) {
         /* Insertion. Use cputc to avoid autoscroll there */
