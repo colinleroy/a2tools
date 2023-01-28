@@ -139,7 +139,7 @@ int main(int argc, char **argv) {
     print_status(reply_to, 0, &scrolled);
 
     if (wherey() > scrh - COMPOSE_HEIGHT - 2) {
-      clrzone(0, scrh - COMPOSE_HEIGHT - 2, scrw - LEFT_COL_WIDTH - 1, scrh - 1);
+      clrzone(0, scrh - COMPOSE_HEIGHT - 2, scrw - LEFT_COL_WIDTH - 2, scrh - 1);
       gotoxy(0, scrh - COMPOSE_HEIGHT - 2);
     }
     dputs("Your reply:\r\n");
