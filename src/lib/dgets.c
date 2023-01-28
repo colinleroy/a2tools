@@ -126,8 +126,7 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
       continue;
     } else if (c == CH_CURS_LEFT || c == CH_DELETE) {
       if (i > 0) {
-        if (buf[i] != '\n') /* are we on a line start */
-          i--;
+        i--;
         cur_x--;
         has_nl = (buf[i] == '\n');
         if (cur_x < 0) {
@@ -140,21 +139,21 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
             gotoxy(cur_x, cur_y);
           }
           while (has_nl) {
+            /* find end of previous line */
             gotoxy(cur_x, cur_y);
             if (cpeekc() != ' ') {
               has_nl = 0;
-              i--; /* one more char back */
+              cur_x++; /* goto right of last char */ 
             } else {
-              if (cur_x > 0) {
-                cur_x--;
-              } else {
-                i--;
+              cur_x--;
+              if (cur_x == 0) {
                 break; /* another empty line */
               }
             }
           }
         }
         if (c == CH_DELETE) {
+          /* FIXME handle deletion of \n */
           gotoxy(cur_x, cur_y);
           for (k = i; k < max_i; k++) {
             buf[k] = buf[k + 1];
@@ -166,16 +165,17 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
       gotoxy(cur_x, cur_y);
     } else if (c == CH_CURS_RIGHT) {
       if (i < max_i) {
-        if (buf[i] != '\n') /* are we on an empty line? */
-          i++;
-        cur_x++;
-        has_nl = (buf[i] == '\n');
-        if (has_nl || cur_x > wx - 1) {
+        if (buf[i] != '\n') {
+          /* We're not at end of line */
+          cur_x++;
+        } else {
+          cur_y++;
+          cur_x = 0;
+        }
+        i++;
+        if (cur_x > wx - 1) {
           cur_x = 0;
           cur_y++;
-          if (has_nl) {
-            i++; /* one more char forward */
-          }
         }
       }
       /* Handle scroll up if needed */
