@@ -29,13 +29,9 @@ static void rewrite_start_of_buffer(char *buf, size_t i, unsigned char wx) {
   int back;
   int prev_line_len, k;
 
-  back = i -1;
+  back = i - 1;
   if (back < 0) {
     return;
-  }
-  if (buf[back] == '\n') {
-    /* we have a previous line */
-    back--;
   }
 
   while (back >= 0 && buf[back] != '\n') {
