@@ -60,10 +60,10 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
       if (i > 0) {
         i--;
         cur_x--;
+up_a_line:
         has_nl = (buf[i] == '\n');
       }
       if (cur_x < 0) {
-up_a_line:
         if (i > 0) {
           cur_y--;
           cur_x = wx - 1;
@@ -72,11 +72,13 @@ up_a_line:
             if (cpeekc() != ' ') {
               has_nl = 0;
               i--; /* one more char back */
-            } else
+            } else {
               cur_x--;
               if (cur_x < 0) {
+                i--;
                 goto up_a_line;
               }
+            }
           }
         }
       }
@@ -85,6 +87,7 @@ up_a_line:
       if (i < max_i) {
         i++;
         cur_x++;
+down_a_line:
         has_nl = (buf[i] == '\n');
       }
       if (has_nl || cur_x > wx - 1) {
@@ -93,6 +96,9 @@ up_a_line:
         if (has_nl) {
           has_nl = 0;
           i++; /* one more char forward */
+          if (i < max_i && buf[i] == '\n') {
+            goto down_a_line;
+          }
         }
       }
       gotoxy(cur_x, cur_y);
@@ -134,6 +140,10 @@ up_a_line:
             if (y + 1 < hy- 1) {
               clrzone(0, y + 1, wx - 1, y + 1);
               gotoxy(x, y);
+            } else {
+              /* we scrolled */
+              cur_y--;
+              break;
             }
           }
           if (buf[k] == '\n') {
