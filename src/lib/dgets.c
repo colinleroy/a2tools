@@ -58,10 +58,17 @@ static void rewrite_end_of_buffer(char *buf, size_t i, size_t max_i, unsigned ch
   size_t k;
   unsigned char x, y;
 
+  if (i == max_i) {
+    /* Just clear EOL */
+    x = wherex();
+    y = wherey();
+    clrzone(x, y, wx - 1, y);
+    return;
+  }
   for (k = i; k < max_i; k++) {
     x = wherex();
     y = wherey();
-    if (buf[k] == '\n') {
+    if (buf[k] == '\n' || k == max_i - 1) {
       clrzone(x, y, wx - 1, y);
       gotoxy(x, y);
     }
@@ -117,16 +124,13 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
       }
     } else if (c == CH_ESC) {
       continue;
-    } else if (c == CH_CURS_LEFT) {
+    } else if (c == CH_CURS_LEFT || c == CH_DELETE) {
       if (i > 0) {
         if (buf[i] != '\n') /* are we on a line start */
           i--;
         cur_x--;
-up_a_line:
         has_nl = (buf[i] == '\n');
-      }
-      if (cur_x < 0) {
-        if (i > 0) {
+        if (cur_x < 0) {
           cur_y--;
           cur_x = wx - 1;
           if (cur_y < 0) {
@@ -149,7 +153,14 @@ up_a_line:
               }
             }
           }
+        }
+        if (c == CH_DELETE) {
           gotoxy(cur_x, cur_y);
+          for (k = i; k < max_i; k++) {
+            buf[k] = buf[k + 1];
+          }
+          max_i--;
+          rewrite_end_of_buffer(buf, i, max_i, wx, hy);
         }
       }
       gotoxy(cur_x, cur_y);
@@ -158,14 +169,13 @@ up_a_line:
         if (buf[i] != '\n') /* are we on an empty line? */
           i++;
         cur_x++;
-down_a_line:
         has_nl = (buf[i] == '\n');
-      }
-      if (has_nl || cur_x > wx - 1) {
-        cur_x = 0;
-        cur_y++;
-        if (has_nl) {
-          i++; /* one more char forward */
+        if (has_nl || cur_x > wx - 1) {
+          cur_x = 0;
+          cur_y++;
+          if (has_nl) {
+            i++; /* one more char forward */
+          }
         }
       }
       /* Handle scroll up if needed */
