@@ -60,16 +60,18 @@ static void rewrite_start_of_buffer(char *buf, size_t i, unsigned char wx) {
   }
 }
 
-static void rewrite_end_of_buffer(char *buf, size_t i, size_t max_i, unsigned char wx, unsigned char hy) {
+static char rewrite_end_of_buffer(char *buf, size_t i, size_t max_i, unsigned char wx, unsigned char hy) {
   size_t k;
   unsigned char x, y;
-
+  char overflowed;
+  
+  overflowed = 0;
   if (i == max_i) {
     /* Just clear EOL */
     x = wherex();
     y = wherey();
     clrzone(x, y, wx - 1, y);
-    return;
+    return 0;
   }
   for (k = i; k < max_i; k++) {
     x = wherex();
@@ -91,9 +93,12 @@ static void rewrite_end_of_buffer(char *buf, size_t i, size_t max_i, unsigned ch
     cputc(buf[k]);
     if (y == hy - 1 && wherey() == 0) {
       /* overflowed bottom */
+      overflowed = 1;
       break;
     }
   }
+
+  return overflowed;
 }
 
 char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
@@ -106,7 +111,7 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
   unsigned char start_x, start_y;
   unsigned char sx, wx;
   unsigned char sy, ey, hy;
-  char scrolled_up = 0;
+  char scrolled_up = 0, overflowed = 0;
 
   get_hscrollwindow(&sx, &wx);
   get_scrollwindow(&sy, &ey);
@@ -215,7 +220,11 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
           buf[k + 1] = buf[k];
         }
 
-        rewrite_end_of_buffer(buf, i + 1, max_i, wx, hy);
+        overflowed = rewrite_end_of_buffer(buf, i + 1, max_i, wx, hy);
+        if (cur_y == hy - 1 && overflowed) {
+          cur_y--;
+          scrollup();
+        }
         gotoxy(cur_x, cur_y);
         /* put back inserted char for cursor
          * advance again */
