@@ -123,7 +123,7 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
   start_x = wherex();
   start_y = wherey();
 
-  while (i < size - 1) {
+  while (1) {
     cur_x = wherex();
     cur_y = wherey();
 
@@ -159,6 +159,8 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
           max_i--;
           rewrite_end_of_buffer(buf, i, max_i, wx, hy);
         }
+      } else {
+        dputc(0x07);
       }
       gotoxy(cur_x, cur_y);
     } else if (c == CH_CURS_RIGHT) {
@@ -175,28 +177,35 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
           cur_x = 0;
           cur_y++;
         }
-      }
-      /* Handle scroll up if needed */
-      gotoxy(cur_x, cur_y);
-      if (cur_x > wx - 1) {
-        cur_x = 0;
-        cur_y++;
+        /* Handle scroll up if needed */
         gotoxy(cur_x, cur_y);
-      }
-      scrolled_up = 0;
-      while (cur_y > hy - 1) {
-        cur_y--;
-        scrollup();
-        gotoxy(cur_x, cur_y);
-        scrolled_up = 1;
-      }
-      if (scrolled_up) {
-        rewrite_end_of_buffer(buf, i, max_i, wx, hy);
-        gotoxy(cur_x, cur_y);
+        if (cur_x > wx - 1) {
+          cur_x = 0;
+          cur_y++;
+          gotoxy(cur_x, cur_y);
+        }
+        scrolled_up = 0;
+        while (cur_y > hy - 1) {
+          cur_y--;
+          scrollup();
+          gotoxy(cur_x, cur_y);
+          scrolled_up = 1;
+        }
+        if (scrolled_up) {
+          rewrite_end_of_buffer(buf, i, max_i, wx, hy);
+          gotoxy(cur_x, cur_y);
+        }
+      } else {
+        dputc(0x07);
       }
     } else if (c == CH_CURS_UP || c == CH_CURS_DOWN) {
+      dputc(0x07);
       /* maybe we'll handle that later */
     } else {
+      if (i == size - 1) {
+        dputc(0x07);
+        continue;
+      }
       if (i < max_i) {
         /* Insertion. Use cputc to avoid autoscroll there */
         if (c == CH_ENTER) {
