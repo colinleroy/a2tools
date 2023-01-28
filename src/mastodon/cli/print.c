@@ -77,12 +77,6 @@ int print_status(status *s, char full, char *scrolled) {
   dputc(arobase);
   dputs(s->account->username);
   
-  /* important stats */
-  gotox(39);
-  y = wherey();
-  cprintf("%3d replies, %1d images",
-        s->n_replies, s->n_images);
-  gotoxy(79, y);
   CHECK_AND_CRLF();
 
   /* Content */
@@ -94,18 +88,16 @@ int print_status(status *s, char full, char *scrolled) {
     return -1;
   }
 
-  if (full) {
-    /* stats */
-      CHECK_AND_CRLF();
-      cprintf("%d replies, %s%d boosts, %s%d favs, %1d images      ",
-            s->n_replies,
-            (s->favorited_or_reblogged & REBLOGGED) ? "*":"", s->n_reblogs,
-            (s->favorited_or_reblogged & FAVOURITED) ? "*":"", s->n_favourites,
-            s->n_images);
-      CHECK_AND_CRLF();
-      if (wherey() == scrh - 1) {
-        return -1;
-      }
+  /* stats */
+  CHECK_AND_CRLF();
+  cprintf("%d replies, %s%d boosts, %s%d favs, %1d images      ",
+        s->n_replies,
+        (s->favorited_or_reblogged & REBLOGGED) ? "*":"", s->n_reblogs,
+        (s->favorited_or_reblogged & FAVOURITED) ? "*":"", s->n_favourites,
+        s->n_images);
+  CHECK_AND_CRLF();
+  if (wherey() == scrh - 1) {
+    return -1;
   }
 
   chline(scrw - LEFT_COL_WIDTH - 1);
