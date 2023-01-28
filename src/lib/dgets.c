@@ -24,14 +24,13 @@
 #include "scrollwindow.h"
 #include "scroll.h"
 
-static void rewrite_start_of_buffer(char *buf, size_t i, unsigned char wx) {
-  /* Assume we're rewriting (at 0,0) the previous line of buf, ending at i. */
+static int get_prev_line_len(char *buf, size_t i, unsigned char wx) {
   int back;
   int prev_line_len, k;
 
   back = i - 1;
   if (back < 0) {
-    return;
+    return 0;
   }
 
   while (back >= 0 && buf[back] != '\n') {
@@ -42,7 +41,18 @@ static void rewrite_start_of_buffer(char *buf, size_t i, unsigned char wx) {
   prev_line_len = i - back;
   /* if it is a long line, only print its end */
   prev_line_len = prev_line_len % wx;
+  return prev_line_len;
+}
 
+static void rewrite_start_of_buffer(char *buf, size_t i, unsigned char wx) {
+  /* Assume we're rewriting (at 0,0) the previous line of buf, ending at i. */
+  int prev_line_len, k;
+
+  if (i == 0) {
+    return;
+  }
+
+  prev_line_len = get_prev_line_len(buf, i, wx);
   /* print it */
   gotoxy(0,0);
   for (k = i - prev_line_len; k <= i; k++) {
@@ -127,26 +137,12 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
         has_nl = (buf[i] == '\n');
         if (cur_x < 0) {
           cur_y--;
-          cur_x = wx - 1;
+          cur_x = get_prev_line_len(buf, i, wx);
           if (cur_y < 0) {
             scrolldn();
             cur_y++;
             rewrite_start_of_buffer(buf, i, wx);
             gotoxy(cur_x, cur_y);
-          }
-          while (has_nl) {
-            /* find end of previous line */
-            gotoxy(cur_x, cur_y);
-            if (cpeekc() != ' ') {
-              has_nl = 0;
-              cur_x++; /* goto right of last char */ 
-            } else {
-              cur_x--;
-              if (cur_x == -1) {
-                cur_x++;
-                break; /* another empty line */
-              }
-            }
           }
         }
         if (c == CH_DELETE) {
