@@ -24,6 +24,36 @@
 #include "scrollwindow.h"
 #include "scroll.h"
 
+static void rewrite_start_of_buffer(char *buf, size_t i, unsigned char wx) {
+  /* Assume we're rewriting (at 0,0) the previous line of buf, ending at i. */
+  int back;
+  int prev_line_len, k;
+
+  back = i -1;
+  if (back < 0) {
+    return;
+  }
+  if (buf[back] == '\n') {
+    /* we have a previous line */
+    back--;
+  }
+
+  while (back >= 0 && buf[back] != '\n') {
+    back--;
+  }
+
+  back++;
+  prev_line_len = i - back;
+  /* if it is a long line, only print its end */
+  prev_line_len = prev_line_len % wx;
+
+  /* print it */
+  gotoxy(0,0);
+  for (k = i - prev_line_len; k <= i; k++) {
+    cputc(buf[k]);
+  }
+}
+
 static void rewrite_end_of_buffer(char *buf, size_t i, size_t max_i, unsigned char wx, unsigned char hy) {
   size_t k;
   unsigned char x, y;
@@ -98,6 +128,12 @@ up_a_line:
         if (i > 0) {
           cur_y--;
           cur_x = wx - 1;
+          if (cur_y < 0) {
+            scrolldn();
+            cur_y++;
+            rewrite_start_of_buffer(buf, i, wx);
+            gotoxy(cur_x, cur_y);
+          }
           while (has_nl) {
             gotoxy(cur_x, cur_y);
             if (cpeekc() != ' ') {
@@ -132,6 +168,7 @@ down_a_line:
           }
         }
       }
+      /* Handle scroll up if needed */
       gotoxy(cur_x, cur_y);
       if (cur_x > wx - 1) {
         cur_x = 0;
