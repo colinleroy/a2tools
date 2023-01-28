@@ -330,7 +330,9 @@ update:
   for (i = max(0, l->first_displayed_post); i < l->n_posts; i++) {
     if (!bottom) {
       status *disp;
-
+      if (kbhit()) {
+        break;
+      }
       full = (l->root && !strcmp(l->root, l->ids[i]));
       if (l->displayed_posts[i] != NULL)
         disp = l->displayed_posts[i];
