@@ -612,6 +612,10 @@ static int load_state(list ***lists) {
       }
       fgets(gen_buf, BUF_SIZE, fp);
       l->post_height[j] = atoi(gen_buf);
+
+      if (l->root && !strcmp(l->root, l->ids[j])) {
+        l->displayed_posts[j] = api_get_status(l->ids[j], 1);
+      }
     }
 
     fgets(gen_buf, BUF_SIZE, fp);
