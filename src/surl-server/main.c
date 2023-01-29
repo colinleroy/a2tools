@@ -90,7 +90,7 @@ static void install_sig_handler(void) {
 }
 
 static FILE *dump_response_to_file(char *buffer, size_t size) {
-  FILE *fp = fopen("/tmp/imgdata", "r+b");
+  FILE *fp = fopen("/tmp/imgdata", "w+b");
   if (!fp) {
     return NULL;
   }
