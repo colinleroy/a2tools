@@ -510,6 +510,43 @@ static unsigned int hgrDither (enum DitherType alg, ImageRef src, unsigned char 
 	return ob->len;
 }
 
+static unsigned int hgrMonoDither (enum DitherType alg, ImageRef src, unsigned char *hgr, int pack)
+{
+	static Pixel pal1[] = {{0,0,0},{0xff,0xff,0xff}};
+	int y,x,z;
+	unsigned int ad, i;
+	Pixel buf1[9];
+	struct obuf *ob;
+	
+	for (y = 0; y < src->h; y += 1) {
+		for (x = 0; x < src->w; x += 7) {
+			for (z = 0; z < 9; z += 1) {
+				buf1[z] = imageGetPixel(src, x+z, y);
+			}
+			dither7(alg, buf1, pal1);
+			ditherFromBuf(alg, buf1, src, x, y);
+		}
+	}
+	
+	for (y = 0; y < src->h; y += 1) {
+		i = 0;
+		ad = baseaddr[y];
+		for (x = 0; x < src->w; x += 7) {
+			hgrBytes(imageGetPixelRef(src,x,y), hgr+ad+i);
+			i += 2;
+		}
+	}
+	
+	if (!pack) return 0x2000;
+
+	ob = packBytes(hgr, 0x2000);
+	if (!ob) return 0;
+	
+	memcpy(hgr, ob->p, ob->len);
+	free(ob->p);
+	return ob->len;
+}
+
 static ImageRef imageNew (unsigned int w, unsigned int h)
 {
 	ImageRef ip;
@@ -846,7 +883,7 @@ emalloc:
 	return 0;
 }
 
-unsigned char *img_to_hgr(FILE *in, char *format, size_t *len) {
+unsigned char *img_to_hgr(FILE *in, char *format, char monochrome, size_t *len) {
 	ImageRef im = NULL, sm = NULL;
 
 	initGreyPals();
@@ -884,7 +921,11 @@ unsigned char *img_to_hgr(FILE *in, char *format, size_t *len) {
 
 	sm = imageNew(140, 192);
 	imageScale(im, sm, 1.904762);
-	*len = hgrDither(EDIFF, sm, grbuf, 0);
+	if (monochrome) {
+		*len = hgrMonoDither(EDIFF, sm, grbuf, 0);
+	} else {
+		*len = hgrDither(EDIFF, sm, grbuf, 0);
+	}
 
 	imageFree(im);
 	imageFree(sm);
