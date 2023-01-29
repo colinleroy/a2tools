@@ -42,6 +42,7 @@ char *oauth_token = NULL;
 #define CONFIGURE          11
 #define COMPOSE            15
 #define REPLY              16
+#define IMAGES             17
 
 static char cur_action;
 
@@ -456,6 +457,22 @@ void launch_compose(status *s) {
 #endif
 }
 
+void launch_images(status *s) {
+  char *params;
+  if (s == NULL) {
+    return;
+  }
+  params = malloc(127);
+  snprintf(params, 127, "%s %s %s %s", instance_url, oauth_token, translit_charset, s->id);
+#ifdef __CC65__
+  exec("mastoimg", params);
+  exit(0);
+#else
+  printf("exec(mastoimg %s)\n",params);
+  exit(0);
+#endif
+}
+
 #ifndef __APPLE2ENH__
 #define STATE_FILE "mastostate"
 #else
@@ -704,6 +721,9 @@ static int show_list(list *l) {
       case 'r':
         cur_action = REPLY;
         return 0;
+      case 'i':
+        cur_action = IMAGES;
+        return 0;
     }
   }
   return 0;
@@ -791,6 +811,11 @@ void cli(void) {
       case REPLY:
           save_state(l, cur_list);
           launch_compose(get_top_status(l[cur_list]));
+          cur_action = NAVIGATE;
+          break;
+      case IMAGES:
+          save_state(l, cur_list);
+          launch_images(get_top_status(l[cur_list]));
           cur_action = NAVIGATE;
           break;
       case QUIT:

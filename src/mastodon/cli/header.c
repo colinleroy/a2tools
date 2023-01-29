@@ -45,11 +45,11 @@ void print_header(list *l, status *root_status) {
     dputs(my_account->username);
   }
 
-  #define BTM 8
+  #define BTM 7
   clrzone(0, BTM, LEFT_COL_WIDTH, 23);
   gotoxy(0,BTM);
 
-  dputs("General:\r\n");
+  dputs("Commands:\r\n");
   dputs(" View toot: Enter\r\n");
   dputs(" Scroll   : Up/dn\r\n");
   dputs(" Configure: O\r\n");
@@ -74,7 +74,7 @@ void print_header(list *l, status *root_status) {
     if (!strcmp(root_status->account->id, my_account->id)) {
       dputs(" Delete   : D      \r\n");
     }
-
+      dputs(" Images   : I      \r\n");
     dputs("Author:\r\n");
     dputs(" Profile  : P      \r\n");
   }

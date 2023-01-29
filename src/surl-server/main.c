@@ -29,6 +29,7 @@
 #include "raw-session.h"
 #include "jq.h"
 #include "html2txt.h"
+#include "hgr.h"
 
 #define BUFSIZE 1024
 
@@ -48,6 +49,11 @@ struct _curl_buffer {
 
   char *content_type;
   
+  FILE *orig_img_fp;
+  /* do not free */
+  unsigned char *hgr_buf;
+  size_t hgr_len;
+
   time_t start_secs;
   long start_msecs;
 };
@@ -81,6 +87,19 @@ static void install_sig_handler(void) {
 	sigaction(SIGHUP, &act, 0);
 
 	sigprocmask(SIG_UNBLOCK, &mask, 0);
+}
+
+static FILE *dump_response_to_file(char *buffer, size_t size) {
+  FILE *fp = fopen("/tmp/imgdata", "r+b");
+  if (!fp) {
+    return NULL;
+  }
+  if (fwrite(buffer, 1, size, fp) < size) {
+    fclose(fp);
+    return NULL;
+  }
+  rewind(fp);
+  return fp;
 }
 
 int main(int argc, char **argv)
@@ -214,6 +233,17 @@ new_req:
           param = strchr(translit, ' ') + 1;
           *strchr(translit, ' ') = '\0';
           *strchr(param, '\n') = '\0';
+        } else if (!strncmp("HGR ", reqbuf, 4)) {
+          char *format = strrchr(url, '.');
+          if (format) {
+            format++;
+          }
+          if (response->orig_img_fp) {
+            fclose(response->orig_img_fp);
+          }
+          response->orig_img_fp = dump_response_to_file(response->buffer, response->size);
+          response->hgr_buf = img_to_hgr(response->orig_img_fp,
+                                  format, &(response->hgr_len));
         } else {
           printf("New request\n");
           goto new_req;
@@ -308,6 +338,13 @@ new_req:
             simple_serial_write("<NOT_FOUND>\n", sizeof(char), strlen("<NOT_FOUND>\n"));
           }
         }
+      } else if (!strncmp("HGR ", reqbuf, 4)) {
+        if (response->hgr_buf && response->hgr_len) {
+            simple_serial_printf("%zu\n", response->hgr_len);
+            simple_serial_write((char *)response->hgr_buf, sizeof(char), response->hgr_len);
+        } else {
+          simple_serial_write("<CONV_ERROR>\n", sizeof(char), strlen("<CONV_ERROR>\n"));
+        }
       }
     }
 
@@ -370,6 +407,9 @@ static void curl_buffer_free(curl_buffer *curlbuf) {
   free(curlbuf->headers);
   free(curlbuf->content_type);
   free(curlbuf->upload_buffer);
+  if(curlbuf->orig_img_fp) {
+    fclose(curlbuf->orig_img_fp);
+  }
   free(curlbuf);
 }
 
@@ -515,15 +555,8 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
   }
   
   curlbuf = malloc(sizeof(curl_buffer));
-  curlbuf->buffer = NULL;
-  curlbuf->size = 0;
+  memset(curlbuf, 0, sizeof(curl_buffer));
   curlbuf->response_code = 500;
-  curlbuf->headers = NULL;
-  curlbuf->headers_size = 0;
-  curlbuf->upload_size = 0;
-  curlbuf->orig_upload_size = 0;
-  curlbuf->upload_buffer = NULL;
-  curlbuf->content_type = NULL;
 
   clock_gettime(CLOCK_REALTIME, &cur_time);
 
