@@ -15,6 +15,10 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifdef __CC65__
+#pragma code-name (push, "LOWCODE")
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -154,3 +158,7 @@ err_out:
   exit(0);
 #endif
 }
+
+#ifdef __CC65__
+#pragma code-name (pop)
+#endif

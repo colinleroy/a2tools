@@ -29,9 +29,19 @@
 #pragma static-locals(push, on)
 #endif
 
+#ifdef __CC65__
+#pragma code-name (push, "LOWCODE")
+#endif
+
 static char serial_activity_indicator_enabled = 0;
 static int serial_activity_indicator_x = -1;
 static int serial_activity_indicator_y = -1;
+
+void simple_serial_set_activity_indicator(char enabled, int x, int y) {
+  serial_activity_indicator_enabled = enabled;
+  serial_activity_indicator_x = x;
+  serial_activity_indicator_y = y;
+}
 
 #ifdef __CC65__
 static void activity_cb(int on) {
@@ -355,6 +365,10 @@ int simple_serial_puts(char *buf) {
   return len;
 }
 
+#ifdef __CC65__
+#pragma code-name (pop)
+#endif
+
 #ifdef SERIAL_TO_LANGCARD
 #pragma code-name (push, "LC")
 #endif
@@ -511,12 +525,6 @@ int simple_serial_write(char *ptr, size_t size, size_t nmemb) {
 #ifdef SERIAL_TO_LANGCARD
 #pragma code-name (pop)
 #endif
-
-void simple_serial_set_activity_indicator(char enabled, int x, int y) {
-  serial_activity_indicator_enabled = enabled;
-  serial_activity_indicator_x = x;
-  serial_activity_indicator_y = y;
-}
 
 #ifdef __CC65__
 #pragma static-locals(pop)

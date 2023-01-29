@@ -8,6 +8,10 @@
 #include "api.h"
 #include "common.h"
 
+#ifdef __CC65__
+#pragma code-name (push, "LOWCODE")
+#endif
+
 #define ENDPOINT_BUF_SIZE 128
 char endpoint_buf[ENDPOINT_BUF_SIZE];
 
@@ -75,3 +79,7 @@ err_out:
   surl_response_free(resp);
   return a;
 }
+
+#ifdef __CC65__
+#pragma code-name (pop)
+#endif

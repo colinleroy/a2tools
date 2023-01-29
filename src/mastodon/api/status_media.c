@@ -1,3 +1,7 @@
+#ifdef __CC65__
+#pragma code-name (push, "LOWCODE")
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -90,3 +94,7 @@ err_out:
   surl_response_free(resp);
   return s;
 }
+
+#ifdef __CC65__
+#pragma code-name (pop)
+#endif

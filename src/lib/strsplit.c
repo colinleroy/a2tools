@@ -15,6 +15,10 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifdef __CC65__
+#pragma code-name (push, "LOWCODE")
+#endif
+
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -81,4 +85,8 @@ int __fastcall__ strsplit_in_place(char *in, char split, char ***out) {
 
 #ifdef __CC65__
 #pragma static-locals(pop)
+#endif
+
+#ifdef __CC65__
+#pragma code-name (pop)
 #endif
