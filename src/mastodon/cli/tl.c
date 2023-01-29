@@ -352,10 +352,9 @@ update:
 
       if (disp != NULL && bottom == 0) {
         bottom = print_status(disp, full, &scrolled);
-        if (!bottom) {
+        if (!scrolled) {
           l->post_height[i] = wherey() - disp->displayed_at;
-        }
-        if (scrolled) {
+        } else {
           l->post_height[i] = scrh;
           l->scrolled = 1;
         }

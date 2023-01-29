@@ -46,7 +46,7 @@ mastowrite.bin: $(mastowrite_SOURCES) $(CC65SOURCES)
 	cl65 $(CFLAGS) $(CLCFLAGS) -m mastowrite.map -o $@ $^
 mastoconf.bin: $(mastoconf_SOURCES) $(CC65SOURCES)
 	cl65 $(CFLAGS) $(CLCFLAGS) -m mastoconf.map -o $@ $^
-mastoimg.bin: $(mastoimg_SOURCES) $(CC65SOURCES)
+mastoimg.bin: $(mastoimg_SOURCES)
 	cl65 $(CFLAGS) $(CLCFLAGS) -C ../../config/apple2enh-hgr.cfg -m mastoimg.map -o $@ $^
 
 mastodon.x86_64: $(mastodon_SOURCES) $(GCCSOURCES)
