@@ -46,14 +46,15 @@ char *oauth_token = NULL;
 char *status_id = NULL;
 char tgi_init_done = 0;
 
+static char mix = 0;
 static void toggle_mix(char force, char *str) {
-  static char mix = 0;
   if (!tgi_init_done)
     return;
   mix = !mix || force;
   
   tgi_apple2_mix(mix);
   gotoxy(0, 0);
+  clrscr();
   dputs(str);
 }
 
@@ -119,6 +120,7 @@ int main(int argc, char **argv) {
   i = 0;
   while (1) {
     img_display(s, i);
+    toggle_mix(mix, s->media_alt_text[i]);
 getc_again:
     c = cgetc();
     switch(tolower(c)) {
