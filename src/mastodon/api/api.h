@@ -2,6 +2,7 @@
 #define __api_h
 
 #include "status.h"
+#include "status_media.h"
 #include "account.h"
 #include "common.h"
 

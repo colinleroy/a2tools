@@ -45,7 +45,7 @@ void compose_print_header(status *root_status) {
     dputs(my_account->username);
   }
 
-  #define BTM 9
+  #define BTM 7
   clrzone(0, BTM, LEFT_COL_WIDTH, 23);
   gotoxy(0,BTM);
 

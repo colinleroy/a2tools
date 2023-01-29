@@ -13,7 +13,6 @@
 status *status_new(void) {
   status *s = malloc(sizeof(status));
   if (s == NULL) {
-    nomem_msg(__FILE__, __LINE__);
     return NULL;
   }
   memset(s, 0, sizeof(status));
@@ -30,6 +29,9 @@ status *status_new_from_json(surl_response *resp, char *id, char full, char is_r
   char r, n_lines;
 
   s = status_new();
+  if (s == NULL) {
+    nomem_msg(__FILE__, __LINE__);
+  }
   s->id = strdup(id);
   if (s->id == NULL) {
     nomem_msg(__FILE__, __LINE__);
