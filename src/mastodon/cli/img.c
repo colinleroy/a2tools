@@ -29,8 +29,6 @@
 #else
 #include "extended_conio.h"
 #endif
-#include "dputs.h"
-#include "tgi_compat.h"
 #include "surl.h"
 #include "simple_serial.h"
 #include "api.h"
@@ -48,18 +46,31 @@ char hgr_page1[0x2000] = { 0 };
 char *instance_url = NULL;
 char *oauth_token = NULL;
 char *status_id = NULL;
-char tgi_init_done = 0;
+char hgr_init_done = 0;
 
 static char mix = 0;
 static void toggle_mix(char force, char *str) {
-  if (!tgi_init_done)
+  if (!hgr_init_done)
     return;
   mix = !mix || force;
-  
-  tgi_apple2_mix(mix);
+
+#ifdef __APPLE2ENH__
+  if (mix) {
+    __asm__("ldx     #1");
+    __asm__("lda     #20");
+    __asm__("sta     $22"); /* WNDTOP */
+    __asm__("bit     $C053"); /* MIXCLR */
+  } else {
+    __asm__("ldx     #0");
+    __asm__("lda     #00");
+    __asm__("sta     $22"); /* WNDTOP */
+    __asm__("bit     $C052"); /* MIXCLR */
+  }
+#endif
+
   gotoxy(0, 0);
   clrscr();
-  dputs(str);
+  cputs(str);
 }
 
 static void img_display(status_media *s, char idx) {
@@ -69,10 +80,15 @@ static void img_display(status_media *s, char idx) {
   resp = surl_start_request("GET", s->media_url[idx], NULL, 0);
 
   if (resp && resp->code >=200 && resp->code < 300) {
-    if (!tgi_init_done) {
-      tgi_install(a2e_hi_tgi);
-      tgi_init();
-      tgi_init_done = 1;
+    if (!hgr_init_done) {
+#ifdef __APPLE2ENH__
+        __asm__("bit     $C052"); /* MIXCLR */
+        __asm__("bit     $C057"); /* HIRES */
+        __asm__("sta     $C07E"); /* IOUDISOU */
+        __asm__("bit     $C05F"); /* DHIRESOFF */
+        __asm__("bit     $C050"); /* TXTCLR */
+#endif
+      hgr_init_done = 1;
     }
     simple_serial_puts("HGR \n");
     if (simple_serial_gets(gen_buf, BUF_SIZE)) {
@@ -99,7 +115,7 @@ int main(int argc, char **argv) {
   videomode(VIDEOMODE_80COL);
 
   if (argc < 5) {
-    printf("Missing instance_url, oauth_token, translit_charset and/or status_id parameters.\n");
+    cputs("Missing instance_url, oauth_token, translit_charset and/or status_id parameters.\r\n");
   }
 
   instance_url = argv[1];
@@ -107,18 +123,21 @@ int main(int argc, char **argv) {
   translit_charset = argv[3];
   status_id = argv[4];
 
-  printf("\n");
-  printf("\n");
-  printf("Toggle legend: L\n");
-  printf("Quit viewer  : Esc\n");
-  printf("Next image   : Any other key\n");
-  printf("\n");
-  printf("Loading...\n");
+  cputs("\r\n");
+  cputs("\r\n");
+  cputs("Toggle legend: L\r\n");
+  cputs("Quit viewer  : Esc\r\n");
+  cputs("Next image   : Any other key\r\n");
+  cputs("\r\n");
+  cputs("Loading...\r\n");
   s = api_get_status_media(status_id);
   if (s == NULL) {
-    printf("Could not load status %s media\n", status_id);
+    cputs("Could not load status media\r\n");
     cgetc();
     goto err_out;
+  }
+  if (s->n_media == 0) {
+    cputs("No images in status.\r\n");
   }
   
   i = 0;
@@ -143,8 +162,14 @@ getc_again:
   }
 
 done:
-  if (tgi_init_done) {
-    tgi_done();
+  if (hgr_init_done) {
+#ifdef __APPLE2ENH__
+    __asm__("bit     $C051"); /* TXTSET */
+    __asm__("bit     $C054"); /* LOWSCR */
+    __asm__("bit     $C056"); /* LORES */
+    __asm__("lda     #$00");
+    __asm__("sta     $22"); /* WNDTOP */
+#endif
   }
 
 err_out:
