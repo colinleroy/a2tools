@@ -22,31 +22,46 @@ status_media *status_media_new(void) {
 }
 status_media *status_media_new_from_json(surl_response *resp) {
   status_media *s;
-  char **lines;
+  char **lines, *w;
   char i, r, n_lines;
+  int n;
 
   s = status_media_new();
 
-  r = surl_get_json(resp, img_buf, IMG_BUF_SIZE, 0, translit_charset, ".media_attachments[]|.url,.description//\"-\"");
+  r = surl_get_json(resp, img_buf, IMG_BUF_SIZE, 0, translit_charset, ".media_attachments|map(. | select(.type==\"image\"))|.[]|.url");
 
   if (r == 0) {
     n_lines = strsplit_in_place(img_buf, '\n', &lines);
-    s->n_media = n_lines / 2;
-    if (n_lines % 2 != 0) {
-      /* read error, probably */
-      free(lines);
-      status_media_free(s);
-      return NULL;
-    }
+    s->n_media = n_lines;
     s->media_url = malloc(s->n_media * sizeof(char *));
     s->media_alt_text = malloc(s->n_media * sizeof(char *));
-    for (i = 0; i < n_lines; i += 2) {
-      r = i / 2;
-      s->media_url[r] = lines[i];
-      s->media_alt_text[r] = lines[i+1];
+    for (i = 0; i < n_lines; i ++) {
+      s->media_url[i] = strdup(lines[i]);
     }
   }
   free(lines);
+  for (i = 0; i < n_lines; i ++) {
+    snprintf(gen_buf, BUF_SIZE, ".media_attachments|map(. | select(.type==\"image\"))|.[%d]|.description", i);
+    r = surl_get_json(resp, img_buf, IMG_BUF_SIZE, 0, translit_charset, gen_buf);
+    w = img_buf;
+    n = 0;
+    while (*w != '\0') {
+      if (*w == '\n') {
+        *w = ' ';
+      }
+      ++w;
+      ++n;
+      if (n == (80*4) - 2) {
+        /* shorten description, we don't scroll them yet */
+        img_buf[n-3] = '.';
+        img_buf[n-2] = '.';
+        img_buf[n-1] = '.';
+        img_buf[n] = '\0';
+        break;
+      }
+    }
+    s->media_alt_text[i] = strdup(img_buf);
+  }
 
   return s;
 }
