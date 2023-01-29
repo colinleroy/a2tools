@@ -243,6 +243,11 @@ size_t surl_receive_lines(surl_response *resp, char *buffer, size_t max_len) {
 #pragma code-name (pop)
 #endif
 
+/* Put the rest in lowcode */
+#ifdef __CC65__
+#pragma code-name (push, "LOWCODE")
+#endif
+
 void surl_response_free(surl_response *resp) {
   if (resp == NULL) {
     return;
@@ -314,3 +319,5 @@ int surl_get_json(surl_response *resp, char *buffer, size_t max_len, char striph
 #ifdef __CC65__
 #pragma static-locals(pop)
 #endif
+
+#pragma code-name (pop)

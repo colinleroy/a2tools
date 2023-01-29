@@ -1,3 +1,7 @@
+#ifdef __CC65__
+#pragma code-name (push, "LOWCODE")
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -76,3 +80,7 @@ err_out:
   account_free(a);
   return NULL;
 }
+
+#ifdef __CC65__
+#pragma code-name (pop)
+#endif
