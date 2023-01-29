@@ -235,6 +235,7 @@ new_req:
           *strchr(param, '\n') = '\0';
         } else if (!strncmp("HGR ", reqbuf, 4)) {
           char *format = strrchr(url, '.');
+          char monochrome = *(strchr(reqbuf, ' ') + 1) == '1';
           if (format) {
             format++;
           }
@@ -243,7 +244,7 @@ new_req:
           }
           response->orig_img_fp = dump_response_to_file(response->buffer, response->size);
           response->hgr_buf = img_to_hgr(response->orig_img_fp,
-                                  format, &(response->hgr_len));
+                                  format, monochrome, &(response->hgr_len));
         } else {
           printf("New request\n");
           goto new_req;

@@ -47,6 +47,7 @@ char *instance_url = NULL;
 char *oauth_token = NULL;
 char *status_id = NULL;
 char hgr_init_done = 0;
+char monochrome = 1;
 
 static char mix = 0;
 static void toggle_mix(char force, char *str) {
@@ -90,7 +91,7 @@ static void img_display(status_media *s, char idx) {
 #endif
       hgr_init_done = 1;
     }
-    simple_serial_puts("HGR \n");
+    simple_serial_printf("HGR %d\n", monochrome);
     if (simple_serial_gets(gen_buf, BUF_SIZE)) {
       len = atoi(gen_buf);
     } else {
@@ -108,6 +109,7 @@ static void img_display(status_media *s, char idx) {
 }
 
 int main(int argc, char **argv) {
+  FILE *fp;
   char *params;
   status_media *s;
   char i, c;
@@ -130,6 +132,18 @@ int main(int argc, char **argv) {
   cputs("Next image   : Any other key\r\n");
   cputs("\r\n");
   cputs("Loading...\r\n");
+
+  fp = fopen("clisettings", "r");
+  translit_charset = US_CHARSET;
+
+  if (fp != NULL) {
+    char buf[16];
+    fgets(buf, 16, fp);
+    fgets(buf, 16, fp);
+    monochrome = atoi(buf);
+    fclose(fp);
+  }
+
   s = api_get_status_media(status_id);
   if (s == NULL) {
     cputs("Could not load status media\r\n");

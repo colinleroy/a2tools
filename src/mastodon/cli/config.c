@@ -20,7 +20,7 @@ char *instance_url;
 char *oauth_token;
 static unsigned char scrw, scrh;
 
-static int save_config(char *charset) {
+static int save_config(char *charset, char monochrome) {
   FILE *fp;
   int r;
 
@@ -36,8 +36,8 @@ static int save_config(char *charset) {
     return -1;
   }
 
-  r = fprintf(fp, "%s\n",
-                  charset);
+  r = fprintf(fp, "%s\n%d\n",
+                  charset, monochrome);
 
   if (r < 0 || fclose(fp) != 0) {
     cputs("Could not save settings file.\r\n");
@@ -47,9 +47,9 @@ static int save_config(char *charset) {
 }
 
 static char *cli() {
-  char c;
+  char c, monochrome;
+  char *charset;
 
-again:
   clrscr();
   gotoxy(0, 0);
 
@@ -59,19 +59,35 @@ again:
   cprintf("0. US QWERTY     ("US_CHARSET" charset)\r\n");
   cprintf("1. French AZERTY ("FR_CHARSET" charset)\r\n");
 
+charset_again:
   c = cgetc();
   switch(c) {
     case '0':
-      save_config(US_CHARSET);
-      return US_CHARSET;
+      charset = US_CHARSET;
       break;
     case '1':
-      save_config(FR_CHARSET);
-      return FR_CHARSET;
+      charset = FR_CHARSET;
       break;
     default:
-      goto again;
+      goto charset_again;
   }
+  
+  cprintf("\r\nIs your monitor monochrome? (y/n)\r\n");
+monochrome_again:
+  c = cgetc();
+  switch(tolower(c)) {
+    case 'y':
+      monochrome = 1;
+      break;
+    case 'n':
+      monochrome = 0;
+      break;
+    default:
+      goto monochrome_again;
+  }
+
+  save_config(charset, monochrome);
+  return charset;
 }
 
 int main(int argc, char **argv) {
