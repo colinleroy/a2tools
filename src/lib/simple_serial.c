@@ -37,14 +37,14 @@ static char serial_activity_indicator_enabled = 0;
 static int serial_activity_indicator_x = -1;
 static int serial_activity_indicator_y = -1;
 
-void simple_serial_set_activity_indicator(char enabled, int x, int y) {
+void __fastcall__ simple_serial_set_activity_indicator(char enabled, int x, int y) {
   serial_activity_indicator_enabled = enabled;
   serial_activity_indicator_x = x;
   serial_activity_indicator_y = y;
 }
 
 #ifdef __CC65__
-static void activity_cb(int on) {
+static void __fastcall__ activity_cb(int on) {
   gotoxy(serial_activity_indicator_x, serial_activity_indicator_y);
   cputc(on ? '*' : ' ');
 }
@@ -61,7 +61,7 @@ static struct ser_params default_params = {
     SER_HS_HW           /* Type of handshake to use */
 };
 
-int simple_serial_open(int slot, int baudrate, int hw_flow_control) {
+int __fastcall__ simple_serial_open(int slot, int baudrate, int hw_flow_control) {
   int err;
   
 #ifdef __APPLE2__
@@ -90,16 +90,16 @@ int simple_serial_open(int slot, int baudrate, int hw_flow_control) {
   return err;
 }
 
-int simple_serial_close(void) {
+int __fastcall__ simple_serial_close(void) {
   return ser_close();
 }
 
-void simple_serial_flush(void) {
+void __fastcall__ simple_serial_flush(void) {
   while(simple_serial_getc_with_timeout() != EOF);
 }
 
 #pragma optimize(push, on)
-int simple_serial_getc_immediate(void) {
+int __fastcall__ simple_serial_getc_immediate(void) {
   char c;
   if (ser_get(&c) != SER_ERR_NO_DATA) {
     return c;
@@ -110,7 +110,7 @@ int simple_serial_getc_immediate(void) {
 static int timeout_cycles = -1;
 
 /* Input */
-static int __simple_serial_getc_with_timeout(char with_timeout) {
+static int __fastcall__ __simple_serial_getc_with_timeout(char with_timeout) {
     char c;
 
     if (with_timeout)
@@ -126,7 +126,7 @@ static int __simple_serial_getc_with_timeout(char with_timeout) {
 
 /* Output */
 // static int send_delay;
-int simple_serial_putc(char c) {
+int __fastcall__ simple_serial_putc(char c) {
   if ((ser_put(c)) != SER_ERR_OVERFLOW) {
     return c;
   }
@@ -312,21 +312,21 @@ try_again:
   return EOF;
 }
 
-int simple_serial_getc_immediate(void) {
+int __fastcall__ simple_serial_getc_immediate(void) {
   return __simple_serial_getc_with_tv_timeout(1, 0, DELAY_MS);
 }
 
-int __simple_serial_getc_with_timeout(int timeout) {
+int __fastcall__ __simple_serial_getc_with_timeout(int timeout) {
   return __simple_serial_getc_with_tv_timeout(timeout, 0, 500);
 }
 
 /* Output */
-int simple_serial_putc(char c) {
+int __fastcall__ simple_serial_putc(char c) {
   int r = fputc(c, ttyfp);
   fflush(ttyfp);
 
   if (!flow_control_enabled)
-    usleep(1000);
+    usleep(1100);
 
   return r;
 }
@@ -337,7 +337,7 @@ int simple_serial_putc(char c) {
 #pragma optimize(push, on)
 #endif
 
-int simple_serial_puts(char *buf) {
+int __fastcall__ simple_serial_puts(char *buf) {
   static int i, len;
   
   len = strlen(buf);
@@ -373,7 +373,7 @@ int simple_serial_puts(char *buf) {
 #pragma code-name (push, "LC")
 #endif
 
-static char *__simple_serial_gets_with_timeout(char *out, size_t size, char with_timeout) {
+static char * __fastcall__ __simple_serial_gets_with_timeout(char *out, size_t size, char with_timeout) {
   static int b;
   static char c;
   static size_t i;
@@ -427,7 +427,7 @@ static char *__simple_serial_gets_with_timeout(char *out, size_t size, char with
   return out;
 }
 
-static size_t __simple_serial_read_with_timeout(char *ptr, size_t size, size_t nmemb, char with_timeout) {
+static size_t __fastcall__ __simple_serial_read_with_timeout(char *ptr, size_t size, size_t nmemb, char with_timeout) {
   static int b;
   static size_t i;
   static char *cur;
@@ -473,27 +473,27 @@ static size_t __simple_serial_read_with_timeout(char *ptr, size_t size, size_t n
 
 /* Wrappers */
 
-int simple_serial_getc_with_timeout(void) {
+int __fastcall__ simple_serial_getc_with_timeout(void) {
   return __simple_serial_getc_with_timeout(1);
 }
 
-char simple_serial_getc(void) {
+char __fastcall__ simple_serial_getc(void) {
   return (char)__simple_serial_getc_with_timeout(0);
 }
 
-char *simple_serial_gets_with_timeout(char *out, size_t size) {
+char * __fastcall__ simple_serial_gets_with_timeout(char *out, size_t size) {
   return __simple_serial_gets_with_timeout(out, size, 1);
 }
 
-char *simple_serial_gets(char *out, size_t size) {
+char * __fastcall__ simple_serial_gets(char *out, size_t size) {
   return __simple_serial_gets_with_timeout(out, size, 0);
 }
 
-size_t simple_serial_read(char *ptr, size_t size, size_t nmemb) {
+size_t __fastcall__ simple_serial_read(char *ptr, size_t size, size_t nmemb) {
   return __simple_serial_read_with_timeout(ptr, size, nmemb, 0);
 }
 
-size_t simple_serial_read_with_timeout(char *ptr, size_t size, size_t nmemb) {
+size_t __fastcall__ simple_serial_read_with_timeout(char *ptr, size_t size, size_t nmemb) {
   return __simple_serial_read_with_timeout(ptr, size, nmemb, 1);
 }
 
@@ -508,7 +508,7 @@ int simple_serial_printf(const char* format, ...) {
   return simple_serial_puts(simple_serial_buf);
 }
 
-int simple_serial_write(char *ptr, size_t size, size_t nmemb) {
+int __fastcall__ simple_serial_write(char *ptr, size_t size, size_t nmemb) {
   int i;
   if (size != 1) {
     return -1;

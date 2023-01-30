@@ -20,12 +20,16 @@ static char *compose_audience_str(char compose_audience) {
 
 char api_send_toot(char *buffer, char *in_reply_to_id, char compose_audience) {
   surl_response *resp;
-  char *body = malloc(1024);
+  char *body;
   char r;
   int i, o, len;
   char *in_reply_to_buf;
 
   r = -1;
+  body = malloc(1024);
+  if (body == NULL) {
+    return -1;
+  }
 
   if (in_reply_to_id) {
     in_reply_to_buf = malloc(48);
@@ -65,9 +69,11 @@ char api_send_toot(char *buffer, char *in_reply_to_id, char compose_audience) {
   surl_send_data_params(resp, len, 0);
   surl_send_data(resp, body, len);
 
+  free(body);
+
   surl_read_response_header(resp);
 
-  if (resp == NULL || resp->code < 200 || resp->code >= 300)
+  if (!surl_response_ok(resp))
     goto err_out;
 
   r = 0;

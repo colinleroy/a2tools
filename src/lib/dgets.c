@@ -24,9 +24,14 @@
 #include "scrollwindow.h"
 #include "scroll.h"
 
+static char echo_on = 1;
+void echo(int on) {
+  echo_on = on;
+}
+
 static int get_prev_line_len(char *buf, size_t i, unsigned char wx) {
   int back;
-  int prev_line_len, k;
+  int prev_line_len;
 
   back = i - 1;
   if (back < 0) {
@@ -34,10 +39,10 @@ static int get_prev_line_len(char *buf, size_t i, unsigned char wx) {
   }
 
   while (back >= 0 && buf[back] != '\n') {
-    back--;
+    --back;
   }
 
-  back++;
+  ++back;
   prev_line_len = i - back;
   /* if it is a long line, only print its end */
   prev_line_len = prev_line_len % wx;
@@ -112,8 +117,20 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
   unsigned char sx, wx;
   unsigned char sy, ey, hy;
   char scrolled_up = 0, overflowed = 0;
+  unsigned char scrw, scrh, reset_hscroll;
 
   get_hscrollwindow(&sx, &wx);
+  cur_x = wherex();
+  reset_hscroll = 0;
+  if (sx == 0 && cur_x > 0) {
+    screensize(&scrw, &scrh);
+    reset_hscroll = wx;
+    sx = cur_x;
+    wx = scrw - cur_x;
+    set_hscrollwindow(sx, wx);
+    gotoxy(0, wherey());
+    cur_x = 0;
+  }
   get_scrollwindow(&sy, &ey);
   hy = ey - sy;
 
@@ -134,7 +151,18 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
         goto out;
       }
     } else if (c == CH_ESC) {
-      continue;
+      if (cmd_cb)
+        continue;
+      else {
+        dputc('\r');
+        dputc('\n');
+        max_i = 0;
+        goto out;
+      }
+    } else if (c == CH_ENTER && !cmd_cb) {
+      dputc('\r');
+      dputc('\n');
+      goto out;
     } else if (c == CH_CURS_LEFT || c == CH_DELETE) {
       if (i > 0) {
         i--;
@@ -220,7 +248,7 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
           cputc('\n');
         } else {
           /* advance cursor */
-          dputc(c);
+          dputc(echo_on ? c : '*');
         }
         /* insert char */
         if (max_i < size - 1)
@@ -245,7 +273,7 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
         i++;
         cur_x = 0;
       } else {
-        dputc(c);
+        dputc(echo_on ? c : '*');
         buf[i] = c;
         i++;
         cur_x++;
@@ -258,7 +286,10 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
 out:
   cursor(prev_cursor);
   buf[max_i] = '\0';
-
+  if (reset_hscroll) {
+    set_hscrollwindow(0, reset_hscroll);
+    gotoxy(0, wherey());
+  }
   return buf;
 #else
   return fgets(buf, size, stdin);

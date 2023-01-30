@@ -232,7 +232,11 @@ maybe_finish_utf8_net:
   } while(last_i != 0x04);
 
 cleanup:
-  tcflush(sockfd, TCIOFLUSH);
+  free(out_buf);
+  free(in_buf);
+  if (sockfd >= 0) {
+    tcflush(sockfd, TCIOFLUSH);
+    close(sockfd);
+  }
   simple_serial_flush();
-  close(sockfd);
 }

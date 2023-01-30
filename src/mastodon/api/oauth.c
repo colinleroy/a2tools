@@ -360,6 +360,7 @@ int register_app(void) {
 
   if (resp == NULL) {
     dputs("Could not start request.\r\n");
+    free(post);
     return -1;
   }
 
@@ -441,6 +442,7 @@ int get_oauth_token(void) {
   resp = surl_start_request("POST", oauth_url, NULL, 0);
   if (resp == NULL) {
     dputs("Could not start request.\r\n");
+    free(oauth_url);
     return -1;
   }
 

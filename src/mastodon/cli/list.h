@@ -11,6 +11,7 @@ typedef struct _list list;
 #define L_PUBLIC_TIMELINE 2
 #define L_FULL_STATUS     3
 #define L_ACCOUNT         4
+#define L_SEARCH          5
 
 struct _list {
   char kind;

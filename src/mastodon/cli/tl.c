@@ -36,6 +36,7 @@ char *oauth_token = NULL;
 #define SHOW_HOME_TIMELINE 0
 #define SHOW_FULL_STATUS   5
 #define SHOW_ACCOUNT       6
+#define SHOW_SEARCH_RES    7
 #define NAVIGATE           8
 #define BACK               9
 #define QUIT               10
@@ -43,15 +44,17 @@ char *oauth_token = NULL;
 #define COMPOSE            15
 #define REPLY              16
 #define IMAGES             17
+#define SEARCH             18
 
 static char cur_action;
+static char search_buf[50] = "colin_mcmillen";
 
 static void print_list(list *l);
 
 static status *get_top_status(list *l) {
   status *root_status;
 
-  if (l->first_displayed_post < 0) 
+  if (l->first_displayed_post < 0 || l->n_posts == 0) 
     return NULL;
 
   root_status = l->displayed_posts[l->first_displayed_post];
@@ -132,7 +135,10 @@ static char load_next_posts(list *l) {
 
   switch (l->kind) {
     case L_HOME_TIMELINE:
-      loaded = api_get_posts(TIMELINE_ENDPOINT "/" HOME_TIMELINE, to_load, last_id, new_ids);
+      loaded = api_get_posts(TIMELINE_ENDPOINT "/" HOME_TIMELINE, to_load, last_id, NULL, ".[].id", new_ids);
+      break;
+    case L_SEARCH:
+      loaded = api_search(to_load, search_buf, last_id, new_ids);
       break;
     case L_FULL_STATUS:
       loaded = api_get_status_and_replies(to_load, l->root, l->leaf_root, last_id, new_ids);
@@ -207,6 +213,32 @@ static int load_prev_posts(list *l) {
   return 0;
 }
 
+static int show_search(void) {
+  set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
+
+  scrolldn();
+  scrolldn();
+  
+  gotoxy(0,1);
+  chline(scrw - LEFT_COL_WIDTH - 1);
+  gotoxy(0, 0);
+  dputs("Search: ");
+
+  dget_text(search_buf, 49, NULL);
+  
+  if (search_buf[0] != '\0') {
+    clrscr();
+    set_hscrollwindow(0, scrw);
+    return 1;
+  }
+
+  scrollup();
+  scrollup();
+
+  set_hscrollwindow(0, scrw);
+  return 0;
+}
+
 static list *build_list(status *root, char kind) {
   list *l;
   char i;
@@ -217,15 +249,15 @@ static list *build_list(status *root, char kind) {
   l = malloc(sizeof(list));
   memset(l, 0, sizeof(list));
 
-  if (kind != L_ACCOUNT) {
+  if (kind == L_ACCOUNT) {
+    l->account = api_get_full_account(root->reblog ? root->reblog->account->id : root->account->id);
+    l->first_displayed_post = -1;
+  } else {
     if (root) {
       l->root = strdup(root->id);
       l->leaf_root = strdup(root->reblog ? root->reblog->id : root->id);
     }
     l->first_displayed_post = 0;
-  } else {
-    l->account = api_get_full_account(root->reblog ? root->reblog->account->id : root->account->id);
-    l->first_displayed_post = -1;
   }
 
   l->kind = kind;
@@ -235,7 +267,11 @@ static list *build_list(status *root, char kind) {
 
   switch (kind) {
     case L_HOME_TIMELINE:
-      l->n_posts = api_get_posts(TIMELINE_ENDPOINT "/" HOME_TIMELINE, N_STATUS_TO_LOAD, NULL, l->ids);
+      l->n_posts = api_get_posts(TIMELINE_ENDPOINT "/" HOME_TIMELINE, N_STATUS_TO_LOAD, NULL, NULL, ".[].id", l->ids);
+      memset(l->displayed_posts, 0, l->n_posts * sizeof(status *));
+      break;
+    case L_SEARCH:
+      l->n_posts = api_search(N_STATUS_TO_LOAD, search_buf, NULL, l->ids);
       memset(l->displayed_posts, 0, l->n_posts * sizeof(status *));
       break;
     case L_FULL_STATUS:
@@ -243,7 +279,6 @@ static list *build_list(status *root, char kind) {
       memset(l->displayed_posts, 0, l->n_posts * sizeof(status *));
       break;
     case L_ACCOUNT:
-      /* fixme */
       l->n_posts = api_get_account_posts(l->account, N_STATUS_TO_LOAD, NULL, l->ids);
       memset(l->displayed_posts, 0, l->n_posts * sizeof(status *));
       break;
@@ -259,7 +294,7 @@ static list *build_list(status *root, char kind) {
           break;
       }
     }
-  } else {
+  } else if (l->n_posts > 0){
     l->displayed_posts[0] = api_get_status(l->ids[0], 0);
   }
   l->last_displayed_post = 0;
@@ -540,7 +575,8 @@ err_out:
 
 
 static int load_state(list ***lists) {
-  char i,j, num_lists, loaded;
+  char i,j, loaded;
+  signed char num_lists;
   FILE *fp;
 
 #ifdef __CC65__
@@ -550,13 +586,21 @@ static int load_state(list ***lists) {
   *lists = NULL;
   fp = fopen(STATE_FILE,"r");
   if (fp == NULL) {
+    *lists = NULL;
     return -1;
   }
+
+  loaded = 0;
 
   printf("Reloading state...");
 
   fgets(gen_buf, BUF_SIZE, fp);
   num_lists = atoi(gen_buf);
+  if (num_lists < 0) {
+    *lists = NULL;
+    fclose(fp);
+    return -1;
+  }
   *lists = malloc((num_lists + 1) * sizeof(list *));
 
   for (i = 0; i <= num_lists; i++) {
@@ -600,10 +644,9 @@ static int load_state(list ***lists) {
 
     for (j = 0; j < l->n_posts; j++) {
       fgets(gen_buf, BUF_SIZE, fp);
-      if (gen_buf[0] != '\n') {
-        *strchr(gen_buf, '\n') = '\0';
-        l->ids[j] = strdup(gen_buf);
-      }
+      *strchr(gen_buf, '\n') = '\0';
+      l->ids[j] = strdup(gen_buf);
+
       fgets(gen_buf, BUF_SIZE, fp);
       l->post_height[j] = atoi(gen_buf);
 
@@ -723,6 +766,9 @@ static int show_list(list *l) {
       case 'i':
         cur_action = IMAGES;
         return 0;
+      case 's':
+        cur_action = SEARCH;
+        return 0;
     }
   }
   return 0;
@@ -732,6 +778,7 @@ void cli(void) {
   signed char cur_list, to_clear, to_show;
   list **l, *prev_list;
   char starting = 1;
+  status *new_root;
 
   if (starting) {
     cur_list = load_state(&l);
@@ -750,23 +797,29 @@ void cli(void) {
         break;
       case SHOW_FULL_STATUS:
       case SHOW_ACCOUNT:
+      case SHOW_SEARCH_RES:
         prev_list = l[cur_list];
         ++cur_list;
         if (cur_action == SHOW_FULL_STATUS) {
           to_clear = prev_list->post_height[prev_list->first_displayed_post] - 2;
           to_show = L_FULL_STATUS;
-        } else {
+          new_root = prev_list->displayed_posts[prev_list->first_displayed_post];
+        } else if (cur_action == SHOW_SEARCH_RES) {
+          to_clear = 0;
+          to_show = L_SEARCH;
+          new_root = NULL;
+        } else if (cur_action == SHOW_ACCOUNT) {
           to_clear = 0;
           to_show = L_ACCOUNT;
+          new_root = NULL;
         }
         l = realloc(l, (cur_list + 1) * sizeof(list *));
-        l[cur_list] = build_list(prev_list->displayed_posts[prev_list->first_displayed_post],
-                   to_show);
-        clrzone(LEFT_COL_WIDTH + 1, to_clear, scrw - 1, scrh - 1);
-        /* free status on list n-2 */
         if (cur_list > 1) {
           compact_list(l[cur_list - 2]);
         }
+        l[cur_list] = build_list(new_root, to_show);
+        clrzone(LEFT_COL_WIDTH + 1, to_clear, scrw - 1, scrh - 1);
+        /* free status on list n-2 */
         cur_action = NAVIGATE;
         break;
       case NAVIGATE:
@@ -817,13 +870,20 @@ void cli(void) {
           launch_images(get_top_status(l[cur_list]));
           cur_action = NAVIGATE;
           break;
+      case SEARCH:
+          if (show_search()) {
+            cur_action = SHOW_SEARCH_RES;
+          } else {
+            cur_action = NAVIGATE;
+          }
+          break;
       case QUIT:
         goto out;
     }
   }
 out:
   free_list(l[cur_list]);
-  l[cur_list] = NULL;
+  free(l);
 }
 
 int main(int argc, char **argv) {

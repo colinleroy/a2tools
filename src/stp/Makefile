@@ -5,18 +5,19 @@ SOURCES := stp.c stp_cli.c stp_save.c stp_send_file.c stp_delete.c \
 	../lib/extended_conio.c \
 	../lib/strsplit.c \
 	../lib/get_filedetails.c \
-	../lib/cgets.c \
+	../lib/dgets.c \
 	../lib/clrzone.c \
 	../lib/scrollwindow.c \
 	../lib/surl.c
 
+CL65SOURCES = ../lib/dputc.s ../lib/scroll.s
 GCC_SOURCES = ../lib/extended_string.c
 
 DEPS := 
 
 CC65_TARGET = apple2enh
 CFLAGS  = -I ../lib
-CLCFLAGS = -t $(CC65_TARGET) -Osir -g --debug-info -Wl "-Ln,$(PROGRAM).lbl" -Wl "--dbgfile,$(PROGRAM).dbg" -Wl "--mapfile,$(PROGRAM).map" -vm  #-DSERIAL_TO_LANGCARD
+CLCFLAGS = -t $(CC65_TARGET) -Osir -g --debug-info -Wl "-Ln,$(PROGRAM).lbl" -Wl "--dbgfile,$(PROGRAM).dbg" -Wl "--mapfile,$(PROGRAM).map" -vm #-DSERIAL_TO_LANGCARD
 GCCCFLAGS = -g -O0 -Werror 
 GCCLDFLAGS = 
 
@@ -24,7 +25,7 @@ GCCLDFLAGS =
 
 all: $(PROGRAM).bin $(PROGRAM).x86_64
 
-$(PROGRAM).bin: $(SOURCES)
+$(PROGRAM).bin: $(SOURCES) $(CL65SOURCES)
 	cl65 $(CFLAGS) $(CLCFLAGS) -o $@ $^ 
 
 $(PROGRAM).x86_64: $(SOURCES) $(GCC_SOURCES)

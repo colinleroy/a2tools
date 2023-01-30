@@ -207,7 +207,7 @@ new_req:
       printf("%s %s - done\n", method, url);
       continue;
     }
-    simple_serial_printf("%d,%d,%d,%s\n", response->response_code, response->size, 
+    simple_serial_printf("%d,%zu,%zu,%s\n", response->response_code, response->size, 
                                     response->headers_size, response->content_type);
     sent = 0;
     sending_headers = 0;
@@ -287,11 +287,11 @@ new_req:
             found[bufsize - 1] = '\n';
             found[bufsize] = '\0';
             //printf("cut %zu bytes with '%s'\n", strlen(found), found);
-            simple_serial_printf("%d\n", strlen(found));
+            simple_serial_printf("%zu\n", strlen(found));
             simple_serial_puts(found);
           } else {
             //printf("send %zu bytes with '%s'\n", strlen(found) + 1, found);
-            simple_serial_printf("%d\n", strlen(found) + 1);
+            simple_serial_printf("%zu\n", strlen(found) + 1);
             simple_serial_puts(found);
             simple_serial_putc('\n');
           }
@@ -458,7 +458,7 @@ static size_t data_send_cb(char *ptr, size_t size, size_t nmemb, void *cbdata) {
 
 static char *replace_new_lines(char *in) {
   int len = strlen(in);
-  char *out = malloc(len);
+  char *out = malloc(len + 1);
   int i, o;
   for (i = 0, o = 0; i < len; i++) {
     if (in[i] == '\\' && i + 3 < len 
@@ -511,7 +511,7 @@ static char *prepare_post(char *buffer, size_t *len) {
       tmp = curl_easy_escape(NULL, translit_data, strlen(translit_data));
       free(translit_data);
     } else
-      tmp = strdup("");
+      tmp = curl_easy_escape(NULL, "", strlen(""));
     sprintf(out_ptr, "%s&", tmp);
     out_ptr += strlen(tmp) + 1;
     curl_free(tmp);
@@ -648,6 +648,8 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
         if (path) {
           path += 3;
           path = strchr(path, '/');
+        } else {
+          path = o_path;
         }
         
         if(strrchr(url, '/')) {
@@ -674,12 +676,14 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
     simple_serial_puts("RAW_SESSION_START\n");
     curl_easy_cleanup(curl);
     curl = NULL;
+    curl_buffer_free(curlbuf);
 
     surl_server_raw_session(url);
-
     return NULL;
   } else {
     printf("Unsupported method %s\n", method);
+    curl_easy_cleanup(curl);
+    curl = NULL;
     return curlbuf;
   }
 

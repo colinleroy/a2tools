@@ -25,7 +25,7 @@
 #else
 #include "extended_conio.h"
 #endif
-#include "cgets.h"
+#include "dgets.h"
 
 static char* server_url = NULL;
 const char *get_server_root_url(void) {
@@ -52,7 +52,7 @@ const char *get_server_root_url(void) {
     printf("Please enter the server's root URL,\n");
     printf("Example: http://homecontrol.lan/a2domo\n");
     printf("\nURL: ");
-    cgets(server_url, BUFSIZE);
+    dget_text(server_url, BUFSIZE, NULL);
 
     *strchr(server_url,'\n') = '\0';
 

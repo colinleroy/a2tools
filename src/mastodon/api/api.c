@@ -9,30 +9,43 @@
 #include "common.h"
 
 int api_get_account_posts(account *a, char to_load, char *first_to_load, char **post_ids) {
-  char *buf = malloc(128); /* can't use endpoint_buf, callers use it */
+  snprintf(gen_buf, BUF_SIZE, "%s/%s/statuses", ACCOUNTS_ENDPOINT, a->id);
 
-  snprintf(buf, 128, "%s/%s/statuses", ACCOUNTS_ENDPOINT, a->id);
-
-  return api_get_posts(buf, to_load, first_to_load, post_ids);
+  return api_get_posts(gen_buf, to_load, first_to_load, NULL, ".[].id", post_ids);
 }
 
-int api_get_posts(char *endpoint, char to_load, char *first_to_load, char **post_ids) {
+int api_search(char to_load, char *search, char *first_to_load, char **post_ids) {
+  char i, len, *w;
+  snprintf(gen_buf, 255, "&type=statuses&q=");
+
+  /* very basic urlencoder */
+  w = gen_buf + strlen(gen_buf);
+  len = strlen(search);
+  for (i = 0; i < len; i++) {
+    snprintf(w, 4, "%%%02x", search[i]);
+    w+= 3;
+  }
+
+  return api_get_posts(SEARCH_ENDPOINT, to_load, first_to_load, gen_buf, ".statuses[].id", post_ids);
+}
+
+static char raw[512];
+int api_get_posts(char *endpoint, char to_load, char *first_to_load, char *filter, char *sel, char **post_ids) {
   surl_response *resp;
   int n_status;
-  char *raw;
 
   n_status = 0;
-  snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s?limit=%d%s%s", endpoint, to_load,
+  snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s?limit=%d%s%s%s", endpoint, to_load,
             first_to_load ? "&max_id=" : "",
-            first_to_load ? first_to_load : ""
+            first_to_load ? first_to_load : "",
+            filter ? filter : ""
           );
   resp = get_surl_for_endpoint("GET", endpoint_buf);
   
-  if (resp == NULL || resp->code < 200 || resp->code >= 300)
+  if (!surl_response_ok(resp))
     goto err_out;
 
-  raw = malloc(512);
-  if (surl_get_json(resp, raw, 512, 0, NULL, ".[].id") == 0) {
+  if (surl_get_json(resp, raw, 512, 0, NULL, sel) == 0) {
     char **tmp;
     int i;
     n_status = strsplit(raw, '\n', &tmp);
@@ -41,14 +54,12 @@ int api_get_posts(char *endpoint, char to_load, char *first_to_load, char **post
     }
     free(tmp);
   }
-  free(raw);
 
 err_out:
   surl_response_free(resp);
   return n_status;
 }
 
-/* FIXME get more using first_to_load and number of asc/desc... */
 int api_get_status_and_replies(char to_load, char *root_id, char *root_leaf_id, char *first_to_load, char **post_ids) {
   surl_response *resp;
   int n_status;
@@ -59,10 +70,9 @@ int api_get_status_and_replies(char to_load, char *root_id, char *root_leaf_id, 
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s/context", STATUS_ENDPOINT, root_leaf_id);
   resp = get_surl_for_endpoint("GET", endpoint_buf);
   
-  if (resp == NULL || resp->code < 200 || resp->code >= 300)
+  if (!surl_response_ok(resp))
     goto err_out;
 
-  raw = malloc(512);
   if (first_to_load == NULL) {
     n_before = to_load/3;
     n_after  = (2 * to_load) / 3;
@@ -94,7 +104,6 @@ int api_get_status_and_replies(char to_load, char *root_id, char *root_leaf_id, 
     }
     free(tmp);
   }
-  free(raw);
 
 err_out:
   surl_response_free(resp);
@@ -109,13 +118,17 @@ static char api_status_interact(status *s, char *action) {
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s/%s", STATUS_ENDPOINT, s->id, action);
   resp = get_surl_for_endpoint("POST", endpoint_buf);
 
+  if (!resp) {
+    goto err_out;
+  }
+
   surl_send_data_params(resp, 0, 1);
   surl_send_data(resp, "", 0);
 
   surl_read_response_header(resp);
 
 
-  if (resp == NULL || resp->code < 200 || resp->code >= 300)
+  if (!surl_response_ok(resp))
     goto err_out;
 
   r = 0;
@@ -180,7 +193,7 @@ char api_delete_status(status *s) {
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s", STATUS_ENDPOINT, s->id);
   resp = get_surl_for_endpoint("DELETE", endpoint_buf);
 
-  if (resp == NULL || resp->code < 200 || resp->code >= 300)
+  if (!surl_response_ok(resp))
     goto err_out;
 
   r = 0;
@@ -200,7 +213,7 @@ char api_relationship_get(account *a, char f) {
     snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/relationships?id[]=%s", ACCOUNTS_ENDPOINT, a->id);
     resp = get_surl_for_endpoint("GET", endpoint_buf);
 
-    if (resp == NULL || resp->code < 200 || resp->code >= 300)
+    if (!surl_response_ok(resp))
       goto err_out;
 
     if (surl_get_json(resp, gen_buf, BUF_SIZE, 0, NULL, ".[]|.following,.followed_by,.blocking,.blocked_by,.muting,.requested") == 0) {
@@ -247,7 +260,7 @@ account *api_get_full_account(char *id) {
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s", ACCOUNTS_ENDPOINT, id);
   resp = get_surl_for_endpoint("GET", endpoint_buf);
   
-  if (resp == NULL || resp->code < 200 || resp->code >= 300)
+  if (!surl_response_ok(resp))
     goto err_out;
 
   a = account_new_from_json(resp);
