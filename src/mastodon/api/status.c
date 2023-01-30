@@ -35,16 +35,20 @@ status *status_new_from_json(surl_response *resp, char *id, char full, char is_r
   s = status_new();
   if (s == NULL) {
     nomem_msg(__FILE__, __LINE__);
+    return NULL;
   }
   s->id = strdup(id);
   if (s->id == NULL) {
+    free(s);
     nomem_msg(__FILE__, __LINE__);
+    return NULL;
   }
 
   s->content = malloc(full ? TL_STATUS_LARGE_BUF : TL_STATUS_SHORT_BUF);
   s->account = account_new();
 
   if (s->content == NULL || s->account == NULL) {
+    status_free(s);
     nomem_msg(__FILE__, __LINE__);
     return NULL;
   }
@@ -142,7 +146,7 @@ status *api_get_status(char *status_id, char full) {
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s", STATUS_ENDPOINT, status_id);
   resp = get_surl_for_endpoint("GET", endpoint_buf);
   
-  if (resp == NULL || resp->code < 200 || resp->code >= 300)
+  if (!surl_response_ok(resp))
     goto err_out;
 
   s = status_new_from_json(resp, status_id, full, 0);

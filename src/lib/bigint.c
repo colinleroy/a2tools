@@ -78,6 +78,7 @@ char *bigint_add(const char *a, const char *b) {
   result[l] = carry + '0';
   if (l != 0) {
     printf("cannot add %s+%s, have l %d\n", a, b, l);
+    free(result);
     return NULL;
   }
 
@@ -183,6 +184,7 @@ char *bigint_sub(const char *a, const char *b) {
   result[l] = carry + '0';
   if (l != 0) {
     printf("cannot sub %s-%s, have l %d\n", a, b, l);
+    free(result);
     return NULL;
   }
   i = 0;
@@ -242,6 +244,7 @@ char *bigint_mul(const char *a, const char *b) {
     
     if (tmp == NULL) {
       printf("bigint_mul: cannot malloc tmp\n");
+      free(total);
       return NULL;
     }
 
@@ -259,6 +262,7 @@ char *bigint_mul(const char *a, const char *b) {
       total = strdup(result);
       if (total == NULL) {
         printf("cannot strdup total\n");
+        free(result);
         return NULL;
       }
     } else {
@@ -273,10 +277,11 @@ char *bigint_mul(const char *a, const char *b) {
     i = ini_i;
   }
 end_mul:
-  if (is_neg) {
+  if (is_neg && total) {
     tmp = trim_leading_zeroes(total);
     result = malloc(strlen(tmp)+2);
     if (result == NULL) {
+      free(tmp);
       printf("bigint_mul: cannot malloc\n");
       return NULL;
     }
@@ -357,20 +362,21 @@ char *bigint_div(char *a, char *b) {
     tmp = bigint_mul(order_div, b);
     if (tmp == NULL) return NULL;
     removed = bigint_mul(tmp, div_order);
+    free(tmp);
     if (removed == NULL) return NULL;
     quotient = bigint_mul(order_div, div_order);
-    if (quotient == NULL) return NULL;
     free(div_order);
+    free(order_div);
+    if (quotient == NULL) return NULL;
     remainder = bigint_sub(a, removed);
+    free(removed);
     if (remainder == NULL) return NULL;
     
-    free(order_div); free(tmp); free(removed);
-    
     sub_div = bigint_div(remainder, b);
-    if (sub_div == NULL) return NULL;
     free(remainder);
+    if (sub_div == NULL) return NULL;
     result = bigint_add(quotient, sub_div);
-    if (result == NULL) return NULL;
+
     free(sub_div);
     free(quotient);
     return result;
@@ -383,14 +389,14 @@ div_precise:
   if (num == NULL) return NULL;
   while(1) {
     tmp = bigint_sub(num, b);
-    if (tmp == NULL) return NULL;
     free(num);
+    if (tmp == NULL) return NULL;
     num = tmp;
 
     if (!strcmp(num, "0") || bigint_bigger(num, "0")) {
       tmp = bigint_add(counter, "1");
-      if (tmp == NULL) return NULL;
       free(counter);
+      if (tmp == NULL) return NULL;
       counter = tmp;
     } else {
       break;
@@ -407,11 +413,11 @@ char *bigint_mod(char *a, char *b) {
   q = bigint_div(a, b);
   if (q == NULL) return NULL;
   round = bigint_mul(q, b);
+  free(q);
   if (round == NULL) return NULL;
   r = bigint_sub(a, round);
+  free(round);
   if (r == NULL) return NULL;
   
-  free(q);
-  free(round);
   return r;
 }

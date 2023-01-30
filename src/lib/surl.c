@@ -58,7 +58,7 @@ void surl_close_proxy(void) {
 
 static char buf[BUFSIZE];
 
-surl_response *surl_start_request(const char *method, const char *url, char **headers, int n_headers) {
+surl_response * __fastcall__ surl_start_request(const char *method, const char *url, char **headers, int n_headers) {
   surl_response *resp;
   int i;
   char got_buf;
@@ -113,7 +113,7 @@ surl_response *surl_start_request(const char *method, const char *url, char **he
   return resp;
 }
 
-int surl_send_data_params(surl_response *resp, size_t total, int raw) {
+int __fastcall__ surl_send_data_params(surl_response *resp, size_t total, int raw) {
   simple_serial_printf("%zu,%d\n", total, raw);
   /* Wait for go */
   simple_serial_gets(buf, BUFSIZE);
@@ -121,11 +121,11 @@ int surl_send_data_params(surl_response *resp, size_t total, int raw) {
   return strcmp(buf, "UPLOAD\n");
 }
 
-size_t surl_send_data(surl_response *resp, char *buffer, size_t len) {
+size_t __fastcall__ surl_send_data(surl_response *resp, char *buffer, size_t len) {
   return simple_serial_write(buffer, 1, len);
 }
 
-void surl_read_response_header(surl_response *resp) {
+void __fastcall__ surl_read_response_header(surl_response *resp) {
   char *w;
 
   if (resp->content_type) {
@@ -162,7 +162,7 @@ void surl_read_response_header(surl_response *resp) {
   }  
 }
 
-size_t surl_receive_data(surl_response *resp, char *buffer, size_t max_len) {
+size_t __fastcall__ surl_receive_data(surl_response *resp, char *buffer, size_t max_len) {
   size_t to_read = min(resp->size - resp->cur_pos, max_len);
   size_t r;
 
@@ -182,7 +182,7 @@ size_t surl_receive_data(surl_response *resp, char *buffer, size_t max_len) {
 static char overwritten_char = '\0';
 static size_t overwritten_offset = 0;
 
-size_t surl_receive_lines(surl_response *resp, char *buffer, size_t max_len) {
+size_t __fastcall__ surl_receive_lines(surl_response *resp, char *buffer, size_t max_len) {
   size_t to_read = min(resp->size - resp->cur_pos, max_len);
   size_t r = 0;
   size_t last_return = 0;
@@ -248,7 +248,7 @@ size_t surl_receive_lines(surl_response *resp, char *buffer, size_t max_len) {
 #pragma code-name (push, "LOWCODE")
 #endif
 
-void surl_response_free(surl_response *resp) {
+void __fastcall__ surl_response_free(surl_response *resp) {
   if (resp == NULL) {
     return;
   }
@@ -259,7 +259,11 @@ void surl_response_free(surl_response *resp) {
 
 }
 
-size_t surl_receive_headers(surl_response *resp, char *buffer, size_t max_len) {
+char __fastcall__ surl_response_ok(surl_response *resp) {
+  return resp != NULL && resp->code >= 200 && resp->code < 300;
+}
+
+size_t __fastcall__ surl_receive_headers(surl_response *resp, char *buffer, size_t max_len) {
   size_t to_read = min(resp->size - resp->cur_hdr_pos, max_len);
   size_t r;
 
@@ -276,7 +280,7 @@ size_t surl_receive_headers(surl_response *resp, char *buffer, size_t max_len) {
   return r;
 }
 
-int surl_find_line(surl_response *resp, char *buffer, size_t max_len, char *search_str) {
+int __fastcall__ surl_find_line(surl_response *resp, char *buffer, size_t max_len, char *search_str) {
   size_t res_len = 0;
   simple_serial_printf("FIND %zu %s\n", max_len, search_str);
   simple_serial_gets(buffer, max_len);
@@ -296,7 +300,7 @@ int surl_find_line(surl_response *resp, char *buffer, size_t max_len, char *sear
   return 0;
 }
 
-int surl_get_json(surl_response *resp, char *buffer, size_t max_len, char striphtml, char *translit, char *selector) {
+int __fastcall__ surl_get_json(surl_response *resp, char *buffer, size_t max_len, char striphtml, char *translit, char *selector) {
   size_t res_len = 0;
   simple_serial_printf("JSON %zu %d %s %s\n", max_len, striphtml, translit ? translit : "0", selector);
   simple_serial_gets(buffer, max_len);

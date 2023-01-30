@@ -1,3 +1,6 @@
+cov-build.sh
+cov-int
+a2-cov.tgz
 a.out
 *.s
 *.o

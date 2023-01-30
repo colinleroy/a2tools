@@ -34,6 +34,9 @@ status_media *status_media_new_from_json(surl_response *resp) {
 
   r = surl_get_json(resp, img_buf, IMG_BUF_SIZE, 0, translit_charset, ".media_attachments|map(. | select(.type==\"image\"))|.[]|.url");
 
+  n_lines = 0;
+  lines = NULL;
+
   if (r == 0) {
     n_lines = strsplit_in_place(img_buf, '\n', &lines);
     s->n_media = n_lines;
@@ -85,7 +88,7 @@ status_media *api_get_status_media(char *status_id) {
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s", STATUS_ENDPOINT, status_id);
   resp = get_surl_for_endpoint("GET", endpoint_buf);
   
-  if (resp == NULL || resp->code < 200 || resp->code >= 300)
+  if (!surl_response_ok(resp))
     goto err_out;
 
   s = status_media_new_from_json(resp);

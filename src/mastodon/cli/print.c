@@ -55,8 +55,6 @@ int print_buf(char *w, char allow_scroll, char *scrolled) {
 }
 
 int print_status(status *s, char full, char *scrolled) {
-  char y;
-
   *scrolled = 0;
   s->displayed_at = wherey();
   /* reblog header */

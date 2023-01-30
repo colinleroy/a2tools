@@ -1,7 +1,7 @@
 PROGRAM=telnet
-SOURCES := telnet.c ../lib/simple_serial.c ../lib/extended_conio.c ../lib/surl.c
+SOURCES := telnet.c ../lib/simple_serial.c ../lib/surl.c ../lib/clrzone.c ../lib/dgets.c ../lib/scrollwindow.c
 CC65SOURCES := ../lib/dputs.s ../lib/dputc.s ../lib/scroll.s
-GCCSOURCES := ../lib/extended_string.c
+GCCSOURCES := ../lib/extended_string.c ../lib/extended_conio.c
 DEPS := 
 
 CC65_TARGET = apple2enh

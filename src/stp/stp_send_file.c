@@ -23,7 +23,7 @@
 #include "stp_cli.h"
 #include "stp_send_file.h"
 #include "simple_serial.h"
-#include "cgets.h"
+#include "dgets.h"
 #include "clrzone.h"
 #include "extended_conio.h"
 #include "get_filedetails.h"
@@ -45,7 +45,7 @@ static char *stp_send_dialog() {
 
   printf("Enter file to send, or empty to abort: ");
   gotoxy(0, 20);
-  cgets(filename, BUFSIZE);
+  dget_text(filename, BUFSIZE, NULL);
   
   if (strchr(filename, '\n'))
     *strchr(filename, '\n') = '\0';

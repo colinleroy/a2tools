@@ -21,12 +21,16 @@
 #include <unistd.h>
 #include "surl.h"
 #include "simple_serial.h"
-#include "extended_conio.h"
+#include "scrollwindow.h"
+#include "clrzone.h"
 #include "shift_char_trans.h"
+#include "dgets.h"
 #ifndef __CC65__
 #include <termios.h>
 #include <unistd.h>
+#include "extended_conio.h"
 #else
+#include <conio.h>
 #include "dputs.h"
 #include "dputc.h"
 #include "scroll.h"
@@ -169,7 +173,7 @@ static int handle_vt100_escape_sequence(void) {
 
       if (step == CTRL_STEP_X)
         x = x * 10 + (o - '0');
-      else if (step = CTRL_STEP_Y)
+      else if (step == CTRL_STEP_Y)
         y = y * 10 + (o - '0');
 
       if (!has_bracket && step == CTRL_STEP_X) {
@@ -355,6 +359,7 @@ static void telnet_subneg(char opt) {
       simple_serial_putc(btm_line - top_line);
       simple_serial_putc(TELNET_IAC);
       simple_serial_putc(TELNET_SBE);
+      break;
     case TELNET_OPT_TSPEED:
       simple_serial_putc(TELNET_IAC);
       simple_serial_putc(TELNET_SB);
@@ -369,7 +374,7 @@ static void telnet_subneg(char opt) {
       break;
   }
 }
-static int echo = 1;
+static int do_echo = 1;
 
 static int handle_telnet_command(void) {
   char type;
@@ -392,7 +397,7 @@ static int handle_telnet_command(void) {
     
     /* we can turn echo off and ask remote
      * to turn echo on */
-    echo = 0;
+    do_echo = 0;
 #ifndef __CC65__
     static struct termios ttyf;
     tcgetattr( STDIN_FILENO, &ttyf);
@@ -481,7 +486,7 @@ again:
   clrscr();
 
   /* turn echo on */
-  echo = 1;
+  do_echo = 1;
 #ifndef __CC65__
   static struct termios ttyf;
   tcgetattr( STDIN_FILENO, &ttyf);
@@ -497,7 +502,7 @@ again:
 
     buf = malloc(BUFSIZE);
     dputs("Enter host:port: ");
-    cgets(buf, BUFSIZE);
+    dget_text(buf, BUFSIZE, NULL);
     dputs("Translate LN <=> CRLN (N/y)? ");
     t = cgetc();
     translate_ln = (t == 'y' || t == 'Y');
@@ -543,7 +548,7 @@ input:
       }
 #ifdef __CC65__
       /* Echo */
-      if (echo) {
+      if (do_echo) {
         rm_cursor();
         if (i == '\r') {
           dputs("\r\n");
@@ -553,7 +558,7 @@ input:
         set_cursor();
       }
 #else
-      if (echo) {
+      if (do_echo) {
         fputc(i, stdout);
         fflush(stdout);
       }
@@ -636,6 +641,4 @@ remote_closed:
   tcsetattr( STDOUT_FILENO, TCSANOW, &ttyf);
 #endif
   goto again;
-  
-  exit(0);
 }

@@ -83,7 +83,7 @@ static char *handle_compose_input(void) {
 }
 
 void compose_toot(void) {
-  char i, *text;
+  char *text;
   
   top = wherey();
   text = NULL;

@@ -57,7 +57,7 @@ account *api_get_profile(char *id) {
               id == NULL ? "verify_credentials" : id);
   resp = get_surl_for_endpoint("GET", endpoint_buf);
 
-  if (resp == NULL || resp->code < 200 || resp->code >= 300) {
+  if (!surl_response_ok(resp)) {
     account_free(a);
     a = NULL;
     goto err_out;
@@ -66,8 +66,9 @@ account *api_get_profile(char *id) {
     n_lines = strsplit_in_place(gen_buf,'\n',&lines);
     if (n_lines < 3) {
       account_free(a);
+      a = NULL;
       free(lines);
-      return NULL;
+      goto err_out;
     }
     a->id = strdup(lines[0]);
     a->display_name = strdup(lines[1]);

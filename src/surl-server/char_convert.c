@@ -32,7 +32,7 @@ static char *do_conv(char *in, char *from, char *to, size_t *new_len) {
   conv = iconv_open(to, from);
   if (conv == (iconv_t)-1) {
     perror("iconv");
-    return orig_in;
+    return strdup(orig_in);
   }
   in_len = strlen(in) + 1;
   out_len = in_len * 2;
@@ -45,6 +45,7 @@ static char *do_conv(char *in, char *from, char *to, size_t *new_len) {
   } else {
     perror("iconv");
     iconv_close(conv);
+    free(orig_out);
     orig_out = strdup(orig_in);
   }
   return orig_out;
@@ -101,4 +102,5 @@ char *do_apple_convert(char *in, int way, char *a2charset, size_t *new_len) {
       return do_conv(in, a2charset, "UTF-8//TRANSLIT", new_len);
     }
   }
+  return NULL;
 }

@@ -183,6 +183,7 @@ const int *bfs_compute_shortest_distances(bfs *b, int start_node) {
     cur_len++;
   }
   bool_array_free(visited);
+  free(node_queue);
 
   return b->distances;
 }

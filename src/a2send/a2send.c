@@ -64,7 +64,7 @@ int main(int argc, char **argv) {
   char c;
   int count = 0;
   char buf[128];
-  char start_addr[2];
+  char start_addr[2] = {0, 0};
   int cur_file = 1;
   unsigned long filesize;
   unsigned char type;
@@ -170,8 +170,8 @@ send_again:
 #ifndef __CC65__
   if (!strcasecmp(filetype, "BIN")) {
     char buf[58];
-    fread(buf, 1, 58, fp);
-    if (buf[0] == 0x00 && buf[1] == 0x05
+    if (fread(buf, 1, 58, fp) == 58
+     && buf[0] == 0x00 && buf[1] == 0x05
      && buf[2] == 0x16 && buf[3] == 0x00) {
       printf("AppleSingle file detected, skipping header\n");
       start_addr[0] = buf[56];

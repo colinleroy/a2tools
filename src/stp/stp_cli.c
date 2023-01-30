@@ -47,6 +47,7 @@ void stp_print_header(char *url) {
   } else {
     printf("%s",no_pass_url);
   }
+  free(no_pass_url);
   gotoxy(0, 1);
   chline(scrw);
 }

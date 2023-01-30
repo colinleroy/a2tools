@@ -4,12 +4,14 @@ homectrl_SOURCES := main.c network.c \
 	server_url.c \
 	../lib/simple_serial.c \
 	../lib/extended_conio.c \
-	../lib/cgets.c \
+	../lib/dgets.c \
 	../lib/scrollwindow.c \
 	../lib/clrzone.c \
 	../lib/strsplit.c \
 	../lib/extended_string.c \
 	../lib/surl.c
+
+homectrl_CL65SOURCES = ../lib/dputc.s ../lib/scroll.s
 
 grphview_SOURCES := graph-viewer.c \
 	../lib/surl.c \
@@ -29,7 +31,7 @@ GCCLDFLAGS = $(shell sdl-config --libs)
 
 all: homectrl.bin homectrl.x86_64 grphview.bin grphview.x86_64
 
-homectrl.bin: $(homectrl_SOURCES)
+homectrl.bin: $(homectrl_SOURCES) $(homectrl_CL65SOURCES)
 	cl65 $(CFLAGS) $(homectrl_CLCFLAGS) -m homectrl.map -o $@ $^
 
 homectrl.x86_64: $(homectrl_SOURCES)

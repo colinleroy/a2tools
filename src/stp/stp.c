@@ -28,7 +28,7 @@
 #include "surl.h"
 #include "simple_serial.h"
 #include "extended_conio.h"
-#include "cgets.h"
+#include "dgets.h"
 #include "clrzone.h"
 #include "strsplit.h"
 
@@ -73,7 +73,7 @@ char *get_start_url(void) {
   printf("\n\nURL: ");
 
   start_url = malloc(BUFSIZE + 1);
-  cgets(start_url, BUFSIZE);
+  dget_text(start_url, BUFSIZE, NULL);
   if (strchr(start_url,'\n'))
     *strchr(start_url,'\n') = '\0';
 
@@ -98,7 +98,7 @@ char *get_start_url(void) {
   }
   
   login = malloc(BUFSIZE + 1);
-  cgets(login, BUFSIZE);
+  dget_text(login, BUFSIZE, NULL);
   if (strchr(login,'\n'))
     *strchr(login,'\n') = '\0';
 
@@ -108,7 +108,7 @@ char *get_start_url(void) {
     password = malloc(BUFSIZE + 1);
     printf("Password: ");
     echo(0);
-    cgets(password, BUFSIZE);
+    dget_text(password, BUFSIZE, NULL);
     echo(1);
     free(last_password);
     changed = 1;
@@ -254,7 +254,7 @@ int main(int argc, char **argv) {
 
     if (resp == NULL || resp->size == 0) {
       gotoxy(12, 12);
-      if (resp->code >= 200 && resp->code < 300) {
+      if (resp && resp->code >= 200 && resp->code < 300) {
         printf("Empty.       ");
       } else {
         printf("Bad response.");

@@ -247,6 +247,7 @@ static int select_item(void) {
     case SENSOR_PAGE:  select_sensor();  return 1;
     case CLIMATE_PAGE: return select_climate_zone();
   }
+  return 1;
 }
 
 static void cleanup(void) {
@@ -345,6 +346,4 @@ command:
     default: 
       goto command;
   }
-
-  exit(0);
 }

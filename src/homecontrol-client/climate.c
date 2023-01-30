@@ -51,6 +51,7 @@ static char *avg_vals(char *in) {
     int avg = (atoi(min_max[2]) + atoi(min_max[0])) / 2;
     sprintf(in, "%d", avg);
   } else {
+    free(min_max);
     return "NA";
   }
   free(min_max);

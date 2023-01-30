@@ -1,4 +1,4 @@
-SUBDIRS = lib a2send a2recv mirror surl-server homecontrol-client surl stp aoc
+SUBDIRS = lib a2send a2recv mirror surl-server homecontrol-client mastodon telnet surl stp aoc
 
 .PHONY: all clean
 

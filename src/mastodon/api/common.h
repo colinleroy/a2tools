@@ -23,6 +23,7 @@ extern char arobase;
 #define ACCOUNTS_ENDPOINT "/api/v1/accounts"
 #define TIMELINE_ENDPOINT "/api/v1/timelines"
 #define STATUS_ENDPOINT   "/api/v1/statuses"
+#define SEARCH_ENDPOINT   "/api/v2/search"
 
 #define COMPOSE_PUBLIC 0
 #define COMPOSE_UNLISTED 1
@@ -34,5 +35,4 @@ extern char arobase;
 void nomem_msg(char *file, int line);
 surl_response *get_surl_for_endpoint(char *method, char *endpoint);
 account *api_get_profile(char *id);
-
 #endif

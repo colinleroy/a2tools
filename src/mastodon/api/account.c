@@ -62,6 +62,7 @@ account *account_new_from_json(surl_response *resp) {
   a->created_at = strdup(lines[3]);
   a->followers_count = atol(lines[4]);
   a->following_count = atol(lines[5]);
+  free(lines);
 
   a->note = malloc(2048);
   r = surl_get_json(resp, a->note, 2048, 1, translit_charset, ".note");

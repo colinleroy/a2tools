@@ -31,10 +31,12 @@
 static int __fastcall__ _strsplit_int(char in_place, char *in, char split, char ***out) {
   int i;
   int n_tokens;
-  char **result = NULL;
+  char **result;
   char **tmp;
 
   n_tokens = 0;
+  result = NULL;
+
   if (in == NULL)
     goto err_out;
 
@@ -45,6 +47,7 @@ static int __fastcall__ _strsplit_int(char in_place, char *in, char split, char 
         result = tmp;
       } else {
         free(result);
+        result = NULL;
         n_tokens = 0;
         goto err_out;
       }
@@ -57,12 +60,13 @@ static int __fastcall__ _strsplit_int(char in_place, char *in, char split, char 
     }
   }
   /* last token */
-  if (in && *in) {
+  if (*in) {
     tmp = realloc(result, (n_tokens + 1) * sizeof(void *));
     if (tmp) {
       result = tmp;
     } else {
       free(result);
+      result = NULL;
       n_tokens = 0;
       goto err_out;
     }

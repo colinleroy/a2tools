@@ -60,7 +60,7 @@ static void toggle_mix(char force, char *str) {
     __asm__("ldx     #1");
     __asm__("lda     #20");
     __asm__("sta     $22"); /* WNDTOP */
-    __asm__("bit     $C053"); /* MIXCLR */
+    __asm__("bit     $C053"); /* MIXSET */
   } else {
     __asm__("ldx     #0");
     __asm__("lda     #00");
@@ -106,6 +106,7 @@ static void img_display(status_media *s, char idx) {
   } else {
     toggle_mix(1, "Request failed.");
   }
+  surl_response_free(resp);
 }
 
 int main(int argc, char **argv) {

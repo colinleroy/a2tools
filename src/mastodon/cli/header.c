@@ -45,13 +45,14 @@ void print_header(list *l, status *root_status) {
     dputs(my_account->username);
   }
 
-  #define BTM 7
+  #define BTM 6
   clrzone(0, BTM, LEFT_COL_WIDTH, 23);
   gotoxy(0,BTM);
 
   dputs("Commands:\r\n");
   dputs(" View toot: Enter\r\n");
   dputs(" Scroll   : Up/dn\r\n");
+  dputs(" Search   : S\r\n");
   dputs(" Configure: O\r\n");
   if (!l || !l->root) {
     dputs(" Exit     : Escape \r\n");
@@ -71,7 +72,7 @@ void print_header(list *l, status *root_status) {
     } else {
       dputs(" Boost    : B      \r\n");
     }
-    if (!strcmp(root_status->account->id, my_account->id)) {
+    if (my_account && !strcmp(root_status->account->id, my_account->id)) {
       dputs(" Delete   : D      \r\n");
     }
       dputs(" Images   : I      \r\n");

@@ -256,13 +256,13 @@ static struct obuf * packBytes (void *vp, unsigned int len)
 
 enum DitherType { EDIFF, ATKIN };
 
-static void dither7 (enum DitherType alg, PixelRef buf, PixelRef pal)
+static void dither7 (enum DitherType alg, PixelRef buf, PixelRef pal, int numPal)
 {
 	int z,i,d,bd,bi,dr,dg,db;
 	
 	for (z = 0; z < 7; z += 1) {
 		bd = bi = 0x7fffffff; // big number
-		for (i = 0; i < 4; ++i) {
+		for (i = 0; i < numPal; ++i) {
 			d = pixelDist(buf[z], pal[i]);
 			if (d < bd) {
 				bd = d;
@@ -479,8 +479,8 @@ static unsigned int hgrDither (enum DitherType alg, ImageRef src, unsigned char 
 				buf1[z] = imageGetPixel(src, x+z, y);
 				buf2[z] = imageGetPixel(src, x+z, y);
 			}
-			dither7(alg, buf1, pal1);
-			dither7(alg, buf2, pal2);
+			dither7(alg, buf1, pal1, 4);
+			dither7(alg, buf2, pal2, 4);
 			pp = imageGetPixelRef(src, x, y);
 			d1 = pixelDist7(pp, buf1);
 			d2 = pixelDist7(pp, buf2);
@@ -523,7 +523,7 @@ static unsigned int hgrMonoDither (enum DitherType alg, ImageRef src, unsigned c
 			for (z = 0; z < 9; z += 1) {
 				buf1[z] = imageGetPixel(src, x+z, y);
 			}
-			dither7(alg, buf1, pal1);
+			dither7(alg, buf1, pal1, 2);
 			ditherFromBuf(alg, buf1, src, x, y);
 		}
 	}
@@ -730,12 +730,11 @@ static ImageRef imageFromJPG (FILE *f)
 
 	jpeg_finish_decompress(&cinfo);
 	jpeg_destroy_decompress(&cinfo);
-
+	if (scanline) free(scanline);
 	return ip;
 
 emalloc:
-	if (scanline) free(scanline);
-	if (ip->p) free(ip->p);
+	if (ip && ip->p) free(ip->p);
 	if (ip) free(ip);
 	return 0;
 }
@@ -746,14 +745,13 @@ static ImageRef imageFromPNG(FILE *fp)
 	PixelRef pp = 0;
 	png_structp png_ptr;
 	png_infop info_ptr;
-	png_bytep scanline;
+	png_bytep scanline = NULL;
 	png_byte color_type;
 	int y, i;
 	char header[8];    // 8 is the maximum size that can be checked
 
 	/* open file and test for it being a png */
-	fread(header, 1, 8, fp);
-	if (png_sig_cmp((png_const_bytep)header, 0, 8)) {
+	if (fread(header, 1, 8, fp) < 8 || png_sig_cmp((png_const_bytep)header, 0, 8)) {
 		printf("[read_png_file] File is not recognized as a PNG file");
 		return NULL;
 	}
@@ -807,11 +805,12 @@ static ImageRef imageFromPNG(FILE *fp)
 			if(color_type == PNG_COLOR_TYPE_RGB_ALPHA) sp++;
 		}
 	}
+	if (scanline) free(scanline);
 	return ip;
 
 emalloc:
 	if (scanline) free(scanline);
-	if (ip->p) free(ip->p);
+	if (ip && ip->p) free(ip->p);
 	if (ip) free(ip);
 	return 0;		
 }
@@ -871,7 +870,7 @@ static ImageRef imageFromXPM (FILE *f)
 			else *pp++ = zp;
 		}
 	}
-	
+	free(cp);
 	return ip;
 
 expm:
