@@ -487,13 +487,14 @@ void launch_compose(status *s) {
 #endif
 }
 
-void launch_images(status *s) {
+void launch_images(account *a, status *s) {
   char *params;
-  if (s == NULL) {
+  if (s == NULL && a == NULL) {
     return;
   }
   params = malloc(127);
-  snprintf(params, 127, "%s %s %s %s", instance_url, oauth_token, translit_charset, s->id);
+  snprintf(params, 127, "%s %s %s %c %s", instance_url, oauth_token, translit_charset,
+           s ? 's':'a', s ? s->id : a->id);
 #ifdef __CC65__
   exec("mastoimg", params);
   exit(0);
@@ -868,7 +869,7 @@ void cli(void) {
           break;
       case IMAGES:
           save_state(l, cur_list);
-          launch_images(get_top_status(l[cur_list]));
+          launch_images(l[cur_list]->account, get_top_status(l[cur_list]));
           cur_action = NAVIGATE;
           break;
       case SEARCH:

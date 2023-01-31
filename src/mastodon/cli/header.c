@@ -82,6 +82,9 @@ void print_header(list *l, status *root_status) {
     }
     dputs("Author:\r\n"
           " Profile  : P      \r\n");
+  } else if (l->account) {
+    dputs("Profile:\r\n"
+          " Images   : I      \r\n");
   }
   dputs("Writing:\r\n"
         " Compose  : C      \r\n");
