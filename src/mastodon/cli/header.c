@@ -25,6 +25,10 @@
 #include "clrzone.h"
 #include "scrollwindow.h"
 
+#ifdef __CC65__
+#pragma code-name (push, "LC")
+#endif
+
 account *my_account = NULL;
 
 void print_header(list *l, status *root_status) {
@@ -50,18 +54,19 @@ void print_header(list *l, status *root_status) {
   gotoxy(0,BTM);
 
   dputs("Commands:\r\n");
-  dputs(" View toot: Enter\r\n");
-  dputs(" Scroll   : Up/dn\r\n");
-  dputs(" Search   : S\r\n");
-  dputs(" Configure: O\r\n");
+  dputs(" View toot: Enter\r\n"
+        " Scroll   : Up/dn\r\n"
+        " Search   : S\r\n"
+        " Configure: O\r\n");
   if (!l || !l->root) {
     dputs(" Exit     : Escape \r\n");
   } else {
     dputs(" Back     : Escape \r\n");
   }
   if (root_status) {
-    dputs("Toot: \r\n");
-    dputs(" Reply    : R      \r\n");
+    dputs("Toot: \r\n"
+          " Reply    : R      \r\n"
+          " Images   : I      \r\n");
     if ((root_status->favorited_or_reblogged & FAVOURITED) != 0) {
       dputs(" Unfav.   : F      \r\n");
     } else {
@@ -75,12 +80,11 @@ void print_header(list *l, status *root_status) {
     if (my_account && !strcmp(root_status->account->id, my_account->id)) {
       dputs(" Delete   : D      \r\n");
     }
-      dputs(" Images   : I      \r\n");
-    dputs("Author:\r\n");
-    dputs(" Profile  : P      \r\n");
+    dputs("Author:\r\n"
+          " Profile  : P      \r\n");
   }
-  dputs("Writing:\r\n");
-  dputs(" Compose  : C      \r\n");
+  dputs("Writing:\r\n"
+        " Compose  : C      \r\n");
 
   print_free_ram();
   cvlinexy(LEFT_COL_WIDTH, 0, scrh);
@@ -88,7 +92,13 @@ void print_header(list *l, status *root_status) {
 
 void print_free_ram(void) {
 #ifdef __CC65__
-  gotoxy(0, 23);
-  cprintf("%zuB free     ", _heapmemavail());
+  gotoxy(0, 22);
+  cprintf("%zuB free     \r\n"
+          "%zuB max      ",
+          _heapmemavail(), _heapmaxavail());
 #endif
 }
+
+#ifdef __CC65__
+#pragma code-name (pop)
+#endif

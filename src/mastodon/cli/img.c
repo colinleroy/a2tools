@@ -31,7 +31,7 @@
 #endif
 #include "surl.h"
 #include "simple_serial.h"
-#include "api.h"
+#include "status_media.h"
 #include "common.h"
 
 #ifdef __CC65__
@@ -110,7 +110,6 @@ static void img_display(status_media *s, char idx) {
 }
 
 int main(int argc, char **argv) {
-  FILE *fp;
   char *params;
   status_media *s;
   char i, c;
@@ -126,24 +125,15 @@ int main(int argc, char **argv) {
   translit_charset = argv[3];
   status_id = argv[4];
 
-  cputs("\r\n");
-  cputs("\r\n");
-  cputs("Toggle legend: L\r\n");
-  cputs("Quit viewer  : Esc\r\n");
-  cputs("Next image   : Any other key\r\n");
-  cputs("\r\n");
-  cputs("Loading...\r\n");
+  cputs("\r\n"
+        "\r\n"
+        "Toggle legend: L\r\n"
+        "Quit viewer  : Esc\r\n"
+        "Next image   : Any other key\r\n"
+        "\r\n"
+        "Loading...\r\n");
 
-  fp = fopen("clisettings", "r");
   translit_charset = US_CHARSET;
-
-  if (fp != NULL) {
-    char buf[16];
-    fgets(buf, 16, fp);
-    fgets(buf, 16, fp);
-    monochrome = atoi(buf);
-    fclose(fp);
-  }
 
   s = api_get_status_media(status_id);
   if (s == NULL) {

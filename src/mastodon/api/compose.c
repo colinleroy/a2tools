@@ -8,6 +8,10 @@
 #include "compose.h"
 #include "common.h"
 
+#ifdef __CC65__
+#pragma code-name (push, "LOWCODE")
+#endif
+
 static char *compose_audience_str(char compose_audience) {
   switch(compose_audience) {
     case COMPOSE_PUBLIC:   return "public";

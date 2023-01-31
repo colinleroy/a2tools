@@ -8,6 +8,10 @@
 #include "api.h"
 #include "common.h"
 
+#ifdef __CC65__
+#pragma code-name (push, "LOWCODE")
+#endif
+
 int api_get_account_posts(account *a, char to_load, char *first_to_load, char **post_ids) {
   snprintf(gen_buf, BUF_SIZE, "%s/%s/statuses", ACCOUNTS_ENDPOINT, a->id);
 

@@ -1,6 +1,3 @@
-#ifdef __CC65__
-#pragma code-name (push, "LOWCODE")
-#endif
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -10,6 +7,10 @@
 #include "simple_serial.h"
 #include "strsplit.h"
 #include "api.h"
+
+#ifdef __CC65__
+#pragma code-name (push, "LOWCODE")
+#endif
 
 #define IMG_BUF_SIZE 2048
 static char img_buf[IMG_BUF_SIZE];

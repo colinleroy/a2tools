@@ -69,32 +69,24 @@ static int print_account(account *a, char *scrolled) {
   char y;
   *scrolled = 0;
   dputs(a->display_name);
-  CHECK_AND_CRLF();
   dputc(arobase);
   dputs(a->username);
-  CHECK_AND_CRLF();
 
-  cprintf("%ld following, %ld followers", a->following_count, a->followers_count);
-  CHECK_AND_CRLF();
-  cprintf("Here since %s", a->created_at);
-  CHECK_AND_CRLF();
+  cprintf("%ld following, %ld followers\r\n"
+          "Here since %s", a->following_count, a->followers_count, a->created_at);
 
   api_relationship_get(a, 0);
   y = 0;
   if (api_relationship_get(a, RSHIP_FOLLOWING)) {
     gotoxy(32, y);
-    dputs("             You follow them");
-    CHECK_AND_CRLF();
-  }
-  if (api_relationship_get(a, RSHIP_FOLLOW_REQ)) {
+    dputs("             You follow them\r\n");
+  } else if (api_relationship_get(a, RSHIP_FOLLOW_REQ)) {
     gotoxy(32, ++y);
-    dputs("You requested to follow them");
-    CHECK_AND_CRLF();
+    dputs("You requested to follow them\r\n");
   }
   if (api_relationship_get(a, RSHIP_FOLLOWED_BY)) {
     gotoxy(32, ++y);
-    dputs("             They follow you");
-    CHECK_AND_CRLF();
+    dputs("             They follow you\r\n");
   }
 
   if (wherey() < 4)
@@ -193,8 +185,7 @@ static int load_prev_posts(list *l) {
   scrolldn();
   
   gotoxy(0, 0);
-  dputs("All caught up! Maybe reload? (y/N) ");
-  gotoxy(0,1);
+  dputs("All caught up! Maybe reload? (y/N)\r\n");
   chline(scrw - LEFT_COL_WIDTH - 1);
 
   c = cgetc();
@@ -239,7 +230,10 @@ static int show_search(void) {
   return 0;
 }
 
-static list *build_list(status *root, char kind) {
+/* root is either an account or status id, depending on kind.
+ * leaf_root is a reblogged status id
+ */
+static list *build_list(char *root, char *leaf_root, char kind) {
   list *l;
   char i;
 
@@ -250,12 +244,12 @@ static list *build_list(status *root, char kind) {
   memset(l, 0, sizeof(list));
 
   if (kind == L_ACCOUNT) {
-    l->account = api_get_full_account(root->reblog ? root->reblog->account->id : root->account->id);
+    l->account = api_get_full_account(root);
     l->first_displayed_post = -1;
   } else {
     if (root) {
-      l->root = strdup(root->id);
-      l->leaf_root = strdup(root->reblog ? root->reblog->id : root->id);
+      l->root = root;
+      l->leaf_root = leaf_root;
     }
     l->first_displayed_post = 0;
   }
@@ -778,21 +772,22 @@ void cli(void) {
   signed char cur_list, to_clear, to_show;
   list **l, *prev_list;
   char starting = 1;
-  status *new_root;
+  status *disp;
+  char *new_root, *new_leaf_root;
 
   if (starting) {
     cur_list = load_state(&l);
   }
   if (cur_list == -1) {
     cur_list = 0;
-    l = malloc((cur_list + 1) * sizeof(list *));
+    l = malloc(1 * sizeof(list *));
     cur_action = SHOW_HOME_TIMELINE;
   }
 
   while (cur_action != QUIT) {
     switch(cur_action) {
       case SHOW_HOME_TIMELINE:
-        l[cur_list] = build_list(NULL, L_HOME_TIMELINE);
+        l[cur_list] = build_list(NULL, NULL, L_HOME_TIMELINE);
         cur_action = NAVIGATE;
         break;
       case SHOW_FULL_STATUS:
@@ -800,24 +795,28 @@ void cli(void) {
       case SHOW_SEARCH_RES:
         prev_list = l[cur_list];
         ++cur_list;
+        to_clear = 0;
+        new_root = NULL;
+        new_leaf_root = NULL;
+        /* we don't want get_top_status because we don't want to go into
+         * reblog */
+        disp = prev_list->displayed_posts[prev_list->first_displayed_post];
         if (cur_action == SHOW_FULL_STATUS) {
           to_clear = prev_list->post_height[prev_list->first_displayed_post] - 2;
           to_show = L_FULL_STATUS;
-          new_root = prev_list->displayed_posts[prev_list->first_displayed_post];
+          new_root = strdup(disp->id);
+          new_leaf_root = strdup(disp->reblog ? disp->reblog->id : disp->id);
         } else if (cur_action == SHOW_SEARCH_RES) {
-          to_clear = 0;
           to_show = L_SEARCH;
-          new_root = NULL;
         } else if (cur_action == SHOW_ACCOUNT) {
-          to_clear = 0;
+          new_root = strdup(disp->reblog ? disp->reblog->account->id : disp->account->id);
           to_show = L_ACCOUNT;
-          new_root = NULL;
         }
         l = realloc(l, (cur_list + 1) * sizeof(list *));
-        if (cur_list > 1) {
-          compact_list(l[cur_list - 2]);
+        if (cur_list > 0) {
+          compact_list(l[cur_list - 1]);
         }
-        l[cur_list] = build_list(new_root, to_show);
+        l[cur_list] = build_list(new_root, new_leaf_root, to_show);
         clrzone(LEFT_COL_WIDTH + 1, to_clear, scrw - 1, scrh - 1);
         /* free status on list n-2 */
         cur_action = NAVIGATE;

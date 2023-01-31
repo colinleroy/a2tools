@@ -53,7 +53,8 @@ static int __fastcall__ _strsplit_int(char in_place, char *in, char split, char 
       }
       in[i] = '\0';
       result[n_tokens] = in_place ? in : strdup(in);
-      in = in + i + 1; i = -1; /* going to be ++'ed by the for loop */
+      in = in + i + 1;
+      i = -1; /* going to be ++'ed by the for loop */
       n_tokens++;
       if (*in == '\0')
         break;

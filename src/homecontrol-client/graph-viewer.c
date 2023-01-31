@@ -31,10 +31,6 @@
 #include "extended_conio.h"
 #include "surl.h"
 
-/* Init HGR segment */
-#pragma rodata-name (push, "HGR")
-const char hgr = 0;
-#pragma rodata-name (pop)
 
 #ifdef __CC65__
 #pragma code-name (push, "LOWCODE")

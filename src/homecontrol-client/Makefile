@@ -9,12 +9,13 @@ homectrl_SOURCES := main.c network.c \
 	../lib/clrzone.c \
 	../lib/strsplit.c \
 	../lib/extended_string.c \
-	../lib/surl.c
+	../lib/surl_core.c
 
 homectrl_CL65SOURCES = ../lib/dputc.s ../lib/scroll.s
 
 grphview_SOURCES := graph-viewer.c \
-	../lib/surl.c \
+	../lib/surl_core.c \
+	../lib/surl_receive_lines.c \
 	../lib/simple_serial.c
 
 grphview_GCCSOURCES := ../lib/extended_conio.c ../lib/clrzone.c ../lib/tgi_sdl.c ../lib/extended_string.c ../lib/tgi_fastline.c
@@ -23,8 +24,8 @@ DEPS :=
 
 CC65_TARGET = apple2enh
 CFLAGS  = -I ../lib 
-homectrl_CLCFLAGS = -t $(CC65_TARGET) -Wl -D,__STACKSIZE__=0x0400 -DSERIAL_TO_LANGCARD
-grphview_CLCFLAGS = -t $(CC65_TARGET) -Wl -D,__STACKSIZE__=0x0400 -DSERIAL_TO_LANGCARD -C ../../config/apple2enh-hgr.cfg
+homectrl_CLCFLAGS = -t $(CC65_TARGET) -O -Wl -D,__STACKSIZE__=0x0400 -DSERIAL_TO_LANGCARD
+grphview_CLCFLAGS = -t $(CC65_TARGET) -O -Wl -D,__STACKSIZE__=0x0400 -DSERIAL_TO_LANGCARD -C ../../config/apple2enh-hgr.cfg
 GCCCFLAGS = -g -O0 -Werror $(shell sdl-config --cflags)
 GCCLDFLAGS = $(shell sdl-config --libs)
 .PHONY: all clean

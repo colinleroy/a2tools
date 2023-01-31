@@ -27,7 +27,7 @@
 
 account *my_account = NULL;
 
-void compose_print_header(status *root_status) {
+void compose_print_header(void) {
   if (my_account == NULL) {
     my_account = api_get_profile(NULL);
   }
@@ -49,19 +49,19 @@ void compose_print_header(status *root_status) {
   clrzone(0, BTM, LEFT_COL_WIDTH, 23);
   gotoxy(0,BTM);
 
-  dputs("Commands:\r\n");
-  dputs(" Open-Apple +...\r\n");
-  dputs(" Send     : S\r\n");
-  dputs(" Cancel   : Escape\r\n");
+  dputs("Commands:\r\n"
+        " Open-Apple +...\r\n"
+        " Send     : S\r\n"
+        " Cancel   : Escape\r\n"
 
-  dputs("\r\n");
-  dputs("Set Audience:\r\n");
-  dputs(" Open-Apple +...\r\n");
-  dputs(" Public   : P\r\n");
-  dputs(" Unlisted : U\r\n");
-  dputs(" Private  : R\r\n");
-  dputs(" Mention  : M\r\n");
-  dputs("\r\n");
+        "\r\n"
+        "Set Audience:\r\n"
+        " Open-Apple +...\r\n"
+        " Public   : P\r\n"
+        " Unlisted : U\r\n"
+        " Private  : R\r\n"
+        " Mention  : M\r\n"
+        "\r\n");
 
 
 #ifdef __CC65__

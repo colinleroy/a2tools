@@ -13,6 +13,10 @@
 #include "extended_conio.h"
 #endif
 
+#ifdef __CC65__
+#pragma code-name (push, "LOWCODE")
+#endif
+
 #define BUF_SIZE 255
 
 #define LOGIN_URL "/auth/sign_in"

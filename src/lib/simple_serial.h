@@ -35,9 +35,9 @@ size_t __fastcall__ simple_serial_read_with_timeout(char *ptr, size_t size, size
 
 /* Output */
 int __fastcall__ simple_serial_putc(char c);
-int __fastcall__ simple_serial_puts(char *buf);
-int simple_serial_printf(const char* format, ...);
-int __fastcall__ simple_serial_write(char *ptr, size_t size, size_t nmemb);
+void __fastcall__ simple_serial_puts(char *buf);
+void simple_serial_printf(const char* format, ...);
+void __fastcall__ simple_serial_write(char *ptr, size_t size, size_t nmemb);
 
 /* Status */
 void __fastcall__ simple_serial_set_activity_indicator(char enabled, int x, int y);
