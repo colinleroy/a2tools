@@ -332,7 +332,7 @@ new_req:
             if (result && strlen(result) >= bufsize) {
               result[bufsize - 1] = '\0';
             }
-            simple_serial_printf("%d\n", strlen(result));
+            simple_serial_printf("%zu\n", strlen(result));
             simple_serial_puts(result);
             free(result);
           } else {
@@ -415,11 +415,15 @@ static void curl_buffer_free(curl_buffer *curlbuf) {
 }
 
 static void proxy_set_curl_opts(CURL *curl) {
-  curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-  curl_easy_setopt(curl, CURLOPT_USERAGENT, "surl-server/1.0");
-  curl_easy_setopt(curl, CURLOPT_COOKIEJAR, "cookies.txt");
-  curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "cookies.txt");
-  curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
+  CURLcode r = 0;
+  r |= curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+  r |= curl_easy_setopt(curl, CURLOPT_USERAGENT, "surl-server/1.0");
+  r |= curl_easy_setopt(curl, CURLOPT_COOKIEJAR, "cookies.txt");
+  r |= curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "cookies.txt");
+  r |= curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
+  if (r) {
+    printf("CURL: Couldn't set standard options\n");
+  }
 }
 
 static int data_seek_cb(void *cbdata, curl_off_t offset, int origin) {
@@ -526,6 +530,7 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
   CURL *curl;
   CURLcode res;
   int i;
+  CURLcode r = 0;
   curl_buffer *curlbuf;
   int is_sftp = !strncmp("sftp", url, 4);
   int is_ftp = !strncmp("ftp", url, 3) || is_sftp;
@@ -533,6 +538,8 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
   int ftp_try_dir = (is_ftp && url[strlen(url)-1] == '/' && !strcmp(method, "GET"));
   static char *upload_buf = NULL;
   struct timespec cur_time;
+  struct curl_slist *curl_headers = NULL;
+  char *tmp;
 
 
   if (upload_buf == NULL) {
@@ -570,7 +577,9 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
   if (!strcmp(method, "POST")) {
       if (is_ftp) {
         printf("Unsupported ftp method POST\n");
-        return curlbuf;
+        curl_buffer_free(curlbuf);
+        curl_easy_cleanup(curl);
+        return NULL;
       }
       simple_serial_puts("SEND_SIZE_AND_DATA\n");
       simple_serial_gets(upload_buf, 255);
@@ -584,6 +593,8 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
 
       if (!strchr(upload_buf, ',')) {
         printf("Unexpected reply\n");
+        curl_buffer_free(curlbuf);
+        curl_easy_cleanup(curl);
         return NULL;
       }
       /* Massage an x-www-urlencoded form */
@@ -597,12 +608,15 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
         printf("POST raw upload: %zu bytes\n", curlbuf->upload_size);
       }
 
-      curl_easy_setopt(curl, CURLOPT_POST, 1L);
-      curl_easy_setopt(curl, CURLOPT_READFUNCTION, data_send_cb);
-      curl_easy_setopt(curl, CURLOPT_SEEKFUNCTION, data_seek_cb);
-      curl_easy_setopt(curl, CURLOPT_READDATA, curlbuf);
-      curl_easy_setopt(curl, CURLOPT_SEEKDATA, curlbuf);
-      curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, curlbuf->upload_size);
+      r |= curl_easy_setopt(curl, CURLOPT_POST, 1L);
+      r |= curl_easy_setopt(curl, CURLOPT_READFUNCTION, data_send_cb);
+      r |= curl_easy_setopt(curl, CURLOPT_SEEKFUNCTION, data_seek_cb);
+      r |= curl_easy_setopt(curl, CURLOPT_READDATA, curlbuf);
+      r |= curl_easy_setopt(curl, CURLOPT_SEEKDATA, curlbuf);
+      r |= curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, curlbuf->upload_size);
+      if (r) {
+        printf("CURL: Couldn't set POST option(s)\n");
+      }
   } else if (!strcmp(method, "PUT")) {
       simple_serial_puts("SEND_SIZE_AND_DATA\n");
       simple_serial_gets(upload_buf, 255);
@@ -614,29 +628,36 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
 
       if (!strchr(upload_buf, ',')) {
         printf("Unexpected reply\n");
+        curl_buffer_free(curlbuf);
+        curl_easy_cleanup(curl);
         return NULL;
       }
 
       if (strcmp(strchr(upload_buf, ','), ",1\n")) {
         simple_serial_puts("ERROR\n");
         printf("Expected raw upload\n");
+        curl_buffer_free(curlbuf);
+        curl_easy_cleanup(curl);
         return NULL;
       }
       simple_serial_puts("UPLOAD\n");
       simple_serial_read(curlbuf->upload_buffer, sizeof(char), curlbuf->upload_size);
       printf("PUT upload: %zu bytes\n", curlbuf->upload_size);
 
-      curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
-      curl_easy_setopt(curl, CURLOPT_READFUNCTION, data_send_cb);
-      curl_easy_setopt(curl, CURLOPT_SEEKFUNCTION, data_seek_cb);
-      curl_easy_setopt(curl, CURLOPT_READDATA, curlbuf);
-      curl_easy_setopt(curl, CURLOPT_SEEKDATA, curlbuf);
-      curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-      curl_easy_setopt(curl, CURLOPT_INFILESIZE, curlbuf->upload_size);
+      r |= curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
+      r |= curl_easy_setopt(curl, CURLOPT_READFUNCTION, data_send_cb);
+      r |= curl_easy_setopt(curl, CURLOPT_SEEKFUNCTION, data_seek_cb);
+      r |= curl_easy_setopt(curl, CURLOPT_READDATA, curlbuf);
+      r |= curl_easy_setopt(curl, CURLOPT_SEEKDATA, curlbuf);
+      r |= curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+      r |= curl_easy_setopt(curl, CURLOPT_INFILESIZE, curlbuf->upload_size);
       if (is_sftp) {
-        curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_SFTP);
+        r |= curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_SFTP);
       } else if (is_ftp) {
-        curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_FTP);
+        r |= curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_FTP);
+      }
+      if (r) {
+        printf("CURL: Could not set PUT option(s)\n");
       }
   } else if (!strcmp(method, "DELETE")) {
       if (is_ftp) {
@@ -660,12 +681,15 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
         sprintf(cmd, "DELE %s", path);
         printf("will delete %s in %s\n", path, url);
         free(o_path);
-        curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_FTP);
-        curl_easy_setopt(curl, CURLOPT_QUOTE, curl_slist_append(NULL,cmd));
+        r |= curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_FTP);
+        r |= curl_easy_setopt(curl, CURLOPT_QUOTE, curl_slist_append(NULL,cmd));
         simple_serial_puts("WAIT\n");
       } else {
-        curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
+        r |= curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
         simple_serial_puts("WAIT\n");
+      }
+      if (r) {
+        printf("CURL: Could not set DELETE option(s)\n");
       }
   } else if (!strcmp(method, "GET")) {
     /* Don't send WAIT twice */
@@ -689,49 +713,49 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
 
 
   printf("%s %s - start\n", method, url);
-  if (curl) {
-    struct curl_slist *curl_headers = NULL;
-    char *tmp;
-    curl_easy_setopt(curl, CURLOPT_URL, url);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_data_cb);
-    curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, curl_write_header_cb);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)curlbuf);
-    curl_easy_setopt(curl, CURLOPT_HEADERDATA, (void *)curlbuf);
+
+  r |= curl_easy_setopt(curl, CURLOPT_URL, url);
+  r |= curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_data_cb);
+  r |= curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, curl_write_header_cb);
+  r |= curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)curlbuf);
+  r |= curl_easy_setopt(curl, CURLOPT_HEADERDATA, (void *)curlbuf);
+  if (ftp_try_dir) {
+    r |= curl_easy_setopt(curl, CURLOPT_DIRLISTONLY, 1L);
+  }
+  for (i = 0; i < n_headers; i++) {
+    curl_headers = curl_slist_append(curl_headers, headers[i]);
+  }
+  
+  printf("\n");
+
+  r |= curl_easy_setopt(curl, CURLOPT_HTTPHEADER, curl_headers);
+  if (r) {
+    printf("CURL: Could not get general option(s)\n");
+  }
+  res = curl_easy_perform(curl);
+  curl_slist_free_all(curl_headers);
+
+  if(res != CURLE_OK) {
+    printf("Curl error %d: %s\n", res, curl_easy_strerror(res));
+    if (res == CURLE_REMOTE_ACCESS_DENIED) {
+      curlbuf->response_code = 401;
+    } else {
+      curlbuf->response_code = 599;
+    }
+  } else {
+    curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &(curlbuf->response_code));
+    if (curlbuf->response_code == 0) {
+      curlbuf->response_code = 200;
+    }
+  }
+  curl_easy_getinfo (curl, CURLINFO_CONTENT_TYPE, &tmp);
+  if (tmp != NULL) {
+    curlbuf->content_type = strdup(tmp);
+  } else {
     if (ftp_try_dir) {
-      curl_easy_setopt(curl, CURLOPT_DIRLISTONLY, 1L);
-    }
-    for (i = 0; i < n_headers; i++) {
-      curl_headers = curl_slist_append(curl_headers, headers[i]);
-    }
-    
-    printf("\n");
-
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, curl_headers);
-    res = curl_easy_perform(curl);
-    curl_slist_free_all(curl_headers);
-
-    if(res != CURLE_OK) {
-      printf("Curl error %d: %s\n", res, curl_easy_strerror(res));
-      if (res == CURLE_REMOTE_ACCESS_DENIED) {
-        curlbuf->response_code = 401;
-      } else {
-        curlbuf->response_code = 599;
-      }
+      curlbuf->content_type = strdup("directory");
     } else {
-      curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &(curlbuf->response_code));
-      if (curlbuf->response_code == 0) {
-        curlbuf->response_code = 200;
-      }
-    }
-    curl_easy_getinfo (curl, CURLINFO_CONTENT_TYPE, &tmp);
-    if (tmp != NULL) {
-      curlbuf->content_type = strdup(tmp);
-    } else {
-      if (ftp_try_dir) {
-        curlbuf->content_type = strdup("directory");
-      } else {
-        curlbuf->content_type = strdup("application/octet-stream");
-      }
+      curlbuf->content_type = strdup("application/octet-stream");
     }
   }
   fflush(stdout);

@@ -833,7 +833,8 @@ static ImageRef imageFromXPM (FILE *f)
 	
 	ip = malloc(sizeof *ip);
 	if (!ip) goto emalloc;
-	
+	ip->p = NULL;
+
 	if (!fgets(sbuf, 65536, f)) goto expm;
 	sscanf(sbuf, "%d %d %d %d", &(ip->w), &(ip->h), &ncol, &pwid);
 	//printf("w:%d h:%d ncol:%d pwid:%d\n", ip->w, ip->h, ncol, pwid);
@@ -876,7 +877,7 @@ static ImageRef imageFromXPM (FILE *f)
 expm:
 	printf("Error reading XPM file\n");
 emalloc:
-	if (ip->p) free(ip->p);
+	if (ip && ip->p) free(ip->p);
 	if (ip) free(ip);
 	if (cp) free(cp);
 	return 0;
