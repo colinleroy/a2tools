@@ -21,7 +21,7 @@ mastowrite_SOURCES := cli/compose.c cli/compose_header.c \
 mastoconf_SOURCES := cli/config.c cli/logo.c ../lib/clrzone.c ../lib/scrollwindow.c
 
 mastoimg_SOURCES := cli/img.c \
-	api/common.c api/status_media.c \
+	api/common.c api/media.c \
 	../lib/strsplit.c ../lib/simple_serial.c \
 	../lib/surl_core.c ../lib/surl_get_json.c
 

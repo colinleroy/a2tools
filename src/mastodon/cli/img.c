@@ -31,7 +31,7 @@
 #endif
 #include "surl.h"
 #include "simple_serial.h"
-#include "status_media.h"
+#include "media.h"
 #include "common.h"
 
 #ifdef __CC65__
@@ -45,7 +45,8 @@ char hgr_page1[0x2000] = { 0 };
 
 char *instance_url = NULL;
 char *oauth_token = NULL;
-char *status_id = NULL;
+char *type = NULL;
+char *id = NULL;
 char hgr_init_done = 0;
 char monochrome = 1;
 
@@ -71,14 +72,15 @@ static void toggle_mix(char force, char *str) {
 
   gotoxy(0, 0);
   clrscr();
-  cputs(str);
+  if (str)
+    cputs(str);
 }
 
-static void img_display(status_media *s, char idx) {
+static void img_display(media *m, char idx) {
   surl_response *resp;
   size_t len;
 
-  resp = surl_start_request("GET", s->media_url[idx], NULL, 0);
+  resp = surl_start_request("GET", m->media_url[idx], NULL, 0);
 
   if (resp && resp->code >=200 && resp->code < 300) {
     if (!hgr_init_done) {
@@ -111,19 +113,20 @@ static void img_display(status_media *s, char idx) {
 
 int main(int argc, char **argv) {
   char *params;
-  status_media *s;
+  media *m;
   char i, c;
 
   videomode(VIDEOMODE_80COL);
 
-  if (argc < 5) {
-    cputs("Missing instance_url, oauth_token, translit_charset and/or status_id parameters.\r\n");
+  if (argc < 6) {
+    cputs("Missing parameters.\r\n");
   }
 
   instance_url = argv[1];
   oauth_token = argv[2];
   translit_charset = argv[3];
-  status_id = argv[4];
+  type = argv[4];
+  id = argv[5];
 
   cputs("\r\n"
         "\r\n"
@@ -135,20 +138,24 @@ int main(int argc, char **argv) {
 
   translit_charset = US_CHARSET;
 
-  s = api_get_status_media(status_id);
-  if (s == NULL) {
-    cputs("Could not load status media\r\n");
+  if (type[0] == 's') {
+    m = api_get_status_media(id);
+  } else {
+    m = api_get_account_media(id);
+  }
+  if (m == NULL) {
+    cputs("Could not load media\r\n");
     cgetc();
     goto err_out;
   }
-  if (s->n_media == 0) {
-    cputs("No images in status.\r\n");
+  if (m->n_media == 0) {
+    cputs("No images.\r\n");
   }
   
   i = 0;
   while (1) {
-    img_display(s, i);
-    toggle_mix(mix, s->media_alt_text[i]);
+    img_display(m, i);
+    toggle_mix(mix, m->media_alt_text[i]);
 getc_again:
     c = cgetc();
     switch(tolower(c)) {
@@ -156,14 +163,14 @@ getc_again:
         goto done;
         break;
       case 'l':
-        toggle_mix(0, s->media_alt_text[i]);
+        toggle_mix(0, m->media_alt_text[i]);
         goto getc_again;
         break;
       default:
         break;
     }
     i++;
-    i %= s->n_media;
+    i %= m->n_media;
   }
 
 done:
