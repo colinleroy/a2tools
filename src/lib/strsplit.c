@@ -29,54 +29,41 @@
 #endif
 
 static int __fastcall__ _strsplit_int(char in_place, char *in, char split, char ***out) {
-  int i;
-  int n_tokens;
-  char **result;
-  char **tmp;
+  char *start;
+  size_t n_tokens;
 
+  start = in;
+  n_tokens = 1;
+  if (!in) {
+    *out = NULL;
+    return 0;
+  }
+  while (*in) {
+    if (*in == split) {
+      ++n_tokens;
+    }
+    ++in;
+  }
+
+  *out = malloc(n_tokens * sizeof(char *));
+  in = start;
   n_tokens = 0;
-  result = NULL;
 
-  if (in == NULL)
-    goto err_out;
-
-  for (i = 0; in[i] != '\0'; i++) {
-    if (in[i] == split) {
-      tmp = realloc(result, (n_tokens + 1) * sizeof(void *));
-      if (tmp) {
-        result = tmp;
-      } else {
-        free(result);
-        result = NULL;
-        n_tokens = 0;
-        goto err_out;
-      }
-      in[i] = '\0';
-      result[n_tokens] = in_place ? in : strdup(in);
-      in = in + i + 1;
-      i = -1; /* going to be ++'ed by the for loop */
-      n_tokens++;
-      if (*in == '\0')
-        break;
+  while (*in) {
+    if (*in == split) {
+      *in = '\0';
+      (*out)[n_tokens] = in_place ? start : strdup(start);
+      ++n_tokens;
+      start = in + 1;
     }
-  }
-  /* last token */
-  if (*in) {
-    tmp = realloc(result, (n_tokens + 1) * sizeof(void *));
-    if (tmp) {
-      result = tmp;
-    } else {
-      free(result);
-      result = NULL;
-      n_tokens = 0;
-      goto err_out;
-    }
-    result[n_tokens] = in_place ? in : strdup(in);
-    n_tokens++;
+    ++in;
   }
 
-err_out:  
-  *out = result;
+  /* Last token */
+  if (*start) {
+    (*out)[n_tokens] = in_place ? start : strdup(start);
+    ++n_tokens;
+  }
   return n_tokens;
 }
 
