@@ -64,7 +64,6 @@ int api_get_status_and_replies(char to_load, char *root_id, char *root_leaf_id, 
   surl_response *resp;
   int n_status;
   char n_before, n_after;
-  char *raw;
 
   n_status = 0;
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s/context", STATUS_ENDPOINT, root_leaf_id);
