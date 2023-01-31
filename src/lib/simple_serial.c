@@ -100,7 +100,7 @@ void __fastcall__ simple_serial_flush(void) {
 
 #pragma optimize(push, on)
 int __fastcall__ simple_serial_getc_immediate(void) {
-  char c;
+  static char c;
   if (ser_get(&c) != SER_ERR_NO_DATA) {
     return c;
   }
@@ -111,7 +111,7 @@ static int timeout_cycles = -1;
 
 /* Input */
 static int __fastcall__ __simple_serial_getc_with_timeout(char with_timeout) {
-    char c;
+    static char c;
 
     if (with_timeout)
       timeout_cycles = 10000;
@@ -337,10 +337,7 @@ int __fastcall__ simple_serial_putc(char c) {
 #pragma optimize(push, on)
 #endif
 
-int __fastcall__ simple_serial_puts(char *buf) {
-  static int i, len;
-  
-  len = strlen(buf);
+void __fastcall__ simple_serial_puts(char *buf) {
 #ifdef __CC65__
   if (serial_activity_indicator_x == -1) {
     serial_activity_indicator_x = wherex();
@@ -351,9 +348,9 @@ int __fastcall__ simple_serial_puts(char *buf) {
     activity_cb(1);
   }
 #endif
-
-  for (i = 0; i < len; i++) {
-    simple_serial_putc(buf[i]);
+  while (*buf) {
+    simple_serial_putc(*buf);
+    ++buf;
   }
 
 #ifdef __CC65__
@@ -361,8 +358,6 @@ int __fastcall__ simple_serial_puts(char *buf) {
     activity_cb(0);
   }
 #endif
-
-  return len;
 }
 
 #ifdef __CC65__
@@ -498,29 +493,22 @@ size_t __fastcall__ simple_serial_read_with_timeout(char *ptr, size_t size, size
 }
 
 static char simple_serial_buf[512];
-int simple_serial_printf(const char* format, ...) {
+void simple_serial_printf(const char* format, ...) {
   va_list args;
 
   va_start(args, format);
   vsnprintf(simple_serial_buf, 511, format, args);
   va_end(args);
 
-  return simple_serial_puts(simple_serial_buf);
+  simple_serial_puts(simple_serial_buf);
 }
 
-int __fastcall__ simple_serial_write(char *ptr, size_t size, size_t nmemb) {
-  int i;
-  if (size != 1) {
-    return -1;
+void __fastcall__ simple_serial_write(char *ptr, size_t size, size_t nmemb) {
+  while (nmemb > 0) {
+    simple_serial_putc(*ptr);
+    ++ptr;
+    --nmemb;
   }
-  for (i = 0; i < nmemb; i++) {
-    if (simple_serial_putc(ptr[i]) < 0) {
-      //printf("Error sending at %d (%s)\n", i, strerror(errno));
-      return i;
-    }
-  }
-
-  return i;
 }
 #ifdef SERIAL_TO_LANGCARD
 #pragma code-name (pop)

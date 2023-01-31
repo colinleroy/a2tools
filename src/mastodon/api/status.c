@@ -1,15 +1,15 @@
-#ifdef __CC65__
-#pragma code-name (push, "LOWCODE")
-#endif
-
-#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #include "surl.h"
 #include "simple_serial.h"
 #include "strsplit.h"
+#include <stdlib.h>
 #include "api.h"
+
+#ifdef __CC65__
+#pragma code-name (push, "LOWCODE")
+#endif
 
 #define TL_STATUS_SHORT_BUF 512
 #define TL_STATUS_LARGE_BUF 4096

@@ -16,7 +16,6 @@
 #include "dputs.h"
 #include "dputc.h"
 #include "scroll.h"
-#include "header.h"
 #include "print.h"
 #include "cli.h"
 #include "compose_header.h"
@@ -125,7 +124,7 @@ int main(int argc, char **argv) {
     /* Cleaner than 'à' */
     arobase = ']';
   }
-  compose_print_header(NULL);
+  compose_print_header();
 
   set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
   gotoxy(0, 0);

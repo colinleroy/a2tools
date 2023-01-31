@@ -1,6 +1,7 @@
 PROGRAM=surl surlput
-surl_SOURCES := surl-client.c ../lib/simple_serial.c ../lib/cgets.c ../lib/scrollwindow.c ../lib/surl.c
-surlput_SOURCES := surl-upload.c ../lib/simple_serial.c ../lib/cgets.c ../lib/scrollwindow.c ../lib/surl.c ../lib/get_filedetails.c
+surl_SOURCES := surl-client.c ../lib/simple_serial.c ../lib/cgets.c ../lib/scrollwindow.c ../lib/surl_core.c
+surlput_SOURCES := surl-upload.c ../lib/simple_serial.c ../lib/cgets.c ../lib/scrollwindow.c \
+	../lib/surl_core.c ../lib/surl_send.c ../lib/get_filedetails.c
 GCCSOURCES := ../lib/extended_string.c
 DEPS := 
 

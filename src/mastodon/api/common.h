@@ -1,8 +1,6 @@
 #ifndef __common_h
 #define __common_h
 
-#include "account.h"
-
 #define ENDPOINT_BUF_SIZE 128
 extern char endpoint_buf[ENDPOINT_BUF_SIZE];
 
@@ -34,5 +32,4 @@ extern char arobase;
 
 void nomem_msg(char *file, int line);
 surl_response *get_surl_for_endpoint(char *method, char *endpoint);
-account *api_get_profile(char *id);
 #endif

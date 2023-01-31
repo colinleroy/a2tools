@@ -3,6 +3,6 @@
 
 #include "list.h"
 
-void compose_print_header(status *root_status);
+void compose_print_header(void);
 
 #endif

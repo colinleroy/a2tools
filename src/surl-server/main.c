@@ -263,7 +263,8 @@ new_req:
         sending_body = 1;
         to_send = min(bufsize, response->size - sent);
         printf("SEND %zu body bytes from %zu\n", to_send, sent);
-        sent += simple_serial_write(response->buffer + sent, sizeof(char), to_send);
+        simple_serial_write(response->buffer + sent, sizeof(char), to_send);
+        sent += to_send;
       } else if (!strncmp("HDRS ", reqbuf, 5)) {
         if (!sending_headers) {
           sent = 0;
@@ -272,7 +273,8 @@ new_req:
         sending_headers = 1;
         to_send = min(bufsize, response->headers_size - sent);
         printf("SEND %zu header bytes from %zu\n", to_send, sent);
-        sent += simple_serial_write(response->headers + sent, sizeof(char), to_send);
+        simple_serial_write(response->headers + sent, sizeof(char), to_send);
+        sent += to_send;
       } else if (!strncmp("FIND ", reqbuf, 5)) {
         char *found = NULL;
         sending_headers = 0;
