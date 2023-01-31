@@ -69,8 +69,10 @@ static int print_account(account *a, char *scrolled) {
   char y;
   *scrolled = 0;
   dputs(a->display_name);
+  dputs("\r\n");
   dputc(arobase);
   dputs(a->username);
+  dputs("\r\n");
 
   cprintf("%ld following, %ld followers\r\n"
           "Here since %s", a->following_count, a->followers_count, a->created_at);
