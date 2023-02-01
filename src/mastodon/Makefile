@@ -6,6 +6,7 @@ mastodon_SOURCES := cli/login.c api/oauth.c cli/logo.c \
 
 mastocli_SOURCES := cli/tl.c api/api.c \
 	api/account.c api/status.c api/common.c \
+	api/notification.c \
 	cli/header.c cli/print.c \
 	../lib/clrzone.c ../lib/scrollwindow.c ../lib/dgets.c \
 	../lib/simple_serial.c ../lib/strsplit.c \

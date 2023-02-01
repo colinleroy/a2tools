@@ -31,7 +31,7 @@
 
 account *my_account = NULL;
 
-void print_header(list *l, status *root_status) {
+void print_header(list *l, status *root_status, notification *root_notif) {
   if (my_account == NULL) {
     my_account = api_get_profile(NULL);
   }
@@ -49,7 +49,7 @@ void print_header(list *l, status *root_status) {
     dputs(my_account->username);
   }
 
-  #define BTM 6
+  #define BTM 4
   clrzone(0, BTM, LEFT_COL_WIDTH, 23);
   gotoxy(0,BTM);
 
@@ -57,6 +57,7 @@ void print_header(list *l, status *root_status) {
   dputs(" View toot: Enter\r\n"
         " Scroll   : Up/dn\r\n"
         " Search   : S\r\n"
+        " Notifs.  : N\r\n"
         " Configure: O\r\n");
   if (!l || !l->root) {
     dputs(" Exit     : Escape \r\n");
@@ -82,9 +83,12 @@ void print_header(list *l, status *root_status) {
     }
     dputs("Author:\r\n"
           " Profile  : P      \r\n");
-  } else if (l->account) {
+  } else if (l && l->account) {
     dputs("Profile:\r\n"
           " Images   : I      \r\n");
+  } else if (root_notif) {
+    dputs("Profile:\r\n"
+          " Open     : P\r\n");
   }
   dputs("Writing:\r\n"
         " Compose  : C      \r\n");

@@ -12,6 +12,7 @@ typedef struct _account account;
 #define RSHIP_FOLLOW_REQ  (1<<6)
 
 struct _account {
+  signed char displayed_at;
   char *id;
   char *username;
   char *display_name;

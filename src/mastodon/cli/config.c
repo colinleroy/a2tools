@@ -55,9 +55,9 @@ static char *cli() {
 
   print_logo(scrw);
 
-  cprintf("Please choose your keyboard layout:\r\n");
-  cprintf("0. US QWERTY     ("US_CHARSET" charset)\r\n");
-  cprintf("1. French AZERTY ("FR_CHARSET" charset)\r\n");
+  cputs("Please choose your keyboard layout:\r\n");
+  cputs("0. US QWERTY     ("US_CHARSET" charset)\r\n");
+  cputs("1. French AZERTY ("FR_CHARSET" charset)\r\n");
 
 charset_again:
   c = cgetc();
@@ -72,7 +72,7 @@ charset_again:
       goto charset_again;
   }
   
-  cprintf("\r\nIs your monitor monochrome? (y/n)\r\n");
+  cputs("\r\nIs your monitor monochrome? (y/n)\r\n");
 monochrome_again:
   c = cgetc();
   switch(tolower(c)) {
@@ -95,7 +95,7 @@ int main(int argc, char **argv) {
   char *new_charset;
 
   if (argc < 3) {
-    printf("Missing instance_url and/or oauth_token parameters.\n");
+    cputs("Missing instance_url and/or oauth_token parameters.\n");
   }
 
   videomode(VIDEOMODE_80COL);
@@ -105,7 +105,7 @@ int main(int argc, char **argv) {
   oauth_token = argv[2];
   new_charset = cli();
 
-  snprintf(params, BUF_SIZE, "%s %s %s", instance_url, oauth_token, new_charset);
+  snprintf(params, BUF_SIZE, "%s %s", instance_url, oauth_token);
 
 #ifdef __CC65__
   exec("mastocli", params);

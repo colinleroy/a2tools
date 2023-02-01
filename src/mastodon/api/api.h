@@ -4,6 +4,7 @@
 #include "status.h"
 #include "media.h"
 #include "account.h"
+#include "notification.h"
 #include "common.h"
 
 int api_get_posts(char *endpoint, char to_load, char *first_to_load, char *filter, char *sel, char **post_ids);

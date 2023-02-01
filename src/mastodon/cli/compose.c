@@ -111,7 +111,7 @@ void compose_toot(void) {
 int main(int argc, char **argv) {
   char *params;
   if (argc < 4) {
-    printf("Missing instance_url, oauth_token and/or charset parameters.\n");
+    dputs("Missing instance_url, oauth_token and/or charset parameters.\n");
   }
 
   videomode(VIDEOMODE_80COL);
@@ -146,7 +146,7 @@ int main(int argc, char **argv) {
   set_hscrollwindow(0, scrw);
 
   params = malloc(127);
-  snprintf(params, 127, "%s %s %s", instance_url, oauth_token, translit_charset);
+  snprintf(params, 127, "%s %s", instance_url, oauth_token);
 #ifdef __CC65__
   exec("mastocli", params);
   exit(0);

@@ -485,7 +485,7 @@ static char *replace_new_lines(char *in) {
  */
 static char *prepare_post(char *buffer, size_t *len) {
   char *tmp, *nl;
-  char *out = malloc(*len * 3);
+  char *out = malloc((*len * 3) + 1);
   char *out_ptr = out;
   char **lines;
   int n_lines = strsplit_in_place(buffer, '\n', &lines);

@@ -3,7 +3,7 @@
 
 #include "list.h"
 
-void print_header(list *l, status *root_status);
+void print_header(list *l, status *root_status, notification *root_notif);
 void print_free_ram(void);
 
 #endif

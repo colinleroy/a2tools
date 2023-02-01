@@ -158,8 +158,6 @@ int main(int argc, char **argv) {
   surl_response *response = NULL;
   char *params = malloc(BUF_SIZE);
   FILE *fp = NULL;
-  char buf[16];
-  char *translit_charset;
   char y;
 
 #ifdef PRODOS_T_TXT
@@ -209,19 +207,7 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  fp = fopen("clisettings", "r");
-  translit_charset = US_CHARSET;
-
-  if (fp != NULL) {
-    fgets(buf, 16, fp);
-    if (strchr(buf, '\n')) {
-      *strchr(buf, '\n') = '\0';
-    }
-    translit_charset = buf;
-    fclose(fp);
-  }
-
-  snprintf(params, BUF_SIZE, "%s %s %s", instance_url, oauth_token, translit_charset);
+  snprintf(params, BUF_SIZE, "%s %s", instance_url, oauth_token);
 
   set_scrollwindow(0, scrh);
 #ifdef __CC65__

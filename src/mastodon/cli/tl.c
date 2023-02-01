@@ -32,6 +32,7 @@ unsigned char scrw, scrh;
 
 char *instance_url = NULL;
 char *oauth_token = NULL;
+char monochrome = 1;
 
 #define SHOW_HOME_TIMELINE 0
 #define SHOW_FULL_STATUS   5
@@ -45,19 +46,20 @@ char *oauth_token = NULL;
 #define REPLY              16
 #define IMAGES             17
 #define SEARCH             18
+#define SHOW_NOTIFICATIONS 19
 
 static char cur_action;
-static char search_buf[50] = "colin_mcmillen";
+static char search_buf[50];
 
 static void print_list(list *l);
 
 static status *get_top_status(list *l) {
   status *root_status;
 
-  if (l->first_displayed_post < 0 || l->n_posts == 0) 
+  if (l->first_displayed_post < 0 || l->n_posts == 0 || l->kind == L_NOTIFICATION) 
     return NULL;
 
-  root_status = l->displayed_posts[l->first_displayed_post];
+  root_status = (status *)l->displayed_posts[l->first_displayed_post];
   if (root_status && root_status->reblog) {
     root_status = root_status->reblog;
   }
@@ -106,8 +108,61 @@ static int print_account(account *a, char *scrolled) {
   return 0;
 }
 
+static int print_notification(notification *n) {
+  char width;
+  char *w;
+  
+  width = scrw - LEFT_COL_WIDTH - 1;
+  n->displayed_at = wherey();
+  cprintf("%s - %s", n->display_name, n->created_at);
+  CHECK_AND_CRLF();
+  w = notification_verb(n);
+  dputs(w);
+  dputs(": ");
+
+  width = (2 * width) - strlen(w) - 6;
+  w = n->excerpt;
+  while (width > 0 && *w) {
+    if (*w == '\n') {
+      dputc(' ');
+    } else {
+      dputc(*w);
+    }
+    ++w;
+    --width;
+  }
+  if (*w) {
+    dputs("...");
+  }
+  CHECK_AND_CRLF();
+  if (wherey() == scrh - 1) {
+    return -1;
+  }
+
+  chline(scrw - LEFT_COL_WIDTH - 1);
+  if (wherey() == scrh - 1) {
+    return -1;
+  }
+  return 0;
+}
+
 #define N_STATUS_TO_LOAD 10
 #define LOADING_TOOT_MSG "Loading toot..."
+
+static void item_free(list *l, char i) {
+  if (l->kind != L_NOTIFICATION) {
+    status_free((status *)l->displayed_posts[i]);
+  } else {
+    notification_free((notification *)l->displayed_posts[i]);
+  }
+}
+
+static item *item_get(list *l, char i, char full) {
+  if (l->kind == L_NOTIFICATION) {
+    return (item *)api_get_notification(l->ids[i]);
+  }
+  return (item *)api_get_status(l->ids[i], full);
+}
 
 static char load_next_posts(list *l) {
   char *last_id;
@@ -140,13 +195,16 @@ static char load_next_posts(list *l) {
     case L_ACCOUNT:
       loaded = api_get_account_posts(l->account, to_load, last_id, new_ids);
       break;
+    case L_NOTIFICATION:
+      loaded = api_get_notifications(to_load, last_id, new_ids);
+      break;
   }
 
   if (loaded > 0) {
     char offset;
     /* free first ones */
     for (i = 0; i < loaded; i++) {
-      status_free(l->displayed_posts[i]);
+      item_free(l, i);
       free(l->ids[i]);
     }
 
@@ -258,25 +316,29 @@ static list *build_list(char *root, char *leaf_root, char kind) {
 
   l->kind = kind;
   l->ids = malloc(N_STATUS_TO_LOAD * sizeof(char *));
-  l->displayed_posts = malloc(N_STATUS_TO_LOAD * sizeof(status *));
+  l->displayed_posts = malloc(N_STATUS_TO_LOAD * sizeof(item *));
   l->post_height = malloc(N_STATUS_TO_LOAD);
 
   switch (kind) {
     case L_HOME_TIMELINE:
       l->n_posts = api_get_posts(TIMELINE_ENDPOINT "/" HOME_TIMELINE, N_STATUS_TO_LOAD, NULL, NULL, ".[].id", l->ids);
-      memset(l->displayed_posts, 0, l->n_posts * sizeof(status *));
+      memset(l->displayed_posts, 0, l->n_posts * sizeof(item *));
       break;
     case L_SEARCH:
       l->n_posts = api_search(N_STATUS_TO_LOAD, search_buf, NULL, l->ids);
-      memset(l->displayed_posts, 0, l->n_posts * sizeof(status *));
+      memset(l->displayed_posts, 0, l->n_posts * sizeof(item *));
       break;
     case L_FULL_STATUS:
       l->n_posts = api_get_status_and_replies(N_STATUS_TO_LOAD, l->root, l->leaf_root, NULL, l->ids);
-      memset(l->displayed_posts, 0, l->n_posts * sizeof(status *));
+      memset(l->displayed_posts, 0, l->n_posts * sizeof(item *));
       break;
     case L_ACCOUNT:
       l->n_posts = api_get_account_posts(l->account, N_STATUS_TO_LOAD, NULL, l->ids);
-      memset(l->displayed_posts, 0, l->n_posts * sizeof(status *));
+      memset(l->displayed_posts, 0, l->n_posts * sizeof(item *));
+      break;
+    case L_NOTIFICATION:
+      l->n_posts = api_get_notifications(N_STATUS_TO_LOAD, NULL, l->ids);
+      memset(l->displayed_posts, 0, l->n_posts * sizeof(item *));
       break;
   }
   memset(l->post_height, -1, l->n_posts);
@@ -285,13 +347,13 @@ static list *build_list(char *root, char *leaf_root, char kind) {
       if(!strcmp(l->ids[i], l->root)) {
           l->first_displayed_post = i;
           /* Load first for the header */
-          status_free(l->displayed_posts[i]);
-          l->displayed_posts[i] = api_get_status(l->ids[i], 1);
+          item_free(l, i);
+          l->displayed_posts[i] = item_get(l, i, 1);
           break;
       }
     }
   } else if (l->n_posts > 0){
-    l->displayed_posts[0] = api_get_status(l->ids[0], 0);
+    l->displayed_posts[0] = item_get(l, 0, 0);
   }
   l->last_displayed_post = 0;
   l->eof = 0;
@@ -307,7 +369,7 @@ static void free_list(list *l) {
   char i;
   for (i = 0; i < l->n_posts; i++) {
     free(l->ids[i]);
-    status_free(l->displayed_posts[i]);
+    item_free(l, i);
   }
   account_free(l->account);
   free(l->root);
@@ -321,7 +383,7 @@ static void free_list(list *l) {
 static void compact_list(list *l) {
   char i;
   for (i = 0; i < l->n_posts; i++) {
-    status_free(l->displayed_posts[i]);
+    item_free(l, i);
     l->displayed_posts[i] = NULL;
   }
 }
@@ -329,7 +391,7 @@ static void compact_list(list *l) {
 static void uncompact_list(list *l, char full) {
   if (l->first_displayed_post >= 0) {
     l->displayed_posts[l->first_displayed_post] = 
-      api_get_status(l->ids[l->first_displayed_post], full);
+      item_get(l, l->first_displayed_post, full);
   }
 }
 
@@ -361,19 +423,19 @@ update:
 
   for (i = max(0, l->first_displayed_post); i < l->n_posts; i++) {
     if (!bottom) {
-      status *disp;
+      item *disp;
       if (kbhit()) {
         break;
       }
       full = (l->root && !strcmp(l->root, l->ids[i]));
       if (l->displayed_posts[i] != NULL)
-        disp = l->displayed_posts[i];
+        disp = (item *)l->displayed_posts[i];
       else {
         if (i > l->first_displayed_post) 
           dputs(LOADING_TOOT_MSG);
         gotox(0);
 
-        disp = api_get_status(l->ids[i], full);
+        disp = item_get(l, i, full);
 
         if (i > l->first_displayed_post)
           dputs("                ");
@@ -382,7 +444,11 @@ update:
       l->displayed_posts[i] = disp;
 
       if (disp != NULL && bottom == 0) {
-        bottom = print_status(disp, full, &scrolled);
+        if (l->kind != L_NOTIFICATION) {
+          bottom = print_status((status *)disp, full, &scrolled);
+        } else {
+          bottom = print_notification((notification *)disp);
+        }
         if (!scrolled) {
           l->post_height[i] = wherey() - disp->displayed_at;
         } else {
@@ -427,6 +493,32 @@ static void shift_posts_down(list *l) {
   print_free_ram();
 }
 
+static char calc_post_height(status *s) {
+  char height;
+  char *w, x;
+  height = 6; /* header(username + date + display_name) + one line content + footer(\r\n + stats + line)*/
+  if (s->reblog) {
+    ++height;
+  }
+  w = s->reblog ? s->reblog->content : s->content;
+
+  x = 0;
+  while (*w) {
+    if (*w == '\n') {
+      x = 0;
+      ++height;
+    } else {
+      ++x;
+      if (x == scrw - LEFT_COL_WIDTH - 1) {
+        x = 0;
+        ++height;
+      }
+    }
+    ++w;
+  }
+  return height;
+}
+
 static int shift_posts_up(list *l) {
   int i;
   signed char scrollval;
@@ -441,6 +533,18 @@ static int shift_posts_up(list *l) {
   if (l->first_displayed_post == 0) {
     scrollval = l->account_height;
   } else {
+    if (l->displayed_posts[l->first_displayed_post - 1] == NULL) {
+      l->displayed_posts[l->first_displayed_post - 1] =
+        item_get(l, l->first_displayed_post - 1, 0);
+    }
+    if (l->post_height[l->first_displayed_post - 1] == -1) {
+      if (l->kind != L_NOTIFICATION) {
+        l->post_height[l->first_displayed_post - 1] = 
+          calc_post_height((status *)l->displayed_posts[l->first_displayed_post - 1]);
+      } else {
+        l->post_height[l->first_displayed_post - 1] = 4;
+      }
+    }
     scrollval = l->post_height[l->first_displayed_post - 1];
   }
   if (scrollval < 0) {
@@ -459,47 +563,17 @@ static int shift_posts_up(list *l) {
   return 0;
 }
 
-static void configure(void) {
+static void launch_command(char *command, char *p1, char *p2, char *p3, char *p4) {
   char *params;
   params = malloc(127);
-  snprintf(params, 127, "%s %s", instance_url, oauth_token);
+  snprintf(params, 127, "%s %s %s %s %s %s", 
+            instance_url, oauth_token,
+            p1?p1:"", p2?p2:"", p3?p3:"", p4?p4:"");
 #ifdef __CC65__
-  exec("mastoconf", params);
+  exec(command, params);
   exit(0);
 #else
-  printf("exec(mastoconf %s)\n",params);
-  exit(0);
-#endif
-}
-
-void launch_compose(status *s) {
-  char *params;
-  params = malloc(127);
-  snprintf(params, 127, "%s %s %s %s", instance_url, oauth_token, 
-                                       translit_charset,
-                                       s ? s->id:"");
-#ifdef __CC65__
-  exec("mastowrite", params);
-  exit(0);
-#else
-  printf("exec(mastowrite %s)\n",params);
-  exit(0);
-#endif
-}
-
-void launch_images(account *a, status *s) {
-  char *params;
-  if (s == NULL && a == NULL) {
-    return;
-  }
-  params = malloc(127);
-  snprintf(params, 127, "%s %s %s %c %s", instance_url, oauth_token, translit_charset,
-           s ? 's':'a', s ? s->id : a->id);
-#ifdef __CC65__
-  exec("mastoimg", params);
-  exit(0);
-#else
-  printf("exec(mastoimg %s)\n",params);
+  printf("exec(%s %s)\n",command, params);
   exit(0);
 #endif
 }
@@ -519,7 +593,7 @@ static void save_state(list **lists, char cur_list) {
 #endif
 
   clrscr();
-  printf("Saving state...");
+  dputs("Saving state...");
 
   fp = fopen(STATE_FILE,"w");
   if (fp == NULL) {
@@ -561,13 +635,13 @@ static void save_state(list **lists, char cur_list) {
   }
 
   fclose(fp);
-  printf("Done.\n");
+  dputs("Done.\n");
   return;
 
 err_out:
   fclose(fp);
   unlink(STATE_FILE);
-  printf("Error.\n");
+  dputs("Error.\n");
 }
 
 
@@ -589,7 +663,7 @@ static int load_state(list ***lists) {
 
   loaded = 0;
 
-  printf("Reloading state...");
+  dputs("Reloading state...");
 
   fgets(gen_buf, BUF_SIZE, fp);
   num_lists = atoi(gen_buf);
@@ -648,13 +722,13 @@ static int load_state(list ***lists) {
       l->post_height[j] = atoi(gen_buf);
 
       if (l->root && !strcmp(l->root, l->ids[j])) {
-        l->displayed_posts[j] = api_get_status(l->ids[j], 1);
+        l->displayed_posts[j] = item_get(l, j, 1);
         loaded = 1;
       }
     }
     if (!loaded && l->first_displayed_post > -1) {
       l->displayed_posts[l->first_displayed_post] = 
-          api_get_status(l->ids[l->first_displayed_post], 1);
+          item_get(l, l->first_displayed_post, 1);
     }
 
 
@@ -672,7 +746,7 @@ static int load_state(list ***lists) {
   unlink(STATE_FILE);
   cur_action = NAVIGATE;
 
-  printf("Done\n");
+  dputs("Done\n");
 
   return num_lists;
 }
@@ -684,7 +758,7 @@ static void background_load(list *l) {
       gotoxy(LEFT_COL_WIDTH - 4, scrh - 1);
       dputs("...");
 
-      l->displayed_posts[i] = api_get_status(l->ids[i], 0);
+      l->displayed_posts[i] = item_get(l, i, 0);
 
       gotoxy(LEFT_COL_WIDTH - 4, scrh - 1);
       dputs("   ");
@@ -699,8 +773,17 @@ static int show_list(list *l) {
   
   while (1) {
     status *root_status;
-    root_status = get_top_status(l);
-    print_header(l, root_status);
+    notification *root_notif;
+    
+    if (l->kind == L_NOTIFICATION) {
+      root_status = NULL;
+      root_notif = (notification *)l->displayed_posts[l->first_displayed_post];
+    } else {
+      root_status = (status *)get_top_status(l);
+      root_notif = NULL;
+    }
+    
+    print_header(l, root_status, root_notif);
 
     gotoxy(LEFT_COL_WIDTH - 4, scrh - 1);
     dputs("...");
@@ -766,6 +849,9 @@ static int show_list(list *l) {
       case 's':
         cur_action = SEARCH;
         return 0;
+      case 'n':
+        cur_action = SHOW_NOTIFICATIONS;
+        return 0;
     }
   }
   return 0;
@@ -775,7 +861,9 @@ void cli(void) {
   signed char cur_list, to_clear, to_show;
   list **l, *prev_list;
   char starting = 1;
-  status *disp;
+  item *disp;
+  status *disp_status;
+  notification *disp_notif;
   char *new_root, *new_leaf_root;
 
   if (starting) {
@@ -796,6 +884,8 @@ void cli(void) {
       case SHOW_FULL_STATUS:
       case SHOW_ACCOUNT:
       case SHOW_SEARCH_RES:
+      case SHOW_NOTIFICATIONS:
+        /* FIXME spaghetti */
         prev_list = l[cur_list];
         ++cur_list;
         to_clear = 0;
@@ -804,16 +894,31 @@ void cli(void) {
         /* we don't want get_top_status because we don't want to go into
          * reblog */
         disp = prev_list->displayed_posts[prev_list->first_displayed_post];
-        if (cur_action == SHOW_FULL_STATUS) {
-          to_clear = prev_list->post_height[prev_list->first_displayed_post] - 2;
-          to_show = L_FULL_STATUS;
-          new_root = strdup(disp->id);
-          new_leaf_root = strdup(disp->reblog ? disp->reblog->id : disp->id);
-        } else if (cur_action == SHOW_SEARCH_RES) {
-          to_show = L_SEARCH;
-        } else if (cur_action == SHOW_ACCOUNT) {
-          new_root = strdup(disp->reblog ? disp->reblog->account->id : disp->account->id);
-          to_show = L_ACCOUNT;
+        if (prev_list->kind != L_NOTIFICATION) {
+          disp_status = (status *)disp;
+          if (cur_action == SHOW_FULL_STATUS) {
+            to_clear = prev_list->post_height[prev_list->first_displayed_post] - 2;
+            to_show = L_FULL_STATUS;
+            new_root = strdup(disp_status->id);
+            new_leaf_root = strdup(disp_status->reblog ? disp_status->reblog->id : disp_status->id);
+          } else if (cur_action == SHOW_SEARCH_RES) {
+            to_show = L_SEARCH;
+          } else if (cur_action == SHOW_NOTIFICATIONS) {
+            to_show = L_NOTIFICATION;
+          } else if (cur_action == SHOW_ACCOUNT) {
+            new_root = strdup(disp_status->reblog ? disp_status->reblog->account->id : disp_status->account->id);
+            to_show = L_ACCOUNT;
+          }
+        } else {
+          disp_notif = (notification *)disp;
+          if (cur_action == SHOW_FULL_STATUS && disp_notif->status_id) {
+            new_root = strdup(disp_notif->status_id);
+            new_leaf_root = strdup(disp_notif->status_id);
+            to_show = L_FULL_STATUS;
+          } else {
+            new_root = strdup(disp_notif->account_id);
+            to_show = L_ACCOUNT;
+          }
         }
         l = realloc(l, (cur_list + 1) * sizeof(list *));
         if (cur_list > 0) {
@@ -830,12 +935,16 @@ void cli(void) {
           clrscr();
         }
         if (show_list(l[cur_list])) {
+          /* reload */
           if (cur_list > 0) {
-            cur_action = (l[cur_list]->account != NULL) 
-                            ? SHOW_ACCOUNT : SHOW_FULL_STATUS;
+            if (l[cur_list]->account != NULL)
+              cur_action = SHOW_ACCOUNT;
+            else if (l[cur_list]->kind == L_NOTIFICATION)
+              cur_action = SHOW_NOTIFICATIONS;
+            else
+              cur_action = SHOW_FULL_STATUS;
             free_list(l[cur_list]);
             --cur_list;
-            uncompact_list(l[cur_list], cur_list > 0);
           } else {
             free_list(l[cur_list]);
             cur_action = SHOW_HOME_TIMELINE;
@@ -848,6 +957,8 @@ void cli(void) {
           clrzone(LEFT_COL_WIDTH + 1, 0, scrw - 1, scrh - 1);
           free_list(l[cur_list]);
           --cur_list;
+          l = realloc(l, (cur_list + 1) * sizeof(list *));
+          uncompact_list(l[cur_list], cur_list > 0);
           cur_action = NAVIGATE;
         } else {
           cur_action = QUIT;
@@ -855,21 +966,26 @@ void cli(void) {
         break;
       case CONFIGURE:
           save_state(l, cur_list);
-          configure();
+          launch_command("mastoconf", NULL, NULL, NULL, NULL);
           cur_action = NAVIGATE;
           break;
       case COMPOSE:
           save_state(l, cur_list);
-          launch_compose(NULL);
+          launch_command("mastowrite", translit_charset, NULL, NULL, NULL);
           cur_action = NAVIGATE;
+          break;
       case REPLY:
           save_state(l, cur_list);
-          launch_compose(get_top_status(l[cur_list]));
+          launch_command("mastowrite", translit_charset, get_top_status(l[cur_list])->id, NULL, NULL);
           cur_action = NAVIGATE;
           break;
       case IMAGES:
           save_state(l, cur_list);
-          launch_images(l[cur_list]->account, get_top_status(l[cur_list]));
+          if (l[cur_list]->account) {
+            launch_command("mastoimg", translit_charset, monochrome?"1":"0", "a", l[cur_list]->account->id);
+          } else if (get_top_status(l[cur_list])) {
+            launch_command("mastoimg", translit_charset, monochrome?"1":"0", "s", get_top_status(l[cur_list])->id);
+          }
           cur_action = NAVIGATE;
           break;
       case SEARCH:
@@ -889,8 +1005,9 @@ out:
 }
 
 int main(int argc, char **argv) {
-  if (argc < 4) {
-    printf("Missing instance_url, oauth_token and/or charset parameters.\n");
+  FILE *fp;
+  if (argc < 3) {
+    dputs("Missing instance_url, oauth_token and/or charset parameters.\n");
   }
 
   videomode(VIDEOMODE_80COL);
@@ -898,7 +1015,26 @@ int main(int argc, char **argv) {
 
   instance_url = argv[1];
   oauth_token = argv[2];
-  translit_charset = argv[3];
+
+
+  fp = fopen("clisettings", "r");
+  translit_charset = US_CHARSET;
+
+  if (fp != NULL) {
+    fgets(gen_buf, 16, fp);
+    if (strchr(gen_buf, '\n')) {
+      *strchr(gen_buf, '\n') = '\0';
+    }
+    translit_charset = strdup(gen_buf);
+
+    fgets(gen_buf, 16, fp);
+    if (gen_buf[0] == '0') {
+      monochrome = 0;
+    }
+
+    fclose(fp);
+  }
+
   if(!strcmp(translit_charset, "ISO646-FR1")) {
     /* § in french charset, cleaner than 'à' */
     arobase = ']';
