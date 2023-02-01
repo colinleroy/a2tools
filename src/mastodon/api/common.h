@@ -1,6 +1,13 @@
 #ifndef __common_h
 #define __common_h
 
+typedef struct _item item;
+struct _item {
+  /* common fields to status, account, notification */
+  signed char displayed_at;
+  char *id;
+};
+
 #define ENDPOINT_BUF_SIZE 128
 extern char endpoint_buf[ENDPOINT_BUF_SIZE];
 
@@ -18,10 +25,11 @@ extern char *oauth_token;
 extern char *translit_charset;
 extern char arobase;
 
-#define ACCOUNTS_ENDPOINT "/api/v1/accounts"
-#define TIMELINE_ENDPOINT "/api/v1/timelines"
-#define STATUS_ENDPOINT   "/api/v1/statuses"
-#define SEARCH_ENDPOINT   "/api/v2/search"
+#define ACCOUNTS_ENDPOINT       "/api/v1/accounts"
+#define TIMELINE_ENDPOINT       "/api/v1/timelines"
+#define STATUS_ENDPOINT         "/api/v1/statuses"
+#define NOTIFICATION_ENDPOINT   "/api/v1/notifications"
+#define SEARCH_ENDPOINT         "/api/v2/search"
 
 #define COMPOSE_PUBLIC 0
 #define COMPOSE_UNLISTED 1

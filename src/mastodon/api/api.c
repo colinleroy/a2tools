@@ -33,7 +33,6 @@ int api_search(char to_load, char *search, char *first_to_load, char **post_ids)
   return api_get_posts(SEARCH_ENDPOINT, to_load, first_to_load, gen_buf, ".statuses[].id", post_ids);
 }
 
-static char raw[512];
 int api_get_posts(char *endpoint, char to_load, char *first_to_load, char *filter, char *sel, char **post_ids) {
   surl_response *resp;
   int n_status;
@@ -49,10 +48,10 @@ int api_get_posts(char *endpoint, char to_load, char *first_to_load, char *filte
   if (!surl_response_ok(resp))
     goto err_out;
 
-  if (surl_get_json(resp, raw, 512, 0, NULL, sel) == 0) {
+  if (surl_get_json(resp, gen_buf, BUF_SIZE, 0, NULL, sel) == 0) {
     char **tmp;
     int i;
-    n_status = strsplit(raw, '\n', &tmp);
+    n_status = strsplit(gen_buf, '\n', &tmp);
     for (i = 0; i < n_status; i++) {
       post_ids[i] = tmp[i];
     }
@@ -93,10 +92,10 @@ int api_get_status_and_replies(char to_load, char *root_id, char *root_leaf_id, 
                                       "|index(\"%s\")+1+%d]|.[].id",
                                       first_to_load, first_to_load, n_after);
   }
-  if (surl_get_json(resp, raw, 512, 0, NULL, selector) == 0) {
+  if (surl_get_json(resp, gen_buf, BUF_SIZE, 0, NULL, selector) == 0) {
     char **tmp;
     int i;
-    n_status = strsplit(raw, '\n', &tmp);
+    n_status = strsplit(gen_buf, '\n', &tmp);
     for (i = 0; i < n_status; i++) {
       if (tmp[i][0] != '-') {
         post_ids[i] = tmp[i];

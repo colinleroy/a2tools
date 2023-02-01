@@ -12,6 +12,7 @@ typedef struct _list list;
 #define L_FULL_STATUS     3
 #define L_ACCOUNT         4
 #define L_SEARCH          5
+#define L_NOTIFICATION    6
 
 struct _list {
   char kind;
@@ -20,7 +21,7 @@ struct _list {
   account *account; /* For accounts */
   char **ids;
   signed char first_displayed_post;
-  status **displayed_posts;
+  item **displayed_posts;
   char last_displayed_post;
   signed char account_height;
   signed char *post_height;

@@ -43,10 +43,7 @@ int __fastcall__ surl_find_line(surl_response *resp, char *buffer, size_t max_le
   res_len = atoi(buffer);
   simple_serial_read(buffer, sizeof(char), res_len);
 
-  if (res_len > 0)
-    buffer[res_len - 1] = '\0';
-  else
-    buffer[0] = '\0';
+  buffer[res_len] = '\0';
 
   return 0;
 }

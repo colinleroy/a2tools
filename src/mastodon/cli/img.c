@@ -125,8 +125,9 @@ int main(int argc, char **argv) {
   instance_url = argv[1];
   oauth_token = argv[2];
   translit_charset = argv[3];
-  type = argv[4];
-  id = argv[5];
+  monochrome = atoi(argv[4]);
+  type = argv[5];
+  id = argv[6];
 
   cputs("\r\n"
         "\r\n"
@@ -186,7 +187,7 @@ done:
 
 err_out:
   params = malloc(127);
-  snprintf(params, 127, "%s %s %s", instance_url, oauth_token, translit_charset);
+  snprintf(params, 127, "%s %s", instance_url, oauth_token);
 #ifdef __CC65__
   exec("mastocli", params);
   exit(0);

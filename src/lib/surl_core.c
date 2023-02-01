@@ -139,8 +139,9 @@ void __fastcall__ surl_read_response_header(surl_response *resp) {
 
   if (strchr(w, ',') != NULL) {
     resp->content_type = strdup(strchr(w, ',') + 1);
-    if (strchr(resp->content_type, '\n'))
-      *strchr(resp->content_type, '\n') = '\0';
+    w = strchr(resp->content_type, '\n');
+    if (w)
+      *w = '\0';
   } else {
     resp->content_type = strdup("application/octet-stream");
   }  

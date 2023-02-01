@@ -45,7 +45,7 @@ void compose_print_header(void) {
     dputs(my_account->username);
   }
 
-  #define BTM 6
+  #define BTM 4
   clrzone(0, BTM, LEFT_COL_WIDTH, 23);
   gotoxy(0,BTM);
 

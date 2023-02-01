@@ -9,12 +9,12 @@ typedef struct _status status;
 #define REBLOGGED  (1<<1)
 
 struct _status {
+  signed char displayed_at;
   char *id;
   char *created_at;
   char *content;
   account *account;
   status *reblog;
-  signed char displayed_at;
   char n_replies;
   char n_reblogs;
   char n_favourites;

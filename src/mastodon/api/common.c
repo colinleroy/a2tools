@@ -25,7 +25,7 @@ char gen_buf[BUF_SIZE];
 char selector[SELECTOR_SIZE];
 
 void nomem_msg(char *file, int line) {
-    printf("No more memory at %s:%d\n", file, line);
+    printf("No more memory (%s:%d)", file, line);
 }
 
 surl_response *get_surl_for_endpoint(char *method, char *endpoint) {

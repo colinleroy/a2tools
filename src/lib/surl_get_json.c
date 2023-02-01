@@ -33,22 +33,18 @@
 
 #define BUFSIZE 255
 
-int __fastcall__ surl_get_json(surl_response *resp, char *buffer, size_t max_len, char striphtml, char *translit, char *selector) {
-  size_t res_len = 0;
-  simple_serial_printf("JSON %zu %d %s %s\n", max_len, striphtml, translit ? translit : "0", selector);
-  simple_serial_gets(buffer, max_len);
+int __fastcall__ surl_get_json(surl_response *resp, char *buffer, size_t len, char striphtml, char *translit, char *selector) {
+  simple_serial_printf("JSON %zu %d %s %s\n", len, striphtml, translit ? translit : "0", selector);
+  simple_serial_gets(buffer, len);
 
   if (!strcmp(buffer, "<NOT_FOUND>\n") || !strcmp(buffer, "<NOT_JSON>\n")) {
     buffer[0] = '\0';
     return -1;
   }
-  res_len = atoi(buffer);
-  simple_serial_read(buffer, sizeof(char), res_len);
+  len = atoi(buffer);
+  simple_serial_read(buffer, sizeof(char), len);
 
-  if (res_len > 0)
-    buffer[res_len] = '\0';
-  else
-    buffer[0] = '\0';
+  buffer[len] = '\0';
 
   return 0;
 }
