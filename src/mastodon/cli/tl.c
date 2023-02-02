@@ -33,19 +33,21 @@ char *instance_url = NULL;
 char *oauth_token = NULL;
 char monochrome = 1;
 
-#define SHOW_HOME_TIMELINE 0
-#define SHOW_FULL_STATUS   5
-#define SHOW_ACCOUNT       6
-#define SHOW_SEARCH_RES    7
-#define NAVIGATE           8
-#define BACK               9
-#define QUIT               10
-#define CONFIGURE          11
-#define COMPOSE            15
-#define REPLY              16
-#define IMAGES             17
-#define SEARCH             18
-#define SHOW_NOTIFICATIONS 19
+#define SHOW_HOME_TIMELINE   0
+#define SHOW_LOCAL_TIMELINE  1
+#define SHOW_GLOBAL_TIMELINE 2
+#define SHOW_FULL_STATUS     5
+#define SHOW_ACCOUNT         6
+#define SHOW_SEARCH_RES      7
+#define NAVIGATE             8
+#define BACK                 9
+#define QUIT                10
+#define CONFIGURE           11
+#define COMPOSE             15
+#define REPLY               16
+#define IMAGES              17
+#define SEARCH              18
+#define SHOW_NOTIFICATIONS  19
 
 static char cur_action;
 static char search_buf[50];
@@ -187,7 +189,9 @@ static char load_next_posts(list *l) {
 
   switch (l->kind) {
     case SHOW_HOME_TIMELINE:
-      loaded = api_get_posts(TIMELINE_ENDPOINT "/" HOME_TIMELINE, to_load, last_id, NULL, ".[].id", new_ids);
+    case SHOW_LOCAL_TIMELINE:
+    case SHOW_GLOBAL_TIMELINE:
+      loaded = api_get_posts(tl_endpoints[l->kind], to_load, last_id, tl_filter[l->kind], ".[].id", new_ids);
       break;
     case SHOW_SEARCH_RES:
       loaded = api_search(to_load, search_buf, last_id, new_ids);
@@ -324,7 +328,9 @@ static list *build_list(char *root, char *leaf_root, char kind) {
 
   switch (kind) {
     case SHOW_HOME_TIMELINE:
-      n_posts = api_get_posts(TIMELINE_ENDPOINT "/" HOME_TIMELINE, N_STATUS_TO_LOAD, NULL, NULL, ".[].id", l->ids);
+    case SHOW_LOCAL_TIMELINE:
+    case SHOW_GLOBAL_TIMELINE:
+      n_posts = api_get_posts(tl_endpoints[kind], N_STATUS_TO_LOAD, NULL, tl_filter[kind], ".[].id", l->ids);
       break;
     case SHOW_SEARCH_RES:
       n_posts = api_search(N_STATUS_TO_LOAD, search_buf, NULL, l->ids);
@@ -389,10 +395,11 @@ static void compact_list(list *l) {
   }
 }
 
-static void uncompact_list(list *l, char full) {
-  signed char first;
+static void uncompact_list(list *l) {
+  signed char first, full;
   first = l->first_displayed_post;
   if (first >= 0) {
+    full = (l->root && !strcmp(l->root, l->ids[first]));
     l->displayed_posts[first] = 
       item_get(l, first, full);
   }
@@ -879,13 +886,22 @@ static int show_list(list *l) {
       case 'n':
         cur_action = SHOW_NOTIFICATIONS;
         return 0;
+      case 'h':
+        cur_action = SHOW_HOME_TIMELINE;
+        return 0;
+      case 'l':
+        cur_action = SHOW_LOCAL_TIMELINE;
+        return 0;
+      case 'g':
+        cur_action = SHOW_GLOBAL_TIMELINE;
+        return 0;
     }
   }
   return 0;
 }
 
 void cli(void) {
-  signed char cur_list, to_clear;
+  signed char cur_list;
   list **l, *prev_list;
   char starting = 1;
   item *disp;
@@ -895,19 +911,24 @@ void cli(void) {
 
   if (starting) {
     cur_list = load_state(&l);
-    if (cur_list == -1) {
-      l = malloc(1 * sizeof(list *));
-    }
+    /* else cur_action will be NAVIGATE */
   }
   if (cur_list == -1) {
-    cur_list = 0;
     cur_action = SHOW_HOME_TIMELINE;
   }
 
   while (cur_action != QUIT) {
     switch(cur_action) {
       case SHOW_HOME_TIMELINE:
-        l[cur_list] = build_list(NULL, NULL, SHOW_HOME_TIMELINE);
+      case SHOW_LOCAL_TIMELINE:
+      case SHOW_GLOBAL_TIMELINE:
+        ++cur_list;
+        if (cur_list > 0) {
+          compact_list(l[cur_list - 1]);
+        }
+        l = realloc(l, (cur_list + 1) * sizeof(list *));
+        l[cur_list] = build_list(NULL, NULL, cur_action);
+        clrscrollwin();
         cur_action = NAVIGATE;
         break;
       case SHOW_FULL_STATUS:
@@ -917,7 +938,6 @@ void cli(void) {
         /* FIXME spaghetti */
         prev_list = l[cur_list];
         ++cur_list;
-        to_clear = 0;
         new_root = NULL;
         new_leaf_root = NULL;
         /* we don't want get_top_status because we don't want to go into
@@ -926,7 +946,6 @@ void cli(void) {
         if (prev_list->kind != SHOW_NOTIFICATIONS) {
           disp_status = (status *)disp;
           if (cur_action == SHOW_FULL_STATUS) {
-            to_clear = prev_list->post_height[prev_list->first_displayed_post] - 2;
             new_root = strdup(disp_status->id);
             new_leaf_root = strdup(disp_status->reblog ? disp_status->reblog->id : disp_status->id);
           } else if (cur_action == SHOW_ACCOUNT) {
@@ -967,7 +986,7 @@ void cli(void) {
           free_list(l[cur_list]);
           --cur_list;
           l = realloc(l, (cur_list + 1) * sizeof(list *));
-          uncompact_list(l[cur_list], cur_list > 0);
+          uncompact_list(l[cur_list]);
           clrscrollwin();
           cur_action = NAVIGATE;
         } else {

@@ -48,7 +48,7 @@ void print_header(list *l, status *root_status, notification *root_notif) {
     dputs(my_account->username);
   }
 
-  #define BTM 4
+  #define BTM 3
   gotoxy(0,BTM);
 
   dputs("Commands:          \r\n"
@@ -56,6 +56,7 @@ void print_header(list *l, status *root_status, notification *root_notif) {
         " Scroll   : Up/dn  \r\n"
         " Search   : S      \r\n"
         " Notifs.  : N      \r\n"
+        " Timelines: H/L/G  \r\n"
         " Configure: O      \r\n"
         " Back     : Escape \r\n");
 

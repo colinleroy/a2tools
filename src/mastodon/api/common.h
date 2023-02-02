@@ -11,6 +11,9 @@ struct _item {
 #define ENDPOINT_BUF_SIZE 128
 extern char endpoint_buf[ENDPOINT_BUF_SIZE];
 
+extern char *tl_endpoints[3];
+extern char *tl_filter[3];
+
 /* FIXME make that configurable */
 #define US_CHARSET "US-ASCII"
 #define FR_CHARSET "ISO646-FR1"
@@ -25,8 +28,8 @@ extern char *oauth_token;
 extern char *translit_charset;
 extern char arobase;
 
-#define ACCOUNTS_ENDPOINT       "/api/v1/accounts"
 #define TIMELINE_ENDPOINT       "/api/v1/timelines"
+#define ACCOUNTS_ENDPOINT       "/api/v1/accounts"
 #define STATUS_ENDPOINT         "/api/v1/statuses"
 #define NOTIFICATION_ENDPOINT   "/api/v1/notifications"
 #define SEARCH_ENDPOINT         "/api/v2/search"
@@ -36,7 +39,8 @@ extern char arobase;
 #define COMPOSE_PRIVATE 2
 #define COMPOSE_MENTION 3
 
-#define HOME_TIMELINE "home"
+#define HOME_TIMELINE     "home"
+#define PUBLIC_TIMELINE   "public"
 
 void nomem_msg(char *file, int line);
 surl_response *get_surl_for_endpoint(char *method, char *endpoint);
