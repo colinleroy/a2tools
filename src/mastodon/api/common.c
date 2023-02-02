@@ -17,6 +17,13 @@ char endpoint_buf[ENDPOINT_BUF_SIZE];
 
 char *translit_charset = US_CHARSET;
 char arobase = '@';
+char *tl_endpoints[3] = { TIMELINE_ENDPOINT "/" HOME_TIMELINE,
+                          TIMELINE_ENDPOINT "/" PUBLIC_TIMELINE,
+                          TIMELINE_ENDPOINT "/" PUBLIC_TIMELINE};
+char *tl_filter[3] = { NULL,
+                       "&local=true",
+                       NULL};
+
 extern char *instance_url;
 extern char *oauth_token;
 
