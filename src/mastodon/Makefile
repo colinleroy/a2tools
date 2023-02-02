@@ -45,15 +45,15 @@ all: mastodon.bin mastodon.x86_64 \
 	mastoimg.bin mastoimg.x86_64
 
 mastodon.bin: $(mastodon_SOURCES) $(CC65SOURCES)
-	cl65 $(CFLAGS) $(CLCFLAGS) -m mastodon.map -o $@ $^
+	cl65 $(CFLAGS) $(CLCFLAGS) -vm -m mastodon.map -o $@ $^
 mastocli.bin: $(mastocli_SOURCES) $(CC65SOURCES)
-	cl65 $(CFLAGS) $(CLCFLAGS) -m mastocli.map -o $@ $^
+	cl65 $(CFLAGS) $(CLCFLAGS) -vm -m mastocli.map -o $@ $^
 mastowrite.bin: $(mastowrite_SOURCES) $(CC65SOURCES)
-	cl65 $(CFLAGS) $(CLCFLAGS) -m mastowrite.map -o $@ $^
+	cl65 $(CFLAGS) $(CLCFLAGS) -vm -m mastowrite.map -o $@ $^
 mastoconf.bin: $(mastoconf_SOURCES) $(CC65SOURCES)
-	cl65 $(CFLAGS) $(CLCFLAGS) -m mastoconf.map -o $@ $^
+	cl65 $(CFLAGS) $(CLCFLAGS) -vm -m mastoconf.map -o $@ $^
 mastoimg.bin: $(mastoimg_SOURCES)
-	cl65 $(CFLAGS) $(CLCFLAGS) -C ../../config/apple2enh-hgr.cfg -m mastoimg.map -o $@ $^
+	cl65 $(CFLAGS) $(CLCFLAGS) -C ../../config/apple2enh-hgr.cfg -vm -m mastoimg.map -o $@ $^
 
 mastodon.x86_64: $(mastodon_SOURCES) $(GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	

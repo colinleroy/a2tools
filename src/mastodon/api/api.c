@@ -19,15 +19,15 @@ int api_get_account_posts(account *a, char to_load, char *first_to_load, char **
 }
 
 int api_search(char to_load, char *search, char *first_to_load, char **post_ids) {
-  char i, len, *w;
+  char i, *w;
   snprintf(gen_buf, 255, "&type=statuses&q=");
 
   /* very basic urlencoder */
-  w = gen_buf + strlen(gen_buf);
-  len = strlen(search);
-  for (i = 0; i < len; i++) {
-    snprintf(w, 4, "%%%02x", search[i]);
+  w = gen_buf + 17; /* 17 = strlen(gen_buf) */;
+  while (*search) {
+    snprintf(w, 4, "%%%02x", *search);
     w+= 3;
+    ++search;
   }
 
   return api_get_posts(SEARCH_ENDPOINT, to_load, first_to_load, gen_buf, ".statuses[].id", post_ids);
@@ -48,7 +48,7 @@ int api_get_posts(char *endpoint, char to_load, char *first_to_load, char *filte
   if (!surl_response_ok(resp))
     goto err_out;
 
-  if (surl_get_json(resp, gen_buf, BUF_SIZE, 0, NULL, sel) == 0) {
+  if (surl_get_json(resp, gen_buf, BUF_SIZE, 0, NULL, sel) >= 0) {
     char **tmp;
     int i;
     n_status = strsplit(gen_buf, '\n', &tmp);
@@ -92,7 +92,7 @@ int api_get_status_and_replies(char to_load, char *root_id, char *root_leaf_id, 
                                       "|index(\"%s\")+1+%d]|.[].id",
                                       first_to_load, first_to_load, n_after);
   }
-  if (surl_get_json(resp, gen_buf, BUF_SIZE, 0, NULL, selector) == 0) {
+  if (surl_get_json(resp, gen_buf, BUF_SIZE, 0, NULL, selector) >= 0) {
     char **tmp;
     int i;
     n_status = strsplit(gen_buf, '\n', &tmp);
@@ -125,10 +125,9 @@ static char api_status_interact(status *s, char *action) {
   }
 
   surl_send_data_params(resp, 0, 1);
-  surl_send_data(resp, "", 0);
+  /* No need to send data */
 
   surl_read_response_header(resp);
-
 
   if (!surl_response_ok(resp))
     goto err_out;
@@ -218,7 +217,9 @@ char api_relationship_get(account *a, char f) {
     if (!surl_response_ok(resp))
       goto err_out;
 
-    if (surl_get_json(resp, gen_buf, BUF_SIZE, 0, NULL, ".[]|.following,.followed_by,.blocking,.blocked_by,.muting,.requested") == 0) {
+    if (surl_get_json(resp, gen_buf, BUF_SIZE, 0, NULL, 
+                      ".[]|.following,.followed_by,"
+                      ".blocking,.blocked_by,.muting,.requested") >= 0) {
       n_lines = strsplit_in_place(gen_buf,'\n',&lines);
       if (n_lines < 6) {
         free(lines);

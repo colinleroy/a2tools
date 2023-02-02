@@ -41,9 +41,10 @@ void account_free(account *a) {
 
 account *account_new_from_json(surl_response *resp) {
   account *a = account_new();
-  char r;
+  int r;
   char n_lines, **lines;
-
+  char *note;
+  
   if (a == NULL) {
     return NULL;
   }
@@ -53,7 +54,7 @@ account *account_new_from_json(surl_response *resp) {
                     ".created_at,.followers_count,"
                     ".following_count");
   n_lines = strsplit_in_place(gen_buf, '\n', &lines);
-  if (r != 0 || n_lines < 6) {
+  if (r < 0 || n_lines < 6) {
     goto err_out;
   }
   a->id = strdup(lines[0]);
@@ -64,13 +65,12 @@ account *account_new_from_json(surl_response *resp) {
   a->following_count = atol(lines[5]);
   free(lines);
 
-  a->note = malloc(2048);
-  r = surl_get_json(resp, a->note, 2048, 1, translit_charset, ".note");
-  if (r != 0) {
-    free(a->note);
-    a->note = NULL;
+  note = malloc(2048);
+  r = surl_get_json(resp, note, 2048, 1, translit_charset, ".note");
+  if (r < 0) {
+    free(note);
   } else {
-    a->note = realloc(a->note, strlen(a->note) + 1);
+    a->note = realloc(note, r + 1);
   }
 
   /* TODO fields */
@@ -101,7 +101,7 @@ account *api_get_profile(char *id) {
     a = NULL;
     goto err_out;
   }
-  if (surl_get_json(resp, gen_buf, BUF_SIZE, 0, translit_charset, ".id,.display_name,.username") == 0) {
+  if (surl_get_json(resp, gen_buf, BUF_SIZE, 0, translit_charset, ".id,.display_name,.username") >= 0) {
     n_lines = strsplit_in_place(gen_buf,'\n',&lines);
     if (n_lines < 3) {
       account_free(a);

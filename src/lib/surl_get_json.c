@@ -46,7 +46,7 @@ int __fastcall__ surl_get_json(surl_response *resp, char *buffer, size_t len, ch
 
   buffer[len] = '\0';
 
-  return 0;
+  return len;
 }
 
 #ifdef __CC65__

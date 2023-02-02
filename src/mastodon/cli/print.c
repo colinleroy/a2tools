@@ -55,14 +55,17 @@ int print_buf(char *w, char allow_scroll, char *scrolled) {
 }
 
 int print_status(status *s, char full, char *scrolled) {
+  char disp_idx;
   *scrolled = 0;
-  s->displayed_at = wherey();
+  disp_idx = wherey();
+  s->displayed_at = disp_idx;
   /* reblog header */
   if (s->reblog) {
     dputs(s->account->display_name);
     dputs(" boosted");
     CHECK_AND_CRLF();
     s = s->reblog;
+    s->displayed_at = disp_idx;
   }
   
   /* Display name + date */
@@ -78,7 +81,7 @@ int print_status(status *s, char full, char *scrolled) {
   CHECK_AND_CRLF();
 
   /* Content */
-  if (print_buf(s->content, (full && s->displayed_at == 0), scrolled) < 0)
+  if (print_buf(s->content, (full && disp_idx == 0), scrolled) < 0)
     return -1;
 
   CHECK_AND_CRLF();

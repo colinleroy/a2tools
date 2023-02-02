@@ -6,14 +6,6 @@
 
 typedef struct _list list;
 
-#define L_HOME_TIMELINE   0
-#define L_LOCAL_TIMELINE  1
-#define L_PUBLIC_TIMELINE 2
-#define L_FULL_STATUS     3
-#define L_ACCOUNT         4
-#define L_SEARCH          5
-#define L_NOTIFICATION    6
-
 struct _list {
   char kind;
   char *root; /* For timelines */

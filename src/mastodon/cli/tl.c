@@ -23,7 +23,6 @@
 #include "list.h"
 #include "math.h"
 #include "dgets.h"
-#include "clrzone.h"
 #include "scrollwindow.h"
 
 #define BUF_SIZE 255
@@ -55,15 +54,19 @@ static void print_list(list *l);
 
 static status *get_top_status(list *l) {
   status *root_status;
+  signed char first = l->first_displayed_post;
 
-  if (l->first_displayed_post < 0 || l->n_posts == 0 || l->kind == L_NOTIFICATION) 
-    return NULL;
-
-  root_status = (status *)l->displayed_posts[l->first_displayed_post];
-  if (root_status && root_status->reblog) {
-    root_status = root_status->reblog;
+  root_status = NULL;
+  if (l->kind == SHOW_NOTIFICATIONS) 
+    goto err_out;
+  
+  if (first >= 0 && first < l->n_posts) {
+    root_status = (status *)l->displayed_posts[first];
+    if (root_status && root_status->reblog) {
+      root_status = root_status->reblog;
+    }
   }
-
+err_out:
   return root_status;
 }
 
@@ -150,7 +153,7 @@ static int print_notification(notification *n) {
 #define LOADING_TOOT_MSG "Loading toot..."
 
 static void item_free(list *l, char i) {
-  if (l->kind != L_NOTIFICATION) {
+  if (l->kind != SHOW_NOTIFICATIONS) {
     status_free((status *)l->displayed_posts[i]);
   } else {
     notification_free((notification *)l->displayed_posts[i]);
@@ -158,7 +161,7 @@ static void item_free(list *l, char i) {
 }
 
 static item *item_get(list *l, char i, char full) {
-  if (l->kind == L_NOTIFICATION) {
+  if (l->kind == SHOW_NOTIFICATIONS) {
     return (item *)api_get_notification(l->ids[i]);
   }
   return (item *)api_get_status(l->ids[i], full);
@@ -168,7 +171,7 @@ static char load_next_posts(list *l) {
   char *last_id;
   char **new_ids;
   char loaded, i;
-  char to_load;
+  char to_load, list_len;
 
   if (l->eof) {
     return 0;
@@ -179,25 +182,27 @@ static char load_next_posts(list *l) {
 
   dputs(LOADING_TOOT_MSG);
 
-  last_id = l->n_posts > 0 ? l->ids[l->n_posts - 1] : NULL;
-  loaded = 0;
+  list_len = l->n_posts;
+  last_id = list_len > 0 ? l->ids[list_len - 1] : NULL;
 
   switch (l->kind) {
-    case L_HOME_TIMELINE:
+    case SHOW_HOME_TIMELINE:
       loaded = api_get_posts(TIMELINE_ENDPOINT "/" HOME_TIMELINE, to_load, last_id, NULL, ".[].id", new_ids);
       break;
-    case L_SEARCH:
+    case SHOW_SEARCH_RES:
       loaded = api_search(to_load, search_buf, last_id, new_ids);
       break;
-    case L_FULL_STATUS:
+    case SHOW_FULL_STATUS:
       loaded = api_get_status_and_replies(to_load, l->root, l->leaf_root, last_id, new_ids);
       break;
-    case L_ACCOUNT:
+    case SHOW_ACCOUNT:
       loaded = api_get_account_posts(l->account, to_load, last_id, new_ids);
       break;
-    case L_NOTIFICATION:
+    case SHOW_NOTIFICATIONS:
       loaded = api_get_notifications(to_load, last_id, new_ids);
       break;
+    default:
+      loaded = 0;
   }
 
   if (loaded > 0) {
@@ -209,7 +214,7 @@ static char load_next_posts(list *l) {
     }
 
     /* move last ones to first ones */
-    for (i = 0; i < l->n_posts - loaded ; i++) {
+    for (i = 0; i < list_len - loaded ; i++) {
       offset = i + loaded;
       l->displayed_posts[i] = l->displayed_posts[offset];
       l->post_height[i] = l->post_height[offset];
@@ -217,17 +222,14 @@ static char load_next_posts(list *l) {
     }
     
     /* Set new ones at end */
-    for (i = l->n_posts - loaded; i < l->n_posts; i++) {
-      offset = i - (l->n_posts - loaded);
+    for (i = list_len - loaded; i < list_len; i++) {
+      offset = i - (list_len - loaded);
       l->displayed_posts[i] = NULL;
       l->post_height[i] = -1;
       l->ids[i] = new_ids[offset];
     }
 
     l->first_displayed_post -= loaded;
-    if (l->first_displayed_post < 0) {
-      l->first_displayed_post = 0;
-    }
   } else {
     gotox(0);
     dputs("Nothing more to load!");
@@ -296,6 +298,7 @@ static int show_search(void) {
 static list *build_list(char *root, char *leaf_root, char kind) {
   list *l;
   char i;
+  char n_posts;
 
   gotoxy(LEFT_COL_WIDTH - 4, scrh - 1);
   dputs("...");
@@ -303,7 +306,7 @@ static list *build_list(char *root, char *leaf_root, char kind) {
   l = malloc(sizeof(list));
   memset(l, 0, sizeof(list));
 
-  if (kind == L_ACCOUNT) {
+  if (kind == SHOW_ACCOUNT) {
     l->account = api_get_full_account(root);
     l->first_displayed_post = -1;
   } else {
@@ -320,31 +323,28 @@ static list *build_list(char *root, char *leaf_root, char kind) {
   l->post_height = malloc(N_STATUS_TO_LOAD);
 
   switch (kind) {
-    case L_HOME_TIMELINE:
-      l->n_posts = api_get_posts(TIMELINE_ENDPOINT "/" HOME_TIMELINE, N_STATUS_TO_LOAD, NULL, NULL, ".[].id", l->ids);
-      memset(l->displayed_posts, 0, l->n_posts * sizeof(item *));
+    case SHOW_HOME_TIMELINE:
+      n_posts = api_get_posts(TIMELINE_ENDPOINT "/" HOME_TIMELINE, N_STATUS_TO_LOAD, NULL, NULL, ".[].id", l->ids);
       break;
-    case L_SEARCH:
-      l->n_posts = api_search(N_STATUS_TO_LOAD, search_buf, NULL, l->ids);
-      memset(l->displayed_posts, 0, l->n_posts * sizeof(item *));
+    case SHOW_SEARCH_RES:
+      n_posts = api_search(N_STATUS_TO_LOAD, search_buf, NULL, l->ids);
       break;
-    case L_FULL_STATUS:
-      l->n_posts = api_get_status_and_replies(N_STATUS_TO_LOAD, l->root, l->leaf_root, NULL, l->ids);
-      memset(l->displayed_posts, 0, l->n_posts * sizeof(item *));
+    case SHOW_FULL_STATUS:
+      n_posts = api_get_status_and_replies(N_STATUS_TO_LOAD, l->root, l->leaf_root, NULL, l->ids);
       break;
-    case L_ACCOUNT:
-      l->n_posts = api_get_account_posts(l->account, N_STATUS_TO_LOAD, NULL, l->ids);
-      memset(l->displayed_posts, 0, l->n_posts * sizeof(item *));
+    case SHOW_ACCOUNT:
+      n_posts = api_get_account_posts(l->account, N_STATUS_TO_LOAD, NULL, l->ids);
       break;
-    case L_NOTIFICATION:
-      l->n_posts = api_get_notifications(N_STATUS_TO_LOAD, NULL, l->ids);
-      memset(l->displayed_posts, 0, l->n_posts * sizeof(item *));
+    case SHOW_NOTIFICATIONS:
+      n_posts = api_get_notifications(N_STATUS_TO_LOAD, NULL, l->ids);
       break;
   }
-  memset(l->post_height, -1, l->n_posts);
-  if (l->root) {
-    for (i = 0; i < l->n_posts; i++) {
-      if(!strcmp(l->ids[i], l->root)) {
+  memset(l->displayed_posts, 0, n_posts * sizeof(item *));
+  memset(l->post_height, -1, n_posts);
+
+  if (root) {
+    for (i = 0; i < n_posts; i++) {
+      if(!strcmp(l->ids[i], root)) {
           l->first_displayed_post = i;
           /* Load first for the header */
           item_free(l, i);
@@ -352,9 +352,10 @@ static list *build_list(char *root, char *leaf_root, char kind) {
           break;
       }
     }
-  } else if (l->n_posts > 0){
+  } else if (n_posts > 0){
     l->displayed_posts[0] = item_get(l, 0, 0);
   }
+  l->n_posts = n_posts;
   l->last_displayed_post = 0;
   l->eof = 0;
   l->scrolled = 0;
@@ -389,19 +390,33 @@ static void compact_list(list *l) {
 }
 
 static void uncompact_list(list *l, char full) {
-  if (l->first_displayed_post >= 0) {
-    l->displayed_posts[l->first_displayed_post] = 
-      item_get(l, l->first_displayed_post, full);
+  signed char first;
+  first = l->first_displayed_post;
+  if (first >= 0) {
+    l->displayed_posts[first] = 
+      item_get(l, first, full);
   }
+}
+
+static void clrscrollwin(void) {
+  set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
+  clrscr();
+  set_hscrollwindow(0, scrw);
 }
 
 static void print_list(list *l) {
   char i, full;
   char bottom = 0;
   char scrolled = 0;
+  signed char first;
+  char n_posts;
 
-  
+
 update:
+  /* copy to temp vars to avoid pointer arithmetic */
+  first = l->first_displayed_post;
+  n_posts = l->n_posts;
+
   /* set scrollwindow */
   set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
   gotoxy(0, 0);
@@ -410,41 +425,41 @@ update:
   }
   l->scrolled = 0;
 
-  if (l->account && l->first_displayed_post == -1) {
+  if (l->account && first == -1) {
     bottom = print_account(l->account, &scrolled);
-    if (!bottom) {
+    if (!scrolled) {
       l->account_height = wherey();
-    }
-    if (scrolled) {
+    } else {
       l->account_height = scrh;
       l->scrolled = 1;
     }
   }
 
-  for (i = max(0, l->first_displayed_post); i < l->n_posts; i++) {
+  for (i = max(0, first); i < n_posts; i++) {
     if (!bottom) {
       item *disp;
       if (kbhit()) {
         break;
       }
       full = (l->root && !strcmp(l->root, l->ids[i]));
-      if (l->displayed_posts[i] != NULL)
-        disp = (item *)l->displayed_posts[i];
-      else {
-        if (i > l->first_displayed_post) 
+      disp = (item *)l->displayed_posts[i];
+      if (disp == NULL) {
+        if (i > first) {
           dputs(LOADING_TOOT_MSG);
-        gotox(0);
+          gotox(0);
+        }
 
         disp = item_get(l, i, full);
+        l->displayed_posts[i] = disp;
 
-        if (i > l->first_displayed_post)
+        if (i > first) {
           dputs("                ");
-        gotox(0);
+          gotox(0);
+        }
       }
-      l->displayed_posts[i] = disp;
 
       if (disp != NULL && bottom == 0) {
-        if (l->kind != L_NOTIFICATION) {
+        if (l->kind != SHOW_NOTIFICATIONS) {
           bottom = print_status((status *)disp, full, &scrolled);
         } else {
           bottom = print_notification((notification *)disp);
@@ -461,7 +476,7 @@ update:
   }
 
   set_hscrollwindow(0, scrw);
-  if (bottom == 0 && i == l->n_posts) {
+  if (bottom == 0 && i == n_posts) {
     if (load_next_posts(l) > 0)
       goto update;
   }
@@ -472,7 +487,7 @@ update:
 static void shift_posts_down(list *l) {
   char i;
   char scroll_val;
-
+  
   if (l->first_displayed_post == l->n_posts)
     return;
 
@@ -496,6 +511,7 @@ static void shift_posts_down(list *l) {
 static char calc_post_height(status *s) {
   char height;
   char *w, x;
+
   height = 6; /* header(username + date + display_name) + one line content + footer(\r\n + stats + line)*/
   if (s->reblog) {
     ++height;
@@ -522,35 +538,40 @@ static char calc_post_height(status *s) {
 static int shift_posts_up(list *l) {
   int i;
   signed char scrollval;
-  
-  if (l->account && l->first_displayed_post == -1) {
+  signed char first;
+
+  first = l->first_displayed_post;
+  if (l->account && first == -1) {
       return -1;
-  } else if (!l->account && l->first_displayed_post == 0) {
+  } else if (!l->account && first == 0) {
       return -1;
   }
 
   l->eof = 0;
-  if (l->first_displayed_post == 0) {
+
+  l->first_displayed_post = --first;
+
+  if (first == -1) {
     scrollval = l->account_height;
   } else {
-    if (l->displayed_posts[l->first_displayed_post - 1] == NULL) {
-      l->displayed_posts[l->first_displayed_post - 1] =
-        item_get(l, l->first_displayed_post - 1, 0);
+    if (l->displayed_posts[first] == NULL) {
+      l->displayed_posts[first] =
+        item_get(l, first, 0);
     }
-    if (l->post_height[l->first_displayed_post - 1] == -1) {
-      if (l->kind != L_NOTIFICATION) {
-        l->post_height[l->first_displayed_post - 1] = 
-          calc_post_height((status *)l->displayed_posts[l->first_displayed_post - 1]);
+    if (l->post_height[first] == -1) {
+      if (l->kind != SHOW_NOTIFICATIONS) {
+        l->post_height[first] = 
+          calc_post_height((status *)l->displayed_posts[first]);
       } else {
-        l->post_height[l->first_displayed_post - 1] = 4;
+        l->post_height[first] = 4;
       }
     }
-    scrollval = l->post_height[l->first_displayed_post - 1];
+    scrollval = l->post_height[first];
   }
   if (scrollval < 0) {
     scrollval = scrh;
   }
-  l->first_displayed_post--;
+
   set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
   for (i = 0; scrollval > 0 && i < scrollval; i++) {
     scrolldn();
@@ -604,34 +625,38 @@ static void save_state(list **lists, char cur_list) {
     goto err_out;
 
   for (i = 0; i <= cur_list; i++) {
-    list *l = lists[i];
-    if (fprintf(fp, "%d\n", l->kind) < 0)
+    list *l;
+    l = lists[i];
+    if (fprintf(fp, "%d\n"
+                    "%s\n"
+                    "%s\n"
+                    "%d\n"
+                    "%d\n"
+                    "%d\n"
+                    "%d\n"
+                    "%d\n"
+                    "%s\n"
+                    "%d\n",
+                    l->kind,
+                    l->root ? l->root : "",
+                    l->leaf_root ? l->leaf_root : "",
+                    l->last_displayed_post,
+                    l->eof,
+                    l->scrolled,
+                    l->first_displayed_post,
+                    l->n_posts,
+                    l->account ? l->account->id : "",
+                    l->account_height) < 0) {
       goto err_out;
-    if (fprintf(fp, "%s\n", l->root ? l->root : "") < 0)
-      goto err_out;
-    if (fprintf(fp, "%s\n", l->leaf_root ? l->leaf_root : "") < 0)
-      goto err_out;
-    if (fprintf(fp, "%d\n", l->last_displayed_post) < 0)
-      goto err_out;
-    if (fprintf(fp, "%d\n", l->eof) < 0)
-      goto err_out;
-    if (fprintf(fp, "%d\n", l->scrolled) < 0)
-      goto err_out;
-    if (fprintf(fp, "%d\n", l->first_displayed_post) < 0)
-      goto err_out;
-    if (fprintf(fp, "%d\n", l->n_posts) < 0)
-      goto err_out;
-    for (j = 0; j < l->n_posts; j++) {
-      if (fprintf(fp, "%s\n", l->ids[j]) < 0)
-        goto err_out;
-      if (fprintf(fp, "%d\n", l->post_height[j]) < 0)
-        goto err_out;
     }
-
-    if (fprintf(fp, "%s\n", l->account ? l->account->id : "") < 0)
-      goto err_out;
-    if (fprintf(fp, "%d\n", l->account_height) < 0)
-      goto err_out;
+    for (j = 0; j < l->n_posts; j++) {
+      if (fprintf(fp, "%s\n"
+                      "%d\n",
+                      l->ids[j],
+                      l->post_height[j]) < 0) {
+        goto err_out;
+      }
+    }
   }
 
   fclose(fp);
@@ -672,10 +697,13 @@ static int load_state(list ***lists) {
     fclose(fp);
     return -1;
   }
+
   *lists = malloc((num_lists + 1) * sizeof(list *));
 
   for (i = 0; i <= num_lists; i++) {
-    list *l = malloc(sizeof(list));
+    list *l;
+
+    l = malloc(sizeof(list));
     memset(l, 0, sizeof(list));
     (*lists)[i] = l;
 
@@ -713,6 +741,15 @@ static int load_state(list ***lists) {
     l->displayed_posts = malloc(l->n_posts * sizeof(status *));
     memset(l->displayed_posts, 0, l->n_posts * sizeof(status *));
 
+    fgets(gen_buf, BUF_SIZE, fp);
+    if (gen_buf[0] != '\n') {
+      *strchr(gen_buf, '\n') = '\0';
+      l->account = api_get_full_account(gen_buf);
+    }
+
+    fgets(gen_buf, BUF_SIZE, fp);
+    l->account_height = atoi(gen_buf);
+
     for (j = 0; j < l->n_posts; j++) {
       fgets(gen_buf, BUF_SIZE, fp);
       *strchr(gen_buf, '\n') = '\0';
@@ -730,16 +767,6 @@ static int load_state(list ***lists) {
       l->displayed_posts[l->first_displayed_post] = 
           item_get(l, l->first_displayed_post, 1);
     }
-
-
-    fgets(gen_buf, BUF_SIZE, fp);
-    if (gen_buf[0] != '\n') {
-      *strchr(gen_buf, '\n') = '\0';
-      l->account = api_get_full_account(gen_buf);
-    }
-
-    fgets(gen_buf, BUF_SIZE, fp);
-    l->account_height = atoi(gen_buf);
   }
 
   fclose(fp);
@@ -775,7 +802,7 @@ static int show_list(list *l) {
     status *root_status;
     notification *root_notif;
     
-    if (l->kind == L_NOTIFICATION) {
+    if (l->kind == SHOW_NOTIFICATIONS) {
       root_status = NULL;
       root_notif = (notification *)l->displayed_posts[l->first_displayed_post];
     } else {
@@ -858,7 +885,7 @@ static int show_list(list *l) {
 }
 
 void cli(void) {
-  signed char cur_list, to_clear, to_show;
+  signed char cur_list, to_clear;
   list **l, *prev_list;
   char starting = 1;
   item *disp;
@@ -868,17 +895,19 @@ void cli(void) {
 
   if (starting) {
     cur_list = load_state(&l);
+    if (cur_list == -1) {
+      l = malloc(1 * sizeof(list *));
+    }
   }
   if (cur_list == -1) {
     cur_list = 0;
-    l = malloc(1 * sizeof(list *));
     cur_action = SHOW_HOME_TIMELINE;
   }
 
   while (cur_action != QUIT) {
     switch(cur_action) {
       case SHOW_HOME_TIMELINE:
-        l[cur_list] = build_list(NULL, NULL, L_HOME_TIMELINE);
+        l[cur_list] = build_list(NULL, NULL, SHOW_HOME_TIMELINE);
         cur_action = NAVIGATE;
         break;
       case SHOW_FULL_STATUS:
@@ -894,39 +923,29 @@ void cli(void) {
         /* we don't want get_top_status because we don't want to go into
          * reblog */
         disp = prev_list->displayed_posts[prev_list->first_displayed_post];
-        if (prev_list->kind != L_NOTIFICATION) {
+        if (prev_list->kind != SHOW_NOTIFICATIONS) {
           disp_status = (status *)disp;
           if (cur_action == SHOW_FULL_STATUS) {
             to_clear = prev_list->post_height[prev_list->first_displayed_post] - 2;
-            to_show = L_FULL_STATUS;
             new_root = strdup(disp_status->id);
             new_leaf_root = strdup(disp_status->reblog ? disp_status->reblog->id : disp_status->id);
-          } else if (cur_action == SHOW_SEARCH_RES) {
-            to_show = L_SEARCH;
-          } else if (cur_action == SHOW_NOTIFICATIONS) {
-            to_show = L_NOTIFICATION;
           } else if (cur_action == SHOW_ACCOUNT) {
             new_root = strdup(disp_status->reblog ? disp_status->reblog->account->id : disp_status->account->id);
-            to_show = L_ACCOUNT;
           }
         } else {
           disp_notif = (notification *)disp;
           if (cur_action == SHOW_FULL_STATUS && disp_notif->status_id) {
             new_root = strdup(disp_notif->status_id);
             new_leaf_root = strdup(disp_notif->status_id);
-            to_show = L_FULL_STATUS;
           } else {
+            cur_action = SHOW_ACCOUNT;
             new_root = strdup(disp_notif->account_id);
-            to_show = L_ACCOUNT;
           }
         }
+        compact_list(l[cur_list - 1]);
         l = realloc(l, (cur_list + 1) * sizeof(list *));
-        if (cur_list > 0) {
-          compact_list(l[cur_list - 1]);
-        }
-        l[cur_list] = build_list(new_root, new_leaf_root, to_show);
-        clrzone(LEFT_COL_WIDTH + 1, to_clear, scrw - 1, scrh - 1);
-        /* free status on list n-2 */
+        l[cur_list] = build_list(new_root, new_leaf_root, cur_action);
+        clrscrollwin();
         cur_action = NAVIGATE;
         break;
       case NAVIGATE:
@@ -935,30 +954,21 @@ void cli(void) {
           clrscr();
         }
         if (show_list(l[cur_list])) {
-          /* reload */
-          if (cur_list > 0) {
-            if (l[cur_list]->account != NULL)
-              cur_action = SHOW_ACCOUNT;
-            else if (l[cur_list]->kind == L_NOTIFICATION)
-              cur_action = SHOW_NOTIFICATIONS;
-            else
-              cur_action = SHOW_FULL_STATUS;
-            free_list(l[cur_list]);
-            --cur_list;
-          } else {
-            free_list(l[cur_list]);
-            cur_action = SHOW_HOME_TIMELINE;
-          }
-          clrzone(LEFT_COL_WIDTH + 1, 0, scrw - 1, scrh - 1);
+          /* reload, freeing the list
+           * and resetting action to load it */
+          cur_action = l[cur_list]->kind;
+          free_list(l[cur_list]);
+          --cur_list;
+          clrscrollwin();
         }
         break;
       case BACK:
         if (cur_list > 0) {
-          clrzone(LEFT_COL_WIDTH + 1, 0, scrw - 1, scrh - 1);
           free_list(l[cur_list]);
           --cur_list;
           l = realloc(l, (cur_list + 1) * sizeof(list *));
           uncompact_list(l[cur_list], cur_list > 0);
+          clrscrollwin();
           cur_action = NAVIGATE;
         } else {
           cur_action = QUIT;
@@ -983,7 +993,7 @@ void cli(void) {
           save_state(l, cur_list);
           if (l[cur_list]->account) {
             launch_command("mastoimg", translit_charset, monochrome?"1":"0", "a", l[cur_list]->account->id);
-          } else if (get_top_status(l[cur_list])) {
+          } else {
             launch_command("mastoimg", translit_charset, monochrome?"1":"0", "s", get_top_status(l[cur_list])->id);
           }
           cur_action = NAVIGATE;
@@ -1007,7 +1017,7 @@ out:
 int main(int argc, char **argv) {
   FILE *fp;
   if (argc < 3) {
-    dputs("Missing instance_url, oauth_token and/or charset parameters.\n");
+    dputs("Missing parameters.\r\n");
   }
 
   videomode(VIDEOMODE_80COL);
