@@ -30,7 +30,9 @@ status *status_new(void) {
 status *status_new_from_json(surl_response *resp, char *id, char full, char is_reblog) {
   status *s;
   char **lines;
-  char r, n_lines;
+  char n_lines;
+  int r;
+  char *content;
 
   s = status_new();
   if (s == NULL) {
@@ -44,10 +46,9 @@ status *status_new_from_json(surl_response *resp, char *id, char full, char is_r
     return NULL;
   }
 
-  s->content = malloc(full ? TL_STATUS_LARGE_BUF : TL_STATUS_SHORT_BUF);
   s->account = account_new();
 
-  if (s->content == NULL || s->account == NULL) {
+  if (s->account == NULL) {
     status_free(s);
     nomem_msg(__FILE__, __LINE__);
     return NULL;
@@ -64,12 +65,10 @@ status *status_new_from_json(surl_response *resp, char *id, char full, char is_r
   }
 
   n_lines = strsplit_in_place(gen_buf, '\n', &lines);
-  if (r == 0 && n_lines >= 2) {
+  if (r >= 0 && n_lines >= 2) {
     s->created_at = strdup(lines[0]);
     s->account->display_name = strdup(lines[1]);
     if (!is_reblog && n_lines > 2) {
-      free(s->content);
-      s->content = NULL;
       s->reblog = status_new_from_json(resp, lines[2], full, 1);
     }
   }
@@ -90,7 +89,7 @@ status *status_new_from_json(surl_response *resp, char *id, char full, char is_r
     }
 
     n_lines = strsplit_in_place(gen_buf, '\n', &lines);
-    if (r == 0 && n_lines == 8) {
+    if (r >= 0 && n_lines == 8) {
       s->n_images = atoi(lines[0]);
       s->n_replies = atoi(lines[1]);
       s->n_reblogs = atoi(lines[2]);
@@ -104,18 +103,23 @@ status *status_new_from_json(surl_response *resp, char *id, char full, char is_r
     }
     free(lines);
 
-    if (is_reblog) {
-      r = surl_get_json(resp, s->content, full ? TL_STATUS_LARGE_BUF : TL_STATUS_SHORT_BUF, 1, translit_charset, ".reblog.content");
-    } else {
-      r = surl_get_json(resp, s->content, full ? TL_STATUS_LARGE_BUF : TL_STATUS_SHORT_BUF, 1, translit_charset, ".content");
+    content = malloc(full ? TL_STATUS_LARGE_BUF : TL_STATUS_SHORT_BUF);
+    if (!content) {
+      status_free(s);
+      nomem_msg(__FILE__, __LINE__);
+      return NULL;
     }
-    if (!full && strlen(s->content) == TL_STATUS_SHORT_BUF - 1) {
-      s->content[TL_STATUS_SHORT_BUF - 4] = '.';
-      s->content[TL_STATUS_SHORT_BUF - 3] = '.';
-      s->content[TL_STATUS_SHORT_BUF - 2] = '.';
-      s->content[TL_STATUS_SHORT_BUF - 1] = '\0';
+
+    if (is_reblog) {
+      r = surl_get_json(resp, content, full ? TL_STATUS_LARGE_BUF : TL_STATUS_SHORT_BUF, 1, translit_charset, ".reblog.content");
     } else {
-      s->content = realloc(s->content, strlen(s->content) + 1);
+      r = surl_get_json(resp, content, full ? TL_STATUS_LARGE_BUF : TL_STATUS_SHORT_BUF, 1, translit_charset, ".content");
+    }
+    if (!full && r == TL_STATUS_SHORT_BUF - 1) {
+      strcpy(content + TL_STATUS_SHORT_BUF - 4, "...");
+      s->content = content;
+    } else if (r >= 0) {
+      s->content = realloc(content, r + 1);
     }
   }
 

@@ -22,7 +22,6 @@
 #include "list.h"
 #include "math.h"
 #include "dgets.h"
-#include "clrzone.h"
 #include "scrollwindow.h"
 
 #ifdef __CC65__
@@ -50,22 +49,18 @@ void print_header(list *l, status *root_status, notification *root_notif) {
   }
 
   #define BTM 4
-  clrzone(0, BTM, LEFT_COL_WIDTH, 23);
   gotoxy(0,BTM);
 
-  dputs("Commands:\r\n");
-  dputs(" View toot: Enter\r\n"
-        " Scroll   : Up/dn\r\n"
-        " Search   : S\r\n"
-        " Notifs.  : N\r\n"
-        " Configure: O\r\n");
-  if (!l || !l->root) {
-    dputs(" Exit     : Escape \r\n");
-  } else {
-    dputs(" Back     : Escape \r\n");
-  }
+  dputs("Commands:          \r\n"
+        " View toot: Enter  \r\n"
+        " Scroll   : Up/dn  \r\n"
+        " Search   : S      \r\n"
+        " Notifs.  : N      \r\n"
+        " Configure: O      \r\n"
+        " Back     : Escape \r\n");
+
   if (root_status) {
-    dputs("Toot: \r\n"
+    dputs("Toot:              \r\n"
           " Reply    : R      \r\n"
           " Images   : I      \r\n");
     if ((root_status->favorited_or_reblogged & FAVOURITED) != 0) {
@@ -81,17 +76,21 @@ void print_header(list *l, status *root_status, notification *root_notif) {
     if (my_account && !strcmp(root_status->account->id, my_account->id)) {
       dputs(" Delete   : D      \r\n");
     }
-    dputs("Author:\r\n"
+    dputs("Author:            \r\n"
           " Profile  : P      \r\n");
-  } else if (l && l->account) {
-    dputs("Profile:\r\n"
+  } else if (l->account) {
+    dputs("Profile:           \r\n"
           " Images   : I      \r\n");
   } else if (root_notif) {
-    dputs("Profile:\r\n"
-          " Open     : P\r\n");
+    dputs("Profile:            \r\n"
+          " Open     : P       \r\n");
   }
-  dputs("Writing:\r\n"
+  dputs("Writing:           \r\n"
         " Compose  : C      \r\n");
+
+  while (wherey() < 21) {
+    dputs("                   \r\n");
+  }
 
   print_free_ram();
   cvlinexy(LEFT_COL_WIDTH, 0, scrh);

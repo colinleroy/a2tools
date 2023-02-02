@@ -38,7 +38,7 @@ media *media_new_from_json(char *urls_selector, char *alt_text_selector, surl_re
   n_lines = 0;
   lines = NULL;
 
-  if (r == 0) {
+  if (r >= 0) {
     n_lines = strsplit_in_place(img_buf, '\n', &lines);
     m->n_media = n_lines;
     m->media_url = malloc(m->n_media * sizeof(char *));

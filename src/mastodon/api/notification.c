@@ -54,7 +54,7 @@ int api_get_notifications(char to_load, char *first_to_load, char **notification
   if (!surl_response_ok(resp))
     goto err_out;
 
-  if (surl_get_json(resp, gen_buf, 512, 0, NULL, ".[]|.id") == 0) {
+  if (surl_get_json(resp, gen_buf, 512, 0, NULL, ".[]|.id") >= 0) {
     char **tmp;
     char i;
     n_notifications = strsplit(gen_buf, '\n', &tmp);
@@ -85,17 +85,15 @@ notification *api_get_notification(char *id) {
                     ".id,.type,.created_at,"
                     ".status.id//\"-\","
                     ".account.id,"
-                    ".account.display_name") == 0) {
+                    ".account.display_name") >= 0) {
     char **lines;
     char n_lines;
 
     n_lines = strsplit_in_place(gen_buf, '\n', &lines);
-    if (n_lines < 6) {
-      free(lines);
-      goto err_out;
-    }
     n = notification_new();
-    if (n == NULL) {
+    if (n == NULL || n_lines < 6) {
+      free(lines);
+      notification_free(n);
       goto err_out;
     }
 
@@ -124,7 +122,7 @@ notification *api_get_notification(char *id) {
     goto err_out;
   }
   if (surl_get_json(resp, gen_buf, BUF_SIZE, 1, translit_charset,
-                    n->type != NOTIFICATION_FOLLOW ? ".status.content":".account.note") == 0) {
+                    n->type != NOTIFICATION_FOLLOW ? ".status.content":".account.note") >= 0) {
     n->excerpt = strdup(gen_buf);
   } else {
     n->excerpt = NULL;
