@@ -34,9 +34,6 @@ static int get_prev_line_len(char *buf, size_t i, unsigned char wx) {
   int prev_line_len;
 
   back = i - 1;
-  if (back < 0) {
-    return 0;
-  }
 
   while (back >= 0 && buf[back] != '\n') {
     --back;
@@ -52,10 +49,6 @@ static int get_prev_line_len(char *buf, size_t i, unsigned char wx) {
 static void rewrite_start_of_buffer(char *buf, size_t i, unsigned char wx) {
   /* Assume we're rewriting (at 0,0) the previous line of buf, ending at i. */
   int prev_line_len, k;
-
-  if (i == 0) {
-    return;
-  }
 
   prev_line_len = get_prev_line_len(buf, i, wx);
   /* print it */
@@ -85,8 +78,8 @@ static char rewrite_end_of_buffer(char *buf, size_t i, size_t max_i, unsigned ch
       clrzone(x, y, wx - 1, y);
       gotoxy(x, y);
     }
-    if (x == wx) {
-      if (y + 1 < hy - 1) {
+    if (x == wx || k == max_i - 1) {
+      if (y + 1 < hy) {
         clrzone(0, y + 1, wx - 1, y + 1);
         gotoxy(x, y);
       }
@@ -113,7 +106,6 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
   int cur_x, cur_y;
   char has_nl = 0;
   int prev_cursor = 0;
-  unsigned char start_x, start_y;
   unsigned char sx, wx;
   unsigned char sy, ey, hy;
   char scrolled_up = 0, overflowed = 0;
@@ -137,16 +129,13 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
   memset(buf, '\0', size - 1);
   prev_cursor = cursor(1);
 
-  start_x = wherex();
-  start_y = wherey();
-
   while (1) {
     cur_x = wherex();
     cur_y = wherey();
 
     c = cgetc();
 
-    if ((c & 0x80) != 0) {
+    if (cmd_cb && (c & 0x80) != 0) {
       if (cmd_cb((c & ~0x80))) {
         goto out;
       }
@@ -179,7 +168,6 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
           }
         }
         if (c == CH_DELETE) {
-          /* FIXME handle deletion of \n */
           gotoxy(cur_x, cur_y);
           for (k = i; k < max_i; k++) {
             buf[k] = buf[k + 1];
@@ -239,9 +227,13 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
         if (c == CH_ENTER) {
           /* Clear to end of line */
           clrzone(cur_x, cur_y, wx - 1, cur_y);
-          if (cur_y + 1 < hy- 1) {
+          if (cur_y + 1 < hy - 1) {
             /* Clear next line */
             clrzone(0, cur_y + 1, wx - 1, cur_y + 1);
+          } else {
+            /* we're on last line, scrollup */
+            cur_y--;
+            scrollup();
           }
           gotoxy(cur_x, cur_y);
           cputc('\r');
