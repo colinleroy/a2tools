@@ -93,8 +93,7 @@ notification *api_get_notification(char *id) {
     n = notification_new();
     if (n == NULL || n_lines < 6) {
       free(lines);
-      notification_free(n);
-      goto err_out;
+      goto free_err_out;
     }
 
     n->id = strdup(lines[0]);
@@ -117,6 +116,7 @@ notification *api_get_notification(char *id) {
     n->display_name = strdup(lines[5]);
     free(lines);
   } else {
+free_err_out:
     notification_free(n);
     n = NULL;
     goto err_out;

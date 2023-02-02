@@ -19,7 +19,7 @@ int api_get_account_posts(account *a, char to_load, char *first_to_load, char **
 }
 
 int api_search(char to_load, char *search, char *first_to_load, char **post_ids) {
-  char i, *w;
+  char *w;
   snprintf(gen_buf, 255, "&type=statuses&q=");
 
   /* very basic urlencoder */
