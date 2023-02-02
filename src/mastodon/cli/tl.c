@@ -344,6 +344,8 @@ static list *build_list(char *root, char *leaf_root, char kind) {
     case SHOW_NOTIFICATIONS:
       n_posts = api_get_notifications(N_STATUS_TO_LOAD, NULL, l->ids);
       break;
+    default:
+      n_posts = 0;
   }
   memset(l->displayed_posts, 0, n_posts * sizeof(item *));
   memset(l->post_height, -1, n_posts);

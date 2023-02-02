@@ -88,6 +88,7 @@ account *api_get_profile(char *id) {
   int r = -1;
   char n_lines, **lines;
 
+  a = NULL;
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s", ACCOUNTS_ENDPOINT,
               id == NULL ? "verify_credentials" : id);
   resp = get_surl_for_endpoint("GET", endpoint_buf);
