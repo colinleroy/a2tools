@@ -214,7 +214,6 @@ static char load_next_posts(list *l) {
     /* free first ones */
     for (i = 0; i < loaded; i++) {
       item_free(l, i);
-      free(l->ids[i]);
     }
 
     /* move last ones to first ones */
@@ -222,7 +221,8 @@ static char load_next_posts(list *l) {
       offset = i + loaded;
       l->displayed_posts[i] = l->displayed_posts[offset];
       l->post_height[i] = l->post_height[offset];
-      l->ids[i] = l->ids[offset];
+      /* strcpy to avoid memory fragmentation */
+      strcpy(l->ids[i], l->ids[offset]);
     }
     
     /* Set new ones at end */
@@ -230,7 +230,10 @@ static char load_next_posts(list *l) {
       offset = i - (list_len - loaded);
       l->displayed_posts[i] = NULL;
       l->post_height[i] = -1;
-      l->ids[i] = new_ids[offset];
+      /* avoid memory fragmentation, get rid
+       * of new_ids-related storage */
+      strcpy(l->ids[i], new_ids[offset]);
+      free(new_ids[offset]);
     }
 
     l->first_displayed_post -= loaded;
@@ -315,8 +318,8 @@ static list *build_list(char *root, char *leaf_root, char kind) {
     l->first_displayed_post = -1;
   } else {
     if (root) {
-      l->root = root;
-      l->leaf_root = leaf_root;
+      l->root = strdup(root);
+      l->leaf_root = strdup(leaf_root);
     }
     l->first_displayed_post = 0;
   }
@@ -909,7 +912,10 @@ void cli(void) {
   item *disp;
   status *disp_status;
   notification *disp_notif;
-  char *new_root, *new_leaf_root;
+  /* static buffer because we need to copy the
+   * IDs before compacting parent list, to avoid
+   * memory fragmentation */
+  char new_root[32], new_leaf_root[32];
 
   if (starting) {
     cur_list = load_state(&l);
@@ -937,35 +943,36 @@ void cli(void) {
       case SHOW_ACCOUNT:
       case SHOW_SEARCH_RES:
       case SHOW_NOTIFICATIONS:
-        /* FIXME spaghetti */
         prev_list = l[cur_list];
         ++cur_list;
-        new_root = NULL;
-        new_leaf_root = NULL;
+        *new_root = '\0';
+        *new_leaf_root = '\0';
         /* we don't want get_top_status because we don't want to go into
          * reblog */
         disp = prev_list->displayed_posts[prev_list->first_displayed_post];
         if (prev_list->kind != SHOW_NOTIFICATIONS) {
           disp_status = (status *)disp;
           if (cur_action == SHOW_FULL_STATUS) {
-            new_root = strdup(disp_status->id);
-            new_leaf_root = strdup(disp_status->reblog ? disp_status->reblog->id : disp_status->id);
+            strcpy(new_root, disp_status->id);
+            strcpy(new_leaf_root, disp_status->reblog ? disp_status->reblog->id : disp_status->id);
           } else if (cur_action == SHOW_ACCOUNT) {
-            new_root = strdup(disp_status->reblog ? disp_status->reblog->account->id : disp_status->account->id);
+            strcpy(new_root, disp_status->reblog ? disp_status->reblog->account->id : disp_status->account->id);
           }
         } else {
           disp_notif = (notification *)disp;
           if (cur_action == SHOW_FULL_STATUS && disp_notif->status_id) {
-            new_root = strdup(disp_notif->status_id);
-            new_leaf_root = strdup(disp_notif->status_id);
+            strcpy(new_root, disp_notif->status_id);
+            strcpy(new_leaf_root, disp_notif->status_id);
           } else {
             cur_action = SHOW_ACCOUNT;
-            new_root = strdup(disp_notif->account_id);
+            strcpy(new_root, disp_notif->account_id);
           }
         }
         compact_list(l[cur_list - 1]);
         l = realloc(l, (cur_list + 1) * sizeof(list *));
-        l[cur_list] = build_list(new_root, new_leaf_root, cur_action);
+        l[cur_list] = build_list(*new_root ? new_root : NULL,
+                                 *new_leaf_root ? new_leaf_root : NULL,
+                                 cur_action);
         clrscrollwin();
         cur_action = NAVIGATE;
         break;
