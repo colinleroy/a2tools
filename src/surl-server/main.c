@@ -30,6 +30,7 @@
 #include "jq.h"
 #include "html2txt.h"
 #include "hgr.h"
+#include "../lib/surl_protocol.h"
 
 #define BUFSIZE 1024
 
@@ -58,7 +59,7 @@ struct _curl_buffer {
   long start_msecs;
 };
 
-static curl_buffer *curl_request(char *method, char *url, char **headers, int n_headers);
+static curl_buffer *curl_request(char method, char *url, char **headers, int n_headers);
 static void curl_buffer_free(curl_buffer *curlbuf);
 
 static void handle_signal(int signal) {
@@ -105,7 +106,7 @@ static FILE *dump_response_to_file(char *buffer, size_t size) {
 int main(int argc, char **argv)
 {
   char reqbuf[BUFSIZE];
-  char *method = NULL, *url = NULL;
+  char method = SURL_METHOD_ABORT, *url = NULL;
   char **headers = NULL;
   int n_headers = 0;
   size_t bufsize = 0, sent = 0;
@@ -131,46 +132,35 @@ reopen:
   while(1) {
 
     if (simple_serial_gets(reqbuf, BUFSIZE) != NULL) {
-      char **parts;
-      int num_parts, i;
+      int i;
 
 new_req:
       fflush(stdout);
 
-      free(method);
       free(url);
       for (i = 0; i < n_headers; i++) {
         free(headers[i]);
       }
       free(headers);
 
-      method = NULL;
+      method = SURL_METHOD_ABORT;
       url = NULL;
       n_headers = 0;
       headers = NULL;
       curl_buffer_free(response);
       response = NULL;
 
-      num_parts = strsplit(reqbuf, ' ', &parts);
-      if (num_parts < 2) {
-        for (i = 0; i < num_parts; i++) {
-          free(parts[i]);
-        }
-        free(parts);
-        if (!strcmp(reqbuf, "\4\n")) {
-          /* it's a reset */
-          continue;
-        }
-        printf("Could not parse request '%s'\n", reqbuf);
+      method = reqbuf[0];
+      url = strdup(reqbuf + 1);
+      if (strchr(url, '\n'))
+        *strchr(url, '\n') = '\0';
+
+      if (method == SURL_METHOD_ABORT) {
+        continue;
+      } else if (url[0] == '\0') {
+        printf("Could not parse request.\n");
         continue;
       }
-      method = trim(parts[0]);
-      url = trim(parts[1]);
-      
-      for (i = 0; i < num_parts; i++) {
-        free(parts[i]);
-      }
-      free(parts);
     } else {
       printf("Fatal read error: %s\n", strerror(errno));
       goto reopen;
@@ -179,7 +169,7 @@ new_req:
     do {
       reqbuf[0] = '\0';
       if (simple_serial_gets(reqbuf, BUFSIZE) != NULL) {
-        if (!strcmp(reqbuf, "\4\n")) {
+        if (reqbuf[0] == SURL_METHOD_ABORT) {
           /* It's a reset */
           goto reopen;
         } else if (strcmp(reqbuf, "\n")) {
@@ -193,8 +183,8 @@ new_req:
       }
     } while (strcmp(reqbuf, "\n"));
 
-    if (method == NULL || url == NULL) {
-      if (!strcmp(reqbuf, "\4\n")) {
+    if (method == SURL_METHOD_ABORT || url == NULL) {
+      if (reqbuf[0] == SURL_METHOD_ABORT) {
         /* it's a reset */
         continue;
       }
@@ -204,7 +194,7 @@ new_req:
 
     response = curl_request(method, url, headers, n_headers);
     if (response == NULL) {
-      printf("%s %s - done\n", method, url);
+      printf("0x%02x %s - done\n", method, url);
       continue;
     }
     simple_serial_printf("%d,%zu,%zu,%s\n", response->response_code, response->size, 
@@ -355,7 +345,7 @@ new_req:
     secs = cur_time.tv_sec - 1;
     msecs = 1000 + (cur_time.tv_nsec / 1000000);
     
-    printf("%s %s - %d (%zub, %lums)\n", method, url, response->response_code, response->size,
+    printf("0x%02x %s - %d (%zub, %lums)\n", method, url, response->response_code, response->size,
         (1000*(secs - response->start_secs))+(msecs - response->start_msecs));
     fflush(stdout);
 
@@ -528,7 +518,7 @@ static char *prepare_post(char *buffer, size_t *len) {
   return out;
 }
 
-static curl_buffer *curl_request(char *method, char *url, char **headers, int n_headers) {
+static curl_buffer *curl_request(char method, char *url, char **headers, int n_headers) {
   CURL *curl;
   CURLcode res;
   int i;
@@ -536,8 +526,8 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
   curl_buffer *curlbuf;
   int is_sftp = !strncmp("sftp", url, 4);
   int is_ftp = !strncmp("ftp", url, 3) || is_sftp;
-  int ftp_is_maybe_dir = (is_ftp && url[strlen(url)-1] != '/' && !strcmp(method, "GET"));
-  int ftp_try_dir = (is_ftp && url[strlen(url)-1] == '/' && !strcmp(method, "GET"));
+  int ftp_is_maybe_dir = (is_ftp && url[strlen(url)-1] != '/' && method == SURL_METHOD_GET);
+  int ftp_try_dir = (is_ftp && url[strlen(url)-1] == '/' && method == SURL_METHOD_GET);
   static char *upload_buf = NULL;
   struct timespec cur_time;
   struct curl_slist *curl_headers = NULL;
@@ -576,7 +566,7 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
   curl = curl_easy_init();
   proxy_set_curl_opts(curl);
 
-  if (!strcmp(method, "POST")) {
+  if (method == SURL_METHOD_POST) {
       if (is_ftp) {
         printf("Unsupported ftp method POST\n");
         curl_buffer_free(curlbuf);
@@ -619,7 +609,7 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
       if (r) {
         printf("CURL: Couldn't set POST option(s)\n");
       }
-  } else if (!strcmp(method, "PUT")) {
+  } else if (method == SURL_METHOD_PUT) {
       simple_serial_puts("SEND_SIZE_AND_DATA\n");
       simple_serial_gets(upload_buf, 255);
       curlbuf->upload_size = atol(upload_buf);
@@ -661,7 +651,7 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
       if (r) {
         printf("CURL: Could not set PUT option(s)\n");
       }
-  } else if (!strcmp(method, "DELETE")) {
+  } else if (method == SURL_METHOD_DELETE) {
       if (is_ftp) {
         char *path = strdup(url);
         char *o_path = path;
@@ -693,12 +683,12 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
       if (r) {
         printf("CURL: Could not set DELETE option(s)\n");
       }
-  } else if (!strcmp(method, "GET")) {
+  } else if (method == SURL_METHOD_GET) {
     /* Don't send WAIT twice */
     if (ftp_try_dir || !ftp_is_maybe_dir) {
       simple_serial_puts("WAIT\n");
     }
-  } else if (!strcmp(method, "RAW")) {
+  } else if (method == SURL_METHOD_RAW) {
     simple_serial_puts("RAW_SESSION_START\n");
     curl_easy_cleanup(curl);
     curl = NULL;
@@ -707,14 +697,14 @@ static curl_buffer *curl_request(char *method, char *url, char **headers, int n_
     surl_server_raw_session(url);
     return NULL;
   } else {
-    printf("Unsupported method %s\n", method);
+    printf("Unsupported method 0x%02x\n", method);
     curl_easy_cleanup(curl);
     curl = NULL;
     return curlbuf;
   }
 
 
-  printf("%s %s - start\n", method, url);
+  printf("0x%02x %s - start\n", method, url);
 
   r |= curl_easy_setopt(curl, CURLOPT_URL, url);
   r |= curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_data_cb);

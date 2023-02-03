@@ -25,7 +25,7 @@ char *get_url(const char *url) {
   char *buffer = NULL;
 
   simple_serial_set_activity_indicator(1, 39, 0);
-  resp = surl_start_request("GET", url, NULL, 0);
+  resp = surl_start_request(SURL_METHOD_GET, url, NULL, 0);
 
   if (resp != NULL && resp->code == 200) {
     buffer = malloc(resp->size + 1);

@@ -245,7 +245,7 @@ int main(int argc, char **argv) {
     printf("Loading...   ");
 
     simple_serial_set_activity_indicator(1, 39, 0);
-    resp = surl_start_request("GET", url, NULL, 0);
+    resp = surl_start_request(SURL_METHOD_GET, url, NULL, 0);
     simple_serial_set_activity_indicator(0, 0, 0);
     
     stp_print_result(resp);

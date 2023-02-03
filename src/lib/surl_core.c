@@ -54,7 +54,7 @@ int surl_connect_proxy(void) {
 
 char surl_buf[BUFSIZE];
 
-surl_response * __fastcall__ surl_start_request(const char *method, const char *url, char **headers, int n_headers) {
+surl_response * __fastcall__ surl_start_request(const char method, const char *url, char **headers, int n_headers) {
   surl_response *resp;
   int i;
   char got_buf;
@@ -77,7 +77,7 @@ surl_response * __fastcall__ surl_start_request(const char *method, const char *
   resp->header_size = 0;
   resp->cur_hdr_pos = 0;
 
-  simple_serial_printf("%s %s\n", method, url);
+  simple_serial_printf("%c%s\n", method, url);
   //DEBUG("sent req %s %s\n", method, url);
   for (i = 0; i < n_headers; i++) {
     simple_serial_puts(headers[i]);
@@ -91,13 +91,13 @@ surl_response * __fastcall__ surl_start_request(const char *method, const char *
   if (!got_buf || *surl_buf == '\0') {
     resp->code = 504;
     return resp;
-  } else if (!strcmp(method, "GET") && strcmp(surl_buf, "WAIT\n")) {
+  } else if (method == SURL_METHOD_GET && strcmp(surl_buf, "WAIT\n")) {
     resp->code = 508;
     return resp;
-  } else if (!strcmp(method, "DELETE") && strcmp(surl_buf, "WAIT\n")) {
+  } else if (method == SURL_METHOD_DELETE && strcmp(surl_buf, "WAIT\n")) {
     resp->code = 508;
     return resp;
-  } else if (!strcmp(method, "RAW") && !strcmp(surl_buf, "RAW_SESSION_START\n")) {
+  } else if (method == SURL_METHOD_RAW && !strcmp(surl_buf, "RAW_SESSION_START\n")) {
     resp->code = 100;
     return resp;
   } else if (!strcmp(surl_buf, "SEND_SIZE_AND_DATA\n")) {

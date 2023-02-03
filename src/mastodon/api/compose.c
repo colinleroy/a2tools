@@ -43,7 +43,7 @@ char api_send_toot(char *buffer, char *in_reply_to_id, char compose_audience) {
   }
 
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s", STATUS_ENDPOINT);
-  resp = get_surl_for_endpoint("POST", endpoint_buf);
+  resp = get_surl_for_endpoint(SURL_METHOD_POST, endpoint_buf);
 
   /* Start of status */
   snprintf(body, 1024, "%s"

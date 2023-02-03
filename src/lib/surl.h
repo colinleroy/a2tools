@@ -1,6 +1,8 @@
 #ifndef __surl_h
 #define __surl_h
 
+#include "surl_protocol.h"
+
 #ifndef __CC65__
 #define __fastcall__
 #endif
@@ -22,7 +24,7 @@ extern char surl_buf[BUFSIZE];
 int __fastcall__ surl_connect_proxy(void);
 #define surl_close_proxy() simple_serial_close()
 
-surl_response * __fastcall__ surl_start_request(const char *method, const char *url, char **headers, int n_headers);
+surl_response * __fastcall__ surl_start_request(const char method, const char *url, char **headers, int n_headers);
 
 void __fastcall__ surl_read_response_header(surl_response *resp);
 

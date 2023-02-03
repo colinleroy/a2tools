@@ -78,7 +78,7 @@ again:
     exit(1);
   }
 
-  response = surl_start_request("PUT", buf, headers, 1);
+  response = surl_start_request(SURL_METHOD_PUT, buf, headers, 1);
   if (response == NULL) {
     printf("No response.\n");
     exit(1);

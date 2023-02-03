@@ -35,7 +35,7 @@ void nomem_msg(char *file, int line) {
     printf("No more memory (%s:%d)", file, line);
 }
 
-surl_response *get_surl_for_endpoint(char *method, char *endpoint) {
+surl_response *get_surl_for_endpoint(char method, char *endpoint) {
   static char *hdrs[1] = {NULL};
   surl_response *resp;
 

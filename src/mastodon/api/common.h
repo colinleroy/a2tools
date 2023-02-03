@@ -43,5 +43,5 @@ extern char arobase;
 #define PUBLIC_TIMELINE   "public"
 
 void nomem_msg(char *file, int line);
-surl_response *get_surl_for_endpoint(char *method, char *endpoint);
+surl_response *get_surl_for_endpoint(char method, char *endpoint);
 #endif

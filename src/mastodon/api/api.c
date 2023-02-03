@@ -43,7 +43,7 @@ int api_get_posts(char *endpoint, char to_load, char *first_to_load, char *filte
             first_to_load ? first_to_load : "",
             filter ? filter : ""
           );
-  resp = get_surl_for_endpoint("GET", endpoint_buf);
+  resp = get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
   
   if (!surl_response_ok(resp))
     goto err_out;
@@ -70,7 +70,7 @@ int api_get_status_and_replies(char to_load, char *root_id, char *root_leaf_id, 
 
   n_status = 0;
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s/context", STATUS_ENDPOINT, root_leaf_id);
-  resp = get_surl_for_endpoint("GET", endpoint_buf);
+  resp = get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
   
   if (!surl_response_ok(resp))
     goto err_out;
@@ -118,7 +118,7 @@ static char api_status_interact(status *s, char *action) {
   char r = -1;
 
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s/%s", STATUS_ENDPOINT, s->id, action);
-  resp = get_surl_for_endpoint("POST", endpoint_buf);
+  resp = get_surl_for_endpoint(SURL_METHOD_POST, endpoint_buf);
 
   if (!resp) {
     goto err_out;
@@ -192,7 +192,7 @@ char api_delete_status(status *s) {
   }
 
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s", STATUS_ENDPOINT, s->id);
-  resp = get_surl_for_endpoint("DELETE", endpoint_buf);
+  resp = get_surl_for_endpoint(SURL_METHOD_DELETE, endpoint_buf);
 
   if (!surl_response_ok(resp))
     goto err_out;
@@ -212,7 +212,7 @@ char api_relationship_get(account *a, char f) {
 
   if ((a->relationship & RSHIP_SET) == 0) {
     snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/relationships?id[]=%s", ACCOUNTS_ENDPOINT, a->id);
-    resp = get_surl_for_endpoint("GET", endpoint_buf);
+    resp = get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
 
     if (!surl_response_ok(resp))
       goto err_out;
@@ -261,7 +261,7 @@ account *api_get_full_account(char *id) {
   a = NULL;
 
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s", ACCOUNTS_ENDPOINT, id);
-  resp = get_surl_for_endpoint("GET", endpoint_buf);
+  resp = get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
   
   if (!surl_response_ok(resp))
     goto err_out;

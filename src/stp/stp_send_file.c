@@ -131,7 +131,7 @@ void stp_send_file(char *remote_dir) {
 
   progress_bar(0, 22, scrw, 0, filesize);
 
-  resp = surl_start_request("PUT", remote_filename, NULL, 0);
+  resp = surl_start_request(SURL_METHOD_PUT, remote_filename, NULL, 0);
   if (resp == NULL || resp->code != 100) {
     gotoxy(0, 21);
     printf("Bad response.");

@@ -44,7 +44,7 @@ again:
   if (strchr(buf, '\n'))
     *strchr(buf, '\n') = '\0';
 
-  response = surl_start_request("GET", buf, headers, 1);
+  response = surl_start_request(SURL_METHOD_GET, buf, headers, 1);
   if (response == NULL) {
     printf("No response.\n");
     exit(1);

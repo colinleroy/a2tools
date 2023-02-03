@@ -143,7 +143,7 @@ int main(int argc, char **argv) {
                          server_url,
                          argv[1], argv[3], argv[4]);
 
-  response = surl_start_request("GET", buf, NULL, 0);
+  response = surl_start_request(SURL_METHOD_GET, buf, NULL, 0);
   if (response == NULL) {
 #ifdef __CC65__
     printf("Cannot allocate response. (%zu avail)", _heapmaxavail());
