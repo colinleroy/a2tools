@@ -285,7 +285,7 @@ static int show_search(void) {
   dputs("Search: ");
 
   dget_text(search_buf, 49, NULL);
-  
+
   if (search_buf[0] != '\0') {
     clrscr();
     set_hscrollwindow(0, scrw);
@@ -317,7 +317,7 @@ static list *build_list(char *root, char *leaf_root, char kind) {
     l->account = api_get_full_account(root);
     l->first_displayed_post = -1;
   } else {
-    if (root) {
+    if (root && *root) {
       l->root = strdup(root);
       l->leaf_root = strdup(leaf_root);
     }
@@ -358,7 +358,6 @@ static list *build_list(char *root, char *leaf_root, char kind) {
       if(!strcmp(l->ids[i], root)) {
           l->first_displayed_post = i;
           /* Load first for the header */
-          item_free(l, i);
           l->displayed_posts[i] = item_get(l, i, 1);
           break;
       }
@@ -970,9 +969,7 @@ void cli(void) {
         }
         compact_list(l[cur_list - 1]);
         l = realloc(l, (cur_list + 1) * sizeof(list *));
-        l[cur_list] = build_list(*new_root ? new_root : NULL,
-                                 *new_leaf_root ? new_leaf_root : NULL,
-                                 cur_action);
+        l[cur_list] = build_list(new_root, new_leaf_root, cur_action);
         clrscrollwin();
         cur_action = NAVIGATE;
         break;
