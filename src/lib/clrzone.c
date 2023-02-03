@@ -24,15 +24,10 @@
 #endif
 #include "clrzone.h"
 
-static char *clearbuf = NULL;
+static char clearbuf[82];
 void __fastcall__ clrzone(char xs, char ys, char xe, char ye) {
   int l = xe - xs + 1;
   
-  if (clearbuf == NULL) {
-    clearbuf = malloc(80 + 2);
-    memset(clearbuf, ' ', 80 + 2);
-  }
-
   memset(clearbuf, ' ', l);
   clearbuf[l] = '\0';
 
