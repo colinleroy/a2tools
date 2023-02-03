@@ -1,0 +1,39 @@
+Request
+1 byte method identifier
+URL
+\n
+header 0
+\n
+...
+header n
+\n
+\n
+
+if method is RAW
+  reply RAW_SESSION_START and stop
+if (method is POST or PUT)
+  reply SEND_SIZE_AND_DATA
+  get data length,is_raw
+  reply UPLOAD
+  get data
+  reply response headers (code,bodysize,headersize,content_type)
+else if (method is DELETE or GET)
+  reply WAIT (avoid client timeout)
+  reply response headers (code,bodysize,headersize,content_type)
+  
+SURL_METHOD_ABORT "\4" (no param)
+SURL_METHOD_GET "" (url)
+SURL_METHOD_POST (url)
+SURL_METHOD_PUT (url)
+SURL_METHOD_DELETE (url)
+SURL_METHOD_RAW (host:post)
+
+SURL_COMMAND_ABORT "\4" (no param)
+SURL_COMMAND_SEND (size to send)
+SURL_COMMAND_HEADERS (size to send)
+SURL_COMMAND_FIND (size to send, string to find)
+SURL_COMMAND_JSON (strip_html_bool, translit charset str, json selector str)
+SURL_COMMAND_HGR (monochrome_bool)
+
+SURL_RESPONSE /* code, body size, headers_size, str */
+SURL_COMMAND_RESPONSE_ERROR /* (not found, not json, conv error, ...)

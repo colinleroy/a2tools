@@ -158,7 +158,7 @@ int do_login(void) {
 
 /* First request to get authorization */
   dputs("GET "OAUTH_URL"... ");
-  resp = surl_start_request("GET", authorize_url, NULL, 0);
+  resp = surl_start_request(SURL_METHOD_GET, authorize_url, NULL, 0);
   if (resp == NULL) {
     dputs("Could not start request.\r\n");
     goto err_out;
@@ -202,7 +202,7 @@ int do_login(void) {
     free(token);
 
     dputs("POST "LOGIN_URL"... ");
-    resp = surl_start_request("POST", login_url, NULL, 0);
+    resp = surl_start_request(SURL_METHOD_POST, login_url, NULL, 0);
 
     if (resp == NULL) {
       dputs("Could not start request.\r\n");
@@ -245,7 +245,7 @@ int do_login(void) {
       free(otp);
 
       dputs("POST "LOGIN_URL"... ");
-      resp = surl_start_request("POST", login_url, NULL, 0);
+      resp = surl_start_request(SURL_METHOD_POST, login_url, NULL, 0);
 
       if (resp == NULL) {
         dputs("Could not start request.\r\n");
@@ -290,7 +290,7 @@ int do_login(void) {
     free(token);
 
     dputs("POST "OAUTH_URL"... ");
-    resp = surl_start_request("POST", oauth_url, NULL, 0);
+    resp = surl_start_request(SURL_METHOD_POST, oauth_url, NULL, 0);
 
     surl_send_data_params(resp, post_len, 0);
     surl_send_data(resp, post, post_len);
@@ -359,7 +359,7 @@ int register_app(void) {
   sprintf(reg_url, "%s%s", instance_url, REGISTER_URL);
 
   dputs("POST "REGISTER_URL"... ");
-  resp = surl_start_request("POST", reg_url, NULL, 0);
+  resp = surl_start_request(SURL_METHOD_POST, reg_url, NULL, 0);
   free(reg_url);
 
   if (resp == NULL) {
@@ -443,7 +443,7 @@ int get_oauth_token(void) {
 
 /* First request to get authorization */
   dputs("POST "OAUTH_URL"... ");
-  resp = surl_start_request("POST", oauth_url, NULL, 0);
+  resp = surl_start_request(SURL_METHOD_POST, oauth_url, NULL, 0);
   if (resp == NULL) {
     dputs("Could not start request.\r\n");
     free(oauth_url);

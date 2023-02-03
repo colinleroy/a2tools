@@ -49,7 +49,7 @@ int api_get_notifications(char to_load, char *first_to_load, char **notification
             first_to_load ? "&max_id=" : "",
             first_to_load ? first_to_load : ""
           );
-  resp = get_surl_for_endpoint("GET", endpoint_buf);
+  resp = get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
   
   if (!surl_response_ok(resp))
     goto err_out;
@@ -76,7 +76,7 @@ notification *api_get_notification(char *id) {
   n = NULL;
 
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s", NOTIFICATION_ENDPOINT, id);
-  resp = get_surl_for_endpoint("GET", endpoint_buf);
+  resp = get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
   
   if (!surl_response_ok(resp))
     goto err_out;

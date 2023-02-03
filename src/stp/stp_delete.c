@@ -65,7 +65,7 @@ void stp_delete(char *url, char *filename) {
   full_url = malloc(strlen(url) + 1 + strlen(filename) + 1);
   sprintf(full_url, "%s/%s", url, filename);
 
-  resp = surl_start_request("DELETE", full_url, NULL, 0);
+  resp = surl_start_request(SURL_METHOD_DELETE, full_url, NULL, 0);
 
   free(full_url);
 

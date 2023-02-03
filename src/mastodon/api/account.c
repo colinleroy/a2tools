@@ -91,7 +91,7 @@ account *api_get_profile(char *id) {
   a = NULL;
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s", ACCOUNTS_ENDPOINT,
               id == NULL ? "verify_credentials" : id);
-  resp = get_surl_for_endpoint("GET", endpoint_buf);
+  resp = get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
 
   if (!surl_response_ok(resp)) {
     goto err_out;

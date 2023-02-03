@@ -80,7 +80,7 @@ static void img_display(media *m, char idx) {
   surl_response *resp;
   size_t len;
 
-  resp = surl_start_request("GET", m->media_url[idx], NULL, 0);
+  resp = surl_start_request(SURL_METHOD_GET, m->media_url[idx], NULL, 0);
 
   if (resp && resp->code >=200 && resp->code < 300) {
     if (!hgr_init_done) {
