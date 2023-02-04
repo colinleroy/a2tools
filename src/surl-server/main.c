@@ -21,6 +21,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <curl/curl.h>
+#include <arpa/inet.h>
 #include "char_convert.h"
 #include "simple_serial.h"
 #include "extended_string.h"
@@ -116,6 +117,7 @@ int main(int argc, char **argv)
   time_t secs;
   long msecs;
   struct timespec cur_time;
+  unsigned short r_hdrs[3];
 
   install_sig_handler();
 
@@ -133,7 +135,6 @@ reopen:
 
     if (simple_serial_gets(reqbuf, BUFSIZE) != NULL) {
       int i;
-
 new_req:
       fflush(stdout);
 
@@ -197,8 +198,15 @@ new_req:
       printf("0x%02x %s - done\n", method, url);
       continue;
     }
-    simple_serial_printf("%d,%zu,%zu,%s\n", response->response_code, response->size, 
-                                    response->headers_size, response->content_type);
+
+    r_hdrs[0] = htons(response->response_code);
+    r_hdrs[1] = htons(response->size);
+    r_hdrs[2] = htons(response->headers_size);
+    printf("r_hdr: %d %zu %zu %s\n", response->response_code, response->size, response->headers_size, response->content_type);
+    simple_serial_write((char *)r_hdrs, 1, 6);
+    simple_serial_puts(response->content_type);
+    simple_serial_putc('\n');
+
     sent = 0;
     sending_headers = 0;
     sending_body = 0;
@@ -573,7 +581,7 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
         curl_easy_cleanup(curl);
         return NULL;
       }
-      simple_serial_puts("SEND_SIZE_AND_DATA\n");
+      simple_serial_putc(SURL_ANSWER_SEND_SIZE);
       simple_serial_gets(upload_buf, 255);
       curlbuf->upload_size = atol(upload_buf);
       curlbuf->orig_upload_size = atol(upload_buf);
@@ -610,7 +618,7 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
         printf("CURL: Couldn't set POST option(s)\n");
       }
   } else if (method == SURL_METHOD_PUT) {
-      simple_serial_puts("SEND_SIZE_AND_DATA\n");
+      simple_serial_putc(SURL_ANSWER_SEND_SIZE);
       simple_serial_gets(upload_buf, 255);
       curlbuf->upload_size = atol(upload_buf);
       curlbuf->orig_upload_size = atol(upload_buf);
@@ -675,10 +683,10 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
         free(o_path);
         r |= curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_FTP);
         r |= curl_easy_setopt(curl, CURLOPT_QUOTE, curl_slist_append(NULL,cmd));
-        simple_serial_puts("WAIT\n");
+        simple_serial_putc(SURL_ANSWER_WAIT);
       } else {
         r |= curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
-        simple_serial_puts("WAIT\n");
+        simple_serial_putc(SURL_ANSWER_WAIT);
       }
       if (r) {
         printf("CURL: Could not set DELETE option(s)\n");
@@ -686,10 +694,10 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
   } else if (method == SURL_METHOD_GET) {
     /* Don't send WAIT twice */
     if (ftp_try_dir || !ftp_is_maybe_dir) {
-      simple_serial_puts("WAIT\n");
+      simple_serial_putc(SURL_ANSWER_WAIT);
     }
   } else if (method == SURL_METHOD_RAW) {
-    simple_serial_puts("RAW_SESSION_START\n");
+    simple_serial_putc(SURL_ANSWER_RAW_START);
     curl_easy_cleanup(curl);
     curl = NULL;
     curl_buffer_free(curlbuf);

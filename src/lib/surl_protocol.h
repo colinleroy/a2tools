@@ -8,4 +8,7 @@
 #define SURL_METHOD_PUT    0x08
 #define SURL_METHOD_DELETE 0x09
 
+#define SURL_ANSWER_WAIT       0x10
+#define SURL_ANSWER_SEND_SIZE  0x11
+#define SURL_ANSWER_RAW_START  0x12
 #endif

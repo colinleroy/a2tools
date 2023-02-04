@@ -18,6 +18,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#ifndef __CC65__
+#include <arpa/inet.h>
+#endif
 #include "surl.h"
 #include "simple_serial.h"
 #include "extended_conio.h"
@@ -54,10 +57,10 @@ int surl_connect_proxy(void) {
 
 char surl_buf[BUFSIZE];
 
-surl_response * __fastcall__ surl_start_request(const char method, const char *url, char **headers, int n_headers) {
+surl_response * __fastcall__ surl_start_request(const char method, char *url, char **headers, int n_headers) {
   surl_response *resp;
   int i;
-  char got_buf;
+
   if (proxy_opened == 0) {
     if (surl_connect_proxy() != 0) {
       return NULL;
@@ -77,7 +80,9 @@ surl_response * __fastcall__ surl_start_request(const char method, const char *u
   resp->header_size = 0;
   resp->cur_hdr_pos = 0;
 
-  simple_serial_printf("%c%s\n", method, url);
+  simple_serial_putc(method);
+  simple_serial_puts(url);
+  simple_serial_putc('\n');
   //DEBUG("sent req %s %s\n", method, url);
   for (i = 0; i < n_headers; i++) {
     simple_serial_puts(headers[i]);
@@ -86,21 +91,21 @@ surl_response * __fastcall__ surl_start_request(const char method, const char *u
   }
   simple_serial_putc('\n');
 
-  got_buf = simple_serial_gets_with_timeout(surl_buf, BUFSIZE) != NULL;
+  i = simple_serial_getc_with_timeout();
 
-  if (!got_buf || *surl_buf == '\0') {
+  if (i == EOF) {
     resp->code = 504;
     return resp;
-  } else if (method == SURL_METHOD_GET && strcmp(surl_buf, "WAIT\n")) {
+  } else if (method == SURL_METHOD_GET && i != SURL_ANSWER_WAIT) {
     resp->code = 508;
     return resp;
-  } else if (method == SURL_METHOD_DELETE && strcmp(surl_buf, "WAIT\n")) {
+  } else if (method == SURL_METHOD_DELETE && i != SURL_ANSWER_WAIT) {
     resp->code = 508;
     return resp;
-  } else if (method == SURL_METHOD_RAW && !strcmp(surl_buf, "RAW_SESSION_START\n")) {
+  } else if (method == SURL_METHOD_RAW && i == SURL_ANSWER_RAW_START) {
     resp->code = 100;
     return resp;
-  } else if (!strcmp(surl_buf, "SEND_SIZE_AND_DATA\n")) {
+  } else if (i == SURL_ANSWER_SEND_SIZE) {
     resp->code = 100;
     return resp;
   }
@@ -109,42 +114,27 @@ surl_response * __fastcall__ surl_start_request(const char method, const char *u
   return resp;
 }
 
+#ifdef __APPLE2ENH__
+#define ntohs(x) ((x >> 8) + ((x & 0xff) << 8))
+#endif
 void __fastcall__ surl_read_response_header(surl_response *resp) {
   char *w;
-
+  
   if (resp->content_type) {
     return; // already read.
   }
 
+  simple_serial_read((char *)resp, 1, 6);
   simple_serial_gets(surl_buf, BUFSIZE);
-  //DEBUG("RESPonse header %s\n", surl_buf);
-  if (surl_buf[0] == '\0') {
-    resp->code = 509;
-    return;
-  }
 
-  if (strchr(surl_buf, ',') == NULL) {
-    resp->code = 510;
-    return;
-  }
+  resp->code = ntohs(resp->code);
+  resp->size = ntohs(resp->size);
+  resp->header_size = ntohs(resp->header_size);
+  resp->content_type = strdup(surl_buf);
 
-  w = surl_buf;
-  resp->code = atoi(w);
-
-  w = strchr(w, ',') + 1;
-  resp->size = atol(w);
-
-  w = strchr(w,',') + 1;
-  resp->header_size = atol(w);
-
-  if (strchr(w, ',') != NULL) {
-    resp->content_type = strdup(strchr(w, ',') + 1);
-    w = strchr(resp->content_type, '\n');
-    if (w)
-      *w = '\0';
-  } else {
-    resp->content_type = strdup("application/octet-stream");
-  }  
+  w = strchr(resp->content_type, '\n');
+  if (w)
+    *w = '\0';
 }
 
 size_t __fastcall__ surl_receive_data(surl_response *resp, char *buffer, size_t max_len) {

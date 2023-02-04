@@ -9,13 +9,15 @@
 
 typedef struct _surl_response surl_response;
 struct _surl_response {
-  int code;
+  unsigned int code;
   size_t size;
+  size_t header_size;
+
   size_t cur_pos;
+  size_t cur_hdr_pos;
+
   char *content_type;
 
-  size_t header_size;
-  size_t cur_hdr_pos;
 };
 
 #define BUFSIZE 255
@@ -24,7 +26,7 @@ extern char surl_buf[BUFSIZE];
 int __fastcall__ surl_connect_proxy(void);
 #define surl_close_proxy() simple_serial_close()
 
-surl_response * __fastcall__ surl_start_request(const char method, const char *url, char **headers, int n_headers);
+surl_response * __fastcall__ surl_start_request(const char method, char *url, char **headers, int n_headers);
 
 void __fastcall__ surl_read_response_header(surl_response *resp);
 
