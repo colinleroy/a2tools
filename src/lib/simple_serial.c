@@ -326,7 +326,7 @@ int __fastcall__ simple_serial_putc(char c) {
   fflush(ttyfp);
 
   if (!flow_control_enabled)
-    usleep(1100);
+    usleep(1000);
 
   return r;
 }

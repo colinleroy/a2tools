@@ -18,6 +18,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#ifndef __CC65__
+#include <arpa/inet.h>
+#endif
 #include "surl.h"
 #include "simple_serial.h"
 #include "extended_conio.h"
@@ -37,6 +40,7 @@ static size_t overwritten_offset = 0;
 size_t __fastcall__ surl_receive_lines(surl_response *resp, char *buffer, size_t max_len) {
   size_t to_read = min(resp->size - resp->cur_pos, max_len);
   size_t r = 0;
+  size_t net_len;
   size_t last_return = 0;
   char *w;
   /* If we had cut the buffer short, restore the overwritten character,
@@ -56,9 +60,10 @@ size_t __fastcall__ surl_receive_lines(surl_response *resp, char *buffer, size_t
   }
 
   w = buffer + r;
+
+  net_len = htons(to_read);
   simple_serial_putc(SURL_CMD_SEND);
-  simple_serial_putc(to_read >> 8);
-  simple_serial_putc((to_read & 0xff) << 8);
+  simple_serial_write((char *)&net_len, 1, 2);
 
   while (to_read > 0) {
     *w = simple_serial_getc();
