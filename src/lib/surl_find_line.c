@@ -18,6 +18,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#ifndef __CC65__
+#include <arpa/inet.h>
+#endif
 #include "surl.h"
 #include "simple_serial.h"
 #include "extended_conio.h"
@@ -33,7 +36,13 @@
 
 int __fastcall__ surl_find_line(surl_response *resp, char *buffer, size_t max_len, char *search_str) {
   size_t res_len = 0;
-  simple_serial_printf("FIND %zu %s\n", max_len, search_str);
+
+  res_len = htons(max_len);
+  simple_serial_putc(SURL_CMD_FIND);
+  simple_serial_write((char *)&res_len, 1, 2);
+  simple_serial_puts(search_str);
+  simple_serial_putc('\n');
+
   simple_serial_gets(buffer, max_len);
 
   if (!strcmp(buffer, "<NOT_FOUND>\n")) {

@@ -114,9 +114,6 @@ surl_response * __fastcall__ surl_start_request(const char method, char *url, ch
   return resp;
 }
 
-#ifdef __APPLE2ENH__
-#define ntohs(x) ((x >> 8) + ((x & 0xff) << 8))
-#endif
 void __fastcall__ surl_read_response_header(surl_response *resp) {
   char *w;
   
@@ -135,23 +132,6 @@ void __fastcall__ surl_read_response_header(surl_response *resp) {
   w = strchr(resp->content_type, '\n');
   if (w)
     *w = '\0';
-}
-
-size_t __fastcall__ surl_receive_data(surl_response *resp, char *buffer, size_t max_len) {
-  size_t to_read = min(resp->size - resp->cur_pos, max_len);
-  size_t r;
-
-  if (to_read == 0) {
-    return 0;
-  }
-
-  simple_serial_printf("SEND %zu\n", to_read);
-  r = simple_serial_read(buffer, sizeof(char), to_read);
-
-  buffer[r] = '\0';
-  resp->cur_pos += r;
-
-  return r;
 }
 
 void __fastcall__ surl_response_free(surl_response *resp) {

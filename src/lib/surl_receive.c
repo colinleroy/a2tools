@@ -18,6 +18,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#ifndef __CC65__
+#include <arpa/inet.h>
+#endif
 #include "surl.h"
 #include "simple_serial.h"
 #include "extended_conio.h"
@@ -41,7 +44,9 @@ size_t __fastcall__ surl_receive_data(surl_response *resp, char *buffer, size_t 
     return 0;
   }
 
-  simple_serial_printf("SEND %zu\n", to_read);
+  r = htons(to_read);
+  simple_serial_putc(SURL_CMD_SEND);
+  simple_serial_write((char *)&r, 1, 2);
   r = simple_serial_read(buffer, sizeof(char), to_read);
 
   buffer[r] = '\0';
