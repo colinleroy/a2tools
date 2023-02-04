@@ -58,6 +58,8 @@ struct _curl_buffer {
 
   time_t start_secs;
   long start_msecs;
+
+  jv json_data;
 };
 
 static curl_buffer *curl_request(char method, char *url, char **headers, int n_headers);
@@ -210,6 +212,11 @@ new_req:
     simple_serial_puts(response->content_type);
     simple_serial_putc('\n');
 
+    if (!strncasecmp(response->content_type, "application/json", 16)) {
+      response->json_data = jv_parse(response->buffer);
+      printf("built json data\n");
+    }
+
     sent = 0;
     sending_headers = 0;
     sending_body = 0;
@@ -220,9 +227,15 @@ new_req:
       char *translit = NULL;
       unsigned short size;
       size_t l;
+      long start_secs = 0;
+      long start_msecs = 0;
 
       /* read command */
       cmd = simple_serial_getc();
+      clock_gettime(CLOCK_REALTIME, &cur_time);
+      start_secs = cur_time.tv_sec;
+      start_msecs = cur_time.tv_nsec / 1000000;
+
       if (SURL_IS_CMD(cmd)) {
         if(cmd == SURL_CMD_SEND || cmd == SURL_CMD_HEADERS) {
           simple_serial_read((char *)&size, 1, 2);
@@ -263,6 +276,12 @@ new_req:
           goto new_req;
         }
       } else {
+        clock_gettime(CLOCK_REALTIME, &cur_time);
+        secs = cur_time.tv_sec - 1;
+        msecs = 1000 + (cur_time.tv_nsec / 1000000);
+        
+        printf("0x%02x %s - (%lums)\n", method, url,
+            (1000*(secs - start_secs))+(msecs - start_msecs));
         /* Put that back as a REQUEST */
         reqbuf[0] = cmd;
         simple_serial_gets(reqbuf + 1, BUFSIZE - 1);
@@ -324,7 +343,7 @@ new_req:
           printf("JSON '%s' into %zu bytes: response is not json\n", param, bufsize);
           simple_serial_putc(SURL_ERROR_NOT_JSON);
         } else {
-          char *result = jq_get(response->buffer, param);
+          char *result = jq_get(jv_copy(response->json_data), param);
           printf("JSON '%s' into %zu bytes%s, translit: %s: %zu bytes %s\n", param, bufsize, 
                   striphtml ? ", striphtml":"",
                   translit,
@@ -370,14 +389,15 @@ new_req:
           simple_serial_putc(SURL_ERROR_CONV_FAILED);
         }
       }
+
+      clock_gettime(CLOCK_REALTIME, &cur_time);
+      secs = cur_time.tv_sec - 1;
+      msecs = 1000 + (cur_time.tv_nsec / 1000000);
+      
+      printf("0x%02x %s - (%lums)\n", method, url,
+          (1000*(secs - start_secs))+(msecs - start_msecs));
     }
 
-    clock_gettime(CLOCK_REALTIME, &cur_time);
-    secs = cur_time.tv_sec - 1;
-    msecs = 1000 + (cur_time.tv_nsec / 1000000);
-    
-    printf("0x%02x %s - %d (%zub, %lums)\n", method, url, response->response_code, response->size,
-        (1000*(secs - response->start_secs))+(msecs - response->start_msecs));
     fflush(stdout);
 
   }
@@ -434,6 +454,7 @@ static void curl_buffer_free(curl_buffer *curlbuf) {
   if(curlbuf->orig_img_fp) {
     fclose(curlbuf->orig_img_fp);
   }
+  jv_free(curlbuf->json_data);
   free(curlbuf);
 }
 
@@ -444,6 +465,13 @@ static void proxy_set_curl_opts(CURL *curl) {
   r |= curl_easy_setopt(curl, CURLOPT_COOKIEJAR, "cookies.txt");
   r |= curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "cookies.txt");
   r |= curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
+
+  r |= curl_easy_setopt(curl, CURLOPT_POST, 0L);
+  r |= curl_easy_setopt(curl, CURLOPT_UPLOAD, 0L);
+  r |= curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_ALL);
+  r |= curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, NULL);
+  r |= curl_easy_setopt(curl, CURLOPT_QUOTE, NULL);
+  r |= curl_easy_setopt(curl, CURLOPT_DIRLISTONLY, 0L);
   if (r) {
     printf("CURL: Couldn't set standard options\n");
   }
@@ -550,7 +578,7 @@ static char *prepare_post(char *buffer, size_t *len) {
 }
 
 static curl_buffer *curl_request(char method, char *url, char **headers, int n_headers) {
-  CURL *curl;
+  static CURL *curl = NULL;
   CURLcode res;
   int i;
   CURLcode r = 0;
@@ -561,6 +589,7 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
   int ftp_try_dir = (is_ftp && url[strlen(url)-1] == '/' && method == SURL_METHOD_GET);
   static char *upload_buf = NULL;
   struct timespec cur_time;
+  long secs, msecs;
   struct curl_slist *curl_headers = NULL;
   char *tmp;
 
@@ -589,19 +618,15 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
   memset(curlbuf, 0, sizeof(curl_buffer));
   curlbuf->response_code = 500;
 
-  clock_gettime(CLOCK_REALTIME, &cur_time);
-
-  curlbuf->start_secs = cur_time.tv_sec;
-  curlbuf->start_msecs = cur_time.tv_nsec / 1000000;
-
-  curl = curl_easy_init();
+  if (curl == NULL) {
+    curl = curl_easy_init();
+  }
   proxy_set_curl_opts(curl);
 
   if (method == SURL_METHOD_POST) {
       if (is_ftp) {
         printf("Unsupported ftp method POST\n");
         curl_buffer_free(curlbuf);
-        curl_easy_cleanup(curl);
         return NULL;
       }
       simple_serial_putc(SURL_ANSWER_SEND_SIZE);
@@ -617,7 +642,6 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
       if (!strchr(upload_buf, ',')) {
         printf("Unexpected reply\n");
         curl_buffer_free(curlbuf);
-        curl_easy_cleanup(curl);
         return NULL;
       }
       /* Massage an x-www-urlencoded form */
@@ -652,7 +676,6 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
       if (!strchr(upload_buf, ',')) {
         printf("Unexpected reply\n");
         curl_buffer_free(curlbuf);
-        curl_easy_cleanup(curl);
         return NULL;
       }
 
@@ -660,7 +683,6 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
         simple_serial_puts("ERROR\n");
         printf("Expected raw upload\n");
         curl_buffer_free(curlbuf);
-        curl_easy_cleanup(curl);
         return NULL;
       }
       simple_serial_puts("UPLOAD\n");
@@ -672,7 +694,6 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
       r |= curl_easy_setopt(curl, CURLOPT_SEEKFUNCTION, data_seek_cb);
       r |= curl_easy_setopt(curl, CURLOPT_READDATA, curlbuf);
       r |= curl_easy_setopt(curl, CURLOPT_SEEKDATA, curlbuf);
-      r |= curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
       r |= curl_easy_setopt(curl, CURLOPT_INFILESIZE, curlbuf->upload_size);
       if (is_sftp) {
         r |= curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_SFTP);
@@ -721,16 +742,12 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
     }
   } else if (method == SURL_METHOD_RAW) {
     simple_serial_putc(SURL_ANSWER_RAW_START);
-    curl_easy_cleanup(curl);
-    curl = NULL;
     curl_buffer_free(curlbuf);
 
     surl_server_raw_session(url);
     return NULL;
   } else {
     printf("Unsupported method 0x%02x\n", method);
-    curl_easy_cleanup(curl);
-    curl = NULL;
     return curlbuf;
   }
 
@@ -752,9 +769,23 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
 
   r |= curl_easy_setopt(curl, CURLOPT_HTTPHEADER, curl_headers);
   if (r) {
-    printf("CURL: Could not get general option(s)\n");
+    printf("CURL: Could not set general option(s)\n");
   }
+
+  clock_gettime(CLOCK_REALTIME, &cur_time);
+
+  curlbuf->start_secs = cur_time.tv_sec;
+  curlbuf->start_msecs = cur_time.tv_nsec / 1000000;
+
   res = curl_easy_perform(curl);
+
+  clock_gettime(CLOCK_REALTIME, &cur_time);
+  secs = cur_time.tv_sec - 1;
+  msecs = 1000 + (cur_time.tv_nsec / 1000000);
+  
+  printf("curl_easy_perform %s %lums\n", url,
+      (1000*(secs - curlbuf->start_secs))+(msecs - curlbuf->start_msecs));
+
   curl_slist_free_all(curl_headers);
 
   if(res != CURLE_OK) {
@@ -781,7 +812,6 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
     }
   }
   fflush(stdout);
-  curl_easy_cleanup(curl);
 
   return curlbuf;
 }
