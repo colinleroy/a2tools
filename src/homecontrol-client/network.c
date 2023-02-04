@@ -20,7 +20,7 @@
 #include "network.h"
 #include "simple_serial.h"
 
-char *get_url(const char *url) {
+char *get_url(char *url) {
   surl_response *resp;
   char *buffer = NULL;
 

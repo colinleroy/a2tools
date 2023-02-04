@@ -1,3 +1,3 @@
 #include "surl.h"
 
-char *get_url(const char *url);
+char *get_url(char *url);
