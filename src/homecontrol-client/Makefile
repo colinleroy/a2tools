@@ -9,7 +9,8 @@ homectrl_SOURCES := main.c network.c \
 	../lib/clrzone.c \
 	../lib/strsplit.c \
 	../lib/extended_string.c \
-	../lib/surl_core.c
+	../lib/surl_core.c \
+	../lib/surl_receive.c
 
 homectrl_CL65SOURCES = ../lib/dputc.s ../lib/scroll.s
 

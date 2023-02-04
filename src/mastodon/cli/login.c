@@ -23,7 +23,7 @@
 #include "simple_serial.h"
 #include "scrollwindow.h"
 #include "strsplit.h"
-#include "cgets.h"
+#include "dgets.h"
 #ifdef __CC65__
 #include "dputs.h"
 #include "dputc.h"
@@ -137,7 +137,7 @@ reenter_settings:
     oauth_token[0] = '\0';
 
     dputs("Your instance: ");
-    cgets(instance_url, BUF_SIZE);
+    dget_text(instance_url, BUF_SIZE, NULL);
     *strchr(instance_url, '\n') = '\0';
 
     if (register_app() < 0) {
@@ -146,7 +146,7 @@ reenter_settings:
 
     dputs("If on a non-US keyboard, use @ instead of arobase.\r\n");
     dputs("Your login: ");
-    cgets(login, BUF_SIZE);
+    dget_text(login, BUF_SIZE, NULL);
     *strchr(login, '\n') = '\0';
     
     return 0;
@@ -190,15 +190,6 @@ int main(int argc, char **argv) {
     dputs("Saved OAuth token.\r\n");
 
   }
-  /* We don't need those anymore */
-  free(client_id);
-  free(client_secret);
-  free(login);
-  free(oauth_code);
-  client_id = NULL;
-  client_secret = NULL;
-  login = NULL;
-  oauth_code = NULL;
 
   if (oauth_token == NULL || oauth_token[0] == '\0') {
     dputs("Could not login :(\n");

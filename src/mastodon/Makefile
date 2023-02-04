@@ -1,5 +1,5 @@
 mastodon_SOURCES := cli/login.c api/oauth.c cli/logo.c \
-	 ../lib/clrzone.c ../lib/scrollwindow.c ../lib/cgets.c \
+	 ../lib/clrzone.c ../lib/scrollwindow.c ../lib/dgets.c \
 	../lib/simple_serial.c ../lib/strsplit.c \
 	../lib/surl_core.c ../lib/surl_send.c ../lib/surl_find_line.c \
 	../lib/surl_get_json.c
