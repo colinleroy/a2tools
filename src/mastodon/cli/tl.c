@@ -907,7 +907,6 @@ static int show_list(list *l) {
 void cli(void) {
   signed char cur_list;
   list **l, *prev_list;
-  char starting = 1;
   item *disp;
   status *disp_status;
   notification *disp_notif;
@@ -916,10 +915,10 @@ void cli(void) {
    * memory fragmentation */
   char new_root[32], new_leaf_root[32];
 
-  if (starting) {
-    cur_list = load_state(&l);
-    /* else cur_action will be NAVIGATE */
-  }
+  cur_list = load_state(&l);
+  clrscr();
+  print_header(NULL, NULL, NULL);
+
   if (cur_list == -1) {
     cur_action = SHOW_HOME_TIMELINE;
   }
@@ -974,10 +973,6 @@ void cli(void) {
         cur_action = NAVIGATE;
         break;
       case NAVIGATE:
-        if (starting) {
-          starting = 0;
-          clrscr();
-        }
         if (show_list(l[cur_list])) {
           /* reload, freeing the list
            * and resetting action to load it */
