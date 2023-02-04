@@ -18,6 +18,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#ifndef __CC65__
+#include <arpa/inet.h>
+#endif
 #include "surl.h"
 #include "simple_serial.h"
 #include "extended_conio.h"
@@ -34,7 +37,19 @@
 #define BUFSIZE 255
 
 int __fastcall__ surl_get_json(surl_response *resp, char *buffer, size_t len, char striphtml, char *translit, char *selector) {
-  simple_serial_printf("JSON %zu %d %s %s\n", len, striphtml, translit ? translit : "0", selector);
+
+  len = htons(len);
+
+  simple_serial_putc(SURL_CMD_JSON);
+  simple_serial_write((char *)&len, 1, 2);
+  simple_serial_putc(striphtml);
+  simple_serial_puts(translit ? translit : "0");
+  simple_serial_putc(' ');
+  simple_serial_puts(selector);
+  simple_serial_putc('\n');
+
+  len = ntohs(len);
+
   simple_serial_gets(buffer, len);
 
   if (!strcmp(buffer, "<NOT_FOUND>\n") || !strcmp(buffer, "<NOT_JSON>\n")) {

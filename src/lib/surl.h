@@ -20,6 +20,11 @@ struct _surl_response {
 
 };
 
+#ifdef __APPLE2ENH__
+#define ntohs(x) (((x) >> 8) + (((x) & 0xff) << 8))
+#define htons(x) (((x) >> 8) + (((x) & 0xff) << 8))
+#endif
+
 #define BUFSIZE 255
 extern char surl_buf[BUFSIZE];
 

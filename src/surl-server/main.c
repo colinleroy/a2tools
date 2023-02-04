@@ -108,6 +108,7 @@ int main(int argc, char **argv)
 {
   char reqbuf[BUFSIZE];
   char method = SURL_METHOD_ABORT, *url = NULL;
+  char cmd;
   char **headers = NULL;
   int n_headers = 0;
   size_t bufsize = 0, sent = 0;
@@ -133,6 +134,7 @@ reopen:
 
   while(1) {
 
+    /* read request */
     if (simple_serial_gets(reqbuf, BUFSIZE) != NULL) {
       int i;
 new_req:
@@ -167,6 +169,7 @@ new_req:
       goto reopen;
     }
     
+    /* read headers */
     do {
       reqbuf[0] = '\0';
       if (simple_serial_gets(reqbuf, BUFSIZE) != NULL) {
@@ -202,7 +205,7 @@ new_req:
     r_hdrs[0] = htons(response->response_code);
     r_hdrs[1] = htons(response->size);
     r_hdrs[2] = htons(response->headers_size);
-    printf("r_hdr: %d %zu %zu %s\n", response->response_code, response->size, response->headers_size, response->content_type);
+
     simple_serial_write((char *)r_hdrs, 1, 6);
     simple_serial_puts(response->content_type);
     simple_serial_putc('\n');
@@ -215,23 +218,33 @@ new_req:
       char *param;
       char striphtml = 0;
       char *translit = NULL;
+      unsigned short size;
 
-      if (simple_serial_gets(reqbuf, BUFSIZE) != NULL) {
-        if(!strncmp("SEND ", reqbuf, 5) 
-        || !strncmp("HDRS ", reqbuf, 5)) {
-          bufsize = atoi(reqbuf + 5);
-        } else if (!strncmp("FIND ", reqbuf, 5)) {
-          bufsize = atoi(reqbuf + 5);
-          param = strchr(reqbuf + 5, ' ') + 1;
+      printf("awaiting command\n");
+      /* read command */
+      cmd = simple_serial_getc();
+      if (SURL_IS_CMD(cmd)) {
+        if(cmd == SURL_CMD_SEND || cmd == SURL_CMD_HEADERS) {
+          simple_serial_read((char *)&size, 1, 2);
+          bufsize = ntohs(size);
+        } else if (cmd == SURL_CMD_FIND) {
+          simple_serial_read((char *)&size, 1, 2);
+          bufsize = ntohs(size);
+
+          simple_serial_gets(reqbuf, BUFSIZE);
+          param = reqbuf;
           *strchr(param, '\n') = '\0';
-        } else if (!strncmp("JSON ", reqbuf, 5)) {
-          bufsize = atoi(reqbuf + 5);
-          striphtml = *(strchr(reqbuf + 5, ' ') + 1) == '1';
-          translit = (strchr(reqbuf + 5, ' ') + 3);
+        } else if (cmd == SURL_CMD_JSON) {
+          simple_serial_read((char *)&size, 1, 2);
+          bufsize = ntohs(size);
+
+          striphtml = simple_serial_getc() == 1;
+          simple_serial_gets(reqbuf, BUFSIZE);
+          translit = reqbuf;
           param = strchr(translit, ' ') + 1;
           *strchr(translit, ' ') = '\0';
           *strchr(param, '\n') = '\0';
-        } else if (!strncmp("HGR ", reqbuf, 4)) {
+        } else if (cmd == SURL_CMD_HGR) {
           char *format = strrchr(url, '.');
           char monochrome = *(strchr(reqbuf, ' ') + 1) == '1';
           if (format) {
@@ -244,16 +257,19 @@ new_req:
           response->hgr_buf = img_to_hgr(response->orig_img_fp,
                                   format, monochrome, &(response->hgr_len));
         } else {
-          printf("New request\n");
+          /* Put that back as a REQUEST */
+          reqbuf[0] = cmd;
+          simple_serial_gets(reqbuf + 1, BUFSIZE - 1);
           goto new_req;
         }
       } else {
-        printf("New request\n");
-        simple_serial_flush();
+        /* Put that back as a REQUEST */
+        reqbuf[0] = cmd;
+        simple_serial_gets(reqbuf + 1, BUFSIZE - 1);
         goto new_req;
       }
 
-      if (!strncmp("SEND ", reqbuf, 5)) {
+      if (cmd == SURL_CMD_SEND) {
         if (!sending_body) {
           sent = 0;
           sending_headers = 0;
@@ -263,7 +279,7 @@ new_req:
         printf("SEND %zu body bytes from %zu\n", to_send, sent);
         simple_serial_write(response->buffer + sent, sizeof(char), to_send);
         sent += to_send;
-      } else if (!strncmp("HDRS ", reqbuf, 5)) {
+      } else if (cmd == SURL_CMD_HEADERS) {
         if (!sending_headers) {
           sent = 0;
           sending_body = 0;
@@ -273,7 +289,7 @@ new_req:
         printf("SEND %zu header bytes from %zu\n", to_send, sent);
         simple_serial_write(response->headers + sent, sizeof(char), to_send);
         sent += to_send;
-      } else if (!strncmp("FIND ", reqbuf, 5)) {
+      } else if (cmd == SURL_CMD_FIND) {
         char *found = NULL;
         sending_headers = 0;
         sending_body = 0;
@@ -299,7 +315,7 @@ new_req:
         } else {
           simple_serial_write("<NOT_FOUND>\n", sizeof(char), strlen("<NOT_FOUND>\n"));
         }
-      } else if (!strncmp("JSON ", reqbuf, 5)) {
+      } else if (cmd == SURL_CMD_JSON) {
         if (strncasecmp(response->content_type, "application/json", 16)) {
           printf("JSON '%s' into %zu bytes: response is not json\n", param, bufsize);
           simple_serial_write("<NOT_JSON>\n", sizeof(char), strlen("<NOT_JSON>\n"));
@@ -339,7 +355,7 @@ new_req:
             simple_serial_write("<NOT_FOUND>\n", sizeof(char), strlen("<NOT_FOUND>\n"));
           }
         }
-      } else if (!strncmp("HGR ", reqbuf, 4)) {
+      } else if (cmd == SURL_CMD_HGR) {
         if (response->hgr_buf && response->hgr_len) {
             simple_serial_printf("%zu\n", response->hgr_len);
             simple_serial_write((char *)response->hgr_buf, sizeof(char), response->hgr_len);
@@ -711,7 +727,6 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
     return curlbuf;
   }
 
-
   printf("0x%02x %s - start\n", method, url);
 
   r |= curl_easy_setopt(curl, CURLOPT_URL, url);
@@ -760,16 +775,6 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
   }
   fflush(stdout);
   curl_easy_cleanup(curl);
-  /* FIXME Allow client to specify desired charset */
-  // if (!strncmp(curlbuf->content_type, "text/", 5)) {
-  //   char *tmp;
-  //   size_t tmp_len;
-  //   tmp = do_apple_convert(curlbuf->buffer, OUTGOING, &tmp_len);
-  //   if (tmp) {
-  //     free(curlbuf->buffer);
-  //     curlbuf->buffer = tmp;
-  //     curlbuf->size = tmp_len;
-  //   }
-  // }
+
   return curlbuf;
 }

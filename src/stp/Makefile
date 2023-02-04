@@ -9,6 +9,7 @@ SOURCES := stp.c stp_cli.c stp_save.c stp_send_file.c stp_delete.c \
 	../lib/clrzone.c \
 	../lib/scrollwindow.c \
 	../lib/surl_core.c \
+	../lib/surl_receive.c \
 	../lib/surl_send.c
 
 CL65SOURCES = ../lib/dputc.s ../lib/scroll.s

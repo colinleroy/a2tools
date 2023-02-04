@@ -56,7 +56,9 @@ size_t __fastcall__ surl_receive_lines(surl_response *resp, char *buffer, size_t
   }
 
   w = buffer + r;
-  simple_serial_printf("SEND %zu\n", to_read);
+  simple_serial_putc(SURL_CMD_SEND);
+  simple_serial_putc(to_read >> 8);
+  simple_serial_putc((to_read & 0xff) << 8);
 
   while (to_read > 0) {
     *w = simple_serial_getc();
