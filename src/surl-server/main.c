@@ -280,7 +280,7 @@ new_req:
         secs = cur_time.tv_sec - 1;
         msecs = 1000 + (cur_time.tv_nsec / 1000000);
         
-        printf("0x%02x %s - (%lums)\n", method, url,
+        printf("0x%02x %s - finished (%lums)\n", method, url,
             (1000*(secs - start_secs))+(msecs - start_msecs));
         /* Put that back as a REQUEST */
         reqbuf[0] = cmd;
@@ -394,7 +394,7 @@ new_req:
       secs = cur_time.tv_sec - 1;
       msecs = 1000 + (cur_time.tv_nsec / 1000000);
       
-      printf("0x%02x %s - (%lums)\n", method, url,
+      printf("0x%02x (0x%02x) %s - (%lums)\n", method, cmd, url,
           (1000*(secs - start_secs))+(msecs - start_msecs));
     }
 
