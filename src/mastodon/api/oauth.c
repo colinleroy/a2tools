@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include "surl.h"
 #include "simple_serial.h"
-#include "cgets.h"
+#include "dgets.h"
 #include "strsplit.h"
 #ifdef __CC65__
 #include <conio.h>
@@ -157,7 +157,9 @@ int do_login(void) {
   snprintf(oauth_url, BUF_SIZE, "%s%s", instance_url, OAUTH_URL);
 
 /* First request to get authorization */
-  dputs("GET "OAUTH_URL"... ");
+  dputs("GET ");
+  dputs(authorize_url);
+  dputs("...");
   resp = surl_start_request(SURL_METHOD_GET, authorize_url, NULL, 0);
   if (resp == NULL) {
     dputs("Could not start request.\r\n");
@@ -183,7 +185,7 @@ int do_login(void) {
     password = malloc(50);
     
     echo(0);
-    cgets(password, 50);
+    dget_text(password, 50, NULL);
     echo(1);
     *strchr(password, '\n') = '\0';
   } else {
@@ -236,7 +238,7 @@ int do_login(void) {
     if (otp_required) {
       char *otp = malloc(10);
       dputs("Enter OTP code: ");
-      cgets(otp, 9);
+      dget_text(otp, 9, NULL);
       *strchr(otp, '\n') = '\0';
 
       post = prepare_otp_post(otp, token);

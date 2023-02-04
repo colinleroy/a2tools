@@ -143,14 +143,10 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
       if (cmd_cb)
         continue;
       else {
-        dputc('\r');
-        dputc('\n');
         max_i = 0;
         goto out;
       }
     } else if (c == CH_ENTER && !cmd_cb) {
-      dputc('\r');
-      dputc('\n');
       goto out;
     } else if (c == CH_CURS_LEFT || c == CH_DELETE) {
       if (i > 0) {
@@ -281,6 +277,10 @@ out:
   if (reset_hscroll) {
     set_hscrollwindow(0, reset_hscroll);
     gotoxy(0, wherey());
+  }
+  if (!cmd_cb) {
+    dputc('\r');
+    dputc('\n');
   }
   return buf;
 #else

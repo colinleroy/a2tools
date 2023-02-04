@@ -219,8 +219,8 @@ new_req:
       char striphtml = 0;
       char *translit = NULL;
       unsigned short size;
+      size_t l;
 
-      printf("awaiting command\n");
       /* read command */
       cmd = simple_serial_getc();
       if (SURL_IS_CMD(cmd)) {
@@ -246,7 +246,7 @@ new_req:
           *strchr(param, '\n') = '\0';
         } else if (cmd == SURL_CMD_HGR) {
           char *format = strrchr(url, '.');
-          char monochrome = *(strchr(reqbuf, ' ') + 1) == '1';
+          char monochrome = simple_serial_getc();
           if (format) {
             format++;
           }
@@ -298,27 +298,31 @@ new_req:
         printf("FIND '%s' into %zu bytes: %s\n", param, bufsize, found != NULL ? "found":"not found");
         if (found) {
           found = strdup(found);
-          
+          simple_serial_putc(SURL_ERROR_OK);
           if (strlen(found) >= bufsize) {
             found[bufsize - 1] = '\n';
             found[bufsize] = '\0';
-            //printf("cut %zu bytes with '%s'\n", strlen(found), found);
-            simple_serial_printf("%zu\n", strlen(found));
+
+            l = htons(strlen(found));
+            simple_serial_write((char *)&l, 1, 2);
+
             simple_serial_puts(found);
           } else {
-            //printf("send %zu bytes with '%s'\n", strlen(found) + 1, found);
-            simple_serial_printf("%zu\n", strlen(found) + 1);
+
+            l = htons(strlen(found) + 1);
+            simple_serial_write((char *)&l, 1, 2);
+
             simple_serial_puts(found);
             simple_serial_putc('\n');
           }
           free(found);
         } else {
-          simple_serial_write("<NOT_FOUND>\n", sizeof(char), strlen("<NOT_FOUND>\n"));
+          simple_serial_putc(SURL_ERROR_NOT_FOUND);
         }
       } else if (cmd == SURL_CMD_JSON) {
         if (strncasecmp(response->content_type, "application/json", 16)) {
           printf("JSON '%s' into %zu bytes: response is not json\n", param, bufsize);
-          simple_serial_write("<NOT_JSON>\n", sizeof(char), strlen("<NOT_JSON>\n"));
+          simple_serial_putc(SURL_ERROR_NOT_JSON);
         } else {
           char *result = jq_get(response->buffer, param);
           printf("JSON '%s' into %zu bytes%s, translit: %s: %zu bytes %s\n", param, bufsize, 
@@ -326,16 +330,15 @@ new_req:
                   translit,
                   result != NULL ? min(strlen(result),bufsize) : 0,
                   result != NULL ? "" :"not found");
-          /* DEBUG */
 
           if (result) {
+            simple_serial_putc(SURL_ERROR_OK);
             if (striphtml) {
               char *text = html2text(result);
               free(result);
               result = text;
             }
             if (translit[0] != '0') {
-              size_t l;
               char *text = do_apple_convert(result, OUTGOING, translit, &l);
               free(result);
               result = text;
@@ -348,19 +351,23 @@ new_req:
             if (result && strlen(result) >= bufsize) {
               result[bufsize - 1] = '\0';
             }
-            simple_serial_printf("%zu\n", strlen(result));
+
+            l = htons(strlen(result));
+            simple_serial_write((char *)&l, 1, 2);
             simple_serial_puts(result);
             free(result);
           } else {
-            simple_serial_write("<NOT_FOUND>\n", sizeof(char), strlen("<NOT_FOUND>\n"));
+            simple_serial_putc(SURL_ERROR_NOT_FOUND);
           }
         }
       } else if (cmd == SURL_CMD_HGR) {
         if (response->hgr_buf && response->hgr_len) {
-            simple_serial_printf("%zu\n", response->hgr_len);
+            simple_serial_putc(SURL_ERROR_OK);
+            l = htons(response->hgr_len);
+            simple_serial_write((char *)&l, 1, 2);
             simple_serial_write((char *)response->hgr_buf, sizeof(char), response->hgr_len);
         } else {
-          simple_serial_write("<CONV_ERROR>\n", sizeof(char), strlen("<CONV_ERROR>\n"));
+          simple_serial_putc(SURL_ERROR_CONV_FAILED);
         }
       }
     }

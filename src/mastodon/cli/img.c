@@ -27,6 +27,7 @@
 #ifdef __CC65__
 #include <conio.h>
 #else
+#include <arpa/inet.h>
 #include "extended_conio.h"
 #endif
 #include "surl.h"
@@ -93,17 +94,19 @@ static void img_display(media *m, char idx) {
 #endif
       hgr_init_done = 1;
     }
-    simple_serial_printf("HGR %d\n", monochrome);
-    if (simple_serial_gets(gen_buf, BUF_SIZE)) {
-      len = atoi(gen_buf);
-    } else {
-      toggle_mix(1, "Could not read response length.");
-    }
+    simple_serial_putc(SURL_CMD_HGR);
+    simple_serial_putc(monochrome);
+    if (simple_serial_getc() == SURL_ERROR_OK) {
+      simple_serial_read((char *)&len, 1, 2);
+      len = ntohs(len);
 
-    if (len == 8192) {
-      simple_serial_read(hgr_page1, 1, len);
+      if (len == 8192) {
+        simple_serial_read(hgr_page1, 1, len);
+      } else {
+        toggle_mix(1, "Bad response, not an HGR file.");
+      }
     } else {
-      toggle_mix(1, "Bad response, not an HGR file.");
+      toggle_mix(1, "Request error.");
     }
   } else {
     toggle_mix(1, "Request failed.");
