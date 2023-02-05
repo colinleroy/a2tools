@@ -219,7 +219,7 @@ maybe_finish_utf8_net:
     }
 
     if (n_out > 0) {
-      simple_serial_write(out_buf, 1, n_out);
+      simple_serial_write(out_buf, n_out);
     }
     if (read_res == EOF) {
       simple_serial_printf("Remote host closed connection.\r\n%c", 0x04);

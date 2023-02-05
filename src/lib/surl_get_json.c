@@ -41,7 +41,7 @@ int __fastcall__ surl_get_json(surl_response *resp, char *buffer, size_t len, ch
   len = htons(len);
 
   simple_serial_putc(SURL_CMD_JSON);
-  simple_serial_write((char *)&len, 1, 2);
+  simple_serial_write((char *)&len, 2);
   simple_serial_putc(striphtml);
   simple_serial_puts(translit ? translit : "0");
   simple_serial_putc(' ');
@@ -55,10 +55,10 @@ int __fastcall__ surl_get_json(surl_response *resp, char *buffer, size_t len, ch
     return -1;
   }
 
-  simple_serial_read((char *)&len, 1, 2);
+  simple_serial_read((char *)&len, 2);
   len = ntohs(len);
 
-  simple_serial_read(buffer, sizeof(char), len);
+  simple_serial_read(buffer, len);
 
   buffer[len] = '\0';
 

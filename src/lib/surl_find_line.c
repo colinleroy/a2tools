@@ -40,7 +40,7 @@ int __fastcall__ surl_find_line(surl_response *resp, char *buffer, size_t max_le
 
   res_len = htons(max_len);
   simple_serial_putc(SURL_CMD_FIND);
-  simple_serial_write((char *)&res_len, 1, 2);
+  simple_serial_write((char *)&res_len, 2);
   simple_serial_puts(search_str);
   simple_serial_putc('\n');
 
@@ -50,10 +50,10 @@ int __fastcall__ surl_find_line(surl_response *resp, char *buffer, size_t max_le
     return -1;
   }
 
-  simple_serial_read((char *)&res_len, 1, 2);
+  simple_serial_read((char *)&res_len, 2);
   res_len = ntohs(res_len);
 
-  simple_serial_read(buffer, sizeof(char), res_len);
+  simple_serial_read(buffer, res_len);
 
   buffer[res_len] = '\0';
 

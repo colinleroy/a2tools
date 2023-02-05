@@ -28,7 +28,8 @@ media *media_new(void) {
 media *media_new_from_json(char *urls_selector, char *alt_text_selector, surl_response *resp) {
   media *m;
   char **lines, *w;
-  char i, r, n_lines;
+  char i, n_lines;
+  signed char r;
   int n;
 
   m = media_new();

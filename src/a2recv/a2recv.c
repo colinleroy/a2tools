@@ -43,7 +43,7 @@ int main(int argc, char **argv) {
 
 
 #ifdef __CC65__
-  simple_serial_open(2, SER_BAUD_9600, 1);
+  simple_serial_open(2, SER_BAUD_9600);
 #else
   simple_serial_open();
 #endif
@@ -119,8 +119,8 @@ read_filename_again:
 
     printf("Reading data...");
     fflush(stdout);
-    r = simple_serial_read(data, sizeof(char), block);
-    total += r;
+    simple_serial_read(data, block);
+    total += block;
 
     simple_serial_set_activity_indicator(0, -1, -1);
 

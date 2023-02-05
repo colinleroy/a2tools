@@ -61,7 +61,7 @@ static struct ser_params default_params = {
     SER_HS_HW           /* Type of handshake to use */
 };
 
-int __fastcall__ simple_serial_open(int slot, int baudrate, int hw_flow_control) {
+int __fastcall__ simple_serial_open(int slot, int baudrate) {
   int err;
   
 #ifdef __APPLE2__
@@ -110,18 +110,24 @@ int __fastcall__ simple_serial_getc_immediate(void) {
 static int timeout_cycles = -1;
 
 /* Input */
-static int __fastcall__ __simple_serial_getc_with_timeout(char with_timeout) {
+int __fastcall__ simple_serial_getc_with_timeout(void) {
     static char c;
 
-    if (with_timeout)
-      timeout_cycles = 10000;
+    timeout_cycles = 10000;
 
     while (ser_get(&c) == SER_ERR_NO_DATA) {
-      if (with_timeout && --timeout_cycles == 0) {
+      if (--timeout_cycles == 0) {
         return EOF;
       }
     }
     return (int)c;
+}
+
+char __fastcall__ simple_serial_getc(void) {
+    static char c;
+
+    while (ser_get(&c) == SER_ERR_NO_DATA);
+    return c;
 }
 
 /* Output */
@@ -130,10 +136,6 @@ int __fastcall__ simple_serial_putc(char c) {
   if ((ser_put(c)) != SER_ERR_OVERFLOW) {
     return c;
   }
-  // for (send_delay = 0; send_delay < 5; send_delay++) {
-  //   /* Why do we need that. (do we though?)
-  //    * Thanks platoterm for the hint */
-  // }
 
   return EOF;
 }
@@ -312,12 +314,16 @@ try_again:
   return EOF;
 }
 
-int __fastcall__ simple_serial_getc_immediate(void) {
-  return __simple_serial_getc_with_tv_timeout(1, 0, DELAY_MS);
+int simple_serial_getc_with_timeout(void) {
+  return __simple_serial_getc_with_tv_timeout(1, 0, 500);
 }
 
-int __fastcall__ __simple_serial_getc_with_timeout(int timeout) {
-  return __simple_serial_getc_with_tv_timeout(timeout, 0, 500);
+char simple_serial_getc(void) {
+  return (char)__simple_serial_getc_with_tv_timeout(0, 0, 500);
+}
+
+int simple_serial_getc_immediate(void) {
+  return __simple_serial_getc_with_tv_timeout(1, 0, DELAY_MS);
 }
 
 /* Output */
@@ -368,8 +374,7 @@ void __fastcall__ simple_serial_puts(char *buf) {
 #pragma code-name (push, "LC")
 #endif
 
-static char * __fastcall__ __simple_serial_gets_with_timeout(char *out, size_t size, char with_timeout) {
-  static int b;
+char * __fastcall__ simple_serial_gets(char *out, size_t size) {
   static char c;
   static size_t i;
   static char *cur;
@@ -392,11 +397,7 @@ static char * __fastcall__ __simple_serial_gets_with_timeout(char *out, size_t s
   i = 0;
   cur = out;
   while (i < size - 1) {
-    b = __simple_serial_getc_with_timeout(with_timeout);
-    if (b == EOF) {
-      break;
-    }
-    c = (char)b;
+    c = simple_serial_getc();
     
     if (c == '\r') {
       /* ignore \r */
@@ -422,9 +423,7 @@ static char * __fastcall__ __simple_serial_gets_with_timeout(char *out, size_t s
   return out;
 }
 
-static size_t __fastcall__ __simple_serial_read_with_timeout(char *ptr, size_t size, size_t nmemb, char with_timeout) {
-  static int b;
-  static size_t i;
+void __fastcall__ simple_serial_read(char *ptr, size_t nmemb) {
   static char *cur;
 
 #ifdef __CC65__
@@ -438,20 +437,11 @@ static size_t __fastcall__ __simple_serial_read_with_timeout(char *ptr, size_t s
   }
 #endif
 
-  if (size != 1) {
-    /* unsupported */
-    return 0;
-  }
-
   cur = ptr;
-  i = 0;
-  while (i < nmemb) {
-    b = __simple_serial_getc_with_timeout(with_timeout);
-    if (b == EOF) {
-      break;
-    }
-    *cur = (char)b;
-    ++i; ++cur;
+  while (nmemb > 0) {
+    *cur = simple_serial_getc();
+    --nmemb;
+    ++cur;
   }
 
 #ifdef __CC65__
@@ -459,38 +449,12 @@ static size_t __fastcall__ __simple_serial_read_with_timeout(char *ptr, size_t s
     activity_cb(0);
   }
 #endif
-
-  return i;
 }
 #ifdef __CC65__
 #pragma optimize(pop)
 #endif
 
 /* Wrappers */
-
-int __fastcall__ simple_serial_getc_with_timeout(void) {
-  return __simple_serial_getc_with_timeout(1);
-}
-
-char __fastcall__ simple_serial_getc(void) {
-  return (char)__simple_serial_getc_with_timeout(0);
-}
-
-char * __fastcall__ simple_serial_gets_with_timeout(char *out, size_t size) {
-  return __simple_serial_gets_with_timeout(out, size, 1);
-}
-
-char * __fastcall__ simple_serial_gets(char *out, size_t size) {
-  return __simple_serial_gets_with_timeout(out, size, 0);
-}
-
-size_t __fastcall__ simple_serial_read(char *ptr, size_t size, size_t nmemb) {
-  return __simple_serial_read_with_timeout(ptr, size, nmemb, 0);
-}
-
-size_t __fastcall__ simple_serial_read_with_timeout(char *ptr, size_t size, size_t nmemb) {
-  return __simple_serial_read_with_timeout(ptr, size, nmemb, 1);
-}
 
 static char simple_serial_buf[512];
 void simple_serial_printf(const char* format, ...) {
@@ -503,7 +467,7 @@ void simple_serial_printf(const char* format, ...) {
   simple_serial_puts(simple_serial_buf);
 }
 
-void __fastcall__ simple_serial_write(char *ptr, size_t size, size_t nmemb) {
+void __fastcall__ simple_serial_write(char *ptr, size_t nmemb) {
   while (nmemb > 0) {
     simple_serial_putc(*ptr);
     ++ptr;
