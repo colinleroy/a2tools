@@ -97,11 +97,11 @@ static void img_display(media *m, char idx) {
     simple_serial_putc(SURL_CMD_HGR);
     simple_serial_putc(monochrome);
     if (simple_serial_getc() == SURL_ERROR_OK) {
-      simple_serial_read((char *)&len, 1, 2);
+      simple_serial_read((char *)&len, 2);
       len = ntohs(len);
 
       if (len == 8192) {
-        simple_serial_read(hgr_page1, 1, len);
+        simple_serial_read(hgr_page1, len);
       } else {
         toggle_mix(1, "Bad response, not an HGR file.");
       }

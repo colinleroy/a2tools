@@ -46,13 +46,13 @@ size_t __fastcall__ surl_receive_data(surl_response *resp, char *buffer, size_t 
 
   r = htons(to_read);
   simple_serial_putc(SURL_CMD_SEND);
-  simple_serial_write((char *)&r, 1, 2);
-  r = simple_serial_read(buffer, sizeof(char), to_read);
+  simple_serial_write((char *)&r, 2);
+  simple_serial_read(buffer, to_read);
 
-  buffer[r] = '\0';
-  resp->cur_pos += r;
+  buffer[to_read] = '\0';
+  resp->cur_pos += to_read;
 
-  return r;
+  return to_read;
 }
 
 #ifdef __CC65__

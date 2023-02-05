@@ -208,7 +208,7 @@ new_req:
     r_hdrs[1] = htons(response->size);
     r_hdrs[2] = htons(response->headers_size);
 
-    simple_serial_write((char *)r_hdrs, 1, 6);
+    simple_serial_write((char *)r_hdrs, 6);
     simple_serial_puts(response->content_type);
     simple_serial_putc('\n');
 
@@ -238,17 +238,17 @@ new_req:
 
       if (SURL_IS_CMD(cmd)) {
         if(cmd == SURL_CMD_SEND || cmd == SURL_CMD_HEADERS) {
-          simple_serial_read((char *)&size, 1, 2);
+          simple_serial_read((char *)&size, 2);
           bufsize = ntohs(size);
         } else if (cmd == SURL_CMD_FIND) {
-          simple_serial_read((char *)&size, 1, 2);
+          simple_serial_read((char *)&size, 2);
           bufsize = ntohs(size);
 
           simple_serial_gets(reqbuf, BUFSIZE);
           param = reqbuf;
           *strchr(param, '\n') = '\0';
         } else if (cmd == SURL_CMD_JSON) {
-          simple_serial_read((char *)&size, 1, 2);
+          simple_serial_read((char *)&size, 2);
           bufsize = ntohs(size);
 
           striphtml = simple_serial_getc() == 1;
@@ -296,7 +296,7 @@ new_req:
         sending_body = 1;
         to_send = min(bufsize, response->size - sent);
         printf("SEND %zu body bytes from %zu\n", to_send, sent);
-        simple_serial_write(response->buffer + sent, sizeof(char), to_send);
+        simple_serial_write(response->buffer + sent, to_send);
         sent += to_send;
       } else if (cmd == SURL_CMD_HEADERS) {
         if (!sending_headers) {
@@ -306,7 +306,7 @@ new_req:
         sending_headers = 1;
         to_send = min(bufsize, response->headers_size - sent);
         printf("SEND %zu header bytes from %zu\n", to_send, sent);
-        simple_serial_write(response->headers + sent, sizeof(char), to_send);
+        simple_serial_write(response->headers + sent, to_send);
         sent += to_send;
       } else if (cmd == SURL_CMD_FIND) {
         char *found = NULL;
@@ -323,13 +323,13 @@ new_req:
             found[bufsize] = '\0';
 
             l = htons(strlen(found));
-            simple_serial_write((char *)&l, 1, 2);
+            simple_serial_write((char *)&l, 2);
 
             simple_serial_puts(found);
           } else {
 
             l = htons(strlen(found) + 1);
-            simple_serial_write((char *)&l, 1, 2);
+            simple_serial_write((char *)&l, 2);
 
             simple_serial_puts(found);
             simple_serial_putc('\n');
@@ -372,7 +372,7 @@ new_req:
             }
 
             l = htons(strlen(result));
-            simple_serial_write((char *)&l, 1, 2);
+            simple_serial_write((char *)&l, 2);
             simple_serial_puts(result);
             free(result);
           } else {
@@ -383,8 +383,8 @@ new_req:
         if (response->hgr_buf && response->hgr_len) {
             simple_serial_putc(SURL_ERROR_OK);
             l = htons(response->hgr_len);
-            simple_serial_write((char *)&l, 1, 2);
-            simple_serial_write((char *)response->hgr_buf, sizeof(char), response->hgr_len);
+            simple_serial_write((char *)&l, 2);
+            simple_serial_write((char *)response->hgr_buf, response->hgr_len);
         } else {
           simple_serial_putc(SURL_ERROR_CONV_FAILED);
         }
@@ -637,7 +637,7 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
       curlbuf->cur_upload_ptr = curlbuf->upload_buffer;
 
       simple_serial_puts("UPLOAD\n");
-      simple_serial_read(curlbuf->upload_buffer, sizeof(char), curlbuf->upload_size);
+      simple_serial_read(curlbuf->upload_buffer, curlbuf->upload_size);
 
       if (!strchr(upload_buf, ',')) {
         printf("Unexpected reply\n");
@@ -686,7 +686,7 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
         return NULL;
       }
       simple_serial_puts("UPLOAD\n");
-      simple_serial_read(curlbuf->upload_buffer, sizeof(char), curlbuf->upload_size);
+      simple_serial_read(curlbuf->upload_buffer, curlbuf->upload_size);
       printf("PUT upload: %zu bytes\n", curlbuf->upload_size);
 
       r |= curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);

@@ -40,7 +40,7 @@ static char proxy_opened = 0;
 int surl_connect_proxy(void) {
   int r;
 #ifdef __CC65__
-  r = simple_serial_open(2, SER_BAUD_9600, 1);
+  r = simple_serial_open(2, SER_BAUD_9600);
 #else
   r = simple_serial_open();
 #endif
@@ -121,7 +121,7 @@ void __fastcall__ surl_read_response_header(surl_response *resp) {
     return; // already read.
   }
 
-  simple_serial_read((char *)resp, 1, 6);
+  simple_serial_read((char *)resp, 6);
   simple_serial_gets(surl_buf, BUFSIZE);
 
   resp->code = ntohs(resp->code);

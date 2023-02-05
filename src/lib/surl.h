@@ -41,7 +41,7 @@ size_t __fastcall__ surl_receive_headers(surl_response *resp, char *buffer, size
 size_t __fastcall__ surl_receive_lines(surl_response *resp, char *buffer, size_t max_len);
 
 int __fastcall__ surl_send_data_params(surl_response *resp, size_t total, int raw);
-#define surl_send_data(resp, buffer, len) simple_serial_write(buffer, 1, len)
+#define surl_send_data(resp, buffer, len) simple_serial_write(buffer, len)
 
 int __fastcall__ surl_find_line(surl_response *resp, char *buffer, size_t max_len, char *search_str);
 int __fastcall__ surl_get_json(surl_response *resp, char *buffer, size_t max_len, char striphtml, char *translit, char *selector);

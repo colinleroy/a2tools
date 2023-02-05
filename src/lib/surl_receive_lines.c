@@ -63,7 +63,7 @@ size_t __fastcall__ surl_receive_lines(surl_response *resp, char *buffer, size_t
 
   net_len = htons(to_read);
   simple_serial_putc(SURL_CMD_SEND);
-  simple_serial_write((char *)&net_len, 1, 2);
+  simple_serial_write((char *)&net_len, 2);
 
   while (to_read > 0) {
     *w = simple_serial_getc();
