@@ -25,7 +25,8 @@ media *media_new(void) {
   memset(m, 0, sizeof(media));
   return m;
 }
-media *media_new_from_json(char *urls_selector, char *alt_text_selector, surl_response *resp) {
+
+static media *media_new_from_json(char *urls_selector, char *alt_text_selector) {
   media *m;
   char **lines, *w;
   char i, n_lines;
@@ -34,7 +35,7 @@ media *media_new_from_json(char *urls_selector, char *alt_text_selector, surl_re
 
   m = media_new();
 
-  r = surl_get_json(resp, img_buf, IMG_BUF_SIZE, 0, translit_charset, urls_selector);
+  r = surl_get_json(img_buf, IMG_BUF_SIZE, 0, translit_charset, urls_selector);
 
   n_lines = 0;
   lines = NULL;
@@ -57,7 +58,7 @@ media *media_new_from_json(char *urls_selector, char *alt_text_selector, surl_re
 
   for (i = 0; i < n_lines; i ++) {
     snprintf(gen_buf, BUF_SIZE, alt_text_selector, i);
-    r = surl_get_json(resp, img_buf, IMG_BUF_SIZE, 0, translit_charset, gen_buf);
+    r = surl_get_json(img_buf, IMG_BUF_SIZE, 0, translit_charset, gen_buf);
     w = img_buf;
     n = 0;
     while (*w != '\0') {
@@ -109,7 +110,7 @@ static media *get_media(char *api_endpoint,
   if (!surl_response_ok(resp))
     goto err_out;
 
-  m = media_new_from_json(urls_selector, alt_text_selector, resp);
+  m = media_new_from_json(urls_selector, alt_text_selector);
 
 err_out:
   surl_response_free(resp);

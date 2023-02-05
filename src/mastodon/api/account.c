@@ -39,7 +39,7 @@ void account_free(account *a) {
   free(a);
 }
 
-account *account_new_from_json(surl_response *resp) {
+account *account_new_from_json(void) {
   account *a = account_new();
   int r;
   char n_lines, **lines;
@@ -49,7 +49,7 @@ account *account_new_from_json(surl_response *resp) {
     return NULL;
   }
   
-  r = surl_get_json(resp, gen_buf, BUF_SIZE, 0, translit_charset,
+  r = surl_get_json(gen_buf, BUF_SIZE, 0, translit_charset,
                     ".id,.acct,.display_name,"
                     ".created_at,.followers_count,"
                     ".following_count");
@@ -66,7 +66,7 @@ account *account_new_from_json(surl_response *resp) {
   free(lines);
 
   note = malloc(2048);
-  r = surl_get_json(resp, note, 2048, 1, translit_charset, ".note");
+  r = surl_get_json(note, 2048, 1, translit_charset, ".note");
   if (r < 0) {
     free(note);
   } else {
@@ -102,7 +102,7 @@ account *api_get_profile(char *id) {
     goto err_out;
   }
 
-  if (surl_get_json(resp, gen_buf, BUF_SIZE, 0, translit_charset, ".id,.display_name,.username") >= 0) {
+  if (surl_get_json(gen_buf, BUF_SIZE, 0, translit_charset, ".id,.display_name,.username") >= 0) {
     n_lines = strsplit_in_place(gen_buf,'\n',&lines);
     if (n_lines < 3) {
       account_free(a);

@@ -31,7 +31,7 @@
 #pragma code-name (push, "LC")
 #endif
 
-int __fastcall__ surl_send_data_params(surl_response *resp, size_t total, int raw) {
+int __fastcall__ surl_send_data_params(size_t total, int raw) {
   simple_serial_printf("%zu,%d\n", total, raw);
   /* Wait for go */
   simple_serial_gets(surl_buf, BUFSIZE);

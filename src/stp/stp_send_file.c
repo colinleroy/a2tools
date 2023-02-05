@@ -138,7 +138,7 @@ void stp_send_file(char *remote_dir) {
     goto err_out;
   }
 
-  if (surl_send_data_params(resp, filesize, 1) != 0) {
+  if (surl_send_data_params(filesize, 1) != 0) {
     goto finished;
   }
 
@@ -158,7 +158,7 @@ void stp_send_file(char *remote_dir) {
     clrzone(0, 21, scrw - 1, 21);
     gotoxy(0, 21);
     printf("Sending %zu/%lu...", total, filesize);
-    surl_send_data(resp, data, r);
+    surl_send_data(data, r);
     simple_serial_set_activity_indicator(0, 0, 0);
 
     progress_bar(0, 22, scrw, total, filesize);

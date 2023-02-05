@@ -346,4 +346,6 @@ command:
     default: 
       goto command;
   }
+  cleanup();
+  exit(0);
 }

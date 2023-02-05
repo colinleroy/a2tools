@@ -34,7 +34,7 @@
 #pragma code-name (push, "LC")
 #endif
 
-int __fastcall__ surl_find_line(surl_response *resp, char *buffer, size_t max_len, char *search_str) {
+int __fastcall__ surl_find_line(char *buffer, size_t max_len, char *search_str) {
   size_t res_len = 0;
   char r;
 

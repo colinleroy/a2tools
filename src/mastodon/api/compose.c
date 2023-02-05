@@ -70,8 +70,8 @@ char api_send_toot(char *buffer, char *in_reply_to_id, char compose_audience) {
   body[o++] = '\n';
   len = o - 1;
 
-  surl_send_data_params(resp, len, 0);
-  surl_send_data(resp, body, len);
+  surl_send_data_params(len, 0);
+  surl_send_data(body, len);
 
   free(body);
 

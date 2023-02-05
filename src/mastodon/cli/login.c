@@ -154,7 +154,7 @@ reenter_settings:
   return -1;
 }
 
-int main(int argc, char **argv) {
+int main(void) {
   surl_response *response = NULL;
   char *params = malloc(BUF_SIZE);
   FILE *fp = NULL;

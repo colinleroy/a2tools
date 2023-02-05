@@ -36,11 +36,11 @@ extern char *password;
 extern char *oauth_code;
 extern char *oauth_token;
 
-static char *get_csrf_token(surl_response *resp, char *body, size_t buf_size) {
+static char *get_csrf_token(char *body, size_t buf_size) {
   char *w, *token = NULL;
   size_t len;
 
-  if (surl_find_line(resp, body, buf_size, CSRF_TOKEN_SCRAPE) == 0) {
+  if (surl_find_line(body, buf_size, CSRF_TOKEN_SCRAPE) == 0) {
     w = strstr(body, CSRF_TOKEN);
     if (w == NULL) {
       return NULL;
@@ -178,7 +178,7 @@ int do_login(void) {
     dputs("Error.\r\n");
     goto err_out;
   }
-  if (surl_find_line(resp, body, buf_size, "action=\""LOGIN_URL) == 0) {
+  if (surl_find_line(body, buf_size, "action=\""LOGIN_URL) == 0) {
     login_required = 1;
     dputs("Login required.\r\n");
     dputs("Enter password: ");
@@ -193,7 +193,7 @@ int do_login(void) {
   }
 
   if (login_required) {
-    token = get_csrf_token(resp, body, buf_size);
+    token = get_csrf_token(body, buf_size);
     if (token == NULL)
       goto err_out;
     surl_response_free(resp);
@@ -211,8 +211,8 @@ int do_login(void) {
       goto err_out;
     }
 
-    surl_send_data_params(resp, post_len, 0);
-    surl_send_data(resp, post, post_len);
+    surl_send_data_params(post_len, 0);
+    surl_send_data(post, post_len);
     free(post);
 
     surl_read_response_header(resp);
@@ -224,11 +224,11 @@ int do_login(void) {
       dputs("OK\r\n");
     }
 
-    surl_find_line(resp, body, buf_size, "otp-authentication-form");
+    surl_find_line(body, buf_size, "otp-authentication-form");
     if (body[0] != '\0') {
       otp_required = 1;
       dputs("OTP required.\r\n");
-      token = get_csrf_token(resp, body, buf_size);
+      token = get_csrf_token(body, buf_size);
       if (token == NULL)
         goto err_out;
     }
@@ -254,8 +254,8 @@ int do_login(void) {
         return -1;
       }
 
-      surl_send_data_params(resp, post_len, 0);
-      surl_send_data(resp, post, post_len);
+      surl_send_data_params(post_len, 0);
+      surl_send_data(post, post_len);
       free(post);
 
       surl_read_response_header(resp);
@@ -272,7 +272,7 @@ int do_login(void) {
   }
   /* End of login */
 
-  if (surl_find_line(resp, body, buf_size, "action=\""OAUTH_URL) == 0) {
+  if (surl_find_line(body, buf_size, "action=\""OAUTH_URL) == 0) {
     oauth_required = 1;
     dputs("OAuth authorization required.\r\n");
   } else {
@@ -280,7 +280,7 @@ int do_login(void) {
   }
 
   if (oauth_required) {
-    token = get_csrf_token(resp, body, buf_size);
+    token = get_csrf_token(body, buf_size);
     if (token == NULL)
       goto err_out;
 
@@ -294,8 +294,8 @@ int do_login(void) {
     dputs("POST "OAUTH_URL"... ");
     resp = surl_start_request(SURL_METHOD_POST, oauth_url, NULL, 0);
 
-    surl_send_data_params(resp, post_len, 0);
-    surl_send_data(resp, post, post_len);
+    surl_send_data_params(post_len, 0);
+    surl_send_data(post, post_len);
     free(post);
 
     surl_read_response_header(resp);
@@ -307,7 +307,7 @@ int do_login(void) {
       dputs("OK.\r\n");
     }
 
-    if (surl_find_line(resp, body, buf_size, "input class='oauth-code") == 0) {
+    if (surl_find_line(body, buf_size, "input class='oauth-code") == 0) {
       free(oauth_code);
       oauth_code = get_oauth_code(body);
       dputs("Got OAuth code.\r\n");
@@ -370,8 +370,8 @@ int register_app(void) {
     return -1;
   }
 
-  surl_send_data_params(resp, post_len, 0);
-  surl_send_data(resp, post, post_len);
+  surl_send_data_params(post_len, 0);
+  surl_send_data(post, post_len);
   free(post);
 
   surl_read_response_header(resp);
@@ -381,11 +381,11 @@ int register_app(void) {
     goto err_out;
   }
 
-  if (surl_get_json(resp, client_id, BUF_SIZE, 0, NULL, ".client_id") < 0) {
+  if (surl_get_json(client_id, BUF_SIZE, 0, NULL, ".client_id") < 0) {
     dputs("App registration: no client_id.\r\n");
     goto err_out;
   }
-  if (surl_get_json(resp, client_secret, BUF_SIZE, 0, NULL, ".client_secret") < 0) {
+  if (surl_get_json(client_secret, BUF_SIZE, 0, NULL, ".client_secret") < 0) {
     dputs("App registration: no client_secret.\r\n");
     goto err_out;
   }
@@ -454,13 +454,13 @@ int get_oauth_token(void) {
 
   post = prepare_oauth_token_post();
   post_len = strlen(post);
-  surl_send_data_params(resp, post_len, 0);
-  surl_send_data(resp, post, post_len);
+  surl_send_data_params(post_len, 0);
+  surl_send_data(post, post_len);
   free(post);
 
   surl_read_response_header(resp);
 
-  if (surl_get_json(resp, oauth_token, BUF_SIZE, 0, NULL, ".access_token") < 0) {
+  if (surl_get_json(oauth_token, BUF_SIZE, 0, NULL, ".access_token") < 0) {
     dputs("OAuth token not found.\r\n");
     goto err_out;
   } else {
