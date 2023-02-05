@@ -35,12 +35,12 @@ static media *media_new_from_json(char *urls_selector, char *alt_text_selector) 
 
   m = media_new();
 
-  r = surl_get_json(img_buf, IMG_BUF_SIZE, 0, translit_charset, urls_selector);
+  n = surl_get_json(img_buf, IMG_BUF_SIZE, 0, translit_charset, urls_selector);
 
   n_lines = 0;
   lines = NULL;
 
-  if (r >= 0) {
+  if (n >= 0) {
     n_lines = strsplit_in_place(img_buf, '\n', &lines);
     m->n_media = n_lines;
     m->media_url = malloc(m->n_media * sizeof(char *));
@@ -58,25 +58,26 @@ static media *media_new_from_json(char *urls_selector, char *alt_text_selector) 
 
   for (i = 0; i < n_lines; i ++) {
     snprintf(gen_buf, BUF_SIZE, alt_text_selector, i);
-    r = surl_get_json(img_buf, IMG_BUF_SIZE, 0, translit_charset, gen_buf);
-    w = img_buf;
-    n = 0;
-    while (*w != '\0') {
-      if (*w == '\n') {
-        *w = ' ';
+    if (surl_get_json(img_buf, IMG_BUF_SIZE, 0, translit_charset, gen_buf) >= 0) {
+      w = img_buf;
+      n = 0;
+      while (*w != '\0') {
+        if (*w == '\n') {
+          *w = ' ';
+        }
+        ++w;
+        ++n;
+        if (n == (80*4) - 2) {
+          /* shorten description, we don't scroll them yet */
+          img_buf[n-3] = '.';
+          img_buf[n-2] = '.';
+          img_buf[n-1] = '.';
+          img_buf[n] = '\0';
+          break;
+        }
       }
-      ++w;
-      ++n;
-      if (n == (80*4) - 2) {
-        /* shorten description, we don't scroll them yet */
-        img_buf[n-3] = '.';
-        img_buf[n-2] = '.';
-        img_buf[n-1] = '.';
-        img_buf[n] = '\0';
-        break;
-      }
+      m->media_alt_text[i] = strdup(img_buf);
     }
-    m->media_alt_text[i] = strdup(img_buf);
   }
 
   return m;
