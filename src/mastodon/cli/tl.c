@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <ctype.h>
+#include <errno.h>
 #ifdef __APPLE2__
 #include <apple2enh.h>
 #endif
@@ -602,8 +603,13 @@ static void launch_command(char *command, char *p1, char *p2, char *p3, char *p4
             instance_url, oauth_token,
             p1?p1:"", p2?p2:"", p3?p3:"", p4?p4:"");
 #ifdef __CC65__
-  exec(command, params);
-  exit(0);
+  _filetype = PRODOS_T_TXT;
+  if (exec(command, params) != 0) {
+    cprintf("\r\nError %d starting %s %s\r\n", errno, command, params);
+    cgetc();
+    clrscr();
+  }
+  free(params);
 #else
   printf("exec(%s %s)\n",command, params);
   exit(0);

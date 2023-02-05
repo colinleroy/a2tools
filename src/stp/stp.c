@@ -215,7 +215,7 @@ static char *build_login_url(char *url) {
   return full_url;
 }
 
-int main(int argc, char **argv) {
+int main(void) {
   char *url;
   char c;
   int full_update = 1;

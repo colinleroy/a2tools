@@ -160,6 +160,11 @@ new_req:
       if (strchr(url, '\n'))
         *strchr(url, '\n') = '\0';
 
+      /* The Apple //c sends a NULL byte on boot */
+      if (reqbuf[0] == '\0' && reqbuf[1] == SURL_METHOD_ABORT && reqbuf[2] == '\n') {
+        printf("Apple 2 reboot?\n");
+        continue;
+      }
       if (method == SURL_METHOD_ABORT) {
         continue;
       } else if (url[0] == '\0') {

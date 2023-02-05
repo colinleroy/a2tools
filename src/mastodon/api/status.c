@@ -57,10 +57,10 @@ status *status_new_from_json(surl_response *resp, char *id, char full, char is_r
   /* .reblog.id is the only one that can be null (and hence not there),
    * so put it at the end */
   if (is_reblog) {
-    r = surl_get_json(resp, gen_buf, BUF_SIZE, 0, translit_charset,
+    r = surl_get_json(gen_buf, BUF_SIZE, 0, translit_charset,
                       ".reblog.created_at,.reblog.account.display_name,.reblog.reblog.id");
   } else {
-    r = surl_get_json(resp, gen_buf, BUF_SIZE, 0, translit_charset,
+    r = surl_get_json(gen_buf, BUF_SIZE, 0, translit_charset,
                       ".created_at,.account.display_name,.reblog.id");
   }
 
@@ -77,12 +77,12 @@ status *status_new_from_json(surl_response *resp, char *id, char full, char is_r
   if (s->reblog == NULL) {
     /* Get details of original toot */
     if (is_reblog) {
-      r = surl_get_json(resp, gen_buf, BUF_SIZE, 0, NULL,
+      r = surl_get_json(gen_buf, BUF_SIZE, 0, NULL,
                         "(.reblog.media_attachments|map(. | select(.type==\"image\"))|length),"
                         ".reblog.replies_count,.reblog.reblogs_count,.reblog.favourites_count,.reblog.reblogged,.reblog.favourited,"
                         ".reblog.account.id,.reblog.account.username");
     } else {
-      r = surl_get_json(resp, gen_buf, BUF_SIZE, 0, NULL,
+      r = surl_get_json(gen_buf, BUF_SIZE, 0, NULL,
                         "(.media_attachments|map(. | select(.type==\"image\"))|length),"
                         ".replies_count,.reblogs_count,.favourites_count,.reblogged,.favourited,"
                         ".account.id,.account.username");
@@ -111,9 +111,9 @@ status *status_new_from_json(surl_response *resp, char *id, char full, char is_r
     }
 
     if (is_reblog) {
-      r = surl_get_json(resp, content, full ? TL_STATUS_LARGE_BUF : TL_STATUS_SHORT_BUF, 1, translit_charset, ".reblog.content");
+      r = surl_get_json(content, full ? TL_STATUS_LARGE_BUF : TL_STATUS_SHORT_BUF, 1, translit_charset, ".reblog.content");
     } else {
-      r = surl_get_json(resp, content, full ? TL_STATUS_LARGE_BUF : TL_STATUS_SHORT_BUF, 1, translit_charset, ".content");
+      r = surl_get_json(content, full ? TL_STATUS_LARGE_BUF : TL_STATUS_SHORT_BUF, 1, translit_charset, ".content");
     }
     if (!full && r == TL_STATUS_SHORT_BUF - 1) {
       strcpy(content + TL_STATUS_SHORT_BUF - 4, "...");

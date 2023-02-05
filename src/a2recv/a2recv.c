@@ -29,8 +29,8 @@
 #define DATA_SIZE 16384
 #define FLOPPY_DELAY 300000
 
-int main(int argc, char **argv) {
-  int r, w, exit_code = 0;
+int main(void) {
+  int w, exit_code = 0;
   int floppy_delay;
   char *filename = malloc(BUF_SIZE);
   char *filetype = malloc(BUF_SIZE);
@@ -135,8 +135,8 @@ read_filename_again:
       goto err_out;
     }
 
-    w = fwrite(data, 1, r, outfp);
-    if (w < r) {
+    w = fwrite(data, 1, block, outfp);
+    if (w < block) {
       printf("Only wrote %d bytes: %s\n", w, strerror(errno));
       exit_code = 1;
       goto err_out;

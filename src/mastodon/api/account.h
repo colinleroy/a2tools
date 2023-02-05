@@ -27,7 +27,7 @@ struct _account {
 };
 
 account *account_new(void);
-account *account_new_from_json(surl_response *resp);
+account *account_new_from_json(void);
 void account_free(account *a);
 account *api_get_profile(char *id);
 

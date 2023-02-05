@@ -48,7 +48,7 @@ int api_get_posts(char *endpoint, char to_load, char *first_to_load, char *filte
   if (!surl_response_ok(resp))
     goto err_out;
 
-  if (surl_get_json(resp, gen_buf, BUF_SIZE, 0, NULL, sel) >= 0) {
+  if (surl_get_json(gen_buf, BUF_SIZE, 0, NULL, sel) >= 0) {
     char **tmp;
     int i;
     n_status = strsplit(gen_buf, '\n', &tmp);
@@ -92,7 +92,7 @@ int api_get_status_and_replies(char to_load, char *root_id, char *root_leaf_id, 
                                       "|index(\"%s\")+1+%d]|.[].id",
                                       first_to_load, first_to_load, n_after);
   }
-  if (surl_get_json(resp, gen_buf, BUF_SIZE, 0, NULL, selector) >= 0) {
+  if (surl_get_json(gen_buf, BUF_SIZE, 0, NULL, selector) >= 0) {
     char **tmp;
     int i;
     n_status = strsplit(gen_buf, '\n', &tmp);
@@ -124,7 +124,7 @@ static char api_status_interact(status *s, char *action) {
     goto err_out;
   }
 
-  surl_send_data_params(resp, 0, 1);
+  surl_send_data_params(0, 1);
   /* No need to send data */
 
   surl_read_response_header(resp);
@@ -217,7 +217,7 @@ char api_relationship_get(account *a, char f) {
     if (!surl_response_ok(resp))
       goto err_out;
 
-    if (surl_get_json(resp, gen_buf, BUF_SIZE, 0, NULL, 
+    if (surl_get_json(gen_buf, BUF_SIZE, 0, NULL, 
                       ".[]|.following,.followed_by,"
                       ".blocking,.blocked_by,.muting,.requested") >= 0) {
       n_lines = strsplit_in_place(gen_buf,'\n',&lines);
@@ -266,7 +266,7 @@ account *api_get_full_account(char *id) {
   if (!surl_response_ok(resp))
     goto err_out;
 
-  a = account_new_from_json(resp);
+  a = account_new_from_json();
 
 err_out:
   surl_response_free(resp);

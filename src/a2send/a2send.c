@@ -56,7 +56,11 @@ static void wait_for_receiver(void) {
 #endif
 }
 
+#ifdef __CC65__
+int main(void) {
+#else
 int main(int argc, char **argv) {
+#endif
   FILE *fp;
   char *filename;
   char *remote_filename;
@@ -75,7 +79,6 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-send_again:
   printf("File to send: ");
   cgets(buf, sizeof(buf));
 
@@ -217,13 +220,14 @@ send_again:
 
 #ifdef __CC65__
   free(filename);
-#endif
+#else
   if (cur_file < argc -1) {
     cur_file++;
     count = 0;
     printf("\n");
     goto send_again;
   }
+#endif
   simple_serial_close();
   printf("Wrote %d bytes.\n", count);
   exit(0);

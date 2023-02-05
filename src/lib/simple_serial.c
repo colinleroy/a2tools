@@ -397,7 +397,11 @@ char * __fastcall__ simple_serial_gets(char *out, size_t size) {
   i = 0;
   cur = out;
   while (i < size - 1) {
+#ifdef __CC65__
+    while (ser_get(&c) == SER_ERR_NO_DATA);
+#else
     c = simple_serial_getc();
+#endif
     
     if (c == '\r') {
       /* ignore \r */
@@ -425,7 +429,7 @@ char * __fastcall__ simple_serial_gets(char *out, size_t size) {
 
 void __fastcall__ simple_serial_read(char *ptr, size_t nmemb) {
   static char *cur;
-
+  static char *end;
 #ifdef __CC65__
   if (serial_activity_indicator_x == -1) {
     serial_activity_indicator_x = wherex();
@@ -438,9 +442,13 @@ void __fastcall__ simple_serial_read(char *ptr, size_t nmemb) {
 #endif
 
   cur = ptr;
-  while (nmemb > 0) {
+  end = ptr + nmemb;
+  while (cur < end) {
+#ifdef __CC65__
+    while (ser_get(cur) == SER_ERR_NO_DATA);
+#else
     *cur = simple_serial_getc();
-    --nmemb;
+#endif
     ++cur;
   }
 
