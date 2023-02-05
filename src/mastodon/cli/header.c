@@ -79,7 +79,7 @@ void print_header(list *l, status *root_status, notification *root_notif) {
     }
     dputs("Author:            \r\n"
           " Profile  : P      \r\n");
-  } else if (l->account) {
+  } else if (l && l->account) {
     dputs("Profile:           \r\n"
           " Images   : I      \r\n");
   } else if (root_notif) {
