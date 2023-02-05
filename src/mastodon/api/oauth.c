@@ -178,11 +178,14 @@ int do_login(void) {
     dputs("Error.\r\n");
     goto err_out;
   }
+
   if (surl_find_line(body, buf_size, "action=\""LOGIN_URL) == 0) {
     login_required = 1;
     dputs("Login required.\r\n");
-    dputs("Enter password: ");
+
     password = malloc(50);
+password_again:
+    dputs("Enter password: ");
     
     echo(0);
     dget_text(password, 50, NULL);
@@ -224,6 +227,13 @@ int do_login(void) {
       dputs("OK\r\n");
     }
 
+    surl_find_line(body, buf_size, "class='flash-message alert");
+    if (body[0] != '\0') {
+      dputs("Authentication error.\r\n");
+      token = get_csrf_token(body, buf_size);
+      goto password_again;
+    }
+
     surl_find_line(body, buf_size, "otp-authentication-form");
     if (body[0] != '\0') {
       otp_required = 1;
@@ -237,6 +247,8 @@ int do_login(void) {
   /* Third request for OTP */
     if (otp_required) {
       char *otp = malloc(10);
+
+otp_again:
       dputs("Enter OTP code: ");
       dget_text(otp, 9, NULL);
       *strchr(otp, '\n') = '\0';
@@ -244,7 +256,6 @@ int do_login(void) {
       post = prepare_otp_post(otp, token);
       post_len = strlen(post);
       free(token);
-      free(otp);
 
       dputs("POST "LOGIN_URL"... ");
       resp = surl_start_request(SURL_METHOD_POST, login_url, NULL, 0);
@@ -264,8 +275,18 @@ int do_login(void) {
         dputs("Invalid response to POST\r\n");
         goto err_out;
       } else {
+        
+        surl_find_line(body, buf_size, "class='flash-message alert");
+        if (body[0] != '\0') {
+          dputs("OTP error.\r\n");
+          token = get_csrf_token(body, buf_size);
+          surl_response_free(resp);
+          goto otp_again;
+        }
+
         dputs("OK\r\n");
       }
+      free(otp);
 
       token = NULL;
     }
