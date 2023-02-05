@@ -112,7 +112,7 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
   int prev_cursor = 0;
   unsigned char sx, wx;
   unsigned char sy, ey, hy, tmp;
-  char scrolled_up = 0, overflowed = 0;
+  char overflowed = 0;
 
   get_hscrollwindow(&sx, &wx);
   get_scrollwindow(&sy, &ey);
@@ -184,23 +184,13 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
           cur_y++;
         }
         /* Handle scroll up if needed */
-        gotoxy(cur_x, cur_y);
-        if (cur_x > wx - 1) {
-          cur_x = 0;
-          cur_y++;
-          gotoxy(cur_x, cur_y);
-        }
-        scrolled_up = 0;
-        while (cur_y > hy - 1) {
+        if (cur_y > hy - 1) {
           cur_y--;
           scrollup();
           gotoxy(cur_x, cur_y);
-          scrolled_up = 1;
-        }
-        if (scrolled_up) {
           rewrite_end_of_buffer(buf, i, max_i, wx, hy);
-          gotoxy(cur_x, cur_y);
         }
+        gotoxy(cur_x, cur_y);
       } else {
         dputc(0x07);
       }
@@ -208,7 +198,9 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
       if (!cmd_cb) {
         dputc(0x07);
       } else if (i == cur_x) {
-        dputc(0x07);
+        cur_x = 0;
+        i = 0;
+        gotoxy(cur_x, cur_y);
       } else {
         i -= cur_x + 1;
         cur_y--;
@@ -234,8 +226,41 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
         gotoxy(cur_x, cur_y);
       }
     } else if (c == CH_CURS_DOWN) {
-      dputc(0x07);
-      /* maybe we'll handle that later */
+      if (!cmd_cb || i == max_i) {
+        dputc(0x07);
+      } else {
+        tmp = cur_x;
+        /* wrap to EOL */
+        while (cur_x < wx && buf[i] != '\n') {
+          i++;
+          cur_x++;
+          if (i == max_i) {
+            /* Can't go down, abort */
+            goto stop_down;
+          }
+        }
+        i++;
+        cur_x = 0;
+        cur_y++;
+        /* Scroll */
+        if (cur_y > hy - 1) {
+          cur_y--;
+          scrollup();
+          gotoxy(cur_x, cur_y);
+          rewrite_end_of_buffer(buf, i, max_i, wx, hy);
+        }
+        /* Advance to previous cur_x at most */
+        while (cur_x < tmp) {
+          if (i == max_i || buf[i] == '\n') {
+            break;
+          }
+          i++;
+          cur_x++;
+        }
+        gotoxy(cur_x, cur_y);
+      }
+stop_down:
+      gotoxy(cur_x, cur_y);
     } else {
       if (i == size - 1) {
         dputc(0x07);
