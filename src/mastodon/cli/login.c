@@ -139,7 +139,9 @@ reenter_settings:
     dputs("Your instance: ");
     dget_text(instance_url, BUF_SIZE, NULL);
     *strchr(instance_url, '\n') = '\0';
-
+    if (instance_url[0] == '\0') {
+      goto reenter_settings;
+    }
     if (register_app() < 0) {
       return -1;
     }

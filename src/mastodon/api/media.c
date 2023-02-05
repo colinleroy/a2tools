@@ -30,7 +30,6 @@ static media *media_new_from_json(char *urls_selector, char *alt_text_selector) 
   media *m;
   char **lines, *w;
   char i, n_lines;
-  signed char r;
   int n;
 
   m = media_new();
