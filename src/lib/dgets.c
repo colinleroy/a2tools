@@ -29,6 +29,8 @@ void echo(int on) {
   echo_on = on;
 }
 
+static char start_x, start_y;
+
 static int get_prev_line_len(char *buf, size_t i, unsigned char wx) {
   int back;
   int prev_line_len;
@@ -40,6 +42,9 @@ static int get_prev_line_len(char *buf, size_t i, unsigned char wx) {
   }
 
   ++back;
+  if (back == 0) {
+    back -= start_x;
+  }
   prev_line_len = i - back;
   /* if it is a long line, only print its end */
   prev_line_len = prev_line_len % wx;
@@ -47,12 +52,12 @@ static int get_prev_line_len(char *buf, size_t i, unsigned char wx) {
 }
 
 static void rewrite_start_of_buffer(char *buf, size_t i, unsigned char wx) {
-  /* Assume we're rewriting (at 0,0) the previous line of buf, ending at i. */
   int prev_line_len, k;
 
   prev_line_len = get_prev_line_len(buf, i, wx);
+  prev_line_len -= start_x;
   /* print it */
-  gotoxy(0,0);
+  gotoxy(start_x, start_y);
   for (k = i - prev_line_len; k <= i; k++) {
     cputc(buf[k]);
   }
@@ -104,26 +109,16 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
   char c;
   size_t i = 0, max_i = 0, k;
   int cur_x, cur_y;
-  char has_nl = 0;
   int prev_cursor = 0;
   unsigned char sx, wx;
-  unsigned char sy, ey, hy;
+  unsigned char sy, ey, hy, tmp;
   char scrolled_up = 0, overflowed = 0;
-  unsigned char scrw, scrh, reset_hscroll;
 
   get_hscrollwindow(&sx, &wx);
-  cur_x = wherex();
-  reset_hscroll = 0;
-  if (sx == 0 && cur_x > 0) {
-    screensize(&scrw, &scrh);
-    reset_hscroll = wx;
-    sx = cur_x;
-    wx = scrw - cur_x;
-    set_hscrollwindow(sx, wx);
-    gotoxy(0, wherey());
-    cur_x = 0;
-  }
   get_scrollwindow(&sy, &ey);
+  start_x = wherex();
+  start_y = wherey();
+
   hy = ey - sy;
 
   memset(buf, '\0', size - 1);
@@ -152,7 +147,6 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
       if (i > 0) {
         i--;
         cur_x--;
-        has_nl = (buf[i] == '\n');
         if (cur_x < 0) {
           cur_y--;
           cur_x = get_prev_line_len(buf, i, wx);
@@ -210,7 +204,36 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
       } else {
         dputc(0x07);
       }
-    } else if (c == CH_CURS_UP || c == CH_CURS_DOWN) {
+    } else if (c == CH_CURS_UP) {
+      if (!cmd_cb) {
+        dputc(0x07);
+      } else if (i == cur_x) {
+        dputc(0x07);
+      } else {
+        i -= cur_x + 1;
+        cur_y--;
+        /* Decompose because rewrite_start_of_buffer
+         * expects us to be on a \n */
+        if (cur_y < 0) {
+          scrolldn();
+          cur_y++;
+          rewrite_start_of_buffer(buf, i, wx);
+        }
+        if (buf[i] == '\n') {
+          /* we're going to previous line */
+          tmp = get_prev_line_len(buf, i, wx);
+          if (tmp < cur_x) {
+            cur_x = tmp;
+          } else {
+            i -= tmp - cur_x;
+          }
+        } else {
+          /* going up in long line */
+          i -= wx - cur_x - 1;
+        }
+        gotoxy(cur_x, cur_y);
+      }
+    } else if (c == CH_CURS_DOWN) {
       dputc(0x07);
       /* maybe we'll handle that later */
     } else {
@@ -274,10 +297,7 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
 out:
   cursor(prev_cursor);
   buf[max_i] = '\0';
-  if (reset_hscroll) {
-    set_hscrollwindow(0, reset_hscroll);
-    gotoxy(0, wherey());
-  }
+
   if (!cmd_cb) {
     dputc('\r');
     dputc('\n');
