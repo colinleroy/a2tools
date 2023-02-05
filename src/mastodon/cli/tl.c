@@ -708,6 +708,8 @@ static int load_state(list ***lists) {
   if (num_lists < 0) {
     *lists = NULL;
     fclose(fp);
+    unlink(STATE_FILE);
+
     return -1;
   }
 
