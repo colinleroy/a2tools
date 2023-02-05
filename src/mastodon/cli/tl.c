@@ -616,11 +616,7 @@ static void launch_command(char *command, char *p1, char *p2, char *p3, char *p4
 #endif
 }
 
-#ifndef __APPLE2ENH__
 #define STATE_FILE "mastostate"
-#else
-#define STATE_FILE "/RAM/mastostate"
-#endif
 
 static void save_state(list **lists, char cur_list) {
   char i,j;
