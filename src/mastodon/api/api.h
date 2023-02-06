@@ -7,10 +7,10 @@
 #include "notification.h"
 #include "common.h"
 
-int api_get_posts(char *endpoint, char to_load, char *first_to_load, char *filter, char *sel, char **post_ids);
-int api_get_account_posts(account *a, char to_load, char *first_to_load, char **post_ids);
-int api_get_status_and_replies(char to_load, char *root_id, char *root_leaf_id, char *first_to_load, char **post_ids);
-int api_search(char to_load, char *search, char *first_to_load, char **post_ids);
+int api_get_posts(char *endpoint, char to_load, char *load_before, char *load_after, char *filter, char *sel, char **post_ids);
+int api_get_account_posts(account *a, char to_load, char *load_before, char *load_after, char **post_ids);
+int api_get_status_and_replies(char to_load, char *root_id, char *root_leaf_id, char *load_before, char *load_after, char **post_ids);
+int api_search(char to_load, char *search, char *load_before, char *load_after, char **post_ids);
 
 status *api_get_status(char *post_id, char full);
 

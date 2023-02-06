@@ -8,8 +8,10 @@ CFLAGS= -I ../lib -g -O0 -Wall -DCONF_FILE_PATH=\"/etc/surl-server/tty.conf\"
 all: $(PROGRAM)
 
 $(PROGRAM): $(SOURCES)
-	gcc $(CFLAGS) $(shell curl-config --cflags) $(shell libpng-config --cflags) $^ \
-		$(shell curl-config --libs) $(shell libpng-config --libs) -ljpeg -ljq -lgumbo -o $@
+	gcc $(CFLAGS) $(shell curl-config --cflags) $(shell libpng-config --cflags) \
+		$^ \
+		$(shell curl-config --libs) $(shell libpng-config --libs) \
+		-ljpeg -ljq -lgumbo -o $@
 
 clean:
 	rm -f $(PROGRAM) *.o

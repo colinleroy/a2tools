@@ -44,4 +44,5 @@ extern char arobase;
 
 void nomem_msg(char *file, int line);
 surl_response *get_surl_for_endpoint(char method, char *endpoint);
+char *date_format(char *in, char with_time);
 #endif
