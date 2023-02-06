@@ -36,18 +36,20 @@ void notification_free(notification *n) {
   free(n);
 }
 
-int api_get_notifications(char to_load, char *first_to_load, char **notification_ids) {
+int api_get_notifications(char to_load, char *load_before, char *load_after, char **notification_ids) {
   surl_response *resp;
   int n_notifications;
 
   n_notifications = 0;
-  snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s?limit=%d&%s=%s&%s=%s&%s=%s&%s=%s%s%s", NOTIFICATION_ENDPOINT, to_load,
+  snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s?limit=%d&%s=%s&%s=%s&%s=%s&%s=%s%s%s%s%s", NOTIFICATION_ENDPOINT, to_load,
             "types[]", "follow",
             "types[]", "mention",
             "types[]", "favourite",
             "types[]", "reblog",
-            first_to_load ? "&max_id=" : "",
-            first_to_load ? first_to_load : ""
+            load_after ? "&max_id=" : "",
+            load_after ? load_after : "",
+            load_before ? "&min_id=" : "",
+            load_before ? load_before : ""
           );
   resp = get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
   
@@ -106,7 +108,7 @@ notification *api_get_notification(char *id) {
     } else if (!strcmp(lines[1], "mention")) {
       n->type = NOTIFICATION_MENTION;
     }
-    n->created_at = strdup(lines[2]);
+    n->created_at = date_format(lines[2], 1);
     if (!strcmp(lines[3], "-")) {
       n->status_id = NULL;
     } else {

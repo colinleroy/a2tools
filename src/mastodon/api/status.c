@@ -66,7 +66,7 @@ status *status_new_from_json(surl_response *resp, char *id, char full, char is_r
 
   n_lines = strsplit_in_place(gen_buf, '\n', &lines);
   if (r >= 0 && n_lines >= 2) {
-    s->created_at = strdup(lines[0]);
+    s->created_at = date_format(lines[0], 1);
     s->account->display_name = strdup(lines[1]);
     if (!is_reblog && n_lines > 2) {
       s->reblog = status_new_from_json(resp, lines[2], full, 1);

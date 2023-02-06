@@ -12,13 +12,13 @@
 #pragma code-name (push, "LOWCODE")
 #endif
 
-int api_get_account_posts(account *a, char to_load, char *first_to_load, char **post_ids) {
+int api_get_account_posts(account *a, char to_load, char *load_before, char *load_after, char **post_ids) {
   snprintf(gen_buf, BUF_SIZE, "%s/%s/statuses", ACCOUNTS_ENDPOINT, a->id);
 
-  return api_get_posts(gen_buf, to_load, first_to_load, NULL, ".[].id", post_ids);
+  return api_get_posts(gen_buf, to_load, load_before, load_after, NULL, ".[].id", post_ids);
 }
 
-int api_search(char to_load, char *search, char *first_to_load, char **post_ids) {
+int api_search(char to_load, char *search, char *load_before, char *load_after, char **post_ids) {
   char *w;
   snprintf(gen_buf, 255, "&type=statuses&q=");
 
@@ -30,17 +30,19 @@ int api_search(char to_load, char *search, char *first_to_load, char **post_ids)
     ++search;
   }
 
-  return api_get_posts(SEARCH_ENDPOINT, to_load, first_to_load, gen_buf, ".statuses[].id", post_ids);
+  return api_get_posts(SEARCH_ENDPOINT, to_load, load_before, load_after, gen_buf, ".statuses[].id", post_ids);
 }
 
-int api_get_posts(char *endpoint, char to_load, char *first_to_load, char *filter, char *sel, char **post_ids) {
+int api_get_posts(char *endpoint, char to_load, char *load_before, char *load_after, char *filter, char *sel, char **post_ids) {
   surl_response *resp;
   int n_status;
 
   n_status = 0;
-  snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s?limit=%d%s%s%s", endpoint, to_load,
-            first_to_load ? "&max_id=" : "",
-            first_to_load ? first_to_load : "",
+  snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s?limit=%d%s%s%s%s%s", endpoint, to_load,
+            load_after ? "&max_id=" : "",
+            load_after ? load_after : "",
+            load_before ? "&min_id=" : "",
+            load_before ? load_before : "",
             filter ? filter : ""
           );
   resp = get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
@@ -63,7 +65,7 @@ err_out:
   return n_status;
 }
 
-int api_get_status_and_replies(char to_load, char *root_id, char *root_leaf_id, char *first_to_load, char **post_ids) {
+int api_get_status_and_replies(char to_load, char *root_id, char *root_leaf_id, char *load_before, char *load_after, char **post_ids) {
   surl_response *resp;
   int n_status;
   char n_before, n_after;
@@ -75,7 +77,17 @@ int api_get_status_and_replies(char to_load, char *root_id, char *root_leaf_id, 
   if (!surl_response_ok(resp))
     goto err_out;
 
-  if (first_to_load == NULL) {
+  /* we will return a list of #to_load IDs. if no load_before/load_after
+   * boundaries are specified, we'll return 1/3rd before the root_leaf_id
+   * and 2/3rds after.
+   * We insert root_id (not root_leaf_id!) in the list so that caller knows
+   * where to init display at. Not root_leaf_id because we want to keep the
+   * "xyz boosted" header.
+   * If load_before or load_after is specified, we concat the ancestors
+   * array, root_id as array, descendants array, and then we return the 
+   * #to_load results (at max) before or after the boundary.
+   */
+  if (load_after == NULL && load_before == NULL) {
     n_before = to_load/3;
     n_after  = (2 * to_load) / 3;
     if (n_before + n_after == to_load) {
@@ -83,26 +95,82 @@ int api_get_status_and_replies(char to_load, char *root_id, char *root_leaf_id, 
       n_before--;
     }
     /* select n_before ascendants and n_after ascendants */
-    snprintf(selector, SELECTOR_SIZE, "(.ancestors|.[-%d:]|.[].id),\"-\","
+    snprintf(selector, SELECTOR_SIZE, "(.ancestors|.[-%d:]|.[].id),\"%s\","
                                       "(.descendants|.[0:%d]|.[].id)",
-                                      n_before, n_after);
-  } else {
+                                      n_before, root_id, n_after);
+  } else if (load_after != NULL){
+    /* flatten ancestors[],root,descendants[] :
+     * [((.ancestors|map(.id)),["root_leaf_id"],(.descendants|map(.id)))|.[]]
+     * get strings: |.[]
+     * with indexes first to end:
+     *              |.[ first : ]
+     * where start is: .|index("root_id")+1
+     * and then get n_after of it:
+     * | .[ : %d]
+     * and flatten:
+     * | .[]
+     * so the full selector is :
+     * [ ((.ancestors|map(.id)),
+         ["root_leaf_id"],
+         (.descendants|map(.id)))
+         |.[]
+       ] | .[
+             .|index("boundary")+1 :
+            ]
+          | .[ : n_after ] | .[]
+     */
     n_after = to_load;
-    snprintf(selector, SELECTOR_SIZE, ".descendants|.[[.[].id]|index(\"%s\")+1:[.[].id]"
-                                      "|index(\"%s\")+1+%d]|.[].id",
-                                      first_to_load, first_to_load, n_after);
+    snprintf(selector, SELECTOR_SIZE, "[ ((.ancestors|map(.id)),"
+                                        "[\"%s\"],"
+                                        "(.descendants|map(.id)))"
+                                        "|.[]"
+                                      "] | .["
+                                            ".|index(\"%s\")+1:"
+                                           "]"
+                                         "| .[ : %d] | .[]",
+                                        root_id,
+                                        load_after,
+                                        n_after);
+  } else if (load_before != NULL){
+    /* flatten ancestors[],root,descendants[] :
+     * [((.ancestors|map(.id)),["root_leaf_id"],(.descendants|map(.id)))|.[]]
+     * get strings: |.[]
+     * with indexes start to last :
+     *              |.[ : last ]
+     * where last is: .|index("root_id")
+     * and then get n_before of it:
+     * | .[ -%d : ]
+     * and flatten:
+     * | .[]
+     * so the full selector is :
+     * [ ((.ancestors|map(.id)),
+         ["root_leaf_id"],
+         (.descendants|map(.id)))
+         |.[]
+       ] | .[
+             .|index("boundary") :
+            ]
+          | .[ -n_before : ] | .[]
+     */
+    n_before = to_load;
+    snprintf(selector, SELECTOR_SIZE, "[ ((.ancestors|map(.id)),"
+                                        "[\"%s\"],"
+                                        "(.descendants|map(.id)))"
+                                        "|.[]"
+                                      "] | .["
+                                            ": .|index(\"%s\")"
+                                           "]"
+                                         "| .[-%d : ] | .[]",
+                                        root_id,
+                                        load_before,
+                                        n_before);
   }
   if (surl_get_json(gen_buf, BUF_SIZE, 0, NULL, selector) >= 0) {
     char **tmp;
     int i;
     n_status = strsplit(gen_buf, '\n', &tmp);
     for (i = 0; i < n_status; i++) {
-      if (tmp[i][0] != '-') {
-        post_ids[i] = tmp[i];
-      } else {
-        post_ids[i] = strdup(root_id);
-        free(tmp[i]);
-      }
+      post_ids[i] = tmp[i];
     }
     free(tmp);
   }

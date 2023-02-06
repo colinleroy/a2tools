@@ -60,7 +60,7 @@ account *account_new_from_json(void) {
   a->id = strdup(lines[0]);
   a->username = strdup(lines[1]);
   a->display_name = strdup(lines[2]);
-  a->created_at = strdup(lines[3]);
+  a->created_at = date_format(lines[3], 0);
   a->followers_count = atol(lines[4]);
   a->following_count = atol(lines[5]);
   free(lines);

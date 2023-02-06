@@ -35,6 +35,21 @@ void nomem_msg(char *file, int line) {
     printf("No more memory (%s:%d)", file, line);
 }
 
+char *date_format(char *in, char with_time) {
+  char *out = strdup(in);
+  if (strchr(out, 'T')) {
+    if (!with_time) {
+      *strchr(out, 'T') = '\0';
+      return out;
+    }
+    *strchr(out, 'T') = ' ';
+  }
+  if (strchr(out, '.')) {
+    *strchr(out, '.') = '\0';
+  }
+  return out;
+}
+
 surl_response *get_surl_for_endpoint(char method, char *endpoint) {
   static char *hdrs[1] = {NULL};
   surl_response *resp;
