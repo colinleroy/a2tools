@@ -178,14 +178,11 @@ void stp_save(char *full_filename, surl_response *resp) {
 
   progress_bar(6, 15, 28, 0, resp->size);
   do {
-    simple_serial_set_activity_indicator(1, 39, 0);
-
     clrzone(6,14, 6+27, 14);
     gotoxy(6, 14);
     printf("Reading %zu bytes...", min(buf_size, resp->size - total));
     
     r = surl_receive_data(resp, data, buf_size);
-    simple_serial_set_activity_indicator(0, 0, 0);
 
     gotoxy(6, 14);
     total += r;

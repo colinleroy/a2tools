@@ -223,6 +223,8 @@ int main(void) {
   clrscr();
   screensize(&scrw, &scrh);
 
+  simple_serial_set_activity_indicator(1, 39, 0);
+
   url = get_start_url();
   url = build_login_url(url);
   //clrscr();
@@ -244,9 +246,7 @@ int main(void) {
     gotoxy(12, 12);
     printf("Loading...   ");
 
-    simple_serial_set_activity_indicator(1, 39, 0);
     resp = surl_start_request(SURL_METHOD_GET, url, NULL, 0);
-    simple_serial_set_activity_indicator(0, 0, 0);
     
     stp_print_result(resp);
     
@@ -270,9 +270,7 @@ int main(void) {
 
     } else {
       data = malloc(resp->size + 1);
-      simple_serial_set_activity_indicator(1, 39, 0);
       r = surl_receive_data(resp, data, resp->size);
-      simple_serial_set_activity_indicator(0, 0, 0);
     }
     if (r < resp->size) {
       gotoxy(5, 12);
