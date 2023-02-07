@@ -30,7 +30,11 @@
 #endif
 
 #ifdef __CC65__
+#ifdef SERIAL_TO_LANGCARD
+#pragma code-name (push, "LC")
+#else
 #pragma code-name (push, "LOWCODE")
+#endif
 #endif
 
 static char serial_activity_indicator_enabled = 0;
