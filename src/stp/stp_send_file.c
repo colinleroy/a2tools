@@ -154,12 +154,10 @@ void stp_send_file(char *remote_dir) {
     r = fread(data, sizeof(char), chunksize, fp);
     total = total + r;
     
-    simple_serial_set_activity_indicator(1, 39, 0);
     clrzone(0, 21, scrw - 1, 21);
     gotoxy(0, 21);
     printf("Sending %zu/%lu...", total, filesize);
     surl_send_data(data, r);
-    simple_serial_set_activity_indicator(0, 0, 0);
 
     progress_bar(0, 22, scrw, total, filesize);
   } while (total < filesize);
