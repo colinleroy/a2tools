@@ -231,7 +231,7 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
       } else {
         tmp = cur_x;
         /* wrap to EOL */
-        while (cur_x < wx && buf[i] != '\n') {
+        while (cur_x < wx - 1 && buf[i] != '\n') {
           i++;
           cur_x++;
           if (i == max_i) {
