@@ -54,4 +54,4 @@ mastapple.dsk: $(mastapple_disk_PROGS)
 	done
 
 upload: all
-	scp $(net_disk_PROGS) $(homectrl_disk_PROGS) $(mastapple_disk_PROGS) diskstation.lan:/volume1/a2repo/
+	scp $(net_disk_PROGS) $(homectrl_disk_PROGS) $(mastapple_disk_PROGS) diskstation.lan:/volume1/a2repo/apple2/
