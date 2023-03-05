@@ -291,6 +291,9 @@ stop_down:
           max_i++;
         for (k = max_i - 2; k >= i; k--) {
           buf[k + 1] = buf[k];
+          if (k == 0) {
+            break; /* size_t is unsigned */
+          }
         }
 
         overflowed = rewrite_end_of_buffer(buf, i + 1, max_i, wx, hy);
