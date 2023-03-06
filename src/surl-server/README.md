@@ -22,7 +22,7 @@ make
 sudo make install
 ```
 
-Start the service once to generate a config file to /etc/surl-server/tty.conf, and edit it if necessary:
+Start the service once to generate a config file to /etc/surl-server/tty.conf, and edit it if necessary. In particular, if your serial cable does hardware handshaking, enable it in the config, it gives a little speed boost. To generate it, start the server:
 
 ```
 sudo /usr/local/bin/surl-server
