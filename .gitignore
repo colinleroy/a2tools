@@ -1,6 +1,7 @@
 cov-build.sh
 cov-int
 a2-cov.tgz
+dist
 a.out
 *.s
 *.o
