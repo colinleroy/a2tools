@@ -82,7 +82,7 @@ static void simple_serial_write_defaults(void) {
   }
   fprintf(fp, "tty: /dev/ttyUSB0\n"
               "baudrate: 9600\n"
-              "hw_handshake: on\n"
+              "hw_handshake: off\n"
               "\n"
               "#Alternatively, you can export environment vars:\n"
               "A2_TTY, A2_TTY_SPEED, A2_TTY_HW_HANDSHAKE\n");
