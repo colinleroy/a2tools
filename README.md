@@ -42,3 +42,17 @@ You can then transfer the images in dist/ using ADTPro.
 === Notes ===
 
 The Apple 2 serial port is hardcoded to be port 2. You can change that in the simple_serial_open() calls, grep for them in the src/ directory.
+
+== Raspberry installation ==
+For convenience, a pre-built surl-server is configured in the Raspberry raspios-buster-armhf-surl-server.img image file.
+
+Copy it to a microSD card:
+```
+gunzip raspios-buster-armhf-surl-server.img.gz
+dd if=raspios-buster-armhf-surl-server.img of=/dev/mmcblk0 bs=1M
+sync
+```
+
+Install the SD card into a Raspberry, connect Ethernet, connect USB/serial adapter and boot. Everything should be up and running if you have a DHCP server. 
+
+You can ssh into the pi with the default Raspbian login, pi/raspberry.
