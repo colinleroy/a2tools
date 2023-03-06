@@ -34,3 +34,5 @@ Enable and start the service:
 sudo systemctl enable surl-server.service
 sudo systemctl restart surl-server.service
 ```
+
+On the raspios-buster-armhf-surl-server.img image, ssh is enabled so you can log on the Raspberry to change any setting you like, with the default 'pi' login, password 'raspberry'.
