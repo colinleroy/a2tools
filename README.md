@@ -13,3 +13,32 @@ started, and then I thought
 One thing led to another and there are now quite a few tools
 here. Including an HomeAssistant frontend to control switches,
 heating, and view sensors' graphs.
+
+=== Building ===
+
+Install cc65:
+
+```
+git clone https://github.com/cc65/cc65.git
+cd cc65
+make
+sudo make install
+```
+
+Build my things:
+
+```
+make
+```
+
+Create floppy images:
+
+```
+make dist
+```
+
+You can then transfer the images in dist/ using ADTPro.
+
+=== Notes ===
+
+The Apple 2 serial port is hardcoded to be port 2. You can change that in the simple_serial_open() calls, grep for them in the src/ directory.
