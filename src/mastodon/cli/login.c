@@ -137,6 +137,7 @@ reenter_settings:
     oauth_token[0] = '\0';
 
     dputs("Your instance: ");
+    instance_url[0] = '\0';
     dget_text(instance_url, BUF_SIZE, NULL);
     *strchr(instance_url, '\n') = '\0';
     if (instance_url[0] == '\0') {
@@ -148,6 +149,7 @@ reenter_settings:
 
     dputs("If on a non-US keyboard, use @ instead of arobase.\r\n");
     dputs("Your login: ");
+    login[0] = '\0';
     dget_text(login, BUF_SIZE, NULL);
     *strchr(login, '\n') = '\0';
     
