@@ -36,6 +36,7 @@ static unsigned char scrw = 255, scrh = 255;
 
 static char *stp_send_dialog() {
   char *filename = malloc(BUFSIZE);
+  filename[0] = '\0';
 
   if (scrw == 255)
     screensize(&scrw, &scrh);

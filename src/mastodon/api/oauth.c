@@ -188,6 +188,7 @@ password_again:
     dputs("Enter password: ");
     
     echo(0);
+    password[0] = '\0';
     dget_text(password, 50, NULL);
     echo(1);
     *strchr(password, '\n') = '\0';
@@ -250,6 +251,7 @@ password_again:
 
 otp_again:
       dputs("Enter OTP code: ");
+      otp[0] = '\0';
       dget_text(otp, 9, NULL);
       *strchr(otp, '\n') = '\0';
 

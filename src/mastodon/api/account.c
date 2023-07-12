@@ -29,6 +29,7 @@ void account_free(account *a) {
     return;
   free(a->id);
   free(a->username);
+  free(a->acct);
   free(a->display_name);
   free(a->created_at);
   free(a->note);
@@ -50,7 +51,7 @@ account *account_new_from_json(void) {
   }
   
   r = surl_get_json(gen_buf, BUF_SIZE, 0, translit_charset,
-                    ".id,.acct,.display_name,"
+                    ".id,.username,.acct,.display_name,"
                     ".created_at,.followers_count,"
                     ".following_count");
   n_lines = strsplit_in_place(gen_buf, '\n', &lines);
@@ -59,10 +60,11 @@ account *account_new_from_json(void) {
   }
   a->id = strdup(lines[0]);
   a->username = strdup(lines[1]);
-  a->display_name = strdup(lines[2]);
-  a->created_at = date_format(lines[3], 0);
-  a->followers_count = atol(lines[4]);
-  a->following_count = atol(lines[5]);
+  a->acct = strdup(lines[2]);
+  a->display_name = strdup(lines[3]);
+  a->created_at = date_format(lines[4], 0);
+  a->followers_count = atol(lines[5]);
+  a->following_count = atol(lines[6]);
   free(lines);
 
   note = malloc(2048);
@@ -102,9 +104,9 @@ account *api_get_profile(char *id) {
     goto err_out;
   }
 
-  if (surl_get_json(gen_buf, BUF_SIZE, 0, translit_charset, ".id,.display_name,.username") >= 0) {
+  if (surl_get_json(gen_buf, BUF_SIZE, 0, translit_charset, ".id,.display_name,.acct,.username") >= 0) {
     n_lines = strsplit_in_place(gen_buf,'\n',&lines);
-    if (n_lines < 3) {
+    if (n_lines < 4) {
       account_free(a);
       a = NULL;
       free(lines);
@@ -112,7 +114,8 @@ account *api_get_profile(char *id) {
     }
     a->id = strdup(lines[0]);
     a->display_name = strdup(lines[1]);
-    a->username = strdup(lines[2]);
+    a->acct = strdup(lines[2]);
+    a->username = strdup(lines[3]);
     free(lines);
   }
 

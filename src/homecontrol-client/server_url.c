@@ -52,6 +52,7 @@ const char *get_server_root_url(void) {
     printf("Please enter the server's root URL,\n");
     printf("Example: http://homecontrol.lan/a2domo\n");
     printf("\nURL: ");
+    server_url[0] = '\0';
     dget_text(server_url, BUFSIZE, NULL);
 
     *strchr(server_url,'\n') = '\0';

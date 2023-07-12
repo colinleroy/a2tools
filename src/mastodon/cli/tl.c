@@ -322,6 +322,7 @@ static int show_search(void) {
   gotoxy(0, 0);
   dputs("Search: ");
 
+  search_buf[0] = '\0';
   dget_text(search_buf, 49, NULL);
 
   if (search_buf[0] != '\0') {

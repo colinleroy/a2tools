@@ -15,6 +15,7 @@ struct _account {
   signed char displayed_at;
   char *id;
   char *username;
+  char *acct;
   char *display_name;
   /* Optionally filled fields */
   char *created_at;

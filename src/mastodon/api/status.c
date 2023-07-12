@@ -80,16 +80,16 @@ status *status_new_from_json(surl_response *resp, char *id, char full, char is_r
       r = surl_get_json(gen_buf, BUF_SIZE, 0, NULL,
                         "(.reblog.media_attachments|map(. | select(.type==\"image\"))|length),"
                         ".reblog.replies_count,.reblog.reblogs_count,.reblog.favourites_count,.reblog.reblogged,.reblog.favourited,"
-                        ".reblog.account.id,.reblog.account.username");
+                        ".reblog.account.id,.reblog.account.acct,.reblog.account.username");
     } else {
       r = surl_get_json(gen_buf, BUF_SIZE, 0, NULL,
                         "(.media_attachments|map(. | select(.type==\"image\"))|length),"
                         ".replies_count,.reblogs_count,.favourites_count,.reblogged,.favourited,"
-                        ".account.id,.account.username");
+                        ".account.id,.account.acct,.account.username");
     }
 
     n_lines = strsplit_in_place(gen_buf, '\n', &lines);
-    if (r >= 0 && n_lines == 8) {
+    if (r >= 0 && n_lines == 9) {
       s->n_images = atoi(lines[0]);
       s->n_replies = atoi(lines[1]);
       s->n_reblogs = atoi(lines[2]);
@@ -99,7 +99,8 @@ status *status_new_from_json(surl_response *resp, char *id, char full, char is_r
       if (lines[5][0] == 't') 
         s->favorited_or_reblogged |= FAVOURITED;
       s->account->id = strdup(lines[6]);
-      s->account->username = strdup(lines[7]);
+      s->account->acct = strdup(lines[7]);
+      s->account->username = strdup(lines[8]);
     }
     free(lines);
 

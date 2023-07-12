@@ -71,9 +71,26 @@ char dgt_cmd_cb(char c) {
   return 0;
 }
 
-static char *handle_compose_input(void) {
+static char *handle_compose_input(char *reply_to_account) {
   char *text;
   text = malloc(500);
+  if (reply_to_account && reply_to_account[0]) {
+    int len = strlen(reply_to_account);
+    int i;
+
+    for (i = 0; i < len; i++) {
+      if (reply_to_account[i] == '@') {
+        reply_to_account[i] = arobase;
+        break; /* no need to continue, there can only be one */
+      }
+    }
+    text[0] = arobase;
+    strncpy(text + 1, reply_to_account, 497);
+    text[len + 1] = ' ';
+    text[len + 2] = '\0';
+  } else {
+    text[0] = '\0';
+  }
   if (dget_text(text, 500, dgt_cmd_cb) == NULL) {
     free(text);
     text = NULL;
@@ -81,7 +98,7 @@ static char *handle_compose_input(void) {
   return text;
 }
 
-void compose_toot(void) {
+void compose_toot(char *reply_to_account) {
   char *text;
   
   top = wherey();
@@ -96,7 +113,7 @@ void compose_toot(void) {
   set_scrollwindow(top + 1, top + COMPOSE_FIELD_HEIGHT);
 
   gotoxy(0, 0);
-  text = handle_compose_input();
+  text = handle_compose_input(reply_to_account);
 
   set_scrollwindow(0, scrh);
 
@@ -140,9 +157,11 @@ int main(int argc, char **argv) {
     }
     chline(scrw - LEFT_COL_WIDTH - 1);
     dputs("Your reply:\r\n");
+  } else {
+    reply_to = NULL;
   }
 
-  compose_toot();
+  compose_toot(reply_to != NULL ? reply_to->account->acct : "");
   set_hscrollwindow(0, scrw);
 
   params = malloc(127);

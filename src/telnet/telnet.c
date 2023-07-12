@@ -501,6 +501,7 @@ again:
     char t;
 
     buf = malloc(BUFSIZE);
+    buf[0] = '\0';
     dputs("Enter host:port: ");
     dget_text(buf, BUFSIZE, NULL);
     dputs("Translate LN <=> CRLN (N/y)? ");

@@ -121,7 +121,13 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
 
   hy = ey - sy;
 
-  memset(buf, '\0', size - 1);
+  if (buf[0] != '\0') {
+    cur_x = wherex();
+    cur_y = wherey();
+    i = strlen(buf);
+    max_i = i;
+    rewrite_start_of_buffer(buf, i - 1, wx);
+  }
   prev_cursor = cursor(1);
 
   while (1) {
