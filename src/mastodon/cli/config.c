@@ -56,9 +56,12 @@ static char *cli() {
   print_logo(scrw);
 
   cputs("Please choose your keyboard layout:\r\n");
-  cputs("0. US QWERTY     ("US_CHARSET" charset)\r\n");
-  cputs("1. French AZERTY ("FR_CHARSET" charset)\r\n");
-
+  cputs("0. US      ("US_CHARSET" charset)\r\n");
+  cputs("1. French  ("FR_CHARSET" charset)\r\n");
+  cputs("2. Spanish ("ES_CHARSET" charset)\r\n");
+  cputs("3. Italian ("IT_CHARSET" charset)\r\n");
+  cputs("4. German  ("DE_CHARSET" charset)\r\n");
+  
 charset_again:
   c = cgetc();
   switch(c) {
@@ -67,6 +70,15 @@ charset_again:
       break;
     case '1':
       charset = FR_CHARSET;
+      break;
+    case '2':
+      charset = ES_CHARSET;
+      break;
+    case '3':
+      charset = IT_CHARSET;
+      break;
+    case '4':
+      charset = DE_CHARSET;
       break;
     default:
       goto charset_again;
