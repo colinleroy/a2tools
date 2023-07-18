@@ -4,3 +4,10 @@
 *source.buildinfo
 *source.changes
 *.ppa.upload
+*build-stamp
+*.debhelper
+*.substvars
+*.buildinfo
+*.changes
+*.deb
+*.ddeb
