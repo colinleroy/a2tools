@@ -5,7 +5,7 @@ After=network.target auditd.service
 [Service]
 Type=simple
 SyslogIdentifier=surl-server
-ExecStart=/usr/local/bin/surl-server
+ExecStart=surl-server
 Restart=on-failure
 RestartSec=5
 TimeoutStopSec=300

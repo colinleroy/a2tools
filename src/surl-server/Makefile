@@ -1,3 +1,4 @@
+prefix ?= /usr/local
 PROGRAM=surl-server
 SOURCES := main.c raw-session.c char_convert.c jq.c html2txt.c hgr.c \
 	../lib/extended_string.c ../lib/strsplit.c \
@@ -17,6 +18,14 @@ clean:
 	rm -f $(PROGRAM) *.o
 
 install:
-	install $(PROGRAM) /usr/local/bin/$(PROGRAM)
-	install -m 644 systemd/surl-server.service /lib/systemd/system/surl-server.service
-	systemctl daemon-reload
+	mkdir -p $(DESTDIR)/etc/surl-server
+	mkdir -p $(DESTDIR)/$(prefix)/bin
+	install $(PROGRAM) $(DESTDIR)/$(prefix)/bin/$(PROGRAM)
+	mkdir -p $(DESTDIR)/lib/systemd/system/
+	install -m 644 systemd/surl-server.service $(DESTDIR)/lib/systemd/system/surl-server.service
+
+deb:
+	debuild -S -sa --force-sign
+
+#deb-upload:
+#	dput ppa:colin-colino/raspios surl-server_1.0_source.changes
