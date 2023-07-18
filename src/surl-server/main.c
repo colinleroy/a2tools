@@ -31,7 +31,7 @@
 #include "jq.h"
 #include "html2txt.h"
 #include "hgr.h"
-#include "../lib/surl_protocol.h"
+#include "surl_protocol.h"
 
 #define BUFSIZE 1024
 

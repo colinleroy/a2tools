@@ -1,7 +1,7 @@
 #ifndef __surl_h
 #define __surl_h
 
-#include "surl_protocol.h"
+#include "../surl-server/surl_protocol.h"
 
 #ifndef __CC65__
 #define __fastcall__

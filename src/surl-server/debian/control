@@ -1,0 +1,16 @@
+Source: surl-server
+Section: net
+Priority: optional
+Maintainer: Colin Leroy-Mira <colin@colino.net>
+Rules-Requires-Root: no
+Build-Depends:
+ debhelper-compat (= 13), libcurl4-gnutls-dev, libgumbo-dev, libjpeg-dev, libpng-dev, libjq-dev
+Standards-Version: 4.6.2
+Homepage: <https://github.com/colinleroy/a2tools>
+
+Package: surl-server
+Architecture: any
+Depends:
+ ${shlibs:Depends},
+ ${misc:Depends},
+Description: Apple2 serial proxy
