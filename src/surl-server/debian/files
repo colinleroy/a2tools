@@ -1,1 +1,3 @@
-surl-server_1.1.2_source.buildinfo net optional
+surl-server-dbgsym_1.1.2_amd64.ddeb debug optional automatic=yes
+surl-server_1.1.2_amd64.buildinfo net optional
+surl-server_1.1.2_amd64.deb net optional
