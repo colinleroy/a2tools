@@ -25,5 +25,7 @@
 #	dh_auto_configure -- \
 #	-DCMAKE_LIBRARY_PATH=$(DEB_HOST_MULTIARCH)
 
+override_dh_auto_build:
+	cd surl-server && make
 override_dh_auto_install:
 	dh_auto_install -- prefix=/usr

@@ -23,9 +23,3 @@ install:
 	install $(PROGRAM) $(DESTDIR)/$(prefix)/bin/$(PROGRAM)
 	mkdir -p $(DESTDIR)/lib/systemd/system/
 	install -m 644 systemd/surl-server.service $(DESTDIR)/lib/systemd/system/surl-server.service
-
-deb:
-	debuild -S -sa --force-sign
-
-#deb-upload:
-#	dput ppa:colin-colino/raspios surl-server_1.0_source.changes
