@@ -12,7 +12,7 @@ install:
 	$(MAKE) -C surl-server -f Makefile $@ || exit
 
 deb:
-	debuild -S -sa --force-sign
+	debuild -S -sa --force-sign --no-check-builddeps
 
 #deb-upload:
 #	dput ppa:colin-colino/raspios surl-server_1.0_source.changes
