@@ -1,5 +1,5 @@
-surl-server (1.1.9) bionic; urgency=medium
+a2tools (1.2.1) bionic; urgency=medium
 
   * Initial release.
 
- -- Colin Leroy-Mira <colin@colino.net>  Tue, 18 Jul 2023 21:28:19 +0200
+ -- Colin Leroy-Mira <colin@colino.net>  Fri, 21 Jul 2023 21:28:19 +0200

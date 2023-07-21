@@ -1,4 +1,4 @@
-Source: surl-server
+Source: a2tools
 Section: net
 Priority: optional
 Maintainer: Colin Leroy-Mira <colin@colino.net>
@@ -13,4 +13,25 @@ Architecture: any
 Depends:
  ${shlibs:Depends},
  ${misc:Depends},
-Description: Apple2 serial proxy
+ a2tools-common
+Description: Apple2 serial/network proxy
+
+Package: a2send
+Architecture: any
+Depends:
+ ${shlibs:Depends},
+ ${misc:Depends},
+ a2tools-common
+Description: Apple2 serial sender tool
+
+Package: a2recv
+Architecture: any
+Depends:
+ ${shlibs:Depends},
+ ${misc:Depends},
+ a2tools-common
+Description: Apple2 serial receiver tool
+
+Package: a2tools-common
+Architecture: all
+Description: Apple2 serial helpers configuration
