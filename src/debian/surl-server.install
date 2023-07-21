@@ -1,1 +1,2 @@
-debian/tty.conf /etc/surl-server/
+usr/bin/surl-server
+lib/systemd/system/surl-server.service
