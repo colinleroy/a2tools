@@ -18,7 +18,7 @@ GCC_SOURCES = ../lib/extended_string.c
 DEPS := 
 
 CC65_TARGET = apple2enh
-CFLAGS  = -I ../lib
+CFLAGS  = -I ../lib -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
 CLCFLAGS = -t $(CC65_TARGET) -O -g --debug-info -Wl "-Ln,$(PROGRAM).lbl" -Wl "--dbgfile,$(PROGRAM).dbg" -Wl "--mapfile,$(PROGRAM).map" -vm #-DSERIAL_TO_LANGCARD
 GCCCFLAGS = -g -O0 -Werror 
 GCCLDFLAGS = 

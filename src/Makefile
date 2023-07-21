@@ -1,5 +1,5 @@
 SUBDIRS = lib a2send a2recv surl-server homecontrol-client mastodon telnet surl stp
-
+INSTALL_SUBDIRS = a2send a2recv surl-server
 .PHONY: all clean
 
 all clean:
@@ -9,7 +9,9 @@ all clean:
 
 #hack for debian packaging
 install:
-	$(MAKE) -C surl-server -f Makefile $@ || exit
+	for dir in $(INSTALL_SUBDIRS); do \
+		$(MAKE) -C $$dir -f Makefile $@ || exit; \
+	done
 
 deb:
 	debuild -S -sa --force-sign --no-check-builddeps
