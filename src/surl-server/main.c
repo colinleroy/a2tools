@@ -473,7 +473,7 @@ static void proxy_set_curl_opts(CURL *curl) {
 
   r |= curl_easy_setopt(curl, CURLOPT_POST, 0L);
   r |= curl_easy_setopt(curl, CURLOPT_UPLOAD, 0L);
-  r |= curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_ALL);
+  r |= curl_easy_setopt(curl, CURLOPT_PROTOCOLS_STR, "ALL");
   r |= curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, NULL);
   r |= curl_easy_setopt(curl, CURLOPT_QUOTE, NULL);
   r |= curl_easy_setopt(curl, CURLOPT_DIRLISTONLY, 0L);
@@ -701,9 +701,9 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
       r |= curl_easy_setopt(curl, CURLOPT_SEEKDATA, curlbuf);
       r |= curl_easy_setopt(curl, CURLOPT_INFILESIZE, curlbuf->upload_size);
       if (is_sftp) {
-        r |= curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_SFTP);
+        r |= curl_easy_setopt(curl, CURLOPT_PROTOCOLS_STR, "SFTP");
       } else if (is_ftp) {
-        r |= curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_FTP);
+        r |= curl_easy_setopt(curl, CURLOPT_PROTOCOLS_STR, "FTP");
       }
       if (r) {
         printf("CURL: Could not set PUT option(s)\n");
@@ -730,7 +730,7 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
         sprintf(cmd, "DELE %s", path);
         printf("will delete %s in %s\n", path, url);
         free(o_path);
-        r |= curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_FTP);
+        r |= curl_easy_setopt(curl, CURLOPT_PROTOCOLS_STR, "FTP");
         r |= curl_easy_setopt(curl, CURLOPT_QUOTE, curl_slist_append(NULL,cmd));
         simple_serial_putc(SURL_ANSWER_WAIT);
       } else {

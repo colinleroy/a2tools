@@ -43,9 +43,13 @@ int main(void) {
 
 
 #ifdef __CC65__
-  simple_serial_open(2, SER_BAUD_9600);
+  if (simple_serial_open(2, SER_BAUD_9600) < 0) {
+    exit(1);
+  }
 #else
-  simple_serial_open();
+  if (simple_serial_open() < 0) {
+    exit(1);
+  }
 #endif
 
 read_again:

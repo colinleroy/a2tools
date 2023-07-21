@@ -31,7 +31,7 @@ GCCSOURCES := ../lib/extended_conio.c ../lib/clrzone.c ../lib/extended_string.c 
 DEPS := 
 
 CC65_TARGET = apple2enh
-CFLAGS  = -I ../lib -I api -I cli
+CFLAGS  = -I ../lib -I api -I cli -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
 CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x0400 -DSERIAL_TO_LANGCARD
 GCCCFLAGS = -g -O0 -Werror $(shell sdl-config --cflags)
 GCCLDFLAGS = $(shell sdl-config --libs)

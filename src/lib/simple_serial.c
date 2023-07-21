@@ -213,9 +213,26 @@ static void setup_tty(int port, int baudrate, int hw_flow_control) {
 #include "simple_serial_opts.c"
 
 int simple_serial_open(void) {
+  struct flock lock;
 
+  lock.l_start = 0;
+  lock.l_len = 0;
+  lock.l_pid = getpid();
+  lock.l_type = F_WRLCK;
+  lock.l_whence = SEEK_SET;
+
+  /* Get options */
   simple_serial_read_opts();
+  
+  /* Open file */
   ttyfp = fopen(opt_tty_path, "r+b");
+
+  /* Try to lock file */
+  if (fcntl (fileno(ttyfp), F_SETLK, &lock) < 0) {
+    printf("%s is already opened by another process.\n", opt_tty_path);
+    fclose(ttyfp);
+    ttyfp = NULL;
+  }
   if (ttyfp == NULL) {
     printf("Can't open %s\n", opt_tty_path);
     return -1;

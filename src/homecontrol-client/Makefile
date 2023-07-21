@@ -24,7 +24,7 @@ grphview_GCCSOURCES := ../lib/extended_conio.c ../lib/clrzone.c ../lib/tgi_sdl.c
 DEPS := 
 
 CC65_TARGET = apple2enh
-CFLAGS  = -I ../lib 
+CFLAGS  = -I ../lib -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
 homectrl_CLCFLAGS = -t $(CC65_TARGET) -O -Wl -D,__STACKSIZE__=0x0400 -DSERIAL_TO_LANGCARD
 grphview_CLCFLAGS = -t $(CC65_TARGET) -O -Wl -D,__STACKSIZE__=0x0400 -DSERIAL_TO_LANGCARD -C ../../config/apple2enh-hgr.cfg
 GCCCFLAGS = -g -O0 -Werror $(shell sdl-config --cflags)

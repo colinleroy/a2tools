@@ -5,7 +5,7 @@ GCCSOURCES := ../lib/extended_string.c ../lib/extended_conio.c
 DEPS := 
 
 CC65_TARGET = apple2enh
-CFLAGS  = -I ../lib
+CFLAGS  = -I ../lib -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
 CLCFLAGS = -t $(CC65_TARGET) -Osir -Cl
 GCCCFLAGS = -g -O0 -Werror 
 GCCLDFLAGS = 
