@@ -534,6 +534,7 @@ static char *replace_new_lines(char *in) {
   out[o++] = '\0';
   return out;
 }
+
 /* we're going to url_encode and concat each line, expecting
  * an alternance of param, value
  */
@@ -576,6 +577,93 @@ static char *prepare_post(char *buffer, size_t *len) {
     out_ptr += strlen(tmp) + 1;
     curl_free(tmp);
   }
+  free(lines);
+  free(buffer);
+  *len = strlen(out);
+  return out;
+}
+
+/* The same, as JSON
+ */
+static char *json_escape(char *in) {
+  int len = strlen(in);
+  char *out = malloc(len * 2 + 1);
+  int i, o;
+  for (i = 0, o = 0; i < len; i++) {
+    if (in[i] == '"') {
+      out[o++] = '\\';
+      out[o++] = '"';
+    } else if (in[i] == '\n') {
+      out[o++] = '\\';
+      out[o++] = 'n';
+    } else {
+      out[o++] = in[i];
+    }
+  }
+  out[o++] = '\0';
+  return out;
+}
+
+static char *prepare_json_post(char *buffer, size_t *len) {
+  char *tmp, *nl, *json_esc;
+  char *out = malloc((*len * 3) + 1);
+  char *out_ptr = out;
+  char **lines;
+  int n_lines = strsplit_in_place(buffer, '\n', &lines);
+  int i;
+  sprintf(out_ptr, "{");
+  out_ptr++;
+  for (i = 0; i < n_lines; i += 2) {
+    char *translit = NULL;
+    if (strstr(lines[i], "|TRANSLIT")) {
+      translit = strstr(lines[i], "|TRANSLIT") + 1;
+      translit = strchr(translit, '|') + 1;
+
+      *strstr(lines[i], "|TRANSLIT") = '\0';
+    }
+    nl = replace_new_lines(lines[i]);
+
+    if (i > 0) {
+      sprintf(out_ptr, ",");
+      out_ptr++;
+    }
+    sprintf(out_ptr, "\"%s\": ", nl);
+    out_ptr += strlen(nl) + 4;
+    curl_free(nl);
+
+    if (strlen(lines[i + 1]) > 0) {
+      char *translit_data;
+
+      nl = replace_new_lines(lines[i + 1]);
+
+      printf("nl: %s\n", nl);
+      if (translit) {
+        size_t tmp_len;
+        translit_data = do_apple_convert(nl, INCOMING, translit, &tmp_len);
+      } else {
+        translit_data = strdup(nl);
+      }
+      printf("translit_data: %s\n", translit_data);
+      free(nl);
+      tmp = strdup(translit_data);
+      free(translit_data);
+    } else
+      tmp = strdup("\"\"");
+
+    if (tmp[0] == '[' || tmp[0] == '{') {
+      sprintf(out_ptr, "%s", tmp);
+      out_ptr += strlen(tmp);
+    } else {
+      json_esc = json_escape(tmp);
+      printf("json_esc: %s\n", json_esc);
+      curl_free(tmp);
+      tmp = json_esc;
+      sprintf(out_ptr, "\"%s\"", tmp);
+      out_ptr += strlen(tmp) + 2;
+    }
+    curl_free(tmp);
+  }
+  sprintf(out_ptr, "}");
   free(lines);
   free(buffer);
   *len = strlen(out);
@@ -659,11 +747,20 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
           curl_buffer_free(curlbuf);
           return NULL;
         }
-        /* Massage an x-www-urlencoded form */
-        if (strcmp(strchr(upload_buf, ','), ",1\n")) {
+
+        if (!strcmp(strchr(upload_buf, ','), ",0\n")) {
+          /* Massage an x-www-urlencoded form */
           curlbuf->upload_buffer = realloc(curlbuf->upload_buffer, curlbuf->upload_size + 1);
           curlbuf->upload_buffer[curlbuf->upload_size] = '\0';
           curlbuf->upload_buffer = prepare_post(curlbuf->upload_buffer, &(curlbuf->upload_size));
+          curlbuf->cur_upload_ptr = curlbuf->upload_buffer;
+          printf("POST upload now %zu bytes\n", curlbuf->upload_size);
+        } else if (!strcmp(strchr(upload_buf, ','), ",2\n")) {
+          /* Massage an simple application/json form (no sub-entities handled )*/
+          curl_headers = curl_slist_append(curl_headers, "Content-Type: application/json");
+          curlbuf->upload_buffer = realloc(curlbuf->upload_buffer, curlbuf->upload_size + 1);
+          curlbuf->upload_buffer[curlbuf->upload_size] = '\0';
+          curlbuf->upload_buffer = prepare_json_post(curlbuf->upload_buffer, &(curlbuf->upload_size));
           curlbuf->cur_upload_ptr = curlbuf->upload_buffer;
           printf("POST upload now %zu bytes\n", curlbuf->upload_size);
         } else {

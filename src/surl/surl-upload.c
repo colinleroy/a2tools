@@ -90,7 +90,7 @@ again:
   }
 
   buffer = malloc(BUFSIZE);
-  surl_send_data_params(filesize, 1);
+  surl_send_data_params(filesize, SURL_DATA_X_WWW_FORM_URLENCODED_RAW);
   while ((r = fread(buffer, 1, BUFSIZE, fp)) > 0) {
     surl_send_data(buffer, r);
   }

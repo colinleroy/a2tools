@@ -29,6 +29,9 @@ char *api_send_hgr_image(char *filename) {
   int to_send = HGR_LEN;
   static char *hdrs[2] = {NULL, NULL};
   surl_response *resp;
+  char **lines;
+  char n_lines;
+  char *media_id;
 
   fp = fopen(filename, "r");
   if (fp == NULL) {
@@ -46,6 +49,10 @@ char *api_send_hgr_image(char *filename) {
   snprintf(gen_buf, BUF_SIZE, "%s%s", instance_url, "/api/v2/media");
   resp = surl_start_request(SURL_METHOD_POST, gen_buf, hdrs, 2);
 
+  if (resp == NULL) {
+    return NULL;
+  }
+
   /* Send num fields */
   simple_serial_putc(1);
 
@@ -60,23 +67,32 @@ char *api_send_hgr_image(char *filename) {
   }
 
   fclose(fp);
+
+  surl_read_response_header(resp);
+
+  media_id = NULL;
   if (surl_response_ok(resp)) {
-    surl_get_json(gen_buf, BUF_SIZE, 0, translit_charset, ".");
-/* {"id":"110764411101000626","type":"image","url":"https://static.piaille.fr/media_attachments/files/110/764/411/101/000/626/original/224c80db8f7a43ff.png","preview_url":"https://static.piaille.fr/media_attachments/files/110/764/411/101/000/626/small/224c80db8f7a43ff.png","remote_url":null,"preview_remote_url":null,"text_url":null,"meta":{"original":{"width":280,"height":192,"size":"280x192","aspect":1.4583333333333333},"small":{"width":280,"height":192,"size":"280x192","aspect":1.4583333333333333}},"description":null,"blurhash":"U2T9L#IU~q~qxuRj%Mxu?bxuM{Rjt7M{t7xu"}(gdb) cont
-*/
+    r = surl_get_json(gen_buf, BUF_SIZE, 0, translit_charset, ".id");
+    n_lines = strsplit_in_place(gen_buf, '\n', &lines);
+    if (r >= 0 && n_lines == 1) {
+      media_id = strdup(lines[0]);
+    }
+    free(lines);
   }
   surl_response_free(resp);
+
+  return media_id;
 }
 
-char api_send_toot(char *buffer, char *in_reply_to_id, char compose_audience) {
+char api_send_toot(char *buffer, char *in_reply_to_id, char **media_ids, char n_medias, char compose_audience) {
   surl_response *resp;
   char *body;
   char r;
   int i, o, len;
-  char *in_reply_to_buf;
+  char *in_reply_to_buf, *medias_buf;
 
   r = -1;
-  body = malloc(1024);
+  body = malloc(1536);
   if (body == NULL) {
     return -1;
   }
@@ -87,18 +103,43 @@ char api_send_toot(char *buffer, char *in_reply_to_id, char compose_audience) {
   } else {
     in_reply_to_buf = NULL;
   }
+  
+  if (n_medias > 0) {
+    medias_buf = malloc(768);
+    snprintf(medias_buf, 768, "media_ids\n[\"%s\""
+                                "%s%s%s"
+                                "%s%s%s"
+                                "%s%s%s"
+                                "]\n",
+                                media_ids[0],
+                                n_medias > 1 ? ",\"":"",
+                                n_medias > 1 ? media_ids[1]:"",
+                                n_medias > 1 ? "\"":"",
+                                n_medias > 2 ? ",\"":"",
+                                n_medias > 2 ? media_ids[2]:"",
+                                n_medias > 2 ? "\"":"",
+                                n_medias > 3 ? ",\"":"",
+                                n_medias > 3 ? media_ids[3]:"",
+                                n_medias > 3 ? "\"":""
+                              );
+  } else {
+    medias_buf = NULL;
+  }
 
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s", STATUS_ENDPOINT);
   resp = get_surl_for_endpoint(SURL_METHOD_POST, endpoint_buf);
 
   /* Start of status */
-  snprintf(body, 1024, "%s"
+  snprintf(body, 1536, "%s"
+                       "%s"
                        "visibility\n%s\n"
                        "status|TRANSLIT|%s\n",
                         in_reply_to_buf ? in_reply_to_buf : "",
+                        medias_buf ? medias_buf : "",
                         compose_audience_str(compose_audience),
                         translit_charset);
   free(in_reply_to_buf);
+  free(medias_buf);
   /* Escaped buffer */
   len = strlen(buffer);
   o = strlen(body);
@@ -116,7 +157,7 @@ char api_send_toot(char *buffer, char *in_reply_to_id, char compose_audience) {
   body[o++] = '\n';
   len = o - 1;
 
-  surl_send_data_params(len, 0);
+  surl_send_data_params(len, SURL_DATA_APPLICATION_JSON_HELP);
   surl_send_data(body, len);
 
   free(body);

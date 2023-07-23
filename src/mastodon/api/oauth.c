@@ -215,7 +215,7 @@ password_again:
       goto err_out;
     }
 
-    surl_send_data_params(post_len, 0);
+    surl_send_data_params(post_len, SURL_DATA_X_WWW_FORM_URLENCODED_HELP);
     surl_send_data(post, post_len);
     free(post);
 
@@ -267,7 +267,7 @@ otp_again:
         return -1;
       }
 
-      surl_send_data_params(post_len, 0);
+      surl_send_data_params(post_len, SURL_DATA_X_WWW_FORM_URLENCODED_HELP);
       surl_send_data(post, post_len);
       free(post);
 
@@ -317,7 +317,7 @@ otp_again:
     dputs("POST "OAUTH_URL"... ");
     resp = surl_start_request(SURL_METHOD_POST, oauth_url, NULL, 0);
 
-    surl_send_data_params(post_len, 0);
+    surl_send_data_params(post_len, SURL_DATA_X_WWW_FORM_URLENCODED_HELP);
     surl_send_data(post, post_len);
     free(post);
 
@@ -393,7 +393,7 @@ int register_app(void) {
     return -1;
   }
 
-  surl_send_data_params(post_len, 0);
+  surl_send_data_params(post_len, SURL_DATA_X_WWW_FORM_URLENCODED_HELP);
   surl_send_data(post, post_len);
   free(post);
 
@@ -477,7 +477,7 @@ int get_oauth_token(void) {
 
   post = prepare_oauth_token_post();
   post_len = strlen(post);
-  surl_send_data_params(post_len, 0);
+  surl_send_data_params(post_len, SURL_DATA_X_WWW_FORM_URLENCODED_HELP);
   surl_send_data(post, post_len);
   free(post);
 

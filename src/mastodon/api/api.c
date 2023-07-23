@@ -192,7 +192,7 @@ static char api_status_interact(status *s, char *action) {
     goto err_out;
   }
 
-  surl_send_data_params(0, 1);
+  surl_send_data_params(0, SURL_DATA_X_WWW_FORM_URLENCODED_RAW);
   /* No need to send data */
 
   surl_read_response_header(resp);

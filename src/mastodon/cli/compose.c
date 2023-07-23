@@ -99,8 +99,11 @@ static char *handle_compose_input(char *reply_to_account) {
 }
 
 void compose_toot(char *reply_to_account) {
+  char i;
   char *text;
-  
+  char *media_ids[4];
+  int n_medias = 0;
+
   top = wherey();
   text = NULL;
 
@@ -117,11 +120,18 @@ void compose_toot(char *reply_to_account) {
 
   set_scrollwindow(0, scrh);
 
-  //api_send_hgr_image("SMILEY");
-  if (text && !cancelled) {
-    api_send_toot(text, reply_to ? reply_to->id : NULL, compose_audience);
-  }
+  n_medias = 0;
+  // media_ids[0] = api_send_hgr_image("SMILEY");
+  // if (media_ids[0])
+  //   n_medias++;
 
+  if (text && !cancelled) {
+    api_send_toot(text, reply_to ? reply_to->id : NULL, media_ids, n_medias,
+                  compose_audience);
+  }
+  for (i = 0; i < n_medias; i++) {
+    free(media_ids[i]);
+  }
   free(text);
 }
 
