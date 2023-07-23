@@ -117,6 +117,7 @@ void compose_toot(char *reply_to_account) {
 
   set_scrollwindow(0, scrh);
 
+  //api_send_hgr_image("SMILEY");
   if (text && !cancelled) {
     api_send_toot(text, reply_to ? reply_to->id : NULL, compose_audience);
   }

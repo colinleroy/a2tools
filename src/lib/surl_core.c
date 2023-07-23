@@ -105,7 +105,7 @@ surl_response * __fastcall__ surl_start_request(const char method, char *url, ch
   } else if (method == SURL_METHOD_RAW && i == SURL_ANSWER_RAW_START) {
     resp->code = 100;
     return resp;
-  } else if (i == SURL_ANSWER_SEND_SIZE) {
+  } else if (i == SURL_ANSWER_SEND_SIZE || i == SURL_ANSWER_SEND_NUM_FIELDS) {
     resp->code = 100;
     return resp;
   }
