@@ -1140,13 +1140,12 @@ static int get_line_offset( int y) {
   }
 }
 
-char *hgr_to_png(FILE *in, char monochrome, size_t *len)
+char *hgr_to_png(char *hgr_buf, size_t hgr_len, char monochrome, size_t *len)
 {
   int x,y;
   png_structp png_ptr;
   png_infop info_ptr = NULL;
   png_bytep row = NULL;
-  char *hgr_buf = NULL;
   int width = 280;
   int height = 192;
   FILE *tmpfp = NULL;
@@ -1169,16 +1168,14 @@ char *hgr_to_png(FILE *in, char monochrome, size_t *len)
     0xffffff
   };
 
+  if (hgr_len != 8192) {
+    printf("Wrong HGR size %zd\n", hgr_len);
+    return NULL;
+  }
   /* create file */
   tmpfp = tmpfile();
   if (!tmpfp) {
     printf("[write_png_file] File could not be opened for writing");
-    goto cleanup;
-  }
-
-  /* Initialize HGR buffer */
-  hgr_buf = malloc(8192);
-  if (fread(hgr_buf, 1, 8192, in) < 8192) {
     goto cleanup;
   }
 
@@ -1291,8 +1288,6 @@ char *hgr_to_png(FILE *in, char monochrome, size_t *len)
 cleanup:
   if (tmpfp)
     fclose(tmpfp);
-  if (hgr_buf)
-    free(hgr_buf);
   if (row)
     free(row);
   if (info_ptr) {
