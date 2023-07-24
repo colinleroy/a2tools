@@ -68,4 +68,4 @@ mastodon.dsk: $(mastodon_disk_PROGS)
 dist: clean all net.dsk homectrl.dsk mastoperso.dsk mastodon.dsk
 
 upload: all
-	scp $(net_disk_PROGS) $(homectrl_disk_PROGS) $(mastodon_disk_PROGS) diskstation.lan:/volume1/a2repo/apple2/
+	cp $(net_disk_PROGS) $(homectrl_disk_PROGS) $(mastodon_disk_PROGS) /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/

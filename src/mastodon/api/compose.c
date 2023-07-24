@@ -7,6 +7,9 @@
 #include "strsplit.h"
 #include "compose.h"
 #include "common.h"
+#ifdef __APPLE2__
+#include <apple2enh.h>
+#endif
 
 #ifdef __CC65__
 #pragma code-name (push, "LOWCODE")
@@ -22,7 +25,7 @@ static char *compose_audience_str(char compose_audience) {
   }
 }
 
-char *api_send_hgr_image(char *filename) {
+char *api_send_hgr_image(char *filename, char *description, char **err) {
   FILE *fp;
   char buf[1024];
   int r = 0;
@@ -33,8 +36,16 @@ char *api_send_hgr_image(char *filename) {
   char n_lines;
   char *media_id;
 
+  *err = malloc(64);
+  *err[0] = '\0';
+
+#ifdef __CC65__
+  _filetype = PRODOS_T_TXT;
+#endif
+
   fp = fopen(filename, "r");
   if (fp == NULL) {
+    snprintf(*err, 64, "Can not open file %s\r\n", filename);
     return NULL;
   }
 
@@ -54,16 +65,23 @@ char *api_send_hgr_image(char *filename) {
   }
 
   /* Send num fields */
-  simple_serial_putc(1);
-
-  simple_serial_puts("file\n");
-  simple_serial_printf("%d\nimage/hgr\n", to_send);
+  surl_multipart_send_num_fields(1);
+  
+  /* Send file */
+  surl_multipart_send_field_desc("file", to_send, "image/hgr");
   while ((r = fread(buf, sizeof(char), sizeof(buf), fp)) > 0) {
-    surl_send_data(buf, r);
+    surl_multipart_send_field_data(buf, r);
     to_send -= r;
     if (to_send == 0) {
       break;
     }
+  }
+  while (to_send > 0) {
+    /* Some hgr files don't include the last bytes, that
+     * fall into an "HGR-memory-hole" and as such are not
+     * indispensable */
+    surl_multipart_send_field_data(0x00, 1);
+    to_send--;
   }
 
   fclose(fp);
@@ -76,11 +94,59 @@ char *api_send_hgr_image(char *filename) {
     n_lines = strsplit_in_place(gen_buf, '\n', &lines);
     if (r >= 0 && n_lines == 1) {
       media_id = strdup(lines[0]);
+    } else {
+      snprintf(*err, 64, "Invalid JSON response\r\n");
     }
     free(lines);
+  } else {
+    snprintf(*err, 64, "Invalid HTTP response %d\r\n", resp->code);
   }
   surl_response_free(resp);
 
+  if (media_id != NULL) {
+    /* Set description */
+    int len, o, i;
+    char *body = malloc(1536);
+    snprintf(body, 1536, "description|TRANSLIT|%s\n",
+                          translit_charset);
+
+    /* Escape buffer */
+    len = strlen(description);
+    o = strlen(body);
+    for (i = 0; i < len; i++) {
+      if (description[i] != '\n') {
+        body[o++] = description[i];
+      } else {
+        body[o++] = '\\';
+        body[o++] = 'r';
+        body[o++] = '\\';
+        body[o++] = 'n';
+      }
+    }
+    /* End of description */
+    body[o++] = '\n';
+    len = o - 1;
+
+    snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s", "/api/v1/media", media_id);
+    resp = get_surl_for_endpoint(SURL_METHOD_PUT, endpoint_buf);
+
+    surl_send_data_params(len, SURL_DATA_APPLICATION_JSON_HELP);
+    surl_send_data(body, len);
+
+    free(body);
+
+    surl_read_response_header(resp);
+
+    if (!surl_response_ok(resp)) {
+      snprintf(*err, 64, "Description: invalid HTTP response %d\r\n", resp->code);
+    }
+    surl_response_free(resp);
+  }
+
+  if (*err[0] == '\0') {
+    free(*err);
+    *err = NULL;
+  }
   return media_id;
 }
 
@@ -140,7 +206,8 @@ char api_send_toot(char *buffer, char *in_reply_to_id, char **media_ids, char n_
                         translit_charset);
   free(in_reply_to_buf);
   free(medias_buf);
-  /* Escaped buffer */
+
+  /* Escape buffer */
   len = strlen(buffer);
   o = strlen(body);
   for (i = 0; i < len; i++) {

@@ -120,30 +120,47 @@ static void remove_image() {
 }
 
 static void add_image() {
+  char *err = NULL;
   clrscr();
   gotoxy(0, 1);
 
   if (n_medias == MAX_IMAGES) {
     return;
   }
-  cprintf("Please insert media disk if needed.\r\n\r\n");
+  cprintf("Please insert media disk if needed. If you switch disks,\r\n"
+          "please enter full path to file, like /VOLNAME/FILENAME\r\n"
+          "\r\n");
 
   cprintf("File name: ");
   media_files[n_medias] = malloc(32);
   media_files[n_medias][0] = '\0';
   dget_text(media_files[n_medias], 32, NULL);
 
-  cprintf("Description: ");
+  cprintf("\r\nDescription: ");
   media_descriptions[n_medias] = malloc(512);
   media_descriptions[n_medias][0] = '\0';
   dget_text(media_descriptions[n_medias], 512, NULL);
 
-  media_ids[n_medias] = strdup("ID-to-do");
-  // media_ids[0] = api_send_hgr_image("SMILEY");
-  // if (media_ids[0])
-  //   n_medias++;
-
-  n_medias++;
+try_again:
+  free(err);
+  err = NULL;
+  media_ids[n_medias] = api_send_hgr_image(media_files[n_medias],
+                                           media_descriptions[n_medias],
+                                           &err);
+  if (media_ids[n_medias] == NULL) {
+    char t;
+    cprintf("\r\nAn error happened uploading the file:\r\n%s\r\n\r\nTry again? (y/n)",
+            err != NULL ? err:"Unknown error");
+    t = cgetc();
+    if (tolower(t) != 'n') {
+      goto try_again;
+    } else {
+      free(media_files[n_medias]);
+      free(media_descriptions[n_medias]);
+    }
+  } else {
+    n_medias++;
+  }
 }
 
 void open_images_menu(void) {
@@ -235,9 +252,6 @@ restart_composing:
 void compose_toot(char *reply_to_account) {
   char i;
   char *text;
-  char *media_ids[4];
-
-  text = NULL;
 
   text = handle_compose_input(reply_to_account);
 
