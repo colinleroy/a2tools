@@ -13,17 +13,8 @@ char *jq_get(jv json_data, char *selector) {
   static jq_state *jq = NULL;
   jv result;
   size_t out_len = 0;
-  long start_secs = 0;
-  long start_msecs = 0;
-  long secs = 0;
-  long msecs = 0;
-  struct timespec cur_time;
 
   out[0] = '\0';
-
-  clock_gettime(CLOCK_REALTIME, &cur_time);
-  start_secs = cur_time.tv_sec - 1;
-  start_msecs = 1000 + (cur_time.tv_nsec / 1000000);
 
   if (jq == NULL) {
     jq = jq_init();
@@ -68,13 +59,6 @@ char *jq_get(jv json_data, char *selector) {
   }
 
   jv_free(result);
-
-  clock_gettime(CLOCK_REALTIME, &cur_time);
-  secs = cur_time.tv_sec - 1;
-  msecs = 1000 + (cur_time.tv_nsec / 1000000);
-  
-  printf("jq_get %s %lums\n", selector,
-      (1000*(secs - start_secs))+(msecs - start_msecs));
 
   return strdup(out);
 }

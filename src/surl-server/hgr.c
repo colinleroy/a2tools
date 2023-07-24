@@ -596,9 +596,9 @@ static void imageScale (ImageRef src, ImageRef dst, float asprat)
 
     xfactor = scalefactor * asprat;
 
-    printf("xfact:%g yfact:%g\n", xfactor, yfactor);
-    printf("srcw:%g srch:%g sw:%d sh:%d\n", srcw, srch, sw, sh);
-    printf("dstw:%g dsth:%g sx:%d sy:%d\n", dstw, dsth, sx, sy);
+    printf("HGR: xfact:%g yfact:%g\n", xfactor, yfactor);
+    printf("HGR: srcw:%g srch:%g sw:%d sh:%d\n", srcw, srch, sw, sh);
+    printf("HGR: dstw:%g dsth:%g sx:%d sy:%d\n", dstw, dsth, sx, sy);
 
     for (y = 0.0; y < srch; y = ny)
     {
@@ -694,21 +694,17 @@ static ImageRef imageFromJPG (FILE *f)
 
   ip = imageNew(cinfo.output_width, cinfo.output_height);
   if (!ip) goto emalloc;
-  // fprintf(stderr, "w:%d h:%d\n", ip->w, ip->h);
 
   scanline = malloc(ip->w * cinfo.out_color_components * sizeof(JSAMPLE));
   if (!scanline) goto emalloc;
 
   pp = ip->p;
-  // fprintf(stderr, "first: %p   limit: %p\n", ip->p, ip->p + ip->h * ip->w);
   while (cinfo.output_scanline < cinfo.output_height)
   {
     int icnt;
     JSAMPLE *sp = scanline;
 
     jpeg_read_scanlines(&cinfo, &scanline, 1);
-
-    // fprintf(stderr, "[%d:pp=%p] ", cinfo.output_scanline, pp); fflush(stderr);
 
     if (cinfo.out_color_components == 1)
     {
@@ -752,7 +748,7 @@ static ImageRef imageFromPNG(FILE *fp)
 
   /* open file and test for it being a png */
   if (fread(header, 1, 8, fp) < 8 || png_sig_cmp((png_const_bytep)header, 0, 8)) {
-    printf("[read_png_file] File is not recognized as a PNG file");
+    printf("HGR: [read_png_file] File is not recognized as a PNG file");
     return NULL;
   }
 
@@ -761,18 +757,18 @@ static ImageRef imageFromPNG(FILE *fp)
   png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 
   if (!png_ptr) {
-    printf("[read_png_file] png_create_read_struct failed");
+    printf("HGR: [read_png_file] png_create_read_struct failed");
     return NULL;
   }
 
   info_ptr = png_create_info_struct(png_ptr);
   if (!info_ptr) {
-    printf("[read_png_file] png_create_info_struct failed");
+    printf("HGR: [read_png_file] png_create_info_struct failed");
     return NULL;
   }
 
   if (setjmp(png_jmpbuf(png_ptr))) {
-    printf("[read_png_file] Error during init_io");
+    printf("HGR: [read_png_file] Error during init_io");
     return NULL;
   }
 
@@ -789,7 +785,7 @@ static ImageRef imageFromPNG(FILE *fp)
   if (!scanline) goto emalloc;
   /* read file */
   if (setjmp(png_jmpbuf(png_ptr))) {
-    printf("[read_png_file] Error during read_image");
+    printf("HGR: [read_png_file] Error during read_image");
     goto emalloc;
   }
 
@@ -837,7 +833,6 @@ static ImageRef imageFromXPM (FILE *f)
 
   if (!fgets(sbuf, 65536, f)) goto expm;
   sscanf(sbuf, "%d %d %d %d", &(ip->w), &(ip->h), &ncol, &pwid);
-  //printf("w:%d h:%d ncol:%d pwid:%d\n", ip->w, ip->h, ncol, pwid);
 
   ip->p = malloc(ip->h * ip->w * sizeof ip->p[0]);
   if (!ip->p) goto emalloc;
@@ -875,7 +870,7 @@ static ImageRef imageFromXPM (FILE *f)
   return ip;
 
 expm:
-  printf("Error reading XPM file\n");
+  printf("HGR: Error reading XPM file\n");
 emalloc:
   if (ip && ip->p) free(ip->p);
   if (ip) free(ip);
@@ -914,7 +909,7 @@ unsigned char *img_to_hgr(FILE *in, char *format, char monochrome, size_t *len) 
     }
   }
   if (im == NULL) {
-    printf("Unhandled format %s\n", format);
+    printf("HGR: Unhandled format %s\n", format);
     *len = 0;
     return NULL;
   }
@@ -1135,7 +1130,7 @@ static int get_line_offset( int y) {
     case 190: return 7120;
     case 191: return 8144;
     default:
-      printf("Unexpected y value %d\n", y);
+      printf("HGR: Unexpected y value %d\n", y);
       return 0;
   }
 }
@@ -1169,31 +1164,31 @@ char *hgr_to_png(char *hgr_buf, size_t hgr_len, char monochrome, size_t *len)
   };
 
   if (hgr_len != 8192) {
-    printf("Wrong HGR size %zd\n", hgr_len);
+    printf("HGR: Wrong HGR size %zd\n", hgr_len);
     return NULL;
   }
   /* create file */
   tmpfp = tmpfile();
   if (!tmpfp) {
-    printf("[write_png_file] File could not be opened for writing");
+    printf("HGR: [write_png_file] File could not be opened for writing");
     goto cleanup;
   }
 
   /* initialize stuff */
   png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
   if (!png_ptr) {
-    printf("[write_png_file] png_create_write_struct failed");
+    printf("HGR: [write_png_file] png_create_write_struct failed");
     goto cleanup;
   }
 
   info_ptr = png_create_info_struct(png_ptr);
   if (!info_ptr) {
-    printf("[write_png_file] png_create_info_struct failed");
+    printf("HGR: [write_png_file] png_create_info_struct failed");
     goto cleanup;
   }
 
   if (setjmp(png_jmpbuf(png_ptr))) {
-    printf("[write_png_file] Error during init_io");
+    printf("HGR: [write_png_file] Error during init_io");
     goto cleanup;
   }
 
@@ -1201,7 +1196,7 @@ char *hgr_to_png(char *hgr_buf, size_t hgr_len, char monochrome, size_t *len)
 
   /* write header */
   if (setjmp(png_jmpbuf(png_ptr))) {
-    printf("[write_png_file] Error during writing header");
+    printf("HGR: [write_png_file] Error during writing header");
     goto cleanup;
   }
 
@@ -1270,7 +1265,7 @@ char *hgr_to_png(char *hgr_buf, size_t hgr_len, char monochrome, size_t *len)
 
   /* end write */
   if (setjmp(png_jmpbuf(png_ptr))) {
-    printf("[write_png_file] Error during end of write");
+    printf("HGR: [write_png_file] Error during end of write");
     goto cleanup;
   }
 
