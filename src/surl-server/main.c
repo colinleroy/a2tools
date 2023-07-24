@@ -822,7 +822,7 @@ printf("image/hgr converted to png %zd bytes\n", f_len);
           curl_mime_data(field, field_contents, f_len);
           if (strncasecmp(field_type, "text/", 5)) {
             char *field_filename = malloc(512);
-            snprintf(field_filename, 512, "file-%d-%s", i, field_type);
+            snprintf(field_filename, 512, "file-%lu-%s", time(NULL), field_type);
             if (strchr(field_type, '/'))
               *strchr(field_type, '/') = '.';
             curl_mime_filename(field, field_filename);
