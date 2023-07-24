@@ -31,11 +31,19 @@ char *oauth_token = NULL;
 unsigned char scrw, scrh;
 char top = 0;
 
+char n_medias = 0;
+#define MAX_IMAGES 4
+
+char *media_files[4];
+char *media_ids[4];
+char *media_descriptions[4];
+
 #define COMPOSE_HEIGHT 15
 #define COMPOSE_FIELD_HEIGHT 9
 
 static char compose_audience = COMPOSE_PUBLIC;
 static char cancelled = 0;
+static char should_open_images_menu = 0;
 static status *reply_to = NULL;
 
 static void update_compose_audience(void) {
@@ -57,6 +65,7 @@ char dgt_cmd_cb(char c) {
   switch(tolower(c)) {
     case 's':    return 1;
     case CH_ESC: cancelled = 1; return 1;
+    case 'i': should_open_images_menu = 1; return 1;
     case 'p': compose_audience = COMPOSE_PUBLIC; break;
     case 'r': compose_audience = COMPOSE_PRIVATE; break;
     case 'u': compose_audience = COMPOSE_UNLISTED; break;
@@ -71,9 +80,126 @@ char dgt_cmd_cb(char c) {
   return 0;
 }
 
+static void setup_gui(void)
+{
+  char scrolled;
+
+  set_scrollwindow(0, scrh);
+  clrscr();
+
+  if (reply_to) {
+    print_status(reply_to, 0, &scrolled);
+    if (wherey() > scrh - COMPOSE_HEIGHT) {
+      clrzone(0, scrh - COMPOSE_HEIGHT, scrw - LEFT_COL_WIDTH - 2, scrh - 1);
+      gotoxy(0, scrh - COMPOSE_HEIGHT);
+      chline(scrw - LEFT_COL_WIDTH - 1);
+    }
+    dputs("Your reply:\r\n");
+    top = wherey();
+  }
+  chline(scrw - LEFT_COL_WIDTH - 1);
+  gotoxy(0, top + COMPOSE_FIELD_HEIGHT);
+  chline(scrw - LEFT_COL_WIDTH - 1);
+
+  update_compose_audience();
+
+  set_scrollwindow(top + 1, top + COMPOSE_FIELD_HEIGHT);
+
+  gotoxy(0, 0);
+}
+
+static void remove_image() {
+  if (n_medias == 0) {
+    return;
+  }
+
+  n_medias--;
+  free(media_files[n_medias]);
+  free(media_ids[n_medias]);
+  free(media_descriptions[n_medias]);
+}
+
+static void add_image() {
+  clrscr();
+  gotoxy(0, 1);
+
+  if (n_medias == MAX_IMAGES) {
+    return;
+  }
+  cprintf("Please insert media disk if needed.\r\n\r\n");
+
+  cprintf("File name: ");
+  media_files[n_medias] = malloc(32);
+  media_files[n_medias][0] = '\0';
+  dget_text(media_files[n_medias], 32, NULL);
+
+  cprintf("Description: ");
+  media_descriptions[n_medias] = malloc(512);
+  media_descriptions[n_medias][0] = '\0';
+  dget_text(media_descriptions[n_medias], 512, NULL);
+
+  media_ids[n_medias] = strdup("ID-to-do");
+  // media_ids[0] = api_send_hgr_image("SMILEY");
+  // if (media_ids[0])
+  //   n_medias++;
+
+  n_medias++;
+}
+
+void open_images_menu(void) {
+  char c;
+
+  set_scrollwindow(0, scrh);
+image_menu:
+  clrscr();
+  gotoxy(0, 1);
+
+  cprintf("Images (%d/%d):\r\n", n_medias, MAX_IMAGES);
+
+  for (c = 0; c < n_medias; c++) {
+    char short_desc[55];
+    strncpy(short_desc, media_descriptions[c], 54);
+    if (strlen(short_desc) > 51) {
+      short_desc[51] = short_desc[52] = short_desc[53] = '.';
+    }
+    cprintf("\r\n- %s (%s)"
+            "\r\n  %s\r\n",
+      media_files[c],
+      media_ids[c],
+      short_desc);
+  }
+
+  gotoxy(0, scrh -1);
+  if (n_medias < MAX_IMAGES) {
+    cprintf("Enter: add image - ");
+  }
+  cprintf("Esc: back to editing");
+  if (n_medias > 0) {
+    cprintf(" - R: remove image %d", n_medias);
+  }
+  c = cgetc();
+  switch (tolower(c)) {
+    case CH_ENTER:
+      add_image();
+      break;
+    case 'r':
+      remove_image();
+      break;
+    case CH_ESC:
+      clrscr();
+      gotoxy(0, 1);
+      cprintf("Please insert Mastodon disk if needed.\r\n\r\n");
+      cgetc();
+      clrscr();
+      return;
+  }
+  goto image_menu;
+}
+
 static char *handle_compose_input(char *reply_to_account) {
   char *text;
   text = malloc(500);
+
   if (reply_to_account && reply_to_account[0]) {
     int len = strlen(reply_to_account);
     int i;
@@ -91,9 +217,17 @@ static char *handle_compose_input(char *reply_to_account) {
   } else {
     text[0] = '\0';
   }
+
+restart_composing:
+  setup_gui();
   if (dget_text(text, 500, dgt_cmd_cb) == NULL) {
     free(text);
     text = NULL;
+  }
+  if (should_open_images_menu) {
+    should_open_images_menu = 0;
+    open_images_menu();
+    goto restart_composing;
   }
   return text;
 }
@@ -102,28 +236,12 @@ void compose_toot(char *reply_to_account) {
   char i;
   char *text;
   char *media_ids[4];
-  int n_medias = 0;
 
-  top = wherey();
   text = NULL;
 
-  chline(scrw - LEFT_COL_WIDTH - 1);
-  gotoxy(0, top + COMPOSE_FIELD_HEIGHT);
-  chline(scrw - LEFT_COL_WIDTH - 1);
-
-  update_compose_audience();
-
-  set_scrollwindow(top + 1, top + COMPOSE_FIELD_HEIGHT);
-
-  gotoxy(0, 0);
   text = handle_compose_input(reply_to_account);
 
   set_scrollwindow(0, scrh);
-
-  n_medias = 0;
-  // media_ids[0] = api_send_hgr_image("SMILEY");
-  // if (media_ids[0])
-  //   n_medias++;
 
   if (text && !cancelled) {
     api_send_toot(text, reply_to ? reply_to->id : NULL, media_ids, n_medias,
@@ -131,10 +249,11 @@ void compose_toot(char *reply_to_account) {
   }
   for (i = 0; i < n_medias; i++) {
     free(media_ids[i]);
+    free(media_files[i]);
+    free(media_descriptions[i]);
   }
   free(text);
 }
-
 
 int main(int argc, char **argv) {
   char *params;
@@ -157,17 +276,7 @@ int main(int argc, char **argv) {
   set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
   gotoxy(0, 0);
   if (argc == 5) {
-    char scrolled;
     reply_to = api_get_status(argv[4], 0);
-
-    print_status(reply_to, 0, &scrolled);
-
-    if (wherey() > scrh - COMPOSE_HEIGHT) {
-      clrzone(0, scrh - COMPOSE_HEIGHT, scrw - LEFT_COL_WIDTH - 2, scrh - 1);
-      gotoxy(0, scrh - COMPOSE_HEIGHT);
-    }
-    chline(scrw - LEFT_COL_WIDTH - 1);
-    dputs("Your reply:\r\n");
   } else {
     reply_to = NULL;
   }
