@@ -52,8 +52,8 @@ void compose_print_header(void) {
   dputs("Commands:\r\n"
         " Open-Apple +...\r\n"
         " Send     : S\r\n"
+        " Images   : I\r\n"
         " Cancel   : Escape\r\n"
-
         "\r\n"
         "Set Audience:\r\n"
         " Open-Apple +...\r\n"
@@ -61,7 +61,8 @@ void compose_print_header(void) {
         " Unlisted : U\r\n"
         " Private  : R\r\n"
         " Mention  : M\r\n"
-        "\r\n");
+        "\r\n"
+      );
 
 
 #ifdef __CC65__
