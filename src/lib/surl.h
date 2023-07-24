@@ -52,4 +52,8 @@ int __fastcall__ surl_send_data_params(size_t total, int raw);
 int __fastcall__ surl_find_line(char *buffer, size_t max_len, char *search_str);
 int __fastcall__ surl_get_json(char *buffer, size_t max_len, char striphtml, char *translit, char *selector);
 
+/* Multipart helpers */
+#define surl_multipart_send_num_fields(x) simple_serial_putc(x)
+#define surl_multipart_send_field_desc(name, len, type) simple_serial_printf("%s\n%d\n%s\n", name, len, type)
+#define surl_multipart_send_field_data(data, len) surl_send_data(data, len)
 #endif
