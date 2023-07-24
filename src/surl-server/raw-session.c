@@ -34,7 +34,7 @@ static void send_buf(int sockfd, char *c, int nmemb) {
   if (n > 0 && FD_ISSET(sockfd, &fds)) {
     write(sockfd, c, nmemb);
   } else if (n < 0) {
-    printf("Write error %s\n", strerror(errno));
+    printf("RAW: Write error %s\n", strerror(errno));
   }
 }
 
@@ -56,12 +56,12 @@ static int net_recv_char(int sockfd, char *c) {
   if (n > 0 && FD_ISSET(sockfd, &fds)) {
     n = read(sockfd, c, 1);
     if (n == 0) {
-      printf("Read error %s\n", strerror(errno));
+      printf("RAW: Read error %s\n", strerror(errno));
       return EOF;
     }
     return 0;
   } else if (n < 0) {
-    printf("Read error %s\n", strerror(errno));
+    printf("RAW: Read error %s\n", strerror(errno));
     return EOF;
   }
   return 0;
@@ -97,7 +97,7 @@ static int socket_connect(int sock, char *remote_url) {
 
   r = getaddrinfo(remote_url, NULL, &hints, &result);
   if (r < 0) {
-    simple_serial_printf("Cannot resolve: %s\n", strerror(errno));
+    simple_serial_printf("RAW: Cannot resolve: %s\n", strerror(errno));
     return -1;
   }
   cur = result;
@@ -141,22 +141,22 @@ void surl_server_raw_session(char *remote_url) {
   int sockfd;
   time_t last_traffic;
 
-  printf("starting raw session.\n");
+  printf("RAW: starting raw session.\n");
 
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
   if (sockfd < 0) {
-    simple_serial_printf("Could not create socket.\n%c", 0x04);
+    simple_serial_printf("RAW: Could not create socket.\n%c", 0x04);
     goto cleanup;
   }
 
   if (socket_connect(sockfd, remote_url) < 0) {
-    simple_serial_printf("Could not connect.\n%c", 0x04);
+    simple_serial_printf("RAW: Could not connect.\n%c", 0x04);
     goto cleanup;
   }
   
   set_non_blocking(sockfd);
 
-  printf("Connected to %s: %d\n", remote_url, sockfd);
+  printf("RAW: Connected to %s: %d\n", remote_url, sockfd);
   simple_serial_puts("Connected.\r\n");
   last_traffic = time(NULL);
   do {
@@ -170,7 +170,7 @@ maybe_finish_ctrl_ser:
     while (n_in < RAW_BUFSIZE - 1 && ser_recv_char(&i) != EOF) {
       last_i = i;
       if (i == 0x04) {
-        printf("Client closed connection.\n");
+        printf("RAW: Client closed connection.\n");
         goto cleanup;
       }
       in_buf[n_in++] = i;
@@ -180,7 +180,6 @@ maybe_finish_ctrl_ser:
       last_traffic = time(NULL);
     }
     if (has_escape_code && n_in < RAW_BUFSIZE - 1) {
-      printf("has escape code and %d bytes, read ser again\n", n_in);
       usleep(10*1000);
       goto maybe_finish_ctrl_ser;
     }
@@ -208,11 +207,9 @@ maybe_finish_utf8_net:
       last_traffic = time(NULL);
     }
     if (has_escape_code && n_out < RAW_BUFSIZE - 1) {
-      printf("has escape code and %d bytes, read net again\n", n_in);
       usleep(10*1000);
       goto maybe_finish_ctrl_net;
     } else if (rem_utf8 > 0 && n_out < RAW_BUFSIZE - 1) {
-      printf("has utf8 and %d bytes, read net again\n", n_in);
       usleep(10*1000);
       rem_utf8--;
       goto maybe_finish_utf8_net;
