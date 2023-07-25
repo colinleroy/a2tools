@@ -3,6 +3,8 @@
 
 #include "list.h"
 
-void compose_print_header(void);
+extern account *my_account;
 
+void compose_print_header(void);
+void print_free_ram(void);
 #endif

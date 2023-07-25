@@ -242,7 +242,7 @@ new_req:
       printf(" [built json data]");
     }
     printf("\n");
-    
+
     if (VERBOSE && VERY_VERBOSE) {
       printf("RESP: headers (%zu bytes):\n%s\n", response->headers_size, response->headers);
       printf("RESP: body (%zu bytes):\n%s\n", response->size,
@@ -372,7 +372,7 @@ new_req:
           simple_serial_putc(SURL_ERROR_NOT_JSON);
         } else {
           char *result = jq_get(jv_copy(response->json_data), param);
-          printf("RESP: JSON '%s' into %zu bytes%s, translit: %s: %zu bytes %s\n", param, bufsize, 
+          printf("RESP: JSON '%s' into %zu bytes%s, translit: %s: %zu bytes %s\n", param, bufsize,
                   striphtml ? ", striphtml":"",
                   translit,
                   result != NULL ? min(strlen(result),bufsize) : 0,
@@ -546,7 +546,7 @@ static char *replace_new_lines(char *in) {
   char *out = malloc(len + 1);
   int i, o;
   for (i = 0, o = 0; i < len; i++) {
-    if (in[i] == '\\' && i + 3 < len 
+    if (in[i] == '\\' && i + 3 < len
      && in[i + 1] == 'r'
      && in[i + 2] == '\\'
      && in[i + 3] == 'n') {
@@ -629,6 +629,14 @@ static char *json_escape(char *in) {
   return out;
 }
 
+/* format is an alternance of param/value lines where param format
+ * is
+ * T|name|TRANSLIT|charset
+ * T = type (S string, B boolean, A array, O object)
+ * TRANSLIT and charset optional
+ * strings will be json-encoded
+ * the other will be untouched
+ */
 static char *prepare_json_post(char *buffer, size_t *len) {
   char *tmp, *nl, *json_esc;
   char *out = malloc((*len * 3) + 1);
@@ -640,6 +648,16 @@ static char *prepare_json_post(char *buffer, size_t *len) {
   out_ptr++;
   for (i = 0; i < n_lines; i += 2) {
     char *translit = NULL;
+    char type = 'S';
+
+    /* get type */
+    type = lines[i][0];
+    if (lines[i][1] != '|' || !strchr("SBAO", type)) {
+      printf("ERR: JSON: malformed input data\n");
+      break;
+    }
+    lines[i] += 2;
+
     if (strstr(lines[i], "|TRANSLIT")) {
       translit = strstr(lines[i], "|TRANSLIT") + 1;
       translit = strchr(translit, '|') + 1;
@@ -656,7 +674,7 @@ static char *prepare_json_post(char *buffer, size_t *len) {
     out_ptr += strlen(nl) + 4;
     curl_free(nl);
 
-    if (strlen(lines[i + 1]) > 0) {
+    if (i + 1 < n_lines && strlen(lines[i + 1]) > 0) {
       char *translit_data;
 
       nl = replace_new_lines(lines[i + 1]);
@@ -670,10 +688,14 @@ static char *prepare_json_post(char *buffer, size_t *len) {
       free(nl);
       tmp = strdup(translit_data);
       free(translit_data);
-    } else
-      tmp = strdup("\"\"");
+    } else if (i + 1 < n_lines){
+      tmp = strdup(lines[i + 1]);
+    } else {
+      printf("ERR: JSON: Missing parameter value\n");
+      tmp = strdup("");
+    }
 
-    if (tmp[0] == '[' || tmp[0] == '{') {
+    if (type != 'S') {
       sprintf(out_ptr, "%s", tmp);
       out_ptr += strlen(tmp);
     } else {

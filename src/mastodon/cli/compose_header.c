@@ -53,6 +53,7 @@ void compose_print_header(void) {
         " Open-Apple +...\r\n"
         " Send     : S\r\n"
         " Images   : I\r\n"
+        " CW       : C\r\n"
         " Cancel   : Escape\r\n"
         "\r\n"
         "Set Audience:\r\n"
@@ -64,10 +65,29 @@ void compose_print_header(void) {
         "\r\n"
       );
 
-
-#ifdef __CC65__
-  gotoxy(0, 23);
-  cprintf("%zuB free     ", _heapmemavail());
-#endif
+  print_free_ram();
   cvlinexy(LEFT_COL_WIDTH, 0, scrh);
+}
+
+void print_free_ram(void) {
+#ifdef __CC65__
+  unsigned char x, y, sx, wx, sy, ey;
+
+  get_hscrollwindow(&sx, &wx);
+  get_scrollwindow(&sy, &ey);
+  x = wherex();
+  y = wherey();
+
+  set_hscrollwindow(0, scrw);
+  set_scrollwindow(0, scrh);
+
+  gotoxy(0, 22);
+  cprintf("%zuB free     \r\n"
+          "%zuB max      ",
+          _heapmemavail(), _heapmaxavail());
+
+  set_scrollwindow(sy, ey);
+  set_hscrollwindow(sx, wx);
+  gotoxy(x, y);
+#endif
 }

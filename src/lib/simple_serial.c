@@ -228,7 +228,7 @@ int simple_serial_open(void) {
   ttyfp = fopen(opt_tty_path, "r+b");
 
   /* Try to lock file */
-  if (fcntl (fileno(ttyfp), F_SETLK, &lock) < 0) {
+  if (ttyfp != NULL && fcntl(fileno(ttyfp), F_SETLK, &lock) < 0) {
     printf("%s is already opened by another process.\n", opt_tty_path);
     fclose(ttyfp);
     ttyfp = NULL;

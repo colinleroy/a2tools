@@ -105,27 +105,13 @@ char *api_send_hgr_image(char *filename, char *description, char **err) {
 
   if (media_id != NULL) {
     /* Set description */
-    int len, o, i;
+    int len;
     char *body = malloc(1536);
-    snprintf(body, 1536, "description|TRANSLIT|%s\n",
-                          translit_charset);
+    snprintf(body, 1536, "S|description|TRANSLIT|%s\n%s\n",
+                          translit_charset,
+                          description);
 
-    /* Escape buffer */
-    len = strlen(description);
-    o = strlen(body);
-    for (i = 0; i < len; i++) {
-      if (description[i] != '\n') {
-        body[o++] = description[i];
-      } else {
-        body[o++] = '\\';
-        body[o++] = 'r';
-        body[o++] = '\\';
-        body[o++] = 'n';
-      }
-    }
-    /* End of description */
-    body[o++] = '\n';
-    len = o - 1;
+    len = strlen(body);
 
     snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s", "/api/v1/media", media_id);
     resp = get_surl_for_endpoint(SURL_METHOD_PUT, endpoint_buf);
@@ -150,7 +136,9 @@ char *api_send_hgr_image(char *filename, char *description, char **err) {
   return media_id;
 }
 
-char api_send_toot(char *buffer, char *in_reply_to_id, char **media_ids, char n_medias, char compose_audience) {
+signed char api_send_toot(char *buffer, char *cw, char sensitive_medias,
+                          char *in_reply_to_id, char **media_ids, char n_medias,
+                          char compose_audience) {
   surl_response *resp;
   char *body;
   char r;
@@ -165,14 +153,14 @@ char api_send_toot(char *buffer, char *in_reply_to_id, char **media_ids, char n_
 
   if (in_reply_to_id) {
     in_reply_to_buf = malloc(48);
-    snprintf(in_reply_to_buf, 48, "in_reply_to_id\n%s\n", in_reply_to_id);
+    snprintf(in_reply_to_buf, 48, "S|in_reply_to_id\n%s\n", in_reply_to_id);
   } else {
     in_reply_to_buf = NULL;
   }
   
   if (n_medias > 0) {
     medias_buf = malloc(768);
-    snprintf(medias_buf, 768, "media_ids\n[\"%s\""
+    snprintf(medias_buf, 768, "A|media_ids\n[\"%s\""
                                 "%s%s%s"
                                 "%s%s%s"
                                 "%s%s%s"
@@ -198,11 +186,16 @@ char api_send_toot(char *buffer, char *in_reply_to_id, char **media_ids, char n_
   /* Start of status */
   snprintf(body, 1536, "%s"
                        "%s"
-                       "visibility\n%s\n"
-                       "status|TRANSLIT|%s\n",
+                       "S|visibility\n%s\n"
+                       "B|sensitive\n%s\n"
+                       "S|spoiler_text|TRANSLIT|%s\n%s\n"
+                       "S|status|TRANSLIT|%s\n",
                         in_reply_to_buf ? in_reply_to_buf : "",
                         medias_buf ? medias_buf : "",
                         compose_audience_str(compose_audience),
+                        sensitive_medias ? "true":"false",
+                        translit_charset,
+                        cw,
                         translit_charset);
   free(in_reply_to_buf);
   free(medias_buf);
