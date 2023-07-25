@@ -61,6 +61,7 @@ char *api_send_hgr_image(char *filename, char *description, char **err) {
   resp = surl_start_request(SURL_METHOD_POST, gen_buf, hdrs, 2);
 
   if (resp == NULL) {
+    fclose(fp);
     return NULL;
   }
 

@@ -672,7 +672,7 @@ static char *prepare_json_post(char *buffer, size_t *len) {
     }
     sprintf(out_ptr, "\"%s\": ", nl);
     out_ptr += strlen(nl) + 4;
-    curl_free(nl);
+    free(nl);
 
     if (i + 1 < n_lines && strlen(lines[i + 1]) > 0) {
       char *translit_data;
@@ -705,7 +705,7 @@ static char *prepare_json_post(char *buffer, size_t *len) {
       sprintf(out_ptr, "\"%s\"", tmp);
       out_ptr += strlen(tmp) + 2;
     }
-    curl_free(tmp);
+    free(tmp);
   }
   sprintf(out_ptr, "}");
   free(lines);

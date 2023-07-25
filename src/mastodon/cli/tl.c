@@ -573,7 +573,7 @@ static int shift_posts_up(list *l) {
   first = l->first_displayed_post;
   if (l->account && first == -1) {
       return -1;
-  } else if (!l->account && first == 0) {
+  } else if (!l->account && l->kind != SHOW_ACCOUNT && first == 0) {
       load_prev_posts(l);
       first = l->first_displayed_post;
       if (first == 0)

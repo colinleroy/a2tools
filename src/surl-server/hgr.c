@@ -1138,7 +1138,7 @@ static int get_line_offset( int y) {
 char *hgr_to_png(char *hgr_buf, size_t hgr_len, char monochrome, size_t *len)
 {
   int x,y;
-  png_structp png_ptr;
+  png_structp png_ptr = NULL;
   png_infop info_ptr = NULL;
   png_bytep row = NULL;
   int width = 280;

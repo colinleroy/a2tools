@@ -278,6 +278,7 @@ resume_composing:
   if (dget_text(text, 500, dgt_cmd_cb) == NULL) {
     free(text);
     text = NULL;
+    goto out;
   }
   if (should_open_images_menu) {
     should_open_images_menu = 0;
@@ -289,6 +290,7 @@ resume_composing:
     open_cw_menu();
     goto resume_composing;
   }
+out:
   return text;
 }
 
