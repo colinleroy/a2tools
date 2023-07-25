@@ -32,11 +32,14 @@ unsigned char scrw, scrh;
 char top = 0;
 
 char n_medias = 0;
+char sensitive_medias = 0;
 #define MAX_IMAGES 4
 
 char *media_files[4];
 char *media_ids[4];
 char *media_descriptions[4];
+
+char cw[50] = "";
 
 #define COMPOSE_HEIGHT 15
 #define COMPOSE_FIELD_HEIGHT 9
@@ -44,6 +47,7 @@ char *media_descriptions[4];
 static char compose_audience = COMPOSE_PUBLIC;
 static char cancelled = 0;
 static char should_open_images_menu = 0;
+static char should_open_cw_menu = 0;
 static status *reply_to = NULL;
 
 static void update_compose_audience(void) {
@@ -53,6 +57,7 @@ static void update_compose_audience(void) {
         compose_audience == COMPOSE_UNLISTED ? '*':' ',
         compose_audience == COMPOSE_PRIVATE ? '*':' ',
         compose_audience == COMPOSE_MENTION ? '*':' ');
+
   gotoxy(0, top + COMPOSE_FIELD_HEIGHT + 3);
   dputs(translit_charset);
   if(!strcmp(translit_charset, "ISO646-FR1")) {
@@ -60,21 +65,32 @@ static void update_compose_audience(void) {
   } /* FIXME add other local charsets */
 }
 
-char dgt_cmd_cb(char c) {
+static void update_cw(void) {
+  clrzone(0, top + COMPOSE_FIELD_HEIGHT + 2, scrw - LEFT_COL_WIDTH - 2, top + COMPOSE_FIELD_HEIGHT + 2);
+  gotoxy(0, top + COMPOSE_FIELD_HEIGHT + 2);
+  if (cw[0] == '\0') {
+    cputs("( ) Content warning not set");
+  } else {
+    cprintf("(*) CW: %s", cw);
+  }
+}
+static char dgt_cmd_cb(char c) {
   char x, y;
   switch(tolower(c)) {
     case 's':    return 1;
-    case CH_ESC: cancelled = 1; return 1;
-    case 'i': should_open_images_menu = 1; return 1;
-    case 'p': compose_audience = COMPOSE_PUBLIC; break;
-    case 'r': compose_audience = COMPOSE_PRIVATE; break;
-    case 'u': compose_audience = COMPOSE_UNLISTED; break;
-    case 'm': compose_audience = COMPOSE_MENTION; break;
+    case CH_ESC: cancelled = 1;                       return 1;
+    case 'i':    should_open_images_menu = 1;         return 1;
+    case 'c':    should_open_cw_menu = 1;             return 1;
+    case 'p':    compose_audience = COMPOSE_PUBLIC;   break;
+    case 'r':    compose_audience = COMPOSE_PRIVATE;  break;
+    case 'u':    compose_audience = COMPOSE_UNLISTED; break;
+    case 'm':    compose_audience = COMPOSE_MENTION;  break;
   }
   x = wherex();
   y = wherey();
   set_scrollwindow(0, scrh);
   update_compose_audience();
+  update_cw();
   set_scrollwindow(top + 1, top + COMPOSE_FIELD_HEIGHT);
   gotoxy(x, y);
   return 0;
@@ -86,6 +102,7 @@ static void setup_gui(void)
 
   set_scrollwindow(0, scrh);
   clrscr();
+  gotoxy(0, 0);
 
   if (reply_to) {
     print_status(reply_to, 0, &scrolled);
@@ -102,6 +119,7 @@ static void setup_gui(void)
   chline(scrw - LEFT_COL_WIDTH - 1);
 
   update_compose_audience();
+  update_cw();
 
   set_scrollwindow(top + 1, top + COMPOSE_FIELD_HEIGHT);
 
@@ -163,7 +181,19 @@ try_again:
   }
 }
 
-void open_images_menu(void) {
+static void open_cw_menu(void) {
+  set_scrollwindow(0, scrh);
+
+  clrzone(0, top + COMPOSE_FIELD_HEIGHT + 2, scrw - LEFT_COL_WIDTH - 2, top + COMPOSE_FIELD_HEIGHT + 2);
+  gotoxy(0, top + COMPOSE_FIELD_HEIGHT + 2);
+  cputs("(*) CW: ");
+  dget_text(cw, sizeof(cw) - 1, NULL);
+  update_cw();
+
+  set_scrollwindow(top + 1, top + COMPOSE_FIELD_HEIGHT);
+}
+
+static void open_images_menu(void) {
   char c;
 
   set_scrollwindow(0, scrh);
@@ -171,7 +201,9 @@ image_menu:
   clrscr();
   gotoxy(0, 1);
 
-  cprintf("Images (%d/%d):\r\n", n_medias, MAX_IMAGES);
+  cprintf("Images %s(%d/%d):\r\n",
+          sensitive_medias ? "(SENSITIVE) ":"",
+          n_medias, MAX_IMAGES);
 
   for (c = 0; c < n_medias; c++) {
     char short_desc[55];
@@ -186,14 +218,20 @@ image_menu:
       short_desc);
   }
 
-  gotoxy(0, scrh -1);
+  print_free_ram();
+  gotoxy(0, scrh -2);
   if (n_medias < MAX_IMAGES) {
-    cprintf("Enter: add image - ");
+    cprintf("Enter: add image");
   }
-  cprintf("Esc: back to editing");
+  if (n_medias > 0 && n_medias < MAX_IMAGES) {
+    cprintf(" - ");
+  }
   if (n_medias > 0) {
     cprintf(" - R: remove image %d", n_medias);
   }
+  cprintf("\r\nS: Mark image(s) %ssensitive - Escape: back to editing",
+          sensitive_medias ? "not ":"");
+
   c = cgetc();
   switch (tolower(c)) {
     case CH_ENTER:
@@ -202,11 +240,10 @@ image_menu:
     case 'r':
       remove_image();
       break;
+    case 's':
+      sensitive_medias = !sensitive_medias;
+      break;
     case CH_ESC:
-      clrscr();
-      gotoxy(0, 1);
-      cprintf("Please insert Mastodon disk if needed.\r\n\r\n");
-      cgetc();
       clrscr();
       return;
   }
@@ -235,8 +272,9 @@ static char *handle_compose_input(char *reply_to_account) {
     text[0] = '\0';
   }
 
-restart_composing:
+resume_composing:
   setup_gui();
+  print_free_ram();
   if (dget_text(text, 500, dgt_cmd_cb) == NULL) {
     free(text);
     text = NULL;
@@ -244,12 +282,17 @@ restart_composing:
   if (should_open_images_menu) {
     should_open_images_menu = 0;
     open_images_menu();
-    goto restart_composing;
+    goto resume_composing;
+  }
+  if (should_open_cw_menu) {
+    should_open_cw_menu = 0;
+    open_cw_menu();
+    goto resume_composing;
   }
   return text;
 }
 
-void compose_toot(char *reply_to_account) {
+static void compose_toot(char *reply_to_account) {
   char i;
   char *text;
 
@@ -258,9 +301,32 @@ void compose_toot(char *reply_to_account) {
   set_scrollwindow(0, scrh);
 
   if (text && !cancelled) {
-    api_send_toot(text, reply_to ? reply_to->id : NULL, media_ids, n_medias,
-                  compose_audience);
+    signed char r;
+
+try_again:
+    clrscr();
+    gotoxy(0, 1);
+    cprintf("Sending toot...\r\n\r\n");
+    r = api_send_toot(text, cw, sensitive_medias,
+                      reply_to ? reply_to->id : NULL,
+                      media_ids, n_medias,
+                      compose_audience);
+    if (r < 0) {
+      char t;
+
+      cprintf("\r\nAn error happened sending the toot.\r\n\r\nTry again? (y/n)");
+      t = cgetc();
+      if (tolower(t) != 'n') {
+        goto try_again;
+      }
+    }
   }
+
+  if (n_medias > 0) {
+    cprintf("Please re-insert Mastodon disk if needed.\r\n\r\n");
+    cgetc();
+  }
+
   for (i = 0; i < n_medias; i++) {
     free(media_ids[i]);
     free(media_files[i]);
@@ -295,7 +361,13 @@ int main(int argc, char **argv) {
     reply_to = NULL;
   }
 
-  compose_toot(reply_to != NULL ? reply_to->account->acct : "");
+  print_free_ram();
+  /* Auto-mention parent toot's sender, unless it's us */
+  if (reply_to != NULL && strcmp(reply_to->account->id, my_account->id)) {
+    compose_toot(reply_to->account->acct);
+  } else {
+    compose_toot("");
+  }
   set_hscrollwindow(0, scrw);
 
   params = malloc(127);
