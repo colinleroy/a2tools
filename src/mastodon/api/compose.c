@@ -144,7 +144,7 @@ signed char api_send_toot(char *buffer, char *cw, char sensitive_medias,
   char *body;
   char r;
   int i, o, len;
-  char *in_reply_to_buf, *medias_buf;
+  char *medias_buf;
 
   r = -1;
   body = malloc(1536);
@@ -152,13 +152,6 @@ signed char api_send_toot(char *buffer, char *cw, char sensitive_medias,
     return -1;
   }
 
-  if (in_reply_to_id) {
-    in_reply_to_buf = malloc(48);
-    snprintf(in_reply_to_buf, 48, "S|in_reply_to_id\n%s\n", in_reply_to_id);
-  } else {
-    in_reply_to_buf = NULL;
-  }
-  
   if (n_medias > 0) {
     medias_buf = malloc(768);
     snprintf(medias_buf, 768, "A|media_ids\n[\"%s\""
@@ -185,20 +178,22 @@ signed char api_send_toot(char *buffer, char *cw, char sensitive_medias,
   resp = get_surl_for_endpoint(SURL_METHOD_POST, endpoint_buf);
 
   /* Start of status */
-  snprintf(body, 1536, "%s"
+  snprintf(body, 1536, "%c|in_reply_to_id\n"
+                       "%s\n"
                        "%s"
                        "S|visibility\n%s\n"
                        "B|sensitive\n%s\n"
                        "S|spoiler_text|TRANSLIT|%s\n%s\n"
                        "S|status|TRANSLIT|%s\n",
-                        in_reply_to_buf ? in_reply_to_buf : "",
+                        in_reply_to_id ? 'S' : 'B',
+                        in_reply_to_id ? in_reply_to_id : "null",
                         medias_buf ? medias_buf : "",
                         compose_audience_str(compose_audience),
                         sensitive_medias ? "true":"false",
                         translit_charset,
                         cw,
                         translit_charset);
-  free(in_reply_to_buf);
+
   free(medias_buf);
 
   /* Escape buffer */
@@ -208,10 +203,8 @@ signed char api_send_toot(char *buffer, char *cw, char sensitive_medias,
     if (buffer[i] != '\n') {
       body[o++] = buffer[i];
     } else {
-      body[o++] = '\\';
-      body[o++] = 'r';
-      body[o++] = '\\';
-      body[o++] = 'n';
+      strcpy(body + o, "\\r\\n");
+      o+=4;
     }
   }
   /* End of status */
