@@ -9,12 +9,11 @@
 #include "surl.h"
 #ifdef __CC65__
 #include <conio.h>
+#include "dputs.h"
 #else
 #include "extended_conio.h"
 #endif
 #include "strsplit.h"
-#include "dputs.h"
-#include "dputc.h"
 #include "scroll.h"
 #include "print.h"
 #include "cli.h"
@@ -59,9 +58,9 @@ static void update_compose_audience(void) {
         compose_audience == COMPOSE_MENTION ? '*':' ');
 
   gotoxy(0, top + COMPOSE_FIELD_HEIGHT + 3);
-  dputs(translit_charset);
+  cputs(translit_charset);
   if(!strcmp(translit_charset, "ISO646-FR1")) {
-    dputs(": Use ] to mention, and # for hashtags.");
+    cputs(": Use ] to mention, and # for hashtags.");
   } /* FIXME add other local charsets */
 }
 
@@ -71,7 +70,8 @@ static void update_cw(void) {
   if (cw[0] == '\0') {
     cputs("( ) Content warning not set");
   } else {
-    cprintf("(*) CW: %s", cw);
+    cputs("(*) CW: ");
+    cputs(cw);
   }
 }
 static char dgt_cmd_cb(char c) {
@@ -112,7 +112,7 @@ static void setup_gui(void)
       gotoxy(0, scrh - COMPOSE_HEIGHT);
       chline(scrw - LEFT_COL_WIDTH - 1);
     }
-    dputs("Your reply:\r\n");
+    cputs("Your reply:\r\n");
     top = wherey();
   }
   chline(scrw - LEFT_COL_WIDTH - 1);
@@ -147,30 +147,30 @@ static void add_image() {
   if (n_medias == MAX_IMAGES) {
     return;
   }
-  cprintf("Please insert media disk if needed. If you switch disks,\r\n"
+  dputs("Please insert media disk if needed. If you switch disks,\r\n"
           "please enter full path to file, like /VOLNAME/FILENAME\r\n"
           "\r\n");
 
-  cprintf("File name: ");
+  dputs("File name: ");
   media_files[n_medias] = malloc(32);
   media_files[n_medias][0] = '\0';
   dget_text(media_files[n_medias], 32, NULL);
 
-  cprintf("\r\nDescription: ");
+  dputs("\r\nDescription: ");
   media_descriptions[n_medias] = malloc(512);
   media_descriptions[n_medias][0] = '\0';
   dget_text(media_descriptions[n_medias], 512, NULL);
 
 try_again:
-  free(err);
-  err = NULL;
+  dputs("\r\nUploading...\r\n");
   media_ids[n_medias] = api_send_hgr_image(media_files[n_medias],
                                            media_descriptions[n_medias],
                                            &err);
   if (media_ids[n_medias] == NULL) {
     char t;
-    cprintf("\r\nAn error happened uploading the file:\r\n%s\r\n\r\nTry again? (y/n)",
-            err != NULL ? err:"Unknown error");
+    dputs("An error happened uploading the file:\r\n");
+    dputs(err != NULL ? err:"Unknown error");
+    dputs("\r\n\r\nTry again? (y/n)");
     t = cgetc();
     if (tolower(t) != 'n') {
       goto try_again;
@@ -223,10 +223,10 @@ image_menu:
   print_free_ram();
   gotoxy(0, scrh -2);
   if (n_medias < MAX_IMAGES) {
-    cprintf("Enter: add image");
+    cputs("Enter: add image");
   }
   if (n_medias > 0 && n_medias < MAX_IMAGES) {
-    cprintf(" - ");
+    cputs(" - ");
   }
   if (n_medias > 0) {
     cprintf(" - R: remove image %d", n_medias);
@@ -309,7 +309,7 @@ static void compose_toot(char *reply_to_account) {
 try_again:
     clrscr();
     gotoxy(0, 1);
-    cprintf("Sending toot...\r\n\r\n");
+    cputs("Sending toot...\r\n\r\n");
     r = api_send_toot(text, cw, sensitive_medias,
                       reply_to ? reply_to->id : NULL,
                       media_ids, n_medias,
@@ -317,7 +317,7 @@ try_again:
     if (r < 0) {
       char t;
 
-      cprintf("\r\nAn error happened sending the toot.\r\n\r\nTry again? (y/n)");
+      cputs("\r\nAn error happened sending the toot.\r\n\r\nTry again? (y/n)");
       t = cgetc();
       if (tolower(t) != 'n') {
         goto try_again;
@@ -326,7 +326,7 @@ try_again:
   }
 
   if (n_medias > 0) {
-    cprintf("Please re-insert Mastodon disk if needed.\r\n\r\n");
+    cputs("Please re-insert Mastodon disk if needed.\r\n\r\n");
     cgetc();
   }
 
@@ -341,7 +341,7 @@ try_again:
 int main(int argc, char **argv) {
   char *params;
   if (argc < 4) {
-    dputs("Missing instance_url, oauth_token and/or charset parameters.\n");
+    cputs("Missing instance_url, oauth_token and/or charset parameters.\n");
   }
 
   videomode(VIDEOMODE_80COL);

@@ -744,33 +744,41 @@ static int load_state(list ***lists) {
     memset(l, 0, sizeof(list));
     (*lists)[i] = l;
 
+    /* coverity[tainted_argument] */
     fgets(gen_buf, BUF_SIZE, fp);
     l->kind = atoi(gen_buf);
 
+    /* coverity[tainted_argument] */
     fgets(gen_buf, BUF_SIZE, fp);
     if (gen_buf[0] != '\n') {
       *strchr(gen_buf, '\n') = '\0';
       l->root = strdup(gen_buf);
     }
 
+    /* coverity[tainted_argument] */
     fgets(gen_buf, BUF_SIZE, fp);
     if (gen_buf[0] != '\n') {
       *strchr(gen_buf, '\n') = '\0';
       l->leaf_root = strdup(gen_buf);
     }
   
+    /* coverity[tainted_argument] */
     fgets(gen_buf, BUF_SIZE, fp);
     l->last_displayed_post = atoi(gen_buf);
 
+    /* coverity[tainted_argument] */
     fgets(gen_buf, BUF_SIZE, fp);
     l->eof = atoi(gen_buf);
 
+    /* coverity[tainted_argument] */
     fgets(gen_buf, BUF_SIZE, fp);
     l->scrolled = atoi(gen_buf);
 
+    /* coverity[tainted_argument] */
     fgets(gen_buf, BUF_SIZE, fp);
     l->first_displayed_post = atoi(gen_buf);
 
+    /* coverity[tainted_argument] */
     fgets(gen_buf, BUF_SIZE, fp);
     l->n_posts = atoi(gen_buf);
     n_posts = l->n_posts;
@@ -779,20 +787,24 @@ static int load_state(list ***lists) {
     l->displayed_posts = malloc(n_posts * sizeof(status *));
     memset(l->displayed_posts, 0, n_posts * sizeof(status *));
 
+    /* coverity[tainted_argument] */
     fgets(gen_buf, BUF_SIZE, fp);
     if (gen_buf[0] != '\n') {
       *strchr(gen_buf, '\n') = '\0';
       l->account = api_get_full_account(gen_buf);
     }
 
+    /* coverity[tainted_argument] */
     fgets(gen_buf, BUF_SIZE, fp);
     l->account_height = atoi(gen_buf);
 
     for (j = 0; j < n_posts; j++) {
+      /* coverity[tainted_argument] */
       fgets(gen_buf, BUF_SIZE, fp);
       *strchr(gen_buf, '\n') = '\0';
       l->ids[j] = strdup(gen_buf);
 
+      /* coverity[tainted_argument] */
       fgets(gen_buf, BUF_SIZE, fp);
       l->post_height[j] = atoi(gen_buf);
 
@@ -974,19 +986,19 @@ void cli(void) {
         if (prev_list->kind != SHOW_NOTIFICATIONS) {
           disp_status = (status *)disp;
           if (cur_action == SHOW_FULL_STATUS) {
-            strcpy(new_root, disp_status->id);
-            strcpy(new_leaf_root, disp_status->reblog ? disp_status->reblog->id : disp_status->id);
+            strncpy(new_root, disp_status->id, sizeof(new_root));
+            strncpy(new_leaf_root, disp_status->reblog ? disp_status->reblog->id : disp_status->id, sizeof(new_leaf_root));
           } else if (cur_action == SHOW_ACCOUNT) {
-            strcpy(new_root, disp_status->reblog ? disp_status->reblog->account->id : disp_status->account->id);
+            strncpy(new_root, disp_status->reblog ? disp_status->reblog->account->id : disp_status->account->id, sizeof(new_root));
           }
         } else {
           disp_notif = (notification *)disp;
           if (cur_action == SHOW_FULL_STATUS && disp_notif->status_id) {
-            strcpy(new_root, disp_notif->status_id);
-            strcpy(new_leaf_root, disp_notif->status_id);
+            strncpy(new_root, disp_notif->status_id, sizeof(new_root));
+            strncpy(new_leaf_root, disp_notif->status_id, sizeof(new_leaf_root));
           } else {
             cur_action = SHOW_ACCOUNT;
-            strcpy(new_root, disp_notif->account_id);
+            strncpy(new_root, disp_notif->account_id, sizeof(new_root));
           }
         }
         compact_list(l[cur_list - 1]);

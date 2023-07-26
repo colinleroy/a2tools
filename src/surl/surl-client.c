@@ -49,6 +49,7 @@ again:
     printf("No response.\n");
     exit(1);
   }
+
   printf("Got response %d (%zu bytes), %s\n", response->code, response->size, response->content_type);
 
   buffer = malloc(BUFSIZE);

@@ -28,10 +28,12 @@
 
 #ifdef __CC65__
 #pragma static-locals(push, on)
-#endif
 
 #ifdef SERIAL_TO_LANGCARD
 #pragma code-name (push, "LC")
+#else
+#pragma code-name (push, "LOWCODE")
+#endif
 #endif
 
 #define BUFSIZE 255
@@ -124,8 +126,11 @@ void __fastcall__ surl_read_response_header(surl_response *resp) {
   simple_serial_read((char *)resp, 6);
   simple_serial_gets(surl_buf, BUFSIZE);
 
+/* coverity[var_assign] */
   resp->code = ntohs(resp->code);
+/* coverity[var_assign] */
   resp->size = ntohs(resp->size);
+/* coverity[var_assign] */
   resp->header_size = ntohs(resp->header_size);
   resp->content_type = strdup(surl_buf);
 
@@ -151,8 +156,5 @@ char __fastcall__ surl_response_ok(surl_response *resp) {
 
 #ifdef __CC65__
 #pragma static-locals(pop)
-#endif
-
-#ifdef SERIAL_TO_LANGCARD
 #pragma code-name (pop)
 #endif

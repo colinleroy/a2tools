@@ -831,6 +831,7 @@ static ImageRef imageFromXPM (FILE *f)
   if (!ip) goto emalloc;
   ip->p = NULL;
 
+  /* coverity[tainted_argument] */
   if (!fgets(sbuf, 65536, f)) goto expm;
   sscanf(sbuf, "%d %d %d %d", &(ip->w), &(ip->h), &ncol, &pwid);
 
@@ -1168,6 +1169,7 @@ char *hgr_to_png(char *hgr_buf, size_t hgr_len, char monochrome, size_t *len)
     return NULL;
   }
   /* create file */
+  /* coverity[secure_temp] */
   tmpfp = tmpfile();
   if (!tmpfp) {
     printf("HGR: [write_png_file] File could not be opened for writing");

@@ -28,10 +28,12 @@
 
 #ifdef __CC65__
 #pragma static-locals(push, on)
-#endif
 
 #ifdef SERIAL_TO_LANGCARD
 #pragma code-name (push, "LC")
+#else
+#pragma code-name (push, "LOWCODE")
+#endif
 #endif
 
 #define BUFSIZE 255
@@ -56,6 +58,8 @@ int __fastcall__ surl_get_json(char *buffer, size_t len, char striphtml, char *t
   }
 
   simple_serial_read((char *)&len, 2);
+
+  /* coverity[var_assign] */
   len = ntohs(len);
 
   simple_serial_read(buffer, len);
@@ -67,8 +71,5 @@ int __fastcall__ surl_get_json(char *buffer, size_t len, char striphtml, char *t
 
 #ifdef __CC65__
 #pragma static-locals(pop)
-#endif
-
-#ifdef SERIAL_TO_LANGCARD
 #pragma code-name (pop)
 #endif

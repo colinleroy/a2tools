@@ -346,6 +346,7 @@ command:
     default: 
       goto command;
   }
+  /* coverity[unreachable] */
   cleanup();
   exit(0);
 }

@@ -209,8 +209,6 @@ int main(int argc, char **argv) {
         gotoxy(12, 22);
         printf("to: %s", text);
 
-        text = NULL;
-
         gotoxy(0, 23);
         printf("Y scale = Value: %ld to %ld %s", (long)min_val, (long)max_val, argv[4]);
 
@@ -226,21 +224,6 @@ int main(int argc, char **argv) {
 
         header_done = 3;
       }
-
-      // text = malloc(BUFSIZE);
-      // 
-      // snprintf(text, BUFSIZE, "%ld", max_val);
-      // tgi_outtextxy(0, MAX_VAL_SCR_Y, text);
-      // snprintf(text, BUFSIZE, "%ld", min_val);
-      // tgi_outtextxy(0, MIN_VAL_SCR_Y, text);
-      // 
-      // snprintf(text, BUFSIZE, "%s", ctime((time_t *)&start_time));
-      // tgi_outtextxy(MIN_TIME_SCR_X, MIN_VAL_SCR_Y + 10, text);
-      // 
-      // snprintf(text, BUFSIZE, "%s", ctime((time_t *)&end_time));
-      // tgi_outtextxy(MAX_TIME_SCR_X - 60, MIN_VAL_SCR_Y + 10, text);
-      // 
-      // free(text);
 
       tgi_setcolor(TGI_COLOR_WHITE);
 

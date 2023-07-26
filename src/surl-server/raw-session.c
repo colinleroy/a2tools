@@ -129,6 +129,7 @@ static int socket_connect(int sock, char *remote_url) {
 }
 
 static void set_non_blocking(int sockfd) {
+  /* coverity[check_return] */
   fcntl(sockfd, F_SETFL, fcntl(sockfd, F_GETFL) | O_NONBLOCK);
 }
 

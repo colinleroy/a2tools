@@ -13,6 +13,7 @@ char *jq_get(jv json_data, char *selector) {
   static jq_state *jq = NULL;
   jv result;
   size_t out_len = 0;
+  size_t rem = sizeof(out) - 1;
 
   out[0] = '\0';
 
@@ -44,17 +45,20 @@ char *jq_get(jv json_data, char *selector) {
     if (jv_get_kind(result) != JV_KIND_STRING) {
       str = jv_dump_string(result, 0);
       tmp = jv_string_value(str);
-      strcpy(out + out_len, tmp);
+      strncpy(out + out_len, tmp, rem);
+      rem -= strlen(tmp);
       out_len += strlen(tmp);
       jv_free(str);
     } else {
       tmp = jv_string_value(result);
-      strcpy(out + out_len, tmp);
+      strncpy(out + out_len, tmp, rem);
+      rem -= strlen(tmp);
       out_len += strlen(tmp);
       jv_free(result);
     }
 
     out[out_len++] = '\n';
+    rem--;
     out[out_len] = '\0';
   }
 

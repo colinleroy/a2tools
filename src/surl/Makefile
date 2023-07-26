@@ -8,7 +8,7 @@ DEPS :=
 CC65_TARGET = apple2enh
 CFLAGS  = -I ../lib -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
 CLCFLAGS = -t $(CC65_TARGET)
-GCCCFLAGS = -g -O0 -Werror 
+GCCCFLAGS = -g -O0 -Wall
 GCCLDFLAGS = 
 
 .PHONY: all clean

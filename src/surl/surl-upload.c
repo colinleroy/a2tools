@@ -102,6 +102,7 @@ again:
   printf("Got response %d (%zu bytes), %s\n", response->code, response->size, response->content_type);
 
   while ((r = surl_receive_data(response, buffer, BUFSIZE - 1)) > 0) {
+    buffer[r] = '\0';
     printf("%s", buffer);
   }
   

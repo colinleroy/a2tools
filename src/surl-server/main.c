@@ -210,16 +210,6 @@ new_req:
       }
     } while (strcmp(reqbuf, "\n"));
 
-    if (method == SURL_METHOD_ABORT || url == NULL) {
-      if (reqbuf[0] == SURL_METHOD_ABORT) {
-        /* it's a reset */
-        printf("REQ: abort requested\n");
-        continue;
-      }
-      printf("REQ: could not parse request 0x%02x\n", reqbuf[0]);
-      continue;
-    }
-
     response = curl_request(method, url, headers, n_headers);
     if (response == NULL) {
       printf("REQ: 0x%02x %s - done with no answer\n", method, url);
@@ -302,11 +292,6 @@ new_req:
           response->orig_img_fp = dump_response_to_file(response->buffer, response->size);
           response->hgr_buf = img_to_hgr(response->orig_img_fp,
                                   format, monochrome, &(response->hgr_len));
-        } else {
-          /* Put that back as a REQUEST */
-          reqbuf[0] = cmd;
-          simple_serial_gets(reqbuf + 1, BUFSIZE - 1);
-          goto new_req;
         }
       } else {
         printf("RESP: finished\n");
@@ -490,6 +475,7 @@ static void curl_buffer_free(curl_buffer *curlbuf) {
 
 static void proxy_set_curl_opts(CURL *curl) {
   CURLcode r = 0;
+  r |= curl_easy_setopt(curl, CURLOPT_CA_CACHE_TIMEOUT, 3600L);
   r |= curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
   r |= curl_easy_setopt(curl, CURLOPT_USERAGENT, "surl-server/1.0");
   r |= curl_easy_setopt(curl, CURLOPT_COOKIEJAR, "cookies.txt");
@@ -579,7 +565,7 @@ static char *prepare_post(char *buffer, size_t *len) {
       *strstr(lines[i], "|TRANSLIT") = '\0';
     }
     nl = replace_new_lines(lines[i]);
-    tmp = curl_easy_escape(NULL, nl, strlen(nl));
+    tmp = curl_easy_escape(NULL, nl, 0);
     free(nl);
     sprintf(out_ptr, "%s=", tmp);
     out_ptr += strlen(tmp) + 1;
@@ -594,10 +580,10 @@ static char *prepare_post(char *buffer, size_t *len) {
         translit_data = strdup(nl);
       }
       free(nl);
-      tmp = curl_easy_escape(NULL, translit_data, strlen(translit_data));
+      tmp = curl_easy_escape(NULL, translit_data, 0);
       free(translit_data);
     } else
-      tmp = curl_easy_escape(NULL, "", strlen(""));
+      tmp = curl_easy_escape(NULL, "", 0);
     sprintf(out_ptr, "%s&", tmp);
     out_ptr += strlen(tmp) + 1;
     curl_free(tmp);
@@ -700,7 +686,7 @@ static char *prepare_json_post(char *buffer, size_t *len) {
       out_ptr += strlen(tmp);
     } else {
       json_esc = json_escape(tmp);
-      curl_free(tmp);
+      free(tmp);
       tmp = json_esc;
       sprintf(out_ptr, "\"%s\"", tmp);
       out_ptr += strlen(tmp) + 2;
@@ -771,22 +757,18 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
 
   if (curl == NULL) {
     curl = curl_easy_init();
+  } else {
+    curl_easy_reset(curl);
   }
   proxy_set_curl_opts(curl);
 
-  if (method == SURL_METHOD_POST) {
-      int is_multipart = 0;
-      int cur_hdr = 0;
+  if (method == SURL_METHOD_POST || method == SURL_METHOD_POST_DATA) {
+      int is_multipart = (method == SURL_METHOD_POST_DATA);
+
       if (is_ftp) {
         printf("REQ: Unsupported ftp method POST\n");
         curl_buffer_free(curlbuf);
         return NULL;
-      }
-
-      for (cur_hdr = 0; cur_hdr < n_headers; cur_hdr++) {
-        if (!strcasecmp(headers[cur_hdr], "Content-Type: multipart/form-data")) {
-          is_multipart = 1;
-        }
       }
 
       if (!is_multipart) {
@@ -845,65 +827,80 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
 
         printf("REQ: POST multipart/form-data\n");
 
+        curl_headers = curl_slist_append(curl_headers, "Content-Type: multipart/form-data");
+
         simple_serial_putc(SURL_ANSWER_SEND_NUM_FIELDS);
         n_fields = simple_serial_getc();
 
         form = curl_mime_init(curl);
-        for (i = 0; i < n_fields; i++) {
-          char *field_contents;
-          size_t f_len;
-          simple_serial_gets(field_name, 255);
-          if (strchr(field_name, '\n'))
-            *strchr(field_name, '\n') = '\0';
+        if (form) {
+          for (i = 0; i < n_fields; i++) {
+            char *field_contents;
+            size_t f_len;
+            simple_serial_gets(field_name, 255);
+            if (strchr(field_name, '\n'))
+              *strchr(field_name, '\n') = '\0';
 
-          simple_serial_gets(field_len, 255);
-          f_len = atoi(field_len);
+            simple_serial_gets(field_len, 255);
+            f_len = atoi(field_len);
 
-          simple_serial_gets(field_type, 255);
-          if (strchr(field_type, '\n'))
-            *strchr(field_type, '\n') = '\0';
+            simple_serial_gets(field_type, 255);
+            if (strchr(field_type, '\n'))
+              *strchr(field_type, '\n') = '\0';
 
-          if (!strncasecmp(field_type, "text/", 5)) {
-            field_contents = malloc(f_len + 1);
-            simple_serial_gets(field_contents, 255);
-            if (strchr(field_contents, '\n'))
-              *strchr(field_contents, '\n') = '\0';
-          } else {
-            field_contents = malloc(f_len);
-            simple_serial_read(field_contents, f_len);
+            if (!strncasecmp(field_type, "text/", 5)) {
+              field_contents = malloc(f_len + 1);
+              simple_serial_gets(field_contents, 255);
+              if (strchr(field_contents, '\n'))
+                *strchr(field_contents, '\n') = '\0';
+            } else {
+              field_contents = malloc(f_len);
+              simple_serial_read(field_contents, f_len);
+            }
+            if (!strcasecmp(field_type, "image/hgr")) {
+              size_t png_len;
+              char *png_data = hgr_to_png(field_contents, f_len, 1, &png_len);
+              free(field_contents);
+              field_contents = png_data;
+              strcpy(field_type, "image/png");
+              f_len = png_len;
+            }
+
+            field = curl_mime_addpart(form);
+            if (field) {
+              if (curl_mime_name(field, field_name) != CURLE_OK)
+                printf("REQ: POST: could not set field name %s\n", field_name);
+              if (curl_mime_data(field, field_contents, f_len) != CURLE_OK)
+                printf("REQ: POST: could not set field contents\n");
+
+              if (VERBOSE) {
+                printf("%s (%s): %s (%zu bytes)\n", field_name, field_type,
+                        !strncasecmp(field_type, "text/", 5) ? field_contents:"[binary]",
+                        f_len);
+              }
+
+              if (strncasecmp(field_type, "text/", 5)) {
+                char *field_filename = malloc(512);
+
+                if (curl_mime_type(field, field_type) != CURLE_OK)
+                  printf("REQ: POST: could not set field type %s\n", field_type);
+
+                snprintf(field_filename, 512, "file-%lu-%s", time(NULL), field_type);
+                if (strchr(field_type, '/'))
+                  *strchr(field_type, '/') = '.';
+                if (curl_mime_filename(field, field_filename) != CURLE_OK)
+                  printf("REQ: POST: could not set field filename %s\n", field_filename);
+                free(field_filename);
+              }
+              free(field_contents);
+            } else {
+              printf("REQ: POST: could not add field\n");
+            }
           }
-          if (!strcasecmp(field_type, "image/hgr")) {
-            size_t png_len;
-            char *png_data = hgr_to_png(field_contents, f_len, 1, &png_len);
-            free(field_contents);
-            field_contents = png_data;
-            strcpy(field_type, "image/png");
-            f_len = png_len;
-          }
-
-          field = curl_mime_addpart(form);
-          curl_mime_name(field, field_name);
-          curl_mime_data(field, field_contents, f_len);
-
-          if (VERBOSE) {
-            printf("%s (%s): %s (%zu bytes)\n", field_name, field_type,
-                    !strncasecmp(field_type, "text/", 5) ? field_contents:"[binary]",
-                    f_len);
-          }
-
-          if (strncasecmp(field_type, "text/", 5)) {
-            char *field_filename = malloc(512);
-
-            curl_mime_type(field, field_type);
-            snprintf(field_filename, 512, "file-%lu-%s", time(NULL), field_type);
-            if (strchr(field_type, '/'))
-              *strchr(field_type, '/') = '.';
-            curl_mime_filename(field, field_filename);
-            free(field_filename);
-          }
-          free(field_contents);
+          curl_easy_setopt(curl, CURLOPT_MIMEPOST, form);
+        } else {
+          printf("REQ: POST: could not setup mime form\n");
         }
-        curl_easy_setopt(curl, CURLOPT_MIMEPOST, form);
       }
   } else if (method == SURL_METHOD_PUT) {
       simple_serial_putc(SURL_ANSWER_SEND_SIZE);
@@ -1004,6 +1001,9 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
     return NULL;
   } else {
     printf("Unsupported method 0x%02x\n", method);
+    curlbuf->response_code = 500;
+    curlbuf->size = 0;
+    curlbuf->content_type = strdup("application/octet-stream");
     return curlbuf;
   }
 
@@ -1023,9 +1023,11 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
   }
   for (i = 0; i < n_headers; i++) {
     curl_headers = curl_slist_append(curl_headers, headers[i]);
-    if (VERBOSE) {
-      printf("%s\n", headers[i]);
-    }
+  }
+  if (VERBOSE) {
+    struct curl_slist *h;
+    for (h = curl_headers; h; h = h->next)
+      printf("%s\n", h->data);
   }
 
   r |= curl_easy_setopt(curl, CURLOPT_HTTPHEADER, curl_headers);

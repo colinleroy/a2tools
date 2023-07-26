@@ -128,7 +128,7 @@ int main(int argc, char **argv) {
   instance_url = argv[1];
   oauth_token = argv[2];
   translit_charset = argv[3];
-  monochrome = atoi(argv[4]);
+  monochrome = (argv[4][0] == '1');
   type = argv[5];
   id = argv[6];
 
