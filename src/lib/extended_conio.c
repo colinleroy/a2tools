@@ -190,7 +190,7 @@ void printxcenteredbox(int width, int height) {
 
 #ifndef __CC65__
 
-static int get_pos(int *y, int *x) {
+static int get_pos(int *x, int *y) {
 
  char buf[30]={0};
  int ret, i, pow;

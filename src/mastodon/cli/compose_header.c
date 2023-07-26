@@ -13,8 +13,6 @@
 #include "extended_conio.h"
 #endif
 #include "strsplit.h"
-#include "dputs.h"
-#include "dputc.h"
 #include "scroll.h"
 #include "cli.h"
 #include "api.h"
@@ -39,17 +37,17 @@ void compose_print_header(void) {
       my_account->username[LEFT_COL_WIDTH] = '\0';
 
     gotoxy(0, 0);
-    dputs(my_account->display_name);
+    cputs(my_account->display_name);
     gotoxy(0, 1);
     cputc(arobase);
-    dputs(my_account->username);
+    cputs(my_account->username);
   }
 
   #define BTM 4
   clrzone(0, BTM, LEFT_COL_WIDTH, 23);
   gotoxy(0,BTM);
 
-  dputs("Commands:\r\n"
+  cputs("Commands:\r\n"
         " Open-Apple +...\r\n"
         " Send     : S\r\n"
         " Images   : I\r\n"

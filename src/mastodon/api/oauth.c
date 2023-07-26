@@ -182,9 +182,22 @@ int do_login(void) {
   if (surl_find_line(body, buf_size, "action=\""LOGIN_URL) == 0) {
     login_required = 1;
     dputs("Login required.\r\n");
+  } else {
+    dputs("Login still valid.\r\n");
+  }
+  surl_response_free(resp);
+  resp = NULL;
 
+/* Get authorization done, password if needed */
+
+  if (login_required) {
     password = malloc(50);
+
 password_again:
+    token = get_csrf_token(body, buf_size);
+    if (token == NULL)
+      goto err_out;
+
     dputs("Enter password: ");
     
     echo(0);
@@ -192,15 +205,6 @@ password_again:
     dget_text(password, 50, NULL);
     echo(1);
     *strchr(password, '\n') = '\0';
-  } else {
-    dputs("Login still valid.\r\n");
-  }
-
-  if (login_required) {
-    token = get_csrf_token(body, buf_size);
-    if (token == NULL)
-      goto err_out;
-    surl_response_free(resp);
 
   /* Second request to send login */
     post = prepare_login_post(login, password, token);
@@ -212,6 +216,7 @@ password_again:
 
     if (resp == NULL) {
       dputs("Could not start request.\r\n");
+      free(post);
       goto err_out;
     }
 
@@ -231,7 +236,7 @@ password_again:
     surl_find_line(body, buf_size, "class='flash-message alert");
     if (body[0] != '\0') {
       dputs("Authentication error.\r\n");
-      token = get_csrf_token(body, buf_size);
+      surl_response_free(resp);
       goto password_again;
     }
 
@@ -239,17 +244,19 @@ password_again:
     if (body[0] != '\0') {
       otp_required = 1;
       dputs("OTP required.\r\n");
-      token = get_csrf_token(body, buf_size);
-      if (token == NULL)
-        goto err_out;
     }
     surl_response_free(resp);
+    resp = NULL;
 
   /* Third request for OTP */
     if (otp_required) {
       char *otp = malloc(10);
 
 otp_again:
+      token = get_csrf_token(body, buf_size);
+      if (token == NULL)
+        goto err_out;
+
       dputs("Enter OTP code: ");
       otp[0] = '\0';
       dget_text(otp, 9, NULL);
@@ -264,6 +271,7 @@ otp_again:
 
       if (resp == NULL) {
         dputs("Could not start request.\r\n");
+        free(post);
         return -1;
       }
 
@@ -281,7 +289,6 @@ otp_again:
         surl_find_line(body, buf_size, "class='flash-message alert");
         if (body[0] != '\0') {
           dputs("OTP error.\r\n");
-          token = get_csrf_token(body, buf_size);
           surl_response_free(resp);
           goto otp_again;
         }
@@ -289,8 +296,8 @@ otp_again:
         dputs("OK\r\n");
       }
       free(otp);
-
-      token = NULL;
+      surl_response_free(resp);
+      resp = NULL;
     }
   }
   /* End of login */
@@ -306,8 +313,6 @@ otp_again:
     token = get_csrf_token(body, buf_size);
     if (token == NULL)
       goto err_out;
-
-    surl_response_free(resp);
 
   /* Oauth request */
     post = prepare_oauth_post(token);

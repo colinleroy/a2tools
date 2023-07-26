@@ -5,7 +5,7 @@ DEPS :=
 CC65_TARGET = apple2enh
 CFLAGS  = -I ../lib
 CLCFLAGS = -t $(CC65_TARGET)
-GCCCFLAGS = -g -O0 -Werror $(shell curl-config --cflags) 
+GCCCFLAGS = -g -O0 -Wall $(shell curl-config --cflags) 
 GCCLDFLAGS = $(shell curl-config --libs) 
 
 .PHONY: all clean

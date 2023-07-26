@@ -9,7 +9,11 @@
 #include "common.h"
 
 #ifdef __CC65__
+#ifdef SERIAL_TO_LANGCARD
 #pragma code-name (push, "LC")
+#else
+#pragma code-name (push, "LOWCODE")
+#endif
 #endif
 
 #define ENDPOINT_BUF_SIZE 128

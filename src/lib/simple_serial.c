@@ -27,9 +27,7 @@
 
 #ifdef __CC65__
 #pragma static-locals(push, on)
-#endif
 
-#ifdef __CC65__
 #ifdef SERIAL_TO_LANGCARD
 #pragma code-name (push, "LC")
 #else
@@ -391,14 +389,6 @@ void __fastcall__ simple_serial_puts(char *buf) {
 #endif
 }
 
-#ifdef __CC65__
-#pragma code-name (pop)
-#endif
-
-#ifdef SERIAL_TO_LANGCARD
-#pragma code-name (push, "LC")
-#endif
-
 char * __fastcall__ simple_serial_gets(char *out, size_t size) {
   static char c;
   static size_t i;
@@ -507,10 +497,8 @@ void __fastcall__ simple_serial_write(char *ptr, size_t nmemb) {
     --nmemb;
   }
 }
-#ifdef SERIAL_TO_LANGCARD
-#pragma code-name (pop)
-#endif
 
 #ifdef __CC65__
+#pragma code-name (pop)
 #pragma static-locals(pop)
 #endif

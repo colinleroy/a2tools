@@ -154,6 +154,7 @@ void stp_save(char *full_filename, surl_response *resp) {
     goto err_out;
   }
 
+  /* coverity[dead_error_condition] */
   if (keep_bin_header) {
     if (fwrite(data, sizeof(char), APPLESINGLE_HEADER_LEN, fp) < APPLESINGLE_HEADER_LEN) {
       gotoxy(6, 15);
@@ -200,7 +201,9 @@ void stp_save(char *full_filename, surl_response *resp) {
   } while (r > 0);
 
 err_out:
-  fclose(fp);
+  if (fp) {
+    fclose(fp);
+  }
   if (had_error) {
     unlink(filename);
   }

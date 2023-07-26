@@ -25,43 +25,38 @@ static char *compose_audience_str(char compose_audience) {
   }
 }
 
+#define FILE_ERROR "Can not open file.\r\n"
+#define NET_ERROR "Network error.\r\n"
+
 char *api_send_hgr_image(char *filename, char *description, char **err) {
   FILE *fp;
   char buf[1024];
-  int r = 0;
-  int to_send = HGR_LEN;
-  static char *hdrs[2] = {NULL, NULL};
+  int r;
+  int to_send;
   surl_response *resp;
   char **lines;
   char n_lines;
   char *media_id;
 
-  *err = malloc(64);
-  *err[0] = '\0';
+  *err = NULL;
+  r = 0;
+  to_send = HGR_LEN;
 
 #ifdef __CC65__
-  _filetype = PRODOS_T_TXT;
+  _filetype = PRODOS_T_BIN;
 #endif
 
   fp = fopen(filename, "r");
   if (fp == NULL) {
-    snprintf(*err, 64, "Can not open file %s\r\n", filename);
+    *err = FILE_ERROR;
     return NULL;
   }
 
-  if (hdrs[0] == NULL) {
-    hdrs[0] = malloc(BUF_SIZE);
-    snprintf(hdrs[0], BUF_SIZE, "Authorization: Bearer %s", oauth_token);
-  }
-  if (hdrs[1] == NULL) {
-    hdrs[1] = "Content-Type: multipart/form-data";
-  }
-
-  snprintf(gen_buf, BUF_SIZE, "%s%s", instance_url, "/api/v2/media");
-  resp = surl_start_request(SURL_METHOD_POST, gen_buf, hdrs, 2);
+  resp = get_surl_for_endpoint(SURL_METHOD_POST_DATA, "/api/v2/media");
 
   if (resp == NULL) {
     fclose(fp);
+    *err = NET_ERROR;
     return NULL;
   }
 
@@ -96,11 +91,11 @@ char *api_send_hgr_image(char *filename, char *description, char **err) {
     if (r >= 0 && n_lines == 1) {
       media_id = strdup(lines[0]);
     } else {
-      snprintf(*err, 64, "Invalid JSON response\r\n");
+      *err = NET_ERROR;
     }
     free(lines);
   } else {
-    snprintf(*err, 64, "Invalid HTTP response %d\r\n", resp->code);
+    *err = NET_ERROR;
   }
   surl_response_free(resp);
 
@@ -123,17 +118,9 @@ char *api_send_hgr_image(char *filename, char *description, char **err) {
     free(body);
 
     surl_read_response_header(resp);
-
-    if (!surl_response_ok(resp)) {
-      snprintf(*err, 64, "Description: invalid HTTP response %d\r\n", resp->code);
-    }
     surl_response_free(resp);
   }
 
-  if (*err[0] == '\0') {
-    free(*err);
-    *err = NULL;
-  }
   return media_id;
 }
 

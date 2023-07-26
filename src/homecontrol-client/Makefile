@@ -27,7 +27,7 @@ CC65_TARGET = apple2enh
 CFLAGS  = -I ../lib -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
 homectrl_CLCFLAGS = -t $(CC65_TARGET) -O -Wl -D,__STACKSIZE__=0x0400 -DSERIAL_TO_LANGCARD
 grphview_CLCFLAGS = -t $(CC65_TARGET) -O -Wl -D,__STACKSIZE__=0x0400 -DSERIAL_TO_LANGCARD -C ../../config/apple2enh-hgr.cfg
-GCCCFLAGS = -g -O0 -Werror $(shell sdl-config --cflags)
+GCCCFLAGS = -g -O0 -Wall $(shell sdl-config --cflags)
 GCCLDFLAGS = $(shell sdl-config --libs)
 .PHONY: all clean
 
