@@ -91,6 +91,7 @@ static char dgt_cmd_cb(char c) {
   set_scrollwindow(0, scrh);
   update_compose_audience();
   update_cw();
+  print_free_ram();
   set_scrollwindow(top + 1, top + COMPOSE_FIELD_HEIGHT);
   gotoxy(x, y);
   return 0;
@@ -120,6 +121,7 @@ static void setup_gui(void)
 
   update_compose_audience();
   update_cw();
+  print_free_ram();
 
   set_scrollwindow(top + 1, top + COMPOSE_FIELD_HEIGHT);
 
@@ -274,7 +276,6 @@ static char *handle_compose_input(char *reply_to_account) {
 
 resume_composing:
   setup_gui();
-  print_free_ram();
   if (dget_text(text, 500, dgt_cmd_cb) == NULL) {
     free(text);
     text = NULL;
@@ -363,7 +364,6 @@ int main(int argc, char **argv) {
     reply_to = NULL;
   }
 
-  print_free_ram();
   /* Auto-mention parent toot's sender, unless it's us */
   if (reply_to != NULL && strcmp(reply_to->account->id, my_account->id)) {
     compose_toot(reply_to->account->acct);

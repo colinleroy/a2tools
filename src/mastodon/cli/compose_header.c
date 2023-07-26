@@ -71,23 +71,16 @@ void compose_print_header(void) {
 
 void print_free_ram(void) {
 #ifdef __CC65__
-  unsigned char x, y, sx, wx, sy, ey;
+  unsigned char sx, wx;
 
   get_hscrollwindow(&sx, &wx);
-  get_scrollwindow(&sy, &ey);
-  x = wherex();
-  y = wherey();
-
   set_hscrollwindow(0, scrw);
-  set_scrollwindow(0, scrh);
 
   gotoxy(0, 22);
   cprintf("%zuB free     \r\n"
           "%zuB max      ",
           _heapmemavail(), _heapmaxavail());
 
-  set_scrollwindow(sy, ey);
   set_hscrollwindow(sx, wx);
-  gotoxy(x, y);
 #endif
 }
