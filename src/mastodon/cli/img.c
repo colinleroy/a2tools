@@ -148,7 +148,7 @@ static void img_display(media *m, char idx) {
       len = ntohs(len);
 
       if (len == HGR_LEN) {
-        int r = 0, b = 1024;
+        int r = 0, b = HGR_LEN/32;
         while (len > 0) {
           progress_bar(0, 23, 40, r, HGR_LEN);
           simple_serial_read((char *)HGR_PAGE + r, b);
