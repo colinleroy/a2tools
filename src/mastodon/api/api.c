@@ -22,7 +22,7 @@ int api_search(char to_load, char *search, char *load_before, char *load_after, 
   char *w;
   snprintf(gen_buf, 255, "&type=statuses&q=");
 
-  /* very basic urlencoder */
+  /* very basic urlencoder, encodes everything */
   w = gen_buf + 17; /* 17 = strlen(gen_buf) */;
   while (*search) {
     snprintf(w, 4, "%%%02x", *search);
@@ -188,41 +188,32 @@ static char api_status_interact(status *s, char *action) {
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s/%s", STATUS_ENDPOINT, s->id, action);
   resp = get_surl_for_endpoint(SURL_METHOD_POST, endpoint_buf);
 
-  if (!resp) {
-    goto err_out;
+  if (resp) {
+    surl_send_data_params(0, SURL_DATA_X_WWW_FORM_URLENCODED_RAW);
+    /* No need to send data */
+
+    surl_read_response_header(resp);
+
+    if (surl_response_ok(resp))
+      r = 0;
   }
 
-  surl_send_data_params(0, SURL_DATA_X_WWW_FORM_URLENCODED_RAW);
-  /* No need to send data */
-
-  surl_read_response_header(resp);
-
-  if (!surl_response_ok(resp))
-    goto err_out;
-
-  r = 0;
-
-err_out:
   surl_response_free(resp);
   return r;
 }
 
 void api_favourite_status(status *s) {
-  char r;
-
   if (s->reblog) {
     s = s->reblog;
   }
 
   if ((s->favorited_or_reblogged & FAVOURITED) == 0) {
-    r = api_status_interact(s, "favourite");
-    if (r == 0) {
+    if (api_status_interact(s, "favourite") == 0) {
       s->favorited_or_reblogged |= FAVOURITED;
       s->n_favourites++;
     }
   } else {
-    r = api_status_interact(s, "unfavourite");
-    if (r == 0) {
+    if (api_status_interact(s, "unfavourite") == 0) {
       s->favorited_or_reblogged &= ~FAVOURITED;
       s->n_favourites--;
     }
@@ -230,21 +221,17 @@ void api_favourite_status(status *s) {
 }
 
 void api_reblog_status(status *s) {
-  char r;
-
   if (s->reblog) {
     s = s->reblog;
   }
 
   if ((s->favorited_or_reblogged & REBLOGGED) == 0) {
-    r = api_status_interact(s, "reblog");
-    if (r == 0) {
+    if (api_status_interact(s, "reblog") == 0) {
       s->favorited_or_reblogged |= REBLOGGED;
       s->n_reblogs++;
     }
   } else {
-    r = api_status_interact(s, "unreblog");
-    if (r == 0) {
+    if (api_status_interact(s, "unreblog") == 0) {
       s->favorited_or_reblogged &= ~REBLOGGED;
       s->n_reblogs--;
     }
@@ -256,18 +243,16 @@ char api_delete_status(status *s) {
   char r = -1;
 
   if (s->reblog) {
-    s = s->reblog;
+    return r;
   }
 
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s", STATUS_ENDPOINT, s->id);
   resp = get_surl_for_endpoint(SURL_METHOD_DELETE, endpoint_buf);
 
-  if (!surl_response_ok(resp))
-    goto err_out;
+  if (resp && surl_response_ok(resp)) {
+    r = 0;
+  }
 
-  r = 0;
-
-err_out:
   surl_response_free(resp);
   return r;
 }
@@ -331,12 +316,10 @@ account *api_get_full_account(char *id) {
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s", ACCOUNTS_ENDPOINT, id);
   resp = get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
   
-  if (!surl_response_ok(resp))
-    goto err_out;
+  if (resp && surl_response_ok(resp)) {
+    a = account_new_from_json();
+  }
 
-  a = account_new_from_json();
-
-err_out:
   surl_response_free(resp);
   return a;
 }

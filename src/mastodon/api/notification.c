@@ -109,7 +109,7 @@ notification *api_get_notification(char *id) {
       n->type = NOTIFICATION_MENTION;
     }
     n->created_at = date_format(lines[2], 1);
-    if (!strcmp(lines[3], "-")) {
+    if (lines[3][0] == '-') {
       n->status_id = NULL;
     } else {
       n->status_id = strdup(lines[3]);

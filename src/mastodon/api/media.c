@@ -66,7 +66,7 @@ static media *media_new_from_json(char *urls_selector, char *alt_text_selector) 
         }
         ++w;
         ++n;
-        if (n == (80*4) - 2) {
+        if (n == (18*40) - 2) {
           /* shorten description, we don't scroll them yet */
           img_buf[n-3] = '.';
           img_buf[n-2] = '.';
