@@ -28,16 +28,17 @@ mastoconf_CC65SOURCES :=
 mastoimg_SOURCES := cli/img.c \
 	api/common.c api/media.c \
 	../lib/strsplit.c ../lib/simple_serial.c \
-	../lib/surl_core.c ../lib/surl_get_json.c
+	../lib/surl_core.c ../lib/surl_get_json.c \
+	../lib/scrollwindow.c ../lib/progress_bar.c ../lib/clrzone.c
 mastoimg_CC65SOURCES :=
 
 GCCSOURCES := ../lib/extended_conio.c ../lib/clrzone.c ../lib/extended_string.c ../lib/tgi_sdl.c ../lib/tgi_fastline.c
-DEPS := 
+DEPS :=
 
 CC65_TARGET = apple2enh
 CFLAGS  = -I ../lib -I api -I cli -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
 CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x0400 -DSERIAL_TO_LANGCARD
-mastoimg_CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x0400
+mastoimg_CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x0400 -DUSE_HGR2 -C ../../config/apple2enh-hgr2.cfg
 GCCCFLAGS = -g -O0 -Wall $(shell sdl-config --cflags)
 GCCLDFLAGS = $(shell sdl-config --libs)
 
@@ -58,7 +59,7 @@ mastowrite.bin: $(mastowrite_SOURCES) $(mastowrite_CC65SOURCES)
 mastoconf.bin: $(mastoconf_SOURCES) $(mastoconf_CC65SOURCES)
 	cl65 $(CFLAGS) $(CLCFLAGS) -vm -m mastoconf.map -o $@ $^
 mastoimg.bin: $(mastoimg_SOURCES) $(mastoimg_CC65SOURCES)
-	cl65 $(CFLAGS) $(mastoimg_CLCFLAGS) -C ../../config/apple2enh-hgr.cfg -vm -m mastoimg.map -o $@ $^
+	cl65 $(CFLAGS) $(mastoimg_CLCFLAGS) -vm -m mastoimg.map -o $@ $^
 
 mastodon.x86_64: $(mastodon_SOURCES) $(GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	

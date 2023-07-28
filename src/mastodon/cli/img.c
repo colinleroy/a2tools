@@ -30,19 +30,13 @@
 #include <arpa/inet.h>
 #include "extended_conio.h"
 #endif
+#include "clrzone.h"
+#include "progress_bar.h"
+#include "scrollwindow.h"
 #include "surl.h"
 #include "simple_serial.h"
 #include "media.h"
 #include "common.h"
-
-#ifdef __CC65__
-/* Init HGR segment */
-#pragma rodata-name (push, "HGR")
-char *hgr_page1 = (char *)0x2000;
-#pragma rodata-name (pop)
-#else
-char hgr_page1[0x2000] = { 0 };
-#endif
 
 char *instance_url = NULL;
 char *oauth_token = NULL;
@@ -51,65 +45,130 @@ char *id = NULL;
 char hgr_init_done = 0;
 char monochrome = 1;
 
-static char mix = 0;
-static void toggle_mix(char force, char *str) {
-  if (!hgr_init_done)
-    return;
-  mix = !mix || force;
-
-#ifdef __APPLE2ENH__
-  if (mix) {
-    __asm__("ldx     #1");
-    __asm__("lda     #20");
-    __asm__("sta     $22"); /* WNDTOP */
-    __asm__("bit     $C053"); /* MIXSET */
-  } else {
-    __asm__("ldx     #0");
-    __asm__("lda     #00");
-    __asm__("sta     $22"); /* WNDTOP */
-    __asm__("bit     $C052"); /* MIXCLR */
-  }
+#ifdef __CC65__
+/* Init HGR segment */
+#pragma rodata-name (push, "HGR")
+char *hgr_page;
+#pragma rodata-name (pop)
 #endif
 
-  gotoxy(0, 0);
+#ifdef USE_HGR2
+#define HGR_PAGE 0x4000
+#else
+#define HGR_PAGE 0x2000
+#endif
+
+static void init_hgr(void) {
+#ifdef __APPLE2ENH__
+
+#ifdef USE_HGR2
+  __asm__("lda     #$40");
+#else
+  __asm__("lda     #$20");
+#endif
+  /* Set draw page */
+  __asm__("sta     $E6"); /* HGRPAGE */
+
+  /* Set graphics mode */
+  __asm__("bit     $C000"); /* 80STORE */
+  __asm__("bit     $C050"); /* TXTCLR */
+  __asm__("bit     $C052"); /* MIXCLR */
+  __asm__("bit     $C057"); /* HIRES */
+
+  /* Set view page */
+#ifdef USE_HGR2
+  __asm__("bit     $C055"); /* HISCR */
+#else
+  __asm__("bit     $C054"); /* LOWSCR */
+#endif
+#endif
+  hgr_init_done = 1;
+}
+
+void init_text(void) {
+#ifdef __APPLE2ENH__
+  __asm__("bit     $C054"); /* LOWSCR */
+  __asm__("bit     $C051"); /* TXTSET */
+  __asm__("bit     $C056"); /* LORES */
+#endif
+  hgr_init_done = 0;
+}
+
+static void print_free_ram(void) {
+#ifdef __APPLE2ENH__
+  gotoxy(0, 19);
+  printf("%zuB free\n", _heapmemavail());
+  printf("%zuB max\n",  _heapmaxavail());
+#endif
+}
+
+static char legend = 0;
+static void toggle_legend(char force) {
+  legend = !legend || force;
+
+#ifdef __APPLE2ENH__
+  if (legend) {
+    init_text();
+  } else {
+    init_hgr();
+  }
+#endif
+}
+
+static void set_legend(char *str) {
+  set_hscrollwindow(0, 40);
   clrscr();
-  if (str)
+  if (str && str[0])
     cputs(str);
+  else
+    cputs("No description provided:-(");
+
+  print_free_ram();
 }
 
 static void img_display(media *m, char idx) {
   surl_response *resp;
   size_t len;
 
+
   resp = surl_start_request(SURL_METHOD_GET, m->media_url[idx], NULL, 0);
 
   if (resp && resp->code >=200 && resp->code < 300) {
-    if (!hgr_init_done) {
-#ifdef __APPLE2ENH__
-        __asm__("bit     $C052"); /* MIXCLR */
-        __asm__("bit     $C057"); /* HIRES */
-        __asm__("sta     $C07E"); /* IOUDISOU */
-        __asm__("bit     $C05F"); /* DHIRESOFF */
-        __asm__("bit     $C050"); /* TXTCLR */
-#endif
-      hgr_init_done = 1;
-    }
+    memset((char *)HGR_PAGE, 0x00, HGR_LEN);
+
+    /* Go to legend while we load */
+    toggle_legend(1);
+    gotoxy(0, 22);
+    cputs("Loading image...");
+
     simple_serial_putc(SURL_CMD_HGR);
     simple_serial_putc(monochrome);
     if (simple_serial_getc() == SURL_ERROR_OK) {
       simple_serial_read((char *)&len, 2);
       len = ntohs(len);
 
-      if (len == 8192) {
-        simple_serial_read(hgr_page1, len);
+      if (len == HGR_LEN) {
+        int r = 0, b = 1024;
+        while (len > 0) {
+          progress_bar(0, 23, 40, r, HGR_LEN);
+          simple_serial_read((char *)HGR_PAGE + r, b);
+          len -= b;
+          r+= b;
+
+        }
+        clrzone(0, 22, 39, 23);
+        toggle_legend(0);
       } else {
-        toggle_mix(1, "Bad response, not an HGR file.");
+        set_legend("Bad response, not an HGR file.");
+        toggle_legend(1);
       }
     } else {
-      toggle_mix(1, "Request error.");
+      set_legend("Request error.");
+      toggle_legend(1);
     }
   } else {
-    toggle_mix(1, "Request failed.");
+    set_legend("Request failed.");
+    toggle_legend(1);
   }
   surl_response_free(resp);
 }
@@ -119,7 +178,7 @@ int main(int argc, char **argv) {
   media *m;
   char i, c;
 
-  videomode(VIDEOMODE_80COL);
+  videomode(VIDEOMODE_40COL);
 
   if (argc < 6) {
     cputs("Missing parameters.\r\n");
@@ -138,7 +197,9 @@ int main(int argc, char **argv) {
         "Quit viewer  : Esc\r\n"
         "Next image   : Any other key\r\n"
         "\r\n"
-        "Loading...\r\n");
+        "Loading medias...\r\n\r\n");
+
+  print_free_ram();
 
   translit_charset = US_CHARSET;
 
@@ -155,11 +216,11 @@ int main(int argc, char **argv) {
   if (m->n_media == 0) {
     cputs("No images.\r\n");
   }
-  
+
   i = 0;
   while (1) {
+    set_legend(m->media_alt_text[i]);
     img_display(m, i);
-    toggle_mix(mix, m->media_alt_text[i]);
 getc_again:
     c = cgetc();
     switch(tolower(c)) {
@@ -167,7 +228,7 @@ getc_again:
         goto done;
         break;
       case 'l':
-        toggle_mix(0, m->media_alt_text[i]);
+        toggle_legend(0);
         goto getc_again;
         break;
       default:
@@ -179,13 +240,7 @@ getc_again:
 
 done:
   if (hgr_init_done) {
-#ifdef __APPLE2ENH__
-    __asm__("bit     $C051"); /* TXTSET */
-    __asm__("bit     $C054"); /* LOWSCR */
-    __asm__("bit     $C056"); /* LORES */
-    __asm__("lda     #$00");
-    __asm__("sta     $22"); /* WNDTOP */
-#endif
+    init_text();
   }
 
 err_out:
