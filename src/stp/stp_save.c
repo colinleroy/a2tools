@@ -25,6 +25,7 @@
 #include "simple_serial.h"
 #include "clrzone.h"
 #include "extended_conio.h"
+#include "progress_bar.h"
 #include "math.h"
 
 #define APPLESINGLE_HEADER_LEN 58

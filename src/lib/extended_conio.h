@@ -51,5 +51,4 @@ int kbhit(void);
 
 void printxcentered(int y, char *buf);
 void printxcenteredbox(int width, int height);
-void progress_bar(int x, int y, int width, size_t cur, size_t end);
 #endif
