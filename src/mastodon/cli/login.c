@@ -159,9 +159,7 @@ reenter_settings:
 }
 
 int main(void) {
-  surl_response *response = NULL;
   char *params = malloc(BUF_SIZE);
-  FILE *fp = NULL;
   char y;
 
 #ifdef PRODOS_T_TXT

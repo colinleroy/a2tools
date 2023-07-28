@@ -126,7 +126,6 @@ int do_login(void) {
   char *authorize_url;
   char *login_url;
   char *oauth_url;
-  char *headers;
   char *body;
   char *token;
   char *post;
@@ -138,7 +137,6 @@ int do_login(void) {
   char oauth_required = 0;
 
   resp = NULL;
-  headers = NULL;
   body = NULL;
 
   authorize_url = malloc(BUF_SIZE);
@@ -458,7 +456,6 @@ int get_oauth_token(void) {
   surl_response *resp;
   char *oauth_url;
   char *post;
-  size_t buf_size = 2048;
   size_t post_len;
   int ret = -1;
 

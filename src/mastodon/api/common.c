@@ -41,15 +41,17 @@ void nomem_msg(char *file, int line) {
 
 char *date_format(char *in, char with_time) {
   char *out = strdup(in);
-  if (strchr(out, 'T')) {
+  char *sep = strchr(out, 'T');
+  if (sep) {
     if (!with_time) {
-      *strchr(out, 'T') = '\0';
+      *sep = '\0';
       return out;
     }
-    *strchr(out, 'T') = ' ';
+    *sep = ' ';
   }
-  if (strchr(out, '.')) {
-    *strchr(out, '.') = '\0';
+  sep = strchr(out, '.');
+  if (sep) {
+    *sep = '\0';
   }
   return out;
 }

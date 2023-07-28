@@ -46,7 +46,7 @@ static int save_config(char *charset, char monochrome) {
   return 0;
 }
 
-static char *cli() {
+static void cli() {
   char c, monochrome;
   char *charset;
 
@@ -99,12 +99,10 @@ monochrome_again:
   }
 
   save_config(charset, monochrome);
-  return charset;
 }
 
 int main(int argc, char **argv) {
   char *params = malloc(BUF_SIZE);
-  char *new_charset;
 
   if (argc < 3) {
     cputs("Missing instance_url and/or oauth_token parameters.\n");
@@ -115,7 +113,7 @@ int main(int argc, char **argv) {
 
   instance_url = argv[1];
   oauth_token = argv[2];
-  new_charset = cli();
+  cli();
 
   snprintf(params, BUF_SIZE, "%s %s", instance_url, oauth_token);
 

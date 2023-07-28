@@ -86,14 +86,15 @@ char *api_send_hgr_image(char *filename, char *description, char **err) {
 
   media_id = NULL;
   if (surl_response_ok(resp)) {
-    r = surl_get_json(gen_buf, BUF_SIZE, 0, translit_charset, ".id");
-    n_lines = strsplit_in_place(gen_buf, '\n', &lines);
-    if (r >= 0 && n_lines == 1) {
-      media_id = strdup(lines[0]);
-    } else {
-      *err = NET_ERROR;
+    if (surl_get_json(gen_buf, BUF_SIZE, 0, translit_charset, ".id") >= 0) {
+      n_lines = strsplit(gen_buf, '\n', &lines);
+      if (n_lines == 1) {
+        media_id = lines[0];
+      } else {
+        *err = NET_ERROR;
+      }
+      free(lines);
     }
-    free(lines);
   } else {
     *err = NET_ERROR;
   }
@@ -129,11 +130,10 @@ signed char api_send_toot(char *buffer, char *cw, char sensitive_medias,
                           char compose_audience) {
   surl_response *resp;
   char *body;
-  char r;
+
   int i, o, len;
   char *medias_buf;
 
-  r = -1;
   body = malloc(1536);
   if (body == NULL) {
     return -1;
@@ -205,11 +205,11 @@ signed char api_send_toot(char *buffer, char *cw, char sensitive_medias,
 
   surl_read_response_header(resp);
 
-  if (!surl_response_ok(resp))
-    goto err_out;
-
-  r = 0;
-err_out:
-  surl_response_free(resp);
-  return r;
+  if (surl_response_ok(resp)) {
+    surl_response_free(resp);
+    return 0;
+  } else {
+    surl_response_free(resp);
+    return -1;
+  }
 }

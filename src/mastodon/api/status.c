@@ -27,7 +27,7 @@ status *status_new(void) {
 #ifdef __CC65__
 #pragma static-locals (push,off) /* need reentrancy */
 #endif
-status *status_new_from_json(surl_response *resp, char *id, char full, char is_reblog) {
+status *status_new_from_json(char *id, char full, char is_reblog) {
   status *s;
   char **lines;
   char n_lines;
@@ -69,7 +69,7 @@ status *status_new_from_json(surl_response *resp, char *id, char full, char is_r
     s->created_at = date_format(lines[0], 1);
     s->account->display_name = strdup(lines[1]);
     if (!is_reblog && n_lines > 2) {
-      s->reblog = status_new_from_json(resp, lines[2], full, 1);
+      s->reblog = status_new_from_json(lines[2], full, 1);
     }
   }
   free(lines);
@@ -151,12 +151,10 @@ status *api_get_status(char *status_id, char full) {
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s", STATUS_ENDPOINT, status_id);
   resp = get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
   
-  if (!surl_response_ok(resp))
-    goto err_out;
+  if (resp && surl_response_ok(resp)) {
+    s = status_new_from_json(status_id, full, 0);
+  }
 
-  s = status_new_from_json(resp, status_id, full, 0);
-
-err_out:
   surl_response_free(resp);
   return s;
 }
