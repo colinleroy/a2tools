@@ -26,6 +26,7 @@
 #include "dgets.h"
 #include "clrzone.h"
 #include "extended_conio.h"
+#include "progress_bar.h"
 #include "get_filedetails.h"
 #include "get_buf_size.h"
 #include "math.h"
