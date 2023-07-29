@@ -391,9 +391,9 @@ static void sdl_image_scale (SDL_Surface *src, SDL_Surface *dst, float asprat)
 
     xfactor = scalefactor * asprat;
 
-    printf("HGR: xfact:%g yfact:%g\n", xfactor, yfactor);
-    printf("HGR: srcw:%g srch:%g sw:%d sh:%d\n", srcw, srch, sw, sh);
-    printf("HGR: dstw:%g dsth:%g sx:%d sy:%d\n", dstw, dsth, sx, sy);
+    // printf("HGR: xfact:%g yfact:%g\n", xfactor, yfactor);
+    // printf("HGR: srcw:%g srch:%g sw:%d sh:%d\n", srcw, srch, sw, sh);
+    // printf("HGR: dstw:%g dsth:%g sx:%d sy:%d\n", dstw, dsth, sx, sy);
 
     for (y = 0.0; y < srch; y = ny)
     {
@@ -402,10 +402,6 @@ static void sdl_image_scale (SDL_Surface *src, SDL_Surface *dst, float asprat)
       {
         nx = x + xfactor;
         r = g = b = 0;
-
-        if (sy == 52 && sx == 161) {
-          putchar('.');
-        }
 
         for (iy = y; iy < ny; iy = niy)
         {
@@ -757,16 +753,17 @@ static int sdl_mono_hgr(SDL_Surface *src, unsigned char *hgr) {
   return 0x2000;
 }
 
-unsigned char *sdl_to_hgr(const char *filename, char monochrome, int *len) {
+unsigned char *sdl_to_hgr(const char *filename, char monochrome, char save_preview, int *len) {
   SDL_Surface *image, *resized;
-  int debug = 0;
 
   init_base_addrs();
 
   /* Open the image file */
   image = IMG_Load(filename);
-  if ( image == NULL ) {
-    printf("Couldn't load image: %s\n", SDL_GetError());
+  if ( image == NULL) {
+    if (!save_preview) {
+      printf("Couldn't load image: %s\n", SDL_GetError());
+    }
     *len = 0;
     return NULL;
   }
@@ -782,13 +779,11 @@ unsigned char *sdl_to_hgr(const char *filename, char monochrome, int *len) {
     *len = sdl_color_hgr(resized, grbuf);
   }
 
-  if (debug) {
-    FILE *out;
-    SDL_SaveBMP(resized, "/tmp/surl-server.dithered.bmp");
-
-    out = fopen("/tmp/surl-server.result.hgr", "wb");
-    fwrite(grbuf, 1, *len, out);
-    fclose(out);
+  if (save_preview) {
+    char preview_file[255];
+    snprintf(preview_file, sizeof(preview_file), "%s.hgr-preview.png", filename);
+    SDL_SaveBMP(resized, preview_file);
+    printf("Saved preview: %s\n", preview_file);
   }
 
   SDL_FreeSurface(resized);

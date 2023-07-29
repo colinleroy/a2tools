@@ -6,7 +6,7 @@
 #include <time.h>
 
 #include <jq.h>
-#include "jq.h"
+#include "jq-get.h"
 
 char out[8192];
 char *jq_get(jv json_data, char *selector) {
