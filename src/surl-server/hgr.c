@@ -629,7 +629,8 @@ cleanup:
   return out_buf;
 }
 
-static void mono_dither(SDL_Surface* s) {
+#if 0
+static void mono_dither_bayer(SDL_Surface* s) {
   Uint32 x, y;
 
   // Ordered dither kernel
@@ -665,6 +666,52 @@ static void mono_dither(SDL_Surface* s) {
       sdl_set_pixel(s, x, y, val, val, val);
     }
   }
+}
+#endif
+
+static void mono_dither_burkes(SDL_Surface* s) {
+  Uint32 x, y;
+  float **error_table;
+  int threshold = 180;
+#define ERR_X_OFF 2
+  error_table = malloc(sizeof(float *) * (s->h + 5));
+  for (y = 0; y < s->h + 5; y++) {
+    error_table[y] = malloc(sizeof(float) * (s->w + 5));
+    memset(error_table[y], 0x00, sizeof(float) * (s->w + 5));
+  }
+
+  for(y = 0; y < s->h; ++y) {
+    for(x = 0; x < s->w; ++x) {
+      Uint8 r, g, b;
+      float in;
+      float current_error;
+      sdl_get_pixel(s, x, y, &r, &g, &b);
+
+      // Convert the pixel value to grayscale i.e. intensity
+      in = .299 * r + .587 * g + .114 * b;
+
+      if (threshold > in + error_table[y][x + ERR_X_OFF]) {
+        sdl_set_pixel(s, x, y, 0, 0, 0);
+        current_error = in + error_table[y][x + ERR_X_OFF];
+      } else {
+        sdl_set_pixel(s, x, y, 255, 255, 255);
+        current_error = in + error_table[y][x + ERR_X_OFF] - 255;
+      }
+      error_table[y][x + 1 + ERR_X_OFF] += (int)(8.0L / 32.0L * current_error);
+      error_table[y][x + 2 + ERR_X_OFF] += (int)(4.0L / 32.0L * current_error);
+      error_table[y + 1][x + ERR_X_OFF] += (int)(8.0L / 32.0L * current_error);
+      error_table[y + 1][x + 1 + ERR_X_OFF] += (int)(4.0L / 32.0L * current_error);
+      error_table[y + 1][x + 2 + ERR_X_OFF] += (int)(2.0L / 32.0L * current_error);
+      error_table[y + 1][x - 1 + ERR_X_OFF] += (int)(4.0L / 32.0L * current_error);
+      error_table[y + 1][x - 2 + ERR_X_OFF] += (int)(2.0L / 32.0L * current_error);
+
+    }
+  }
+
+  for (y = 0; y < s->h + 4; y++) {
+    free(error_table[y]);
+  }
+  free(error_table);
 }
 
 static int sdl_color_hgr(SDL_Surface *src, unsigned char *hgr) {
@@ -728,7 +775,7 @@ unsigned char *sdl_to_hgr(const char *filename, char monochrome, int *len) {
 
   sdl_image_scale(image, resized, monochrome ? 0.952381 : 1.904762);
   if (monochrome) {
-    mono_dither(resized);
+    mono_dither_burkes(resized);
     *len = sdl_mono_hgr(resized, grbuf);
   } else {
     color_dither(resized);

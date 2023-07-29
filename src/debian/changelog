@@ -1,4 +1,4 @@
-a2tools (1.2.4) bionic; urgency=medium
+a2tools (1.2.4.1) bionic; urgency=medium
 
   * Rework HGR convert for better B&W dithering
   * Optimize (a lot)
