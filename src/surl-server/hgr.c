@@ -726,7 +726,7 @@ unsigned char *sdl_to_hgr(const char *filename, char monochrome, int *len) {
 
   resized = SDL_CreateRGBSurface (0, monochrome ? 280 : 140, 192, 32, 0, 0, 0, 0);
 
-  sdl_image_scale(image, resized, monochrome ? 1 : 1.904762);
+  sdl_image_scale(image, resized, monochrome ? 0.952381 : 1.904762);
   if (monochrome) {
     mono_dither(resized);
     *len = sdl_mono_hgr(resized, grbuf);
