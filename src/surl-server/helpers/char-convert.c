@@ -6,7 +6,7 @@
 #include <iconv.h>
 #include <langinfo.h>
 #include <locale.h>
-#include "char_convert.h"
+#include "char-convert.h"
 #include "math.h"
 
 static char *do_conv(char *in, char *from, char *to, size_t *new_len) {

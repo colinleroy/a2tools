@@ -22,16 +22,16 @@
 #include <signal.h>
 #include <curl/curl.h>
 #include <arpa/inet.h>
-#include "char_convert.h"
+#include "surl_protocol.h"
 #include "simple_serial.h"
 #include "extended_string.h"
 #include "strsplit.h"
 #include "math.h"
 #include "raw-session.h"
-#include "jq.h"
+#include "char-convert.h"
+#include "jq-get.h"
 #include "html2txt.h"
 #include "hgr.h"
-#include "surl_protocol.h"
 
 #define BUFSIZE 1024
 
@@ -288,7 +288,7 @@ new_req:
           }
           response->hgr_buf = sdl_to_hgr(
               dump_response_to_file(response->buffer, response->size),
-              monochrome, &(response->hgr_len));
+              monochrome, 0, &(response->hgr_len));
         }
       } else {
         printf("RESP: finished\n");

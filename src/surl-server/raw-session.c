@@ -16,7 +16,7 @@
 
 #include "simple_serial.h"
 #include "raw-session.h"
-#include "char_convert.h"
+#include "char-convert.h"
 
 static void send_buf(int sockfd, char *c, int nmemb) {
   fd_set fds;

@@ -1,10 +1,13 @@
 prefix ?= /usr/local
 PROGRAM=surl-server
-SOURCES := main.c raw-session.c char_convert.c jq.c html2txt.c hgr.c \
+SOURCES := main.c raw-session.c \
+	helpers/char-convert.c helpers/jq-get.c helpers/html2txt.c helpers/hgr.c \
 	../lib/extended_string.c ../lib/strsplit.c \
 	../lib/simple_serial.c ../lib/clrzone.c ../lib/extended_conio.c	
 
-CFLAGS= -I ../lib $(shell sdl-config --cflags) -g -O0 -Wall -Wno-deprecated-declarations -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
+hgrconv_SOURCES := hgr-convert.c helpers/hgr.c
+
+CFLAGS= -I ../lib -I helpers $(shell sdl-config --cflags) -g -O0 -Wall -Wno-deprecated-declarations -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
 .PHONY: all clean
 all: $(PROGRAM)
 
@@ -17,7 +20,16 @@ $(PROGRAM): $(SOURCES)
 		$(shell curl-config --libs) \
 		$(shell libpng-config --libs) \
 		$(shell pkg-config --libs SDL_image) \
-		-ljpeg -ljq -lgumbo -o $@
+		-ljq -lgumbo -o $@
+
+hgr-convert: $(hgrconv_SOURCES)
+	gcc $(CFLAGS) \
+		$(shell libpng-config --cflags) \
+		$(shell pkg-config --cflags SDL_image) \
+		$^ \
+		$(shell libpng-config --libs) \
+		$(shell pkg-config --libs SDL_image) \
+		-o $@
 
 clean:
 	rm -f $(PROGRAM) *.o
