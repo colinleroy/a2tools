@@ -105,7 +105,7 @@ static const char *dump_response_to_file(char *buffer, size_t size) {
     fclose(fp);
     return NULL;
   }
-  rewind(fp);
+  fclose(fp);
   return filename;
 }
 
