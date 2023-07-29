@@ -204,6 +204,10 @@ int main(void) {
 
   set_scrollwindow(0, scrh);
 #ifdef __CC65__
+  // Quicker image debug
+  // snprintf(params, BUF_SIZE, "https://piaille.fr %s US_ASCII 1 s 110796581585162452", oauth_token);
+  // exec("mastoimg", params);
+
   exec("mastocli", params);
 #else
   printf("exec(mastocli %s)\n",params);
