@@ -54,7 +54,6 @@ struct _curl_buffer {
 
   char *content_type;
 
-  FILE *orig_img_fp;
   /* do not free */
   unsigned char *hgr_buf;
   size_t hgr_len;
@@ -96,8 +95,9 @@ static void install_sig_handler(void) {
 	sigprocmask(SIG_UNBLOCK, &mask, 0);
 }
 
-static FILE *dump_response_to_file(char *buffer, size_t size) {
-  FILE *fp = fopen("/tmp/imgdata", "w+b");
+static const char *dump_response_to_file(char *buffer, size_t size) {
+  char *filename = "/tmp/imgdata";
+  FILE *fp = fopen(filename, "w+b");
   if (!fp) {
     return NULL;
   }
@@ -106,7 +106,7 @@ static FILE *dump_response_to_file(char *buffer, size_t size) {
     return NULL;
   }
   rewind(fp);
-  return fp;
+  return filename;
 }
 
 int main(int argc, char **argv)
@@ -286,12 +286,9 @@ new_req:
           if (format) {
             format++;
           }
-          if (response->orig_img_fp) {
-            fclose(response->orig_img_fp);
-          }
-          response->orig_img_fp = dump_response_to_file(response->buffer, response->size);
-          response->hgr_buf = img_to_hgr(response->orig_img_fp,
-                                  format, monochrome, &(response->hgr_len));
+          response->hgr_buf = sdl_to_hgr(
+              dump_response_to_file(response->buffer, response->size),
+              monochrome, &(response->hgr_len));
         }
       } else {
         printf("RESP: finished\n");
@@ -466,9 +463,6 @@ static void curl_buffer_free(curl_buffer *curlbuf) {
   free(curlbuf->headers);
   free(curlbuf->content_type);
   free(curlbuf->upload_buffer);
-  if(curlbuf->orig_img_fp) {
-    fclose(curlbuf->orig_img_fp);
-  }
   jv_free(curlbuf->json_data);
   free(curlbuf);
 }

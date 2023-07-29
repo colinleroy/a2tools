@@ -1,3 +1,16 @@
+a2tools (1.2.4) bionic; urgency=medium
+
+  * Rework HGR convert for better B&W dithering
+  * Optimize (a lot)
+
+ -- Colin Leroy-Mira <colin@colino.net>  Sat, 29 Jul 2023 21:28:19 +0200
+
+a2tools (1.2.3) bionic; urgency=medium
+
+  * optimisations, CW, images
+
+ -- Colin Leroy-Mira <colin@colino.net>  Wed, 26 Jul 2023 21:28:19 +0200
+
 a2tools (1.2.1) bionic; urgency=medium
 
   * Initial release.

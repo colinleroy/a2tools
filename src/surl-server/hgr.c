@@ -1,3 +1,28 @@
+/*
+ * Copyright (C) 2023 Colin Leroy-Mira <colin@colino.net>
+ *
+ * This file draws heavily from the following projects:
+ * - http://wsxyz.net/tohgr.html
+ *   No author/copyright info found
+ * - https://www.appleoldies.ca/bmp2dhr/
+ *   Copyright Bill Buckels 2014
+ * - https://github.com/eiroca/apple2graphic
+ *   Copyright (C) 1996-2019 eIrOcA Enrico Croce & Simona Burzio
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ */
+
 /* Thanks to http://wsxyz.net/tohgr.html */
 #include <stdio.h>
 #include <string.h>
@@ -8,26 +33,14 @@
 
 #include "jpeglib.h"
 #include "png.h"
+#include <SDL_image.h>
 
 static unsigned baseaddr[192];
 static unsigned char grbuf[65536];
 
-struct pixel {
-  unsigned char r, g, b;
-};
-
-struct image {
-  unsigned int h, w;
-  struct pixel * p;
-};
-
-typedef struct pixel Pixel;
-typedef struct pixel * PixelRef;
-typedef struct image * ImageRef;
-
 // static ImageRef testimage;
 
-static void initBaseAddrs (void)
+static void init_base_addrs (void)
 {
   unsigned int i, group_of_eight, line_of_eight, group_of_sixtyfour;
 
@@ -41,276 +54,175 @@ static void initBaseAddrs (void)
   }
 }
 
-static Pixel imageGetPixel (ImageRef i, unsigned int x, unsigned int y)
-{
-  Pixel z = {0,0,0};
-  if (x >= i->w) return z;
-  if (y >= i->h) return z;
-  return i->p[(i->w * y) + x];
+static void sdl_set_pixel32(SDL_Surface *surface, int x, int y, Uint32 p) {
+  if (x < surface->w && y < surface->h)
+    *((Uint32*)(surface->pixels) + x + y * surface->w) = p;
 }
 
-static void imagePutPixel (ImageRef i, unsigned int x, unsigned int y, Pixel p)
-{
-  if (x >= i->w) return;
-  if (y >= i->h) return;
-  i->p[(i->w * y) + x] = p;
+static void sdl_set_pixel(SDL_Surface *surface, int x, int y, Uint8 r, Uint8 g, Uint8 b) {
+  sdl_set_pixel32(surface, x, y, SDL_MapRGB(surface->format, r, g, b));
 }
 
-static PixelRef imageGetPixelRef (ImageRef i, unsigned x, unsigned y)
+static Uint32 *sdl_get_pixel32_ref(SDL_Surface *surface, int x, int y)
 {
-  if (y >= i->h) return 0;
-  if (x == i->w && y == 1+i->h) return 0;
-  return i->p + (i->w * y) + x;
+    int bpp = surface->format->BytesPerPixel;
+    /* Here p is the address to the pixel we want to retrieve */
+    Uint8 *p;
+
+    if (x >= surface->w || y >= surface->h)
+      return NULL;
+
+    p = (Uint8 *)surface->pixels + y * surface->pitch + x * bpp;
+    return (Uint32 *)p;
 }
 
-static void imageClear (ImageRef i)
+static Uint32 sdl_get_pixel32(SDL_Surface *surface, int x, int y)
 {
-  memset(i->p, 0, i->w * i->h * sizeof i->p[0]);
+  int bpp = surface->format->BytesPerPixel;
+  /* Here p is the address to the pixel we want to retrieve */
+  Uint8 *p;
+
+  if (x >= surface->w || y >= surface->h)
+    return 0x00;
+
+  p = (Uint8 *)surface->pixels + y * surface->pitch + x * bpp;
+
+  switch (bpp)
+  {
+    case 1:
+      return *p;
+
+    case 2:
+      return *(Uint16 *)p;
+
+    case 3:
+      if (SDL_BYTEORDER == SDL_BIG_ENDIAN)
+        return p[0] << 16 | p[1] << 8 | p[2];
+      else
+        return p[0] | p[1] << 8 | p[2] << 16;
+
+    case 4:
+      return *(Uint32 *)p;
+
+    default:
+      return 0;       /* shouldn't happen, but avoids warnings */
+  }
 }
 
-static int pixelDist (Pixel p1, Pixel p2)
+static void sdl_get_pixel(SDL_Surface *surface, int x, int y, Uint8 *r, Uint8 *g, Uint8 *b) {
+  Uint32 data = sdl_get_pixel32(surface, x, y);
+  SDL_GetRGB(data, surface->format, r, g, b);
+}
+
+static int sdl_pixel_dist (SDL_Surface *s, Uint32 p1, Uint32 p2)
 {
   int d, pd;
-  d = (int)p1.r - (int)p2.r;
+  Uint8 p1r, p1g, p1b, p2r, p2g, p2b;
+  SDL_GetRGB(p1, s->format, &p1r, &p1g, &p1b);
+  SDL_GetRGB(p2, s->format, &p2r, &p2g, &p2b);
+  d = (int)p1r - (int)p2r;
   pd = d * d;
-  d = (int)p1.g - (int)p2.g;
+  d = (int)p1g - (int)p2g;
   pd = pd + d * d;
-  d = (int)p1.b - (int)p2.b;
+  d = (int)p1b - (int)p2b;
   return pd + d * d;
 }
 
-static int pixelDist7 (PixelRef pv1, PixelRef pv2)
+static int sdl_pixel_dist7 (SDL_Surface *s, Uint32 *pv1, Uint32 *pv2)
 {
   int i, d = 0;
   for (i = 0; i < 7; ++i)
-  d = d + pixelDist(pv1[i], pv2[i]);
+    d = d + sdl_pixel_dist(s, pv1[i], pv2[i]);
   return d;
 }
 
-static Pixel alterPixel (Pixel p, int dr, int dg, int db)
+static void sdl_alter_pixel (Uint8 *r, Uint8 *g, Uint8 *b, int dr, int dg, int db)
 {
-  dr += (int)p.r;
-  dg += (int)p.g;
-  db += (int)p.b;
+  dr += *r;
+  dg += *g;
+  db += *b;
   if (dr < 0) dr = 0; else if (dr > 255) dr = 255;
   if (dg < 0) dg = 0; else if (dg > 255) dg = 255;
   if (db < 0) db = 0; else if (db > 255) db = 255;
-  p.r = dr;
-  p.g = dg;
-  p.b = db;
-  return p;
-}
-
-struct obuf {
-  unsigned char *p;
-  unsigned char *n;
-  unsigned int len, size;
-};
-
-static int initobuf (struct obuf *ob)
-{
-  ob->len = 0;
-  ob->size = 4096;
-  ob->n = ob->p = realloc(0, ob->size);
-  return ob->p != 0;
-}
-
-static int ckobuf (struct obuf *ob, int len)
-{
-  unsigned char *p;
-  if (ob->len + len <= ob->size) return 1;
-  p = realloc(ob->p, ob->size + 4096);
-  if (!p) return 0;
-  ob->n = p + (ob->n - ob->p);
-  ob->p = p;
-  ob->size = ob->size + 4096;
-  return 1;
-}
-
-static struct obuf * packBytes (void *vp, unsigned int len)
-{
-  unsigned int ilen, tlen, rlen, x;
-  unsigned char *bp, *ip, *tp, *rp, b;
-  static struct obuf ob;
-
-  if (!initobuf(&ob)) return 0;
-
-  bp = vp;
-  ip = vp;
-  ilen = len;
-
-  while (ilen)
-  {
-    tp = ip;
-    tlen = ilen;
-    b = *tp++;
-    while (--tlen && b == *tp) tp++;
-
-    rlen = tp - ip;
-    if (rlen > 2)
-    {
-      tlen = ip - bp;
-      while (tlen > 0)
-      {
-        x = tlen;
-        if (x >= 64) x = 64;
-        tlen -= x;
-        if (!ckobuf(&ob, x + 1)) return 0;
-        ob.len += (x + 1);
-        *(ob.n)++ = (unsigned char)(x - 1);
-        while (x--)
-        *(ob.n)++ = *bp++;
-      }
-
-      assert(bp == ip);
-
-      if (rlen < 8 && rlen % 4)
-      {
-        if (!ckobuf(&ob, 2)) return 0;
-        *(ob.n)++ = 0x40 | ((unsigned char)(rlen - 1));
-        *(ob.n)++ = b;
-        ob.len += 2;
-        ilen -= rlen;
-        ip += rlen;
-      }
-      else
-      {
-        rlen /= 4;
-        if (rlen > 64) rlen = 64;
-        if (!ckobuf(&ob, 2)) return 0;
-        *(ob.n)++ = 0xC0 | ((unsigned char)(rlen - 1));
-        *(ob.n)++ = b;
-        ob.len += 2;
-        ilen -= (rlen * 4);
-        ip += (rlen * 4);
-      }
-      bp = ip;
-      continue;
-    }
-
-    if (ilen >= 8)
-    {
-      rp = ip;
-      tp = ip + 4;
-      tlen = ilen - 4;
-      while (tlen && *tp == *rp)
-      {
-        tp += 1;
-        rp += 1;
-        tlen -= 1;
-      }
-
-      rlen = tp - ip;
-      if (rlen >= 8)
-      {
-        tlen = ip - bp;
-        while (tlen > 0)
-        {
-          x = tlen;
-          if (x >= 64) x = 64;
-          tlen -= x;
-          if (!ckobuf(&ob, x + 1)) return 0;
-          ob.len += (x + 1);
-          *(ob.n)++ = (unsigned char)(x - 1);
-          while (x--)
-          *(ob.n)++ = *bp++;
-        }
-
-        assert(bp == ip);
-
-        rlen /= 4;
-        if (rlen > 64) rlen = 64;
-        if (!ckobuf(&ob, 5)) return 0;
-        *(ob.n)++ = 0x80 | ((unsigned char)(rlen - 1));
-        *(ob.n)++ = ip[0];
-        *(ob.n)++ = ip[1];
-        *(ob.n)++ = ip[2];
-        *(ob.n)++ = ip[3];
-        ob.len += 5;
-        ilen -= (rlen * 4);
-        ip += (rlen * 4);
-        bp = ip;
-        continue;
-      }
-    }
-
-    ip += 1;
-    ilen -= 1;
-  }
-
-  tlen = ip - bp;
-  while (tlen > 0)
-  {
-    x = tlen;
-    if (x >= 64) x = 64;
-    tlen -= x;
-    if (!ckobuf(&ob, x + 1)) return 0;
-    ob.len += (x + 1);
-    *(ob.n)++ = (unsigned char)(x - 1);
-    while (x--)
-    *(ob.n)++ = *bp++;
-  }
-
-  return &ob;
+  *r = dr;
+  *g = dg;
+  *b = db;
 }
 
 enum DitherType { EDIFF, ATKIN };
 
-static void dither7 (enum DitherType alg, PixelRef buf, PixelRef pal, int numPal)
+static void sdl_dither7 (SDL_Surface *im, enum DitherType alg, Uint32 *buf, Uint32 *pal, int numPal)
 {
   int z,i,d,bd,bi,dr,dg,db;
-
+  Uint8 r, g, b, pr, pg, pb;
   for (z = 0; z < 7; z += 1) {
     bd = bi = 0x7fffffff; // big number
     for (i = 0; i < numPal; ++i) {
-      d = pixelDist(buf[z], pal[i]);
+      d = sdl_pixel_dist(im, buf[z], pal[i]);
       if (d < bd) {
         bd = d;
         bi = i;
       }
     }
 
-    dr = (int)buf[z].r - (int)pal[bi].r;
-    dg = (int)buf[z].g - (int)pal[bi].g;
-    db = (int)buf[z].b - (int)pal[bi].b;
+    SDL_GetRGB(buf[z], im->format, &r, &g, &b);
+    SDL_GetRGB(pal[bi], im->format, &pr, &pg, &pb);
+    dr = (int)r - (int)pr;
+    dg = (int)g - (int)pg;
+    db = (int)b - (int)pb;
 
     if (alg == ATKIN)
     {
-      buf[z+1] = alterPixel(buf[z+1], dr/8, dg/8, db/8);
-      buf[z+2] = alterPixel(buf[z+2], dr/8, dg/8, db/8);
+      SDL_GetRGB(buf[z+1], im->format, &r, &g, &b);
+      sdl_alter_pixel(&r, &g, &b, dr/8, dg/8, db/8);
+      buf[z+1] = SDL_MapRGB(im->format, r, g, b);
+
+      SDL_GetRGB(buf[z+2], im->format, &r, &g, &b);
+      sdl_alter_pixel(&r, &g, &b, dr/8, dg/8, db/8);
+      buf[z+2] = SDL_MapRGB(im->format, r, g, b);
     }
     else
     {
-      buf[z+1] = alterPixel(buf[z+1], dr*7/16, dg*7/16, db*7/16);
+      SDL_GetRGB(buf[z+1], im->format, &r, &g, &b);
+      sdl_alter_pixel(&r, &g, &b, dr*7/16, dg*7/16, db*7/16);
+      buf[z+1] = SDL_MapRGB(im->format, r, g, b);
     }
 
     buf[z] = pal[bi];
   }
 }
 
-static void ditherFromBuf (enum DitherType alg, PixelRef buf, ImageRef im, unsigned x, unsigned y)
+static void sdl_dither_from_buf (enum DitherType alg, Uint32 *p, SDL_Surface *im, unsigned x, unsigned y)
 {
   int i,j,k,dr,dg,db;
-  Pixel ip;
+  Uint8 ipr, ipg, ipb;
+  Uint8 imr, img, imb;
+  Uint8 r, g, b;
 
   for (i = 0; i < 7; ++i)
   {
-    ip = imageGetPixel(im, x+i, y);
-    dr = (int)ip.r - (int)buf[i].r;
-    dg = (int)ip.g - (int)buf[i].g;
-    db = (int)ip.b - (int)buf[i].b;
-    imagePutPixel(im, x+i, y, buf[i]);
+    sdl_get_pixel(im, x+i, y, &imr, &img, &imb);
 
-    if (i == 6)
-    {
-      if (alg == ATKIN)
-      {
-        imagePutPixel(im, x+7, y, alterPixel(imageGetPixel(im, x+7, y), dr/8, dg/8, db/8));
-        imagePutPixel(im, x+8, y, alterPixel(imageGetPixel(im, x+8, y), dr/8, dg/8, db/8));
+    SDL_GetRGB(p[i], im->format, &ipr, &ipg, &ipb);
+    dr = (int)imr - (int)ipr;
+    dg = (int)img - (int)ipg;
+    db = (int)imb - (int)ipb;
+    sdl_set_pixel32(im, x+i, y, p[i]);
+
+    if (i == 6) {
+      if (alg == ATKIN) {
+        sdl_get_pixel(im, x+7, y, &r, &g, &b);
+        sdl_alter_pixel(&r, &g, &b, dr/8, dg/8, db/8);
+        sdl_set_pixel(im, x+7, y, r, g, b);
+        sdl_get_pixel(im, x+8, y, &r, &g, &b);
+        sdl_alter_pixel(&r, &g, &b, dr/8, dg/8, db/8);
+        sdl_set_pixel(im, x+8, y, r, g, b);
       }
       else
       {
-        imagePutPixel(im, x+7, y, alterPixel(imageGetPixel(im, x+7, y), dr*7/16, dg*7/16, db*7/16));
+        sdl_get_pixel(im, x+7, y, &r, &g, &b);
+        sdl_alter_pixel(&r, &g, &b, dr*7/16, dg*7/16, db*7/16);
+        sdl_set_pixel(im, x+7, y, r, g, b);
       }
     }
 
@@ -318,11 +230,15 @@ static void ditherFromBuf (enum DitherType alg, PixelRef buf, ImageRef im, unsig
     {
       if (alg == ATKIN)
       {
-        imagePutPixel(im, x+i, y+2, alterPixel(imageGetPixel(im, x+i, y+2), dr/8, dg/8, db/8));
+        sdl_get_pixel(im, x+i, y+2, &r, &g, &b);
+        sdl_alter_pixel(&r, &g, &b, dr/8, dg/8, db/8);
+        sdl_set_pixel(im, x+i, y+2, r, g, b);
         for (j = 0; j < 3; j += 1)
         {
           k = x + i + j - 1;
-          imagePutPixel(im, k, y+1, alterPixel(imageGetPixel(im, k, y+1), dr/8, dg/8, db/8));
+          sdl_get_pixel(im, k, y+1, &r, &g, &b);
+          sdl_alter_pixel(&r, &g, &b, dr/8, dg/8, db/8);
+          sdl_set_pixel(im, k, y+1, r, g, b);
         }
       }
       else
@@ -331,86 +247,21 @@ static void ditherFromBuf (enum DitherType alg, PixelRef buf, ImageRef im, unsig
         for (j = 0; j < 3; j += 1)
         {
           k = x + i + j - 1;
-          imagePutPixel(im, k, y+1, alterPixel(imageGetPixel(im, k, y+1), dr*f[j]/16, dg*f[j]/16, db*f[j]/16));
+          sdl_get_pixel(im, k, y+1, &r, &g, &b);
+          sdl_alter_pixel(&r, &g, &b, dr*f[j]/16, dg*f[j]/16, db*f[j]/16);
+          sdl_set_pixel(im, k, y+1, r, g, b);
         }
       }
     }
   }
 }
 
-struct paletteEntry {
-  Pixel p;
-  int cnt;
-  unsigned int smr, smg, smb;
-};
-
-struct paletteEntry grpal[] = {
-  {{0x00,0x00,0x00},0,0,0,0},
-  {{0xad,0x18,0x28},0,0,0,0},
-  {{0x55,0x1b,0xe1},0,0,0,0},
-  {{0xe8,0x2c,0xf8},0,0,0,0},
-  {{0x01,0x73,0x63},0,0,0,0},
-  {{0x7e,0x82,0x7f},0,0,0,0},
-  {{0x34,0x85,0xfc},0,0,0,0},
-  {{0xd1,0x95,0xff},0,0,0,0},
-  {{0x33,0x6f,0x00},0,0,0,0},
-  {{0xd0,0x81,0x01},0,0,0,0},
-  {{0x7f,0x7e,0x77},0,0,0,0},
-  {{0xfe,0x93,0xa3},0,0,0,0},
-  {{0x1d,0xd6,0x09},0,0,0,0},
-  {{0xae,0xea,0x22},0,0,0,0},
-  {{0x5b,0xeb,0xd9},0,0,0,0},
-  {{0xff,0xff,0xff},0,0,0,0}
-};
-
-struct colorSpace {
-  unsigned int npixels;
-  unsigned char min[3];
-  unsigned char max[3];
-  unsigned char del[3];
-  unsigned char pvec[320][3];
-  int ridx;
-  int rval;
-};
-
-static Pixel greyPals[15][16];
-static unsigned char lumiVals[15][16] = {
-  {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF},
-  {0x22, 0x22, 0x22, 0x22, 0x66, 0x66, 0x66, 0x66, 0xAA, 0xAA, 0xAA, 0xAA, 0xEE, 0xEE, 0xEE, 0xEE},
-  {0x00, 0x00, 0x00, 0x22, 0x22, 0x22, 0x44, 0x66, 0x99, 0xBB, 0xDD, 0xDD, 0xDD, 0xFF, 0xFF, 0xFF},
-  {0x00, 0x00, 0x11, 0x11, 0x22, 0x22, 0x33, 0x33, 0x44, 0x44, 0x55, 0x55, 0x66, 0x66, 0x77, 0x77},
-  {0x11, 0x11, 0x22, 0x22, 0x33, 0x33, 0x44, 0x44, 0x55, 0x55, 0x66, 0x66, 0x77, 0x77, 0x88, 0x88},
-  {0x22, 0x22, 0x33, 0x33, 0x44, 0x44, 0x55, 0x55, 0x66, 0x66, 0x77, 0x77, 0x88, 0x88, 0x99, 0x99},
-  {0x33, 0x33, 0x44, 0x44, 0x55, 0x55, 0x66, 0x66, 0x77, 0x77, 0x88, 0x88, 0x99, 0x99, 0xAA, 0xAA},
-  {0x44, 0x44, 0x55, 0x55, 0x66, 0x66, 0x77, 0x77, 0x88, 0x88, 0x99, 0x99, 0xAA, 0xAA, 0xBB, 0xBB},
-  {0x55, 0x55, 0x66, 0x66, 0x77, 0x77, 0x88, 0x88, 0x99, 0x99, 0xAA, 0xAA, 0xBB, 0xBB, 0xCC, 0xCC},
-  {0x66, 0x66, 0x77, 0x77, 0x88, 0x88, 0x99, 0x99, 0xAA, 0xAA, 0xBB, 0xBB, 0xCC, 0xCC, 0xDD, 0xDD},
-  {0x77, 0x77, 0x88, 0x88, 0x99, 0x99, 0xAA, 0xAA, 0xBB, 0xBB, 0xCC, 0xCC, 0xDD, 0xDD, 0xEE, 0xEE},
-  {0x88, 0x88, 0x99, 0x99, 0xAA, 0xAA, 0xBB, 0xBB, 0xCC, 0xCC, 0xDD, 0xDD, 0xEE, 0xEE, 0xFF, 0xFF},
-  {0x00, 0x22, 0x44, 0x66, 0x88, 0xAA, 0xBB, 0xBB, 0xCC, 0xCC, 0xDD, 0xDD, 0xEE, 0xEE, 0xFF, 0xFF},
-  {0x00, 0x00, 0x11, 0x11, 0x22, 0x22, 0x33, 0x33, 0x44, 0x44, 0x66, 0x77, 0x99, 0xBB, 0xDD, 0xFF},
-  {0x00, 0x22, 0x44, 0x55, 0x66, 0x66, 0x77, 0x77, 0x88, 0x88, 0x99, 0x99, 0xAA, 0xBB, 0xDD, 0xFF}
-};
-
-static void initGreyPals (void)
-{
-  int i,j;
-
-  for (i = 0; i < 15; i += 1) {
-    for (j = 0; j < 16; j += 1) {
-      greyPals[i][j].r = lumiVals[i][j];
-      greyPals[i][j].g = lumiVals[i][j];
-      greyPals[i][j].b = lumiVals[i][j];
-    }
-  }
-}
-
-enum fileType { FTC00002, FTC10001, FTC10002 };
-
-static void hgrBytes (Pixel *p, unsigned char *hgr)
+static void sdl_hgr_bytes (SDL_Surface *src, int startx, int starty, unsigned char *hgr)
 {
   int x, y, s, i;
   unsigned char b, h;
+  Uint8 pr, pg, pb;
+  Uint32 *p = sdl_get_pixel32_ref(src, startx, starty);
 
   i = s = 0;
   for (y = 0; y < 2; ++y)
@@ -421,7 +272,8 @@ static void hgrBytes (Pixel *p, unsigned char *hgr)
       if (s == 0)
       {
         s = 1;
-        switch (p[i].r)
+        SDL_GetRGB(p[i], src->format, &pr, &pg, &pb);
+        switch (pr)
         {
         case 0x34:  /* blue */
           h = 0x80;
@@ -441,20 +293,25 @@ static void hgrBytes (Pixel *p, unsigned char *hgr)
       {
         s = 0;
         i = i + 1;
-        switch (p[i].r)
-        {
-        case 0xd0:  /* orange */
-          h = 0x80;
-          /* continue */
-        case 0x1d:  /* green */
-        case 0xff:  /* white */
-          b = (b >> 1) | 0x80;
-          break;
-        case 0xe8:  /* violet */
-        case 0x34:  /* blue */
-        default:  /* black */
-          b = b >> 1;
-          break;
+        if (startx + i < src->w) {
+          SDL_GetRGB(p[i], src->format, &pr, &pg, &pb);
+          switch (pr)
+          {
+          case 0xd0:  /* orange */
+            h = 0x80;
+            /* continue */
+          case 0x1d:  /* green */
+          case 0xff:  /* white */
+            b = (b >> 1) | 0x80;
+            break;
+          case 0xe8:  /* violet */
+          case 0x34:  /* blue */
+          default:  /* black */
+            b = b >> 1;
+            break;
+          }
+        } else {
+          b = h = 0;
         }
       }
     }
@@ -463,122 +320,60 @@ static void hgrBytes (Pixel *p, unsigned char *hgr)
   }
 }
 
-static unsigned int hgrDither (enum DitherType alg, ImageRef src, unsigned char *hgr, int pack)
+static void color_dither (SDL_Surface *src)
 {
-  static Pixel pal1[] = {{0,0,0},{0xe8,0x2c,0xf8},{0x1d,0xd6,0x09},{0xff,0xff,0xff}};
-  static Pixel pal2[] = {{0,0,0},{0x34,0x85,0xfc},{0xd0,0x81,0x01},{0xff,0xff,0xff}};
+  static Uint32 pal1[4];
+  static Uint32 pal2[4];
+  enum DitherType alg = EDIFF;
   int y,x,z,d1,d2;
-  unsigned int ad, i;
-  PixelRef pp;
-  Pixel buf1[9], buf2[9];
-  struct obuf *ob;
+  Uint32 *pp;
+  Uint32 buf1[9], buf2[9];
+  static int pal_init = 0;
+  if (!pal_init) {
+    pal1[0] = SDL_MapRGB(src->format, 0, 0, 0);
+    pal1[1] = SDL_MapRGB(src->format, 0xe8,0x2c,0xf8);
+    pal1[2] = SDL_MapRGB(src->format, 0x1d,0xd6,0x09);
+    pal1[3] = SDL_MapRGB(src->format, 0xff,0xff,0xff);
 
+    pal2[0] = SDL_MapRGB(src->format, 0, 0, 0);
+    pal2[1] = SDL_MapRGB(src->format, 0x34,0x85,0xfc);
+    pal2[2] = SDL_MapRGB(src->format, 0xd0,0x81,0x01);
+    pal2[3] = SDL_MapRGB(src->format, 0xff,0xff,0xff);
+    pal_init = 1;
+  }
   for (y = 0; y < src->h; y += 1) {
     for (x = 0; x < src->w; x += 7) {
       for (z = 0; z < 9; z += 1) {
-        buf1[z] = imageGetPixel(src, x+z, y);
-        buf2[z] = imageGetPixel(src, x+z, y);
+        buf1[z] = sdl_get_pixel32(src, x+z, y);
+        buf2[z] = sdl_get_pixel32(src, x+z, y);
       }
-      dither7(alg, buf1, pal1, 4);
-      dither7(alg, buf2, pal2, 4);
-      pp = imageGetPixelRef(src, x, y);
-      d1 = pixelDist7(pp, buf1);
-      d2 = pixelDist7(pp, buf2);
+      sdl_dither7(src, alg, buf1, pal1, 4);
+      sdl_dither7(src, alg, buf2, pal2, 4);
+      pp = sdl_get_pixel32_ref(src, x, y);
+      d1 = sdl_pixel_dist7(src, pp, buf1);
+      d2 = sdl_pixel_dist7(src, pp, buf2);
       if (d1 < d2)
-      ditherFromBuf(alg, buf1, src, x, y);
+        sdl_dither_from_buf(alg, buf1, src, x, y);
       else
-      ditherFromBuf(alg, buf2, src, x, y);
+        sdl_dither_from_buf(alg, buf2, src, x, y);
     }
   }
-
-  for (y = 0; y < src->h; y += 1) {
-    i = 0;
-    ad = baseaddr[y];
-    for (x = 0; x < src->w; x += 7) {
-      hgrBytes(imageGetPixelRef(src,x,y), hgr+ad+i);
-      i += 2;
-    }
-  }
-
-  if (!pack) return 0x2000;
-
-  ob = packBytes(hgr, 0x2000);
-  if (!ob) return 0;
-
-  memcpy(hgr, ob->p, ob->len);
-  free(ob->p);
-  return ob->len;
 }
 
-static unsigned int hgrMonoDither (enum DitherType alg, ImageRef src, unsigned char *hgr, int pack)
-{
-  static Pixel pal1[] = {{0,0,0},{0xff,0xff,0xff}};
-  int y,x,z;
-  unsigned int ad, i;
-  Pixel buf1[9];
-  struct obuf *ob;
 
-  for (y = 0; y < src->h; y += 1) {
-    for (x = 0; x < src->w; x += 7) {
-      for (z = 0; z < 9; z += 1) {
-        buf1[z] = imageGetPixel(src, x+z, y);
-      }
-      dither7(alg, buf1, pal1, 2);
-      ditherFromBuf(alg, buf1, src, x, y);
-    }
-  }
-
-  for (y = 0; y < src->h; y += 1) {
-    i = 0;
-    ad = baseaddr[y];
-    for (x = 0; x < src->w; x += 7) {
-      hgrBytes(imageGetPixelRef(src,x,y), hgr+ad+i);
-      i += 2;
-    }
-  }
-
-  if (!pack) return 0x2000;
-
-  ob = packBytes(hgr, 0x2000);
-  if (!ob) return 0;
-
-  memcpy(hgr, ob->p, ob->len);
-  free(ob->p);
-  return ob->len;
-}
-
-static ImageRef imageNew (unsigned int w, unsigned int h)
-{
-  ImageRef ip;
-  ip = malloc(sizeof *ip);
-  if (!ip) return 0;
-  ip->w = w;
-  ip->h = h;
-  ip->p = malloc(ip->h * ip->w * sizeof ip->p[0]);
-  if (ip->p) return ip;
-  free(ip);
-  return 0;
-}
-
-static void imageFree (ImageRef im)
-{
-  free(im->p);
-  free(im);
-}
-
-static void imageScale (ImageRef src, ImageRef dst, float asprat)
+static void sdl_image_scale (SDL_Surface *src, SDL_Surface *dst, float asprat)
 {
   int sw, sh, bx, sx, sy;
+  Uint8 red, green, blue;
   float srcw, srch, dstw, dsth, r, g, b;
   float xfactor, yfactor, scalefactor, x, y, nx, ny, ix, iy, nix, niy, area;
-  Pixel p;
-
-  imageClear(dst);
 
   srcw = (float)src->w;
   srch = (float)src->h;
   dstw = (float)dst->w;
   dsth = (float)dst->h;
+
+  SDL_LockSurface(dst);
 
   if (srch > dsth || srcw > dstw)
   {
@@ -635,11 +430,11 @@ static void imageScale (ImageRef src, ImageRef dst, float asprat)
               area = area * (nx - ix);
             }
 
-            p = imageGetPixel(src, (int)ix, (int)iy);
+            sdl_get_pixel(src, (int)ix, (int)iy, &red, &green, &blue);
 
-            r += (area * (float)p.r);
-            g += (area * (float)p.g);
-            b += (area * (float)p.b);
+            r += (area * (float)red);
+            g += (area * (float)green);
+            b += (area * (float)blue);
           }
         }
 
@@ -651,489 +446,24 @@ static void imageScale (ImageRef src, ImageRef dst, float asprat)
         if (g < 0.0) g = 0.0; else if (g >= 256.0) g = 255.0;
         if (b < 0.0) b = 0.0; else if (b >= 256.0) b = 255.0;
 
-        p.r = (int)(r+0.1);
-        p.g = (int)(g+0.1);
-        p.b = (int)(b+0.1);
+        r = (int)(r+0.1);
+        g = (int)(g+0.1);
+        b = (int)(b+0.1);
 
-        imagePutPixel(dst, sx, sy, p);
+        sdl_set_pixel(dst, sx, sy, r, g, b);
         sx += 1;
       }
       sx = bx;
       sy += 1;
     }
   }
-}
-
-struct cmap {
-  char cx[8];
-  Pixel px;
-};
-
-static int cmapcmp (const void *a, const void *b)
-{
-  char *x, *y;
-  x = ((struct cmap *)a)->cx;
-  y = ((struct cmap *)b)->cx;
-  return strcmp(x,y);
-}
-
-static ImageRef imageFromJPG (FILE *f)
-{
-  ImageRef ip = 0;
-  PixelRef pp = 0;
-  JSAMPLE * scanline = 0;
-  struct jpeg_decompress_struct cinfo;
-  struct jpeg_error_mgr jerr;
-
-  cinfo.err = jpeg_std_error(&jerr);
-  jpeg_create_decompress(&cinfo);
-  jpeg_stdio_src(&cinfo, f);
-
-  jpeg_read_header(&cinfo, TRUE);
-  jpeg_start_decompress(&cinfo);
-
-  ip = imageNew(cinfo.output_width, cinfo.output_height);
-  if (!ip) goto emalloc;
-
-  scanline = malloc(ip->w * cinfo.out_color_components * sizeof(JSAMPLE));
-  if (!scanline) goto emalloc;
-
-  pp = ip->p;
-  while (cinfo.output_scanline < cinfo.output_height)
-  {
-    int icnt;
-    JSAMPLE *sp = scanline;
-
-    jpeg_read_scanlines(&cinfo, &scanline, 1);
-
-    if (cinfo.out_color_components == 1)
-    {
-      for (icnt = ip->w; icnt; --icnt, ++pp)
-      {
-        pp->r = pp->g = pp->b = *sp++;
-      }
-    }
-    else
-    {
-      for (icnt = ip->w; icnt; --icnt, ++pp)
-      {
-        pp->r = *sp++;
-        pp->g = *sp++;
-        pp->b = *sp++;
-      }
-    }
-  }
-
-  jpeg_finish_decompress(&cinfo);
-  jpeg_destroy_decompress(&cinfo);
-  if (scanline) free(scanline);
-  return ip;
-
-emalloc:
-  if (ip && ip->p) free(ip->p);
-  if (ip) free(ip);
-  return 0;
-}
-
-static ImageRef imageFromPNG(FILE *fp)
-{
-  ImageRef ip = 0;
-  PixelRef pp = 0;
-  png_structp png_ptr;
-  png_infop info_ptr;
-  png_bytep scanline = NULL;
-  png_byte color_type;
-  int y, i;
-  char header[8];    // 8 is the maximum size that can be checked
-
-  /* open file and test for it being a png */
-  if (fread(header, 1, 8, fp) < 8 || png_sig_cmp((png_const_bytep)header, 0, 8)) {
-    printf("HGR: [read_png_file] File is not recognized as a PNG file");
-    return NULL;
-  }
-
-
-  /* initialize stuff */
-  png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-
-  if (!png_ptr) {
-    printf("HGR: [read_png_file] png_create_read_struct failed");
-    return NULL;
-  }
-
-  info_ptr = png_create_info_struct(png_ptr);
-  if (!info_ptr) {
-    printf("HGR: [read_png_file] png_create_info_struct failed");
-    return NULL;
-  }
-
-  if (setjmp(png_jmpbuf(png_ptr))) {
-    printf("HGR: [read_png_file] Error during init_io");
-    return NULL;
-  }
-
-  png_init_io(png_ptr, fp);
-  png_set_sig_bytes(png_ptr, 8);
-
-  png_read_info(png_ptr, info_ptr);
-  color_type = png_get_color_type(png_ptr, info_ptr);
-  ip = imageNew(png_get_image_width(png_ptr, info_ptr), png_get_image_height(png_ptr, info_ptr));
-  if (!ip) goto emalloc;  
-  png_read_update_info(png_ptr, info_ptr);
-
-  scanline = malloc(png_get_rowbytes(png_ptr,info_ptr));
-  if (!scanline) goto emalloc;
-  /* read file */
-  if (setjmp(png_jmpbuf(png_ptr))) {
-    printf("HGR: [read_png_file] Error during read_image");
-    goto emalloc;
-  }
-
-  pp = ip->p;
-  for (y=0; y<ip->h; y++){
-    png_bytep sp = scanline;
-    png_read_row(png_ptr, scanline, NULL);
-    for (i = 0; i < ip->w; i++, ++pp)
-    {
-      pp->r = *sp++;
-      pp->g = *sp++;
-      pp->b = *sp++;
-      if(color_type == PNG_COLOR_TYPE_RGB_ALPHA) sp++;
-    }
-  }
-  if (scanline) free(scanline);
-  return ip;
-
-emalloc:
-  if (scanline) free(scanline);
-  if (ip && ip->p) free(ip->p);
-  if (ip) free(ip);
-  return 0;    
-}
-
-static char sbuf[65536];
-static ImageRef imageFromXPM (FILE *f)
-{
-  int c, n, ncol, pwid;
-  unsigned int r, g, b;
-  char *t;
-  char pb[8];
-  ImageRef ip = 0;
-  PixelRef pp;
-  Pixel zp = {0,0,0};
-  struct cmap *cp = 0, *ep;
-
-  c = 0;
-  while (c != '"' && !feof(f)) c = fgetc(f);
-  if (feof(f)) return 0;
-
-  ip = malloc(sizeof *ip);
-  if (!ip) goto emalloc;
-  ip->p = NULL;
-
-  /* coverity[tainted_argument] */
-  if (!fgets(sbuf, 65536, f)) goto expm;
-  sscanf(sbuf, "%d %d %d %d", &(ip->w), &(ip->h), &ncol, &pwid);
-
-  ip->p = malloc(ip->h * ip->w * sizeof ip->p[0]);
-  if (!ip->p) goto emalloc;
-  cp = malloc(ncol * sizeof *cp);
-  if (!cp) goto emalloc;
-
-  for (n = 0; n < ncol; ++n) {
-    if (!fgets(sbuf, 65536, f)) goto expm;
-    cp[n].px = zp;
-    memset(cp[n].cx, 0, 8);
-    strncpy(cp[n].cx, sbuf+1, pwid);
-    t = strchr(sbuf+1+pwid, 'c');
-    if (t && *(t+2) == '#') {
-      sscanf(t+3, "%2x%2x%2x", &r, &g, &b);
-      cp[n].px.r = r;
-      cp[n].px.g = g;
-      cp[n].px.b = b;
-    }
-  }
-
-  qsort(cp, ncol, sizeof *cp, cmapcmp);
-  pp = ip->p;
-  memset(pb, 0, 8);
-  for (n = 0; n < ip->h; ++n) {
-    if (!fgets(sbuf, 65536, f)) goto expm;
-    t = sbuf+1;
-    for (c = 0; c < ip->w; ++c) {
-      strncpy(pb, t+pwid*c, pwid);
-      ep = bsearch(pb, cp, ncol, sizeof *cp, cmapcmp);
-      if (ep) *pp++ = ep->px;
-      else *pp++ = zp;
-    }
-  }
-  free(cp);
-  return ip;
-
-expm:
-  printf("HGR: Error reading XPM file\n");
-emalloc:
-  if (ip && ip->p) free(ip->p);
-  if (ip) free(ip);
-  if (cp) free(cp);
-  return 0;
-}
-
-unsigned char *img_to_hgr(FILE *in, char *format, char monochrome, size_t *len) {
-  ImageRef im = NULL, sm = NULL;
-
-  initGreyPals();
-  initBaseAddrs();
-
-  if (format == NULL || in == NULL) {
-    *len = 0;
-    return NULL;
-  }
-
-  if (!strcasecmp(format, "xpm")) {
-    im = imageFromXPM(in);
-    if (!im) {
-      *len = 0;
-      return NULL;
-    }
-  } else if (!strcasecmp(format, "jpg") || !strcasecmp(format, "jpeg")) {
-    im = imageFromJPG(in);
-    if (!im) {
-      *len = 0;
-      return NULL;
-    }
-  } else if (!strcasecmp(format, "png")) {
-    im = imageFromPNG(in);
-    if (!im) {
-      *len = 0;
-      return NULL;
-    }
-  }
-  if (im == NULL) {
-    printf("HGR: Unhandled format %s\n", format);
-    *len = 0;
-    return NULL;
-  }
-
-  sm = imageNew(140, 192);
-  imageScale(im, sm, 1.904762);
-  if (monochrome) {
-    *len = hgrMonoDither(EDIFF, sm, grbuf, 0);
-  } else {
-    *len = hgrDither(EDIFF, sm, grbuf, 0);
-  }
-
-  imageFree(im);
-  imageFree(sm);
-
-  return grbuf;
+  SDL_UnlockSurface(dst);
 }
 
 static inline void setRGB(png_byte *ptr, int value) {
   ptr[0] = (value >> 16) & 255;
   ptr[1] = (value >> 8) & 255;
   ptr[2] = value & 255;
-}
-
-static int get_line_offset( int y) {
-  /* Ugly but the mem layout is ugly anyway */
-  switch (y) {
-    case 0: return 0;
-    case 1: return 1024;
-    case 2: return 2048;
-    case 3: return 3072;
-    case 4: return 4096;
-    case 5: return 5120;
-    case 6: return 6144;
-    case 7: return 7168;
-    case 8: return 128;
-    case 9: return 1152;
-    case 10: return 2176;
-    case 11: return 3200;
-    case 12: return 4224;
-    case 13: return 5248;
-    case 14: return 6272;
-    case 15: return 7296;
-    case 16: return 256;
-    case 17: return 1280;
-    case 18: return 2304;
-    case 19: return 3328;
-    case 20: return 4352;
-    case 21: return 5376;
-    case 22: return 6400;
-    case 23: return 7424;
-    case 24: return 384;
-    case 25: return 1408;
-    case 26: return 2432;
-    case 27: return 3456;
-    case 28: return 4480;
-    case 29: return 5504;
-    case 30: return 6528;
-    case 31: return 7552;
-    case 32: return 512;
-    case 33: return 1536;
-    case 34: return 2560;
-    case 35: return 3584;
-    case 36: return 4608;
-    case 37: return 5632;
-    case 38: return 6656;
-    case 39: return 7680;
-    case 40: return 640;
-    case 41: return 1664;
-    case 42: return 2688;
-    case 43: return 3712;
-    case 44: return 4736;
-    case 45: return 5760;
-    case 46: return 6784;
-    case 47: return 7808;
-    case 48: return 768;
-    case 49: return 1792;
-    case 50: return 2816;
-    case 51: return 3840;
-    case 52: return 4864;
-    case 53: return 5888;
-    case 54: return 6912;
-    case 55: return 7936;
-    case 56: return 896;
-    case 57: return 1920;
-    case 58: return 2944;
-    case 59: return 3968;
-    case 60: return 4992;
-    case 61: return 6016;
-    case 62: return 7040;
-    case 63: return 8064;
-    case 64: return 40;
-    case 65: return 1064;
-    case 66: return 2088;
-    case 67: return 3112;
-    case 68: return 4136;
-    case 69: return 5160;
-    case 70: return 6184;
-    case 71: return 7208;
-    case 72: return 168;
-    case 73: return 1192;
-    case 74: return 2216;
-    case 75: return 3240;
-    case 76: return 4264;
-    case 77: return 5288;
-    case 78: return 6312;
-    case 79: return 7336;
-    case 80: return 296;
-    case 81: return 1320;
-    case 82: return 2344;
-    case 83: return 3368;
-    case 84: return 4392;
-    case 85: return 5416;
-    case 86: return 6440;
-    case 87: return 7464;
-    case 88: return 424;
-    case 89: return 1448;
-    case 90: return 2472;
-    case 91: return 3496;
-    case 92: return 4520;
-    case 93: return 5544;
-    case 94: return 6568;
-    case 95: return 7592;
-    case 96: return 552;
-    case 97: return 1576;
-    case 98: return 2600;
-    case 99: return 3624;
-    case 100: return 4648;
-    case 101: return 5672;
-    case 102: return 6696;
-    case 103: return 7720;
-    case 104: return 680;
-    case 105: return 1704;
-    case 106: return 2728;
-    case 107: return 3752;
-    case 108: return 4776;
-    case 109: return 5800;
-    case 110: return 6824;
-    case 111: return 7848;
-    case 112: return 808;
-    case 113: return 1832;
-    case 114: return 2856;
-    case 115: return 3880;
-    case 116: return 4904;
-    case 117: return 5928;
-    case 118: return 6952;
-    case 119: return 7976;
-    case 120: return 936;
-    case 121: return 1960;
-    case 122: return 2984;
-    case 123: return 4008;
-    case 124: return 5032;
-    case 125: return 6056;
-    case 126: return 7080;
-    case 127: return 8104;
-    case 128: return 80;
-    case 129: return 1104;
-    case 130: return 2128;
-    case 131: return 3152;
-    case 132: return 4176;
-    case 133: return 5200;
-    case 134: return 6224;
-    case 135: return 7248;
-    case 136: return 208;
-    case 137: return 1232;
-    case 138: return 2256;
-    case 139: return 3280;
-    case 140: return 4304;
-    case 141: return 5328;
-    case 142: return 6352;
-    case 143: return 7376;
-    case 144: return 336;
-    case 145: return 1360;
-    case 146: return 2384;
-    case 147: return 3408;
-    case 148: return 4432;
-    case 149: return 5456;
-    case 150: return 6480;
-    case 151: return 7504;
-    case 152: return 464;
-    case 153: return 1488;
-    case 154: return 2512;
-    case 155: return 3536;
-    case 156: return 4560;
-    case 157: return 5584;
-    case 158: return 6608;
-    case 159: return 7632;
-    case 160: return 592;
-    case 161: return 1616;
-    case 162: return 2640;
-    case 163: return 3664;
-    case 164: return 4688;
-    case 165: return 5712;
-    case 166: return 6736;
-    case 167: return 7760;
-    case 168: return 720;
-    case 169: return 1744;
-    case 170: return 2768;
-    case 171: return 3792;
-    case 172: return 4816;
-    case 173: return 5840;
-    case 174: return 6864;
-    case 175: return 7888;
-    case 176: return 848;
-    case 177: return 1872;
-    case 178: return 2896;
-    case 179: return 3920;
-    case 180: return 4944;
-    case 181: return 5968;
-    case 182: return 6992;
-    case 183: return 8016;
-    case 184: return 976;
-    case 185: return 2000;
-    case 186: return 3024;
-    case 187: return 4048;
-    case 188: return 5072;
-    case 189: return 6096;
-    case 190: return 7120;
-    case 191: return 8144;
-    default:
-      printf("HGR: Unexpected y value %d\n", y);
-      return 0;
-  }
 }
 
 char *hgr_to_png(char *hgr_buf, size_t hgr_len, char monochrome, size_t *len)
@@ -1163,6 +493,8 @@ char *hgr_to_png(char *hgr_buf, size_t hgr_len, char monochrome, size_t *len)
     0x0066ff,
     0xffffff
   };
+
+  init_base_addrs();
 
   if (hgr_len != 8192) {
     printf("HGR: Wrong HGR size %zd\n", hgr_len);
@@ -1212,7 +544,7 @@ char *hgr_to_png(char *hgr_buf, size_t hgr_len, char monochrome, size_t *len)
 
   if (!monochrome) {
     for (y=0; y < height; y++){
-      char *ord_hgr = hgr_buf + get_line_offset(y);
+      char *ord_hgr = hgr_buf + baseaddr[y];
       x = 0;
       do {
         v1 = *(ord_hgr++);
@@ -1249,7 +581,7 @@ char *hgr_to_png(char *hgr_buf, size_t hgr_len, char monochrome, size_t *len)
     }
   } else {
     for (y=0; y < height; y++){
-      char *ord_hgr = hgr_buf + get_line_offset(y);
+      char *ord_hgr = hgr_buf + baseaddr[y];
       char sx;
 
       x = 0;
@@ -1289,10 +621,131 @@ cleanup:
     free(row);
   if (info_ptr) {
     png_free_data(png_ptr, info_ptr, PNG_FREE_ALL, -1);
-		free(info_ptr);
-	}
+    free(info_ptr);
+  }
   if (png_ptr)
     png_destroy_write_struct(&png_ptr, (png_infopp)NULL);
 
   return out_buf;
+}
+
+static void mono_dither(SDL_Surface* s) {
+  Uint32 x, y;
+
+  // Ordered dither kernel
+  Uint16 map[8][8] = {
+    { 1, 49, 13, 61, 4, 52, 16, 64 },
+    { 33, 17, 45, 29, 36, 20, 48, 32 },
+    { 9, 57, 5, 53, 12, 60, 8, 56 },
+    { 41, 25, 37, 21, 44, 28, 40, 24 },
+    { 3, 51, 15, 63, 2, 50, 14, 62 },
+    { 25, 19, 47, 31, 34, 18, 46, 30 },
+    { 11, 59, 7, 55, 10, 58, 6, 54 },
+    { 43, 27, 39, 23, 42, 26, 38, 22 }
+  };
+
+  for(y = 0; y < s->h; ++y) {
+    for(x = 0; x < s->w; ++x) {
+      Uint8 r, g, b;
+      sdl_get_pixel(s, x, y, &r, &g, &b);
+
+      // Convert the pixel value to grayscale i.e. intensity
+      float in = .299 * r + .587 * g + .114 * b;
+
+      // Apply the ordered dither kernel
+      Uint16 val = in + in * map[y % 8][x % 8] / 63;
+
+      // If >= 192 choose white, else choose black
+      if(val >= 192)
+        val = 255;
+      else
+        val = 0;
+
+      // Put the pixel back in the image
+      sdl_set_pixel(s, x, y, val, val, val);
+    }
+  }
+}
+
+static int sdl_color_hgr(SDL_Surface *src, unsigned char *hgr) {
+  int x, y;
+  unsigned int ad, i;
+
+  for (y = 0; y < src->h; y += 1) {
+    i = 0;
+    ad = baseaddr[y];
+    for (x = 0; x < src->w; x += 7) {
+      sdl_hgr_bytes(src, x, y, hgr+ad+i);
+      i += 2;
+    }
+  }
+
+  return 0x2000;
+}
+
+static int sdl_mono_hgr(SDL_Surface *src, unsigned char *hgr) {
+  int x, y, base, xoff, pixel;
+  Uint32 color;
+  unsigned char *ptr;
+  unsigned char dhbmono[] = {0x7e,0x7d,0x7b,0x77,0x6f,0x5f,0x3f};
+  unsigned char dhwmono[] = {0x1,0x2,0x4,0x8,0x10,0x20,0x40};
+
+  memset(hgr, 0x00, 0x2000);
+
+  for (y = 0; y < src->h; y++) {
+    base = baseaddr[y];
+    for (x = 0; x < src->w; x++) {
+      xoff = base + x/7;
+      pixel = x%7;
+      ptr = hgr + xoff;
+      color = sdl_get_pixel32(src, x, y);
+      if (color != 0x00) {
+        ptr[0] |= dhwmono[pixel];
+      } else {
+        ptr[0] &= dhbmono[pixel];
+      }
+    }
+  }
+
+  return 0x2000;
+}
+
+unsigned char *sdl_to_hgr(const char *filename, char monochrome, int *len) {
+  SDL_Surface *image, *resized;
+  int debug = 0;
+
+  init_base_addrs();
+
+  /* Open the image file */
+  image = IMG_Load(filename);
+  if ( image == NULL ) {
+    printf("Couldn't load image: %s\n", SDL_GetError());
+    *len = 0;
+    return NULL;
+  }
+
+  resized = SDL_CreateRGBSurface (0, monochrome ? 280 : 140, 192, 32, 0, 0, 0, 0);
+
+  sdl_image_scale(image, resized, monochrome ? 1 : 1.904762);
+  if (monochrome) {
+    mono_dither(resized);
+    *len = sdl_mono_hgr(resized, grbuf);
+  } else {
+    color_dither(resized);
+    *len = sdl_color_hgr(resized, grbuf);
+  }
+
+  if (debug) {
+    FILE *out;
+    SDL_SaveBMP(resized, "/tmp/surl-server.dithered.bmp");
+
+    out = fopen("/tmp/surl-server.result.hgr", "wb");
+    fwrite(grbuf, 1, *len, out);
+    fclose(out);
+  }
+
+  SDL_FreeSurface(resized);
+  SDL_FreeSurface(image);
+
+  return grbuf;
 }
