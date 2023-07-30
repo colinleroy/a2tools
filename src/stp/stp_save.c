@@ -146,6 +146,10 @@ void stp_save(char *full_filename, surl_response *resp) {
   filename = cleanup_filename(filename);
 #endif
 
+  /* Unlink before writing (a change in AppleSingle header
+   * would not be reflected, as it's written only at CREATE)
+   */
+  unlink(filename);
   fp = fopen(filename, "w");
   if (fp == NULL) {
     gotoxy(6, 15);
