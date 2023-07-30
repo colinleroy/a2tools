@@ -15,6 +15,12 @@
 #define IMG_BUF_SIZE 2048
 static char img_buf[IMG_BUF_SIZE];
 
+#ifdef USE_HGR2
+ #define NUMCOLS 40
+#else
+ #define NUMCOLS 80
+#endif
+
 media *media_new(void) {
   media *m;
   
@@ -66,7 +72,7 @@ static media *media_new_from_json(char *urls_selector, char *alt_text_selector) 
         }
         ++w;
         ++n;
-        if (n == (18*40) - 2) {
+        if (n == (16*NUMCOLS) - 2) {
           /* shorten description, we don't scroll them yet */
           img_buf[n-3] = '.';
           img_buf[n-2] = '.';
