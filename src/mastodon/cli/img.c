@@ -56,10 +56,12 @@ char *hgr_page;
   #define HGR_PAGE 0x4000
   #define TEXTMODE VIDEOMODE_40COL
   #define NUMCOLS 40
+  #define PROGRESS_STEPS 32
 #else
   #define HGR_PAGE 0x2000
   #define TEXTMODE VIDEOMODE_80COL
   #define NUMCOLS 80
+  #define PROGRESS_STEPS 64
   #define ADD_LOW_HEAP 1
 #endif
 
@@ -154,7 +156,7 @@ static void img_display(media *m, char idx, char num_images) {
       len = ntohs(len);
 
       if (len == HGR_LEN) {
-        int r = 0, b = HGR_LEN/32;
+        int r = 0, b = HGR_LEN/PROGRESS_STEPS;
         while (len > 0) {
           progress_bar(0, 23, NUMCOLS, r, HGR_LEN);
           simple_serial_read((char *)HGR_PAGE + r, b);
