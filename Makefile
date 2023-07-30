@@ -26,6 +26,7 @@ all clean:
 
 net.dsk: $(net_disk_PROGS)
 	cp $(CLEANDISK) $@; \
+	java -jar bin/ac.jar -n $@ NETWORKTOOLS
 	java -jar bin/ac.jar -p $@ BASIC.SYSTEM SYS < bin/loader.system; \
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
@@ -35,6 +36,7 @@ net.dsk: $(net_disk_PROGS)
 
 homectrl.dsk: $(homectrl_disk_PROGS)
 	cp $(CLEANDISK) $@; \
+	java -jar bin/ac.jar -n $@ HOMECONTROL
 	java -jar bin/ac.jar -p $@ BASIC.SYSTEM SYS < bin/loader.system; \
 	# java -jar bin/ac.jar -p $@ SRVURL TXT < src/homecontrol-client/SRVURL; \
 	for prog in $^; do \
@@ -45,6 +47,7 @@ homectrl.dsk: $(homectrl_disk_PROGS)
 
 mastoperso.dsk: $(mastodon_disk_PROGS)
 	cp $(CLEANDISK) $@; \
+	java -jar bin/ac.jar -n $@ MASTODON
 	java -jar bin/ac.jar -p $@ MASTODON.SYSTEM SYS < bin/loader.system; \
 	java -jar bin/ac.jar -p $@ mastsettings TXT < src/mastodon/mastsettings; \
 	java -jar bin/ac.jar -p $@ clisettings TXT < src/mastodon/clisettings; \
@@ -57,6 +60,7 @@ mastoperso.dsk: $(mastodon_disk_PROGS)
 
 mastodon.dsk: $(mastodon_disk_PROGS)
 	cp $(CLEANDISK) $@; \
+	java -jar bin/ac.jar -n $@ MASTODON
 	java -jar bin/ac.jar -p $@ MASTODON.SYSTEM SYS < bin/loader.system; \
 	java -jar bin/ac.jar -d $@ BASIC; \
 	for prog in $^; do \

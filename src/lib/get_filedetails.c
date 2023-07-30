@@ -17,6 +17,9 @@ int get_filedetails(char *filename, unsigned long *size, unsigned char *type, un
   *auxtype = 0;
 
   dir = opendir(".");
+  if (dir == NULL) {
+    return -1;
+  }
   while (d = readdir(dir)) {
     if (!strcasecmp(filename, d->d_name)) {
       *type = d->d_type;
