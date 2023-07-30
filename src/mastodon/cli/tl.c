@@ -914,9 +914,13 @@ static int show_list(list *l) {
         cur_action = COMPOSE;
         return 0;
       case 'r':
+        if (!root_status)
+          break;
         cur_action = REPLY;
         return 0;
       case 'i':
+        if (!root_status || root_status->n_images == 0)
+          break;
         cur_action = IMAGES;
         return 0;
       case 's':
@@ -1049,7 +1053,7 @@ void cli(void) {
           disp_status = get_top_status(l[cur_list]);
           if (l[cur_list]->account && !disp_status) {
             launch_command("mastoimg", translit_charset, monochrome?"1":"0", "a", l[cur_list]->account->id);
-          } else if (disp_status) {
+          } else if (disp_status && disp_status->n_images) {
             launch_command("mastoimg", translit_charset, monochrome?"1":"0", "s", disp_status->id);
           }
           cur_action = NAVIGATE;

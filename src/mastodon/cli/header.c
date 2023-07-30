@@ -62,8 +62,10 @@ void print_header(list *l, status *root_status, notification *root_notif) {
 
   if (root_status) {
     dputs("Toot:              \r\n"
-          " Reply    : R      \r\n"
-          " Images   : I      \r\n");
+          " Reply    : R      \r\n");
+    if (root_status->n_images > 0) {
+      dputs(" Images   : I      \r\n");
+    }
     if ((root_status->favorited_or_reblogged & FAVOURITED) != 0) {
       dputs(" Unfav.   : F      \r\n");
     } else {
