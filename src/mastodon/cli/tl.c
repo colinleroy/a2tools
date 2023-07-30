@@ -1046,10 +1046,11 @@ void cli(void) {
           break;
       case IMAGES:
           save_state(l, cur_list);
-          if (l[cur_list]->account) {
+          disp_status = get_top_status(l[cur_list]);
+          if (l[cur_list]->account && !disp_status) {
             launch_command("mastoimg", translit_charset, monochrome?"1":"0", "a", l[cur_list]->account->id);
-          } else {
-            launch_command("mastoimg", translit_charset, monochrome?"1":"0", "s", get_top_status(l[cur_list])->id);
+          } else if (disp_status) {
+            launch_command("mastoimg", translit_charset, monochrome?"1":"0", "s", disp_status->id);
           }
           cur_action = NAVIGATE;
           break;
