@@ -53,9 +53,14 @@ char *hgr_page;
 #endif
 
 #ifdef USE_HGR2
-#define HGR_PAGE 0x4000
+  #define HGR_PAGE 0x4000
+  #define TEXTMODE VIDEOMODE_40COL
+  #define NUMCOLS 40
 #else
-#define HGR_PAGE 0x2000
+  #define HGR_PAGE 0x2000
+  #define TEXTMODE VIDEOMODE_80COL
+  #define NUMCOLS 80
+  #define ADD_LOW_HEAP 1
 #endif
 
 static void init_hgr(void) {
@@ -115,9 +120,10 @@ static void toggle_legend(char force) {
 #endif
 }
 
-static void set_legend(char *str) {
-  set_hscrollwindow(0, 40);
+static void set_legend(char *str, int idx, int num_images) {
+  set_hscrollwindow(0, NUMCOLS);
   clrscr();
+  cprintf("Image %d/%d: \r\n\r\n", idx + 1, num_images);
   if (str && str[0])
     cputs(str);
   else
@@ -126,7 +132,7 @@ static void set_legend(char *str) {
   print_free_ram();
 }
 
-static void img_display(media *m, char idx) {
+static void img_display(media *m, char idx, char num_images) {
   surl_response *resp;
   size_t len;
 
@@ -150,24 +156,24 @@ static void img_display(media *m, char idx) {
       if (len == HGR_LEN) {
         int r = 0, b = HGR_LEN/32;
         while (len > 0) {
-          progress_bar(0, 23, 40, r, HGR_LEN);
+          progress_bar(0, 23, NUMCOLS, r, HGR_LEN);
           simple_serial_read((char *)HGR_PAGE + r, b);
           len -= b;
           r+= b;
 
         }
-        clrzone(0, 22, 39, 23);
+        clrzone(0, 22, NUMCOLS-1, 23);
         toggle_legend(0);
       } else {
-        set_legend("Bad response, not an HGR file.");
+        set_legend("Bad response, not an HGR file.", idx, num_images);
         toggle_legend(1);
       }
     } else {
-      set_legend("Request error.");
+      set_legend("Request error.", idx, num_images);
       toggle_legend(1);
     }
   } else {
-    set_legend("Request failed.");
+    set_legend("Request failed.", idx, num_images);
     toggle_legend(1);
   }
   surl_response_free(resp);
@@ -178,7 +184,12 @@ int main(int argc, char **argv) {
   media *m;
   char i, c;
 
-  videomode(VIDEOMODE_40COL);
+#ifdef __CC65__
+#ifdef ADD_LOW_HEAP
+  _heapadd ((void *) 0x0803, 0x17FD);
+#endif
+#endif
+  videomode(TEXTMODE);
 
   if (argc < 6) {
     cputs("Missing parameters.\r\n");
@@ -219,8 +230,8 @@ int main(int argc, char **argv) {
 
   i = 0;
   while (1) {
-    set_legend(m->media_alt_text[i]);
-    img_display(m, i);
+    set_legend(m->media_alt_text[i], i, m->n_media);
+    img_display(m, i, m->n_media);
 getc_again:
     c = cgetc();
     switch(tolower(c)) {
