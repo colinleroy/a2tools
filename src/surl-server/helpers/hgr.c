@@ -375,13 +375,16 @@ static void sdl_image_scale (SDL_Surface *src, SDL_Surface *dst, float asprat)
 
   SDL_LockSurface(dst);
 
-  if (srch > dsth || srcw > dstw)
+  if (srch != dsth || srcw != dstw)
   {
     xfactor = srcw / dstw / asprat;
     yfactor = srch / dsth;
 
     scalefactor = xfactor;
     if (yfactor > scalefactor) scalefactor = yfactor;
+    if (srcw < dstw && srch < dsth) {
+      scalefactor = 1.0L;
+    }
 
     sw = (int)(srcw / scalefactor / asprat);
     sh = (int)(srch / scalefactor);
