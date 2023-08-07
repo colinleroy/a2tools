@@ -37,7 +37,7 @@ DEPS :=
 
 CC65_TARGET = apple2enh
 CFLAGS  = -I ../lib -I api -I cli -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
-CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x0400 -DSERIAL_TO_LANGCARD
+CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x0400 -DSERIAL_TO_LANGCARD -C ../../config/apple2enh-noexit.cfg
 #Using start address 0x4000 is easier than HGR page 2, and also allows to use 80 columns
 mastoimg_CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x0400 --start-addr 0x4000 # -DUSE_HGR2 -C ../../config/apple2enh-hgr2.cfg
 GCCCFLAGS = -g -O0 -Wall $(shell sdl-config --cflags)

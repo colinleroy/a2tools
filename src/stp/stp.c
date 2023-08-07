@@ -74,7 +74,7 @@ char *get_start_url(void) {
 
   start_url = malloc(BUFSIZE + 1);
   start_url[0] = '\0';
-  dget_text(start_url, BUFSIZE, NULL);
+  dget_text(start_url, BUFSIZE, NULL, 0);
   if (strchr(start_url,'\n'))
     *strchr(start_url,'\n') = '\0';
 
@@ -100,7 +100,7 @@ char *get_start_url(void) {
   
   login = malloc(BUFSIZE + 1);
   login[0] = '\0';
-  dget_text(login, BUFSIZE, NULL);
+  dget_text(login, BUFSIZE, NULL, 0);
   if (strchr(login,'\n'))
     *strchr(login,'\n') = '\0';
 
@@ -111,7 +111,7 @@ char *get_start_url(void) {
     password[0] = '\0';
     printf("Password: ");
     echo(0);
-    dget_text(password, BUFSIZE, NULL);
+    dget_text(password, BUFSIZE, NULL, 0);
     echo(1);
     free(last_password);
     changed = 1;

@@ -42,7 +42,6 @@ char monochrome = 1;
 #define SHOW_SEARCH_RES      7
 #define NAVIGATE             8
 #define BACK                 9
-#define QUIT                10
 #define CONFIGURE           11
 #define COMPOSE             15
 #define REPLY               16
@@ -52,6 +51,7 @@ char monochrome = 1;
 
 static char cur_action;
 static char search_buf[50];
+static char search_type = 'm';
 
 static void print_list(list *l);
 
@@ -60,9 +60,9 @@ static status *get_top_status(list *l) {
   signed char first = l->first_displayed_post;
 
   root_status = NULL;
-  if (l->kind == SHOW_NOTIFICATIONS) 
+  if (l->kind == SHOW_NOTIFICATIONS)
     goto err_out;
-  
+
   if (first >= 0 && first < l->n_posts) {
     root_status = (status *)l->displayed_posts[first];
     if (root_status && root_status->reblog) {
@@ -117,7 +117,7 @@ static int print_account(account *a, char *scrolled) {
 static int print_notification(notification *n) {
   char width;
   char *w;
-  
+
   width = scrw - LEFT_COL_WIDTH - 1;
   n->displayed_at = wherey();
   cprintf("%s - %s", n->display_name, n->created_at);
@@ -179,7 +179,7 @@ static char load_around(list *l, char to_load, char *first, char *last, char **n
       loaded = api_get_posts(tl_endpoints[l->kind], to_load, first, last, tl_filter[l->kind], ".[].id", new_ids);
       break;
     case SHOW_SEARCH_RES:
-      loaded = api_search(to_load, search_buf, first, last, new_ids);
+      loaded = api_search(to_load, search_buf, 'm', first, last, new_ids);
       break;
     case SHOW_FULL_STATUS:
       loaded = api_get_status_and_replies(to_load, l->root, l->leaf_root, first, last, new_ids);
@@ -231,7 +231,7 @@ static char load_next_posts(list *l) {
       /* strcpy to avoid memory fragmentation */
       strcpy(l->ids[i], l->ids[offset]);
     }
-    
+
     /* Set new ones at end */
     for (i = list_len - loaded; i < list_len; i++) {
       offset = i - (list_len - loaded);
@@ -290,7 +290,7 @@ static char load_prev_posts(list *l) {
       /* strcpy to avoid memory fragmentation */
       strcpy(l->ids[offset], l->ids[i]);
     }
-    
+
     /* Set new ones at first */
     for (i = 0; i < loaded; i++) {
       l->displayed_posts[i] = NULL;
@@ -311,19 +311,36 @@ static char load_prev_posts(list *l) {
   return loaded;
 }
 
+static char search_footer(char c) {
+  switch (tolower(c)) {
+    case 'm':
+    case 'a':
+      search_type = tolower(c);
+      break;
+    default:
+      break;
+  }
+  gotoxy(0,1);
+  cprintf("(%c) Messages (%c) Account   (Open-Apple + M/A)\r\n",
+          search_type == 'm' ? '*':' ',
+          search_type == 'a' ? '*':' ');
+  chline(scrw - LEFT_COL_WIDTH - 1);
+  gotoxy(0, 0);
+  return 0;
+}
+
 static int show_search(void) {
   set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
 
   scrolldn();
   scrolldn();
-  
-  gotoxy(0,1);
-  chline(scrw - LEFT_COL_WIDTH - 1);
-  gotoxy(0, 0);
+  scrolldn();
+
+  search_footer(search_type);
   dputs("Search: ");
 
   search_buf[0] = '\0';
-  dget_text(search_buf, 49, NULL);
+  dget_text(search_buf, 49, search_footer, 0);
 
   if (search_buf[0] != '\0') {
     clrscr();
@@ -331,6 +348,7 @@ static int show_search(void) {
     return 1;
   }
 
+  scrollup();
   scrollup();
   scrollup();
 
@@ -383,7 +401,7 @@ static list *build_list(char *root, char *leaf_root, char kind) {
           break;
       }
     }
-  } 
+  }
   if (n_posts > 0 && !found_root) {
     l->displayed_posts[0] = item_get(l, 0, 0);
   }
@@ -423,7 +441,7 @@ static void uncompact_list(list *l) {
   first = l->first_displayed_post;
   if (first >= 0) {
     full = (l->root && !strcmp(l->root, l->ids[first]));
-    l->displayed_posts[first] = 
+    l->displayed_posts[first] =
       item_get(l, first, full);
   }
 }
@@ -517,7 +535,7 @@ update:
 static void shift_posts_down(list *l) {
   char i;
   char scroll_val;
-  
+
   if (l->first_displayed_post == l->n_posts)
     return;
 
@@ -593,7 +611,7 @@ static int shift_posts_up(list *l) {
     }
     if (l->post_height[first] == -1) {
       if (l->kind != SHOW_NOTIFICATIONS) {
-        l->post_height[first] = 
+        l->post_height[first] =
           calc_post_height((status *)l->displayed_posts[first]);
       } else {
         l->post_height[first] = 4;
@@ -620,7 +638,7 @@ static int shift_posts_up(list *l) {
 static void launch_command(char *command, char *p1, char *p2, char *p3, char *p4) {
   char *params;
   params = malloc(127);
-  snprintf(params, 127, "%s %s %s %s %s %s", 
+  snprintf(params, 127, "%s %s %s %s %s %s",
             instance_url, oauth_token,
             p1?p1:"", p2?p2:"", p3?p3:"", p4?p4:"");
 #ifdef __CC65__
@@ -761,7 +779,7 @@ static int load_state(list ***lists) {
       *strchr(gen_buf, '\n') = '\0';
       l->leaf_root = strdup(gen_buf);
     }
-  
+
     /* coverity[tainted_argument] */
     fgets(gen_buf, BUF_SIZE, fp);
     l->last_displayed_post = atoi(gen_buf);
@@ -814,7 +832,7 @@ static int load_state(list ***lists) {
       }
     }
     if (!loaded && l->first_displayed_post > -1) {
-      l->displayed_posts[l->first_displayed_post] = 
+      l->displayed_posts[l->first_displayed_post] =
           item_get(l, l->first_displayed_post, 1);
     }
   }
@@ -847,11 +865,11 @@ static void background_load(list *l) {
 /* returns 1 to reload */
 static int show_list(list *l) {
   char c;
-  
+
   while (1) {
     status *root_status;
     notification *root_notif;
-    
+
     if (l->kind == SHOW_NOTIFICATIONS) {
       root_status = NULL;
       root_notif = (notification *)l->displayed_posts[l->first_displayed_post];
@@ -859,7 +877,7 @@ static int show_list(list *l) {
       root_status = (status *)get_top_status(l);
       root_notif = NULL;
     }
-    
+
     print_header(l, root_status, root_notif);
 
     gotoxy(LEFT_COL_WIDTH - 4, scrh - 1);
@@ -962,7 +980,7 @@ void cli(void) {
     cur_action = SHOW_HOME_TIMELINE;
   }
 
-  while (cur_action != QUIT) {
+  while (1) {
     switch(cur_action) {
       case SHOW_HOME_TIMELINE:
       case SHOW_LOCAL_TIMELINE:
@@ -1005,12 +1023,15 @@ void cli(void) {
             strncpy(new_root, disp_notif->account_id, sizeof(new_root));
           }
         }
+navigate_new_list:
         compact_list(l[cur_list - 1]);
         l = realloc(l, (cur_list + 1) * sizeof(list *));
         l[cur_list] = build_list(new_root, new_leaf_root, cur_action);
         clrscrollwin();
+        /*
         cur_action = NAVIGATE;
         break;
+        */
       case NAVIGATE:
         if (show_list(l[cur_list])) {
           /* reload, freeing the list
@@ -1030,7 +1051,7 @@ void cli(void) {
           clrscrollwin();
           cur_action = NAVIGATE;
         } else {
-          cur_action = QUIT;
+          cur_action = NAVIGATE;
         }
         break;
       case CONFIGURE:
@@ -1060,18 +1081,28 @@ void cli(void) {
           break;
       case SEARCH:
           if (show_search()) {
-            cur_action = SHOW_SEARCH_RES;
+            if (search_type == 'm') {
+              cur_action = SHOW_SEARCH_RES;
+            } else {
+              char **acc_id = malloc(sizeof(char *));
+              int loaded = api_search(1, search_buf, 'a', NULL, NULL, acc_id);
+              if (loaded > 0) {
+                strncpy(new_root, acc_id[0], sizeof(new_root));
+                free(acc_id[0]);
+                free(acc_id);
+                cur_action = SHOW_ACCOUNT;
+                prev_list = l[cur_list];
+                ++cur_list;
+                goto navigate_new_list;
+              }
+              free(acc_id);
+            }
           } else {
             cur_action = NAVIGATE;
           }
           break;
-      case QUIT:
-        goto out;
     }
   }
-out:
-  free_list(l[cur_list]);
-  free(l);
 }
 
 int main(int argc, char **argv) {

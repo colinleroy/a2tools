@@ -18,9 +18,10 @@ int api_get_account_posts(account *a, char to_load, char *load_before, char *loa
   return api_get_posts(gen_buf, to_load, load_before, load_after, NULL, ".[].id", post_ids);
 }
 
-int api_search(char to_load, char *search, char *load_before, char *load_after, char **post_ids) {
+int api_search(char to_load, char *search, char search_type, char *load_before, char *load_after, char **post_ids) {
   char *w;
-  snprintf(gen_buf, 255, "&type=statuses&q=");
+  snprintf(gen_buf, 255, "&type=%s&q=",
+           search_type == 'm' ? "statuses":"accounts");
 
   /* very basic urlencoder, encodes everything */
   w = gen_buf + 17; /* 17 = strlen(gen_buf) */;
@@ -30,7 +31,10 @@ int api_search(char to_load, char *search, char *load_before, char *load_after, 
     ++search;
   }
 
-  return api_get_posts(SEARCH_ENDPOINT, to_load, load_before, load_after, gen_buf, ".statuses[].id", post_ids);
+  if (search_type == 'm')
+    return api_get_posts(SEARCH_ENDPOINT, to_load, load_before, load_after, gen_buf, ".statuses[].id", post_ids);
+  else
+    return api_get_posts(SEARCH_ENDPOINT, to_load, load_before, load_after, gen_buf, ".accounts[].id", post_ids);
 }
 
 int api_get_posts(char *endpoint, char to_load, char *load_before, char *load_after, char *filter, char *sel, char **post_ids) {
