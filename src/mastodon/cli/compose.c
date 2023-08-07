@@ -75,7 +75,6 @@ static void update_cw(void) {
   }
 }
 static char dgt_cmd_cb(char c) {
-  char x, y;
   switch(tolower(c)) {
     case 's':    return 1;
     case CH_ESC: cancelled = 1;                       return 1;
@@ -86,14 +85,11 @@ static char dgt_cmd_cb(char c) {
     case 'u':    compose_audience = COMPOSE_UNLISTED; break;
     case 'm':    compose_audience = COMPOSE_MENTION;  break;
   }
-  x = wherex();
-  y = wherey();
   set_scrollwindow(0, scrh);
   update_compose_audience();
   update_cw();
   print_free_ram();
   set_scrollwindow(top + 1, top + COMPOSE_FIELD_HEIGHT);
-  gotoxy(x, y);
   return 0;
 }
 
@@ -154,12 +150,14 @@ static void add_image() {
   dputs("File name: ");
   media_files[n_medias] = malloc(32);
   media_files[n_medias][0] = '\0';
-  dget_text(media_files[n_medias], 32, NULL);
+  if (dget_text(media_files[n_medias], 32, NULL, 0) == NULL) {
+    return;
+  }
 
   dputs("\r\nDescription: ");
   media_descriptions[n_medias] = malloc(512);
   media_descriptions[n_medias][0] = '\0';
-  dget_text(media_descriptions[n_medias], 512, NULL);
+  dget_text(media_descriptions[n_medias], 512, NULL, 0);
 
 try_again:
   dputs("\r\nUploading...\r\n");
@@ -189,7 +187,7 @@ static void open_cw_menu(void) {
   clrzone(0, top + COMPOSE_FIELD_HEIGHT + 2, scrw - LEFT_COL_WIDTH - 2, top + COMPOSE_FIELD_HEIGHT + 2);
   gotoxy(0, top + COMPOSE_FIELD_HEIGHT + 2);
   cputs("(*) CW: ");
-  dget_text(cw, sizeof(cw) - 1, NULL);
+  dget_text(cw, sizeof(cw) - 1, NULL, 0);
   update_cw();
 
   set_scrollwindow(top + 1, top + COMPOSE_FIELD_HEIGHT);
@@ -276,7 +274,7 @@ static char *handle_compose_input(char *reply_to_account) {
 
 resume_composing:
   setup_gui();
-  if (dget_text(text, 500, dgt_cmd_cb) == NULL) {
+  if (dget_text(text, 500, dgt_cmd_cb, 1) == NULL) {
     free(text);
     text = NULL;
     goto out;

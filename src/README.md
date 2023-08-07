@@ -6,8 +6,9 @@ How to MOK: https://ursache.io/posts/signed-kernel-module-debian-2023/
 git clone https://github.com/freemed/tty0tty
 cd tty0tty-1.2/module
 make
+cd ..
 /usr/src/linux-headers-$(uname -r)/scripts/sign-file sha256 ../mok/MOK.priv ../mok/MOK.der ./module/tty0tty.ko
-sudo cp tty0tty.ko /lib/modules/$(uname -r)/kernel/drivers/misc/
+sudo cp module/tty0tty.ko /lib/modules/$(uname -r)/kernel/drivers/misc/
 sudo depmod
 sudo modprobe tty0tty
 sudo chmod 666 /dev/tnt*

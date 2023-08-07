@@ -101,7 +101,7 @@ static int load_settings(void) {
   login[0] = '\0';
   oauth_code[0] = '\0';
   oauth_token[0] = '\0';
-  
+
   if (fp != NULL) {
     if (fgets(instance_url, BUF_SIZE, fp) > 0)
       *strchr(instance_url, '\n') = '\0';
@@ -138,7 +138,7 @@ reenter_settings:
 
     dputs("Your instance: ");
     instance_url[0] = '\0';
-    dget_text(instance_url, BUF_SIZE, NULL);
+    dget_text(instance_url, BUF_SIZE, NULL, 0);
     *strchr(instance_url, '\n') = '\0';
     if (instance_url[0] == '\0') {
       goto reenter_settings;
@@ -150,9 +150,9 @@ reenter_settings:
     dputs("If on a non-US keyboard, use @ instead of arobase.\r\n");
     dputs("Your login: ");
     login[0] = '\0';
-    dget_text(login, BUF_SIZE, NULL);
+    dget_text(login, BUF_SIZE, NULL, 0);
     *strchr(login, '\n') = '\0';
-    
+
     return 0;
   }
   return -1;
@@ -171,7 +171,7 @@ int main(void) {
 
   clrscr();
   print_logo(scrw);
-  
+
   y = wherey();
   set_scrollwindow(y, scrh);
 

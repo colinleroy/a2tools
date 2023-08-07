@@ -47,7 +47,7 @@ static char *stp_send_dialog() {
 
   printf("Enter file to send, or empty to abort: ");
   gotoxy(0, 20);
-  dget_text(filename, BUFSIZE, NULL);
+  dget_text(filename, BUFSIZE, NULL, 0);
   
   if (strchr(filename, '\n'))
     *strchr(filename, '\n') = '\0';

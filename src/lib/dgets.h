@@ -7,7 +7,7 @@
 #endif
 
 typedef char (*cmd_handler_func) (char);
-char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb);
+char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb, char enter_accepted);
 
 void echo(int on);
 

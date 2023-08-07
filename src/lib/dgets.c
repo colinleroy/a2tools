@@ -104,7 +104,7 @@ static char rewrite_end_of_buffer(char *buf, size_t i, size_t max_i, unsigned ch
   return overflowed;
 }
 
-char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
+char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb, char enter_accepted) {
 #ifdef __CC65__
   char c;
   size_t i = 0, max_i = 0, k;
@@ -140,14 +140,15 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb) {
       if (cmd_cb((c & ~0x80))) {
         goto out;
       }
+      gotoxy(cur_x, cur_y);
     } else if (c == CH_ESC) {
-      if (cmd_cb)
+      if (cmd_cb && enter_accepted)
         continue;
       else {
         max_i = 0;
         goto out;
       }
-    } else if (c == CH_ENTER && !cmd_cb) {
+    } else if (c == CH_ENTER && (!cmd_cb || !enter_accepted)) {
       goto out;
     } else if (c == CH_CURS_LEFT || c == CH_DELETE) {
       if (i > 0) {
