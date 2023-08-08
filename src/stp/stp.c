@@ -218,6 +218,40 @@ static char *build_login_url(char *url) {
   return full_url;
 }
 
+static void get_all(const char *url, char **lines, int n_lines) {
+  int i, r;
+  if (lines == NULL || !stp_confirm_save_all(url)) {
+    return;
+  }
+  for (i = 0; i < n_lines; i++) {
+    surl_response *resp = NULL;
+    char *cur_url = strdup(url);
+    cur_url = url_enter(cur_url, lines[i]);
+    resp = surl_start_request(SURL_METHOD_GET, cur_url, NULL, 0);
+
+    stp_print_result(resp);
+    
+    gotoxy(0, 2);
+
+    if (resp == NULL || resp->size == 0) {
+      surl_response_free(resp);
+      free(cur_url);
+      continue;
+    }
+
+    if (resp->content_type && strcmp(resp->content_type, "directory")) {
+      r = stp_save_dialog(cur_url, resp, 0);
+      stp_print_result(resp);
+    }
+    surl_response_free(resp);
+    free(cur_url);
+    if (r != 0) {
+      break;
+    }
+  }
+  clrzone(0, 2, scrw - 1, 2 + PAGE_HEIGHT);
+}
+
 int main(void) {
   char *url;
   char c;
@@ -233,6 +267,7 @@ int main(void) {
   //clrscr();
 
   stp_print_footer();
+  surl_set_time();
   while(1) {
     surl_response *resp = NULL;
     char *data = NULL, **lines = NULL;
@@ -266,11 +301,10 @@ int main(void) {
     }
 
     if (resp->content_type && strcmp(resp->content_type, "directory")) {
-      stp_save_dialog(url, resp);
+      stp_save_dialog(url, resp, 1);
       clrzone(0, 2, scrw - 1, 2 + PAGE_HEIGHT);
       stp_print_result(resp);
       goto up_dir;
-
     } else {
       data = malloc(resp->size + 1);
       r = surl_receive_data(resp, data, resp->size);
@@ -312,6 +346,10 @@ up_dir:
         if (lines)
           url = url_enter(url, lines[cur_line]);
         full_update = 1;
+        break;
+      case 'a':
+      case 'A':
+        get_all(url, lines, num_lines);
         break;
       case CH_CURS_UP:
         full_update = scroll(-1);

@@ -77,4 +77,6 @@ clean:
 	rm -f *.bin *.x86_64 *.o *.map
 
 upload: all
-	scp masto*.bin diskstation.lan:/volume1/a2repo/
+	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/mastodon/ || \
+	mkdir /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/mastodon/ && \
+	cp masto*.bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/mastodon/

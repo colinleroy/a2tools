@@ -992,6 +992,11 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
 
     surl_server_raw_session(url);
     return NULL;
+  } else if (method == SURL_METHOD_GETTIME) {
+    uint32_t now = htonl((uint32_t)time(NULL));
+    simple_serial_putc(SURL_ANSWER_TIME);
+    simple_serial_write((char *)&now, 4);
+    return NULL;
   } else {
     printf("Unsupported method 0x%02x\n", method);
     curlbuf->response_code = 500;

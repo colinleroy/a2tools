@@ -29,3 +29,8 @@ surlput.x86_64: $(surlput_SOURCES) $(GCCSOURCES)
 
 clean:
 	rm -f surl.bin surl.x86_64 surlput.bin surlput.x86_64 *.o *.map
+
+upload: all
+	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/net/ || \
+	mkdir /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/net/ && \
+	cp surl.bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/net/
