@@ -11,7 +11,8 @@ SOURCES := stp.c stp_cli.c stp_save.c stp_send_file.c stp_delete.c \
 	../lib/scrollwindow.c \
 	../lib/surl_core.c \
 	../lib/surl_receive.c \
-	../lib/surl_send.c
+	../lib/surl_send.c \
+	../lib/surl_set_time.c
 
 CL65SOURCES = ../lib/dputc.s ../lib/scroll.s
 GCC_SOURCES = ../lib/extended_string.c
@@ -38,4 +39,6 @@ clean:
 	rm -f $(PROGRAM).bin $(PROGRAM).x86_64 *.o *.map
 
 upload: all
-	scp $(PROGRAM).bin diskstation.lan:/volume1/a2repo/
+	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/net/ || \
+	mkdir /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/net/ && \
+	cp $(PROGRAM).bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/net/

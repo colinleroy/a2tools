@@ -78,5 +78,26 @@ void stp_print_footer(void) {
   clrzone(0, 22, scrw - 1, 23);
   gotoxy(0, 22);
   printf("Up/Down: navigate, S: send, D: delete\n"
-       "Enter: select - Esc: back");
+         "Enter: select, A: get all, Esc: back");
+}
+
+int stp_confirm_save_all(const char *url) {
+  char *tmp = strdup(url);
+  char *last_part = strrchr(tmp, '/');
+  char c;
+  printxcenteredbox(30, 11);
+  printxcentered(7, last_part);
+  free(tmp);
+
+  gotoxy(6, 10);
+  printf("Save all files?");
+
+  gotoxy(6, 16);
+  chline(28);
+  gotoxy(6, 17);
+  printf("Esc: cancel  !   Enter: Save");
+  do {
+    c = cgetc();
+  } while (c != CH_ENTER && c != CH_ESC);
+  return c == CH_ENTER;
 }

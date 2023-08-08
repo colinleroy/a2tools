@@ -27,7 +27,11 @@ struct _surl_response {
 
 #ifdef __APPLE2ENH__
 #define ntohs(x) (((x) >> 8) + (((x) & 0xff) << 8))
-#define htons(x) (((x) >> 8) + (((x) & 0xff) << 8))
+#define htons(x) ntohs(x)
+
+#define ntohl(x) ((((x) & 0xff000000u) >> 24) | (((x) & 0x00ff0000u) >> 8) \
+                  | (((x) & 0x0000ff00u) << 8) | (((x) & 0x000000ffu) << 24))
+#define htonl(x) ntohl(x)
 #endif
 
 #define BUFSIZE 255
@@ -56,6 +60,9 @@ int __fastcall__ surl_send_data_params(size_t total, int raw);
 
 int __fastcall__ surl_find_line(char *buffer, size_t max_len, char *search_str);
 int __fastcall__ surl_get_json(char *buffer, size_t max_len, char striphtml, char *translit, char *selector);
+
+/* Helper to set the date */
+void __fastcall__ surl_set_time(void);
 
 /* Multipart helpers */
 #define surl_multipart_send_num_fields(x) simple_serial_putc(x)

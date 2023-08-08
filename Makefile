@@ -19,7 +19,7 @@ CLEANDISK = disks/basic-empty.dsk
 
 .PHONY: all clean
 
-all clean:
+all clean upload:
 	for dir in $(SUBDIRS); do \
 		$(MAKE) -C $$dir -f Makefile $@ || exit; \
 	done
@@ -28,6 +28,7 @@ net.dsk: $(net_disk_PROGS)
 	cp $(CLEANDISK) $@; \
 	java -jar bin/ac.jar -n $@ NETWORKTOOLS
 	java -jar bin/ac.jar -p $@ BASIC.SYSTEM SYS < bin/loader.system; \
+	java -jar bin/ac.jar -p $@ STP.SYSTEM SYS < bin/loader.system; \
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
@@ -37,7 +38,7 @@ net.dsk: $(net_disk_PROGS)
 homectrl.dsk: $(homectrl_disk_PROGS)
 	cp $(CLEANDISK) $@; \
 	java -jar bin/ac.jar -n $@ HOMECONTROL
-	java -jar bin/ac.jar -p $@ BASIC.SYSTEM SYS < bin/loader.system; \
+	java -jar bin/ac.jar -p $@ HOMECTRL.SYSTEM SYS < bin/loader.system; \
 	# java -jar bin/ac.jar -p $@ SRVURL TXT < src/homecontrol-client/SRVURL; \
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
@@ -70,6 +71,3 @@ mastodon.dsk: $(mastodon_disk_PROGS)
 	cp $@ dist/; \
 
 dist: clean all net.dsk homectrl.dsk mastoperso.dsk mastodon.dsk
-
-upload: all
-	cp $(net_disk_PROGS) $(homectrl_disk_PROGS) $(mastodon_disk_PROGS) /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/

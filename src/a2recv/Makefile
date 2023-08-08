@@ -27,4 +27,6 @@ clean:
 	rm -f $(PROGRAM).bin $(PROGRAM).x86_64 *.o *.map
 
 upload: all
-	scp $(PROGRAM).bin diskstation.lan:/volume1/a2repo/
+	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/net/ || \
+	mkdir /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/net/ && \
+	cp $(PROGRAM).bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/net/

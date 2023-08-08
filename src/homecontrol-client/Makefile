@@ -49,4 +49,6 @@ clean:
 	rm -f homectrl.bin homectrl.x86_64 grphview.bin grphview.x86_64 *.o *.map
 
 upload: all
-	scp homectrl.bin grphview.bin diskstation.lan:/volume1/a2repo/
+	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/homecontrol/ || \
+	mkdir /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/homecontrol/ && \
+	cp homectrl.bin grphview.bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/homecontrol/

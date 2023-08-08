@@ -54,9 +54,10 @@ char *cleanup_filename(char *in) {
   return in;
 }
 
-void stp_save_dialog(char *url, surl_response *resp) {
+int stp_save_dialog(char *url, surl_response *resp, char confirm) {
   char *filename = strdup(strrchr(url, '/') + 1);
   char c;
+  int r;
 
   printxcenteredbox(30, 11);
   printxcentered(7, filename);
@@ -69,20 +70,26 @@ void stp_save_dialog(char *url, surl_response *resp) {
   gotoxy(6, 16);
   chline(28);
   gotoxy(6, 17);
-  printf("Esc: cancel  !   Enter: Save");
-  do {
-    c = cgetc();
-  } while (c != CH_ENTER && c != CH_ESC);
-  
+  if (confirm) {
+    printf("Esc: cancel  !   Enter: Save");
+    do {
+      c = cgetc();
+    } while (c != CH_ENTER && c != CH_ESC);
+  } else {
+    printf("Preparing...");
+    c = CH_ENTER;
+  }
   if (c == CH_ENTER) {
     gotoxy(6, 17);
     printf("Saving file...              ");
-    stp_save(filename, resp);
+    r = stp_save(filename, resp);
   }
   free(filename);
+
+  return r;
 }
 
-void stp_save(char *full_filename, surl_response *resp) {
+int stp_save(char *full_filename, surl_response *resp) {
   FILE *fp = NULL;
   char *data = NULL;
   char *filename;
@@ -111,6 +118,8 @@ void stp_save(char *full_filename, surl_response *resp) {
   if (!strcasecmp(filetype, "TXT")) {
     _filetype = PRODOS_T_TXT;
     _auxtype  = PRODOS_AUX_T_TXT_SEQ;
+  } else if (!strcasecmp(filetype,"HGR")) {
+    _filetype = PRODOS_T_BIN;
   } else if (!strcasecmp(filetype,"BIN")) {
     _filetype = PRODOS_T_BIN;
 
@@ -140,6 +149,7 @@ void stp_save(char *full_filename, surl_response *resp) {
     free(filename);
     filename = strdup(full_filename);
     _filetype = PRODOS_T_TXT;
+    _auxtype  = PRODOS_AUX_T_TXT_SEQ;
   }
 #endif
 
@@ -214,4 +224,5 @@ err_out:
   }
   free(filename);
   free(data);
+  return had_error;
 }

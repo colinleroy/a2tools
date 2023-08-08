@@ -1,5 +1,7 @@
 SUBDIRS = lib a2send a2recv surl-server homecontrol-client mastodon telnet surl stp
 INSTALL_SUBDIRS = a2send a2recv surl-server
+UPLOAD_SUBDIRS = a2send a2recv homecontrol-client mastodon telnet surl stp
+
 .PHONY: all clean
 
 all clean:
@@ -10,6 +12,11 @@ all clean:
 #hack for debian packaging
 install:
 	for dir in $(INSTALL_SUBDIRS); do \
+		$(MAKE) -C $$dir -f Makefile $@ || exit; \
+	done
+
+upload:
+	for dir in $(UPLOAD_SUBDIRS); do \
 		$(MAKE) -C $$dir -f Makefile $@ || exit; \
 	done
 
