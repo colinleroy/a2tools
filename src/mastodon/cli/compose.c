@@ -102,7 +102,11 @@ static void setup_gui(void)
   gotoxy(0, 0);
 
   if (reply_to) {
-    print_status(reply_to, 0, &scrolled);
+    print_status(reply_to, 0, 0, &scrolled);
+    if (reply_to->spoiler_text) {
+      strncpy(cw, reply_to->spoiler_text, sizeof(cw) - 1);
+      cw[sizeof(cw) - 1] = '\0';
+    }
     if (wherey() > scrh - COMPOSE_HEIGHT) {
       clrzone(0, scrh - COMPOSE_HEIGHT, scrw - LEFT_COL_WIDTH - 2, scrh - 1);
       gotoxy(0, scrh - COMPOSE_HEIGHT);

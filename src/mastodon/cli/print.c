@@ -26,7 +26,7 @@
 #include "clrzone.h"
 #include "scrollwindow.h"
 
-int print_buf(char *w, char allow_scroll, char *scrolled) {
+int print_buf(char *w, char hide, char allow_scroll, char *scrolled) {
   while (*w) {
     if (allow_scroll && wherey() == scrh - 2) {
       char i;
@@ -47,14 +47,17 @@ int print_buf(char *w, char allow_scroll, char *scrolled) {
       if (wherey() == scrh - 1 && wherex() == scrw - LEFT_COL_WIDTH - 2) {
         return -1;
       }
-      dputc(*w);
+      if (!hide || *w == ' ' || *w == '\r' || *w == '\n')
+        dputc(*w);
+      else
+        dputc('.');
     }
     ++w;
   }
   return 0;
 }
 
-int print_status(status *s, char full, char *scrolled) {
+int print_status(status *s, char hide, char full, char *scrolled) {
   char disp_idx;
   *scrolled = 0;
   disp_idx = wherey();
@@ -79,9 +82,13 @@ int print_status(status *s, char full, char *scrolled) {
   dputs(s->account->username);
   
   CHECK_AND_CRLF();
-
+  if (s->spoiler_text) {
+    dputs("CW: ");
+    dputs(s->spoiler_text);
+    CHECK_AND_CRLF();
+  }
   /* Content */
-  if (print_buf(s->content, (full && disp_idx == 0), scrolled) < 0)
+  if (print_buf(s->content, hide && s->spoiler_text != NULL, (full && disp_idx == 0), scrolled) < 0)
     return -1;
 
   CHECK_AND_CRLF();

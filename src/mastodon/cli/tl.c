@@ -103,7 +103,7 @@ static int print_account(account *a, char *scrolled) {
     gotoy(4);
 
   CHECK_AND_CRLF();
-  if (print_buf(a->note, 1, scrolled) < 0) {
+  if (print_buf(a->note, 0, 1, scrolled) < 0) {
     return -1;
   }
   CHECK_AND_CRLF();
@@ -452,6 +452,8 @@ static void clrscrollwin(void) {
   set_hscrollwindow(0, scrw);
 }
 
+char hide_cw = 1;
+
 static void print_list(list *l) {
   char i, full;
   char bottom = 0;
@@ -508,7 +510,7 @@ update:
 
       if (disp != NULL && bottom == 0) {
         if (l->kind != SHOW_NOTIFICATIONS) {
-          bottom = print_status((status *)disp, full, &scrolled);
+          bottom = print_status((status *)disp, hide_cw || wherey() > 0, full, &scrolled);
         } else {
           bottom = print_notification((notification *)disp);
         }
@@ -560,11 +562,15 @@ static char calc_post_height(status *s) {
   char height;
   char *w, x;
 
+  w = s->reblog ? s->reblog->content : s->content;
+
   height = 6; /* header(username + date + display_name) + one line content + footer(\r\n + stats + line)*/
   if (s->reblog) {
     ++height;
   }
-  w = s->reblog ? s->reblog->content : s->content;
+  if (s->spoiler_text) {
+    ++height;
+  }
 
   x = 0;
   while (*w) {
@@ -899,14 +905,19 @@ static int show_list(list *l) {
         cur_action = BACK;
         return 0;
       case CH_CURS_DOWN:
+        hide_cw = 1;
         shift_posts_down(l);
         break;
       case CH_CURS_UP:
+        hide_cw = 1;
         shift_posts_up(l);
         break;
       case 'p':
         cur_action = SHOW_ACCOUNT;
         return 0;
+      case 'w':
+        hide_cw = !hide_cw;
+        break;
       case 'f':
         if (root_status) {
           api_favourite_status(root_status);
@@ -985,11 +996,15 @@ void cli(void) {
       case SHOW_HOME_TIMELINE:
       case SHOW_LOCAL_TIMELINE:
       case SHOW_GLOBAL_TIMELINE:
-        ++cur_list;
-        if (cur_list > 0) {
-          compact_list(l[cur_list - 1]);
+        if (cur_list < 0 || l[cur_list]->kind != cur_action) {
+          ++cur_list;
+          if (cur_list > 0) {
+            compact_list(l[cur_list - 1]);
+          }
+          l = realloc(l, (cur_list + 1) * sizeof(list *));
+        } else {
+          free_list(l[cur_list]);
         }
-        l = realloc(l, (cur_list + 1) * sizeof(list *));
         l[cur_list] = build_list(NULL, NULL, cur_action);
         clrscrollwin();
         cur_action = NAVIGATE;
@@ -1041,6 +1056,7 @@ navigate_new_list:
           --cur_list;
           clrscrollwin();
         }
+        hide_cw = 1;
         break;
       case BACK:
         if (cur_list > 0) {

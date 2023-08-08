@@ -103,9 +103,8 @@ void init_text(void) {
 
 static void print_free_ram(void) {
 #ifdef __APPLE2ENH__
-  gotoxy(0, 19);
+  gotoxy(0, 20);
   printf("%zuB free\n", _heapmemavail());
-  printf("%zuB max\n",  _heapmaxavail());
 #endif
 }
 
