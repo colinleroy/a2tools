@@ -85,6 +85,9 @@ int main(int argc, char **argv) {
   long start_time = -1L;
   long end_time = -1L;
 
+#ifdef __CC65__
+  _heapadd ((void *) 0x0803, 0x17FD);
+#endif
 
   tgi_install(a2e_hi_tgi);
 
@@ -92,7 +95,7 @@ int main(int argc, char **argv) {
 
 #ifdef __CC65__
   gotoxy(5, 10);
-  printf("Max heap available: %u bytes.", _heapmaxavail());
+  printf("Free memory: %zu bytes.", _heapmemavail());
 #endif
 
   if (argc < 5) {
@@ -213,6 +216,7 @@ int main(int argc, char **argv) {
         printf("Y scale = Value: %ld to %ld %s", (long)min_val, (long)max_val, argv[4]);
 
         tgi_init();
+        tgi_clear();
         tgi_apple2_mix(1);
 
         /* Draw scales */
