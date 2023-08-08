@@ -63,6 +63,9 @@ void print_header(list *l, status *root_status, notification *root_notif) {
   if (root_status) {
     dputs("Toot:              \r\n"
           " Reply    : R      \r\n");
+    if (root_status->spoiler_text) {
+      dputs(" Toggle CW: W      \r\n");
+    }
     if (root_status->n_images > 0) {
       dputs(" Images   : I      \r\n");
     }
@@ -90,10 +93,11 @@ void print_header(list *l, status *root_status, notification *root_notif) {
   }
   dputs("Writing:           \r\n"
         " Compose  : C      \r\n");
-
+#ifdef __CC65__
   while (wherey() < 21) {
     dputs("                   \r\n");
   }
+#endif
 
   print_free_ram();
   cvlinexy(LEFT_COL_WIDTH, 0, scrh);
@@ -101,10 +105,9 @@ void print_header(list *l, status *root_status, notification *root_notif) {
 
 void print_free_ram(void) {
 #ifdef __CC65__
-  gotoxy(0, 22);
-  cprintf("%zuB free     \r\n"
-          "%zuB max      ",
-          _heapmemavail(), _heapmaxavail());
+  gotoxy(0, 23);
+  cprintf("%zuB free     ",
+          _heapmemavail());
 #endif
 }
 

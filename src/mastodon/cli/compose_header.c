@@ -74,10 +74,9 @@ void print_free_ram(void) {
   get_hscrollwindow(&sx, &wx);
   set_hscrollwindow(0, scrw);
 
-  gotoxy(0, 22);
-  cprintf("%zuB free     \r\n"
-          "%zuB max      ",
-          _heapmemavail(), _heapmaxavail());
+  gotoxy(0, 23);
+  cprintf("%zuB free     ",
+          _heapmemavail());
 
   set_hscrollwindow(sx, wx);
 #endif

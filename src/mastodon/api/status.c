@@ -11,6 +11,7 @@
 #pragma code-name (push, "LOWCODE")
 #endif
 
+#define TL_SPOILER_TEXT_BUF 54
 #define TL_STATUS_SHORT_BUF 512
 #define TL_STATUS_LARGE_BUF 4096
 
@@ -58,18 +59,26 @@ status *status_new_from_json(char *id, char full, char is_reblog) {
    * so put it at the end */
   if (is_reblog) {
     r = surl_get_json(gen_buf, BUF_SIZE, 0, translit_charset,
-                      ".reblog.created_at,.reblog.account.display_name,.reblog.reblog.id");
+                      ".reblog.created_at,.reblog.account.display_name,.reblog.reblog.id//\"-\",.reblog.spoiler_text");
   } else {
     r = surl_get_json(gen_buf, BUF_SIZE, 0, translit_charset,
-                      ".created_at,.account.display_name,.reblog.id");
+                      ".created_at,.account.display_name,.reblog.id//\"-\",.spoiler_text");
   }
 
   n_lines = strsplit_in_place(gen_buf, '\n', &lines);
-  if (r >= 0 && n_lines >= 2) {
+  if (r >= 0 && n_lines >= 3) {
     s->created_at = date_format(lines[0], 1);
     s->account->display_name = strdup(lines[1]);
-    if (!is_reblog && n_lines > 2) {
+    if (!is_reblog && lines[2][0] != '-') {
       s->reblog = status_new_from_json(lines[2], full, 1);
+    }
+    if (n_lines > 3) {
+      s->spoiler_text = malloc(TL_SPOILER_TEXT_BUF);
+      if (!s->spoiler_text) {
+        goto err_mem;
+      }
+      strncpy(s->spoiler_text, lines[3], TL_SPOILER_TEXT_BUF - 1);
+      s->spoiler_text[TL_SPOILER_TEXT_BUF - 1] = '\0';
     }
   }
   free(lines);
@@ -94,9 +103,9 @@ status *status_new_from_json(char *id, char full, char is_reblog) {
       s->n_replies = atoi(lines[1]);
       s->n_reblogs = atoi(lines[2]);
       s->n_favourites = atoi(lines[3]);
-      if (lines[4][0] == 't') 
+      if (lines[4][0] == 't') /* true */
         s->favorited_or_reblogged |= REBLOGGED;
-      if (lines[5][0] == 't') 
+      if (lines[5][0] == 't') /* true */
         s->favorited_or_reblogged |= FAVOURITED;
       s->account->id = strdup(lines[6]);
       s->account->acct = strdup(lines[7]);
@@ -106,6 +115,7 @@ status *status_new_from_json(char *id, char full, char is_reblog) {
 
     content = malloc(full ? TL_STATUS_LARGE_BUF : TL_STATUS_SHORT_BUF);
     if (!content) {
+err_mem:
       status_free(s);
       nomem_msg(__FILE__, __LINE__);
       return NULL;
@@ -136,6 +146,7 @@ void status_free(status *s) {
     return;
   free(s->id);
   free(s->created_at);
+  free(s->spoiler_text);
   free(s->content);
   status_free(s->reblog);
   account_free(s->account);

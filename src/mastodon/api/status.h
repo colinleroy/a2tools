@@ -12,6 +12,7 @@ struct _status {
   signed char displayed_at;
   char *id;
   char *created_at;
+  char *spoiler_text;
   char *content;
   account *account;
   status *reblog;
