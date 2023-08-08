@@ -36,6 +36,7 @@
 #define tgi_install(x) do {} while(0)
 #define tgi_uninstall() do {} while(0)
 #define tgi_apple2_mix(x) do {} while(0)
+#define tgi_clear() do {} while(0)
 
 int tgi_init();
 int tgi_done();
