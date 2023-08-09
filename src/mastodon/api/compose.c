@@ -130,7 +130,6 @@ signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medi
                           char compose_audience) {
   surl_response *resp;
   char *body;
-  char *ref_id;
   int i, o, len;
   char *medias_buf;
 
@@ -166,11 +165,6 @@ signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medi
            mode == 'e' ? ref_toot_id : "");
   resp = get_surl_for_endpoint(mode == 'e' ? SURL_METHOD_PUT : SURL_METHOD_POST, endpoint_buf);
 
-  if (mode == 'e') {
-    ref_id = "id";
-  } else {
-    ref_id = "in_reply_to_id";
-  }
   /* Start of status */
   snprintf(body, 1536, "%c|in_reply_to_id\n"
                        "%s\n"

@@ -110,11 +110,11 @@ status *status_new_from_json(char *id, char full, char is_reblog) {
       s->account->id = strdup(lines[6]);
       s->account->acct = strdup(lines[7]);
       s->account->username = strdup(lines[8]);
-      if (!strcmp(lines[9][0], "public"))
+      if (!strcmp(lines[9], "public"))
         s->visibility = COMPOSE_PUBLIC;
-      else if (!strcmp(lines[9][0], "unlisted"))
+      else if (!strcmp(lines[9], "unlisted"))
         s->visibility = COMPOSE_UNLISTED;
-      else if (!strcmp(lines[9][0], "private"))
+      else if (!strcmp(lines[9], "private"))
         s->visibility = COMPOSE_PRIVATE;
       else
         s->visibility = COMPOSE_MENTION;
