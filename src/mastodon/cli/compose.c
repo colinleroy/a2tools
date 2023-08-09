@@ -47,7 +47,9 @@ static char compose_audience = COMPOSE_PUBLIC;
 static char cancelled = 0;
 static char should_open_images_menu = 0;
 static char should_open_cw_menu = 0;
-static status *reply_to = NULL;
+
+static status *ref_status = NULL;
+static char *compose_mode = "c";
 
 static void update_compose_audience(void) {
   gotoxy(0, top + COMPOSE_FIELD_HEIGHT + 1);
@@ -101,19 +103,21 @@ static void setup_gui(void)
   clrscr();
   gotoxy(0, 0);
 
-  if (reply_to) {
-    print_status(reply_to, 0, 0, &scrolled);
-    if (reply_to->spoiler_text) {
-      strncpy(cw, reply_to->spoiler_text, sizeof(cw) - 1);
+  if (ref_status) {
+    if (ref_status->spoiler_text) {
+      strncpy(cw, ref_status->spoiler_text, sizeof(cw) - 1);
       cw[sizeof(cw) - 1] = '\0';
     }
-    if (wherey() > scrh - COMPOSE_HEIGHT) {
-      clrzone(0, scrh - COMPOSE_HEIGHT, scrw - LEFT_COL_WIDTH - 2, scrh - 1);
-      gotoxy(0, scrh - COMPOSE_HEIGHT);
-      chline(scrw - LEFT_COL_WIDTH - 1);
+    if (compose_mode[0] == 'r') {
+      print_status(ref_status, 0, 0, &scrolled);
+      if (wherey() > scrh - COMPOSE_HEIGHT) {
+        clrzone(0, scrh - COMPOSE_HEIGHT, scrw - LEFT_COL_WIDTH - 2, scrh - 1);
+        gotoxy(0, scrh - COMPOSE_HEIGHT);
+        chline(scrw - LEFT_COL_WIDTH - 1);
+      }
+      cputs("Your reply:\r\n");
+      top = wherey();
     }
-    cputs("Your reply:\r\n");
-    top = wherey();
   }
   chline(scrw - LEFT_COL_WIDTH - 1);
   gotoxy(0, top + COMPOSE_FIELD_HEIGHT);
@@ -313,7 +317,7 @@ try_again:
     gotoxy(0, 1);
     cputs("Sending toot...\r\n\r\n");
     r = api_send_toot(text, cw, sensitive_medias,
-                      reply_to ? reply_to->id : NULL,
+                      ref_status ? ref_status->id : NULL,
                       media_ids, n_medias,
                       compose_audience);
     if (r < 0) {
@@ -342,6 +346,7 @@ try_again:
 
 int main(int argc, char **argv) {
   char *params;
+
   if (argc < 4) {
     cputs("Missing instance_url, oauth_token and/or charset parameters.\n");
   }
@@ -360,16 +365,17 @@ int main(int argc, char **argv) {
 
   set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
   gotoxy(0, 0);
-  if (argc == 5) {
-    reply_to = api_get_status(argv[4], 0);
+  if (argc == 6) {
+    compose_mode = argv[4];
+    ref_status = api_get_status(argv[5], 0);
   } else {
-    reply_to = NULL;
+    ref_status = NULL;
   }
 
   /* Auto-mention parent toot's sender, unless it's us */
-  if (reply_to != NULL && strcmp(reply_to->account->id, my_account->id)) {
-    compose_toot(reply_to->account->acct);
-  } else {
+  if (ref_status != NULL && compose_mode[0] == 'r' && strcmp(ref_status->account->id, my_account->id)) {
+    compose_toot(ref_status->account->acct);
+  } else if (compose_mode[0] == 'c') {
     compose_toot("");
   }
   set_hscrollwindow(0, scrw);

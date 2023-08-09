@@ -1090,7 +1090,7 @@ navigate_reuse_list:
           break;
       case REPLY:
           save_state(l, cur_list);
-          launch_command("mastowrite", translit_charset, get_top_status(l[cur_list])->id, NULL, NULL);
+          launch_command("mastowrite", translit_charset, "r", get_top_status(l[cur_list])->id, NULL);
           cur_action = NAVIGATE;
           break;
       case IMAGES:
