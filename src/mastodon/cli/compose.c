@@ -398,7 +398,6 @@ int main(int argc, char **argv) {
     ref_status = NULL;
   }
 
-
   /* Auto-mention parent toot's sender, unless it's us */
   if (ref_status && compose_mode[0] == 'r' && strcmp(ref_status->account->id, my_account->id)) {
     compose_toot(ref_status->account->acct);
@@ -409,7 +408,7 @@ int main(int argc, char **argv) {
     }
     compose_toot(orig_status);
     free(orig_status);
-  } else if (compose_mode[0] == 'c') {
+  } else {
     compose_toot("");
   }
   set_hscrollwindow(0, scrw);
