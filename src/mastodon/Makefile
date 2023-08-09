@@ -15,7 +15,7 @@ mastocli_SOURCES := cli/tl.c api/api.c \
 mastocli_CC65SOURCES := ../lib/dputs.s ../lib/dputc.s ../lib/scroll.s
 
 mastowrite_SOURCES := cli/compose.c cli/compose_header.c \
-	api/compose.c api/account.c api/status.c api/common.c \
+	api/compose.c api/account.c api/status.c api/common.c api/media.c \
 	../lib/dgets.c ../lib/clrzone.c ../lib/scrollwindow.c \
 	cli/print.c \
 	../lib/simple_serial.c ../lib/strsplit.c \
