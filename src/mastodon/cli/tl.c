@@ -996,6 +996,9 @@ void cli(void) {
       case SHOW_HOME_TIMELINE:
       case SHOW_LOCAL_TIMELINE:
       case SHOW_GLOBAL_TIMELINE:
+        /* Create a new list if it's the first of different than
+         * the current one. Otherwise, overwrite the current one.
+         */
         if (cur_list < 0 || l[cur_list]->kind != cur_action) {
           ++cur_list;
           if (cur_list > 0) {
@@ -1013,6 +1016,10 @@ void cli(void) {
       case SHOW_ACCOUNT:
       case SHOW_SEARCH_RES:
       case SHOW_NOTIFICATIONS:
+        if (l[cur_list]->kind == cur_action) {
+          free_list(l[cur_list]);
+          goto navigate_reuse_list;
+        }
         prev_list = l[cur_list];
         ++cur_list;
         *new_root = '\0';
@@ -1041,6 +1048,7 @@ void cli(void) {
 navigate_new_list:
         compact_list(l[cur_list - 1]);
         l = realloc(l, (cur_list + 1) * sizeof(list *));
+navigate_reuse_list:
         l[cur_list] = build_list(new_root, new_leaf_root, cur_action);
         clrscrollwin();
         /*
