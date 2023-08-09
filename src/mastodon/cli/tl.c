@@ -34,6 +34,8 @@ char *instance_url = NULL;
 char *oauth_token = NULL;
 char monochrome = 1;
 
+extern account *my_account;
+
 #define SHOW_HOME_TIMELINE   0
 #define SHOW_LOCAL_TIMELINE  1
 #define SHOW_GLOBAL_TIMELINE 2
@@ -944,7 +946,7 @@ static int show_list(list *l) {
         cur_action = COMPOSE;
         return 0;
       case 'e':
-        if (!root_status)
+        if (!root_status || strcmp(root_status->account->id, my_account->id))
           break;
         cur_action = EDIT;
         return 0;
