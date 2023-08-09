@@ -80,6 +80,7 @@ void print_header(list *l, status *root_status, notification *root_notif) {
       dputs(" Boost    : B      \r\n");
     }
     if (my_account && !strcmp(root_status->account->id, my_account->id)) {
+      dputs(" Edit     : E      \r\n");
       dputs(" Delete   : D      \r\n");
     }
     dputs("Author:            \r\n"
@@ -94,7 +95,7 @@ void print_header(list *l, status *root_status, notification *root_notif) {
   dputs("Writing:           \r\n"
         " Compose  : C      \r\n");
 #ifdef __CC65__
-  while (wherey() < 21) {
+  while (wherey() < 23) {
     dputs("                   \r\n");
   }
 #endif

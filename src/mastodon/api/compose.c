@@ -125,12 +125,12 @@ char *api_send_hgr_image(char *filename, char *description, char **err) {
   return media_id;
 }
 
-signed char api_send_toot(char *buffer, char *cw, char sensitive_medias,
-                          char *in_reply_to_id, char **media_ids, char n_medias,
+signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medias,
+                          char *ref_toot_id, char **media_ids, char n_medias,
                           char compose_audience) {
   surl_response *resp;
   char *body;
-
+  char *ref_id;
   int i, o, len;
   char *medias_buf;
 
@@ -161,9 +161,16 @@ signed char api_send_toot(char *buffer, char *cw, char sensitive_medias,
     medias_buf = NULL;
   }
 
-  snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s", STATUS_ENDPOINT);
-  resp = get_surl_for_endpoint(SURL_METHOD_POST, endpoint_buf);
+  snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s%s%s", STATUS_ENDPOINT,
+           mode == 'e' ? "/" : "",
+           mode == 'e' ? ref_toot_id : "");
+  resp = get_surl_for_endpoint(mode == 'e' ? SURL_METHOD_PUT : SURL_METHOD_POST, endpoint_buf);
 
+  if (mode == 'e') {
+    ref_id = "id";
+  } else {
+    ref_id = "in_reply_to_id";
+  }
   /* Start of status */
   snprintf(body, 1536, "%c|in_reply_to_id\n"
                        "%s\n"
@@ -172,8 +179,8 @@ signed char api_send_toot(char *buffer, char *cw, char sensitive_medias,
                        "B|sensitive\n%s\n"
                        "S|spoiler_text|TRANSLIT|%s\n%s\n"
                        "S|status|TRANSLIT|%s\n",
-                        in_reply_to_id ? 'S' : 'B',
-                        in_reply_to_id ? in_reply_to_id : "null",
+                        (ref_toot_id && mode == 'r') ? 'S' : 'B',
+                        (ref_toot_id && mode == 'r') ? ref_toot_id : "null",
                         medias_buf ? medias_buf : "",
                         compose_audience_str(compose_audience),
                         sensitive_medias ? "true":"false",
@@ -212,4 +219,31 @@ signed char api_send_toot(char *buffer, char *cw, char sensitive_medias,
     surl_response_free(resp);
     return -1;
   }
+}
+
+char *compose_get_status_text(char *status_id) {
+  surl_response *resp;
+  char *content = NULL;
+
+  snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s/source", STATUS_ENDPOINT, status_id);
+  resp = get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
+  
+  if (resp && surl_response_ok(resp)) {
+    int r;
+    
+    content = malloc(NUM_CHARS);
+    if (content == NULL)
+      goto err_out;
+
+    r = surl_get_json(content, NUM_CHARS, 1, translit_charset, ".text");
+
+    if (r < 0) {
+      free(content);
+      content = NULL;
+    }
+  }
+
+err_out:
+  surl_response_free(resp);
+  return content;
 }

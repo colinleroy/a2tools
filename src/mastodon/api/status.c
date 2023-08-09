@@ -89,16 +89,16 @@ status *status_new_from_json(char *id, char full, char is_reblog) {
       r = surl_get_json(gen_buf, BUF_SIZE, 0, NULL,
                         "(.reblog.media_attachments|map(. | select(.type==\"image\"))|length),"
                         ".reblog.replies_count,.reblog.reblogs_count,.reblog.favourites_count,.reblog.reblogged,.reblog.favourited,"
-                        ".reblog.account.id,.reblog.account.acct,.reblog.account.username");
+                        ".reblog.account.id,.reblog.account.acct,.reblog.account.username,.visibility");
     } else {
       r = surl_get_json(gen_buf, BUF_SIZE, 0, NULL,
                         "(.media_attachments|map(. | select(.type==\"image\"))|length),"
                         ".replies_count,.reblogs_count,.favourites_count,.reblogged,.favourited,"
-                        ".account.id,.account.acct,.account.username");
+                        ".account.id,.account.acct,.account.username,.visibility");
     }
 
     n_lines = strsplit_in_place(gen_buf, '\n', &lines);
-    if (r >= 0 && n_lines == 9) {
+    if (r >= 0 && n_lines == 10) {
       s->n_images = atoi(lines[0]);
       s->n_replies = atoi(lines[1]);
       s->n_reblogs = atoi(lines[2]);
@@ -110,6 +110,14 @@ status *status_new_from_json(char *id, char full, char is_reblog) {
       s->account->id = strdup(lines[6]);
       s->account->acct = strdup(lines[7]);
       s->account->username = strdup(lines[8]);
+      if (!strcmp(lines[9][0], "public"))
+        s->visibility = COMPOSE_PUBLIC;
+      else if (!strcmp(lines[9][0], "unlisted"))
+        s->visibility = COMPOSE_UNLISTED;
+      else if (!strcmp(lines[9][0], "private"))
+        s->visibility = COMPOSE_PRIVATE;
+      else
+        s->visibility = COMPOSE_MENTION;
     }
     free(lines);
 

@@ -48,6 +48,7 @@ char monochrome = 1;
 #define IMAGES              17
 #define SEARCH              18
 #define SHOW_NOTIFICATIONS  19
+#define EDIT                20
 
 static char cur_action;
 static char search_buf[50];
@@ -942,6 +943,11 @@ static int show_list(list *l) {
       case 'c':
         cur_action = COMPOSE;
         return 0;
+      case 'e':
+        if (!root_status)
+          break;
+        cur_action = EDIT;
+        return 0;
       case 'r':
         if (!root_status)
           break;
@@ -1091,6 +1097,11 @@ navigate_reuse_list:
       case REPLY:
           save_state(l, cur_list);
           launch_command("mastowrite", "r", get_top_status(l[cur_list])->id, NULL);
+          cur_action = NAVIGATE;
+          break;
+      case EDIT:
+          save_state(l, cur_list);
+          launch_command("mastowrite", "e", get_top_status(l[cur_list])->id, NULL);
           cur_action = NAVIGATE;
           break;
       case IMAGES:

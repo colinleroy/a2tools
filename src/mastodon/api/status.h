@@ -21,6 +21,7 @@ struct _status {
   char n_favourites;
   char n_images;
   char favorited_or_reblogged;
+  char visibility;
 };
 
 status *status_new(void);
