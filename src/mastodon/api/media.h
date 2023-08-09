@@ -5,6 +5,7 @@ typedef struct _media media;
 
 struct _media {
   char n_media;
+  char **media_id;
   char **media_url;
   char **media_alt_text;
 };

@@ -32,7 +32,7 @@ media *media_new(void) {
   return m;
 }
 
-static media *media_new_from_json(char *urls_selector, char *alt_text_selector) {
+static media *media_new_from_json(char *ids_selector, char *urls_selector, char *alt_text_selector) {
   media *m;
   char **lines, *w;
   char i, n_lines;
@@ -40,7 +40,7 @@ static media *media_new_from_json(char *urls_selector, char *alt_text_selector) 
 
   m = media_new();
 
-  n = surl_get_json(img_buf, IMG_BUF_SIZE, 0, translit_charset, urls_selector);
+  n = surl_get_json(img_buf, IMG_BUF_SIZE, 0, translit_charset, ids_selector);
 
   n_lines = 0;
   lines = NULL;
@@ -48,22 +48,30 @@ static media *media_new_from_json(char *urls_selector, char *alt_text_selector) 
   if (n >= 0) {
     n_lines = strsplit_in_place(img_buf, '\n', &lines);
     m->n_media = n_lines;
+    m->media_id = malloc(m->n_media * sizeof(char *));
     m->media_url = malloc(m->n_media * sizeof(char *));
     m->media_alt_text = malloc(m->n_media * sizeof(char *));
+    memset(m->media_url, 0, m->n_media * sizeof(char *));
     memset(m->media_alt_text, 0, m->n_media * sizeof(char *));
 
     for (i = 0; i < n_lines; i ++) {
-      m->media_url[i] = strdup(lines[i]);
+      m->media_id[i] = strdup(lines[i]);
     }
   }
   free(lines);
-  if (alt_text_selector == NULL) {
-    return m;
-  }
 
   for (i = 0; i < n_lines; i ++) {
+    snprintf(gen_buf, BUF_SIZE, urls_selector, i);
+    if (surl_get_json(img_buf, IMG_BUF_SIZE, 0, translit_charset, gen_buf) > 0) {
+      m->media_url[i] = strdup(img_buf);
+    }
+
+    if (alt_text_selector == NULL) {
+      continue;
+    }
+
     snprintf(gen_buf, BUF_SIZE, alt_text_selector, i);
-    if (surl_get_json(img_buf, IMG_BUF_SIZE, 0, translit_charset, gen_buf) >= 0) {
+    if (surl_get_json(img_buf, IMG_BUF_SIZE, 1, translit_charset, gen_buf) > 0) {
       w = img_buf;
       n = 0;
       while (*w != '\0') {
@@ -93,15 +101,18 @@ void media_free(media *m) {
   if (m == NULL)
     return;
   for (i = 0; i < m->n_media; i++) {
+    free(m->media_id[i]);
     free(m->media_url[i]);
     free(m->media_alt_text[i]);
   }
+  free(m->media_id);
   free(m->media_url);
   free(m->media_alt_text);
   free(m);
 }
 
 static media *get_media(char *api_endpoint,
+                        char *ids_selector,
                         char *urls_selector,
                         char *alt_text_selector,
                         char *id) {
@@ -116,7 +127,7 @@ static media *get_media(char *api_endpoint,
   if (!surl_response_ok(resp))
     goto err_out;
 
-  m = media_new_from_json(urls_selector, alt_text_selector);
+  m = media_new_from_json(ids_selector, urls_selector, alt_text_selector);
 
 err_out:
   surl_response_free(resp);
@@ -125,13 +136,15 @@ err_out:
 
 media *api_get_status_media(char *id) {
   return get_media(STATUS_ENDPOINT, 
-                   ".media_attachments|map(. | select(.type==\"image\"))|.[]|.url",
+                   ".media_attachments|map(. | select(.type==\"image\"))|.[]|.id",
+                   ".media_attachments|map(. | select(.type==\"image\"))|.[%d]|.url",
                    ".media_attachments|map(. | select(.type==\"image\"))|.[%d]|.description",
                    id);
 }
 
 media *api_get_account_media(char *id) {
   return get_media(ACCOUNTS_ENDPOINT, 
+                   ".avatar_static,.header_static",
                    ".avatar_static,.header_static", NULL, id);
 }
 
