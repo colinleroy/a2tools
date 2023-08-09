@@ -641,12 +641,12 @@ static int shift_posts_up(list *l) {
   return 0;
 }
 
-static void launch_command(char *command, char *p1, char *p2, char *p3, char *p4) {
+static void launch_command(char *command, char *p1, char *p2, char *p3) {
   char *params;
   params = malloc(127);
   snprintf(params, 127, "%s %s %s %s %s %s",
             instance_url, oauth_token,
-            p1?p1:"", p2?p2:"", p3?p3:"", p4?p4:"");
+            translit_charset, p1?p1:"", p2?p2:"", p3?p3:"");
 #ifdef __CC65__
   _filetype = PRODOS_T_TXT;
   if (exec(command, params) != 0) {
@@ -1080,26 +1080,26 @@ navigate_reuse_list:
         break;
       case CONFIGURE:
           save_state(l, cur_list);
-          launch_command("mastoconf", NULL, NULL, NULL, NULL);
+          launch_command("mastoconf", NULL, NULL, NULL);
           cur_action = NAVIGATE;
           break;
       case COMPOSE:
           save_state(l, cur_list);
-          launch_command("mastowrite", translit_charset, NULL, NULL, NULL);
+          launch_command("mastowrite", NULL, NULL, NULL);
           cur_action = NAVIGATE;
           break;
       case REPLY:
           save_state(l, cur_list);
-          launch_command("mastowrite", translit_charset, "r", get_top_status(l[cur_list])->id, NULL);
+          launch_command("mastowrite", "r", get_top_status(l[cur_list])->id, NULL);
           cur_action = NAVIGATE;
           break;
       case IMAGES:
           save_state(l, cur_list);
           disp_status = get_top_status(l[cur_list]);
           if (l[cur_list]->account && !disp_status) {
-            launch_command("mastoimg", translit_charset, monochrome?"1":"0", "a", l[cur_list]->account->id);
+            launch_command("mastoimg", monochrome?"1":"0", "a", l[cur_list]->account->id);
           } else if (disp_status && disp_status->n_images) {
-            launch_command("mastoimg", translit_charset, monochrome?"1":"0", "s", disp_status->id);
+            launch_command("mastoimg", monochrome?"1":"0", "s", disp_status->id);
           }
           cur_action = NAVIGATE;
           break;
