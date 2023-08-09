@@ -104,10 +104,6 @@ static void setup_gui(void)
   gotoxy(0, 0);
 
   if (ref_status) {
-    if (ref_status->spoiler_text) {
-      strncpy(cw, ref_status->spoiler_text, sizeof(cw) - 1);
-      cw[sizeof(cw) - 1] = '\0';
-    }
     if (compose_mode[0] == 'r') {
       print_status(ref_status, 0, 0, &scrolled);
       if (wherey() > scrh - COMPOSE_HEIGHT) {
@@ -258,31 +254,36 @@ image_menu:
   goto image_menu;
 }
 
-static char *handle_compose_input(char *reply_to_account) {
+static char *handle_compose_input(char *initial_buf) {
   char *text;
-  text = malloc(500);
+  text = malloc(NUM_CHARS);
 
-  if (reply_to_account && reply_to_account[0]) {
-    int len = strlen(reply_to_account);
-    int i;
+  if (initial_buf && initial_buf[0]) {
+    int len = min(NUM_CHARS - 3, strlen(initial_buf));
 
-    for (i = 0; i < len; i++) {
-      if (reply_to_account[i] == '@') {
-        reply_to_account[i] = arobase;
-        break; /* no need to continue, there can only be one */
+    if (compose_mode[0] == 'r') {
+      int i;
+      /* Insert initial_buf as handle to reply to */
+      text[0] = arobase;
+      for (i = 0; i < len; i++) {
+        if (initial_buf[i] == '@') {
+          initial_buf[i] = arobase;
+        }
       }
+      strncpy(text + 1, initial_buf, NUM_CHARS - 3);
+      text[len + 1] = ' ';
+      text[len + 2] = '\0';
+    } else {
+      strncpy(text, initial_buf, NUM_CHARS);
+      text[NUM_CHARS - 1] = '\0';
     }
-    text[0] = arobase;
-    strncpy(text + 1, reply_to_account, 497);
-    text[len + 1] = ' ';
-    text[len + 2] = '\0';
   } else {
     text[0] = '\0';
   }
 
 resume_composing:
   setup_gui();
-  if (dget_text(text, 500, dgt_cmd_cb, 1) == NULL) {
+  if (dget_text(text, NUM_CHARS, dgt_cmd_cb, 1) == NULL) {
     free(text);
     text = NULL;
     goto out;
@@ -301,11 +302,11 @@ out:
   return text;
 }
 
-static void compose_toot(char *reply_to_account) {
+static void compose_toot(char *initial_buf) {
   char i;
   char *text;
 
-  text = handle_compose_input(reply_to_account);
+  text = handle_compose_input(initial_buf);
 
   set_scrollwindow(0, scrh);
 
@@ -316,7 +317,7 @@ try_again:
     clrscr();
     gotoxy(0, 1);
     cputs("Sending toot...\r\n\r\n");
-    r = api_send_toot(text, cw, sensitive_medias,
+    r = api_send_toot(compose_mode[0], text, cw, sensitive_medias,
                       ref_status ? ref_status->id : NULL,
                       media_ids, n_medias,
                       compose_audience);
@@ -368,13 +369,27 @@ int main(int argc, char **argv) {
   if (argc == 6) {
     compose_mode = argv[4];
     ref_status = api_get_status(argv[5], 0);
+    /* Get CW from reference status */
+    if (ref_status && ref_status->spoiler_text) {
+      strncpy(cw, ref_status->spoiler_text, sizeof(cw) - 1);
+      cw[sizeof(cw) - 1] = '\0';
+    }
+    compose_audience = ref_status->visibility;
   } else {
     ref_status = NULL;
   }
 
+
   /* Auto-mention parent toot's sender, unless it's us */
-  if (ref_status != NULL && compose_mode[0] == 'r' && strcmp(ref_status->account->id, my_account->id)) {
+  if (ref_status && compose_mode[0] == 'r' && strcmp(ref_status->account->id, my_account->id)) {
     compose_toot(ref_status->account->acct);
+  } else if (compose_mode[0] == 'e') {
+    char *orig_status = compose_get_status_text(ref_status->id);
+    if (orig_status == NULL) {
+      orig_status = strdup("Can not fetch status");
+    }
+    compose_toot(orig_status);
+    free(orig_status);
   } else if (compose_mode[0] == 'c') {
     compose_toot("");
   }
