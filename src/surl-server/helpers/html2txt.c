@@ -148,7 +148,16 @@ static char *dump_tree(GumboNode *node, char *buffer, int plain)
 char *html2text(char *html) {
     char *text;
     size_t buf_size;
-    GumboOutput *parsed_html = gumbo_parse(html);
+    GumboOutput *parsed_html;
+
+    if (!html) {
+      return NULL;
+    }
+    if (html[0] == '\0') {
+      return strdup(html);
+    }
+
+    parsed_html = gumbo_parse(html);
 
     buf_size = strlen(html) * 2;
     text = malloc(buf_size);
