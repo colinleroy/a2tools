@@ -50,6 +50,12 @@ static void __fastcall__ activity_cb(int on) {
   char x, y;
   x = wherex();
   y = wherey();
+
+  if (serial_activity_indicator_x == -1) {
+    serial_activity_indicator_x = x;
+    serial_activity_indicator_y = y;
+  }
+
   gotoxy(serial_activity_indicator_x, serial_activity_indicator_y);
   cputc(on ? '*' : ' ');
   gotoxy(x, y);
@@ -368,11 +374,6 @@ int __fastcall__ simple_serial_putc(char c) {
 
 void __fastcall__ simple_serial_puts(char *buf) {
 #ifdef __CC65__
-  if (serial_activity_indicator_x == -1) {
-    serial_activity_indicator_x = wherex();
-    serial_activity_indicator_y = wherey();
-  }
-
   if (serial_activity_indicator_enabled) {
     activity_cb(1);
   }
@@ -391,27 +392,22 @@ void __fastcall__ simple_serial_puts(char *buf) {
 
 char * __fastcall__ simple_serial_gets(char *out, size_t size) {
   static char c;
-  static size_t i;
   static char *cur;
-
-#ifdef __CC65__
-  if (serial_activity_indicator_x == -1) {
-    serial_activity_indicator_x = wherex();
-    serial_activity_indicator_y = wherey();
-  }
-
-  if (serial_activity_indicator_enabled) {
-    activity_cb(1);
-  }
-#endif
+  static char *end;
 
   if (size == 0) {
     return NULL;
   }
 
-  i = 0;
+#ifdef __CC65__
+  if (serial_activity_indicator_enabled) {
+    activity_cb(1);
+  }
+#endif
+
   cur = out;
-  while (i < size - 1) {
+  end = cur + size - 1;
+  while (cur < end) {
 #ifdef __CC65__
     while (ser_get(&c) == SER_ERR_NO_DATA);
 #else
@@ -424,7 +420,6 @@ char * __fastcall__ simple_serial_gets(char *out, size_t size) {
     }
 
     *cur = c;
-    ++i;
     ++cur;
 
     if (c == '\n') {
@@ -446,11 +441,6 @@ void __fastcall__ simple_serial_read(char *ptr, size_t nmemb) {
   static char *cur;
   static char *end;
 #ifdef __CC65__
-  if (serial_activity_indicator_x == -1) {
-    serial_activity_indicator_x = wherex();
-    serial_activity_indicator_y = wherey();
-  }
-
   if (serial_activity_indicator_enabled) {
     activity_cb(1);
   }
