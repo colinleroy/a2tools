@@ -62,7 +62,7 @@ int main(void) {
 int main(int argc, char **argv) {
 #endif
   FILE *fp;
-  char *filename;
+  char *filename, *path;
   char *remote_filename;
   char *filetype;
   char c;
@@ -82,12 +82,12 @@ int main(int argc, char **argv) {
   printf("File to send: ");
   cgets(buf, sizeof(buf));
 
-  filename = buf;
-  if (strchr(filename, '\n')) {
-    *strchr(filename, '\n') = '\0';
+  path = buf;
+  if (strchr(path, '\n')) {
+    *strchr(path, '\n') = '\0';
   }
-  if (get_filedetails(filename, &filesize, &type, &auxtype) < 0) {
-    printf("Can't get %s details\n", filename);
+  if (get_filedetails(path, &filename, &filesize, &type, &auxtype) < 0) {
+    printf("Can't get %s details\n", path);
     exit(1);
   }
 
@@ -95,9 +95,9 @@ int main(int argc, char **argv) {
   _filetype = PRODOS_T_TXT;
   _auxtype  = PRODOS_AUX_T_TXT_SEQ;
   
-  fp = fopen(filename,"r");
+  fp = fopen(path,"r");
   if (fp == NULL) {
-    printf("Can't open %s\n", filename);
+    printf("Can't open %s\n", path);
     exit(1);
   }
   
@@ -134,7 +134,7 @@ int main(int argc, char **argv) {
 
 send_again:
 
-  if (get_filedetails(argv[cur_file], &filesize, &type, &auxtype) < 0) {
+  if (get_filedetails(argv[cur_file], &filename, &filesize, &type, &auxtype) < 0) {
     printf("Can't get %s details\n", argv[cur_file]);
     exit(1);
   }
@@ -145,7 +145,6 @@ send_again:
     exit(1);
   }
 
-  filename = basename(argv[cur_file]);
   if (strchr(filename, '.') != NULL) {
     filetype = strchr(filename, '.') + 1;
     *(strchr(filename, '.')) = '\0';
@@ -219,7 +218,7 @@ send_again:
   wait_for_receiver();
 
 #ifdef __CC65__
-  free(filename);
+  free(path);
 #else
   if (cur_file < argc -1) {
     cur_file++;
