@@ -8,20 +8,33 @@
 #include <libgen.h>
 #endif
 
-int get_filedetails(char *filename, unsigned long *size, unsigned char *type, unsigned *auxtype) {
+static char file_parts[FILENAME_MAX];
+
+int get_filedetails(char *path, char **filename, unsigned long *size, unsigned char *type, unsigned *auxtype) {
 
   struct dirent *d;
   DIR *dir;
+  char *dirname;
+
   *size = 0;
   *type = 0;
   *auxtype = 0;
+  strncpy(file_parts, path, FILENAME_MAX);
+  if (strrchr(file_parts + 1, '/')) {
+    dirname = file_parts;
+    *filename = strrchr(file_parts + 1, '/') + 1;
+    *strrchr(file_parts + 1, '/') = '\0';
+  } else {
+    dirname = ".";
+    *filename = path;
+  }
 
-  dir = opendir(".");
+  dir = opendir(dirname);
   if (dir == NULL) {
     return -1;
   }
   while (d = readdir(dir)) {
-    if (!strcasecmp(filename, d->d_name)) {
+    if (!strcasecmp(*filename, d->d_name)) {
       *type = d->d_type;
 #ifdef __APPLE2__
       *size = d->d_size;
@@ -36,10 +49,15 @@ int get_filedetails(char *filename, unsigned long *size, unsigned char *type, un
 #ifndef __CC65__
   struct stat statbuf;
 
-  if (stat(filename, &statbuf) < 0) {
+  if (stat(path, &statbuf) < 0) {
     return -1;
   }
-  
+
+  if (strrchr(path, '/'))
+    *filename = strrchr(path, '/') + 1;
+  else
+    *filename = path;
+
   *size = statbuf.st_size;
 #endif
 

@@ -1,7 +1,5 @@
-PROGRAM=surl surlput
+PROGRAM=surl
 surl_SOURCES := surl-client.c ../lib/simple_serial.c ../lib/cgets.c ../lib/scrollwindow.c ../lib/surl_core.c ../lib/surl_receive.c
-surlput_SOURCES := surl-upload.c ../lib/simple_serial.c ../lib/cgets.c ../lib/scrollwindow.c \
-	../lib/surl_core.c ../lib/surl_send.c ../lib/surl_receive.c ../lib/get_filedetails.c
 GCCSOURCES := ../lib/extended_string.c
 DEPS := 
 
@@ -13,7 +11,7 @@ GCCLDFLAGS =
 
 .PHONY: all clean
 
-all: surl.bin surl.x86_64 surlput.bin surlput.x86_64
+all: surl.bin surl.x86_64
 
 surl.bin: $(surl_SOURCES)
 	cl65 $(CFLAGS) $(CLCFLAGS) -m surl.map -o $@ $^
@@ -21,14 +19,8 @@ surl.bin: $(surl_SOURCES)
 surl.x86_64: $(surl_SOURCES) $(GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	
 
-surlput.bin: $(surlput_SOURCES)
-	cl65 $(CFLAGS) $(CLCFLAGS) -m surl.map -o $@ $^
-
-surlput.x86_64: $(surlput_SOURCES) $(GCCSOURCES)
-	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	
-
 clean:
-	rm -f surl.bin surl.x86_64 surlput.bin surlput.x86_64 *.o *.map
+	rm -f surl.bin surl.x86_64 *.o *.map
 
 upload: all
 	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/net/ || \

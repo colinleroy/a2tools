@@ -4,6 +4,11 @@ net_disk_PROGS = src/a2recv/a2recv.bin \
 				src/surl/surl.bin \
 				src/stp/stp.bin \
 				src/telnet/telnet.bin
+stp_disk_PROGS = src/a2recv/a2recv.bin \
+				src/a2send/a2send.bin \
+				src/surl/surl.bin \
+				src/stp/stp.bin \
+				src/telnet/telnet.bin
 
 homectrl_disk_PROGS = src/a2recv/a2recv.bin \
 				src/homecontrol-client/homectrl.bin \
@@ -29,6 +34,17 @@ net.dsk: $(net_disk_PROGS)
 	java -jar bin/ac.jar -n $@ NETWORKTOOLS
 	java -jar bin/ac.jar -p $@ BASIC.SYSTEM SYS < bin/loader.system; \
 	java -jar bin/ac.jar -p $@ STP.SYSTEM SYS < bin/loader.system; \
+	for prog in $^; do \
+		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
+	done
+	cp $@ ~/Documents/ADTPro-2.1.0/disks/; \
+	cp $@ dist/; \
+
+stp.dsk: $(stp_disk_PROGS)
+	cp $(CLEANDISK) $@; \
+	java -jar bin/ac.jar -n $@ STP
+	java -jar bin/ac.jar -p $@ STP.SYSTEM SYS < bin/loader.system; \
+	#java -jar bin/ac.jar -p $@ STPSTARTURL TXT < src/stp/STPSTARTURL; \
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done

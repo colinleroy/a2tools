@@ -20,6 +20,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#include "path_helper.h"
 #include "stp.h"
 #include "stp_cli.h"
 #include "stp_save.h"
@@ -256,6 +257,8 @@ int main(void) {
   char *url;
   char c;
   int full_update = 1;
+
+  register_start_device();
 
   clrscr();
   screensize(&scrw, &scrh);

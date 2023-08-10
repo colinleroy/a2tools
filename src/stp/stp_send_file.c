@@ -20,6 +20,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include "path_helper.h"
+#include "file_select.h"
+#include "stp.h"
 #include "stp_cli.h"
 #include "stp_send_file.h"
 #include "simple_serial.h"
@@ -36,28 +39,8 @@
 static unsigned char scrw = 255, scrh = 255;
 
 static char *stp_send_dialog() {
-  char *filename = malloc(BUFSIZE);
-  filename[0] = '\0';
-
-  if (scrw == 255)
-    screensize(&scrw, &scrh);
-
-  clrzone(0, 19, scrw - 1, 23);
-  gotoxy(0, 19);
-
-  printf("Enter file to send, or empty to abort: ");
-  gotoxy(0, 20);
-  dget_text(filename, BUFSIZE, NULL, 0);
-  
-  if (strchr(filename, '\n'))
-    *strchr(filename, '\n') = '\0';
-  
-  if (*filename == '\0') {
-    free(filename);
-    stp_print_footer();
-    return NULL;
-  }
-
+  char *filename = file_select(0, 2, scrw - 1, 2 + PAGE_HEIGHT, 0, "Select file to send");
+  clrzone(0, 2, scrw - 1, 2 + PAGE_HEIGHT);
   return filename;
 }
 
@@ -71,12 +54,14 @@ static char *data = NULL;
 void stp_send_file(char *remote_dir) {
   static FILE *fp;
   static char *filename;
+  static char *path;
   static char *remote_filename;
   static surl_response *resp;
   static int r = 0;
   
   fp = NULL;
   filename = NULL;
+  path = NULL;
   remote_filename = NULL;
   resp = NULL;
   r = 0;
@@ -84,30 +69,35 @@ void stp_send_file(char *remote_dir) {
   if (scrw == 255)
     screensize(&scrw, &scrh);
 
-  filename  = stp_send_dialog();
-  if (filename == NULL) {
+  path  = stp_send_dialog();
+  if (path == NULL) {
     return;
   }
 
-  fp = fopen(filename, "r");
+#ifdef PRODOS_T_TXT
+  /* We want to send raw files */
+  _filetype = PRODOS_T_BIN;
+  _auxtype  = PRODOS_AUX_T_TXT_SEQ;
+#endif
+
+  clrzone(0, 2, scrw - 1, 2 + PAGE_HEIGHT);
+  gotoxy(0, 2);
+  printf("Opening %s...\n", path);
+
+  fp = fopen(path, "r");
   if (fp == NULL) {
-    gotoxy(0, 21);
-    printf("%s: %s", filename, strerror(errno));
+    printf("%s: %s", path, strerror(errno));
     cgetc();
     goto err_out;
   }
   
-  if (get_filedetails(filename, &filesize, &type, &auxtype) < 0) {
-    gotoxy(0, 21);
+  if (get_filedetails(path, &filename, &filesize, &type, &auxtype) < 0) {
     printf("Can't get file details.");
     cgetc();
     goto err_out;
   }
 
 #ifdef PRODOS_T_TXT
-  /* We want to send raw files */
-  _filetype = PRODOS_T_TXT;
-  _auxtype  = PRODOS_AUX_T_TXT_SEQ;
   remote_filename = malloc(BUFSIZE);
   if (type == PRODOS_T_SYS) {
     snprintf(remote_filename, BUFSIZE, "%s/%s.SYS", remote_dir, filename);
@@ -125,18 +115,17 @@ void stp_send_file(char *remote_dir) {
   data = malloc(buf_size + 1);
 
   if (data == NULL) {
-    gotoxy(0, 21);
     printf("Cannot allocate buffer.");
     cgetc();
     goto err_out;
   }
 
-  progress_bar(0, 22, scrw, 0, filesize);
+  progress_bar(0, 5, scrw, 0, filesize);
 
   resp = surl_start_request(SURL_METHOD_PUT, remote_filename, NULL, 0);
   if (resp == NULL || resp->code != 100) {
-    gotoxy(0, 21);
     printf("Bad response.");
+    cgetc();
     goto err_out;
   }
 
@@ -149,28 +138,26 @@ void stp_send_file(char *remote_dir) {
   do {
     size_t rem = (size_t)((long)filesize - (long)total);
     size_t chunksize = min(buf_size, rem);
-    clrzone(0, 21, scrw - 1, 21);
-    gotoxy(0, 21);
+    clrzone(0, 2, scrw - 1, 2);
+    gotoxy(0, 2);
     printf("Reading %zu bytes...", chunksize);
 
     r = fread(data, sizeof(char), chunksize, fp);
     total = total + r;
     
-    clrzone(0, 21, scrw - 1, 21);
-    gotoxy(0, 21);
+    clrzone(0, 2, scrw - 1, 2);
+    gotoxy(0, 2);
     printf("Sending %zu/%lu...", total, filesize);
     surl_send_data(data, r);
 
-    progress_bar(0, 22, scrw, total, filesize);
+    progress_bar(0, 5, scrw, total, filesize);
   } while (total < filesize);
-  gotoxy(0, 21);
-  clrzone(0, 21, scrw - 1, 21);
-  printf("Sent %zu/%lu.", total, filesize);
+  clrzone(0, 2, scrw - 1, 2 + PAGE_HEIGHT);
+  gotoxy(0, 2);
+  printf("Sent %zu/%lu.\n", total, filesize);
 
 finished:
   surl_read_response_header(resp);
-  clrzone(0, 21, scrw - 1, 22);
-  gotoxy(0, 21);
   printf("File sent, response code: %d\n", resp->code);
   printf("Hit a key to continue.");
   cgetc();
@@ -178,7 +165,15 @@ finished:
 err_out:
   if (fp)
     fclose(fp);
-  free(filename);
+  // 
+  // while (reopen_start_device() != 0) {
+  //   clrzone(0, 21, scrw - 1, 22);
+  //   gotoxy(0, 21);
+  //   printf("Please reinsert the program disk.");
+  //   cgetc();
+  // }
+
+  free(path);
   free(remote_filename);
   free(data);
   surl_response_free(resp);
