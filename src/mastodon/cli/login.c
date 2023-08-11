@@ -36,6 +36,7 @@
 #include "api.h"
 #include "oauth.h"
 #include "logo.h"
+#include "img.h"
 
 #define BUF_SIZE 255
 
@@ -158,9 +159,19 @@ reenter_settings:
   return -1;
 }
 
-int main(void) {
-  char *params = malloc(BUF_SIZE);
+int main(int argc, char **argv) {
+  char *params;
   char y;
+
+#ifdef __CC65__
+  _heapadd ((void *) 0x0803, 0x17FD);
+#endif
+
+  if (argc > 1) {
+    return img_main(argc, argv);
+  }
+
+  params = malloc(BUF_SIZE);
 
 #ifdef PRODOS_T_TXT
   _filetype = PRODOS_T_TXT;
@@ -204,10 +215,6 @@ int main(void) {
 
   set_scrollwindow(0, scrh);
 #ifdef __CC65__
-  // /* Quicker image debug */
-  // snprintf(params, BUF_SIZE, "https://piaille.fr %s US_ASCII 1 s 110796581585162452", oauth_token);
-  // exec("mastoimg", params);
-
   exec("mastocli", params);
 #else
   printf("exec(mastocli %s)\n",params);

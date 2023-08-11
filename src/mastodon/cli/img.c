@@ -38,19 +38,12 @@
 #include "media.h"
 #include "common.h"
 
-char *instance_url = NULL;
-char *oauth_token = NULL;
+extern char *instance_url;
+extern char *oauth_token;
 char *type = NULL;
 char *id = NULL;
 char hgr_init_done = 0;
 char monochrome = 1;
-
-#ifdef __CC65__
-/* Init HGR segment */
-#pragma rodata-name (push, "HGR")
-char *hgr_page;
-#pragma rodata-name (pop)
-#endif
 
 #ifdef USE_HGR2
   #define HGR_PAGE 0x4000
@@ -62,7 +55,9 @@ char *hgr_page;
   #define TEXTMODE VIDEOMODE_80COL
   #define NUMCOLS 80
   #define PROGRESS_STEPS 64
-  #define ADD_LOW_HEAP 1
+#pragma rodata-name (push, "HGR")
+char *hgr_page;
+#pragma rodata-name (pop)
 #endif
 
 static void init_hgr(void) {
@@ -180,16 +175,11 @@ static void img_display(media *m, char idx, char num_images) {
   surl_response_free(resp);
 }
 
-int main(int argc, char **argv) {
+int img_main(int argc, char **argv) {
   char *params;
   media *m;
   char i, c;
 
-#ifdef __CC65__
-#ifdef ADD_LOW_HEAP
-  _heapadd ((void *) 0x0803, 0x17FD);
-#endif
-#endif
   videomode(TEXTMODE);
 
   if (argc < 6) {
@@ -212,8 +202,6 @@ int main(int argc, char **argv) {
         "Loading medias...\r\n\r\n");
 
   print_free_ram();
-
-  translit_charset = US_CHARSET;
 
   if (type[0] == 's') {
     m = api_get_status_media(id);
