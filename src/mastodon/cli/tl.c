@@ -1110,9 +1110,9 @@ navigate_reuse_list:
           save_state(l, cur_list);
           disp_status = get_top_status(l[cur_list]);
           if (l[cur_list]->account && !disp_status) {
-            launch_command("mastoimg", monochrome?"1":"0", "a", l[cur_list]->account->id);
+            launch_command("mastodon", monochrome?"1":"0", "a", l[cur_list]->account->id);
           } else if (disp_status && disp_status->n_images) {
-            launch_command("mastoimg", monochrome?"1":"0", "s", disp_status->id);
+            launch_command("mastodon", monochrome?"1":"0", "s", disp_status->id);
           }
           cur_action = NAVIGATE;
           break;
