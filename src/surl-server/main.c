@@ -281,11 +281,8 @@ new_req:
           *strchr(translit, ' ') = '\0';
           *strchr(param, '\n') = '\0';
         } else if (cmd == SURL_CMD_HGR) {
-          char *format = strrchr(url, '.');
           char monochrome = simple_serial_getc();
-          if (format) {
-            format++;
-          }
+          printf("RESP: converting to %s HGR\n", monochrome?"monochrome":"color");
           response->hgr_buf = sdl_to_hgr(
               dump_response_to_file(response->buffer, response->size),
               monochrome, 0, &(response->hgr_len));

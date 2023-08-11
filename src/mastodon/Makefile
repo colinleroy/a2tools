@@ -22,7 +22,7 @@ mastowrite_SOURCES := cli/compose.c cli/compose_header.c \
 	cli/print.c \
 	../lib/simple_serial.c ../lib/strsplit.c \
 	../lib/surl_core.c ../lib/surl_send.c ../lib/surl_get_json.c \
-	 ../lib/path_helper.c ../lib/file_select.c
+	 ../lib/path_helper.c ../lib/file_select.c ../lib/progress_bar.c
 mastowrite_CC65SOURCES := ../lib/dputs.s ../lib/dputc.s ../lib/scroll.s
 
 mastoconf_SOURCES := cli/config.c cli/logo.c ../lib/clrzone.c ../lib/scrollwindow.c  ../lib/path_helper.c

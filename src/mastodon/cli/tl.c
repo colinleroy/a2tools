@@ -36,21 +36,23 @@ char monochrome = 1;
 
 extern account *my_account;
 
+/* actions mapped to keys */
+#define SHOW_FULL_STATUS     CH_ENTER
+#define SHOW_ACCOUNT         'p'
+#define BACK                 CH_ESC
+#define CONFIGURE            'o'
+#define COMPOSE              'c'
+#define REPLY                'r'
+#define IMAGES               'i'
+#define SEARCH               's'
+#define SHOW_NOTIFICATIONS   'n'
+#define EDIT                 'e'
+/* special cases (extra step or mapped arrays )*/
 #define SHOW_HOME_TIMELINE   0
 #define SHOW_LOCAL_TIMELINE  1
 #define SHOW_GLOBAL_TIMELINE 2
-#define SHOW_FULL_STATUS     5
-#define SHOW_ACCOUNT         6
-#define SHOW_SEARCH_RES      7
-#define NAVIGATE             8
-#define BACK                 9
-#define CONFIGURE           11
-#define COMPOSE             15
-#define REPLY               16
-#define IMAGES              17
-#define SEARCH              18
-#define SHOW_NOTIFICATIONS  19
-#define EDIT                20
+#define SHOW_SEARCH_RES      'R'
+#define NAVIGATE             'N'
 
 static char cur_action;
 static char search_buf[50];
@@ -644,26 +646,6 @@ static int shift_posts_up(list *l) {
   return 0;
 }
 
-static void launch_command(char *command, char *p1, char *p2, char *p3) {
-  char *params;
-  params = malloc(127);
-  snprintf(params, 127, "%s %s %s %s %s %s",
-            instance_url, oauth_token,
-            translit_charset, p1?p1:"", p2?p2:"", p3?p3:"");
-#ifdef __CC65__
-  _filetype = PRODOS_T_TXT;
-  if (exec(command, params) != 0) {
-    cprintf("\r\nError %d starting %s %s\r\n", errno, command, params);
-    cgetc();
-    clrscr();
-  }
-  free(params);
-#else
-  printf("exec(%s %s)\n",command, params);
-  exit(0);
-#endif
-}
-
 #define STATE_FILE "mastostate"
 
 static void save_state(list **lists, char cur_list) {
@@ -730,6 +712,28 @@ err_out:
   dputs("Error.\n");
 }
 
+static void launch_command(char *command, char *p1, char *p2, char *p3, list **l, signed char cur_list) {
+  char *params;
+
+  save_state(l, cur_list);
+
+  params = malloc(127);
+  snprintf(params, 127, "%s %s %s %s %s %s",
+            instance_url, oauth_token,
+            translit_charset, p1?p1:"", p2?p2:"", p3?p3:"");
+#ifdef __CC65__
+  _filetype = PRODOS_T_TXT;
+  if (exec(command, params) != 0) {
+    cprintf("\r\nError %d starting %s %s\r\n", errno, command, params);
+    cgetc();
+    clrscr();
+  }
+  free(params);
+#else
+  printf("exec(%s %s)\n",command, params);
+  exit(0);
+#endif
+}
 
 static int load_state(list ***lists) {
   char i,j, loaded;
@@ -901,12 +905,6 @@ static int show_list(list *l) {
     }
     c = tolower(cgetc());
     switch(c) {
-      case CH_ENTER:
-        cur_action = SHOW_FULL_STATUS;
-        return 0;
-      case CH_ESC:
-        cur_action = BACK;
-        return 0;
       case CH_CURS_DOWN:
         hide_cw = 1;
         shift_posts_down(l);
@@ -915,9 +913,6 @@ static int show_list(list *l) {
         hide_cw = 1;
         shift_posts_up(l);
         break;
-      case 'p':
-        cur_action = SHOW_ACCOUNT;
-        return 0;
       case 'w':
         hide_cw = !hide_cw;
         break;
@@ -939,33 +934,6 @@ static int show_list(list *l) {
           }
         }
         break;
-      case 'o':
-        cur_action = CONFIGURE;
-        return 0;
-      case 'c':
-        cur_action = COMPOSE;
-        return 0;
-      case 'e':
-        if (!root_status || strcmp(root_status->account->id, my_account->id))
-          break;
-        cur_action = EDIT;
-        return 0;
-      case 'r':
-        if (!root_status)
-          break;
-        cur_action = REPLY;
-        return 0;
-      case 'i':
-        if (!root_status || root_status->n_images == 0)
-          break;
-        cur_action = IMAGES;
-        return 0;
-      case 's':
-        cur_action = SEARCH;
-        return 0;
-      case 'n':
-        cur_action = SHOW_NOTIFICATIONS;
-        return 0;
       case 'h':
         cur_action = SHOW_HOME_TIMELINE;
         return 0;
@@ -974,6 +942,18 @@ static int show_list(list *l) {
         return 0;
       case 'g':
         cur_action = SHOW_GLOBAL_TIMELINE;
+        return 0;
+      case CH_ENTER: /* SHOW_FULL_STATUS */
+      case CH_ESC:   /* BACK */
+      case 'p':      /* SHOW_ACCOUNT */
+      case 'o':      /* CONFIGURE */
+      case 'c':      /* COMPOSE */
+      case 'e':      /* EDIT */
+      case 'r':      /* REPLY */
+      case 'i':      /* IMAGES */
+      case 's':      /* SEARCH */
+      case 'n':      /* SHOW_NOTIFICATIONS */
+        cur_action = c;
         return 0;
     }
   }
@@ -1000,6 +980,11 @@ void cli(void) {
   }
 
   while (1) {
+    if (cur_list == -1) {
+      disp_status = NULL;
+    } else {
+      disp_status = get_top_status(l[cur_list]);
+    }
     switch(cur_action) {
       case SHOW_HOME_TIMELINE:
       case SHOW_LOCAL_TIMELINE:
@@ -1087,32 +1072,28 @@ navigate_reuse_list:
         }
         break;
       case CONFIGURE:
-          save_state(l, cur_list);
-          launch_command("mastoconf", NULL, NULL, NULL);
+          launch_command("mastoconf", NULL, NULL, NULL, l, cur_list);
           cur_action = NAVIGATE;
           break;
       case COMPOSE:
-          save_state(l, cur_list);
-          launch_command("mastowrite", NULL, NULL, NULL);
+          launch_command("mastowrite", NULL, NULL, NULL, l, cur_list);
           cur_action = NAVIGATE;
           break;
       case REPLY:
-          save_state(l, cur_list);
-          launch_command("mastowrite", "r", get_top_status(l[cur_list])->id, NULL);
+          if (disp_status)
+            launch_command("mastowrite", "r", disp_status->id, NULL, l, cur_list);
           cur_action = NAVIGATE;
           break;
       case EDIT:
-          save_state(l, cur_list);
-          launch_command("mastowrite", "e", get_top_status(l[cur_list])->id, NULL);
+          if (disp_status && !strcmp(disp_status->account->id, my_account->id))
+            launch_command("mastowrite", "e", disp_status->id, NULL, l, cur_list);
           cur_action = NAVIGATE;
           break;
       case IMAGES:
-          save_state(l, cur_list);
-          disp_status = get_top_status(l[cur_list]);
-          if (l[cur_list]->account && !disp_status) {
-            launch_command("mastodon", monochrome?"1":"0", "a", l[cur_list]->account->id);
+          if (l[cur_list]->account && (!disp_status || disp_status->displayed_at > 0)) {
+            launch_command("mastodon", monochrome?"1":"0", "a", l[cur_list]->account->id, l, cur_list);
           } else if (disp_status && disp_status->n_images) {
-            launch_command("mastodon", monochrome?"1":"0", "s", disp_status->id);
+            launch_command("mastodon", monochrome?"1":"0", "s", disp_status->id, l, cur_list);
           }
           cur_action = NAVIGATE;
           break;
