@@ -36,8 +36,8 @@
 #endif
 
 static char serial_activity_indicator_enabled = 0;
-static int serial_activity_indicator_x = -1;
-static int serial_activity_indicator_y = -1;
+static signed char serial_activity_indicator_x = -1;
+static signed char serial_activity_indicator_y = -1;
 
 void __fastcall__ simple_serial_set_activity_indicator(char enabled, int x, int y) {
   serial_activity_indicator_enabled = enabled;

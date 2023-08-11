@@ -20,6 +20,7 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
+#include "stp.h"
 #include "stp_save.h"
 #include "get_buf_size.h"
 #include "simple_serial.h"
@@ -27,10 +28,25 @@
 #include "extended_conio.h"
 #include "progress_bar.h"
 #include "math.h"
+#include "file_select.h"
 
 #define APPLESINGLE_HEADER_LEN 58
 
-static unsigned char scrw = 255, scrh = 255;
+extern char scrw, scrh;
+
+char *stp_confirm_save_all(const char *url) {
+  char *tmp = strdup(url);
+  char *last_part = strrchr(tmp, '/');
+  char *out_dir;
+
+  clrzone(0, 2, scrw - 1, 2 + PAGE_HEIGHT);
+  gotoxy(0, 4);
+  printf("Save all files in %s", last_part);
+  free(tmp);
+
+  out_dir = file_select(0, 8, scrw - 1, 17, 1, "Select destination directory");
+  return out_dir;
+}
 
 char *cleanup_filename(char *in) {
   int len = strlen(in), i;
@@ -54,42 +70,38 @@ char *cleanup_filename(char *in) {
   return in;
 }
 
-int stp_save_dialog(char *url, surl_response *resp, char confirm) {
+int stp_save_dialog(char *url, surl_response *resp, char *out_dir) {
   char *filename = strdup(strrchr(url, '/') + 1);
-  char c;
   int r;
+  char free_out_dir = (out_dir == NULL);
 
-  printxcenteredbox(30, 11);
-  printxcentered(7, filename);
+  clrzone(0, 2, scrw - 1, 2 + PAGE_HEIGHT);
+  gotoxy(0, 4);
+  printf("%s", filename);
 
-  gotoxy(6, 10);
-  printf("%s", resp->content_type ? resp->content_type : "");
-  gotoxy(6, 11);
-  printf("%zu bytes", resp->size);
+  gotoxy(0, 6);
+  printf("%s, %zu bytes\n", resp->content_type ? resp->content_type : "", resp->size);
 
-  gotoxy(6, 16);
-  chline(28);
-  gotoxy(6, 17);
-  if (confirm) {
-    printf("Esc: cancel  !   Enter: Save");
-    do {
-      c = cgetc();
-    } while (c != CH_ENTER && c != CH_ESC);
-  } else {
-    printf("Preparing...");
-    c = CH_ENTER;
-  }
-  if (c == CH_ENTER) {
-    gotoxy(6, 17);
-    printf("Saving file...              ");
-    r = stp_save(filename, resp);
-  }
+  if (!out_dir) {
+    out_dir = file_select(0, 8, scrw - 1, 17, 1, "Select destination directory");
+
+    if (!out_dir) {
+      free(filename);
+      return 1;
+    }
+  } 
+
+  gotoxy(0, 12);
+  printf("Saving file...              ");
+  r = stp_save(filename, out_dir, resp);
+
   free(filename);
-
+  if (free_out_dir)
+    free(out_dir);
   return r;
 }
 
-int stp_save(char *full_filename, surl_response *resp) {
+int stp_save(char *full_filename, char *out_dir, surl_response *resp) {
   FILE *fp = NULL;
   char *data = NULL;
   char *filename;
@@ -98,13 +110,12 @@ int stp_save(char *full_filename, surl_response *resp) {
   unsigned int buf_size;
   char keep_bin_header = 0;
   char had_error = 0;
-
-  if (scrw == 255)
-    screensize(&scrw, &scrh);
+  char *full_path = NULL;
 
   filename = strdup(full_filename);
 
-  gotoxy(6, 12);
+  clrzone(0, 8, scrw - 1, 8);
+  gotoxy(0, 8);
 
 #ifdef __CC65__
   if (strchr(filename, '.') != NULL) {
@@ -159,11 +170,13 @@ int stp_save(char *full_filename, surl_response *resp) {
   /* Unlink before writing (a change in AppleSingle header
    * would not be reflected, as it's written only at CREATE)
    */
-  unlink(filename);
-  fp = fopen(filename, "w");
+  full_path = malloc(FILENAME_MAX);
+  snprintf(full_path, FILENAME_MAX, "%s/%s", out_dir, filename);
+  unlink(full_path);
+  fp = fopen(full_path, "w");
   if (fp == NULL) {
-    gotoxy(6, 15);
-    printf("%s", strerror(errno));
+    gotoxy(0, 15);
+    printf("%s: %s", full_path, strerror(errno));
     cgetc();
     had_error = 1;
     goto err_out;
@@ -172,7 +185,7 @@ int stp_save(char *full_filename, surl_response *resp) {
   /* coverity[dead_error_condition] */
   if (keep_bin_header) {
     if (fwrite(data, sizeof(char), APPLESINGLE_HEADER_LEN, fp) < APPLESINGLE_HEADER_LEN) {
-      gotoxy(6, 15);
+      gotoxy(0, 15);
       printf("%s.", strerror(errno));
       cgetc();
       had_error = 1;
@@ -185,34 +198,35 @@ int stp_save(char *full_filename, surl_response *resp) {
   data = malloc(buf_size + 1);
 
   if (data == NULL) {
-    gotoxy(6, 15);
+    gotoxy(0, 15);
     printf("Cannot allocate buffer.");
     cgetc();
     had_error = 1;
     goto err_out;
   }
 
-  progress_bar(6, 15, 28, 0, resp->size);
+  progress_bar(0, 15, scrw - 1, 0, resp->size);
   do {
-    clrzone(6,14, 6+27, 14);
-    gotoxy(6, 14);
+    clrzone(0,14, scrw - 1, 14);
+    gotoxy(0, 14);
     printf("Reading %zu bytes...", min(buf_size, resp->size - total));
     
     r = surl_receive_data(resp, data, buf_size);
 
-    gotoxy(6, 14);
+    clrzone(0,14, scrw - 1, 14);
+    gotoxy(0, 14);
     total += r;
     printf("Saving %zu/%zu...", total, resp->size);
 
     if (fwrite(data, sizeof(char), r, fp) < r) {
-      gotoxy(6, 15);
+      gotoxy(0, 15);
       printf("%s.", strerror(errno));
       cgetc();
       had_error = 1;
       goto err_out;
     }
 
-    progress_bar(6, 15, 28, total, resp->size);
+    progress_bar(0, 15, scrw - 1, total, resp->size);
   } while (r > 0);
 
 err_out:
@@ -222,6 +236,7 @@ err_out:
   if (had_error) {
     unlink(filename);
   }
+  free(full_path);
   free(filename);
   free(data);
   return had_error;
