@@ -81,11 +81,6 @@ int __fastcall__ simple_serial_open(int slot, int baudrate) {
     return err;
 #endif
 
-#ifdef __C64__
-  if ((err = ser_install(&c64_swlink_ser)) != 0)
-    return err;
-#endif
-
 #ifdef __APPLE2__
   if ((err = ser_apple2_slot(slot)) != 0)
     return err;
