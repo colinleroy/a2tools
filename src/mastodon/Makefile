@@ -11,8 +11,8 @@ mastocli_SOURCES := cli/tl.c api/api.c \
 	api/notification.c \
 	cli/header.c cli/print.c \
 	../lib/clrzone.c ../lib/scrollwindow.c ../lib/dgets.c \
-	../lib/simple_serial.c ../lib/strsplit.c \
-	../lib/surl_core.c ../lib/surl_send.c ../lib/surl_get_json.c 
+	../lib/simple_serial.c ../lib/strsplit.c ../lib/path_helper.c \
+	../lib/surl_core.c ../lib/surl_send.c ../lib/surl_get_json.c
 mastocli_CC65SOURCES := ../lib/dputs.s ../lib/dputc.s ../lib/scroll.s
 
 mastowrite_SOURCES := cli/compose.c cli/compose_header.c \
@@ -21,7 +21,7 @@ mastowrite_SOURCES := cli/compose.c cli/compose_header.c \
 	cli/print.c \
 	../lib/simple_serial.c ../lib/strsplit.c \
 	../lib/surl_core.c ../lib/surl_send.c ../lib/surl_get_json.c \
-	 ../lib/file_select.c ../lib/progress_bar.c
+	 ../lib/file_select.c ../lib/progress_bar.c ../lib/path_helper.c
 mastowrite_CC65SOURCES := ../lib/dputs.s ../lib/dputc.s ../lib/scroll.s
 
 mastoconf_SOURCES := cli/config.c cli/logo.c ../lib/clrzone.c ../lib/scrollwindow.c

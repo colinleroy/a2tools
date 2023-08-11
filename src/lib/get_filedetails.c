@@ -19,7 +19,7 @@ int get_filedetails(char *path, char **filename, unsigned long *size, unsigned c
   *size = 0;
   *type = 0;
   *auxtype = 0;
-  strncpy(file_parts, path, FILENAME_MAX);
+  strncpy(file_parts, path, FILENAME_MAX - 1);
   if (strrchr(file_parts + 1, '/')) {
     dirname = file_parts;
     *filename = strrchr(file_parts + 1, '/') + 1;

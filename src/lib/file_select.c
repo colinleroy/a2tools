@@ -152,13 +152,12 @@ up:
     case CH_ESC:
       goto out;
     case CH_ENTER:
-      filename = malloc(FILENAME_MAX);
-      snprintf(filename, FILENAME_MAX, "%s%s%s", last_dir, (last_dir[0] != '\0' ? "/":""), list[sel]);
       if (is_dir[sel] != dir) {
         bell();
-        free(filename);
         goto disp_again;
       } else {
+        filename = malloc(FILENAME_MAX);
+        snprintf(filename, FILENAME_MAX, "%s%s%s", last_dir, (last_dir[0] != '\0' ? "/":""), list[sel]);
         goto out;
       }
     case CH_CURS_DOWN:

@@ -13,6 +13,7 @@
 #else
 #include "extended_conio.h"
 #endif
+#include "path_helper.h"
 #include "strsplit.h"
 #include "dputs.h"
 #include "dputc.h"
@@ -33,7 +34,6 @@ unsigned char scrw, scrh;
 char *instance_url = NULL;
 char *oauth_token = NULL;
 char monochrome = 1;
-char masto_start_dir[FILENAME_MAX];
 
 extern account *my_account;
 
@@ -718,7 +718,7 @@ static void launch_command(char *command, char *p1, char *p2, char *p3, list **l
 
   save_state(l, cur_list);
 
-  chdir(masto_start_dir);
+  reopen_start_device();
 
   params = malloc(127);
   snprintf(params, 127, "%s %s %s %s %s %s",
@@ -1133,7 +1133,7 @@ int main(int argc, char **argv) {
     dputs("Missing parameters.\r\n");
   }
 
-  getcwd(masto_start_dir, FILENAME_MAX);
+  register_start_device();
 
   videomode(VIDEOMODE_80COL);
   screensize(&scrw, &scrh);
