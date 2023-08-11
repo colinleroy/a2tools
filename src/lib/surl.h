@@ -9,13 +9,14 @@
 
 typedef struct _surl_response surl_response;
 struct _surl_response {
-  unsigned int code;
 #ifdef __CC65__
+  unsigned int code;
   size_t size;
   size_t header_size;
   size_t cur_pos;
   size_t cur_hdr_pos;
 #else
+  unsigned short code;
   unsigned short size;
   unsigned short header_size;
   unsigned short cur_pos;

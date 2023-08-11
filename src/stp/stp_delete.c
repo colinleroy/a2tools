@@ -20,22 +20,29 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
+#ifndef __CC65__
+#include "extended_conio.h"
+#else
+#include <conio.h>
+#endif
 #include "stp_delete.h"
+#include "stp.h"
 #include "stp_cli.h"
 #include "get_buf_size.h"
 #include "simple_serial.h"
-#include "extended_conio.h"
+#include "clrzone.h"
 #include "math.h"
 
 #define APPLESINGLE_HEADER_LEN 58
 
-static unsigned char scrw = 255, scrh = 255;
+extern char scrw, scrh;
 
 void stp_delete_dialog(char *url, char *filename) {
   char c;
 
-  printxcenteredbox(30, 11);
-  printxcentered(7, filename);
+  clrzone(0, 2, scrw - 1, 2 + PAGE_HEIGHT);
+  gotoxy(0, 7);
+  printf("%s", filename);
 
   gotoxy(6, 10);
   printf("Delete file?");

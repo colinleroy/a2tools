@@ -2,7 +2,6 @@ PROGRAM=stp
 SOURCES := stp.c stp_cli.c stp_save.c stp_send_file.c stp_delete.c \
 	../lib/simple_serial.c \
 	../lib/get_buf_size.c \
-	../lib/extended_conio.c \
 	../lib/progress_bar.c \
 	../lib/strsplit.c \
 	../lib/get_filedetails.c \
@@ -17,13 +16,13 @@ SOURCES := stp.c stp_cli.c stp_save.c stp_send_file.c stp_delete.c \
 	../lib/file_select.c
 
 CL65SOURCES = ../lib/dputc.s ../lib/scroll.s
-GCC_SOURCES = ../lib/extended_string.c
+GCC_SOURCES = ../lib/extended_string.c ../lib/extended_conio.c
 
 DEPS := 
 
 CC65_TARGET = apple2enh
 CFLAGS  = -I ../lib -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
-CLCFLAGS = -t $(CC65_TARGET) -O -g --debug-info -Wl "-Ln,$(PROGRAM).lbl" -Wl "--dbgfile,$(PROGRAM).dbg" -Wl "--mapfile,$(PROGRAM).map" -vm #-DSERIAL_TO_LANGCARD
+CLCFLAGS = -t $(CC65_TARGET) -Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-noexit.cfg -vm -m $(PROGRAM).map #-DSERIAL_TO_LANGCARD
 GCCCFLAGS = -g -O0 -Wall 
 GCCLDFLAGS = 
 

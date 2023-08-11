@@ -58,8 +58,11 @@ char *get_start_url(void) {
     fgets(last_login, BUFSIZE, fp);
     fgets(last_password, BUFSIZE, fp);
     fclose(fp);
-    *strchr(last_start_url,'\n') = '\0';
-    *strchr(last_login,'\n') = '\0';
+    if (strchr(last_start_url,'\n'))
+      *strchr(last_start_url,'\n') = '\0';
+    if (strchr(last_login,'\n'))
+      *strchr(last_login,'\n') = '\0';
+    if (strchr(last_password,'\n'))
     *strchr(last_password,'\n') = '\0';
   } else {
     last_start_url = strdup("ftp://ftp.apple.asimov.net");
@@ -192,7 +195,7 @@ static int scroll(int shift) {
   return scroll_changed;
 }
 
-static unsigned char scrw = 255, scrh = 255;
+unsigned char scrw = 255, scrh = 255;
 
 static char *build_login_url(char *url) {
   char *host = strstr(url, "://");
@@ -221,7 +224,8 @@ static char *build_login_url(char *url) {
 
 static void get_all(const char *url, char **lines, int n_lines) {
   int i, r;
-  if (lines == NULL || !stp_confirm_save_all(url)) {
+  char *out_dir;
+  if (lines == NULL || (out_dir = stp_confirm_save_all(url)) == NULL) {
     return;
   }
   for (i = 0; i < n_lines; i++) {
@@ -241,7 +245,7 @@ static void get_all(const char *url, char **lines, int n_lines) {
     }
 
     if (resp->content_type && strcmp(resp->content_type, "directory")) {
-      r = stp_save_dialog(cur_url, resp, 0);
+      r = stp_save_dialog(cur_url, resp, out_dir);
       stp_print_result(resp);
     }
     surl_response_free(resp);
@@ -251,6 +255,7 @@ static void get_all(const char *url, char **lines, int n_lines) {
     }
   }
   clrzone(0, 2, scrw - 1, 2 + PAGE_HEIGHT);
+  free(out_dir);
 }
 
 int main(void) {
@@ -304,7 +309,7 @@ int main(void) {
     }
 
     if (resp->content_type && strcmp(resp->content_type, "directory")) {
-      stp_save_dialog(url, resp, 1);
+      stp_save_dialog(url, resp, NULL);
       clrzone(0, 2, scrw - 1, 2 + PAGE_HEIGHT);
       stp_print_result(resp);
       goto up_dir;

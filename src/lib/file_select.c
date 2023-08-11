@@ -15,31 +15,44 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifdef __CC65__
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#ifdef __CC65__
 #include <conio.h>
+#include <device.h>
+#else
+#include "extended_conio.h"
+#define _DE_ISDIR(x) ((x) == DT_DIR)
+#endif
 #include <ctype.h>
 #include <errno.h>
-#include <device.h>
 #include <dirent.h>
 #include "clrzone.h"
 
 static char last_dir[FILENAME_MAX] = "";
 
 static void bell(void) {
+#ifdef __CC65__
   __asm__("bit     $C082");
   __asm__("jsr     $FBE4");
   __asm__("bit     $C080");
+#endif
 }
 
 char *file_select(char sx, char sy, char ex, char ey, char dir, char *prompt) {
   char **list = NULL;
   char *is_dir = NULL;
+#ifdef __CC65__
   char dev, c, sel = 0, i, n = 0, start = 0;
+#else
+  int dev, c, sel = 0, i, n = 0, start = 0;
+#endif
   char *filename = NULL;
+
+  if (dir)
+    last_dir[0] = '\0';
 
 list_again:
   for (i = 0; i < n; i++) {
@@ -55,6 +68,7 @@ list_again:
   start = 0;
 
   if (last_dir[0] == '\0') {
+#ifdef __CC65__
     dev = getfirstdevice();
     do {
       n++;
@@ -68,26 +82,45 @@ list_again:
         continue;
       }
       is_dir[n - 1] = 1;
-
     } while ((dev = getnextdevice(dev)) != INVALID_DEVICE);
+#else
+  last_dir[0] = '/';
+  goto posix_use_dir;
+#endif
   } else {
-    DIR *dir = opendir(last_dir);
-    struct dirent *d;
-    while (d = readdir(dir)) {
-      n++;
-      list = realloc(list, sizeof(char *) * n);
-      is_dir = realloc(is_dir, sizeof(char) * n);
+#ifndef __CC65__
+posix_use_dir:
+#endif
+    DIR *d = opendir(last_dir);
+    struct dirent *ent;
+    if (d) {
+      while (ent = readdir(d)) {
+        if (dir && !_DE_ISDIR(ent->d_type))
+          continue;
 
-      list[n - 1] = strdup(d->d_name);
-      is_dir[n - 1] = _DE_ISDIR(d->d_type);
+        n++;
+        list = realloc(list, sizeof(char *) * n);
+        is_dir = realloc(is_dir, sizeof(char) * n);
+
+        list[n - 1] = strdup(ent->d_name);
+        is_dir[n - 1] = _DE_ISDIR(ent->d_type);
+      }
+      closedir(d);
     }
-    closedir(dir);
   }
 full_disp_again:
   clrzone(sx, sy, ex, ey);
 disp_again:
   gotoxy(sx, sy);
   printf("-- %s\n", prompt);
+  if (n == 0) {
+    printf("! *%s*\n"
+           "!\n"
+           "-- Any key to go up",
+           dir ? "No directory":"Empty");
+    cgetc();
+    goto up;
+  }
   for (i = start; i < n && i - start < ey - sy - 3; i++) {
     revers(0);
     cputs("! ");
@@ -96,8 +129,8 @@ disp_again:
   }
   revers(0);
   printf("! \n"
-         "!  Up/Down: navigate; Right: enter dir;\n");
-  printf("-- Esc: exit dir; Enter: select");
+         "!  Up/Down/Left/Right: navigate;\n");
+  printf("-- Enter: select; Esc: cancel");
   c = tolower(cgetc());
   switch (c) {
     case CH_CURS_RIGHT:
@@ -109,14 +142,16 @@ disp_again:
         strcat(last_dir, "/");
       strcat(last_dir, list[sel]);
       goto list_again;
-    case CH_ESC:
-      if (last_dir[0] == '\0')
-        return NULL;
-      *strrchr(last_dir, '/') = '\0';
+    case CH_CURS_LEFT:
+up:
+      if (strrchr(last_dir, '/'))
+        *strrchr(last_dir, '/') = '\0';
       goto list_again;
+    case CH_ESC:
+      goto out;
     case CH_ENTER:
       filename = malloc(FILENAME_MAX);
-      snprintf(filename, FILENAME_MAX, "%s/%s", last_dir, list[sel]);
+      snprintf(filename, FILENAME_MAX, "%s%s%s", last_dir, (last_dir[0] != '\0' ? "/":""), list[sel]);
       if (is_dir[sel] != dir) {
         bell();
         free(filename);
@@ -150,12 +185,8 @@ out:
   free(is_dir);
   clrzone(sx, sy, ex, ey);
   gotoxy(sx, sy);
-  printf("%s", filename);
+  if (filename) {
+    printf("%s", filename);
+  }
   return filename;
 }
-
-#else
-char *file_select(char sx, char sy, char w, char h, char dir_only) {
-  return 0;
-}
-#endif

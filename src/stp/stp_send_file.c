@@ -36,7 +36,7 @@
 
 #define BUFSIZE 255
 
-static unsigned char scrw = 255, scrh = 255;
+extern char scrw, scrh;
 
 static char *stp_send_dialog() {
   char *filename = file_select(0, 2, scrw - 1, 2 + PAGE_HEIGHT, 0, "Select file to send");
@@ -66,9 +66,6 @@ void stp_send_file(char *remote_dir) {
   resp = NULL;
   r = 0;
   
-  if (scrw == 255)
-    screensize(&scrw, &scrh);
-
   path  = stp_send_dialog();
   if (path == NULL) {
     return;
