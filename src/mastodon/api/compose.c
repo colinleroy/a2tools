@@ -7,6 +7,8 @@
 #include "strsplit.h"
 #include "compose.h"
 #include "common.h"
+#include "progress_bar.h"
+
 #ifdef __APPLE2__
 #include <apple2enh.h>
 #endif
@@ -28,7 +30,7 @@ static char *compose_audience_str(char compose_audience) {
 #define FILE_ERROR "Can not open file.\r\n"
 #define NET_ERROR "Network error.\r\n"
 
-char *api_send_hgr_image(char *filename, char *description, char **err) {
+char *api_send_hgr_image(char *filename, char *description, char **err, char x, char y, char w) {
   FILE *fp;
   char buf[1024];
   int r;
@@ -52,6 +54,8 @@ char *api_send_hgr_image(char *filename, char *description, char **err) {
     return NULL;
   }
 
+  if (w > 0)
+    progress_bar(x, y, w, 0, HGR_LEN);
   resp = get_surl_for_endpoint(SURL_METHOD_POST_DATA, "/api/v2/media");
 
   if (resp == NULL) {
@@ -68,6 +72,8 @@ char *api_send_hgr_image(char *filename, char *description, char **err) {
   while ((r = fread(buf, sizeof(char), sizeof(buf), fp)) > 0) {
     surl_multipart_send_field_data(buf, r);
     to_send -= r;
+    if (w > 0)
+      progress_bar(x, y, w, HGR_LEN - to_send, HGR_LEN);
     if (to_send == 0) {
       break;
     }

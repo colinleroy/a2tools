@@ -13,6 +13,7 @@
 #else
 #include "extended_conio.h"
 #endif
+#include "file_select.h"
 #include "strsplit.h"
 #include "scroll.h"
 #include "print.h"
@@ -30,6 +31,7 @@ char *instance_url = NULL;
 char *oauth_token = NULL;
 unsigned char scrw, scrh;
 char top = 0;
+char masto_start_dir[FILENAME_MAX];
 
 char n_medias = 0;
 char sensitive_medias = 0;
@@ -142,20 +144,19 @@ static void remove_image() {
 
 static void add_image() {
   char *err = NULL;
+  char x, y;
   clrscr();
   gotoxy(0, 1);
 
   if (n_medias == MAX_IMAGES) {
     return;
   }
-  dputs("Please insert media disk if needed. If you switch disks,\r\n"
-          "please enter full path to file, like /VOLNAME/FILENAME\r\n"
-          "\r\n");
 
   dputs("File name: ");
-  media_files[n_medias] = malloc(32);
-  media_files[n_medias][0] = '\0';
-  if (dget_text(media_files[n_medias], 32, NULL, 0) == NULL) {
+  x = wherex();
+  y = wherey();
+  media_files[n_medias] = file_select(x, y, scrw - x - 1, y + 10, 0, "Please choose an image");
+  if (media_files[n_medias] == NULL) {
     return;
   }
 
@@ -165,10 +166,12 @@ static void add_image() {
   dget_text(media_descriptions[n_medias], 512, NULL, 0);
 
 try_again:
-  dputs("\r\nUploading...\r\n");
+  dputs("\r\nUploading... ");
+  x = wherex();
+  y = wherey();
   media_ids[n_medias] = api_send_hgr_image(media_files[n_medias],
                                            media_descriptions[n_medias],
-                                           &err);
+                                           &err, x, y, scrw - LEFT_COL_WIDTH - 1 - x);
   if (media_ids[n_medias] == NULL) {
     char t;
     dputs("An error happened uploading the file:\r\n");
@@ -333,11 +336,6 @@ try_again:
     }
   }
 
-  if (n_medias > 0) {
-    cputs("Please re-insert Mastodon disk if needed.\r\n\r\n");
-    cgetc();
-  }
-
   for (i = 0; i < n_medias; i++) {
     free(media_ids[i]);
     free(media_files[i]);
@@ -352,6 +350,8 @@ int main(int argc, char **argv) {
   if (argc < 4) {
     cputs("Missing instance_url, oauth_token and/or charset parameters.\n");
   }
+
+  getcwd(masto_start_dir, FILENAME_MAX);
 
   videomode(VIDEOMODE_80COL);
   screensize(&scrw, &scrh);
@@ -416,6 +416,13 @@ int main(int argc, char **argv) {
   params = malloc(127);
   snprintf(params, 127, "%s %s", instance_url, oauth_token);
 #ifdef __CC65__
+  while (chdir(masto_start_dir) != 0) {
+    clrscr();
+    gotoxy(13, 12);
+    printf("Please reinsert the program disk, then press any key.");
+    cgetc();
+  }
+
   exec("mastocli", params);
   exit(0);
 #else
