@@ -95,7 +95,8 @@ notification *api_get_notification(char *id) {
                     ".id,.type,.created_at,"
                     ".status.id//\"-\","
                     ".account.id,"
-                    ".account.display_name") >= 0) {
+                    ".account.display_name,"
+                    ".account.username") >= 0) {
     char **lines;
     char n_lines;
 
@@ -123,7 +124,9 @@ notification *api_get_notification(char *id) {
       n->status_id = strdup(lines[3]);
     }
     n->account_id = strdup(lines[4]);
-    n->display_name = strdup(lines[5]);
+    /* if display_name is null or non-existent, 
+     * we'll use username */
+    n->display_name = (lines[5][0] == '\0' && n_lines == 7) ? strdup(lines[6]) : strdup(lines[5]);
     free(lines);
   } else {
 free_err_out:
