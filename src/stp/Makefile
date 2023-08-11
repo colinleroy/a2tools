@@ -12,7 +12,6 @@ SOURCES := stp.c stp_cli.c stp_save.c stp_send_file.c stp_delete.c \
 	../lib/surl_receive.c \
 	../lib/surl_send.c \
 	../lib/surl_set_time.c \
-	../lib/path_helper.c \
 	../lib/file_select.c
 
 CL65SOURCES = ../lib/dputc.s ../lib/scroll.s

@@ -114,23 +114,25 @@ disp_again:
   gotoxy(sx, sy);
   printf("-- %s\n", prompt);
   if (n == 0) {
-    printf("! *%s*\n"
-           "!\n"
-           "-- Any key to go up",
-           dir ? "No directory":"Empty");
+    gotox(sx); printf("! *%s*\n", dir ? "No directory":"Empty");
+    gotox(sx); printf("!\n");
+    gotox(sx); printf("-- Any key to go up");
     cgetc();
     goto up;
   }
   for (i = start; i < n && i - start < ey - sy - 3; i++) {
     revers(0);
+    gotox(sx);
     cputs("! ");
     revers(i == sel);
     printf("%s\n", list[i]);
   }
   revers(0);
-  printf("! \n"
-         "!  Up/Down/Left/Right: navigate;\n");
-  printf("-- Enter: select; Esc: cancel");
+
+  gotox(sx);printf("! \n");
+  gotox(sx);printf("!  Up/Down/Left/Right: navigate;\n");
+  gotox(sx);printf("-- Enter: select; Esc: cancel");
+
   c = tolower(cgetc());
   switch (c) {
     case CH_CURS_RIGHT:

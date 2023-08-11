@@ -20,7 +20,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
-#include "path_helper.h"
 #include "file_select.h"
 #include "stp.h"
 #include "stp_cli.h"
@@ -162,13 +161,6 @@ finished:
 err_out:
   if (fp)
     fclose(fp);
-  // 
-  // while (reopen_start_device() != 0) {
-  //   clrzone(0, 21, scrw - 1, 22);
-  //   gotoxy(0, 21);
-  //   printf("Please reinsert the program disk.");
-  //   cgetc();
-  // }
 
   free(path);
   free(remote_filename);

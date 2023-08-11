@@ -14,8 +14,7 @@ homectrl_disk_PROGS = src/a2recv/a2recv.bin \
 mastodon_disk_PROGS = src/mastodon/mastodon.bin \
 				src/mastodon/mastocli.bin \
 				src/mastodon/mastowrite.bin \
-				src/mastodon/mastoconf.bin \
-				src/mastodon/mastoimg.bin
+				src/mastodon/mastoconf.bin
 
 CLEANDISK = disks/basic-empty.dsk
 

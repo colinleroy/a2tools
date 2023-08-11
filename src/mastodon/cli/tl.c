@@ -33,6 +33,7 @@ unsigned char scrw, scrh;
 char *instance_url = NULL;
 char *oauth_token = NULL;
 char monochrome = 1;
+char masto_start_dir[FILENAME_MAX];
 
 extern account *my_account;
 
@@ -646,7 +647,7 @@ static int shift_posts_up(list *l) {
   return 0;
 }
 
-#define STATE_FILE "mastostate"
+#define STATE_FILE "/RAM/mastostate"
 
 static void save_state(list **lists, char cur_list) {
   char i,j;
@@ -717,6 +718,8 @@ static void launch_command(char *command, char *p1, char *p2, char *p3, list **l
 
   save_state(l, cur_list);
 
+  chdir(masto_start_dir);
+
   params = malloc(127);
   snprintf(params, 127, "%s %s %s %s %s %s",
             instance_url, oauth_token,
@@ -745,7 +748,7 @@ static int load_state(list ***lists) {
 #endif
 
   *lists = NULL;
-  fp = fopen(STATE_FILE,"r");
+  fp = fopen(STATE_FILE, "r");
   if (fp == NULL) {
     *lists = NULL;
     return -1;
@@ -759,6 +762,7 @@ static int load_state(list ***lists) {
   num_lists = atoi(gen_buf);
   if (num_lists < 0) {
     *lists = NULL;
+    printf("Error %d\n", errno);
     fclose(fp);
     unlink(STATE_FILE);
 
@@ -1128,6 +1132,8 @@ int main(int argc, char **argv) {
   if (argc < 3) {
     dputs("Missing parameters.\r\n");
   }
+
+  getcwd(masto_start_dir, FILENAME_MAX);
 
   videomode(VIDEOMODE_80COL);
   screensize(&scrw, &scrh);
