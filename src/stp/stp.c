@@ -246,6 +246,8 @@ static void get_all(const char *url, char **lines, int n_lines) {
     if (resp->content_type && strcmp(resp->content_type, "directory")) {
       r = stp_save_dialog(cur_url, resp, out_dir);
       stp_print_result(resp);
+    } else {
+      r = -1;
     }
     surl_response_free(resp);
     free(cur_url);

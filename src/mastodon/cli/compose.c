@@ -13,6 +13,7 @@
 #else
 #include "extended_conio.h"
 #endif
+#include "path_helper.h"
 #include "file_select.h"
 #include "strsplit.h"
 #include "scroll.h"
@@ -31,7 +32,6 @@ char *instance_url = NULL;
 char *oauth_token = NULL;
 unsigned char scrw, scrh;
 char top = 0;
-char masto_start_dir[FILENAME_MAX];
 
 char n_medias = 0;
 char sensitive_medias = 0;
@@ -351,7 +351,7 @@ int main(int argc, char **argv) {
     cputs("Missing instance_url, oauth_token and/or charset parameters.\n");
   }
 
-  getcwd(masto_start_dir, FILENAME_MAX);
+  register_start_device();
 
   videomode(VIDEOMODE_80COL);
   screensize(&scrw, &scrh);
@@ -378,7 +378,8 @@ int main(int argc, char **argv) {
     }
 
     /* Set compose audience */
-    compose_audience = ref_status->visibility;
+    if (ref_status)
+      compose_audience = ref_status->visibility;
 
     /* If editing, set medias from reference status */
     if (compose_mode[0] == 'e' && ref_status->n_images > 0) {
@@ -416,7 +417,7 @@ int main(int argc, char **argv) {
   params = malloc(127);
   snprintf(params, 127, "%s %s", instance_url, oauth_token);
 #ifdef __CC65__
-  while (chdir(masto_start_dir) != 0) {
+  while (reopen_start_device() != 0) {
     clrscr();
     gotoxy(13, 12);
     printf("Please reinsert the program disk, then press any key.");
