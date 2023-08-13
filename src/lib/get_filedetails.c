@@ -33,7 +33,7 @@ int get_filedetails(char *path, char **filename, unsigned long *size, unsigned c
   if (dir == NULL) {
     return -1;
   }
-  while (d = readdir(dir)) {
+  while ((d = readdir(dir))) {
     if (!strcasecmp(*filename, d->d_name)) {
       *type = d->d_type;
 #ifdef __APPLE2__
