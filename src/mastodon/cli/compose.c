@@ -371,28 +371,29 @@ int main(int argc, char **argv) {
     compose_mode = argv[4];
     ref_status = api_get_status(argv[5], 0);
 
-    /* Set CW from reference status */
-    if (ref_status && ref_status->spoiler_text) {
-      strncpy(cw, ref_status->spoiler_text, sizeof(cw) - 1);
-      cw[sizeof(cw) - 1] = '\0';
-    }
+    if (ref_status) {
+      /* Set CW from reference status */
+      if (ref_status->spoiler_text) {
+        strncpy(cw, ref_status->spoiler_text, sizeof(cw) - 1);
+        cw[sizeof(cw) - 1] = '\0';
+      }
 
-    /* Set compose audience */
-    if (ref_status)
+      /* Set compose audience */
       compose_audience = ref_status->visibility;
 
-    /* If editing, set medias from reference status */
-    if (compose_mode[0] == 'e' && ref_status->n_images > 0) {
-      media *images = api_get_status_media(ref_status->id);
-      if (images) {
-        char i;
-        n_medias = images->n_media;
-        for (i = 0; i < n_medias; i++) {
-          media_ids[i] = strdup(images->media_id[i]);
-          media_files[i] = strdup(strrchr(images->media_url[i], '/'));
-          media_descriptions[i] = strdup(images->media_alt_text[i]);
+      /* If editing, set medias from reference status */
+      if (compose_mode[0] == 'e' && ref_status->n_images > 0) {
+        media *images = api_get_status_media(ref_status->id);
+        if (images) {
+          char i;
+          n_medias = images->n_media;
+          for (i = 0; i < n_medias; i++) {
+            media_ids[i] = strdup(images->media_id[i]);
+            media_files[i] = strdup(strrchr(images->media_url[i], '/'));
+            media_descriptions[i] = strdup(images->media_alt_text[i]);
+          }
+          media_free(images);
         }
-        media_free(images);
       }
     }
   } else {
