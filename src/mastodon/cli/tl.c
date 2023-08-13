@@ -318,10 +318,11 @@ static char load_prev_posts(list *l) {
 }
 
 static char search_footer(char c) {
-  switch (tolower(c)) {
+  c = tolower(c);
+  switch (c) {
     case 'm':
     case 'a':
-      search_type = tolower(c);
+      search_type = c;
       break;
     default:
       break;
@@ -513,8 +514,18 @@ update:
           gotox(0);
         }
       }
-
-      if (disp != NULL && bottom == 0) {
+      if (disp == NULL) {
+        dputs("Load error :(");
+        if (wherey() < scrh - 1) {
+          dputs("\r\n");
+          chline(scrw - LEFT_COL_WIDTH - 1);
+        } else {
+          bottom = 1;
+        }
+        l->post_height[i] = 2;
+        continue;
+      }
+      if (bottom == 0) {
         if (l->kind != SHOW_NOTIFICATIONS) {
           bottom = print_status((status *)disp, hide_cw || wherey() > 0, full, &scrolled);
         } else {
