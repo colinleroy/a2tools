@@ -38,8 +38,11 @@
 extern char scrw, scrh;
 
 static char *stp_send_dialog() {
-  char *filename = file_select(0, 2, scrw - 1, 2 + PAGE_HEIGHT, 0, "Select file to send");
+  char *filename;
   clrzone(0, 2, scrw - 1, 2 + PAGE_HEIGHT);
+  gotoxy(0, 3);
+  cprintf("File name: ");
+  filename = file_select(wherex(), wherey(), scrw - 1, PAGE_HEIGHT, 0, "Select file to send");
   return filename;
 }
 
@@ -57,14 +60,15 @@ void stp_send_file(char *remote_dir) {
   static char *remote_filename;
   static surl_response *resp;
   static int r = 0;
-  
+  static char start_y = 3;
+
   fp = NULL;
   filename = NULL;
   path = NULL;
   remote_filename = NULL;
   resp = NULL;
   r = 0;
-  
+
   path  = stp_send_dialog();
   if (path == NULL) {
     return;
@@ -77,18 +81,18 @@ void stp_send_file(char *remote_dir) {
 #endif
 
   clrzone(0, 2, scrw - 1, 2 + PAGE_HEIGHT);
-  gotoxy(0, 2);
-  printf("Opening %s...\n", path);
+  gotoxy(0, 3);
+  cprintf("Opening %s...\r\n", path);
 
   fp = fopen(path, "r");
   if (fp == NULL) {
-    printf("%s: %s", path, strerror(errno));
+    cprintf("%s: %s", path, strerror(errno));
     cgetc();
     goto err_out;
   }
-  
+
   if (get_filedetails(path, &filename, &filesize, &type, &auxtype) < 0) {
-    printf("Can't get file details.");
+    cprintf("Can't get file details.");
     cgetc();
     goto err_out;
   }
@@ -111,16 +115,16 @@ void stp_send_file(char *remote_dir) {
   data = malloc(buf_size + 1);
 
   if (data == NULL) {
-    printf("Cannot allocate buffer.");
+    cprintf("Cannot allocate buffer.");
     cgetc();
     goto err_out;
   }
 
-  progress_bar(0, 5, scrw, 0, filesize);
+  progress_bar(0, start_y + 3, scrw, 0, filesize);
 
   resp = surl_start_request(SURL_METHOD_PUT, remote_filename, NULL, 0);
   if (resp == NULL || resp->code != 100) {
-    printf("Bad response.");
+    cprintf("Bad response.");
     cgetc();
     goto err_out;
   }
@@ -134,28 +138,28 @@ void stp_send_file(char *remote_dir) {
   do {
     size_t rem = (size_t)((long)filesize - (long)total);
     size_t chunksize = min(buf_size, rem);
-    clrzone(0, 2, scrw - 1, 2);
-    gotoxy(0, 2);
-    printf("Reading %zu bytes...", chunksize);
+    clrzone(0, start_y, scrw - 1, start_y);
+    gotoxy(0, start_y);
+    cprintf("Reading %zu bytes...", chunksize);
 
     r = fread(data, sizeof(char), chunksize, fp);
     total = total + r;
-    
-    clrzone(0, 2, scrw - 1, 2);
-    gotoxy(0, 2);
-    printf("Sending %zu/%lu...", total, filesize);
+
+    clrzone(0, start_y, scrw - 1, start_y);
+    gotoxy(0, start_y);
+    cprintf("Sending %zu/%lu...", total, filesize);
     surl_send_data(data, r);
 
-    progress_bar(0, 5, scrw, total, filesize);
+    progress_bar(0, start_y + 3, scrw, total, filesize);
   } while (total < filesize);
   clrzone(0, 2, scrw - 1, 2 + PAGE_HEIGHT);
-  gotoxy(0, 2);
-  printf("Sent %zu/%lu.\n", total, filesize);
+  gotoxy(0, start_y);
+  cprintf("Sent %zu/%lu.\r\n", total, filesize);
 
 finished:
   surl_read_response_header(resp);
-  printf("File sent, response code: %d\n", resp->code);
-  printf("Hit a key to continue.");
+  cprintf("File sent, response code: %d\r\n", resp->code);
+  cprintf("Hit a key to continue.");
   cgetc();
 
 err_out:

@@ -34,17 +34,15 @@
 
 extern char scrw, scrh;
 
-char *stp_confirm_save_all(const char *url) {
-  char *tmp = strdup(url);
-  char *last_part = strrchr(tmp, '/');
+char *stp_confirm_save_all(void) {
   char *out_dir;
 
   clrzone(0, 2, scrw - 1, 2 + PAGE_HEIGHT);
   gotoxy(0, 4);
-  printf("Save all files in %s", last_part);
-  free(tmp);
+  cprintf("Save all files in current directory\r\n\r\n");
 
-  out_dir = file_select(0, 8, scrw - 1, 17, 1, "Select destination directory");
+  cprintf("Save to: ");
+  out_dir = file_select(wherex(), wherey(), scrw - 1, 17, 1, "Select destination directory");
   return out_dir;
 }
 
@@ -77,22 +75,24 @@ int stp_save_dialog(char *url, surl_response *resp, char *out_dir) {
 
   clrzone(0, 2, scrw - 1, 2 + PAGE_HEIGHT);
   gotoxy(0, 4);
-  printf("%s", filename);
-
-  gotoxy(0, 6);
-  printf("%s, %zu bytes\n", resp->content_type ? resp->content_type : "", resp->size);
+  cprintf("%s\r\n"
+          "%s, %zu bytes\r\n"
+          "\r\n"
+          "Save to: ", filename, resp->content_type ? resp->content_type : "", resp->size);
 
   if (!out_dir) {
-    out_dir = file_select(0, 8, scrw - 1, 17, 1, "Select destination directory");
+    out_dir = file_select(wherex(), wherey(), scrw - 1, 17, 1, "Select destination directory");
 
     if (!out_dir) {
       free(filename);
       return 1;
     }
-  } 
+  } else {
+    cprintf("%s", out_dir);
+  }
 
   gotoxy(0, 12);
-  printf("Saving file...              ");
+  cprintf("Saving file...              ");
   r = stp_save(filename, out_dir, resp);
 
   free(filename);
@@ -111,11 +111,12 @@ int stp_save(char *full_filename, char *out_dir, surl_response *resp) {
   char keep_bin_header = 0;
   char had_error = 0;
   char *full_path = NULL;
+  char start_y = 10;
 
   filename = strdup(full_filename);
 
-  clrzone(0, 8, scrw - 1, 8);
-  gotoxy(0, 8);
+  clrzone(0, start_y, scrw - 1, start_y);
+  gotoxy(0, start_y);
 
 #ifdef __CC65__
   if (strchr(filename, '.') != NULL) {
@@ -141,7 +142,7 @@ int stp_save(char *full_filename, char *out_dir, surl_response *resp) {
     if (r == 58
      && data[0] == 0x00 && data[1] == 0x05
      && data[2] == 0x16 && data[3] == 0x00) {
-      printf("AppleSingle: $%04x\n", (data[56]<<8 | data[57]));
+      cprintf("AppleSingle: $%04x\r\n", (data[56]<<8 | data[57]));
       _auxtype = (data[56]<<8 | data[57]);
       free(data);
     } else {
@@ -156,7 +157,7 @@ int stp_save(char *full_filename, char *out_dir, surl_response *resp) {
     filename = tmp;
     _filetype = PRODOS_T_SYS;
   } else {
-    printf("Filetype unknown, using TXT.");
+    cprintf("Filetype unknown, using TXT.");
     free(filename);
     filename = strdup(full_filename);
     _filetype = PRODOS_T_TXT;
@@ -176,7 +177,7 @@ int stp_save(char *full_filename, char *out_dir, surl_response *resp) {
   fp = fopen(full_path, "w");
   if (fp == NULL) {
     gotoxy(0, 15);
-    printf("%s: %s", full_path, strerror(errno));
+    cprintf("%s: %s", full_path, strerror(errno));
     cgetc();
     had_error = 1;
     goto err_out;
@@ -186,7 +187,7 @@ int stp_save(char *full_filename, char *out_dir, surl_response *resp) {
   if (keep_bin_header) {
     if (fwrite(data, sizeof(char), APPLESINGLE_HEADER_LEN, fp) < APPLESINGLE_HEADER_LEN) {
       gotoxy(0, 15);
-      printf("%s.", strerror(errno));
+      cprintf("%s.", strerror(errno));
       cgetc();
       had_error = 1;
       goto err_out;
@@ -199,7 +200,7 @@ int stp_save(char *full_filename, char *out_dir, surl_response *resp) {
 
   if (data == NULL) {
     gotoxy(0, 15);
-    printf("Cannot allocate buffer.");
+    cprintf("Cannot allocate buffer.");
     cgetc();
     had_error = 1;
     goto err_out;
@@ -209,18 +210,18 @@ int stp_save(char *full_filename, char *out_dir, surl_response *resp) {
   do {
     clrzone(0,14, scrw - 1, 14);
     gotoxy(0, 14);
-    printf("Reading %zu bytes...", min(buf_size, resp->size - total));
-    
+    cprintf("Reading %zu bytes...", min(buf_size, resp->size - total));
+
     r = surl_receive_data(resp, data, buf_size);
 
     clrzone(0,14, scrw - 1, 14);
     gotoxy(0, 14);
     total += r;
-    printf("Saving %zu/%zu...", total, resp->size);
+    cprintf("Saving %zu/%zu...", total, resp->size);
 
     if (fwrite(data, sizeof(char), r, fp) < r) {
       gotoxy(0, 15);
-      printf("%s.", strerror(errno));
+      cprintf("%s.", strerror(errno));
       cgetc();
       had_error = 1;
       goto err_out;
