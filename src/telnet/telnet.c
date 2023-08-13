@@ -335,9 +335,9 @@ static void telnet_reply(char resp_code, char opt) {
 }
 
 static void telnet_subneg(char opt) {
-  unsigned char one = simple_serial_getc();
-  unsigned char iac = simple_serial_getc();
-  unsigned char sne = simple_serial_getc();
+  /* unsigned char one = */ simple_serial_getc();
+  /* unsigned char iac = */ simple_serial_getc();
+  /* unsigned char sne = */ simple_serial_getc();
   
   switch(opt) {
     case TELNET_OPT_TERMT:
@@ -434,8 +434,10 @@ static int handle_special_char(char i) {
 }
 
 static char curs_x = 255, curs_y = 255;
+#ifdef __CC65__
 static char ch_at_curs = 0;
 static int cursor_blinker = 0;
+#endif
 
 static void set_cursor(void) {
 #ifdef __CC65__
@@ -466,6 +468,19 @@ static void rm_cursor(void) {
     curs_x = 255;
   }
 #endif
+}
+
+static void tab(void) {
+  char x = wherex();
+  char next = 8 - (x % 8);
+  while (next-- > 0) {
+#ifdef __CC65__
+    dputc(' ');
+#else
+    fputc(' ', stdout);
+    fflush(stdout);
+#endif
+  }
 }
 
 static char shift_up = 0;
@@ -605,7 +620,10 @@ got_input = 0;
 #endif
       } else {
 #ifdef __CC65__
-        dputc(o);
+        if (o != '\t')
+          dputc(o);
+        else
+          tab();
 #else
         fputc(o, stdout);
         fflush(stdout);
