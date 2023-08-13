@@ -55,9 +55,11 @@ char monochrome = 1;
   #define TEXTMODE VIDEOMODE_80COL
   #define NUMCOLS 80
   #define PROGRESS_STEPS 64
-#pragma rodata-name (push, "HGR")
-char *hgr_page;
-#pragma rodata-name (pop)
+  #ifdef __CC65__
+    #pragma rodata-name (push, "HGR")
+    char *hgr_page;
+    #pragma rodata-name (pop)
+  #endif
 #endif
 
 static void init_hgr(void) {
