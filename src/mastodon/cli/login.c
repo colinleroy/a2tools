@@ -180,7 +180,10 @@ int main(int argc, char **argv) {
   videomode(VIDEOMODE_80COL);
   screensize(&scrw, &scrh);
 
+  surl_ping();
+
   clrscr();
+
   print_logo(scrw);
 
   y = wherey();

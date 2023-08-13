@@ -3,7 +3,7 @@ mastodon_SOURCES := cli/login.c api/oauth.c cli/logo.c \
 	 ../lib/clrzone.c ../lib/scrollwindow.c ../lib/dgets.c \
 	../lib/simple_serial.c ../lib/strsplit.c \
 	../lib/surl_core.c ../lib/surl_send.c ../lib/surl_find_line.c \
-	../lib/surl_get_json.c ../lib/progress_bar.c
+	../lib/surl_get_json.c ../lib/surl_ping.c ../lib/progress_bar.c
 mastodon_CC65SOURCES := ../lib/dputs.s ../lib/dputc.s ../lib/scroll.s
 
 mastocli_SOURCES := cli/tl.c api/api.c \
@@ -35,7 +35,7 @@ CFLAGS  = -I ../lib -I api -I cli -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
 CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x0400 -DSERIAL_TO_LANGCARD -C ../../config/apple2enh-noexit.cfg
 #Using start address 0x4000 is easier than HGR page 2, and also allows to use 80 columns
 mastodon_CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x0400 --start-addr 0x4000  -DSERIAL_TO_LANGCARD -C ../../config/apple2enh-noexit.cfg
-GCCCFLAGS = -g -O0 -Wall $(shell sdl-config --cflags)
+GCCCFLAGS = -g -O0 -Wall -Wno-char-subscripts -Wno-unused-function -Werror $(shell sdl-config --cflags)
 GCCLDFLAGS = $(shell sdl-config --libs)
 
 .PHONY: all clean
