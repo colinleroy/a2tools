@@ -212,7 +212,7 @@ new_req:
 
     response = curl_request(method, url, headers, n_headers);
     if (response == NULL) {
-      printf("REQ: 0x%02x %s - done with no answer\n", method, url);
+      printf("REQ: 0x%02x %s - done\n", method, url);
       continue;
     }
 
@@ -993,6 +993,9 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
     uint32_t now = htonl((uint32_t)time(NULL));
     simple_serial_putc(SURL_ANSWER_TIME);
     simple_serial_write((char *)&now, 4);
+    return NULL;
+  } else if (method == SURL_METHOD_PING) {
+    simple_serial_putc(SURL_ANSWER_PONG);
     return NULL;
   } else {
     printf("Unsupported method 0x%02x\n", method);
