@@ -127,9 +127,16 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb, c
   hy = ey - sy;
 
   if (buf[0] != '\0') {
-    i = strlen(buf);
-    max_i = i;
-    rewrite_start_of_buffer(buf, i - 1, wx);
+    max_i = strlen(buf);
+    for (i = 0; i < max_i; i++) {
+      char c = buf[i];
+      if (c != '\n') {
+        dputc(c);
+      } else {
+        dputc('\r');
+        dputc('\n');
+      }
+    }
   }
   prev_cursor = cursor(1);
 
