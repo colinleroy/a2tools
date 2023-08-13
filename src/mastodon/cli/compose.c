@@ -407,6 +407,8 @@ int main(int argc, char **argv) {
     if (orig_status == NULL) {
       orig_status = strdup("Can not fetch status");
     }
+    printf("status %s\n", orig_status);
+    cgetc();
     compose_toot(orig_status);
     free(orig_status);
   } else {
