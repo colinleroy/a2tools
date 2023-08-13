@@ -62,12 +62,14 @@ int main(void) {
 int main(int argc, char **argv) {
 #endif
   FILE *fp;
-  char *filename, *path;
-  char *remote_filename;
+  char *filename;
   char *filetype;
   char c;
   int count = 0;
+#ifdef __CC65__
   char buf[128];
+  char *remote_filename, *path;
+#endif
   char start_addr[2] = {0, 0};
   int cur_file = 1;
   unsigned long filesize;

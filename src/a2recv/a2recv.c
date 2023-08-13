@@ -35,7 +35,9 @@ int main(void) {
   char *filename = malloc(BUF_SIZE);
   char *filetype = malloc(BUF_SIZE);
   char *s_len = malloc(BUF_SIZE);
+#ifdef __CC65__
   char *start_addr = malloc(BUF_SIZE);
+#endif
   size_t data_len = 0;
   FILE *outfp = NULL;
   char *data = NULL;
