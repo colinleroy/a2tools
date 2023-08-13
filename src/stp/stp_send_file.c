@@ -35,7 +35,7 @@
 
 #define BUFSIZE 255
 
-extern char scrw, scrh;
+extern unsigned char scrw, scrh;
 
 static char *stp_send_dialog() {
   char *filename;

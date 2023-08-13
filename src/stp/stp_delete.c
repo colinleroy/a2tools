@@ -35,7 +35,7 @@
 
 #define APPLESINGLE_HEADER_LEN 58
 
-extern char scrw, scrh;
+extern unsigned char scrw, scrh;
 
 void stp_delete_dialog(char *url, char *filename) {
   char c;
