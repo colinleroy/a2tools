@@ -47,7 +47,7 @@ char *file_select(char sx, char sy, char ex, char ey, char dir, char *prompt) {
 #ifdef __CC65__
   char dev, c, sel = 0, i, n = 0, start = 0;
 #else
-  int dev, c, sel = 0, i, n = 0, start = 0;
+  int c, sel = 0, i, n = 0, start = 0;
 #endif
   char *filename = NULL;
 
@@ -94,7 +94,7 @@ posix_use_dir:
     DIR *d = opendir(last_dir);
     struct dirent *ent;
     if (d) {
-      while (ent = readdir(d)) {
+      while ((ent = readdir(d))) {
         if (dir && !_DE_ISDIR(ent->d_type))
           continue;
 

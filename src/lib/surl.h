@@ -65,6 +65,9 @@ int __fastcall__ surl_get_json(char *buffer, size_t max_len, char striphtml, cha
 /* Helper to set the date */
 void __fastcall__ surl_set_time(void);
 
+/* Helper to check connectivity */
+void __fastcall__ surl_ping(void);
+
 /* Multipart helpers */
 #define surl_multipart_send_num_fields(x) simple_serial_putc(x)
 #define surl_multipart_send_field_desc(name, len, type) simple_serial_printf("%s\n%d\n%s\n", name, len, type)

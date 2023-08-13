@@ -110,6 +110,9 @@ surl_response * __fastcall__ surl_start_request(const char method, char *url, ch
   } else if (method == SURL_METHOD_GETTIME && i == SURL_ANSWER_TIME) {
     resp->code = 200;
     return resp;
+  } else if (method == SURL_METHOD_PING && i == SURL_ANSWER_PONG) {
+    resp->code = 200;
+    return resp;
   } else if (i == SURL_ANSWER_SEND_SIZE || i == SURL_ANSWER_SEND_NUM_FIELDS) {
     resp->code = 100;
     return resp;

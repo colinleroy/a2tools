@@ -20,8 +20,9 @@
 #include <string.h>
 #ifndef __CC65__
 #include <arpa/inet.h>
+#include "extended_conio.h"
 #else
-#include <time.h>
+#include <conio.h>
 #endif
 #include "surl.h"
 #include "simple_serial.h"
@@ -34,18 +35,24 @@
 #pragma code-name (push, "LC")
 #endif
 
-void __fastcall__ surl_set_time(void) {
-  surl_response *resp = surl_start_request(SURL_METHOD_GETTIME, "time://", NULL, 0);
+void __fastcall__ surl_ping(void) {
+  surl_response *resp;
+  char done = 0;
+try_again:
+  clrscr();
+  gotoxy(0, 10);
+  cputs("Establishing serial connection... ");
+  resp = surl_start_request(SURL_METHOD_PING, "ping://", NULL, 0);
   if (resp && surl_response_ok(resp)) {
-    struct timespec now;
-    simple_serial_read((char *)&now.tv_sec, 4);
-    now.tv_sec = ntohl(now.tv_sec);
-    now.tv_nsec = 0;
-#ifdef __CC65__
-    clock_settime(0, &now);
-#endif
+    done = 1;
   }
   surl_response_free(resp);
+  if (!done) {
+    cputs("\r\n\r\nError. Press any key to try again...\r\n");
+    cgetc();
+    goto try_again;
+  }
+  cputs("Done.");
 }
 
 #ifdef __CC65__
