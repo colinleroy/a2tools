@@ -1,3 +1,21 @@
+a2tools (1.3.0.1) bionic; urgency=medium
+
+  * STP: 80 columns mode
+  * STP: Add Get All
+  * STP: Add file selector
+  * STP: Check serial connectivity
+  * Mastodon: Image viewer fixes
+  * Mastodon: Add Content Warning handling
+  * Mastodon: Add toot edition
+  * Mastodon: Check serial connectivity
+  * Mastodon: Handle load errors
+  * Mastodon: Save state to /RAM
+  * Telnet: Handle tabs correctly
+  * Move STP and Telnet to their own floppies
+  * Lots of little fixes and optimisations
+
+ -- Colin Leroy-Mira <colin@colino.net>  Sun, 13 Aug 2023 21:28:19 +0200
+
 a2tools (1.2.4.2) bionic; urgency=medium
 
   * Fix resource leak
