@@ -5,7 +5,7 @@ stp_disk_PROGS = src/a2recv/a2recv.bin \
 				src/stp/stp.bin
 telnet_disk_PROGS = src/a2recv/a2recv.bin \
 				src/a2send/a2send.bin \
-				src/stp/stp.bin
+				src/telnet/telnet.bin
 
 homectrl_disk_PROGS = src/a2recv/a2recv.bin \
 				src/homecontrol-client/homectrl.bin \
