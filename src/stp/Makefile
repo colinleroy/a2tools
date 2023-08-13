@@ -12,6 +12,7 @@ SOURCES := stp.c stp_cli.c stp_save.c stp_send_file.c stp_delete.c \
 	../lib/surl_receive.c \
 	../lib/surl_send.c \
 	../lib/surl_set_time.c \
+	../lib/surl_ping.c \
 	../lib/file_select.c
 
 CL65SOURCES = ../lib/dputc.s ../lib/scroll.s
@@ -22,7 +23,7 @@ DEPS :=
 CC65_TARGET = apple2enh
 CFLAGS  = -I ../lib -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
 CLCFLAGS = -t $(CC65_TARGET) -Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-noexit.cfg -vm -m $(PROGRAM).map -DSERIAL_TO_LANGCARD
-GCCCFLAGS = -g -O0 -Wall 
+GCCCFLAGS = -g -O0 -Wall -Wno-format -Wno-unused-function -Werror
 GCCLDFLAGS = 
 
 .PHONY: all clean

@@ -32,7 +32,7 @@
 
 #define APPLESINGLE_HEADER_LEN 58
 
-extern char scrw, scrh;
+extern unsigned char scrw, scrh;
 
 char *stp_confirm_save_all(void) {
   char *out_dir;
@@ -105,7 +105,9 @@ int stp_save(char *full_filename, char *out_dir, surl_response *resp) {
   FILE *fp = NULL;
   char *data = NULL;
   char *filename;
+#ifdef __CC65__
   char *filetype;
+#endif
   size_t r = 0, total = 0;
   unsigned int buf_size;
   char keep_bin_header = 0;

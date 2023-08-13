@@ -22,7 +22,7 @@
 #include "clrzone.h"
 #include "extended_conio.h"
 
-extern char scrw, scrh;
+extern unsigned char scrw, scrh;
 
 void stp_print_header(char *url) {
   char *no_pass_url = strdup(url);
