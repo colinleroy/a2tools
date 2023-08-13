@@ -235,7 +235,7 @@ char *compose_get_status_text(char *status_id) {
     if (content == NULL)
       goto err_out;
 
-    r = surl_get_json(content, NUM_CHARS, 1, translit_charset, ".text");
+    r = surl_get_json(content, NUM_CHARS, 0, translit_charset, ".text");
 
     if (r < 0) {
       free(content);

@@ -24,14 +24,18 @@
 #include "scrollwindow.h"
 #include "scroll.h"
 
+#ifdef __CC65__
+#pragma optimize(push, on)
+#endif
+
 static char echo_on = 1;
-void echo(int on) {
+void __fastcall__ echo(int on) {
   echo_on = on;
 }
 
 static char start_x, start_y;
 
-static int get_prev_line_len(char *buf, size_t i, unsigned char wx) {
+static int __fastcall__ get_prev_line_len(char *buf, size_t i, unsigned char wx) {
   int back;
   int prev_line_len;
 
@@ -51,7 +55,7 @@ static int get_prev_line_len(char *buf, size_t i, unsigned char wx) {
   return prev_line_len;
 }
 
-static void rewrite_start_of_buffer(char *buf, size_t i, unsigned char wx) {
+static void __fastcall__ rewrite_start_of_buffer(char *buf, size_t i, unsigned char wx) {
   int prev_line_len, k;
 
   prev_line_len = get_prev_line_len(buf, i, wx);
@@ -63,7 +67,7 @@ static void rewrite_start_of_buffer(char *buf, size_t i, unsigned char wx) {
   }
 }
 
-static char rewrite_end_of_buffer(char *buf, size_t i, size_t max_i, unsigned char wx, unsigned char hy) {
+static char __fastcall__ rewrite_end_of_buffer(char *buf, size_t i, size_t max_i, unsigned char wx, unsigned char hy) {
   size_t k;
   unsigned char x, y;
   char overflowed;
@@ -77,9 +81,10 @@ static char rewrite_end_of_buffer(char *buf, size_t i, size_t max_i, unsigned ch
     return 0;
   }
   for (k = i; k < max_i; k++) {
+    char c = buf[k];
     x = wherex();
     y = wherey();
-    if (buf[k] == '\n' || k == max_i - 1) {
+    if (c == '\n' || k == max_i - 1) {
       clrzone(x, y, wx - 1, y);
       gotoxy(x, y);
     }
@@ -89,11 +94,11 @@ static char rewrite_end_of_buffer(char *buf, size_t i, size_t max_i, unsigned ch
         gotoxy(x, y);
       }
     }
-    if (buf[k] == '\n') {
+    if (c == '\n') {
       cputc('\r');
     }
     y = wherey();
-    cputc(buf[k]);
+    cputc(c);
     if (y == hy - 1 && wherey() == 0) {
       /* overflowed bottom */
       overflowed = 1;
@@ -122,8 +127,6 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb, c
   hy = ey - sy;
 
   if (buf[0] != '\0') {
-    cur_x = wherex();
-    cur_y = wherey();
     i = strlen(buf);
     max_i = i;
     rewrite_start_of_buffer(buf, i - 1, wx);
@@ -197,17 +200,16 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb, c
           gotoxy(cur_x, cur_y);
           rewrite_end_of_buffer(buf, i, max_i, wx, hy);
         }
-        gotoxy(cur_x, cur_y);
       } else {
         dputc(0x07);
       }
+      gotoxy(cur_x, cur_y);
     } else if (c == CH_CURS_UP) {
       if (!cmd_cb) {
         dputc(0x07);
       } else if (i == cur_x) {
         cur_x = 0;
         i = 0;
-        gotoxy(cur_x, cur_y);
       } else {
         i -= cur_x + 1;
         cur_y--;
@@ -230,8 +232,8 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb, c
           /* going up in long line */
           i -= wx - cur_x - 1;
         }
-        gotoxy(cur_x, cur_y);
       }
+      gotoxy(cur_x, cur_y);
     } else if (c == CH_CURS_DOWN) {
       if (!cmd_cb || i == max_i) {
         dputc(0x07);
@@ -264,7 +266,6 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb, c
           i++;
           cur_x++;
         }
-        gotoxy(cur_x, cur_y);
       }
 stop_down:
       gotoxy(cur_x, cur_y);
@@ -342,3 +343,7 @@ out:
   return fgets(buf, size, stdin);
 #endif
 }
+
+#ifdef __CC65__
+#pragma optimize(pop)
+#endif
