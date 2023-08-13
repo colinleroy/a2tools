@@ -325,12 +325,10 @@ stop_down:
         dputc('\n');
         buf[i] = '\n';
         i++;
-        cur_x = 0;
       } else {
         dputc(echo_on ? c : '*');
         buf[i] = c;
         i++;
-        cur_x++;
       }
     }
     if (i > max_i) {
