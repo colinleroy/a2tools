@@ -42,22 +42,16 @@ void stp_delete_dialog(char *url, char *filename) {
 
   clrzone(0, 2, scrw - 1, 2 + PAGE_HEIGHT);
   gotoxy(0, 7);
-  printf("%s", filename);
 
-  gotoxy(6, 10);
-  printf("Delete file?");
+  cprintf("Delete %s?", filename);
 
-  gotoxy(6, 16);
-  chline(28);
-  gotoxy(6, 17);
-  printf("Esc: cancel !  Enter: Delete");
   do {
     c = cgetc();
   } while (c != CH_ENTER && c != CH_ESC);
-  
+
   if (c == CH_ENTER) {
-    gotoxy(6, 17);
-    printf("Deleting file...            ");
+    gotoxy(0, 17);
+    cprintf("Deleting file...            ");
     stp_delete(url, filename);
   }
 }
@@ -79,7 +73,7 @@ void stp_delete(char *url, char *filename) {
   stp_print_result(resp);
   surl_response_free(resp);
 
-  gotoxy(6, 17);
-  printf("Hit a key to continue.      ");
+  gotoxy(0, 17);
+  cprintf("Done. hit a key to continue.      ");
   cgetc();
 }

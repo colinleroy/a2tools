@@ -21,7 +21,7 @@ DEPS :=
 
 CC65_TARGET = apple2enh
 CFLAGS  = -I ../lib -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
-CLCFLAGS = -t $(CC65_TARGET) -Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-noexit.cfg -vm -m $(PROGRAM).map #-DSERIAL_TO_LANGCARD
+CLCFLAGS = -t $(CC65_TARGET) -Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-noexit.cfg -vm -m $(PROGRAM).map -DSERIAL_TO_LANGCARD
 GCCCFLAGS = -g -O0 -Wall 
 GCCLDFLAGS = 
 
@@ -30,7 +30,7 @@ GCCLDFLAGS =
 all: $(PROGRAM).bin $(PROGRAM).x86_64
 
 $(PROGRAM).bin: $(SOURCES) $(CL65SOURCES)
-	cl65 $(CFLAGS) $(CLCFLAGS) -o $@ $^ 
+	cl65 -g --debug-info -Wl --dbgfile,"stp.dbg" $(CFLAGS) $(CLCFLAGS) -o $@ $^ -Ln stp.lbl
 
 $(PROGRAM).x86_64: $(SOURCES) $(GCC_SOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	

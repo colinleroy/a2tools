@@ -70,10 +70,10 @@ char *get_start_url(void) {
   }
 
   gotoxy(0, 9);
-  printf("Please enter the server's root URL,\n");
-  printf("or Enter to reuse the last one:\n\n");
-  printf("'%s'\n", last_start_url);
-  printf("\n\nURL: ");
+  cprintf("Please enter the server's root URL,\r\n");
+  cprintf("or Enter to reuse the last one:\r\n\r\n");
+  cprintf("'%s'\r\n", last_start_url);
+  cprintf("\r\n\r\nURL: ");
 
   start_url = malloc(BUFSIZE + 1);
   start_url[0] = '\0';
@@ -87,7 +87,7 @@ char *get_start_url(void) {
   } else {
     free(last_start_url);
     changed = 1;
-    
+
     /* Forget login and password too */
     free(last_login);
     free(last_password);
@@ -96,11 +96,11 @@ char *get_start_url(void) {
   }
 
   if (*last_login != '\0') {
-    printf("Login (%s): ", last_login);
+    cprintf("Login (%s): ", last_login);
   } else {
-    printf("Login (anonymous): ");
+    cprintf("Login (anonymous): ");
   }
-  
+
   login = malloc(BUFSIZE + 1);
   login[0] = '\0';
   dget_text(login, BUFSIZE, NULL, 0);
@@ -112,7 +112,7 @@ char *get_start_url(void) {
   } else {
     password = malloc(BUFSIZE + 1);
     password[0] = '\0';
-    printf("Password: ");
+    cprintf("Password: ");
     echo(0);
     dget_text(password, BUFSIZE, NULL, 0);
     echo(1);
@@ -139,7 +139,7 @@ char *get_start_url(void) {
       fprintf(fp, "%s\n", password);
       fclose(fp);
     } else {
-      printf("Can't save URL: %s\n", strerror(errno));
+      cprintf("Can't save URL: %s\r\n", strerror(errno));
       exit(1);
     }
   }
@@ -200,7 +200,7 @@ static char *build_login_url(char *url) {
   char *host = strstr(url, "://");
   char *proto;
   char *full_url;
-  
+
   full_url = malloc(BUFSIZE);
 
   if (host != NULL) {
@@ -212,7 +212,7 @@ static char *build_login_url(char *url) {
     proto = "ftp";
     host = url;
   }
-  
+
   if (login)
     snprintf(full_url, BUFSIZE, "%s://%s:%s@%s", proto, login, password, host);
   else
@@ -224,7 +224,7 @@ static char *build_login_url(char *url) {
 static void get_all(const char *url, char **lines, int n_lines) {
   int i, r;
   char *out_dir;
-  if (lines == NULL || (out_dir = stp_confirm_save_all(url)) == NULL) {
+  if (lines == NULL || (out_dir = stp_confirm_save_all()) == NULL) {
     return;
   }
   for (i = 0; i < n_lines; i++) {
@@ -234,7 +234,7 @@ static void get_all(const char *url, char **lines, int n_lines) {
     resp = surl_start_request(SURL_METHOD_GET, cur_url, NULL, 0);
 
     stp_print_result(resp);
-    
+
     gotoxy(0, 2);
 
     if (resp == NULL || resp->size == 0) {
@@ -264,10 +264,12 @@ int main(void) {
   char c;
   int full_update = 1;
 
+  videomode(VIDEOMODE_80COL);
+
   clrscr();
   screensize(&scrw, &scrh);
 
-  simple_serial_set_activity_indicator(1, 39, 0);
+  simple_serial_set_activity_indicator(1, scrw - 1, 0);
 
   url = get_start_url();
   url = build_login_url(url);
@@ -280,29 +282,30 @@ int main(void) {
     char *data = NULL, **lines = NULL;
     int i;
     size_t r;
+    char center_x = 30; /* 12 in 40COLS */
 
     num_lines = 0;
     cur_line = 0;
     cur_display_line = 0;
 
     stp_print_header(url);
-    
+
     clrzone(0, 2, scrw - 1, 2 + PAGE_HEIGHT);
-    gotoxy(12, 12);
-    printf("Loading...   ");
+    gotoxy(center_x, 12);
+    cprintf("Loading...   ");
 
     resp = surl_start_request(SURL_METHOD_GET, url, NULL, 0);
-    
+
     stp_print_result(resp);
-    
+
     gotoxy(0, 2);
 
     if (resp == NULL || resp->size == 0) {
-      gotoxy(12, 12);
+      gotoxy(center_x, 12);
       if (resp && resp->code >= 200 && resp->code < 300) {
-        printf("Empty.       ");
+        cprintf("Empty.       ");
       } else {
-        printf("Bad response.");
+        cprintf("Bad response.");
       }
       goto keyb_input;
     }
@@ -317,8 +320,8 @@ int main(void) {
       r = surl_receive_data(resp, data, resp->size);
     }
     if (r < resp->size) {
-      gotoxy(5, 12);
-      printf("Can not load response.");
+      gotoxy(center_x - 7, 12);
+      cprintf("Can not load response.");
       goto keyb_input;
     }
 
@@ -330,9 +333,9 @@ update_list:
       for (i = 0; i + cur_display_line < num_lines && i < PAGE_HEIGHT; i++) {
         gotoxy(0, i + 2);
         if (i + cur_display_line == cur_line) {
-          printf("> %s", lines[i + cur_display_line]);
+          cprintf("> %s", lines[i + cur_display_line]);
         } else {
-          printf("  %s", lines[i + cur_display_line]);
+          cprintf("  %s", lines[i + cur_display_line]);
         }
       }
     } else {
@@ -375,7 +378,7 @@ up_dir:
           stp_delete_dialog(url, lines[cur_line]);
         full_update = 1;
         break;
-      default: 
+      default:
         goto update_list;
     }
     surl_response_free(resp);

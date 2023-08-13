@@ -39,10 +39,10 @@ void stp_print_header(char *url) {
   gotoxy(0,0);
   if (strlen(no_pass_url) > scrw - 2 /* One char for serial act */) {
     char *tmp = strdup(no_pass_url + strlen(no_pass_url) - scrw + 5);
-    printf("...%s", tmp);
+    cprintf("...%s", tmp);
     free(tmp);
   } else {
-    printf("%s",no_pass_url);
+    cprintf("%s",no_pass_url);
   }
   free(no_pass_url);
   gotoxy(0, 1);
@@ -50,16 +50,14 @@ void stp_print_header(char *url) {
 }
 
 void stp_print_result(surl_response *response) {
-  if (scrw == 255)
-    screensize(&scrw, &scrh);
-  gotoxy(0, 18);
+  gotoxy(0, 20);
   chline(scrw);
-  clrzone(0, 19, scrw - 1, 20);
-  gotoxy(0, 19);
+  clrzone(0, 21, scrw - 1, 21);
+  gotoxy(0, 21);
   if (response == NULL) {
-    printf("Unknown request error.");
+    cprintf("Unknown request error.");
   } else {
-    printf("Response code %d - %zu bytes,\n%s", 
+    cprintf("Response code %d - %zu bytes, %s",
             response->code,
             response->size,
             response->content_type != NULL ? response->content_type : "");
@@ -68,12 +66,9 @@ void stp_print_result(surl_response *response) {
 }
 
 void stp_print_footer(void) {
-  if (scrw == 255)
-    screensize(&scrw, &scrh);
-  gotoxy(0, 21);
-  chline(scrw);
-  clrzone(0, 22, scrw - 1, 23);
   gotoxy(0, 22);
-  printf("Up/Down: navigate, S: send, D: delete\n"
-         "Enter: select, A: get all, Esc: back");
+  chline(scrw);
+  clrzone(0, 23, scrw - 1, 23);
+  gotoxy(0, 23);
+  cprintf("Up/Down: navigate, Enter: select, S: send, D: delete, A: get all, Esc: back");
 }
