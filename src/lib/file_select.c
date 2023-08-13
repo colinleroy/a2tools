@@ -112,11 +112,11 @@ full_disp_again:
   clrzone(sx, sy, ex, ey);
 disp_again:
   gotoxy(sx, sy);
-  printf("-- %s\n", prompt);
+  cprintf("-- %s\r\n", prompt);
   if (n == 0) {
-    gotox(sx); printf("! *%s*\n", dir ? "No directory":"Empty");
-    gotox(sx); printf("!\n");
-    gotox(sx); printf("-- Any key to go up");
+    gotox(sx); cprintf("! *%s*\r\n", dir ? "No directory":"Empty");
+    gotox(sx); cprintf("!\r\n");
+    gotox(sx); cprintf("-- Any key to go up");
     cgetc();
     goto up;
   }
@@ -125,13 +125,13 @@ disp_again:
     gotox(sx);
     cputs("! ");
     revers(i == sel);
-    printf("%s\n", list[i]);
+    cprintf("%s\r\n", list[i]);
   }
   revers(0);
 
-  gotox(sx);printf("! \n");
-  gotox(sx);printf("!  Up/Down/Left/Right: navigate;\n");
-  gotox(sx);printf("-- Enter: select; Esc: cancel");
+  gotox(sx);cprintf("! \r\n");
+  gotox(sx);cprintf("!  Up/Down/Left/Right: navigate;\r\n");
+  gotox(sx);cprintf("-- Enter: select; Esc: cancel");
 
   c = tolower(cgetc());
   switch (c) {
@@ -187,7 +187,7 @@ out:
   clrzone(sx, sy, ex, ey);
   gotoxy(sx, sy);
   if (filename) {
-    printf("%s", filename);
+    cprintf("%s", filename);
   }
   return filename;
 }
