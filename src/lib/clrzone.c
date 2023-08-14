@@ -26,13 +26,12 @@
 
 static char clearbuf[82];
 void __fastcall__ clrzone(char xs, char ys, char xe, char ye) {
-  int l = xe - xs + 1;
-  
+  char l = xe - xs + 1;
+
   memset(clearbuf, ' ', l);
   clearbuf[l] = '\0';
 
-  while (ys < ye + 1) {
+  do {
     cputsxy(xs, ys, clearbuf);
-    ys++;
-  }
+  } while (++ys <= ye);
 }
