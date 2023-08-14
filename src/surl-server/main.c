@@ -762,30 +762,36 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
       }
 
       if (!is_multipart) {
+        unsigned short size, mode;
         simple_serial_putc(SURL_ANSWER_SEND_SIZE);
-        simple_serial_gets(upload_buf, 255);
-        curlbuf->upload_size = atol(upload_buf);
-        curlbuf->orig_upload_size = atol(upload_buf);
+        simple_serial_read((char *)&size, 2);
+        simple_serial_read((char *)&mode, 2);
+        size = ntohs(size);
+        mode = ntohs(mode);
+
+        if (mode > 2) {
+          simple_serial_puts("ERROR\n");
+          printf("REQ: Unexpected serial reply\n");
+          curl_buffer_free(curlbuf);
+          return NULL;
+        }
+
+        curlbuf->upload_size = size;
+        curlbuf->orig_upload_size = size;
         curlbuf->upload_buffer = malloc(curlbuf->upload_size);
         curlbuf->cur_upload_ptr = curlbuf->upload_buffer;
 
         simple_serial_puts("UPLOAD\n");
         simple_serial_read(curlbuf->upload_buffer, curlbuf->upload_size);
 
-        if (!strchr(upload_buf, ',')) {
-          printf("REQ: Unexpected serial reply\n");
-          curl_buffer_free(curlbuf);
-          return NULL;
-        }
-
-        if (!strcmp(strchr(upload_buf, ','), ",0\n")) {
+        if (mode == 0) {
           /* Massage an x-www-urlencoded form */
           massage_upload_urlencoded(curlbuf);
           if (VERBOSE) {
             printf("REQ: POST x-www-urlencoded [%zu bytes], body:\n", curlbuf->upload_size);
             printf("%s\n", curlbuf->upload_buffer);
           }
-        } else if (!strcmp(strchr(upload_buf, ','), ",2\n")) {
+        } else if (mode == 2) {
           /* Massage an simple application/json form (no sub-entities handled )*/
           curl_headers = curl_slist_append(curl_headers, "Content-Type: application/json");
           massage_upload_json(curlbuf);
@@ -893,32 +899,37 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
         }
       }
   } else if (method == SURL_METHOD_PUT) {
+      unsigned short size, mode;
       simple_serial_putc(SURL_ANSWER_SEND_SIZE);
-      simple_serial_gets(upload_buf, 255);
-      curlbuf->upload_size = atol(upload_buf);
-      curlbuf->orig_upload_size = atol(upload_buf);
+      simple_serial_read((char *)&size, 2);
+      simple_serial_read((char *)&mode, 2);
+      size = ntohs(size);
+      mode = ntohs(mode);
 
-      curlbuf->upload_buffer = malloc(curlbuf->upload_size);
-      curlbuf->cur_upload_ptr = curlbuf->upload_buffer;
-
-      if (!strchr(upload_buf, ',')) {
+      if (mode > 2) {
         simple_serial_puts("ERROR\n");
-        printf("Unexpected reply\n");
+        printf("REQ: Unexpected serial reply\n");
         curl_buffer_free(curlbuf);
         return NULL;
       }
 
+      curlbuf->upload_size = size;
+      curlbuf->orig_upload_size = size;
+
+      curlbuf->upload_buffer = malloc(curlbuf->upload_size);
+      curlbuf->cur_upload_ptr = curlbuf->upload_buffer;
+
       simple_serial_puts("UPLOAD\n");
       simple_serial_read(curlbuf->upload_buffer, curlbuf->upload_size);
 
-      if (!strcmp(strchr(upload_buf, ','), ",0\n")) {
+      if (mode == 0) {
         /* Massage an x-www-urlencoded form */
         massage_upload_urlencoded(curlbuf);
         if (VERBOSE) {
           printf("REQ: PUT x-www-urlencoded [%zu bytes], body:\n", curlbuf->upload_size);
           printf("%s\n", curlbuf->upload_buffer);
         }
-      } else if (!strcmp(strchr(upload_buf, ','), ",2\n")) {
+      } else if (mode == 2) {
         /* Massage an simple application/json form (no sub-entities handled )*/
         curl_headers = curl_slist_append(curl_headers, "Content-Type: application/json");
         massage_upload_json(curlbuf);
