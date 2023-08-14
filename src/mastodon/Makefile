@@ -1,70 +1,30 @@
-common_SOURCES := \
-	api/common.c \
-	../lib/clrzone.c \
-	../lib/dgets.c \
-	../lib/path_helper.c \
-	../lib/scrollwindow.c \
-	../lib/simple_serial.c \
-	../lib/strsplit.c \
-	../lib/surl_core.c \
-	../lib/surl_get_json.c \
-	../lib/surl_send.c
+mastodon_SOURCES := cli/login.c api/oauth.c cli/logo.c \
+	cli/img.c api/common.c api/media.c \
+	 ../lib/clrzone.c ../lib/scrollwindow.c ../lib/dgets.c \
+	../lib/simple_serial.c ../lib/strsplit.c \
+	../lib/surl_core.c ../lib/surl_send.c ../lib/surl_find_line.c \
+	../lib/surl_get_json.c ../lib/surl_ping.c ../lib/progress_bar.c
+mastodon_CC65SOURCES := ../lib/dputs.s ../lib/dputc.s ../lib/scroll.s
 
-mastodon_SOURCES := \
-	$(common_SOURCES) \
-	cli/login.c \
-	cli/logo.c \
-	cli/img.c \
-	api/media.c \
-	api/oauth.c \
-	../lib/progress_bar.c \
-	../lib/surl_find_line.c \
-	../lib/surl_ping.c
-
-mastodon_CC65SOURCES := \
-	../lib/dputs.s \
-	../lib/dputc.s \
-	../lib/scroll.s
-
-mastocli_SOURCES := \
-	$(common_SOURCES) \
-	cli/header.c \
-	cli/print.c \
-	cli/tl.c\
-	api/api.c \
-	api/account.c \
-	api/date_format.c \
+mastocli_SOURCES := cli/tl.c api/api.c \
+	api/account.c api/status.c api/common.c \
 	api/notification.c \
-	api/status.c
+	cli/header.c cli/print.c \
+	../lib/clrzone.c ../lib/scrollwindow.c ../lib/dgets.c \
+	../lib/simple_serial.c ../lib/strsplit.c ../lib/path_helper.c \
+	../lib/surl_core.c ../lib/surl_send.c ../lib/surl_get_json.c
+mastocli_CC65SOURCES := ../lib/dputs.s ../lib/dputc.s ../lib/scroll.s
 
-mastocli_CC65SOURCES := \
-	../lib/dputs.s \
-	../lib/dputc.s \
-	../lib/scroll.s
-
-mastowrite_SOURCES := \
-	$(common_SOURCES) \
-	cli/compose.c \
-	cli/compose_header.c \
+mastowrite_SOURCES := cli/compose.c cli/compose_header.c \
+	api/compose.c api/account.c api/status.c api/common.c api/media.c \
+	../lib/dgets.c ../lib/clrzone.c ../lib/scrollwindow.c \
 	cli/print.c \
-	api/account.c \
-	api/compose.c \
-	api/date_format.c \
-	api/media.c \
-	api/status.c \
-	../lib/file_select.c \
- 	../lib/progress_bar.c
+	../lib/simple_serial.c ../lib/strsplit.c \
+	../lib/surl_core.c ../lib/surl_send.c ../lib/surl_get_json.c \
+	 ../lib/file_select.c ../lib/progress_bar.c ../lib/path_helper.c
+mastowrite_CC65SOURCES := ../lib/dputs.s ../lib/dputc.s ../lib/scroll.s
 
-mastowrite_CC65SOURCES := \
-	../lib/dputs.s \
-	../lib/dputc.s \
-	../lib/scroll.s
-
-mastoconf_SOURCES := \
-	cli/config.c \
-	cli/logo.c \
-	../lib/clrzone.c \
-	../lib/scrollwindow.c
+mastoconf_SOURCES := cli/config.c cli/logo.c ../lib/clrzone.c ../lib/scrollwindow.c
 mastoconf_CC65SOURCES :=
 
 GCCSOURCES := ../lib/extended_conio.c ../lib/clrzone.c ../lib/extended_string.c ../lib/tgi_sdl.c ../lib/tgi_fastline.c
@@ -72,9 +32,9 @@ DEPS :=
 
 CC65_TARGET = apple2enh
 CFLAGS  = -I ../lib -I api -I cli -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
-CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x0400 -DSERIAL_TO_LANGCARD -C ../../config/apple2enh-noexit.cfg
+CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x0400 -DSURL_TO_LANGCARD -C ../../config/apple2enh-noexit.cfg
 #Using start address 0x4000 is easier than HGR page 2, and also allows to use 80 columns
-mastodon_CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x0400 --start-addr 0x4000  -DSERIAL_TO_LANGCARD -C ../../config/apple2enh-noexit.cfg
+mastodon_CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x0400 --start-addr 0x4000  -DSURL_TO_LANGCARD -C ../../config/apple2enh-noexit.cfg
 GCCCFLAGS = -g -O0 -Wall -Wno-char-subscripts -Wno-unused-function -Werror $(shell sdl-config --cflags)
 GCCLDFLAGS = $(shell sdl-config --libs)
 

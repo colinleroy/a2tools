@@ -31,7 +31,7 @@
 #pragma static-locals(push, on)
 #endif
 
-#ifdef SERIAL_TO_LANGCARD
+#ifdef SURL_TO_LANGCARD
 #pragma code-name (push, "LC")
 #endif
 
@@ -59,6 +59,6 @@ try_again:
 #pragma static-locals(pop)
 #endif
 
-#ifdef SERIAL_TO_LANGCARD
+#ifdef SURL_TO_LANGCARD
 #pragma code-name (pop)
 #endif

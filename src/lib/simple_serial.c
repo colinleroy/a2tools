@@ -27,8 +27,7 @@
 
 #ifdef __CC65__
 #pragma static-locals(push, on)
-
-#ifdef SERIAL_TO_LANGCARD
+#ifdef SURL_TO_LANGCARD
 #pragma code-name (push, "LC")
 #else
 #pragma code-name (push, "LOWCODE")

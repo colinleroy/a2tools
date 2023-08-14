@@ -7,10 +7,9 @@
 #include "simple_serial.h"
 #include "strsplit.h"
 #include "api.h"
-#include "date_format.h"
 
 #ifdef __CC65__
-#ifdef SERIAL_TO_LANGCARD
+#ifdef SURL_TO_LANGCARD
 #pragma code-name (push, "LC")
 #else
 #pragma code-name (push, "LOWCODE")

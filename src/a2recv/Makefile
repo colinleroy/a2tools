@@ -6,8 +6,8 @@ DEPS :=
 
 CC65_TARGET = apple2enh
 CFLAGS  = -I ../lib -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
-CLCFLAGS = -t $(CC65_TARGET) -DSERIAL_TO_LANGCARD
-GCCCFLAGS = -g -O0 -Wall -Werror
+CLCFLAGS = -t $(CC65_TARGET) -DSURL_TO_LANGCARD
+GCCCFLAGS = -g -O0 -Wall -Wno-char-subscripts -Werror
 
 .PHONY: all clean
 

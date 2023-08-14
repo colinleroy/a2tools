@@ -30,7 +30,7 @@
 #pragma static-locals(push, on)
 #endif
 
-#ifdef SERIAL_TO_LANGCARD
+#ifdef SURL_TO_LANGCARD
 #pragma code-name (push, "LC")
 #endif
 
@@ -64,6 +64,6 @@ int __fastcall__ surl_find_line(char *buffer, size_t max_len, char *search_str) 
 #pragma static-locals(pop)
 #endif
 
-#ifdef SERIAL_TO_LANGCARD
+#ifdef SURL_TO_LANGCARD
 #pragma code-name (pop)
 #endif
