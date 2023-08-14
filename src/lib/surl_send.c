@@ -18,6 +18,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#ifndef __CC65__
+#include <arpa/inet.h>
+#endif
 #include "surl.h"
 #include "simple_serial.h"
 #include "extended_conio.h"
@@ -32,7 +35,10 @@
 #endif
 
 int __fastcall__ surl_send_data_params(size_t total, int mode) {
-  simple_serial_printf("%zu,%d\n", total, mode);
+  total = htons(total);
+  mode = htons(mode);
+  simple_serial_write((char *)&total, 2);
+  simple_serial_write((char *)&mode, 2);
   /* Wait for go */
   simple_serial_gets(surl_buf, BUFSIZE);
 

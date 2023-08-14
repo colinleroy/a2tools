@@ -51,7 +51,7 @@ int surl_connect_proxy(void) {
 
   if (r == 0) {
     /* Break previous session if needed */
-    simple_serial_printf("%c\n", 0x04);
+    simple_serial_puts("\4\n");
     simple_serial_flush();
   }
   return r;
