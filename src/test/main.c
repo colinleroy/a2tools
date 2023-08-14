@@ -5,37 +5,22 @@
 #include <stdarg.h>
 #include <errno.h>
 #include <conio.h>
-
-#pragma code-name (push, "LC")
-
-static signed char ref_x = -1;
-static signed char ref_y = -1;
-
-static void __fastcall__ test(int on) {
-  char x, y;
-  x = wherex();
-  y = wherey();
-
-  if (ref_x == -1) {
-    ref_x = x;
-    ref_y = y;
-  }
-
-  gotoxy(ref_x, ref_y);
-  cputc(on ? '*' : ' ');
-  gotoxy(x, y);
-}
-#pragma code-name (pop)
+#include "clrzone.h"
 
 int main(int argc, char *argv[]) {
-  char on = 0;
-  clrscr();
-  ref_x = 39;
-  ref_y = 0;
-  while (1) {
-    test(on);
-    on = !on;
+  char x, y;
+  
+  videomode(VIDEOMODE_80COL);
+  for (x = 0; x < 80; x++) {
+    for (y = 0; y < 24; y++) {
+      cputcxy(x, y, '*');
+    }
   }
+  cgetc();
+  gotoxy(0, 0);
+  
+  clrzone(2, 2, 78, 2);
+  cgetc();
 
   return 0;
 }
