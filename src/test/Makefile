@@ -1,6 +1,6 @@
 PROGRAM=test
 SOURCES := main.c ../lib/clrzone.c
-CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-noexit.cfg -vm -m $(PROGRAM).map -DSERIAL_TO_LANGCARD
+CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-noexit.cfg -vm -m $(PROGRAM).map -DSURL_TO_LANGCARD
 CC65_TARGET = apple2enh
 
 .PHONY: all clean
