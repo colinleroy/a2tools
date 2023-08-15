@@ -463,9 +463,12 @@ void __fastcall__ simple_serial_read(char *ptr, size_t nmemb) {
 
 /* Wrappers */
 
-static char simple_serial_buf[512];
+static char *simple_serial_buf = NULL;
 void simple_serial_printf(const char* format, ...) {
   va_list args;
+
+  if (simple_serial_buf == NULL)
+    simple_serial_buf = malloc(512);
 
   va_start(args, format);
   vsnprintf(simple_serial_buf, 511, format, args);
