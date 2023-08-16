@@ -448,11 +448,14 @@ void __fastcall__ simple_serial_read(char *ptr, size_t nmemb) {
 #endif
 
 void __fastcall__ simple_serial_write(char *ptr, size_t nmemb) {
+  activity_cb(1);
+
   while (nmemb > 0) {
     simple_serial_putc(*ptr);
     ++ptr;
     --nmemb;
   }
+  activity_cb(0);
 }
 
 #ifdef __CC65__
