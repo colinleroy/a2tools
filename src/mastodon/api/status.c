@@ -130,9 +130,9 @@ err_mem:
     }
 
     if (is_reblog) {
-      r = surl_get_json(content, full ? TL_STATUS_LARGE_BUF : TL_STATUS_SHORT_BUF, SURL_HTMLSTRIP_WITH_LINKS, translit_charset, ".reblog.content");
+      r = surl_get_json(content, full ? TL_STATUS_LARGE_BUF : TL_STATUS_SHORT_BUF, SURL_HTMLSTRIP_FULL, translit_charset, ".reblog.content");
     } else {
-      r = surl_get_json(content, full ? TL_STATUS_LARGE_BUF : TL_STATUS_SHORT_BUF, SURL_HTMLSTRIP_WITH_LINKS, translit_charset, ".content");
+      r = surl_get_json(content, full ? TL_STATUS_LARGE_BUF : TL_STATUS_SHORT_BUF, SURL_HTMLSTRIP_FULL, translit_charset, ".content");
     }
     if (!full && r == TL_STATUS_SHORT_BUF - 1) {
       strcpy(content + TL_STATUS_SHORT_BUF - 4, "...");

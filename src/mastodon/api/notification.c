@@ -134,7 +134,7 @@ free_err_out:
     n = NULL;
     goto err_out;
   }
-  if (surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_WITH_LINKS, translit_charset,
+  if (surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_FULL, translit_charset,
                     n->type != NOTIFICATION_FOLLOW ? ".status.content":".account.note") >= 0) {
     n->excerpt = strdup(gen_buf);
   } else {
