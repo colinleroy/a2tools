@@ -202,7 +202,6 @@ password_again:
     password[0] = '\0';
     dget_text(password, 50, NULL, 0);
     echo(1);
-    *strchr(password, '\n') = '\0';
 
   /* Second request to send login */
     post = prepare_login_post(login, password, token);
@@ -258,7 +257,6 @@ otp_again:
       dputs("Enter OTP code: ");
       otp[0] = '\0';
       dget_text(otp, 9, NULL, 0);
-      *strchr(otp, '\n') = '\0';
 
       post = prepare_otp_post(otp, token);
       post_len = strlen(post);

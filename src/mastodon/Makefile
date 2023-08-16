@@ -73,7 +73,7 @@ CFLAGS  = -I ../lib -I api -I cli -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
 CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x0400 -DSURL_TO_LANGCARD -C ../../config/apple2enh-noexit.cfg
 #Using start address 0x4000 is easier than HGR page 2, and also allows to use 80 columns
 mastodon_CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x0400 --start-addr 0x4000  -DSURL_TO_LANGCARD -C ../../config/apple2enh-noexit.cfg
-GCCCFLAGS = -g -O0 -Wall -Wno-char-subscripts -Wno-unused-function -Wno-unused-variable -Werror $(shell sdl-config --cflags)
+GCCCFLAGS = -g -O0 -Wall -Wno-char-subscripts -Wno-unused-variable -Werror $(shell sdl-config --cflags)
 GCCLDFLAGS = $(shell sdl-config --libs)
 
 .PHONY: all clean
