@@ -22,6 +22,10 @@
 #include "clrzone.h"
 #include "extended_conio.h"
 
+#ifdef __CC65__
+#pragma code-name (push, "LC")
+#endif
+
 extern unsigned char scrw, scrh;
 
 void stp_print_header(char *url) {
@@ -72,3 +76,6 @@ void stp_print_footer(void) {
   gotoxy(0, 23);
   cprintf("Up/Down: navigate, Enter: select, S: send, D: delete, A: get all, Esc: back");
 }
+#ifdef __CC65__
+#pragma code-name (pop)
+#endif
