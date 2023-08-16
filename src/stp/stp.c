@@ -268,6 +268,7 @@ int main(void) {
   simple_serial_set_activity_indicator(1, scrw - 1, 0);
 
   surl_ping();
+  clrscr();
 
   url = get_start_url();
   url = build_login_url(url);
