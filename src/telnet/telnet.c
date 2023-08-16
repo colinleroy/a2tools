@@ -128,7 +128,7 @@ static void do_vt100_ctrl(char way, char abs, char x, char y) {
       gotoy(max(top_line, cur_y - x));
     } else {
 #ifdef __CC65__
-        while (x != 0) { scrolldn(1); --x; }
+        scrolldown_n(x);
 #endif
       }
   } else if (way == CH_CURS_DOWN) {

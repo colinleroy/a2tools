@@ -9,7 +9,7 @@
         .export         _dputcxy, _dputc
         .export         dputdirect, dnewline
         .import         gotoxy, VTABZ, putchar
-        .import         _scrollup, _scrolldn
+        .import         _scrollup_one, _scrolldown_one
 
         .include        "apple2.inc"
 
@@ -70,7 +70,6 @@ dnewline:
         cmp     WNDBTM          ; Are we at bottom?
         bcc     :+
         dec     CV              ; Yes, decrement
-        lda     #$01
-        jsr     _scrollup       ; and scroll
+        jsr     _scrollup_one   ; and scroll
         lda     CV
 :       jmp     VTABZ

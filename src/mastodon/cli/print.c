@@ -34,7 +34,7 @@ int print_buf(char *w, char hide, char allow_scroll, char *scrolled) {
       cgetc();
       gotoxy(0, scrh-1);
       dputs("                      ");
-      scrollup(10);
+      scrollup_n(10);
       gotoxy(0, scrh - 12);
       *scrolled = 1;
     }

@@ -51,9 +51,6 @@ static void __fastcall__ activity_cb(int on) {
   x = wherex();
   y = wherey();
 
-  if (!serial_activity_indicator_enabled)
-    return;
-
   if (serial_activity_indicator_x == -1) {
     serial_activity_indicator_x = x;
     serial_activity_indicator_y = y;
@@ -375,14 +372,16 @@ int __fastcall__ simple_serial_putc(char c) {
 
 void __fastcall__ simple_serial_puts(char *buf) {
 
-  activity_cb(1);
+  if (serial_activity_indicator_enabled)
+    activity_cb(1);
 
   while (*buf) {
     simple_serial_putc(*buf);
     ++buf;
   }
 
-  activity_cb(0);
+  if (serial_activity_indicator_enabled)
+    activity_cb(0);
 }
 
 char * __fastcall__ simple_serial_gets(char *out, size_t size) {
@@ -394,7 +393,8 @@ char * __fastcall__ simple_serial_gets(char *out, size_t size) {
     return NULL;
   }
 
-  activity_cb(1);
+  if (serial_activity_indicator_enabled)
+    activity_cb(1);
 
   cur = out;
   end = cur + size - 1;
@@ -419,7 +419,8 @@ char * __fastcall__ simple_serial_gets(char *out, size_t size) {
   }
   *cur = '\0';
 
-  activity_cb(0);
+  if (serial_activity_indicator_enabled)
+    activity_cb(0);
 
   return out;
 }
@@ -428,7 +429,8 @@ void __fastcall__ simple_serial_read(char *ptr, size_t nmemb) {
   static char *cur;
   static char *end;
 
-  activity_cb(1);
+  if (serial_activity_indicator_enabled)
+    activity_cb(1);
 
   cur = ptr;
   end = ptr + nmemb;
@@ -441,21 +443,24 @@ void __fastcall__ simple_serial_read(char *ptr, size_t nmemb) {
     ++cur;
   }
 
-  activity_cb(0);
+  if (serial_activity_indicator_enabled)
+    activity_cb(0);
 }
 #ifdef __CC65__
 #pragma optimize(pop)
 #endif
 
 void __fastcall__ simple_serial_write(char *ptr, size_t nmemb) {
-  activity_cb(1);
+  if (serial_activity_indicator_enabled)
+    activity_cb(1);
 
   while (nmemb > 0) {
     simple_serial_putc(*ptr);
     ++ptr;
     --nmemb;
   }
-  activity_cb(0);
+  if (serial_activity_indicator_enabled)
+    activity_cb(0);
 }
 
 #ifdef __CC65__

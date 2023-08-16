@@ -269,7 +269,7 @@ static char load_prev_posts(list *l) {
   new_ids = malloc(to_load * sizeof(char *));
 
   set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
-  scrolldn(2);
+  scrolldown_n(2);
   gotoxy(0,1);
   chline(scrw - LEFT_COL_WIDTH - 1);
   gotoxy(0, 0);
@@ -308,7 +308,7 @@ static char load_prev_posts(list *l) {
 
     l->first_displayed_post += loaded;
   }
-  scrollup(2);
+  scrollup_n(2);
   set_hscrollwindow(0, scrw);
 
   free(new_ids);
@@ -337,7 +337,7 @@ static char search_footer(char c) {
 static int show_search(void) {
   set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
 
-  scrolldn(3);
+  scrolldown_n(3);
 
   search_footer(search_type);
   dputs("Search: ");
@@ -351,7 +351,7 @@ static int show_search(void) {
     return 1;
   }
 
-  scrollup(3);
+  scrollup_n(3);
 
   set_hscrollwindow(0, scrw);
   return 0;
@@ -560,7 +560,7 @@ static void shift_posts_down(list *l) {
   }
   l->first_displayed_post++;
   set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
-  scrollup(scroll_val);
+  scrollup_n(scroll_val);
 #ifndef __CC65__
   clrscr();
 #endif
@@ -640,7 +640,7 @@ static int shift_posts_up(list *l) {
 
   set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
   if (scrollval > 0)
-    scrolldn(scrollval);
+    scrolldown_n(scrollval);
 #ifndef __CC65__
   clrscr();
 #endif
