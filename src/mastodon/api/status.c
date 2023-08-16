@@ -1,10 +1,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include "surl.h"
 #include "simple_serial.h"
 #include "strsplit.h"
-#include <stdlib.h>
 #include "api.h"
 
 #ifdef __CC65__

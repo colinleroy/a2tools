@@ -21,6 +21,7 @@
 #include <unistd.h>
 #include "surl.h"
 #include "simple_serial.h"
+#include "simple_serial_printf.h"
 #include "scrollwindow.h"
 #include "clrzone.h"
 #include "shift_char_trans.h"

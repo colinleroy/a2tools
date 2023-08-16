@@ -15,6 +15,7 @@
 #include <termios.h>
 
 #include "simple_serial.h"
+#include "simple_serial_printf.h"
 #include "raw-session.h"
 #include "char-convert.h"
 

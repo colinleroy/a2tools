@@ -1,6 +1,6 @@
 prefix ?= /usr/local
 PROGRAM=a2send
-SOURCES := a2send.c ../lib/simple_serial.c ../lib/cgets.c  ../lib/scrollwindow.c ../lib/get_filedetails.c
+SOURCES := a2send.c ../lib/simple_serial.c ../lib/simple_serial_printf.c ../lib/cgets.c  ../lib/scrollwindow.c ../lib/get_filedetails.c
 GCCSOURCES := ../lib/extended_string.c
 
 CC65_TARGET = apple2enh
