@@ -147,6 +147,11 @@ static void img_display(media *m, char idx, char num_images) {
   resp = surl_start_request(SURL_METHOD_GET, m->media_url[idx], NULL, 0);
 
   if (resp && resp->code >=200 && resp->code < 300) {
+    #ifndef __CC65__
+    #undef HGR_PAGE
+    char *HGR_PAGE = malloc(0x2000);
+    #endif
+
     memset((char *)HGR_PAGE, 0x00, HGR_LEN);
 
     /* Go to legend while we load */

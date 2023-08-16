@@ -59,7 +59,7 @@ status *status_new_from_json(char *id, char full, char is_reblog) {
    * so put it at the end */
   if (is_reblog) {
     r = surl_get_json(gen_buf, BUF_SIZE, 0, translit_charset,
-                      ".reblog.created_at,.reblog.account.display_name,.reblog.reblog.id//\"-\",.reblog.spoiler_text");
+                      ".reblog|(.created_at,.account.display_name,\"-\",.spoiler_text)");
   } else {
     r = surl_get_json(gen_buf, BUF_SIZE, 0, translit_charset,
                       ".created_at,.account.display_name,.reblog.id//\"-\",.spoiler_text");
@@ -87,9 +87,9 @@ status *status_new_from_json(char *id, char full, char is_reblog) {
     /* Get details of original toot */
     if (is_reblog) {
       r = surl_get_json(gen_buf, BUF_SIZE, 0, NULL,
-                        "(.reblog.media_attachments|map(. | select(.type==\"image\"))|length),"
-                        ".reblog.replies_count,.reblog.reblogs_count,.reblog.favourites_count,.reblog.reblogged,.reblog.favourited,"
-                        ".reblog.account.id,.reblog.account.acct,.reblog.account.username,.visibility");
+                        ".reblog|((.media_attachments|map(. | select(.type==\"image\"))|length),"
+                        ".replies_count,.reblogs_count,.favourites_count,.reblogged,.favourited,"
+                        ".account.id,.account.acct,.account.username,.visibility)");
     } else {
       r = surl_get_json(gen_buf, BUF_SIZE, 0, NULL,
                         "(.media_attachments|map(. | select(.type==\"image\"))|length),"
