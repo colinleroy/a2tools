@@ -55,8 +55,6 @@ const char *get_server_root_url(void) {
     server_url[0] = '\0';
     dget_text(server_url, BUFSIZE, NULL, 0);
 
-    *strchr(server_url,'\n') = '\0';
-
     fp = fopen(SRV_URL_FILE, "wb");
     if (fp != NULL) {
       fprintf(fp, "%s\n", server_url);

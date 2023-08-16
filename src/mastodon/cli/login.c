@@ -140,7 +140,7 @@ reenter_settings:
     dputs("Your instance: ");
     instance_url[0] = '\0';
     dget_text(instance_url, BUF_SIZE, NULL, 0);
-    *strchr(instance_url, '\n') = '\0';
+
     if (instance_url[0] == '\0') {
       goto reenter_settings;
     }
@@ -152,7 +152,6 @@ reenter_settings:
     dputs("Your login: ");
     login[0] = '\0';
     dget_text(login, BUF_SIZE, NULL, 0);
-    *strchr(login, '\n') = '\0';
 
     return 0;
   }

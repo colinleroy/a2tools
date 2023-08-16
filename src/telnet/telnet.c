@@ -531,9 +531,6 @@ again:
   tcsetattr( STDOUT_FILENO, TCSANOW, &ttyf);
 #endif
 
-  if (strchr(buf, '\n'))
-    *strchr(buf, '\n') = '\0';
-
   response = surl_start_request(SURL_METHOD_RAW, buf, NULL, 0);
   if (response == NULL || response->code != 100) {
     printf("No response (%d).\n", response ? response->code : -1);

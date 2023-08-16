@@ -62,6 +62,11 @@ char monochrome = 1;
   #endif
 #endif
 
+#ifndef __CC65__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
+
 static void init_hgr(void) {
 #ifdef __APPLE2ENH__
 
@@ -88,6 +93,10 @@ static void init_hgr(void) {
 #endif
   hgr_init_done = 1;
 }
+
+#ifndef __CC65__
+#pragma GCC diagnostic pop
+#endif
 
 void init_text(void) {
 #ifdef __APPLE2ENH__

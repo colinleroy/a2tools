@@ -55,6 +55,11 @@ static int __fastcall__ get_prev_line_len(char *buf, size_t i, unsigned char wx)
   return prev_line_len;
 }
 
+#ifndef __CC65__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
+
 static void __fastcall__ rewrite_start_of_buffer(char *buf, size_t i, unsigned char wx) {
   int prev_line_len, k;
 
@@ -109,12 +114,17 @@ static char __fastcall__ rewrite_end_of_buffer(char *buf, size_t i, size_t max_i
   return overflowed;
 }
 
+#ifndef __CC65__
+#pragma GCC diagnostic pop
+#endif
+
 char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb, char enter_accepted) {
-#ifdef __CC65__
   char c;
   size_t i = 0, max_i = 0, k;
   int cur_x, cur_y;
+#ifdef __CC65__
   int prev_cursor = 0;
+#endif
   unsigned char sx, wx;
   unsigned char sy, ey, hy, tmp;
   char overflowed = 0;
@@ -138,8 +148,9 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb, c
       }
     }
   }
+#ifdef __CC65__
   prev_cursor = cursor(1);
-
+#endif
   while (1) {
     cur_x = wherex();
     cur_y = wherey();
@@ -299,7 +310,9 @@ stop_down:
           cputc('\n');
         } else {
           /* advance cursor */
+#ifdef __CC65__
           dputc(echo_on ? c : '*');
+#endif
         }
         /* insert char */
         if (max_i < size - 1)
@@ -321,12 +334,16 @@ stop_down:
          * advance again */
       }
       if (c == CH_ENTER) {
+#ifdef __CC65__
         dputc('\r');
         dputc('\n');
+#endif
         buf[i] = '\n';
         i++;
       } else {
+#ifdef __CC65__
         dputc(echo_on ? c : '*');
+#endif
         buf[i] = c;
         i++;
       }
@@ -344,9 +361,6 @@ out:
     dputc('\n');
   }
   return buf;
-#else
-  return fgets(buf, size, stdin);
-#endif
 }
 
 #ifdef __CC65__
