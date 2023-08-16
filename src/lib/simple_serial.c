@@ -45,21 +45,27 @@ void __fastcall__ simple_serial_set_activity_indicator(char enabled, int x, int 
   serial_activity_indicator_y = y;
 }
 
-#ifdef __CC65__
 static void __fastcall__ activity_cb(int on) {
   char x, y;
   x = wherex();
   y = wherey();
+
+  if (!serial_activity_indicator_enabled)
+    return;
 
   if (serial_activity_indicator_x == -1) {
     serial_activity_indicator_x = x;
     serial_activity_indicator_y = y;
   }
 
+#ifdef __CC65__
   gotoxy(serial_activity_indicator_x, serial_activity_indicator_y);
   cputc(on ? '*' : ' ');
   gotoxy(x, y);
+#endif
 }
+
+#ifdef __CC65__
 
 /* Setup */
 static int last_slot = 2;
@@ -368,21 +374,15 @@ int __fastcall__ simple_serial_putc(char c) {
 #endif
 
 void __fastcall__ simple_serial_puts(char *buf) {
-#ifdef __CC65__
-  if (serial_activity_indicator_enabled) {
-    activity_cb(1);
-  }
-#endif
+
+  activity_cb(1);
+
   while (*buf) {
     simple_serial_putc(*buf);
     ++buf;
   }
 
-#ifdef __CC65__
-  if (serial_activity_indicator_enabled) {
-    activity_cb(0);
-  }
-#endif
+  activity_cb(0);
 }
 
 char * __fastcall__ simple_serial_gets(char *out, size_t size) {
@@ -394,11 +394,7 @@ char * __fastcall__ simple_serial_gets(char *out, size_t size) {
     return NULL;
   }
 
-#ifdef __CC65__
-  if (serial_activity_indicator_enabled) {
-    activity_cb(1);
-  }
-#endif
+  activity_cb(1);
 
   cur = out;
   end = cur + size - 1;
@@ -423,11 +419,7 @@ char * __fastcall__ simple_serial_gets(char *out, size_t size) {
   }
   *cur = '\0';
 
-#ifdef __CC65__
-  if (serial_activity_indicator_enabled) {
-    activity_cb(0);
-  }
-#endif
+  activity_cb(0);
 
   return out;
 }
@@ -435,11 +427,8 @@ char * __fastcall__ simple_serial_gets(char *out, size_t size) {
 void __fastcall__ simple_serial_read(char *ptr, size_t nmemb) {
   static char *cur;
   static char *end;
-#ifdef __CC65__
-  if (serial_activity_indicator_enabled) {
-    activity_cb(1);
-  }
-#endif
+
+  activity_cb(1);
 
   cur = ptr;
   end = ptr + nmemb;
@@ -452,11 +441,7 @@ void __fastcall__ simple_serial_read(char *ptr, size_t nmemb) {
     ++cur;
   }
 
-#ifdef __CC65__
-  if (serial_activity_indicator_enabled) {
-    activity_cb(0);
-  }
-#endif
+  activity_cb(0);
 }
 #ifdef __CC65__
 #pragma optimize(pop)
