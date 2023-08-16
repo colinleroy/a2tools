@@ -44,16 +44,16 @@ void notification_free(notification *n) {
 #pragma code-name (pop)
 #endif
 
-int api_get_notifications(char to_load, char *load_before, char *load_after, char **notification_ids) {
+int api_get_notifications(char to_load, char notifications_type, char *load_before, char *load_after, char **notification_ids) {
   surl_response *resp;
   int n_notifications;
 
   n_notifications = 0;
-  snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s?limit=%d&%s=%s&%s=%s&%s=%s&%s=%s%s%s%s%s", NOTIFICATION_ENDPOINT, to_load,
-            "types[]", "follow",
-            "types[]", "mention",
-            "types[]", "favourite",
-            "types[]", "reblog",
+  snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s?limit=%d" "&%s%s" "%s%s%s%s", NOTIFICATION_ENDPOINT,
+            to_load,
+            "types[]=mention",
+            notifications_type == NOTIFICATION_FAVOURITE ? 
+              "&types[]=follow&types[]=favourite&types[]=reblog" : "",
             load_after ? "&max_id=" : "",
             load_after ? load_after : "",
             load_before ? "&min_id=" : "",
@@ -151,7 +151,7 @@ char *notification_verb(notification *n) {
     case NOTIFICATION_FOLLOW:
       return("followed you");
     case NOTIFICATION_FAVOURITE:
-      return("liked");
+      return("faved");
     case NOTIFICATION_REBLOG:
       return("shared");
     case NOTIFICATION_MENTION:

@@ -105,7 +105,10 @@ void __fastcall__ print_header(list *l, status *root_status, notification *root_
       dputs(" Mute     : M      \r\n");
     }
   } else if (root_notif) {
-    dputs("Profile:            \r\n"
+    dputs("Notifications:      \r\n"
+          " All      : A       \r\n"
+          " Mentions : M       \r\n"
+          "Profile:            \r\n"
           " Open     : P       \r\n");
   }
   dputs("Writing:           \r\n"
