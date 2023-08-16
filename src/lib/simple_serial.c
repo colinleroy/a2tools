@@ -27,6 +27,7 @@
 
 #ifdef __CC65__
 #pragma static-locals(push, on)
+
 #ifdef SURL_TO_LANGCARD
 #pragma code-name (push, "LC")
 #else
@@ -460,22 +461,6 @@ void __fastcall__ simple_serial_read(char *ptr, size_t nmemb) {
 #ifdef __CC65__
 #pragma optimize(pop)
 #endif
-
-/* Wrappers */
-
-static char *simple_serial_buf = NULL;
-void simple_serial_printf(const char* format, ...) {
-  va_list args;
-
-  if (simple_serial_buf == NULL)
-    simple_serial_buf = malloc(512);
-
-  va_start(args, format);
-  vsnprintf(simple_serial_buf, 511, format, args);
-  va_end(args);
-
-  simple_serial_puts(simple_serial_buf);
-}
 
 void __fastcall__ simple_serial_write(char *ptr, size_t nmemb) {
   while (nmemb > 0) {

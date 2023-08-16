@@ -817,7 +817,6 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
       } else {
         char n_fields;
         char field_name[255];
-        char field_len[255];
         char field_type[255];
         curl_mimepart *field = NULL;
 
@@ -832,17 +831,18 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
         if (form) {
           for (i = 0; i < n_fields; i++) {
             char *field_contents;
+            unsigned short h_len;
             size_t f_len;
             simple_serial_gets(field_name, 255);
             if (strchr(field_name, '\n'))
               *strchr(field_name, '\n') = '\0';
 
-            simple_serial_gets(field_len, 255);
-            f_len = atoi(field_len);
-
             simple_serial_gets(field_type, 255);
             if (strchr(field_type, '\n'))
               *strchr(field_type, '\n') = '\0';
+
+            simple_serial_read((char *)&h_len, 2);
+            f_len = ntohs(h_len);
 
             if (!strncasecmp(field_type, "text/", 5)) {
               field_contents = malloc(f_len + 1);

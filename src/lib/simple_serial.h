@@ -1,3 +1,5 @@
+#ifndef __simple_serial_h
+#define __simple_serial_h
 #ifdef __CC65__
 #include <serial.h>
 #else
@@ -34,8 +36,8 @@ void __fastcall__ simple_serial_read(char *ptr, size_t nmemb);
 /* Output */
 int __fastcall__ simple_serial_putc(char c);
 void __fastcall__ simple_serial_puts(char *buf);
-void simple_serial_printf(const char* format, ...);
 void __fastcall__ simple_serial_write(char *ptr, size_t nmemb);
 
 /* Status */
 void __fastcall__ simple_serial_set_activity_indicator(char enabled, int x, int y);
+#endif

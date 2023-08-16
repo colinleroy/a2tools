@@ -1,6 +1,8 @@
 #ifndef __surl_h
 #define __surl_h
-
+#ifndef __CC65__
+#include <arpa/inet.h>
+#endif
 #include "../surl-server/surl_protocol.h"
 
 #ifndef __CC65__
@@ -70,6 +72,15 @@ void __fastcall__ surl_ping(void);
 
 /* Multipart helpers */
 #define surl_multipart_send_num_fields(x) simple_serial_putc(x)
-#define surl_multipart_send_field_desc(name, len, type) simple_serial_printf("%s\n%d\n%s\n", name, len, type)
+
+#define surl_multipart_send_field_desc(name, len, type) do { \
+  unsigned short h_len = htons(len);                         \
+  simple_serial_puts(name);                                  \
+  simple_serial_putc('\n');                                  \
+  simple_serial_puts(type);                                  \
+  simple_serial_putc('\n');                                  \
+  simple_serial_write((char *)&h_len, 2);                    \
+} while (0)
+
 #define surl_multipart_send_field_data(data, len) surl_send_data(data, len)
 #endif

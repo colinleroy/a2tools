@@ -1,30 +1,68 @@
-mastodon_SOURCES := cli/login.c api/oauth.c cli/logo.c \
-	cli/img.c api/common.c api/media.c \
-	 ../lib/clrzone.c ../lib/scrollwindow.c ../lib/dgets.c \
-	../lib/simple_serial.c ../lib/strsplit.c \
-	../lib/surl_core.c ../lib/surl_send.c ../lib/surl_find_line.c \
-	../lib/surl_get_json.c ../lib/surl_ping.c ../lib/progress_bar.c
-mastodon_CC65SOURCES := ../lib/dputs.s ../lib/dputc.s ../lib/scroll.s
+common_SOURCES := \
+	api/common.c \
+	../lib/clrzone.c \
+	../lib/dgets.c \
+	../lib/path_helper.c \
+	../lib/scrollwindow.c \
+	../lib/simple_serial.c \
+	../lib/strsplit.c \
+	../lib/surl_core.c \
+	../lib/surl_get_json.c \
+	../lib/surl_send.c
 
-mastocli_SOURCES := cli/tl.c api/api.c \
-	api/account.c api/status.c api/common.c \
-	api/notification.c \
-	cli/header.c cli/print.c \
-	../lib/clrzone.c ../lib/scrollwindow.c ../lib/dgets.c \
-	../lib/simple_serial.c ../lib/strsplit.c ../lib/path_helper.c \
-	../lib/surl_core.c ../lib/surl_send.c ../lib/surl_get_json.c
-mastocli_CC65SOURCES := ../lib/dputs.s ../lib/dputc.s ../lib/scroll.s
+mastodon_SOURCES := \
+	$(common_SOURCES) \
+	cli/login.c \
+	cli/logo.c \
+	cli/img.c \
+	api/media.c \
+	api/oauth.c \
+	../lib/progress_bar.c \
+	../lib/surl_find_line.c \
+	../lib/surl_ping.c
 
-mastowrite_SOURCES := cli/compose.c cli/compose_header.c \
-	api/compose.c api/account.c api/status.c api/common.c api/media.c \
-	../lib/dgets.c ../lib/clrzone.c ../lib/scrollwindow.c \
+mastodon_CC65SOURCES := \
+	../lib/dputs.s \
+	../lib/dputc.s \
+	../lib/scroll.s
+
+mastocli_SOURCES := \
+	$(common_SOURCES) \
+	cli/header.c \
 	cli/print.c \
-	../lib/simple_serial.c ../lib/strsplit.c \
-	../lib/surl_core.c ../lib/surl_send.c ../lib/surl_get_json.c \
-	 ../lib/file_select.c ../lib/progress_bar.c ../lib/path_helper.c
-mastowrite_CC65SOURCES := ../lib/dputs.s ../lib/dputc.s ../lib/scroll.s
+	cli/tl.c\
+	api/api.c \
+	api/account.c \
+	api/notification.c \
+	api/status.c
 
-mastoconf_SOURCES := cli/config.c cli/logo.c ../lib/clrzone.c ../lib/scrollwindow.c
+mastocli_CC65SOURCES := \
+	../lib/dputs.s \
+	../lib/dputc.s \
+	../lib/scroll.s
+
+mastowrite_SOURCES := \
+	$(common_SOURCES) \
+	cli/compose.c \
+	cli/compose_header.c \
+	cli/print.c \
+	api/account.c \
+	api/compose.c \
+	api/media.c \
+	api/status.c \
+	../lib/file_select.c \
+	../lib/progress_bar.c
+
+mastowrite_CC65SOURCES := \
+	../lib/dputs.s \
+	../lib/dputc.s \
+	../lib/scroll.s
+
+mastoconf_SOURCES := \
+	cli/config.c \
+	cli/logo.c \
+	../lib/clrzone.c \
+	../lib/scrollwindow.c
 mastoconf_CC65SOURCES :=
 
 GCCSOURCES := ../lib/extended_conio.c ../lib/clrzone.c ../lib/extended_string.c ../lib/tgi_sdl.c ../lib/tgi_fastline.c
