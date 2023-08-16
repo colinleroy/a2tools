@@ -68,7 +68,7 @@ static media *media_new_from_json(char *base_selector, char *description_selecto
 
   for (i = 0; i < m->n_media; i ++) {
     snprintf(gen_buf, BUF_SIZE, description_selector, i);
-    if (surl_get_json(img_buf, IMG_BUF_SIZE, SURL_HTMLSTRIP_WITH_LINKS, translit_charset, gen_buf) > 0) {
+    if (surl_get_json(img_buf, IMG_BUF_SIZE, SURL_HTMLSTRIP_FULL, translit_charset, gen_buf) > 0) {
       w = img_buf;
       n = 0;
       while (*w != '\0') {

@@ -73,7 +73,7 @@ account *account_new_from_json(void) {
       goto err_out;
 
     note = malloc(2048);
-    r = surl_get_json(note, 2048, SURL_HTMLSTRIP_WITH_LINKS, translit_charset, ".note");
+    r = surl_get_json(note, 2048, SURL_HTMLSTRIP_FULL, translit_charset, ".note");
     if (r < 0) {
       free(note);
     } else {

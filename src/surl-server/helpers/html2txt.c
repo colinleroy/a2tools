@@ -24,6 +24,7 @@
 #include <sys/stat.h>
 #include <stdarg.h>
 #include <gumbo.h>
+#include "html2txt.h"
 
 static char *buffer_printf(char *buffer, const char *format, ...) {
   int w = 0;
@@ -72,7 +73,7 @@ static char *print_norm(char *buffer, const char *text)
     return buffer;
 }
 
-static char *dump_tree(GumboNode *node, char *buffer, int plain)
+static char *dump_tree(GumboNode *node, char *buffer, int plain, int strip_level)
 {
     GumboVector *children;
     GumboAttribute *href, *src, *alt;
@@ -109,7 +110,7 @@ static char *dump_tree(GumboNode *node, char *buffer, int plain)
             buffer = buffer_printf(buffer, "\n\n");
         children = &node->v.element.children;
         for (i = 0; i < (int) children->length; i++)
-            buffer = dump_tree((GumboNode *) children->data[i], buffer, plain);
+            buffer = dump_tree((GumboNode *) children->data[i], buffer, plain, strip_level);
         if (
             node->v.element.tag == GUMBO_TAG_TITLE ||
             node->v.element.tag == GUMBO_TAG_H1 ||
@@ -130,22 +131,33 @@ static char *dump_tree(GumboNode *node, char *buffer, int plain)
             buffer = buffer_printf(buffer, "\t");
         else if (node->v.element.tag == GUMBO_TAG_A) {
             href = gumbo_get_attribute(&node->v.element.attributes, "href");
-            if (href)
+            if (href) {
+              if (strip_level == HTML2TEXT_DISPLAY_LINKS)
                 buffer = buffer_printf(buffer, " <%s>", href->value);
+              else
+                buffer = buffer_printf(buffer, " ");
+            }
         }
         else if (node->v.element.tag == GUMBO_TAG_IMG) {
             src = gumbo_get_attribute(&node->v.element.attributes, "src");
             alt = gumbo_get_attribute(&node->v.element.attributes, "alt");
-            if (alt && strlen(alt->value))
-                buffer = buffer_printf(buffer, "\n(image: %s <%s>)\n", alt->value, src->value);
-            else
-                buffer = buffer_printf(buffer, "\n(image: <%s>)\n", src->value);
+            if (strip_level == HTML2TEXT_DISPLAY_LINKS) {
+              if (alt && strlen(alt->value))
+                  buffer = buffer_printf(buffer, "\n(image: %s <%s>)\n", alt->value, src->value);
+              else
+                  buffer = buffer_printf(buffer, "\n(image: <%s>)\n", src->value);
+            } else {
+              if (alt && strlen(alt->value))
+                  buffer = buffer_printf(buffer, "\n(image: %s)\n", alt->value);
+              else
+                  buffer = buffer_printf(buffer, "\n(*undescribed image*)\n");
+            }
         }
     }
     return buffer;
 }
 
-char *html2text(char *html) {
+char *html2text(char *html, int strip_level) {
     char *text;
     size_t buf_size;
     GumboOutput *parsed_html;
@@ -162,7 +174,7 @@ char *html2text(char *html) {
     buf_size = strlen(html) * 2;
     text = malloc(buf_size);
     memset(text, 0, buf_size);
-    dump_tree(parsed_html->root, text, 0);
+    dump_tree(parsed_html->root, text, 0, strip_level);
   
     gumbo_destroy_output(&kGumboDefaultOptions, parsed_html);
     return text;

@@ -274,7 +274,7 @@ new_req:
           simple_serial_read((char *)&size, 2);
           bufsize = ntohs(size);
 
-          striphtml = simple_serial_getc() == 1;
+          striphtml = simple_serial_getc();
           simple_serial_gets(reqbuf, BUFSIZE);
           translit = reqbuf;
           if (strchr(translit,' ')) {
@@ -368,7 +368,8 @@ abort:
           if (result) {
             simple_serial_putc(SURL_ERROR_OK);
             if (striphtml) {
-              char *text = html2text(result);
+              char *text = html2text(result,
+                          striphtml == SURL_HTMLSTRIP_FULL ? HTML2TEXT_EXCLUDE_LINKS : HTML2TEXT_DISPLAY_LINKS);
               free(result);
               result = text;
             }
