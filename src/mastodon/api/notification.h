@@ -19,7 +19,7 @@ struct _notification {
   char *excerpt; /* either status or account note */
 };
 
-int api_get_notifications(char to_load, char *load_before, char *load_after, char **notification_ids);
+int api_get_notifications(char to_load, char notifications_type, char *load_before, char *load_after, char **notification_ids);
 notification *api_get_notification(char *id);
 void notification_free(notification *n);
 char *notification_verb(notification *n);

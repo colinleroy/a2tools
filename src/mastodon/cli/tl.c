@@ -60,7 +60,7 @@ static char cur_action;
 static char search_buf[50];
 static char search_type = 'm';
 static char rship_toggle_action = RSHIP_FOLLOWING;
-
+static char notifications_type = NOTIFICATION_FAVOURITE;
 static void print_list(list *l);
 
 static status *get_top_status(list *l) {
@@ -196,7 +196,7 @@ static char load_around(list *l, char to_load, char *first, char *last, char **n
       loaded = api_get_account_posts(l->account, to_load, first, last, new_ids);
       break;
     case SHOW_NOTIFICATIONS:
-      loaded = api_get_notifications(to_load, first, last, new_ids);
+      loaded = api_get_notifications(to_load, notifications_type, first, last, new_ids);
       break;
     default:
       loaded = 0;
@@ -943,13 +943,25 @@ static int show_list(list *l) {
           cur_action = ACCOUNT_TOGGLE_RSHIP;
           rship_toggle_action = RSHIP_MUTING;
           return 0;
+        } else if (l->kind == SHOW_NOTIFICATIONS) {
+          notifications_type = NOTIFICATION_MENTION;
+          cur_action = SHOW_NOTIFICATIONS;
+          return 0;
         }
+        break;
       case 'd':
         if (root_status) {
           if (api_delete_status(root_status)) {
             cur_action = BACK;
             return 0;
           }
+        }
+        break;
+      case 'a':
+        if (l->kind == SHOW_NOTIFICATIONS) {
+          notifications_type = NOTIFICATION_FAVOURITE;
+          cur_action = SHOW_NOTIFICATIONS;
+          return 0;
         }
         break;
       case 'h':
