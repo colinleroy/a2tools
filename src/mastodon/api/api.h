@@ -18,6 +18,11 @@ void api_favourite_status(status *s);
 void api_reblog_status(status *s);
 char api_delete_status(status *s);
 
+char api_interact(char *id, char type, char *action);
+
+
 char api_relationship_get(account *a, char f);
+void account_toggle_rship(account *a, char action);
+
 account *api_get_full_account(char *id);
 #endif

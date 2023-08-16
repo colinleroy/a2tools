@@ -88,6 +88,22 @@ void __fastcall__ print_header(list *l, status *root_status, notification *root_
   } else if (l && l->account) {
     dputs("Profile:           \r\n"
           " Images   : I      \r\n");
+    if (api_relationship_get(l->account, RSHIP_FOLLOWING)
+     || api_relationship_get(l->account, RSHIP_FOLLOW_REQ)) {
+      dputs(" Unfollow : F      \r\n");
+    } else {
+      dputs(" Follow   : F      \r\n");
+    }
+    if (api_relationship_get(l->account, RSHIP_BLOCKING)) {
+      dputs(" Unblock  : B      \r\n");
+    } else {
+      dputs(" Block    : B      \r\n");
+    }
+    if (api_relationship_get(l->account, RSHIP_MUTING)) {
+      dputs(" Unmute   : M      \r\n");
+    } else {
+      dputs(" Mute     : M      \r\n");
+    }
   } else if (root_notif) {
     dputs("Profile:            \r\n"
           " Open     : P       \r\n");

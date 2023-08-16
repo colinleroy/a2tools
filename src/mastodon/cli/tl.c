@@ -54,10 +54,12 @@ extern account *my_account;
 #define SHOW_GLOBAL_TIMELINE 2
 #define SHOW_SEARCH_RES      'R'
 #define NAVIGATE             'N'
+#define ACCOUNT_TOGGLE_RSHIP 'F'
 
 static char cur_action;
 static char search_buf[50];
 static char search_type = 'm';
+static char rship_toggle_action = RSHIP_FOLLOWING;
 
 static void print_list(list *l);
 
@@ -921,13 +923,27 @@ static int show_list(list *l) {
       case 'f':
         if (root_status) {
           api_favourite_status(root_status);
+        } else if (l->account) {
+          cur_action = ACCOUNT_TOGGLE_RSHIP;
+          rship_toggle_action = RSHIP_FOLLOWING;
+          return 0;
         }
         break;
       case 'b':
         if (root_status) {
           api_reblog_status(root_status);
+        } else if (l->account) {
+          cur_action = ACCOUNT_TOGGLE_RSHIP;
+          rship_toggle_action = RSHIP_BLOCKING;
+          return 0;
         }
         break;
+      case 'm':
+        if (l->account) {
+          cur_action = ACCOUNT_TOGGLE_RSHIP;
+          rship_toggle_action = RSHIP_MUTING;
+          return 0;
+        }
       case 'd':
         if (root_status) {
           if (api_delete_status(root_status)) {
@@ -1007,6 +1023,11 @@ void cli(void) {
         clrscrollwin();
         cur_action = NAVIGATE;
         break;
+      case ACCOUNT_TOGGLE_RSHIP:
+        account_toggle_rship(l[cur_list]->account, rship_toggle_action);
+        cur_action = SHOW_ACCOUNT;
+        /* and fallthrough to reuse list (we're obviously already
+         * in a SHOW_ACCOUNT list)*/
       case SHOW_FULL_STATUS:
       case SHOW_ACCOUNT:
       case SHOW_SEARCH_RES:

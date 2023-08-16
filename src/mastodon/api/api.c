@@ -184,12 +184,12 @@ err_out:
   return n_status;
 }
 
-/* Caution: does not go into s->reblog */
-static char api_status_interact(status *s, char *action) {
+char api_interact(char *id, char type, char *action) {
   surl_response *resp;
   char r = -1;
 
-  snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s/%s", STATUS_ENDPOINT, s->id, action);
+  snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s/%s",
+           type == 's' ? STATUS_ENDPOINT : ACCOUNTS_ENDPOINT, id, action);
   resp = get_surl_for_endpoint(SURL_METHOD_POST, endpoint_buf);
 
   if (resp) {
@@ -212,12 +212,12 @@ void api_favourite_status(status *s) {
   }
 
   if ((s->favorited_or_reblogged & FAVOURITED) == 0) {
-    if (api_status_interact(s, "favourite") == 0) {
+    if (api_interact(s->id, 's', "favourite") == 0) {
       s->favorited_or_reblogged |= FAVOURITED;
       s->n_favourites++;
     }
   } else {
-    if (api_status_interact(s, "unfavourite") == 0) {
+    if (api_interact(s->id, 's', "unfavourite") == 0) {
       s->favorited_or_reblogged &= ~FAVOURITED;
       s->n_favourites--;
     }
@@ -230,12 +230,12 @@ void api_reblog_status(status *s) {
   }
 
   if ((s->favorited_or_reblogged & REBLOGGED) == 0) {
-    if (api_status_interact(s, "reblog") == 0) {
+    if (api_interact(s->id, 's', "reblog") == 0) {
       s->favorited_or_reblogged |= REBLOGGED;
       s->n_reblogs++;
     }
   } else {
-    if (api_status_interact(s, "unreblog") == 0) {
+    if (api_interact(s->id, 's', "unreblog") == 0) {
       s->favorited_or_reblogged &= ~REBLOGGED;
       s->n_reblogs--;
     }
@@ -309,6 +309,27 @@ char api_relationship_get(account *a, char f) {
 err_out:
   surl_response_free(resp);
   return r;
+}
+
+void account_toggle_rship(account *a, char action) {
+  if (a) {
+    /* at this point we're sure to have the relationship bitfield set
+     * so avoid the wrapper */
+    switch(action) {
+      case RSHIP_FOLLOWING:
+        api_interact(a->id, 'a',
+          api_relationship_get(a, RSHIP_FOLLOWING|RSHIP_FOLLOW_REQ) ? "unfollow":"follow");
+        return;
+      case RSHIP_BLOCKING:
+        api_interact(a->id, 'a',
+          api_relationship_get(a, RSHIP_BLOCKING) ? "unblock":"block");
+        return;
+      case RSHIP_MUTING:
+        api_interact(a->id, 'a',
+          api_relationship_get(a, RSHIP_MUTING) ? "unmute":"mute");
+        return;
+    }
+  }
 }
 
 account *api_get_full_account(char *id) {
