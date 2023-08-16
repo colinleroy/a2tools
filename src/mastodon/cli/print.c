@@ -29,15 +29,12 @@
 int print_buf(char *w, char hide, char allow_scroll, char *scrolled) {
   while (*w) {
     if (allow_scroll && wherey() == scrh - 2) {
-      char i;
       gotoxy(0, scrh-1);
       dputs("Hit a key to continue.");
       cgetc();
       gotoxy(0, scrh-1);
       dputs("                      ");
-      for (i = 0; i < 10; i++) {
-        scrollup();
-      }
+      scrollup(10);
       gotoxy(0, scrh - 12);
       *scrolled = 1;
     }

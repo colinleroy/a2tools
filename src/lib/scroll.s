@@ -8,8 +8,8 @@
         .import         VTABZ
         .include        "apple2.inc"
 
-        .segment        "ONCE"
-
+        .bss
+NLINES: .res 1
         .code
 
 BAS2L  := $2A
@@ -20,11 +20,22 @@ TEMP1    := $778+3
 SEV1     := $CB06
 
 _scrolldn:
+        sta     NLINES          ;save A (# of lines)
+dnagain:
         ldy     #0              ;direction = down
-        beq     scrollit        ;go do scroll
+        jsr     scrollit        ;go do scroll
+        dec     NLINES
+        bne     dnagain
+        rts
 
 _scrollup:
-        ldy     #1              ;direction = up
+        sta     NLINES          ;save A (# of lines)
+upagain:
+        ldy     #1              ;direction = down
+        jsr     scrollit        ;go do scroll
+        dec     NLINES
+        bne     upagain
+        rts
 
 scrollit:
         txa                     ;save X

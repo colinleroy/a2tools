@@ -179,7 +179,7 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb, c
           cur_y--;
           cur_x = get_prev_line_len(buf, i, wx);
           if (cur_y < 0) {
-            scrolldn();
+            scrolldn(1);
             cur_y++;
             rewrite_start_of_buffer(buf, i, wx);
             gotoxy(cur_x, cur_y);
@@ -214,7 +214,7 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb, c
         /* Handle scroll up if needed */
         if (cur_y > hy - 1) {
           cur_y--;
-          scrollup();
+          scrollup(1);
           gotoxy(cur_x, cur_y);
           rewrite_end_of_buffer(buf, i, max_i, wx, hy);
         }
@@ -234,7 +234,7 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb, c
         /* Decompose because rewrite_start_of_buffer
          * expects us to be on a \n */
         if (cur_y < 0) {
-          scrolldn();
+          scrolldn(1);
           cur_y++;
           rewrite_start_of_buffer(buf, i, wx);
         }
@@ -272,7 +272,7 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb, c
         /* Scroll */
         if (cur_y > hy - 1) {
           cur_y--;
-          scrollup();
+          scrollup(1);
           gotoxy(cur_x, cur_y);
           rewrite_end_of_buffer(buf, i, max_i, wx, hy);
         }
@@ -303,7 +303,7 @@ stop_down:
           } else {
             /* we're on last line, scrollup */
             cur_y--;
-            scrollup();
+            scrollup(1);
           }
           gotoxy(cur_x, cur_y);
           cputc('\r');
@@ -327,7 +327,7 @@ stop_down:
         overflowed = rewrite_end_of_buffer(buf, i + 1, max_i, wx, hy);
         if (cur_y == hy - 1 && overflowed) {
           cur_y--;
-          scrollup();
+          scrollup(1);
         }
         gotoxy(cur_x, cur_y);
         /* put back inserted char for cursor

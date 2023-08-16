@@ -277,9 +277,16 @@ new_req:
           striphtml = simple_serial_getc() == 1;
           simple_serial_gets(reqbuf, BUFSIZE);
           translit = reqbuf;
-          param = strchr(translit, ' ') + 1;
-          *strchr(translit, ' ') = '\0';
-          *strchr(param, '\n') = '\0';
+          if (strchr(translit,' ')) {
+            param = strchr(translit, ' ') + 1;
+            *strchr(translit, ' ') = '\0';
+            *strchr(param, '\n') = '\0';
+          } else if (translit[0] == SURL_METHOD_ABORT) {
+            goto abort;
+          } else {
+            printf("Unknown error\n");
+            goto new_req;
+          }
         } else if (cmd == SURL_CMD_HGR) {
           char monochrome = simple_serial_getc();
           printf("RESP: converting to %s HGR\n", monochrome?"monochrome":"color");
@@ -288,6 +295,7 @@ new_req:
               monochrome, 0, &(response->hgr_len));
         }
       } else {
+abort:
         printf("RESP: finished\n");
         /* Put that back as a REQUEST */
         reqbuf[0] = cmd;

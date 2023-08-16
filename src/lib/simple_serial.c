@@ -46,6 +46,7 @@ void __fastcall__ simple_serial_set_activity_indicator(char enabled, int x, int 
 }
 
 static void __fastcall__ activity_cb(int on) {
+#ifdef __CC65__
   char x, y;
   x = wherex();
   y = wherey();
@@ -58,7 +59,6 @@ static void __fastcall__ activity_cb(int on) {
     serial_activity_indicator_y = y;
   }
 
-#ifdef __CC65__
   gotoxy(serial_activity_indicator_x, serial_activity_indicator_y);
   cputc(on ? '*' : ' ');
   gotoxy(x, y);
