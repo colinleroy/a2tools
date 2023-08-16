@@ -92,7 +92,7 @@ char *api_send_hgr_image(char *filename, char *description, char **err, char x, 
 
   media_id = NULL;
   if (surl_response_ok(resp)) {
-    if (surl_get_json(gen_buf, BUF_SIZE, 0, translit_charset, ".id") >= 0) {
+    if (surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, translit_charset, ".id") >= 0) {
       n_lines = strsplit(gen_buf, '\n', &lines);
       if (n_lines == 1) {
         media_id = lines[0];
@@ -235,7 +235,7 @@ char *compose_get_status_text(char *status_id) {
     if (content == NULL)
       goto err_out;
 
-    r = surl_get_json(content, NUM_CHARS, 0, translit_charset, ".text");
+    r = surl_get_json(content, NUM_CHARS, SURL_HTMLSTRIP_NONE, translit_charset, ".text");
 
     if (r < 0) {
       free(content);

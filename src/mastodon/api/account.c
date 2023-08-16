@@ -54,7 +54,7 @@ account *account_new_from_json(void) {
     return NULL;
   }
 
-  if (surl_get_json(gen_buf, BUF_SIZE, 0, translit_charset,
+  if (surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, translit_charset,
                     ".id,.username,.acct,.display_name,"
                     ".created_at,.followers_count,"
                     ".following_count") >= 0) {
@@ -73,7 +73,7 @@ account *account_new_from_json(void) {
       goto err_out;
 
     note = malloc(2048);
-    r = surl_get_json(note, 2048, 1, translit_charset, ".note");
+    r = surl_get_json(note, 2048, SURL_HTMLSTRIP_WITH_LINKS, translit_charset, ".note");
     if (r < 0) {
       free(note);
     } else {
@@ -110,7 +110,7 @@ account *api_get_profile(char *id) {
     goto err_out;
   }
 
-  if (surl_get_json(gen_buf, BUF_SIZE, 0, translit_charset, ".id,.display_name,.acct,.username") >= 0) {
+  if (surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, translit_charset, ".id,.display_name,.acct,.username") >= 0) {
     n_lines = strsplit_in_place(gen_buf,'\n',&lines);
     if (n_lines < 4) {
       account_free(a);
