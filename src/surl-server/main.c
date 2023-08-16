@@ -792,14 +792,14 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
         simple_serial_puts("UPLOAD\n");
         simple_serial_read(curlbuf->upload_buffer, curlbuf->upload_size);
 
-        if (mode == 0) {
+        if (mode == SURL_DATA_X_WWW_FORM_URLENCODED_HELP) {
           /* Massage an x-www-urlencoded form */
           massage_upload_urlencoded(curlbuf);
           if (VERBOSE) {
             printf("REQ: POST x-www-urlencoded [%zu bytes], body:\n", curlbuf->upload_size);
             printf("%s\n", curlbuf->upload_buffer);
           }
-        } else if (mode == 2) {
+        } else if (mode == SURL_DATA_APPLICATION_JSON_HELP) {
           /* Massage an simple application/json form (no sub-entities handled )*/
           curl_headers = curl_slist_append(curl_headers, "Content-Type: application/json");
           massage_upload_json(curlbuf);
@@ -807,7 +807,7 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
             printf("REQ: POST application/json [%zu bytes], body:\n", curlbuf->upload_size);
             printf("%s\n", curlbuf->upload_buffer);
           }
-        } else {
+        } else { /* assume SURL_DATA_X_WWW_FORM_URLENCODED_RAW */
           if (VERBOSE) {
             printf("REQ: POST raw [%zu bytes]\n", curlbuf->upload_size);
           }
@@ -930,14 +930,14 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
       simple_serial_puts("UPLOAD\n");
       simple_serial_read(curlbuf->upload_buffer, curlbuf->upload_size);
 
-      if (mode == 0) {
+      if (mode == SURL_DATA_X_WWW_FORM_URLENCODED_HELP) {
         /* Massage an x-www-urlencoded form */
         massage_upload_urlencoded(curlbuf);
         if (VERBOSE) {
           printf("REQ: PUT x-www-urlencoded [%zu bytes], body:\n", curlbuf->upload_size);
           printf("%s\n", curlbuf->upload_buffer);
         }
-      } else if (mode == 2) {
+      } else if (mode == SURL_DATA_APPLICATION_JSON_HELP) {
         /* Massage an simple application/json form (no sub-entities handled )*/
         curl_headers = curl_slist_append(curl_headers, "Content-Type: application/json");
         massage_upload_json(curlbuf);
@@ -945,7 +945,7 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
           printf("REQ: PUT application/json [%zu bytes], body:\n", curlbuf->upload_size);
           printf("%s\n", curlbuf->upload_buffer);
         }
-      } else {
+      } else { /* assume SURL_DATA_X_WWW_FORM_URLENCODED_RAW */
         if (VERBOSE) {
           printf("REQ: PUT raw [%zu bytes]\n", curlbuf->upload_size);
         }

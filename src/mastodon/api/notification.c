@@ -64,7 +64,7 @@ int api_get_notifications(char to_load, char notifications_type, char *load_befo
   if (!surl_response_ok(resp))
     goto err_out;
 
-  if (surl_get_json(gen_buf, 512, 0, NULL, ".[]|.id") >= 0) {
+  if (surl_get_json(gen_buf, 512, SURL_HTMLSTRIP_NONE, NULL, ".[]|.id") >= 0) {
     char **tmp;
     char i;
     n_notifications = strsplit(gen_buf, '\n', &tmp);
@@ -91,7 +91,7 @@ notification *api_get_notification(char *id) {
   if (!surl_response_ok(resp))
     goto err_out;
 
-  if (surl_get_json(gen_buf, BUF_SIZE, 0, translit_charset,
+  if (surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, translit_charset,
                     ".id,.type,.created_at,"
                     ".status.id//\"-\","
                     ".account.id,"
@@ -134,7 +134,7 @@ free_err_out:
     n = NULL;
     goto err_out;
   }
-  if (surl_get_json(gen_buf, BUF_SIZE, 1, translit_charset,
+  if (surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_WITH_LINKS, translit_charset,
                     n->type != NOTIFICATION_FOLLOW ? ".status.content":".account.note") >= 0) {
     n->excerpt = strdup(gen_buf);
   } else {
