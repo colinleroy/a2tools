@@ -269,8 +269,7 @@ static char load_prev_posts(list *l) {
   new_ids = malloc(to_load * sizeof(char *));
 
   set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
-  scrolldn();
-  scrolldn();
+  scrolldn(2);
   gotoxy(0,1);
   chline(scrw - LEFT_COL_WIDTH - 1);
   gotoxy(0, 0);
@@ -309,8 +308,7 @@ static char load_prev_posts(list *l) {
 
     l->first_displayed_post += loaded;
   }
-  scrollup();
-  scrollup();
+  scrollup(2);
   set_hscrollwindow(0, scrw);
 
   free(new_ids);
@@ -339,9 +337,7 @@ static char search_footer(char c) {
 static int show_search(void) {
   set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
 
-  scrolldn();
-  scrolldn();
-  scrolldn();
+  scrolldn(3);
 
   search_footer(search_type);
   dputs("Search: ");
@@ -355,14 +351,16 @@ static int show_search(void) {
     return 1;
   }
 
-  scrollup();
-  scrollup();
-  scrollup();
+  scrollup(3);
 
   set_hscrollwindow(0, scrw);
   return 0;
 }
 
+static void __fastcall__ load_indicator(char on) {
+  gotoxy(LEFT_COL_WIDTH - 4, scrh - 1);
+  dputs(on ? "...":"   ");
+}
 /* root is either an account or status id, depending on kind.
  * leaf_root is a reblogged status id
  */
@@ -371,8 +369,7 @@ static list *build_list(char *root, char *leaf_root, char kind) {
   char i, found_root;
   char n_posts;
 
-  gotoxy(LEFT_COL_WIDTH - 4, scrh - 1);
-  dputs("...");
+  load_indicator(1);
 
   l = malloc(sizeof(list));
   memset(l, 0, sizeof(list));
@@ -414,8 +411,7 @@ static list *build_list(char *root, char *leaf_root, char kind) {
   }
   l->n_posts = n_posts;
 
-  gotoxy(LEFT_COL_WIDTH - 4, scrh - 1);
-  dputs("   ");
+  load_indicator(0);
 
   return l;
 }
@@ -552,7 +548,6 @@ update:
 }
 
 static void shift_posts_down(list *l) {
-  char i;
   char scroll_val;
 
   if (l->first_displayed_post == l->n_posts)
@@ -565,9 +560,7 @@ static void shift_posts_down(list *l) {
   }
   l->first_displayed_post++;
   set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
-  for (i = 0; i < scroll_val; i++) {
-    scrollup();
-  }
+  scrollup(scroll_val);
 #ifndef __CC65__
   clrscr();
 #endif
@@ -607,7 +600,6 @@ static char calc_post_height(status *s) {
 }
 
 static int shift_posts_up(list *l) {
-  int i;
   signed char scrollval;
   signed char first;
 
@@ -647,9 +639,8 @@ static int shift_posts_up(list *l) {
   }
 
   set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
-  for (i = 0; scrollval > 0 && i < scrollval; i++) {
-    scrolldn();
-  }
+  if (scrollval > 0)
+    scrolldn(scrollval);
 #ifndef __CC65__
   clrscr();
 #endif
@@ -878,13 +869,11 @@ static void background_load(list *l) {
   char i;
   for (i = 0; i < l->n_posts; i++) {
     if (l->displayed_posts[i] == NULL) {
-      gotoxy(LEFT_COL_WIDTH - 4, scrh - 1);
-      dputs("...");
+      load_indicator(1);
 
       l->displayed_posts[i] = item_get(l, i, 0);
 
-      gotoxy(LEFT_COL_WIDTH - 4, scrh - 1);
-      dputs("   ");
+      load_indicator(0);
       break; /* background load one by one to check kb */
     }
   }
@@ -908,11 +897,9 @@ static int show_list(list *l) {
 
     print_header(l, root_status, root_notif);
 
-    gotoxy(LEFT_COL_WIDTH - 4, scrh - 1);
-    dputs("...");
+    load_indicator(1);
     print_list(l);
-    gotoxy(LEFT_COL_WIDTH - 4, scrh - 1);
-    dputs("   ");
+    load_indicator(0);
 
     while (!kbhit()) {
       background_load(l);

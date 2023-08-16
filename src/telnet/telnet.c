@@ -126,12 +126,10 @@ static void do_vt100_ctrl(char way, char abs, char x, char y) {
     cur_y = wherey();
     if (cur_y - x >= top_line) {
       gotoy(max(top_line, cur_y - x));
-    } else
-      while (x != 0) {
+    } else {
 #ifdef __CC65__
-        scrolldn();
+        while (x != 0) { scrolldn(1); --x; }
 #endif
-        --x;
       }
   } else if (way == CH_CURS_DOWN) {
     cur_y = wherey();

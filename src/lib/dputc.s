@@ -13,8 +13,6 @@
 
         .include        "apple2.inc"
 
-        .segment        "ONCE"
-
         .code
 
 ; Plot a character - also used as internal function
@@ -72,6 +70,7 @@ dnewline:
         cmp     WNDBTM          ; Are we at bottom?
         bcc     :+
         dec     CV              ; Yes, decrement
+        lda     #$01
         jsr     _scrollup       ; and scroll
         lda     CV
 :       jmp     VTABZ
