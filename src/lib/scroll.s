@@ -4,7 +4,7 @@
 ; pages 366 - 368
 ;
 
-        .export         _scrolldn, _scrollup
+        .export         _scrolldown_one, _scrollup_one, _scrolldown_n, _scrollup_n
         .import         VTABZ
         .include        "apple2.inc"
 
@@ -19,7 +19,7 @@ TXTPAGE2 := $C055
 TEMP1    := $778+3
 SEV1     := $CB06
 
-_scrolldn:
+_scrolldown_n:
         sta     NLINES          ;save A (# of lines)
 dnagain:
         ldy     #0              ;direction = down
@@ -28,14 +28,21 @@ dnagain:
         bne     dnagain
         rts
 
-_scrollup:
+_scrollup_n:
         sta     NLINES          ;save A (# of lines)
 upagain:
-        ldy     #1              ;direction = down
+        ldy     #1              ;direction = up
         jsr     scrollit        ;go do scroll
         dec     NLINES
         bne     upagain
         rts
+
+_scrolldown_one:
+        ldy     #0              ;direction = down
+        jsr     scrollit        ;go do scroll
+
+_scrollup_one:
+        ldy     #1              ;direction = up
 
 scrollit:
         txa                     ;save X
