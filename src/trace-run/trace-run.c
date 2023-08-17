@@ -4,7 +4,7 @@
 #include "strsplit.h"
 #include "slist.h"
 
-#define BUF_SIZE 1024
+#define BUF_SIZE 4096
 #define STORAGE_SIZE 200000
 
 #define FIELD_WIDTH 40
@@ -14,6 +14,8 @@ typedef struct _file dbg_file;
 typedef struct _segment dbg_segment;
 typedef struct _symbol dbg_symbol;
 typedef struct _address dbg_address;
+
+int tail = 0;
 
 #define RAM 0
 #define ROM 1
@@ -508,18 +510,41 @@ int is_op_write(char *op) {
 static void annotate_run(const char *file) {
   FILE *fp = fopen(file, "r");
   char buf[BUF_SIZE];
+  char line_buf[BUF_SIZE];
 
-  while (fgets(buf, BUF_SIZE, fp)) {
+  line_buf[0] = '\0';
+
+  while (fgets(buf, BUF_SIZE, fp) || tail) {
     char **parts = NULL;
     char *line;
     int n_parts;
+    int is_line;
+    int buf_len;
 
-    if (strchr(buf, '\n')) {
-      *strchr(buf, '\n') = '\0';
+    buf_len = strlen(buf);
+    if (buf_len == 0) {
+      if (tail) {
+        clearerr(fp);
+        usleep(5*1000);
+        continue;
+      } else {
+        return;
+      }
     }
 
+    is_line = buf[buf_len - 1] == '\n';
+    strcat(line_buf, buf);
+    if (!is_line) {
+      /* reset buf */
+      buf[0] = '\0';
+      /* Store until we get a new line */
+      continue;
+    }
+
+    *strchr(line_buf, '\n') = '\0';
+
     /* we're going to poke holes in the string */
-    line = strdup(buf);
+    line = strdup(line_buf);
 
     n_parts = strsplit_in_place(line, ':', &parts);
 
@@ -578,13 +603,13 @@ static void annotate_run(const char *file) {
         }
       }
 
-      printf("%s", buf);
+      printf("%s", line_buf);
 
       if (analyze_op(op_addr, op, param_addr) || (!address && !op_symbol && !param_symbol)) {
         printf("\n");
       } else {
         int i;
-        for (i = strlen(buf); i < 18; i++) printf(" ");
+        for (i = strlen(line_buf); i < 18; i++) printf(" ");
         printf("; OP: ");
 
         if (op_symbol) {
@@ -611,23 +636,56 @@ static void annotate_run(const char *file) {
         printf("\n");
       }
     } else {
-      printf("%s\n", buf);
+      printf("%s\n", line_buf);
     }
+
     free(line);
     free(parts);
+
+    /* reset read buffers */
+    line_buf[0] = '\0';
+    buf[0] = '\0';
   }
 
   fclose(fp);
 }
 
 int main(int argc, char *argv[]) {
-  if (argc < 4) {
-    printf("Usage: %s .dbg .lbl trace\n", argv[0]);
+  int i;
+  char *trace_file = NULL;
+
+  if (argc < 7) {
+err_usage:
+    printf("Usage: %s -d cc65_dbg_file -l cc65_lbl_file -t mame_trace_file [-f]\n", argv[0]);
+    printf("\n"
+           "-d cc65_dbg_file:   point to a cc65-generated .dbg file\n"
+           "-l cc65_lbl_file:   point to a cc65-generated .lbl file\n"
+           "-t mame_trace_file: point to a MAME debugger generated trace file\n"
+           "-f                : tail trace file\n");
     exit(1);
   }
-  load_syms(argv[1]);
-  load_lbls(argv[2]);
+  for (i = 1; i < argc; i++) {
+    if (!strcmp(argv[i], "-d") && i < argc - 1) {
+      i++;
+      load_syms(argv[i]);
+    }
+    if (!strcmp(argv[i], "-l") && i < argc - 1) {
+      i++;
+      load_lbls(argv[i]);
+    }
+    if (!strcmp(argv[i], "-t") && i < argc - 1) {
+      i++;
+      trace_file = argv[i];
+    }
+    if (!strcmp(argv[i], "-f")) {
+      tail = 1;
+    }
+  }
   cleanup_symbols();
   map_lines_to_adresses();
-  annotate_run(argv[3]);
+  if (trace_file) {
+    annotate_run(trace_file);
+  } else {
+    goto err_usage;
+  }
 }
