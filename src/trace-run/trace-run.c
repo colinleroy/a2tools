@@ -5,8 +5,9 @@
 #include "slist.h"
 
 #define BUF_SIZE 1024
-#define STORAGE_SIZE 200000 
+#define STORAGE_SIZE 200000
 
+#define FIELD_WIDTH 40
 typedef struct _line dbg_line;
 typedef struct _span dbg_span;
 typedef struct _file dbg_file;
@@ -32,7 +33,7 @@ char *read_instructions[] = {
   "eor", "jmp", "jsr",
   "ora",
   "lda", "ldx", "ldy",
-  "sbc", 
+  "sbc",
   NULL
 };
 
@@ -119,7 +120,7 @@ static void insert_line(char **parts, int n_parts) {
   int line_number = -1;
   char *span = NULL;
   int i;
-  
+
   for (i = 0; i < n_parts; i++) {
     if (!strncmp(parts[i], "id=", 3))
       id = get_int_val(parts[i]);
@@ -173,7 +174,7 @@ static void insert_file(char **parts, int n_parts) {
   char *name = NULL;
   int size = -1;
   int i;
-  
+
   for (i = 0; i < n_parts; i++) {
     if (!strncmp(parts[i], "id=", 3))
       id = get_int_val(parts[i]);
@@ -199,7 +200,7 @@ static void insert_segment(char **parts, int n_parts) {
   int start = -1;
   int size = -1;
   int i;
-  
+
   for (i = 0; i < n_parts; i++) {
     if (!strncmp(parts[i], "id=", 3))
       id = get_int_val(parts[i]);
@@ -227,7 +228,7 @@ static void insert_symbol(char **parts, int n_parts) {
   char *name = NULL;
   int size = -1;
   int i;
-  
+
   for (i = 0; i < n_parts; i++) {
     if (!strncmp(parts[i], "val=", 3))
       id = get_hex_val(parts[i]);
@@ -275,14 +276,14 @@ static void load_syms(const char *file) {
   while (fgets(buf, BUF_SIZE, fp)) {
     char **parts;
     int n_parts;
-    
+
     n_parts = strsplit_in_place(buf, '\t', &parts);
     if (n_parts == 2) {
       char **subparts;
       int n_subparts;
 
       n_subparts = strsplit_in_place(parts[1], ',', &subparts);
-      
+
       if (!strcmp(parts[0], "line")) {
         insert_line(subparts, n_subparts);
       }
@@ -312,7 +313,7 @@ static void load_lbls(const char *file) {
   while (fgets(buf, BUF_SIZE, fp)) {
     char **parts;
     int n_parts;
-    
+
     n_parts = strsplit_in_place(buf, ' ', &parts);
     if (n_parts == 3) {
       char zerox[32];
@@ -336,6 +337,26 @@ static void load_lbls(const char *file) {
     free(parts);
   }
   fclose(fp);
+}
+
+static void cleanup_symbols(void) {
+  int i;
+  for (i = 0; i < STORAGE_SIZE; i++) {
+    dbg_symbol *symbol = symbols[i];
+    char *tmp, *quote;
+
+    if (!symbol || symbol->name[0] != '"')
+      continue;
+
+    /* strip first quote */
+    tmp = strdup(symbol->name + 1);
+    /* strip the other ones */
+    while ((quote = strchr(tmp, '"')) != NULL)
+      *quote = ' ';
+
+    free(symbol->name);
+    symbol->name = tmp;
+  }
 }
 
 static void map_lines_to_adresses(void) {
@@ -506,8 +527,8 @@ static void annotate_run(const char *file) {
       int op_addr = 0;
       int param_addr = 0;
       dbg_address *address = NULL;
-      dbg_symbol *symbol = NULL;
-      dbg_symbol *param = NULL;
+      dbg_symbol *op_symbol = NULL;
+      dbg_symbol *param_symbol = NULL;
       char *op, *arg;
 
       char zerox[32];
@@ -515,10 +536,10 @@ static void annotate_run(const char *file) {
       /* get address */
       snprintf(zerox, 32, "0x%s", parts[0]);
       op_addr = strtoul(zerox, (char**)0, 0);
-      
+
       /* get op */
       op = parts[1] + 1; /* skip space */
-      arg = strchr(op, ' '); 
+      arg = strchr(op, ' ');
       if (arg) {
         *arg = '\0';
         arg++;
@@ -529,7 +550,7 @@ static void annotate_run(const char *file) {
         if ((read_from == RAM && (op_addr < 0xD000 || op_addr >= 0xDFFF))
          || (read_from == RAM && op_addr >= 0xD000 && op_addr < 0xDFFF && lc_bank == 2)) {
           address = addresses[op_addr];
-          symbol = symbols[op_addr];
+          op_symbol = symbols[op_addr];
         }
       }
 
@@ -540,49 +561,57 @@ static void annotate_run(const char *file) {
         if (strchr(arg, ','))
           *strchr(arg, ',') = '\0';
         snprintf(zerox, 32, "0x%s", arg + 1); /* skip $ */
-        
+
         param_addr = strtoul(zerox, (char**)0, 0);
         if (param_addr >= 0) {
           if (param_addr >= 0xD000 && lc_bank == 2) {
             int op_writes = is_op_write(op);
             if (write_to == RAM && op_writes) {
               /* We're writing to LC bank2 */
-              param = symbols[param_addr];
+              param_symbol = symbols[param_addr];
             } else if (read_from == RAM && !op_writes) {
-              param = symbols[param_addr];
+              param_symbol = symbols[param_addr];
             }
           } else if (param_addr < 0xD000) {
-            param = symbols[param_addr];
+            param_symbol = symbols[param_addr];
           }
         }
       }
 
       printf("%s", buf);
 
-      if (analyze_op(op_addr, op, param_addr) || (!address && !symbol && !param)) {
+      if (analyze_op(op_addr, op, param_addr) || (!address && !op_symbol && !param_symbol)) {
         printf("\n");
       } else {
         int i;
-        for (i = strlen(buf); i < 20; i++) printf(" ");
-        printf("; ");
-        if (address) {
-          i = printf("[%s:%d] ", address->file->name, address->line->line_number);
-          for (; i < 23; i++) printf(" ");
+        for (i = strlen(buf); i < 18; i++) printf(" ");
+        printf("; OP: ");
+
+        if (op_symbol) {
+          printf("%s", op_symbol->name);
+          for (i = strlen(op_symbol->name); i < FIELD_WIDTH; i++) printf(" ");
         } else {
-          for (i = 0; i < 23; i++) printf(" ");
+          for (i = 0; i < FIELD_WIDTH; i++) printf(" ");
         }
-        if (symbol) {
-          printf("%s ", symbol->name);
-        }
-        if (param) {
-          printf("(%s) ", param->name);
+
+        printf("ARG: ");
+        if (param_symbol) {
+          printf("%s", param_symbol->name);
+          for (i = strlen(param_symbol->name); i < FIELD_WIDTH; i++) printf(" ");
         } else if (arg && arg[0] == '$') {
-          printf("(%s)", zerox);
+          printf("%s", zerox);
+          for (i = strlen(zerox); i < FIELD_WIDTH; i++) printf(" ");
+        } else {
+          for (i = 0; i < FIELD_WIDTH; i++) printf(" ");
+        }
+
+        if (address) {
+          i = printf("OP loc: %s:%d", address->file->name, address->line->line_number);
         }
         printf("\n");
       }
     } else {
-      printf("%s", buf);
+      printf("%s\n", buf);
     }
     free(line);
     free(parts);
@@ -598,6 +627,7 @@ int main(int argc, char *argv[]) {
   }
   load_syms(argv[1]);
   load_lbls(argv[2]);
+  cleanup_symbols();
   map_lines_to_adresses();
   annotate_run(argv[3]);
 }
