@@ -5,7 +5,8 @@ and annotates it with debug symbols.
 
 ### Building the tool
 ```
-cd src/trace-run
+git clone https://github.com/colinleroy/a2tools.git
+cd a2tools/src/trace-run
 make && sudo make install
 ```
 
