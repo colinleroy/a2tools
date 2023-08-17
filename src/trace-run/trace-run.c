@@ -43,7 +43,7 @@ char *write_instructions[] = {
   "dec", "inc",
   "lsr", "rol", "ror",
   "sta", "stx", "sty",
-  "stz", "trb", "tsb"
+  "stz", "trb", "tsb",
   NULL
 };
 
