@@ -14,6 +14,39 @@ typedef struct _segment dbg_segment;
 typedef struct _symbol dbg_symbol;
 typedef struct _address dbg_address;
 
+#define RAM 0
+#define ROM 1
+#define NONE 2
+
+char *mem_str[3] = {
+  "RAM",
+  "ROM",
+  "none"
+};
+
+/* LSR, ROL, ROR, ? */
+
+char *read_instructions[] = {
+  "adc", "and", "bit",
+  "cmp", "cpx", "cpy",
+  "eor", "jmp", "jsr",
+  "ora",
+  "lda", "ldx", "ldy",
+  "sbc", 
+  NULL
+};
+
+char *write_instructions[] = {
+  "dec", "inc",
+  "lsr", "rol", "ror",
+  "sta", "stx", "sty",
+  NULL
+};
+
+int read_from = ROM;
+int write_to  = NONE;
+int lc_bank   = 1;
+
 struct _line {
   int file;
   int line_number;
@@ -321,9 +354,21 @@ static void map_lines_to_adresses(void) {
     n_spans = strsplit(line->spans, '+', &c_spans);
     for (i = 0; i < n_spans; i++) {
       int span_num     = atoi(c_spans[i]);
-      dbg_span *span   = spans[span_num];
-      dbg_segment *seg = segs[span->segment];
-      int addr         = seg->start + span->start;
+      dbg_span *span;
+      dbg_segment *seg;
+      int addr;
+
+      span = spans[span_num];
+      if (!span) {
+        continue;
+      }
+
+      seg = segs[span->segment];
+      if (!seg) {
+        continue;
+      }
+
+      addr = seg->start + span->start;
 
       if (addresses[addr]) {
         //printf("Warning: Address 0x%04x already set\n", addr);
@@ -339,52 +384,182 @@ static void map_lines_to_adresses(void) {
   }
 }
 
+static int analyze_op(int op_addr, char *op, int param_addr) {
+  static int bit_count = 0;
+  static int last_bit = 0;
+  int parsed = 0, bank_switch = 0;
+
+  if (!strcmp(op, "bit")) {
+    switch(param_addr) {
+      case 0xC080:
+        read_from = RAM;
+        write_to  = NONE;
+        lc_bank   = 2;
+        parsed    = 1;
+        bank_switch = 1;
+        break;
+      case 0xC081:
+        if (param_addr == last_bit && ++bit_count == 2) {
+          read_from = ROM;
+          write_to  = RAM;
+          lc_bank   = 2;
+          parsed    = 1;
+          bank_switch = 1;
+        } else {
+          bit_count = 0;
+        }
+        break;
+      case 0xC082:
+        read_from = ROM;
+        write_to  = NONE;
+        lc_bank   = 2;
+        parsed    = 1;
+        bank_switch = 1;
+        break;
+      case 0xC083:
+        if (param_addr == last_bit && ++bit_count == 2) {
+          read_from = RAM;
+          write_to  = RAM;
+          lc_bank   = 2;
+          parsed    = 1;
+          bank_switch = 1;
+        } else {
+          bit_count = 0;
+        }
+        break;
+      case 0xC088:
+        read_from = RAM;
+        write_to  = NONE;
+        lc_bank   = 1;
+        parsed    = 1;
+        bank_switch = 1;
+        break;
+      case 0xC089:
+        if (param_addr == last_bit && ++bit_count == 2) {
+          read_from = ROM;
+          write_to  = RAM;
+          lc_bank   = 1;
+          parsed    = 1;
+          bank_switch = 1;
+        }
+        break;
+      case 0xC08A:
+        read_from = ROM;
+        write_to  = NONE;
+        lc_bank   = 1;
+        parsed    = 1;
+        bank_switch = 1;
+        break;
+      case 0xC08B:
+        if (param_addr == last_bit && ++bit_count == 2) {
+          read_from = RAM;
+          write_to  = RAM;
+          lc_bank   = 1;
+          parsed    = 1;
+          bank_switch = 1;
+        }
+        break;
+      default: break;
+    }
+    last_bit = param_addr;
+    bit_count++;
+  } else {
+    bit_count = 0;
+    last_bit = 0;
+  }
+  if (bank_switch) {
+    printf(" ; BANK SWITCH: read from %s, write to %s, LC bank %d",
+            mem_str[read_from], mem_str[write_to], lc_bank);
+  }
+  return parsed;
+}
+
+int is_op_write(char *op) {
+  int i;
+  for (i = 0; write_instructions[i] != NULL; i++) {
+    if (!strcmp(write_instructions[i], op)) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
 static void annotate_run(const char *file) {
   FILE *fp = fopen(file, "r");
   char buf[BUF_SIZE];
 
   while (fgets(buf, BUF_SIZE, fp)) {
     char **parts = NULL;
-    char *line = strdup(buf);
+    char *line;
     int n_parts;
 
     if (strchr(buf, '\n')) {
       *strchr(buf, '\n') = '\0';
     }
 
+    /* we're going to poke holes in the string */
+    line = strdup(buf);
+
     n_parts = strsplit_in_place(line, ':', &parts);
 
     if (n_parts >= 2) {
-      int addr;
+      int op_addr = 0;
+      int param_addr = 0;
       dbg_address *address = NULL;
       dbg_symbol *symbol = NULL;
       dbg_symbol *param = NULL;
+      char *op, *arg;
+
       char zerox[32];
 
       /* get address */
       snprintf(zerox, 32, "0x%s", parts[0]);
-      addr = strtoul(zerox, (char**)0, 0);
-      if (addr >= 0) {
-        address = addresses[addr];
+      op_addr = strtoul(zerox, (char**)0, 0);
+      
+      /* get op */
+      op = parts[1] + 1; /* skip space */
+      arg = strchr(op, ' '); 
+      if (arg) {
+        *arg = '\0';
+        arg++;
       }
 
-      /* get symbol */
-      symbol = symbols[addr];
-
-      /* get param */
-      if (strstr(parts[1], " $")) {
-        if (strchr(parts[1], '\n'))
-          *strchr(parts[1], '\n') = '\0';
-        if (strchr(parts[1], ','))
-          *strchr(parts[1], ',') = '\0';
-        snprintf(zerox, 32, "0x%s", strstr(parts[1], " $") + 2);
-        addr = strtoul(zerox, (char**)0, 0);
-        if (addr >= 0) {
-          param = symbols[addr];
+      if (op_addr >= 0) {
+        /* Get our symbol only if the address is in RAM, out of LC or in LC page 2 */
+        if ((read_from == RAM && (op_addr < 0xD000 || op_addr >= 0xDFFF))
+         || (read_from == RAM && op_addr >= 0xD000 && op_addr < 0xDFFF && lc_bank == 2)) {
+          address = addresses[op_addr];
+          symbol = symbols[op_addr];
         }
       }
+
+      /* get param */
+      if (arg && arg[0] == '$') {
+        if (strchr(arg, '\n'))
+          *strchr(arg, '\n') = '\0';
+        if (strchr(arg, ','))
+          *strchr(arg, ',') = '\0';
+        snprintf(zerox, 32, "0x%s", arg + 1); /* skip $ */
+        
+        param_addr = strtoul(zerox, (char**)0, 0);
+        if (param_addr >= 0) {
+          if (param_addr >= 0xD000 && lc_bank == 2) {
+            int op_writes = is_op_write(op);
+            if (write_to == RAM && op_writes) {
+              /* We're writing to LC bank2 */
+              param = symbols[param_addr];
+            } else if (read_from == RAM && !op_writes) {
+              param = symbols[param_addr];
+            }
+          } else if (param_addr < 0xD000) {
+            param = symbols[param_addr];
+          }
+        }
+      }
+
       printf("%s", buf);
-      if (!address && !symbol && !param) {
+
+      if (analyze_op(op_addr, op, param_addr) || (!address && !symbol && !param)) {
         printf("\n");
       } else {
         int i;
@@ -401,13 +576,13 @@ static void annotate_run(const char *file) {
         }
         if (param) {
           printf("(%s) ", param->name);
-        } else if (strstr(parts[1], " $")) {
+        } else if (arg && arg[0] == '$') {
           printf("(%s)", zerox);
         }
         printf("\n");
       }
     } else {
-      printf("%s\n", buf);
+      printf("%s", buf);
     }
     free(line);
     free(parts);
