@@ -57,8 +57,6 @@ int surl_connect_proxy(void) {
   return r;
 }
 
-char surl_buf[BUFSIZE];
-
 surl_response * __fastcall__ surl_start_request(const char method, char *url, char **headers, int n_headers) {
   surl_response *resp;
   int i;
@@ -129,16 +127,19 @@ void __fastcall__ surl_read_response_header(surl_response *resp) {
     return; // already read.
   }
 
-  simple_serial_read((char *)resp, 6);
-  simple_serial_gets(surl_buf, BUFSIZE);
-
+  simple_serial_read((char *)resp, 8);
 /* coverity[var_assign] */
   resp->code = ntohs(resp->code);
 /* coverity[var_assign] */
   resp->size = ntohs(resp->size);
 /* coverity[var_assign] */
   resp->header_size = ntohs(resp->header_size);
-  resp->content_type = strdup(surl_buf);
+/* coverity[var_assign] */
+  resp->content_type_size = ntohs(resp->content_type_size);
+  /* Includes the zero byte */
+  resp->content_type = malloc(resp->content_type_size);
+  simple_serial_read(resp->content_type, resp->content_type_size);
+
 
   w = strchr(resp->content_type, '\n');
   if (w)

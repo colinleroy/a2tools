@@ -37,6 +37,9 @@
 
 #define SURL_IS_ERROR(x) ((x) >= SURL_ERROR_OK && (x) <= SURL_ERROR_CONV_FAILED)
 
+#define SURL_UPLOAD_GO          0x50
+#define SURL_UPLOAD_PARAM_ERROR 0x51
+
 #define HGR_LEN 8192
 
 #define SURL_DATA_X_WWW_FORM_URLENCODED_HELP  0

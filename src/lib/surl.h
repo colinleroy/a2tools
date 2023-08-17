@@ -15,12 +15,14 @@ struct _surl_response {
   unsigned int code;
   size_t size;
   size_t header_size;
+  size_t content_type_size;
   size_t cur_pos;
   size_t cur_hdr_pos;
 #else
   unsigned short code;
   unsigned short size;
   unsigned short header_size;
+  unsigned short content_type_size;
   unsigned short cur_pos;
   unsigned short cur_hdr_pos;
 #endif
@@ -36,9 +38,6 @@ struct _surl_response {
                   | (((x) & 0x0000ff00u) << 8) | (((x) & 0x000000ffu) << 24))
 #define htonl(x) ntohl(x)
 #endif
-
-#define BUFSIZE 255
-extern char surl_buf[BUFSIZE];
 
 int __fastcall__ surl_connect_proxy(void);
 #define surl_close_proxy() simple_serial_close()

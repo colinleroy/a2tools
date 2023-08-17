@@ -123,7 +123,7 @@ int main(int argc, char **argv)
   time_t secs;
   long msecs;
   struct timespec cur_time;
-  unsigned short r_hdrs[3];
+  unsigned short r_hdrs[4];
 
   if (argc > 1) {
     if (!strcmp(argv[1], "--help")) {
@@ -219,10 +219,11 @@ new_req:
     r_hdrs[0] = htons(response->response_code);
     r_hdrs[1] = htons(response->size);
     r_hdrs[2] = htons(response->headers_size);
+    r_hdrs[3] = htons(strlen(response->content_type) + 1);
 
-    simple_serial_write((char *)r_hdrs, 6);
+    simple_serial_write((char *)r_hdrs, 8);
     simple_serial_puts(response->content_type);
-    simple_serial_putc('\n');
+    simple_serial_putc('\0');
 
     printf("RESP: code %d, %zd response bytes, %zd header bytes, content-type: %s",
            response->response_code, response->size, response->headers_size,
@@ -779,7 +780,7 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
         mode = ntohs(mode);
 
         if (mode > 2) {
-          simple_serial_puts("ERROR\n");
+          simple_serial_putc(SURL_UPLOAD_PARAM_ERROR);
           printf("REQ: Unexpected serial reply\n");
           curl_buffer_free(curlbuf);
           return NULL;
@@ -790,7 +791,7 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
         curlbuf->upload_buffer = malloc(curlbuf->upload_size);
         curlbuf->cur_upload_ptr = curlbuf->upload_buffer;
 
-        simple_serial_puts("UPLOAD\n");
+        simple_serial_putc(SURL_UPLOAD_GO);
         simple_serial_read(curlbuf->upload_buffer, curlbuf->upload_size);
 
         if (mode == SURL_DATA_X_WWW_FORM_URLENCODED_HELP) {
@@ -916,7 +917,7 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
       mode = ntohs(mode);
 
       if (mode > 2) {
-        simple_serial_puts("ERROR\n");
+        simple_serial_putc(SURL_UPLOAD_PARAM_ERROR);
         printf("REQ: Unexpected serial reply\n");
         curl_buffer_free(curlbuf);
         return NULL;
@@ -928,7 +929,7 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
       curlbuf->upload_buffer = malloc(curlbuf->upload_size);
       curlbuf->cur_upload_ptr = curlbuf->upload_buffer;
 
-      simple_serial_puts("UPLOAD\n");
+      simple_serial_putc(SURL_UPLOAD_GO);
       simple_serial_read(curlbuf->upload_buffer, curlbuf->upload_size);
 
       if (mode == SURL_DATA_X_WWW_FORM_URLENCODED_HELP) {
