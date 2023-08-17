@@ -1,0 +1,34 @@
+13D7: rts
+08A5: cmp #$06
+08A7: beq $08a2
+08A2: jsr $1167
+1167: sta $88
+1169: stx $89
+116B: jmp $16b0
+16B0: jmp $13be
+13BE: ldx $21aa
+13C1: ldy $1fa7
+13C4: iny
+13C5: beq $13cc
+13CC: lda $1fa4
+13CF: cmp #$ff
+13D1: bne $13d8
+13D3: lda #$06
+13D5: ldx #$00
+13D7: rts
+08A5: cmp #$06
+08A7: beq $08a2
+08A2: jsr $1167
+1167: sta $88
+1169: stx $89
+116B: jmp $16b0
+16B0: jmp $13be
+13BE: ldx $21aa
+13C1: ldy $1fa7
+13C4: iny
+13C5: beq $13cc
+13CC: lda $1fa4
+13CF: cmp #$ff
+13D1: bne $13d8
+13D3: lda #$06
+13D5: ldx #$00

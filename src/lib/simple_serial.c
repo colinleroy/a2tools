@@ -428,21 +428,23 @@ char * __fastcall__ simple_serial_gets(char *out, size_t size) {
 void __fastcall__ simple_serial_read(char *ptr, size_t nmemb) {
   static char *cur;
   static char *end;
-
   if (serial_activity_indicator_enabled)
     activity_cb(1);
 
   cur = ptr;
   end = ptr + nmemb;
-  while (cur < end) {
 #ifdef __CC65__
+  while (cur < end) {
     while (ser_get(cur) == SER_ERR_NO_DATA);
-#else
-    *cur = simple_serial_getc();
-#endif
     ++cur;
   }
-
+  //WIP simple_serial_read_to(cur, end);
+#else
+  while (cur < end) {
+    *cur = simple_serial_getc();
+    ++cur;
+  }
+#endif
   if (serial_activity_indicator_enabled)
     activity_cb(0);
 }
