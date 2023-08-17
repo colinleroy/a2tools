@@ -24,7 +24,8 @@ mastodon_SOURCES := \
 mastodon_CC65SOURCES := \
 	../lib/dputs.s \
 	../lib/dputc.s \
-	../lib/scroll.s
+	../lib/scroll.s \
+	../lib/simple_serial_read_to.s
 
 mastocli_SOURCES := \
 	$(common_SOURCES) \
@@ -39,7 +40,8 @@ mastocli_SOURCES := \
 mastocli_CC65SOURCES := \
 	../lib/dputs.s \
 	../lib/dputc.s \
-	../lib/scroll.s
+	../lib/scroll.s \
+	../lib/simple_serial_read_to.s
 
 mastowrite_SOURCES := \
 	$(common_SOURCES) \
@@ -56,7 +58,8 @@ mastowrite_SOURCES := \
 mastowrite_CC65SOURCES := \
 	../lib/dputs.s \
 	../lib/dputc.s \
-	../lib/scroll.s
+	../lib/scroll.s \
+	../lib/simple_serial_read_to.s
 
 mastoconf_SOURCES := \
 	cli/config.c \
