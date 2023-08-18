@@ -1017,6 +1017,7 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
     return NULL;
   } else if (method == SURL_METHOD_PING) {
     simple_serial_putc(SURL_ANSWER_PONG);
+    simple_serial_putc(SURL_PROTOCOL_VERSION);
     return NULL;
   } else {
     printf("Unsupported method 0x%02x\n", method);
