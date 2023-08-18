@@ -8,7 +8,7 @@ CC65_TARGET = apple2enh
 all: $(PROGRAM).bin
 
 $(PROGRAM).bin: $(SOURCES) $(CL65SOURCES)
-	cl65 $(CFLAGS) $(CLCFLAGS) -o $@ $^ 
+	cl65 -g -Wl --dbgfile,test.dbg -Ln test.lbl $(CFLAGS) $(CLCFLAGS) -o $@ $^
 
 clean:
 	rm -f $(PROGRAM).bin *.o *.map
