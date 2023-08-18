@@ -5,17 +5,22 @@
 #include <stdarg.h>
 #include <errno.h>
 #include <conio.h>
-#include "simple_serial.h"
-
-static char readbuf[2000];
+#include "clrzone.h"
 
 int main(int argc, char *argv[]) {
-  printf("ready\n");
-//  cgetc();
-  simple_serial_open(2, SER_BAUD_9600);
-  simple_serial_read(readbuf, 2000);
-
-  printf("done\n");
+  char x, y;
+  
+  videomode(VIDEOMODE_80COL);
+  for (x = 0; x < 80; x++) {
+    for (y = 0; y < 24; y++) {
+      cputcxy(x, y, '*');
+    }
+  }
   cgetc();
+  gotoxy(0, 0);
+  
+  clrzone(2, 2, 78, 2);
+  cgetc();
+
   return 0;
 }
