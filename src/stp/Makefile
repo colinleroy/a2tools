@@ -15,7 +15,7 @@ SOURCES := stp.c stp_cli.c stp_save.c stp_send_file.c stp_delete.c \
 	../lib/surl_ping.c \
 	../lib/file_select.c
 
-CL65SOURCES = ../lib/dputc.s ../lib/scroll.s 	../lib/simple_serial_read_to.s
+CL65SOURCES = ../lib/dputc.s ../lib/scroll.s
 GCC_SOURCES = ../lib/extended_string.c ../lib/extended_conio.c
 
 DEPS := 
