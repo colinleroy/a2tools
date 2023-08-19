@@ -51,6 +51,8 @@ char *file_select(char sx, char sy, char ex, char ey, char dir, char *prompt) {
 #endif
   char *filename = NULL;
 
+  gotoxy(sx, sy);
+  cprintf("Please wait...");
   if (dir)
     last_dir[0] = '\0';
 
