@@ -140,13 +140,12 @@ static void set_legend(char *str, int idx, int num_images) {
 }
 
 static void img_display(media *m, char idx, char num_images) {
-  surl_response *resp;
   size_t len;
 
 
-  resp = surl_start_request(SURL_METHOD_GET, m->media_url[idx], NULL, 0);
+  surl_start_request(SURL_METHOD_GET, m->media_url[idx], NULL, 0);
 
-  if (resp && resp->code >=200 && resp->code < 300) {
+  if (surl_response_ok()) {
     #ifndef __CC65__
     #undef HGR_PAGE
     char *HGR_PAGE = malloc(0x2000);
@@ -188,7 +187,6 @@ static void img_display(media *m, char idx, char num_images) {
     set_legend("Request failed.", idx, num_images);
     toggle_legend(1);
   }
-  surl_response_free(resp);
 }
 
 int img_main(int argc, char **argv) {

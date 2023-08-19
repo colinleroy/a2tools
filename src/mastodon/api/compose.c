@@ -35,7 +35,6 @@ char *api_send_hgr_image(char *filename, char *description, char **err, char x, 
   char buf[1024];
   int r;
   int to_send;
-  surl_response *resp;
   char **lines;
   char n_lines;
   char *media_id;
@@ -56,13 +55,7 @@ char *api_send_hgr_image(char *filename, char *description, char **err, char x, 
 
   if (w > 0)
     progress_bar(x, y, w, 0, HGR_LEN);
-  resp = get_surl_for_endpoint(SURL_METHOD_POST_DATA, "/api/v2/media");
-
-  if (resp == NULL) {
-    fclose(fp);
-    *err = NET_ERROR;
-    return NULL;
-  }
+  get_surl_for_endpoint(SURL_METHOD_POST_DATA, "/api/v2/media");
 
   /* Send num fields */
   surl_multipart_send_num_fields(1);
@@ -88,10 +81,10 @@ char *api_send_hgr_image(char *filename, char *description, char **err, char x, 
 
   fclose(fp);
 
-  surl_read_response_header(resp);
+  surl_read_response_header();
 
   media_id = NULL;
-  if (surl_response_ok(resp)) {
+  if (surl_response_ok()) {
     if (surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, translit_charset, ".id") >= 0) {
       n_lines = strsplit(gen_buf, '\n', &lines);
       if (n_lines == 1) {
@@ -104,7 +97,6 @@ char *api_send_hgr_image(char *filename, char *description, char **err, char x, 
   } else {
     *err = NET_ERROR;
   }
-  surl_response_free(resp);
 
   if (media_id != NULL) {
     /* Set description */
@@ -117,15 +109,14 @@ char *api_send_hgr_image(char *filename, char *description, char **err, char x, 
     len = strlen(body);
 
     snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s", "/api/v1/media", media_id);
-    resp = get_surl_for_endpoint(SURL_METHOD_PUT, endpoint_buf);
+    get_surl_for_endpoint(SURL_METHOD_PUT, endpoint_buf);
 
     surl_send_data_params(len, SURL_DATA_APPLICATION_JSON_HELP);
     surl_send_data(body, len);
 
     free(body);
 
-    surl_read_response_header(resp);
-    surl_response_free(resp);
+    surl_read_response_header();
   }
 
   return media_id;
@@ -134,7 +125,6 @@ char *api_send_hgr_image(char *filename, char *description, char **err, char x, 
 signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medias,
                           char *ref_toot_id, char **media_ids, char n_medias,
                           char compose_audience) {
-  surl_response *resp;
   char *body;
   int i, o, len;
   char *medias_buf;
@@ -169,7 +159,7 @@ signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medi
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s%s%s", STATUS_ENDPOINT,
            mode == 'e' ? "/" : "",
            mode == 'e' ? ref_toot_id : "");
-  resp = get_surl_for_endpoint(mode == 'e' ? SURL_METHOD_PUT : SURL_METHOD_POST, endpoint_buf);
+  get_surl_for_endpoint(mode == 'e' ? SURL_METHOD_PUT : SURL_METHOD_POST, endpoint_buf);
 
   /* Start of status */
   snprintf(body, 1536, "%c|in_reply_to_id\n"
@@ -210,40 +200,31 @@ signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medi
 
   free(body);
 
-  surl_read_response_header(resp);
+  surl_read_response_header();
 
-  if (surl_response_ok(resp)) {
-    surl_response_free(resp);
-    return 0;
-  } else {
-    surl_response_free(resp);
-    return -1;
-  }
+  return surl_response_ok() ? 0 : -1;
 }
 
 char *compose_get_status_text(char *status_id) {
-  surl_response *resp;
   char *content = NULL;
 
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s/source", STATUS_ENDPOINT, status_id);
-  resp = get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
+  get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
   
-  if (resp && surl_response_ok(resp)) {
+  if (surl_response_ok()) {
     int r;
     
     content = malloc(NUM_CHARS);
     if (content == NULL)
-      goto err_out;
+      return NULL;
 
     r = surl_get_json(content, NUM_CHARS, SURL_HTMLSTRIP_NONE, translit_charset, ".text");
 
     if (r < 0) {
       free(content);
-      content = NULL;
+      return NULL;
     }
   }
 
-err_out:
-  surl_response_free(resp);
   return content;
 }

@@ -110,7 +110,7 @@ static const char *dump_response_to_file(char *buffer, size_t size) {
 }
 
 static void do_debug(char *file_line) {
-  static char debug_buf[DBG_BUF_SIZE + 1];
+  static char debug_buf[SIMPLE_SERIAL_BUF_SIZE + 1];
   static unsigned short len;
 
   if (strchr(file_line, '\n'))

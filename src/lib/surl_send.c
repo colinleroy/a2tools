@@ -41,7 +41,7 @@ int __fastcall__ surl_send_data_params(size_t total, int mode) {
   simple_serial_write((char *)&mode, 2);
 
   /* Wait for go */
-  return simple_serial_getc() == SURL_UPLOAD_GO;
+  return (simple_serial_getc() == SURL_UPLOAD_GO) ? 0 : -1;
 }
 
 #ifdef __CC65__

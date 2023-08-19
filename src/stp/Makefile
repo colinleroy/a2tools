@@ -1,6 +1,15 @@
+ifdef SER_DEBUG
+ser_debug_SOURCES := ../lib/simple_serial_printf.c
+debug_CFLAGS := -DSER_DEBUG=1
+else
+ser_debug_SOURCES :=
+debug_CFLAGS :=
+endif
+
 PROGRAM=stp
 SOURCES := stp.c stp_cli.c stp_save.c stp_send_file.c stp_delete.c \
 	../lib/simple_serial.c \
+	$(ser_debug_SOURCES) \
 	../lib/get_buf_size.c \
 	../lib/progress_bar.c \
 	../lib/strsplit.c \
@@ -21,8 +30,8 @@ GCC_SOURCES = ../lib/extended_string.c ../lib/extended_conio.c
 DEPS := 
 
 CC65_TARGET = apple2enh
-CFLAGS  = -I ../lib -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
-CLCFLAGS = -t $(CC65_TARGET) -g -O -Cl -Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-noexit.cfg -vm -m $(PROGRAM).map -DSURL_TO_LANGCARD -DFILESEL_TO_LANGCARD
+CFLAGS  = -I ../lib -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\" $(debug_CFLAGS)
+CLCFLAGS = -t $(CC65_TARGET) -g -O -Cl -Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-noexit.cfg -vm -m $(PROGRAM).map #-DSURL_TO_LANGCARD -DFILESEL_TO_LANGCARD
 GCCCFLAGS = -g -O0 -Wall -Wno-format -Wno-unused-function -Wno-char-subscripts -Werror
 GCCLDFLAGS = 
 

@@ -68,7 +68,7 @@ char *cleanup_filename(char *in) {
   return in;
 }
 
-int stp_save_dialog(char *url, surl_response *resp, char *out_dir) {
+int stp_save_dialog(char *url, const surl_response *resp, char *out_dir) {
   char *filename = strdup(strrchr(url, '/') + 1);
   int r;
   char free_out_dir = (out_dir == NULL);
@@ -101,7 +101,7 @@ int stp_save_dialog(char *url, surl_response *resp, char *out_dir) {
   return r;
 }
 
-int stp_save(char *full_filename, char *out_dir, surl_response *resp) {
+int stp_save(char *full_filename, char *out_dir, const surl_response *resp) {
   FILE *fp = NULL;
   char *data = NULL;
   char *filename;
@@ -139,7 +139,7 @@ int stp_save(char *full_filename, char *out_dir, surl_response *resp) {
 
     /* Look into the header, and skip it by the way */
     data = malloc(APPLESINGLE_HEADER_LEN);
-    r = surl_receive_data(resp, data, APPLESINGLE_HEADER_LEN);
+    r = surl_receive_data(data, APPLESINGLE_HEADER_LEN);
 
     if (r == 58
      && data[0] == 0x00 && data[1] == 0x05
@@ -214,7 +214,7 @@ int stp_save(char *full_filename, char *out_dir, surl_response *resp) {
     gotoxy(0, 14);
     cprintf("Reading %zu bytes...", min(buf_size, resp->size - total));
 
-    r = surl_receive_data(resp, data, buf_size);
+    r = surl_receive_data(data, buf_size);
 
     clrzone(0,14, scrw - 1, 14);
     gotoxy(0, 14);

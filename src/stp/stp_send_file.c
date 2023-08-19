@@ -58,7 +58,7 @@ void stp_send_file(char *remote_dir) {
   static char *filename;
   static char *path;
   static char *remote_filename;
-  static surl_response *resp;
+  static const surl_response *resp;
   static int r = 0;
   static char start_y = 3;
 
@@ -66,10 +66,9 @@ void stp_send_file(char *remote_dir) {
   filename = NULL;
   path = NULL;
   remote_filename = NULL;
-  resp = NULL;
   r = 0;
 
-  path  = stp_send_dialog();
+  path = stp_send_dialog();
   if (path == NULL) {
     return;
   }
@@ -82,7 +81,7 @@ void stp_send_file(char *remote_dir) {
 
   clrzone(0, 2, scrw - 1, 2 + PAGE_HEIGHT);
   gotoxy(0, 3);
-  cprintf("Opening %s...\r\n", path);
+  cprintf("Opening %s...", path);
 
   fp = fopen(path, "r");
   if (fp == NULL) {
@@ -96,6 +95,7 @@ void stp_send_file(char *remote_dir) {
     cgetc();
     goto err_out;
   }
+  cprintf("(%zu bytes)\r\n", filesize);
 
 #ifdef PRODOS_T_TXT
   remote_filename = malloc(BUFSIZE);
@@ -123,7 +123,7 @@ void stp_send_file(char *remote_dir) {
   progress_bar(0, start_y + 3, scrw, 0, filesize);
 
   resp = surl_start_request(SURL_METHOD_PUT, remote_filename, NULL, 0);
-  if (resp == NULL || resp->code != 100) {
+  if (resp->code != 100) {
     cprintf("Bad response.");
     cgetc();
     goto err_out;
@@ -157,7 +157,7 @@ void stp_send_file(char *remote_dir) {
   cprintf("Sent %zu/%lu.\r\n", total, filesize);
 
 finished:
-  surl_read_response_header(resp);
+  surl_read_response_header();
   cprintf("File sent, response code: %d\r\n", resp->code);
   cprintf("Hit a key to continue.");
   cgetc();
@@ -169,7 +169,6 @@ err_out:
   free(path);
   free(remote_filename);
   free(data);
-  surl_response_free(resp);
   clrzone(0, 19, scrw - 1, 20);
   stp_print_footer();
 }

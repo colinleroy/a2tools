@@ -162,20 +162,14 @@ void status_free(status *s) {
 }
 
 status *api_get_status(char *status_id, char full) {
-  surl_response *resp;
-  status *s;
-
-  s = NULL;
-
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s", STATUS_ENDPOINT, status_id);
-  resp = get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
+  get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
   
-  if (resp && surl_response_ok(resp)) {
-    s = status_new_from_json(status_id, full, 0);
+  if (surl_response_ok()) {
+    return status_new_from_json(status_id, full, 0);
   }
 
-  surl_response_free(resp);
-  return s;
+  return NULL;
 }
 
 #ifdef __CC65__

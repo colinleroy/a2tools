@@ -35,8 +35,8 @@
 #endif
 
 void __fastcall__ surl_set_time(void) {
-  surl_response *resp = surl_start_request(SURL_METHOD_GETTIME, "time://", NULL, 0);
-  if (resp && surl_response_ok(resp)) {
+  surl_start_request(SURL_METHOD_GETTIME, "time://", NULL, 0);
+  if (surl_response_ok()) {
     struct timespec now;
     simple_serial_read((char *)&now.tv_sec, 4);
     now.tv_sec = ntohl(now.tv_sec);
@@ -45,7 +45,6 @@ void __fastcall__ surl_set_time(void) {
     clock_settime(0, &now);
 #endif
   }
-  surl_response_free(resp);
 }
 
 #ifdef __CC65__

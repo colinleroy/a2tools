@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdarg.h>
 #ifndef __CC65__
 #include <arpa/inet.h>
 #endif
@@ -57,8 +58,10 @@ int surl_connect_proxy(void) {
   return r;
 }
 
-surl_response * __fastcall__ surl_start_request(const char method, char *url, char **headers, int n_headers) {
-  surl_response *resp;
+static surl_response static_resp;
+surl_response *resp;
+
+const surl_response * __fastcall__ surl_start_request(const char method, char *url, char **headers, int n_headers) {
   int i;
 
   if (proxy_opened == 0) {
@@ -67,10 +70,9 @@ surl_response * __fastcall__ surl_start_request(const char method, char *url, ch
     }
   }
 
-  resp = malloc(sizeof(surl_response));
-  if (resp == NULL) {
-    printf("No more memory at %s:%d\n",__FILE__, __LINE__);
-    return NULL;
+  resp = &static_resp;
+  if (resp->content_type) {
+    free(resp->content_type);
   }
 
   resp->size = 0;
@@ -116,11 +118,11 @@ surl_response * __fastcall__ surl_start_request(const char method, char *url, ch
     return resp;
   }
 
-  surl_read_response_header(resp);
+  surl_read_response_header();
   return resp;
 }
 
-void __fastcall__ surl_read_response_header(surl_response *resp) {
+void __fastcall__ surl_read_response_header(void) {
   char *w;
   
   if (resp->content_type) {
@@ -146,18 +148,7 @@ void __fastcall__ surl_read_response_header(surl_response *resp) {
     *w = '\0';
 }
 
-void __fastcall__ surl_response_free(surl_response *resp) {
-  if (resp == NULL) {
-    return;
-  }
-  free(resp->content_type);
-  free(resp);
-  /* Flush serial */
-  simple_serial_flush();
-
-}
-
-char __fastcall__ surl_response_ok(surl_response *resp) {
+char __fastcall__ surl_response_ok(void) {
   return resp != NULL && resp->code >= 200 && resp->code < 300;
 }
 

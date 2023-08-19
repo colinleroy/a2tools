@@ -36,14 +36,14 @@
 #endif
 
 void __fastcall__ surl_ping(void) {
-  surl_response *resp;
+  const surl_response *resp;
   char done = 0;
 try_again:
   clrscr();
   gotoxy(0, 10);
   cputs("Establishing serial connection... ");
   resp = surl_start_request(SURL_METHOD_PING, "ping://", NULL, 0);
-  if (resp && resp->code == SURL_PROTOCOL_VERSION) {
+  if (resp->code == SURL_PROTOCOL_VERSION) {
     done = 1;
   } else {
     cprintf("\r\n\r\n%s. Press any key to try again...\r\n",
@@ -52,7 +52,7 @@ try_again:
                 : "Unknown error");
     cgetc();
   }
-  surl_response_free(resp);
+
   if (!done) {
     goto try_again;
   }

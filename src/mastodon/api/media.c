@@ -112,22 +112,17 @@ static media *get_media(char *api_endpoint,
                         char *base_selector,
                         char *description_selector,
                         char *id) {
-  surl_response *resp;
   media *m;
 
   m = NULL;
 
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s", api_endpoint, id);
-  resp = get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
+  get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
   
-  if (!surl_response_ok(resp))
-    goto err_out;
+  if (!surl_response_ok())
+    return NULL;
 
-  m = media_new_from_json(base_selector, description_selector);
-
-err_out:
-  surl_response_free(resp);
-  return m;
+  return media_new_from_json(base_selector, description_selector);
 }
 
 media *api_get_status_media(char *id) {
