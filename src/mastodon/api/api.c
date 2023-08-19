@@ -194,10 +194,6 @@ char api_interact(char *id, char type, char *action) {
 }
 
 void api_favourite_status(status *s) {
-  if (s->reblog) {
-    s = s->reblog;
-  }
-
   if ((s->favorited_or_reblogged & FAVOURITED) == 0) {
     if (api_interact(s->id, 's', "favourite") == 0) {
       s->favorited_or_reblogged |= FAVOURITED;
@@ -212,10 +208,6 @@ void api_favourite_status(status *s) {
 }
 
 void api_reblog_status(status *s) {
-  if (s->reblog) {
-    s = s->reblog;
-  }
-
   if ((s->favorited_or_reblogged & REBLOGGED) == 0) {
     if (api_interact(s->id, 's', "reblog") == 0) {
       s->favorited_or_reblogged |= REBLOGGED;
@@ -230,10 +222,6 @@ void api_reblog_status(status *s) {
 }
 
 char api_delete_status(status *s) {
-  if (s->reblog) {
-    return -1;
-  }
-
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s", STATUS_ENDPOINT, s->id);
   get_surl_for_endpoint(SURL_METHOD_DELETE, endpoint_buf);
 
