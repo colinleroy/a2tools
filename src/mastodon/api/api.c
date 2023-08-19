@@ -38,10 +38,8 @@ int api_search(char to_load, char *search, char search_type, char *load_before, 
 }
 
 int api_get_posts(char *endpoint, char to_load, char *load_before, char *load_after, char *filter, char *sel, char **post_ids) {
-  surl_response *resp;
   int n_status;
 
-  n_status = 0;
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s?limit=%d%s%s%s%s%s", endpoint, to_load,
             load_after ? "&max_id=" : "",
             load_after ? load_after : "",
@@ -49,10 +47,10 @@ int api_get_posts(char *endpoint, char to_load, char *load_before, char *load_af
             load_before ? load_before : "",
             filter ? filter : ""
           );
-  resp = get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
+  get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
   
-  if (!surl_response_ok(resp))
-    goto err_out;
+  if (!surl_response_ok())
+    return 0;
 
   if (surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, NULL, sel) >= 0) {
     char **tmp;
@@ -64,22 +62,18 @@ int api_get_posts(char *endpoint, char to_load, char *load_before, char *load_af
     free(tmp);
   }
 
-err_out:
-  surl_response_free(resp);
   return n_status;
 }
 
 int api_get_status_and_replies(char to_load, char *root_id, char *root_leaf_id, char *load_before, char *load_after, char **post_ids) {
-  surl_response *resp;
   int n_status;
   char n_before, n_after;
 
-  n_status = 0;
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s/context", STATUS_ENDPOINT, root_leaf_id);
-  resp = get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
+  get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
   
-  if (!surl_response_ok(resp))
-    goto err_out;
+  if (!surl_response_ok())
+    return 0;
 
   /* we will return a list of #to_load IDs. if no load_before/load_after
    * boundaries are specified, we'll return 1/3rd before the root_leaf_id
@@ -179,30 +173,23 @@ int api_get_status_and_replies(char to_load, char *root_id, char *root_leaf_id, 
     free(tmp);
   }
 
-err_out:
-  surl_response_free(resp);
   return n_status;
 }
 
 char api_interact(char *id, char type, char *action) {
-  surl_response *resp;
   char r = -1;
 
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s/%s",
            type == 's' ? STATUS_ENDPOINT : ACCOUNTS_ENDPOINT, id, action);
-  resp = get_surl_for_endpoint(SURL_METHOD_POST, endpoint_buf);
+  get_surl_for_endpoint(SURL_METHOD_POST, endpoint_buf);
 
-  if (resp) {
-    surl_send_data_params(0, SURL_DATA_X_WWW_FORM_URLENCODED_RAW);
-    /* No need to send data */
+  surl_send_data_params(0, SURL_DATA_X_WWW_FORM_URLENCODED_RAW);
+  /* No need to send data */
+  surl_read_response_header();
 
-    surl_read_response_header(resp);
+  if (surl_response_ok())
+    r = 0;
 
-    if (surl_response_ok(resp))
-      r = 0;
-  }
-
-  surl_response_free(resp);
   return r;
 }
 
@@ -243,36 +230,25 @@ void api_reblog_status(status *s) {
 }
 
 char api_delete_status(status *s) {
-  surl_response *resp;
-  char r = -1;
-
   if (s->reblog) {
-    return r;
+    return -1;
   }
 
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s", STATUS_ENDPOINT, s->id);
-  resp = get_surl_for_endpoint(SURL_METHOD_DELETE, endpoint_buf);
+  get_surl_for_endpoint(SURL_METHOD_DELETE, endpoint_buf);
 
-  if (resp && surl_response_ok(resp)) {
-    r = 0;
-  }
-
-  surl_response_free(resp);
-  return r;
+  return surl_response_ok() ? 0 : -1;
 }
 
 char api_relationship_get(account *a, char f) {
-  surl_response *resp;
-  char r = 0;
   char n_lines, **lines;
-  resp = NULL;
 
   if ((a->relationship & RSHIP_SET) == 0) {
     snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/relationships?id[]=%s", ACCOUNTS_ENDPOINT, a->id);
-    resp = get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
+    get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
 
-    if (!surl_response_ok(resp))
-      goto err_out;
+    if (!surl_response_ok())
+      return 0;
 
     if (surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, NULL, 
                       ".[]|.following,.followed_by,"
@@ -280,7 +256,7 @@ char api_relationship_get(account *a, char f) {
       n_lines = strsplit_in_place(gen_buf,'\n',&lines);
       if (n_lines < 6) {
         free(lines);
-        goto err_out;
+        return 0;
       }
       a->relationship |= RSHIP_SET;
       if (lines[0][0] == 't') {
@@ -304,11 +280,8 @@ char api_relationship_get(account *a, char f) {
       free(lines);
     }
   }
-  r = (a->relationship & f) != 0;
 
-err_out:
-  surl_response_free(resp);
-  return r;
+  return (a->relationship & f) != 0;
 }
 
 void account_toggle_rship(account *a, char action) {
@@ -333,18 +306,11 @@ void account_toggle_rship(account *a, char action) {
 }
 
 account *api_get_full_account(char *id) {
-  surl_response *resp;
-  account *a;
-
-  a = NULL;
-
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s", ACCOUNTS_ENDPOINT, id);
-  resp = get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
+  get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
   
-  if (resp && surl_response_ok(resp)) {
-    a = account_new_from_json();
+  if (surl_response_ok()) {
+    return account_new_from_json();
   }
-
-  surl_response_free(resp);
-  return a;
+  return NULL;
 }

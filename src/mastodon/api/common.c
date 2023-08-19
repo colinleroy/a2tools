@@ -56,9 +56,8 @@ char *date_format(char *in, char with_time) {
   return out;
 }
 
-surl_response *get_surl_for_endpoint(char method, char *endpoint) {
+const surl_response *get_surl_for_endpoint(char method, char *endpoint) {
   static char *hdrs[1] = {NULL};
-  surl_response *resp;
 
   if (hdrs[0] == NULL) {
     hdrs[0] = malloc(BUF_SIZE);
@@ -66,9 +65,7 @@ surl_response *get_surl_for_endpoint(char method, char *endpoint) {
   }
 
   snprintf(gen_buf, BUF_SIZE, "%s%s", instance_url, endpoint);
-  resp = surl_start_request(method, gen_buf, hdrs, 1);
-  
-  return resp;
+  return surl_start_request(method, gen_buf, hdrs, 1);
 }
 
 #ifdef __CC65__

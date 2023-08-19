@@ -224,7 +224,7 @@ static void get_all(const char *url, char **lines, int n_lines) {
     return;
   }
   for (i = 0; i < n_lines; i++) {
-    surl_response *resp = NULL;
+    const surl_response *resp = NULL;
     char *cur_url = strdup(url);
     cur_url = url_enter(cur_url, lines[i]);
     resp = surl_start_request(SURL_METHOD_GET, cur_url, NULL, 0);
@@ -233,8 +233,7 @@ static void get_all(const char *url, char **lines, int n_lines) {
 
     gotoxy(0, 2);
 
-    if (resp == NULL || resp->size == 0) {
-      surl_response_free(resp);
+    if (resp->size == 0) {
       free(cur_url);
       continue;
     }
@@ -245,7 +244,6 @@ static void get_all(const char *url, char **lines, int n_lines) {
     } else {
       r = -1;
     }
-    surl_response_free(resp);
     free(cur_url);
     if (r != 0) {
       break;
@@ -277,7 +275,7 @@ int main(void) {
   stp_print_footer();
   surl_set_time();
   while(1) {
-    surl_response *resp = NULL;
+    const surl_response *resp = NULL;
     char *data = NULL, **lines = NULL;
     int i;
     size_t r;
@@ -299,9 +297,9 @@ int main(void) {
 
     gotoxy(0, 2);
 
-    if (resp == NULL || resp->size == 0) {
+    if (resp->size == 0) {
       gotoxy(center_x, 12);
-      if (resp && resp->code >= 200 && resp->code < 300) {
+      if (surl_response_ok()) {
         cprintf("Empty.       ");
       } else {
         cprintf("Bad response.");
@@ -316,7 +314,7 @@ int main(void) {
       goto up_dir;
     } else {
       data = malloc(resp->size + 1);
-      r = surl_receive_data(resp, data, resp->size);
+      r = surl_receive_data(data, resp->size);
     }
     if (r < resp->size) {
       gotoxy(center_x - 7, 12);
@@ -380,8 +378,6 @@ up_dir:
       default:
         goto update_list;
     }
-    surl_response_free(resp);
-    resp = NULL;
     free(data);
     data = NULL;
     free(lines);

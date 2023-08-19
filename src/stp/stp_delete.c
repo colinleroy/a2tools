@@ -58,7 +58,7 @@ void stp_delete_dialog(char *url, char *filename) {
 
 void stp_delete(char *url, char *filename) {
   char *full_url;
-  surl_response *resp = NULL;
+  const surl_response *resp = NULL;
 
   if (scrw == 255)
     screensize(&scrw, &scrh);
@@ -71,7 +71,6 @@ void stp_delete(char *url, char *filename) {
   free(full_url);
 
   stp_print_result(resp);
-  surl_response_free(resp);
 
   gotoxy(0, 17);
   cprintf("Done. hit a key to continue.      ");

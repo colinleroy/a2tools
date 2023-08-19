@@ -53,7 +53,7 @@ void stp_print_header(char *url) {
   chline(scrw);
 }
 
-void stp_print_result(surl_response *response) {
+void stp_print_result(const surl_response *response) {
   gotoxy(0, 20);
   chline(scrw);
   clrzone(0, 21, scrw - 1, 21);

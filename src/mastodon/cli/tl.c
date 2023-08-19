@@ -951,7 +951,7 @@ static int show_list(list *l) {
         break;
       case 'd':
         if (root_status) {
-          if (api_delete_status(root_status)) {
+          if (api_delete_status(root_status) == 0) {
             cur_action = BACK;
             return 0;
           }
@@ -1103,7 +1103,10 @@ navigate_reuse_list:
           clrscrollwin();
           cur_action = NAVIGATE;
         } else {
-          cur_action = NAVIGATE;
+          free_list(l[cur_list]);
+          --cur_list;
+          l = realloc(l, (cur_list + 1) * sizeof(list *));
+          cur_action = SHOW_HOME_TIMELINE;
         }
         break;
       case CONFIGURE:

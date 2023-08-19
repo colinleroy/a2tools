@@ -92,22 +92,20 @@ err_out:
 }
 
 account *api_get_profile(char *id) {
-  surl_response *resp;
   account *a;
   char n_lines, **lines;
 
-  a = NULL;
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s", ACCOUNTS_ENDPOINT,
               id == NULL ? "verify_credentials" : id);
-  resp = get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
+  get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
 
-  if (!surl_response_ok(resp)) {
-    goto err_out;
+  if (!surl_response_ok()) {
+    return NULL;
   }
 
   a = account_new();
   if (a == NULL) {
-    goto err_out;
+    return NULL;
   }
 
   if (surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, translit_charset, ".id,.display_name,.acct,.username") >= 0) {
@@ -116,7 +114,7 @@ account *api_get_profile(char *id) {
       account_free(a);
       a = NULL;
       free(lines);
-      goto err_out;
+      return NULL;
     }
     a->id = strdup(lines[0]);
     a->display_name = strdup(lines[1]);
@@ -124,9 +122,6 @@ account *api_get_profile(char *id) {
     a->username = strdup(lines[3]);
     free(lines);
   }
-
-err_out:
-  surl_response_free(resp);
   return a;
 }
 

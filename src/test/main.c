@@ -6,11 +6,17 @@
 #include <errno.h>
 #include <conio.h>
 #include <unistd.h>
-#include "clrzone.h"
+#include "get_filedetails.h"
+#include "surl.h"
 
 int main(int argc, char *argv[]) {
-  char buf[100];
-  getcwd(buf, 100);
-  printf("%s, %zuB free\n", buf, _heapmemavail());
+  unsigned char t;
+  unsigned st;
+  unsigned long size;
+  char *filename;
+  
+  surl_connect_proxy();
+  get_filedetails("PRODOS", &filename, &size, &t, &st);
+  printf("done. filename %s type %d size %zuB st %d\n", filename, size, t, st);
   cgetc();
 }

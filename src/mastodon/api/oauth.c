@@ -122,7 +122,7 @@ static char *prepare_oauth_post(char *token) {
 }
 
 int do_login(void) {
-  surl_response *resp;
+  const surl_response *resp;
   char *authorize_url;
   char *login_url;
   char *oauth_url;
@@ -159,10 +159,6 @@ int do_login(void) {
   dputs(authorize_url);
   dputs("...");
   resp = surl_start_request(SURL_METHOD_GET, authorize_url, NULL, 0);
-  if (resp == NULL) {
-    dputs("Could not start request.\r\n");
-    goto err_out;
-  }
 
   body = malloc(buf_size + 1);
   if (body == NULL) {
@@ -183,7 +179,6 @@ int do_login(void) {
   } else {
     dputs("Login still valid.\r\n");
   }
-  surl_response_free(resp);
   resp = NULL;
 
 /* Get authorization done, password if needed */
@@ -211,17 +206,11 @@ password_again:
     dputs("POST "LOGIN_URL"... ");
     resp = surl_start_request(SURL_METHOD_POST, login_url, NULL, 0);
 
-    if (resp == NULL) {
-      dputs("Could not start request.\r\n");
-      free(post);
-      goto err_out;
-    }
-
     surl_send_data_params(post_len, SURL_DATA_X_WWW_FORM_URLENCODED_HELP);
     surl_send_data(post, post_len);
     free(post);
 
-    surl_read_response_header(resp);
+    surl_read_response_header();
 
     if (resp->code != 200) {
       dputs("Invalid response to POST\r\n");
@@ -233,7 +222,6 @@ password_again:
     surl_find_line(body, buf_size, "class='flash-message alert");
     if (body[0] != '\0') {
       dputs("Authentication error.\r\n");
-      surl_response_free(resp);
       goto password_again;
     }
 
@@ -242,7 +230,6 @@ password_again:
       otp_required = 1;
       dputs("OTP required.\r\n");
     }
-    surl_response_free(resp);
     resp = NULL;
 
   /* Third request for OTP */
@@ -265,17 +252,11 @@ otp_again:
       dputs("POST "LOGIN_URL"... ");
       resp = surl_start_request(SURL_METHOD_POST, login_url, NULL, 0);
 
-      if (resp == NULL) {
-        dputs("Could not start request.\r\n");
-        free(post);
-        return -1;
-      }
-
       surl_send_data_params(post_len, SURL_DATA_X_WWW_FORM_URLENCODED_HELP);
       surl_send_data(post, post_len);
       free(post);
 
-      surl_read_response_header(resp);
+      surl_read_response_header();
 
       if (resp->code != 200) {
         dputs("Invalid response to POST\r\n");
@@ -285,14 +266,12 @@ otp_again:
         surl_find_line(body, buf_size, "class='flash-message alert");
         if (body[0] != '\0') {
           dputs("OTP error.\r\n");
-          surl_response_free(resp);
           goto otp_again;
         }
 
         dputs("OK\r\n");
       }
       free(otp);
-      surl_response_free(resp);
       resp = NULL;
     }
   }
@@ -322,7 +301,7 @@ otp_again:
     surl_send_data(post, post_len);
     free(post);
 
-    surl_read_response_header(resp);
+    surl_read_response_header();
 
     if (resp->code != 200) {
       dputs("Invalid response to POST\r\n");
@@ -344,7 +323,6 @@ otp_again:
   ret = 0;
 
 err_out:
-  surl_response_free(resp);
   free(body);
   free(oauth_url);
   free(login_url);
@@ -370,7 +348,7 @@ static char *prepare_app_register_post(void) {
 }
 
 int register_app(void) {
-  surl_response *resp;
+  const surl_response *resp;
   char *post;
   char *reg_url;
   size_t post_len;
@@ -388,17 +366,11 @@ int register_app(void) {
   resp = surl_start_request(SURL_METHOD_POST, reg_url, NULL, 0);
   free(reg_url);
 
-  if (resp == NULL) {
-    dputs("Could not start request.\r\n");
-    free(post);
-    return -1;
-  }
-
   surl_send_data_params(post_len, SURL_DATA_X_WWW_FORM_URLENCODED_HELP);
   surl_send_data(post, post_len);
   free(post);
 
-  surl_read_response_header(resp);
+  surl_read_response_header();
 
   if (resp->code != 200) {
     dputs("App registration: Invalid response to POST\r\n");
@@ -423,9 +395,6 @@ int register_app(void) {
   res = 0;
 
 err_out:
-  if (resp) {
-    surl_response_free(resp);
-  }
   return res;
 }
 
@@ -451,13 +420,11 @@ static char *prepare_oauth_token_post(void) {
 }
 
 int get_oauth_token(void) {
-  surl_response *resp;
+  const surl_response *resp;
   char *oauth_url;
   char *post;
   size_t post_len;
   int ret = -1;
-
-  resp = NULL;
 
   if (!oauth_token) {
     oauth_token = malloc(50);
@@ -469,11 +436,6 @@ int get_oauth_token(void) {
 /* First request to get authorization */
   dputs("POST "OAUTH_URL"... ");
   resp = surl_start_request(SURL_METHOD_POST, oauth_url, NULL, 0);
-  if (resp == NULL) {
-    dputs("Could not start request.\r\n");
-    free(oauth_url);
-    return -1;
-  }
 
   post = prepare_oauth_token_post();
   post_len = strlen(post);
@@ -481,7 +443,7 @@ int get_oauth_token(void) {
   surl_send_data(post, post_len);
   free(post);
 
-  surl_read_response_header(resp);
+  surl_read_response_header();
 
   if (surl_get_json(oauth_token, BUF_SIZE, SURL_HTMLSTRIP_NONE, NULL, ".access_token") < 0) {
     dputs("OAuth token not found.\r\n");
@@ -499,6 +461,5 @@ err_out:
     cgetc();
   }
   free(oauth_url);
-  surl_response_free(resp);
   return ret;
 }

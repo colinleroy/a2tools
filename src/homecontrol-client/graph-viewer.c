@@ -72,7 +72,6 @@ int main(int argc, char **argv) {
   char *server_url = NULL;
   FILE *fp;
   char *buf = NULL;
-  surl_response *response = NULL;
   char *text;
   long prev_t = -1L;
   long prev_v = -1L;
@@ -146,23 +145,15 @@ int main(int argc, char **argv) {
                          server_url,
                          argv[1], argv[3], argv[4]);
 
-  response = surl_start_request(SURL_METHOD_GET, buf, NULL, 0);
-  if (response == NULL) {
-#ifdef __CC65__
-    printf("Cannot allocate response. (%zu avail)", _heapmaxavail());
-#endif
-    goto err_out;
-  }
-
-  if (response == NULL || response->code != 200) {
+  surl_start_request(SURL_METHOD_GET, buf, NULL, 0);
+  if (!surl_response_ok()) {
     gotoxy(12, 10);
     printf("Error loading metrics.");
     cgetc();
-    surl_response_free(response);
     goto err_out;
   }
 
-  while (surl_receive_lines(response, buf, BIG_BUFSIZE - 1) > 0) {
+  while (surl_receive_lines(buf, BIG_BUFSIZE - 1) > 0) {
     cur_line = buf;
 
     while (cur_line != NULL && *cur_line != '\0') {

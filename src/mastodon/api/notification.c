@@ -33,7 +33,6 @@ void notification_free(notification *n) {
 }
 
 int api_get_notifications(char to_load, char notifications_type, char *load_before, char *load_after, char **notification_ids) {
-  surl_response *resp;
   int n_notifications;
 
   n_notifications = 0;
@@ -47,10 +46,10 @@ int api_get_notifications(char to_load, char notifications_type, char *load_befo
             load_before ? "&min_id=" : "",
             load_before ? load_before : ""
           );
-  resp = get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
+  get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
   
-  if (!surl_response_ok(resp))
-    goto err_out;
+  if (!surl_response_ok())
+    return 0;
 
   if (surl_get_json(gen_buf, 512, SURL_HTMLSTRIP_NONE, NULL, ".[]|.id") >= 0) {
     char **tmp;
@@ -62,22 +61,17 @@ int api_get_notifications(char to_load, char notifications_type, char *load_befo
     free(tmp);
   }
 
-err_out:
-  surl_response_free(resp);
   return n_notifications;
 }
 
 notification *api_get_notification(char *id) {
-  surl_response *resp;
-  notification *n;
-
-  n = NULL;
+  notification *n = NULL;
 
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s", NOTIFICATION_ENDPOINT, id);
-  resp = get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
+  get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
   
-  if (!surl_response_ok(resp))
-    goto err_out;
+  if (!surl_response_ok())
+    return NULL;
 
   if (surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, translit_charset,
                     ".id,.type,.created_at,"
@@ -92,7 +86,8 @@ notification *api_get_notification(char *id) {
     n = notification_new();
     if (n == NULL || n_lines < 6) {
       free(lines);
-      goto free_err_out;
+      notification_free(n);
+      return NULL;
     }
 
     n->id = strdup(lines[0]);
@@ -117,10 +112,8 @@ notification *api_get_notification(char *id) {
     n->display_name = (lines[5][0] == '\0' && n_lines == 7) ? strdup(lines[6]) : strdup(lines[5]);
     free(lines);
   } else {
-free_err_out:
-    notification_free(n);
-    n = NULL;
-    goto err_out;
+      notification_free(n);
+      return NULL;
   }
   if (surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_FULL, translit_charset,
                     n->type != NOTIFICATION_FOLLOW ? ".status.content":".account.note") >= 0) {
@@ -129,8 +122,6 @@ free_err_out:
     n->excerpt = NULL;
   }
 
-err_out:
-  surl_response_free(resp);
   return n;
 }
 

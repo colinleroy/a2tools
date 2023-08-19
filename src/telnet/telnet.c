@@ -484,7 +484,7 @@ static void tab(void) {
 static char shift_up = 0;
 
 int main(int argc, char **argv) {
-  surl_response *response = NULL;
+  const surl_response *response = NULL;
   char i, o;
   char got_input;
   //DEBUG int loop_wait = 0;
@@ -529,8 +529,8 @@ again:
 #endif
 
   response = surl_start_request(SURL_METHOD_RAW, buf, NULL, 0);
-  if (response == NULL || response->code != 100) {
-    printf("No response (%d).\n", response ? response->code : -1);
+  if (response->code != 100) {
+    printf("No response (%d).\n", response->code);
     exit(1);
   }
   i = '\0';
@@ -638,8 +638,6 @@ remote_closed:
   shift_up = 0;
   i = 0;
   set_scrollwindow(0, scrh);
-
-  surl_response_free(response);
 
   printf("\nConnection closed (Enter to continue).\n");
   cgetc();
