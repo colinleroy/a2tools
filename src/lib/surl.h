@@ -4,6 +4,7 @@
 #include <arpa/inet.h>
 #endif
 #include "../surl-server/surl_protocol.h"
+#include "simple_serial.h"
 
 #ifndef __CC65__
 #define __fastcall__
@@ -82,4 +83,12 @@ void __fastcall__ surl_ping(void);
 } while (0)
 
 #define surl_multipart_send_field_data(data, len) surl_send_data(data, len)
+
+#ifdef SER_DEBUG
+void surl_do_debug(const char *file, int line, const char *format, ...);
+#define surl_debug(...) surl_do_debug(__FILE__, __LINE__, __VA_ARGS__);
+#else
+#define surl_debug(...)
+#endif
+
 #endif

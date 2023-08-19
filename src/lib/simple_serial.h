@@ -1,5 +1,6 @@
 #ifndef __simple_serial_h
 #define __simple_serial_h
+#include <stdlib.h>
 #ifdef __CC65__
 #include <serial.h>
 #else
@@ -10,8 +11,7 @@
 #define __fastcall__
 #endif
 
-
-#include <stdlib.h>
+#define SIMPLE_SERIAL_BUF_SIZE 512
 
 /* Setup */
 #ifdef __CC65__
@@ -40,4 +40,6 @@ void __fastcall__ simple_serial_write(char *ptr, size_t nmemb);
 
 /* Status */
 void __fastcall__ simple_serial_set_activity_indicator(char enabled, int x, int y);
+
+void simple_serial_printf(const char* format, ...);
 #endif

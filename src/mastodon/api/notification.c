@@ -8,14 +8,6 @@
 #include "strsplit.h"
 #include "api.h"
 
-#ifdef __CC65__
-#ifdef SURL_TO_LANGCARD
-#pragma code-name (push, "LC")
-#else
-#pragma code-name (push, "LOWCODE")
-#endif
-#endif
-
 notification *notification_new(void) {
   notification *n;
   
@@ -39,10 +31,6 @@ void notification_free(notification *n) {
   free(n->display_name);
   free(n);
 }
-
-#ifdef __CC65__
-#pragma code-name (pop)
-#endif
 
 int api_get_notifications(char to_load, char notifications_type, char *load_before, char *load_after, char **notification_ids) {
   surl_response *resp;

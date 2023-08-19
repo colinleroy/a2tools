@@ -31,7 +31,6 @@
 #include <string.h>
 #include "get_filedetails.h"
 #include "simple_serial.h"
-#include "simple_serial_printf.h"
 
 #define DATA_SIZE 16384
 #define BUFSIZE 32
