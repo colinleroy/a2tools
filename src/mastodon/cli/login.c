@@ -217,8 +217,9 @@ int main(int argc, char **argv) {
 
   set_scrollwindow(0, scrh);
 #ifdef __CC65__
-  // snprintf(params, BUF_SIZE, "%s %s ISO646_FR1 e 110882478679186108", instance_url, oauth_token);
-  // exec("mastowrite", params);
+  //snprintf(params, BUF_SIZE, "%s %s ISO646-FR1 e 110882478679186108", instance_url, oauth_token);
+  //snprintf(params, BUF_SIZE, "%s %s ISO646-FR1", instance_url, oauth_token);
+  //exec("mastowrite", params);
   exec("mastocli", params);
 #else
   printf("exec(mastocli %s)\n",params);
