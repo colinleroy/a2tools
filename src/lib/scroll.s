@@ -39,7 +39,7 @@ upagain:
 
 _scrolldown_one:
         ldy     #0              ;direction = down
-        jsr     scrollit        ;go do scroll
+        beq     scrollit        ;go do scroll
 
 _scrollup_one:
         ldy     #1              ;direction = up
