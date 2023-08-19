@@ -95,7 +95,7 @@ void stp_send_file(char *remote_dir) {
     cgetc();
     goto err_out;
   }
-  cprintf("(%zu bytes)\r\n", filesize);
+  cprintf("(%lu bytes)\r\n", filesize);
 
 #ifdef PRODOS_T_TXT
   remote_filename = malloc(BUFSIZE);
@@ -129,7 +129,7 @@ void stp_send_file(char *remote_dir) {
     goto err_out;
   }
 
-  if (surl_send_data_params(filesize, SURL_DATA_X_WWW_FORM_URLENCODED_RAW) != 0) {
+  if (surl_send_data_params((size_t)filesize, SURL_DATA_X_WWW_FORM_URLENCODED_RAW) != 0) {
     goto finished;
   }
 
