@@ -73,9 +73,6 @@ static status *get_top_status(list *l) {
 
   if (first >= 0 && first < l->n_posts) {
     root_status = (status *)l->displayed_posts[first];
-    if (root_status && root_status->reblog) {
-      root_status = root_status->reblog;
-    }
   }
 err_out:
   return root_status;
@@ -160,7 +157,6 @@ static int print_notification(notification *n) {
   return 0;
 }
 
-#define N_STATUS_TO_LOAD 10
 #define LOADING_TOOT_MSG "Loading toot..."
 
 static void item_free(list *l, char i) {
@@ -387,9 +383,6 @@ static list *build_list(char *root, char *leaf_root, char kind) {
   }
 
   l->kind = kind;
-  l->ids = malloc(N_STATUS_TO_LOAD * sizeof(char *));
-  l->displayed_posts = malloc(N_STATUS_TO_LOAD * sizeof(item *));
-  l->post_height = malloc(N_STATUS_TO_LOAD);
 
   n_posts = load_around(l, N_STATUS_TO_LOAD, NULL, NULL, l->ids);
 
@@ -427,9 +420,6 @@ static void free_list(list *l) {
   account_free(l->account);
   free(l->root);
   free(l->leaf_root);
-  free(l->ids);
-  free(l->displayed_posts);
-  free(l->post_height);
   free(l);
 }
 
@@ -574,10 +564,10 @@ static char calc_post_height(status *s) {
   char height;
   char *w, x;
 
-  w = s->reblog ? s->reblog->content : s->content;
+  w = s->content;
 
   height = 6; /* header(username + date + display_name) + one line content + footer(\r\n + stats + line)*/
-  if (s->reblog) {
+  if (s->reblogged_by) {
     ++height;
   }
   if (s->spoiler_text) {
@@ -821,10 +811,8 @@ static int load_state(list ***lists) {
     fgets(gen_buf, BUF_SIZE, fp);
     l->n_posts = atoi(gen_buf);
     n_posts = l->n_posts;
-    l->ids = malloc(n_posts * sizeof(char *));
-    l->post_height = malloc(n_posts * sizeof(char));
-    l->displayed_posts = malloc(n_posts * sizeof(status *));
-    memset(l->displayed_posts, 0, n_posts * sizeof(status *));
+
+    memset(l->displayed_posts, 0, N_STATUS_TO_LOAD * sizeof(status *));
 
     /* coverity[tainted_argument] */
     fgets(gen_buf, BUF_SIZE, fp);
@@ -1052,16 +1040,14 @@ void cli(void) {
         ++cur_list;
         *new_root = '\0';
         *new_leaf_root = '\0';
-        /* we don't want get_top_status because we don't want to go into
-         * reblog */
         disp = prev_list->displayed_posts[prev_list->first_displayed_post];
         if (prev_list->kind != SHOW_NOTIFICATIONS) {
           disp_status = (status *)disp;
           if (cur_action == SHOW_FULL_STATUS) {
-            strncpy(new_root, disp_status->id, sizeof(new_root));
-            strncpy(new_leaf_root, disp_status->reblog ? disp_status->reblog->id : disp_status->id, sizeof(new_leaf_root));
+            strncpy(new_root, disp_status->reblog_id ? disp_status->reblog_id : disp_status->id, sizeof(new_root));
+            strncpy(new_leaf_root, disp_status->id, sizeof(new_leaf_root));
           } else if (cur_action == SHOW_ACCOUNT) {
-            strncpy(new_root, disp_status->reblog ? disp_status->reblog->account->id : disp_status->account->id, sizeof(new_root));
+            strncpy(new_root, disp_status->account->id, sizeof(new_root));
           }
         } else {
           disp_notif = (notification *)disp;

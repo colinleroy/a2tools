@@ -60,11 +60,10 @@ int print_status(status *s, char hide, char full, char *scrolled) {
   disp_idx = wherey();
   s->displayed_at = disp_idx;
   /* reblog header */
-  if (s->reblog) {
-    dputs(s->account->display_name);
+  if (s->reblogged_by) {
+    dputs(s->reblogged_by);
     dputs(" boosted");
     CHECK_AND_CRLF();
-    s = s->reblog;
     s->displayed_at = disp_idx;
   }
   

@@ -11,11 +11,12 @@ typedef struct _status status;
 struct _status {
   signed char displayed_at;
   char *id;
+  char *reblog_id;
   char *created_at;
   char *spoiler_text;
   char *content;
   account *account;
-  status *reblog;
+  char *reblogged_by;
   char n_replies;
   char n_reblogs;
   char n_favourites;
@@ -25,7 +26,6 @@ struct _status {
 };
 
 status *status_new(void);
-status *status_new_from_json(char *id, char full, char is_reblog);
 void status_free(status *s);
 
 #endif
