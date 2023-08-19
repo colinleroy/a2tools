@@ -22,7 +22,6 @@
 #include <stdarg.h>
 #include <errno.h>
 #include "simple_serial.h"
-#include "simple_serial_printf.h"
 #include "extended_conio.h"
 #include "extended_string.h"
 
@@ -36,15 +35,15 @@
 #endif
 #endif
 
-static char *simple_serial_buf = NULL;
+char *simple_serial_buf = NULL;
 void simple_serial_printf(const char* format, ...) {
   va_list args;
 
   if (simple_serial_buf == NULL)
-    simple_serial_buf = malloc(512);
+    simple_serial_buf = malloc(SIMPLE_SERIAL_BUF_SIZE);
 
   va_start(args, format);
-  vsnprintf(simple_serial_buf, 511, format, args);
+  vsnprintf(simple_serial_buf, SIMPLE_SERIAL_BUF_SIZE - 1, format, args);
   va_end(args);
 
   simple_serial_puts(simple_serial_buf);

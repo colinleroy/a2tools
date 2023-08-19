@@ -162,6 +162,30 @@ char __fastcall__ surl_response_ok(surl_response *resp) {
 }
 
 #ifdef __CC65__
-#pragma static-locals(pop)
 #pragma code-name (pop)
+#endif
+
+#ifdef SER_DEBUG
+extern char *simple_serial_buf;
+void surl_do_debug(const char *file, int line, const char *format, ...) {
+  unsigned short n_len, dbg_len;
+  va_list args;
+
+  simple_serial_putc(SURL_METHOD_DEBUG);
+  simple_serial_printf("%s:%d\n", file, line);
+
+  va_start(args, format);
+  /* simple_serial_buf has been allocated by previous simple_serial_printf. */
+  vsnprintf(simple_serial_buf, SIMPLE_SERIAL_BUF_SIZE, format, args);
+  va_end(args);
+
+  dbg_len = strlen(simple_serial_buf) + 1;
+  n_len = htons(dbg_len);
+  simple_serial_write((char *)&n_len, 2);
+  simple_serial_write(simple_serial_buf, dbg_len);
+}
+#endif
+
+#ifdef __CC65__
+#pragma static-locals(pop)
 #endif

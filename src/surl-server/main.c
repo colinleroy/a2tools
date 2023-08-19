@@ -109,6 +109,19 @@ static const char *dump_response_to_file(char *buffer, size_t size) {
   return filename;
 }
 
+static void do_debug(char *file_line) {
+  static char debug_buf[DBG_BUF_SIZE + 1];
+  static unsigned short len;
+
+  if (strchr(file_line, '\n'))
+    *strchr(file_line, '\n') = '\0';
+  printf("DBG: %s: ", file_line);
+  simple_serial_read((char *)&len, 2);
+  len = ntohs(len);
+  simple_serial_read(debug_buf, len);
+  printf("%s\n", debug_buf);
+}
+
 int main(int argc, char **argv)
 {
   char reqbuf[BUFSIZE];
@@ -154,6 +167,7 @@ reopen:
     /* read request */
     if (simple_serial_gets(reqbuf, BUFSIZE) != NULL) {
       int i;
+
 new_req:
       printf("\n");
       fflush(stdout);
@@ -175,6 +189,11 @@ new_req:
       url = strdup(reqbuf + 1);
       if (strchr(url, '\n'))
         *strchr(url, '\n') = '\0';
+
+      if (method == SURL_METHOD_DEBUG) {
+        do_debug(reqbuf + 1);
+        continue;
+      }
 
       /* The Apple //c sends a NULL byte on boot */
       if (reqbuf[0] == '\0' && reqbuf[1] == SURL_METHOD_ABORT && reqbuf[2] == '\n') {
@@ -296,6 +315,13 @@ new_req:
               monochrome, 0, &(response->hgr_len));
         }
       } else {
+        /* special case for debugs */
+        if (cmd == SURL_METHOD_DEBUG) {
+          reqbuf[0] = cmd;
+          simple_serial_gets(reqbuf + 1, BUFSIZE - 1);
+          do_debug(reqbuf + 1);
+          continue;
+        }
 abort:
         printf("RESP: finished\n");
         /* Put that back as a REQUEST */
@@ -731,6 +757,17 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
   char *tmp;
   curl_mime *form = NULL;
 
+  if (method == SURL_METHOD_GETTIME) {
+    uint32_t now = htonl((uint32_t)time(NULL));
+    simple_serial_putc(SURL_ANSWER_TIME);
+    simple_serial_write((char *)&now, 4);
+    return NULL;
+  } else if (method == SURL_METHOD_PING) {
+    simple_serial_putc(SURL_ANSWER_PONG);
+    simple_serial_putc(SURL_PROTOCOL_VERSION);
+    return NULL;
+  }
+
   if (upload_buf == NULL) {
     upload_buf = malloc(4096);
   }
@@ -1009,15 +1046,6 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
     curl_buffer_free(curlbuf);
 
     surl_server_raw_session(url);
-    return NULL;
-  } else if (method == SURL_METHOD_GETTIME) {
-    uint32_t now = htonl((uint32_t)time(NULL));
-    simple_serial_putc(SURL_ANSWER_TIME);
-    simple_serial_write((char *)&now, 4);
-    return NULL;
-  } else if (method == SURL_METHOD_PING) {
-    simple_serial_putc(SURL_ANSWER_PONG);
-    simple_serial_putc(SURL_PROTOCOL_VERSION);
     return NULL;
   } else {
     printf("Unsupported method 0x%02x\n", method);
