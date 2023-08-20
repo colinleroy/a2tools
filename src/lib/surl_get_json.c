@@ -66,6 +66,7 @@ int __fastcall__ surl_get_json(char *buffer, size_t len, char striphtml, char *t
 
   buffer[len] = '\0';
 
+  /* coverity[return_tainted_data] */
   return len;
 }
 
