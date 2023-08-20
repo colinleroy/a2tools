@@ -85,7 +85,7 @@ void __fastcall__ surl_ping(void);
 void surl_do_debug(const char *file, int line, const char *format, ...);
 #define surl_debug(...) surl_do_debug(__FILE__, __LINE__, __VA_ARGS__);
 #else
-#define surl_debug(...)
+#define surl_debug(...) do {} while(0)
 #endif
 
 #endif

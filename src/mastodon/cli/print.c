@@ -42,9 +42,13 @@ int print_buf(char *w, char hide, char allow_scroll, char *scrolled) {
       CHECK_AND_CRLF();
     } else {
       if (wherey() == scrh - 1 && wherex() == scrw - LEFT_COL_WIDTH - 2) {
+        /* don't scroll last char */
+        if (!hide) {
+          cputc(*w);
+        }
         return -1;
       }
-      if (!hide || *w == ' ' || *w == '\r' || *w == '\n')
+      if (!hide || *w == ' ' || *w == '\r')
         dputc(*w);
       else
         dputc('.');
