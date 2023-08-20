@@ -65,7 +65,7 @@ static char search_buf[50];
 static char search_type = 'm';
 static char rship_toggle_action = RSHIP_FOLLOWING;
 static char notifications_type = NOTIFICATION_FAVOURITE;
-static void print_list(list *l);
+static void print_list(list *l, signed char limit);
 
 static status *get_top_status(list *l) {
   status *root_status;
@@ -180,6 +180,7 @@ static item *item_get(list *l, char i, char full) {
 
 static char load_around(list *l, char to_load, char *first, char *last, char **new_ids) {
   char loaded;
+  l->half_displayed_post = 0;
   switch (l->kind) {
     case SHOW_HOME_TIMELINE:
     case SHOW_LOCAL_TIMELINE:
@@ -306,6 +307,12 @@ static char load_prev_posts(list *l) {
        * of new_ids-related storage */
       strcpy(l->ids[i], new_ids[i]);
       free(new_ids[i]);
+
+      /* fetch last one before removing the
+       * "Loading" header */
+      if (i == loaded - 1)
+        l->displayed_posts[i] = item_get(l, i, !strcmp(l->root, l->ids[i]));
+
     }
 
     l->first_displayed_post += loaded;
@@ -438,6 +445,7 @@ static void compact_list(list *l) {
 static void uncompact_list(list *l) {
   signed char first, full;
   first = l->first_displayed_post;
+  l->half_displayed_post = 0;
   if (first >= 0) {
     full = (l->root && !strcmp(l->root, l->ids[first]));
     l->displayed_posts[first] =
@@ -453,26 +461,53 @@ static void clrscrollwin(void) {
 
 char hide_cw = 1;
 
-static void print_list(list *l) {
+static void shift_displayed_at(list *l, signed char val) {
+  signed char i = l->first_displayed_post;
+  item *item;
+
+  if (i < 0) {
+    i = 0;
+  }
+  for (; i <= l->last_displayed_post; i++) {
+    item = l->displayed_posts[i];
+    item->displayed_at -= val;
+  }
+}
+
+/* limit set to 1 when scrolling up */
+static void print_list(list *l, signed char limit) {
   char i, full;
   char bottom = 0;
   char scrolled = 0;
   signed char first;
   char n_posts;
 
-
 update:
-  /* copy to temp vars to avoid pointer arithmetic */
-  first = l->first_displayed_post;
-  n_posts = l->n_posts;
-
   /* set scrollwindow */
   set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
   gotoxy(0, 0);
+
+  /* copy to temp vars to avoid pointer arithmetic */
+  if (l->half_displayed_post > 0) {
+    item *disp;
+    first = l->half_displayed_post;
+    disp = (item *)l->displayed_posts[first];
+    if (disp->displayed_at >= 0) {
+      gotoxy(0, disp->displayed_at);
+    } else {
+      first = l->first_displayed_post;
+    }
+  } else {
+    first = l->first_displayed_post;
+  }
+  n_posts = l->n_posts;
+
   if (l->scrolled) {
     clrscr();
   }
   l->scrolled = 0;
+
+  l->half_displayed_post = 0;
 
   if (l->account && first == -1) {
     bottom = print_account(l->account, &scrolled);
@@ -485,52 +520,61 @@ update:
   }
 
   for (i = max(0, first); i < n_posts; i++) {
-    if (!bottom) {
-      item *disp;
-      if (kbhit()) {
-        break;
+    item *disp;
+    if (kbhit()) {
+      break;
+    }
+    full = (l->root && !strcmp(l->root, l->ids[i]));
+    disp = (item *)l->displayed_posts[i];
+    if (disp == NULL) {
+      if (i > first) {
+        dputs(LOADING_TOOT_MSG);
+        gotox(0);
       }
-      full = (l->root && !strcmp(l->root, l->ids[i]));
-      disp = (item *)l->displayed_posts[i];
-      if (disp == NULL) {
-        if (i > first) {
-          dputs(LOADING_TOOT_MSG);
-          gotox(0);
-        }
 
-        disp = item_get(l, i, full);
-        l->displayed_posts[i] = disp;
+      disp = item_get(l, i, full);
+      l->displayed_posts[i] = disp;
 
-        if (i > first) {
-          dputs("                ");
-          gotox(0);
-        }
+      if (i > first) {
+        dputs("                ");
+        gotox(0);
       }
-      if (disp == NULL) {
-        dputs("Load error :(");
-        if (wherey() < scrh - 1) {
-          dputs("\r\n");
-          chline(scrw - LEFT_COL_WIDTH - 1);
-        } else {
-          bottom = 1;
-        }
-        l->post_height[i] = 2;
-        continue;
+    }
+    if (disp == NULL) {
+      dputs("Load error :(");
+      if (wherey() < scrh - 1) {
+        dputs("\r\n");
+        chline(scrw - LEFT_COL_WIDTH - 1);
+      } else {
+        bottom = 1;
       }
-      if (bottom == 0) {
-        if (l->kind != SHOW_NOTIFICATIONS) {
-          bottom = print_status((status *)disp, hide_cw || wherey() > 0, full, &scrolled);
-        } else {
-          bottom = print_notification((notification *)disp);
-        }
-        if (!scrolled) {
-          l->post_height[i] = wherey() - disp->displayed_at;
-        } else {
-          l->post_height[i] = scrh;
-          l->scrolled = 1;
-        }
-        l->last_displayed_post = i;
+      l->post_height[i] = 2;
+      continue;
+    }
+    if (bottom == 0) {
+      if (l->kind != SHOW_NOTIFICATIONS) {
+        bottom = print_status((status *)disp, hide_cw || wherey() > 0, full, &scrolled);
+      } else {
+        bottom = print_notification((notification *)disp);
       }
+      if (!scrolled) {
+        l->post_height[i] = wherey() - disp->displayed_at;
+      } else {
+        l->post_height[i] = scrh;
+        l->scrolled = 1;
+      }
+      l->last_displayed_post = i;
+    }
+    if (bottom) {
+      l->half_displayed_post = i;
+      break;
+    }
+    /* Let's see if we reached the limit
+     * Hack: passing limit = 0 means no
+     * limit because of thise comparison
+     */
+    if (--limit == 0) {
+      break;
     }
   }
 
@@ -554,9 +598,14 @@ static void shift_posts_down(list *l) {
   } else {
     scroll_val = l->post_height[l->first_displayed_post];
   }
+
+  /* recompute displayed_at */
+  shift_displayed_at(l, scroll_val);
+
   l->first_displayed_post++;
   set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
   scrollup_n(scroll_val);
+
 #ifndef __CC65__
   clrscr();
 #endif
@@ -599,6 +648,7 @@ static int shift_posts_up(list *l) {
   signed char scrollval;
   signed char first;
 
+  l->half_displayed_post = 0;
   first = l->first_displayed_post;
   if (l->account && first == -1) {
       return -1;
@@ -637,6 +687,10 @@ static int shift_posts_up(list *l) {
   set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
   if (scrollval > 0)
     scrolldown_n(scrollval);
+
+  /* recompute displayed_at */
+  shift_displayed_at(l, -scrollval);
+
 #ifndef __CC65__
   clrscr();
 #endif
@@ -859,7 +913,7 @@ static int load_state(list ***lists) {
   return num_lists;
 }
 
-static void background_load(list *l) {
+static char background_load(list *l) {
   char i;
   for (i = 0; i < l->n_posts; i++) {
     if (l->displayed_posts[i] == NULL) {
@@ -868,14 +922,16 @@ static void background_load(list *l) {
       l->displayed_posts[i] = item_get(l, i, 0);
 
       load_indicator(0);
-      break; /* background load one by one to check kb */
+      return 0; /* background load one by one to check kb */
     }
   }
+  return -1;
 }
 
 /* fixme return type */
 static int show_list(list *l) {
   char c;
+  char limit = 0;
 
   while (1) {
     status *root_status;
@@ -892,11 +948,11 @@ static int show_list(list *l) {
     print_header(l, root_status, root_notif);
 
     load_indicator(1);
-    print_list(l);
+    print_list(l, limit);
+    limit = 0;
     load_indicator(0);
 
-    while (!kbhit()) {
-      background_load(l);
+    while (!kbhit() && background_load(l) == 0) {
       print_free_ram();
     }
     c = tolower(cgetc());
@@ -908,6 +964,7 @@ static int show_list(list *l) {
       case CH_CURS_UP:
         hide_cw = 1;
         shift_posts_up(l);
+        limit = 1; /* only print one */
         break;
       case 'w':
         hide_cw = !hide_cw;
