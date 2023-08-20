@@ -55,15 +55,15 @@ int print_buf(char *w, char hide, char allow_scroll, char *scrolled) {
 }
 
 int print_status(status *s, char hide, char full, char *scrolled) {
-  char disp_idx;
+  char disp_idx, y;
   *scrolled = 0;
-  disp_idx = wherey();
+  y = disp_idx = wherey();
   s->displayed_at = disp_idx;
   /* reblog header */
   if (s->reblogged_by) {
     dputs(s->reblogged_by);
     dputs(" boosted");
-    CHECK_AND_CRLF();
+    FAST_CHECK_AND_CRLF();
     s->displayed_at = disp_idx;
   }
   
@@ -71,41 +71,39 @@ int print_status(status *s, char hide, char full, char *scrolled) {
   dputs(s->account->display_name); 
   dputs(" - ");
   dputs(s->created_at); 
-  CHECK_AND_CRLF();
+  FAST_CHECK_AND_CRLF();
 
   /* username (30 chars max)*/
   dputc(arobase);
   dputs(s->account->username);
   
-  CHECK_AND_CRLF();
+  FAST_CHECK_AND_CRLF();
   if (s->spoiler_text) {
     dputs("CW: ");
     dputs(s->spoiler_text);
-    CHECK_AND_CRLF();
+    FAST_CHECK_AND_CRLF();
   }
   /* Content */
   if (print_buf(s->content, hide && s->spoiler_text != NULL, (full && disp_idx == 0), scrolled) < 0)
     return -1;
-
-  CHECK_AND_CRLF();
-  if (wherey() == scrh - 1) {
-    return -1;
-  }
+  y = wherey();
+  FAST_CHECK_AND_CRLF();
 
   /* stats */
-  CHECK_AND_CRLF();
+  FAST_CHECK_AND_CRLF();
   cprintf("%d replies, %s%d boosts, %s%d favs, %1d images      ",
         s->n_replies,
         (s->favorited_or_reblogged & REBLOGGED) ? "*":"", s->n_reblogs,
         (s->favorited_or_reblogged & FAVOURITED) ? "*":"", s->n_favourites,
         s->n_images);
-  CHECK_AND_CRLF();
-  if (wherey() == scrh - 1) {
+  FAST_CHECK_AND_CRLF();
+  if (y == scrh - 1) { /* one less because chline will scroll */
     return -1;
   }
 
   chline(scrw - LEFT_COL_WIDTH - 1);
-  if (wherey() == scrh - 1) {
+  y++;
+  if (y == scrh) {
     return -1;
   }
 
