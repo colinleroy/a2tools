@@ -702,7 +702,7 @@ static void save_state(void) {
   }
 
   fclose(fp);
-  dputs("Done.\n");
+  dputs(" Done.");
   return;
 
 err_out:
@@ -854,7 +854,7 @@ static int load_state(list ***lists) {
   unlink(STATE_FILE);
   cur_action = NAVIGATE;
 
-  dputs("Done\n");
+  dputs(" Done");
 
   return num_lists;
 }
