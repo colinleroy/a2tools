@@ -37,6 +37,10 @@ char monochrome = 1;
 
 extern account *my_account;
 
+static list **all_lists;
+static signed char cur_list_idx;
+static list *current_list = NULL;
+
 /* actions mapped to keys */
 #define SHOW_FULL_STATUS     CH_ENTER
 #define SHOW_ACCOUNT         'p'
@@ -643,7 +647,7 @@ static int shift_posts_up(list *l) {
 
 #define STATE_FILE "/RAM/mastostate"
 
-static void save_state(list **lists, char cur_list) {
+static void save_state(void) {
   char i,j;
   FILE *fp;
 
@@ -659,12 +663,12 @@ static void save_state(list **lists, char cur_list) {
     return;
   }
 
-  if (fprintf(fp, "%d\n", cur_list) < 0)
+  if (fprintf(fp, "%d\n", cur_list_idx) < 0)
     goto err_out;
 
-  for (i = 0; i <= cur_list; i++) {
+  for (i = 0; i <= cur_list_idx; i++) {
     list *l;
-    l = lists[i];
+    l = all_lists[i];
     if (fprintf(fp, "%d\n"
                     "%s\n"
                     "%s\n"
@@ -707,10 +711,10 @@ err_out:
   dputs("Error.\n");
 }
 
-static void launch_command(char *command, char *p1, char *p2, char *p3, list **l, signed char cur_list) {
+static void launch_command(char *command, char *p1, char *p2, char *p3) {
   char *params;
 
-  save_state(l, cur_list);
+  save_state();
 
   reopen_start_device();
 
@@ -869,7 +873,7 @@ static void background_load(list *l) {
   }
 }
 
-/* returns 1 to reload */
+/* fixme return type */
 static int show_list(list *l) {
   char c;
 
@@ -978,9 +982,32 @@ static int show_list(list *l) {
   return 0;
 }
 
+static void push_list(void) {
+  ++cur_list_idx;
+  if (cur_list_idx > 0) {
+    compact_list(all_lists[cur_list_idx - 1]);
+  }
+  all_lists = realloc(all_lists, (cur_list_idx + 1) * sizeof(list *));
+  current_list = NULL; /* it's not yet built */
+}
+
+static void pop_list(void) {
+  if (cur_list_idx < 0)
+    return;
+
+  free_list(all_lists[cur_list_idx]);
+  --cur_list_idx;
+
+  all_lists = realloc(all_lists, (cur_list_idx + 1) * sizeof(list *));
+  if (cur_list_idx >= 0) {
+    uncompact_list(all_lists[cur_list_idx]);
+    current_list = all_lists[cur_list_idx];
+  } else {
+    current_list = NULL;
+  }
+}
+
 void cli(void) {
-  signed char cur_list;
-  list **l, *prev_list;
   item *disp;
   status *disp_status;
   notification *disp_notif;
@@ -989,19 +1016,21 @@ void cli(void) {
    * memory fragmentation */
   char new_root[32], new_leaf_root[32];
 
-  cur_list = load_state(&l);
+  cur_list_idx = load_state(&all_lists);
   clrscr();
   print_header(NULL, NULL, NULL);
 
-  if (cur_list == -1) {
+  if (cur_list_idx == -1) {
     cur_action = SHOW_HOME_TIMELINE;
   }
 
   while (1) {
-    if (cur_list == -1) {
+    if (cur_list_idx == -1) {
+      current_list = NULL;
       disp_status = NULL;
     } else {
-      disp_status = get_top_status(l[cur_list]);
+      current_list = all_lists[cur_list_idx];
+      disp_status = get_top_status(current_list);
     }
     switch(cur_action) {
       case SHOW_HOME_TIMELINE:
@@ -1010,21 +1039,20 @@ void cli(void) {
         /* Create a new list if it's the first of different than
          * the current one. Otherwise, overwrite the current one.
          */
-        if (cur_list < 0 || l[cur_list]->kind != cur_action) {
-          ++cur_list;
-          if (cur_list > 0) {
-            compact_list(l[cur_list - 1]);
-          }
-          l = realloc(l, (cur_list + 1) * sizeof(list *));
+        if (cur_list_idx < 0 || current_list->kind != cur_action) {
+          push_list();
         } else {
-          free_list(l[cur_list]);
+          /* hack, reusing current_list */
+          free_list(all_lists[cur_list_idx]);
         }
-        l[cur_list] = build_list(NULL, NULL, cur_action);
+        all_lists[cur_list_idx] = build_list(NULL, NULL, cur_action);
+        current_list = all_lists[cur_list_idx];
+
         clrscrollwin();
         cur_action = NAVIGATE;
         break;
       case ACCOUNT_TOGGLE_RSHIP:
-        account_toggle_rship(l[cur_list]->account, rship_toggle_action);
+        account_toggle_rship(current_list->account, rship_toggle_action);
         cur_action = SHOW_ACCOUNT;
         /* and fallthrough to reuse list (we're obviously already
          * in a SHOW_ACCOUNT list)*/
@@ -1032,16 +1060,14 @@ void cli(void) {
       case SHOW_ACCOUNT:
       case SHOW_SEARCH_RES:
       case SHOW_NOTIFICATIONS:
-        if (l[cur_list]->kind == cur_action) {
-          free_list(l[cur_list]);
+        if (current_list->kind == cur_action) {
+          free_list(all_lists[cur_list_idx]);
           goto navigate_reuse_list;
         }
-        prev_list = l[cur_list];
-        ++cur_list;
         *new_root = '\0';
         *new_leaf_root = '\0';
-        disp = prev_list->displayed_posts[prev_list->first_displayed_post];
-        if (prev_list->kind != SHOW_NOTIFICATIONS) {
+        disp = current_list->displayed_posts[current_list->first_displayed_post];
+        if (current_list->kind != SHOW_NOTIFICATIONS) {
           disp_status = (status *)disp;
           if (cur_action == SHOW_FULL_STATUS) {
             strncpy(new_root, disp_status->reblog_id ? disp_status->reblog_id : disp_status->id, sizeof(new_root));
@@ -1060,64 +1086,50 @@ void cli(void) {
           }
         }
 navigate_new_list:
-        compact_list(l[cur_list - 1]);
-        l = realloc(l, (cur_list + 1) * sizeof(list *));
+        push_list();
 navigate_reuse_list:
-        l[cur_list] = build_list(new_root, new_leaf_root, cur_action);
+        all_lists[cur_list_idx] = build_list(new_root, new_leaf_root, cur_action);
+        current_list = all_lists[cur_list_idx];
         clrscrollwin();
         /*
         cur_action = NAVIGATE;
         break;
         */
       case NAVIGATE:
-        if (show_list(l[cur_list])) {
-          /* reload, freeing the list
-           * and resetting action to load it */
-          cur_action = l[cur_list]->kind;
-          free_list(l[cur_list]);
-          --cur_list;
-          clrscrollwin();
-        }
-        hide_cw = 1;
+        show_list(current_list);
         break;
       case BACK:
-        if (cur_list > 0) {
-          free_list(l[cur_list]);
-          --cur_list;
-          l = realloc(l, (cur_list + 1) * sizeof(list *));
-          uncompact_list(l[cur_list]);
-          clrscrollwin();
+        pop_list();
+        clrscrollwin();
+        if (cur_list_idx >= 0) {
           cur_action = NAVIGATE;
         } else {
-          free_list(l[cur_list]);
-          --cur_list;
-          l = realloc(l, (cur_list + 1) * sizeof(list *));
           cur_action = SHOW_HOME_TIMELINE;
         }
         break;
       case CONFIGURE:
-          launch_command("mastoconf", NULL, NULL, NULL, l, cur_list);
+          launch_command("mastoconf", NULL, NULL, NULL);
           cur_action = NAVIGATE;
           break;
       case COMPOSE:
-          launch_command("mastowrite", NULL, NULL, NULL, l, cur_list);
+          launch_command("mastowrite", NULL, NULL, NULL);
           cur_action = NAVIGATE;
           break;
       case REPLY:
           if (disp_status)
-            launch_command("mastowrite", "r", disp_status->id, NULL, l, cur_list);
+            launch_command("mastowrite", "r", disp_status->id, NULL);
           cur_action = NAVIGATE;
           break;
       case EDIT:
           if (disp_status && !strcmp(disp_status->account->id, my_account->id))
-            launch_command("mastowrite", "e", disp_status->id, NULL, l, cur_list);
+            launch_command("mastowrite", "e", disp_status->id, NULL);
           cur_action = NAVIGATE;
           break;
       case IMAGES:
-          if (l[cur_list]->account && (!disp_status || disp_status->displayed_at > 0)) {
-            launch_command("mastodon", monochrome?"1":"0", "a", l[cur_list]->account->id, l, cur_list);
+          if (current_list->account && (!disp_status || disp_status->displayed_at > 0)) {
+            launch_command("mastodon", monochrome?"1":"0", "a", current_list->account->id);
           } else if (disp_status && disp_status->n_images) {
-            launch_command("mastodon", monochrome?"1":"0", "s", disp_status->id, l, cur_list);
+            launch_command("mastodon", monochrome?"1":"0", "s", disp_status->id);
           }
           cur_action = NAVIGATE;
           break;
@@ -1133,8 +1145,6 @@ navigate_reuse_list:
                 free(acc_id[0]);
                 free(acc_id);
                 cur_action = SHOW_ACCOUNT;
-                prev_list = l[cur_list];
-                ++cur_list;
                 goto navigate_new_list;
               }
               free(acc_id);
