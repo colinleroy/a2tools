@@ -605,7 +605,6 @@ static void shift_posts_down(list *l) {
   clrscr();
 #endif
   set_hscrollwindow(0, scrw);
-  print_free_ram();
 }
 
 static char calc_post_height(status *s) {
@@ -640,7 +639,7 @@ static char calc_post_height(status *s) {
 }
 
 static int shift_posts_up(list *l) {
-  signed char scrollval;
+  signed char scroll_val;
   signed char first;
 
   l->half_displayed_post = 0;
@@ -659,7 +658,7 @@ static int shift_posts_up(list *l) {
   l->first_displayed_post = --first;
 
   if (first == -1) {
-    scrollval = l->account_height;
+    scroll_val = l->account_height;
   } else {
     if (l->displayed_posts[first] == NULL) {
       l->displayed_posts[first] =
@@ -673,24 +672,27 @@ static int shift_posts_up(list *l) {
         l->post_height[first] = 4;
       }
     }
-    scrollval = l->post_height[first];
+    scroll_val = l->post_height[first];
   }
-  if (scrollval < 0) {
-    scrollval = scrh;
+  if (scroll_val < 0) {
+    scroll_val = scrh;
+  }
+  if (scroll_val == 23) {
+    /* we may have returned before the end */
+    scroll_val = 24;
   }
 
   set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
-  if (scrollval > 0)
-    scrolldown_n(scrollval);
+  if (scroll_val > 0)
+    scrolldown_n(scroll_val);
 
   /* recompute displayed_at */
-  shift_displayed_at(l, -scrollval);
+  shift_displayed_at(l, -scroll_val);
 
 #ifndef __CC65__
   clrscr();
 #endif
   set_hscrollwindow(0, scrw);
-  print_free_ram();
   return 0;
 }
 

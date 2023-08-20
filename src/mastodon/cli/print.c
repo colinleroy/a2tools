@@ -29,19 +29,21 @@
 int print_buf(char *w, char hide, char allow_scroll, char *scrolled) {
   char x = wherex(), y = wherey();
   while (*w) {
-    if (allow_scroll && wherey() == scrh - 2) {
+    if (allow_scroll && y == scrh - 2) {
       gotoxy(0, scrh-1);
       dputs("Hit a key to continue.");
       cgetc();
       gotoxy(0, scrh-1);
       dputs("                      ");
-      scrollup_n(10);
-      y = scrh - 12;
+      scrollup_n(14);
+      y = scrh - 16;
       gotoxy(x, y);
       *scrolled = 1;
     }
+
     if (*w == '\n') {
       FAST_CHECK_AND_CRLF();
+      x = 0;
     } else {
       if (x == scrw - LEFT_COL_WIDTH - 2) {
         y++;
