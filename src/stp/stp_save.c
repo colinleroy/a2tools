@@ -141,7 +141,7 @@ int stp_save(char *full_filename, char *out_dir, const surl_response *resp) {
     data = malloc(APPLESINGLE_HEADER_LEN);
     r = surl_receive_data(data, APPLESINGLE_HEADER_LEN);
 
-    if (r == 58
+    if (r == APPLESINGLE_HEADER_LEN
      && data[0] == 0x00 && data[1] == 0x05
      && data[2] == 0x16 && data[3] == 0x00) {
       cprintf("AppleSingle: $%04x\r\n", (data[56]<<8 | data[57]));
