@@ -120,6 +120,7 @@ static void do_debug(char *file_line) {
   len = ntohs(len);
   simple_serial_read(debug_buf, len);
   printf("%s\n", debug_buf);
+  fflush(stdout);
 }
 
 int main(int argc, char **argv)
