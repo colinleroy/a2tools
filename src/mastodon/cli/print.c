@@ -27,6 +27,7 @@
 #include "scrollwindow.h"
 
 int print_buf(char *w, char hide, char allow_scroll, char *scrolled) {
+  char x = wherex(), y = wherey();
   while (*w) {
     if (allow_scroll && wherey() == scrh - 2) {
       gotoxy(0, scrh-1);
@@ -35,18 +36,23 @@ int print_buf(char *w, char hide, char allow_scroll, char *scrolled) {
       gotoxy(0, scrh-1);
       dputs("                      ");
       scrollup_n(10);
-      gotoxy(0, scrh - 12);
+      y = scrh - 12;
+      gotoxy(x, y);
       *scrolled = 1;
     }
     if (*w == '\n') {
-      CHECK_AND_CRLF();
+      FAST_CHECK_AND_CRLF();
     } else {
-      if (wherey() == scrh - 1 && wherex() == scrw - LEFT_COL_WIDTH - 2) {
+      if (x == scrw - LEFT_COL_WIDTH - 2) {
+        y++;
+        x = 0;
         /* don't scroll last char */
-        if (!hide) {
-          cputc(*w);
+        if (y == scrh) {
+          cputc(hide ? '.':*w);
+          return -1;
         }
-        return -1;
+      } else {
+        x++;
       }
       if (!hide || *w == ' ' || *w == '\r')
         dputc(*w);
@@ -101,15 +107,9 @@ int print_status(status *s, char hide, char full, char *scrolled) {
         (s->favorited_or_reblogged & FAVOURITED) ? "*":"", s->n_favourites,
         s->n_images);
   FAST_CHECK_AND_CRLF();
-  if (y == scrh - 1) { /* one less because chline will scroll */
-    return -1;
-  }
 
-  chline(scrw - LEFT_COL_WIDTH - 1);
-  y++;
-  if (y == scrh) {
-    return -1;
-  }
+  chline(scrw - LEFT_COL_WIDTH - 2);
+  FAST_CHECK_AND_CRLF();
 
   return 0;
 }

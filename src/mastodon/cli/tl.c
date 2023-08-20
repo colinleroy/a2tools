@@ -116,10 +116,9 @@ static int print_account(account *a, char *scrolled) {
     return -1;
   }
   CHECK_AND_CRLF();
-  chline(scrw - LEFT_COL_WIDTH - 1);
-  if (wherey() == scrh - 1) {
-    return -1;
-  }
+  chline(scrw - LEFT_COL_WIDTH - 2);
+  CHECK_AND_CRLF();
+
   return 0;
 }
 
@@ -150,14 +149,10 @@ static int print_notification(notification *n) {
     dputs("...");
   }
   CHECK_AND_CRLF();
-  if (wherey() == scrh - 1) {
-    return -1;
-  }
 
-  chline(scrw - LEFT_COL_WIDTH - 1);
-  if (wherey() == scrh - 1) {
-    return -1;
-  }
+  chline(scrw - LEFT_COL_WIDTH - 2);
+  CHECK_AND_CRLF();
+
   return 0;
 }
 
@@ -488,7 +483,7 @@ update:
   gotoxy(0, 0);
 
   /* copy to temp vars to avoid pointer arithmetic */
-  if (l->half_displayed_post > 0) {
+  if (l->half_displayed_post > 0 && limit == 0) {
     item *disp;
     first = l->half_displayed_post;
     disp = (item *)l->displayed_posts[first];
@@ -968,6 +963,7 @@ static int show_list(list *l) {
         break;
       case 'w':
         hide_cw = !hide_cw;
+        limit =1; /* print the first one */
         break;
       case 'f':
         if (root_status) {
