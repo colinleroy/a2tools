@@ -38,7 +38,7 @@ int api_search(char to_load, char *search, char search_type, char *load_before, 
 }
 
 int api_get_posts(char *endpoint, char to_load, char *load_before, char *load_after, char *filter, char *sel, char **post_ids) {
-  int n_status;
+  int n_status = 0;
 
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s?limit=%d%s%s%s%s%s", endpoint, to_load,
             load_after ? "&max_id=" : "",
@@ -66,7 +66,7 @@ int api_get_posts(char *endpoint, char to_load, char *load_before, char *load_af
 }
 
 int api_get_status_and_replies(char to_load, char *root_id, char *root_leaf_id, char *load_before, char *load_after, char **post_ids) {
-  int n_status;
+  int n_status = 0;
   char n_before, n_after;
 
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s/context", STATUS_ENDPOINT, root_leaf_id);

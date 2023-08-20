@@ -272,7 +272,6 @@ otp_again:
         dputs("OK\r\n");
       }
       free(otp);
-      resp = NULL;
     }
   }
   /* End of login */

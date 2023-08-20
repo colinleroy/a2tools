@@ -51,6 +51,8 @@ int __fastcall__ surl_find_line(char *buffer, size_t max_len, char *search_str) 
   }
 
   simple_serial_read((char *)&res_len, 2);
+
+  /* coverity[tainted_return_value] */
   res_len = ntohs(res_len);
 
   simple_serial_read(buffer, res_len);
