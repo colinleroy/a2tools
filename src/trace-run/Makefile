@@ -15,6 +15,12 @@ $(PROGRAM): $(SOURCES)
 clean:
 	rm -f $(PROGRAM) *.o
 
+test: all
+	./trace-run -d ref/in/prog.dbg -l ref/in/prog.lbl -t ref/in/prog.run > /tmp/prog.dasm && \
+	./trace-run -d ref/in/prog.dbg -l ref/in/prog.lbl -t ref/in/prog.run -p > /tmp/prog.callgrind && \
+	diff -u ref/out/prog.dasm /tmp/prog.dasm && \
+	diff -u ref/out/prog.callgrind /tmp/prog.callgrind
+
 install:
 	mkdir -p $(DESTDIR)/$(prefix)/bin
 	install $(PROGRAM) $(DESTDIR)/$(prefix)/bin/$(PROGRAM)
