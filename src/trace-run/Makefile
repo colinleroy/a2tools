@@ -1,6 +1,9 @@
 prefix ?= /usr/local
 PROGRAM=trace-run
-SOURCES := trace-run.c ../lib/strsplit.c
+SOURCES := trace-run.c \
+	instructions.c \
+	symbols.c \
+	../lib/strsplit.c
 
 CFLAGS= -I ../lib -g -O0 -Wall -Wno-deprecated-declarations
 .PHONY: all clean
