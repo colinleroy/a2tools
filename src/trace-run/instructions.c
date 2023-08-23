@@ -33,6 +33,103 @@ char *write_instructions[] = {
   NULL
 };
 
+struct _instr_cycles {
+  char *instruction;
+  int cost[NUM_ADDR_MODES];
+};
+
+/* Values are for the 65C02.
+ * Ref1: https://www.masswerk.at/6502/6502_instruction_set.html
+ * Ref2: http://6502.org/tutorials/65c02opcodes.html
+ */
+instr_cycles instr_cost[] = {
+/* {name, {imm, imp, acc, zero, zeroind,zeroxy, abs, absxy, indx, indy}} */
+/* Math */
+  {"adc", {2,   0,   0,   3,    5,      4,      4,   4,     6,    5}},
+  {"and", {2,   0,   0,   3,    5,      4,      4,   4,     6,    5}},
+  {"asl", {0,   0,   2,   5,    0,      6,      6,   6,     0,    0}},
+  {"eor", {2,   0,   0,   3,    5,      4,      4,   4,     6,    5}},
+  {"bit", {2,   0,   0,   3,    0,      4,      4,   4,     0,    0}},
+  {"lsr", {0,   0,   2,   5,    0,      6,      6,   6,     0,    0}},
+  {"ora", {2,   0,   0,   3,    5,      4,      4,   4,     6,    5}},
+  {"rol", {0,   0,   2,   5,    0,      6,      6,   6,     0,    0}},
+  {"ror", {0,   0,   2,   5,    0,      6,      6,   6,     0,    0}},
+  {"sbc", {2,   0,   0,   3,    5,      4,      4,   4,     6,    5}},
+  {"trb", {0,   0,   0,   5,    0,      0,      6,   0,     0,    0}},
+  {"tsb", {0,   0,   0,   5,    0,      0,      6,   0,     0,    0}},
+
+/* Flow */
+  {"bcc", {0,   0,   0,   0,    0,      0,      2,   0,     0,    0}},
+  {"bcs", {0,   0,   0,   0,    0,      0,      2,   0,     0,    0}},
+  {"beq", {0,   0,   0,   0,    0,      0,      2,   0,     0,    0}},
+  {"bmi", {0,   0,   0,   0,    0,      0,      2,   0,     0,    0}},
+  {"bne", {0,   0,   0,   0,    0,      0,      2,   0,     0,    0}},
+  {"bpl", {0,   0,   0,   0,    0,      0,      2,   0,     0,    0}},
+  {"bra", {0,   0,   0,   0,    0,      0,      3,   0,     0,    0}},
+  {"brk", {0,   7,   0,   0,    0,      0,      4,   0,     0,    0}},
+  {"bvc", {0,   0,   0,   0,    0,      0,      2,   0,     0,    0}},
+  {"bvs", {0,   0,   0,   0,    0,      0,      2,   0,     0,    0}},
+  {"jmp", {0,   0,   0,   0,    0,      0,      3,   6,     5,    5}},
+  {"jsr", {0,   0,   0,   0,    0,      0,      6,   0,     0,    0}},
+  {"nop", {0,   2,   0,   0,    0,      0,      0,   0,     0,    0}},
+  {"rti", {0,   6,   0,   0,    0,      0,      0,   0,     0,    0}},
+  {"rts", {0,   6,   0,   0,    0,      0,      0,   0,     0,    0}},
+
+/* Flags */
+/* {name, {imm, imp, acc, zero, zeroind,zeroxy, abs, absxy, indx, indy}} */
+  {"clc", {0,   2,   0,   0,    0,      0,      0,   0,     0,    0}},
+  {"cld", {0,   2,   0,   0,    0,      0,      0,   0,     0,    0}},
+  {"cli", {0,   2,   0,   0,    0,      0,      0,   0,     0,    0}},
+  {"clv", {0,   2,   0,   0,    0,      0,      0,   0,     0,    0}},
+  {"sec", {0,   2,   0,   0,    0,      0,      0,   0,     0,    0}},
+  {"sed", {0,   2,   0,   0,    0,      0,      0,   0,     0,    0}},
+  {"sei", {0,   2,   0,   0,    0,      0,      0,   0,     0,    0}},
+
+/* Compare */
+  {"cmp", {2,   0,   0,   3,    5,      4,      4,   4,     6,    5}},
+  {"cpx", {2,   0,   0,   3,    0,      0,      4,   0,     0,    0}},
+  {"cpy", {2,   0,   0,   3,    0,      0,      4,   0,     0,    0}},
+
+/* Decrement */
+  {"dec", {0,   0,   2,   5,    0,      6,      6,   7,     0,    0}},
+  {"dex", {0,   2,   0,   0,    0,      0,      0,   0,     0,    0}},
+  {"dey", {0,   2,   0,   0,    0,      0,      0,   0,     0,    0}},
+
+/* Increment */
+  {"inc", {0,   0,   2,   5,    0,      6,      6,   7,     0,    0}},
+  {"inx", {0,   2,   0,   0,    0,      0,      0,   0,     0,    0}},
+  {"iny", {0,   2,   0,   0,    0,      0,      0,   0,     0,    0}},
+
+/* Loads and stores */
+/* {name, {imm, imp, acc, zero, zeroind,zeroxy, abs, absxy, indx, indy}} */
+  {"lda", {2,   0,   0,   3,    5,      4,      4,   4,     6,    5}},
+  {"ldx", {2,   0,   0,   3,    0,      4,      4,   4,     0,    0}},
+  {"ldy", {2,   0,   0,   3,    0,      4,      4,   4,     0,    0}},
+  {"sta", {0,   0,   0,   3,    5,      4,      4,   5,     6,    6}},
+  {"stx", {0,   0,   0,   3,    0,      4,      4,   0,     0,    0}},
+  {"sty", {0,   0,   0,   3,    0,      4,      4,   0,     0,    0}},
+  {"stz", {0,   0,   0,   3,    0,      4,      4,   5,     0,    0}},
+  {"tax", {0,   2,   0,   0,    0,      0,      0,   0,     0,    0}},
+  {"tay", {0,   2,   0,   0,    0,      0,      0,   0,     0,    0}},
+  {"tsx", {0,   2,   0,   0,    0,      0,      0,   0,     0,    0}},
+  {"txa", {0,   2,   0,   0,    0,      0,      0,   0,     0,    0}},
+  {"txs", {0,   2,   0,   0,    0,      0,      0,   0,     0,    0}},
+  {"tya", {0,   2,   0,   0,    0,      0,      0,   0,     0,    0}},
+
+/* Stack */
+  {"pha", {0,   3,   0,   0,    0,      0,      0,   0,     0,    0}},
+  {"php", {0,   3,   0,   0,    0,      0,      0,   0,     0,    0}},
+  {"phx", {0,   3,   0,   0,    0,      0,      0,   0,     0,    0}},
+  {"phy", {0,   3,   0,   0,    0,      0,      0,   0,     0,    0}},
+  {"pla", {0,   4,   0,   0,    0,      0,      0,   0,     0,    0}},
+  {"plp", {0,   4,   0,   0,    0,      0,      0,   0,     0,    0}},
+  {"plx", {0,   4,   0,   0,    0,      0,      0,   0,     0,    0}},
+  {"ply", {0,   4,   0,   0,    0,      0,      0,   0,     0,    0}},
+
+/* {name, {imm, imp, acc, zero, zeroind,zeroxy, abs, absxy, indx, indy}} */
+  {NULL,  {0,   0,   0,   0,    0,      0,      0,   0,     0,    0}}
+};
+
 /* Current memory banking */
 int read_from = RAM;
 int write_to  = NONE;
@@ -57,15 +154,18 @@ struct _function_calls {
   /* Number of times the function's been called */
   unsigned long call_count;
 
-  /* Number of instructions inside this function, total */
+  /* Number of instructions and cycles inside this function, total */
   unsigned long self_instruction_count;
+  unsigned long self_cycle_count;
 
-  /* Number of instructions inside this function, current call */
+  /* Number of instructions and cycles inside this function, current call */
   unsigned long cur_call_self_instruction_count;
+  unsigned long cur_call_self_cycle_count;
 
-  /* Number of instructions inside this function,
+  /* Number of instructions and cycles inside this function,
    * plus the ones it calls */
   unsigned long incl_instruction_count;
+  unsigned long incl_cycle_count;
 
   /* List of functions called by this one */
   function_calls **callees;
@@ -108,8 +208,82 @@ int is_addr_in_cc65_user_bank (int op_addr) {
    || (read_from == RAM && op_addr >= 0xD000 && op_addr < 0xDFFF && lc_bank == 2);
 }
 
+/* Figure out the addressing mode for the instruction */
+int instruction_get_addressing_mode(const char *arg) {
+  int len;
+
+  /* no arg */
+  if (!arg || arg[0] == '\0')
+    return ADDR_MODE_IMPLIED;
+
+  len = strlen(arg);
+
+  /* A */
+  if (len == 1)
+    return ADDR_MODE_ACC;
+
+  /* #$ff */
+  if (arg[0] == '#')
+    return ADDR_MODE_IMMEDIATE;
+
+  /* $ff */
+  if (len == 3 && arg[0] == '$')
+    return ADDR_MODE_ZERO;
+
+  /* <$90 or similar, unsure of page, let's use absolute */
+  if (arg[0] == '<' || arg[0] == '>')
+    return ADDR_MODE_ABS;
+
+  /* MAME symbol like RDRAM or 80STOREON :( */
+  if ((arg[0] >= 'A' && arg[0] <= 'Z') || (arg[0] >= 'a' && arg[0] <= 'z') || (arg[0] >= '0' && arg[0] <= '9'))
+    return ADDR_MODE_ABS;
+
+  if (len >= 5) {
+
+    /* $ff, x */
+    if (arg[0] == '$' && arg[3] == ',')
+      return ADDR_MODE_ZEROXY;
+
+    /* ($ff), y */
+    if (arg[0] == '(' && arg[4] == ')' && len > 7 && (arg[7] == 'x' || arg[7] == 'y'))
+      return ADDR_MODE_ZEROXY;
+
+    /* ($ff) */
+    if (arg[0] == '(' && arg[4] == ')')
+      return ADDR_MODE_ZEROIND;
+  
+    /* $ffff */
+    if (len == 5 && arg[0] == '$')
+      return ADDR_MODE_ABS;
+
+    /* $ffff, x */
+    if (len >= 6 && arg[0] == '$' && arg[5] == ',')
+      return ADDR_MODE_ABSXY;
+
+    /* ($ffff, x) */
+    if (len >= 6 && arg[0] == '(' && arg[6] == ',' && arg[8] == 'x')
+      return ADDR_MODE_INDX;
+
+    /* ($ff, x) */
+    if (arg[0] == '(' && arg[4] == ',' && arg[6] == 'x')
+      return ADDR_MODE_INDX;
+
+    /* ($ffff), y */
+    if (len >= 7 && arg[0] == '(' && arg[6] == ')')
+      return ADDR_MODE_INDY;
+
+    /* ($ff), y */
+    if (arg[0] == '(' && arg[4] == ',' && arg[7] == 'x')
+      return ADDR_MODE_INDX;
+
+
+  }
+  fprintf(stderr, "Error: unknown addressing mode for %s\n", arg);
+  exit(1);
+}
+
 /* Check instruction for memory banking change */
-int analyze_instruction(int op_addr, char *instr, int param_addr, char *comment) {
+int analyze_instruction(int op_addr, const char *instr, int param_addr, char *comment) {
   static int bit_count = 0;
   static int last_bit = 0;
   int parsed = 0, bank_switch = 0;
@@ -289,9 +463,27 @@ static function_calls *get_function_calls_for_addr(int addr) {
     return counter;
 }
 
+/* Get cycles number for instruction / addressing mode
+ * TODO Hugely inefficient, add a instruction str <=> number mapping
+ */
+int get_cycles_for_instr(const char *instr, int a_mode) {
+  for (int i = 0; instr_cost[i].instruction != NULL; i++) {
+    if (!strcmp(instr, instr_cost[i].instruction)) {
+      if (instr_cost[i].cost[a_mode] == 0) {
+        fprintf(stderr, "Error, addressing mode %d invalid for %s\n", a_mode, instr);
+        return -1;
+      }
+      return instr_cost[i].cost[a_mode];
+    }
+  }
+  fprintf(stderr, "Error, cycle count not found for %s\n", instr);
+  return -1;
+}
+
 /* Count current instruction */
-static void count_instruction(void) {
-  tree_functions[tree_depth - 1]->cur_call_self_instruction_count ++;
+static void count_instruction(const char *instr, int cycle_count) {
+  tree_functions[tree_depth - 1]->cur_call_self_instruction_count++;
+  tree_functions[tree_depth - 1]->cur_call_self_cycle_count += cycle_count;
 }
 
 /* Find a function in an array */
@@ -334,7 +526,7 @@ static void add_callee(function_calls *caller, function_calls *callee) {
 }
 
 /* Transfer the instruction count to the top of the tree */
-static void update_caller_incl_cost(int count) {
+static void update_caller_incl_cost(int instr_count, int cycle_count) {
   int i = tree_depth;
   for (i = tree_depth; i > 0; i--) {
     function_calls *caller = tree_functions[i - 1];
@@ -342,10 +534,12 @@ static void update_caller_incl_cost(int count) {
     // if (verbose)
     //  fprintf(stderr, "; adding %d incl count to %s called by %s\n",
     //         count, symbol_get_name(callee->func_symbol), symbol_get_name(caller->func_symbol));
-    ref_callee->incl_instruction_count += count;
+    ref_callee->incl_instruction_count += instr_count;
+    ref_callee->incl_cycle_count += cycle_count;
   }
   /* and the root */
-  tree_functions[0]->incl_instruction_count += count;
+  tree_functions[0]->incl_instruction_count += instr_count;
+  tree_functions[0]->incl_cycle_count += cycle_count;
 }
 
 /* Register a new call in the tree */
@@ -378,6 +572,7 @@ static void start_call_info(int addr, int mem, int lc, int line_num) {
   tree_functions[tree_depth] = my_info;
   /* Reset current self instruction count for this new call */
   tree_functions[tree_depth]->cur_call_self_instruction_count = 0;
+  tree_functions[tree_depth]->cur_call_self_cycle_count = 0;
 
   /* add myself to parent's callees */
   if (tree_depth > 0) {
@@ -414,13 +609,21 @@ static void end_call_info(int line_num) {
 
   /* We done ? */
   if (tree_depth > 0) {
-    tree_functions[tree_depth]->self_instruction_count += tree_functions[tree_depth]->cur_call_self_instruction_count;
+    /* update self counts */
+    tree_functions[tree_depth]->self_instruction_count +=
+      tree_functions[tree_depth]->cur_call_self_instruction_count;
+
+    tree_functions[tree_depth]->self_cycle_count +=
+      tree_functions[tree_depth]->cur_call_self_cycle_count;
+
     /* push it up to callers */
-    update_caller_incl_cost(tree_functions[tree_depth]->cur_call_self_instruction_count);
+    update_caller_incl_cost(
+      tree_functions[tree_depth]->cur_call_self_instruction_count,
+      tree_functions[tree_depth]->cur_call_self_cycle_count);
   }
 }
 
-int update_call_counters(int op_addr, const char *instr, int param_addr, int line_num) {
+int update_call_counters(int op_addr, const char *instr, int param_addr, int cycle_count, int line_num) {
   int dest = RAM, lc = 0;
 
   /* Set memory and LC bank according to the address */
@@ -514,7 +717,7 @@ rts:
   }
 
   /* And count the instruction */
-  count_instruction();
+  count_instruction(instr, cycle_count);
   return 0;
 }
 
@@ -530,13 +733,14 @@ static void dump_callee(function_calls *cur) {
   printf("cfi=%s%s\n"
          "cfn=%s\n"
          "calls=%ld\n"
-         "%d %lu\n",
+         "%d %lu %lu\n",
           cur->file ? cur->file : "unknown.",
           cur->file ? "": symbol_get_name(sym),
           symbol_get_name(sym),
           cur->call_count,
           cur->line,
-          cur->incl_instruction_count
+          cur->incl_instruction_count,
+          cur->incl_cycle_count
         );
 }
 
@@ -552,12 +756,13 @@ static void dump_function(function_calls *cur) {
    * instruction count */
   printf("fl=%s%s\n"
          "fn=%s\n"
-         "%d %lu\n",
+         "%d %lu %lu\n",
           cur->file ? cur->file : "unknown.",
           cur->file ? "": symbol_get_name(sym),
           symbol_get_name(sym),
           cur->line,
-          cur->self_instruction_count
+          cur->self_instruction_count,
+          cur->self_cycle_count
         );
 
   /* Dump information for every function it calls */
@@ -580,7 +785,7 @@ void finalize_call_counters(void) {
 
   /* File header */
   printf("# callgrind format\n"
-         "events: Instructions\n\n");
+         "events: Instructions Cycles\n\n");
 
   /* Dump start function first */
   dump_function(root_call);
