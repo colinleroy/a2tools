@@ -359,7 +359,7 @@ int __fastcall__ simple_serial_putc(char c) {
   fflush(ttyfp);
 
   if (!flow_control_enabled)
-    usleep(1000);
+    usleep(50);
 
   return r;
 }
@@ -426,6 +426,38 @@ char * __fastcall__ simple_serial_gets(char *out, size_t size) {
 }
 
 void __fastcall__ simple_serial_read(char *ptr, size_t nmemb) {
+#ifdef __CC65__
+  static char *cur;
+  static char *end;
+
+  if (serial_activity_indicator_enabled)
+    activity_cb(1);
+
+  cur = ptr;
+  end = ptr + nmemb;
+
+  __asm__("                  bra check_bound");
+
+    __asm__("read_again:       lda %v", cur);
+    __asm__("read_again_aok:   ldx %v+1", cur);
+    __asm__("read_again_axok: jsr %v",   ser_get);
+    __asm__("                  cmp #$06");
+    __asm__("                  beq read_again");
+
+    __asm__("                  inc %v", cur);
+    __asm__("                  bne check_bound");
+    __asm__("                  inc %v+1", cur);
+
+  __asm__("check_bound:        lda %v", cur);
+  __asm__("                    cmp %v", end);
+  __asm__("                    bne read_again_aok");
+  __asm__("                    ldx %v+1", cur);
+  __asm__("                    cpx %v+1", end);
+  __asm__("                    bne read_again_axok");
+
+  if (serial_activity_indicator_enabled)
+    activity_cb(0);
+#else
   static char *cur;
   static char *end;
 
@@ -435,16 +467,13 @@ void __fastcall__ simple_serial_read(char *ptr, size_t nmemb) {
   cur = ptr;
   end = ptr + nmemb;
   while (cur < end) {
-#ifdef __CC65__
-    while (ser_get(cur) == SER_ERR_NO_DATA);
-#else
     *cur = simple_serial_getc();
-#endif
     ++cur;
   }
 
   if (serial_activity_indicator_enabled)
     activity_cb(0);
+#endif
 }
 #ifdef __CC65__
 #pragma optimize(pop)
