@@ -16,7 +16,7 @@ GCCLDFLAGS =
 all: $(PROGRAM).bin $(PROGRAM).x86_64
 
 $(PROGRAM).bin: $(SOURCES) $(CC65SOURCES)
-	cl65 $(CFLAGS) $(CLCFLAGS) -m $(PROGRAM).map -o $@ $^
+	cl65 --debug-info -Wl --dbgfile,"telnet.dbg" -Ln telnet.lbl $(CFLAGS) $(CLCFLAGS) -m $(PROGRAM).map -o $@ $^
 
 $(PROGRAM).x86_64: $(SOURCES) $(GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	
