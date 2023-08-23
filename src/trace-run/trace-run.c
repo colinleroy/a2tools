@@ -78,6 +78,8 @@ skip_to_start:
     int n_parts;
     int is_line;
     int buf_len;
+    int a_mode;
+    int cycles;
 
     cur_line++;
     buf_len = strlen(buf);
@@ -125,7 +127,7 @@ skip_to_start:
       /* If we've not yet seen the start address,
        * skip line
        */
-      if (!found_start_addr && start_addr != 0) {
+      if (!found_start_addr) {
         if (op_addr == start_addr) {
           found_start_addr = 1;
           cur_line = 1;
@@ -158,6 +160,15 @@ skip_to_start:
         }
       }
 
+      /* get addressing mode and cycles count.
+       * Done here instead of in instructions.c to be
+       * able to display a potentially problematic line
+       */
+      a_mode = instruction_get_addressing_mode(arg);
+      if ((cycles = get_cycles_for_instr(instr, a_mode)) < 0) {
+        fprintf(stderr, "%s\n", buf);
+        exit(1);
+      }
       /* get param if it's numeric */
       if (arg && arg[0] == '$') {
         if (strchr(arg, '\n'))
@@ -192,7 +203,7 @@ try_gen:
         printf("%s", line_buf);
 
       /* Profile if needed */
-      if (do_callgrind && update_call_counters(op_addr, instr, param_addr, cur_line) < 0) {
+      if (do_callgrind && update_call_counters(op_addr, instr, param_addr, cycles, cur_line) < 0) {
         printf("; Error popping call tree at trace line %d\n", cur_line);
       }
 
@@ -276,8 +287,9 @@ int main(int argc, char *argv[]) {
 
   if (argc < 7) {
 err_usage:
-    printf("Usage: %s -d cc65_dbg_file -l cc65_lbl_file -t mame_trace_file [-f]\n", argv[0]);
-    printf("\n"
+    fprintf(stderr, 
+           "Usage: %s -d cc65_dbg_file -l cc65_lbl_file -t mame_trace_file [-f]\n"
+           "\n"
            "-d cc65_dbg_file  : point to a cc65-generated .dbg file\n"
            "-l cc65_lbl_file  : point to a cc65-generated .lbl file\n"
            "-t mame_trace_file: point to a MAME debugger generated trace file\n"
@@ -287,34 +299,34 @@ err_usage:
            "-f                : tail trace file\n"
            "\n\n"
            "For profiles, generate tracefile with 'trace log.run,maincpu,noloop'\n",
-           DEFAULT_START_ADDR);
+           argv[0],DEFAULT_START_ADDR);
     exit(1);
   }
   for (i = 1; i < argc; i++) {
     if (!strcmp(argv[i], "-d") && i < argc - 1) {
       i++;
       load_syms(argv[i]);
-    }
-    if (!strcmp(argv[i], "-l") && i < argc - 1) {
+    } else if (!strcmp(argv[i], "-l") && i < argc - 1) {
       i++;
       load_lbls(argv[i]);
-    }
-    if (!strcmp(argv[i], "-t") && i < argc - 1) {
+    } else if (!strcmp(argv[i], "-t") && i < argc - 1) {
       i++;
       trace_file = argv[i];
-    }
-    if (!strcmp(argv[i], "-x") && i < argc - 1) {
+    }  else if (!strcmp(argv[i], "-x") && i < argc - 1) {
       i++;
       start_addr = hex2int(argv[i]);
-    }
-    if (!strcmp(argv[i], "-f")) {
+      if (start_addr == 0) {
+        found_start_addr = 1;
+      }
+    } else if (!strcmp(argv[i], "-f")) {
       tail = 1;
-    }
-    if (!strcmp(argv[i], "-v")) {
+    } else if (!strcmp(argv[i], "-v")) {
       verbose = 1;
-    }
-    if (!strcmp(argv[i], "-p")) {
+    } else if (!strcmp(argv[i], "-p")) {
       do_callgrind = 1;
+    } else {
+      fprintf(stderr, "Unrecognized parameter %s\n", argv[i]);
+      goto err_usage;
     }
   }
 
@@ -327,5 +339,9 @@ err_usage:
     annotate_run(trace_file);
   } else {
     goto err_usage;
+  }
+  if (!found_start_addr) {
+    fprintf(stderr, "Could not find entry point at start address 0x%04X.\n",
+            start_addr);
   }
 }
