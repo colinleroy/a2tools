@@ -95,7 +95,7 @@ all: mastodon.bin mastodon.x86_64 \
 	mastoconf.bin mastoconf.x86_64
 
 mastodon.bin: $(mastodon_SOURCES) $(mastodon_CC65SOURCES)
-	cl65 $(CFLAGS) $(mastodon_CLCFLAGS) -vm -m mastodon.map -o $@ $^
+	cl65 --debug-info -Wl --dbgfile,"mastodon.dbg" -Ln mastodon.lbl $(CFLAGS) $(mastodon_CLCFLAGS) -vm -m mastodon.map -o $@ $^
 mastocli.bin: $(mastocli_SOURCES) $(mastocli_CC65SOURCES)
 	cl65 --debug-info -Wl --dbgfile,"mastocli.dbg" -Ln mastocli.lbl $(CFLAGS) $(CLCFLAGS) -vm -m mastocli.map -o $@ $^
 mastowrite.bin: $(mastowrite_SOURCES) $(mastowrite_CC65SOURCES)
