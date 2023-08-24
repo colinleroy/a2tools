@@ -436,7 +436,12 @@ void __fastcall__ simple_serial_read(char *ptr, size_t nmemb) {
   end = ptr + nmemb;
 
 #ifdef __CC65__
-  __asm__("                  bra check_bound");           /* check cur != end */
+#ifdef __APPLE2ENH__
+  __asm__("                  bra check_bound");           /* branch to check cur != end */
+#else
+  __asm__("                  ldx #$00");                  /* branch to check cur != end */
+  __asm__("                  beq check_bound");           /* branch to check cur != end */
+#endif
 
     __asm__("read_again:       lda %v",   cur);           /* low byte in A */
     __asm__("read_again_aok:   ldx %v+1", cur);           /* high byte in X */
@@ -480,7 +485,12 @@ void __fastcall__ simple_serial_write(char *ptr, size_t nmemb) {
   end = ptr + nmemb;
 
 #ifdef __CC65__
-  __asm__("                   bra check_bound");            /* check cur != end */
+#ifdef __APPLE2ENH__
+  __asm__("                  bra check_bound");           /* branch to check cur != end */
+#else
+  __asm__("                  ldx #$00");                  /* branch to check cur != end */
+  __asm__("                  beq check_bound");           /* branch to check cur != end */
+#endif
 
     __asm__("write_again:       lda %v",   cur);            /* low byte in A */
     __asm__("write_again_aok:   ldx %v+1", cur);            /* high byte in X */
