@@ -18,11 +18,13 @@ int verbose = 0;
 int do_callgrind = 0;
 int found_start_addr = 0;
 
-int start_addr = DEFAULT_START_ADDR;
+int start_addr = 0;
 
 extern int read_from;
 extern int write_to;
 extern int lc_bank;
+
+extern dbg_symbol ****gen_sym_cache;
 
 static int hex2int(const char *hex) {
   if (tolower(hex[1]) != 'x') {
@@ -128,9 +130,21 @@ skip_to_start:
        * skip line
        */
       if (!found_start_addr) {
-        if (op_addr == start_addr) {
+        if (start_addr == 0) {
+          /* Autodetect */
+          if (op_addr == 0x803 || op_addr == 0x2000 || op_addr == 0x4000) {
+            start_addr = op_addr;
+            found_start_addr = 1;
+            cur_line = 1;
+          }
+        } else if (op_addr == start_addr) {
           found_start_addr = 1;
           cur_line = 1;
+        }
+        if (found_start_addr) {
+          fprintf(stderr, "Found start address 0x%X.\n", start_addr);
+          gen_sym_cache[start_addr][ROM][1] = generate_symbol("__MAIN_START__", start_addr, RAM, 1, NULL);
+          start_tracing();
         }
         else
           goto skip_to_start;
@@ -291,18 +305,19 @@ err_usage:
     fprintf(stderr, 
            "Usage: %s -d cc65_dbg_file -l cc65_lbl_file -t mame_trace_file [-f]\n"
            "\n"
-           "-d cc65_dbg_file  : point to a cc65-generated .dbg file\n"
-           "-l cc65_lbl_file  : point to a cc65-generated .lbl file\n"
-           "-t mame_trace_file: point to a MAME debugger generated trace file\n"
-           "-x start_addr     : specify start address, or 0x0 to start at top [default: 0x%x]\n"
-           "-v                : verbose\n"
-           "-p                : generate callgrind profile\n"
-           "-f                : tail trace file\n"
+           "-d  cc65_dbg_file  : point to a cc65-generated .dbg file\n"
+           "-l  cc65_lbl_file  : point to a cc65-generated .lbl file\n"
+           "-t  mame_trace_file: point to a MAME debugger generated trace file\n"
+           "-x  start_addr     : specify start address, [default: auto-detect]\n"
+           "-nx                : start at beginning without looking for a start address\n"
+           "-v                 : verbose\n"
+           "-p                 : generate callgrind profile\n"
+           "-f                 : tail trace file\n"
            "\n"
            "Either -d or -l is required; -t is required.\n"
            "\n"
            "For profiles, generate tracefile with 'trace log.run,maincpu,noloop'\n",
-           argv[0],DEFAULT_START_ADDR);
+           argv[0]);
     exit(1);
   }
   for (i = 1; i < argc; i++) {
@@ -320,9 +335,8 @@ err_usage:
     }  else if (!strcmp(argv[i], "-x") && i < argc - 1) {
       i++;
       start_addr = hex2int(argv[i]);
-      if (start_addr == 0) {
-        found_start_addr = 1;
-      }
+    } else if (!strcmp(argv[i], "-nx")) {
+      found_start_addr = 1;
     } else if (!strcmp(argv[i], "-f")) {
       tail = 1;
     } else if (!strcmp(argv[i], "-v")) {
@@ -343,6 +357,9 @@ err_usage:
   map_slocs_to_adresses();
   allocate_trace_counters();
 
+  if (found_start_addr) {
+    start_tracing();
+  }
   /* Do the thing */
   if (trace_file) {
     annotate_run(trace_file);
@@ -350,7 +367,10 @@ err_usage:
     goto err_usage;
   }
   if (!found_start_addr) {
-    fprintf(stderr, "Could not find entry point at start address 0x%04X.\n",
-            start_addr);
+    fprintf(stderr, "Could not find entry point at start address ");
+    if (start_addr != 0)
+      fprintf(stderr, "0x%04X.\n", start_addr);
+    else
+      fprintf(stderr, "(auto-detection failed).\n");
   }
 }

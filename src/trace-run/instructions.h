@@ -29,6 +29,7 @@ typedef struct _instr_cycles instr_cycles;
 #define NUM_ADDR_MODES      10
 
 void allocate_trace_counters(void);
+void start_tracing(void);
 int update_call_counters(int op_addr, const char *instr, int param_addr, int cycle_count, int line_num);
 
 int is_instruction_write(const char *instr);
