@@ -224,11 +224,15 @@ static void insert_symbol(char **parts, int n_parts) {
     }
   }
 
+  if (size <= 0)
+    size = 1;
+
   /* Insert it, and when we have a size, insert it
    * with all offsets */
   if (id != -1 && symbols[id] == NULL && name != NULL) {
     for (i = 0; i < size; i++) {
       symbols[id + i] = malloc(sizeof(dbg_symbol));
+
       if (i == 0) {
         symbols[id + i]->name = strdup(name);
       } else {
@@ -267,7 +271,10 @@ static void cleanup_data(void) {
     free(symbol->name);
     symbol->name = tmp;
     if (strchr(symbol->name, ' ')) {
-      *strchr(symbol->name, ' ') = '\0';
+      char *char_after = strchr(symbol->name, ' ');
+      char_after++;
+      if (*char_after == '\0')
+        *strchr(symbol->name, ' ') = '\0';
     }
 
 cleanup_file:
@@ -362,12 +369,17 @@ void load_syms(const char *file) {
       if (!strcmp(parts[0], "sym")) {
         insert_symbol(subparts, n_subparts);
       }
+      if (!strcmp(parts[0], "exp")) {
+        insert_symbol(subparts, n_subparts);
+      }
       free(subparts);
     }
     free(parts);
   }
   fclose(fp);
 
+  /* add __MAIN_START__, both in RAM and ROM syms */
+  gen_sym_cache[__MAIN_START__][ROM][1] = generate_symbol("__MAIN_START__", __MAIN_START__, RAM, 1, NULL);
   /* add IRQ handlers, both in RAM and ROM syms */
   gen_sym_cache[ROM_IRQ_ADDR][ROM][1] = generate_symbol("__ROM_IRQ", ROM_IRQ_ADDR, RAM, 1, "0xC803");
   gen_sym_cache[PRODOS_IRQ_ADDR][ROM][1] = generate_symbol("__ProDOS_IRQ", PRODOS_IRQ_ADDR, RAM, 1, "0xBFEB");
