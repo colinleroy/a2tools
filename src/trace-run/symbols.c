@@ -64,7 +64,7 @@ static dbg_symbol **gen_symbols = NULL;
 static int num_gen_symbols = 0;
 
 /* Cache for generated symbols */
-static dbg_symbol ****gen_sym_cache = NULL;
+dbg_symbol ****gen_sym_cache = NULL;
 
 /* Conversion helpers */
 static int get_int_val(const char *str) {
@@ -378,8 +378,6 @@ void load_syms(const char *file) {
   }
   fclose(fp);
 
-  /* add __MAIN_START__, both in RAM and ROM syms */
-  gen_sym_cache[__MAIN_START__][ROM][1] = generate_symbol("__MAIN_START__", __MAIN_START__, RAM, 1, NULL);
   /* add IRQ handlers, both in RAM and ROM syms */
   gen_sym_cache[ROM_IRQ_ADDR][ROM][1] = generate_symbol("__ROM_IRQ", ROM_IRQ_ADDR, RAM, 1, "0xC803");
   gen_sym_cache[PRODOS_IRQ_ADDR][ROM][1] = generate_symbol("__ProDOS_IRQ", PRODOS_IRQ_ADDR, RAM, 1, "0xBFEB");

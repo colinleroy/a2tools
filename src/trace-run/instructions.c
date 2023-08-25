@@ -798,6 +798,19 @@ void finalize_call_counters(void) {
   }
 }
 
+void start_tracing(void) {
+    /* make ourselves a root in the IRQ call tree */
+    tree_functions = irq_tree;
+    start_call_info(start_addr, 0, RAM, 0);
+
+    /* Hack - reset depth for the runtime root */
+    tree_depth = 0;
+
+    /* make ourselves a root in the runtime call tree */
+    tree_functions = func_tree;
+    start_call_info(start_addr, 0, RAM, 0);
+}
+
 /* Setup structures and data */
 void allocate_trace_counters(void) {
   if (functions != NULL) {
@@ -812,18 +825,6 @@ void allocate_trace_counters(void) {
   memset(functions,        0, sizeof(function_calls *) * 2 * STORAGE_SIZE);
   memset(func_tree,        0, sizeof(function_calls *) * 2 * STORAGE_SIZE);
   memset(irq_tree,         0, sizeof(function_calls *) * 2 * STORAGE_SIZE);
-
-
-  /* make ourselves a root in the IRQ call tree */
-  tree_functions = irq_tree;
-  start_call_info(start_addr, 0, RAM, 0);
-
-  /* Hack - reset depth for the runtime root */
-  tree_depth = 0;
-
-  /* make ourselves a root in the runtime call tree */
-  tree_functions = func_tree;
-  start_call_info(start_addr, 0, RAM, 0);
 
   /* Let the depth where it is, so every call will
    * be attached to the start_addr function */
