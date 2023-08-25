@@ -10,6 +10,7 @@ typedef struct _instr_cycles instr_cycles;
 #define NONE 2
 
 /* Addresses we handle differently */
+#define __MAIN_START__         start_addr
 #define ROM_IRQ_ADDR           0xC803
 #define PRODOS_IRQ_ADDR        0xBFEB
 #define PRODOS_MLI_RETURN_ADDR 0xBFB6

@@ -284,8 +284,9 @@ try_gen:
 int main(int argc, char *argv[]) {
   int i;
   char *trace_file = NULL;
+  int loaded_something = 0;
 
-  if (argc < 7) {
+  if (argc < 5) {
 err_usage:
     fprintf(stderr, 
            "Usage: %s -d cc65_dbg_file -l cc65_lbl_file -t mame_trace_file [-f]\n"
@@ -297,7 +298,9 @@ err_usage:
            "-v                : verbose\n"
            "-p                : generate callgrind profile\n"
            "-f                : tail trace file\n"
-           "\n\n"
+           "\n"
+           "Either -d or -l is required; -t is required.\n"
+           "\n"
            "For profiles, generate tracefile with 'trace log.run,maincpu,noloop'\n",
            argv[0],DEFAULT_START_ADDR);
     exit(1);
@@ -306,9 +309,11 @@ err_usage:
     if (!strcmp(argv[i], "-d") && i < argc - 1) {
       i++;
       load_syms(argv[i]);
+      loaded_something = 1;
     } else if (!strcmp(argv[i], "-l") && i < argc - 1) {
       i++;
       load_lbls(argv[i]);
+      loaded_something = 1;
     } else if (!strcmp(argv[i], "-t") && i < argc - 1) {
       i++;
       trace_file = argv[i];
@@ -328,6 +333,10 @@ err_usage:
       fprintf(stderr, "Unrecognized parameter %s\n", argv[i]);
       goto err_usage;
     }
+  }
+
+  if (!loaded_something) {
+    goto err_usage;
   }
 
   /* Prepare everything */

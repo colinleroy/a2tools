@@ -3,7 +3,8 @@ PROGRAM=trace-run
 SOURCES := trace-run.c \
 	instructions.c \
 	symbols.c \
-	../lib/strsplit.c
+	../lib/strsplit.c \
+	../../../cc65/src/dbginfo/dbginfo.c
 
 CFLAGS= -I ../lib -g -O0 -Wall -Wno-deprecated-declarations
 .PHONY: all clean
