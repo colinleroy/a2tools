@@ -484,37 +484,10 @@ void __fastcall__ simple_serial_write(char *ptr, size_t nmemb) {
   cur = ptr;
   end = ptr + nmemb;
 
-#ifdef __CC65__
-#ifdef __APPLE2ENH__
-  __asm__("                  bra check_bound");           /* branch to check cur != end */
-#else
-  __asm__("                  ldx #$00");                  /* branch to check cur != end */
-  __asm__("                  beq check_bound");           /* branch to check cur != end */
-#endif
-
-    __asm__("write_again:       lda %v",   cur);            /* low byte in A */
-    __asm__("write_again_aok:   ldx %v+1", cur);            /* high byte in X */
-    __asm__("write_again_axok:  jsr %v",   ser_put);        /* pass cur to ser_put */
-    __asm__("                   cmp #%b", SER_ERR_OVERFLOW);/* Did we push data? */
-    __asm__("                   beq write_again");          /* No */
-
-    __asm__("                   inc %v", cur);              /* Inc cur's low byte */
-    __asm__("                   bne check_bound");          /* not wrapped? go check bound */
-    __asm__("                   inc %v+1", cur);            /* Inc high byte */
-
-  __asm__("check_bound:       lda %v", cur);                /* Compare cur/end low bytes */
-  __asm__("                   cmp %v", end);
-  __asm__("                   bne write_again_aok");        /* different, read again */
-  __asm__("                   ldx %v+1", cur);              /* Compare high bytes */
-  __asm__("                   cpx %v+1", end);
-  __asm__("                   bne write_again_axok");       /* different, read again */
-#else
-
   while (cur != end) {
     simple_serial_putc(*cur);
     ++cur;
   }
-#endif
 
   if (serial_activity_indicator_enabled)
     activity_cb(0);
