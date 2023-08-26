@@ -29,7 +29,7 @@ stp.dsk: $(stp_disk_PROGS)
 	cp $(CLEANDISK) $@; \
 	java -jar bin/ac.jar -n $@ STP
 	java -jar bin/ac.jar -p $@ STP.SYSTEM SYS < bin/loader.system; \
-	# java -jar bin/ac.jar -p $@ STPSTARTURL TXT < src/stp/STPSTARTURL; \
+	java -jar bin/ac.jar -p $@ STPSTARTURL TXT < src/stp/STPSTARTURL; \
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
