@@ -290,15 +290,6 @@ int analyze_instruction(int op_addr, const char *instr, int param_addr, char *co
 
   comment[0] = '\0';
 
-  /* Dirty hack: The IRQ handler at 0x803 finishes by resetting
-   * the memory banking to how it was at C893: inc $c000, x
-   * For all intents and purposes we will assume we're going
-   * back to the standard cc65 setup, Read RAM, LC bank 2 */
-  if (op_addr == 0xC893 && !strcmp(instr, "inc") && param_addr == 0xc000) {
-    goto ramlc2;
-  }
-
-
   if (!strcmp(instr, "bit") || !strncmp(instr,"ld", 2)
    || !strncmp(instr,"st", 2) || !strcmp(instr, "inc")) {
     if (is_instruction_write(instr)) {
@@ -309,7 +300,6 @@ int analyze_instruction(int op_addr, const char *instr, int param_addr, char *co
     switch(param_addr) {
       case 0xC080:
       case 0xC084:
-ramlc2:
         read_from = RAM;
         write_to  = NONE;
         lc_bank   = 2;
@@ -405,7 +395,7 @@ ramlc2:
   /* Update comment for the caller */
   if (bank_switch) {
     snprintf(comment, BUF_SIZE,
-            " ; BANK SWITCH: read from %s, write to %s, LC bank %d",
+            "BANK SWITCH: read from %s, write to %s, LC bank %d",
             mem_str[read_from], mem_str[write_to], lc_bank);
   }
   return parsed;
