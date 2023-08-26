@@ -12,6 +12,9 @@ a.out
 *.bin
 *.x86_64
 *.dsk
+*.tr
+*.callg
+*.dasm
 log
 *.log
 massif.*
