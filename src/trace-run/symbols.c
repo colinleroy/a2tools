@@ -558,32 +558,34 @@ dbg_symbol *generate_symbol(const char *param_name, int param_addr, int mem, int
   }
 
   /* Check if we have it */
-  s = symbol_get_by_name(full_name);
-  if (s) {
-    return s;
-
-  /* Otherwise build it */
-  } else {
-    s = malloc(sizeof(dbg_symbol));
-    s->addr = STORAGE_SIZE + num_gen_symbols;
-    s->real_addr = param_addr;
-    s->name = strdup(full_name);
-    s->size = 0;
-    s->segment = 0;
-    s->mem = mem;
-    s->lcbank = lc;
-
-    /* Insert in map */
-    gen_symbols[num_gen_symbols] = s;
-
-    /* If it has an address, insert in cache */
-    if (s->real_addr > 0)
-      gen_sym_cache[s->real_addr][mem][lc] = s;
-
-    /* Bump total */
-    num_gen_symbols++;
-    return s;
+  if (param_addr > 0 && gen_sym_cache[param_addr][mem][lc]) {
+    return gen_sym_cache[param_addr][mem][lc];
+  } else if (param_addr == 0) {
+    s = symbol_get_by_name(full_name);
+    if (s) {
+      return s;
+    }
   }
+  /* Otherwise build it */
+  s = malloc(sizeof(dbg_symbol));
+  s->addr = STORAGE_SIZE + num_gen_symbols;
+  s->real_addr = param_addr;
+  s->name = strdup(full_name);
+  s->size = 0;
+  s->segment = 0;
+  s->mem = mem;
+  s->lcbank = lc;
+
+  /* Insert in map */
+  gen_symbols[num_gen_symbols] = s;
+
+  /* If it has an address, insert in cache */
+  if (s->real_addr > 0)
+    gen_sym_cache[s->real_addr][mem][lc] = s;
+
+  /* Bump total */
+  num_gen_symbols++;
+  return s;
 }
 
 /* Symbol name getter */

@@ -3,6 +3,7 @@ PROGRAM=trace-run
 SOURCES := trace-run.c \
 	instructions.c \
 	symbols.c \
+	mame-params.c \
 	../lib/strsplit.c
 
 CFLAGS= -I ../lib -g -O0 -Wall -Wno-deprecated-declarations
