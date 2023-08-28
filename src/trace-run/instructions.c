@@ -630,17 +630,19 @@ int update_call_counters(int op_addr, const char *instr, int param_addr, int cyc
     if (verbose)
       fprintf(stderr, "; interrupt at depth %d\n", tree_depth);
 
-    /* Record existing depth */
-    tree_depth_before_intr[in_interrupt] = tree_depth;
+    if (in_interrupt == 0) {
+      /* Record existing depth */
+      tree_depth_before_intr[in_interrupt] = tree_depth;
+
+      /* Update stats structs pointer */
+      tree_functions = irq_tree;
+
+      /* Reset tree depth */
+      tree_depth = 1;
+    }
 
     /* Increment the IRQ stack count */
     in_interrupt++;
-
-    /* Update stats structs pointer */
-    tree_functions = irq_tree;
-
-    /* Reset tree depth */
-    tree_depth = 0;
 
     /* And record entering */
     start_call_info(op_addr, RAM, lc, line_num);
@@ -651,22 +653,23 @@ int update_call_counters(int op_addr, const char *instr, int param_addr, int cyc
       if (verbose)
         fprintf(stderr, "; rti from interrupt at depth %d\n", tree_depth);
 
-      /* Decrease IRQ stack */
-      in_interrupt--;
-
       /* Record end of call */
       end_call_info(line_num);
 
-      /* Reset tree to standard runtime */
-      tree_functions = func_tree;
-      tree_depth = tree_depth_before_intr[in_interrupt];
+      /* Decrease IRQ stack */
+      in_interrupt--;
 
-      /* Remember if we just rti'd out of IRQ, as if
-       * we go back to a jsr that was recorded but not
-       * executed, we don't want to re-register it. If
-       * so we'll skip the next instruction. */
-      just_out_of_irq = 1;
+      if (!in_interrupt) {
+        /* Reset tree to standard runtime */
+        tree_functions = func_tree;
+        tree_depth = tree_depth_before_intr[in_interrupt];
 
+        /* Remember if we just rti'd out of IRQ, as if
+         * we go back to a jsr that was recorded but not
+         * executed, we don't want to re-register it. If
+         * so we'll skip the next instruction. */
+        just_out_of_irq = 1;
+      }
     } else if (op_addr == PRODOS_MLI_RETURN_ADDR) {
       /* Hack: ProDOS MLI calls return with an rti,
        * handle it as an rts. */
