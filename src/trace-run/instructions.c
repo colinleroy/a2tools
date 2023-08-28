@@ -625,6 +625,9 @@ int update_call_counters(int op_addr, const char *instr, int param_addr, int cyc
     lc = lc_bank;
   }
 
+  /* Count the instruction */
+  count_instruction(instr, cycle_count);
+
   /* Are we entering an IRQ handler ? */
   if (op_addr == ROM_IRQ_ADDR || op_addr == PRODOS_IRQ_ADDR) {
     if (verbose)
@@ -709,8 +712,6 @@ rts:
     just_out_of_irq = 0;
   }
 
-  /* And count the instruction */
-  count_instruction(instr, cycle_count);
   return 0;
 }
 
