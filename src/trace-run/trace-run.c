@@ -9,6 +9,7 @@
 #include "general.h"
 #include "symbols.h"
 #include "instructions.h"
+#include "mame-params.h"
 
 #define FIELD_WIDTH 40
 #define DEFAULT_START_ADDR 0x803
@@ -36,29 +37,18 @@ static int hex2int(const char *hex) {
   }
 }
 
-/* Remove the most annoying MAME symbols 
- * and put back the address instead 
- */
-static char *fix_param(char *param) {
-  if (!param)
-    return NULL;
-  if (!strcmp(param, "ROMIN"))
-    return "$c085";
-  if (!strcmp(param, "LCBANK2"))
-    return "$c087";
-  if (!strcmp(param, "($03fe)"))
-    return "$befb";
-  return param;
-}
-
 static void tabulate(const char *buf, int len) {
-  int i;
+  static char tbuf[80];
+  int i = 0;
   if (do_callgrind)
     return;
 
-  for (i = buf ? strlen(buf) : 0; i < len; i++) {
-      printf(" ");
-  }
+  i = buf ? strlen(buf) : 0;
+  if (i > 78)
+    i = 78;
+  memset(tbuf, ' ', i);
+  tbuf[i + 1] = '\0';
+  printf("%s", tbuf);
 }
 
 static int detect_tracelog(char *line) {
@@ -158,7 +148,7 @@ skip_to_start:
       dbg_slocdef *sloc = NULL;
       dbg_symbol *instr_symbol = NULL;
       dbg_symbol *param_symbol = NULL;
-      char *instr, *arg;
+      const char *instr, *arg;
       char comment[BUF_SIZE];
       char * cur_lineaddress = parts[0] + op_idx;
       int a, x, y;
@@ -196,9 +186,9 @@ skip_to_start:
       /* get arg if there's one */
       arg = strchr(instr, ' ');
       if (arg) {
-        *arg = '\0';
+        *(char *)arg = '\0';
         arg++;
-        arg = fix_param(arg);
+        arg = fix_mame_param(arg);
       }
 
       if (op_addr >= 0) {
@@ -261,7 +251,7 @@ skip_to_start:
         } else {
           goto try_gen;
         }
-      } else if (arg) {
+      } else if (arg && arg[0] != '#') {
 try_gen:
         /* Generate a dummy symbol. Its name will reference its address,
          * and where it will hit depending on current memory banking 
@@ -316,7 +306,7 @@ try_gen:
             printf("%s", symbol_get_name(param_symbol));
             tabulate(symbol_get_name(param_symbol), FIELD_WIDTH);
           }
-        } else if (arg && arg[0] == '$') {
+        } else if (arg) {
           if (!do_callgrind) {
             printf("%s", arg);
             tabulate(arg, FIELD_WIDTH);
