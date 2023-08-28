@@ -43,11 +43,13 @@ static void tabulate(const char *buf, int len) {
   if (do_callgrind)
     return;
 
-  i = buf ? strlen(buf) : 0;
+  i = len + 1 - (buf ? strlen(buf) : 0);
   if (i > 78)
     i = 78;
+  if (i < 0)
+    i = 0;
   memset(tbuf, ' ', i);
-  tbuf[i + 1] = '\0';
+  tbuf[i] = '\0';
   printf("%s", tbuf);
 }
 
