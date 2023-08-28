@@ -140,15 +140,6 @@ char __fastcall__ simple_serial_getc(void) {
     return c;
 }
 
-/* Output */
-// static int send_delay;
-int __fastcall__ simple_serial_putc(char c) {
-  if ((ser_put(c)) != SER_ERR_OVERFLOW) {
-    return c;
-  }
-
-  return EOF;
-}
 #pragma optimize(pop)
 
 #else
@@ -354,14 +345,14 @@ int simple_serial_getc_immediate(void) {
 }
 
 /* Output */
-int __fastcall__ simple_serial_putc(char c) {
+unsigned char __fastcall__ simple_serial_putc(char c) {
   int r = fputc(c, ttyfp);
   fflush(ttyfp);
 
   if (!flow_control_enabled)
     usleep(50);
 
-  return r;
+  return r == EOF ? -1 : 0;
 }
 
 #endif /* End of platform-dependant code */
