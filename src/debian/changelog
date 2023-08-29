@@ -1,4 +1,4 @@
-a2tools (1.4.0.1) bionic; urgency=medium
+a2tools (1.4.0.2) bionic; urgency=medium
 
   * Now with no memory corruption from cc65!
   * Serial code optimization
