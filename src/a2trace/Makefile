@@ -1,6 +1,6 @@
 prefix ?= /usr/local
-PROGRAM=trace-run
-SOURCES := trace-run.c \
+PROGRAM=a2trace
+SOURCES := main.c \
 	instructions.c \
 	symbols.c \
 	mame-params.c \
