@@ -193,32 +193,49 @@ char api_interact(char *id, char type, char *action) {
   return r;
 }
 
-void api_favourite_status(status *s) {
-  if ((s->favorited_or_reblogged & FAVOURITED) == 0) {
-    if (api_interact(s->id, 's', "favourite") == 0) {
-      s->favorited_or_reblogged |= FAVOURITED;
-      s->n_favourites++;
+static char *flags_str[LAST_FLAGS + 1] = {
+  NULL,
+  "favourite", /* (1<<0) */
+  "reblog",    /* (1<<1) */
+  NULL,
+  "bookmark",  /* (1<<2) */
+};
+
+static char flag_buf[14];
+static void api_status_toggle_flag(status *s, char flag) {
+  if ((s->flags & flag) == 0) {
+    if (api_interact(s->id, 's', flags_str[flag]) == 0) {
+      s->flags |= flag;
     }
   } else {
-    if (api_interact(s->id, 's', "unfavourite") == 0) {
-      s->favorited_or_reblogged &= ~FAVOURITED;
-      s->n_favourites--;
+    snprintf(flag_buf, sizeof(flag_buf), "un%s", flags_str[flag]);
+    if (api_interact(s->id, 's', flag_buf) == 0) {
+      s->flags &= ~flag;
     }
   }
 }
 
-void api_reblog_status(status *s) {
-  if ((s->favorited_or_reblogged & REBLOGGED) == 0) {
-    if (api_interact(s->id, 's', "reblog") == 0) {
-      s->favorited_or_reblogged |= REBLOGGED;
-      s->n_reblogs++;
-    }
+
+void api_favourite_status(status *s) {
+  api_status_toggle_flag(s, FAVOURITED);
+  if ((s->flags & FAVOURITED) != 0) {
+    s->n_favourites++;
   } else {
-    if (api_interact(s->id, 's', "unreblog") == 0) {
-      s->favorited_or_reblogged &= ~REBLOGGED;
-      s->n_reblogs--;
-    }
+    s->n_favourites--;
   }
+}
+
+void api_reblog_status(status *s) {
+  api_status_toggle_flag(s, REBLOGGED);
+  if ((s->flags & REBLOGGED) != 0) {
+    s->n_reblogs++;
+  } else {
+    s->n_reblogs--;
+  }
+}
+
+void api_bookmark_status(status *s) {
+  api_status_toggle_flag(s, BOOKMARKED);
 }
 
 char api_delete_status(status *s) {

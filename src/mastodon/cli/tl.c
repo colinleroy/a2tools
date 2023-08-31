@@ -970,9 +970,16 @@ static int show_list(list *l) {
         hide_cw = !hide_cw;
         limit =1; /* print the first one */
         break;
+      case 'k':
+        if (root_status) {
+          api_bookmark_status(root_status);
+          l->half_displayed_post = 0;
+        }
+        break;
       case 'f':
         if (root_status) {
           api_favourite_status(root_status);
+          l->half_displayed_post = 0;
         } else if (l->account) {
           cur_action = ACCOUNT_TOGGLE_RSHIP;
           rship_toggle_action = RSHIP_FOLLOWING;
@@ -982,6 +989,7 @@ static int show_list(list *l) {
       case 'b':
         if (root_status) {
           api_reblog_status(root_status);
+          l->half_displayed_post = 0;
         } else if (l->account) {
           cur_action = ACCOUNT_TOGGLE_RSHIP;
           rship_toggle_action = RSHIP_BLOCKING;

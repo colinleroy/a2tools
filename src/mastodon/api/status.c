@@ -86,32 +86,38 @@ static __fastcall__ char status_fill_from_json(status *s, char *id, char full, c
     r = surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, NULL,
                       ".reblog|((.media_attachments|map(. | select(.type==\"image\"))|length),"
                       ".replies_count,.reblogs_count,.favourites_count,.reblogged,.favourited,"
-                      ".account.id,.account.acct,.account.username,.visibility)");
+                      ".bookmarked,.account.id,.account.acct,.account.username,.visibility)");
   } else {
     r = surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, NULL,
                       "(.media_attachments|map(. | select(.type==\"image\"))|length),"
                       ".replies_count,.reblogs_count,.favourites_count,.reblogged,.favourited,"
-                      ".account.id,.account.acct,.account.username,.visibility");
+                      ".bookmarked,.account.id,.account.acct,.account.username,.visibility");
   }
 
   n_lines = strsplit_in_place(gen_buf, '\n', &lines);
-  if (r >= 0 && n_lines == 10) {
-    s->n_images = atoi(lines[0]);
-    s->n_replies = atoi(lines[1]);
-    s->n_reblogs = atoi(lines[2]);
-    s->n_favourites = atoi(lines[3]);
+  if (r >= 0 && n_lines == 11) {
+    r = atoi(lines[0]);
+    s->n_images = r > 255 ? 255 : r;
+    r = atoi(lines[1]);
+    s->n_replies = r > 255 ? 255 : r;
+    r = atoi(lines[2]);
+    s->n_reblogs = r > 255 ? 255 : r;
+    r = atoi(lines[3]);
+    s->n_favourites = r > 255 ? 255 : r;
     if (lines[4][0] == 't') /* true */
-      s->favorited_or_reblogged |= REBLOGGED;
+      s->flags |= REBLOGGED;
     if (lines[5][0] == 't') /* true */
-      s->favorited_or_reblogged |= FAVOURITED;
-    s->account->id = strdup(lines[6]);
-    s->account->acct = strdup(lines[7]);
-    s->account->username = strdup(lines[8]);
-    if (lines[9][1] == 'u') /* pUblic */
+      s->flags |= FAVOURITED;
+    if (lines[6][0] == 't') /* true */
+      s->flags |= BOOKMARKED;
+    s->account->id = strdup(lines[7]);
+    s->account->acct = strdup(lines[8]);
+    s->account->username = strdup(lines[9]);
+    if (lines[10][1] == 'u') /* pUblic */
       s->visibility = COMPOSE_PUBLIC;
-    else if (lines[9][1] == 'n') /* uNlisted */
+    else if (lines[10][1] == 'n') /* uNlisted */
       s->visibility = COMPOSE_UNLISTED;
-    else if (lines[9][1] == 'r') /* pRivate */
+    else if (lines[10][1] == 'r') /* pRivate */
       s->visibility = COMPOSE_PRIVATE;
     else
       s->visibility = COMPOSE_MENTION;

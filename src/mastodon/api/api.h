@@ -16,6 +16,7 @@ status *api_get_status(char *post_id, char full);
 
 void api_favourite_status(status *s);
 void api_reblog_status(status *s);
+void api_bookmark_status(status *s);
 char api_delete_status(status *s);
 
 char api_interact(char *id, char type, char *action);
