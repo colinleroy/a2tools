@@ -57,7 +57,7 @@ void __fastcall__ print_header(list *l, status *root_status, notification *root_
         " Search    : S     \r\n"
         " Notifs.   : N     \r\n"
         " Timelines : H/L/G \r\n"
-        " Bookmarks : X     \r\n"
+        " Bookmarks : K     \r\n"
         " Configure : O     \r\n"
         " Back      : Escape\r\n");
 
@@ -81,9 +81,9 @@ void __fastcall__ print_header(list *l, status *root_status, notification *root_
       dputs(" Boost     : B     \r\n");
     }
     if ((root_status->flags & BOOKMARKED) != 0) {
-      dputs(" UnBookmark: K     \r\n");
+      dputs(" Unbookmark: M     \r\n");
     } else {
-      dputs(" Bookmark  : K     \r\n");
+      dputs(" Bookmark  : M     \r\n");
     }
     if (my_account && !strcmp(root_status->account->id, my_account->id)) {
       dputs(" Edit      : E     \r\n"
