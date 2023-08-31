@@ -156,7 +156,10 @@ static int print_notification(notification *n) {
   return 0;
 }
 
-#define LOADING_TOOT_MSG "Loading toot..."
+/* Make those the same width so they overwrite each other */
+#define LOADING_TOOT_MSG    "Loading toot...      "
+#define NOTHING_TO_LOAD_MSG "Nothing more to load!"
+#define CLEAR_LOAD_MSG      "                     "
 
 static void item_free(list *l, char i) {
   if (l->kind != SHOW_NOTIFICATIONS) {
@@ -250,7 +253,7 @@ static char load_next_posts(list *l) {
     l->first_displayed_post -= loaded;
   } else {
     gotox(0);
-    dputs("Nothing more to load!");
+    dputs(NOTHING_TO_LOAD_MSG);
     l->eof = 1;
   }
   free(new_ids);
@@ -531,7 +534,7 @@ update:
       l->displayed_posts[i] = disp;
 
       if (i > first) {
-        dputs("                ");
+        dputs(CLEAR_LOAD_MSG);
         gotox(0);
       }
     }
@@ -803,7 +806,7 @@ static int load_state(list ***lists) {
     return -1;
   }
 
-  loaded = 0;
+  loaded = -1;
 
   dputs("Reloading state...");
 
@@ -892,10 +895,10 @@ static int load_state(list ***lists) {
 
       if (l->root && !strcmp(l->root, l->ids[j])) {
         l->displayed_posts[j] = item_get(l, j, 1);
-        loaded = 1;
+        loaded = j;
       }
     }
-    if (!loaded && l->first_displayed_post > -1) {
+    if (loaded != l->first_displayed_post && l->first_displayed_post > -1) {
       l->displayed_posts[l->first_displayed_post] =
           item_get(l, l->first_displayed_post, 1);
     }
