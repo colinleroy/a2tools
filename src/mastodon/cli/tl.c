@@ -180,6 +180,11 @@ static item *item_get(list *l, char i, char full) {
 static char load_around(list *l, char to_load, char *first, char *last, char **new_ids) {
   char loaded;
   l->half_displayed_post = 0;
+  if (l->kind == SHOW_BOOKMARKS && (first || last)) {
+    /* Must paginate those with Link: HTTP headers :( */
+    return 0;
+  }
+
   switch (l->kind) {
     case SHOW_HOME_TIMELINE:
     case SHOW_LOCAL_TIMELINE:
@@ -972,12 +977,6 @@ static int show_list(list *l) {
         hide_cw = !hide_cw;
         limit =1; /* print the first one */
         break;
-      case 'k':
-        if (root_status) {
-          api_bookmark_status(root_status);
-          l->half_displayed_post = 0;
-        }
-        break;
       case 'f':
         if (root_status) {
           api_favourite_status(root_status);
@@ -999,7 +998,10 @@ static int show_list(list *l) {
         }
         break;
       case 'm':
-        if (l->account) {
+        if (root_status) {
+          api_bookmark_status(root_status);
+          l->half_displayed_post = 0;
+        } else if (l->account) {
           cur_action = ACCOUNT_TOGGLE_RSHIP;
           rship_toggle_action = RSHIP_MUTING;
           return 0;
@@ -1033,7 +1035,7 @@ static int show_list(list *l) {
       case 'g':
         cur_action = SHOW_GLOBAL_TIMELINE;
         return 0;
-      case 'x':
+      case 'k':
         cur_action = SHOW_BOOKMARKS;
         return 0;
       case CH_ENTER: /* SHOW_FULL_STATUS */
