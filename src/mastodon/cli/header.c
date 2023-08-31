@@ -48,7 +48,7 @@ void __fastcall__ print_header(list *l, status *root_status, notification *root_
     dputs(my_account->username);
   }
 
-  #define BTM 3
+  #define BTM 2
   gotoxy(0,BTM);
 
   dputs("Commands:          \r\n"
@@ -57,6 +57,7 @@ void __fastcall__ print_header(list *l, status *root_status, notification *root_
         " Search    : S     \r\n"
         " Notifs.   : N     \r\n"
         " Timelines : H/L/G \r\n"
+        " Bookmarks : X     \r\n"
         " Configure : O     \r\n"
         " Back      : Escape\r\n");
 

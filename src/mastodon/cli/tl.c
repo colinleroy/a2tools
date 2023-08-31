@@ -56,6 +56,7 @@ static list *current_list = NULL;
 #define SHOW_HOME_TIMELINE   0
 #define SHOW_LOCAL_TIMELINE  1
 #define SHOW_GLOBAL_TIMELINE 2
+#define SHOW_BOOKMARKS       3
 #define SHOW_SEARCH_RES      'R'
 #define NAVIGATE             'N'
 #define ACCOUNT_TOGGLE_RSHIP 'F'
@@ -183,6 +184,7 @@ static char load_around(list *l, char to_load, char *first, char *last, char **n
     case SHOW_HOME_TIMELINE:
     case SHOW_LOCAL_TIMELINE:
     case SHOW_GLOBAL_TIMELINE:
+    case SHOW_BOOKMARKS:
       loaded = api_get_posts(tl_endpoints[l->kind], to_load, first, last, tl_filter[l->kind], ".[].id", new_ids);
       break;
     case SHOW_SEARCH_RES:
@@ -1031,6 +1033,9 @@ static int show_list(list *l) {
       case 'g':
         cur_action = SHOW_GLOBAL_TIMELINE;
         return 0;
+      case 'x':
+        cur_action = SHOW_BOOKMARKS;
+        return 0;
       case CH_ENTER: /* SHOW_FULL_STATUS */
       case CH_ESC:   /* BACK */
       case 'p':      /* SHOW_ACCOUNT */
@@ -1102,6 +1107,7 @@ void cli(void) {
       case SHOW_HOME_TIMELINE:
       case SHOW_LOCAL_TIMELINE:
       case SHOW_GLOBAL_TIMELINE:
+      case SHOW_BOOKMARKS:
         /* Create a new list if it's the first of different than
          * the current one. Otherwise, overwrite the current one.
          */

@@ -11,8 +11,8 @@ struct _item {
 #define ENDPOINT_BUF_SIZE 128
 extern char endpoint_buf[ENDPOINT_BUF_SIZE];
 
-extern char *tl_endpoints[3];
-extern char *tl_filter[3];
+extern char *tl_endpoints[4];
+extern char *tl_filter[4];
 
 /* Refs: https://www.aivosto.com/articles/charsets-7bit.html
  * and https://archive.org/details/Apple_IIgs_Hardware_Reference_HiRes/page/n275/mode/1up?view=theater
@@ -34,15 +34,16 @@ extern char *translit_charset;
 extern char arobase;
 
 #define TIMELINE_ENDPOINT       "/api/v1/timelines"
+#define BOOKMARKS_ENDPOINT      "/api/v1/bookmarks"
 #define ACCOUNTS_ENDPOINT       "/api/v1/accounts"
 #define STATUS_ENDPOINT         "/api/v1/statuses"
 #define NOTIFICATION_ENDPOINT   "/api/v1/notifications"
 #define SEARCH_ENDPOINT         "/api/v2/search"
 
-#define COMPOSE_PUBLIC 0
+#define COMPOSE_PUBLIC   0
 #define COMPOSE_UNLISTED 1
-#define COMPOSE_PRIVATE 2
-#define COMPOSE_MENTION 3
+#define COMPOSE_PRIVATE  2
+#define COMPOSE_MENTION  3
 
 #define HOME_TIMELINE     "home"
 #define PUBLIC_TIMELINE   "public"

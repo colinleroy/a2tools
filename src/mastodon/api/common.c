@@ -21,11 +21,13 @@ char endpoint_buf[ENDPOINT_BUF_SIZE];
 
 char *translit_charset = US_CHARSET;
 char arobase = '@';
-char *tl_endpoints[3] = { TIMELINE_ENDPOINT "/" HOME_TIMELINE,
+char *tl_endpoints[4] = { TIMELINE_ENDPOINT "/" HOME_TIMELINE,
                           TIMELINE_ENDPOINT "/" PUBLIC_TIMELINE,
-                          TIMELINE_ENDPOINT "/" PUBLIC_TIMELINE};
-char *tl_filter[3] = { NULL,
+                          TIMELINE_ENDPOINT "/" PUBLIC_TIMELINE,
+                          BOOKMARKS_ENDPOINT};
+char *tl_filter[4] = { NULL,
                        "&local=true",
+                       NULL,
                        NULL};
 
 extern char *instance_url;
