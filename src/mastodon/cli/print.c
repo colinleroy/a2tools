@@ -103,11 +103,12 @@ int print_status(status *s, char hide, char full, char *scrolled) {
 
   /* stats */
   FAST_CHECK_AND_CRLF();
-  cprintf("%d replies, %s%d boosts, %s%d favs, %1d images      ",
+  cprintf("%d replies, %s%d boosts, %s%d favs, %1d images %s",
         s->n_replies,
-        (s->favorited_or_reblogged & REBLOGGED) ? "*":"", s->n_reblogs,
-        (s->favorited_or_reblogged & FAVOURITED) ? "*":"", s->n_favourites,
-        s->n_images);
+        (s->flags & REBLOGGED) ? "*":"", s->n_reblogs,
+        (s->flags & FAVOURITED) ? "*":"", s->n_favourites,
+        s->n_images,
+        (s->flags & BOOKMARKED) ? " - bookmarked":"             ");
   FAST_CHECK_AND_CRLF();
 
   chline(scrw - LEFT_COL_WIDTH - 2);

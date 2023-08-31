@@ -52,67 +52,72 @@ void __fastcall__ print_header(list *l, status *root_status, notification *root_
   gotoxy(0,BTM);
 
   dputs("Commands:          \r\n"
-        " View toot: Enter  \r\n"
-        " Scroll   : Up/dn  \r\n"
-        " Search   : S      \r\n"
-        " Notifs.  : N      \r\n"
-        " Timelines: H/L/G  \r\n"
-        " Configure: O      \r\n"
-        " Back     : Escape \r\n");
+        " View toot : Enter \r\n"
+        " Scroll    : Up/dn \r\n"
+        " Search    : S     \r\n"
+        " Notifs.   : N     \r\n"
+        " Timelines : H/L/G \r\n"
+        " Configure : O     \r\n"
+        " Back      : Escape\r\n");
 
   if (root_status) {
     dputs("Toot:              \r\n"
-          " Reply    : R      \r\n");
+          " Reply     : R     \r\n");
     if (root_status->spoiler_text) {
-      dputs(" Toggle CW: W      \r\n");
+      dputs(" Toggle CW : W     \r\n");
     }
     if (root_status->n_images > 0) {
-      dputs(" Images   : I      \r\n");
+      dputs(" Images    : I     \r\n");
     }
-    if ((root_status->favorited_or_reblogged & FAVOURITED) != 0) {
-      dputs(" Unfav.   : F      \r\n");
+    if ((root_status->flags & FAVOURITED) != 0) {
+      dputs(" Unfav.    : F     \r\n");
     } else {
-      dputs(" Favourite: F      \r\n");
+      dputs(" Favourite : F     \r\n");
     }
-    if ((root_status->favorited_or_reblogged & REBLOGGED) != 0) {
-      dputs(" Unboost  : B      \r\n");
+    if ((root_status->flags & REBLOGGED) != 0) {
+      dputs(" Unboost   : B     \r\n");
     } else {
-      dputs(" Boost    : B      \r\n");
+      dputs(" Boost     : B     \r\n");
+    }
+    if ((root_status->flags & BOOKMARKED) != 0) {
+      dputs(" UnBookmark: K     \r\n");
+    } else {
+      dputs(" Bookmark  : K     \r\n");
     }
     if (my_account && !strcmp(root_status->account->id, my_account->id)) {
-      dputs(" Edit     : E      \r\n");
-      dputs(" Delete   : D      \r\n");
+      dputs(" Edit      : E     \r\n"
+            " Delete    : D     \r\n");
     }
-    dputs("Author:            \r\n"
-          " Profile  : P      \r\n");
+      dputs("Author:            \r\n"
+            " Profile   : P     \r\n");
   } else if (l && l->account) {
-    dputs("Profile:           \r\n"
-          " Images   : I      \r\n");
+      dputs("Profile:           \r\n"
+            " Images    : I     \r\n");
     if (api_relationship_get(l->account, RSHIP_FOLLOWING)
      || api_relationship_get(l->account, RSHIP_FOLLOW_REQ)) {
-      dputs(" Unfollow : F      \r\n");
+      dputs(" Unfollow  : F     \r\n");
     } else {
-      dputs(" Follow   : F      \r\n");
+      dputs(" Follow    : F     \r\n");
     }
     if (api_relationship_get(l->account, RSHIP_BLOCKING)) {
-      dputs(" Unblock  : B      \r\n");
+      dputs(" Unblock   : B     \r\n");
     } else {
-      dputs(" Block    : B      \r\n");
+      dputs(" Block     : B     \r\n");
     }
     if (api_relationship_get(l->account, RSHIP_MUTING)) {
-      dputs(" Unmute   : M      \r\n");
+      dputs(" Unmute    : M     \r\n");
     } else {
-      dputs(" Mute     : M      \r\n");
+      dputs(" Mute      : M     \r\n");
     }
   } else if (root_notif) {
-    dputs("Notifications:      \r\n"
-          " All      : A       \r\n"
-          " Mentions : M       \r\n"
-          "Profile:            \r\n"
-          " Open     : P       \r\n");
+      dputs("Notifications:     \r\n"
+            " All       : A     \r\n"
+            " Mentions  : M     \r\n"
+            "Profile:           \r\n"
+            " Open      : P     \r\n");
   }
   dputs("Writing:           \r\n"
-        " Compose  : C      \r\n");
+        " Compose   : C     \r\n");
 #ifdef __CC65__
   while (wherey() < 23) {
     dputs("                   \r\n");

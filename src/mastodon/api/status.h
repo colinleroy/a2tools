@@ -7,6 +7,8 @@ typedef struct _status status;
 
 #define FAVOURITED (1<<0)
 #define REBLOGGED  (1<<1)
+#define BOOKMARKED (1<<2)
+#define LAST_FLAGS BOOKMARKED
 
 struct _status {
   signed char displayed_at;
@@ -17,11 +19,11 @@ struct _status {
   char *content;
   account *account;
   char *reblogged_by;
-  char n_replies;
-  char n_reblogs;
-  char n_favourites;
-  char n_images;
-  char favorited_or_reblogged;
+  unsigned char n_replies;
+  unsigned char n_reblogs;
+  unsigned char n_favourites;
+  unsigned char n_images;
+  char flags;
   char visibility;
 };
 
