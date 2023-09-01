@@ -362,13 +362,16 @@ unsigned char __fastcall__ simple_serial_putc(char c) {
 #endif
 
 void __fastcall__ simple_serial_puts(char *buf) {
+  static char *cur;
+
+  cur = buf;
 
   if (serial_activity_indicator_enabled)
     activity_cb(1);
 
-  while (*buf) {
-    simple_serial_putc(*buf);
-    ++buf;
+  while (*cur) {
+    simple_serial_putc(*cur);
+    ++cur;
   }
 
   if (serial_activity_indicator_enabled)
