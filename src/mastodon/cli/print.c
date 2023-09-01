@@ -78,17 +78,19 @@ int print_status(status *s, char hide, char full, char *scrolled) {
     FAST_CHECK_AND_CRLF();
     s->displayed_at = disp_idx;
   }
-  
+
   /* Display name + date */
-  dputs(s->account->display_name); 
-  dputs(" - ");
-  dputs(s->created_at); 
-  FAST_CHECK_AND_CRLF();
+  dputs(s->account->display_name);
+  gotox(TIME_COLUMN);
+  cputs(s->created_at); /* no scrolling please */
+  y++; /* CRLF done by printing created_at */
+  if (y == scrh)
+    return -1;
 
   /* username (30 chars max)*/
   dputc(arobase);
   dputs(s->account->username);
-  
+
   FAST_CHECK_AND_CRLF();
   if (s->spoiler_text) {
     dputs("CW: ");
@@ -111,8 +113,10 @@ int print_status(status *s, char hide, char full, char *scrolled) {
         (s->flags & BOOKMARKED) ? " - bookmarked":"             ");
   FAST_CHECK_AND_CRLF();
 
-  chline(scrw - LEFT_COL_WIDTH - 2);
-  FAST_CHECK_AND_CRLF();
+  chline(scrw - LEFT_COL_WIDTH - 2); cputc('_'); /* Does CRLF */
+  y++;
+  if (y == scrh)
+    return -1;
 
   return 0;
 }

@@ -117,8 +117,9 @@ static int print_account(account *a, char *scrolled) {
     return -1;
   }
   CHECK_AND_CRLF();
-  chline(scrw - LEFT_COL_WIDTH - 2);
-  CHECK_AND_CRLF();
+  chline(scrw - LEFT_COL_WIDTH - 2); cputc('_'); /* Does CRLF */
+  if (wherey() == 0)
+    return -1;
 
   return 0;
 }
@@ -129,8 +130,13 @@ static int print_notification(notification *n) {
 
   width = scrw - LEFT_COL_WIDTH - 1;
   n->displayed_at = wherey();
-  cprintf("%s - %s", n->display_name, n->created_at);
-  CHECK_AND_CRLF();
+  dputs(n->display_name);
+  gotox(TIME_COLUMN);
+  cputs(n->created_at); /* no scrolling please */
+  /* no CRLF, done by created_at */
+  if (wherey() == 0)
+    return -1;
+
   w = notification_verb(n);
   dputs(w);
   dputs(": ");
@@ -151,8 +157,9 @@ static int print_notification(notification *n) {
   }
   CHECK_AND_CRLF();
 
-  chline(scrw - LEFT_COL_WIDTH - 2);
-  CHECK_AND_CRLF();
+  chline(scrw - LEFT_COL_WIDTH - 2); cputc('_'); /* Does CRLF */
+  if (wherey() == 0)
+    return -1;
 
   return 0;
 }
@@ -797,6 +804,22 @@ static void launch_command(char *command, char *p1, char *p2, char *p3) {
 #endif
 }
 
+static int state_get_int(FILE *fp) {
+  /* coverity[tainted_argument] */
+  fgets(gen_buf, BUF_SIZE, fp);
+  return atoi(gen_buf);
+}
+
+static char *state_get_str(FILE *fp) {
+  /* coverity[tainted_argument] */
+  fgets(gen_buf, BUF_SIZE, fp);
+  if (gen_buf[0] != '\n') {
+    *strchr(gen_buf, '\n') = '\0';
+    return strdup(gen_buf);
+  }
+  return NULL;
+}
+
 static int load_state(list ***lists) {
   char i,j, loaded;
   signed char num_lists;
@@ -817,8 +840,7 @@ static int load_state(list ***lists) {
 
   dputs("Reloading state...");
 
-  fgets(gen_buf, BUF_SIZE, fp);
-  num_lists = atoi(gen_buf);
+  num_lists = state_get_int(fp);
   if (num_lists < 0) {
     *lists = NULL;
     printf("Error %d\n", errno);
@@ -838,43 +860,15 @@ static int load_state(list ***lists) {
     memset(l, 0, sizeof(list));
     (*lists)[i] = l;
 
-    /* coverity[tainted_argument] */
-    fgets(gen_buf, BUF_SIZE, fp);
-    l->kind = atoi(gen_buf);
+    l->kind = state_get_int(fp);
+    l->root = state_get_str(fp);
+    l->leaf_root = state_get_str(fp);
+    l->last_displayed_post = state_get_int(fp);
+    l->eof = state_get_int(fp);
+    l->scrolled = state_get_int(fp);
+    l->first_displayed_post = state_get_int(fp);
+    l->n_posts = state_get_int(fp);
 
-    /* coverity[tainted_argument] */
-    fgets(gen_buf, BUF_SIZE, fp);
-    if (gen_buf[0] != '\n') {
-      *strchr(gen_buf, '\n') = '\0';
-      l->root = strdup(gen_buf);
-    }
-
-    /* coverity[tainted_argument] */
-    fgets(gen_buf, BUF_SIZE, fp);
-    if (gen_buf[0] != '\n') {
-      *strchr(gen_buf, '\n') = '\0';
-      l->leaf_root = strdup(gen_buf);
-    }
-
-    /* coverity[tainted_argument] */
-    fgets(gen_buf, BUF_SIZE, fp);
-    l->last_displayed_post = atoi(gen_buf);
-
-    /* coverity[tainted_argument] */
-    fgets(gen_buf, BUF_SIZE, fp);
-    l->eof = atoi(gen_buf);
-
-    /* coverity[tainted_argument] */
-    fgets(gen_buf, BUF_SIZE, fp);
-    l->scrolled = atoi(gen_buf);
-
-    /* coverity[tainted_argument] */
-    fgets(gen_buf, BUF_SIZE, fp);
-    l->first_displayed_post = atoi(gen_buf);
-
-    /* coverity[tainted_argument] */
-    fgets(gen_buf, BUF_SIZE, fp);
-    l->n_posts = atoi(gen_buf);
     n_posts = l->n_posts;
 
     memset(l->displayed_posts, 0, N_STATUS_TO_LOAD * sizeof(status *));
@@ -886,19 +880,11 @@ static int load_state(list ***lists) {
       l->account = api_get_full_account(gen_buf);
     }
 
-    /* coverity[tainted_argument] */
-    fgets(gen_buf, BUF_SIZE, fp);
-    l->account_height = atoi(gen_buf);
+    l->account_height = state_get_int(fp);
 
     for (j = 0; j < n_posts; j++) {
-      /* coverity[tainted_argument] */
-      fgets(gen_buf, BUF_SIZE, fp);
-      *strchr(gen_buf, '\n') = '\0';
-      l->ids[j] = strdup(gen_buf);
-
-      /* coverity[tainted_argument] */
-      fgets(gen_buf, BUF_SIZE, fp);
-      l->post_height[j] = atoi(gen_buf);
+      l->ids[j] = state_get_str(fp);
+      l->post_height[j] = state_get_int(fp);
 
       if (l->root && !strcmp(l->root, l->ids[j])) {
         l->displayed_posts[j] = item_get(l, j, 1);

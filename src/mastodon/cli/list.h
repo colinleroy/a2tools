@@ -8,6 +8,8 @@ typedef struct _list list;
 
 #define N_STATUS_TO_LOAD 10
 
+#define TIME_COLUMN 41
+
 struct _list {
   char kind;
   char *root; /* For timelines */
