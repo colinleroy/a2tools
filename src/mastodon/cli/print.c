@@ -26,8 +26,14 @@
 #include "clrzone.h"
 #include "scrollwindow.h"
 
-int print_buf(char *w, char hide, char allow_scroll, char *scrolled) {
-  char x = wherex(), y = wherey();
+int print_buf(char *buffer, char hide, char allow_scroll, char *scrolled) {
+  static char x, y;
+  static char *w;
+
+  x = wherex();
+  y = wherey();
+  w = buffer;
+
   while (*w) {
     if (allow_scroll && y == scrh - 2) {
       gotoxy(0, scrh-1);

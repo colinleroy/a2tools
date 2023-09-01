@@ -18,7 +18,7 @@
   dputs("\r\n");              \
 } while (0)
 
-int print_buf(char *w, char hide, char allow_scroll, char *scrolled);
+int print_buf(char *buffer, char hide, char allow_scroll, char *scrolled);
 int print_status(status *s, char hide, char full, char *scrolled);
 
 #endif
