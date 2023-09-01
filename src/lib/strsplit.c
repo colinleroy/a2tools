@@ -31,39 +31,44 @@
 static int __fastcall__ _strsplit_int(char in_place, char *in, char split, char ***out) {
   char *start;
   size_t n_tokens;
+  char **tokens;
+  char *src = in;
 
-  start = in;
   n_tokens = 1;
   if (!in) {
     *out = NULL;
     return 0;
   }
-  while (*in) {
-    if (*in == split) {
+
+  start = src;
+  while (*src) {
+    if (*src == split) {
       ++n_tokens;
     }
-    ++in;
+    ++src;
   }
 
-  *out = malloc(n_tokens * sizeof(char *));
-  in = start;
+  tokens = malloc(n_tokens * sizeof(char *));
+  src = start;
   n_tokens = 0;
 
-  while (*in) {
-    if (*in == split) {
-      *in = '\0';
-      (*out)[n_tokens] = in_place ? start : strdup(start);
+  while (*src) {
+    if (*src == split) {
+      *src = '\0';
+      tokens[n_tokens] = in_place ? start : strdup(start);
       ++n_tokens;
-      start = in + 1;
+      start = src + 1;
     }
-    ++in;
+    ++src;
   }
 
   /* Last token */
   if (*start) {
-    (*out)[n_tokens] = in_place ? start : strdup(start);
+    tokens[n_tokens] = in_place ? start : strdup(start);
     ++n_tokens;
   }
+
+  *out = tokens;
   return n_tokens;
 }
 
