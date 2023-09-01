@@ -183,11 +183,14 @@ static function_calls **irq_tree = NULL;
 static function_calls **tree_functions = NULL;
 
 /* The current tree depth */
-static int            tree_depth = 0;
+static int tree_depth = 0;
 
 /* Storage for the tree depth before entering
  * IRQ handlers */
 static int tree_depth_before_intr[2];
+
+/* MLI hack (rti'ng from anywhere) */
+static int mli_call_depth = -1;
 
 /* Interrupt handler counter (0xC803 will call
  * ProDOS's 0xBFEB), so two handlers will run */
@@ -515,6 +518,11 @@ static void add_callee(function_calls *caller, function_calls *callee) {
   //         caller->addr, symbol_get_name(caller->func_symbol));
 }
 
+static void tabulate_stack(void) {
+  fprintf(stderr, ";");
+  for (int i = 0; i < tree_depth; i++)
+    fprintf(stderr, " ");
+}
 /* Transfer the instruction count to the top of the tree */
 static void update_caller_incl_cost(int instr_count, int cycle_count) {
   int i = tree_depth;
@@ -548,9 +556,7 @@ static void start_call_info(int addr, int mem, int lc, int line_num) {
 
   /* Log */
   if (verbose) {
-    fprintf(stderr, ";");
-    for (int i = 0; i < tree_depth; i++)
-      fprintf(stderr, " ");
+    tabulate_stack();
 
     fprintf(stderr, "depth %d, $%04X (%s/LC%d), %s calls %s (asm line %d)\n",
       tree_depth, addr, mem == RAM ? "RAM":"ROM", lc,
@@ -574,7 +580,7 @@ static void start_call_info(int addr, int mem, int lc, int line_num) {
   tree_depth++;
 }
 
-static void end_call_info(int line_num) {
+static void end_call_info(int op_addr, int line_num) {
   function_calls *my_info;
 
   if (tree_depth == 0) {
@@ -590,9 +596,7 @@ static void end_call_info(int line_num) {
 
   /* Log */
   if (verbose) {
-    fprintf(stderr, ";");
-    for (int i = 0; i < tree_depth; i++)
-      fprintf(stderr, " ");
+    tabulate_stack();
     fprintf(stderr, "depth %d, %s returning (asm line %d)\n", tree_depth,
             symbol_get_name(my_info->func_symbol), line_num);
   }
@@ -657,7 +661,7 @@ int update_call_counters(int op_addr, const char *instr, int param_addr, int cyc
         fprintf(stderr, "; rti from interrupt at depth %d\n", tree_depth);
 
       /* Record end of call */
-      end_call_info(line_num);
+      end_call_info(op_addr, line_num);
 
       /* Decrease IRQ stack */
       in_interrupt--;
@@ -675,8 +679,28 @@ int update_call_counters(int op_addr, const char *instr, int param_addr, int cyc
       }
     } else if (op_addr == PRODOS_MLI_RETURN_ADDR) {
       /* Hack: ProDOS MLI calls return with an rti,
-       * handle it as an rts. */
-      goto rts;
+       * handle it as an rts, and go back up to caller's depth. */
+      if (mli_call_depth == -1) {
+        fprintf(stderr, "Untracked end of MLI call at depth %d\n", tree_depth);
+        exit(1);
+      } else {
+        tabulate_stack();
+        fprintf(stderr, "(End of MLI call at depth %d)\n", tree_depth);
+        /* don't register an rts if we just went out of irq,
+         * we registered it before, same as jsr's */
+        if (!just_out_of_irq) {
+          while (tree_depth > mli_call_depth)
+            end_call_info(op_addr, line_num);
+        }
+        tabulate_stack();
+        fprintf(stderr, "(Returned from MLI call at depth %d)\n", tree_depth);
+
+        /* Unset flag */
+        just_out_of_irq = 0;
+
+        /* Unset MLI call flag */
+        mli_call_depth = -1;
+      }
     }
 
   /* cc65 runtime jmp's into _main, record it as if it
@@ -689,19 +713,31 @@ int update_call_counters(int op_addr, const char *instr, int param_addr, int cyc
 jsr:
     /* don't register a jsr if we just went out of
      * irq, we registered it right before entering IRQ */
-    if (!just_out_of_irq)
+    if (!just_out_of_irq) {
       start_call_info(param_addr, dest, lc, line_num);
+
+      /* Ugly hack (both because of MAME's symbol and because of the hardcoding).
+       * ProDOS MLI uses rti to return faster to where it was called from. */
+      if (!strncmp(symbol_get_name(tree_functions[tree_depth - 1]->func_symbol), "RAM.LC1.ProDOS 8: ", 18)) {
+        if (mli_call_depth != -1) {
+          fprintf(stderr, "Error: unhandled recursive MLI call at line %d\n", line_num);
+          exit(1);
+        }
+        mli_call_depth = tree_depth - 1;
+        tabulate_stack();
+        fprintf(stderr, "Recording MLI call at depth %d\n", mli_call_depth);
+      }
+    }
 
     /* Unset flag */
     just_out_of_irq = 0;
 
   /* Are we returning from a function? */
   } else if (!strcmp(instr, "rts") && tree_depth > 0) {
-rts:
     /* don't register an rts if we just went out of irq,
      * we registered it before, same as jsr's */
     if (!just_out_of_irq)
-      end_call_info(line_num);
+      end_call_info(op_addr, line_num);
 
     /* Unset flag */
     just_out_of_irq = 0;
@@ -775,7 +811,7 @@ void finalize_call_counters(void) {
 
   /* finish all calls to count their self count */
   while (tree_depth > 0)
-    end_call_info(0);
+    end_call_info(0x0000, 0);
 
   /* File header */
   printf("# callgrind format\n"

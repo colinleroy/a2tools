@@ -109,7 +109,6 @@ skip_to_start:
     int a_mode;
     int cycles;
 
-    cur_line++;
     buf_len = strlen(buf);
 
     if (buf_len == 0) {
@@ -154,6 +153,8 @@ skip_to_start:
       char comment[BUF_SIZE];
       char * cur_lineaddress = parts[0] + op_idx;
       int a, x, y;
+
+      cur_line++;
 
       /* get the op's address */
       op_addr = hex2int(cur_lineaddress);
@@ -263,12 +264,12 @@ try_gen:
         param_addr = symbol_get_addr(param_symbol);
       }
 
+      int backtab = 0;
       /* Print the line as-is */
       if (!do_callgrind) {
-        printf("%s", line_buf);
+        printf("%08d %s", cur_line, line_buf);
         if (strlen(line_buf) > op_idx + 18) {
-          printf("\n");
-          tabulate("", op_idx + 18);
+          backtab = op_idx + 19 - strlen(line_buf);
         }
       }
 
@@ -294,10 +295,10 @@ try_gen:
         if (instr_symbol) {
           if (!do_callgrind) {
             printf("%s", symbol_get_name(instr_symbol));
-            tabulate(symbol_get_name(instr_symbol), FIELD_WIDTH);
+            tabulate(symbol_get_name(instr_symbol), FIELD_WIDTH + backtab);
           }
         } else {
-          tabulate(NULL, FIELD_WIDTH);
+          tabulate(NULL, FIELD_WIDTH + backtab);
         }
 
         /* Print the argument's symbol */
