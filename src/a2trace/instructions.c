@@ -137,6 +137,9 @@ int lc_bank   = 1;
 
 extern int start_addr;
 static int _main_addr;
+static int handle_rom_irq_addr = 0x0;
+static int handle_ram_irq_addr = 0x0;
+
 extern int verbose;
 
 /* Statistics structure */
@@ -553,7 +556,10 @@ static void start_call_info(int addr, int mem, int lc, int line_num) {
   my_info = get_function_calls_for_addr(addr);
   /* FIXME shouldn't the stats structs be indexed by addr / mem / lc... */
   my_info->func_symbol = symbol_get_by_addr(addr, mem, lc);
-
+  if (my_info->func_symbol == NULL) {
+    fprintf(stderr, "No symbol found for 0x%04X, %d, %d\n", addr, mem, lc);
+    exit(1);
+  }
   /* Log */
   if (verbose) {
     tabulate_stack();
@@ -633,7 +639,8 @@ int update_call_counters(int op_addr, const char *instr, int param_addr, int cyc
   count_instruction(instr, cycle_count);
 
   /* Are we entering an IRQ handler ? */
-  if (op_addr == ROM_IRQ_ADDR || op_addr == PRODOS_IRQ_ADDR) {
+  if (op_addr == ROM_IRQ_ADDR || op_addr == PRODOS_IRQ_ADDR
+   || op_addr == handle_rom_irq_addr || op_addr == handle_ram_irq_addr) {
     if (verbose)
       fprintf(stderr, "; interrupt at depth %d\n", tree_depth);
 
@@ -868,4 +875,6 @@ void allocate_trace_counters(void) {
   /* register _main's address for later - crt0 will
    * jmp to it and we'll still want to record it. */
   _main_addr = symbol_get_addr(symbol_get_by_name("_main"));
+  handle_rom_irq_addr = symbol_get_addr(symbol_get_by_name("handle_rom_irq"));
+  handle_ram_irq_addr = symbol_get_addr(symbol_get_by_name("handle_ram_irq"));
 }

@@ -487,9 +487,14 @@ void map_slocs_to_adresses(void) {
 
 /* Get a symbol by its address, depending on current banking */
 dbg_symbol *symbol_get_by_addr(int addr, int mem, int lc) {
+  char buf[6];
+
   if (addr < 0xD000 || addr > 0xDFFF) {
     /* There's no LC bank 2 out of this range */
     lc = 1;
+  }
+  if (addr < 0xC800) {
+    mem = RAM;
   }
 
   /* Hack for generated symbols with no address
@@ -518,7 +523,9 @@ dbg_symbol *symbol_get_by_addr(int addr, int mem, int lc) {
     if (addr > STORAGE_SIZE)
       return gen_symbols[addr - STORAGE_SIZE];
   }
-  return NULL;
+
+  snprintf(buf, 6, "%04X", addr);
+  return generate_symbol(buf, addr, mem, lc, NULL);
 }
 
 /* Get symbol by name */
@@ -554,7 +561,7 @@ dbg_symbol *generate_symbol(const char *param_name, int param_addr, int mem, int
 
   /* Unset banking according to address */
   lc = (param_addr < 0xD000 || param_addr > 0xDFFF) ? 1 : lc;
-  mem = (param_addr < 0xD000 || param_addr > 0xDFFF) ? RAM : mem;
+  mem = (param_addr < 0xC800) ? RAM : mem;
 
   /* Format the name */
   snprintf(full_name, 64, "%s.LC%d.", (mem == RAM ? "RAM":"ROM"), lc);
