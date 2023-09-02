@@ -289,6 +289,13 @@ cleanup_file:
 
     free(file->name);
     file->name = tmp;
+
+    if (strchr(file->name, ' ')) {
+      char *char_after = strchr(file->name, ' ');
+      char_after++;
+      if (*char_after == '\0')
+        *strchr(file->name, ' ') = '\0';
+    }
   }
 }
 

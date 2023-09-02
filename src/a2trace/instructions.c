@@ -684,16 +684,20 @@ int update_call_counters(int op_addr, const char *instr, int param_addr, int cyc
         fprintf(stderr, "Untracked end of MLI call at depth %d\n", tree_depth);
         exit(1);
       } else {
-        tabulate_stack();
-        fprintf(stderr, "(End of MLI call at depth %d)\n", tree_depth);
+        if (verbose) {
+          tabulate_stack();
+          fprintf(stderr, "(End of MLI call at depth %d)\n", tree_depth);
+        }
         /* don't register an rts if we just went out of irq,
          * we registered it before, same as jsr's */
         if (!just_out_of_irq) {
           while (tree_depth > mli_call_depth)
             end_call_info(op_addr, line_num);
         }
-        tabulate_stack();
-        fprintf(stderr, "(Returned from MLI call at depth %d)\n", tree_depth);
+	if (verbose) {
+          tabulate_stack();
+          fprintf(stderr, "(Returned from MLI call at depth %d)\n", tree_depth);
+        }
 
         /* Unset flag */
         just_out_of_irq = 0;
@@ -724,8 +728,10 @@ jsr:
           exit(1);
         }
         mli_call_depth = tree_depth - 1;
-        tabulate_stack();
-        fprintf(stderr, "Recording MLI call at depth %d\n", mli_call_depth);
+        if (verbose) {
+          tabulate_stack();
+          fprintf(stderr, "Recording MLI call at depth %d\n", mli_call_depth);
+        }
       }
     }
 
