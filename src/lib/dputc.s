@@ -25,13 +25,14 @@ _dputcxy:
 _dputc:
         cmp     #$0D            ; Test for \r = carrage return
         beq     left
+        bcs     :+              ; Skip other tests if possible
         cmp     #$0A            ; Test for \n = line feed
         beq     dnewline
         cmp     #$08            ; Test for backspace
         beq     backspace
         cmp     #$07            ; Test for bell
         beq     bell
-        eor     #$80            ; Invert high bit
+:       eor     #$80            ; Invert high bit
 
 dputdirect:
         jsr     putchar
@@ -40,8 +41,7 @@ dputdirect:
         cmp     WNDWDTH
         bcc     :+
         jsr     dnewline
-left:   lda     #$00            ; Goto left edge of screen
-        sta     CH
+left:   stz     CH              ; Goto left edge of screen
 :       rts
 
 bell:
