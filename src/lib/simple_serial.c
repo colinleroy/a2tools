@@ -350,7 +350,7 @@ unsigned char __fastcall__ simple_serial_putc(char c) {
   fflush(ttyfp);
 
   if (!flow_control_enabled)
-    usleep(1000);
+    usleep(500);
 
   return r == EOF ? -1 : 0;
 }
