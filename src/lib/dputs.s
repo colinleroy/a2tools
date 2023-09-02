@@ -14,17 +14,14 @@ _dputsxy:
         sta     ptr1            ; Save s for later
         stx     ptr1+1
         jsr     gotoxy          ; Set cursor, pop x and y
-        jmp     L0              ; Same as dputs...
+        jmp     L1              ; Same as dputs...
 
 _dputs: sta     ptr1            ; Save s
         stx     ptr1+1
-L0:     ldy     #0
-L1:     lda     (ptr1),y
+L1:     lda     (ptr1)
         beq     L9              ; Jump if done
-        iny
-        sty     tmp1            ; Save offset
         jsr     _dputc          ; Output char, advance cursor
-        ldy     tmp1            ; Get offset
+        inc     ptr1            ; Bump low byte
         bne     L1              ; Next char
         inc     ptr1+1          ; Bump high byte
         bne     L1
