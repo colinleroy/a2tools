@@ -22,6 +22,8 @@ static int tty_speed_from_str(char *tmp) {
     return B9600;
   if (!strcmp(tmp, "19200"))
     return B19200;
+  if (!strcmp(tmp, "38400"))
+    return B38400;
   if (!strcmp(tmp, "57600"))
     return B57600;
   if (!strcmp(tmp, "115200"))
@@ -45,6 +47,8 @@ static char *tty_speed_to_str(int speed) {
     return "9600";
   if (speed == B19200)
     return "19200";
+  if (speed == B38400)
+    return "38400";
   if (speed == B57600)
     return "57600";
   if (speed == B115200)
