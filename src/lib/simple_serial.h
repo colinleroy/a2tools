@@ -39,8 +39,5 @@ void __fastcall__ simple_serial_read(char *ptr, size_t nmemb);
 void __fastcall__ simple_serial_puts(char *buf);
 void __fastcall__ simple_serial_write(char *ptr, size_t nmemb);
 
-/* Status */
-void __fastcall__ simple_serial_set_activity_indicator(char enabled, int x, int y);
-
 void simple_serial_printf(const char* format, ...);
 #endif

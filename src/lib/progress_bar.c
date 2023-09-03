@@ -27,17 +27,26 @@
 void progress_bar(int x, int y, int width, size_t cur, size_t end) {
   unsigned long percent;
   unsigned int i;
+  static unsigned long last_percent;
 
-  gotoxy(x, y);
+  if (x >= 0) {
+    gotoxy(x, y);
+    last_percent = 0;
+  }
+
   percent = (long)cur * (long)width;
   percent = percent/((long)end);
+
   revers(1);
-  for (i = 0; i <= ((int)percent) && i < width; i++)
+  for (i = last_percent; i < ((int)percent) && i < width; i++)
     cputc(' ');
   revers(0);
+
+  last_percent = percent;
 
   if (cur == 0) {
     for (i = (int)(percent + 1L); i < width; i++)
       cputc(0x7F);
+    gotoxy(x, y);
   }
 }

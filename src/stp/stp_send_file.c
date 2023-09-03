@@ -143,6 +143,8 @@ void stp_send_file(char *remote_dir) {
     cprintf("Reading %zu bytes...", chunksize);
 
     r = fread(data, sizeof(char), chunksize, fp);
+    progress_bar(0, start_y + 3, scrw, total + (chunksize / 2), filesize);
+
     total = total + r;
 
     clrzone(0, start_y, scrw - 1, start_y);
