@@ -24,7 +24,7 @@ char *get_url(char *url) {
   const surl_response *resp;
   char *buffer = NULL;
 
-  simple_serial_set_activity_indicator(1, 39, 0);
+  simple_serial_set_activity_indicator(1, 0, 0);
   resp = surl_start_request(SURL_METHOD_GET, url, NULL, 0);
 
   if (resp->code == 200) {
