@@ -40,7 +40,7 @@ void stp_print_header(char *url) {
     }
   }
   clrzone(0, 0, scrw - 1, 0);
-  gotoxy(2, 0);
+  gotoxy(0, 0);
   if (strlen(no_pass_url) > scrw - 1) {
     char *tmp = strdup(no_pass_url + strlen(no_pass_url) - scrw + 5);
     cprintf("...%s", tmp);
