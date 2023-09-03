@@ -29,6 +29,16 @@ stp.dsk: $(stp_disk_PROGS)
 	cp $(CLEANDISK) $@; \
 	java -jar bin/ac.jar -n $@ STP
 	java -jar bin/ac.jar -p $@ STP.SYSTEM SYS < bin/loader.system; \
+	for prog in $^; do \
+		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
+	done
+	cp $@ ~/Documents/ADTPro-2.1.0/disks/; \
+	cp $@ dist/; \
+
+stpperso.dsk: $(stp_disk_PROGS)
+	cp $(CLEANDISK) $@; \
+	java -jar bin/ac.jar -n $@ STP
+	java -jar bin/ac.jar -p $@ STP.SYSTEM SYS < bin/loader.system; \
 	java -jar bin/ac.jar -p $@ STPSTARTURL TXT < src/stp/STPSTARTURL; \
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
@@ -50,7 +60,17 @@ homectrl.dsk: $(homectrl_disk_PROGS)
 	cp $(CLEANDISK) $@; \
 	java -jar bin/ac.jar -n $@ HOMECONTROL
 	java -jar bin/ac.jar -p $@ HOMECTRL.SYSTEM SYS < bin/loader.system; \
-	# java -jar bin/ac.jar -p $@ SRVURL TXT < src/homecontrol-client/SRVURL; \
+	for prog in $^; do \
+		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
+	done
+	cp $@ ~/Documents/ADTPro-2.1.0/disks/; \
+	cp $@ dist/; \
+
+homectrlperso.dsk: $(homectrl_disk_PROGS)
+	cp $(CLEANDISK) $@; \
+	java -jar bin/ac.jar -n $@ HOMECONTROL
+	java -jar bin/ac.jar -p $@ HOMECTRL.SYSTEM SYS < bin/loader.system; \
+	java -jar bin/ac.jar -p $@ SRVURL TXT < src/homecontrol-client/SRVURL; \
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
@@ -81,4 +101,4 @@ mastodon.dsk: $(mastodon_disk_PROGS)
 	cp $@ ~/Documents/ADTPro-2.1.0/disks/; \
 	cp $@ dist/; \
 
-dist: clean all stp.dsk telnet.dsk homectrl.dsk mastoperso.dsk mastodon.dsk
+dist: clean all stp.dsk telnet.dsk homectrl.dsk mastodon.dsk mastoperso.dsk homectrlperso.dsk stpperso.dsk

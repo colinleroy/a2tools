@@ -1,2 +1,2 @@
 #!/bin/bash
-make clean all && cd ../.. && make homectrl.dsk && mame apple2c0 -window -flop1 homectrl.dsk -resolution 560x384 -modem null_modem -bitb socket.localhost:2000 -nomouse -nodebug; cd src/homecontrol-client
+make clean all && cd ../.. && make homectrlperso.dsk && mame apple2c0 -window -flop1 homectrlperso.dsk -resolution 560x384 -modem null_modem -bitb socket.localhost:2000 -nomouse -nodebug; cd src/homecontrol-client
