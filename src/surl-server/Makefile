@@ -10,7 +10,7 @@ hgrconv_SOURCES := hgr-convert.c helpers/hgr.c
 
 CFLAGS= -I ../lib -I helpers $(shell sdl-config --cflags) -g -O0 -Wall -Wno-char-subscripts -Wno-deprecated-declarations -Werror -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
 .PHONY: all clean
-all: $(PROGRAM)
+all: $(PROGRAM) hgr-convert
 
 $(PROGRAM): $(SOURCES)
 	gcc $(CFLAGS) \

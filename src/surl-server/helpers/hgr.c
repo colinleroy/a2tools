@@ -373,10 +373,10 @@ static void sdl_image_scale (SDL_Surface *src, SDL_Surface *dst, float asprat)
   dstw = (float)dst->w;
   dsth = (float)dst->h;
 
-  SDL_LockSurface(dst);
 
   if (srch != dsth || srcw != dstw)
   {
+    SDL_LockSurface(dst);
     xfactor = srcw / dstw / asprat;
     yfactor = srch / dsth;
 
@@ -455,8 +455,11 @@ static void sdl_image_scale (SDL_Surface *src, SDL_Surface *dst, float asprat)
       sx = bx;
       sy += 1;
     }
+    SDL_UnlockSurface(dst);
+  } else {
+    printf("No resizing needed.\n");
+    SDL_BlitSurface(src, NULL, dst, NULL);
   }
-  SDL_UnlockSurface(dst);
 }
 
 static inline void setRGB(png_byte *ptr, int value) {
