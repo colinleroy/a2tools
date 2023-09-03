@@ -96,7 +96,6 @@ int update_switches(hc_switch ***switches_list) {
 void toggle_switch(hc_switch *sw) {
   char *response;
   char *url = malloc(BUFSIZE);
-  int i;
 
   printxcenteredbox(18, 5);
   printxcentered(12, "Toggling...");
@@ -106,6 +105,4 @@ void toggle_switch(hc_switch *sw) {
 
   free(url);
   free(response);
-
-  for (i = 0; i < 10000; i++); /* wait long enough */
 }
