@@ -210,12 +210,15 @@ int stp_save(char *full_filename, char *out_dir, const surl_response *resp) {
 
   progress_bar(0, 15, scrw - 1, 0, resp->size);
   do {
+    size_t bytes_to_read = min(buf_size, resp->size - total);
+
     clrzone(0,14, scrw - 1, 14);
     gotoxy(0, 14);
-    cprintf("Reading %zu bytes...", min(buf_size, resp->size - total));
+    cprintf("Reading %zu bytes...", bytes_to_read);
 
-    r = surl_receive_data(data, buf_size);
+    r = surl_receive_data(data, bytes_to_read);
 
+    progress_bar(0, 15, scrw - 1, total + (bytes_to_read / 2), resp->size);
     clrzone(0,14, scrw - 1, 14);
     gotoxy(0, 14);
     total += r;

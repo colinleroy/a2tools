@@ -121,14 +121,10 @@ read_filename_again:
       exit (1);
     }
 
-    simple_serial_set_activity_indicator(1, -1, -1);
-
     printf("Reading data...");
     fflush(stdout);
     simple_serial_read(data, block);
     total += block;
-
-    simple_serial_set_activity_indicator(0, -1, -1);
 
     printf("\nRead %u bytes. Writing %s...\n", total, filename);
 

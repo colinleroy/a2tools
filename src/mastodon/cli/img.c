@@ -166,12 +166,12 @@ static void img_display(media *m, char idx, char num_images) {
 
       if (len == HGR_LEN) {
         int r = 0, b = HGR_LEN/PROGRESS_STEPS;
+        progress_bar(0, 23, NUMCOLS, 0, HGR_LEN);
         while (len > 0) {
-          progress_bar(0, 23, NUMCOLS, r, HGR_LEN);
           simple_serial_read((char *)HGR_PAGE + r, b);
           len -= b;
           r+= b;
-
+          progress_bar(-1, -1, NUMCOLS, r, HGR_LEN);
         }
         clrzone(0, 22, NUMCOLS-1, 23);
         toggle_legend(0);
