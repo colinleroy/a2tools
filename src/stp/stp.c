@@ -263,7 +263,7 @@ int main(void) {
   clrscr();
   screensize(&scrw, &scrh);
 
-  simple_serial_set_activity_indicator(1, scrw - 1, 0);
+  simple_serial_set_activity_indicator(1, 0, 0);
 
   surl_ping();
   clrscr();

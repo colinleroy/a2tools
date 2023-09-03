@@ -35,6 +35,9 @@ void progress_bar(int x, int y, int width, size_t cur, size_t end) {
   for (i = 0; i <= ((int)percent) && i < width; i++)
     cputc(' ');
   revers(0);
-  for (i = (int)(percent + 1L); i < width; i++)
-    cputc(0x7F);
+
+  if (cur == 0) {
+    for (i = (int)(percent + 1L); i < width; i++)
+      cputc(0x7F);
+  }
 }
