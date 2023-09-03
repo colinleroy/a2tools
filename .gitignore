@@ -13,6 +13,7 @@ a.out
 *.x86_64
 *.dsk
 *.tr
+*.trace
 *.callg
 *.dasm
 log
