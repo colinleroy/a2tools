@@ -7,6 +7,9 @@
 
         .export         _init_fast_irq, _done_fast_irq
         .import         callirq
+        .constructor    _init_fast_irq, 11
+        .destructor     _done_fast_irq, 11
+
         .include        "apple2.inc"
 
 ; ------------------------------------------------------------------------
@@ -20,6 +23,7 @@ RAMIRQVEC:= $fffe
 
 _prev_rom_irq_vector: .res 2
 _prev_ram_irq_vector: .res 2
+_a_backup: .res 1
 
         .segment        "LOWCODE"
 
@@ -39,6 +43,15 @@ _init_fast_irq:
         sta     ROMIRQVEC
         stx     ROMIRQVEC+1
 
+        ; Check for Apple IIgs
+        bit     ROMIN
+        lda     $FE1F
+        cmp     #$60
+        ; Keep standard IRQ vector at FFFE/FFFF,
+        ; IIgs uses this one even from ROM
+        ; so we need it standard
+        bne     :+
+
         ; Switch to RAM
         bit     LCBANK2
         bit     LCBANK2
@@ -56,7 +69,7 @@ _init_fast_irq:
         stx     RAMIRQVEC+1
 
         ; Enable IRQs
-        cli
+:       cli
         rts
 
 ; ------------------------------------------------------------------------
@@ -67,6 +80,11 @@ _done_fast_irq:
         ldx     _prev_rom_irq_vector+1
         sta     ROMIRQVEC
         stx     ROMIRQVEC+1
+
+        ; Check for Apple IIgs
+        lda     $FE1F
+        cmp     #$60
+        bne     :+
 
         ; Switch to RAM
         bit     LCBANK2
@@ -80,39 +98,31 @@ _done_fast_irq:
 
         ; And back to ROM, we're exiting
         bit     ROMIN
+:       rts
 
 ; ------------------------------------------------------------------------
 
 handle_ram_irq:
-        .ifdef __APPLE2ENH__
+        ; Check for BRK
+        sta     _a_backup
+        pla
+        pha
+        asl     a
+        asl     a
+        asl     a
+        bpl     :+
+        ; Give BRK to the standard handler
+        jmp     (_prev_ram_irq_vector)
 
-        pha                     ; Save A,Y,X,P
-        phy
+        ; It's an IRQ
+:       lda     _a_backup
+        pha                     ; Save A,X,Y
         phx
-        php
+        phy
         jsr     callirq
-        plp                     ; Restore everything
+        ply                     ; Restore Y,X,A
         plx
-        ply
         pla
-
-        .else
-
-        pha                     ; Save A,Y,X,P
-        tya
-        pha
-        txa
-        pha
-        php
-        jsr     callirq
-        plp                     ; Restore everything
-        pla
-        tax
-        pla
-        tay
-        pla
-
-        .endif
         rti
 
 handle_rom_irq:                 ; ROM saves things for us

@@ -1,6 +1,7 @@
 PROGRAM=surl
 surl_SOURCES := surl-client.c ../lib/simple_serial.c ../lib/cgets.c ../lib/scrollwindow.c ../lib/surl_core.c ../lib/surl_receive.c
 GCCSOURCES := ../lib/extended_string.c
+CL65SOURCES := ../lib/fastirq.s
 DEPS := 
 
 CC65_TARGET = apple2enh
@@ -13,7 +14,7 @@ GCCLDFLAGS =
 
 all: surl.bin surl.x86_64
 
-surl.bin: $(surl_SOURCES)
+surl.bin: $(surl_SOURCES) $(CL65SOURCES)
 	cl65 $(CFLAGS) $(CLCFLAGS) -m surl.map -o $@ $^
 
 surl.x86_64: $(surl_SOURCES) $(GCCSOURCES)

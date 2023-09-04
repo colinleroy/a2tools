@@ -59,7 +59,7 @@ void __fastcall__ print_header(list *l, status *root_status, notification *root_
         " Timelines : H/L/G \r\n"
         " Bookmarks : K     \r\n"
         " Configure : O     \r\n"
-        " Back      : Escape\r\n");
+        " Back      : Esc   \r\n");
 
   if (root_status) {
     dputs("Toot:              \r\n"
