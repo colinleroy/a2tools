@@ -33,7 +33,8 @@ mastodon_SOURCES := \
 mastodon_CC65SOURCES := \
 	../lib/dputs.s \
 	../lib/dputc.s \
-	../lib/scroll.s
+	../lib/scroll.s \
+	../lib/fastirq.s
 
 mastocli_SOURCES := \
 	$(common_SOURCES) \
@@ -48,7 +49,8 @@ mastocli_SOURCES := \
 mastocli_CC65SOURCES := \
 	../lib/dputs.s \
 	../lib/dputc.s \
-	../lib/scroll.s
+	../lib/scroll.s \
+	../lib/fastirq.s
 
 mastowrite_SOURCES := \
 	$(common_SOURCES) \
@@ -65,7 +67,8 @@ mastowrite_SOURCES := \
 mastowrite_CC65SOURCES := \
 	../lib/dputs.s \
 	../lib/dputc.s \
-	../lib/scroll.s
+	../lib/scroll.s \
+	../lib/fastirq.s
 
 mastoconf_SOURCES := \
 	cli/config.c \
@@ -80,7 +83,7 @@ DEPS :=
 CC65_TARGET = apple2enh
 CFLAGS  = -I ../lib -I api -I cli -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
 
-CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x0400 -DSURL_TO_LANGCARD -C ../../config/apple2enh-noexit.cfg $(debug_CFLAGS)
+CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x400 -DSURL_TO_LANGCARD -C ../../config/apple2enh-noexit.cfg $(debug_CFLAGS)
 #Using start address 0x4000 is easier than HGR page 2, and also allows to use 80 columns
 mastodon_CLCFLAGS = $(CLCFLAGS) --start-addr 0x4000
 

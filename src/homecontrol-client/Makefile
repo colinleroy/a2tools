@@ -12,7 +12,7 @@ homectrl_SOURCES := main.c network.c \
 	../lib/surl_core.c \
 	../lib/surl_receive.c
 
-homectrl_CL65SOURCES = ../lib/dputc.s ../lib/scroll.s
+homectrl_CL65SOURCES = ../lib/dputc.s ../lib/scroll.s ../lib/fastirq.s
 
 grphview_SOURCES := graph-viewer.c \
 	../lib/surl_core.c \
@@ -20,6 +20,7 @@ grphview_SOURCES := graph-viewer.c \
 	../lib/simple_serial.c
 
 grphview_GCCSOURCES := ../lib/extended_conio.c ../lib/clrzone.c ../lib/tgi_sdl.c ../lib/extended_string.c ../lib/tgi_fastline.c
+grphview_CL65SOURCES = ../lib/fastirq.s
 
 DEPS := 
 
@@ -39,7 +40,7 @@ homectrl.bin: $(homectrl_SOURCES) $(homectrl_CL65SOURCES)
 homectrl.x86_64: $(homectrl_SOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@
 
-grphview.bin: $(grphview_SOURCES)
+grphview.bin: $(grphview_SOURCES) $(grphview_CL65SOURCES)
 	cl65 $(CFLAGS) $(grphview_CLCFLAGS) -m grphview.map -o $@ $^
 
 grphview.x86_64: $(grphview_SOURCES) $(grphview_GCCSOURCES)

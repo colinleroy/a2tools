@@ -1,6 +1,7 @@
 prefix ?= /usr/local
 PROGRAM=a2send
 SOURCES := a2send.c ../lib/simple_serial.c ../lib/simple_serial_printf.c ../lib/cgets.c  ../lib/scrollwindow.c ../lib/get_filedetails.c
+CL65SOURCES := ../lib/fastirq.s
 GCCSOURCES := ../lib/extended_string.c
 
 CC65_TARGET = apple2enh
@@ -16,7 +17,7 @@ install:
 	mkdir -p $(DESTDIR)/$(prefix)/bin
 	install $(PROGRAM).x86_64 $(DESTDIR)/$(prefix)/bin/$(PROGRAM)
 
-$(PROGRAM).bin: $(SOURCES)
+$(PROGRAM).bin: $(SOURCES) $(CL65SOURCES)
 	cl65 $(CFLAGS) $(CLCFLAGS) -m $(PROGRAM).map -o $@ $^
 
 $(PROGRAM).x86_64: $(SOURCES) $(GCCSOURCES)
