@@ -26,36 +26,39 @@
 #include "clrzone.h"
 #include "scrollwindow.h"
 
-int print_buf(char *buffer, char hide, char allow_scroll, char *scrolled) {
-  static char x, y;
+extern char writable_lines;
+
+int print_buf(char *buffer, char hide, char allow_scroll) {
+  static char x;
   static char *w;
+  static char scrolled;
 
   x = wherex();
-  y = wherey();
   w = buffer;
 
+  scrolled = 0;
+
   while (*w) {
-    if (allow_scroll && y == scrh - 2) {
+    if (allow_scroll && writable_lines == 1) {
       gotoxy(0, scrh-1);
       dputs("Hit a key to continue.");
       cgetc();
-      gotoxy(0, scrh-1);
+      gotoxy(0, scrh - 1);
       dputs("                      ");
-      scrollup_n(14);
-      y = scrh - 16;
-      gotoxy(x, y);
-      *scrolled = 1;
+      gotoxy(0, scrh - 1);
+      writable_lines += 14;
+      scrolled = 1;
     }
 
     if (*w == '\n') {
-      FAST_CHECK_AND_CRLF();
+      CHECK_AND_CRLF();
       x = 0;
     } else {
       if (x == scrw - LEFT_COL_WIDTH - 2) {
-        y++;
+        CHECK_NO_CRLF();
         x = 0;
         /* don't scroll last char */
-        if (y == scrh) {
+        if (writable_lines == 1) {
           cputc(hide ? '.':*w);
           return -1;
         }
@@ -69,60 +72,55 @@ int print_buf(char *buffer, char hide, char allow_scroll, char *scrolled) {
     }
     ++w;
   }
+  if (scrolled) {
+    return -1;
+  }
   return 0;
 }
 
-int print_status(status *s, char hide, char full, char *scrolled) {
-  char disp_idx, y;
-  *scrolled = 0;
-  y = disp_idx = wherey();
-  s->displayed_at = disp_idx;
+int print_status(status *s, char hide, char full) {
+  s->displayed_at = wherey();
   /* reblog header */
   if (s->reblogged_by) {
     dputs(s->reblogged_by);
     dputs(" boosted");
-    FAST_CHECK_AND_CRLF();
-    s->displayed_at = disp_idx;
+    CHECK_AND_CRLF();
   }
 
   /* Display name + date */
   dputs(s->account->display_name);
   gotox(TIME_COLUMN);
-  cputs(s->created_at); /* no scrolling please */
-  y++; /* CRLF done by printing created_at */
-  if (y == scrh)
-    return -1;
+  if (writable_lines != 1)
+    dputs(s->created_at);
+  else
+    cputs(s->created_at); /* no scrolling please */
+  CHECK_NO_CRLF();
 
   /* username (30 chars max)*/
   dputc(arobase);
   dputs(s->account->username);
 
-  FAST_CHECK_AND_CRLF();
+  CHECK_AND_CRLF();
   if (s->spoiler_text) {
     dputs("CW: ");
     dputs(s->spoiler_text);
-    FAST_CHECK_AND_CRLF();
+    CHECK_AND_CRLF();
   }
   /* Content */
-  if (print_buf(s->content, hide && s->spoiler_text != NULL, (full && disp_idx == 0), scrolled) < 0)
+  if (print_buf(s->content, hide && s->spoiler_text != NULL, (full && s->displayed_at == 0)) < 0)
     return -1;
-  y = wherey();
-  FAST_CHECK_AND_CRLF();
-
+  CHECK_AND_CRLF();
   /* stats */
-  FAST_CHECK_AND_CRLF();
+  CHECK_AND_CRLF();
   cprintf("%d replies, %s%d boosts, %s%d favs, %1d images %s",
         s->n_replies,
         (s->flags & REBLOGGED) ? "*":"", s->n_reblogs,
         (s->flags & FAVOURITED) ? "*":"", s->n_favourites,
         s->n_images,
         (s->flags & BOOKMARKED) ? " - bookmarked":"             ");
-  FAST_CHECK_AND_CRLF();
+  CHECK_AND_CRLF();
 
-  chline(scrw - LEFT_COL_WIDTH - 2); cputc('_'); /* Does CRLF */
-  y++;
-  if (y == scrh)
-    return -1;
+  CHLINE_SAFE();
 
   return 0;
 }

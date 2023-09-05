@@ -34,6 +34,7 @@ unsigned char scrw, scrh;
 char *instance_url = NULL;
 char *oauth_token = NULL;
 char monochrome = 1;
+char writable_lines = 24;
 
 extern account *my_account;
 
@@ -83,17 +84,18 @@ err_out:
   return root_status;
 }
 
-static int print_account(account *a, char *scrolled) {
+static int print_account(account *a) {
   char y;
-  *scrolled = 0;
-  dputs(a->display_name);
-  dputs("\r\n");
-  dputc(arobase);
+  dputs(a->display_name); /* 0 */
+  CHECK_AND_CRLF();
+  dputc(arobase);         /* 1 */
   dputs(a->username);
-  dputs("\r\n");
+  CHECK_AND_CRLF();
 
-  cprintf("%ld following, %ld followers\r\n"
-          "Here since %s", a->following_count, a->followers_count, a->created_at);
+  cprintf("%ld following, %ld followers\r\n" /* 2 */
+          "Here since %s", /* 3 */
+          a->following_count, a->followers_count, a->created_at);
+  CHECK_NO_CRLF();
 
   api_relationship_get(a, 0);
   y = 0;
@@ -109,17 +111,17 @@ static int print_account(account *a, char *scrolled) {
     dputs("             They follow you\r\n");
   }
 
-  if (wherey() < 4)
+  if (wherey() < 4) {
     gotoy(4);
+    CHECK_NO_CRLF();
+  }
 
   CHECK_AND_CRLF();
-  if (print_buf(a->note, 0, 1, scrolled) < 0) {
+  if (print_buf(a->note, 0, 1) < 0) {
     return -1;
   }
   CHECK_AND_CRLF();
-  chline(scrw - LEFT_COL_WIDTH - 2); cputc('_'); /* Does CRLF */
-  if (wherey() == 0)
-    return -1;
+  CHLINE_SAFE();
 
   return 0;
 }
@@ -132,10 +134,11 @@ static int print_notification(notification *n) {
   n->displayed_at = wherey();
   dputs(n->display_name);
   gotox(TIME_COLUMN);
-  cputs(n->created_at); /* no scrolling please */
-  /* no CRLF, done by created_at */
-  if (wherey() == 0)
-    return -1;
+  if (writable_lines != 1)
+    dputs(n->created_at);
+  else
+    cputs(n->created_at); /* no scrolling please */
+  CHECK_NO_CRLF();
 
   w = notification_verb(n);
   dputs(w);
@@ -143,6 +146,7 @@ static int print_notification(notification *n) {
 
   width = (2 * width) - strlen(w) - 6;
   w = n->excerpt;
+
   while (width > 0 && *w) {
     if (*w == '\n') {
       dputc(' ');
@@ -155,11 +159,10 @@ static int print_notification(notification *n) {
   if (*w) {
     dputs("...");
   }
+  CHECK_NO_CRLF();
   CHECK_AND_CRLF();
 
-  chline(scrw - LEFT_COL_WIDTH - 2); cputc('_'); /* Does CRLF */
-  if (wherey() == 0)
-    return -1;
+  CHLINE_SAFE();
 
   return 0;
 }
@@ -490,7 +493,6 @@ static void shift_displayed_at(list *l, signed char val) {
 static void print_list(list *l, signed char limit) {
   char i, full;
   char bottom = 0;
-  char scrolled = 0;
   signed char first;
   char n_posts;
 
@@ -499,6 +501,8 @@ update:
   set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
   gotoxy(0, 0);
 
+  writable_lines = scrh;
+
   /* copy to temp vars to avoid pointer arithmetic */
   if (l->half_displayed_post > 0 && limit == 0) {
     item *disp;
@@ -506,6 +510,7 @@ update:
     disp = (item *)l->displayed_posts[first];
     if (disp->displayed_at >= 0) {
       gotoxy(0, disp->displayed_at);
+      writable_lines = scrh - disp->displayed_at;
     } else {
       first = l->first_displayed_post;
     }
@@ -514,21 +519,11 @@ update:
   }
   n_posts = l->n_posts;
 
-  if (l->scrolled) {
-    clrscr();
-  }
-  l->scrolled = 0;
-
   l->half_displayed_post = 0;
 
   if (l->account && first == -1) {
-    bottom = print_account(l->account, &scrolled);
-    if (!scrolled) {
-      l->account_height = wherey();
-    } else {
-      l->account_height = scrh;
-      l->scrolled = 1;
-    }
+    bottom = print_account(l->account);
+    l->account_height = wherey();
   }
 
   for (i = max(0, first); i < n_posts; i++) {
@@ -539,7 +534,7 @@ update:
     full = (l->root && !strcmp(l->root, l->ids[i]));
     disp = (item *)l->displayed_posts[i];
     if (disp == NULL) {
-      if (i > first) {
+      if (i > first && writable_lines != 0) {
         dputs(LOADING_TOOT_MSG);
         gotox(0);
       }
@@ -547,16 +542,17 @@ update:
       disp = item_get(l, i, full);
       l->displayed_posts[i] = disp;
 
-      if (i > first) {
+      if (i > first && writable_lines != 0) {
         dputs(CLEAR_LOAD_MSG);
         gotox(0);
       }
     }
     if (disp == NULL) {
       dputs("Load error :(");
-      if (wherey() < scrh - 1) {
+      if (--writable_lines != 0) {
         dputs("\r\n");
-        chline(scrw - LEFT_COL_WIDTH - 1);
+        if (--writable_lines != 0)
+          chline(scrw - LEFT_COL_WIDTH - 1);
       } else {
         bottom = 1;
       }
@@ -565,16 +561,11 @@ update:
     }
     if (bottom == 0) {
       if (l->kind != SHOW_NOTIFICATIONS) {
-        bottom = print_status((status *)disp, hide_cw || wherey() > 0, full, &scrolled);
+        bottom = print_status((status *)disp, hide_cw || wherey() > 0, full);
       } else {
         bottom = print_notification((notification *)disp);
       }
-      if (!scrolled) {
-        l->post_height[i] = wherey() - disp->displayed_at;
-      } else {
-        l->post_height[i] = scrh;
-        l->scrolled = 1;
-      }
+      l->post_height[i] = wherey() - disp->displayed_at;
       l->last_displayed_post = i;
     }
     if (bottom) {
