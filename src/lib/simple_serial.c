@@ -389,27 +389,37 @@ void __fastcall__ simple_serial_read(char *ptr, size_t nmemb) {
 
 #ifdef __CC65__
 #ifdef __APPLE2ENH__
+  __asm__("                  lda %v", cur);               /* Copy cur to ZP */
+  __asm__("                  sta tmp1");
+  __asm__("                  lda %v+1", cur);
+  __asm__("                  sta tmp2");
+
+  __asm__("                  lda %v", end);              /* Copy end to ZP */
+  __asm__("                  sta tmp3");
+  __asm__("                  lda %v+1", end);
+  __asm__("                  sta tmp4");
+
   __asm__("                  bra check_bound");           /* branch to check cur != end */
 #else
   __asm__("                  ldx #$00");                  /* branch to check cur != end */
   __asm__("                  beq check_bound");           /* branch to check cur != end */
 #endif
 
-    __asm__("read_again:       lda %v",   cur);           /* low byte in A */
-    __asm__("read_again_aok:   ldx %v+1", cur);           /* high byte in X */
-    __asm__("read_again_axok:  jsr %v",   ser_get);       /* pass cur to ser_get */
+    __asm__("read_again:       lda tmp1");                /* low byte in A */
+    __asm__("read_again_aok:   ldx tmp2");                /* high byte in X */
+    __asm__("read_again_axok:  jsr %v", ser_get);         /* pass cur to ser_get */
     __asm__("                  cmp #%b", SER_ERR_NO_DATA);/* Did we get data? */
     __asm__("                  beq read_again");          /* No */
 
-    __asm__("                  inc %v", cur);             /* Inc cur's low byte */
+    __asm__("                  inc tmp1");                /* Inc cur's low byte */
     __asm__("                  bne check_bound");         /* not wrapped? go check bound */
-    __asm__("                  inc %v+1", cur);           /* Inc high byte */
+    __asm__("                  inc tmp2");                /* Inc high byte */
 
-  __asm__("check_bound:      lda %v", cur);               /* Compare cur/end low bytes */
-  __asm__("                  cmp %v", end);
+  __asm__("check_bound:      lda tmp1");                  /* Compare cur/end low bytes */
+  __asm__("                  cmp tmp3");
   __asm__("                  bne read_again_aok");        /* different, read again */
-  __asm__("                  ldx %v+1", cur);             /* Compare high bytes */
-  __asm__("                  cpx %v+1", end);
+  __asm__("                  ldx tmp2");                  /* Compare high bytes */
+  __asm__("                  cpx tmp4");
   __asm__("                  bne read_again_axok");       /* different, read again */
 #else
 

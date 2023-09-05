@@ -17,6 +17,15 @@
 
 ; Plot a character - also used as internal function
 
+special_chars:
+        cmp     #$0A            ; Test for \n = line feed
+        beq     dnewline
+        cmp     #$08            ; Test for backspace
+        beq     backspace
+        cmp     #$07            ; Test for bell
+        beq     bell
+        bra     invert          ; Back to standard codepath
+
 _dputcxy:
         pha                     ; Save C
         jsr     gotoxy          ; Call this one, will pop params
@@ -25,23 +34,19 @@ _dputcxy:
 _dputc:
         cmp     #$0D            ; Test for \r = carrage return
         beq     left
-        bcs     :+              ; Skip other tests if possible
-        cmp     #$0A            ; Test for \n = line feed
-        beq     dnewline
-        cmp     #$08            ; Test for backspace
-        beq     backspace
-        cmp     #$07            ; Test for bell
-        beq     bell
-:       eor     #$80            ; Invert high bit
+        bcc     special_chars   ; Skip other tests if possible
+invert: eor     #$80            ; Invert high bit
 
         jsr     putchardirect
         inc     CH              ; Bump to next column
         lda     CH
         cmp     WNDWDTH
-        bcc     :+
-        jsr     dnewline
+        bcs     :+
+        rts
+
+:       jsr     dnewline
 left:   stz     CH              ; Goto left edge of screen
-:       rts
+        rts
 
 bell:
         bit     $C082
