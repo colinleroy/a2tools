@@ -32,6 +32,7 @@ char *instance_url = NULL;
 char *oauth_token = NULL;
 unsigned char scrw, scrh;
 char top = 0;
+char writable_lines = 24;
 
 char n_medias = 0;
 char sensitive_medias = 0;
@@ -100,20 +101,20 @@ static char dgt_cmd_cb(char c) {
 
 static void setup_gui(void)
 {
-  char scrolled;
-
   set_scrollwindow(0, scrh);
   clrscr();
   gotoxy(0, 0);
 
   if (ref_status) {
     if (compose_mode[0] == 'r') {
-      print_status(ref_status, 0, 0, &scrolled);
-      if (wherey() > scrh - COMPOSE_HEIGHT) {
-        clrzone(0, scrh - COMPOSE_HEIGHT, scrw - LEFT_COL_WIDTH - 2, scrh - 1);
-        gotoxy(0, scrh - COMPOSE_HEIGHT);
-        chline(scrw - LEFT_COL_WIDTH - 1);
-      }
+      writable_lines = scrh - COMPOSE_HEIGHT + 2;
+      print_status(ref_status, 0, 0);
+
+      /* we want to make sure we'll have one and
+       * only one separator line */
+      gotoxy(0, wherey() - 1);
+      chline(scrw - LEFT_COL_WIDTH - 1);
+
       cputs("Your reply:\r\n");
       top = wherey();
     }
