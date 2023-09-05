@@ -28,56 +28,86 @@
 #pragma static-locals(push, on)
 #endif
 
-static int __fastcall__ _strsplit_int(char in_place, char *in, char split, char ***out) {
+static int __fastcall__ _strsplit_int(char in_place, char *in, char split, char ***out, size_t max_tokens) {
   char *start;
   size_t n_tokens;
   char **tokens;
+  /* copy to avoid stack access */
   char *src = in;
 
-  n_tokens = 1;
   if (!in) {
     *out = NULL;
     return 0;
   }
 
-  start = src;
-  while (*src) {
-    if (*src == split) {
-      ++n_tokens;
+  if (max_tokens == 0) {
+    start = src;
+    n_tokens = 1;
+    while (*src) {
+      if (*src == split) {
+        ++n_tokens;
+      }
+      ++src;
     }
-    ++src;
+
+    tokens = malloc(n_tokens * sizeof(char *));
+    src = start;
+  } else {
+    tokens = malloc((max_tokens) * sizeof(char *));
+    start = src;
   }
 
-  tokens = malloc(n_tokens * sizeof(char *));
-  src = start;
   n_tokens = 0;
 
   while (*src) {
     if (*src == split) {
       *src = '\0';
-      tokens[n_tokens] = in_place ? start : strdup(start);
+
+      if (in_place)
+        tokens[n_tokens] = start;
+      else
+        tokens[n_tokens] = strdup(start);
+
       ++n_tokens;
       start = src + 1;
+
+      /* no need to check where max_tokens != 0,
+       * n_tokens won't be 0 by that point */
+      if (n_tokens == max_tokens) {
+        goto done;
+      }
     }
     ++src;
   }
 
   /* Last token */
   if (*start) {
-    tokens[n_tokens] = in_place ? start : strdup(start);
+      if (in_place)
+        tokens[n_tokens] = start;
+      else
+        tokens[n_tokens] = strdup(start);
     ++n_tokens;
   }
 
+done:
   *out = tokens;
   return n_tokens;
 }
 
 int __fastcall__ strsplit(char *in, char split, char ***out) {
-  return _strsplit_int(0, in, split, out);
+  return _strsplit_int(0, in, split, out, 0);
 }
 
 int __fastcall__ strsplit_in_place(char *in, char split, char ***out) {
-  return _strsplit_int(1, in, split, out);
+  return _strsplit_int(1, in, split, out, 0);
+}
+
+int __fastcall__ strnsplit(char *in, char split, char ***out, char max_tokens) {
+  return _strsplit_int(0, in, split, out, max_tokens);
+}
+
+int __fastcall__ strnsplit_in_place(char *in, char split, char ***out, char max_tokens) {
+  return _strsplit_int(1, in, split, out, max_tokens);
 }
 
 #ifdef __CC65__

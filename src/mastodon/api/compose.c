@@ -86,7 +86,7 @@ char *api_send_hgr_image(char *filename, char *description, char **err, char x, 
   media_id = NULL;
   if (surl_response_ok()) {
     if (surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, translit_charset, ".id") >= 0) {
-      n_lines = strsplit(gen_buf, '\n', &lines);
+      n_lines = strnsplit(gen_buf, '\n', &lines, 1);
       if (n_lines == 1) {
         media_id = lines[0];
       } else {

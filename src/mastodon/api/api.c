@@ -55,7 +55,7 @@ int api_get_posts(char *endpoint, char to_load, char *load_before, char *load_af
   if (surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, NULL, sel) >= 0) {
     char **tmp;
     int i;
-    n_status = strsplit(gen_buf, '\n', &tmp);
+    n_status = strnsplit(gen_buf, '\n', &tmp, to_load);
     for (i = 0; i < n_status; i++) {
       post_ids[i] = tmp[i];
     }
@@ -258,8 +258,8 @@ char api_relationship_get(account *a, char f) {
     if (surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, NULL, 
                       ".[]|.following,.followed_by,"
                       ".blocking,.blocked_by,.muting,.requested") >= 0) {
-      n_lines = strsplit_in_place(gen_buf,'\n',&lines);
-      if (n_lines < 6) {
+      n_lines = strnsplit_in_place(gen_buf,'\n',&lines, 6);
+      if (n_lines != 6) {
         free(lines);
         return 0;
       }

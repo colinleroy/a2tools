@@ -58,8 +58,8 @@ account *account_new_from_json(void) {
                     ".id,.username,.acct,.display_name,"
                     ".created_at,.followers_count,"
                     ".following_count") >= 0) {
-    n_lines = strsplit_in_place(gen_buf, '\n', &lines);
-    if (n_lines >= 6) {
+    n_lines = strnsplit_in_place(gen_buf, '\n', &lines, 7);
+    if (n_lines > 5) {
       a->id = strdup(lines[0]);
       a->username = strdup(lines[1]);
       a->acct = strdup(lines[2]);
@@ -109,7 +109,7 @@ account *api_get_profile(char *id) {
   }
 
   if (surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, translit_charset, ".id,.display_name,.acct,.username") >= 0) {
-    n_lines = strsplit_in_place(gen_buf,'\n',&lines);
+    n_lines = strnsplit_in_place(gen_buf,'\n',&lines, 4);
     if (n_lines < 4) {
       account_free(a);
       a = NULL;
