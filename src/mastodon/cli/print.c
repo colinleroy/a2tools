@@ -32,10 +32,11 @@ int print_buf(char *buffer, char hide, char allow_scroll) {
   static char x;
   static char *w;
   static char scrolled;
+  static char wrap_idx;
 
   x = wherex();
   w = buffer;
-
+  wrap_idx = scrw - LEFT_COL_WIDTH - 2;
   scrolled = 0;
 
   while (*w) {
@@ -54,7 +55,7 @@ int print_buf(char *buffer, char hide, char allow_scroll) {
       CHECK_AND_CRLF();
       x = 0;
     } else {
-      if (x == scrw - LEFT_COL_WIDTH - 2) {
+      if (x == wrap_idx) {
         CHECK_NO_CRLF();
         x = 0;
         /* don't scroll last char */
