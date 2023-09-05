@@ -19,9 +19,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
-#ifndef __CC65__
-#include <arpa/inet.h>
-#endif
 #include "surl.h"
 #include "simple_serial.h"
 #include "extended_conio.h"

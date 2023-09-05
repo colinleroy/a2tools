@@ -1,5 +1,5 @@
 ifdef SER_DEBUG
-ser_debug_SOURCES := ../lib/simple_serial_printf.c
+ser_debug_SOURCES := ../lib/simple_serial_ext.c
 debug_CFLAGS := -DSER_DEBUG=1
 else
 ser_debug_SOURCES :=
@@ -34,7 +34,8 @@ mastodon_CC65SOURCES := \
 	../lib/dputs.s \
 	../lib/dputc.s \
 	../lib/scroll.s \
-	../lib/fastirq.s
+	../lib/fastirq.s \
+	../lib/ntohs.s
 
 mastocli_SOURCES := \
 	$(common_SOURCES) \
@@ -50,7 +51,8 @@ mastocli_CC65SOURCES := \
 	../lib/dputs.s \
 	../lib/dputc.s \
 	../lib/scroll.s \
-	../lib/fastirq.s
+	../lib/fastirq.s \
+	../lib/ntohs.s
 
 mastowrite_SOURCES := \
 	$(common_SOURCES) \
@@ -68,7 +70,8 @@ mastowrite_CC65SOURCES := \
 	../lib/dputs.s \
 	../lib/dputc.s \
 	../lib/scroll.s \
-	../lib/fastirq.s
+	../lib/fastirq.s \
+	../lib/ntohs.s
 
 mastoconf_SOURCES := \
 	cli/config.c \

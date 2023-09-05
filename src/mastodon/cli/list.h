@@ -24,6 +24,5 @@ struct _list {
   signed char post_height[N_STATUS_TO_LOAD];
   char n_posts;
   char eof;
-  char scrolled;
 };
 #endif

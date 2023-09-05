@@ -586,8 +586,6 @@ update:
     if (load_next_posts(l) > 0)
       goto update;
   }
-
-  print_free_ram();
 }
 
 static void shift_posts_down(list *l) {
@@ -735,7 +733,6 @@ static void save_state(void) {
                     "%d\n"
                     "%d\n"
                     "%d\n"
-                    "%d\n"
                     "%s\n"
                     "%d\n",
                     l->kind,
@@ -743,7 +740,6 @@ static void save_state(void) {
                     l->leaf_root ? l->leaf_root : "",
                     l->last_displayed_post,
                     l->eof,
-                    l->scrolled,
                     l->first_displayed_post,
                     l->n_posts,
                     l->account ? l->account->id : "",
@@ -856,7 +852,6 @@ static int load_state(list ***lists) {
     l->leaf_root = state_get_str(fp);
     l->last_displayed_post = state_get_int(fp);
     l->eof = state_get_int(fp);
-    l->scrolled = state_get_int(fp);
     l->first_displayed_post = state_get_int(fp);
     l->n_posts = state_get_int(fp);
 
@@ -937,8 +932,9 @@ static int show_list(list *l) {
     load_indicator(0);
 
     while (!kbhit() && background_load(l) == 0) {
-      print_free_ram();
+      /* keep loading */
     }
+    print_free_ram();
     c = tolower(cgetc());
     switch(c) {
       case CH_CURS_DOWN:

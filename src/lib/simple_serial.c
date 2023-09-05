@@ -345,41 +345,6 @@ void __fastcall__ simple_serial_puts(char *buf) {
   }
 }
 
-char * __fastcall__ simple_serial_gets(char *out, size_t size) {
-  static char c;
-  static char *cur;
-  static char *end;
-
-  if (size == 0) {
-    return NULL;
-  }
-
-  cur = out;
-  end = cur + size - 1;
-  while (cur < end) {
-#ifdef __CC65__
-    while (ser_get(&c) == SER_ERR_NO_DATA);
-#else
-    c = simple_serial_getc();
-#endif
-    
-    if (c == '\r') {
-      /* ignore \r */
-      continue;
-    }
-
-    *cur = c;
-    ++cur;
-
-    if (c == '\n') {
-      break;
-    }
-  }
-  *cur = '\0';
-
-  return out;
-}
-
 void __fastcall__ simple_serial_read(char *ptr, size_t nmemb) {
   static char *cur;
   static char *end;
