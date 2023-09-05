@@ -91,6 +91,8 @@ static void annotate_run(const char *file) {
   char line_buf[BUF_SIZE];
   int cur_line = 0;
   int op_idx = -1;
+  int cost_if_taken = 0;
+  int prev_instr_param = 0;
 
   if (fp == NULL) {
     fprintf(stderr, "Can not open file %s: %s\n", file, strerror(errno));
@@ -207,15 +209,20 @@ skip_to_start:
         }
       }
 
+      cycles = 0;
+      if (cost_if_taken > 0 && prev_instr_param == op_addr) {
+        cycles += cost_if_taken;
+      }
       /* get addressing mode and cycles count.
        * Done here instead of in instructions.c to be
        * able to display a potentially problematic line
        */
       a_mode = instruction_get_addressing_mode(arg);
-      if ((cycles = get_cycles_for_instr(instr, a_mode)) < 0) {
+      if ((cycles += get_cycles_for_instr(instr, a_mode, &cost_if_taken)) < 0) {
         fprintf(stderr, "%s\n", buf);
         exit(1);
       }
+
       /* get param if it's numeric */
       if (arg && arg[0] == '$') {
         if (strchr(arg, '\n'))
@@ -263,6 +270,8 @@ try_gen:
         param_symbol = generate_symbol(arg, param_addr, dest, lc_bank, n_parts > 2 ? parts[2] : NULL);
         param_addr = symbol_get_addr(param_symbol);
       }
+
+      prev_instr_param = param_addr;
 
       int backtab = 0;
       /* Print the line as-is */
