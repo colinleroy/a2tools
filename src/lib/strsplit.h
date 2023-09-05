@@ -8,4 +8,7 @@
 int __fastcall__ strsplit(char *in, char split, char ***out);
 int __fastcall__ strsplit_in_place(char *in, char split, char ***out);
 
+int __fastcall__ strnsplit(char *in, char split, char ***out, size_t max_tokens);
+int __fastcall__ strnsplit_in_place(char *in, char split, char ***out, size_t max_tokens);
+
 #endif

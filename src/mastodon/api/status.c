@@ -57,7 +57,7 @@ static __fastcall__ char status_fill_from_json(status *s, char *id, char full, c
                       ".created_at,.account.display_name,.reblog.id//\"-\",.spoiler_text");
   }
 
-  n_lines = strsplit_in_place(gen_buf, '\n', &lines);
+  n_lines = strnsplit_in_place(gen_buf, '\n', &lines, 4);
   if (r >= 0 && n_lines >= 3) {
     if (!is_reblog && lines[2][0] != '-') {
       s->reblogged_by = strdup(lines[1]);
@@ -94,7 +94,7 @@ static __fastcall__ char status_fill_from_json(status *s, char *id, char full, c
                       ".bookmarked,.account.id,.account.acct,.account.username,.visibility");
   }
 
-  n_lines = strsplit_in_place(gen_buf, '\n', &lines);
+  n_lines = strnsplit_in_place(gen_buf, '\n', &lines, 11);
   if (r >= 0 && n_lines == 11) {
     r = atoi(lines[0]);
     s->n_images = r > 255 ? 255 : r;

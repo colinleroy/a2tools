@@ -54,7 +54,7 @@ int api_get_notifications(char to_load, char notifications_type, char *load_befo
   if (surl_get_json(gen_buf, 512, SURL_HTMLSTRIP_NONE, NULL, ".[]|.id") >= 0) {
     char **tmp;
     char i;
-    n_notifications = strsplit(gen_buf, '\n', &tmp);
+    n_notifications = strnsplit(gen_buf, '\n', &tmp, to_load);
     for (i = 0; i < n_notifications; i++) {
       notification_ids[i] = tmp[i];
     }
@@ -82,7 +82,7 @@ notification *api_get_notification(char *id) {
     char **lines;
     char n_lines;
 
-    n_lines = strsplit_in_place(gen_buf, '\n', &lines);
+    n_lines = strnsplit_in_place(gen_buf, '\n', &lines, 7);
     n = notification_new();
     if (n == NULL || n_lines < 6) {
       free(lines);
