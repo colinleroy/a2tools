@@ -7,9 +7,9 @@
 ;
 
         .export         _dputcxy, _dputc
-        .export         dputdirect, dnewline
-        .import         gotoxy, VTABZ, putchar
-        .import         _scrollup_one, _scrolldown_one
+        .export         dnewline
+        .import         gotoxy, VTABZ, putchardirect
+        .import         _scrollup_one
 
         .include        "apple2.inc"
 
@@ -34,8 +34,7 @@ _dputc:
         beq     bell
 :       eor     #$80            ; Invert high bit
 
-dputdirect:
-        jsr     putchar
+        jsr     putchardirect
         inc     CH              ; Bump to next column
         lda     CH
         cmp     WNDWDTH
