@@ -36,14 +36,11 @@ int api_get_notifications(char to_load, char notifications_type, char *load_befo
   int n_notifications;
 
   n_notifications = 0;
-  snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s?limit=%d" "&%s%s" "%s%s%s%s", NOTIFICATION_ENDPOINT,
+  snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s?limit=%d" "&types[]=mention%s" "&max_id=%s&min_id=%s", NOTIFICATION_ENDPOINT,
             to_load,
-            "types[]=mention",
             notifications_type == NOTIFICATION_FAVOURITE ? 
               "&types[]=follow&types[]=favourite&types[]=reblog" : "",
-            load_after ? "&max_id=" : "",
             load_after ? load_after : "",
-            load_before ? "&min_id=" : "",
             load_before ? load_before : ""
           );
   get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);

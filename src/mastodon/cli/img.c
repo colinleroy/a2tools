@@ -27,7 +27,6 @@
 #ifdef __CC65__
 #include <conio.h>
 #else
-#include <arpa/inet.h>
 #include "extended_conio.h"
 #endif
 #include "clrzone.h"

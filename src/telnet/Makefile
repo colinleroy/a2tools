@@ -1,7 +1,7 @@
 PROGRAM=telnet
-SOURCES := telnet.c ../lib/simple_serial.c ../lib/simple_serial_printf.c \
+SOURCES := telnet.c ../lib/simple_serial.c ../lib/simple_serial_ext.c \
 	../lib/surl_core.c ../lib/clrzone.c ../lib/dgets.c ../lib/scrollwindow.c
-CC65SOURCES := ../lib/dputs.s ../lib/dputc.s ../lib/scroll.s ../lib/fastirq.s
+CC65SOURCES := ../lib/dputs.s ../lib/dputc.s ../lib/scroll.s ../lib/fastirq.s ../lib/ntohs.s
 GCCSOURCES := ../lib/extended_string.c ../lib/extended_conio.c
 DEPS := 
 

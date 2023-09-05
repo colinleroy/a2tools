@@ -5,6 +5,7 @@
 #endif
 #include "../surl-server/surl_protocol.h"
 #include "simple_serial.h"
+#include "ntohs.h"
 
 #ifndef __CC65__
 #define __fastcall__
@@ -30,15 +31,6 @@ struct _surl_response {
   char *content_type;
 
 };
-
-#ifdef __APPLE2ENH__
-#define ntohs(x) (((x) >> 8) + (((x) & 0xff) << 8))
-#define htons(x) ntohs(x)
-
-#define ntohl(x) ((((x) & 0xff000000u) >> 24) | (((x) & 0x00ff0000u) >> 8) \
-                  | (((x) & 0x0000ff00u) << 8) | (((x) & 0x000000ffu) << 24))
-#define htonl(x) ntohl(x)
-#endif
 
 int __fastcall__ surl_connect_proxy(void);
 #define surl_close_proxy() simple_serial_close()

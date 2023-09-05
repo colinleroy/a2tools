@@ -1,5 +1,5 @@
 ifdef SER_DEBUG
-ser_debug_SOURCES := ../lib/simple_serial_printf.c
+ser_debug_SOURCES := ../lib/simple_serial_ext.c
 debug_CFLAGS := -DSER_DEBUG=1
 else
 ser_debug_SOURCES :=
@@ -24,7 +24,7 @@ SOURCES := stp.c stp_cli.c stp_save.c stp_send_file.c stp_delete.c \
 	../lib/surl_ping.c \
 	../lib/file_select.c
 
-CL65SOURCES = ../lib/dputc.s ../lib/scroll.s ../lib/fastirq.s
+CL65SOURCES = ../lib/dputc.s ../lib/scroll.s ../lib/fastirq.s ../lib/ntohs.s
 GCC_SOURCES = ../lib/extended_string.c ../lib/extended_conio.c
 
 DEPS := 
