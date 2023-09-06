@@ -40,7 +40,6 @@ extern account *my_account;
 
 static list **all_lists;
 static signed char cur_list_idx;
-static list *current_list = NULL;
 
 /* actions mapped to keys */
 #define SHOW_FULL_STATUS     CH_ENTER
@@ -1034,7 +1033,6 @@ static void push_list(void) {
     compact_list(all_lists[cur_list_idx - 1]);
   }
   all_lists = realloc(all_lists, (cur_list_idx + 1) * sizeof(list *));
-  current_list = NULL; /* it's not yet built */
 }
 
 static void pop_list(void) {
@@ -1047,9 +1045,6 @@ static void pop_list(void) {
   all_lists = realloc(all_lists, (cur_list_idx + 1) * sizeof(list *));
   if (cur_list_idx >= 0) {
     uncompact_list(all_lists[cur_list_idx]);
-    current_list = all_lists[cur_list_idx];
-  } else {
-    current_list = NULL;
   }
 }
 
@@ -1057,6 +1052,8 @@ void cli(void) {
   item *disp;
   status *disp_status;
   notification *disp_notif;
+  list *current_list;
+
   /* static buffer because we need to copy the
    * IDs before compacting parent list, to avoid
    * memory fragmentation */
@@ -1103,14 +1100,14 @@ void cli(void) {
         cur_action = SHOW_ACCOUNT;
         /* and fallthrough to reuse list (we're obviously already
          * in a SHOW_ACCOUNT list)*/
-      case SHOW_FULL_STATUS:
-      case SHOW_ACCOUNT:
       case SHOW_SEARCH_RES:
       case SHOW_NOTIFICATIONS:
         if (current_list->kind == cur_action) {
           free_list(all_lists[cur_list_idx]);
           goto navigate_reuse_list;
         }
+      case SHOW_ACCOUNT:
+      case SHOW_FULL_STATUS:
         *new_root = '\0';
         *new_leaf_root = '\0';
         disp = current_list->displayed_posts[current_list->first_displayed_post];
