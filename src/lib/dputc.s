@@ -50,7 +50,7 @@ left:   stz     CH              ; Goto left edge of screen
 
 bell:
         bit     $C082
-        jsr     $FBE4           ; BELL2
+        jsr     $FF3A           ; BELL
         bit     $C080
         rts
 
