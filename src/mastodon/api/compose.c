@@ -9,7 +9,7 @@
 #include "common.h"
 #include "progress_bar.h"
 
-#ifdef __APPLE2__
+#ifdef __APPLE2ENH__
 #include <apple2enh.h>
 #endif
 
@@ -43,7 +43,7 @@ char *api_send_hgr_image(char *filename, char *description, char **err, char x, 
   r = 0;
   to_send = HGR_LEN;
 
-#ifdef __CC65__
+#ifdef __APPLE2ENH__
   _filetype = PRODOS_T_BIN;
 #endif
 

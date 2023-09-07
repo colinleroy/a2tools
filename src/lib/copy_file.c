@@ -6,11 +6,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #ifdef __APPLE2ENH__
-#include <conio.h>
 #include <apple2enh.h>
-#else
-#include "extended_conio.h"
 #endif
+#include "extended_conio.h"
 #include "get_filedetails.h"
 #include "progress_bar.h"
 
