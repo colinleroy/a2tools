@@ -7,11 +7,7 @@
 #include <apple2enh.h>
 #endif
 #include "surl.h"
-#ifdef __CC65__
-#include <conio.h>
-#else
 #include "extended_conio.h"
-#endif
 #include "strsplit.h"
 #include "dputs.h"
 #include "dputc.h"
@@ -89,6 +85,9 @@ int print_status(status *s, char hide, char full) {
   }
 
   /* Display name + date */
+  if (strlen(s->account->display_name) > 30) {
+    s->account->display_name[30] = '\0';
+  }
   dputs(s->account->display_name);
   gotox(TIME_COLUMN);
   if (writable_lines != 1)

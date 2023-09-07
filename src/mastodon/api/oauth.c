@@ -6,12 +6,8 @@
 #include "simple_serial.h"
 #include "dgets.h"
 #include "strsplit.h"
-#ifdef __CC65__
-#include <conio.h>
 #include "dputs.h"
-#else
 #include "extended_conio.h"
-#endif
 
 #ifdef __CC65__
 #pragma code-name (push, "LOWCODE")

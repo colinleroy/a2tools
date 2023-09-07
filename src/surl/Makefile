@@ -1,7 +1,7 @@
 PROGRAM=surl
 surl_SOURCES := surl-client.c ../lib/simple_serial.c ../lib/cgets.c ../lib/scrollwindow.c ../lib/surl_core.c ../lib/surl_receive.c
 GCCSOURCES := ../lib/extended_string.c
-CL65SOURCES := ../lib/fastirq.s ../lib/ntohs.s
+CL65SOURCES := ../lib/fastirq.s
 DEPS := 
 
 CC65_TARGET = apple2enh

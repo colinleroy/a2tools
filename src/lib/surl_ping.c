@@ -18,8 +18,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#ifndef __CC65__
 #include <arpa/inet.h>
+#ifndef __CC65__
 #include "extended_conio.h"
 #else
 #include <conio.h>

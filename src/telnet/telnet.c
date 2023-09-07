@@ -28,13 +28,11 @@
 #ifndef __CC65__
 #include <termios.h>
 #include <unistd.h>
+#endif
 #include "extended_conio.h"
-#else
-#include <conio.h>
 #include "dputs.h"
 #include "dputc.h"
 #include "scroll.h"
-#endif
 #include "math.h"
 
 #define BUFSIZE 255

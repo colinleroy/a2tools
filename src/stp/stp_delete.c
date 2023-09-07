@@ -20,11 +20,7 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
-#ifndef __CC65__
 #include "extended_conio.h"
-#else
-#include <conio.h>
-#endif
 #include "stp_delete.h"
 #include "stp.h"
 #include "stp_cli.h"

@@ -7,12 +7,8 @@
 #include <apple2enh.h>
 #endif
 #include "surl.h"
-#ifdef __CC65__
-#include <conio.h>
 #include "dputs.h"
-#else
 #include "extended_conio.h"
-#endif
 #include "path_helper.h"
 #include "file_select.h"
 #include "strsplit.h"

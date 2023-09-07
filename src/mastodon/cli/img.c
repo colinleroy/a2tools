@@ -24,11 +24,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <ctype.h>
-#ifdef __CC65__
-#include <conio.h>
-#else
 #include "extended_conio.h"
-#endif
 #include "clrzone.h"
 #include "progress_bar.h"
 #include "scrollwindow.h"

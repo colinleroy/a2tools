@@ -184,7 +184,7 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb, c
       }
     } else if (c == CH_ENTER && (!cmd_cb || !enter_accepted)) {
       goto out;
-    } else if (c == CH_CURS_LEFT || c == CH_DELETE) {
+    } else if (c == CH_CURS_LEFT || c == CH_DEL) {
       if (cur_insert > 0) {
         /* Go back one step in the buffer */
         cur_insert--;
@@ -202,7 +202,7 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb, c
             cur_y--;
           }
         }
-        if (c == CH_DELETE) {
+        if (c == CH_DEL) {
           char deleted = text_buf[cur_insert];
           /* shift chars down */
           for (k = cur_insert; k < max_insert; k++) {
