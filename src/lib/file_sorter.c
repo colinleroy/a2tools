@@ -96,7 +96,7 @@ file_sorter *file_sorter_new(sort_func object_compare,
 static char *get_filename(int num_file) {
   char *filename = malloc(BUFSIZE);
 
-#ifdef PRODOS_T_TXT
+#ifdef __CC65__
   sprintf(filename, "SRT%d", num_file);
 #else
   sprintf(filename, "/tmp/sorter-%d", num_file);
@@ -108,7 +108,7 @@ static FILE *open_filenum(int num_file, char *mode) {
   char *filename = get_filename(num_file);
   FILE *fp;
 
-#ifdef PRODOS_T_TXT
+#ifdef __APPLE2ENH__
   _filetype = PRODOS_T_TXT;
 #else
 #endif

@@ -22,7 +22,7 @@
 #include <errno.h>
 #include <limits.h>
 #include <time.h>
-#ifdef __CC65__
+#ifdef __APPLE2ENH__
 #include <apple2enh.h>
 #endif
 #include "math.h"
@@ -106,21 +106,17 @@ int main(int argc, char **argv) {
 
   if (server_url == NULL) {
     server_url = malloc(BUFSIZE);
-#ifdef __CC65__
     if (server_url == NULL) {
-      printf("Cant alloc server_url buffer. (%zu avail)", _heapmaxavail());
+      printf("Cant alloc server_url buffer.\n");
+      goto err_out;
     }
-#endif
     fp = fopen(SRV_URL_FILE, "r");
     if (fp != NULL) {
       fgets(server_url, BUFSIZE, fp);
       *strchr(server_url,'\n') = '\0';
       fclose(fp);
     } else {
-#ifdef __CC65__
-      printf("Can't load server URL (%zu avail).", _heapmaxavail());
-#endif
-      cgetc();
+      printf("Can't load server URL.\n");
       goto err_out;
     }
   }
@@ -132,9 +128,7 @@ int main(int argc, char **argv) {
 
   buf = malloc(BIG_BUFSIZE);
   if (buf == NULL) {
-#ifdef __CC65__
-    printf("Cannot allocate buffer. (%zu avail)", _heapmaxavail());
-#endif
+    printf("Cannot allocate buffer.\n");
     goto err_out;
   }
 
@@ -262,7 +256,6 @@ err_out:
   printf("Please wait...");
 #ifdef __CC65__
   exec("HOMECTRL", "2");
-  free(buf); /* unreachable code anyway */
 #else
   /* TODO */
 #endif

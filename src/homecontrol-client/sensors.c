@@ -82,10 +82,7 @@ int update_sensors(hc_sensor ***sensors_list) {
   for (i = 0; i < num_lines; i++) {
     char **parts;
     int num_parts;
-// #ifdef __CC65__
-//   gotoxy(0,0);
-//   printf("%d/%d     ", _heapmaxavail(), _heapmemavail());
-// #endif
+
     num_parts = strsplit_in_place(lines[i],';', &parts);
     if (num_parts == 5) {
       sensor_add(parts[0], parts[1], atoi(parts[2]), atol(parts[3]), parts[4]);

@@ -105,7 +105,7 @@ int stp_save(char *full_filename, char *out_dir, const surl_response *resp) {
   FILE *fp = NULL;
   char *data = NULL;
   char *filename;
-#ifdef __CC65__
+#ifdef __APPLE2ENH__
   char *filetype;
 #endif
   size_t r = 0, total = 0;
@@ -120,7 +120,7 @@ int stp_save(char *full_filename, char *out_dir, const surl_response *resp) {
   clrzone(0, start_y, scrw - 1, start_y);
   gotoxy(0, start_y);
 
-#ifdef __CC65__
+#ifdef __APPLE2ENH__
   if (strchr(filename, '.') != NULL) {
     filetype = strrchr(filename, '.') + 1;
     *(strchr(filename, '.')) = '\0';
@@ -128,7 +128,6 @@ int stp_save(char *full_filename, char *out_dir, const surl_response *resp) {
     filetype = "TXT";
   }
 
-#ifdef PRODOS_T_TXT
   if (!strcasecmp(filetype, "TXT")) {
     _filetype = PRODOS_T_TXT;
     _auxtype  = PRODOS_AUX_T_TXT_SEQ;
@@ -165,7 +164,6 @@ int stp_save(char *full_filename, char *out_dir, const surl_response *resp) {
     _filetype = PRODOS_T_TXT;
     _auxtype  = PRODOS_AUX_T_TXT_SEQ;
   }
-#endif
 
   filename = cleanup_filename(filename);
 #endif

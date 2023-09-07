@@ -44,7 +44,8 @@ char *get_start_url(void) {
   char *last_login = NULL;
   char *last_password = NULL;
   int changed = 0;
-#ifdef PRODOS_T_TXT
+
+#ifdef __APPLE2ENH__
   _filetype = PRODOS_T_TXT;
 #endif
 

@@ -73,7 +73,7 @@ void stp_send_file(char *remote_dir) {
     return;
   }
 
-#ifdef PRODOS_T_TXT
+#ifdef __APPLE2ENH__
   /* We want to send raw files */
   _filetype = PRODOS_T_BIN;
   _auxtype  = PRODOS_AUX_T_TXT_SEQ;
@@ -97,7 +97,7 @@ void stp_send_file(char *remote_dir) {
   }
   cprintf("(%lu bytes)\r\n", filesize);
 
-#ifdef PRODOS_T_TXT
+#ifdef __APPLE2ENH__
   remote_filename = malloc(BUFSIZE);
   if (type == PRODOS_T_SYS) {
     snprintf(remote_filename, BUFSIZE, "%s/%s.SYS", remote_dir, filename);

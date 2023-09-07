@@ -17,11 +17,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#ifdef __CC65__
-#include <conio.h>
-#else
 #include "extended_conio.h"
-#endif
 #include "clrzone.h"
 
 static char clearbuf[82];

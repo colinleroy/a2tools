@@ -19,6 +19,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#ifdef __APPLE2ENH__
+#include <apple2enh.h>
+#endif
 #include "simple_serial.h"
 #include "clrzone.h"
 #include "extended_conio.h"
@@ -30,12 +33,7 @@
 #include "sensors.h"
 #include "climate.h"
 #include "server_url.h"
-
-#ifdef __CC65__
-#include <apple2enh.h>
-#else
 #include <time.h>
-#endif
 
 static unsigned char scrw, scrh;
 
@@ -306,11 +304,6 @@ update:
   if (cur_list_length > 0 && cur_list_offset == -1) {
     update_offset(+1);
   }
-
-// #ifdef __CC65__
-//   gotoxy(0,0);
-//   printf("%d/%d    ", _heapmaxavail(), _heapmemavail());
-// #endif
 
 command:
   while (!kbhit()) {

@@ -26,13 +26,13 @@
 #include "extended_string.h"
 
 #ifdef __CC65__
-#pragma static-locals(push, on)
+  #pragma static-locals(push, on)
 
-#ifdef SURL_TO_LANGCARD
-#pragma code-name (push, "LC")
-#else
-#pragma code-name (push, "LOWCODE")
-#endif
+  #ifdef SURL_TO_LANGCARD
+  #pragma code-name (push, "LC")
+  #else
+  #pragma code-name (push, "LOWCODE")
+  #endif
 #endif
 
 char * __fastcall__ simple_serial_gets(char *out, size_t size) {

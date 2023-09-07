@@ -8,7 +8,6 @@
 #include "compose.h"
 #include "common.h"
 #include "progress_bar.h"
-
 #ifdef __APPLE2ENH__
 #include <apple2enh.h>
 #endif
