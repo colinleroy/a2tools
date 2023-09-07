@@ -52,12 +52,10 @@ static struct ser_params default_params = {
 int __fastcall__ simple_serial_open(int slot, int baudrate) {
   int err;
   
-#ifdef __APPLE2__
+#ifdef __APPLE2ENH__
   if ((err = ser_install(&a2e_ssc_ser)) != 0)
     return err;
-#endif
 
-#ifdef __APPLE2__
   if ((err = ser_apple2_slot(slot)) != 0)
     return err;
 #endif
@@ -352,7 +350,6 @@ void __fastcall__ simple_serial_read(char *ptr, size_t nmemb) {
   cur = ptr;
   end = ptr + nmemb;
 
-#ifdef __CC65__
 #ifdef __APPLE2ENH__
   __asm__("                  lda %v", cur);               /* Copy cur to ZP */
   __asm__("                  sta tmp1");
@@ -365,10 +362,6 @@ void __fastcall__ simple_serial_read(char *ptr, size_t nmemb) {
   __asm__("                  sta tmp4");
 
   __asm__("                  bra check_bound");           /* branch to check cur != end */
-#else
-  __asm__("                  ldx #$00");                  /* branch to check cur != end */
-  __asm__("                  beq check_bound");           /* branch to check cur != end */
-#endif
 
     __asm__("read_again:       lda tmp1");                /* low byte in A */
     __asm__("read_again_aok:   ldx tmp2");                /* high byte in X */
@@ -394,6 +387,7 @@ void __fastcall__ simple_serial_read(char *ptr, size_t nmemb) {
   }
 #endif
 }
+
 #ifdef __CC65__
 #pragma optimize(pop)
 #endif

@@ -3,9 +3,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <ctype.h>
-#ifdef __APPLE2__
-#include <apple2enh.h>
-#endif
 #include "surl.h"
 #include "dputs.h"
 #include "extended_conio.h"
