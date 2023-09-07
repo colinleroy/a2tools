@@ -20,7 +20,7 @@
 #include "simple_serial.h"
 #include <string.h>
 #include <errno.h>
-#ifdef __CC65__
+#ifdef __APPLE2ENH__
 #include <apple2enh.h>
 #endif
 #include "clrzone.h"
@@ -45,7 +45,7 @@ int main(void) {
 
 
 #ifdef __CC65__
-  if (simple_serial_open(2, SER_BAUD_9600) < 0) {
+  if (simple_serial_open(2, SER_BAUD_19200) < 0) {
     exit(1);
   }
 #else
