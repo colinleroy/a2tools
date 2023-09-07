@@ -1,11 +1,10 @@
 #ifndef __surl_h
 #define __surl_h
-#ifndef __CC65__
+
 #include <arpa/inet.h>
-#endif
+
 #include "../surl-server/surl_protocol.h"
 #include "simple_serial.h"
-#include "ntohs.h"
 
 #ifndef __CC65__
 #define __fastcall__

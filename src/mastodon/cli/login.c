@@ -24,14 +24,10 @@
 #include "scrollwindow.h"
 #include "strsplit.h"
 #include "dgets.h"
-#ifdef __CC65__
 #include "dputs.h"
 #include "dputc.h"
 #include "scroll.h"
-#include <conio.h>
-#else
 #include "extended_conio.h"
-#endif
 #include "math.h"
 #include "api.h"
 #include "oauth.h"

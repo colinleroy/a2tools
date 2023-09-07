@@ -35,7 +35,6 @@ mastodon_CC65SOURCES := \
 	../lib/dputc.s \
 	../lib/scroll.s \
 	../lib/fastirq.s \
-	../lib/ntohs.s
 
 mastocli_SOURCES := \
 	$(common_SOURCES) \
@@ -52,7 +51,6 @@ mastocli_CC65SOURCES := \
 	../lib/dputc.s \
 	../lib/scroll.s \
 	../lib/fastirq.s \
-	../lib/ntohs.s
 
 mastowrite_SOURCES := \
 	$(common_SOURCES) \
@@ -71,7 +69,6 @@ mastowrite_CC65SOURCES := \
 	../lib/dputc.s \
 	../lib/scroll.s \
 	../lib/fastirq.s \
-	../lib/ntohs.s
 
 mastoconf_SOURCES := \
 	cli/config.c \
