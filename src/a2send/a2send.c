@@ -77,7 +77,7 @@ int main(int argc, char **argv) {
   unsigned auxtype;
 
 #ifdef __CC65__
-  if (simple_serial_open(2, SER_BAUD_9600) < 0) {
+  if (simple_serial_open(2, SER_BAUD_19200) < 0) {
     exit(1);
   }
 
