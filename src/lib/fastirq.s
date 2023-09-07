@@ -116,6 +116,8 @@ handle_ram_irq:
 
         ; It's an IRQ
 :       lda     _a_backup
+
+        .ifdef __APPLE2ENH__
         pha                     ; Save A,X,Y
         phx
         phy
@@ -123,6 +125,21 @@ handle_ram_irq:
         ply                     ; Restore Y,X,A
         plx
         pla
+
+        .else
+        pha                     ; Save A,X,Y
+        txa
+        pha
+        tya
+        pha
+        jsr     callirq
+        pla                     ; Restore Y,X,A
+        tay
+        pla
+        tax
+        pla
+
+        .endif
         rti
 
 handle_rom_irq:                 ; ROM saves things for us
