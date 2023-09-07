@@ -61,15 +61,10 @@ surl_response *resp;
 const surl_response * __fastcall__ surl_start_request(const char method, char *url, char **headers, int n_headers) {
   int i;
 
-  if (proxy_opened == 0) {
-    if (surl_connect_proxy() != 0) {
-      return NULL;
-    }
-  }
-
   resp = &static_resp;
   if (resp->content_type) {
     free(resp->content_type);
+    resp->content_type = NULL;
   }
 
   resp->size = 0;
@@ -78,6 +73,13 @@ const surl_response * __fastcall__ surl_start_request(const char method, char *u
   resp->content_type = NULL;
   resp->header_size = 0;
   resp->cur_hdr_pos = 0;
+
+  if (proxy_opened == 0) {
+    if (surl_connect_proxy() != 0) {
+      resp->code = 600;
+      return resp;
+    }
+  }
 
   simple_serial_putc(method);
   simple_serial_puts(url);

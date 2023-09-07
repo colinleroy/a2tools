@@ -53,13 +53,7 @@ int api_get_posts(char *endpoint, char to_load, char *load_before, char *load_af
     return 0;
 
   if (surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, NULL, sel) >= 0) {
-    char **tmp;
-    int i;
-    n_status = strnsplit(gen_buf, '\n', &tmp, to_load);
-    for (i = 0; i < n_status; i++) {
-      post_ids[i] = tmp[i];
-    }
-    free(tmp);
+    n_status = strnsplit(gen_buf, '\n', post_ids, to_load);
   }
 
   return n_status;
@@ -246,7 +240,7 @@ char api_delete_status(status *s) {
 }
 
 char api_relationship_get(account *a, char f) {
-  char n_lines, **lines;
+  char n_lines;
 
   if ((a->relationship & RSHIP_SET) == 0) {
     snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/relationships?id[]=%s", ACCOUNTS_ENDPOINT, a->id);
@@ -258,9 +252,8 @@ char api_relationship_get(account *a, char f) {
     if (surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, NULL, 
                       ".[]|.following,.followed_by,"
                       ".blocking,.blocked_by,.muting,.requested") >= 0) {
-      n_lines = strnsplit_in_place(gen_buf,'\n',&lines, 6);
+      n_lines = strnsplit_in_place(gen_buf,'\n', lines, 6);
       if (n_lines != 6) {
-        free(lines);
         return 0;
       }
       a->relationship |= RSHIP_SET;
@@ -282,7 +275,6 @@ char api_relationship_get(account *a, char f) {
       if (lines[5][0] == 't') {
         a->relationship |= RSHIP_FOLLOW_REQ;
       }
-      free(lines);
     }
   }
 
