@@ -26,6 +26,7 @@
 #include "extended_string.h"
 
 #ifdef __CC65__
+
 #pragma static-locals(push, on)
 
 #ifdef SURL_TO_LANGCARD
@@ -33,9 +34,6 @@
 #else
 #pragma code-name (push, "LOWCODE")
 #endif
-#endif
-
-#ifdef __CC65__
 
 /* Setup */
 static int last_slot = 2;

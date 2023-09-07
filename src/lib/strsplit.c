@@ -112,8 +112,5 @@ int __fastcall__ strnsplit_in_place(char *in, char split, char ***out, char max_
 
 #ifdef __CC65__
 #pragma static-locals(pop)
-#endif
-
-#ifdef __CC65__
 #pragma code-name (pop)
 #endif

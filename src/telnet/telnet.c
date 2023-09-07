@@ -487,7 +487,7 @@ int main(int argc, char **argv) {
   char got_input;
   //DEBUG int loop_wait = 0;
   
-#ifdef __CC65__
+#ifdef __APPLE2ENH__
   videomode(VIDEOMODE_80COL);
 #endif
   screensize(&scrw, &scrh);

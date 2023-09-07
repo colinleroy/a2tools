@@ -20,26 +20,18 @@
 #include <string.h>
 #include <unistd.h>
 #ifdef __CC65__
-#include <conio.h>
 #include <device.h>
 #else
-#include "extended_conio.h"
 #define _DE_ISDIR(x) ((x) == DT_DIR)
 #endif
+#include "extended_conio.h"
 #include <ctype.h>
 #include <errno.h>
 #include <dirent.h>
+#include "dputc.h"
 #include "clrzone.h"
 
 static char last_dir[FILENAME_MAX] = "";
-
-static void bell(void) {
-#ifdef __CC65__
-  __asm__("bit     $C082");
-  __asm__("jsr     $FBE4");
-  __asm__("bit     $C080");
-#endif
-}
 
 char *file_select(char sx, char sy, char ex, char ey, char dir, char *prompt) {
   char **list = NULL;
@@ -139,7 +131,7 @@ disp_again:
   switch (c) {
     case CH_CURS_RIGHT:
       if (!is_dir[sel]) {
-        bell();
+        dputc('\07');
         goto disp_again;
       }
       if (list[sel][0] != '/')
@@ -155,7 +147,7 @@ up:
       goto out;
     case CH_ENTER:
       if (is_dir[sel] != dir) {
-        bell();
+        dputc('\07');
         goto disp_again;
       } else {
         filename = malloc(FILENAME_MAX);

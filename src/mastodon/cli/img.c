@@ -65,11 +65,11 @@ char monochrome = 1;
 static void init_hgr(void) {
 #ifdef __APPLE2ENH__
 
-#ifdef USE_HGR2
+  #ifdef USE_HGR2
   __asm__("lda     #$40");
-#else
+  #else
   __asm__("lda     #$20");
-#endif
+  #endif
   /* Set draw page */
   __asm__("sta     $E6"); /* HGRPAGE */
 
@@ -80,11 +80,11 @@ static void init_hgr(void) {
   __asm__("bit     $C057"); /* HIRES */
 
   /* Set view page */
-#ifdef USE_HGR2
+  #ifdef USE_HGR2
   __asm__("bit     $C055"); /* HISCR */
-#else
+  #else
   __asm__("bit     $C054"); /* LOWSCR */
-#endif
+  #endif
 #endif
   hgr_init_done = 1;
 }

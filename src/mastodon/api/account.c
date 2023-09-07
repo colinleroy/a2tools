@@ -10,11 +10,11 @@
 #define BUF_SIZE 255
 
 #ifdef __CC65__
-#ifdef SURL_TO_LANGCARD
-#pragma code-name (push, "LC")
-#else
-#pragma code-name (push, "LOWCODE")
-#endif
+  #ifdef SURL_TO_LANGCARD
+  #pragma code-name (push, "LC")
+  #else
+  #pragma code-name (push, "LOWCODE")
+  #endif
 #endif
 
 account *account_new(void) {

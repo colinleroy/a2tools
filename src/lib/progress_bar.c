@@ -17,11 +17,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#ifdef __CC65__
-#include <conio.h>
-#else
 #include "extended_conio.h"
-#endif
 #include "progress_bar.h"
 
 void progress_bar(int x, int y, int width, size_t cur, size_t end) {
