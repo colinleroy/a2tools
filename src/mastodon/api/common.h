@@ -28,6 +28,9 @@ extern char selector[SELECTOR_SIZE];
 #define BUF_SIZE 255
 extern char gen_buf[BUF_SIZE];
 
+#define MAX_LINES_NUM 12
+extern char *lines[BUF_SIZE];
+
 extern char *instance_url;
 extern char *oauth_token;
 extern char *translit_charset;

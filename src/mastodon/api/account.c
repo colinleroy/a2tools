@@ -47,7 +47,7 @@ void account_free(account *a) {
 account *account_new_from_json(void) {
   account *a = account_new();
   int r;
-  char n_lines, **lines;
+  char n_lines;
   char *note;
   
   if (a == NULL) {
@@ -58,7 +58,7 @@ account *account_new_from_json(void) {
                     ".id,.username,.acct,.display_name,"
                     ".created_at,.followers_count,"
                     ".following_count") >= 0) {
-    n_lines = strnsplit_in_place(gen_buf, '\n', &lines, 7);
+    n_lines = strnsplit_in_place(gen_buf, '\n', lines, 7);
     if (n_lines > 5) {
       a->id = strdup(lines[0]);
       a->username = strdup(lines[1]);
@@ -68,7 +68,6 @@ account *account_new_from_json(void) {
       a->followers_count = atol(lines[5]);
       a->following_count = atol(lines[6]);
     }
-    free(lines);
     if (n_lines < 6)
       goto err_out;
 
@@ -93,7 +92,7 @@ err_out:
 
 account *api_get_profile(char *id) {
   account *a;
-  char n_lines, **lines;
+  char n_lines;
 
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s", ACCOUNTS_ENDPOINT,
               id == NULL ? "verify_credentials" : id);
@@ -109,18 +108,16 @@ account *api_get_profile(char *id) {
   }
 
   if (surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, translit_charset, ".id,.display_name,.acct,.username") >= 0) {
-    n_lines = strnsplit_in_place(gen_buf,'\n',&lines, 4);
+    n_lines = strnsplit_in_place(gen_buf,'\n', lines, 4);
     if (n_lines < 4) {
       account_free(a);
       a = NULL;
-      free(lines);
       return NULL;
     }
     a->id = strdup(lines[0]);
     a->display_name = strdup(lines[1]);
     a->acct = strdup(lines[2]);
     a->username = strdup(lines[3]);
-    free(lines);
   }
   return a;
 }

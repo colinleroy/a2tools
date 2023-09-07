@@ -29,7 +29,6 @@ status *status_new(void) {
 #pragma static-locals (push,off) /* need reentrancy */
 #endif
 static __fastcall__ char status_fill_from_json(status *s, char *id, char full, char is_reblog) {
-  char **lines;
   char n_lines;
   int r;
   char *content;
@@ -57,14 +56,13 @@ static __fastcall__ char status_fill_from_json(status *s, char *id, char full, c
                       ".created_at,.account.display_name,.reblog.id//\"-\",.spoiler_text");
   }
 
-  n_lines = strnsplit_in_place(gen_buf, '\n', &lines, 4);
+  n_lines = strnsplit_in_place(gen_buf, '\n', lines, 4);
   if (r >= 0 && n_lines >= 3) {
     if (!is_reblog && lines[2][0] != '-') {
       s->reblogged_by = strdup(lines[1]);
       s->reblog_id = s->id;
       s->id = NULL;
       r = status_fill_from_json(s, lines[2], full, 1);
-      free(lines);
       return r;
     }
 
@@ -79,7 +77,6 @@ static __fastcall__ char status_fill_from_json(status *s, char *id, char full, c
       s->spoiler_text[TL_SPOILER_TEXT_BUF - 1] = '\0';
     }
   }
-  free(lines);
   
   /* Get details of original toot */
   if (is_reblog) {
@@ -94,7 +91,7 @@ static __fastcall__ char status_fill_from_json(status *s, char *id, char full, c
                       ".bookmarked,.account.id,.account.acct,.account.username,.visibility");
   }
 
-  n_lines = strnsplit_in_place(gen_buf, '\n', &lines, 11);
+  n_lines = strnsplit_in_place(gen_buf, '\n', lines, 11);
   if (r >= 0 && n_lines == 11) {
     r = atoi(lines[0]);
     s->n_images = r > 255 ? 255 : r;
@@ -122,7 +119,6 @@ static __fastcall__ char status_fill_from_json(status *s, char *id, char full, c
     else
       s->visibility = COMPOSE_MENTION;
   }
-  free(lines);
 
   content = malloc(full ? TL_STATUS_LARGE_BUF : TL_STATUS_SHORT_BUF);
   if (!content) {

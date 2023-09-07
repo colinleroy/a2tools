@@ -43,19 +43,16 @@ try_again:
   gotoxy(0, 10);
   cputs("Establishing serial connection... ");
   resp = surl_start_request(SURL_METHOD_PING, "ping://", NULL, 0);
-  if (resp->code == SURL_PROTOCOL_VERSION) {
-    done = 1;
-  } else {
+  if (resp->code != SURL_PROTOCOL_VERSION) {
     cprintf("\r\n\r\n%s. Press any key to try again...\r\n",
             resp->code == 504 ? "Timeout"
-              : resp->code != SURL_PROTOCOL_VERSION ? "Wrong protocol version"
-                : "Unknown error");
+              : (resp->code == 600 ? "Can not open serial port."
+                : (resp->code != SURL_PROTOCOL_VERSION ? "Wrong protocol version"
+                  : "Unknown error")));
     cgetc();
-  }
-
-  if (!done) {
     goto try_again;
   }
+
   cputs("Done.");
 }
 

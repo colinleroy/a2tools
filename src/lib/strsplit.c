@@ -28,34 +28,13 @@
 #pragma static-locals(push, on)
 #endif
 
-static int __fastcall__ _strsplit_int(char in_place, char *in, char split, char ***out, size_t max_tokens) {
+static int __fastcall__ _strnsplit_int(char in_place, char *in, char split, char **tokens, size_t max_tokens) {
   char *start;
   size_t n_tokens;
-  char **tokens;
   /* copy to avoid stack access */
   char *src = in;
 
-  if (!in) {
-    *out = NULL;
-    return 0;
-  }
-
-  if (max_tokens == 0) {
-    start = src;
-    n_tokens = 1;
-    while (*src) {
-      if (*src == split) {
-        ++n_tokens;
-      }
-      ++src;
-    }
-
-    tokens = malloc(n_tokens * sizeof(char *));
-    src = start;
-  } else {
-    tokens = malloc((max_tokens) * sizeof(char *));
-    start = src;
-  }
+  start = src;
 
   n_tokens = 0;
 
@@ -90,24 +69,44 @@ static int __fastcall__ _strsplit_int(char in_place, char *in, char split, char 
   }
 
 done:
-  *out = tokens;
   return n_tokens;
 }
 
+static int __fastcall__ _strsplit_int(char in_place, char *in, char split, char ***out) {
+  size_t n_tokens;
+  /* copy to avoid stack access */
+  char *src = in;
+
+  if (!in) {
+    *out = NULL;
+    return 0;
+  }
+
+  n_tokens = 1;
+  while (*src) {
+    if (*src == split) {
+      ++n_tokens;
+    }
+    ++src;
+  }
+  *out = malloc(n_tokens * sizeof(char *));
+  return _strnsplit_int(in_place, in, split, *out, n_tokens);
+}
+
 int __fastcall__ strsplit(char *in, char split, char ***out) {
-  return _strsplit_int(0, in, split, out, 0);
+  return _strsplit_int(0, in, split, out);
 }
 
 int __fastcall__ strsplit_in_place(char *in, char split, char ***out) {
-  return _strsplit_int(1, in, split, out, 0);
+  return _strsplit_int(1, in, split, out);
 }
 
-int __fastcall__ strnsplit(char *in, char split, char ***out, char max_tokens) {
-  return _strsplit_int(0, in, split, out, max_tokens);
+int __fastcall__ strnsplit(char *in, char split, char **out, char max_tokens) {
+  return _strnsplit_int(0, in, split, out, max_tokens);
 }
 
-int __fastcall__ strnsplit_in_place(char *in, char split, char ***out, char max_tokens) {
-  return _strsplit_int(1, in, split, out, max_tokens);
+int __fastcall__ strnsplit_in_place(char *in, char split, char **out, char max_tokens) {
+  return _strnsplit_int(1, in, split, out, max_tokens);
 }
 
 #ifdef __CC65__

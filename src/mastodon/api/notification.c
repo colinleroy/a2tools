@@ -49,13 +49,7 @@ int api_get_notifications(char to_load, char notifications_type, char *load_befo
     return 0;
 
   if (surl_get_json(gen_buf, 512, SURL_HTMLSTRIP_NONE, NULL, ".[]|.id") >= 0) {
-    char **tmp;
-    char i;
-    n_notifications = strnsplit(gen_buf, '\n', &tmp, to_load);
-    for (i = 0; i < n_notifications; i++) {
-      notification_ids[i] = tmp[i];
-    }
-    free(tmp);
+    n_notifications = strnsplit(gen_buf, '\n', notification_ids, to_load);
   }
 
   return n_notifications;
@@ -76,13 +70,11 @@ notification *api_get_notification(char *id) {
                     ".account.id,"
                     ".account.display_name,"
                     ".account.username") >= 0) {
-    char **lines;
     char n_lines;
 
-    n_lines = strnsplit_in_place(gen_buf, '\n', &lines, 7);
+    n_lines = strnsplit_in_place(gen_buf, '\n', lines, 7);
     n = notification_new();
     if (n == NULL || n_lines < 6) {
-      free(lines);
       notification_free(n);
       return NULL;
     }
@@ -107,7 +99,6 @@ notification *api_get_notification(char *id) {
     /* if display_name is null or non-existent, 
      * we'll use username */
     n->display_name = (lines[5][0] == '\0' && n_lines == 7) ? strdup(lines[6]) : strdup(lines[5]);
-    free(lines);
   } else {
       notification_free(n);
       return NULL;
