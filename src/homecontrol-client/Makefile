@@ -12,7 +12,7 @@ homectrl_SOURCES := main.c network.c \
 	../lib/surl_core.c \
 	../lib/surl_receive.c
 
-homectrl_CL65SOURCES = ../lib/dputc.s ../lib/scroll.s ../lib/fastirq.s
+homectrl_CL65SOURCES = ../lib/dputc.s ../lib/dputs.s ../lib/scroll.s ../lib/fastirq.s
 
 grphview_SOURCES := graph-viewer.c \
 	../lib/surl_core.c \
