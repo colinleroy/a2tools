@@ -37,7 +37,7 @@
 
 void __fastcall__ surl_ping(void) {
   const surl_response *resp;
-  char done = 0;
+
 try_again:
   clrscr();
   gotoxy(0, 10);
