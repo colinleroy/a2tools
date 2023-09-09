@@ -17,4 +17,6 @@
 
 #define BUFSIZE 255
 #define STP_URL_FILE "STPSTARTURL"
-#define PAGE_HEIGHT 15
+
+#define PAGE_BEGIN 2
+#define PAGE_HEIGHT 17

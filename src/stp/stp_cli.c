@@ -20,6 +20,7 @@
 #include <string.h>
 #include "stp_cli.h"
 #include "clrzone.h"
+#include "dputs.h"
 #include "extended_conio.h"
 
 #ifdef __CC65__
@@ -43,10 +44,11 @@ void stp_print_header(char *url) {
   gotoxy(0, 0);
   if (strlen(no_pass_url) > scrw - 1) {
     char *tmp = strdup(no_pass_url + strlen(no_pass_url) - scrw + 5);
-    cprintf("...%s", tmp);
+    dputs("...");
+    dputs(tmp);
     free(tmp);
   } else {
-    cprintf("%s",no_pass_url);
+    dputs(no_pass_url);
   }
   free(no_pass_url);
   gotoxy(0, 1);
@@ -59,7 +61,7 @@ void stp_print_result(const surl_response *response) {
   clrzone(0, 21, scrw - 1, 21);
   gotoxy(0, 21);
   if (response == NULL) {
-    cprintf("Unknown request error.");
+    dputs("Unknown request error.");
   } else {
     cprintf("Response code %d - %zu bytes, %s",
             response->code,
@@ -74,7 +76,7 @@ void stp_print_footer(void) {
   chline(scrw);
   clrzone(0, 23, scrw - 1, 23);
   gotoxy(0, 23);
-  cprintf("Up/Down: navigate, Enter: select, S: send, D: delete, A: get all, Esc: back");
+  dputs("Up/Down: navigate, Enter: select, S: send, D: delete, A: get all, Esc: back");
 }
 #ifdef __CC65__
 #pragma code-name (pop)
