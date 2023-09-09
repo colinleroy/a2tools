@@ -29,7 +29,11 @@
 #include "simple_serial.h"
 #include "extended_conio.h"
 #include "dgets.h"
+#include "dputc.h"
+#include "dputs.h"
 #include "clrzone.h"
+#include "scroll.h"
+#include "scrollwindow.h"
 #include "strsplit.h"
 
 static char *url_go_up(char *url);
@@ -65,16 +69,18 @@ char *get_start_url(void) {
     if (strchr(last_password,'\n'))
     *strchr(last_password,'\n') = '\0';
   } else {
-    last_start_url = strdup("ftp://ftp.apple.asimov.net");
+    last_start_url = strdup("ftp://ftp.apple.asimov.net/");
     last_login = strdup("");
     last_password = strdup("");
   }
 
   gotoxy(0, 9);
-  cprintf("Please enter the server's root URL,\r\n");
-  cprintf("or Enter to reuse the last one:\r\n\r\n");
-  cprintf("'%s'\r\n", last_start_url);
-  cprintf("\r\n\r\nURL: ");
+  dputs("Please enter the server's root URL,\r\n"
+        "or Enter to reuse the last one:\r\n\r\n"
+        "'");
+  dputs(last_start_url);
+  dputs("'\r\n\r\n\r\n"
+        "URL: ");
 
   start_url = malloc(BUFSIZE + 1);
   start_url[0] = '\0';
@@ -95,9 +101,11 @@ char *get_start_url(void) {
   }
 
   if (*last_login != '\0') {
-    cprintf("Login (%s): ", last_login);
+    dputs("Login (");
+    dputs(last_login);
+    dputs("): ");
   } else {
-    cprintf("Login (anonymous): ");
+    dputs("Login (anonymous): ");
   }
 
   login = malloc(BUFSIZE + 1);
@@ -109,7 +117,7 @@ char *get_start_url(void) {
   } else {
     password = malloc(BUFSIZE + 1);
     password[0] = '\0';
-    cprintf("Password: ");
+    dputs("Password: ");
     echo(0);
     dget_text(password, BUFSIZE, NULL, 0);
     echo(1);
@@ -136,7 +144,9 @@ char *get_start_url(void) {
       fprintf(fp, "%s\n", password);
       fclose(fp);
     } else {
-      cprintf("Can't save URL: %s\r\n", strerror(errno));
+      dputs("Can't save URL: ");
+      dputs(strerror(errno));
+      cgetc();
       exit(1);
     }
   }
@@ -156,14 +166,17 @@ static int num_lines = 0;
 static int cur_line = 0;
 static int cur_display_line = 0;
 
-static int scroll(int shift) {
-  int scroll_changed = 0, scroll_way = 0;
+static char scroll(signed char shift) {
+  signed char scroll_changed = 0, scroll_way = 0;
+  char rollover = 0;
+
   /* Handle list offset */
   if (shift < 0) {
     if (cur_line > 0) {
       cur_line--;
       scroll_way = -1;
     } else {
+      rollover = 1;
       cur_line = num_lines - 1;
       scroll_way = +1;
     }
@@ -172,6 +185,7 @@ static int scroll(int shift) {
       cur_line++;
       scroll_way = +1;
     } else {
+      rollover = 1;
       cur_line = 0;
       scroll_way = -1;
     }
@@ -183,12 +197,23 @@ static int scroll(int shift) {
   if (scroll_way < 0 && cur_line < cur_display_line) {
     cur_display_line = cur_line;
     scroll_changed = 1;
+    if (!rollover) {
+      set_scrollwindow(PAGE_BEGIN, PAGE_BEGIN + PAGE_HEIGHT + 1);
+      scrolldown_one();
+      set_scrollwindow(0, 24);
+    }
   }
-  if (scroll_way > 0 && cur_line > cur_display_line + PAGE_HEIGHT - 1) {
-    cur_display_line = cur_line - PAGE_HEIGHT + 1;
+
+  if (scroll_way > 0 && cur_line - PAGE_HEIGHT > cur_display_line) {
+    cur_display_line = cur_line - PAGE_HEIGHT;
     scroll_changed = 1;
+    if (!rollover) {
+      set_scrollwindow(PAGE_BEGIN, PAGE_BEGIN + PAGE_HEIGHT + 1);
+      scrollup_one();
+      set_scrollwindow(0, 24);
+    }
   }
-  return scroll_changed;
+  return scroll_changed && rollover;
 }
 
 unsigned char scrw = 255, scrh = 255;
@@ -250,7 +275,7 @@ static void get_all(const char *url, char **lines, int n_lines) {
       break;
     }
   }
-  clrzone(0, 2, scrw - 1, 2 + PAGE_HEIGHT);
+  clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
   free(out_dir);
 }
 
@@ -286,9 +311,9 @@ int main(void) {
 
     stp_print_header(url);
 
-    clrzone(0, 2, scrw - 1, 2 + PAGE_HEIGHT);
+    clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
     gotoxy(center_x, 12);
-    cprintf("Loading...   ");
+    dputs("Loading...   ");
 
     resp = surl_start_request(SURL_METHOD_GET, url, NULL, 0);
 
@@ -299,16 +324,16 @@ int main(void) {
     if (resp->size == 0) {
       gotoxy(center_x, 12);
       if (surl_response_ok()) {
-        cprintf("Empty.       ");
+        dputs("Empty.       ");
       } else {
-        cprintf("Bad response.");
+        dputs("Bad response.");
       }
       goto keyb_input;
     }
 
     if (resp->content_type && strcmp(resp->content_type, "directory")) {
       stp_save_dialog(url, resp, NULL);
-      clrzone(0, 2, scrw - 1, 2 + PAGE_HEIGHT);
+      clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
       stp_print_result(resp);
       goto up_dir;
     } else {
@@ -317,7 +342,7 @@ int main(void) {
     }
     if (r < resp->size) {
       gotoxy(center_x - 7, 12);
-      cprintf("Can not load response.");
+      dputs("Can not load response.");
       goto keyb_input;
     }
 
@@ -325,20 +350,19 @@ int main(void) {
 
 update_list:
     if (full_update) {
-      clrzone(0, 2, scrw - 1, 2 + PAGE_HEIGHT);
-      for (i = 0; i + cur_display_line < num_lines && i < PAGE_HEIGHT; i++) {
-        gotoxy(0, i + 2);
-        if (i + cur_display_line == cur_line) {
-          cprintf("> %s", lines[i + cur_display_line]);
-        } else {
-          cprintf("  %s", lines[i + cur_display_line]);
-        }
+      clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
+      for (i = 0; i + cur_display_line < num_lines && i <= PAGE_HEIGHT; i++) {
+        gotoxy(2, i + PAGE_BEGIN);
+        dputs(lines[i + cur_display_line]);
       }
     } else {
-      clrzone(0, 2, 1, 2 + PAGE_HEIGHT);
-      gotoxy(0, 2 + cur_line - cur_display_line);
-      cputc('>');
+      gotoxy (2, PAGE_BEGIN + cur_line - cur_display_line);
+      dputs(lines[cur_line]);
+
+      clrzone(0, PAGE_BEGIN, 1, PAGE_BEGIN + PAGE_HEIGHT);
     }
+    gotoxy(0, PAGE_BEGIN + cur_line - cur_display_line);
+    dputc('>');
 
 keyb_input:
     c = cgetc();
