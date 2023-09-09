@@ -33,6 +33,10 @@
 #include "sensors.h"
 #include "climate.h"
 #include "server_url.h"
+#include "scroll.h"
+#include "scrollwindow.h"
+#include "dputc.h"
+#include "dputs.h"
 #include <time.h>
 
 static unsigned char scrw, scrh;
@@ -49,7 +53,7 @@ static int cur_list_display_offset = 0;
 static int cur_list_length = -1;
 
 #define clear_list(x) do { clrzone(x, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT); } while(0)
-static void update_switch_page(int update_data) {
+static void update_switch_page(char update_data, char clear) {
   int i;
 
   if (update_data) {
@@ -62,26 +66,28 @@ static void update_switch_page(int update_data) {
     return;
   }
 
-  clear_list(3);
+  if (clear)
+    clear_list(3);
+
   for (i = 0; i + cur_list_display_offset < cur_list_length && i < PAGE_HEIGHT; i++) {
     hc_switch *sw = switches[i + cur_list_display_offset];
 
     gotoxy(3, PAGE_BEGIN + i);
-    printf("%s", sw->name);
+    dputs(sw->name);
     
     gotoxy(30, PAGE_BEGIN + i);
 
     if (!strcmp(sw->state, "on")) {
       revers(1);
-      puts("( ON)");
+      cputs("( ON)");
       revers(0);
     } else {
-      puts("(OFF)");
+      cputs("(OFF)");
     }
   }
 }
 
-static void update_sensor_page(int update_data) {
+static void update_sensor_page(char update_data, char clear) {
   int i;
 
   if (update_data) {
@@ -94,20 +100,22 @@ static void update_sensor_page(int update_data) {
     return;
   }
 
-  clear_list(3);
+  if (clear)
+    clear_list(3);
 
   for (i = 0; i + cur_list_display_offset < cur_list_length && i < PAGE_HEIGHT; i++) {
     hc_sensor *sensor = sensors[i + cur_list_display_offset];
 
     gotoxy(3, PAGE_BEGIN + i);
-    printf("%s\n", sensor->name);
+    dputs(sensor->name);
 
     gotoxy(30, PAGE_BEGIN + i);
-    printf("%ld %s", sensor->cur_value, sensor->unit);
+    cprintf("%ld ", sensor->cur_value);
+    dputs(sensor->unit);
   }
 }
 
-static void update_climate_page(int update_data) {
+static void update_climate_page(char update_data, char clear) {
   int i;
 
   if (update_data) {
@@ -120,15 +128,17 @@ static void update_climate_page(int update_data) {
     return;
   }
 
-  clear_list(3);
+  if (clear)
+    clear_list(3);
+
   for (i = 0; i + cur_list_display_offset < cur_list_length && i < PAGE_HEIGHT; i++) {
     hc_climate_zone *zone = climate_zones[i + cur_list_display_offset];
 
     gotoxy(3, PAGE_BEGIN + i);
-    printf("%s", zone->name);
+    dputs(zone->name);
     
     gotoxy(24, PAGE_BEGIN + i);
-    printf("%4s/%2d[C %2s%%H", zone->cur_temp, zone->set_temp, zone->cur_humidity);
+    cprintf("%4s/%2d[C %2s%%H", zone->cur_temp, zone->set_temp, zone->cur_humidity);
   }
 }
 
@@ -145,14 +155,16 @@ static void print_footer(void) {
   printxcentered(23, "Up/Down: Choose ! Enter: Select");
 }
 
-static void update_offset(int new_offset) {
-  int scroll_changed = 0, scroll_way = 0;
-  /* Handle list offset */
+static void update_offset(signed char new_offset) {
+  signed char scroll_changed = 0, scroll_way = 0;
+  char rollover = 0;
+
   if (new_offset < 0) {
     if (cur_list_offset > 0) {
       cur_list_offset--;
       scroll_way = -1;
     } else {
+      rollover = 1;
       cur_list_offset = cur_list_length - 1;
       scroll_way = +1;
     }
@@ -161,6 +173,7 @@ static void update_offset(int new_offset) {
       cur_list_offset++;
       scroll_way = +1;
     } else {
+      rollover = 1;
       cur_list_offset = 0;
       scroll_way = -1;
     }
@@ -172,23 +185,33 @@ static void update_offset(int new_offset) {
   if (scroll_way < 0 && cur_list_offset < cur_list_display_offset) {
     cur_list_display_offset = cur_list_offset;
     scroll_changed = 1;
+    if (!rollover) {
+      set_scrollwindow(PAGE_BEGIN, PAGE_BEGIN + PAGE_HEIGHT);
+      scrolldown_one();
+      set_scrollwindow(0, 24);
+    }
   }
   if (scroll_way > 0 && cur_list_offset > cur_list_display_offset + PAGE_HEIGHT - 1) {
     cur_list_display_offset = cur_list_offset - PAGE_HEIGHT + 1;
     scroll_changed = 1;
+    if (!rollover) {
+      set_scrollwindow(PAGE_BEGIN, PAGE_BEGIN + PAGE_HEIGHT);
+      scrollup_one();
+      set_scrollwindow(0, 24);
+    }
   }
 
   if (scroll_changed) {
     switch(cur_page) {
-      case SWITCH_PAGE:  update_switch_page(0);  break;
-      case SENSOR_PAGE:  update_sensor_page(0);  break;
-      case CLIMATE_PAGE: update_climate_page(0); break;
+      case SWITCH_PAGE:  update_switch_page(0, rollover);  break;
+      case SENSOR_PAGE:  update_sensor_page(0, rollover);  break;
+      case CLIMATE_PAGE: update_climate_page(0, rollover); break;
     }
   }
 
   clrzone(1, PAGE_BEGIN, 1, PAGE_BEGIN + PAGE_HEIGHT);
   gotoxy(1, PAGE_BEGIN + cur_list_offset - cur_list_display_offset);
-  cputc('>');
+  dputc('>');
 }
 
 static void select_switch(void) {
@@ -233,7 +256,7 @@ static int select_climate_zone(void) {
 
   if (!configure_climate_zone(zone)) {
     /* Redraw on config screen */
-    update_climate_page(0);
+    update_climate_page(0, 1);
     return 0;
   }
   return 1;
@@ -297,9 +320,9 @@ update:
   climate_zones_free_all();
   cur_list_length = 0;
   switch(cur_page) {
-    case SWITCH_PAGE:  update_switch_page(1);  break;
-    case SENSOR_PAGE:  update_sensor_page(1);  break;
-    case CLIMATE_PAGE: update_climate_page(1); break;
+    case SWITCH_PAGE:  update_switch_page(1, 1);  break;
+    case SENSOR_PAGE:  update_sensor_page(1, 1);  break;
+    case CLIMATE_PAGE: update_climate_page(1, 1); break;
   }
   if (cur_list_length > 0 && cur_list_offset == -1) {
     update_offset(+1);
