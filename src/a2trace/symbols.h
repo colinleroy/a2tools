@@ -12,7 +12,7 @@ void load_syms(const char *file);
 void load_lbls(const char *file);
 void map_slocs_to_adresses(void);
 
-dbg_symbol *symbol_get_by_addr(int addr, int main, int lc);
+dbg_symbol *symbol_get_by_addr(int cpu, int addr, int main, int lc);
 dbg_symbol *symbol_get_by_name(const char *name);
 int symbol_get_addr(dbg_symbol *symbol);
 const char *symbol_get_name(dbg_symbol *symbol);

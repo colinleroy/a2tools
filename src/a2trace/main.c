@@ -18,6 +18,9 @@ int tail = 0;
 int verbose = 0;
 int do_callgrind = 0;
 int found_start_addr = 0;
+int cpu;
+int cur_65816_bank = 0;
+int dst_65816_bank = 0;
 
 int start_addr = 0;
 
@@ -53,24 +56,40 @@ static void tabulate(const char *buf, int len) {
   printf("%s", tbuf);
 }
 
-static int detect_tracelog(char *line) {
+static int detect_tracelog(char *first_part, char *second_part) {
   char checkbuf[32];
-  if (strlen(line) == 4 && hex2int(line) > 0) {
+  if (strlen(first_part) == 4 && hex2int(first_part) > 0) {
     fprintf(stderr, "Found addresses at index 0\n");
     return 0;
   }
-  if(strlen(line) > 4 && strchr(line, ' ')) {
-    char *try_addr = strchr(line, ' ') + 1;
+  if(strlen(first_part) > 4 && strchr(first_part, ' ')) {
+    char *try_addr = strchr(first_part, ' ') + 1;
     int val = hex2int(try_addr);
 
     snprintf(checkbuf, 5, "%04X", val);
     if (!strcmp(try_addr, checkbuf)) {
-      int idx = (int)(try_addr - line);
-      fprintf(stderr, "Found addresses at index %d\n", idx);
+      int idx = (int)(try_addr - first_part);
+      fprintf(stderr, "Found 6502 addresses at index %d\n", idx);
+      cpu = CPU_6502;
       return idx;
     }
   }
-  fprintf(stderr, "%s\n", line);
+
+  if(strchr(first_part, ' ')) {
+    char *try_addr = strchr(first_part, ' ') + 1;
+    int a_val = hex2int(try_addr);
+    int b_val = hex2int(second_part);
+
+    snprintf(checkbuf, 5, "%04X", b_val);
+    if (a_val <= 0xFF && a_val >= 0x00 && !strcmp(second_part, checkbuf)) {
+      int idx = (int)(try_addr - first_part);
+      fprintf(stderr, "Found 65816 addresses at index %d\n", idx);
+      cpu = CPU_65816;
+      return idx;
+    }
+  }
+
+  fprintf(stderr, "%s:%s\n", first_part, second_part);
   fprintf(stderr, "Can not parse log (address field not found)\n");
   exit(1);
 }
@@ -120,7 +139,7 @@ skip_to_start:
         usleep(5*1000);
         continue;
       } else {
-        return;
+        goto all_done;
       }
     }
 
@@ -141,7 +160,7 @@ skip_to_start:
     n_parts = strsplit_in_place(line, ':', &parts);
 
     if (op_idx == -1) {
-      op_idx = detect_tracelog(line);
+      op_idx = detect_tracelog(parts[0], parts[1]);
     }
 
     /* We want at least an "ADDR: op" */
@@ -153,14 +172,24 @@ skip_to_start:
       dbg_symbol *param_symbol = NULL;
       const char *instr, *arg;
       char comment[BUF_SIZE];
-      char * cur_lineaddress = parts[0] + op_idx;
+      char * cur_lineaddress;
+      int addr_field;
       int a, x, y;
 
       cur_line++;
 
       /* get the op's address */
-      op_addr = hex2int(cur_lineaddress);
-
+      if (cpu == CPU_6502) {
+        addr_field = 0;
+        cur_lineaddress = parts[0] + op_idx;
+        op_addr = hex2int(cur_lineaddress);
+      } else if (cpu == CPU_65816) {
+        addr_field = 1;
+        op_idx = strchr(parts[0], ' ') + 1 - parts[0];
+        cur_65816_bank = hex2int(parts[0] + op_idx);
+        cur_lineaddress = parts[1];
+        op_addr = hex2int(cur_lineaddress);        
+      }
       /* If we've not yet seen the start address,
        * skip line
        */
@@ -179,14 +208,14 @@ skip_to_start:
         if (found_start_addr) {
           fprintf(stderr, "Found start address 0x%X.\n", start_addr);
           gen_sym_cache[start_addr][ROM][1] = generate_symbol("__MAIN_START__", start_addr, RAM, 1, NULL);
-          start_tracing();
+          start_tracing(cpu);
         }
         else
           goto skip_to_start;
       }
 
       /* get instruction */
-      instr = parts[1] + 1; /* skip space */
+      instr = parts[addr_field + 1] + 1; /* skip space */
 
       /* get arg if there's one */
       arg = strchr(instr, ' ');
@@ -196,14 +225,23 @@ skip_to_start:
         arg = fix_mame_param(arg);
       }
 
+      if (cur_line == 869130) {
+        printf("!!");
+      }
       if (op_addr >= 0) {
         /* Get our sloc only if the address is in RAM, out of LC or in LC page 2
          * Otherwise we're quite sure not to have a real symbol defined
          */
+        if (cpu == CPU_65816) {
+          /* https://github.com/TomHarte/CLK/wiki/Apple-IIgs-Memory-Map */
+          read_from = cur_65816_bank >= 0xF0 ? ROM:RAM;
+          if (read_from == RAM)
+            sloc = sloc_get_for_addr(op_addr);
+        }
         if (is_addr_in_cc65_user_bank(op_addr)) {
           sloc = sloc_get_for_addr(op_addr);
         }
-        instr_symbol = symbol_get_by_addr(op_addr, read_from, lc_bank);
+        instr_symbol = symbol_get_by_addr(cpu, op_addr, read_from, lc_bank);
         if (!instr_symbol) {
           instr_symbol = generate_symbol(cur_lineaddress, op_addr, read_from, lc_bank, NULL);
         }
@@ -217,13 +255,19 @@ skip_to_start:
        * Done here instead of in instructions.c to be
        * able to display a potentially problematic line
        */
-      a_mode = instruction_get_addressing_mode(arg);
-      if ((cycles += get_cycles_for_instr(instr, a_mode, &cost_if_taken)) < 0) {
+      a_mode = instruction_get_addressing_mode(cpu, arg);
+      if ((cycles += get_cycles_for_instr(cpu, instr, a_mode, &cost_if_taken)) < 0) {
         fprintf(stderr, "%s\n", buf);
         exit(1);
       }
 
       /* get param if it's numeric */
+      if (cpu == CPU_65816 && arg && strlen(arg) == 6) {
+        if (sscanf(arg, "%2X%4X", &dst_65816_bank, &param_addr) == 2) {
+          goto addr_without_dollar;
+        }
+      }
+
       if (arg && arg[0] == '$') {
         if (strchr(arg, '\n'))
           *strchr(arg, '\n') = '\0';
@@ -244,18 +288,34 @@ skip_to_start:
         if (strchr(arg, ','))
           *strchr(arg, ',') = '\0';
 
-        param_addr += hex2int(arg + 1); /* skip $ */
+        if (cpu == CPU_65816) {
+          write_to = read_from;
+        }
 
+        if (cpu == CPU_6502 || strlen(arg + 1) <= 4) {
+          param_addr += hex2int(arg + 1); /* skip $ */
+        } else {
+          sscanf(arg + 1, "%2X%4X", &dst_65816_bank, &param_addr);
+        }
+
+addr_without_dollar:
         if (param_addr >= 0) {
-          int dest = is_instruction_write(instr) ? write_to : read_from;
-          param_symbol = symbol_get_by_addr(param_addr, dest, lc_bank);
+          int dest;
+
+          if (cpu == CPU_65816) {
+            read_from = cur_65816_bank >= 0xF0 ? ROM:RAM;
+            write_to = dst_65816_bank >= 0xF0 ? ROM:RAM;
+          }
+
+          dest = is_instruction_write(instr) ? write_to : read_from;
+          param_symbol = symbol_get_by_addr(cpu, param_addr, dest, lc_bank);
 
           /* If we don't have a symbol, generate a dummy one */
           if (param_symbol == NULL) {
             int dest = is_instruction_write(instr) ? write_to : read_from;
             char new_str_addr[10];
             snprintf(new_str_addr, 10, "%04X", param_addr);
-            param_symbol = generate_symbol(new_str_addr, param_addr, dest, lc_bank, n_parts > 2 ? parts[2] : NULL);
+            param_symbol = generate_symbol(new_str_addr, param_addr, dest, lc_bank, n_parts > addr_field + 2 ? parts[addr_field + 2] : NULL);
             param_addr = symbol_get_addr(param_symbol);
           }
         } else {
@@ -267,7 +327,7 @@ try_gen:
          * and where it will hit depending on current memory banking 
          */
         int dest = is_instruction_write(instr) ? write_to : read_from;
-        param_symbol = generate_symbol(arg, param_addr, dest, lc_bank, n_parts > 2 ? parts[2] : NULL);
+        param_symbol = generate_symbol(arg, param_addr, dest, lc_bank, n_parts > addr_field + 2 ? parts[addr_field + 2] : NULL);
         param_addr = symbol_get_addr(param_symbol);
       }
 
@@ -283,12 +343,12 @@ try_gen:
       }
 
       /* Profile if needed */
-      if (do_callgrind && update_call_counters(op_addr, instr, param_addr, cycles, cur_line) < 0) {
+      if (do_callgrind && update_call_counters(cpu, op_addr, instr, param_addr, cycles, cur_line) < 0) {
         printf("; Error popping call tree at trace line %d\n", cur_line);
       }
 
       /* Analyse instruction to follow memory banking */
-      if (analyze_instruction(op_addr, instr, param_addr, comment)
+      if (analyze_instruction(cpu, op_addr, instr, param_addr, comment)
        || (!sloc && !instr_symbol && !param_symbol)) {
         /* print either banking comment or finish the line if we have zero data about it */
         if (!do_callgrind) {
@@ -355,6 +415,7 @@ try_gen:
     buf[0] = '\0';
   }
 
+all_done:
   fclose(fp);
 
   /* Finish the counts */
@@ -432,7 +493,7 @@ err_usage:
   allocate_trace_counters();
 
   if (found_start_addr) {
-    start_tracing();
+    start_tracing(cpu);
   }
   /* Do the thing */
   if (trace_file) {
