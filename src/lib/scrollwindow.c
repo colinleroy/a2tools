@@ -17,19 +17,16 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef __CC65__
+#include <apple2enh.h>
+#endif
+
 #include "scrollwindow.h"
 
-void get_scrollwindow(unsigned char *top, unsigned char *bottom){
+void __fastcall__ get_scrollwindow(unsigned char *top, unsigned char *bottom){
 #ifdef __CC65__
-  static char t, b;
-
-  __asm__("lda $22"); /* get WNDTOP */
-  __asm__("sta %v", t);
-  __asm__("lda $23"); /* get WNDBTM */
-  __asm__("sta %v", b);
-  
-  *top = t;
-  *bottom = b;
+  *top = get_wndtop();
+  *bottom = get_wndbtm();
 #else
   *top = 0;
   *bottom = 24;
@@ -37,34 +34,17 @@ void get_scrollwindow(unsigned char *top, unsigned char *bottom){
 
 }
 
-void set_scrollwindow(unsigned char top, unsigned char bottom) {
+void __fastcall__ set_scrollwindow(unsigned char top, unsigned char bottom) {
 #ifdef __CC65__
-  static char t, b;
-  t = top;
-  b = bottom;
-
-  if (top >= bottom || bottom > 24)
-    return;
-
-  __asm__("lda %v", t);
-  __asm__("sta $22"); /* store WNDTOP */
-  __asm__("lda %v", b);
-  __asm__("sta $23"); /* store WNDBTM */
-
+  set_wndtop(top);
+  set_wndbtm(bottom);
 #endif
 }
 
-void get_hscrollwindow(unsigned char *left, unsigned char *width){
+void __fastcall__ get_hscrollwindow(unsigned char *left, unsigned char *width){
 #ifdef __CC65__
-  static char l, w;
-
-  __asm__("lda $20"); /* get WNDLFT */
-  __asm__("sta %v", l);
-  __asm__("lda $21"); /* get WNDWDTH */
-  __asm__("sta %v", w);
-  
-  *left = l;
-  *width = w;
+  *left = get_wndlft();
+  *width = get_wndwdth();
 #else
   *left = 0;
   *width = 80;
@@ -72,19 +52,9 @@ void get_hscrollwindow(unsigned char *left, unsigned char *width){
 
 }
 
-void set_hscrollwindow(unsigned char left, unsigned char width) {
+void __fastcall__ set_hscrollwindow(unsigned char left, unsigned char width) {
 #ifdef __CC65__
-  static char l, w;
-  l = left;
-  w = width;
-
-  if (l >= 79)
-    return;
-
-  __asm__("lda %v", l);
-  __asm__("sta $20"); /* store WNDLFT */
-  __asm__("lda %v", w);
-  __asm__("sta $21"); /* store WNDWDTH */
-
+  set_wndlft(left);
+  set_wndwdth(width);
 #endif
 }
