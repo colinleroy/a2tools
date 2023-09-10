@@ -3,7 +3,7 @@ cov-int
 a2-cov.tgz
 dist
 a.out
-*.s
+*.patch
 *.o
 *.map
 *.sym
@@ -16,6 +16,7 @@ a.out
 *.trace
 *.callg
 *.dasm
+*.stack
 log
 *.log
 massif.*
@@ -39,3 +40,4 @@ history/
 *.changes
 *.deb
 *.ddeb
+src/kept-around
