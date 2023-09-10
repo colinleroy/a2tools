@@ -2,7 +2,7 @@ prefix ?= /usr/local
 PROGRAM=a2recv
 SOURCES := a2recv.c ../lib/simple_serial.c ../lib/simple_serial_ext.c ../lib/clrzone.c
 GCCSOURCES := ../lib/extended_string.c ../lib/extended_conio.c
-CL65SOURCES := ../lib/fastirq.s
+CL65SOURCES := ../lib/fastirq.s ../lib/scrollwindow.c
 DEPS := 
 
 CC65_TARGET = apple2enh
