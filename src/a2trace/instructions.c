@@ -7,6 +7,9 @@
 
 #define STORAGE_SIZE 200000
 
+int ROM_IRQ_ADDR[] = {0xC803, 0xC074 };
+int PRODOS_IRQ_ADDR = 0xBFEB;
+
 char *mem_str[3] = {
   "RAM",
   "ROM",
@@ -216,8 +219,9 @@ int is_addr_in_cc65_user_bank (int op_addr) {
 }
 
 /* Figure out the addressing mode for the instruction */
-int instruction_get_addressing_mode(const char *arg) {
+int instruction_get_addressing_mode(int cpu, const char *arg) {
   int len;
+  int shift = 0;
 
   /* no arg */
   if (!arg || arg[0] == '\0')
@@ -245,55 +249,73 @@ int instruction_get_addressing_mode(const char *arg) {
   if ((arg[0] >= 'A' && arg[0] <= 'Z') || (arg[0] >= 'a' && arg[0] <= 'z') || (arg[0] >= '0' && arg[0] <= '9'))
     return ADDR_MODE_ABS;
 
-  if (len >= 5) {
+  if (strstr(arg, ",s") - arg + 2 == strlen(arg)) {
+    return ADDR_MODE_ABSXY; /* FIXME that's not true */
+  }
 
+  if (len >= 5) {
+indexed_modes:
     /* $ff, x */
     if (arg[0] == '$' && arg[3] == ',')
       return ADDR_MODE_ZEROXY;
 
     /* ($ff), y */
-    if (arg[0] == '(' && arg[4] == ')' && len > 7 && (arg[7] == 'x' || arg[7] == 'y'))
+    if (arg[0] == '(' && arg[shift+4] == ')' && len > 7 && (arg[shift+7] == 'x' || arg[shift+7] == 'y'))
       return ADDR_MODE_ZEROXY;
 
     /* ($ff) */
-    if (arg[0] == '(' && arg[4] == ')')
+    if (arg[0] == '(' && arg[shift+4] == ')')
       return ADDR_MODE_ZEROIND;
   
     /* $ffff */
-    if (len == 5 && arg[0] == '$')
+    if (len == shift+5 && arg[0] == '$')
       return ADDR_MODE_ABS;
 
     /* $ffff, x */
-    if (len >= 6 && arg[0] == '$' && arg[5] == ',')
+    if (len >= 6 && arg[0] == '$' && arg[shift+5] == ',')
       return ADDR_MODE_ABSXY;
 
     /* ($ffff, x) */
-    if (len >= 6 && arg[0] == '(' && arg[6] == ',' && arg[8] == 'x')
+    if (len >= shift+6 && arg[0] == '(' && arg[shift+6] == ',' && arg[shift+8] == 'x')
       return ADDR_MODE_INDX;
 
     /* ($ff, x) */
-    if (arg[0] == '(' && arg[4] == ',' && arg[6] == 'x')
+    if (arg[0] == '(' && arg[shift+4] == ',' && arg[shift+6] == 'x')
       return ADDR_MODE_INDX;
 
     /* ($ffff), y */
-    if (len >= 7 && arg[0] == '(' && arg[6] == ')')
+    if (len >= shift+7 && arg[0] == '(' && arg[shift+6] == ')')
       return ADDR_MODE_INDY;
 
     /* ($ff), y */
-    if (arg[0] == '(' && arg[4] == ',' && arg[7] == 'x')
+    if (arg[0] == '(' && arg[shift+4] == ',' && arg[shift+7] == 'x')
       return ADDR_MODE_INDX;
-
-
   }
+  if (len >= 7 && shift == 0) {
+    shift = 2;
+    goto indexed_modes;
+  }
+
   fprintf(stderr, "Error: unknown addressing mode for %s\n", arg);
   exit(1);
 }
 
+extern int cur_65816_bank;
+
 /* Check instruction for memory banking change */
-int analyze_instruction(int op_addr, const char *instr, int param_addr, char *comment) {
+int analyze_instruction(int cpu, int op_addr, const char *instr, int param_addr, char *comment) {
   static int bit_count = 0;
   static int last_bit = 0;
   int parsed = 0, bank_switch = 0;
+
+  if (cpu == CPU_65816) {
+    if (cur_65816_bank == 0xFF) {
+      read_from = ROM;
+    } else {
+      read_from = RAM;
+    }
+    return 0;
+  }
 
   comment[0] = '\0';
 
@@ -463,7 +485,7 @@ static function_calls *get_function_calls_for_addr(int addr) {
 /* Get cycles number for instruction / addressing mode
  * TODO Hugely inefficient, add a instruction str <=> number mapping
  */
-int get_cycles_for_instr(const char *instr, int a_mode, int *extra_cost_if_taken) {
+int get_cycles_for_instr(int cpu, const char *instr, int a_mode, int *extra_cost_if_taken) {
   for (int i = 0; instr_cost[i].instruction != NULL; i++) {
     if (!strcmp(instr, instr_cost[i].instruction)) {
       if (instr_cost[i].cost[a_mode] == 0) {
@@ -474,8 +496,13 @@ int get_cycles_for_instr(const char *instr, int a_mode, int *extra_cost_if_taken
       return instr_cost[i].cost[a_mode];
     }
   }
-  fprintf(stderr, "Error, cycle count not found for %s\n", instr);
-  return -1;
+  if (cpu == CPU_6502) {
+    fprintf(stderr, "Error, cycle count not found for %s\n", instr);
+    return -1;
+  } else {
+    /* FIXME add 65816 instructions */
+    return 0;
+  }
 }
 
 /* Count current instruction */
@@ -546,7 +573,7 @@ static void update_caller_incl_cost(int instr_count, int cycle_count) {
 }
 
 /* Register a new call in the tree */
-static void start_call_info(int addr, int mem, int lc, int line_num) {
+static void start_call_info(int cpu, int addr, int mem, int lc, int line_num) {
   function_calls *my_info;
 
   if (tree_depth < 0) {
@@ -557,7 +584,7 @@ static void start_call_info(int addr, int mem, int lc, int line_num) {
   /* Get the stats structure */
   my_info = get_function_calls_for_addr(addr);
   /* FIXME shouldn't the stats structs be indexed by addr / mem / lc... */
-  my_info->func_symbol = symbol_get_by_addr(addr, mem, lc);
+  my_info->func_symbol = symbol_get_by_addr(cpu, addr, mem, lc);
   if (my_info->func_symbol == NULL) {
     fprintf(stderr, "No symbol found for 0x%04X, %d, %d\n", addr, mem, lc);
     exit(1);
@@ -588,7 +615,7 @@ static void start_call_info(int addr, int mem, int lc, int line_num) {
   tree_depth++;
 }
 
-static void end_call_info(int op_addr, int line_num) {
+static void end_call_info(int op_addr, int line_num, const char *from) {
   function_calls *my_info;
 
   if (tree_depth == 0) {
@@ -605,8 +632,8 @@ static void end_call_info(int op_addr, int line_num) {
   /* Log */
   if (verbose) {
     tabulate_stack();
-    fprintf(stderr, "depth %d, %s returning (asm line %d)\n", tree_depth,
-            symbol_get_name(my_info->func_symbol), line_num);
+    fprintf(stderr, "depth %d, %s returning (%s, asm line %d)\n", tree_depth,
+            symbol_get_name(my_info->func_symbol), from, line_num);
   }
 
   /* We done ? */
@@ -625,23 +652,25 @@ static void end_call_info(int op_addr, int line_num) {
   }
 }
 
-int update_call_counters(int op_addr, const char *instr, int param_addr, int cycle_count, int line_num) {
+int update_call_counters(int cpu, int op_addr, const char *instr, int param_addr, int cycle_count, int line_num) {
   int dest = RAM, lc = 0;
 
-  /* Set memory and LC bank according to the address */
-  if (param_addr < 0xD000 || param_addr > 0xDFFF) {
-    dest = RAM;
-    lc = 1;
-  } else {
-    dest = is_instruction_write(instr) ? write_to : read_from;
-    lc = lc_bank;
+  if (cpu != CPU_6502) {
+    /* Set memory and LC bank according to the address */
+    if (param_addr < 0xD000 || param_addr > 0xDFFF) {
+      dest = RAM;
+      lc = 1;
+    } else {
+      dest = is_instruction_write(instr) ? write_to : read_from;
+      lc = lc_bank;
+    }
   }
 
   /* Count the instruction */
   count_instruction(instr, cycle_count);
 
   /* Are we entering an IRQ handler ? */
-  if (op_addr == ROM_IRQ_ADDR || op_addr == PRODOS_IRQ_ADDR
+  if (op_addr == ROM_IRQ_ADDR[cpu] || op_addr == PRODOS_IRQ_ADDR
    || op_addr == handle_rom_irq_addr || op_addr == handle_ram_irq_addr) {
     if (verbose)
       fprintf(stderr, "; interrupt at depth %d\n", tree_depth);
@@ -661,7 +690,7 @@ int update_call_counters(int op_addr, const char *instr, int param_addr, int cyc
     in_interrupt++;
 
     /* And record entering */
-    start_call_info(op_addr, RAM, lc, line_num);
+    start_call_info(cpu, op_addr, RAM, lc, line_num);
 
   } else if (!strcmp(instr, "rti")) {
     /* Are we exiting an IRQ handler ? */
@@ -670,7 +699,7 @@ int update_call_counters(int op_addr, const char *instr, int param_addr, int cyc
         fprintf(stderr, "; rti from interrupt at depth %d\n", tree_depth);
 
       /* Record end of call */
-      end_call_info(op_addr, line_num);
+      end_call_info(op_addr, line_num, "irq");
 
       /* Decrease IRQ stack */
       in_interrupt--;
@@ -701,7 +730,7 @@ int update_call_counters(int op_addr, const char *instr, int param_addr, int cyc
          * we registered it before, same as jsr's */
         if (!just_out_of_irq) {
           while (tree_depth > mli_call_depth)
-            end_call_info(op_addr, line_num);
+            end_call_info(op_addr, line_num, "mli rts");
         }
 	if (verbose) {
           tabulate_stack();
@@ -722,12 +751,12 @@ int update_call_counters(int op_addr, const char *instr, int param_addr, int cyc
     goto jsr;
 
   /* Are we entering a function ? */
-  } else if (!strcmp(instr, "jsr")) {
+} else if (!strcmp(instr, "jsr") || !strcmp(instr, "jsl")) {
 jsr:
     /* don't register a jsr if we just went out of
      * irq, we registered it right before entering IRQ */
     if (!just_out_of_irq) {
-      start_call_info(param_addr, dest, lc, line_num);
+      start_call_info(cpu, param_addr, dest, lc, line_num);
 
       /* Ugly hack (both because of MAME's symbol and because of the hardcoding).
        * ProDOS MLI uses rti to return faster to where it was called from. */
@@ -748,11 +777,11 @@ jsr:
     just_out_of_irq = 0;
 
   /* Are we returning from a function? */
-  } else if (!strcmp(instr, "rts") && tree_depth > 0) {
+} else if ((!strcmp(instr, "rts") || !strcmp(instr, "rtl")) && tree_depth > 0) {
     /* don't register an rts if we just went out of irq,
      * we registered it before, same as jsr's */
     if (!just_out_of_irq)
-      end_call_info(op_addr, line_num);
+      end_call_info(op_addr, line_num, instr);
 
     /* Unset flag */
     just_out_of_irq = 0;
@@ -826,7 +855,7 @@ void finalize_call_counters(void) {
 
   /* finish all calls to count their self count */
   while (tree_depth > 0)
-    end_call_info(0x0000, 0);
+    end_call_info(0x0000, 0, "end of program");
 
   /* File header */
   printf("# callgrind format\n"
@@ -843,17 +872,17 @@ void finalize_call_counters(void) {
   }
 }
 
-void start_tracing(void) {
+void start_tracing(int cpu) {
     /* make ourselves a root in the IRQ call tree */
     tree_functions = irq_tree;
-    start_call_info(start_addr, 0, RAM, 0);
+    start_call_info(cpu, start_addr, 0, RAM, 0);
 
     /* Hack - reset depth for the runtime root */
     tree_depth = 0;
 
     /* make ourselves a root in the runtime call tree */
     tree_functions = func_tree;
-    start_call_info(start_addr, 0, RAM, 0);
+    start_call_info(cpu, start_addr, 0, RAM, 0);
 }
 
 /* Setup structures and data */

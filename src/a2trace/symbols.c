@@ -386,7 +386,8 @@ void load_syms(const char *file) {
   fclose(fp);
 
   /* add IRQ handlers, both in RAM and ROM syms */
-  gen_sym_cache[ROM_IRQ_ADDR][ROM][1] = generate_symbol("__ROM_IRQ", ROM_IRQ_ADDR, RAM, 1, "0xC803");
+  gen_sym_cache[ROM_IRQ_ADDR[CPU_6502]][ROM][1] = generate_symbol("__ROM_IRQ", ROM_IRQ_ADDR[CPU_6502], RAM, 1, "0xC803");
+  gen_sym_cache[ROM_IRQ_ADDR[CPU_65816]][ROM][1] = generate_symbol("__ROM_IRQ", ROM_IRQ_ADDR[CPU_65816], RAM, 1, "0xC366");
   gen_sym_cache[PRODOS_IRQ_ADDR][ROM][1] = generate_symbol("__ProDOS_IRQ", PRODOS_IRQ_ADDR, RAM, 1, "0xBFEB");
   cleanup_data();
 }
@@ -486,17 +487,17 @@ void map_slocs_to_adresses(void) {
 }
 
 /* Get a symbol by its address, depending on current banking */
-dbg_symbol *symbol_get_by_addr(int addr, int mem, int lc) {
+dbg_symbol *symbol_get_by_addr(int cpu, int addr, int mem, int lc) {
   char buf[6];
-
-  if (addr < 0xD000 || addr > 0xDFFF) {
-    /* There's no LC bank 2 out of this range */
-    lc = 1;
+  if (cpu == CPU_6502) {
+    if (addr < 0xD000 || addr > 0xDFFF) {
+      /* There's no LC bank 2 out of this range */
+      lc = 1;
+    }
+    if (addr < 0xC800) {
+      mem = RAM;
+    }
   }
-  if (addr < 0xC800) {
-    mem = RAM;
-  }
-
   /* Hack for generated symbols with no address
    * (Thanks MAME!) */
   if (addr > 2 * STORAGE_SIZE)
