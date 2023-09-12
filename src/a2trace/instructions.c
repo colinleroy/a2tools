@@ -295,9 +295,8 @@ indexed_modes:
     shift = 2;
     goto indexed_modes;
   }
-
-  fprintf(stderr, "Error: unknown addressing mode for %s\n", arg);
-  exit(1);
+  fprintf(stderr, "Warning: unknown addressing mode for %s\n", arg);
+  return ADDR_MODE_ABS;
 }
 
 extern int cur_65816_bank;
@@ -489,8 +488,8 @@ int get_cycles_for_instr(int cpu, const char *instr, int a_mode, int *extra_cost
   for (int i = 0; instr_cost[i].instruction != NULL; i++) {
     if (!strcmp(instr, instr_cost[i].instruction)) {
       if (instr_cost[i].cost[a_mode] == 0) {
-        fprintf(stderr, "Error, addressing mode %d invalid for %s\n", a_mode, instr);
-        return -1;
+        fprintf(stderr, "Warning, addressing mode %d invalid for %s\n", a_mode, instr);
+        return instr_cost[i].cost[ADDR_MODE_ABS];
       }
       *extra_cost_if_taken = instr_cost[i].cost_if_taken;
       return instr_cost[i].cost[a_mode];
@@ -906,6 +905,7 @@ void allocate_trace_counters(void) {
   /* register _main's address for later - crt0 will
    * jmp to it and we'll still want to record it. */
   _main_addr = symbol_get_addr(symbol_get_by_name("_main"));
+
   handle_rom_irq_addr = symbol_get_addr(symbol_get_by_name("handle_rom_irq"));
   handle_ram_irq_addr = symbol_get_addr(symbol_get_by_name("handle_ram_irq"));
 }

@@ -51,9 +51,13 @@ int __fastcall__ simple_serial_open(int slot, int baudrate) {
   int err;
   
 #ifdef __APPLE2ENH__
+  #ifdef IIGS
+  if ((err = ser_install(&a2gs_ssc_ser)) != 0)
+    return err;
+  #else
   if ((err = ser_install(&a2e_ssc_ser)) != 0)
     return err;
-
+  #endif
   if ((err = ser_apple2_slot(slot)) != 0)
     return err;
 #endif
@@ -318,8 +322,15 @@ unsigned char __fastcall__ simple_serial_putc(char c) {
   int r = fputc(c, ttyfp);
   fflush(ttyfp);
 
-  if (!flow_control_enabled)
-    usleep(500);
+  if (!flow_control_enabled) {
+    switch (bps) {
+      case B57600:
+        usleep(50);
+        break;
+      default:
+        usleep(500);
+    }
+  }
 
   return r == EOF ? -1 : 0;
 }

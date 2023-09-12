@@ -1,3 +1,13 @@
+ifdef IIGS
+iigs_CFLAGS := -DIIGS --asm-define IIGS
+suffix := -iigs
+upload_subdir := /iigs
+else
+iigs_FLAGS :=
+suffix :=
+upload_subdir := /iigs
+endif
+
 PROGRAM=homectrl grphview
 homectrl_SOURCES := main.c network.c \
 	switches.c sensors.c climate.c \
@@ -12,7 +22,7 @@ homectrl_SOURCES := main.c network.c \
 	../lib/surl_core.c \
 	../lib/surl_receive.c
 
-homectrl_CL65SOURCES = ../lib/dputc.s ../lib/dputs.s ../lib/scroll.s ../lib/fastirq.s
+homectrl_CL65SOURCES = ../lib/dputc.s ../lib/dputs.s ../lib/scroll.s ../lib/fastirq$(suffix).s
 
 grphview_SOURCES := graph-viewer.c \
 	../lib/surl_core.c \
@@ -20,14 +30,14 @@ grphview_SOURCES := graph-viewer.c \
 	../lib/simple_serial.c
 
 grphview_GCCSOURCES := ../lib/extended_conio.c ../lib/clrzone.c ../lib/tgi_sdl.c ../lib/extended_string.c ../lib/tgi_fastline.c
-grphview_CL65SOURCES = ../lib/fastirq.s
+grphview_CL65SOURCES = ../lib/fastirq$(suffix).s
 
 DEPS := 
 
 CC65_TARGET = apple2enh
 CFLAGS  = -I ../lib -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
-homectrl_CLCFLAGS = -t $(CC65_TARGET) -O -Wl -D,__STACKSIZE__=0x0400 -DSURL_TO_LANGCARD
-grphview_CLCFLAGS = -t $(CC65_TARGET) -O -Wl -D,__STACKSIZE__=0x0400 -DSURL_TO_LANGCARD --start-addr 0x4000 #-C ../../config/apple2enh-hgr.cfg
+homectrl_CLCFLAGS = -t $(CC65_TARGET) -O -Wl -D,__STACKSIZE__=0x0400 -DSURL_TO_LANGCARD $(iigs_CFLAGS)
+grphview_CLCFLAGS = $(homectrl_CLCFLAGS) --start-addr 0x4000 #-C ../../config/apple2enh-hgr.cfg
 GCCCFLAGS = -g -O0 -Wall -Wno-unused-function -Wno-char-subscripts -Werror $(shell sdl-config --cflags)
 GCCLDFLAGS = $(shell sdl-config --libs)
 .PHONY: all clean
@@ -50,6 +60,6 @@ clean:
 	rm -f homectrl.bin homectrl.x86_64 grphview.bin grphview.x86_64 *.o *.map
 
 upload: all
-	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/homecontrol/ || \
-	mkdir /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/homecontrol/ && \
-	cp homectrl.bin grphview.bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/homecontrol/
+	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/homecontrol/ || \
+	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/homecontrol/ && \
+	cp homectrl.bin grphview.bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/homecontrol/

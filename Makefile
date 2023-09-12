@@ -1,3 +1,11 @@
+ifdef IIGS
+iigs_CFLAGS := -DIIGS
+suffix := -iigs
+else
+iigs_FLAGS :=
+suffix :=
+endif
+
 SUBDIRS = src 
 
 stp_disk_PROGS = src/a2recv/a2recv.bin \
@@ -20,12 +28,18 @@ CLEANDISK = disks/basic-empty.dsk
 
 .PHONY: all clean
 
-all clean upload:
+clean:
+	rm -f *.dsk && \
 	for dir in $(SUBDIRS); do \
 		$(MAKE) -C $$dir -f Makefile $@ || exit; \
 	done
 
-stp.dsk: $(stp_disk_PROGS)
+all upload:
+	for dir in $(SUBDIRS); do \
+		$(MAKE) -C $$dir -f Makefile $@ || exit; \
+	done
+
+stp$(suffix).dsk: $(stp_disk_PROGS)
 	cp $(CLEANDISK) $@; \
 	java -jar bin/ac.jar -n $@ STP
 	java -jar bin/ac.jar -p $@ STP.SYSTEM SYS < bin/loader.system; \
@@ -35,7 +49,7 @@ stp.dsk: $(stp_disk_PROGS)
 	cp $@ ~/Documents/ADTPro-2.1.0/disks/; \
 	cp $@ dist/; \
 
-stpperso.dsk: $(stp_disk_PROGS)
+stpperso$(suffix).dsk: $(stp_disk_PROGS)
 	cp $(CLEANDISK) $@; \
 	java -jar bin/ac.jar -n $@ STP
 	java -jar bin/ac.jar -p $@ STP.SYSTEM SYS < bin/loader.system; \
@@ -46,7 +60,7 @@ stpperso.dsk: $(stp_disk_PROGS)
 	cp $@ ~/Documents/ADTPro-2.1.0/disks/; \
 	cp $@ dist/; \
 
-telnet.dsk: $(telnet_disk_PROGS)
+telnet$(suffix).dsk: $(telnet_disk_PROGS)
 	cp $(CLEANDISK) $@; \
 	java -jar bin/ac.jar -n $@ TELNET
 	java -jar bin/ac.jar -p $@ TELNET.SYSTEM SYS < bin/loader.system; \
@@ -56,7 +70,7 @@ telnet.dsk: $(telnet_disk_PROGS)
 	cp $@ ~/Documents/ADTPro-2.1.0/disks/; \
 	cp $@ dist/; \
 
-homectrl.dsk: $(homectrl_disk_PROGS)
+homectrl$(suffix).dsk: $(homectrl_disk_PROGS)
 	cp $(CLEANDISK) $@; \
 	java -jar bin/ac.jar -n $@ HOMECONTROL
 	java -jar bin/ac.jar -p $@ HOMECTRL.SYSTEM SYS < bin/loader.system; \
@@ -66,7 +80,7 @@ homectrl.dsk: $(homectrl_disk_PROGS)
 	cp $@ ~/Documents/ADTPro-2.1.0/disks/; \
 	cp $@ dist/; \
 
-homectrlperso.dsk: $(homectrl_disk_PROGS)
+homectrlperso$(suffix).dsk: $(homectrl_disk_PROGS)
 	cp $(CLEANDISK) $@; \
 	java -jar bin/ac.jar -n $@ HOMECONTROL
 	java -jar bin/ac.jar -p $@ HOMECTRL.SYSTEM SYS < bin/loader.system; \
@@ -77,7 +91,7 @@ homectrlperso.dsk: $(homectrl_disk_PROGS)
 	cp $@ ~/Documents/ADTPro-2.1.0/disks/; \
 	cp $@ dist/; \
 
-mastoperso.dsk: $(mastodon_disk_PROGS)
+mastoperso$(suffix).dsk: $(mastodon_disk_PROGS)
 	cp $(CLEANDISK) $@; \
 	java -jar bin/ac.jar -n $@ MASTODON
 	java -jar bin/ac.jar -p $@ MASTODON.SYSTEM SYS < bin/loader.system; \
@@ -90,7 +104,7 @@ mastoperso.dsk: $(mastodon_disk_PROGS)
 	cp $@ ~/Documents/ADTPro-2.1.0/disks/; \
 	cp $@ dist/; \
 
-mastodon.dsk: $(mastodon_disk_PROGS)
+mastodon$(suffix).dsk: $(mastodon_disk_PROGS)
 	cp $(CLEANDISK) $@; \
 	java -jar bin/ac.jar -n $@ MASTODON
 	java -jar bin/ac.jar -p $@ MASTODON.SYSTEM SYS < bin/loader.system; \
@@ -101,4 +115,11 @@ mastodon.dsk: $(mastodon_disk_PROGS)
 	cp $@ ~/Documents/ADTPro-2.1.0/disks/; \
 	cp $@ dist/; \
 
-dist: clean all stp.dsk telnet.dsk homectrl.dsk mastodon.dsk mastoperso.dsk homectrlperso.dsk stpperso.dsk
+dist: all \
+	stp$(suffix).dsk \
+	telnet$(suffix).dsk \
+	homectrl$(suffix).dsk \
+	mastodon$(suffix).dsk \
+	mastoperso$(suffix).dsk \
+	homectrlperso$(suffix).dsk \
+	stpperso$(suffix).dsk
