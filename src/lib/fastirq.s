@@ -43,15 +43,6 @@ _init_fast_irq:
         sta     ROMIRQVEC
         stx     ROMIRQVEC+1
 
-        ; Check for Apple IIgs
-        bit     ROMIN
-        lda     $FE1F
-        cmp     #$60
-        ; Keep standard IRQ vector at FFFE/FFFF,
-        ; IIgs uses this one even from ROM
-        ; so we need it standard
-        bne     :+
-
         ; Switch to RAM
         bit     LCBANK2
         bit     LCBANK2
@@ -69,7 +60,7 @@ _init_fast_irq:
         stx     RAMIRQVEC+1
 
         ; Enable IRQs
-:       cli
+        cli
         rts
 
 ; ------------------------------------------------------------------------
@@ -80,11 +71,6 @@ _done_fast_irq:
         ldx     _prev_rom_irq_vector+1
         sta     ROMIRQVEC
         stx     ROMIRQVEC+1
-
-        ; Check for Apple IIgs
-        lda     $FE1F
-        cmp     #$60
-        bne     :+
 
         ; Switch to RAM
         bit     LCBANK2
@@ -98,7 +84,7 @@ _done_fast_irq:
 
         ; And back to ROM, we're exiting
         bit     ROMIN
-:       rts
+        rts
 
 ; ------------------------------------------------------------------------
 

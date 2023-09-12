@@ -1,0 +1,5 @@
+#!/bin/bash
+
+rm *.dsk
+make clean all dist upload
+make clean all dist upload IIGS=1

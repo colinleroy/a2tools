@@ -515,6 +515,9 @@ again:
     buf[0] = '\0';
     dputs("Enter host:port: ");
     dget_text(buf, BUFSIZE, NULL, 0);
+    if (buf[0] == '\0') {
+      exit(0);
+    }
     dputs("Translate LN <=> CRLN (N/y)? ");
     t = cgetc();
     translate_ln = (t == 'y' || t == 'Y');
@@ -529,7 +532,8 @@ again:
   response = surl_start_request(SURL_METHOD_RAW, buf, NULL, 0);
   if (response->code != 100) {
     printf("No response (%d).\n", response->code);
-    exit(1);
+    cgetc();
+    goto again;
   }
   i = '\0';
 #ifdef __CC65__

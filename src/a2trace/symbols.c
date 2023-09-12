@@ -8,7 +8,7 @@
 #include "instructions.h"
 #include "symbols.h"
 
-#define STORAGE_SIZE 200000
+#define STORAGE_SIZE 16777215
 
 /* Internal structures to parse cc65 .dbg files */
 struct _line {

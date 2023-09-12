@@ -17,4 +17,4 @@ test: clean all
 	cp ../../disks/basic-empty.dsk ./test.dsk && \
 	java -jar ../../bin/ac.jar -p test.dsk TEST.SYSTEM SYS < ../../bin/loader.system && \
 	java -jar ../../bin/ac.jar -as test.dsk TEST BIN < test.bin && \
-	mame apple2c -window -flop1 test.dsk -resolution 560x384 -modem null_modem -bitb socket.localhost:2000 -nomouse -debug
+	mame apple2c0 -window -flop1 test.dsk -resolution 560x384 -modem null_modem -bitb socket.localhost:2000 -mouse -debug
