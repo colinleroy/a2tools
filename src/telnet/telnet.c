@@ -30,6 +30,7 @@
 #include <unistd.h>
 #endif
 #include "extended_conio.h"
+#include "simple_serial.h"
 #include "dputs.h"
 #include "dputc.h"
 #include "scroll.h"
@@ -481,6 +482,14 @@ static void tab(void) {
 
 static char shift_up = 0;
 
+static char raw = 0;
+static char opened = 0;
+
+static char set_raw(char c) {
+  raw = (c == 's');
+  return raw == 1;
+}
+
 int main(int argc, char **argv) {
   const surl_response *response = NULL;
   char i, o;
@@ -513,14 +522,26 @@ again:
 
     buf = malloc(BUFSIZE);
     buf[0] = '\0';
-    dputs("Enter host:port: ");
-    dget_text(buf, BUFSIZE, NULL, 0);
-    if (buf[0] == '\0') {
+    gotoxy(0, 1);
+    dputs("(When done, use Open-Apple-D to close connection).");
+    gotoxy(0, 0);
+    dputs("Enter host:port (or Open-Apple-S for serial): ");
+    dget_text(buf, BUFSIZE, set_raw, 0);
+    if (buf[0] == '\0' && !raw) {
+      dputs("Bye.");
       exit(0);
     }
-    dputs("Translate LN <=> CRLN (N/y)? ");
-    t = cgetc();
-    translate_ln = (t == 'y' || t == 'Y');
+    gotoxy(0, 2);
+    dputs("Translate LN <=> CRLN ");
+    if (raw) {
+      dputs("(Y/n)?");
+      t = cgetc();
+      translate_ln = (t != 'n' && t != 'N');
+    } else {
+      dputs("(N/y)?");
+      t = cgetc();
+      translate_ln = (t == 'y' || t == 'Y');
+    }
   }
 
 #ifndef __CC65__
@@ -528,12 +549,27 @@ again:
   ttyf.c_lflag &= ~(ICANON);
   tcsetattr( STDOUT_FILENO, TCSANOW, &ttyf);
 #endif
+  if (raw) {
+    char r;
+#ifdef __CC65__
+    r = simple_serial_open(2, SER_BAUD_19200);
+#else
+    r = simple_serial_open();
+#endif
 
-  response = surl_start_request(SURL_METHOD_RAW, buf, NULL, 0);
-  if (response->code != 100) {
-    printf("No response (%d).\n", response->code);
-    cgetc();
-    goto again;
+    if (r != 0) {
+      dputs("Error opening serial port.\r\n");
+      cgetc();
+      goto again;
+    }
+  } else {
+    response = surl_start_request(SURL_METHOD_RAW, buf, NULL, 0);
+    if (response->code != 100) {
+      printf("No response (%d).\n", response->code);
+      cgetc();
+      goto again;
+    }
+    opened = 1;
   }
   i = '\0';
 #ifdef __CC65__
@@ -632,7 +668,7 @@ got_input = 0;
     }
     if (!got_input)
       set_cursor();
-  } while(i != 0x04);
+  } while(i != ('d'|0x80));
 
 remote_closed:
   top_line = 0;

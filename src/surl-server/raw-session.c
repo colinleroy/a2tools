@@ -38,7 +38,7 @@ static void send_buf(int sockfd, char *c, int nmemb) {
   }
 }
 
-static int net_recv_char(int sockfd, char *c) {
+static int net_recv_char(int sockfd, unsigned char *c) {
   fd_set fds;
   struct timeval timeout;
   int n;
@@ -67,7 +67,7 @@ static int net_recv_char(int sockfd, char *c) {
   return 0;
 }
 
-static int ser_recv_char(char *c) {
+static int ser_recv_char(unsigned char *c) {
   int i = simple_serial_getc_immediate();
   if (i == EOF)
     return EOF;
@@ -135,7 +135,7 @@ static void set_non_blocking(int sockfd) {
 
 #define RAW_BUFSIZE 1024
 void surl_server_raw_session(char *remote_url) {
-  char i, last_i, o;
+  unsigned char i, last_i, o;
   char *in_buf = malloc(RAW_BUFSIZE);
   char *out_buf = malloc(RAW_BUFSIZE);
   int n_in = 0, n_out = 0;
@@ -170,7 +170,8 @@ maybe_finish_ctrl_ser:
     has_escape_code = 0;
     while (n_in < RAW_BUFSIZE - 1 && ser_recv_char(&i) != EOF) {
       last_i = i;
-      if (i == 0x04) {
+      printf("%02x\n", i);
+      if (i == ('d'|0x80)) {
         printf("RAW: Client closed connection.\n");
         goto cleanup;
       }
@@ -227,7 +228,7 @@ maybe_finish_utf8_net:
       simple_serial_printf("Inactivity timeout.\r\n%c", 0x04);
       goto cleanup;
     }
-  } while(last_i != 0x04);
+  } while(last_i != ('d'|0x80));
 
 cleanup:
   free(out_buf);
