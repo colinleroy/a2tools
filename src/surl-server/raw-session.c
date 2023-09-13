@@ -170,7 +170,7 @@ maybe_finish_ctrl_ser:
     has_escape_code = 0;
     while (n_in < RAW_BUFSIZE - 1 && ser_recv_char(&i) != EOF) {
       last_i = i;
-      printf("%02x\n", i);
+
       if (i == ('d'|0x80)) {
         printf("RAW: Client closed connection.\n");
         goto cleanup;
