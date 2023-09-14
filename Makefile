@@ -29,7 +29,7 @@ CLEANDISK = disks/basic-empty.dsk
 .PHONY: all clean
 
 clean:
-	rm -f *.dsk && \
+	rm -f *$(suffix).dsk && \
 	for dir in $(SUBDIRS); do \
 		$(MAKE) -C $$dir -f Makefile $@ || exit; \
 	done
