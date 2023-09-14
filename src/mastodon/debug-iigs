@@ -1,2 +1,2 @@
 #!/bin/bash
-make clean all IIGS=1 SER_DEBUG=1 && cd ../.. && make mastoperso-iigs.dsk && mame apple2gs -window -flop1 mastoperso-iigs.dsk -resolution 560x384 -modem null_modem -bitb socket.localhost:2000 -nomouse -debug; cd src/mastodon
+make clean all IIGS=1 SER_DEBUG=1 && cd ../.. && make mastoperso-iigs.dsk IIGS=1 && mame apple2gs -window -flop1 mastoperso-iigs.dsk -resolution 560x384 -modem null_modem -bitb socket.localhost:2000 -nomouse -debug; cd src/mastodon

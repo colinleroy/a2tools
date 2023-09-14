@@ -52,14 +52,20 @@ int __fastcall__ simple_serial_open(int slot, int baudrate) {
   
 #ifdef __APPLE2ENH__
   #ifdef IIGS
+
   if ((err = ser_install(&a2gs_ssc_ser)) != 0)
     return err;
+  if ((err = ser_apple2_slot(SER_A2GS_CHANNEL_B)) != 0)
+    return err;
+
   #else
+
   if ((err = ser_install(&a2e_ssc_ser)) != 0)
     return err;
-  #endif
   if ((err = ser_apple2_slot(slot)) != 0)
     return err;
+
+  #endif
 #endif
 
   default_params.baudrate = baudrate;
