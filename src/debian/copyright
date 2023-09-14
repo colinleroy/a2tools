@@ -1,6 +1,6 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Source: <https://github.com/colinleroy/a2tools>
-Upstream-Name: surl-server
+Upstream-Name: a2tools
 Upstream-Contact: <colin@colino.net>
 
 Files:

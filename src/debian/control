@@ -32,6 +32,13 @@ Depends:
  a2tools-common
 Description: Apple2 serial receiver tool
 
+Package: a2trace
+Architecture: any
+Depends:
+ ${shlibs:Depends},
+ ${misc:Depends}
+Description: Apple2 MAME trace interpreter
+
 Package: a2tools-common
 Architecture: all
 Description: Apple2 serial helpers configuration

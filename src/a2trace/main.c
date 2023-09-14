@@ -322,11 +322,12 @@ addr_without_dollar:
           goto try_gen;
         }
       } else if (arg && arg[0] != '#') {
+        int dest;
 try_gen:
         /* Generate a dummy symbol. Its name will reference its address,
          * and where it will hit depending on current memory banking 
          */
-        int dest = is_instruction_write(instr) ? write_to : read_from;
+        dest = is_instruction_write(instr) ? write_to : read_from;
         param_symbol = generate_symbol(arg, param_addr, dest, lc_bank, n_parts > addr_field + 2 ? parts[addr_field + 2] : NULL);
         param_addr = symbol_get_addr(param_symbol);
       }
