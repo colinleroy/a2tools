@@ -73,7 +73,7 @@ static void simple_serial_write_defaults(void) {
     fp = stdout;
   }
   fprintf(fp, "tty: /dev/ttyUSB0\n"
-              "baudrate: 9600\n"
+              "baudrate: 19200\n"
               "hw_handshake: off\n"
               "\n"
               "#Alternatively, you can export environment vars:\n"
