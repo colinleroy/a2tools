@@ -331,10 +331,10 @@ unsigned char __fastcall__ simple_serial_putc(char c) {
   if (!flow_control_enabled) {
     switch (bps) {
       case B57600:
-        usleep(50);
+        usleep(60);
         break;
       default:
-        usleep(500);
+        usleep(600);
     }
   }
 

@@ -1,5 +1,17 @@
 a2tools (1.4.0.2) bionic; urgency=medium
 
+  * Now running at 19.2kbps!
+  * Mastodon: implement bookmarks (without pagination)
+  * Optimisations in common functions
+  * HGR: Fix loading of images when they don't need
+    resizing
+  * Telnet: disconnection with Open-Apple-D
+  * IIgs port
+
+ -- Colin Leroy-Mira <colin@colino.net>  Thu, 14 Sep 2023 21:28:19 +0200
+
+a2tools (1.4.0.2) bionic; urgency=medium
+
   * Now with no memory corruption from cc65!
   * Serial code optimization
   * Cleanups
