@@ -38,7 +38,6 @@ void compose_print_header(void) {
 
   #define BTM 4
   clrzone(0, BTM, LEFT_COL_WIDTH, 23);
-  gotoxy(0,BTM);
 
   cputs("Commands:\r\n"
         " Open-Apple +...\r\n"

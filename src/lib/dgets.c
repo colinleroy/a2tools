@@ -95,7 +95,6 @@ static char __fastcall__ rewrite_end_of_buffer(char full) {
     char c = text_buf[k];
     if (c == '\n' || k == max_insert - 1) {
       clrzone(x, y, win_width - 1, y);
-      gotoxy(x, y);
     }
     if (x == win_width || k == max_insert - 1) {
       if (y + 1 < win_height) {
@@ -260,7 +259,7 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb, c
         cur_x = 0;
         cur_insert = 0;
       } else {
-        /* Go back in the buffer to the character just 
+        /* Go back in the buffer to the character just
          * before the current offset to left border */
         cur_insert -= cur_x + 1;
         /* and go up to previous line */
@@ -344,8 +343,8 @@ stop_down:
             /* we're on last line, scrollup */
             cur_y--;
             scrollup_one();
+            gotoxy(cur_x, cur_y);
           }
-          gotoxy(cur_x, cur_y);
           cputc('\r');
           cputc('\n');
         } else {
@@ -398,7 +397,7 @@ stop_down:
     }
     if (cur_insert > max_insert) {
       max_insert = cur_insert;
-    }    
+    }
   }
 out:
   cursor(prev_cursor);
