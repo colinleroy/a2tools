@@ -9,9 +9,8 @@
 
         .export         _init_fast_irq, _done_fast_irq
         .import         callirq
-; Disabled
-;       .constructor    _init_fast_irq, 9
-;       .destructor     _done_fast_irq, 9
+        .constructor    _init_fast_irq, 9
+        .destructor     _done_fast_irq, 9
 
         .include        "apple2.inc"
 
@@ -102,14 +101,7 @@ Native:
         stz     Emulate
 
 HandleIrq:
-        lda     $C012
-        pha
         jsr     callirq
-        pla
-        bmi     R_LC
-R_ROM:  bit     $C082
-        bra     :+
-R_LC:   bit     $C080
 :       bcc     Fallback        ; We did not handle that.
 
 Done:
