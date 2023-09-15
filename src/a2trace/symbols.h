@@ -8,6 +8,8 @@ typedef struct _segment dbg_segment;
 typedef struct _symbol dbg_symbol;
 typedef struct _slocdef dbg_slocdef;
 
+#define STORAGE_SIZE 16777215
+
 void load_syms(const char *file);
 void load_lbls(const char *file);
 void map_slocs_to_adresses(void);

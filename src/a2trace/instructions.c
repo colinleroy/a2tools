@@ -5,8 +5,6 @@
 #include "instructions.h"
 #include "symbols.h"
 
-#define STORAGE_SIZE 200000
-
 int ROM_IRQ_ADDR[] = {0xC803, 0xC074 };
 int PRODOS_IRQ_ADDR = 0xBFEB;
 
