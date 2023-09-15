@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include <arpa/inet.h>
 #ifndef __CC65__
 #include "extended_conio.h"
@@ -40,20 +41,27 @@ void __fastcall__ surl_ping(void) {
 
 try_again:
   clrscr();
-  gotoxy(0, 10);
   cputs("Establishing serial connection... ");
+  
   resp = surl_start_request(SURL_METHOD_PING, "ping://", NULL, 0);
   if (resp->code != SURL_PROTOCOL_VERSION) {
-    cprintf("\r\n\r\n%s. Press any key to try again...\r\n",
+    if (resp->code == 404) {
+      simple_serial_flush();
+      goto try_again;
+    }
+    cprintf("\r\n\r\n%s. Press any key to try again or C to configure.\r\n",
             resp->code == 504 ? "Timeout"
               : (resp->code == 600 ? "Can not open serial port."
                 : (resp->code != SURL_PROTOCOL_VERSION ? "Wrong protocol version"
                   : "Unknown error")));
-    cgetc();
+    if (tolower(cgetc()) == 'c') {
+      surl_disconnect_proxy();
+      simple_serial_configure();
+    }
     goto try_again;
   }
 
-  cputs("Done.");
+  clrscr();
 }
 
 #ifdef __CC65__

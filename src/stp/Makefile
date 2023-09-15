@@ -32,7 +32,8 @@ SOURCES := stp.c stp_cli.c stp_save.c stp_send_file.c stp_delete.c \
 	../lib/surl_send.c \
 	../lib/surl_set_time.c \
 	../lib/surl_ping.c \
-	../lib/file_select.c
+	../lib/file_select.c \
+	../lib/path_helper.c
 
 CL65SOURCES = ../lib/dputc.s ../lib/dputs.s ../lib/scroll.s ../lib/fastirq$(suffix).s
 GCC_SOURCES = ../lib/extended_string.c ../lib/extended_conio.c

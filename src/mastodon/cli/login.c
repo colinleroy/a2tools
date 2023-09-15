@@ -176,14 +176,14 @@ int main(int argc, char **argv) {
   videomode(VIDEOMODE_80COL);
   screensize(&scrw, &scrh);
 
-  surl_ping();
-
   clrscr();
 
   print_logo(scrw);
 
   y = wherey();
   set_scrollwindow(y, scrh);
+
+  surl_ping();
 
   if (load_settings() < 0) {
     set_scrollwindow(0, scrh);

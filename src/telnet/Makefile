@@ -10,7 +10,8 @@ endif
 
 PROGRAM=telnet
 SOURCES := telnet.c ../lib/simple_serial.c ../lib/simple_serial_ext.c \
-	../lib/surl_core.c ../lib/clrzone.c ../lib/dgets.c ../lib/scrollwindow.c
+	../lib/surl_core.c ../lib/clrzone.c ../lib/dgets.c ../lib/scrollwindow.c \
+	../lib/path_helper.c
 CC65SOURCES := ../lib/dputs.s ../lib/dputc.s ../lib/scroll.s ../lib/fastirq$(suffix).s
 GCCSOURCES := ../lib/extended_string.c ../lib/extended_conio.c
 DEPS := 

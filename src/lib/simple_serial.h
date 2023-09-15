@@ -18,11 +18,14 @@
 int __fastcall__ simple_serial_open(void);
 int __fastcall__ simple_serial_close(void);
 void __fastcall__ simple_serial_flush(void);
+void __fastcall__ simple_serial_configure(void);
+
 #define simple_serial_putc(c) ser_put(c)
 #else
 int simple_serial_open(void);
 int simple_serial_close(void);
 void simple_serial_flush(void);
+#define simple_serial_configure()
 unsigned char __fastcall__ simple_serial_putc(char c);
 #endif
 
