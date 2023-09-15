@@ -65,7 +65,6 @@ static void update_compose_audience(void) {
 
 static void update_cw(void) {
   clrzone(0, top + COMPOSE_FIELD_HEIGHT + 2, scrw - LEFT_COL_WIDTH - 2, top + COMPOSE_FIELD_HEIGHT + 2);
-  gotoxy(0, top + COMPOSE_FIELD_HEIGHT + 2);
   if (cw[0] == '\0') {
     cputs("( ) Content warning not set");
   } else {
@@ -187,7 +186,6 @@ static void open_cw_menu(void) {
   set_scrollwindow(0, scrh);
 
   clrzone(0, top + COMPOSE_FIELD_HEIGHT + 2, scrw - LEFT_COL_WIDTH - 2, top + COMPOSE_FIELD_HEIGHT + 2);
-  gotoxy(0, top + COMPOSE_FIELD_HEIGHT + 2);
   cputs("(*) CW: ");
   dget_text(cw, sizeof(cw) - 1, NULL, 0);
   update_cw();

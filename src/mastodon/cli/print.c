@@ -16,7 +16,6 @@
 #include "list.h"
 #include "math.h"
 #include "dgets.h"
-#include "clrzone.h"
 #include "scrollwindow.h"
 
 extern char writable_lines;

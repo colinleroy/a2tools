@@ -29,6 +29,7 @@
 #include <errno.h>
 #include <dirent.h>
 #include "dputc.h"
+#include "dputs.h"
 #include "clrzone.h"
 
 static char last_dir[FILENAME_MAX] = "";
@@ -44,7 +45,7 @@ char *file_select(char sx, char sy, char ex, char ey, char dir, char *prompt) {
   char *filename = NULL;
 
   gotoxy(sx, sy);
-  cprintf("Please wait...");
+  dputs("Please wait...");
   if (dir)
     last_dir[0] = '\0';
 
@@ -109,8 +110,8 @@ disp_again:
   cprintf("-- %s\r\n", prompt);
   if (n == 0) {
     gotox(sx); cprintf("! *%s*\r\n", dir ? "No directory":"Empty");
-    gotox(sx); cprintf("!\r\n");
-    gotox(sx); cprintf("-- Any key to go up");
+    gotox(sx); dputs("!\r\n");
+    gotox(sx); dputs("-- Any key to go up");
     cgetc();
     goto up;
   }
@@ -123,9 +124,9 @@ disp_again:
   }
   revers(0);
 
-  gotox(sx);cprintf("! \r\n");
-  gotox(sx);cprintf("!  Up/Down/Left/Right: navigate;\r\n");
-  gotox(sx);cprintf("-- Enter: select; Esc: cancel");
+  gotox(sx);dputs("! \r\n");
+  gotox(sx);dputs("!  Up/Down/Left/Right: navigate;\r\n");
+  gotox(sx);dputs("-- Enter: select; Esc: cancel");
 
   c = tolower(cgetc());
   switch (c) {
@@ -181,7 +182,7 @@ out:
   clrzone(sx, sy, ex, ey);
   gotoxy(sx, sy);
   if (filename) {
-    cprintf("%s", filename);
+    dputs(filename);
   }
   return filename;
 }
