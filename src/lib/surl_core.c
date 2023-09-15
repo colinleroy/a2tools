@@ -39,11 +39,7 @@
 static char proxy_opened = 0;
 int surl_connect_proxy(void) {
   int r;
-#ifdef __CC65__
-  r = simple_serial_open(2, SER_BAUD_19200);
-#else
   r = simple_serial_open();
-#endif
   //DEBUG("connected proxy: %d\n", r);
   proxy_opened = (r == 0);
 

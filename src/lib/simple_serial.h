@@ -15,7 +15,7 @@
 
 /* Setup */
 #ifdef __CC65__
-int __fastcall__ simple_serial_open(int slot, int baudrate);
+int __fastcall__ simple_serial_open(void);
 int __fastcall__ simple_serial_close(void);
 void __fastcall__ simple_serial_flush(void);
 #define simple_serial_putc(c) ser_put(c)

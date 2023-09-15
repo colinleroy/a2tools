@@ -551,11 +551,7 @@ again:
 #endif
   if (raw) {
     char r;
-#ifdef __CC65__
-    r = simple_serial_open(2, SER_BAUD_19200);
-#else
     r = simple_serial_open();
-#endif
 
     if (r != 0) {
       dputs("Error opening serial port.\r\n");
