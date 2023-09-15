@@ -28,6 +28,7 @@ void __fastcall__ clrzone(char xs, char ys, char xe, char ye) {
 #ifdef __APPLE2ENH__
   unsigned char orig_top, orig_bottom;
   unsigned char orig_left, orig_width;
+  unsigned char ww = xe - xs + 1;
 
   get_scrollwindow(&orig_top, &orig_bottom);
   get_hscrollwindow(&orig_left, &orig_width);
@@ -35,7 +36,7 @@ void __fastcall__ clrzone(char xs, char ys, char xe, char ye) {
   xs += orig_left;
   ys += orig_top;
   set_scrollwindow(ys, ye + 1);
-  set_hscrollwindow(xs, xe - xs + 1);
+  set_hscrollwindow(xs, ww);
   clrscr();
   set_hscrollwindow(orig_left, orig_width);
   set_scrollwindow(orig_top, orig_bottom);
