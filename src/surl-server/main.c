@@ -67,7 +67,7 @@ struct _curl_buffer {
 static curl_buffer *surl_handle_request(char method, char *url, char **headers, int n_headers);
 static void curl_buffer_free(curl_buffer *curlbuf);
 
-static const char *surl_method_str(char method) {
+static const char *surl_method_str(unsigned char method) {
   switch (method) {
     case SURL_METHOD_ABORT:     return "ABORT";
     case SURL_METHOD_RAW:       return "RAW";
@@ -141,7 +141,8 @@ static void do_debug(char *file_line) {
 int main(int argc, char **argv)
 {
   char reqbuf[BUFSIZE];
-  char method = SURL_METHOD_ABORT, *url = NULL;
+  unsigned char method = SURL_METHOD_ABORT;
+  char *url = NULL;
   char cmd;
   char **headers = NULL;
   int n_headers = 0;
@@ -231,7 +232,7 @@ new_req:
     do {
       reqbuf[0] = '\0';
       if (simple_serial_gets(reqbuf, BUFSIZE) != NULL) {
-        if (reqbuf[0] == SURL_METHOD_ABORT) {
+        if ((unsigned char)reqbuf[0] == SURL_METHOD_ABORT) {
           /* It's a reset */
           goto reopen;
         } else if (strcmp(reqbuf, "\n")) {
@@ -347,7 +348,7 @@ new_req:
             param = strchr(translit, ' ') + 1;
             *strchr(translit, ' ') = '\0';
             *strchr(param, '\n') = '\0';
-          } else if (translit[0] == SURL_METHOD_ABORT) {
+          } else if ((unsigned char)translit[0] == SURL_METHOD_ABORT) {
             goto abort;
           } else {
             printf("Unknown error\n");
