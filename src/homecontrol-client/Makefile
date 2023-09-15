@@ -20,14 +20,17 @@ homectrl_SOURCES := main.c network.c \
 	../lib/strsplit.c \
 	../lib/extended_string.c \
 	../lib/surl_core.c \
-	../lib/surl_receive.c
+	../lib/surl_receive.c \
+	../lib/path_helper.c \
+	../lib/surl_ping.c
 
 homectrl_CL65SOURCES = ../lib/dputc.s ../lib/dputs.s ../lib/scroll.s ../lib/fastirq$(suffix).s
 
 grphview_SOURCES := graph-viewer.c \
 	../lib/surl_core.c \
 	../lib/surl_receive_lines.c \
-	../lib/simple_serial.c
+	../lib/simple_serial.c \
+	../lib/path_helper.c
 
 grphview_GCCSOURCES := ../lib/extended_conio.c ../lib/clrzone.c ../lib/tgi_sdl.c ../lib/extended_string.c ../lib/tgi_fastline.c
 grphview_CL65SOURCES = ../lib/fastirq$(suffix).s

@@ -45,10 +45,16 @@ int surl_connect_proxy(void) {
 
   if (r == 0) {
     /* Break previous session if needed */
+    simple_serial_flush();
     simple_serial_puts("\4\n");
     simple_serial_flush();
   }
   return r;
+}
+
+void surl_disconnect_proxy(void) {
+  simple_serial_close();
+  proxy_opened = 0;
 }
 
 static surl_response static_resp;
@@ -105,9 +111,14 @@ const surl_response * __fastcall__ surl_start_request(const char method, char *u
   } else if (method == SURL_METHOD_GETTIME && i == SURL_ANSWER_TIME) {
     resp->code = 200;
     return resp;
-  } else if (method == SURL_METHOD_PING && i == SURL_ANSWER_PONG) {
-    resp->code = simple_serial_getc();
-    return resp;
+  } else if (method == SURL_METHOD_PING) {
+    if (i == SURL_ANSWER_PONG) {
+      resp->code = simple_serial_getc();
+      return resp;
+    } else {
+      resp->code = 404;
+      return resp;
+    }
   } else if (i == SURL_ANSWER_SEND_SIZE || i == SURL_ANSWER_SEND_NUM_FIELDS) {
     resp->code = 100;
     return resp;

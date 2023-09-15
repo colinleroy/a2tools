@@ -39,7 +39,8 @@ mastodon_SOURCES := \
 	api/oauth.c \
 	../lib/progress_bar.c \
 	../lib/surl_find_line.c \
-	../lib/surl_ping.c
+	../lib/surl_ping.c \
+	../lib/path_helper.c
 
 mastodon_CC65SOURCES := \
 	../lib/dputs.s \
@@ -55,7 +56,8 @@ mastocli_SOURCES := \
 	api/api.c \
 	api/account.c \
 	api/notification.c \
-	api/status.c
+	api/status.c \
+	../lib/path_helper.c
 
 mastocli_CC65SOURCES := \
 	../lib/dputs.s \
@@ -73,7 +75,8 @@ mastowrite_SOURCES := \
 	api/media.c \
 	api/status.c \
 	../lib/file_select.c \
-	../lib/progress_bar.c
+	../lib/progress_bar.c \
+	../lib/path_helper.c
 
 mastowrite_CC65SOURCES := \
 	../lib/dputs.s \

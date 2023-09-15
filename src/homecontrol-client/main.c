@@ -272,7 +272,7 @@ static int select_item(void) {
 }
 
 static void cleanup(void) {
-  surl_close_proxy();
+  surl_disconnect_proxy();
   switches_free_all();
   sensors_free_all();
   climate_zones_free_all();
@@ -289,7 +289,7 @@ int main(int argc, char **argv) {
 
   clrscr();
   screensize(&scrw, &scrh);
-  
+  surl_ping();
   print_header();
   
   /* init if needed */
