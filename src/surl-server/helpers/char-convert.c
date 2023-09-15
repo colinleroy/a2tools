@@ -51,7 +51,7 @@ static char *do_conv(char *in, char *from, char *to, size_t *new_len) {
   return orig_out;
 }
 
-char *do_apple_convert(char *in, int way, char *a2charset, size_t *new_len) {
+char *do_charset_convert(char *in, int way, char *a2charset, size_t *new_len) {
   char *out_final = NULL;
   char *out_ascii = NULL;
   char translit_charset[50];
@@ -65,9 +65,11 @@ char *do_apple_convert(char *in, int way, char *a2charset, size_t *new_len) {
   if (way == OUTGOING) {
     out_final = do_conv(in, "UTF-8", translit_charset, new_len);
     out_ascii = do_conv(in, "UTF-8", "US-ASCII//TRANSLIT", &ascii_len);
-    
+
+    /* Special case for Apple 2 French charset, which does not contain
+     * quite widely used characters. We'll adapt for legibility.
+     */
     if (!strcmp(a2charset, "ISO646-FR1")) {
-      /* Adapt for legibility */
       for (i = 0; i < min(*new_len, ascii_len); i++) {
         if (out_final[i] == '?' && out_ascii[i] != '?') {
           switch(out_ascii[i]) {
@@ -84,7 +86,12 @@ char *do_apple_convert(char *in, int way, char *a2charset, size_t *new_len) {
     }
     free(out_ascii);
     return out_final;
+
   } else {
+    /* Special case for Apple 2 French charset, which does not contain
+     * @ or #. We ask the French user of the Apple 2 to use
+     * § for @, and £ for #. 
+     */
     if (!strcmp(a2charset, "ISO646-FR1")) {
       /* Do a step to ISO8859 to keep § and £ chars */
       char *out;

@@ -64,9 +64,24 @@ struct _curl_buffer {
   jv json_data;
 };
 
-static curl_buffer *curl_request(char method, char *url, char **headers, int n_headers);
+static curl_buffer *surl_handle_request(char method, char *url, char **headers, int n_headers);
 static void curl_buffer_free(curl_buffer *curlbuf);
 
+static const char *surl_method_str(char method) {
+  switch (method) {
+    case SURL_METHOD_ABORT:     return "ABORT";
+    case SURL_METHOD_RAW:       return "RAW";
+    case SURL_METHOD_GET:       return "GET";
+    case SURL_METHOD_POST:      return "POST";
+    case SURL_METHOD_PUT:       return "PUT";
+    case SURL_METHOD_DELETE:    return "DELETE";
+    case SURL_METHOD_POST_DATA: return "POST_DATA";
+    case SURL_METHOD_GETTIME:   return "GETTIME";
+    case SURL_METHOD_PING:      return "PING";
+    case SURL_METHOD_DEBUG:     return "DEBUG";
+    default:                    return "[UNKNOWN]";
+  }
+}
 static void handle_signal(int signal) {
   if (signal == SIGTERM) {
     simple_serial_close();
@@ -230,12 +245,14 @@ new_req:
       }
     } while (strcmp(reqbuf, "\n"));
 
-    response = curl_request(method, url, headers, n_headers);
+    /* Perform the request */
+    response = surl_handle_request(method, url, headers, n_headers);
     if (response == NULL) {
-      printf("REQ: 0x%02x %s - done\n", method, url);
+      printf("REQ: %s %s - done\n", surl_method_str(method), url);
       continue;
     }
 
+    /* Send short response headers */
     r_hdrs[0] = htons(response->response_code);
     r_hdrs[1] = htons(response->size);
     r_hdrs[2] = htons(response->headers_size);
@@ -248,6 +265,8 @@ new_req:
     printf("RESP: code %d, %zd response bytes, %zd header bytes, content-type: %s",
            response->response_code, response->size, response->headers_size,
            response->content_type);
+
+    /* Parse JSON if it is */
     if (!strncasecmp(response->content_type, "application/json", 16)) {
       response->json_data = jv_parse(response->buffer);
       printf(" [built json data]");
@@ -264,6 +283,8 @@ new_req:
     sent = 0;
     sending_headers = 0;
     sending_body = 0;
+
+    /* Enter sub-request loop until client is done with it */
     while (1) {
       size_t to_send;
       char *param;
@@ -281,21 +302,45 @@ new_req:
       start_msecs = cur_time.tv_nsec / 1000000;
 
       if (SURL_IS_CMD(cmd)) {
+
         if(cmd == SURL_CMD_SEND || cmd == SURL_CMD_HEADERS) {
+          /* client wants body or headers data. 
+           * Input: 16-bit word: maximum number of bytes to return
+           */
           simple_serial_read((char *)&size, 2);
           bufsize = ntohs(size);
+
         } else if (cmd == SURL_CMD_FIND) {
+          /* client wants to body data at a substring match. 
+           * Input: 16-bit word: maximum number of bytes to return
+           *        string, \n terminated: what is looked for
+           */
           simple_serial_read((char *)&size, 2);
           bufsize = ntohs(size);
 
           simple_serial_gets(reqbuf, BUFSIZE);
           param = reqbuf;
           *strchr(param, '\n') = '\0';
+
         } else if (cmd == SURL_CMD_JSON) {
+          /* client wants parsed json. 
+           * Input: 16-bit word: maximum number of bytes to return
+           *        char (SURL_HTMLSTRIP_*): how to strip HTML in parsed result
+           *        string, space (' ') terminated: Charset transliteration, "0" for none
+           *        string, \n terminated: JSON selector
+           *
+           * Warning: The htmlstrip and charset transliteration apply to every
+           *          matched field. Do multiple commands if you need different
+           *          settings for different fields.
+           */
+
+          /* Size */
           simple_serial_read((char *)&size, 2);
           bufsize = ntohs(size);
-
+          /* Striphtml */
           striphtml = simple_serial_getc();
+
+          /* Charset transliteration and JSON selector */
           simple_serial_gets(reqbuf, BUFSIZE);
           translit = reqbuf;
           if (strchr(translit,' ')) {
@@ -308,7 +353,11 @@ new_req:
             printf("Unknown error\n");
             goto new_req;
           }
+
         } else if (cmd == SURL_CMD_HGR) {
+          /* Client wants an image
+           * Input: char: Monochrome (\1) or color (\0)
+           */
           char monochrome = simple_serial_getc();
           printf("RESP: converting to %s HGR\n", monochrome?"monochrome":"color");
           response->hgr_buf = sdl_to_hgr(
@@ -316,13 +365,14 @@ new_req:
               monochrome, 0, &(response->hgr_len));
         }
       } else {
-        /* special case for debugs */
+        /* special case for debugs in the middle of a request */
         if (cmd == SURL_METHOD_DEBUG) {
           reqbuf[0] = cmd;
           simple_serial_gets(reqbuf + 1, BUFSIZE - 1);
           do_debug(reqbuf + 1);
           continue;
         }
+
 abort:
         printf("RESP: finished\n");
         /* Put that back as a REQUEST */
@@ -331,8 +381,16 @@ abort:
         goto new_req;
       }
 
+      /* Parameters are set, now answer */
       if (cmd == SURL_CMD_SEND) {
+        /* SEND response format:
+         * array of bytes (up to the maximum specified)
+         *
+         * Warning: It is up to the client to make sure they don't
+         * read more bytes than available, using surl_response->size.
+         */
         if (!sending_body) {
+          /* Switching from HEADERS resets the cursor */
           sent = 0;
           sending_headers = 0;
         }
@@ -341,8 +399,16 @@ abort:
         printf("RESP: SEND %zu body bytes from %zu\n", to_send, sent);
         simple_serial_write(response->buffer + sent, to_send);
         sent += to_send;
+
       } else if (cmd == SURL_CMD_HEADERS) {
+        /* HEADERS response format:
+         * array of bytes (up to the maximum specified)
+         *
+         * Warning: It is up to the client to make sure they don't
+         * read more bytes than available, using surl_response->headers_size.
+         */
         if (!sending_headers) {
+          /* Switching from BODY resets the cursor */
           sent = 0;
           sending_body = 0;
         }
@@ -351,41 +417,70 @@ abort:
         printf("RESP: HEADERS %zu header bytes from %zu\n", to_send, sent);
         simple_serial_write(response->headers + sent, to_send);
         sent += to_send;
+
       } else if (cmd == SURL_CMD_FIND) {
+        /* FIND response format:
+         * char:           search status (SURL_ERROR_OK or SURL_ERROR_NOT_FOUND)
+         * 16-bit word:    length of the result
+         * array of bytes: search result (substring of maximum length: bufsize - 1),
+         *                 starting at first search pattern match,
+         *                 followed by a \n
+         */
+
         char *found = NULL;
         sending_headers = 0;
         sending_body = 0;
 
         found = strstr(response->buffer, param);
-        printf("RESP: FIND '%s' into %zu bytes: %s\n", param, bufsize, found != NULL ? "found":"not found");
+        printf("RESP: FIND '%s' into %zu bytes: ", param, bufsize);
         if (found) {
+          size_t len = strlen(found);
           found = strdup(found);
-          simple_serial_putc(SURL_ERROR_OK);
-          if (strlen(found) >= bufsize) {
-            found[bufsize - 1] = '\n';
-            found[bufsize] = '\0';
-
-            l = htons(strlen(found));
-            simple_serial_write((char *)&l, 2);
-
-            simple_serial_puts(found);
-          } else {
-
-            l = htons(strlen(found) + 1);
-            simple_serial_write((char *)&l, 2);
-
-            simple_serial_puts(found);
-            simple_serial_putc('\n');
+          if (len > bufsize - 1) {
+            found[bufsize - 1] = '\0';
+            len = strlen(found);
           }
+
+          /* We'll add a \n */
+          len++;
+          printf("found (%zu bytes)\n", len);
+          l = htons(len);
+
+          simple_serial_putc(SURL_ERROR_OK);
+          simple_serial_write((char *)&l, 2);
+          simple_serial_puts(found);
+          simple_serial_putc('\n');
+
           free(found);
         } else {
+          printf("not found\n");
           simple_serial_putc(SURL_ERROR_NOT_FOUND);
         }
+
       } else if (cmd == SURL_CMD_JSON) {
+        /* JSON response format:
+         * char:             status (SURL_ERROR_OK, SURL_ERROR_NOT_FOUND or 
+                             SURL_ERROR_NOT_JSON)
+         * 16-bit word:      length of the result
+         * array of strings: JSON result, each field matched by the selector
+         *                   separated on its own line.
+         *
+         * Warning: unmatched fields in the selector get NO line. Make sure to put
+         * only one field whose existence is uncertain, put it last in the selector,
+         * or do one command per uncertain field,
+         * or use a default in the selector (like .optional_id//"-")
+         *
+         * Warning 2: a field containing text with \n will be represented on multiple
+         * lines. Make sure to put only one field of this type per command, and put it
+         * last, or do multiple commands.
+         */
+
         if (strncasecmp(response->content_type, "application/json", 16)) {
+          /* HTTP response was not JSON */
           printf("RESP: JSON '%s' into %zu bytes: response is not json\n", param, bufsize);
           simple_serial_putc(SURL_ERROR_NOT_JSON);
         } else {
+          /* Extract result */
           char *result = jq_get(jv_copy(response->json_data), param);
           printf("RESP: JSON '%s' into %zu bytes%s, translit: %s: %zu bytes %s\n", param, bufsize,
                   striphtml ? ", striphtml":"",
@@ -394,19 +489,26 @@ abort:
                   result != NULL ? "" :"not found");
 
           if (result) {
+            /* We have a result */
             simple_serial_putc(SURL_ERROR_OK);
+
+            /* Strip HTML at the required level */
             if (striphtml) {
               char *text = html2text(result,
-                          striphtml == SURL_HTMLSTRIP_FULL ? HTML2TEXT_EXCLUDE_LINKS : HTML2TEXT_DISPLAY_LINKS);
-              free(result);
-              result = text;
-            }
-            if (translit[0] != '0') {
-              char *text = do_apple_convert(result, OUTGOING, translit, &l);
+                            striphtml == SURL_HTMLSTRIP_FULL ? 
+                              HTML2TEXT_EXCLUDE_LINKS : HTML2TEXT_DISPLAY_LINKS);
               free(result);
               result = text;
             }
 
+            /* Convert the charset */
+            if (translit[0] != '0') {
+              char *text = do_charset_convert(result, OUTGOING, translit, &l);
+              free(result);
+              result = text;
+            }
+
+            /* Remove whitespace */
             char *trimmed = trim(result);
             free(result);
             result = trimmed;
@@ -415,6 +517,7 @@ abort:
               result[bufsize - 1] = '\0';
             }
 
+            /* And send the result */
             l = htons(strlen(result));
             simple_serial_write((char *)&l, 2);
             simple_serial_puts(result);
@@ -423,7 +526,14 @@ abort:
             simple_serial_putc(SURL_ERROR_NOT_FOUND);
           }
         }
+
       } else if (cmd == SURL_CMD_HGR) {
+        /* HGR response format:
+         * char:           status (SURL_ERROR_OK or SURL_ERROR_CONV_FAILED)
+         * 16-bit word:    length of the result
+         * array of bytes: Binary HGR data (eligible to be directly written
+         *                 to the Apple2 HGR page 1 or 2).
+         */
         if (response->hgr_buf && response->hgr_len) {
             printf("RESP: HGR %zu bytes\n", response->hgr_len);
             simple_serial_putc(SURL_ERROR_OK);
@@ -602,7 +712,7 @@ static char *prepare_post(char *buffer, size_t *len) {
       nl = replace_new_lines(lines[i + 1]);
       if (translit) {
         size_t tmp_len;
-        translit_data = do_apple_convert(nl, INCOMING, translit, &tmp_len);
+        translit_data = do_charset_convert(nl, INCOMING, translit, &tmp_len);
       } else {
         translit_data = strdup(nl);
       }
@@ -648,7 +758,7 @@ static char *json_escape(char *in) {
  * T = type (S string, B boolean, A array, O object)
  * TRANSLIT and charset optional
  * strings will be json-encoded
- * the other will be untouched
+ * the other types will be untouched
  */
 static char *prepare_json_post(char *buffer, size_t *len) {
   char *tmp, *nl, *json_esc;
@@ -694,7 +804,7 @@ static char *prepare_json_post(char *buffer, size_t *len) {
 
       if (translit) {
         size_t tmp_len;
-        translit_data = do_apple_convert(nl, INCOMING, translit, &tmp_len);
+        translit_data = do_charset_convert(nl, INCOMING, translit, &tmp_len);
       } else {
         translit_data = strdup(nl);
       }
@@ -741,23 +851,226 @@ static void massage_upload_json(curl_buffer *curlbuf) {
   curlbuf->cur_upload_ptr = curlbuf->upload_buffer;
 }
 
-static curl_buffer *curl_request(char method, char *url, char **headers, int n_headers) {
+static int setup_simple_upload_request(char method, CURL *curl,
+                                       struct curl_slist **curl_headers,
+                                       curl_buffer *curlbuf) {
+  int r = 0;
+  unsigned short size, mode;
+
+  simple_serial_putc(SURL_ANSWER_SEND_SIZE);
+  simple_serial_read((char *)&size, 2);
+  simple_serial_read((char *)&mode, 2);
+  size = ntohs(size);
+  mode = ntohs(mode);
+
+  if (mode > 2) {
+    simple_serial_putc(SURL_UPLOAD_PARAM_ERROR);
+    printf("REQ: Unexpected serial reply\n");
+    curl_buffer_free(curlbuf);
+    return -1;
+  }
+
+  curlbuf->upload_size = size;
+  curlbuf->orig_upload_size = size;
+  curlbuf->upload_buffer = malloc(curlbuf->upload_size);
+  curlbuf->cur_upload_ptr = curlbuf->upload_buffer;
+
+  simple_serial_putc(SURL_UPLOAD_GO);
+  simple_serial_read(curlbuf->upload_buffer, curlbuf->upload_size);
+
+  if (mode == SURL_DATA_X_WWW_FORM_URLENCODED_HELP) {
+    /* Massage an x-www-urlencoded form */
+    massage_upload_urlencoded(curlbuf);
+    if (VERBOSE) {
+      printf("REQ: %s x-www-urlencoded [%zu bytes], body:\n", surl_method_str(method), curlbuf->upload_size);
+      printf("%s\n", curlbuf->upload_buffer);
+    }
+  } else if (mode == SURL_DATA_APPLICATION_JSON_HELP) {
+    /* Massage an simple application/json form (no sub-entities handled )*/
+    *curl_headers = curl_slist_append(*curl_headers, "Content-Type: application/json");
+    massage_upload_json(curlbuf);
+    if (VERBOSE) {
+      printf("REQ: %s application/json [%zu bytes], body:\n", surl_method_str(method), curlbuf->upload_size);
+      printf("%s\n", curlbuf->upload_buffer);
+    }
+  } else { /* assume SURL_DATA_X_WWW_FORM_URLENCODED_RAW */
+    if (VERBOSE) {
+      printf("REQ: %s raw [%zu bytes]\n", surl_method_str(method), curlbuf->upload_size);
+    }
+  }
+
+  r |= curl_easy_setopt(curl, CURLOPT_READFUNCTION, data_send_cb);
+  r |= curl_easy_setopt(curl, CURLOPT_SEEKFUNCTION, data_seek_cb);
+  r |= curl_easy_setopt(curl, CURLOPT_READDATA, curlbuf);
+  r |= curl_easy_setopt(curl, CURLOPT_SEEKDATA, curlbuf);
+
+  if (method == SURL_METHOD_POST) {
+    r |= curl_easy_setopt(curl, CURLOPT_POST, 1L);
+    r |= curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, curlbuf->upload_size);
+  } else {
+    r |= curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
+    r |= curl_easy_setopt(curl, CURLOPT_INFILESIZE, curlbuf->upload_size);
+  }
+  if (r) {
+    printf("CURL: Could not set %s option(s)\n", surl_method_str(method));
+  }
+  return 0;
+}
+
+static curl_mime *setup_multipart_upload_request(char method, CURL *curl,
+                                          struct curl_slist **curl_headers,
+                                          curl_buffer *curlbuf) {
+  int i;
+  char n_fields;
+  char field_name[255];
+  char field_type[255];
+  curl_mimepart *field = NULL;
+  curl_mime *form = NULL;
+
+  printf("REQ: POST multipart/form-data\n");
+
+  *curl_headers = curl_slist_append(*curl_headers, "Content-Type: multipart/form-data");
+
+  simple_serial_putc(SURL_ANSWER_SEND_NUM_FIELDS);
+  n_fields = simple_serial_getc();
+
+  form = curl_mime_init(curl);
+  if (form) {
+    for (i = 0; i < n_fields; i++) {
+      char *field_contents;
+      unsigned short h_len;
+      size_t f_len;
+      simple_serial_gets(field_name, 255);
+      if (strchr(field_name, '\n'))
+        *strchr(field_name, '\n') = '\0';
+
+      simple_serial_gets(field_type, 255);
+      if (strchr(field_type, '\n'))
+        *strchr(field_type, '\n') = '\0';
+
+      simple_serial_read((char *)&h_len, 2);
+      f_len = ntohs(h_len);
+
+      if (!strncasecmp(field_type, "text/", 5)) {
+        field_contents = malloc(f_len + 1);
+        simple_serial_gets(field_contents, 255);
+        if (strchr(field_contents, '\n'))
+          *strchr(field_contents, '\n') = '\0';
+      } else {
+        field_contents = malloc(f_len);
+        simple_serial_read(field_contents, f_len);
+      }
+      if (!strcasecmp(field_type, "image/hgr")) {
+        size_t png_len;
+        char *png_data = hgr_to_png(field_contents, f_len, 1, &png_len);
+        free(field_contents);
+        field_contents = png_data;
+        strcpy(field_type, "image/png");
+        f_len = png_len;
+      }
+
+      field = curl_mime_addpart(form);
+      if (field) {
+        if (curl_mime_name(field, field_name) != CURLE_OK)
+          printf("REQ: POST: could not set field name %s\n", field_name);
+        if (curl_mime_data(field, field_contents, f_len) != CURLE_OK)
+          printf("REQ: POST: could not set field contents\n");
+
+        if (VERBOSE) {
+          printf("%s (%s): %s (%zu bytes)\n", field_name, field_type,
+                  !strncasecmp(field_type, "text/", 5) ? field_contents:"[binary]",
+                  f_len);
+        }
+
+        if (strncasecmp(field_type, "text/", 5)) {
+          char *field_filename = malloc(512);
+
+          if (curl_mime_type(field, field_type) != CURLE_OK)
+            printf("REQ: POST: could not set field type %s\n", field_type);
+
+          snprintf(field_filename, 512, "file-%lu-%s", time(NULL), field_type);
+          if (strchr(field_type, '/'))
+            *strchr(field_type, '/') = '.';
+          if (curl_mime_filename(field, field_filename) != CURLE_OK)
+            printf("REQ: POST: could not set field filename %s\n", field_filename);
+          free(field_filename);
+        }
+        free(field_contents);
+      } else {
+        printf("REQ: POST: could not add field\n");
+      }
+    }
+    curl_easy_setopt(curl, CURLOPT_MIMEPOST, form);
+  } else {
+    printf("REQ: POST: could not setup mime form\n");
+  }
+  return form;
+}
+
+static int setup_ftp_delete(CURL *curl, const char *url) {
+  char r = 0;
+  char *path = strdup(url);
+  char *o_path = path;
+  char *cmd;
+
+  path = strstr(path, "://");
+  if (path) {
+    path += 3;
+    path = strchr(path, '/');
+  } else {
+    path = o_path;
+  }
+
+  if(strrchr(url, '/')) {
+    *(strrchr(url, '/') + 1) = '\0';
+  }
+
+  cmd = malloc(strlen("DELE ") + strlen(path) + 1);
+  sprintf(cmd, "DELE %s", path);
+  printf("REQ: DELE %s in %s:\n", path, url);
+  free(o_path);
+  r |= curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_FTP);
+  r |= curl_easy_setopt(curl, CURLOPT_QUOTE, curl_slist_append(NULL,cmd));
+
+  return r;
+}
+
+static curl_buffer *surl_handle_request(char method, char *url, char **headers, int n_headers) {
   static CURL *curl = NULL;
   CURLcode res;
   int i;
   CURLcode r = 0;
   curl_buffer *curlbuf;
-  int is_sftp = !strncmp("sftp", url, 4);
-  int is_ftp = !strncmp("ftp", url, 3) || is_sftp;
-  int ftp_is_maybe_dir = (is_ftp && url[strlen(url)-1] != '/' && method == SURL_METHOD_GET);
-  int ftp_try_dir = (is_ftp && url[strlen(url)-1] == '/' && method == SURL_METHOD_GET);
+  int is_sftp = 0;
+  int is_ftp  = 0;
+  int ftp_is_maybe_dir = 0;
+  int ftp_try_dir = 0;
   static char *upload_buf = NULL;
   struct timespec cur_time;
   long secs, msecs;
   struct curl_slist *curl_headers = NULL;
-  char *tmp;
+  char *tmp = NULL;
   curl_mime *form = NULL;
 
+  if (upload_buf == NULL) {
+    upload_buf = malloc(4096);
+  }
+
+  if (!strncmp("sftp", url, 4)) {
+    is_ftp = is_sftp = 1;
+  } else if (!strncmp("ftp", url, 3)) {
+    is_ftp = 1;
+  }
+
+  /* CURL short ftp list doesn't tell us if something is
+   * a directory. Test by appending a / if there isn't one
+   */
+  if (is_ftp && method == SURL_METHOD_GET) {
+    ftp_is_maybe_dir = url[strlen(url)-1] != '/';
+    ftp_try_dir      = !ftp_is_maybe_dir;
+  }
+
+  /* Handle methods not needing a curlbuf first */
   if (method == SURL_METHOD_GETTIME) {
     uint32_t now = htonl((uint32_t)time(NULL));
     simple_serial_putc(SURL_ANSWER_TIME);
@@ -767,10 +1080,10 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
     simple_serial_putc(SURL_ANSWER_PONG);
     simple_serial_putc(SURL_PROTOCOL_VERSION);
     return NULL;
-  }
-
-  if (upload_buf == NULL) {
-    upload_buf = malloc(4096);
+  } else if (method == SURL_METHOD_RAW) {
+    simple_serial_putc(SURL_ANSWER_RAW_START);
+    surl_server_raw_session(url);
+    return NULL;
   }
 
   if (ftp_is_maybe_dir) {
@@ -779,8 +1092,10 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
     memcpy(dir_url, url, strlen(url));
     dir_url[strlen(url)] = '/';
     dir_url[strlen(url) + 1] = '\0';
-    curlbuf = curl_request(method, dir_url, headers, n_headers);
+    curlbuf = surl_handle_request(method, dir_url, headers, n_headers);
     free(dir_url);
+
+    /* Did we get a good response ? */
     if (curlbuf->response_code >= 200 && curlbuf->response_code < 300) {
       return curlbuf;
     } else {
@@ -791,8 +1106,10 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
 
   curlbuf = malloc(sizeof(curl_buffer));
   memset(curlbuf, 0, sizeof(curl_buffer));
+
   curlbuf->response_code = 500;
 
+  /* Init curl */
   if (curl == NULL) {
     curl = curl_easy_init();
   } else {
@@ -801,239 +1118,40 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
   proxy_set_curl_opts(curl);
 
   if (method == SURL_METHOD_POST || method == SURL_METHOD_POST_DATA) {
-      int is_multipart = (method == SURL_METHOD_POST_DATA);
-
       if (is_ftp) {
-        printf("REQ: Unsupported ftp method POST\n");
+        printf("REQ: Unsupported FTP method POST\n");
         curl_buffer_free(curlbuf);
         return NULL;
       }
 
-      if (!is_multipart) {
-        unsigned short size, mode;
-        simple_serial_putc(SURL_ANSWER_SEND_SIZE);
-        simple_serial_read((char *)&size, 2);
-        simple_serial_read((char *)&mode, 2);
-        size = ntohs(size);
-        mode = ntohs(mode);
-
-        if (mode > 2) {
-          simple_serial_putc(SURL_UPLOAD_PARAM_ERROR);
-          printf("REQ: Unexpected serial reply\n");
-          curl_buffer_free(curlbuf);
+      if (method == SURL_METHOD_POST) {
+        if (setup_simple_upload_request(method, curl, &curl_headers, curlbuf) < 0) {
           return NULL;
         }
-
-        curlbuf->upload_size = size;
-        curlbuf->orig_upload_size = size;
-        curlbuf->upload_buffer = malloc(curlbuf->upload_size);
-        curlbuf->cur_upload_ptr = curlbuf->upload_buffer;
-
-        simple_serial_putc(SURL_UPLOAD_GO);
-        simple_serial_read(curlbuf->upload_buffer, curlbuf->upload_size);
-
-        if (mode == SURL_DATA_X_WWW_FORM_URLENCODED_HELP) {
-          /* Massage an x-www-urlencoded form */
-          massage_upload_urlencoded(curlbuf);
-          if (VERBOSE) {
-            printf("REQ: POST x-www-urlencoded [%zu bytes], body:\n", curlbuf->upload_size);
-            printf("%s\n", curlbuf->upload_buffer);
-          }
-        } else if (mode == SURL_DATA_APPLICATION_JSON_HELP) {
-          /* Massage an simple application/json form (no sub-entities handled )*/
-          curl_headers = curl_slist_append(curl_headers, "Content-Type: application/json");
-          massage_upload_json(curlbuf);
-          if (VERBOSE) {
-            printf("REQ: POST application/json [%zu bytes], body:\n", curlbuf->upload_size);
-            printf("%s\n", curlbuf->upload_buffer);
-          }
-        } else { /* assume SURL_DATA_X_WWW_FORM_URLENCODED_RAW */
-          if (VERBOSE) {
-            printf("REQ: POST raw [%zu bytes]\n", curlbuf->upload_size);
-          }
-        }
-
-        r |= curl_easy_setopt(curl, CURLOPT_POST, 1L);
-        r |= curl_easy_setopt(curl, CURLOPT_READFUNCTION, data_send_cb);
-        r |= curl_easy_setopt(curl, CURLOPT_SEEKFUNCTION, data_seek_cb);
-        r |= curl_easy_setopt(curl, CURLOPT_READDATA, curlbuf);
-        r |= curl_easy_setopt(curl, CURLOPT_SEEKDATA, curlbuf);
-        r |= curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, curlbuf->upload_size);
-        if (r) {
-          printf("CURL: Couldn't set POST option(s)\n");
-        }
       } else {
-        char n_fields;
-        char field_name[255];
-        char field_type[255];
-        curl_mimepart *field = NULL;
-
-        printf("REQ: POST multipart/form-data\n");
-
-        curl_headers = curl_slist_append(curl_headers, "Content-Type: multipart/form-data");
-
-        simple_serial_putc(SURL_ANSWER_SEND_NUM_FIELDS);
-        n_fields = simple_serial_getc();
-
-        form = curl_mime_init(curl);
-        if (form) {
-          for (i = 0; i < n_fields; i++) {
-            char *field_contents;
-            unsigned short h_len;
-            size_t f_len;
-            simple_serial_gets(field_name, 255);
-            if (strchr(field_name, '\n'))
-              *strchr(field_name, '\n') = '\0';
-
-            simple_serial_gets(field_type, 255);
-            if (strchr(field_type, '\n'))
-              *strchr(field_type, '\n') = '\0';
-
-            simple_serial_read((char *)&h_len, 2);
-            f_len = ntohs(h_len);
-
-            if (!strncasecmp(field_type, "text/", 5)) {
-              field_contents = malloc(f_len + 1);
-              simple_serial_gets(field_contents, 255);
-              if (strchr(field_contents, '\n'))
-                *strchr(field_contents, '\n') = '\0';
-            } else {
-              field_contents = malloc(f_len);
-              simple_serial_read(field_contents, f_len);
-            }
-            if (!strcasecmp(field_type, "image/hgr")) {
-              size_t png_len;
-              char *png_data = hgr_to_png(field_contents, f_len, 1, &png_len);
-              free(field_contents);
-              field_contents = png_data;
-              strcpy(field_type, "image/png");
-              f_len = png_len;
-            }
-
-            field = curl_mime_addpart(form);
-            if (field) {
-              if (curl_mime_name(field, field_name) != CURLE_OK)
-                printf("REQ: POST: could not set field name %s\n", field_name);
-              if (curl_mime_data(field, field_contents, f_len) != CURLE_OK)
-                printf("REQ: POST: could not set field contents\n");
-
-              if (VERBOSE) {
-                printf("%s (%s): %s (%zu bytes)\n", field_name, field_type,
-                        !strncasecmp(field_type, "text/", 5) ? field_contents:"[binary]",
-                        f_len);
-              }
-
-              if (strncasecmp(field_type, "text/", 5)) {
-                char *field_filename = malloc(512);
-
-                if (curl_mime_type(field, field_type) != CURLE_OK)
-                  printf("REQ: POST: could not set field type %s\n", field_type);
-
-                snprintf(field_filename, 512, "file-%lu-%s", time(NULL), field_type);
-                if (strchr(field_type, '/'))
-                  *strchr(field_type, '/') = '.';
-                if (curl_mime_filename(field, field_filename) != CURLE_OK)
-                  printf("REQ: POST: could not set field filename %s\n", field_filename);
-                free(field_filename);
-              }
-              free(field_contents);
-            } else {
-              printf("REQ: POST: could not add field\n");
-            }
-          }
-          curl_easy_setopt(curl, CURLOPT_MIMEPOST, form);
-        } else {
-          printf("REQ: POST: could not setup mime form\n");
+        form = setup_multipart_upload_request(method, curl, &curl_headers, curlbuf);
+        if (form == NULL) {
+          return NULL;
         }
       }
   } else if (method == SURL_METHOD_PUT) {
-      unsigned short size, mode;
-      simple_serial_putc(SURL_ANSWER_SEND_SIZE);
-      simple_serial_read((char *)&size, 2);
-      simple_serial_read((char *)&mode, 2);
-      size = ntohs(size);
-      mode = ntohs(mode);
-
-      if (mode > 2) {
-        simple_serial_putc(SURL_UPLOAD_PARAM_ERROR);
-        printf("REQ: Unexpected serial reply\n");
-        curl_buffer_free(curlbuf);
-        return NULL;
-      }
-
-      curlbuf->upload_size = size;
-      curlbuf->orig_upload_size = size;
-
-      curlbuf->upload_buffer = malloc(curlbuf->upload_size);
-      curlbuf->cur_upload_ptr = curlbuf->upload_buffer;
-
-      simple_serial_putc(SURL_UPLOAD_GO);
-      simple_serial_read(curlbuf->upload_buffer, curlbuf->upload_size);
-
-      if (mode == SURL_DATA_X_WWW_FORM_URLENCODED_HELP) {
-        /* Massage an x-www-urlencoded form */
-        massage_upload_urlencoded(curlbuf);
-        if (VERBOSE) {
-          printf("REQ: PUT x-www-urlencoded [%zu bytes], body:\n", curlbuf->upload_size);
-          printf("%s\n", curlbuf->upload_buffer);
-        }
-      } else if (mode == SURL_DATA_APPLICATION_JSON_HELP) {
-        /* Massage an simple application/json form (no sub-entities handled )*/
-        curl_headers = curl_slist_append(curl_headers, "Content-Type: application/json");
-        massage_upload_json(curlbuf);
-        if (VERBOSE) {
-          printf("REQ: PUT application/json [%zu bytes], body:\n", curlbuf->upload_size);
-          printf("%s\n", curlbuf->upload_buffer);
-        }
-      } else { /* assume SURL_DATA_X_WWW_FORM_URLENCODED_RAW */
-        if (VERBOSE) {
-          printf("REQ: PUT raw [%zu bytes]\n", curlbuf->upload_size);
-        }
-      }
-
-      r |= curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
-      r |= curl_easy_setopt(curl, CURLOPT_READFUNCTION, data_send_cb);
-      r |= curl_easy_setopt(curl, CURLOPT_SEEKFUNCTION, data_seek_cb);
-      r |= curl_easy_setopt(curl, CURLOPT_READDATA, curlbuf);
-      r |= curl_easy_setopt(curl, CURLOPT_SEEKDATA, curlbuf);
-      r |= curl_easy_setopt(curl, CURLOPT_INFILESIZE, curlbuf->upload_size);
-      if (is_sftp) {
-        r |= curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_SFTP);
-      } else if (is_ftp) {
-        r |= curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_FTP);
-      }
-      if (r) {
-        printf("CURL: Could not set PUT option(s)\n");
-      }
+    if (setup_simple_upload_request(SURL_METHOD_PUT, curl, &curl_headers, curlbuf) < 0) {
+      return NULL;
+    }
+    if (is_sftp) {
+      r |= curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_SFTP);
+    } else if (is_ftp) {
+      r |= curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_FTP);
+    }
   } else if (method == SURL_METHOD_DELETE) {
       if (is_ftp) {
-        char *path = strdup(url);
-        char *o_path = path;
-        char *cmd;
-
-        path = strstr(path, "://");
-        if (path) {
-          path += 3;
-          path = strchr(path, '/');
-        } else {
-          path = o_path;
-        }
-
-        if(strrchr(url, '/')) {
-          *(strrchr(url, '/') + 1) = '\0';
-        }
-
-        cmd = malloc(strlen("DELE ") + strlen(path) + 1);
-        sprintf(cmd, "DELE %s", path);
-        printf("REQ: DELE %s in %s:\n", path, url);
-        free(o_path);
-        r |= curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_FTP);
-        r |= curl_easy_setopt(curl, CURLOPT_QUOTE, curl_slist_append(NULL,cmd));
-        simple_serial_putc(SURL_ANSWER_WAIT);
+        r |= setup_ftp_delete(curl, url);
       } else {
         r |= curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
-        simple_serial_putc(SURL_ANSWER_WAIT);
       }
+
+      simple_serial_putc(SURL_ANSWER_WAIT);
+
       if (r) {
         printf("CURL: Could not set DELETE option(s)\n");
       }
@@ -1042,12 +1160,6 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
     if (ftp_try_dir || !ftp_is_maybe_dir) {
       simple_serial_putc(SURL_ANSWER_WAIT);
     }
-  } else if (method == SURL_METHOD_RAW) {
-    simple_serial_putc(SURL_ANSWER_RAW_START);
-    curl_buffer_free(curlbuf);
-
-    surl_server_raw_session(url);
-    return NULL;
   } else {
     printf("Unsupported method 0x%02x\n", method);
     curlbuf->response_code = 500;
@@ -1056,8 +1168,9 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
     return curlbuf;
   }
 
-  printf("0x%02x %s - start\n", method, url);
+  printf("%s %s - start\n", surl_method_str(method), url);
 
+  /* Setup standards options */
   r |= curl_easy_setopt(curl, CURLOPT_URL, url);
   r |= curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_data_cb);
   r |= curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, curl_write_header_cb);
@@ -1067,9 +1180,12 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
   if (ftp_try_dir) {
     r |= curl_easy_setopt(curl, CURLOPT_DIRLISTONLY, 1L);
   }
+
+
   if (VERBOSE) {
     printf("REQ: headers:\n");
   }
+  /* Add custom headers */
   for (i = 0; i < n_headers; i++) {
     curl_headers = curl_slist_append(curl_headers, headers[i]);
   }
@@ -1085,7 +1201,6 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
   }
 
   clock_gettime(CLOCK_REALTIME, &cur_time);
-
   curlbuf->start_secs = cur_time.tv_sec;
   curlbuf->start_msecs = cur_time.tv_nsec / 1000000;
 
@@ -1099,6 +1214,7 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
       (1000*(secs - curlbuf->start_secs))+(msecs - curlbuf->start_msecs));
 
   curl_slist_free_all(curl_headers);
+
   if (form) {
     curl_mime_free(form);
     form = NULL;
@@ -1108,6 +1224,8 @@ static curl_buffer *curl_request(char method, char *url, char **headers, int n_h
     printf("CURL: error %d: %s\n", res, curl_easy_strerror(res));
     if (res == CURLE_REMOTE_ACCESS_DENIED) {
       curlbuf->response_code = 401;
+    } else if (res == CURLE_OPERATION_TIMEDOUT) {
+      curlbuf->response_code = 504;
     } else {
       curlbuf->response_code = 599;
     }
