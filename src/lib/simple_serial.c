@@ -36,45 +36,32 @@
 #endif
 
 /* Setup */
-static int last_slot = 2;
-static int last_baudrate = SER_BAUD_9600;
-
 static struct ser_params default_params = {
-    SER_BAUD_9600,     /* Baudrate */
+    SER_BAUD_19200,     /* Baudrate */
     SER_BITS_8,         /* Number of data bits */
     SER_STOP_1,         /* Number of stop bits */
     SER_PAR_NONE,       /* Parity setting */
     SER_HS_HW           /* Type of handshake to use */
 };
 
-int __fastcall__ simple_serial_open(int slot, int baudrate) {
+int __fastcall__ simple_serial_open(void) {
   int err;
   
 #ifdef __APPLE2ENH__
   #ifdef IIGS
-
   if ((err = ser_install(&a2gs_ssc_ser)) != 0)
     return err;
   if ((err = ser_apple2_slot(SER_A2GS_CHANNEL_B)) != 0)
     return err;
-
   #else
-
   if ((err = ser_install(&a2e_ssc_ser)) != 0)
     return err;
-  if ((err = ser_apple2_slot(slot)) != 0)
-    return err;
-
   #endif
+  if ((err = ser_apple2_slot(2)) != 0)
+    return err;
 #endif
 
-  default_params.baudrate = baudrate;
-  /* HW flow control ignored as it's always on */
-
   err = ser_open (&default_params);
-
-  last_slot = slot;
-  last_baudrate = baudrate;
 
   return err;
 }
