@@ -345,6 +345,12 @@ int main(int argc, char **argv) {
 
   register_start_device();
 
+  if (surl_connect_proxy() != 0) {
+    dputs("Can not connect serial proxy.");
+    cgetc();
+    exit(1);
+  }
+
   videomode(VIDEOMODE_80COL);
   screensize(&scrw, &scrh);
 

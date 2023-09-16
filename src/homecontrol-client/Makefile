@@ -39,7 +39,7 @@ DEPS :=
 
 CC65_TARGET = apple2enh
 CFLAGS  = -I ../lib -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
-homectrl_CLCFLAGS = -t $(CC65_TARGET) -O -Wl -D,__STACKSIZE__=0x0400 -DSURL_TO_LANGCARD $(iigs_CFLAGS)
+homectrl_CLCFLAGS = -t $(CC65_TARGET) -O -Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-rtonce.cfg -DSURL_TO_LANGCARD $(iigs_CFLAGS)
 grphview_CLCFLAGS = $(homectrl_CLCFLAGS) --start-addr 0x4000 #-C ../../config/apple2enh-hgr.cfg
 GCCCFLAGS = -g -O0 -Wall -Wno-unused-function -Wno-char-subscripts -Werror $(shell sdl-config --cflags)
 GCCLDFLAGS = $(shell sdl-config --libs)

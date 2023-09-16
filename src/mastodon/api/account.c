@@ -27,23 +27,6 @@ account *account_new(void) {
   return a;
 }
 
-void account_free(account *a) {
-  char i;
-  if (a == NULL)
-    return;
-  free(a->id);
-  free(a->username);
-  free(a->acct);
-  free(a->display_name);
-  free(a->created_at);
-  free(a->note);
-  for (i = 0; i < a->n_fields; i++) {
-    free(a->fields[i]);
-  }
-  free(a->fields);
-  free(a);
-}
-
 account *account_new_from_json(void) {
   account *a = account_new();
   int r;
@@ -90,6 +73,10 @@ err_out:
   return NULL;
 }
 
+#ifdef __CC65__
+#pragma code-name (pop)
+#endif
+
 account *api_get_profile(char *id) {
   account *a;
   char n_lines;
@@ -122,6 +109,19 @@ account *api_get_profile(char *id) {
   return a;
 }
 
-#ifdef __CC65__
-#pragma code-name (pop)
-#endif
+void account_free(account *a) {
+  char i;
+  if (a == NULL)
+    return;
+  free(a->id);
+  free(a->username);
+  free(a->acct);
+  free(a->display_name);
+  free(a->created_at);
+  free(a->note);
+  for (i = 0; i < a->n_fields; i++) {
+    free(a->fields[i]);
+  }
+  free(a->fields);
+  free(a);
+}

@@ -33,7 +33,7 @@
 #include "oauth.h"
 #include "logo.h"
 #include "img.h"
-#include "clean_rt_once.h"
+#include "runtime_once_clean.h"
 
 #define BUF_SIZE 255
 
@@ -186,7 +186,7 @@ int main(int argc, char **argv) {
 
   surl_ping();
 
-  clean_rt_once();
+  runtime_once_clean();
 
   if (load_settings() < 0) {
     set_scrollwindow(0, scrh);
