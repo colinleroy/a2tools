@@ -334,10 +334,10 @@ static int flow_control_enabled;
 static char *readbuf = NULL;
 static int readbuf_idx = 0;
 static int readbuf_avail = 0;
-static int bps = B9600;
+static int bps = B19200;
 
 static char *opt_tty_path = NULL;
-static int opt_tty_speed = B9600;
+static int opt_tty_speed = B19200;
 static int opt_tty_hw_handshake = 1;
 
 static const char *get_cfg_path(void) {
