@@ -31,7 +31,7 @@
 
 #pragma static-locals(push, on)
 
-static unsigned char baudrate = SER_BAUD_9600;
+static unsigned char baudrate = SER_BAUD_19200;
 
 static char *baud_strs[] = {
   " 2400",
@@ -84,6 +84,8 @@ static struct ser_params default_params = {
     SER_HS_HW           /* Type of handshake to use */
 };
 
+#pragma code-name (push, "RT_ONCE")
+
 static char simple_serial_settings(const char *path, char *mode) {
   FILE *fp;
 
@@ -129,6 +131,9 @@ static void simple_serial_read_opts(void) {
   reopen_start_device();
   simple_serial_load_settings("serialcfg");
 }
+
+#pragma code-name (pop)
+
 
 #ifdef SURL_TO_LANGCARD
 #pragma code-name (push, "LC")
