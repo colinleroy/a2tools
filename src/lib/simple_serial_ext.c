@@ -27,12 +27,7 @@
 
 #ifdef __CC65__
   #pragma static-locals(push, on)
-
-  #ifdef SURL_TO_LANGCARD
-  #pragma code-name (push, "LC")
-  #else
   #pragma code-name (push, "LOWCODE")
-  #endif
 #endif
 
 char * __fastcall__ simple_serial_gets(char *out, size_t size) {
@@ -85,6 +80,5 @@ void simple_serial_printf(const char* format, ...) {
 }
 
 #ifdef __CC65__
-#pragma code-name (pop)
 #pragma static-locals(pop)
 #endif

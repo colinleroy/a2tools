@@ -22,7 +22,7 @@
 #include "math.h"
 #include "dgets.h"
 #include "scrollwindow.h"
-#include "clean_rt_once.h"
+#include "runtime_once_clean.h"
 
 #define BUF_SIZE 255
 
@@ -1068,8 +1068,14 @@ static void cli(void) {
 
   cur_list_idx = load_state(&all_lists);
 
-  surl_connect_proxy();
-  clean_rt_once();
+  if (surl_connect_proxy() != 0) {
+    dputs("Can not connect serial proxy.");
+    cgetc();
+    exit(1);
+  }
+
+  /* Get rid of init code */
+  runtime_once_clean();
 
   clrscr();
   print_header(NULL, NULL, NULL);
@@ -1210,6 +1216,9 @@ navigate_reuse_list:
           break;
     }
   }
+  /* we can't return to main(), it has been
+   * garbage-collected */
+  exit(0);
 }
 
 #ifdef __CC65__

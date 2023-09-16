@@ -35,6 +35,7 @@
 #include "scroll.h"
 #include "scrollwindow.h"
 #include "strsplit.h"
+#include "runtime_once_clean.h"
 
 static char *url_go_up(char *url);
 static char *url_enter(char *url, char *suffix);
@@ -298,6 +299,9 @@ int main(void) {
 
   stp_print_footer();
   surl_set_time();
+
+  runtime_once_clean();
+
   while(1) {
     const surl_response *resp = NULL;
     char *data = NULL, **lines = NULL;

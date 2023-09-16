@@ -47,7 +47,7 @@ mastodon_CC65SOURCES := \
 	../lib/dputc.s \
 	../lib/scroll.s \
 	../lib/fastirq$(suffix).s \
-	../lib/clean_rt_once.s
+	../lib/runtime_once_clean.s
 
 mastocli_SOURCES := \
 	$(common_SOURCES) \
@@ -65,7 +65,7 @@ mastocli_CC65SOURCES := \
 	../lib/dputc.s \
 	../lib/scroll.s \
 	../lib/fastirq$(suffix).s \
-	../lib/clean_rt_once.s
+	../lib/runtime_once_clean.s
 
 mastowrite_SOURCES := \
 	$(common_SOURCES) \
@@ -99,7 +99,7 @@ DEPS :=
 CC65_TARGET = apple2enh
 CFLAGS  = -I ../lib -I api -I cli -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
 
-CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x400 -DSURL_TO_LANGCARD -C ../../config/apple2enh-noexit.cfg $(debug_CFLAGS)  $(iigs_CFLAGS)
+CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x400 -DSURL_TO_LANGCARD -C ../../config/apple2enh-rtonce.cfg $(debug_CFLAGS)  $(iigs_CFLAGS)
 #Using start address 0x4000 is easier than HGR page 2, and also allows to use 80 columns
 mastodon_CLCFLAGS = $(CLCFLAGS) --start-addr 0x4000
 

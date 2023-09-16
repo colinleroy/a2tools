@@ -25,10 +25,7 @@
 
 #ifdef __CC65__
 #pragma static-locals(push, on)
-#endif
-
-#ifdef SURL_TO_LANGCARD
-#pragma code-name (push, "LC")
+#pragma code-name (push, "RT_ONCE")
 #endif
 
 void __fastcall__ surl_set_time(void) {
@@ -45,9 +42,6 @@ void __fastcall__ surl_set_time(void) {
 }
 
 #ifdef __CC65__
-#pragma static-locals(pop)
-#endif
-
-#ifdef SURL_TO_LANGCARD
 #pragma code-name (pop)
+#pragma static-locals(pop)
 #endif

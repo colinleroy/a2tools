@@ -132,15 +132,6 @@ static void simple_serial_read_opts(void) {
   simple_serial_load_settings("serialcfg");
 }
 
-#pragma code-name (pop)
-
-
-#ifdef SURL_TO_LANGCARD
-#pragma code-name (push, "LC")
-#else
-#pragma code-name (push, "LOWCODE")
-#endif
-
 void simple_serial_configure(void) {
   static char cur_setting = 0;
   char c, done = 0, modified = 0;
@@ -237,6 +228,15 @@ void simple_serial_configure(void) {
   simple_serial_save_settings("/RAM/serialcfg");
   reopen_start_device();
 }
+
+#pragma code-name (pop)
+
+
+#ifdef SURL_TO_LANGCARD
+#pragma code-name (push, "LC")
+#else
+#pragma code-name (push, "LOWCODE")
+#endif
 
 int __fastcall__ simple_serial_open(void) {
   int err;
