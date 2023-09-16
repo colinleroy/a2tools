@@ -662,17 +662,41 @@ int simple_serial_getc_immediate(void) {
 
 /* Output */
 unsigned char __fastcall__ simple_serial_putc(char c) {
-  int r = fputc(c, ttyfp);
-  fflush(ttyfp);
+  int r;
+  fd_set fds;
+  struct timeval tv_timeout;
+  int n;
 
-  if (!flow_control_enabled) {
-    switch (bps) {
-      case B57600:
-        usleep(60);
-        break;
-      default:
-        usleep(600);
+  FD_ZERO(&fds);
+  FD_SET(fileno(ttyfp), &fds);
+
+  tv_timeout.tv_sec  = 1;
+  tv_timeout.tv_usec = 0;
+
+  n = select(fileno(ttyfp) + 1, NULL, &fds, NULL, &tv_timeout);
+
+  if (n > 0 && FD_ISSET(fileno(ttyfp), &fds)) {
+    int flags = fcntl(fileno(ttyfp), F_GETFL);
+    flags |= O_NONBLOCK;
+    fcntl(fileno(ttyfp), F_SETFL, flags);
+
+    r = fputc(c, ttyfp);
+    fflush(ttyfp);
+
+    flags &= ~O_NONBLOCK;
+    fcntl(fileno(ttyfp), F_SETFL, flags);
+
+    if (!flow_control_enabled) {
+      switch (bps) {
+        case B57600:
+          usleep(60);
+          break;
+        default:
+          usleep(600);
+      }
     }
+  } else {
+    r = EOF;
   }
 
   return r == EOF ? -1 : 0;
@@ -690,7 +714,12 @@ void __fastcall__ simple_serial_puts(char *buf) {
   cur = buf;
 
   while (*cur) {
+#ifndef __CC65__
+    if (simple_serial_putc(*cur) == -1)
+      break;
+#else
     simple_serial_putc(*cur);
+#endif
     ++cur;
   }
 }
@@ -752,7 +781,12 @@ void __fastcall__ simple_serial_write(char *ptr, size_t nmemb) {
   end = ptr + nmemb;
 
   while (cur != end) {
+#ifndef __CC65__
+    if (simple_serial_putc(*cur) == -1)
+      break;
+#else
     simple_serial_putc(*cur);
+#endif
     ++cur;
   }
 }
