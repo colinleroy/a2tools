@@ -5,7 +5,7 @@ upload_subdir := /iigs
 else
 iigs_FLAGS :=
 suffix :=
-upload_subdir := /iigs
+upload_subdir :=
 endif
 
 PROGRAM=telnet
