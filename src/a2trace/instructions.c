@@ -652,7 +652,7 @@ static void end_call_info(int op_addr, int line_num, const char *from) {
 int update_call_counters(int cpu, int op_addr, const char *instr, int param_addr, int cycle_count, int line_num) {
   int dest = RAM, lc = 0;
 
-  if (cpu != CPU_6502) {
+  if (cpu == CPU_6502) {
     /* Set memory and LC bank according to the address */
     if (param_addr < 0xD000 || param_addr > 0xDFFF) {
       dest = RAM;
@@ -872,14 +872,14 @@ void finalize_call_counters(void) {
 void start_tracing(int cpu) {
     /* make ourselves a root in the IRQ call tree */
     tree_functions = irq_tree;
-    start_call_info(cpu, start_addr, 0, RAM, 0);
+    start_call_info(cpu, start_addr, RAM, 1, 0);
 
     /* Hack - reset depth for the runtime root */
     tree_depth = 0;
 
     /* make ourselves a root in the runtime call tree */
     tree_functions = func_tree;
-    start_call_info(cpu, start_addr, 0, RAM, 0);
+    start_call_info(cpu, start_addr, RAM, 1, 0);
 }
 
 /* Setup structures and data */
