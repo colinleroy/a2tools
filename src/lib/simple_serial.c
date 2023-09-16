@@ -31,7 +31,7 @@
 
 #pragma static-locals(push, on)
 
-static unsigned char baudrate = SER_BAUD_19200;
+static unsigned char baudrate = SER_BAUD_9600;
 
 static char *baud_strs[] = {
   " 2400",
@@ -117,12 +117,6 @@ static char simple_serial_save_settings(const char *path) {
   return simple_serial_settings(path, "w");
 }
 
-#ifdef SURL_TO_LANGCARD
-#pragma code-name (push, "LC")
-#else
-#pragma code-name (push, "LOWCODE")
-#endif
-
 static void simple_serial_read_opts(void) {
   register_start_device();
 
@@ -135,6 +129,12 @@ static void simple_serial_read_opts(void) {
   reopen_start_device();
   simple_serial_load_settings("serialcfg");
 }
+
+#ifdef SURL_TO_LANGCARD
+#pragma code-name (push, "LC")
+#else
+#pragma code-name (push, "LOWCODE")
+#endif
 
 void simple_serial_configure(void) {
   static char cur_setting = 0;
@@ -254,7 +254,23 @@ int __fastcall__ simple_serial_open(void) {
 
   err = ser_open (&default_params);
 
-  simple_serial_flush();
+  if (err == 0) {
+    unsigned char s;
+    /* We expect the serial card to be ready to send bytes */
+#ifndef IIGS
+    err = ser_status(&s);
+    if (err != 0 || (s & 0x10) == 0) {
+      return SER_ERR_NO_DATA;
+    }
+#else
+    err = ser_status(&s);
+    if (err != 0 || (s & 0x20) == 0) {
+      return SER_ERR_NO_DATA;
+    }
+#endif
+    simple_serial_flush();
+  }
+
   return err;
 }
 
