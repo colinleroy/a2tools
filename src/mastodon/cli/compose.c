@@ -148,7 +148,7 @@ static void add_image() {
   dputs("File name: ");
   x = wherex();
   y = wherey();
-  media_files[n_medias] = file_select(x, y, scrw - x - 1, y + 10, 0, "Please choose an image");
+  media_files[n_medias] = file_select(x, y, scrw - LEFT_COL_WIDTH - 1 - x, y + 10, 0, "Please choose an image");
   if (media_files[n_medias] == NULL) {
     return;
   }
