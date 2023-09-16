@@ -22,6 +22,7 @@
 #include "math.h"
 #include "dgets.h"
 #include "scrollwindow.h"
+#include "clean_rt_once.h"
 
 #define BUF_SIZE 255
 
@@ -804,6 +805,10 @@ static char *state_get_str(FILE *fp) {
   return NULL;
 }
 
+#ifdef __CC65__
+#pragma code-name (push, "RT_ONCE")
+#endif
+
 static int load_state(list ***lists) {
   char i,j, loaded;
   signed char num_lists;
@@ -888,6 +893,10 @@ static int load_state(list ***lists) {
 
   return num_lists;
 }
+
+#ifdef __CC65__
+#pragma code-name (pop)
+#endif
 
 static char background_load(list *l) {
   char i;
@@ -1046,7 +1055,7 @@ static void pop_list(void) {
   }
 }
 
-void cli(void) {
+static void cli(void) {
   item *disp;
   status *disp_status;
   notification *disp_notif;
@@ -1058,6 +1067,10 @@ void cli(void) {
   char new_root[32], new_leaf_root[32];
 
   cur_list_idx = load_state(&all_lists);
+
+  surl_connect_proxy();
+  clean_rt_once();
+
   clrscr();
   print_header(NULL, NULL, NULL);
 
@@ -1199,6 +1212,10 @@ navigate_reuse_list:
   }
 }
 
+#ifdef __CC65__
+#pragma code-name (push, "RT_ONCE")
+#endif
+
 int main(int argc, char **argv) {
   FILE *fp;
 
@@ -1242,3 +1259,7 @@ int main(int argc, char **argv) {
   videomode(VIDEOMODE_40COL);
   exit(0);
 }
+
+#ifdef __CC65__
+#pragma code-name (pop)
+#endif

@@ -47,6 +47,7 @@ mastodon_CC65SOURCES := \
 	../lib/dputc.s \
 	../lib/scroll.s \
 	../lib/fastirq$(suffix).s \
+	../lib/clean_rt_once.s
 
 mastocli_SOURCES := \
 	$(common_SOURCES) \
@@ -64,6 +65,7 @@ mastocli_CC65SOURCES := \
 	../lib/dputc.s \
 	../lib/scroll.s \
 	../lib/fastirq$(suffix).s \
+	../lib/clean_rt_once.s
 
 mastowrite_SOURCES := \
 	$(common_SOURCES) \
