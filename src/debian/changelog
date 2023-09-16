@@ -1,3 +1,10 @@
+a2tools (1.6.0.1) bionic; urgency=medium
+
+  * Add serial port configuration if connection fails
+  * Make both sides more resilient to disconnections and failures
+
+ -- Colin Leroy-Mira <colin@colino.net>  Thu, 14 Sep 2023 21:28:19 +0200
+
 a2tools (1.5.0.2) bionic; urgency=medium
 
   * Update tty.conf file with new speed
