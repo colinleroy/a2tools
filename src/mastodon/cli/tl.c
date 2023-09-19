@@ -40,7 +40,7 @@ static signed char cur_list_idx;
 
 /* actions mapped to keys */
 #define SHOW_FULL_STATUS     CH_ENTER
-#define SHOW_ACCOUNT         'p'
+#define SHOW_PROFILE         'p'
 #define BACK                 CH_ESC
 #define CONFIGURE            'o'
 #define COMPOSE              'c'
@@ -204,7 +204,7 @@ static char load_around(list *l, char to_load, char *first, char *last, char **n
     case SHOW_FULL_STATUS:
       loaded = api_get_status_and_replies(to_load, l->root, l->leaf_root, first, last, new_ids);
       break;
-    case SHOW_ACCOUNT:
+    case SHOW_PROFILE:
       loaded = api_get_account_posts(l->account, to_load, first, last, new_ids);
       break;
     case SHOW_NOTIFICATIONS:
@@ -394,7 +394,7 @@ static list *build_list(char *root, char *leaf_root, char kind) {
   l = malloc(sizeof(list));
   memset(l, 0, sizeof(list));
 
-  if (kind == SHOW_ACCOUNT) {
+  if (kind == SHOW_PROFILE) {
     l->account = api_get_full_account(root);
     l->first_displayed_post = -1;
   } else {
@@ -648,7 +648,7 @@ static int shift_posts_up(list *l) {
   first = l->first_displayed_post;
   if (l->account && first == -1) {
       return -1;
-  } else if (!l->account && l->kind != SHOW_ACCOUNT && first == 0) {
+  } else if (!l->account && l->kind != SHOW_PROFILE && first == 0) {
       load_prev_posts(l);
       first = l->first_displayed_post;
       if (first == 0)
@@ -789,6 +789,10 @@ static void launch_command(char *command, char *p1, char *p2, char *p3) {
 #endif
 }
 
+#ifdef __CC65__
+#pragma code-name (push, "RT_ONCE")
+#endif
+
 static int state_get_int(FILE *fp) {
   /* coverity[tainted_argument] */
   fgets(gen_buf, BUF_SIZE, fp);
@@ -804,10 +808,6 @@ static char *state_get_str(FILE *fp) {
   }
   return NULL;
 }
-
-#ifdef __CC65__
-#pragma code-name (push, "RT_ONCE")
-#endif
 
 static int load_state(list ***lists) {
   char i,j, loaded;
@@ -1019,14 +1019,14 @@ static int show_list(list *l) {
         return 0;
       case CH_ENTER: /* SHOW_FULL_STATUS */
       case CH_ESC:   /* BACK */
-      case 'p':      /* SHOW_ACCOUNT */
-      case 'o':      /* CONFIGURE */
       case 'c':      /* COMPOSE */
-      case 'e':      /* EDIT */
-      case 'r':      /* REPLY */
-      case 'i':      /* IMAGES */
-      case 's':      /* SEARCH */
+      case 'o':      /* CONFIGURE */
       case 'n':      /* SHOW_NOTIFICATIONS */
+      case 's':      /* SEARCH */
+      case 'p':      /* SHOW_PROFILE */
+      case 'i':      /* IMAGES */
+      case 'r':      /* REPLY */
+      case 'e':      /* EDIT */
         cur_action = c;
         return 0;
     }
@@ -1114,16 +1114,16 @@ static void cli(void) {
         break;
       case ACCOUNT_TOGGLE_RSHIP:
         account_toggle_rship(current_list->account, rship_toggle_action);
-        cur_action = SHOW_ACCOUNT;
+        cur_action = SHOW_PROFILE;
         /* and fallthrough to reuse list (we're obviously already
-         * in a SHOW_ACCOUNT list)*/
+         * in a SHOW_PROFILE list)*/
       case SHOW_SEARCH_RES:
       case SHOW_NOTIFICATIONS:
         if (current_list->kind == cur_action) {
           free_list(all_lists[cur_list_idx]);
           goto navigate_reuse_list;
         }
-      case SHOW_ACCOUNT:
+      case SHOW_PROFILE:
       case SHOW_FULL_STATUS:
         *new_root = '\0';
         *new_leaf_root = '\0';
@@ -1133,7 +1133,7 @@ static void cli(void) {
           if (cur_action == SHOW_FULL_STATUS) {
             strncpy(new_root, disp_status->reblog_id ? disp_status->reblog_id : disp_status->id, sizeof(new_root));
             strncpy(new_leaf_root, disp_status->id, sizeof(new_leaf_root));
-          } else if (cur_action == SHOW_ACCOUNT) {
+          } else if (cur_action == SHOW_PROFILE) {
             strncpy(new_root, disp_status->account->id, sizeof(new_root));
           }
         } else {
@@ -1142,7 +1142,7 @@ static void cli(void) {
             strncpy(new_root, disp_notif->status_id, sizeof(new_root));
             strncpy(new_leaf_root, disp_notif->status_id, sizeof(new_leaf_root));
           } else {
-            cur_action = SHOW_ACCOUNT;
+            cur_action = SHOW_PROFILE;
             strncpy(new_root, disp_notif->account_id, sizeof(new_root));
           }
         }
@@ -1205,7 +1205,7 @@ navigate_reuse_list:
                 strncpy(new_root, acc_id[0], sizeof(new_root));
                 free(acc_id[0]);
                 free(acc_id);
-                cur_action = SHOW_ACCOUNT;
+                cur_action = SHOW_PROFILE;
                 goto navigate_new_list;
               }
               free(acc_id);
