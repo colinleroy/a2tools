@@ -39,13 +39,6 @@ static __fastcall__ char status_fill_from_json(status *s, char *id, char full, c
     return -1;
   }
 
-  s->account = account_new();
-
-  if (s->account == NULL) {
-    nomem_msg(__FILE__, __LINE__);
-    return -1;
-  }
-
   /* .reblog.id is the only one that can be null (and hence not there),
    * so put it at the end */
   if (is_reblog) {
@@ -64,6 +57,13 @@ static __fastcall__ char status_fill_from_json(status *s, char *id, char full, c
       s->id = NULL;
       r = status_fill_from_json(s, lines[2], full, 1);
       return r;
+    }
+
+    s->account = account_new();
+
+    if (s->account == NULL) {
+      nomem_msg(__FILE__, __LINE__);
+      return -1;
     }
 
     s->created_at = date_format(lines[0], 1);
