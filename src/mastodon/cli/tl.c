@@ -524,7 +524,7 @@ update:
 
   for (i = max(0, first); i < n_posts; i++) {
     item *disp;
-    if (kbhit()) {
+    if (kbhit() && limit == 0) {
       break;
     }
     full = (l->root && !strcmp(l->root, l->ids[i]));
@@ -561,7 +561,12 @@ update:
       } else {
         bottom = print_notification((notification *)disp);
       }
-      l->post_height[i] = wherey() - disp->displayed_at;
+      if (disp->displayed_at == 0 && wherey() == 0) {
+        /* Specific case of a fullscreen, but not overflowing, post */
+        l->post_height[i] = scrh;
+      } else {
+        l->post_height[i] = wherey() - disp->displayed_at;
+      }
       l->last_displayed_post = i;
     }
     if (bottom) {
@@ -601,6 +606,7 @@ static void shift_posts_down(list *l) {
 
   l->first_displayed_post++;
   set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
+
   scrollup_n(scroll_val);
 
 #ifndef __CC65__
@@ -679,9 +685,9 @@ static int shift_posts_up(list *l) {
   if (scroll_val < 0) {
     scroll_val = scrh;
   }
-  if (scroll_val == 23) {
+  if (scroll_val == scrh - 1) {
     /* we may have returned before the end */
-    scroll_val = 24;
+    scroll_val = scrh;
   }
 
   set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
@@ -874,12 +880,13 @@ static int load_state(list ***lists) {
       l->ids[j] = state_get_str(fp);
       l->post_height[j] = state_get_int(fp);
 
-      if (l->root && !strcmp(l->root, l->ids[j])) {
+      if (i == num_lists && l->root && !strcmp(l->root, l->ids[j])) {
         l->displayed_posts[j] = item_get(l, j, 1);
         loaded = j;
       }
     }
-    if (loaded != l->first_displayed_post && l->first_displayed_post > -1) {
+    if (i == num_lists && loaded != l->first_displayed_post
+        && l->first_displayed_post > -1) {
       l->displayed_posts[l->first_displayed_post] =
           item_get(l, l->first_displayed_post, 1);
     }
