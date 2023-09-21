@@ -102,7 +102,7 @@ Native:
 
 HandleIrq:
         jsr     callirq
-:       bcc     Fallback        ; We did not handle that.
+        bcc     Fallback        ; We did not handle that.
 
 Done:
         bit     Emulate
