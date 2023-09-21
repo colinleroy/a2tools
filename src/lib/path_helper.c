@@ -32,7 +32,12 @@ int reopen_start_device(void) {
   return chdir(start_dir);
 }
 
+const char *get_start_device(void) {
+  return start_dir;
+}
+
 #else
 void register_start_device(void) {}
 void reopen_start_device(void) {}
+const char *get_start_device(void) { return 0x00; }
 #endif

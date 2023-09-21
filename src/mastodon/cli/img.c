@@ -32,6 +32,8 @@
 #include "simple_serial.h"
 #include "media.h"
 #include "common.h"
+#include "path_helper.h"
+#include "dgets.h"
 
 extern char *instance_url;
 extern char *oauth_token;
@@ -102,9 +104,15 @@ void init_text(void) {
   hgr_init_done = 0;
 }
 
-static void print_free_ram(void) {
+static void show_help(void) {
+  clrzone(0, 17, NUMCOLS, 23);
+  gotoxy(0, 17);
+  cputs("Toggle legend: L\r\n"
+        "Save image   : S\r\n"
+        "Quit viewer  : Esc\r\n"
+        "Next image   : Any other key");
 #ifdef __APPLE2ENH__
-  gotoxy(0, 20);
+  gotoxy(0, 22);
   printf("%zuB free\n", _heapmemavail());
 #endif
 }
@@ -129,9 +137,9 @@ static void set_legend(char *str, int idx, int num_images) {
   if (str && str[0])
     cputs(str);
   else
-    cputs("No description provided:-(");
+    cputs("No description provided :-(");
 
-  print_free_ram();
+  show_help();
 }
 
 static void img_display(media *m, char idx, char num_images) {
@@ -186,6 +194,47 @@ static void img_display(media *m, char idx, char num_images) {
   }
 }
 
+static void save_image(void) {
+  unsigned char prev_legend = legend;
+  char buf[40];
+
+  toggle_legend(1);
+  clrzone(0, 22, NUMCOLS, 23);
+  cputs("Save to: ");
+
+  strcpy(buf, get_start_device());
+  dget_text(buf, sizeof(buf) - 1, NULL, 0);
+  clrzone(0, 22, NUMCOLS, 23);
+
+#ifdef __APPLE2ENH__
+  _filetype = PRODOS_T_BIN;
+  _auxtype = HGR_PAGE;
+
+  if (buf[0] != '\0') {
+    FILE *fp = fopen(buf, "w");
+    if (fp == NULL) {
+      cputs("Can not open file. ");
+      goto out;
+    }
+    if (fwrite((char *)HGR_PAGE, 1, HGR_LEN, fp) < HGR_LEN) {
+      cputs("Can not write to file. ");
+      goto out;
+    }
+    fclose(fp);
+    cputs("Image saved. ");
+  }
+
+out:
+#endif
+  cputs("Press a key to continue.");
+  cgetc();
+
+  clrzone(0, 22, NUMCOLS, 23);
+
+  if (!prev_legend)
+    toggle_legend(0);
+}
+
 int img_main(int argc, char **argv) {
   char *params;
   media *m;
@@ -204,15 +253,10 @@ int img_main(int argc, char **argv) {
   type = argv[5];
   id = argv[6];
 
-  cputs("\r\n"
-        "\r\n"
-        "Toggle legend: L\r\n"
-        "Quit viewer  : Esc\r\n"
-        "Next image   : Any other key\r\n"
-        "\r\n"
-        "Loading medias...\r\n\r\n");
+  gotoxy(0, 2);
+  cputs("Loading medias...\r\n\r\n");
 
-  print_free_ram();
+  show_help();
 
   if (type[0] == 's') {
     m = api_get_status_media(id);
@@ -237,11 +281,12 @@ getc_again:
     switch(tolower(c)) {
       case CH_ESC:
         goto done;
-        break;
       case 'l':
         toggle_legend(0);
         goto getc_again;
-        break;
+      case 's':
+        save_image();
+        goto getc_again;
       default:
         break;
     }
@@ -257,6 +302,7 @@ done:
 err_out:
   params = malloc(127);
   snprintf(params, 127, "%s %s", instance_url, oauth_token);
+  reopen_start_device();
 #ifdef __CC65__
   exec("mastocli", params);
   exit(0);
