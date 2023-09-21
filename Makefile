@@ -57,8 +57,7 @@ stpperso$(suffix).dsk: $(stp_disk_PROGS)
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
-	cp $@ ~/Documents/ADTPro-2.1.0/disks/; \
-	cp $@ dist/; \
+	cp $@ ~/Documents/ADTPro-2.1.0/disks/;
 
 telnet$(suffix).dsk: $(telnet_disk_PROGS)
 	cp $(CLEANDISK) $@; \
@@ -88,8 +87,7 @@ homectrlperso$(suffix).dsk: $(homectrl_disk_PROGS)
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
-	cp $@ ~/Documents/ADTPro-2.1.0/disks/; \
-	cp $@ dist/; \
+	cp $@ ~/Documents/ADTPro-2.1.0/disks/;
 
 mastoperso$(suffix).dsk: $(mastodon_disk_PROGS)
 	cp $(CLEANDISK) $@; \
@@ -101,8 +99,7 @@ mastoperso$(suffix).dsk: $(mastodon_disk_PROGS)
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
-	cp $@ ~/Documents/ADTPro-2.1.0/disks/; \
-	cp $@ dist/; \
+	cp $@ ~/Documents/ADTPro-2.1.0/disks/;
 
 mastodon$(suffix).dsk: $(mastodon_disk_PROGS)
 	cp $(CLEANDISK) $@; \
@@ -115,6 +112,9 @@ mastodon$(suffix).dsk: $(mastodon_disk_PROGS)
 	cp $@ ~/Documents/ADTPro-2.1.0/disks/; \
 	cp $@ dist/; \
 
+doc-dist:
+	$(MAKE) -C doc -f Makefile dist
+
 dist: all \
 	stp$(suffix).dsk \
 	telnet$(suffix).dsk \
@@ -122,4 +122,5 @@ dist: all \
 	mastodon$(suffix).dsk \
 	mastoperso$(suffix).dsk \
 	homectrlperso$(suffix).dsk \
-	stpperso$(suffix).dsk
+	stpperso$(suffix).dsk \
+	doc-dist
