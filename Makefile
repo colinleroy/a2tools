@@ -6,7 +6,7 @@ iigs_FLAGS :=
 suffix :=
 endif
 
-SUBDIRS = src 
+SUBDIRS = src doc
 
 stp_disk_PROGS = src/a2recv/a2recv.bin \
 				src/a2send/a2send.bin \
