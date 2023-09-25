@@ -48,6 +48,12 @@ again:
 
   printf("Got response %d (%zu bytes), %s\n", response->code, response->size, response->content_type);
 
+  surl_strip_html(SURL_HTMLSTRIP_FULL);
+  printf("Stripped: %d (%zu bytes), %s\n", response->code, response->size, response->content_type);
+  
+  surl_translit("ISO646-FR1");
+  printf("Stripped: %d (%zu bytes), %s\n", response->code, response->size, response->content_type);
+  
   buffer = malloc(BUFSIZE);
   while ((r = surl_receive_data(buffer, BUFSIZE - 1)) > 0) {
     printf("%s", buffer);

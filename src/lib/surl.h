@@ -46,6 +46,9 @@ size_t __fastcall__ surl_receive_headers(char *buffer, size_t max_len);
 
 size_t __fastcall__ surl_receive_lines(char *buffer, size_t max_len);
 
+void surl_strip_html(char strip_level);
+void surl_translit(char *charset);
+
 int __fastcall__ surl_send_data_params(size_t total, int raw);
 #define surl_send_data(buffer, len) simple_serial_write(buffer, len)
 

@@ -55,6 +55,19 @@ size_t __fastcall__ surl_receive_data(char *buffer, size_t max_len) {
   return to_read;
 }
 
+void surl_strip_html(char strip_level) {
+  simple_serial_putc(SURL_CMD_STRIPHTML);
+  simple_serial_putc(strip_level);
+  surl_read_response_header();
+}
+
+void surl_translit(char *charset) {
+  simple_serial_putc(SURL_CMD_TRANSLIT);
+  simple_serial_puts(charset);
+  simple_serial_putc('\n');
+  surl_read_response_header();
+}
+
 #ifdef __CC65__
 #pragma static-locals(pop)
 #endif

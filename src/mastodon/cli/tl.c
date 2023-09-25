@@ -491,6 +491,7 @@ static void print_list(list *l, signed char limit) {
   char bottom = 0;
   signed char first;
   char n_posts;
+  item *disp;
 
 update:
   /* set scrollwindow */
@@ -501,7 +502,6 @@ update:
 
   /* copy to temp vars to avoid pointer arithmetic */
   if (l->half_displayed_post > 0 && limit == 0) {
-    item *disp;
     first = l->half_displayed_post;
     disp = (item *)l->displayed_posts[first];
     if (disp->displayed_at >= 0) {
@@ -523,7 +523,6 @@ update:
   }
 
   for (i = max(0, first); i < n_posts; i++) {
-    item *disp;
     if (kbhit() && limit == 0) {
       break;
     }
@@ -599,6 +598,11 @@ static void shift_posts_down(list *l) {
     scroll_val = l->account_height;
   } else {
     scroll_val = l->post_height[l->first_displayed_post];
+  }
+
+  if (scroll_val == scrh - 1) {
+    /* we may have returned before the end */
+    scroll_val = scrh;
   }
 
   /* recompute displayed_at */
@@ -1138,19 +1142,19 @@ static void cli(void) {
         if (current_list->kind != SHOW_NOTIFICATIONS) {
           disp_status = (status *)disp;
           if (cur_action == SHOW_FULL_STATUS) {
-            strncpy(new_root, disp_status->reblog_id ? disp_status->reblog_id : disp_status->id, sizeof(new_root));
-            strncpy(new_leaf_root, disp_status->id, sizeof(new_leaf_root));
+            strcpy(new_root, disp_status->reblog_id ? disp_status->reblog_id : disp_status->id);
+            strcpy(new_leaf_root, disp_status->id);
           } else if (cur_action == SHOW_PROFILE) {
-            strncpy(new_root, disp_status->account->id, sizeof(new_root));
+            strcpy(new_root, disp_status->account->id);
           }
         } else {
           disp_notif = (notification *)disp;
           if (cur_action == SHOW_FULL_STATUS && disp_notif->status_id) {
-            strncpy(new_root, disp_notif->status_id, sizeof(new_root));
-            strncpy(new_leaf_root, disp_notif->status_id, sizeof(new_leaf_root));
+            strcpy(new_root, disp_notif->status_id);
+            strcpy(new_leaf_root, disp_notif->status_id);
           } else {
             cur_action = SHOW_PROFILE;
-            strncpy(new_root, disp_notif->account_id, sizeof(new_root));
+            strcpy(new_root, disp_notif->account_id);
           }
         }
 navigate_new_list:
@@ -1177,12 +1181,10 @@ navigate_reuse_list:
         break;
       case CONFIGURE:
           launch_command("mastoconf", NULL, NULL, NULL);
-          cur_action = NAVIGATE;
-          break;
+          /* we're never coming back */
       case COMPOSE:
           launch_command("mastowrite", NULL, NULL, NULL);
-          cur_action = NAVIGATE;
-          break;
+          /* we're never coming back */
       case REPLY:
           if (disp_status)
             launch_command("mastowrite", "r", disp_status->id, NULL);
@@ -1209,7 +1211,7 @@ navigate_reuse_list:
               char **acc_id = malloc(sizeof(char *));
               int loaded = api_search(1, search_buf, 'a', NULL, NULL, acc_id);
               if (loaded > 0) {
-                strncpy(new_root, acc_id[0], sizeof(new_root));
+                strcpy(new_root, acc_id[0]);
                 free(acc_id[0]);
                 free(acc_id);
                 cur_action = SHOW_PROFILE;

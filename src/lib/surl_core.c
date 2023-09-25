@@ -133,7 +133,7 @@ void __fastcall__ surl_read_response_header(void) {
   char *w;
   
   if (resp->content_type) {
-    return; // already read.
+    free(resp->content_type);
   }
 
   simple_serial_read((char *)resp, 8);

@@ -244,6 +244,7 @@ int img_main(int argc, char **argv) {
 
   if (argc < 6) {
     cputs("Missing parameters.\r\n");
+    goto err_out;
   }
 
   instance_url = argv[1];
@@ -265,11 +266,11 @@ int img_main(int argc, char **argv) {
   }
   if (m == NULL) {
     cputs("Could not load media\r\n");
-    cgetc();
     goto err_out;
   }
   if (m->n_media == 0) {
     cputs("No images.\r\n");
+    goto err_out;
   }
 
   i = 0;
@@ -294,12 +295,13 @@ getc_again:
     i %= m->n_media;
   }
 
+err_out:
+  cgetc();
 done:
   if (hgr_init_done) {
     init_text();
   }
 
-err_out:
   params = malloc(127);
   snprintf(params, 127, "%s %s", instance_url, oauth_token);
   reopen_start_device();
