@@ -138,6 +138,18 @@ static void do_debug(char *file_line) {
   fflush(stdout);
 }
 
+static void send_response_headers(curl_buffer *response) {
+  unsigned short r_hdrs[4];
+  r_hdrs[0] = htons(response->response_code);
+  r_hdrs[1] = htons(response->size);
+  r_hdrs[2] = htons(response->headers_size);
+  r_hdrs[3] = htons(strlen(response->content_type) + 1);
+
+  simple_serial_write((char *)r_hdrs, 8);
+  simple_serial_puts(response->content_type);
+  simple_serial_putc('\0');
+}
+
 int main(int argc, char **argv)
 {
   char reqbuf[BUFSIZE];
@@ -153,8 +165,7 @@ int main(int argc, char **argv)
   time_t secs;
   long msecs;
   struct timespec cur_time;
-  unsigned short r_hdrs[4];
-
+  
   if (argc > 1) {
     if (!strcmp(argv[1], "--help")) {
       printf("Usage: %s [--verbose|--very-verbose]\n", argv[0]);
@@ -254,14 +265,7 @@ new_req:
     }
 
     /* Send short response headers */
-    r_hdrs[0] = htons(response->response_code);
-    r_hdrs[1] = htons(response->size);
-    r_hdrs[2] = htons(response->headers_size);
-    r_hdrs[3] = htons(strlen(response->content_type) + 1);
-
-    simple_serial_write((char *)r_hdrs, 8);
-    simple_serial_puts(response->content_type);
-    simple_serial_putc('\0');
+    send_response_headers(response);
 
     printf("RESP: code %d, %zd response bytes, %zd header bytes, content-type: %s",
            response->response_code, response->size, response->headers_size,
@@ -364,6 +368,17 @@ new_req:
           response->hgr_buf = sdl_to_hgr(
               dump_response_to_file(response->buffer, response->size),
               monochrome, 0, &(response->hgr_len));
+        } else if (cmd == SURL_CMD_STRIPHTML) {
+          /* Strip the HTML in a response, and update size
+           * Input: char: Strip level
+           */
+           striphtml = simple_serial_getc();
+        } else if (cmd == SURL_CMD_TRANSLIT) {
+          /* Translit a response, and update size
+           * Input: string: charset
+           */
+          simple_serial_gets(reqbuf, BUFSIZE);
+          translit = reqbuf;
         }
       } else {
         /* special case for debugs in the middle of a request */
@@ -545,6 +560,29 @@ abort:
           printf("RESP: HGR: No HGR data\n");
           simple_serial_putc(SURL_ERROR_CONV_FAILED);
         }
+      } else if (cmd == SURL_CMD_STRIPHTML) {
+        char *tmp = html2text(response->buffer,
+                      striphtml == SURL_HTMLSTRIP_FULL ? 
+                        HTML2TEXT_EXCLUDE_LINKS : HTML2TEXT_DISPLAY_LINKS);
+        if (tmp) {
+          free(response->buffer);
+          response->buffer = tmp;
+          response->size = strlen(response->buffer);
+          printf("RESP: HTML_STRIP to %zd response bytes\n", response->size);
+        }
+        send_response_headers(response);
+      } else if (cmd == SURL_CMD_TRANSLIT) {
+        char *tmp = NULL;
+        if (translit[0] != '\0') {
+          tmp = do_charset_convert(response->buffer, OUTGOING, translit, &l);
+        }
+        if (tmp) {
+          free(response->buffer);
+          response->buffer = tmp;
+          response->size = strlen(response->buffer);
+          printf("RESP: TRANSLIT to %zd response bytes\n", response->size);
+        }
+        send_response_headers(response);
       }
 
       clock_gettime(CLOCK_REALTIME, &cur_time);

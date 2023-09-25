@@ -25,6 +25,15 @@ status *status_new(void) {
   return s;
 }
 
+static __fastcall__ char atoc(const char *str) {
+  static int i;
+  i = atoi(str);
+  if (i > 255) {
+    return 255;
+  }
+  return i;
+}
+
 #ifdef __CC65__
 #pragma static-locals (push,off) /* need reentrancy */
 #endif
@@ -35,7 +44,6 @@ static __fastcall__ char status_fill_from_json(status *s, char *id, char full, c
 
   s->id = strdup(id);
   if (s->id == NULL) {
-    nomem_msg(__FILE__, __LINE__);
     return -1;
   }
 
@@ -55,22 +63,20 @@ static __fastcall__ char status_fill_from_json(status *s, char *id, char full, c
       s->reblogged_by = strdup(lines[1]);
       s->reblog_id = s->id;
       s->id = NULL;
-      r = status_fill_from_json(s, lines[2], full, 1);
-      return r;
+      return status_fill_from_json(s, lines[2], full, 1);
     }
 
     s->account = account_new();
 
     if (s->account == NULL) {
-      nomem_msg(__FILE__, __LINE__);
-      return -1;
+      goto err_mem;
     }
 
     s->created_at = date_format(lines[0], 1);
     s->account->display_name = strdup(lines[1]);
     if (n_lines > 3) {
       s->spoiler_text = malloc(TL_SPOILER_TEXT_BUF);
-      if (!s->spoiler_text) {
+      if (s->spoiler_text == NULL) {
         goto err_mem;
       }
       strncpy(s->spoiler_text, lines[3], TL_SPOILER_TEXT_BUF - 1);
@@ -93,14 +99,10 @@ static __fastcall__ char status_fill_from_json(status *s, char *id, char full, c
 
   n_lines = strnsplit_in_place(gen_buf, '\n', lines, 11);
   if (r >= 0 && n_lines == 11) {
-    r = atoi(lines[0]);
-    s->n_images = r > 255 ? 255 : r;
-    r = atoi(lines[1]);
-    s->n_replies = r > 255 ? 255 : r;
-    r = atoi(lines[2]);
-    s->n_reblogs = r > 255 ? 255 : r;
-    r = atoi(lines[3]);
-    s->n_favourites = r > 255 ? 255 : r;
+    s->n_images = atoc(lines[0]);
+    s->n_replies = atoc(lines[1]);
+    s->n_reblogs = atoc(lines[2]);
+    s->n_favourites = atoc(lines[3]);
     if (lines[4][0] == 't') /* true */
       s->flags |= REBLOGGED;
     if (lines[5][0] == 't') /* true */
@@ -120,18 +122,17 @@ static __fastcall__ char status_fill_from_json(status *s, char *id, char full, c
       s->visibility = COMPOSE_MENTION;
   }
 
-  content = malloc(full ? TL_STATUS_LARGE_BUF : TL_STATUS_SHORT_BUF);
+  r = full ? TL_STATUS_LARGE_BUF : TL_STATUS_SHORT_BUF;
+  content = malloc(r);
   if (!content) {
 err_mem:
-    status_free(s);
-    nomem_msg(__FILE__, __LINE__);
     return -1;
   }
 
   if (is_reblog) {
-    r = surl_get_json(content, full ? TL_STATUS_LARGE_BUF : TL_STATUS_SHORT_BUF, SURL_HTMLSTRIP_FULL, translit_charset, ".reblog.content");
+    r = surl_get_json(content, r, SURL_HTMLSTRIP_FULL, translit_charset, ".reblog.content");
   } else {
-    r = surl_get_json(content, full ? TL_STATUS_LARGE_BUF : TL_STATUS_SHORT_BUF, SURL_HTMLSTRIP_FULL, translit_charset, ".content");
+    r = surl_get_json(content, r, SURL_HTMLSTRIP_FULL, translit_charset, ".content");
   }
   if (!full && r == TL_STATUS_SHORT_BUF - 1) {
     strcpy(content + TL_STATUS_SHORT_BUF - 4, "...");

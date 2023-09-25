@@ -125,7 +125,7 @@ int do_login(void) {
   char *body;
   char *token;
   char *post;
-  size_t buf_size = 2048;
+  size_t buf_size = 256;
   size_t post_len;
   int ret = -1;
   char otp_required = 0;
@@ -151,9 +151,7 @@ int do_login(void) {
   snprintf(oauth_url, BUF_SIZE, "%s%s", instance_url, OAUTH_URL);
 
 /* First request to get authorization */
-  dputs("GET ");
-  dputs(authorize_url);
-  dputs("...");
+  dputs("GET "OAUTH_URL"... ");
   resp = surl_start_request(SURL_METHOD_GET, authorize_url, NULL, 0);
 
   body = malloc(buf_size + 1);
@@ -336,9 +334,9 @@ static char *prepare_app_register_post(void) {
                       "scopes\nread write\n"
                       "website\n%s\n",
 
-                      "MastApple//c",
+                      "Mastodon for Apple II",
                       REDIRECT_URI,
-                      "https://www.colino.net/");
+                      "https://www.colino.net/wordpress/en/mastodon-for-apple-II/");
   return data;
 }
 

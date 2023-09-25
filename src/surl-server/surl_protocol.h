@@ -25,13 +25,15 @@
 
 #define SURL_IS_ANSWER(x) ((x) >= SURL_ANSWER_WAIT && (x) <= SURL_ANSWER_PONG)
 
-#define SURL_CMD_SEND     0x30
-#define SURL_CMD_HEADERS  0x31
-#define SURL_CMD_FIND     0x32
-#define SURL_CMD_JSON     0x33
-#define SURL_CMD_HGR      0x34
+#define SURL_CMD_SEND      0x30
+#define SURL_CMD_HEADERS   0x31
+#define SURL_CMD_FIND      0x32
+#define SURL_CMD_JSON      0x33
+#define SURL_CMD_HGR       0x34
+#define SURL_CMD_STRIPHTML 0x35
+#define SURL_CMD_TRANSLIT  0x36
 
-#define SURL_IS_CMD(x) ((x) >= SURL_CMD_SEND && (x) <= SURL_CMD_HGR)
+#define SURL_IS_CMD(x) ((x) >= SURL_CMD_SEND && (x) <= SURL_CMD_TRANSLIT)
 
 #define SURL_ERROR_OK           0x40
 #define SURL_ERROR_NOT_FOUND    0x41
