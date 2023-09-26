@@ -1066,6 +1066,10 @@ static void pop_list(void) {
   }
 }
 
+static void disconnect_account (void) {
+  unlink("mastsettings");
+}
+
 static void cli(void) {
   item *disp;
   status *disp_status;
@@ -1089,7 +1093,21 @@ static void cli(void) {
   runtime_once_clean();
 
   clrscr();
-  print_header(NULL, NULL, NULL);
+
+  if (print_header(NULL, NULL, NULL) != 0) {
+    int code = surl_response_code();
+    clrscr();
+    printf("Error fetching data: code %d\n\n", code);
+    if (code == 401) {
+      disconnect_account();
+      dputs("Your token is invalid. ");
+    }
+    dputs("Please try to login again.");
+    cgetc();
+#ifdef __CC65__
+    exec("mastodon", NULL);
+#endif
+  }
 
   if (cur_list_idx == -1) {
     cur_action = SHOW_HOME_TIMELINE;

@@ -130,8 +130,6 @@ const surl_response * __fastcall__ surl_start_request(const char method, char *u
 }
 
 void __fastcall__ surl_read_response_header(void) {
-  char *w;
-  
   if (resp->content_type) {
     free(resp->content_type);
   }
@@ -148,15 +146,14 @@ void __fastcall__ surl_read_response_header(void) {
   /* Includes the zero byte */
   resp->content_type = malloc(resp->content_type_size);
   simple_serial_read(resp->content_type, resp->content_type_size);
-
-
-  w = strchr(resp->content_type, '\n');
-  if (w)
-    *w = '\0';
 }
 
 char __fastcall__ surl_response_ok(void) {
   return resp != NULL && resp->code >= 200 && resp->code < 300;
+}
+
+int __fastcall__ surl_response_code(void) {
+  return resp != NULL ? resp->code : 504;
 }
 
 #ifdef __CC65__
