@@ -23,23 +23,25 @@
 
 account *my_account = NULL;
 
-void __fastcall__ print_header(list *l, status *root_status, notification *root_notif) {
+char __fastcall__ print_header(list *l, status *root_status, notification *root_notif) {
   if (my_account == NULL) {
     my_account = api_get_profile(NULL);
   }
-  if (my_account != NULL) {
-    if (strlen(my_account->display_name) > LEFT_COL_WIDTH)
-      my_account->display_name[LEFT_COL_WIDTH] = '\0';
-
-    if (strlen(my_account->username) > LEFT_COL_WIDTH)
-      my_account->username[LEFT_COL_WIDTH] = '\0';
-
-    gotoxy(0, 0);
-    dputs(my_account->display_name);
-    gotoxy(0, 1);
-    dputc(arobase);
-    dputs(my_account->username);
+  if (my_account == NULL) {
+    return -1;
   }
+
+  if (strlen(my_account->display_name) > LEFT_COL_WIDTH)
+    my_account->display_name[LEFT_COL_WIDTH] = '\0';
+
+  if (strlen(my_account->username) > LEFT_COL_WIDTH)
+    my_account->username[LEFT_COL_WIDTH] = '\0';
+
+  gotoxy(0, 0);
+  dputs(my_account->display_name);
+  gotoxy(0, 1);
+  dputc(arobase);
+  dputs(my_account->username);
 
   #define BTM 2
   gotoxy(0,BTM);
@@ -120,6 +122,7 @@ void __fastcall__ print_header(list *l, status *root_status, notification *root_
 
   print_free_ram();
   cvlinexy(LEFT_COL_WIDTH, 0, scrh);
+  return 0;
 }
 
 void __fastcall__ print_free_ram(void) {

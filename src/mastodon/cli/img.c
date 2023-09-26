@@ -243,7 +243,7 @@ int img_main(int argc, char **argv) {
   videomode(TEXTMODE);
 
   if (argc < 6) {
-    cputs("Missing parameters.\r\n");
+    cputs("IMG: Missing parameters.\r\n");
     goto err_out;
   }
 
