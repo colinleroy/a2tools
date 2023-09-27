@@ -57,19 +57,19 @@ static void update_compose_audience(void) {
         compose_audience == COMPOSE_MENTION ? '*':' ');
 
   gotoxy(0, top + COMPOSE_FIELD_HEIGHT + 3);
-  cputs(translit_charset);
+  dputs(translit_charset);
   if(!strcmp(translit_charset, "ISO646-FR1")) {
-    cputs(": Use ] to mention, and # for hashtags.");
+    dputs(": Use ] to mention, and # for hashtags.");
   } /* FIXME add other local charsets */
 }
 
 static void update_cw(void) {
   clrzone(0, top + COMPOSE_FIELD_HEIGHT + 2, scrw - LEFT_COL_WIDTH - 2, top + COMPOSE_FIELD_HEIGHT + 2);
   if (cw[0] == '\0') {
-    cputs("( ) Content warning not set");
+    dputs("( ) Content warning not set");
   } else {
-    cputs("(*) CW: ");
-    cputs(cw);
+    dputs("(*) CW: ");
+    dputs(cw);
   }
 }
 static char dgt_cmd_cb(char c) {
@@ -107,7 +107,7 @@ static void setup_gui(void)
       gotoxy(0, wherey() - 1);
       chline(scrw - LEFT_COL_WIDTH - 1);
 
-      cputs("Your reply:\r\n");
+      dputs("Your reply:\r\n");
       top = wherey();
     }
   }
@@ -186,7 +186,7 @@ static void open_cw_menu(void) {
   set_scrollwindow(0, scrh);
 
   clrzone(0, top + COMPOSE_FIELD_HEIGHT + 2, scrw - LEFT_COL_WIDTH - 2, top + COMPOSE_FIELD_HEIGHT + 2);
-  cputs("(*) CW: ");
+  dputs("(*) CW: ");
   dget_text(cw, sizeof(cw) - 1, NULL, 0);
   update_cw();
 
@@ -221,10 +221,10 @@ image_menu:
   print_free_ram();
   gotoxy(0, scrh -2);
   if (n_medias < MAX_IMAGES) {
-    cputs("Enter: add image");
+    dputs("Enter: add image");
   }
   if (n_medias > 0 && n_medias < MAX_IMAGES) {
-    cputs(" - ");
+    dputs(" - ");
   }
   if (n_medias > 0) {
     cprintf(" - R: remove image %d", n_medias);
@@ -312,7 +312,7 @@ static void compose_toot(char *initial_buf) {
 try_again:
     clrscr();
     gotoxy(0, 1);
-    cputs("Sending toot...\r\n\r\n");
+    dputs("Sending toot...\r\n\r\n");
     r = api_send_toot(compose_mode[0], text, cw, sensitive_medias,
                       ref_status ? ref_status->id : NULL,
                       media_ids, n_medias,
@@ -320,7 +320,7 @@ try_again:
     if (r < 0) {
       char t;
 
-      cputs("\r\nAn error happened sending the toot.\r\n\r\nTry again? (y/n)");
+      dputs("\r\nAn error happened sending the toot.\r\n\r\nTry again? (y/n)");
       t = cgetc();
       if (tolower(t) != 'n') {
         goto try_again;
@@ -340,7 +340,7 @@ int main(int argc, char **argv) {
   char *params;
 
   if (argc < 4) {
-    cputs("Missing instance_url, oauth_token and/or charset parameters.\n");
+    dputs("Missing parameters.\n");
   }
 
   register_start_device();

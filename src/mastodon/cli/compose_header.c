@@ -13,6 +13,8 @@
 #include "list.h"
 #include "math.h"
 #include "dgets.h"
+#include "dputs.h"
+#include "dputc.h"
 #include "clrzone.h"
 #include "scrollwindow.h"
 
@@ -30,16 +32,16 @@ void compose_print_header(void) {
       my_account->username[LEFT_COL_WIDTH] = '\0';
 
     gotoxy(0, 0);
-    cputs(my_account->display_name);
+    dputs(my_account->display_name);
     gotoxy(0, 1);
-    cputc(arobase);
-    cputs(my_account->username);
+    dputc(arobase);
+    dputs(my_account->username);
   }
 
   #define BTM 4
   clrzone(0, BTM, LEFT_COL_WIDTH, 23);
 
-  cputs("Commands:\r\n"
+  dputs("Commands:\r\n"
         " Open-Apple +...\r\n"
         " Send     : S\r\n"
         " Images   : I\r\n"
