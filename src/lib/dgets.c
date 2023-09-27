@@ -185,79 +185,80 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb, c
     } else if (c == CH_ENTER && (!cmd_cb || !enter_accepted)) {
       goto out;
     } else if (c == CH_CURS_LEFT || c == CH_DEL) {
-      if (cur_insert > 0) {
-        /* Go back one step in the buffer */
-        cur_insert--;
-        /* did we hit start of (soft) line ? */
-        if (cur_x == 0) {
-          /* recompute x */
-          cur_x = get_prev_line_len();
-          /* do we have to scroll (we were at line 0) ? */
-          if (cur_y == 0) {
-            scrolldown_one();
-            rewrite_start_of_buffer();
-          } else {
-            /* go up */
-            cur_y--;
-          }
+      if (cur_insert == 0) {
+err_beep:
+        dputc(0x07);
+        continue;
+      }
+      /* Go back one step in the buffer */
+      cur_insert--;
+      /* did we hit start of (soft) line ? */
+      if (cur_x == 0) {
+        /* recompute x */
+        cur_x = get_prev_line_len();
+        /* do we have to scroll (we were at line 0) ? */
+        if (cur_y == 0) {
+          scrolldown_one();
+          rewrite_start_of_buffer();
         } else {
-          cur_x--;
-        }
-        if (c == CH_DEL) {
-          char deleted = text_buf[cur_insert];
-          /* shift chars down */
-          for (k = cur_insert; k < max_insert; k++) {
-            text_buf[k] = text_buf[k + 1];
-          }
-          /* dec length */
-          max_insert--;
-          /* update display */
-          gotoxy(cur_x, cur_y);
-          rewrite_end_of_buffer(deleted == '\n');
+          /* go up */
+          cur_y--;
         }
       } else {
-        dputc(0x07);
+        cur_x--;
+      }
+      if (c == CH_DEL) {
+        char deleted = text_buf[cur_insert];
+        /* shift chars down */
+        for (k = cur_insert; k < max_insert; k++) {
+          text_buf[k] = text_buf[k + 1];
+        }
+        /* dec length */
+        max_insert--;
+        /* update display */
+        gotoxy(cur_x, cur_y);
+        rewrite_end_of_buffer(deleted == '\n');
       }
       gotoxy(cur_x, cur_y);
     } else if (c == CH_CURS_RIGHT) {
       /* are we at buffer end? */
-      if (cur_insert < max_insert) {
-        /* Are we at end of hard line ? */
-        if (text_buf[cur_insert] != '\n') {
-          /* We're not at end of line, go right */
-          cur_x++;
-        } else {
-          /* We are, go down and left */
-          cur_y++;
-          cur_x = 0;
-        }
-
-        /* Are we at end of soft line now? */
-        if (cur_x > win_width - 1) {
-          /* We are, go down and left */
-          cur_y++;
-          cur_x = 0;
-        }
-
-        cur_insert++;
-
-        /* Handle scroll up if needed */
-        if (cur_y > win_height - 1) {
-          cur_y--;
-          scrollup_one();
-          gotoxy(cur_x, cur_y);
-          rewrite_end_of_buffer(0);
-        }
+      if (cur_insert == max_insert) {
+        goto err_beep;
+      }
+      /* Are we at end of hard line ? */
+      if (text_buf[cur_insert] != '\n') {
+        /* We're not at end of line, go right */
+        cur_x++;
       } else {
-        dputc(0x07);
+        /* We are, go down and left */
+        goto down_left;
+      }
+
+      /* Are we at end of soft line now? */
+      if (cur_x > win_width - 1) {
+        /* We are, go down and left */
+down_left:
+        cur_y++;
+        cur_x = 0;
+      }
+
+      cur_insert++;
+
+      /* Handle scroll up if needed */
+      if (cur_y > win_height - 1) {
+        cur_y--;
+        scrollup_one();
+        gotoxy(cur_x, cur_y);
+        rewrite_end_of_buffer(0);
       }
       gotoxy(cur_x, cur_y);
     } else if (c == CH_CURS_UP) {
-      if (!cmd_cb) {
+      if (!cmd_cb || cur_insert == 0) {
         /* No up/down in standard line edit */
-        dputc(0x07);
-      } else if (cur_insert == cur_x) {
-        /* we are at the first line, go at the beginning */
+        goto err_beep;
+      } 
+      if (cur_insert == cur_x) {
+        /* we are at the first line, go at its beginning */
         cur_x = 0;
         cur_insert = 0;
       } else {
@@ -292,47 +293,45 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb, c
     } else if (c == CH_CURS_DOWN) {
       if (!cmd_cb || cur_insert == max_insert) {
         /* No down in standard editor mode */
-        dputc(0x07);
+        goto err_beep;
+      }
+      /* Save cur_x */
+      tmp = cur_x;
+      /* wrap to EOL, either hard or soft */
+      while (cur_x < win_width - 1 && text_buf[cur_insert] != '\n') {
+        cur_insert++;
+        cur_x++;
+        if (cur_insert == max_insert) {
+          /* Can't go down, abort */
+          goto stop_down;
+        }
+      }
+      cur_insert++;
+      cur_x = 0;
+
+      /* Scroll if we need */
+      if (cur_y == win_height - 1) {
+        scrollup_one();
+        gotoxy(cur_x, cur_y);
+        rewrite_end_of_buffer(0);
       } else {
-        /* Save cur_x */
-        tmp = cur_x;
-        /* wrap to EOL, either hard or soft */
-        while (cur_x < win_width - 1 && text_buf[cur_insert] != '\n') {
-          cur_insert++;
-          cur_x++;
-          if (cur_insert == max_insert) {
-            /* Can't go down, abort */
-            goto stop_down;
-          }
+        cur_y++;
+      }
+
+      /* Advance to previous cur_x at most */
+      while (cur_x < tmp) {
+        if (cur_insert == max_insert || text_buf[cur_insert] == '\n') {
+          break;
         }
         cur_insert++;
-        cur_x = 0;
-
-        /* Scroll if we need */
-        if (cur_y == win_height - 1) {
-          scrollup_one();
-          gotoxy(cur_x, cur_y);
-          rewrite_end_of_buffer(0);
-        } else {
-          cur_y++;
-        }
-
-        /* Advance to previous cur_x at most */
-        while (cur_x < tmp) {
-          if (cur_insert == max_insert || text_buf[cur_insert] == '\n') {
-            break;
-          }
-          cur_insert++;
-          cur_x++;
-        }
+        cur_x++;
       }
 stop_down:
       gotoxy(cur_x, cur_y);
     } else {
-      if (cur_insert == size - 1) {
+      if (max_insert == size) {
         /* Full buffer */
-        dputc(0x07);
-        continue;
+        goto err_beep;
       }
       if (cur_insert < max_insert) {
         /* Insertion in the middle of the buffer.
@@ -355,15 +354,12 @@ stop_down:
           dputc(echo_on ? c : '*');
 #endif
         }
-        /* insert char */
-        if (max_insert < size - 1)
-          max_insert++;
         /* shift end of buffer */
-        for (k = max_insert - 2; k >= cur_insert; k--) {
+        k = max_insert;
+        max_insert++;
+        while (k != cur_insert) {
+          k--;
           text_buf[k + 1] = text_buf[k];
-          if (k == 0) {
-            break; /* size_t is unsigned, the for stop condition won't work */
-          }
         }
 
         /* rewrite buffer after inserted char */
