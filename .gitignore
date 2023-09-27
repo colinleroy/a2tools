@@ -17,6 +17,7 @@ a.out
 *.callg
 *.dasm
 *.stack
+*.csv
 log
 *.log
 massif.*

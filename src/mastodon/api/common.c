@@ -67,7 +67,8 @@ const surl_response *get_surl_for_endpoint(char method, char *endpoint) {
     snprintf(hdrs[0], BUF_SIZE, "Authorization: Bearer %s", oauth_token);
   }
 
-  snprintf(gen_buf, BUF_SIZE, "%s%s", instance_url, endpoint);
+  strcpy(gen_buf, instance_url);
+  strcat(gen_buf, endpoint);
   return surl_start_request(method, gen_buf, hdrs, 1);
 }
 

@@ -67,15 +67,9 @@ const surl_response * __fastcall__ surl_start_request(const char method, char *u
   resp = &static_resp;
   if (resp->content_type) {
     free(resp->content_type);
-    resp->content_type = NULL;
   }
 
-  resp->size = 0;
-  resp->code = 0;
-  resp->cur_pos = 0;
-  resp->content_type = NULL;
-  resp->header_size = 0;
-  resp->cur_hdr_pos = 0;
+  memset(resp, 0, sizeof(surl_response));
 
   if (proxy_opened == 0) {
     if (surl_connect_proxy() != 0) {

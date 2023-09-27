@@ -30,7 +30,7 @@
 #endif
 
 static char echo_on = 1;
-void __fastcall__ echo(int on) {
+void __fastcall__ echo(char on) {
   echo_on = on;
 }
 
@@ -39,9 +39,9 @@ static unsigned char win_width, win_height;
 static size_t cur_insert, max_insert;
 static char *text_buf;
 
-static int __fastcall__ get_prev_line_len() {
+static char __fastcall__ get_prev_line_len() {
   int back;
-  int prev_line_len;
+  char prev_line_len;
 
   back = cur_insert - 1;
 
@@ -63,7 +63,8 @@ static int __fastcall__ get_prev_line_len() {
 #endif
 
 static void __fastcall__ rewrite_start_of_buffer() {
-  int prev_line_len, k;
+  char prev_line_len;
+  int k;
 
   prev_line_len = get_prev_line_len() - start_x;
   /* print it */
@@ -129,9 +130,9 @@ static char __fastcall__ rewrite_end_of_buffer(char full) {
 char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb, char enter_accepted) {
   char c;
   size_t k;
-  int cur_x, cur_y;
+  char cur_x, cur_y;
 #ifdef __CC65__
-  int prev_cursor = 0;
+  char prev_cursor = 0;
 #endif
   unsigned char sx;
   unsigned char sy, ey, tmp;
@@ -187,9 +188,8 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb, c
       if (cur_insert > 0) {
         /* Go back one step in the buffer */
         cur_insert--;
-        cur_x--;
         /* did we hit start of (soft) line ? */
-        if (cur_x < 0) {
+        if (cur_x == 0) {
           /* recompute x */
           cur_x = get_prev_line_len();
           /* do we have to scroll (we were at line 0) ? */
@@ -200,6 +200,8 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb, c
             /* go up */
             cur_y--;
           }
+        } else {
+          cur_x--;
         }
         if (c == CH_DEL) {
           char deleted = text_buf[cur_insert];
@@ -377,23 +379,20 @@ stop_down:
           rewrite_end_of_buffer(0);
         }
         gotoxy(cur_x, cur_y);
-        /* put back inserted char for cursor
-         * advance again */
       }
       if (c == CH_ENTER) {
 #ifdef __CC65__
         dputc('\r');
         dputc('\n');
 #endif
-        text_buf[cur_insert] = '\n';
-        cur_insert++;
+        c = '\n';
       } else {
 #ifdef __CC65__
         dputc(echo_on ? c : '*');
 #endif
-        text_buf[cur_insert] = c;
-        cur_insert++;
       }
+      text_buf[cur_insert] = c;
+      cur_insert++;
     }
     if (cur_insert > max_insert) {
       max_insert = cur_insert;
