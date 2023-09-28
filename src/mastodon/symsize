@@ -1,3 +1,3 @@
 #!/bin/bash
-grep '^sym.*size=[0-9A-F][0-9A-F][0-9A-F]' $1|sed 's/[=,]/;/g'|awk -F';' '{ print $8, $4}'|sort -n
+grep '^sym.*size=[0-9A-F][0-9A-F]' $1|sed 's/[=,]/;/g'|awk -F';' '{ print $8, $4}'|sort -n
 

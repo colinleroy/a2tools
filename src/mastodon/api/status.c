@@ -38,7 +38,7 @@ static __fastcall__ char atoc(const char *str) {
 #pragma static-locals (push,off) /* need reentrancy */
 #endif
 static __fastcall__ char status_fill_from_json(status *s, char *id, char full, char is_reblog) {
-  char n_lines;
+  char c, n_lines;
   int r;
   char *content;
 
@@ -112,11 +112,12 @@ static __fastcall__ char status_fill_from_json(status *s, char *id, char full, c
     s->account->id = strdup(lines[7]);
     s->account->acct = strdup(lines[8]);
     s->account->username = strdup(lines[9]);
-    if (lines[10][1] == 'u') /* pUblic */
+    c = lines[10][1];
+    if (c == 'u') /* pUblic */
       s->visibility = COMPOSE_PUBLIC;
-    else if (lines[10][1] == 'n') /* uNlisted */
+    else if (c == 'n') /* uNlisted */
       s->visibility = COMPOSE_UNLISTED;
-    else if (lines[10][1] == 'r') /* pRivate */
+    else if (c == 'r') /* pRivate */
       s->visibility = COMPOSE_PRIVATE;
     else
       s->visibility = COMPOSE_MENTION;
