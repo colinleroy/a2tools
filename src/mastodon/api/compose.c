@@ -105,7 +105,7 @@ char *api_send_hgr_image(char *filename, char *description, char **err, char x, 
 
     len = strlen(body);
 
-    snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s", "/api/v1/media", media_id);
+    snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, MEDIA_ENDPOINT"/%s", media_id);
     get_surl_for_endpoint(SURL_METHOD_PUT, endpoint_buf);
 
     surl_send_data_params(len, SURL_DATA_APPLICATION_JSON_HELP);
@@ -153,7 +153,7 @@ signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medi
     medias_buf = NULL;
   }
 
-  snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s%s%s", STATUS_ENDPOINT,
+  snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, STATUS_ENDPOINT"%s%s",
            mode == 'e' ? "/" : "",
            mode == 'e' ? ref_toot_id : "");
   get_surl_for_endpoint(mode == 'e' ? SURL_METHOD_PUT : SURL_METHOD_POST, endpoint_buf);
@@ -205,7 +205,7 @@ signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medi
 char *compose_get_status_text(char *status_id) {
   char *content = NULL;
 
-  snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s/source", STATUS_ENDPOINT, status_id);
+  snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, STATUS_ENDPOINT"/%s/source", status_id);
   get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
   
   if (surl_response_ok()) {
