@@ -37,8 +37,11 @@
 #define BUFSIZE 255
 
 static char proxy_opened = 0;
-int surl_connect_proxy(void) {
-  int r;
+char surl_connect_proxy(void) {
+  static char r;
+  if (proxy_opened) {
+    return 0;
+  }
   r = simple_serial_open();
   //DEBUG("connected proxy: %d\n", r);
   proxy_opened = (r == 0);
