@@ -238,8 +238,8 @@ void simple_serial_configure(void) {
 #pragma code-name (push, "LOWCODE")
 #endif
 
-int __fastcall__ simple_serial_open(void) {
-  int err;
+char __fastcall__ simple_serial_open(void) {
+  char err;
 
   simple_serial_read_opts();
 
@@ -251,6 +251,7 @@ int __fastcall__ simple_serial_open(void) {
   if ((err = ser_install(&a2e_ssc_ser)) != 0)
     return err;
   #endif
+
   if ((err = ser_apple2_slot(slot)) != 0)
     return err;
 #endif
@@ -260,26 +261,13 @@ int __fastcall__ simple_serial_open(void) {
   err = ser_open (&default_params);
 
   if (err == 0) {
-    unsigned char s;
-    /* We expect the serial card to be ready to send bytes */
-#ifndef IIGS
-    err = ser_status(&s);
-    if (err != 0 || (s & 0x10) == 0) {
-      return SER_ERR_NO_DATA;
-    }
-#else
-    err = ser_status(&s);
-    if (err != 0 || (s & 0x20) == 0) {
-      return SER_ERR_NO_DATA;
-    }
-#endif
     simple_serial_flush();
   }
 
   return err;
 }
 
-int __fastcall__ simple_serial_close(void) {
+char __fastcall__ simple_serial_close(void) {
   return ser_close();
 }
 
