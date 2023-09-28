@@ -34,22 +34,11 @@
 
 static char last_dir[FILENAME_MAX] = "";
 
-char *file_select(char sx, char sy, char ex, char ey, char dir, char *prompt) {
-  char **list = NULL;
-  char *is_dir = NULL;
-#ifdef __CC65__
-  char dev, c, sel = 0, i, n = 0, start = 0;
-#else
-  int c, sel = 0, i, n = 0, start = 0;
-#endif
-  char *filename = NULL;
+static char **list = NULL;
+static char *is_dir = NULL;
 
-  gotoxy(sx, sy);
-  dputs("Please wait...");
-  if (dir)
-    last_dir[0] = '\0';
-
-list_again:
+static void __fastcall__ free_data (char n) {
+  static char i;
   for (i = 0; i < n; i++) {
     free(list[i]);
   }
@@ -57,6 +46,26 @@ list_again:
   free(is_dir);
   list = NULL;
   is_dir = NULL;
+}
+
+char *file_select(char sx, char sy, char ex, char ey, char dir, char *prompt) {
+#ifdef __CC65__
+  static char dev, c, sel, i, n, start;
+#else
+  int c, sel, i, n, start;
+#endif
+  static char *filename = NULL;
+
+  gotoxy(sx, sy);
+
+  dputs("Please wait...");
+  if (dir)
+    last_dir[0] = '\0';
+
+  n = 0;
+
+list_again:
+  free_data(n);
 
   n = 0;
   sel = 0;
@@ -66,17 +75,16 @@ list_again:
 #ifdef __CC65__
     dev = getfirstdevice();
     do {
-      n++;
-      list = realloc(list, sizeof(char *) * n);
-      is_dir = realloc(is_dir, sizeof(char) * n);
+      list = realloc(list, sizeof(char *) * (n + 1));
+      is_dir = realloc(is_dir, sizeof(char) * (n + 1));
 
-      list[n - 1] = malloc(FILENAME_MAX);
-      if (getdevicedir(dev, list[n - 1], FILENAME_MAX) == NULL) {
-        n--;
+      list[n] = malloc(FILENAME_MAX);
+      if (getdevicedir(dev, list[n], FILENAME_MAX) == NULL) {
         free(list[n]);
         continue;
       }
-      is_dir[n - 1] = 1;
+      is_dir[n] = 1;
+      n++;
     } while ((dev = getnextdevice(dev)) != INVALID_DEVICE);
 #else
   last_dir[0] = '/';
@@ -93,12 +101,12 @@ posix_use_dir:
         if (dir && !_DE_ISDIR(ent->d_type))
           continue;
 
-        n++;
-        list = realloc(list, sizeof(char *) * n);
-        is_dir = realloc(is_dir, sizeof(char) * n);
+        list = realloc(list, sizeof(char *) * (n + 1));
+        is_dir = realloc(is_dir, sizeof(char) * (n + 1));
 
-        list[n - 1] = strdup(ent->d_name);
-        is_dir[n - 1] = _DE_ISDIR(ent->d_type);
+        list[n] = strdup(ent->d_name);
+        is_dir[n] = _DE_ISDIR(ent->d_type);
+        n++;
       }
       closedir(d);
     }
@@ -132,8 +140,9 @@ disp_again:
   switch (c) {
     case CH_CURS_RIGHT:
       if (!is_dir[sel]) {
-        dputc('\07');
-        goto disp_again;
+err_bell:
+        dputc(0x07);
+        break;
       }
       if (list[sel][0] != '/')
         strcat(last_dir, "/");
@@ -148,8 +157,7 @@ up:
       goto out;
     case CH_ENTER:
       if (is_dir[sel] != dir) {
-        dputc('\07');
-        goto disp_again;
+        goto err_bell;
       } else {
         filename = malloc(FILENAME_MAX);
         snprintf(filename, FILENAME_MAX, "%s%s%s", last_dir, (last_dir[0] != '\0' ? "/":""), list[sel]);
@@ -174,11 +182,7 @@ up:
   }
   goto disp_again;
 out:
-  for (i = 0; i < n; i++) {
-    free(list[i]);
-  }
-  free(list);
-  free(is_dir);
+  free_data(n);
   clrzone(sx, sy, ex, ey);
   gotoxy(sx, sy);
   if (filename) {
