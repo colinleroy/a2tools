@@ -15,8 +15,8 @@
 
 /* Setup */
 #ifdef __CC65__
-int __fastcall__ simple_serial_open(void);
-int __fastcall__ simple_serial_close(void);
+char __fastcall__ simple_serial_open(void);
+char __fastcall__ simple_serial_close(void);
 void __fastcall__ simple_serial_flush(void);
 void __fastcall__ simple_serial_configure(void);
 
