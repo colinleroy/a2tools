@@ -40,14 +40,14 @@ static signed char cur_list_idx;
 
 /* actions mapped to keys */
 #define SHOW_FULL_STATUS     CH_ENTER
-#define SHOW_PROFILE         'p'
 #define BACK                 CH_ESC
-#define CONFIGURE            'o'
 #define COMPOSE              'c'
-#define REPLY                'r'
-#define IMAGES               'i'
-#define SEARCH               's'
+#define CONFIGURE            'o'
 #define SHOW_NOTIFICATIONS   'n'
+#define SEARCH               's'
+#define SHOW_PROFILE         'p'
+#define IMAGES               'i'
+#define REPLY                'r'
 #define EDIT                 'e'
 /* special cases (extra step or mapped arrays )*/
 #define SHOW_HOME_TIMELINE   0
@@ -1081,13 +1081,13 @@ static void cli(void) {
    * memory fragmentation */
   char new_root[32], new_leaf_root[32];
 
-  cur_list_idx = load_state(&all_lists);
-
   if (surl_connect_proxy() != 0) {
     dputs("Can not connect serial proxy.");
     cgetc();
     exit(1);
   }
+
+  cur_list_idx = load_state(&all_lists);
 
   /* Get rid of init code */
   runtime_once_clean();

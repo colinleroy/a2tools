@@ -31,7 +31,7 @@ struct _surl_response {
 
 };
 
-int __fastcall__ surl_connect_proxy(void);
+char __fastcall__ surl_connect_proxy(void);
 void surl_disconnect_proxy(void);
 
 const surl_response * __fastcall__ surl_start_request(const char method, char *url, char **headers, int n_headers);
