@@ -36,7 +36,7 @@ int api_get_notifications(char to_load, char notifications_type, char *load_befo
   int n_notifications;
 
   n_notifications = 0;
-  snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s?limit=%d" "&types[]=mention%s" "&max_id=%s&min_id=%s", NOTIFICATION_ENDPOINT,
+  snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, NOTIFICATION_ENDPOINT"?limit=%d" "&types[]=mention%s" "&max_id=%s&min_id=%s",
             to_load,
             notifications_type == NOTIFICATION_FAVOURITE ? 
               "&types[]=follow&types[]=favourite&types[]=reblog" : "",
@@ -58,7 +58,7 @@ int api_get_notifications(char to_load, char notifications_type, char *load_befo
 notification *api_get_notification(char *id) {
   notification *n = NULL;
 
-  snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s", NOTIFICATION_ENDPOINT, id);
+  snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, NOTIFICATION_ENDPOINT"/%s", id);
   get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
   
   if (!surl_response_ok())

@@ -42,6 +42,7 @@ extern char arobase;
 #define STATUS_ENDPOINT         "/api/v1/statuses"
 #define NOTIFICATION_ENDPOINT   "/api/v1/notifications"
 #define SEARCH_ENDPOINT         "/api/v2/search"
+#define MEDIA_ENDPOINT          "/api/v1/media"
 
 #define COMPOSE_PUBLIC   0
 #define COMPOSE_UNLISTED 1

@@ -162,7 +162,7 @@ void status_free(status *s) {
 }
 
 status *api_get_status(char *status_id, char full) {
-  snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s", STATUS_ENDPOINT, status_id);
+  snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, STATUS_ENDPOINT"/%s", status_id);
   get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
   
   if (surl_response_ok()) {
