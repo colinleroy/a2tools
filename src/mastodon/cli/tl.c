@@ -136,7 +136,7 @@ static int print_notification(notification *n) {
     cputs(n->created_at); /* no scrolling please */
   CHECK_NO_CRLF();
 
-  w = notification_verb(n);
+  w = notification_verb[n->type];
   dputs(w);
   dputs(": ");
 

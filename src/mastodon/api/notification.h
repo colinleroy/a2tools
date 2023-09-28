@@ -7,6 +7,7 @@ typedef struct _notification notification;
 #define NOTIFICATION_FAVOURITE 1
 #define NOTIFICATION_REBLOG    2
 #define NOTIFICATION_FOLLOW    3
+#define N_NOTIFICATIONS_TYPE   4
 
 struct _notification {
   signed char displayed_at;
@@ -22,5 +23,5 @@ struct _notification {
 int api_get_notifications(char to_load, char notifications_type, char *load_before, char *load_after, char **notification_ids);
 notification *api_get_notification(char *id);
 void notification_free(notification *n);
-char *notification_verb(notification *n);
+extern char *notification_verb[N_NOTIFICATIONS_TYPE];
 #endif

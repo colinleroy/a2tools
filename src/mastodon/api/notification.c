@@ -57,6 +57,7 @@ int api_get_notifications(char to_load, char notifications_type, char *load_befo
 
 notification *api_get_notification(char *id) {
   notification *n = NULL;
+  char c;
 
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, NOTIFICATION_ENDPOINT"/%s", id);
   get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
@@ -75,18 +76,20 @@ notification *api_get_notification(char *id) {
     n_lines = strnsplit_in_place(gen_buf, '\n', lines, 7);
     n = notification_new();
     if (n == NULL || n_lines < 6) {
+err_out:
       notification_free(n);
       return NULL;
     }
 
     n->id = strdup(lines[0]);
-    if (!strcmp(lines[1], "follow")) {
+    c = lines[1][2];
+    if (c == 'l' /* foLlow */) {
       n->type = NOTIFICATION_FOLLOW;
-    } else if (!strcmp(lines[1], "favourite")) {
+    } else if (c == 'v' /* faVourite */) {
       n->type = NOTIFICATION_FAVOURITE;
-    } else if (!strcmp(lines[1], "reblog")) {
+    } else if (c == 'b' /* reBlog */) {
       n->type = NOTIFICATION_REBLOG;
-    } else if (!strcmp(lines[1], "mention")) {
+    } else if (c == 'n' /* meNtion */) {
       n->type = NOTIFICATION_MENTION;
     }
     n->created_at = date_format(lines[2], 1);
@@ -100,8 +103,7 @@ notification *api_get_notification(char *id) {
      * we'll use username */
     n->display_name = (lines[5][0] == '\0' && n_lines == 7) ? strdup(lines[6]) : strdup(lines[5]);
   } else {
-      notification_free(n);
-      return NULL;
+      goto err_out;
   }
   if (surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_FULL, translit_charset,
                     n->type != NOTIFICATION_FOLLOW ? ".status.content":".account.note") >= 0) {
@@ -113,16 +115,9 @@ notification *api_get_notification(char *id) {
   return n;
 }
 
-char *notification_verb(notification *n) {
-  switch(n->type) {
-    case NOTIFICATION_FOLLOW:
-      return("followed you");
-    case NOTIFICATION_FAVOURITE:
-      return("faved");
-    case NOTIFICATION_REBLOG:
-      return("shared");
-    case NOTIFICATION_MENTION:
-      return("mentioned you");
-  }
-  return "???";
-}
+char *notification_verb[N_NOTIFICATIONS_TYPE] = {
+  "mentioned you",
+  "faved",
+  "shared",
+  "followed you"
+};
