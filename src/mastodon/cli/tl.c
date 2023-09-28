@@ -216,6 +216,29 @@ static char load_around(list *l, char to_load, char *first, char *last, char **n
   return loaded;
 }
 
+static void free_posts(list *l, char from, char to) {
+  char i;
+  for (i = from; i < to; i++) {
+    item_free(l, i);
+  }
+}
+
+static void move_post(list *l, char from, char to) {
+  l->displayed_posts[from] = l->displayed_posts[to];
+  l->post_height[from] = l->post_height[to];
+  /* strcpy to avoid memory fragmentation */
+  strcpy(l->ids[from], l->ids[to]);
+}
+
+static void init_post(list *l, char **new_ids, char from, char to) {
+  l->displayed_posts[to] = NULL;
+  l->post_height[to] = -1;
+  /* avoid memory fragmentation, get rid
+   * of new_ids-related storage */
+  strcpy(l->ids[to], new_ids[from]);
+  free(new_ids[from]);
+}
+
 static char load_next_posts(list *l) {
   char *last_id;
   char **new_ids;
@@ -237,30 +260,19 @@ static char load_next_posts(list *l) {
   loaded = load_around(l, to_load, NULL, last_id, new_ids);
 
   if (loaded > 0) {
-    char offset;
+    char split;
     /* free first ones */
-    for (i = 0; i < loaded; i++) {
-      item_free(l, i);
-    }
+    free_posts(l, 0, loaded);
 
     /* move last ones to first ones */
-    for (i = 0; i < list_len - loaded ; i++) {
-      offset = i + loaded;
-      l->displayed_posts[i] = l->displayed_posts[offset];
-      l->post_height[i] = l->post_height[offset];
-      /* strcpy to avoid memory fragmentation */
-      strcpy(l->ids[i], l->ids[offset]);
+    split = list_len - loaded;
+    for (i = 0; i < split ; i++) {
+      move_post(l, i, i + loaded);
     }
 
     /* Set new ones at end */
-    for (i = list_len - loaded; i < list_len; i++) {
-      offset = i - (list_len - loaded);
-      l->displayed_posts[i] = NULL;
-      l->post_height[i] = -1;
-      /* avoid memory fragmentation, get rid
-       * of new_ids-related storage */
-      strcpy(l->ids[i], new_ids[offset]);
-      free(new_ids[offset]);
+    for (i = split; i < list_len; i++) {
+      init_post(l, new_ids, i - split, i);
     }
 
     l->first_displayed_post -= loaded;
@@ -295,36 +307,26 @@ static char load_prev_posts(list *l) {
   loaded = load_around(l, to_load, first_id, NULL, new_ids);
 
   if (loaded > 0) {
-    char offset;
+    char split;
+
+    split = list_len - loaded;
     /* free last ones */
-    for (i = list_len - loaded; i < list_len; i++) {
-      item_free(l, i);
-    }
+    free_posts(l, split, list_len);
 
     /* move first ones to first ones */
-    for (i = list_len - 1 - loaded; i >= 0 ; i--) {
-      offset = i + loaded;
-      l->displayed_posts[offset] = l->displayed_posts[i];
-      l->post_height[offset] = l->post_height[i];
-      /* strcpy to avoid memory fragmentation */
-      strcpy(l->ids[offset], l->ids[i]);
+    for (i = split - 1; i >= 0 ; i--) {
+      move_post(l, i + loaded, i);
     }
 
     /* Set new ones at first */
     for (i = 0; i < loaded; i++) {
-      l->displayed_posts[i] = NULL;
-      l->post_height[i] = -1;
-      /* avoid memory fragmentation, get rid
-       * of new_ids-related storage */
-      strcpy(l->ids[i], new_ids[i]);
-      free(new_ids[i]);
-
-      /* fetch last one before removing the
-       * "Loading" header */
-      if (i == loaded - 1)
-        l->displayed_posts[i] = item_get(l, i, !strcmp(l->root, l->ids[i]));
+      init_post(l, new_ids, i, i);
 
     }
+    /* fetch last one before removing the
+     * "Loading" header */
+    i = loaded - 1;
+    l->displayed_posts[i] = item_get(l, i, !strcmp(l->root, l->ids[i]));
 
     l->first_displayed_post += loaded;
   }
@@ -924,8 +926,7 @@ static char background_load(list *l) {
   return -1;
 }
 
-/* fixme return type */
-static int show_list(list *l) {
+static void show_list(list *l) {
   char c;
   char limit = 0;
 
@@ -965,7 +966,7 @@ static int show_list(list *l) {
         break;
       case 'w':
         hide_cw = !hide_cw;
-        limit =1; /* print the first one */
+        limit = 1; /* print the first one */
         break;
       case 'f':
         if (root_status) {
@@ -974,7 +975,7 @@ static int show_list(list *l) {
         } else if (l->account) {
           cur_action = ACCOUNT_TOGGLE_RSHIP;
           rship_toggle_action = RSHIP_FOLLOWING;
-          return 0;
+          return;
         }
         break;
       case 'b':
@@ -984,7 +985,7 @@ static int show_list(list *l) {
         } else if (l->account) {
           cur_action = ACCOUNT_TOGGLE_RSHIP;
           rship_toggle_action = RSHIP_BLOCKING;
-          return 0;
+          return;
         }
         break;
       case 'm':
@@ -994,18 +995,18 @@ static int show_list(list *l) {
         } else if (l->account) {
           cur_action = ACCOUNT_TOGGLE_RSHIP;
           rship_toggle_action = RSHIP_MUTING;
-          return 0;
+          return;
         } else if (l->kind == SHOW_NOTIFICATIONS) {
           notifications_type = NOTIFICATION_MENTION;
           cur_action = SHOW_NOTIFICATIONS;
-          return 0;
+          return;
         }
         break;
       case 'd':
         if (root_status) {
           if (api_delete_status(root_status) == 0) {
             cur_action = BACK;
-            return 0;
+            return;
           }
         }
         break;
@@ -1013,21 +1014,21 @@ static int show_list(list *l) {
         if (l->kind == SHOW_NOTIFICATIONS) {
           notifications_type = NOTIFICATION_FAVOURITE;
           cur_action = SHOW_NOTIFICATIONS;
-          return 0;
+          return;
         }
         break;
       case 'h':
         cur_action = SHOW_HOME_TIMELINE;
-        return 0;
+        return;
       case 'l':
         cur_action = SHOW_LOCAL_TIMELINE;
-        return 0;
+        return;
       case 'g':
         cur_action = SHOW_GLOBAL_TIMELINE;
-        return 0;
+        return;
       case 'k':
         cur_action = SHOW_BOOKMARKS;
-        return 0;
+        return;
       case CH_ENTER: /* SHOW_FULL_STATUS */
       case CH_ESC:   /* BACK */
       case 'c':      /* COMPOSE */
@@ -1039,10 +1040,9 @@ static int show_list(list *l) {
       case 'r':      /* REPLY */
       case 'e':      /* EDIT */
         cur_action = c;
-        return 0;
+        return;
     }
   }
-  return 0;
 }
 
 static void push_list(void) {
