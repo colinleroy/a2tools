@@ -18,7 +18,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#ifdef __APPLE2ENH__
 #include <apple2enh.h>
+#endif
 #include <em.h>
 #include "simple_em.h"
 

@@ -161,6 +161,11 @@ void simple_serial_configure(void) {
   cputs("Slot:      \r\n"
         "Baud rate: \r\n"
         "\r\n"
+#ifdef __APPLE2ENH__
+        "Up/down/left/right to configure,\r\n"
+#else
+        "Space/left/right to configure,\r\n"
+#endif
         "Enter to validate.");
 
 
@@ -178,8 +183,12 @@ void simple_serial_configure(void) {
     setting_offset = 0;
     c = cgetc();
     switch(c) {
+#ifdef __APPLE2ENH__
       case CH_CURS_UP:
       case CH_CURS_DOWN:
+#else
+      case ' ':
+#endif
         cur_setting = !cur_setting;
         break;
       case CH_CURS_LEFT:
@@ -245,7 +254,7 @@ char __fastcall__ simple_serial_open(void) {
 
 #ifdef __APPLE2ENH__
   #ifdef IIGS
-  if ((err = ser_install(&a2gs_ssc_ser)) != 0)
+  if ((err = ser_install(&a2e_gs_ser)) != 0)
     return err;
   #else
   if ((err = ser_install(&a2e_ssc_ser)) != 0)
