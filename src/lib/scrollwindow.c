@@ -17,9 +17,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#ifdef __CC65__
-#include <apple2enh.h>
-#endif
 
 #include "scrollwindow.h"
 
