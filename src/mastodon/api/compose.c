@@ -10,6 +10,10 @@
 #include "progress_bar.h"
 #ifdef __APPLE2ENH__
 #include <apple2enh.h>
+#else
+  #ifdef __APPLE2__
+  #include <apple2.h>
+  #endif
 #endif
 
 #ifdef __CC65__
@@ -41,7 +45,7 @@ char *api_send_hgr_image(char *filename, char *description, char **err, char x, 
   r = 0;
   to_send = HGR_LEN;
 
-#ifdef __APPLE2ENH__
+#ifdef __APPLE2__
   _filetype = PRODOS_T_BIN;
 #endif
 

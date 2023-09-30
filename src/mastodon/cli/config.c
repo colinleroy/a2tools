@@ -5,6 +5,10 @@
 #include <ctype.h>
 #ifdef __APPLE2ENH__
 #include <apple2enh.h>
+#else
+  #ifdef __APPLE2__
+  #include <apple2.h>
+  #endif
 #endif
 #include "surl.h"
 #include "extended_conio.h"
@@ -104,7 +108,9 @@ int main(int argc, char **argv) {
     cputs("Missing instance_url and/or oauth_token parameters.\n");
   }
 
+#ifdef __APPLE2ENH__
   videomode(VIDEOMODE_80COL);
+#endif
   screensize(&scrw, &scrh);
 
   instance_url = argv[1];

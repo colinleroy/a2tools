@@ -108,7 +108,7 @@ static FILE *open_filenum(int num_file, char *mode) {
   char *filename = get_filename(num_file);
   FILE *fp;
 
-#ifdef __APPLE2ENH__
+#ifdef __APPLE2__
   _filetype = PRODOS_T_TXT;
 #else
 #endif

@@ -21,11 +21,11 @@
 #include "scrollwindow.h"
 #include "clrzone.h"
 
-#ifndef __APPLE2ENH__
+#ifndef __APPLE2__
 static char clearbuf[82];
 #endif
 void __fastcall__ clrzone(char xs, char ys, char xe, char ye) {
-#ifdef __APPLE2ENH__
+#ifdef __APPLE2__
   unsigned char orig_top, orig_bottom;
   unsigned char orig_left, orig_width;
   unsigned char ww = xe - xs + 1;

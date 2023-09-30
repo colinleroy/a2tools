@@ -18,7 +18,14 @@ _dputsxy:
 
 _dputs: sta     ptr1            ; Save s
         stx     ptr1+1
-L1:     lda     (ptr1)
+
+L1:
+        .ifdef  __APPLE2ENH__
+        lda     (ptr1)
+        .else
+        ldy     #$00
+        lda     (ptr1),y
+        .endif
         beq     L9              ; Jump if done
         jsr     _dputc          ; Output char, advance cursor
         inc     ptr1            ; Bump low byte
