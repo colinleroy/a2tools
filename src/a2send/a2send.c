@@ -24,7 +24,7 @@
 #ifndef __CC65__
 #include <libgen.h>
 #else
-#include <apple2enh.h>
+#include "platform.h"
 #endif
 #include "cgets.h"
 #include <stdlib.h>

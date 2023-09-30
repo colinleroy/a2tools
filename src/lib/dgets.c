@@ -135,7 +135,10 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb, c
   char prev_cursor = 0;
 #endif
   unsigned char sx;
-  unsigned char sy, ey, tmp;
+  unsigned char sy, ey;
+#ifdef __APPLE2ENH__
+  unsigned char tmp;
+#endif
   char overflowed = 0;
 
   cur_insert = 0;

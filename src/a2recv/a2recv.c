@@ -20,9 +20,7 @@
 #include "simple_serial.h"
 #include <string.h>
 #include <errno.h>
-#ifdef __APPLE2ENH__
-#include <apple2enh.h>
-#endif
+#include "platform.h"
 #include "clrzone.h"
 
 #define BUF_SIZE 255

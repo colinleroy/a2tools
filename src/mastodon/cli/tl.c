@@ -4,9 +4,7 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <errno.h>
-#ifdef __APPLE2ENH__
-#include <apple2enh.h>
-#endif
+#include "platform.h"
 #include "surl.h"
 #include "extended_conio.h"
 #include "path_helper.h"
