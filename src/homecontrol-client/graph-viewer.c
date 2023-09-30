@@ -22,9 +22,7 @@
 #include <errno.h>
 #include <limits.h>
 #include <time.h>
-#ifdef __APPLE2ENH__
-#include <apple2enh.h>
-#endif
+#include "platform.h"
 #include "math.h"
 #include "tgi_compat.h"
 #include "constants.h"

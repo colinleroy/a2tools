@@ -20,7 +20,7 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
-#include <apple2enh.h>
+#include "platform.h"
 #include <tgi.h>
 
 int main(int argc, char **argv) {

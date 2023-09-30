@@ -21,7 +21,7 @@
 #include <string.h>
 #include <dbg.h>
 #include <errno.h>
-#include <apple2enh.h>
+#include "platform.h"
 
 #define BUF_SIZE 255
 #define DATA_SIZE 16385

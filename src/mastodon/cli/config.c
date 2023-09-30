@@ -3,13 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <ctype.h>
-#ifdef __APPLE2ENH__
-#include <apple2enh.h>
-#else
-  #ifdef __APPLE2__
-  #include <apple2.h>
-  #endif
-#endif
+#include "platform.h"
 #include "surl.h"
 #include "extended_conio.h"
 #include "strsplit.h"

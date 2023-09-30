@@ -2,19 +2,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include "platform.h"
 #include "surl.h"
 #include "simple_serial.h"
 #include "strsplit.h"
 #include "compose.h"
 #include "common.h"
 #include "progress_bar.h"
-#ifdef __APPLE2ENH__
-#include <apple2enh.h>
-#else
-  #ifdef __APPLE2__
-  #include <apple2.h>
-  #endif
-#endif
 
 #ifdef __CC65__
 #pragma code-name (push, "LOWCODE")
