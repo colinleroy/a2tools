@@ -127,12 +127,16 @@ static int print_notification(notification *n) {
   width = scrw - LEFT_COL_WIDTH - 1;
   n->displayed_at = wherey();
   dputs(n->display_name);
+#ifdef __APPLE2ENH__
   gotox(TIME_COLUMN);
   if (writable_lines != 1)
     dputs(n->created_at);
   else
     cputs(n->created_at); /* no scrolling please */
   CHECK_NO_CRLF();
+#else
+  CHECK_AND_CRLF();
+#endif
 
   w = notification_verb[n->type];
   dputs(w);
@@ -292,7 +296,9 @@ static char load_prev_posts(list *l) {
   to_load = N_STATUS_TO_LOAD / 2;
   new_ids = malloc(to_load * sizeof(char *));
 
+#ifdef __APPLE2ENH__
   set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
+#endif
   scrolldown_n(2);
   gotoxy(0,1);
   chline(scrw - LEFT_COL_WIDTH - 1);
@@ -355,7 +361,9 @@ static char search_footer(char c) {
 }
 
 static int show_search(void) {
+#ifdef __APPLE2ENH__
   set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
+#endif
 
   scrolldown_n(3);
 
@@ -378,8 +386,10 @@ static int show_search(void) {
 }
 
 static void __fastcall__ load_indicator(char on) {
+#ifdef __APPLE2ENH__
   gotoxy(LEFT_COL_WIDTH - 4, scrh - 1);
   dputs(on ? "...":"   ");
+#endif
 }
 /* root is either an account or status id, depending on kind.
  * leaf_root is a reblogged status id
@@ -465,9 +475,13 @@ static void uncompact_list(list *l) {
 }
 
 static void clrscrollwin(void) {
+#ifdef __APPLE2ENH__
   set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
   clrscr();
   set_hscrollwindow(0, scrw);
+#else
+  clrscr();
+#endif
 }
 
 char hide_cw = 1;
@@ -495,7 +509,9 @@ static void print_list(list *l, signed char limit) {
 
 update:
   /* set scrollwindow */
+#ifdef __APPLE2ENH__
   set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
+#endif
   gotoxy(0, 0);
 
   writable_lines = scrh;
@@ -609,13 +625,15 @@ static void shift_posts_down(list *l) {
   shift_displayed_at(l, scroll_val);
 
   l->first_displayed_post++;
+#ifdef __APPLE2ENH__
   set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
-
+#endif
   scrollup_n(scroll_val);
 
 #ifndef __CC65__
   clrscr();
 #endif
+
   set_hscrollwindow(0, scrw);
 }
 
@@ -694,7 +712,9 @@ static int shift_posts_up(list *l) {
     scroll_val = scrh;
   }
 
+#ifdef __APPLE2ENH__
   set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
+#endif
   if (scroll_val > 0)
     scrolldown_n(scroll_val);
 
@@ -704,6 +724,7 @@ static int shift_posts_up(list *l) {
 #ifndef __CC65__
   clrscr();
 #endif
+
   set_hscrollwindow(0, scrw);
   return 0;
 }
