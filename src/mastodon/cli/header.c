@@ -24,6 +24,7 @@
 account *my_account = NULL;
 
 char __fastcall__ print_header(list *l, status *root_status, notification *root_notif) {
+#ifdef __APPLE2ENH__
   if (my_account == NULL) {
     my_account = api_get_profile(NULL);
   }
@@ -122,11 +123,13 @@ char __fastcall__ print_header(list *l, status *root_status, notification *root_
 
   print_free_ram();
   cvlinexy(LEFT_COL_WIDTH, 0, scrh);
+
+#endif
   return 0;
 }
 
 void __fastcall__ print_free_ram(void) {
-#ifdef __CC65__
+#ifdef __APPLE2ENH__
   gotoxy(0, 23);
   cprintf("%zuB free     ",
           _heapmemavail());

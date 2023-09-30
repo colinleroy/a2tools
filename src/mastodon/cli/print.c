@@ -85,12 +85,16 @@ int print_status(status *s, char hide, char full) {
     s->account->display_name[30] = '\0';
   }
   dputs(s->account->display_name);
+#ifdef __APPLE2ENH__
   gotox(TIME_COLUMN);
   if (writable_lines != 1)
     dputs(s->created_at);
   else
     cputs(s->created_at); /* no scrolling please */
   CHECK_NO_CRLF();
+#else
+  CHECK_AND_CRLF();
+#endif
 
   /* username (30 chars max)*/
   dputc(arobase);
