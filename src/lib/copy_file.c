@@ -36,7 +36,7 @@ int __fastcall__ copy_file(char *source_file, const char *dest_dir) {
   }
   
   snprintf(dest_file, sizeof(dest_file), "%s/%s", dest_dir, filename);
-#ifdef __APPLE2ENH__
+#ifdef __APPLE2__
   _filetype = type;
   _auxtype = auxtype;
 #endif

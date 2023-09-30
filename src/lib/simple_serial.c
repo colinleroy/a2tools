@@ -89,7 +89,7 @@ static struct ser_params default_params = {
 static char simple_serial_settings(const char *path, char *mode) {
   FILE *fp;
 
-#ifdef __APPLE2ENH__
+#ifdef __APPLE2__
   _filetype = PRODOS_T_BIN;
   _auxtype  = PRODOS_AUX_T_TXT_SEQ;
 #endif
@@ -263,8 +263,20 @@ char __fastcall__ simple_serial_open(void) {
 
   if ((err = ser_apple2_slot(slot)) != 0)
     return err;
-#endif
+#else
+  #ifdef __APPLE2__
+    #ifdef IIGS
+    if ((err = ser_install(&a2_gs_ser)) != 0)
+      return err;
+    #else
+    if ((err = ser_install(&a2_ssc_ser)) != 0)
+      return err;
+    #endif
 
+    if ((err = ser_apple2_slot(slot)) != 0)
+      return err;
+  #endif
+#endif
   default_params.baudrate = baudrate;
 
   err = ser_open (&default_params);
@@ -728,7 +740,7 @@ void __fastcall__ simple_serial_read(char *ptr, size_t nmemb) {
   cur = ptr;
   end = ptr + nmemb;
 
-#ifdef __APPLE2ENH__
+#ifdef __APPLE2__
   __asm__("                  lda %v", cur);               /* Copy cur to ZP */
   __asm__("                  sta tmp1");
   __asm__("                  lda %v+1", cur);
@@ -739,7 +751,12 @@ void __fastcall__ simple_serial_read(char *ptr, size_t nmemb) {
   __asm__("                  lda %v+1", end);
   __asm__("                  sta tmp4");
 
+#ifdef __APPLE2ENH__
   __asm__("                  bra check_bound");           /* branch to check cur != end */
+#else
+  __asm__("                  lda #$00");
+  __asm__("                  beq check_bound");           /* branch to check cur != end */
+#endif
 
     __asm__("read_again:       lda tmp1");                /* low byte in A */
     __asm__("read_again_aok:   ldx tmp2");                /* high byte in X */

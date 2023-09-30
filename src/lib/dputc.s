@@ -8,7 +8,12 @@
 
         .export         _dputcxy, _dputc
         .export         dnewline
-        .import         gotoxy, VTABZ, putchardirect
+        .import         gotoxy, VTABZ
+        .ifdef  __APPLE2ENH__
+        .import         putchardirect
+        .else
+        .import         putchar
+        .endif
         .import         _scrollup_one
 
         .include        "apple2.inc"
@@ -24,7 +29,11 @@ special_chars:
         beq     backspace
         cmp     #$07            ; Test for bell
         beq     bell
+        .ifdef  __APPLE2ENH__
         bra     invert          ; Back to standard codepath
+        .else
+        jmp     invert
+        .endif
 
 _dputcxy:
         pha                     ; Save C
@@ -37,7 +46,18 @@ _dputc:
         bcc     special_chars   ; Skip other tests if possible
 invert: eor     #$80            ; Invert high bit
 
+        .ifndef __APPLE2ENH__
+        cmp     #$E0            ; Test for lowercase
+        bcc     dputdirect
+        and     #$DF            ; Convert to uppercase
+        .endif
+
+dputdirect:
+        .ifndef __APPLE2ENH__
+        jsr     putchar
+        .else
         jsr     putchardirect
+        .endif
         inc     CH              ; Bump to next column
         lda     CH
         cmp     WNDWDTH
@@ -45,7 +65,13 @@ invert: eor     #$80            ; Invert high bit
         rts
 
 :       jsr     dnewline
-left:   stz     CH              ; Goto left edge of screen
+left:
+        .ifdef  __APPLE2ENH__
+        stz     CH              ; Goto left edge of screen
+        .else
+        lda     #$00
+        sta     CH
+        .endif
         rts
 
 bell:

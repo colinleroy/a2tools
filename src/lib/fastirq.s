@@ -97,8 +97,11 @@ handle_ram_irq:
         asl     a
         asl     a
         bpl     :+
+
         ; Give BRK to the standard handler
+        .ifdef __APPLE2ENH__
         jmp     (_prev_ram_irq_vector)
+        .endif
 
         ; It's an IRQ
 :       lda     _a_backup

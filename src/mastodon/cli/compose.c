@@ -351,7 +351,9 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
+#ifdef __APPLE2ENH__
   videomode(VIDEOMODE_80COL);
+#endif
   screensize(&scrw, &scrh);
 
   instance_url = argv[1];

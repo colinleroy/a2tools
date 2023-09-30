@@ -184,7 +184,11 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb, c
       }
     } else if (c == CH_ENTER && (!cmd_cb || !enter_accepted)) {
       goto out;
-    } else if (c == CH_CURS_LEFT || c == CH_DEL) {
+    } else if (c == CH_CURS_LEFT
+#ifdef __APPLE2ENH__
+       || c == CH_DEL
+#endif
+     ) {
       if (cur_insert == 0) {
 err_beep:
         dputc(0x07);
@@ -207,6 +211,7 @@ err_beep:
       } else {
         cur_x--;
       }
+#ifdef __APPLE2ENH__
       if (c == CH_DEL) {
         char deleted = text_buf[cur_insert];
         /* shift chars down */
@@ -219,6 +224,7 @@ err_beep:
         gotoxy(cur_x, cur_y);
         rewrite_end_of_buffer(deleted == '\n');
       }
+#endif
       gotoxy(cur_x, cur_y);
     } else if (c == CH_CURS_RIGHT) {
       /* are we at buffer end? */
@@ -252,6 +258,7 @@ down_left:
         rewrite_end_of_buffer(0);
       }
       gotoxy(cur_x, cur_y);
+#ifdef __APPLE2ENH__
     } else if (c == CH_CURS_UP) {
       if (!cmd_cb || cur_insert == 0) {
         /* No up/down in standard line edit */
@@ -328,6 +335,7 @@ down_left:
       }
 stop_down:
       gotoxy(cur_x, cur_y);
+#endif
     } else {
       if (max_insert == size) {
         /* Full buffer */

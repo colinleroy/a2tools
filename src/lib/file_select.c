@@ -163,7 +163,11 @@ up:
         snprintf(filename, FILENAME_MAX, "%s%s%s", last_dir, (last_dir[0] != '\0' ? "/":""), list[sel]);
         goto out;
       }
+#ifdef __APPLE2ENH__
     case CH_CURS_DOWN:
+#else
+    case 'j':
+#endif
       if (sel < n - 1)
         sel++;
       if (sel == start + ey - sy - 3) {
@@ -171,7 +175,11 @@ up:
         goto full_disp_again;
       }
       break;
+#ifdef __APPLE2ENH__
     case CH_CURS_UP:
+#else
+    case 'u':
+#endif
       if (sel > 0)
         sel--;
       if (sel < start) {

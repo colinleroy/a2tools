@@ -49,9 +49,15 @@ char monochrome = 1;
   #define PROGRESS_STEPS 32
 #else
   #define HGR_PAGE 0x2000
-  #define TEXTMODE VIDEOMODE_80COL
-  #define NUMCOLS 80
-  #define PROGRESS_STEPS 64
+  #ifdef __APPLE2ENH__
+    #define TEXTMODE VIDEOMODE_80COL
+    #define NUMCOLS 80
+    #define PROGRESS_STEPS 64
+  #else
+    #define TEXTMODE VIDEOMODE_40COL
+    #define NUMCOLS 40
+    #define PROGRESS_STEPS 32
+  #endif
   #ifdef __CC65__
     #pragma rodata-name (push, "HGR")
     char *hgr_page;
@@ -65,7 +71,7 @@ char monochrome = 1;
 #endif
 
 static void init_hgr(void) {
-#ifdef __APPLE2ENH__
+#ifdef __APPLE2__
 
   #ifdef USE_HGR2
   __asm__("lda     #$40");
@@ -96,7 +102,7 @@ static void init_hgr(void) {
 #endif
 
 void init_text(void) {
-#ifdef __APPLE2ENH__
+#ifdef __APPLE2__
   __asm__("bit     $C054"); /* LOWSCR */
   __asm__("bit     $C051"); /* TXTSET */
   __asm__("bit     $C056"); /* LORES */
@@ -111,7 +117,7 @@ static void show_help(void) {
         "Save image   : S\r\n"
         "Quit viewer  : Esc\r\n"
         "Next image   : Any other key");
-#ifdef __APPLE2ENH__
+#ifdef __APPLE2__
   gotoxy(0, 22);
   printf("%zuB free\n", _heapmemavail());
 #endif
@@ -121,7 +127,7 @@ static char legend = 0;
 static void toggle_legend(char force) {
   legend = !legend || force;
 
-#ifdef __APPLE2ENH__
+#ifdef __APPLE2__
   if (legend) {
     init_text();
   } else {
@@ -206,7 +212,7 @@ static void save_image(void) {
   dget_text(buf, sizeof(buf) - 1, NULL, 0);
   clrzone(0, 22, NUMCOLS, 23);
 
-#ifdef __APPLE2ENH__
+#ifdef __APPLE2__
   _filetype = PRODOS_T_BIN;
   _auxtype = HGR_PAGE;
 
@@ -240,7 +246,9 @@ int img_main(int argc, char **argv) {
   media *m;
   char i, c;
 
+#ifdef __APPLE2ENH__
   videomode(TEXTMODE);
+#endif
 
   if (argc < 6) {
     cputs("IMG: Missing parameters.\r\n");

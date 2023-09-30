@@ -1,0 +1,2 @@
+#!/bin/bash
+make clean all IIGS=1 && cd ../.. && make telnet-iigs.dsk IIGS=1 && mame apple2gs -window -flop1 telnet-iigs.dsk -resolution 560x384 -modem null_modem -bitb socket.localhost:2000 -nomouse -nodebug; cd src/surl
