@@ -4,7 +4,8 @@
 #include "extended_conio.h"
 
 void print_logo(unsigned char scrw) {
-  char *logo = 
+#ifdef __APPLE2ENH__
+  char *logo =
     "   ***************\r\n"
     " ***      '      ***       WELCOME TO MASTODON\r\n"
     "***   ***   ***   ***\r\n"
@@ -19,6 +20,22 @@ void print_logo(unsigned char scrw) {
   set_hscrollwindow((scrw - 58) / 2, 58);
   gotoxy(0, 2);
   cputs(logo);
+#else
+  char *logo =
+    "   ***************\r\n"
+    " ***      '      ***      WELCOME TO \r\n"
+    "***   ***   ***   ***      MASTODON\r\n"
+    "***   ***   ***   ***\r\n"
+    "***   *********   *** https://colino.net\r\n"
+    " *******************\r\n"
+    "  ****************\r\n"
+    "   ****\r\n"
+    "     *********'\r\n";
+
+  /* 58 is the width of char *logo */
+  gotoxy(0, 2);
+  cputs(logo);
+#endif
   set_hscrollwindow(0, scrw);
   cputs("\r\n");
   chline(scrw);
