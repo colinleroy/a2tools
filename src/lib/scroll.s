@@ -44,6 +44,7 @@ _scrolldown_one:
 _scrollup_one:
         ldy     #1              ;direction = up
 
+.ifdef __APPLE2ENH__
 scrollit:
         txa                     ;save X
         pha
@@ -196,3 +197,13 @@ clr3:
         ldx     BAS2L
         sec
         rts
+
+.else   ; __APPLE2__
+
+scrollit:
+        bit $C082
+        jsr $FC70
+        bit $C080
+        rts
+
+.endif
