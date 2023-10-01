@@ -6,17 +6,26 @@ ser_debug_SOURCES :=
 debug_CFLAGS :=
 endif
 
+TARGET := apple2enh
+USE_LANGCARD := -DSURL_TO_LANGCARD
+
 ifdef IIGS
 iigs_CFLAGS := -DIIGS --asm-define IIGS
 suffix := -iigs
 upload_subdir := /iigs
-
+else
+ifdef OLDII
+iigs_FLAGS :=
+suffix :=
+upload_subdir :=
+TARGET := apple2
+USE_LANGCARD :=
 else
 iigs_FLAGS :=
 suffix :=
 upload_subdir :=
 endif
-
+endif
 common_SOURCES := \
 	api/common.c \
 	../lib/clrzone.c \
@@ -96,10 +105,10 @@ mastoconf_CC65SOURCES :=
 GCCSOURCES := ../lib/extended_conio.c ../lib/clrzone.c ../lib/extended_string.c ../lib/tgi_sdl.c ../lib/tgi_fastline.c
 DEPS :=
 
-CC65_TARGET = apple2enh
+CC65_TARGET = $(TARGET)
 CFLAGS  = -I ../lib -I api -I cli -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
 
-CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x400 -DSURL_TO_LANGCARD -C ../../config/apple2enh-rtonce.cfg $(debug_CFLAGS)  $(iigs_CFLAGS)
+CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x400 $(USE_LANGCARD) -C ../../config/apple2enh-rtonce.cfg $(debug_CFLAGS)  $(iigs_CFLAGS)
 #Using start address 0x4000 is easier than HGR page 2, and also allows to use 80 columns
 mastodon_CLCFLAGS = $(CLCFLAGS) --start-addr 0x4000
 

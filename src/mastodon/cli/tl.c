@@ -38,7 +38,7 @@ static signed char cur_list_idx;
 
 /* actions mapped to keys */
 #if NUMCOLS == 40
-#define SHOW_HELP          ' '
+#define SHOW_HELP            HELP_KEY
 #endif
 #define SHOW_FULL_STATUS     CH_ENTER
 #define BACK                 CH_ESC
@@ -95,6 +95,8 @@ static int print_account(account *a) {
   CHECK_NO_CRLF();
 
   api_relationship_get(a, 0);
+
+#if NUMCOLS == 80
   y = 0;
   if (api_relationship_get(a, RSHIP_FOLLOWING)) {
     gotoxy(32, y);
@@ -107,6 +109,19 @@ static int print_account(account *a) {
     gotoxy(32, ++y);
     dputs("             They follow you\r\n");
   }
+#else
+  if (api_relationship_get(a, RSHIP_FOLLOWING)) {
+    dputs("You follow them\r\n");
+    CHECK_AND_CRLF();
+  } else if (api_relationship_get(a, RSHIP_FOLLOW_REQ)) {
+    dputs("You requested to follow them\r\n");
+    CHECK_AND_CRLF();
+  }
+  if (api_relationship_get(a, RSHIP_FOLLOWED_BY)) {
+    dputs("They follow you\r\n");
+    CHECK_AND_CRLF();
+  }
+#endif
 
   if (wherey() < 4) {
     gotoy(4);
@@ -345,15 +360,17 @@ static char load_prev_posts(list *l) {
 static char search_footer(char c) {
   c = tolower(c);
   switch (c) {
-    case 'm':
+    case 't':
+      search_type = 'm';
+      break;
     case 'a':
-      search_type = c;
+      search_type = 'a';
       break;
     default:
       break;
   }
   gotoxy(0,1);
-  cprintf("(%c) Messages (%c) Account   (Open-Apple + M/A)\r\n",
+  cprintf("(%c) Toots (%c) Account   ("KEY_COMB" + T/A)\r\n",
           search_type == 'm' ? '*':' ',
           search_type == 'a' ? '*':' ');
   chline(scrw - RIGHT_COL_START);
@@ -978,7 +995,7 @@ inject_cmd:
 #ifdef __APPLE2ENH__
       case CH_CURS_DOWN:
 #else
-      case CH_CURS_RIGHT:
+      case 'j':
 #endif
         hide_cw = 1;
         shift_posts_down(l);
@@ -986,7 +1003,7 @@ inject_cmd:
 #ifdef __APPLE2ENH__
       case CH_CURS_UP:
 #else
-      case CH_CURS_LEFT:
+      case 'u':
 #endif
         hide_cw = 1;
         shift_posts_up(l);
@@ -1076,7 +1093,7 @@ inject_cmd:
         c = cgetc();
         clrscr();
         l->half_displayed_post = 0;
-        if (c == ' ') {
+        if (c == HELP_KEY) {
           cur_action = NAVIGATE;
           return;
         } else {

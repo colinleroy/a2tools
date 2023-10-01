@@ -29,6 +29,7 @@
 #include "scroll.h"
 #include "extended_conio.h"
 #include "math.h"
+#include "cli.h"
 #include "api.h"
 #include "oauth.h"
 #include "logo.h"
@@ -37,7 +38,7 @@
 
 #define BUF_SIZE 255
 
-static unsigned char scrw, scrh;
+unsigned char scrw, scrh;
 char *instance_url = NULL;
 char *client_id = NULL;
 char *client_secret = NULL;
@@ -215,6 +216,10 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
+#if NUMCOLS == 40
+  dputs("\r\nHint: Use Ctrl-Y to toggle help menu");
+  dputs("\r\nfrom anywhere in the program.");
+#endif
   snprintf(params, BUF_SIZE, "%s %s", instance_url, oauth_token);
 
   set_scrollwindow(0, scrh);

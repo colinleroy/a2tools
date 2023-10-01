@@ -3,3 +3,9 @@
 rm *.dsk
 make clean all dist upload
 make clean all dist upload IIGS=1
+
+#Only mastodon is ported to old II yet
+cd src/mastodon
+make clean all OLDII=1
+cd ../../
+make mastodon-oldii.dsk OLDII=1

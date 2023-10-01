@@ -17,7 +17,7 @@
 #include "dgets.h"
 #include "scrollwindow.h"
 
-#ifdef __CC65__
+#ifdef SURL_TO_LANGCARD
 #pragma code-name (push, "LC")
 #endif
 
@@ -61,7 +61,7 @@ void show_help (list *l, status *root_status, notification *root_notif) {
 #ifdef __APPLE2ENH__
         " Scroll    : Up/dn \r\n"
 #else
-        " Scroll    : Left/Right \r\n"
+        " Scroll    : U/J   \r\n"
 #endif
         " Search    : S     \r\n"
         " Notifs.   : N     \r\n"
@@ -145,6 +145,6 @@ void __fastcall__ print_free_ram(void) {
 #endif
 }
 
-#ifdef __CC65__
+#ifdef SURL_TO_LANGCARD
 #pragma code-name (pop)
 #endif

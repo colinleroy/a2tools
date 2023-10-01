@@ -44,6 +44,7 @@ static char compose_audience = COMPOSE_PUBLIC;
 static char cancelled = 0;
 static char should_open_images_menu = 0;
 static char should_open_cw_menu = 0;
+static char should_resume_composing = 0;
 
 static status *ref_status = NULL;
 static char *compose_mode = "c";
@@ -63,7 +64,7 @@ static void update_compose_audience(void) {
     dputs(": Use ] to mention, and # for hashtags.");
   } /* FIXME add other local charsets */
 #else
-  cprintf("Audience: %s",
+  cprintf("Audience: %s     ",
         compose_audience_str(compose_audience));
 #endif
 }
@@ -89,13 +90,26 @@ static void update_cw(void) {
 static char dgt_cmd_cb(char c) {
   switch(tolower(c)) {
     case 's':    return 1;
-    case CH_ESC: cancelled = 1;                       return 1;
     case 'i':    should_open_images_menu = 1;         return 1;
     case 'c':    should_open_cw_menu = 1;             return 1;
     case 'p':    compose_audience = COMPOSE_PUBLIC;   break;
     case 'r':    compose_audience = COMPOSE_PRIVATE;  break;
+#if NUMCOLS == 80
     case 'u':    compose_audience = COMPOSE_UNLISTED; break;
     case 'm':    compose_audience = COMPOSE_MENTION;  break;
+    case CH_ESC: cancelled = 1;                       return 1;
+#else
+    case 'n':    compose_audience = COMPOSE_UNLISTED; break;
+    case 'd':    compose_audience = COMPOSE_MENTION;  break;
+    case 'x':    cancelled = 1;                       return 1;
+    case 'y':    should_resume_composing = 1;
+                 set_scrollwindow(0, scrh);
+                 clrscr();
+                 compose_show_help();
+                 c = cgetc();
+                 clrscr();
+                 return 1;
+#endif
   }
   set_scrollwindow(0, scrh);
   update_compose_audience();
@@ -160,6 +174,9 @@ static void add_image() {
   }
 
   dputs("File name: ");
+#if NUMCOLS == 40
+  dputs("\r\n");
+#endif
   x = wherex();
   y = wherey();
   media_files[n_medias] = file_select(x, y, scrw - RIGHT_COL_START - x, y + 10, 0, "Please choose an image");
@@ -235,7 +252,7 @@ image_menu:
   }
 
   print_free_ram();
-  gotoxy(0, scrh -2);
+  gotoxy(0, scrh - 3);
   if (n_medias < MAX_IMAGES) {
     dputs("Enter: add image");
   }
@@ -243,9 +260,10 @@ image_menu:
     dputs(" - ");
   }
   if (n_medias > 0) {
-    cprintf(" - R: remove image %d", n_medias);
+    cprintf("R: remove image %d", n_medias);
   }
-  cprintf("\r\nS: Mark image(s) %ssensitive - Escape: back to editing",
+  cprintf("\r\nS: Mark image(s) %ssensitive"
+          "\r\nEscape: back to editing",
           sensitive_medias ? "not ":"");
 
   c = cgetc();
@@ -308,6 +326,10 @@ resume_composing:
   if (should_open_cw_menu) {
     should_open_cw_menu = 0;
     open_cw_menu();
+    goto resume_composing;
+  }
+  if (should_resume_composing) {
+    should_resume_composing = 0;
     goto resume_composing;
   }
 out:

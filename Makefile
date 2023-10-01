@@ -2,8 +2,12 @@ ifdef IIGS
 iigs_CFLAGS := -DIIGS
 suffix := -iigs
 else
+ifdef OLDII
+suffix := -oldii
+else
 iigs_FLAGS :=
 suffix :=
+endif
 endif
 
 SUBDIRS = src doc
