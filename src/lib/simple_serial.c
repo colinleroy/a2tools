@@ -155,6 +155,11 @@ void simple_serial_configure(void) {
     }
   }
 
+  /* Make sure we don't have an opened serial
+   * port lingering around.
+   */
+  simple_serial_close();
+
   clrscr();
   gotoxy(0, 0);
   cputs("Serial connection settings\r\n\r\n");
@@ -289,7 +294,8 @@ char __fastcall__ simple_serial_open(void) {
 }
 
 char __fastcall__ simple_serial_close(void) {
-  return ser_close();
+  ser_close();
+  return ser_uninstall();
 }
 
 void __fastcall__ simple_serial_flush(void) {
