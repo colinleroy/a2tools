@@ -11,7 +11,6 @@
 #pragma code-name (push, "LOWCODE")
 #endif
 
-#define TL_SPOILER_TEXT_BUF 54
 #define TL_STATUS_SHORT_BUF 512
 #define TL_STATUS_LARGE_BUF 4096
 

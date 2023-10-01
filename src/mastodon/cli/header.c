@@ -24,14 +24,13 @@
 account *my_account = NULL;
 
 char __fastcall__ print_header(list *l, status *root_status, notification *root_notif) {
-#ifdef __APPLE2ENH__
   if (my_account == NULL) {
     my_account = api_get_profile(NULL);
   }
   if (my_account == NULL) {
     return -1;
   }
-
+#if NUMCOLS == 80
   if (strlen(my_account->display_name) > LEFT_COL_WIDTH)
     my_account->display_name[LEFT_COL_WIDTH] = '\0';
 
@@ -129,7 +128,7 @@ char __fastcall__ print_header(list *l, status *root_status, notification *root_
 }
 
 void __fastcall__ print_free_ram(void) {
-#ifdef __APPLE2ENH__
+#if NUMCOLS == 80
   gotoxy(0, 23);
   cprintf("%zuB free     ",
           _heapmemavail());

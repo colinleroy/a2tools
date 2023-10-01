@@ -24,6 +24,7 @@ void compose_print_header(void) {
   if (my_account == NULL) {
     my_account = api_get_profile(NULL);
   }
+#if NUMCOLS == 80
   if (my_account != NULL) {
     if (strlen(my_account->display_name) > LEFT_COL_WIDTH)
       my_account->display_name[LEFT_COL_WIDTH] = '\0';
@@ -59,10 +60,11 @@ void compose_print_header(void) {
 
   print_free_ram();
   cvlinexy(LEFT_COL_WIDTH, 0, scrh);
+#endif
 }
 
 void print_free_ram(void) {
-#ifdef __CC65__
+#if NUMCOLS == 80
   unsigned char sx, wx;
 
   get_hscrollwindow(&sx, &wx);

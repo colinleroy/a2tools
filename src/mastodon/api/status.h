@@ -3,6 +3,12 @@
 
 #include "account.h"
 
+#ifdef __APPLE2ENH__
+#define TL_SPOILER_TEXT_BUF 54
+#else
+#define TL_SPOILER_TEXT_BUF 34
+#endif
+
 typedef struct _status status;
 
 #define FAVOURITED (1<<0)

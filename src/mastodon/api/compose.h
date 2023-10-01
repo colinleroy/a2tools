@@ -5,6 +5,8 @@
 
 #define NUM_CHARS 501
 
+char *compose_audience_str(char compose_audience);
+
 signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medias,
                           char *ref_toot_id, char **media_ids, char n_medias,
                           char compose_audience);
