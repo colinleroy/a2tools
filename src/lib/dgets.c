@@ -89,6 +89,7 @@ static char __fastcall__ rewrite_end_of_buffer(char full) {
   if (cur_insert == max_insert) {
     /* Just clear EOL */
     clrzone(x, y, win_width - 1, y);
+    gotoxy(x, y);
     return 0;
   }
 
@@ -96,6 +97,7 @@ static char __fastcall__ rewrite_end_of_buffer(char full) {
     char c = text_buf[k];
     if (c == '\n' || k == max_insert - 1) {
       clrzone(x, y, win_width - 1, y);
+      gotoxy(x, y);
     }
     if (x == win_width || k == max_insert - 1) {
       if (y + 1 < win_height) {
