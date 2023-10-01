@@ -6,8 +6,6 @@
 
 typedef struct _list list;
 
-#define N_STATUS_TO_LOAD 10
-
 struct _list {
   char kind;
   char *root; /* For timelines */

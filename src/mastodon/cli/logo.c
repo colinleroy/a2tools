@@ -23,14 +23,14 @@ void print_logo(unsigned char scrw) {
 #else
   char *logo =
     "  **********\r\n"
-    " **        **      WELCOME TO \r\n"
-    "**  **  **  **      MASTODON\r\n"
+    " **        **        WELCOME TO\r\n"
+    "**  **  **  **        MASTODON\r\n"
     "**  **  **  **\r\n"
-    "**  ******  ** https://colino.net\r\n"
-    " ************\r\n"
-    "  ********\r\n"
-    "   **\r\n"
-    "    ****'\r\n";
+    "**  ******  **   (c) Colin Leroy-Mira\r\n"
+    " ************       https://colino.net\r\n"
+    "  *********\r\n"
+    "   **           This program is GPL v3.\r\n"
+    "     ****'\r\n";
 
   /* 58 is the width of char *logo */
   gotoxy(0, 2);
