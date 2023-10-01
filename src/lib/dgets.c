@@ -99,7 +99,7 @@ static char __fastcall__ rewrite_end_of_buffer(char full) {
       clrzone(x, y, win_width - 1, y);
       gotoxy(x, y);
     }
-    if (x == win_width || k == max_insert - 1) {
+    if (x == win_width || (c == '\n' && k == max_insert - 1)) {
       if (y + 1 < win_height) {
         clrzone(0, y + 1, win_width - 1, y + 1);
         gotoxy(x, y);
