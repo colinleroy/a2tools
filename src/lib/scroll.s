@@ -201,9 +201,63 @@ clr3:
 .else   ; __APPLE2__
 
 scrollit:
-        bit $C082
-        jsr $FC70
-        bit $C080
+        sty     TEMP1           ;save direction
+        cpy     #1
+        beq     initup
+        lda     WNDBTM
+        sec
+        sbc     #1
+        jmp     start
+
+initup:
+        lda     WNDTOP
+start:
+        pha
+        jsr     VTABZ
+        
+scrl1:  lda     BASL
+        sta     BAS2L
+        lda     BASH
+        sta     BAS2H
+
+        lda     TEMP1           ;remember direction
+        bne     contup
+        
+        pla
+        sec
+        sbc     #1              ;down
+        cmp     WNDTOP
+        bmi     scrl3
+        bpl     cont
+
+contup:
+        pla
+        adc     #1
+        cmp     WNDBTM
+        bcs     scrl3
+cont:
+        pha
+        jsr     VTABZ
+
+        ldy     WNDWDTH
+        dey
+scrl2:  lda     (BASL),y
+        sta     (BAS2L),y
+        dey
+        bpl     scrl2
+
+        bmi     scrl1
+
+scrl3:  ldy     #0
+        jsr     clreolz
+        rts
+
+clreolz:
+        lda     #' '|$80
+cleol2: sta     (BASL),y
+        iny
+        cpy     WNDWDTH
+        bcc     cleol2
         rts
 
 .endif
