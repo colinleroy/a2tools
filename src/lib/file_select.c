@@ -133,7 +133,11 @@ disp_again:
   revers(0);
 
   gotox(sx);dputs("! \r\n");
-  gotox(sx);dputs("!  Up/Down/Left/Right: navigate;\r\n");
+#ifdef __APPLE2ENH__
+  gotox(sx);dputs("!  Up/Down / Left/Right: navigate;\r\n");
+#else
+  gotox(sx);dputs("!  U/J / Left/Right: navigate;\r\n");
+#endif
   gotox(sx);dputs("-- Enter: select; Esc: cancel");
 
   c = tolower(cgetc());

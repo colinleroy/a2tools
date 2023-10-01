@@ -6,5 +6,7 @@
 extern account *my_account;
 
 void compose_print_header(void);
+void compose_show_help (void);
 void print_free_ram(void);
+
 #endif

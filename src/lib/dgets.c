@@ -129,7 +129,6 @@ static char __fastcall__ rewrite_end_of_buffer(char full) {
 
 char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb, char enter_accepted) {
   char c;
-  size_t k;
   char cur_x, cur_y;
 #ifdef __CC65__
   char prev_cursor = 0;
@@ -137,6 +136,7 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb, c
   unsigned char sx;
   unsigned char sy, ey;
 #ifdef __APPLE2ENH__
+  size_t k;
   unsigned char tmp;
 #endif
   char overflowed = 0;
@@ -173,11 +173,21 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb, c
 
     c = cgetc();
 
+#ifdef __APPLE2ENH__
     if (cmd_cb && (c & 0x80) != 0) {
       if (cmd_cb((c & ~0x80))) {
         goto out;
       }
       gotoxy(cur_x, cur_y);
+#else
+    /* No Open-Apple there, let's do it with Ctrl */
+    if (cmd_cb && c < 27 &&
+        c != CH_ENTER && c != CH_CURS_LEFT && c != CH_CURS_RIGHT) {
+      if (cmd_cb(c + 'A' - 1)) {
+        goto out;
+      }
+      gotoxy(cur_x, cur_y);
+#endif
     } else if (c == CH_ESC) {
       if (cmd_cb && enter_accepted)
         continue;
