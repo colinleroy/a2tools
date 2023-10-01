@@ -30,12 +30,22 @@ char __fastcall__ print_header(list *l, status *root_status, notification *root_
   if (my_account == NULL) {
     return -1;
   }
+
 #if NUMCOLS == 80
   if (strlen(my_account->display_name) > LEFT_COL_WIDTH)
     my_account->display_name[LEFT_COL_WIDTH] = '\0';
 
   if (strlen(my_account->username) > LEFT_COL_WIDTH)
     my_account->username[LEFT_COL_WIDTH] = '\0';
+
+  show_help(l, root_status, root_notif);
+  cvlinexy(LEFT_COL_WIDTH, 0, scrh);
+#endif
+
+  return 0;
+}
+
+void show_help (list *l, status *root_status, notification *root_notif) {
 
   gotoxy(0, 0);
   dputs(my_account->display_name);
@@ -48,7 +58,11 @@ char __fastcall__ print_header(list *l, status *root_status, notification *root_
 
   dputs("Commands:          \r\n"
         " View toot : Enter \r\n"
+#ifdef __APPLE2ENH__
         " Scroll    : Up/dn \r\n"
+#else
+        " Scroll    : Left/Right \r\n"
+#endif
         " Search    : S     \r\n"
         " Notifs.   : N     \r\n"
         " Timelines : H/L/G \r\n"
@@ -121,14 +135,10 @@ char __fastcall__ print_header(list *l, status *root_status, notification *root_
 #endif
 
   print_free_ram();
-  cvlinexy(LEFT_COL_WIDTH, 0, scrh);
-
-#endif
-  return 0;
 }
 
 void __fastcall__ print_free_ram(void) {
-#if NUMCOLS == 80
+#ifdef __APPLE2__
   gotoxy(0, 23);
   cprintf("%zuB free     ",
           _heapmemavail());

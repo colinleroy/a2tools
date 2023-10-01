@@ -37,6 +37,9 @@ static list **all_lists;
 static signed char cur_list_idx;
 
 /* actions mapped to keys */
+#if NUMCOLS == 40
+#define SHOW_HELP          ' '
+#endif
 #define SHOW_FULL_STATUS     CH_ENTER
 #define BACK                 CH_ESC
 #define COMPOSE              'c'
@@ -961,8 +964,16 @@ static void show_list(list *l) {
     while (!kbhit() && background_load(l) == 0) {
       /* keep loading */
     }
+#if NUMCOLS == 80
     print_free_ram();
+#endif
+
     c = tolower(cgetc());
+
+#if NUMCOLS == 40
+inject_cmd:
+#endif
+
     switch(c) {
 #ifdef __APPLE2ENH__
       case CH_CURS_DOWN:
@@ -1058,6 +1069,20 @@ static void show_list(list *l) {
       case 'e':      /* EDIT */
         cur_action = c;
         return;
+#if NUMCOLS == 40
+      case SHOW_HELP:
+        clrscr();
+        show_help(l, root_status, root_notif);
+        c = cgetc();
+        clrscr();
+        l->half_displayed_post = 0;
+        if (c == ' ') {
+          cur_action = NAVIGATE;
+          return;
+        } else {
+          goto inject_cmd;
+        }
+#endif
     }
   }
 }
