@@ -49,6 +49,7 @@ static void cli() {
 
   print_logo(scrw);
 
+#ifdef __APPLE2ENH__
   cputs("Please choose your keyboard layout:\r\n");
   cputs("0. US      ("US_CHARSET" charset)\r\n");
   cputs("1. French  ("FR_CHARSET" charset)\r\n");
@@ -77,7 +78,10 @@ charset_again:
     default:
       goto charset_again;
   }
-  
+#else
+  charset = US_CHARSET;
+#endif
+
   cputs("\r\nIs your monitor monochrome? (y/n)\r\n");
 monochrome_again:
   c = cgetc();

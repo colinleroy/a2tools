@@ -124,10 +124,10 @@ static int print_notification(notification *n) {
   char width;
   char *w;
 
-  width = scrw - LEFT_COL_WIDTH - 1;
+  width = scrw - RIGHT_COL_START;
   n->displayed_at = wherey();
   dputs(n->display_name);
-#ifdef __APPLE2ENH__
+#if NUMCOLS == 80
   gotox(TIME_COLUMN);
   if (writable_lines != 1)
     dputs(n->created_at);
@@ -296,12 +296,10 @@ static char load_prev_posts(list *l) {
   to_load = N_STATUS_TO_LOAD / 2;
   new_ids = malloc(to_load * sizeof(char *));
 
-#ifdef __APPLE2ENH__
-  set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
-#endif
+  set_hscrollwindow(RIGHT_COL_START, scrw - RIGHT_COL_START);
   scrolldown_n(2);
   gotoxy(0,1);
-  chline(scrw - LEFT_COL_WIDTH - 1);
+  chline(scrw - RIGHT_COL_START);
   gotoxy(0, 0);
   dputs(LOADING_TOOT_MSG);
 
@@ -355,15 +353,13 @@ static char search_footer(char c) {
   cprintf("(%c) Messages (%c) Account   (Open-Apple + M/A)\r\n",
           search_type == 'm' ? '*':' ',
           search_type == 'a' ? '*':' ');
-  chline(scrw - LEFT_COL_WIDTH - 1);
+  chline(scrw - RIGHT_COL_START);
   gotoxy(0, 0);
   return 0;
 }
 
 static int show_search(void) {
-#ifdef __APPLE2ENH__
-  set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
-#endif
+  set_hscrollwindow(RIGHT_COL_START, scrw - RIGHT_COL_START);
 
   scrolldown_n(3);
 
@@ -386,7 +382,7 @@ static int show_search(void) {
 }
 
 static void __fastcall__ load_indicator(char on) {
-#ifdef __APPLE2ENH__
+#if NUMCOLS == 80
   gotoxy(LEFT_COL_WIDTH - 4, scrh - 1);
   dputs(on ? "...":"   ");
 #endif
@@ -475,13 +471,9 @@ static void uncompact_list(list *l) {
 }
 
 static void clrscrollwin(void) {
-#ifdef __APPLE2ENH__
-  set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
+  set_hscrollwindow(RIGHT_COL_START, scrw - RIGHT_COL_START);
   clrscr();
   set_hscrollwindow(0, scrw);
-#else
-  clrscr();
-#endif
 }
 
 char hide_cw = 1;
@@ -509,9 +501,7 @@ static void print_list(list *l, signed char limit) {
 
 update:
   /* set scrollwindow */
-#ifdef __APPLE2ENH__
-  set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
-#endif
+  set_hscrollwindow(RIGHT_COL_START, scrw - RIGHT_COL_START);
   gotoxy(0, 0);
 
   writable_lines = scrh;
@@ -563,7 +553,7 @@ update:
       if (--writable_lines != 0) {
         dputs("\r\n");
         if (--writable_lines != 0)
-          chline(scrw - LEFT_COL_WIDTH - 1);
+          chline(scrw - RIGHT_COL_START);
       } else {
         bottom = 1;
       }
@@ -625,9 +615,7 @@ static void shift_posts_down(list *l) {
   shift_displayed_at(l, scroll_val);
 
   l->first_displayed_post++;
-#ifdef __APPLE2ENH__
-  set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
-#endif
+  set_hscrollwindow(RIGHT_COL_START, scrw - RIGHT_COL_START);
   scrollup_n(scroll_val);
 
 #ifndef __CC65__
@@ -658,7 +646,7 @@ static char calc_post_height(status *s) {
       ++height;
     } else {
       ++x;
-      if (x == scrw - LEFT_COL_WIDTH - 1) {
+      if (x == scrw - RIGHT_COL_START) {
         x = 0;
         ++height;
       }
@@ -712,9 +700,7 @@ static int shift_posts_up(list *l) {
     scroll_val = scrh;
   }
 
-#ifdef __APPLE2ENH__
-  set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
-#endif
+  set_hscrollwindow(RIGHT_COL_START, scrw - RIGHT_COL_START);
   if (scroll_val > 0)
     scrolldown_n(scroll_val);
 
@@ -1310,7 +1296,9 @@ int main(int argc, char **argv) {
     if (strchr(gen_buf, '\n')) {
       *strchr(gen_buf, '\n') = '\0';
     }
+#ifdef __APPLE2ENH__
     translit_charset = strdup(gen_buf);
+#endif
 
     fgets(gen_buf, 16, fp);
     if (gen_buf[0] == '0') {

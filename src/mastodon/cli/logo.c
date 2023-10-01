@@ -22,15 +22,15 @@ void print_logo(unsigned char scrw) {
   cputs(logo);
 #else
   char *logo =
-    "   ***************\r\n"
-    " ***      '      ***      WELCOME TO \r\n"
-    "***   ***   ***   ***      MASTODON\r\n"
-    "***   ***   ***   ***\r\n"
-    "***   *********   *** https://colino.net\r\n"
-    " *******************\r\n"
-    "  ****************\r\n"
-    "   ****\r\n"
-    "     *********'\r\n";
+    "  **********\r\n"
+    " **        **      WELCOME TO \r\n"
+    "**  **  **  **      MASTODON\r\n"
+    "**  **  **  **\r\n"
+    "**  ******  ** https://colino.net\r\n"
+    " ************\r\n"
+    "  ********\r\n"
+    "   **\r\n"
+    "    ****'\r\n";
 
   /* 58 is the width of char *logo */
   gotoxy(0, 2);

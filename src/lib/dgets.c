@@ -365,6 +365,8 @@ stop_down:
           dputc(echo_on ? c : '*');
 #endif
         }
+
+#ifdef __APPLE2ENH__ /* No insertion on non-enhanced Apple 2 */
         /* shift end of buffer */
         k = max_insert;
         max_insert++;
@@ -372,6 +374,7 @@ stop_down:
           k--;
           text_buf[k + 1] = text_buf[k];
         }
+#endif
 
         /* rewrite buffer after inserted char */
         cur_insert++;

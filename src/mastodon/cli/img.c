@@ -30,6 +30,7 @@
 #include "scrollwindow.h"
 #include "surl.h"
 #include "simple_serial.h"
+#include "cli.h"
 #include "media.h"
 #include "common.h"
 #include "path_helper.h"
@@ -42,27 +43,18 @@ char *id = NULL;
 char hgr_init_done = 0;
 char monochrome = 1;
 
-#ifdef USE_HGR2
-  #define HGR_PAGE 0x4000
-  #define TEXTMODE VIDEOMODE_40COL
-  #define NUMCOLS 40
-  #define PROGRESS_STEPS 32
+#define HGR_PAGE 0x2000
+#ifdef __APPLE2ENH__
+  #define TEXTMODE VIDEOMODE_80COL
+  #define PROGRESS_STEPS 64
 #else
-  #define HGR_PAGE 0x2000
-  #ifdef __APPLE2ENH__
-    #define TEXTMODE VIDEOMODE_80COL
-    #define NUMCOLS 80
-    #define PROGRESS_STEPS 64
-  #else
-    #define TEXTMODE VIDEOMODE_40COL
-    #define NUMCOLS 40
-    #define PROGRESS_STEPS 32
-  #endif
-  #ifdef __CC65__
-    #pragma rodata-name (push, "HGR")
-    char *hgr_page;
-    #pragma rodata-name (pop)
-  #endif
+  #define TEXTMODE VIDEOMODE_40COL
+  #define PROGRESS_STEPS 32
+#endif
+#ifdef __CC65__
+  #pragma rodata-name (push, "HGR")
+  char *hgr_page;
+  #pragma rodata-name (pop)
 #endif
 
 #ifndef __CC65__

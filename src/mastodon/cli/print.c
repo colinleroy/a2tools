@@ -28,7 +28,7 @@ int print_buf(char *buffer, char hide, char allow_scroll) {
 
   x = wherex();
   w = buffer;
-  wrap_idx = scrw - LEFT_COL_WIDTH - 2;
+  wrap_idx = scrw - RIGHT_COL_START - 1;
   scrolled = 0;
 
   while (*w) {
@@ -74,6 +74,11 @@ int print_buf(char *buffer, char hide, char allow_scroll) {
 int print_status(status *s, char hide, char full) {
   s->displayed_at = wherey();
   /* reblog header */
+#if NUMCOLS == 40
+  if (strlen(s->reblogged_by) > 30) {
+    s->reblogged_by[30] = '\0';
+  }
+#endif
   if (s->reblogged_by) {
     dputs(s->reblogged_by);
     dputs(" boosted");
@@ -85,7 +90,7 @@ int print_status(status *s, char hide, char full) {
     s->account->display_name[30] = '\0';
   }
   dputs(s->account->display_name);
-#ifdef __APPLE2ENH__
+#if NUMCOLS == 80
   gotox(TIME_COLUMN);
   if (writable_lines != 1)
     dputs(s->created_at);
@@ -101,6 +106,12 @@ int print_status(status *s, char hide, char full) {
   dputs(s->account->username);
 
   CHECK_AND_CRLF();
+
+#if NUMCOLS == 40
+  if (strlen(s->spoiler_text) > 30) {
+    s->spoiler_text[30] = '\0';
+  }
+#endif
   if (s->spoiler_text) {
     dputs("CW: ");
     dputs(s->spoiler_text);
@@ -112,12 +123,21 @@ int print_status(status *s, char hide, char full) {
   CHECK_AND_CRLF();
   /* stats */
   CHECK_AND_CRLF();
+
+#if NUMCOLS == 40
+  cprintf("%d rep, %s%d boost, %s%d fav, %1d img %s",
+#else
   cprintf("%d replies, %s%d boosts, %s%d favs, %1d images %s",
+#endif
         s->n_replies,
         (s->flags & REBLOGGED) ? "*":"", s->n_reblogs,
         (s->flags & FAVOURITED) ? "*":"", s->n_favourites,
         s->n_images,
+#if NUMCOLS == 40
+        (s->flags & BOOKMARKED) ? " - bkm":"      ");
+#else
         (s->flags & BOOKMARKED) ? " - bookmarked":"             ");
+#endif
   CHECK_AND_CRLF();
 
   CHLINE_SAFE();

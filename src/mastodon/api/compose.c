@@ -14,7 +14,7 @@
 #pragma code-name (push, "LOWCODE")
 #endif
 
-static char *compose_audience_str(char compose_audience) {
+char *compose_audience_str(char compose_audience) {
   switch(compose_audience) {
     case COMPOSE_PUBLIC:   return "public";
     case COMPOSE_UNLISTED: return "unlisted";

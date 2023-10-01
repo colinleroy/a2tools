@@ -50,6 +50,7 @@ static char *compose_mode = "c";
 
 static void update_compose_audience(void) {
   gotoxy(0, top + COMPOSE_FIELD_HEIGHT + 1);
+#if NUMCOLS == 80
   cprintf("Audience: (%c) Public  (%c) Unlisted  (%c) Private  (%c) Mention",
         compose_audience == COMPOSE_PUBLIC ? '*':' ',
         compose_audience == COMPOSE_UNLISTED ? '*':' ',
@@ -61,16 +62,29 @@ static void update_compose_audience(void) {
   if(!strcmp(translit_charset, "ISO646-FR1")) {
     dputs(": Use ] to mention, and # for hashtags.");
   } /* FIXME add other local charsets */
+#else
+  cprintf("Audience: %s",
+        compose_audience_str(compose_audience));
+#endif
 }
 
 static void update_cw(void) {
-  clrzone(0, top + COMPOSE_FIELD_HEIGHT + 2, scrw - LEFT_COL_WIDTH - 2, top + COMPOSE_FIELD_HEIGHT + 2);
+  clrzone(0, top + COMPOSE_FIELD_HEIGHT + 2, scrw - RIGHT_COL_START, top + COMPOSE_FIELD_HEIGHT + 2);
+#if NUMCOLS == 80
   if (cw[0] == '\0') {
     dputs("( ) Content warning not set");
   } else {
     dputs("(*) CW: ");
     dputs(cw);
   }
+#else
+  if (cw[0] == '\0') {
+    dputs("Content warning not set");
+  } else {
+    dputs("CW: ");
+    dputs(cw);
+  }
+#endif
 }
 static char dgt_cmd_cb(char c) {
   switch(tolower(c)) {
@@ -105,15 +119,15 @@ static void setup_gui(void)
       /* we want to make sure we'll have one and
        * only one separator line */
       gotoxy(0, wherey() - 1);
-      chline(scrw - LEFT_COL_WIDTH - 1);
+      chline(scrw - RIGHT_COL_START);
 
       dputs("Your reply:\r\n");
       top = wherey();
     }
   }
-  chline(scrw - LEFT_COL_WIDTH - 1);
+  chline(scrw - RIGHT_COL_START);
   gotoxy(0, top + COMPOSE_FIELD_HEIGHT);
-  chline(scrw - LEFT_COL_WIDTH - 1);
+  chline(scrw - RIGHT_COL_START);
 
   update_compose_audience();
   update_cw();
@@ -148,7 +162,7 @@ static void add_image() {
   dputs("File name: ");
   x = wherex();
   y = wherey();
-  media_files[n_medias] = file_select(x, y, scrw - LEFT_COL_WIDTH - 1 - x, y + 10, 0, "Please choose an image");
+  media_files[n_medias] = file_select(x, y, scrw - RIGHT_COL_START - x, y + 10, 0, "Please choose an image");
   if (media_files[n_medias] == NULL) {
     return;
   }
@@ -164,7 +178,7 @@ try_again:
   y = wherey();
   media_ids[n_medias] = api_send_hgr_image(media_files[n_medias],
                                            media_descriptions[n_medias],
-                                           &err, x, y, scrw - LEFT_COL_WIDTH - 1 - x);
+                                           &err, x, y, scrw - RIGHT_COL_START - x);
   if (media_ids[n_medias] == NULL) {
     char t;
     dputs("An error happened uploading the file:\r\n");
@@ -185,7 +199,7 @@ try_again:
 static void open_cw_menu(void) {
   set_scrollwindow(0, scrh);
 
-  clrzone(0, top + COMPOSE_FIELD_HEIGHT + 2, scrw - LEFT_COL_WIDTH - 2, top + COMPOSE_FIELD_HEIGHT + 2);
+  clrzone(0, top + COMPOSE_FIELD_HEIGHT + 2, scrw - RIGHT_COL_START, top + COMPOSE_FIELD_HEIGHT + 2);
   dputs("(*) CW: ");
   dget_text(cw, sizeof(cw) - 1, NULL, 0);
   update_cw();
@@ -207,9 +221,11 @@ image_menu:
 
   for (c = 0; c < n_medias; c++) {
     char short_desc[55];
-    strncpy(short_desc, media_descriptions[c], 54);
-    if (strlen(short_desc) > 51) {
-      short_desc[51] = short_desc[52] = short_desc[53] = '.';
+    strncpy(short_desc, media_descriptions[c], TL_SPOILER_TEXT_BUF);
+    if (strlen(short_desc) > TL_SPOILER_TEXT_BUF-3) {
+      short_desc[TL_SPOILER_TEXT_BUF-3] =
+        short_desc[TL_SPOILER_TEXT_BUF-2] =
+        short_desc[TL_SPOILER_TEXT_BUF-1] = '.';
     }
     cprintf("\r\n- %s (%s)"
             "\r\n  %s\r\n",
@@ -365,7 +381,7 @@ int main(int argc, char **argv) {
   }
   compose_print_header();
 
-  set_hscrollwindow(LEFT_COL_WIDTH + 1, scrw - LEFT_COL_WIDTH - 1);
+  set_hscrollwindow(RIGHT_COL_START, scrw - RIGHT_COL_START);
   gotoxy(0, 0);
   if (argc == 6) {
     compose_mode = argv[4];
