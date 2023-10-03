@@ -366,16 +366,16 @@ int register_app(void) {
   surl_read_response_header();
 
   if (resp->code != 200) {
-    dputs("App registration: Invalid response to POST\r\n");
+    printf("Invalid response %d to POST\n", resp->code);
     goto err_out;
   }
 
   if (surl_get_json(client_id, BUF_SIZE, SURL_HTMLSTRIP_NONE, NULL, ".client_id") < 0) {
-    dputs("App registration: no client_id.\r\n");
+    dputs("No client_id.\r\n");
     goto err_out;
   }
   if (surl_get_json(client_secret, BUF_SIZE, SURL_HTMLSTRIP_NONE, NULL, ".client_secret") < 0) {
-    dputs("App registration: no client_secret.\r\n");
+    dputs("No client_secret.\r\n");
     goto err_out;
   }
 
