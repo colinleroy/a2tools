@@ -135,15 +135,15 @@ reenter_settings:
     /* Invalidate oauth token */
     oauth_token[0] = '\0';
 
-    dputs("Your instance: ");
-    instance_url[0] = '\0';
+    dputs("Your instance URL: ");
+    strcpy(instance_url, "https://");
     dget_text(instance_url, BUF_SIZE, NULL, 0);
 
     if (instance_url[0] == '\0') {
       goto reenter_settings;
     }
     if (register_app() < 0) {
-      return -1;
+      goto reenter_settings;
     }
 
     dputs("If on a non-US keyboard, use @ instead of arobase.\r\n");
