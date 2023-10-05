@@ -4,6 +4,7 @@ After=network.target auditd.service
 
 [Service]
 Type=simple
+User=surl-server
 SyslogIdentifier=surl-server
 ExecStart=surl-server
 Restart=on-failure
