@@ -1,3 +1,9 @@
+a2tools (1.7.1.1) bionic; urgency=medium
+
+  * Rebuild for bullseye
+
+ -- Colin Leroy-Mira <colin@colino.net>  Wed, 04 Oct 2023 21:28:19 +0200
+
 a2tools (1.6.0.1) bionic; urgency=medium
 
   * Add serial port configuration if connection fails
