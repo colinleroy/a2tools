@@ -1,0 +1,37 @@
+#!/bin/sh -e
+
+if ! getent passwd surl-server >/dev/null 2>&1; then
+    adduser --system --no-create-home surl-server
+    adduser surl-server dialout
+fi
+
+# Automatically added by dh_systemd_enable/13.11.4ubuntu3
+if [ "$1" = "configure" ] || [ "$1" = "abort-upgrade" ] || [ "$1" = "abort-deconfigure" ] || [ "$1" = "abort-remove" ] ; then
+        # The following line should be removed in trixie or trixie+1
+        deb-systemd-helper unmask 'surl-server.service' >/dev/null || true
+
+        # was-enabled defaults to true, so new installations run enable.
+        if deb-systemd-helper --quiet was-enabled 'surl-server.service'; then
+                # Enables the unit on first installation, creates new
+                # symlinks on upgrades if the unit file has changed.
+                deb-systemd-helper enable 'surl-server.service' >/dev/null || true
+        else
+                # Update the statefile to add new symlinks (if any), which need to be
+                # cleaned up on purge. Also remove old symlinks.
+                deb-systemd-helper update-state 'surl-server.service' >/dev/null || true
+        fi
+fi
+# End automatically added section
+# Automatically added by dh_systemd_start/13.11.4ubuntu3
+if [ "$1" = "configure" ] || [ "$1" = "abort-upgrade" ] || [ "$1" = "abort-deconfigure" ] || [ "$1" = "abort-remove" ] ; then
+        if [ -d /run/systemd/system ]; then
+                systemctl --system daemon-reload >/dev/null || true
+                if [ -n "$2" ]; then
+                        _dh_action=restart
+                else
+                        _dh_action=start
+                fi
+                deb-systemd-invoke $_dh_action 'surl-server.service' >/dev/null || true
+        fi
+fi
+# End automatically added section

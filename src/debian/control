@@ -13,7 +13,8 @@ Architecture: any
 Depends:
  ${shlibs:Depends},
  ${misc:Depends},
- a2tools-common
+ a2tools-common,
+ adduser
 Description: Apple2 serial/network proxy
 
 Package: a2send

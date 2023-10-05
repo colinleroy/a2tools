@@ -40,4 +40,7 @@ install:
 	mkdir -p $(DESTDIR)/$(prefix)/bin
 	install $(PROGRAM) $(DESTDIR)/$(prefix)/bin/$(PROGRAM)
 	mkdir -p $(DESTDIR)/lib/systemd/system/
+	if [ $(DESTDIR) = "" ]; then \
+		id surl-server || (adduser --system --no-create-home surl-server && adduser surl-server dialout) \
+	fi
 	install -m 644 systemd/surl-server.service $(DESTDIR)/lib/systemd/system/surl-server.service
