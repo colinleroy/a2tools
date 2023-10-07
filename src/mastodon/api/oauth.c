@@ -366,7 +366,8 @@ int register_app(void) {
   surl_read_response_header();
 
   if (resp->code != 200) {
-    printf("Invalid response %d to POST\n", resp->code);
+    cprintf("Invalid response %d to POST", resp->code);
+    dputs("\r\n"); /* Scroll if needed */
     goto err_out;
   }
 
