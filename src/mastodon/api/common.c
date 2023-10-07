@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include "extended_conio.h"
 #include "surl.h"
 #include "simple_serial.h"
 #include "strsplit.h"
@@ -39,7 +40,7 @@ char selector[SELECTOR_SIZE];
 char *lines[BUF_SIZE];
 
 void nomem_msg(char *file, int line) {
-    printf("No more memory (%s:%d)", file, line);
+    cprintf("No more memory (%s:%d)", file, line);
 }
 
 char *date_format(char *in, char with_time) {

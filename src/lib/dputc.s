@@ -5,7 +5,6 @@
 ; void __fastcall__ dputcxy (unsigned char x, unsigned char y, char c);
 ; void __fastcall__ dputc (char c);
 ;
-
         .export         _dputcxy, _dputc
         .export         dnewline
         .import         gotoxy, VTABZ
@@ -76,7 +75,11 @@ left:
 
 bell:
         bit     $C082
+        .ifdef  IIGS
+        jsr     $FBE4           ; BELL fucks up the cursor??
+        .else
         jsr     $FF3A           ; BELL
+        .endif
         bit     $C080
         rts
 

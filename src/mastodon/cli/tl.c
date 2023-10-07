@@ -607,11 +607,11 @@ update:
     }
   }
 
-  set_hscrollwindow(0, scrw);
   if (bottom == 0 && i == n_posts) {
     if (load_next_posts(l) > 0)
       goto update;
   }
+  set_hscrollwindow(0, scrw);
 }
 
 static void shift_posts_down(list *l) {
@@ -873,7 +873,7 @@ static int load_state(list ***lists) {
   num_lists = state_get_int(fp);
   if (num_lists < 0) {
     *lists = NULL;
-    printf("Error %d\n", errno);
+    cprintf("Error %d\r\n", errno);
     fclose(fp);
     unlink(STATE_FILE);
 
@@ -1156,7 +1156,7 @@ static void cli(void) {
   if (print_header(NULL, NULL, NULL) != 0) {
     int code = surl_response_code();
     clrscr();
-    printf("Error fetching data: code %d\n\n", code);
+    cprintf("Error fetching data: code %d\r\n\r\n", code);
     if (code == 401) {
       disconnect_account();
       dputs("Your token is invalid. ");

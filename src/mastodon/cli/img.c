@@ -110,7 +110,7 @@ static void show_help(void) {
         "Next image   : Any other key");
 #ifdef __APPLE2__
   gotoxy(0, 22);
-  printf("%zuB free\n", _heapmemavail());
+  cprintf("%zuB free\r\n", _heapmemavail());
 #endif
 }
 

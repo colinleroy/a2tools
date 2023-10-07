@@ -459,7 +459,7 @@ int main(int argc, char **argv) {
   while (reopen_start_device() != 0) {
     clrscr();
     gotoxy(13, 12);
-    printf("Please reinsert the program disk, then press any key.");
+    dputs("Please reinsert the program disk, then press any key.");
     cgetc();
   }
 
