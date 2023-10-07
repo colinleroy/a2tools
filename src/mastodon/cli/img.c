@@ -104,7 +104,6 @@ void init_text(void) {
 
 static void show_help(void) {
   clrzone(0, 17, NUMCOLS, 23);
-  gotoxy(0, 17);
   cputs("Toggle legend: L\r\n"
         "Save image   : S\r\n"
         "Quit viewer  : Esc\r\n"

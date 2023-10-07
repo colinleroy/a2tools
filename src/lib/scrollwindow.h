@@ -14,6 +14,8 @@ void __fastcall__ set_hscrollwindow(unsigned char left, unsigned char width);
 #define WNDWDTH "$21"
 #define WNDTOP  "$22"
 #define WNDBTM  "$23"
+#define CH      "$24"
+#define CV      "$25"
 
 #define get_wndtop()       \
     (                      \

@@ -33,14 +33,12 @@ void __fastcall__ clrzone(char xs, char ys, char xe, char ye) {
   get_scrollwindow(&orig_top, &orig_bottom);
   get_hscrollwindow(&orig_left, &orig_width);
 
-  xs += orig_left;
-  ys += orig_top;
-  set_scrollwindow(ys, ye + 1);
-  set_hscrollwindow(xs, ww);
+  set_scrollwindow(ys + orig_top, ye + 1);
+  set_hscrollwindow(xs + orig_left, ww);
   clrscr();
   set_hscrollwindow(orig_left, orig_width);
   set_scrollwindow(orig_top, orig_bottom);
-
+  gotoxy(xs, ys);
 #else
   char l = xe - xs + 1;
 

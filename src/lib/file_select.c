@@ -196,7 +196,7 @@ up:
 out:
   free_data(n);
   clrzone(sx, sy, ex, ey);
-  gotoxy(sx, sy);
+
   if (filename) {
     dputs(filename);
   }
