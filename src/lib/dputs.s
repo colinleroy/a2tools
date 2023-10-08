@@ -14,25 +14,23 @@ _dputsxy:
         sta     ptr1            ; Save s for later
         stx     ptr1+1
         jsr     gotoxy          ; Set cursor, pop x and y
-        jmp     L1              ; Same as dputs...
+        jmp     loop            ; Same as dputs...
 
 _dputs: sta     ptr1            ; Save s
         stx     ptr1+1
 
-L1:
+loop:
         .ifdef  __APPLE2ENH__
         lda     (ptr1)
         .else
         ldy     #$00
         lda     (ptr1),y
         .endif
-        beq     L9              ; Jump if done
+        beq     done            ; Jump if done
         jsr     _dputc          ; Output char, advance cursor
         inc     ptr1            ; Bump low byte
-        bne     L1              ; Next char
+        bne     loop            ; Next char
         inc     ptr1+1          ; Bump high byte
-        bne     L1
-
-; Done
-
-L9:     rts
+        bne     loop
+done:
+        rts
