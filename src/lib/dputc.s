@@ -84,16 +84,17 @@ bell:
         rts
 
 backspace:
-        lda     CH
-        cmp     WNDLFT          ; are we at col 0
+        lda     CH              ; are we at col 0
         bne     decrh           ; no, we can decrement 
         ldy     CV              ; yes,
-        cmp     WNDTOP          ; so are we at row 0
+        cpy     WNDTOP          ; so are we at row 0
         beq     :+              ; yes, do nothing
         dey                     ; no, decr row
         sty     CV              ; store it
         ldy     WNDWDTH         ; prepare CH for decr
         sty     CH
+        lda     CV
+        jsr     VTABZ
 decrh:  dec     CH
 :       rts
 
