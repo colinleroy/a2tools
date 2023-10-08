@@ -59,6 +59,27 @@ _init_fast_irq:
 ; ------------------------------------------------------------------------
 
 _done_fast_irq:
+        sei
+        clc
+        xce
+        rep     #$30
+        .i16
+
+        pea     $0004           ; Interrupt manager refnum
+        lda     OrgMgr+2
+        pha
+        lda     OrgMgr
+        pha
+
+        ldx     #$1003          ; Set Vector
+        jsl     $E10000
+
+        sec
+        xce
+        sep     #$30
+        .i8
+
+        cli
         rts
 
 ; ------------------------------------------------------------------------
