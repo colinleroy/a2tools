@@ -58,7 +58,10 @@ dputdirect:
         jsr     putchardirect
         .endif
         inc     CH              ; Bump to next column
-        lda     CH
+        bit     RD80VID
+        bpl     :+
+        inc     OURCH
+:       lda     CH
         cmp     WNDWDTH
         bcs     :+
         rts
@@ -67,11 +70,17 @@ dputdirect:
 left:
         .ifdef  __APPLE2ENH__
         stz     CH              ; Goto left edge of screen
+        bit     RD80VID
+        bpl     :+
+        stz     OURCH
         .else
         lda     #$00
         sta     CH
+        bit     RD80VID
+        bpl     :+
+        sta     OURCH
         .endif
-        rts
+:       rts
 
 bell:
         bit     $C082
@@ -90,20 +99,42 @@ backspace:
         cpy     WNDTOP          ; so are we at row 0
         beq     :+              ; yes, do nothing
         dey                     ; no, decr row
+
         sty     CV              ; store it
-        ldy     WNDWDTH         ; prepare CH for decr
+        bit     RD80VID
+        bpl     :+
+        sty     OURCV
+
+:       ldy     WNDWDTH         ; prepare CH for decr
+
         sty     CH
-        lda     CV
+        bit     RD80VID
+        bpl     :+
+        sty     OURCH
+
+:       lda     CV
         jsr     VTABZ
 decrh:  dec     CH
+        bit     RD80VID
+        bpl     :+
+        dec     OURCH
 :       rts
 
 dnewline:
         inc     CV              ; Bump to next line
-        lda     CV
+        bit     RD80VID
+        bpl     :+
+        inc     OURCV
+
+:       lda     CV
         cmp     WNDBTM          ; Are we at bottom?
         bcc     :+
+
         dec     CV              ; Yes, decrement
-        jsr     _scrollup_one   ; and scroll
+        bit     RD80VID
+        bpl     :+
+        dec     OURCV
+
+:       jsr     _scrollup_one   ; and scroll
         lda     CV
 :       jmp     VTABZ
