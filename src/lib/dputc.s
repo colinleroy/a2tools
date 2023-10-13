@@ -74,13 +74,13 @@ left:
         rts
 
 bell:
+        lda     CH
+        pha
         bit     $C082
-        .ifdef  IIGS
-        jsr     $FBE4           ; BELL fucks up the cursor??
-        .else
         jsr     $FF3A           ; BELL
-        .endif
         bit     $C080
+        pla
+        sta     CH              ; Bell scrambles CH on IIgs
         rts
 
 backspace:
