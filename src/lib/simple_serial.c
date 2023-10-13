@@ -52,28 +52,28 @@ static char baud_rates[] = {
   SER_BAUD_57600
 };
 #ifdef IIGS
-static unsigned char slot = 0;
-static char *slots_strs[] = {
-  "  CHANNEL B (MODEM)",
-  "CHANNEL A (PRINTER)",
-  NULL
-};
-#define MAX_SLOT_IDX 1
-#define MAX_SPEED_IDX 5
+  static unsigned char slot = 0;
+  static char *slots_strs[] = {
+    "  CHANNEL B (MODEM)",
+    "CHANNEL A (PRINTER)",
+    NULL
+  };
+  #define MAX_SLOT_IDX 1
+  #define MAX_SPEED_IDX 5
 #else
-static unsigned char slot = 2;
-static char *slots_strs[] = {
-  "1",
-  "2",
-  "3",
-  "4",
-  "5",
-  "6",
-  "7",
-  NULL
-};
-#define MAX_SLOT_IDX 6
-#define MAX_SPEED_IDX 4
+  static unsigned char slot = 2;
+  static char *slots_strs[] = {
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    NULL
+  };
+  #define MAX_SLOT_IDX 6
+  #define MAX_SPEED_IDX 4
 #endif
 /* Setup */
 static struct ser_params default_params = {
