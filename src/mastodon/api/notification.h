@@ -22,6 +22,9 @@ struct _notification {
 
 int api_get_notifications(char to_load, char notifications_type, char *load_before, char *load_after, char **notification_ids);
 notification *api_get_notification(char *id);
+
+#define notification_new() (notification *)malloc0(sizeof(notification))
 void notification_free(notification *n);
+
 extern char *notification_verb[N_NOTIFICATIONS_TYPE];
 #endif

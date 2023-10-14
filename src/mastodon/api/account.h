@@ -27,7 +27,8 @@ struct _account {
   char relationship;
 };
 
-account *account_new(void);
+#define account_new() (account *)malloc0(sizeof(account))
+
 account *account_new_from_json(void);
 void account_free(account *a);
 account *api_get_profile(char *id);

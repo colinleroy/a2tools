@@ -10,7 +10,9 @@ struct _media {
   char **media_alt_text;
 };
 
+#define media_new() (media *)malloc0(sizeof(media))
 void media_free(media *s);
+
 media *api_get_status_media(char *id);
 media *api_get_account_media(char *id);
 

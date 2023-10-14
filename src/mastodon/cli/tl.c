@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <errno.h>
+#include "malloc0.h"
 #include "platform.h"
 #include "surl.h"
 #include "extended_conio.h"
@@ -417,8 +418,7 @@ static list *build_list(char *root, char *leaf_root, char kind) {
 
   load_indicator(1);
 
-  l = malloc(sizeof(list));
-  memset(l, 0, sizeof(list));
+  l = malloc0(sizeof(list));
 
   if (kind == SHOW_PROFILE) {
     l->account = api_get_full_account(root);
@@ -889,8 +889,7 @@ static int load_state(list ***lists) {
     list *l;
     char n_posts;
 
-    l = malloc(sizeof(list));
-    memset(l, 0, sizeof(list));
+    l = malloc0(sizeof(list));
     (*lists)[i] = l;
 
     l->kind = state_get_int(fp);

@@ -2,6 +2,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include "malloc0.h"
 #include "surl.h"
 #include "simple_serial.h"
 #include "strsplit.h"
@@ -19,11 +20,10 @@
 #define TL_STATUS_LARGE_BUF 4096
 
 status *status_new(void) {
-  status *s = malloc(sizeof(status));
+  status *s = malloc0(sizeof(status));
   if (s == NULL) {
     return NULL;
   }
-  memset(s, 0, sizeof(status));
   s->displayed_at = -1;
   return s;
 }
