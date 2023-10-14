@@ -1,5 +1,5 @@
-#ifndef __cli_h
-#define __cli_h
+#ifndef __tl_h
+#define __tl_h
 
 void cli(void);
 

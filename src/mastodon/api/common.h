@@ -43,6 +43,7 @@ extern char arobase;
 #define NOTIFICATION_ENDPOINT   "/api/v1/notifications"
 #define SEARCH_ENDPOINT         "/api/v2/search"
 #define MEDIA_ENDPOINT          "/api/v1/media"
+#define VOTES_ENDPOINT          "/api/v1/polls"
 
 #define COMPOSE_PUBLIC   0
 #define COMPOSE_UNLISTED 1

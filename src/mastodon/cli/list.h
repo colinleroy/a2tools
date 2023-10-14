@@ -2,6 +2,7 @@
 #define __list_h
 
 #include <string.h>
+#include "cli.h"
 #include "api.h"
 
 typedef struct _list list;
