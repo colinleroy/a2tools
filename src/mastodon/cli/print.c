@@ -20,12 +20,12 @@
 #include "scrollwindow.h"
 
 extern char writable_lines;
+static char wrap_idx;
 
 int print_buf(char *buffer, char hide, char allow_scroll) {
   static char x;
   static char *w;
   static char scrolled;
-  static char wrap_idx;
 
   x = wherex();
   w = buffer;
@@ -125,7 +125,6 @@ int print_status(status *s, char hide, char full) {
 
   if (s->poll) {
     char i;
-    char w = scrw - RIGHT_COL_START - 1;
     size_t total = s->poll->votes_count;
 
     if (total == 0) {
@@ -133,12 +132,12 @@ int print_status(status *s, char hide, char full) {
     }
 
     for (i = 0; i < s->poll->options_count; i++) {
+      poll_option *o = s->poll->options[i];
       CHECK_AND_CRLF();
-      dputs(s->poll->options[i]->title);
+      dputs(o->title);
       CHECK_AND_CRLF();
-      progress_bar(wherex(), wherey(), w,
-                   s->poll->options[i]->votes_count,
-                   total);
+      progress_bar(wherex(), wherey(), wrap_idx,
+                   o->votes_count, total);
       CHECK_AND_CRLF();
     }
   }
