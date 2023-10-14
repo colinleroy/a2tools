@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <ctype.h>
+#include "malloc0.h"
 #include "surl.h"
 #include "dputs.h"
 #include "extended_conio.h"
@@ -185,8 +186,7 @@ static void add_image() {
   }
 
   dputs("\r\nDescription: ");
-  media_descriptions[n_medias] = malloc(512);
-  media_descriptions[n_medias][0] = '\0';
+  media_descriptions[n_medias] = malloc0(512);
   dget_text(media_descriptions[n_medias], 512, NULL, 0);
 
 try_again:
@@ -286,7 +286,7 @@ image_menu:
 
 static char *handle_compose_input(char *initial_buf) {
   char *text;
-  text = malloc(NUM_CHARS);
+  text = malloc0(NUM_CHARS);
 
   if (initial_buf && initial_buf[0]) {
     int len = min(NUM_CHARS - 3, strlen(initial_buf));
@@ -453,7 +453,7 @@ int main(int argc, char **argv) {
   }
   set_hscrollwindow(0, scrw);
 
-  params = malloc(127);
+  params = malloc0(127);
   snprintf(params, 127, "%s %s", instance_url, oauth_token);
 #ifdef __CC65__
   while (reopen_start_device() != 0) {

@@ -18,6 +18,7 @@ endif
 
 PROGRAM=stp
 SOURCES := stp.c stp_cli.c stp_save.c stp_send_file.c stp_delete.c \
+	../lib/malloc0.c \
 	../lib/simple_serial.c \
 	$(ser_debug_SOURCES) \
 	../lib/get_buf_size.c \

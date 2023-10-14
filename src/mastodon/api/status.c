@@ -21,9 +21,6 @@
 
 status *status_new(void) {
   status *s = malloc0(sizeof(status));
-  if (s == NULL) {
-    return NULL;
-  }
   s->displayed_at = -1;
   return s;
 }
@@ -78,17 +75,10 @@ static __fastcall__ char status_fill_from_json(status *s, char *id, char full, c
 
     s->account = account_new();
 
-    if (s->account == NULL) {
-      goto err_mem;
-    }
-
     s->created_at = date_format(lines[0], 1);
     s->account->display_name = strdup(lines[1]);
     if (n_lines > 3) {
-      s->spoiler_text = malloc(TL_SPOILER_TEXT_BUF);
-      if (s->spoiler_text == NULL) {
-        goto err_mem;
-      }
+      s->spoiler_text = malloc0(TL_SPOILER_TEXT_BUF);
       strncpy(s->spoiler_text, lines[3], TL_SPOILER_TEXT_BUF - 1);
       s->spoiler_text[TL_SPOILER_TEXT_BUF - 1] = '\0';
     }
@@ -137,20 +127,13 @@ static __fastcall__ char status_fill_from_json(status *s, char *id, char full, c
     /* Poll */
     if (n_lines == 12) {
       s->poll = poll_new();
-      if (s->poll == NULL) {
-        goto err_mem;
-      }
       s->poll->id = strdup(lines[11]);
       poll_fill(s->poll, is_reblog);
     }
   }
 
   r = full ? TL_STATUS_LARGE_BUF : TL_STATUS_SHORT_BUF;
-  content = malloc(r);
-  if (!content) {
-err_mem:
-    return -1;
-  }
+  content = malloc0(r);
 
   if (is_reblog) {
     r = surl_get_json(content, r, SURL_HTMLSTRIP_FULL, translit_charset, ".reblog.content");
@@ -191,7 +174,7 @@ status *api_get_status(char *status_id, char full) {
   
   if (surl_response_ok()) {
     status *s = status_new();
-    if (s != NULL && status_fill_from_json(s, status_id, full, 0) == 0)
+    if (status_fill_from_json(s, status_id, full, 0) == 0)
       return s;
     else
       status_free(s);

@@ -24,6 +24,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <ctype.h>
+#include "malloc0.h"
 #include "extended_conio.h"
 #include "clrzone.h"
 #include "progress_bar.h"
@@ -148,7 +149,7 @@ static void img_display(media *m, char idx, char num_images) {
   if (surl_response_ok()) {
     #ifndef __CC65__
     #undef HGR_PAGE
-    char *HGR_PAGE = malloc(0x2000);
+    char *HGR_PAGE = malloc0(0x2000);
     #endif
 
     memset((char *)HGR_PAGE, 0x00, HGR_LEN);
@@ -301,7 +302,7 @@ done:
     init_text();
   }
 
-  params = malloc(127);
+  params = malloc0(127);
   snprintf(params, 127, "%s %s", instance_url, oauth_token);
   reopen_start_device();
 #ifdef __CC65__

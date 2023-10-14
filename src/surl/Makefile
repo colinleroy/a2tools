@@ -9,7 +9,7 @@ upload_subdir :=
 endif
 
 PROGRAM=surl
-surl_SOURCES := surl-client.c ../lib/simple_serial.c ../lib/cgets.c ../lib/scrollwindow.c ../lib/surl_core.c ../lib/surl_receive.c ../lib/path_helper.c
+surl_SOURCES := surl-client.c ../lib/malloc0.c ../lib/simple_serial.c ../lib/cgets.c ../lib/scrollwindow.c ../lib/surl_core.c ../lib/surl_receive.c ../lib/path_helper.c
 GCCSOURCES := ../lib/extended_string.c
 CL65SOURCES := ../lib/fastirq$(suffix).s
 DEPS := 

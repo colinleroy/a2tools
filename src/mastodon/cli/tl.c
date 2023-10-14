@@ -271,7 +271,7 @@ static char load_next_posts(list *l) {
   }
 
   to_load = min(N_STATUS_TO_LOAD / 2, l->first_displayed_post);
-  new_ids = malloc(to_load * sizeof(char *));
+  new_ids = malloc0(to_load * sizeof(char *));
 
   dputs(LOADING_TOOT_MSG);
 
@@ -313,7 +313,7 @@ static char load_prev_posts(list *l) {
   char to_load, list_len;
 
   to_load = N_STATUS_TO_LOAD / 2;
-  new_ids = malloc(to_load * sizeof(char *));
+  new_ids = malloc0(to_load * sizeof(char *));
 
   set_hscrollwindow(RIGHT_COL_START, scrw - RIGHT_COL_START);
   scrolldown_n(2);
@@ -813,7 +813,7 @@ static void launch_command(char *command, char *p1, char *p2, char *p3) {
 
   reopen_start_device();
 
-  params = malloc(127);
+  params = malloc0(127);
   snprintf(params, 127, "%s %s %s %s %s %s",
             instance_url, oauth_token,
             translit_charset, p1?p1:"", p2?p2:"", p3?p3:"");
@@ -883,7 +883,7 @@ static int load_state(list ***lists) {
     return -1;
   }
 
-  *lists = malloc((num_lists + 1) * sizeof(list *));
+  *lists = malloc0((num_lists + 1) * sizeof(list *));
 
   for (i = 0; i <= num_lists; i++) {
     list *l;
@@ -1287,7 +1287,7 @@ navigate_reuse_list:
             if (search_type == 'm') {
               cur_action = SHOW_SEARCH_RES;
             } else {
-              char **acc_id = malloc(sizeof(char *));
+              char **acc_id = malloc0(sizeof(char *));
               int loaded = api_search(1, search_buf, 'a', NULL, NULL, acc_id);
               if (loaded > 0) {
                 strcpy(new_root, acc_id[0]);

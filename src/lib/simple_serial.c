@@ -23,6 +23,7 @@
 #include <stdarg.h>
 #include <errno.h>
 #include <ctype.h>
+#include "malloc0.h"
 #include "extended_conio.h"
 #include "extended_string.h"
 #include "path_helper.h"
@@ -619,7 +620,7 @@ int __simple_serial_getc_with_tv_timeout(int timeout, int secs, int msecs) {
   int n;
 
   if (readbuf == NULL) {
-    readbuf = malloc(16384);
+    readbuf = malloc0(16384);
   }
   
 send_from_buf:

@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include "malloc0.h"
 #include "extended_conio.h"
 #include "surl.h"
 #include "simple_serial.h"
@@ -64,7 +65,7 @@ const surl_response *get_surl_for_endpoint(char method, char *endpoint) {
   static char *hdrs[1] = {NULL};
 
   if (hdrs[0] == NULL) {
-    hdrs[0] = malloc(BUF_SIZE);
+    hdrs[0] = malloc0(BUF_SIZE);
     snprintf(hdrs[0], BUF_SIZE, "Authorization: Bearer %s", oauth_token);
   }
 

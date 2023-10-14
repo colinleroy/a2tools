@@ -65,7 +65,7 @@ notification *api_get_notification(char *id) {
 
     n_lines = strnsplit_in_place(gen_buf, '\n', lines, 7);
     n = notification_new();
-    if (n == NULL || n_lines < 6) {
+    if (n_lines < 6) {
 err_out:
       notification_free(n);
       return NULL;

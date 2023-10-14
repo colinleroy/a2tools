@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
+#include "malloc0.h"
 #include "surl.h"
 #include "simple_serial.h"
 #include "extended_conio.h"
@@ -141,7 +142,7 @@ void __fastcall__ surl_read_response_header(void) {
 /* coverity[var_assign] */
   resp->content_type_size = ntohs(resp->content_type_size);
   /* Includes the zero byte */
-  resp->content_type = malloc(resp->content_type_size);
+  resp->content_type = malloc0(resp->content_type_size);
   simple_serial_read(resp->content_type, resp->content_type_size);
 }
 

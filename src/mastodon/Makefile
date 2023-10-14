@@ -103,7 +103,8 @@ mastoconf_SOURCES := \
 	cli/config.c \
 	cli/logo.c \
 	../lib/clrzone.c \
-	../lib/scrollwindow.c
+	../lib/scrollwindow.c \
+	../lib/malloc0.c
 mastoconf_CC65SOURCES :=
 
 GCCSOURCES := ../lib/extended_conio.c ../lib/clrzone.c ../lib/extended_string.c ../lib/tgi_sdl.c ../lib/tgi_fastline.c

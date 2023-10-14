@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include "malloc0.h"
 #include "surl.h"
 #include "simple_serial.h"
 #include "dgets.h"
@@ -51,7 +52,7 @@ static char *get_csrf_token(char *body, size_t buf_size) {
     }
     w++;
     len = strchr(w, '"') - w;
-    token = malloc(len + 1);
+    token = malloc0(len + 1);
     strncpy(token, w, len);
     token[len] = '\0';
   } else {
@@ -78,7 +79,7 @@ static char *get_oauth_code(char *body) {
   }
   w++;
   len = strchr(w, '\'') - w;
-  token = malloc(len + 1);
+  token = malloc0(len + 1);
   strncpy(token, w, len);
   token[len] = '\0';
 
@@ -86,21 +87,21 @@ static char *get_oauth_code(char *body) {
 }
 
 static char *prepare_login_post(char *login, char *password, char *token) {
-  char *data = malloc(512);
+  char *data = malloc0(512);
   snprintf(data, 511, CSRF_TOKEN"\n%s\nuser[email]\n%s\nuser[password]\n%s\nbutton\n\n",
             token, login, password);
   return data;
 }
 
 static char *prepare_otp_post(char *otp, char *token) {
-  char *data = malloc(512);
+  char *data = malloc0(512);
   snprintf(data, 511, CSRF_TOKEN"\n%s\nuser[otp_attempt]\n%s\nbutton\n\n",
             token, otp);
   return data;
 }
 
 static char *prepare_oauth_post(char *token) {
-  char *data = malloc(512);
+  char *data = malloc0(512);
   snprintf(data, 511, CSRF_TOKEN"\n%s\n"
                       "client_id\n%s\n"
                       "redirect_uri\n%s\n"
@@ -135,7 +136,7 @@ int do_login(void) {
   resp = NULL;
   body = NULL;
 
-  authorize_url = malloc(BUF_SIZE);
+  authorize_url = malloc0(BUF_SIZE);
   snprintf(authorize_url, BUF_SIZE,
             "%s" OAUTH_URL
             "?response_type=code"
@@ -144,21 +145,17 @@ int do_login(void) {
             "&scope=read+write",
             instance_url, client_id);
 
-  login_url = malloc(BUF_SIZE);
+  login_url = malloc0(BUF_SIZE);
   snprintf(login_url, BUF_SIZE, "%s%s", instance_url, LOGIN_URL);
 
-  oauth_url = malloc(BUF_SIZE);
+  oauth_url = malloc0(BUF_SIZE);
   snprintf(oauth_url, BUF_SIZE, "%s%s", instance_url, OAUTH_URL);
 
 /* First request to get authorization */
   dputs("GET "OAUTH_URL"... ");
   resp = surl_start_request(SURL_METHOD_GET, authorize_url, NULL, 0);
 
-  body = malloc(buf_size + 1);
-  if (body == NULL) {
-    dputs("Could not allocate body buffer.\r\n");
-    goto err_out;
-  }
+  body = malloc0(buf_size + 1);
 
   if (resp->code == 200) {
     dputs("OK.\r\n");
@@ -178,7 +175,7 @@ int do_login(void) {
 /* Get authorization done, password if needed */
 
   if (login_required) {
-    password = malloc(50);
+    password = malloc0(50);
 
 password_again:
     token = get_csrf_token(body, buf_size);
@@ -228,7 +225,7 @@ password_again:
 
   /* Third request for OTP */
     if (otp_required) {
-      char *otp = malloc(10);
+      char *otp = malloc0(10);
 
 otp_again:
       token = get_csrf_token(body, buf_size);
