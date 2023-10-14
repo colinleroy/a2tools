@@ -74,12 +74,12 @@ int print_buf(char *buffer, char hide, char allow_scroll) {
 int print_status(status *s, char hide, char full) {
   s->displayed_at = wherey();
   /* reblog header */
-#if NUMCOLS == 40
-  if (strlen(s->reblogged_by) > 30) {
-    s->reblogged_by[30] = '\0';
-  }
-#endif
   if (s->reblogged_by) {
+#if NUMCOLS == 40
+    if (strlen(s->reblogged_by) > 30) {
+      s->reblogged_by[30] = '\0';
+    }
+#endif
     dputs(s->reblogged_by);
     dputs(" boosted");
     CHECK_AND_CRLF();
@@ -107,12 +107,12 @@ int print_status(status *s, char hide, char full) {
 
   CHECK_AND_CRLF();
 
-#if NUMCOLS == 40
-  if (strlen(s->spoiler_text) > 30) {
-    s->spoiler_text[30] = '\0';
-  }
-#endif
   if (s->spoiler_text) {
+#if NUMCOLS == 40
+    if (strlen(s->spoiler_text) > 30) {
+      s->spoiler_text[30] = '\0';
+    }
+#endif
     dputs("CW: ");
     dputs(s->spoiler_text);
     CHECK_AND_CRLF();
