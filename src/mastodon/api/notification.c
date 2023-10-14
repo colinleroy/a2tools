@@ -3,21 +3,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include "malloc0.h"
 #include "surl.h"
 #include "simple_serial.h"
 #include "strsplit.h"
 #include "api.h"
-
-notification *notification_new(void) {
-  notification *n;
-  
-  n = malloc(sizeof(notification));
-  if (n == NULL) {
-    return NULL;
-  }
-  memset(n, 0, sizeof(notification));
-  return n;
-}
 
 void notification_free(notification *n) {
   if (n == NULL) {

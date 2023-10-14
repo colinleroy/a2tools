@@ -19,7 +19,7 @@ struct _poll {
   poll_option options[MAX_POLL_OPTIONS];
 };
 
-poll *poll_new(void);
+#define poll_new() (poll *)malloc0(sizeof(poll))
 void poll_free(poll *p);
 
 void poll_fill(poll *p, const char from_reblog);

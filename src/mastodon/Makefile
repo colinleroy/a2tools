@@ -34,6 +34,7 @@ common_SOURCES := \
 	../lib/scrollwindow.c \
 	../lib/simple_serial.c \
 	$(ser_debug_SOURCES) \
+	../lib/malloc0.c \
 	../lib/strsplit.c \
 	../lib/surl_core.c \
 	../lib/surl_get_json.c \

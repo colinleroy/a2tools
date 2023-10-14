@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include "malloc0.h"
 #include "surl.h"
 #include "simple_serial.h"
 #include "strsplit.h"
@@ -21,17 +22,6 @@ static char img_buf[IMG_BUF_SIZE];
  #define NUMCOLS 80
 #endif
 
-media *media_new(void) {
-  media *m;
-  
-  m = malloc(sizeof(media));
-  if (m == NULL) {
-    return NULL;
-  }
-  memset(m, 0, sizeof(media));
-  return m;
-}
-
 static media *media_new_from_json(char *base_selector, char *description_selector) {
   media *m;
   char **lines, *w;
@@ -48,11 +38,9 @@ static media *media_new_from_json(char *base_selector, char *description_selecto
   if (n >= 0) {
     n_lines = strsplit_in_place(img_buf, '\n', &lines);
     m->n_media = n_lines / 2;
-    m->media_id = malloc(m->n_media * sizeof(char *));
-    m->media_url = malloc(m->n_media * sizeof(char *));
-    m->media_alt_text = malloc(m->n_media * sizeof(char *));
-    memset(m->media_url, 0, m->n_media * sizeof(char *));
-    memset(m->media_alt_text, 0, m->n_media * sizeof(char *));
+    m->media_id = malloc0(m->n_media * sizeof(char *));
+    m->media_url = malloc0(m->n_media * sizeof(char *));
+    m->media_alt_text = malloc0(m->n_media * sizeof(char *));
     j = 0;
     for (i = 0; i < n_lines - 1; i += 2) {
       m->media_id[j] = strdup(lines[i]);

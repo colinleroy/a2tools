@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include "malloc0.h"
 #include "surl.h"
 #include "simple_serial.h"
 #include "strsplit.h"
@@ -16,16 +17,6 @@
   #pragma code-name (push, "LOWCODE")
   #endif
 #endif
-
-account *account_new(void) {
-  account *a = malloc(sizeof(account));
-  if (a == NULL) {
-    nomem_msg(__FILE__, __LINE__);
-    return NULL;
-  }
-  memset(a, 0, sizeof(account));
-  return a;
-}
 
 account *account_new_from_json(void) {
   account *a = account_new();
