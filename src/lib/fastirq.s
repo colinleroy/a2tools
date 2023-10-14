@@ -18,12 +18,12 @@
 
 ROMIRQVEC:= $03fe
 RAMIRQVEC:= $fffe
+A_BACKUP := $eb                 ; https://fadden.com/apple2/dl/zero-page.txt
 
         .segment       "DATA"
 
 _prev_rom_irq_vector: .res 2
 _prev_ram_irq_vector: .res 2
-_a_backup: .res 1
 
         .segment        "LOWCODE"
 
@@ -89,35 +89,24 @@ _done_fast_irq:
 ; ------------------------------------------------------------------------
 
 handle_ram_irq:
-        ; Check for BRK
-        sta     _a_backup
-        pla
+        sta     A_BACKUP        ; Save A
+        pla                     ; Check for BRK
         pha
-        asl     a
-        asl     a
-        asl     a
-        bpl     :+
-
-        ; Give BRK to the standard handler
-        .ifdef __APPLE2ENH__
-        jmp     (_prev_ram_irq_vector)
-        .endif
+        and     #%0010000       ; Check bit 4 (BRK flag)
+        bne     do_brk
 
         ; It's an IRQ
-:       lda     _a_backup
 
         .ifdef __APPLE2ENH__
-        pha                     ; Save A,X,Y
-        phx
+        phx                     ; Save X,Y
         phy
         jsr     callirq
         ply                     ; Restore Y,X,A
         plx
-        pla
+        lda     A_BACKUP
 
         .else
-        pha                     ; Save A,X,Y
-        txa
+        txa                     ; Save X,Y
         pha
         tya
         pha
@@ -126,10 +115,16 @@ handle_ram_irq:
         tay
         pla
         tax
-        pla
+        lda     A_BACKUP
 
         .endif
         rti
+
+do_brk:
+        ; Give BRK to the standard handler
+        .ifdef __APPLE2ENH__
+        jmp     (_prev_ram_irq_vector)
+        .endif
 
 handle_rom_irq:                 ; ROM saves things for us
         jsr     callirq
