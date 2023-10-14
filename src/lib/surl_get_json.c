@@ -35,7 +35,7 @@
 
 #define BUFSIZE 255
 
-int __fastcall__ surl_get_json(char *buffer, size_t len, char striphtml, char *translit, char *selector) {
+int __fastcall__ surl_get_json(char *buffer, size_t len, char striphtml, const char *translit, const char *selector) {
   char r;
   len = htons(len);
 
