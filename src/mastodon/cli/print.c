@@ -16,6 +16,7 @@
 #include "list.h"
 #include "math.h"
 #include "dgets.h"
+#include "progress_bar.h"
 #include "scrollwindow.h"
 
 extern char writable_lines;
@@ -126,9 +127,11 @@ int print_status(status *s, char hide, char full) {
     char i;
     for (i = 0; i < s->poll->options_count; i++) {
       CHECK_AND_CRLF();
-      cprintf("%zu", s->poll->options[i]->votes_count);
-      CHECK_AND_CRLF();
       dputs(s->poll->options[i]->title);
+      CHECK_AND_CRLF();
+      progress_bar(wherex(), wherey(), scrw - RIGHT_COL_START - 1,
+                   s->poll->options[i]->votes_count,
+                   s->poll->votes_count);
       CHECK_AND_CRLF();
     }
   }

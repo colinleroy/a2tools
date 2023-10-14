@@ -68,6 +68,7 @@ mastocli_SOURCES := \
 	api/notification.c \
 	api/status.c \
 	api/poll.c \
+	../lib/progress_bar.c \
 	../lib/path_helper.c
 
 mastocli_CC65SOURCES := \
