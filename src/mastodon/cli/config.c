@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <ctype.h>
+#include "malloc0.h"
 #include "platform.h"
 #include "surl.h"
 #include "extended_conio.h"
@@ -100,7 +101,7 @@ monochrome_again:
 }
 
 int main(int argc, char **argv) {
-  char *params = malloc(BUF_SIZE);
+  char *params = malloc0(BUF_SIZE);
 
   if (argc < 3) {
     cputs("Missing instance_url and/or oauth_token parameters.\n");

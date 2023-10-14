@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include "malloc0.h"
 #include "platform.h"
 #include "surl.h"
 #include "simple_serial.h"
@@ -96,7 +97,7 @@ char *api_send_hgr_image(char *filename, char *description, char **err, char x, 
   if (media_id != NULL) {
     /* Set description */
     int len;
-    char *body = malloc(1536);
+    char *body = malloc0(1536);
     snprintf(body, 1536, "S|description|TRANSLIT|%s\n%s\n",
                           translit_charset,
                           description);
@@ -124,13 +125,10 @@ signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medi
   int i, o, len;
   char *medias_buf;
 
-  body = malloc(1536);
-  if (body == NULL) {
-    return -1;
-  }
+  body = malloc0(1536);
 
   if (n_medias > 0) {
-    medias_buf = malloc(768);
+    medias_buf = malloc0(768);
     snprintf(medias_buf, 768, "A|media_ids\n[\"%s\""
                                 "%s%s%s"
                                 "%s%s%s"
@@ -209,9 +207,7 @@ char *compose_get_status_text(char *status_id) {
   if (surl_response_ok()) {
     int r;
     
-    content = malloc(NUM_CHARS);
-    if (content == NULL)
-      return NULL;
+    content = malloc0(NUM_CHARS);
 
     r = surl_get_json(content, NUM_CHARS, SURL_HTMLSTRIP_NONE, translit_charset, ".text");
 

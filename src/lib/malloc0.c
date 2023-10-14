@@ -4,9 +4,11 @@
 
 void * __fastcall__ malloc0(size_t size) {
   void *p = malloc(size);
-
-  if (p) {
-    memset(p, 0, size);
+#ifdef __CC65__
+  if (!p) {
+    __asm__("brk");
   }
+#endif
+  memset(p, 0, size);
   return p;
 }

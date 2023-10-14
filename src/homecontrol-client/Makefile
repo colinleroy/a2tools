@@ -12,6 +12,7 @@ PROGRAM=homectrl grphview
 homectrl_SOURCES := main.c network.c \
 	switches.c sensors.c climate.c \
 	server_url.c \
+	../lib/malloc0.c \
 	../lib/simple_serial.c \
 	../lib/extended_conio.c \
 	../lib/dgets.c \
@@ -27,6 +28,7 @@ homectrl_SOURCES := main.c network.c \
 homectrl_CL65SOURCES = ../lib/dputc.s ../lib/dputs.s ../lib/scroll.s ../lib/fastirq$(suffix).s
 
 grphview_SOURCES := graph-viewer.c \
+	../lib/malloc0.c \
 	../lib/surl_core.c \
 	../lib/surl_receive_lines.c \
 	../lib/simple_serial.c \

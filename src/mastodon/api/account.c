@@ -24,10 +24,6 @@ account *account_new_from_json(void) {
   char n_lines;
   char *note;
   
-  if (a == NULL) {
-    return NULL;
-  }
-
   if (surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, translit_charset,
                     ".id,.username,.acct,.display_name,"
                     ".created_at,.followers_count,"
@@ -45,7 +41,7 @@ account *account_new_from_json(void) {
     if (n_lines < 6)
       goto err_out;
 
-    note = malloc(2048);
+    note = malloc0(2048);
     r = surl_get_json(note, 2048, SURL_HTMLSTRIP_FULL, translit_charset, ".note");
     if (r < 0) {
       free(note);
@@ -81,9 +77,6 @@ account *api_get_profile(char *id) {
   }
 
   a = account_new();
-  if (a == NULL) {
-    return NULL;
-  }
 
   if (surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, translit_charset, ".id,.display_name,.acct,.username") >= 0) {
     n_lines = strnsplit_in_place(gen_buf,'\n', lines, 4);

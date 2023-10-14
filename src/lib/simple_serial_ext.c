@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <errno.h>
+#include "malloc0.h"
 #include "simple_serial.h"
 #include "extended_conio.h"
 #include "extended_string.h"
@@ -70,7 +71,7 @@ void simple_serial_printf(const char* format, ...) {
   va_list args;
 
   if (simple_serial_buf == NULL)
-    simple_serial_buf = malloc(SIMPLE_SERIAL_BUF_SIZE);
+    simple_serial_buf = malloc0(SIMPLE_SERIAL_BUF_SIZE);
 
   va_start(args, format);
   vsnprintf(simple_serial_buf, SIMPLE_SERIAL_BUF_SIZE - 1, format, args);

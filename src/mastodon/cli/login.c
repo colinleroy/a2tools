@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include "malloc0.h"
 #include "surl.h"
 #include "simple_serial.h"
 #include "scrollwindow.h"
@@ -87,19 +88,12 @@ static int load_settings(void) {
 
   fp = fopen("mastsettings", "r");
 
-  instance_url  = malloc(BUF_SIZE);
-  client_id     = malloc(50);
-  client_secret = malloc(50);
-  login         = malloc(50);
-  oauth_code    = malloc(50);
-  oauth_token   = malloc(50);
-
-  instance_url[0] = '\0';
-  client_id[0] = '\0';
-  client_secret[0] = '\0';
-  login[0] = '\0';
-  oauth_code[0] = '\0';
-  oauth_token[0] = '\0';
+  instance_url  = malloc0(BUF_SIZE);
+  client_id     = malloc0(50);
+  client_secret = malloc0(50);
+  login         = malloc0(50);
+  oauth_code    = malloc0(50);
+  oauth_token   = malloc0(50);
 
   if (fp != NULL) {
     if (fgets(instance_url, BUF_SIZE, fp) > 0)
@@ -169,7 +163,7 @@ int main(int argc, char **argv) {
     return img_main(argc, argv);
   }
 
-  params = malloc(BUF_SIZE);
+  params = malloc0(BUF_SIZE);
 
 #ifdef PRODOS_T_TXT
   _filetype = PRODOS_T_TXT;
