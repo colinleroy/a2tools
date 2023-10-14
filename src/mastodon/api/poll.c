@@ -22,24 +22,23 @@ void poll_free(poll *p) {
 
 /* expired, multiple, votes_count, voters_count */
 #define NUM_POLL_LINES 3
+static const char *poll_selector = ".reblog.poll|(.multiple,.votes_count,"
+                            "(.own_votes|join(\",\")),"
+                            "(.options[]|(.title,.votes_count)))";
 
 void poll_fill(poll *p, char from_reblog) {
   int r;
   char n_lines;
 
+  if (from_reblog)
+    n_lines = 0;
+  else
+    n_lines = 7; /* strlen(".reblog") */
+
   memset(p->own_votes, 0, MAX_POLL_OPTIONS);
 
-  if (from_reblog) {
-    r = surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE,
-                      translit_charset, ".reblog.poll|(.multiple,.votes_count,"
-                                        "(.own_votes|join(\",\")),"
-                                        "(.options[]|(.title,.votes_count)))");
-  } else {
-    r = surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE,
-                      translit_charset, ".poll|(.multiple,.votes_count,"
-                                        "(.own_votes|join(\",\")),"
-                                        "(.options[]|(.title,.votes_count)))");
-  }
+  r = surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE,
+                    translit_charset, poll_selector + n_lines);
 
   n_lines = strnsplit_in_place(gen_buf, '\n', lines,
                                NUM_POLL_LINES + (MAX_POLL_OPTIONS * 2));
