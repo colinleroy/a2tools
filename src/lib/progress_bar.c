@@ -40,7 +40,7 @@ void progress_bar(int x, int y, int width, size_t cur, size_t end) {
 
   last_percent = percent;
 
-  if (cur == 0) {
+  if (x >= 0) {
     for (i = (int)(percent + 1L); i < width; i++)
       cputc(0x7F);
     gotoxy(x, y);
