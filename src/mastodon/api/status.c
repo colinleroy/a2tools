@@ -41,6 +41,14 @@ static __fastcall__ char atoc(const char *str) {
   #endif
 #endif
 
+static const char *basic_selector   = ".reblog|(.created_at,.account.display_name,.reblog.id//\"-\",.spoiler_text)";
+static const char *details_selector = ".reblog|((.media_attachments|map(. | select(.type==\"image\"))|length),"
+                                 ".replies_count,.reblogs_count,.favourites_count,.reblogged,.favourited,"
+                                 ".bookmarked,.account.id,.account.acct,.account.username,.visibility,"
+                                 ".poll.id)";
+static const char *content_selector = ".reblog|(.content)";
+
+
 #ifdef __CC65__
 #pragma static-locals (push,off) /* need reentrancy */
 #endif
@@ -48,21 +56,20 @@ static __fastcall__ char status_fill_from_json(status *s, char *id, char full, c
   char c, n_lines;
   int r;
   char *content;
+  char reblog_offset;
 
   s->id = strdup(id);
   if (s->id == NULL) {
     return -1;
   }
 
-  /* .reblog.id is the only one that can be null (and hence not there),
-   * so put it at the end */
-  if (is_reblog) {
-    r = surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, translit_charset,
-                      ".reblog|(.created_at,.account.display_name,\"-\",.spoiler_text)");
-  } else {
-    r = surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, translit_charset,
-                      ".created_at,.account.display_name,.reblog.id//\"-\",.spoiler_text");
-  }
+  if (is_reblog)
+    reblog_offset = 0;
+  else
+    reblog_offset = 8; /* strlen(".reblog|") */
+
+  r = surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, translit_charset,
+                    basic_selector + reblog_offset);
 
   n_lines = strnsplit_in_place(gen_buf, '\n', lines, 4);
   if (r >= 0 && n_lines >= 3) {
@@ -85,19 +92,8 @@ static __fastcall__ char status_fill_from_json(status *s, char *id, char full, c
   }
   
   /* Get details of original toot */
-  if (is_reblog) {
-    r = surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, NULL,
-                      ".reblog|((.media_attachments|map(. | select(.type==\"image\"))|length),"
-                      ".replies_count,.reblogs_count,.favourites_count,.reblogged,.favourited,"
-                      ".bookmarked,.account.id,.account.acct,.account.username,.visibility,"
-                      ".poll.id)");
-  } else {
-    r = surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, NULL,
-                      "(.media_attachments|map(. | select(.type==\"image\"))|length),"
-                      ".replies_count,.reblogs_count,.favourites_count,.reblogged,.favourited,"
-                      ".bookmarked,.account.id,.account.acct,.account.username,.visibility,"
-                      ".poll.id");
-  }
+  r = surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, NULL,
+                    details_selector + reblog_offset);
 
   n_lines = strnsplit_in_place(gen_buf, '\n', lines, 12);
   if (r >= 0 && n_lines >= 11) {
@@ -135,11 +131,9 @@ static __fastcall__ char status_fill_from_json(status *s, char *id, char full, c
   r = full ? TL_STATUS_LARGE_BUF : TL_STATUS_SHORT_BUF;
   content = malloc0(r);
 
-  if (is_reblog) {
-    r = surl_get_json(content, r, SURL_HTMLSTRIP_FULL, translit_charset, ".reblog.content");
-  } else {
-    r = surl_get_json(content, r, SURL_HTMLSTRIP_FULL, translit_charset, ".content");
-  }
+  r = surl_get_json(content, r, SURL_HTMLSTRIP_FULL, translit_charset,
+                    content_selector + reblog_offset);
+
   if (!full && r == TL_STATUS_SHORT_BUF - 1) {
     strcpy(content + TL_STATUS_SHORT_BUF - 4, "...");
     s->content = content;
