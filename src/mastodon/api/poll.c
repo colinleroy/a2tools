@@ -23,47 +23,42 @@ void poll_free(poll *p) {
 
   free(p->id);
   for (i = 0; i < p->options_count; i++) {
-    free(p->options[i]->title);
-    free(p->options[i]);
+    free(p->options[i].title);
   }
-  free(p->options);
   free(p);
 }
 
 /* expired, multiple, votes_count, voters_count */
-#define NUM_POLL_LINES 4
+#define NUM_POLL_LINES 2
 
-void poll_fill(poll *p, const char *poll_sel) {
+void poll_fill(poll *p, char from_reblog) {
   int r;
   char n_lines;
 
-  snprintf(selector, SELECTOR_SIZE, "%s|(.expired,.multiple,.votes_count,.voters_count,"
-                                        "(.options[]|(.title,.votes_count)))",
-                                      poll_sel);
-
-  r = surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE,
-                    translit_charset, selector);
+  if (from_reblog) {
+    r = surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE,
+                      translit_charset, ".reblog.poll|(.multiple,.votes_count,"
+                                        "(.options[]|(.title,.votes_count)))");
+  } else {
+    r = surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE,
+                      translit_charset, ".poll|(.multiple,.votes_count,"
+                                        "(.options[]|(.title,.votes_count)))");
+  }
 
   n_lines = strnsplit_in_place(gen_buf, '\n', lines,
                                NUM_POLL_LINES + (MAX_POLL_OPTIONS * 2));
   /* Check we have at least two options */
   if (r >= 0 && n_lines >= (NUM_POLL_LINES + (2 * 2))) {
-    p->expired  = (lines[0][0] == 't');
-    p->multiple = (lines[1][0] == 't');
-    p->votes_count = (size_t)atoi(lines[2]);
-    p->voters_count = (size_t)atoi(lines[3]);
+    p->multiple = (lines[0][0] == 't');
+    p->votes_count = (size_t)atoi(lines[1]);
 
-    p->options_count = (n_lines - NUM_POLL_LINES) / 2;
-    p->options = malloc(p->options_count * sizeof(poll_option *));
-    if (p->options == NULL) {
-      p->options_count = 0;
-      return;
-    }
+    p->options_count = (n_lines - NUM_POLL_LINES);
+    p->options_count /= 2;
 
     for (r = 0; r < p->options_count; r ++) {
-      p->options[r] = malloc(sizeof(poll_option));
-      p->options[r]->title = strdup(lines[NUM_POLL_LINES + (r * 2)]);
-      p->options[r]->votes_count = (size_t)atoi(lines[NUM_POLL_LINES + 1 + (r * 2)]);
+      char i = NUM_POLL_LINES + (r * 2);
+      p->options[r].title = strdup(lines[i]);
+      p->options[r].votes_count = (size_t)atoi(lines[i + 1]);
     }
   }
 }

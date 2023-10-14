@@ -132,7 +132,7 @@ int print_status(status *s, char hide, char full) {
     }
 
     for (i = 0; i < s->poll->options_count; i++) {
-      poll_option *o = s->poll->options[i];
+      poll_option *o = &(s->poll->options[i]);
       CHECK_AND_CRLF();
       dputs(o->title);
       CHECK_AND_CRLF();

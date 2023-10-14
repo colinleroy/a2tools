@@ -141,7 +141,7 @@ static __fastcall__ char status_fill_from_json(status *s, char *id, char full, c
         goto err_mem;
       }
       s->poll->id = strdup(lines[11]);
-      poll_fill(s->poll, is_reblog ? ".reblog.poll":".poll");
+      poll_fill(s->poll, is_reblog);
     }
   }
 
