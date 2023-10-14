@@ -125,13 +125,20 @@ int print_status(status *s, char hide, char full) {
 
   if (s->poll) {
     char i;
+    char w = scrw - RIGHT_COL_START - 1;
+    size_t total = s->poll->votes_count;
+
+    if (total == 0) {
+      total = 1;
+    }
+
     for (i = 0; i < s->poll->options_count; i++) {
       CHECK_AND_CRLF();
       dputs(s->poll->options[i]->title);
       CHECK_AND_CRLF();
-      progress_bar(wherex(), wherey(), scrw - RIGHT_COL_START - 1,
+      progress_bar(wherex(), wherey(), w,
                    s->poll->options[i]->votes_count,
-                   s->poll->votes_count);
+                   total);
       CHECK_AND_CRLF();
     }
   }

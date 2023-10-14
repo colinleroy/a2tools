@@ -658,6 +658,9 @@ static char calc_post_height(status *s) {
   if (s->spoiler_text) {
     ++height;
   }
+  if (s->poll) {
+    height += 3 * s->poll->options_count;
+  }
 
   x = 0;
   while (*w) {
