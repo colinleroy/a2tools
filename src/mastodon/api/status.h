@@ -2,6 +2,7 @@
 #define __status_h
 
 #include "account.h"
+#include "poll.h"
 
 #ifdef __APPLE2ENH__
 #define TL_SPOILER_TEXT_BUF 54
@@ -31,6 +32,7 @@ struct _status {
   unsigned char n_images;
   char flags;
   char visibility;
+  poll *poll;
 };
 
 status *status_new(void);
