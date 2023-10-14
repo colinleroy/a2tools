@@ -22,7 +22,7 @@
 Emulate:       .res 1
 OrgMgr:        .res 4
 
-        .segment        "LOWCODE"
+        .segment        "RT_ONCE"
 
 _init_fast_irq:
         sei
@@ -57,6 +57,8 @@ _init_fast_irq:
         rts
 
 ; ------------------------------------------------------------------------
+
+        .segment        "LOWCODE"
 
 _done_fast_irq:
         sei

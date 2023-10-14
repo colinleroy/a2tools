@@ -8,7 +8,11 @@
 #include "api.h"
 
 #ifdef __CC65__
-#pragma code-name (push, "LOWCODE")
+  #ifdef SURL_TO_LANGCARD
+  #pragma code-name (push, "LC")
+  #else
+  #pragma code-name (push, "LOWCODE")
+  #endif
 #endif
 
 #define TL_STATUS_SHORT_BUF 512
@@ -32,6 +36,13 @@ static __fastcall__ char atoc(const char *str) {
   }
   return i;
 }
+
+#ifdef __CC65__
+  #ifdef SURL_TO_LANGCARD
+  #pragma code-name (pop)
+  #pragma code-name (push, "LOWCODE")
+  #endif
+#endif
 
 #ifdef __CC65__
 #pragma static-locals (push,off) /* need reentrancy */
