@@ -16,6 +16,7 @@ struct _poll {
   char multiple;
   size_t votes_count;
   char options_count;
+  char own_votes[MAX_POLL_OPTIONS];
   poll_option options[MAX_POLL_OPTIONS];
 };
 
@@ -24,4 +25,5 @@ void poll_free(poll *p);
 
 void poll_fill(poll *p, const char from_reblog);
 
+void poll_update_vote(poll *p);
 #endif

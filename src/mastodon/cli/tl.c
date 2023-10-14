@@ -7,6 +7,7 @@
 #include "malloc0.h"
 #include "platform.h"
 #include "surl.h"
+#include "clrzone.h"
 #include "extended_conio.h"
 #include "path_helper.h"
 #include "strsplit.h"
@@ -37,30 +38,7 @@ extern account *my_account;
 static list **all_lists;
 static signed char cur_list_idx;
 
-/* actions mapped to keys */
-#if NUMCOLS == 40
-#define SHOW_HELP            HELP_KEY
-#endif
-#define SHOW_FULL_STATUS     CH_ENTER
-#define BACK                 CH_ESC
-#define COMPOSE              'c'
-#define CONFIGURE            'o'
-#define SHOW_NOTIFICATIONS   'n'
-#define SEARCH               's'
-#define SHOW_PROFILE         'p'
-#define IMAGES               'i'
-#define REPLY                'r'
-#define EDIT                 'e'
-/* special cases (extra step or mapped arrays )*/
-#define SHOW_HOME_TIMELINE   0
-#define SHOW_LOCAL_TIMELINE  1
-#define SHOW_GLOBAL_TIMELINE 2
-#define SHOW_BOOKMARKS       3
-#define SHOW_SEARCH_RES      'R'
-#define NAVIGATE             'N'
-#define ACCOUNT_TOGGLE_RSHIP 'F'
-
-static char cur_action;
+char cur_action;
 static char search_buf[50];
 static char search_type = 'm';
 static char rship_toggle_action = RSHIP_FOLLOWING;
@@ -957,6 +935,44 @@ static char background_load(list *l) {
   return -1;
 }
 
+static void do_vote (status *status) {
+  char c;
+
+  set_hscrollwindow(RIGHT_COL_START, scrw - RIGHT_COL_START);
+
+  while (1) {
+    gotoxy(0, 0);
+    writable_lines = 23;
+    print_status(status, 0, 1);
+    c = wherey();
+    c -= 2;
+    clrzone(0, c, scrw - RIGHT_COL_START, c);
+    dputs("1-4 to choose, Enter to vote, Escape to cancel");
+    c = tolower(cgetc());
+
+    switch(c) {
+      case CH_ESC:
+        goto out;
+      case CH_ENTER:
+        goto vote;
+      case '1':
+      case '2':
+      case '3':
+      case '4':
+        if (!status->poll->multiple) {
+          memset(status->poll->own_votes, 0, MAX_POLL_OPTIONS);
+        }
+        status->poll->own_votes[c-'1'] = !status->poll->own_votes[c-'1'];
+        break;
+    }
+  }
+vote:
+  poll_update_vote(status->poll);
+out:
+  set_hscrollwindow(0, scrw);
+  return;
+}
+
 static void show_list(list *l) {
   char c;
   char limit = 0;
@@ -1055,6 +1071,15 @@ inject_cmd:
             cur_action = BACK;
             return;
           }
+        }
+        break;
+      case 'v':
+        if (root_status && root_status->poll) {
+          cur_action = VOTING;
+          do_vote(root_status);
+          l->half_displayed_post = 0;
+          cur_action = NAVIGATE;
+          return;
         }
         break;
       case 'a':

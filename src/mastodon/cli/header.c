@@ -79,6 +79,9 @@ void show_help (list *l, status *root_status, notification *root_notif) {
     if (root_status->n_images > 0) {
       dputs(" Images    : I     \r\n");
     }
+    if (root_status->poll) {
+      dputs(" Vote      : V     \r\n");
+    }
     if ((root_status->flags & FAVOURITED) != 0) {
       dputs(" Unfav.    : F     \r\n");
     } else {

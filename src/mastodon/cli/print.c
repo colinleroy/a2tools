@@ -134,9 +134,10 @@ int print_status(status *s, char hide, char full) {
     for (i = 0; i < s->poll->options_count; i++) {
       poll_option *o = &(s->poll->options[i]);
       CHECK_AND_CRLF();
+      dputs(s->poll->own_votes[i] == 1 ? "(*) ":"( ) ");
       dputs(o->title);
       CHECK_AND_CRLF();
-      progress_bar(wherex(), wherey(), wrap_idx,
+      progress_bar(wherex() + 4, wherey(), wrap_idx - 3,
                    o->votes_count, total);
       CHECK_AND_CRLF();
     }
