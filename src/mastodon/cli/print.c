@@ -121,6 +121,17 @@ int print_status(status *s, char hide, char full) {
   if (print_buf(s->content, hide && s->spoiler_text != NULL, (full && s->displayed_at == 0)) < 0)
     return -1;
   CHECK_AND_CRLF();
+
+  if (s->poll) {
+    char i;
+    for (i = 0; i < s->poll->options_count; i++) {
+      CHECK_AND_CRLF();
+      cprintf("%zu", s->poll->options[i]->votes_count);
+      CHECK_AND_CRLF();
+      dputs(s->poll->options[i]->title);
+      CHECK_AND_CRLF();
+    }
+  }
   /* stats */
   CHECK_AND_CRLF();
 

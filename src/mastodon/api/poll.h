@@ -4,6 +4,8 @@
 typedef struct _poll poll;
 typedef struct _poll_option poll_option;
 
+#define MAX_POLL_OPTIONS 4
+
 struct _poll {
   char *id;
   char expired;
@@ -21,5 +23,7 @@ struct _poll_option {
 
 poll *poll_new(void);
 void poll_free(poll *p);
+
+void poll_fill(poll *p, const char *poll_sel);
 
 #endif

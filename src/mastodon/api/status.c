@@ -99,16 +99,18 @@ static __fastcall__ char status_fill_from_json(status *s, char *id, char full, c
     r = surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, NULL,
                       ".reblog|((.media_attachments|map(. | select(.type==\"image\"))|length),"
                       ".replies_count,.reblogs_count,.favourites_count,.reblogged,.favourited,"
-                      ".bookmarked,.account.id,.account.acct,.account.username,.visibility)");
+                      ".bookmarked,.account.id,.account.acct,.account.username,.visibility,"
+                      ".poll.id)");
   } else {
     r = surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, NULL,
                       "(.media_attachments|map(. | select(.type==\"image\"))|length),"
                       ".replies_count,.reblogs_count,.favourites_count,.reblogged,.favourited,"
-                      ".bookmarked,.account.id,.account.acct,.account.username,.visibility");
+                      ".bookmarked,.account.id,.account.acct,.account.username,.visibility,"
+                      ".poll.id");
   }
 
-  n_lines = strnsplit_in_place(gen_buf, '\n', lines, 11);
-  if (r >= 0 && n_lines == 11) {
+  n_lines = strnsplit_in_place(gen_buf, '\n', lines, 12);
+  if (r >= 0 && n_lines >= 11) {
     s->n_images = atoc(lines[0]);
     s->n_replies = atoc(lines[1]);
     s->n_reblogs = atoc(lines[2]);
@@ -131,6 +133,16 @@ static __fastcall__ char status_fill_from_json(status *s, char *id, char full, c
       s->visibility = COMPOSE_PRIVATE;
     else
       s->visibility = COMPOSE_MENTION;
+
+    /* Poll */
+    if (n_lines == 12) {
+      s->poll = poll_new();
+      if (s->poll == NULL) {
+        goto err_mem;
+      }
+      s->poll->id = strdup(lines[11]);
+      poll_fill(s->poll, is_reblog ? ".reblog.poll":".poll");
+    }
   }
 
   r = full ? TL_STATUS_LARGE_BUF : TL_STATUS_SHORT_BUF;
@@ -169,6 +181,7 @@ void status_free(status *s) {
   free(s->content);
   free(s->reblogged_by);
   account_free(s->account);
+  poll_free(s->poll);
   free(s);
 }
 
