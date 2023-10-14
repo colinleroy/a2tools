@@ -25,7 +25,7 @@ A_BACKUP := $eb                 ; https://fadden.com/apple2/dl/zero-page.txt
 _prev_rom_irq_vector: .res 2
 _prev_ram_irq_vector: .res 2
 
-        .segment        "LOWCODE"
+        .segment        "RT_ONCE"
 
 _init_fast_irq:
         ; Disable IRQs
@@ -64,6 +64,8 @@ _init_fast_irq:
         rts
 
 ; ------------------------------------------------------------------------
+
+        .segment        "LOWCODE"
 
 _done_fast_irq:
         ; Restore ROM IRQ vector

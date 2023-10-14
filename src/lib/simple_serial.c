@@ -243,15 +243,6 @@ void simple_serial_configure(void) {
   reopen_start_device();
 }
 
-#pragma code-name (pop)
-
-
-#ifdef SURL_TO_LANGCARD
-#pragma code-name (push, "LC")
-#else
-#pragma code-name (push, "LOWCODE")
-#endif
-
 char __fastcall__ simple_serial_open(void) {
   char err;
 
@@ -297,6 +288,14 @@ char __fastcall__ simple_serial_close(void) {
   ser_close();
   return ser_uninstall();
 }
+
+#pragma code-name (pop)
+
+#ifdef SURL_TO_LANGCARD
+#pragma code-name (push, "LC")
+#else
+#pragma code-name (push, "LOWCODE")
+#endif
 
 void __fastcall__ simple_serial_flush(void) {
   while(simple_serial_getc_with_timeout() != EOF);
