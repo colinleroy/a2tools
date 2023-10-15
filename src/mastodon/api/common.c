@@ -18,9 +18,6 @@
   #endif
 #endif
 
-#define ENDPOINT_BUF_SIZE 128
-char endpoint_buf[ENDPOINT_BUF_SIZE];
-
 char *translit_charset = US_CHARSET;
 char arobase = '@';
 char *tl_endpoints[4] = { TIMELINE_ENDPOINT "/" HOME_TIMELINE,
@@ -38,7 +35,8 @@ extern char *oauth_token;
 /* shared */
 char gen_buf[BUF_SIZE];
 char selector[SELECTOR_SIZE];
-char *lines[BUF_SIZE];
+char endpoint_buf[ENDPOINT_BUF_SIZE];
+char *lines[MAX_LINES_NUM];
 
 char *date_format(char *in, char with_time) {
   char *out = strdup(in);

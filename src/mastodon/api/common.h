@@ -8,8 +8,6 @@ struct _item {
   char *id;
 };
 
-#define ENDPOINT_BUF_SIZE 128
-extern char endpoint_buf[ENDPOINT_BUF_SIZE];
 
 extern char *tl_endpoints[4];
 extern char *tl_filter[4];
@@ -23,13 +21,18 @@ extern char *tl_filter[4];
 #define IT_CHARSET "ISO646-IT"
 #define DE_CHARSET "ISO646-DE"
 
-#define SELECTOR_SIZE 255
-extern char selector[SELECTOR_SIZE];
+/* Shared buffers */
 #define BUF_SIZE 255
 extern char gen_buf[BUF_SIZE];
 
-#define MAX_LINES_NUM 12
-extern char *lines[BUF_SIZE];
+#define SELECTOR_SIZE 128
+extern char selector[SELECTOR_SIZE];
+
+#define ENDPOINT_BUF_SIZE 128
+extern char endpoint_buf[ENDPOINT_BUF_SIZE];
+
+#define MAX_LINES_NUM 32
+extern char *lines[MAX_LINES_NUM];
 
 extern char *instance_url;
 extern char *oauth_token;

@@ -112,14 +112,14 @@ int api_get_status_and_replies(char to_load, char *root_id, char *root_leaf_id, 
           | .[ : n_after ] | .[]
      */
     n_after = to_load;
-    snprintf(selector, SELECTOR_SIZE, "[ ((.ancestors|map(.id)),"
+    snprintf(selector, SELECTOR_SIZE, "[((.ancestors|map(.id)),"
                                         "[\"%s\"],"
                                         "(.descendants|map(.id)))"
                                         "|.[]"
-                                      "] | .["
+                                      "]|.["
                                             ".|index(\"%s\")+1:"
                                            "]"
-                                         "| .[ : %d] | .[]",
+                                         "|.[:%d]|.[]",
                                         root_id,
                                         load_after,
                                         n_after);
@@ -145,14 +145,14 @@ int api_get_status_and_replies(char to_load, char *root_id, char *root_leaf_id, 
           | .[ -n_before : ] | .[]
      */
     n_before = to_load;
-    snprintf(selector, SELECTOR_SIZE, "[ ((.ancestors|map(.id)),"
+    snprintf(selector, SELECTOR_SIZE, "[((.ancestors|map(.id)),"
                                         "[\"%s\"],"
                                         "(.descendants|map(.id)))"
                                         "|.[]"
-                                      "] | .["
-                                            ": .|index(\"%s\")"
+                                      "]|.["
+                                            ":.|index(\"%s\")"
                                            "]"
-                                         "| .[-%d : ] | .[]",
+                                         "|.[-%d : ]|.[]",
                                         root_id,
                                         load_before,
                                         n_before);
