@@ -5,9 +5,9 @@ typedef struct _media media;
 
 struct _media {
   char n_media;
-  char **media_id;
-  char **media_url;
-  char **media_alt_text;
+  char *media_id[4];
+  char *media_url[4];
+  char *media_alt_text[4];
 };
 
 #define media_new() (media *)malloc0(sizeof(media))
