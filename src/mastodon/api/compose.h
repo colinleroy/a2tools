@@ -5,6 +5,10 @@
 
 #define NUM_CHARS 501
 
+#define NUM_POLL_DURATIONS 6
+extern const char compose_poll_durations_hours[];
+extern const char *compose_poll_durations_seconds[];
+
 char *compose_audience_str(char compose_audience);
 
 signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medias,

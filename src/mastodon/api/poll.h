@@ -5,6 +5,7 @@ typedef struct _poll poll;
 typedef struct _poll_option poll_option;
 
 #define MAX_POLL_OPTIONS 4
+#define MAX_POLL_OPTION_LEN 49
 
 struct _poll_option {
   char *title;
@@ -16,6 +17,7 @@ struct _poll {
   char multiple;
   size_t votes_count;
   char options_count;
+  char expires_in_hours;
   char own_votes[MAX_POLL_OPTIONS];
   poll_option options[MAX_POLL_OPTIONS];
 };
