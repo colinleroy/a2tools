@@ -144,7 +144,7 @@ static void setup_gui(void)
        * only one separator line */
       gotoxy(0, wherey() - 1);
       chline(scrw - RIGHT_COL_START);
-
+      clrzone(wherex(), wherey(), scrw - RIGHT_COL_START, wherey());
       dputs("Your reply:\r\n");
       top = wherey();
     }
@@ -314,6 +314,7 @@ static void add_poll_option(void) {
   }
   dget_text(toot_poll->options[r].title, MAX_POLL_OPTION_LEN, NULL, 0);
   if (toot_poll->options[r].title[0] != '\0') {
+    compose_sanitize_str(toot_poll->options[r].title);
     r++;
     toot_poll->options_count = r;
   } else {
@@ -519,7 +520,7 @@ try_again:
     r = api_send_toot(compose_mode[0], text, cw, sensitive_medias,
                       ref_status ? ref_status->id : NULL,
                       media_ids, n_medias,
-                      compose_audience);
+                      toot_poll, compose_audience);
     if (r < 0) {
       char t;
 
