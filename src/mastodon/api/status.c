@@ -41,11 +41,11 @@ static __fastcall__ char atoc(const char *str) {
   #endif
 #endif
 
-static const char *basic_selector   = ".reblog|(.created_at,.account.display_name,.reblog.id//\"-\",.spoiler_text)";
-static const char *details_selector = ".reblog|((.media_attachments|map(. | select(.type==\"image\"))|length),"
-                                 ".replies_count,.reblogs_count,.favourites_count,.reblogged,.favourited,"
-                                 ".bookmarked,.account.id,.account.acct,.account.username,.visibility,"
-                                 ".poll.id)";
+static const char *basic_selector   = ".reblog|(.created_at,.account.display_name,.reblog.id//\"-\",.spoiler_text//\"\","
+                                      "(.media_attachments|map(. | select(.type==\"image\"))|length),"
+                                      ".replies_count,.reblogs_count,.favourites_count,"
+                                      ".account.id,.account.acct,.account.username,.visibility,"
+                                      ".reblogged,.favourited,.bookmarked,.poll.id)";
 static const char *content_selector = ".reblog|(.content)";
 
 
@@ -71,8 +71,8 @@ static __fastcall__ char status_fill_from_json(status *s, char *id, char full, c
   r = surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, translit_charset,
                     basic_selector + reblog_offset);
 
-  n_lines = strnsplit_in_place(gen_buf, '\n', lines, 4);
-  if (r >= 0 && n_lines >= 3) {
+  n_lines = strnsplit_in_place(gen_buf, '\n', lines, 16);
+  if (r >= 0 && n_lines >= 15) {
     if (!is_reblog && lines[2][0] != '-') {
       s->reblogged_by = strdup(lines[1]);
       s->reblog_id = s->id;
@@ -84,33 +84,20 @@ static __fastcall__ char status_fill_from_json(status *s, char *id, char full, c
 
     s->created_at = date_format(lines[0], 1);
     s->account->display_name = strdup(lines[1]);
-    if (n_lines > 3) {
+    if (lines[3][0] != '\0') {
       s->spoiler_text = malloc0(TL_SPOILER_TEXT_BUF);
       strncpy(s->spoiler_text, lines[3], TL_SPOILER_TEXT_BUF - 1);
       s->spoiler_text[TL_SPOILER_TEXT_BUF - 1] = '\0';
     }
-  }
-  
-  /* Get details of original toot */
-  r = surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, NULL,
-                    details_selector + reblog_offset);
 
-  n_lines = strnsplit_in_place(gen_buf, '\n', lines, 12);
-  if (r >= 0 && n_lines >= 11) {
-    s->n_images = atoc(lines[0]);
-    s->n_replies = atoc(lines[1]);
-    s->n_reblogs = atoc(lines[2]);
-    s->n_favourites = atoc(lines[3]);
-    if (lines[4][0] == 't') /* true */
-      s->flags |= REBLOGGED;
-    if (lines[5][0] == 't') /* true */
-      s->flags |= FAVOURITED;
-    if (lines[6][0] == 't') /* true */
-      s->flags |= BOOKMARKED;
-    s->account->id = strdup(lines[7]);
-    s->account->acct = strdup(lines[8]);
-    s->account->username = strdup(lines[9]);
-    c = lines[10][1];
+    s->n_images = atoc(lines[4]);
+    s->n_replies = atoc(lines[5]);
+    s->n_reblogs = atoc(lines[6]);
+    s->n_favourites = atoc(lines[7]);
+    s->account->id = strdup(lines[8]);
+    s->account->acct = strdup(lines[9]);
+    s->account->username = strdup(lines[10]);
+    c = lines[11][1];
     if (c == 'u') /* pUblic */
       s->visibility = COMPOSE_PUBLIC;
     else if (c == 'n') /* uNlisted */
@@ -120,12 +107,20 @@ static __fastcall__ char status_fill_from_json(status *s, char *id, char full, c
     else
       s->visibility = COMPOSE_MENTION;
 
+    if (lines[12][0] == 't') /* true */
+      s->flags |= REBLOGGED;
+    if (lines[13][0] == 't') /* true */
+      s->flags |= FAVOURITED;
+    if (lines[14][0] == 't') /* true */
+      s->flags |= BOOKMARKED;
+
     /* Poll */
-    if (n_lines == 12) {
+    if (n_lines == 16) {
       s->poll = poll_new();
-      s->poll->id = strdup(lines[11]);
+      s->poll->id = strdup(lines[15]);
       poll_fill(s->poll, is_reblog);
     }
+
   }
 
   r = full ? TL_STATUS_LARGE_BUF : TL_STATUS_SHORT_BUF;

@@ -136,6 +136,10 @@ reenter_settings:
     if (instance_url[0] == '\0') {
       goto reenter_settings;
     }
+    if (strlen(instance_url) > 70) {
+      dputs("URL is too long.\r\n");
+      goto reenter_settings;
+    }
     if (register_app() < 0) {
       goto reenter_settings;
     }
