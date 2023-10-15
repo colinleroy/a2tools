@@ -16,6 +16,7 @@
 #include "compose_header.h"
 #include "compose.h"
 #include "media.h"
+#include "poll.h"
 #include "list.h"
 #include "math.h"
 #include "dgets.h"
@@ -38,13 +39,14 @@ char *media_descriptions[4];
 
 char cw[50] = "";
 
+poll *toot_poll = NULL;
+
 #define COMPOSE_HEIGHT 15
 #define COMPOSE_FIELD_HEIGHT 9
 
 static char compose_audience = COMPOSE_PUBLIC;
 static char cancelled = 0;
-static char should_open_images_menu = 0;
-static char should_open_cw_menu = 0;
+static char should_open_menu = 0;
 static char should_resume_composing = 0;
 
 static status *ref_status = NULL;
@@ -89,10 +91,17 @@ static void update_cw(void) {
 #endif
 }
 static char dgt_cmd_cb(char c) {
-  switch(tolower(c)) {
-    case 's':    return 1;
-    case 'i':    should_open_images_menu = 1;         return 1;
-    case 'c':    should_open_cw_menu = 1;             return 1;
+  c = tolower(c);
+  switch(c) {
+    case 's':    /* send */
+      return 1;
+
+    case 'i':
+    case 'c':
+    case 'v':
+      should_open_menu = c;
+      return 1;
+
     case 'p':    compose_audience = COMPOSE_PUBLIC;   break;
     case 'r':    compose_audience = COMPOSE_PRIVATE;  break;
 #if NUMCOLS == 80
@@ -236,6 +245,13 @@ image_menu:
           sensitive_medias ? "(SENSITIVE) ":"",
           n_medias, MAX_IMAGES);
 
+  if (toot_poll) {
+    dputs("\r\nCan not add images to a toot with a poll.");
+    cgetc();
+    clrscr();
+    return;
+  }
+
   for (c = 0; c < n_medias; c++) {
     char short_desc[55];
     strncpy(short_desc, media_descriptions[c], TL_SPOILER_TEXT_BUF);
@@ -284,6 +300,150 @@ image_menu:
   goto image_menu;
 }
 
+static void add_poll_option(void) {
+  char r = toot_poll->options_count + 1;
+
+  if (r > MAX_POLL_OPTIONS) {
+    return;
+  }
+
+  cprintf("Option %d: ", r);
+  r--;
+  if (toot_poll->options[r].title == NULL) {
+    toot_poll->options[r].title = malloc0(MAX_POLL_OPTION_LEN + 1);
+  }
+  dget_text(toot_poll->options[r].title, MAX_POLL_OPTION_LEN, NULL, 0);
+  if (toot_poll->options[r].title[0] != '\0') {
+    r++;
+    toot_poll->options_count = r;
+  } else {
+    free(toot_poll->options[r].title);
+    toot_poll->options[r].title = NULL;
+  }
+}
+
+static void remove_poll_option(void) {
+  char c = toot_poll->options_count;
+  if (c == 0) {
+    return;
+  }
+  c--;
+  free(toot_poll->options[c].title);
+  toot_poll->options[c].title = NULL;
+  toot_poll->options_count = c;
+}
+
+static void print_poll_header(void) {
+  gotoxy(0, 0);
+  cprintf("Poll (%d %s):     \r\n"
+          "%u options, %s choice\r\n\r\n",
+          toot_poll->expires_in_hours < 48 ? 
+            toot_poll->expires_in_hours : toot_poll->expires_in_hours / 24,
+          toot_poll->expires_in_hours < 48 ? 
+            "hours":"days",
+          toot_poll->options_count,
+          toot_poll->multiple ? "multiple":"single");
+}
+
+static void set_poll_duration(void) {
+  char c, i;
+  do {
+    gotoxy(0, scrh - 1);
+    dputs("Left/Right to change duration, Enter to validate.");
+    for (i = 0; i < NUM_POLL_DURATIONS; i++) {
+      if (toot_poll->expires_in_hours == compose_poll_durations_hours[i]) {
+        break;
+      }
+    }
+    c = cgetc();
+    if (c == CH_CURS_LEFT && i > 0) {
+      toot_poll->expires_in_hours = compose_poll_durations_hours[i - 1];
+    }
+    if (c == CH_CURS_RIGHT && i < NUM_POLL_DURATIONS) {
+      toot_poll->expires_in_hours = compose_poll_durations_hours[i + 1];
+    }
+    print_poll_header();
+  } while (c != CH_ENTER);
+}
+
+static void open_poll_menu(void) {
+  char c, next_option_y;
+
+  set_scrollwindow(0, scrh);
+poll_menu:
+  clrscr();
+  gotoxy(0, 1);
+
+  if (toot_poll == NULL) {
+    toot_poll = poll_new();
+    toot_poll->expires_in_hours = 24;
+  }
+
+  print_poll_header();
+
+  if (n_medias > 0) {
+    poll_free(toot_poll);
+    toot_poll = NULL;
+    dputs("Can not add a poll to a toot with images.");
+    cgetc();
+    clrscr();
+    return;
+  }
+
+  for (c = 0; c < toot_poll->options_count; c++) {
+    cprintf("Option %d: %s\r\n\r\n",
+            c + 1, toot_poll->options[c].title);
+  }
+  next_option_y = wherey();
+
+  print_free_ram();
+  gotoxy(0, scrh - 3);
+  if (toot_poll->options_count < MAX_POLL_OPTIONS) {
+    dputs("Enter: add option");
+  }
+  if (toot_poll->options_count > 0 && toot_poll->options_count < MAX_POLL_OPTIONS) {
+    dputs(" - ");
+  }
+  if (toot_poll->options_count > 0) {
+    cprintf("R: remove option %d", toot_poll->options_count);
+  }
+  cprintf("\r\nT: Set to %s choice; E: set duration"
+          "\r\nD: delete poll; Escape: back to editing",
+          toot_poll->multiple ? "single":"multiple");
+
+  c = cgetc();
+  switch (tolower(c)) {
+    case CH_ENTER:
+      gotoxy(0, next_option_y);
+      add_poll_option();
+      break;
+    case 'r':
+      remove_poll_option();
+      break;
+    case 'e':
+      set_poll_duration();
+      break;
+    case 't':
+      toot_poll->multiple = !toot_poll->multiple;
+      break;
+    case 'd':
+      poll_free(toot_poll);
+      toot_poll = NULL;
+      clrscr();
+      return;
+    case CH_ESC:
+      if (toot_poll->options_count > 0 && toot_poll->options_count < 2) {
+        gotoxy(0, scrh - 1);
+        dputs("Not enough options in the poll.");
+        cgetc();
+        break;
+      }
+      clrscr();
+      return;
+  }
+  goto poll_menu;
+}
+
 static char *handle_compose_input(char *initial_buf) {
   char *text;
   text = malloc0(NUM_CHARS);
@@ -318,14 +478,19 @@ resume_composing:
     text = NULL;
     goto out;
   }
-  if (should_open_images_menu) {
-    should_open_images_menu = 0;
+  if (should_open_menu == 'i') {
+    should_open_menu = 0;
     open_images_menu();
     goto resume_composing;
   }
-  if (should_open_cw_menu) {
-    should_open_cw_menu = 0;
+  if (should_open_menu == 'c') {
+    should_open_menu = 0;
     open_cw_menu();
+    goto resume_composing;
+  }
+  if (should_open_menu == 'v') {
+    should_open_menu = 0;
+    open_poll_menu();
     goto resume_composing;
   }
   if (should_resume_composing) {

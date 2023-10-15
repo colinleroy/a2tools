@@ -219,3 +219,6 @@ char *compose_get_status_text(char *status_id) {
 
   return content;
 }
+
+const char compose_poll_durations_hours[] = {1, 6, 12, 24, 48, 72, 168};
+const char *compose_poll_durations_seconds[] = {"3600", "21600", "43200", "86400", "172800", "259200", "604800"};
