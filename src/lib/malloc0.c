@@ -5,7 +5,7 @@
 void * __fastcall__ malloc0(size_t size) {
   void *p = malloc(size);
 #ifdef __CC65__
-  if (!p) {
+  if (!p && size) {
     __asm__("brk");
   }
 #endif
