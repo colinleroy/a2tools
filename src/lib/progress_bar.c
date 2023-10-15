@@ -21,27 +21,31 @@
 #include "progress_bar.h"
 
 void progress_bar(int x, int y, int width, size_t cur, size_t end) {
-  unsigned long percent;
-  unsigned int i;
-  static unsigned long last_percent;
+  size_t percent;
+  size_t i;
+  static size_t last_percent;
 
   if (x >= 0) {
     gotoxy(x, y);
     last_percent = 0;
   }
 
-  percent = (long)cur * (long)width;
-  percent = percent/((long)end);
+  if (end > 512) {
+    cur /= 512;
+    end /= 512;
+  }
+  percent = cur * width;
+  percent = percent / end;
 
   revers(1);
-  for (i = last_percent; i < ((int)percent) && i < width; i++)
+  for (i = last_percent; i < percent && i < width; i++)
     cputc(' ');
   revers(0);
 
   last_percent = percent;
 
   if (x >= 0) {
-    for (i = (int)(percent + 1L); i < width; i++)
+    for (i = percent + 1; i < width; i++)
       cputc(0x7F);
     gotoxy(x, y);
   }
