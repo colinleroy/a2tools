@@ -68,13 +68,11 @@ char *api_send_hgr_image(char *filename, char *description, char **err, char x, 
       break;
     }
   }
-  while (to_send > 0) {
-    /* Some hgr files don't include the last bytes, that
-     * fall into an "HGR-memory-hole" and as such are not
-     * indispensable */
-    surl_multipart_send_field_data(0x00, 1);
-    to_send--;
-  }
+  /* Some hgr files don't include the last bytes, that
+   * fall into an "HGR-memory-hole" and as such are not
+   * indispensable. Fill up with zeroes up to to_send */
+  memset(buf, 0, to_send);
+  surl_multipart_send_field_data(buf, to_send);
 
   fclose(fp);
 

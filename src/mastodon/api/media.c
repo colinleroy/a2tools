@@ -38,13 +38,11 @@ static media *media_new_from_json(char *base_selector, char *description_selecto
   if (n >= 0) {
     n_lines = strsplit_in_place(img_buf, '\n', &lines);
     m->n_media = n_lines / 2;
-    m->media_id = malloc0(m->n_media * sizeof(char *));
-    m->media_url = malloc0(m->n_media * sizeof(char *));
-    m->media_alt_text = malloc0(m->n_media * sizeof(char *));
     j = 0;
     for (i = 0; i < n_lines - 1; i += 2) {
       m->media_id[j] = strdup(lines[i]);
       m->media_url[j] = strdup(lines[i + 1]);
+      m->media_alt_text[j] = NULL;
       ++j;
     }
   }
@@ -67,9 +65,9 @@ static media *media_new_from_json(char *base_selector, char *description_selecto
         ++n;
         if (n == (16*NUMCOLS) - 2) {
           /* shorten description, we don't scroll them yet */
-          img_buf[n-3] = '.';
-          img_buf[n-2] = '.';
-          img_buf[n-1] = '.';
+          img_buf[n-3] =
+            img_buf[n-2] =
+            img_buf[n-1] = '.';
           img_buf[n] = '\0';
           break;
         }
@@ -90,9 +88,6 @@ void media_free(media *m) {
     free(m->media_url[i]);
     free(m->media_alt_text[i]);
   }
-  free(m->media_id);
-  free(m->media_url);
-  free(m->media_alt_text);
   free(m);
 }
 
