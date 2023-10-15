@@ -120,16 +120,16 @@ char *api_send_hgr_image(char *filename, char *description, char **err, char x, 
 
 signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medias,
                           char *ref_toot_id, char **media_ids, char n_medias,
-                          char compose_audience) {
+                          poll *toot_poll, char compose_audience) {
   char *body;
   int i, o, len;
-  char *medias_buf;
+  char *extra_buf;
 
   body = malloc0(1536);
 
   if (n_medias > 0) {
-    medias_buf = malloc0(768);
-    snprintf(medias_buf, 768, "A|media_ids\n[\"%s\""
+    extra_buf = malloc0(768);
+    snprintf(extra_buf, 768, "A|media_ids\n[\"%s\""
                                 "%s%s%s"
                                 "%s%s%s"
                                 "%s%s%s"
@@ -145,8 +145,38 @@ signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medi
                                 n_medias > 3 ? media_ids[3]:"",
                                 n_medias > 3 ? "\"":""
                               );
+  } else if (toot_poll != NULL) {
+    char duration, n_options;
+    for (duration = 0; duration < NUM_POLL_DURATIONS; duration++) {
+      if (compose_poll_durations_hours[duration] == toot_poll->expires_in_hours)
+        break;
+    }
+    n_options = toot_poll->options_count;
+
+    extra_buf = malloc0(768);
+    snprintf(extra_buf, 768, "O|poll\n{"
+                             "\"expires_in\": %s,"
+                             "\"multiple\": %s,"
+                             "\"options\":[\"%s\""
+                                           "%s%s%s"
+                                           "%s%s%s"
+                                           "%s%s%s"
+                                           "]"
+                             "}\n",
+                             compose_poll_durations_seconds[duration],
+                             toot_poll->multiple ? "true":"false",
+                             toot_poll->options[0].title,
+                             n_options > 1 ? ",\"":"",
+                             n_options > 1 ? toot_poll->options[1].title:"",
+                             n_options > 1 ? "\"":"",
+                             n_options > 2 ? ",\"":"",
+                             n_options > 2 ? toot_poll->options[2].title:"",
+                             n_options > 2 ? "\"":"",
+                             n_options > 3 ? ",\"":"",
+                             n_options > 3 ? toot_poll->options[3].title:"",
+                             n_options > 3 ? "\"":"");
   } else {
-    medias_buf = NULL;
+    extra_buf = NULL;
   }
 
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, STATUS_ENDPOINT"%s%s",
@@ -164,14 +194,14 @@ signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medi
                        "S|status|TRANSLIT|%s\n",
                         (ref_toot_id && mode == 'r') ? 'S' : 'B',
                         (ref_toot_id && mode == 'r') ? ref_toot_id : "null",
-                        medias_buf ? medias_buf : "",
+                        extra_buf ? extra_buf : "",
                         compose_audience_str(compose_audience),
                         sensitive_medias ? "true":"false",
                         translit_charset,
                         cw,
                         translit_charset);
 
-  free(medias_buf);
+  free(extra_buf);
 
   /* Escape buffer */
   len = strlen(buffer);
@@ -222,3 +252,23 @@ char *compose_get_status_text(char *status_id) {
 
 const char compose_poll_durations_hours[] = {1, 6, 12, 24, 48, 72, 168};
 const char *compose_poll_durations_seconds[] = {"3600", "21600", "43200", "86400", "172800", "259200", "604800"};
+
+void compose_sanitize_str(char *s) {
+  char *r;
+  while ((r = strchr(s, '"')))
+    *r = '\'';
+  if(!strcmp(translit_charset, "ISO646-FR1")) {
+    while ((r = strchr(s, '{')))
+      *r = 'e';
+    while ((r = strchr(s, '}')))
+      *r = 'e';
+    while ((r = strchr(s, '\\')))
+      *r = 'c';
+    while ((r = strchr(s, '@')))
+      *r = 'a';
+    while ((r = strchr(s, '|')))
+      *r = 'u';
+    while ((r = strchr(s, ']')))
+      *r = '@';
+  }
+}
