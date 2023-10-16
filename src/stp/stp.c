@@ -359,7 +359,7 @@ update_list:
         gotoxy(2, i + PAGE_BEGIN);
         dputs(lines[i + cur_display_line]);
       }
-    } else {
+    } else if (cur_line < num_lines) {
       gotoxy (2, PAGE_BEGIN + cur_line - cur_display_line);
       dputs(lines[cur_line]);
 

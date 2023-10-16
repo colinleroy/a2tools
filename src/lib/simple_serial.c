@@ -802,7 +802,7 @@ void __fastcall__ simple_serial_write(const char *ptr, size_t nmemb) {
 
   while (cur != end) {
 #ifndef __CC65__
-    if (simple_serial_putc(*cur) == -1)
+    if (simple_serial_putc(*cur) == (unsigned char)-1)
       break;
 #else
     simple_serial_putc(*cur);

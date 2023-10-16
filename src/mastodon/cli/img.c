@@ -161,19 +161,19 @@ static void img_display(media *m, char idx, char num_images) {
 
     /* Init bar before serial firehose */
     progress_bar(0, 23, NUMCOLS, 0, HGR_LEN);
-
     simple_serial_putc(SURL_CMD_HGR);
     simple_serial_putc(monochrome);
+
     if (simple_serial_getc() == SURL_ERROR_OK) {
       simple_serial_read((char *)&len, 2);
       len = ntohs(len);
 
       if (len == HGR_LEN) {
-        int r = 0, b = HGR_LEN/PROGRESS_STEPS;
+        int r = 0;
         while (len > 0) {
-          simple_serial_read((char *)HGR_PAGE + r, b);
-          len -= b;
-          r+= b;
+          simple_serial_read((char *)HGR_PAGE + r, HGR_LEN/PROGRESS_STEPS);
+          len -= HGR_LEN/PROGRESS_STEPS;
+          r+= HGR_LEN/PROGRESS_STEPS;
           progress_bar(-1, -1, NUMCOLS, r, HGR_LEN);
         }
         clrzone(0, 22, NUMCOLS-1, 23);
