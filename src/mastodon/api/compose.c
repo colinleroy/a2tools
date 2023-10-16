@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include "malloc0.h"
 #include "platform.h"
+#include "math.h"
 #include "surl.h"
 #include "simple_serial.h"
 #include "strsplit.h"
@@ -27,10 +28,11 @@ char *compose_audience_str(char compose_audience) {
 
 #define FILE_ERROR "Can not open file.\r\n"
 #define NET_ERROR "Network error.\r\n"
+#define SEND_BUF_SIZE 1024
 
 char *api_send_hgr_image(char *filename, char *description, char **err, char x, char y, char w) {
   FILE *fp;
-  char buf[1024];
+  char buf[SEND_BUF_SIZE];
   int r;
   int to_send;
   char n_lines;
@@ -60,6 +62,7 @@ char *api_send_hgr_image(char *filename, char *description, char **err, char x, 
   /* Send file */
   surl_multipart_send_field_desc("file", to_send, "image/hgr");
   while ((r = fread(buf, sizeof(char), sizeof(buf), fp)) > 0) {
+send_again:
     surl_multipart_send_field_data(buf, r);
     to_send -= r;
     if (w > 0)
@@ -71,8 +74,11 @@ char *api_send_hgr_image(char *filename, char *description, char **err, char x, 
   /* Some hgr files don't include the last bytes, that
    * fall into an "HGR-memory-hole" and as such are not
    * indispensable. Fill up with zeroes up to to_send */
-  memset(buf, 0, to_send);
-  surl_multipart_send_field_data(buf, to_send);
+  if (to_send > 0) {
+    r = min(to_send, SEND_BUF_SIZE);
+    memset(buf, 0, r);
+    goto send_again;
+  }
 
   fclose(fp);
 

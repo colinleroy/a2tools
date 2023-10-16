@@ -905,7 +905,6 @@ static int setup_simple_upload_request(char method, CURL *curl,
   if (mode > 2) {
     simple_serial_putc(SURL_UPLOAD_PARAM_ERROR);
     printf("REQ: Unexpected serial reply\n");
-    curl_buffer_free(curlbuf);
     return -1;
   }
 
@@ -1039,7 +1038,11 @@ static curl_mime *setup_multipart_upload_request(char method, CURL *curl,
         printf("REQ: POST: could not add field\n");
       }
     }
-    curl_easy_setopt(curl, CURLOPT_MIMEPOST, form);
+    if (curl_easy_setopt(curl, CURLOPT_MIMEPOST, form) != CURLE_OK) {
+      printf("REQ: POST: could not add form\n");
+      curl_mime_free(form);
+      form = NULL;
+    }
   } else {
     printf("REQ: POST: could not setup mime form\n");
   }
@@ -1165,16 +1168,19 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
 
       if (method == SURL_METHOD_POST) {
         if (setup_simple_upload_request(method, curl, &curl_headers, curlbuf) < 0) {
+          curl_buffer_free(curlbuf);
           return NULL;
         }
       } else {
         form = setup_multipart_upload_request(method, curl, &curl_headers, curlbuf);
         if (form == NULL) {
+          curl_buffer_free(curlbuf);
           return NULL;
         }
       }
   } else if (method == SURL_METHOD_PUT) {
     if (setup_simple_upload_request(SURL_METHOD_PUT, curl, &curl_headers, curlbuf) < 0) {
+      curl_buffer_free(curlbuf);
       return NULL;
     }
     if (is_sftp) {

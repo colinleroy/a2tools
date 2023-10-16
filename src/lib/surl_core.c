@@ -85,12 +85,13 @@ const surl_response * __fastcall__ surl_start_request(const char method, char *u
   simple_serial_putc(method);
   simple_serial_puts(url);
   simple_serial_putc('\n');
-  //DEBUG("sent req %s %s\n", method, url);
-  for (i = 0; i < n_headers; i++) {
-    simple_serial_puts(headers[i]);
+
+  while (n_headers > 0) {
+    n_headers--;
+    simple_serial_puts(headers[n_headers]);
     simple_serial_putc('\n');
-    //DEBUG("sent hdr %d %s\n", i, headers[i]);
   }
+
   simple_serial_putc('\n');
 
   i = simple_serial_getc_with_timeout();
