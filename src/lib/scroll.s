@@ -130,7 +130,7 @@ scrll3:
         plp                     ;pull status off stack
         pla                     ;restore window width
         sta     WNDWDTH
-        jsr     clrline        ;clear current line //TODO
+        jsr     clrline        ;clear current line
         lda     CV
         jsr     VTABZ           ;restore original cursor line
         pla                     ;and X
@@ -139,7 +139,6 @@ scrll3:
 
 clrline:
         ldy     #0              ;start at left
-        beq     xgseolz         ;clear to end of line
 
 xgseolz:
         lda     INVFLG          ;mask blank
@@ -249,10 +248,6 @@ scrl2:  lda     (BASL),y
         bmi     scrl1
 
 scrl3:  ldy     #0
-        jsr     clreolz
-        rts
-
-clreolz:
         lda     #' '|$80
 cleol2: sta     (BASL),y
         iny
