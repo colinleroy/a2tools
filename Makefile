@@ -28,6 +28,8 @@ mastodon_disk_PROGS = src/mastodon/mastodon.bin \
 				src/mastodon/mastowrite.bin \
 				src/mastodon/mastoconf.bin
 
+quicktake_disk_PROGS = src/quicktake/qtake.bin
+
 CLEANDISK = disks/basic-empty.dsk
 
 .PHONY: all clean
@@ -116,6 +118,18 @@ mastodon$(suffix).dsk: $(mastodon_disk_PROGS)
 	cp $@ ~/Documents/ADTPro-2.1.0/disks/; \
 	cp $@ dist/; \
 
+quicktake$(suffix).dsk: $(quicktake_disk_PROGS)
+	cp $(CLEANDISK) $@; \
+	java -jar bin/ac.jar -n $@ QTAKE
+	java -jar bin/ac.jar -p $@ QTAKE.SYSTEM SYS < bin/loader.system; \
+	java -jar bin/ac.jar -d $@ BASIC; \
+	java -jar bin/ac.jar -p $@ TEST1.QTK BIN < src/quicktake/test1.qtk; \
+	for prog in $^; do \
+		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
+	done
+	cp $@ ~/Documents/ADTPro-2.1.0/disks/; \
+	cp $@ dist/; \
+
 doc-dist:
 	$(MAKE) -C doc -f Makefile dist
 
@@ -127,4 +141,5 @@ dist: all \
 	mastoperso$(suffix).dsk \
 	homectrlperso$(suffix).dsk \
 	stpperso$(suffix).dsk \
+	quicktake$(suffix).dsk
 	doc-dist
