@@ -23,11 +23,27 @@
    $Date: 2018/06/01 20:36:25 $
  */
 
-#define BAND 20 /* 4 * 5, 4 for sensor, 5 for scaling */
+/* RADC (quicktake 150/200): 9mn per 640*480 pic on 16MHz ZipGS Apple IIgs
+ *                           90mn on 1MHz Apple IIc
+ *
+ * Storage: ~64 kB per QT150 pic   ~128 kB per QT100 pic
+ *            8 kB per output HGR     8 kB per output HGR
+ * Main RAM: Stores code, vars, raw_image array
+ *           Approx 1kB free        ??
+ *           LC more stuffable, stack can be shortened
+ */
+
+/* Handle pic by horizontal bands for memory constraints reasons.
+ * Bands need to be a multiple of 4px high for compression reasons
+ * on QT 150/200 pictures,
+ * and a multiple of 5px for nearest-neighbor scaling reasons.
+ * (480 => 192 = *0.4, 240 => 192 = *0.8)
+ */
+#define QT150_BAND 20
 
 #define COLORS 3
-#define FINAL_WIDTH 280
-#define FINAL_HEIGHT 192
+#define HGR_WIDTH 280
+#define HGR_HEIGHT 192
 #define HGR_LEN 8192
 
 #include <stdio.h>
@@ -41,21 +57,25 @@
   #define uint8  unsigned char
   #define uint16 unsigned int
   #define uint32 unsigned long
+  #define int8  signed char
+  #define int16 signed int
+  #define int32 signed long
   #pragma static-locals(push, on)
 #else
   #define uint8  unsigned char
   #define uint16 unsigned short
   #define uint32 unsigned int
+  #define int8  signed char
+  #define int16 signed short
+  #define int32 signed int
 #endif
 
 static FILE *ifp, *ofp;
 static const char *ifname;
 static size_t data_offset;
-static unsigned char zero_after_ff, data_error;
 
 static uint16 height, width;
-static unsigned char raw_image[BAND * 640];
-static void (*write_fun)(uint16 top, uint8 h);
+static uint8 raw_image[QT150_BAND * 640];
 static void (*load_raw)(uint16 top, uint8 h);
 
 #define FORC(cnt) for (c=0; c < cnt; c++)
@@ -87,26 +107,11 @@ static void (*load_raw)(uint16 top, uint8 h);
 
 #define RAW(row,col) raw_image[(row)*width+(col)]
 
-
-static void derror()
-{
-  if (!data_error) {
-    fprintf (stderr, "%s: ", ifname);
-    if (feof(ifp)) {
-      printf ("Unexpected end of file\n");
-      cgetc();
-      exit(1);
-    }
-    else
-      printf ("Corrupt data\n");
-  }
-  data_error++;
-}
-
 static void tread(void *ptr, size_t size, size_t nmemb, FILE *stream)
 {
   if( fread (ptr, size, nmemb, stream) != nmemb ) {
-    derror();
+    printf("Error reading input\n");
+    exit(1);
   }
 }
 
@@ -122,28 +127,30 @@ static uint16 get2()
   return ntohs(v);
 }
 
-static unsigned getbithuff (signed short nbits, uint16 *huff)
+static uint8 getbithuff (int16 nbits, uint16 *huff)
 {
   static uint32 bitbuf=0;
-  static signed short vbits=0, reset=0;
-  unsigned c;
+  static int16 vbits=0;
+  uint8 c;
 
-  if (nbits > 25) return 0;
+  if (nbits > 25 || nbits == 0 || vbits < 0) return 0;
+
   if (nbits < 0)
-    return bitbuf = vbits = reset = 0;
-  if (nbits == 0 || vbits < 0) return 0;
-  while (!reset && vbits < nbits && (c = get1()) != EOF &&
-    !(reset = zero_after_ff && c == 0xff && get1())) {
+    return bitbuf = vbits = 0;
+
+  while (vbits < nbits) {
+    c = get1();
     bitbuf = (bitbuf << 8) + (uint8) c;
     vbits += 8;
   }
-  c = bitbuf << (32-vbits) >> (32-nbits);
+  c = (uint8)(((uint32)(bitbuf << (32-vbits))) >> (32-nbits));
+
   if (huff) {
     vbits -= huff[c] >> 8;
     c = (uint8) huff[c];
   } else
     vbits -= nbits;
-  if (vbits < 0) derror();
+
   return c;
 }
 
@@ -216,7 +223,7 @@ static unsigned getbithuff (signed short nbits, uint16 *huff)
 //       RAW(row,col) = curve[pixel[row+2][col+2]] / 256;
 // }
 
-#define radc_token(tree) ((signed char) getbithuff(8,huff[tree]))
+#define radc_token(tree) ((int8) getbithuff(8,huff[tree]))
 
 #define FORYX for (y=1; y < 3; y++) for (x=col+1; x >= col; x--)
 
@@ -225,7 +232,7 @@ static unsigned getbithuff (signed short nbits, uint16 *huff)
 
 static void kodak_radc_load_raw(uint16 top, uint8 h)
 {
-  static const char src[] = {
+  static const int8 src[] = {
     1,1, 2,3, 3,4, 4,2, 5,7, 6,5, 7,6, 7,8,
     1,0, 2,1, 3,3, 4,4, 5,2, 6,7, 7,6, 8,5, 8,8,
     2,1, 2,3, 3,0, 3,2, 3,4, 4,6, 5,5, 6,7, 6,8,
@@ -246,47 +253,64 @@ static void kodak_radc_load_raw(uint16 top, uint8 h)
     2,-26, 2,-13, 2,1, 3,-39, 4,16, 5,-55, 6,-76, 6,37
   };
   static uint16 huff[19][256];
-  static short row, col, tree, nreps, rep, step, i, c, s, r, x, y, val, half_width;
-  static short last[3] = { 16,16,16 }, mul[3], buf[3][3][386];
+  static int16 row, col, tree, nreps, rep, step, i, c, s, r, x, y, val, half_width;
+  static uint16 last[3] = { 16,16,16 }, mul[3], buf[3][3][386], t;
+  static uint16 *midbuf1, *midbuf2;
 
   if (top == 0) {
-    for (s=i=0; i < sizeof src; i+=2)
+    /* Init */
+    for (s = i = 0; i < sizeof src; i += 2) {
       FORC(256 >> src[i]) {
-        ((uint16 *)huff)[s++] = src[i] << 8 | (uint8) src[i+1];
-        printf("%d %d %04x \n", i, s, huff[s]);
+        ((uint16 *)(huff))[s] = (src[i] << 8 | (uint8) src[i+1]);
+        s++;
       }
-    s = 3;
-    FORC(256) {
-      huff[18][c] = (8-s) << 8 | c >> s << s | 1 << (s-1);
-      printf("%04x ", huff[18][c]);
     }
-    
+
+    FORC(256) {
+      //huff[18][c] = ((8-s) << 8 | c >> s << s | 1 << (s-1));
+      huff[18][c] = (1284 | c);
+    }
     getbits(-1);
 
-    for (i=0; i < sizeof(buf)/sizeof(short); i++)
-      ((short *)buf)[i] = 2048;
+    for (i=0; i < sizeof(buf)/sizeof(uint16); i++)
+      ((uint16 *)buf)[i] = 2048;
+
+    half_width = width / 2;
   }
 
-  half_width = width/2;
-  for (row=top; row < top + h; row+=4) {
-    FORC3 mul[c] = getbits(6);
+  for (row=0; row < h; row+=4) {
+    printf(".");
+    mul[0] = getbits(6);
+    mul[1] = getbits(6);
+    mul[2] = getbits(6);
     FORC3 {
-      val = ((0x1000000/last[c] + 0x7ff) >> 12) * mul[c];
-//      s = 12;
+      t = mul[c];
+      val = ((0x1000000L/(uint32)last[c] + 0x7ff) >> 12) * t;
       x = ~(-1 << (s-1));
-//      val <<= 12-s;
-      for (i=0; i < sizeof(buf[0])/sizeof(short); i++)
-        ((short *)buf[c])[i] = (((short *)buf[c])[i] * val + x) >> 12;
-      last[c] = mul[c];
+      for (i=0; i < sizeof(buf[0])/sizeof(uint16); i++) {
+        uint32 l = (uint32)(((uint16 *)buf[c])[i] * (uint32)val + x);
+        ((uint16 *)buf[c])[i] = (l) >> 12;
+      }
+      last[c] = t;
+      midbuf1 = &(buf[c][1][half_width]);
+      midbuf2 = &(buf[c][2][half_width]);
       for (r=0; r <= !c; r++) {
-        buf[c][1][half_width] = buf[c][2][half_width] = mul[c] << 7;
-        for (tree=1, col=half_width; col > 0; ) {
-          if ((tree = radc_token(tree))) {
+        tree = t << 7;
+        *midbuf1 = tree;
+        *midbuf2 = tree;
+
+        for (tree = 1, col = half_width; col > 0; ) {
+          if ((tree = (int16)radc_token(tree))) {
             col -= 2;
             if (tree == 8)
-              FORYX buf[c][y][x] = (uint8) radc_token(18) * mul[c];
+              FORYX {
+                buf[c][y][x] = (uint8) radc_token(18) * t;
+              }
             else
-              FORYX buf[c][y][x] = radc_token(tree+10) * 16 + PREDICTOR;
+              FORYX {
+                int8 tk = radc_token(tree+10);
+                buf[c][y][x] = (int)tk * 16 + PREDICTOR;
+              }
           } else
             do {
               nreps = (col > 2) ? radc_token(9) + 1 : 1;
@@ -294,35 +318,42 @@ static void kodak_radc_load_raw(uint16 top, uint8 h)
                 col -= 2;
                 FORYX buf[c][y][x] = PREDICTOR;
                 if (rep & 1) {
-                  step = radc_token(10) << 4;
+                  int8 tk = radc_token(10);
+                  step = tk << 4;
                   FORYX buf[c][y][x] += step;
                 }
               }
             } while (nreps == 9);
         }
-        for (y=0; y < 2; y++)
+        for (y=0; y < 2; y++) {
           for (x=0; x < half_width; x++) {
-            val = (buf[c][y+1][x] << 4) / mul[c];
-            if (val < 0) val = 0;
-            if (c) RAW(row-top+y*2+c-1,x*2+2-c) = val / 256;
-            else   RAW(row-top+r*2+y,x*2+y) = val / 256;
+            val = ((uint32)buf[c][y+1][x] >> 4) / t;
+            if (val < 0)
+              val = 0;
+            if (c) {
+              RAW(row+y*2+c-1,x*2+2-c) = val;
+            }
+            else {
+              RAW(row+r*2+y,x*2+y) = val;
+            }
           }
+        }
         memcpy (buf[c][0]+!c, buf[c][2], sizeof buf[c][0]-2*!c);
       }
     }
-    for (y=row; y < row+4; y++)
-      for (x=0; x < width; x++)
+    for (y = row; y < row + 4; y++) {
+      for (x = 0; x < width; x++) {
         if ((x+y) & 1) {
-          r = x ? x-1 : x+1;
-          s = x+1 < width ? x+1 : x-1;
-          val = (RAW(y-top,r)*256 + RAW(y-top,s)*256)/2;
-          if ((y)*width+(x) > 2048)
-            val += (RAW(y-top,x)*256-2048)*2;
-          if (val < 0) val = 0;
-          RAW(y-top,x) = val/256;
+          RAW(y,x) = 0;
         }
+      }
+    }
   }
 }
+
+#undef FORYX
+#undef PREDICTOR
+
 #ifdef SURL_TO_LANGCARD
 #pragma code-name (push, "LC")
 #endif
@@ -332,18 +363,11 @@ static void grey_levels(uint8 h) {
   uint16 x;
   for (y = 0; y < h; y+= 2)
     for (x = 0; x < width; x += 2) {
-      unsigned char sum = RAW(y,x) + RAW(y+1,x) + RAW(y,x+1) + RAW(y+1,x+1);
+      uint8 sum = RAW(y,x) + RAW(y+1,x) + RAW(y,x+1) + RAW(y+1,x+1);
       RAW(y,x) = RAW(y+1,x) = RAW(y,x+1) = RAW(y+1,x+1) = sum;
     }
 }
 
-#undef FORYX
-#undef PREDICTOR
-
-/*
-   Identify which camera created this file, and set global variables
-   accordingly.
- */
 #define HDR_LEN 32
 #define WH_OFFSET 544
 
@@ -357,14 +381,18 @@ static void identify()
 
   tread (head, 1, HDR_LEN, ifp);
 
+  printf("Doing QuickTake ");
   if (!strcmp (head, "qktk")) {
+    printf("100");
     //load_raw = &quicktake_100_load_raw;
   } else if (!strcmp (head, "qktn")) {
     load_raw = &kodak_radc_load_raw;
   }
 
   if (head[5]) {
-    /* This is a QuickTake 200. Not that we care. */
+    printf("200");
+  } else {
+    printf("150");
   }
 
   /* Skip to 544 */
@@ -374,6 +402,8 @@ static void identify()
 
   height = get2();
   width  = get2();
+
+  printf(" image (%dx%d)\n", width, height);
 
   /* Skip those */
   get2();
@@ -395,7 +425,7 @@ static void dither_bayer(uint16 w, uint8 h) {
   uint8 y;
 
   // Ordered dither kernel
-  char map[8][8] = {
+  uint8 map[8][8] = {
     { 1, 49, 13, 61, 4, 52, 16, 64 },
     { 33, 17, 45, 29, 36, 20, 48, 32 },
     { 9, 57, 5, 53, 12, 60, 8, 56 },
@@ -412,12 +442,10 @@ static void dither_bayer(uint16 w, uint8 h) {
 
       in += in * map[y % 8][x % 8] / 63;
 
-      if(in >= 24)
-        in = 255 >> 2;
+      if(in >= 14)
+        RAW(y, x) = 255;
       else
-        in = 0;
-
-      RAW(y, x) = in;
+        RAW(y, x) = 0;
     }
   }
 }
@@ -427,7 +455,7 @@ static void init_base_addrs (void)
 {
   uint16 i, group_of_eight, line_of_eight, group_of_sixtyfour;
 
-  for (i = 0; i < 192; ++i)
+  for (i = 0; i < HGR_HEIGHT; ++i)
   {
     line_of_eight = i % 8;
     group_of_eight = (i % 64) / 8;
@@ -437,51 +465,60 @@ static void init_base_addrs (void)
   }
 }
 
-static void write_ppm_tiff(uint16 top, uint8 h)
+static void write_hgr(uint16 top, uint8 h)
 {
-  static uint8 line[40];
-  uint16 c, row, col;
+  uint8 line[40];
+  uint16 row, col;
+  uint8 scaled_top;
+  uint16 pixel;
+  unsigned char *ptr;
+
+  unsigned char dhbmono[] = {0x7e,0x7d,0x7b,0x77,0x6f,0x5f,0x3f};
+  unsigned char dhwmono[] = {0x01,0x02,0x04,0x08,0x10,0x20,0x40};
   uint8 scaling_factor = (width == 640 ? 4 : 8);
   uint8 band_final_height = h * scaling_factor / 10;
-  uint8 scaled_top;
 
-  uint16 x, y, base, pixel;
-  unsigned char *ptr;
-  unsigned char dhbmono[] = {0x7e,0x7d,0x7b,0x77,0x6f,0x5f,0x3f};
-  unsigned char dhwmono[] = {0x1,0x2,0x4,0x8,0x10,0x20,0x40};
+  #define image_final_width 256
+  #define x_offset ((HGR_WIDTH - image_final_width) / 2)
 
   /* Greyscale */
-  grey_levels(BAND);
+  printf(" Greyscaling...\n");
+  grey_levels(h);
 
   /* Scale (nearest neighbor)*/
-  for (row=0; row < band_final_height; row++) {
+  printf(" Scaling...\n");
+  for (row = 0; row < band_final_height; row++) {
     uint16 orig_y = row * 10 / scaling_factor;
 
-    for (col=0; col < width; col++) {
-      uint16 final_x = col * scaling_factor / 10;
-      RAW(row, final_x) = RAW(orig_y,col);
+    for (col = 0; col < image_final_width; col++) {
+      uint16 orig_x = col * 10 / scaling_factor;
+      RAW(row, col + x_offset) = RAW(orig_y, orig_x);
     }
-    /* clear black band */
-    for (col = (width + 1)* scaling_factor / 10; col < FINAL_WIDTH; col++)
+
+    /* clear black bands */
+    for (col = 0; col < x_offset; col++)
+      RAW(row, col) = 0;
+    for (col = image_final_width + x_offset + 1; col < HGR_WIDTH; col++)
       RAW(row, col) = 0;
   }
 
   /* Dither (Bayes) */
-  dither_bayer(FINAL_WIDTH, h);
+  printf(" Dithering...\n");
+  dither_bayer(HGR_WIDTH, h);
 
   /* Write */
+  printf(" Saving...\n");
   scaled_top = top * scaling_factor / 10;
-  for (row=0; row < band_final_height; row++) {
-    for (col = 0; col < FINAL_WIDTH; col++) {
-      ptr = line + col/7;
-      pixel = col%7;
+  for (row = 0; row < band_final_height; row++) {
+    for (col = 0; col < HGR_WIDTH; col++) {
+      ptr = line + col / 7;
+      pixel = col % 7;
       if (RAW(row,col) != 0) {
         ptr[0] |= dhwmono[pixel];
       } else {
         ptr[0] &= dhbmono[pixel];
       }
     }
-    printf("line %d => %d\n", scaled_top+row, baseaddr[scaled_top+row]);
     fseek(ofp, baseaddr[scaled_top + row], SEEK_SET);
     fwrite(line, 40, 1, ofp);
   }
@@ -495,8 +532,8 @@ int main (int argc, const char **argv)
   ofname = 0;
 
 #ifdef __CC65__
+  videomode(VIDEOMODE_80COL);
   printf("Free: %zu/%zuB\n", _heapmaxavail(), _heapmemavail());
-  cgetc();
 #endif
 
   ifname = "test1.qtk";
@@ -507,8 +544,6 @@ int main (int argc, const char **argv)
   }
 
   identify();
-
-  write_fun = &write_ppm_tiff;
 
   ofname = (char *) malloc (strlen(ifname) + 64);
   strcpy (ofname, ifname);
@@ -527,11 +562,11 @@ int main (int argc, const char **argv)
 
   init_base_addrs();
 
-  for (h = 0; h < height; h+=BAND) {
-    printf("Loading %d-%d\n", h, BAND);
-    (*load_raw)(h, BAND);
-    printf("Converting %d-%d\n", h, BAND);
-    (*write_fun)(h, BAND);
+  for (h = 0; h < height; h += QT150_BAND) {
+    printf("Loading %d-%d", h, h + QT150_BAND);
+    (*load_raw)(h, QT150_BAND);
+    printf("\nConverting...\n");
+    write_hgr(h, QT150_BAND);
   }
   printf("Done.\n");
 
