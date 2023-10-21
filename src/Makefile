@@ -1,6 +1,6 @@
-SUBDIRS = lib a2send a2recv a2trace surl-server homecontrol-client mastodon telnet surl stp
+SUBDIRS = lib a2send a2recv a2trace surl-server homecontrol-client mastodon telnet surl stp quicktake
 INSTALL_SUBDIRS = a2send a2recv a2trace surl-server
-UPLOAD_SUBDIRS = a2send a2recv homecontrol-client mastodon telnet surl stp
+UPLOAD_SUBDIRS = a2send a2recv homecontrol-client mastodon telnet surl stp quicktake
 
 .PHONY: all clean
 

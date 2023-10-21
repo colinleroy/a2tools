@@ -1,0 +1,2 @@
+slsnif -u -l log.txt -s 19200 /dev/ttyUSB0
+connect soft to /dev/pts/XX (in slsnif's stdout) instead of /dev/ttyUSB0
