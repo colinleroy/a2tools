@@ -1,6 +1,22 @@
 #ifndef __platform_h
 #define __platform_h
 
+#ifdef __CC65__
+  #define uint8  unsigned char
+  #define uint16 unsigned int
+  #define uint32 unsigned long
+  #define int8  signed char
+  #define int16 signed int
+  #define int32 signed long
+#else
+  #define uint8  unsigned char
+  #define uint16 unsigned short
+  #define uint32 unsigned int
+  #define int8  signed char
+  #define int16 signed short
+  #define int32 signed int
+#endif
+
 #ifdef __APPLE2ENH__
 #include <apple2enh.h>
 #else

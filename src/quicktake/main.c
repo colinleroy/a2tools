@@ -50,24 +50,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <arpa/inet.h>
-
+#include "platform.h"
 #include "extended_conio.h"
 
 #ifdef __CC65__
-  #define uint8  unsigned char
-  #define uint16 unsigned int
-  #define uint32 unsigned long
-  #define int8  signed char
-  #define int16 signed int
-  #define int32 signed long
   #pragma static-locals(push, on)
-#else
-  #define uint8  unsigned char
-  #define uint16 unsigned short
-  #define uint32 unsigned int
-  #define int8  signed char
-  #define int16 signed short
-  #define int32 signed int
 #endif
 
 static FILE *ifp, *ofp;
@@ -89,31 +76,7 @@ static void (*load_raw)(uint16 top, uint8 h);
 #define LIM(x,min,max) MAX(min,MIN(x,max))
 #define SWAP(a,b) { a=a+b; b=a-b; a=a-b; }
 
-/*
-   In order to inline this calculation, I make the risky
-   assumption that all filter patterns can be described
-   by a repeating pattern of eight rows and two columns
-
-   All RGB cameras use one of these Bayer grids:
-
-        0x16161616:        0x61616161:        0x49494949:        0x94949494:
-
-          0 1 2 3 4 5          0 1 2 3 4 5          0 1 2 3 4 5          0 1 2 3 4 5
-        0 B G B G B G        0 G R G R G R        0 G B G B G B        0 R G R G R G
-        1 G R G R G R        1 B G B G B G        1 R G R G R G        1 G B G B G B
-        2 B G B G B G        2 G R G R G R        2 G B G B G B        2 R G R G R G
-        3 G R G R G R        3 B G B G B G        3 R G R G R G        3 G B G B G B
- */
-
 #define RAW(row,col) raw_image[(row)*width+(col)]
-
-static void tread(void *ptr, size_t size, size_t nmemb, FILE *stream)
-{
-  if( fread (ptr, size, nmemb, stream) != nmemb ) {
-    printf("Error reading input\n");
-    exit(1);
-  }
-}
 
 static uint8 get1()
 {
@@ -123,26 +86,26 @@ static uint8 get1()
 static uint16 get2()
 {
   uint16 v;
-  tread (&v, 1, 2, ifp);
+  fread ((char *)&v, 1, 2, ifp);
   return ntohs(v);
 }
 
-static uint8 getbithuff (int16 nbits, uint16 *huff)
+static uint8 getbithuff (uint8 nbits, uint16 *huff)
 {
   static uint32 bitbuf=0;
-  static int16 vbits=0;
+  static uint8 vbits=0;
   uint8 c;
 
-  if (nbits > 25 || nbits == 0 || vbits < 0) return 0;
-
-  if (nbits < 0)
+  if (nbits == 0)
     return bitbuf = vbits = 0;
 
   while (vbits < nbits) {
     c = get1();
-    bitbuf = (bitbuf << 8) + (uint8) c;
+    bitbuf <<= 8;
+    bitbuf += (uint8) c;
     vbits += 8;
   }
+
   c = (uint8)(((uint32)(bitbuf << (32-vbits))) >> (32-nbits));
 
   if (huff) {
@@ -181,7 +144,7 @@ static uint8 getbithuff (int16 nbits, uint16 *huff)
 //   int rb, row, col, sharp, val=0;
 // 
 //   if (top == 0)
-//     getbits(-1);
+//     getbits(0);
 //   memset (pixel, 0x80, sizeof pixel);
 //   for (row=2; row < h+2; row++) {
 //     for (col=2+(row & 1); col < width+2; col+=2) {
@@ -232,6 +195,12 @@ static uint8 getbithuff (int16 nbits, uint16 *huff)
 
 static void kodak_radc_load_raw(uint16 top, uint8 h)
 {
+  static uint16 huff[19][256];
+  static int16 c, col, tree, step, i, s, x, val, half_width;
+  static uint8 r, nreps, rep, row, y, mul[3];
+  static uint16 buf[3][3][386], t;
+  static uint16 *midbuf1, *midbuf2;
+
   static const int8 src[] = {
     1,1, 2,3, 3,4, 4,2, 5,7, 6,5, 7,6, 7,8,
     1,0, 2,1, 3,3, 4,4, 5,2, 6,7, 7,6, 8,5, 8,8,
@@ -252,10 +221,7 @@ static void kodak_radc_load_raw(uint16 top, uint8 h)
     2,-1, 2,13, 2,26, 3,39, 4,-16, 5,55, 6,-37, 6,76,
     2,-26, 2,-13, 2,1, 3,-39, 4,16, 5,-55, 6,-76, 6,37
   };
-  static uint16 huff[19][256];
-  static int16 row, col, tree, nreps, rep, step, i, c, s, r, x, y, val, half_width;
-  static uint16 last[3] = { 16,16,16 }, mul[3], buf[3][3][386], t;
-  static uint16 *midbuf1, *midbuf2;
+  static uint8 last[3] = { 16,16,16 };
 
   if (top == 0) {
     /* Init */
@@ -270,7 +236,7 @@ static void kodak_radc_load_raw(uint16 top, uint8 h)
       //huff[18][c] = ((8-s) << 8 | c >> s << s | 1 << (s-1));
       huff[18][c] = (1284 | c);
     }
-    getbits(-1);
+    getbits(0);
 
     for (i=0; i < sizeof(buf)/sizeof(uint16); i++)
       ((uint16 *)buf)[i] = 2048;
@@ -379,7 +345,7 @@ static void identify()
 /* INIT */
   height = width = 0;
 
-  tread (head, 1, HDR_LEN, ifp);
+  fread (head, 1, HDR_LEN, ifp);
 
   printf("Doing QuickTake ");
   if (!strcmp (head, "qktk")) {
