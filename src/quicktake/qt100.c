@@ -18,9 +18,11 @@ static uint32 prev_bitbuf_b = 0;
 static uint8 prev_vbits_b = 0;
 static uint32 prev_offset_b = 0;
 
-char *magic = "qktk";
+char magic[5] = QT100_MAGIC;
 char *model = "100";
-uint16 raw_width = 640;
+uint16 raw_width = 644;
+uint16 raw_image_size = (QT_BAND + 4) * 644;
+uint8 raw_image[(QT_BAND + 4) * 644];
 
 #define ABS(x) (x < 0 ? -x : x)
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
@@ -85,7 +87,7 @@ void qt_load_raw(uint16 top, uint16 h)
 
   /* Save bitbuff state at end of first full pass */
   if (top == 0) {
-    cputs("Init first pass bitbuff...\r\n");
+    printf("Init first pass bitbuff...\n");
     for (row = 2; row < height+2; row++) {
       for (col=2+(row & 1); col < width+2; col+=2) {
         getbits(4);
@@ -110,7 +112,7 @@ void qt_load_raw(uint16 top, uint16 h)
      * accessing pixels from row-2 (0) to row+2 (24)
      */
     for (row=2+rb; row < h+2; row+=2) {
-      cputc('.');
+      printf(".");
       for (col=3-(row & 1); col < width+2; col+=2) {
         if ((row < 4 && top == 0) || col < 4) sharp = 2;
         else {

@@ -28,7 +28,10 @@ mastodon_disk_PROGS = src/mastodon/mastodon.bin \
 				src/mastodon/mastowrite.bin \
 				src/mastodon/mastoconf.bin
 
-quicktake_disk_PROGS = src/quicktake/qtake.bin
+quicktake_disk_PROGS = \
+	src/quicktake/qtmenu.bin \
+	src/quicktake/qt100conv.bin \
+	src/quicktake/qt150conv.bin
 
 CLEANDISK = disks/basic-empty.dsk
 
@@ -120,11 +123,9 @@ mastodon$(suffix).dsk: $(mastodon_disk_PROGS)
 
 quicktake$(suffix).dsk: $(quicktake_disk_PROGS)
 	cp $(CLEANDISK) $@; \
-	java -jar bin/ac.jar -n $@ QTAKE
-	java -jar bin/ac.jar -p $@ QTAKE.SYSTEM SYS < bin/loader.system; \
+	java -jar bin/ac.jar -n $@ QUICKTAKE
+	java -jar bin/ac.jar -p $@ QTMENU.SYSTEM SYS < bin/loader.system; \
 	java -jar bin/ac.jar -d $@ BASIC; \
-	#java -jar bin/ac.jar -p $@ TEST1.QTK BIN < src/quicktake/test1.qtk; \
-	#java -jar bin/ac.jar -p $@ TEST102.QTK BIN < src/quicktake/test102.qtk; \
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
