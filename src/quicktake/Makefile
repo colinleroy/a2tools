@@ -27,9 +27,13 @@ upload_subdir :=
 endif
 endif
 
-qtake_SOURCES := \
-	main.c
-qtake_CC65SOURCES :=
+qt100conv_SOURCES := \
+	qt-conv.c qt100.c
+qt100conv_CC65SOURCES :=
+
+qt150conv_SOURCES := \
+	qt-conv.c qt150.c
+qt150conv_CC65SOURCES :=
 
 GCCSOURCES := ../lib/extended_conio.c ../lib/clrzone.c
 DEPS :=
@@ -37,7 +41,7 @@ DEPS :=
 CC65_TARGET = $(TARGET)
 CFLAGS  = -I ../lib -I api -I cli -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
 
-CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x400 $(USE_LANGCARD) \
+CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x200 $(USE_LANGCARD) \
 	-C ../../config/apple2enh-rtonce.cfg $(debug_CFLAGS) $(iigs_CFLAGS) \
 	$(CC65_TARGET)-iobuf-0800.o --start-addr 0x1000
 
@@ -46,12 +50,18 @@ GCCLDFLAGS = $(shell sdl-config --libs)
 
 .PHONY: all clean
 
-all: qtake.bin qtake.x86_64
+all: qt100conv.bin qt100conv.x86_64 qt150conv.bin qt150conv.x86_64
 
-qtake.bin: $(qtake_SOURCES) $(qtake_CC65SOURCES)
-	cl65 --debug-info -Wl --dbgfile,"qtake.dbg" $(CFLAGS) $(CLCFLAGS) -vm -m qtake.map -o $@ $^
+qt100conv.bin: $(qt100conv_SOURCES) $(qt100conv_CC65SOURCES)
+	cl65 --debug-info -Wl --dbgfile,"qt100conv.dbg" $(CFLAGS) $(CLCFLAGS) -vm -m qt100conv.map -o $@ $^
 
-qtake.x86_64: $(qtake_SOURCES) $(GCCSOURCES)
+qt100conv.x86_64: $(qt100conv_SOURCES) $(GCCSOURCES)
+	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	
+
+qt150conv.bin: $(qt150conv_SOURCES) $(qt150conv_CC65SOURCES)
+	cl65 --debug-info -Wl --dbgfile,"qt150conv.dbg" $(CFLAGS) $(CLCFLAGS) -vm -m qt150conv.map -o $@ $^
+
+qt150conv.x86_64: $(qt150conv_SOURCES) $(GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	
 
 clean:

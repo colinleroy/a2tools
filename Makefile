@@ -123,7 +123,8 @@ quicktake$(suffix).dsk: $(quicktake_disk_PROGS)
 	java -jar bin/ac.jar -n $@ QTAKE
 	java -jar bin/ac.jar -p $@ QTAKE.SYSTEM SYS < bin/loader.system; \
 	java -jar bin/ac.jar -d $@ BASIC; \
-	java -jar bin/ac.jar -p $@ TEST1.QTK BIN < src/quicktake/test1.qtk; \
+	#java -jar bin/ac.jar -p $@ TEST1.QTK BIN < src/quicktake/test1.qtk; \
+	#java -jar bin/ac.jar -p $@ TEST102.QTK BIN < src/quicktake/test102.qtk; \
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
