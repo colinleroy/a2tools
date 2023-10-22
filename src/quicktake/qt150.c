@@ -3,6 +3,7 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include "qt-conv.h"
+
 #define radc_token(tree) ((int8) getbithuff(8,huff[tree]))
 
 #define FORYX for (y=1; y < 3; y++) for (x=col+1; x >= col; x--)
@@ -10,9 +11,11 @@
 #define PREDICTOR (c ? (buf[c][y-1][x] + buf[c][y][x+1]) / 2 \
 : (buf[c][y-1][x+1] + 2*buf[c][y-1][x] + buf[c][y][x+1]) / 4)
 
-char *magic = "qktn";
+char magic[5] = QT150_MAGIC;
 char *model = "150/200";
-uint16 raw_width = 644;
+uint16 raw_width = 640;
+uint16 raw_image_size = (QT_BAND) * 640;
+uint8 raw_image[(QT_BAND) * 640];
 
 void qt_load_raw(uint16 top, uint16 h)
 {
@@ -67,7 +70,7 @@ void qt_load_raw(uint16 top, uint16 h)
   }
 
   for (row=0; row < h; row+=4) {
-    cputc('.');
+    printf(".");
     mul[0] = getbits(6);
     mul[1] = getbits(6);
     mul[2] = getbits(6);

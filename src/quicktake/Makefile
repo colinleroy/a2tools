@@ -27,6 +27,12 @@ upload_subdir :=
 endif
 endif
 
+qtmenu_SOURCES := \
+	qt-menu.c ../lib/dgets.c ../lib/scrollwindow.c
+qtmenu_CC65SOURCES := \
+	../lib/dputc.s ../lib/dputs.s ../lib/scroll.s \
+	../lib/clrzone.c
+
 qt100conv_SOURCES := \
 	qt-conv.c qt100.c
 qt100conv_CC65SOURCES :=
@@ -50,7 +56,16 @@ GCCLDFLAGS = $(shell sdl-config --libs)
 
 .PHONY: all clean
 
-all: qt100conv.bin qt100conv.x86_64 qt150conv.bin qt150conv.x86_64
+all: \
+	qtmenu.bin qtmenu.x86_64 \
+	qt100conv.bin qt100conv.x86_64 \
+	qt150conv.bin qt150conv.x86_64
+
+qtmenu.bin: $(qtmenu_SOURCES) $(qtmenu_CC65SOURCES)
+	cl65 --debug-info -Wl --dbgfile,"qtmenu.dbg" $(CFLAGS) $(CLCFLAGS) -vm -m qtmenu.map -o $@ $^
+
+qtmenu.x86_64: $(qtmenu_SOURCES) $(GCCSOURCES)
+	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	
 
 qt100conv.bin: $(qt100conv_SOURCES) $(qt100conv_CC65SOURCES)
 	cl65 --debug-info -Wl --dbgfile,"qt100conv.dbg" $(CFLAGS) $(CLCFLAGS) -vm -m qt100conv.map -o $@ $^

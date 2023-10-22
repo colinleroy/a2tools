@@ -3,11 +3,16 @@
 
 #include "platform.h"
 #include "extended_conio.h"
+
 #define QT_BAND 20
+#define QT100_MAGIC "qktk"
+#define QT150_MAGIC "qktn"
 
 extern uint16 height, width, raw_width;
-extern uint8 raw_image[(QT_BAND + 4) * 644];
-extern char *magic;
+extern uint8 raw_image[];
+extern uint16 raw_image_size;
+
+extern char magic[5];
 extern char *model;
 
 extern uint32 bitbuf;

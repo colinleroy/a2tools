@@ -68,7 +68,7 @@ static const char *ifname;
 static size_t data_offset;
 
 uint16 height, width;
-uint8 raw_image[(QT_BAND + 4) * 644];
+extern uint8 raw_image[];
 
 /* bithuff state */
 uint32 bitbuf=0;
@@ -139,11 +139,11 @@ static void identify()
 
   fread (head, 1, HDR_LEN, ifp);
 
-  cputs("Doing QuickTake ");
+  printf("Doing QuickTake ");
   if (!strcmp (head, magic)) {
-    cputs(model);
+    printf("%s", model);
   } else {
-    cputs("??? - Invalid file.\r\n");
+    printf("??? - Invalid file.\n");
     cgetc();
     exit(1);
   }
@@ -156,7 +156,7 @@ static void identify()
   height = get2();
   width  = get2();
 
-  cputs(" image\n");
+  printf(" image\n");
 
   /* Skip those */
   get2();
@@ -236,12 +236,12 @@ static void write_hgr(uint16 top, uint8 h)
 
 #if GREYSCALE
   /* Greyscale */
-  cputs(" Greyscaling...\r\n");
+  printf(" Greyscaling...\n");
   grey_levels(h);
 #endif
 
   /* Scale (nearest neighbor)*/
-  cputs(" Scaling...\r\n");
+  printf(" Scaling...\n");
   for (row = 0; row < band_final_height; row++) {
     uint16 orig_y = row * 10 / scaling_factor;
 
@@ -258,11 +258,11 @@ static void write_hgr(uint16 top, uint8 h)
   }
 
   /* Dither (Bayes) */
-  cputs(" Dithering...\r\n");
+  printf(" Dithering...\n");
   dither_bayer(HGR_WIDTH, h);
 
   /* Write */
-  cputs(" Saving...\r\n");
+  printf(" Saving...\n");
   scaled_top = top * scaling_factor / 10;
   for (row = 0; row < band_final_height; row++) {
     for (col = 0; col < HGR_WIDTH; col++) {
@@ -356,7 +356,7 @@ int main (int argc, const char **argv)
 
   ifname = argv[1];
   if (!(ifp = fopen (ifname, "rb"))) {
-    cputs("Can't open input\r\n");
+    printf("Can't open %s\n", ifname);
     cgetc();
     exit(1);
   }
@@ -379,7 +379,7 @@ int main (int argc, const char **argv)
     exit(1);
   }
 
-  memset(raw_image, 0, sizeof(raw_image));
+  memset(raw_image, 0, raw_image_size);
 #if !OUTPUT_PPM
   fwrite(raw_image, HGR_LEN, 1, ofp);
 #endif
@@ -389,14 +389,14 @@ int main (int argc, const char **argv)
   for (h = 0; h < height; h += QT_BAND) {
     printf("Loading %d-%d", h, h + QT_BAND);
     qt_load_raw(h, QT_BAND);
-    cputs("\r\nConverting...\r\n");
+    printf("\nConverting...\n");
 #if OUTPUT_PPM
     write_ppm_tiff(h, QT_BAND);
 #else
     write_hgr(h, QT_BAND);
 #endif
   }
-  cputs("Done.\r\n");
+  printf("Done.\n");
 
   fclose(ifp);
   fclose(ofp);
