@@ -87,8 +87,8 @@ void qt_load_raw(uint16 top, uint16 h)
 
   /* Save bitbuff state at end of first full pass */
   if (top == 0) {
-    printf("Init first pass bitbuff...\n");
-    for (row = 2; row < height+2; row++) {
+    printf(" (Finish first pass bitbuff...)");
+    for (; row < height+2; row++) {
       for (col=2+(row & 1); col < width+2; col+=2) {
         getbits(4);
       }
@@ -152,6 +152,7 @@ void qt_load_raw(uint16 top, uint16 h)
   /* Row from 0 to 19, moving pixels from row+2 to row */
   for (row=0; row < h; row++) {
     for (col=0; col < width; col++) {
+      /* FIXME do I need the curve there? */
       RAW(row,col) = curve[RAW(row+2,col+2)] >> 2;
     }
   }
