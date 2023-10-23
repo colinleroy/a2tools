@@ -17,7 +17,7 @@ uint16 raw_width = 640;
 uint16 raw_image_size = (QT_BAND) * 640;
 uint8 raw_image[(QT_BAND) * 640];
 
-void qt_load_raw(uint16 top, uint16 h)
+void qt_load_raw(uint16 top, uint8 h)
 {
   static uint16 huff[19][256];
   static int16 c, col, tree, step, i, s, x, half_width;
