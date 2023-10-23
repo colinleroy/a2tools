@@ -70,9 +70,6 @@ static size_t data_offset;
 uint16 height, width;
 extern uint8 raw_image[];
 
-/* bithuff state */
-uint32 bitbuf=0;
-uint8 vbits=0;
 
 #ifdef SURL_TO_LANGCARD
 #pragma code-name (push, "LC")
@@ -89,27 +86,39 @@ uint16 get2() {
   return ntohs(v);
 }
 
+#define GETBITS_COMMON() {                                          \
+  if (nbits == 0)                                                   \
+    return bitbuf = vbits = 0;                                      \
+  if (vbits < nbits) {                                              \
+    c = get1();                                                     \
+    FAST_SHIFT_LEFT_8_LONG(bitbuf);                                 \
+    bitbuf += c;                                                    \
+    vbits += 8;                                                     \
+  }                                                                 \
+  c = (uint8)(((uint32)(bitbuf << (32-vbits))) >> (32-nbits));      \
+}
+
+/* bithuff state */
+uint32 bitbuf=0;
+uint8 vbits=0;
 uint8 getbithuff (uint8 nbits, uint16 *huff)
 {
   uint8 c;
 
-  if (nbits == 0)
-    return bitbuf = vbits = 0;
+  GETBITS_COMMON();
 
-  while (vbits < nbits) {
-    c = get1();
-    bitbuf <<= 8;
-    bitbuf += (uint8) c;
-    vbits += 8;
-  }
+  vbits -= huff[c] >> 8;
+  c = (uint8) huff[c];
 
-  c = (uint8)(((uint32)(bitbuf << (32-vbits))) >> (32-nbits));
+  return c;
+}
+uint8 getbitnohuff (uint8 nbits)
+{
+  uint8 c;
 
-  if (huff) {
-    vbits -= huff[c] >> 8;
-    c = (uint8) huff[c];
-  } else
-    vbits -= nbits;
+  GETBITS_COMMON();
+
+  vbits -= nbits;
 
   return c;
 }
@@ -148,15 +157,12 @@ static void identify()
     exit(1);
   }
 
-  /* Skip to 544 */
-  for(i = HDR_LEN; i < WH_OFFSET; i++) {
-    get1();
-  }
+  fseek(ifp, WH_OFFSET, SEEK_SET);
 
   height = get2();
   width  = get2();
 
-  printf(" image\n");
+  printf(" image (%dx%d)\n", width, height);
 
   /* Skip those */
   get2();
@@ -167,10 +173,7 @@ static void identify()
   else
     data_offset = 736;
 
-  /* We just read 10 bytes, now skip to data offset */
-  for(i = WH_OFFSET + 10; i < data_offset; i++) {
-    get1();
-  }
+  fseek(ifp, data_offset, SEEK_SET);
 }
 
 static void dither_bayer(uint16 w, uint8 h) {
@@ -190,10 +193,11 @@ static void dither_bayer(uint16 w, uint8 h) {
   };
 
   for(y = 0; y < h; ++y) {
+    uint8 y_mod8 = y % 8;
     for(x = 0; x < w; ++x) {
       uint16 in = RAW(y, x);
 
-      in += in * map[y % 8][x % 8] / 63;
+      in += in * map[y_mod8][x % 8] / 63;
 
       if(in >= DITHER_THRESHOLD)
         RAW(y, x) = 255;
@@ -223,7 +227,7 @@ static void write_hgr(uint16 top, uint8 h)
   uint8 line[40];
   uint16 row, col;
   uint8 scaled_top;
-  uint16 pixel;
+  uint16 pixel, prev_offset = 0;
   unsigned char *ptr;
 
   unsigned char dhbmono[] = {0x7e,0x7d,0x7b,0x77,0x6f,0x5f,0x3f};

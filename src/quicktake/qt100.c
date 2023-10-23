@@ -30,11 +30,11 @@ uint8 raw_image[(QT_BAND + 4) * 644];
 #define LIM(x,min,max) MAX(min,MIN(x,max))
 #define SWAP(a,b) { a=a+b; b=a-b; a=a-b; }
 
-void qt_load_raw(uint16 top, uint16 h)
+void qt_load_raw(uint16 top, uint8 h)
 {
-  static const int16 gstep[16] =
+  static const int8 gstep[16] =
   { -89,-60,-44,-32,-22,-15,-8,-2,2,8,15,22,32,44,60,89 };
-  static const int16 rstep[6][4] =
+  static const int8 rstep[6][4] =
   { {  -3,-1,1,3  }, {  -5,-1,1,5  }, {  -8,-2,2,8  },
     { -13,-3,3,13 }, { -19,-4,4,19 }, { -28,-6,6,28 } };
   static const uint16 curve[256] =
@@ -52,12 +52,21 @@ void qt_load_raw(uint16 top, uint16 h)
     654,665,676,687,698,710,721,732,743,754,766,777,788,799,810,822,833,844,
     855,866,878,889,900,911,922,933,945,956,967,978,989,1001,1012,1023 };
   int16 val=0;
-  uint8 sharp, rb;
-  uint16 row, col;
+  uint8 sharp, rb, row;
+  uint16 col, tmp_i16;
+
+  /* Cycle-sparing caches */
+  static uint8 h_plus2;
+  static uint16 height_plus2, width_plus2, double_raw_width;
+  static uint8 v_row_min2_col, v_row_col_min2, v_row_min2_col_min2;
+  static uint16 idx, end_idx;
 
   getbits(0);
   if (top == 0) {
     memset (raw_image, 0x80, sizeof raw_image);
+    h_plus2 = h + 2;
+    width_plus2 = width+2;
+    double_raw_width = raw_width+raw_width;
   } else {
     memcpy(raw_image, raw_image + ((QT_BAND)*644), 4*644);
     bitbuf = prev_bitbuf_a;
@@ -65,19 +74,22 @@ void qt_load_raw(uint16 top, uint16 h)
     fseek(ifp, prev_offset_a, SEEK_SET);
   }
 
-  for (row=2; row < h+2; row++) {
-    for (col=2+(row & 1); col < width+2; col+=2) {
-      val = ((RAW(row-1,col-1) + 2*RAW(row-1,col+1) +
-                RAW(row,col-2)) >> 2) + gstep[getbits(4)];
-      RAW(row,col) = val = LIM(val,0,255);
+  for (row = 2; row < h_plus2; row++) {
+    col=2 + (row & 1);
+    idx = RAW_IDX(row,col);
+    for (; col < width_plus2; col+=2) {
+      val = ((RAW_DIRECT_IDX(idx-raw_width-1) + 2*RAW_DIRECT_IDX(idx-raw_width+1) +
+                RAW_DIRECT_IDX(idx-2)) >> 2) + gstep[getbits(4)];
+      RAW_DIRECT_IDX(idx) = val = LIM(val,0,255);
       if (col < 4) {
-        RAW(row,col-2) = RAW(row+1,~row & 1) = val;
+        RAW_DIRECT_IDX(idx-2) = RAW(row+1,~row & 1) = val;
       }
       if (row == 2 && top == 0) {
-        RAW(row-1,col+1) = RAW(row-1,col+3) = val;
+        RAW_DIRECT_IDX(idx-raw_width+1) = RAW_DIRECT_IDX(idx-raw_width+3) = val;
       }
+      idx += 2;
     }
-    RAW(row,col) = val;
+    RAW_DIRECT_IDX(idx) = val;
   }
 
   /* Save state at end of first loop */
@@ -87,9 +99,11 @@ void qt_load_raw(uint16 top, uint16 h)
 
   /* Save bitbuff state at end of first full pass */
   if (top == 0) {
+    height_plus2 = height + 2;
     printf(" (Finish first pass bitbuff...)");
-    for (; row < height+2; row++) {
-      for (col=2+(row & 1); col < width+2; col+=2) {
+    /* Use an i16 because height can be == 480 */
+    for (tmp_i16 = row; tmp_i16 < height_plus2; tmp_i16++) {
+      for (col=2+(tmp_i16 & 1); col < width_plus2; col+=2) {
         getbits(4);
       }
     }
@@ -111,26 +125,34 @@ void qt_load_raw(uint16 top, uint16 h)
     /* Row from 2 to 21, then 3 to 22
      * accessing pixels from row-2 (0) to row+2 (24)
      */
-    for (row=2+rb; row < h+2; row+=2) {
+    for (row=2+rb; row < h_plus2; row+=2) {
       printf(".");
-      for (col=3-(row & 1); col < width+2; col+=2) {
-        if ((row < 4 && top == 0) || col < 4) sharp = 2;
-        else {
-          val = ABS(RAW(row-2,col) - RAW(row,col-2))
-              + ABS(RAW(row-2,col) - RAW(row-2,col-2))
-              + ABS(RAW(row,col-2) - RAW(row-2,col-2));
+      col = 3-(row & 1);
+      idx = RAW_IDX(row,col);
+      for (; col < width_plus2; col+=2) {
+        v_row_min2_col = RAW_DIRECT_IDX(idx-double_raw_width); // (row-2,col)
+        v_row_col_min2 = RAW_DIRECT_IDX(idx-2); // (row,col-2)
+
+        if ((row < 4 && top == 0) || col < 4) {
+          sharp = 2;
+        } else {
+          v_row_min2_col_min2 = RAW_DIRECT_IDX(idx-double_raw_width-2); // (row-2,col-2)
+          val = ABS(v_row_min2_col - v_row_col_min2)
+              + ABS(v_row_min2_col - v_row_min2_col_min2)
+              + ABS(v_row_col_min2 - v_row_min2_col_min2);
           sharp = val <  4 ? 0 : val <  8 ? 1 : val < 16 ? 2 :
                   val < 32 ? 3 : val < 48 ? 4 : 5;
         }
-        val = ((RAW(row-2,col) + RAW(row,col-2)) >> 1)
+        val = ((v_row_min2_col + v_row_col_min2) >> 1)
               + rstep[sharp][getbits(2)];
-        RAW(row,col) = val = LIM(val,0,255);
+        RAW_DIRECT_IDX(idx) = val = LIM(val,0,255);
         if (row < 4 && top == 0) {
-          RAW(row-2,col+2) = val;
+          RAW_DIRECT_IDX(idx-double_raw_width+2) = val; // (row-2,col+2)
         }
         if (col < 4) {
-          RAW(row+2,col-2) = val;
+          RAW_DIRECT_IDX(idx+double_raw_width-2) = val; // (row+2,col-2)
         }
+        idx += 2;
       }
     }
   }
@@ -141,19 +163,23 @@ void qt_load_raw(uint16 top, uint16 h)
   prev_offset_b = ftell(ifp);
 
   /* Row from 2 to 21, accessing pixels from 2 to 21 */
-  for (row=2; row < h+2; row++) {
-    for (col=3-(row & 1); col < width+2; col+=2) {
-      val = ((RAW(row,col-1) + (RAW(row,col) << 2) +
-              RAW(row,col+1)) >> 1) - 0x100;
-      RAW(row,col) = LIM(val,0,255);
+  for (row=2; row < h_plus2; row++) {
+    idx = RAW_IDX(row, 3-(row & 1));
+    end_idx = RAW_IDX(row, width_plus2);
+    for (;idx < end_idx; idx +=2) {
+      val = ((RAW_DIRECT_IDX(idx-1) + (RAW_DIRECT_IDX(idx) << 2) +
+              RAW_DIRECT_IDX(idx+1)) >> 1) - 0x100;
+      RAW_DIRECT_IDX(idx) = LIM(val,0,255);
     }
   }
 
   /* Row from 0 to 19, moving pixels from row+2 to row */
   for (row=0; row < h; row++) {
-    for (col=0; col < width; col++) {
+    idx = RAW_IDX(row, 0);
+    for (col=0; col < width; idx++, col++) {
       /* FIXME do I need the curve there? */
-      RAW(row,col) = curve[RAW(row+2,col+2)] >> 2;
+      // RAW(row,col) = curl[RAW(row+2,col+2)]
+      RAW_DIRECT_IDX(idx) = curve[RAW_DIRECT_IDX(idx+double_raw_width+2)] >> 2;
     }
   }
 }
