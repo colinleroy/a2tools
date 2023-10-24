@@ -1,0 +1,49 @@
+yy = checksum
+
+# 10 02 01 07 01 00 07 10 03 yy (set 57600)
+# 10 02 01 07 01 00 06 10 03 yy (set 38400)
+# 10 02 01 07 01 00 04 10 03 yy (set 19200)
+
+# 04 (set done)
+
+# 10 02 00 09 00 00 10 03 yy       (get model)
+# 10 02 00 0B 00 00 10 03 yy       (num pictures)
+
+# 10 02 00 0A 02 00 xx 00 10 03 yy (get picture xx name)
+# 10 02 00 00 02 00 xx 00 10 03 yy (get thumbnail xx)
+# 10 02 00 02 02 00 xx 00 10 03 yy (get full picture xx)
+
+# 10 02 00 19 02 00 xx 00 10 03 yy (del picture xx)
+
+# 10 02 00 19 02 00 xx xx 00 10 03 yy (del picture 0x10)
+# 10 02 00 0A 02 00 xx xx 00 10 03 yy (get picture 0x10 name)
+# 10 02 00 00 02 00 xx xx 00 10 03 yy (get thumbnail 0x10)
+# 10 02 00 02 02 00 xx xx 00 10 03 yy (get full picture 0x10)
+
+command_prefix={0x10, 0x02}
+
+command_get=0x00
+command_set=0x01
+
+command_set_speed_57600={0x07, 0x01, 0x00, 0x07}
+command_set_speed_38400={0x07, 0x01, 0x00, 0x06}
+command_set_speed_19200={0x07, 0x01, 0x00, 0x04}
+
+command_get_model=   {0x09,0x00,0x00}
+command_get_num_pics={0x0B,0x00,0x00}
+
+command_get_pic_name= {0x0A,0x02,0x00} + pic_num == 0x10 ? {0x10,0x10} : {pic_num} + {0x00}
+command_get_pic_thumb={0x00,0x02,0x00} + pic_num == 0x10 ? {0x10,0x10} : {pic_num} + {0x00}
+command_get_full_pic= {0x02,0x02,0x00} + pic_num == 0x10 ? {0x10,0x10} : {pic_num} + {0x00}
+command_del_pic=      {0x19,0x02,0x00} + pic_num == 0x10 ? {0x10,0x10} : {pic_num} + {0x00}
+
+command_suffix={0x10, 0x03}
+
+checksum = xor(command bytes without prefix/suffix)^0x03
+
+
+data sent by blocks separated by 0x10,0x17
+eot is 0x10,0x03
+
+data 0x10,0x17 represented as 0x10,0x10,0x17
+data 0x10,0x03 represented as 0x10,0x10,0x03

@@ -4,6 +4,18 @@
 #include <arpa/inet.h>
 #include "qt-conv.h"
 
+
+char *cache[2];
+uint16 cache_size = 4096;
+
+void alloc_cache(void) {
+  cache[CACHE_A] = malloc(cache_size);
+  cache[CACHE_B] = malloc(cache_size);
+  if (cache[CACHE_A] == NULL || cache[CACHE_B] == NULL) {
+    printf("Cannot allocate memory");
+    exit(1);
+  }
+}
 /* bitbuff state at end of first loop */
 static uint32 prev_bitbuf_a = 0;
 static uint8 prev_vbits_a = 0;
@@ -68,10 +80,10 @@ void qt_load_raw(uint16 top, uint8 h)
     width_plus2 = width+2;
     double_raw_width = raw_width+raw_width;
   } else {
-    memcpy(raw_image, raw_image + ((QT_BAND)*644), 4*644);
+    memcpy(raw_image, raw_image + ((QT_BAND + 2)*644), 2*644);
     bitbuf = prev_bitbuf_a;
     vbits = prev_vbits_a;
-    fseek(ifp, prev_offset_a, SEEK_SET);
+    set_cache(prev_offset_a, CACHE_A);
   }
 
   for (row = 2; row < h_plus2; row++) {
@@ -118,7 +130,7 @@ void qt_load_raw(uint16 top, uint8 h)
   if (prev_offset_b != 0) {
     bitbuf = prev_bitbuf_b;
     vbits = prev_vbits_b;
-    fseek(ifp, prev_offset_b, SEEK_SET);
+    set_cache(prev_offset_b, CACHE_B);
   }
 
   for (rb=0; rb < 2; rb++) {
