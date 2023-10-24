@@ -48,9 +48,15 @@
 #define RESIZE    1
 #define DITHER    1
 #define GREYSCALE 0
-#define DITHER_THRESHOLD 100
+#define DITHER_THRESHOLD 120
 
 #define OUTPUT_PPM 0
+
+#ifdef __CC65__
+#define TMP_NAME "/RAM/HGR"
+#else
+#define TMP_NAME "tmp.HGR"
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -68,49 +74,50 @@ static const char *ifname;
 static size_t data_offset;
 
 uint16 height, width;
-extern uint8 raw_image[];
 
+uint8 *cache = NULL;
+uint16 cache_offset;
+uint16 cache_pages_read;
+uint32 last_seek = 0;
 
-extern char *cache[2];
-extern uint16 cache_size;
-uint8 cur_cache;
-uint16 cur_cache_offset;
+void iseek(uint32 off) {
+  fseek(ifp, off, SEEK_SET);
+  fread(cache, 1, cache_size, ifp);
+  cache_offset = 0;
+  cache_pages_read = 0;
+  last_seek = off;
+}
 
-void set_cache(uint16 offset, uint8 cache_num) {
-  fseek(ifp, offset, SEEK_SET);
-  fread(cache[cache_num], 1, cache_size, ifp);
-  cur_cache = cache_num;
-  cur_cache_offset = 0;
+uint32 cache_read_since_inval(void) {
+  return last_seek + cache_pages_read + cache_offset;
 }
 
 uint8 get1() {
-  //return fgetc(ifp);
-  int r;
-  if (cur_cache_offset == cache_size) {
-    if ((r = fread(cache[cur_cache], 1, cache_size, ifp)) < cache_size) {
-      printf("short read %d at offset %llu\n", r, ftell(ifp));
-      exit(1);
-    }
-    cur_cache_offset = 0;
+  // return fgetc(ifp);
+  if (cache_offset == cache_size) {
+    fread(cache, 1, cache_size, ifp);
+    cache_offset = 0;
+    cache_pages_read += cache_size;
   }
-  return cache[cur_cache][cur_cache_offset++];
+  return cache[cache_offset++];
 }
 
 uint16 get2() {
   uint16 v;
   // fread ((char *)&v, 1, 2, ifp);
   // return ntohs(v);
-  if (cur_cache_offset == cache_size) {
-    fread(cache[cur_cache], 1, cache_size, ifp);
-    cur_cache_offset = 0;
+  if (cache_offset == cache_size) {
+    fread(cache, 1, cache_size, ifp);
+    cache_offset = 0;
+    cache_pages_read += cache_size;
   }
-  ((unsigned char *)&v)[1] = cache[cur_cache][cur_cache_offset++];
-  
-  if (cur_cache_offset == cache_size) {
-    fread(cache[cur_cache], 1, cache_size, ifp);
-    cur_cache_offset = 0;
+  ((unsigned char *)&v)[1] = cache[cache_offset++];
+  if (cache_offset == cache_size) {
+    fread(cache, 1, cache_size, ifp);
+    cache_offset = 0;
+    cache_pages_read += cache_size;
   }
-  ((unsigned char *)&v)[0] = cache[cur_cache][cur_cache_offset++];
+  ((unsigned char *)&v)[0] = cache[cache_offset++];
   return v;
 }
 
@@ -216,9 +223,8 @@ static void identify()
     exit(1);
   }
 
-  set_cache(WH_OFFSET, CACHE_A);
   //fseek(ifp, WH_OFFSET, SEEK_SET);
-
+  iseek(WH_OFFSET);
   height = get2();
   width  = get2();
 
@@ -233,8 +239,8 @@ static void identify()
   else
     data_offset = 736;
 
-  set_cache(data_offset, CACHE_A);
   //fseek(ifp, data_offset, SEEK_SET);
+  iseek(data_offset);
 }
 
 static void dither_bayer(uint16 w, uint8 h) {
@@ -420,8 +426,11 @@ int main (int argc, const char **argv)
 
   ofname = 0;
 
-  alloc_cache();
-
+  cache = malloc(cache_size);
+  if (cache == NULL) {
+    printf("Not enough memory\n");
+    exit(1);
+  }
 #ifdef __CC65__
   videomode(VIDEOMODE_80COL);
   printf("Free: %zu/%zuB\n", _heapmaxavail(), _heapmemavail());
@@ -444,7 +453,8 @@ int main (int argc, const char **argv)
 #else
   strcat (ofname, ".hgr");
 #endif
-  ofp = fopen (ofname, "wb");
+
+  ofp = fopen (TMP_NAME, "wb");
 
   if (!ofp) {
     perror (ofname);
@@ -455,17 +465,9 @@ int main (int argc, const char **argv)
 
   memset(raw_image, 0, raw_image_size);
 
-#ifdef __CC65__
-  if (_heapmaxavail() > HGR_LEN) {
-#else
-  if (1) {
-#endif
-    hgr_buf = malloc(HGR_LEN);
-  } else {
 #if !OUTPUT_PPM
-    fwrite(raw_image, 1, HGR_LEN, ofp);
+  fwrite(raw_image, 1, HGR_LEN, ofp);
 #endif
-  }
 
   init_base_addrs();
   for (h = 0; h < height; h += QT_BAND) {
@@ -478,18 +480,18 @@ int main (int argc, const char **argv)
     write_hgr(h, QT_BAND);
 #endif
   }
-  if (hgr_buf) {
-    uint8 i;
-    printf("Saving to disk...\n");
-    for (i = 0; i < HGR_LEN / 1024; i++)
-      if (fwrite(hgr_buf + (i*1024), 1, 1024, ofp) < 1024) {
-        printf("Short write (%d)...\n", i);
-      }
-  }
-  printf("Done.\n");
+  
+  printf("Finalizing...\n");
 
   fclose(ifp);
   fclose(ofp);
+  ifp = fopen(TMP_NAME, "rb");
+  ofp = fopen(ofname, "wb");
+  while ((h = fread(cache, 1, cache_size, ifp)) > 0)
+    fwrite(cache, 1, h, ofp);
+  fclose(ifp);
+  fclose(ofp);
+  printf("Done.");
 
   if (ofname) free (ofname);
 
