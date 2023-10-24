@@ -20,10 +20,9 @@ extern uint8 vbits;
 
 extern FILE *ifp, *ofp;
 
-#define CACHE_A 0
-#define CACHE_B 1
-void alloc_cache(void);
-void set_cache(uint16 offset, uint8 cache);
+void iseek(uint32 off);
+uint32 cache_read_since_inval(void);
+extern uint16 cache_size;
 
 uint8 get1();
 uint16 get2();

@@ -16,18 +16,7 @@ char *model = "150/200";
 uint16 raw_width = 640;
 uint16 raw_image_size = (QT_BAND) * 640;
 uint8 raw_image[(QT_BAND) * 640];
-
-char *cache[2];
-uint16 cache_size = 1024;
-
-void alloc_cache(void) {
-  cache[CACHE_A] = malloc(cache_size);
-  cache[CACHE_B] = NULL;
-  if (cache[CACHE_A] == NULL) {
-    printf("Cannot allocate memory");
-    exit(1);
-  }
-}
+uint16 cache_size = 2048;
 
 void qt_load_raw(uint16 top, uint8 h)
 {
