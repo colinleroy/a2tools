@@ -71,22 +71,53 @@ uint16 height, width;
 extern uint8 raw_image[];
 
 
-#ifdef SURL_TO_LANGCARD
-#pragma code-name (push, "LC")
-#endif
+extern char *cache[2];
+extern uint16 cache_size;
+uint8 cur_cache;
+uint16 cur_cache_offset;
 
+void set_cache(uint16 offset, uint8 cache_num) {
+  fseek(ifp, offset, SEEK_SET);
+  fread(cache[cache_num], cache_size, 1, ifp);
+  cur_cache = cache_num;
+  cur_cache_offset = 0;
+}
 
 uint8 get1() {
-  return fgetc(ifp);
+  //return fgetc(ifp);
+  
+  if (cur_cache_offset == cache_size) {
+    fread(cache[cur_cache], cache_size, 1, ifp);
+    cur_cache_offset = 0;
+  }
+  return cache[cur_cache][cur_cache_offset++];
 }
 
 uint16 get2() {
   uint16 v;
-  fread ((char *)&v, 1, 2, ifp);
-  return ntohs(v);
+  // fread ((char *)&v, 1, 2, ifp);
+  // return ntohs(v);
+  if (cur_cache_offset == cache_size) {
+    fread(cache[cur_cache], cache_size, 1, ifp);
+    cur_cache_offset = 0;
+  }
+  ((unsigned char *)&v)[1] = cache[cur_cache][cur_cache_offset++];
+  
+  if (cur_cache_offset == cache_size) {
+    fread(cache[cur_cache], cache_size, 1, ifp);
+    cur_cache_offset = 0;
+  }
+  ((unsigned char *)&v)[0] = cache[cur_cache][cur_cache_offset++];
+  return v;
 }
 
+#ifdef SURL_TO_LANGCARD
+#pragma code-name (push, "LC")
+#endif
+
 #define GETBITS_COMMON() {                                          \
+  uint32 tmp;                                                       \
+  uint8 shift;                                                      \
   if (nbits == 0)                                                   \
     return bitbuf = vbits = 0;                                      \
   if (vbits < nbits) {                                              \
@@ -95,7 +126,32 @@ uint16 get2() {
     bitbuf += c;                                                    \
     vbits += 8;                                                     \
   }                                                                 \
-  c = (uint8)(((uint32)(bitbuf << (32-vbits))) >> (32-nbits));      \
+  shift = 32-vbits;                                                 \
+  if (shift >= 24) {                                                \
+    FAST_SHIFT_LEFT_24_LONG_TO(bitbuf, tmp);                        \
+    shift -= 24;                                                    \
+  } else if (shift >= 16) {                                         \
+    FAST_SHIFT_LEFT_16_LONG_TO(bitbuf, tmp);                        \
+    shift -= 16;                                                    \
+  } else if (shift >= 8) {                                          \
+    FAST_SHIFT_LEFT_8_LONG_TO(bitbuf, tmp);                         \
+    shift -= 8;                                                     \
+  }                                                                 \
+  if (shift)                                                        \
+    tmp <<= shift;                                                  \
+                                                                    \
+  shift = 32-nbits;                                                 \
+  if (shift >= 24) {                                                \
+    FAST_SHIFT_RIGHT_24_LONG(tmp);                                  \
+    shift -= 24;                                                    \
+  } else if (shift >= 16) {                                         \
+    FAST_SHIFT_RIGHT_16_LONG(tmp);                                  \
+    shift -= 16;                                                    \
+  } else if (shift >= 8) {                                          \
+    FAST_SHIFT_RIGHT_8_LONG(tmp);                                   \
+    shift -= 8;                                                     \
+  }                                                                 \
+  c = (uint8)(tmp >> shift);                                        \
 }
 
 /* bithuff state */
@@ -157,7 +213,8 @@ static void identify()
     exit(1);
   }
 
-  fseek(ifp, WH_OFFSET, SEEK_SET);
+  set_cache(WH_OFFSET, CACHE_A);
+  //fseek(ifp, WH_OFFSET, SEEK_SET);
 
   height = get2();
   width  = get2();
@@ -173,7 +230,8 @@ static void identify()
   else
     data_offset = 736;
 
-  fseek(ifp, data_offset, SEEK_SET);
+  set_cache(data_offset, CACHE_A);
+  //fseek(ifp, data_offset, SEEK_SET);
 }
 
 static void dither_bayer(uint16 w, uint8 h) {
@@ -221,6 +279,8 @@ static void init_base_addrs (void)
     baseaddr[i] = line_of_eight * 1024 + group_of_eight * 128 + group_of_sixtyfour * 40;
   }
 }
+
+static uint8 *hgr_buf = NULL;
 
 static void write_hgr(uint16 top, uint8 h)
 {
@@ -278,8 +338,12 @@ static void write_hgr(uint16 top, uint8 h)
         ptr[0] &= dhbmono[pixel];
       }
     }
-    fseek(ofp, baseaddr[scaled_top + row], SEEK_SET);
-    fwrite(line, 40, 1, ofp);
+    if (hgr_buf) {
+      memcpy(hgr_buf + baseaddr[scaled_top + row], line, 40);
+    } else {
+      fseek(ofp, baseaddr[scaled_top + row], SEEK_SET);
+      fwrite(line, 40, 1, ofp);
+    }
   }
 }
 
@@ -353,6 +417,8 @@ int main (int argc, const char **argv)
 
   ofname = 0;
 
+  alloc_cache();
+
 #ifdef __CC65__
   videomode(VIDEOMODE_80COL);
   printf("Free: %zu/%zuB\n", _heapmaxavail(), _heapmemavail());
@@ -383,13 +449,22 @@ int main (int argc, const char **argv)
     exit(1);
   }
 
+
   memset(raw_image, 0, raw_image_size);
-#if !OUTPUT_PPM
-  fwrite(raw_image, HGR_LEN, 1, ofp);
+
+#ifdef __CC65__
+  if (_heapmaxavail() > HGR_LEN) {
+#else
+  if (1) {
 #endif
+    hgr_buf = malloc(HGR_LEN);
+  } else {
+#if !OUTPUT_PPM
+    fwrite(raw_image, HGR_LEN, 1, ofp);
+#endif
+  }
 
   init_base_addrs();
-
   for (h = 0; h < height; h += QT_BAND) {
     printf("Loading %d-%d", h, h + QT_BAND);
     qt_load_raw(h, QT_BAND);
@@ -399,6 +474,10 @@ int main (int argc, const char **argv)
 #else
     write_hgr(h, QT_BAND);
 #endif
+  }
+  if (hgr_buf) {
+    printf("Saving to disk...\n");
+    fwrite(hgr_buf, HGR_LEN, 1, ofp);
   }
   printf("Done.\n");
 
