@@ -78,16 +78,19 @@ uint16 cur_cache_offset;
 
 void set_cache(uint16 offset, uint8 cache_num) {
   fseek(ifp, offset, SEEK_SET);
-  fread(cache[cache_num], cache_size, 1, ifp);
+  fread(cache[cache_num], 1, cache_size, ifp);
   cur_cache = cache_num;
   cur_cache_offset = 0;
 }
 
 uint8 get1() {
   //return fgetc(ifp);
-  
+  int r;
   if (cur_cache_offset == cache_size) {
-    fread(cache[cur_cache], cache_size, 1, ifp);
+    if ((r = fread(cache[cur_cache], 1, cache_size, ifp)) < cache_size) {
+      printf("short read %d at offset %llu\n", r, ftell(ifp));
+      exit(1);
+    }
     cur_cache_offset = 0;
   }
   return cache[cur_cache][cur_cache_offset++];
@@ -98,13 +101,13 @@ uint16 get2() {
   // fread ((char *)&v, 1, 2, ifp);
   // return ntohs(v);
   if (cur_cache_offset == cache_size) {
-    fread(cache[cur_cache], cache_size, 1, ifp);
+    fread(cache[cur_cache], 1, cache_size, ifp);
     cur_cache_offset = 0;
   }
   ((unsigned char *)&v)[1] = cache[cur_cache][cur_cache_offset++];
   
   if (cur_cache_offset == cache_size) {
-    fread(cache[cur_cache], cache_size, 1, ifp);
+    fread(cache[cur_cache], 1, cache_size, ifp);
     cur_cache_offset = 0;
   }
   ((unsigned char *)&v)[0] = cache[cur_cache][cur_cache_offset++];
@@ -342,7 +345,7 @@ static void write_hgr(uint16 top, uint8 h)
       memcpy(hgr_buf + baseaddr[scaled_top + row], line, 40);
     } else {
       fseek(ofp, baseaddr[scaled_top + row], SEEK_SET);
-      fwrite(line, 40, 1, ofp);
+      fwrite(line, 1, 40, ofp);
     }
   }
 }
@@ -460,7 +463,7 @@ int main (int argc, const char **argv)
     hgr_buf = malloc(HGR_LEN);
   } else {
 #if !OUTPUT_PPM
-    fwrite(raw_image, HGR_LEN, 1, ofp);
+    fwrite(raw_image, 1, HGR_LEN, ofp);
 #endif
   }
 
@@ -476,8 +479,12 @@ int main (int argc, const char **argv)
 #endif
   }
   if (hgr_buf) {
+    uint8 i;
     printf("Saving to disk...\n");
-    fwrite(hgr_buf, HGR_LEN, 1, ofp);
+    for (i = 0; i < HGR_LEN / 1024; i++)
+      if (fwrite(hgr_buf + (i*1024), 1, 1024, ofp) < 1024) {
+        printf("Short write (%d)...\n", i);
+      }
   }
   printf("Done.\n");
 
