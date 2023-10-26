@@ -1,2 +1,2 @@
 #!/bin/bash
-make clean all && cd ../.. && make quicktake.dsk && mame apple2c0 -window -flop1 quicktake.dsk -flop2 disks/qt100.dsk -resolution 560x384 -modem null_modem -bitb socket.localhost:2000 -nomouse -nodebug; cd src/quicktake
+make clean all && cd ../.. && make quicktake.dsk && mame apple2c0 -window -flop1 quicktake.dsk -flop2 disks/qt100.dsk -resolution 560x384 -modem null_modem -bitb socket.localhost:2000 -nomouse -debug; cd src/quicktake

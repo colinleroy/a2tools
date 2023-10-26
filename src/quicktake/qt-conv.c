@@ -62,6 +62,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <arpa/inet.h>
+#include <unistd.h>
 
 #include "qt-conv.h"
 
@@ -121,10 +122,6 @@ uint16 get2() {
   return v;
 }
 
-#ifdef SURL_TO_LANGCARD
-#pragma code-name (push, "LC")
-#endif
-
 #define GETBITS_COMMON() {                                          \
   uint32 tmp;                                                       \
   uint8 shift;                                                      \
@@ -167,6 +164,22 @@ uint16 get2() {
 /* bithuff state */
 uint32 bitbuf=0;
 uint8 vbits=0;
+
+uint8 getbitnohuff (uint8 nbits)
+{
+  uint8 c;
+
+  GETBITS_COMMON();
+
+  vbits -= nbits;
+
+  return c;
+}
+
+#ifdef SURL_TO_LANGCARD
+#pragma code-name (push, "LC")
+#endif
+
 uint8 getbithuff (uint8 nbits, uint16 *huff)
 {
   uint8 c;
@@ -175,16 +188,6 @@ uint8 getbithuff (uint8 nbits, uint16 *huff)
 
   vbits -= huff[c] >> 8;
   c = (uint8) huff[c];
-
-  return c;
-}
-uint8 getbitnohuff (uint8 nbits)
-{
-  uint8 c;
-
-  GETBITS_COMMON();
-
-  vbits -= nbits;
 
   return c;
 }
@@ -204,10 +207,9 @@ static void grey_levels(uint8 h) {
 #define HDR_LEN 32
 #define WH_OFFSET 544
 
-static void identify()
+static uint8 identify()
 {
   char head[32];
-  uint16 i;
 
 /* INIT */
   height = width = 0;
@@ -219,8 +221,7 @@ static void identify()
     printf("%s", model);
   } else {
     printf("??? - Invalid file.\n");
-    cgetc();
-    exit(1);
+    return -1;
   }
 
   //fseek(ifp, WH_OFFSET, SEEK_SET);
@@ -241,6 +242,7 @@ static void identify()
 
   //fseek(ifp, data_offset, SEEK_SET);
   iseek(data_offset);
+  return 0;
 }
 
 static void dither_bayer(uint16 w, uint8 h) {
@@ -429,21 +431,26 @@ int main (int argc, const char **argv)
   cache = malloc(cache_size);
   if (cache == NULL) {
     printf("Not enough memory\n");
-    exit(1);
+    goto out;
   }
 #ifdef __CC65__
   videomode(VIDEOMODE_80COL);
   printf("Free: %zu/%zuB\n", _heapmaxavail(), _heapmemavail());
 #endif
 
+  if (argc == 1) {
+    printf("No file.\n");
+    goto out;
+  }
   ifname = argv[1];
   if (!(ifp = fopen (ifname, "rb"))) {
     printf("Can't open %s\n", ifname);
-    cgetc();
-    exit(1);
+    goto out;
   }
 
-  identify();
+  if (identify() != 0) {
+    goto out;
+  }
 
   ofname = (char *) malloc (strlen(ifname) + 64);
   strcpy (ofname, ifname);
@@ -458,8 +465,7 @@ int main (int argc, const char **argv)
 
   if (!ofp) {
     perror (ofname);
-    cgetc();
-    exit(1);
+    goto out;
   }
 
 
@@ -495,7 +501,10 @@ int main (int argc, const char **argv)
 
   if (ofname) free (ofname);
 
-  return 0;
+  exec("qtmenu", NULL);
+out:
+  cgetc();
+  exec("qtmenu", NULL);
 }
 #ifdef SURL_TO_LANGCARD
 #pragma code-name (pop)

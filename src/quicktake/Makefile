@@ -1,8 +1,6 @@
 ifdef SER_DEBUG
-ser_debug_SOURCES := ../lib/simple_serial_ext.c
 debug_CFLAGS := -DSER_DEBUG=1
 else
-ser_debug_SOURCES :=
 debug_CFLAGS :=
 endif
 
@@ -28,7 +26,11 @@ endif
 endif
 
 qtmenu_SOURCES := \
-	qt-menu.c ../lib/dgets.c ../lib/scrollwindow.c
+	qt-menu.c qt-serial.c \
+	../lib/dgets.c ../lib/scrollwindow.c ../lib/path_helper.c \
+	../lib/simple_serial.c ../lib/simple_serial_ext.c \
+	../lib/extended_string.c ../lib/malloc0.c
+
 qtmenu_CC65SOURCES := \
 	../lib/dputc.s ../lib/dputs.s ../lib/scroll.s \
 	../lib/clrzone.c
@@ -45,13 +47,13 @@ GCCSOURCES := ../lib/extended_conio.c ../lib/clrzone.c
 DEPS :=
 
 CC65_TARGET = $(TARGET)
-CFLAGS  = -I ../lib -I api -I cli -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
+CFLAGS  = -I ../lib -DCONF_FILE_PATH=\"/etc/a2tools/quicktake.conf\"
 
 CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x200 $(USE_LANGCARD) \
 	-C ../../config/apple2enh-rtonce.cfg $(debug_CFLAGS) $(iigs_CFLAGS) \
 	$(CC65_TARGET)-iobuf-0800.o --start-addr 0x1000
 
-GCCCFLAGS = -g -O0 -Wall -Wno-char-subscripts -Wno-unused-but-set-variable -Wno-unused-variable $(shell sdl-config --cflags)
+GCCCFLAGS = -g -O0 -Wall -Wno-pointer-sign -Wno-char-subscripts -Wno-unused-but-set-variable -Wno-unused-variable $(shell sdl-config --cflags)
 GCCLDFLAGS = $(shell sdl-config --libs)
 
 .PHONY: all clean
