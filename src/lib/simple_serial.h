@@ -1,6 +1,7 @@
 #ifndef __simple_serial_h
 #define __simple_serial_h
 #include <stdlib.h>
+#include <unistd.h>
 #ifdef __CC65__
 #include <serial.h>
 #else
@@ -14,6 +15,11 @@
 #define SIMPLE_SERIAL_BUF_SIZE 512
 
 /* Setup */
+
+void simple_serial_set_speed(unsigned char b);
+void simple_serial_set_parity(unsigned int p);
+void simple_serial_dtr_onoff(unsigned char on);
+
 #ifdef __CC65__
 char __fastcall__ simple_serial_open(void);
 char __fastcall__ simple_serial_close(void);

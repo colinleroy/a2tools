@@ -32,7 +32,7 @@
 
 #pragma static-locals(push, on)
 
-static unsigned char baudrate = SER_BAUD_19200;
+unsigned char baudrate = SER_BAUD_19200;
 
 static char *baud_strs[] = {
   " 2400",
@@ -53,7 +53,7 @@ static char baud_rates[] = {
   SER_BAUD_57600
 };
 #ifdef IIGS
-  static unsigned char slot = 0;
+  unsigned char slot = 0;
   static char *slots_strs[] = {
     "  CHANNEL B (MODEM)",
     "CHANNEL A (PRINTER)",
@@ -62,7 +62,7 @@ static char baud_rates[] = {
   #define MAX_SLOT_IDX 1
   #define MAX_SPEED_IDX 5
 #else
-  static unsigned char slot = 2;
+  unsigned char slot = 2;
   static char *slots_strs[] = {
     "1",
     "2",
@@ -348,7 +348,7 @@ char __fastcall__ simple_serial_getc(void) {
 
 #define DELAY_MS 3
 
-static FILE *ttyfp = NULL;
+FILE *ttyfp = NULL;
 static int flow_control_enabled;
 
 static char *readbuf = NULL;

@@ -21,14 +21,24 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <errno.h>
+#ifndef __CC65__
+#include <sys/ioctl.h>
+#else
+#include <peekpoke.h>
+#endif
 #include "malloc0.h"
 #include "simple_serial.h"
 #include "extended_conio.h"
 #include "extended_string.h"
 
+extern unsigned char baudrate;
+
 #ifdef __CC65__
   #pragma static-locals(push, on)
   #pragma code-name (push, "LOWCODE")
+  extern unsigned char slot;
+#else
+  extern FILE *ttyfp;
 #endif
 
 char * __fastcall__ simple_serial_gets(char *out, size_t size) {
@@ -79,6 +89,133 @@ void simple_serial_printf(const char* format, ...) {
 
   simple_serial_puts(simple_serial_buf);
 }
+
+#ifdef __CC65__
+void simple_serial_set_speed(unsigned char b) {
+  baudrate = b;
+}
+
+#define ACIA_CMD (0xC08A)
+void simple_serial_dtr_onoff(unsigned char on) {
+#ifndef IIGS
+  static unsigned char reg_idx;
+  
+  reg_idx = slot << 4;
+
+  if (on) {
+    __asm__("ldx     %v", reg_idx);
+    __asm__("lda     $c08a,x");
+    __asm__("ora     #%b", (unsigned char)0b00000001);
+    __asm__("sta     $c08a,x");
+  } else {
+    __asm__("ldx     %v", reg_idx);
+    __asm__("lda     $c08a,x");
+    __asm__("and     #%b", (unsigned char)0b11111110);
+    __asm__("sta     $c08a,x");
+  }
+
+#endif
+}
+
+/* https://www.princeton.edu/~mae412/HANDOUTS/Datasheets/6551_acia.pdf */
+void simple_serial_set_parity(unsigned int p) {
+#ifndef IIGS
+  static unsigned char reg_idx;
+  
+  reg_idx = slot << 4;
+
+  switch (p) {
+    case SER_PAR_NONE:
+      __asm__("ldx     %v", reg_idx);
+      __asm__("lda     $c08a,x");
+      __asm__("and     #%b", (unsigned char)0b00011111);
+      __asm__("sta     $c08a,x");
+      break;
+    case SER_PAR_EVEN:
+      __asm__("ldx     %v", reg_idx);
+      __asm__("lda     $c08a,x");
+      __asm__("and     #%b", (unsigned char)0b00011111);
+      __asm__("ora     #%b", (unsigned char)0b01100000);
+      __asm__("sta     $c08a,x");
+      break;
+    case SER_PAR_ODD:
+      __asm__("ldx     %v", reg_idx);
+      __asm__("lda     $c08a,x");
+      __asm__("and     #%b", (unsigned char)0b00011111);
+      __asm__("ora     #%b", (unsigned char)0b00100000);
+      __asm__("sta     $c08a,x");
+      break;
+    case SER_PAR_MARK:
+      __asm__("ldx     %v", reg_idx);
+      __asm__("lda     $c08a,x");
+      __asm__("and     #%b", (unsigned char)0b00011111);
+      __asm__("ora     #%b", (unsigned char)0b10100000);
+      __asm__("sta     $c08a,x");
+      break;
+    case SER_PAR_SPACE:
+      __asm__("ldx     %v", reg_idx);
+      __asm__("lda     $c08a,x");
+      __asm__("and     #%b", (unsigned char)0b00011111);
+      __asm__("ora     #%b", (unsigned char)0b11100000);
+      __asm__("sta     $c08a,x");
+      break;
+    default:
+      break;
+  }
+#endif
+}
+
+#else
+void simple_serial_set_speed(unsigned char b) {
+  struct termios tty;
+
+  setenv("A2_TTY_SPEED", "9600", 1);
+  if (ttyfp == NULL) {
+    return;
+  }
+  if(tcgetattr(fileno(ttyfp), &tty) != 0) {
+    printf("tcgetattr error\n");
+    exit(1);
+  }
+  cfsetispeed(&tty, b);
+  cfsetospeed(&tty, b);
+}
+
+void simple_serial_dtr_onoff(unsigned char on) {
+  int b;
+
+  if (on) {
+    b = TIOCM_DTR;
+    ioctl(fileno(ttyfp), TIOCMBIS, &b);
+  } else {
+    b = TIOCM_DTR;
+    ioctl(fileno(ttyfp), TIOCMBIC, &b);
+  }
+}
+
+
+void simple_serial_set_parity(unsigned int p) {
+  struct termios tty;
+
+  if(tcgetattr(fileno(ttyfp), &tty) != 0) {
+    printf("tcgetattr error\n");
+    exit(1);
+  }
+  if (p != 0) {
+    tty.c_iflag |= INPCK;
+    tty.c_cflag |= p;
+  } else {
+    tty.c_iflag &= ~INPCK;
+    tty.c_cflag &= ~PARENB;
+  }
+
+  if (tcsetattr(fileno(ttyfp), TCSANOW, &tty) != 0) {
+    printf("tcgetattr error\n");
+    exit(1);
+  }
+  tcgetattr(fileno(ttyfp), &tty);
+}
+#endif
 
 #ifdef __CC65__
 #pragma static-locals(pop)
