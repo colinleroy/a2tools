@@ -41,9 +41,6 @@
  */
 
 #define COLORS 3
-#define HGR_WIDTH 280
-#define HGR_HEIGHT 192
-#define HGR_LEN 8192
 
 #define RESIZE    1
 #define DITHER    1
@@ -64,7 +61,10 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 
+#include "hgr.h"
+
 #include "qt-conv.h"
+#include "path_helper.h"
 
 #ifdef __CC65__
   #pragma static-locals(push, on)
@@ -207,7 +207,7 @@ static void grey_levels(uint8 h) {
 #define HDR_LEN 32
 #define WH_OFFSET 544
 
-static uint8 identify()
+static uint8 identify(const char *name)
 {
   char head[32];
 
@@ -216,7 +216,7 @@ static uint8 identify()
 
   fread (head, 1, HDR_LEN, ifp);
 
-  printf("Doing QuickTake ");
+  printf("Converting QuickTake ");
   if (!strcmp (head, magic)) {
     printf("%s", model);
   } else {
@@ -229,7 +229,7 @@ static uint8 identify()
   height = get2();
   width  = get2();
 
-  printf(" image (%dx%d)\n", width, height);
+  printf(" image %s (%dx%d)...\n", name, width, height);
 
   /* Skip those */
   get2();
@@ -421,13 +421,23 @@ static void write_ppm_tiff(int top, int h)
 }
 #endif
 
+static void reload_menu(void) {
+  while (reopen_start_device() != 0) {
+    clrscr();
+    gotoxy(13, 12);
+    printf("Please reinsert the program disk, then press any key.");
+    cgetc();
+  }
+  exec("qtmenu", NULL);
+}
 int main (int argc, const char **argv)
 {
   uint16 h;
   char *ofname, *cp;
 
-  ofname = 0;
+  register_start_device();
 
+  ofname = NULL;
   cache = malloc(cache_size);
   if (cache == NULL) {
     printf("Not enough memory\n");
@@ -435,7 +445,7 @@ int main (int argc, const char **argv)
   }
 #ifdef __CC65__
   videomode(VIDEOMODE_80COL);
-  printf("Free: %zu/%zuB\n", _heapmaxavail(), _heapmemavail());
+  printf("Free memory: %zu/%zuB\n", _heapmaxavail(), _heapmemavail());
 #endif
 
   if (argc == 1) {
@@ -448,7 +458,7 @@ int main (int argc, const char **argv)
     goto out;
   }
 
-  if (identify() != 0) {
+  if (identify(ifname) != 0) {
     goto out;
   }
 
@@ -477,7 +487,7 @@ int main (int argc, const char **argv)
 
   init_base_addrs();
   for (h = 0; h < height; h += QT_BAND) {
-    printf("Loading %d-%d", h, h + QT_BAND);
+    printf("Loading lines %d-%d", h, h + QT_BAND);
     qt_load_raw(h, QT_BAND);
     printf("\nConverting...\n");
 #if OUTPUT_PPM
@@ -501,12 +511,13 @@ int main (int argc, const char **argv)
 
   if (ofname) free (ofname);
 
-  exec("qtmenu", NULL);
+  reload_menu();
 out:
   cgetc();
-  exec("qtmenu", NULL);
+  reload_menu();
   return 0;
 }
+
 #ifdef SURL_TO_LANGCARD
 #pragma code-name (pop)
 #endif
