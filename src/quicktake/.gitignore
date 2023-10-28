@@ -1,4 +1,6 @@
 *.hgr
 *.qtk
+*.QTK
 *.png
 *.ppm
+*.dump

@@ -6,26 +6,33 @@
 
 #include "dgets.h"
 #include "dputc.h"
+#include "dputs.h"
 #include "extended_conio.h"
+#include "file_select.h"
+#include "hgr.h"
 #include "path_helper.h"
+#include "progress_bar.h"
 
 #include "qt-conv.h"
 #include "qt-serial.h"
+
+uint8 scrw, scrh;
 
 #ifdef __CC65__
   #pragma static-locals(push, on)
 #endif
 
-uint8 scrw, scrh;
-
 #define BUF_SIZE 64
-static char imgname[BUF_SIZE];
 char magic[5] = "????";
 
 static void convert_image(const char *filename) {
+  static char imgname[BUF_SIZE];
   if (!filename) {
-    cputs("Enter image to convert: ");
-    dget_text(imgname, BUF_SIZE, NULL, 0);
+    char *tmp = file_select(wherex(), wherey(), scrw - wherex(), wherey() + 10, 0, "Image to convert: ");
+    if (tmp == NULL)
+      return;
+    strcpy(imgname, tmp);
+    free(tmp);
   } else {
     strcpy(imgname, filename);
   }
@@ -47,6 +54,63 @@ static void convert_image(const char *filename) {
   }
 }
 
+static void view_image(const char *filename) {
+  FILE *fp = NULL;
+  static char imgname[BUF_SIZE];
+  uint16 len;
+  #define BLOCK_SIZE 512
+
+  if (!filename) {
+    char *tmp;
+    dputs("Image to view: ");
+    tmp = file_select(wherex(), wherey(), scrw - wherex(), wherey() + 10, 0, "Please select an HGR file");
+    if (tmp == NULL)
+      return;
+    strcpy(imgname, tmp);
+    free(tmp);
+  } else {
+    strcpy(imgname, filename);
+  }
+
+  fp = fopen(imgname, "rb");
+  if (fp == NULL) {
+    dputs("Can not open image.\r\n");
+    cgetc();
+    return;
+  }
+
+  memset((char *)HGR_PAGE, 0x00, HGR_LEN);
+  init_text();
+  gotoxy(0, 22);
+  cputs("Loading image...");
+
+  progress_bar(0, 23, scrw, 0, HGR_LEN);
+
+  len = 0;
+  while (len < HGR_LEN) {
+#ifdef __CC65__
+    fread((char *)(HGR_PAGE + len), 1, BLOCK_SIZE, fp);
+#endif
+    progress_bar(0, 23, scrw, len, HGR_LEN);
+    len += BLOCK_SIZE;
+  }
+
+  init_hgr();
+  fclose(fp);
+
+  cgetc();
+  init_text();
+
+  while (reopen_start_device() != 0) {
+    clrscr();
+    gotoxy(13, 12);
+    printf("Please reinsert the program disk, then press any key.");
+    cgetc();
+  }
+  clrscr();
+  return;
+}
+
 static void print_header(uint8 num_pics, uint8 left_pics, uint8 mode, const char *name, struct tm *time) {
   gotoxy(0, 0);
   printf("%s connected - %02d/%02d/%04d %02d:%02d\n%d photos taken, %d left, %s mode\n",
@@ -64,23 +128,37 @@ static uint8 print_menu(void) {
          "3. Get one thumbnail\n"
          "4. Get all thumbnails\n"
          "5. Convert a picture on floppy\n"
-         "\n"
+         "6. View a picture\n"
          "7. Set camera name\n"
          "8. Set camera time\n"
          "9. %s auto-conversion to HGR\n"
          "0. Exit\n\n",
-       
+
           auto_convert ? "Disable":"Enable");
   return cgetc();
 }
 
-char filename[64] = "/";
-
 static void save_picture(uint8 n_pic, uint8 full) {
-  printf("Filename: ");
-  if (strchr(filename, '/')) {
-    *(strrchr(filename, '/') + 1) = '\0';
+  char filename[64];
+  char *dirname;
+
+  filename[0] = '\0';
+  clrscr();
+  dputs("Make sure to save the picture to a floppy with\r\n"
+        "at least 118480 + 8192 (124kB) free. Basically,\r\n"
+        "use one floppy per picture.\r\n"
+        "Please swap disks if needed and press a key.\r\n\r\n");
+  cgetc();
+
+  dirname = file_select(wherex(), wherey(), scrw - wherex(), wherey() + 10, 1, "Filename: ");
+  if (dirname == NULL) {
+    return;
   }
+  gotox(0);
+  strcpy(filename, dirname);
+  strcat(filename, "/");
+  free(dirname);
+
   dget_text(filename, 60, NULL, 0);
 
   if (!strchr(filename, '.')) {
@@ -91,11 +169,13 @@ static void save_picture(uint8 n_pic, uint8 full) {
 
   if (!auto_convert) {
     char c;
-    printf("Convert to HGR? [Y/n] ");
+    dputs("Convert to HGR? (Y/n) ");
     c = tolower(cgetc());
     if (c != 'n') {
       convert_image(filename);
     }
+  } else {
+    convert_image(filename);
   }
 }
 
@@ -111,7 +191,7 @@ static void get_one_picture(uint8 num_pics, uint8 full) {
   int8 n_pic;
 
 again:
-  printf("Picture number (1-%d)? ", num_pics);
+  dputs("Picture number? ");
   buf[0] = '\0';
   dget_text(buf, 3, NULL, 0);
   n_pic = atoi(buf);
@@ -127,7 +207,7 @@ static void set_camera_name(const char *name) {
 
   strncpy(buf, name, 31);
 
-  printf("Name: ");
+  dputs("Name: ");
   dget_text(buf, 31, NULL, 0);
 
   qt_set_camera_name(buf);
@@ -138,14 +218,14 @@ static void set_camera_time(void) {
   char buf[5];
   uint8 vals[5];
   uint8 i;
-  
+
   for (i = 0; i < 5; i++) {
     buf[0] = '\0';
-    printf("%s: ", names[i]);
+    dputs(names[i]);
+    dputs(": ");
     dget_text(buf, 5, NULL, 0);
     vals[i] = (uint8)(atoi(buf) % 100);
   }
-  printf("set time to %d/%d/%d %d:%d\n", vals[0], vals[1], vals[2], vals[3], vals[4]);
 
   qt_set_camera_time(vals[0], vals[1], vals[2], vals[3], vals[4], 0);
 }
@@ -165,7 +245,7 @@ int main (void)
 
   while (qt_serial_connect() != 0) {
     char c;
-    printf("Try again? [Y/n] ");
+    dputs("Try again? (Y/n) ");
     c = tolower(cgetc());
     if (c == 'n')
       goto out;
@@ -192,7 +272,12 @@ again:
       get_all_pictures(num_pics, 0);
       break;
     case '5':
-      printf("Not implemented\n");
+      clrscr();
+      convert_image(NULL);
+      break;
+    case '6':
+      clrscr();
+      view_image(NULL);
       break;
     case '7':
       set_camera_name(name);

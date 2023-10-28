@@ -8,7 +8,10 @@
 #include "platform.h"
 #include "extended_conio.h"
 #include "extended_string.h"
+#include "progress_bar.h"
 #include "simple_serial.h"
+
+extern uint8 scrw, scrh;
 
 #ifndef __CC65__
 FILE *dbgfp = NULL;
@@ -82,7 +85,7 @@ static void send_hello(void) {
   char str_hello[] = {0x5A,0xA5,0x55,0x05,0x00,0x00,0x25,0x80,0x00,0x80,0x02,0x00,0x80};
 
   DUMP_START("qt_hello_reply");
-  
+
   simple_serial_write(str_hello, sizeof(str_hello));
   simple_serial_read(buffer, 10);
 
@@ -114,7 +117,7 @@ static uint8 send_photo_summary_command(void) {
 #define PSIZE_IDX 7
 #define THUMBNAIL_SIZE 0x0960
 
-/* Gets thumbnail of the photo (?) 
+/* Gets thumbnail of the photo (?)
  * At least, the data received is 2400 bytes long, which correspond
  * to raw 4-bit data for a 80x60 image.
  */
@@ -151,7 +154,7 @@ void qt_set_camera_name(const char *name) {
                0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,
                0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20};
   uint8 len;
-  
+
   len = strlen(name);
   if (len > 31)
     len = 31;
@@ -197,17 +200,17 @@ void qt_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 mi
 //   simple_serial_write(str_speed, sizeof str_speed);
 //   tty_set_speed(spd_code);
 //   sleep(1);
-// 
+//
 //   /* get ack */
 //   if (get_ack() != 0) {
 //     return -1;
 //   }
 //   send_ack();
-// 
+//
 //   /* Get a full kB of 0xaa ?? */
 //   simple_serial_read(buffer, BLOCK_SIZE);
 //   simple_serial_read(buffer, BLOCK_SIZE);
-// 
+//
 //   send_ack();
 //   return get_ack();
 // }
@@ -232,6 +235,7 @@ void qt_get_picture(uint8 n_pic, const char *filename, uint8 full) {
   uint16 width, height;
   unsigned char pic_size_str[3];
   unsigned long pic_size_int;
+  uint8 y;
 
   sleep(1);
 
@@ -280,26 +284,43 @@ void qt_get_picture(uint8 n_pic, const char *filename, uint8 full) {
   if (full) {
     memcpy(pic_size_str, buffer + IMG_SIZE_IDX, 3);
     send_photo_data_command(n_pic, pic_size_str);
-    pic_size_int = ((uint32)pic_size_str[0])<<16 | pic_size_str[1]<<8 | pic_size_str[2];
+
+#ifndef __CC65__
+    pic_size_int = (pic_size_str[0]<<16) + (pic_size_str[1]<<8) + (pic_size_str[2]);
+#else
+    ((unsigned char *)&pic_size_int)[0] = pic_size_str[2];
+    ((unsigned char *)&pic_size_int)[1] = pic_size_str[1];
+    ((unsigned char *)&pic_size_int)[2] = pic_size_str[0];
+    ((unsigned char *)&pic_size_int)[3] = 0;
+#endif
+
   } else {
     send_photo_thumbnail_command(n_pic);
     pic_size_int = THUMBNAIL_SIZE;
   }
 
-  printf("  Width %u, height %u, %lu bytes\n", 
+  printf("  Width %u, height %u, %lu bytes\n",
          ntohs(width), ntohs(height), pic_size_int);
 
-  for (i = 0; i < pic_size_int / BLOCK_SIZE; i++) {
-    simple_serial_read(buffer, BLOCK_SIZE);
+  printf("  Getting data...\n");
+  y = wherey();
 
+  progress_bar(2, y, scrw - 2, 0, (uint16)(pic_size_int / BLOCK_SIZE));
+  for (i = 0; i < (uint16)(pic_size_int / BLOCK_SIZE); i++) {
+
+    simple_serial_read(buffer, BLOCK_SIZE);
     fwrite(buffer, 1, BLOCK_SIZE, picture);
     DUMP_DATA(buffer, BLOCK_SIZE);
 
+    progress_bar(2, y, scrw - 2, i, (uint16)(pic_size_int / BLOCK_SIZE));
+
     send_ack();
   }
-  simple_serial_read(buffer, pic_size_int % BLOCK_SIZE);
+  simple_serial_read(buffer, (uint16)(pic_size_int % BLOCK_SIZE));
   fwrite(buffer, 1, pic_size_int % BLOCK_SIZE, picture);
   DUMP_DATA(buffer, pic_size_int % BLOCK_SIZE);
+
+  progress_bar(2, y, scrw - 2, 100, 100);
 
   DUMP_END();
   fclose(picture);
@@ -320,9 +341,10 @@ uint8 qt_serial_connect(void) {
 #ifdef __CC65__
   #ifndef IIGS
 
-  printf("Toggling printer port on/off...\n");
+  printf("Toggling printer port on...\n");
   simple_serial_acia_onoff(1, 1);
-
+  sleep(1);
+  printf("Toggling printer port off...\n");
   simple_serial_acia_onoff(1, 0);
 
   #else
@@ -340,7 +362,7 @@ uint8 qt_serial_connect(void) {
   }
   printf("Sending hello...\n");
   send_hello();
-  
+
   printf("Connected.\n");
 
 #ifdef __CC65__
@@ -378,7 +400,7 @@ void qt_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *mode, char **n
   #define NAME_IDX       0x2F
 
   printf("Getting information...\n");
-  
+
   DUMP_START("summary");
 
   send_photo_summary_command();
