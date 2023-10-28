@@ -1,0 +1,51 @@
+Quicktake Apple IIc cable
+
+The problem:
+
+The ACIA 6551 can not communicate with DTR down. Turning DTR off
+effectively shutdowns the ACIA.
+The Quicktake 100 wakes up and starts communicating only when DTR
+goes from up to down. If DTR goes back up, it stops communicating.
+Hence, there is no way to wake up a Quicktake 100 with an Apple //c
+serial port.
+
+The solution:
+
+The Apple //c has two serial ports. We will transfer data from the
+Quicktake 100 digital camera using the modem port, and wake it up
+using the printer port. Our cable will have one Mini-DIN-8 connector
+on one end, a DIN-5 connector on the other end, and... a DIN-5
+connector on the third end.
+
+The cable wiring scheme is the following:
+
+Mini-DIN8       Modem DIN5             Printer DIN5
+1 -             -                      -
+2 (DTR)         -                      1 (DTR)
+3 (RX)          4 (RX)                 -
+4 (GND)         3 (GND)                -
+5 (TX)          2 (TX)                 -
+6 -             -                      -
+7 (DTR)         -                      1 (DTR)
+8 -             -                      -
+                1-5 (DTR-DSR shorted)
+
+Mini-DIN8 pins 1, 6 and 8 are not connected to anything.
+
+Mini-DIN8 pins 2 and 7 are connected together to one of the DIN5 pin 1.
+This DIN5 connector will be plugged in the printer port.
+
+Mini-DIN8 pins 3,4,5 are connected to the other DIN5 pins 4,3,2.
+This DIN5 connector will be plugged in the modem port.
+
+Mini-DIN8 pins numbering, as seen when looking at the front of the connector:
+
+  6 7 8
+ 3 4   5
+   1 2
+   
+DIN5 pins numbering, as seen when looking at the front of the connector:
+
+ 1       5
+  2     4
+     3
