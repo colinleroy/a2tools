@@ -32,7 +32,7 @@
 #include "extended_string.h"
 
 extern unsigned char baudrate;
-
+extern unsigned char flow_control;
 #ifdef __CC65__
   #pragma static-locals(push, on)
   #pragma code-name (push, "LOWCODE")
@@ -94,26 +94,31 @@ void simple_serial_printf(const char* format, ...) {
 void simple_serial_set_speed(unsigned char b) {
   baudrate = b;
 }
+void simple_serial_set_flow_control(unsigned char fc) {
+  flow_control = fc;
+}
 
-#define ACIA_CMD (0xC08A)
 void simple_serial_dtr_onoff(unsigned char on) {
+#ifdef IIGS
+  /* TODO */
+#endif
+}
+
+void simple_serial_acia_onoff(unsigned char slot_num, unsigned char on) {
 #ifndef IIGS
   static unsigned char reg_idx;
   
-  reg_idx = slot << 4;
+  reg_idx = slot_num << 4;
 
   if (on) {
     __asm__("ldx     %v", reg_idx);
-    __asm__("lda     $c08a,x");
-    __asm__("ora     #%b", (unsigned char)0b00000001);
+    __asm__("lda     #%b", (unsigned char)0b00001011);
     __asm__("sta     $c08a,x");
   } else {
     __asm__("ldx     %v", reg_idx);
-    __asm__("lda     $c08a,x");
-    __asm__("and     #%b", (unsigned char)0b11111110);
+    __asm__("lda     #%b", (unsigned char)0b00000000);
     __asm__("sta     $c08a,x");
   }
-
 #endif
 }
 

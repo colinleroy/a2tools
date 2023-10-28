@@ -33,6 +33,7 @@
 #pragma static-locals(push, on)
 
 unsigned char baudrate = SER_BAUD_19200;
+unsigned char flow_control = SER_HS_HW;
 
 static char *baud_strs[] = {
   " 2400",
@@ -275,6 +276,7 @@ char __fastcall__ simple_serial_open(void) {
   #endif
 #endif
   default_params.baudrate = baudrate;
+  default_params.handshake = flow_control;
 
   err = ser_open (&default_params);
 

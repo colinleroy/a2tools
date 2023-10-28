@@ -17,8 +17,11 @@
 /* Setup */
 
 void simple_serial_set_speed(unsigned char b);
+void simple_serial_set_flow_control(unsigned char fc);
+
 void simple_serial_set_parity(unsigned int p);
 void simple_serial_dtr_onoff(unsigned char on);
+void simple_serial_acia_onoff(unsigned char slot_num, unsigned char on);
 
 #ifdef __CC65__
 char __fastcall__ simple_serial_open(void);
