@@ -1,0 +1,14 @@
+Quicktake Apple IIc cable
+
+
+
+Mini-DIN8       Modem DIN5             Printer DIN5
+1               -                      -
+2 (DTR)         -                      1 (DTR)
+3 (RX)          4 (RX)                 -
+4 (GND)         3 (GND)                -
+5 (TX)          2 (TX)                 -
+6               -                      -
+7 (DTR)         -                      1 (DTR)
+8               -                      -
+                1-5 (DTR-DSR shorted)

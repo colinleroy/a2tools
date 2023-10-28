@@ -505,6 +505,7 @@ int main (int argc, const char **argv)
 out:
   cgetc();
   exec("qtmenu", NULL);
+  return 0;
 }
 #ifdef SURL_TO_LANGCARD
 #pragma code-name (pop)
