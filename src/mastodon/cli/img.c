@@ -29,6 +29,7 @@
 #include "clrzone.h"
 #include "progress_bar.h"
 #include "scrollwindow.h"
+#include "hgr.h"
 #include "surl.h"
 #include "simple_serial.h"
 #include "cli.h"
@@ -41,10 +42,8 @@ extern char *instance_url;
 extern char *oauth_token;
 char *type = NULL;
 char *id = NULL;
-char hgr_init_done = 0;
 char monochrome = 1;
 
-#define HGR_PAGE 0x2000
 #ifdef __APPLE2ENH__
   #define TEXTMODE VIDEOMODE_80COL
   #define PROGRESS_STEPS 64
@@ -63,45 +62,9 @@ char monochrome = 1;
 #pragma GCC diagnostic ignored "-Wunused-function"
 #endif
 
-static void init_hgr(void) {
-#ifdef __APPLE2__
-
-  #ifdef USE_HGR2
-  __asm__("lda     #$40");
-  #else
-  __asm__("lda     #$20");
-  #endif
-  /* Set draw page */
-  __asm__("sta     $E6"); /* HGRPAGE */
-
-  /* Set graphics mode */
-  __asm__("bit     $C000"); /* 80STORE */
-  __asm__("bit     $C050"); /* TXTCLR */
-  __asm__("bit     $C052"); /* MIXCLR */
-  __asm__("bit     $C057"); /* HIRES */
-
-  /* Set view page */
-  #ifdef USE_HGR2
-  __asm__("bit     $C055"); /* HISCR */
-  #else
-  __asm__("bit     $C054"); /* LOWSCR */
-  #endif
-#endif
-  hgr_init_done = 1;
-}
-
 #ifndef __CC65__
 #pragma GCC diagnostic pop
 #endif
-
-void init_text(void) {
-#ifdef __APPLE2__
-  __asm__("bit     $C054"); /* LOWSCR */
-  __asm__("bit     $C051"); /* TXTSET */
-  __asm__("bit     $C056"); /* LORES */
-#endif
-  hgr_init_done = 0;
-}
 
 static void show_help(void) {
   clrzone(0, 17, NUMCOLS, 23);
