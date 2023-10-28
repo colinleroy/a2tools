@@ -105,6 +105,16 @@ static uint8 send_command(const char *cmd, uint8 len, uint8 s_ack) {
   return 0;
 }
 
+/* Delete all photos */
+static uint8 send_photo_delete_command(void) {
+  char str1[] = {0x16,0x29,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+
+  send_separator();
+  send_separator();
+
+  return send_command(str1, sizeof str1, 0);
+}
+
 /* Get the photos summary */
 static uint8 send_photo_summary_command(void) {
   //           {????,????,????,????,????,????,????,RESPONSE__SIZE,????}
@@ -324,6 +334,10 @@ void qt_get_picture(uint8 n_pic, const char *filename, uint8 full) {
 
   DUMP_END();
   fclose(picture);
+}
+
+uint8 qt_delete_pictures(void) {
+  return send_photo_delete_command();
 }
 
 uint8 qt_serial_connect(void) {

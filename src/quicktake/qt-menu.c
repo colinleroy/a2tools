@@ -125,8 +125,7 @@ static uint8 print_menu(void) {
   gotoxy(0, 3);
   printf("1. Get one picture\n"
          "2. Get all pictures\n"
-         "3. Get one thumbnail\n"
-         "4. Get all thumbnails\n"
+         "3. Delete all pictures\n"
          "5. Convert a picture on floppy\n"
          "6. View a picture\n"
          "7. Set camera name\n"
@@ -230,6 +229,15 @@ static void set_camera_time(void) {
   qt_set_camera_time(vals[0], vals[1], vals[2], vals[3], vals[4], 0);
 }
 
+static void delete_pictures(void) {
+  clrscr();
+  dputs("Delete all pictures on camera? (y/N) ");
+  if (tolower(cgetc()) == 'y') {
+    qt_delete_pictures();
+  }
+  dputs("\r\nPlease wait...\r\n");
+}
+
 int main (void)
 {
   uint8 num_pics, left_pics, mode, choice;
@@ -266,10 +274,7 @@ again:
       get_all_pictures(num_pics, 1);
       break;
     case '3':
-      get_one_picture(num_pics, 0);
-      break;
-    case '4':
-      get_all_pictures(num_pics, 0);
+      delete_pictures();
       break;
     case '5':
       clrscr();
