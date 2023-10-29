@@ -105,6 +105,13 @@ static uint8 send_command(const char *cmd, uint8 len, uint8 s_ack) {
   return 0;
 }
 
+/* Take a picture */
+uint8 qt_take_picture(void) {
+  char str[] = {0x16,0x1B,0x00,0x00,0x00,0x00,0x00};
+
+  return send_command(str, sizeof str, 0);
+}
+
 /* Delete all photos */
 static uint8 send_photo_delete_command(void) {
   char str1[] = {0x16,0x29,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};

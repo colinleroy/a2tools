@@ -126,6 +126,7 @@ static uint8 print_menu(void) {
   printf("1. Get one picture\n"
          "2. Get all pictures\n"
          "3. Delete all pictures\n"
+         "4. Take a picture\n"
          "5. Convert a picture on floppy\n"
          "6. View a picture\n"
          "7. Set camera name\n"
@@ -275,6 +276,9 @@ again:
       break;
     case '3':
       delete_pictures();
+      break;
+    case '4':
+      qt_take_picture();
       break;
     case '5':
       clrscr();
