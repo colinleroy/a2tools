@@ -123,8 +123,8 @@ static uint8 send_photo_summary_command(void) {
   return send_command(str, sizeof str, 1);
 }
 
-#define PNUM_IDX 6
-#define PSIZE_IDX 7
+#define PNUM_IDX       0x06
+#define PSIZE_IDX      0x07
 #define THUMBNAIL_SIZE 0x0960
 
 /* Gets thumbnail of the photo (?)
@@ -159,7 +159,7 @@ static uint8 send_photo_data_command(uint8 pnum, uint8 *picture_size) {
 }
 
 void qt_set_camera_name(const char *name) {
-  #define NAME_SET_IDX 13
+  #define NAME_SET_IDX 0x0D
   char str[] = {0x16,0x2a,0x00,0x02,0x00,0x00,0x00,0x00,0x00,0x22,0x00,0x02,0x20,
                0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,
                0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20};
@@ -174,12 +174,12 @@ void qt_set_camera_name(const char *name) {
 }
 
 void qt_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second) {
-  #define SET_MONTH_IDX 13
-  #define SET_DAY_IDX   14
-  #define SET_YEAR_IDX  15
-  #define SET_HOUR_IDX  16
-  #define SET_MIN_IDX   17
-  #define SET_SEC_IDX   18
+  #define SET_MONTH_IDX 0x0D
+  #define SET_DAY_IDX   0x0E
+  #define SET_YEAR_IDX  0x0F
+  #define SET_HOUR_IDX  0x10
+  #define SET_MIN_IDX   0x11
+  #define SET_SEC_IDX   0x12
   //           {                                                                  mon  day year hour  min  sec
   char str[] = {0x16,0x2A,0x00,0x01,0x00,0x00,0x00,0x00,0x00,0x08,0x00,0x01,0x06,0x00,0x00,0x00,0x00,0x00,0x00};
 
@@ -237,8 +237,10 @@ void qt_get_picture(uint8 n_pic, const char *filename, uint8 full) {
   #define IMG_WIDTH_IDX  0x08
   #define IMG_HEIGHT_IDX 0x0A
   #define IMG_SIZE_IDX   0x05
-  #define WH_OFFSET 544
-  #define DATA_OFFSET 736
+  #define HDR_IDX        0x04
+  
+  #define WH_OFFSET      0x220
+  #define DATA_OFFSET    0x2E0
 
   uint16 i;
   FILE *picture;
@@ -272,7 +274,7 @@ void qt_get_picture(uint8 n_pic, const char *filename, uint8 full) {
   if (full) {
     /* Write the header */
     fseek(picture, 0x0E, SEEK_SET);
-    fwrite(buffer + 4, 1, 64 - 4, picture);
+    fwrite(buffer + HDR_IDX, 1, 64 - HDR_IDX, picture);
 
     /* Get dimensions */
     width = char_to_n_uint16(buffer + IMG_WIDTH_IDX);
@@ -425,7 +427,7 @@ void qt_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *mode, char **n
 
   *num_pics = buffer[NUM_PICS_IDX];
   *left_pics = buffer[LEFT_PICS_IDX];
-  *mode = buffer[MODE_IDX] - 1;
+  *mode = buffer[MODE_IDX];
 
   time->tm_mday = buffer[DAY_IDX];
   time->tm_mon  = buffer[MONTH_IDX];
