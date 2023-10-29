@@ -31,7 +31,7 @@
 #include "char-convert.h"
 #include "jq-get.h"
 #include "html2txt.h"
-#include "hgr.h"
+#include "hgr-convert.h"
 
 #define BUFSIZE 1024
 
