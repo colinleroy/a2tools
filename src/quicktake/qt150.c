@@ -16,7 +16,9 @@ char *model = "150/200";
 uint16 raw_width = 640;
 uint16 raw_image_size = (QT_BAND) * 640;
 uint8 raw_image[(QT_BAND) * 640];
-uint16 cache_size = 2048;
+uint16 cache_size = 200;
+uint8 cache[200];
+uint8 *reusable_buf = NULL;
 
 void qt_load_raw(uint16 top, uint8 h)
 {
@@ -71,7 +73,7 @@ void qt_load_raw(uint16 top, uint8 h)
   }
 
   for (row=0; row < h; row+=4) {
-    printf(".");
+    printf("....");
     mul[0] = getbits(6);
     mul[1] = getbits(6);
     mul[2] = getbits(6);

@@ -11,6 +11,12 @@
 extern uint16 height, width, raw_width;
 extern uint8 raw_image[];
 extern uint16 raw_image_size;
+/* A buffer reusable after decompression
+ * to optimize hgr generation. It must be
+ * at least 8192 bytes.
+ */
+
+extern uint8 *reusable_buf;
 
 extern char magic[5];
 extern char *model;
@@ -22,6 +28,7 @@ extern FILE *ifp, *ofp;
 
 void iseek(uint32 off);
 uint32 cache_read_since_inval(void);
+extern uint8 cache[];
 extern uint16 cache_size;
 
 uint8 get1();
