@@ -16,7 +16,7 @@
 
 /* Setup */
 
-void simple_serial_set_speed(unsigned char b);
+void simple_serial_set_speed(int b);
 void simple_serial_set_flow_control(unsigned char fc);
 
 void simple_serial_set_parity(unsigned int p);
@@ -36,6 +36,7 @@ int simple_serial_close(void);
 void simple_serial_flush(void);
 #define simple_serial_configure()
 unsigned char __fastcall__ simple_serial_putc(char c);
+char *tty_speed_to_str(int speed);
 #endif
 
 /* Input */
