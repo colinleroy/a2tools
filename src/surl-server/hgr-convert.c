@@ -17,7 +17,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "hgr.h"
+#include "hgr-convert.h"
 
 static char *read_hgr(char *filename, size_t *len) {
   FILE *in = fopen(filename, "rb");
@@ -40,6 +40,8 @@ static char *read_hgr(char *filename, size_t *len) {
     buf = NULL;
     *len = 0;
   }
+  if (*len == 8184) 
+    *len = 8192;
 
   fclose(in);
   return buf;
