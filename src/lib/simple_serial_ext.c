@@ -92,15 +92,41 @@ void simple_serial_printf(const char* format, ...) {
 
 #ifdef __CC65__
 void simple_serial_set_speed(int b) {
+  static unsigned char reg_idx;
+  /* Set speed before port is opened */
   baudrate = (unsigned char)b;
+#ifndef IIGS
+  /* Set speed after port is opened */
+  reg_idx = slot << 4;
+
+  switch (b) {
+    case SER_BAUD_9600:
+      __asm__("ldx     %v", reg_idx);
+      __asm__("lda     $c08b,x");
+      __asm__("and     #%b", (unsigned char)0b11110000);
+      __asm__("ora     #%b", (unsigned char)0b00001110);
+      __asm__("sta     $c08b,x");
+      break;
+    case SER_BAUD_19200:
+      __asm__("ldx     %v", reg_idx);
+      __asm__("lda     $c08b,x");
+      __asm__("and     #%b", (unsigned char)0b11110000);
+      __asm__("ora     #%b", (unsigned char)0b00001111);
+      __asm__("sta     $c08b,x");
+      break;
+    default:
+      break;
+  }
+#endif
 }
 void simple_serial_set_flow_control(unsigned char fc) {
   flow_control = fc;
 }
 
 void simple_serial_dtr_onoff(unsigned char on) {
-#ifdef IIGS
-  /* TODO */
+#ifndef IIGS
+  simple_serial_acia_onoff(slot, on);
+#else
 #endif
 }
 
@@ -175,10 +201,13 @@ void simple_serial_set_speed(int b) {
   struct termios tty;
   char *spd_str = tty_speed_to_str(b);
 
+  /* Set speed before the port is opened */
   setenv("A2_TTY_SPEED", spd_str, 1);
   if (ttyfp == NULL) {
     return;
   }
+
+  /* Set speed after the port is opened */
   if(tcgetattr(fileno(ttyfp), &tty) != 0) {
     printf("tcgetattr error\n");
     exit(1);
