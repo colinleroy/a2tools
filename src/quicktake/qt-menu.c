@@ -143,6 +143,7 @@ static void save_picture(uint8 n_pic, uint8 full) {
   char *dirname;
 
   filename[0] = '\0';
+#ifdef __CC65__
   clrscr();
   dputs("Make sure to save the picture to a floppy with\r\n"
         "at least 118480 + 8192 (124kB) free. Basically,\r\n"
@@ -160,7 +161,9 @@ static void save_picture(uint8 n_pic, uint8 full) {
   free(dirname);
 
   dget_text(filename, 60, NULL, 0);
-
+#else
+  sprintf(filename, "image%02d.qtk", n_pic);
+#endif
   if (!strchr(filename, '.')) {
     strcat(filename, ".QTK");
   }
@@ -252,7 +255,7 @@ int main (void)
   screensize(&scrw, &scrh);
 #endif
 
-  while (qt_serial_connect() != 0) {
+  while (qt_serial_connect(19200) != 0) {
     char c;
     dputs("Try again? (Y/n) ");
     c = tolower(cgetc());

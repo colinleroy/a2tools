@@ -91,8 +91,8 @@ void simple_serial_printf(const char* format, ...) {
 }
 
 #ifdef __CC65__
-void simple_serial_set_speed(unsigned char b) {
-  baudrate = b;
+void simple_serial_set_speed(int b) {
+  baudrate = (unsigned char)b;
 }
 void simple_serial_set_flow_control(unsigned char fc) {
   flow_control = fc;
@@ -171,10 +171,11 @@ void simple_serial_set_parity(unsigned int p) {
 }
 
 #else
-void simple_serial_set_speed(unsigned char b) {
+void simple_serial_set_speed(int b) {
   struct termios tty;
+  char *spd_str = tty_speed_to_str(b);
 
-  setenv("A2_TTY_SPEED", "9600", 1);
+  setenv("A2_TTY_SPEED", spd_str, 1);
   if (ttyfp == NULL) {
     return;
   }
@@ -182,8 +183,10 @@ void simple_serial_set_speed(unsigned char b) {
     printf("tcgetattr error\n");
     exit(1);
   }
+
   cfsetispeed(&tty, b);
   cfsetospeed(&tty, b);
+  tcsetattr(fileno(ttyfp), TCSANOW, &tty);
 }
 
 void simple_serial_dtr_onoff(unsigned char on) {

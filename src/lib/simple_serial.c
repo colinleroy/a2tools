@@ -391,7 +391,7 @@ static int tty_speed_from_str(char *tmp) {
   exit(1);
 }
 
-static char *tty_speed_to_str(int speed) {
+char *tty_speed_to_str(int speed) {
   if (speed == B300)
     return "300";
   if (speed == B600)

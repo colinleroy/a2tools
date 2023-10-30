@@ -25,6 +25,10 @@ void progress_bar(int x, int y, int width, size_t cur, size_t end) {
   size_t i;
   static size_t last_percent;
 
+#ifndef __CC65__
+  return;
+#endif
+
   if (x >= 0) {
     gotoxy(x, y);
     last_percent = 0;

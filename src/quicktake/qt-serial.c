@@ -81,10 +81,21 @@ static uint8 get_hello(void) {
   return 0;
 }
 
-static void send_hello(void) {
+static void send_hello(uint16 speed) {
+  #define SPD_IDX 0x06
+  #define CHK_IDX 0x0C
   char str_hello[] = {0x5A,0xA5,0x55,0x05,0x00,0x00,0x25,0x80,0x00,0x80,0x02,0x00,0x80};
 
   DUMP_START("qt_hello_reply");
+  if (speed == 19200) {
+    str_hello[SPD_IDX]   = 0x4B;
+    str_hello[SPD_IDX+1] = 0x00;
+    str_hello[CHK_IDX]   = 0x26;
+  } else if (speed == 57600U) {
+    str_hello[SPD_IDX]   = 0xE1;
+    str_hello[SPD_IDX+1] = 0x00;
+    str_hello[CHK_IDX]   = 0xBC;
+  }
 
   simple_serial_write(str_hello, sizeof(str_hello));
   simple_serial_read(buffer, 10);
@@ -200,37 +211,57 @@ void qt_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 mi
   send_command(str, sizeof str, 0);
 }
 
-// #define SPD_IDX 13
-// static uint8 set_speed(uint16 speed) {
-//   char str_speed[] = {0x16,0x2A,0x00,0x03,0x00,0x00,0x00,0x00,0x00,0x05,0x00,0x03,0x03,0x08,0x04,0x00};
-//   uint8 spd_code;
-//   switch(speed) {
-//     case 9600:
-//       spd_code = B9600;
-//       str_speed[SPD_IDX] = 0x08;
-//       break;
-//     case 19200:
-//       spd_code = B19200;
-//       str_speed[SPD_IDX] = 0x10;
-//       break;
-//   }
-//   simple_serial_write(str_speed, sizeof str_speed);
-//   tty_set_speed(spd_code);
-//   sleep(1);
-//
-//   /* get ack */
-//   if (get_ack() != 0) {
-//     return -1;
-//   }
-//   send_ack();
-//
-//   /* Get a full kB of 0xaa ?? */
-//   simple_serial_read(buffer, BLOCK_SIZE);
-//   simple_serial_read(buffer, BLOCK_SIZE);
-//
-//   send_ack();
-//   return get_ack();
-// }
+#define SPD_CMD_IDX 13
+static uint8 qt_set_speed(uint16 speed) {
+  char str_speed[] = {0x16,0x2A,0x00,0x03,0x00,0x00,0x00,0x00,0x00,0x05,0x00,0x03,0x03,0x08,0x04,0x00};
+  int spd_code;
+
+  switch(speed) {
+    case 9600:
+#ifdef __CC65__
+      spd_code = SER_BAUD_9600;
+#else
+      spd_code = B9600;
+#endif
+      str_speed[SPD_CMD_IDX] = 0x08;
+      break;
+
+    case 19200:
+#ifdef __CC65__
+      spd_code = SER_BAUD_19200;
+#else
+      spd_code = B19200;
+#endif
+      str_speed[SPD_CMD_IDX] = 0x10;
+      break;
+
+    case 57600U:
+#ifdef __CC65__
+      spd_code = SER_BAUD_57600;
+#else
+      spd_code = B57600;
+#endif
+      str_speed[SPD_CMD_IDX] = 0x30;
+      break;
+  }
+  simple_serial_write(str_speed, sizeof str_speed);
+
+  /* get ack */
+  if (get_ack() != 0) {
+    return -1;
+  }
+  send_ack();
+
+  sleep(1);
+  simple_serial_set_speed(spd_code);
+  sleep(1);
+
+  /* Get some data ?? */
+  while (simple_serial_getc_with_timeout() != EOF);
+
+  send_ack();
+  return get_ack();
+}
 
 
 static void write_qtkt_header(FILE *fp) {
@@ -349,7 +380,7 @@ uint8 qt_delete_pictures(void) {
   return send_photo_delete_command();
 }
 
-uint8 qt_serial_connect(void) {
+uint8 qt_serial_connect(uint16 speed) {
   printf("Connecting to Quicktake...\n");
 #ifdef __CC65__
   simple_serial_set_speed(SER_BAUD_9600);
@@ -384,7 +415,7 @@ uint8 qt_serial_connect(void) {
     return -1;
   }
   printf("Sending hello...\n");
-  send_hello();
+  send_hello(speed);
 
   printf("Connected.\n");
 
@@ -398,7 +429,7 @@ uint8 qt_serial_connect(void) {
   sleep(1);
   printf("Initializing...\n");
 
-  send_separator();
+  qt_set_speed(speed);
 
   return 0;
 }
