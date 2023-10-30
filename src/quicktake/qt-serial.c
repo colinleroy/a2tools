@@ -211,7 +211,7 @@ void qt_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 mi
   send_command(str, sizeof str, 0);
 }
 
-#define SPD_CMD_IDX 13
+#define SPD_CMD_IDX 0x0D
 static uint8 qt_set_speed(uint16 speed) {
   char str_speed[] = {0x16,0x2A,0x00,0x03,0x00,0x00,0x00,0x00,0x00,0x05,0x00,0x03,0x03,0x08,0x04,0x00};
   int spd_code;
@@ -392,6 +392,7 @@ uint8 qt_serial_connect(uint16 speed) {
 #endif
 
   simple_serial_open();
+  simple_serial_flush();
 #ifdef __CC65__
   #ifndef IIGS
 

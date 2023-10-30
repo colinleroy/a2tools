@@ -42,12 +42,8 @@
 
 #define COLORS 3
 
-#define RESIZE    1
-#define DITHER    1
-#define GREYSCALE 0
-#define DITHER_THRESHOLD 120
+#define DITHER_THRESHOLD 92
 
-#define OUTPUT_PPM 0
 
 #ifdef __CC65__
 #define TMP_NAME "/RAM/HGR"
@@ -76,7 +72,6 @@ static size_t data_offset;
 
 uint16 height, width;
 
-uint8 *cache = NULL;
 uint16 cache_offset;
 uint16 cache_pages_read;
 uint32 last_seek = 0;
@@ -105,8 +100,7 @@ uint8 get1() {
 
 uint16 get2() {
   uint16 v;
-  // fread ((char *)&v, 1, 2, ifp);
-  // return ntohs(v);
+
   if (cache_offset == cache_size) {
     fread(cache, 1, cache_size, ifp);
     cache_offset = 0;
@@ -176,10 +170,6 @@ uint8 getbitnohuff (uint8 nbits)
   return c;
 }
 
-#ifdef SURL_TO_LANGCARD
-#pragma code-name (push, "LC")
-#endif
-
 uint8 getbithuff (uint8 nbits, uint16 *huff)
 {
   uint8 c;
@@ -191,6 +181,10 @@ uint8 getbithuff (uint8 nbits, uint16 *huff)
 
   return c;
 }
+#ifdef SURL_TO_LANGCARD
+#pragma code-name (push, "LC")
+#endif
+
 
 #if GREYSCALE
 static void grey_levels(uint8 h) {
@@ -198,8 +192,8 @@ static void grey_levels(uint8 h) {
   uint16 x;
   for (y = 0; y < h; y+= 2)
     for (x = 0; x < width; x += 2) {
-      uint8 sum = RAW(y,x) + RAW(y+1,x) + RAW(y,x+1) + RAW(y+1,x+1);
-      RAW(y,x) = RAW(y+1,x) = RAW(y,x+1) = RAW(y+1,x+1) = sum;
+      uint16 sum = RAW(y,x) + RAW(y+1,x) + RAW(y,x+1) + RAW(y+1,x+1);
+      RAW(y,x) = RAW(y+1,x) = RAW(y,x+1) = RAW(y+1,x+1) = sum >> 2;
     }
 }
 #endif
@@ -245,37 +239,6 @@ static uint8 identify(const char *name)
   return 0;
 }
 
-static void dither_bayer(uint16 w, uint8 h) {
-  uint16 x;
-  uint8 y;
-
-  // Ordered dither kernel
-  uint8 map[8][8] = {
-    { 1, 49, 13, 61, 4, 52, 16, 64 },
-    { 33, 17, 45, 29, 36, 20, 48, 32 },
-    { 9, 57, 5, 53, 12, 60, 8, 56 },
-    { 41, 25, 37, 21, 44, 28, 40, 24 },
-    { 3, 51, 15, 63, 2, 50, 14, 62 },
-    { 25, 19, 47, 31, 34, 18, 46, 30 },
-    { 11, 59, 7, 55, 10, 58, 6, 54 },
-    { 43, 27, 39, 23, 42, 26, 38, 22 }
-  };
-
-  for(y = 0; y < h; ++y) {
-    uint8 y_mod8 = y % 8;
-    for(x = 0; x < w; ++x) {
-      uint16 in = RAW(y, x);
-
-      in += in * map[y_mod8][x % 8] / 63;
-
-      if(in >= DITHER_THRESHOLD)
-        RAW(y, x) = 255;
-      else
-        RAW(y, x) = 0;
-    }
-  }
-}
-
 static unsigned baseaddr[192];
 static void init_base_addrs (void)
 {
@@ -291,135 +254,135 @@ static void init_base_addrs (void)
   }
 }
 
-static uint8 *hgr_buf = NULL;
+#define FILE_WIDTH 256
+#define FILE_HEIGHT HGR_HEIGHT
+#define X_OFFSET ((HGR_WIDTH - FILE_WIDTH) / 2)
 
-static void write_hgr(uint16 top, uint8 h)
-{
-  uint8 line[40];
-  uint16 row, col;
-  uint8 scaled_top;
-  uint16 pixel, prev_offset = 0;
-  unsigned char *ptr;
+static uint8 buf[256];
+static int8 err[512];
+static uint8 hgr[40];
+static uint16 histogram[256];
+static uint8 opt_histogram[256];
 
+#define NUM_PIXELS 49152U //256*192
+
+static void dither_burkes_hgr(uint16 w, uint16 h) {
+  uint16 x;
+  uint16 y;
+  int16 cur_err;
+  uint8 *ptr;
+  uint8 pixel;
+  uint16 curr_hist = 0;
+  int8 *err_line_2 = err + w;
+  uint8 *hgr_start_col = hgr + X_OFFSET/7;
+  uint16 h_plus1 = h + 1;
   unsigned char dhbmono[] = {0x7e,0x7d,0x7b,0x77,0x6f,0x5f,0x3f};
   unsigned char dhwmono[] = {0x01,0x02,0x04,0x08,0x10,0x20,0x40};
-  uint8 scaling_factor = (width == 640 ? 4 : 8);
-  uint8 band_final_height = h * scaling_factor / 10;
 
-  #define image_final_width 256
-  #define x_offset ((HGR_WIDTH - image_final_width) / 2)
-
-#if GREYSCALE
-  /* Greyscale */
-  printf(" Greyscaling...\n");
-  grey_levels(h);
-#endif
-
-  /* Scale (nearest neighbor)*/
-  printf(" Scaling...\n");
-  for (row = 0; row < band_final_height; row++) {
-    uint16 orig_y = row * 10 / scaling_factor;
-
-    for (col = 0; col < image_final_width; col++) {
-      uint16 orig_x = col * 10 / scaling_factor;
-      RAW(row, col + x_offset) = RAW(orig_y, orig_x);
-    }
-
-    /* clear black bands */
-    for (col = 0; col < x_offset; col++)
-      RAW(row, col) = 0;
-    for (col = image_final_width + x_offset + 1; col < HGR_WIDTH; col++)
-      RAW(row, col) = 0;
+  printf("Histogram equalization...\n");
+  for (x = 0; x < 256; x++) {
+    curr_hist += histogram[x];
+    opt_histogram[x] = (uint8)((((uint32)curr_hist * 255)) / NUM_PIXELS);
   }
 
-  /* Dither (Bayes) */
-  printf(" Dithering...\n");
-  dither_bayer(HGR_WIDTH, h);
+  printf("Dithering...");
+  memset(err, 0, sizeof err);
+  if (reusable_buf) {
+    memset(reusable_buf, 0, HGR_LEN);
+  }
 
-  /* Write */
-  printf(" Saving...\n");
-  scaled_top = top * scaling_factor / 10;
-  for (row = 0; row < band_final_height; row++) {
-    for (col = 0; col < HGR_WIDTH; col++) {
-      ptr = line + col / 7;
-      pixel = col % 7;
-      if (RAW(row,col) != 0) {
-        ptr[0] |= dhwmono[pixel];
-      } else {
+  for(y = 0; y < h; ++y) {
+    printf(".");
+    fread(buf, 1, w, ifp);
+    memset(hgr, 0, 40);
+    /* Rollover next error line */
+    memcpy(err, err_line_2, w);
+    memset(err_line_2, 0, w);
+
+    for(x = 0; x < w; ++x) {
+      uint8 buf_plus_err = opt_histogram[buf[x]] + err[x];
+      uint16 x_plus1 = x + 1;
+      uint16 x_plus2 = x + 2;
+      int16 x_minus1 = x - 1;
+      int16 x_minus2 = x - 2;
+      int16 err8, err4, err2;
+
+      ptr = hgr_start_col + x / 7;
+      pixel = x % 7;
+
+      if (DITHER_THRESHOLD > buf_plus_err) {
+        cur_err = buf_plus_err;
         ptr[0] &= dhbmono[pixel];
+      } else {
+        cur_err = buf_plus_err - 255;
+        ptr[0] |= dhwmono[pixel];
       }
+      err8 = (cur_err * 8) / 32;
+      err4 = (cur_err * 4) / 32;
+      err2 = (cur_err * 2) / 32;
+
+      if (x_plus1 < w) {
+        err[x_plus1]          += err8;
+        err_line_2[x_plus1]   += err4;
+        if (x_plus2 < w) {
+          err[x_plus2]        += err4;
+          err_line_2[x_plus2] += err2;
+        }
+      }
+      if (x_minus1 > 0) {
+        err_line_2[x_minus1]   += err4;
+        if (x_minus2 > 0) {
+          err_line_2[x_minus2] += err2;
+        } 
+      }
+      err_line_2[x]            += err8;
     }
-    if (hgr_buf) {
-      memcpy(hgr_buf + baseaddr[scaled_top + row], line, 40);
+    if (reusable_buf) {
+      memcpy(reusable_buf + baseaddr[y], hgr, 40);
     } else {
-      fseek(ofp, baseaddr[scaled_top + row], SEEK_SET);
-      fwrite(line, 1, 40, ofp);
+      fseek(ofp, baseaddr[y], SEEK_SET);
+      fwrite(hgr, 1, 40, ofp);
     }
+  }
+  printf("\nSaving...\n");
+  if (reusable_buf) {
+    fseek(ofp, 0, SEEK_SET);
+    fwrite(reusable_buf, 1, HGR_LEN, ofp);
   }
 }
 
-#if OUTPUT_PPM
-static void write_ppm_tiff(int top, int h)
+static void write_raw(void)
 {
-  static uint8 *ppm;
-  int c, row, col;
-  int scaling_factor = (width == 640 ? 4 : 8);
-  int band_final_height = h * scaling_factor / 10;
-#if RESIZE
-  #define FILE_WIDTH HGR_WIDTH
-  #define FILE_HEIGHT HGR_HEIGHT
-  #define BAND_HEIGHT band_final_height
-#else
-  #define FILE_WIDTH width
-  #define FILE_HEIGHT height
-  #define BAND_HEIGHT QT_BAND
-#endif
+  uint16 row, col;
+  uint8 scaling_factor = (width == 640 ? 4 : 8);
+  uint8 band_height = QT_BAND * scaling_factor / 10;
+  uint16 idx_dst, idx_src;
+  uint8 *raw_ptr;
 
-  if (top == 0) {
-    /* Header */
-    ppm = malloc(width * COLORS);
-    fprintf (ofp, "P%d\n%d %d\n%d\n",
-        COLORS/2+5, FILE_WIDTH, FILE_HEIGHT, (1 << 8)-1);
-  }
-
-#if GREYSCALE
-  /* Greyscale */
-  grey_levels(QT_BAND);
-#endif
-
-#if RESIZE
+  printf("Scaling...");
   /* Scale (nearest neighbor)*/
-  for (row = 0; row < band_final_height; row++) {
+  for (row = 0; row < band_height; row++) {
     uint16 orig_y = row * 10 / scaling_factor;
-
-    for (col = 0; col < image_final_width; col++) {
+    printf(".");
+    idx_dst = RAW_IDX(row, 0);
+    idx_src = RAW_IDX(orig_y, 0);
+    for (col = 0; col < FILE_WIDTH; col++) {
       uint16 orig_x = col * 10 / scaling_factor;
-      RAW(row, col + x_offset) = RAW(orig_y, orig_x);
+      uint8 val = RAW_DIRECT_IDX(idx_src + orig_x);
+      RAW_DIRECT_IDX(idx_dst) = val;
+      histogram[val]++;
+      idx_dst++;
     }
-
-    /* clear black bands */
-    for (col = 0; col < x_offset; col++)
-      RAW(row, col) = 0;
-    for (col = image_final_width + x_offset + 1; col < HGR_WIDTH; col++)
-      RAW(row, col) = 0;
   }
-#endif
-
-#if DITHER
-  /* Dither (Bayes) */
-  dither_bayer(FILE_WIDTH, h);
-#endif
+  printf("\n");
 
   /* Write */
-  for (row = 0; row < BAND_HEIGHT; row++) {
-    for (col=0; col < FILE_WIDTH; col++) {
-      char val = RAW(row,col);
-      FORCC ppm [col*COLORS+c] = val;
-    }
-    fwrite (ppm, COLORS, FILE_WIDTH, ofp);
+  raw_ptr = raw_image;
+  for (row = 0; row < band_height; row++) {
+    fwrite (raw_ptr, 1, FILE_WIDTH, ofp);
+    raw_ptr += width;
   }
 }
-#endif
 
 static void reload_menu(void) {
   while (reopen_start_device() != 0) {
@@ -433,27 +396,17 @@ static void reload_menu(void) {
 int main (int argc, const char **argv)
 {
   uint16 h;
-  char *ofname, *cp;
+  char ofname[64], *cp;
 
   register_start_device();
 
-  ofname = NULL;
-  cache = malloc(cache_size);
-  if (cache == NULL) {
-    printf("Not enough memory\n");
-    goto out;
-  }
 #ifdef __CC65__
   videomode(VIDEOMODE_80COL);
   printf("Free memory: %zu/%zuB\n", _heapmaxavail(), _heapmemavail());
 #endif
 
-  if (argc == 1) {
-    printf("No file.\n");
-    goto out;
-  }
   ifname = argv[1];
-  if (!(ifp = fopen (ifname, "rb"))) {
+  if (argc < 2 || !(ifp = fopen (ifname, "rb"))) {
     printf("Can't open %s\n", ifname);
     goto out;
   }
@@ -462,7 +415,6 @@ int main (int argc, const char **argv)
     goto out;
   }
 
-  ofname = (char *) malloc (strlen(ifname) + 64);
   strcpy (ofname, ifname);
   if ((cp = strrchr (ofname, '.'))) *cp = 0;
 #if OUTPUT_PPM
@@ -481,40 +433,35 @@ int main (int argc, const char **argv)
 
   memset(raw_image, 0, raw_image_size);
 
-#if !OUTPUT_PPM
-  fwrite(raw_image, 1, HGR_LEN, ofp);
-#endif
-
   init_base_addrs();
   for (h = 0; h < height; h += QT_BAND) {
     printf("Loading lines %d-%d", h, h + QT_BAND);
     qt_load_raw(h, QT_BAND);
-    printf("\nConverting...\n");
-#if OUTPUT_PPM
-    write_ppm_tiff(h, QT_BAND);
-#else
-    write_hgr(h, QT_BAND);
-#endif
+    write_raw();
   }
   
-  printf("Finalizing...\n");
-
   fclose(ifp);
   fclose(ofp);
   ifp = fopen(TMP_NAME, "rb");
   ofp = fopen(ofname, "wb");
-  while ((h = fread(cache, 1, cache_size, ifp)) > 0)
-    fwrite(cache, 1, h, ofp);
+
+#if OUTPUT_PPM
+  write_ppm(width, height);
+#else
+  dither_burkes_hgr(FILE_WIDTH, FILE_HEIGHT);
+#endif
   fclose(ifp);
   fclose(ofp);
   printf("Done.");
 
-  if (ofname) free (ofname);
-
+#ifdef __CC65__
   reload_menu();
 out:
   cgetc();
   reload_menu();
+#else
+out:
+#endif
   return 0;
 }
 

@@ -15,14 +15,15 @@ char *model = "100";
 uint16 raw_width = 640;
 uint16 raw_image_size = (QT_BAND) * 640;
 uint8 raw_image[QT_BAND * 640];
-uint16 cache_size = 4096;
+uint16 cache_size = 3350;
+uint8 cache[3350];
 
 #define ABS(x) ((x) < 0 ? -(x) : (x))
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 #define MAX(a,b) ((a) > (b) ? (a) : (b))
 #define LIM(x,min,max) MAX(min,MIN(x,max))
 
-static uint8 h_plus2, h_plus4;
+static uint8 h_plus1, h_plus2, h_plus4;
 static uint16 width_plus2;
 
 #define PIX_WIDTH 644
@@ -31,16 +32,19 @@ static uint8 pixel[(QT_BAND+5)*PIX_WIDTH];
 #define PIX_IDX(row,col) ((row)*PIX_WIDTH+(col))
 #define PIX_DIRECT_IDX(idx) pixel[idx]
 
+uint8 *reusable_buf = pixel;
+
 void qt_load_raw(uint16 top, uint8 h)
 {
   static const short gstep[16] =
   { -89,-60,-44,-32,-22,-15,-8,-2,2,8,15,22,32,44,60,89 };
   int16 val = 0;
   uint8 row;
-  uint16 col, idx, idx2;
+  uint16 col, idx, idx_rowplus2, idx_rowminus1;
 
   if (top == 0) {
     getbits(0);
+    h_plus1 = h + 1;
     h_plus2 = h + 2;
     h_plus4 = h + 4;
     width_plus2 = width + 2;
@@ -57,9 +61,10 @@ void qt_load_raw(uint16 top, uint8 h)
     printf(".");
     col = 2+(row & 1);
     idx = PIX_IDX(row, col);
+    idx_rowminus1 = idx - PIX_WIDTH;
     for (; col < width_plus2; col+=2) {
-      val = ((PIX_DIRECT_IDX(idx - PIX_WIDTH - 1) // row-1,col-1
-              + 2*PIX_DIRECT_IDX(idx - PIX_WIDTH + 1) //row-1,col+1
+      val = ((PIX_DIRECT_IDX(idx_rowminus1 - 1) // row-1,col-1
+              + 2*PIX_DIRECT_IDX(idx_rowminus1 + 1) //row-1,col+1
               + PIX_DIRECT_IDX(idx - 2)) >> 2) //row,col-2
              + gstep[getbits(4)];
 
@@ -71,14 +76,15 @@ void qt_load_raw(uint16 top, uint8 h)
       }
       if (row == 2 && top == 0){
         /* row-1,col+1 / row-1,col+3*/
-        PIX_DIRECT_IDX(idx-PIX_WIDTH+1) = PIX_DIRECT_IDX(idx-PIX_WIDTH+3) = val;
+        PIX_DIRECT_IDX(idx_rowminus1+1) = PIX_DIRECT_IDX(idx_rowminus1+3) = val;
       }
       idx += 2;
+      idx_rowminus1 += 2;
     }
 
     PIX_DIRECT_IDX(idx) = val;
 
-    if(row == h_plus2) {
+    if(row == h_plus1) {
       /* Save state at end of first loop */
       prev_bitbuf_a = bitbuf;
       prev_vbits_a = vbits;
@@ -100,11 +106,11 @@ void qt_load_raw(uint16 top, uint8 h)
   }
   for (row=0; row < h; row++) {
     idx = RAW_IDX(row,0);
-    idx2 = PIX_IDX(row+2, 2);
+    idx_rowplus2 = PIX_IDX(row + 2, 2);
     for (col=0; col < width; col++) {
-      RAW_DIRECT_IDX(idx) = PIX_DIRECT_IDX(idx2);
+      RAW_DIRECT_IDX(idx) = PIX_DIRECT_IDX(idx_rowplus2);
       idx++;
-      idx2++;
+      idx_rowplus2++;
     }
   }
 }

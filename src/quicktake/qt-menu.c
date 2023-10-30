@@ -247,15 +247,20 @@ int main (void)
   uint8 num_pics, left_pics, mode, choice;
   char *name;
   struct tm time;
-
+#ifndef __CC65__
+  int target_speed = 57600;
+#else
+  int target_speed = 9600;
+  
+//  exec("qt100conv", "/QT100/TEST100.QTK");
+  
   register_start_device();
 
-#ifdef __CC65__
   videomode(VIDEOMODE_80COL);
   screensize(&scrw, &scrh);
 #endif
 
-  while (qt_serial_connect(19200) != 0) {
+  while (qt_serial_connect(target_speed) != 0) {
     char c;
     dputs("Try again? (Y/n) ");
     c = tolower(cgetc());
