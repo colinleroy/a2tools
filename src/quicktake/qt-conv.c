@@ -40,17 +40,6 @@
  * (480 => 192 = *0.4, 240 => 192 = *0.8)
  */
 
-#define COLORS 3
-
-#define DITHER_THRESHOLD 92
-
-
-#ifdef __CC65__
-#define TMP_NAME "/RAM/HGR"
-#else
-#define TMP_NAME "tmp.HGR"
-#endif
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -239,117 +228,10 @@ static uint8 identify(const char *name)
   return 0;
 }
 
-static unsigned baseaddr[192];
-static void init_base_addrs (void)
-{
-  uint16 i, group_of_eight, line_of_eight, group_of_sixtyfour;
-
-  for (i = 0; i < HGR_HEIGHT; ++i)
-  {
-    line_of_eight = i % 8;
-    group_of_eight = (i % 64) / 8;
-    group_of_sixtyfour = i / 64;
-
-    baseaddr[i] = line_of_eight * 1024 + group_of_eight * 128 + group_of_sixtyfour * 40;
-  }
-}
-
 #define FILE_WIDTH 256
 #define FILE_HEIGHT HGR_HEIGHT
-#define X_OFFSET ((HGR_WIDTH - FILE_WIDTH) / 2)
 
-static uint8 buf[256];
-static int8 err[512];
-static uint8 hgr[40];
 static uint16 histogram[256];
-static uint8 opt_histogram[256];
-
-#define NUM_PIXELS 49152U //256*192
-
-static void dither_burkes_hgr(uint16 w, uint16 h) {
-  uint16 x;
-  uint16 y;
-  int16 cur_err;
-  uint8 *ptr;
-  uint8 pixel;
-  uint16 curr_hist = 0;
-  int8 *err_line_2 = err + w;
-  uint8 *hgr_start_col = hgr + X_OFFSET/7;
-  uint16 h_plus1 = h + 1;
-  unsigned char dhbmono[] = {0x7e,0x7d,0x7b,0x77,0x6f,0x5f,0x3f};
-  unsigned char dhwmono[] = {0x01,0x02,0x04,0x08,0x10,0x20,0x40};
-
-  printf("Histogram equalization...\n");
-  for (x = 0; x < 256; x++) {
-    curr_hist += histogram[x];
-    opt_histogram[x] = (uint8)((((uint32)curr_hist * 255)) / NUM_PIXELS);
-  }
-
-  printf("Dithering...");
-  memset(err, 0, sizeof err);
-  if (reusable_buf) {
-    memset(reusable_buf, 0, HGR_LEN);
-  }
-
-  for(y = 0; y < h; ++y) {
-    printf(".");
-    fread(buf, 1, w, ifp);
-    memset(hgr, 0, 40);
-    /* Rollover next error line */
-    memcpy(err, err_line_2, w);
-    memset(err_line_2, 0, w);
-
-    for(x = 0; x < w; ++x) {
-      uint8 buf_plus_err = opt_histogram[buf[x]] + err[x];
-      uint16 x_plus1 = x + 1;
-      uint16 x_plus2 = x + 2;
-      int16 x_minus1 = x - 1;
-      int16 x_minus2 = x - 2;
-      int16 err8, err4, err2;
-
-      ptr = hgr_start_col + x / 7;
-      pixel = x % 7;
-
-      if (DITHER_THRESHOLD > buf_plus_err) {
-        cur_err = buf_plus_err;
-        ptr[0] &= dhbmono[pixel];
-      } else {
-        cur_err = buf_plus_err - 255;
-        ptr[0] |= dhwmono[pixel];
-      }
-      err8 = (cur_err * 8) / 32;
-      err4 = (cur_err * 4) / 32;
-      err2 = (cur_err * 2) / 32;
-
-      if (x_plus1 < w) {
-        err[x_plus1]          += err8;
-        err_line_2[x_plus1]   += err4;
-        if (x_plus2 < w) {
-          err[x_plus2]        += err4;
-          err_line_2[x_plus2] += err2;
-        }
-      }
-      if (x_minus1 > 0) {
-        err_line_2[x_minus1]   += err4;
-        if (x_minus2 > 0) {
-          err_line_2[x_minus2] += err2;
-        } 
-      }
-      err_line_2[x]            += err8;
-    }
-    if (reusable_buf) {
-      memcpy(reusable_buf + baseaddr[y], hgr, 40);
-    } else {
-      fseek(ofp, baseaddr[y], SEEK_SET);
-      fwrite(hgr, 1, 40, ofp);
-    }
-  }
-  printf("\nSaving...\n");
-  if (reusable_buf) {
-    fseek(ofp, 0, SEEK_SET);
-    fwrite(reusable_buf, 1, HGR_LEN, ofp);
-  }
-}
 
 static void write_raw(void)
 {
@@ -384,14 +266,14 @@ static void write_raw(void)
   }
 }
 
-static void reload_menu(void) {
+static void reload_menu(const char *filename) {
   while (reopen_start_device() != 0) {
     clrscr();
     gotoxy(13, 12);
     printf("Please reinsert the program disk, then press any key.");
     cgetc();
   }
-  exec("qtmenu", NULL);
+  exec("qtmenu", filename);
 }
 int main (int argc, const char **argv)
 {
@@ -405,8 +287,13 @@ int main (int argc, const char **argv)
   printf("Free memory: %zu/%zuB\n", _heapmaxavail(), _heapmemavail());
 #endif
 
+  if (argc < 2) {
+    printf("Missing argument.\n");
+    goto out;
+  }
+
   ifname = argv[1];
-  if (argc < 2 || !(ifp = fopen (ifname, "rb"))) {
+  if (!(ifp = fopen (ifname, "rb"))) {
     printf("Can't open %s\n", ifname);
     goto out;
   }
@@ -417,23 +304,17 @@ int main (int argc, const char **argv)
 
   strcpy (ofname, ifname);
   if ((cp = strrchr (ofname, '.'))) *cp = 0;
-#if OUTPUT_PPM
-  strcat (ofname, ".ppm");
-#else
   strcat (ofname, ".hgr");
-#endif
 
   ofp = fopen (TMP_NAME, "wb");
 
   if (!ofp) {
-    perror (ofname);
+    printf("Can't open %s\n", ofname);
     goto out;
   }
 
-
   memset(raw_image, 0, raw_image_size);
 
-  init_base_addrs();
   for (h = 0; h < height; h += QT_BAND) {
     printf("Loading lines %d-%d", h, h + QT_BAND);
     qt_load_raw(h, QT_BAND);
@@ -442,26 +323,20 @@ int main (int argc, const char **argv)
   
   fclose(ifp);
   fclose(ofp);
-  ifp = fopen(TMP_NAME, "rb");
-  ofp = fopen(ofname, "wb");
 
-#if OUTPUT_PPM
-  write_ppm(width, height);
-#else
-  dither_burkes_hgr(FILE_WIDTH, FILE_HEIGHT);
-#endif
-  fclose(ifp);
-  fclose(ofp);
+  /* Save histogram to /RAM */
+  ofp = fopen(HIST_NAME,"w");
+  if (ofp) {
+    fwrite(histogram, sizeof(uint16), 256, ofp);
+    fclose(ofp);
+  }
+
   printf("Done.");
 
-#ifdef __CC65__
-  reload_menu();
+  reload_menu(ofname);
 out:
   cgetc();
-  reload_menu();
-#else
-out:
-#endif
+  reload_menu(NULL);
   return 0;
 }
 

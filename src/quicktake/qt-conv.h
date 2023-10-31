@@ -8,15 +8,17 @@
 #define QT100_MAGIC "qktk"
 #define QT150_MAGIC "qktn"
 
+#ifdef __CC65__
+#define TMP_NAME "/RAM/GREY"
+#define HIST_NAME "/RAM/HIST"
+#else
+#define TMP_NAME "GREY"
+#define HIST_NAME "HIST"
+#endif
+
 extern uint16 height, width, raw_width;
 extern uint8 raw_image[];
 extern uint16 raw_image_size;
-/* A buffer reusable after decompression
- * to optimize hgr generation. It must be
- * at least 8192 bytes.
- */
-
-extern uint8 *reusable_buf;
 
 extern char magic[5];
 extern char *model;

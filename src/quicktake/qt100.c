@@ -15,8 +15,8 @@ char *model = "100";
 uint16 raw_width = 640;
 uint16 raw_image_size = (QT_BAND) * 640;
 uint8 raw_image[QT_BAND * 640];
-uint16 cache_size = 3350;
-uint8 cache[3350];
+uint16 cache_size = 5120;
+uint8 cache[5120];
 
 #define ABS(x) ((x) < 0 ? -(x) : (x))
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
@@ -31,8 +31,6 @@ static uint8 pixel[(QT_BAND+5)*PIX_WIDTH];
 #define PIX(row,col) pixel[(row)*PIX_WIDTH+(col)]
 #define PIX_IDX(row,col) ((row)*PIX_WIDTH+(col))
 #define PIX_DIRECT_IDX(idx) pixel[idx]
-
-uint8 *reusable_buf = pixel;
 
 void qt_load_raw(uint16 top, uint8 h)
 {
