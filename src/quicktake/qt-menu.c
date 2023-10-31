@@ -159,6 +159,7 @@ static uint8 edit_image(const char *ofname, int16 *angle) {
           c = tolower(cgetc());
           if (c == 'y')
             goto done;
+          hgr_mixoff();
           break;
         case 's':
           goto save;
