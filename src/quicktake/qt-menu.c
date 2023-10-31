@@ -111,6 +111,142 @@ static void view_image(const char *filename) {
   return;
 }
 
+static unsigned baseaddr[192];
+static void init_base_addrs (void)
+{
+  uint16 i, group_of_eight, line_of_eight, group_of_sixtyfour;
+
+  for (i = 0; i < HGR_HEIGHT; ++i)
+  {
+    line_of_eight = i % 8;
+    group_of_eight = (i % 64) / 8;
+    group_of_sixtyfour = i / 64;
+
+    baseaddr[i] = line_of_eight * 1024 + group_of_eight * 128 + group_of_sixtyfour * 40;
+  }
+}
+
+#define FILE_WIDTH 256
+#define FILE_HEIGHT HGR_HEIGHT
+#define X_OFFSET ((HGR_WIDTH - FILE_WIDTH) / 2)
+#define DITHER_THRESHOLD 92
+
+#ifndef __CC65__
+char HGR_PAGE[HGR_LEN];
+#endif
+
+static uint8 buf[256];
+static uint8 err[512];
+static uint8 hgr[40];
+static uint16 histogram[256];
+static uint8 opt_histogram[256];
+FILE *ifp, *ofp;
+
+#define NUM_PIXELS 49152U //256*192
+
+static void dither_burkes_hgr(const char *ofname, uint16 w, uint16 h) {
+  uint16 x, off_x;
+  uint16 y;
+  int16 cur_err;
+  uint8 *ptr;
+  uint8 pixel;
+  uint16 curr_hist = 0;
+  uint8 *err_line_2 = err + w;
+  uint16 h_plus1 = h + 1;
+  unsigned char dhbmono[] = {0x7e,0x7d,0x7b,0x77,0x6f,0x5f,0x3f};
+  unsigned char dhwmono[] = {0x01,0x02,0x04,0x08,0x10,0x20,0x40};
+
+  init_base_addrs();
+
+  printf("Finishing %s conversion...\n", ofname);
+
+  ifp = fopen(HIST_NAME, "r");
+  if (ifp != NULL) {
+    fread(histogram, sizeof(uint16), 256, ifp);
+    fclose(ifp);
+
+    printf("Histogram equalization...\n");
+    for (x = 0; x < 256; x++) {
+      curr_hist += histogram[x];
+      opt_histogram[x] = (uint8)((((uint32)curr_hist * 255)) / NUM_PIXELS);
+    }
+  } else {
+    printf("Can't open "HIST_NAME"\n");
+  }
+
+  ifp = fopen(TMP_NAME, "r");
+  if (ifp == NULL) {
+    printf("Can't open "TMP_NAME"\n");
+    return;
+  }
+  ofp = fopen(ofname, "w");
+  if (ofp == NULL) {
+    printf("Can't open %s\n", ofname);
+    fclose(ifp);
+    return;
+  }
+
+  printf("Dithering...");
+  memset(err, 0, sizeof err);
+  memset((char *)HGR_PAGE, 0, HGR_LEN);
+
+  for(y = 0; y < h; ++y) {
+    printf(".");
+    fread(buf, 1, w, ifp);
+    memset(hgr, 0, 40);
+    /* Rollover next error line */
+    memcpy(err, err_line_2, w);
+    memset(err_line_2, 0, w);
+
+    for(x = 0, off_x = X_OFFSET; x < w; ++x, ++off_x) {
+      uint8 buf_plus_err = opt_histogram[buf[x]] + err[x];
+      uint16 x_plus1 = x + 1;
+      uint16 x_plus2 = x + 2;
+      int16 x_minus1 = x - 1;
+      int16 x_minus2 = x - 2;
+      int16 err8, err4, err2;
+
+      ptr = hgr + off_x / 7;
+      pixel = off_x % 7;
+
+      if (DITHER_THRESHOLD > buf_plus_err) {
+        cur_err = buf_plus_err;
+        ptr[0] &= dhbmono[pixel];
+      } else {
+        cur_err = buf_plus_err - 255;
+        ptr[0] |= dhwmono[pixel];
+      }
+      err8 = cur_err >> 2; /* cur_err * 8 / 32 */
+      err4 = err8 >> 1;    /* cur_err * 4 / 32 */
+      err2 = err4 >> 1;    /* cur_err * 2 / 32 */
+
+      if (x_plus1 < w) {
+        err[x_plus1]          += err8;
+        err_line_2[x_plus1]   += err4;
+        if (x_plus2 < w) {
+          err[x_plus2]        += err4;
+          err_line_2[x_plus2] += err2;
+        }
+      }
+      if (x_minus1 > 0) {
+        err_line_2[x_minus1]   += err4;
+        if (x_minus2 > 0) {
+          err_line_2[x_minus2] += err2;
+        } 
+      }
+      err_line_2[x]            += err8;
+    }
+    memcpy((char *)HGR_PAGE + baseaddr[y], hgr, 40);
+  }
+  printf("\nSaving %s...\n", ofname);
+  fseek(ofp, 0, SEEK_SET);
+  fwrite((char *)HGR_PAGE, 1, HGR_LEN, ofp);
+  fclose(ifp);
+  fclose(ofp);
+
+  view_image(ofname);
+}
+
 static void print_header(uint8 num_pics, uint8 left_pics, uint8 mode, const char *name, struct tm *time) {
   gotoxy(0, 0);
   printf("%s connected - %02d/%02d/%04d %02d:%02d\n%d photos taken, %d left, %s mode\n",
@@ -242,7 +378,7 @@ static void delete_pictures(void) {
   dputs("\r\nPlease wait...\r\n");
 }
 
-int main (void)
+int main (int argc, char *argv[])
 {
   uint8 num_pics, left_pics, mode, choice;
   char *name;
@@ -257,8 +393,19 @@ int main (void)
   register_start_device();
 
   videomode(VIDEOMODE_80COL);
+  printf("Free memory: %zu/%zuB\n", _heapmaxavail(), _heapmemavail());
   screensize(&scrw, &scrh);
 #endif
+
+  if (argc > 1) {
+    dither_burkes_hgr(argv[1], FILE_WIDTH, FILE_HEIGHT);
+  } else {
+    exec("qt100conv","/QT100/TEST100.qtk");
+  }
+
+  /* Remove temporary files */
+  unlink(HIST_NAME);
+  unlink(TMP_NAME);
 
   while (qt_serial_connect(target_speed) != 0) {
     char c;

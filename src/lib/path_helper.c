@@ -38,6 +38,6 @@ const char *get_start_device(void) {
 
 #else
 void register_start_device(void) {}
-void reopen_start_device(void) {}
+int reopen_start_device(void) { return 0; }
 const char *get_start_device(void) { return 0x00; }
 #endif
