@@ -25,6 +25,8 @@ uint8 scrw, scrh;
 #define BUF_SIZE 64
 char magic[5] = "????";
 
+static void convert_temp_to_hgr(const char *ofname, uint16 angle);
+
 static void convert_image(const char *filename) {
   static char imgname[BUF_SIZE];
   if (!filename) {
@@ -135,24 +137,84 @@ static void init_base_addrs (void)
 char HGR_PAGE[HGR_LEN];
 #endif
 
+static uint8 edit_image(const char *ofname, int16 *angle) {
+  char c;
+  uint8 mix_is_on = 0;
+  init_hgr();
+
+  do {
+    c = tolower(cgetc());
+    if (!mix_is_on) {
+      hgr_mixon();
+      mix_is_on = 1;
+      clrscr();
+      gotoxy(0, 20);
+      printf("S: Save - Escape: Exit without saving (%d rotation)\n"
+             "L: Rotate left - U: Rotate upside-down - R: Rotate right\n"
+             "Any other key: Hide this help\n", *angle);
+    } else {
+      switch(c) {
+        case CH_ESC:
+          printf("Exit without saving? (y/N) ");
+          c = tolower(cgetc());
+          if (c == 'y')
+            goto done;
+          break;
+        case 's':
+          goto save;
+        case 'r':
+          *angle += 90;
+          return 1;
+        case 'l':
+          *angle -= 90;
+          return 1;
+        case 'u':
+          *angle += 180;
+          return 1;
+        default:
+          hgr_mixoff();
+          mix_is_on = 0;
+      }
+    }
+  } while (1);
+
+save:
+  ofp = fopen(ofname, "w");
+  if (ofp == NULL) {
+    printf("Can't open %s\n", ofname);
+    fclose(ifp);
+    return 0;
+  }
+  printf("\nSaving %s...\n", ofname);
+  fseek(ofp, 0, SEEK_SET);
+  fwrite((char *)HGR_PAGE, 1, HGR_LEN, ofp);
+  fclose(ofp);
+done:
+  hgr_mixoff();
+  init_text();
+  return 0;
+}
+
 static uint8 buf[256];
 static uint8 err[512];
-static uint8 hgr[40];
 static uint16 histogram[256];
 static uint8 opt_histogram[256];
 FILE *ifp, *ofp;
 
 #define NUM_PIXELS 49152U //256*192
 
-static void dither_burkes_hgr(const char *ofname, uint16 w, uint16 h) {
+static void convert_temp_to_hgr(const char *ofname, uint16 angle) {
   uint16 x, off_x;
-  uint16 y;
+  uint16 y, off_y;
+  uint16 dx, dy, scaled_dx, scaled_dy;
+  int8 xdir, ydir;
   int16 cur_err;
   uint8 *ptr;
   uint8 pixel;
+  uint8 invert_coords;
   uint16 curr_hist = 0;
-  uint8 *err_line_2 = err + w;
-  uint16 h_plus1 = h + 1;
+  uint8 *err_line_2 = err + FILE_WIDTH;
+  uint16 h_plus1 = FILE_HEIGHT + 1;
   unsigned char dhbmono[] = {0x7e,0x7d,0x7b,0x77,0x6f,0x5f,0x3f};
   unsigned char dhwmono[] = {0x01,0x02,0x04,0x08,0x10,0x20,0x40};
 
@@ -179,26 +241,50 @@ static void dither_burkes_hgr(const char *ofname, uint16 w, uint16 h) {
     printf("Can't open "TMP_NAME"\n");
     return;
   }
-  ofp = fopen(ofname, "w");
-  if (ofp == NULL) {
-    printf("Can't open %s\n", ofname);
-    fclose(ifp);
-    return;
-  }
 
   printf("Dithering...");
   memset(err, 0, sizeof err);
   memset((char *)HGR_PAGE, 0, HGR_LEN);
 
-  for(y = 0; y < h; ++y) {
-    printf(".");
-    fread(buf, 1, w, ifp);
-    memset(hgr, 0, 40);
-    /* Rollover next error line */
-    memcpy(err, err_line_2, w);
-    memset(err_line_2, 0, w);
+  switch (angle) {
+    case 0:
+      off_x = X_OFFSET;
+      off_y = 0;
+      xdir = +1;
+      ydir = +1;
+      invert_coords = 0;
+      break;
+    case 90:
+      off_x = 0;
+      off_y = 282; /* will be scaled down to 212 */
+      xdir = +1;
+      ydir = -1;
+      invert_coords = 1;
+      break;
+    case 270:
+      off_x = FILE_WIDTH - 1;
+      off_y = 90; /* will be scaled down to 68 */
+      xdir = -1;
+      ydir = +1;
+      invert_coords = 1;
+      break;
+    case 180:
+      off_x = HGR_WIDTH - X_OFFSET;
+      off_y = FILE_HEIGHT - 1;
+      xdir = -1;
+      ydir = -1;
+      invert_coords = 0;
+      break;
+  }
+  init_hgr();
+  for(y = 0, dy = off_y; y != FILE_HEIGHT; y++, dy+= ydir) {
+    fread(buf, 1, FILE_WIDTH, ifp);
 
-    for(x = 0, off_x = X_OFFSET; x < w; ++x, ++off_x) {
+    /* Rollover next error line */
+    memcpy(err, err_line_2, FILE_WIDTH);
+    memset(err_line_2, 0, FILE_WIDTH);
+
+    for(x = 0, dx = off_x; x != FILE_WIDTH; x++, dx += xdir) {
       uint8 buf_plus_err = opt_histogram[buf[x]] + err[x];
       uint16 x_plus1 = x + 1;
       uint16 x_plus2 = x + 2;
@@ -206,8 +292,15 @@ static void dither_burkes_hgr(const char *ofname, uint16 w, uint16 h) {
       int16 x_minus2 = x - 2;
       int16 err8, err4, err2;
 
-      ptr = hgr + off_x / 7;
-      pixel = off_x % 7;
+      if (invert_coords) {
+        scaled_dy = dy * 3 / 4;
+        scaled_dx = dx * 3 / 4;
+        ptr = (char *)HGR_PAGE + baseaddr[scaled_dx] + scaled_dy / 7;
+        pixel = scaled_dy % 7;
+      } else {
+        ptr = (char *)HGR_PAGE + baseaddr[dy] + dx / 7;
+        pixel = dx % 7;
+      }
 
       if (DITHER_THRESHOLD > buf_plus_err) {
         cur_err = buf_plus_err;
@@ -220,10 +313,10 @@ static void dither_burkes_hgr(const char *ofname, uint16 w, uint16 h) {
       err4 = err8 >> 1;    /* cur_err * 4 / 32 */
       err2 = err4 >> 1;    /* cur_err * 2 / 32 */
 
-      if (x_plus1 < w) {
+      if (x_plus1 < FILE_WIDTH) {
         err[x_plus1]          += err8;
         err_line_2[x_plus1]   += err4;
-        if (x_plus2 < w) {
+        if (x_plus2 < FILE_WIDTH) {
           err[x_plus2]        += err4;
           err_line_2[x_plus2] += err2;
         }
@@ -232,19 +325,12 @@ static void dither_burkes_hgr(const char *ofname, uint16 w, uint16 h) {
         err_line_2[x_minus1]   += err4;
         if (x_minus2 > 0) {
           err_line_2[x_minus2] += err2;
-        } 
+        }
       }
       err_line_2[x]            += err8;
     }
-    memcpy((char *)HGR_PAGE + baseaddr[y], hgr, 40);
   }
-  printf("\nSaving %s...\n", ofname);
-  fseek(ofp, 0, SEEK_SET);
-  fwrite((char *)HGR_PAGE, 1, HGR_LEN, ofp);
   fclose(ifp);
-  fclose(ofp);
-
-  view_image(ofname);
 }
 
 static void print_header(uint8 num_pics, uint8 left_pics, uint8 mode, const char *name, struct tm *time) {
@@ -381,15 +467,16 @@ static void delete_pictures(void) {
 int main (int argc, char *argv[])
 {
   uint8 num_pics, left_pics, mode, choice;
+  int16 angle;
   char *name;
   struct tm time;
 #ifndef __CC65__
   int target_speed = 57600;
 #else
   int target_speed = 9600;
-  
+
 //  exec("qt100conv", "/QT100/TEST100.QTK");
-  
+
   register_start_device();
 
   videomode(VIDEOMODE_80COL);
@@ -398,7 +485,13 @@ int main (int argc, char *argv[])
 #endif
 
   if (argc > 1) {
-    dither_burkes_hgr(argv[1], FILE_WIDTH, FILE_HEIGHT);
+    do {
+      if (angle >= 360)
+        angle -= 360;
+      if (angle < 0)
+        angle += 360;
+      convert_temp_to_hgr(argv[1], angle);
+    } while (edit_image(argv[1], &angle));
   } else {
     exec("qt100conv","/QT100/TEST100.qtk");
   }
