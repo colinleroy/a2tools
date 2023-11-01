@@ -177,7 +177,7 @@ char api_interact(char *id, char type, char *action) {
            type == 's' ? STATUS_ENDPOINT : ACCOUNTS_ENDPOINT, id, action);
   get_surl_for_endpoint(SURL_METHOD_POST, endpoint_buf);
 
-  surl_send_data_params(0, SURL_DATA_X_WWW_FORM_URLENCODED_RAW);
+  surl_send_data_params((uint32)0, SURL_DATA_X_WWW_FORM_URLENCODED_RAW);
   /* No need to send data */
   surl_read_response_header();
 

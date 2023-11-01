@@ -79,7 +79,7 @@ void poll_update_vote(poll *p) {
   get_surl_for_endpoint(SURL_METHOD_POST, endpoint_buf);
 
   i = strlen(params);
-  surl_send_data_params(i, SURL_DATA_APPLICATION_JSON_HELP);
+  surl_send_data_params((uint32)i, SURL_DATA_APPLICATION_JSON_HELP);
   surl_send_data(params, i);
 
   surl_read_response_header();

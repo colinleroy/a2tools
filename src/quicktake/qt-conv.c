@@ -56,6 +56,8 @@
   #pragma static-locals(push, on)
 #endif
 
+#pragma code-name (push, "LC")
+
 FILE *ifp, *ofp;
 static const char *ifname;
 static size_t data_offset;
@@ -171,10 +173,6 @@ uint8 getbithuff (uint8 nbits, uint16 *huff)
 
   return c;
 }
-#ifdef SURL_TO_LANGCARD
-#pragma code-name (push, "LC")
-#endif
-
 
 #if GREYSCALE
 static void grey_levels(uint8 h) {
@@ -347,9 +345,7 @@ out:
   return 0;
 }
 
-#ifdef SURL_TO_LANGCARD
 #pragma code-name (pop)
-#endif
 
 #ifdef __CC65__
   #pragma static-locals(pop)
