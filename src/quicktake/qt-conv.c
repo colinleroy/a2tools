@@ -50,6 +50,7 @@
 
 #include "qt-conv.h"
 #include "path_helper.h"
+#include "progress_bar.h"
 
 #ifdef __CC65__
   #pragma static-locals(push, on)
@@ -241,11 +242,10 @@ static void write_raw(void)
   uint16 idx_dst, idx_src;
   uint8 *raw_ptr;
 
-  printf("Scaling...");
   /* Scale (nearest neighbor)*/
   for (row = 0; row < band_height; row++) {
     uint16 orig_y = row * 10 / scaling_factor;
-    printf(".");
+
     idx_dst = RAW_IDX(row, 0);
     idx_src = RAW_IDX(orig_y, 0);
     for (col = 0; col < FILE_WIDTH; col++) {
@@ -256,7 +256,6 @@ static void write_raw(void)
       idx_dst++;
     }
   }
-  printf("\n");
 
   /* Write */
   raw_ptr = raw_image;
@@ -320,12 +319,15 @@ try_again:
 
   memset(raw_image, 0, raw_image_size);
 
+  clrscr();
+  printf("Decompressing...\n");
+  progress_bar(0, 1, 80*22, 0, height);
   for (h = 0; h < height; h += QT_BAND) {
-    printf("Loading lines %d-%d", h, h + QT_BAND);
     qt_load_raw(h, QT_BAND);
     write_raw();
   }
-  
+  progress_bar(-1, -1, 80*22, height, height);
+
   fclose(ifp);
   fclose(ofp);
 
@@ -335,7 +337,7 @@ try_again:
     fwrite(histogram, sizeof(uint16), 256, ofp);
     fclose(ofp);
   }
-
+  clrscr();
   printf("Done.");
 
   reload_menu(ofname);
