@@ -293,9 +293,14 @@ int main (int argc, const char **argv)
   }
 
   ifname = argv[1];
+try_again:
   if (!(ifp = fopen (ifname, "rb"))) {
-    printf("Can't open %s\n", ifname);
-    goto out;
+    printf("Please reinsert the disk containing %s,\n"
+           "or press Escape to cancel.\n", ifname);
+    if (cgetc() == CH_ESC)
+      goto out;
+    else
+      goto try_again;
   }
 
   if (identify(ifname) != 0) {

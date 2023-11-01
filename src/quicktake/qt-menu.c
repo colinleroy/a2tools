@@ -39,6 +39,15 @@ uint8 dither_threshold = DEFAULT_DITHER_THRESHOLD;
 
 static void convert_temp_to_hgr(const char *ofname);
 
+static void get_program_disk(void) {
+  while (reopen_start_device() != 0) {
+    clrscr();
+    gotoxy(13, 12);
+    printf("Please reinsert the program disk, then press any key.");
+    cgetc();
+  }
+}
+
 static void convert_image(const char *filename) {
   static char imgname[BUF_SIZE];
   if (!filename) {
@@ -58,6 +67,9 @@ static void convert_image(const char *filename) {
       magic[4] = '\0';
       fclose(fp);
     }
+
+    get_program_disk();
+
     if (!strcmp(magic, QT100_MAGIC)) {
       exec("qt100conv", imgname);
     } else if (!strcmp(magic, QT150_MAGIC)) {
@@ -118,12 +130,7 @@ static void view_image(const char *filename) {
   cgetc();
   init_text();
 
-  while (reopen_start_device() != 0) {
-    clrscr();
-    gotoxy(13, 12);
-    printf("Please reinsert the program disk, then press any key.");
-    cgetc();
-  }
+  get_program_disk();
   clrscr();
   return;
 }
@@ -154,6 +161,7 @@ char HGR_PAGE[HGR_LEN];
 static uint8 edit_image(const char *ofname) {
   char c;
 
+start_edit:
   do {
     clrscr();
     gotoxy(0, 20);
@@ -191,8 +199,8 @@ static uint8 edit_image(const char *ofname) {
         case 's':
           clrscr();
           gotoxy(0, 20);
-          printf("Once saved, image edition will not be possible anymore.\n"
-                 "Save? (Y/n) ");
+          printf("Once saved, image edition will require a new full conversion.\n"
+                 "Save? (Y/n)\n");
           c = tolower(cgetc());
           if (c != 'n')
             goto save;
@@ -225,10 +233,10 @@ static uint8 edit_image(const char *ofname) {
           dither_threshold = DEFAULT_DITHER_THRESHOLD;
           return 1;
         case 'b':
-          dither_threshold -= 10;
+          dither_threshold -= 32;
           return 1;
         case 'd':
-          dither_threshold += 10;
+          dither_threshold += 32;
           return 1;
         default:
           hgr_mixoff();
@@ -240,9 +248,10 @@ static uint8 edit_image(const char *ofname) {
 save:
   ofp = fopen(ofname, "w");
   if (ofp == NULL) {
-    printf("Can't open %s\n", ofname);
-    fclose(ifp);
-    return 0;
+    printf("Please insert image floppy for %s, or Escape to return\n", ofname);
+    if (cgetc() != CH_ESC)
+      goto save;
+    goto start_edit;
   }
   printf("\nSaving %s...\n", ofname);
   fseek(ofp, 0, SEEK_SET);
@@ -302,7 +311,8 @@ static void convert_temp_to_hgr(const char *ofname) {
 
   init_base_addrs();
 
-  printf("Finishing %s conversion...\n", ofname);
+  gotoxy(0, 20);
+  printf("Converting %s (Esc to stop)...\n", ofname);
 
   if (auto_level) {
     ifp = fopen(HIST_NAME, "r");
@@ -330,9 +340,11 @@ static void convert_temp_to_hgr(const char *ofname) {
     return;
   }
 
-  printf("Dithering...");
+  printf("Dithering...\n");
   memset(err, 0, sizeof err);
   memset((char *)HGR_PAGE, 0, HGR_LEN);
+
+  progress_bar(wherex(), wherey(), scrw, 0, FILE_HEIGHT);
 
   start_x = 0;
   end_x = FILE_WIDTH;
@@ -393,6 +405,10 @@ static void convert_temp_to_hgr(const char *ofname) {
     for(x = start_x, dx = off_x; x != end_x; x++, dx += xdir) {
       //printf("y %d dy %d x %d dx %d\n", y, dy, x, dx);
       /* Get destination pixel */
+      if (kbhit()) {
+        if (cgetc() == CH_ESC)
+          goto stop;
+      }
       if (invert_coords) {
         if (resize) {
           scaled_dy = dy * 3 / 4;
@@ -459,7 +475,9 @@ static void convert_temp_to_hgr(const char *ofname) {
         }      
       }
     }
+    progress_bar(-1, -1, scrw, y, FILE_HEIGHT);
   }
+stop:
   fclose(ifp);
 }
 
@@ -471,22 +489,16 @@ static void print_header(uint8 num_pics, uint8 left_pics, uint8 mode, const char
   chline(scrw);
 }
 
-uint8 auto_convert = 1;
-
 static uint8 print_menu(void) {
   gotoxy(0, 3);
   printf("1. Get one picture\n"
-         "2. Get all pictures\n"
-         "3. Delete all pictures\n"
-         "4. Take a picture\n"
-         "5. Convert a picture on floppy\n"
-         "6. View a picture\n"
-         "7. Set camera name\n"
-         "8. Set camera time\n"
-         "9. %s auto-conversion to HGR\n"
-         "0. Exit\n\n",
-
-          auto_convert ? "Disable":"Enable");
+         "2. Delete all pictures\n"
+         "3. Take a picture\n"
+         "4. Convert a picture on floppy\n"
+         "5. View a picture\n"
+         "6. Set camera name\n"
+         "7. Set camera time\n"
+         "0. Exit\n\n");
   return cgetc();
 }
 
@@ -500,6 +512,7 @@ static void save_picture(uint8 n_pic, uint8 full) {
   dputs("Make sure to save the picture to a floppy with\r\n"
         "at least 118480 + 8192 (124kB) free. Basically,\r\n"
         "use one floppy per picture.\r\n"
+        "Do not use /RAM, which will be used for temporary storage.\r\n\r\n"
         "Please swap disks if needed and press a key.\r\n\r\n");
   cgetc();
 
@@ -522,23 +535,7 @@ static void save_picture(uint8 n_pic, uint8 full) {
 
   qt_get_picture(n_pic, filename, full);
 
-  if (!auto_convert) {
-    char c;
-    dputs("Convert to HGR? (Y/n) ");
-    c = tolower(cgetc());
-    if (c != 'n') {
-      convert_image(filename);
-    }
-  } else {
-    convert_image(filename);
-  }
-}
-
-static void get_all_pictures(uint8 num_pics, uint8 full) {
-  uint8 n_pic;
-  for (n_pic = 1; n_pic <= num_pics; n_pic++) {
-    save_picture(n_pic, full);
-  }
+  convert_image(filename);
 }
 
 static void get_one_picture(uint8 num_pics, uint8 full) {
@@ -594,7 +591,7 @@ static void delete_pictures(void) {
   dputs("\r\nPlease wait...\r\n");
 }
 
-int main (int argc, char *argv[])
+int main(int argc, char *argv[])
 {
   uint8 num_pics, left_pics, mode, choice;
   char *name;
@@ -613,6 +610,8 @@ int main (int argc, char *argv[])
 
   if (argc > 1) {
     init_hgr();
+    hgr_mixon();
+    mix_is_on = 1;
     do {
       clrscr();
       if (angle >= 360)
@@ -621,9 +620,6 @@ int main (int argc, char *argv[])
         angle += 360;
       convert_temp_to_hgr(argv[1]);
     } while (edit_image(argv[1]));
-  } else {
-    /* For testing */
-    //exec("qt100conv","/QT100/TEST100.qtk");
   }
 
   /* Remove temporary files */
@@ -650,30 +646,24 @@ again:
       get_one_picture(num_pics, 1);
       break;
     case '2':
-      get_all_pictures(num_pics, 1);
-      break;
-    case '3':
       delete_pictures();
       break;
-    case '4':
+    case '3':
       qt_take_picture();
       break;
-    case '5':
+    case '4':
       clrscr();
       convert_image(NULL);
       break;
-    case '6':
+    case '5':
       clrscr();
       view_image(NULL);
       break;
-    case '7':
+    case '6':
       set_camera_name(name);
       break;
-    case '8':
+    case '7':
       set_camera_time();
-      break;
-    case '9':
-      auto_convert = !auto_convert;
       break;
     case '0':
       goto out;
