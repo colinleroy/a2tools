@@ -132,11 +132,11 @@ void __fastcall__ surl_read_response_header(void) {
   if (resp->content_type) {
     free(resp->content_type);
   }
-  simple_serial_read((char *)resp, 8);
+  simple_serial_read((char *)resp, 10);
+/* coverity[var_assign] */
+  resp->size = ntohl(resp->size);
 /* coverity[var_assign] */
   resp->code = ntohs(resp->code);
-/* coverity[var_assign] */
-  resp->size = ntohs(resp->size);
 /* coverity[var_assign] */
   resp->header_size = ntohs(resp->header_size);
 /* coverity[var_assign] */
