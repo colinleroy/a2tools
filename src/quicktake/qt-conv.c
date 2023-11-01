@@ -261,7 +261,7 @@ static void write_raw(void)
   raw_ptr = raw_image;
   for (row = 0; row < band_height; row++) {
     fwrite (raw_ptr, 1, FILE_WIDTH, ofp);
-    raw_ptr += width;
+    raw_ptr += raw_width;
   }
 }
 
