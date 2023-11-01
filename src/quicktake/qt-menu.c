@@ -28,12 +28,14 @@ char magic[5] = "????";
 #define DITHER_NONE   0
 #define DITHER_BURKES 1
 #define DITHER_BAYER  2
+#define DEFAULT_DITHER_THRESHOLD 128
+
 int16 angle = 0;
 uint8 auto_level = 1;
 uint8 dither_alg = DITHER_BURKES;
 uint8 resize = 1;
 uint8 mix_is_on = 0;
-uint8 dither_threshold[] = {128, 92, 120};
+uint8 dither_threshold = DEFAULT_DITHER_THRESHOLD;
 
 static void convert_temp_to_hgr(const char *ofname);
 
@@ -155,17 +157,19 @@ static uint8 edit_image(const char *ofname) {
   do {
     clrscr();
     gotoxy(0, 20);
-    printf("L: Rotate left - U: Rotate upside-down - R: Rotate right (angle %d)\n"
-           "H: Auto-level %s", angle, auto_level ? "off":"on");
+    printf("L: Rotate left - U: Rotate upside-down - R: Rotate right (Angle %d)",
+           angle);
     if (angle == 90 || angle == 270) {
       if (resize)
-        printf(" - C: Crop instead of resizing\n");
+        printf(" - C: Crop\n");
       else
-        printf(" - C: Resize instead of cropping\n");
+        printf(" - C: Fit\n");
     } else {
       printf("\n");
     }
-    printf("Dither with B: Burkes / Y: Bayer / N: Don't dither (current: %s)\n"
+    printf("H: Auto-level %s - B: Brighten - D: Darken (Threshold %d)\n",
+           auto_level ? "off":"on", dither_threshold);
+    printf("Dither with K: Burkes / Y: Bayer / N: Don't dither (Current: %s)\n"
            "S: Save - Escape: Exit without saving - Any other key: Hide help",
            dither_alg == DITHER_BURKES ? "Burkes"
             : dither_alg == DITHER_BAYER ? "Bayer" : "None");
@@ -200,14 +204,23 @@ static uint8 edit_image(const char *ofname) {
         case 'c':
           resize = !resize;
           return 1;
-        case 'b':
+        case 'k':
           dither_alg = DITHER_BURKES;
+          dither_threshold = DEFAULT_DITHER_THRESHOLD;
           return 1;
         case 'y':
           dither_alg = DITHER_BAYER;
+          dither_threshold = DEFAULT_DITHER_THRESHOLD;
           return 1;
         case 'n':
           dither_alg = DITHER_NONE;
+          dither_threshold = DEFAULT_DITHER_THRESHOLD;
+          return 1;
+        case 'b':
+          dither_threshold -= 10;
+          return 1;
+        case 'd':
+          dither_threshold += 10;
           return 1;
         default:
           hgr_mixoff();
@@ -395,7 +408,7 @@ static void convert_temp_to_hgr(const char *ofname) {
         x_minus1 = x - 1;
         x_minus2 = x - 2;
 
-        if (dither_threshold[DITHER_BURKES] > buf_plus_err) {
+        if (dither_threshold > buf_plus_err) {
           cur_err = buf_plus_err;
           ptr[0] &= dhbmono[pixel];
         } else {
@@ -425,13 +438,13 @@ static void convert_temp_to_hgr(const char *ofname) {
         uint16 val = opt_histogram[buf[x]];
 
         val += val * map[y % 8][x % 8] / 63;
-        if (dither_threshold[DITHER_BAYER] > val) {
+        if (dither_threshold > val) {
           ptr[0] &= dhbmono[pixel];
         } else {
           ptr[0] |= dhwmono[pixel];
         }
       } else if (dither_alg == DITHER_NONE) {
-        if (dither_threshold[DITHER_NONE] > opt_histogram[buf[x]]) {
+        if (dither_threshold > opt_histogram[buf[x]]) {
           ptr[0] &= dhbmono[pixel];
         } else {
           ptr[0] |= dhwmono[pixel];
