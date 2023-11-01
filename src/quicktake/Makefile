@@ -37,11 +37,11 @@ qtmenu_CC65SOURCES := \
 	../lib/clrzone.c
 
 qt100conv_SOURCES := \
-	qt-conv.c qt100.c  ../lib/path_helper.c
+	qt-conv.c qt100.c  ../lib/path_helper.c ../lib/progress_bar.c
 qt100conv_CC65SOURCES :=
 
 qt150conv_SOURCES := \
-	qt-conv.c qt150.c  ../lib/path_helper.c
+	qt-conv.c qt150.c  ../lib/path_helper.c ../lib/progress_bar.c
 qt150conv_CC65SOURCES :=
 
 GCCSOURCES := ../lib/extended_conio.c ../lib/clrzone.c

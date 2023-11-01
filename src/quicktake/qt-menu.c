@@ -620,6 +620,9 @@ int main(int argc, char *argv[])
         angle += 360;
       convert_temp_to_hgr(argv[1]);
     } while (edit_image(argv[1]));
+  } else {
+    /* For testing */
+    //exec("qt150conv","/QT150/TEST150.qtk");
   }
 
   /* Remove temporary files */

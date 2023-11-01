@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <arpa/inet.h>
+#include "progress_bar.h"
 #include "qt-conv.h"
 
 
@@ -56,7 +57,8 @@ void qt_load_raw(uint16 top, uint8 h)
   }
 
   for (row=2; row < h_plus4; row++) {
-    printf(".");
+    if (row < h_plus2)
+      progress_bar(-1, -1, 80*22, (top + row - 2), height);
     col = 2+(row & 1);
     idx = PIX_IDX(row, col);
     idx_rowminus1 = idx - PIX_WIDTH;

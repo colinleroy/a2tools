@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <arpa/inet.h>
+#include "progress_bar.h"
 #include "qt-conv.h"
 
 #define radc_token(tree) ((int8) getbithuff(8,huff[tree]))
@@ -72,7 +73,7 @@ void qt_load_raw(uint16 top, uint8 h)
   }
 
   for (row=0; row < h; row+=4) {
-    printf("....");
+    progress_bar(-1, -1, 80*22, (top + row), height);
     mul[0] = getbits(6);
     mul[1] = getbits(6);
     mul[2] = getbits(6);
