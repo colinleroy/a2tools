@@ -604,8 +604,6 @@ int main (int argc, char *argv[])
 #else
   int target_speed = 9600;
 
-//  exec("qt100conv", "/QT100/TEST100.QTK");
-
   register_start_device();
 
   videomode(VIDEOMODE_80COL);
@@ -624,7 +622,8 @@ int main (int argc, char *argv[])
       convert_temp_to_hgr(argv[1]);
     } while (edit_image(argv[1]));
   } else {
-    exec("qt100conv","/QT100/TEST100.qtk");
+    /* For testing */
+    //exec("qt100conv","/QT100/TEST100.qtk");
   }
 
   /* Remove temporary files */
