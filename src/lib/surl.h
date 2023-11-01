@@ -66,12 +66,12 @@ void __fastcall__ surl_ping(void);
 #define surl_multipart_send_num_fields(x) simple_serial_putc(x)
 
 #define surl_multipart_send_field_desc(name, len, type) do { \
-  unsigned short h_len = htons(len);                         \
+  unsigned long h_len = htonl(len);                          \
   simple_serial_puts(name);                                  \
   simple_serial_putc('\n');                                  \
   simple_serial_puts(type);                                  \
   simple_serial_putc('\n');                                  \
-  simple_serial_write((char *)&h_len, 2);                    \
+  simple_serial_write((char *)&h_len, 4);                    \
 } while (0)
 
 #define surl_multipart_send_field_data(data, len) surl_send_data(data, len)

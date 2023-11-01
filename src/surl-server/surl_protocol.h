@@ -1,7 +1,7 @@
 #ifndef __surl_protocol_h
 #define __surl_protocol_h
 
-#define SURL_PROTOCOL_VERSION 0x05
+#define SURL_PROTOCOL_VERSION 0x06
 
 #define SURL_METHOD_ABORT     ('d'|0x80)
 #define SURL_METHOD_RAW       0x05

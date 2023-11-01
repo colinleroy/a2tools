@@ -978,7 +978,7 @@ static curl_mime *setup_multipart_upload_request(char method, CURL *curl,
   if (form) {
     for (i = 0; i < n_fields; i++) {
       char *field_contents;
-      unsigned short h_len;
+      uint32 h_len;
       size_t f_len;
       simple_serial_gets(field_name, 255);
       if (strchr(field_name, '\n'))
@@ -988,8 +988,8 @@ static curl_mime *setup_multipart_upload_request(char method, CURL *curl,
       if (strchr(field_type, '\n'))
         *strchr(field_type, '\n') = '\0';
 
-      simple_serial_read((char *)&h_len, 2);
-      f_len = ntohs(h_len);
+      simple_serial_read((char *)&h_len, 4);
+      f_len = ntohl(h_len);
 
       if (!strncasecmp(field_type, "text/", 5)) {
         field_contents = malloc(f_len + 1);
@@ -1173,7 +1173,7 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
           curl_buffer_free(curlbuf);
           return NULL;
         }
-      } else {
+      } else if (method == SURL_METHOD_POST_DATA) {
         form = setup_multipart_upload_request(method, curl, &curl_headers, curlbuf);
         if (form == NULL) {
           curl_buffer_free(curlbuf);
