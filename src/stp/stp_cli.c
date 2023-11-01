@@ -63,7 +63,7 @@ void stp_print_result(const surl_response *response) {
   if (response == NULL) {
     dputs("Unknown request error.");
   } else {
-    cprintf("Response code %d - %zu bytes, %s",
+    cprintf("Response code %d - %lu bytes, %s",
             response->code,
             response->size,
             response->content_type != NULL ? response->content_type : "");

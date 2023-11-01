@@ -12,21 +12,13 @@
 
 typedef struct _surl_response surl_response;
 struct _surl_response {
-#ifdef __CC65__
-  unsigned int code;
-  size_t size;
-  size_t header_size;
-  size_t content_type_size;
-  size_t cur_pos;
-  size_t cur_hdr_pos;
-#else
-  unsigned short code;
-  unsigned short size;
-  unsigned short header_size;
-  unsigned short content_type_size;
-  unsigned short cur_pos;
-  unsigned short cur_hdr_pos;
-#endif
+  /* Mind the alignment */
+  uint32 size;
+  uint16 code;
+  uint16 header_size;
+  uint16 content_type_size;
+  uint16 cur_hdr_pos;
+  uint32 cur_pos;
   char *content_type;
 
 };

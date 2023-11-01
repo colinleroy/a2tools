@@ -76,7 +76,7 @@ int stp_save_dialog(char *url, const surl_response *resp, char *out_dir) {
   clrzone(0, 2, scrw - 1, 2 + PAGE_HEIGHT);
   gotoxy(0, 4);
   cprintf("%s\r\n"
-          "%s, %zu bytes\r\n"
+          "%s, %lu bytes\r\n"
           "\r\n"
           "Save to: ", filename, resp->content_type ? resp->content_type : "", resp->size);
 
@@ -108,7 +108,8 @@ int stp_save(char *full_filename, char *out_dir, const surl_response *resp) {
 #ifdef __APPLE2ENH__
   char *filetype;
 #endif
-  size_t r = 0, total = 0;
+  size_t r = 0;
+  uint32 total = 0;
   unsigned int buf_size;
   char keep_bin_header = 0;
   char had_error = 0;
@@ -158,11 +159,10 @@ int stp_save(char *full_filename, char *out_dir, const surl_response *resp) {
     filename = tmp;
     _filetype = PRODOS_T_SYS;
   } else {
-    cprintf("Filetype unknown, using TXT.");
+    cprintf("Filetype unknown, using BIN.");
     free(filename);
     filename = strdup(full_filename);
-    _filetype = PRODOS_T_TXT;
-    _auxtype  = PRODOS_AUX_T_TXT_SEQ;
+    _filetype = PRODOS_T_BIN;
   }
 
   filename = cleanup_filename(filename);
@@ -208,7 +208,9 @@ int stp_save(char *full_filename, char *out_dir, const surl_response *resp) {
 
   progress_bar(0, 15, scrw - 1, 0, resp->size);
   do {
-    size_t bytes_to_read = min(buf_size, resp->size - total);
+    size_t bytes_to_read = buf_size;
+    if (resp->size - total < (uint32)buf_size)
+      bytes_to_read = (uint16)(resp->size - total);
 
     clrzone(0,14, scrw - 1, 14);
     gotoxy(0, 14);
@@ -220,7 +222,7 @@ int stp_save(char *full_filename, char *out_dir, const surl_response *resp) {
     clrzone(0,14, scrw - 1, 14);
     gotoxy(0, 14);
     total += r;
-    cprintf("Saving %zu/%zu...", total, resp->size);
+    cprintf("Saving %lu/%lu bytes...", total, resp->size);
 
     if (fwrite(data, sizeof(char), r, fp) < r) {
       gotoxy(0, 15);

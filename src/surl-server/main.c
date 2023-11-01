@@ -140,13 +140,17 @@ static void do_debug(char *file_line) {
 }
 
 static void send_response_headers(curl_buffer *response) {
-  unsigned short r_hdrs[4];
-  r_hdrs[0] = htons(response->response_code);
-  r_hdrs[1] = htons(response->size);
-  r_hdrs[2] = htons(response->headers_size);
-  r_hdrs[3] = htons(strlen(response->content_type) + 1);
+  uint16 code, hdr_size, ct_size;
+  uint32 size;
+  size = htonl(response->size);
+  code = htons(response->response_code);
+  hdr_size = htons(response->headers_size);
+  ct_size = htons(strlen(response->content_type) + 1);
 
-  simple_serial_write((char *)r_hdrs, 8);
+  simple_serial_write((char *)&size, 4);
+  simple_serial_write((char *)&code, 2);
+  simple_serial_write((char *)&hdr_size, 2);
+  simple_serial_write((char *)&ct_size, 2);
   simple_serial_puts(response->content_type);
   simple_serial_putc('\0');
 }
