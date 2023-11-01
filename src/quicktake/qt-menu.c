@@ -25,7 +25,17 @@ uint8 scrw, scrh;
 #define BUF_SIZE 64
 char magic[5] = "????";
 
-static void convert_temp_to_hgr(const char *ofname, uint16 angle);
+#define DITHER_NONE   0
+#define DITHER_BURKES 1
+#define DITHER_BAYER  2
+int16 angle = 0;
+uint8 auto_level = 1;
+uint8 dither_alg = DITHER_BURKES;
+uint8 resize = 1;
+uint8 mix_is_on = 0;
+uint8 dither_threshold[] = {128, 92, 120};
+
+static void convert_temp_to_hgr(const char *ofname);
 
 static void convert_image(const char *filename) {
   static char imgname[BUF_SIZE];
@@ -98,6 +108,9 @@ static void view_image(const char *filename) {
   }
 
   init_hgr();
+  hgr_mixoff();
+  mix_is_on = 0;
+
   fclose(fp);
 
   cgetc();
@@ -131,27 +144,36 @@ static void init_base_addrs (void)
 #define FILE_WIDTH 256
 #define FILE_HEIGHT HGR_HEIGHT
 #define X_OFFSET ((HGR_WIDTH - FILE_WIDTH) / 2)
-#define DITHER_THRESHOLD 92
 
 #ifndef __CC65__
 char HGR_PAGE[HGR_LEN];
 #endif
 
-static uint8 edit_image(const char *ofname, int16 *angle) {
+static uint8 edit_image(const char *ofname) {
   char c;
-  uint8 mix_is_on = 0;
-  init_hgr();
 
   do {
+    clrscr();
+    gotoxy(0, 20);
+    printf("L: Rotate left - U: Rotate upside-down - R: Rotate right (angle %d)\n"
+           "H: Auto-level %s", angle, auto_level ? "off":"on");
+    if (angle == 90 || angle == 270) {
+      if (resize)
+        printf(" - C: Crop instead of resizing\n");
+      else
+        printf(" - C: Resize instead of cropping\n");
+    } else {
+      printf("\n");
+    }
+    printf("Dither with B: Burkes / Y: Bayer / N: Don't dither (current: %s)\n"
+           "S: Save - Escape: Exit without saving - Any other key: Hide help",
+           dither_alg == DITHER_BURKES ? "Burkes"
+            : dither_alg == DITHER_BAYER ? "Bayer" : "None");
+
     c = tolower(cgetc());
     if (!mix_is_on) {
       hgr_mixon();
       mix_is_on = 1;
-      clrscr();
-      gotoxy(0, 20);
-      printf("S: Save - Escape: Exit without saving (%d rotation)\n"
-             "L: Rotate left - U: Rotate upside-down - R: Rotate right\n"
-             "Any other key: Hide this help\n", *angle);
     } else {
       switch(c) {
         case CH_ESC:
@@ -164,13 +186,28 @@ static uint8 edit_image(const char *ofname, int16 *angle) {
         case 's':
           goto save;
         case 'r':
-          *angle += 90;
+          angle += 90;
           return 1;
         case 'l':
-          *angle -= 90;
+          angle -= 90;
           return 1;
         case 'u':
-          *angle += 180;
+          angle += 180;
+          return 1;
+        case 'h':
+          auto_level = !auto_level;
+          return 1;
+        case 'c':
+          resize = !resize;
+          return 1;
+        case 'b':
+          dither_alg = DITHER_BURKES;
+          return 1;
+        case 'y':
+          dither_alg = DITHER_BAYER;
+          return 1;
+        case 'n':
+          dither_alg = DITHER_NONE;
           return 1;
         default:
           hgr_mixoff();
@@ -204,8 +241,9 @@ FILE *ifp, *ofp;
 
 #define NUM_PIXELS 49152U //256*192
 
-static void convert_temp_to_hgr(const char *ofname, uint16 angle) {
-  uint16 x, off_x;
+static void convert_temp_to_hgr(const char *ofname) {
+  /* Rotation/cropping variables */
+  uint16 x, off_x, start_x, end_x;
   uint16 y, off_y;
   uint16 dx, dy, scaled_dx, scaled_dy;
   int8 xdir, ydir;
@@ -213,6 +251,28 @@ static void convert_temp_to_hgr(const char *ofname, uint16 angle) {
   uint8 *ptr;
   uint8 pixel;
   uint8 invert_coords;
+
+  /* Burkes variables */
+  uint8 buf_plus_err;
+  uint16 x_plus1;
+  uint16 x_plus2;
+  int16 x_minus1;
+  int16 x_minus2;
+  int16 err8, err4, err2;
+
+  /* Bayer variables */
+  uint8 map[8][8] = {
+    { 1, 49, 13, 61, 4, 52, 16, 64 },
+    { 33, 17, 45, 29, 36, 20, 48, 32 },
+    { 9, 57, 5, 53, 12, 60, 8, 56 },
+    { 41, 25, 37, 21, 44, 28, 40, 24 },
+    { 3, 51, 15, 63, 2, 50, 14, 62 },
+    { 25, 19, 47, 31, 34, 18, 46, 30 },
+    { 11, 59, 7, 55, 10, 58, 6, 54 },
+    { 43, 27, 39, 23, 42, 26, 38, 22 }
+  };
+
+  /* General variables */
   uint16 curr_hist = 0;
   uint8 *err_line_2 = err + FILE_WIDTH;
   uint16 h_plus1 = FILE_HEIGHT + 1;
@@ -223,18 +283,24 @@ static void convert_temp_to_hgr(const char *ofname, uint16 angle) {
 
   printf("Finishing %s conversion...\n", ofname);
 
-  ifp = fopen(HIST_NAME, "r");
-  if (ifp != NULL) {
-    fread(histogram, sizeof(uint16), 256, ifp);
-    fclose(ifp);
+  if (auto_level) {
+    ifp = fopen(HIST_NAME, "r");
+    if (ifp != NULL) {
+      fread(histogram, sizeof(uint16), 256, ifp);
+      fclose(ifp);
 
-    printf("Histogram equalization...\n");
-    for (x = 0; x < 256; x++) {
-      curr_hist += histogram[x];
-      opt_histogram[x] = (uint8)((((uint32)curr_hist * 255)) / NUM_PIXELS);
+      printf("Histogram equalization...\n");
+      for (x = 0; x < 256; x++) {
+        curr_hist += histogram[x];
+        opt_histogram[x] = (uint8)((((uint32)curr_hist * 255)) / NUM_PIXELS);
+      }
+    } else {
+      printf("Can't open "HIST_NAME"\n");
     }
   } else {
-    printf("Can't open "HIST_NAME"\n");
+    for (x = 0; x < 256; x++) {
+      opt_histogram[x] = x;
+    }
   }
 
   ifp = fopen(TMP_NAME, "r");
@@ -247,6 +313,8 @@ static void convert_temp_to_hgr(const char *ofname, uint16 angle) {
   memset(err, 0, sizeof err);
   memset((char *)HGR_PAGE, 0, HGR_LEN);
 
+  start_x = 0;
+  end_x = FILE_WIDTH;
   switch (angle) {
     case 0:
       off_x = X_OFFSET;
@@ -256,15 +324,29 @@ static void convert_temp_to_hgr(const char *ofname, uint16 angle) {
       invert_coords = 0;
       break;
     case 90:
-      off_x = 0;
-      off_y = 282; /* will be scaled down to 212 */
+      if (resize) {
+        off_x = 0;
+        off_y = 212 * 4 / 3;
+      } else {
+        off_x = 0;
+        off_y = HGR_WIDTH - 45;
+        start_x = 32;
+        end_x = FILE_WIDTH - 33;
+      }
       xdir = +1;
       ydir = -1;
       invert_coords = 1;
       break;
     case 270:
-      off_x = FILE_WIDTH - 1;
-      off_y = 90; /* will be scaled down to 68 */
+      if (resize) {
+        off_x = FILE_WIDTH - 1;
+        off_y = 68 * 4 / 3;
+      } else {
+        off_x = HGR_HEIGHT - 1;
+        off_y = 44;
+        start_x = 32;
+        end_x = FILE_WIDTH - 33;
+      }
       xdir = -1;
       ydir = +1;
       invert_coords = 1;
@@ -277,25 +359,27 @@ static void convert_temp_to_hgr(const char *ofname, uint16 angle) {
       invert_coords = 0;
       break;
   }
-  init_hgr();
+
   for(y = 0, dy = off_y; y != FILE_HEIGHT; y++, dy+= ydir) {
     fread(buf, 1, FILE_WIDTH, ifp);
 
     /* Rollover next error line */
-    memcpy(err, err_line_2, FILE_WIDTH);
-    memset(err_line_2, 0, FILE_WIDTH);
+    if (dither_alg == DITHER_BURKES) {
+      memcpy(err, err_line_2, FILE_WIDTH);
+      memset(err_line_2, 0, FILE_WIDTH);
+    }
 
-    for(x = 0, dx = off_x; x != FILE_WIDTH; x++, dx += xdir) {
-      uint8 buf_plus_err = opt_histogram[buf[x]] + err[x];
-      uint16 x_plus1 = x + 1;
-      uint16 x_plus2 = x + 2;
-      int16 x_minus1 = x - 1;
-      int16 x_minus2 = x - 2;
-      int16 err8, err4, err2;
-
+    for(x = start_x, dx = off_x; x != end_x; x++, dx += xdir) {
+      //printf("y %d dy %d x %d dx %d\n", y, dy, x, dx);
+      /* Get destination pixel */
       if (invert_coords) {
-        scaled_dy = dy * 3 / 4;
-        scaled_dx = dx * 3 / 4;
+        if (resize) {
+          scaled_dy = dy * 3 / 4;
+          scaled_dx = dx * 3 / 4;
+        } else {
+          scaled_dy = dy;
+          scaled_dx = dx;
+        }
         ptr = (char *)HGR_PAGE + baseaddr[scaled_dx] + scaled_dy / 7;
         pixel = scaled_dy % 7;
       } else {
@@ -303,32 +387,56 @@ static void convert_temp_to_hgr(const char *ofname, uint16 angle) {
         pixel = dx % 7;
       }
 
-      if (DITHER_THRESHOLD > buf_plus_err) {
-        cur_err = buf_plus_err;
-        ptr[0] &= dhbmono[pixel];
-      } else {
-        cur_err = buf_plus_err - 255;
-        ptr[0] |= dhwmono[pixel];
-      }
-      err8 = cur_err >> 2; /* cur_err * 8 / 32 */
-      err4 = err8 >> 1;    /* cur_err * 4 / 32 */
-      err2 = err4 >> 1;    /* cur_err * 2 / 32 */
+      /* Dither */
+      if (dither_alg == DITHER_BURKES) {
+        buf_plus_err = opt_histogram[buf[x]] + err[x];
+        x_plus1 = x + 1;
+        x_plus2 = x + 2;
+        x_minus1 = x - 1;
+        x_minus2 = x - 2;
 
-      if (x_plus1 < FILE_WIDTH) {
-        err[x_plus1]          += err8;
-        err_line_2[x_plus1]   += err4;
-        if (x_plus2 < FILE_WIDTH) {
-          err[x_plus2]        += err4;
-          err_line_2[x_plus2] += err2;
+        if (dither_threshold[DITHER_BURKES] > buf_plus_err) {
+          cur_err = buf_plus_err;
+          ptr[0] &= dhbmono[pixel];
+        } else {
+          cur_err = buf_plus_err - 255;
+          ptr[0] |= dhwmono[pixel];
         }
-      }
-      if (x_minus1 > 0) {
-        err_line_2[x_minus1]   += err4;
-        if (x_minus2 > 0) {
-          err_line_2[x_minus2] += err2;
+        err8 = cur_err >> 2; /* cur_err * 8 / 32 */
+        err4 = err8 >> 1;    /* cur_err * 4 / 32 */
+        err2 = err4 >> 1;    /* cur_err * 2 / 32 */
+
+        if (x_plus1 < FILE_WIDTH) {
+          err[x_plus1]          += err8;
+          err_line_2[x_plus1]   += err4;
+          if (x_plus2 < FILE_WIDTH) {
+            err[x_plus2]        += err4;
+            err_line_2[x_plus2] += err2;
+          }
         }
+        if (x_minus1 > 0) {
+          err_line_2[x_minus1]   += err4;
+          if (x_minus2 > 0) {
+            err_line_2[x_minus2] += err2;
+          }
+        }
+        err_line_2[x]            += err8;
+      } else if (dither_alg == DITHER_BAYER) {
+        uint16 val = opt_histogram[buf[x]];
+
+        val += val * map[y % 8][x % 8] / 63;
+        if (dither_threshold[DITHER_BAYER] > val) {
+          ptr[0] &= dhbmono[pixel];
+        } else {
+          ptr[0] |= dhwmono[pixel];
+        }
+      } else if (dither_alg == DITHER_NONE) {
+        if (dither_threshold[DITHER_NONE] > opt_histogram[buf[x]]) {
+          ptr[0] &= dhbmono[pixel];
+        } else {
+          ptr[0] |= dhwmono[pixel];
+        }      
       }
-      err_line_2[x]            += err8;
     }
   }
   fclose(ifp);
@@ -468,7 +576,6 @@ static void delete_pictures(void) {
 int main (int argc, char *argv[])
 {
   uint8 num_pics, left_pics, mode, choice;
-  int16 angle;
   char *name;
   struct tm time;
 #ifndef __CC65__
@@ -486,13 +593,15 @@ int main (int argc, char *argv[])
 #endif
 
   if (argc > 1) {
+    init_hgr();
     do {
+      clrscr();
       if (angle >= 360)
         angle -= 360;
       if (angle < 0)
         angle += 360;
-      convert_temp_to_hgr(argv[1], angle);
-    } while (edit_image(argv[1], &angle));
+      convert_temp_to_hgr(argv[1]);
+    } while (edit_image(argv[1]));
   } else {
     exec("qt100conv","/QT100/TEST100.qtk");
   }
