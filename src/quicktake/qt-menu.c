@@ -181,14 +181,22 @@ static uint8 edit_image(const char *ofname) {
     } else {
       switch(c) {
         case CH_ESC:
+          clrscr();
+          gotoxy(0, 20);
           printf("Exit without saving? (y/N) ");
           c = tolower(cgetc());
           if (c == 'y')
             goto done;
-          hgr_mixoff();
           break;
         case 's':
-          goto save;
+          clrscr();
+          gotoxy(0, 20);
+          printf("Once saved, image edition will not be possible anymore.\n"
+                 "Save? (Y/n) ");
+          c = tolower(cgetc());
+          if (c != 'n')
+            goto save;
+          break;
         case 'r':
           angle += 90;
           return 1;
