@@ -31,10 +31,10 @@
 #pragma code-name (push, "LC")
 #endif
 
-int __fastcall__ surl_send_data_params(size_t total, int mode) {
-  total = htons(total);
+int __fastcall__ surl_send_data_params(uint32 total, int mode) {
+  total = htonl(total);
   mode = htons(mode);
-  simple_serial_write((char *)&total, 2);
+  simple_serial_write((char *)&total, 4);
   simple_serial_write((char *)&mode, 2);
 
   /* Wait for go */

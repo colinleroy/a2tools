@@ -347,7 +347,6 @@ uint8 qt_get_picture(uint8 n_pic, const char *filename, uint8 full) {
 
   if (full) {
     memcpy(pic_size_str, buffer + IMG_SIZE_IDX, 3);
-    send_photo_data_command(n_pic, pic_size_str);
 
 #ifndef __CC65__
     pic_size_int = (pic_size_str[0]<<16) + (pic_size_str[1]<<8) + (pic_size_str[2]);
@@ -359,7 +358,6 @@ uint8 qt_get_picture(uint8 n_pic, const char *filename, uint8 full) {
 #endif
 
   } else {
-    send_photo_thumbnail_command(n_pic);
     pic_size_int = THUMBNAIL_SIZE;
   }
 
@@ -370,13 +368,18 @@ uint8 qt_get_picture(uint8 n_pic, const char *filename, uint8 full) {
   y = wherey();
 
   progress_bar(2, y, scrw - 2, 0, (uint16)(pic_size_int / BLOCK_SIZE));
+  if (full) {
+    send_photo_data_command(n_pic, pic_size_str);
+  } else {
+    send_photo_thumbnail_command(n_pic);
+  }
   for (i = 0; i < (uint16)(pic_size_int / BLOCK_SIZE); i++) {
 
     simple_serial_read(buffer, BLOCK_SIZE);
     fwrite(buffer, 1, BLOCK_SIZE, picture);
     DUMP_DATA(buffer, BLOCK_SIZE);
 
-    progress_bar(2, y, scrw - 2, i, (uint16)(pic_size_int / BLOCK_SIZE));
+    progress_bar(-1, -1, scrw - 2, i, (uint16)(pic_size_int / BLOCK_SIZE));
 
     send_ack();
   }
@@ -384,7 +387,7 @@ uint8 qt_get_picture(uint8 n_pic, const char *filename, uint8 full) {
   fwrite(buffer, 1, pic_size_int % BLOCK_SIZE, picture);
   DUMP_DATA(buffer, pic_size_int % BLOCK_SIZE);
 
-  progress_bar(2, y, scrw - 2, 100, 100);
+  progress_bar(-1, -1, scrw - 2, 100, 100);
 
   DUMP_END();
   fclose(picture);

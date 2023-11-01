@@ -22,6 +22,7 @@
 #include <signal.h>
 #include <curl/curl.h>
 #include <arpa/inet.h>
+#include "platform.h"
 #include "surl_protocol.h"
 #include "simple_serial.h"
 #include "extended_string.h"
@@ -894,12 +895,13 @@ static int setup_simple_upload_request(char method, CURL *curl,
                                        struct curl_slist **curl_headers,
                                        curl_buffer *curlbuf) {
   int r = 0;
-  unsigned short size, mode;
+  uint32 size;
+  unsigned short mode;
 
   simple_serial_putc(SURL_ANSWER_SEND_SIZE);
-  simple_serial_read((char *)&size, 2);
+  simple_serial_read((char *)&size, 4);
   simple_serial_read((char *)&mode, 2);
-  size = ntohs(size);
+  size = ntohl(size);
   mode = ntohs(mode);
 
   if (mode > 2) {

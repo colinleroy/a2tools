@@ -20,7 +20,7 @@
 #include "extended_conio.h"
 #include "progress_bar.h"
 
-void progress_bar(int x, int y, int width, size_t cur, size_t end) {
+void progress_bar(int x, int y, int width, unsigned long cur, unsigned long end) {
   size_t percent;
   size_t i;
   static size_t last_percent;

@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include "platform.h"
 #include "file_select.h"
 #include "stp.h"
 #include "stp_cli.h"
@@ -47,7 +48,7 @@ static char *stp_send_dialog() {
 }
 
 static unsigned long filesize = 0;
-static size_t total = 0;
+static unsigned long total = 0;
 static unsigned char type;
 static unsigned auxtype;
 static int buf_size;
@@ -129,38 +130,39 @@ void stp_send_file(char *remote_dir) {
     goto err_out;
   }
 
-  if (surl_send_data_params((size_t)filesize, SURL_DATA_X_WWW_FORM_URLENCODED_RAW) != 0) {
+  if (surl_send_data_params(filesize, SURL_DATA_X_WWW_FORM_URLENCODED_RAW) != 0) {
     goto finished;
   }
 
   total = 0;
 
   do {
-    size_t rem = (size_t)((long)filesize - (long)total);
-    size_t chunksize = min(buf_size, rem);
+    unsigned long rem = filesize - total;
+    size_t chunksize = buf_size;
+
+    if (rem < (unsigned long)chunksize)
+      chunksize = (size_t)rem;
+
     clrzone(0, start_y, scrw - 1, start_y);
     gotoxy(0, start_y);
-    cprintf("Reading %zu bytes...", chunksize);
+    cprintf("Sending %s: %lu/%lu bytes...", filename, total, filesize);
 
     r = fread(data, sizeof(char), chunksize, fp);
     progress_bar(0, start_y + 3, scrw, total + (chunksize / 2), filesize);
 
     total = total + r;
 
-    clrzone(0, start_y, scrw - 1, start_y);
-    gotoxy(0, start_y);
-    cprintf("Sending %zu/%lu...", total, filesize);
     surl_send_data(data, r);
 
-    progress_bar(0, start_y + 3, scrw, total, filesize);
+    progress_bar(-1, -1, scrw, total, filesize);
   } while (total < filesize);
-  clrzone(0, 2, scrw - 1, 2 + PAGE_HEIGHT);
-  gotoxy(0, start_y);
-  cprintf("Sent %zu/%lu.\r\n", total, filesize);
 
 finished:
   surl_read_response_header();
-  cprintf("File sent, response code: %d\r\n", resp->code);
+  clrzone(0, 2, scrw - 1, 2 + PAGE_HEIGHT);
+  gotoxy(0, start_y);
+  cprintf("Sent %lu bytes.\r\n", total);
+  cprintf("File %s sent, response code: %d\r\n", filename, resp->code);
   cprintf("Hit a key to continue.");
   cgetc();
 

@@ -420,10 +420,10 @@ static void convert_temp_to_hgr(const char *ofname) {
           scaled_dy = dy;
           scaled_dx = dx;
         }
-        ptr = (char *)HGR_PAGE + baseaddr[scaled_dx] + scaled_dy / 7;
+        ptr = (unsigned char *)HGR_PAGE + baseaddr[scaled_dx] + scaled_dy / 7;
         pixel = scaled_dy % 7;
       } else {
-        ptr = (char *)HGR_PAGE + baseaddr[dy] + dx / 7;
+        ptr = (unsigned char *)HGR_PAGE + baseaddr[dy] + dx / 7;
         pixel = dx % 7;
       }
 

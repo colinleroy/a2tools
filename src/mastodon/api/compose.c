@@ -66,7 +66,7 @@ send_again:
     surl_multipart_send_field_data(buf, r);
     to_send -= r;
     if (w > 0)
-      progress_bar(x, y, w, HGR_LEN - to_send, HGR_LEN);
+      progress_bar(-1, -1, w, HGR_LEN - to_send, HGR_LEN);
     if (to_send == 0) {
       break;
     }
@@ -111,7 +111,7 @@ send_again:
     snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, MEDIA_ENDPOINT"/%s", media_id);
     get_surl_for_endpoint(SURL_METHOD_PUT, endpoint_buf);
 
-    surl_send_data_params(len, SURL_DATA_APPLICATION_JSON_HELP);
+    surl_send_data_params((uint32)len, SURL_DATA_APPLICATION_JSON_HELP);
     surl_send_data(body, len);
 
     free(body);
@@ -222,7 +222,7 @@ signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medi
   body[o++] = '\n';
   len = o - 1;
 
-  surl_send_data_params(len, SURL_DATA_APPLICATION_JSON_HELP);
+  surl_send_data_params((uint32)len, SURL_DATA_APPLICATION_JSON_HELP);
   surl_send_data(body, len);
 
   free(body);
