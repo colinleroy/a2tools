@@ -12,11 +12,14 @@
 #include "hgr.h"
 #include "path_helper.h"
 #include "progress_bar.h"
+#include "scrollwindow.h"
 
+#include "splash.h"
 #include "qt-conv.h"
 #include "qt-serial.h"
 
 uint8 scrw, scrh;
+uint8 camera_connected;
 
 #ifdef __CC65__
   #pragma static-locals(push, on)
@@ -483,22 +486,32 @@ stop:
 
 static void print_header(uint8 num_pics, uint8 left_pics, uint8 mode, const char *name, struct tm *time) {
   gotoxy(0, 0);
-  printf("%s connected - %02d/%02d/%04d %02d:%02d\n%d photos taken, %d left, %s mode\n",
-         name, time->tm_mday, time->tm_mon, time->tm_year, time->tm_hour, time->tm_min,
-         num_pics, left_pics, qt_get_mode_str(mode));
+  if (camera_connected) {
+    printf("%s connected - %02d/%02d/%04d %02d:%02d\n%d photos taken, %d left, %s mode\n",
+          name, time->tm_mday, time->tm_mon, time->tm_year, time->tm_hour, time->tm_min,
+          num_pics, left_pics, qt_get_mode_str(mode));
+  } else {
+    printf("No camera connected\n\n");
+  }
   chline(scrw);
 }
 
 static uint8 print_menu(void) {
   gotoxy(0, 3);
-  printf("1. Get one picture\n"
-         "2. Delete all pictures\n"
-         "3. Take a picture\n"
-         "4. Convert a picture on floppy\n"
-         "5. View a picture\n"
-         "6. Set camera name\n"
-         "7. Set camera time\n"
-         "0. Exit\n\n");
+  if (camera_connected) {
+    printf("1. Get one picture\n"
+           "2. Delete all pictures\n"
+           "3. Take a picture\n");
+  } else {
+    printf("1. Connect camera\n");
+  }
+  printf(  "4. Re-edit a raw picture from floppy\n"
+           "5. View a converted picture from floppy\n");
+  if (camera_connected) {
+    printf("6. Set camera name\n"
+           "7. Set camera time\n");
+  }
+  printf(  "0. Exit\n\n");
   return cgetc();
 }
 
@@ -533,29 +546,36 @@ static void save_picture(uint8 n_pic, uint8 full) {
     strcat(filename, ".QTK");
   }
 
-  qt_get_picture(n_pic, filename, full);
-
-  convert_image(filename);
+  if (qt_get_picture(n_pic, filename, full) == 0) {
+    convert_image(filename);
+  }
 }
 
 static void get_one_picture(uint8 num_pics, uint8 full) {
   char buf[3];
   int8 n_pic;
 
-again:
   dputs("Picture number? ");
   buf[0] = '\0';
   dget_text(buf, 3, NULL, 0);
+  
+  if (buf[0] == '\0')
+    return;
+
   n_pic = atoi(buf);
   if (n_pic < 1 || n_pic > num_pics) {
     dputc(0x07);
-    goto again;
+    printf("No image %d in camera.\n", n_pic);
+    return;
   }
   save_picture(n_pic, full);
 }
 
 static void set_camera_name(const char *name) {
   char buf[31];
+  if (name == NULL) {
+    return;
+  }
 
   strncpy(buf, name, 31);
 
@@ -604,16 +624,18 @@ int main(int argc, char *argv[])
   register_start_device();
 
   videomode(VIDEOMODE_80COL);
-  printf("Free memory: %zu/%zuB\n", _heapmaxavail(), _heapmemavail());
   screensize(&scrw, &scrh);
+  init_hgr();
+  hgr_mixon();
+  mix_is_on = 1;
+  clrscr();
+  gotoxy(0,20);
+  printf("Welcome to Quicktake for Apple II - (c) Colin Leroy-Mira, https://colino.net\n");
+  printf("Free memory: %zuB - ", _heapmemavail());
 #endif
 
   if (argc > 1) {
-    init_hgr();
-    hgr_mixon();
-    mix_is_on = 1;
     do {
-      clrscr();
       if (angle >= 360)
         angle -= 360;
       if (angle < 0)
@@ -621,38 +643,51 @@ int main(int argc, char *argv[])
       convert_temp_to_hgr(argv[1]);
     } while (edit_image(argv[1]));
   } else {
-    /* For testing */
-    //exec("qt150conv","/QT150/TEST150.qtk");
+    set_scrollwindow(21, scrh);
   }
 
   /* Remove temporary files */
   unlink(HIST_NAME);
   unlink(TMP_NAME);
 
+  camera_connected = 0;
+connect:
   while (qt_serial_connect(target_speed) != 0) {
     char c;
-    dputs("Try again? (Y/n) ");
+    dputs("Error. Try again? (Y/n)\r\n");
     c = tolower(cgetc());
     if (c == 'n')
-      goto out;
+      goto menu;
+  }
+  camera_connected = 1;
+menu:
+  if (camera_connected) {
+    qt_get_information(&num_pics, &left_pics, &mode, &name, &time);
   }
 
-again:
-  qt_get_information(&num_pics, &left_pics, &mode, &name, &time);
-
+  init_text();
+  set_scrollwindow(0, scrh);
   clrscr();
   print_header(num_pics, left_pics, mode, name, &time);
 
   choice = print_menu();
   switch(choice) {
     case '1':
-      get_one_picture(num_pics, 1);
+      if (camera_connected) {
+        get_one_picture(num_pics, 1); 
+      } else {
+        goto connect;
+      }
       break;
     case '2':
-      delete_pictures();
+      if (camera_connected) {
+        delete_pictures();
+      }
       break;
     case '3':
-      qt_take_picture();
+      if (camera_connected) {
+        qt_take_picture();
+      }
       break;
     case '4':
       clrscr();
@@ -663,17 +698,21 @@ again:
       view_image(NULL);
       break;
     case '6':
-      set_camera_name(name);
+      if (camera_connected) {
+        set_camera_name(name);
+      }
       break;
     case '7':
-      set_camera_time();
+      if (camera_connected) {
+        set_camera_time();
+      }
       break;
     case '0':
       goto out;
     default:
       break;
   }
-  goto again;
+  goto menu;
 
 out:
   free(name);

@@ -13,6 +13,8 @@
 
 extern uint8 scrw, scrh;
 
+#pragma code-name(push, "LC")
+
 #ifndef __CC65__
 FILE *dbgfp = NULL;
 
@@ -46,9 +48,8 @@ unsigned __fastcall__ sleep (unsigned wait) {
 #define BLOCK_SIZE 512
 static char buffer[BLOCK_SIZE];
 
-static int get_ack(void) {
-  if (simple_serial_getc() != 0x00) {
-    printf("unexpected reply\n");
+static uint8 get_ack(void) {
+  if (simple_serial_getc_with_timeout() != 0x00) {
     return -1;
   }
   return 0;
@@ -58,10 +59,10 @@ static void send_ack() {
   simple_serial_putc(0x06);
 }
 
-static void send_separator(void) {
+static uint8 send_separator(void) {
   char str_start[] = {0x16,0x00,0x00,0x00,0x00,0x00,0x00};
   simple_serial_write(str_start, sizeof(str_start));
-  get_ack();
+  return get_ack();
 }
 
 static uint8 get_hello(void) {
@@ -71,7 +72,7 @@ static uint8 get_hello(void) {
   for (i = 0; i < 7; i++) {
     int c = simple_serial_getc_with_timeout();
     if (c == EOF) {
-      printf("Cannot connect (timeout at byte %d/7).\n", i + 1);
+      printf("Cannot connect (timeout).\n");
       DUMP_END();
       return -1;
     }
@@ -81,11 +82,11 @@ static uint8 get_hello(void) {
   return 0;
 }
 
-static void send_hello(uint16 speed) {
+static uint8 send_hello(uint16 speed) {
   #define SPD_IDX 0x06
   #define CHK_IDX 0x0C
   char str_hello[] = {0x5A,0xA5,0x55,0x05,0x00,0x00,0x25,0x80,0x00,0x80,0x02,0x00,0x80};
-
+  int r;
   DUMP_START("qt_hello_reply");
   if (speed == 19200) {
     str_hello[SPD_IDX]   = 0x4B;
@@ -98,10 +99,17 @@ static void send_hello(uint16 speed) {
   }
 
   simple_serial_write(str_hello, sizeof(str_hello));
-  simple_serial_read(buffer, 10);
+  r = simple_serial_getc_with_timeout();
+  if (r == EOF) {
+    return -1;
+  }
+  buffer[0] = (char)r;
+  simple_serial_read(buffer + 1, 9);
 
   DUMP_DATA(buffer, 10);
   DUMP_END();
+
+  return 0;
 }
 
 static uint8 send_command(const char *cmd, uint8 len, uint8 s_ack) {
@@ -271,7 +279,7 @@ static void write_qtkt_header(FILE *fp) {
 
 #define char_to_n_uint16(buf) (((uint8)((buf)[1]))<<8 | ((uint8)((buf)[0])))
 
-void qt_get_picture(uint8 n_pic, const char *filename, uint8 full) {
+uint8 qt_get_picture(uint8 n_pic, const char *filename, uint8 full) {
   #define IMG_WIDTH_IDX  0x08
   #define IMG_HEIGHT_IDX 0x0A
   #define IMG_SIZE_IDX   0x05
@@ -281,6 +289,7 @@ void qt_get_picture(uint8 n_pic, const char *filename, uint8 full) {
   #define DATA_OFFSET    0x2E0
 
   uint16 i;
+  int r;
   FILE *picture;
   uint16 width, height;
   unsigned char pic_size_str[3];
@@ -304,7 +313,12 @@ void qt_get_picture(uint8 n_pic, const char *filename, uint8 full) {
   DUMP_START("header");
 
   send_photo_header_command(n_pic);
-  simple_serial_read(buffer, 64);
+  r = simple_serial_getc_with_timeout();
+  if (r == EOF) {
+    return -1;
+  }
+  buffer[0] = (char)r;
+  simple_serial_read(buffer + 1, 63);
 
   DUMP_DATA(buffer, 64);
   DUMP_END();
@@ -374,6 +388,7 @@ void qt_get_picture(uint8 n_pic, const char *filename, uint8 full) {
 
   DUMP_END();
   fclose(picture);
+  return 0;
 }
 
 uint8 qt_delete_pictures(void) {
@@ -381,6 +396,7 @@ uint8 qt_delete_pictures(void) {
 }
 
 uint8 qt_serial_connect(uint16 speed) {
+  simple_serial_close();
   printf("Connecting to Quicktake...\n");
 #ifdef __CC65__
   simple_serial_set_speed(SER_BAUD_9600);
@@ -391,7 +407,9 @@ uint8 qt_serial_connect(uint16 speed) {
   simple_serial_set_speed(B9600);
 #endif
 
-  simple_serial_open();
+  if (simple_serial_open() != 0) {
+    return -1;
+  }
   simple_serial_flush();
 #ifdef __CC65__
   #ifndef IIGS
@@ -443,7 +461,7 @@ const char *qt_get_mode_str(uint8 mode) {
   }
 }
 
-void qt_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *mode, char **name, struct tm *time) {
+uint8 qt_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *mode, char **name, struct tm *time) {
   #define NUM_PICS_IDX   0x04
   #define LEFT_PICS_IDX  0x06
   #define MODE_IDX       0x07
@@ -453,13 +471,19 @@ void qt_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *mode, char **n
   #define HOUR_IDX       0x13
   #define MIN_IDX        0x14
   #define NAME_IDX       0x2F
+  int r;
 
   printf("Getting information...\n");
 
   DUMP_START("summary");
 
   send_photo_summary_command();
-  simple_serial_read(buffer, 128);
+  r = simple_serial_getc_with_timeout();
+  if (r == EOF) {
+    return -1;
+  }
+  buffer[0] = (char)r;
+  simple_serial_read(buffer + 1, 127);
 
   DUMP_DATA(buffer, 128);
   DUMP_END();
@@ -475,4 +499,6 @@ void qt_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *mode, char **n
   time->tm_min  = buffer[MIN_IDX];
 
   *name = trim(buffer + NAME_IDX);
+  return 0;
 }
+#pragma code-name(pop)

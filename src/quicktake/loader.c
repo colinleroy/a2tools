@@ -24,7 +24,7 @@ void main(int argc, char *argv[]) {
     printf("Couldn't initialize SDL: %s\n", SDL_GetError());
     return;
   }
-
+  printf("loading image %s (%dx%d)\n", argv[1],w,h);
   screen = SDL_SetVideoMode(w, h, 32, SDL_HWSURFACE | SDL_DOUBLEBUF);
   if (screen == NULL) {
     printf("Couldn't initialize screen: %s\n", SDL_GetError());
