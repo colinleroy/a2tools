@@ -314,6 +314,7 @@ static void convert_temp_to_hgr(const char *ofname) {
 
   init_base_addrs();
 
+  clrscr();
   gotoxy(0, 20);
   printf("Converting %s (Esc to stop)...\n", ofname);
 
@@ -619,7 +620,11 @@ int main(int argc, char *argv[])
 #ifndef __CC65__
   int target_speed = 57600;
 #else
+#ifndef IIGS
+  int target_speed = 19200;
+#else
   int target_speed = 9600;
+#endif
 
   register_start_device();
 
