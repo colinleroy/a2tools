@@ -92,10 +92,10 @@ void simple_serial_printf(const char* format, ...) {
 
 #ifdef __CC65__
 void simple_serial_set_speed(int b) {
+#ifndef IIGS
   static unsigned char reg_idx;
   /* Set speed before port is opened */
   baudrate = (unsigned char)b;
-#ifndef IIGS
   /* Set speed after port is opened */
   reg_idx = slot << 4;
 
@@ -117,8 +117,11 @@ void simple_serial_set_speed(int b) {
     default:
       break;
   }
+#else
+  baudrate = (unsigned char)b;
 #endif
 }
+
 void simple_serial_set_flow_control(unsigned char fc) {
   flow_control = fc;
 }
@@ -127,26 +130,45 @@ void simple_serial_dtr_onoff(unsigned char on) {
 #ifndef IIGS
   simple_serial_acia_onoff(slot, on);
 #else
+  /* http://www.applelogic.org/files/Z8530UM.pdf */
+  if (on) {
+    __asm__("ldx     #5");
+    __asm__("stx     $c038");
+    __asm__("lda     $c038");
+    __asm__("and     #%b", (unsigned char)0b01111111);
+    __asm__("stx     $c038");
+    __asm__("sta     $c038");
+  } else {
+    __asm__("ldx     #5");
+    __asm__("stx     $c038");
+    __asm__("lda     $c038");
+    __asm__("ora     #%b", (unsigned char)0b10000000);
+    __asm__("stx     $c038");
+    __asm__("sta     $c038");
+  }
 #endif
 }
 
-void simple_serial_acia_onoff(unsigned char slot_num, unsigned char on) {
 #ifndef IIGS
+void simple_serial_acia_onoff(unsigned char slot_num, unsigned char on) {
   static unsigned char reg_idx;
   
   reg_idx = slot_num << 4;
 
   if (on) {
     __asm__("ldx     %v", reg_idx);
-    __asm__("lda     #%b", (unsigned char)0b00001011);
+    __asm__("lda     $c08a,x");
+    __asm__("and     #%b", (unsigned char)0b11110000);
+    __asm__("ora     #%b", (unsigned char)0b00001011);
     __asm__("sta     $c08a,x");
   } else {
     __asm__("ldx     %v", reg_idx);
-    __asm__("lda     #%b", (unsigned char)0b00000000);
+    __asm__("lda     $c08a,x");
+    __asm__("and     #%b", (unsigned char)0b11110000);
     __asm__("sta     $c08a,x");
   }
-#endif
 }
+#endif
 
 /* https://www.princeton.edu/~mae412/HANDOUTS/Datasheets/6551_acia.pdf */
 void simple_serial_set_parity(unsigned int p) {
@@ -189,6 +211,41 @@ void simple_serial_set_parity(unsigned int p) {
       __asm__("and     #%b", (unsigned char)0b00011111);
       __asm__("ora     #%b", (unsigned char)0b11100000);
       __asm__("sta     $c08a,x");
+      break;
+    default:
+      break;
+  }
+#else
+  switch (p) {
+    case SER_PAR_NONE:
+      __asm__("ldx     #4");
+      __asm__("stx     $c038");
+      __asm__("lda     $c038");
+      __asm__("and     #%b", (unsigned char)0b11111100);
+      __asm__("stx     $c038");
+      __asm__("sta     $c038");
+      break;
+    case SER_PAR_EVEN:
+      __asm__("ldx     #4");
+      __asm__("stx     $c038");
+      __asm__("lda     $c038");
+      __asm__("and     #%b", (unsigned char)0b11111100);
+      __asm__("ora     #%b", (unsigned char)0b00000011);
+      __asm__("stx     $c038");
+      __asm__("sta     $c038");
+      break;
+    case SER_PAR_ODD:
+      __asm__("ldx     #4");
+      __asm__("stx     $c038");
+      __asm__("lda     $c038");
+      __asm__("and     #%b", (unsigned char)0b11111100);
+      __asm__("ora     #%b", (unsigned char)0b00000001);
+      __asm__("stx     $c038");
+      __asm__("sta     $c038");
+      break;
+    case SER_PAR_MARK:
+      break;
+    case SER_PAR_SPACE:
       break;
     default:
       break;

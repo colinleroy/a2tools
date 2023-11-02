@@ -35,7 +35,7 @@ qtmenu_SOURCES := \
 
 qtmenu_CC65SOURCES := \
 	../lib/dputc.s ../lib/dputs.s ../lib/scroll.s \
-	../lib/clrzone.c
+	../lib/clrzone.c ../lib/fastirq$(suffix).s
 
 qt100conv_SOURCES := \
 	qt-conv.c qt100.c  ../lib/path_helper.c ../lib/progress_bar.c
