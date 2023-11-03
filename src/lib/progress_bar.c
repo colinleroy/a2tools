@@ -34,12 +34,7 @@ void progress_bar(int x, int y, int width, unsigned long cur, unsigned long end)
     last_percent = 0;
   }
 
-  if (end > 512) {
-    cur /= 512;
-    end /= 512;
-  }
-  percent = cur * width;
-  percent = percent / end;
+  percent = (size_t)(cur * width / end);
 
   revers(1);
   for (i = last_percent; i < percent && i < width; i++)
