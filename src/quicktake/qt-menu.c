@@ -485,12 +485,13 @@ stop:
   fclose(ifp);
 }
 
-static void print_header(uint8 num_pics, uint8 left_pics, uint8 mode, const char *name, struct tm *time) {
+static void print_header(uint8 num_pics, uint8 left_pics, uint8 mode, uint8 flash_mode, const char *name, struct tm *time) {
   gotoxy(0, 0);
   if (camera_connected) {
-    printf("%s connected - %02d/%02d/%04d %02d:%02d\n%d photos taken, %d left, %s mode\n",
+    printf("%s connected - %02d/%02d/%04d %02d:%02d\n"
+           "%d photos taken, %d left, %s mode, %s flash\n",
           name, time->tm_mday, time->tm_mon, time->tm_year, time->tm_hour, time->tm_min,
-          num_pics, left_pics, qt_get_mode_str(mode));
+          num_pics, left_pics, qt_get_mode_str(mode), qt_get_flash_str(flash_mode));
   } else {
     printf("No camera connected\n\n");
   }
@@ -614,7 +615,7 @@ static void delete_pictures(void) {
 
 int main(int argc, char *argv[])
 {
-  uint8 num_pics, left_pics, mode, choice;
+  uint8 num_pics, left_pics, mode, choice, flash;
   char *name;
   struct tm time;
 #ifndef __CC65__
@@ -674,13 +675,13 @@ connect:
   camera_connected = 1;
 menu:
   if (camera_connected) {
-    qt_get_information(&num_pics, &left_pics, &mode, &name, &time);
+    qt_get_information(&num_pics, &left_pics, &mode, &flash, &name, &time);
   }
 
   init_text();
   set_scrollwindow(0, scrh);
   clrscr();
-  print_header(num_pics, left_pics, mode, name, &time);
+  print_header(num_pics, left_pics, mode, flash, name, &time);
 
   choice = print_menu();
   switch(choice) {
