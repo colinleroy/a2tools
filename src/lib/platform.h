@@ -30,7 +30,9 @@
 #endif
 
 #ifdef __APPLE2__
-void platform_sleep(int n);
+void platform_sleep(uint8 s);
+void platform_msleep(uint16 ms);
 #else
 #define platform_sleep(n) sleep(n)
+#define platform_msleep(n) usleep(n*1000)
 #endif

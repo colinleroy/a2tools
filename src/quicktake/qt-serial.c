@@ -262,6 +262,10 @@ static uint8 qt_set_speed(uint16 speed) {
   printf("Setting speed to %u...\n", speed);
   simple_serial_write(str_speed, sizeof str_speed);
 
+
+/* This part is very sensitive to timing */
+  /* Wait about 5ms */
+  platform_msleep(5);
   /* get ack */
   if (get_ack() != 0) {
     printf("Speed set command failed.\n");
@@ -269,14 +273,11 @@ static uint8 qt_set_speed(uint16 speed) {
   }
   send_ack();
 
-  /* For example, remove that printf here and the IIgs
-   * will fail to setup 57.6kbps. But put a sleep, and
-   * it will also fail.
-   */
-  printf("Toggling our speed...\n");
+  /* wait about 2ms */
+  platform_msleep(2);
   simple_serial_set_speed(spd_code);
 
-  /* Get some data ?? */
+  /* Get some data (1kB) */
   nbytes = 0;
   ntries = 0;
 again:
@@ -291,7 +292,7 @@ again:
     printf("Negotiation failed (%d bytes read/1024).\n", nbytes);
     return -1;
   }
-  /* End of the part that is very sensitive to timing */
+/* End of the part that is very sensitive to timing */
   
   send_ack();
   return get_ack();
