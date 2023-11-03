@@ -430,9 +430,6 @@ uint8 qt_serial_connect(uint16 speed) {
   printf("Connecting to Quicktake...\n");
 #ifdef __CC65__
   simple_serial_set_speed(SER_BAUD_9600);
-  #ifndef IIGS
-  simple_serial_set_flow_control(SER_HS_NONE);
-  #endif
 #else
   simple_serial_set_speed(B9600);
 #endif
