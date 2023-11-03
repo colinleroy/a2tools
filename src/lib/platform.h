@@ -27,5 +27,10 @@
     #include "extended_conio.h"
   #endif
 #endif
+#endif
 
+#ifdef __APPLE2__
+void platform_sleep(int n);
+#else
+#define platform_sleep(n) sleep(n)
 #endif
