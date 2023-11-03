@@ -621,7 +621,7 @@ int main(int argc, char *argv[])
   uint16 target_speed = 57600U;
 #else
 #ifndef IIGS
-  uint16 target_speed = 19200;
+  uint16 target_speed = 19200U;
 #else
   uint16 target_speed = 57600U;
 #endif
