@@ -10,6 +10,7 @@
 #include "extended_string.h"
 #include "progress_bar.h"
 #include "simple_serial.h"
+#include "qt-serial.h"
 
 extern uint8 scrw, scrh;
 
@@ -48,10 +49,13 @@ FILE *dbgfp = NULL;
 static char buffer[BLOCK_SIZE];
 
 static uint8 get_ack(void) {
-  if (simple_serial_getc_with_timeout() != 0x00) {
-    return -1;
+  uint16 wait = 5000;
+  while (wait--) {
+    if (simple_serial_getc_with_timeout() == 0x00) {
+      return 0;
+    }
   }
-  return 0;
+  return -1;
 }
 
 static void send_ack() {
@@ -129,6 +133,8 @@ static uint8 send_command(const char *cmd, uint8 len, uint8 s_ack) {
 /* Take a picture */
 uint8 qt_take_picture(void) {
   char str[] = {0x16,0x1B,0x00,0x00,0x00,0x00,0x00};
+  
+  send_separator();
 
   return send_command(str, sizeof str, 0);
 }
@@ -490,7 +496,18 @@ const char *qt_get_mode_str(uint8 mode) {
   }
 }
 
-uint8 qt_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *mode, char **name, struct tm *time) {
+const char *qt_get_flash_str(uint8 mode) {
+  switch(mode) {
+    case 0:  return "automatic";
+    case 1:  return "disabled";
+    case 2:  return "forced";
+    default: return "Unknown";
+  }
+}
+
+uint8 qt_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mode, uint8 *flash_mode, char **name, struct tm *time) {
+  uint8 n;
+  #define BATTERY_IDX    0x02 /* ?? */
   #define NUM_PICS_IDX   0x04
   #define LEFT_PICS_IDX  0x06
   #define MODE_IDX       0x07
@@ -499,6 +516,8 @@ uint8 qt_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *mode, char **
   #define YEAR_IDX       0x12
   #define HOUR_IDX       0x13
   #define MIN_IDX        0x14
+  #define SEC_IDX        0x15
+  #define FLASH_IDX      0x16
   #define NAME_IDX       0x2F
 
   printf("Getting information...\n");
@@ -510,10 +529,12 @@ uint8 qt_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *mode, char **
 
   DUMP_DATA(buffer, 128);
   DUMP_END();
+  
 
-  *num_pics = buffer[NUM_PICS_IDX];
-  *left_pics = buffer[LEFT_PICS_IDX];
-  *mode = buffer[MODE_IDX];
+  *num_pics     = buffer[NUM_PICS_IDX];
+  *left_pics    = buffer[LEFT_PICS_IDX];
+  *quality_mode = buffer[MODE_IDX];
+  *flash_mode   = buffer[FLASH_IDX];
 
   time->tm_mday = buffer[DAY_IDX];
   time->tm_mon  = buffer[MONTH_IDX];
