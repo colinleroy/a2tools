@@ -618,12 +618,12 @@ int main(int argc, char *argv[])
   char *name;
   struct tm time;
 #ifndef __CC65__
-  int target_speed = 57600;
+  uint16 target_speed = 57600U;
 #else
 #ifndef IIGS
-  int target_speed = 19200;
+  uint16 target_speed = 19200;
 #else
-  int target_speed = 9600;
+  uint16 target_speed = 57600U;
 #endif
 
   register_start_device();
@@ -659,10 +659,17 @@ int main(int argc, char *argv[])
 connect:
   while (qt_serial_connect(target_speed) != 0) {
     char c;
-    dputs("Error. Try again? (Y/n)\r\n");
+
+    if (target_speed != 9600)
+      printf("Please turn the Quicktake off and on. Try again at %u or at 9600bps? (Y/n/9)\n", target_speed);
+    else
+      printf("Please turn the Quicktake off and on. Try again? (Y/n)\n");
+
     c = tolower(cgetc());
     if (c == 'n')
       goto menu;
+    if(c == '9')
+      target_speed = 9600;
   }
   camera_connected = 1;
 menu:

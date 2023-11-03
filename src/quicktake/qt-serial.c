@@ -13,35 +13,34 @@
 
 extern uint8 scrw, scrh;
 
-#pragma code-name(push, "LC")
-
 #ifndef __CC65__
 FILE *dbgfp = NULL;
 
-#define DUMP_START(name) do {       \
-  dbgfp = fopen(name".dump", "wb"); \
-} while (0)
-#define DUMP_DATA(buf,size) do {    \
-  fwrite(buf, 1, size, dbgfp);      \
-} while (0)
-#define DUMP_END() do {             \
-  fclose(dbgfp);                    \
-} while (0)
+  #define DUMP_START(name) do {       \
+    dbgfp = fopen(name".dump", "wb"); \
+  } while (0)
+  #define DUMP_DATA(buf,size) do {    \
+    fwrite(buf, 1, size, dbgfp);      \
+  } while (0)
+  #define DUMP_END() do {             \
+    fclose(dbgfp);                    \
+  } while (0)
 
 #else
 
-#define DUMP_START(name)
-#define DUMP_DATA(buf,size)
-#define DUMP_END()
-
-unsigned __fastcall__ sleep (unsigned wait) {
-  int i;
-  while (wait > 0) {
-    for (i = 0; i < 30000; i++);
-    wait--;
-  }
-  return 0;
-}
+  #if 0
+  uint16 dump_counter;
+    #define DUMP_START(name) printf("\n%s :", name)
+    #define DUMP_DATA(buf,size)  do {    \
+      for (dump_counter = 0; dump_counter < size; dump_counter++) \
+        printf("%02x ", (unsigned char) buf[dump_counter]);       \
+    } while (0)
+    #define DUMP_END() printf("\n")
+  #else
+    #define DUMP_START(name)
+    #define DUMP_DATA(buf,size)
+    #define DUMP_END()
+  #endif
 
 #endif
 
@@ -66,21 +65,24 @@ static uint8 send_separator(void) {
 }
 
 static uint8 get_hello(void) {
-  uint8 i;
+  int c;
   DUMP_START("qt_hello");
 
-  for (i = 0; i < 7; i++) {
-    int c = simple_serial_getc_with_timeout();
-    if (c == EOF) {
-      printf("Cannot connect (timeout).\n");
-      DUMP_END();
-      return -1;
-    }
-    DUMP_DATA(&c, 1);
+  c = simple_serial_getc_with_timeout();
+  if (c == EOF) {
+    printf("Cannot connect (timeout).\n");
+    DUMP_END();
+    return -1;
   }
+  buffer[0] = (unsigned char)c;
+  simple_serial_read(buffer + 1, 6);
+
+  DUMP_DATA(buffer, 7);
   DUMP_END();
   return 0;
 }
+
+#pragma code-name(push, "LC")
 
 static uint8 send_hello(uint16 speed) {
   #define SPD_IDX 0x06
@@ -223,6 +225,7 @@ void qt_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 mi
 static uint8 qt_set_speed(uint16 speed) {
   char str_speed[] = {0x16,0x2A,0x00,0x03,0x00,0x00,0x00,0x00,0x00,0x05,0x00,0x03,0x03,0x08,0x04,0x00};
   int spd_code;
+  int nbytes, ntries;
 
   switch(speed) {
     case 9600:
@@ -252,21 +255,44 @@ static uint8 qt_set_speed(uint16 speed) {
       str_speed[SPD_CMD_IDX] = 0x30;
       break;
   }
+
+  /* This part is very sensitive to timing and I
+   * didn't yet figure out how to make things square.
+   */
+  printf("Setting speed to %u...\n", speed);
   simple_serial_write(str_speed, sizeof str_speed);
 
   /* get ack */
   if (get_ack() != 0) {
+    printf("Speed set command failed.\n");
     return -1;
   }
   send_ack();
 
-  sleep(1);
+  /* For example, remove that printf here and the IIgs
+   * will fail to setup 57.6kbps. But put a sleep, and
+   * it will also fail.
+   */
+  printf("Toggling our speed...\n");
   simple_serial_set_speed(spd_code);
-  sleep(1);
 
   /* Get some data ?? */
-  while (simple_serial_getc_with_timeout() != EOF);
-
+  nbytes = 0;
+  ntries = 0;
+again:
+  while (simple_serial_getc_with_timeout() != EOF) {
+    nbytes++;
+  }
+  if (nbytes < 1024 && ntries < 10) {
+    ntries++;
+    goto again;
+  }
+  if (nbytes < 1024) {
+    printf("Negotiation failed (%d bytes read/1024).\n", nbytes);
+    return -1;
+  }
+  /* End of the part that is very sensitive to timing */
+  
   send_ack();
   return get_ack();
 }
@@ -296,7 +322,7 @@ uint8 qt_get_picture(uint8 n_pic, const char *filename, uint8 full) {
   unsigned long pic_size_int;
   uint8 y;
 
-  sleep(1);
+  platform_sleep(1);
 
   picture = fopen(filename,"wb");
 
@@ -409,25 +435,26 @@ uint8 qt_serial_connect(uint16 speed) {
 #else
   simple_serial_set_speed(B9600);
 #endif
-
   if (simple_serial_open() != 0) {
     return -1;
   }
   simple_serial_flush();
 #ifdef __CC65__
   #ifndef IIGS
-
-  printf("Toggling printer port on...\n");
-  simple_serial_acia_onoff(1, 1);
-  sleep(1);
-  printf("Toggling printer port off...\n");
-  simple_serial_acia_onoff(1, 0);
-
+    printf("Toggling printer port on...\n");
+    simple_serial_acia_onoff(1, 1);
+    platform_sleep(1);
+    printf("Toggling printer port off...\n");
+    simple_serial_acia_onoff(1, 0);
   #else
-  printf("Toggling DTR off...\n");
-  simple_serial_dtr_onoff(0);
+    printf("Toggling DTR on...\n");
+    simple_serial_dtr_onoff(1);
+    printf("Toggling DTR off...\n");
+    simple_serial_dtr_onoff(0);
   #endif
 #else
+  printf("Toggling DTR on...\n");
+  simple_serial_dtr_onoff(1);
   printf("Toggling DTR off...\n");
   simple_serial_dtr_onoff(0);
 #endif
@@ -448,12 +475,13 @@ uint8 qt_serial_connect(uint16 speed) {
 #endif
   printf("Parity set.\n");
 
-  sleep(1);
+  platform_sleep(1);
   printf("Initializing...\n");
 
-  qt_set_speed(speed);
-
-  return 0;
+  if (speed != 9600)
+    return qt_set_speed(speed);
+  else
+    return send_separator();
 }
 
 const char *qt_get_mode_str(uint8 mode) {
@@ -474,19 +502,13 @@ uint8 qt_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *mode, char **
   #define HOUR_IDX       0x13
   #define MIN_IDX        0x14
   #define NAME_IDX       0x2F
-  int r;
 
   printf("Getting information...\n");
 
   DUMP_START("summary");
 
   send_photo_summary_command();
-  r = simple_serial_getc_with_timeout();
-  if (r == EOF) {
-    return -1;
-  }
-  buffer[0] = (char)r;
-  simple_serial_read(buffer + 1, 127);
+  simple_serial_read(buffer, 128);
 
   DUMP_DATA(buffer, 128);
   DUMP_END();
