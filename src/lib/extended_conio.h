@@ -49,5 +49,4 @@
 
 void printxcentered(int y, char *buf);
 void printxcenteredbox(int width, int height);
-
 #endif

@@ -118,7 +118,36 @@ void simple_serial_set_speed(int b) {
       break;
   }
 #else
+  /* Set speed before port is opened */
   baudrate = (unsigned char)b;
+  /* Set speed after port is opened */
+  switch (b) {
+    case SER_BAUD_9600:
+    __asm__("ldx     #12"); /* BaudLow */
+    __asm__("lda     #$0A");
+    __asm__("stx     $c038");
+    __asm__("sta     $c038");
+      break;
+    case SER_BAUD_19200:
+    __asm__("ldx     #12"); /* BaudLow */
+    __asm__("lda     #$04");
+    __asm__("stx     $c038");
+    __asm__("sta     $c038");
+      break;
+    case SER_BAUD_57600:
+    __asm__("ldx     #12"); /* BaudLow */
+    __asm__("lda     #$00");
+    __asm__("stx     $c038");
+    __asm__("sta     $c038");
+      break;
+    default:
+      break;
+  }
+  __asm__("ldx     #13"); /* BaudHigh */
+  __asm__("lda     #$00"); /* It's 0 for 9.6, 19.2 and 57.6 kbps. */
+  __asm__("stx     $c038");
+  __asm__("sta     $c038");
+
 #endif
 }
 
@@ -133,16 +162,12 @@ void simple_serial_dtr_onoff(unsigned char on) {
   /* http://www.applelogic.org/files/Z8530UM.pdf */
   if (on) {
     __asm__("ldx     #5");
-    __asm__("stx     $c038");
-    __asm__("lda     $c038");
-    __asm__("and     #%b", (unsigned char)0b01111111);
+    __asm__("lda     #%b", (unsigned char)0b01101010);
     __asm__("stx     $c038");
     __asm__("sta     $c038");
   } else {
     __asm__("ldx     #5");
-    __asm__("stx     $c038");
-    __asm__("lda     $c038");
-    __asm__("ora     #%b", (unsigned char)0b10000000);
+    __asm__("lda     #%b", (unsigned char)0b11101010);
     __asm__("stx     $c038");
     __asm__("sta     $c038");
   }
@@ -216,30 +241,23 @@ void simple_serial_set_parity(unsigned int p) {
       break;
   }
 #else
+  /* Fixme this assumes 8 databits (01000000) and 1 stop bit (00000100) */
   switch (p) {
     case SER_PAR_NONE:
       __asm__("ldx     #4");
-      __asm__("stx     $c038");
-      __asm__("lda     $c038");
-      __asm__("and     #%b", (unsigned char)0b11111100);
+      __asm__("lda     #%b", (unsigned char)0b01000100);
       __asm__("stx     $c038");
       __asm__("sta     $c038");
       break;
     case SER_PAR_EVEN:
       __asm__("ldx     #4");
-      __asm__("stx     $c038");
-      __asm__("lda     $c038");
-      __asm__("and     #%b", (unsigned char)0b11111100);
-      __asm__("ora     #%b", (unsigned char)0b00000011);
+      __asm__("lda     #%b", (unsigned char)0b01000111);
       __asm__("stx     $c038");
       __asm__("sta     $c038");
       break;
     case SER_PAR_ODD:
       __asm__("ldx     #4");
-      __asm__("stx     $c038");
-      __asm__("lda     $c038");
-      __asm__("and     #%b", (unsigned char)0b11111100);
-      __asm__("ora     #%b", (unsigned char)0b00000001);
+      __asm__("lda     #%b", (unsigned char)0b01000101);
       __asm__("stx     $c038");
       __asm__("sta     $c038");
       break;
@@ -263,6 +281,8 @@ void simple_serial_set_speed(int b) {
   if (ttyfp == NULL) {
     return;
   }
+
+  ioctl(fileno(ttyfp), TCFLSH, TCIOFLUSH);
 
   /* Set speed after the port is opened */
   if(tcgetattr(fileno(ttyfp), &tty) != 0) {

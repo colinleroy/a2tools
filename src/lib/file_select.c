@@ -54,7 +54,9 @@ char *file_select(char sx, char sy, char ex, char ey, char dir, char *prompt) {
 #else
   int c, sel, i, n, start;
 #endif
-  static char *filename = NULL;
+  static char *filename;
+
+  filename = NULL;
 
   gotoxy(sx, sy);
 
