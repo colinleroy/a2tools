@@ -54,7 +54,7 @@ static uint8 get_ack(void) {
 
   /* about 10seconds wait */
   while (wait--) {
-    if (simple_serial_getc_with_timeout() == 0x00) {
+    if (simple_serial_getc_with_timeout_rom() == 0x00) {
       return 0;
     }
   }
@@ -77,7 +77,7 @@ static uint8 get_hello(void) {
 
   wait = 20;
   while (wait--) {
-    c = simple_serial_getc_with_timeout();
+    c = simple_serial_getc_with_timeout_rom();
     if (c != EOF) {
       goto read;
     }
@@ -114,7 +114,7 @@ static uint8 send_hello(uint16 speed) {
   }
 
   simple_serial_write(str_hello, sizeof(str_hello));
-  r = simple_serial_getc_with_timeout();
+  r = simple_serial_getc_with_timeout_rom();
   if (r == EOF) {
     return -1;
   }
@@ -318,6 +318,7 @@ static uint8 qt_set_speed(uint16 speed) {
   nbytes = 0;
   ntries = 0;
 again:
+  /* Don't use ROM version here, IRQs happen at 57600bps */
   while (simple_serial_getc_with_timeout() != EOF) {
     nbytes++;
   }
