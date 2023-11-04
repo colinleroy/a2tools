@@ -53,8 +53,14 @@ static void get_program_disk(void) {
 
 static void convert_image(const char *filename) {
   static char imgname[BUF_SIZE];
+
+  clrscr();
+  dputs("Image conversion\r\n\r\n");
   if (!filename) {
-    char *tmp = file_select(wherex(), wherey(), scrw - wherex(), wherey() + 10, 0, "Image to convert: ");
+    char *tmp;
+    
+    dputs("Image (QTK): ");
+    tmp = file_select(wherex(), wherey(), scrw - wherex(), wherey() + 10, 0, "Select a QTK file");
     if (tmp == NULL)
       return;
     strcpy(imgname, tmp);
@@ -89,10 +95,13 @@ static void view_image(const char *filename) {
   uint16 len;
   #define BLOCK_SIZE 512
 
+  clrscr();
+
+  dputs("Image view\r\n\r\n");
   if (!filename) {
     char *tmp;
-    dputs("Image to view: ");
-    tmp = file_select(wherex(), wherey(), scrw - wherex(), wherey() + 10, 0, "Please select an HGR file");
+    dputs("Image (HGR): ");
+    tmp = file_select(wherex(), wherey(), scrw - wherex(), wherey() + 10, 0, "Select an HGR file");
     if (tmp == NULL)
       return;
     strcpy(imgname, tmp);
@@ -110,17 +119,17 @@ static void view_image(const char *filename) {
 
   memset((char *)HGR_PAGE, 0x00, HGR_LEN);
   init_text();
-  gotoxy(0, 22);
+  gotoxy(0, 19);
   cputs("Loading image...");
 
-  progress_bar(0, 23, scrw, 0, HGR_LEN);
+  progress_bar(0, 20, scrw, 0, HGR_LEN);
 
   len = 0;
   while (len < HGR_LEN) {
 #ifdef __CC65__
     fread((char *)(HGR_PAGE + len), 1, BLOCK_SIZE, fp);
 #endif
-    progress_bar(0, 23, scrw, len, HGR_LEN);
+    progress_bar(-1, -1, scrw, len, HGR_LEN);
     len += BLOCK_SIZE;
   }
 
@@ -499,21 +508,22 @@ static void print_header(uint8 num_pics, uint8 left_pics, uint8 mode, uint8 flas
 }
 
 static uint8 print_menu(void) {
-  gotoxy(0, 3);
+  printf("Menu\n\n");
   if (camera_connected) {
-    printf("1. Get one picture\n"
-           "2. Delete all pictures\n"
-           "3. Take a picture\n");
+    printf(" 1. Get one picture\n"
+           " 2. Delete all pictures\n"
+           " 3. Take a picture\n");
   } else {
-    printf("1. Connect camera\n");
+    printf(" 1. Connect camera\n");
   }
-  printf(  "4. Re-edit a raw picture from floppy\n"
-           "5. View a converted picture from floppy\n");
+  printf(  " 4. Re-edit a raw picture from floppy\n"
+           " 5. View a converted picture from floppy\n");
   if (camera_connected) {
-    printf("6. Set camera name\n"
-           "7. Set camera time\n");
+    printf(" 6. Set camera name\n"
+           " 7. Set camera time\n");
   }
-  printf(  "0. Exit\n\n");
+  printf(  "\n"
+           " 0. Exit\n\n");
   return cgetc();
 }
 
@@ -524,7 +534,9 @@ static void save_picture(uint8 n_pic, uint8 full) {
   filename[0] = '\0';
 #ifdef __CC65__
   clrscr();
-  dputs("Make sure to save the picture to a floppy with\r\n"
+  dputs("Saving picture\r\n\r\n"
+  
+        "Make sure to save the picture to a floppy with\r\n"
         "at least 118480 + 8192 (124kB) free. Basically,\r\n"
         "use one floppy per picture.\r\n"
         "Do not use /RAM, which will be used for temporary storage.\r\n\r\n"
@@ -557,7 +569,11 @@ static void get_one_picture(uint8 num_pics, uint8 full) {
   char buf[3];
   int8 n_pic;
 
-  dputs("Picture number? ");
+  clrscr();
+  dputs("Get a picture from the camera\r\n\r\n"
+  
+        "Picture number? ");
+
   buf[0] = '\0';
   dget_text(buf, 3, NULL, 0);
   
@@ -567,7 +583,9 @@ static void get_one_picture(uint8 num_pics, uint8 full) {
   n_pic = atoi(buf);
   if (n_pic < 1 || n_pic > num_pics) {
     dputc(0x07);
-    printf("No image %d in camera.\n", n_pic);
+    printf("No image %d in camera.\n"
+           "Please press a key...", n_pic);
+    cgetc();
     return;
   }
   save_picture(n_pic, full);
@@ -575,13 +593,17 @@ static void get_one_picture(uint8 num_pics, uint8 full) {
 
 static void set_camera_name(const char *name) {
   char buf[31];
+
   if (name == NULL) {
     return;
   }
 
+  clrscr();
+  dputs("Camera renaming\r\n\r\n");
+
   strncpy(buf, name, 31);
 
-  dputs("Name: ");
+  dputs("New camera name: ");
   dget_text(buf, 31, NULL, 0);
 
   qt_set_camera_name(buf);
@@ -592,6 +614,11 @@ static void set_camera_time(void) {
   char buf[5];
   uint8 vals[5];
   uint8 i;
+
+  clrscr();
+  dputs("Camera time setting\r\n\r\n"
+  
+        "Please enter the current date and time:\r\n");
 
   for (i = 0; i < 5; i++) {
     buf[0] = '\0';
@@ -606,11 +633,21 @@ static void set_camera_time(void) {
 
 static void delete_pictures(void) {
   clrscr();
-  dputs("Delete all pictures on camera? (y/N) ");
+  dputs("Pictures deletion\r\n\r\n"
+        "Delete all pictures on camera? (y/N)\r\n");
+
   if (tolower(cgetc()) == 'y') {
+    dputs("Deleting pictures, please wait...\r\n");
     qt_delete_pictures();
   }
-  dputs("\r\nPlease wait...\r\n");
+  dputs("Done!...\r\n");
+}
+
+static void take_picture(void) {
+  clrscr();
+  dputs("Taking a picture...\r\n\r\n");
+  qt_take_picture();
+  dputs("Done!...\r\n");
 }
 
 int main(int argc, char *argv[])
@@ -683,6 +720,9 @@ menu:
   clrscr();
   print_header(num_pics, left_pics, mode, flash, name, &time);
 
+  set_scrollwindow(4, scrh);
+  gotoxy(0, 0);
+
   choice = print_menu();
   switch(choice) {
     case '1':
@@ -699,15 +739,13 @@ menu:
       break;
     case '3':
       if (camera_connected) {
-        qt_take_picture();
+        take_picture();
       }
       break;
     case '4':
-      clrscr();
       convert_image(NULL);
       break;
     case '5':
-      clrscr();
       view_image(NULL);
       break;
     case '6':
