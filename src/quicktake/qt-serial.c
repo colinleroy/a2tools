@@ -50,11 +50,9 @@ FILE *dbgfp = NULL;
 static char buffer[BLOCK_SIZE];
 
 static uint8 get_ack(void) {
-#ifdef __CC65__
-  uint16 wait = 100;
-#else
-  uint16 wait = 5;
-#endif
+  uint8 wait = 20;
+
+  /* about 10seconds wait */
   while (wait--) {
     if (simple_serial_getc_with_timeout() == 0x00) {
       return 0;
@@ -74,19 +72,18 @@ static uint8 send_ping(void) {
 }
 
 static uint8 get_hello(void) {
-  int c, i;
+  int c;
+  uint8 wait;
 
-  i = 0;
-  while (1) {
+  wait = 20;
+  while (wait--) {
     c = simple_serial_getc_with_timeout();
     if (c != EOF) {
       goto read;
     }
-    if (i++ == 16) {
-      printf("Cannot connect (timeout).\n");
-      return -1;
-    }
   }
+  printf("Cannot connect (timeout).\n");
+  return -1;
 read:
   buffer[0] = (unsigned char)c;
   simple_serial_read(buffer + 1, 6);
