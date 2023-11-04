@@ -711,13 +711,14 @@ connect:
   }
   camera_connected = 1;
 menu:
+  init_text();
+  set_scrollwindow(0, scrh);
+  clrscr();
+  gotoxy(0, 0);
   if (camera_connected) {
     qt_get_information(&num_pics, &left_pics, &mode, &flash, &name, &time);
   }
 
-  init_text();
-  set_scrollwindow(0, scrh);
-  clrscr();
   print_header(num_pics, left_pics, mode, flash, name, &time);
 
   set_scrollwindow(4, scrh);
