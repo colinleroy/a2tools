@@ -312,8 +312,10 @@ again:
 }
 
 
-static void write_qtkt_header(FILE *fp) {
+static void write_qtk_header(FILE *fp, const char *pic_format) {
   char hdr[] = {0x71,0x6B,0x74,0x6B,0x00,0x00,0x00,0x04,0x00,0x00,0x73,0xE4,0x00,0x01};
+
+  memcpy(hdr, pic_format, 4);
   fwrite(hdr, 1, sizeof hdr, fp);
 }
 
@@ -335,18 +337,13 @@ uint8 qt_get_picture(uint8 n_pic, const char *filename, uint8 full) {
   unsigned char pic_size_str[3];
   unsigned long pic_size_int;
   uint8 y;
+  const char *format;
 
   platform_sleep(1);
 
   picture = fopen(filename,"wb");
 
   memset(buffer, 0, BLOCK_SIZE);
-
-  if (full) {
-    write_qtkt_header(picture);
-    fwrite(buffer, 1, BLOCK_SIZE, picture);
-    fwrite(buffer, 1, BLOCK_SIZE, picture);
-  }
 
   printf("  Getting header...\n");
 
@@ -364,28 +361,7 @@ uint8 qt_get_picture(uint8 n_pic, const char *filename, uint8 full) {
   DUMP_END();
 
   if (full) {
-    /* Write the header */
-    fseek(picture, 0x0E, SEEK_SET);
-    fwrite(buffer + HDR_IDX, 1, 64 - HDR_IDX, picture);
-
-    /* Get dimensions */
-    width = char_to_n_uint16(buffer + IMG_WIDTH_IDX);
-    height = char_to_n_uint16(buffer  + IMG_HEIGHT_IDX);
-
-    /* Set them in the file */
-    fseek(picture, WH_OFFSET, SEEK_SET);
-    fwrite((char *)&height, 2, 1, picture);
-    fwrite((char *)&width, 2, 1, picture);
-
-    fseek(picture, DATA_OFFSET, SEEK_SET);
-  } else {
-    width = htons(80);
-    height = htons(60);
-  }
-
-  DUMP_START("data");
-
-  if (full) {
+    /* Get size */
     memcpy(pic_size_str, buffer + IMG_SIZE_IDX, 3);
 
 #ifndef __CC65__
@@ -397,12 +373,48 @@ uint8 qt_get_picture(uint8 n_pic, const char *filename, uint8 full) {
     ((unsigned char *)&pic_size_int)[3] = 0;
 #endif
 
+    /* Get dimensions */
+    width = char_to_n_uint16(buffer + IMG_WIDTH_IDX);
+    height = char_to_n_uint16(buffer  + IMG_HEIGHT_IDX);
+
+    format = "qktk"; /* Default to QuickTake 100 format */
+
+    /* QuickTake 150 pictures are better compressed
+     * FIXME: This is a bad way to detect format
+     */
+    if (width == 640 && pic_size_int != 115200) {
+      format = "qktn";
+    }
+    if (width == 320 && pic_size_int != 28800) {
+      format = "qktn";
+    }
+
+    /* Write the start of the header */
+    write_qtk_header(picture, format);
+    fwrite(buffer, 1, BLOCK_SIZE, picture);
+    fwrite(buffer, 1, BLOCK_SIZE, picture);
+
+    /* Write the rest of the header */
+    fseek(picture, 0x0E, SEEK_SET);
+    fwrite(buffer + HDR_IDX, 1, 64 - HDR_IDX, picture);
+
+    /* Set them in the file */
+    fseek(picture, WH_OFFSET, SEEK_SET);
+    fwrite((char *)&height, 2, 1, picture);
+    fwrite((char *)&width, 2, 1, picture);
+
+    fseek(picture, DATA_OFFSET, SEEK_SET);
   } else {
+    width = htons(80);
+    height = htons(60);
     pic_size_int = THUMBNAIL_SIZE;
+    format = "thumbnail";
   }
 
-  printf("  Width %u, height %u, %lu bytes\n",
-         ntohs(width), ntohs(height), pic_size_int);
+  DUMP_START("data");
+
+  printf("  Width %u, height %u, %lu bytes (%s)\n",
+         ntohs(width), ntohs(height), pic_size_int, format);
 
   printf("  Getting data...\n");
   y = wherey();
