@@ -4,7 +4,7 @@
 #include <time.h>
 
 uint8 qt_serial_connect(uint16 speed);
-uint8 qt_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mode, uint8 *flash_mode, char **name, struct tm *time);
+uint8 qt_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mode, uint8 *flash_mode, uint8 *battery_level, char **name, struct tm *time);
 uint8 qt_get_picture(uint8 n_pic, const char *filename, uint8 full);
 uint8 qt_delete_pictures(void);
 uint8 qt_take_picture(void);
