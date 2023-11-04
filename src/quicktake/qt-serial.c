@@ -50,7 +50,11 @@ FILE *dbgfp = NULL;
 static char buffer[BLOCK_SIZE];
 
 static uint8 get_ack(void) {
-  uint16 wait = 5000;
+#ifdef __CC65__
+  uint16 wait = 100;
+#else
+  uint16 wait = 5;
+#endif
   while (wait--) {
     if (simple_serial_getc_with_timeout() == 0x00) {
       return 0;
@@ -63,7 +67,7 @@ static void send_ack() {
   simple_serial_putc(0x06);
 }
 
-static uint8 send_separator(void) {
+static uint8 send_ping(void) {
   char str_start[] = {0x16,0x00,0x00,0x00,0x00,0x00,0x00};
   simple_serial_write(str_start, sizeof(str_start));
   return get_ack();
@@ -142,7 +146,9 @@ static uint8 send_command(const char *cmd, uint8 len, uint8 s_ack) {
 uint8 qt_take_picture(void) {
   char str[] = {0x16,0x1B,0x00,0x00,0x00,0x00,0x00};
   
-  send_separator();
+  if (send_ping() != 0) {
+    return -1;
+  }
 
   return send_command(str, sizeof str, 0);
 }
@@ -151,8 +157,9 @@ uint8 qt_take_picture(void) {
 static uint8 send_photo_delete_command(void) {
   char str1[] = {0x16,0x29,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
 
-  send_separator();
-  send_separator();
+  if (send_ping() != 0) {
+    return -1;
+  }
 
   return send_command(str1, sizeof str1, 0);
 }
@@ -161,6 +168,10 @@ static uint8 send_photo_delete_command(void) {
 static uint8 send_photo_summary_command(void) {
   //           {????,????,????,????,????,????,????,RESPONSE__SIZE,????}
   char str[] = {0x16,0x28,0x00,0x30,0x00,0x00,0x00,0x00,0x00,0x80,0x00};
+
+  if (send_ping() != 0) {
+    return -1;
+  }
 
   return send_command(str, sizeof str, 1);
 }
@@ -178,6 +189,11 @@ static uint8 send_photo_thumbnail_command(uint8 pnum) {
   char str[] = {0x16,0x28,0x00,0x00,0x00,0x00,0x01,0x00,0x09,0x60,0x00};
 
   str[PNUM_IDX] = pnum;
+
+  if (send_ping() != 0) {
+    return -1;
+  }
+
   return send_command(str, sizeof str, 1);
 }
 
@@ -187,6 +203,11 @@ static uint8 send_photo_header_command(uint8 pnum) {
   char str[] = {0x16,0x28,0x00,0x21,0x00,0x00,0x01,0x00,0x00,0x40,0x00};
 
   str[PNUM_IDX] = pnum;
+
+  if (send_ping() != 0) {
+    return -1;
+  }
+
   return send_command(str, sizeof str, 1);
 }
 
@@ -197,6 +218,11 @@ static uint8 send_photo_data_command(uint8 pnum, uint8 *picture_size) {
 
   str[PNUM_IDX] = pnum;
   memcpy(str + PSIZE_IDX, picture_size, 3);
+
+  if (send_ping() != 0) {
+    return -1;
+  }
+
   return send_command(str, sizeof str, 1);
 }
 
@@ -350,7 +376,9 @@ uint8 qt_get_picture(uint8 n_pic, const char *filename, uint8 full) {
 
   DUMP_START("header");
 
-  send_photo_header_command(n_pic);
+  if (send_photo_header_command(n_pic) != 0)
+    return -1;
+
   r = simple_serial_getc_with_timeout();
   if (r == EOF) {
     return -1;
@@ -506,7 +534,7 @@ uint8 qt_serial_connect(uint16 speed) {
   if (speed != 9600)
     return qt_set_speed(speed);
   else
-    return send_separator();
+    return send_ping();
 }
 
 const char *qt_get_mode_str(uint8 mode) {
@@ -526,7 +554,7 @@ const char *qt_get_flash_str(uint8 mode) {
   }
 }
 
-uint8 qt_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mode, uint8 *flash_mode, char **name, struct tm *time) {
+uint8 qt_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mode, uint8 *flash_mode, uint8 *battery_level, char **name, struct tm *time) {
   #define BATTERY_IDX    0x02 /* ?? */
   #define NUM_PICS_IDX   0x04
   #define LEFT_PICS_IDX  0x06
@@ -544,7 +572,9 @@ uint8 qt_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mode,
 
   DUMP_START("summary");
 
-  send_photo_summary_command();
+  if (send_photo_summary_command() != 0)
+    return -1;
+
   simple_serial_read(buffer, 128);
 
   DUMP_DATA(buffer, 128);
@@ -555,6 +585,7 @@ uint8 qt_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mode,
   *left_pics    = buffer[LEFT_PICS_IDX];
   *quality_mode = buffer[MODE_IDX];
   *flash_mode   = buffer[FLASH_IDX];
+  *battery_level= buffer[BATTERY_IDX];
 
   time->tm_mday = buffer[DAY_IDX];
   time->tm_mon  = buffer[MONTH_IDX];

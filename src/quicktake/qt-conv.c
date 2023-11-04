@@ -210,18 +210,9 @@ static uint8 identify(const char *name)
   else
     data_offset = 736;
 
-  //fseek(ifp, data_offset, SEEK_SET);
   iseek(data_offset);
   return 0;
 }
-
-#if SCALE
-#define FILE_WIDTH 256
-#define FILE_HEIGHT HGR_HEIGHT
-#else
-#define FILE_WIDTH width
-#define FILE_HEIGHT height
-#endif
 
 static uint16 histogram[256];
 

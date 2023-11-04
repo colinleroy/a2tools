@@ -11,6 +11,15 @@
 #define QT100_MAGIC "qktk"
 #define QT150_MAGIC "qktn"
 
+#if SCALE
+#define FILE_WIDTH 256
+#define FILE_HEIGHT HGR_HEIGHT
+#else
+#define FILE_WIDTH width
+#define FILE_HEIGHT height
+#endif
+
+
 #ifdef __CC65__
 #define TMP_NAME "/RAM/GREY"
 #define HIST_NAME "/RAM/HIST"
