@@ -37,7 +37,7 @@ void main(int argc, char *argv[]) {
   for (y = 0; y < h; y++) {
     for (x = 0; x < w; x++) {
       fread(&c, 1, 1, fp);
-      //printf("%d,%d = %d\n", x,y,c);
+
       sdl_set_pixel(screen, x, y, c, c, c);
     }
   }

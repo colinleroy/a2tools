@@ -174,18 +174,6 @@ uint8 getbithuff (uint8 nbits, uint16 *huff)
   return c;
 }
 
-#if GREYSCALE
-static void grey_levels(uint8 h) {
-  uint8 y;
-  uint16 x;
-  for (y = 0; y < h; y+= 2)
-    for (x = 0; x < width; x += 2) {
-      uint16 sum = RAW(y,x) + RAW(y+1,x) + RAW(y,x+1) + RAW(y+1,x+1);
-      RAW(y,x) = RAW(y+1,x) = RAW(y,x+1) = RAW(y+1,x+1) = sum >> 2;
-    }
-}
-#endif
-
 #define HDR_LEN 32
 #define WH_OFFSET 544
 
@@ -227,19 +215,30 @@ static uint8 identify(const char *name)
   return 0;
 }
 
+#if SCALE
 #define FILE_WIDTH 256
 #define FILE_HEIGHT HGR_HEIGHT
+#else
+#define FILE_WIDTH width
+#define FILE_HEIGHT height
+#endif
 
 static uint16 histogram[256];
 
 static void write_raw(void)
 {
   uint16 row, col;
+#if SCALE
   uint8 scaling_factor = (width == 640 ? 4 : 8);
   uint8 band_height = QT_BAND * scaling_factor / 10;
+#else
+  uint8 scaling_factor = 1;
+  uint8 band_height = QT_BAND;
+#endif
   uint16 idx_dst, idx_src;
   uint8 *raw_ptr;
 
+#if SCALE
   /* Scale (nearest neighbor)*/
   for (row = 0; row < band_height; row++) {
     uint16 orig_y = row * 10 / scaling_factor;
@@ -254,7 +253,7 @@ static void write_raw(void)
       idx_dst++;
     }
   }
-
+#endif
   /* Write */
   raw_ptr = raw_image;
   for (row = 0; row < band_height; row++) {

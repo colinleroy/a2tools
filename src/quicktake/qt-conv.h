@@ -5,6 +5,9 @@
 #include "extended_conio.h"
 
 #define QT_BAND 20
+
+#define SCALE 1
+
 #define QT100_MAGIC "qktk"
 #define QT150_MAGIC "qktn"
 

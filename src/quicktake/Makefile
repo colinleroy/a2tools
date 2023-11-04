@@ -90,6 +90,9 @@ qt150conv.bin: $(qt150conv_SOURCES) $(qt150conv_CC65SOURCES)
 qt150conv.x86_64: $(qt150conv_SOURCES) $(GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	
 
+loader.x86_64:
+	gcc -o $@ -I/usr/include/SDL loader.c ../lib/extended_conio.c ../lib/clrzone.c -lSDL_image -lSDL
+
 clean:
 	rm -f *.bin *.x86_64 *.o *.map splash.h
 
