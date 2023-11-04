@@ -11,6 +11,7 @@
 #include "progress_bar.h"
 #include "simple_serial.h"
 #include "qt-serial.h"
+#include "qt-conv.h"
 
 extern uint8 scrw, scrh;
 
@@ -377,16 +378,16 @@ uint8 qt_get_picture(uint8 n_pic, const char *filename, uint8 full) {
     width = char_to_n_uint16(buffer + IMG_WIDTH_IDX);
     height = char_to_n_uint16(buffer  + IMG_HEIGHT_IDX);
 
-    format = "qktk"; /* Default to QuickTake 100 format */
+    format = QT100_MAGIC; /* Default to QuickTake 100 format */
 
     /* QuickTake 150 pictures are better compressed
      * FIXME: This is a bad way to detect format
      */
     if (width == 640 && pic_size_int != 115200) {
-      format = "qktn";
+      format = QT150_MAGIC;
     }
     if (width == 320 && pic_size_int != 28800) {
-      format = "qktn";
+      format = QT150_MAGIC;
     }
 
     /* Write the start of the header */
