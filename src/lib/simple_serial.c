@@ -24,6 +24,7 @@
 #include <errno.h>
 #include <ctype.h>
 #include "malloc0.h"
+#include "platform.h"
 #include "extended_conio.h"
 #include "extended_string.h"
 #include "path_helper.h"
@@ -313,14 +314,17 @@ int __fastcall__ simple_serial_getc_immediate(void) {
   return EOF;
 }
 
-static int timeout_cycles = -1;
+static uint16 timeout_cycles = 0;
 
 /* Input */
 int __fastcall__ simple_serial_getc_with_timeout(void) {
     static char c;
 
-    timeout_cycles = 10000;
-
+#ifndef IIGS
+    timeout_cycles = 10000U;
+#else
+    timeout_cycles = 30000U;
+#endif
     while (ser_get(&c) == SER_ERR_NO_DATA) {
       if (--timeout_cycles == 0) {
         return EOF;

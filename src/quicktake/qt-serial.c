@@ -69,20 +69,27 @@ static uint8 send_separator(void) {
 }
 
 static uint8 get_hello(void) {
-  int c;
-  DUMP_START("qt_hello");
+  int c, i;
 
-  c = simple_serial_getc_with_timeout();
-  if (c == EOF) {
-    printf("Cannot connect (timeout).\n");
-    DUMP_END();
-    return -1;
+  i = 0;
+  while (1) {
+    c = simple_serial_getc_with_timeout();
+    if (c != EOF) {
+      goto read;
+    }
+    if (i++ == 16) {
+      printf("Cannot connect (timeout).\n");
+      return -1;
+    }
   }
+read:
   buffer[0] = (unsigned char)c;
   simple_serial_read(buffer + 1, 6);
 
+  DUMP_START("qt_hello");
   DUMP_DATA(buffer, 7);
   DUMP_END();
+
   return 0;
 }
 
@@ -440,6 +447,7 @@ uint8 qt_serial_connect(uint16 speed) {
   simple_serial_set_speed(B9600);
 #endif
   if (simple_serial_open() != 0) {
+    printf("Cannot open port\n");
     return -1;
   }
   simple_serial_flush();
@@ -506,7 +514,6 @@ const char *qt_get_flash_str(uint8 mode) {
 }
 
 uint8 qt_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mode, uint8 *flash_mode, char **name, struct tm *time) {
-  uint8 n;
   #define BATTERY_IDX    0x02 /* ?? */
   #define NUM_PICS_IDX   0x04
   #define LEFT_PICS_IDX  0x06
