@@ -42,6 +42,7 @@ char *tty_speed_to_str(int speed);
 /* Input */
 char __fastcall__ simple_serial_getc(void);
 int __fastcall__ simple_serial_getc_with_timeout(void);
+int __fastcall__ simple_serial_getc_with_timeout_rom(void);
 int __fastcall__ simple_serial_getc_immediate(void);
 
 char * __fastcall__ simple_serial_gets(char *out, size_t size);

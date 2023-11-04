@@ -314,32 +314,24 @@ int __fastcall__ simple_serial_getc_immediate(void) {
   return EOF;
 }
 
-#ifdef SURL_TO_LANGCARD
-#pragma code-name (pop)
-#endif
-
 static uint16 timeout_cycles = 0;
-/* Accesses ROM so out of language card */
+
+/* Input */
 int __fastcall__ simple_serial_getc_with_timeout(void) {
     static char c;
 
-    timeout_cycles = 10000;
-
+#ifndef IIGS
+    timeout_cycles = 10000U;
+#else
+    timeout_cycles = 30000U;
+#endif
     while (ser_get(&c) == SER_ERR_NO_DATA) {
       if (--timeout_cycles == 0) {
         return EOF;
       }
-      __asm__("bit $C082");
-      __asm__("lda #$01");  /* About 30µs */
-      __asm__("jsr $fca8"); /* MONWAIT */
-      __asm__("bit $C080");
     }
     return (int)c;
 }
-
-#ifdef SURL_TO_LANGCARD
-#pragma code-name (push, "LC")
-#endif
 
 char __fastcall__ simple_serial_getc(void) {
     static char c;

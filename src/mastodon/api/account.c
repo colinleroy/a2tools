@@ -60,6 +60,10 @@ err_out:
   return NULL;
 }
 
+#ifdef __CC65__
+#pragma code-name (pop)
+#endif
+
 account *api_get_profile(char *id) {
   account *a;
   char n_lines;
@@ -88,10 +92,6 @@ account *api_get_profile(char *id) {
   }
   return a;
 }
-
-#ifdef __CC65__
-#pragma code-name (pop)
-#endif
 
 void account_free(account *a) {
   char i;
