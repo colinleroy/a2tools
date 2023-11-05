@@ -85,10 +85,45 @@ void qt_convert_image(const char *filename) {
   }
 }
 
-static unsigned baseaddr[192];
+static unsigned baseaddr[HGR_HEIGHT];
+static uint8 div7_table[HGR_WIDTH];
+static uint8 mod7_table[HGR_WIDTH];
+static uint16 histogram[256];
+static uint8 opt_histogram[256];
+#define NUM_PIXELS 49152U //256*192
+
+static void histogram_equalize(void) {
+  uint16 x;
+  uint16 curr_hist = 0;
+
+  if (auto_level) {
+    ifp = fopen(HIST_NAME, "r");
+    if (ifp != NULL) {
+      fread(histogram, sizeof(uint16), 256, ifp);
+      fclose(ifp);
+
+      printf("Histogram equalization...\n");
+      for (x = 0; x < 256; x++) {
+        curr_hist += histogram[x];
+        opt_histogram[x] = (uint8)((((uint32)curr_hist * 255)) / NUM_PIXELS);
+      }
+    } else {
+      printf("Can't open "HIST_NAME"\n");
+    }
+  } else {
+    for (x = 0; x < 256; x++) {
+      opt_histogram[x] = x;
+    }
+  }
+}
+
 static void init_base_addrs (void)
 {
+  static uint8 base_init_done = 0;
   uint16 i, group_of_eight, line_of_eight, group_of_sixtyfour;
+  if (base_init_done) {
+    return;
+  }
 
   for (i = 0; i < HGR_HEIGHT; ++i)
   {
@@ -98,6 +133,12 @@ static void init_base_addrs (void)
 
     baseaddr[i] = line_of_eight * 1024 + group_of_eight * 128 + group_of_sixtyfour * 40;
   }
+  for (i = 0; i < HGR_WIDTH; i++) {
+    div7_table[i] = i / 7;
+    mod7_table[i] = i % 7;
+  }
+  histogram_equalize();
+  base_init_done = 1;
 }
 
 #define X_OFFSET ((HGR_WIDTH - FILE_WIDTH) / 2)
@@ -164,6 +205,7 @@ start_edit:
           return 1;
         case 'h':
           auto_level = !auto_level;
+          histogram_equalize();
           return 1;
         case 'c':
           resize = !resize;
@@ -213,11 +255,8 @@ done:
 
 static uint8 buf[FILE_WIDTH];
 static uint8 err[FILE_WIDTH * 2];
-static uint16 histogram[256];
-static uint8 opt_histogram[256];
-FILE *ifp, *ofp;
 
-#define NUM_PIXELS 49152U //256*192
+FILE *ifp, *ofp;
 
 static void convert_temp_to_hgr(const char *ofname) {
   /* Rotation/cropping variables */
@@ -252,37 +291,19 @@ static void convert_temp_to_hgr(const char *ofname) {
   uint8 y_mod8;
 
   /* General variables */
-  uint16 curr_hist = 0;
   uint8 *err_line_2 = err + FILE_WIDTH;
   uint16 h_plus1 = FILE_HEIGHT + 1;
   unsigned char dhbmono[] = {0x7e,0x7d,0x7b,0x77,0x6f,0x5f,0x3f};
   unsigned char dhwmono[] = {0x01,0x02,0x04,0x08,0x10,0x20,0x40};
+  uint8 *cur_hgr_line;
+  uint16 cur_hgr_row;
+  uint8 cur_hgr_mod;
 
   init_base_addrs();
 
   clrscr();
   gotoxy(0, 20);
   printf("Converting %s (Esc to stop)...\n", ofname);
-
-  if (auto_level) {
-    ifp = fopen(HIST_NAME, "r");
-    if (ifp != NULL) {
-      fread(histogram, sizeof(uint16), 256, ifp);
-      fclose(ifp);
-
-      printf("Histogram equalization...\n");
-      for (x = 0; x < 256; x++) {
-        curr_hist += histogram[x];
-        opt_histogram[x] = (uint8)((((uint32)curr_hist * 255)) / NUM_PIXELS);
-      }
-    } else {
-      printf("Can't open "HIST_NAME"\n");
-    }
-  } else {
-    for (x = 0; x < 256; x++) {
-      opt_histogram[x] = x;
-    }
-  }
 
   ifp = fopen(TMP_NAME, "r");
   if (ifp == NULL) {
@@ -351,32 +372,41 @@ static void convert_temp_to_hgr(const char *ofname) {
         goto stop;
     }
 
-    /* Rollover next error line */
     if (dither_alg == DITHER_BURKES) {
+      /* Rollover next error line */
       memcpy(err, err_line_2, FILE_WIDTH);
       memset(err_line_2, 0, FILE_WIDTH);
     } else {
+      /* Precompute y modulo for the line */
       y_mod8 = y % 8;
     }
     if (invert_coords) {
       if (resize) {
         scaled_dy = dy * 3 / 4;
+        cur_hgr_row = div7_table[scaled_dy];
+        cur_hgr_mod = mod7_table[scaled_dy];
+      } else {
+        cur_hgr_row = div7_table[dy];
+        cur_hgr_mod = mod7_table[dy];
       }
+    } else {
+      cur_hgr_line = (unsigned char *)HGR_PAGE + baseaddr[dy];
     }
+
     for(x = start_x, dx = off_x; x != end_x; x++, dx += xdir) {
       /* Get destination pixel */
       if (invert_coords) {
         if (resize) {
           scaled_dx = dx * 3 / 4;
-          ptr = (unsigned char *)HGR_PAGE + baseaddr[scaled_dx] + scaled_dy / 7;
-          pixel = scaled_dy % 7;
+          ptr = (unsigned char *)HGR_PAGE + baseaddr[scaled_dx] + cur_hgr_row;
+          pixel = cur_hgr_mod;
         } else {
-          ptr = (unsigned char *)HGR_PAGE + baseaddr[dx] + dy / 7;
-          pixel = dy % 7;
+          ptr = (unsigned char *)HGR_PAGE + baseaddr[dx] + cur_hgr_row;
+          pixel = cur_hgr_mod;
         }
       } else {
-        ptr = (unsigned char *)HGR_PAGE + baseaddr[dy] + dx / 7;
-        pixel = dx % 7;
+        ptr = cur_hgr_line + div7_table[dx];
+        pixel = mod7_table[dx];
       }
 
       /* Dither */
