@@ -317,6 +317,10 @@ void qt1x0_set_camera_name(const char *name) {
   if (len > 31)
     len = 31;
 
+  if (qt1x0_send_ping() != 0) {
+    return;
+  }
+
   memcpy(str + NAME_SET_IDX, name, len);
   send_command(str, sizeof str, 0);
 }
@@ -338,6 +342,10 @@ void qt1x0_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8
   str[SET_HOUR_IDX]  = hour;
   str[SET_MIN_IDX]   = minute;
   str[SET_SEC_IDX]   = second;
+
+  if (qt1x0_send_ping() != 0) {
+    return;
+  }
 
   send_command(str, sizeof str, 0);
 }
@@ -364,6 +372,10 @@ uint8 qt1x0_get_picture(uint8 n_pic, const char *filename, uint8 full) {
   const char *format;
 
   platform_sleep(1);
+
+  if (qt1x0_send_ping() != 0) {
+    return -1;
+  }
 
   picture = fopen(filename,"wb");
 
@@ -495,6 +507,10 @@ uint8 qt1x0_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mo
   printf("Getting information...\n");
 
   DUMP_START("summary");
+
+  if (qt1x0_send_ping() != 0) {
+    return -1;
+  }
 
   if (send_photo_summary_command() != 0)
     return -1;

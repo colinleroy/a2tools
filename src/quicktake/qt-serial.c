@@ -100,14 +100,14 @@ uint8 qt_get_picture(uint8 n_pic, const char *filename, uint8 full) {
     return -1;
 }
 
+#pragma code-name(pop)
+
 uint8 qt_delete_pictures(void) {
   if (serial_model == QT_MODEL_1X0)
     return qt1x0_delete_pictures();
   else
     return -1;
 }
-
-#pragma code-name(pop)
 
 uint8 qt_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mode, uint8 *flash_mode, uint8 *battery_level, char **name, struct tm *time) {
   if (serial_model == QT_MODEL_1X0)
