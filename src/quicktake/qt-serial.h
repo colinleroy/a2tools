@@ -7,6 +7,11 @@
 #define QT_MODEL_150 150
 #define QT_MODEL_200 200
 
+/* Communication buffer */
+#define BLOCK_SIZE 512
+extern char buffer[BLOCK_SIZE];
+
+/* Camera interface functions, protocol-agnostic */
 uint8 qt_serial_connect(uint16 speed);
 uint8 qt_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mode, uint8 *flash_mode, uint8 *battery_level, char **name, struct tm *time);
 uint8 qt_get_picture(uint8 n_pic, const char *filename, uint8 full);
@@ -16,14 +21,12 @@ uint8 qt_take_picture(void);
 void qt_set_camera_name(const char *name);
 void qt_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second);
 
+/* Helper functions */
 void write_qtk_header(FILE *fp, const char *pic_format);
-
 const char *qt_get_mode_str(uint8 mode);
 const char *qt_get_flash_str(uint8 mode);
 
-#define BLOCK_SIZE 512
-extern char buffer[BLOCK_SIZE];
-
+/* Debug helpers */
 #ifndef __CC65__
 extern FILE *dbgfp;
 
@@ -38,7 +41,7 @@ extern FILE *dbgfp;
   } while (0)
 
 #else
-
+  /* Debug disabled on target apple2 */
   #if 0
   uint16 dump_counter;
     #define DUMP_START(name) printf("\n%s :", name)
@@ -52,7 +55,6 @@ extern FILE *dbgfp;
     #define DUMP_DATA(buf,size)
     #define DUMP_END()
   #endif
-
 #endif
 
 #endif
