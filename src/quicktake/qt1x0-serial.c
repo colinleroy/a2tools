@@ -190,28 +190,26 @@ static uint8 send_photo_summary_command(void) {
  * Returns 0 if successful, -1 otherwise
  */
 uint8 qt_1x0_wakeup(uint16 speed) {
-#ifdef __CC65__
-  #ifndef IIGS
+#if defined(__CC65__) && !defined(IIGS)
+    /* The Apple IIc printer being closed right now,
+     * we have to set DTR before clearing it. */
     printf("Toggling printer port on...\n");
     simple_serial_acia_onoff(1, 1);
     platform_sleep(1);
     printf("Toggling printer port off...\n");
     simple_serial_acia_onoff(1, 0);
-  #else
-    printf("Toggling DTR on...\n");
-    simple_serial_dtr_onoff(1);
-    printf("Toggling DTR off...\n");
-    simple_serial_dtr_onoff(0);
-  #endif
 #else
-  printf("Toggling DTR on...\n");
-  simple_serial_dtr_onoff(1);
   printf("Toggling DTR off...\n");
   simple_serial_dtr_onoff(0);
 #endif
 
   printf("Waiting for hello...\n");
   if (get_hello() != 0) {
+#if !defined(__CC65__) || defined(IIGS)
+    /* Re-up current port */
+    printf("Toggling DTR on...\n");
+    simple_serial_dtr_onoff(1);
+#endif
     return -1;
   }
   printf("Sending hello...\n");
