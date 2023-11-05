@@ -3,7 +3,6 @@
 
 uint8 qt_1x0_wakeup(uint16 speed);
 
-uint8 qt1x0_send_ping(void);
 uint8 qt1x0_set_speed(uint16 speed);
 
 void qt1x0_set_camera_name(const char *name);
