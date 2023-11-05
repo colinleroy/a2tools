@@ -144,7 +144,10 @@ uint16 get2() {
     FAST_SHIFT_RIGHT_8_LONG(tmp);                                   \
     shift -= 8;                                                     \
   }                                                                 \
-  c = (uint8)(tmp >> shift);                                        \
+  if (shift)                                                        \
+    c = (uint8)(tmp >> shift);                                      \
+  else                                                              \
+    c = (uint8)tmp;                                                 \
 }
 
 /* bithuff state */
@@ -216,41 +219,62 @@ static uint8 identify(const char *name)
 
 static uint16 histogram[256];
 
-static void write_raw(void)
-{
+static uint16 orig_y_table[QT_BAND];
+static uint16 orig_x_table[640];
+uint16 idx_dst_skip;
+static uint8 scaled_band_height;
+
+static void build_scale_table(void) {
   uint16 row, col;
 #if SCALE
   uint8 scaling_factor = (width == 640 ? 4 : 8);
-  uint8 band_height = QT_BAND * scaling_factor / 10;
+  scaled_band_height = QT_BAND * scaling_factor / 10;
 #else
   uint8 scaling_factor = 1;
-  uint8 band_height = QT_BAND;
+  scaled_band_height = QT_BAND;
 #endif
+
+  idx_dst_skip = raw_width - FILE_WIDTH;
+
+  for (row = 0; row < scaled_band_height; row++) {
+    orig_y_table[row] = RAW_IDX(row * 10 / scaling_factor, 0);
+
+    for (col = 0; col < FILE_WIDTH; col++) {
+      orig_x_table[col] = col * 10 / scaling_factor;
+    }
+  }
+}
+
+static void write_raw(void)
+{
+  uint16 row, col;
   uint16 idx_dst, idx_src;
   uint8 *raw_ptr;
 
 #if SCALE
   /* Scale (nearest neighbor)*/
-  for (row = 0; row < band_height; row++) {
-    uint16 orig_y = row * 10 / scaling_factor;
-
-    idx_dst = RAW_IDX(row, 0);
-    idx_src = RAW_IDX(orig_y, 0);
+  idx_dst = RAW_IDX(0, 0);
+  raw_ptr = raw_image;
+  for (row = 0; row < scaled_band_height; row++) {
+    idx_src = orig_y_table[row];
     for (col = 0; col < FILE_WIDTH; col++) {
-      uint16 orig_x = col * 10 / scaling_factor;
-      uint8 val = RAW_DIRECT_IDX(idx_src + orig_x);
+      uint8 val = RAW_DIRECT_IDX(idx_src + orig_x_table[col]);
       RAW_DIRECT_IDX(idx_dst) = val;
       histogram[val]++;
       idx_dst++;
     }
-  }
-#endif
-  /* Write */
-  raw_ptr = raw_image;
-  for (row = 0; row < band_height; row++) {
+    idx_dst += idx_dst_skip;
     fwrite (raw_ptr, 1, FILE_WIDTH, ofp);
     raw_ptr += raw_width;
   }
+#else
+  /* Write */
+  raw_ptr = raw_image;
+  for (row = 0; row < scaled_band_height; row++) {
+    fwrite (raw_ptr, 1, FILE_WIDTH, ofp);
+    raw_ptr += raw_width;
+  }
+#endif
 }
 
 static void reload_menu(const char *filename) {
@@ -310,6 +334,10 @@ try_again:
   clrscr();
   printf("Decompressing...\n");
   progress_bar(0, 1, 80*22, 0, height);
+
+  /* Build scaling table */
+  build_scale_table();
+
   for (h = 0; h < height; h += QT_BAND) {
     qt_load_raw(h, QT_BAND);
     write_raw();
