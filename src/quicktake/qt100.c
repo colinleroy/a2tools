@@ -16,16 +16,12 @@ char *model = "100";
 uint16 raw_width = 640;
 uint16 raw_image_size = (QT_BAND) * 640;
 uint8 raw_image[QT_BAND * 640];
-uint16 cache_size = 5120;
-uint8 cache[5120];
-
-#define ABS(x) ((x) < 0 ? -(x) : (x))
-#define MIN(a,b) ((a) < (b) ? (a) : (b))
-#define MAX(a,b) ((a) > (b) ? (a) : (b))
-#define LIM(x,min,max) MAX(min,MIN(x,max))
+uint16 cache_size = 4096;
+uint8 cache[4096];
 
 static uint8 h_plus1, h_plus2, h_plus4;
 static uint16 width_plus2;
+static uint16 pgbar_state;
 
 #define PIX_WIDTH 644
 static uint8 pixel[(QT_BAND+5)*PIX_WIDTH];
@@ -39,7 +35,8 @@ void qt_load_raw(uint16 top, uint8 h)
   { -89,-60,-44,-32,-22,-15,-8,-2,2,8,15,22,32,44,60,89 };
   int16 val = 0;
   uint8 row;
-  uint16 col, idx, idx_rowplus2, idx_rowminus1;
+  uint16 col, idx, idx_rowplus1, idx_rowplus2, idx_rowminus1;
+  uint16 idx_skip, idx_rowplus2_skip;
 
   if (top == 0) {
     getbits(0);
@@ -47,6 +44,7 @@ void qt_load_raw(uint16 top, uint8 h)
     h_plus2 = h + 2;
     h_plus4 = h + 4;
     width_plus2 = width + 2;
+    pgbar_state = 0;
     memset (pixel, 0x80, sizeof pixel);
   } else {
     memcpy(pixel, pixel + PIX_IDX(QT_BAND + 2, 0), 3*PIX_WIDTH);
@@ -58,21 +56,27 @@ void qt_load_raw(uint16 top, uint8 h)
 
   for (row=2; row < h_plus4; row++) {
     if (row < h_plus2)
-      progress_bar(-1, -1, 80*22, (top + row - 2), height);
+      progress_bar(-1, -1, 80*22, pgbar_state++, height);
     col = 2+(row & 1);
     idx = PIX_IDX(row, col);
     idx_rowminus1 = idx - PIX_WIDTH;
+    idx_rowplus1 = idx + PIX_WIDTH;
     for (; col < width_plus2; col+=2) {
       val = ((PIX_DIRECT_IDX(idx_rowminus1 - 1) // row-1,col-1
               + 2*PIX_DIRECT_IDX(idx_rowminus1 + 1) //row-1,col+1
               + PIX_DIRECT_IDX(idx - 2)) >> 2) //row,col-2
              + gstep[getbits(4)];
 
-      PIX_DIRECT_IDX(idx) = val = LIM(val,0,255);
+      if (val < 0)
+        val = 0;
+      if (val > 255)
+        val = 255;
+      PIX_DIRECT_IDX(idx) = val;
 
       if (col < 4){
-        /* row, col-2*/
-        PIX_DIRECT_IDX(idx - 2) = PIX(row+1,~row & 1) = val;
+        /* row, col-2 */
+        PIX_DIRECT_IDX(idx - 2) = PIX_DIRECT_IDX(idx_rowplus1 + (~row & 1)) = val;
+        idx_rowplus1 += 2; /* No need to follow this index after col >= 4 */
       }
       if (row == 2 && top == 0){
         /* row-1,col+1 / row-1,col+3*/
@@ -94,23 +98,34 @@ void qt_load_raw(uint16 top, uint8 h)
 
   for (row=2; row < h_plus2; row++) {
     col = 3-(row & 1);
-    idx = PIX_IDX(row,col);
+    idx = PIX_IDX(row, col);
     for (; col < width_plus2; col+=2) {
       val = ((PIX_DIRECT_IDX(idx-1) // row,col-1
             + (PIX_DIRECT_IDX(idx) << 2) //row,col
             +  PIX_DIRECT_IDX(idx+1)) >> 1) //row,col+1
             - 0x100;
-      PIX_DIRECT_IDX(idx) = LIM(val,0,255);
+
+      if (val < 0)
+        val = 0;
+      if (val > 255)
+        val = 255;
+      PIX_DIRECT_IDX(idx) = val;
       idx += 2;
     }
   }
+
+  idx = RAW_IDX(0, 0);
+  idx_skip = raw_width - width;
+  idx_rowplus2 = PIX_IDX(2, 2);
+  idx_rowplus2_skip = PIX_WIDTH - width;
   for (row=0; row < h; row++) {
-    idx = RAW_IDX(row,0);
-    idx_rowplus2 = PIX_IDX(row + 2, 2);
+    //idx_rowplus2 = PIX_IDX(row + 2, 2);
     for (col=0; col < width; col++) {
       RAW_DIRECT_IDX(idx) = PIX_DIRECT_IDX(idx_rowplus2);
       idx++;
       idx_rowplus2++;
     }
+    idx += idx_skip;
+    idx_rowplus2 += idx_rowplus2_skip;
   }
 }
