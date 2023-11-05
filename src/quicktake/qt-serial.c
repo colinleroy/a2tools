@@ -11,43 +11,18 @@
 #include "progress_bar.h"
 #include "simple_serial.h"
 #include "qt-serial.h"
+#include "qt1x0-serial.h"
 #include "qt-conv.h"
 
 extern uint8 scrw, scrh;
 
+static uint8 serial_model = 0;
+
 #ifndef __CC65__
 FILE *dbgfp = NULL;
-
-  #define DUMP_START(name) do {       \
-    dbgfp = fopen(name".dump", "wb"); \
-  } while (0)
-  #define DUMP_DATA(buf,size) do {    \
-    fwrite(buf, 1, size, dbgfp);      \
-  } while (0)
-  #define DUMP_END() do {             \
-    fclose(dbgfp);                    \
-  } while (0)
-
-#else
-
-  #if 0
-  uint16 dump_counter;
-    #define DUMP_START(name) printf("\n%s :", name)
-    #define DUMP_DATA(buf,size)  do {    \
-      for (dump_counter = 0; dump_counter < size; dump_counter++) \
-        printf("%02x ", (unsigned char) buf[dump_counter]);       \
-    } while (0)
-    #define DUMP_END() printf("\n")
-  #else
-    #define DUMP_START(name)
-    #define DUMP_DATA(buf,size)
-    #define DUMP_END()
-  #endif
-
 #endif
 
-#define BLOCK_SIZE 512
-static char buffer[BLOCK_SIZE];
+char buffer[BLOCK_SIZE];
 
 static uint8 get_ack(void) {
   uint8 wait = 20;
@@ -71,61 +46,7 @@ static uint8 send_ping(void) {
   return get_ack();
 }
 
-static uint8 get_hello(void) {
-  int c;
-  uint8 wait;
-
-  wait = 20;
-  while (wait--) {
-    c = simple_serial_getc_with_timeout_rom();
-    if (c != EOF) {
-      goto read;
-    }
-  }
-  printf("Cannot connect (timeout).\n");
-  return -1;
-read:
-  buffer[0] = (unsigned char)c;
-  simple_serial_read(buffer + 1, 6);
-
-  DUMP_START("qt_hello");
-  DUMP_DATA(buffer, 7);
-  DUMP_END();
-
-  return 0;
-}
-
 #pragma code-name(push, "LC")
-
-static uint8 send_hello(uint16 speed) {
-  #define SPD_IDX 0x06
-  #define CHK_IDX 0x0C
-  char str_hello[] = {0x5A,0xA5,0x55,0x05,0x00,0x00,0x25,0x80,0x00,0x80,0x02,0x00,0x80};
-  int r;
-  DUMP_START("qt_hello_reply");
-  if (speed == 19200) {
-    str_hello[SPD_IDX]   = 0x4B;
-    str_hello[SPD_IDX+1] = 0x00;
-    str_hello[CHK_IDX]   = 0x26;
-  } else if (speed == 57600U) {
-    str_hello[SPD_IDX]   = 0xE1;
-    str_hello[SPD_IDX+1] = 0x00;
-    str_hello[CHK_IDX]   = 0xBC;
-  }
-
-  simple_serial_write(str_hello, sizeof(str_hello));
-  r = simple_serial_getc_with_timeout_rom();
-  if (r == EOF) {
-    return -1;
-  }
-  buffer[0] = (char)r;
-  simple_serial_read(buffer + 1, 9);
-
-  DUMP_DATA(buffer, 10);
-  DUMP_END();
-
-  return 0;
-}
 
 static uint8 send_command(const char *cmd, uint8 len, uint8 s_ack) {
   simple_serial_write(cmd, len);
@@ -490,34 +411,10 @@ uint8 qt_serial_connect(uint16 speed) {
     return -1;
   }
   simple_serial_flush();
-#ifdef __CC65__
-  #ifndef IIGS
-    printf("Toggling printer port on...\n");
-    simple_serial_acia_onoff(1, 1);
-    platform_sleep(1);
-    printf("Toggling printer port off...\n");
-    simple_serial_acia_onoff(1, 0);
-  #else
-    printf("Toggling DTR on...\n");
-    simple_serial_dtr_onoff(1);
-    printf("Toggling DTR off...\n");
-    simple_serial_dtr_onoff(0);
-  #endif
-#else
-  printf("Toggling DTR on...\n");
-  simple_serial_dtr_onoff(1);
-  printf("Toggling DTR off...\n");
-  simple_serial_dtr_onoff(0);
-#endif
 
-  printf("Waiting for hello...\n");
-  if (get_hello() != 0) {
-    return -1;
+  if (qt_1x0_wakeup(speed) == 0) {
+    serial_model = QT_MODEL_100;
   }
-  printf("Sending hello...\n");
-  send_hello(speed);
-
-  printf("Connected.\n");
 
 #ifdef __CC65__
   simple_serial_set_parity(SER_PAR_EVEN);
