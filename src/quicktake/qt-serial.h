@@ -3,8 +3,7 @@
 
 #include <time.h>
 
-#define QT_MODEL_100 100
-#define QT_MODEL_150 150
+#define QT_MODEL_1X0 100
 #define QT_MODEL_200 200
 
 /* Communication buffer */
