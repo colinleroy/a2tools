@@ -17,6 +17,7 @@
 
 extern uint8 scrw, scrh;
 
+/* Get the ack from the camera */
 static uint8 get_ack(void) {
   uint8 wait = 20;
 
@@ -29,10 +30,12 @@ static uint8 get_ack(void) {
   return -1;
 }
 
+/* Send an ack to the camera */
 static void send_ack() {
   simple_serial_putc(0x06);
 }
 
+/* Get first data from the camera after connecting */
 static uint8 get_hello(void) {
   int c;
   uint8 wait;
@@ -57,6 +60,9 @@ read:
   return 0;
 }
 
+/* Send our greeting to the camera, and inform it of the speed
+ * we aim for
+ */
 static uint8 send_hello(uint16 speed) {
   #define SPD_IDX 0x06
   #define CHK_IDX 0x0C
@@ -87,6 +93,7 @@ static uint8 send_hello(uint16 speed) {
   return 0;
 }
 
+/* Send a command to the camera */
 static uint8 send_command(const char *cmd, uint8 len, uint8 s_ack) {
   simple_serial_write(cmd, len);
 
@@ -99,10 +106,11 @@ static uint8 send_command(const char *cmd, uint8 len, uint8 s_ack) {
   return 0;
 }
 
+/* Ping the camera */
 static uint8 qt1x0_send_ping(void) {
-  char str_start[] = {0x16,0x00,0x00,0x00,0x00,0x00,0x00};
-  simple_serial_write(str_start, sizeof(str_start));
-  return get_ack();
+  char str[] = {0x16,0x00,0x00,0x00,0x00,0x00,0x00};
+
+  return send_command(str, sizeof str, 0);
 }
 
 #define PNUM_IDX       0x06
@@ -178,6 +186,9 @@ static uint8 send_photo_summary_command(void) {
   return send_command(str, sizeof str, 1);
 }
 
+/* Wakeup and detect a QuickTake 100/150 by clearing DTR 
+ * Returns 0 if successful, -1 otherwise
+ */
 uint8 qt_1x0_wakeup(uint16 speed) {
 #ifdef __CC65__
   #ifndef IIGS
@@ -210,6 +221,7 @@ uint8 qt_1x0_wakeup(uint16 speed) {
   return 0;
 }
 
+/* Send the speed upgrade command */
 uint8 qt1x0_set_speed(uint16 speed) {
 #define SPD_CMD_IDX 0x0D
   char str_speed[] = {0x16,0x2A,0x00,0x03,0x00,0x00,0x00,0x00,0x00,0x05,0x00,0x03,0x03,0x08,0x04,0x00};
@@ -293,6 +305,7 @@ uint8 qt1x0_take_picture(void) {
   return send_command(str, sizeof str, 0);
 }
 
+/* Set the camera name */
 void qt1x0_set_camera_name(const char *name) {
   #define NAME_SET_IDX 0x0D
   char str[] = {0x16,0x2a,0x00,0x02,0x00,0x00,0x00,0x00,0x00,0x22,0x00,0x02,0x20,
@@ -308,6 +321,7 @@ void qt1x0_set_camera_name(const char *name) {
   send_command(str, sizeof str, 0);
 }
 
+/* Set the camera time */
 void qt1x0_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second) {
   #define SET_MONTH_IDX 0x0D
   #define SET_DAY_IDX   0x0E
@@ -330,6 +344,7 @@ void qt1x0_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8
 
 #define char_to_n_uint16(buf) (((uint8)((buf)[1]))<<8 | ((uint8)((buf)[0])))
 
+/* Get a picture from the camera to a file */
 uint8 qt1x0_get_picture(uint8 n_pic, const char *filename, uint8 full) {
   #define IMG_WIDTH_IDX  0x08
   #define IMG_HEIGHT_IDX 0x0A
@@ -457,10 +472,12 @@ uint8 qt1x0_get_picture(uint8 n_pic, const char *filename, uint8 full) {
   return 0;
 }
 
+/* Delete all pictures from the camera */
 uint8 qt1x0_delete_pictures(void) {
   return send_photo_delete_command();
 }
 
+/* Get information from the camera */
 uint8 qt1x0_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mode, uint8 *flash_mode, uint8 *battery_level, char **name, struct tm *time) {
   #define BATTERY_IDX    0x02 /* ?? */
   #define NUM_PICS_IDX   0x04
