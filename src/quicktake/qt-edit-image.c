@@ -211,8 +211,8 @@ done:
   return 0;
 }
 
-static uint8 buf[256];
-static uint8 err[512];
+static uint8 buf[FILE_WIDTH];
+static uint8 err[FILE_WIDTH * 2];
 static uint16 histogram[256];
 static uint8 opt_histogram[256];
 FILE *ifp, *ofp;
@@ -249,6 +249,7 @@ static void convert_temp_to_hgr(const char *ofname) {
     { 11, 59, 7, 55, 10, 58, 6, 54 },
     { 43, 27, 39, 23, 42, 26, 38, 22 }
   };
+  uint8 y_mod8;
 
   /* General variables */
   uint16 curr_hist = 0;
@@ -345,29 +346,34 @@ static void convert_temp_to_hgr(const char *ofname) {
   for(y = 0, dy = off_y; y != FILE_HEIGHT; y++, dy+= ydir) {
     fread(buf, 1, FILE_WIDTH, ifp);
 
+    if (kbhit()) {
+      if (cgetc() == CH_ESC)
+        goto stop;
+    }
+
     /* Rollover next error line */
     if (dither_alg == DITHER_BURKES) {
       memcpy(err, err_line_2, FILE_WIDTH);
       memset(err_line_2, 0, FILE_WIDTH);
+    } else {
+      y_mod8 = y % 8;
     }
-
-    for(x = start_x, dx = off_x; x != end_x; x++, dx += xdir) {
-      //printf("y %d dy %d x %d dx %d\n", y, dy, x, dx);
-      /* Get destination pixel */
-      if (kbhit()) {
-        if (cgetc() == CH_ESC)
-          goto stop;
+    if (invert_coords) {
+      if (resize) {
+        scaled_dy = dy * 3 / 4;
       }
+    }
+    for(x = start_x, dx = off_x; x != end_x; x++, dx += xdir) {
+      /* Get destination pixel */
       if (invert_coords) {
         if (resize) {
-          scaled_dy = dy * 3 / 4;
           scaled_dx = dx * 3 / 4;
+          ptr = (unsigned char *)HGR_PAGE + baseaddr[scaled_dx] + scaled_dy / 7;
+          pixel = scaled_dy % 7;
         } else {
-          scaled_dy = dy;
-          scaled_dx = dx;
+          ptr = (unsigned char *)HGR_PAGE + baseaddr[dx] + dy / 7;
+          pixel = dy % 7;
         }
-        ptr = (unsigned char *)HGR_PAGE + baseaddr[scaled_dx] + scaled_dy / 7;
-        pixel = scaled_dy % 7;
       } else {
         ptr = (unsigned char *)HGR_PAGE + baseaddr[dy] + dx / 7;
         pixel = dx % 7;
@@ -377,9 +383,9 @@ static void convert_temp_to_hgr(const char *ofname) {
       if (dither_alg == DITHER_BURKES) {
         buf_plus_err = opt_histogram[buf[x]] + err[x];
         x_plus1 = x + 1;
-        x_plus2 = x + 2;
+        x_plus2 = x_plus1 + 1;
         x_minus1 = x - 1;
-        x_minus2 = x - 2;
+        x_minus2 = x_minus1 - 1;
 
         if (dither_threshold > buf_plus_err) {
           cur_err = buf_plus_err;
@@ -410,7 +416,7 @@ static void convert_temp_to_hgr(const char *ofname) {
       } else if (dither_alg == DITHER_BAYER) {
         uint16 val = opt_histogram[buf[x]];
 
-        val += val * map[y % 8][x % 8] / 63;
+        val += val * map[y_mod8][x % 8] / 63;
         if (dither_threshold > val) {
           ptr[0] &= dhbmono[pixel];
         } else {
