@@ -247,8 +247,12 @@ static void build_scale_table(void) {
 
 static void write_raw(void)
 {
-  uint16 row, col;
   uint16 idx_dst, idx_src;
+#if SCALE
+  uint8 row, col;
+#else
+  uint16 row, col;
+#endif
   uint8 *raw_ptr;
 
 #if SCALE
@@ -257,12 +261,16 @@ static void write_raw(void)
   raw_ptr = raw_image;
   for (row = 0; row < scaled_band_height; row++) {
     idx_src = orig_y_table[row];
-    for (col = 0; col < FILE_WIDTH; col++) {
+    col = 0;
+
+    /* Not a for() because looping on uint8 from 0 to 255 */
+    do {
       uint8 val = RAW_DIRECT_IDX(idx_src + orig_x_table[col]);
       RAW_DIRECT_IDX(idx_dst) = val;
       histogram[val]++;
       idx_dst++;
-    }
+    } while (++col);
+
     idx_dst += idx_dst_skip;
     fwrite (raw_ptr, 1, FILE_WIDTH, ofp);
     raw_ptr += raw_width;

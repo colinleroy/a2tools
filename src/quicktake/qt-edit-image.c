@@ -260,8 +260,8 @@ FILE *ifp, *ofp;
 
 static void convert_temp_to_hgr(const char *ofname) {
   /* Rotation/cropping variables */
-  uint16 x, off_x, start_x, end_x;
-  uint16 y, off_y;
+  uint8 x, start_x, end_x;
+  uint16 off_x, y, off_y;
   uint16 dx, dy, scaled_dx, scaled_dy;
   int8 xdir, ydir;
   int16 cur_err;
@@ -271,10 +271,10 @@ static void convert_temp_to_hgr(const char *ofname) {
 
   /* Burkes variables */
   uint8 buf_plus_err;
-  uint16 x_plus1;
-  uint16 x_plus2;
-  int16 x_minus1;
-  int16 x_minus2;
+  uint8 x_plus1;
+  uint8 x_plus2;
+  uint8 x_minus1;
+  uint8 x_minus2;
   int16 err8, err4, err2;
 
   /* Bayer variables */
@@ -319,7 +319,7 @@ static void convert_temp_to_hgr(const char *ofname) {
   progress_bar(wherex(), wherey(), scrw, 0, FILE_HEIGHT);
 
   start_x = 0;
-  end_x = FILE_WIDTH;
+  end_x = 0; /* FILE_WIDTH, but on uint8 */
   switch (angle) {
     case 0:
       off_x = X_OFFSET;
@@ -396,7 +396,9 @@ static void convert_temp_to_hgr(const char *ofname) {
       cur_hgr_line = (unsigned char *)HGR_PAGE + baseaddr[dy];
     }
 
-    for(x = start_x, dx = off_x; x != end_x; x++, dx += xdir) {
+    x = start_x;
+    dx = off_x;
+    do {
       /* Get destination pixel */
       if (invert_coords) {
         if (resize) {
@@ -439,9 +441,9 @@ static void convert_temp_to_hgr(const char *ofname) {
             next_err_line[x_plus2] += err2;
           }
         }
-        if (x_minus1 > 0) {
+        if (x > 0) {
           next_err_line[x_minus1]  += err4;
-          if (x_minus2 > 0) {
+          if (x > 1) {
             next_err_line[x_minus2]+= err2;
           }
         }
@@ -462,7 +464,9 @@ static void convert_temp_to_hgr(const char *ofname) {
           ptr[0] |= dhwmono[pixel];
         }      
       }
-    }
+      x++;
+      dx += xdir;
+    } while (x != end_x);
     progress_bar(-1, -1, scrw, y, FILE_HEIGHT);
   }
 stop:
