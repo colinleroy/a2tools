@@ -16,6 +16,8 @@ uint8 qt_take_picture(void);
 void qt_set_camera_name(const char *name);
 void qt_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second);
 
+void write_qtk_header(FILE *fp, const char *pic_format);
+
 const char *qt_get_mode_str(uint8 mode);
 const char *qt_get_flash_str(uint8 mode);
 
