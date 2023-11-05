@@ -291,7 +291,8 @@ static void convert_temp_to_hgr(const char *ofname) {
   uint8 y_mod8;
 
   /* General variables */
-  uint8 *err_line_2 = err + FILE_WIDTH;
+  uint8 *cur_err_line = err;
+  uint8 *next_err_line = err + FILE_WIDTH;
   uint16 h_plus1 = FILE_HEIGHT + 1;
   unsigned char dhbmono[] = {0x7e,0x7d,0x7b,0x77,0x6f,0x5f,0x3f};
   unsigned char dhwmono[] = {0x01,0x02,0x04,0x08,0x10,0x20,0x40};
@@ -374,8 +375,10 @@ static void convert_temp_to_hgr(const char *ofname) {
 
     if (dither_alg == DITHER_BURKES) {
       /* Rollover next error line */
-      memcpy(err, err_line_2, FILE_WIDTH);
-      memset(err_line_2, 0, FILE_WIDTH);
+      uint8 *tmp = cur_err_line;
+      cur_err_line = next_err_line;
+      next_err_line = tmp;
+      memset(next_err_line, 0, FILE_WIDTH);
     } else {
       /* Precompute y modulo for the line */
       y_mod8 = y % 8;
@@ -411,7 +414,7 @@ static void convert_temp_to_hgr(const char *ofname) {
 
       /* Dither */
       if (dither_alg == DITHER_BURKES) {
-        buf_plus_err = opt_histogram[buf[x]] + err[x];
+        buf_plus_err = opt_histogram[buf[x]] + cur_err_line[x];
         x_plus1 = x + 1;
         x_plus2 = x_plus1 + 1;
         x_minus1 = x - 1;
@@ -429,20 +432,20 @@ static void convert_temp_to_hgr(const char *ofname) {
         err2 = err4 >> 1;    /* cur_err * 2 / 32 */
 
         if (x_plus1 < FILE_WIDTH) {
-          err[x_plus1]          += err8;
-          err_line_2[x_plus1]   += err4;
+          cur_err_line[x_plus1]    += err8;
+          next_err_line[x_plus1]   += err4;
           if (x_plus2 < FILE_WIDTH) {
-            err[x_plus2]        += err4;
-            err_line_2[x_plus2] += err2;
+            cur_err_line[x_plus2]  += err4;
+            next_err_line[x_plus2] += err2;
           }
         }
         if (x_minus1 > 0) {
-          err_line_2[x_minus1]   += err4;
+          next_err_line[x_minus1]  += err4;
           if (x_minus2 > 0) {
-            err_line_2[x_minus2] += err2;
+            next_err_line[x_minus2]+= err2;
           }
         }
-        err_line_2[x]            += err8;
+        next_err_line[x]           += err8;
       } else if (dither_alg == DITHER_BAYER) {
         uint16 val = opt_histogram[buf[x]];
 
