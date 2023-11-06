@@ -6,6 +6,8 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include "platform.h"
+#include "dgets.h"
+#include "dputs.h"
 #include "extended_conio.h"
 #include "extended_string.h"
 #include "progress_bar.h"
@@ -13,6 +15,8 @@
 #include "qt-serial.h"
 #include "qt1x0-serial.h"
 #include "qt-conv.h"
+
+#define DEBUG_TIMING 0
 
 extern uint8 scrw, scrh;
 
@@ -26,21 +30,27 @@ char buffer[BLOCK_SIZE];
 
 #pragma code-name(push, "LC")
 
-static uint8 qt_set_speed(uint16 speed) {
+static uint8 qt_set_speed(uint16 speed, int first_sleep, int second_sleep) {
   if (serial_model == QT_MODEL_1X0)
-    return qt1x0_set_speed(speed);
+    return qt1x0_set_speed(speed, first_sleep, second_sleep);
   else
     return -1;
 }
 
 /* Connect to a QuickTake and detect its model */
 uint8 qt_serial_connect(uint16 speed) {
+  int qt1_first_sleep, qt1_second_sleep;
+#if DEBUG_TIMING
+  char buf[5];
+#endif
+
   simple_serial_close();
   printf("Connecting to Quicktake...\n");
 
   /* Set initial speed */
 #ifdef __CC65__
   simple_serial_set_speed(SER_BAUD_9600);
+  simple_serial_set_flow_control(SER_HS_NONE);
 #else
   simple_serial_set_speed(B9600);
 #endif
@@ -49,6 +59,21 @@ uint8 qt_serial_connect(uint16 speed) {
     return -1;
   }
   simple_serial_flush();
+
+#if DEBUG_TIMING
+  dputs("Sleep time before speed command, in seconds: ");
+  strcpy(buf, "1");
+  dget_text(buf, 4, NULL, 0);
+  qt1_first_sleep = atoi(buf);
+
+  dputs("Sleep time after speed command, in milliseconds: ");
+  strcpy(buf, "100");
+  dget_text(buf, 4, NULL, 0);
+  qt1_second_sleep = atoi(buf);
+#else
+  qt1_first_sleep = 1;
+  qt1_second_sleep = 100;
+#endif
 
   /* Try and detect a QuickTake 1x0 */
   if (qt_1x0_wakeup(speed) == 0) {
@@ -67,11 +92,10 @@ uint8 qt_serial_connect(uint16 speed) {
    * connected
    */
 
-  platform_sleep(1);
   printf("Initializing...\n");
 
   /* Upgrade to target speed */
-  return qt_set_speed(speed);
+  return qt_set_speed(speed, qt1_first_sleep, qt1_second_sleep);
 }
 
 /* Protocol-dependant camera functions */

@@ -8,7 +8,6 @@
 void platform_sleep(uint8 s) {
   s *= 6;
   while(s > 0) {
-
     __asm__("bit $C082");
     __asm__("lda #$ff");  /* About 166ms */
     __asm__("jsr $fca8"); /* MONWAIT */

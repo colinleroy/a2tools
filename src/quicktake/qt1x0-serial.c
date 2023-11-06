@@ -67,7 +67,7 @@ static uint8 send_hello(uint16 speed) {
   #define SPD_IDX 0x06
   #define CHK_IDX 0x0C
   char str_hello[] = {0x5A,0xA5,0x55,0x05,0x00,0x00,0x25,0x80,0x00,0x80,0x02,0x00,0x80};
-  int r;
+
   DUMP_START("qt_hello_reply");
   if (speed == 19200) {
     str_hello[SPD_IDX]   = 0x4B;
@@ -80,12 +80,7 @@ static uint8 send_hello(uint16 speed) {
   }
 
   simple_serial_write(str_hello, sizeof(str_hello));
-  r = simple_serial_getc_with_timeout_rom();
-  if (r == EOF) {
-    return -1;
-  }
-  buffer[0] = (char)r;
-  simple_serial_read(buffer + 1, 9);
+  simple_serial_read(buffer, 10);
 
   DUMP_DATA(buffer, 10);
   DUMP_END();
@@ -220,11 +215,10 @@ uint8 qt_1x0_wakeup(uint16 speed) {
 }
 
 /* Send the speed upgrade command */
-uint8 qt1x0_set_speed(uint16 speed) {
+uint8 qt1x0_set_speed(uint16 speed, int first_sleep, int second_sleep) {
 #define SPD_CMD_IDX 0x0D
   char str_speed[] = {0x16,0x2A,0x00,0x03,0x00,0x00,0x00,0x00,0x00,0x05,0x00,0x03,0x03,0x08,0x04,0x00};
   int spd_code;
-  int nbytes, ntries;
 
   switch(speed) {
     case 9600:
@@ -252,13 +246,11 @@ uint8 qt1x0_set_speed(uint16 speed) {
   /* This part is very sensitive to timing and I
    * didn't yet figure out how to make things square.
    */
+  platform_sleep(first_sleep);
+
   printf("Setting speed to %u...\n", speed);
   simple_serial_write(str_speed, sizeof str_speed);
 
-
-/* This part is very sensitive to timing */
-  /* Wait about 5ms */
-  platform_msleep(5);
   /* get ack */
   if (get_ack() != 0) {
     printf("Speed set command failed.\n");
@@ -266,27 +258,11 @@ uint8 qt1x0_set_speed(uint16 speed) {
   }
   send_ack();
 
-  /* wait about 2ms */
-  platform_msleep(2);
+  platform_msleep(second_sleep);
   simple_serial_set_speed(spd_code);
 
-  /* Get some data (1kB) */
-  nbytes = 0;
-  ntries = 0;
-again:
-  /* Don't use ROM version here, IRQs happen at 57600bps */
-  while (simple_serial_getc_with_timeout() != EOF) {
-    nbytes++;
-  }
-  if (nbytes < 1024 && ntries < 10) {
-    ntries++;
-    goto again;
-  }
-  if (nbytes < 1024) {
-    printf("Negotiation failed (%d bytes read/1024).\n", nbytes);
-    return -1;
-  }
-/* End of the part that is very sensitive to timing */
+  /* We don't care about the bytes we receive here */
+  simple_serial_flush();
   
   send_ack();
   return get_ack();
@@ -361,7 +337,6 @@ uint8 qt1x0_get_picture(uint8 n_pic, const char *filename, uint8 full) {
   #define DATA_OFFSET    0x2E0
 
   uint16 i;
-  int r;
   FILE *picture;
   uint16 width, height;
   unsigned char pic_size_str[3];
@@ -386,12 +361,7 @@ uint8 qt1x0_get_picture(uint8 n_pic, const char *filename, uint8 full) {
   if (send_photo_header_command(n_pic) != 0)
     return -1;
 
-  r = simple_serial_getc_with_timeout();
-  if (r == EOF) {
-    return -1;
-  }
-  buffer[0] = (char)r;
-  simple_serial_read(buffer + 1, 63);
+  simple_serial_read(buffer, 64);
 
   DUMP_DATA(buffer, 64);
   DUMP_END();
