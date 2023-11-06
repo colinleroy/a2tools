@@ -5,6 +5,10 @@
 #include "progress_bar.h"
 #include "qt-conv.h"
 
+#pragma inline-stdfuncs(push, on)
+#pragma allow-eager-inline(push, on)
+#pragma codesize(push, 200)
+#pragma register-vars(push, on)
 
 /* bitbuff state at end of first loop */
 static uint32 prev_bitbuf_a = 0;
@@ -25,8 +29,8 @@ static uint16 pgbar_state;
 
 #define PIX_WIDTH 644
 static uint8 pixel[(QT_BAND+5)*PIX_WIDTH];
-#define PIX(row,col) pixel[(row)*PIX_WIDTH+(col)]
-#define PIX_IDX(row,col) ((row)*PIX_WIDTH+(col))
+#define PIX(row,col) pixel[PIX_WIDTH*(row)+(col)]
+#define PIX_IDX(row,col) (PIX_WIDTH*(row)+(col))
 #define PIX_DIRECT_IDX(idx) pixel[idx]
 
 void qt_load_raw(uint16 top, uint8 h)
@@ -34,8 +38,9 @@ void qt_load_raw(uint16 top, uint8 h)
   static const short gstep[16] =
   { -89,-60,-44,-32,-22,-15,-8,-2,2,8,15,22,32,44,60,89 };
   int16 val = 0;
-  uint8 row;
-  uint16 col, idx, idx_rowplus1, idx_rowplus2, idx_rowminus1;
+  register uint8 row;
+  register uint16 col, idx;
+  uint16 idx_rowplus1, idx_rowplus2, idx_rowminus1;
   uint16 idx_skip, idx_rowplus2_skip;
 
   if (top == 0) {
@@ -129,3 +134,8 @@ void qt_load_raw(uint16 top, uint8 h)
     idx_rowplus2 += idx_rowplus2_skip;
   }
 }
+
+#pragma register-vars(pop)
+#pragma codesize(pop)
+#pragma allow-eager-inline(pop)
+#pragma inline-stdfuncs(pop)
