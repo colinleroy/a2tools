@@ -258,11 +258,18 @@ static uint8 err[FILE_WIDTH * 2];
 
 FILE *ifp, *ofp;
 
+#pragma inline-stdfuncs(push, on)
+#pragma allow-eager-inline(push, on)
+#pragma codesize(push, 200)
+#pragma register-vars(push, on)
+
 static void convert_temp_to_hgr(const char *ofname) {
   /* Rotation/cropping variables */
-  uint8 x, start_x, end_x;
+  uint8 start_x;
+  register uint8 x, end_x;
+  register uint16 dx, dy;
   uint16 off_x, y, off_y;
-  uint16 dx, dy, scaled_dx, scaled_dy;
+  uint16 scaled_dx, scaled_dy;
   int8 xdir, ydir;
   int16 cur_err;
   uint8 *ptr;
@@ -433,10 +440,10 @@ static void convert_temp_to_hgr(const char *ofname) {
         err4 = err8 >> 1;    /* cur_err * 4 / 32 */
         err2 = err4 >> 1;    /* cur_err * 2 / 32 */
 
-        if (x_plus1 < FILE_WIDTH) {
+        if (x < FILE_WIDTH - 1) {
           cur_err_line[x_plus1]    += err8;
           next_err_line[x_plus1]   += err4;
-          if (x_plus2 < FILE_WIDTH) {
+          if (x < FILE_WIDTH - 2) {
             cur_err_line[x_plus2]  += err4;
             next_err_line[x_plus2] += err2;
           }
@@ -472,6 +479,11 @@ static void convert_temp_to_hgr(const char *ofname) {
 stop:
   fclose(ifp);
 }
+
+#pragma register-vars(pop)
+#pragma codesize(pop)
+#pragma allow-eager-inline(pop)
+#pragma inline-stdfuncs(pop)
 
 void qt_edit_image(const char *ofname) {
   do {

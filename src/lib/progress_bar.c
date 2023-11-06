@@ -20,6 +20,9 @@
 #include "extended_conio.h"
 #include "progress_bar.h"
 
+#pragma inline-stdfuncs(push, on)
+#pragma allow-eager-inline(push, on)
+#pragma codesize(push, 200)
 void progress_bar(int x, int y, int width, unsigned long cur, unsigned long end) {
   size_t percent;
   size_t i;
@@ -49,3 +52,6 @@ void progress_bar(int x, int y, int width, unsigned long cur, unsigned long end)
     gotoxy(x, y);
   }
 }
+#pragma codesize(pop)
+#pragma allow-eager-inline(pop)
+#pragma inline-stdfuncs(pop)

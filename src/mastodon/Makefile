@@ -118,7 +118,7 @@ CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x400 $(USE_LANGCARD) -
 #Using start address 0x4000 is easier than HGR page 2, and also allows to use 80 columns
 mastodon_CLCFLAGS = $(CLCFLAGS) --start-addr 0x4000
 
-GCCCFLAGS = -g -O0 -Wall -Wno-char-subscripts -Wno-unused-but-set-variable -Wno-unused-variable -Werror $(shell sdl-config --cflags)
+GCCCFLAGS = -g -O0 -Wall -Wno-char-subscripts -Wno-unused-but-set-variable -Wno-unused-variable -Wno-unknown-pragmas -Werror $(shell sdl-config --cflags)
 GCCLDFLAGS = $(shell sdl-config --libs)
 
 .PHONY: all clean

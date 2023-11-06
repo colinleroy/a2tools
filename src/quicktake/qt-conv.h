@@ -28,9 +28,9 @@
 #define HIST_NAME "HIST"
 #endif
 
-extern uint16 height, width, raw_width;
+extern uint16 height, width;
 extern uint8 raw_image[];
-extern uint16 raw_image_size;
+extern uint16 raw_width, raw_image_size;
 
 extern char magic[5];
 extern char *model;
@@ -52,8 +52,8 @@ uint8 getbitnohuff (uint8 nbits);
 
 void qt_load_raw(uint16 top, uint8 h);
 
-#define RAW(row,col) raw_image[(row)*raw_width+(col)]
-#define RAW_IDX(row,col) ((row)*raw_width+(col))
+#define RAW(row,col) raw_image[((row)*raw_width)+(col)]
+#define RAW_IDX(row,col) (((row)*raw_width)+(col))
 #define RAW_DIRECT_IDX(idx) raw_image[idx]
 
 #define getbits(n) getbitnohuff(n)
