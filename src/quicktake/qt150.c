@@ -138,7 +138,7 @@ void qt_load_raw(uint16 top, uint8 h)
     for (y = row; y < row + 4; y++) {
       for (x = 0; x < width; x++) {
         if ((x+y) & 1) {
-          RAW(y,x) = RAW(y,x-1);
+          FILE(y,x) = RAW(y,x-1);
         }
       }
     }

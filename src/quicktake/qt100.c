@@ -26,11 +26,12 @@ uint8 cache[4096];
 static uint8 h_plus1, h_plus2, h_plus4;
 static uint16 width_plus2;
 static uint16 pgbar_state;
+static uint16 threepxband_size;
 
 #define PIX_WIDTH 644
 static uint8 pixel[(QT_BAND+5)*PIX_WIDTH];
-#define PIX(row,col) pixel[PIX_WIDTH*(row)+(col)]
-#define PIX_IDX(row,col) (PIX_WIDTH*(row)+(col))
+#define PIX(row,col) pixel[width*(row)+(col)]
+#define PIX_IDX(row,col) (width*(row)+(col))
 #define PIX_DIRECT_IDX(idx) pixel[idx]
 
 void qt_load_raw(uint16 top, uint8 h)
@@ -38,10 +39,11 @@ void qt_load_raw(uint16 top, uint8 h)
   static const short gstep[16] =
   { -89,-60,-44,-32,-22,-15,-8,-2,2,8,15,22,32,44,60,89 };
   int16 val = 0;
-  register uint8 row;
+  uint8 row;
+  register uint8 *dst;
   register uint16 col, idx;
-  uint16 idx_rowplus1, idx_rowplus2, idx_rowminus1;
-  uint16 idx_skip, idx_rowplus2_skip;
+  uint8 *src;
+  uint16 idx_rowplus1, idx_rowminus1;
 
   if (top == 0) {
     getbits(0);
@@ -50,10 +52,11 @@ void qt_load_raw(uint16 top, uint8 h)
     h_plus4 = h + 4;
     width_plus2 = width + 2;
     pgbar_state = 0;
+    threepxband_size = 3*width;
     memset (pixel, 0x80, sizeof pixel);
   } else {
-    memcpy(pixel, pixel + PIX_IDX(QT_BAND + 2, 0), 3*PIX_WIDTH);
-    memset (pixel + PIX_IDX(3, 0), 0x80, sizeof pixel - (3*PIX_WIDTH));
+    memcpy(pixel, pixel + PIX_IDX(QT_BAND + 2, 0), threepxband_size);
+    memset (pixel + PIX_IDX(3, 0), 0x80, sizeof pixel - threepxband_size);
     bitbuf = prev_bitbuf_a;
     vbits = prev_vbits_a;
     iseek(prev_offset_a);
@@ -64,8 +67,8 @@ void qt_load_raw(uint16 top, uint8 h)
       progress_bar(-1, -1, 80*22, pgbar_state++, height);
     col = 2+(row & 1);
     idx = PIX_IDX(row, col);
-    idx_rowminus1 = idx - PIX_WIDTH;
-    idx_rowplus1 = idx + PIX_WIDTH;
+    idx_rowminus1 = idx - width;
+    idx_rowplus1 = idx + width;
     for (; col < width_plus2; col+=2) {
       val = ((PIX_DIRECT_IDX(idx_rowminus1 - 1) // row-1,col-1
               + 2*PIX_DIRECT_IDX(idx_rowminus1 + 1) //row-1,col+1
@@ -119,19 +122,14 @@ void qt_load_raw(uint16 top, uint8 h)
     }
   }
 
-  idx = RAW_IDX(0, 0);
-  idx_skip = raw_width - width;
-  idx_rowplus2 = PIX_IDX(2, 2);
-  idx_rowplus2_skip = PIX_WIDTH - width;
+  dst = raw_image;
+  src = pixel + PIX_IDX(2, 2);
   for (row=0; row < h; row++) {
-    //idx_rowplus2 = PIX_IDX(row + 2, 2);
     for (col=0; col < width; col++) {
-      RAW_DIRECT_IDX(idx) = PIX_DIRECT_IDX(idx_rowplus2);
-      idx++;
-      idx_rowplus2++;
+      *dst = *src;
+      dst++;
+      src++;
     }
-    idx += idx_skip;
-    idx_rowplus2 += idx_rowplus2_skip;
   }
 }
 

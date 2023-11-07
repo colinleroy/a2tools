@@ -56,6 +56,10 @@ void qt_load_raw(uint16 top, uint8 h);
 #define RAW_IDX(row,col) (((row)*raw_width)+(col))
 #define RAW_DIRECT_IDX(idx) raw_image[idx]
 
+#define FILE(row,col) raw_image[((row)*width)+(col)]
+#define FILE_IDX(row,col) (((row)*width)+(col))
+#define FILE_DIRECT_IDX(idx) raw_image[idx]
+
 #define getbits(n) getbitnohuff(n)
 #define FORC(cnt) for (c=0; c < cnt; c++)
 #define FORC3 FORC(3)
