@@ -85,7 +85,7 @@ void qt_convert_image(const char *filename) {
   }
 }
 
-static unsigned baseaddr[HGR_HEIGHT];
+static uint8 *baseaddr[HGR_HEIGHT];
 static uint8 div7_table[HGR_WIDTH];
 static uint8 mod7_table[HGR_WIDTH];
 static uint16 histogram[256];
@@ -119,23 +119,23 @@ static void histogram_equalize(void) {
 
 static void init_base_addrs (void)
 {
-  static uint8 base_init_done = 0;
-  uint16 i, group_of_eight, line_of_eight, group_of_sixtyfour;
+  static uint8 y, base_init_done = 0;
+  uint16 x, group_of_eight, line_of_eight, group_of_sixtyfour;
   if (base_init_done) {
     return;
   }
 
-  for (i = 0; i < HGR_HEIGHT; ++i)
+  for (y = 0; y < HGR_HEIGHT; ++y)
   {
-    line_of_eight = i % 8;
-    group_of_eight = (i % 64) / 8;
-    group_of_sixtyfour = i / 64;
+    line_of_eight = y % 8;
+    group_of_eight = (y % 64) / 8;
+    group_of_sixtyfour = y / 64;
 
-    baseaddr[i] = line_of_eight * 1024 + group_of_eight * 128 + group_of_sixtyfour * 40;
+    baseaddr[y] = (uint8 *)HGR_PAGE + line_of_eight * 1024 + group_of_eight * 128 + group_of_sixtyfour * 40;
   }
-  for (i = 0; i < HGR_WIDTH; i++) {
-    div7_table[i] = i / 7;
-    mod7_table[i] = i % 7;
+  for (x = 0; x < HGR_WIDTH; x++) {
+    div7_table[x] = x / 7;
+    mod7_table[x] = x % 7;
   }
   histogram_equalize();
   base_init_done = 1;
@@ -269,11 +269,15 @@ static void convert_temp_to_hgr(const char *ofname) {
   register uint8 x, end_x;
   register uint16 dx, dy;
   uint16 off_x, y, off_y;
+#if SCALE
+  uint8 scaled_dx, scaled_dy;
+#else
   uint16 scaled_dx, scaled_dy;
+#endif
   int8 xdir, ydir;
   int16 cur_err;
   uint8 *ptr;
-  uint8 pixel;
+  uint8 pixel, color;
   uint8 invert_coords;
 
   /* Burkes variables */
@@ -300,12 +304,17 @@ static void convert_temp_to_hgr(const char *ofname) {
   /* General variables */
   uint8 *cur_err_line = err;
   uint8 *next_err_line = err + FILE_WIDTH;
+#if SCALE
+  uint8 h_plus1 = FILE_HEIGHT + 1;
+#else
   uint16 h_plus1 = FILE_HEIGHT + 1;
-  unsigned char dhbmono[] = {0x7e,0x7d,0x7b,0x77,0x6f,0x5f,0x3f};
-  unsigned char dhwmono[] = {0x01,0x02,0x04,0x08,0x10,0x20,0x40};
+#endif
+  uint8 dhbmono[] = {0x7e,0x7d,0x7b,0x77,0x6f,0x5f,0x3f};
+  uint8 dhwmono[] = {0x01,0x02,0x04,0x08,0x10,0x20,0x40};
   uint8 *cur_hgr_line;
-  uint16 cur_hgr_row;
+  uint8 cur_hgr_row;
   uint8 cur_hgr_mod;
+  uint8 opt_val;
 
   init_base_addrs();
 
@@ -372,7 +381,7 @@ static void convert_temp_to_hgr(const char *ofname) {
       break;
   }
 
-  for(y = 0, dy = off_y; y != FILE_HEIGHT; y++, dy+= ydir) {
+  for(y = 0, dy = off_y; y != FILE_HEIGHT; y++, dy += ydir) {
     fread(buf, 1, FILE_WIDTH, ifp);
 
     if (kbhit()) {
@@ -390,6 +399,8 @@ static void convert_temp_to_hgr(const char *ofname) {
       /* Precompute y modulo for the line */
       y_mod8 = y % 8;
     }
+
+    /* Calculate hgr base coordinates for the line */
     if (invert_coords) {
       if (resize) {
         scaled_dy = dy * 3 / 4;
@@ -400,7 +411,7 @@ static void convert_temp_to_hgr(const char *ofname) {
         cur_hgr_mod = mod7_table[dy];
       }
     } else {
-      cur_hgr_line = (unsigned char *)HGR_PAGE + baseaddr[dy];
+      cur_hgr_line = baseaddr[dy];
     }
 
     x = start_x;
@@ -410,10 +421,10 @@ static void convert_temp_to_hgr(const char *ofname) {
       if (invert_coords) {
         if (resize) {
           scaled_dx = dx * 3 / 4;
-          ptr = (unsigned char *)HGR_PAGE + baseaddr[scaled_dx] + cur_hgr_row;
+          ptr = baseaddr[scaled_dx] + cur_hgr_row;
           pixel = cur_hgr_mod;
         } else {
-          ptr = (unsigned char *)HGR_PAGE + baseaddr[dx] + cur_hgr_row;
+          ptr = baseaddr[dx] + cur_hgr_row;
           pixel = cur_hgr_mod;
         }
       } else {
@@ -421,20 +432,22 @@ static void convert_temp_to_hgr(const char *ofname) {
         pixel = mod7_table[dx];
       }
 
+      opt_val = buf[x];
+      opt_val = opt_histogram[opt_val];
       /* Dither */
       if (dither_alg == DITHER_BURKES) {
-        buf_plus_err = opt_histogram[buf[x]] + cur_err_line[x];
+        buf_plus_err = opt_val + cur_err_line[x];
         x_plus1 = x + 1;
         x_plus2 = x_plus1 + 1;
         x_minus1 = x - 1;
         x_minus2 = x_minus1 - 1;
 
-        if (dither_threshold > buf_plus_err) {
+        if (buf_plus_err < dither_threshold) {
           cur_err = buf_plus_err;
-          ptr[0] &= dhbmono[pixel];
+          color = 0;
         } else {
           cur_err = buf_plus_err - 255;
-          ptr[0] |= dhwmono[pixel];
+          color = 1;
         }
         err8 = cur_err >> 2; /* cur_err * 8 / 32 */
         err4 = err8 >> 1;    /* cur_err * 4 / 32 */
@@ -456,26 +469,32 @@ static void convert_temp_to_hgr(const char *ofname) {
         }
         next_err_line[x]           += err8;
       } else if (dither_alg == DITHER_BAYER) {
-        uint16 val = opt_histogram[buf[x]];
-
+        uint16 val = opt_val;
         val += val * map[y_mod8][x % 8] / 63;
-        if (dither_threshold > val) {
-          ptr[0] &= dhbmono[pixel];
+        if (val < dither_threshold) {
+          color = 0;
         } else {
-          ptr[0] |= dhwmono[pixel];
+          color = 1;
         }
       } else if (dither_alg == DITHER_NONE) {
-        if (dither_threshold > opt_histogram[buf[x]]) {
-          ptr[0] &= dhbmono[pixel];
+        if (opt_val < dither_threshold) {
+          color = 0;
         } else {
-          ptr[0] |= dhwmono[pixel];
+          color = 1;
         }      
+      }
+      if (color) {
+        *ptr |= dhwmono[pixel];
+      } else {
+        *ptr &= dhbmono[pixel];
       }
       x++;
       dx += xdir;
     } while (x != end_x);
-    progress_bar(-1, -1, scrw, y, FILE_HEIGHT);
+    if (y % 8 == 0)
+      progress_bar(-1, -1, scrw, y, FILE_HEIGHT);
   }
+  progress_bar(-1, -1, scrw, FILE_HEIGHT, FILE_HEIGHT);
 stop:
   fclose(ifp);
 }
