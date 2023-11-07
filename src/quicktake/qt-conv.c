@@ -81,7 +81,6 @@ uint32 cache_read_since_inval(void) {
 }
 
 uint8 get1() {
-  // return fgetc(ifp);
   if (cache_offset == cache_size) {
     fread(cache, 1, cache_size, ifp);
     cache_offset = 0;
@@ -108,6 +107,11 @@ uint16 get2() {
   return v;
 }
 
+#pragma inline-stdfuncs(push, on)
+#pragma allow-eager-inline(push, on)
+#pragma codesize(push, 200)
+#pragma register-vars(push, on)
+
 #define GETBITS_COMMON() {                                          \
   uint32 tmp;                                                       \
   uint8 shift;                                                      \
@@ -122,13 +126,13 @@ uint16 get2() {
   shift = 32-vbits;                                                 \
   if (shift >= 24) {                                                \
     FAST_SHIFT_LEFT_24_LONG_TO(bitbuf, tmp);                        \
-    shift -= 24;                                                    \
+    shift %= 8;                                                     \
   } else if (shift >= 16) {                                         \
     FAST_SHIFT_LEFT_16_LONG_TO(bitbuf, tmp);                        \
-    shift -= 16;                                                    \
+    shift %= 8;                                                     \
   } else if (shift >= 8) {                                          \
     FAST_SHIFT_LEFT_8_LONG_TO(bitbuf, tmp);                         \
-    shift -= 8;                                                     \
+    shift %= 8;                                                     \
   }                                                                 \
   if (shift)                                                        \
     tmp <<= shift;                                                  \
@@ -136,13 +140,13 @@ uint16 get2() {
   shift = 32-nbits;                                                 \
   if (shift >= 24) {                                                \
     FAST_SHIFT_RIGHT_24_LONG(tmp);                                  \
-    shift -= 24;                                                    \
+    shift %= 8;                                                     \
   } else if (shift >= 16) {                                         \
     FAST_SHIFT_RIGHT_16_LONG(tmp);                                  \
-    shift -= 16;                                                    \
+    shift %= 8;                                                     \
   } else if (shift >= 8) {                                          \
     FAST_SHIFT_RIGHT_8_LONG(tmp);                                   \
-    shift -= 8;                                                     \
+    shift %= 8;                                                     \
   }                                                                 \
   if (shift)                                                        \
     c = (uint8)(tmp >> shift);                                      \
@@ -219,9 +223,8 @@ static uint8 identify(const char *name)
 
 static uint16 histogram[256];
 
-static uint16 orig_y_table[QT_BAND];
+static uint8 *orig_y_table[QT_BAND];
 static uint16 orig_x_table[640];
-uint16 idx_dst_skip;
 static uint8 scaled_band_height;
 static uint16 output_write_len;
 
@@ -237,10 +240,8 @@ static void build_scale_table(void) {
   output_write_len = FILE_WIDTH * QT_BAND;
 #endif
 
-  idx_dst_skip = raw_width - FILE_WIDTH;
-
   for (row = 0; row < scaled_band_height; row++) {
-    orig_y_table[row] = FILE_IDX(row * 10 / scaling_factor, 0);
+    orig_y_table[row] = raw_image + FILE_IDX(row * 10 / scaling_factor, 0);
 
     for (col = 0; col < FILE_WIDTH; col++) {
       orig_x_table[col] = col * 10 / scaling_factor;
@@ -250,13 +251,14 @@ static void build_scale_table(void) {
 
 static void write_raw(void)
 {
-  uint16 idx_dst, idx_src;
+  register uint8 *idx_src;
+  register uint8 *dst_ptr;
 #if SCALE
-  uint8 row, col;
+  register uint8 row, col;
 #else
   uint16 row, col;
 #endif
-  uint8 *raw_ptr, *dst_ptr;
+  uint8 *raw_ptr;
 
   raw_ptr = raw_image;
 
@@ -269,7 +271,7 @@ static void write_raw(void)
 
     /* Not a for() because looping on uint8 from 0 to 255 */
     do {
-      uint8 val = FILE_DIRECT_IDX(idx_src + orig_x_table[col]);
+      uint8 val = *(idx_src + orig_x_table[col]);
       *dst_ptr = val;
       histogram[val]++;
       dst_ptr++;
@@ -280,6 +282,11 @@ static void write_raw(void)
   fwrite (raw_ptr, 1, output_write_len, ofp);
   raw_ptr += output_write_len;
 }
+
+#pragma register-vars(pop)
+#pragma codesize(pop)
+#pragma allow-eager-inline(pop)
+#pragma inline-stdfuncs(pop)
 
 static void reload_menu(const char *filename) {
   while (reopen_start_device() != 0) {
