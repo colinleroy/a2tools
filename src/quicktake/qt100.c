@@ -27,6 +27,7 @@ static uint8 h_plus1, h_plus2, h_plus4;
 static uint16 width_plus2;
 static uint16 pgbar_state;
 static uint16 threepxband_size;
+static uint16 band_size;
 
 #define PIX_WIDTH 644
 static uint8 pixel[(QT_BAND+5)*PIX_WIDTH];
@@ -52,6 +53,7 @@ void qt_load_raw(uint16 top, uint8 h)
     h_plus4 = h + 4;
     width_plus2 = width + 2;
     pgbar_state = 0;
+    band_size = h * width;
     threepxband_size = 3*width;
     memset (pixel, 0x80, sizeof pixel);
   } else {
@@ -122,15 +124,10 @@ void qt_load_raw(uint16 top, uint8 h)
     }
   }
 
-  dst = raw_image;
+  /* Move from tmp pixel array to raw_image */
   src = pixel + PIX_IDX(2, 2);
-  for (row=0; row < h; row++) {
-    for (col=0; col < width; col++) {
-      *dst = *src;
-      dst++;
-      src++;
-    }
-  }
+  dst = raw_image;
+  memcpy(dst, src, band_size);
 }
 
 #pragma register-vars(pop)
