@@ -1,6 +1,8 @@
 #ifndef __hgr_h
 #define __hgr_h
 
+#include "platform.h"
+
 #define HGR_LEN 8192
 #define HGR_WIDTH 280
 #define HGR_HEIGHT 192
@@ -12,7 +14,7 @@ extern char HGR_PAGE[HGR_LEN];
 #endif
 
 extern char hgr_init_done;
-void init_hgr(void);
+void init_hgr(uint8 mono);
 void init_text(void);
 
 #ifdef __CC65__
