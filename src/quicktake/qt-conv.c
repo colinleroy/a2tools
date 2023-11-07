@@ -223,21 +223,24 @@ static uint16 orig_y_table[QT_BAND];
 static uint16 orig_x_table[640];
 uint16 idx_dst_skip;
 static uint8 scaled_band_height;
+static uint16 output_write_len;
 
 static void build_scale_table(void) {
   uint16 row, col;
 #if SCALE
   uint8 scaling_factor = (width == 640 ? 4 : 8);
   scaled_band_height = QT_BAND * scaling_factor / 10;
+  output_write_len = FILE_WIDTH * scaled_band_height;
 #else
   uint8 scaling_factor = 1;
   scaled_band_height = QT_BAND;
+  output_write_len = FILE_WIDTH * QT_BAND;
 #endif
 
   idx_dst_skip = raw_width - FILE_WIDTH;
 
   for (row = 0; row < scaled_band_height; row++) {
-    orig_y_table[row] = RAW_IDX(row * 10 / scaling_factor, 0);
+    orig_y_table[row] = FILE_IDX(row * 10 / scaling_factor, 0);
 
     for (col = 0; col < FILE_WIDTH; col++) {
       orig_x_table[col] = col * 10 / scaling_factor;
@@ -253,36 +256,29 @@ static void write_raw(void)
 #else
   uint16 row, col;
 #endif
-  uint8 *raw_ptr;
+  uint8 *raw_ptr, *dst_ptr;
+
+  raw_ptr = raw_image;
 
 #if SCALE
   /* Scale (nearest neighbor)*/
-  idx_dst = RAW_IDX(0, 0);
-  raw_ptr = raw_image;
+  dst_ptr = raw_image;
   for (row = 0; row < scaled_band_height; row++) {
     idx_src = orig_y_table[row];
     col = 0;
 
     /* Not a for() because looping on uint8 from 0 to 255 */
     do {
-      uint8 val = RAW_DIRECT_IDX(idx_src + orig_x_table[col]);
-      RAW_DIRECT_IDX(idx_dst) = val;
+      uint8 val = FILE_DIRECT_IDX(idx_src + orig_x_table[col]);
+      *dst_ptr = val;
       histogram[val]++;
-      idx_dst++;
+      dst_ptr++;
     } while (++col);
 
-    idx_dst += idx_dst_skip;
-    fwrite (raw_ptr, 1, FILE_WIDTH, ofp);
-    raw_ptr += raw_width;
-  }
-#else
-  /* Write */
-  raw_ptr = raw_image;
-  for (row = 0; row < scaled_band_height; row++) {
-    fwrite (raw_ptr, 1, FILE_WIDTH, ofp);
-    raw_ptr += raw_width;
   }
 #endif
+  fwrite (raw_ptr, 1, output_write_len, ofp);
+  raw_ptr += output_write_len;
 }
 
 static void reload_menu(const char *filename) {
