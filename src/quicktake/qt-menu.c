@@ -211,7 +211,7 @@ int main(int argc, char *argv[])
 
   videomode(VIDEOMODE_80COL);
   screensize(&scrw, &scrh);
-  init_hgr();
+  init_hgr(1);
   hgr_mixon();
   mix_is_on = 1;
   clrscr();

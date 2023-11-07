@@ -539,7 +539,7 @@ void qt_view_image(const char *filename) {
     len += BLOCK_SIZE;
   }
 
-  init_hgr();
+  init_hgr(1);
   hgr_mixoff();
   mix_is_on = 0;
 

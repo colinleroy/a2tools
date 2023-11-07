@@ -2,8 +2,28 @@
 
 char hgr_init_done = 0;
 
-void init_hgr(void) {
+void init_hgr(uint8 mono) {
 #ifdef __APPLE2__
+
+#ifdef IIGS
+  if (mono) {
+    __asm__("lda     $C021"); /* MONOCOLOR */
+    __asm__("ora     #$80");  /* Set bit 7 */
+    __asm__("sta     $C021");
+
+    __asm__("lda     $C029"); /* NEWVIDEO */
+    __asm__("ora     #$20");  /* Set bit 5 */
+    __asm__("sta     $C029");
+  } else {
+    __asm__("lda     $C021"); /* MONOCOLOR */
+    __asm__("and     #$7F");  /* Clear bit 7 */
+    __asm__("sta     $C021");
+
+    __asm__("lda     $C029"); /* NEWVIDEO */
+    __asm__("and     #$DF");  /* Clear bit 5 */
+    __asm__("sta     $C029");
+  }
+#endif
 
   #ifdef USE_HGR2
   __asm__("lda     #$40");

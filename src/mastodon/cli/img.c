@@ -86,7 +86,7 @@ static void toggle_legend(char force) {
   if (legend) {
     init_text();
   } else {
-    init_hgr();
+    init_hgr(monochrome);
   }
 #endif
 }
