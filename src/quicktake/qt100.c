@@ -41,10 +41,10 @@ void qt_load_raw(uint16 top, uint8 h)
   { -89,-60,-44,-32,-22,-15,-8,-2,2,8,15,22,32,44,60,89 };
   int16 val = 0;
   uint8 row;
-  register uint8 *dst;
-  register uint16 col, idx;
+  register uint8 *dst, *idx;
+  register uint16 col;
   uint8 *src;
-  uint16 idx_rowplus1, idx_rowminus1;
+  uint8 *idx_forward, *idx_behind;
 
   if (top == 0) {
     getbits(0);
@@ -68,35 +68,35 @@ void qt_load_raw(uint16 top, uint8 h)
     if (row < h_plus2)
       progress_bar(-1, -1, 80*22, pgbar_state++, height);
     col = 2+(row & 1);
-    idx = PIX_IDX(row, col);
-    idx_rowminus1 = idx - width;
-    idx_rowplus1 = idx + width;
+    idx = pixel + PIX_IDX(row, col);
+    idx_behind = idx - width - 1;
+    idx_forward = idx + width;
     for (; col < width_plus2; col+=2) {
-      val = ((PIX_DIRECT_IDX(idx_rowminus1 - 1) // row-1,col-1
-              + 2*PIX_DIRECT_IDX(idx_rowminus1 + 1) //row-1,col+1
-              + PIX_DIRECT_IDX(idx - 2)) >> 2) //row,col-2
+      val = ((*(idx_behind)           // row-1,col-1
+              + (*(idx_behind + 2))*2 //row-1,col+1
+              + *(idx - 2)) >> 2)     //row,col-2
              + gstep[getbits(4)];
 
       if (val < 0)
         val = 0;
       if (val > 255)
         val = 255;
-      PIX_DIRECT_IDX(idx) = val;
+      *(idx) = val;
 
       if (col < 4){
         /* row, col-2 */
-        PIX_DIRECT_IDX(idx - 2) = PIX_DIRECT_IDX(idx_rowplus1 + (~row & 1)) = val;
-        idx_rowplus1 += 2; /* No need to follow this index after col >= 4 */
+        *(idx - 2) = *(idx_forward + (~row & 1)) = val;
+        idx_forward += 2;
       }
       if (row == 2 && top == 0){
         /* row-1,col+1 / row-1,col+3*/
-        PIX_DIRECT_IDX(idx_rowminus1+1) = PIX_DIRECT_IDX(idx_rowminus1+3) = val;
+        *(idx_behind + 2) = *(idx_behind + 4) = val;
       }
       idx += 2;
-      idx_rowminus1 += 2;
+      idx_behind += 2;
     }
 
-    PIX_DIRECT_IDX(idx) = val;
+    *(idx) = val;
 
     if(row == h_plus1) {
       /* Save state at end of first loop */
@@ -108,18 +108,18 @@ void qt_load_raw(uint16 top, uint8 h)
 
   for (row=2; row < h_plus2; row++) {
     col = 3-(row & 1);
-    idx = PIX_IDX(row, col);
+    idx = pixel + PIX_IDX(row, col);
     for (; col < width_plus2; col+=2) {
-      val = ((PIX_DIRECT_IDX(idx-1) // row,col-1
-            + (PIX_DIRECT_IDX(idx) << 2) //row,col
-            +  PIX_DIRECT_IDX(idx+1)) >> 1) //row,col+1
+      val = ((*(idx-1) // row,col-1
+            + (*(idx) << 2) //row,col
+            +  *(idx+1)) >> 1) //row,col+1
             - 0x100;
 
       if (val < 0)
         val = 0;
       if (val > 255)
         val = 255;
-      PIX_DIRECT_IDX(idx) = val;
+      *(idx) = val;
       idx += 2;
     }
   }
