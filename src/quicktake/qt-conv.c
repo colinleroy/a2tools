@@ -112,9 +112,10 @@ uint16 get2() {
 #pragma codesize(push, 200)
 #pragma register-vars(push, on)
 
+static uint32 tmp;
+static uint8 shift;
+
 #define GETBITS_COMMON() {                                          \
-  uint32 tmp;                                                       \
-  uint8 shift;                                                      \
   if (nbits == 0)                                                   \
     return bitbuf = vbits = 0;                                      \
   if (vbits < nbits) {                                              \
@@ -172,11 +173,12 @@ uint8 getbitnohuff (uint8 nbits)
 uint8 getbithuff (uint8 nbits, uint16 *huff)
 {
   uint8 c;
-
+  uint16 h;
   GETBITS_COMMON();
 
-  vbits -= huff[c] >> 8;
-  c = (uint8) huff[c];
+  h = huff[c];
+  vbits -= h >> 8;
+  c = (uint8) h;
 
   return c;
 }
