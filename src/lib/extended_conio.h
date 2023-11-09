@@ -44,7 +44,7 @@
   int wherex(void);
   int wherey(void);
   int kbhit(void);
-  void exec(const char *cmd, const char *params);
+  int exec(const char *cmd, const char *params);
 #endif
 
 void printxcentered(int y, char *buf);

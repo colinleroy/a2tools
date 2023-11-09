@@ -27,9 +27,10 @@ static unsigned char scrw = 255, scrh = 255;
 #include <unistd.h>
 #include <sys/ioctl.h>
 
-void exec(const char *cmd, const char *params) {
+int exec(const char *cmd, const char *params) {
   printf("%s %s\n", cmd, params);
   exit(0);
+  return 0;
 }
 
 void clrscr(void) {

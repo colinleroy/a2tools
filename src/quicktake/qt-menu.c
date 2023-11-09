@@ -22,8 +22,6 @@
 uint8 scrw, scrh;
 uint8 camera_connected;
 
-extern uint8 mix_is_on;
-
 #ifdef __CC65__
   #pragma static-locals(push, on)
 #endif
@@ -71,7 +69,7 @@ static void save_picture(uint8 n_pic, uint8 full) {
 #ifdef __CC65__
   clrscr();
   dputs("Saving picture\r\n\r\n"
-  
+
         "Make sure to save the picture to a floppy with\r\n"
         "at least 118480 + 8192 (124kB) free. Basically,\r\n"
         "use one floppy per picture.\r\n"
@@ -111,12 +109,12 @@ static void get_one_picture(uint8 num_pics, uint8 full) {
 
   clrscr();
   dputs("Get a picture from the camera\r\n\r\n"
-  
+
         "Picture number? ");
 
   buf[0] = '\0';
   dget_text(buf, 3, NULL, 0);
-  
+
   if (buf[0] == '\0')
     return;
 
@@ -157,7 +155,7 @@ static void set_camera_time(void) {
 
   clrscr();
   dputs("Camera time setting\r\n\r\n"
-  
+
         "Please enter the current date and time:\r\n");
 
   for (i = 0; i < 5; i++) {
@@ -213,7 +211,6 @@ int main(int argc, char *argv[])
   screensize(&scrw, &scrh);
   init_hgr(1);
   hgr_mixon();
-  mix_is_on = 1;
   clrscr();
   gotoxy(0,20);
   printf("Welcome to Quicktake for Apple II - (c) Colin Leroy-Mira, https://colino.net\n");
@@ -266,7 +263,7 @@ menu:
   switch(choice) {
     case '1':
       if (camera_connected) {
-        get_one_picture(num_pics, 1); 
+        get_one_picture(num_pics, 1);
       } else {
         goto connect;
       }

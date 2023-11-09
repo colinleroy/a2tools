@@ -38,9 +38,7 @@ extern char *model;
 extern uint32 bitbuf;
 extern uint8 vbits;
 
-extern FILE *ifp, *ofp;
-
-void iseek(uint32 off);
+void src_file_seek(uint32 off);
 uint32 cache_read_since_inval(void);
 extern uint8 cache[];
 extern uint16 cache_size;
