@@ -328,10 +328,20 @@ void qt1x0_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8
 
 /* Get a picture from the camera to a file */
 uint8 qt1x0_get_picture(uint8 n_pic, const char *filename, uint8 full) {
+  /* Interesting bytes from the header */
+  #define IMG_NUM_IDX    0x03
+  #define IMG_SIZE_IDX   0x05
   #define IMG_WIDTH_IDX  0x08
   #define IMG_HEIGHT_IDX 0x0A
-  #define IMG_SIZE_IDX   0x05
-  #define HDR_IDX        0x04
+  #define IMG_MONTH_IDX  0x0D
+  #define IMG_DAY_IDX    0x0E
+  #define IMG_YEAR_IDX   0x0F
+  #define IMG_HOUR_IDX   0x10
+  #define IMG_MINUTE_IDX 0x11
+  #define IMG_SECOND_IDX 0x12
+  #define IMG_FLASH_IDX  0x13
+  #define QUALITY_IDX    0x18 /* (?) */
+  #define HDR_SKIP       0x04
   
   #define WH_OFFSET      0x220
   #define DATA_OFFSET    0x2E0
@@ -402,7 +412,7 @@ uint8 qt1x0_get_picture(uint8 n_pic, const char *filename, uint8 full) {
 
     /* Write the rest of the header */
     fseek(picture, 0x0E, SEEK_SET);
-    fwrite(buffer + HDR_IDX, 1, 64 - HDR_IDX, picture);
+    fwrite(buffer + HDR_SKIP, 1, 64 - HDR_SKIP, picture);
 
     /* Set them in the file */
     fseek(picture, WH_OFFSET, SEEK_SET);

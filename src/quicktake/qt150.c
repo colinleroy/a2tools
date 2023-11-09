@@ -1,3 +1,21 @@
+/*
+   QTKN (QuickTake 150/200) decoding algorithm
+   Copyright 2023, Colin Leroy-Mira <colin@colino.net>
+
+   Heavily based on dcraw.c -- Dave Coffin's raw photo decoder
+   Copyright 1997-2018 by Dave Coffin, dcoffin a cybercom o net
+
+   Welcome to pointer arithmetic hell - you can refer to dcraw's
+   kodak_radc_load_raw() is you prefer triple-dimensional array hell
+ */
+
+/* Handle pic by horizontal bands for memory constraints reasons.
+ * Bands need to be a multiple of 4px high for compression reasons
+ * on QT 150/200 pictures,
+ * and a multiple of 5px for nearest-neighbor scaling reasons.
+ * (480 => 192 = *0.4, 240 => 192 = *0.8)
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,11 +25,9 @@
 
 #define radc_token(tree) ((int8) getbithuff(8,huff[tree]))
 
+/* Shared with qt-conv.c */
 char magic[5] = QT150_MAGIC;
 char *model = "150/200";
-uint16 raw_width = 640;
-uint16 raw_image_size = (QT_BAND) * 640;
-uint8 raw_image[(QT_BAND) * 640];
 uint16 cache_size = 1536;
 uint8 cache[1536];
 
@@ -71,7 +87,7 @@ void qt_load_raw(uint16 top, uint8 h)
       }
     }
 
-    for (c=0; c < 256; c++) {      
+    for (c=0; c < 256; c++) {
       huff[18][c] = (1284 | c);
     }
     getbits(0);
@@ -149,7 +165,7 @@ void qt_load_raw(uint16 top, uint8 h)
                 /* Unrolled */
                 tk = radc_token(tmp_i16);
                 *cur_buf_x = tk * 16;
-                
+
                 if (c) {
                   tmp16_2 = (*cur_buf_prevy + *cur_buf_x_plus1);
                   tmp16_2 >>= 1;
@@ -274,7 +290,7 @@ void qt_load_raw(uint16 top, uint8 h)
         raw_ptr1--;
       }
     }
-    
+
     row_idx += row_idx_shift;
     row_idx_plus2 += row_idx_shift;
   }

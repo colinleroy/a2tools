@@ -1,6 +1,7 @@
 #include "hgr.h"
 
 char hgr_init_done = 0;
+char hgr_mix_is_on = 0;
 
 void init_hgr(uint8 mono) {
 #ifdef __APPLE2__

@@ -1,36 +1,27 @@
 /*
-   dcraw.c -- Dave Coffin's raw photo decoder
-   Copyright 1997-2018 by Dave Coffin, dcoffin a cybercom o net
+  QTKT/QTKN decoding wrapper
+  Copyright 2023, Colin Leroy-Mira <colin@colino.net>
 
-   This is a command-line ANSI C program to convert raw photos from
-   any digital camera on any computer running any operating system.
+  Based on dcraw.c -- Dave Coffin's raw photo decoder
+  Copyright 1997-2018 by Dave Coffin, dcoffin a cybercom o net
 
-   No license is required to download and use dcraw.c.  However,
-   to lawfully redistribute dcraw, you must either (a) offer, at
-   no extra charge, full source code* for all executable files
-   containing RESTRICTED functions, (b) distribute this code under
-   the GPL Version 2 or later, (c) remove all RESTRICTED functions,
-   re-implement them, or copy them from an earlier, unrestricted
-   Revision of dcraw.c, or (d) purchase a license from the author.
+  Main decoding program, link with either qt100.c or qt150.c to
+  build the decoder.
 
-   The functions that process Foveon images have been RESTRICTED
-   since Revision 1.237.  All other code remains free for all uses.
+  Decoding implementations are expected to provide global variables:
+  char magic[5];
+  char *model;
+  uint16 raw_image_size;
+  uint8 raw_image[<of raw_image_size>];
+  uint16 cache_size;
+  uint8 cache[<of cache_size size>];
 
-   *If you have not modified dcraw.c in any way, a link to my
-   homepage qualifies as "full source code".
+  and the decoding function:
+  void qt_load_raw(uint16 top, uint8 h)
 
-   $Revision: 1.478 $
-   $Date: 2018/06/01 20:36:25 $
- */
-
-/* RADC (quicktake 150/200): 9mn per 640*480 pic on 16MHz ZipGS Apple IIgs
- *                           90mn on 1MHz Apple IIc
- *
- * Storage: ~64 kB per QT150 pic   ~128 kB per QT100 pic
- *            8 kB per output HGR     8 kB per output HGR
- * Main RAM: Stores code, vars, raw_image array
- *           Approx 1kB free        ??
- *           LC more stuffable, stack can be shortened
+  This file provides the actual uint16 height and width to the decoder.
+  uint16 raw_image_size;
+  uint8 raw_image[<of raw_image_size>];
  */
 
 /* Handle pic by horizontal bands for memory constraints reasons.
@@ -39,7 +30,6 @@
  * and a multiple of 5px for nearest-neighbor scaling reasons.
  * (480 => 192 = *0.4, 240 => 192 = *0.8)
  */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -58,17 +48,25 @@
 
 #pragma code-name (push, "LC")
 
-FILE *ifp, *ofp;
+/* Shared with decoders */
+uint16 height, width;
+uint16 raw_image_size = (QT_BAND) * 640;
+uint8 raw_image[(QT_BAND) * 640];
+
+
+/* Source file access. The cache mechanism is shared with decoders
+ * but the cache size is set by decoders. Decoders should not have
+ * access to the file pointers
+ */
+static FILE *ifp, *ofp;
 static const char *ifname;
 static size_t data_offset;
 
-uint16 height, width;
+static uint16 cache_offset;
+static uint16 cache_pages_read;
+static uint32 last_seek = 0;
 
-uint16 cache_offset;
-uint16 cache_pages_read;
-uint32 last_seek = 0;
-
-void iseek(uint32 off) {
+void src_file_seek(uint32 off) {
   fseek(ifp, off, SEEK_SET);
   fread(cache, 1, cache_size, ifp);
   cache_offset = 0;
@@ -80,7 +78,7 @@ uint32 cache_read_since_inval(void) {
   return last_seek + cache_pages_read + cache_offset;
 }
 
-uint8 get1() {
+static uint8 src_file_get_byte(void) {
   if (cache_offset == cache_size) {
     fread(cache, 1, cache_size, ifp);
     cache_offset = 0;
@@ -89,7 +87,7 @@ uint8 get1() {
   return cache[cache_offset++];
 }
 
-uint16 get2() {
+static uint16 src_file_get_uint16(void) {
   uint16 v;
 
   if (cache_offset == cache_size) {
@@ -119,7 +117,7 @@ static uint8 shift;
   if (nbits == 0)                                                   \
     return bitbuf = vbits = 0;                                      \
   if (vbits < nbits) {                                              \
-    c = get1();                                                     \
+    c = src_file_get_byte();                                        \
     FAST_SHIFT_LEFT_8_LONG(bitbuf);                                 \
     bitbuf += c;                                                    \
     vbits += 8;                                                     \
@@ -204,22 +202,22 @@ static uint8 identify(const char *name)
   }
 
   //fseek(ifp, WH_OFFSET, SEEK_SET);
-  iseek(WH_OFFSET);
-  height = get2();
-  width  = get2();
+  src_file_seek(WH_OFFSET);
+  height = src_file_get_uint16();
+  width  = src_file_get_uint16();
 
   printf(" image %s (%dx%d)...\n", name, width, height);
 
   /* Skip those */
-  get2();
-  get2();
+  src_file_get_uint16();
+  src_file_get_uint16();
 
-  if (get2() == 30)
+  if (src_file_get_uint16() == 30)
     data_offset = 738;
   else
     data_offset = 736;
 
-  iseek(data_offset);
+  src_file_seek(data_offset);
   return 0;
 }
 
@@ -253,10 +251,11 @@ static void build_scale_table(void) {
 
 static void write_raw(void)
 {
-  register uint8 *idx_src;
   register uint8 *dst_ptr;
+  register uint8 **cur_orig_y;
+  register uint16 *cur_orig_x;
 #if SCALE
-  register uint8 row, col;
+  uint8 row, col;
 #else
   uint16 row, col;
 #endif
@@ -267,18 +266,20 @@ static void write_raw(void)
 #if SCALE
   /* Scale (nearest neighbor)*/
   dst_ptr = raw_image;
+  cur_orig_y = orig_y_table + 0;
   for (row = 0; row < scaled_band_height; row++) {
-    idx_src = orig_y_table[row];
     col = 0;
 
     /* Not a for() because looping on uint8 from 0 to 255 */
+    cur_orig_x = orig_x_table + 0;
     do {
-      uint8 val = *(idx_src + orig_x_table[col]);
+      uint8 val = *(*cur_orig_y + *cur_orig_x);
       *dst_ptr = val;
       histogram[val]++;
       dst_ptr++;
+      cur_orig_x++;
     } while (++col);
-
+    cur_orig_y++;
   }
 #endif
   fwrite (raw_ptr, 1, output_write_len, ofp);
@@ -297,8 +298,13 @@ static void reload_menu(const char *filename) {
     printf("Please reinsert the program disk, then press any key.");
     cgetc();
   }
-  exec("qtmenu", filename);
+
+  if (exec("qtmenu", filename) != 0) {
+    printf("can't exec menu\n");
+    cgetc();
+  }
 }
+
 int main (int argc, const char **argv)
 {
   uint16 h;
@@ -361,7 +367,7 @@ try_again:
   fclose(ofp);
 
   /* Save histogram to /RAM */
-  ofp = fopen(HIST_NAME,"w");
+  ofp = fopen(HIST_NAME, "w");
   if (ofp) {
     fwrite(histogram, sizeof(uint16), 256, ofp);
     fclose(ofp);

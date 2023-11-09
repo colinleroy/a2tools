@@ -28,13 +28,16 @@ extern uint8 scrw, scrh;
 #define DITHER_BURKES 1
 #define DITHER_BAYER  2
 #define DEFAULT_DITHER_THRESHOLD 128
+#define DEFAULT_BRIGHTEN 0
+
+FILE *ifp, *ofp;
 
 int16 angle = 0;
 uint8 auto_level = 1;
 uint8 dither_alg = DITHER_BURKES;
 uint8 resize = 1;
-uint8 mix_is_on = 0;
 uint8 dither_threshold = DEFAULT_DITHER_THRESHOLD;
+int8 brighten = DEFAULT_BRIGHTEN;
 
 static void convert_temp_to_hgr(const char *ofname);
 
@@ -93,7 +96,7 @@ static uint8 opt_histogram[256];
 #define NUM_PIXELS 49152U //256*192
 
 static void histogram_equalize(void) {
-  uint16 x;
+  uint8 x = 0;
   uint16 curr_hist = 0;
 
   if (auto_level) {
@@ -103,17 +106,17 @@ static void histogram_equalize(void) {
       fclose(ifp);
 
       printf("Histogram equalization...\n");
-      for (x = 0; x < 256; x++) {
+      do {
         curr_hist += histogram[x];
         opt_histogram[x] = (uint8)((((uint32)curr_hist * 255)) / NUM_PIXELS);
-      }
+      } while (++x);
     } else {
       printf("Can't open "HIST_NAME"\n");
     }
   } else {
-    for (x = 0; x < 256; x++) {
+    do {
       opt_histogram[x] = x;
-    }
+    } while (++x);
   }
 }
 
@@ -164,17 +167,18 @@ start_edit:
     } else {
       printf("\n");
     }
-    printf("H: Auto-level %s - B: Brighten - D: Darken (Threshold %d)\n",
-           auto_level ? "off":"on", dither_threshold);
+    printf("H: Auto-level %s - B: Brighten - D: Darken (Current %s%d)\n",
+           auto_level ? "off":"on", 
+           brighten > 0 ? "+":"",
+           brighten);
     printf("Dither with K: Burkes / Y: Bayer / N: Don't dither (Current: %s)\n"
            "S: Save - Escape: Exit without saving - Any other key: Hide help",
            dither_alg == DITHER_BURKES ? "Burkes"
             : dither_alg == DITHER_BAYER ? "Bayer" : "None");
 
     c = tolower(cgetc());
-    if (!mix_is_on) {
+    if (!hgr_mix_is_on()) {
       hgr_mixon();
-      mix_is_on = 1;
     } else {
       switch(c) {
         case CH_ESC:
@@ -212,25 +216,21 @@ start_edit:
           return 1;
         case 'k':
           dither_alg = DITHER_BURKES;
-          dither_threshold = DEFAULT_DITHER_THRESHOLD;
           return 1;
         case 'y':
           dither_alg = DITHER_BAYER;
-          dither_threshold = DEFAULT_DITHER_THRESHOLD;
           return 1;
         case 'n':
           dither_alg = DITHER_NONE;
-          dither_threshold = DEFAULT_DITHER_THRESHOLD;
           return 1;
         case 'b':
-          dither_threshold -= 32;
+          brighten += 16;
           return 1;
         case 'd':
-          dither_threshold += 32;
+          brighten -= 16;
           return 1;
         default:
           hgr_mixoff();
-          mix_is_on = 0;
       }
     }
   } while (1);
@@ -255,8 +255,6 @@ done:
 
 static uint8 buf[FILE_WIDTH];
 static uint8 err[FILE_WIDTH * 2];
-
-FILE *ifp, *ofp;
 
 #pragma inline-stdfuncs(push, on)
 #pragma allow-eager-inline(push, on)
@@ -434,6 +432,15 @@ static void convert_temp_to_hgr(const char *ofname) {
 
       opt_val = buf[x];
       opt_val = opt_histogram[opt_val];
+      if (brighten) {
+        int16 t = opt_val + brighten;
+        if (t < 0)
+          opt_val = 0;
+        else if (t > 255)
+          opt_val = 255;
+        else
+          opt_val = t;
+      }
       /* Dither */
       if (dither_alg == DITHER_BURKES) {
         buf_plus_err = opt_val + cur_err_line[x];
@@ -560,7 +567,6 @@ void qt_view_image(const char *filename) {
 
   init_hgr(1);
   hgr_mixoff();
-  mix_is_on = 0;
 
   fclose(fp);
 
