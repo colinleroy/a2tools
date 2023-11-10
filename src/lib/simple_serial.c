@@ -315,21 +315,23 @@ int __fastcall__ simple_serial_getc_immediate(void) {
 }
 
 static uint16 timeout_cycles = 0;
+#ifdef IIGS
+uint8 orig_speed_reg; /* For IIgs */
+#endif
 
 /* Input */
 int __fastcall__ simple_serial_getc_with_timeout(void) {
     static char c;
 
-#ifndef IIGS
     timeout_cycles = 10000U;
-#else
-    timeout_cycles = 30000U;
-#endif
+    slowdown();
     while (ser_get(&c) == SER_ERR_NO_DATA) {
       if (--timeout_cycles == 0) {
+        speedup();
         return EOF;
       }
     }
+    speedup();
     return (int)c;
 }
 
