@@ -40,7 +40,7 @@ static uint8 get_hello(void) {
   int c;
   uint8 wait;
 
-  wait = 20;
+  wait = 5;
   while (wait--) {
     c = simple_serial_getc_with_timeout_rom();
     if (c != EOF) {

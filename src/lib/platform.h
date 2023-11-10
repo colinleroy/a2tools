@@ -36,3 +36,24 @@ void platform_msleep(uint16 ms);
 #define platform_sleep(n) sleep(n)
 #define platform_msleep(n) usleep(n*1000)
 #endif
+
+#ifdef IIGS
+
+extern uint8 orig_speed_reg;
+
+#define slowdown() do {               \
+  __asm__("lda $C036"); /* CYAREG */  \
+  __asm__("sta %v", orig_speed_reg);  \
+  __asm__("and #$79");                \
+  __asm__("sta $C036");               \
+} while (0)
+
+#define speedup() do {                \
+  __asm__("lda %v", orig_speed_reg);  \
+  __asm__("sta $C036");               \
+} while (0)
+
+#else
+#define slowdown()
+#define speedup()
+#endif
