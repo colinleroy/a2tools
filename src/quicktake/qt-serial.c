@@ -107,14 +107,32 @@ uint8 qt_take_picture(void) {
     return -1;
 }
 
-void qt_set_camera_name(const char *name) {
+uint8 qt_set_camera_name(const char *name) {
   if (serial_model == QT_MODEL_1X0)
-    qt1x0_set_camera_name(name);
+    return qt1x0_set_camera_name(name);
+  else
+    return -1;
 }
 
-void qt_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second) {
+uint8 qt_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second) {
   if (serial_model == QT_MODEL_1X0)
-    qt1x0_set_camera_time(day, month, year, hour, minute, second);
+    return qt1x0_set_camera_time(day, month, year, hour, minute, second);
+  else
+    return -1;
+}
+
+uint8 qt_set_quality(uint8 quality) {
+  if (serial_model == QT_MODEL_1X0)
+    return qt1x0_set_quality(quality);
+  else
+    return -1;
+}
+
+uint8 qt_set_flash(uint8 mode) {
+  if (serial_model == QT_MODEL_1X0)
+    return qt1x0_set_flash(mode);
+  else
+    return -1;
 }
 
 uint8 qt_get_picture(uint8 n_pic, const char *filename, uint8 full) {
@@ -150,17 +168,25 @@ void write_qtk_header(FILE *fp, const char *pic_format) {
 
 const char *qt_get_mode_str(uint8 mode) {
   switch(mode) {
-    case 1:  return "standard quality";
-    case 2:  return "high quality";
-    default: return "Unknown";
+    case QUALITY_STANDARD:
+      return "standard quality";
+    case QUALITY_HIGH:
+      return "high quality";
+    default:
+      return "Unknown";
   }
 }
 
+
 const char *qt_get_flash_str(uint8 mode) {
   switch(mode) {
-    case 0:  return "automatic";
-    case 1:  return "disabled";
-    case 2:  return "forced";
-    default: return "Unknown";
+    case FLASH_AUTO:
+      return "automatic";
+    case FLASH_OFF:
+      return "disabled";
+    case FLASH_ON:
+      return "forced";
+    default:
+      return "Unknown";
   }
 }

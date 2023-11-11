@@ -160,13 +160,13 @@ static uint8 send_photo_data_command(uint8 pnum, uint8 *picture_size) {
 
 /* Delete all photos */
 static uint8 send_photo_delete_command(void) {
-  char str1[] = {0x16,0x29,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+  char str[] = {0x16,0x29,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
 
   if (qt1x0_send_ping() != 0) {
     return -1;
   }
 
-  return send_command(str1, sizeof str1, 0);
+  return send_command(str, sizeof str, 0);
 }
 
 /* Get the photos summary */
@@ -180,6 +180,35 @@ static uint8 send_photo_summary_command(void) {
 
   return send_command(str, sizeof str, 1);
 }
+
+/* Change quality mode */
+static uint8 send_set_quality_command(uint8 quality) {
+  #define SET_QUALITY_IDX 0x0D
+  //           {????,????,????,????,????,????,????,????,????,????,????,????,????,QUAL,????}
+  char str[] = {0x16,0x2A,0x00,0x06,0x00,0x00,0x00,0x00,0x00,0x04,0x00,0x06,0x02,0x10,0x00};
+
+  if (qt1x0_send_ping() != 0) {
+    return -1;
+  }
+  str[SET_QUALITY_IDX] = (quality == QUALITY_HIGH ? 0x10 : 0x20);
+
+  return send_command(str, sizeof str, 0);
+}
+
+/* Change flash mode */
+static uint8 send_set_flash_command(uint8 mode) {
+  #define SET_FLASH_IDX 0x0D
+  //           {????,????,????,????,????,????,????,????,????,????,????,????,????,FLSH}
+  char str[] = {0x16,0x2A,0x00,0x07,0x00,0x00,0x00,0x00,0x00,0x03,0x00,0x07,0x01,0x00};
+
+  if (qt1x0_send_ping() != 0) {
+    return -1;
+  }
+  str[SET_FLASH_IDX] = mode;
+
+  return send_command(str, sizeof str, 0);
+}
+
 
 /* Wakeup and detect a QuickTake 100/150 by clearing DTR 
  * Returns 0 if successful, -1 otherwise
@@ -280,7 +309,7 @@ uint8 qt1x0_take_picture(void) {
 }
 
 /* Set the camera name */
-void qt1x0_set_camera_name(const char *name) {
+uint8 qt1x0_set_camera_name(const char *name) {
   #define NAME_SET_IDX 0x0D
   char str[] = {0x16,0x2a,0x00,0x02,0x00,0x00,0x00,0x00,0x00,0x22,0x00,0x02,0x20,
                0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,0x20,
@@ -292,15 +321,15 @@ void qt1x0_set_camera_name(const char *name) {
     len = 31;
 
   if (qt1x0_send_ping() != 0) {
-    return;
+    return - 1;
   }
 
   memcpy(str + NAME_SET_IDX, name, len);
-  send_command(str, sizeof str, 0);
+  return send_command(str, sizeof str, 0);
 }
 
 /* Set the camera time */
-void qt1x0_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second) {
+uint8 qt1x0_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second) {
   #define SET_MONTH_IDX 0x0D
   #define SET_DAY_IDX   0x0E
   #define SET_YEAR_IDX  0x0F
@@ -318,10 +347,10 @@ void qt1x0_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8
   str[SET_SEC_IDX]   = second;
 
   if (qt1x0_send_ping() != 0) {
-    return;
+    return -1;
   }
 
-  send_command(str, sizeof str, 0);
+  return send_command(str, sizeof str, 0);
 }
 
 #define char_to_n_uint16(buf) (((uint8)((buf)[1]))<<8 | ((uint8)((buf)[0])))
@@ -467,6 +496,18 @@ uint8 qt1x0_delete_pictures(void) {
   return send_photo_delete_command();
 }
 
+/* Set quality */
+uint8 qt1x0_set_quality(uint8 quality) {
+  return send_set_quality_command(quality);
+}
+
+/* Set quality */
+uint8 qt1x0_set_flash(uint8 mode) {
+  return send_set_flash_command(mode);
+}
+
+#pragma code-name(pop)
+
 /* Get information from the camera */
 uint8 qt1x0_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mode, uint8 *flash_mode, uint8 *battery_level, char **name, struct tm *time) {
   #define BATTERY_IDX    0x02 /* ?? */
@@ -514,4 +555,3 @@ uint8 qt1x0_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mo
   *name = trim(buffer + NAME_IDX);
   return 0;
 }
-#pragma code-name(pop)

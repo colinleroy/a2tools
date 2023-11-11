@@ -21,6 +21,7 @@
 
 uint8 scrw, scrh;
 uint8 camera_connected;
+uint8 current_quality, current_flash_mode;
 
 #ifdef __CC65__
   #pragma static-locals(push, on)
@@ -54,7 +55,11 @@ static uint8 print_menu(void) {
            " 5. View a converted picture from floppy\n");
   if (camera_connected) {
     printf(" 6. Set camera name\n"
-           " 7. Set camera time\n");
+           " 7. Set camera time\n"
+           " 8. Set quality to %s\n"
+           " 9. Set flash to %s\n",
+           qt_get_mode_str((current_quality == QUALITY_HIGH) ? QUALITY_STANDARD:QUALITY_HIGH),
+           qt_get_flash_str((current_flash_mode + 1) % 3));
   }
   printf(  "\n"
            " 0. Exit\n\n");
@@ -252,6 +257,8 @@ menu:
   if (camera_connected) {
     if (qt_get_information(&num_pics, &left_pics, &mode, &flash, &batt, &name, &time) != 0)
       camera_connected = 0;
+    current_quality = mode;
+    current_flash_mode = flash;
   }
 
   print_header(num_pics, left_pics, mode, flash, batt, name, &time);
@@ -292,6 +299,16 @@ menu:
     case '7':
       if (camera_connected) {
         set_camera_time();
+      }
+      break;
+    case '8':
+      if (camera_connected) {
+        qt_set_quality((current_quality == QUALITY_HIGH) ? QUALITY_STANDARD:QUALITY_HIGH);
+      }
+      break;
+    case '9':
+      if (camera_connected) {
+        qt_set_flash((current_flash_mode + 1) % 3);
       }
       break;
     case '0':

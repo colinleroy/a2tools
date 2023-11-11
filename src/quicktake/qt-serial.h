@@ -6,6 +6,12 @@
 #define QT_MODEL_1X0 100
 #define QT_MODEL_200 200
 
+#define QUALITY_STANDARD 1
+#define QUALITY_HIGH 2
+#define FLASH_AUTO 0
+#define FLASH_OFF 1
+#define FLASH_ON 2
+
 /* Communication buffer */
 #define BLOCK_SIZE 512
 extern char buffer[BLOCK_SIZE];
@@ -17,8 +23,10 @@ uint8 qt_get_picture(uint8 n_pic, const char *filename, uint8 full);
 uint8 qt_delete_pictures(void);
 uint8 qt_take_picture(void);
 
-void qt_set_camera_name(const char *name);
-void qt_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second);
+uint8 qt_set_camera_name(const char *name);
+uint8 qt_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second);
+uint8 qt_set_quality(uint8 quality);
+uint8 qt_set_flash(uint8 mode);
 
 /* Helper functions */
 void write_qtk_header(FILE *fp, const char *pic_format);
