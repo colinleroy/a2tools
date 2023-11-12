@@ -93,25 +93,6 @@ void simple_serial_printf(const char* format, ...) {
 
 #ifdef __CC65__
 
-static uint16 timeout_cycles = 0;
-/* Accesses ROM so out of language card */
-int __fastcall__ simple_serial_getc_with_timeout_rom(void) {
-    static char c;
-
-    timeout_cycles = 10000;
-
-    while (ser_get(&c) == SER_ERR_NO_DATA) {
-      if (--timeout_cycles == 0) {
-        return EOF;
-      }
-      __asm__("bit $C082");
-      __asm__("lda #$01");  /* About 30µs */
-      __asm__("jsr $fca8"); /* MONWAIT */
-      __asm__("bit $C080");
-    }
-    return (int)c;
-}
-
 void simple_serial_set_speed(int b) {
 #ifndef IIGS
   static unsigned char reg_idx;

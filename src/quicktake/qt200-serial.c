@@ -22,7 +22,7 @@ static uint8 get_ack(void) {
 
   /* about 10seconds wait */
   while (wait--) {
-    if (simple_serial_getc_with_timeout_rom() == 0x06) {
+    if (simple_serial_getc_with_timeout() == 0x06) {
       return 0;
     }
   }
