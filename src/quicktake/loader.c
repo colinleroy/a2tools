@@ -34,10 +34,11 @@ void main(int argc, char *argv[]) {
   SDL_LockSurface(screen);
   unsigned char c;
   int x, y;
+
   for (y = 0; y < h; y++) {
     for (x = 0; x < w; x++) {
       fread(&c, 1, 1, fp);
-
+  
       sdl_set_pixel(screen, x, y, c, c, c);
     }
   }

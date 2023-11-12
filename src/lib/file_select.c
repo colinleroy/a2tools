@@ -31,6 +31,7 @@
 #include "dputc.h"
 #include "dputs.h"
 #include "clrzone.h"
+#include "malloc0.h"
 
 static char last_dir[FILENAME_MAX] = "";
 
@@ -77,10 +78,10 @@ list_again:
 #ifdef __CC65__
     dev = getfirstdevice();
     do {
-      list = realloc(list, sizeof(char *) * (n + 1));
-      is_dir = realloc(is_dir, sizeof(char) * (n + 1));
+      list = realloc_safe(list, sizeof(char *) * (n + 1));
+      is_dir = realloc_safe(is_dir, sizeof(char) * (n + 1));
 
-      list[n] = malloc(FILENAME_MAX);
+      list[n] = malloc0(FILENAME_MAX);
       if (getdevicedir(dev, list[n], FILENAME_MAX) == NULL) {
         free(list[n]);
         continue;
@@ -103,8 +104,8 @@ posix_use_dir:
         if (dir && !_DE_ISDIR(ent->d_type))
           continue;
 
-        list = realloc(list, sizeof(char *) * (n + 1));
-        is_dir = realloc(is_dir, sizeof(char) * (n + 1));
+        list = realloc_safe(list, sizeof(char *) * (n + 1));
+        is_dir = realloc_safe(is_dir, sizeof(char) * (n + 1));
 
         list[n] = strdup(ent->d_name);
         is_dir[n] = _DE_ISDIR(ent->d_type);
@@ -165,7 +166,7 @@ up:
       if (is_dir[sel] != dir) {
         goto err_bell;
       } else {
-        filename = malloc(FILENAME_MAX);
+        filename = malloc0(FILENAME_MAX);
         snprintf(filename, FILENAME_MAX, "%s%s%s", last_dir, (last_dir[0] != '\0' ? "/":""), list[sel]);
         goto out;
       }

@@ -23,9 +23,11 @@
 #ifdef __CC65__
 #define TMP_NAME "/RAM/GREY"
 #define HIST_NAME "/RAM/HIST"
+#define THUMBNAIL_NAME "/RAM/THUMBNAIL"
 #else
 #define TMP_NAME "GREY"
 #define HIST_NAME "HIST"
+#define THUMBNAIL_NAME "THUMBNAIL"
 #endif
 
 extern uint16 height, width;

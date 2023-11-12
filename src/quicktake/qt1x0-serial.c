@@ -13,9 +13,9 @@
 #include "qt-serial.h"
 #include "qt-conv.h"
 
-#pragma code-name(push, "LC")
-
 extern uint8 scrw, scrh;
+
+#pragma code-name(push, "LC")
 
 /* Get the ack from the camera */
 static uint8 get_ack(void) {
@@ -356,7 +356,7 @@ uint8 qt1x0_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint
 #define char_to_n_uint16(buf) (((uint8)((buf)[1]))<<8 | ((uint8)((buf)[0])))
 
 /* Get a picture from the camera to a file */
-uint8 qt1x0_get_picture(uint8 n_pic, const char *filename, uint8 full) {
+uint8 qt1x0_get_picture(uint8 n_pic, const char *filename) {
   /* Interesting bytes from the header */
   #define IMG_NUM_IDX    0x03
   #define IMG_SIZE_IDX   0x05
@@ -405,56 +405,49 @@ uint8 qt1x0_get_picture(uint8 n_pic, const char *filename, uint8 full) {
   DUMP_DATA(buffer, 64);
   DUMP_END();
 
-  if (full) {
-    /* Get size */
-    memcpy(pic_size_str, buffer + IMG_SIZE_IDX, 3);
+  /* Get size */
+  memcpy(pic_size_str, buffer + IMG_SIZE_IDX, 3);
 
 #ifndef __CC65__
-    pic_size_int = (pic_size_str[0]<<16) + (pic_size_str[1]<<8) + (pic_size_str[2]);
+  pic_size_int = (pic_size_str[0]<<16) + (pic_size_str[1]<<8) + (pic_size_str[2]);
 #else
-    ((unsigned char *)&pic_size_int)[0] = pic_size_str[2];
-    ((unsigned char *)&pic_size_int)[1] = pic_size_str[1];
-    ((unsigned char *)&pic_size_int)[2] = pic_size_str[0];
-    ((unsigned char *)&pic_size_int)[3] = 0;
+  ((unsigned char *)&pic_size_int)[0] = pic_size_str[2];
+  ((unsigned char *)&pic_size_int)[1] = pic_size_str[1];
+  ((unsigned char *)&pic_size_int)[2] = pic_size_str[0];
+  ((unsigned char *)&pic_size_int)[3] = 0;
 #endif
 
-    /* Get dimensions */
-    width = char_to_n_uint16(buffer + IMG_WIDTH_IDX);
-    height = char_to_n_uint16(buffer  + IMG_HEIGHT_IDX);
+  /* Get dimensions */
+  width = char_to_n_uint16(buffer + IMG_WIDTH_IDX);
+  height = char_to_n_uint16(buffer  + IMG_HEIGHT_IDX);
 
-    format = QT150_MAGIC; /* Default to QuickTake 150 format */
+  format = QT150_MAGIC; /* Default to QuickTake 150 format */
 
-    /* QuickTake 150 pictures are better compressed
-     * FIXME: This is a bad way to detect format
-     */
-    if (ntohs(width) == 640 && pic_size_int == 115200UL) {
-      format = QT100_MAGIC;
-    }
-    if (ntohs(width) == 320 && pic_size_int == 28800UL) {
-      format = QT100_MAGIC;
-    }
-
-    /* Write the start of the header */
-    write_qtk_header(picture, format);
-    fwrite(buffer, 1, BLOCK_SIZE, picture);
-    fwrite(buffer, 1, BLOCK_SIZE, picture);
-
-    /* Write the rest of the header */
-    fseek(picture, 0x0E, SEEK_SET);
-    fwrite(buffer + HDR_SKIP, 1, 64 - HDR_SKIP, picture);
-
-    /* Set them in the file */
-    fseek(picture, WH_OFFSET, SEEK_SET);
-    fwrite((char *)&height, 2, 1, picture);
-    fwrite((char *)&width, 2, 1, picture);
-
-    fseek(picture, DATA_OFFSET, SEEK_SET);
-  } else {
-    width = htons(80);
-    height = htons(60);
-    pic_size_int = THUMBNAIL_SIZE;
-    format = "thumbnail";
+  /* QuickTake 150 pictures are better compressed
+   * FIXME: This is a bad way to detect format
+   */
+  if (ntohs(width) == 640 && pic_size_int == 115200UL) {
+    format = QT100_MAGIC;
   }
+  if (ntohs(width) == 320 && pic_size_int == 28800UL) {
+    format = QT100_MAGIC;
+  }
+
+  /* Write the start of the header */
+  write_qtk_header(picture, format);
+  fwrite(buffer, 1, BLOCK_SIZE, picture);
+  fwrite(buffer, 1, BLOCK_SIZE, picture);
+
+  /* Write the rest of the header */
+  fseek(picture, 0x0E, SEEK_SET);
+  fwrite(buffer + HDR_SKIP, 1, 64 - HDR_SKIP, picture);
+
+  /* Set them in the file */
+  fseek(picture, WH_OFFSET, SEEK_SET);
+  fwrite((char *)&height, 2, 1, picture);
+  fwrite((char *)&width, 2, 1, picture);
+
+  fseek(picture, DATA_OFFSET, SEEK_SET);
 
   DUMP_START("data");
 
@@ -465,11 +458,79 @@ uint8 qt1x0_get_picture(uint8 n_pic, const char *filename, uint8 full) {
   y = wherey();
 
   progress_bar(2, y, scrw - 2, 0, (uint16)(pic_size_int / BLOCK_SIZE));
-  if (full) {
-    send_photo_data_command(n_pic, pic_size_str);
-  } else {
-    send_photo_thumbnail_command(n_pic);
+  send_photo_data_command(n_pic, pic_size_str);
+
+  for (i = 0; i < (uint16)(pic_size_int / BLOCK_SIZE); i++) {
+
+    simple_serial_read(buffer, BLOCK_SIZE);
+    fwrite(buffer, 1, BLOCK_SIZE, picture);
+    DUMP_DATA(buffer, BLOCK_SIZE);
+
+    progress_bar(-1, -1, scrw - 2, i, (uint16)(pic_size_int / BLOCK_SIZE));
+
+    send_ack();
   }
+  simple_serial_read(buffer, (uint16)(pic_size_int % BLOCK_SIZE));
+  fwrite(buffer, 1, pic_size_int % BLOCK_SIZE, picture);
+  DUMP_DATA(buffer, pic_size_int % BLOCK_SIZE);
+
+  progress_bar(-1, -1, scrw - 2, 100, 100);
+
+  DUMP_END();
+  fclose(picture);
+  return 0;
+}
+
+#pragma code-name(pop)
+#pragma code-name(push, "LOWCODE")
+
+/* Get a thumnail from the camera to /RAM/THUMBNAIL */
+uint8 qt1x0_get_thumbnail(uint8 n_pic) {
+  uint16 i;
+  FILE *picture;
+  uint16 width, height;
+  unsigned long pic_size_int;
+  uint8 y;
+  const char *format;
+
+  platform_sleep(1);
+
+  if (qt1x0_send_ping() != 0) {
+    return -1;
+  }
+
+  picture = fopen(THUMBNAIL_NAME, "wb");
+
+  memset(buffer, 0, BLOCK_SIZE);
+
+  printf("  Getting header...\n");
+
+  DUMP_START("header");
+
+  if (send_photo_header_command(n_pic) != 0)
+    return -1;
+
+  simple_serial_read(buffer, 64);
+
+  DUMP_DATA(buffer, 64);
+  DUMP_END();
+
+  width = htons(80);
+  height = htons(60);
+  pic_size_int = THUMBNAIL_SIZE;
+  format = "thumbnail";
+
+  DUMP_START("data");
+
+  printf("  Width %u, height %u, %lu bytes (%s)\n",
+         ntohs(width), ntohs(height), pic_size_int, format);
+
+  printf("  Getting data...\n");
+  y = wherey();
+
+  progress_bar(2, y, scrw - 2, 0, (uint16)(pic_size_int / BLOCK_SIZE));
+  send_photo_thumbnail_command(n_pic);
+
   for (i = 0; i < (uint16)(pic_size_int / BLOCK_SIZE); i++) {
 
     simple_serial_read(buffer, BLOCK_SIZE);
@@ -505,8 +566,6 @@ uint8 qt1x0_set_quality(uint8 quality) {
 uint8 qt1x0_set_flash(uint8 mode) {
   return send_set_flash_command(mode);
 }
-
-#pragma code-name(pop)
 
 /* Get information from the camera */
 uint8 qt1x0_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mode, uint8 *flash_mode, uint8 *battery_level, char **name, struct tm *time) {
@@ -555,3 +614,4 @@ uint8 qt1x0_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mo
   *name = trim(buffer + NAME_IDX);
   return 0;
 }
+#pragma code-name(pop)
