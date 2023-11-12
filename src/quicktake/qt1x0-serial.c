@@ -23,7 +23,7 @@ static uint8 get_ack(void) {
 
   /* about 10seconds wait */
   while (wait--) {
-    if (simple_serial_getc_with_timeout_rom() == 0x00) {
+    if (simple_serial_getc_with_timeout() == 0x00) {
       return 0;
     }
   }
@@ -42,7 +42,7 @@ static uint8 get_hello(void) {
 
   wait = 5;
   while (wait--) {
-    c = simple_serial_getc_with_timeout_rom();
+    c = simple_serial_getc_with_timeout();
     if (c != EOF) {
       goto read;
     }
