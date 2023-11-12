@@ -5,7 +5,7 @@
   Based on dcraw.c -- Dave Coffin's raw photo decoder
   Copyright 1997-2018 by Dave Coffin, dcoffin a cybercom o net
 
-  Main decoding program, link with either qt100.c or qt150.c to
+  Main decoding program, link with either qtkt.c or qtkn.c to
   build the decoder.
 
   Decoding implementations are expected to provide global variables:
@@ -299,8 +299,8 @@ static void reload_menu(const char *filename) {
     cgetc();
   }
 
-  if (exec("qtmenu", filename) != 0) {
-    printf("can't exec menu\n");
+  if (exec("slowtake", filename) != 0) {
+    printf("Can't exec main program\n");
     cgetc();
   }
 }

@@ -25,26 +25,26 @@ upload_subdir :=
 endif
 endif
 
-qtmenu_SOURCES := \
-	qt-menu.c qt-serial.c qt1x0-serial.c qt-edit-image.c \
+slowtake_SOURCES := \
+	qt-menu.c qt-serial.c qt1x0-serial.c qt200-serial.c qt-edit-image.c \
 	../lib/dgets.c ../lib/scrollwindow.c ../lib/path_helper.c \
 	../lib/simple_serial.c ../lib/simple_serial_ext.c \
 	../lib/extended_string.c ../lib/malloc0.c \
 	../lib/file_select.c ../lib/progress_bar.c ../lib/hgr.c \
 	../lib/scrollwindow.c
 
-qtmenu_CC65SOURCES := \
+slowtake_CC65SOURCES := \
 	../lib/dputc.s ../lib/dputs.s ../lib/scroll.s \
 	../lib/clrzone.c ../lib/fastirq$(suffix).s \
 	../lib/platform_sleep.c
 
-qt100conv_SOURCES := \
-	qt-conv.c qt100.c  ../lib/path_helper.c ../lib/progress_bar.c
-qt100conv_CC65SOURCES :=
+qtktconv_SOURCES := \
+	qt-conv.c qtkt.c  ../lib/path_helper.c ../lib/progress_bar.c
+qtktconv_CC65SOURCES :=
 
-qt150conv_SOURCES := \
-	qt-conv.c qt150.c  ../lib/path_helper.c ../lib/progress_bar.c
-qt150conv_CC65SOURCES :=
+qtknconv_SOURCES := \
+	qt-conv.c qtkn.c  ../lib/path_helper.c ../lib/progress_bar.c
+qtknconv_CC65SOURCES :=
 
 GCCSOURCES := ../lib/extended_conio.c ../lib/clrzone.c
 DEPS :=
@@ -54,9 +54,9 @@ CFLAGS  = -I ../lib -DCONF_FILE_PATH=\"/etc/a2tools/quicktake.conf\"
 
 CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x200 $(USE_LANGCARD) $(debug_CFLAGS) $(iigs_CFLAGS)
 
-qtmenu_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-hgr.cfg $(CC65_TARGET)-iobuf-0800.o --start-addr 0x1000
-qt100conv_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh.cfg $(CC65_TARGET)-iobuf-0800.o --start-addr 0x1000
-qt150conv_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh.cfg $(CC65_TARGET)-iobuf-0800.o --start-addr 0x1000
+slowtake_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-hgr.cfg $(CC65_TARGET)-iobuf-0800.o --start-addr 0x1000
+qtktconv_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh.cfg $(CC65_TARGET)-iobuf-0800.o --start-addr 0x1000
+qtknconv_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh.cfg $(CC65_TARGET)-iobuf-0800.o --start-addr 0x1000
 
 GCCCFLAGS = -g -O0 -Wall -Wno-pointer-sign -Wno-char-subscripts -Wno-unused-but-set-variable -Wno-unused-variable -Wno-unknown-pragmas $(shell sdl-config --cflags)
 GCCLDFLAGS = $(shell sdl-config --libs)
@@ -65,29 +65,29 @@ GCCLDFLAGS = $(shell sdl-config --libs)
 
 all: \
 	splash.h \
-	qtmenu.bin qtmenu.x86_64 \
-	qt100conv.bin qt100conv.x86_64 \
-	qt150conv.bin qt150conv.x86_64
+	slowtake.bin slowtake.x86_64 \
+	qtktconv.bin qtktconv.x86_64 \
+	qtknconv.bin qtknconv.x86_64
 
 splash.h: splash.hgr
 	./make-splash.sh
 
-qtmenu.bin: $(qtmenu_SOURCES) $(qtmenu_CC65SOURCES)
-	cl65 --debug-info -Wl --dbgfile,"qtmenu.dbg" $(CFLAGS) $(qtmenu_CLCFLAGS) -vm -m qtmenu.map -o $@ $^
+slowtake.bin: $(slowtake_SOURCES) $(slowtake_CC65SOURCES)
+	cl65 --debug-info -Wl --dbgfile,"slowtake.dbg" $(CFLAGS) $(slowtake_CLCFLAGS) -vm -m slowtake.map -o $@ $^
 
-qtmenu.x86_64: $(qtmenu_SOURCES) $(GCCSOURCES)
+slowtake.x86_64: $(slowtake_SOURCES) $(GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	
 
-qt100conv.bin: $(qt100conv_SOURCES) $(qt100conv_CC65SOURCES)
-	cl65 --debug-info -Wl --dbgfile,"qt100conv.dbg" $(CFLAGS) $(qt100conv_CLCFLAGS) -vm -m qt100conv.map -o $@ $^
+qtktconv.bin: $(qtktconv_SOURCES) $(qtktconv_CC65SOURCES)
+	cl65 --debug-info -Wl --dbgfile,"qtktconv.dbg" $(CFLAGS) $(qtktconv_CLCFLAGS) -vm -m qtktconv.map -o $@ $^
 
-qt100conv.x86_64: $(qt100conv_SOURCES) $(GCCSOURCES)
+qtktconv.x86_64: $(qtktconv_SOURCES) $(GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	
 
-qt150conv.bin: $(qt150conv_SOURCES) $(qt150conv_CC65SOURCES)
-	cl65 --debug-info -Wl --dbgfile,"qt150conv.dbg" $(CFLAGS) $(qt150conv_CLCFLAGS) -vm -m qt150conv.map -o $@ $^
+qtknconv.bin: $(qtknconv_SOURCES) $(qtknconv_CC65SOURCES)
+	cl65 --debug-info -Wl --dbgfile,"qtknconv.dbg" $(CFLAGS) $(qtknconv_CLCFLAGS) -vm -m qtknconv.map -o $@ $^
 
-qt150conv.x86_64: $(qt150conv_SOURCES) $(GCCSOURCES)
+qtknconv.x86_64: $(qtknconv_SOURCES) $(GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	
 
 loader.x86_64:

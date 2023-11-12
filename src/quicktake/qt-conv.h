@@ -8,8 +8,8 @@
 
 #define SCALE 1
 
-#define QT100_MAGIC "qktk"
-#define QT150_MAGIC "qktn"
+#define QTKT_MAGIC "qktk"
+#define QTKN_MAGIC "qktn"
 
 #if SCALE
 #define FILE_WIDTH 256

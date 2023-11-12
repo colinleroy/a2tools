@@ -14,6 +14,7 @@
 #include "simple_serial.h"
 #include "qt-serial.h"
 #include "qt1x0-serial.h"
+#include "qt200-serial.h"
 #include "qt-conv.h"
 
 #define DEBUG_TIMING 0
@@ -72,7 +73,7 @@ uint8 qt_serial_connect(uint16 speed) {
 #endif
 
   /* Try and detect a QuickTake 1x0 */
-  if (qt_1x0_wakeup(speed) == 0) {
+  if (qt1x0_wakeup(speed) == 0) {
     serial_model = QT_MODEL_1X0;
   }
 
@@ -84,9 +85,16 @@ uint8 qt_serial_connect(uint16 speed) {
 #endif
   printf("Parity set.\n");
 
-  /* TODO: wakeup a QuickTake 200 if we don't have a 1x0
-   * connected
-   */
+  if (serial_model != QT_MODEL_1X0) {
+    if (qt200_wakeup() == 0) {
+      serial_model = QT_MODEL_200;
+    }
+  }
+
+  if (serial_model == 0) {
+    printf("No camera connected.\n");
+    return -1;
+  }
 
   printf("Initializing...\n");
 
