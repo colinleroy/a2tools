@@ -29,7 +29,7 @@
 #pragma register-vars(push, on)
 
 /* Shared with qt-conv.c */
-char magic[5] = QT100_MAGIC;
+char magic[5] = QTKT_MAGIC;
 char *model = "100";
 uint16 cache_size = 4096;
 uint8 cache[4096];

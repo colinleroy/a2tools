@@ -312,7 +312,7 @@ menu:
   set_scrollwindow(4, scrh);
   gotoxy(0, 0);
 
-  choice = print_menu();
+  choice = tolower(print_menu());
   switch(choice) {
     case 'p':
       if (camera_connected) {

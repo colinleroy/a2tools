@@ -76,10 +76,10 @@ void qt_convert_image(const char *filename) {
 
     get_program_disk();
 
-    if (!strcmp(magic, QT100_MAGIC)) {
-      exec("qt100conv", imgname);
-    } else if (!strcmp(magic, QT150_MAGIC)) {
-      exec("qt150conv", imgname);
+    if (!strcmp(magic, QTKT_MAGIC)) {
+      exec("qtktconv", imgname);
+    } else if (!strcmp(magic, QTKN_MAGIC)) {
+      exec("qtknconv", imgname);
     } else {
       cputs("Unknown file type.\r\n");
     }

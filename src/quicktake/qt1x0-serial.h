@@ -2,7 +2,7 @@
 #define __qt_1x0_serial_h
 
 /* Connection functions */
-uint8 qt_1x0_wakeup(uint16 speed);
+uint8 qt1x0_wakeup(uint16 speed);
 uint8 qt1x0_set_speed(uint16 speed, int first_sleep, int second_sleep);
 
 /* Camera settings functions */

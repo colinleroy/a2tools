@@ -26,7 +26,7 @@
 #define radc_token(tree) ((int8) getbithuff(8,huff[tree]))
 
 /* Shared with qt-conv.c */
-char magic[5] = QT150_MAGIC;
+char magic[5] = QTKN_MAGIC;
 char *model = "150/200";
 uint16 cache_size = 1536;
 uint8 cache[1536];

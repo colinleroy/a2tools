@@ -47,7 +47,7 @@ static uint8 get_hello(void) {
       goto read;
     }
   }
-  printf("Cannot connect (timeout).\n");
+  printf("Timeout.\n");
   return -1;
 read:
   buffer[0] = (unsigned char)c;
@@ -56,7 +56,7 @@ read:
   DUMP_START("qt_hello");
   DUMP_DATA(buffer, 7);
   DUMP_END();
-
+  printf("Done.\n");
   return 0;
 }
 
@@ -158,19 +158,8 @@ static uint8 send_photo_data_command(uint8 pnum, uint8 *picture_size) {
   return send_command(str, sizeof str, 1);
 }
 
-/* Delete all photos */
-static uint8 send_photo_delete_command(void) {
-  char str[] = {0x16,0x29,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
-
-  if (qt1x0_send_ping() != 0) {
-    return -1;
-  }
-
-  return send_command(str, sizeof str, 0);
-}
-
-/* Get the photos summary */
-static uint8 send_photo_summary_command(void) {
+/* Get the camera information summary */
+static uint8 send_get_information_command(void) {
   //           {????,????,????,????,????,????,????,RESPONSE__SIZE,????}
   char str[] = {0x16,0x28,0x00,0x30,0x00,0x00,0x00,0x00,0x00,0x80,0x00};
 
@@ -181,39 +170,10 @@ static uint8 send_photo_summary_command(void) {
   return send_command(str, sizeof str, 1);
 }
 
-/* Change quality mode */
-static uint8 send_set_quality_command(uint8 quality) {
-  #define SET_QUALITY_IDX 0x0D
-  //           {????,????,????,????,????,????,????,????,????,????,????,????,????,QUAL,????}
-  char str[] = {0x16,0x2A,0x00,0x06,0x00,0x00,0x00,0x00,0x00,0x04,0x00,0x06,0x02,0x10,0x00};
-
-  if (qt1x0_send_ping() != 0) {
-    return -1;
-  }
-  str[SET_QUALITY_IDX] = (quality == QUALITY_HIGH ? 0x10 : 0x20);
-
-  return send_command(str, sizeof str, 0);
-}
-
-/* Change flash mode */
-static uint8 send_set_flash_command(uint8 mode) {
-  #define SET_FLASH_IDX 0x0D
-  //           {????,????,????,????,????,????,????,????,????,????,????,????,????,FLSH}
-  char str[] = {0x16,0x2A,0x00,0x07,0x00,0x00,0x00,0x00,0x00,0x03,0x00,0x07,0x01,0x00};
-
-  if (qt1x0_send_ping() != 0) {
-    return -1;
-  }
-  str[SET_FLASH_IDX] = mode;
-
-  return send_command(str, sizeof str, 0);
-}
-
-
-/* Wakeup and detect a QuickTake 100/150 by clearing DTR 
+/* Wakeup and detect a QuickTake 100/150 by clearing DTR
  * Returns 0 if successful, -1 otherwise
  */
-uint8 qt_1x0_wakeup(uint16 speed) {
+uint8 qt1x0_wakeup(uint16 speed) {
 #if defined(__CC65__) && !defined(IIGS)
     /* The Apple IIc printer being closed right now,
      * we have to set DTR before clearing it. */
@@ -227,7 +187,7 @@ uint8 qt_1x0_wakeup(uint16 speed) {
   simple_serial_dtr_onoff(0);
 #endif
 
-  printf("Waiting for hello...\n");
+  printf("Waiting for QuickTake 1x0 hello... ");
   if (get_hello() != 0) {
 #if !defined(__CC65__) || defined(IIGS)
     /* Re-up current port */
@@ -292,7 +252,7 @@ uint8 qt1x0_set_speed(uint16 speed, int first_sleep, int second_sleep) {
 
   /* We don't care about the bytes we receive here */
   simple_serial_flush();
-  
+
   send_ack();
   return get_ack();
 }
@@ -300,7 +260,7 @@ uint8 qt1x0_set_speed(uint16 speed, int first_sleep, int second_sleep) {
 /* Take a picture */
 uint8 qt1x0_take_picture(void) {
   char str[] = {0x16,0x1B,0x00,0x00,0x00,0x00,0x00};
-  
+
   if (qt1x0_send_ping() != 0) {
     return -1;
   }
@@ -371,7 +331,7 @@ uint8 qt1x0_get_picture(uint8 n_pic, const char *filename) {
   #define IMG_FLASH_IDX  0x13
   #define QUALITY_IDX    0x18 /* (?) */
   #define HDR_SKIP       0x04
-  
+
   #define WH_OFFSET      0x220
   #define DATA_OFFSET    0x2E0
 
@@ -421,16 +381,16 @@ uint8 qt1x0_get_picture(uint8 n_pic, const char *filename) {
   width = char_to_n_uint16(buffer + IMG_WIDTH_IDX);
   height = char_to_n_uint16(buffer  + IMG_HEIGHT_IDX);
 
-  format = QT150_MAGIC; /* Default to QuickTake 150 format */
+  format = QTKN_MAGIC; /* Default to QuickTake 150 format */
 
   /* QuickTake 150 pictures are better compressed
    * FIXME: This is a bad way to detect format
    */
   if (ntohs(width) == 640 && pic_size_int == 115200UL) {
-    format = QT100_MAGIC;
+    format = QTKT_MAGIC;
   }
   if (ntohs(width) == 320 && pic_size_int == 28800UL) {
-    format = QT100_MAGIC;
+    format = QTKT_MAGIC;
   }
 
   /* Write the start of the header */
@@ -554,17 +514,41 @@ uint8 qt1x0_get_thumbnail(uint8 n_pic) {
 
 /* Delete all pictures from the camera */
 uint8 qt1x0_delete_pictures(void) {
-  return send_photo_delete_command();
+  char str[] = {0x16,0x29,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+
+  if (qt1x0_send_ping() != 0) {
+    return -1;
+  }
+
+  return send_command(str, sizeof str, 0);
 }
 
 /* Set quality */
 uint8 qt1x0_set_quality(uint8 quality) {
-  return send_set_quality_command(quality);
+  #define SET_QUALITY_IDX 0x0D
+  //           {????,????,????,????,????,????,????,????,????,????,????,????,????,QUAL,????}
+  char str[] = {0x16,0x2A,0x00,0x06,0x00,0x00,0x00,0x00,0x00,0x04,0x00,0x06,0x02,0x10,0x00};
+
+  if (qt1x0_send_ping() != 0) {
+    return -1;
+  }
+  str[SET_QUALITY_IDX] = (quality == QUALITY_HIGH ? 0x10 : 0x20);
+
+  return send_command(str, sizeof str, 0);
 }
 
-/* Set quality */
+/* Set flash mode */
 uint8 qt1x0_set_flash(uint8 mode) {
-  return send_set_flash_command(mode);
+  #define SET_FLASH_IDX 0x0D
+  //           {????,????,????,????,????,????,????,????,????,????,????,????,????,FLSH}
+  char str[] = {0x16,0x2A,0x00,0x07,0x00,0x00,0x00,0x00,0x00,0x03,0x00,0x07,0x01,0x00};
+
+  if (qt1x0_send_ping() != 0) {
+    return -1;
+  }
+  str[SET_FLASH_IDX] = mode;
+
+  return send_command(str, sizeof str, 0);
 }
 
 /* Get information from the camera */
@@ -590,14 +574,14 @@ uint8 qt1x0_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mo
     return -1;
   }
 
-  if (send_photo_summary_command() != 0)
+  if (send_get_information_command() != 0)
     return -1;
 
   simple_serial_read(buffer, 128);
 
   DUMP_DATA(buffer, 128);
   DUMP_END();
-  
+
 
   *num_pics     = buffer[NUM_PICS_IDX];
   *left_pics    = buffer[LEFT_PICS_IDX];
