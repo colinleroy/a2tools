@@ -313,6 +313,35 @@ uint8 qt1x0_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint
   return send_command(str, sizeof str, 0);
 }
 
+static void receive_data(uint32 size, FILE *fp) {
+  uint8 y = wherey();
+  uint16 i;
+
+  DUMP_START("data");
+
+  printf("  Getting data...\n");
+
+  progress_bar(2, y, scrw - 2, 0, (uint16)(size / BLOCK_SIZE));
+
+  for (i = 0; i < (uint16)(size / BLOCK_SIZE); i++) {
+
+    simple_serial_read(buffer, BLOCK_SIZE);
+    fwrite(buffer, 1, BLOCK_SIZE, fp);
+    DUMP_DATA(buffer, BLOCK_SIZE);
+
+    progress_bar(-1, -1, scrw - 2, i, (uint16)(size / BLOCK_SIZE));
+
+    send_ack();
+  }
+  simple_serial_read(buffer, (uint16)(size % BLOCK_SIZE));
+  fwrite(buffer, 1, size % BLOCK_SIZE, fp);
+  DUMP_DATA(buffer, size % BLOCK_SIZE);
+
+  progress_bar(-1, -1, scrw - 2, 100, 100);
+
+  DUMP_END();
+}
+
 #define char_to_n_uint16(buf) (((uint8)((buf)[1]))<<8 | ((uint8)((buf)[0])))
 
 /* Get a picture from the camera to a file */
@@ -335,12 +364,10 @@ uint8 qt1x0_get_picture(uint8 n_pic, const char *filename) {
   #define WH_OFFSET      0x220
   #define DATA_OFFSET    0x2E0
 
-  uint16 i;
   FILE *picture;
   uint16 width, height;
   unsigned char pic_size_str[3];
   unsigned long pic_size_int;
-  uint8 y;
   const char *format;
 
   platform_sleep(1);
@@ -409,34 +436,13 @@ uint8 qt1x0_get_picture(uint8 n_pic, const char *filename) {
 
   fseek(picture, DATA_OFFSET, SEEK_SET);
 
-  DUMP_START("data");
-
   printf("  Width %u, height %u, %lu bytes (%s)\n",
          ntohs(width), ntohs(height), pic_size_int, format);
 
-  printf("  Getting data...\n");
-  y = wherey();
-
-  progress_bar(2, y, scrw - 2, 0, (uint16)(pic_size_int / BLOCK_SIZE));
   send_photo_data_command(n_pic, pic_size_str);
 
-  for (i = 0; i < (uint16)(pic_size_int / BLOCK_SIZE); i++) {
+  receive_data(pic_size_int, picture);
 
-    simple_serial_read(buffer, BLOCK_SIZE);
-    fwrite(buffer, 1, BLOCK_SIZE, picture);
-    DUMP_DATA(buffer, BLOCK_SIZE);
-
-    progress_bar(-1, -1, scrw - 2, i, (uint16)(pic_size_int / BLOCK_SIZE));
-
-    send_ack();
-  }
-  simple_serial_read(buffer, (uint16)(pic_size_int % BLOCK_SIZE));
-  fwrite(buffer, 1, pic_size_int % BLOCK_SIZE, picture);
-  DUMP_DATA(buffer, pic_size_int % BLOCK_SIZE);
-
-  progress_bar(-1, -1, scrw - 2, 100, 100);
-
-  DUMP_END();
   fclose(picture);
   return 0;
 }
@@ -446,11 +452,9 @@ uint8 qt1x0_get_picture(uint8 n_pic, const char *filename) {
 
 /* Get a thumnail from the camera to /RAM/THUMBNAIL */
 uint8 qt1x0_get_thumbnail(uint8 n_pic) {
-  uint16 i;
   FILE *picture;
   uint16 width, height;
   unsigned long pic_size_int;
-  uint8 y;
   const char *format;
 
   platform_sleep(1);
@@ -485,29 +489,10 @@ uint8 qt1x0_get_thumbnail(uint8 n_pic) {
   printf("  Width %u, height %u, %lu bytes (%s)\n",
          ntohs(width), ntohs(height), pic_size_int, format);
 
-  printf("  Getting data...\n");
-  y = wherey();
-
-  progress_bar(2, y, scrw - 2, 0, (uint16)(pic_size_int / BLOCK_SIZE));
   send_photo_thumbnail_command(n_pic);
 
-  for (i = 0; i < (uint16)(pic_size_int / BLOCK_SIZE); i++) {
+  receive_data(pic_size_int, picture);
 
-    simple_serial_read(buffer, BLOCK_SIZE);
-    fwrite(buffer, 1, BLOCK_SIZE, picture);
-    DUMP_DATA(buffer, BLOCK_SIZE);
-
-    progress_bar(-1, -1, scrw - 2, i, (uint16)(pic_size_int / BLOCK_SIZE));
-
-    send_ack();
-  }
-  simple_serial_read(buffer, (uint16)(pic_size_int % BLOCK_SIZE));
-  fwrite(buffer, 1, pic_size_int % BLOCK_SIZE, picture);
-  DUMP_DATA(buffer, pic_size_int % BLOCK_SIZE);
-
-  progress_bar(-1, -1, scrw - 2, 100, 100);
-
-  DUMP_END();
   fclose(picture);
   return 0;
 }
