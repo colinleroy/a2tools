@@ -30,12 +30,8 @@ char buffer[BLOCK_SIZE];
 
 #pragma code-name(push, "LC")
 
-static uint8 qt_set_speed(uint16 speed, int first_sleep, int second_sleep) {
-  if (serial_model == QT_MODEL_1X0)
-    return qt1x0_set_speed(speed, first_sleep, second_sleep);
-  else
-    return -1;
-}
+/* Forward declarations */
+static uint8 qt_set_speed(uint16 speed, int first_sleep, int second_sleep);
 
 /* Connect to a QuickTake and detect its model */
 uint8 qt_serial_connect(uint16 speed) {
@@ -100,6 +96,13 @@ uint8 qt_serial_connect(uint16 speed) {
 
 /* Protocol-dependant camera functions */
 
+static uint8 qt_set_speed(uint16 speed, int first_sleep, int second_sleep) {
+  if (serial_model == QT_MODEL_1X0)
+    return qt1x0_set_speed(speed, first_sleep, second_sleep);
+  else
+    return -1;
+}
+
 uint8 qt_take_picture(void) {
   if (serial_model == QT_MODEL_1X0)
     return qt1x0_take_picture();
@@ -135,14 +138,22 @@ uint8 qt_set_flash(uint8 mode) {
     return -1;
 }
 
-uint8 qt_get_picture(uint8 n_pic, const char *filename, uint8 full) {
+uint8 qt_get_picture(uint8 n_pic, const char *filename) {
   if (serial_model == QT_MODEL_1X0)
-    return qt1x0_get_picture(n_pic, filename, full);
+    return qt1x0_get_picture(n_pic, filename);
+  else
+    return -1;
+}
+
+uint8 qt_get_thumbnail(uint8 n_pic) {
+  if (serial_model == QT_MODEL_1X0)
+    return qt1x0_get_thumbnail(n_pic);
   else
     return -1;
 }
 
 #pragma code-name(pop)
+#pragma code-name(push, "LOWCODE")
 
 uint8 qt_delete_pictures(void) {
   if (serial_model == QT_MODEL_1X0)
@@ -190,3 +201,4 @@ const char *qt_get_flash_str(uint8 mode) {
       return "Unknown";
   }
 }
+#pragma code-name(pop)

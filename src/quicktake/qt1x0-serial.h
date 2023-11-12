@@ -14,7 +14,8 @@ uint8 qt1x0_set_flash(uint8 mode);
 
 /* Camera pictures functions */
 uint8 qt1x0_take_picture(void);
-uint8 qt1x0_get_picture(uint8 n_pic, const char *filename, uint8 full);
+uint8 qt1x0_get_picture(uint8 n_pic, const char *filename);
+uint8 qt1x0_get_thumbnail(uint8 n_pic);
 uint8 qt1x0_delete_pictures(void);
 
 #endif

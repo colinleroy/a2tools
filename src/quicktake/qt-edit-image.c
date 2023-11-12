@@ -39,8 +39,6 @@ uint8 resize = 1;
 uint8 dither_threshold = DEFAULT_DITHER_THRESHOLD;
 int8 brighten = DEFAULT_BRIGHTEN;
 
-static void convert_temp_to_hgr(const char *ofname);
-
 void get_program_disk(void) {
   while (reopen_start_device() != 0) {
     clrscr();
@@ -101,19 +99,19 @@ static void histogram_equalize(void) {
 
   if (auto_level) {
     ifp = fopen(HIST_NAME, "r");
-    if (ifp != NULL) {
-      fread(histogram, sizeof(uint16), 256, ifp);
-      fclose(ifp);
-
-      printf("Histogram equalization...\n");
-      do {
-        curr_hist += histogram[x];
-        opt_histogram[x] = (uint8)((((uint32)curr_hist * 255)) / NUM_PIXELS);
-      } while (++x);
-    } else {
-      printf("Can't open "HIST_NAME"\n");
+    if (ifp == NULL) {
+      goto fallback_std;
     }
+    fread(histogram, sizeof(uint16), 256, ifp);
+    fclose(ifp);
+
+    printf("Histogram equalization...\n");
+    do {
+      curr_hist += histogram[x];
+      opt_histogram[x] = (uint8)((((uint32)curr_hist * 255)) / NUM_PIXELS);
+    } while (++x);
   } else {
+fallback_std:
     do {
       opt_histogram[x] = x;
     } while (++x);
@@ -144,7 +142,7 @@ static void init_base_addrs (void)
   base_init_done = 1;
 }
 
-#define X_OFFSET ((HGR_WIDTH - FILE_WIDTH) / 2)
+#define X_OFFSET ((HGR_WIDTH - file_width) / 2)
 
 #ifndef __CC65__
 char HGR_PAGE[HGR_LEN];
@@ -261,16 +259,19 @@ static uint8 err[FILE_WIDTH * 2];
 #pragma codesize(push, 200)
 #pragma register-vars(push, on)
 
-static void convert_temp_to_hgr(const char *ofname) {
+void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint16 p_height) {
   /* Rotation/cropping variables */
-  uint8 start_x;
+  uint8 start_x, i;
   register uint8 x, end_x;
   register uint16 dx, dy;
   uint16 off_x, y, off_y;
+  uint16 file_width;
 #if SCALE
   uint8 scaled_dx, scaled_dy;
+  uint8 file_height;
 #else
   uint16 scaled_dx, scaled_dy;
+  uint16 file_height;
 #endif
   int8 xdir, ydir;
   int16 cur_err;
@@ -301,11 +302,11 @@ static void convert_temp_to_hgr(const char *ofname) {
 
   /* General variables */
   uint8 *cur_err_line = err;
-  uint8 *next_err_line = err + FILE_WIDTH;
+  uint8 *next_err_line;
 #if SCALE
-  uint8 h_plus1 = FILE_HEIGHT + 1;
+  uint8 h_plus1;
 #else
-  uint16 h_plus1 = FILE_HEIGHT + 1;
+  uint16 h_plus1;
 #endif
   uint8 dhbmono[] = {0x7e,0x7d,0x7b,0x77,0x6f,0x5f,0x3f};
   uint8 dhwmono[] = {0x01,0x02,0x04,0x08,0x10,0x20,0x40};
@@ -314,15 +315,20 @@ static void convert_temp_to_hgr(const char *ofname) {
   uint8 cur_hgr_mod;
   uint8 opt_val;
 
+  file_width = p_width;
+  file_height = p_height;
+  h_plus1 = file_height + 1;
+  
+  next_err_line = err + file_width;
   init_base_addrs();
 
   clrscr();
   gotoxy(0, 20);
   printf("Converting %s (Esc to stop)...\n", ofname);
 
-  ifp = fopen(TMP_NAME, "r");
+  ifp = fopen(ifname, "r");
   if (ifp == NULL) {
-    printf("Can't open "TMP_NAME"\n");
+    printf("Can't open %s\n", ifname);
     return;
   }
 
@@ -330,14 +336,19 @@ static void convert_temp_to_hgr(const char *ofname) {
   memset(err, 0, sizeof err);
   memset((char *)HGR_PAGE, 0, HGR_LEN);
 
-  progress_bar(wherex(), wherey(), scrw, 0, FILE_HEIGHT);
+  progress_bar(wherex(), wherey(), scrw, 0, file_height);
 
   start_x = 0;
-  end_x = 0; /* FILE_WIDTH, but on uint8 */
+#if SCALE
+  end_x = file_width == 256 ? 0 : file_width;
+#else
+  end_x = file_width;
+#endif
+
   switch (angle) {
     case 0:
       off_x = X_OFFSET;
-      off_y = 0;
+      off_y = (HGR_HEIGHT - file_height) / 2;
       xdir = +1;
       ydir = +1;
       invert_coords = 0;
@@ -350,7 +361,7 @@ static void convert_temp_to_hgr(const char *ofname) {
         off_x = 0;
         off_y = HGR_WIDTH - 45;
         start_x = 32;
-        end_x = FILE_WIDTH - 33;
+        end_x = file_width - 33;
       }
       xdir = +1;
       ydir = -1;
@@ -358,13 +369,13 @@ static void convert_temp_to_hgr(const char *ofname) {
       break;
     case 270:
       if (resize) {
-        off_x = FILE_WIDTH - 1;
+        off_x = file_width - 1;
         off_y = 68 * 4 / 3;
       } else {
         off_x = HGR_HEIGHT - 1;
         off_y = 44;
         start_x = 32;
-        end_x = FILE_WIDTH - 33;
+        end_x = file_width - 33;
       }
       xdir = -1;
       ydir = +1;
@@ -372,15 +383,29 @@ static void convert_temp_to_hgr(const char *ofname) {
       break;
     case 180:
       off_x = HGR_WIDTH - X_OFFSET;
-      off_y = FILE_HEIGHT - 1;
+      off_y = file_height - 1;
       xdir = -1;
       ydir = -1;
       invert_coords = 0;
       break;
   }
 
-  for(y = 0, dy = off_y; y != FILE_HEIGHT; y++, dy += ydir) {
-    fread(buf, 1, FILE_WIDTH, ifp);
+  for(y = 0, dy = off_y; y != file_height; y++, dy += ydir) {
+    if (file_width == 80) {
+      /* assume thumbnail at 4bpp */
+      fread(buf, 1, 40, ifp);
+      /* Unpack */
+      i = 39;
+      do {
+        int c = buf[i];
+        int a = (((c>>4) & 0b00001111) << 4);
+        int b = (((c)    & 0b00001111) << 4);
+        buf[i*2] = a;
+        buf[(i*2) + 1] = b;
+      } while (i--);
+    } else {
+      fread(buf, 1, file_width, ifp);
+    }
 
     if (kbhit()) {
       if (cgetc() == CH_ESC)
@@ -392,7 +417,7 @@ static void convert_temp_to_hgr(const char *ofname) {
       uint8 *tmp = cur_err_line;
       cur_err_line = next_err_line;
       next_err_line = tmp;
-      memset(next_err_line, 0, FILE_WIDTH);
+      memset(next_err_line, 0, file_width);
     } else {
       /* Precompute y modulo for the line */
       y_mod8 = y % 8;
@@ -441,6 +466,7 @@ static void convert_temp_to_hgr(const char *ofname) {
         else
           opt_val = t;
       }
+
       /* Dither */
       if (dither_alg == DITHER_BURKES) {
         buf_plus_err = opt_val + cur_err_line[x];
@@ -460,10 +486,10 @@ static void convert_temp_to_hgr(const char *ofname) {
         err4 = err8 >> 1;    /* cur_err * 4 / 32 */
         err2 = err4 >> 1;    /* cur_err * 2 / 32 */
 
-        if (x < FILE_WIDTH - 1) {
+        if (x < file_width - 1) {
           cur_err_line[x_plus1]    += err8;
           next_err_line[x_plus1]   += err4;
-          if (x < FILE_WIDTH - 2) {
+          if (x < file_width - 2) {
             cur_err_line[x_plus2]  += err4;
             next_err_line[x_plus2] += err2;
           }
@@ -499,9 +525,9 @@ static void convert_temp_to_hgr(const char *ofname) {
       dx += xdir;
     } while (x != end_x);
     if (y % 8 == 0)
-      progress_bar(-1, -1, scrw, y, FILE_HEIGHT);
+      progress_bar(-1, -1, scrw, y, file_height);
   }
-  progress_bar(-1, -1, scrw, FILE_HEIGHT, FILE_HEIGHT);
+  progress_bar(-1, -1, scrw, file_height, file_height);
 stop:
   fclose(ifp);
 }
@@ -517,7 +543,7 @@ void qt_edit_image(const char *ofname) {
       angle -= 360;
     if (angle < 0)
       angle += 360;
-    convert_temp_to_hgr(ofname);
+    convert_temp_to_hgr(TMP_NAME, ofname, FILE_WIDTH, FILE_HEIGHT);
   } while (reedit_image(ofname));
 }
 

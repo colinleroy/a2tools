@@ -12,3 +12,13 @@ void * __fastcall__ malloc0(size_t size) {
   memset(p, 0, size);
   return p;
 }
+
+void *__fastcall__ realloc_safe(void *ptr, size_t size) {
+  void *p = realloc(ptr, size);
+#ifdef __CC65__
+  if (!p && size) {
+    __asm__("brk");
+  }
+#endif
+  return p;
+}

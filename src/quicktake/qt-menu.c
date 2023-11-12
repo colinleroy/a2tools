@@ -19,6 +19,8 @@
 #include "qt-edit-image.h"
 #include "qt-serial.h"
 
+#pragma code-name(push, "LOWCODE")
+
 uint8 scrw, scrh;
 uint8 camera_connected;
 uint8 current_quality, current_flash_mode;
@@ -45,19 +47,20 @@ static void print_header(uint8 num_pics, uint8 left_pics, uint8 mode, uint8 flas
 static uint8 print_menu(void) {
   printf("Menu\n\n");
   if (camera_connected) {
-    printf(" 1. Get one picture\n"
-           " 2. Delete all pictures\n"
-           " 3. Take a picture\n");
+    printf(" G. Get one picture\n"
+           " P. Preview pictures\n"
+           " D. Delete all pictures\n"
+           " S. Snap a picture\n");
   } else {
-    printf(" 1. Connect camera\n");
+    printf(" C. Connect camera\n");
   }
-  printf(  " 4. Re-edit a raw picture from floppy\n"
-           " 5. View a converted picture from floppy\n");
+  printf(  " R. Re-edit a raw picture from floppy\n"
+           " V. View a converted picture from floppy\n");
   if (camera_connected) {
-    printf(" 6. Set camera name\n"
-           " 7. Set camera time\n"
-           " 8. Set quality to %s\n"
-           " 9. Set flash to %s\n",
+    printf(" N. Set camera name\n"
+           " T. Set camera time\n"
+           " Q. Set quality to %s\n"
+           " F. Set flash to %s\n",
            qt_get_mode_str((current_quality == QUALITY_HIGH) ? QUALITY_STANDARD:QUALITY_HIGH),
            qt_get_flash_str((current_flash_mode + 1) % 3));
   }
@@ -66,20 +69,21 @@ static uint8 print_menu(void) {
   return cgetc();
 }
 
-static void save_picture(uint8 n_pic, uint8 full) {
+static void save_picture(uint8 n_pic) {
   char filename[64];
   char *dirname;
 
   filename[0] = '\0';
 #ifdef __CC65__
   clrscr();
-  dputs("Saving picture\r\n\r\n"
+  printf("Saving picture %d\n\n"
 
-        "Make sure to save the picture to a floppy with\r\n"
-        "at least 118480 + 8192 (124kB) free. Basically,\r\n"
-        "use one floppy per picture.\r\n"
-        "Do not use /RAM, which will be used for temporary storage.\r\n\r\n"
-        "Please swap disks if needed and press a key.\r\n\r\n");
+        "Make sure to save the picture to a floppy with\n"
+        "at least 118480 + 8192 (124kB) free. Basically,\n"
+        "use one floppy per picture.\n"
+        "Do not use /RAM, which will be used for temporary storage.\n\n"
+        "Please swap disks if needed and press a key.\n\n",
+      n_pic);
   cgetc();
 
   dirname = file_select(wherex(), wherey(), scrw - wherex(), wherey() + 10, 1, "Filename: ");
@@ -103,12 +107,12 @@ static void save_picture(uint8 n_pic, uint8 full) {
     strcat(filename, ".QTK");
   }
 
-  if (qt_get_picture(n_pic, filename, full) == 0) {
+  if (qt_get_picture(n_pic, filename) == 0) {
     qt_convert_image(filename);
   }
 }
 
-static void get_one_picture(uint8 num_pics, uint8 full) {
+static void get_one_picture(uint8 num_pics) {
   char buf[3];
   int8 n_pic;
 
@@ -131,7 +135,7 @@ static void get_one_picture(uint8 num_pics, uint8 full) {
     cgetc();
     return;
   }
-  save_picture(n_pic, full);
+  save_picture(n_pic);
 }
 
 static void set_camera_name(const char *name) {
@@ -192,6 +196,48 @@ static void take_picture(void) {
   dputs("Taking a picture...\r\n\r\n");
   qt_take_picture();
   dputs("Done!...\r\n");
+}
+
+static void show_thumbnails(uint8 num_pics) {
+  uint8 i = 0;
+  char c;
+  char thumb_buf[32];
+  if (num_pics == 0) {
+    return;
+  }
+
+  set_scrollwindow(0, scrh);
+  init_hgr(1);
+  hgr_mixon();
+
+  do {
+    i++;
+    if (i > num_pics) {
+      i = 1;
+    }
+
+    clrscr();
+    gotoxy(0,20);
+    if (qt_get_thumbnail(i) != 0) {
+      break;
+    }
+
+    sprintf(thumb_buf, "Thumbnail %d", i);
+    convert_temp_to_hgr(THUMBNAIL_NAME, thumb_buf, 80, 60);
+
+    clrscr();
+    gotoxy(0,20);
+    printf("%s - G to get full picture\n"
+           "Escape to exit, any other key to continue",
+           thumb_buf);
+    c = tolower(cgetc());
+  } while (c != CH_ESC && c != 'g');
+  unlink(THUMBNAIL_NAME);
+
+  if (c == 'g') {
+    init_text();
+    save_picture(i);
+  }
 }
 
 int main(int argc, char *argv[])
@@ -268,45 +314,53 @@ menu:
 
   choice = print_menu();
   switch(choice) {
-    case '1':
+    case 'p':
       if (camera_connected) {
-        get_one_picture(num_pics, 1);
-      } else {
+        show_thumbnails(num_pics);
+      }
+      break;
+    case 'g':
+      if (camera_connected) {
+        get_one_picture(num_pics);
+      }
+      break;
+    case 'c':
+      if (!camera_connected) {
         goto connect;
       }
       break;
-    case '2':
+    case 'd':
       if (camera_connected) {
         delete_pictures();
       }
       break;
-    case '3':
+    case 's':
       if (camera_connected) {
         take_picture();
       }
       break;
-    case '4':
+    case 'r':
       qt_convert_image(NULL);
       break;
-    case '5':
+    case 'v':
       qt_view_image(NULL);
       break;
-    case '6':
+    case 'n':
       if (camera_connected) {
         set_camera_name(name);
       }
       break;
-    case '7':
+    case 't':
       if (camera_connected) {
         set_camera_time();
       }
       break;
-    case '8':
+    case 'q':
       if (camera_connected) {
         qt_set_quality((current_quality == QUALITY_HIGH) ? QUALITY_STANDARD:QUALITY_HIGH);
       }
       break;
-    case '9':
+    case 'f':
       if (camera_connected) {
         qt_set_flash((current_flash_mode + 1) % 3);
       }
@@ -326,3 +380,4 @@ out:
 #ifdef __CC65__
   #pragma static-locals(pop)
 #endif
+#pragma code-name(pop)
