@@ -15,8 +15,6 @@
 
 extern uint8 scrw, scrh;
 
-#pragma code-name(push, "LC")
-
 /* Get the ack from the camera */
 static uint8 get_ack(void) {
   uint8 wait = 20;
@@ -29,6 +27,7 @@ static uint8 get_ack(void) {
   }
   return -1;
 }
+
 
 /* Send an ack to the camera */
 static void send_ack() {
@@ -60,6 +59,8 @@ read:
   return 0;
 }
 
+#pragma code-name(push, "LC")
+
 /* Send our greeting to the camera, and inform it of the speed
  * we aim for
  */
@@ -67,8 +68,8 @@ static uint8 send_hello(uint16 speed) {
   #define SPD_IDX 0x06
   #define CHK_IDX 0x0C
   char str_hello[] = {0x5A,0xA5,0x55,0x05,0x00,0x00,0x25,0x80,0x00,0x80,0x02,0x00,0x80};
+  int c;
 
-  DUMP_START("qt_hello_reply");
   if (speed == 19200) {
     str_hello[SPD_IDX]   = 0x4B;
     str_hello[SPD_IDX+1] = 0x00;
@@ -80,8 +81,18 @@ static uint8 send_hello(uint16 speed) {
   }
 
   simple_serial_write(str_hello, sizeof(str_hello));
-  simple_serial_read(buffer, 10);
+  if ((c = simple_serial_getc_with_timeout()) == EOF) {
+    printf("Timeout.\n");
+    return -1;
+  }
+  if (c != 0x00) {
+    printf("Error ($%02x).\n", c);
+    return -1;
+  }
+  buffer[0] = c;
+  simple_serial_read(buffer + 1, 9);
 
+  DUMP_START("qt_hello_reply");
   DUMP_DATA(buffer, 10);
   DUMP_END();
 
