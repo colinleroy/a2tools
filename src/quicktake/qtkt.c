@@ -54,7 +54,7 @@ static int16 val;
 static uint8 val_col_minus2;
 static uint8 row;
 static uint8 *src;
-static uint8 *idx_forward, *idx_behind;
+static uint8 *idx_forward, *idx_behind, *idx_end;
 
 static uint8 *pix_direct_row[QT_BAND+5];
 
@@ -112,15 +112,17 @@ void qt_load_raw(uint16 top, uint8 h)
       col = 2;
     }
     idx = pix_direct_row[row];
+    idx_end = idx;
     idx += col;
     idx_behind = idx;
     idx_forward = idx;
 
     idx_behind -= width_plus1;
     idx_forward += width;
+    idx_end += width_plus2;
 
     val_col_minus2 = *(idx - 2);
-    for (; col < width_plus2; col+=2) {
+    for (; idx < idx_end; idx+=2) {
       val = ((*(idx_behind)           // row-1, col-1
               + (*(idx_behind + 2))*2 // row-1, col+1
               + val_col_minus2) >> 2) // row  , col-2
@@ -140,9 +142,9 @@ void qt_load_raw(uint16 top, uint8 h)
         /* row, col-2 */
         *(idx - 2) = *(idx_forward + (~row & 1)) = val;
         idx_forward += 2;
+        col += 2;
       }
 
-      idx += 2;
       idx_behind += 2;
 
       if (at_very_first_line) {
@@ -167,9 +169,11 @@ void qt_load_raw(uint16 top, uint8 h)
       col = 2;
     else
       col = 3;
-    idx = pix_direct_row[row] + col;
-
-    for (; col < width_plus2; col+=2) {
+    idx = pix_direct_row[row];
+    idx_end = idx;
+    idx += col;
+    idx_end += width_plus2;
+    for (; idx < idx_end; idx+=2) {
       val = ((*(idx-1) // row,col-1
             + (*(idx) << 2) //row,col
             +  *(idx+1)) >> 1) //row,col+1
@@ -181,8 +185,6 @@ void qt_load_raw(uint16 top, uint8 h)
         *(idx) = 255;
       else
         *(idx) = val;
-
-      idx += 2;
     }
   }
 
