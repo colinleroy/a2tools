@@ -41,7 +41,7 @@ static uint32 prev_offset_a = 0;
 
 /* Pointer arithmetic helpers */
 static uint8 h_plus1, h_plus2, h_plus4;
-static uint16 width_plus2;
+static uint16 width_plus2, width_plus1;
 static uint16 pgbar_state;
 static uint16 threepxband_size, work_size;
 static uint16 band_size;
@@ -79,6 +79,7 @@ void qt_load_raw(uint16 top, uint8 h)
     h_plus2 = h + 2;
     h_plus4 = h + 4;
     width_plus2 = width + 2;
+    width_plus1 = width + 1;
     pgbar_state = 0;
     band_size = h * width;
     /* calculate offsets to shift the last lines */
@@ -100,21 +101,22 @@ void qt_load_raw(uint16 top, uint8 h)
   }
 
   for (row=2; row < h_plus4; row++) {
-    if (row < h_plus2) {
-      pgbar_state++;
-      progress_bar(-1, -1, 80*22, pgbar_state, height);
-    }
 
-    if (row & 1)
+    if (row & 1) {
       col = 3;
-    else
+      if (row < h_plus2) {
+        pgbar_state += 2;
+        progress_bar(-1, -1, 80*22, pgbar_state, height);
+      }
+    } else {
       col = 2;
+    }
     idx = pix_direct_row[row];
     idx += col;
     idx_behind = idx;
     idx_forward = idx;
 
-    idx_behind -= (width + 1);
+    idx_behind -= width_plus1;
     idx_forward += width;
 
     val_col_minus2 = *(idx - 2);

@@ -114,8 +114,11 @@ static uint32 tmp;
 static uint8 shift;
 
 #define GETBITS_COMMON() {                                          \
-  if (nbits == 0)                                                   \
-    return bitbuf = vbits = 0;                                      \
+  if (nbits == 0) {                                                 \
+    bitbuf = 0;                                                     \
+    vbits = 0;                                                      \
+    return 0;                                                       \
+  }                                                                 \
   if (vbits < nbits) {                                              \
     c = src_file_get_byte();                                        \
     FAST_SHIFT_LEFT_8_LONG(bitbuf);                                 \
@@ -273,9 +276,8 @@ static void write_raw(void)
     /* Not a for() because looping on uint8 from 0 to 255 */
     cur_orig_x = orig_x_table + 0;
     do {
-      uint8 val = *(*cur_orig_y + *cur_orig_x);
-      *dst_ptr = val;
-      histogram[val]++;
+      *dst_ptr = *(*cur_orig_y + *cur_orig_x);
+      histogram[*dst_ptr]++;
       dst_ptr++;
       cur_orig_x++;
     } while (++col);
