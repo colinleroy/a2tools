@@ -63,6 +63,7 @@ static const char *ifname;
 static size_t data_offset;
 
 static uint16 cache_offset;
+static uint8 *cur_cache_ptr;
 static uint16 cache_pages_read;
 static uint32 last_seek = 0;
 
@@ -70,6 +71,7 @@ void src_file_seek(uint32 off) {
   fseek(ifp, off, SEEK_SET);
   fread(cache, 1, cache_size, ifp);
   cache_offset = 0;
+  cur_cache_ptr = cache;
   cache_pages_read = 0;
   last_seek = off;
 }
@@ -82,9 +84,11 @@ static uint8 src_file_get_byte(void) {
   if (cache_offset == cache_size) {
     fread(cache, 1, cache_size, ifp);
     cache_offset = 0;
+    cur_cache_ptr = cache;
     cache_pages_read += cache_size;
   }
-  return cache[cache_offset++];
+  cache_offset++;
+  return *(cur_cache_ptr++);
 }
 
 static uint16 src_file_get_uint16(void) {
@@ -93,15 +97,19 @@ static uint16 src_file_get_uint16(void) {
   if (cache_offset == cache_size) {
     fread(cache, 1, cache_size, ifp);
     cache_offset = 0;
+    cur_cache_ptr = cache;
     cache_pages_read += cache_size;
   }
-  ((unsigned char *)&v)[1] = cache[cache_offset++];
+  cache_offset++;
+  ((unsigned char *)&v)[1] = *(cur_cache_ptr++);
   if (cache_offset == cache_size) {
     fread(cache, 1, cache_size, ifp);
     cache_offset = 0;
+    cur_cache_ptr = cache;
     cache_pages_read += cache_size;
   }
-  ((unsigned char *)&v)[0] = cache[cache_offset++];
+  cache_offset++;
+  ((unsigned char *)&v)[0] = *(cur_cache_ptr++);
   return v;
 }
 
@@ -254,35 +262,37 @@ static void build_scale_table(void) {
 
 static void write_raw(void)
 {
+#if SCALE
   register uint8 *dst_ptr;
   register uint8 **cur_orig_y;
   register uint16 *cur_orig_x;
-#if SCALE
-  uint8 row, col;
+  static uint8 **end_orig_y = NULL;
+  static uint16 *end_orig_x;
+  uint8 col;
 #else
-  uint16 row, col;
+  uint16 col;
 #endif
   uint8 *raw_ptr;
 
   raw_ptr = raw_image;
 
 #if SCALE
+  if (end_orig_y == NULL) {
+    end_orig_y = orig_y_table + scaled_band_height;
+    end_orig_x = orig_x_table + FILE_WIDTH;
+  }
   /* Scale (nearest neighbor)*/
   dst_ptr = raw_image;
   cur_orig_y = orig_y_table + 0;
-  for (row = 0; row < scaled_band_height; row++) {
-    col = 0;
-
-    /* Not a for() because looping on uint8 from 0 to 255 */
+  do {
     cur_orig_x = orig_x_table + 0;
+
     do {
       *dst_ptr = *(*cur_orig_y + *cur_orig_x);
       histogram[*dst_ptr]++;
       dst_ptr++;
-      cur_orig_x++;
-    } while (++col);
-    cur_orig_y++;
-  }
+    } while (++cur_orig_x < end_orig_x);
+  } while (++cur_orig_y < end_orig_y);
 #endif
   fwrite (raw_ptr, 1, output_write_len, ofp);
   raw_ptr += output_write_len;
