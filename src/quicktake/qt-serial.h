@@ -3,7 +3,9 @@
 
 #include <time.h>
 
-#define QT_MODEL_1X0 100
+#define QT_MODEL_UNKNOWN 0
+#define QT_MODEL_100 100
+#define QT_MODEL_150 150
 #define QT_MODEL_200 200
 
 #define QUALITY_STANDARD 1
@@ -14,7 +16,7 @@
 
 /* Communication buffer */
 #define BLOCK_SIZE 512
-extern char buffer[BLOCK_SIZE];
+extern unsigned char buffer[BLOCK_SIZE];
 
 /* Camera interface functions, protocol-agnostic */
 uint8 qt_serial_connect(uint16 speed);

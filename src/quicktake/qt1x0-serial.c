@@ -47,16 +47,19 @@ static uint8 get_hello(void) {
     }
   }
   printf("Timeout.\n");
-  return -1;
+  return QT_MODEL_UNKNOWN;
 read:
   buffer[0] = (unsigned char)c;
+  if (buffer[0] != 0xA5) {
+    return QT_MODEL_UNKNOWN;
+  }
   simple_serial_read(buffer + 1, 6);
 
   DUMP_START("qt_hello");
   DUMP_DATA(buffer, 7);
   DUMP_END();
   printf("Done.\n");
-  return 0;
+  return buffer[3] == 0xC8 ? QT_MODEL_150 : QT_MODEL_100;
 }
 
 #pragma code-name(push, "LC")
@@ -185,33 +188,36 @@ static uint8 send_get_information_command(void) {
  * Returns 0 if successful, -1 otherwise
  */
 uint8 qt1x0_wakeup(uint16 speed) {
+  static uint8 model = QT_MODEL_UNKNOWN;
 #if defined(__CC65__) && !defined(IIGS)
-    /* The Apple IIc printer being closed right now,
-     * we have to set DTR before clearing it. */
-    printf("Toggling printer port on...\n");
-    simple_serial_acia_onoff(1, 1);
-    platform_sleep(1);
-    printf("Toggling printer port off...\n");
-    simple_serial_acia_onoff(1, 0);
+  /* The Apple IIc printer being closed right now,
+   * we have to set DTR before clearing it.
+   */
+  printf("Toggling printer port on...\n");
+  simple_serial_acia_onoff(1, 1);
+  platform_sleep(1);
+  printf("Toggling printer port off...\n");
+  simple_serial_acia_onoff(1, 0);
 #else
   printf("Toggling DTR off...\n");
   simple_serial_dtr_onoff(0);
 #endif
 
   printf("Waiting for QuickTake 1x0 hello... ");
-  if (get_hello() != 0) {
+  if ((model = get_hello()) == QT_MODEL_UNKNOWN) {
 #if !defined(__CC65__) || defined(IIGS)
     /* Re-up current port */
     printf("Toggling DTR on...\n");
     simple_serial_dtr_onoff(1);
 #endif
-    return -1;
+    return QT_MODEL_UNKNOWN;
   }
   printf("Sending hello...\n");
   send_hello(speed);
 
-  printf("Connected to QuickTake 1x0.\n");
-  return 0;
+  printf("Connected to QuickTake %s.\n",
+         model == QT_MODEL_100 ? "100":"150");
+  return model;
 }
 
 /* Send the speed upgrade command */

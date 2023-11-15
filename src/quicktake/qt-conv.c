@@ -268,9 +268,6 @@ static void write_raw(void)
   register uint16 *cur_orig_x;
   static uint8 **end_orig_y = NULL;
   static uint16 *end_orig_x;
-  uint8 col;
-#else
-  uint16 col;
 #endif
   uint8 *raw_ptr;
 
