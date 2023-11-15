@@ -4,7 +4,9 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#ifndef __CC65__
 #include <sys/ioctl.h>
+#endif
 #include "platform.h"
 #include "dgets.h"
 #include "dputs.h"
@@ -27,7 +29,7 @@ static uint8 serial_model = 0;
 FILE *dbgfp = NULL;
 #endif
 
-char buffer[BLOCK_SIZE];
+unsigned char buffer[BLOCK_SIZE];
 
 #pragma code-name(push, "LC")
 
@@ -73,9 +75,7 @@ uint8 qt_serial_connect(uint16 speed) {
 #endif
 
   /* Try and detect a QuickTake 1x0 */
-  if (qt1x0_wakeup(speed) == 0) {
-    serial_model = QT_MODEL_1X0;
-  }
+  serial_model = qt1x0_wakeup(speed);
 
   /* Set parity to EVEN (all QuickTakes need it at that point) */
 #ifdef __CC65__
@@ -85,13 +85,13 @@ uint8 qt_serial_connect(uint16 speed) {
 #endif
   printf("Parity set.\n");
 
-  if (serial_model != QT_MODEL_1X0) {
+  if (serial_model == QT_MODEL_UNKNOWN) {
     if (qt200_wakeup() == 0) {
       serial_model = QT_MODEL_200;
     }
   }
 
-  if (serial_model == 0) {
+  if (serial_model == QT_MODEL_UNKNOWN) {
     printf("No camera connected.\n");
     return -1;
   }
@@ -105,56 +105,56 @@ uint8 qt_serial_connect(uint16 speed) {
 /* Protocol-dependant camera functions */
 
 static uint8 qt_set_speed(uint16 speed, int first_sleep, int second_sleep) {
-  if (serial_model == QT_MODEL_1X0)
+  if (serial_model != QT_MODEL_200)
     return qt1x0_set_speed(speed, first_sleep, second_sleep);
   else
     return -1;
 }
 
 uint8 qt_take_picture(void) {
-  if (serial_model == QT_MODEL_1X0)
+  if (serial_model != QT_MODEL_200)
     return qt1x0_take_picture();
   else
     return -1;
 }
 
 uint8 qt_set_camera_name(const char *name) {
-  if (serial_model == QT_MODEL_1X0)
+  if (serial_model != QT_MODEL_200)
     return qt1x0_set_camera_name(name);
   else
     return -1;
 }
 
 uint8 qt_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second) {
-  if (serial_model == QT_MODEL_1X0)
+  if (serial_model != QT_MODEL_200)
     return qt1x0_set_camera_time(day, month, year, hour, minute, second);
   else
     return -1;
 }
 
 uint8 qt_set_quality(uint8 quality) {
-  if (serial_model == QT_MODEL_1X0)
+  if (serial_model != QT_MODEL_200)
     return qt1x0_set_quality(quality);
   else
     return -1;
 }
 
 uint8 qt_set_flash(uint8 mode) {
-  if (serial_model == QT_MODEL_1X0)
+  if (serial_model != QT_MODEL_200)
     return qt1x0_set_flash(mode);
   else
     return -1;
 }
 
 uint8 qt_get_picture(uint8 n_pic, const char *filename) {
-  if (serial_model == QT_MODEL_1X0)
+  if (serial_model != QT_MODEL_200)
     return qt1x0_get_picture(n_pic, filename);
   else
     return -1;
 }
 
 uint8 qt_get_thumbnail(uint8 n_pic) {
-  if (serial_model == QT_MODEL_1X0)
+  if (serial_model != QT_MODEL_200)
     return qt1x0_get_thumbnail(n_pic);
   else
     return -1;
@@ -164,14 +164,14 @@ uint8 qt_get_thumbnail(uint8 n_pic) {
 #pragma code-name(push, "LOWCODE")
 
 uint8 qt_delete_pictures(void) {
-  if (serial_model == QT_MODEL_1X0)
+  if (serial_model != QT_MODEL_200)
     return qt1x0_delete_pictures();
   else
     return -1;
 }
 
 uint8 qt_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mode, uint8 *flash_mode, uint8 *battery_level, char **name, struct tm *time) {
-  if (serial_model == QT_MODEL_1X0)
+  if (serial_model != QT_MODEL_200)
     return qt1x0_get_information(num_pics, left_pics, quality_mode, flash_mode, battery_level, name, time);
   else
     return -1;
