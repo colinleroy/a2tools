@@ -15,6 +15,7 @@
 #include "scrollwindow.h"
 
 #include "qt-conv.h"
+#include "qt-serial.h"
 
 extern uint8 scrw, scrh;
 
@@ -136,7 +137,7 @@ static void init_base_addrs (void)
   }
   for (x = 0; x < HGR_WIDTH; x++) {
     div7_table[x] = x / 7;
-    mod7_table[x] = x % 7;
+    mod7_table[x] = 1 << (x % 7);
   }
   histogram_equalize();
   base_init_done = 1;
@@ -251,7 +252,6 @@ done:
   return 0;
 }
 
-static uint8 buf[FILE_WIDTH];
 static uint8 err[FILE_WIDTH * 2];
 
 #pragma inline-stdfuncs(push, on)
@@ -263,28 +263,48 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
   /* Rotation/cropping variables */
   uint8 start_x, i;
   register uint8 x, end_x;
-  register uint16 dx, dy;
+  register uint16 dx;
+  uint16 dy;
   uint16 off_x, y, off_y;
   uint16 file_width;
 #if SCALE
   uint8 scaled_dx, scaled_dy;
-  uint8 file_height;
 #else
   uint16 scaled_dx, scaled_dy;
   uint16 file_height;
 #endif
   int8 xdir, ydir;
   int16 cur_err;
-  uint8 *ptr;
-  uint8 pixel, color;
+  register uint8 *ptr;
   uint8 invert_coords;
 
   /* Burkes variables */
   uint8 buf_plus_err;
-  uint8 x_plus1;
-  uint8 x_plus2;
-  uint8 x_minus1;
-  uint8 x_minus2;
+  uint8 *cur_err_line = err;
+  uint8 *next_err_line;
+
+#ifdef __CC65__
+  #define cur_err_x_y zp1p
+  #define cur_err_x_yplus1 zp3p
+  #define file_height zp5
+  #define cur_err_xplus1_y zp6p
+  #define cur_err_xplus2_y zp8p
+  #define cur_err_xplus1_yplus1 zp10p
+  #define cur_err_xplus2_yplus1 zp12p
+#else
+  uint8 *cur_err_x_y;
+  uint8 *cur_err_x_yplus1;
+  uint8 file_height;
+  uint8 *cur_err_xplus1_y;
+  uint8 *cur_err_xplus2_y;
+  uint8 *cur_err_xplus1_yplus1;
+  uint8 *cur_err_xplus2_yplus1;
+#endif
+  uint8 pixel;
+
+  uint8 *cur_err_xmin1_yplus1;
+  uint8 *cur_err_xmin2_yplus1;
+
   int16 err8, err4, err2;
 
   /* Bayer variables */
@@ -301,15 +321,11 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
   uint8 y_mod8;
 
   /* General variables */
-  uint8 *cur_err_line = err;
-  uint8 *next_err_line;
 #if SCALE
   uint8 h_plus1;
 #else
   uint16 h_plus1;
 #endif
-  uint8 dhbmono[] = {0x7e,0x7d,0x7b,0x77,0x6f,0x5f,0x3f};
-  uint8 dhwmono[] = {0x01,0x02,0x04,0x08,0x10,0x20,0x40};
   uint8 *cur_hgr_line;
   uint8 cur_hgr_row;
   uint8 cur_hgr_mod;
@@ -391,25 +407,25 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
   }
 
   for(y = 0, dy = off_y; y != file_height; y++, dy += ydir) {
-    if (file_width == 80) {
-      /* assume thumbnail at 4bpp */
-      fread(buf, 1, 40, ifp);
-      /* Unpack */
-      i = 39;
-      do {
-        int c = buf[i];
-        int a = (((c>>4) & 0b00001111) << 4);
-        int b = (((c)    & 0b00001111) << 4);
-        buf[i*2] = a;
-        buf[(i*2) + 1] = b;
-      } while (i--);
+    if (file_width == THUMB_WIDTH*2) {
+      /* assume thumbnail at 4bpp and zoom it */
+      if (!(y & 1)) {
+        fread(buffer, 1, 40, ifp);
+        /* Unpack */
+        i = 39;
+        do {
+          uint8 c   = buffer[i];
+          uint8 a   = (((c>>4) & 0b00001111) << 4);
+          uint8 b   = (((c)    & 0b00001111) << 4);
+          uint8 off = i * 4;
+          buffer[off++] = a;
+          buffer[off++] = a;
+          buffer[off++] = b;
+          buffer[off++] = b;
+        } while (i--);
+      }
     } else {
-      fread(buf, 1, file_width, ifp);
-    }
-
-    if (kbhit()) {
-      if (cgetc() == CH_ESC)
-        goto stop;
+      fread(buffer, 1, FILE_WIDTH, ifp);
     }
 
     if (dither_alg == DITHER_BURKES) {
@@ -439,6 +455,19 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
 
     x = start_x;
     dx = off_x;
+
+    /* Init cursors */
+    if (dither_alg == DITHER_BURKES) {
+      cur_err_x_y = cur_err_line + x;
+      cur_err_xplus1_y = cur_err_x_y + 1;
+      cur_err_xplus2_y = cur_err_xplus1_y + 1;
+      cur_err_x_yplus1 = next_err_line + x;
+      cur_err_xplus1_yplus1 = cur_err_x_yplus1 + 1;
+      cur_err_xplus2_yplus1 = cur_err_xplus1_yplus1 + 1;
+      cur_err_xmin1_yplus1 = cur_err_x_yplus1 - 1;
+      cur_err_xmin2_yplus1 = cur_err_xmin1_yplus1 - 1;
+    }
+
     do {
       /* Get destination pixel */
       if (invert_coords) {
@@ -455,13 +484,13 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
         pixel = mod7_table[dx];
       }
 
-      opt_val = buf[x];
+      opt_val = buffer[x];
       opt_val = opt_histogram[opt_val];
       if (brighten) {
         int16 t = opt_val + brighten;
         if (t < 0)
           opt_val = 0;
-        else if (t > 255)
+        else if (t & 0xff00) /* > 255, but faster as we're sure it's non-negative */
           opt_val = 255;
         else
           opt_val = t;
@@ -469,63 +498,68 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
 
       /* Dither */
       if (dither_alg == DITHER_BURKES) {
-        buf_plus_err = opt_val + cur_err_line[x];
-        x_plus1 = x + 1;
-        x_plus2 = x_plus1 + 1;
-        x_minus1 = x - 1;
-        x_minus2 = x_minus1 - 1;
-
+        buf_plus_err = opt_val + *cur_err_x_y;
         if (buf_plus_err < dither_threshold) {
           cur_err = buf_plus_err;
-          color = 0;
+          /* pixel's already black */
         } else {
           cur_err = buf_plus_err - 255;
-          color = 1;
+          *ptr |= pixel;
         }
         err8 = cur_err >> 2; /* cur_err * 8 / 32 */
         err4 = err8 >> 1;    /* cur_err * 4 / 32 */
         err2 = err4 >> 1;    /* cur_err * 2 / 32 */
 
-        if (x < file_width - 1) {
-          cur_err_line[x_plus1]    += err8;
-          next_err_line[x_plus1]   += err4;
-          if (x < file_width - 2) {
-            cur_err_line[x_plus2]  += err4;
-            next_err_line[x_plus2] += err2;
+        if (x + 1 < file_width) {
+          *cur_err_xplus1_y        += err8;
+          *cur_err_xplus1_yplus1   += err4;
+          if (x + 2 < file_width) {
+            *cur_err_xplus2_y      += err4;
+            *cur_err_xplus2_yplus1 += err2;
           }
         }
         if (x > 0) {
-          next_err_line[x_minus1]  += err4;
+          *cur_err_xmin1_yplus1    += err4;
           if (x > 1) {
-            next_err_line[x_minus2]+= err2;
+            *cur_err_xmin2_yplus1  += err2;
           }
         }
-        next_err_line[x]           += err8;
+        *cur_err_x_yplus1          += err8;
+
+        /* shift cursors */
+        cur_err_x_y++;
+        cur_err_xplus1_y++;
+        cur_err_xplus2_y++;
+        cur_err_x_yplus1++;
+        cur_err_xplus1_yplus1++;
+        cur_err_xplus2_yplus1++;
+        cur_err_xmin1_yplus1++;
+        cur_err_xmin2_yplus1++;
       } else if (dither_alg == DITHER_BAYER) {
         uint16 val = opt_val;
         val += val * map[y_mod8][x % 8] / 63;
         if (val < dither_threshold) {
-          color = 0;
+          /* pixel's already black */
         } else {
-          color = 1;
+          *ptr |= pixel;
         }
       } else if (dither_alg == DITHER_NONE) {
         if (opt_val < dither_threshold) {
-          color = 0;
         } else {
-          color = 1;
+          *ptr |= pixel;
         }      
       }
-      if (color) {
-        *ptr |= dhwmono[pixel];
-      } else {
-        *ptr &= dhbmono[pixel];
-      }
+
       x++;
       dx += xdir;
     } while (x != end_x);
-    if (y % 8 == 0)
+    if (y % 16 == 0) {
       progress_bar(-1, -1, scrw, y, file_height);
+      if (kbhit()) {
+        if (cgetc() == CH_ESC)
+          goto stop;
+      }
+    }
   }
   progress_bar(-1, -1, scrw, file_height, file_height);
 stop:

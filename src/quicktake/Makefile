@@ -36,15 +36,15 @@ slowtake_SOURCES := \
 slowtake_CC65SOURCES := \
 	../lib/dputc.s ../lib/dputs.s ../lib/scroll.s \
 	../lib/clrzone.c ../lib/fastirq$(suffix).s \
-	../lib/platform_sleep.c
+	../lib/platform_sleep.c ../lib/extrazp.s
 
 qtktconv_SOURCES := \
 	qt-conv.c qtkt.c  ../lib/path_helper.c ../lib/progress_bar.c
-qtktconv_CC65SOURCES :=
+qtktconv_CC65SOURCES := ../lib/extrazp.s
 
 qtknconv_SOURCES := \
 	qt-conv.c qtkn.c  ../lib/path_helper.c ../lib/progress_bar.c
-qtknconv_CC65SOURCES :=
+qtknconv_CC65SOURCES := ../lib/extrazp.s
 
 GCCSOURCES := ../lib/extended_conio.c ../lib/clrzone.c
 DEPS :=

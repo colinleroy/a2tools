@@ -50,11 +50,24 @@ static uint8 at_very_first_line;
 
 static const int8 gstep[16] =
 { -89,-60,-44,-32,-22,-15,-8,-2,2,8,15,22,32,44,60,89 };
+
+#ifdef __CC65__
+#define val zp1si
+#define src zp3p
+#define row zp5
+#define idx_forward zp6p
+#define idx_behind zp8p
+#define idx_end zp10p
+#define val_col_minus2 zp12
+#else
 static int16 val;
-static uint8 val_col_minus2;
-static uint8 row;
 static uint8 *src;
-static uint8 *idx_forward, *idx_behind, *idx_end;
+static uint8 row;
+static uint8 *idx_forward;
+static uint8 *idx_behind;
+static uint8 *idx_end;
+static uint8 val_col_minus2;
+#endif
 
 static uint8 *pix_direct_row[QT_BAND+5];
 

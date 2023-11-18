@@ -18,7 +18,8 @@
 #define FILE_WIDTH width
 #define FILE_HEIGHT height
 #endif
-
+#define THUMB_WIDTH 80
+#define THUMB_HEIGHT 60
 
 #ifdef __CC65__
 #define TMP_NAME "/RAM/GREY"

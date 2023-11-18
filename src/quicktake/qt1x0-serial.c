@@ -53,7 +53,7 @@ read:
   if (buffer[0] != 0xA5) {
     return QT_MODEL_UNKNOWN;
   }
-  simple_serial_read(buffer + 1, 6);
+  simple_serial_read((char *)buffer + 1, 6);
 
   DUMP_START("qt_hello");
   DUMP_DATA(buffer, 7);
@@ -93,7 +93,7 @@ static uint8 send_hello(uint16 speed) {
     return -1;
   }
   buffer[0] = c;
-  simple_serial_read(buffer + 1, 9);
+  simple_serial_read((char *)buffer + 1, 9);
 
   DUMP_START("qt_hello_reply");
   DUMP_DATA(buffer, 10);
@@ -342,7 +342,7 @@ static void receive_data(uint32 size, FILE *fp) {
 
   for (i = 0; i < (uint16)(size / BLOCK_SIZE); i++) {
 
-    simple_serial_read(buffer, BLOCK_SIZE);
+    simple_serial_read((char *)buffer, BLOCK_SIZE);
     fwrite(buffer, 1, BLOCK_SIZE, fp);
     DUMP_DATA(buffer, BLOCK_SIZE);
 
@@ -350,7 +350,7 @@ static void receive_data(uint32 size, FILE *fp) {
 
     send_ack();
   }
-  simple_serial_read(buffer, (uint16)(size % BLOCK_SIZE));
+  simple_serial_read((char *)buffer, (uint16)(size % BLOCK_SIZE));
   fwrite(buffer, 1, size % BLOCK_SIZE, fp);
   DUMP_DATA(buffer, size % BLOCK_SIZE);
 
@@ -404,7 +404,7 @@ uint8 qt1x0_get_picture(uint8 n_pic, const char *filename) {
   if (send_photo_header_command(n_pic) != 0)
     return -1;
 
-  simple_serial_read(buffer, 64);
+  simple_serial_read((char *)buffer, 64);
 
   DUMP_DATA(buffer, 64);
   DUMP_END();
@@ -425,15 +425,9 @@ uint8 qt1x0_get_picture(uint8 n_pic, const char *filename) {
   width = char_to_n_uint16(buffer + IMG_WIDTH_IDX);
   height = char_to_n_uint16(buffer  + IMG_HEIGHT_IDX);
 
-  format = QTKN_MAGIC; /* Default to QuickTake 150 format */
+  format = QTKN_MAGIC; /* Default to QuickTake 150/200 format */
 
-  /* QuickTake 150 pictures are better compressed
-   * FIXME: This is a bad way to detect format
-   */
-  if (ntohs(width) == 640 && pic_size_int == 115200UL) {
-    format = QTKT_MAGIC;
-  }
-  if (ntohs(width) == 320 && pic_size_int == 28800UL) {
+  if (serial_model == QT_MODEL_100) {
     format = QTKT_MAGIC;
   }
 
@@ -491,7 +485,7 @@ uint8 qt1x0_get_thumbnail(uint8 n_pic) {
   if (send_photo_header_command(n_pic) != 0)
     return -1;
 
-  simple_serial_read(buffer, 64);
+  simple_serial_read((char *)buffer, 64);
 
   DUMP_DATA(buffer, 64);
   DUMP_END();
@@ -579,7 +573,7 @@ uint8 qt1x0_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mo
   if (send_get_information_command() != 0)
     return -1;
 
-  simple_serial_read(buffer, 128);
+  simple_serial_read((char *)buffer, 128);
 
   DUMP_DATA(buffer, 128);
   DUMP_END();
@@ -597,7 +591,7 @@ uint8 qt1x0_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mo
   time->tm_hour = buffer[HOUR_IDX];
   time->tm_min  = buffer[MIN_IDX];
 
-  *name = trim(buffer + NAME_IDX);
+  *name = trim((char *)buffer + NAME_IDX);
   return 0;
 }
 #pragma code-name(pop)

@@ -32,18 +32,33 @@ uint16 cache_size = 4096;
 uint8 cache[4096];
 
 static uint16 val_from_last[256];
-static uint16 huff[19][256], *cur_huff, *huff_9, *huff_10, *huff_18;
+static uint16 huff[19][256], *huff_9, *huff_10;
 static int16 x, s, i, tree, tmp_i16;
 static uint16 c, half_width, col;
 static uint8 r, nreps, rep, row, y, mul, t;
 #define DATABUF_SIZE 386
-static uint16 buf[3][DATABUF_SIZE], (*cur_buf)[DATABUF_SIZE], *cur_buf_y, *cur_buf_prevy;
+static uint16 buf[3][DATABUF_SIZE], (*cur_buf)[DATABUF_SIZE];
 static uint16 val;
 static int8 tk;
 static uint8 tmp8;
 static uint16 tmp16;
 static uint32 tmp32, tmp32_2;
-static uint8 *raw_ptr1, *raw_ptr2;
+#ifdef __CC65__
+#define raw_ptr1 zp1p
+#define raw_ptr2 zp3p
+#define cur_buf_y zp6ip
+#define cur_buf_prevy zp8ip
+#define cur_huff zp10ip
+#define huff_18 zp12ip
+#else
+static uint8 *raw_ptr1;
+static uint8 *raw_ptr2;
+static uint16 *cur_buf_y;
+static uint16 *cur_buf_prevy;
+static uint16 *cur_huff;
+static uint16 *huff_18;
+#endif
+
 static uint16 row_idx, row_idx_plus2, row_idx_shift;
 
 static const int8 src[] = {
