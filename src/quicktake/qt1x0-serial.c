@@ -559,7 +559,7 @@ uint8 qt1x0_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mo
   #define MIN_IDX        0x14
   #define SEC_IDX        0x15
   #define FLASH_IDX      0x16
-  #define QUALITY_IDX    0x1B
+  #define QUAL_IDX       0x1B
   #define NAME_IDX       0x2F
 
   printf("Getting information...\n");
@@ -581,7 +581,7 @@ uint8 qt1x0_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mo
 
   *num_pics     = buffer[NUM_PICS_IDX];
   *left_pics    = buffer[LEFT_PICS_IDX];
-  *quality_mode = buffer[QUALITY_IDX];
+  *quality_mode = buffer[QUAL_IDX];
   *flash_mode   = buffer[FLASH_IDX];
   *battery_level= buffer[BATTERY_IDX];
 
