@@ -17,6 +17,7 @@
 /* Communication buffer */
 #define BLOCK_SIZE 512
 extern unsigned char buffer[BLOCK_SIZE];
+extern uint8 serial_model;
 
 /* Camera interface functions, protocol-agnostic */
 uint8 qt_serial_connect(uint16 speed);

@@ -223,7 +223,7 @@ static void show_thumbnails(uint8 num_pics) {
     }
 
     sprintf(thumb_buf, "Thumbnail %d", i);
-    convert_temp_to_hgr(THUMBNAIL_NAME, thumb_buf, 80, 60);
+    convert_temp_to_hgr(THUMBNAIL_NAME, thumb_buf, THUMB_WIDTH*2, THUMB_HEIGHT*2);
 
     clrscr();
     gotoxy(0,20);

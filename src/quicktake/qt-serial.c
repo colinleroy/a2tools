@@ -23,7 +23,7 @@
 
 extern uint8 scrw, scrh;
 
-static uint8 serial_model = 0;
+uint8 serial_model = QT_MODEL_UNKNOWN;
 
 #ifndef __CC65__
 FILE *dbgfp = NULL;

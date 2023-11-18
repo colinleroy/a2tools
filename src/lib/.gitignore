@@ -2,3 +2,4 @@ bool_array_test
 !dput*.s
 !scroll.s
 !fastirq*.s
+!extrazp.s
