@@ -8,8 +8,8 @@
 #define QT_MODEL_150 150
 #define QT_MODEL_200 200
 
-#define QUALITY_STANDARD 1
-#define QUALITY_HIGH 2
+#define QUALITY_STANDARD 0x20
+#define QUALITY_HIGH 0x10
 #define FLASH_AUTO 0
 #define FLASH_OFF 1
 #define FLASH_ON 2
