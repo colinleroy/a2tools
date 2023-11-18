@@ -82,6 +82,7 @@ static const int8 src[] = {
   2,-26, 2,-13, 2,1, 3,-39, 4,16, 5,-55, 6,-76, 6,37
 };
 static uint8 last = 16;
+static uint16 *midbuf1, *midbuf2;
 
 #pragma inline-stdfuncs(push, on)
 #pragma allow-eager-inline(push, on)
@@ -117,13 +118,16 @@ void qt_load_raw(uint16 top, uint8 h)
     }
 
     for (i = 1; i < 256; i++) {
-      tmp32 = (0x1000000L/(uint32)i);
+      tmp32 = (0x1000000L/(uint32)i + 0x7ff);
       FAST_SHIFT_RIGHT_8_LONG(tmp32);
       val_from_last[i] = (tmp32 >> 4);
     }
 
     half_width = width / 2;
     row_idx_shift = width * 4;
+
+    midbuf1 = &(buf[1][half_width]);
+    midbuf2 = &(buf[2][half_width]);
   }
 
   row_idx = 0;
@@ -147,7 +151,7 @@ void qt_load_raw(uint16 top, uint8 h)
     cur_buf_y = cur_buf[0];
     tmp32_2 = (uint32)val;
     for (i=0; i < DATABUF_SIZE; i++) {
-      tmp32 = tmp32_2 * (*cur_buf_y);
+      tmp32 = tmp32_2 * (*cur_buf_y) - 1;
       /* Shift >> 12 */
       FAST_SHIFT_RIGHT_8_LONG(tmp32);
       *((uint16 *)cur_buf_y) = tmp32 >> 4;
@@ -158,6 +162,8 @@ void qt_load_raw(uint16 top, uint8 h)
 
     for (r=0; r <= 1; r++) {
       tree = t << 7;
+     *midbuf1 = tree;
+     *midbuf2 = tree;
       for (tree = 1, col = half_width; col; ) {
         cur_huff = huff[tree];
         if ((tree = (int16)radc_token(cur_huff))) {
@@ -212,21 +218,13 @@ void qt_load_raw(uint16 top, uint8 h)
             nreps = (col > 2) ? radc_token(huff_9) + 1 : 1;
             for (rep=0; rep < 8 && rep < nreps && col; rep++) {
               col -= 2;
-              if (rep & 1) {
-                /* need to get that, but ignore it */
-                tk = radc_token(huff_10);
-              }
               tmp16 = col + 1;
               cur_buf_prevy = cur_buf[0] + tmp16;
               cur_buf_x = cur_buf_prevy + DATABUF_SIZE;
               cur_buf_x_plus1 = cur_buf_x + 1;
               for (y=1; ; y++) {
                 /* Unrolled */
-                if (c) {
-                  *cur_buf_x = (*cur_buf_prevy + *(cur_buf_x_plus1)) / 2;
-                } else {
-                  *cur_buf_x = (*(cur_buf_prevy + 1) + 2*(*cur_buf_prevy) + *(cur_buf_x_plus1)) / 4;
-                }
+                *cur_buf_x = (*(cur_buf_prevy + 1) + 2*(*cur_buf_prevy) + *(cur_buf_x_plus1)) / 4;
                 cur_buf_x_plus1 = cur_buf_x;
                 cur_buf_x--;
                 cur_buf_prevy--;
@@ -241,6 +239,28 @@ void qt_load_raw(uint16 top, uint8 h)
                 cur_buf_x += DATABUF_SIZE+1;
                 cur_buf_x_plus1 += DATABUF_SIZE+1;
                 cur_buf_prevy += DATABUF_SIZE+1;
+              }
+              if (rep & 1) {
+                tk = radc_token(huff_10);
+                tmp_i16 = tk << 4;
+
+                tmp16 = col + 1;
+                cur_buf_prevy = cur_buf[0] + tmp16;
+                cur_buf_x = cur_buf_prevy + DATABUF_SIZE;
+
+                for (y=1; ; y++) {
+                  /* Unrolled */
+                  *cur_buf_x += tmp_i16;
+                  cur_buf_x_plus1 = cur_buf_x;
+                  cur_buf_x--;
+                  cur_buf_prevy--;
+                  *cur_buf_x += tmp_i16;
+                  if (y == 2)
+                    break;
+                  cur_buf_x += DATABUF_SIZE+1;
+                  cur_buf_x_plus1 += DATABUF_SIZE+1;
+                  cur_buf_prevy += DATABUF_SIZE+1;
+                }
               }
             }
           } while (nreps == 9);
