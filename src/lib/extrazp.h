@@ -98,5 +98,12 @@ extern int16 zp12si;
 #pragma zpsym ("zp8i")
 #pragma zpsym ("zp10i")
 #pragma zpsym ("zp12i")
+
+#pragma zpsym ("zp1si")
+#pragma zpsym ("zp3si")
+#pragma zpsym ("zp6si")
+#pragma zpsym ("zp8si")
+#pragma zpsym ("zp10si")
+#pragma zpsym ("zp12si")
 #endif
 #endif
