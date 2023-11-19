@@ -253,13 +253,14 @@ done:
 }
 
 static uint8 err[FILE_WIDTH * 2];
+static uint8 thumb_buf[THUMB_WIDTH * 2];
 
 #pragma inline-stdfuncs(push, on)
 #pragma allow-eager-inline(push, on)
 #pragma codesize(push, 200)
 #pragma register-vars(push, on)
 
-void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint16 p_height) {
+void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint16 p_height, uint8 serial_model) {
   /* Rotation/cropping variables */
   uint8 start_x, i;
   register uint8 x, end_x;
@@ -408,21 +409,91 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
 
   for(y = 0, dy = off_y; y != file_height; y++, dy += ydir) {
     if (file_width == THUMB_WIDTH*2) {
+      uint8 a, b, c, d, off;
       /* assume thumbnail at 4bpp and zoom it */
-      if (!(y & 1)) {
-        fread(buffer, 1, 40, ifp);
-        /* Unpack */
-        i = 39;
-        do {
-          uint8 c   = buffer[i];
-          uint8 a   = (((c>>4) & 0b00001111) << 4);
-          uint8 b   = (((c)    & 0b00001111) << 4);
-          uint8 off = i * 4;
-          buffer[off++] = a;
-          buffer[off++] = a;
-          buffer[off++] = b;
-          buffer[off++] = b;
-        } while (i--);
+      if (serial_model == QT_MODEL_100) {
+        if (!(y & 1)) {
+          fread(buffer, 1, THUMB_WIDTH / 2, ifp);
+          /* Unpack */
+          i = 39;
+          do {
+            c   = buffer[i];
+            a   = (((c>>4) & 0b00001111) << 4);
+            b   = (((c)    & 0b00001111) << 4);
+            off = i * 4;
+            buffer[off++] = a;
+            buffer[off++] = a;
+            buffer[off++] = b;
+            buffer[off++] = b;
+          } while (i--);
+        }
+      } else {
+        unsigned char *cur_in, *cur_out;
+        unsigned char *orig_in, *orig_out;
+        /* Why do they do that */
+        if (!(y % 4)) {
+          /* Expand the next two lines from 4bpp buffer to 8bpp thumb_buf */
+          fread(buffer, 1, THUMB_WIDTH, ifp);
+          orig_in = cur_in = buffer;
+          orig_out = cur_out = thumb_buf;
+          for (x = 0; x < THUMB_WIDTH; x++) {
+            c = *cur_in++;
+            a   = (((c>>4) & 0b00001111) << 4);
+            b   = (((c)    & 0b00001111) << 4);
+            *cur_out++ = a;
+            *cur_out++ = b;
+          }
+          /* Copy thumb_buf back to buffer */
+          memcpy(buffer, thumb_buf, THUMB_WIDTH * 2);
+
+          /* Reorder bytes from buffer to thumb_buf */
+          orig_in = cur_in = buffer;
+          orig_out = cur_out = thumb_buf;
+          for (i = 0; i < THUMB_WIDTH * 2; ) {
+            if (i < THUMB_WIDTH*3/2) {
+              a = *cur_in++;
+              b = *cur_in++;
+              c = *cur_in++;
+
+              *(cur_out) = a;
+              *(cur_out + THUMB_WIDTH) = c;
+              cur_out++;
+              *(cur_out) = b;
+              cur_out++;
+              i+=3;
+            } else {
+              i++;
+              cur_out++;
+              d = *cur_in++;
+              *(cur_out) = d;
+              cur_out++;
+            }
+          }
+          /* Finally copy the first line of thumb_buf to buffer for display,
+           * upscaling horizontally */
+          orig_in = cur_in = thumb_buf;
+          orig_out = cur_out = buffer;
+          for (x = 0; x < THUMB_WIDTH; x++) {
+            *cur_out = *cur_in;
+            cur_out++;
+            *cur_out = *cur_in;
+            cur_out++;
+            cur_in++;
+          }
+        } else if (!(y % 2)) {
+          /* Copy the second line of thumb_buf to buffer for display */
+          orig_in = cur_in = thumb_buf + THUMB_WIDTH;
+          orig_out = cur_out = buffer;
+          for (x = 0; x < THUMB_WIDTH; x++) {
+            *cur_out = *cur_in;
+            cur_out++;
+            *cur_out = *cur_in;
+            cur_out++;
+            cur_in++;
+          }
+        } else {
+          /* Reuse the previous buffer line once for upscaling */
+        }
       }
     } else {
       fread(buffer, 1, FILE_WIDTH, ifp);
@@ -564,6 +635,11 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
   progress_bar(-1, -1, scrw, file_height, file_height);
 stop:
   fclose(ifp);
+#ifndef __CC65__
+  ifp = fopen("HGR","wb");
+  fwrite((char *)HGR_PAGE, 1, HGR_LEN, ifp);
+  fclose(ifp);
+#endif
 }
 
 #pragma register-vars(pop)
@@ -577,7 +653,7 @@ void qt_edit_image(const char *ofname) {
       angle -= 360;
     if (angle < 0)
       angle += 360;
-    convert_temp_to_hgr(TMP_NAME, ofname, FILE_WIDTH, FILE_HEIGHT);
+    convert_temp_to_hgr(TMP_NAME, ofname, FILE_WIDTH, FILE_HEIGHT, QT_MODEL_UNKNOWN);
   } while (reedit_image(ofname));
 }
 
