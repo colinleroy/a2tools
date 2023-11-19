@@ -35,11 +35,65 @@ void main(int argc, char *argv[]) {
   unsigned char c;
   int x, y;
 
-  for (y = 0; y < h; y++) {
-    for (x = 0; x < w; x++) {
-      fread(&c, 1, 1, fp);
-  
-      sdl_set_pixel(screen, x, y, c, c, c);
+  if (w != 80) {
+    for (y = 0; y < h; y++) {
+      for (x = 0; x < w; x++) {
+        fread(&c, 1, 1, fp);
+    
+        sdl_set_pixel(screen, x, y, c, c, c);
+      }
+    }
+  } else {
+    // for (y = 0; y < h*2; y++) {
+    //   for (x = 0; x < w*2; x+=4) {
+    //     int a, b;
+    //     fread(&c, 1, 1, fp);
+    //     a   = (((c>>4) & 0b00001111) << 4);
+    //     b   = (((c)    & 0b00001111) << 4);
+    // 
+    //     sdl_set_pixel(screen, x, y, a, a, a);
+    //     sdl_set_pixel(screen, x+1, y, a, a, a);
+    //     sdl_set_pixel(screen, x, y+1, a, a, a);
+    //     sdl_set_pixel(screen, x+1, y+1, a, a, a);
+    // 
+    //     sdl_set_pixel(screen, x+2, y, b, b, b);
+    //     sdl_set_pixel(screen, x+3, y, b, b, b);
+    //     sdl_set_pixel(screen, x+2, y+1, b, b, b);
+    //     sdl_set_pixel(screen, x+3, y+1, b, b, b);
+    //   }
+    char line[80], *cur_in;
+    char out[160], *cur_out;
+    int i, a, b, c, x, y;
+    for (y = 0; y < 60; y+=2) {
+      fread(line, 1, 80, fp);
+      cur_in = line;
+      cur_out = out;
+      for (i = 0; i < 80; i++) {
+        c = *cur_in++;
+        a   = (((c>>4) & 0b00001111) << 4);
+        b   = (((c)    & 0b00001111) << 4);
+        *cur_out++ = a;
+        *cur_out++ = b;
+      }
+      i = 0;
+      x = 0;
+      cur_out = out;
+      for (i = 0; i < 80 * 2; ) {
+        if (i < 120) {
+          a = *cur_out++;
+          b = *cur_out++;
+          c = *cur_out++;
+          sdl_set_pixel(screen, x, (y), a, a, a);
+          sdl_set_pixel(screen, x+1, (y), b, b, b);
+          sdl_set_pixel(screen, x, (y)+1, c, c, c);
+          x+=2;
+          i+=3;
+        } else {
+          a = *cur_out++;
+          sdl_set_pixel(screen, 1+((i - 120)*2), (y)+1, a, a, a);
+          i++;
+        }
+      }
     }
   }
   fclose(fp);
