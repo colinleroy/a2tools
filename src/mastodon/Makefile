@@ -58,6 +58,7 @@ mastodon_CC65SOURCES := \
 	../lib/dputc.s \
 	../lib/scroll.s \
 	../lib/fastirq$(suffix).s \
+	 ../lib/extrazp.s \
 	../lib/runtime_once_clean.s
 
 mastocli_SOURCES := \
@@ -78,6 +79,7 @@ mastocli_CC65SOURCES := \
 	../lib/dputc.s \
 	../lib/scroll.s \
 	../lib/fastirq$(suffix).s \
+	 ../lib/extrazp.s \
 	../lib/runtime_once_clean.s
 
 mastowrite_SOURCES := \
@@ -99,6 +101,7 @@ mastowrite_CC65SOURCES := \
 	../lib/dputc.s \
 	../lib/scroll.s \
 	../lib/fastirq$(suffix).s \
+	 ../lib/extrazp.s
 
 mastoconf_SOURCES := \
 	cli/config.c \

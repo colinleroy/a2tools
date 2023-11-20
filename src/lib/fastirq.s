@@ -7,6 +7,7 @@
 
         .export         _init_fast_irq, _done_fast_irq
         .import         callirq
+        .importzp       _a_backup, _prev_ram_irq_vector, _prev_rom_irq_vector
         .constructor    _init_fast_irq, 9
         .destructor     _done_fast_irq, 9
 
@@ -18,12 +19,6 @@
 
 ROMIRQVEC:= $03fe
 RAMIRQVEC:= $fffe
-A_BACKUP := $eb                 ; https://fadden.com/apple2/dl/zero-page.txt
-
-        .segment       "DATA"
-
-_prev_rom_irq_vector: .res 2
-_prev_ram_irq_vector: .res 2
 
         .segment        "RT_ONCE"
 
@@ -91,7 +86,7 @@ _done_fast_irq:
 ; ------------------------------------------------------------------------
 
 handle_ram_irq:
-        sta     A_BACKUP        ; Save A
+        sta     _a_backup       ; Save A
         pla                     ; Check for BRK
         pha
         and     #%0010000       ; Check bit 4 (BRK flag)
@@ -103,9 +98,16 @@ handle_ram_irq:
         phx                     ; Save X,Y
         phy
         jsr     callirq
+        bcc     give_back_irq
         ply                     ; Restore Y,X,A
         plx
-        lda     A_BACKUP
+        lda     _a_backup
+        rti
+give_back_irq:
+        ply                     ; Restore Y,X,A
+        plx
+        lda     _a_backup
+        jmp     (_prev_ram_irq_vector)
 
         .else
         txa                     ; Save X,Y
@@ -113,21 +115,30 @@ handle_ram_irq:
         tya
         pha
         jsr     callirq
+        bcc     give_back_irq
         pla                     ; Restore Y,X,A
         tay
         pla
         tax
-        lda     A_BACKUP
+        lda     _a_backup
+        rti
+give_back_irq:
+        pla                     ; Restore Y,X,A
+        tay
+        pla
+        tax
+        lda     _a_backup
+        jmp     (_prev_ram_irq_vector)
 
         .endif
-        rti
 
 do_brk:
         ; Give BRK to the standard handler
-        .ifdef __APPLE2ENH__
         jmp     (_prev_ram_irq_vector)
-        .endif
 
 handle_rom_irq:                 ; ROM saves things for us
         jsr     callirq
+        bcs     handled
+        jmp     (_prev_rom_irq_vector)
+handled:
         rti

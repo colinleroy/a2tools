@@ -2,36 +2,21 @@
 ; Ullrich von Bassewitz, 06.08.1998
 ; Colin Leroy-Mira <colin@colino.net>, 2023
 ;
-        .export         _zp1, _zp2, _zp3, _zp4, _zp5, _zp6, _zp7, _zp8, _zp9, _zp10, _zp11, _zp12, _zp13
-        .export         _zp1s, _zp2s, _zp3s, _zp4s, _zp5s, _zp6s, _zp7s, _zp8s, _zp9s, _zp10s, _zp11s, _zp12s, _zp13s
-        .export         _zp1p, _zp3p, _zp6p, _zp8p, _zp10p, _zp12p
-        .export         _zp1ip, _zp3ip, _zp6ip, _zp8ip, _zp10ip, _zp12ip
-        .export         _zp1i, _zp3i, _zp6i, _zp8i, _zp10i, _zp12i
-        .export         _zp1si, _zp3si, _zp6si, _zp8si, _zp1si, _zp12si
+        .export         _a_backup, _prev_ram_irq_vector, _prev_rom_irq_vector
+        .export         _zp6, _zp7, _zp8, _zp9, _zp10, _zp11, _zp12, _zp13
+        .export         _zp6s, _zp7s, _zp8s, _zp9s, _zp10s, _zp11s, _zp12s, _zp13s
+        .export         _zp6p, _zp8p, _zp10p, _zp12p
+        .export         _zp6ip, _zp8ip, _zp10ip, _zp12ip
+        .export         _zp6i, _zp8i, _zp10i, _zp12i
+        .export         _zp6si, _zp8si, _zp10si, _zp12si
 
 ; https://fadden.com/apple2/dl/zero-page.txt
-; Of course don't use them badly like zp1i and zp2
+; Of course don't use them badly
 
-_zp1  := $EB
-_zp1i := $EB
-_zp1s := $EB
-_zp1si:= $EB
-_zp1p := $EB
-_zp1ip:= $EB
-_zp2  := $EC
-_zp2s := $EC
-
-_zp3  := $ED
-_zp3i := $ED
-_zp3s := $ED
-_zp3si:= $ED
-_zp3p := $ED
-_zp3ip:= $ED
-_zp4  := $EE
-_zp4s := $EE
-
-_zp5  := $EF
-_zp5s := $EF
+; For serial
+_prev_ram_irq_vector  := $EB
+_prev_rom_irq_vector  := $ED
+_a_backup             := $EF
 
 _zp6  := $54
 _zp6i := $54
