@@ -11,7 +11,7 @@ prefix ?= /usr/local
 PROGRAM=a2recv
 SOURCES := a2recv.c ../lib/malloc0.c ../lib/simple_serial.c ../lib/simple_serial_ext.c ../lib/clrzone.c ../lib/path_helper.c
 GCCSOURCES := ../lib/extended_string.c ../lib/extended_conio.c
-CL65SOURCES := ../lib/fastirq$(suffix).s ../lib/scrollwindow.c
+CL65SOURCES := ../lib/fastirq$(suffix).s ../lib/scrollwindow.c ../lib/extrazp.s
 DEPS := 
 
 CC65_TARGET = apple2enh

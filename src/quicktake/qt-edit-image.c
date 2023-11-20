@@ -176,9 +176,12 @@ start_edit:
             : dither_alg == DITHER_BAYER ? "Bayer" : "None");
 
     c = tolower(cgetc());
+#ifdef __CC65__
     if (!hgr_mix_is_on()) {
       hgr_mixon();
-    } else {
+    } else
+#endif
+    {
       switch(c) {
         case CH_ESC:
           clrscr();
@@ -269,7 +272,7 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
   uint16 off_x, y, off_y;
   uint16 file_width;
 #if SCALE
-  uint8 scaled_dx, scaled_dy;
+  uint8 scaled_dx, scaled_dy, prev_scaled_dx, prev_scaled_dy;
 #else
   uint16 scaled_dx, scaled_dy;
   uint16 file_height;
@@ -405,7 +408,7 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
       break;
   }
 
-  for(y = 0, dy = off_y; y != file_height; y++, dy += ydir) {
+  for(y = 0, dy = off_y; y != file_height;) {
     if (file_width == THUMB_WIDTH*2) {
       uint8 a, b, c, d, off;
       /* assume thumbnail at 4bpp and zoom it */
@@ -496,6 +499,25 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
       fread(buffer, 1, FILE_WIDTH, ifp);
     }
 
+    /* Calculate hgr base coordinates for the line */
+    if (invert_coords) {
+      if (resize) {
+        scaled_dy = (dy * 3) >> 2;
+        if (scaled_dy == prev_scaled_dy) {
+          /* Avoid rewriting same destination line twice */
+          goto next_line;
+        }
+        prev_scaled_dy = scaled_dy;
+        cur_hgr_row = div7_table[scaled_dy];
+        cur_hgr_mod = mod7_table[scaled_dy];
+      } else {
+        cur_hgr_row = div7_table[dy];
+        cur_hgr_mod = mod7_table[dy];
+      }
+    } else {
+      cur_hgr_line = baseaddr[dy];
+    }
+
     if (dither_alg == DITHER_BURKES) {
       /* Rollover next error line */
       uint8 *tmp = cur_err_line;
@@ -505,20 +527,6 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
     } else {
       /* Precompute y modulo for the line */
       y_mod8 = y % 8;
-    }
-
-    /* Calculate hgr base coordinates for the line */
-    if (invert_coords) {
-      if (resize) {
-        scaled_dy = dy * 3 / 4;
-        cur_hgr_row = div7_table[scaled_dy];
-        cur_hgr_mod = mod7_table[scaled_dy];
-      } else {
-        cur_hgr_row = div7_table[dy];
-        cur_hgr_mod = mod7_table[dy];
-      }
-    } else {
-      cur_hgr_line = baseaddr[dy];
     }
 
     x = start_x;
@@ -540,7 +548,12 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
       /* Get destination pixel */
       if (invert_coords) {
         if (resize) {
-          scaled_dx = dx * 3 / 4;
+          scaled_dx = (dx * 3) >> 2;
+          if (scaled_dx == prev_scaled_dx) {
+            /* Avoid rewriting same destination pixel twice */
+            goto next_pixel;
+          }
+          prev_scaled_dx = scaled_dx;
           ptr = baseaddr[scaled_dx] + cur_hgr_row;
           pixel = cur_hgr_mod;
         } else {
@@ -593,16 +606,6 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
           }
         }
         *cur_err_x_yplus1          += err8;
-
-        /* shift cursors */
-        cur_err_x_y++;
-        cur_err_xplus1_y++;
-        cur_err_xplus2_y++;
-        cur_err_x_yplus1++;
-        cur_err_xplus1_yplus1++;
-        cur_err_xplus2_yplus1++;
-        cur_err_xmin1_yplus1++;
-        cur_err_xmin2_yplus1++;
       } else if (dither_alg == DITHER_BAYER) {
         uint16 val = opt_val;
         val += val * map[y_mod8][x % 8] / 63;
@@ -618,8 +621,20 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
         }      
       }
 
+next_pixel:
       x++;
       dx += xdir;
+      if (dither_alg == DITHER_BURKES) {
+        /* shift cursors */
+        cur_err_x_y++;
+        cur_err_xplus1_y++;
+        cur_err_xplus2_y++;
+        cur_err_x_yplus1++;
+        cur_err_xplus1_yplus1++;
+        cur_err_xplus2_yplus1++;
+        cur_err_xmin1_yplus1++;
+        cur_err_xmin2_yplus1++;
+      }
     } while (x != end_x);
     if (y % 16 == 0) {
       progress_bar(-1, -1, scrw, y, file_height);
@@ -628,6 +643,9 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
           goto stop;
       }
     }
+next_line:
+    y++;
+    dy += ydir;
   }
   progress_bar(-1, -1, scrw, file_height, file_height);
 stop:

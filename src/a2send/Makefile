@@ -11,7 +11,7 @@ endif
 prefix ?= /usr/local
 PROGRAM=a2send
 SOURCES := a2send.c ../lib/malloc0.c ../lib/simple_serial.c ../lib/simple_serial_ext.c ../lib/cgets.c  ../lib/scrollwindow.c ../lib/get_filedetails.c ../lib/path_helper.c
-CL65SOURCES := ../lib/fastirq$(suffix).s
+CL65SOURCES := ../lib/fastirq$(suffix).s ../lib/extrazp.s
 GCCSOURCES := ../lib/extended_string.c
 
 CC65_TARGET = apple2enh
