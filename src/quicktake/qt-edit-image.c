@@ -285,22 +285,20 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
   uint8 *next_err_line;
 
 #ifdef __CC65__
-  #define cur_err_x_y zp1p
-  #define cur_err_x_yplus1 zp3p
-  #define file_height zp5
   #define cur_err_xplus1_y zp6p
   #define cur_err_xplus2_y zp8p
-  #define cur_err_xplus1_yplus1 zp10p
-  #define cur_err_xplus2_yplus1 zp12p
+  #define cur_err_x_y zp8p
+  #define cur_err_x_yplus1 zp10p
+  #define file_height zp12
 #else
   uint8 *cur_err_x_y;
   uint8 *cur_err_x_yplus1;
   uint8 file_height;
   uint8 *cur_err_xplus1_y;
+#endif
   uint8 *cur_err_xplus2_y;
   uint8 *cur_err_xplus1_yplus1;
   uint8 *cur_err_xplus2_yplus1;
-#endif
   uint8 pixel;
 
   uint8 *cur_err_xmin1_yplus1;
@@ -432,10 +430,10 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
         unsigned char *orig_in, *orig_out;
         /* Why do they do that */
         if (!(y % 4)) {
-          /* Expand the next two lines from 4bpp buffer to 8bpp thumb_buf */
-          fread(buffer, 1, THUMB_WIDTH, ifp);
-          orig_in = cur_in = buffer;
-          orig_out = cur_out = thumb_buf;
+          /* Expand the next two lines from 4bpp thumb_buf to 8bpp buffer */
+          fread(thumb_buf, 1, THUMB_WIDTH, ifp);
+          orig_in = cur_in = thumb_buf;
+          orig_out = cur_out = buffer;
           for (x = 0; x < THUMB_WIDTH; x++) {
             c = *cur_in++;
             a   = (((c>>4) & 0b00001111) << 4);
@@ -443,10 +441,8 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
             *cur_out++ = a;
             *cur_out++ = b;
           }
-          /* Copy thumb_buf back to buffer */
-          memcpy(buffer, thumb_buf, THUMB_WIDTH * 2);
 
-          /* Reorder bytes from buffer to thumb_buf */
+          /* Reorder bytes from buffer back to thumb_buf */
           orig_in = cur_in = buffer;
           orig_out = cur_out = thumb_buf;
           for (i = 0; i < THUMB_WIDTH * 2; ) {
@@ -481,7 +477,8 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
             cur_in++;
           }
         } else if (!(y % 2)) {
-          /* Copy the second line of thumb_buf to buffer for display */
+          /* Copy the second line of thumb_buf to buffer for display,
+           * upscaling horizontally */
           orig_in = cur_in = thumb_buf + THUMB_WIDTH;
           orig_out = cur_out = buffer;
           for (x = 0; x < THUMB_WIDTH; x++) {
