@@ -290,19 +290,18 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
 #ifdef __CC65__
   #define cur_err_xplus1_y zp6p
   #define cur_err_xplus2_y zp8p
-  #define cur_err_x_y zp8p
-  #define cur_err_x_yplus1 zp10p
-  #define file_height zp12
+  #define cur_err_x_y zp10p
+  #define cur_err_x_yplus1 zp12p
 #else
   uint8 *cur_err_x_y;
   uint8 *cur_err_x_yplus1;
-  uint8 file_height;
   uint8 *cur_err_xplus1_y;
 #endif
   uint8 *cur_err_xplus2_y;
   uint8 *cur_err_xplus1_yplus1;
   uint8 *cur_err_xplus2_yplus1;
   uint8 pixel;
+  uint8 file_height;
 
   uint8 *cur_err_xmin1_yplus1;
   uint8 *cur_err_xmin2_yplus1;
@@ -502,9 +501,10 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
     /* Calculate hgr base coordinates for the line */
     if (invert_coords) {
       if (resize) {
-        scaled_dy = (dy * 3) >> 2;
+        scaled_dy = dy * 3 / 4;
         if (scaled_dy == prev_scaled_dy) {
-          /* Avoid rewriting same destination line twice */
+          /* Avoid rewriting same destination line twice
+           * It results in ugly dithering */
           goto next_line;
         }
         prev_scaled_dy = scaled_dy;
@@ -548,9 +548,10 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
       /* Get destination pixel */
       if (invert_coords) {
         if (resize) {
-          scaled_dx = (dx * 3) >> 2;
+          scaled_dx = dx * 3 / 4;
           if (scaled_dx == prev_scaled_dx) {
-            /* Avoid rewriting same destination pixel twice */
+            /* Avoid rewriting same destination pixel twice
+             * It results in ugly dithering */
             goto next_pixel;
           }
           prev_scaled_dx = scaled_dx;
