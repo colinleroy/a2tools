@@ -86,9 +86,10 @@ uint8 qt_serial_connect(uint16 speed) {
   printf("Parity set.\n");
 
   if (serial_model == QT_MODEL_UNKNOWN) {
-    if (qt200_wakeup() == 0) {
-      serial_model = QT_MODEL_200;
-    }
+    // Disabled for now
+    // if (qt200_wakeup() == 0) {
+    //   serial_model = QT_MODEL_200;
+    // }
   }
 
   if (serial_model == QT_MODEL_UNKNOWN) {
@@ -108,56 +109,56 @@ static uint8 qt_set_speed(uint16 speed, int first_sleep, int second_sleep) {
   if (serial_model != QT_MODEL_200)
     return qt1x0_set_speed(speed, first_sleep, second_sleep);
   else
-    return -1;
+    return qt200_set_speed(speed, first_sleep, second_sleep);
 }
 
 uint8 qt_take_picture(void) {
   if (serial_model != QT_MODEL_200)
     return qt1x0_take_picture();
   else
-    return -1;
+    return qt200_take_picture();
 }
 
 uint8 qt_set_camera_name(const char *name) {
   if (serial_model != QT_MODEL_200)
     return qt1x0_set_camera_name(name);
   else
-    return -1;
+    return qt200_set_camera_name(name);
 }
 
 uint8 qt_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second) {
   if (serial_model != QT_MODEL_200)
     return qt1x0_set_camera_time(day, month, year, hour, minute, second);
   else
-    return -1;
+    return qt200_set_camera_time(day, month, year, hour, minute, second);
 }
 
 uint8 qt_set_quality(uint8 quality) {
   if (serial_model != QT_MODEL_200)
     return qt1x0_set_quality(quality);
   else
-    return -1;
+    return qt200_set_quality(quality);
 }
 
 uint8 qt_set_flash(uint8 mode) {
   if (serial_model != QT_MODEL_200)
     return qt1x0_set_flash(mode);
   else
-    return -1;
+    return qt200_set_flash(mode);
 }
 
 uint8 qt_get_picture(uint8 n_pic, const char *filename) {
   if (serial_model != QT_MODEL_200)
     return qt1x0_get_picture(n_pic, filename);
   else
-    return -1;
+    return qt200_get_picture(n_pic, filename);
 }
 
-uint8 qt_get_thumbnail(uint8 n_pic) {
+uint8 qt_get_thumbnail(uint8 n_pic, uint8 *quality, uint8 *flash, uint8 *year, uint8 *month, uint8 *day, uint8 *hour, uint8 *minute) {
   if (serial_model != QT_MODEL_200)
-    return qt1x0_get_thumbnail(n_pic);
+    return qt1x0_get_thumbnail(n_pic, quality, flash, year, month, day, hour, minute);
   else
-    return -1;
+    return qt200_get_thumbnail(n_pic, quality, flash, year, month, day, hour, minute);
 }
 
 #pragma code-name(pop)
@@ -167,14 +168,14 @@ uint8 qt_delete_pictures(void) {
   if (serial_model != QT_MODEL_200)
     return qt1x0_delete_pictures();
   else
-    return -1;
+    return qt200_delete_pictures();
 }
 
 uint8 qt_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mode, uint8 *flash_mode, uint8 *battery_level, char **name, struct tm *time) {
   if (serial_model != QT_MODEL_200)
     return qt1x0_get_information(num_pics, left_pics, quality_mode, flash_mode, battery_level, name, time);
   else
-    return -1;
+    return qt200_get_information(num_pics, left_pics, quality_mode, flash_mode, battery_level, name, time);
 }
 
 /* Helper functions */

@@ -16,10 +16,7 @@
 extern uint8 scrw, scrh;
 
 /* Get the ack from the camera */
-static uint8 get_ack(void) {
-  uint8 wait = 20;
-
-  /* about 10seconds wait */
+static uint8 get_ack(uint8 wait) {
   while (wait--) {
     if (simple_serial_getc_with_timeout() == 0x00) {
       return 0;
@@ -103,10 +100,10 @@ static uint8 send_hello(uint16 speed) {
 }
 
 /* Send a command to the camera */
-static uint8 send_command(const char *cmd, uint8 len, uint8 s_ack) {
+static uint8 send_command(const char *cmd, uint8 len, uint8 s_ack, uint8 wait) {
   simple_serial_write(cmd, len);
 
-  if (get_ack() != 0) {
+  if (get_ack(wait) != 0) {
     return -1;
   }
   if (s_ack)
@@ -119,7 +116,7 @@ static uint8 send_command(const char *cmd, uint8 len, uint8 s_ack) {
 static uint8 qt1x0_send_ping(void) {
   char str[] = {0x16,0x00,0x00,0x00,0x00,0x00,0x00};
 
-  return send_command(str, sizeof str, 0);
+  return send_command(str, sizeof str, 0, 5);
 }
 
 #define PNUM_IDX       0x06
@@ -140,13 +137,26 @@ static uint8 send_photo_thumbnail_command(uint8 pnum) {
     return -1;
   }
 
-  return send_command(str, sizeof str, 1);
+  return send_command(str, sizeof str, 1, 5);
 }
 
 /* Gets photo header */
 static uint8 send_photo_header_command(uint8 pnum) {
   //           {????,????,????,????,????,????,PNUM,RESPONSE__SIZE,????}
   char str[] = {0x16,0x28,0x00,0x21,0x00,0x00,0x01,0x00,0x00,0x40,0x00};
+  /* Interesting bytes from the header */
+  #define IMG_NUM_IDX     0x03
+  #define IMG_SIZE_IDX    0x05
+  #define IMG_WIDTH_IDX   0x08
+  #define IMG_HEIGHT_IDX  0x0A
+  #define IMG_MONTH_IDX   0x0D
+  #define IMG_DAY_IDX     0x0E
+  #define IMG_YEAR_IDX    0x0F
+  #define IMG_HOUR_IDX    0x10
+  #define IMG_MINUTE_IDX  0x11
+  #define IMG_SECOND_IDX  0x12
+  #define IMG_FLASH_IDX   0x13
+  #define IMG_QUALITY_IDX 0x18 /* (?) */
 
   str[PNUM_IDX] = pnum;
 
@@ -154,7 +164,7 @@ static uint8 send_photo_header_command(uint8 pnum) {
     return -1;
   }
 
-  return send_command(str, sizeof str, 1);
+  return send_command(str, sizeof str, 1, 5);
 }
 
 /* Gets photo data */
@@ -169,7 +179,7 @@ static uint8 send_photo_data_command(uint8 pnum, uint8 *picture_size) {
     return -1;
   }
 
-  return send_command(str, sizeof str, 1);
+  return send_command(str, sizeof str, 1, 5);
 }
 
 /* Get the camera information summary */
@@ -181,7 +191,7 @@ static uint8 send_get_information_command(void) {
     return -1;
   }
 
-  return send_command(str, sizeof str, 1);
+  return send_command(str, sizeof str, 1, 5);
 }
 
 /* Wakeup and detect a QuickTake 100/150 by clearing DTR
@@ -258,7 +268,7 @@ uint8 qt1x0_set_speed(uint16 speed, int first_sleep, int second_sleep) {
   simple_serial_write(str_speed, sizeof str_speed);
 
   /* get ack */
-  if (get_ack() != 0) {
+  if (get_ack(5) != 0) {
     printf("Speed set command failed.\n");
     return -1;
   }
@@ -271,7 +281,7 @@ uint8 qt1x0_set_speed(uint16 speed, int first_sleep, int second_sleep) {
   simple_serial_flush();
 
   send_ack();
-  return get_ack();
+  return get_ack(5);
 }
 
 /* Take a picture */
@@ -282,7 +292,7 @@ uint8 qt1x0_take_picture(void) {
     return -1;
   }
 
-  return send_command(str, sizeof str, 0);
+  return send_command(str, sizeof str, 0, 20);
 }
 
 /* Set the camera name */
@@ -302,7 +312,7 @@ uint8 qt1x0_set_camera_name(const char *name) {
   }
 
   memcpy(str + NAME_SET_IDX, name, len);
-  return send_command(str, sizeof str, 0);
+  return send_command(str, sizeof str, 0, 5);
 }
 
 /* Set the camera time */
@@ -327,7 +337,7 @@ uint8 qt1x0_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint
     return -1;
   }
 
-  return send_command(str, sizeof str, 0);
+  return send_command(str, sizeof str, 0, 5);
 }
 
 static void receive_data(uint32 size, FILE *fp) {
@@ -363,19 +373,6 @@ static void receive_data(uint32 size, FILE *fp) {
 
 /* Get a picture from the camera to a file */
 uint8 qt1x0_get_picture(uint8 n_pic, const char *filename) {
-  /* Interesting bytes from the header */
-  #define IMG_NUM_IDX    0x03
-  #define IMG_SIZE_IDX   0x05
-  #define IMG_WIDTH_IDX  0x08
-  #define IMG_HEIGHT_IDX 0x0A
-  #define IMG_MONTH_IDX  0x0D
-  #define IMG_DAY_IDX    0x0E
-  #define IMG_YEAR_IDX   0x0F
-  #define IMG_HOUR_IDX   0x10
-  #define IMG_MINUTE_IDX 0x11
-  #define IMG_SECOND_IDX 0x12
-  #define IMG_FLASH_IDX  0x13
-  #define QUALITY_IDX    0x18 /* (?) */
   #define HDR_SKIP       0x04
 
   #define WH_OFFSET      0x220
@@ -462,7 +459,7 @@ uint8 qt1x0_get_picture(uint8 n_pic, const char *filename) {
 #pragma code-name(push, "LOWCODE")
 
 /* Get a thumnail from the camera to /RAM/THUMBNAIL */
-uint8 qt1x0_get_thumbnail(uint8 n_pic) {
+uint8 qt1x0_get_thumbnail(uint8 n_pic, uint8 *quality, uint8 *flash, uint8 *year, uint8 *month, uint8 *day, uint8 *hour, uint8 *minute) {
   FILE *picture;
   uint16 width, height;
   unsigned long pic_size_int;
@@ -490,10 +487,19 @@ uint8 qt1x0_get_thumbnail(uint8 n_pic) {
   DUMP_DATA(buffer, 64);
   DUMP_END();
 
-  width = htons(80);
-  height = htons(60);
+  
+  width = htons(THUMB_WIDTH);
+  height = htons(THUMB_HEIGHT);
   pic_size_int = THUMBNAIL_SIZE;
   format = "thumbnail";
+
+  *quality = buffer[IMG_QUALITY_IDX];
+  *flash   = buffer[IMG_FLASH_IDX];
+  *year    = buffer[IMG_YEAR_IDX];
+  *month   = buffer[IMG_MONTH_IDX];
+  *day     = buffer[IMG_DAY_IDX];
+  *hour    = buffer[IMG_HOUR_IDX];
+  *minute  = buffer[IMG_MINUTE_IDX];
 
   DUMP_START("data");
 
@@ -516,7 +522,10 @@ uint8 qt1x0_delete_pictures(void) {
     return -1;
   }
 
-  return send_command(str, sizeof str, 0);
+  if (serial_model == QT_MODEL_100)
+    return send_command(str, sizeof str, 0, 20);
+  else
+    return send_command(str, sizeof str, 0, 60);
 }
 
 /* Set quality */
@@ -530,7 +539,7 @@ uint8 qt1x0_set_quality(uint8 quality) {
   }
   str[SET_QUALITY_IDX] = (quality == QUALITY_HIGH ? 0x10 : 0x20);
 
-  return send_command(str, sizeof str, 0);
+  return send_command(str, sizeof str, 0, 5);
 }
 
 /* Set flash mode */
@@ -544,7 +553,7 @@ uint8 qt1x0_set_flash(uint8 mode) {
   }
   str[SET_FLASH_IDX] = mode;
 
-  return send_command(str, sizeof str, 0);
+  return send_command(str, sizeof str, 0, 5);
 }
 
 /* Get information from the camera */

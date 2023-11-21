@@ -47,16 +47,20 @@ static void print_header(uint8 num_pics, uint8 left_pics, uint8 mode, uint8 flas
 static uint8 print_menu(void) {
   printf("Menu\n\n");
   if (camera_connected) {
-    printf(" G. Get one picture\n"
+    if (serial_model != QT_MODEL_200) {
+      printf(" G. Get one picture\n"
            " P. Preview pictures\n"
            " D. Delete all pictures\n"
            " S. Snap a picture\n");
+    } else {
+      printf(" G. Get one picture\n");
+    }
   } else {
     printf(" C. Connect camera\n");
   }
   printf(  " R. Re-edit a raw picture from floppy\n"
            " V. View a converted picture from floppy\n");
-  if (camera_connected) {
+  if (camera_connected  && serial_model != QT_MODEL_200) {
     printf(" N. Set camera name\n"
            " T. Set camera time\n"
            " Q. Set quality to %s\n"
@@ -200,6 +204,8 @@ static void take_picture(void) {
 
 static void show_thumbnails(uint8 num_pics) {
   uint8 i = 0;
+  uint8 quality, flash, year, month, day, hour, minute;
+
   char c;
   char thumb_buf[32];
   if (num_pics == 0) {
@@ -218,7 +224,7 @@ static void show_thumbnails(uint8 num_pics) {
 
     clrscr();
     gotoxy(0,20);
-    if (qt_get_thumbnail(i) != 0) {
+    if (qt_get_thumbnail(i, &quality, &flash, &year, &month, &day, &hour, &minute) != 0) {
       break;
     }
 
@@ -227,9 +233,11 @@ static void show_thumbnails(uint8 num_pics) {
 
     clrscr();
     gotoxy(0,20);
-    printf("%s - G to get full picture\n"
-           "Escape to exit, any other key to continue",
-           thumb_buf);
+
+    printf("%s (%s, flash %s, %02d/%02d/%04d %02d:%02d)\n"
+           "G to get full picture, Escape to exit, any other key to continue",
+           thumb_buf, qt_get_mode_str(quality), flash?"on":"off", day, month,
+           year + 2000, hour, minute);
     c = tolower(cgetc());
   } while (c != CH_ESC && c != 'g');
   unlink(THUMBNAIL_NAME);
@@ -330,12 +338,12 @@ menu:
       }
       break;
     case 'd':
-      if (camera_connected) {
+      if (camera_connected && serial_model != QT_MODEL_200) {
         delete_pictures();
       }
       break;
     case 's':
-      if (camera_connected) {
+      if (camera_connected && serial_model != QT_MODEL_200) {
         take_picture();
       }
       break;
@@ -346,22 +354,22 @@ menu:
       qt_view_image(NULL);
       break;
     case 'n':
-      if (camera_connected) {
+      if (camera_connected && serial_model != QT_MODEL_200) {
         set_camera_name(name);
       }
       break;
     case 't':
-      if (camera_connected) {
+      if (camera_connected && serial_model != QT_MODEL_200) {
         set_camera_time();
       }
       break;
     case 'q':
-      if (camera_connected) {
+      if (camera_connected && serial_model != QT_MODEL_200) {
         qt_set_quality((current_quality == QUALITY_HIGH) ? QUALITY_STANDARD:QUALITY_HIGH);
       }
       break;
     case 'f':
-      if (camera_connected) {
+      if (camera_connected && serial_model != QT_MODEL_200) {
         qt_set_flash((current_flash_mode + 1) % 3);
       }
       break;
