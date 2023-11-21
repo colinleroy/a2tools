@@ -15,59 +15,140 @@
 
 extern uint8 scrw, scrh;
 
+#define STX 0x02 /* Start of data */
+#define ETX 0x03 /* End of data */
+#define EOT 0x04 /* End of session */
+#define ENQ 0x05 /* Enquiry */
+#define ACK 0x06
+#define ESC 0x10
+#define ETB 0x17 /* End of transmission block */
+#define NAK 0x15
 
-/* Get the ack from the camera */
-static uint8 get_ack(void) {
-  uint8 wait = 20;
+#define CMD_ACK 0x00
+#define CMD_NAK 0x01
 
-  /* about 10seconds wait */
-  while (wait--) {
-    if (simple_serial_getc_with_timeout() == 0x06) {
-      return 0;
-    }
-  }
-  return -1;
+#define FUJI_CMD_PIC_GET_THUMB 0x00
+#define FUJI_CMD_SPEED         0x07
+#define FUJI_CMD_GET_INFO      0x09
+#define FUJI_CMD_PIC_COUNT     0x0B
+
+
+static uint16 response_len;
+static uint8 response_continues;
+
+/* Ent of session */
+static void end_session(void) {
+  simple_serial_putc(EOT);
 }
+/* Read a reply from the camera */
+static uint8 read_response(unsigned char *buf, uint16 len, uint8 expect_header) {
+  uint8 *cur_buf, *end_buf;
+  uint8 eot_buf[3];
+  uint16 i;
+  if (expect_header) {
+    /* Read the header */
+    simple_serial_read((char *)buf, 6);
 
-#pragma code-name(push, "LC")
+    if (buf[0] != ESC || buf[1] != STX) {
+      printf("Unexpected header.\n");
+      return -1;
+    }
+    printf("header: %02x %02x %02x %02x %02x %02x\n", buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]);
 
-/* Send an ack to the camera */
-static void send_ack() {
-  simple_serial_putc(0x06);
+    response_len = (buf[5] << 8) | buf[4];
+    if (response_len > len) {
+      /* Buffer overflow awaiting */
+      printf("data too long (%d bytes)\n", response_len);
+      return -1;
+    }
+  } else {
+    response_len = BLOCK_SIZE;
+  }
+  cur_buf = buf;
+  end_buf = cur_buf + response_len;
+  i = 0;
+  while (cur_buf != end_buf) {
+    *cur_buf = simple_serial_getc();
+    if (*cur_buf == ESC) {
+      /* Skip escape */
+      *cur_buf = simple_serial_getc();
+    }
+    cur_buf++;
+    i++;
+  }
+  /* Read footer */
+  simple_serial_read((char *)eot_buf, 3);
+
+  printf("read %d bytes: ", i);
+  for (i = 0; i < response_len; i++) {
+    printf("%02x ", buf[i]);
+  }
+  printf("\n");
+  printf("footer: %02x %02x %02x\n", eot_buf[0], eot_buf[1], eot_buf[2]);
+  DUMP_DATA(buf, response_len);
+  /* If cur_buf[1] == ETB, there will be more to read */
+  response_continues = (eot_buf[1] == ETB);
+  return 0;
 }
 
 /* Send a command to the camera */
-static uint8 send_command(const char *cmd, uint8 len, uint8 s_ack) {
-  simple_serial_write(cmd, len);
+static uint8 send_command(const char *cmd, uint8 len, uint8 get_ack, uint8 wait) {
+  uint8 header[] = {ESC, STX};
+  uint8 cmd_buffer[32];
+  uint8 i, checksum = 0x00;
 
-  if (get_ack() != 0) {
+  memcpy(cmd_buffer, cmd, len);
+
+  for (i = 0; i < len; i++) {
+    printf("0x%02x^", cmd_buffer[i]);
+    checksum ^= cmd_buffer[i];
+    if (cmd_buffer[i] == ESC) {
+      memmove (cmd_buffer + i + 1, cmd_buffer + i, len - i);
+      cmd_buffer[i] = ESC;
+      i++;
+      len++;
+    }
+  }
+  cmd_buffer[len++] = ESC;
+  cmd_buffer[len++] = ETX;
+  checksum ^= ETX;
+  printf("0x%02x^", ETX);
+  cmd_buffer[len++] = checksum;
+  printf("\nsending ");
+  for (i = 0; i < len; i++) {
+    printf("%02x ", cmd_buffer[i]);
+  }
+  printf("\n");
+
+  simple_serial_write((char *)header, sizeof header);
+  simple_serial_write(cmd_buffer, len);
+
+  if (get_ack && simple_serial_getc_with_timeout() != ACK)
+    return -1;
+
+  if (read_response(buffer, BLOCK_SIZE, get_ack) != 0) {
     return -1;
   }
-  if (s_ack)
-    send_ack();
-
   return 0;
 }
 
 /* Ping the camera */
 static uint8 qt200_send_ping(void) {
-  char str[] = {0x05};
+  int c;
+  simple_serial_putc(ENQ);
 
-  return send_command(str, sizeof str, 0);
+  c = simple_serial_getc();
+  return (c == ACK) ? 0 : -1;
 }
-
-#define PNUM_IDX       0x06
-#define PSIZE_IDX      0x07
-#define THUMBNAIL_SIZE 0x0960
 
 /* Wakeup and detect a QuickTake 200
  * Returns 0 if successful, -1 otherwise
  */
 uint8 qt200_wakeup(void) {
+  end_session();
   printf("Pinging QuickTake 200... ");
-  qt200_send_ping();
 
-  if (get_ack() == 0) {
+  if (qt200_send_ping() == 0) {
     printf("Done.\n");
     return 0;
   } else {
@@ -78,15 +159,14 @@ uint8 qt200_wakeup(void) {
 
 /* Send the speed upgrade command */
 uint8 qt200_set_speed(uint16 speed, int first_sleep, int second_sleep) {
-#define SPD_CMD_IDX 0x06
-#define SPD_CHK_IDX 0x09
-  //                 {????,????,????,????,????,????,SPD ,????,????,CHKS,????}
-  char str_speed[] = {0x10,0x02,0x01,0x07,0x01,0x00,0x04,0x10,0x03,0x00,0x04};
+#define SPD_CMD_IDX 0x04
+  //                 {????,CMD ,          ????,????,SPD }
+  char str_speed[] = {0x01,FUJI_CMD_SPEED,0x01,0x00,0x04};
   int spd_code;
 
   switch(speed) {
     case 9600:
-      return qt200_send_ping();
+      return 0;
 
     case 19200:
 #ifdef __CC65__
@@ -95,7 +175,6 @@ uint8 qt200_set_speed(uint16 speed, int first_sleep, int second_sleep) {
       spd_code = B19200;
 #endif
       str_speed[SPD_CMD_IDX] = 0x04;
-      str_speed[SPD_CHK_IDX] = 0x00;
       break;
 
     case 57600U:
@@ -105,27 +184,35 @@ uint8 qt200_set_speed(uint16 speed, int first_sleep, int second_sleep) {
       spd_code = B57600;
 #endif
       str_speed[SPD_CMD_IDX] = 0x07;
-      str_speed[SPD_CHK_IDX] = 0x03;
       break;
   }
 
   printf("Setting speed to %u...\n", speed);
-  simple_serial_write(str_speed, sizeof str_speed);
+  DUMP_START("set_speed");
+  if (send_command(str_speed, sizeof str_speed, 1, 5) != 0) {
+    printf("Speed set command failed.\n");
+    return -1;
+  }
+  DUMP_END();
+  /* End session */
+  end_session();
 
-  platform_msleep(300);
+  platform_msleep(500);
 
   /* Toggle speed */
   simple_serial_set_speed(spd_code);
 
-  /* get ack */
-  qt200_send_ping();
-  if (get_ack() != 0) {
-    printf("Speed set command failed.\n");
+
+  /* ping again */
+  if (qt200_send_ping() != 0) {
+    printf("Communication check failed.\n");
     return -1;
   }
 
   return 0;
 }
+
+#pragma code-name(push, "LC")
 
 /* Take a picture */
 uint8 qt200_take_picture(void) {
@@ -142,17 +229,48 @@ uint8 qt200_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint
   return -1;
 }
 
+static uint8 get_data(uint8 n_pic, const char *name) {
+  #define TYPE_IDX 1
+  #define NUM_PIC_IDX 4
+  char data_cmd[] = {0x00,0x02,0x02,0x00,0x00,0x00};
+  FILE *picture = fopen(name, "wb");
+  uint8 is_thumb = !strcmp(name, THUMBNAIL_NAME);
+
+  memset(buffer, 0, BLOCK_SIZE);
+
+  DUMP_START("data");
+
+	data_cmd[TYPE_IDX] = is_thumb ? 0x00:0x02;
+	data_cmd[NUM_PIC_IDX] = n_pic;
+
+  send_command(data_cmd, sizeof data_cmd, 1, 5);
+  if (is_thumb)
+    fwrite(buffer + 12, 1, response_len - 12, picture);
+  else
+    fwrite(buffer, 1, response_len, picture);
+  while (response_continues) {
+    simple_serial_putc(ACK);
+    read_response(buffer, BLOCK_SIZE, 1);
+    fwrite(buffer, 1, response_len, picture);
+  }
+  DUMP_END();
+
+  fclose(picture);
+  cgetc();
+  return -1;
+}
+
 /* Get a picture from the camera to a file */
 uint8 qt200_get_picture(uint8 n_pic, const char *filename) {
-  return -1;
+  return get_data(n_pic, filename);
 }
 
 #pragma code-name(pop)
 #pragma code-name(push, "LOWCODE")
 
 /* Get a thumnail from the camera to /RAM/THUMBNAIL */
-uint8 qt200_get_thumbnail(uint8 n_pic) {
-  return -1;
+uint8 qt200_get_thumbnail(uint8 n_pic, uint8 *quality, uint8 *flash, uint8 *year, uint8 *month, uint8 *day, uint8 *hour, uint8 *minute) {
+  return get_data(n_pic, THUMBNAIL_NAME);
 }
 
 /* Delete all pictures from the camera */
@@ -172,6 +290,23 @@ uint8 qt200_set_flash(uint8 mode) {
 
 /* Get information from the camera */
 uint8 qt200_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mode, uint8 *flash_mode, uint8 *battery_level, char **name, struct tm *time) {
-  return -1;
+  char num_pics_cmd[]  = {0x00,FUJI_CMD_PIC_COUNT,0x00,0x00};
+  char info_cmd[]= {0x00,FUJI_CMD_GET_INFO,0x00,0x00};
+  uint8 i;
+  *left_pics = *quality_mode = *battery_level = 0;
+
+  DUMP_START("num_pics");
+  send_command(num_pics_cmd, sizeof num_pics_cmd, 1, 5);
+  *num_pics = (buffer[1] << 8) + buffer[0];
+  DUMP_END();
+
+  DUMP_START("info");
+  send_command(info_cmd, sizeof info_cmd, 1, 5);
+  *name = malloc (response_len - 5);
+  strncpy(*name, (char *)buffer + 6, response_len - 5);
+  (*name)[response_len - 5] = '\0';
+  DUMP_END();
+
+  return 0;
 }
 #pragma code-name(pop)
