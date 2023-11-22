@@ -101,14 +101,17 @@ static void save_picture(uint8 n_pic) {
 
   dget_text(filename, 60, NULL, 0);
 #else
-  sprintf(filename, "image%02d.qtk", n_pic);
+  if (serial_model == QT_MODEL_200)
+    sprintf(filename, "image%02d.jpg", n_pic);
+  else
+    sprintf(filename, "image%02d.qtk", n_pic);
 #endif
 
   if (filename[strlen(filename) - 1] == '/')
     return;
 
   if (!strchr(filename, '.')) {
-    strcat(filename, ".QTK");
+    strcat(filename, serial_model == QT_MODEL_200 ? ".JPG":".QTK");
   }
 
   if (qt_get_picture(n_pic, filename) == 0) {

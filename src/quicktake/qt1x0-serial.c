@@ -59,8 +59,6 @@ read:
   return buffer[3] == 0xC8 ? QT_MODEL_150 : QT_MODEL_100;
 }
 
-#pragma code-name(push, "LC")
-
 /* Send our greeting to the camera, and inform it of the speed
  * we aim for
  */
@@ -98,6 +96,8 @@ static uint8 send_hello(uint16 speed) {
 
   return 0;
 }
+
+#pragma code-name(push, "LC")
 
 /* Send a command to the camera */
 static uint8 send_command(const char *cmd, uint8 len, uint8 s_ack, uint8 wait) {
@@ -231,7 +231,7 @@ uint8 qt1x0_wakeup(uint16 speed) {
 }
 
 /* Send the speed upgrade command */
-uint8 qt1x0_set_speed(uint16 speed, int first_sleep, int second_sleep) {
+uint8 qt1x0_set_speed(uint16 speed) {
 #define SPD_CMD_IDX 0x0D
   char str_speed[] = {0x16,0x2A,0x00,0x03,0x00,0x00,0x00,0x00,0x00,0x05,0x00,0x03,0x03,0x08,0x04,0x00};
   int spd_code;
@@ -259,10 +259,7 @@ uint8 qt1x0_set_speed(uint16 speed, int first_sleep, int second_sleep) {
       break;
   }
 
-  /* This part is very sensitive to timing and I
-   * didn't yet figure out how to make things square.
-   */
-  platform_sleep(first_sleep);
+  platform_sleep(1);
 
   printf("Setting speed to %u...\n", speed);
   simple_serial_write(str_speed, sizeof str_speed);
@@ -274,7 +271,7 @@ uint8 qt1x0_set_speed(uint16 speed, int first_sleep, int second_sleep) {
   }
   send_ack();
 
-  platform_msleep(second_sleep);
+  platform_msleep(100);
   simple_serial_set_speed(spd_code);
 
   /* We don't care about the bytes we receive here */

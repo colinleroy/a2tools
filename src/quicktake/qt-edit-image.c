@@ -57,8 +57,8 @@ void qt_convert_image(const char *filename) {
   if (!filename) {
     char *tmp;
     
-    dputs("Image (QTK): ");
-    tmp = file_select(wherex(), wherey(), scrw - wherex(), wherey() + 10, 0, "Select a QTK file");
+    dputs("Image: ");
+    tmp = file_select(wherex(), wherey(), scrw - wherex(), wherey() + 10, 0, "Select an image file");
     if (tmp == NULL)
       return;
     strcpy(imgname, tmp);
@@ -81,8 +81,11 @@ void qt_convert_image(const char *filename) {
       exec("qtktconv", imgname);
     } else if (!strcmp(magic, QTKN_MAGIC)) {
       exec("qtknconv", imgname);
+    } else if (!strcmp(magic, JPEG_EXIF_MAGIC)) {
+      exec("jpegconv", imgname);
     } else {
       cputs("Unknown file type.\r\n");
+      cgetc();
     }
   }
 }

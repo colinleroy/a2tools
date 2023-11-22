@@ -205,7 +205,7 @@ static uint8 identify(const char *name)
   fread (head, 1, HDR_LEN, ifp);
 
   printf("Converting QuickTake ");
-  if (!strcmp (head, magic)) {
+  if (!memcmp (head, magic, 4)) {
     printf("%s", model);
   } else {
     printf("??? - Invalid file.\n");

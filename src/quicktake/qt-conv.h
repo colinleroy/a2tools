@@ -8,8 +8,9 @@
 
 #define SCALE 1
 
-#define QTKT_MAGIC "qktk"
-#define QTKN_MAGIC "qktn"
+#define QTKT_MAGIC      "qktk"
+#define QTKN_MAGIC      "qktn"
+#define JPEG_EXIF_MAGIC "\377\330\377\341"
 
 #if SCALE
 #define FILE_WIDTH 256
