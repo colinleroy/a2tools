@@ -3,7 +3,7 @@
 
 /* Connection functions */
 uint8 qt200_wakeup(void);
-uint8 qt200_set_speed(uint16 speed, int first_sleep, int second_sleep);
+uint8 qt200_set_speed(uint16 speed);
 
 /* Camera settings functions */
 uint8 qt200_set_camera_name(const char *name);

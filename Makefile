@@ -31,7 +31,8 @@ mastodon_disk_PROGS = src/mastodon/mastodon.bin \
 quicktake_disk_PROGS = \
 	src/quicktake/slowtake.bin \
 	src/quicktake/qtktconv.bin \
-	src/quicktake/qtknconv.bin
+	src/quicktake/qtknconv.bin \
+	src/quicktake/jpegconv.bin
 
 CLEANDISK = disks/basic-empty.dsk
 

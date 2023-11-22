@@ -3,6 +3,7 @@
 *.QTK
 *.png
 *.ppm
+*.jpg
 *.dump
 loader
 GREY

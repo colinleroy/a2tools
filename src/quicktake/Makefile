@@ -46,6 +46,10 @@ qtknconv_SOURCES := \
 	qt-conv.c qtkn.c  ../lib/path_helper.c ../lib/progress_bar.c
 qtknconv_CC65SOURCES := ../lib/extrazp.s
 
+jpegconv_SOURCES := \
+	qt-conv.c jpeg.c  ../lib/path_helper.c ../lib/progress_bar.c
+jpegconv_CC65SOURCES := ../lib/extrazp.s
+
 GCCSOURCES := ../lib/extended_conio.c ../lib/clrzone.c
 DEPS :=
 
@@ -57,6 +61,7 @@ CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x200 $(USE_LANGCARD) $
 slowtake_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-hgr.cfg $(CC65_TARGET)-iobuf-0800.o --start-addr 0x1000
 qtktconv_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh.cfg $(CC65_TARGET)-iobuf-0800.o --start-addr 0x1000
 qtknconv_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh.cfg $(CC65_TARGET)-iobuf-0800.o --start-addr 0x1000
+jpegconv_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh.cfg $(CC65_TARGET)-iobuf-0800.o --start-addr 0x1000
 
 GCCCFLAGS = -g -O0 -Wall -Wno-pointer-sign -Wno-char-subscripts -Wno-unused-but-set-variable -Wno-unused-variable -Wno-unknown-pragmas $(shell sdl-config --cflags)
 GCCLDFLAGS = $(shell sdl-config --libs)
@@ -67,7 +72,8 @@ all: \
 	splash.h \
 	slowtake.bin slowtake.x86_64 \
 	qtktconv.bin qtktconv.x86_64 \
-	qtknconv.bin qtknconv.x86_64
+	qtknconv.bin qtknconv.x86_64 \
+	jpegconv.bin jpegconv.x86_64
 
 splash.h: splash.hgr
 	./make-splash.sh
@@ -76,7 +82,7 @@ slowtake.bin: $(slowtake_SOURCES) $(slowtake_CC65SOURCES)
 	cl65 --debug-info -Wl --dbgfile,"slowtake.dbg" $(CFLAGS) $(slowtake_CLCFLAGS) -vm -m slowtake.map -o $@ $^
 
 slowtake.x86_64: $(slowtake_SOURCES) $(GCCSOURCES)
-	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	
+	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@
 
 qtktconv.bin: $(qtktconv_SOURCES) $(qtktconv_CC65SOURCES)
 	cl65 --debug-info -Wl --dbgfile,"qtktconv.dbg" $(CFLAGS) $(qtktconv_CLCFLAGS) -vm -m qtktconv.map -o $@ $^
@@ -88,6 +94,12 @@ qtknconv.bin: $(qtknconv_SOURCES) $(qtknconv_CC65SOURCES)
 	cl65 --debug-info -Wl --dbgfile,"qtknconv.dbg" $(CFLAGS) $(qtknconv_CLCFLAGS) -vm -m qtknconv.map -o $@ $^
 
 qtknconv.x86_64: $(qtknconv_SOURCES) $(GCCSOURCES)
+	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	
+
+jpegconv.bin: $(jpegconv_SOURCES) $(jpegconv_CC65SOURCES)
+	cl65 --debug-info -Wl --dbgfile,"jpegconv.dbg" $(CFLAGS) $(jpegconv_CLCFLAGS) -vm -m jpegconv.map -o $@ $^
+
+jpegconv.x86_64: $(jpegconv_SOURCES) $(GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	
 
 loader.x86_64:

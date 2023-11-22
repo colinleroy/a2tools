@@ -3,7 +3,7 @@
 
 /* Connection functions */
 uint8 qt1x0_wakeup(uint16 speed);
-uint8 qt1x0_set_speed(uint16 speed, int first_sleep, int second_sleep);
+uint8 qt1x0_set_speed(uint16 speed);
 
 /* Camera settings functions */
 uint8 qt1x0_set_camera_name(const char *name);

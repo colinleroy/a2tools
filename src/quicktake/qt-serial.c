@@ -34,15 +34,10 @@ unsigned char buffer[BLOCK_SIZE];
 #pragma code-name(push, "LC")
 
 /* Forward declarations */
-static uint8 qt_set_speed(uint16 speed, int first_sleep, int second_sleep);
+static uint8 qt_set_speed(uint16 speed);
 
 /* Connect to a QuickTake and detect its model */
 uint8 qt_serial_connect(uint16 speed) {
-  int qt1_first_sleep, qt1_second_sleep;
-#if DEBUG_TIMING
-  char buf[5];
-#endif
-
   simple_serial_close();
   printf("Connecting to Quicktake...\n");
 
@@ -59,21 +54,6 @@ uint8 qt_serial_connect(uint16 speed) {
   }
   simple_serial_flush();
 
-#if DEBUG_TIMING
-  dputs("Sleep time before speed command, in seconds: ");
-  strcpy(buf, "1");
-  dget_text(buf, 4, NULL, 0);
-  qt1_first_sleep = atoi(buf);
-
-  dputs("Sleep time after speed command, in milliseconds: ");
-  strcpy(buf, "100");
-  dget_text(buf, 4, NULL, 0);
-  qt1_second_sleep = atoi(buf);
-#else
-  qt1_first_sleep = 1;
-  qt1_second_sleep = 100;
-#endif
-
   /* Try and detect a QuickTake 1x0 */
   serial_model = qt1x0_wakeup(speed);
 
@@ -85,12 +65,11 @@ uint8 qt_serial_connect(uint16 speed) {
 #endif
   printf("Parity set.\n");
 
-  if (serial_model == QT_MODEL_UNKNOWN) {
-    // Disabled for now
-    // if (qt200_wakeup() == 0) {
-    //   serial_model = QT_MODEL_200;
-    // }
-  }
+  // if (serial_model == QT_MODEL_UNKNOWN) {
+  //   if (qt200_wakeup() == 0) {
+  //     serial_model = QT_MODEL_200;
+  //   }
+  // }
 
   if (serial_model == QT_MODEL_UNKNOWN) {
     printf("No camera connected.\n");
@@ -100,16 +79,16 @@ uint8 qt_serial_connect(uint16 speed) {
   printf("Initializing...\n");
 
   /* Upgrade to target speed */
-  return qt_set_speed(speed, qt1_first_sleep, qt1_second_sleep);
+  return qt_set_speed(speed);
 }
 
 /* Protocol-dependant camera functions */
 
-static uint8 qt_set_speed(uint16 speed, int first_sleep, int second_sleep) {
+static uint8 qt_set_speed(uint16 speed) {
   if (serial_model != QT_MODEL_200)
-    return qt1x0_set_speed(speed, first_sleep, second_sleep);
+    return qt1x0_set_speed(speed);
   else
-    return qt200_set_speed(speed, first_sleep, second_sleep);
+    return qt200_set_speed(speed);
 }
 
 uint8 qt_take_picture(void) {

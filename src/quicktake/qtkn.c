@@ -27,7 +27,7 @@
 
 /* Shared with qt-conv.c */
 char magic[5] = QTKN_MAGIC;
-char *model = "150/200";
+char *model = "150";
 uint16 cache_size = 4096;
 uint8 cache[4096];
 
