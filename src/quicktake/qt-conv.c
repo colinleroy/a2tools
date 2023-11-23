@@ -91,6 +91,25 @@ static uint8 src_file_get_byte(void) {
   return *(cur_cache_ptr++);
 }
 
+void src_file_get_bytes(uint8 *dst, uint16 count) {
+  uint16 start, end;
+
+  if (cache_offset + count < cache_size) {
+    memcpy(dst, cur_cache_ptr, count);
+    cur_cache_ptr += count;
+    cache_offset += count;
+  } else {
+    start = cache_size - cache_offset;
+    memcpy(dst, cur_cache_ptr, count);
+    end = count - start;
+    fread(cache, 1, cache_size, ifp);
+    memcpy(dst + start, cache, end);
+    cur_cache_ptr = cache + end;
+    cache_offset = end;
+    cache_pages_read += cache_size;
+  }
+}
+
 static uint16 src_file_get_uint16(void) {
   uint16 v;
 
@@ -212,23 +231,30 @@ static uint8 identify(const char *name)
     return -1;
   }
 
-  //fseek(ifp, WH_OFFSET, SEEK_SET);
-  src_file_seek(WH_OFFSET);
-  height = src_file_get_uint16();
-  width  = src_file_get_uint16();
+  if (!memcmp(head, QTKT_MAGIC, 3)) {
+    src_file_seek(WH_OFFSET);
+    height = src_file_get_uint16();
+    width  = src_file_get_uint16();
 
-  printf(" image %s (%dx%d)...\n", name, width, height);
+    printf(" image %s (%dx%d)...\n", name, width, height);
 
-  /* Skip those */
-  src_file_get_uint16();
-  src_file_get_uint16();
+    /* Skip those */
+    src_file_get_uint16();
+    src_file_get_uint16();
 
-  if (src_file_get_uint16() == 30)
-    data_offset = 738;
-  else
-    data_offset = 736;
+    if (src_file_get_uint16() == 30)
+      data_offset = 738;
+    else
+      data_offset = 736;
 
-  src_file_seek(data_offset);
+    src_file_seek(data_offset);
+  } else if (!memcmp(head, JPEG_EXIF_MAGIC, 4)) {
+    /* FIXME QT 200 implied, 640x480 (scaled down) implied, that sucks */
+    width = QT200_JPEG_WIDTH;
+    height = QT200_JPEG_HEIGHT;
+    /* Init cache */
+    src_file_seek(0);
+  }
   return 0;
 }
 
