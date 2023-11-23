@@ -22,6 +22,9 @@
 #define THUMB_WIDTH 80
 #define THUMB_HEIGHT 60
 
+#define QT200_JPEG_WIDTH 320
+#define QT200_JPEG_HEIGHT 240
+
 #ifdef __CC65__
 #define TMP_NAME "/RAM/GREY"
 #define HIST_NAME "/RAM/HIST"
@@ -47,8 +50,7 @@ uint32 cache_read_since_inval(void);
 extern uint8 cache[];
 extern uint16 cache_size;
 
-uint8 get1();
-uint16 get2();
+void src_file_get_bytes(uint8 *dst, uint16 count);
 uint8 getbithuff (uint8 nbits, uint16 *huff);
 uint8 getbitnohuff (uint8 nbits);
 

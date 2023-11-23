@@ -45,6 +45,12 @@ extern int16 zp8si;
 extern int16 zp10si;
 extern int16 zp12si;
 
+extern int16 *zp6sip;
+extern int16 *zp8sip;
+extern int16 *zp10sip;
+extern int16 *zp12sip;
+
+
 #ifdef __CC65__
 #pragma zpsym ("zp6")
 #pragma zpsym ("zp7")
@@ -74,5 +80,10 @@ extern int16 zp12si;
 #pragma zpsym ("zp8si")
 #pragma zpsym ("zp10si")
 #pragma zpsym ("zp12si")
+
+#pragma zpsym ("zp6sip")
+#pragma zpsym ("zp8sip")
+#pragma zpsym ("zp10sip")
+#pragma zpsym ("zp12sip")
 #endif
 #endif

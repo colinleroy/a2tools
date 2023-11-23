@@ -154,6 +154,7 @@ void simple_serial_set_speed(int b) {
 }
 
 void simple_serial_set_flow_control(unsigned char fc) {
+  /* Only done before opening */
   flow_control = fc;
 }
 

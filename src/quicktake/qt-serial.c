@@ -65,11 +65,11 @@ uint8 qt_serial_connect(uint16 speed) {
 #endif
   printf("Parity set.\n");
 
-  // if (serial_model == QT_MODEL_UNKNOWN) {
-  //   if (qt200_wakeup() == 0) {
-  //     serial_model = QT_MODEL_200;
-  //   }
-  // }
+  if (serial_model == QT_MODEL_UNKNOWN) {
+    if (qt200_wakeup() == 0) {
+      serial_model = QT_MODEL_200;
+    }
+  }
 
   if (serial_model == QT_MODEL_UNKNOWN) {
     printf("No camera connected.\n");
