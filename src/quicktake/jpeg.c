@@ -1,6 +1,11 @@
+//------------------------------------------------------------------------------
+// picojpeg.c v1.1 - Public domain, Rich Geldreich <richgel99@gmail.com>
+// Nov. 27, 2010 - Initial release
+// Feb. 9, 2013 - Added H1V2/H2V1 support, cleaned up macros, signed shift fixes 
+// Also integrated and tested changes from Chris Phoenix <cphoenix@gmail.com>.
+//------------------------------------------------------------------------------
 /*
- * JPEG/EXIF decoding algorithm
- * Copyright 2023, Colin Leroy-Mira <colin@colino.net>
+ * Adapted in 2023 by Colin Leroy-Mira <colin@colino.net> for the Apple 2
  */
 
 /* Handle pic by horizontal bands for memory constraints reasons.

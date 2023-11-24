@@ -110,10 +110,6 @@ static void save_picture(uint8 n_pic) {
   if (filename[strlen(filename) - 1] == '/')
     return;
 
-  if (!strchr(filename, '.')) {
-    strcat(filename, serial_model == QT_MODEL_200 ? ".JPG":".QTK");
-  }
-
   if (qt_get_picture(n_pic, filename) == 0) {
     qt_convert_image(filename);
   } else {
