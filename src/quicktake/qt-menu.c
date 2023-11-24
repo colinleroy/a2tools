@@ -116,6 +116,9 @@ static void save_picture(uint8 n_pic) {
 
   if (qt_get_picture(n_pic, filename) == 0) {
     qt_convert_image(filename);
+  } else {
+    printf("Error saving picture.\n");
+    cgetc();
   }
 }
 
@@ -228,6 +231,8 @@ static void show_thumbnails(uint8 num_pics) {
     clrscr();
     gotoxy(0,20);
     if (qt_get_thumbnail(i, &quality, &flash, &year, &month, &day, &hour, &minute) != 0) {
+      printf("Error getting thumbnail.\n");
+      cgetc();
       break;
     }
 

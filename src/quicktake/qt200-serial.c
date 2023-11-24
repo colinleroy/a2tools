@@ -31,6 +31,7 @@ extern uint8 scrw, scrh;
 #define FUJI_CMD_SPEED         0x07
 #define FUJI_CMD_GET_INFO      0x09
 #define FUJI_CMD_PIC_COUNT     0x0B
+#define FUJI_CMD_PIC_SIZE      0x17
 
 
 static uint16 response_len;
@@ -325,8 +326,6 @@ uint8 qt200_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mo
 }
 
 #pragma code-name(pop)
-#pragma code-name(push, "LOWCODE")
-
 
 static uint8 get_data(uint8 n_pic, const char *name) {
   #define TYPE_IDX 1
@@ -335,6 +334,8 @@ static uint8 get_data(uint8 n_pic, const char *name) {
   FILE *picture;
   uint8 is_thumb;
   uint8 err = 0;
+  unsigned long picture_size, total_read;
+  uint8 y;
 
   if (qt200_start() != 0) {
 #ifdef DEBUG_PROTO
@@ -348,10 +349,41 @@ static uint8 get_data(uint8 n_pic, const char *name) {
   is_thumb = !strcmp(name, THUMBNAIL_NAME);
   memset(buffer, 0, BLOCK_SIZE);
 
-  DUMP_START("data");
-
 	data_cmd[TYPE_IDX] = is_thumb ? 0x00:0x02;
 	data_cmd[NUM_PIC_IDX] = n_pic;
+
+  printf("  Getting size...\n");
+  if (!is_thumb) {
+    char size_cmd[]= {0x00,FUJI_CMD_PIC_SIZE,0x02,0x00,0x00,0x00};
+    size_cmd[0x04] = n_pic;
+
+    DUMP_START("pic_size");
+    if (send_command(size_cmd, sizeof size_cmd, 1, 5) != 0) {
+      DUMP_END();
+      return -1;
+    }
+    DUMP_END();
+    picture_size = buffer[0] + (buffer[1] << 8) + ((uint32)buffer[2] << 16) + ((uint32)buffer[3] << 24);
+#ifndef __CC65__
+    picture_size = buffer[0] + (buffer[1] << 8) + (buffer[2] << 16) + (buffer[3] << 24);
+#else
+    ((unsigned char *)&picture_size)[0] = buffer[0];
+    ((unsigned char *)&picture_size)[1] = buffer[1];
+    ((unsigned char *)&picture_size)[2] = buffer[2];
+    ((unsigned char *)&picture_size)[3] = buffer[3];
+#endif
+  } else {
+    picture_size = 12000;
+  }
+
+  printf("  Width 640, height 480, %lu bytes (jpg)\n",
+         picture_size);
+
+  DUMP_START("data");
+
+  total_read = 0;
+  y = wherey();
+  progress_bar(2, y, scrw - 2, 0, (uint16)(picture_size / BLOCK_SIZE));
 
   if (send_command(data_cmd, sizeof data_cmd, 1, 5) != 0) {
 #ifdef DEBUG_PROTO
@@ -360,19 +392,30 @@ static uint8 get_data(uint8 n_pic, const char *name) {
 #endif
     return -1;
   }
-  if (is_thumb)
-    fwrite(buffer + 12, 1, response_len - 12, picture);
-  else
-    fwrite(buffer, 1, response_len, picture);
+  if (is_thumb) {
+    if (fwrite(buffer + 12, 1, response_len - 12, picture) < response_len - 12) {
+      err = -1;
+    }
+  } else {
+    if (fwrite(buffer, 1, response_len, picture) < response_len) {
+      err = -1;
+    }
+  }
   while (response_continues) {
+    total_read += response_len;
+    progress_bar(-1, -1, scrw - 2, (uint16)(total_read / BLOCK_SIZE), (uint16)(picture_size / BLOCK_SIZE));
+
     simple_serial_putc(ACK);
     if (read_response(buffer, BLOCK_SIZE, 1) != 0) {
       err = -1;
       break;
     }
-    fwrite(buffer, 1, response_len, picture);
+    if (fwrite(buffer, 1, response_len, picture) < response_len) {
+      err = -1;
+    }
   }
   DUMP_END();
+  progress_bar(-1, -1, scrw - 2, (uint16)(picture_size / BLOCK_SIZE), (uint16)(picture_size / BLOCK_SIZE));
 
   qt200_stop();
 
@@ -380,6 +423,8 @@ static uint8 get_data(uint8 n_pic, const char *name) {
 
   return err;
 }
+
+#pragma code-name(push, "LOWCODE")
 
 /* Get a picture from the camera to a file */
 uint8 qt200_get_picture(uint8 n_pic, const char *filename) {
