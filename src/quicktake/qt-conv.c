@@ -379,7 +379,7 @@ try_again:
   ofp = fopen (TMP_NAME, "wb");
 
   if (!ofp) {
-    printf("Can't open %s\n", ofname);
+    printf("Can't open %s\n", TMP_NAME);
     goto out;
   }
 
