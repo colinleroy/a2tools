@@ -1374,27 +1374,30 @@ static void idctRows(void)
 {
    uint8 i;
    static int16 seven_zeroes[] = {0,0,0,0,0,0,0};
-   register int16* pSrc = gCoeffBuf;
-   register int16* pSrc_1 = pSrc+1;
-   register int16* pSrc_2 = pSrc_1+1;
+   register int16* pSrc;
+   register int16* pSrc_1;
+   register int16* pSrc_2;
 #ifdef __CC65__
    #define pSrc_3 zp6sip
    #define pSrc_4 zp8sip
    #define pSrc_5 zp10sip
    #define pSrc_6 zp12sip
 #else
-   int16* pSrc_3 = pSrc_2+1;
-   int16* pSrc_4 = pSrc_3+1;
-   int16* pSrc_5 = pSrc_4+1;
-   int16* pSrc_6 = pSrc_5+1;
+   int16* pSrc_3;
+   int16* pSrc_4;
+   int16* pSrc_5;
+   int16* pSrc_6;
 #endif
    int16* pSrc_7;
 
-   pSrc_3 = pSrc_2+1;
-   pSrc_4 = pSrc_3+1;
-   pSrc_5 = pSrc_4+1;
-   pSrc_6 = pSrc_5+1;
-   pSrc_7 = pSrc_6+1;
+   pSrc = gCoeffBuf;
+   pSrc_1 = gCoeffBuf + 1;
+   pSrc_2 = gCoeffBuf + 2;
+   pSrc_3 = gCoeffBuf + 3;
+   pSrc_4 = gCoeffBuf + 4;
+   pSrc_5 = gCoeffBuf + 5;
+   pSrc_6 = gCoeffBuf + 6;
+   pSrc_7 = gCoeffBuf + 7;
 
    for (i = 0; i < 8; i++)
    {
