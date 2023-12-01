@@ -236,6 +236,8 @@ uint8 qt1x0_set_speed(uint16 speed) {
   char str_speed[] = {0x16,0x2A,0x00,0x03,0x00,0x00,0x00,0x00,0x00,0x05,0x00,0x03,0x03,0x08,0x04,0x00};
   int spd_code;
 
+  platform_sleep(1);
+
   switch(speed) {
     case 9600:
       return qt1x0_send_ping();
@@ -259,8 +261,6 @@ uint8 qt1x0_set_speed(uint16 speed) {
       break;
   }
 
-  platform_sleep(1);
-
   printf("Setting speed to %u...\n", speed);
   simple_serial_write(str_speed, sizeof str_speed);
 
@@ -271,7 +271,7 @@ uint8 qt1x0_set_speed(uint16 speed) {
   }
   send_ack();
 
-  platform_msleep(100);
+  platform_msleep(200);
   simple_serial_set_speed(spd_code);
 
   /* We don't care about the bytes we receive here */
@@ -569,8 +569,8 @@ uint8 qt1x0_set_flash(uint8 mode) {
 }
 
 /* Get information from the camera */
-uint8 qt1x0_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mode, uint8 *flash_mode, uint8 *battery_level, char **name, struct tm *time) {
-  #define BATTERY_IDX    0x02 /* ?? */
+uint8 qt1x0_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mode, uint8 *flash_mode, uint8 *battery_level, uint8 *charging, char **name, struct tm *time) {
+  #define BATTERY_IDX    0x02 /* ?? 0xA7 = charging, full ; 0x63 = not charging, full */
   #define NUM_PICS_IDX   0x04
   #define LEFT_PICS_IDX  0x06
   #define MONTH_IDX      0x10
@@ -605,6 +605,13 @@ uint8 qt1x0_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mo
   *quality_mode = buffer[QUAL_IDX];
   *flash_mode   = buffer[FLASH_IDX];
   *battery_level= buffer[BATTERY_IDX];
+  if (buffer[BATTERY_IDX] > 100) {
+    *battery_level = buffer[BATTERY_IDX] / 2;
+    *charging = 1;
+  } else {
+    *battery_level = buffer[BATTERY_IDX];
+    *charging = 0;
+  }
 
   time->tm_mday = buffer[DAY_IDX];
   time->tm_mon  = buffer[MONTH_IDX];
