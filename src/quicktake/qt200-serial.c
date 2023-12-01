@@ -285,7 +285,7 @@ uint8 qt200_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint
 #pragma code-name(push, "LC")
 
 /* Get information from the camera */
-uint8 qt200_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mode, uint8 *flash_mode, uint8 *battery_level, char **name, struct tm *time) {
+uint8 qt200_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mode, uint8 *flash_mode, uint8 *battery_level, uint8 *charging, char **name, struct tm *time) {
   char num_pics_cmd[]  = {0x00,FUJI_CMD_PIC_COUNT,0x00,0x00};
   char info_cmd[]= {0x00,FUJI_CMD_GET_INFO,0x00,0x00};
 
@@ -315,6 +315,7 @@ uint8 qt200_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mo
   *quality_mode  = QUALITY_STANDARD;
   *flash_mode    = FLASH_AUTO;
   *battery_level = 0;
+  *charging = 0;
   time->tm_mday  = 1;
   time->tm_mon   = 1;
   time->tm_year  = 1970;

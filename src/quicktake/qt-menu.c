@@ -31,12 +31,13 @@ uint8 current_quality, current_flash_mode;
 
 char magic[5] = "????";
 
-static void print_header(uint8 num_pics, uint8 left_pics, uint8 mode, uint8 flash_mode, uint8 battery_level, const char *name, struct tm *time) {
+static void print_header(uint8 num_pics, uint8 left_pics, uint8 mode, uint8 flash_mode, uint8 battery_level, uint8 charging, const char *name, struct tm *time) {
   gotoxy(0, 0);
   if (camera_connected) {
-    printf("%s connected - %d%% battery - %02d/%02d/%04d %02d:%02d\n"
+    printf("%s connected - %d%% battery%s - %02d/%02d/%04d %02d:%02d\n"
            "%d photos taken, %d left, %s mode, %s flash\n",
-          name, battery_level, time->tm_mday, time->tm_mon, time->tm_year, time->tm_hour, time->tm_min,
+          name, battery_level, charging? " (charging)":"",
+          time->tm_mday, time->tm_mon, time->tm_year, time->tm_hour, time->tm_min,
           num_pics, left_pics, qt_get_mode_str(mode), qt_get_flash_str(flash_mode));
   } else {
     printf("No camera connected\n\n");
@@ -254,7 +255,7 @@ static void show_thumbnails(uint8 num_pics) {
 
 int main(int argc, char *argv[])
 {
-  uint8 num_pics, left_pics, mode, choice, flash, batt;
+  uint8 num_pics, left_pics, mode, choice, flash, batt, charging;
   char *name;
   struct tm time;
 #ifndef __CC65__
@@ -312,14 +313,15 @@ menu:
   set_scrollwindow(0, scrh);
   clrscr();
   gotoxy(0, 0);
+
   if (camera_connected) {
-    if (qt_get_information(&num_pics, &left_pics, &mode, &flash, &batt, &name, &time) != 0)
+    if (qt_get_information(&num_pics, &left_pics, &mode, &flash, &batt, &charging, &name, &time) != 0)
       camera_connected = 0;
     current_quality = mode;
     current_flash_mode = flash;
   }
 
-  print_header(num_pics, left_pics, mode, flash, batt, name, &time);
+  print_header(num_pics, left_pics, mode, flash, batt, charging, name, &time);
 
   set_scrollwindow(4, scrh);
   gotoxy(0, 0);

@@ -150,11 +150,11 @@ uint8 qt_delete_pictures(void) {
     return qt200_delete_pictures();
 }
 
-uint8 qt_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mode, uint8 *flash_mode, uint8 *battery_level, char **name, struct tm *time) {
+uint8 qt_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mode, uint8 *flash_mode, uint8 *battery_level, uint8 *charging, char **name, struct tm *time) {
   if (serial_model != QT_MODEL_200)
-    return qt1x0_get_information(num_pics, left_pics, quality_mode, flash_mode, battery_level, name, time);
+    return qt1x0_get_information(num_pics, left_pics, quality_mode, flash_mode, battery_level, charging, name, time);
   else
-    return qt200_get_information(num_pics, left_pics, quality_mode, flash_mode, battery_level, name, time);
+    return qt200_get_information(num_pics, left_pics, quality_mode, flash_mode, battery_level, charging, name, time);
 }
 
 /* Helper functions */
