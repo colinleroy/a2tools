@@ -334,6 +334,8 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
   uint8 cur_hgr_row;
   uint8 cur_hgr_mod;
   uint8 opt_val;
+  uint8 is_thumb = (p_width == THUMB_WIDTH*2);
+  uint8 is_qt100 = (serial_model == QT_MODEL_100);
 
   file_width = p_width;
   file_height = p_height;
@@ -411,10 +413,10 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
   }
 
   for(y = 0, dy = off_y; y != file_height;) {
-    if (file_width == THUMB_WIDTH*2) {
+    if (is_thumb) {
       uint8 a, b, c, d, off;
       /* assume thumbnail at 4bpp and zoom it */
-      if (serial_model == QT_MODEL_100) {
+      if (is_qt100) {
         if (!(y & 1)) {
           fread(buffer, 1, THUMB_WIDTH / 2, ifp);
           /* Unpack */
@@ -427,7 +429,7 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
             buffer[off++] = a;
             buffer[off++] = a;
             buffer[off++] = b;
-            buffer[off++] = b;
+            buffer[off] = b;
           } while (i--);
         }
       } else {

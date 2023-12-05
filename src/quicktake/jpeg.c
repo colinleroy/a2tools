@@ -258,7 +258,6 @@ static uint32 g_nInFileOfs;
 static void fillInBuf(void)
 {
    uint16 n;
-   uint16 i;
    uint8 *c;
    // Reserve a few bytes at the beginning of the buffer for putting back ("stuffing") chars.
    gInBufOfs = 4;
@@ -266,11 +265,9 @@ static void fillInBuf(void)
 
    n = PJPG_MAX_IN_BUF_SIZE - gInBufOfs;
    c = gInBuf + gInBufOfs;
+
    src_file_get_bytes(c, n);
-   // for (i = 0; i < n; i++) {
-   //   *c = src_file_get_byte();
-   //   c++;
-   // }
+
    gInBufLeft = (unsigned char)(n);
    g_nInFileOfs += n;
 }   
@@ -2270,7 +2267,7 @@ void qt_load_raw(uint16 top, uint8 h)
    row_pitch = decoded_width * m_comps;
 
   }
-  memset(raw_image, 0, decoded_width * m_comps*QT_BAND);
+  memset(raw_image, 0, decoded_width * m_comps * h);
    for ( ; ; )
    {
       uint8 *pDst_row;
