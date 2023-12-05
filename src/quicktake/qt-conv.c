@@ -46,8 +46,6 @@
   #pragma static-locals(push, on)
 #endif
 
-#pragma code-name (push, "LC")
-
 /* Shared with decoders */
 uint16 height, width;
 uint16 raw_image_size = (QT_BAND) * 640;
@@ -76,19 +74,10 @@ void src_file_seek(uint32 off) {
   last_seek = off;
 }
 
+#pragma code-name (push, "LC")
+
 uint32 cache_read_since_inval(void) {
   return last_seek + cache_pages_read + cache_offset;
-}
-
-static uint8 src_file_get_byte(void) {
-  if (cache_offset == cache_size) {
-    fread(cache, 1, cache_size, ifp);
-    cache_offset = 0;
-    cur_cache_ptr = cache;
-    cache_pages_read += cache_size;
-  }
-  cache_offset++;
-  return *(cur_cache_ptr++);
 }
 
 void src_file_get_bytes(uint8 *dst, uint16 count) {
@@ -147,36 +136,38 @@ static uint8 shift;
     return 0;                                                       \
   }                                                                 \
   if (vbits < nbits) {                                              \
-    c = src_file_get_byte();                                        \
     FAST_SHIFT_LEFT_8_LONG(bitbuf);                                 \
-    bitbuf += c;                                                    \
+    if (cache_offset == cache_size) {                               \
+      fread(cache, 1, cache_size, ifp);                             \
+      cache_offset = 0;                                             \
+      cur_cache_ptr = cache;                                        \
+      cache_pages_read += cache_size;                               \
+    }                                                               \
+    cache_offset++;                                                 \
+    bitbuf += *(cur_cache_ptr++);                                   \
     vbits += 8;                                                     \
   }                                                                 \
   shift = 32-vbits;                                                 \
   if (shift >= 24) {                                                \
     FAST_SHIFT_LEFT_24_LONG_TO(bitbuf, tmp);                        \
-    shift %= 8;                                                     \
   } else if (shift >= 16) {                                         \
     FAST_SHIFT_LEFT_16_LONG_TO(bitbuf, tmp);                        \
-    shift %= 8;                                                     \
   } else if (shift >= 8) {                                          \
     FAST_SHIFT_LEFT_8_LONG_TO(bitbuf, tmp);                         \
-    shift %= 8;                                                     \
   }                                                                 \
+  shift %= 8;                                                       \
   if (shift)                                                        \
     tmp <<= shift;                                                  \
                                                                     \
   shift = 32-nbits;                                                 \
   if (shift >= 24) {                                                \
     FAST_SHIFT_RIGHT_24_LONG(tmp);                                  \
-    shift %= 8;                                                     \
   } else if (shift >= 16) {                                         \
     FAST_SHIFT_RIGHT_16_LONG(tmp);                                  \
-    shift %= 8;                                                     \
   } else if (shift >= 8) {                                          \
     FAST_SHIFT_RIGHT_8_LONG(tmp);                                   \
-    shift %= 8;                                                     \
   }                                                                 \
+  shift %= 8;                                                       \
   if (shift)                                                        \
     c = (uint8)(tmp >> shift);                                      \
   else                                                              \

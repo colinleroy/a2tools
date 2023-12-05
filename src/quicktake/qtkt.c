@@ -31,8 +31,8 @@
 /* Shared with qt-conv.c */
 char magic[5] = QTKT_MAGIC;
 char *model = "100";
-uint16 cache_size = 4096;
-uint8 cache[4096];
+uint16 cache_size = 4092;
+uint8 cache[4092];
 
 /* bitbuff state at end of first loop */
 static uint32 prev_bitbuf_a = 0;
@@ -51,9 +51,7 @@ static uint8 at_very_first_line;
 static const int8 gstep[16] =
 { -89,-60,-44,-32,-22,-15,-8,-2,2,8,15,22,32,44,60,89 };
 
-static int16 val;
-static uint8 *src;
-static uint8 row;
+static uint8 *src, *dst;
 #ifdef __CC65__
 #define idx_forward zp6p
 #define idx_behind zp8p
@@ -74,22 +72,25 @@ static uint8 pixel[(QT_BAND+5)*PIX_WIDTH];
 
 void qt_load_raw(uint16 top, uint8 h)
 {
-  register uint8 *dst, *idx;
-  register uint16 col;
+  register uint8 *idx;
+  register uint8 at_very_first_col;
+  register uint8 row; /* Can be 8bits as limited to h */
+  register int16 val;
 
   if (top == 0) {
     getbits(0);
 
-    for (col = 0; col < QT_BAND + 5; col++) {
-      pix_direct_row[col] = pixel + (width * col);
+    for (row = 0; row < QT_BAND + 5; row++) {
+      pix_direct_row[row] = pixel + (row * width);
     }
 
     at_very_first_line = 1;
     h_plus1 = h + 1;
-    h_plus2 = h + 2;
-    h_plus4 = h + 4;
-    width_plus2 = width + 2;
+    h_plus2 = h_plus1 + 1;
+    h_plus4 = h_plus2 + 2;
     width_plus1 = width + 1;
+    width_plus2 = width_plus1 + 1;
+
     pgbar_state = 0;
     band_size = h * width;
     /* calculate offsets to shift the last lines */
@@ -98,6 +99,10 @@ void qt_load_raw(uint16 top, uint8 h)
     last_two_lines = pix_direct_row[QT_BAND + 2];
     third_line = pix_direct_row[3];
     memset (pixel, 0x80, sizeof pixel);
+
+    /* Move offset at end of band */
+    src = pix_direct_row[2] + 2;
+    dst = raw_image;
   } else {
     /* Shift last pixel lines to start */
     memcpy(pixel, last_two_lines, threepxband_size);
@@ -110,37 +115,38 @@ void qt_load_raw(uint16 top, uint8 h)
     src_file_seek(prev_offset_a);
   }
 
-  for (row=2; row < h_plus4; row++) {
+  for (row = 2; row != h_plus4; row++) {
 
+    idx_end = idx = pix_direct_row[row];
     if (row & 1) {
-      col = 3;
+      idx += 3;
       if (row < h_plus2) {
-        pgbar_state += 2;
+        pgbar_state++;
+        pgbar_state++;
         progress_bar(-1, -1, 80*22, pgbar_state, height);
       }
     } else {
-      col = 2;
+      idx++;
+      idx++;
     }
-    idx = pix_direct_row[row];
-    idx_end = idx;
-    idx += col;
-    idx_behind = idx;
-    idx_forward = idx;
+    idx_forward = idx_behind = idx;
 
     idx_behind -= width_plus1;
     idx_forward += width;
     idx_end += width_plus2;
 
     val_col_minus2 = *(idx - 2);
-    for (; idx < idx_end; idx+=2) {
-      val = ((*(idx_behind)           // row-1, col-1
+    at_very_first_col = 1;
+
+    while (idx < idx_end) {
+      val = ((*idx_behind             // row-1, col-1
               + (*(idx_behind + 2))*2 // row-1, col+1
               + val_col_minus2) >> 2) // row  , col-2
              + gstep[getbits(4)];
 
       if (val < 0)
         val = 0;
-      else if (val > 255)
+      else if (val & 0xff00) /* > 255, but faster as we're sure it's non-negative */
         val = 255;
 
       *(idx) = val;
@@ -148,19 +154,21 @@ void qt_load_raw(uint16 top, uint8 h)
       /* Cache it for next loop before shifting */
       val_col_minus2 = val;
 
-      if (col < 4) {
+      if (at_very_first_col) {
         /* row, col-2 */
         *(idx - 2) = *(idx_forward + (~row & 1)) = val;
-        idx_forward += 2;
-        col += 2;
+        at_very_first_col = 0;
       }
 
-      idx_behind += 2;
+      idx_behind++;
+      idx_behind++;
 
       if (at_very_first_line) {
         /* row-1,col+1 / row-1,col+3*/
         *(idx_behind) = *(idx_behind + 2) = val;
       }
+      idx++;
+      idx++;
     }
 
     *(idx) = val;
@@ -174,16 +182,15 @@ void qt_load_raw(uint16 top, uint8 h)
     at_very_first_line = 0;
   }
 
-  for (row = 2; row < h_plus2; row++) {
-    if (row & 1)
-      col = 2;
-    else
-      col = 3;
+  for (row = 2; row != h_plus2; row++) {
     idx = pix_direct_row[row];
     idx_end = idx;
-    idx += col;
+    if (row & 1)
+      idx += 2;
+    else
+      idx += 3;
     idx_end += width_plus2;
-    for (; idx < idx_end; idx+=2) {
+    while (idx < idx_end) {
       val = ((*(idx-1) // row,col-1
             + (*(idx) << 2) //row,col
             +  *(idx+1)) >> 1) //row,col+1
@@ -191,16 +198,16 @@ void qt_load_raw(uint16 top, uint8 h)
 
       if (val < 0)
         *(idx) = 0;
-      else if (val > 255)
+      else if (val & 0xff00) /* > 255, but faster as we're sure it's non-negative */
         *(idx) = 255;
       else
         *(idx) = val;
+      idx++;
+      idx++;
     }
   }
 
   /* Move from tmp pixel array to raw_image */
-  src = pix_direct_row[2] + 2;
-  dst = raw_image;
   memcpy(dst, src, band_size);
 }
 

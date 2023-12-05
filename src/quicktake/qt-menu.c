@@ -329,7 +329,7 @@ menu:
   choice = tolower(print_menu());
   switch(choice) {
     case 'p':
-      if (camera_connected) {
+      if (camera_connected && serial_model != QT_MODEL_200) {
         show_thumbnails(num_pics);
       }
       break;

@@ -267,21 +267,6 @@ static uint8 qt200_stop(void) {
   return qt200_set_speed(9600);
 }
 
-/* Take a picture */
-uint8 qt200_take_picture(void) {
-  return -1;
-}
-
-/* Set the camera name */
-uint8 qt200_set_camera_name(const char *name) {
-  return -1;
-}
-
-/* Set the camera time */
-uint8 qt200_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint8 minute, uint8 second) {
-  return -1;
-}
-
 #pragma code-name(push, "LC")
 
 /* Get information from the camera */
@@ -332,10 +317,13 @@ static uint8 get_data(uint8 n_pic, const char *name) {
   #define TYPE_IDX 1
   #define NUM_PIC_IDX 4
   char data_cmd[] = {0x00,0x02,0x02,0x00,0x00,0x00};
+  char size_cmd[]= {0x00,FUJI_CMD_PIC_SIZE,0x02,0x00,0x00,0x00};
+
   FILE *picture;
-  uint8 is_thumb;
   uint8 err = 0;
-  unsigned long picture_size, total_read;
+  unsigned long picture_size;
+  uint16 blocks_read;
+  uint16 num_blocks;
   uint8 y;
 
   if (qt200_start() != 0) {
@@ -347,44 +335,39 @@ static uint8 get_data(uint8 n_pic, const char *name) {
   }
 
   picture = fopen(name, "wb");
-  is_thumb = !strcmp(name, THUMBNAIL_NAME);
   memset(buffer, 0, BLOCK_SIZE);
 
-	data_cmd[TYPE_IDX] = is_thumb ? 0x00:0x02;
 	data_cmd[NUM_PIC_IDX] = n_pic;
 
   printf("  Getting size...\n");
-  if (!is_thumb) {
-    char size_cmd[]= {0x00,FUJI_CMD_PIC_SIZE,0x02,0x00,0x00,0x00};
-    size_cmd[0x04] = n_pic;
+  size_cmd[NUM_PIC_IDX] = n_pic;
 
-    DUMP_START("pic_size");
-    if (send_command(size_cmd, sizeof size_cmd, 1, 5) != 0) {
-      DUMP_END();
-      return -1;
-    }
+  DUMP_START("pic_size");
+  if (send_command(size_cmd, sizeof size_cmd, 1, 5) != 0) {
     DUMP_END();
-    picture_size = buffer[0] + (buffer[1] << 8) + ((uint32)buffer[2] << 16) + ((uint32)buffer[3] << 24);
-#ifndef __CC65__
-    picture_size = buffer[0] + (buffer[1] << 8) + (buffer[2] << 16) + (buffer[3] << 24);
-#else
-    ((unsigned char *)&picture_size)[0] = buffer[0];
-    ((unsigned char *)&picture_size)[1] = buffer[1];
-    ((unsigned char *)&picture_size)[2] = buffer[2];
-    ((unsigned char *)&picture_size)[3] = buffer[3];
-#endif
-  } else {
-    picture_size = 12000;
+    return -1;
   }
+  DUMP_END();
+  picture_size = buffer[0] + (buffer[1] << 8) + ((uint32)buffer[2] << 16) + ((uint32)buffer[3] << 24);
+#ifndef __CC65__
+  picture_size = buffer[0] + (buffer[1] << 8) + (buffer[2] << 16) + (buffer[3] << 24);
+#else
+  ((unsigned char *)&picture_size)[0] = buffer[0];
+  ((unsigned char *)&picture_size)[1] = buffer[1];
+  ((unsigned char *)&picture_size)[2] = buffer[2];
+  ((unsigned char *)&picture_size)[3] = buffer[3];
+#endif
 
   printf("  Width 640, height 480, %lu bytes (jpg)\n",
          picture_size);
 
   DUMP_START("data");
 
-  total_read = 0;
+  blocks_read = 0;
+  num_blocks = (uint16)(picture_size / BLOCK_SIZE);
+
   y = wherey();
-  progress_bar(2, y, scrw - 2, 0, (uint16)(picture_size / BLOCK_SIZE));
+  progress_bar(2, y, scrw - 2, 0, num_blocks);
 
   if (send_command(data_cmd, sizeof data_cmd, 1, 5) != 0) {
 #ifdef DEBUG_PROTO
@@ -393,18 +376,12 @@ static uint8 get_data(uint8 n_pic, const char *name) {
 #endif
     return -1;
   }
-  if (is_thumb) {
-    if (fwrite(buffer + 12, 1, response_len - 12, picture) < response_len - 12) {
-      err = -1;
-    }
-  } else {
-    if (fwrite(buffer, 1, response_len, picture) < response_len) {
-      err = -1;
-    }
+  if (fwrite(buffer, 1, response_len, picture) < response_len) {
+    err = -1;
   }
   while (response_continues) {
-    total_read += response_len;
-    progress_bar(-1, -1, scrw - 2, (uint16)(total_read / BLOCK_SIZE), (uint16)(picture_size / BLOCK_SIZE));
+    blocks_read++;
+    progress_bar(-1, -1, scrw - 2, blocks_read, num_blocks);
 
     simple_serial_putc(ACK);
     if (read_response(buffer, BLOCK_SIZE, 1) != 0) {
@@ -416,7 +393,7 @@ static uint8 get_data(uint8 n_pic, const char *name) {
     }
   }
   DUMP_END();
-  progress_bar(-1, -1, scrw - 2, (uint16)(picture_size / BLOCK_SIZE), (uint16)(picture_size / BLOCK_SIZE));
+  progress_bar(-1, -1, scrw - 2, num_blocks, num_blocks);
 
   qt200_stop();
 
@@ -430,26 +407,6 @@ static uint8 get_data(uint8 n_pic, const char *name) {
 /* Get a picture from the camera to a file */
 uint8 qt200_get_picture(uint8 n_pic, const char *filename) {
   return get_data(n_pic, filename);
-}
-
-/* Get a thumnail from the camera to /RAM/THUMBNAIL */
-uint8 qt200_get_thumbnail(uint8 n_pic, uint8 *quality, uint8 *flash, uint8 *year, uint8 *month, uint8 *day, uint8 *hour, uint8 *minute) {
-  return get_data(n_pic, THUMBNAIL_NAME);
-}
-
-/* Delete all pictures from the camera */
-uint8 qt200_delete_pictures(void) {
-  return -1;
-}
-
-/* Set quality */
-uint8 qt200_set_quality(uint8 quality) {
-  return -1;
-}
-
-/* Set flash mode */
-uint8 qt200_set_flash(uint8 mode) {
-  return -1;
 }
 
 #pragma code-name(pop)

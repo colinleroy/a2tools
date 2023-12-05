@@ -13,6 +13,7 @@
 #include "qt-serial.h"
 #include "qt-conv.h"
 
+#pragma code-name(push, "LOWCODE")
 extern uint8 scrw, scrh;
 
 /* Get the ack from the camera */
@@ -58,6 +59,8 @@ read:
   printf("Done.\n");
   return buffer[3] == 0xC8 ? QT_MODEL_150 : QT_MODEL_100;
 }
+
+#pragma code-name(pop)
 
 /* Send our greeting to the camera, and inform it of the speed
  * we aim for
