@@ -8,17 +8,16 @@ void init_hgr(uint8 mono) {
 
 #ifdef IIGS
   if (mono) {
-    __asm__("lda     $C021"); /* MONOCOLOR */
-    __asm__("ora     #$80");  /* Set bit 7 */
-    __asm__("sta     $C021");
+    __asm__("lda     #$80");
+    __asm__("sta     $C021"); /* MONOCOLOR */
 
     __asm__("lda     $C029"); /* NEWVIDEO */
     __asm__("ora     #$20");  /* Set bit 5 */
     __asm__("sta     $C029");
+
   } else {
-    __asm__("lda     $C021"); /* MONOCOLOR */
-    __asm__("and     #$7F");  /* Clear bit 7 */
-    __asm__("sta     $C021");
+    __asm__("lda     #$00");
+    __asm__("sta     $C021"); /* MONOCOLOR */
 
     __asm__("lda     $C029"); /* NEWVIDEO */
     __asm__("and     #$DF");  /* Clear bit 5 */

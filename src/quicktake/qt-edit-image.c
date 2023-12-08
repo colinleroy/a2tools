@@ -27,7 +27,7 @@ extern uint8 scrw, scrh;
 
 #define DITHER_NONE   0
 #define DITHER_BURKES 1
-#define DITHER_BAYER  2
+#define DITHER_SIERRA  2
 #define DEFAULT_DITHER_THRESHOLD 128
 #define DEFAULT_BRIGHTEN 0
 
@@ -35,7 +35,7 @@ FILE *ifp, *ofp;
 
 int16 angle = 0;
 uint8 auto_level = 1;
-uint8 dither_alg = DITHER_BURKES;
+uint8 dither_alg = DITHER_SIERRA;
 uint8 resize = 1;
 uint8 dither_threshold = DEFAULT_DITHER_THRESHOLD;
 int8 brighten = DEFAULT_BRIGHTEN;
@@ -173,10 +173,10 @@ start_edit:
            auto_level ? "off":"on", 
            brighten > 0 ? "+":"",
            brighten);
-    printf("Dither with K: Burkes / Y: Bayer / N: Don't dither (Current: %s)\n"
+    printf("Dither with E: Sierra Lite / K: Burkes / N: No dither (Current: %s)\n"
            "S: Save - Escape: Exit without saving - Any other key: Hide help",
            dither_alg == DITHER_BURKES ? "Burkes"
-            : dither_alg == DITHER_BAYER ? "Bayer" : "None");
+            : dither_alg == DITHER_SIERRA ? "Sierra Lite" : "None");
 
     c = tolower(cgetc());
 #ifdef __CC65__
@@ -222,8 +222,8 @@ start_edit:
         case 'k':
           dither_alg = DITHER_BURKES;
           return 1;
-        case 'y':
-          dither_alg = DITHER_BAYER;
+        case 'e':
+          dither_alg = DITHER_SIERRA;
           return 1;
         case 'n':
           dither_alg = DITHER_NONE;
@@ -258,7 +258,7 @@ done:
   return 0;
 }
 
-static uint8 err[FILE_WIDTH * 2];
+static int8 err[FILE_WIDTH * 2];
 static uint8 thumb_buf[THUMB_WIDTH * 2];
 
 #pragma inline-stdfuncs(push, on)
@@ -275,54 +275,44 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
   uint16 off_x, y, off_y;
   uint16 file_width;
 #if SCALE
+#ifdef __CC65__
+  #define scaled_dx zp6
+  #define scaled_dy zp7
+  #define prev_scaled_dx zp8
+  #define prev_scaled_dy zp9
+  #define buf_ptr zp10p
+#else
   uint8 scaled_dx, scaled_dy, prev_scaled_dx, prev_scaled_dy;
+  uint8 *buf_ptr;
+#endif
 #else
   uint16 scaled_dx, scaled_dy;
   uint16 file_height;
 #endif
   int8 xdir, ydir;
-  int16 cur_err;
+  int8 cur_err;
+  int8 err8, err4, err2, err1;
+
   register uint8 *ptr;
   uint8 invert_coords;
 
   /* Burkes variables */
-  uint8 buf_plus_err;
-  uint8 *cur_err_line = err;
-  uint8 *next_err_line;
+  int16 buf_plus_err;
+  int8 *cur_err_line = err;
+  int8 *next_err_line;
 
-#ifdef __CC65__
-  #define cur_err_xplus1_y zp6p
-  #define cur_err_xplus2_y zp8p
-  #define cur_err_x_y zp10p
-  #define cur_err_x_yplus1 zp12p
-#else
-  uint8 *cur_err_x_y;
-  uint8 *cur_err_x_yplus1;
-  uint8 *cur_err_xplus1_y;
-#endif
-  uint8 *cur_err_xplus2_y;
-  uint8 *cur_err_xplus1_yplus1;
-  uint8 *cur_err_xplus2_yplus1;
+  int8 *cur_err_xplus1_y;
+  int8 *cur_err_xmin1_yplus1;
+  int8 *cur_err_x_y;
+  int8 *cur_err_x_yplus1;
+
+  int8 *cur_err_xplus1_yplus1;
+  int8 *cur_err_xplus2_yplus1;
+  int8 *cur_err_xmin2_yplus1;
+  int8 *cur_err_xplus2_y;
+
   uint8 pixel;
   uint8 file_height;
-
-  uint8 *cur_err_xmin1_yplus1;
-  uint8 *cur_err_xmin2_yplus1;
-
-  int16 err8, err4, err2;
-
-  /* Bayer variables */
-  uint8 map[8][8] = {
-    { 1, 49, 13, 61, 4, 52, 16, 64 },
-    { 33, 17, 45, 29, 36, 20, 48, 32 },
-    { 9, 57, 5, 53, 12, 60, 8, 56 },
-    { 41, 25, 37, 21, 44, 28, 40, 24 },
-    { 3, 51, 15, 63, 2, 50, 14, 62 },
-    { 25, 19, 47, 31, 34, 18, 46, 30 },
-    { 11, 59, 7, 55, 10, 58, 6, 54 },
-    { 43, 27, 39, 23, 42, 26, 38, 22 }
-  };
-  uint8 y_mod8;
 
   /* General variables */
 #if SCALE
@@ -506,7 +496,7 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
     /* Calculate hgr base coordinates for the line */
     if (invert_coords) {
       if (resize) {
-        scaled_dy = dy * 3 / 4;
+        scaled_dy = (dy + (dy << 1)) >> 2;  /* *3/4 */
         if (scaled_dy == prev_scaled_dy) {
           /* Avoid rewriting same destination line twice
            * It results in ugly dithering */
@@ -523,37 +513,40 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
       cur_hgr_line = baseaddr[dy];
     }
 
-    if (dither_alg == DITHER_BURKES) {
+    x = start_x;
+    buf_ptr = buffer + x;
+    dx = off_x;
+
+    if (dither_alg != DITHER_NONE) {
       /* Rollover next error line */
-      uint8 *tmp = cur_err_line;
+      int8 *tmp = cur_err_line;
       cur_err_line = next_err_line;
       next_err_line = tmp;
       memset(next_err_line, 0, file_width);
-    } else {
-      /* Precompute y modulo for the line */
-      y_mod8 = y % 8;
-    }
 
-    x = start_x;
-    dx = off_x;
-
-    /* Init cursors */
-    if (dither_alg == DITHER_BURKES) {
-      cur_err_x_y = cur_err_line + x;
-      cur_err_xplus1_y = cur_err_x_y + 1;
-      cur_err_xplus2_y = cur_err_xplus1_y + 1;
-      cur_err_x_yplus1 = next_err_line + x;
-      cur_err_xplus1_yplus1 = cur_err_x_yplus1 + 1;
-      cur_err_xplus2_yplus1 = cur_err_xplus1_yplus1 + 1;
-      cur_err_xmin1_yplus1 = cur_err_x_yplus1 - 1;
-      cur_err_xmin2_yplus1 = cur_err_xmin1_yplus1 - 1;
+      /* Init cursors */
+      if (dither_alg == DITHER_BURKES) {
+        cur_err_x_y = cur_err_line + x;
+        cur_err_xplus1_y = cur_err_x_y + 1;
+        cur_err_xplus2_y = cur_err_xplus1_y + 1;
+        cur_err_x_yplus1 = next_err_line + x;
+        cur_err_xplus1_yplus1 = cur_err_x_yplus1 + 1;
+        cur_err_xplus2_yplus1 = cur_err_xplus1_yplus1 + 1;
+        cur_err_xmin1_yplus1 = cur_err_x_yplus1 - 1;
+        cur_err_xmin2_yplus1 = cur_err_xmin1_yplus1 - 1;
+      } else {
+        err2 = 0;
+        cur_err_x_y = cur_err_line + x;
+        cur_err_x_yplus1 = next_err_line + x;
+        cur_err_xmin1_yplus1 = cur_err_x_yplus1 - 1;
+      }
     }
 
     do {
       /* Get destination pixel */
       if (invert_coords) {
         if (resize) {
-          scaled_dx = dx * 3 / 4;
+          scaled_dx = (dx + (dx << 1)) >> 2; /* *3/4 */
           if (scaled_dx == prev_scaled_dx) {
             /* Avoid rewriting same destination pixel twice
              * It results in ugly dithering */
@@ -571,7 +564,7 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
         pixel = mod7_table[dx];
       }
 
-      opt_val = buffer[x];
+      opt_val = *buf_ptr;
       opt_val = opt_histogram[opt_val];
       if (brighten) {
         int16 t = opt_val + brighten;
@@ -585,7 +578,8 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
 
       /* Dither */
       if (dither_alg == DITHER_BURKES) {
-        buf_plus_err = opt_val + *cur_err_x_y;
+        buf_plus_err = *cur_err_x_y;
+        buf_plus_err += opt_val;
         if (buf_plus_err < dither_threshold) {
           cur_err = buf_plus_err;
           /* pixel's already black */
@@ -612,14 +606,22 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
           }
         }
         *cur_err_x_yplus1          += err8;
-      } else if (dither_alg == DITHER_BAYER) {
-        uint16 val = opt_val;
-        val += val * map[y_mod8][x % 8] / 63;
-        if (val < dither_threshold) {
+      } else if (dither_alg == DITHER_SIERRA) {
+        buf_plus_err = opt_val + *cur_err_x_y + err2;
+        if (buf_plus_err < dither_threshold) {
+          cur_err = buf_plus_err;
           /* pixel's already black */
         } else {
+          cur_err = buf_plus_err - 255;
           *ptr |= pixel;
         }
+        err2 = cur_err >> 1; /* cur_err * 2 / 4 */
+        err1 = err2 >> 1;    /* cur_err * 1 / 4 */
+
+        if (x > 0) {
+          *cur_err_xmin1_yplus1    += err1;
+        }
+        *cur_err_x_yplus1          += err1;
       } else if (dither_alg == DITHER_NONE) {
         if (opt_val < dither_threshold) {
         } else {
@@ -629,6 +631,7 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
 
 next_pixel:
       x++;
+      buf_ptr++;
       dx += xdir;
       if (dither_alg == DITHER_BURKES) {
         /* shift cursors */
@@ -640,6 +643,11 @@ next_pixel:
         cur_err_xplus2_yplus1++;
         cur_err_xmin1_yplus1++;
         cur_err_xmin2_yplus1++;
+      } else if (dither_alg == DITHER_SIERRA) {
+        /* shift cursors */
+        cur_err_x_y++;
+        cur_err_x_yplus1++;
+        cur_err_xmin1_yplus1++;
       }
     } while (x != end_x);
     if (y % 16 == 0) {

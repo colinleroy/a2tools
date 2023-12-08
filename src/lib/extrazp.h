@@ -30,6 +30,11 @@ extern uint8 *zp8p;
 extern uint8 *zp10p;
 extern uint8 *zp12p;
 
+extern int8 *zp6sp;
+extern int8 *zp8sp;
+extern int8 *zp10sp;
+extern int8 *zp12sp;
+
 extern uint16 *zp6ip;
 extern uint16 *zp8ip;
 extern uint16 *zp10ip;
@@ -65,6 +70,11 @@ extern int16 *zp12sip;
 #pragma zpsym ("zp8p")
 #pragma zpsym ("zp10p")
 #pragma zpsym ("zp12p")
+
+#pragma zpsym ("zp6sp")
+#pragma zpsym ("zp8sp")
+#pragma zpsym ("zp10sp")
+#pragma zpsym ("zp12sp")
 
 #pragma zpsym ("zp6ip")
 #pragma zpsym ("zp8ip")

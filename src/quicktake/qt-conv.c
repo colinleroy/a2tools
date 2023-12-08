@@ -280,11 +280,17 @@ static void build_scale_table(void) {
 static void write_raw(void)
 {
 #if SCALE
-  register uint8 *dst_ptr;
-  register uint8 **cur_orig_y;
-  register uint16 *cur_orig_x;
-  static uint8 **end_orig_y = NULL;
+#ifdef __CC65__
+  #define dst_ptr zp6p
+  #define cur_y zp8p
+#else
+  uint8 *dst_ptr;
+  uint8 *cur_y;
+#endif
+  uint16 *cur_orig_x;
+  uint8 **cur_orig_y;
   static uint16 *end_orig_x;
+  static uint8 **end_orig_y = NULL;
 #endif
   uint8 *raw_ptr;
 
@@ -295,14 +301,15 @@ static void write_raw(void)
     end_orig_y = orig_y_table + scaled_band_height;
     end_orig_x = orig_x_table + FILE_WIDTH;
   }
+
   /* Scale (nearest neighbor)*/
   dst_ptr = raw_image;
   cur_orig_y = orig_y_table + 0;
   do {
     cur_orig_x = orig_x_table + 0;
-
+    cur_y = *cur_orig_y;
     do {
-      *dst_ptr = *(*cur_orig_y + *cur_orig_x);
+      *dst_ptr = *(cur_y + *cur_orig_x);
       histogram[*dst_ptr]++;
       dst_ptr++;
     } while (++cur_orig_x < end_orig_x);
