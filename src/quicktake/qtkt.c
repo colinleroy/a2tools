@@ -31,8 +31,8 @@
 /* Shared with qt-conv.c */
 char magic[5] = QTKT_MAGIC;
 char *model = "100";
-uint16 cache_size = 4092;
-uint8 cache[4092];
+uint16 cache_size = 4096;
+uint8 cache[4096];
 
 /* bitbuff state at end of first loop */
 static uint32 prev_bitbuf_a = 0;
@@ -58,10 +58,10 @@ static uint8 *src, *dst;
 #define idx_end zp10p
 #define val_col_minus2 zp12
 #else
-static uint8 *idx_forward;
-static uint8 *idx_behind;
-static uint8 *idx_end;
-static uint8 val_col_minus2;
+uint8 *idx_forward;
+uint8 *idx_behind;
+uint8 *idx_end;
+uint8 val_col_minus2;
 #endif
 
 static uint8 *pix_direct_row[QT_BAND+5];
