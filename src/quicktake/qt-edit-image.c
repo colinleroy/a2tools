@@ -296,7 +296,7 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
   register uint8 *ptr;
   uint8 invert_coords;
 
-  /* Burkes variables */
+  /* Dither variables */
   int16 buf_plus_err;
   int8 *cur_err_line = err;
   int8 *next_err_line;
@@ -356,6 +356,9 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
 #else
   end_x = file_width;
 #endif
+
+  /* Init to safe value */
+  prev_scaled_dx = prev_scaled_dy = 100;
 
   switch (angle) {
     case 0:
@@ -503,12 +506,11 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
           goto next_line;
         }
         prev_scaled_dy = scaled_dy;
-        cur_hgr_row = div7_table[scaled_dy];
-        cur_hgr_mod = mod7_table[scaled_dy];
       } else {
-        cur_hgr_row = div7_table[dy];
-        cur_hgr_mod = mod7_table[dy];
+        scaled_dy = dy;
       }
+      cur_hgr_row = div7_table[scaled_dy];
+      cur_hgr_mod = mod7_table[scaled_dy];
     } else {
       cur_hgr_line = baseaddr[dy];
     }
@@ -525,20 +527,18 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
       memset(next_err_line, 0, file_width);
 
       /* Init cursors */
+      cur_err_x_y = cur_err_line + x;
+      cur_err_x_yplus1 = next_err_line + x;
+      cur_err_xmin1_yplus1 = cur_err_x_yplus1 - 1;
+
       if (dither_alg == DITHER_BURKES) {
-        cur_err_x_y = cur_err_line + x;
         cur_err_xplus1_y = cur_err_x_y + 1;
         cur_err_xplus2_y = cur_err_xplus1_y + 1;
-        cur_err_x_yplus1 = next_err_line + x;
         cur_err_xplus1_yplus1 = cur_err_x_yplus1 + 1;
         cur_err_xplus2_yplus1 = cur_err_xplus1_yplus1 + 1;
-        cur_err_xmin1_yplus1 = cur_err_x_yplus1 - 1;
         cur_err_xmin2_yplus1 = cur_err_xmin1_yplus1 - 1;
       } else {
         err2 = 0;
-        cur_err_x_y = cur_err_line + x;
-        cur_err_x_yplus1 = next_err_line + x;
-        cur_err_xmin1_yplus1 = cur_err_x_yplus1 - 1;
       }
     }
 
@@ -553,12 +553,11 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
             goto next_pixel;
           }
           prev_scaled_dx = scaled_dx;
-          ptr = baseaddr[scaled_dx] + cur_hgr_row;
-          pixel = cur_hgr_mod;
         } else {
-          ptr = baseaddr[dx] + cur_hgr_row;
-          pixel = cur_hgr_mod;
+          scaled_dx = dx;
         }
+        ptr = baseaddr[scaled_dx] + cur_hgr_row;
+        pixel = cur_hgr_mod;
       } else {
         ptr = cur_hgr_line + div7_table[dx];
         pixel = mod7_table[dx];
@@ -633,21 +632,18 @@ next_pixel:
       x++;
       buf_ptr++;
       dx += xdir;
-      if (dither_alg == DITHER_BURKES) {
-        /* shift cursors */
-        cur_err_x_y++;
-        cur_err_xplus1_y++;
-        cur_err_xplus2_y++;
-        cur_err_x_yplus1++;
-        cur_err_xplus1_yplus1++;
-        cur_err_xplus2_yplus1++;
-        cur_err_xmin1_yplus1++;
-        cur_err_xmin2_yplus1++;
-      } else if (dither_alg == DITHER_SIERRA) {
+      if (dither_alg != DITHER_NONE) {
         /* shift cursors */
         cur_err_x_y++;
         cur_err_x_yplus1++;
         cur_err_xmin1_yplus1++;
+        if (dither_alg == DITHER_BURKES) {
+          cur_err_xplus1_y++;
+          cur_err_xplus2_y++;
+          cur_err_xplus1_yplus1++;
+          cur_err_xplus2_yplus1++;
+          cur_err_xmin2_yplus1++;
+        }
       }
     } while (x != end_x);
     if (y % 16 == 0) {
