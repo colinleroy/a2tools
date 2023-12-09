@@ -1288,20 +1288,12 @@ static void createWinogradQuant(int16* pQuant)
 static PJPG_INLINE uint16 imul_b1_b3(int16 w)
 {
    /* *362 = *2 + *8 + *32 + *64 + *256 */
-   uint32 x = 0, tmp;
-   tmp = (w << 1); /* 2 */
-   x += tmp;
-   tmp <<= 2;      /* 8 */
-   x += tmp;
-   tmp <<= 2;      /* 32 */
-   x += tmp;
-   tmp <<= 1;      /* 64 */
-   x += tmp;
-   tmp <<= 2;      /* 256 */
-   x += tmp;
-   // x += 128L;
-   //return (int16)(PJPG_ARITH_SHIFT_RIGHT_8_L(x));
-   return (uint16)(x>>8);
+   int16 l = w;
+   uint32 x;
+   FAST_SHIFT_LEFT_8_INT_TO_LONG(l, x); /* 256 */
+   x += l*106;
+   FAST_SHIFT_RIGHT_8_LONG(x);
+   return (uint16)x;
 }
 
 // 1/cos(6*pi/16)
@@ -1309,21 +1301,13 @@ static PJPG_INLINE uint16 imul_b1_b3(int16 w)
 static PJPG_INLINE uint16 imul_b2(int16 w)
 {
    /* *669 = *512 + *128 + *16 + *8 + *4 + *1 */
-   uint32 tmp;
-   uint32 x = w;     /* 1 */
-   tmp = w << 2;   /* 4 */
-   x += tmp;
-   tmp <<= 1;      /* 8 */
-   x += tmp;
-   tmp <<= 1;      /* 16 */
-   x += tmp;
-   tmp <<= 3;      /* 128 */
-   x += tmp;
-   tmp <<= 2;      /* 512 */
-   x += tmp;
-   // x += 128L;
-   // return (int16)(PJPG_ARITH_SHIFT_RIGHT_8_L(x));
-   return (uint16)(x>>8);
+   int16 l = w;
+   uint32 x;
+   FAST_SHIFT_LEFT_8_INT_TO_LONG(l, x); /* 256 */
+   x <<= 1;        /* 512 */
+   x += l*157;
+   FAST_SHIFT_RIGHT_8_LONG(x);
+   return (uint16)x;
 }
 
 // 1/cos(2*pi/16)
@@ -1331,17 +1315,12 @@ static PJPG_INLINE uint16 imul_b2(int16 w)
 static PJPG_INLINE uint16 imul_b4(int16 w)
 {
    /* 277 = * 256 + *16 + *4 + *1 */
-   uint32 tmp;
-   uint32 x = w;     /* 1 */
-   tmp = w << 2;   /* 4 */
-   x += tmp;
-   tmp <<= 2;      /* 16 */
-   x += tmp;
-   tmp <<= 4;      /* 256 */
-   x += tmp;
-   // x += 128L;
-   // return (int16)(PJPG_ARITH_SHIFT_RIGHT_8_L(x));
-   return (uint16)(x>>8);
+   int16 l = w;
+   uint32 x;
+   FAST_SHIFT_LEFT_8_INT_TO_LONG(l, x); /* 256 */
+   x += l*21;
+   FAST_SHIFT_RIGHT_8_LONG(x);
+   return (uint16)x;
 }
 
 // 1/(cos(2*pi/16) + cos(6*pi/16))
@@ -1349,16 +1328,10 @@ static PJPG_INLINE uint16 imul_b4(int16 w)
 static PJPG_INLINE uint16 imul_b5(int16 w)
 {
    /* 196 = *128 + *64 + *4 */
-   uint32 x = 0, tmp;
-   tmp = (w << 2); /* 4 */
-   x += tmp;
-   tmp <<= 4;      /* 64 */
-   x += tmp;
-   tmp <<= 1;      /* 128 */
-   x += tmp;
-   // x += 128L;
-   // return (int16)(PJPG_ARITH_SHIFT_RIGHT_8_L(x));
-   return (uint16)(x>>8);
+   int16 l = w;
+   uint32 x = l * 196;
+   FAST_SHIFT_RIGHT_8_LONG(x);
+   return (uint16)x;
 }
 
 #define clamp(d, s) {int16 t = (s); if (t < 0) d = 0; else if (t & 0xFF00) d = 255; else d = (uint8)t; }
