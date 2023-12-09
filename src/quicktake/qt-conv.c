@@ -283,24 +283,24 @@ static void write_raw(void)
 #ifdef __CC65__
   #define dst_ptr zp6p
   #define cur_y zp8p
+  #define cur_orig_x zp10ip
+  #define cur_orig_y zp12ip
 #else
   uint8 *dst_ptr;
   uint8 *cur_y;
-#endif
   uint16 *cur_orig_x;
   uint8 **cur_orig_y;
-  static uint16 *end_orig_x;
+#endif
+  static uint16 *end_orig_x = NULL;
   static uint8 **end_orig_y = NULL;
 #endif
-  uint8 *raw_ptr;
-
-  raw_ptr = raw_image;
 
 #if SCALE
   if (end_orig_y == NULL) {
     end_orig_y = orig_y_table + scaled_band_height;
     end_orig_x = orig_x_table + FILE_WIDTH;
   }
+
 
   /* Scale (nearest neighbor)*/
   dst_ptr = raw_image;
@@ -315,8 +315,7 @@ static void write_raw(void)
     } while (++cur_orig_x < end_orig_x);
   } while (++cur_orig_y < end_orig_y);
 #endif
-  fwrite (raw_ptr, 1, output_write_len, ofp);
-  raw_ptr += output_write_len;
+  fwrite (raw_image, 1, output_write_len, ofp);
 }
 
 #pragma register-vars(pop)
