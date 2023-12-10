@@ -8,8 +8,6 @@
         .import         __RT_ONCE_LOAD__, __RT_ONCE_SIZE__    ; Linker generated
         .import         ___bzero, ___heapadd, pushax
 
-_runtime_once_cleaned:  .byte 0
-
 _runtime_once_clean:
         lda             _runtime_once_cleaned
         bne             clean_done
@@ -31,3 +29,7 @@ _runtime_once_clean:
         stx             _runtime_once_cleaned
 clean_done:
         rts
+
+        .data
+
+_runtime_once_cleaned:  .byte 0

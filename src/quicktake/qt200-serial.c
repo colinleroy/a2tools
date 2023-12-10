@@ -321,6 +321,7 @@ uint8 qt200_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mo
 }
 
 #pragma code-name(pop)
+#pragma code-name(push, "LOWCODE")
 
 static uint8 get_data(uint8 n_pic, const char *name) {
   #define TYPE_IDX 1
@@ -415,3 +416,5 @@ static uint8 get_data(uint8 n_pic, const char *name) {
 uint8 qt200_get_picture(uint8 n_pic, const char *filename) {
   return get_data(n_pic, filename);
 }
+
+#pragma code-name(pop)
