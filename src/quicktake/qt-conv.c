@@ -340,7 +340,7 @@ static void reload_menu(const char *filename) {
 int main (int argc, const char **argv)
 {
   uint16 h;
-  char ofname[64], *cp;
+  char ofname[64];
 
   register_start_device();
 
@@ -370,8 +370,6 @@ try_again:
   }
 
   strcpy (ofname, ifname);
-  if ((cp = strrchr (ofname, '.'))) *cp = 0;
-  strcat (ofname, ".hgr");
 
   ofp = fopen (TMP_NAME, "wb");
 
