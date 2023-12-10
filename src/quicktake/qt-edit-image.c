@@ -54,7 +54,7 @@ void get_program_disk(void) {
 
 void qt_convert_image_with_crop(const char *filename, uint16 sx, uint16 sy, uint16 ex, uint16 ey) {
   static char imgname[BUF_SIZE];
-  static char args[128];
+  static char args[BUF_SIZE + 16];
 
   clrscr();
   dputs("Image conversion\r\n\r\n");
@@ -314,14 +314,22 @@ zoom_level_1:
             return 1;
           case '+':
             if (zoom_level == 1 && src_width == 640) {
+zoom_level_2:
               zoom_level = 2;
+              crop_start_x = crop_start_y = 0;
+              crop_end_x = crop_start_x + 320;
+              crop_end_y = crop_start_y + 240;
+            } else if (zoom_level == 2) {
+              zoom_level = 3;
               crop_start_x = crop_start_y = 0;
               crop_end_x = crop_start_x + 256;
               crop_end_y = crop_start_y + 192;
             }
             break;
           case '-':
-            if (zoom_level == 2)
+            if (zoom_level == 3)
+              goto zoom_level_2;
+            else if (zoom_level == 2)
               goto zoom_level_1;
             break;
           case CH_CURS_RIGHT:
