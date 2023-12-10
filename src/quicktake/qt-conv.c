@@ -269,7 +269,7 @@ static uint16 effective_width;
  * 640x480 cropped to 256x192 => 256x192, * 10 / 10, bands of 20 end up 20px, crop last band to 12px
  *
  * 320x240 non-cropped        => 256x192, * 8  / 10, bands of 20 end up 16px
- * 320x240 cropped to 256x192 => 256x192, * 10 / 10, bands of 20 end up 20px
+ * 320x240 cropped to 256x192 => 256x192, * 10 / 10, bands of 20 end up 20px, crop last band to 12px
  */
 static void build_scale_table(const char *ofname) {
   uint16 row, col;
@@ -287,7 +287,7 @@ static void build_scale_table(const char *ofname) {
       case 512:
         scaling_factor = 5;
         last_band = crop_start_y + 380;
-        last_band_crop = 2; /* (4, scaled) */
+        last_band_crop = 2; /* 4, scaled */
         break;
       case 256:
         scaling_factor = 10;
@@ -296,6 +296,7 @@ static void build_scale_table(const char *ofname) {
         break;
     }
   } else if (width == 320) {
+    /* Crop boundaries are 640x480 bound, divide them */
     crop_start_x /= 2;
     crop_end_x   /= 2;
     crop_start_y /= 2;
@@ -307,6 +308,8 @@ static void build_scale_table(const char *ofname) {
         break;
       case 256:
         scaling_factor = 10;
+        last_band = crop_start_y + 180;
+        last_band_crop = 12;
         break;
       case 128:
         printf("Can not reframe 128x96 zone of 320x240 image.\n"
@@ -354,6 +357,7 @@ static void write_raw(uint16 h)
   } else if (h == last_band && last_band_crop) {
     /* Skip end of last band if cropping */
     end_orig_y = orig_y_table + last_band_crop;
+    output_write_len -= (scaled_band_height - last_band_crop) * FILE_WIDTH;
   }
 
   /* Scale (nearest neighbor)*/
@@ -466,6 +470,7 @@ try_again:
     fwrite(histogram, sizeof(uint16), 256, ofp);
     fclose(ofp);
   }
+
   clrscr();
   printf("Done.");
 

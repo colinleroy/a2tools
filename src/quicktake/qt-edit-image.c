@@ -237,12 +237,7 @@ start_edit:
           case 's':
             clrscr();
             gotoxy(0, 20);
-            printf("Once saved, image edition will require a new full conversion.\n"
-                   "Save? (Y/n)\n");
-            c = tolower(cgetc());
-            if (c != 'n')
-              goto save;
-            break;
+            goto save;
           case 'r':
             angle += 90;
             return 1;
@@ -283,7 +278,11 @@ start_edit:
             hgr_mixoff();
         }
       } else {
+        /* will be divided by 2 if 320x240, we want it
+         * to start on a band boundary */
+        uint8 move_offset;
 crop_again:
+        move_offset = src_width == 640 ? QT_BAND : QT_BAND*2;
         clrscr();
         gotoxy(0, 20);
         if (src_width == 640) {
@@ -334,26 +333,26 @@ zoom_level_2:
             break;
           case CH_CURS_RIGHT:
             if (crop_end_x < 640) {
-              crop_start_x += 20;
-              crop_end_x += 20;
+              crop_start_x += move_offset;
+              crop_end_x += move_offset;
             }
             break;
           case CH_CURS_LEFT:
             if (crop_start_x > 0) {
-              crop_start_x -= 20;
-              crop_end_x -= 20;
+              crop_start_x -= move_offset;
+              crop_end_x -= move_offset;
             }
             break;
           case CH_CURS_DOWN:
             if (crop_end_y < 480) {
-              crop_start_y += 20;
-              crop_end_y += 20;
+              crop_start_y += move_offset;
+              crop_end_y += move_offset;
             }
             break;
           case CH_CURS_UP:
             if (crop_start_y > 0) {
-              crop_start_y -= 20;
-              crop_end_y -= 20;
+              crop_start_y -= move_offset;
+              crop_end_y -= move_offset;
             }
             break;
         }
