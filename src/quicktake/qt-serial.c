@@ -31,15 +31,11 @@ FILE *dbgfp = NULL;
 
 unsigned char buffer[BLOCK_SIZE];
 
-#pragma code-name(push, "LC")
-
-/* Forward declarations */
-static uint8 qt_set_speed(uint16 speed);
+#pragma code-name(push, "RT_ONCE")
 
 /* Connect to a QuickTake and detect its model */
 uint8 qt_serial_connect(uint16 speed) {
   simple_serial_close();
-  printf("Connecting to Quicktake...\n");
 
   /* Set initial speed */
 #ifdef __CC65__
@@ -63,13 +59,14 @@ uint8 qt_serial_connect(uint16 speed) {
 #else
   simple_serial_set_parity(PARENB);
 #endif
-  printf("Parity set.\n");
 
   if (serial_model == QT_MODEL_UNKNOWN) {
     if (qt200_wakeup() == 0) {
       serial_model = QT_MODEL_200;
     }
   }
+
+  printf("\n");
 
   if (serial_model == QT_MODEL_UNKNOWN) {
     printf("No camera connected.\n");
@@ -79,17 +76,16 @@ uint8 qt_serial_connect(uint16 speed) {
   printf("Initializing...\n");
 
   /* Upgrade to target speed */
-  return qt_set_speed(speed);
-}
-
-/* Protocol-dependant camera functions */
-
-static uint8 qt_set_speed(uint16 speed) {
   if (serial_model != QT_MODEL_200)
     return qt1x0_set_speed(speed);
   else
     return qt200_set_speed(speed);
 }
+
+/* Protocol-dependant camera functions */
+
+#pragma code-name(pop)
+#pragma code-name(push, "LC")
 
 uint8 qt_take_picture(void) {
   if (serial_model != QT_MODEL_200)
@@ -141,7 +137,6 @@ uint8 qt_get_thumbnail(uint8 n_pic, uint8 *quality, uint8 *flash, uint8 *year, u
 }
 
 #pragma code-name(pop)
-#pragma code-name(push, "LOWCODE")
 
 uint8 qt_delete_pictures(void) {
   if (serial_model != QT_MODEL_200)
@@ -149,6 +144,8 @@ uint8 qt_delete_pictures(void) {
   else
     return -1;
 }
+
+#pragma code-name(push, "LOWCODE")
 
 uint8 qt_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mode, uint8 *flash_mode, uint8 *battery_level, uint8 *charging, char **name, struct tm *time) {
   if (serial_model != QT_MODEL_200)

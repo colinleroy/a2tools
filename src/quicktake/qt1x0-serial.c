@@ -13,8 +13,11 @@
 #include "qt-serial.h"
 #include "qt-conv.h"
 
-#pragma code-name(push, "LOWCODE")
 extern uint8 scrw, scrh;
+
+static uint8 qt1x0_send_ping(void);
+
+#pragma code-name(push, "LOWCODE")
 
 /* Get the ack from the camera */
 static uint8 get_ack(uint8 wait) {
@@ -25,7 +28,6 @@ static uint8 get_ack(uint8 wait) {
   }
   return -1;
 }
-
 
 /* Send an ack to the camera */
 static void send_ack() {
@@ -44,8 +46,8 @@ static uint8 get_hello(void) {
       goto read;
     }
   }
-  printf("Timeout.\n");
   return QT_MODEL_UNKNOWN;
+
 read:
   buffer[0] = (unsigned char)c;
   if (buffer[0] != 0xA5) {
@@ -56,7 +58,7 @@ read:
   DUMP_START("qt_hello");
   DUMP_DATA(buffer, 7);
   DUMP_END();
-  printf("Done.\n");
+
   return buffer[3] == 0xC8 ? QT_MODEL_150 : QT_MODEL_100;
 }
 
@@ -100,6 +102,89 @@ static uint8 send_hello(uint16 speed) {
   return 0;
 }
 
+#pragma code-name(push, "RT_ONCE")
+/* Wakeup and detect a QuickTake 100/150 by clearing DTR
+ * Returns 0 if successful, -1 otherwise
+ */
+uint8 qt1x0_wakeup(uint16 speed) {
+  static uint8 model = QT_MODEL_UNKNOWN;
+  printf("Pinging QuickTake 1x0... ");
+#if defined(__CC65__) && !defined(IIGS)
+  /* The Apple IIc printer being closed right now,
+   * we have to set DTR before clearing it.
+   */
+  simple_serial_acia_onoff(1, 1);
+  platform_sleep(1);
+  simple_serial_acia_onoff(1, 0);
+#else
+  simple_serial_dtr_onoff(0);
+#endif
+
+  if ((model = get_hello()) == QT_MODEL_UNKNOWN) {
+    printf("Timeout. ");
+#if !defined(__CC65__) || defined(IIGS)
+    /* Re-up current port */
+    simple_serial_dtr_onoff(1);
+#endif
+    return QT_MODEL_UNKNOWN;
+  }
+  send_hello(speed);
+
+  printf("Done. ");
+  return model;
+}
+
+/* Send the speed upgrade command */
+uint8 qt1x0_set_speed(uint16 speed) {
+#define SPD_CMD_IDX 0x0D
+  char str_speed[] = {0x16,0x2A,0x00,0x03,0x00,0x00,0x00,0x00,0x00,0x05,0x00,0x03,0x03,0x08,0x04,0x00};
+  int spd_code;
+
+  platform_sleep(1);
+
+  switch(speed) {
+    case 9600:
+      return qt1x0_send_ping();
+
+    case 19200:
+#ifdef __CC65__
+      spd_code = SER_BAUD_19200;
+#else
+      spd_code = B19200;
+#endif
+      str_speed[SPD_CMD_IDX] = 0x10;
+      break;
+
+    case 57600U:
+#ifdef __CC65__
+      spd_code = SER_BAUD_57600;
+#else
+      spd_code = B57600;
+#endif
+      str_speed[SPD_CMD_IDX] = 0x30;
+      break;
+  }
+
+  printf("Setting speed to %u...\n", speed);
+  simple_serial_write(str_speed, sizeof str_speed);
+
+  /* get ack */
+  if (get_ack(5) != 0) {
+    printf("Speed set command failed.\n");
+    return -1;
+  }
+  send_ack();
+
+  platform_msleep(200);
+  simple_serial_set_speed(spd_code);
+
+  /* We don't care about the bytes we receive here */
+  simple_serial_flush();
+
+  send_ack();
+  return get_ack(5);
+}
+#pragma code-name(pop)
 #pragma code-name(push, "LC")
 
 /* Send a command to the camera */
@@ -195,93 +280,6 @@ static uint8 send_get_information_command(void) {
   }
 
   return send_command(str, sizeof str, 1, 5);
-}
-
-/* Wakeup and detect a QuickTake 100/150 by clearing DTR
- * Returns 0 if successful, -1 otherwise
- */
-uint8 qt1x0_wakeup(uint16 speed) {
-  static uint8 model = QT_MODEL_UNKNOWN;
-#if defined(__CC65__) && !defined(IIGS)
-  /* The Apple IIc printer being closed right now,
-   * we have to set DTR before clearing it.
-   */
-  printf("Toggling printer port on...\n");
-  simple_serial_acia_onoff(1, 1);
-  platform_sleep(1);
-  printf("Toggling printer port off...\n");
-  simple_serial_acia_onoff(1, 0);
-#else
-  printf("Toggling DTR off...\n");
-  simple_serial_dtr_onoff(0);
-#endif
-
-  printf("Waiting for QuickTake 1x0 hello... ");
-  if ((model = get_hello()) == QT_MODEL_UNKNOWN) {
-#if !defined(__CC65__) || defined(IIGS)
-    /* Re-up current port */
-    printf("Toggling DTR on...\n");
-    simple_serial_dtr_onoff(1);
-#endif
-    return QT_MODEL_UNKNOWN;
-  }
-  printf("Sending hello...\n");
-  send_hello(speed);
-
-  printf("Connected to QuickTake %s.\n",
-         model == QT_MODEL_100 ? "100":"150");
-  return model;
-}
-
-/* Send the speed upgrade command */
-uint8 qt1x0_set_speed(uint16 speed) {
-#define SPD_CMD_IDX 0x0D
-  char str_speed[] = {0x16,0x2A,0x00,0x03,0x00,0x00,0x00,0x00,0x00,0x05,0x00,0x03,0x03,0x08,0x04,0x00};
-  int spd_code;
-
-  platform_sleep(1);
-
-  switch(speed) {
-    case 9600:
-      return qt1x0_send_ping();
-
-    case 19200:
-#ifdef __CC65__
-      spd_code = SER_BAUD_19200;
-#else
-      spd_code = B19200;
-#endif
-      str_speed[SPD_CMD_IDX] = 0x10;
-      break;
-
-    case 57600U:
-#ifdef __CC65__
-      spd_code = SER_BAUD_57600;
-#else
-      spd_code = B57600;
-#endif
-      str_speed[SPD_CMD_IDX] = 0x30;
-      break;
-  }
-
-  printf("Setting speed to %u...\n", speed);
-  simple_serial_write(str_speed, sizeof str_speed);
-
-  /* get ack */
-  if (get_ack(5) != 0) {
-    printf("Speed set command failed.\n");
-    return -1;
-  }
-  send_ack();
-
-  platform_msleep(200);
-  simple_serial_set_speed(spd_code);
-
-  /* We don't care about the bytes we receive here */
-  simple_serial_flush();
-
-  send_ack();
-  return get_ack(5);
 }
 
 /* Take a picture */

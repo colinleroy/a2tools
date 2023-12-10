@@ -37,6 +37,10 @@ int16 angle = 0;
 uint8 auto_level = 1;
 uint8 dither_alg = DITHER_SIERRA;
 uint8 resize = 1;
+uint8 cropping = 0;
+uint8 zoom_level = 0;
+uint16 crop_start_x = 0, crop_end_x;
+uint16 crop_start_y = 0, crop_end_y;
 int8 brighten = DEFAULT_BRIGHTEN;
 
 void get_program_disk(void) {
@@ -48,8 +52,9 @@ void get_program_disk(void) {
   }
 }
 
-void qt_convert_image(const char *filename) {
+void qt_convert_image_with_crop(const char *filename, uint16 sx, uint16 sy, uint16 ex, uint16 ey) {
   static char imgname[BUF_SIZE];
+  static char args[128];
 
   clrscr();
   dputs("Image conversion\r\n\r\n");
@@ -76,12 +81,14 @@ void qt_convert_image(const char *filename) {
 
     get_program_disk();
 
+    snprintf(args, 128, "%s %3d %3d %3d %3d", imgname, sx, sy, ex, ey);
+
     if (!strcmp(magic, QTKT_MAGIC)) {
-      exec("qtktconv", imgname);
+      exec("qtktconv", args);
     } else if (!strcmp(magic, QTKN_MAGIC)) {
-      exec("qtknconv", imgname);
+      exec("qtknconv", args);
     } else if (!strcmp(magic, JPEG_EXIF_MAGIC)) {
-      exec("jpegconv", imgname);
+      exec("jpegconv", args);
     } else {
       cputs("Unknown file type.\r\n");
       cgetc();
@@ -89,6 +96,9 @@ void qt_convert_image(const char *filename) {
   }
 }
 
+void qt_convert_image(const char *filename) {
+  qt_convert_image_with_crop(filename, 0, 0, 640, 480);
+}
 static uint8 *baseaddr[HGR_HEIGHT];
 static uint8 div7_table[HGR_WIDTH];
 static uint8 mod7_table[HGR_WIDTH];
@@ -151,90 +161,197 @@ static void init_base_addrs (void)
 char HGR_PAGE[HGR_LEN];
 #endif
 
-static uint8 reedit_image(const char *ofname) {
+static void invert_selection(void) {
+  uint16 x, lx, rx;
+  uint8 y, *a, *b;
+  /* Scale back */
+  uint16 dsx = crop_start_x * 8 / 20;
+  uint16 dex = crop_end_x * 8 / 20;
+  uint16 dsy = crop_start_y * 8 / 20;
+  uint16 dey = crop_end_y * 8 / 20;
+
+  #define START_OFFSET ((HGR_WIDTH - FILE_WIDTH) / 2)
+
+  lx = div7_table[dsx + START_OFFSET];
+  rx = div7_table[dex + START_OFFSET];
+
+  /* Invert horizontal lines */
+  a = baseaddr[dsy] + lx;
+  b = baseaddr[dey] + lx;
+  for (x = dsx; x < dex; x+=7) {
+    *a = ~(*a);
+    *b = ~(*b);
+    a++;
+    b++;
+  }
+  /* Invert vertical lines */
+  for (y = dsy + 1; y < dey - 1; y++) {
+    a = baseaddr[y] + lx;
+    b = baseaddr[y] + rx;
+    *a = ~(*a);
+    *b = ~(*b);
+  }
+}
+
+static uint8 reedit_image(const char *ofname, uint16 src_width) {
   char c, *cp;
 
 start_edit:
   do {
     clrscr();
     gotoxy(0, 20);
-    printf("L: Rotate left - U: Rotate upside-down - R: Rotate right (Angle %d)",
-           angle);
+    printf("Rotate: L:left - U:180 - R:right");
     if (angle == 90 || angle == 270) {
       if (resize)
-        printf(" - C: Crop\n");
+        printf("; C: Crop");
       else
-        printf(" - C: Fit\n");
-    } else {
-      printf("\n");
+        printf("; C: Fit");
+    } else if (angle == 0 && !(src_width % 320)) {
+      printf("; C: Reframe");
     }
-    printf("H: Auto-level %s - B: Brighten - D: Darken (Current %s%d)\n",
-           auto_level ? "off":"on", 
+    printf("\nH: Auto-level %s; B: Brighten - D: Darken (Current %s%d)\n",
+           auto_level ? "off":"on",
            brighten > 0 ? "+":"",
            brighten);
     printf("Dither with E: Sierra Lite / Y: Bayer / N: No dither (Current: %s)\n"
            "S: Save - Escape: Exit without saving - Any other key: Hide help",
            dither_alg == DITHER_BAYER ? "Bayer"
             : dither_alg == DITHER_SIERRA ? "Sierra Lite" : "None");
-
-    c = tolower(cgetc());
+  c = tolower(cgetc());
 #ifdef __CC65__
     if (!hgr_mix_is_on()) {
       hgr_mixon();
     } else
 #endif
     {
-      switch(c) {
-        case CH_ESC:
-          clrscr();
-          gotoxy(0, 20);
-          printf("Exit without saving? (y/N) ");
-          c = tolower(cgetc());
-          if (c == 'y')
-            goto done;
-          break;
-        case 's':
-          clrscr();
-          gotoxy(0, 20);
-          printf("Once saved, image edition will require a new full conversion.\n"
-                 "Save? (Y/n)\n");
-          c = tolower(cgetc());
-          if (c != 'n')
-            goto save;
-          break;
-        case 'r':
-          angle += 90;
-          return 1;
-        case 'l':
-          angle -= 90;
-          return 1;
-        case 'u':
-          angle += 180;
-          return 1;
-        case 'h':
-          auto_level = !auto_level;
-          histogram_equalize();
-          return 1;
-        case 'c':
-          resize = !resize;
-          return 1;
-        case 'y':
-          dither_alg = DITHER_BAYER;
-          return 1;
-        case 'e':
-          dither_alg = DITHER_SIERRA;
-          return 1;
-        case 'n':
-          dither_alg = DITHER_NONE;
-          return 1;
-        case 'b':
-          brighten += 16;
-          return 1;
-        case 'd':
-          brighten -= 16;
-          return 1;
-        default:
-          hgr_mixoff();
+      if (!cropping) {
+        switch(c) {
+          case CH_ESC:
+            clrscr();
+            gotoxy(0, 20);
+            printf("Exit without saving? (y/N) ");
+            c = tolower(cgetc());
+            if (c == 'y')
+              goto done;
+            break;
+          case 's':
+            clrscr();
+            gotoxy(0, 20);
+            printf("Once saved, image edition will require a new full conversion.\n"
+                   "Save? (Y/n)\n");
+            c = tolower(cgetc());
+            if (c != 'n')
+              goto save;
+            break;
+          case 'r':
+            angle += 90;
+            return 1;
+          case 'l':
+            angle -= 90;
+            return 1;
+          case 'u':
+            angle += 180;
+            return 1;
+          case 'h':
+            auto_level = !auto_level;
+            histogram_equalize();
+            return 1;
+          case 'c':
+            if (angle == 0 && !(src_width % 320)) {
+              cropping = 1;
+              goto crop_again;
+            }
+            else
+              resize = !resize;
+            return 1;
+          case 'y':
+            dither_alg = DITHER_BAYER;
+            return 1;
+          case 'e':
+            dither_alg = DITHER_SIERRA;
+            return 1;
+          case 'n':
+            dither_alg = DITHER_NONE;
+            return 1;
+          case 'b':
+            brighten += 16;
+            return 1;
+          case 'd':
+            brighten -= 16;
+            return 1;
+          default:
+            hgr_mixoff();
+        }
+      } else {
+crop_again:
+        clrscr();
+        gotoxy(0, 20);
+        if (src_width == 640) {
+          printf("+: Zoom in; -: Zoom out; ");
+        }
+        printf("Arrow keys: Move selection\n"
+               "Enter: Reframe; Escape: Cancel");
+        if (zoom_level) {
+          /* Set back pixels at previous crop border */
+          invert_selection();
+        } else {
+zoom_level_1:
+          zoom_level = 1;
+          crop_start_x = crop_start_y = 0;
+          crop_end_x = crop_start_x + 512;
+          crop_end_y = crop_start_y + 384;
+        }
+        switch(c) {
+          case CH_ESC:
+            cropping = 0;
+            zoom_level = 0;
+            return 1;
+          case CH_ENTER:
+            cropping = 0;
+            zoom_level = 0;
+            init_text();
+            qt_convert_image_with_crop(ofname, crop_start_x, crop_start_y, crop_end_x, crop_end_y);
+            return 1;
+          case '+':
+            if (zoom_level == 1 && src_width == 640) {
+              zoom_level = 2;
+              crop_start_x = crop_start_y = 0;
+              crop_end_x = crop_start_x + 256;
+              crop_end_y = crop_start_y + 192;
+            }
+            break;
+          case '-':
+            if (zoom_level == 2)
+              goto zoom_level_1;
+            break;
+          case CH_CURS_RIGHT:
+            if (crop_end_x < 640) {
+              crop_start_x += 20;
+              crop_end_x += 20;
+            }
+            break;
+          case CH_CURS_LEFT:
+            if (crop_start_x > 0) {
+              crop_start_x -= 20;
+              crop_end_x -= 20;
+            }
+            break;
+          case CH_CURS_DOWN:
+            if (crop_end_y < 480) {
+              crop_start_y += 20;
+              crop_end_y += 20;
+            }
+            break;
+          case CH_CURS_UP:
+            if (crop_start_y > 0) {
+              crop_start_y -= 20;
+              crop_end_y -= 20;
+            }
+            break;
+        }
+        invert_selection();
+        c = cgetc();
+        goto crop_again;
       }
     }
   } while (1);
@@ -259,6 +376,7 @@ save:
 done:
   hgr_mixoff();
   init_text();
+  printf("\n");
   return 0;
 }
 
@@ -278,7 +396,6 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
   uint16 dy;
   uint16 off_x, y, off_y;
   uint16 file_width;
-#if SCALE
 #ifdef __CC65__
   #define scaled_dx zp6
   #define scaled_dy zp7
@@ -288,10 +405,6 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
 #else
   uint8 scaled_dx, scaled_dy, prev_scaled_dx, prev_scaled_dy;
   uint8 *buf_ptr;
-#endif
-#else
-  uint16 scaled_dx, scaled_dy;
-  uint16 file_height;
 #endif
   int8 xdir, ydir;
   int8 cur_err;
@@ -326,11 +439,7 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
   uint8 file_height;
 
   /* General variables */
-#if SCALE
   uint8 h_plus1;
-#else
-  uint16 h_plus1;
-#endif
   uint8 *cur_hgr_line;
   uint8 cur_hgr_row;
   uint8 cur_hgr_mod;
@@ -362,11 +471,7 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
   progress_bar(wherex(), wherey(), scrw, 0, file_height);
 
   start_x = 0;
-#if SCALE
   end_x = file_width == 256 ? 0 : file_width;
-#else
-  end_x = file_width;
-#endif
 
   /* Init to safe value */
   prev_scaled_dx = prev_scaled_dy = 100;
@@ -647,14 +752,14 @@ stop:
 #pragma allow-eager-inline(pop)
 #pragma inline-stdfuncs(pop)
 
-void qt_edit_image(const char *ofname) {
+void qt_edit_image(const char *ofname, uint16 src_width) {
   do {
     if (angle >= 360)
       angle -= 360;
     if (angle < 0)
       angle += 360;
     convert_temp_to_hgr(TMP_NAME, ofname, FILE_WIDTH, FILE_HEIGHT, QT_MODEL_UNKNOWN);
-  } while (reedit_image(ofname));
+  } while (reedit_image(ofname, src_width));
 }
 
 void qt_view_image(const char *filename) {

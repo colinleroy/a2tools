@@ -4,7 +4,7 @@
 #include "platform.h"
 
 void qt_convert_image(const char *filename);
-uint8 qt_edit_image(const char *ofname);
+uint8 qt_edit_image(const char *ofname, uint16 src_width);
 void qt_view_image(const char *filename);
 void get_program_disk(void);
 

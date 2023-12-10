@@ -11,6 +11,8 @@
 _runtime_once_cleaned:  .byte 0
 
 _runtime_once_clean:
+        lda             _runtime_once_cleaned
+        bne             clean_done
         ldx             #>__RT_ONCE_LOAD__
         lda             #<__RT_ONCE_LOAD__
         jsr             pushax
@@ -27,4 +29,5 @@ _runtime_once_clean:
 
         ldx             #1
         stx             _runtime_once_cleaned
+clean_done:
         rts

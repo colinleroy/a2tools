@@ -46,6 +46,8 @@
   #pragma static-locals(push, on)
 #endif
 
+static void reload_menu(const char *filename);
+
 /* Shared with decoders */
 uint16 height, width;
 uint16 raw_image_size = (QT_BAND) * 640;
@@ -73,8 +75,6 @@ void src_file_seek(uint32 off) {
   cache_pages_read = 0;
   last_seek = off;
 }
-
-#pragma code-name (push, "LC")
 
 uint32 cache_read_since_inval(void) {
   return last_seek + cache_pages_read + cache_offset;
@@ -120,6 +120,8 @@ static uint16 src_file_get_uint16(void) {
   ((unsigned char *)&v)[0] = *(cur_cache_ptr++);
   return v;
 }
+
+#pragma code-name (push, "LC")
 
 #pragma inline-stdfuncs(push, on)
 #pragma allow-eager-inline(push, on)
@@ -255,31 +257,78 @@ static uint8 *orig_y_table[QT_BAND];
 static uint16 orig_x_table[640];
 static uint8 scaled_band_height;
 static uint16 output_write_len;
-
-static void build_scale_table(void) {
+static uint8 scaling_factor = 4;
+static uint16 crop_start_x, crop_start_y, crop_end_x, crop_end_y;
+static uint16 last_band = 0;
+static uint16 last_band_crop = 0;
+static uint16 effective_width;
+/* Scales:
+ * 640x480 non-cropped        => 256x192, * 4  / 10, bands of 20 end up 8px
+ * 640x480 cropped to 512x384 => 256x192, * 5  / 10, bands of 20 end up 10px, crop last band to 4px
+ * 640x480 cropped to 256x192 => 256x192, * 10 / 10, bands of 20 end up 20px, crop last band to 12px
+ *
+ * 320x240 non-cropped        => 256x192, * 8  / 10, bands of 20 end up 16px
+ * 320x240 cropped to 256x192 => 256x192, * 10 / 10, bands of 20 end up 20px
+ */
+static void build_scale_table(const char *ofname) {
   uint16 row, col;
-#if SCALE
-  uint8 scaling_factor = (width == 640 ? 4 : 8);
+
+  if (width == 640) {
+    effective_width = crop_end_x - crop_start_x;
+    switch (effective_width) {
+      case 640:
+        scaling_factor = 4;
+        break;
+      case 512:
+        scaling_factor = 5;
+        last_band = crop_start_y + 380;
+        last_band_crop = 2; /* (4, scaled) */
+        break;
+      case 256:
+        scaling_factor = 10;
+        last_band = crop_start_y + 180;
+        last_band_crop = 12;
+        break;
+    }
+  } else if (width == 320) {
+    crop_start_x /= 2;
+    crop_end_x   /= 2;
+    crop_start_y /= 2;
+    crop_end_y   /= 2;
+    effective_width = crop_end_x - crop_start_x;
+    switch (effective_width) {
+      case 320:
+        scaling_factor = 8;
+        break;
+      case 256:
+        scaling_factor = 10;
+        break;
+      case 128:
+        printf("Can not reframe 128x96 zone of 320x240 image.\n"
+               "Please try again with less zoom.\n");
+        cgetc();
+        /* Reset effective width to go back where we were */
+        effective_width = 320;
+        reload_menu(ofname);
+        break;
+    }
+  }
   scaled_band_height = QT_BAND * scaling_factor / 10;
   output_write_len = FILE_WIDTH * scaled_band_height;
-#else
-  uint8 scaling_factor = 1;
-  scaled_band_height = QT_BAND;
-  output_write_len = FILE_WIDTH * QT_BAND;
-#endif
 
   for (row = 0; row < scaled_band_height; row++) {
-    orig_y_table[row] = raw_image + FILE_IDX(row * 10 / scaling_factor, 0);
+    /* Y cropping is handled in main decode/save loop */
+    orig_y_table[row] = raw_image + FILE_IDX((row) * 10 / scaling_factor, 0);
 
     for (col = 0; col < FILE_WIDTH; col++) {
-      orig_x_table[col] = col * 10 / scaling_factor;
+      /* X cropping is handled here in lookup table */
+      orig_x_table[col] = (col * 10 / scaling_factor) + crop_start_x;
     }
   }
 }
 
-static void write_raw(void)
+static void write_raw(uint16 h)
 {
-#if SCALE
 #ifdef __CC65__
   #define dst_ptr zp6p
   #define cur_y zp8p
@@ -293,14 +342,14 @@ static void write_raw(void)
 #endif
   static uint16 *end_orig_x = NULL;
   static uint8 **end_orig_y = NULL;
-#endif
 
-#if SCALE
   if (end_orig_y == NULL) {
     end_orig_y = orig_y_table + scaled_band_height;
     end_orig_x = orig_x_table + FILE_WIDTH;
+  } else if (h == last_band && last_band_crop) {
+    /* Skip end of last band if cropping */
+    end_orig_y = orig_y_table + last_band_crop;
   }
-
 
   /* Scale (nearest neighbor)*/
   dst_ptr = raw_image;
@@ -314,7 +363,7 @@ static void write_raw(void)
       dst_ptr++;
     } while (++cur_orig_x < end_orig_x);
   } while (++cur_orig_y < end_orig_y);
-#endif
+
   fwrite (raw_image, 1, output_write_len, ofp);
 }
 
@@ -324,6 +373,7 @@ static void write_raw(void)
 #pragma inline-stdfuncs(pop)
 
 static void reload_menu(const char *filename) {
+  char buffer[128];
   while (reopen_start_device() != 0) {
     clrscr();
     gotoxy(13, 12);
@@ -331,9 +381,11 @@ static void reload_menu(const char *filename) {
     cgetc();
   }
 
-  if (exec("slowtake", filename) != 0) {
-    printf("Can't exec main program\n");
-    cgetc();
+  if (filename) {
+    sprintf(buffer, "%s %d", filename, effective_width);
+    exec("slowtake", buffer);
+  } else {
+    exec("slowtake", NULL);
   }
 }
 
@@ -349,12 +401,17 @@ int main (int argc, const char **argv)
   printf("Free memory: %zu/%zuB\n", _heapmaxavail(), _heapmemavail());
 #endif
 
-  if (argc < 2) {
+  if (argc < 6) {
     printf("Missing argument.\n");
     goto out;
   }
 
   ifname = argv[1];
+  crop_start_x = atoi(argv[2]);
+  crop_start_y = atoi(argv[3]);
+  crop_end_x   = atoi(argv[4]);
+  crop_end_y   = atoi(argv[5]);
+
 try_again:
   if (!(ifp = fopen (ifname, "rb"))) {
     printf("Please reinsert the disk containing %s,\n"
@@ -368,6 +425,9 @@ try_again:
   if (identify(ifname) != 0) {
     goto out;
   }
+
+  /* Build scaling table */
+  build_scale_table(ofname);
 
   strcpy (ofname, ifname);
 
@@ -384,13 +444,12 @@ try_again:
   printf("Decompressing...\n");
   progress_bar(0, 1, 80*22, 0, height);
 
-  /* Build scaling table */
-  build_scale_table();
-
-  for (h = 0; h < height; h += QT_BAND) {
+  for (h = 0; h < crop_end_y; h += QT_BAND) {
     qt_load_raw(h, QT_BAND);
-    write_raw();
+    if (h >= crop_start_y)
+      write_raw(h);
   }
+
   progress_bar(-1, -1, 80*22, height, height);
 
   fclose(ifp);

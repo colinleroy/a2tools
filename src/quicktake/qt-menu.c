@@ -19,6 +19,8 @@
 #include "qt-edit-image.h"
 #include "qt-serial.h"
 
+#include "runtime_once_clean.h"
+
 #pragma code-name(push, "LOWCODE")
 
 uint8 scrw, scrh;
@@ -35,13 +37,16 @@ static void print_header(uint8 num_pics, uint8 left_pics, uint8 mode, uint8 flas
   gotoxy(0, 0);
   if (camera_connected) {
     printf("%s connected - %d%% battery%s - %02d/%02d/%04d %02d:%02d\n"
-           "%d photos taken, %d left, %s mode, %s flash\n",
+           "%d photos taken, %d left, %s mode, %s flash - ",
           name, battery_level, charging? " (charging)":"",
           time->tm_mday, time->tm_mon, time->tm_year, time->tm_hour, time->tm_min,
           num_pics, left_pics, qt_get_mode_str(mode), qt_get_flash_str(flash_mode));
   } else {
-    printf("No camera connected\n\n");
+    printf("No camera connected\n");
   }
+#ifdef __CC65__
+  printf("Free RAM: %zuB\n", _heapmemavail());
+#endif
   chline(scrw);
 }
 
@@ -253,11 +258,10 @@ static void show_thumbnails(uint8 num_pics) {
   }
 }
 
-int main(int argc, char *argv[])
-{
-  uint8 num_pics, left_pics, mode, choice, flash, batt, charging;
-  char *name;
-  struct tm time;
+#pragma code-name(pop)
+#pragma code-name(push, "RT_ONCE")
+
+static uint8 setup(int argc, char *argv[]) {
 #ifndef __CC65__
   uint16 target_speed = 57600U;
   scrw = 80; scrh = 24;
@@ -278,11 +282,10 @@ int main(int argc, char *argv[])
   clrscr();
   gotoxy(0,20);
   printf("Welcome to Quicktake for Apple II - (c) Colin Leroy-Mira, https://colino.net\n");
-  printf("Free memory: %zuB - ", _heapmemavail());
 #endif
 
-  if (argc > 1) {
-    qt_edit_image(argv[1]);
+  if (argc > 2) {
+    qt_edit_image(argv[1], atoi(argv[2]));
   } else {
     set_scrollwindow(21, scrh);
   }
@@ -291,23 +294,34 @@ int main(int argc, char *argv[])
   unlink(HIST_NAME);
   unlink(TMP_NAME);
 
-  camera_connected = 0;
-connect:
   while (qt_serial_connect(target_speed) != 0) {
     char c;
 
+    printf("Please turn the Quicktake off and on. Try again");
     if (target_speed != 9600)
-      printf("Please turn the Quicktake off and on. Try again at %u or at 9600bps? (Y/n/9)\n", target_speed);
+      printf(" at %u or at 9600bps? (Y/n/9)\n", target_speed);
     else
-      printf("Please turn the Quicktake off and on. Try again? (Y/n)\n");
+      printf("? (Y/n)\n");
 
     c = tolower(cgetc());
     if (c == 'n')
-      goto menu;
+      return 0;
     if(c == '9')
       target_speed = 9600;
   }
-  camera_connected = 1;
+  return 1;
+}
+
+#pragma code-name(pop)
+#pragma code-name(push, "LOWCODE")
+
+int main(int argc, char *argv[])
+{
+  uint8 num_pics, left_pics, mode, choice, flash, batt, charging;
+  char *name;
+  struct tm time;
+
+  camera_connected = setup(argc, argv);
 menu:
   init_text();
   set_scrollwindow(0, scrh);
@@ -321,6 +335,8 @@ menu:
     current_flash_mode = flash;
   }
 
+  runtime_once_clean();
+
   print_header(num_pics, left_pics, mode, flash, batt, charging, name, &time);
 
   set_scrollwindow(4, scrh);
@@ -328,6 +344,11 @@ menu:
 
   choice = tolower(print_menu());
   switch(choice) {
+    case 'c':
+      if (!camera_connected) {
+        exec("slowtake", NULL);
+      }
+      break;
     case 'p':
       if (camera_connected && serial_model != QT_MODEL_200) {
         show_thumbnails(num_pics);
@@ -336,11 +357,6 @@ menu:
     case 'g':
       if (camera_connected) {
         get_one_picture(num_pics);
-      }
-      break;
-    case 'c':
-      if (!camera_connected) {
-        goto connect;
       }
       break;
     case 'd':
