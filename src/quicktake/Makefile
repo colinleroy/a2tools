@@ -31,12 +31,13 @@ slowtake_SOURCES := \
 	../lib/simple_serial.c ../lib/simple_serial_ext.c \
 	../lib/extended_string.c ../lib/malloc0.c \
 	../lib/file_select.c ../lib/progress_bar.c ../lib/hgr.c \
-	../lib/scrollwindow.c
+	../lib/scrollwindow.c \
 
 slowtake_CC65SOURCES := \
 	../lib/dputc.s ../lib/dputs.s ../lib/scroll.s \
 	../lib/clrzone.c ../lib/fastirq$(suffix).s \
-	../lib/platform_sleep.c ../lib/extrazp.s
+	../lib/platform_sleep.c ../lib/extrazp.s \
+	../lib/runtime_once_clean.s
 
 qtktconv_SOURCES := \
 	qt-conv.c qtkt.c  ../lib/path_helper.c ../lib/progress_bar.c

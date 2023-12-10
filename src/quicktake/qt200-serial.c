@@ -37,10 +37,34 @@ extern uint8 scrw, scrh;
 static uint16 response_len;
 static uint8 response_continues;
 
-/* Ent of session */
+static uint8 qt200_send_ping(void);
+static void end_session(void);
+
+#pragma code-name(push, "RT_ONCE")
+/* Wakeup and detect a QuickTake 200
+ * Returns 0 if successful, -1 otherwise
+ */
+uint8 qt200_wakeup(void) {
+  end_session();
+  printf("Pinging QuickTake 200... ");
+
+  if (qt200_send_ping() == 0) {
+    printf("Done.");
+    return 0;
+  } else {
+    printf("Timeout.");
+    return -1;
+  }
+}
+#pragma code-name(pop)
+
+/* End of session */
 static void end_session(void) {
   simple_serial_putc(EOT);
 }
+
+#pragma code-name(push, "LOWCODE")
+
 /* Read a reply from the camera */
 static uint8 read_response(unsigned char *buf, uint16 len, uint8 expect_header) {
   uint8 *cur_buf, *end_buf;
@@ -100,6 +124,9 @@ static uint8 read_response(unsigned char *buf, uint16 len, uint8 expect_header) 
   response_continues = (eot_buf[1] == ETB);
   return 0;
 }
+
+#pragma code-name(pop)
+#pragma code-name(push, "LC")
 
 /* Send a command to the camera */
 static uint8 send_command(const char *cmd, uint8 len, uint8 get_ack, uint8 wait) {
@@ -161,22 +188,6 @@ static uint8 qt200_send_ping(void) {
     return -1;
   }
   return 0;
-}
-
-/* Wakeup and detect a QuickTake 200
- * Returns 0 if successful, -1 otherwise
- */
-uint8 qt200_wakeup(void) {
-  end_session();
-  printf("Pinging QuickTake 200... ");
-
-  if (qt200_send_ping() == 0) {
-    printf("Done.\n");
-    return 0;
-  } else {
-    printf("Timeout.\n");
-    return -1;
-  }
 }
 
 /* Send the speed upgrade command */
@@ -266,8 +277,6 @@ static uint8 qt200_stop(void) {
 #endif
   return qt200_set_speed(9600);
 }
-
-#pragma code-name(push, "LC")
 
 /* Get information from the camera */
 uint8 qt200_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mode, uint8 *flash_mode, uint8 *battery_level, uint8 *charging, char **name, struct tm *time) {
@@ -402,11 +411,7 @@ static uint8 get_data(uint8 n_pic, const char *name) {
   return err;
 }
 
-#pragma code-name(push, "LOWCODE")
-
 /* Get a picture from the camera to a file */
 uint8 qt200_get_picture(uint8 n_pic, const char *filename) {
   return get_data(n_pic, filename);
 }
-
-#pragma code-name(pop)

@@ -6,19 +6,12 @@
 
 #define QT_BAND 20
 
-#define SCALE 1
-
 #define QTKT_MAGIC      "qktk"
 #define QTKN_MAGIC      "qktn"
 #define JPEG_EXIF_MAGIC "\377\330\377\341"
 
-#if SCALE
 #define FILE_WIDTH 256
 #define FILE_HEIGHT HGR_HEIGHT
-#else
-#define FILE_WIDTH width
-#define FILE_HEIGHT height
-#endif
 #define THUMB_WIDTH 80
 #define THUMB_HEIGHT 60
 
