@@ -48,14 +48,14 @@ static uint32 tmp32, tmp32_2;
 #define raw_ptr1 zp6p
 #define raw_ptr2 zp8p
 #define cur_huff zp10ip
-#define huff_18 zp12ip
+#define cur_buf_y zp12ip
 #else
 static uint8 *raw_ptr1;
 static uint8 *raw_ptr2;
 static uint16 *cur_huff;
-static uint16 *huff_18;
-#endif
 static uint16 *cur_buf_y;
+#endif
+static uint16 *huff_18;
 static uint16 *cur_buf_prevy;
 
 static uint16 row_idx, row_idx_plus2, row_idx_shift;
