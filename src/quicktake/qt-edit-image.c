@@ -81,7 +81,7 @@ void qt_convert_image_with_crop(const char *filename, uint16 sx, uint16 sy, uint
 
     get_program_disk();
 
-    snprintf(args, 128, "%s %3d %3d %3d %3d", imgname, sx, sy, ex, ey);
+    snprintf(args, 128, "%s %d %d %d %d", imgname, sx, sy, ex, ey);
 
     if (!strcmp(magic, QTKT_MAGIC)) {
       exec("qtktconv", args);
