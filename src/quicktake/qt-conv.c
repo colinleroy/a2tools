@@ -265,6 +265,7 @@ static uint16 effective_width;
 /* Scales:
  * 640x480 non-cropped        => 256x192, * 4  / 10, bands of 20 end up 8px
  * 640x480 cropped to 512x384 => 256x192, * 5  / 10, bands of 20 end up 10px, crop last band to 4px
+ * 640x480 cropped to 320x240 => 256x192, * 8  / 10, bands of 20 end up 16px
  * 640x480 cropped to 256x192 => 256x192, * 10 / 10, bands of 20 end up 20px, crop last band to 12px
  *
  * 320x240 non-cropped        => 256x192, * 8  / 10, bands of 20 end up 16px
@@ -278,6 +279,10 @@ static void build_scale_table(const char *ofname) {
     switch (effective_width) {
       case 640:
         scaling_factor = 4;
+        break;
+      case 320:
+        scaling_factor = 8;
+        effective_width = 321; /* Prevent re-cropping from menu */
         break;
       case 512:
         scaling_factor = 5;
