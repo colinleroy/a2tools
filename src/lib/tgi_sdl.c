@@ -148,7 +148,7 @@ void tgi_setpixel(int x, int y) {
   
   SDL_UnlockSurface(screen);
 
-  SDL_UpdateRect(screen, 0, 0, X_RES * 2, Y_RES * 2);
+  SDL_UpdateRect(screen, d_x, d_y, 2, 2);
 }
 
 void tgi_line(int x1, int y1, int x2, int y2) {

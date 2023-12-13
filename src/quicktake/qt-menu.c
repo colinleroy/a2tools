@@ -272,6 +272,7 @@ static uint8 setup(int argc, char *argv[]) {
 #else
   uint16 target_speed = 57600U;
 #endif
+#endif
 
   register_start_device();
 
@@ -282,7 +283,6 @@ static uint8 setup(int argc, char *argv[]) {
   clrscr();
   gotoxy(0,20);
   printf("Welcome to Quicktake for Apple II - (c) Colin Leroy-Mira, https://colino.net\n");
-#endif
 
   if (argc > 2) {
     qt_edit_image(argv[1], atoi(argv[2]));

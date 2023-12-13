@@ -17,6 +17,16 @@
 #include "qt-conv.h"
 #include "qt-serial.h"
 
+#ifndef __CC65__
+#include "tgi_compat.h"
+void x86_64_tgi_set(int x, int y, int color) {
+  tgi_setcolor(color);
+  tgi_setpixel(x, y);
+}
+#else
+#define x86_64_tgi_set(x,y,c)
+#endif
+
 extern uint8 scrw, scrh;
 
 #ifdef __CC65__
@@ -131,14 +141,28 @@ fallback_std:
   }
 }
 
+int8 bayer_map[64] = {
+   0, 32,  8, 40,  2, 34, 10, 42,
+  48, 16, 56, 24, 50, 18, 58, 26,
+  12, 44,  4, 36, 14, 46,  6, 38,
+  60, 28, 52, 20, 62, 30, 54, 22,
+   3, 35, 11, 43,  1, 33,  9, 41,
+  51, 19, 59, 27, 49, 17, 57, 25,
+  15, 47,  7, 39, 13, 45,  5, 37,
+  63, 31, 55, 23, 61, 29, 53, 21
+};
+
 static void init_base_addrs (void)
 {
   static uint8 y, base_init_done = 0;
   uint16 x, group_of_eight, line_of_eight, group_of_sixtyfour;
+  uint8 *a, *b;
+  int8 *m;
   if (base_init_done) {
     return;
   }
 
+  /* Fun with HGR memory layout! */
   for (y = 0; y < HGR_HEIGHT; ++y)
   {
     line_of_eight = y % 8;
@@ -147,9 +171,22 @@ static void init_base_addrs (void)
 
     baseaddr[y] = (uint8 *)HGR_PAGE + line_of_eight * 1024 + group_of_eight * 128 + group_of_sixtyfour * 40;
   }
+
+  /* Precompute /7 and %7 from 0 to HGR_WIDTH */
+  a = div7_table + 0;
+  b = mod7_table + 0;
   for (x = 0; x < HGR_WIDTH; x++) {
-    div7_table[x] = x / 7;
-    mod7_table[x] = 1 << (x % 7);
+    *a = x / 7;
+    *b = 1 << (x % 7);
+    a++;
+    b++;
+  }
+
+  /* Fixup (standardize, divide) Bayer map once and for all*/
+  m = bayer_map + 0;
+  for (x = 0; x < 64; x++) {
+    *m = (*m - 32) << 2;
+    m++;
   }
   histogram_equalize();
   base_init_done = 1;
@@ -163,12 +200,21 @@ char HGR_PAGE[HGR_LEN];
 
 static void invert_selection(void) {
   uint16 x, lx, rx;
+#ifdef __CC65__
+  #define y zp6
+  #define a zp8p
+  #define b zp10p
+#else
   uint8 y, *a, *b;
-  /* Scale back */
-  uint16 dsx = crop_start_x * 8 / 20;
-  uint16 dex = crop_end_x * 8 / 20;
-  uint16 dsy = crop_start_y * 8 / 20;
-  uint16 dey = crop_end_y * 8 / 20;
+#endif
+
+  /* Scale back, we use 640x480 based crop values but display
+   * them at 256x192
+   */
+  uint16 dsx = crop_start_x * 4 / 10;
+  uint16 dex = crop_end_x * 4 / 10;
+  uint16 dsy = crop_start_y * 4 / 10;
+  uint16 dey = crop_end_y * 4 / 10;
 
   #define START_OFFSET ((HGR_WIDTH - FILE_WIDTH) / 2)
 
@@ -186,8 +232,9 @@ static void invert_selection(void) {
   }
   /* Invert vertical lines */
   for (y = dsy + 1; y < dey - 1; y++) {
-    a = baseaddr[y] + lx;
-    b = baseaddr[y] + rx;
+    uint8 *by = baseaddr[y];
+    a = by + lx;
+    b = by + rx;
     *a = ~(*a);
     *b = ~(*b);
   }
@@ -398,49 +445,45 @@ static uint8 thumb_buf[THUMB_WIDTH * 2];
 void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint16 p_height, uint8 serial_model) {
   /* Rotation/cropping variables */
   uint8 start_x, i;
-  register uint8 x, end_x;
-  register uint16 dx;
+  uint8 x, end_x;
+  uint16 dx;
+
   uint16 dy;
   uint16 off_x, y, off_y;
   uint16 file_width;
 #ifdef __CC65__
-  #define scaled_dx zp6
-  #define scaled_dy zp7
-  #define prev_scaled_dx zp8
-  #define prev_scaled_dy zp9
+  #define cur_d7 zp6p
+  #define cur_m7 zp8p
   #define buf_ptr zp10p
+  #define ptr zp12p
 #else
-  uint8 scaled_dx, scaled_dy, prev_scaled_dx, prev_scaled_dy;
   uint8 *buf_ptr;
+  uint8 *cur_d7, *cur_m7;
+  uint8 *ptr;
 #endif
+  uint8 scaled_dx, scaled_dy, prev_scaled_dx, prev_scaled_dy;
   int8 xdir, ydir;
   int8 cur_err;
   int8 err2, err1;
 
-  register uint8 *ptr;
   uint8 invert_coords;
 
+  /* Used for both Sierra and Bayer */
+  register int8 *regptr1, *regptr2, *regptr3;
+
   /* Sierra variables */
+  #define cur_err_x_y regptr1
+  #define cur_err_xmin1_yplus1 regptr2
+  #define cur_err_x_yplus1 regptr3
   int16 buf_plus_err;
   int8 *cur_err_line = err;
   int8 *next_err_line;
 
-  int8 *cur_err_xmin1_yplus1;
-  int8 *cur_err_x_y;
-  int8 *cur_err_x_yplus1;
-
   /* Bayer variables */
-  uint8 map[8][8] = {
-    { 1, 49, 13, 61, 4, 52, 16, 64 },
-    { 33, 17, 45, 29, 36, 20, 48, 32 },
-    { 9, 57, 5, 53, 12, 60, 8, 56 },
-    { 41, 25, 37, 21, 44, 28, 40, 24 },
-    { 3, 51, 15, 63, 2, 50, 14, 62 },
-    { 25, 19, 47, 31, 34, 18, 46, 30 },
-    { 11, 59, 7, 55, 10, 58, 6, 54 },
-    { 43, 27, 39, 23, 42, 26, 38, 22 }
-  };
-  uint8 *bayer_map_y;
+  #define bayer_map_x regptr1
+  #define bayer_map_y regptr2
+  #define end_bayer_map_x regptr3
+  int8 *end_bayer_map_y;
 
   uint8 pixel;
   uint8 file_height;
@@ -483,6 +526,7 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
   /* Init to safe value */
   prev_scaled_dx = prev_scaled_dy = 100;
 
+  /* Setup offsets and directions */
   switch (angle) {
     case 0:
       off_x = X_OFFSET;
@@ -528,8 +572,16 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
       break;
   }
 
+  /* Line loop */
+  bayer_map_y = bayer_map + 0;
+  end_bayer_map_y = bayer_map_y + 64;
+
   for(y = 0, dy = off_y; y != file_height;) {
-    if (is_thumb) {
+    
+    /* Load data from file */
+    if (!is_thumb) {
+      fread(buffer, 1, FILE_WIDTH, ifp);
+    } else {
       uint8 a, b, c, d, off;
       /* assume thumbnail at 4bpp and zoom it */
       if (is_qt100) {
@@ -551,7 +603,7 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
       } else {
         unsigned char *cur_in, *cur_out;
         unsigned char *orig_in, *orig_out;
-        /* Why do they do that */
+        /* Whyyyyyy do they do that */
         if (!(y % 4)) {
           /* Expand the next two lines from 4bpp thumb_buf to 8bpp buffer */
           fread(thumb_buf, 1, THUMB_WIDTH, ifp);
@@ -615,8 +667,6 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
           /* Reuse the previous buffer line once for upscaling */
         }
       }
-    } else {
-      fread(buffer, 1, FILE_WIDTH, ifp);
     }
 
     /* Calculate hgr base coordinates for the line */
@@ -642,6 +692,9 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
     buf_ptr = buffer + x;
     dx = off_x;
 
+    cur_d7 = div7_table + dx;
+    cur_m7 = mod7_table + dx;
+
     if (dither_alg == DITHER_SIERRA) {
       /* Rollover next error line */
       int8 *tmp = cur_err_line;
@@ -655,9 +708,11 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
       cur_err_xmin1_yplus1 = cur_err_x_yplus1 - 1;
       err2 = 0;
     } else if (dither_alg == DITHER_BAYER) {
-      bayer_map_y = map[y % 8];
+      bayer_map_x = bayer_map_y + 0;
+      end_bayer_map_x = bayer_map_x + 8;
     }
 
+    /* Column loop */
     do {
       /* Get destination pixel */
       if (invert_coords) {
@@ -675,12 +730,20 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
         ptr = baseaddr[scaled_dx] + cur_hgr_row;
         pixel = cur_hgr_mod;
       } else {
-        ptr = cur_hgr_line + div7_table[dx];
-        pixel = mod7_table[dx];
+        ptr = cur_hgr_line + *cur_d7;
+        pixel = *cur_m7;
       }
 
+#ifndef __CC65__
       opt_val = *buf_ptr;
       opt_val = opt_histogram[opt_val];
+#else
+      /* Compensate optimizer */
+      __asm__("lda   (%v)", buf_ptr);
+      __asm__("tay");
+      __asm__("lda %v,y",   opt_histogram);
+      __asm__("sta %v",     opt_val);
+#endif
       if (brighten) {
         int16 t = opt_val + brighten;
         if (t < 0)
@@ -693,51 +756,118 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
 
       /* Dither */
       if (dither_alg == DITHER_SIERRA) {
-        buf_plus_err = opt_val + *cur_err_x_y + err2;
+        buf_plus_err = opt_val + err2;
+#ifndef __CC65__
+        buf_plus_err += *cur_err_x_y;
+#else
+        __asm__("ldx #$00");
+        __asm__("lda (%v)", cur_err_x_y);
+        __asm__("bpl %g", positive_s);
+        __asm__("dex");
+        positive_s:
+        __asm__("clc");
+        __asm__("adc %v", buf_plus_err);
+        __asm__("sta %v", buf_plus_err);
+        __asm__("txa");
+        __asm__("adc %v+1", buf_plus_err);
+        __asm__("sta %v+1", buf_plus_err);
+#endif
+        cur_err = buf_plus_err;
         if (buf_plus_err < DITHER_THRESHOLD) {
-          cur_err = buf_plus_err;
           /* pixel's already black */
+          x86_64_tgi_set(dx, y, TGI_COLOR_BLACK);
         } else {
-          cur_err = buf_plus_err - 255;
           *ptr |= pixel;
+          x86_64_tgi_set(dx, y, TGI_COLOR_WHITE);
         }
         err2 = cur_err >> 1; /* cur_err * 2 / 4 */
         err1 = err2 >> 1;    /* cur_err * 1 / 4 */
 
         if (x > 0) {
+#ifndef __CC65__
           *cur_err_xmin1_yplus1    += err1;
+#else
+          __asm__("lda (%v)", cur_err_xmin1_yplus1);
+          __asm__("clc");
+          __asm__("adc %v", err1);
+          __asm__("sta (%v)", cur_err_xmin1_yplus1);
+#endif
         }
+#ifndef __CC65__
         *cur_err_x_yplus1          += err1;
+#else
+        __asm__("lda (%v)", cur_err_x_yplus1);
+        __asm__("clc");
+        __asm__("adc %v", err1);
+        __asm__("sta (%v)", cur_err_x_yplus1);
+#endif
+
+        /* Advance cursors */
+        cur_err_x_y++;
+        cur_err_x_yplus1++;
+        cur_err_xmin1_yplus1++;
       } else if (dither_alg == DITHER_BAYER) {
-        uint16 val = opt_val;
-        val += val * bayer_map_y[x % 8] / 63;
-        if (val < DITHER_THRESHOLD) {
+        buf_plus_err = opt_val;
+#ifndef __CC65__
+        buf_plus_err += *bayer_map_x;
+#else
+        __asm__("ldx #$00");
+        __asm__("lda (%v)", bayer_map_x);
+        __asm__("bpl %g", positive_b);
+        __asm__("dex");
+        positive_b:
+        __asm__("clc");
+        __asm__("adc %v", buf_plus_err);
+        __asm__("sta %v", buf_plus_err);
+        __asm__("txa");
+        __asm__("adc %v+1", buf_plus_err);
+        __asm__("sta %v+1", buf_plus_err);
+#endif
+        if (buf_plus_err < DITHER_THRESHOLD) {
+          x86_64_tgi_set(dx, y, TGI_COLOR_BLACK);
         } else {
           *ptr |= pixel;
+          x86_64_tgi_set(dx, y, TGI_COLOR_WHITE);
         }
+        /* Advance Bayer X */
+        bayer_map_x++;
+        if (bayer_map_x == end_bayer_map_x)
+          bayer_map_x = bayer_map_y + 0;
       } else if (dither_alg == DITHER_NONE) {
         if (opt_val < DITHER_THRESHOLD) {
+          x86_64_tgi_set(dx, y, TGI_COLOR_BLACK);
         } else {
           *ptr |= pixel;
+          x86_64_tgi_set(dx, y, TGI_COLOR_WHITE);
         }      
       }
 
 next_pixel:
       x++;
       buf_ptr++;
-      dx += xdir;
-      if (dither_alg == DITHER_SIERRA) {
-        /* shift cursors */
-        cur_err_x_y++;
-        cur_err_x_yplus1++;
-        cur_err_xmin1_yplus1++;
+      if (xdir < 0) {
+        dx--;
+        cur_d7--;
+        cur_m7--;
+      } else {
+        dx++;
+        cur_d7++;
+        cur_m7++;
       }
+
     } while (x != end_x);
     if (y % 16 == 0) {
       progress_bar(-1, -1, scrw, y, file_height);
       if (kbhit()) {
         if (cgetc() == CH_ESC)
           goto stop;
+      }
+    }
+    if (dither_alg == DITHER_BAYER) {
+      /* Advance Bayer Y */
+      bayer_map_y += 8;
+      if (bayer_map_y == end_bayer_map_y) {
+        bayer_map_y = bayer_map + 0;
       }
     }
 next_line:

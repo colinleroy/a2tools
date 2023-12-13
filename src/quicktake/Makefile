@@ -39,6 +39,8 @@ slowtake_CC65SOURCES := \
 	../lib/platform_sleep.c ../lib/extrazp.s \
 	../lib/runtime_once_clean.s
 
+slowtake_GCCSOURCES := ../lib/tgi_sdl.c ../lib/tgi_fastline.c
+
 qtktconv_SOURCES := \
 	qt-conv.c qtkt.c  ../lib/path_helper.c ../lib/progress_bar.c
 qtktconv_CC65SOURCES := ../lib/extrazp.s
@@ -82,7 +84,7 @@ splash.h: splash.hgr
 slowtake.bin: $(slowtake_SOURCES) $(slowtake_CC65SOURCES)
 	cl65 --debug-info -Wl --dbgfile,"slowtake.dbg" $(CFLAGS) $(slowtake_CLCFLAGS) -vm -m slowtake.map -o $@ $^
 
-slowtake.x86_64: $(slowtake_SOURCES) $(GCCSOURCES)
+slowtake.x86_64: $(slowtake_SOURCES) $(slowtake_GCCSOURCES) $(GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@
 
 qtktconv.bin: $(qtktconv_SOURCES) $(qtktconv_CC65SOURCES)
