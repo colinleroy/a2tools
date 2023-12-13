@@ -225,14 +225,14 @@ void qt_load_raw(uint16 top, uint8 h)
       /* add to val */
       __asm__("clc");
       __asm__("adc %v", val);
-      __asm__("sta %v", val);
+      __asm__("tay"); /* Backup A */
       __asm__("txa");
       __asm__("adc %v+1", val);
       __asm__("sta %v+1", val);
+      __asm__("tax"); /* Put high byte back where it belongs */
+      __asm__("tya"); /* Restore A */
 
       /* val < 0 ? */
-      __asm__("lda %v", val);
-      __asm__("ldx %v+1", val);
       __asm__("cpx #$80");
       __asm__("bcs %g", setzero);
       /* > 255 ? */
@@ -312,9 +312,9 @@ void qt_load_raw(uint16 top, uint8 h)
         *(idx) = val;
 #else
       /* *idx << 2 */
-      __asm__("ldy #$00");
+      __asm__("ldx #$00");
       __asm__("lda (%v)", idx);
-      __asm__("sty tmp1");
+      __asm__("stx tmp1");
       __asm__("asl a");
       __asm__("rol tmp1");
       __asm__("asl a");
@@ -323,14 +323,14 @@ void qt_load_raw(uint16 top, uint8 h)
 
       /* + idx_min1 */
       __asm__("clc");
-      __asm__("adc (%v),y", idx_min1);
+      __asm__("adc (%v)", idx_min1);
       __asm__("bcc %g", noof4);
       __asm__("inx");
       noof4:
 
       /* +idx_plus1 */
       __asm__("clc");
-      __asm__("adc (%v),y", idx_plus1);
+      __asm__("adc (%v)", idx_plus1);
       __asm__("bcc %g", noof5);
       __asm__("inx");
       noof5:
