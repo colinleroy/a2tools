@@ -37,6 +37,7 @@
 #include <unistd.h>
 
 #include "hgr.h"
+#include "extrazp.h"
 
 #include "qt-conv.h"
 #include "path_helper.h"
@@ -63,11 +64,20 @@ static const char *ifname;
 static size_t data_offset;
 
 static uint16 cache_offset;
+
+#ifdef __CC65__
+/* Can't use zp* as they're used by codecs,
+ * but can use serial-reserved ZP vars as
+ * we don't do serial */
+#define cur_cache_ptr prev_ram_irq_vector
+#else
 static uint8 *cur_cache_ptr;
+#endif
+
 static uint16 cache_pages_read;
 static uint32 last_seek = 0;
 
-void src_file_seek(uint32 off) {
+void __fastcall__ src_file_seek(uint32 off) {
   fseek(ifp, off, SEEK_SET);
   fread(cache, 1, cache_size, ifp);
   cache_offset = 0;
@@ -76,11 +86,11 @@ void src_file_seek(uint32 off) {
   last_seek = off;
 }
 
-uint32 cache_read_since_inval(void) {
+uint32 __fastcall__ cache_read_since_inval(void) {
   return last_seek + cache_pages_read + cache_offset;
 }
 
-void src_file_get_bytes(uint8 *dst, uint16 count) {
+void __fastcall__ src_file_get_bytes(uint8 *dst, uint16 count) {
   uint16 start, end;
 
   if (cache_offset + count < cache_size) {
@@ -99,7 +109,7 @@ void src_file_get_bytes(uint8 *dst, uint16 count) {
   }
 }
 
-static uint16 src_file_get_uint16(void) {
+static uint16 __fastcall__ src_file_get_uint16(void) {
   uint16 v;
 
   if (cache_offset == cache_size) {
@@ -131,77 +141,410 @@ static uint16 src_file_get_uint16(void) {
 static uint32 tmp;
 static uint8 shift;
 
-#define GETBITS_COMMON() {                                          \
-  if (nbits == 0) {                                                 \
-    bitbuf = 0;                                                     \
-    vbits = 0;                                                      \
-    return 0;                                                       \
-  }                                                                 \
-  if (vbits < nbits) {                                              \
-    FAST_SHIFT_LEFT_8_LONG(bitbuf);                                 \
-    if (cache_offset == cache_size) {                               \
-      fread(cache, 1, cache_size, ifp);                             \
-      cache_offset = 0;                                             \
-      cur_cache_ptr = cache;                                        \
-      cache_pages_read += cache_size;                               \
-    }                                                               \
-    cache_offset++;                                                 \
-    bitbuf += *(cur_cache_ptr++);                                   \
-    vbits += 8;                                                     \
-  }                                                                 \
-  shift = 32-vbits;                                                 \
-  if (shift >= 24) {                                                \
-    FAST_SHIFT_LEFT_24_LONG_TO(bitbuf, tmp);                        \
-  } else if (shift >= 16) {                                         \
-    FAST_SHIFT_LEFT_16_LONG_TO(bitbuf, tmp);                        \
-  } else if (shift >= 8) {                                          \
-    FAST_SHIFT_LEFT_8_LONG_TO(bitbuf, tmp);                         \
-  }                                                                 \
-  shift %= 8;                                                       \
-  if (shift)                                                        \
-    tmp <<= shift;                                                  \
-                                                                    \
-  shift = 32-nbits;                                                 \
-  if (shift >= 24) {                                                \
-    FAST_SHIFT_RIGHT_24_LONG(tmp);                                  \
-  } else if (shift >= 16) {                                         \
-    FAST_SHIFT_RIGHT_16_LONG(tmp);                                  \
-  } else if (shift >= 8) {                                          \
-    FAST_SHIFT_RIGHT_8_LONG(tmp);                                   \
-  }                                                                 \
-  shift %= 8;                                                       \
-  if (shift)                                                        \
-    c = (uint8)(tmp >> shift);                                      \
-  else                                                              \
-    c = (uint8)tmp;                                                 \
-}
-
 /* bithuff state */
 uint32 bitbuf=0;
 uint8 vbits=0;
 
-uint8 getbitnohuff (uint8 nbits)
+uint8 getbitnohuff (uint8 n)
 {
+#ifndef __CC65__
   uint8 c;
+  uint8 nbits = n;
 
-  GETBITS_COMMON();
+  if (nbits == 0) {
+    bitbuf = 0;
+    vbits = 0;
+    return 0;
+  }
+  if (nbits >= vbits) {
+    FAST_SHIFT_LEFT_8_LONG(bitbuf);
+    if (cache_offset == cache_size) {
+      fread(cache, 1, cache_size, ifp);
+      cache_offset = 0;
+      cur_cache_ptr = cache;
+      cache_pages_read += cache_size;
+    }
+    cache_offset++;
+    bitbuf += *(cur_cache_ptr++);
+    vbits += 8;
+  }
+  shift = 32-vbits;
+  if (shift >= 24) {
+    FAST_SHIFT_LEFT_24_LONG_TO(bitbuf, tmp);
+  } else if (shift >= 16) {
+    FAST_SHIFT_LEFT_16_LONG_TO(bitbuf, tmp);
+  } else if (shift >= 8) {
+    FAST_SHIFT_LEFT_8_LONG_TO(bitbuf, tmp);
+  }
+  shift %= 8;
+  if (shift)
+    tmp <<= shift;
+
+  shift = 32-nbits;
+  if (shift >= 24) {
+    FAST_SHIFT_RIGHT_24_LONG(tmp);
+  } else if (shift >= 16) {
+    FAST_SHIFT_RIGHT_16_LONG(tmp);
+  } else if (shift >= 8) {
+    FAST_SHIFT_RIGHT_8_LONG(tmp);
+  }
+  shift %= 8;
+  if (shift)
+    c = (uint8)(tmp >> shift);
+  else
+    c = (uint8)tmp;
 
   vbits -= nbits;
 
   return c;
+#else
+  uint8 nbits = n;
+
+  /* is nbits 0 ? */
+  __asm__("bne %g", nbits_pos);
+  /* Reset vars */
+  __asm__("stz %v", bitbuf);
+  __asm__("stz %v+1", bitbuf);
+  __asm__("stz %v+2", bitbuf);
+  __asm__("stz %v+3", bitbuf);
+  __asm__("stz %v", vbits);
+  /* Return 0 */
+  __asm__("tax");
+  __asm__("jmp incsp1");
+
+  nbits_pos:
+  __asm__("cmp %v", vbits);
+  __asm__("jcc %g", no_read);
+  /* shift bitbuf << 8 */
+  FAST_SHIFT_LEFT_8_LONG(bitbuf);
+  /* Is cache finished? */
+  __asm__("lda %v", cache_size);
+  __asm__("cmp %v", cache_offset);
+  __asm__("bne %g", cache_ok);
+  __asm__("ldx %v+1", cache_size);
+  __asm__("cpx %v+1", cache_offset);
+  __asm__("bne %g", cache_ok);
+
+  /* Read cache */
+  fread(cache, 1, cache_size, ifp);
+  cache_offset = 0;
+  cur_cache_ptr = cache;
+  cache_pages_read += cache_size;
+
+  cache_ok:
+  /* Inc cache offset */
+  __asm__("inc %v", cache_offset);
+  __asm__("bne %g", noof1);
+  __asm__("inc %v+1", cache_offset);
+  noof1:
+  /* bitbuf += *(cur_cache_ptr++); */
+  __asm__("lda %v", bitbuf);
+  __asm__("clc");
+  __asm__("adc (%v)", cur_cache_ptr);
+  __asm__("sta %v", bitbuf);
+  __asm__("bcc %g", noof3);
+  __asm__("inc %v+1", bitbuf);
+  __asm__("bne %g", noof3);
+  __asm__("inc %v+2", bitbuf);
+  __asm__("bne %g", noof3);
+  __asm__("inc %v+3", bitbuf);
+  noof3:
+  /* inc pointer */
+  __asm__("inc %v", cur_cache_ptr);
+  __asm__("bne %g", noof2);
+  __asm__("inc %v+1", cur_cache_ptr);
+
+  noof2:
+  /* vbits += 8; */
+  __asm__("lda #%b", 8);
+  __asm__("clc");
+  __asm__("adc %v", vbits);
+  __asm__("sta %v", vbits);
+
+  no_read:
+  /* shift = 32-vbits; */
+  __asm__("lda #%b", 32);
+  __asm__("sec");
+  __asm__("sbc %v", vbits);
+
+  __asm__("cmp #%b", 24);
+  __asm__("bcc %g", check_l16);
+  FAST_SHIFT_LEFT_24_LONG_TO(bitbuf, tmp);
+  goto finish_left_shift;
+  check_l16:
+  __asm__("cmp #%b", 16);
+  __asm__("bcc %g", check_l8);
+  FAST_SHIFT_LEFT_16_LONG_TO(bitbuf, tmp);
+  goto finish_left_shift;
+  check_l8:
+  __asm__("cmp #%b", 8);
+  __asm__("bcc %g", finish_left_shift);
+  FAST_SHIFT_LEFT_8_LONG_TO(bitbuf, tmp);
+
+  finish_left_shift:
+  /* % 8 */
+  __asm__("and #$07");
+  __asm__("sta %v", shift);
+  if (shift)
+    tmp <<= shift;
+
+  vbits -= nbits;
+
+  /* shift = 32-nbits; */
+  __asm__("lda #%b", 32);
+  __asm__("sec");
+  __asm__("sbc %v", nbits);
+
+  __asm__("cmp #%b", 24);
+  __asm__("bcc %g", check_r16);
+  FAST_SHIFT_RIGHT_24_LONG_SHORT_ONLY(tmp);
+  goto finish_right_shift;
+  check_r16:
+  __asm__("cmp #%b", 16);
+  __asm__("bcc %g", check_r8);
+  FAST_SHIFT_RIGHT_16_LONG_SHORT_ONLY(tmp);
+  goto finish_right_shift;
+  check_r8:
+  __asm__("cmp #%b", 8);
+  __asm__("bcc %g", finish_right_shift);
+  FAST_SHIFT_RIGHT_8_LONG_SHORT_ONLY(tmp);
+
+  finish_right_shift:
+  __asm__("ldx #$00");
+  /* % 8 */
+  __asm__("and #$07");
+
+  /* Should we finish shifting? */
+  __asm__("bne %g", finish_and_return);
+  /* Else we're done! */
+  __asm__("lda %v", tmp);
+  __asm__("jmp incsp1");
+
+  finish_and_return:
+  /* Finish shift */
+  __asm__("tay");
+  __asm__("lda %v", tmp);
+  cont_shift:
+  __asm__("lsr a");
+  __asm__("dey");
+  __asm__("bpl %g", cont_shift);
+  __asm__("rol a");
+  __asm__("jmp incsp1");
+
+  /* Unreachable */
+  return 0;
+#endif
 }
 
-uint8 getbithuff (uint8 nbits, uint16 *huff)
+uint8 getbithuff (uint8 n, uint16 *huff)
 {
   uint8 c;
   uint16 h;
-  GETBITS_COMMON();
+#ifndef __CC65__
+  uint8 nbits = n;
+
+  if (nbits == 0) {
+    bitbuf = 0;
+    vbits = 0;
+    return 0;
+  }
+  if (nbits >= vbits) {
+    FAST_SHIFT_LEFT_8_LONG(bitbuf);
+    if (cache_offset == cache_size) {
+      fread(cache, 1, cache_size, ifp);
+      cache_offset = 0;
+      cur_cache_ptr = cache;
+      cache_pages_read += cache_size;
+    }
+    cache_offset++;
+    bitbuf += *(cur_cache_ptr++);
+    vbits += 8;
+  }
+  shift = 32-vbits;
+  if (shift >= 24) {
+    FAST_SHIFT_LEFT_24_LONG_TO(bitbuf, tmp);
+  } else if (shift >= 16) {
+    FAST_SHIFT_LEFT_16_LONG_TO(bitbuf, tmp);
+  } else if (shift >= 8) {
+    FAST_SHIFT_LEFT_8_LONG_TO(bitbuf, tmp);
+  }
+  shift %= 8;
+  if (shift)
+    tmp <<= shift;
+
+  shift = 32-nbits;
+  if (shift >= 24) {
+    FAST_SHIFT_RIGHT_24_LONG(tmp);
+  } else if (shift >= 16) {
+    FAST_SHIFT_RIGHT_16_LONG(tmp);
+  } else if (shift >= 8) {
+    FAST_SHIFT_RIGHT_8_LONG(tmp);
+  }
+  shift %= 8;
+  if (shift)
+    c = (uint8)(tmp >> shift);
+  else
+    c = (uint8)tmp;
 
   h = huff[c];
   vbits -= h >> 8;
   c = (uint8) h;
 
   return c;
+#else
+  uint8 nbits = n;
+
+  /* is nbits 0 ? */
+  __asm__("bne %g", hnbits_pos);
+  /* Reset vars */
+  __asm__("stz %v", bitbuf);
+  __asm__("stz %v+1", bitbuf);
+  __asm__("stz %v+2", bitbuf);
+  __asm__("stz %v+3", bitbuf);
+  __asm__("stz %v", vbits);
+  /* Return 0 */
+  __asm__("tax");
+  __asm__("jmp incsp3");
+
+  hnbits_pos:
+  __asm__("cmp %v", vbits);
+  __asm__("jcc %g", hno_read);
+  /* shift bitbuf << 8 */
+  FAST_SHIFT_LEFT_8_LONG(bitbuf);
+  /* Is cache finished? */
+  __asm__("lda %v", cache_size);
+  __asm__("cmp %v", cache_offset);
+  __asm__("bne %g", hcache_ok);
+  __asm__("ldx %v+1", cache_size);
+  __asm__("cpx %v+1", cache_offset);
+  __asm__("bne %g", hcache_ok);
+
+  /* Read cache */
+  fread(cache, 1, cache_size, ifp);
+  cache_offset = 0;
+  cur_cache_ptr = cache;
+  cache_pages_read += cache_size;
+
+  hcache_ok:
+  /* Inc cache offset */
+  __asm__("inc %v", cache_offset);
+  __asm__("bne %g", hnoof1);
+  __asm__("inc %v+1", cache_offset);
+  hnoof1:
+  /* bitbuf += *(cur_cache_ptr++); */
+  __asm__("lda %v", bitbuf);
+  __asm__("clc");
+  __asm__("adc (%v)", cur_cache_ptr);
+  __asm__("sta %v", bitbuf);
+  __asm__("bcc %g", hnoof3);
+  __asm__("inc %v+1", bitbuf);
+  __asm__("bne %g", hnoof3);
+  __asm__("inc %v+2", bitbuf);
+  __asm__("bne %g", hnoof3);
+  __asm__("inc %v+3", bitbuf);
+  hnoof3:
+  /* inc pointer */
+  __asm__("inc %v", cur_cache_ptr);
+  __asm__("bne %g", hnoof2);
+  __asm__("inc %v+1", cur_cache_ptr);
+
+  hnoof2:
+  /* vbits += 8; */
+  __asm__("lda #%b", 8);
+  __asm__("clc");
+  __asm__("adc %v", vbits);
+  __asm__("sta %v", vbits);
+
+  hno_read:
+  /* shift = 32-vbits; */
+  __asm__("lda #%b", 32);
+  __asm__("sec");
+  __asm__("sbc %v", vbits);
+
+  __asm__("cmp #%b", 24);
+  __asm__("bcc %g", hcheck_l16);
+  FAST_SHIFT_LEFT_24_LONG_TO(bitbuf, tmp);
+  goto hfinish_left_shift;
+  hcheck_l16:
+  __asm__("cmp #%b", 16);
+  __asm__("bcc %g", hcheck_l8);
+  FAST_SHIFT_LEFT_16_LONG_TO(bitbuf, tmp);
+  goto hfinish_left_shift;
+  hcheck_l8:
+  __asm__("cmp #%b", 8);
+  __asm__("bcc %g", hfinish_left_shift);
+  FAST_SHIFT_LEFT_8_LONG_TO(bitbuf, tmp);
+
+  hfinish_left_shift:
+  /* % 8 */
+  __asm__("and #$07");
+  __asm__("sta %v", shift);
+  if (shift)
+    tmp <<= shift;
+
+  /* shift = 32-nbits; */
+  __asm__("lda #%b", 32);
+  __asm__("sec");
+  __asm__("sbc %v", nbits);
+
+  __asm__("cmp #%b", 24);
+  __asm__("bcc %g", hcheck_r16);
+  FAST_SHIFT_RIGHT_24_LONG_SHORT_ONLY(tmp);
+  goto hfinish_right_shift;
+  hcheck_r16:
+  __asm__("cmp #%b", 16);
+  __asm__("bcc %g", hcheck_r8);
+  FAST_SHIFT_RIGHT_16_LONG_SHORT_ONLY(tmp);
+  goto hfinish_right_shift;
+  hcheck_r8:
+  __asm__("cmp #%b", 8);
+  __asm__("bcc %g", hfinish_right_shift);
+  FAST_SHIFT_RIGHT_8_LONG_SHORT_ONLY(tmp);
+
+  hfinish_right_shift:
+  __asm__("ldx #$00");
+  /* % 8 */
+  __asm__("and #$07");
+
+  /* Should we finish shifting? */
+  __asm__("beq %g", hfinish_and_return);
+
+  /* Finish shift */
+  __asm__("tay");
+  __asm__("lda %v", tmp);
+  hcont_shift:
+  __asm__("lsr a");
+  __asm__("dey");
+  __asm__("bpl %g", hcont_shift);
+  __asm__("rol a");
+  goto do_huff;
+
+  hfinish_and_return:
+  __asm__("lda %v", tmp);
+
+  do_huff:
+  /* h = huff[c]; */
+  __asm__("asl a"); /* shift index because uint16 array */
+  __asm__("bcc %g", hnoof4);
+  __asm__("inx");
+  __asm__("clc");
+  hnoof4:
+  __asm__("ldy #%o", huff);
+  __asm__("adc (sp),y");
+  __asm__("sta ptr1");
+  __asm__("txa");
+  __asm__("iny");
+  __asm__("adc (sp),y");
+  __asm__("sta ptr1+1");
+  __asm__("lda (ptr1),y");
+  __asm__("sta %v+1", h);
+  __asm__("lda (ptr1)");
+  __asm__("sta %v", h);
+
+  vbits -= h >> 8;
+  return (uint8) h;
+#endif
+
 }
 
 #define HDR_LEN 32
@@ -365,7 +708,7 @@ static void write_raw(uint16 h)
   cur_orig_y = orig_y_table + 0;
   do {
     cur_orig_x = orig_x_table + 0;
-    cur_y = *cur_orig_y;
+    cur_y = (uint8 *)*cur_orig_y;
     do {
       *dst_ptr = *(cur_y + *cur_orig_x);
       histogram[*dst_ptr]++;
