@@ -7,6 +7,11 @@
  * Of course don't use them randomly
  */
 
+/* Reserved for serial use */
+extern uint8 *prev_ram_irq_vector;
+extern uint8 *prev_rom_irq_vector;
+extern uint8 a_backup;
+
 extern uint8 zp6;
 extern uint8 zp7;
 extern uint8 zp8;
@@ -57,6 +62,10 @@ extern int16 *zp12sip;
 
 
 #ifdef __CC65__
+#pragma zpsym ("prev_ram_irq_vector")
+#pragma zpsym ("prev_rom_irq_vector")
+#pragma zpsym ("a_backup")
+
 #pragma zpsym ("zp6")
 #pragma zpsym ("zp7")
 #pragma zpsym ("zp8")
