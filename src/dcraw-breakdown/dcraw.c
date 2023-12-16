@@ -44,7 +44,7 @@ unsigned getbithuff (int nbits, uint16 *huff)
   return c;
 }
 
-void quicktake_100_load_raw()
+void quicktake_100_load_raw(uint16 top)
 {
   uint8 pixel[BAND_HEIGHT+4][WIDTH+4];
   static const short gstep[16] =
@@ -67,9 +67,31 @@ void quicktake_100_load_raw()
     654,665,676,687,698,710,721,732,743,754,766,777,788,799,810,822,833,844,
     855,866,878,889,900,911,922,933,945,956,967,978,989,1001,1012,1023 };
   int rb, row, col, sharp, val=0;
-  int first_line = 1, cnt;
-  getbits(-1);
-  memset (pixel, 0x80, sizeof pixel);
+  int first_line = 0, cnt;
+
+  if (top == 0) {
+    getbits(-1);
+    memset (pixel, 0x80, sizeof pixel);
+    first_line = 1;
+  } else {
+    /* Copy the two last computed lines of the last band */
+    for (row = 0; row < 2; row++) {
+      memcpy(pixel[row], pixel[row+BAND_HEIGHT], WIDTH+4);
+    }
+
+    /* Copy the two last computed pixels of the last band.
+     * They're set in the first loop below, if col < 4. If
+     * we don't copy them, a clear diagonal haze descends
+     * from the top left corner of the picture. */
+    pixel[2][0] = pixel[BAND_HEIGHT+2][0];
+    pixel[2][1] = pixel[BAND_HEIGHT+2][1];
+    memset(pixel[2] + 2, 0x80, WIDTH+2);
+
+    /* Reset the rest to grey */
+    for (row = 3; row < BAND_HEIGHT+2; row++) {
+      memset(pixel[row], 0x80, WIDTH+4);
+    }
+  }
   for (row=2; row < BAND_HEIGHT+2; row++) {
     int first_col = 1;
     cnt = 0;
@@ -81,29 +103,12 @@ void quicktake_100_load_raw()
       if (col < 4) {
         pixel[row][col-2] = pixel[row+1][~row & 1] = val;
       }
-      if (row == 2)
+      if (first_line)
         pixel[row-1][col+1] = pixel[row-1][col+3] = val;
     }
     pixel[row][col] = val;
     first_line=0;
   }
-  for (rb=0; rb < 2; rb++)
-    for (row=2+rb; row < BAND_HEIGHT+2; row+=2)
-      for (col=3-(row & 1); col < WIDTH+2; col+=2) {
-        if (row < 4 || col < 4) sharp = 2;
-        else {
-          val = ABS(pixel[row-2][col] - pixel[row][col-2])
-              + ABS(pixel[row-2][col] - pixel[row-2][col-2])
-              + ABS(pixel[row][col-2] - pixel[row-2][col-2]);
-          sharp = val <  4 ? 0 : val <  8 ? 1 : val < 16 ? 2 :
-                  val < 32 ? 3 : val < 48 ? 4 : 5;
-        }
-        val = ((pixel[row-2][col] + pixel[row][col-2]) >> 1)
-              + rstep[sharp][getbits(2)];
-        pixel[row][col] = val = LIM(val,0,255);
-        if (row < 4) pixel[row-2][col+2] = val;
-        if (col < 4) pixel[row+2][col-2] = val;
-      }
   for (row=2; row < BAND_HEIGHT+2; row++)
     for (col=3-(row & 1); col < WIDTH+2; col+=2) {
       val = ((pixel[row][col-1] + (pixel[row][col] << 2) +
@@ -123,7 +128,7 @@ int main(int argc, char *argv[]) {
   fseek(ifp, 736, SEEK_SET);
 
   for (h = 0; h < HEIGHT; h+=BAND_HEIGHT) {
-    quicktake_100_load_raw();
+    quicktake_100_load_raw(h);
     fwrite(raw_image, 1, WIDTH*BAND_HEIGHT, ofp);
   }
   fclose(ifp);
