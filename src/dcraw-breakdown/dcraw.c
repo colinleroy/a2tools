@@ -1,3 +1,128 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "platform.h"
+
+#define WIDTH 640
+#define HEIGHT 480
+uint8 raw_image[WIDTH*HEIGHT];
+
+FILE *fp;
+
+#define RAW(row,col) \
+        raw_image[(row)*WIDTH+(col)]
+#define ABS(x) (((int)(x) ^ ((int)(x) >> 31)) - ((int)(x) >> 31))
+#define MIN(a,b) ((a) < (b) ? (a) : (b))
+#define MAX(a,b) ((a) > (b) ? (a) : (b))
+#define LIM(x,min,max) MAX(min,MIN(x,max))
+
+#define getbits(n) getbithuff(n,0)
+
+unsigned getbithuff (int nbits, uint16 *huff)
+{
+  static unsigned bitbuf=0;
+  static int vbits=0, reset=0;
+  unsigned c;
+
+  if (nbits > 25) return 0;
+  if (nbits < 0)
+    return bitbuf = vbits = reset = 0;
+  if (nbits == 0 || vbits < 0) return 0;
+  while (!reset && vbits < nbits && (c = fgetc(fp)) != EOF &&
+    !(c == 0xff && fgetc(fp))) {
+    bitbuf = (bitbuf << 8) + (uint8) c;
+    vbits += 8;
+  }
+  c = bitbuf << (32-vbits) >> (32-nbits);
+  if (huff) {
+    vbits -= huff[c] >> 8;
+    c = (uint8) huff[c];
+  } else
+    vbits -= nbits;
+  if (vbits < 0) exit(1);
+  return c;
+}
+
+void quicktake_100_load_raw()
+{
+  uint8 pixel[HEIGHT+4][WIDTH+4];
+  static const short gstep[16] =
+  { -89,-60,-44,-32,-22,-15,-8,-2,2,8,15,22,32,44,60,89 };
+  static const short rstep[6][4] =
+  { {  -3,-1,1,3  }, {  -5,-1,1,5  }, {  -8,-2,2,8  },
+    { -13,-3,3,13 }, { -19,-4,4,19 }, { -28,-6,6,28 } };
+  static const short curve[256] =
+  { 0,1,2,3,4,5,6,7,8,9,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,
+    28,29,30,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,53,
+    54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,74,75,76,77,78,
+    79,80,81,82,83,84,86,88,90,92,94,97,99,101,103,105,107,110,112,114,116,
+    118,120,123,125,127,129,131,134,136,138,140,142,144,147,149,151,153,155,
+    158,160,162,164,166,168,171,173,175,177,179,181,184,186,188,190,192,195,
+    197,199,201,203,205,208,210,212,214,216,218,221,223,226,230,235,239,244,
+    248,252,257,261,265,270,274,278,283,287,291,296,300,305,309,313,318,322,
+    326,331,335,339,344,348,352,357,361,365,370,374,379,383,387,392,396,400,
+    405,409,413,418,422,426,431,435,440,444,448,453,457,461,466,470,474,479,
+    483,487,492,496,500,508,519,531,542,553,564,575,587,598,609,620,631,643,
+    654,665,676,687,698,710,721,732,743,754,766,777,788,799,810,822,833,844,
+    855,866,878,889,900,911,922,933,945,956,967,978,989,1001,1012,1023 };
+  int rb, row, col, sharp, val=0;
+  int first_line = 1, cnt;
+  getbits(-1);
+  memset (pixel, 0x80, sizeof pixel);
+  for (row=2; row < HEIGHT+2; row++) {
+    int first_col = 1;
+    cnt = 0;
+    for (col=2+(row & 1); col < WIDTH+2; col+=2) {
+      val = ((pixel[row-1][col-1] + 2*pixel[row-1][col+1] +
+                pixel[row][col-2]) >> 2) + gstep[getbits(4)];
+
+      pixel[row][col] = val = LIM(val,0,255);
+      if (col < 4) {
+        pixel[row][col-2] = pixel[row+1][~row & 1] = val;
+      }
+      if (row == 2)
+        pixel[row-1][col+1] = pixel[row-1][col+3] = val;
+    }
+    pixel[row][col] = val;
+    first_line=0;
+  }
+  for (rb=0; rb < 2; rb++)
+    for (row=2+rb; row < HEIGHT+2; row+=2)
+      for (col=3-(row & 1); col < WIDTH+2; col+=2) {
+        if (row < 4 || col < 4) sharp = 2;
+        else {
+          val = ABS(pixel[row-2][col] - pixel[row][col-2])
+              + ABS(pixel[row-2][col] - pixel[row-2][col-2])
+              + ABS(pixel[row][col-2] - pixel[row-2][col-2]);
+          sharp = val <  4 ? 0 : val <  8 ? 1 : val < 16 ? 2 :
+                  val < 32 ? 3 : val < 48 ? 4 : 5;
+        }
+        val = ((pixel[row-2][col] + pixel[row][col-2]) >> 1)
+              + rstep[sharp][getbits(2)];
+        pixel[row][col] = val = LIM(val,0,255);
+        if (row < 4) pixel[row-2][col+2] = val;
+        if (col < 4) pixel[row+2][col-2] = val;
+      }
+  for (row=2; row < HEIGHT+2; row++)
+    for (col=3-(row & 1); col < WIDTH+2; col+=2) {
+      val = ((pixel[row][col-1] + (pixel[row][col] << 2) +
+              pixel[row][col+1]) >> 1) - 0x100;
+      pixel[row][col] = LIM(val,0,255);
+    }
+   for (row=0; row < HEIGHT; row++)
+     for (col=0; col < WIDTH; col++)
+       RAW(row,col) = pixel[row+2][col+2];
+}
+
 int main(int argc, char *argv[]) {
+  fp = fopen("test.qtk", "r");
   
+  fseek(fp, 736, SEEK_SET);
+
+  quicktake_100_load_raw();
+  fclose(fp);
+
+  fp = fopen("out.raw","w");
+  fwrite(raw_image, 1, 640*480, fp);
+  fclose(fp);
 }
