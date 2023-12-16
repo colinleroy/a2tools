@@ -17,7 +17,7 @@
   uint8 cache[<of cache_size size>];
 
   and the decoding function:
-  void qt_load_raw(uint16 top, uint8 h)
+  void qt_load_raw(uint16 top)
 
   This file provides the actual uint16 height and width to the decoder.
   uint16 raw_image_size;
@@ -145,7 +145,7 @@ static uint8 shift;
 uint32 bitbuf=0;
 uint8 vbits=0;
 
-uint8 getbitnohuff (uint8 n)
+uint8 __fastcall__ getbitnohuff (uint8 n)
 {
 #ifndef __CC65__
   uint8 c;
@@ -336,11 +336,11 @@ uint8 getbitnohuff (uint8 n)
 #endif
 }
 
-uint8 getbithuff (uint8 n, uint16 *huff)
+uint8 __fastcall__ getbithuff (uint8 n)
 {
-  uint8 c;
-  uint16 h;
 #ifndef __CC65__
+  uint16 h;
+  uint8 c;
   uint8 nbits = n;
 
   if (nbits == 0) {
@@ -386,7 +386,7 @@ uint8 getbithuff (uint8 n, uint16 *huff)
   else
     c = (uint8)tmp;
 
-  h = huff[c];
+  h = huff_ptr[c];
   vbits -= h >> 8;
   c = (uint8) h;
 
@@ -529,20 +529,24 @@ uint8 getbithuff (uint8 n, uint16 *huff)
   __asm__("inx");
   __asm__("clc");
   hnoof4:
-  __asm__("ldy #%o", huff);
-  __asm__("adc (sp),y");
+  __asm__("adc %v", huff_ptr);
   __asm__("sta ptr1");
   __asm__("txa");
-  __asm__("iny");
-  __asm__("adc (sp),y");
+  __asm__("adc %v+1", huff_ptr);
   __asm__("sta ptr1+1");
+  __asm__("ldy #$01");
   __asm__("lda (ptr1),y");
-  __asm__("sta %v+1", h);
+  /* h>>8: We don't care about low byte yet */
+  __asm__("eor #$FF");
+  __asm__("sec");
+  __asm__("adc %v", vbits);
+  __asm__("sta %v", vbits);
+  /* Return h low byte */
+  __asm__("ldx #$00");
   __asm__("lda (ptr1)");
-  __asm__("sta %v", h);
-
-  vbits -= h >> 8;
-  return (uint8) h;
+  __asm__("jmp incsp1");
+  /* unreachable */
+  return 0;
 #endif
 
 }
@@ -778,9 +782,6 @@ try_again:
     goto out;
   }
 
-  /* Build scaling table */
-  build_scale_table(ofname);
-
   strcpy (ofname, ifname);
 
   ofp = fopen (TMP_NAME, "wb");
@@ -791,13 +792,14 @@ try_again:
   }
 
   memset(raw_image, 0, raw_image_size);
+  build_scale_table(ofname);
 
   clrscr();
   printf("Decompressing...\n");
   progress_bar(0, 1, 80*22, 0, height);
 
   for (h = 0; h < crop_end_y; h += QT_BAND) {
-    qt_load_raw(h, QT_BAND);
+    qt_load_raw(h);
     if (h >= crop_start_y)
       write_raw(h);
   }
