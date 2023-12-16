@@ -44,10 +44,12 @@ extern uint8 cache[];
 extern uint16 cache_size;
 
 void __fastcall__ src_file_get_bytes(uint8 *dst, uint16 count);
-uint8 getbithuff (uint8 nbits, uint16 *huff);
-uint8 getbitnohuff (uint8 nbits);
 
-void qt_load_raw(uint16 top, uint8 h);
+extern uint16 *huff_ptr;
+uint8 __fastcall__ getbithuff (uint8 nbits);
+uint8 __fastcall__ getbitnohuff (uint8 nbits);
+
+void qt_load_raw(uint16 top);
 
 #define RAW(row,col) raw_image[((row)*width)+(col)]
 #define RAW_IDX(row,col) (((row)*width)+(col))

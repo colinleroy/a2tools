@@ -30,6 +30,7 @@ char magic[5] = JPEG_EXIF_MAGIC;
 char *model = "200";
 uint16 cache_size = 4096;
 uint8 cache[4096];
+uint16 *huff_ptr;
 
 #pragma inline-stdfuncs(push, on)
 #pragma allow-eager-inline(push, on)
@@ -2215,7 +2216,7 @@ static uint16 decoded_width, decoded_height;
 static uint8 m_comps;
 static uint16 y, x;
 
-void qt_load_raw(uint16 top, uint8 h)
+void qt_load_raw(uint16 top)
 {
    if (top == 0) {
      status = pjpeg_decode_init(&image_info);
@@ -2240,7 +2241,7 @@ void qt_load_raw(uint16 top, uint8 h)
    row_pitch = decoded_width * m_comps;
 
   }
-  memset(raw_image, 0, decoded_width * m_comps * h);
+  memset(raw_image, 0, decoded_width * m_comps * QT_BAND);
    for ( ; ; )
    {
       uint8 *pDst_row;

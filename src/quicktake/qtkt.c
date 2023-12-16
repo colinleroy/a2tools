@@ -35,16 +35,13 @@ uint16 cache_size = 4096;
 uint8 cache[4096];
 
 /* bitbuff state at end of first loop */
-static uint32 prev_bitbuf_a = 0;
-static uint8 prev_vbits_a = 0;
-static uint32 prev_offset_a = 0;
+uint16 *huff_ptr = NULL;
+uint8 *dst, *src;
 
 /* Pointer arithmetic helpers */
-static uint8 h_plus1, h_plus2, h_plus4;
 static uint16 width_plus2, width_plus1;
 static uint16 pgbar_state;
-static uint16 threepxband_size, work_size;
-static uint16 band_size;
+static uint16 twopxband_size, work_size;
 static uint8 *last_two_lines, *third_line;
 static uint8 at_very_first_line;
 
@@ -52,7 +49,6 @@ static const uint8 gstep[16] =
 { 89,60,44,32,22,15,8,2,2,8,15,22,32,44,60,89 };
 #define NEG_STEPS 7
 
-static uint8 *src, *dst;
 #ifdef __CC65__
 #define idx_forward zp6p
 #define idx_behind zp8p
@@ -64,19 +60,20 @@ uint8 *idx_behind;
 uint8 *idx_end;
 uint8 *idx_behind_plus2;
 #endif
-uint8 val_col_minus2;
+uint8 val_col_minus2, val_col_minus2_save;
 
 /* Reuse same vars in another place */
 #define idx_min1 idx_behind
 #define idx_plus1 idx_forward
 
-static uint8 *pix_direct_row[QT_BAND+5];
 
 /* Internal buffer */
 #define PIX_WIDTH 644
-static uint8 pixel[(QT_BAND+5)*PIX_WIDTH];
+/* Two extra bytes for row+1,~row-1 scratch value */
+static uint8 pixel[(QT_BAND + 4)*PIX_WIDTH + 2];
+static uint8 *pix_direct_row[QT_BAND + 5];
 
-void qt_load_raw(uint16 top, uint8 h)
+void qt_load_raw(uint16 top)
 {
   register uint8 *idx;
   register uint8 at_very_first_col;
@@ -87,60 +84,56 @@ void qt_load_raw(uint16 top, uint8 h)
     getbits(0);
 
     for (row = 0; row < QT_BAND + 5; row++) {
-      pix_direct_row[row] = pixel + (row * width);
+      pix_direct_row[row] = pixel + (row * PIX_WIDTH);
     }
 
     at_very_first_line = 1;
-    h_plus1 = h + 1;
-    h_plus2 = h_plus1 + 1;
-    h_plus4 = h_plus2 + 2;
     width_plus1 = width + 1;
     width_plus2 = width_plus1 + 1;
 
     pgbar_state = 0;
-    band_size = h * width;
-    /* calculate offsets to shift the last lines */
-    threepxband_size = 3*width;
-    work_size = sizeof pixel - threepxband_size;
-    last_two_lines = pix_direct_row[QT_BAND + 2];
-    third_line = pix_direct_row[3];
+    /* calculate offsets to shift the last two lines + 2px */
+    twopxband_size = 2*PIX_WIDTH + 2;
+    work_size = sizeof pixel - twopxband_size;
+    last_two_lines = pix_direct_row[QT_BAND];
+    third_line = pix_direct_row[2] + 2;
     memset (pixel, 0x80, sizeof pixel);
-
-    /* Move offset at end of band */
-    src = pix_direct_row[2] + 2;
-    dst = raw_image;
   } else {
     /* Shift last pixel lines to start */
-    memcpy(pixel, last_two_lines, threepxband_size);
+    memcpy(pixel, last_two_lines, twopxband_size);
     /* And reset the others */
     memset (third_line, 0x80, work_size);
-
-    /* Reset bitbuf where it should be */
-    bitbuf = prev_bitbuf_a;
-    vbits = prev_vbits_a;
-    src_file_seek(prev_offset_a);
   }
 
-  idx_end = src;
-  for (row = 2; row != h_plus4; row++) {
-    idx_end = idx = idx_end - 2;
+  src = pix_direct_row[2];
+  for (row = 2; row != QT_BAND + 2; row++) {
+    int cnt = 0;
+    idx_forward = idx_end = idx = src;
     if (row & 1) {
       idx++;
-      if (row < h_plus2) {
-        pgbar_state++;
-        pgbar_state++;
-        progress_bar(-1, -1, 80*22, pgbar_state, height);
-      }
+      pgbar_state++;
+      pgbar_state++;
+      progress_bar(-1, -1, 80*22, pgbar_state, height);
+    } else {
+      idx_forward++;
     }
-    val_col_minus2 = *(idx);
+    val_col_minus2 = (*idx);
     idx++;
     idx++;
 
-    idx_forward = idx_behind = idx;
+    idx_behind = idx;
 
-    idx_behind -= width_plus1;
+    /* row-1, col-1 */
+    idx_behind -= (PIX_WIDTH+1);
+    /* row-1, col+1 */
     idx_behind_plus2 = idx_behind + 2;
-    idx_forward += width;
+    /* row+1, ~row & 1 */
+    idx_forward += PIX_WIDTH;
+
+    /* Shift for next line */
+    src += PIX_WIDTH;
+
+    /* Width to decode: image width, not scratch buffer width */
     idx_end += width_plus2;
 
     at_very_first_col = 1;
@@ -169,7 +162,7 @@ void qt_load_raw(uint16 top, uint8 h)
       __asm__("lda #4");
       __asm__("jsr %v", getbitnohuff);
       __asm__("tay");
-      
+
       /* if h > NEG_STEPS */
       __asm__("cmp #%b", NEG_STEPS + 1);
       __asm__("bcc %g", h_neg);
@@ -248,20 +241,19 @@ void qt_load_raw(uint16 top, uint8 h)
       __asm__("sta %v", val);   /* set val */
       __asm__("sta (%v)", idx);
       __asm__("sta %v", val_col_minus2);
-#endif
 
+#endif
       idx_behind = idx_behind_plus2++;
       idx_behind_plus2++;
+
+      if (at_very_first_col) {
+        *(idx_forward) = *(idx - 2) = val;
+        at_very_first_col = 0;
+      }
 
       if (at_very_first_line) {
         /* row-1,col+1 / row-1,col+3*/
         *(idx_behind) = *(idx_behind_plus2) = val;
-      }
-
-      if (at_very_first_col) {
-        /* row, col-2 */
-        *(idx - 2) = *(idx_forward + (~row & 1)) = val;
-        at_very_first_col = 0;
       }
 
       idx++;
@@ -269,34 +261,24 @@ void qt_load_raw(uint16 top, uint8 h)
     }
 
     *(idx) = val;
-
-    if(row == h_plus1) {
-      /* Save bitbuf state at end of first loop */
-      prev_bitbuf_a = bitbuf;
-      prev_vbits_a = vbits;
-      prev_offset_a = cache_read_since_inval();
-      if (top == 460) {
-        break;
-      }
-    }
     at_very_first_line = 0;
   }
 
-  idx_end = src;
-  for (row = 2; row != h_plus2; row++) {
-    idx_end = idx = idx_end - 2;
+  src = pix_direct_row[2];
+  for (row = 2; row != QT_BAND + 2; row++) {
+    idx_end = idx = src;
 
     idx++;
     if (row & 1) {
-      idx_min1 = idx;
-      idx++;
+      idx_min1 = idx++;
     } else {
       idx++;
-      idx_min1 = idx;
-      idx++;
+      idx_min1 = idx++;
     }
     idx_plus1 = idx + 1;
     idx_end += width_plus2;
+    src += PIX_WIDTH;
+
     while (idx < idx_end) {
 #ifndef __CC65__
       val = ((*(idx_min1) // row,col-1
@@ -310,6 +292,10 @@ void qt_load_raw(uint16 top, uint8 h)
         *(idx) = 255;
       else
         *(idx) = val;
+
+      idx_min1 = ++idx;
+      idx_plus1 = ++idx;
+      idx_plus1++;
 #else
       /* *idx << 2 */
       __asm__("ldx #$00");
@@ -341,7 +327,7 @@ void qt_load_raw(uint16 top, uint8 h)
       __asm__("ror tmp1");
       __asm__("ror a");
       __asm__("ldx tmp1");
-      
+
       /* - 0x100 */
       __asm__("dex");
 
@@ -357,16 +343,41 @@ void qt_load_raw(uint16 top, uint8 h)
       __asm__("lda #$00");
       done2:
       __asm__("sta (%v)", idx); /* set idx */
-#endif
 
-      idx_min1 = ++idx;
-      idx_plus1 = ++idx;
-      idx_plus1++;
+      /* shift indexes */
+      __asm__("ldx %v+1", idx);
+      __asm__("lda %v", idx);
+      __asm__("ina");
+      __asm__("bne %g", noof6);
+      __asm__("inx");
+      noof6:
+      __asm__("stx %v+1", idx_min1);
+      __asm__("sta %v", idx_min1);
+      __asm__("ina");
+      __asm__("bne %g", noof7);
+      __asm__("inx");
+      noof7:
+      __asm__("stx %v+1", idx);
+      __asm__("sta %v", idx);
+      __asm__("ina");
+      __asm__("bne %g", noof8);
+      __asm__("inx");
+      noof8:
+      __asm__("stx %v+1", idx_plus1);
+      __asm__("sta %v", idx_plus1);
+#endif
     }
+    idx++;
+    idx++;
   }
 
-  /* Move from tmp pixel array to raw_image */
-  memcpy(dst, src, band_size);
+  dst = raw_image;
+  src = pix_direct_row[2] + 2;
+  for (row = 0; row < QT_BAND; row++) {
+    memcpy(dst, src, width);
+    dst+=width;
+    src+=PIX_WIDTH;
+  }
 }
 
 #pragma register-vars(pop)
