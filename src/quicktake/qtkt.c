@@ -33,22 +33,30 @@ char magic[5] = QTKT_MAGIC;
 char *model = "100";
 uint16 cache_size = 4096;
 uint8 cache[4096];
-
-/* bitbuff state at end of first loop */
-uint16 *huff_ptr = NULL;
+uint16 *huff_ptr = NULL; /* unused here, just for linking */
 uint8 *dst, *src;
 
 /* Pointer arithmetic helpers */
-static uint16 width_plus2, width_plus1;
+static uint16 width_plus2;
 static uint16 pgbar_state;
 static uint16 twopxband_size, work_size;
 static uint8 *last_two_lines, *third_line;
 static uint8 at_very_first_line;
 
+/* Decoding stuff. The values from 0-7 are negative
+ * but we reverse them when we use them for optimisation 
+ */
 static const uint8 gstep[16] =
 { 89,60,44,32,22,15,8,2,2,8,15,22,32,44,60,89 };
 #define NEG_STEPS 7
 
+/* Indexes. We need to follow the current pixel (at idx) at
+ * various places: 
+ * idx_forward is start of the next row,
+ * idx_behind is row-1, col-1,
+ * idx_behind_plus2 is row-1, col-3,
+ * idx_end is where we stop to finish a line
+ */
 #ifdef __CC65__
 #define idx_forward zp6p
 #define idx_behind zp8p
@@ -62,14 +70,23 @@ uint8 *idx_behind_plus2;
 #endif
 uint8 val_col_minus2, val_col_minus2_save;
 
-/* Reuse same vars in another place */
+/* Reuse same vars in the second loop.
+ * idx_min1 is row,col-1,
+ * idx_plus1 is row,col+1
+ */
 #define idx_min1 idx_behind
 #define idx_plus1 idx_forward
 
 
-/* Internal buffer */
+/* Internal data buffer
+ * We don't use the destination raw_image directly,
+ * because the algorithm uses two pixels bands top,
+ * left, right and bottom as scratch. So we need a
+ * 24x644 buffer to decode our 20x640 band. We add
+ * two pixels on a 25th line because they are re-
+ * used at the start of the next band.
+ */
 #define PIX_WIDTH 644
-/* Two extra bytes for row+1,~row-1 scratch value */
 static uint8 pixel[(QT_BAND + 4)*PIX_WIDTH + 2];
 static uint8 *pix_direct_row[QT_BAND + 5];
 
@@ -77,34 +94,42 @@ void qt_load_raw(uint16 top)
 {
   register uint8 *idx;
   register uint8 at_very_first_col;
-  register uint8 row; /* Can be 8bits as limited to h */
+  register uint8 row;
   register int16 val;
 
+  /* First band: init variables */
   if (top == 0) {
     getbits(0);
 
+    at_very_first_line = 1;
+    width_plus2 = width + 2;
+    pgbar_state = 0;
+
+    /* Init direct pointers to each line */
     for (row = 0; row < QT_BAND + 5; row++) {
       pix_direct_row[row] = pixel + (row * PIX_WIDTH);
     }
 
-    at_very_first_line = 1;
-    width_plus1 = width + 1;
-    width_plus2 = width_plus1 + 1;
-
-    pgbar_state = 0;
-    /* calculate offsets to shift the last two lines + 2px */
+    /* calculate offsets to shift the last two lines + 2px 
+     * from the end of the previous band to the start of
+     * the new one.
+     */
     twopxband_size = 2*PIX_WIDTH + 2;
     work_size = sizeof pixel - twopxband_size;
     last_two_lines = pix_direct_row[QT_BAND];
     third_line = pix_direct_row[2] + 2;
+
+    /* Init the whole buffer with grey. */
     memset (pixel, 0x80, sizeof pixel);
   } else {
-    /* Shift last pixel lines to start */
+    /* Shift the last band's last 2 lines, plus 2 pixels,
+     * to the start of the new band. */
     memcpy(pixel, last_two_lines, twopxband_size);
-    /* And reset the others */
+    /* And reset the others to grey */
     memset (third_line, 0x80, work_size);
   }
 
+  /* We start at line 2. */
   src = pix_direct_row[2];
   for (row = 2; row != QT_BAND + 2; row++) {
     int cnt = 0;
