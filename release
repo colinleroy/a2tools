@@ -1,5 +1,10 @@
 #!/bin/bash
 
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [ "$BRANCH" != "master" ];
+	echo Not on release branch
+	exit 1
+fi
 rm *.dsk
 make clean all dist upload
 make clean all dist upload IIGS=1

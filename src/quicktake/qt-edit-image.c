@@ -415,6 +415,11 @@ save:
   if ((cp = strrchr ((char *)buffer, '.')))
     *cp = 0;
   strcat ((char *)buffer, ".hgr");
+  dputs("Save to: ");
+  dget_text(buffer, 63, NULL, 0);
+  if (buffer[0] == '\0') {
+    goto start_edit;
+  }
 
   ofp = fopen((char *)buffer, "w");
   if (ofp == NULL) {
@@ -423,14 +428,24 @@ save:
       goto save;
     goto start_edit;
   }
-  printf("\nSaving %s...\n", (char *)buffer);
+  printf("Saving %s...\n", (char *)buffer);
   fseek(ofp, 0, SEEK_SET);
-  fwrite((char *)HGR_PAGE, 1, HGR_LEN, ofp);
+  if (fwrite((char *)HGR_PAGE, 1, HGR_LEN, ofp) < HGR_LEN) {
+    printf("Error saving file. Press a key to continue...\n");
+    cgetc();
+    goto start_edit;
+  }
   fclose(ofp);
+
+  printf("Done. Go back to Edition or main Menu? (E/m)");
+  c = tolower(cgetc());
+  if (c != 'm') {
+    goto start_edit;
+  }
 done:
   hgr_mixoff();
   init_text();
-  printf("\n");
+
   return 0;
 }
 
