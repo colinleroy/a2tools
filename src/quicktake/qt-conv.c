@@ -404,7 +404,7 @@ uint8 __fastcall__ getbithuff (uint8 n)
   __asm__("stz %v", vbits);
   /* Return 0 */
   __asm__("tax");
-  __asm__("jmp incsp3");
+  __asm__("jmp incsp1");
 
   hnbits_pos:
   __asm__("cmp %v", vbits);
