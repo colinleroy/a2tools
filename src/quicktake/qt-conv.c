@@ -712,12 +712,43 @@ static void write_raw(uint16 h)
   cur_orig_y = orig_y_table + 0;
   do {
     cur_orig_x = orig_x_table + 0;
+#ifndef __CC65__
     cur_y = (uint8 *)*cur_orig_y;
     do {
       *dst_ptr = *(cur_y + *cur_orig_x);
       histogram[*dst_ptr]++;
       dst_ptr++;
     } while (++cur_orig_x < end_orig_x);
+#else
+    next_x:
+    /* *dst_ptr = *(*cur_orig_y + *cur_orig_x); */
+    __asm__("clc");
+    __asm__("lda (%v)", cur_orig_x);
+    __asm__("adc (%v)", cur_orig_y);
+    __asm__("sta ptr1");
+    __asm__("ldy #$01");
+    __asm__("lda (%v),y", cur_orig_x);
+    __asm__("adc (%v),y", cur_orig_y);
+    __asm__("sta ptr1+1");
+    __asm__("lda (ptr1)");
+    __asm__("sta (%v)", dst_ptr);
+
+    histogram[*dst_ptr]++;
+    dst_ptr++;
+    /* ++cur_orig_x */
+    __asm__("lda #$02");
+    __asm__("clc");
+    __asm__("adc %v", cur_orig_x);
+    __asm__("sta %v", cur_orig_x);
+    __asm__("bcc %g", noof5);
+    __asm__("inc %v+1", cur_orig_x);
+    noof5:
+    /* < end_orig_x ? */
+    __asm__("cmp %v", end_orig_x);
+    __asm__("lda %v+1", cur_orig_x);
+    __asm__("sbc %v+1", end_orig_x);
+    __asm__("bcc %g", next_x);
+#endif
   } while (++cur_orig_y < end_orig_y);
 
   fwrite (raw_image, 1, output_write_len, ofp);
