@@ -34,7 +34,7 @@ uint16 *huff_ptr;
 
 #pragma inline-stdfuncs(push, on)
 #pragma allow-eager-inline(push, on)
-#pragma codesize(push, 200)
+#pragma codesize(push, 600)
 #pragma register-vars(push, on)
 
 //------------------------------------------------------------------------------
@@ -178,10 +178,6 @@ static int16 gCoeffBuf[8*8];
 
 // 8*8*4 bytes * 3 = 768
 static uint8 gMCUBufG[256];
-#if FULL_DECODE
-static uint8 gMCUBufR[256];
-static uint8 gMCUBufB[256];
-#endif
 // 256 bytes
 static int16 gQuant0[8*8];
 static int16 gQuant1[8*8];
@@ -1060,67 +1056,6 @@ static uint8 processRestart(void)
    return 0;
 }
 
-#if FULL_DECODE
-//------------------------------------------------------------------------------
-// FIXME: findEOI() is not actually called at the end of the image 
-// (it's optional, and probably not needed on embedded devices)
-static uint8 findEOI(void)
-{
-   uint8 c;
-   uint8 status;
-
-   // Prime the bit buffer
-   gBitsLeft = 8;
-   getBits1(8);
-   getBits1(8);
-
-   // The next marker _should_ be EOI
-   status = processMarkers(&c);
-   if (status)
-      return status;
-   else if (gCallbackStatus)
-      return gCallbackStatus;
-   
-   //gTotalBytesRead -= in_buf_left;
-   if (c != M_EOI)
-      return PJPG_UNEXPECTED_MARKER;
-   
-   return 0;
-}
-
-//------------------------------------------------------------------------------
-static uint8 checkHuffTables(void)
-{
-   uint8 i;
-
-   for (i = 0; i < gCompsInScan; i++)
-   {
-      uint8 compDCTab = gCompDCTab[gCompList[i]];
-      uint8 compACTab = gCompACTab[gCompList[i]] + 2;
-      
-      if ( ((gValidHuffTables & (1 << compDCTab)) == 0) ||
-           ((gValidHuffTables & (1 << compACTab)) == 0) )
-         return PJPG_UNDEFINED_HUFF_TABLE;           
-   }
-   
-   return 0;
-}
-//------------------------------------------------------------------------------
-static uint8 checkQuantTables(void)
-{
-   uint8 i;
-
-   for (i = 0; i < gCompsInScan; i++)
-   {
-      uint8 compQuantMask = gCompQuant[gCompList[i]] ? 2 : 1;
-      
-      if ((gValidQuantTables & compQuantMask) == 0)
-         return PJPG_UNDEFINED_QUANT_TABLE;
-   }         
-
-   return 0;         
-}
-#endif
 //------------------------------------------------------------------------------
 static uint8 initScan(void)
 {
@@ -1130,16 +1065,6 @@ static uint8 initScan(void)
       return status;
    if (foundEOI)
       return PJPG_UNEXPECTED_MARKER;
-
-#if FULL_DECODE
-   status = checkHuffTables();
-   if (status)
-      return status;
-
-   status = checkQuantTables();
-   if (status)
-      return status;
-#endif
 
    gLastDC[0] = 0;
    gLastDC[1] = 0;
@@ -1380,71 +1305,94 @@ static void idctRows(void)
       if (!memcmp(pSrc + 1, seven_zeroes, 7))
       {
          // Short circuit the 1D IDCT if only the DC component is non-zero
-         int16 src0 = *pSrc;
-
-         *(pSrc_2) = src0;
-         *(pSrc_4) = src0;
-         *(pSrc_6) = src0;
-#if FULL_DECODE
-         *(pSrc_1) = src0;
-         *(pSrc_3) = src0;
-         *(pSrc_5) = src0;
-         *(pSrc_7) = src0;
+#ifndef __CC65__
+         *(pSrc_2) = *(pSrc_4) = *(pSrc_6) = *pSrc;
+#else
+        __asm__("lda (%v)", pSrc);
+        __asm__("sta (%v)", pSrc_2);
+        __asm__("sta (%v)", pSrc_4);
+        __asm__("sta (%v)", pSrc_6);
+        __asm__("ldy #$01");
+        __asm__("lda (%v),y", pSrc);
+        __asm__("sta (%v),y", pSrc_2);
+        __asm__("sta (%v),y", pSrc_4);
+        __asm__("sta (%v),y", pSrc_6);
 #endif
       }
       else
       {
-         int16 src4 = *(pSrc_5);
-         int16 src7 = *(pSrc_3);
-         int16 x4  = src4 - src7;
-         int16 x7  = src4 + src7;
+         int16 x7, x5, x15, x17, x6, x4, tmp1, stg26, x24, tmp2, tmp3, x30, x31, x12, x13, x32;
+         
+#ifndef __CC65__
+         x7  = *(pSrc_5) + *(pSrc_3);
+         x5  = *(pSrc_1) + *(pSrc_7);
+         x6  = *(pSrc_1) - *(pSrc_7);
+         x4  = *(pSrc_5) - *(pSrc_3);
+#else
+         /* Copy pSrc_7 */
+         __asm__("lda %v", pSrc_7);
+         __asm__("sta ptr1");
+         __asm__("lda %v+1", pSrc_7);
+         __asm__("sta ptr1+1");
 
-         int16 src5 = *(pSrc_1);
-         int16 src6 = *(pSrc_7);
-         int16 x5  = src5 + src6;
-         int16 x6  = src5 - src6;
+         __asm__("ldy #$01");
+         __asm__("clc");
+         __asm__("lda (%v)", pSrc_5);
+         __asm__("adc (%v)", pSrc_3);
+         __asm__("sta %v", x7);
+         __asm__("lda (%v),y", pSrc_5);
+         __asm__("adc (%v),y", pSrc_3);
+         __asm__("sta %v+1", x7);
 
-         int16 tmp1 = imul_b5(x4 - x6);
-         int16 stg26 = imul_b4(x6) - tmp1;
+         __asm__("clc");
+         __asm__("lda (%v)", pSrc_1);
+         __asm__("adc (ptr1)");
+         __asm__("sta %v", x5);
+         __asm__("lda (%v),y", pSrc_1);
+         __asm__("adc (ptr1),y");
+         __asm__("sta %v+1", x5);
 
-         int16 x24 = tmp1 - imul_b2(x4);
+         __asm__("sec");
+         __asm__("lda (%v)", pSrc_1);
+         __asm__("sbc (ptr1)");
+         __asm__("sta %v", x6);
+         __asm__("lda (%v),y", pSrc_1);
+         __asm__("sbc (ptr1),y");
+         __asm__("sta %v+1", x6);
 
-         int16 x15 = x5 - x7;
-         int16 x17 = x5 + x7;
-
-         int16 tmp2 = stg26 - x17;
-         int16 tmp3 = imul_b1_b3(x15) - tmp2;
-         int16 x44 = tmp3 + x24;
-
-         int16 src0 = *(pSrc);
-         int16 src1 = *(pSrc_4);
-         int16 x30 = src0 + src1;
-         int16 x31 = src0 - src1;
-
-         int16 src2 = *(pSrc_2);
-         int16 src3 = *(pSrc_6);
-         int16 x12 = src2 - src3;
-         int16 x13 = src2 + src3;
-
-         int16 x32 = imul_b1_b3(x12) - x13;
-
-         int16 x40 = x30 + x13;
-         int16 x43 = x30 - x13;
-         int16 x41 = x31 + x32;
-         int16 x42 = x31 - x32;
-
-         *(pSrc) = x40 + x17;
-         *(pSrc_2) = x42 + tmp3;
-         *(pSrc_4) = x43 + x44;
-         *(pSrc_6) = x41 - tmp2;
-#if FULL_DECODE
-         *(pSrc_1) = x41 + tmp2;
-         *(pSrc_3) = x43 - x44;
-         *(pSrc_5) = x42 - tmp3;
-         *(pSrc_7) = x40 - x17;
+         __asm__("sec");
+         __asm__("lda (%v)", pSrc_5);
+         __asm__("sbc (%v)", pSrc_3);
+         __asm__("sta %v", x4);
+         __asm__("lda (%v),y", pSrc_5);
+         __asm__("sbc (%v),y", pSrc_3);
+         __asm__("sta %v+1", x4);
 #endif
+         x15 = x5 - x7;
+         x17 = x5 + x7;
+
+         tmp1 = imul_b5(x4 - x6);
+         stg26 = imul_b4(x6) - tmp1;
+
+         x24 = tmp1 - imul_b2(x4);
+
+         tmp2 = stg26 - x17;
+         tmp3 = imul_b1_b3(x15) - tmp2;
+
+         x30 = *(pSrc) + *(pSrc_4);
+         x31 = *(pSrc) - *(pSrc_4);
+
+         x12 = *(pSrc_2) - *(pSrc_6);
+         x13 = *(pSrc_2) + *(pSrc_6);
+
+         x32 = imul_b1_b3(x12) - x13;
+
+         *(pSrc) = x30 + x13 + x17;
+         *(pSrc_2) = x31 - x32 + tmp3;
+         *(pSrc_4) = x30 + tmp3 + x24 - x13;
+         *(pSrc_6) = x31 + x32 - tmp2;
       }
-                  
+
       pSrc += 8;
       pSrc_1 += 8;
       pSrc_2 += 8;
@@ -1460,72 +1408,88 @@ static void idctCols(void)
 {
    uint8 i;
       
-   int16 *pSrc = gCoeffBuf;
-   int16 *pSrc_0_8 = pSrc+0*8;
-   int16 *pSrc_2_8 = pSrc+2*8;
-   int16 *pSrc_4_8 = pSrc+4*8;
-   int16 *pSrc_6_8 = pSrc+6*8;
-   int16 *pSrc_1_8 = pSrc+1*8;
-   int16 *pSrc_3_8 = pSrc+3*8;
-   int16 *pSrc_5_8 = pSrc+5*8;
-   int16 *pSrc_7_8 = pSrc+7*8;
+   register int16* pSrc = gCoeffBuf;
+   register int16* pSrc_0_8 = gCoeffBuf+0*8;
+   register int16* pSrc_2_8 = gCoeffBuf+2*8;
+#ifdef __CC65__
+   #define pSrc_4_8 zp6sip
+   #define pSrc_6_8 zp8sip
+   #define pSrc_8_8 zp10sip
+   #define pSrc_1_8 zp12sip
+#else
+   int16 *pSrc_4_8;
+   int16 *pSrc_6_8;
+   int16 *pSrc_8_8;
+   int16 *pSrc_1_8;
+#endif
+   int16 *pSrc_3_8 = gCoeffBuf+3*8;
+   int16 *pSrc_5_8 = gCoeffBuf+5*8;
+   int16 *pSrc_7_8 = gCoeffBuf+7*8;
+
+   pSrc_4_8 = gCoeffBuf+4*8;
+   pSrc_6_8 = gCoeffBuf+6*8;
+   pSrc_8_8 = gCoeffBuf+8*8;
+   pSrc_1_8 = gCoeffBuf+1*8;
 
    for (i = 0; i < 8; i++)
    {
-      if ((*pSrc_1_8 == 0 && *pSrc_2_8 == 0 && *pSrc_3_8 == 0 && *pSrc_4_8 == 0 && *pSrc_5_8 == 0 && *pSrc_6_8 == 0 && *pSrc_7_8 == 0))
+      if (*pSrc_2_8 == 0 && *pSrc_4_8 == 0 && *pSrc_6_8 == 0)
       {
          // Short circuit the 1D IDCT if only the DC component is non-zero
          uint8 c;
          clamp(c, PJPG_DESCALE(*pSrc_0_8) + 128);
-         *(pSrc_0_8) = c;
-         *(pSrc_2_8) = c;
-         *(pSrc_4_8) = c;
-         *(pSrc_6_8) = c;
-         *(pSrc_1_8) = c;
-         *(pSrc_3_8) = c;
-         *(pSrc_5_8) = c;
-         *(pSrc_7_8) = c;
+#ifndef __CC65__
+         *(pSrc_0_8) = 
+           *(pSrc_2_8) = 
+           *(pSrc_4_8) = 
+           *(pSrc_6_8) = c;
+#else
+        __asm__("lda %v", c);
+        __asm__("sta (%v)", pSrc_0_8);
+        __asm__("sta (%v)", pSrc_2_8);
+        __asm__("sta (%v)", pSrc_4_8);
+        __asm__("sta (%v)", pSrc_6_8);
+        __asm__("ldy #$01");
+        __asm__("lda #$00");
+        __asm__("sta (%v),y", pSrc_0_8);
+        __asm__("sta (%v),y", pSrc_2_8);
+        __asm__("sta (%v),y", pSrc_4_8);
+        __asm__("sta (%v),y", pSrc_6_8);
+#endif
       }
       else
       {
-         int16 src4 = *(pSrc_5_8);
-         int16 src7 = *(pSrc_3_8);
-         int16 x4  = src4 - src7;
-         int16 x7  = src4 + src7;
+         int16 x4, x7, x5, x6, tmp1, stg26, x24, x15, x17, tmp2, tmp3, x44, x30, x31, x12, x13, x32, x40, x43, x41, x42;
+         x4  = *(pSrc_5_8) - *(pSrc_3_8);
+         x7  = *(pSrc_5_8) + *(pSrc_3_8);
 
-         int16 src5 = *(pSrc_1_8);
-         int16 src6 = *(pSrc_7_8);
-         int16 x5  = src5 + src6;
-         int16 x6  = src5 - src6;
+         x5  = *(pSrc_1_8) + *(pSrc_7_8);
+         x6  = *(pSrc_1_8) - *(pSrc_7_8);
 
-         int16 tmp1 = imul_b5(x4 - x6);
-         int16 stg26 = imul_b4(x6) - tmp1;
+         tmp1 = imul_b5(x4 - x6);
+         stg26 = imul_b4(x6) - tmp1;
          
-         int16 x24 = tmp1 - imul_b2(x4);
+         x24 = tmp1 - imul_b2(x4);
          
-         int16 x15 = x5 - x7;
-         int16 x17 = x5 + x7;
+         x15 = x5 - x7;
+         x17 = x5 + x7;
 
-         int16 tmp2 = stg26 - x17;
-         int16 tmp3 = imul_b1_b3(x15) - tmp2;
-         int16 x44 = tmp3 + x24;
+         tmp2 = stg26 - x17;
+         tmp3 = imul_b1_b3(x15) - tmp2;
+         x44 = tmp3 + x24;
          
-         int16 src0 = *(pSrc_0_8);
-         int16 src1 = *(pSrc_4_8);
-         int16 x30 = src0 + src1;
-         int16 x31 = src0 - src1;
+         x30 = *(pSrc_0_8) + *(pSrc_4_8);
+         x31 = *(pSrc_0_8) - *(pSrc_4_8);
          
-         int16 src2 = *(pSrc_2_8);
-         int16 src3 = *(pSrc_6_8);
-         int16 x12 = src2 - src3;
-         int16 x13 = src2 + src3;
+         x12 = *(pSrc_2_8) - *(pSrc_6_8);
+         x13 = *(pSrc_2_8) + *(pSrc_6_8);
          
-         int16 x32 = imul_b1_b3(x12) - x13;
+         x32 = imul_b1_b3(x12) - x13;
          
-         int16 x40 = x30 + x13;
-         int16 x43 = x30 - x13;
-         int16 x41 = x31 + x32;
-         int16 x42 = x31 - x32;
+         x40 = x30 + x13;
+         x43 = x30 - x13;
+         x41 = x31 + x32;
+         x42 = x31 - x32;
 
          // descale, convert to unsigned and clamp to 8-bit
          clamp(*(pSrc_0_8), PJPG_DESCALE(x40 + x17)  + 128);
@@ -1549,267 +1513,12 @@ static void idctCols(void)
    }      
 }
 
-#if FULL_DECODE
-/*----------------------------------------------------------------------------*/
-static PJPG_INLINE uint8 addAndClamp(uint8 a, int16 b)
-{
-   b = a + b;
-   
-   if ((uint16)b > 255U)
-   {
-      if (b < 0)
-         return 0;
-      else if (b > 255)
-         return 255;
-   }
-      
-   return (uint8)b;
-}
-/*----------------------------------------------------------------------------*/
-static PJPG_INLINE uint8 subAndClamp(uint8 a, int16 b)
-{
-   b = a - b;
-
-   if ((uint16)b > 255U)
-   {
-      if (b < 0)
-         return 0;
-      else if (b > 255)
-         return 255;
-   }
-
-   return (uint8)b;
-}
-
-/*----------------------------------------------------------------------------*/
-// 103/256
-//R = Y + 1.402 (Cr-128)
-
-// 88/256, 183/256
-//G = Y - 0.34414 (Cb-128) - 0.71414 (Cr-128)
-
-// 198/256
-//B = Y + 1.772 (Cb-128)
-/*----------------------------------------------------------------------------*/
-// Cb upsample and accumulate, 4x4 to 8x8
-static void upsampleCb(uint8 srcOfs, uint8 dstOfs)
-{
-   // Cb - affects G and B
-   uint8 x, y;
-   int16* pSrc = gCoeffBuf + srcOfs;
-   uint8* pDstG = gMCUBufG + dstOfs;
-   uint8* pDstB = gMCUBufB + dstOfs;
-   for (y = 0; y < 4; y++)
-   {
-      for (x = 0; x < 4; x++)
-      {
-         uint8 cb = (uint8)*pSrc++;
-         int16 cbG, cbB;
-
-         cbG = ((cb * 88U) >> 8U) - 44U;
-         pDstG[0] = subAndClamp(pDstG[0], cbG);
-         pDstG[1] = subAndClamp(pDstG[1], cbG);
-         pDstG[8] = subAndClamp(pDstG[8], cbG);
-         pDstG[9] = subAndClamp(pDstG[9], cbG);
-
-         cbB = (cb + ((cb * 198U) >> 8U)) - 227U;
-         pDstB[0] = addAndClamp(pDstB[0], cbB);
-         pDstB[1] = addAndClamp(pDstB[1], cbB);
-         pDstB[8] = addAndClamp(pDstB[8], cbB);
-         pDstB[9] = addAndClamp(pDstB[9], cbB);
-
-         pDstG += 2;
-         pDstB += 2;
-      }
-
-      pSrc = pSrc - 4 + 8;
-      pDstG = pDstG - 8 + 16;
-      pDstB = pDstB - 8 + 16;
-   }
-}   
-/*----------------------------------------------------------------------------*/
-// Cb upsample and accumulate, 4x8 to 8x8
-static void upsampleCbH(uint8 srcOfs, uint8 dstOfs)
-{
-   // Cb - affects G and B
-   uint8 x, y;
-   int16* pSrc = gCoeffBuf + srcOfs;
-   uint8* pDstG = gMCUBufG + dstOfs;
-   uint8* pDstB = gMCUBufB + dstOfs;
-   for (y = 0; y < 8; y++)
-   {
-      for (x = 0; x < 4; x++)
-      {
-         uint8 cb = (uint8)*pSrc++;
-         int16 cbG, cbB;
-
-         cbG = ((cb * 88U) >> 8U) - 44U;
-         pDstG[0] = subAndClamp(pDstG[0], cbG);
-         pDstG[1] = subAndClamp(pDstG[1], cbG);
-
-         cbB = (cb + ((cb * 198U) >> 8U)) - 227U;
-         pDstB[0] = addAndClamp(pDstB[0], cbB);
-         pDstB[1] = addAndClamp(pDstB[1], cbB);
-
-         pDstG += 2;
-         pDstB += 2;
-      }
-
-      pSrc = pSrc - 4 + 8;
-   }
-}   
-/*----------------------------------------------------------------------------*/
-// Cb upsample and accumulate, 8x4 to 8x8
-static void upsampleCbV(uint8 srcOfs, uint8 dstOfs)
-{
-   // Cb - affects G and B
-   uint8 x, y;
-   int16* pSrc = gCoeffBuf + srcOfs;
-   uint8* pDstG = gMCUBufG + dstOfs;
-   uint8* pDstB = gMCUBufB + dstOfs;
-   for (y = 0; y < 4; y++)
-   {
-      for (x = 0; x < 8; x++)
-      {
-         uint8 cb = (uint8)*pSrc++;
-         int16 cbG, cbB;
-
-         cbG = ((cb * 88U) >> 8U) - 44U;
-         pDstG[0] = subAndClamp(pDstG[0], cbG);
-         pDstG[8] = subAndClamp(pDstG[8], cbG);
-
-         cbB = (cb + ((cb * 198U) >> 8U)) - 227U;
-         pDstB[0] = addAndClamp(pDstB[0], cbB);
-         pDstB[8] = addAndClamp(pDstB[8], cbB);
-
-         ++pDstG;
-         ++pDstB;
-      }
-
-      pDstG = pDstG - 8 + 16;
-      pDstB = pDstB - 8 + 16;
-   }
-}   
-/*----------------------------------------------------------------------------*/
-// 103/256
-//R = Y + 1.402 (Cr-128)
-
-// 88/256, 183/256
-//G = Y - 0.34414 (Cb-128) - 0.71414 (Cr-128)
-
-// 198/256
-//B = Y + 1.772 (Cb-128)
-/*----------------------------------------------------------------------------*/
-// Cr upsample and accumulate, 4x4 to 8x8
-static void upsampleCr(uint8 srcOfs, uint8 dstOfs)
-{
-   // Cr - affects R and G
-   uint8 x, y;
-   int16* pSrc = gCoeffBuf + srcOfs;
-   uint8* pDstR = gMCUBufR + dstOfs;
-   uint8* pDstG = gMCUBufG + dstOfs;
-   for (y = 0; y < 4; y++)
-   {
-      for (x = 0; x < 4; x++)
-      {
-         uint8 cr = (uint8)*pSrc++;
-         int16 crR, crG;
-
-         crR = (cr + ((cr * 103U) >> 8U)) - 179;
-         pDstR[0] = addAndClamp(pDstR[0], crR);
-         pDstR[1] = addAndClamp(pDstR[1], crR);
-         pDstR[8] = addAndClamp(pDstR[8], crR);
-         pDstR[9] = addAndClamp(pDstR[9], crR);
-         
-         crG = ((cr * 183U) >> 8U) - 91;
-         pDstG[0] = subAndClamp(pDstG[0], crG);
-         pDstG[1] = subAndClamp(pDstG[1], crG);
-         pDstG[8] = subAndClamp(pDstG[8], crG);
-         pDstG[9] = subAndClamp(pDstG[9], crG);
-         
-         pDstR += 2;
-         pDstG += 2;
-      }
-
-      pSrc = pSrc - 4 + 8;
-      pDstR = pDstR - 8 + 16;
-      pDstG = pDstG - 8 + 16;
-   }
-}   
-/*----------------------------------------------------------------------------*/
-// Cr upsample and accumulate, 4x8 to 8x8
-static void upsampleCrH(uint8 srcOfs, uint8 dstOfs)
-{
-   // Cr - affects R and G
-   uint8 x, y;
-   int16* pSrc = gCoeffBuf + srcOfs;
-   uint8* pDstR = gMCUBufR + dstOfs;
-   uint8* pDstG = gMCUBufG + dstOfs;
-   for (y = 0; y < 8; y++)
-   {
-      for (x = 0; x < 4; x++)
-      {
-         uint8 cr = (uint8)*pSrc++;
-         int16 crR, crG;
-
-         crR = (cr + ((cr * 103U) >> 8U)) - 179;
-         pDstR[0] = addAndClamp(pDstR[0], crR);
-         pDstR[1] = addAndClamp(pDstR[1], crR);
-         
-         crG = ((cr * 183U) >> 8U) - 91;
-         pDstG[0] = subAndClamp(pDstG[0], crG);
-         pDstG[1] = subAndClamp(pDstG[1], crG);
-         
-         pDstR += 2;
-         pDstG += 2;
-      }
-
-      pSrc = pSrc - 4 + 8;
-   }
-}   
-/*----------------------------------------------------------------------------*/
-// Cr upsample and accumulate, 8x4 to 8x8
-static void upsampleCrV(uint8 srcOfs, uint8 dstOfs)
-{
-   // Cr - affects R and G
-   uint8 x, y;
-   int16* pSrc = gCoeffBuf + srcOfs;
-   uint8* pDstR = gMCUBufR + dstOfs;
-   uint8* pDstG = gMCUBufG + dstOfs;
-   for (y = 0; y < 4; y++)
-   {
-      for (x = 0; x < 8; x++)
-      {
-         uint8 cr = (uint8)*pSrc++;
-         int16 crR, crG;
-
-         crR = (cr + ((cr * 103U) >> 8U)) - 179;
-         pDstR[0] = addAndClamp(pDstR[0], crR);
-         pDstR[8] = addAndClamp(pDstR[8], crR);
-
-         crG = ((cr * 183U) >> 8U) - 91;
-         pDstG[0] = subAndClamp(pDstG[0], crG);
-         pDstG[8] = subAndClamp(pDstG[8], crG);
-
-         ++pDstR;
-         ++pDstG;
-      }
-
-      pDstR = pDstR - 8 + 16;
-      pDstG = pDstG - 8 + 16;
-   }
-}
-#endif /* FULL_DECODE */
 /*----------------------------------------------------------------------------*/
 // Convert Y to RGB
 static void copyY(uint8 dstOfs)
 {
    uint8 i;
    uint8* pGDst = gMCUBufG + dstOfs;
-#if FULL_DECODE
-   uint8* pRDst = gMCUBufR + dstOfs;
-   uint8* pBDst = gMCUBufB + dstOfs;
-#endif
    int16* pSrc = gCoeffBuf;
    
    for (i = 64; i; i--)
@@ -1817,209 +1526,28 @@ static void copyY(uint8 dstOfs)
       uint8 c = (uint8)*pSrc++;
       
       *pGDst++ = c;
-#if FULL_DECODE
-      *pRDst++ = c;
-      *pBDst++ = c;
-#endif
    }
 }
 
-#if FULL_DECODE
-/*----------------------------------------------------------------------------*/
-// Cb convert to RGB and accumulate
-static void convertCb(uint8 dstOfs)
-{
-   uint8 i;
-   uint8* pDstG = gMCUBufG + dstOfs;
-   uint8* pDstB = gMCUBufB + dstOfs;
-   int16* pSrc = gCoeffBuf;
-
-   for (i = 64; i > 0; i--)
-   {
-      uint8 cb = (uint8)*pSrc++;
-      int16 cbG, cbB;
-
-      cbG = ((cb * 88U) >> 8U) - 44U;
-      *pDstG++ = subAndClamp(pDstG[0], cbG);
-
-      cbB = (cb + ((cb * 198U) >> 8U)) - 227U;
-      *pDstB++ = addAndClamp(pDstB[0], cbB);
-   }
-}
-/*----------------------------------------------------------------------------*/
-// Cr convert to RGB and accumulate
-static void convertCr(uint8 dstOfs)
-{
-   uint8 i;
-   uint8* pDstR = gMCUBufR + dstOfs;
-   uint8* pDstG = gMCUBufG + dstOfs;
-   int16* pSrc = gCoeffBuf;
-
-   for (i = 64; i > 0; i--)
-   {
-      uint8 cr = (uint8)*pSrc++;
-      int16 crR, crG;
-
-      crR = (cr + ((cr * 103U) >> 8U)) - 179;
-      *pDstR++ = addAndClamp(pDstR[0], crR);
-
-      crG = ((cr * 183U) >> 8U) - 91;
-      *pDstG++ = subAndClamp(pDstG[0], crG);
-   }
-}
-#endif /* FULL_DECODE */
 /*----------------------------------------------------------------------------*/
 static void transformBlock(uint8 mcuBlock)
 {
    idctRows();
    idctCols();
-   
-#if FULL_DECODE
 
-   switch (gScanType)
+   switch (mcuBlock)
    {
-      case PJPG_GRAYSCALE:
+      case 0:
       {
-         // MCU size: 1, 1 block per MCU
          copyY(0);
          break;
       }
-      case PJPG_YH1V1:
+      case 1:
       {
-         // MCU size: 8x8, 3 blocks per MCU
-         switch (mcuBlock)
-         {
-            case 0:
-            {
-               copyY(0);
-               break;
-            }
-            case 1:
-            {
-               convertCb(0);
-               break;
-            }
-            case 2:
-            {
-               convertCr(0);
-               break;
-            }
-         }
-
+         copyY(64);
          break;
       }
-      case PJPG_YH1V2:
-      {
-         // MCU size: 8x16, 4 blocks per MCU
-         switch (mcuBlock)
-         {
-            case 0:
-            {
-               copyY(0);
-               break;
-            }
-            case 1:
-            {
-               copyY(128);
-               break;
-            }
-            case 2:
-            {
-               upsampleCbV(0, 0);
-               upsampleCbV(4*8, 128);
-               break;
-            }
-            case 3:
-            {
-               upsampleCrV(0, 0);
-               upsampleCrV(4*8, 128);
-               break;
-            }
-         }
-
-         break;
-      }        
-      case PJPG_YH2V1:
-      {
-         // MCU size: 16x8, 4 blocks per MCU
-#endif /* FULL_DECODE */
-         switch (mcuBlock)
-         {
-            case 0:
-            {
-               copyY(0);
-               break;
-            }
-            case 1:
-            {
-               copyY(64);
-               break;
-            }
-#if FULL_DECODE
-            case 2:
-            {
-               upsampleCbH(0, 0);
-               upsampleCbH(4, 64);
-               break;
-            }
-            case 3:
-            {
-               upsampleCrH(0, 0);
-               upsampleCrH(4, 64);
-               break;
-            }
-#endif /* FULL_DECODE */
-         }
-#if FULL_DECODE
-         break;
-      }        
-      case PJPG_YH2V2:
-      {
-         // MCU size: 16x16, 6 blocks per MCU
-         switch (mcuBlock)
-         {
-            case 0:
-            {
-               copyY(0);
-               break;
-            }
-            case 1:
-            {
-               copyY(64);
-               break;
-            }
-            case 2:
-            {
-               copyY(128);
-               break;
-            }
-            case 3:
-            {
-               copyY(192);
-               break;
-            }
-            case 4:
-            {
-               upsampleCb(0, 0);
-               upsampleCb(4, 64);
-               upsampleCb(4*8, 128);
-               upsampleCb(4+4*8, 192);
-               break;
-            }
-            case 5:
-            {
-               upsampleCr(0, 0);
-               upsampleCr(4, 64);
-               upsampleCr(4*8, 128);
-               upsampleCr(4+4*8, 192);
-               break;
-            }
-         }
-
-         break;
-      }         
-   }      
-#endif /* FULL_DECODE */
+   }
 }
 //------------------------------------------------------------------------------
 static uint8 decodeNextMCU(void)
@@ -2171,10 +1699,6 @@ unsigned char pjpeg_decode_init(pjpeg_image_info_t *pInfo)
    pInfo->m_MCUSPerRow = 0; pInfo->m_MCUSPerCol = 0;
    pInfo->m_scanType = PJPG_GRAYSCALE;
    pInfo->m_MCUWidth = 0; pInfo->m_MCUHeight = 0;
-#if FULL_DECODE
-   pInfo->m_pMCUBufR = (unsigned char*)0;
-   pInfo->m_pMCUBufB = (unsigned char*)0;
-#endif
    pInfo->m_pMCUBufG = (unsigned char*)0;
 
     
@@ -2199,10 +1723,6 @@ unsigned char pjpeg_decode_init(pjpeg_image_info_t *pInfo)
    pInfo->m_MCUSPerRow = gMaxMCUSPerRow; pInfo->m_MCUSPerCol = gMaxMCUSPerCol;
    pInfo->m_MCUWidth = gMaxMCUXSize; pInfo->m_MCUHeight = gMaxMCUYSize;
    pInfo->m_pMCUBufG = gMCUBufG;
-#if FULL_DECODE
-   pInfo->m_pMCUBufR = gMCUBufR;
-   pInfo->m_pMCUBufB = gMCUBufB;
-#endif      
    return 0;
 }
 
@@ -2280,48 +1800,20 @@ void qt_load_raw(uint16 top)
              // Compute source byte offset of the block in the decoder's MCU buffer.
              uint16 src_ofs = (x << 3) + (y << 4);
              const uint8 *pSrcG = image_info.m_pMCUBufG + src_ofs;
-#if FULL_DECODE
-             const uint8 *pSrcR = image_info.m_pMCUBufR + src_ofs;
-             const uint8 *pSrcB = image_info.m_pMCUBufB + src_ofs;
-#endif
              const uint8 bx_limit = min(8, image_info.m_width - (mcu_x * image_info.m_MCUWidth + x));
                 uint8 bx, by;
                 for (by = 0; by < by_limit; by+=2)
                 {
                    uint8 *pDst = pDst_block;
 
-#if FULL_DECODE
-                   for (bx = 0; bx < bx_limit; bx+=2)
-                   {
-                      pDst[0] = *pSrcR++;
-                      pDst[1] = *pSrcG++;
-                      pDst[2] = *pSrcB++;
-                      pDst += 3;
-                      pSrcR++;
-                      pSrcG++;
-                      pSrcB++;
-                   }
-
-                   pSrcR += (8*2 - bx_limit);
-                   pSrcG += (8*2 - bx_limit);
-                   pSrcB += (8*2 - bx_limit);
-#else
                    for (bx = 0; bx < bx_limit; bx+=2)
                    {
                       uint8 c = *pSrcG++;
-#if FULL_ENCODE
-                      pDst[0] = c;
-                      pDst[1] = c;
-                      pDst[2] = c;
-                      pDst += 3;
-#else
                       *pDst++ = c;
-#endif
                       pSrcG++;
                    }
 
                    pSrcG += (8*2 - bx_limit);
-#endif
                    pDst_block += row_pitch;
                 }
           }
