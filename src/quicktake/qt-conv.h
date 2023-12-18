@@ -114,14 +114,32 @@ void qt_load_raw(uint16 top);
 } while(0)
 
 #define FAST_SHIFT_RIGHT_8_LONG_SHORT_ONLY(value) do { \
+    __asm__("lda %v+1", value);    \
+    __asm__("sta %v", value);      \
+    __asm__("ldx %v+2", value);    \
+    __asm__("stx %v+1", value);    \
+} while(0)
+#define FAST_SHIFT_RIGHT_16_LONG_SHORT_ONLY(value) do { \
+    __asm__("lda %v+2", value);    \
+    __asm__("sta %v", value);      \
+    __asm__("ldx %v+3", value);    \
+    __asm__("stx %v+1", value);    \
+} while(0)
+#define FAST_SHIFT_RIGHT_24_LONG_SHORT_ONLY(value) do { \
+    __asm__("lda %v+3", value);    \
+    __asm__("sta %v", value);      \
+    __asm__("stz %v+1", value);    \
+} while(0)
+
+#define FAST_SHIFT_RIGHT_8_LONG_CHAR_ONLY(value) do { \
     __asm__("ldx %v+1", value);    \
     __asm__("stx %v", value);      \
 } while(0)
-#define FAST_SHIFT_RIGHT_16_LONG_SHORT_ONLY(value) do { \
+#define FAST_SHIFT_RIGHT_16_LONG_CHAR_ONLY(value) do { \
     __asm__("ldx %v+2", value);    \
     __asm__("stx %v", value);      \
 } while(0)
-#define FAST_SHIFT_RIGHT_24_LONG_SHORT_ONLY(value) do { \
+#define FAST_SHIFT_RIGHT_24_LONG_CHAR_ONLY(value) do { \
     __asm__("ldx %v+3", value);    \
     __asm__("stx %v", value);      \
 } while(0)
@@ -195,6 +213,9 @@ void qt_load_raw(uint16 top);
 #define FAST_SHIFT_RIGHT_8_LONG_SHORT_ONLY(value) (value >>=8)
 #define FAST_SHIFT_RIGHT_16_LONG_SHORT_ONLY(value) (value >>=16)
 #define FAST_SHIFT_RIGHT_24_LONG_SHORT_ONLY(value) (value >>=24)
+#define FAST_SHIFT_RIGHT_8_LONG_CHAR_ONLY(value) (value >>=8)
+#define FAST_SHIFT_RIGHT_16_LONG_CHAR_ONLY(value) (value >>=16)
+#define FAST_SHIFT_RIGHT_24_LONG_CHAR_ONLY(value) (value >>=24)
 
 #define FAST_SHIFT_LEFT_8_INT_TO_LONG(value, to) (to = value << 8)
 #define FAST_SHIFT_LEFT_8_LONG_TO(value, to) (to = value << 8)
