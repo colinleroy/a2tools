@@ -297,17 +297,17 @@ uint8 __fastcall__ getbitnohuff (uint8 n)
 
   __asm__("cmp #%b", 24);
   __asm__("bcc %g", check_r16);
-  FAST_SHIFT_RIGHT_24_LONG_SHORT_ONLY(tmp);
+  FAST_SHIFT_RIGHT_24_LONG_CHAR_ONLY(tmp);
   goto finish_right_shift;
   check_r16:
   __asm__("cmp #%b", 16);
   __asm__("bcc %g", check_r8);
-  FAST_SHIFT_RIGHT_16_LONG_SHORT_ONLY(tmp);
+  FAST_SHIFT_RIGHT_16_LONG_CHAR_ONLY(tmp);
   goto finish_right_shift;
   check_r8:
   __asm__("cmp #%b", 8);
   __asm__("bcc %g", finish_right_shift);
-  FAST_SHIFT_RIGHT_8_LONG_SHORT_ONLY(tmp);
+  FAST_SHIFT_RIGHT_8_LONG_CHAR_ONLY(tmp);
 
   finish_right_shift:
   __asm__("ldx #$00");
@@ -489,17 +489,17 @@ uint8 __fastcall__ getbithuff (uint8 n)
 
   __asm__("cmp #%b", 24);
   __asm__("bcc %g", hcheck_r16);
-  FAST_SHIFT_RIGHT_24_LONG_SHORT_ONLY(tmp);
+  FAST_SHIFT_RIGHT_24_LONG_CHAR_ONLY(tmp);
   goto hfinish_right_shift;
   hcheck_r16:
   __asm__("cmp #%b", 16);
   __asm__("bcc %g", hcheck_r8);
-  FAST_SHIFT_RIGHT_16_LONG_SHORT_ONLY(tmp);
+  FAST_SHIFT_RIGHT_16_LONG_CHAR_ONLY(tmp);
   goto hfinish_right_shift;
   hcheck_r8:
   __asm__("cmp #%b", 8);
   __asm__("bcc %g", hfinish_right_shift);
-  FAST_SHIFT_RIGHT_8_LONG_SHORT_ONLY(tmp);
+  FAST_SHIFT_RIGHT_8_LONG_CHAR_ONLY(tmp);
 
   hfinish_right_shift:
   __asm__("ldx #$00");
