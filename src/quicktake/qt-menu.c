@@ -277,9 +277,9 @@ static uint8 setup(int argc, char *argv[]) {
 
   videomode(VIDEOMODE_80COL);
   if (argc == 1) {
-  //  exec("QTKTCONV","/QT100/TEST100.QTK 0 0 640 480");
-  //  exec("QTKNCONV","/QT150/TEST150.QTK 0 0 640 480");
-  //  exec("JPEGCONV","/QT150/TEST200.JPG 0 0 640 480");
+  // exec("QTKTCONV","/QT100/TEST100.QTK 0 0 640 480");
+  // exec("QTKNCONV","/QT150/TEST150.QTK 0 0 640 480");
+  // exec("JPEGCONV","/QT150/TEST200.JPG 0 0 640 480");
   }
   screensize(&scrw, &scrh);
   init_hgr(1);

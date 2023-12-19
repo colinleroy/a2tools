@@ -132,7 +132,6 @@ void qt_load_raw(uint16 top)
   /* We start at line 2. */
   src = pix_direct_row[2];
   for (row = 2; row != QT_BAND + 2; row++) {
-    int cnt = 0;
     idx_forward = idx_end = idx = src;
     if (row & 1) {
       idx++;
