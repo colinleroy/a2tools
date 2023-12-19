@@ -32,6 +32,9 @@ uint16 cache_size = 4096;
 uint8 cache[4096];
 uint16 *huff_ptr;
 
+#define QT200_WIDTH 640
+#define QT200_HEIGHT 480
+
 #pragma inline-stdfuncs(push, on)
 #pragma allow-eager-inline(push, on)
 #pragma codesize(push, 600)
@@ -41,69 +44,11 @@ uint16 *huff_ptr;
 // Set to 1 if right shifts on signed ints are always unsigned (logical) shifts
 // When 1, arithmetic right shifts will be emulated by using a logical shift
 // with special case code to ensure the sign bit is replicated.
-#define PJPG_RIGHT_SHIFT_IS_ALWAYS_UNSIGNED 0
 
 // Define PJPG_INLINE to "inline" if your C compiler supports explicit inlining
 #define PJPG_INLINE
 //------------------------------------------------------------------------------
-#ifndef max
-#define max(a,b)    (((a) > (b)) ? (a) : (b))
-#endif
-#ifndef min
-#define min(a,b)    (((a) < (b)) ? (a) : (b))
-#endif
 
-//------------------------------------------------------------------------------
-#if PJPG_RIGHT_SHIFT_IS_ALWAYS_UNSIGNED
-static int16 replicateSignBit16(int8 n)
-{
-   switch (n)
-   {
-      case 0:  return 0x0000;
-      case 1:  return 0x8000;
-      case 2:  return 0xC000;
-      case 3:  return 0xE000;
-      case 4:  return 0xF000;
-      case 5:  return 0xF800;
-      case 6:  return 0xFC00;
-      case 7:  return 0xFE00;
-      case 8:  return 0xFF00;
-      case 9:  return 0xFF80;
-      case 10: return 0xFFC0;
-      case 11: return 0xFFE0;
-      case 12: return 0xFFF0;
-      case 13: return 0xFFF8;
-      case 14: return 0xFFFC;
-      case 15: return 0xFFFE;
-      default: return 0xFFFF;
-   }
-}
-
-static PJPG_INLINE int16 arithmeticRightShiftN16(int16 x, int8 n)
-{
-   int16 r = (uint16)x >> (uint8)n;
-   if (x < 0)
-      r |= replicateSignBit16(n);
-   return r;
-}
-static PJPG_INLINE long arithmeticRightShift8L(long x)
-{
-   long r = (unsigned long)x >> 8U;
-   if (x < 0)
-      r |= ~(~(unsigned long)0U >> 8U);
-   return r;
-}
-#define PJPG_ARITH_SHIFT_RIGHT_N_16(x, n) arithmeticRightShiftN16(x, n)
-#define PJPG_ARITH_SHIFT_RIGHT_8_L(x) arithmeticRightShift8L(x)
-#else
-#define PJPG_ARITH_SHIFT_RIGHT_N_16(x, n) ((x) >> (n))
-#define PJPG_ARITH_SHIFT_RIGHT_8_L(x) ((x) >> 8)
-#endif
-//------------------------------------------------------------------------------
-// Change as needed - the PJPG_MAX_WIDTH/PJPG_MAX_HEIGHT checks are only present
-// to quickly detect bogus files.
-#define PJPG_MAX_WIDTH 16384
-#define PJPG_MAX_HEIGHT 16384
 #define PJPG_MAXCOMPSINSCAN 3
 //------------------------------------------------------------------------------
 typedef enum
@@ -162,21 +107,20 @@ typedef enum
    RST0    = 0xD0
 } JPEG_MARKER;
 //------------------------------------------------------------------------------
-static const uint8 ZAG[] =
-{
-   0,  1,  8, 16,  9,  2,  3, 10,
-   17, 24, 32, 25, 18, 11,  4,  5,
-   12, 19, 26, 33, 40, 48, 41, 34,
-   27, 20, 13,  6,  7, 14, 21, 28,
-   35, 42, 49, 56, 57, 50, 43, 36,
-   29, 22, 15, 23, 30, 37, 44, 51,
-   58, 59, 52, 45, 38, 31, 39, 46,
-   53, 60, 61, 54, 47, 55, 62, 63,
-};
-//------------------------------------------------------------------------------
 // 128 bytes
 static int16 gCoeffBuf[8*8];
 
+static int16 *ZAG_Coeff[] =
+{
+   gCoeffBuf+0,  gCoeffBuf+1,  gCoeffBuf+8, gCoeffBuf+16,  gCoeffBuf+9,  gCoeffBuf+2,  gCoeffBuf+3, gCoeffBuf+10,
+   gCoeffBuf+17, gCoeffBuf+24, gCoeffBuf+32, gCoeffBuf+25, gCoeffBuf+18, gCoeffBuf+11,  gCoeffBuf+4,  gCoeffBuf+5,
+   gCoeffBuf+12, gCoeffBuf+19, gCoeffBuf+26, gCoeffBuf+33, gCoeffBuf+40, gCoeffBuf+48, gCoeffBuf+41, gCoeffBuf+34,
+   gCoeffBuf+27, gCoeffBuf+20, gCoeffBuf+13,  gCoeffBuf+6,  gCoeffBuf+7, gCoeffBuf+14, gCoeffBuf+21, gCoeffBuf+28,
+   gCoeffBuf+35, gCoeffBuf+42, gCoeffBuf+49, gCoeffBuf+56, gCoeffBuf+57, gCoeffBuf+50, gCoeffBuf+43, gCoeffBuf+36,
+   gCoeffBuf+29, gCoeffBuf+22, gCoeffBuf+15, gCoeffBuf+23, gCoeffBuf+30, gCoeffBuf+37, gCoeffBuf+44, gCoeffBuf+51,
+   gCoeffBuf+58, gCoeffBuf+59, gCoeffBuf+52, gCoeffBuf+45, gCoeffBuf+38, gCoeffBuf+31, gCoeffBuf+39, gCoeffBuf+46,
+   gCoeffBuf+53, gCoeffBuf+60, gCoeffBuf+61, gCoeffBuf+54, gCoeffBuf+47, gCoeffBuf+55, gCoeffBuf+62, gCoeffBuf+63,
+};
 // 8*8*4 bytes * 3 = 768
 static uint8 gMCUBufG[256];
 // 256 bytes
@@ -218,8 +162,6 @@ static uint8 gInBuf[PJPG_MAX_IN_BUF_SIZE];
 static uint16 gBitBuf;
 static uint8 gBitsLeft;
 //------------------------------------------------------------------------------
-static uint16 gImageXSize;
-static uint16 gImageYSize;
 static uint8 gCompsInFrame;
 static uint8 gCompIdent[3];
 static uint8 gCompHSamp[3];
@@ -235,13 +177,7 @@ static uint8 gCompList[3];
 static uint8 gCompDCTab[3]; // 0,1
 static uint8 gCompACTab[3]; // 0,1
 
-static pjpeg_scan_type_t gScanType;
-
 static uint8 gMaxBlocksPerMCU;
-static uint8 gMaxMCUXSize;
-static uint8 gMaxMCUYSize;
-static uint16 gMaxMCUSPerRow;
-static uint16 gMaxMCUSPerCol;
 
 static uint16 gNumMCUSRemainingX, gNumMCUSRemainingY;
 
@@ -356,51 +292,165 @@ out:
 //------------------------------------------------------------------------------
 static uint16 getBits(uint8 numBits, uint8 FFCheck)
 {
-   uint8 origBits = numBits;
-   uint16 ret = gBitBuf;
+  uint8 n = numBits, tmp;
+  uint8 ff = FFCheck;
+  uint8 final_shift = 16 - n;
+  uint16 ret = gBitBuf;
 
-   if (numBits > 8)
-   {
-      numBits -= 8;
-
-      gBitBuf <<= gBitsLeft;
-
-#ifndef __CC65__
-      gBitBuf |= getOctet(FFCheck);
-#else
-      getOctet(FFCheck);
-      __asm__("ora %v", gBitBuf);
-      __asm__("sta %v", gBitBuf);
-#endif
-      gBitBuf <<= (8 - gBitsLeft);
-
-      ret = (ret & 0xFF00) | (gBitBuf >> 8);
-   }
-
-   if (gBitsLeft < numBits)
-   {
-      gBitBuf <<= gBitsLeft;
+  if (n > 8) {
+    n -= 8;
 
 #ifndef __CC65__
-      gBitBuf |= getOctet(FFCheck);
+    gBitBuf <<= gBitsLeft;
+    gBitBuf |= getOctet(ff);
+    gBitBuf <<= (8 - gBitsLeft);
+    ret = (ret & 0xFF00) | (gBitBuf >> 8);
 #else
-      getOctet(FFCheck);
-      __asm__("ora %v", gBitBuf);
-      __asm__("sta %v", gBitBuf);
+    //gBitBuf <<= gBitsLeft;
+    __asm__("ldy %v", gBitsLeft);
+    __asm__("beq %g", no_lshift);
+    __asm__("cpy #8");
+    __asm__("bne %g", l_shift);
+    __asm__("lda %v", gBitBuf);
+    __asm__("sta %v+1", gBitBuf);
+    __asm__("stz %v", gBitBuf);
+    goto no_lshift;
+    l_shift:
+    __asm__("lda %v", gBitBuf);
+    l_shift_again:
+    __asm__("asl a");
+    __asm__("rol %v+1", gBitBuf);
+    __asm__("dey");
+    __asm__("bne %g", l_shift_again);
+    __asm__("sta %v", gBitBuf);
+    no_lshift:
+    //gBitBuf |= getOctet(ff);
+    __asm__("lda %v", ff);
+    __asm__("jsr %v", getOctet);
+    __asm__("ora %v", gBitBuf);
+    __asm__("sta %v", gBitBuf);
+    //gBitBuf <<= (8 - gBitsLeft);
+    __asm__("lda #%b", 8);
+    __asm__("sec");
+    __asm__("sbc %v", gBitsLeft);
+    __asm__("tay");
+    __asm__("beq %g", no_lshift2);
+    __asm__("cpy #8");
+    __asm__("bne %g", l_shift2);
+    __asm__("lda %v", gBitBuf);
+    __asm__("sta %v+1", gBitBuf);
+    __asm__("stz %v", gBitBuf);
+    goto no_lshift2;
+    l_shift2:
+    __asm__("lda %v", gBitBuf);
+    l_shift_again2:
+    __asm__("asl a");
+    __asm__("rol %v+1", gBitBuf);
+    __asm__("dey");
+    __asm__("bne %g", l_shift_again2);
+    __asm__("sta %v", gBitBuf);
+    no_lshift2:
+    //ret = (ret & 0xFF00) | (gBitBuf >> 8);
+    __asm__("lda %v+1", gBitBuf);
+    __asm__("sta %v", ret);
+#endif
+  }
+
+  if (gBitsLeft < n) {
+#ifndef __CC65__
+    gBitBuf <<= gBitsLeft;
+    gBitBuf |= getOctet(ff);
+    tmp = n - gBitsLeft;
+    gBitBuf <<= tmp;
+    gBitsLeft = 8 - tmp;
+#else
+    //gBitBuf <<= gBitsLeft;
+    __asm__("ldy %v", gBitsLeft);
+    __asm__("beq %g", no_lshift3);
+    __asm__("cpy #8");
+    __asm__("bne %g", l_shift3);
+    __asm__("lda %v", gBitBuf);
+    __asm__("sta %v+1", gBitBuf);
+    __asm__("stz %v", gBitBuf);
+    goto no_lshift3;
+    l_shift3:
+    __asm__("lda %v", gBitBuf);
+    l_shift_again3:
+    __asm__("asl a");
+    __asm__("rol %v+1", gBitBuf);
+    __asm__("dey");
+    __asm__("bne %g", l_shift_again3);
+    __asm__("sta %v", gBitBuf);
+    no_lshift3:
+    //gBitBuf |= getOctet(ff);
+    __asm__("lda %v", ff);
+    __asm__("jsr %v", getOctet);
+    __asm__("ora %v", gBitBuf);
+    __asm__("sta %v", gBitBuf);
+    // tmp = n - gBitsLeft;
+    __asm__("lda %v", n);
+    __asm__("sec");
+    __asm__("sbc %v", gBitsLeft);
+    __asm__("sta %v", tmp);
+    // gBitBuf <<= tmp;
+    __asm__("tay");
+    __asm__("beq %g", no_lshift4);
+    __asm__("cpy #8");
+    __asm__("bne %g", l_shift4);
+    __asm__("lda %v", gBitBuf);
+    __asm__("sta %v+1", gBitBuf);
+    __asm__("stz %v", gBitBuf);
+    goto no_lshift4;
+    l_shift4:
+    __asm__("lda %v", gBitBuf);
+    l_shift_again4:
+    __asm__("asl a");
+    __asm__("rol %v+1", gBitBuf);
+    __asm__("dey");
+    __asm__("bne %g", l_shift_again4);
+    __asm__("sta %v", gBitBuf);
+    no_lshift4:
+    // gBitsLeft = 8 - tmp;
+    __asm__("lda #%b", 8);
+    __asm__("sec");
+    __asm__("sbc %v", tmp);
+    __asm__("sta %v", gBitsLeft);
 #endif
 
-      gBitBuf <<= (numBits - gBitsLeft);
-
-      gBitsLeft = 8 - (numBits - gBitsLeft);
-   }
-   else
-   {
-      gBitsLeft = (uint8)(gBitsLeft - numBits);
-      gBitBuf <<= numBits;
-   }
-
-   return ret >> (16 - origBits);
+  } else {
+#ifndef __CC65__
+    gBitsLeft = gBitsLeft - n;
+    gBitBuf <<= n;
+    goto no_lshift5;
+#else
+    // gBitsLeft = gBitsLeft - n;
+    __asm__("lda %v", gBitsLeft);
+    __asm__("sec");
+    __asm__("sbc %v", n);
+    __asm__("sta %v", gBitsLeft);
+    // gBitBuf <<= n;
+    __asm__("ldy %v", n);
+    __asm__("beq %g", no_lshift5);
+    __asm__("cpy #8");
+    __asm__("bne %g", l_shift5);
+    __asm__("lda %v", gBitBuf);
+    __asm__("sta %v+1", gBitBuf);
+    __asm__("stz %v", gBitBuf);
+    goto no_lshift5;
+    l_shift5:
+    __asm__("lda %v", gBitBuf);
+    l_shift_again5:
+    __asm__("asl a");
+    __asm__("rol %v+1", gBitBuf);
+    __asm__("dey");
+    __asm__("bne %g", l_shift_again5);
+    __asm__("sta %v", gBitBuf);
+#endif
+  }
+  no_lshift5:
+  return ret >> final_shift;
 }
+
 #define getBits1(n) getBits(n, 0)
 #define getBits2(n) getBits(n, 1)
 //------------------------------------------------------------------------------
@@ -415,7 +465,8 @@ static PJPG_INLINE uint8 getBit(void)
 #ifndef __CC65__
       gBitBuf |= getOctet(1);
 #else
-      getOctet(1);
+    __asm__("lda #1");
+    __asm__("jsr %v", getOctet);
       __asm__("ora %v", gBitBuf);
       __asm__("sta %v", gBitBuf);
 #endif
@@ -424,8 +475,12 @@ static PJPG_INLINE uint8 getBit(void)
    }
 
    gBitsLeft--;
+#ifndef __CC65__
    gBitBuf <<= 1;
-
+#else
+  __asm__("asl %v", gBitBuf);
+  __asm__("rol %v+1", gBitBuf);
+#endif
    return ret;
 }
 //------------------------------------------------------------------------------
@@ -479,71 +534,105 @@ static int16 getExtendOffset(uint8 i)
 //------------------------------------------------------------------------------
 static PJPG_INLINE int16 huffExtend(uint16 x, uint8 s)
 {
-   return ((x < getExtendTest(s)) ? ((int16)x + getExtendOffset(s)) : (int16)x);
+   uint8 lx = x, ls = s;
+   return ((lx < getExtendTest(ls)) ? ((int16)lx + getExtendOffset(ls)) : (int16)lx);
 }
 //------------------------------------------------------------------------------
-static PJPG_INLINE uint8 huffDecode(const HuffTable* pHuffTable, const uint8* pHuffVal)
+static PJPG_INLINE uint8 huffDecode(HuffTable* pHuffTable, const uint8* pHuffVal)
 {
-   uint8 i = 0;
-   uint8 j;
-   uint16 code = getBit();
+  uint8 i = 0;
+  uint8 j;
+  uint16 code = getBit();
+  HuffTable *curTable = pHuffTable;
+  register uint16 *curMaxCode = curTable->mMaxCode;
+  register uint16 *curMinCode = curTable->mMinCode;
+  register uint8 *curValPtr = curTable->mValPtr;
+  // This func only reads a bit at a time, which on modern CPU's is not terribly efficient.
+  // But on microcontrollers without strong integer shifting support this seems like a
+  // more reasonable approach.
+  for ( ; ; ) {
+    if (i == 16)
+      return 0;
 
-   // This func only reads a bit at a time, which on modern CPU's is not terribly efficient.
-   // But on microcontrollers without strong integer shifting support this seems like a
-   // more reasonable approach.
-   for ( ; ; )
-   {
-      uint16 maxCode;
+    if (*curMaxCode != 0xFFFF) {
+      if (*curMaxCode >= code)
+        break;
+    }
 
-      if (i == 16)
-         return 0;
+    i++;
+    curMaxCode++;
+    curMinCode++;
+    curValPtr++;
 
-      maxCode = pHuffTable->mMaxCode[i];
-      if ((code <= maxCode) && (maxCode != 0xFFFF))
-         break;
+#ifndef __CC65__
+    code <<= 1;
+    code |= getBit();
+#else
+    __asm__("asl %v", code);
+    __asm__("rol %v+1", code);
+    __asm__("jsr %v", getBit);
+    __asm__("ora %v", code);
+    __asm__("sta %v", code);
+#endif
+  }
 
-      i++;
-      code <<= 1;
-      code |= getBit();
-   }
+#ifndef __CC65__
+  j = (uint8)*curValPtr + (uint8)code - (uint8)*curMinCode;
+#else
+  __asm__("clc");
+  __asm__("lda (%v)", curValPtr);
+  __asm__("adc %v", code);
+  __asm__("sec");
+  __asm__("sbc (%v)", curMinCode);
+  __asm__("sta %v", j);
+#endif
 
-   j = pHuffTable->mValPtr[i];
-   j = (uint8)(j + (code - pHuffTable->mMinCode[i]));
-
-   return pHuffVal[j];
+  return pHuffVal[j];
 }
 //------------------------------------------------------------------------------
-static void huffCreate(const uint8* pBits, HuffTable* pHuffTable)
+static void huffCreate(uint8* pBits, HuffTable* pHuffTable)
 {
-   uint8 i = 0;
-   uint8 j = 0;
-
-   uint16 code = 0;
+  uint8 i = 0;
+  uint8 j = 0;
+  uint16 code = 0;
+  uint8 *l_pBits = pBits;
+  register uint16 *curMaxCode = pHuffTable->mMaxCode;
+  register uint16 *curMinCode = pHuffTable->mMinCode;
+  register uint8 *curValPtr = pHuffTable->mValPtr;
 
    for ( ; ; )
    {
-      uint8 num = pBits[i];
+      uint8 num = *l_pBits;
 
       if (!num)
       {
-         pHuffTable->mMinCode[i] = 0x0000;
-         pHuffTable->mMaxCode[i] = 0xFFFF;
-         pHuffTable->mValPtr[i] = 0;
+         *curMinCode = 0x0000;
+         *curMaxCode = 0xFFFF;
+         *curValPtr = 0;
       }
       else
       {
-         pHuffTable->mMinCode[i] = code;
-         pHuffTable->mMaxCode[i] = code + num - 1;
-         pHuffTable->mValPtr[i] = j;
+         *curMinCode = code;
+         *curMaxCode = code + num - 1;
+         *curValPtr = j;
 
          j = (uint8)(j + num);
 
-         code = (uint16)(code + num);
+         code += num;
       }
 
+#ifndef __CC65__
       code <<= 1;
+#else
+      __asm__("asl %v", code);
+      __asm__("rol %v+1", code);
+#endif
 
       i++;
+      curMaxCode++;
+      curMinCode++;
+      curValPtr++;
+      l_pBits++;
       if (i > 15)
          break;
    }
@@ -586,6 +675,7 @@ static uint8 readDHTMarker(void)
 {
    uint8 bits[16];
    uint16 left = getBits1(16);
+   register uint8 *ptr;
 
    if (left < 2)
       return PJPG_BAD_DHT_MARKER;
@@ -612,18 +702,20 @@ static uint8 readDHTMarker(void)
       gValidHuffTables |= (1 << tableIndex);
 
       count = 0;
+      ptr = bits;
       for (i = 0; i <= 15; i++)
       {
          uint8 n = (uint8)getBits1(8);
-         bits[i] = n;
+         *(ptr++) = n;
          count = (uint16)(count + n);
       }
 
       if (count > getMaxHuffCodes(tableIndex))
          return PJPG_BAD_DHT_COUNTS;
 
+      ptr = pHuffVal;
       for (i = 0; i < count; i++)
-         pHuffVal[i] = (uint8)getBits1(8);
+         *(ptr++) = (uint8)getBits1(8);
 
       totalRead = 1 + 16 + count;
 
@@ -643,7 +735,7 @@ static void createWinogradQuant(int16* pQuant);
 static uint8 readDQTMarker(void)
 {
    uint16 left = getBits1(16);
-
+   register int16 *ptr_quant1, *ptr_quant0;
    if (left < 2)
       return PJPG_BAD_DQT_MARKER;
 
@@ -664,6 +756,8 @@ static uint8 readDQTMarker(void)
       gValidQuantTables |= (n ? 2 : 1);
 
       // read quantization entries, in zag order
+      ptr_quant0 = gQuant0;
+      ptr_quant1 = gQuant1;
       for (i = 0; i < 64; i++)
       {
          uint16 temp = getBits1(8);
@@ -672,9 +766,12 @@ static uint8 readDQTMarker(void)
             temp = (temp << 8) + getBits1(8);
 
          if (n)
-            gQuant1[i] = (int16)temp;
+            *ptr_quant1 = (int16)temp;
          else
-            gQuant0[i] = (int16)temp;
+            *ptr_quant0 = (int16)temp;
+        
+         ptr_quant0++;
+         ptr_quant1++;
       }
 
       createWinogradQuant(n ? gQuant1 : gQuant0);
@@ -695,20 +792,23 @@ static uint8 readDQTMarker(void)
 //------------------------------------------------------------------------------
 static uint8 readSOFMarker(void)
 {
-   uint8 i;
-   uint16 left = getBits1(16);
+  uint8 i;
+  uint16 left = getBits1(16);
+  uint16 gImageXSize;
+  uint16 gImageYSize;
+  register uint8 *ptr_ident, *ptr_quant, *ptr_hsamp;
 
    if (getBits1(8) != 8)
       return PJPG_BAD_PRECISION;
 
    gImageYSize = getBits1(16);
 
-   if ((!gImageYSize) || (gImageYSize > PJPG_MAX_HEIGHT))
+   if (gImageYSize != QT200_HEIGHT)
       return PJPG_BAD_HEIGHT;
 
    gImageXSize = getBits1(16);
 
-   if ((!gImageXSize) || (gImageXSize > PJPG_MAX_WIDTH))
+   if (gImageXSize  != QT200_WIDTH)
       return PJPG_BAD_WIDTH;
 
    gCompsInFrame = (uint8)getBits1(8);
@@ -719,15 +819,19 @@ static uint8 readSOFMarker(void)
    if (left != (gCompsInFrame + gCompsInFrame + gCompsInFrame + 8))
       return PJPG_BAD_SOF_LENGTH;
 
+   ptr_ident = gCompIdent;
+   ptr_quant = gCompQuant;
+   ptr_hsamp = gCompHSamp;
    for (i = 0; i < gCompsInFrame; i++)
    {
-      gCompIdent[i] = (uint8)getBits1(8);
-      gCompHSamp[i] = (uint8)getBits1(4);
+      *(ptr_ident++) = (uint8)getBits1(8);
+      *(ptr_hsamp++) = (uint8)getBits1(4);
       gCompVSamp[i] = (uint8)getBits1(4);
-      gCompQuant[i] = (uint8)getBits1(8);
+      *(ptr_quant) = (uint8)getBits1(8);
 
-      if (gCompQuant[i] > 1)
+      if (*ptr_quant > 1)
          return PJPG_UNSUPPORTED_QUANT_TABLE;
+      ptr_quant++;
    }
 
    return 0;
@@ -816,27 +920,16 @@ static uint8 readSOSMarker(void)
 static uint8 nextMarker(void)
 {
    uint8 c;
-   uint8 bytes = 0;
 
-   do
-   {
-      do
-      {
-         bytes++;
-
+   do {
+      do {
          c = (uint8)getBits1(8);
-
       } while (c != 0xFF);
 
-      do
-      {
+      do {
          c = (uint8)getBits1(8);
-
       } while (c == 0xFF);
-
    } while (c == 0);
-
-   // If bytes > 0 here, there where extra bytes before the marker (not good).
 
    return c;
 }
@@ -1039,8 +1132,6 @@ static uint8 init(void)
    uint8 i;
    uint32 r;
 
-   gImageXSize = 0;
-   gImageYSize = 0;
    gCompsInFrame = 0;
    gRestartInterval = 0;
    gCompsInScan = 0;
@@ -1206,92 +1297,22 @@ static uint8 initScan(void)
 
    return 0;
 }
+
 //------------------------------------------------------------------------------
 static uint8 initFrame(void)
 {
-   if (gCompsInFrame == 1)
-   {
-      if ((gCompHSamp[0] != 1) || (gCompVSamp[0] != 1))
-         return PJPG_UNSUPPORTED_SAMP_FACTORS;
+   gMaxBlocksPerMCU = 4;
+   gMCUOrg[0] = 0;
+   gMCUOrg[1] = 0;
+   gMCUOrg[2] = 1;
+   gMCUOrg[3] = 2;
 
-      gScanType = PJPG_GRAYSCALE;
+   #define gMaxMCUXSize 16
+   #define gMaxMCUYSize 8
 
-      gMaxBlocksPerMCU = 1;
-      gMCUOrg[0] = 0;
+   #define gMaxMCUSPerRow ((QT200_WIDTH + (gMaxMCUXSize - 1)) >> 4)
+   #define gMaxMCUSPerCol ((QT200_HEIGHT + (gMaxMCUYSize - 1)) >> 3)
 
-      gMaxMCUXSize     = 8;
-      gMaxMCUYSize     = 8;
-   }
-   else if (gCompsInFrame == 3)
-   {
-      if ( ((gCompHSamp[1] != 1) || (gCompVSamp[1] != 1)) ||
-         ((gCompHSamp[2] != 1) || (gCompVSamp[2] != 1)) )
-         return PJPG_UNSUPPORTED_SAMP_FACTORS;
-
-      if ((gCompHSamp[0] == 1) && (gCompVSamp[0] == 1))
-      {
-         gScanType = PJPG_YH1V1;
-
-         gMaxBlocksPerMCU = 3;
-         gMCUOrg[0] = 0;
-         gMCUOrg[1] = 1;
-         gMCUOrg[2] = 2;
-
-         gMaxMCUXSize = 8;
-         gMaxMCUYSize = 8;
-      }
-      else if ((gCompHSamp[0] == 1) && (gCompVSamp[0] == 2))
-      {
-         gScanType = PJPG_YH1V2;
-
-         gMaxBlocksPerMCU = 4;
-         gMCUOrg[0] = 0;
-         gMCUOrg[1] = 0;
-         gMCUOrg[2] = 1;
-         gMCUOrg[3] = 2;
-
-         gMaxMCUXSize = 8;
-         gMaxMCUYSize = 16;
-      }
-      else if ((gCompHSamp[0] == 2) && (gCompVSamp[0] == 1))
-      {
-         gScanType = PJPG_YH2V1;
-
-         gMaxBlocksPerMCU = 4;
-         gMCUOrg[0] = 0;
-         gMCUOrg[1] = 0;
-         gMCUOrg[2] = 1;
-         gMCUOrg[3] = 2;
-
-         gMaxMCUXSize = 16;
-         gMaxMCUYSize = 8;
-      }
-      else if ((gCompHSamp[0] == 2) && (gCompVSamp[0] == 2))
-      {
-         gScanType = PJPG_YH2V2;
-
-         gMaxBlocksPerMCU = 6;
-         gMCUOrg[0] = 0;
-         gMCUOrg[1] = 0;
-         gMCUOrg[2] = 0;
-         gMCUOrg[3] = 0;
-         gMCUOrg[4] = 1;
-         gMCUOrg[5] = 2;
-
-         gMaxMCUXSize = 16;
-         gMaxMCUYSize = 16;
-      }
-      else
-         return PJPG_UNSUPPORTED_SAMP_FACTORS;
-   }
-   else
-      return PJPG_UNSUPPORTED_COLORSPACE;
-
-   gMaxMCUSPerRow = (gImageXSize + (gMaxMCUXSize - 1)) >> ((gMaxMCUXSize == 8) ? 3 : 4);
-   gMaxMCUSPerCol = (gImageYSize + (gMaxMCUYSize - 1)) >> ((gMaxMCUYSize == 8) ? 3 : 4);
-
-   // This can overflow on large JPEG's.
-   //gNumMCUSRemaining = gMaxMCUSPerRow * gMaxMCUSPerCol;
    gNumMCUSRemainingX = gMaxMCUSPerRow;
    gNumMCUSRemainingY = gMaxMCUSPerCol;
 
@@ -1306,7 +1327,7 @@ static uint8 initFrame(void)
 
 #define PJPG_WINOGRAD_QUANT_SCALE_BITS 10
 
-const uint8 gWinogradQuant[] =
+uint8 gWinogradQuant[] =
 {
    128,  178,  178,  167,  246,  167,  151,  232,
    232,  151,  128,  209,  219,  209,  128,  101,
@@ -1322,12 +1343,14 @@ const uint8 gWinogradQuant[] =
 static void createWinogradQuant(int16* pQuant)
 {
    uint8 i;
+   register int16 *ptr_quant = pQuant;
+   register uint8 *ptr_winograd = gWinogradQuant;
 
    for (i = 0; i < 64; i++)
    {
-      long x = pQuant[i];
-      x *= gWinogradQuant[i];
-      pQuant[i] = (int16)((x + (1 << (PJPG_WINOGRAD_QUANT_SCALE_BITS - PJPG_DCT_SCALE_BITS - 1))) >> (PJPG_WINOGRAD_QUANT_SCALE_BITS - PJPG_DCT_SCALE_BITS));
+      long x = *ptr_quant;
+      x *= *(ptr_winograd++);
+      *(ptr_quant++) = (int16)((x + (1 << (PJPG_WINOGRAD_QUANT_SCALE_BITS - PJPG_DCT_SCALE_BITS - 1))) >> (PJPG_WINOGRAD_QUANT_SCALE_BITS - PJPG_DCT_SCALE_BITS));
    }
 }
 
@@ -1373,7 +1396,8 @@ static uint16 __fastcall__ imul_b1_b3(int16 w)
   __asm__("sta %v+1", x);
   __asm__("lda %v,y", mul362_h);
   __asm__("sta %v+2", x);
-  __asm__("stz %v+3", x);
+  /* We can ignore high byte */
+  // __asm__("stz %v+3", x);
 
   // x += (mul362_l[h]) << 8;
   __asm__("clc");
@@ -1387,11 +1411,13 @@ static uint16 __fastcall__ imul_b1_b3(int16 w)
   __asm__("adc %v,y", mul362_m);
   __asm__("sta %v+2", x);
 
+  /* We can ignore high byte */
   // x += (mul362_h[h]) << 24;
-  __asm__("lda %v+3", x);
-  __asm__("adc %v,y", mul362_h);
-  __asm__("sta %v+3", x);
+  // __asm__("lda %v+3", x);
+  // __asm__("adc %v,y", mul362_h);
+  // __asm__("sta %v+3", x);
 
+  /* Was val negative? */
   __asm__("lda %v", neg);
   __asm__("beq %g", do_shift);
     // x ^= 0xffffffff;
@@ -1407,7 +1433,7 @@ static uint16 __fastcall__ imul_b1_b3(int16 w)
   __asm__("eor #$FF");
   __asm__("sta %v+2", x);
 
-  /* We can ignore this one */
+  /* We can ignore high byte */
   // __asm__("lda %v+3", x);
   // __asm__("eor #$FF");
   // __asm__("sta %v+3", x);
@@ -1466,7 +1492,8 @@ static uint16 __fastcall__ imul_b2(int16 w)
   __asm__("sta %v+1", x);
   __asm__("lda %v,y", mul669_h);
   __asm__("sta %v+2", x);
-  __asm__("stz %v+3", x);
+  /* We can ignore high byte */
+  // __asm__("stz %v+3", x);
 
   // x += (mul669_l[h]) << 8;
   __asm__("clc");
@@ -1480,10 +1507,11 @@ static uint16 __fastcall__ imul_b2(int16 w)
   __asm__("adc %v,y", mul669_m);
   __asm__("sta %v+2", x);
 
+  /* We can ignore high byte */
   // x += (mul669_h[h]) << 24;
-  __asm__("lda %v+3", x);
-  __asm__("adc %v,y", mul669_h);
-  __asm__("sta %v+3", x);
+  // __asm__("lda %v+3", x);
+  // __asm__("adc %v,y", mul669_h);
+  // __asm__("sta %v+3", x);
 
   __asm__("lda %v", neg);
   __asm__("beq %g", do_shift);
@@ -1559,7 +1587,8 @@ static uint16 __fastcall__ imul_b4(int16 w)
   __asm__("sta %v+1", x);
   __asm__("lda %v,y", mul277_h);
   __asm__("sta %v+2", x);
-  __asm__("stz %v+3", x);
+  /* We can ignore high byte */
+  // __asm__("stz %v+3", x);
 
   // x += (mul277_l[h]) << 8;
   __asm__("clc");
@@ -1573,10 +1602,11 @@ static uint16 __fastcall__ imul_b4(int16 w)
   __asm__("adc %v,y", mul277_m);
   __asm__("sta %v+2", x);
 
+  /* We can ignore high byte */
   // x += (mul277_h[h]) << 24;
-  __asm__("lda %v+3", x);
-  __asm__("adc %v,y", mul277_h);
-  __asm__("sta %v+3", x);
+  // __asm__("lda %v+3", x);
+  // __asm__("adc %v,y", mul277_h);
+  // __asm__("sta %v+3", x);
 
   __asm__("lda %v", neg);
   __asm__("beq %g", do_shift);
@@ -1652,7 +1682,8 @@ static uint16 __fastcall__ imul_b5(int16 w)
   __asm__("sta %v+1", x);
   __asm__("lda %v,y", mul196_h);
   __asm__("sta %v+2", x);
-  __asm__("stz %v+3", x);
+  /* We can ignore high byte */
+  // __asm__("stz %v+3", x);
 
   // x += (mul196_l[h]) << 8;
   __asm__("clc");
@@ -1666,10 +1697,11 @@ static uint16 __fastcall__ imul_b5(int16 w)
   __asm__("adc %v,y", mul196_m);
   __asm__("sta %v+2", x);
 
+  /* We can ignore high byte */
   // x += (mul196_h[h]) << 24;
-  __asm__("lda %v+3", x);
-  __asm__("adc %v,y", mul196_h);
-  __asm__("sta %v+3", x);
+  // __asm__("lda %v+3", x);
+  // __asm__("adc %v,y", mul196_h);
+  // __asm__("sta %v+3", x);
 
   /* was val negative? */
   __asm__("lda %v", neg);
@@ -2119,133 +2151,225 @@ static void transformBlock(uint8 mcuBlock)
 //------------------------------------------------------------------------------
 static uint8 decodeNextMCU(void)
 {
-   uint8 status;
-   uint8 mcuBlock;
-   /* Do not use zp vars here, it'll be destroyed by transformBlock
-    * and idct*
-    */
-   register uint8 *cur_gMCUOrg;
+  uint8 status;
+  uint8 mcuBlock;
+  /* Do not use zp vars here, it'll be destroyed by transformBlock
+  * and idct*
+  */
+  register uint8 *cur_gMCUOrg;
 
-   if (gRestartInterval)
-   {
-      if (gRestartsLeft == 0)
-      {
-         status = processRestart();
-         if (status)
-            return status;
-      }
-      gRestartsLeft--;
-   }
+  if (gRestartInterval) {
+    if (gRestartsLeft == 0) {
+      status = processRestart();
+      if (status)
+        return status;
+    }
+    gRestartsLeft--;
+  }
 
-   cur_gMCUOrg = gMCUOrg + 0;
-   for (mcuBlock = 0; mcuBlock < gMaxBlocksPerMCU; mcuBlock++)
-   {
-      uint8 componentID = *cur_gMCUOrg;
-      uint8 compQuant = gCompQuant[componentID];	
-      uint8 compDCTab = gCompDCTab[componentID];
-      uint8 numExtraBits, compACTab;
-      const int16* pQ = compQuant ? gQuant1 : gQuant0;
-      uint16 r, dc;
-      uint8 s;
-      const uint8 *end_ZAG;
+  cur_gMCUOrg = gMCUOrg + 0;
+  for (mcuBlock = 0; mcuBlock < 2; mcuBlock++) {
+    uint8 componentID = *cur_gMCUOrg;
+    uint8 compQuant = gCompQuant[componentID];	
+    uint8 compDCTab = gCompDCTab[componentID];
+    uint8 numExtraBits, compACTab;
+    int16* pQ = compQuant ? gQuant1 : gQuant0;
+    uint16 r, dc;
+    uint8 s;
 #ifndef __CC65__
-      const int16 *cur_pQ;
-      const uint8 *cur_ZAG;
+    int16 *cur_pQ;
+    int16 **cur_ZAG_coeff;
+    int16 **end_ZAG_coeff;
 #else
-      /* We can use 6 and 8 there as we'll be done with them by the time
-       * we reach transformBlock()
-       */
-      #define cur_pQ zp6sip
-      #define cur_ZAG zp8p
+    /* We can use 6 and 8 there as we'll be done with them by the time
+     * we reach transformBlock()
+     */
+    #define cur_pQ zp6sip
+    #define cur_ZAG_coeff zp8sip
+    int16 *end_ZAG_coeff;
 #endif
-      if (compDCTab)
-        s = huffDecode(&gHuffTab1, gHuffVal1);
+    if (compDCTab)
+      s = huffDecode(&gHuffTab1, gHuffVal1);
+    else
+      s = huffDecode(&gHuffTab0, gHuffVal0);
+
+    cur_gMCUOrg++;
+
+    r = 0;
+    numExtraBits = s & 0xF;
+    if (numExtraBits)
+       r = getBits2(numExtraBits);
+    dc = huffExtend(r, s);
+
+    dc = dc + gLastDC[componentID];
+    gLastDC[componentID] = dc;
+
+    gCoeffBuf[0] = dc * pQ[0];
+    compACTab = gCompACTab[componentID];
+
+    // Decode and dequantize AC coefficients
+
+#ifndef __CC65__
+    cur_ZAG_coeff = (ZAG_Coeff + 1);
+    end_ZAG_coeff = ZAG_Coeff + (64 - 1);
+#else
+    cur_ZAG_coeff = (int16 *)(ZAG_Coeff + 1);
+    end_ZAG_coeff = (int16 *)(ZAG_Coeff + (64 - 1));
+#endif
+    cur_pQ = pQ + 1;
+    for (; cur_ZAG_coeff != end_ZAG_coeff; cur_ZAG_coeff++, cur_pQ++) {
+      uint16 extraBits, tmp16;
+
+      if (compACTab)
+        s = huffDecode(&gHuffTab3, gHuffVal3);
       else
-        s = huffDecode(&gHuffTab0, gHuffVal0);
+        s = huffDecode(&gHuffTab2, gHuffVal2);
 
-      cur_gMCUOrg++;
-
-      r = 0;
+      extraBits = 0;
       numExtraBits = s & 0xF;
       if (numExtraBits)
-         r = getBits2(numExtraBits);
-      dc = huffExtend(r, s);
+        extraBits = getBits2(numExtraBits);
 
-      dc = dc + gLastDC[componentID];
-      gLastDC[componentID] = dc;
+      r = s >> 4;
+      s &= 15;
 
-      gCoeffBuf[0] = dc * pQ[0];
-      compACTab = gCompACTab[componentID];
+      if (s) {
+        uint16 ac;
 
-         // Decode and dequantize AC coefficients
+        while (r) {
+#ifndef __CC65__
+          **cur_ZAG_coeff = 0;
+#else
+          __asm__("lda (%v)", cur_ZAG_coeff);
+          __asm__("sta ptr1");
+          __asm__("ldy #1");
+          __asm__("lda (%v),y", cur_ZAG_coeff);
+          __asm__("sta ptr1+1");
+          __asm__("lda #0");
+          __asm__("sta (ptr1)");
+          __asm__("sta (ptr1),y");
+#endif
+          cur_ZAG_coeff++;
+          cur_pQ++;
+          r--;
+        }
 
-         cur_ZAG = ZAG + 1;
-         cur_pQ = pQ + 1;
-         end_ZAG = ZAG + sizeof ZAG;
-         for (; cur_ZAG != end_ZAG; cur_ZAG++, cur_pQ++)
-         {
-            uint16 extraBits;
+        ac = huffExtend(extraBits, s);
 
-            if (compACTab)
-              s = huffDecode(&gHuffTab3, gHuffVal3);
-            else
-              s = huffDecode(&gHuffTab2, gHuffVal2);
+#ifndef __CC65__
+        **cur_ZAG_coeff =  ac * *cur_pQ;
+#else
+        tmp16 = ac * *cur_pQ;
+        __asm__("lda (%v)", cur_ZAG_coeff);
+        __asm__("sta ptr1");
+        __asm__("ldy #1");
+        __asm__("lda (%v),y", cur_ZAG_coeff);
+        __asm__("sta ptr1+1");
+        __asm__("lda %v", tmp16);
+        __asm__("sta (ptr1)");
+        __asm__("lda %v+1", tmp16);
+        __asm__("sta (ptr1),y");
+#endif
+      } else {
+        if (r == 15) {
+          if ((cur_ZAG_coeff + 16) > end_ZAG_coeff)
+            return PJPG_DECODE_ERROR;
 
-            extraBits = 0;
-            numExtraBits = s & 0xF;
-            if (numExtraBits)
-               extraBits = getBits2(numExtraBits);
-
-            r = s >> 4;
-            s &= 15;
-
-            if (s)
-            {
-               int16 ac;
-
-                while (r)
-                {
-                   gCoeffBuf[*cur_ZAG] = 0;
-                   cur_ZAG++;
-                   cur_pQ++;
-                   r--;
-                }
-
-               ac = huffExtend(extraBits, s);
-
-               gCoeffBuf[*cur_ZAG] = ac * *cur_pQ;
-            }
-            else
-            {
-               if (r == 15)
-               {
-                  if ((cur_ZAG + 16) > end_ZAG)
-                     return PJPG_DECODE_ERROR;
-
-                  for (r = 16; r > 0; r--){
-                     gCoeffBuf[*cur_ZAG] = 0;
-                     cur_ZAG++;
-                     cur_pQ++;
-                  }
-                  cur_ZAG--;
-                  cur_pQ--;
-               }
-               else
-                  break;
-            }
-         }
-
-         while (cur_ZAG != end_ZAG) {
-            gCoeffBuf[*cur_ZAG] = 0;
-            cur_ZAG++;
+          for (r = 16; r > 0; r--) {
+#ifndef __CC65__
+            **cur_ZAG_coeff = 0;
+#else
+            __asm__("lda (%v)", cur_ZAG_coeff);
+            __asm__("sta ptr1");
+            __asm__("ldy #1");
+            __asm__("lda (%v),y", cur_ZAG_coeff);
+            __asm__("sta ptr1+1");
+            __asm__("lda #0");
+            __asm__("sta (ptr1)");
+            __asm__("sta (ptr1),y");
+#endif
+            cur_ZAG_coeff++;
             cur_pQ++;
           }
+          cur_ZAG_coeff--;
+          cur_pQ--;
+        } else
+          break;
+      }
+    }
 
-         if (mcuBlock < 2)
-          transformBlock(mcuBlock);
-   }
+    while (cur_ZAG_coeff != end_ZAG_coeff) {
+#ifndef __CC65__
+      **cur_ZAG_coeff = 0;
+#else
+      __asm__("lda (%v)", cur_ZAG_coeff);
+      __asm__("sta ptr1");
+      __asm__("ldy #1");
+      __asm__("lda (%v),y", cur_ZAG_coeff);
+      __asm__("sta ptr1+1");
+      __asm__("lda #0");
+      __asm__("sta (ptr1)");
+      __asm__("sta (ptr1),y");
+#endif
+      cur_ZAG_coeff++;
+      cur_pQ++;
+    }
 
-   return 0;
+    if (mcuBlock < 2)
+      transformBlock(mcuBlock);
+  }
+
+   /* Skip the other blocks, do the minimal work */
+  for (mcuBlock = 2; mcuBlock < gMaxBlocksPerMCU; mcuBlock++) {
+    uint8 componentID = *cur_gMCUOrg;
+    uint8 compDCTab = gCompDCTab[componentID];
+    uint8 numExtraBits, compACTab;
+    uint16 r, dc;
+    uint8 s, i;
+
+    if (compDCTab)
+      s = huffDecode(&gHuffTab1, gHuffVal1);
+    else
+      s = huffDecode(&gHuffTab0, gHuffVal0);
+
+    compACTab = gCompACTab[componentID];
+    r = 0;
+    numExtraBits = s & 0xF;
+    if (numExtraBits)
+      r = getBits2(numExtraBits);
+
+    dc = huffExtend(r, s);
+
+    for (i = 1; i != 64; i++) {
+      uint16 extraBits;
+
+      if (compACTab)
+        s = huffDecode(&gHuffTab3, gHuffVal3);
+      else
+        s = huffDecode(&gHuffTab2, gHuffVal2);
+
+      extraBits = 0;
+      numExtraBits = s & 0xF;
+      if (numExtraBits)
+        extraBits = getBits2(numExtraBits);
+
+      r = s >> 4;
+      s &= 15;
+
+      if (s) {
+        int16 ac;
+
+        i += r;
+        ac = huffExtend(extraBits, s);
+      } else {
+        if (r == 15) {
+          i+=15;
+        } else
+          break;
+      }
+    }
+  }
+  return 0;
 }
 //------------------------------------------------------------------------------
 unsigned char pjpeg_decode_mcu(void)
@@ -2270,16 +2394,9 @@ unsigned char pjpeg_decode_mcu(void)
    return 0;
 }
 //------------------------------------------------------------------------------
-unsigned char pjpeg_decode_init(pjpeg_image_info_t *pInfo)
+unsigned char pjpeg_decode_init(void)
 {
    uint8 status;
-
-   pInfo->m_width = 0; pInfo->m_height = 0; pInfo->m_comps = 0;
-   pInfo->m_MCUSPerRow = 0; pInfo->m_MCUSPerCol = 0;
-   pInfo->m_scanType = PJPG_GRAYSCALE;
-   pInfo->m_MCUWidth = 0; pInfo->m_MCUHeight = 0;
-   pInfo->m_pMCUBufG = (unsigned char*)0;
-
 
    status = init();
    if (status)
@@ -2297,122 +2414,99 @@ unsigned char pjpeg_decode_init(pjpeg_image_info_t *pInfo)
    if (status)
       return status;
 
-   pInfo->m_width = gImageXSize; pInfo->m_height = gImageYSize; pInfo->m_comps = gCompsInFrame;
-   pInfo->m_scanType = gScanType;
-   pInfo->m_MCUSPerRow = gMaxMCUSPerRow; pInfo->m_MCUSPerCol = gMaxMCUSPerCol;
-   pInfo->m_MCUWidth = gMaxMCUXSize; pInfo->m_MCUHeight = gMaxMCUYSize;
-   pInfo->m_pMCUBufG = gMCUBufG;
+   #define m_MCUWidth gMaxMCUXSize
+   #define m_MCUHeight gMaxMCUYSize
    return 0;
 }
 
-static pjpeg_image_info_t image_info;
-static uint16 mcu_x = 0;
-static uint16 mcu_y = 0;
+static uint8 mcu_x = 0;
 static uint8 status;
-static uint16 row_pitch;
 static uint16 dst_y;
-static uint16 decoded_width, decoded_height;
-static uint8 m_comps;
-static uint16 y, x;
+static uint8 *pDst_row;
+
+#define DECODED_WIDTH (QT200_WIDTH>>1)
+#define DECODED_HEIGHT (QT200_HEIGHT>>1)
 
 void qt_load_raw(uint16 top)
 {
-   if (top == 0) {
-     status = pjpeg_decode_init(&image_info);
+  uint8 *pDst_block;
+  register uint8 *pDst;
+  register uint8 *pSrcG;
 
-     if (status)
-     {
-        printf("pjpeg_decode_init() failed with status %u\n", status);
-        if (status == PJPG_UNSUPPORTED_MODE)
-        {
-           printf("Progressive JPEG files are not supported.\n");
-        }
-        return;
-     }
+  if (top == 0) {
+    status = pjpeg_decode_init();
 
-     decoded_width = image_info.m_width >> 1;
-     decoded_height = image_info.m_height >> 1;
-#if FULL_ENCODE
-  m_comps = image_info.m_comps;
-#else
-  m_comps = 1;
-#endif
-   row_pitch = decoded_width * m_comps;
-
+    if (status) {
+      printf("pjpeg_decode_init() failed with status %u\n", status);
+      if (status == PJPG_UNSUPPORTED_MODE) {
+        printf("Progressive JPEG files are not supported.\n");
+      }
+      return;
+    }
+    dst_y = 0;
+    #define row_pitch DECODED_WIDTH
   }
-  memset(raw_image, 0, decoded_width * m_comps * QT_BAND);
-   for ( ; ; )
-   {
-      uint8 *pDst_row;
+  pDst_row = raw_image;
 
-      status = pjpeg_decode_mcu();
+  for ( ; ; ) {
+    uint8 bx, by;
+    status = pjpeg_decode_mcu();
 
-      if (status)
-      {
-         if (status != PJPG_NO_MORE_BLOCKS)
-         {
-            printf("pjpeg_decode_mcu() failed with status %u\n", status);
-            return;
-         }
-
-         break;
-      }
-
-      if (mcu_y >= image_info.m_MCUSPerCol)
-      {
-         return;
-      }
-
-       // Copy MCU's pixel blocks into the destination bitmap.
-       dst_y = (mcu_y * image_info.m_MCUHeight);
-
-       pDst_row = raw_image + ((dst_y % (QT_BAND*2)) * row_pitch + (mcu_x * image_info.m_MCUWidth * m_comps))/2;
-
-       for (y = 0; y < image_info.m_MCUHeight; y += 8)
-       {
-          const uint8 by_limit = min(8, image_info.m_height - (mcu_y * image_info.m_MCUHeight + y));
-
-          for (x = 0; x < image_info.m_MCUWidth; x += 8)
-          {
-             uint8 *pDst_block = pDst_row + ((x * m_comps)>>1);
-
-             // Compute source byte offset of the block in the decoder's MCU buffer.
-             uint16 src_ofs = (x << 3) + (y << 4);
-             const uint8 *pSrcG = image_info.m_pMCUBufG + src_ofs;
-             const uint8 bx_limit = min(8, image_info.m_width - (mcu_x * image_info.m_MCUWidth + x));
-                uint8 bx, by;
-                for (by = 0; by < by_limit; by+=2)
-                {
-                   uint8 *pDst = pDst_block;
-
-                   for (bx = 0; bx < bx_limit; bx+=2)
-                   {
-                      uint8 c = *pSrcG++;
-                      *pDst++ = c;
-                      pSrcG++;
-                   }
-
-                   pSrcG += (8*2 - bx_limit);
-                   pDst_block += row_pitch;
-                }
-          }
-
-          pDst_row += (row_pitch << 3);
+    if (status) {
+       if (status != PJPG_NO_MORE_BLOCKS) {
+        printf("pjpeg_decode_mcu() failed with status %u\n", status);
+        return;
        }
+       break;
+    }
 
-      mcu_x++;
-      if (mcu_x == image_info.m_MCUSPerRow)
-      {
-         mcu_x = 0;
-         mcu_y++;
-         dst_y = (mcu_y * image_info.m_MCUHeight);
+    pSrcG = gMCUBufG;
 
-         progress_bar(-1, -1, 80*22, dst_y >> 1, height);
-         if (dst_y % (QT_BAND*2) == 0) {
-            break;
-         }
+    pDst_block = pDst_row;
+
+    for (by = 0; ; by++) {
+      pDst = pDst_block;
+
+      for (bx = 0; bx < 4; bx++) {
+        *pDst++ = *pSrcG++;
+        pSrcG++;
       }
-   }
+
+      pSrcG += 8;
+      if (by == 3)
+        break;
+      pDst_block += row_pitch;
+    }
+
+    pDst_block = pDst_row + (8>>1);
+
+    for (by = 0; ; by++) {
+      pDst = pDst_block;
+
+      for (bx = 0; bx < 4; bx++) {
+        *pDst++ = *pSrcG++;
+        pSrcG++;
+      }
+
+      pSrcG += 8;
+      if (by == 3)
+        break;
+      pDst_block += row_pitch;
+    }
+
+    mcu_x++;
+    pDst_row += 8;
+    if (mcu_x == gMaxMCUSPerRow) {
+      mcu_x = 0;
+      dst_y += m_MCUHeight;
+      pDst_row += QT200_HEIGHT * 2;
+
+      progress_bar(-1, -1, 80*22, dst_y >> 1, height);
+      if (dst_y % (QT_BAND*2) == 0) {
+        break;
+      }
+    }
+  }
 }
 
 #pragma register-vars(pop)
