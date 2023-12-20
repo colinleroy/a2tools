@@ -1,0 +1,3 @@
+#!/bin/bash
+FLOP2="-flop2 disks/qt100.dsk"
+make clean all IIGS=1 && cd ../.. && make quicktake.dsk && mame apple2gs -window -flop1 quicktake.dsk $FLOP2 -resolution 560x384 -modem null_modem -bitb socket.localhost:2000 -nomouse -debug -sl7 scsi -hard ~/Downloads/smart0.po; cd src/quicktake

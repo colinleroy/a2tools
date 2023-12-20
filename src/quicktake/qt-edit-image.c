@@ -70,7 +70,7 @@ void qt_convert_image_with_crop(const char *filename, uint16 sx, uint16 sy, uint
   dputs("Image conversion\r\n\r\n");
   if (!filename) {
     char *tmp;
-    
+
     dputs("Image: ");
     tmp = file_select(wherex(), wherey(), scrw - wherex(), wherey() + 10, 0, "Select an image file");
     if (tmp == NULL)
@@ -110,6 +110,8 @@ void qt_convert_image(const char *filename) {
   qt_convert_image_with_crop(filename, 0, 0, 640, 480);
 }
 static uint8 *baseaddr[HGR_HEIGHT];
+static uint8 **cur_baseaddr_ptr;
+static uint8 *cur_baseaddr_val; /* shortcut ptr */
 static uint8 div7_table[HGR_WIDTH];
 static uint8 mod7_table[HGR_WIDTH];
 static uint16 histogram[256];
@@ -416,7 +418,7 @@ save:
     *cp = 0;
   strcat ((char *)buffer, ".hgr");
   dputs("Save to: ");
-  dget_text(buffer, 63, NULL, 0);
+  dget_text((char *)buffer, 63, NULL, 0);
   if (buffer[0] == '\0') {
     goto start_edit;
   }
@@ -504,8 +506,6 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
   uint8 file_height;
 
   /* General variables */
-  uint8 h_plus1;
-  uint8 *cur_hgr_line;
   uint8 cur_hgr_row;
   uint8 cur_hgr_mod;
   uint8 opt_val;
@@ -514,8 +514,7 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
 
   file_width = p_width;
   file_height = p_height;
-  h_plus1 = file_height + 1;
-  
+
   next_err_line = err + file_width;
   init_base_addrs();
 
@@ -546,6 +545,8 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
     case 0:
       off_x = X_OFFSET;
       off_y = (HGR_HEIGHT - file_height) / 2;
+      cur_baseaddr_ptr = baseaddr + off_y;
+      cur_baseaddr_val = *cur_baseaddr_ptr;
       xdir = +1;
       ydir = +1;
       invert_coords = 0;
@@ -581,6 +582,8 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
     case 180:
       off_x = HGR_WIDTH - X_OFFSET;
       off_y = file_height - 1;
+      cur_baseaddr_ptr = baseaddr + off_y;
+      cur_baseaddr_val = *cur_baseaddr_ptr;
       xdir = -1;
       ydir = -1;
       invert_coords = 0;
@@ -592,7 +595,7 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
   end_bayer_map_y = bayer_map_y + 64;
 
   for(y = 0, dy = off_y; y != file_height;) {
-    
+
     /* Load data from file */
     if (!is_thumb) {
       fread(buffer, 1, FILE_WIDTH, ifp);
@@ -700,7 +703,7 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
       cur_hgr_row = div7_table[scaled_dy];
       cur_hgr_mod = mod7_table[scaled_dy];
     } else {
-      cur_hgr_line = baseaddr[dy];
+
     }
 
     x = start_x;
@@ -745,7 +748,19 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
         ptr = baseaddr[scaled_dx] + cur_hgr_row;
         pixel = cur_hgr_mod;
       } else {
-        ptr = cur_hgr_line + *cur_d7;
+#ifndef __CC65__
+        ptr = cur_baseaddr_val + *cur_d7;
+#else
+        __asm__("ldx %v+1", cur_baseaddr_val);
+        __asm__("lda %v", cur_baseaddr_val);
+        __asm__("clc");
+        __asm__("adc (%v)", cur_d7);
+        __asm__("sta %v", ptr);
+        __asm__("bcc %g", noof1);
+        __asm__("inx");
+        noof1:
+        __asm__("stx %v+1", ptr);
+#endif
         pixel = *cur_m7;
       }
 
@@ -787,7 +802,6 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
         __asm__("adc %v+1", buf_plus_err);
         __asm__("sta %v+1", buf_plus_err);
 #endif
-        cur_err = buf_plus_err;
         if (buf_plus_err < DITHER_THRESHOLD) {
           /* pixel's already black */
           x86_64_tgi_set(dx, y, TGI_COLOR_BLACK);
@@ -795,6 +809,7 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
           *ptr |= pixel;
           x86_64_tgi_set(dx, y, TGI_COLOR_WHITE);
         }
+        cur_err = buf_plus_err;
         err2 = cur_err >> 1; /* cur_err * 2 / 4 */
         err1 = err2 >> 1;    /* cur_err * 1 / 4 */
 
@@ -854,7 +869,7 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
         } else {
           *ptr |= pixel;
           x86_64_tgi_set(dx, y, TGI_COLOR_WHITE);
-        }      
+        }
       }
 
 next_pixel:
@@ -887,7 +902,15 @@ next_pixel:
     }
 next_line:
     y++;
-    dy += ydir;
+    if (ydir < 0) {
+      cur_baseaddr_ptr--;
+      cur_baseaddr_val = *cur_baseaddr_ptr;
+      dy--;
+    } else {
+      cur_baseaddr_ptr++;
+      cur_baseaddr_val = *cur_baseaddr_ptr;
+      dy++;
+    }
   }
   progress_bar(-1, -1, scrw, file_height, file_height);
 stop:
