@@ -76,13 +76,13 @@ list_again:
 
   if (last_dir[0] == '\0') {
 #ifdef __CC65__
+    list = malloc0(sizeof(char *) * 58);
+    is_dir = malloc0(sizeof(char) * 58);
     dev = getfirstdevice();
     do {
-      list = realloc_safe(list, sizeof(char *) * (n + 1));
-      is_dir = realloc_safe(is_dir, sizeof(char) * (n + 1));
 
-      list[n] = malloc0(FILENAME_MAX);
-      if (getdevicedir(dev, list[n], FILENAME_MAX) == NULL) {
+      list[n] = malloc0(17);
+      if (getdevicedir(dev, list[n], 17) == NULL) {
         free(list[n]);
         continue;
       }
