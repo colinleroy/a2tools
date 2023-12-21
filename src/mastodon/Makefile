@@ -50,6 +50,7 @@ mastodon_SOURCES := \
 	../lib/progress_bar.c \
 	../lib/surl_find_line.c \
 	../lib/surl_ping.c \
+	../lib/file_select.c \
 	../lib/path_helper.c \
 	../lib/hgr.c
 

@@ -27,6 +27,7 @@
 #include "malloc0.h"
 #include "extended_conio.h"
 #include "clrzone.h"
+#include "file_select.h"
 #include "progress_bar.h"
 #include "scrollwindow.h"
 #include "hgr.h"
@@ -157,15 +158,22 @@ static void img_display(media *m, char idx, char num_images) {
 
 static void save_image(void) {
   unsigned char prev_legend = legend;
-  char buf[40];
-
+  char buf[FILENAME_MAX + 1];
+  char *dir = NULL;
+  unsigned char x;
   toggle_legend(1);
-  clrzone(0, 22, NUMCOLS, 23);
+  clrscr();
   cputs("Save to: ");
 
-  strcpy(buf, get_start_device());
+  
+  dir = file_select((x = wherex()), wherey(), scrw - wherex(), wherey() + 10, 1, "Select directory");
+  if (dir == NULL) {
+    goto out_no_conf;
+  }
+  strncpy(buf, dir, FILENAME_MAX);
+  free(dir);
+  gotox(x);
   dget_text(buf, sizeof(buf) - 1, NULL, 0);
-  clrzone(0, 22, NUMCOLS, 23);
 
 #ifdef __APPLE2__
   _filetype = PRODOS_T_BIN;
@@ -174,7 +182,7 @@ static void save_image(void) {
   if (buf[0] != '\0') {
     FILE *fp = fopen(buf, "w");
     if (fp == NULL) {
-      cputs("Can not open file. ");
+      cputs("\r\nCan not open file. ");
       goto out;
     }
     if (fwrite((char *)HGR_PAGE, 1, HGR_LEN, fp) < HGR_LEN) {
@@ -182,15 +190,17 @@ static void save_image(void) {
       goto out;
     }
     fclose(fp);
-    cputs("Image saved. ");
+    cputs("\r\nImage saved. ");
+  } else {
+    goto out_no_conf;
   }
 
 out:
 #endif
   cputs("Press a key to continue.");
   cgetc();
-
-  clrzone(0, 22, NUMCOLS, 23);
+out_no_conf:
+  clrscr();
 
   if (!prev_legend)
     toggle_legend(0);
@@ -250,7 +260,9 @@ getc_again:
         goto getc_again;
       case 's':
         save_image();
+        set_legend(m->media_alt_text[i], i, m->n_media);
         goto getc_again;
+        break;
       default:
         break;
     }
