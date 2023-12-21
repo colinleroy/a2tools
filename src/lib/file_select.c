@@ -28,9 +28,8 @@
 #include <ctype.h>
 #include <errno.h>
 #include <dirent.h>
-#include "dputc.h"
-#include "dputs.h"
 #include "clrzone.h"
+#include "dputc.h"
 #include "malloc0.h"
 
 static char last_dir[FILENAME_MAX] = "";
@@ -61,7 +60,7 @@ char *file_select(char sx, char sy, char ex, char ey, char dir, char *prompt) {
 
   gotoxy(sx, sy);
 
-  dputs("Please wait...");
+  cputs("Please wait...");
   if (dir)
     last_dir[0] = '\0';
 
@@ -76,18 +75,24 @@ list_again:
 
   if (last_dir[0] == '\0') {
 #ifdef __CC65__
+    char **cur_list;
+    char *cur_is_dir;
     list = malloc0(sizeof(char *) * 58);
     is_dir = malloc0(sizeof(char) * 58);
     dev = getfirstdevice();
+    cur_list = list;
+    cur_is_dir = is_dir;
     do {
 
-      list[n] = malloc0(17);
-      if (getdevicedir(dev, list[n], 17) == NULL) {
-        free(list[n]);
+      *cur_list = malloc0(17);
+      if (getdevicedir(dev, *cur_list, 17) == NULL) {
+        free(*cur_list);
         continue;
       }
-      is_dir[n] = 1;
+      *cur_is_dir = 1;
       n++;
+      cur_list++;
+      cur_is_dir++;
     } while ((dev = getnextdevice(dev)) != INVALID_DEVICE);
 #else
   last_dir[0] = '/';
@@ -121,8 +126,8 @@ disp_again:
   cprintf("-- %s\r\n", prompt);
   if (n == 0) {
     gotox(sx); cprintf("! *%s*\r\n", dir ? "No directory":"Empty");
-    gotox(sx); dputs("!\r\n");
-    gotox(sx); dputs("-- Any key to go up");
+    gotox(sx); cputs("!\r\n");
+    gotox(sx); cputs("-- Any key to go up");
     cgetc();
     goto up;
   }
@@ -135,13 +140,13 @@ disp_again:
   }
   revers(0);
 
-  gotox(sx);dputs("! \r\n");
+  gotox(sx);cputs("! \r\n");
 #ifdef __APPLE2ENH__
-  gotox(sx);dputs("!  Up/Down / Left/Right: navigate;\r\n");
+  gotox(sx);cputs("!  Up/Down / Left/Right: navigate;\r\n");
 #else
-  gotox(sx);dputs("!  U/J / Left/Right: navigate;\r\n");
+  gotox(sx);cputs("!  U/J / Left/Right: navigate;\r\n");
 #endif
-  gotox(sx);dputs("-- Enter: select; Esc: cancel");
+  gotox(sx);cputs("-- Enter: select; Esc: cancel");
 
   c = tolower(cgetc());
   switch (c) {
@@ -201,7 +206,7 @@ out:
   clrzone(sx, sy, ex, ey);
 
   if (filename) {
-    dputs(filename);
+    cputs(filename);
   }
   return filename;
 }

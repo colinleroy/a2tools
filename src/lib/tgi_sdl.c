@@ -57,7 +57,7 @@ int tgi_done() {
     return 0;
 
   SDL_Quit();
-
+  screen = NULL;
   return 0;
 }
 

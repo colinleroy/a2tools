@@ -5,8 +5,6 @@
 #include <unistd.h>
 
 #include "dgets.h"
-#include "dputc.h"
-#include "dputs.h"
 #include "extended_conio.h"
 #include "file_select.h"
 #include "hgr.h"
@@ -25,7 +23,9 @@
 
 uint8 scrw, scrh;
 uint8 camera_connected;
-uint8 current_quality, current_flash_mode;
+char *camera_name = NULL;
+struct tm camera_time;
+uint8 num_pics, left_pics, choice, battery_level, charging, current_quality, current_flash_mode;
 
 #ifdef __CC65__
   #pragma static-locals(push, on)
@@ -33,14 +33,15 @@ uint8 current_quality, current_flash_mode;
 
 char magic[5] = "????";
 
-static void print_header(uint8 num_pics, uint8 left_pics, uint8 mode, uint8 flash_mode, uint8 battery_level, uint8 charging, const char *name, struct tm *time) {
+static void print_header(void) {
   gotoxy(0, 0);
   if (camera_connected) {
     printf("%s connected - %d%% battery%s - %02d/%02d/%04d %02d:%02d\n"
            "%d photos taken, %d left, %s mode, %s flash - ",
-          name, battery_level, charging? " (charging)":"",
-          time->tm_mday, time->tm_mon, time->tm_year, time->tm_hour, time->tm_min,
-          num_pics, left_pics, qt_get_mode_str(mode), qt_get_flash_str(flash_mode));
+          camera_name, battery_level, charging? " (charging)":"",
+          camera_time.tm_mday, camera_time.tm_mon, camera_time.tm_year,
+          camera_time.tm_hour, camera_time.tm_min,
+          num_pics, left_pics, qt_get_mode_str(current_quality), qt_get_flash_str(current_flash_mode));
   } else {
     printf("No camera connected\n");
   }
@@ -96,7 +97,7 @@ static void save_picture(uint8 n_pic) {
       n_pic);
   cgetc();
 
-  dirname = file_select(wherex(), wherey(), scrw - wherex(), wherey() + 10, 1, "Filename: ");
+  dirname = file_select(wherex(), wherey(), scrw - wherex(), wherey() + 10, 1, "Select directory");
   if (dirname == NULL) {
     return;
   }
@@ -129,7 +130,7 @@ static void get_one_picture(uint8 num_pics) {
   int8 n_pic;
 
   clrscr();
-  dputs("Get a picture from the camera\r\n\r\n"
+  cputs("Get a picture from the camera\r\n\r\n"
 
         "Picture number? ");
 
@@ -137,11 +138,10 @@ static void get_one_picture(uint8 num_pics) {
   dget_text(buf, 3, NULL, 0);
 
   if (buf[0] == '\0')
-    return;
+    return; 
 
   n_pic = atoi(buf);
   if (n_pic < 1 || n_pic > num_pics) {
-    dputc(0x07);
     printf("No image %d in camera.\n"
            "Please press a key...", n_pic);
     cgetc();
@@ -158,7 +158,7 @@ static void set_camera_name(const char *name) {
   }
 
   clrscr();
-  dputs("Camera renaming\r\n\r\n"
+  cputs("Camera renaming\r\n\r\n"
 
         "New camera name: ");
 
@@ -175,14 +175,14 @@ static void set_camera_time(void) {
   uint8 i;
 
   clrscr();
-  dputs("Camera time setting\r\n\r\n"
+  cputs("Camera time setting\r\n\r\n"
 
         "Please enter the current date and time:\r\n");
 
   for (i = 0; i < 5; i++) {
     buf[0] = '\0';
-    dputs(names[i]);
-    dputs(": ");
+    cputs(names[i]);
+    cputs(": ");
     dget_text(buf, 5, NULL, 0);
     vals[i] = (uint8)(atoi(buf) % 100);
   }
@@ -192,22 +192,22 @@ static void set_camera_time(void) {
 
 static void delete_pictures(void) {
   clrscr();
-  dputs("Pictures deletion\r\n\r\n"
+  cputs("Pictures deletion\r\n\r\n"
 
         "Delete all pictures on camera? (y/N)\r\n");
 
   if (tolower(cgetc()) == 'y') {
-    dputs("Deleting pictures, please wait...\r\n");
+    cputs("Deleting pictures, please wait...\r\n");
     qt_delete_pictures();
   }
-  dputs("Done!...\r\n");
+  cputs("Done!...\r\n");
 }
 
 static void take_picture(void) {
   clrscr();
-  dputs("Taking a picture...\r\n\r\n");
+  cputs("Taking a picture...\r\n\r\n");
   qt_take_picture();
-  dputs("Done!...\r\n");
+  cputs("Done!...\r\n");
 }
 
 static void show_thumbnails(uint8 num_pics) {
@@ -321,9 +321,7 @@ static uint8 setup(int argc, char *argv[]) {
 
 int main(int argc, char *argv[])
 {
-  uint8 num_pics, left_pics, mode, choice, flash, batt, charging;
-  char *name;
-  struct tm time;
+  uint8 choice;
 
   camera_connected = setup(argc, argv);
 menu:
@@ -333,81 +331,80 @@ menu:
   gotoxy(0, 0);
 
   if (camera_connected) {
-    if (qt_get_information(&num_pics, &left_pics, &mode, &flash, &batt, &charging, &name, &time) != 0)
+    free(camera_name);
+    camera_name = NULL;
+    if (qt_get_information(&num_pics, &left_pics, &current_quality,
+                           &current_flash_mode, &battery_level, &charging,
+                           &camera_name, &camera_time) != 0) {
       camera_connected = 0;
-    current_quality = mode;
-    current_flash_mode = flash;
+    }
   }
 
   runtime_once_clean();
 
-  print_header(num_pics, left_pics, mode, flash, batt, charging, name, &time);
+  print_header();
 
   set_scrollwindow(4, scrh);
   gotoxy(0, 0);
 
   choice = tolower(print_menu());
+
+  /* Choices available with or without a connected camera */
   switch(choice) {
-    case 'c':
-      if (!camera_connected) {
-        exec("slowtake", NULL);
-      }
-      break;
-    case 'p':
-      if (camera_connected && serial_model != QT_MODEL_200) {
-        show_thumbnails(num_pics);
-      }
-      break;
-    case 'g':
-      if (camera_connected) {
-        get_one_picture(num_pics);
-      }
-      break;
-    case 'd':
-      if (camera_connected && serial_model != QT_MODEL_200) {
-        delete_pictures();
-      }
-      break;
-    case 's':
-      if (camera_connected && serial_model != QT_MODEL_200) {
-        take_picture();
-      }
-      break;
     case 'r':
       qt_convert_image(NULL);
-      break;
+      goto menu;
     case 'v':
       qt_view_image(NULL);
-      break;
-    case 'n':
-      if (camera_connected && serial_model != QT_MODEL_200) {
-        set_camera_name(name);
-      }
-      break;
-    case 't':
-      if (camera_connected && serial_model != QT_MODEL_200) {
-        set_camera_time();
-      }
-      break;
-    case 'q':
-      if (camera_connected && serial_model != QT_MODEL_200) {
-        qt_set_quality((current_quality == QUALITY_HIGH) ? QUALITY_STANDARD:QUALITY_HIGH);
-      }
-      break;
-    case 'f':
-      if (camera_connected && serial_model != QT_MODEL_200) {
-        qt_set_flash((current_flash_mode + 1) % 3);
-      }
-      break;
+      goto menu;
     case '0':
       goto out;
     default:
       break;
   }
+
+  /* Choices available only with a camera connected */
+  if (camera_connected) {
+    /* The only possible choice for QT200 */
+    if (choice == 'g') {
+      get_one_picture(num_pics);
+    }
+    /* Choices for QT1x0 */
+    if (serial_model != QT_MODEL_200) {
+      switch(choice) {
+        case 'p':
+          show_thumbnails(num_pics);
+          break;
+        case 'd':
+          delete_pictures();
+          break;
+        case 's':
+          take_picture();
+          break;
+        case 'n':
+          set_camera_name(camera_name);
+          break;
+        case 't':
+          set_camera_time();
+          break;
+        case 'q':
+          qt_set_quality((current_quality == QUALITY_HIGH) ? QUALITY_STANDARD:QUALITY_HIGH);
+          break;
+        case 'f':
+          qt_set_flash((current_flash_mode + 1) % 3);
+          break;
+        default:
+          break;
+      }
+    }
+  } else if (choice == 'c') {
+    exec("slowtake", NULL);
+  }
+
   goto menu;
 
 out:
-  free(name);
+  free(camera_name);
   return 0;
 }
 

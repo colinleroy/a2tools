@@ -358,7 +358,7 @@ static uint8 get_data(uint8 n_pic, const char *name) {
     return -1;
   }
   DUMP_END();
-  picture_size = buffer[0] + (buffer[1] << 8) + ((uint32)buffer[2] << 16) + ((uint32)buffer[3] << 24);
+
 #ifndef __CC65__
   picture_size = buffer[0] + (buffer[1] << 8) + (buffer[2] << 16) + (buffer[3] << 24);
 #else

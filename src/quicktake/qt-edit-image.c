@@ -5,8 +5,6 @@
 #include <unistd.h>
 
 #include "dgets.h"
-#include "dputc.h"
-#include "dputs.h"
 #include "extended_conio.h"
 #include "file_select.h"
 #include "hgr.h"
@@ -53,11 +51,13 @@ uint16 crop_start_x = 0, crop_end_x;
 uint16 crop_start_y = 0, crop_end_y;
 int8 brighten = DEFAULT_BRIGHTEN;
 
+#pragma code-name(push, "LOWCODE")
+
 void get_program_disk(void) {
   while (reopen_start_device() != 0) {
     clrscr();
     gotoxy(13, 12);
-    printf("Please reinsert the program disk, then press any key.");
+    cputs("Please reinsert the program disk, then press any key.");
     cgetc();
   }
 }
@@ -67,11 +67,11 @@ void qt_convert_image_with_crop(const char *filename, uint16 sx, uint16 sy, uint
   static char args[BUF_SIZE + 16];
 
   clrscr();
-  dputs("Image conversion\r\n\r\n");
+  cputs("Image conversion\r\n\r\n");
   if (!filename) {
     char *tmp;
 
-    dputs("Image: ");
+    cputs("Image: ");
     tmp = file_select(wherex(), wherey(), scrw - wherex(), wherey() + 10, 0, "Select an image file");
     if (tmp == NULL)
       return;
@@ -130,7 +130,7 @@ static void histogram_equalize(void) {
     fread(histogram, sizeof(uint16), 256, ifp);
     fclose(ifp);
 
-    printf("Histogram equalization...\n");
+    cputs("Histogram equalization...\r\n");
     do {
       curr_hist += histogram[x];
       opt_histogram[x] = (uint8)((((uint32)curr_hist * 255)) / NUM_PIXELS);
@@ -143,6 +143,8 @@ fallback_std:
   }
 }
 
+#pragma code-name(pop)
+
 int8 bayer_map[64] = {
    0, 32,  8, 40,  2, 34, 10, 42,
   48, 16, 56, 24, 50, 18, 58, 26,
@@ -154,6 +156,7 @@ int8 bayer_map[64] = {
   63, 31, 55, 23, 61, 29, 53, 21
 };
 
+//char test[1497];
 static void init_base_addrs (void)
 {
   static uint8 y, base_init_done = 0;
@@ -249,14 +252,14 @@ start_edit:
   do {
     clrscr();
     gotoxy(0, 20);
-    printf("Rotate: L:left - U:180 - R:right");
+    cputs("Rotate: L:left - U:180 - R:right");
     if (angle == 90 || angle == 270) {
       if (resize)
-        printf("; C: Crop");
+        cputs("; C: Crop");
       else
-        printf("; C: Fit");
+        cputs("; C: Fit");
     } else if (angle == 0 && !(src_width % 320)) {
-      printf("; C: Reframe");
+      cputs("; C: Reframe");
     }
     printf("\nH: Auto-level %s; B: Brighten - D: Darken (Current %s%d)\n",
            auto_level ? "off":"on",
@@ -278,7 +281,7 @@ start_edit:
           case CH_ESC:
             clrscr();
             gotoxy(0, 20);
-            printf("Exit without saving? (y/N) ");
+            cputs("Exit without saving? (y/N)");
             c = tolower(cgetc());
             if (c == 'y')
               goto done;
@@ -304,9 +307,9 @@ start_edit:
             if (angle == 0 && !(src_width % 320)) {
               cropping = 1;
               goto crop_again;
-            }
-            else
+            } else {
               resize = !resize;
+            }
             return 1;
           case 'y':
             dither_alg = DITHER_BAYER;
@@ -335,9 +338,9 @@ crop_again:
         clrscr();
         gotoxy(0, 20);
         if (src_width == 640) {
-          printf("+: Zoom in; -: Zoom out; ");
+          cputs("+: Zoom in; -: Zoom out; ");
         }
-        printf("Arrow keys: Move selection\n"
+        cputs("Arrow keys: Move selection\r\n"
                "Enter: Reframe; Escape: Cancel");
         if (zoom_level) {
           /* Set back pixels at previous crop border */
@@ -417,29 +420,30 @@ save:
   if ((cp = strrchr ((char *)buffer, '.')))
     *cp = 0;
   strcat ((char *)buffer, ".hgr");
-  dputs("Save to: ");
+  cputs("Save to: ");
   dget_text((char *)buffer, 63, NULL, 0);
   if (buffer[0] == '\0') {
     goto start_edit;
   }
 
+open_again:
   ofp = fopen((char *)buffer, "w");
   if (ofp == NULL) {
     printf("Please insert image floppy for %s, or Escape to return\n", (char *)buffer);
     if (cgetc() != CH_ESC)
-      goto save;
+      goto open_again;
     goto start_edit;
   }
-  printf("Saving %s...\n", (char *)buffer);
+  cputs("Saving...\r\n");
   fseek(ofp, 0, SEEK_SET);
   if (fwrite((char *)HGR_PAGE, 1, HGR_LEN, ofp) < HGR_LEN) {
-    printf("Error saving file. Press a key to continue...\n");
+    cputs("Error. Press a key to continue...\r\n");
     cgetc();
     goto start_edit;
   }
   fclose(ofp);
 
-  printf("Done. Go back to Edition or main Menu? (E/m)");
+  cputs("Done. Go back to Edition or main Menu? (E/m)");
   c = tolower(cgetc());
   if (c != 'm') {
     goto start_edit;
@@ -447,6 +451,7 @@ save:
 done:
   hgr_mixoff();
   init_text();
+  clrscr();
 
   return 0;
 }
@@ -528,7 +533,7 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
     return;
   }
 
-  printf("Dithering...\n");
+  cputs("Dithering...\r\n");
   memset(err, 0, sizeof err);
   memset((char *)HGR_PAGE, 0, HGR_LEN);
 
@@ -945,10 +950,10 @@ void qt_view_image(const char *filename) {
 
   clrscr();
 
-  dputs("Image view\r\n\r\n");
+  cputs("Image view\r\n\r\n");
   if (!filename) {
     char *tmp;
-    dputs("Image (HGR): ");
+    cputs("Image (HGR): ");
     tmp = file_select(wherex(), wherey(), scrw - wherex(), wherey() + 10, 0, "Select an HGR file");
     if (tmp == NULL)
       return;
@@ -960,7 +965,7 @@ void qt_view_image(const char *filename) {
 
   fp = fopen(imgname, "rb");
   if (fp == NULL) {
-    dputs("Can not open image.\r\n");
+    cputs("Can not open image.\r\n");
     cgetc();
     return;
   }
