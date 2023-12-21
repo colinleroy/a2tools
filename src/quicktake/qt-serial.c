@@ -9,7 +9,6 @@
 #endif
 #include "platform.h"
 #include "dgets.h"
-#include "dputs.h"
 #include "extended_conio.h"
 #include "extended_string.h"
 #include "progress_bar.h"

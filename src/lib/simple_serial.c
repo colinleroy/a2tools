@@ -57,8 +57,8 @@ static char baud_rates[] = {
 #ifdef IIGS
   unsigned char slot = 0;
   static char *slots_strs[] = {
-    "  CHANNEL B (MODEM)",
-    "CHANNEL A (PRINTER)",
+    "MODEM  ",
+    "PRINTER",
     NULL
   };
   #define MAX_SLOT_IDX 1
@@ -321,25 +321,25 @@ uint8 orig_speed_reg; /* For IIgs */
 
 /* Input */
 int __fastcall__ simple_serial_getc_with_timeout(void) {
-    static char c;
+  static char c;
 
-    timeout_cycles = 10000U;
-    slowdown();
-    while (ser_get(&c) == SER_ERR_NO_DATA) {
-      if (--timeout_cycles == 0) {
-        speedup();
-        return EOF;
-      }
+  timeout_cycles = 10000U;
+  slowdown();
+  while (ser_get(&c) == SER_ERR_NO_DATA) {
+    if (--timeout_cycles == 0) {
+      speedup();
+      return EOF;
     }
-    speedup();
-    return (int)c;
+  }
+  speedup();
+  return (int)c;
 }
 
 char __fastcall__ simple_serial_getc(void) {
-    static char c;
+  static char c;
 
-    while (ser_get(&c) == SER_ERR_NO_DATA);
-    return c;
+  while (ser_get(&c) == SER_ERR_NO_DATA);
+  return c;
 }
 
 #pragma optimize(pop)
@@ -732,19 +732,38 @@ unsigned char __fastcall__ simple_serial_putc(char c) {
 #endif
 
 void __fastcall__ simple_serial_puts(const char *buf) {
+#ifndef __CC65__
   static const char *cur;
 
   cur = buf;
 
   while (*cur) {
-#ifndef __CC65__
     if (simple_serial_putc(*cur) == -1)
       break;
-#else
-    simple_serial_putc(*cur);
-#endif
     ++cur;
   }
+
+#else
+  __asm__("ldy #%o", buf);
+  __asm__("lda (sp),y");
+  __asm__("sta ptr4");
+  __asm__("iny");
+  __asm__("lda (sp),y");
+  __asm__("sta ptr4+1");
+  putc_again:
+  __asm__("ldy #$00");
+  __asm__("lda (ptr4),y");
+  __asm__("beq %g", puts_done);
+  __asm__("jsr %v", ser_put);
+  __asm__("cmp #%b", SER_ERR_OVERFLOW);
+  __asm__("beq %g", putc_again);
+  __asm__("inc ptr4");
+  __asm__("bne %g", putc_again);
+  __asm__("inc ptr4+1");
+  __asm__("bne %g", putc_again);
+  puts_done:
+  return;
+#endif
 }
 
 void __fastcall__ simple_serial_read(char *ptr, size_t nmemb) {
@@ -754,7 +773,14 @@ void __fastcall__ simple_serial_read(char *ptr, size_t nmemb) {
   cur = ptr;
   end = ptr + nmemb;
 
-#ifdef __APPLE2__
+#ifndef __CC65__
+
+  while (cur != end) {
+    *cur = simple_serial_getc();
+    ++cur;
+  }
+
+#else
   __asm__("                  lda %v", cur);               /* Copy cur to ZP */
   __asm__("                  sta tmp1");
   __asm__("                  lda %v+1", cur);
@@ -788,12 +814,6 @@ void __fastcall__ simple_serial_read(char *ptr, size_t nmemb) {
   __asm__("                  ldx tmp2");                  /* Compare high bytes */
   __asm__("                  cpx tmp4");
   __asm__("                  bne read_again_axok");       /* different, read again */
-#else
-
-  while (cur != end) {
-    *cur = simple_serial_getc();
-    ++cur;
-  }
 #endif
 }
 
@@ -808,15 +828,38 @@ void __fastcall__ simple_serial_write(const char *ptr, size_t nmemb) {
   cur = ptr;
   end = ptr + nmemb;
 
-  while (cur != end) {
 #ifndef __CC65__
+
+  while (cur != end) {
     if (simple_serial_putc(*cur) == (unsigned char)-1)
       break;
-#else
-    simple_serial_putc(*cur);
-#endif
     ++cur;
   }
+
+#else
+  __asm__("lda %v", cur);
+  __asm__("sta ptr4");
+  __asm__("ldx %v+1", cur);
+  __asm__("stx ptr4+1");
+  goto check_write;
+  write_again:
+  __asm__("ldy #$00");
+  __asm__("lda (ptr4),y");
+  __asm__("jsr %v", ser_put);
+  __asm__("cmp #%b", SER_ERR_OVERFLOW);
+  __asm__("beq %g", write_again);
+
+  __asm__("inc ptr4");
+  __asm__("bne %g", check_write);
+  __asm__("inc ptr4+1");
+  check_write:
+  __asm__("lda ptr4");
+  __asm__("cmp %v", end);
+  __asm__("bne %g", write_again);
+  __asm__("ldx ptr4+1");
+  __asm__("cpx %v+1", end);
+  __asm__("bne %g", write_again);
+#endif
 }
 
 #ifdef __CC65__

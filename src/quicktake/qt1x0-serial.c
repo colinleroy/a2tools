@@ -387,6 +387,7 @@ uint8 qt1x0_get_picture(uint8 n_pic, const char *filename) {
   uint16 width, height;
   unsigned char pic_size_str[3];
   unsigned long pic_size_int;
+  uint8 i;
   const char *format;
 
   platform_sleep(1);
@@ -435,8 +436,8 @@ uint8 qt1x0_get_picture(uint8 n_pic, const char *filename) {
 
   /* Write the start of the header */
   write_qtk_header(picture, format);
-  fwrite(buffer, 1, BLOCK_SIZE, picture);
-  fwrite(buffer, 1, BLOCK_SIZE, picture);
+  for (i = 0; i != 2; i++)
+    fwrite(buffer, 1, BLOCK_SIZE, picture);
 
   /* Write the rest of the header */
   fseek(picture, 0x0E, SEEK_SET);
