@@ -44,7 +44,7 @@ uint8 qt_serial_connect(uint16 speed) {
   simple_serial_set_speed(B9600);
 #endif
   if (simple_serial_open() != 0) {
-    printf("Cannot open port\n");
+    cputs("Cannot open port\r\n");
     return -1;
   }
   simple_serial_flush();
@@ -65,14 +65,14 @@ uint8 qt_serial_connect(uint16 speed) {
     }
   }
 
-  printf("\n");
+  cputs("\r\n");
 
   if (serial_model == QT_MODEL_UNKNOWN) {
-    printf("No camera connected.\n");
+    cputs("No camera connected.\r\n");
     return -1;
   }
 
-  printf("Initializing...\n");
+  cputs("Initializing...\r\n");
 
   /* Upgrade to target speed */
   if (serial_model != QT_MODEL_200)
@@ -121,16 +121,16 @@ uint8 qt_set_flash(uint8 mode) {
     return -1;
 }
 
-uint8 qt_get_picture(uint8 n_pic, const char *filename) {
+uint8 qt_get_picture(uint8 n_pic, FILE *picture) {
   if (serial_model != QT_MODEL_200)
-    return qt1x0_get_picture(n_pic, filename);
+    return qt1x0_get_picture(n_pic, picture);
   else
-    return qt200_get_picture(n_pic, filename);
+    return qt200_get_picture(n_pic, picture);
 }
 
-uint8 qt_get_thumbnail(uint8 n_pic, uint8 *quality, uint8 *flash, uint8 *year, uint8 *month, uint8 *day, uint8 *hour, uint8 *minute) {
+uint8 qt_get_thumbnail(uint8 n_pic, FILE *picture, thumb_info *info) {
   if (serial_model != QT_MODEL_200)
-    return qt1x0_get_thumbnail(n_pic, quality, flash, year, month, day, hour, minute);
+    return qt1x0_get_thumbnail(n_pic, picture, info);
   else
     return -1;
 }
@@ -146,11 +146,11 @@ uint8 qt_delete_pictures(void) {
 
 #pragma code-name(push, "LOWCODE")
 
-uint8 qt_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mode, uint8 *flash_mode, uint8 *battery_level, uint8 *charging, char **name, struct tm *time) {
+uint8 qt_get_information(camera_info *info) {
   if (serial_model != QT_MODEL_200)
-    return qt1x0_get_information(num_pics, left_pics, quality_mode, flash_mode, battery_level, charging, name, time);
+    return qt1x0_get_information(info);
   else
-    return qt200_get_information(num_pics, left_pics, quality_mode, flash_mode, battery_level, charging, name, time);
+    return qt200_get_information(info);
 }
 
 /* Helper functions */
@@ -161,7 +161,7 @@ void write_qtk_header(FILE *fp, const char *pic_format) {
   fwrite(hdr, 1, sizeof hdr, fp);
 }
 
-const char *qt_get_mode_str(uint8 mode) {
+const char *qt_get_quality_str(uint8 mode) {
   switch(mode) {
     case QUALITY_STANDARD:
       return "standard quality";

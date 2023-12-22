@@ -18,14 +18,13 @@
 #include "qt-serial.h"
 
 #include "runtime_once_clean.h"
+#include "extended_string.h"
 
 #pragma code-name(push, "LOWCODE")
 
 uint8 scrw, scrh;
 uint8 camera_connected;
-char *camera_name = NULL;
-struct tm camera_time;
-uint8 num_pics, left_pics, choice, battery_level, charging, current_quality, current_flash_mode;
+camera_info cam_info;
 
 #ifdef __CC65__
   #pragma static-locals(push, on)
@@ -33,17 +32,20 @@ uint8 num_pics, left_pics, choice, battery_level, charging, current_quality, cur
 
 char magic[5] = "????";
 
+#define WELCOME_STR "Welcome to Quicktake for Apple II - (c) Colin Leroy-Mira, https://colino.net\r\n"
+
 static void print_header(void) {
   gotoxy(0, 0);
   if (camera_connected) {
     printf("%s connected - %d%% battery%s - %02d/%02d/%04d %02d:%02d\n"
-           "%d photos taken, %d left, %s mode, %s flash - ",
-          camera_name, battery_level, charging? " (charging)":"",
-          camera_time.tm_mday, camera_time.tm_mon, camera_time.tm_year,
-          camera_time.tm_hour, camera_time.tm_min,
-          num_pics, left_pics, qt_get_mode_str(current_quality), qt_get_flash_str(current_flash_mode));
+           "%d photos taken, %d left, %s, %s flash - ",
+          cam_info.name, cam_info.battery_level, cam_info.charging? " (charging)":"",
+          cam_info.date.day, cam_info.date.month, cam_info.date.year,
+          cam_info.date.hour, cam_info.date.minute,
+          cam_info.num_pics, cam_info.left_pics, qt_get_quality_str(cam_info.quality_mode),
+          qt_get_flash_str(cam_info.flash_mode));
   } else {
-    printf("No camera connected\n");
+    cputs("No camera connected\r\n");
   }
 #ifdef __CC65__
   printf("Free RAM: %zuB\n", _heapmemavail());
@@ -52,37 +54,37 @@ static void print_header(void) {
 }
 
 static uint8 print_menu(void) {
-  printf("Menu\n\n");
+  cputs("Menu\r\n\r\n");
   if (camera_connected) {
+    cputs(" G. Get one picture\r\n");
     if (serial_model != QT_MODEL_200) {
-      printf(" G. Get one picture\n"
-           " P. Preview pictures\n"
-           " D. Delete all pictures\n"
-           " S. Snap a picture\n");
-    } else {
-      printf(" G. Get one picture\n");
+      cputs(" P. Preview pictures\r\n"
+            " D. Delete all pictures\r\n"
+            " S. Snap a picture\r\n");
     }
   } else {
-    printf(" C. Connect camera\n");
+    cputs(" C. Connect camera\r\n");
   }
-  printf(  " R. Re-edit a raw picture from floppy\n"
-           " V. View a converted picture from floppy\n");
+  cputs(  " R. Re-edit a raw picture from floppy\r\n"
+           " V. View a converted picture from floppy\r\n");
   if (camera_connected  && serial_model != QT_MODEL_200) {
     printf(" N. Set camera name\n"
            " T. Set camera time\n"
            " Q. Set quality to %s\n"
            " F. Set flash to %s\n",
-           qt_get_mode_str((current_quality == QUALITY_HIGH) ? QUALITY_STANDARD:QUALITY_HIGH),
-           qt_get_flash_str((current_flash_mode + 1) % 3));
+           qt_get_quality_str((cam_info.quality_mode == QUALITY_HIGH) ? QUALITY_STANDARD:QUALITY_HIGH),
+           qt_get_flash_str((cam_info.flash_mode + 1) % 3));
   }
-  printf(  "\n"
-           " 0. Exit\n\n");
+  cputs(   "\r\n"
+           " A. About this program\r\n"
+           " 0. Exit\r\n\r\n");
   return cgetc();
 }
 
 static void save_picture(uint8 n_pic) {
   char filename[64];
   char *dirname;
+  FILE *fp;
 
   filename[0] = '\0';
 #ifdef __CC65__
@@ -114,13 +116,33 @@ static void save_picture(uint8 n_pic) {
     sprintf(filename, "image%02d.qtk", n_pic);
 #endif
 
-  if (filename[strlen(filename) - 1] == '/')
+  if (filename[0] == '\0' || filename[strlen(filename) - 1] == '/')
     return;
 
-  if (qt_get_picture(n_pic, filename) == 0) {
+  fp = fopen(filename, "r");
+  if (fp) {
+    char c;
+    fclose(fp);
+    cputs("File exists. Overwrite? (y/N)\r\n");
+    c = tolower(cgetc());
+    if (c != 'y') {
+      return;
+    }
+  }
+
+  fp = fopen(filename, "w");
+  if (!fp) {
+    goto err_io;
+  }
+
+  if (qt_get_picture(n_pic, fp) == 0) {
+    fclose(fp);
     qt_convert_image(filename);
   } else {
-    printf("Error saving picture.\n");
+    fclose(fp);
+    unlink(filename);
+err_io:
+    cputs("Error saving picture.\r\n");
     cgetc();
   }
 }
@@ -173,7 +195,7 @@ static void set_camera_time(void) {
   char buf[5];
   uint8 vals[5];
   uint8 i;
-
+  
   clrscr();
   cputs("Camera time setting\r\n\r\n"
 
@@ -212,10 +234,11 @@ static void take_picture(void) {
 
 static void show_thumbnails(uint8 num_pics) {
   uint8 i = 0;
-  uint8 quality, flash, year, month, day, hour, minute;
-
+  thumb_info info;
   char c;
   char thumb_buf[32];
+  FILE *fp;
+
   if (num_pics == 0) {
     return;
   }
@@ -230,10 +253,20 @@ static void show_thumbnails(uint8 num_pics) {
       i = 1;
     }
 
+    fp = fopen(THUMBNAIL_NAME, "w");
+    if (!fp) {
+      goto err_thumb_io;
+    }
+
     clrscr();
     gotoxy(0,20);
-    if (qt_get_thumbnail(i, &quality, &flash, &year, &month, &day, &hour, &minute) != 0) {
-      printf("Error getting thumbnail.\n");
+
+    c = qt_get_thumbnail(i, fp, &info);
+    fclose(fp);
+
+    if (c != 0) {
+err_thumb_io:
+      cputs("\r\nError getting thumbnail.\r\n");
       cgetc();
       break;
     }
@@ -246,8 +279,9 @@ static void show_thumbnails(uint8 num_pics) {
 
     printf("%s (%s, flash %s, %02d/%02d/%04d %02d:%02d)\n"
            "G to get full picture, Escape to exit, any other key to continue",
-           thumb_buf, qt_get_mode_str(quality), flash?"on":"off", day, month,
-           year + 2000, hour, minute);
+           thumb_buf, qt_get_quality_str(info.quality_mode),
+           info.flash_mode ? "on":"off", info.date.day, info.date.month,
+           info.date.year, info.date.hour, info.date.minute);
     c = tolower(cgetc());
   } while (c != CH_ESC && c != 'g');
   unlink(THUMBNAIL_NAME);
@@ -256,6 +290,21 @@ static void show_thumbnails(uint8 num_pics) {
     init_text();
     save_picture(i);
   }
+}
+
+static void finish_img_view(void) {
+  cgetc();
+  init_text();
+
+  get_program_disk();
+  clrscr();
+}
+
+static void print_welcome(void) {
+  hgr_mixon();
+  clrscr();
+  gotoxy(0,20);
+  cputs(WELCOME_STR);
 }
 
 #pragma code-name(pop)
@@ -283,12 +332,9 @@ static uint8 setup(int argc, char *argv[]) {
   }
   screensize(&scrw, &scrh);
   init_hgr(1);
-  hgr_mixon();
-  clrscr();
-  gotoxy(0,20);
-  printf("Welcome to Quicktake for Apple II - (c) Colin Leroy-Mira, https://colino.net\n");
+  print_welcome();
 
-  if (argc > 2) {
+  if (argc == 3) {
     qt_edit_image(argv[1], atoi(argv[2]));
   } else {
     set_scrollwindow(21, scrh);
@@ -301,7 +347,7 @@ static uint8 setup(int argc, char *argv[]) {
   while (qt_serial_connect(target_speed) != 0) {
     char c;
 
-    printf("Please turn the Quicktake off and on. Try again");
+    cputs("Please turn the Quicktake off and on. Try again");
     if (target_speed != 9600)
       printf(" at %u or at 9600bps? (Y/n/9)\n", target_speed);
     else
@@ -331,11 +377,9 @@ menu:
   gotoxy(0, 0);
 
   if (camera_connected) {
-    free(camera_name);
-    camera_name = NULL;
-    if (qt_get_information(&num_pics, &left_pics, &current_quality,
-                           &current_flash_mode, &battery_level, &charging,
-                           &camera_name, &camera_time) != 0) {
+    free(cam_info.name);
+    cam_info.name = NULL;
+    if (qt_get_information(&cam_info) != 0) {
       camera_connected = 0;
     }
   }
@@ -356,6 +400,17 @@ menu:
       goto menu;
     case 'v':
       qt_view_image(NULL);
+      finish_img_view();
+      goto menu;
+    case 'a':
+      reopen_start_device();
+      qt_view_image("about.hgr");
+      set_scrollwindow(0, scrh);
+      print_welcome();
+      cputs("Many thanks to Abi for her patience and support! <3\r\n"
+            "Thanks to my sons for their encouragements, to Pierre Dandumont for lending\r\n"
+            "me cameras, and to Fozztexx for extensive testing and debugging.");
+      finish_img_view();
       goto menu;
     case '0':
       goto out;
@@ -367,13 +422,13 @@ menu:
   if (camera_connected) {
     /* The only possible choice for QT200 */
     if (choice == 'g') {
-      get_one_picture(num_pics);
+      get_one_picture(cam_info.num_pics);
     }
     /* Choices for QT1x0 */
     if (serial_model != QT_MODEL_200) {
       switch(choice) {
         case 'p':
-          show_thumbnails(num_pics);
+          show_thumbnails(cam_info.num_pics);
           break;
         case 'd':
           delete_pictures();
@@ -382,16 +437,16 @@ menu:
           take_picture();
           break;
         case 'n':
-          set_camera_name(camera_name);
+          set_camera_name(cam_info.name);
           break;
         case 't':
           set_camera_time();
           break;
         case 'q':
-          qt_set_quality((current_quality == QUALITY_HIGH) ? QUALITY_STANDARD:QUALITY_HIGH);
+          qt_set_quality((cam_info.quality_mode == QUALITY_HIGH) ? QUALITY_STANDARD:QUALITY_HIGH);
           break;
         case 'f':
-          qt_set_flash((current_flash_mode + 1) % 3);
+          qt_set_flash((cam_info.flash_mode + 1) % 3);
           break;
         default:
           break;
@@ -404,7 +459,8 @@ menu:
   goto menu;
 
 out:
-  free(camera_name);
+  free(cam_info.name);
+  cam_info.name = NULL;
   return 0;
 }
 

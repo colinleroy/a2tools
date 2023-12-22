@@ -34,6 +34,9 @@ quicktake_disk_PROGS = \
 	src/quicktake/qtknconv.bin \
 	src/quicktake/jpegconv.bin
 
+quicktake_disk_IMGS = \
+	src/quicktake/about.hgr
+
 CLEANDISK = disks/basic-empty.dsk
 
 .PHONY: all clean
@@ -129,6 +132,9 @@ quicktake$(suffix).dsk: $(quicktake_disk_PROGS)
 	java -jar bin/ac.jar -d $@ BASIC; \
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
+	done
+	for img in $(quicktake_disk_IMGS); do \
+		java -jar bin/ac.jar -p $@ $$(basename $$img) BIN 0x2000 < $$img; \
 	done
 	cp $@ ~/Documents/ADTPro-2.1.0/disks/; \
 	cp $@ dist/; \

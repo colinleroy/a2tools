@@ -98,19 +98,8 @@ void stp_send_file(char *remote_dir) {
   }
   cprintf("(%lu bytes)\r\n", filesize);
 
-#ifdef __APPLE2ENH__
   remote_filename = malloc(BUFSIZE);
-  if (type == PRODOS_T_SYS) {
-    snprintf(remote_filename, BUFSIZE, "%s/%s.SYS", remote_dir, filename);
-  } else if (type == PRODOS_T_BIN) {
-    snprintf(remote_filename, BUFSIZE, "%s/%s.BIN", remote_dir, filename);
-  } else {
-    snprintf(remote_filename, BUFSIZE, "%s/%s.TXT", remote_dir, filename);
-  }
-#else
-    remote_filename = malloc(BUFSIZE);
-    snprintf(remote_filename, BUFSIZE, "%s/%s", remote_dir, filename);
-#endif
+  snprintf(remote_filename, BUFSIZE, "%s/%s", remote_dir, filename);
 
   buf_size = get_buf_size();
   data = malloc(buf_size + 1);

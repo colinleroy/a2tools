@@ -124,7 +124,6 @@ int stp_save(char *full_filename, char *out_dir, const surl_response *resp) {
 #ifdef __APPLE2ENH__
   if (strchr(filename, '.') != NULL) {
     filetype = strrchr(filename, '.') + 1;
-    *(strchr(filename, '.')) = '\0';
   } else {
     filetype = "TXT";
   }
@@ -132,10 +131,15 @@ int stp_save(char *full_filename, char *out_dir, const surl_response *resp) {
   if (!strcasecmp(filetype, "TXT")) {
     _filetype = PRODOS_T_TXT;
     _auxtype  = PRODOS_AUX_T_TXT_SEQ;
+    *(strrchr(filename, '.')) = '\0';
   } else if (!strcasecmp(filetype,"HGR")) {
     _filetype = PRODOS_T_BIN;
+  } else if (!strcasecmp(filetype,"SYSTEM")) {
+    _filetype = PRODOS_T_SYS;
+    _auxtype = 0x2000;
   } else if (!strcasecmp(filetype,"BIN")) {
     _filetype = PRODOS_T_BIN;
+    *(strrchr(filename, '.')) = '\0';
 
     /* Look into the header, and skip it by the way */
     data = malloc(APPLESINGLE_HEADER_LEN);
