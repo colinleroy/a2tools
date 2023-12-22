@@ -85,7 +85,7 @@ static uint8 send_hello(uint16 speed) {
 
   simple_serial_write(str_hello, sizeof(str_hello));
   if ((c = simple_serial_getc_with_timeout()) == EOF) {
-    printf("Timeout.\n");
+    cputs("Timeout.\r\n");
     return -1;
   }
   if (c != 0x00) {
@@ -108,7 +108,7 @@ static uint8 send_hello(uint16 speed) {
  */
 uint8 qt1x0_wakeup(uint16 speed) {
   static uint8 model = QT_MODEL_UNKNOWN;
-  printf("Pinging QuickTake 1x0... ");
+  cputs("Pinging QuickTake 1x0... ");
 #if defined(__CC65__) && !defined(IIGS)
   /* The Apple IIc printer being closed right now,
    * we have to set DTR before clearing it.
@@ -121,7 +121,7 @@ uint8 qt1x0_wakeup(uint16 speed) {
 #endif
 
   if ((model = get_hello()) == QT_MODEL_UNKNOWN) {
-    printf("Timeout. ");
+    cputs("Timeout. ");
 #if !defined(__CC65__) || defined(IIGS)
     /* Re-up current port */
     simple_serial_dtr_onoff(1);
@@ -130,7 +130,7 @@ uint8 qt1x0_wakeup(uint16 speed) {
   }
   send_hello(speed);
 
-  printf("Done. ");
+  cputs("Done. ");
   return model;
 }
 
@@ -170,7 +170,7 @@ uint8 qt1x0_set_speed(uint16 speed) {
 
   /* get ack */
   if (get_ack(5) != 0) {
-    printf("Speed set command failed.\n");
+    cputs("Speed set command failed.\r\n");
     return -1;
   }
   send_ack();
@@ -209,7 +209,7 @@ static uint8 qt1x0_send_ping(void) {
 
 #define PNUM_IDX       0x06
 #define PSIZE_IDX      0x07
-#define THUMBNAIL_SIZE 0x0960
+#define THUMBNAIL_SIZE 0x0960UL
 
 /* Gets thumbnail of the photo (?)
  * At least, the data received is 2400 bytes long, which correspond
@@ -345,7 +345,7 @@ static uint8 receive_data(uint32 size, FILE *fp) {
 
   DUMP_START("data");
 
-  printf("  Getting data...\n");
+  cputs("  Getting data...\r\n");
 
   progress_bar(2, y, scrw - 2, 0, (uint16)(size / BLOCK_SIZE));
 
@@ -377,13 +377,12 @@ static uint8 receive_data(uint32 size, FILE *fp) {
 #define char_to_n_uint16(buf) (((uint8)((buf)[1]))<<8 | ((uint8)((buf)[0])))
 
 /* Get a picture from the camera to a file */
-uint8 qt1x0_get_picture(uint8 n_pic, const char *filename) {
+uint8 qt1x0_get_picture(uint8 n_pic, FILE *picture) {
   #define HDR_SKIP       0x04
 
   #define WH_OFFSET      0x220
   #define DATA_OFFSET    0x2E0
 
-  FILE *picture;
   uint16 width, height;
   unsigned char pic_size_str[3];
   unsigned long pic_size_int;
@@ -396,11 +395,9 @@ uint8 qt1x0_get_picture(uint8 n_pic, const char *filename) {
     return -1;
   }
 
-  picture = fopen(filename,"wb");
-
   memset(buffer, 0, BLOCK_SIZE);
 
-  printf("  Getting header...\n");
+  cputs("  Getting header...\r\n");
 
   DUMP_START("header");
 
@@ -455,37 +452,23 @@ uint8 qt1x0_get_picture(uint8 n_pic, const char *filename) {
 
   send_photo_data_command(n_pic, pic_size_str);
 
-  if (receive_data(pic_size_int, picture) != 0) {
-    fclose(picture);
-    unlink(filename);
-    return -1;
-  }
-
-  fclose(picture);
-  return 0;
+  return receive_data(pic_size_int, picture);
 }
 
 #pragma code-name(pop)
 #pragma code-name(push, "LOWCODE")
 
 /* Get a thumnail from the camera to /RAM/THUMBNAIL */
-uint8 qt1x0_get_thumbnail(uint8 n_pic, uint8 *quality, uint8 *flash, uint8 *year, uint8 *month, uint8 *day, uint8 *hour, uint8 *minute) {
-  FILE *picture;
-  uint16 width, height;
-  unsigned long pic_size_int;
-  const char *format;
-
+uint8 qt1x0_get_thumbnail(uint8 n_pic, FILE *picture, thumb_info *info) {
   platform_sleep(1);
 
   if (qt1x0_send_ping() != 0) {
     return -1;
   }
 
-  picture = fopen(THUMBNAIL_NAME, "wb");
-
   memset(buffer, 0, BLOCK_SIZE);
 
-  printf("  Getting header...\n");
+  cputs("  Getting header...\r\n");
 
   DUMP_START("header");
 
@@ -498,34 +481,22 @@ uint8 qt1x0_get_thumbnail(uint8 n_pic, uint8 *quality, uint8 *flash, uint8 *year
   DUMP_END();
 
   
-  width = htons(THUMB_WIDTH);
-  height = htons(THUMB_HEIGHT);
-  pic_size_int = THUMBNAIL_SIZE;
-  format = "thumbnail";
-
-  *quality = buffer[IMG_QUALITY_IDX];
-  *flash   = buffer[IMG_FLASH_IDX];
-  *year    = buffer[IMG_YEAR_IDX];
-  *month   = buffer[IMG_MONTH_IDX];
-  *day     = buffer[IMG_DAY_IDX];
-  *hour    = buffer[IMG_HOUR_IDX];
-  *minute  = buffer[IMG_MINUTE_IDX];
+  info->quality_mode = buffer[IMG_QUALITY_IDX];
+  info->flash_mode   = buffer[IMG_FLASH_IDX];
+  info->date.year    = buffer[IMG_YEAR_IDX] + 2000;
+  info->date.month   = buffer[IMG_MONTH_IDX];
+  info->date.day     = buffer[IMG_DAY_IDX];
+  info->date.hour    = buffer[IMG_HOUR_IDX];
+  info->date.minute  = buffer[IMG_MINUTE_IDX];
 
   DUMP_START("data");
 
   printf("  Width %u, height %u, %lu bytes (%s)\n",
-         ntohs(width), ntohs(height), pic_size_int, format);
+         THUMB_WIDTH, THUMB_HEIGHT, THUMBNAIL_SIZE, "thumbnail");
 
   send_photo_thumbnail_command(n_pic);
 
-  if (receive_data(pic_size_int, picture) != 0) {
-    fclose(picture);
-    unlink(THUMBNAIL_NAME);
-    return -1;
-  }
-
-  fclose(picture);
-  return 0;
+  return receive_data(THUMBNAIL_SIZE, picture);
 }
 
 /* Delete all pictures from the camera */
@@ -571,7 +542,7 @@ uint8 qt1x0_set_flash(uint8 mode) {
 }
 
 /* Get information from the camera */
-uint8 qt1x0_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mode, uint8 *flash_mode, uint8 *battery_level, uint8 *charging, char **name, struct tm *time) {
+uint8 qt1x0_get_information(camera_info *info) {
   #define BATTERY_IDX    0x02 /* ?? 0xA7 = charging, full ; 0x63 = not charging, full */
   #define NUM_PICS_IDX   0x04
   #define LEFT_PICS_IDX  0x06
@@ -585,7 +556,7 @@ uint8 qt1x0_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mo
   #define QUAL_IDX       0x1B
   #define NAME_IDX       0x2F
 
-  printf("Getting information...\n");
+  cputs("Getting information...\r\n");
 
   DUMP_START("summary");
 
@@ -602,26 +573,26 @@ uint8 qt1x0_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mo
   DUMP_END();
 
 
-  *num_pics     = buffer[NUM_PICS_IDX];
-  *left_pics    = buffer[LEFT_PICS_IDX];
-  *quality_mode = buffer[QUAL_IDX];
-  *flash_mode   = buffer[FLASH_IDX];
-  *battery_level= buffer[BATTERY_IDX];
+  info->num_pics     = buffer[NUM_PICS_IDX];
+  info->left_pics    = buffer[LEFT_PICS_IDX];
+  info->quality_mode = buffer[QUAL_IDX];
+  info->flash_mode   = buffer[FLASH_IDX];
+  info->battery_level= buffer[BATTERY_IDX];
   if (buffer[BATTERY_IDX] > 100) {
-    *battery_level = buffer[BATTERY_IDX] / 2;
-    *charging = 1;
+    info->battery_level = buffer[BATTERY_IDX] / 2;
+    info->charging = 1;
   } else {
-    *battery_level = buffer[BATTERY_IDX];
-    *charging = 0;
+    info->battery_level = buffer[BATTERY_IDX];
+    info->charging = 0;
   }
 
-  time->tm_mday = buffer[DAY_IDX];
-  time->tm_mon  = buffer[MONTH_IDX];
-  time->tm_year = buffer[YEAR_IDX] + 2000; /* Year 2256 bug, here we come */
-  time->tm_hour = buffer[HOUR_IDX];
-  time->tm_min  = buffer[MIN_IDX];
+  info->date.day    = buffer[DAY_IDX];
+  info->date.month  = buffer[MONTH_IDX];
+  info->date.year   = buffer[YEAR_IDX] + 2000; /* Year 2256 bug, here we come */
+  info->date.hour   = buffer[HOUR_IDX];
+  info->date.minute = buffer[MIN_IDX];
 
-  *name = trim((char *)buffer + NAME_IDX);
+  info->name = trim((char *)buffer + NAME_IDX);
   return 0;
 }
 #pragma code-name(pop)

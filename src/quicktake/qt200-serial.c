@@ -46,13 +46,13 @@ static void end_session(void);
  */
 uint8 qt200_wakeup(void) {
   end_session();
-  printf("Pinging QuickTake 200... ");
+  cputs("Pinging QuickTake 200... ");
 
   if (qt200_send_ping() == 0) {
-    printf("Done.");
+    cputs("Done.");
     return 0;
   } else {
-    printf("Timeout.");
+    cputs("Timeout.");
     return -1;
   }
 }
@@ -76,7 +76,7 @@ static uint8 read_response(unsigned char *buf, uint16 len, uint8 expect_header) 
 
     if (buf[0] != ESC || buf[1] != STX) {
 #ifdef DEBUG_PROTO
-      printf("Unexpected header.\n");
+      cputs("Unexpected header.\r\n");
       cgetc();
 #endif
       return -1;
@@ -279,7 +279,7 @@ static uint8 qt200_stop(void) {
 }
 
 /* Get information from the camera */
-uint8 qt200_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mode, uint8 *flash_mode, uint8 *battery_level, uint8 *charging, char **name, struct tm *time) {
+uint8 qt200_get_information(camera_info *info) {
   char num_pics_cmd[]  = {0x00,FUJI_CMD_PIC_COUNT,0x00,0x00};
   char info_cmd[]= {0x00,FUJI_CMD_GET_INFO,0x00,0x00};
 
@@ -291,7 +291,7 @@ uint8 qt200_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mo
     return -1;
   }
   DUMP_END();
-  *num_pics = (buffer[1] << 8) + buffer[0];
+  info->num_pics = (buffer[1] << 8) + buffer[0];
 
   DUMP_START("info");
   if (send_command(info_cmd, sizeof info_cmd, 1, 5) != 0) {
@@ -301,20 +301,22 @@ uint8 qt200_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mo
   DUMP_END();
   
   buffer[response_len] = '\0';
-  *name = malloc (response_len - 4);
-  strncpy(*name, (char *)buffer + 6, response_len - 4);
-  (*name)[response_len - 5] = '\0';
+  info->name = malloc (response_len - 4);
 
-  *left_pics     = 0;
-  *quality_mode  = QUALITY_STANDARD;
-  *flash_mode    = FLASH_AUTO;
-  *battery_level = 0;
-  *charging = 0;
-  time->tm_mday  = 1;
-  time->tm_mon   = 1;
-  time->tm_year  = 1970;
-  time->tm_hour  = 0;
-  time->tm_min   = 0;
+  strncpy(info->name, (char *)buffer + 6, response_len - 4);
+  info->name[response_len - 5] = '\0';
+
+  info->left_pics     = 0;
+  info->quality_mode  = QUALITY_STANDARD;
+  info->flash_mode    = FLASH_AUTO;
+  info->battery_level = 0;
+  info->charging      = 0;
+
+  info->date.day      = 1;
+  info->date.month    = 1;
+  info->date.year     = 1970;
+  info->date.hour     = 0;
+  info->date.minute   = 0;
 
   qt200_stop();
   return 0;
@@ -323,13 +325,12 @@ uint8 qt200_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mo
 #pragma code-name(pop)
 #pragma code-name(push, "LOWCODE")
 
-static uint8 get_data(uint8 n_pic, const char *name) {
+uint8 qt200_get_picture(uint8 n_pic, FILE *picture) {
   #define TYPE_IDX 1
   #define NUM_PIC_IDX 4
   char data_cmd[] = {0x00,0x02,0x02,0x00,0x00,0x00};
   char size_cmd[]= {0x00,FUJI_CMD_PIC_SIZE,0x02,0x00,0x00,0x00};
 
-  FILE *picture;
   uint8 err = 0;
   unsigned long picture_size;
   uint16 blocks_read;
@@ -344,12 +345,11 @@ static uint8 get_data(uint8 n_pic, const char *name) {
     return -1;
   }
 
-  picture = fopen(name, "wb");
   memset(buffer, 0, BLOCK_SIZE);
 
 	data_cmd[NUM_PIC_IDX] = n_pic;
 
-  printf("  Getting size...\n");
+  cputs("  Getting size...\r\n");
   size_cmd[NUM_PIC_IDX] = n_pic;
 
   DUMP_START("pic_size");
@@ -381,7 +381,7 @@ static uint8 get_data(uint8 n_pic, const char *name) {
 
   if (send_command(data_cmd, sizeof data_cmd, 1, 5) != 0) {
 #ifdef DEBUG_PROTO
-    printf("Could not send get command\n");
+    cputs("Could not send get command\r\n");
     cgetc();
 #endif
     return -1;
@@ -407,14 +407,7 @@ static uint8 get_data(uint8 n_pic, const char *name) {
 
   qt200_stop();
 
-  fclose(picture);
-
   return err;
-}
-
-/* Get a picture from the camera to a file */
-uint8 qt200_get_picture(uint8 n_pic, const char *filename) {
-  return get_data(n_pic, filename);
 }
 
 #pragma code-name(pop)

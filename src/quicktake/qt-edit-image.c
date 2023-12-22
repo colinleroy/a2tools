@@ -100,7 +100,7 @@ void qt_convert_image_with_crop(const char *filename, uint16 sx, uint16 sy, uint
     } else if (!strcmp(magic, JPEG_EXIF_MAGIC)) {
       exec("jpegconv", args);
     } else {
-      cputs("Unknown file type.\r\n");
+      cputs("\r\nUnknown file type.\r\n");
       cgetc();
     }
   }
@@ -109,6 +109,7 @@ void qt_convert_image_with_crop(const char *filename, uint16 sx, uint16 sy, uint
 void qt_convert_image(const char *filename) {
   qt_convert_image_with_crop(filename, 0, 0, 640, 480);
 }
+
 static uint8 *baseaddr[HGR_HEIGHT];
 static uint8 **cur_baseaddr_ptr;
 static uint8 *cur_baseaddr_val; /* shortcut ptr */
@@ -420,7 +421,8 @@ save:
   if ((cp = strrchr ((char *)buffer, '.')))
     *cp = 0;
   strcat ((char *)buffer, ".hgr");
-  cputs("Save to: ");
+  /* Use printf to scroll */
+  printf("Save to: ");
   dget_text((char *)buffer, 63, NULL, 0);
   if (buffer[0] == '\0') {
     goto start_edit;
@@ -434,16 +436,16 @@ open_again:
       goto open_again;
     goto start_edit;
   }
-  cputs("Saving...\r\n");
+  printf("Saving...\n");
   fseek(ofp, 0, SEEK_SET);
   if (fwrite((char *)HGR_PAGE, 1, HGR_LEN, ofp) < HGR_LEN) {
-    cputs("Error. Press a key to continue...\r\n");
+    printf("Error. Press a key to continue...\n");
     cgetc();
     goto start_edit;
   }
   fclose(ofp);
 
-  cputs("Done. Go back to Edition or main Menu? (E/m)");
+  printf("Done. Go back to Edition or main Menu? (E/m)");
   c = tolower(cgetc());
   if (c != 'm') {
     goto start_edit;
@@ -987,15 +989,8 @@ void qt_view_image(const char *filename) {
   }
 
   init_hgr(1);
-  hgr_mixoff();
 
   fclose(fp);
-
-  cgetc();
-  init_text();
-
-  get_program_disk();
-  clrscr();
   return;
 }
 

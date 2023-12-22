@@ -2,6 +2,7 @@
 #define __qt_serial_h
 
 #include <time.h>
+#include <stdio.h>
 
 #define QT_MODEL_UNKNOWN 0
 #define QT_MODEL_100 100
@@ -14,6 +15,32 @@
 #define FLASH_OFF 1
 #define FLASH_ON 2
 
+
+typedef struct _camera_date {
+  uint16 year;
+  uint8 month;
+  uint8 day;
+  uint8 hour;
+  uint8 minute;
+} camera_date;
+
+typedef struct _camera_info {
+  uint8 num_pics;
+  uint8 left_pics;
+  uint8 quality_mode;
+  uint8 flash_mode;
+  uint8 battery_level;
+  uint8 charging;
+  char *name;
+  camera_date date;
+} camera_info;
+
+typedef struct _thumb_info {
+  uint8 quality_mode;
+  uint8 flash_mode;
+  camera_date date;
+} thumb_info;
+
 /* Communication buffer */
 #define BLOCK_SIZE 512
 extern unsigned char buffer[BLOCK_SIZE];
@@ -21,9 +48,10 @@ extern uint8 serial_model;
 
 /* Camera interface functions, protocol-agnostic */
 uint8 qt_serial_connect(uint16 speed);
-uint8 qt_get_information(uint8 *num_pics, uint8 *left_pics, uint8 *quality_mode, uint8 *flash_mode, uint8 *battery_level, uint8 *charging, char **name, struct tm *time);
-uint8 qt_get_picture(uint8 n_pic, const char *filename);
-uint8 qt_get_thumbnail(uint8 n_pic, uint8 *quality, uint8 *flash, uint8 *year, uint8 *month, uint8 *day, uint8 *hour, uint8 *minute);
+uint8 qt_get_information(camera_info *info);
+uint8 qt_get_picture(uint8 n_pic, FILE *picture);
+
+uint8 qt_get_thumbnail(uint8 n_pic, FILE *picture, thumb_info *info);
 uint8 qt_delete_pictures(void);
 uint8 qt_take_picture(void);
 
@@ -34,7 +62,7 @@ uint8 qt_set_flash(uint8 mode);
 
 /* Helper functions */
 void write_qtk_header(FILE *fp, const char *pic_format);
-const char *qt_get_mode_str(uint8 mode);
+const char *qt_get_quality_str(uint8 mode);
 const char *qt_get_flash_str(uint8 mode);
 
 /* Debug helpers */
@@ -42,6 +70,7 @@ const char *qt_get_flash_str(uint8 mode);
 extern FILE *dbgfp;
 
   #define DUMP_START(name) do {       \
+    if (dbgfp) fclose(dbgfp);         \
     dbgfp = fopen(name".dump", "wb"); \
   } while (0)
   #define DUMP_DATA(buf,size) do {    \
@@ -49,6 +78,7 @@ extern FILE *dbgfp;
   } while (0)
   #define DUMP_END() do {             \
     fclose(dbgfp);                    \
+    dbgfp = NULL;                     \
   } while (0)
 
 #else
