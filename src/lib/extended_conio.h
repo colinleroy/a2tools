@@ -3,6 +3,17 @@
 
 #ifdef __CC65__
   #include <conio.h>
+
+  #ifdef __APPLE2__
+    #define CH "$24"
+    #define gotox(x)           \
+        (                      \
+            __A__=(x),         \
+            asm("sta "CH)      \
+        )
+
+  #endif
+
 #else
   #include <stdio.h>
   #include <string.h>

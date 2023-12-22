@@ -49,16 +49,18 @@ static void __fastcall__ free_data (char n) {
 }
 
 char *file_select(char sx, char sy, char ex, char ey, char dir, char *prompt) {
+  static char l_sx;
 #ifdef __CC65__
-  static char dev, c, sel, i, n, start;
+  static char dev, c, sel, i, n, start, stop, loop_stop;
 #else
-  int c, sel, i, n, start;
+  int c, sel, i, n, start, stop, loop_stop;
 #endif
   static char *filename;
 
   filename = NULL;
+  l_sx = sx;
 
-  gotoxy(sx, sy);
+  gotoxy(l_sx, sy);
 
   cputs("Please wait...");
   if (dir)
@@ -120,33 +122,39 @@ posix_use_dir:
     }
   }
 full_disp_again:
-  clrzone(sx, sy, ex, ey);
+  clrzone(l_sx, sy, ex, ey);
 disp_again:
-  gotoxy(sx, sy);
+  gotoxy(l_sx, sy);
   cprintf("-- %s\r\n", prompt);
   if (n == 0) {
-    gotox(sx); cprintf("! *%s*\r\n", dir ? "No directory":"Empty");
-    gotox(sx); cputs("!\r\n");
-    gotox(sx); cputs("-- Any key to go up");
+    gotox(l_sx); cprintf("! *%s*\r\n", dir ? "No directory":"Empty");
+    gotox(l_sx); cputs("!\r\n");
+    gotox(l_sx); cputs("-- Any key to go up");
     cgetc();
     goto up;
   }
-  for (i = start; i < n && i - start < ey - sy - 3; i++) {
+
+  loop_stop = stop = ey - sy - 3 + start;
+  if (n < stop) {
+    loop_stop = n;
+  }
+
+  for (i = start; i < loop_stop; i++) {
     revers(0);
-    gotox(sx);
+    gotox(l_sx);
     cputs("! ");
     revers(i == sel);
     cprintf("%s\r\n", list[i]);
   }
   revers(0);
 
-  gotox(sx);cputs("! \r\n");
+  gotox(l_sx);cputs("! \r\n");
 #ifdef __APPLE2ENH__
-  gotox(sx);cputs("!  Up/Down / Left/Right: navigate;\r\n");
+  gotox(l_sx);cputs("!  Up/Down / Left/Right: navigate;\r\n");
 #else
-  gotox(sx);cputs("!  U/J / Left/Right: navigate;\r\n");
+  gotox(l_sx);cputs("!  U/J / Left/Right: navigate;\r\n");
 #endif
-  gotox(sx);cputs("-- Enter: select; Esc: cancel");
+  gotox(l_sx);cputs("-- Enter: select; Esc: cancel");
 
   c = tolower(cgetc());
   switch (c) {
@@ -180,9 +188,10 @@ up:
 #else
     case 'j':
 #endif
-      if (sel < n - 1)
+      if (sel < n - 1) {
         sel++;
-      if (sel == start + ey - sy - 3) {
+      }
+      if (sel == stop) {
         start++;
         goto full_disp_again;
       }
@@ -192,8 +201,9 @@ up:
 #else
     case 'u':
 #endif
-      if (sel > 0)
+      if (sel > 0) {
         sel--;
+      }
       if (sel < start) {
         start--;
         goto full_disp_again;
@@ -203,7 +213,7 @@ up:
   goto disp_again;
 out:
   free_data(n);
-  clrzone(sx, sy, ex, ey);
+  clrzone(l_sx, sy, ex, ey);
 
   if (filename) {
     cputs(filename);

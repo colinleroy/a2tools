@@ -36,6 +36,7 @@ void __fastcall__ echo(char on) {
 
 static char start_x, start_y;
 static unsigned char win_width, win_height;
+static unsigned char win_width_min1, win_height_min1;
 static size_t cur_insert, max_insert;
 static char *text_buf;
 
@@ -62,10 +63,11 @@ static char __fastcall__ get_prev_line_len() {
 #pragma GCC diagnostic ignored "-Wunused-function"
 #endif
 
-static void __fastcall__ rewrite_start_of_buffer() {
+static void __fastcall__ scroll_down_and_rewrite_start_of_buffer() {
   char prev_line_len;
   int k;
 
+  scrolldown_one();
   prev_line_len = get_prev_line_len() - start_x;
   /* print it */
   gotoxy(start_x, start_y);
@@ -76,7 +78,7 @@ static void __fastcall__ rewrite_start_of_buffer() {
 
 static char __fastcall__ rewrite_end_of_buffer(char full) {
   size_t k;
-  unsigned char x, y;
+  unsigned char x, y, y_plus1;
   char overflowed;
   char first_crlf;
 
@@ -85,26 +87,27 @@ static char __fastcall__ rewrite_end_of_buffer(char full) {
 
   x = wherex();
   y = wherey();
+  y_plus1 = y + 1;
 
   if (cur_insert == max_insert) {
     /* Just clear EOL */
-    clrzone(x, y, win_width - 1, y);
+    clrzone(x, y, win_width_min1, y);
     return 0;
   }
 
   for (k = cur_insert; k < max_insert; k++) {
     char c = text_buf[k];
     if (c == '\n' || k == max_insert - 1) {
-      clrzone(x, y, win_width - 1, y);
+      clrzone(x, y, win_width_min1, y);
     }
     if (x == win_width || (c == '\n' && k == max_insert - 1)) {
-      if (y + 1 < win_height) {
-        clrzone(0, y + 1, win_width - 1, y + 1);
+      if (y_plus1 < win_height) {
+        clrzone(0, y_plus1, win_width_min1, y_plus1);
         gotoxy(x, y);
       }
     }
     if (c == '\n') {
-      if (x != 0 && x != win_width - 1 && first_crlf) {
+      if (x != 0 && x != win_width_min1 && first_crlf) {
         /* we can stop there, we won't shift lines down or up */
         break;
       }
@@ -113,7 +116,7 @@ static char __fastcall__ rewrite_end_of_buffer(char full) {
     }
     cputc(c);
     x = wherex();
-    if (y == win_height - 1 && wherey() == 0) {
+    if (y == win_height_min1 && wherey() == 0) {
       /* overflowed bottom */
       overflowed = 1;
       break;
@@ -151,6 +154,8 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb, c
   start_y = wherey();
 
   win_height = ey - sy;
+  win_width_min1 = win_width - 1;
+  win_height_min1 = win_height - 1;
 
   if (text_buf[0] != '\0') {
     max_insert = strlen(text_buf);
@@ -215,8 +220,7 @@ err_beep:
         cur_x = get_prev_line_len();
         /* do we have to scroll (we were at line 0) ? */
         if (cur_y == 0) {
-          scrolldown_one();
-          rewrite_start_of_buffer();
+          scroll_down_and_rewrite_start_of_buffer();
         } else {
           /* go up */
           cur_y--;
@@ -254,7 +258,7 @@ err_beep:
       }
 
       /* Are we at end of soft line now? */
-      if (cur_x > win_width - 1) {
+      if (cur_x > win_width_min1) {
         /* We are, go down and left */
 down_left:
         cur_y++;
@@ -264,7 +268,7 @@ down_left:
       cur_insert++;
 
       /* Handle scroll up if needed */
-      if (cur_y > win_height - 1) {
+      if (cur_y > win_height_min1) {
         cur_y--;
         scrollup_one();
         gotoxy(cur_x, cur_y);
@@ -286,11 +290,10 @@ down_left:
          * before the current offset to left border */
         cur_insert -= cur_x + 1;
         /* and go up to previous line */
-        /* Decompose because rewrite_start_of_buffer
+        /* Decompose because scroll_down_and_rewrite_start_of_buffer
          * expects us to be on a \n */
         if (cur_y == 0) {
-          scrolldown_one();
-          rewrite_start_of_buffer();
+          scroll_down_and_rewrite_start_of_buffer();
         } else {
           cur_y--;
         }
@@ -306,7 +309,7 @@ down_left:
           }
         } else {
           /* just going up in long line */
-          cur_insert -= win_width - cur_x - 1;
+          cur_insert -= win_width_min1 - cur_x;
         }
       }
       gotoxy(cur_x, cur_y);
@@ -318,7 +321,7 @@ down_left:
       /* Save cur_x */
       tmp = cur_x;
       /* wrap to EOL, either hard or soft */
-      while (cur_x < win_width - 1 && text_buf[cur_insert] != '\n') {
+      while (cur_x < win_width_min1 && text_buf[cur_insert] != '\n') {
         cur_insert++;
         cur_x++;
         if (cur_insert == max_insert) {
@@ -330,7 +333,7 @@ down_left:
       cur_x = 0;
 
       /* Scroll if we need */
-      if (cur_y == win_height - 1) {
+      if (cur_y == win_height_min1) {
         scrollup_one();
         gotoxy(cur_x, cur_y);
         rewrite_end_of_buffer(0);
@@ -359,9 +362,9 @@ stop_down:
          * Use cputc to avoid autoscroll there */
         if (c == CH_ENTER) {
           /* Clear to end of line */
-          clrzone(cur_x, cur_y, win_width - 1, cur_y);
+          clrzone(cur_x, cur_y, win_width_min1, cur_y);
           /* Are we on the last line? */
-          if (cur_y == win_height - 1) {
+          if (cur_y == win_height_min1) {
             /* we're on last line, scrollup */
             cur_y--;
             scrollup_one();
@@ -391,7 +394,7 @@ stop_down:
         overflowed = rewrite_end_of_buffer(c == CH_ENTER);
         cur_insert--;
 
-        if (cur_y == win_height - 1 && overflowed) {
+        if (cur_y == win_height_min1 && overflowed) {
           cur_y--;
           scrollup_one();
           /* rewrite again for last line */

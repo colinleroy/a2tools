@@ -25,31 +25,44 @@
 #endif
 
 char * __fastcall__ trim(const char *in) {
-  int i = 0, o = 0, len = strlen(in);
-  int trimmed_start = 0, last_non_sep = 0;
-  char *out = strdup(in);
-  
-  for (i = 0; i < len; i++) {
-    int is_whitespc = strchr(" \r\n\t", in[i]) != NULL;
-    if (!trimmed_start && is_whitespc)
-      continue;
-    trimmed_start = 1;
-    if (trimmed_start) {
-      if (last_non_sep == 0 && is_whitespc)
-        last_non_sep = o;
-      else if (last_non_sep > 0 && !is_whitespc)
-        last_non_sep = 0;
-    }
+  int i = 0, len = strlen(in);
+  int last_non_sep = 0;
+  char *out;
 
-    out[o] = in[i];
-    o++;
+  /* Front trim */
+  while (i < len) {
+    if (!strchr(" \r\n\t", in[i]))
+      break;
+    i++;
   }
-  if (last_non_sep > 0) {
+  if (i == len)
+    return strdup("");
+
+  out = strdup(in + i);
+
+  /* Tail trim */
+  for (i = 0; out[i]; i++) {
+    if (!strchr(" \r\n\t", out[i])) {
+      last_non_sep = 0;
+    } else if (last_non_sep == 0) {
+      last_non_sep = i;
+    }
+  }
+
+  if (last_non_sep != 0) {
     out[last_non_sep]='\0';
   }
 
-  out[o] = '\0';
   return out;
+}
+
+static char *do_ellipsis(char *str, int len) {
+  str[len-3] =
+    str[len-2] =
+    str[len-1] = '.';
+  str[len]='\0';
+
+  return str;
 }
 
 char *strndup_ellipsis(char *in, int len) {
@@ -59,24 +72,14 @@ char *strndup_ellipsis(char *in, int len) {
   }
   out = malloc(len + 1);
   strncpy(out, in, len - 1);
-  out[len-3]='.';
-  out[len-2]='.';
-  out[len-1]='.';
-  out[len]='\0';
-
-  return out;
+  return do_ellipsis(out, len);
 }
 
 char *ellipsis(char *in, int len) {
   if (strlen(in) < len) {
     return in;
   }
-  in[len-3]='.';
-  in[len-2]='.';
-  in[len-1]='.';
-  in[len]='\0';
-
-  return in;
+  return do_ellipsis(in, len);
 }
 
 #ifdef __CC65__
