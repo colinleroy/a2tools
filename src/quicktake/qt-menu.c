@@ -301,6 +301,7 @@ static void finish_img_view(void) {
 }
 
 static void print_welcome(void) {
+  set_scrollwindow(0, scrh);
   hgr_mixon();
   clrscr();
   gotoxy(0,20);
@@ -405,7 +406,6 @@ menu:
     case 'a':
       reopen_start_device();
       qt_view_image("about.hgr");
-      set_scrollwindow(0, scrh);
       print_welcome();
       cputs("Many thanks to Abi for her patience and support! <3\r\n"
             "Thanks to my sons for their encouragements, to Pierre Dandumont for lending\r\n"

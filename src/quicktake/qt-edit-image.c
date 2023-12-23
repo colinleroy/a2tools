@@ -421,8 +421,7 @@ save:
   if ((cp = strrchr ((char *)buffer, '.')))
     *cp = 0;
   strcat ((char *)buffer, ".hgr");
-  /* Use printf to scroll */
-  printf("Save to: ");
+  cputs("Save to: ");
   dget_text((char *)buffer, 63, NULL, 0);
   if (buffer[0] == '\0') {
     goto start_edit;
