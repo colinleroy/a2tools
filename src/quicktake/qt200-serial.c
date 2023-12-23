@@ -4,7 +4,6 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include <sys/ioctl.h>
 #include "platform.h"
 #include "extended_conio.h"
 #include "extended_string.h"

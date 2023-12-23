@@ -4,7 +4,9 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#ifndef __CC65__
 #include <sys/ioctl.h>
+#endif
 #include "platform.h"
 #include "extended_conio.h"
 #include "extended_string.h"
