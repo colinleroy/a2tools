@@ -439,6 +439,7 @@ open_again:
   fseek(ofp, 0, SEEK_SET);
   if (fwrite((char *)HGR_PAGE, 1, HGR_LEN, ofp) < HGR_LEN) {
     printf("Error. Press a key to continue...\n");
+    fclose(ofp);
     cgetc();
     goto start_edit;
   }
