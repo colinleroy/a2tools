@@ -76,7 +76,7 @@ void stp_print_footer(void) {
   chline(scrw);
   clrzone(0, 23, scrw - 1, 23);
   gotoxy(0, 23);
-  dputs("Up/Down: navigate, Enter: select, S: send, D: delete, A: get all, Esc: back");
+  dputs("Up/Down, Enter: nav, S: send (R: recursive), D: delete, A: get all, Esc: back");
 }
 #ifdef __CC65__
 #pragma code-name (pop)

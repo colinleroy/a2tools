@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
+#include <dirent.h>
 #include "platform.h"
 #include "file_select.h"
 #include "stp.h"
@@ -36,14 +37,23 @@
 
 #define BUFSIZE 255
 
+#ifndef __CC65__
+#define _DE_ISDIR(x) ((x) == DT_DIR)
+#endif
+
 extern unsigned char scrw, scrh;
 
-static char *stp_send_dialog() {
+static char *stp_send_dialog(char recursive) {
   char *filename;
   clrzone(0, 2, scrw - 1, 2 + PAGE_HEIGHT);
   gotoxy(0, 3);
-  cprintf("File name: ");
-  filename = file_select(wherex(), wherey(), scrw - 1, PAGE_HEIGHT, 0, "Select file to send");
+  if (recursive) {
+    cprintf("Directory: ");
+    filename = file_select(wherex(), wherey(), scrw - 1, PAGE_HEIGHT, 1, "Select directory to send");
+  } else {
+    cprintf("File name: ");
+    filename = file_select(wherex(), wherey(), scrw - 1, PAGE_HEIGHT, 0, "Select file to send");
+  }
   return filename;
 }
 
@@ -54,10 +64,12 @@ static unsigned auxtype;
 static int buf_size;
 static char *data = NULL;
 
-void stp_send_file(char *remote_dir) {
+void stp_send_file(char *remote_dir, char recursive) {
   static FILE *fp;
+  static DIR *d;
+  static struct dirent *ent;
   static char *filename;
-  static char *path;
+  static char *path, *dir;
   static char *remote_filename;
   static const surl_response *resp;
   static int r = 0;
@@ -69,7 +81,7 @@ void stp_send_file(char *remote_dir) {
   remote_filename = NULL;
   r = 0;
 
-  path = stp_send_dialog();
+  path = stp_send_dialog(recursive);
   if (path == NULL) {
     return;
   }
@@ -79,6 +91,25 @@ void stp_send_file(char *remote_dir) {
   _filetype = PRODOS_T_BIN;
   _auxtype  = PRODOS_AUX_T_TXT_SEQ;
 #endif
+
+  dir = NULL;
+  if (recursive) {
+    d = opendir(path);
+    dir = path;
+    if (d) {
+read_next_ent:
+      ent = readdir(d);
+      if (ent == NULL) {
+        closedir(d);
+        d = NULL;
+        goto all_ents_read;
+      }
+      if (_DE_ISDIR(ent->d_type))
+          goto read_next_ent;
+      path = malloc(FILENAME_MAX+1);
+      sprintf(path, "%s/%s", dir, ent->d_name);
+    }
+  }
 
   clrzone(0, 2, scrw - 1, 2 + PAGE_HEIGHT);
   gotoxy(0, 3);
@@ -152,16 +183,26 @@ finished:
   gotoxy(0, start_y);
   cprintf("Sent %lu bytes.\r\n", total);
   cprintf("File %s sent, response code: %d\r\n", filename, resp->code);
-  cprintf("Hit a key to continue.");
-  cgetc();
 
 err_out:
   if (fp)
     fclose(fp);
+  fp = NULL;
 
   free(path);
   free(remote_filename);
   free(data);
   clrzone(0, 19, scrw - 1, 20);
   stp_print_footer();
+  if (recursive && d) {
+    goto read_next_ent;
+  }
+  if (dir) {
+    free(dir);
+  }
+all_ents_read:
+  clrzone(0, 5, scrw - 1, PAGE_HEIGHT - 1);
+  gotoxy(0, start_y + 3);
+  cprintf("Hit a key to continue.");
+  cgetc();
 }
