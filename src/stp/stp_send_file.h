@@ -3,6 +3,6 @@
 
 #include "surl.h"
 
-void stp_send_file(char *remote_dir);
+void stp_send_file(char *remote_dir, char recursive);
 
 #endif

@@ -393,7 +393,12 @@ up_dir:
         goto update_list;
       case 's':
       case 'S':
-        stp_send_file(url);
+        stp_send_file(url, 0);
+        full_update = 1;
+        break;
+      case 'r':
+      case 'R':
+        stp_send_file(url, 1);
         full_update = 1;
         break;
       case 'd':
