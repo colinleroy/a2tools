@@ -293,7 +293,13 @@ err_thumb_io:
 }
 
 static void finish_img_view(void) {
-  cgetc();
+  char c;
+check_again:
+  c = tolower(cgetc());
+  if (c == 'p') {
+    hgr_print();
+    goto check_again;
+  }
   init_text();
 
   get_program_disk();
@@ -301,7 +307,6 @@ static void finish_img_view(void) {
 }
 
 static void print_welcome(void) {
-  set_scrollwindow(0, scrh);
   hgr_mixon();
   clrscr();
   gotoxy(0,20);
@@ -334,6 +339,10 @@ static uint8 setup(int argc, char *argv[]) {
   screensize(&scrw, &scrh);
   init_hgr(1);
   print_welcome();
+
+  /* Make sure we open the port early, so that RT_ONCE
+   * cleaning can happen */
+  qt_serial_open();
 
   if (argc == 3) {
     qt_edit_image(argv[1], atoi(argv[2]));
