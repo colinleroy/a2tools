@@ -30,24 +30,35 @@ FILE *dbgfp = NULL;
 
 unsigned char buffer[BLOCK_SIZE];
 
-#pragma code-name(push, "RT_ONCE")
-
-/* Connect to a QuickTake and detect its model */
-uint8 qt_serial_connect(uint16 speed) {
-  simple_serial_close();
-
-  /* Set initial speed */
+void qt_serial_reset(void) {
 #ifdef __CC65__
   simple_serial_set_speed(SER_BAUD_9600);
   simple_serial_set_flow_control(SER_HS_NONE);
+  simple_serial_set_parity(SER_PAR_NONE);
 #else
   simple_serial_set_speed(B9600);
+  simple_serial_set_parity(0);
 #endif
+  camera_connected = 0;
+}
+
+#pragma code-name(push, "RT_ONCE")
+
+uint8 qt_serial_open(void) {
+  simple_serial_close();
+
   if (simple_serial_open() != 0) {
     cputs("Cannot open port\r\n");
     return -1;
   }
   simple_serial_flush();
+  return 0;
+}
+
+/* Connect to a QuickTake and detect its model */
+uint8 qt_serial_connect(uint16 speed) {
+  /* Set initial settings */
+  qt_serial_reset();
 
   /* Try and detect a QuickTake 1x0 */
   serial_model = qt1x0_wakeup(speed);

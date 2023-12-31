@@ -15,7 +15,7 @@
 #define FLASH_OFF 1
 #define FLASH_ON 2
 
-
+extern uint8 camera_connected;
 typedef struct _camera_date {
   uint16 year;
   uint8 month;
@@ -47,6 +47,8 @@ extern unsigned char buffer[BLOCK_SIZE];
 extern uint8 serial_model;
 
 /* Camera interface functions, protocol-agnostic */
+uint8 qt_serial_open(void);
+void qt_serial_reset(void);
 uint8 qt_serial_connect(uint16 speed);
 uint8 qt_get_information(camera_info *info);
 uint8 qt_get_picture(uint8 n_pic, FILE *picture);

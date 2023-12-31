@@ -11,6 +11,7 @@
 #include "path_helper.h"
 #include "progress_bar.h"
 #include "scrollwindow.h"
+#include "simple_serial.h"
 
 #include "qt-conv.h"
 #include "qt-serial.h"
@@ -38,6 +39,8 @@ extern uint8 scrw, scrh;
 #define DITHER_SIERRA 2
 #define DITHER_THRESHOLD 128
 #define DEFAULT_BRIGHTEN 0
+
+#define X_OFFSET ((HGR_WIDTH - file_width) / 2)
 
 FILE *ifp, *ofp;
 
@@ -157,7 +160,6 @@ int8 bayer_map[64] = {
   63, 31, 55, 23, 61, 29, 53, 21
 };
 
-//char test[1497];
 static void init_base_addrs (void)
 {
   static uint8 y, base_init_done = 0;
@@ -197,8 +199,6 @@ static void init_base_addrs (void)
   histogram_equalize();
   base_init_done = 1;
 }
-
-#define X_OFFSET ((HGR_WIDTH - file_width) / 2)
 
 #ifndef __CC65__
 char HGR_PAGE[HGR_LEN];
@@ -246,6 +246,85 @@ static void invert_selection(void) {
   }
 }
 
+void hgr_print(void) {
+  uint16 x;
+  uint8 y, cy, ey, bit;
+  uint8 c;
+  char setup_binary_print_cmd[] = {CH_ESC, 'n', CH_ESC, 'T', '1', '6'};
+  char send_chars_cmd[7]; // = {CH_ESC, 'G', '0', '0', '0', '0'};
+#ifdef __CC65__
+  #define cur_d7 zp6p
+  #define cur_m7 zp8p
+#else
+  uint8 *cur_d7, *cur_m7;
+#endif
+  uint16 sx, ex;
+
+  init_base_addrs();
+
+  hgr_mixon();
+  clrscr(); gotoxy(0, 20);
+  cputs("Resetting serial...\r\n");
+  qt_serial_reset();
+  cputs("Please connect ImageWriter II to modem port and turn it on.\r\n"
+        "Press a key when ready...\r\n");
+  cgetc();
+  cputs("Printing...\r\n");
+  /* Calculate X boundaries */
+  switch (angle) {
+    case 0:
+    case 180:
+      sx = 12;
+      ex = HGR_WIDTH - 12;
+      break;
+    case 90:
+    case 270:
+      if (resize) {
+        sx = 68;
+        ex = HGR_WIDTH - 68;
+      } else {
+        sx = 32;
+        ex = HGR_WIDTH - 32;
+      }
+  }
+
+  init_text();
+
+  /* Set line width */
+  sprintf(send_chars_cmd, "\033G%04d", ex-sx);
+
+  for (y = 0; y < HGR_HEIGHT; y+=8) {
+    cur_d7 = div7_table + sx;
+    cur_m7 = mod7_table + sx;
+    ey = y + 8;
+    printf("init binary\n");
+    /* Set printer to binary mode */
+    simple_serial_write(setup_binary_print_cmd, sizeof(setup_binary_print_cmd));
+    cgetc();
+    printf("Printing lines %d-%d...\n", y, ey);
+    simple_serial_write(send_chars_cmd, 6);
+    cgetc();
+    for (x = sx; x < ex; x++) {
+      c = 0;
+      bit = 0x1;
+      for (cy = y; cy < ey; cy++) {
+        if ((*(baseaddr[cy] + *cur_d7) & *cur_m7) == 0) {
+          c |= bit;
+        }
+        bit <<= 1;
+      }
+      cur_d7++;
+      cur_m7++;
+      simple_serial_putc(c);
+    }
+    printf("sending crlf\n");
+    simple_serial_write("\r\n", 2);
+    cgetc();
+    /* avoid needing DTR wired */
+    platform_sleep(3);
+  }
+}
+
 static uint8 reedit_image(const char *ofname, uint16 src_width) {
   char c, *cp;
 
@@ -267,7 +346,7 @@ start_edit:
            brighten > 0 ? "+":"",
            brighten);
     printf("Dither with E: Sierra Lite / Y: Bayer / N: No dither (Current: %s)\n"
-           "S: Save - Escape: Exit without saving - Any other key: Hide help",
+           "S: Save - Escape: Exit - P: Print - Any other key: Hide help",
            dither_alg == DITHER_BAYER ? "Bayer"
             : dither_alg == DITHER_SIERRA ? "Sierra Lite" : "None");
   c = tolower(cgetc());
@@ -303,6 +382,9 @@ start_edit:
           case 'h':
             auto_level = !auto_level;
             histogram_equalize();
+            return 1;
+          case 'p':
+            hgr_print();
             return 1;
           case 'c':
             if (angle == 0 && !(src_width % 320)) {
@@ -559,11 +641,10 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
       invert_coords = 0;
       break;
     case 90:
+      off_x = 0;
       if (resize) {
-        off_x = 0;
         off_y = 212 * 4 / 3;
       } else {
-        off_x = 0;
         off_y = HGR_WIDTH - 45;
         start_x = 32;
         end_x = file_width - 33;
@@ -950,7 +1031,12 @@ void qt_view_image(const char *filename) {
   uint16 len;
   #define BLOCK_SIZE 512
 
+  set_scrollwindow(0, scrh);
   clrscr();
+
+  /* Need to set in case we print */
+  angle = 0;
+  resize = 1;
 
   cputs("Image view\r\n\r\n");
   if (!filename) {
