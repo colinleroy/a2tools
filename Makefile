@@ -56,6 +56,7 @@ stp$(suffix).dsk: $(stp_disk_PROGS)
 	cp $(CLEANDISK) $@; \
 	java -jar bin/ac.jar -n $@ STP
 	java -jar bin/ac.jar -p $@ STP.SYSTEM SYS < bin/loader.system; \
+	java -jar bin/ac.jar -d $@ BASIC.SYSTEM; \
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
@@ -67,6 +68,7 @@ stpperso$(suffix).dsk: $(stp_disk_PROGS)
 	java -jar bin/ac.jar -n $@ STP
 	java -jar bin/ac.jar -p $@ STP.SYSTEM SYS < bin/loader.system; \
 	java -jar bin/ac.jar -p $@ STPSTARTURL TXT < src/stp/STPSTARTURL; \
+	java -jar bin/ac.jar -d $@ BASIC.SYSTEM; \
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
@@ -76,6 +78,7 @@ telnet$(suffix).dsk: $(telnet_disk_PROGS)
 	cp $(CLEANDISK) $@; \
 	java -jar bin/ac.jar -n $@ TELNET
 	java -jar bin/ac.jar -p $@ TELNET.SYSTEM SYS < bin/loader.system; \
+	java -jar bin/ac.jar -d $@ BASIC.SYSTEM; \
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
@@ -86,6 +89,7 @@ homectrl$(suffix).dsk: $(homectrl_disk_PROGS)
 	cp $(CLEANDISK) $@; \
 	java -jar bin/ac.jar -n $@ HOMECONTROL
 	java -jar bin/ac.jar -p $@ HOMECTRL.SYSTEM SYS < bin/loader.system; \
+	java -jar bin/ac.jar -d $@ BASIC.SYSTEM; \
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
@@ -97,6 +101,7 @@ homectrlperso$(suffix).dsk: $(homectrl_disk_PROGS)
 	java -jar bin/ac.jar -n $@ HOMECONTROL
 	java -jar bin/ac.jar -p $@ HOMECTRL.SYSTEM SYS < bin/loader.system; \
 	java -jar bin/ac.jar -p $@ SRVURL TXT < src/homecontrol-client/SRVURL; \
+	java -jar bin/ac.jar -d $@ BASIC.SYSTEM; \
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
@@ -108,7 +113,7 @@ mastoperso$(suffix).dsk: $(mastodon_disk_PROGS)
 	java -jar bin/ac.jar -p $@ MASTODON.SYSTEM SYS < bin/loader.system; \
 	java -jar bin/ac.jar -p $@ mastsettings TXT < src/mastodon/mastsettings; \
 	java -jar bin/ac.jar -p $@ clisettings TXT < src/mastodon/clisettings; \
-	java -jar bin/ac.jar -d $@ BASIC; \
+	java -jar bin/ac.jar -d $@ BASIC.SYSTEM; \
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
@@ -118,7 +123,7 @@ mastodon$(suffix).dsk: $(mastodon_disk_PROGS)
 	cp $(CLEANDISK) $@; \
 	java -jar bin/ac.jar -n $@ MASTODON
 	java -jar bin/ac.jar -p $@ MASTODON.SYSTEM SYS < bin/loader.system; \
-	java -jar bin/ac.jar -d $@ BASIC; \
+	java -jar bin/ac.jar -d $@ BASIC.SYSTEM; \
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
@@ -129,7 +134,7 @@ quicktake$(suffix).dsk: $(quicktake_disk_PROGS)
 	cp $(CLEANDISK) $@; \
 	java -jar bin/ac.jar -n $@ QUICKTAKE
 	java -jar bin/ac.jar -p $@ SLOWTAKE.SYSTEM SYS < bin/loader.system; \
-	java -jar bin/ac.jar -d $@ BASIC; \
+	java -jar bin/ac.jar -d $@ BASIC.SYSTEM; \
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
