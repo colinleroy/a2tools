@@ -409,17 +409,18 @@ menu:
       qt_convert_image(NULL);
       goto menu;
     case 'v':
-      qt_view_image(NULL);
-      finish_img_view();
+      if (qt_view_image(NULL) == 0)
+        finish_img_view();
       goto menu;
     case 'a':
       reopen_start_device();
-      qt_view_image("about.hgr");
-      print_welcome();
-      cputs("Many thanks to Abi for her patience and support! <3\r\n"
-            "Thanks to my sons for their encouragements, to Pierre Dandumont for lending\r\n"
-            "me cameras, and to Fozztexx for extensive testing and debugging.");
-      finish_img_view();
+      if (qt_view_image("about.hgr") == 0) {
+        print_welcome();
+        cputs("Many thanks to Abi for her patience and support! <3\r\n"
+              "Thanks to my sons for their encouragements, to Pierre Dandumont for lending\r\n"
+              "me cameras, and to Fozztexx for extensive testing and debugging.");
+        finish_img_view();
+      }
       goto menu;
     case '0':
       goto out;

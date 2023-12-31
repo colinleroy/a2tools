@@ -251,7 +251,7 @@ void hgr_print(void) {
   uint8 y, cy, ey, bit;
   uint8 c;
   char setup_binary_print_cmd[] = {CH_ESC, 'n', CH_ESC, 'T', '1', '6'};
-  char send_chars_cmd[7]; // = {CH_ESC, 'G', '0', '0', '0', '0'};
+  char send_chars_cmd[8]; // = {CH_ESC, 'G', '0', '0', '0', '0'};
 #ifdef __CC65__
   #define cur_d7 zp6p
   #define cur_m7 zp8p
@@ -259,10 +259,26 @@ void hgr_print(void) {
   uint8 *cur_d7, *cur_m7;
 #endif
   uint16 sx, ex;
+  uint8 scale = 1;
 
   init_base_addrs();
 
   hgr_mixon();
+  clrscr(); gotoxy(0, 20);
+  cputs("Printout scale: \r\n"
+        "1. 72dpi (9x6.7cm)\r\n"
+        "2. 36dpi (18x13cm)\r\n"
+        "Escape: cancel printing");
+scale_again:
+  scale = cgetc();
+  if (scale == CH_ESC) {
+    hgr_mixoff();
+    return;
+  }
+  scale -= '0';
+  if (scale != 1 && scale != 2) {
+    goto scale_again;
+  }
   clrscr(); gotoxy(0, 20);
   cputs("Resetting serial...\r\n");
   qt_serial_reset();
@@ -288,41 +304,40 @@ void hgr_print(void) {
       }
   }
 
-  init_text();
-
   /* Set line width */
-  sprintf(send_chars_cmd, "\033G%04d", ex-sx);
+  sprintf(send_chars_cmd, "%cG%04d", CH_ESC, (ex-sx) * scale);
 
-  for (y = 0; y < HGR_HEIGHT; y+=8) {
+  for (y = 0; y < HGR_HEIGHT; y += (8/scale)) {
     cur_d7 = div7_table + sx;
     cur_m7 = mod7_table + sx;
-    ey = y + 8;
-    printf("init binary\n");
+    ey = y + (8/scale);
     /* Set printer to binary mode */
     simple_serial_write(setup_binary_print_cmd, sizeof(setup_binary_print_cmd));
-    cgetc();
-    printf("Printing lines %d-%d...\n", y, ey);
     simple_serial_write(send_chars_cmd, 6);
-    cgetc();
     for (x = sx; x < ex; x++) {
       c = 0;
-      bit = 0x1;
+      bit = (scale == 1) ? 0x1 : 0x3;
       for (cy = y; cy < ey; cy++) {
         if ((*(baseaddr[cy] + *cur_d7) & *cur_m7) == 0) {
           c |= bit;
         }
-        bit <<= 1;
+        bit <<= scale;
       }
       cur_d7++;
       cur_m7++;
       simple_serial_putc(c);
+      if (scale == 2)
+        simple_serial_putc(c);
     }
-    printf("sending crlf\n");
     simple_serial_write("\r\n", 2);
-    cgetc();
     /* avoid needing DTR wired */
-    platform_sleep(3);
+    platform_msleep(200*scale);
   }
+  clrscr(); gotoxy(0, 20);
+  cputs("Done.\r\n"
+        "Press a key to continue.\r\n");
+  cgetc();
+  hgr_mixoff();
 }
 
 static uint8 reedit_image(const char *ofname, uint16 src_width) {
@@ -1025,7 +1040,7 @@ void qt_edit_image(const char *ofname, uint16 src_width) {
   } while (reedit_image(ofname, src_width));
 }
 
-void qt_view_image(const char *filename) {
+uint8 qt_view_image(const char *filename) {
   FILE *fp = NULL;
   static char imgname[BUF_SIZE];
   uint16 len;
@@ -1044,7 +1059,7 @@ void qt_view_image(const char *filename) {
     cputs("Image (HGR): ");
     tmp = file_select(wherex(), wherey(), scrw - wherex(), wherey() + 10, 0, "Select an HGR file");
     if (tmp == NULL)
-      return;
+      return -1;
     strcpy(imgname, tmp);
     free(tmp);
   } else {
@@ -1055,7 +1070,7 @@ void qt_view_image(const char *filename) {
   if (fp == NULL) {
     cputs("Can not open image.\r\n");
     cgetc();
-    return;
+    return -1;
   }
 
   memset((char *)HGR_PAGE, 0x00, HGR_LEN);
@@ -1077,7 +1092,7 @@ void qt_view_image(const char *filename) {
   init_hgr(1);
 
   fclose(fp);
-  return;
+  return 0;
 }
 
 #ifdef __CC65__
