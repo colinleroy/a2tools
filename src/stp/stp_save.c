@@ -131,7 +131,6 @@ int stp_save(char *full_filename, char *out_dir, const surl_response *resp) {
   if (!strcasecmp(filetype, "TXT")) {
     _filetype = PRODOS_T_TXT;
     _auxtype  = PRODOS_AUX_T_TXT_SEQ;
-    *(strrchr(filename, '.')) = '\0';
   } else if (!strcasecmp(filetype,"HGR")) {
     _filetype = PRODOS_T_BIN;
   } else if (!strcasecmp(filetype,"SYSTEM")) {
