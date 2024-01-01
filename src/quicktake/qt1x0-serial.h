@@ -2,6 +2,7 @@
 #define __qt_1x0_serial_h
 
 #include <stdio.h>
+#include <sys/types.h>
 #include "qt-serial.h"
 
 /* Connection functions */
@@ -17,7 +18,7 @@ uint8 qt1x0_set_flash(uint8 mode);
 
 /* Camera pictures functions */
 uint8 qt1x0_take_picture(void);
-uint8 qt1x0_get_picture(uint8 n_pic, FILE *picture);
+uint8 qt1x0_get_picture(uint8 n_pic, FILE *picture, off_t avail);
 uint8 qt1x0_get_thumbnail(uint8 n_pic, FILE *picture, thumb_info *info);
 uint8 qt1x0_delete_pictures(void);
 

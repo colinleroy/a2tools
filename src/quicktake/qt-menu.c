@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/statvfs.h>
 
 #include "dgets.h"
 #include "extended_conio.h"
@@ -83,6 +84,7 @@ static uint8 print_menu(void) {
 
 static void save_picture(uint8 n_pic) {
   char filename[64];
+  struct statvfs sv;
   char *dirname;
   FILE *fp;
 
@@ -128,6 +130,11 @@ static void save_picture(uint8 n_pic) {
     if (c != 'y') {
       return;
     }
+    unlink(filename);
+  }
+
+  if (statvfs(filename, &sv) != 0) {
+    goto err_io;
   }
 
   fp = fopen(filename, "w");
@@ -135,7 +142,7 @@ static void save_picture(uint8 n_pic) {
     goto err_io;
   }
 
-  if (qt_get_picture(n_pic, fp) == 0) {
+  if (qt_get_picture(n_pic, fp, sv.f_bfree * sv.f_bsize) == 0) {
     fclose(fp);
     qt_convert_image(filename);
   } else {
