@@ -12,15 +12,10 @@ endif
 
 SUBDIRS = src doc
 
-stp_disk_PROGS = src/a2recv/a2recv.bin \
-				src/a2send/a2send.bin \
-				src/stp/stp.bin
-telnet_disk_PROGS = src/a2recv/a2recv.bin \
-				src/a2send/a2send.bin \
-				src/telnet/telnet.bin
+stp_disk_PROGS = src/stp/stp.bin
+telnet_disk_PROGS = src/telnet/telnet.bin
 
-homectrl_disk_PROGS = src/a2recv/a2recv.bin \
-				src/homecontrol-client/homectrl.bin \
+homectrl_disk_PROGS = src/homecontrol-client/homectrl.bin \
 				src/homecontrol-client/grphview.bin \
 
 mastodon_disk_PROGS = src/mastodon/mastodon.bin \
@@ -155,5 +150,5 @@ dist: all \
 	mastoperso$(suffix).dsk \
 	homectrlperso$(suffix).dsk \
 	stpperso$(suffix).dsk \
-	quicktake$(suffix).dsk
+	quicktake$(suffix).dsk \
 	doc-dist

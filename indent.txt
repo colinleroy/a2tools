@@ -1,0 +1,3 @@
+-nut -br -ce -cdw -sc -lp -nbfda -cli2 -brf -brs  -npcs -par -npsl -sai -saf -saw -ts2 -ncs -nbc -l120
+
+grep ,size=.*type=lab slowtake.dbg | sed "s/^.*name=.//"|sed "s/,scope=.*$//"|sed "s/.,add.*=.*,size=/ /" | awk '{print $2,";",$1}'|sort -n > size.csv
