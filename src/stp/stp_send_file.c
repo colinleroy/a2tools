@@ -21,6 +21,7 @@
 #include <string.h>
 #include <errno.h>
 #include <dirent.h>
+#include <sys/stat.h>
 #include "platform.h"
 #include "file_select.h"
 #include "stp.h"
@@ -31,7 +32,6 @@
 #include "clrzone.h"
 #include "extended_conio.h"
 #include "progress_bar.h"
-#include "get_filedetails.h"
 #include "get_buf_size.h"
 #include "math.h"
 
@@ -57,10 +57,7 @@ static char *stp_send_dialog(char recursive) {
   return filename;
 }
 
-static unsigned long filesize = 0;
 static unsigned long total = 0;
-static unsigned char type;
-static unsigned auxtype;
 static int buf_size;
 static char *data = NULL;
 
@@ -74,6 +71,7 @@ void stp_send_file(char *remote_dir, char recursive) {
   static const surl_response *resp;
   static int r = 0;
   static char start_y = 3;
+  static struct stat stbuf;
 
   fp = NULL;
   filename = NULL;
@@ -115,6 +113,13 @@ read_next_ent:
   gotoxy(0, 3);
   cprintf("Opening %s...", path);
 
+  if (stat(path, &stbuf) < 0) {
+    cprintf("Can't stat %s (%d).", path, errno);
+    cgetc();
+    goto err_out;
+  }
+  cprintf("(%lu bytes)\r\n", stbuf.st_size);
+
   fp = fopen(path, "r");
   if (fp == NULL) {
     cprintf("%s: %s", path, strerror(errno));
@@ -122,12 +127,7 @@ read_next_ent:
     goto err_out;
   }
 
-  if (get_filedetails(path, &filename, &filesize, &type, &auxtype) < 0) {
-    cprintf("Can't get file details.");
-    cgetc();
-    goto err_out;
-  }
-  cprintf("(%lu bytes)\r\n", filesize);
+  filename = strrchr(path, '/') + 1;
 
   remote_filename = malloc(BUFSIZE);
   snprintf(remote_filename, BUFSIZE, "%s/%s", remote_dir, filename);
@@ -141,7 +141,7 @@ read_next_ent:
     goto err_out;
   }
 
-  progress_bar(0, start_y + 3, scrw, 0, filesize);
+  progress_bar(0, start_y + 3, scrw, 0, stbuf.st_size);
 
   resp = surl_start_request(SURL_METHOD_PUT, remote_filename, NULL, 0);
   if (resp->code != 100) {
@@ -150,14 +150,14 @@ read_next_ent:
     goto err_out;
   }
 
-  if (surl_send_data_params(filesize, SURL_DATA_X_WWW_FORM_URLENCODED_RAW) != 0) {
+  if (surl_send_data_params(stbuf.st_size, SURL_DATA_X_WWW_FORM_URLENCODED_RAW) != 0) {
     goto finished;
   }
 
   total = 0;
 
   do {
-    unsigned long rem = filesize - total;
+    unsigned long rem = stbuf.st_size - total;
     size_t chunksize = buf_size;
 
     if (rem < (unsigned long)chunksize)
@@ -165,17 +165,17 @@ read_next_ent:
 
     clrzone(0, start_y, scrw - 1, start_y);
     gotoxy(0, start_y);
-    cprintf("Sending %s: %lu/%lu bytes...", filename, total, filesize);
+    cprintf("Sending %s: %lu/%lu bytes...", filename, total, stbuf.st_size);
 
     r = fread(data, sizeof(char), chunksize, fp);
-    progress_bar(0, start_y + 3, scrw, total + (chunksize / 2), filesize);
+    progress_bar(0, start_y + 3, scrw, total + (chunksize / 2), stbuf.st_size);
 
     total = total + r;
 
     surl_send_data(data, r);
 
-    progress_bar(-1, -1, scrw, total, filesize);
-  } while (total < filesize);
+    progress_bar(-1, -1, scrw, total, stbuf.st_size);
+  } while (total < stbuf.st_size);
 
 finished:
   surl_read_response_header();

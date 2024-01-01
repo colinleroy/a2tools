@@ -24,7 +24,6 @@ SOURCES := stp.c stp_cli.c stp_save.c stp_send_file.c stp_delete.c \
 	../lib/get_buf_size.c \
 	../lib/progress_bar.c \
 	../lib/strsplit.c \
-	../lib/get_filedetails.c \
 	../lib/dgets.c \
 	../lib/clrzone.c \
 	../lib/scrollwindow.c \
