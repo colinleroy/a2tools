@@ -132,11 +132,11 @@ uint8 qt_set_flash(uint8 mode) {
     return -1;
 }
 
-uint8 qt_get_picture(uint8 n_pic, FILE *picture) {
+uint8 qt_get_picture(uint8 n_pic, FILE *picture, off_t avail) {
   if (serial_model != QT_MODEL_200)
-    return qt1x0_get_picture(n_pic, picture);
+    return qt1x0_get_picture(n_pic, picture, avail);
   else
-    return qt200_get_picture(n_pic, picture);
+    return qt200_get_picture(n_pic, picture, avail);
 }
 
 uint8 qt_get_thumbnail(uint8 n_pic, FILE *picture, thumb_info *info) {

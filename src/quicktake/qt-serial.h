@@ -1,8 +1,9 @@
 #ifndef __qt_serial_h
 #define __qt_serial_h
 
-#include <time.h>
 #include <stdio.h>
+#include <time.h>
+#include <sys/types.h>
 
 #define QT_MODEL_UNKNOWN 0
 #define QT_MODEL_100 100
@@ -51,7 +52,7 @@ uint8 qt_serial_open(void);
 void qt_serial_reset(void);
 uint8 qt_serial_connect(uint16 speed);
 uint8 qt_get_information(camera_info *info);
-uint8 qt_get_picture(uint8 n_pic, FILE *picture);
+uint8 qt_get_picture(uint8 n_pic, FILE *picture, off_t avail);
 
 uint8 qt_get_thumbnail(uint8 n_pic, FILE *picture, thumb_info *info);
 uint8 qt_delete_pictures(void);

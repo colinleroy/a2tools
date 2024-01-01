@@ -379,7 +379,7 @@ static uint8 receive_data(uint32 size, FILE *fp) {
 #define char_to_n_uint16(buf) (((uint8)((buf)[1]))<<8 | ((uint8)((buf)[0])))
 
 /* Get a picture from the camera to a file */
-uint8 qt1x0_get_picture(uint8 n_pic, FILE *picture) {
+uint8 qt1x0_get_picture(uint8 n_pic, FILE *picture, off_t avail) {
   #define HDR_SKIP       0x04
 
   #define WH_OFFSET      0x220
@@ -422,6 +422,11 @@ uint8 qt1x0_get_picture(uint8 n_pic, FILE *picture) {
   ((unsigned char *)&pic_size_int)[2] = pic_size_str[0];
   ((unsigned char *)&pic_size_int)[3] = 0;
 #endif
+
+  if (pic_size_int > avail) {
+    cputs("  Not enough space available.\r\n");
+    return -1;
+  }
 
   /* Get dimensions */
   width = char_to_n_uint16(buffer + IMG_WIDTH_IDX);

@@ -324,7 +324,7 @@ uint8 qt200_get_information(camera_info *info) {
 #pragma code-name(pop)
 #pragma code-name(push, "LOWCODE")
 
-uint8 qt200_get_picture(uint8 n_pic, FILE *picture) {
+uint8 qt200_get_picture(uint8 n_pic, FILE *picture, off_t avail) {
   #define TYPE_IDX 1
   #define NUM_PIC_IDX 4
   char data_cmd[] = {0x00,0x02,0x02,0x00,0x00,0x00};
@@ -366,6 +366,12 @@ uint8 qt200_get_picture(uint8 n_pic, FILE *picture) {
   ((unsigned char *)&picture_size)[2] = buffer[2];
   ((unsigned char *)&picture_size)[3] = buffer[3];
 #endif
+
+  if (picture_size > avail) {
+    cputs("  Not enough space available.\r\n");
+    return -1;
+  }
+
 
   printf("  Width 640, height 480, %lu bytes (jpg)\n",
          picture_size);
