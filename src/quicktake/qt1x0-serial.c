@@ -145,9 +145,6 @@ uint8 qt1x0_set_speed(uint16 speed) {
   platform_sleep(1);
 
   switch(speed) {
-    case 9600:
-      return qt1x0_send_ping();
-
     case 19200:
 #ifdef __CC65__
       spd_code = SER_BAUD_19200;
@@ -165,6 +162,10 @@ uint8 qt1x0_set_speed(uint16 speed) {
 #endif
       str_speed[SPD_CMD_IDX] = 0x30;
       break;
+
+    case 9600:
+    default:
+      return qt1x0_send_ping();
   }
 
   printf("Setting speed to %u...\n", speed);
