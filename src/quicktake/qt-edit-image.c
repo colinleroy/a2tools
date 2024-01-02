@@ -94,7 +94,7 @@ void qt_convert_image_with_crop(const char *filename, uint16 sx, uint16 sy, uint
 
     get_program_disk();
 
-    snprintf(args, 128, "%s %d %d %d %d", imgname, sx, sy, ex, ey);
+    snprintf(args, BUF_SIZE + 15, "%s %d %d %d %d", imgname, sx, sy, ex, ey);
 
     if (!strcmp(magic, QTKT_MAGIC)) {
       exec("qtktconv", args);
@@ -288,11 +288,6 @@ scale_again:
   cputs("Printing...\r\n");
   /* Calculate X boundaries */
   switch (angle) {
-    case 0:
-    case 180:
-      sx = 12;
-      ex = HGR_WIDTH - 12;
-      break;
     case 90:
     case 270:
       if (resize) {
@@ -302,6 +297,13 @@ scale_again:
         sx = 32;
         ex = HGR_WIDTH - 32;
       }
+      break;
+    case 0:
+    case 180:
+    default:
+      sx = 12;
+      ex = HGR_WIDTH - 12;
+      break;
   }
 
   /* Set line width */
@@ -583,11 +585,11 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
   uint8 *ptr;
 #endif
   uint8 scaled_dx, scaled_dy, prev_scaled_dx, prev_scaled_dy;
-  int8 xdir, ydir;
+  int8 xdir = 1, ydir = 1;
   int8 cur_err;
   int8 err2, err1;
 
-  uint8 invert_coords;
+  uint8 invert_coords = 0;
 
   /* Used for both Sierra and Bayer */
   register int8 *regptr1, *regptr2, *regptr3;

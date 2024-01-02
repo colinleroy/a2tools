@@ -180,7 +180,7 @@ static void get_one_picture(uint8 num_pics) {
 }
 
 static void set_camera_name(const char *name) {
-  char buf[31];
+  char buf[32];
 
   if (name == NULL) {
     return;
@@ -242,7 +242,7 @@ static void take_picture(void) {
 static void show_thumbnails(uint8 num_pics) {
   uint8 i = 0;
   thumb_info info;
-  char c;
+  char c = 0;
   char thumb_buf[32];
   FILE *fp;
 

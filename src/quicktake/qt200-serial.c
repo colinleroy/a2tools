@@ -193,18 +193,14 @@ static uint8 qt200_send_ping(void) {
 uint8 qt200_set_speed(uint16 speed) {
 #define SPD_CMD_IDX 0x04
   //                 {????,CMD ,          ????,????,SPD }
-  char str_speed[] = {0x01,FUJI_CMD_SPEED,0x01,0x00,0x04};
-  int spd_code;
+  char str_speed[] = {0x01,FUJI_CMD_SPEED,0x01,0x00,0x00};
+#ifdef __CC65__
+  int spd_code = SER_BAUD_9600;
+#else
+  int spd_code = B9600;
+#endif
 
   switch(speed) {
-    case 9600:
-#ifdef __CC65__
-      spd_code = SER_BAUD_9600;
-#else
-      spd_code = B9600;
-#endif
-      str_speed[SPD_CMD_IDX] = 0x00;
-      break;
     case 19200:
 #ifdef __CC65__
       spd_code = SER_BAUD_19200;

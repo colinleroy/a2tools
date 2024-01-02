@@ -197,10 +197,10 @@ err_out:
   if (recursive && d) {
     goto read_next_ent;
   }
+all_ents_read:
   if (dir) {
     free(dir);
   }
-all_ents_read:
   clrzone(0, 5, scrw - 1, PAGE_HEIGHT - 1);
   gotoxy(0, start_y + 3);
   cprintf("Hit a key to continue.");
