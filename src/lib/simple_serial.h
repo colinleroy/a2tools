@@ -14,6 +14,13 @@
 
 #define SIMPLE_SERIAL_BUF_SIZE 512
 
+#ifdef IIGS
+#define PRINTER_SER_SLOT 1
+#define MODEM_SER_SLOT 0
+#else
+#define PRINTER_SER_SLOT 1
+#define MODEM_SER_SLOT 2
+#endif
 /* Setup */
 
 void simple_serial_set_speed(int b);
@@ -25,6 +32,7 @@ void simple_serial_acia_onoff(unsigned char slot_num, unsigned char on);
 
 #ifdef __CC65__
 char __fastcall__ simple_serial_open(void);
+char __fastcall__ simple_serial_open_slot(unsigned char my_slot);
 char __fastcall__ simple_serial_close(void);
 void __fastcall__ simple_serial_flush(void);
 void __fastcall__ simple_serial_configure(void);
@@ -32,6 +40,7 @@ void __fastcall__ simple_serial_configure(void);
 #define simple_serial_putc(c) ser_put(c)
 #else
 int simple_serial_open(void);
+int simple_serial_open_slot(int my_slot);
 int simple_serial_close(void);
 void simple_serial_flush(void);
 #define simple_serial_configure()

@@ -1,0 +1,5 @@
+#!/bin/bash
+if [ "$2" != "" ]; then
+	FLOP2="-flop2 disks/qt$2.dsk"
+fi
+make clean all && cd ../.. && make imageviewer.dsk && mame apple2c0 -window -flop1 imageviewer.dsk $FLOP2 -resolution 560x384 -modem null_modem -bitb socket.localhost:2000 -nomouse -debug; cd src/image-viewer

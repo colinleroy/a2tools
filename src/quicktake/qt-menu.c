@@ -299,20 +299,6 @@ err_thumb_io:
   }
 }
 
-static void finish_img_view(void) {
-  char c;
-check_again:
-  c = tolower(cgetc());
-  if (c == 'p') {
-    hgr_print();
-    goto check_again;
-  }
-  init_text();
-
-  get_program_disk();
-  clrscr();
-}
-
 static void print_welcome(void) {
   hgr_mixon();
   clrscr();
@@ -324,6 +310,7 @@ static void print_welcome(void) {
 #pragma code-name(push, "RT_ONCE")
 
 static uint8 setup(int argc, char *argv[]) {
+  uint16 is_reedit = 0;
 #ifndef __CC65__
   uint16 target_speed = 57600U;
   scrw = 80; scrh = 24;
@@ -342,20 +329,19 @@ static uint8 setup(int argc, char *argv[]) {
   // exec("QTKTCONV","/QT100/TEST100.QTK 0 0 640 480");
   // exec("QTKNCONV","/QT150/TEST150.QTK 0 0 640 480");
   // exec("JPEGCONV","/QT150/TEST200.JPG 0 0 640 480");
+  exec("IMGVIEW","/QT100/TEST100.HGR");
   }
   screensize(&scrw, &scrh);
   init_hgr(1);
   print_welcome();
 
-  /* Make sure we open the port early, so that RT_ONCE
-   * cleaning can happen */
-  qt_serial_open();
-
   if (argc == 3) {
-    qt_edit_image(argv[1], atoi(argv[2]));
-  } else {
-    set_scrollwindow(21, scrh);
+    is_reedit = atoi(argv[2]);
+    if (is_reedit)
+      qt_edit_image(argv[1], is_reedit);
   }
+
+  set_scrollwindow(21, scrh);
 
   /* Remove temporary files */
   unlink(HIST_NAME);
@@ -416,18 +402,11 @@ menu:
       qt_convert_image(NULL);
       goto menu;
     case 'v':
-      if (qt_view_image(NULL) == 0)
-        finish_img_view();
+      qt_view_image(NULL, 0);
       goto menu;
     case 'a':
       reopen_start_device();
-      if (qt_view_image("about.hgr") == 0) {
-        print_welcome();
-        cputs("Many thanks to Abi for her patience and support! <3\r\n"
-              "Thanks to my sons for their encouragements, to Pierre Dandumont for lending\r\n"
-              "me cameras, and to Fozztexx for extensive testing and debugging.");
-        finish_img_view();
-      }
+      qt_view_image("about.hgr", 0);
       goto menu;
     case '0':
       goto out;
