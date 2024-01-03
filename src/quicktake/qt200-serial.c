@@ -55,14 +55,14 @@ uint8 qt200_wakeup(void) {
     return -1;
   }
 }
+
 #pragma code-name(pop)
+#pragma code-name(push, "LOWCODE")
 
 /* End of session */
 static void end_session(void) {
   simple_serial_putc(EOT);
 }
-
-#pragma code-name(push, "LOWCODE")
 
 /* Read a reply from the camera */
 static uint8 read_response(unsigned char *buf, uint16 len, uint8 expect_header) {

@@ -62,6 +62,8 @@ void poll_fill(poll *p, char from_reblog) {
   }
 }
 
+#pragma code-name(push, "LC")
+
 void poll_update_vote(poll *p) {
   char params[128] = "A|choices\n[";
   char i, empty = 1, *cur;
@@ -84,3 +86,5 @@ void poll_update_vote(poll *p) {
 
   surl_read_response_header();
 }
+
+#pragma code-name(pop)
