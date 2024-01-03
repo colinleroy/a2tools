@@ -17,6 +17,7 @@
 #include "qt-conv.h"
 #include "qt-edit-image.h"
 #include "qt-serial.h"
+#include "qt-state.h"
 
 #include "runtime_once_clean.h"
 #include "extended_string.h"
@@ -143,7 +144,9 @@ static void save_picture(uint8 n_pic) {
   }
 
   if (qt_get_picture(n_pic, fp, sv.f_bfree * sv.f_bsize) == 0) {
+    uint16 tmp = n_pic;
     fclose(fp);
+    state_set(STATE_GET, tmp, NULL);
     qt_convert_image(filename);
   } else {
     fclose(fp);
@@ -155,8 +158,9 @@ err_io:
 }
 
 static void get_one_picture(uint8 num_pics) {
-  char buf[3];
-  int8 n_pic;
+  char buf[5];
+  uint8 n_pic;
+  uint16 tmp;
 
   clrscr();
   cputs("Get a picture from the camera\r\n\r\n"
@@ -164,10 +168,15 @@ static void get_one_picture(uint8 num_pics) {
         "Picture number? ");
 
   buf[0] = '\0';
-  dget_text(buf, 3, NULL, 0);
+
+  if (state_load(STATE_GET, &tmp, NULL) == 0) {
+    if (tmp < num_pics)
+      sprintf(buf, "%u", tmp + 1);
+  }
+  dget_text(buf, 4, NULL, 0);
 
   if (buf[0] == '\0')
-    return; 
+    return;
 
   n_pic = atoi(buf);
   if (n_pic < 1 || n_pic > num_pics) {
@@ -202,7 +211,7 @@ static void set_camera_time(void) {
   char buf[5];
   uint8 vals[5];
   uint8 i;
-  
+
   clrscr();
   cputs("Camera time setting\r\n\r\n"
 
@@ -241,6 +250,7 @@ static void take_picture(void) {
 
 static void show_thumbnails(uint8 num_pics) {
   uint8 i = 0;
+  uint16 tmp;
   thumb_info info;
   char c = 0;
   char thumb_buf[32];
@@ -253,6 +263,10 @@ static void show_thumbnails(uint8 num_pics) {
   set_scrollwindow(0, scrh);
   init_hgr(1);
   hgr_mixon();
+
+  if (state_load(STATE_PREVIEW, &tmp, NULL) == 0) {
+    i = tmp;
+  }
 
   do {
     i++;
@@ -278,6 +292,8 @@ err_thumb_io:
       break;
     }
 
+    tmp = i;
+    state_set(STATE_PREVIEW, tmp, NULL);
     sprintf(thumb_buf, "Thumbnail %d", i);
     convert_temp_to_hgr(THUMBNAIL_NAME, thumb_buf, THUMB_WIDTH*2, THUMB_HEIGHT*2, serial_model);
 
@@ -311,6 +327,8 @@ static void print_welcome(void) {
 
 static uint8 setup(int argc, char *argv[]) {
   uint16 is_reedit = 0;
+  char *reedit_name;
+
 #ifndef __CC65__
   uint16 target_speed = 57600U;
   scrw = 80; scrh = 24;
@@ -329,13 +347,16 @@ static uint8 setup(int argc, char *argv[]) {
   // exec("QTKTCONV","/QT100/TEST100.QTK 0 0 640 480");
   // exec("QTKNCONV","/QT150/TEST150.QTK 0 0 640 480");
   // exec("JPEGCONV","/QT150/TEST200.JPG 0 0 640 480");
-  exec("IMGVIEW","/QT100/TEST100.HGR");
+  // exec("IMGVIEW","/QT100/TEST100.HGR");
   }
   screensize(&scrw, &scrh);
   init_hgr(1);
   print_welcome();
 
-  if (argc == 3) {
+  if (state_load(STATE_EDIT, &is_reedit, &reedit_name) == 0) {
+      qt_edit_image(reedit_name, is_reedit);
+      state_set(STATE_EDIT, 0, NULL);
+  } else if (argc == 3) {
     is_reedit = atoi(argv[2]);
     if (is_reedit)
       qt_edit_image(argv[1], is_reedit);
@@ -402,11 +423,11 @@ menu:
       qt_convert_image(NULL);
       goto menu;
     case 'v':
-      qt_view_image(NULL, 0);
+      qt_view_image(NULL);
       goto menu;
     case 'a':
       reopen_start_device();
-      qt_view_image("about.hgr", 0);
+      qt_view_image("about.hgr");
       goto menu;
     case '0':
       goto out;

@@ -17,6 +17,7 @@
 #include "qt-conv.h"
 #include "qt-edit-image.h"
 #include "qt-serial.h"
+#include "qt-state.h"
 
 #ifndef __CC65__
 #include "tgi_compat.h"
@@ -429,7 +430,8 @@ open_again:
   printf("Done. Go back to Edition, View, or main Menu? (E/v/m)");
   c = tolower(cgetc());
   if (c == 'v') {
-    qt_view_image(buffer, src_width);
+    state_set(STATE_EDIT, src_width, (char *)buffer);
+    qt_view_image((char *)buffer);
     goto done;
   }
   if (c != 'm') {
@@ -928,9 +930,9 @@ void qt_edit_image(const char *ofname, uint16 src_width) {
   } while (reedit_image(ofname, src_width));
 }
 
-uint8 qt_view_image(const char *filename, uint16 src_width) {
+uint8 qt_view_image(const char *filename) {
   if (filename)
-    snprintf((char *)args, sizeof(args) - 1, "%s SLOWTAKE %s %u", filename, filename, src_width);
+    snprintf((char *)args, sizeof(args) - 1, "%s SLOWTAKE", filename);
   else
     snprintf((char *)args, sizeof(args) - 1, "___SEL___ SLOWTAKE");
 

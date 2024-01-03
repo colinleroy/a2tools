@@ -5,7 +5,7 @@
 
 void qt_convert_image(const char *filename);
 void qt_edit_image(const char *ofname, uint16 src_width);
-uint8 qt_view_image(const char *filename, uint16 src_width);
+uint8 qt_view_image(const char *filename);
 void finish_img_view(void);
 void get_program_disk(void);
 
