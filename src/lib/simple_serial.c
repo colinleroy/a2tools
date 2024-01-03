@@ -246,10 +246,10 @@ void simple_serial_configure(void) {
   reopen_start_device();
 }
 
-char __fastcall__ simple_serial_open(void) {
+char __fastcall__ simple_serial_open_slot(unsigned char my_slot) {
   char err;
 
-  simple_serial_read_opts();
+  slot = my_slot;
 
 #ifdef __APPLE2ENH__
   #ifdef IIGS
@@ -286,6 +286,11 @@ char __fastcall__ simple_serial_open(void) {
   }
 
   return err;
+}
+
+char __fastcall__ simple_serial_open(void) {
+  simple_serial_read_opts();
+  return simple_serial_open_slot(slot);
 }
 
 char __fastcall__ simple_serial_close(void) {
@@ -544,7 +549,7 @@ static void setup_tty(int port, int baudrate, int hw_flow_control) {
   }
 }
 
-int simple_serial_open(void) {
+int simple_serial_open_slot(int slot) {
   struct flock lock;
 
   lock.l_start = 0;
@@ -553,9 +558,6 @@ int simple_serial_open(void) {
   lock.l_type = F_WRLCK;
   lock.l_whence = SEEK_SET;
 
-  /* Get options */
-  simple_serial_read_opts();
-  
   /* Open file */
   ttyfp = fopen(opt_tty_path, "r+b");
 
@@ -574,6 +576,12 @@ int simple_serial_open(void) {
   setup_tty(fileno(ttyfp), opt_tty_speed, opt_tty_hw_handshake);
 
   return 0;
+}
+
+int simple_serial_open(void) {
+  /* Get options */
+  simple_serial_read_opts();
+  return simple_serial_open_slot(0);
 }
 
 int simple_serial_close(void) {

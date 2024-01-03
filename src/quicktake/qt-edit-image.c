@@ -15,6 +15,7 @@
 #include "simple_serial.h"
 
 #include "qt-conv.h"
+#include "qt-edit-image.h"
 #include "qt-serial.h"
 
 #ifndef __CC65__
@@ -66,9 +67,10 @@ void get_program_disk(void) {
   }
 }
 
+static char imgname[FILENAME_MAX];
+static char args[FILENAME_MAX + 16];
+
 void qt_convert_image_with_crop(const char *filename, uint16 sx, uint16 sy, uint16 ex, uint16 ey) {
-  static char imgname[BUF_SIZE];
-  static char args[BUF_SIZE + 16];
 
   clrscr();
   cputs("Image conversion\r\n\r\n");
@@ -225,102 +227,6 @@ static void invert_selection(void) {
   }
 }
 
-void hgr_print(void) {
-  uint16 x;
-  uint8 y, cy, ey, bit;
-  uint8 c;
-  char setup_binary_print_cmd[] = {CH_ESC, 'n', CH_ESC, 'T', '1', '6'};
-  char send_chars_cmd[8]; // = {CH_ESC, 'G', '0', '0', '0', '0'};
-#ifdef __CC65__
-  #define cur_d7 zp6p
-  #define cur_m7 zp8p
-#else
-  uint8 *cur_d7, *cur_m7;
-#endif
-  uint16 sx, ex;
-  uint8 scale = 1;
-
-  init_data();
-
-  hgr_mixon();
-  clrscr(); gotoxy(0, 20);
-  cputs("Printout scale: \r\n"
-        "1. 72dpi (9x6.7cm)\r\n"
-        "2. 36dpi (18x13cm)\r\n"
-        "Escape: cancel printing");
-scale_again:
-  scale = cgetc();
-  if (scale == CH_ESC) {
-    hgr_mixoff();
-    return;
-  }
-  scale -= '0';
-  if (scale != 1 && scale != 2) {
-    goto scale_again;
-  }
-  clrscr(); gotoxy(0, 20);
-  cputs("Resetting serial...\r\n");
-  qt_serial_reset();
-  cputs("Please connect ImageWriter II to modem port and turn it on.\r\n"
-        "Press a key when ready...\r\n");
-  cgetc();
-  cputs("Printing...\r\n");
-  /* Calculate X boundaries */
-  switch (angle) {
-    case 90:
-    case 270:
-      if (resize) {
-        sx = 68;
-        ex = HGR_WIDTH - 68;
-      } else {
-        sx = 32;
-        ex = HGR_WIDTH - 32;
-      }
-      break;
-    case 0:
-    case 180:
-    default:
-      sx = 12;
-      ex = HGR_WIDTH - 12;
-      break;
-  }
-
-  /* Set line width */
-  sprintf(send_chars_cmd, "%cG%04d", CH_ESC, (ex-sx) * scale);
-
-  for (y = 0; y < HGR_HEIGHT; y += (8/scale)) {
-    cur_d7 = div7_table + sx;
-    cur_m7 = mod7_table + sx;
-    ey = y + (8/scale);
-    /* Set printer to binary mode */
-    simple_serial_write(setup_binary_print_cmd, sizeof(setup_binary_print_cmd));
-    simple_serial_write(send_chars_cmd, 6);
-    for (x = sx; x < ex; x++) {
-      c = 0;
-      bit = (scale == 1) ? 0x1 : 0x3;
-      for (cy = y; cy < ey; cy++) {
-        if ((*(hgr_baseaddr[cy] + *cur_d7) & *cur_m7) == 0) {
-          c |= bit;
-        }
-        bit <<= scale;
-      }
-      cur_d7++;
-      cur_m7++;
-      simple_serial_putc(c);
-      if (scale == 2)
-        simple_serial_putc(c);
-    }
-    simple_serial_write("\r\n", 2);
-    /* avoid needing DTR wired */
-    platform_msleep(200*scale);
-  }
-  clrscr(); gotoxy(0, 20);
-  cputs("Done.\r\n"
-        "Press a key to continue.\r\n");
-  cgetc();
-  hgr_mixoff();
-}
-
 static uint8 reedit_image(const char *ofname, uint16 src_width) {
   char c, *cp;
 
@@ -342,7 +248,7 @@ start_edit:
            brighten > 0 ? "+":"",
            brighten);
     printf("Dither with E: Sierra Lite / Y: Bayer / N: No dither (Current: %s)\n"
-           "S: Save - Escape: Exit - P: Print - Any other key: Hide help",
+           "S: Save - Escape: Exit - Any other key: Hide help",
            dither_alg == DITHER_BAYER ? "Bayer"
             : dither_alg == DITHER_SIERRA ? "Sierra Lite" : "None");
   c = tolower(cgetc());
@@ -378,9 +284,6 @@ start_edit:
           case 'h':
             auto_level = !auto_level;
             histogram_equalize();
-            return 1;
-          case 'p':
-            hgr_print();
             return 1;
           case 'c':
             if (angle == 0 && !(src_width % 320)) {
@@ -523,8 +426,12 @@ open_again:
   }
   fclose(ofp);
 
-  printf("Done. Go back to Edition or main Menu? (E/m)");
+  printf("Done. Go back to Edition, View, or main Menu? (E/v/m)");
   c = tolower(cgetc());
+  if (c == 'v') {
+    qt_view_image(buffer, src_width);
+    goto done;
+  }
   if (c != 'm') {
     goto start_edit;
   }
@@ -1021,59 +928,14 @@ void qt_edit_image(const char *ofname, uint16 src_width) {
   } while (reedit_image(ofname, src_width));
 }
 
-uint8 qt_view_image(const char *filename) {
-  FILE *fp = NULL;
-  static char imgname[BUF_SIZE];
-  uint16 len;
-  #define BLOCK_SIZE 512
+uint8 qt_view_image(const char *filename, uint16 src_width) {
+  if (filename)
+    snprintf((char *)args, sizeof(args) - 1, "%s SLOWTAKE %s %u", filename, filename, src_width);
+  else
+    snprintf((char *)args, sizeof(args) - 1, "___SEL___ SLOWTAKE");
 
-  set_scrollwindow(0, scrh);
-  clrscr();
-
-  /* Need to set in case we print */
-  angle = 0;
-  resize = 1;
-
-  cputs("Image view\r\n\r\n");
-  if (!filename) {
-    char *tmp;
-    cputs("Image (HGR): ");
-    tmp = file_select(wherex(), wherey(), scrw - wherex(), wherey() + 10, 0, "Select an HGR file");
-    if (tmp == NULL)
-      return -1;
-    strcpy(imgname, tmp);
-    free(tmp);
-  } else {
-    strcpy(imgname, filename);
-  }
-
-  fp = fopen(imgname, "rb");
-  if (fp == NULL) {
-    cputs("Can not open image.\r\n");
-    cgetc();
-    return -1;
-  }
-
-  memset((char *)HGR_PAGE, 0x00, HGR_LEN);
   init_text();
-  gotoxy(0, 18);
-  cputs("Loading image...");
-
-  progress_bar(0, 19, scrw, 0, HGR_LEN);
-
-  len = 0;
-  while (len < HGR_LEN) {
-#ifdef __CC65__
-    fread((char *)(HGR_PAGE + len), 1, BLOCK_SIZE, fp);
-#endif
-    progress_bar(-1, -1, scrw, len, HGR_LEN);
-    len += BLOCK_SIZE;
-  }
-
-  init_hgr(1);
-
-  fclose(fp);
-  return 0;
+  return exec("imgview", (char *)args);
 }
 
 #ifdef __CC65__

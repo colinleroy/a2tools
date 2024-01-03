@@ -48,8 +48,6 @@ extern unsigned char buffer[BLOCK_SIZE];
 extern uint8 serial_model;
 
 /* Camera interface functions, protocol-agnostic */
-uint8 qt_serial_open(void);
-void qt_serial_reset(void);
 uint8 qt_serial_connect(uint16 speed);
 uint8 qt_get_information(camera_info *info);
 uint8 qt_get_picture(uint8 n_pic, FILE *picture, off_t avail);

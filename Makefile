@@ -27,10 +27,14 @@ quicktake_disk_PROGS = \
 	src/quicktake/slowtake.bin \
 	src/quicktake/qtktconv.bin \
 	src/quicktake/qtknconv.bin \
-	src/quicktake/jpegconv.bin
+	src/quicktake/jpegconv.bin \
+	src/image-viewer/imgview.bin
 
 quicktake_disk_IMGS = \
 	src/quicktake/about.hgr
+
+imageviewer_disk_PROGS = \
+	src/image-viewer/imgview.bin
 
 CLEANDISK = disks/basic-empty.dsk
 
@@ -135,6 +139,17 @@ quicktake$(suffix).dsk: $(quicktake_disk_PROGS)
 	done
 	for img in $(quicktake_disk_IMGS); do \
 		java -jar bin/ac.jar -p $@ $$(basename $$img) BIN 0x2000 < $$img; \
+	done
+	cp $@ ~/Documents/ADTPro-2.1.0/disks/; \
+	cp $@ dist/; \
+
+imageviewer$(suffix).dsk: $(imageviewer_disk_PROGS)
+	cp $(CLEANDISK) $@; \
+	java -jar bin/ac.jar -n $@ QUICKTAKE
+	java -jar bin/ac.jar -p $@ IMGVIEW.SYSTEM SYS < bin/loader.system; \
+	java -jar bin/ac.jar -d $@ BASIC.SYSTEM; \
+	for prog in $^; do \
+		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
 	cp $@ ~/Documents/ADTPro-2.1.0/disks/; \
 	cp $@ dist/; \
