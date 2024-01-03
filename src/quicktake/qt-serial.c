@@ -146,7 +146,6 @@ uint8 qt_get_thumbnail(uint8 n_pic, FILE *picture, thumb_info *info) {
     return -1;
 }
 
-#pragma code-name(pop)
 
 uint8 qt_delete_pictures(void) {
   if (serial_model != QT_MODEL_200)
@@ -154,8 +153,6 @@ uint8 qt_delete_pictures(void) {
   else
     return -1;
 }
-
-#pragma code-name(push, "LOWCODE")
 
 uint8 qt_get_information(camera_info *info) {
   if (serial_model != QT_MODEL_200)
@@ -182,7 +179,6 @@ const char *qt_get_quality_str(uint8 mode) {
       return "Unknown";
   }
 }
-
 
 const char *qt_get_flash_str(uint8 mode) {
   switch(mode) {

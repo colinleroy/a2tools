@@ -19,8 +19,6 @@ extern uint8 scrw, scrh;
 
 static uint8 qt1x0_send_ping(void);
 
-#pragma code-name(push, "LOWCODE")
-
 /* Get the ack from the camera */
 static uint8 get_ack(uint8 wait) {
   while (wait--) {
@@ -30,6 +28,8 @@ static uint8 get_ack(uint8 wait) {
   }
   return -1;
 }
+
+#pragma code-name(push, "LOWCODE")
 
 /* Send an ack to the camera */
 static void send_ack() {
@@ -63,8 +63,6 @@ read:
 
   return buffer[3] == 0xC8 ? QT_MODEL_150 : QT_MODEL_100;
 }
-
-#pragma code-name(pop)
 
 /* Send our greeting to the camera, and inform it of the speed
  * we aim for
@@ -104,6 +102,7 @@ static uint8 send_hello(uint16 speed) {
   return 0;
 }
 
+#pragma code-name(pop)
 #pragma code-name(push, "RT_ONCE")
 /* Wakeup and detect a QuickTake 100/150 by clearing DTR
  * Returns 0 if successful, -1 otherwise

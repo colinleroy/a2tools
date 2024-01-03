@@ -19,7 +19,7 @@ DEPS :=
 CC65_TARGET = apple2enh
 CFLAGS  = -I ../lib -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
 CLCFLAGS = -t $(CC65_TARGET) -Osir -Cl $(iigs_CFLAGS) -C ../../config/apple2enh-rtonce.cfg -DSURL_TO_LANGCARD
-GCCCFLAGS = -g -O0 -Wall -Wno-char-subscripts -Wno-unused-function -Werror
+GCCCFLAGS = -g -O0 -Wall -Wno-char-subscripts -Wno-unused-function -Wno-unknown-pragmas -Werror
 GCCLDFLAGS = 
 
 .PHONY: all clean

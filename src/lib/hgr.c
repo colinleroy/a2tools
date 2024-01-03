@@ -3,6 +3,8 @@
 char hgr_init_done = 0;
 char hgr_mix_is_on = 0;
 
+#pragma code-name(push, "LOWCODE")
+
 #ifndef __CC65__
 #include "tgi_compat.h"
 
@@ -70,3 +72,5 @@ void init_text(void) {
   hgr_init_done = 0;
 }
 #endif
+
+#pragma code-name(pop)

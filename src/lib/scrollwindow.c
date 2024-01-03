@@ -20,6 +20,8 @@
 
 #include "scrollwindow.h"
 
+#pragma code-name(push, "LOWCODE")
+
 void __fastcall__ get_scrollwindow(unsigned char *top, unsigned char *bottom){
 #ifdef __CC65__
   *top = get_wndtop();
@@ -50,6 +52,8 @@ void __fastcall__ get_hscrollwindow(unsigned char *left, unsigned char *width){
 #endif
 
 }
+
+#pragma code-name(pop)
 
 void __fastcall__ set_hscrollwindow(unsigned char left, unsigned char width) {
 #ifdef __CC65__

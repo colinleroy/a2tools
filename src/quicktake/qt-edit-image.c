@@ -8,6 +8,7 @@
 #include "extended_conio.h"
 #include "file_select.h"
 #include "hgr.h"
+#include "hgr_addrs.h"
 #include "path_helper.h"
 #include "progress_bar.h"
 #include "scrollwindow.h"
@@ -113,11 +114,8 @@ void qt_convert_image(const char *filename) {
   qt_convert_image_with_crop(filename, 0, 0, 640, 480);
 }
 
-static uint8 *baseaddr[HGR_HEIGHT];
-static uint8 **cur_baseaddr_ptr;
-static uint8 *cur_baseaddr_val; /* shortcut ptr */
-static uint8 div7_table[HGR_WIDTH];
-static uint8 mod7_table[HGR_WIDTH];
+static uint8 **cur_hgr_baseaddr_ptr;
+static uint8 *cur_hgr_baseaddr_val; /* shortcut ptr */
 static uint16 histogram[256];
 static uint8 opt_histogram[256];
 #define NUM_PIXELS 49152U //256*192
@@ -160,36 +158,17 @@ int8 bayer_map[64] = {
   63, 31, 55, 23, 61, 29, 53, 21
 };
 
-static void init_base_addrs (void)
+static void init_data (void)
 {
-  static uint8 y, base_init_done = 0;
-  uint16 x, group_of_eight, line_of_eight, group_of_sixtyfour;
-  uint8 *a, *b;
+  static uint8 init_done = 0;
   int8 *m;
-  if (base_init_done) {
+  uint16 x;
+
+  if (init_done) {
     return;
   }
 
-  /* Fun with HGR memory layout! */
-  for (y = 0; y < HGR_HEIGHT; ++y)
-  {
-    line_of_eight = y % 8;
-    group_of_eight = (y % 64) / 8;
-    group_of_sixtyfour = y / 64;
-
-    baseaddr[y] = (uint8 *)HGR_PAGE + line_of_eight * 1024 + group_of_eight * 128 + group_of_sixtyfour * 40;
-  }
-
-  /* Precompute /7 and %7 from 0 to HGR_WIDTH */
-  a = div7_table + 0;
-  b = mod7_table + 0;
-  for (x = 0; x < HGR_WIDTH; x++) {
-    *a = x / 7;
-    *b = 1 << (x % 7);
-    a++;
-    b++;
-  }
-
+  init_hgr_base_addrs();
   /* Fixup (standardize, divide) Bayer map once and for all*/
   m = bayer_map + 0;
   for (x = 0; x < 64; x++) {
@@ -197,7 +176,7 @@ static void init_base_addrs (void)
     m++;
   }
   histogram_equalize();
-  base_init_done = 1;
+  init_done = 1;
 }
 
 #ifndef __CC65__
@@ -228,8 +207,8 @@ static void invert_selection(void) {
   rx = div7_table[dex + START_OFFSET];
 
   /* Invert horizontal lines */
-  a = baseaddr[dsy] + lx;
-  b = baseaddr[dey] + lx;
+  a = hgr_baseaddr[dsy] + lx;
+  b = hgr_baseaddr[dey] + lx;
   for (x = dsx; x < dex; x+=7) {
     *a = ~(*a);
     *b = ~(*b);
@@ -238,7 +217,7 @@ static void invert_selection(void) {
   }
   /* Invert vertical lines */
   for (y = dsy + 1; y < dey - 1; y++) {
-    uint8 *by = baseaddr[y];
+    uint8 *by = hgr_baseaddr[y];
     a = by + lx;
     b = by + rx;
     *a = ~(*a);
@@ -261,7 +240,7 @@ void hgr_print(void) {
   uint16 sx, ex;
   uint8 scale = 1;
 
-  init_base_addrs();
+  init_data();
 
   hgr_mixon();
   clrscr(); gotoxy(0, 20);
@@ -320,7 +299,7 @@ scale_again:
       c = 0;
       bit = (scale == 1) ? 0x1 : 0x3;
       for (cy = y; cy < ey; cy++) {
-        if ((*(baseaddr[cy] + *cur_d7) & *cur_m7) == 0) {
+        if ((*(hgr_baseaddr[cy] + *cur_d7) & *cur_m7) == 0) {
           c |= bit;
         }
         bit <<= scale;
@@ -622,7 +601,7 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
   file_height = p_height;
 
   next_err_line = err + file_width;
-  init_base_addrs();
+  init_data();
 
   clrscr();
   gotoxy(0, 20);
@@ -651,8 +630,8 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
     case 0:
       off_x = X_OFFSET;
       off_y = (HGR_HEIGHT - file_height) / 2;
-      cur_baseaddr_ptr = baseaddr + off_y;
-      cur_baseaddr_val = *cur_baseaddr_ptr;
+      cur_hgr_baseaddr_ptr = hgr_baseaddr + off_y;
+      cur_hgr_baseaddr_val = *cur_hgr_baseaddr_ptr;
       xdir = +1;
       ydir = +1;
       invert_coords = 0;
@@ -687,8 +666,8 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
     case 180:
       off_x = HGR_WIDTH - X_OFFSET;
       off_y = file_height - 1;
-      cur_baseaddr_ptr = baseaddr + off_y;
-      cur_baseaddr_val = *cur_baseaddr_ptr;
+      cur_hgr_baseaddr_ptr = hgr_baseaddr + off_y;
+      cur_hgr_baseaddr_val = *cur_hgr_baseaddr_ptr;
       xdir = -1;
       ydir = -1;
       invert_coords = 0;
@@ -850,14 +829,14 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
         } else {
           scaled_dx = dx;
         }
-        ptr = baseaddr[scaled_dx] + cur_hgr_row;
+        ptr = hgr_baseaddr[scaled_dx] + cur_hgr_row;
         pixel = cur_hgr_mod;
       } else {
 #ifndef __CC65__
-        ptr = cur_baseaddr_val + *cur_d7;
+        ptr = cur_hgr_baseaddr_val + *cur_d7;
 #else
-        __asm__("ldx %v+1", cur_baseaddr_val);
-        __asm__("lda %v", cur_baseaddr_val);
+        __asm__("ldx %v+1", cur_hgr_baseaddr_val);
+        __asm__("lda %v", cur_hgr_baseaddr_val);
         __asm__("clc");
         __asm__("adc (%v)", cur_d7);
         __asm__("sta %v", ptr);
@@ -1008,12 +987,12 @@ next_pixel:
 next_line:
     y++;
     if (ydir < 0) {
-      cur_baseaddr_ptr--;
-      cur_baseaddr_val = *cur_baseaddr_ptr;
+      cur_hgr_baseaddr_ptr--;
+      cur_hgr_baseaddr_val = *cur_hgr_baseaddr_ptr;
       dy--;
     } else {
-      cur_baseaddr_ptr++;
-      cur_baseaddr_val = *cur_baseaddr_ptr;
+      cur_hgr_baseaddr_ptr++;
+      cur_hgr_baseaddr_val = *cur_hgr_baseaddr_ptr;
       dy++;
     }
   }
