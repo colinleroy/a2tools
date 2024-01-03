@@ -79,8 +79,9 @@ scale_again:
   }
   clrscr(); gotoxy(0, 20);
   cputs("Please connect ImageWriter II to the printer port and turn it on.\r\n"
-        "Press a key when ready...\r\n");
-  cgetc();
+        "Press a key when ready or Escape to cancel...\r\n");
+  if (cgetc() == CH_ESC)
+    goto out;
 
   if (!serial_opened) {
     serial_opened = (simple_serial_open_slot(PRINTER_SER_SLOT) == 0);
