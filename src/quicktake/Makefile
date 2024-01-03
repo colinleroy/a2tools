@@ -27,6 +27,7 @@ endif
 
 slowtake_SOURCES := \
 	qt-menu.c qt-serial.c qt1x0-serial.c qt200-serial.c qt-edit-image.c \
+	qt-state.c \
 	../lib/dgets.c ../lib/scrollwindow.c ../lib/path_helper.c \
 	../lib/simple_serial.c ../lib/simple_serial_ext.c \
 	../lib/extended_string.c ../lib/malloc0.c \

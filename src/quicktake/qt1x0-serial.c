@@ -29,8 +29,6 @@ static uint8 get_ack(uint8 wait) {
   return -1;
 }
 
-#pragma code-name(push, "LOWCODE")
-
 /* Send an ack to the camera */
 static void send_ack() {
   simple_serial_putc(0x06);
@@ -63,6 +61,8 @@ read:
 
   return buffer[3] == 0xC8 ? QT_MODEL_150 : QT_MODEL_100;
 }
+
+#pragma code-name(push, "LOWCODE")
 
 /* Send our greeting to the camera, and inform it of the speed
  * we aim for
