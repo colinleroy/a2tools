@@ -1,4 +1,6 @@
 #include <ctype.h>
+#include <dirent.h>
+#include <errno.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -19,6 +21,9 @@ char HGR_PAGE[HGR_LEN];
 #endif
 
 static uint8 serial_opened = 0;
+
+extern unsigned char printer_baudrate;
+extern char printer_slot;
 
 /* Check for XON/XOFF */
 uint8 wait_imagewriter_ready(void) {
@@ -48,11 +53,12 @@ void hgr_print(void) {
   uint8 y, cy, ey, bit;
   uint8 c;
   char setup_binary_print_cmd[] = {CH_ESC, 'n', CH_ESC, 'T', '1', '6'};
-  char send_chars_cmd[8]; // = {CH_ESC, 'G', '0', '0', '0', '0'};
 #ifdef __CC65__
+  char send_chars_cmd[8]; // = {CH_ESC, 'G', '0', '0', '0', '0'};
   #define cur_d7 zp6p
   #define cur_m7 zp8p
 #else
+  char send_chars_cmd[16];
   uint8 *cur_d7, *cur_m7;
 #endif
   uint16 sx, ex;
@@ -60,6 +66,7 @@ void hgr_print(void) {
 
   init_hgr_base_addrs();
 
+init_again:
   hgr_mixon();
   clrscr();
   gotoxy(0, 20);
@@ -78,25 +85,29 @@ scale_again:
     goto scale_again;
   }
   clrscr(); gotoxy(0, 20);
-  cputs("Please connect ImageWriter II to the printer port and turn it on.\r\n"
-        "Press a key when ready or Escape to cancel...\r\n");
+  cprintf("Please set your ImageWriter II to %sbps, XON/XOFF, connect it to the \r\n"
+          "printer port (slot %u) and turn it on.\r\n"
+          "Press a key when ready or Escape to cancel...\r\n",
+          tty_speed_to_str(printer_baudrate), printer_slot);
   if (cgetc() == CH_ESC)
     goto out;
 
   if (!serial_opened) {
-    serial_opened = (simple_serial_open_slot(PRINTER_SER_SLOT) == 0);
+#ifdef __CC65__
+    simple_serial_set_flow_control(SER_HS_NONE);
+#endif
+    serial_opened = (simple_serial_open_printer() == 0);
   }
   if (!serial_opened) {
-    cputs("Could not open serial port.\r\n");
-    cgetc();
+    printf("Could not open serial slot %d. Configure? (Y/n)\n", printer_slot);
+    if (tolower(cgetc()) != 'n') {
+      init_text();
+      clrscr();
+      simple_serial_configure();
+      goto init_again;
+    }
     goto out;
   }
-#ifdef __CC65__
-  simple_serial_set_speed(SER_BAUD_9600);
-  simple_serial_set_flow_control(SER_HS_NONE);
-#else
-  simple_serial_set_speed(B9600);
-#endif
 
   /* Calculate X boundaries */
   for (sx = 0; sx < 100; sx++) {
@@ -156,9 +167,9 @@ scale_again:
       if (wait_imagewriter_ready() != 0) {
         goto err_out;
       }
-      simple_serial_write(&c, 1);
+      simple_serial_write((char *)&c, 1);
       if (scale == 2)
-        simple_serial_write(&c, 1);
+        simple_serial_write((char *)&c, 1);
     }
     simple_serial_write("\r\n", 2);
   }
@@ -169,6 +180,64 @@ err_out:
   cgetc();
 out:
   hgr_mixoff();
+}
+
+static void get_next_image(char *imgname) {
+#ifdef __CC65__
+  char *filename = strrchr(imgname, '/');
+  DIR *d;
+  struct dirent *ent;
+  uint8 found = 0, loop = 0;
+
+  if (filename) {
+    *filename = '\0';
+  } else {
+    return;
+  }
+
+  d = opendir(imgname);
+  if (!d) {
+    *filename = '/';
+    return;
+  }
+
+start_from_first:
+  while ((ent = readdir(d))) {
+    if (found == 0 && !strcmp(ent->d_name, filename+1)) {
+      found = 1;
+      continue;
+    }
+    if (found == 1) {
+      if (ent->d_type == PRODOS_T_BIN
+       && (ent->d_auxtype == 0x2000 || ent->d_auxtype == 0x0)
+       && (ent->d_size == 8192UL || ent->d_size == 8184UL)) {
+         /* this is, quite probably, an image */
+         sprintf(filename, "/%s", ent->d_name);
+         found = 2;
+         break;
+       }
+    }
+  }
+
+  if (found < 2) {
+    found = 1;
+    rewinddir(d);
+    loop++;
+    if (loop == 1) {
+      goto start_from_first;
+    } else {
+      /* Bail */
+      *filename = '/';
+    }
+  }
+  closedir(d);
+#endif
+}
+
+static void print_help(void) {
+  gotoxy(0, 20);
+  cputs("P: Print to ImageWriter II - Space: view next image in directory\r\n"
+        "Escape: exit - Any other key: toggle help.");
 }
 
 int main(int argc, char *argv[]) {
@@ -201,34 +270,35 @@ int main(int argc, char *argv[]) {
     cputs("Image (HGR): ");
     tmp = file_select(wherex(), wherey(), scrw - wherex(), wherey() + 10, 0, "Select an HGR file");
     if (tmp == NULL)
-      return -1;
+      goto out;
     strcpy(imgname, tmp);
     free(tmp);
   } else {
     strcpy(imgname, filename);
   }
 
+next_image:
   fp = fopen(imgname, "rb");
   if (fp == NULL) {
-    cputs("Can not open image.\r\n");
+    cprintf("Can not open image %s (%s).\r\n", imgname, strerror(errno));
     cgetc();
-    return -1;
+    goto out;
   }
 
-  memset((char *)HGR_PAGE, 0x00, HGR_LEN);
+  memset((char *)HGR_PAGE, 0x0, HGR_LEN);
   init_text();
-  gotoxy(0, 18);
-  cputs("Loading image...");
-
-  progress_bar(0, 19, scrw, 0, HGR_LEN);
+  gotoxy(0, 17);
+  cprintf("Loading image %s...               ", imgname);
+  print_help();
+  progress_bar(0, 18, scrw, 0, HGR_LEN);
 
   len = 0;
   while (len < HGR_LEN) {
 #ifdef __CC65__
     fread((char *)(HGR_PAGE + len), 1, BLOCK_SIZE, fp);
 #endif
-    progress_bar(-1, -1, scrw, len, HGR_LEN);
     len += BLOCK_SIZE;
+    progress_bar(-1, -1, scrw, len, HGR_LEN);
   }
 
   init_hgr(1);
@@ -237,11 +307,27 @@ int main(int argc, char *argv[]) {
 
 again:
   i = tolower(cgetc());
-  if (i == 'p') {
-    hgr_print();
-    goto again;
+  switch(i) {
+    case 'p':
+      hgr_print();
+      goto again;
+    case CH_ESC:
+      goto out;
+    case ' ':
+      get_next_image(imgname);
+      goto next_image;
+    default:
+      if (hgr_mix_is_on) {
+        hgr_mixoff();
+      } else{
+        hgr_mixon();
+        clrscr();
+        print_help();
+      }
+      goto again;
   }
 
+out:
   init_text();
 
   if (argc > 2) {

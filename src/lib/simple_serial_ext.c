@@ -37,7 +37,7 @@ extern unsigned char flow_control;
 #ifdef __CC65__
   #pragma static-locals(push, on)
   #pragma code-name (push, "LOWCODE")
-  extern unsigned char slot;
+  extern unsigned char open_slot;
 #else
   extern FILE *ttyfp;
 #endif
@@ -99,7 +99,7 @@ void simple_serial_set_speed(int b) {
   /* Set speed before port is opened */
   baudrate = (unsigned char)b;
   /* Set speed after port is opened */
-  reg_idx = slot << 4;
+  reg_idx = open_slot << 4;
 
   switch (b) {
     case SER_BAUD_9600:
@@ -160,7 +160,7 @@ void simple_serial_set_flow_control(unsigned char fc) {
 
 void simple_serial_dtr_onoff(unsigned char on) {
 #ifndef IIGS
-  simple_serial_acia_onoff(slot, on);
+  simple_serial_acia_onoff(open_slot, on);
 #else
   /* http://www.applelogic.org/files/Z8530UM.pdf */
   if (on) {
@@ -203,7 +203,7 @@ void simple_serial_set_parity(unsigned int p) {
 #ifndef IIGS
   static unsigned char reg_idx;
   
-  reg_idx = slot << 4;
+  reg_idx = open_slot << 4;
 
   switch (p) {
     case SER_PAR_NONE:

@@ -35,6 +35,7 @@ unsigned char buffer[BLOCK_SIZE];
 /* Connect to a QuickTake and detect its model */
 uint8 qt_serial_connect(uint16 speed) {
   /* Set initial settings */
+  simple_serial_close();
 #ifdef __CC65__
   simple_serial_set_speed(SER_BAUD_9600);
   simple_serial_set_flow_control(SER_HS_NONE);
@@ -44,8 +45,6 @@ uint8 qt_serial_connect(uint16 speed) {
   simple_serial_set_parity(0);
 #endif
   camera_connected = 0;
-
-  simple_serial_close();
 
   if (simple_serial_open() != 0) {
     cputs("Cannot open port\r\n");
@@ -72,7 +71,7 @@ uint8 qt_serial_connect(uint16 speed) {
   cputs("\r\n");
 
   if (serial_model == QT_MODEL_UNKNOWN) {
-    cputs("No camera connected.\r\n");
+    cputs("No camera connected. ");
     return -1;
   }
 

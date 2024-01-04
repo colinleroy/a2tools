@@ -69,10 +69,15 @@ void get_program_disk(void) {
 }
 
 static char imgname[FILENAME_MAX];
-static char args[FILENAME_MAX + 16];
+#ifdef __CC65__
+#define FOUR_NUM_WIDTH 16
+#else
+#define FOUR_NUM_WIDTH 64
+#endif
+static char args[FILENAME_MAX + FOUR_NUM_WIDTH];
 
 void qt_convert_image_with_crop(const char *filename, uint16 sx, uint16 sy, uint16 ex, uint16 ey) {
-
+  set_scrollwindow(0, scrh);
   clrscr();
   cputs("Image conversion\r\n\r\n");
   if (!filename) {
@@ -98,7 +103,7 @@ void qt_convert_image_with_crop(const char *filename, uint16 sx, uint16 sy, uint
 
     get_program_disk();
 
-    snprintf(args, BUF_SIZE + 15, "%s %d %d %d %d", imgname, sx, sy, ex, ey);
+    snprintf(args, FILENAME_MAX + FOUR_NUM_WIDTH - 1, "%s %d %d %d %d", imgname, sx, sy, ex, ey);
 
     if (!strcmp(magic, QTKT_MAGIC)) {
       exec("qtktconv", args);
@@ -234,7 +239,6 @@ static uint8 reedit_image(const char *ofname, uint16 src_width) {
 start_edit:
   do {
     clrscr();
-    gotoxy(0, 20);
     cputs("Rotate: L:left - U:180 - R:right");
     if (angle == 90 || angle == 270) {
       if (resize)
@@ -263,7 +267,6 @@ start_edit:
         switch(c) {
           case CH_ESC:
             clrscr();
-            gotoxy(0, 20);
             cputs("Exit without saving? (y/N)");
             c = tolower(cgetc());
             if (c == 'y')
@@ -271,7 +274,6 @@ start_edit:
             break;
           case 's':
             clrscr();
-            gotoxy(0, 20);
             goto save;
           case 'r':
             angle += 90;
@@ -319,7 +321,6 @@ start_edit:
 crop_again:
         move_offset = src_width == 640 ? QT_BAND : QT_BAND*2;
         clrscr();
-        gotoxy(0, 20);
         if (src_width == 640) {
           cputs("+: Zoom in; -: Zoom out; ");
         }
@@ -513,7 +514,6 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
   init_data();
 
   clrscr();
-  gotoxy(0, 20);
   printf("Converting %s (Esc to stop)...\n", ofname);
 
   ifp = fopen(ifname, "r");
@@ -921,6 +921,7 @@ stop:
 #pragma inline-stdfuncs(pop)
 
 void qt_edit_image(const char *ofname, uint16 src_width) {
+  set_scrollwindow(20, scrh);
   do {
     if (angle >= 360)
       angle -= 360;
