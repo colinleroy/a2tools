@@ -12,6 +12,7 @@
 #include "path_helper.h"
 #include "progress_bar.h"
 #include "scrollwindow.h"
+#include "simple_serial.h"
 
 #include "splash.h"
 #include "qt-conv.h"
@@ -94,9 +95,8 @@ static void save_picture(uint8 n_pic) {
   clrscr();
   printf("Saving picture %d\n\n"
 
-        "Make sure to save the picture to a floppy with\n"
-        "at least 118480 + 8192 (124kB) free. Basically,\n"
-        "use one floppy per picture.\n"
+        "Make sure to save the picture to a floppy with enough free space.\n"
+        "\n"
         "Do not use /RAM, which will be used for temporary storage.\n\n"
         "Please swap disks if needed and press a key.\n\n",
       n_pic);
@@ -158,7 +158,11 @@ err_io:
 }
 
 static void get_one_picture(uint8 num_pics) {
+#ifdef __CC65__
   char buf[5];
+#else
+  char buf[20];
+#endif
   uint8 n_pic;
   uint16 tmp;
 
@@ -316,13 +320,35 @@ err_thumb_io:
 }
 
 static void print_welcome(void) {
+  init_hgr(1);
+  set_scrollwindow(20, scrh);
   hgr_mixon();
   clrscr();
-  gotoxy(0,20);
   cputs(WELCOME_STR);
+  set_scrollwindow(21, scrh);
 }
 
 #pragma code-name(pop)
+
+static void show_about(void) {
+  FILE *fp;
+  size_t r;
+
+  reopen_start_device();
+  fp = fopen("about", "r");
+  if (!fp) {
+    return;
+  }
+  set_scrollwindow(0, scrh);
+  clrscr();
+  while((r = fread((char *)buffer, 1, sizeof(buffer) - 1, fp))) {
+    buffer[r] = '\0';
+    printf("%s", buffer);
+  }
+  fclose(fp);
+  cgetc();
+}
+
 #pragma code-name(push, "RT_ONCE")
 
 static uint8 setup(int argc, char *argv[]) {
@@ -347,10 +373,9 @@ static uint8 setup(int argc, char *argv[]) {
   // exec("QTKTCONV","/QT100/TEST100.QTK 0 0 640 480");
   // exec("QTKNCONV","/QT150/TEST150.QTK 0 0 640 480");
   // exec("JPEGCONV","/QT150/TEST200.JPG 0 0 640 480");
-  // exec("IMGVIEW","/QT100/TEST100.HGR");
+  // exec("IMGVIEW","/ADTPRO.2.1.0/VELO.HGR");
   }
   screensize(&scrw, &scrh);
-  init_hgr(1);
   print_welcome();
 
   if (state_load(STATE_EDIT, &is_reedit, &reedit_name) == 0) {
@@ -362,8 +387,6 @@ static uint8 setup(int argc, char *argv[]) {
       qt_edit_image(argv[1], is_reedit);
   }
 
-  set_scrollwindow(21, scrh);
-
   /* Remove temporary files */
   unlink(HIST_NAME);
   unlink(TMP_NAME);
@@ -371,17 +394,25 @@ static uint8 setup(int argc, char *argv[]) {
   while (qt_serial_connect(target_speed) != 0) {
     char c;
 
-    cputs("Please turn the Quicktake off and on. Try again");
+    printf("Please turn the Quicktake off and on. Try again?\n");
     if (target_speed != 9600)
-      printf(" at %u or at 9600bps? (Y/n/9)\n", target_speed);
+      printf("Y: try at %ubps, 9: try at 9600bps, C: configure, N: don't try (Y/9/c/n)\n", target_speed);
     else
-      printf("? (Y/n)\n");
+      printf("Y: try at %ubps, C: configure, N: don't try (Y/c/n)\n", target_speed);
 
     c = tolower(cgetc());
     if (c == 'n')
       return 0;
+    print_welcome();
     if(c == '9')
       target_speed = 9600;
+    if(c == 'c') {
+      init_text();
+      set_scrollwindow(0, scrh);
+      clrscr();
+      simple_serial_configure();
+      print_welcome();
+    }
   }
   return 1;
 }
@@ -398,7 +429,6 @@ menu:
   init_text();
   set_scrollwindow(0, scrh);
   clrscr();
-  gotoxy(0, 0);
 
   if (camera_connected) {
     free(cam_info.name);
@@ -426,8 +456,7 @@ menu:
       qt_view_image(NULL);
       goto menu;
     case 'a':
-      reopen_start_device();
-      qt_view_image("about.hgr");
+      show_about();
       goto menu;
     case '0':
       goto out;

@@ -32,15 +32,22 @@ void simple_serial_acia_onoff(unsigned char slot_num, unsigned char on);
 
 #ifdef __CC65__
 char __fastcall__ simple_serial_open(void);
-char __fastcall__ simple_serial_open_slot(unsigned char my_slot);
+char __fastcall__ simple_serial_open_printer(void);
 char __fastcall__ simple_serial_close(void);
 void __fastcall__ simple_serial_flush(void);
 void __fastcall__ simple_serial_configure(void);
 
+#define tty_speed_to_str(speed)        \
+  ((speed == SER_BAUD_2400) ? "2400":  \
+   (speed == SER_BAUD_4800) ? "4800":  \
+   (speed == SER_BAUD_9600) ? "9600":  \
+   (speed == SER_BAUD_19200)? "19200": \
+   (speed == SER_BAUD_57600)? "57600":"115200")
+
 #define simple_serial_putc(c) ser_put(c)
 #else
 int simple_serial_open(void);
-int simple_serial_open_slot(int my_slot);
+int simple_serial_open_printer(void);
 int simple_serial_close(void);
 void simple_serial_flush(void);
 #define simple_serial_configure()

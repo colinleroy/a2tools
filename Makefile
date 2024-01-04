@@ -31,7 +31,7 @@ quicktake_disk_PROGS = \
 	src/image-viewer/imgview.bin
 
 quicktake_disk_IMGS = \
-	src/quicktake/about.hgr
+	src/quicktake/about
 
 imageviewer_disk_PROGS = \
 	src/image-viewer/imgview.bin

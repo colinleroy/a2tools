@@ -109,14 +109,16 @@ static uint8 send_hello(uint16 speed) {
  */
 uint8 qt1x0_wakeup(uint16 speed) {
   static uint8 model = QT_MODEL_UNKNOWN;
+  extern uint8 printer_slot;
+
   cputs("Pinging QuickTake 1x0... ");
 #if defined(__CC65__) && !defined(IIGS)
   /* The Apple IIc printer being closed right now,
    * we have to set DTR before clearing it.
    */
-  simple_serial_acia_onoff(1, 1);
+  simple_serial_acia_onoff(printer_slot, 1);
   platform_sleep(1);
-  simple_serial_acia_onoff(1, 0);
+  simple_serial_acia_onoff(printer_slot, 0);
 #else
   simple_serial_dtr_onoff(0);
 #endif
