@@ -243,16 +243,16 @@ curs_up:
       do_vt100_ctrl(CH_CURS_UP, 0, (x == 0 ? 1 : x), 0);
       break;
     /* cursor down */
-    case 'B': 
+    case 'B':
 curs_down:
       do_vt100_ctrl(CH_CURS_DOWN, 0, (x == 0 ? 1 : x), 0);
       break;
     /* cursor right */
-    case 'C': 
+    case 'C':
       do_vt100_ctrl(CH_CURS_RIGHT, 0, (x == 0 ? 1 : x), 0);
       break;
     /* cursor left, or down, depending on bracket */
-    case 'D': 
+    case 'D':
       if (!has_bracket)
         goto curs_down;
       do_vt100_ctrl(CH_CURS_LEFT, 0, (x == 0 ? 1 : x), 0);
@@ -335,7 +335,7 @@ static void telnet_subneg(char opt) {
   /* unsigned char one = */ simple_serial_getc();
   /* unsigned char iac = */ simple_serial_getc();
   /* unsigned char sne = */ simple_serial_getc();
-  
+
   switch(opt) {
     case TELNET_OPT_TERMT:
       simple_serial_putc(TELNET_IAC);
@@ -382,7 +382,7 @@ static int handle_telnet_command(void) {
   opt = simple_serial_getc();
 
   if (type == TELNET_DO) {
-    if (opt == TELNET_OPT_TERMT 
+    if (opt == TELNET_OPT_TERMT
      || opt == TELNET_OPT_WSIZE
      || opt == TELNET_OPT_TSPEED) {
       telnet_reply(TELNET_WILL, opt);
@@ -391,7 +391,7 @@ static int handle_telnet_command(void) {
     }
   } else if (type == TELNET_SB) {
     telnet_subneg(opt);
-    
+
     /* we can turn echo off and ask remote
      * to turn echo on */
     do_echo = 0;
@@ -439,8 +439,12 @@ static int cursor_blinker = 0;
 static void set_cursor(void) {
 #ifdef __CC65__
   if (curs_x == 255) {
-    curs_x = wherex();
-    curs_y = wherey();
+    // curs_x = wherex();
+    // curs_y = wherey();
+    __asm__("lda "CH);
+    __asm__("sta %v", curs_x);
+    __asm__("lda "CV);
+    __asm__("sta %v", curs_y);
     ch_at_curs = cpeekc();
     cursor_blinker = 0;
   }
@@ -448,9 +452,23 @@ static void set_cursor(void) {
   if (cursor_blinker == 1) {
     /* Use cputc because we don't want the
      * cursor to trigger scrolling */
-    cputcxy(curs_x, curs_y, 0x7F);
+    // cputcxy(curs_x, curs_y, 0x7F);
+    __asm__("lda %v", curs_x);
+    __asm__("sta "CH);
+    __asm__("lda %v", curs_y);
+    __asm__("sta "CV);
+    __asm__("jsr VTABZ");
+    __asm__("lda #$7F");
+    __asm__("jsr _cputc");
   } else if (cursor_blinker == 1501){
-    cputcxy(curs_x, curs_y, ch_at_curs);
+    // cputcxy(curs_x, curs_y, ch_at_curs);
+    __asm__("lda %v", curs_x);
+    __asm__("sta "CH);
+    __asm__("lda %v", curs_y);
+    __asm__("sta "CV);
+    __asm__("jsr VTABZ");
+    __asm__("lda %v", ch_at_curs);
+    __asm__("jsr _cputc");
   } else if (cursor_blinker == 3000) {
     cursor_blinker = 0;
   }
@@ -460,8 +478,18 @@ static void set_cursor(void) {
 static void rm_cursor(void) {
 #ifdef __CC65__
   if (curs_x != 255) {
-    cputcxy(curs_x, curs_y, ch_at_curs);
-    gotoxy(curs_x, curs_y);
+    // cputcxy(curs_x, curs_y, ch_at_curs);
+    // gotoxy(curs_x, curs_y);
+    __asm__("lda %v", curs_x);
+    __asm__("sta "CH);
+    __asm__("lda %v", curs_y);
+    __asm__("sta "CV);
+    __asm__("jsr VTABZ");
+
+    __asm__("lda %v", ch_at_curs);
+    __asm__("eor #$80");
+    __asm__("jsr putchar");
+
     curs_x = 255;
   }
 #endif
@@ -495,7 +523,7 @@ int main(int argc, char **argv) {
   char i, o;
   char got_input;
   //DEBUG int loop_wait = 0;
-  
+
 #ifdef __APPLE2ENH__
   videomode(VIDEOMODE_80COL);
 #endif
@@ -571,7 +599,7 @@ again:
 #ifdef __CC65__
   puts("\n");
 #endif
-  
+
   do {
     if (kbhit()) {
 input:
