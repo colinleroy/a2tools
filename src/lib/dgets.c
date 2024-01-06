@@ -156,7 +156,10 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb, c
   win_height = ey - sy;
   win_width_min1 = win_width - 1;
   win_height_min1 = win_height - 1;
-
+  // if (start_x + size < win_width && !enter_accepted) {
+  //   win_height = 1;
+  //   win_height_min1 = 0;
+  // }
   if (text_buf[0] != '\0') {
     max_insert = strlen(text_buf);
     for (cur_insert = 0; cur_insert < max_insert; cur_insert++) {

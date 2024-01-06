@@ -104,7 +104,7 @@ start_clearing:
   __asm__("sta "CV);
 
 next_line:
-  __asm__("jsr VTABZ");
+  __asm__("jsr FVTABZ");
   __asm__("pha"); /* save BASL */
 
   __asm__("bit $C01F"); /* RD80VID */
@@ -150,7 +150,7 @@ do_next_line:
   __asm__("sta "CH);
   __asm__("pla");
   __asm__("sta "CV);
-  __asm__("jsr VTABZ");
+  __asm__("jsr FVTABZ");
 
 #else
   char l = xe - xs + 1;

@@ -25,7 +25,7 @@ homectrl_SOURCES := main.c network.c \
 	../lib/path_helper.c \
 	../lib/surl_ping.c
 
-homectrl_CL65SOURCES = ../lib/dputc.s ../lib/dputs.s ../lib/scroll.s ../lib/fastirq$(suffix).s ../lib/extrazp.s
+homectrl_CL65SOURCES = ../lib/dputc.s ../lib/dputs.s ../lib/scroll.s ../lib/FVTABZ.s ../lib/fastirq$(suffix).s ../lib/extrazp.s
 
 grphview_SOURCES := graph-viewer.c \
 	../lib/malloc0.c \

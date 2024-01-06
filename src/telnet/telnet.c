@@ -457,7 +457,7 @@ static void set_cursor(void) {
     __asm__("sta "CH);
     __asm__("lda %v", curs_y);
     __asm__("sta "CV);
-    __asm__("jsr VTABZ");
+    __asm__("jsr FVTABZ");
     __asm__("lda #$7F");
     __asm__("jsr _cputc");
   } else if (cursor_blinker == 1501){
@@ -466,7 +466,7 @@ static void set_cursor(void) {
     __asm__("sta "CH);
     __asm__("lda %v", curs_y);
     __asm__("sta "CV);
-    __asm__("jsr VTABZ");
+    __asm__("jsr FVTABZ");
     __asm__("lda %v", ch_at_curs);
     __asm__("jsr _cputc");
   } else if (cursor_blinker == 3000) {
@@ -484,7 +484,7 @@ static void rm_cursor(void) {
     __asm__("sta "CH);
     __asm__("lda %v", curs_y);
     __asm__("sta "CV);
-    __asm__("jsr VTABZ");
+    __asm__("jsr FVTABZ");
 
     __asm__("lda %v", ch_at_curs);
     __asm__("eor #$80");

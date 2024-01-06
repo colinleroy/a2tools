@@ -38,7 +38,7 @@ void __fastcall__ set_scrollwindow(unsigned char top, unsigned char bottom) {
   set_wndtop(top);
   set_wndbtm(bottom);
   __asm__("lda "CV);
-  __asm__("jsr VTABZ");
+  __asm__("jsr FVTABZ");
 #endif
 }
 
@@ -60,6 +60,6 @@ void __fastcall__ set_hscrollwindow(unsigned char left, unsigned char width) {
   set_wndlft(left);
   set_wndwdth(width);
   __asm__("lda "CV);
-  __asm__("jsr VTABZ");
+  __asm__("jsr FVTABZ");
 #endif
 }

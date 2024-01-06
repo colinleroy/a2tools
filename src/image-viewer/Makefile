@@ -34,7 +34,7 @@ imgview_SOURCES := \
 	../lib/malloc0.c
 
 imgview_CC65SOURCES := \
-	../lib/dputc.s ../lib/scroll.s \
+	../lib/dputc.s ../lib/scroll.s ../lib/FVTABZ.s \
 	../lib/clrzone.c ../lib/fastirq$(suffix).s \
 	../lib/platform_sleep.c ../lib/extrazp.s
 

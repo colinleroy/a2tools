@@ -35,7 +35,7 @@ slowtake_SOURCES := \
 	../lib/hgr_addrs.c ../lib/scrollwindow.c \
 
 slowtake_CC65SOURCES := \
-	../lib/dputc.s ../lib/scroll.s \
+	../lib/dputc.s ../lib/scroll.s ../lib/FVTABZ.s \
 	../lib/clrzone.c ../lib/fastirq$(suffix).s \
 	../lib/platform_sleep.c ../lib/extrazp.s \
 	../lib/runtime_once_clean.s

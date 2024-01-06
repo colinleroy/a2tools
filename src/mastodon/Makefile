@@ -57,7 +57,7 @@ mastodon_SOURCES := \
 mastodon_CC65SOURCES := \
 	../lib/dputs.s \
 	../lib/dputc.s \
-	../lib/scroll.s \
+	../lib/scroll.s ../lib/FVTABZ.s \
 	../lib/fastirq$(suffix).s \
 	 ../lib/extrazp.s \
 	../lib/runtime_once_clean.s
@@ -78,7 +78,7 @@ mastocli_SOURCES := \
 mastocli_CC65SOURCES := \
 	../lib/dputs.s \
 	../lib/dputc.s \
-	../lib/scroll.s \
+	../lib/scroll.s ../lib/FVTABZ.s \
 	../lib/fastirq$(suffix).s \
 	 ../lib/extrazp.s \
 	../lib/runtime_once_clean.s
@@ -100,7 +100,7 @@ mastowrite_SOURCES := \
 mastowrite_CC65SOURCES := \
 	../lib/dputs.s \
 	../lib/dputc.s \
-	../lib/scroll.s \
+	../lib/scroll.s ../lib/FVTABZ.s \
 	../lib/fastirq$(suffix).s \
 	 ../lib/extrazp.s
 
@@ -110,7 +110,7 @@ mastoconf_SOURCES := \
 	../lib/clrzone.c \
 	../lib/scrollwindow.c \
 	../lib/malloc0.c
-mastoconf_CC65SOURCES :=
+mastoconf_CC65SOURCES := ../lib/FVTABZ.s
 
 GCCSOURCES := ../lib/extended_conio.c ../lib/clrzone.c ../lib/extended_string.c ../lib/tgi_sdl.c ../lib/tgi_fastline.c
 DEPS :=

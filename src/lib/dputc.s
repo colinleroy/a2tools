@@ -7,7 +7,7 @@
 ;
         .export         _dputcxy, _dputc
         .export         dnewline
-        .import         gotoxy, VTABZ
+        .import         gotoxy, FVTABZ
         .ifdef  __APPLE2ENH__
         .import         putchardirect
         .else
@@ -95,7 +95,7 @@ backspace:
         ldy     WNDWDTH         ; prepare CH for decr
         sty     CH
         lda     CV
-        jsr     VTABZ
+        jsr     FVTABZ
 decrh:  dec     CH
 :       rts
 
@@ -107,4 +107,4 @@ dnewline:
         dec     CV              ; Yes, decrement
         jsr     _scrollup_one   ; and scroll
         lda     CV
-:       jmp     VTABZ
+:       jmp     FVTABZ
