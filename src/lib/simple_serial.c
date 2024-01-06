@@ -787,10 +787,6 @@ unsigned char __fastcall__ simple_serial_putc(char c) {
 
 #endif /* End of platform-dependant code */
 
-#ifdef __CC65__
-#pragma optimize(push, on)
-#endif
-
 void __fastcall__ simple_serial_puts(const char *buf) {
 #ifndef __CC65__
   static const char *cur;
@@ -831,7 +827,7 @@ void __fastcall__ simple_serial_read(char *ptr, size_t nmemb) {
   static char *end;
 
   cur = ptr;
-  end = ptr + nmemb;
+  end = nmemb + cur;
 
 #ifndef __CC65__
 
@@ -877,16 +873,12 @@ void __fastcall__ simple_serial_read(char *ptr, size_t nmemb) {
 #endif
 }
 
-#ifdef __CC65__
-#pragma optimize(pop)
-#endif
-
 void __fastcall__ simple_serial_write(const char *ptr, size_t nmemb) {
   static const char *cur;
   static const char *end;
 
   cur = ptr;
-  end = ptr + nmemb;
+  end = nmemb + cur;
 
 #ifndef __CC65__
 

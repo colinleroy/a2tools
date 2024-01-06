@@ -22,6 +22,8 @@
 ; Plot a character - also used as internal function
 
 special_chars:
+        cmp     #$0D            ; Test for \r = carrage return
+        beq     left
         cmp     #$0A            ; Test for \n = line feed
         beq     dnewline
         cmp     #$08            ; Test for backspace
@@ -40,8 +42,7 @@ _dputcxy:
         pla                     ; Restore C and run into _dputc
 
 _dputc:
-        cmp     #$0D            ; Test for \r = carrage return
-        beq     left
+        cmp     #$0E            ; Test for special chars <= \r
         bcc     special_chars   ; Skip other tests if possible
 invert: eor     #$80            ; Invert high bit
 
