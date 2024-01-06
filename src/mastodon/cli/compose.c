@@ -73,7 +73,7 @@ static void update_compose_audience(void) {
 }
 
 static void update_cw(void) {
-  clrzone(0, top + COMPOSE_FIELD_HEIGHT + 2, scrw - RIGHT_COL_START, top + COMPOSE_FIELD_HEIGHT + 2);
+  clrzone(0, top + COMPOSE_FIELD_HEIGHT + 2, scrw - RIGHT_COL_START - 1, top + COMPOSE_FIELD_HEIGHT + 2);
 #if NUMCOLS == 80
   if (cw[0] == '\0') {
     dputs("( ) Content warning not set");
@@ -144,7 +144,7 @@ static void setup_gui(void)
        * only one separator line */
       gotoxy(0, wherey() - 1);
       chline(scrw - RIGHT_COL_START);
-      clrzone(wherex(), wherey(), scrw - RIGHT_COL_START, wherey());
+      clrzone(wherex(), wherey(), scrw - RIGHT_COL_START - 1, wherey());
       dputs("Your reply:\r\n");
       top = wherey();
     }
@@ -225,7 +225,7 @@ try_again:
 static void open_cw_menu(void) {
   set_scrollwindow(0, scrh);
 
-  clrzone(0, top + COMPOSE_FIELD_HEIGHT + 2, scrw - RIGHT_COL_START, top + COMPOSE_FIELD_HEIGHT + 2);
+  clrzone(0, top + COMPOSE_FIELD_HEIGHT + 2, scrw - RIGHT_COL_START - 1, top + COMPOSE_FIELD_HEIGHT + 2);
   dputs("(*) CW: ");
   dget_text(cw, sizeof(cw) - 1, NULL, 0);
   update_cw();
