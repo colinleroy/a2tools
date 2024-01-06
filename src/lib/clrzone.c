@@ -64,7 +64,14 @@ lxs_is_even:
   __asm__("bcc %g", lxe_is_even);
   __asm__("adc #0");
 lxe_is_even:
+  __asm__("sec");
+  __asm__("sbc %v", lxs_even);
   __asm__("sta %v", lxe_even);
+
+  __asm__("lda %v", lxe_odd);
+  __asm__("sec");
+  __asm__("sbc %v", lxs_odd);
+  __asm__("sta %v", lxe_odd);
 
   /* Start clearing */
   __asm__("lda %v", lys);
@@ -72,25 +79,34 @@ lxe_is_even:
 
 next_line:
   __asm__("jsr VTABZ");
+  __asm__("pha"); /* save BASL */
+  __asm__("clc");
+  __asm__("adc %v", lxs_even);
+  __asm__("sta $28");
+
   __asm__("lda #' '|$80");
 
   __asm__("bit $C055");
-  __asm__("ldy %v", lxs_even);
+  __asm__("ldy %v", lxe_even);
+  __asm__("beq %g", do_low);
 next_char_hi:
-  __asm__("cpy %v", lxe_even);
-  __asm__("bcs %g", do_low);
+  __asm__("dey");
   __asm__("sta ($28),y");
-  __asm__("iny");
   __asm__("bne %g", next_char_hi);
 
 do_low:
+  __asm__("pla");  /* Restore BASL */
+  __asm__("clc");
+  __asm__("adc %v", lxs_odd);
+  __asm__("sta $28");
+
+  __asm__("lda #' '|$80");
   __asm__("bit $C054");
-  __asm__("ldy %v", lxs_odd);
+  __asm__("ldy %v", lxe_odd);
+  __asm__("beq %g", do_next_line);
 next_char_low:
-  __asm__("cpy %v", lxe_odd);
-  __asm__("bcs %g", do_next_line);
+  __asm__("dey");
   __asm__("sta ($28),y");
-  __asm__("iny");
   __asm__("bne %g", next_char_low);
 
 do_next_line:
