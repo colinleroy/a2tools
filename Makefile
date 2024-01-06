@@ -161,6 +161,7 @@ dist: all \
 	stp$(suffix).dsk \
 	telnet$(suffix).dsk \
 	homectrl$(suffix).dsk \
+	imageviewer$(suffix).dsk \
 	mastodon$(suffix).dsk \
 	mastoperso$(suffix).dsk \
 	homectrlperso$(suffix).dsk \

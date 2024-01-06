@@ -6,8 +6,7 @@ if [ "$BRANCH" != "master" ]; then
 	exit 1
 fi
 rm *.dsk
-make clean all dist upload
-make clean all dist upload IIGS=1
+make clean all dist upload && make clean all dist upload IIGS=1 || exit
 
 #Only mastodon is ported to old II yet
 cd src/mastodon
