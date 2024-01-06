@@ -122,6 +122,7 @@ static char __fastcall__ rewrite_end_of_buffer(char full) {
       break;
     }
     y = wherey();
+    y_plus1 = y + 1;
   }
   return overflowed;
 }
@@ -156,6 +157,12 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb, c
   win_height = ey - sy;
   win_width_min1 = win_width - 1;
   win_height_min1 = win_height - 1;
+
+  if (start_x + size < win_width && !enter_accepted) {
+    /* We'll never handle another line */
+    win_height = 1;
+    win_height_min1 = 1;
+  }
 
   if (text_buf[0] != '\0') {
     max_insert = strlen(text_buf);
@@ -277,7 +284,7 @@ down_left:
       gotoxy(cur_x, cur_y);
 #ifdef __APPLE2ENH__
     } else if (c == CH_CURS_UP) {
-      if (!cmd_cb || cur_insert == 0) {
+      if (!cmd_cb || !enter_accepted || cur_insert == 0) {
         /* No up/down in standard line edit */
         goto err_beep;
       } 
@@ -314,7 +321,7 @@ down_left:
       }
       gotoxy(cur_x, cur_y);
     } else if (c == CH_CURS_DOWN) {
-      if (!cmd_cb || cur_insert == max_insert) {
+      if (!cmd_cb || !enter_accepted || cur_insert == max_insert) {
         /* No down in standard editor mode */
         goto err_beep;
       }
