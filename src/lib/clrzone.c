@@ -24,6 +24,11 @@
 #ifndef __APPLE2__
 static char clearbuf[82];
 #endif
+
+#ifdef __CC65__
+#pragma static-locals(push, on)
+#endif
+
 void __fastcall__ clrzone(char xs, char ys, char xe, char ye) {
 #ifdef __APPLE2__
   /* Load by stack order */
@@ -158,3 +163,6 @@ do_next_line:
   } while (++ys <= ye);
 #endif
 }
+#ifdef __CC65__
+#pragma static-locals(pop)
+#endif
