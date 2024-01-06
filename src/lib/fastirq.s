@@ -94,7 +94,7 @@ handle_ram_irq:
 
         ; It's an IRQ
 
-        .ifdef __APPLE2ENH__
+.ifdef __APPLE2ENH__
         phx                     ; Save X,Y
         phy
         jsr     callirq
@@ -109,7 +109,7 @@ give_back_irq:
         lda     _a_backup
         jmp     (_prev_ram_irq_vector)
 
-        .else
+.else
         txa                     ; Save X,Y
         pha
         tya
@@ -130,7 +130,7 @@ give_back_irq:
         lda     _a_backup
         jmp     (_prev_ram_irq_vector)
 
-        .endif
+.endif
 
 do_brk:
         ; Give BRK to the standard handler

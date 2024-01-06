@@ -26,13 +26,14 @@
 
 #ifdef __CC65__
 #pragma static-locals(push, on)
+#pragma register-vars(push, on)
 #endif
 
 int __fastcall__ _strnsplit_int(char in_place, char *in, char split, char **tokens, size_t max_tokens) {
   char *start;
   size_t n_tokens;
   /* copy to avoid stack access */
-  char *src = in;
+  register char *src = in;
 
   start = src;
 
@@ -74,7 +75,7 @@ done:
 int __fastcall__ _strsplit_int(char in_place, char *in, char split, char ***out) {
   size_t n_tokens;
   /* copy to avoid stack access */
-  char *src = in;
+  register char *src = in;
 
   if (!in) {
     *out = NULL;
@@ -93,6 +94,7 @@ int __fastcall__ _strsplit_int(char in_place, char *in, char split, char ***out)
 }
 
 #ifdef __CC65__
+#pragma register-vars(pop)
 #pragma static-locals(pop)
 #pragma code-name (pop)
 #endif

@@ -26,19 +26,50 @@ static char clearbuf[82];
 #endif
 void __fastcall__ clrzone(char xs, char ys, char xe, char ye) {
 #ifdef __APPLE2__
-  unsigned char orig_top, orig_bottom;
-  unsigned char orig_left, orig_width;
-  unsigned char ww = xe - xs + 1;
+  /* Load by stack order */
+  unsigned char lxs = xs;
+  unsigned char lys = ys;
+  unsigned char new_wdth = xe - lxs + 1;
+  unsigned char lye = ye;
 
-  get_scrollwindow(&orig_top, &orig_bottom);
-  get_hscrollwindow(&orig_left, &orig_width);
+  /* Backup and update scrollwindow boundaries */
+  __asm__("lda "WNDBTM);
+  __asm__("pha");
+  __asm__("lda "WNDTOP);
+  __asm__("pha");
+  __asm__("clc");
+  __asm__("adc %v", lys);
+  __asm__("sta "WNDTOP);
+  __asm__("pla");
+  __asm__("pha");
+  __asm__("clc");
+  __asm__("adc %v", lye);
+  __asm__("adc #1");
+  __asm__("sta "WNDBTM);
 
-  set_scrollwindow(ys + orig_top, ye + orig_top + 1);
-  set_hscrollwindow(xs + orig_left, ww);
+  __asm__("lda "WNDLFT);
+  __asm__("pha");
+  __asm__("clc");
+  __asm__("adc %v", lxs);
+  __asm__("sta "WNDLFT);
+  __asm__("lda "WNDWDTH);
+  __asm__("pha");
+  __asm__("lda %v", new_wdth);
+  __asm__("sta "WNDWDTH);
+
   clrscr();
-  set_hscrollwindow(orig_left, orig_width);
-  set_scrollwindow(orig_top, orig_bottom);
-  gotoxy(xs, ys);
+  
+  /* Restore boundaries */
+  __asm__("pla");
+  __asm__("sta "WNDWDTH);
+  __asm__("pla");
+  __asm__("sta "WNDLFT);
+  __asm__("pla");
+  __asm__("sta "WNDTOP);
+  __asm__("pla");
+  __asm__("sta "WNDBTM);
+
+  gotoxy(lxs, lys);
 #else
   char l = xe - xs + 1;
 
