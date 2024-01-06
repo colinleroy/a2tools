@@ -24,6 +24,6 @@ all: $(SOURCES:.c=.o) \
 clean:
 	rm -f $(PROGRAM) *.o *.map
 
-bat.bin: bool_array.c cgets.c scrollwindow.c clrzone.c bool_array_test.c
+bat.bin: bool_array.c cgets.c scrollwindow.c clrzone.c bool_array_test.c FVTABZ.s
 	$(CC) $(LDFLAGS) -o $@ $^ $(DEPS)
 	

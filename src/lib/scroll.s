@@ -5,11 +5,13 @@
 ;
 
         .export         _scrolldown_one, _scrollup_one, _scrolldown_n, _scrollup_n
-        .import         VTABZ
+        .import         FVTABZ
         .include        "apple2.inc"
 
         .bss
+
 NLINES: .res 1
+
         .code
 
 BAS2L  := $2A
@@ -80,7 +82,7 @@ getstl:
         dex                     ;really need one less
 setdbas:
         txa                     ;get current line
-        jsr     VTABZ           ;calculate base with window width
+        jsr     FVTABZ          ;calculate base with window width
 scrlin:
         lda     BASL            ;current line is destination
         sta     BAS2L
@@ -94,7 +96,7 @@ scrlin:
         bcs     scrll3          ;yup, all done
 setsrc:
         txa                     ;set new line
-        jsr     VTABZ           ;get base for current line
+        jsr     FVTABZ          ;get base for current line
         ldy     WNDWDTH         ;get width for scroll
         plp                     ;get status for scroll
         php                     ;N=1 if 80 columns
@@ -132,7 +134,7 @@ scrll3:
         sta     WNDWDTH
         jsr     clrline        ;clear current line
         lda     CV
-        jsr     VTABZ           ;restore original cursor line
+        jsr     FVTABZ          ;restore original cursor line
         pla                     ;and X
         tax
         rts                     ;done!!!
@@ -212,7 +214,7 @@ initup:
         lda     WNDTOP
 start:
         pha
-        jsr     VTABZ
+        jsr     FVTABZ
         
 scrl1:  lda     BASL
         sta     BAS2L
@@ -236,7 +238,7 @@ contup:
         bcs     scrl3
 cont:
         pha
-        jsr     VTABZ
+        jsr     FVTABZ
 
         ldy     WNDWDTH
         dey
