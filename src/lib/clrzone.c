@@ -46,9 +46,29 @@ void __fastcall__ clrzone(char xs, char ys, char xe, char ye) {
   __asm__("adc #1");
   __asm__("sta %v", lye);
 
-  /* Fix even/odd boundaries */
+  /* Are we in 80col? */
+  __asm__("bit $C01F"); /* RD80VID */
+  __asm__("bmi %g", setup_80_bounds);
+
+  /* Fix boundaries for 40col */
   __asm__("lda %v", lxs_even);
-  __asm__("pha");
+  __asm__("sta %v", lxs_odd);
+  __asm__("pha"); /* save for gotoxy */
+  __asm__("lda %v", lxe_even);
+  __asm__("sec");
+  __asm__("sbc %v", lxs_odd);
+  __asm__("clc");
+  __asm__("adc #1");
+  __asm__("sta %v", lxe_odd);
+  __asm__("lda #$00");
+  __asm__("sta %v", lxs_even);
+  __asm__("sta %v", lxe_even);
+  __asm__("beq %g", start_clearing);
+
+setup_80_bounds:
+  /* Fix even/odd boundaries if 80col */
+  __asm__("lda %v", lxs_even);
+  __asm__("pha"); /* save for gotoxy */
   __asm__("lsr");
   __asm__("sta %v", lxs_odd);
   __asm__("bcc %g", lxs_is_even);
@@ -73,6 +93,7 @@ lxe_is_even:
   __asm__("sbc %v", lxs_odd);
   __asm__("sta %v", lxe_odd);
 
+start_clearing:
   /* Start clearing */
   __asm__("lda %v", lys);
   __asm__("sta "CV);
@@ -80,6 +101,10 @@ lxe_is_even:
 next_line:
   __asm__("jsr VTABZ");
   __asm__("pha"); /* save BASL */
+
+  __asm__("bit $C01F"); /* RD80VID */
+  __asm__("bpl %g", do_low); /* no, just do low */
+
   __asm__("clc");
   __asm__("adc %v", lxs_even);
   __asm__("sta $28");
