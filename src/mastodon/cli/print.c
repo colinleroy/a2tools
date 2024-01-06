@@ -22,18 +22,25 @@
 extern char writable_lines;
 static char wrap_idx;
 
+#pragma register-vars(push, on)
+
 int print_buf(char *buffer, char hide, char allow_scroll) {
   static char x;
-  static char *w;
+  register char *w;
   static char scrolled;
+  static char l_allow_scroll;
+  static char l_hide;
 
   x = wherex();
   w = buffer;
+  l_hide = hide;
+  l_allow_scroll = allow_scroll;
+
   wrap_idx = scrw - RIGHT_COL_START - 1;
   scrolled = 0;
 
   while (*w) {
-    if (allow_scroll && writable_lines == 1) {
+    if (l_allow_scroll && writable_lines == 1) {
       gotoxy(0, scrh-1);
       dputs("Hit a key to continue.");
       cgetc();
@@ -53,13 +60,13 @@ int print_buf(char *buffer, char hide, char allow_scroll) {
         x = 0;
         /* don't scroll last char */
         if (writable_lines == 1) {
-          cputc(hide ? '.':*w);
+          cputc(l_hide ? '.':*w);
           return -1;
         }
       } else {
         x++;
       }
-      if (!hide || *w == ' ' || *w == '\r')
+      if (!l_hide || *w == ' ' || *w == '\r')
         dputc(*w);
       else
         dputc('.');
@@ -165,3 +172,5 @@ int print_status(status *s, char hide, char full) {
 
   return 0;
 }
+
+#pragma register-vars(pop)

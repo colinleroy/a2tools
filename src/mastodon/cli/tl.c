@@ -26,6 +26,8 @@
 
 #define BUF_SIZE 255
 
+#pragma register-vars(push, on)
+
 unsigned char scrw, scrh;
 
 char *instance_url = NULL;
@@ -119,7 +121,7 @@ static int print_account(account *a) {
 
 static int print_notification(notification *n) {
   char width;
-  char *w;
+  register char *w;
 
   width = scrw - RIGHT_COL_START;
   n->displayed_at = wherey();
@@ -625,7 +627,8 @@ static void shift_posts_down(list *l) {
 
 static char calc_post_height(status *s) {
   char height;
-  char *w, x;
+  register char *w;
+  char x;
 
   w = s->content;
 
@@ -943,10 +946,13 @@ static void do_vote (status *status) {
   while (1) {
     gotoxy(0, 0);
     writable_lines = 23;
-    print_status(status, 0, 1);
-    c = wherey();
-    c -= 2;
-    clrzone(0, c, scrw - RIGHT_COL_START, c);
+    if (print_status(status, 0, 1) == 0) {
+      c = wherey();
+      c -= 2;
+    } else {
+      c = scrh - 1;
+    }
+    clrzone(0, c, scrw - RIGHT_COL_START - 1, c);
     dputs("1-4 to choose, Enter to vote, Escape to cancel");
     c = tolower(cgetc());
 
@@ -1389,3 +1395,5 @@ int main(int argc, char **argv) {
 #ifdef __CC65__
 #pragma code-name (pop)
 #endif
+
+#pragma register-vars(pop)

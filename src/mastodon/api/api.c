@@ -196,22 +196,25 @@ static char *flags_str[LAST_FLAGS + 1] = {
 };
 
 static char flag_buf[14];
-static void api_status_toggle_flag(status *s, char flag) {
+static char api_status_toggle_flag(status *s, char flag) {
+  char ok;
   if ((s->flags & flag) == 0) {
-    if (api_interact(s->id, 's', flags_str[flag]) == 0) {
+    if ((ok = api_interact(s->id, 's', flags_str[flag])) == 0) {
       s->flags |= flag;
     }
   } else {
     snprintf(flag_buf, sizeof(flag_buf), "un%s", flags_str[flag]);
-    if (api_interact(s->id, 's', flag_buf) == 0) {
+    if ((ok = api_interact(s->id, 's', flag_buf)) == 0) {
       s->flags &= ~flag;
     }
   }
+  return ok;
 }
 
 
 void api_favourite_status(status *s) {
-  api_status_toggle_flag(s, FAVOURITED);
+  if (api_status_toggle_flag(s, FAVOURITED) != 0)
+    return;
   if ((s->flags & FAVOURITED) != 0) {
     s->n_favourites++;
   } else {
@@ -220,7 +223,8 @@ void api_favourite_status(status *s) {
 }
 
 void api_reblog_status(status *s) {
-  api_status_toggle_flag(s, REBLOGGED);
+  if (api_status_toggle_flag(s, REBLOGGED) != 0)
+    return;
   if ((s->flags & REBLOGGED) != 0) {
     s->n_reblogs++;
   } else {
