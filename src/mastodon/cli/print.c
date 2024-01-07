@@ -80,6 +80,9 @@ int print_buf(char *buffer, char hide, char allow_scroll) {
 }
 
 int print_status(status *s, char hide, char full) {
+  poll *p = s->poll;
+  account *a = s->account;
+
   s->displayed_at = wherey();
   /* reblog header */
   if (s->reblogged_by) {
@@ -94,10 +97,10 @@ int print_status(status *s, char hide, char full) {
   }
 
   /* Display name + date */
-  if (strlen(s->account->display_name) > 30) {
-    s->account->display_name[30] = '\0';
+  if (strlen(a->display_name) > 30) {
+    a->display_name[30] = '\0';
   }
-  dputs(s->account->display_name);
+  dputs(a->display_name);
 #if NUMCOLS == 80
   gotox(TIME_COLUMN);
   if (writable_lines != 1)
@@ -111,7 +114,7 @@ int print_status(status *s, char hide, char full) {
 
   /* username (30 chars max)*/
   dputc(arobase);
-  dputs(s->account->username);
+  dputs(a->username);
 
   CHECK_AND_CRLF();
 
@@ -130,18 +133,18 @@ int print_status(status *s, char hide, char full) {
     return -1;
   CHECK_AND_CRLF();
 
-  if (s->poll) {
+  if (p) {
     char i;
-    size_t total = s->poll->votes_count;
+    size_t total = p->votes_count;
 
     if (total == 0) {
       total = 1;
     }
 
-    for (i = 0; i < s->poll->options_count; i++) {
-      poll_option *o = &(s->poll->options[i]);
+    for (i = 0; i < p->options_count; i++) {
+      poll_option *o = &(p->options[i]);
       CHECK_AND_CRLF();
-      dputs(s->poll->own_votes[i] == 1 ? "(*) ":"( ) ");
+      dputs(p->own_votes[i] == 1 ? "(*) ":"( ) ");
       dputs(o->title);
       CHECK_AND_CRLF();
       progress_bar(wherex() + 4, wherey(), wrap_idx - 3,

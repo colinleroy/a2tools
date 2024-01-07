@@ -41,7 +41,7 @@ void poll_fill(poll *p, char from_reblog) {
                     translit_charset, poll_selector + n_lines);
 
   n_lines = strnsplit_in_place(gen_buf, '\n', lines,
-                               NUM_POLL_LINES + (MAX_POLL_OPTIONS * 2));
+                               (NUM_POLL_LINES + (MAX_POLL_OPTIONS * 2)));
   /* Check we have at least two options */
   if (r >= 0 && n_lines >= (NUM_POLL_LINES + (2 * 2))) {
     p->multiple = (lines[0][0] == 't');
@@ -51,8 +51,7 @@ void poll_fill(poll *p, char from_reblog) {
       p->own_votes[r] = (strchr(lines[2], r + '0') != NULL);
     }
 
-    p->options_count = (n_lines - NUM_POLL_LINES);
-    p->options_count /= 2;
+    p->options_count = (n_lines - NUM_POLL_LINES) / 2;
 
     for (r = 0; r < p->options_count; r ++) {
       char i = NUM_POLL_LINES + (r * 2);
