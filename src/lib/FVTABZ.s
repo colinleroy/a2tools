@@ -73,7 +73,12 @@ FVTABZ:
         .else
         stx     tmp1
         .endif
-        tax
+
+        cmp     #24
+        bcc     :+
+        lda     #23
+
+:       tax
         lda     FBASH,x
         sta     BASH
         lda     WNDLFT
