@@ -289,7 +289,9 @@ void simple_serial_set_speed(int b) {
     return;
   }
 
+  #ifdef TCFLSH
   ioctl(fileno(ttyfp), TCFLSH, TCIOFLUSH);
+  #endif
 
   /* Set speed after the port is opened */
   if(tcgetattr(fileno(ttyfp), &tty) != 0) {

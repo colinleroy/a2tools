@@ -416,8 +416,8 @@ static int opt_tty_hw_handshake = 1;
 
 unsigned char data_slot = 0;
 unsigned char printer_slot = 0;
-unsigned char data_baudrate = B19200;
-unsigned char printer_baudrate = B9600;
+unsigned int data_baudrate = B19200;
+unsigned int printer_baudrate = B9600;
 
 static const char *get_cfg_path(void) {
   return CONF_FILE_PATH;
@@ -794,7 +794,7 @@ void __fastcall__ simple_serial_puts(const char *buf) {
   cur = buf;
 
   while (*cur) {
-    if (simple_serial_putc(*cur) == -1)
+    if (simple_serial_putc(*cur) == (unsigned char)-1)
       break;
     ++cur;
   }

@@ -1,5 +1,5 @@
 #ifndef __jq_get_h_
-#define __jq_get_h
+#define __jq_get_h_
 
 #include <jq.h>
 

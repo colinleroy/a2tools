@@ -229,7 +229,7 @@ new_req:
       }
 
       /* The Apple //c sends a NULL byte on boot */
-      if (reqbuf[0] == '\0' && reqbuf[1] == SURL_METHOD_ABORT && reqbuf[2] == '\n') {
+      if (reqbuf[0] == '\0' && (unsigned char)reqbuf[1] == SURL_METHOD_ABORT && reqbuf[2] == '\n') {
         printf("REQ: Apple 2 reboot?\n");
         continue;
       }

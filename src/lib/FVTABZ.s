@@ -5,6 +5,7 @@
 ;
 
         .export         FVTABZ
+        .import         tmp1
         .include        "apple2.inc"
 
         .data
