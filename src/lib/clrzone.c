@@ -52,7 +52,7 @@ void __fastcall__ clrzone(char xs, char ys, char xe, char ye) {
   __asm__("sta %v", lye);
 
   /* Are we in 80col? */
-  __asm__("bit $C01F"); /* RD80VID */
+  __asm__("bit "RD80VID);
   __asm__("bmi %g", setup_80_bounds);
 
   /* Fix boundaries for 40col */
@@ -107,12 +107,12 @@ next_line:
   __asm__("jsr FVTABZ");
   __asm__("pha"); /* save BASL */
 
-  __asm__("bit $C01F"); /* RD80VID */
+  __asm__("bit "RD80VID);
   __asm__("bpl %g", do_low); /* no, just do low */
 
   __asm__("clc");
   __asm__("adc %v", lxs_even);
-  __asm__("sta $28");
+  __asm__("sta "BASL);
 
   __asm__("lda #' '|$80");
 
@@ -121,14 +121,14 @@ next_line:
   __asm__("beq %g", do_low);
 next_char_hi:
   __asm__("dey");
-  __asm__("sta ($28),y");
+  __asm__("sta ("BASL"),y");
   __asm__("bne %g", next_char_hi);
 
 do_low:
   __asm__("pla");  /* Restore BASL */
   __asm__("clc");
   __asm__("adc %v", lxs_odd);
-  __asm__("sta $28");
+  __asm__("sta "BASL);
 
   __asm__("lda #' '|$80");
   __asm__("bit $C054");
@@ -136,7 +136,7 @@ do_low:
   __asm__("beq %g", do_next_line);
 next_char_low:
   __asm__("dey");
-  __asm__("sta ($28),y");
+  __asm__("sta ("BASL"),y");
   __asm__("bne %g", next_char_low);
 
 do_next_line:
