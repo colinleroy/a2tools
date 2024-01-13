@@ -551,7 +551,7 @@ update:
     if (disp == NULL) {
       dputs("Load error :(");
       if (--writable_lines != 0) {
-        dputs("\r\n");
+        clrnln();
         if (--writable_lines != 0)
           chline(scrw - RIGHT_COL_START);
       } else {

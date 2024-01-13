@@ -10,6 +10,7 @@
 #include "dputc.h"
 #include "scroll.h"
 #include "cli.h"
+#include "clrzone.h"
 #include "header.h"
 #include "print.h"
 #include "api.h"
@@ -24,19 +25,28 @@ static char wrap_idx;
 
 #pragma register-vars(push, on)
 
+void __fastcall__ clrnln(void) {
+  clreol();
+  #ifdef __APPLE2__
+    __asm__("lda #0");
+    __asm__("sta "CH);
+    __asm__("jsr dnewline");
+  #endif
+}
+
 int print_buf(char *buffer, char hide, char allow_scroll) {
   static char x;
   register char *w;
-  static char scrolled;
   static char l_allow_scroll;
   static char l_hide;
+  static char scrolled;
 
   x = wherex();
   w = buffer;
   l_hide = hide;
   l_allow_scroll = allow_scroll;
 
-  wrap_idx = scrw - RIGHT_COL_START - 1;
+  wrap_idx = scrw - (RIGHT_COL_START + 1);
   scrolled = 0;
 
   while (*w) {
@@ -44,11 +54,13 @@ int print_buf(char *buffer, char hide, char allow_scroll) {
       gotoxy(0, scrh-1);
       dputs("Hit a key to continue.");
       cgetc();
+
       gotoxy(0, scrh - 1);
       dputs("                      ");
       gotoxy(0, scrh - 1);
       writable_lines += 14;
       scrolled = 1;
+      x = 0;
     }
 
     if (*w == '\n') {
@@ -59,7 +71,7 @@ int print_buf(char *buffer, char hide, char allow_scroll) {
         CHECK_NO_CRLF();
         x = 0;
         /* don't scroll last char */
-        if (writable_lines == 1) {
+        if (writable_lines == 1 && !l_allow_scroll) {
           cputc(l_hide ? '.':*w);
           return -1;
         }
@@ -82,6 +94,7 @@ int print_buf(char *buffer, char hide, char allow_scroll) {
 int print_status(status *s, char hide, char full) {
   poll *p = s->poll;
   account *a = s->account;
+  char scrolled = 0;
 
   s->displayed_at = wherey();
   /* reblog header */
@@ -102,6 +115,7 @@ int print_status(status *s, char hide, char full) {
   }
   dputs(a->display_name);
 #if NUMCOLS == 80
+  clreol();
   gotox(TIME_COLUMN);
   if (writable_lines != 1)
     dputs(s->created_at);
@@ -129,8 +143,10 @@ int print_status(status *s, char hide, char full) {
     CHECK_AND_CRLF();
   }
   /* Content */
-  if (print_buf(s->content, hide && s->spoiler_text != NULL, (full && s->displayed_at == 0)) < 0)
+  scrolled = print_buf(s->content, hide && s->spoiler_text != NULL, (full && s->displayed_at == 0));
+  if (scrolled && !(full && s->displayed_at == 0))
     return -1;
+
   CHECK_AND_CRLF();
 
   if (p) {
@@ -173,7 +189,7 @@ int print_status(status *s, char hide, char full) {
 
   CHLINE_SAFE();
 
-  return 0;
+  return scrolled;
 }
 
 #pragma register-vars(pop)

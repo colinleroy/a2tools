@@ -27,6 +27,7 @@
 
 #ifdef __CC65__
 #pragma optimize(push, on)
+#pragma static-locals(push, on)
 #endif
 
 static char echo_on = 1;
@@ -85,24 +86,24 @@ static char __fastcall__ rewrite_end_of_buffer(char full) {
   overflowed = 0;
   first_crlf = !full;
 
-  x = wherex();
-  y = wherey();
-  y_plus1 = y + 1;
-
   if (cur_insert == max_insert) {
     /* Just clear EOL */
-    clrzone(x, y, win_width_min1, y);
+    clreol();
     return 0;
   }
 
-  for (k = cur_insert; k < max_insert; k++) {
+  k = cur_insert;
+  goto initxy;
+
+  while (k < max_insert) {
     char c = text_buf[k];
     if (c == '\n' || k == max_insert - 1) {
-      clrzone(x, y, win_width_min1, y);
+      clreol();
     }
     if (x == win_width || k == max_insert - 1) {
       if (y_plus1 < win_height) {
-        clrzone(0, y_plus1, win_width_min1, y_plus1);
+        gotoxy(0, y_plus1);
+        clreol();
         gotoxy(x, y);
       }
     }
@@ -115,12 +116,14 @@ static char __fastcall__ rewrite_end_of_buffer(char full) {
       cputc('\r');
     }
     cputc(c);
-    x = wherex();
     if (y == win_height_min1 && wherey() == 0) {
       /* overflowed bottom */
       overflowed = 1;
       break;
     }
+    k++;
+initxy:
+    x = wherex();
     y = wherey();
     y_plus1 = y + 1;
   }
@@ -369,7 +372,7 @@ stop_down:
          * Use cputc to avoid autoscroll there */
         if (c == CH_ENTER) {
           /* Clear to end of line */
-          clrzone(cur_x, cur_y, win_width_min1, cur_y);
+          clreol();
           /* Are we on the last line? */
           if (cur_y == win_height_min1) {
             /* we're on last line, scrollup */
