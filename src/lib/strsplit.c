@@ -17,12 +17,13 @@
 
 #ifdef __CC65__
 #pragma code-name (push, "LOWCODE")
+#else
+#define __fastcall__
 #endif
 
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "extended_string.h"
 
 #ifdef __CC65__
 #pragma static-locals(push, on)

@@ -6,7 +6,6 @@
 #include <unistd.h>
 #include "platform.h"
 #include "extended_conio.h"
-#include "extended_string.h"
 #include "progress_bar.h"
 #include "simple_serial.h"
 #include "qt-serial.h"

@@ -30,7 +30,6 @@
 #include "platform.h"
 #include "simple_serial.h"
 #include "extended_conio.h"
-#include "extended_string.h"
 
 extern unsigned char baudrate;
 extern unsigned char flow_control;

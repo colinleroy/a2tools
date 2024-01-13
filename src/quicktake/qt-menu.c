@@ -21,7 +21,6 @@
 #include "qt-state.h"
 
 #include "runtime_once_clean.h"
-#include "extended_string.h"
 
 #pragma code-name(push, "LOWCODE")
 
