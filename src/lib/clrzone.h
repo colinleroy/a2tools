@@ -6,5 +6,7 @@
 #endif
 
 #include <string.h>
+
+void __fastcall__ clreol(void);
 void __fastcall__ clrzone(char xs, char ys, char xe, char ye);
 #endif

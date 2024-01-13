@@ -6,10 +6,16 @@
 
   #ifdef __APPLE2__
     #define CH "$24"
-    #define gotox(x)           \
-        (                      \
-            __A__=(x),         \
-            asm("sta "CH)      \
+    #define gotox(x)                \
+        (                           \
+            __A__=(x),              \
+            asm("sta "CH)           \
+        )
+    #define wherex()                \
+        (                           \
+            asm("lda "CH),          \
+            asm("ldx #$00"),        \
+            __AX__                  \
         )
 
   #endif

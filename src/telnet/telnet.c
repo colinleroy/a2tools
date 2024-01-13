@@ -82,10 +82,13 @@ static void do_vt100_ctrl(char way, char abs, char x, char y) {
       clrscr();
     } else {
       cur_x = wherex(); cur_y = wherey();
-      if (x == 0) clrzone(cur_x, cur_y, scrw-1, cur_y);
-      if (x == 1) clrzone(0, cur_y, cur_x, cur_y);
-      if (x == 2) clrzone(0, cur_y, scrw-1, cur_y);
-      gotoxy(cur_x, cur_y);
+      if (x == 0) {
+        clreol();
+      } else {
+        if (x == 1) clrzone(0, cur_y, cur_x, cur_y);
+        if (x == 2) { gotox(0); clreol(); }
+        gotox(cur_x);
+      }
     }
   } else if (way == CURSOR) {
     cursor_mode = x;
