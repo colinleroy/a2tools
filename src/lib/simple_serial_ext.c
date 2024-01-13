@@ -41,55 +41,6 @@ extern unsigned char flow_control;
   extern FILE *ttyfp;
 #endif
 
-char * __fastcall__ simple_serial_gets(char *out, size_t size) {
-  static char c;
-  static char *cur;
-  static char *end;
-
-  if (size == 0) {
-    return NULL;
-  }
-
-  cur = out;
-  end = cur + size - 1;
-  while (cur < end) {
-#ifdef __CC65__
-    while (ser_get(&c) == SER_ERR_NO_DATA);
-#else
-    c = simple_serial_getc();
-#endif
-    
-    if (c == '\r') {
-      /* ignore \r */
-      continue;
-    }
-
-    *cur = c;
-    ++cur;
-
-    if (c == '\n') {
-      break;
-    }
-  }
-  *cur = '\0';
-
-  return out;
-}
-
-char *simple_serial_buf = NULL;
-void simple_serial_printf(const char* format, ...) {
-  va_list args;
-
-  if (simple_serial_buf == NULL)
-    simple_serial_buf = malloc0(SIMPLE_SERIAL_BUF_SIZE);
-
-  va_start(args, format);
-  vsnprintf(simple_serial_buf, SIMPLE_SERIAL_BUF_SIZE - 1, format, args);
-  va_end(args);
-
-  simple_serial_puts(simple_serial_buf);
-}
-
 #ifdef __CC65__
 
 void simple_serial_set_speed(int b) {
@@ -179,7 +130,7 @@ void simple_serial_dtr_onoff(unsigned char on) {
 #ifndef IIGS
 void simple_serial_acia_onoff(unsigned char slot_num, unsigned char on) {
   static unsigned char reg_idx;
-  
+
   reg_idx = slot_num << 4;
 
   if (on) {
@@ -201,7 +152,7 @@ void simple_serial_acia_onoff(unsigned char slot_num, unsigned char on) {
 void simple_serial_set_parity(unsigned int p) {
 #ifndef IIGS
   static unsigned char reg_idx;
-  
+
   reg_idx = open_slot << 4;
 
   switch (p) {

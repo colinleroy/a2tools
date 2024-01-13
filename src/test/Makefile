@@ -1,6 +1,6 @@
 PROGRAM=test
 SOURCES := main.c ../lib/scroll.s ../lib/FVTABZ.s
-CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh.cfg -vm -m $(PROGRAM).map -DSER_DEBUG=1 -DSURL_TO_LANGCARD
+CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh.cfg -vm -m $(PROGRAM).map -DSURL_TO_LANGCARD
 CC65_TARGET = apple2enh
 
 .PHONY: all clean

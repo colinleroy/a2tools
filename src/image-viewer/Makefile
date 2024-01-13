@@ -1,9 +1,3 @@
-ifdef SER_DEBUG
-debug_CFLAGS := -DSER_DEBUG=1
-else
-debug_CFLAGS :=
-endif
-
 TARGET := apple2enh
 USE_LANGCARD := -DSURL_TO_LANGCARD
 
@@ -46,7 +40,7 @@ DEPS :=
 CC65_TARGET = $(TARGET)
 CFLAGS  = -I ../lib -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
 
-CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x200 $(USE_LANGCARD) $(debug_CFLAGS) $(iigs_CFLAGS)
+CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x200 $(USE_LANGCARD) $(iigs_CFLAGS)
 
 imgview_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-rtonce.cfg $(CC65_TARGET)-iobuf-0800.o --start-addr 0x4000
 

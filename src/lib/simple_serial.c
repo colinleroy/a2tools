@@ -473,7 +473,7 @@ char *tty_speed_to_str(int speed) {
 }
 
 static int get_bool(char *tmp) {
-  return !strcmp(tmp, "1") 
+  return !strcmp(tmp, "1")
     || !strcasecmp(tmp, "yes")
     || !strcasecmp(tmp, "true")
     || !strcasecmp(tmp, "on");
@@ -536,7 +536,7 @@ static int simple_serial_read_opts(void) {
   if (fp != NULL) {
     fclose(fp);
   }
-  
+
   /* Env vars take precedence */
   if (getenv("A2_TTY")) {
     free(opt_tty_path);
@@ -677,8 +677,8 @@ void simple_serial_flush(void) {
   }
   while(simple_serial_getc_with_timeout() != EOF);
 }
-/* Input 
- * Very complicated because select() won't mark fd as readable 
+/* Input
+ * Very complicated because select() won't mark fd as readable
  * if there was more than one byte available last time and we only
  * read one. So we're doing our own buffer.
  */
@@ -690,7 +690,7 @@ int __simple_serial_getc_with_tv_timeout(int timeout, int secs, int msecs) {
   if (readbuf == NULL) {
     readbuf = malloc0(16384);
   }
-  
+
 send_from_buf:
   if (readbuf_avail > 0) {
     int r = (unsigned char)readbuf[readbuf_idx];
@@ -714,7 +714,7 @@ try_again:
     int r;
     flags |= O_NONBLOCK;
     fcntl(fileno(ttyfp), F_SETFL, flags);
-    
+
     r = fread(readbuf, sizeof(char), 16383, ttyfp);
     if (r > 0) {
       readbuf_avail = r;
@@ -800,25 +800,15 @@ void __fastcall__ simple_serial_puts(const char *buf) {
   }
 
 #else
-  __asm__("ldy #%o", buf);
+  __asm__("ldy #%o+1", buf);
   __asm__("lda (sp),y");
-  __asm__("sta ptr4");
-  __asm__("iny");
+  __asm__("tax");
+  __asm__("dey");
   __asm__("lda (sp),y");
-  __asm__("sta ptr4+1");
-  putc_again:
-  __asm__("ldy #$00");
-  __asm__("lda (ptr4),y");
-  __asm__("beq %g", puts_done);
-  __asm__("jsr %v", ser_put);
-  __asm__("cmp #%b", SER_ERR_OVERFLOW);
-  __asm__("beq %g", putc_again);
-  __asm__("inc ptr4");
-  __asm__("bne %g", putc_again);
-  __asm__("inc ptr4+1");
-  __asm__("bne %g", putc_again);
-  puts_done:
-  return;
+
+  __asm__("jsr pushax"); /* Push for simple_serial_write */
+  __asm__("jsr %v", strlen); /* Strlen takes it from AX */
+  __asm__("jsr %v", simple_serial_write);
 #endif
 }
 
