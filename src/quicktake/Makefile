@@ -1,7 +1,9 @@
 ifdef SER_DEBUG
 debug_CFLAGS := -DSER_DEBUG=1
+debug_SOURCES :=  ../lib/simple_serial_ext.c
 else
 debug_CFLAGS :=
+debug_SOURCES :=
 endif
 
 TARGET := apple2enh
@@ -33,6 +35,7 @@ slowtake_SOURCES := \
 	../lib/extended_string.c ../lib/malloc0.c \
 	../lib/file_select.c ../lib/progress_bar.c ../lib/hgr.c \
 	../lib/hgr_addrs.c ../lib/scrollwindow.c \
+	$(debug_SOURCES)
 
 slowtake_CC65SOURCES := \
 	../lib/dputc.s ../lib/scroll.s ../lib/FVTABZ.s \
@@ -44,14 +47,17 @@ slowtake_GCCSOURCES := ../lib/tgi_sdl.c ../lib/tgi_fastline.c
 
 qtktconv_SOURCES := \
 	qt-conv.c qtkt.c  ../lib/path_helper.c ../lib/progress_bar.c
+
 qtktconv_CC65SOURCES := ../lib/extrazp.s
 
 qtknconv_SOURCES := \
 	qt-conv.c qtkn.c  ../lib/path_helper.c ../lib/progress_bar.c
+
 qtknconv_CC65SOURCES := ../lib/extrazp.s
 
 jpegconv_SOURCES := \
 	qt-conv.c jpeg.c  ../lib/path_helper.c ../lib/progress_bar.c
+
 jpegconv_CC65SOURCES := ../lib/extrazp.s
 
 GCCSOURCES := ../lib/extended_conio.c ../lib/clrzone.c

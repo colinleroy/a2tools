@@ -1,5 +1,5 @@
 ifdef SER_DEBUG
-ser_debug_SOURCES := ../lib/simple_serial_ext.c
+ser_debug_SOURCES := ../lib/simple_serial_printf.c
 debug_CFLAGS := -DSER_DEBUG=1
 else
 ser_debug_SOURCES :=
