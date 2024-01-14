@@ -22,7 +22,7 @@ endif
 imgview_SOURCES := \
 	imageview.c \
 	../lib/simple_serial.c ../lib/simple_serial_ext.c \
-	../lib/path_helper.c ../lib/extended_string.c \
+	../lib/path_helper.c \
 	../lib/file_select.c ../lib/progress_bar.c ../lib/hgr.c \
 	../lib/hgr_addrs.c ../lib/scrollwindow.c \
 	../lib/malloc0.c
@@ -30,9 +30,10 @@ imgview_SOURCES := \
 imgview_CC65SOURCES := \
 	../lib/dputc.s ../lib/scroll.s ../lib/FVTABZ.s \
 	../lib/clrzone.c ../lib/fastirq$(suffix).s \
-	../lib/platform_sleep.c ../lib/extrazp.s
+	../lib/extrazp.s ../lib/simple_serial_io.s \
+	 ../lib/speedctrl.s
 
-imgview_GCCSOURCES := ../lib/tgi_sdl.c ../lib/tgi_fastline.c
+imgview_GCCSOURCES := ../lib/tgi_sdl.c ../lib/tgi_fastline.c ../lib/strtrim.c
 
 GCCSOURCES := ../lib/extended_conio.c ../lib/clrzone.c
 DEPS :=

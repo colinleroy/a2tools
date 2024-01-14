@@ -347,10 +347,6 @@ char __fastcall__ simple_serial_close(void) {
 #pragma code-name (push, "LOWCODE")
 #endif
 
-void __fastcall__ simple_serial_flush(void) {
-  while(simple_serial_getc_with_timeout() != EOF);
-}
-
 #pragma optimize(push, on)
 
 static uint16 timeout_cycles = 0;

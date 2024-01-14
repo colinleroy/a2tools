@@ -1,12 +1,15 @@
 ;
 ; Colin Leroy-Mira <colin@colino.net>, 2023
 ;
-;
+
         .export         _simple_serial_puts
         .export         _simple_serial_getc
         .export         _simple_serial_getc_immediate
         .export         _simple_serial_write
         .export         _simple_serial_read
+        .export         _simple_serial_flush
+
+        .import         _simple_serial_getc_with_timeout
         .import         _ser_get, _ser_put, _strlen
         .import         pushax, popax
         .importzp       tmp2, ptr3, ptr4
@@ -15,6 +18,8 @@
 
         .ifdef SURL_TO_LANGCARD
         .segment "LC"
+        .else
+        .segment "LOWCODE"
         .endif
 
 ;char __fastcall__ simple_serial_getc(void) {
@@ -116,4 +121,10 @@ check_bound:
         cpx     ptr3+1
         bne     read_again_axok
 
+        rts
+
+_simple_serial_flush:
+        jsr     _simple_serial_getc_with_timeout
+        cpx     #$FF
+        bne     _simple_serial_flush
         rts

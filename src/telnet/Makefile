@@ -12,7 +12,7 @@ PROGRAM=telnet
 SOURCES := telnet.c ../lib/simple_serial.c ../lib/simple_serial_printf.c \
 	../lib/surl_core.c ../lib/clrzone.c ../lib/dgets.c ../lib/scrollwindow.c \
 	../lib/path_helper.c ../lib/malloc0.c
-CC65SOURCES := ../lib/simple_serial_io.s ../lib/dputs.s ../lib/dputc.s ../lib/scroll.s ../lib/FVTABZ.s ../lib/fastirq$(suffix).s ../lib/extrazp.s
+CC65SOURCES := ../lib/simple_serial_io.s ../lib/speedctrl.s ../lib/dputs.s ../lib/dputc.s ../lib/scroll.s ../lib/FVTABZ.s ../lib/fastirq$(suffix).s ../lib/extrazp.s
 GCCSOURCES := ../lib/strtrim.c ../lib/extended_conio.c
 DEPS := 
 
