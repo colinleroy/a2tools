@@ -1,7 +1,6 @@
 SOURCES := simple_serial.c \
 	simple_em.c \
 	extended_conio.c \
-	extended_string.c \
 	bool_array.c \
 	array_sort.c \
 	bool_array_test.c \

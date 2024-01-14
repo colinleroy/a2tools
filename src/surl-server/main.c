@@ -25,7 +25,7 @@
 #include "platform.h"
 #include "surl_protocol.h"
 #include "simple_serial.h"
-#include "extended_string.h"
+#include "strtrim.h"
 #include "strsplit.h"
 #include "math.h"
 #include "raw-session.h"

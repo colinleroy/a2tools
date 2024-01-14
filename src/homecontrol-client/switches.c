@@ -19,7 +19,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "extended_conio.h"
-#include "extended_string.h"
+#include "strellipsis.h"
 #include "strsplit.h"
 
 #include "constants.h"
