@@ -18,43 +18,11 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "extended_string.h"
+#include "strellipsis.h"
 
 #ifdef __CC65__
 #pragma static-locals(push, on)
 #endif
-
-char * __fastcall__ trim(const char *in) {
-  int i = 0, len = strlen(in);
-  int last_non_sep = 0;
-  char *out;
-
-  /* Front trim */
-  while (i < len) {
-    if (!strchr(" \r\n\t", in[i]))
-      break;
-    i++;
-  }
-  if (i == len)
-    return strdup("");
-
-  out = strdup(in + i);
-
-  /* Tail trim */
-  for (i = 0; out[i]; i++) {
-    if (!strchr(" \r\n\t", out[i])) {
-      last_non_sep = 0;
-    } else if (last_non_sep == 0) {
-      last_non_sep = i;
-    }
-  }
-
-  if (last_non_sep != 0) {
-    out[last_non_sep]='\0';
-  }
-
-  return out;
-}
 
 static char *do_ellipsis(char *str, int len) {
   str[len-3] =

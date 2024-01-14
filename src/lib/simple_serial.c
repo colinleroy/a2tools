@@ -26,7 +26,7 @@
 #include "malloc0.h"
 #include "platform.h"
 #include "extended_conio.h"
-#include "extended_string.h"
+#include "strtrim.h"
 #include "path_helper.h"
 
 #ifdef __CC65__

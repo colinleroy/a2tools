@@ -20,16 +20,8 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
-#include <errno.h>
-#ifndef __CC65__
-#include <sys/ioctl.h>
-#else
-#include <peekpoke.h>
-#endif
-#include "malloc0.h"
-#include "platform.h"
 #include "simple_serial.h"
-#include "extended_conio.h"
+#include "malloc0.h"
 
 #ifdef __CC65__
   #pragma static-locals(push, on)

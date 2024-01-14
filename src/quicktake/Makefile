@@ -32,7 +32,7 @@ slowtake_SOURCES := \
 	qt-state.c \
 	../lib/dgets.c ../lib/scrollwindow.c ../lib/path_helper.c \
 	../lib/simple_serial.c ../lib/simple_serial_ext.c \
-	../lib/extended_string.c ../lib/malloc0.c \
+	../lib/strtrim.c ../lib/malloc0.c \
 	../lib/file_select.c ../lib/progress_bar.c ../lib/hgr.c \
 	../lib/hgr_addrs.c ../lib/scrollwindow.c \
 	$(debug_SOURCES)

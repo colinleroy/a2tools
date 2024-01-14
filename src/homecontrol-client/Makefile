@@ -19,12 +19,13 @@ homectrl_SOURCES := main.c network.c \
 	../lib/scrollwindow.c \
 	../lib/clrzone.c \
 	../lib/strsplit.c \
-	../lib/extended_string.c \
+	../lib/strellipsis.c \
 	../lib/surl_core.c \
 	../lib/surl_receive.c \
 	../lib/path_helper.c \
 	../lib/surl_ping.c
 
+homectrl_GCCSOURCES = 	../lib/strtrim.c 
 homectrl_CL65SOURCES = ../lib/dputc.s ../lib/dputs.s ../lib/scroll.s ../lib/FVTABZ.s ../lib/fastirq$(suffix).s ../lib/extrazp.s
 
 grphview_SOURCES := graph-viewer.c \
@@ -34,7 +35,7 @@ grphview_SOURCES := graph-viewer.c \
 	../lib/simple_serial.c \
 	../lib/path_helper.c
 
-grphview_GCCSOURCES := ../lib/extended_conio.c ../lib/clrzone.c ../lib/tgi_sdl.c ../lib/extended_string.c ../lib/tgi_fastline.c
+grphview_GCCSOURCES := ../lib/strtrim.c ../lib/extended_conio.c ../lib/clrzone.c ../lib/tgi_sdl.c ../lib/tgi_fastline.c
 grphview_CL65SOURCES = ../lib/fastirq$(suffix).s ../lib/extrazp.s
 
 DEPS := 
@@ -52,7 +53,7 @@ all: homectrl.bin homectrl.x86_64 grphview.bin grphview.x86_64
 homectrl.bin: $(homectrl_SOURCES) $(homectrl_CL65SOURCES)
 	cl65 $(CFLAGS) $(homectrl_CLCFLAGS) -m homectrl.map -o $@ $^
 
-homectrl.x86_64: $(homectrl_SOURCES)
+homectrl.x86_64: $(homectrl_SOURCES) $(homectrl_GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@
 
 grphview.bin: $(grphview_SOURCES) $(grphview_CL65SOURCES)

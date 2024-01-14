@@ -10,7 +10,7 @@ endif
 
 PROGRAM=surl
 surl_SOURCES := surl-client.c ../lib/malloc0.c ../lib/simple_serial.c ../lib/cgets.c ../lib/scrollwindow.c ../lib/surl_core.c ../lib/surl_receive.c ../lib/path_helper.c
-GCCSOURCES := ../lib/extended_string.c
+GCCSOURCES := ../lib/strtrim.c
 CL65SOURCES := ../lib/fastirq$(suffix).s ../lib/extrazp.s ../lib/FVTABZ.s
 DEPS := 
 

@@ -5,8 +5,6 @@
 #define __fastcall__
 #endif
 
-char *strndup_ellipsis(char *in, int len);
-char *ellipsis(char *in, int len);
 char * __fastcall__ trim(const char *in);
 
 #endif
