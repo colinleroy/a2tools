@@ -19,6 +19,8 @@ extern uint8 scrw, scrh;
 
 static uint8 qt1x0_send_ping(void);
 
+#pragma code-name(push, "LOWCODE")
+
 /* Get the ack from the camera */
 static uint8 get_ack(uint8 wait) {
   while (wait--) {
@@ -61,8 +63,6 @@ read:
 
   return buffer[3] == 0xC8 ? QT_MODEL_150 : QT_MODEL_100;
 }
-
-#pragma code-name(push, "LOWCODE")
 
 /* Send our greeting to the camera, and inform it of the speed
  * we aim for

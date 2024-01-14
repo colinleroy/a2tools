@@ -8,6 +8,8 @@
 #include "strsplit.h"
 #include "api.h"
 
+#pragma code-name(push, "LC")
+
 void poll_free(poll *p) {
   char i;
   if (p == NULL)
@@ -19,6 +21,8 @@ void poll_free(poll *p) {
   }
   free(p);
 }
+
+#pragma code-name(pop)
 
 /* expired, multiple, votes_count, voters_count */
 #define NUM_POLL_LINES 3
