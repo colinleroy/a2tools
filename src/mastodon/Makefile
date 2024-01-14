@@ -7,7 +7,7 @@ debug_CFLAGS :=
 endif
 
 TARGET := apple2enh
-USE_LANGCARD := -DSURL_TO_LANGCARD
+USE_LANGCARD := -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD
 
 ifdef IIGS
 iigs_CFLAGS := -DIIGS --asm-define IIGS
@@ -40,6 +40,16 @@ common_SOURCES := \
 	../lib/surl_get_json.c \
 	../lib/surl_send.c
 
+common_CC65SOURCES := \
+	../lib/simple_serial_io.s \
+	../lib/dputs.s \
+	../lib/dputc.s \
+	../lib/scroll.s \
+	../lib/FVTABZ.s \
+	../lib/fastirq$(suffix).s \
+	 ../lib/extrazp.s \
+	../lib/runtime_once_clean.s
+
 mastodon_SOURCES := \
 	$(common_SOURCES) \
 	cli/login.c \
@@ -55,12 +65,7 @@ mastodon_SOURCES := \
 	../lib/hgr.c
 
 mastodon_CC65SOURCES := \
-	../lib/dputs.s \
-	../lib/dputc.s \
-	../lib/scroll.s ../lib/FVTABZ.s \
-	../lib/fastirq$(suffix).s \
-	 ../lib/extrazp.s \
-	../lib/runtime_once_clean.s
+	$(common_CC65SOURCES) \
 
 mastocli_SOURCES := \
 	$(common_SOURCES) \
@@ -76,12 +81,7 @@ mastocli_SOURCES := \
 	../lib/path_helper.c
 
 mastocli_CC65SOURCES := \
-	../lib/dputs.s \
-	../lib/dputc.s \
-	../lib/scroll.s ../lib/FVTABZ.s \
-	../lib/fastirq$(suffix).s \
-	 ../lib/extrazp.s \
-	../lib/runtime_once_clean.s
+	$(common_CC65SOURCES) \
 
 mastowrite_SOURCES := \
 	$(common_SOURCES) \
@@ -98,11 +98,7 @@ mastowrite_SOURCES := \
 	../lib/path_helper.c
 
 mastowrite_CC65SOURCES := \
-	../lib/dputs.s \
-	../lib/dputc.s \
-	../lib/scroll.s ../lib/FVTABZ.s \
-	../lib/fastirq$(suffix).s \
-	 ../lib/extrazp.s
+	$(common_CC65SOURCES) \
 
 mastoconf_SOURCES := \
 	cli/config.c \

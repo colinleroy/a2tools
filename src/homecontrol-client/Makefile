@@ -26,7 +26,7 @@ homectrl_SOURCES := main.c network.c \
 	../lib/surl_ping.c
 
 homectrl_GCCSOURCES = 	../lib/strtrim.c 
-homectrl_CL65SOURCES = ../lib/dputc.s ../lib/dputs.s ../lib/scroll.s ../lib/FVTABZ.s ../lib/fastirq$(suffix).s ../lib/extrazp.s
+homectrl_CL65SOURCES = ../lib/simple_serial_io.s ../lib/dputc.s ../lib/dputs.s ../lib/scroll.s ../lib/FVTABZ.s ../lib/fastirq$(suffix).s ../lib/extrazp.s
 
 grphview_SOURCES := graph-viewer.c \
 	../lib/malloc0.c \
@@ -36,13 +36,13 @@ grphview_SOURCES := graph-viewer.c \
 	../lib/path_helper.c
 
 grphview_GCCSOURCES := ../lib/strtrim.c ../lib/extended_conio.c ../lib/clrzone.c ../lib/tgi_sdl.c ../lib/tgi_fastline.c
-grphview_CL65SOURCES = ../lib/fastirq$(suffix).s ../lib/extrazp.s
+grphview_CL65SOURCES = ../lib/simple_serial_io.s ../lib/fastirq$(suffix).s ../lib/extrazp.s
 
 DEPS := 
 
 CC65_TARGET = apple2enh
 CFLAGS  = -I ../lib -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
-homectrl_CLCFLAGS = -t $(CC65_TARGET) -O -Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-rtonce.cfg -DSURL_TO_LANGCARD $(iigs_CFLAGS)
+homectrl_CLCFLAGS = -t $(CC65_TARGET) -O -Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-rtonce.cfg -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD $(iigs_CFLAGS)
 grphview_CLCFLAGS = $(homectrl_CLCFLAGS) --start-addr 0x4000 #-C ../../config/apple2enh-hgr.cfg
 GCCCFLAGS = -g -O0 -Wall  -Wno-unknown-pragmas -Wno-unused-function -Wno-char-subscripts -Werror $(shell sdl-config --cflags)
 GCCLDFLAGS = $(shell sdl-config --libs)

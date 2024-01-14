@@ -1,5 +1,5 @@
 TARGET := apple2enh
-USE_LANGCARD := -DSURL_TO_LANGCARD
+USE_LANGCARD := -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD
 
 ifdef IIGS
 iigs_CFLAGS := -DIIGS --asm-define IIGS

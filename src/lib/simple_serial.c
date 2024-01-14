@@ -352,13 +352,6 @@ void __fastcall__ simple_serial_flush(void) {
 }
 
 #pragma optimize(push, on)
-int __fastcall__ simple_serial_getc_immediate(void) {
-  static char c;
-  if (ser_get(&c) != SER_ERR_NO_DATA) {
-    return c;
-  }
-  return EOF;
-}
 
 static uint16 timeout_cycles = 0;
 #ifdef IIGS
@@ -379,13 +372,6 @@ int __fastcall__ simple_serial_getc_with_timeout(void) {
   }
   speedup();
   return (int)c;
-}
-
-char __fastcall__ simple_serial_getc(void) {
-  static char c;
-
-  while (ser_get(&c) == SER_ERR_NO_DATA);
-  return c;
 }
 
 #pragma optimize(pop)
@@ -785,10 +771,7 @@ unsigned char __fastcall__ simple_serial_putc(char c) {
   return r == EOF ? -1 : 0;
 }
 
-#endif /* End of platform-dependant code */
-
 void __fastcall__ simple_serial_puts(const char *buf) {
-#ifndef __CC65__
   static const char *cur;
 
   cur = buf;
@@ -798,18 +781,6 @@ void __fastcall__ simple_serial_puts(const char *buf) {
       break;
     ++cur;
   }
-
-#else
-  __asm__("ldy #%o+1", buf);
-  __asm__("lda (sp),y");
-  __asm__("tax");
-  __asm__("dey");
-  __asm__("lda (sp),y");
-
-  __asm__("jsr pushax"); /* Push for simple_serial_write */
-  __asm__("jsr %v", strlen); /* Strlen takes it from AX */
-  __asm__("jsr %v", simple_serial_write);
-#endif
 }
 
 void __fastcall__ simple_serial_read(char *ptr, size_t nmemb) {
@@ -819,48 +790,10 @@ void __fastcall__ simple_serial_read(char *ptr, size_t nmemb) {
   cur = ptr;
   end = nmemb + cur;
 
-#ifndef __CC65__
-
   while (cur != end) {
     *cur = simple_serial_getc();
     ++cur;
   }
-
-#else
-  __asm__("                  lda %v", cur);               /* Copy cur to ZP */
-  __asm__("                  sta tmp1");
-  __asm__("                  lda %v+1", cur);
-  __asm__("                  sta tmp2");
-
-  __asm__("                  lda %v", end);              /* Copy end to ZP */
-  __asm__("                  sta tmp3");
-  __asm__("                  lda %v+1", end);
-  __asm__("                  sta tmp4");
-
-#ifdef __APPLE2ENH__
-  __asm__("                  bra check_bound");           /* branch to check cur != end */
-#else
-  __asm__("                  lda #$00");
-  __asm__("                  beq check_bound");           /* branch to check cur != end */
-#endif
-
-    __asm__("read_again:       lda tmp1");                /* low byte in A */
-    __asm__("read_again_aok:   ldx tmp2");                /* high byte in X */
-    __asm__("read_again_axok:  jsr %v", ser_get);         /* pass cur to ser_get */
-    __asm__("                  cmp #%b", SER_ERR_NO_DATA);/* Did we get data? */
-    __asm__("                  beq read_again");          /* No */
-
-    __asm__("                  inc tmp1");                /* Inc cur's low byte */
-    __asm__("                  bne check_bound");         /* not wrapped? go check bound */
-    __asm__("                  inc tmp2");                /* Inc high byte */
-
-  __asm__("check_bound:      lda tmp1");                  /* Compare cur/end low bytes */
-  __asm__("                  cmp tmp3");
-  __asm__("                  bne read_again_aok");        /* different, read again */
-  __asm__("                  ldx tmp2");                  /* Compare high bytes */
-  __asm__("                  cpx tmp4");
-  __asm__("                  bne read_again_axok");       /* different, read again */
-#endif
 }
 
 void __fastcall__ simple_serial_write(const char *ptr, size_t nmemb) {
@@ -870,39 +803,14 @@ void __fastcall__ simple_serial_write(const char *ptr, size_t nmemb) {
   cur = ptr;
   end = nmemb + cur;
 
-#ifndef __CC65__
-
   while (cur != end) {
     if (simple_serial_putc(*cur) == (unsigned char)-1)
       break;
     ++cur;
   }
-
-#else
-  __asm__("lda %v", cur);
-  __asm__("sta ptr4");
-  __asm__("ldx %v+1", cur);
-  __asm__("stx ptr4+1");
-  goto check_write;
-  write_again:
-  __asm__("ldy #$00");
-  __asm__("lda (ptr4),y");
-  __asm__("jsr %v", ser_put);
-  __asm__("cmp #%b", SER_ERR_OVERFLOW);
-  __asm__("beq %g", write_again);
-
-  __asm__("inc ptr4");
-  __asm__("bne %g", check_write);
-  __asm__("inc ptr4+1");
-  check_write:
-  __asm__("lda ptr4");
-  __asm__("cmp %v", end);
-  __asm__("bne %g", write_again);
-  __asm__("ldx ptr4+1");
-  __asm__("cpx %v+1", end);
-  __asm__("bne %g", write_again);
-#endif
 }
+
+#endif /* End of platform-dependant code */
 
 #ifdef __CC65__
 #pragma code-name (pop)

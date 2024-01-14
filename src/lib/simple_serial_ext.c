@@ -226,9 +226,6 @@ void simple_serial_set_parity(unsigned int p) {
 
 #else
 
-int __fastcall__ simple_serial_getc_with_timeout_rom(void) {
-  return simple_serial_getc_with_timeout();
-}
 void simple_serial_set_speed(int b) {
   struct termios tty;
   char *spd_str = tty_speed_to_str(b);

@@ -7,7 +7,7 @@ debug_SOURCES :=
 endif
 
 TARGET := apple2enh
-USE_LANGCARD := -DSURL_TO_LANGCARD
+USE_LANGCARD := -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD
 
 ifdef IIGS
 iigs_CFLAGS := -DIIGS --asm-define IIGS
@@ -41,7 +41,8 @@ slowtake_CC65SOURCES := \
 	../lib/dputc.s ../lib/scroll.s ../lib/FVTABZ.s \
 	../lib/clrzone.c ../lib/fastirq$(suffix).s \
 	../lib/platform_sleep.c ../lib/extrazp.s \
-	../lib/runtime_once_clean.s
+	../lib/runtime_once_clean.s \
+	../lib/simple_serial_io.s 
 
 slowtake_GCCSOURCES := ../lib/tgi_sdl.c ../lib/tgi_fastline.c
 
