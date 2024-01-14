@@ -6,6 +6,7 @@
 #include "platform.h"
 #include "path_helper.h"
 
+
 typedef struct _qt_state {
   uint16 num[3];
   char edit_name[FILENAME_MAX];
@@ -57,6 +58,8 @@ uint8 state_load(uint8 state_num, uint16 *num, char **edit_name) {
   return -1;
 }
 
+#pragma code-name(push, "LC")
+
 uint8 state_set(uint8 state_num, uint16 num, const char *edit_name) {
   if (state_io("r") != 0) {
     memset(&state, 0, sizeof(state));
@@ -67,3 +70,4 @@ uint8 state_set(uint8 state_num, uint16 num, const char *edit_name) {
   }
   return state_io("w");
 }
+#pragma code-name(pop)
