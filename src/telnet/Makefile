@@ -10,15 +10,24 @@ endif
 
 PROGRAM=telnet
 SOURCES := telnet.c ../lib/simple_serial.c ../lib/simple_serial_printf.c \
-	../lib/surl_core.c ../lib/clrzone.c ../lib/dgets.c ../lib/scrollwindow.c \
+	../lib/surl_core.c ../lib/dgets.c ../lib/scrollwindow.c \
 	../lib/path_helper.c ../lib/malloc0.c
-CC65SOURCES := ../lib/simple_serial_io.s ../lib/speedctrl.s ../lib/dputs.s ../lib/dputc.s ../lib/scroll.s ../lib/FVTABZ.s ../lib/fastirq$(suffix).s ../lib/extrazp.s
-GCCSOURCES := ../lib/strtrim.c ../lib/extended_conio.c
+CC65SOURCES := ../lib/simple_serial_io.s \
+	../lib/clrzone.s \
+	 ../lib/speedctrl.s \
+ 	 ../lib/dputs.s \
+ 	 ../lib/dputc.s \
+ 	 ../lib/scroll.s \
+ 	 ../lib/FVTABZ.s \
+ 	 ../lib/fastirq$(suffix).s \
+ 	 ../lib/extrazp.s
+
+GCCSOURCES := ../lib/strtrim.c ../lib/extended_conio.c ../lib/clrzone.c 
 DEPS := 
 
 CC65_TARGET = apple2enh
 CFLAGS  = -I ../lib -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
-CLCFLAGS = -t $(CC65_TARGET) -Osir -Cl $(iigs_CFLAGS) -C ../../config/apple2enh-rtonce.cfg -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD
+CLCFLAGS = -t $(CC65_TARGET) -Osir -Cl $(iigs_CFLAGS) -C ../../config/apple2enh-rtonce.cfg -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD  -DAVOID_ROM_CALLS --asm-define AVOID_ROM_CALLS
 GCCCFLAGS = -g -O0 -Wall -Wno-char-subscripts -Wno-unused-function -Wno-unknown-pragmas -Werror
 GCCLDFLAGS = 
 

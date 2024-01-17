@@ -28,6 +28,7 @@
 #include "extended_conio.h"
 #include "strtrim.h"
 #include "path_helper.h"
+#include "clrzone.h"
 
 #ifdef __CC65__
 

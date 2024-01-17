@@ -7,8 +7,13 @@
         .export         FVTABZ
         .import         tmp1
         .include        "apple2.inc"
+.ifndef AVOID_ROM_CALLS
+        .import         VTABZ
+.endif
 
         .data
+
+.ifdef AVOID_ROM_CALLS
 
 FBASL:
         .byte $00
@@ -96,3 +101,7 @@ colforty:
         ldx     tmp1
         .endif
         rts
+
+.else
+FVTABZ = VTABZ
+.endif

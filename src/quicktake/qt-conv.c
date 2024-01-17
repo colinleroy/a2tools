@@ -38,7 +38,7 @@
 
 #include "hgr.h"
 #include "extrazp.h"
-
+#include "clrzone.h"
 #include "qt-conv.h"
 #include "path_helper.h"
 #include "progress_bar.h"
