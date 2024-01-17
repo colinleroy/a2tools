@@ -74,78 +74,103 @@ static unsigned char top_line = 255, btm_line = 255;
 
 static char saved_vt100_curs_x = 255, saved_vt100_curs_y = 255;
 
-static void do_vt100_ctrl(char way, char abs, char x, char y) {
+static void do_vt100_ctrl(unsigned char way, char abs, char stkx, char stky) {
+  char x = stkx, y = stky;
   unsigned char cur_x = 0, cur_y = 0;
-
-  if (way == CLRSCR) {
-    if (abs == 1) {
-      clrscr();
-    } else {
-      cur_x = wherex(); cur_y = wherey();
-      if (x == 0) {
-        clreol();
+  
+  switch (way) {
+    case CLRSCR:
+      if (abs == 1) {
+        clrscr();
       } else {
-        if (x == 1) clrzone(0, cur_y, cur_x, cur_y);
-        if (x == 2) { gotox(0); clreol(); }
-        gotox(cur_x);
+        switch (x) {
+          case 0:
+            clreol();
+            break;
+          case 1:
+            cur_x = wherex();
+            cur_y = wherey();
+            clrzone(0, cur_y, cur_x, cur_y);
+            gotox(cur_x);
+            break;
+          case 2:
+            cur_x = wherex();
+            gotox(0);
+            clreol();
+            gotox(cur_x);
+            break;
+        }
       }
-    }
-  } else if (way == CURSOR) {
-    cursor_mode = x;
-  } else if (way == SAVE_CURSOR) {
-    saved_vt100_curs_x = wherex();
-    saved_vt100_curs_y = wherey();
-  } else if (way == RESTORE_CURSOR) {
-    if (saved_vt100_curs_x != 255) {
-      gotoxy(saved_vt100_curs_x, saved_vt100_curs_y);
-    }
-  } else if (way == AUTOWRAP) {
-    autowrap_mode = x;
-  } else if (way == NEXTLINE) {
+      break;
+    case CURSOR:
+      cursor_mode = x;
+      break;
+    case SAVE_CURSOR:
+      saved_vt100_curs_x = wherex();
+      saved_vt100_curs_y = wherey();
+      break;
+    case RESTORE_CURSOR:
+      if (saved_vt100_curs_x != 255) {
+        gotoxy(saved_vt100_curs_x, saved_vt100_curs_y);
+      }
+      break;
+    case AUTOWRAP:
+      autowrap_mode = x;
+      break;
+    case NEXTLINE:
 #ifdef __CC65__
-    dputc('\n');
+      dputc('\n');
 #else
-    printf("\n");
+      printf("\n");
 #endif
-  } else if (way == STATUSREQ) {
-    if (x == 5) {
-      /* terminal status */
-      simple_serial_puts("\33[0n");
-    } else if (x == 6) {
-      /* cursor position report */
-      simple_serial_printf("\33[%d;%dR", wherex(), wherey());
-    }
-  } else if (way == TERMTYPE) {
-    simple_serial_printf("\33[?1;0c"); /* VT100 */
-  } else if (way == CH_CURS_LEFT) {
-    cur_x = wherex();
-    gotox(max(0, cur_x - x));
-  } else if (way == CH_CURS_RIGHT) {
-    cur_x = wherex();
-    gotox(min(scrw - 1, cur_x + x));
-  } else if (way == CH_CURS_UP) {
-    cur_y = wherey();
-    if (cur_y - x >= top_line) {
-      gotoy(max(top_line, cur_y - x));
-    } else {
+      break;
+    case STATUSREQ:
+      if (x == 5) {
+        /* terminal status */
+        simple_serial_puts("\33[0n");
+      } else if (x == 6) {
+        /* cursor position report */
+        simple_serial_printf("\33[%d;%dR", wherex(), wherey());
+      }
+      break;
+    case TERMTYPE:
+      simple_serial_printf("\33[?1;0c"); /* VT100 */
+      break;
+    case CH_CURS_LEFT:
+      cur_x = wherex();
+      gotox(max(0, cur_x - x));
+      break;
+    case CH_CURS_RIGHT:
+      cur_x = wherex();
+      gotox(min(scrw - 1, cur_x + x));
+      break;
+    case CH_CURS_UP:
+      cur_y = wherey();
+      if (cur_y - x >= top_line) {
+        gotoy(max(top_line, cur_y - x));
+      } else {
 #ifdef __CC65__
         scrolldown_n(x);
 #endif
       }
-  } else if (way == CH_CURS_DOWN) {
-    cur_y = wherey();
-    gotoy(min(btm_line - 1, cur_y + x));
-  } else if (way == SCROLL_WINDOW) {
-    top_line = x - 1;
-    btm_line = y;
-    set_scrollwindow(top_line, btm_line);
-  } else if (way == GOTOXY) {
-    if (x != 255 && y != 255)
-      gotoxy(x, y);
-    else if (x != 255)
-      gotox(x);
-    else if (y != 255)
-      gotoy(y);
+      break;
+    case CH_CURS_DOWN:
+      cur_y = wherey();
+      gotoy(min(btm_line - 1, cur_y + x));
+      break;
+    case SCROLL_WINDOW:
+      top_line = x - 1;
+      btm_line = y;
+      set_scrollwindow(top_line, btm_line);
+      break;
+    case GOTOXY:
+      if (x != 255 && y != 255)
+        gotoxy(x, y);
+      else if (x != 255)
+        gotox(x);
+      else if (y != 255)
+        gotoy(y);
+      break;
   }
 }
 
@@ -631,7 +656,7 @@ input:
         } else {
           dputc(i);
         }
-        set_cursor();
+        //set_cursor();
       }
 #else
       if (do_echo) {
