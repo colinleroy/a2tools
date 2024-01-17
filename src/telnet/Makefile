@@ -33,7 +33,7 @@ GCCLDFLAGS =
 
 .PHONY: all clean
 
-all: $(PROGRAM).bin $(PROGRAM).x86_64
+all: $(PROGRAM).bin
 
 $(PROGRAM).bin: $(SOURCES) $(CC65SOURCES)
 	cl65 --debug-info -Wl --dbgfile,"telnet.dbg" -Ln telnet.lbl $(CFLAGS) $(CLCFLAGS) -m $(PROGRAM).map -o $@ $^
