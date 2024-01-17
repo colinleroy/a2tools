@@ -28,7 +28,7 @@
 #include "constants.h"
 #include "extended_conio.h"
 #include "surl.h"
-
+#include "clrzone.h"
 
 #ifdef __CC65__
 #pragma code-name (push, "LOWCODE")

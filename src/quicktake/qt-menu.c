@@ -13,7 +13,7 @@
 #include "progress_bar.h"
 #include "scrollwindow.h"
 #include "simple_serial.h"
-
+#include "clrzone.h"
 #include "splash.h"
 #include "qt-conv.h"
 #include "qt-edit-image.h"

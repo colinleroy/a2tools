@@ -17,7 +17,6 @@ homectrl_SOURCES := main.c network.c \
 	../lib/extended_conio.c \
 	../lib/dgets.c \
 	../lib/scrollwindow.c \
-	../lib/clrzone.c \
 	../lib/strsplit.c \
 	../lib/strellipsis.c \
 	../lib/surl_core.c \
@@ -25,8 +24,16 @@ homectrl_SOURCES := main.c network.c \
 	../lib/path_helper.c \
 	../lib/surl_ping.c
 
-homectrl_GCCSOURCES = 	../lib/strtrim.c 
-homectrl_CL65SOURCES = ../lib/simple_serial_io.s ../lib/speedctrl.s ../lib/dputc.s ../lib/dputs.s ../lib/scroll.s ../lib/FVTABZ.s ../lib/fastirq$(suffix).s ../lib/extrazp.s
+homectrl_GCCSOURCES = 	../lib/strtrim.c ../lib/clrzone.c
+homectrl_CL65SOURCES = ../lib/simple_serial_io.s\
+	../lib/speedctrl.s \
+	../lib/dputc.s\
+	../lib/dputs.s \
+	../lib/scroll.s \
+	../lib/FVTABZ.s \
+	../lib/fastirq$(suffix).s \
+	../lib/extrazp.s \
+	../lib/clrzone.s
 
 grphview_SOURCES := graph-viewer.c \
 	../lib/malloc0.c \
@@ -36,7 +43,7 @@ grphview_SOURCES := graph-viewer.c \
 	../lib/path_helper.c
 
 grphview_GCCSOURCES := ../lib/strtrim.c ../lib/extended_conio.c ../lib/clrzone.c ../lib/tgi_sdl.c ../lib/tgi_fastline.c
-grphview_CL65SOURCES = ../lib/simple_serial_io.s ../lib/speedctrl.s ../lib/fastirq$(suffix).s ../lib/extrazp.s
+grphview_CL65SOURCES = ../lib/simple_serial_io.s ../lib/speedctrl.s ../lib/clrzone.s ../lib/fastirq$(suffix).s ../lib/extrazp.s ../lib/FVTABZ.s
 
 DEPS := 
 

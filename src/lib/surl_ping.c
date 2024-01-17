@@ -27,6 +27,7 @@
 #endif
 #include "surl.h"
 #include "simple_serial.h"
+#include "clrzone.h"
 
 #ifdef __CC65__
 #pragma static-locals(push, on)

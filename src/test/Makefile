@@ -7,7 +7,7 @@ trgt = apple2c0
 endif
 
 PROGRAM=test
-SOURCES := main.c ../lib/scroll.s ../lib/FVTABZ.s ../lib/platform_sleep.s ../lib/speedctrl.s ../lib/dputc.s
+SOURCES := main.c ../lib/clrzone.s ../lib/scroll.s ../lib/FVTABZ.s ../lib/platform_sleep.s ../lib/speedctrl.s ../lib/dputc.s ../lib/scrollwindow.c
 CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh.cfg -vm -m $(PROGRAM).map -DSURL_TO_LANGCARD -O
 CC65_TARGET = apple2enh
 

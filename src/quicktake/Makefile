@@ -39,7 +39,7 @@ slowtake_SOURCES := \
 
 slowtake_CC65SOURCES := \
 	../lib/dputc.s ../lib/scroll.s ../lib/FVTABZ.s \
-	../lib/clrzone.c ../lib/fastirq$(suffix).s \
+	../lib/clrzone.s ../lib/fastirq$(suffix).s \
 	../lib/platform_sleep.s ../lib/extrazp.s \
 	../lib/runtime_once_clean.s \
 	../lib/simple_serial_io.s \

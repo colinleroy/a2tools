@@ -28,7 +28,6 @@ endif
 endif
 common_SOURCES := \
 	api/common.c \
-	../lib/clrzone.c \
 	../lib/dgets.c \
 	../lib/path_helper.c \
 	../lib/scrollwindow.c \
@@ -42,6 +41,7 @@ common_SOURCES := \
 
 common_CC65SOURCES := \
 	../lib/simple_serial_io.s \
+	../lib/clrzone.s \
 	../lib/speedctrl.s \
 	../lib/dputs.s \
 	../lib/dputc.s \
@@ -104,10 +104,9 @@ mastowrite_CC65SOURCES := \
 mastoconf_SOURCES := \
 	cli/config.c \
 	cli/logo.c \
-	../lib/clrzone.c \
 	../lib/scrollwindow.c \
 	../lib/malloc0.c
-mastoconf_CC65SOURCES := ../lib/FVTABZ.s
+mastoconf_CC65SOURCES := ../lib/FVTABZ.s ../lib/clrzone.s
 
 GCCSOURCES := ../lib/extended_conio.c ../lib/clrzone.c ../lib/strtrim.c ../lib/tgi_sdl.c ../lib/tgi_fastline.c
 DEPS :=

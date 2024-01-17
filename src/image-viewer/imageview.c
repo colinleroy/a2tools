@@ -14,6 +14,7 @@
 #include "progress_bar.h"
 #include "scrollwindow.h"
 #include "simple_serial.h"
+#include "clrzone.h"
 
 uint8 scrw, scrh;
 #ifndef __CC65__
