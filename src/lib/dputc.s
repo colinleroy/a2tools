@@ -5,8 +5,62 @@
 ; void __fastcall__ dputcxy (unsigned char x, unsigned char y, char c);
 ; void __fastcall__ dputc (char c);
 ;
+
+        .include        "apple2.inc"
+
+bell:
+        lda     CH
+        pha
+        bit     $C082
+        jsr     $FF3A           ; BELL
+        bit     $C080
+        pla
+        sta     CH              ; Bell scrambles CH in 80col mode on IIgs
+        rts                     ; moving it to OURCH and resetting CH to 0
+
+.ifndef AVOID_ROM_CALLS
+
         .export         _dputcxy, _dputc
-        .export         dnewline
+        .import         _scrollup_one, gotoxy, FVTABZ, _cputc
+
+_dputcxy:
+        pha                     ; Save C
+        jsr     gotoxy          ; Call this one, will pop params
+        pla                     ; Restore C and run into _dputc
+
+_dputc:
+        cmp    #$07
+        bne    :+
+        jmp     bell
+:       jsr     _cputc
+        pha
+        cmp     #$0D            ; Don't scroll if \r
+        beq     noscroll
+        lda     WNDTOP          ; Don't scroll if not at first line
+        cmp     CV
+        bne     noscroll
+
+        lda     CH              ; Don't scroll if first line but not first char
+        bne     noscroll
+
+        jsr     _scrollup_one
+        lda     WNDBTM
+        .ifdef __APPLE2ENH__
+        dec     a
+        .else
+        sec
+        sbc     #1
+        .endif
+        sta     CV
+        jsr     FVTABZ
+
+noscroll:
+        pla
+        rts
+
+.else
+
+        .export         _dputcxy, _dputc
         .import         gotoxy, FVTABZ
         .ifdef  __APPLE2ENH__
         .import         putchardirect
@@ -14,8 +68,6 @@
         .import         putchar
         .endif
         .import         _scrollup_one
-
-        .include        "apple2.inc"
 
         .code
 
@@ -30,11 +82,7 @@ special_chars:
         beq     backspace
         cmp     #$07            ; Test for bell
         beq     bell
-        .ifdef  __APPLE2ENH__
-        bra     invert          ; Back to standard codepath
-        .else
-        jmp     invert
-        .endif
+        bne     invert          ; Back to standard codepath
 
 _dputcxy:
         pha                     ; Save C
@@ -74,16 +122,6 @@ left:
         .endif
         rts
 
-bell:
-        lda     CH
-        pha
-        bit     $C082
-        jsr     $FF3A           ; BELL
-        bit     $C080
-        pla
-        sta     CH              ; Bell scrambles CH on IIgs
-        rts
-
 backspace:
         lda     CH              ; are we at col 0
         bne     decrh           ; no, we can decrement 
@@ -108,3 +146,5 @@ dnewline:
         jsr     _scrollup_one   ; and scroll
         lda     CV
 :       jmp     FVTABZ
+
+.endif

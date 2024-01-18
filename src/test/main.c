@@ -20,32 +20,12 @@
 
 
 int main(int argc, char *argv[]) {
-  int i,j;
-  clrscr();
   videomode(VIDEOMODE_80COL);
-  for (i = 0; i < 80; i++) {
-    for (j = 0; j < 24; j++) {
-      cputc('*');
-    }
-  }
-  clrzone(2, 2, 10, 10);
-
-  clrzone(0, 12, 78, 12);
-  clrzone(0, 14, 79, 12);
+  printf("test1\n");
+  printf("test2\n");
   cgetc();
-  set_scrollwindow(1,23);
-  set_hscrollwindow(1,79);
-  clrscr();
+  putchar(0x17);
   cgetc();
-
-  for (i = 0; i < 80; i++) {
-    for (j = 0; j < 24; j++) {
-      cputc('*');
-    }
-  }
-  gotoxy(5, 5);
-  cputs("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
-  cgetc();
-  clrzone(7, 5, 17, 5);
+  putchar(0x16);
   cgetc();
 }
