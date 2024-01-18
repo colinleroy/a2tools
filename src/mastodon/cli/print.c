@@ -30,7 +30,8 @@ void __fastcall__ clrnln(void) {
   #ifdef __APPLE2__
     __asm__("lda #0");
     __asm__("sta "CH);
-    __asm__("jsr dnewline");
+    __asm__("lda #$0A");
+    __asm__("jsr _dputc");
   #endif
 }
 

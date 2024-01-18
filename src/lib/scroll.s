@@ -6,6 +6,9 @@
 
         .export         _scrolldown_one, _scrollup_one, _scrolldown_n, _scrollup_n
         .import         FVTABZ
+        .ifndef AVOID_ROM_CALLS
+        .import         COUT
+        .endif
         .include        "apple2.inc"
 
         .bss
@@ -24,8 +27,7 @@ SEV1     := $CB06
 _scrolldown_n:
         sta     NLINES          ;save A (# of lines)
 dnagain:
-        ldy     #0              ;direction = down
-        jsr     scrollit        ;go do scroll
+        jsr     _scrolldown_one
         dec     NLINES
         bne     dnagain
         rts
@@ -33,11 +35,27 @@ dnagain:
 _scrollup_n:
         sta     NLINES          ;save A (# of lines)
 upagain:
-        ldy     #1              ;direction = up
-        jsr     scrollit        ;go do scroll
+        jsr     _scrollup_one
         dec     NLINES
         bne     upagain
         rts
+
+.ifndef AVOID_ROM_CALLS
+
+_scrolldown_one:
+        lda     RD80VID         ;in 40 or 80 columns?
+        bpl     :+
+        lda     #($16|$80)      ; 80col firmware's Ctrl-V
+        jmp     COUT
+:       rts
+
+_scrollup_one:
+        bit     $C082
+        jsr     $FC70           ; SCROLL
+        bit     $C080
+        rts
+
+.else
 
 _scrolldown_one:
         ldy     #0              ;direction = down
@@ -256,5 +274,7 @@ cleol2: sta     (BASL),y
         cpy     WNDWDTH
         bcc     cleol2
         rts
+
+.endif
 
 .endif
