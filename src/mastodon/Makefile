@@ -42,7 +42,6 @@ common_SOURCES := \
 common_CC65SOURCES := \
 	../lib/simple_serial_io.s \
 	../lib/clrzone.s \
-	../lib/speedctrl.s \
 	../lib/dputs.s \
 	../lib/dputc.s \
 	../lib/scroll.s \

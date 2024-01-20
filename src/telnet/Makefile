@@ -14,7 +14,6 @@ SOURCES := telnet.c ../lib/simple_serial.c ../lib/simple_serial_printf.c \
 	../lib/path_helper.c ../lib/malloc0.c
 CC65SOURCES := ../lib/simple_serial_io.s \
 	../lib/clrzone.s \
-	 ../lib/speedctrl.s \
  	 ../lib/dputs.s \
  	 ../lib/dputc.s \
  	 ../lib/scroll.s \

@@ -42,8 +42,7 @@ slowtake_CC65SOURCES := \
 	../lib/clrzone.s ../lib/fastirq$(suffix).s \
 	../lib/platform_sleep.s ../lib/extrazp.s \
 	../lib/runtime_once_clean.s \
-	../lib/simple_serial_io.s \
-	../lib/speedctrl.s
+	../lib/simple_serial_io.s
 
 slowtake_GCCSOURCES := ../lib/tgi_sdl.c ../lib/tgi_fastline.c
 
