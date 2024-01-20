@@ -841,7 +841,7 @@ try_again:
     goto out;
   }
 
-  memset(raw_image, 0, raw_image_size);
+  bzero(raw_image, raw_image_size);
   build_scale_table(ofname);
 
   clrscr();

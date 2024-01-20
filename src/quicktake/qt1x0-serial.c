@@ -399,7 +399,7 @@ uint8 qt1x0_get_picture(uint8 n_pic, FILE *picture, off_t avail) {
     return -1;
   }
 
-  memset(buffer, 0, BLOCK_SIZE);
+  bzero(buffer, BLOCK_SIZE);
 
   cputs("  Getting header...\r\n");
 
@@ -475,7 +475,7 @@ uint8 qt1x0_get_thumbnail(uint8 n_pic, FILE *picture, thumb_info *info) {
     return -1;
   }
 
-  memset(buffer, 0, BLOCK_SIZE);
+  bzero(buffer, BLOCK_SIZE);
 
   cputs("  Getting header...\r\n");
 
