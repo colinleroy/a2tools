@@ -28,8 +28,6 @@
 /* Shared with qt-conv.c */
 char magic[5] = JPEG_EXIF_MAGIC;
 char *model = "200";
-uint16 cache_size = 4096;
-uint8 cache[4096];
 uint16 *huff_ptr;
 
 #define QT200_WIDTH 640

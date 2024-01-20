@@ -31,8 +31,6 @@
 /* Shared with qt-conv.c */
 char magic[5] = QTKT_MAGIC;
 char *model = "100";
-uint16 cache_size = 4096;
-uint8 cache[4096];
 uint16 *huff_ptr = NULL; /* unused here, just for linking */
 uint8 *dst, *src;
 
@@ -44,14 +42,14 @@ static uint8 *last_two_lines, *third_line;
 static uint8 at_very_first_line;
 
 /* Decoding stuff. The values from 0-7 are negative
- * but we reverse them when we use them for optimisation 
+ * but we reverse them when we use them for optimisation
  */
 static const uint8 gstep[16] =
 { 89,60,44,32,22,15,8,2,2,8,15,22,32,44,60,89 };
 #define NEG_STEPS 7
 
 /* Indexes. We need to follow the current pixel (at idx) at
- * various places: 
+ * various places:
  * idx_forward is start of the next row,
  * idx_behind is row-1, col-1,
  * idx_behind_plus2 is row-1, col-3,
@@ -110,7 +108,7 @@ void qt_load_raw(uint16 top)
       pix_direct_row[row] = pixel + (row * PIX_WIDTH);
     }
 
-    /* calculate offsets to shift the last two lines + 2px 
+    /* calculate offsets to shift the last two lines + 2px
      * from the end of the previous band to the start of
      * the new one.
      */
@@ -132,6 +130,8 @@ void qt_load_raw(uint16 top)
   /* We start at line 2. */
   src = pix_direct_row[2];
   for (row = 2; row != QT_BAND + 2; row++) {
+
+#ifndef __CC65__
     idx_forward = idx_end = idx = src;
     if (row & 1) {
       idx++;
@@ -141,16 +141,16 @@ void qt_load_raw(uint16 top)
     } else {
       idx_forward++;
     }
-    val_col_minus2 = (*idx);
-    idx++;
-    idx++;
 
-    idx_behind = idx;
+    val_col_minus2 = (*idx);
+    idx += 2;
 
     /* row-1, col-1 */
-    idx_behind -= (PIX_WIDTH+1);
+    idx_behind = idx - (PIX_WIDTH+1);
+
     /* row-1, col+1 */
     idx_behind_plus2 = idx_behind + 2;
+
     /* row+1, ~row & 1 */
     idx_forward += PIX_WIDTH;
 
@@ -161,9 +161,7 @@ void qt_load_raw(uint16 top)
     idx_end += width_plus2;
 
     at_very_first_col = 1;
-
     while (idx < idx_end) {
-#ifndef __CC65__
       uint8 h = getbitnohuff(4);
       if (h > NEG_STEPS) {
         val = gstep[h];
@@ -182,91 +180,7 @@ void qt_load_raw(uint16 top)
 
       /* Cache it for next loop before shifting */
       val_col_minus2 = val;
-#else
-      __asm__("lda #4");
-      __asm__("jsr %v", getbitnohuff);
-      __asm__("tay");
 
-      /* if h > NEG_STEPS */
-      __asm__("cmp #%b", NEG_STEPS + 1);
-      __asm__("bcc %g", h_neg);
-      /* h is positive */
-      __asm__("ldx #$00");
-      __asm__("lda %v,y", gstep);
-      __asm__("bra %g", gstep_done);
-      h_neg:
-      __asm__("lda %v,y", gstep);
-      __asm__("ldx #$FF");
-      __asm__("eor #$FF");
-      __asm__("clc");
-      __asm__("adc #$01");
-      __asm__("bcc %g", gstep_done);
-      __asm__("inx");
-      gstep_done:
-      __asm__("sta %v", val);
-      __asm__("stx %v+1", val);
-
-      __asm__("ldx #$00");
-
-      /* *idx_behind_plus2 * 2 */
-      __asm__("lda (%v)", idx_behind_plus2);
-      __asm__("asl a");
-      __asm__("bcc %g", noof1);
-      __asm__("inx");
-      __asm__("clc");
-
-      noof1:
-      /* *idx_behind */
-      __asm__("adc (%v)", idx_behind);
-      __asm__("bcc %g", noof2);
-      __asm__("inx");
-      __asm__("clc");
-
-      noof2:
-      /* val_col_minus2 */
-      __asm__("adc %v", val_col_minus2);
-      __asm__("bcc %g", noof3);
-      __asm__("inx");
-      noof3:
-
-      /* >> 2 */
-      __asm__("stx tmp1");
-      __asm__("cpx #$80");
-      __asm__("ror tmp1");
-      __asm__("ror a");
-      __asm__("cpx #$80");
-      __asm__("ror tmp1");
-      __asm__("ror a");
-      __asm__("ldx tmp1");
-
-      /* add to val */
-      __asm__("clc");
-      __asm__("adc %v", val);
-      __asm__("tay"); /* Backup A */
-      __asm__("txa");
-      __asm__("adc %v+1", val);
-      __asm__("sta %v+1", val);
-      __asm__("tax"); /* Put high byte back where it belongs */
-      __asm__("tya"); /* Restore A */
-
-      /* val < 0 ? */
-      __asm__("cpx #$80");
-      __asm__("bcs %g", setzero);
-      /* > 255 ? */
-      __asm__("cpx #$00");
-      __asm__("beq %g", done);
-      __asm__("lda #$FF");
-      __asm__("bra %g", done);
-      setzero:
-      __asm__("lda #$00");
-      done:
-      __asm__("stz %v+1", val);
-
-      __asm__("sta %v", val);   /* set val */
-      __asm__("sta (%v)", idx);
-      __asm__("sta %v", val_col_minus2);
-
-#endif
       idx_behind = idx_behind_plus2++;
       idx_behind_plus2++;
 
@@ -280,31 +194,281 @@ void qt_load_raw(uint16 top)
         *(idx_behind) = *(idx_behind_plus2) = val;
       }
 
-      idx++;
-      idx++;
+      idx+=2;
     }
-
     *(idx) = val;
     at_very_first_line = 0;
+#else
+    /* idx_forward = idx_end = idx = src; */
+    __asm__("lda %v", src);
+    __asm__("sta %v", idx);
+    __asm__("sta %v", idx_end);
+    __asm__("sta %v", idx_forward);
+    __asm__("lda %v+1", src);
+    __asm__("sta %v+1", idx);
+    __asm__("sta %v+1", idx_end);
+    __asm__("sta %v+1", idx_forward);
+
+    /* if (row & 1) { */
+    __asm__("lda %v", row);
+    __asm__("and #$01");
+    __asm__("beq %g", even_row);
+
+    /* idx++; */
+    __asm__("inc %v", idx);
+    __asm__("bne %g", noof12);
+    __asm__("inc %v+1", idx);
+    noof12:
+    __asm__("inc %v", pgbar_state);
+    __asm__("bne %g", noof13);
+    __asm__("inc %v+1", pgbar_state);
+    __asm__("inc %v", pgbar_state);
+    __asm__("bra %g", do_pgbar);
+    noof13:
+    __asm__("inc %v", pgbar_state);
+    __asm__("bne %g", do_pgbar);
+    __asm__("inc %v+1", pgbar_state);
+
+    do_pgbar:
+    progress_bar(-1, -1, 80*22, pgbar_state, height);
+    goto row_checked;
+
+    even_row:
+    /* idx_forward++; */
+    __asm__("inc %v", idx_forward);
+    __asm__("bne %g", row_checked);
+    __asm__("inc %v+1", idx_forward);
+
+    row_checked:
+    /* val_col_minus2 = (*idx); */
+    __asm__("lda (%v)", idx);
+    __asm__("sta %v", val_col_minus2);
+    /* idx += 2 */
+    __asm__("lda %v", idx);
+    __asm__("ldx %v+1", idx);
+    __asm__("clc");
+    __asm__("adc #2");
+    __asm__("bcc %g", noof9);
+    __asm__("inx");
+noof9:
+    __asm__("sta %v", idx);
+    __asm__("stx %v+1", idx);
+
+    /* idx_behind = idx - (PIX_WIDTH+1); */
+    __asm__("sec");
+    __asm__("sbc #<%w", PIX_WIDTH+1);
+    __asm__("sta %v", idx_behind);
+    __asm__("txa");
+    __asm__("sbc #>%w", PIX_WIDTH+1);
+    __asm__("sta %v+1", idx_behind);
+    __asm__("tax");
+
+    /* idx_behind_plus2 = idx_behind + 2; */
+    __asm__("lda %v", idx_behind);
+    __asm__("clc");
+    __asm__("adc #2");
+    __asm__("sta %v", idx_behind_plus2);
+    __asm__("bcc %g", noof10);
+    __asm__("inx");
+noof10:
+    __asm__("stx %v+1", idx_behind_plus2);
+
+    /* idx_forward += PIX_WIDTH; */
+    __asm__("clc");
+    __asm__("lda #<%w", PIX_WIDTH);
+    __asm__("adc %v", idx_forward);
+    __asm__("sta %v", idx_forward);
+
+    __asm__("lda #>%w", PIX_WIDTH);
+    __asm__("adc %v+1", idx_forward);
+    __asm__("sta %v+1", idx_forward);
+
+    /* src += PIX_WIDTH; */
+    __asm__("lda #<%w", PIX_WIDTH);
+    __asm__("clc");
+    __asm__("adc %v", src);
+    __asm__("sta %v", src);
+    __asm__("lda #>%w", PIX_WIDTH);
+    __asm__("adc %v+1", src);
+    __asm__("sta %v+1", src);
+
+    /* idx_end += width_plus2; */
+    __asm__("lda %v", idx_end);
+    __asm__("clc");
+    __asm__("adc %v", width_plus2);
+    __asm__("sta %v", idx_end);
+    __asm__("lda %v+1", idx_end);
+    __asm__("adc %v+1", width_plus2);
+    __asm__("sta %v+1", idx_end);
+
+    /* at_very_first_col = 1 */
+    __asm__("sta %v", at_very_first_col);
+
+    __asm__("jmp %g", check_idx_loop);
+idx_loop:
+    __asm__("lda #4");
+    __asm__("jsr %v", getbitnohuff);
+    __asm__("tay");
+
+    /* if h > NEG_STEPS */
+    __asm__("cmp #%b", NEG_STEPS + 1);
+    __asm__("bcc %g", h_neg);
+    /* h is positive */
+    __asm__("ldx #$00");
+    __asm__("lda %v,y", gstep);
+    __asm__("bra %g", gstep_done);
+    h_neg:
+    __asm__("lda %v,y", gstep);
+    __asm__("ldx #$FF");
+    __asm__("eor #$FF");
+    __asm__("clc");
+    __asm__("adc #$01");
+    __asm__("bcc %g", gstep_done);
+    __asm__("inx");
+    gstep_done:
+    __asm__("sta %v", val);
+    __asm__("stx %v+1", val);
+
+    __asm__("ldx #$00");
+
+    /* *idx_behind_plus2 * 2 */
+    __asm__("lda (%v)", idx_behind_plus2);
+    __asm__("asl a");
+    __asm__("bcc %g", noof1);
+    __asm__("inx");
+    __asm__("clc");
+
+    noof1:
+    /* + *idx_behind */
+    __asm__("adc (%v)", idx_behind);
+    __asm__("bcc %g", noof2);
+    __asm__("inx");
+    __asm__("clc");
+
+    noof2:
+    /* + val_col_minus2 */
+    __asm__("adc %v", val_col_minus2);
+    __asm__("bcc %g", noof3);
+    __asm__("inx");
+    noof3:
+
+    /* >> 2 */
+    __asm__("stx tmp1");
+    __asm__("cpx #$80");
+    __asm__("ror tmp1");
+    __asm__("ror a");
+    __asm__("cpx #$80");
+    __asm__("ror tmp1");
+    __asm__("ror a");
+
+    /* add to val */
+    __asm__("clc");
+    __asm__("adc %v", val);
+    __asm__("tay"); /* Backup A */
+    __asm__("lda tmp1");
+    __asm__("adc %v+1", val);
+
+    __asm__("stz %v+1", val); /* zero val's high byte */
+
+    /* val < 0 ? */
+    __asm__("bmi %g", store0);
+    /* > 255 ? */
+    __asm__("beq %g", storeval);
+    __asm__("lda #$FF");
+    __asm__("bra %g", store);
+    store0:
+    __asm__("lda #$00");
+    __asm__("bra %g", store);
+
+    storeval:
+    __asm__("tya"); /* Restore A */
+    store:
+    __asm__("sta %v", val);   /* set val */
+    __asm__("sta (%v)", idx);
+    __asm__("sta %v", val_col_minus2);
+
+    /* idx_behind = idx_behind_plus2; idx_behind_plus2+=2; */
+    __asm__("lda %v+1", idx_behind_plus2);
+    __asm__("sta %v+1", idx_behind);
+    __asm__("lda %v", idx_behind_plus2);
+    __asm__("sta %v", idx_behind);
+    __asm__("clc");
+    __asm__("adc #2");
+    __asm__("sta %v", idx_behind_plus2);
+    __asm__("bcc %g", noof11);
+    __asm__("inc %v+1", idx_behind_plus2);
+    noof11:
+    /* if (at_very_first_col) */
+    __asm__("lda %v", at_very_first_col);
+    __asm__("beq %g", not_first_col);
+
+    /* *(idx_forward) = *(idx - 2) = val;*/
+    __asm__("lda %v+1", idx);
+    __asm__("sta ptr1+1");
+    __asm__("lda %v", idx);
+    __asm__("sec");
+    __asm__("sbc #2");
+    __asm__("sta ptr1");
+    __asm__("bcs %g", nouf1);
+    __asm__("dec ptr1+1");
+    nouf1:
+    __asm__("lda %v", val);
+    __asm__("sta (%v)", idx_forward);
+    __asm__("sta (ptr1)"); /* *(idx-2) */
+
+    /* at_very_first_col = 0; */
+    __asm__("stz %v", at_very_first_col);
+    not_first_col:
+
+    /* if (at_very_first_line) */
+    __asm__("lda %v", at_very_first_line);
+    __asm__("beq %g", not_first_line);
+    /* *(idx_behind) = *(idx_behind_plus2) = val; */
+    __asm__("lda %v", val);
+    __asm__("sta (%v)", idx_behind_plus2);
+    __asm__("sta (%v)", idx_behind);
+
+    not_first_line:
+    __asm__("lda %v", idx);
+    __asm__("clc");
+    __asm__("adc #2");
+    __asm__("sta %v", idx);
+    __asm__("bcc %g", check_idx_loop);
+    __asm__("inc %v+1", idx);
+
+    check_idx_loop:
+    __asm__("lda %v", idx);
+    __asm__("cmp %v", idx_end);
+    __asm__("lda %v+1", idx);
+    __asm__("sbc %v+1", idx_end);
+    __asm__("bcc %g", idx_loop);
+
+    /* *(idx) = val; */
+    __asm__("lda %v", val);
+    __asm__("sta (%v)", idx);
+
+    /* at_very_first_line = 0; */
+    __asm__("stz %v", at_very_first_line);
+#endif
   }
 
   src = pix_direct_row[2];
   for (row = 2; row != QT_BAND + 2; row++) {
-    idx_end = idx = src;
+#ifndef __CC65__
+    idx_end = src;
 
-    idx++;
     if (row & 1) {
-      idx_min1 = idx++;
+      idx_min1 = src+1;
     } else {
-      idx++;
-      idx_min1 = idx++;
+      idx_min1 = src+2;
     }
+    idx = idx_min1+1;
     idx_plus1 = idx + 1;
+
     idx_end += width_plus2;
     src += PIX_WIDTH;
 
     while (idx < idx_end) {
-#ifndef __CC65__
       val = ((*(idx_min1) // row,col-1
             + (*(idx) << 2) //row,col
             +  *(idx_plus1)) >> 1) //row,col+1
@@ -320,46 +484,102 @@ void qt_load_raw(uint16 top)
       idx_min1 = ++idx;
       idx_plus1 = ++idx;
       idx_plus1++;
+    }
+    idx++;
+    idx++;
+
 #else
+    /* idx_end = src; */
+    __asm__("ldy %v", src);
+    __asm__("ldx %v+1", src);
+    __asm__("sty %v", idx_end);
+    __asm__("stx %v+1", idx_end);
+
+    __asm__("iny");
+    __asm__("bne %g", noof15);
+    __asm__("inx");
+    noof15:
+    __asm__("lda %v", row);
+    __asm__("and #$01");
+    __asm__("bne %g", row_checked2);
+
+    __asm__("iny");
+    __asm__("bne %g", row_checked2);
+    __asm__("inx");
+    row_checked2:
+    __asm__("sty %v", idx_min1);
+    __asm__("stx %v+1", idx_min1);
+
+    /* idx = idx_min1+1; */
+    __asm__("iny");
+    __asm__("bne %g", noof16);
+    __asm__("inx");
+    noof16:
+    __asm__("sty %v", idx);
+    __asm__("stx %v+1", idx);
+
+    /* idx_plus1 = idx + 1; */
+    __asm__("iny");
+    __asm__("bne %g", noof17);
+    __asm__("inx");
+    noof17:
+    __asm__("sty %v", idx_plus1);
+    __asm__("stx %v+1", idx_plus1);
+
+    /* idx_end += width_plus2; */
+    __asm__("lda %v", idx_end);
+    __asm__("clc");
+    __asm__("adc %v", width_plus2);
+    __asm__("sta %v", idx_end);
+    __asm__("lda %v+1", idx_end);
+    __asm__("adc %v+1", width_plus2);
+    __asm__("sta %v+1", idx_end);
+
+    /* src += PIX_WIDTH; */
+    __asm__("lda #<%w", PIX_WIDTH);
+    __asm__("clc");
+    __asm__("adc %v", src);
+    __asm__("sta %v", src);
+    __asm__("lda #>%w", PIX_WIDTH);
+    __asm__("adc %v+1", src);
+    __asm__("sta %v+1", src);
+
+    __asm__("jmp %g", check_idx_loop2);
+idx_loop2:
+
       /* *idx << 2 */
-      __asm__("ldx #$00");
       __asm__("lda (%v)", idx);
-      __asm__("stx tmp1");
+      __asm__("stz tmp1");
       __asm__("asl a");
       __asm__("rol tmp1");
       __asm__("asl a");
       __asm__("rol tmp1");
-      __asm__("ldx tmp1");
 
       /* + idx_min1 */
       __asm__("clc");
       __asm__("adc (%v)", idx_min1);
       __asm__("bcc %g", noof4);
-      __asm__("inx");
+      __asm__("inc tmp1");
       noof4:
 
       /* +idx_plus1 */
       __asm__("clc");
       __asm__("adc (%v)", idx_plus1);
       __asm__("bcc %g", noof5);
-      __asm__("inx");
+      __asm__("inc tmp1");
       noof5:
 
       /* >> 1 */
-      __asm__("stx tmp1");
       __asm__("clc");
       __asm__("ror tmp1");
       __asm__("ror a");
-      __asm__("ldx tmp1");
 
       /* - 0x100 */
-      __asm__("dex");
+      __asm__("dec tmp1");
 
       /* < 0 ? */
-      __asm__("cpx #$80");
-      __asm__("bcs %g", setzero2);
+      __asm__("bmi %g", setzero2);
       /* > 255 ? */
-      __asm__("cpx #$00");
       __asm__("beq %g", done2);
       __asm__("lda #$FF");
       __asm__("bra %g", done2);
@@ -389,10 +609,23 @@ void qt_load_raw(uint16 top)
       noof8:
       __asm__("stx %v+1", idx_plus1);
       __asm__("sta %v", idx_plus1);
+
+    check_idx_loop2:
+    __asm__("lda %v", idx);
+    __asm__("cmp %v", idx_end);
+    __asm__("lda %v+1", idx);
+    __asm__("sbc %v+1", idx_end);
+    __asm__("bcc %g", idx_loop2);
+
+    /* idx+=2; */
+    __asm__("lda %v", idx);
+    __asm__("clc");
+    __asm__("adc #2");
+    __asm__("sta %v", idx);
+    __asm__("lda %v+1", idx);
+    __asm__("adc #0");
+    __asm__("sta %v+1", idx);
 #endif
-    }
-    idx++;
-    idx++;
   }
 
   dst = raw_image;

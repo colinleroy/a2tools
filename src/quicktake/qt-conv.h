@@ -39,9 +39,6 @@ extern uint32 bitbuf;
 extern uint8 vbits;
 
 void __fastcall__ src_file_seek(uint32 off);
-uint32 __fastcall__ cache_read_since_inval(void);
-extern uint8 cache[];
-extern uint16 cache_size;
 
 void __fastcall__ src_file_get_bytes(uint8 *dst, uint16 count);
 
