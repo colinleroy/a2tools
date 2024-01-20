@@ -13,8 +13,6 @@
   char *model;
   uint16 raw_image_size;
   uint8 raw_image[<of raw_image_size>];
-  uint16 cache_size;
-  uint8 cache[<of cache_size size>];
 
   and the decoding function:
   void qt_load_raw(uint16 top)
@@ -54,6 +52,10 @@ uint16 height, width;
 uint16 raw_image_size = (QT_BAND) * 640;
 uint8 raw_image[(QT_BAND) * 640];
 
+/* Cache */
+#define CACHE_SIZE 4096
+uint8 cache[CACHE_SIZE];
+uint8 *cache_end = cache + CACHE_SIZE;
 
 /* Source file access. The cache mechanism is shared with decoders
  * but the cache size is set by decoders. Decoders should not have
@@ -62,8 +64,6 @@ uint8 raw_image[(QT_BAND) * 640];
 static FILE *ifp, *ofp;
 static const char *ifname;
 static size_t data_offset;
-
-static uint16 cache_offset;
 
 #ifdef __CC65__
 /* Can't use zp* as they're used by codecs,
@@ -74,59 +74,43 @@ static uint16 cache_offset;
 static uint8 *cur_cache_ptr;
 #endif
 
-static uint16 cache_pages_read;
 static uint32 last_seek = 0;
 
 void __fastcall__ src_file_seek(uint32 off) {
   fseek(ifp, off, SEEK_SET);
-  fread(cache, 1, cache_size, ifp);
-  cache_offset = 0;
+  fread(cache, 1, CACHE_SIZE, ifp);
   cur_cache_ptr = cache;
-  cache_pages_read = 0;
   last_seek = off;
-}
-
-uint32 __fastcall__ cache_read_since_inval(void) {
-  return last_seek + cache_pages_read + cache_offset;
 }
 
 void __fastcall__ src_file_get_bytes(uint8 *dst, uint16 count) {
   uint16 start, end;
 
-  if (cache_offset + count < cache_size) {
+  if (cur_cache_ptr + count < cache_end) {
     memcpy(dst, cur_cache_ptr, count);
     cur_cache_ptr += count;
-    cache_offset += count;
   } else {
-    start = cache_size - cache_offset;
-    memcpy(dst, cur_cache_ptr, count);
+    start = cache_end - cur_cache_ptr;
+    memcpy(dst, cur_cache_ptr, start);
     end = count - start;
-    fread(cache, 1, cache_size, ifp);
+    fread(cache, 1, CACHE_SIZE, ifp);
     memcpy(dst + start, cache, end);
     cur_cache_ptr = cache + end;
-    cache_offset = end;
-    cache_pages_read += cache_size;
   }
 }
 
 static uint16 __fastcall__ src_file_get_uint16(void) {
   uint16 v;
 
-  if (cache_offset == cache_size) {
-    fread(cache, 1, cache_size, ifp);
-    cache_offset = 0;
+  if (cur_cache_ptr == cache_end) {
+    fread(cache, 1, CACHE_SIZE, ifp);
     cur_cache_ptr = cache;
-    cache_pages_read += cache_size;
   }
-  cache_offset++;
   ((unsigned char *)&v)[1] = *(cur_cache_ptr++);
-  if (cache_offset == cache_size) {
-    fread(cache, 1, cache_size, ifp);
-    cache_offset = 0;
+  if (cur_cache_ptr == cache_end) {
+    fread(cache, 1, CACHE_SIZE, ifp);
     cur_cache_ptr = cache;
-    cache_pages_read += cache_size;
   }
-  cache_offset++;
   ((unsigned char *)&v)[0] = *(cur_cache_ptr++);
   return v;
 }
@@ -158,13 +142,10 @@ uint8 __fastcall__ getbitnohuff (uint8 n)
   }
   if (nbits >= vbits) {
     FAST_SHIFT_LEFT_8_LONG(bitbuf);
-    if (cache_offset == cache_size) {
-      fread(cache, 1, cache_size, ifp);
-      cache_offset = 0;
+    if (cur_cache_ptr == cache_end) {
+      fread(cache, 1, CACHE_SIZE, ifp);
       cur_cache_ptr = cache;
-      cache_pages_read += cache_size;
     }
-    cache_offset++;
     bitbuf += *(cur_cache_ptr++);
     vbits += 8;
   }
@@ -214,29 +195,22 @@ uint8 __fastcall__ getbitnohuff (uint8 n)
 
   nbits_pos:
   __asm__("cmp %v", vbits);
-  __asm__("jcc %g", no_read);
+  __asm__("bcc %g", no_read);
   /* shift bitbuf << 8 */
   FAST_SHIFT_LEFT_8_LONG(bitbuf);
   /* Is cache finished? */
-  __asm__("lda %v", cache_size);
-  __asm__("cmp %v", cache_offset);
+  __asm__("lda %v", cache_end);
+  __asm__("cmp %v", cur_cache_ptr);
   __asm__("bne %g", cache_ok);
-  __asm__("ldx %v+1", cache_size);
-  __asm__("cpx %v+1", cache_offset);
+  __asm__("ldx %v+1", cache_end);
+  __asm__("cpx %v+1", cur_cache_ptr);
   __asm__("bne %g", cache_ok);
 
   /* Read cache */
-  fread(cache, 1, cache_size, ifp);
-  cache_offset = 0;
+  fread(cache, 1, CACHE_SIZE, ifp);
   cur_cache_ptr = cache;
-  cache_pages_read += cache_size;
 
   cache_ok:
-  /* Inc cache offset */
-  __asm__("inc %v", cache_offset);
-  __asm__("bne %g", noof1);
-  __asm__("inc %v+1", cache_offset);
-  noof1:
   /* bitbuf += *(cur_cache_ptr++); */
   __asm__("lda %v", bitbuf);
   __asm__("clc");
@@ -270,12 +244,25 @@ uint8 __fastcall__ getbitnohuff (uint8 n)
   __asm__("cmp #%b", 24);
   __asm__("bcc %g", check_l16);
   FAST_SHIFT_LEFT_24_LONG_TO(bitbuf, tmp);
-  goto finish_left_shift;
+  __asm__("and #$07");      /* only finish shifting high byte */
+  __asm__("tay");
+  __asm__("lda %v+3", tmp);
+  __asm__("ldx #$00");
+  __asm__("jsr shlaxy");
+  __asm__("sta %v+3", tmp);
+  goto left_shift_done;
   check_l16:
   __asm__("cmp #%b", 16);
   __asm__("bcc %g", check_l8);
   FAST_SHIFT_LEFT_16_LONG_TO(bitbuf, tmp);
-  goto finish_left_shift;
+  __asm__("and #$07");      /* only finish shifting two high bytes */
+  __asm__("tay");
+  __asm__("lda %v+2", tmp);
+  __asm__("ldx %v+3", tmp);
+  __asm__("jsr shlaxy");
+  __asm__("sta %v+2", tmp);
+  __asm__("stx %v+3", tmp);
+  goto left_shift_done;
   check_l8:
   __asm__("cmp #%b", 8);
   __asm__("bcc %g", finish_left_shift);
@@ -288,6 +275,7 @@ uint8 __fastcall__ getbitnohuff (uint8 n)
   if (shift)
     tmp <<= shift;
 
+  left_shift_done:
   vbits -= nbits;
 
   /* shift = 32-nbits; */
@@ -350,13 +338,10 @@ uint8 __fastcall__ getbithuff (uint8 n)
   }
   if (nbits >= vbits) {
     FAST_SHIFT_LEFT_8_LONG(bitbuf);
-    if (cache_offset == cache_size) {
-      fread(cache, 1, cache_size, ifp);
-      cache_offset = 0;
+    if (cur_cache_ptr == cache_end) {
+      fread(cache, 1, CACHE_SIZE, ifp);
       cur_cache_ptr = cache;
-      cache_pages_read += cache_size;
     }
-    cache_offset++;
     bitbuf += *(cur_cache_ptr++);
     vbits += 8;
   }
@@ -412,25 +397,18 @@ uint8 __fastcall__ getbithuff (uint8 n)
   /* shift bitbuf << 8 */
   FAST_SHIFT_LEFT_8_LONG(bitbuf);
   /* Is cache finished? */
-  __asm__("lda %v", cache_size);
-  __asm__("cmp %v", cache_offset);
+  __asm__("lda %v", cache_end);
+  __asm__("cmp %v", cur_cache_ptr);
   __asm__("bne %g", hcache_ok);
-  __asm__("ldx %v+1", cache_size);
-  __asm__("cpx %v+1", cache_offset);
+  __asm__("ldx %v+1", cache_end);
+  __asm__("cpx %v+1", cur_cache_ptr);
   __asm__("bne %g", hcache_ok);
 
   /* Read cache */
-  fread(cache, 1, cache_size, ifp);
-  cache_offset = 0;
+  fread(cache, 1, CACHE_SIZE, ifp);
   cur_cache_ptr = cache;
-  cache_pages_read += cache_size;
 
   hcache_ok:
-  /* Inc cache offset */
-  __asm__("inc %v", cache_offset);
-  __asm__("bne %g", hnoof1);
-  __asm__("inc %v+1", cache_offset);
-  hnoof1:
   /* bitbuf += *(cur_cache_ptr++); */
   __asm__("lda %v", bitbuf);
   __asm__("clc");
@@ -464,12 +442,25 @@ uint8 __fastcall__ getbithuff (uint8 n)
   __asm__("cmp #%b", 24);
   __asm__("bcc %g", hcheck_l16);
   FAST_SHIFT_LEFT_24_LONG_TO(bitbuf, tmp);
-  goto hfinish_left_shift;
+  __asm__("and #$07");      /* only finish shifting high byte */
+  __asm__("tay");
+  __asm__("lda %v+3", tmp);
+  __asm__("ldx #$00");
+  __asm__("jsr shlaxy");
+  __asm__("sta %v+3", tmp);
+  goto hleft_shift_done;
   hcheck_l16:
   __asm__("cmp #%b", 16);
   __asm__("bcc %g", hcheck_l8);
   FAST_SHIFT_LEFT_16_LONG_TO(bitbuf, tmp);
-  goto hfinish_left_shift;
+  __asm__("and #$07");      /* only finish shifting two high bytes */
+  __asm__("tay");
+  __asm__("lda %v+2", tmp);
+  __asm__("ldx %v+3", tmp);
+  __asm__("jsr shlaxy");
+  __asm__("sta %v+2", tmp);
+  __asm__("stx %v+3", tmp);
+  goto hleft_shift_done;
   hcheck_l8:
   __asm__("cmp #%b", 8);
   __asm__("bcc %g", hfinish_left_shift);
@@ -482,6 +473,7 @@ uint8 __fastcall__ getbithuff (uint8 n)
   if (shift)
     tmp <<= shift;
 
+  hleft_shift_done:
   /* shift = 32-nbits; */
   __asm__("lda #%b", 32);
   __asm__("sec");
@@ -733,8 +725,35 @@ static void write_raw(uint16 h)
     __asm__("lda (ptr1)");
     __asm__("sta (%v)", dst_ptr);
 
-    histogram[*dst_ptr]++;
-    dst_ptr++;
+    /* histogram[*dst_ptr]++; */
+    __asm__("ldx #$00");
+    __asm__("asl a");
+    __asm__("bcc %g", noof6);
+    __asm__("inx");
+    __asm__("clc");
+    noof6:
+    __asm__("adc #<(%v)", histogram);
+    __asm__("sta ptr1");
+    __asm__("txa");
+    __asm__("adc #>(%v)", histogram);
+    __asm__("sta ptr1+1");
+
+    __asm__("lda (ptr1)");
+    __asm__("inc a");
+    __asm__("sta (ptr1)");
+    __asm__("bne %g", inc_dst);
+    __asm__("ldy #$01");
+    __asm__("lda (ptr1),y");
+    __asm__("inc a");
+    __asm__("sta (ptr1),y");
+
+    inc_dst:
+    /* dst_ptr++; */
+    __asm__("inc %v", dst_ptr);
+    __asm__("bne %g", noof7);
+    __asm__("inc %v+1", dst_ptr);
+
+    noof7:
     /* ++cur_orig_x */
     __asm__("lda #$02");
     __asm__("clc");

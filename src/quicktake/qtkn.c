@@ -29,8 +29,6 @@
 /* Shared with qt-conv.c */
 char magic[5] = QTKN_MAGIC;
 char *model = "150";
-uint16 cache_size = 4096;
-uint8 cache[4096];
 uint16 *huff_ptr;
 
 static uint16 val_from_last[256];

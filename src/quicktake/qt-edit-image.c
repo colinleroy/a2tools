@@ -57,8 +57,6 @@ uint16 crop_start_x = 0, crop_end_x;
 uint16 crop_start_y = 0, crop_end_y;
 int8 brighten = DEFAULT_BRIGHTEN;
 
-#pragma code-name(push, "LOWCODE")
-
 void get_program_disk(void) {
   while (reopen_start_device() != 0) {
     clrscr();
@@ -67,6 +65,8 @@ void get_program_disk(void) {
     cgetc();
   }
 }
+
+#pragma code-name(push, "LOWCODE")
 
 static char imgname[FILENAME_MAX];
 #ifdef __CC65__
