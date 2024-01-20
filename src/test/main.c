@@ -20,12 +20,8 @@
 
 
 int main(int argc, char *argv[]) {
-  videomode(VIDEOMODE_80COL);
-  printf("test1\n");
-  printf("test2\n");
-  cgetc();
-  putchar(0x17);
-  cgetc();
-  putchar(0x16);
+  dputc(0x07);
+  platform_msleep(200);
+  dputc(0x07);
   cgetc();
 }

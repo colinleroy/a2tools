@@ -35,7 +35,6 @@ SOURCES := stp.c stp_cli.c stp_save.c stp_send_file.c stp_delete.c \
 	../lib/path_helper.c
 
 CL65SOURCES = ../lib/simple_serial_io.s \
-	../lib/speedctrl.s \
  ../lib/dputc.s \
  ../lib/dputs.s \
  ../lib/scroll.s \

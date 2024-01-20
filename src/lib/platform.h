@@ -32,11 +32,7 @@
 #endif
 
 #ifdef __APPLE2__
-void __fastcall__ platform_sleep(uint16 s);
 void __fastcall__ platform_msleep(uint16 ms);
-void __fastcall__ slowdown();
-void __fastcall__ speedup();
 #else
-#define platform_sleep(n) sleep(n)
 #define platform_msleep(n) usleep(n*1000)
 #endif

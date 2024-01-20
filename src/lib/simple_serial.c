@@ -31,6 +31,7 @@
 #include "clrzone.h"
 
 #ifdef __CC65__
+#include <accelerator.h>
 
 #pragma static-locals(push, on)
 
@@ -358,16 +359,17 @@ uint8 orig_speed_reg; /* For IIgs */
 /* Input */
 int __fastcall__ simple_serial_getc_with_timeout(void) {
   static char c;
-
+  static char prev_spd;
   timeout_cycles = 10000U;
-  slowdown();
+  prev_spd = get_iigs_speed();
+  set_iigs_speed(SPEED_SLOW);
   while (ser_get(&c) == SER_ERR_NO_DATA) {
     if (--timeout_cycles == 0) {
-      speedup();
+      set_iigs_speed(prev_spd);
       return EOF;
     }
   }
-  speedup();
+  set_iigs_speed(prev_spd);
   return (int)c;
 }
 

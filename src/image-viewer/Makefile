@@ -30,8 +30,7 @@ imgview_SOURCES := \
 imgview_CC65SOURCES := \
 	../lib/dputc.s ../lib/scroll.s ../lib/FVTABZ.s \
 	../lib/clrzone.s ../lib/fastirq$(suffix).s \
-	../lib/extrazp.s ../lib/simple_serial_io.s \
-	 ../lib/speedctrl.s
+	../lib/extrazp.s ../lib/simple_serial_io.s
 
 imgview_GCCSOURCES := ../lib/tgi_sdl.c ../lib/tgi_fastline.c ../lib/strtrim.c ../lib/clrzone.c
 

@@ -117,7 +117,7 @@ uint8 qt1x0_wakeup(uint16 speed) {
    * we have to set DTR before clearing it.
    */
   simple_serial_acia_onoff(printer_slot, 1);
-  platform_sleep(1);
+  sleep(1);
   simple_serial_acia_onoff(printer_slot, 0);
 #else
   simple_serial_dtr_onoff(0);
@@ -143,7 +143,7 @@ uint8 qt1x0_set_speed(uint16 speed) {
   char str_speed[] = {0x16,0x2A,0x00,0x03,0x00,0x00,0x00,0x00,0x00,0x05,0x00,0x03,0x03,0x08,0x04,0x00};
   int spd_code;
 
-  platform_sleep(1);
+  sleep(1);
 
   switch(speed) {
     case 19200:
@@ -393,7 +393,7 @@ uint8 qt1x0_get_picture(uint8 n_pic, FILE *picture, off_t avail) {
   uint8 i;
   const char *format;
 
-  platform_sleep(1);
+  sleep(1);
 
   if (qt1x0_send_ping() != 0) {
     return -1;
@@ -469,7 +469,7 @@ uint8 qt1x0_get_picture(uint8 n_pic, FILE *picture, off_t avail) {
 
 /* Get a thumnail from the camera to /RAM/THUMBNAIL */
 uint8 qt1x0_get_thumbnail(uint8 n_pic, FILE *picture, thumb_info *info) {
-  platform_sleep(1);
+  sleep(1);
 
   if (qt1x0_send_ping() != 0) {
     return -1;
