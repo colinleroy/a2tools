@@ -270,12 +270,13 @@ noof9:
     __asm__("sta %v", idx_behind_plus2);
     __asm__("bcc %g", noof10);
     __asm__("inx");
+    __asm__("clc");
 noof10:
     __asm__("stx %v+1", idx_behind_plus2);
 
     /* idx_forward += PIX_WIDTH; */
-    __asm__("clc");
     __asm__("lda #<%w", PIX_WIDTH);
+    //__asm__("clc");
     __asm__("adc %v", idx_forward);
     __asm__("sta %v", idx_forward);
 
@@ -285,7 +286,7 @@ noof10:
 
     /* src += PIX_WIDTH; */
     __asm__("lda #<%w", PIX_WIDTH);
-    __asm__("clc");
+    //__asm__("clc");
     __asm__("adc %v", src);
     __asm__("sta %v", src);
     __asm__("lda #>%w", PIX_WIDTH);
@@ -294,7 +295,7 @@ noof10:
 
     /* idx_end += width_plus2; */
     __asm__("lda %v", idx_end);
-    __asm__("clc");
+    //__asm__("clc");
     __asm__("adc %v", width_plus2);
     __asm__("sta %v", idx_end);
     __asm__("lda %v+1", idx_end);
@@ -537,7 +538,7 @@ idx_loop:
 
     /* src += PIX_WIDTH; */
     __asm__("lda #<%w", PIX_WIDTH);
-    __asm__("clc");
+    //__asm__("clc");
     __asm__("adc %v", src);
     __asm__("sta %v", src);
     __asm__("lda #>%w", PIX_WIDTH);
@@ -560,17 +561,17 @@ idx_loop2:
       __asm__("adc (%v)", idx_min1);
       __asm__("bcc %g", noof4);
       __asm__("inc tmp1");
+      __asm__("clc");
       noof4:
 
       /* +idx_plus1 */
-      __asm__("clc");
       __asm__("adc (%v)", idx_plus1);
       __asm__("bcc %g", noof5);
       __asm__("inc tmp1");
+      __asm__("clc");
       noof5:
 
       /* >> 1 */
-      __asm__("clc");
       __asm__("ror tmp1");
       __asm__("ror a");
 

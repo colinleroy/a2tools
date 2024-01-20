@@ -886,12 +886,11 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
         __asm__("adc %v+1", buf_plus_err);
         __asm__("sta %v+1", buf_plus_err);
 
-        __asm__("lda %v+1", buf_plus_err);
         __asm__("bmi %g", black_pix);
         __asm__("bne %g", white_pix);
         __asm__("lda %v", buf_plus_err);
         __asm__("cmp #<(%b)", DITHER_THRESHOLD);
-        __asm__("bcc %g", black_pix);
+        __asm__("bcc %g", black_pix2);
         white_pix:
         __asm__("lda (%v)", ptr);
         __asm__("ora %v", pixel);
@@ -899,6 +898,7 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
 
         black_pix:
         __asm__("lda %v", buf_plus_err);
+        black_pix2:
         __asm__("cmp #$80");
         __asm__("ror a");
         __asm__("cmp #$80");

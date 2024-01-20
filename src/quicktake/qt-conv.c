@@ -74,13 +74,9 @@ static size_t data_offset;
 static uint8 *cur_cache_ptr;
 #endif
 
-static uint32 last_seek = 0;
-
 void __fastcall__ src_file_seek(uint32 off) {
   fseek(ifp, off, SEEK_SET);
-  fread(cache, 1, CACHE_SIZE, ifp);
-  cur_cache_ptr = cache;
-  last_seek = off;
+  fread(cur_cache_ptr = cache, 1, CACHE_SIZE, ifp);
 }
 
 void __fastcall__ src_file_get_bytes(uint8 *dst, uint16 count) {
@@ -103,13 +99,11 @@ static uint16 __fastcall__ src_file_get_uint16(void) {
   uint16 v;
 
   if (cur_cache_ptr == cache_end) {
-    fread(cache, 1, CACHE_SIZE, ifp);
-    cur_cache_ptr = cache;
+    fread(cur_cache_ptr = cache, 1, CACHE_SIZE, ifp);
   }
   ((unsigned char *)&v)[1] = *(cur_cache_ptr++);
   if (cur_cache_ptr == cache_end) {
-    fread(cache, 1, CACHE_SIZE, ifp);
-    cur_cache_ptr = cache;
+    fread(cur_cache_ptr = cache, 1, CACHE_SIZE, ifp);
   }
   ((unsigned char *)&v)[0] = *(cur_cache_ptr++);
   return v;
@@ -143,8 +137,7 @@ uint8 __fastcall__ getbitnohuff (uint8 n)
   if (nbits >= vbits) {
     FAST_SHIFT_LEFT_8_LONG(bitbuf);
     if (cur_cache_ptr == cache_end) {
-      fread(cache, 1, CACHE_SIZE, ifp);
-      cur_cache_ptr = cache;
+      fread(cur_cache_ptr = cache, 1, CACHE_SIZE, ifp);
     }
     bitbuf += *(cur_cache_ptr++);
     vbits += 8;
@@ -207,8 +200,7 @@ uint8 __fastcall__ getbitnohuff (uint8 n)
   __asm__("bne %g", cache_ok);
 
   /* Read cache */
-  fread(cache, 1, CACHE_SIZE, ifp);
-  cur_cache_ptr = cache;
+  fread(cur_cache_ptr = cache, 1, CACHE_SIZE, ifp);
 
   cache_ok:
   /* bitbuf += *(cur_cache_ptr++); */
@@ -231,7 +223,7 @@ uint8 __fastcall__ getbitnohuff (uint8 n)
   noof2:
   /* vbits += 8; */
   __asm__("lda #%b", 8);
-  __asm__("clc");
+  //__asm__("clc");
   __asm__("adc %v", vbits);
   __asm__("sta %v", vbits);
 
@@ -339,8 +331,7 @@ uint8 __fastcall__ getbithuff (uint8 n)
   if (nbits >= vbits) {
     FAST_SHIFT_LEFT_8_LONG(bitbuf);
     if (cur_cache_ptr == cache_end) {
-      fread(cache, 1, CACHE_SIZE, ifp);
-      cur_cache_ptr = cache;
+      fread(cur_cache_ptr = cache, 1, CACHE_SIZE, ifp);
     }
     bitbuf += *(cur_cache_ptr++);
     vbits += 8;
@@ -405,8 +396,7 @@ uint8 __fastcall__ getbithuff (uint8 n)
   __asm__("bne %g", hcache_ok);
 
   /* Read cache */
-  fread(cache, 1, CACHE_SIZE, ifp);
-  cur_cache_ptr = cache;
+  fread(cur_cache_ptr = cache, 1, CACHE_SIZE, ifp);
 
   hcache_ok:
   /* bitbuf += *(cur_cache_ptr++); */
@@ -429,7 +419,7 @@ uint8 __fastcall__ getbithuff (uint8 n)
   hnoof2:
   /* vbits += 8; */
   __asm__("lda #%b", 8);
-  __asm__("clc");
+  //__asm__("clc");
   __asm__("adc %v", vbits);
   __asm__("sta %v", vbits);
 
@@ -756,7 +746,7 @@ static void write_raw(uint16 h)
     noof7:
     /* ++cur_orig_x */
     __asm__("lda #$02");
-    __asm__("clc");
+    //__asm__("clc");
     __asm__("adc %v", cur_orig_x);
     __asm__("sta %v", cur_orig_x);
     __asm__("bcc %g", noof5);
