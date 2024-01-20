@@ -62,7 +62,7 @@ uint8 state_load(uint8 state_num, uint16 *num, char **edit_name) {
 
 uint8 state_set(uint8 state_num, uint16 num, const char *edit_name) {
   if (state_io("r") != 0) {
-    memset(&state, 0, sizeof(state));
+    bzero(&state, sizeof(state));
   }
   state.num[state_num] = num;
   if (state_num == STATE_EDIT) {

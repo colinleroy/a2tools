@@ -339,7 +339,7 @@ uint8 qt200_get_picture(uint8 n_pic, FILE *picture, off_t avail) {
     return -1;
   }
 
-  memset(buffer, 0, BLOCK_SIZE);
+  bzero(buffer, BLOCK_SIZE);
 
 	data_cmd[NUM_PIC_IDX] = n_pic;
 
