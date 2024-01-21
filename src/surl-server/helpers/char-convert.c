@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -51,16 +52,18 @@ static char *do_conv(char *in, char *from, char *to, size_t *new_len) {
   return orig_out;
 }
 
-char *do_charset_convert(char *in, int way, char *a2charset, size_t *new_len) {
+char *do_charset_convert(char *in, int way, char *a2charset, int lowercase, size_t *new_len) {
   char *out_final = NULL;
   char *out_ascii = NULL;
   char translit_charset[50];
-  
+  char *out;
+
   size_t ascii_len, i;
 
   if (in == NULL) {
     return NULL;
   }
+
   snprintf(translit_charset, 50, "%s//TRANSLIT", a2charset);
   if (way == OUTGOING) {
     out_final = do_conv(in, "UTF-8", translit_charset, new_len);
@@ -88,14 +91,35 @@ char *do_charset_convert(char *in, int way, char *a2charset, size_t *new_len) {
     return out_final;
 
   } else {
+    in = strdup(in);
+    if (lowercase) {
+      char prev = '.'; /* don't lowercase first char */
+      for (i = 0; i < strlen(in); i++) {
+        /* ignore spaces */
+        if (isspace(in[i])) {
+          continue;
+        }
+        /* Ignore chars after punctuation */
+        if (strchr(".!?", prev) != NULL) {
+          prev = in[i];
+          continue;
+        }
+        prev = in[i];
+        /* Ignore non-alphabetic chars */
+        if (!isalpha(in[i])) {
+          continue;
+        }
+        in[i] = tolower(in[i]);
+      }
+    }
     /* Special case for Apple 2 French charset, which does not contain
      * @ or #. We ask the French user of the Apple 2 to use
      * § for @, and £ for #. 
      */
     if (!strcmp(a2charset, "ISO646-FR1")) {
       /* Do a step to ISO8859 to keep § and £ chars */
-      char *out;
       char *tmp = do_conv(in, a2charset, "ISO-8859-1//TRANSLIT", new_len);
+      free(in);
       for (i = 0; i < strlen(tmp); i++) {
         switch(tmp[i]) {
           case '\247': tmp[i] = '@'; break;
@@ -106,7 +130,9 @@ char *do_charset_convert(char *in, int way, char *a2charset, size_t *new_len) {
       free(tmp);
       return out;
     } else {
-      return do_conv(in, a2charset, "UTF-8//TRANSLIT", new_len);
+      out = do_conv(in, a2charset, "UTF-8//TRANSLIT", new_len);
+      free(in);
+      return out;
     }
   }
   return NULL;
