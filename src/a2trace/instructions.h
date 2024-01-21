@@ -36,7 +36,7 @@ int update_call_counters(int cpu, int op_addr, const char *instr, int param_addr
 int is_instruction_write(const char *instr);
 int analyze_instruction(int cpu, int op_addr, const char *instr, int param_addr, char *comment);
 
-int instruction_get_addressing_mode(int cpu, const char *arg);
+int instruction_get_addressing_mode(int cpu, const char *instr, const char *arg);
 int get_cycles_for_instr(int cpu, const char *instr, int a_mode, int *extra_cost_if_taken);
 
 /* Memory banking */
