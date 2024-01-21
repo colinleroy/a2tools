@@ -94,7 +94,7 @@ static int detect_tracelog(char *first_part, char *second_part) {
   exit(1);
 }
 
-static void update_regs(const char *buf, int *a, int *x, int *y) {
+static void update_regs(const char *buf, int *a, int *x, int *y, int *p) {
   *a = *x = *y = 0;
   if (strstr(buf, "A="))
     *a = hex2int(strstr(buf, "A=") + 2);
@@ -102,6 +102,24 @@ static void update_regs(const char *buf, int *a, int *x, int *y) {
     *x = hex2int(strstr(buf, "X=") + 2);
   if (strstr(buf, "Y="))
     *y = hex2int(strstr(buf, "Y=") + 2);
+  if (strstr(buf, "P="))
+    *p = hex2int(strstr(buf, "P=") + 2);
+}
+
+static const char *print_flags(int flags) {
+  static char *flagstr = NULL;
+
+  if (flagstr == NULL)
+    flagstr = strdup("........");
+
+  flagstr[0] = ((flags & 0b10000000) != 0) ? 'N':'.';
+  flagstr[1] = ((flags & 0b01000000) != 0) ? 'V':'.';
+  flagstr[4] = ((flags & 0b00001000) != 0) ? 'D':'.';
+  flagstr[5] = ((flags & 0b00000100) != 0) ? 'I':'.';
+  flagstr[6] = ((flags & 0b00000010) != 0) ? 'Z':'.';
+  flagstr[7] = ((flags & 0b00000001) != 0) ? 'C':'.';
+
+  return flagstr;
 }
 
 static void annotate_run(const char *file) {
@@ -118,6 +136,12 @@ static void annotate_run(const char *file) {
     exit(1);
   }
 
+  if (!do_callgrind) {
+    printf("Line #  ; Registers     ; Flags   ; Addr: Instruction            ;"
+           " Resolved address                            "
+           "; Instruction with symbol                    "
+           "; Location\n");
+  }
 skip_to_start:
   line_buf[0] = '\0';
 
@@ -174,7 +198,7 @@ skip_to_start:
       char comment[BUF_SIZE];
       char * cur_lineaddress;
       int addr_field;
-      int a, x, y;
+      int a, x, y, p;
 
       cur_line++;
 
@@ -225,9 +249,6 @@ skip_to_start:
         arg = fix_mame_param(arg);
       }
 
-      if (cur_line == 869130) {
-        printf("!!");
-      }
       if (op_addr >= 0) {
         /* Get our sloc only if the address is in RAM, out of LC or in LC page 2
          * Otherwise we're quite sure not to have a real symbol defined
@@ -268,15 +289,14 @@ skip_to_start:
         }
       }
 
+      /* Figure out A X Y */
+      update_regs(parts[0], &a, &x, &y, &p);
+
       if (arg && arg[0] == '$') {
         if (strchr(arg, '\n'))
           *strchr(arg, '\n') = '\0';
 
         param_addr = 0;
-        if (op_idx > 0 && (strstr(arg, ", x") || strstr(arg, ", y"))) {
-          /* Figure out A X Y */
-          update_regs(parts[0], &a, &x, &y);
-        }
         /* calculate offset */
         if (strstr(arg, ", x")) {
           param_addr = x;
@@ -337,9 +357,9 @@ try_gen:
       int backtab = 0;
       /* Print the line as-is */
       if (!do_callgrind) {
-        printf("%08d %s", cur_line, line_buf);
-        if (strlen(line_buf) > op_idx + 18) {
-          backtab = op_idx + 19 - strlen(line_buf);
+        printf("%08d; A=%02X X=%02X Y=%02X; %s; %s", cur_line, a, x, y, print_flags(p), line_buf + op_idx);
+        if (strlen(line_buf) > op_idx + 28) {
+          backtab = op_idx + 29 - strlen(line_buf);
         }
       }
 
@@ -353,12 +373,12 @@ try_gen:
        || (!sloc && !instr_symbol && !param_symbol)) {
         /* print either banking comment or finish the line if we have zero data about it */
         if (!do_callgrind) {
-          tabulate(line_buf, op_idx + 18);
+          tabulate(line_buf, op_idx + 28);
           printf("; *%s*\n", comment);
         }
       } else {
         if (!do_callgrind) {
-          tabulate(line_buf, op_idx + 18);
+          tabulate(line_buf, op_idx + 28);
           printf("; adr: ");
         }
         /* Display the instruction's symbol */
@@ -452,7 +472,7 @@ err_usage:
            "Either -d or -l is required; -t is required.\n"
            "\n"
            "Generate trace files in MAME debugger using:\n"
-           "  trace program.tr,maincpu,noloop,{tracelog \"A=%%02X,X=%%02X,Y=%%02X \",a,x,y}\n\n",
+           "  trace program.tr,maincpu,noloop,{tracelog \"A=%%02X,X=%%02X,Y=%%02X,P=%%02X \",a,x,y,p}\n\n",
            argv[0]);
     exit(1);
   }
