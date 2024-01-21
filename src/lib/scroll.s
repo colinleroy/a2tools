@@ -40,6 +40,8 @@ upagain:
         bne     upagain
         rts
 
+.ifdef __APPLE2ENH__
+
 .ifndef AVOID_ROM_CALLS
 
 _scrolldown_one:
@@ -64,7 +66,6 @@ _scrolldown_one:
 _scrollup_one:
         ldy     #1              ;direction = up
 
-.ifdef __APPLE2ENH__
 scrollit:
         txa                     ;save X
         pha
@@ -217,7 +218,16 @@ clr3:
         sec
         rts
 
+.endif  ; AVOID_ROM_CALLS
+
 .else   ; __APPLE2__
+
+_scrolldown_one:
+        ldy     #0              ;direction = down
+        beq     scrollit        ;go do scroll
+
+_scrollup_one:
+        ldy     #1              ;direction = up
 
 scrollit:
         sty     TEMP1           ;save direction
@@ -274,7 +284,5 @@ cleol2: sta     (BASL),y
         cpy     WNDWDTH
         bcc     cleol2
         rts
-
-.endif
 
 .endif
