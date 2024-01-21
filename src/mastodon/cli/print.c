@@ -164,8 +164,10 @@ int print_status(status *s, char hide, char full) {
       dputs(p->own_votes[i] == 1 ? "(*) ":"( ) ");
       dputs(o->title);
       CHECK_AND_CRLF();
-      progress_bar(wherex() + 4, wherey(), wrap_idx - 3,
+      dputs("    ");
+      progress_bar(wherex(), wherey(), wrap_idx - 4,
                    o->votes_count, total);
+      gotox(wrap_idx); /* don't clear our progress_bar */
       CHECK_AND_CRLF();
     }
   }

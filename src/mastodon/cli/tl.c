@@ -953,7 +953,11 @@ static void do_vote (status *status) {
       c = scrh - 1;
     }
     clrzone(0, c, scrw - RIGHT_COL_START - 1, c);
+#if NUMCOLS == 80
     dputs("1-4 to choose, Enter to vote, Escape to cancel");
+#else
+    dputs("1-4: choose, Enter: vote, Esc: cancel");
+#endif
     c = tolower(cgetc());
 
     switch(c) {
