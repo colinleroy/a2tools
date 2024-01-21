@@ -276,7 +276,7 @@ skip_to_start:
        * Done here instead of in instructions.c to be
        * able to display a potentially problematic line
        */
-      a_mode = instruction_get_addressing_mode(cpu, arg);
+      a_mode = instruction_get_addressing_mode(cpu, instr, arg);
       if ((cycles += get_cycles_for_instr(cpu, instr, a_mode, &cost_if_taken)) < 0) {
         fprintf(stderr, "%s\n", buf);
         exit(1);
@@ -365,7 +365,7 @@ try_gen:
 
       /* Profile if needed */
       if (do_callgrind && update_call_counters(cpu, op_addr, instr, param_addr, cycles, cur_line) < 0) {
-        printf("; Error popping call tree at trace line %d\n", cur_line);
+        fprintf(stderr, "; Error popping call tree at trace line %d\n", cur_line);
       }
 
       /* Analyse instruction to follow memory banking */

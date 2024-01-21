@@ -139,8 +139,8 @@ int lc_bank   = 1;
 
 extern int start_addr;
 static int _main_addr;
-static int handle_rom_irq_addr = 0x0;
-static int handle_ram_irq_addr = 0x0;
+static int handle_rom_irq_addr = 0xffffffff;
+static int handle_ram_irq_addr = 0xffffffff;
 
 extern int verbose;
 
@@ -217,7 +217,7 @@ int is_addr_in_cc65_user_bank (int op_addr) {
 }
 
 /* Figure out the addressing mode for the instruction */
-int instruction_get_addressing_mode(int cpu, const char *arg) {
+int instruction_get_addressing_mode(int cpu, const char *instr, const char *arg) {
   int len;
   int shift = 0;
 
@@ -293,7 +293,7 @@ indexed_modes:
     shift = 2;
     goto indexed_modes;
   }
-  fprintf(stderr, "Warning: unknown addressing mode for %s\n", arg);
+  fprintf(stderr, "Warning: unknown addressing mode for %s %s\n", instr, arg);
   return ADDR_MODE_ABS;
 }
 
@@ -457,6 +457,7 @@ static function_calls *get_function_calls_for_addr(int addr) {
      * the array, so as to dump it first and once
      * in the
      * callgrind file */
+
     if (addr == start_addr) {
       if (!root_call)
         root_call = function_calls_new(start_addr);
@@ -503,9 +504,12 @@ int get_cycles_for_instr(int cpu, const char *instr, int a_mode, int *extra_cost
 }
 
 /* Count current instruction */
-static void count_instruction(const char *instr, int cycle_count) {
+static int count_instruction(const char *instr, int cycle_count) {
+  if (tree_depth == 0)
+    return - 1;
   tree_functions[tree_depth - 1]->cur_call_self_instruction_count++;
   tree_functions[tree_depth - 1]->cur_call_self_cycle_count += cycle_count;
+  return 0;
 }
 
 /* Find a function in an array */
@@ -664,7 +668,9 @@ int update_call_counters(int cpu, int op_addr, const char *instr, int param_addr
   }
 
   /* Count the instruction */
-  count_instruction(instr, cycle_count);
+  if (count_instruction(instr, cycle_count) != 0) {
+    return -1;
+  }
 
   /* Are we entering an IRQ handler ? */
   if (op_addr == ROM_IRQ_ADDR[cpu] || op_addr == PRODOS_IRQ_ADDR
@@ -820,9 +826,14 @@ static void dump_callee(function_calls *cur) {
  * Ref: https://valgrind.org/docs/manual/cl-format.html
  */
 static void dump_function(function_calls *cur) {
-  dbg_symbol *sym = cur->func_symbol;
+  dbg_symbol *sym;
   int i;
 
+  if (cur == NULL) {
+    return;
+  }
+
+  sym = cur->func_symbol;
   /* Dump the function definition and self
    * instruction count */
   printf("fl=%s%s\n"
@@ -904,6 +915,8 @@ void allocate_trace_counters(void) {
    * jmp to it and we'll still want to record it. */
   _main_addr = symbol_get_addr(symbol_get_by_name("_main"));
 
-  handle_rom_irq_addr = symbol_get_addr(symbol_get_by_name("handle_rom_irq"));
-  handle_ram_irq_addr = symbol_get_addr(symbol_get_by_name("handle_ram_irq"));
+  if (symbol_get_by_name("handle_rom_irq"))
+    handle_rom_irq_addr = symbol_get_addr(symbol_get_by_name("handle_rom_irq"));
+  if (symbol_get_by_name("handle_ram_irq"))
+    handle_ram_irq_addr = symbol_get_addr(symbol_get_by_name("handle_ram_irq"));
 }
