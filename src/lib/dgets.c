@@ -401,7 +401,11 @@ stop_down:
 
         /* rewrite buffer after inserted char */
         cur_insert++;
+#ifdef __APPLE2ENH__
         overflowed = rewrite_end_of_buffer(c == CH_ENTER);
+#else /* No insertion on non-enhanced Apple 2 so rewrite everything */
+        overflowed = rewrite_end_of_buffer(1);
+#endif
         cur_insert--;
 
         if (cur_y == win_height_min1 && overflowed) {
@@ -432,6 +436,12 @@ stop_down:
     }
   }
 out:
+
+#ifndef __APPLE2ENH__
+  /* No deletion on non-enhanced Apple 2 so remove everything
+   * after the cursor */
+  max_insert = cur_insert;
+#endif
   cursor(prev_cursor);
   text_buf[max_insert] = '\0';
 
