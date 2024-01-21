@@ -32,8 +32,9 @@ _dputc:
         cmp    #$07
         bne    :+
         jmp     bell
-:       jsr     _cputc
-        pha
+:       pha
+        jsr     _cputc
+        pla
         cmp     #$0D            ; Don't scroll if \r
         beq     noscroll
         lda     WNDTOP          ; Don't scroll if not at first line
@@ -55,7 +56,6 @@ _dputc:
         jsr     FVTABZ
 
 noscroll:
-        pla
         rts
 
 .else

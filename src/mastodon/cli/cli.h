@@ -12,7 +12,7 @@
 #define N_STATUS_TO_LOAD 10
 
 #else
-#define LEFT_COL_WIDTH -1
+#define LEFT_COL_WIDTH 39
 #define RIGHT_COL_START 0
 #define NUMCOLS 40
 #define KEY_COMB "Ctrl"
