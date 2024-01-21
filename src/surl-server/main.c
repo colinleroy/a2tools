@@ -524,7 +524,7 @@ abort:
 
             /* Convert the charset */
             if (translit[0] != '0') {
-              char *text = do_charset_convert(result, OUTGOING, translit, &l);
+              char *text = do_charset_convert(result, OUTGOING, translit, 0, &l);
               free(result);
               result = text;
             }
@@ -579,7 +579,7 @@ abort:
       } else if (cmd == SURL_CMD_TRANSLIT) {
         char *tmp = NULL;
         if (translit[0] != '\0') {
-          tmp = do_charset_convert(response->buffer, OUTGOING, translit, &l);
+          tmp = do_charset_convert(response->buffer, OUTGOING, translit, 0, &l);
         }
         if (tmp) {
           free(response->buffer);
@@ -737,8 +737,13 @@ static char *prepare_post(char *buffer, size_t *len) {
   char **lines;
   int n_lines = strsplit_in_place(buffer, '\n', &lines);
   int i;
+  int lowercase = 0;
+
   for (i = 0; i < n_lines; i += 2) {
     char *translit = NULL;
+
+    lowercase = (strstr(lines[i], "|TRANSLITLC")) != NULL;
+
     if (strstr(lines[i], "|TRANSLIT")) {
       translit = strstr(lines[i], "|TRANSLIT") + 1;
       translit = strchr(translit, '|') + 1;
@@ -756,7 +761,7 @@ static char *prepare_post(char *buffer, size_t *len) {
       nl = replace_new_lines(lines[i + 1]);
       if (translit) {
         size_t tmp_len;
-        translit_data = do_charset_convert(nl, INCOMING, translit, &tmp_len);
+        translit_data = do_charset_convert(nl, INCOMING, translit, lowercase, &tmp_len);
       } else {
         translit_data = strdup(nl);
       }
@@ -816,6 +821,7 @@ static char *prepare_json_post(char *buffer, size_t *len) {
   for (i = 0; i < n_lines; i += 2) {
     char *translit = NULL;
     char type = 'S';
+    int lowercase;
 
     /* get type */
     type = lines[i][0];
@@ -824,6 +830,8 @@ static char *prepare_json_post(char *buffer, size_t *len) {
       break;
     }
     lines[i] += 2;
+
+    lowercase = (strstr(lines[i], "|TRANSLITLC")) != NULL;
 
     if (strstr(lines[i], "|TRANSLIT")) {
       translit = strstr(lines[i], "|TRANSLIT") + 1;
@@ -848,7 +856,7 @@ static char *prepare_json_post(char *buffer, size_t *len) {
 
       if (translit) {
         size_t tmp_len;
-        translit_data = do_charset_convert(nl, INCOMING, translit, &tmp_len);
+        translit_data = do_charset_convert(nl, INCOMING, translit, lowercase, &tmp_len);
       } else {
         translit_data = strdup(nl);
       }

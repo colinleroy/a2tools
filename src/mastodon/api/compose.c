@@ -16,6 +16,12 @@
 #pragma code-name (push, "LOWCODE")
 #endif
 
+#ifdef __APPLE2ENH__
+#define TRANSLITCMD "TRANSLIT"
+#else
+#define TRANSLITCMD "TRANSLITLC"
+#endif
+
 char *compose_audience_str(char compose_audience) {
   switch(compose_audience) {
     case COMPOSE_PUBLIC:   return "public";
@@ -102,7 +108,7 @@ send_again:
     /* Set description */
     int len;
     char *body = malloc0(1536);
-    snprintf(body, 1536, "S|description|TRANSLIT|%s\n%s\n",
+    snprintf(body, 1536, "S|description|"TRANSLITCMD"|%s\n%s\n",
                           translit_charset,
                           description);
 
@@ -194,8 +200,8 @@ signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medi
                        "%s"
                        "S|visibility\n%s\n"
                        "B|sensitive\n%s\n"
-                       "S|spoiler_text|TRANSLIT|%s\n%s\n"
-                       "S|status|TRANSLIT|%s\n",
+                       "S|spoiler_text|"TRANSLITCMD"|%s\n%s\n"
+                       "S|status|"TRANSLITCMD"|%s\n",
                         (ref_toot_id && mode == 'r') ? 'S' : 'B',
                         (ref_toot_id && mode == 'r') ? ref_toot_id : "null",
                         extra_buf ? extra_buf : "",
