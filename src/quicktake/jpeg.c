@@ -122,11 +122,11 @@ static int16 *ZAG_Coeff[] =
 // 8*8*4 bytes * 3 = 768
 static uint8 gMCUBufG[256];
 // 256 bytes
-static int16 gQuant0[8*8];
-static int16 gQuant1[8*8];
+static uint16 gQuant0[8*8];
+static uint16 gQuant1[8*8];
 
 // 6 bytes
-static int16 gLastDC[3];
+static uint16 gLastDC[3];
 
 typedef struct HuffTableT
 {
@@ -288,7 +288,7 @@ out:
   return 0;
 }
 //------------------------------------------------------------------------------
-static uint16 getBits(uint8 numBits, uint8 FFCheck)
+static uint16 __fastcall__ getBits(uint8 numBits, uint8 FFCheck)
 {
   uint8 n = numBits, tmp;
   uint8 ff = FFCheck;
@@ -454,35 +454,51 @@ static uint16 getBits(uint8 numBits, uint8 FFCheck)
 //------------------------------------------------------------------------------
 static PJPG_INLINE uint8 getBit(void)
 {
-   uint8 ret = 0;
-   if (gBitBuf & 0x8000)
+  uint8 ret = 0;
+
+#ifndef __CC65__
+  if (gBitBuf & 0x8000)
       ret = 1;
 
-   if (!gBitsLeft)
-   {
-#ifndef __CC65__
+  if (!gBitsLeft)
+  {
       gBitBuf |= getOctet(1);
-#else
-    __asm__("lda #1");
-    __asm__("jsr %v", getOctet);
-      __asm__("ora %v", gBitBuf);
-      __asm__("sta %v", gBitBuf);
-#endif
-
       gBitsLeft += 8;
-   }
-
-   gBitsLeft--;
-#ifndef __CC65__
-   gBitBuf <<= 1;
+  }
+  gBitsLeft--;
+  gBitBuf <<= 1;
 #else
+  __asm__("lda %v+1", gBitBuf);
+  __asm__("and #$80");
+  __asm__("beq %g", notLast);
+  __asm__("lda #1");
+  __asm__("sta %v", ret);
+
+  notLast:
+  __asm__("lda %v", gBitsLeft);
+  __asm__("bne %g", bitsLeft);
+
+  __asm__("lda #1");
+  __asm__("jsr %v", getOctet);
+  __asm__("ora %v", gBitBuf);
+  __asm__("sta %v", gBitBuf);
+
+  __asm__("lda %v", gBitsLeft);
+  __asm__("clc");
+  __asm__("adc #8");
+  bitsLeft:
+  __asm__("dec a");
+  __asm__("sta %v", gBitsLeft);
+
   __asm__("asl %v", gBitBuf);
   __asm__("rol %v+1", gBitBuf);
 #endif
-   return ret;
+
+  return ret;
 }
+
 //------------------------------------------------------------------------------
-static uint16 getExtendTest(uint8 i)
+static uint16 __fastcall__ getExtendTest(uint8 i)
 {
    switch (i)
    {
@@ -506,7 +522,7 @@ static uint16 getExtendTest(uint8 i)
    }
 }
 //------------------------------------------------------------------------------
-static int16 getExtendOffset(uint8 i)
+static int16 __fastcall__ getExtendOffset(uint8 i)
 {
    switch (i)
    {
@@ -530,16 +546,19 @@ static int16 getExtendOffset(uint8 i)
    }
 };
 //------------------------------------------------------------------------------
-static PJPG_INLINE int16 huffExtend(uint16 x, uint8 s)
+static PJPG_INLINE int16 __fastcall__ huffExtend(uint16 x, uint8 s)
 {
-   uint8 lx = x, ls = s;
+   uint16 lx = x;
+   uint8 ls = s;
    return ((lx < getExtendTest(ls)) ? ((int16)lx + getExtendOffset(ls)) : (int16)lx);
 }
 //------------------------------------------------------------------------------
 static PJPG_INLINE uint8 huffDecode(HuffTable* pHuffTable, const uint8* pHuffVal)
 {
   uint8 i = 0;
+#ifndef __CC65__
   uint8 j;
+#endif
   uint16 code = getBit();
   HuffTable *curTable = pHuffTable;
   register uint16 *curMaxCode = curTable->mMaxCode;
@@ -552,6 +571,7 @@ static PJPG_INLINE uint8 huffDecode(HuffTable* pHuffTable, const uint8* pHuffVal
     if (i == 16)
       return 0;
 
+#ifndef __CC65__
     if (*curMaxCode != 0xFFFF) {
       if (*curMaxCode >= code)
         break;
@@ -562,10 +582,34 @@ static PJPG_INLINE uint8 huffDecode(HuffTable* pHuffTable, const uint8* pHuffVal
     curMinCode++;
     curValPtr++;
 
-#ifndef __CC65__
     code <<= 1;
     code |= getBit();
 #else
+    if (*curMaxCode != 0xFFFF) {
+      if (*curMaxCode >= code)
+        break;
+    }
+    noTest:
+    __asm__("inc %v", i);
+    __asm__("clc");
+    __asm__("lda %v", curMaxCode);
+    __asm__("adc #%b", sizeof(uint16));
+    __asm__("sta %v", curMaxCode);
+    __asm__("bcc %g", noof2);
+    __asm__("inc %v+1", curMaxCode);
+    __asm__("clc");
+    noof2:
+    __asm__("lda %v", curMinCode);
+    __asm__("adc #%b", sizeof(uint16));
+    __asm__("sta %v", curMinCode);
+    __asm__("bcc %g", noof3);
+    __asm__("inc %v+1", curMinCode);
+    __asm__("clc");
+    noof3:
+    __asm__("inc %v", curValPtr);
+    __asm__("bne %g", noof4);
+    __asm__("inc %v+1", curValPtr);
+    noof4:
     __asm__("asl %v", code);
     __asm__("rol %v+1", code);
     __asm__("jsr %v", getBit);
@@ -576,16 +620,28 @@ static PJPG_INLINE uint8 huffDecode(HuffTable* pHuffTable, const uint8* pHuffVal
 
 #ifndef __CC65__
   j = (uint8)*curValPtr + (uint8)code - (uint8)*curMinCode;
+  return pHuffVal[j];
 #else
   __asm__("clc");
   __asm__("lda (%v)", curValPtr);
   __asm__("adc %v", code);
   __asm__("sec");
   __asm__("sbc (%v)", curMinCode);
-  __asm__("sta %v", j);
+  __asm__("pha"); //j
+
+  __asm__("ldy #%o", pHuffVal);
+  __asm__("clc");
+  __asm__("lda (sp),y");
+  __asm__("sta ptr1");
+  __asm__("iny");
+  __asm__("lda (sp),y");
+  __asm__("sta ptr1+1");
+  __asm__("pla"); //j
+  __asm__("tay");
+  __asm__("lda (ptr1),y");
+  return __A__;
 #endif
 
-  return pHuffVal[j];
 }
 //------------------------------------------------------------------------------
 static void huffCreate(uint8* pBits, HuffTable* pHuffTable)
@@ -728,12 +784,12 @@ static uint8 readDHTMarker(void)
    return 0;
 }
 //------------------------------------------------------------------------------
-static void createWinogradQuant(int16* pQuant);
+static void createWinogradQuant(uint16* pQuant);
 
 static uint8 readDQTMarker(void)
 {
    uint16 left = getBits1(16);
-   register int16 *ptr_quant1, *ptr_quant0;
+   register uint16 *ptr_quant1, *ptr_quant0;
    if (left < 2)
       return PJPG_BAD_DQT_MARKER;
 
@@ -1338,10 +1394,10 @@ uint8 gWinogradQuant[] =
 };
 
 // Multiply quantization matrix by the Winograd IDCT scale factors
-static void createWinogradQuant(int16* pQuant)
+static void createWinogradQuant(uint16* pQuant)
 {
    uint8 i;
-   register int16 *ptr_quant = pQuant;
+   register uint16 *ptr_quant = pQuant;
    register uint8 *ptr_winograd = gWinogradQuant;
 
    for (i = 0; i < 64; i++)
@@ -2170,22 +2226,17 @@ static uint8 decodeNextMCU(void)
     uint8 componentID = *cur_gMCUOrg;
     uint8 compQuant = gCompQuant[componentID];	
     uint8 compDCTab = gCompDCTab[componentID];
-    uint8 numExtraBits, compACTab;
-    int16* pQ = compQuant ? gQuant1 : gQuant0;
-    uint16 r, dc;
+    uint8 compACTab;
+    uint16* pQ = compQuant ? gQuant1 : gQuant0;
+    uint16 r;
     uint8 s;
 #ifndef __CC65__
-    int16 *cur_pQ;
+    uint8 numExtraBits;
+    uint16 dc;
+    uint16 *cur_pQ;
     int16 **cur_ZAG_coeff;
     int16 **end_ZAG_coeff;
-#else
-    /* We can use 6 and 8 there as we'll be done with them by the time
-     * we reach transformBlock()
-     */
-    #define cur_pQ zp6sip
-    #define cur_ZAG_coeff zp8sip
-    int16 *end_ZAG_coeff;
-#endif
+
     if (compDCTab)
       s = huffDecode(&gHuffTab1, gHuffVal1);
     else
@@ -2201,8 +2252,80 @@ static uint8 decodeNextMCU(void)
 
     dc = dc + gLastDC[componentID];
     gLastDC[componentID] = dc;
-
     gCoeffBuf[0] = dc * pQ[0];
+#else
+    /* We can use 6 and 8 there as we'll be done with them by the time
+     * we reach transformBlock()
+     */
+    #define cur_pQ zp6ip
+    #define cur_ZAG_coeff zp8sip
+    int16 *end_ZAG_coeff;
+
+    if (compDCTab)
+      s = huffDecode(&gHuffTab1, gHuffVal1);
+    else
+      s = huffDecode(&gHuffTab0, gHuffVal0);
+
+    cur_gMCUOrg++;
+
+    __asm__("lda %v", s);
+    __asm__("and #%b", 0xF);
+    __asm__("beq %g", noExtraBits);
+    __asm__("jsr pusha");
+    __asm__("lda #1");
+    __asm__("jsr %v", getBits);
+    goto doExtend;
+    noExtraBits:
+    __asm__("lda #0");
+    __asm__("tax");
+    doExtend:
+    __asm__("jsr pushax");
+    __asm__("lda %v", s);
+    __asm__("jsr %v", huffExtend);
+    __asm__("stx tmp2");
+    __asm__("sta tmp1");
+
+    __asm__("ldx #0");
+    __asm__("lda %v", componentID);
+    __asm__("asl a");
+    __asm__("bcc %g", noof1);
+    __asm__("inx");
+    __asm__("clc");
+    noof1:
+    __asm__("adc #<%v", gLastDC);
+    __asm__("sta ptr1");
+    __asm__("txa");
+    __asm__("adc #>%v", gLastDC);
+    __asm__("sta ptr1+1");
+    
+    __asm__("clc");
+    __asm__("ldy #0");
+    __asm__("lda (ptr1)");
+    __asm__("adc tmp1");
+    __asm__("pha");
+    __asm__("iny");
+    __asm__("lda (ptr1),y");
+    __asm__("adc tmp2");
+    __asm__("sta (ptr1),y");
+    __asm__("tax");
+    __asm__("pla");
+    __asm__("sta (ptr1)");
+
+    //gCoeffBuf[0] = dc * pQ[0];
+    __asm__("jsr pushax");
+    __asm__("lda %v", pQ);
+    __asm__("sta ptr1");
+    __asm__("lda %v+1", pQ);
+    __asm__("sta ptr1+1");
+    __asm__("ldy #1");
+    __asm__("lda (ptr1),y");
+    __asm__("tax");
+    __asm__("lda (ptr1)");
+    __asm__("jsr tosumulax");
+    __asm__("sta %v", gCoeffBuf);
+    __asm__("stx %v+1", gCoeffBuf);
+#endif
+
     compACTab = gCompACTab[componentID];
 
     // Decode and dequantize AC coefficients
@@ -2223,6 +2346,7 @@ static uint8 decodeNextMCU(void)
       else
         s = huffDecode(&gHuffTab2, gHuffVal2);
 
+#ifndef __CC65__
       extraBits = 0;
       numExtraBits = s & 0xF;
       if (numExtraBits)
@@ -2230,6 +2354,33 @@ static uint8 decodeNextMCU(void)
 
       r = s >> 4;
       s &= 15;
+#else
+    __asm__("lda %v", s);
+    __asm__("and #%b", 0xF);
+    __asm__("beq %g", noExtraBits2);
+    __asm__("jsr pusha");
+    __asm__("lda #1");
+    __asm__("jsr %v", getBits);
+    goto storeExtraBits;
+    noExtraBits2:
+    __asm__("lda #0");
+    __asm__("tax");
+    storeExtraBits:
+    __asm__("sta %v", extraBits);
+    __asm__("stx %v+1", extraBits);
+
+    __asm__("lda %v", s);
+    __asm__("lsr a");
+    __asm__("lsr a");
+    __asm__("lsr a");
+    __asm__("lsr a");
+    __asm__("sta %v", r);
+    __asm__("stz %v+1", r);
+    __asm__("lda %v", s);
+    __asm__("and #%b", 15);
+    __asm__("sta %v", s);
+#endif
+
 
       if (s) {
         uint16 ac;
@@ -2320,23 +2471,43 @@ static uint8 decodeNextMCU(void)
    /* Skip the other blocks, do the minimal work */
   for (mcuBlock = 2; mcuBlock < gMaxBlocksPerMCU; mcuBlock++) {
     uint8 componentID = *cur_gMCUOrg;
-    uint8 compDCTab = gCompDCTab[componentID];
-    uint8 numExtraBits, compACTab;
-    uint16 r, dc;
+#ifndef __CC65__
+    uint8 numExtraBits;
+#endif
+    uint8 compACTab;
+    uint16 r;
     uint8 s, i;
 
-    if (compDCTab)
+    if (gCompDCTab[componentID])
       s = huffDecode(&gHuffTab1, gHuffVal1);
     else
       s = huffDecode(&gHuffTab0, gHuffVal0);
 
     compACTab = gCompACTab[componentID];
+
+#ifndef __CC65__
     r = 0;
     numExtraBits = s & 0xF;
     if (numExtraBits)
       r = getBits2(numExtraBits);
 
-    dc = huffExtend(r, s);
+    huffExtend(r, s);
+#else
+    __asm__("lda %v", s);
+    __asm__("and #%b", 0xF);
+    __asm__("beq %g", noExtraBits3);
+    __asm__("jsr pusha");
+    __asm__("lda #1");
+    __asm__("jsr %v", getBits);
+    goto doExtend2;
+    noExtraBits3:
+    __asm__("lda #0");
+    __asm__("tax");
+    doExtend2:
+    __asm__("jsr pushax");
+    __asm__("lda %v", s);
+    __asm__("jsr %v", huffExtend);
+#endif
 
     for (i = 1; i != 64; i++) {
       uint16 extraBits;
@@ -2346,6 +2517,7 @@ static uint8 decodeNextMCU(void)
       else
         s = huffDecode(&gHuffTab2, gHuffVal2);
 
+#ifndef __CC65__
       extraBits = 0;
       numExtraBits = s & 0xF;
       if (numExtraBits)
@@ -2353,12 +2525,36 @@ static uint8 decodeNextMCU(void)
 
       r = s >> 4;
       s &= 15;
+#else
+    __asm__("lda %v", s);
+    __asm__("and #%b", 0xF);
+    __asm__("beq %g", noExtraBits4);
+    __asm__("jsr pusha");
+    __asm__("lda #1");
+    __asm__("jsr %v", getBits);
+    goto storeExtraBits2;
+    noExtraBits4:
+    __asm__("lda #0");
+    __asm__("tax");
+    storeExtraBits2:
+    __asm__("sta %v", extraBits);
+    __asm__("stx %v+1", extraBits);
+
+    __asm__("lda %v", s);
+    __asm__("lsr a");
+    __asm__("lsr a");
+    __asm__("lsr a");
+    __asm__("lsr a");
+    __asm__("sta %v", r);
+    __asm__("stz %v+1", r);
+    __asm__("lda %v", s);
+    __asm__("and #%b", 15);
+    __asm__("sta %v", s);
+#endif
 
       if (s) {
-        int16 ac;
-
         i += r;
-        ac = huffExtend(extraBits, s);
+        huffExtend(extraBits, s);
       } else {
         if (r == 15) {
           i+=15;
@@ -2462,32 +2658,32 @@ void qt_load_raw(uint16 top)
 
     pDst_block = pDst_row;
 
-    for (by = 0; ; by++) {
+    for (by = 3; ; by--) {
       pDst = pDst_block;
 
-      for (bx = 0; bx < 4; bx++) {
-        *pDst++ = *pSrcG++;
-        pSrcG++;
+      for (bx = 4; bx; bx--) {
+        *pDst++ = *pSrcG;
+        pSrcG+=2;
       }
 
       pSrcG += 8;
-      if (by == 3)
+      if (!by)
         break;
       pDst_block += row_pitch;
     }
 
     pDst_block = pDst_row + (8>>1);
 
-    for (by = 0; ; by++) {
+    for (by = 3; ; by--) {
       pDst = pDst_block;
 
-      for (bx = 0; bx < 4; bx++) {
-        *pDst++ = *pSrcG++;
-        pSrcG++;
+      for (bx = 4; bx; bx--) {
+        *pDst++ = *pSrcG;
+        pSrcG+=2;
       }
 
       pSrcG += 8;
-      if (by == 3)
+      if (!by)
         break;
       pDst_block += row_pitch;
     }
