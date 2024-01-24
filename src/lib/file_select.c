@@ -34,18 +34,16 @@
 
 static char last_dir[FILENAME_MAX] = "";
 
-static char **list = NULL;
-static char *is_dir = NULL;
+typedef struct _file_entry {
+  char name[FILENAME_MAX+1];
+  char is_dir;
+} file_entry;
 
-static void __fastcall__ free_data (char n) {
-  static char i;
-  for (i = 0; i < n; i++) {
-    free(list[i]);
-  }
-  free(list);
-  free(is_dir);
-  list = NULL;
-  is_dir = NULL;
+file_entry *file_entries = NULL;
+
+static void __fastcall__ free_data (void) {
+  free(file_entries);
+  file_entries = NULL;
 }
 
 char *file_select(char sx, char sy, char ex, char ey, char dir, char *prompt) {
@@ -69,7 +67,7 @@ char *file_select(char sx, char sy, char ex, char ey, char dir, char *prompt) {
   n = 0;
 
 list_again:
-  free_data(n);
+  free_data();
 
   n = 0;
   sel = 0;
@@ -77,24 +75,14 @@ list_again:
 
   if (last_dir[0] == '\0') {
 #ifdef __CC65__
-    char **cur_list;
-    char *cur_is_dir;
-    list = malloc0(sizeof(char *) * 58);
-    is_dir = malloc0(sizeof(char) * 58);
     dev = getfirstdevice();
-    cur_list = list;
-    cur_is_dir = is_dir;
     do {
-
-      *cur_list = malloc0(17);
-      if (getdevicedir(dev, *cur_list, 17) == NULL) {
-        free(*cur_list);
+      file_entries = realloc_safe(file_entries, sizeof(file_entry)*(n+1));
+      if (getdevicedir(dev, file_entries[n].name, 17) == NULL) {
         continue;
       }
-      *cur_is_dir = 1;
+      file_entries[n].is_dir = 1;
       n++;
-      cur_list++;
-      cur_is_dir++;
     } while ((dev = getnextdevice(dev)) != INVALID_DEVICE);
 #else
   last_dir[0] = '/';
@@ -111,11 +99,10 @@ posix_use_dir:
         if (dir && !_DE_ISDIR(ent->d_type))
           continue;
 
-        list = realloc_safe(list, sizeof(char *) * (n + 1));
-        is_dir = realloc_safe(is_dir, sizeof(char) * (n + 1));
+        file_entries = realloc_safe(file_entries, sizeof(file_entry)*(n+1));
 
-        list[n] = strdup(ent->d_name);
-        is_dir[n] = _DE_ISDIR(ent->d_type);
+        strcpy(file_entries[n].name, ent->d_name);
+        file_entries[n].is_dir = _DE_ISDIR(ent->d_type);
         n++;
       }
       closedir(d);
@@ -144,7 +131,7 @@ disp_again:
     gotox(l_sx);
     cputs("! ");
     revers(i == sel);
-    cprintf("%s\r\n", list[i]);
+    cprintf("%s\r\n", file_entries[i].name);
   }
   revers(0);
 
@@ -159,14 +146,14 @@ disp_again:
   c = tolower(cgetc());
   switch (c) {
     case CH_CURS_RIGHT:
-      if (!is_dir[sel]) {
+      if (!file_entries[sel].is_dir) {
 err_bell:
         dputc(0x07);
         break;
       }
-      if (list[sel][0] != '/')
+      if (file_entries[sel].name[0] != '/')
         strcat(last_dir, "/");
-      strcat(last_dir, list[sel]);
+      strcat(last_dir, file_entries[sel].name);
       goto list_again;
     case CH_CURS_LEFT:
 up:
@@ -176,11 +163,13 @@ up:
     case CH_ESC:
       goto out;
     case CH_ENTER:
-      if (is_dir[sel] != dir) {
+      if (file_entries[sel].is_dir != dir) {
         goto err_bell;
       } else {
-        filename = malloc0(FILENAME_MAX);
-        snprintf(filename, FILENAME_MAX, "%s%s%s", last_dir, (last_dir[0] != '\0' ? "/":""), list[sel]);
+        filename = malloc0(FILENAME_MAX+1);
+        #pragma GCC diagnostic ignored "-Wformat-truncation"
+        snprintf(filename, FILENAME_MAX, "%s%s%s", last_dir, (last_dir[0] != '\0' ? "/":""),
+                 file_entries[sel].name);
         goto out;
       }
 #ifdef __APPLE2ENH__
@@ -212,7 +201,7 @@ up:
   }
   goto disp_again;
 out:
-  free_data(n);
+  free_data();
   clrzone(l_sx, sy, ex, ey);
 
   if (filename) {
