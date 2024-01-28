@@ -506,7 +506,7 @@ int get_cycles_for_instr(int cpu, const char *instr, int a_mode, int *extra_cost
 /* Count current instruction */
 static int count_instruction(const char *instr, int cycle_count) {
   if (tree_depth == 0)
-    return - 1;
+    return -1;
   tree_functions[tree_depth - 1]->cur_call_self_instruction_count++;
   tree_functions[tree_depth - 1]->cur_call_self_cycle_count += cycle_count;
   return 0;

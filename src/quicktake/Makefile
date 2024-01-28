@@ -57,9 +57,10 @@ qtknconv_SOURCES := \
 qtknconv_CC65SOURCES := ../lib/extrazp.s
 
 jpegconv_SOURCES := \
-	qt-conv.c jpeg.c  ../lib/path_helper.c ../lib/progress_bar.c
+	qt-conv.c jpeg.c ../lib/path_helper.c ../lib/progress_bar.c
 
-jpegconv_CC65SOURCES := ../lib/extrazp.s
+jpegconv_CC65SOURCES := jpeg_platform.s ../lib/extrazp.s 
+jpegconv_GCCSOURCES := jpeg_platform.c
 
 GCCSOURCES := ../lib/extended_conio.c ../lib/clrzone.c
 DEPS :=
@@ -110,7 +111,7 @@ qtknconv.x86_64: $(qtknconv_SOURCES) $(GCCSOURCES)
 jpegconv.bin: $(jpegconv_SOURCES) $(jpegconv_CC65SOURCES)
 	cl65 --debug-info -Wl --dbgfile,"jpegconv.dbg" $(CFLAGS) $(jpegconv_CLCFLAGS) -vm -m jpegconv.map -o $@ $^
 
-jpegconv.x86_64: $(jpegconv_SOURCES) $(GCCSOURCES)
+jpegconv.x86_64: $(jpegconv_SOURCES) $(jpegconv_GCCSOURCES) $(GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	
 
 loader.x86_64:

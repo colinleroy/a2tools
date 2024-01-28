@@ -37,7 +37,6 @@ uint8 *dst, *src;
 /* Pointer arithmetic helpers */
 static uint16 width_plus2;
 static uint16 pgbar_state;
-static uint16 twopxband_size, work_size;
 static uint8 *last_two_lines, *third_line;
 static uint8 at_very_first_line;
 
@@ -96,6 +95,7 @@ void qt_load_raw(uint16 top)
   register int16 val;
 
   /* First band: init variables */
+#ifndef __CC65__
   if (top == 0) {
     getbits(0);
 
@@ -112,8 +112,6 @@ void qt_load_raw(uint16 top)
      * from the end of the previous band to the start of
      * the new one.
      */
-    twopxband_size = 2*PIX_WIDTH + 2;
-    work_size = sizeof pixel - twopxband_size;
     last_two_lines = pix_direct_row[QT_BAND];
     third_line = pix_direct_row[2] + 2;
 
@@ -122,16 +120,63 @@ void qt_load_raw(uint16 top)
   } else {
     /* Shift the last band's last 2 lines, plus 2 pixels,
      * to the start of the new band. */
-    memcpy(pixel, last_two_lines, twopxband_size);
+    memcpy(pixel, last_two_lines, 2*PIX_WIDTH + 2);
     /* And reset the others to grey */
-    memset (third_line, 0x80, work_size);
+    memset (third_line, 0x80, sizeof pixel - (2*PIX_WIDTH + 2));
   }
+#else
+    __asm__("ldy #$06");
+    __asm__("lda (sp),y");
+    __asm__("ora (sp)");
+    __asm__("bne %g", notTop);
+
+    __asm__("jsr %v", getbitnohuff);
+
+    __asm__("inc a");
+    __asm__("sta %v", at_very_first_line);
+
+    __asm__("lda %v", width);
+    __asm__("clc");
+    __asm__("adc #2");
+    __asm__("sta %v", width_plus2);
+    __asm__("lda %v+1", width);
+    __asm__("adc #0");
+    __asm__("sta %v+1", width_plus2);
+
+    __asm__("stz %v", pgbar_state);
+
+    __asm__("lda #%b", QT_BAND+4);
+    __asm__("sta %v", row);
+    /* Init direct pointers to each line */
+    preCalcRow:
+    pix_direct_row[row] = pixel + (row * PIX_WIDTH);
+    __asm__("dec %v", row);
+    __asm__("bpl %g", preCalcRow);
+
+    /* calculate offsets to shift the last two lines + 2px
+     * from the end of the previous band to the start of
+     * the new one.
+     */
+    last_two_lines = pix_direct_row[QT_BAND];
+    third_line = pix_direct_row[2] + 2;
+
+    /* Init the whole buffer with grey. */
+    memset (pixel, 0x80, sizeof pixel);
+    goto startWork;
+  notTop:
+    /* Shift the last band's last 2 lines, plus 2 pixels,
+     * to the start of the new band. */
+    memcpy(pixel, last_two_lines, 2*PIX_WIDTH + 2);
+    /* And reset the others to grey */
+    memset (third_line, 0x80, sizeof pixel - (2*PIX_WIDTH + 2));
+  startWork:
+#endif
 
   /* We start at line 2. */
-  src = pix_direct_row[2];
-  for (row = 2; row != QT_BAND + 2; row++) {
-
 #ifndef __CC65__
+  src = pix_direct_row[2];
+  for (row = QT_BAND; row != 0; row--) {
+
     idx_forward = idx_end = idx = src;
     if (row & 1) {
       idx++;
@@ -198,7 +243,20 @@ void qt_load_raw(uint16 top)
     }
     *(idx) = val;
     at_very_first_line = 0;
+  }
 #else
+  // src = pix_direct_row[2];
+  // for (row = 2; row != QT_BAND + 2; row++) {
+
+  __asm__("lda %v+4+1", pix_direct_row);
+  __asm__("sta %v+1", src);
+  __asm__("lda %v+4", pix_direct_row);
+  __asm__("sta %v", src);
+  __asm__("lda #%b", QT_BAND);
+  __asm__("sta %v", row);
+  nextRow1:
+  //for (row = QT_BAND; row != 0; row--) {
+
     /* idx_forward = idx_end = idx = src; */
     __asm__("lda %v", src);
     __asm__("sta %v", idx);
@@ -450,12 +508,14 @@ idx_loop:
 
     /* at_very_first_line = 0; */
     __asm__("stz %v", at_very_first_line);
+  __asm__("dec %v", row);
+  __asm__("bne %g", nextRow1);
 #endif
-  }
 
-  src = pix_direct_row[2];
-  for (row = 2; row != QT_BAND + 2; row++) {
 #ifndef __CC65__
+  src = pix_direct_row[2];
+  //for (row = 2; row != QT_BAND + 2; row++) {
+  for (row = QT_BAND; row != 0; row--) {
     idx_end = src;
 
     if (row & 1) {
@@ -488,8 +548,24 @@ idx_loop:
     }
     idx++;
     idx++;
+  }
 
+  dst = raw_image;
+  src = pix_direct_row[2] + 2;
+  for (row = 0; row < QT_BAND; row++) {
+    memcpy(dst, src, width);
+    dst+=width;
+    src+=PIX_WIDTH;
+  }
 #else
+  __asm__("lda %v+4+1", pix_direct_row);
+  __asm__("sta %v+1", src);
+  __asm__("lda %v+4", pix_direct_row);
+  __asm__("sta %v", src);
+  __asm__("lda #%b", QT_BAND);
+  __asm__("sta %v", row);
+  nextRow2:
+  //for (row = QT_BAND; row != 0; row--) {
     /* idx_end = src; */
     __asm__("ldy %v", src);
     __asm__("ldx %v+1", src);
@@ -538,7 +614,6 @@ idx_loop:
 
     /* src += PIX_WIDTH; */
     __asm__("lda #<%w", PIX_WIDTH);
-    //__asm__("clc");
     __asm__("adc %v", src);
     __asm__("sta %v", src);
     __asm__("lda #>%w", PIX_WIDTH);
@@ -623,19 +698,69 @@ idx_loop2:
     __asm__("clc");
     __asm__("adc #2");
     __asm__("sta %v", idx);
-    __asm__("lda %v+1", idx);
-    __asm__("adc #0");
-    __asm__("sta %v+1", idx);
-#endif
-  }
+    __asm__("bcc %g", noof18); //FIXME
+    __asm__("inc %v+1", idx);
+    __asm__("clc");
+    noof18:
+  __asm__("dec %v", row);
+  __asm__("bne %g", nextRow2);
 
-  dst = raw_image;
-  src = pix_direct_row[2] + 2;
-  for (row = 0; row < QT_BAND; row++) {
-    memcpy(dst, src, width);
-    dst+=width;
-    src+=PIX_WIDTH;
-  }
+  // Copy to destination
+
+  __asm__("lda #<(%v)", raw_image);
+  __asm__("sta %v", dst);
+  __asm__("ldx #>(%v)", raw_image);
+  __asm__("stx %v+1", dst);
+  
+  __asm__("jsr pushax");
+  
+  __asm__("clc");
+  __asm__("lda %v+4", pix_direct_row);
+  __asm__("ldx %v+4+1", pix_direct_row);
+  __asm__("adc #2");
+  __asm__("sta %v", src);
+  __asm__("bcc %g", noof20);
+  __asm__("inx");
+  __asm__("clc");
+  noof20:
+  __asm__("stx %v+1", src);
+  __asm__("jsr pushax");
+  
+  __asm__("lda #%b", QT_BAND);
+  __asm__("sta %v", row);
+  nextRow3:
+  __asm__("lda %v", width);
+  __asm__("ldx %v+1", width);
+  __asm__("jsr %v", memcpy);
+  
+  __asm__("clc");
+  __asm__("lda %v", dst);
+  __asm__("adc %v", width);
+  __asm__("sta %v", dst);
+  __asm__("pha");
+  __asm__("lda %v+1", dst);
+  __asm__("adc %v+1", width);
+  __asm__("sta %v+1", dst);
+  __asm__("tax");
+  __asm__("pla");
+  __asm__("jsr pushax");
+  
+  __asm__("clc");
+  __asm__("lda %v", src);
+  __asm__("adc #<%w", PIX_WIDTH);
+  __asm__("sta %v", src);
+  __asm__("pha");
+  __asm__("lda %v+1", src);
+  __asm__("adc #>%w", PIX_WIDTH);
+  __asm__("sta %v+1", src);
+  __asm__("tax");
+  __asm__("pla");
+  __asm__("jsr pushax");
+  
+  __asm__("dec %v", row);
+  __asm__("bne %g", nextRow3);
+  __asm__("jsr incsp4");
+#endif
 }
 
 #pragma register-vars(pop)
