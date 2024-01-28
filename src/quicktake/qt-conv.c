@@ -223,7 +223,6 @@ uint8 __fastcall__ getbitnohuff (uint8 n)
   noof2:
   /* vbits += 8; */
   __asm__("lda #%b", 8);
-  //__asm__("clc");
   __asm__("adc %v", vbits);
   __asm__("sta %v", vbits);
 
@@ -419,7 +418,6 @@ uint8 __fastcall__ getbithuff (uint8 n)
   hnoof2:
   /* vbits += 8; */
   __asm__("lda #%b", 8);
-  //__asm__("clc");
   __asm__("adc %v", vbits);
   __asm__("sta %v", vbits);
 
@@ -671,40 +669,53 @@ static void write_raw(uint16 h)
   #define cur_y zp8p
   #define cur_orig_x zp10ip
   #define cur_orig_y zp12ip
+  static uint8 x_len;
 #else
   uint8 *dst_ptr;
   uint8 *cur_y;
   uint16 *cur_orig_x;
   uint8 **cur_orig_y;
+  static uint16 x_len;
 #endif
-  static uint16 *end_orig_x = NULL;
-  static uint8 **end_orig_y = NULL;
+  static uint8 y_len;
 
-  if (end_orig_y == NULL) {
-    end_orig_y = orig_y_table + scaled_band_height;
-    end_orig_x = orig_x_table + FILE_WIDTH;
-  } else if (h == last_band && last_band_crop) {
+  y_len = scaled_band_height;
+  if (h == last_band && last_band_crop) {
     /* Skip end of last band if cropping */
-    end_orig_y = orig_y_table + last_band_crop;
+    y_len = last_band_crop;
     output_write_len -= (scaled_band_height - last_band_crop) * FILE_WIDTH;
   }
 
   /* Scale (nearest neighbor)*/
   dst_ptr = raw_image;
+#ifndef __CC65__
   cur_orig_y = orig_y_table + 0;
   do {
     cur_orig_x = orig_x_table + 0;
-#ifndef __CC65__
     cur_y = (uint8 *)*cur_orig_y;
+    x_len = FILE_WIDTH;
     do {
       *dst_ptr = *(cur_y + *cur_orig_x);
       histogram[*dst_ptr]++;
       dst_ptr++;
-    } while (++cur_orig_x < end_orig_x);
+      cur_orig_x++;
+    } while (--x_len);
+    cur_orig_y++;
+} while (--y_len);
 #else
+  __asm__("clc");
+  __asm__("lda #<(%v)", orig_y_table);
+  __asm__("sta %v", cur_orig_y);
+  __asm__("lda #>(%v)", orig_y_table);
+  __asm__("sta %v+1", cur_orig_y);
+  next_y:
+    __asm__("lda #<(%v)", orig_x_table);
+    __asm__("sta %v", cur_orig_x);
+    __asm__("lda #>(%v)", orig_x_table);
+    __asm__("sta %v+1", cur_orig_x);
+    __asm__("stz %v", x_len); // 256, but in 8bits
     next_x:
     /* *dst_ptr = *(*cur_orig_y + *cur_orig_x); */
-    __asm__("clc");
     __asm__("lda (%v)", cur_orig_x);
     __asm__("adc (%v)", cur_orig_y);
     __asm__("sta ptr1");
@@ -746,19 +757,29 @@ static void write_raw(uint16 h)
     noof7:
     /* ++cur_orig_x */
     __asm__("lda #$02");
-    //__asm__("clc");
+    __asm__("clc");
     __asm__("adc %v", cur_orig_x);
     __asm__("sta %v", cur_orig_x);
     __asm__("bcc %g", noof5);
     __asm__("inc %v+1", cur_orig_x);
+    __asm__("clc");
     noof5:
-    /* < end_orig_x ? */
-    __asm__("cmp %v", end_orig_x);
-    __asm__("lda %v+1", cur_orig_x);
-    __asm__("sbc %v+1", end_orig_x);
-    __asm__("bcc %g", next_x);
+    /* x_len? */
+    __asm__("dec %v", x_len);
+    __asm__("bne %g", next_x);
+  /* ++cur_orig_y */
+  __asm__("lda #$02");
+  __asm__("clc");
+  __asm__("adc %v", cur_orig_y);
+  __asm__("sta %v", cur_orig_y);
+  __asm__("bcc %g", noof5b);
+  __asm__("inc %v+1", cur_orig_y);
+  __asm__("clc");
+  noof5b:
+  /* y_len? */
+  __asm__("dec %v", y_len);
+  __asm__("bne %g", next_y);
 #endif
-  } while (++cur_orig_y < end_orig_y);
 
   fwrite (raw_image, 1, output_write_len, ofp);
 }
