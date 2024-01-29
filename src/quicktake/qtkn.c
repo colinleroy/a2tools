@@ -22,6 +22,7 @@
 #include <arpa/inet.h>
 #include "progress_bar.h"
 #include "qt-conv.h"
+#include "qtk_bithuff.h"
 
 #define radc_token(r, t, ch) do { huff_ptr = ch; r = (t) getbithuff(8); } while(0)
 #define skip_radc_token(ch) do { huff_ptr = ch; getbithuff(8); } while(0)
@@ -110,7 +111,7 @@ void qt_load_raw(uint16 top)
     huff_9 = huff[9];
     huff_10 = huff[10];
     huff_18 = huff[18];
-    getbits(0);
+    getbithuff(0);
 
     cur_buf_y = buf[0];
     for (i=0; i != DATABUF_SIZE; i++) {
@@ -136,10 +137,11 @@ void qt_load_raw(uint16 top)
 
   for (row=0; row != QT_BAND; row+=4) {
     progress_bar(-1, -1, 80*22, (top + row), height);
-    t = getbits(6);
+    huff_ptr = NULL;
+    t = getbithuff(6);
     /* Ignore those */
-    getbits(6);
-    getbits(6);
+    getbithuff(6);
+    getbithuff(6);
 
     cur_buf = buf;
     c = 0;
