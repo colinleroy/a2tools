@@ -63,7 +63,6 @@ uint8 *cache_end = cache + CACHE_SIZE;
 FILE *ifp;
 static FILE *ofp;
 static const char *ifname;
-static size_t data_offset;
 
 void __fastcall__ src_file_seek(uint32 off) {
   fseek(ifp, off, SEEK_SET);
@@ -148,11 +147,10 @@ static uint8 identify(const char *name)
     src_file_get_uint16();
 
     if (src_file_get_uint16() == 30)
-      data_offset = 738;
+      cur_cache_ptr = cache + (738 - WH_OFFSET);
     else
-      data_offset = 736;
+      cur_cache_ptr = cache + (736 - WH_OFFSET);
 
-    src_file_seek(data_offset);
   } else if (!memcmp(head, JPEG_EXIF_MAGIC, 4)) {
     /* FIXME QT 200 implied, 640x480 (scaled down) implied, that sucks */
     printf(" image %s (640x480)...\n", name);
