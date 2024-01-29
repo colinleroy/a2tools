@@ -53,7 +53,6 @@ uint16 raw_image_size = (QT_BAND) * 640;
 uint8 raw_image[(QT_BAND) * 640];
 
 /* Cache */
-#define CACHE_SIZE 4096
 uint8 cache[CACHE_SIZE];
 uint8 *cache_end = cache + CACHE_SIZE;
 
@@ -61,18 +60,10 @@ uint8 *cache_end = cache + CACHE_SIZE;
  * but the cache size is set by decoders. Decoders should not have
  * access to the file pointers
  */
-static FILE *ifp, *ofp;
+FILE *ifp;
+static FILE *ofp;
 static const char *ifname;
 static size_t data_offset;
-
-#ifdef __CC65__
-/* Can't use zp* as they're used by codecs,
- * but can use serial-reserved ZP vars as
- * we don't do serial */
-#define cur_cache_ptr prev_ram_irq_vector
-#else
-static uint8 *cur_cache_ptr;
-#endif
 
 void __fastcall__ src_file_seek(uint32 off) {
   fseek(ifp, off, SEEK_SET);
@@ -116,423 +107,17 @@ static uint16 __fastcall__ src_file_get_uint16(void) {
 #pragma codesize(push, 200)
 #pragma register-vars(push, on)
 
-static uint32 tmp;
-static uint8 shift;
-
 /* bithuff state */
+uint8 bitbuf_nohuff=0;
 uint32 bitbuf=0;
 uint8 vbits=0;
 
-uint8 __fastcall__ getbitnohuff (uint8 n)
-{
-#ifndef __CC65__
-  uint8 c;
-  uint8 nbits = n;
-
-  if (nbits == 0) {
-    bitbuf = 0;
-    vbits = 0;
-    return 0;
-  }
-  if (nbits >= vbits) {
-    FAST_SHIFT_LEFT_8_LONG(bitbuf);
-    if (cur_cache_ptr == cache_end) {
-      fread(cur_cache_ptr = cache, 1, CACHE_SIZE, ifp);
-    }
-    bitbuf += *(cur_cache_ptr++);
-    vbits += 8;
-  }
-  shift = 32-vbits;
-  if (shift >= 24) {
-    FAST_SHIFT_LEFT_24_LONG_TO(bitbuf, tmp);
-  } else if (shift >= 16) {
-    FAST_SHIFT_LEFT_16_LONG_TO(bitbuf, tmp);
-  } else if (shift >= 8) {
-    FAST_SHIFT_LEFT_8_LONG_TO(bitbuf, tmp);
-  }
-  shift %= 8;
-  if (shift)
-    tmp <<= shift;
-
-  shift = 32-nbits;
-  if (shift >= 24) {
-    FAST_SHIFT_RIGHT_24_LONG(tmp);
-  } else if (shift >= 16) {
-    FAST_SHIFT_RIGHT_16_LONG(tmp);
-  } else if (shift >= 8) {
-    FAST_SHIFT_RIGHT_8_LONG(tmp);
-  }
-  shift %= 8;
-  if (shift)
-    c = (uint8)(tmp >> shift);
-  else
-    c = (uint8)tmp;
-
-  vbits -= nbits;
-
-  return c;
-#else
-  uint8 nbits = n;
-
-  /* is nbits 0 ? */
-  __asm__("bne %g", nbits_pos);
-  /* Reset vars */
-  __asm__("stz %v", bitbuf);
-  __asm__("stz %v+1", bitbuf);
-  __asm__("stz %v+2", bitbuf);
-  __asm__("stz %v+3", bitbuf);
-  __asm__("stz %v", vbits);
-  /* Return 0 */
-  __asm__("tax");
-  __asm__("jmp incsp1");
-
-  nbits_pos:
-  __asm__("cmp %v", vbits);
-  __asm__("bcc %g", no_read);
-  /* shift bitbuf << 8 */
-  FAST_SHIFT_LEFT_8_LONG(bitbuf);
-  /* Is cache finished? */
-  __asm__("lda %v", cache_end);
-  __asm__("cmp %v", cur_cache_ptr);
-  __asm__("bne %g", cache_ok);
-  __asm__("ldx %v+1", cache_end);
-  __asm__("cpx %v+1", cur_cache_ptr);
-  __asm__("bne %g", cache_ok);
-
-  /* Read cache */
-  fread(cur_cache_ptr = cache, 1, CACHE_SIZE, ifp);
-
-  cache_ok:
-  /* bitbuf += *(cur_cache_ptr++); */
-  __asm__("lda %v", bitbuf);
-  __asm__("clc");
-  __asm__("adc (%v)", cur_cache_ptr);
-  __asm__("sta %v", bitbuf);
-  __asm__("bcc %g", noof3);
-  __asm__("inc %v+1", bitbuf);
-  __asm__("bne %g", noof3);
-  __asm__("inc %v+2", bitbuf);
-  __asm__("bne %g", noof3);
-  __asm__("inc %v+3", bitbuf);
-  noof3:
-  /* inc pointer */
-  __asm__("inc %v", cur_cache_ptr);
-  __asm__("bne %g", noof2);
-  __asm__("inc %v+1", cur_cache_ptr);
-
-  noof2:
-  /* vbits += 8; */
-  __asm__("lda #%b", 8);
-  __asm__("adc %v", vbits);
-  __asm__("sta %v", vbits);
-
-  no_read:
-  /* shift = 32-vbits; */
-  __asm__("lda #%b", 32);
-  __asm__("sec");
-  __asm__("sbc %v", vbits);
-
-  __asm__("cmp #%b", 24);
-  __asm__("bcc %g", check_l16);
-  FAST_SHIFT_LEFT_24_LONG_TO(bitbuf, tmp);
-  __asm__("and #$07");      /* only finish shifting high byte */
-  __asm__("tay");
-  __asm__("lda %v+3", tmp);
-  __asm__("ldx #$00");
-  __asm__("jsr shlaxy");
-  __asm__("sta %v+3", tmp);
-  goto left_shift_done;
-  check_l16:
-  __asm__("cmp #%b", 16);
-  __asm__("bcc %g", check_l8);
-  FAST_SHIFT_LEFT_16_LONG_TO(bitbuf, tmp);
-  __asm__("and #$07");      /* only finish shifting two high bytes */
-  __asm__("tay");
-  __asm__("lda %v+2", tmp);
-  __asm__("ldx %v+3", tmp);
-  __asm__("jsr shlaxy");
-  __asm__("sta %v+2", tmp);
-  __asm__("stx %v+3", tmp);
-  goto left_shift_done;
-  check_l8:
-  __asm__("cmp #%b", 8);
-  __asm__("bcc %g", finish_left_shift);
-  FAST_SHIFT_LEFT_8_LONG_TO(bitbuf, tmp);
-
-  finish_left_shift:
-  /* % 8 */
-  __asm__("and #$07");
-  __asm__("sta %v", shift);
-  if (shift)
-    tmp <<= shift;
-
-  left_shift_done:
-  vbits -= nbits;
-
-  /* shift = 32-nbits; */
-  __asm__("lda #%b", 32);
-  __asm__("sec");
-  __asm__("sbc %v", nbits);
-
-  __asm__("cmp #%b", 24);
-  __asm__("bcc %g", check_r16);
-  FAST_SHIFT_RIGHT_24_LONG_CHAR_ONLY(tmp);
-  goto finish_right_shift;
-  check_r16:
-  __asm__("cmp #%b", 16);
-  __asm__("bcc %g", check_r8);
-  FAST_SHIFT_RIGHT_16_LONG_CHAR_ONLY(tmp);
-  goto finish_right_shift;
-  check_r8:
-  __asm__("cmp #%b", 8);
-  __asm__("bcc %g", finish_right_shift);
-  FAST_SHIFT_RIGHT_8_LONG_CHAR_ONLY(tmp);
-
-  finish_right_shift:
-  __asm__("ldx #$00");
-  /* % 8 */
-  __asm__("and #$07");
-
-  /* Should we finish shifting? */
-  __asm__("bne %g", finish_and_return);
-  /* Else we're done! */
-  __asm__("lda %v", tmp);
-  __asm__("jmp incsp1");
-
-  finish_and_return:
-  /* Finish shift */
-  __asm__("tay");
-  __asm__("lda %v", tmp);
-  cont_shift:
-  __asm__("lsr a");
-  __asm__("dey");
-  __asm__("bpl %g", cont_shift);
-  __asm__("rol a");
-  __asm__("jmp incsp1");
-
-  /* Unreachable */
-  return 0;
-#endif
-}
-
-uint8 __fastcall__ getbithuff (uint8 n)
-{
-#ifndef __CC65__
-  uint16 h;
-  uint8 c;
-  uint8 nbits = n;
-
-  if (nbits == 0) {
-    bitbuf = 0;
-    vbits = 0;
-    return 0;
-  }
-  if (nbits >= vbits) {
-    FAST_SHIFT_LEFT_8_LONG(bitbuf);
-    if (cur_cache_ptr == cache_end) {
-      fread(cur_cache_ptr = cache, 1, CACHE_SIZE, ifp);
-    }
-    bitbuf += *(cur_cache_ptr++);
-    vbits += 8;
-  }
-  shift = 32-vbits;
-  if (shift >= 24) {
-    FAST_SHIFT_LEFT_24_LONG_TO(bitbuf, tmp);
-  } else if (shift >= 16) {
-    FAST_SHIFT_LEFT_16_LONG_TO(bitbuf, tmp);
-  } else if (shift >= 8) {
-    FAST_SHIFT_LEFT_8_LONG_TO(bitbuf, tmp);
-  }
-  shift %= 8;
-  if (shift)
-    tmp <<= shift;
-
-  shift = 32-nbits;
-  if (shift >= 24) {
-    FAST_SHIFT_RIGHT_24_LONG(tmp);
-  } else if (shift >= 16) {
-    FAST_SHIFT_RIGHT_16_LONG(tmp);
-  } else if (shift >= 8) {
-    FAST_SHIFT_RIGHT_8_LONG(tmp);
-  }
-  shift %= 8;
-  if (shift)
-    c = (uint8)(tmp >> shift);
-  else
-    c = (uint8)tmp;
-
-  h = huff_ptr[c];
-  vbits -= h >> 8;
-  c = (uint8) h;
-
-  return c;
-#else
-  uint8 nbits = n;
-
-  /* is nbits 0 ? */
-  __asm__("bne %g", hnbits_pos);
-  /* Reset vars */
-  __asm__("stz %v", bitbuf);
-  __asm__("stz %v+1", bitbuf);
-  __asm__("stz %v+2", bitbuf);
-  __asm__("stz %v+3", bitbuf);
-  __asm__("stz %v", vbits);
-  /* Return 0 */
-  __asm__("tax");
-  __asm__("jmp incsp1");
-
-  hnbits_pos:
-  __asm__("cmp %v", vbits);
-  __asm__("jcc %g", hno_read);
-  /* shift bitbuf << 8 */
-  FAST_SHIFT_LEFT_8_LONG(bitbuf);
-  /* Is cache finished? */
-  __asm__("lda %v", cache_end);
-  __asm__("cmp %v", cur_cache_ptr);
-  __asm__("bne %g", hcache_ok);
-  __asm__("ldx %v+1", cache_end);
-  __asm__("cpx %v+1", cur_cache_ptr);
-  __asm__("bne %g", hcache_ok);
-
-  /* Read cache */
-  fread(cur_cache_ptr = cache, 1, CACHE_SIZE, ifp);
-
-  hcache_ok:
-  /* bitbuf += *(cur_cache_ptr++); */
-  __asm__("lda %v", bitbuf);
-  __asm__("clc");
-  __asm__("adc (%v)", cur_cache_ptr);
-  __asm__("sta %v", bitbuf);
-  __asm__("bcc %g", hnoof3);
-  __asm__("inc %v+1", bitbuf);
-  __asm__("bne %g", hnoof3);
-  __asm__("inc %v+2", bitbuf);
-  __asm__("bne %g", hnoof3);
-  __asm__("inc %v+3", bitbuf);
-  hnoof3:
-  /* inc pointer */
-  __asm__("inc %v", cur_cache_ptr);
-  __asm__("bne %g", hnoof2);
-  __asm__("inc %v+1", cur_cache_ptr);
-
-  hnoof2:
-  /* vbits += 8; */
-  __asm__("lda #%b", 8);
-  __asm__("adc %v", vbits);
-  __asm__("sta %v", vbits);
-
-  hno_read:
-  /* shift = 32-vbits; */
-  __asm__("lda #%b", 32);
-  __asm__("sec");
-  __asm__("sbc %v", vbits);
-
-  __asm__("cmp #%b", 24);
-  __asm__("bcc %g", hcheck_l16);
-  FAST_SHIFT_LEFT_24_LONG_TO(bitbuf, tmp);
-  __asm__("and #$07");      /* only finish shifting high byte */
-  __asm__("tay");
-  __asm__("lda %v+3", tmp);
-  __asm__("ldx #$00");
-  __asm__("jsr shlaxy");
-  __asm__("sta %v+3", tmp);
-  goto hleft_shift_done;
-  hcheck_l16:
-  __asm__("cmp #%b", 16);
-  __asm__("bcc %g", hcheck_l8);
-  FAST_SHIFT_LEFT_16_LONG_TO(bitbuf, tmp);
-  __asm__("and #$07");      /* only finish shifting two high bytes */
-  __asm__("tay");
-  __asm__("lda %v+2", tmp);
-  __asm__("ldx %v+3", tmp);
-  __asm__("jsr shlaxy");
-  __asm__("sta %v+2", tmp);
-  __asm__("stx %v+3", tmp);
-  goto hleft_shift_done;
-  hcheck_l8:
-  __asm__("cmp #%b", 8);
-  __asm__("bcc %g", hfinish_left_shift);
-  FAST_SHIFT_LEFT_8_LONG_TO(bitbuf, tmp);
-
-  hfinish_left_shift:
-  /* % 8 */
-  __asm__("and #$07");
-  __asm__("sta %v", shift);
-  if (shift)
-    tmp <<= shift;
-
-  hleft_shift_done:
-  /* shift = 32-nbits; */
-  __asm__("lda #%b", 32);
-  __asm__("sec");
-  __asm__("sbc %v", nbits);
-
-  __asm__("cmp #%b", 24);
-  __asm__("bcc %g", hcheck_r16);
-  FAST_SHIFT_RIGHT_24_LONG_CHAR_ONLY(tmp);
-  goto hfinish_right_shift;
-  hcheck_r16:
-  __asm__("cmp #%b", 16);
-  __asm__("bcc %g", hcheck_r8);
-  FAST_SHIFT_RIGHT_16_LONG_CHAR_ONLY(tmp);
-  goto hfinish_right_shift;
-  hcheck_r8:
-  __asm__("cmp #%b", 8);
-  __asm__("bcc %g", hfinish_right_shift);
-  FAST_SHIFT_RIGHT_8_LONG_CHAR_ONLY(tmp);
-
-  hfinish_right_shift:
-  __asm__("ldx #$00");
-  /* % 8 */
-  __asm__("and #$07");
-
-  /* Should we finish shifting? */
-  __asm__("beq %g", hfinish_and_return);
-
-  /* Finish shift */
-  __asm__("tay");
-  __asm__("lda %v", tmp);
-  hcont_shift:
-  __asm__("lsr a");
-  __asm__("dey");
-  __asm__("bpl %g", hcont_shift);
-  __asm__("rol a");
-  goto do_huff;
-
-  hfinish_and_return:
-  __asm__("lda %v", tmp);
-
-  do_huff:
-  /* h = huff[c]; */
-  __asm__("asl a"); /* shift index because uint16 array */
-  __asm__("bcc %g", hnoof4);
-  __asm__("inx");
-  __asm__("clc");
-  hnoof4:
-  __asm__("adc %v", huff_ptr);
-  __asm__("sta ptr1");
-  __asm__("txa");
-  __asm__("adc %v+1", huff_ptr);
-  __asm__("sta ptr1+1");
-  __asm__("ldy #$01");
-  __asm__("lda (ptr1),y");
-  /* h>>8: We don't care about low byte yet */
-  __asm__("eor #$FF");
-  __asm__("sec");
-  __asm__("adc %v", vbits);
-  __asm__("sta %v", vbits);
-  /* Return h low byte */
-  __asm__("ldx #$00");
-  __asm__("lda (ptr1)");
-  __asm__("jmp incsp1");
-  /* unreachable */
-  return 0;
-#endif
-
-}
-
 #define HDR_LEN 32
 #define WH_OFFSET 544
+
+#ifndef __CC65__
+uint8 *cur_cache_ptr;
+#endif
 
 static uint8 identify(const char *name)
 {
@@ -570,6 +155,7 @@ static uint8 identify(const char *name)
     src_file_seek(data_offset);
   } else if (!memcmp(head, JPEG_EXIF_MAGIC, 4)) {
     /* FIXME QT 200 implied, 640x480 (scaled down) implied, that sucks */
+    printf(" image %s (640x480)...\n", name);
     width = QT200_JPEG_WIDTH;
     height = QT200_JPEG_HEIGHT;
     /* Init cache */
@@ -679,11 +265,12 @@ static void write_raw(uint16 h)
 #endif
   static uint8 y_len;
 
-  y_len = scaled_band_height;
   if (h == last_band && last_band_crop) {
     /* Skip end of last band if cropping */
     y_len = last_band_crop;
     output_write_len -= (scaled_band_height - last_band_crop) * FILE_WIDTH;
+  } else {
+    y_len = scaled_band_height;
   }
 
   /* Scale (nearest neighbor)*/
@@ -757,7 +344,6 @@ static void write_raw(uint16 h)
     noof7:
     /* ++cur_orig_x */
     __asm__("lda #$02");
-    __asm__("clc");
     __asm__("adc %v", cur_orig_x);
     __asm__("sta %v", cur_orig_x);
     __asm__("bcc %g", noof5);
@@ -769,7 +355,6 @@ static void write_raw(uint16 h)
     __asm__("bne %g", next_x);
   /* ++cur_orig_y */
   __asm__("lda #$02");
-  __asm__("clc");
   __asm__("adc %v", cur_orig_y);
   __asm__("sta %v", cur_orig_y);
   __asm__("bcc %g", noof5b);

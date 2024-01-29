@@ -3,6 +3,21 @@
 
 #include "platform.h"
 #include "extended_conio.h"
+#include "extrazp.h"
+
+#define CACHE_SIZE 4096
+extern uint8 cache[CACHE_SIZE];
+extern uint8 *cache_end;
+extern FILE *ifp;
+
+#ifdef __CC65__
+/* Can't use zp* as they're used by codecs,
+ * but can use serial-reserved ZP vars as
+ * we don't do serial */
+#define cur_cache_ptr prev_ram_irq_vector
+#else
+extern uint8 *cur_cache_ptr;
+#endif
 
 #define QT_BAND 20
 
@@ -35,6 +50,7 @@ extern uint16 raw_width, raw_image_size;
 extern char magic[5];
 extern char *model;
 
+extern uint8 bitbuf_nohuff;
 extern uint32 bitbuf;
 extern uint8 vbits;
 
@@ -44,7 +60,6 @@ void __fastcall__ src_file_get_bytes(uint8 *dst, uint16 count);
 
 extern uint16 *huff_ptr;
 uint8 __fastcall__ getbithuff (uint8 nbits);
-uint8 __fastcall__ getbitnohuff (uint8 nbits);
 
 void qt_load_raw(uint16 top);
 
@@ -55,8 +70,6 @@ void qt_load_raw(uint16 top);
 #define FILE(row,col) raw_image[((row)*width)+(col)]
 #define FILE_IDX(row,col) (((row)*width)+(col))
 #define FILE_DIRECT_IDX(idx) raw_image[idx]
-
-#define getbits(n) getbitnohuff(n)
 
 #ifdef __CC65__
 

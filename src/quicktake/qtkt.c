@@ -22,6 +22,7 @@
 #include <arpa/inet.h>
 #include "progress_bar.h"
 #include "qt-conv.h"
+#include "qtk_bithuff.h"
 
 #pragma inline-stdfuncs(push, on)
 #pragma allow-eager-inline(push, on)
@@ -97,7 +98,7 @@ void qt_load_raw(uint16 top)
   /* First band: init variables */
 #ifndef __CC65__
   if (top == 0) {
-    getbits(0);
+    reset_bitbuff();
 
     at_very_first_line = 1;
     width_plus2 = width + 2;
@@ -125,12 +126,13 @@ void qt_load_raw(uint16 top)
     memset (third_line, 0x80, sizeof pixel - (2*PIX_WIDTH + 2));
   }
 #else
-    __asm__("ldy #$06");
+    __asm__("ldy #%o", top);
     __asm__("lda (sp),y");
-    __asm__("ora (sp)");
+    __asm__("iny");
+    __asm__("ora (sp),y");
     __asm__("bne %g", notTop);
 
-    __asm__("jsr %v", getbitnohuff);
+    __asm__("jsr %v", reset_bitbuff);
 
     __asm__("inc a");
     __asm__("sta %v", at_very_first_line);
@@ -207,7 +209,7 @@ void qt_load_raw(uint16 top)
 
     at_very_first_col = 1;
     while (idx < idx_end) {
-      uint8 h = getbitnohuff(4);
+      uint8 h = get_four_bits();
       if (h > NEG_STEPS) {
         val = gstep[h];
       } else {
@@ -365,8 +367,7 @@ noof10:
 
     __asm__("jmp %g", check_idx_loop);
 idx_loop:
-    __asm__("lda #4");
-    __asm__("jsr %v", getbitnohuff);
+    __asm__("jsr %v", get_four_bits);
     __asm__("tay");
 
     /* if h > NEG_STEPS */
@@ -445,6 +446,7 @@ idx_loop:
     __asm__("sta %v", val);   /* set val */
     __asm__("sta (%v)", idx);
     __asm__("sta %v", val_col_minus2);
+    __asm__("tay"); /* Backup val for next sets */
 
     /* idx_behind = idx_behind_plus2; idx_behind_plus2+=2; */
     __asm__("lda %v+1", idx_behind_plus2);
@@ -471,7 +473,7 @@ idx_loop:
     __asm__("bcs %g", nouf1);
     __asm__("dec ptr1+1");
     nouf1:
-    __asm__("lda %v", val);
+    __asm__("tya"); /* val */
     __asm__("sta (%v)", idx_forward);
     __asm__("sta (ptr1)"); /* *(idx-2) */
 
@@ -483,7 +485,7 @@ idx_loop:
     __asm__("lda %v", at_very_first_line);
     __asm__("beq %g", not_first_line);
     /* *(idx_behind) = *(idx_behind_plus2) = val; */
-    __asm__("lda %v", val);
+    __asm__("tya"); /* val */
     __asm__("sta (%v)", idx_behind_plus2);
     __asm__("sta (%v)", idx_behind);
 
@@ -496,14 +498,13 @@ idx_loop:
     __asm__("inc %v+1", idx);
 
     check_idx_loop:
-    __asm__("lda %v", idx);
     __asm__("cmp %v", idx_end);
     __asm__("lda %v+1", idx);
     __asm__("sbc %v+1", idx_end);
     __asm__("bcc %g", idx_loop);
 
     /* *(idx) = val; */
-    __asm__("lda %v", val);
+    __asm__("tya"); /* val */
     __asm__("sta (%v)", idx);
 
     /* at_very_first_line = 0; */

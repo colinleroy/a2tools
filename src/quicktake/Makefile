@@ -49,12 +49,14 @@ slowtake_GCCSOURCES := ../lib/tgi_sdl.c ../lib/tgi_fastline.c
 qtktconv_SOURCES := \
 	qt-conv.c qtkt.c  ../lib/path_helper.c ../lib/progress_bar.c
 
-qtktconv_CC65SOURCES := ../lib/extrazp.s
+qtktconv_CC65SOURCES := ../lib/extrazp.s qtk_bithuff.s
+qtktconv_GCCSOURCES := qtk_bithuff.c
 
 qtknconv_SOURCES := \
 	qt-conv.c qtkn.c  ../lib/path_helper.c ../lib/progress_bar.c
 
-qtknconv_CC65SOURCES := ../lib/extrazp.s
+qtknconv_CC65SOURCES := ../lib/extrazp.s qtk_bithuff.s
+qtknconv_GCCSOURCES := qtk_bithuff.c
 
 jpegconv_SOURCES := \
 	qt-conv.c jpeg.c ../lib/path_helper.c ../lib/progress_bar.c
@@ -99,13 +101,13 @@ slowtake.x86_64: $(slowtake_SOURCES) $(slowtake_GCCSOURCES) $(GCCSOURCES)
 qtktconv.bin: $(qtktconv_SOURCES) $(qtktconv_CC65SOURCES)
 	cl65 --debug-info -Wl --dbgfile,"qtktconv.dbg" $(CFLAGS) $(qtktconv_CLCFLAGS) -vm -m qtktconv.map -o $@ $^
 
-qtktconv.x86_64: $(qtktconv_SOURCES) $(GCCSOURCES)
+qtktconv.x86_64: $(qtktconv_SOURCES) $(qtktconv_GCCSOURCES) $(GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	
 
 qtknconv.bin: $(qtknconv_SOURCES) $(qtknconv_CC65SOURCES)
 	cl65 --debug-info -Wl --dbgfile,"qtknconv.dbg" $(CFLAGS) $(qtknconv_CLCFLAGS) -vm -m qtknconv.map -o $@ $^
 
-qtknconv.x86_64: $(qtknconv_SOURCES) $(GCCSOURCES)
+qtknconv.x86_64: $(qtknconv_SOURCES) $(qtknconv_GCCSOURCES) $(GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	
 
 jpegconv.bin: $(jpegconv_SOURCES) $(jpegconv_CC65SOURCES)
