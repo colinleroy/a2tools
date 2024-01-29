@@ -34,9 +34,9 @@ uint16 *huff_ptr;
 
 static uint16 val_from_last[256];
 static uint16 huff[19][256], *huff_9, *huff_10;
-static int16 x, s, i, tmp_i16;
+static int16 x, s, i, tmp_i16, tree;
 static uint16 c, half_width, col;
-static uint8 r, nreps, rep, row, y, t, rep_loop, tree;
+static uint8 r, nreps, rep, row, y, t, rep_loop;
 #define DATABUF_SIZE 386
 static uint16 buf[3][DATABUF_SIZE], (*cur_buf)[DATABUF_SIZE];
 static uint16 val;
@@ -215,7 +215,7 @@ void qt_load_raw(uint16 top)
     last = t;
 
     for (r=0; r != 2; r++) {
-      tree = (uint8)(t << 7);
+      tree = (t << 7);
      *midbuf1 = tree;
      *midbuf2 = tree;
       for (tree = 1, col = half_width; col; ) {
