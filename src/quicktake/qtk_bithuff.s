@@ -100,27 +100,20 @@ no_read_required:
         bne     :+
         inc     cur_cache_ptr+1
 
-:       lda     #2
-        sta     _vbits
+:       ldx     #1
+        stx     _vbits
+
+        lsr     a
+        lsr     a
+        lsr     a
+        lsr     a
+        rts
 
 have_enough_vbits:
-        lda     _bitbuf_nohuff
-        ldy     #4
-:       lsr     a
-        dey
-        bne     :-
-        tax                     ; Store retval
-
-        lda     _bitbuf_nohuff
-        ldy     #4
-:       asl     a
-        dey
-        bne     :-
-        sta     _bitbuf_nohuff
-
         dec     _vbits
+        lda     _bitbuf_nohuff
+        and     #$0F
 
-        txa
         rts
 
 .segment        "BSS"
