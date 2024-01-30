@@ -23,7 +23,7 @@
 #pragma inline-stdfuncs(push, on)
 #pragma allow-eager-inline(push, on)
 #pragma codesize(push, 200)
-void progress_bar(int x, int y, int width, unsigned long cur, unsigned long end) {
+void __fastcall__ progress_bar(int x, int y, int width, unsigned long cur, unsigned long end) {
   size_t percent;
   size_t i;
   static size_t last_percent;
