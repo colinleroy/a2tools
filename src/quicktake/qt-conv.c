@@ -183,25 +183,33 @@ static uint16 effective_width;
  * 320x240 cropped to 256x192 => 256x192, * 10 / 10, bands of 20 end up 20px, crop last band to 12px
  */
 static void build_scale_table(const char *ofname) {
-  uint16 row, col;
-
+  uint8 row, col;
+  
   if (width == 640) {
     effective_width = crop_end_x - crop_start_x;
     switch (effective_width) {
       case 640:
         scaling_factor = 4;
+        scaled_band_height = (QT_BAND * 4 / 10);
+        output_write_len = FILE_WIDTH * (QT_BAND * 4 / 10);
         break;
       case 320:
         scaling_factor = 8;
+        scaled_band_height = (QT_BAND * 8 / 10);
+        output_write_len = FILE_WIDTH * (QT_BAND * 8 / 10);
         effective_width = 321; /* Prevent re-cropping from menu */
         break;
       case 512:
         scaling_factor = 5;
+        scaled_band_height = (QT_BAND * 5 / 10);
+        output_write_len = FILE_WIDTH * (QT_BAND * 5 / 10);
         last_band = crop_start_y + 380;
         last_band_crop = 2; /* 4, scaled */
         break;
       case 256:
         scaling_factor = 10;
+        scaled_band_height = (QT_BAND * 10 / 10);
+        output_write_len = FILE_WIDTH * (QT_BAND * 10 / 10);
         last_band = crop_start_y + 180;
         last_band_crop = 12;
         break;
@@ -216,9 +224,13 @@ static void build_scale_table(const char *ofname) {
     switch (effective_width) {
       case 320:
         scaling_factor = 8;
+        scaled_band_height = (QT_BAND * 8 / 10);
+        output_write_len = FILE_WIDTH * (QT_BAND * 8 / 10);
         break;
       case 256:
         scaling_factor = 10;
+        scaled_band_height = (QT_BAND * 10 / 10);
+        output_write_len = FILE_WIDTH * (QT_BAND * 10 / 10);
         last_band = crop_start_y + 180;
         last_band_crop = 12;
         break;
@@ -232,18 +244,20 @@ static void build_scale_table(const char *ofname) {
         break;
     }
   }
-  scaled_band_height = QT_BAND * scaling_factor / 10;
-  output_write_len = FILE_WIDTH * scaled_band_height;
 
-  for (row = 0; row < scaled_band_height; row++) {
+  row = 0;
+  do {
     /* Y cropping is handled in main decode/save loop */
     orig_y_table[row] = raw_image + FILE_IDX((row) * 10 / scaling_factor, 0);
+    row++;
+  } while (row < scaled_band_height);
 
-    for (col = 0; col < FILE_WIDTH; col++) {
-      /* X cropping is handled here in lookup table */
-      orig_x_table[col] = (col * 10 / scaling_factor) + crop_start_x;
-    }
-  }
+  col = 0;
+  do {
+    /* X cropping is handled here in lookup table */
+    orig_x_table[col] = (col * 10 / scaling_factor) + crop_start_x;
+    col++;
+  } while (col); /* FILE_WIDTH == 256 */
 }
 
 static void write_raw(uint16 h)
