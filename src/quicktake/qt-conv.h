@@ -6,8 +6,10 @@
 #include "extrazp.h"
 
 #define CACHE_SIZE 4096
-extern uint8 cache[CACHE_SIZE];
+extern uint8 cache[];
+extern uint8 *cache_start;
 extern uint8 *cache_end;
+
 extern FILE *ifp;
 
 #ifdef __CC65__

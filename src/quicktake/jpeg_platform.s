@@ -1,9 +1,9 @@
 
         .import     popptr1
-        .importzp   tmp1, tmp2, ptr1, _prev_rom_irq_vector, sp, regbank, ptr4
+        .importzp   tmp1, tmp2, ptr1, _prev_ram_irq_vector, sp, regbank, ptr4
         .importzp   _zp6sip, _zp8sip, _zp10sip, _zp12sip, _zp6ip, _zp6p
         .import     _extendTests, _extendOffsets, _gBitsLeft, _gBitBuf
-        .import     _endInBufPtr, _fillInBuf
+        .import     _cache_end, _fillInBuf
         .import     _mul669_l, _mul669_m, _mul669_h
         .import     _mul362_l, _mul362_m, _mul362_h
         .import     _mul277_l, _mul277_m, _mul277_h
@@ -24,7 +24,7 @@
    mValPtr  .res 16
 .endstruct
 
-_curInBufPtr = _prev_rom_irq_vector
+_cur_cache_ptr = _prev_ram_irq_vector
 
 ; PJPG_INLINE int16 __fastcall__ huffExtend(uint16 x, uint8 sDMCU)
 
@@ -248,23 +248,23 @@ no_lshift5:
 
 getOctet:
         ; Do we need to fill buffer?
-        lda     _curInBufPtr+1
-        cmp     _endInBufPtr+1
+        lda     _cur_cache_ptr+1
+        cmp     _cache_end+1
         bcc     :+
-        lda     _curInBufPtr
-        cmp     _endInBufPtr
+        lda     _cur_cache_ptr
+        cmp     _cache_end
         bcc     :+
         phy
         jsr     _fillInBuf
         ply
 
 :       ; Load char from buffer
-        lda     (_curInBufPtr)
+        lda     (_cur_cache_ptr)
         tax                     ; Result in X
         ; Increment buffer pointer
-        inc     _curInBufPtr
+        inc     _cur_cache_ptr
         bne     :+
-        inc     _curInBufPtr+1
+        inc     _cur_cache_ptr+1
 
 :       ; Should we check for $FF?
         cpy     #0
@@ -273,34 +273,34 @@ getOctet:
         bne     out
 
         ; Yes. Read again.
-        lda     _curInBufPtr+1
-        cmp     _endInBufPtr+1
+        lda     _cur_cache_ptr+1
+        cmp     _cache_end+1
         bcc     :+
-        lda     _curInBufPtr
-        cmp     _endInBufPtr
+        lda     _cur_cache_ptr
+        cmp     _cache_end
         bcc     :+
         jsr     _fillInBuf
 
-:       lda     (_curInBufPtr)
-        inc     _curInBufPtr
+:       lda     (_cur_cache_ptr)
+        inc     _cur_cache_ptr
         bne     :+
-        inc     _curInBufPtr+1
+        inc     _cur_cache_ptr+1
 
 :       cmp     #$00
         beq     out
 
         ; Stuff back chars
-        sta     (_curInBufPtr)
-        lda     _curInBufPtr
+        sta     (_cur_cache_ptr)
+        lda     _cur_cache_ptr
         bne     :+
-        dec     _curInBufPtr+1
-:       dec     _curInBufPtr
+        dec     _cur_cache_ptr+1
+:       dec     _cur_cache_ptr
         lda     #$FF
-        sta     (_curInBufPtr)
-        lda     _curInBufPtr
+        sta     (_cur_cache_ptr)
+        lda     _cur_cache_ptr
         bne     :+
-        dec     _curInBufPtr+1
-:       dec     _curInBufPtr
+        dec     _cur_cache_ptr+1
+:       dec     _cur_cache_ptr
 out:
         ; Return result
         txa

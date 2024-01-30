@@ -34,6 +34,8 @@ char magic[5] = QTKT_MAGIC;
 char *model = "100";
 uint16 *huff_ptr = NULL; /* unused here, just for linking */
 uint8 *dst, *src;
+uint8 cache[CACHE_SIZE];
+uint8 *cache_start = cache;
 
 /* Pointer arithmetic helpers */
 static uint16 width_plus2;
@@ -58,12 +60,14 @@ static const uint8 gstep[16] =
 #ifdef __CC65__
 #define idx_forward zp6p
 #define idx_behind zp8p
+#define idx_min2 prev_rom_irq_vector
 #define idx_end zp10p
 #define idx_behind_plus2 zp12p
 #define idx_pix_rows zp12ip
 #else
 uint8 *idx_forward;
 uint8 *idx_behind;
+uint8 *idx_min2;
 uint8 *idx_end;
 uint8 *idx_behind_plus2;
 uint16 *idx_pix_rows;
@@ -135,14 +139,14 @@ void qt_load_raw(uint16 top)
     idx_forward = idx_end = idx = src;
     if (row & 1) {
       idx++;
-      pgbar_state++;
-      pgbar_state++;
+      pgbar_state+=2;
       progress_bar(-1, -1, 80*22, pgbar_state, height);
     } else {
       idx_forward++;
     }
 
     val_col_minus2 = (*idx);
+    idx_min2 = idx;
     idx += 2;
 
     /* row-1, col-1 */
@@ -185,7 +189,7 @@ void qt_load_raw(uint16 top)
       idx_behind_plus2++;
 
       if (at_very_first_col) {
-        *(idx_forward) = *(idx - 2) = val;
+        *(idx_forward) = *(idx_min2) = val;
         at_very_first_col = 0;
       }
 
@@ -459,6 +463,10 @@ void qt_load_raw(uint16 top)
     /* idx += 2 */
     __asm__("lda %v", idx);
     __asm__("ldx %v+1", idx);
+
+    __asm__("sta %v", idx_min2);
+    __asm__("stx %v+1", idx_min2);
+
     __asm__("clc");
     __asm__("adc #2");
     __asm__("bcc %g", noof9);
@@ -612,19 +620,10 @@ idx_loop:
     __asm__("lda %v", at_very_first_col);
     __asm__("beq %g", not_first_col);
 
-    /* *(idx_forward) = *(idx - 2) = val;*/
-    __asm__("lda %v+1", idx);
-    __asm__("sta ptr1+1");
-    __asm__("lda %v", idx);
-    __asm__("sec");
-    __asm__("sbc #2");
-    __asm__("sta ptr1");
-    __asm__("bcs %g", nouf1);
-    __asm__("dec ptr1+1");
-    nouf1:
+    /* *(idx_forward) = *(idx_min2) = val;*/
     __asm__("tya"); /* val */
     __asm__("sta (%v)", idx_forward);
-    __asm__("sta (ptr1)"); /* *(idx-2) */
+    __asm__("sta (%v)", idx_min2);
 
     /* at_very_first_col = 0; */
     __asm__("stz %v", at_very_first_col);

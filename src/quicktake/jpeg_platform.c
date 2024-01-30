@@ -56,26 +56,27 @@ uint16 __fastcall__ getBits2(uint8 numBits) {
   return getBits(numBits, 1);
 }
 
-extern uint8 *curInBufPtr;
-extern uint8 *endInBufPtr;
+extern uint8 *cur_cache_ptr;
+extern uint8 *cache_end;
 
 uint8 getOctet(uint8 FFCheck)
 {
   uint8 c, n;
-  if (curInBufPtr == endInBufPtr)
+  if (cur_cache_ptr == cache_end) {
     fillInBuf();
-  c = *(curInBufPtr++);
+  }
+  c = *(cur_cache_ptr++);
   if (!FFCheck)
     goto out;
   if (c != 0xFF)
     goto out;
-  if (curInBufPtr == endInBufPtr)
+  if (cur_cache_ptr == cache_end)
     fillInBuf();
-  n = *(curInBufPtr++);
+  n = *(cur_cache_ptr++);
   if (n)
   {
-     *(curInBufPtr--) = n;
-     *(curInBufPtr--) = 0xFF;
+     *(cur_cache_ptr--) = n;
+     *(cur_cache_ptr--) = 0xFF;
   }
 out:
   return c;

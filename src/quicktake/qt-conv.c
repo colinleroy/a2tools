@@ -53,8 +53,7 @@ uint16 raw_image_size = (QT_BAND) * 640;
 uint8 raw_image[(QT_BAND) * 640];
 
 /* Cache */
-uint8 cache[CACHE_SIZE];
-uint8 *cache_end = cache + CACHE_SIZE;
+uint8 *cache_end;
 
 /* Source file access. The cache mechanism is shared with decoders
  * but the cache size is set by decoders. Decoders should not have
@@ -66,7 +65,7 @@ static const char *ifname;
 
 void __fastcall__ src_file_seek(uint32 off) {
   fseek(ifp, off, SEEK_SET);
-  fread(cur_cache_ptr = cache, 1, CACHE_SIZE, ifp);
+  fread(cur_cache_ptr = cache_start, 1, CACHE_SIZE, ifp);
 }
 
 void __fastcall__ src_file_get_bytes(uint8 *dst, uint16 count) {
@@ -79,9 +78,9 @@ void __fastcall__ src_file_get_bytes(uint8 *dst, uint16 count) {
     start = cache_end - cur_cache_ptr;
     memcpy(dst, cur_cache_ptr, start);
     end = count - start;
-    fread(cache, 1, CACHE_SIZE, ifp);
-    memcpy(dst + start, cache, end);
-    cur_cache_ptr = cache + end;
+    fread(cache_start, 1, CACHE_SIZE, ifp);
+    memcpy(dst + start, cache_start, end);
+    cur_cache_ptr = cache_start + end;
   }
 }
 
@@ -89,11 +88,11 @@ static uint16 __fastcall__ src_file_get_uint16(void) {
   uint16 v;
 
   if (cur_cache_ptr == cache_end) {
-    fread(cur_cache_ptr = cache, 1, CACHE_SIZE, ifp);
+    fread(cur_cache_ptr = cache_start, 1, CACHE_SIZE, ifp);
   }
   ((unsigned char *)&v)[1] = *(cur_cache_ptr++);
   if (cur_cache_ptr == cache_end) {
-    fread(cur_cache_ptr = cache, 1, CACHE_SIZE, ifp);
+    fread(cur_cache_ptr = cache_start, 1, CACHE_SIZE, ifp);
   }
   ((unsigned char *)&v)[0] = *(cur_cache_ptr++);
   return v;
@@ -147,17 +146,16 @@ static uint8 identify(const char *name)
     src_file_get_uint16();
 
     if (src_file_get_uint16() == 30)
-      cur_cache_ptr = cache + (738 - WH_OFFSET);
+      cur_cache_ptr = cache_start + (738 - WH_OFFSET);
     else
-      cur_cache_ptr = cache + (736 - WH_OFFSET);
+      cur_cache_ptr = cache_start + (736 - WH_OFFSET);
 
   } else if (!memcmp(head, JPEG_EXIF_MAGIC, 4)) {
     /* FIXME QT 200 implied, 640x480 (scaled down) implied, that sucks */
     printf(" image %s (640x480)...\n", name);
     width = QT200_JPEG_WIDTH;
     height = QT200_JPEG_HEIGHT;
-    /* Init cache */
-    src_file_seek(0);
+    rewind(ifp);
   }
   return 0;
 }
@@ -425,6 +423,8 @@ int main (int argc, const char **argv)
   crop_start_y = atoi(argv[3]);
   crop_end_x   = atoi(argv[4]);
   crop_end_y   = atoi(argv[5]);
+
+  cache_end = cache_start + CACHE_SIZE;
 
 try_again:
   if (!(ifp = fopen (ifname, "rb"))) {
