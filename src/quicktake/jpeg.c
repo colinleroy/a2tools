@@ -31,6 +31,10 @@ char magic[5] = JPEG_EXIF_MAGIC;
 char *model = "200";
 uint16 *huff_ptr;
 
+#define N_STUFF_CHARS 4
+uint8 cache[CACHE_SIZE + N_STUFF_CHARS];
+uint8 *cache_start = cache + N_STUFF_CHARS;
+
 #define QT200_WIDTH 640
 #define QT200_HEIGHT 480
 
@@ -147,8 +151,6 @@ static uint8 gValidHuffTables;
 static uint8 gValidQuantTables;
 
 static uint8 gTemFlag;
-#define PJPG_MAX_IN_BUF_SIZE 256
-static uint8 gInBuf[PJPG_MAX_IN_BUF_SIZE];
 
 uint16 gBitBuf;
 uint8 gBitsLeft;
@@ -176,20 +178,10 @@ uint8 gMCUOrg[6];
 
 //------------------------------------------------------------------------------
 
-#ifndef __CC65__
-uint8 *curInBufPtr;
-#else
-#define curInBufPtr prev_rom_irq_vector
-#endif
-uint8 *endInBufPtr;
-#define N_STUFF_CHARS 4
-//------------------------------------------------------------------------------
 void fillInBuf(void)
 {
    // Reserve a few bytes at the beginning of the buffer for putting back ("stuffing") chars.
-   curInBufPtr = gInBuf + N_STUFF_CHARS;
-
-   src_file_get_bytes(curInBufPtr, PJPG_MAX_IN_BUF_SIZE - N_STUFF_CHARS);
+  fread(cur_cache_ptr = cache_start, 1, CACHE_SIZE, ifp);
 }
 
 //------------------------------------------------------------------------------
@@ -753,10 +745,8 @@ static uint8 init(void)
    gValidHuffTables = 0;
    gValidQuantTables = 0;
    gTemFlag = 0;
-   //gInBufLeft = 0;
    gBitBuf = 0;
    gBitsLeft = 8;
-   endInBufPtr = gInBuf + PJPG_MAX_IN_BUF_SIZE;
    i = 0;
    do {
      r = (uint32)i * 669U;
@@ -794,9 +784,9 @@ static void fixInBuffer(void)
    /* In case any 0xFF's where pulled into the buffer during marker scanning */
 
    if (gBitsLeft > 0)
-      *(curInBufPtr--) = (uint8)gBitBuf;
+      *(cur_cache_ptr--) = (uint8)gBitBuf;
 
-   *(curInBufPtr--) = (uint8)(gBitBuf >> 8);
+   *(cur_cache_ptr--) = (uint8)(gBitBuf >> 8);
 
    gBitsLeft = 8;
    getBits2(8);
@@ -813,23 +803,23 @@ uint8 processRestart(void)
 
    for (i = 1536; i > 0; i--) {
 #ifndef __CC65__
-      if (curInBufPtr == endInBufPtr)
+      if (cur_cache_ptr == cache_end)
         fillInBuf();
-      c = *(curInBufPtr++);
+      c = *(cur_cache_ptr++);
 #else
-      __asm__("lda %v+1", curInBufPtr);
-      __asm__("cmp %v+1", endInBufPtr);
+      __asm__("lda %v+1", cur_cache_ptr);
+      __asm__("cmp %v+1", cache_end);
       __asm__("bcc %g", buf_ok3);
-      __asm__("lda %v", curInBufPtr);
-      __asm__("cmp %v", endInBufPtr);
+      __asm__("lda %v", cur_cache_ptr);
+      __asm__("cmp %v", cache_end);
       __asm__("bcc %g", buf_ok3);
       fillInBuf();
       buf_ok3:
-      __asm__("lda (%v)", curInBufPtr);
+      __asm__("lda (%v)", cur_cache_ptr);
       __asm__("sta %v", c);
-      __asm__("inc %v", curInBufPtr);
+      __asm__("inc %v", cur_cache_ptr);
       __asm__("bne %g", cur_buf_inc_done3);
-      __asm__("inc %v+1", curInBufPtr);
+      __asm__("inc %v+1", cur_cache_ptr);
       cur_buf_inc_done3:
 #endif
       if (c == 0xFF)
@@ -840,23 +830,23 @@ uint8 processRestart(void)
 
    for ( ; i > 0; i--) {
 #ifndef __CC65__
-      if (curInBufPtr == endInBufPtr)
+      if (cur_cache_ptr == cache_end)
         fillInBuf();
-      c = *(curInBufPtr++);
+      c = *(cur_cache_ptr++);
 #else
-      __asm__("lda %v+1", curInBufPtr);
-      __asm__("cmp %v+1", endInBufPtr);
+      __asm__("lda %v+1", cur_cache_ptr);
+      __asm__("cmp %v+1", cache_end);
       __asm__("bcc %g", buf_ok4);
-      __asm__("lda %v", curInBufPtr);
-      __asm__("cmp %v", endInBufPtr);
+      __asm__("lda %v", cur_cache_ptr);
+      __asm__("cmp %v", cache_end);
       __asm__("bcc %g", buf_ok4);
       fillInBuf();
       buf_ok4:
-      __asm__("lda (%v)", curInBufPtr);
+      __asm__("lda (%v)", cur_cache_ptr);
       __asm__("sta %v", c);
-      __asm__("inc %v", curInBufPtr);
+      __asm__("inc %v", cur_cache_ptr);
       __asm__("bne %g", cur_buf_inc_done4);
-      __asm__("inc %v+1", curInBufPtr);
+      __asm__("inc %v+1", cur_cache_ptr);
       cur_buf_inc_done4:
 #endif
       if (c != 0xFF)

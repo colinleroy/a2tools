@@ -10,7 +10,7 @@
         .import         _bitbuf
         .import         _bitbuf_nohuff
         .import         _vbits
-        .import         _cache
+        .import         _cache_start
         .import         _cache_end
         .import         _ifp
         .import         _huff_ptr
@@ -64,11 +64,11 @@ _shift:
 
         ; Push fread dest pointer
         ldy     #$05
-        lda     #>(_cache)
+        lda     _cache_start+1
         sta     cur_cache_ptr+1
         sta     (sp),y
 
-        lda     #<(_cache)
+        lda     _cache_start
         sta     cur_cache_ptr
         dey
         sta     (sp),y
@@ -162,11 +162,11 @@ have_nbits_h:
 
         ; Push fread dest pointer
         ldy     #$05
-        lda     #>(_cache)
+        lda     _cache_start+1
         sta     cur_cache_ptr+1
         sta     (sp),y
 
-        lda     #<(_cache)
+        lda     _cache_start
         sta     cur_cache_ptr
         dey
         sta     (sp),y
