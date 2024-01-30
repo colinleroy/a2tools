@@ -68,7 +68,7 @@ char monochrome = 1;
 #endif
 
 static void show_help(void) {
-  clrzone(0, 17, NUMCOLS, 23);
+  clrzone(0, 17, NUMCOLS-1, 23);
   cputs("Toggle legend: L\r\n"
         "Save image   : S\r\n"
         "Quit viewer  : Esc\r\n"
