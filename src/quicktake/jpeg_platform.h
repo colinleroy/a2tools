@@ -2,6 +2,7 @@
 #define __JPEG_PLATFORM_H
 
 #include "platform.h"
+#include "picojpeg.h"
 
 typedef struct HuffTableT
 {
@@ -77,5 +78,7 @@ void transformBlock(uint8 mcuBlock);
 void idctRows(void);
 void idctCols(void);
 uint8 processRestart(void);
+
+uint8 skipVariableMarker(void);
 
 #endif

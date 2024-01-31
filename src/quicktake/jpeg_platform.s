@@ -1,6 +1,6 @@
 
         .import     popptr1
-        .importzp   tmp1, tmp2, ptr1, _prev_ram_irq_vector, sp, regbank, ptr4
+        .importzp   tmp1, tmp2, ptr1, _prev_ram_irq_vector, _prev_rom_irq_vector, sp, regbank, ptr4
         .importzp   _zp6sip, _zp8sip, _zp10sip, _zp12sip, _zp6ip, _zp6p
         .import     _extendTests, _extendOffsets, _gBitsLeft, _gBitBuf
         .import     _cache_end, _fillInBuf
@@ -13,7 +13,7 @@
         .import     _gQuant0, _gQuant1, _gCompDCTab, _gMCUOrg, _gLastDC, _gCoeffBuf, _ZAG_Coeff
         .import     _gHuffTab0, _gHuffVal0, _gHuffTab1, _gHuffVal1, _gHuffTab2, _gHuffVal2, _gHuffTab3, _gHuffVal3
         .import     _gMCUBufG
-        .import     shraxy, decsp6, popax, addysp, pushax, tosumulax
+        .import     shraxy, decsp4, decsp6, popax, addysp, pushax, tosumulax
         .export     _huffExtend, _getBits1, _getBits2, _getBit, _huffDecode
         .export     _imul_b1_b3, _imul_b2, _imul_b4, _imul_b5
         .export     _idctRows, _idctCols, _decodeNextMCU, _transformBlock
@@ -109,21 +109,16 @@ getBits:
         lda     n
         cmp     #9
         bcc     n_lt8
-        
+
         sec
         sbc     #8
         sta     n
 
         ldy     _gBitsLeft
         beq     no_lshift
-        cpy     #8
-        bne     :+
-        lda     _gBitBuf
-        sta     _gBitBuf+1
-        stz     _gBitBuf
-        bra     no_lshift
 
-:       lda     _gBitBuf
+        ; no need to check for << 8, that can't be, as _gBitsLeft maximum is 7
+        lda     _gBitBuf
 
 :       asl     a
         rol     _gBitBuf+1
@@ -134,7 +129,6 @@ getBits:
 no_lshift:
         ldy     ff
         jsr     getOctet
-        ora     _gBitBuf
         sta     _gBitBuf
         lda     #8
         sec
@@ -143,6 +137,7 @@ no_lshift:
         beq     no_lshift2
         cpy     #8
         bne     :+
+
         lda     _gBitBuf
         sta     _gBitBuf+1
         stz     _gBitBuf
@@ -166,14 +161,9 @@ n_lt8:
 
         ldy     _gBitsLeft
         beq     no_lshift3
-        cpy     #8
-        bne     :+
-        lda     _gBitBuf
-        sta     _gBitBuf+1
-        stz     _gBitBuf
-        bra     no_lshift3
 
-:       lda     _gBitBuf
+        ; no need to check for << 8, that can't be
+        lda     _gBitBuf
 :       asl     a
         rol     _gBitBuf+1
         dey
@@ -196,6 +186,7 @@ no_lshift3:
 
         cpy     #8
         bne     :+
+
         lda     _gBitBuf
         sta     _gBitBuf+1
         stz     _gBitBuf
@@ -316,29 +307,27 @@ _getBit:
         beq     :+
         inx
 
-:
-        lda     _gBitsLeft
-        bne     :+
+:       dec     _gBitsLeft
+        bpl     :+
 
         phx
         ldy     #1
         jsr     getOctet
-        plx
-        ora     _gBitBuf
+        asl     a
         sta     _gBitBuf
+        rol     _gBitBuf+1
+        plx
 
-        lda     _gBitsLeft
-        clc
-        adc     #8
-
-:       dec     a
+        lda     #7
         sta     _gBitsLeft
 
-        asl     _gBitBuf
+        txa
+        rts
+
+:       asl     _gBitBuf
         rol     _gBitBuf+1
 
         txa
-        ldx     #0
         rts
 
 ; uint16 __fastcall__ imul_b1_b3(int16 w)
@@ -617,21 +606,14 @@ _imul_b5:
 
 :       rts
 
-curMinCode = regbank+4
-curMaxCode = regbank+2
-curValPtr  = regbank+0
+curMinCode = _zp10sip
+curMaxCode = _zp12sip
+curValPtr  = _prev_rom_irq_vector
 
 ; uint8 __fastcall__ huffDecode(const uint8* pHuffVal)
 _huffDecode:
         sta     huffVal
         stx     huffVal+1
-
-        jsr     decsp6          ; Backup regbank
-        ldy     #5
-:       lda     regbank+0,y
-        sta     (sp),y
-        dey
-        bpl     :-
 
         lda     huffTab
         ldx     huffTab+1
@@ -725,18 +707,8 @@ loopDone:
         lda     (ptr1),y
 
 huffDecodeDone:
-        tax                     ; Backup result
-
-        ldy     #0              ; Restore regbank
-:       lda     (sp),y
-        sta     regbank+0,y
-        iny
-        cpy     #6
-        bne     :-
-
-        txa
         ldx     #0
-        jmp     addysp
+        rts
 
 
 rowSrc   = regbank+4
@@ -872,14 +844,24 @@ full_idct_rows:
         adc    (rowSrc_3)
         sta    x7
         lda    (rowSrc_5),y
+        tax
         adc    (rowSrc_3),y
         sta    x7+1
+
+        sec
+        lda    (rowSrc_5)
+        sbc    (rowSrc_3)
+        sta    x4
+        txa
+        sbc    (rowSrc_3),y
+        sta    x4+1
 
         clc
         lda    (rowSrc_1)
         adc    (rowSrc_7)
         sta    x5
         lda    (rowSrc_1),y
+        tax
         adc    (rowSrc_7),y
         sta    x5+1
 
@@ -887,47 +869,41 @@ full_idct_rows:
         lda    (rowSrc_1)
         sbc    (rowSrc_7)
         sta    x6
-        lda    (rowSrc_1),y
+        txa
         sbc    (rowSrc_7),y
         sta    x6+1
-
-        sec
-        lda    (rowSrc_5)
-        sbc    (rowSrc_3)
-        sta    x4
-        lda    (rowSrc_5),y
-        sbc    (rowSrc_3),y
-        sta    x4+1
 
         clc
         lda    (rowSrc)
         adc    (rowSrc_4)
         sta    x30
         lda    (rowSrc),y
+        tax
         adc    (rowSrc_4),y
         sta    x30+1
+
+        sec
+        lda    (rowSrc)
+        sbc    (rowSrc_4)
+        sta    x31
+        txa
+        sbc    (rowSrc_4),y
+        sta    x31+1
 
         clc
         lda    (rowSrc_2)
         adc    (rowSrc_6)
         sta    x13
         lda    (rowSrc_2),y
+        tax
         adc    (rowSrc_6),y
         sta    x13+1
-
-        sec
-        lda    (rowSrc)
-        sbc    (rowSrc_4)
-        sta    x31
-        lda    (rowSrc),y
-        sbc    (rowSrc_4),y
-        sta    x31+1
 
         sec
         lda    (rowSrc_2)
         sbc    (rowSrc_6)
         pha
-        lda    (rowSrc_2),y
+        txa
         sbc    (rowSrc_6),y
 
         tax
@@ -1219,6 +1195,7 @@ full_idct_cols:
         sbc     (pSrc_3_8)
         sta     x4
         lda     (pSrc_5_8),y
+        tax
         sbc     (pSrc_3_8),y
         sta     x4+1
 
@@ -1226,7 +1203,7 @@ full_idct_cols:
         lda     (pSrc_5_8)
         adc     (pSrc_3_8)
         sta     x7
-        lda     (pSrc_5_8),y
+        txa
         adc     (pSrc_3_8),y
         sta     x7+1
 
@@ -1235,6 +1212,7 @@ full_idct_cols:
         sbc     (pSrc_7_8)
         sta     x6
         lda     (pSrc_1_8),y
+        tax
         sbc     (pSrc_7_8),y
         sta     x6+1
 
@@ -1242,7 +1220,7 @@ full_idct_cols:
         lda     (pSrc_1_8)
         adc     (pSrc_7_8)
         sta     x5
-        lda     (pSrc_1_8),y
+        txa
         adc     (pSrc_7_8),y
         sta     x5+1
 
@@ -1336,6 +1314,7 @@ full_idct_cols:
         sbc     (pSrc_4_8)
         sta     x31
         lda     (pSrc_0_8),y
+        tax
         sbc     (pSrc_4_8),y
         sta     x31+1
 
@@ -1343,7 +1322,7 @@ full_idct_cols:
         lda     (pSrc_0_8)
         adc     (pSrc_4_8)
         sta     x30
-        lda     (pSrc_0_8),y
+        txa
         adc     (pSrc_4_8),y
         sta     x30+1
 
@@ -1352,6 +1331,7 @@ full_idct_cols:
         sbc     (pSrc_6_8)
         sta     x12
         lda     (pSrc_2_8),y
+        tax
         sbc     (pSrc_6_8),y
         sta     x12+1
 
@@ -1359,7 +1339,7 @@ full_idct_cols:
         lda     (pSrc_2_8)
         adc     (pSrc_6_8)
         sta     x13
-        lda     (pSrc_2_8),y
+        txa
         adc     (pSrc_6_8),y
         sta     x13+1
 
@@ -1413,10 +1393,10 @@ full_idct_cols:
 
         ; t = ((x40 + x17) >> PJPG_DCT_SCALE_BITS) +128;
         ; if (t < 0)
-        ;   *pSrc_0_8 = 0; 
+        ;   *pSrc_0_8 = 0;
         ; else if (t & 0xFF00)
         ;    *pSrc_0_8 = 255;
-        ; else 
+        ; else
         ;   *pSrc_0_8 = (uint8)t;
         lda     x40
         clc
@@ -1444,10 +1424,10 @@ clampDone2:
 
         ; t = ((x42 + res3) >> PJPG_DCT_SCALE_BITS) +128;
         ; if (t < 0)
-        ;   *pSrc_2_8 = 0; 
+        ;   *pSrc_2_8 = 0;
         ; else if (t & 0xFF00)
         ;    *pSrc_2_8 = 255;
-        ; else 
+        ; else
         ;   *pSrc_2_8 = (uint8)t;
         lda     x42
         clc
@@ -1593,13 +1573,17 @@ idctColDone:
         jmp     addysp
 
 cur_gMCUOrg   = regbank+0
-cur_pQ        = _zp6ip
-cur_ZAG_coeff = _zp8sip
+cur_pQ        = regbank+2
+cur_ZAG_coeff = regbank+4
 
 _decodeNextMCU:
-        lda     regbank+0
-        ldx     regbank+1
-        jsr     pushax
+        jsr     decsp6          ; Backup regbank
+        ldy     #5
+:       lda     regbank+0,y
+        sta     (sp),y
+        dey
+        bpl     :-
+
         lda     _gRestartInterval
         ora     _gRestartInterval+1
         beq     noRestart
@@ -1612,12 +1596,17 @@ _decodeNextMCU:
         cmp     #0
         beq     decRestarts
         pha
-        jsr     popax
-        sta     regbank+0
-        stx     regbank+1
+
+        ldy     #0              ; Restore regbank
+:       lda     (sp),y
+        sta     regbank+0,y
+        iny
+        cpy     #6
+        bne     :-
+
         pla
         ldx     #0
-        rts
+        jmp     addysp
 
 decRestarts:
         lda     _gRestartsLeft
@@ -1685,9 +1674,7 @@ doDec:
         beq     :+
         jsr     _getBits2
         bra     doExtend
-
-:       lda     #0
-        tax
+:       tax
 
 doExtend:
         sta     extendX
@@ -1797,8 +1784,8 @@ doDec2:
         beq     :+
         jsr     _getBits2
         bra     storeExtraBits
-:       lda     #0
-        tax
+:       tax
+
 storeExtraBits:
         sta     extendX
         stx     extendX+1
@@ -1817,10 +1804,10 @@ storeExtraBits:
         lda     sDMCU
         beq     sZero
 
-zeroZAG:
         lda     rDMCU
         ora     rDMCU+1
         beq     zeroZAGDone
+zeroZAG:
         lda     (cur_ZAG_coeff)
         sta     ptr1
         ldy     #1
@@ -1848,8 +1835,9 @@ zeroZAG:
 :       lda     rDMCU
         bne     :+
         dec     rDMCU+1
+        bmi     zeroZAGDone
 :       dec     rDMCU
-        bra     zeroZAG
+        bne     zeroZAG
 
 zeroZAGDone:
         ;ac = huffExtend(sDMCU
@@ -2014,8 +2002,7 @@ doDecb:
         beq     :+
         jsr     _getBits2
         bra     doExtend2
-:       lda     #0
-        tax
+:       tax
 
 doExtend2:
         sta     extendX
@@ -2053,8 +2040,7 @@ doDec2b:
         beq     :+
         jsr     _getBits2
         bra     storeExtraBits2
-:       lda     #0
-        tax
+:       tax
 
 storeExtraBits2:
         tay                     ; keep AX until...
@@ -2107,18 +2093,22 @@ ZAG2_Done:
         jmp     nextUselessBlock
 
 uselessBlocksDone:
-        jsr     popax
-        sta     regbank+0
-        stx     regbank+1
-        lda     #0
+        ldy     #0              ; Restore regbank
+:       lda     (sp),y
+        sta     regbank+0,y
+        iny
+        cpy     #6
+        bne     :-
+        lda     #$00
         tax
-        rts
+        jmp     addysp
 
 pGDst = _zp6p
 pSrc  = _zp8sip
 
 _transformBlock:
         pha
+
         jsr     _idctRows
         jsr     _idctCols
 
@@ -2126,20 +2116,18 @@ _transformBlock:
         beq     mCZero
 
         lda     #<(_gMCUBufG+64)
-        sta     pGDst
-        lda     #>(_gMCUBufG+64)
-        sta     pGDst+1
+        ldx     #>(_gMCUBufG+64)
         bra     dstSet
 mCZero:
         lda     #<(_gMCUBufG)
-        sta     pGDst
-        lda     #>(_gMCUBufG)
-        sta     pGDst+1
+        ldx     #>(_gMCUBufG)
 dstSet:
+        sta     pGDst
+        stx     pGDst+1
         lda     #<(_gCoeffBuf)
         sta     pSrc
         lda     #>(_gCoeffBuf)
-        sta     pSrc+1 
+        sta     pSrc+1
 
         ldy     #64
         clc
@@ -2161,6 +2149,7 @@ tbCopy:
 
 :       dey
         bne     tbCopy
+
         rts
 
         .bss
@@ -2168,7 +2157,7 @@ tbCopy:
 ;getBit/octet
 n:      .res 1
 ff:     .res 1
-final_shift: 
+final_shift:
         .res 1
 ret:    .res 2
 
@@ -2222,5 +2211,5 @@ rDMCU:      .res 2
 sDMCU:      .res 1
 iDMCU:      .res 1
 
-end_ZAG_coeff: 
+end_ZAG_coeff:
             .res 2

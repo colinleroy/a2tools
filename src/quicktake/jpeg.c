@@ -445,7 +445,7 @@ static uint8 readSOFMarker(void)
 }
 //------------------------------------------------------------------------------
 // Used to skip unrecognized markers.
-static uint8 skipVariableMarker(void)
+uint8 skipVariableMarker(void)
 {
    uint16 left = getBits1(16);
 
@@ -540,6 +540,7 @@ static uint8 nextMarker(void)
 
    return c;
 }
+
 //------------------------------------------------------------------------------
 // Process markers. Returns when an SOFx, SOI, EOI, or SOS marker is
 // encountered.

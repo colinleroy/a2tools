@@ -36,6 +36,7 @@ uint16 __fastcall__ getBits(uint8 numBits, uint8 FFCheck)
     gBitBuf <<= (8 - gBitsLeft);
     ret = (ret & 0xFF00) | (gBitBuf >> 8);
   }
+
   if (gBitsLeft < n) {
     gBitBuf <<= gBitsLeft;
     gBitBuf |= getOctet(ff);
@@ -92,8 +93,11 @@ uint8 getBit(void)
   if (!gBitsLeft)
   {
       gBitBuf |= getOctet(1);
-      gBitsLeft += 8;
+      gBitsLeft = 7;
+      gBitBuf <<= 1;
+      return ret;
   }
+
   gBitsLeft--;
   gBitBuf <<= 1;
 
@@ -535,7 +539,6 @@ void transformBlock(uint8 mcuBlock)
   uint8 iTB;
   uint8 mB = mcuBlock;
 
-#ifndef __CC65__
   idctRows();
   idctCols();
 
@@ -549,6 +552,4 @@ void transformBlock(uint8 mcuBlock)
   for (iTB = 64; iTB; iTB--) {
     *pGDst++ = (uint8)*pSrc++;
   }
-#else
-#endif
 }
