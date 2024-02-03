@@ -387,8 +387,7 @@ void qt_load_raw(uint16 top)
 
     /* if (row & 1) { */
     __asm__("lda %v", row);
-    __asm__("tax");
-    __asm__("and #$01");
+    __asm__("bit #$01");
     __asm__("beq %g", even_row);
 
     /* idx++; */
@@ -396,8 +395,7 @@ void qt_load_raw(uint16 top)
     __asm__("bne %g", noof12);
     __asm__("inc %v+1", idx);
     noof12:
-    __asm__("txa");
-    __asm__("and #$02");
+    __asm__("bit #$02");
     __asm__("beq %g", row_checked);
     
     __asm__("lda %v", pgbar_state);

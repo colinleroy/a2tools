@@ -302,8 +302,7 @@ finish_rshift_h:
 
 :       lsr     a
         dey
-        bpl     :-
-        rol     a
+        bne     :-
         bra     do_huff_h
 no_final_shift_h:
         lda     tmp1
