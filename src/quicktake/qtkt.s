@@ -140,8 +140,6 @@ idx_min2          = _prev_rom_irq_vector
 :       jmp     not_top
 
 top:    jsr     _reset_bitbuff  ; Yes. Initialize things
-        inc     a
-        sta     at_very_first_row
 
         lda     _width
         clc
@@ -164,8 +162,8 @@ top:    jsr     _reset_bitbuff  ; Yes. Initialize things
         sta     idx_pix_rows+1
 
         ldx     #(QT_BAND+4)
-
         ldy     #1
+        sty     at_very_first_row
 precalc_row_index:              ; Init direct pointers to each line
         lda     idx
         sta     (idx_pix_rows)
@@ -215,7 +213,6 @@ precalc_row_index:              ; Init direct pointers to each line
         jsr     _memset
 
         jmp     start_work
-
 not_top:
         ; Shift the previous band's last two lines, plus 2 pixels,
         ; to the start of the new band.
@@ -383,7 +380,6 @@ first_pass_row_work:
 
         ; We're not at first column anymore
         sta     at_very_first_col
-        jmp     check_first_pass_col_loop
 
 first_pass_col_loop:
         jsr     _get_four_bits
@@ -430,8 +426,7 @@ first_pass_col_loop:
         bra     store_val_lb
 
 val_neg:
-        lda     #$00            ; clamp to 0
-        bra     store_val_lb
+        ldy     #$00            ; clamp to 0 (into Y, avoid a BRA)
 
 val_less_256:
         tya                     ; Restore val's low byte
@@ -482,8 +477,7 @@ check_first_pass_col_loop:
         cmp     idx_end
         lda     idx+1
         sbc     idx_end+1
-        bcs     end_of_line
-        jmp     first_pass_col_loop
+        bcc     first_pass_col_loop
 
 end_of_line:
         tya                     ; *idx = val
@@ -550,7 +544,12 @@ second_pass_row_work:
         lda     #>PIX_WIDTH
         adc     src+1
         sta     src+1
-        jmp     check_second_pass_col_loop
+        bra     second_pass_col_loop
+
+check_second_pass_col_loop:
+        lda     idx
+        cmp     idx_end
+        bcs     second_pass_row_done
 
 second_pass_col_loop:
         lda     (idx)           ; *idx << 2
@@ -576,8 +575,8 @@ second_pass_col_loop:
 
         dec     tmp1            ; - 0x100
 
-        bmi     val_neg_2
         beq     store_val_lb_2
+        bmi     val_neg_2
         lda     #$FF
         bra     store_val_lb_2
 val_neg_2:
@@ -602,19 +601,17 @@ store_val_lb_2:
 :       stx     idx+1
         sta     idx
         inc     a
-        bne     :+
-        inx
-
-:       stx     idx_forward+1
         sta     idx_forward
+        stx     idx_forward+1   ; Let's hope we don't cross page
+        bne     :+
+        inc     idx_forward+1   ; We did. Don't touch X for end of row comparison
 
-check_second_pass_col_loop:
-        lda     idx
-        cmp     idx_end
-        lda     idx+1
-        sbc     idx_end+1
+:       ; Are we done for this row?
+        cpx     idx_end+1
         bcc     second_pass_col_loop
+        beq     check_second_pass_col_loop
 
+second_pass_row_done:
         lda     idx             ; idx += 2
         clc
         adc     #2
