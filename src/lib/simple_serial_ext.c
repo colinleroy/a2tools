@@ -266,7 +266,9 @@ void simple_serial_dtr_onoff(unsigned char on) {
 
 void simple_serial_set_parity(unsigned int p) {
   struct termios tty;
-
+  if (ttyfp == NULL) {
+    return;
+  }
   if(tcgetattr(fileno(ttyfp), &tty) != 0) {
     printf("tcgetattr error\n");
     exit(1);
