@@ -51,15 +51,40 @@ _shift:
 
 .segment        "LC"
 
-        lda     _vbits
-        bne     have_enough_vbits
+        dec     _vbits
+        bmi     not_enough_vbits
+        lda     _bitbuf_nohuff
+        and     #$0F
+        rts
 
+not_enough_vbits:
         lda     _cache_end
         cmp     cur_cache_ptr
-        bne     no_read_required
+        beq     cache_check_high
+
+fetch_vbits:
+        lda     (cur_cache_ptr)
+        sta     _bitbuf_nohuff
+
+        inc     cur_cache_ptr
+        bne     :+
+        inc     cur_cache_ptr+1
+
+:       ldx     #1
+        stx     _vbits
+
+        lsr     a
+        lsr     a
+        lsr     a
+        lsr     a
+        rts
+
+cache_check_high:
         ldx     _cache_end+1
         cpx     cur_cache_ptr+1
-        bne     no_read_required
+        bne     fetch_vbits
+
+must_read:
         jsr     decsp6
 
         ; Push fread dest pointer
@@ -92,29 +117,7 @@ _shift:
         lda     _ifp
         ldx     _ifp+1
         jsr     _fread
-no_read_required:
-        lda     (cur_cache_ptr)
-        sta     _bitbuf_nohuff
-
-        inc     cur_cache_ptr
-        bne     :+
-        inc     cur_cache_ptr+1
-
-:       ldx     #1
-        stx     _vbits
-
-        lsr     a
-        lsr     a
-        lsr     a
-        lsr     a
-        rts
-
-have_enough_vbits:
-        dec     _vbits
-        lda     _bitbuf_nohuff
-        and     #$0F
-
-        rts
+        bra     fetch_vbits
 
 .segment        "BSS"
 
