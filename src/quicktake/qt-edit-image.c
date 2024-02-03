@@ -45,6 +45,8 @@ extern uint8 scrw, scrh;
 
 #define X_OFFSET ((HGR_WIDTH - file_width) / 2)
 
+static int8 err[FILE_WIDTH * 2];
+
 FILE *ifp, *ofp;
 
 int16 angle = 0;
@@ -154,6 +156,30 @@ fallback_std:
 }
 
 #pragma code-name(pop)
+
+static void thumb_histogram(FILE *ifp) {
+  uint8 x = 0, read;
+  uint16 *histogram = (uint16 *)err;
+  uint8 *cur;
+  uint16 curr_hist = 0;
+
+  while ((read = fread(buffer, 1, 255, ifp)) != 0) {
+    cur = buffer;
+    do {
+      uint8 v = *cur;
+      histogram[((v&0x0F) << 4)]++;
+      histogram[((v&0xF0))]++;
+      cur++;
+      x++;
+    } while (x != read);
+  }
+  x = 0;
+  do {
+    curr_hist += histogram[x];
+    opt_histogram[x] = (uint8)((((uint32)curr_hist * 255)) / (THUMB_WIDTH*THUMB_HEIGHT));
+  } while (++x);
+  return;
+}
 
 int8 bayer_map[64] = {
    0, 32,  8, 40,  2, 34, 10, 42,
@@ -446,7 +472,6 @@ done:
   return 0;
 }
 
-static int8 err[FILE_WIDTH * 2];
 static uint8 thumb_buf[THUMB_WIDTH * 2];
 
 #pragma inline-stdfuncs(push, on)
@@ -519,6 +544,11 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
   if (ifp == NULL) {
     printf("Can't open %s\n", ifname);
     return;
+  }
+  if (is_thumb) {
+    thumb_histogram(ifp);
+    rewind(ifp);
+    dither_alg = DITHER_BAYER;
   }
 
   cputs("Dithering...\r\n");
@@ -601,8 +631,8 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
           i = 39;
           do {
             c   = buffer[i];
-            a   = (((c>>4) & 0b00001111) << 4);
-            b   = (((c)    & 0b00001111) << 4);
+            a   = (c & 0xF0);
+            b   = ((c & 0x0F) << 4);
             off = i * 4;
             buffer[off++] = a;
             buffer[off++] = a;
@@ -621,8 +651,8 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
           orig_out = cur_out = buffer;
           for (x = 0; x < THUMB_WIDTH; x++) {
             c = *cur_in++;
-            a   = (((c>>4) & 0b00001111) << 4);
-            b   = (((c)    & 0b00001111) << 4);
+            a   = (c & 0xF0);
+            b   = ((c & 0x0F) << 4);
             *cur_out++ = a;
             *cur_out++ = b;
           }
@@ -737,7 +767,7 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
 #endif
 
     if (dither_alg == DITHER_SIERRA) {
-#ifndef __CCd65__
+#ifndef __CC65__
       /* Rollover next error line */
       int8 *tmp = cur_err_line;
 
