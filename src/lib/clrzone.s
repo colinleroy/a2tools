@@ -38,7 +38,11 @@ _clrzone:
 
         dey
         lda     (sp),y
-        sta     clr_lxe
+        cmp     WNDWDTH         ; Make sure end bound is sane
+        bcc     :+
+        lda     WNDWDTH
+        dec     a
+:       sta     clr_lxe
 
         jsr     incsp3
 
