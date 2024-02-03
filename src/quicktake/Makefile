@@ -47,10 +47,10 @@ slowtake_CC65SOURCES := \
 slowtake_GCCSOURCES := ../lib/tgi_sdl.c ../lib/tgi_fastline.c
 
 qtktconv_SOURCES := \
-	qt-conv.c qtkt.c  ../lib/path_helper.c ../lib/progress_bar.c
+	qt-conv.c ../lib/path_helper.c ../lib/progress_bar.c
 
-qtktconv_CC65SOURCES := ../lib/extrazp.s qtk_bithuff.s
-qtktconv_GCCSOURCES := qtk_bithuff.c
+qtktconv_CC65SOURCES := qtkt.s ../lib/extrazp.s qtk_bithuff.s
+qtktconv_GCCSOURCES := qtkt.c qtk_bithuff.c
 
 qtknconv_SOURCES := \
 	qt-conv.c qtkn.c  ../lib/path_helper.c ../lib/progress_bar.c
