@@ -737,22 +737,24 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
 #endif
 
     if (dither_alg == DITHER_SIERRA) {
-#ifndef __CC65__
+#ifndef __CCd65__
       /* Rollover next error line */
       int8 *tmp = cur_err_line;
-      cur_err_line = next_err_line;
-      next_err_line = tmp;
-      bzero(next_err_line, file_width);
 
-      /* Init cursors */
+      cur_err_line = next_err_line;
       cur_err_x_y = cur_err_line + x;
+
+      next_err_line = tmp;
       cur_err_x_yplus1 = next_err_line + x;
       cur_err_xmin1_yplus1 = cur_err_x_yplus1 - 1;
+
+      bzero(next_err_line, file_width);
+
       err2 = 0;
 #else
       __asm__("lda %v", cur_err_line);
       __asm__("ldx %v+1", cur_err_line);
-      __asm__("tay"); /* start swapping cur/next */
+      __asm__("tay"); /* start swapping cur/next, now tmp in YX */
       __asm__("phx");
       __asm__("lda %v", next_err_line);
       __asm__("ldx %v+1", next_err_line);
@@ -763,32 +765,34 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
       __asm__("clc");
       __asm__("adc %v", x);
       __asm__("sta %v", cur_err_x_y);
-      __asm__("txa");
-      __asm__("adc %v+1", x);
-      __asm__("sta %v+1", cur_err_x_y);
+      __asm__("bcc %g", noof3);
+      __asm__("inx");
+      noof3:
+      __asm__("stx %v+1", cur_err_x_y);
 
       __asm__("plx"); /* finish swapping cur/next */
       __asm__("tya");
       __asm__("sta %v", next_err_line);
       __asm__("stx %v+1", next_err_line);
-      __asm__("jsr pushax");
+      __asm__("jsr pushax"); /* Push for bzero */
+
       /* cur_err_x_yplus1 = next_err_line + x; */
       __asm__("clc");
       __asm__("adc %v", x);
       __asm__("sta %v", cur_err_x_yplus1);
-      __asm__("tay");
-      __asm__("txa");
-      __asm__("adc %v+1", x);
-      __asm__("sta %v+1", cur_err_x_yplus1);
-      __asm__("sta %v+1", cur_err_xmin1_yplus1);
+      __asm__("bcc %g", noof4);
+      __asm__("inx");
+      noof4:
+      __asm__("stx %v+1", cur_err_x_yplus1);
 
       /* cur_err_xmin1_yplus1 = cur_err_x_yplus1 - 1;*/
-      __asm__("tya");
-      __asm__("bne %g", nouf1);
-      __asm__("dec %v+1", cur_err_xmin1_yplus1);
+      __asm__("sec");
+      __asm__("sbc #1");
+      __asm__("sta %v", cur_err_xmin1_yplus1);
+      __asm__("bcs %g", nouf1);
+      __asm__("dex");
       nouf1:
-      __asm__("dey");
-      __asm__("sty %v", cur_err_xmin1_yplus1);
+      __asm__("stx %v+1", cur_err_xmin1_yplus1);
 
       __asm__("lda %v", file_width);
       __asm__("ldx %v+1", file_width);
