@@ -74,23 +74,16 @@ void quicktake_100_load_raw(uint16 top)
     memset (pixel, 0x80, sizeof pixel);
     first_line = 1;
   } else {
-    /* Copy the two last computed lines of the last band */
-    for (row = 0; row < 2; row++) {
-      memcpy(pixel[row], pixel[row+BAND_HEIGHT], WIDTH+4);
-    }
-
-    /* Copy the two last computed pixels of the last band.
+    /* Copy the two full last computed lines of the last band,
+     * plus the two last computed pixels of the last band.
      * They're set in the first loop below, if col < 4. If
      * we don't copy them, a clear diagonal haze descends
-     * from the top left corner of the picture. */
-    pixel[2][0] = pixel[BAND_HEIGHT+2][0];
-    pixel[2][1] = pixel[BAND_HEIGHT+2][1];
-    memset(pixel[2] + 2, 0x80, WIDTH+2);
+     * from the top left corner of the picture.
+     */
+    memcpy(pixel[0], pixel[BAND_HEIGHT], 2*(WIDTH+4)+2);
 
     /* Reset the rest to grey */
-    for (row = 3; row < BAND_HEIGHT+2; row++) {
-      memset(pixel[row], 0x80, WIDTH+4);
-    }
+    memset(pixel[2] + 2, 0x80, BAND_HEIGHT*(WIDTH+4)-2);
   }
   for (row=2; row < BAND_HEIGHT+2; row++) {
     int first_col = 1;
@@ -109,15 +102,16 @@ void quicktake_100_load_raw(uint16 top)
     pixel[row][col] = val;
     first_line=0;
   }
-  for (row=2; row < BAND_HEIGHT+2; row++)
+  for (row=2; row < BAND_HEIGHT+2; row++) {
     for (col=3-(row & 1); col < WIDTH+2; col+=2) {
       val = ((pixel[row][col-1] + (pixel[row][col] << 2) +
               pixel[row][col+1]) >> 1) - 0x100;
       pixel[row][col] = LIM(val,0,255);
     }
-   for (row=0; row < BAND_HEIGHT; row++)
-     for (col=0; col < WIDTH; col++)
-       RAW(row,col) = pixel[row+2][col+2];
+  }
+
+  for (row=0; row < BAND_HEIGHT; row++)
+    memcpy(raw_image + (WIDTH*row), pixel[row+2]+2, WIDTH);
 }
 
 int main(int argc, char *argv[]) {
