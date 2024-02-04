@@ -130,6 +130,14 @@ static uint16 histogram[256];
 static uint8 opt_histogram[256];
 #define NUM_PIXELS 49152U //256*192
 
+#ifdef __CC65__
+#define cur_histogram zp6ip
+#define cur_opt_histogram zp8p
+#else
+uint16 *cur_histogram;
+uint8 *cur_opt_histogram;
+#endif
+
 static void histogram_equalize(void) {
   uint8 x = 0;
   uint16 curr_hist = 0;
@@ -143,40 +151,50 @@ static void histogram_equalize(void) {
     fclose(ifp);
 
     cputs("Histogram equalization...\r\n");
+    cur_histogram = histogram;
+    cur_opt_histogram = opt_histogram;
     do {
-      curr_hist += histogram[x];
-      opt_histogram[x] = (uint8)((((uint32)curr_hist * 255)) / NUM_PIXELS);
+      curr_hist += *(cur_histogram++);
+      *(cur_opt_histogram++) = (uint8)((((uint32)curr_hist * 255)) / NUM_PIXELS);
     } while (++x);
   } else {
 fallback_std:
+    cur_opt_histogram = opt_histogram;
     do {
-      opt_histogram[x] = x;
+      *(cur_opt_histogram++) = x;
     } while (++x);
   }
 }
 
 #pragma code-name(pop)
 
+#ifdef __CC65__
+#define cur_thumb_data zp10p
+#else
+uint8 *cur_thumb_data;
+#endif
+
 static void thumb_histogram(FILE *ifp) {
   uint8 x = 0, read;
   uint16 *histogram = (uint16 *)err;
-  uint8 *cur;
   uint16 curr_hist = 0;
 
   while ((read = fread(buffer, 1, 255, ifp)) != 0) {
-    cur = buffer;
+    cur_thumb_data = buffer;
     do {
-      uint8 v = *cur;
+      uint8 v = *cur_thumb_data;
       histogram[((v&0x0F) << 4)]++;
       histogram[((v&0xF0))]++;
-      cur++;
+      cur_thumb_data++;
       x++;
     } while (x != read);
   }
   x = 0;
+  cur_histogram = histogram;
+  cur_opt_histogram = opt_histogram;
   do {
-    curr_hist += histogram[x];
-    opt_histogram[x] = (uint8)((((uint32)curr_hist * 255)) / (THUMB_WIDTH*THUMB_HEIGHT));
+    curr_hist += *(cur_histogram++);
+    *(cur_opt_histogram++) = (uint8)((((uint32)curr_hist * 255)) / (THUMB_WIDTH*THUMB_HEIGHT));
   } while (++x);
   return;
 }
@@ -905,7 +923,7 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
           *ptr |= pixel;
           x86_64_tgi_set(dx, y, TGI_COLOR_WHITE);
         }
-        err2 = buf_plus_err >> 1; /* cur_err * 2 / 4 */
+        err2 = ((int8)buf_plus_err) >> 1; /* cur_err * 2 / 4 */
         err1 = err2 >> 1;    /* cur_err * 1 / 4 */
 #else
         __asm__("ldx #$00");
@@ -924,7 +942,7 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
         __asm__("bne %g", white_pix);
         __asm__("lda %v", buf_plus_err);
         __asm__("cmp #<(%b)", DITHER_THRESHOLD);
-        __asm__("bcc %g", black_pix2);
+        __asm__("bcc %g", black_pix_direct);
         white_pix:
         __asm__("lda (%v)", ptr);
         __asm__("ora %v", pixel);
@@ -932,14 +950,12 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
 
         black_pix:
         __asm__("lda %v", buf_plus_err);
-        black_pix2:
+        black_pix_direct:
         __asm__("cmp #$80");
         __asm__("ror a");
-        __asm__("cmp #$80");
         __asm__("sta %v", err2);
         __asm__("cmp #$80");
         __asm__("ror a");
-        __asm__("cmp #$80");
         __asm__("sta %v", err1);
 #endif
 
