@@ -124,6 +124,8 @@ void qt_convert_image(const char *filename) {
   qt_convert_image_with_crop(filename, 0, 0, 640, 480);
 }
 
+#pragma code-name(pop)
+
 static uint8 **cur_hgr_baseaddr_ptr;
 static uint8 *cur_hgr_baseaddr_val; /* shortcut ptr */
 static uint16 histogram[256];
@@ -165,8 +167,6 @@ fallback_std:
     } while (++x);
   }
 }
-
-#pragma code-name(pop)
 
 #ifdef __CC65__
 #define cur_thumb_data zp10p
@@ -1109,11 +1109,43 @@ next_line:
   progress_bar(-1, -1, scrw, file_height, file_height);
 stop:
   fclose(ifp);
-#ifndef __CC65__
-  ifp = fopen("HGR","wb");
-  fwrite((char *)HGR_PAGE, 1, HGR_LEN, ifp);
+
+  ifp = fopen("/RAM/DHGR","wb");
+  fwrite(HGR_PAGE, 1, HGR_LEN, ifp); /* Fill file with 8kB */
+
+  for (y = 0; y < HGR_HEIGHT; y++) {
+    cur_hgr_baseaddr_val = hgr_baseaddr[y];
+    memcpy(buffer, cur_hgr_baseaddr_val, 40);
+    fseek(ifp, cur_hgr_baseaddr_val-0x2000, SEEK_SET);
+    for (x = 0; x < 40; x++) {
+      uint8 cur_main_byte = 0, cur_aux_byte = 0;
+      if (buffer[x] & 0b00000001) {
+        cur_aux_byte |= 0b00000011;
+      }
+      if (buffer[x] & 0b00000010) {
+        cur_aux_byte |= 0b00001100;
+      }
+      if (buffer[x] & 0b00000100) {
+        cur_aux_byte |= 0b00110000;
+      }
+      if (buffer[x] & 0b00001000) {
+        cur_aux_byte |= 0b01000000;
+        cur_main_byte |= 0b00000001;
+      }
+      if (buffer[x] & 0b00010000) {
+        cur_main_byte |= 0b00000110;
+      }
+      if (buffer[x] & 0b00100000) {
+        cur_main_byte |= 0b00011000;
+      }
+      if (buffer[x] & 0b01000000) {
+        cur_main_byte |= 0b01100000;
+      }
+      *((unsigned char *)(cur_hgr_baseaddr_val + x)) = cur_main_byte;
+      fputc(cur_aux_byte, ifp);
+    }
+  }
   fclose(ifp);
-#endif
 }
 
 #pragma register-vars(pop)

@@ -53,6 +53,15 @@ void init_hgr(uint8 mono) {
   __asm__("bit     $C052"); /* MIXCLR */
   __asm__("bit     $C057"); /* HIRES */
 
+  __asm__("bit $C00D");
+  __asm__("bit $C00C");
+  __asm__("bit $C05E");
+  __asm__("bit $C05F");
+  __asm__("bit $C05E");
+  __asm__("bit $C05F");
+  __asm__("bit $C00D");
+  __asm__("bit $C05E");
+
   /* Set view page */
   #ifdef USE_HGR2
   __asm__("bit     $C055"); /* HISCR */
