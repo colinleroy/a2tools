@@ -17,31 +17,19 @@ FILE *ifp, *ofp;
 #define MAX(a,b) ((a) > (b) ? (a) : (b))
 #define LIM(x,min,max) MAX(min,MIN(x,max))
 
-#define getbits(n) getbithuff(n,0)
-
-unsigned getbithuff (int nbits, uint16 *huff)
+unsigned get_four_bits (void)
 {
-  static unsigned bitbuf=0;
-  static int vbits=0, reset=0;
-  unsigned c;
+  static uint8 bitbuf = 0;
+  static uint8 vbits = 0;
 
-  if (nbits > 25) return 0;
-  if (nbits < 0)
-    return bitbuf = vbits = reset = 0;
-  if (nbits == 0 || vbits < 0) return 0;
-  while (!reset && vbits < nbits && (c = fgetc(ifp)) != EOF &&
-    !(c == 0xff && fgetc(ifp))) {
-    bitbuf = (bitbuf << 8) + (uint8) c;
-    vbits += 8;
+  if(vbits) {
+    vbits--; 
+    return bitbuf & 0x0F;
+  } else {
+    bitbuf = fgetc(ifp);
+    vbits = 1;
+    return (bitbuf) >> 4;
   }
-  c = bitbuf << (32-vbits) >> (32-nbits);
-  if (huff) {
-    vbits -= huff[c] >> 8;
-    c = (uint8) huff[c];
-  } else
-    vbits -= nbits;
-  if (vbits < 0) exit(1);
-  return c;
 }
 
 void quicktake_100_load_raw(uint16 top)
@@ -53,7 +41,6 @@ void quicktake_100_load_raw(uint16 top)
   int first_line = 0, cnt;
 
   if (top == 0) {
-    getbits(-1);
     memset (pixel, 0x80, sizeof pixel);
     first_line = 1;
   } else {
@@ -72,8 +59,9 @@ void quicktake_100_load_raw(uint16 top)
     int first_col = 1;
     cnt = 0;
     for (col=2+(row & 1); col < WIDTH+2; col+=2) {
+      val = get_four_bits();
       val = ((pixel[row-1][col-1] + 2*pixel[row-1][col+1] +
-                pixel[row][col-2]) >> 2) + gstep[getbits(4)];
+                pixel[row][col-2]) >> 2) + gstep[val];
 
       pixel[row][col] = val = LIM(val,0,255);
       if (col < 4) {
