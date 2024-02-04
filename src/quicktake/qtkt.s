@@ -340,7 +340,7 @@ first_pass_row_work:
 :       sta     idx             ; idx += 2
         stx     idx+1
 
-        sec                     ; Set idx_behind
+        sec                     ; Set idx_behind = idx - (PIX_WIDTH+1)
         sbc     #<(PIX_WIDTH+1)
         sta     idx_behind
         txa
@@ -348,7 +348,7 @@ first_pass_row_work:
         sta     idx_behind+1
         tax
 
-        lda     idx_behind      ; Set idx_behind_plus2
+        lda     idx_behind      ; Set idx_behind_plus2 = idx_behind+2
         clc
         adc     #2
         sta     idx_behind_plus2
@@ -357,7 +357,7 @@ first_pass_row_work:
         clc
 :       stx     idx_behind_plus2+1
 
-        lda     #<PIX_WIDTH     ; Set idx_forward
+        lda     #<PIX_WIDTH     ; Set idx_forward += PIX_WIDTH
         adc     idx_forward
         sta     idx_forward
         lda     #>PIX_WIDTH
@@ -378,7 +378,7 @@ first_pass_row_work:
         adc     width_plus2+1
         sta     idx_end+1
 
-        ; We're not at first column anymore
+        ; We're at first column
         sta     at_very_first_col
 
 first_pass_col_loop:
@@ -420,23 +420,19 @@ first_pass_col_loop:
         lda     tmp1
         adc     tmp2            ; val's high byte in A
 
-        beq     val_less_256    ; was val < 256 ?
+        beq     store_val_lb    ; was val < 256 ?
         bmi     val_neg         ; was val < 0 ?
-        lda     #$FF            ; no, clamp to 255
+        ldy     #$FF            ; no, clamp to 255
         bra     store_val_lb
 
 val_neg:
-        ldy     #$00            ; clamp to 0 (into Y, avoid a BRA)
-
-val_less_256:
-        tya                     ; Restore val's low byte
+        ldy     #$00            ; clamp to 0
 
 store_val_lb:
+        tya                     ; Restore val's low byte
         sta     (idx)           ; *idx = val
 
         sta     val_col_minus2  ; Remember val for next loop
-
-        tay                     ; Backup val for following sets
 
         ; idx_behind = idx_behind_plus2
         lda     idx_behind_plus2+1
@@ -453,7 +449,7 @@ store_val_lb:
 :       lda     at_very_first_col
         beq     not_at_first_col
 
-        tya                     ; *(idx_forward) = *(idx_min2) = val
+        tya                     ; *(idx_forward) = *(idx_min2) = val (still in Y)
         sta     (idx_forward)
         sta     (idx_min2)
         stz     at_very_first_col
@@ -521,7 +517,7 @@ second_pass_row_work:
         bne     :+
         inx
 
-:       sty     idx
+:       sty     idx             ; idx
         stx     idx+1
         iny
         bne     :+
@@ -604,7 +600,7 @@ store_val_lb_2:
         sta     idx_forward
         stx     idx_forward+1   ; Let's hope we don't cross page
         bne     :+
-        inc     idx_forward+1   ; We did. Don't touch X for end of row comparison
+        inc     idx_forward+1   ; We did. Don't touch X (idx high byte) for end of row comparison
 
 :       ; Are we done for this row?
         cpx     idx_end+1
