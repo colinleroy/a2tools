@@ -42,10 +42,11 @@ uint8 __fastcall__ getbithuff (uint8 n)
     if (cur_cache_ptr == cache_end) {
       fread(cur_cache_ptr = cache, 1, CACHE_SIZE, ifp);
     }
-    bitbuf += *(cur_cache_ptr++);
+    bitbuf |= *(cur_cache_ptr++);
     vbits += 8;
   }
   shift = 32-vbits;
+  printf("vbits %d, shift %d\n", vbits, shift);
   if (shift >= 24) {
     FAST_SHIFT_LEFT_24_LONG_TO(bitbuf, tmp);
   } else if (shift >= 16) {
@@ -57,15 +58,8 @@ uint8 __fastcall__ getbithuff (uint8 n)
   if (shift)
     tmp <<= shift;
 
-  shift = 32-nbits;
-  if (shift >= 24) {
-    FAST_SHIFT_RIGHT_24_LONG(tmp);
-  } else if (shift >= 16) {
-    FAST_SHIFT_RIGHT_16_LONG(tmp);
-  } else if (shift >= 8) {
-    FAST_SHIFT_RIGHT_8_LONG(tmp);
-  }
-  shift %= 8;
+  shift = 8-nbits; /* nbits max is 8 so we'll shift at least 24 */
+  FAST_SHIFT_RIGHT_24_LONG(tmp);
   if (shift)
     c = (uint8)(tmp >> shift);
   else

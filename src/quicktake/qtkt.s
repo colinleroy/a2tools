@@ -335,10 +335,9 @@ first_pass_row_work:
         clc
         adc     #2
         bcc     :+
-        inx
+        inc     idx+1
 
 :       sta     idx             ; idx += 2
-        stx     idx+1
 
         sec                     ; Set idx_behind = idx - (PIX_WIDTH+1)
         sbc     #<(PIX_WIDTH+1)
@@ -456,12 +455,12 @@ store_val_lb:
 
 not_at_first_col:
         lda     at_very_first_row
-        beq     not_at_first_line
+        beq     not_at_first_row
         tya
         sta     (idx_behind_plus2)
         sta     (idx_behind)
 
-not_at_first_line:
+not_at_first_row:
         clc                     ; idx += 2
         lda     idx
         adc     #2
@@ -489,6 +488,7 @@ start_second_pass:
         sta     src+1
         lda     pix_direct_row+(2*2)
         sta     src
+
         lda     #QT_BAND
         sta     row
 
