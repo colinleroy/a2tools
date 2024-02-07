@@ -5,7 +5,7 @@
 #include "extended_conio.h"
 #include "extrazp.h"
 
-#define CACHE_SIZE 4096
+#define CACHE_SIZE _CACHE_SIZE
 extern uint8 cache[];
 extern uint8 *cache_start;
 extern uint8 *cache_end;

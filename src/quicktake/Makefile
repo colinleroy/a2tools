@@ -55,13 +55,17 @@ qtktconv_GCCSOURCES := qtkt.c qtk_bithuff.c
 qtknconv_SOURCES := \
 	qt-conv.c qtkn.c  ../lib/path_helper.c ../lib/progress_bar.c
 
-qtknconv_CC65SOURCES := ../lib/extrazp.s qtk_bithuff.s
+qtknconv_CC65SOURCES := ../lib/extrazp.s qtk_bithuff.s \
+	../lib/mult16x16x32.s \
+	../lib/approxdiv16x8.s \
+	../lib/square_table.s
+	
 qtknconv_GCCSOURCES := qtk_bithuff.c
 
 jpegconv_SOURCES := \
 	qt-conv.c jpeg.c ../lib/path_helper.c ../lib/progress_bar.c
 
-jpegconv_CC65SOURCES := jpeg_platform.s ../lib/extrazp.s 
+jpegconv_CC65SOURCES := jpeg_platform.s ../lib/extrazp.s
 jpegconv_GCCSOURCES := jpeg_platform.c
 
 GCCSOURCES := ../lib/extended_conio.c ../lib/clrzone.c
@@ -73,11 +77,11 @@ CFLAGS  = -I ../lib -DCONF_FILE_PATH=\"/etc/a2tools/quicktake.conf\"
 CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x200 $(USE_LANGCARD) $(debug_CFLAGS) $(iigs_CFLAGS)
 
 slowtake_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-hgr.cfg $(CC65_TARGET)-iobuf-0800.o --start-addr 0xC00 #One file buffer
-qtktconv_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh.cfg $(CC65_TARGET)-iobuf-0800.o --start-addr 0x1000    #Two file buffers
-qtknconv_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh.cfg $(CC65_TARGET)-iobuf-0800.o --start-addr 0x1000
-jpegconv_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh.cfg $(CC65_TARGET)-iobuf-0800.o --start-addr 0x1000
+qtktconv_CLCFLAGS = -D_CACHE_SIZE=4096 --asm-define CACHE_SIZE=4096 $(CLCFLAGS) -C ../../config/apple2enh.cfg $(CC65_TARGET)-iobuf-0800.o --start-addr 0x1000    #Two file buffers
+qtknconv_CLCFLAGS = -D_CACHE_SIZE=3072 --asm-define CACHE_SIZE=3072 $(CLCFLAGS) -C ../../config/apple2enh-aligndata.cfg $(CC65_TARGET)-iobuf-0800.o --start-addr 0x1000
+jpegconv_CLCFLAGS = -D_CACHE_SIZE=4096 --asm-define CACHE_SIZE=4096 $(CLCFLAGS) -C ../../config/apple2enh.cfg $(CC65_TARGET)-iobuf-0800.o --start-addr 0x1000
 
-GCCCFLAGS = -g -O0 -Wall -Wno-pointer-sign -Wno-char-subscripts -Wno-unused-but-set-variable -Wno-unused-variable -Wno-unknown-pragmas $(shell sdl-config --cflags)
+GCCCFLAGS = -D_CACHE_SIZE=4096 -g -O0 -Wall -Wno-pointer-sign -Wno-char-subscripts -Wno-unused-but-set-variable -Wno-unused-variable -Wno-unknown-pragmas $(shell sdl-config --cflags)
 GCCLDFLAGS = $(shell sdl-config --libs)
 
 .PHONY: all clean
