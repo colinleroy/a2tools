@@ -108,15 +108,22 @@ posix_use_dir:
       closedir(d);
     }
   }
+#ifdef __APPLE2ENH__
+#define VBAR "\337"
+#define LOWER_CORNER "\324\137"
+#else
+#define VBAR "!"
+#define LOWER_CORNER "!_"
+#endif
 full_disp_again:
   clrzone(l_sx, sy, ex, ey);
 disp_again:
   gotoxy(l_sx, sy);
-  cprintf("-- %s\r\n", prompt);
+  cprintf(VBAR"%s\r\n", prompt);
   if (n == 0) {
-    gotox(l_sx); cprintf("! *%s*\r\n", dir ? "No directory":"Empty");
-    gotox(l_sx); cputs("!\r\n");
-    gotox(l_sx); cputs("-- Any key to go up");
+    gotox(l_sx); cprintf(VBAR" *%s*\r\n", dir ? "No directory":"Empty");
+    gotox(l_sx); cputs(VBAR"\r\n");
+    gotox(l_sx); cputs(LOWER_CORNER" Any key to go up");
     cgetc();
     goto up;
   }
@@ -129,19 +136,19 @@ disp_again:
   for (i = start; i < loop_stop; i++) {
     revers(0);
     gotox(l_sx);
-    cputs("! ");
+    cputs(VBAR" ");
     revers(i == sel);
     cprintf("%s\r\n", file_entries[i].name);
   }
   revers(0);
 
-  gotox(l_sx);cputs("! \r\n");
+  gotox(l_sx);cputs(VBAR" \r\n");
 #ifdef __APPLE2ENH__
-  gotox(l_sx);cputs("!  Up/Down / Left/Right: navigate;\r\n");
+  gotox(l_sx);cputs(VBAR"  Up/Down / Left/Right: navigate;\r\n");
 #else
-  gotox(l_sx);cputs("!  U/J / Left/Right: navigate;\r\n");
+  gotox(l_sx);cputs(VBAR"  U/J / Left/Right: navigate;\r\n");
 #endif
-  gotox(l_sx);cputs("-- Enter: select; Esc: cancel");
+  gotox(l_sx);cputs(LOWER_CORNER" Enter: select; Esc: cancel");
 
   c = tolower(cgetc());
   switch (c) {
