@@ -45,7 +45,7 @@ gstep_low:
         .byte        $F1
         .byte        $F8
         .byte        $FE
-        
+
         .byte        $02
         .byte        $08
         .byte        $0F
@@ -64,7 +64,7 @@ gstep_high:
         .byte        $FF
         .byte        $FF
         .byte        $FF
-        
+
         .byte        $00
         .byte        $00
         .byte        $00
@@ -82,8 +82,6 @@ model_str:
 _cache:
         .res        4096,$00
 dst:
-        .res        2,$00
-src:
         .res        2,$00
 width_plus2:
         .res        2,$00
@@ -111,9 +109,9 @@ val_col_minus2    = regbank+1
 row               = regbank+2
 at_very_first_col = regbank+3
 idx               = regbank+4
-idx_forward       = _zp6p
-idx_behind        = _zp8p
-idx_end           = _zp10p
+src               = _zp6p
+idx_forward       = _zp8p
+idx_behind        = _zp10p
 idx_behind_plus2  = _zp12p
 idx_pix_rows      = _zp12ip
 idx_min2          = _prev_rom_irq_vector
@@ -248,25 +246,40 @@ start_work:
         sta     row
 
 first_pass_next_row:
-        ; idx_forward = idx_end = idx = src
-        lda     src
-        sta     idx
-        sta     idx_end
-        sta     idx_forward
-        lda     src+1
-        sta     idx+1
-        sta     idx_end+1
-        sta     idx_forward+1
-
         lda     row             ; Row & 1?
         bit     #$01
-        beq     even_row
-
-        inc     idx
         bne     :+
-        inc     idx+1
+        jmp     even_row
 
-:       bit     #$02            ; Row & 2?
+:       clc
+        lda     src             ; idx_end = src + width_plus2
+        adc     width_plus2
+        tay
+        lda     src+1
+        adc     width_plus2+1
+        iny                     ; + 1
+        sty     check_first_pass_col_loop+1
+        bne     :+
+        inc     a
+:       sta     check_first_pass_col_loop_hi+1
+
+        lda     src             ; Set idx_forward = src + PIX_WIDTH and idx = src + 1
+        tay
+        adc     #<PIX_WIDTH
+        sta     idx_forward
+        lda     src+1
+        tax
+        adc     #>PIX_WIDTH
+        sta     idx_forward+1
+
+        iny                     ; Finish with idx = src + 1
+        bne     :+
+        inx
+
+:       sty     idx
+        stx     idx+1
+
+        bit     #$02            ; Row & 2?
         beq     first_pass_row_work
 
         lda     pgbar_state    ; Update progress bar
@@ -319,10 +332,23 @@ first_pass_next_row:
         jmp     first_pass_row_work
 
 even_row:
-        inc     idx_forward     ; increment idx_forward on even rows
-        bne     :+
-        inc     idx_forward+1
-:
+        clc
+        lda     src             ; idx_end = src + width_plus2
+        adc     width_plus2
+        sta     check_first_pass_col_loop+1
+        lda     src+1
+        adc     width_plus2+1
+        sta     check_first_pass_col_loop_hi+1
+
+        lda     src             ; Set idx_forward = src + PIX_WIDTH + 1 and idx = src
+        sta     idx
+        adc     #<(PIX_WIDTH+1)
+        sta     idx_forward
+        lda     src+1
+        sta     idx+1
+        adc     #>(PIX_WIDTH+1)
+        sta     idx_forward+1
+
 first_pass_row_work:
         lda     (idx)           ; Remember previous val before shifting
         sta     val_col_minus2  ; index
@@ -335,9 +361,10 @@ first_pass_row_work:
         clc
         adc     #2
         bcc     :+
-        inc     idx+1
+        inx
 
 :       sta     idx             ; idx += 2
+        stx     idx+1
 
         sec                     ; Set idx_behind = idx - (PIX_WIDTH+1)
         sbc     #<(PIX_WIDTH+1)
@@ -347,21 +374,14 @@ first_pass_row_work:
         sta     idx_behind+1
         tax
 
-        lda     idx_behind      ; Set idx_behind_plus2 = idx_behind+2
         clc
+        lda     idx_behind      ; Set idx_behind_plus2 = idx_behind+2
         adc     #2
         sta     idx_behind_plus2
         bcc     :+
         inx
         clc
 :       stx     idx_behind_plus2+1
-
-        lda     #<PIX_WIDTH     ; Set idx_forward += PIX_WIDTH
-        adc     idx_forward
-        sta     idx_forward
-        lda     #>PIX_WIDTH
-        adc     idx_forward+1
-        sta     idx_forward+1
 
         lda     #<PIX_WIDTH     ; src += PIX_WIDTH
         adc     src
@@ -370,62 +390,52 @@ first_pass_row_work:
         adc     src+1
         sta     src+1
 
-        lda     idx_end         ; idx_end += width_plus2
-        adc     width_plus2
-        sta     idx_end
-        lda     idx_end+1
-        adc     width_plus2+1
-        sta     idx_end+1
-
         ; We're at first column
         sta     at_very_first_col
 
 first_pass_col_loop:
         jsr     _get_four_bits
-        tay
+        tax
 
-        ldx     gstep_high,y
-        lda     gstep_low,y
-        stx     tmp2
-        sta     val
+        ; Math done in AY instead of AX to keep gstep's index in X
 
-        ldx     #$00            ; *idx_behind_plus2 * 2
+        ldy     #$00            ; ((*idx_behind_plus2 * 2)
         lda     (idx_behind_plus2)
         asl     a
         bcc     :+
-        inx
+        iny
         clc
 
 :       adc     (idx_behind)    ; + *idx_behind
         bcc     :+
-        inx
+        iny
         clc
 
 :       adc     val_col_minus2  ; + val_col_minus_2
         bcc     :+
-        inx
+        iny
 
-:       stx     tmp1            ; >> 2
-        cpx     #$80
+:       sty     tmp1            ; ) >> 2
+        cpy     #$80
         ror     tmp1
         ror     a
-        cpx     #$80
+        cpy     #$80
         ror     tmp1
         ror     a
 
-        clc                     ; increment val by this.
-        adc     val
+        clc                     ; + gstep[h].
+        adc     gstep_low,x
         tay                     ; Backup val's low byte
         lda     tmp1
-        adc     tmp2            ; val's high byte in A
+        adc     gstep_high,x    ; val's high byte in A
 
-        beq     store_val_lb    ; was val < 256 ?
+        beq     store_val_lb    ; check high byte: was val < 256 ?
         bmi     val_neg         ; was val < 0 ?
-        ldy     #$FF            ; no, clamp to 255
-        bra     store_val_lb
+        ldy     #$FF            ; no, > 255 so clamp to 255
+        jmp     store_val_lb
 
 val_neg:
-        ldy     #$00            ; clamp to 0
+        ldy     #$00            ; < 0, clamp to 0
 
 store_val_lb:
         tya                     ; Restore val's low byte
@@ -434,18 +444,20 @@ store_val_lb:
         sta     val_col_minus2  ; Remember val for next loop
 
         ; idx_behind = idx_behind_plus2
-        lda     idx_behind_plus2+1
-        sta     idx_behind+1
         lda     idx_behind_plus2
         sta     idx_behind
+        ldx     idx_behind_plus2+1
+        stx     idx_behind+1
 
         clc                     ; idx_behind_plus2 += 2
         adc     #2
         sta     idx_behind_plus2
         bcc     :+
-        inc     idx_behind_plus2+1
+        inx
 
-:       lda     at_very_first_col
+:       stx     idx_behind_plus2+1
+
+        lda     at_very_first_col
         beq     not_at_first_col
 
         tya                     ; *(idx_forward) = *(idx_min2) = val (still in Y)
@@ -456,7 +468,7 @@ store_val_lb:
 not_at_first_col:
         lda     at_very_first_row
         beq     not_at_first_row
-        tya
+        tya                     ; *(idx_behind_plus2) = *(idx_behind) = val (still in Y)
         sta     (idx_behind_plus2)
         sta     (idx_behind)
 
@@ -469,13 +481,15 @@ not_at_first_row:
         inc     idx+1
 
 check_first_pass_col_loop:
-        cmp     idx_end
+        cmp     #0              ; Patched (idx_end)
+        bne     first_pass_col_loop
         lda     idx+1
-        sbc     idx_end+1
-        bcc     first_pass_col_loop
+check_first_pass_col_loop_hi:
+        cmp     #0              ; Patched (idx_end+1)
+        bne     first_pass_col_loop
 
 end_of_line:
-        tya                     ; *idx = val
+        tya                     ; *idx = val (still in Y)
         sta     (idx)
         stz     at_very_first_row
 
@@ -493,10 +507,9 @@ start_second_pass:
         sta     row
 
 second_pass_next_row:
-        ldy     src             ; idx in YX
+        clc
+        ldy     src
         ldx     src+1
-        sty     idx_end         ; idx_end = src
-        stx     idx_end+1
 
         iny
         bne     :+
@@ -519,20 +532,20 @@ second_pass_row_work:
 
 :       sty     idx             ; idx
         stx     idx+1
-        iny
+
+        tya                     ; idx_end = idx + width
+        adc     _width
+        sta     check_second_pass_col_loop+1
+        txa
+        adc     _width+1
+        sta     check_second_pass_col_loop_hi+1
+
+        iny                     ; idx_forward = idx + 1
         bne     :+
         inx
 
-:       sty     idx_forward     ; idx_forward = idx + 1
+:       sty     idx_forward
         stx     idx_forward+1
-
-        lda     idx_end         ; idx_end += width_plus2
-        clc
-        adc     width_plus2
-        sta     idx_end
-        lda     idx_end+1
-        adc     width_plus2+1
-        sta     idx_end+1
 
         lda     #<PIX_WIDTH     ; src += PIX_WIDTH
         adc     src
@@ -540,12 +553,6 @@ second_pass_row_work:
         lda     #>PIX_WIDTH
         adc     src+1
         sta     src+1
-        bra     second_pass_col_loop
-
-check_second_pass_col_loop:
-        lda     idx
-        cmp     idx_end
-        bcs     second_pass_row_done
 
 second_pass_col_loop:
         lda     (idx)           ; *idx << 2
@@ -574,7 +581,7 @@ second_pass_col_loop:
         beq     store_val_lb_2
         bmi     val_neg_2
         lda     #$FF
-        bra     store_val_lb_2
+        jmp     store_val_lb_2
 val_neg_2:
         lda     #$00
 
@@ -596,27 +603,23 @@ store_val_lb_2:
 
 :       stx     idx+1
         sta     idx
+        tay
         inc     a
         sta     idx_forward
         stx     idx_forward+1   ; Let's hope we don't cross page
-        bne     :+
+        bne     check_second_pass_col_loop
         inc     idx_forward+1   ; We did. Don't touch X (idx high byte) for end of row comparison
 
-:       ; Are we done for this row?
-        cpx     idx_end+1
-        bcc     second_pass_col_loop
-        beq     check_second_pass_col_loop
+check_second_pass_col_loop:
+        ; Are we done for this row?
+        cpy     #0              ; Patched (idx_end)
+        bne     second_pass_col_loop
+check_second_pass_col_loop_hi:
+        cpx     #0              ; Patched (idx_end+1)
+        bne     second_pass_col_loop
 
 second_pass_row_done:
-        lda     idx             ; idx += 2
-        clc
-        adc     #2
-        sta     idx
-        bcc     :+
-        inc     idx+1
-        clc
-
-:       dec     row
+        dec     row
         beq     :+
         jmp     second_pass_next_row
 
@@ -672,7 +675,7 @@ copy_row:
         tax
         tya
         jsr     pushax          ; push src to memcpy
-        bra     copy_row
+        jmp     copy_row
 copy_done:
 
         ldy     #$00            ; Restore regbank

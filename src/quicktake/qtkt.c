@@ -114,17 +114,20 @@ void qt_load_raw(uint16 top)
   src = pix_direct_row[2];
   for (row = QT_BAND; row != 0; row--) {
 
-    idx_forward = idx_end = idx = src;
+    idx = src;
     if (row & 1) {
-      idx++;
+      idx_forward = src + PIX_WIDTH;
+      idx_min2 = idx = src + 1;
+      idx_end = src + width_plus2 + 1;
       pgbar_state+=2;
       progress_bar(-1, -1, 80*22, pgbar_state, height);
     } else {
-      idx_forward++;
+      idx_min2 = idx = src;
+      idx_end = src + width_plus2;
+      idx_forward = src + PIX_WIDTH + 1;
     }
 
     val_col_minus2 = (*idx);
-    idx_min2 = idx;
     idx += 2;
 
     /* row-1, col-1 */
@@ -133,24 +136,19 @@ void qt_load_raw(uint16 top)
     /* row-1, col+1 */
     idx_behind_plus2 = idx_behind + 2;
 
-    /* row+1, ~row & 1 */
-    idx_forward += PIX_WIDTH;
-
     /* Shift for next line */
     src += PIX_WIDTH;
 
-    /* Width to decode: image width, not scratch buffer width */
-    idx_end += width_plus2;
-
     at_very_first_col = 1;
-    while (idx < idx_end) {
+
+    while (idx != idx_end) {
       uint8 h = get_four_bits();
 
-      val = gstep[h];
-
-      val += ((*idx_behind             // row-1, col-1
+      val = ((*idx_behind               // row-1, col-1
               + (*(idx_behind_plus2))*2 // row-1, col+1
-              + val_col_minus2) >> 2);  // row  , col-2
+              + val_col_minus2) >> 2)   // row  , col-2
+              + gstep[h];
+
       if (val < 0)
         val = 0;
       else if (val & 0xff00) /* > 255, but faster as we're sure it's non-negative */
@@ -161,8 +159,8 @@ void qt_load_raw(uint16 top)
       /* Cache it for next loop before shifting */
       val_col_minus2 = val;
 
-      idx_behind = idx_behind_plus2++;
-      idx_behind_plus2++;
+      idx_behind = idx_behind_plus2;
+      idx_behind_plus2+=2;
 
       if (at_very_first_col) {
         *(idx_forward) = *(idx_min2) = val;
@@ -184,20 +182,18 @@ void qt_load_raw(uint16 top)
   src = pix_direct_row[2];
   //for (row = 2; row != QT_BAND + 2; row++) {
   for (row = QT_BAND; row != 0; row--) {
-    idx_end = src;
-
     if (row & 1) {
       idx_behind = src+1;
     } else {
       idx_behind = src+2;
     }
     idx = idx_behind+1;
+    idx_end = idx + width;
     idx_forward = idx + 1;
 
-    idx_end += width_plus2;
     src += PIX_WIDTH;
 
-    while (idx < idx_end) {
+    while (idx != idx_end) {
       val = ((*(idx_behind) // row,col-1
             + (*(idx) << 2) //row,col
             +  *(idx_forward)) >> 1) //row,col+1
@@ -214,8 +210,6 @@ void qt_load_raw(uint16 top)
       idx_forward = ++idx;
       idx_forward++;
     }
-    idx++;
-    idx++;
   }
 
   dst = raw_image;

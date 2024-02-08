@@ -53,7 +53,7 @@ _get_four_bits:
         rts
 
 not_enough_vbits:
-        lda     #0              ; Patched when resetting
+        lda     #0              ; Patched when resetting (_cache_end)
         cmp     cur_cache_ptr
         beq     cache_check_high
 
@@ -73,7 +73,7 @@ fetch_vbits:
         rts
 
 cache_check_high:
-        ldx     #0              ; Patched when resetting
+        ldx     #0              ; Patched when resetting (_cache_end+1)
         cpx     cur_cache_ptr+1
         bne     fetch_vbits
 
@@ -194,13 +194,13 @@ have_enough_vbits_h:
         bcc     maybe_shift_16_h
         ldy     _bitbuf         ; take low byte to high
         ldx     #0
-        bra     finish_lshift_h
+        jmp     finish_lshift_h
 maybe_shift_16_h:
         cmp     #16
         bcc     maybe_shift_8_h
         ldy     _bitbuf+1       ; two low bytes to high
         ldx     _bitbuf
-        bra     finish_lshift_h
+        jmp     finish_lshift_h
 maybe_shift_8_h:
         cmp     #8
         bcc     finish_lshift_h
@@ -230,7 +230,7 @@ lshift_done_h:
 :       lsr     a
         dey
         bne     :-
-        bra     do_huff_h
+        jmp     do_huff_h
 no_final_shift_h:
         lda     tmp4
 do_huff_h:
