@@ -36,7 +36,7 @@ uint8 *cache_start = cache;
 static uint16 width_plus2;
 static uint16 pgbar_state;
 static uint8 *last_two_lines, *third_line;
-static uint8 at_very_first_line;
+static uint8 at_very_first_row;
 
 /* Decoding stuff. The values from 0-7 are negative
  * but we reverse them when we use them for optimisation
@@ -84,7 +84,7 @@ void qt_load_raw(uint16 top)
   if (top == 0) {
     reset_bitbuff();
 
-    at_very_first_line = 1;
+    at_very_first_row = 1;
     width_plus2 = width + 2;
     pgbar_state = 0;
 
@@ -145,7 +145,7 @@ void qt_load_raw(uint16 top)
       uint8 h = get_four_bits();
 
       val = ((*idx_behind               // row-1, col-1
-              + (*(idx_behind_plus2))*2 // row-1, col+1
+              + (*(idx_behind_plus2) << 1) // row-1, col+1
               + val_col_minus2) >> 2)   // row  , col-2
               + gstep[h];
 
@@ -167,7 +167,7 @@ void qt_load_raw(uint16 top)
         at_very_first_col = 0;
       }
 
-      if (at_very_first_line) {
+      if (at_very_first_row) {
         /* row-1,col+1 / row-1,col+3*/
         *(idx_behind) = *(idx_behind_plus2) = val;
       }
@@ -175,7 +175,7 @@ void qt_load_raw(uint16 top)
       idx+=2;
     }
     *(idx) = val;
-    at_very_first_line = 0;
+    at_very_first_row = 0;
   }
 
   /* Finish */

@@ -27,7 +27,7 @@ char *read_instructions[] = {
 };
 
 char *write_instructions[] = {
-  "dec", "inc",
+  "dec", "inc", "asl",
   "lsr", "rol", "ror",
   "sta", "stx", "sty",
   "stz", "trb", "tsb",

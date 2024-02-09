@@ -168,7 +168,6 @@ precalc_row_index:              ; Init direct pointers to each line
         lda     idx+1
         sta     (idx_pix_rows),y
 
-        clc
         lda     #<PIX_WIDTH
         adc     idx
         sta     idx
@@ -399,7 +398,7 @@ first_pass_col_loop:
 
         ; Math done in AY instead of AX to keep gstep's index in X
 
-        ldy     #$00            ; ((*idx_behind_plus2 * 2)
+        ldy     #$00            ; ((*idx_behind_plus2 << 1)
         lda     (idx_behind_plus2)
         asl     a
         bcc     :+
@@ -425,24 +424,30 @@ first_pass_col_loop:
 
         clc                     ; + gstep[h].
         adc     gstep_low,x
+
+        ; It's faster to store and backup there instead of just
+        ; backing up and always transferring Y back to A at
+        ; val_stored, then storing
+
+        sta     (idx)           ; *idx = val
+        sta     val_col_minus2  ; Remember val for next loop
         tay                     ; Backup val's low byte
+
         lda     tmp1
         adc     gstep_high,x    ; val's high byte in A
 
-        beq     store_val_lb    ; check high byte: was val < 256 ?
-        bmi     val_neg         ; was val < 0 ?
-        ldy     #$FF            ; no, > 255 so clamp to 255
-        jmp     store_val_lb
+        beq     val_stored      ; High byte 0, No need to clamp
+        asl     a               ; Get high byte sign into carry
+        ldy     #$00
+        bcs     store_clamped   ; High byte negative, clamp to 0
+        dey
 
-val_neg:
-        ldy     #$00            ; < 0, clamp to 0
-
-store_val_lb:
-        tya                     ; Restore val's low byte
+store_clamped:
+        tya                     ; Store again, clamped
         sta     (idx)           ; *idx = val
-
         sta     val_col_minus2  ; Remember val for next loop
 
+val_stored:
         ; idx_behind = idx_behind_plus2
         lda     idx_behind_plus2
         sta     idx_behind
@@ -454,10 +459,9 @@ store_val_lb:
         sta     idx_behind_plus2
         bcc     :+
         inx
+        stx     idx_behind_plus2+1
 
-:       stx     idx_behind_plus2+1
-
-        lda     at_very_first_col
+:       lda     at_very_first_col
         beq     not_at_first_col
 
         tya                     ; *(idx_forward) = *(idx_min2) = val (still in Y)
@@ -571,9 +575,8 @@ second_pass_col_loop:
 :       adc     (idx_forward)   ; + idx_forward
         bcc     :+
         inc     tmp1
-        clc
 
-:       ror     tmp1            ; >> 1
+:       lsr     tmp1            ; >> 1
         ror     a
 
         dec     tmp1            ; - 0x100
