@@ -3,9 +3,9 @@
 
 #include "platform.h"
 
-#define HGR_LEN 8192
-#define HGR_WIDTH 280
-#define HGR_HEIGHT 192
+#define HGR_LEN 8192U
+#define HGR_WIDTH 280U
+#define HGR_HEIGHT 192U
 
 #ifdef __CC65__
 #define HGR_PAGE 0x2000
