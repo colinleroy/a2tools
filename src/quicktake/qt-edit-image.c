@@ -822,9 +822,20 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
       __asm__("tya");
       __asm__("sta %v", next_err_line);
       __asm__("stx %v+1", next_err_line);
-      __asm__("jsr pushax"); /* Push for bzero */
+      
+      /* Push next_err_line to ptr1 and clear it */
+      __asm__("sta ptr1");
+      __asm__("stx ptr1+1");
+      __asm__("ldy %v", file_width);
+      __asm__("pha");
+      __asm__("lda #0");
+      clear_next_err_line:
+      __asm__("sta (ptr1),y");
+      __asm__("dey");
+      __asm__("bne %g", clear_next_err_line);
 
       /* cur_err_x_yplus1 = next_err_line + x; */
+      __asm__("pla");
       __asm__("clc");
       __asm__("adc %v", x);
       __asm__("sta %v", cur_err_x_yplus1);
@@ -841,10 +852,6 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
       __asm__("dex");
       nouf1:
       __asm__("stx %v+1", cur_err_xmin1_yplus1);
-
-      __asm__("lda %v", file_width);
-      __asm__("ldx %v+1", file_width);
-      __asm__("jsr %v", bzero);
 
       __asm__("stz %v", err2);
 #endif
