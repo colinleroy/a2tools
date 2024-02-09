@@ -144,11 +144,10 @@ void qt_load_raw(uint16 top)
     while (idx != idx_end) {
       uint8 h = get_four_bits();
 
-      val = ((*idx_behind               // row-1, col-1
-              + (*(idx_behind_plus2) << 1) // row-1, col+1
-              + val_col_minus2) >> 2)   // row  , col-2
+      val = ((((*idx_behind               // row-1, col-1
+              + val_col_minus2) >> 1)
+              + *idx_behind_plus2) >> 1) // row-1, col+1
               + gstep[h];
-
       if (val < 0)
         val = 0;
       else if (val & 0xff00) /* > 255, but faster as we're sure it's non-negative */
