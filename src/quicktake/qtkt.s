@@ -80,7 +80,7 @@ model_str:
 .segment        "BSS"
 
 _cache:
-        .res        4096,$00
+        .res        CACHE_SIZE,$00
 dst:
         .res        2,$00
 width_plus2:
@@ -251,7 +251,7 @@ first_pass_next_row:
         jmp     even_row
 
 :       clc
-        lda     src             ; idx_end = src + width_plus2
+        lda     src             ; idx_end = src + width_plus2 + 1
         adc     width_plus2
         tay
         lda     src+1
@@ -396,58 +396,40 @@ first_pass_col_loop:
         jsr     _get_four_bits
         tax
 
-        ; Math done in AY instead of AX to keep gstep's index in X
+        ; Thanks to Kent Dickey for the simplification!
+        ; val = ((*idx_behind            // row-1, col-1
+        ;      + val_col_minus2) >> 1    // row,   col-2
+        ;      + *idx_behind_plus2) >> 1 // row-1, col+1
+        ;      + gstep[h];
 
-        ldy     #$00            ; ((*idx_behind_plus2 << 1)
-        lda     (idx_behind_plus2)
-        asl     a
-        bcc     :+
-        iny
         clc
+        lda     (idx_behind)
+        adc     val_col_minus2
+        ror
 
-:       adc     (idx_behind)    ; + *idx_behind
-        bcc     :+
-        iny
         clc
-
-:       adc     val_col_minus2  ; + val_col_minus_2
-        bcc     :+
-        iny
-
-:       sty     tmp1            ; ) >> 2
-        cpy     #$80
-        ror     tmp1
-        ror     a
-        cpy     #$80
-        ror     tmp1
-        ror     a
+        adc     (idx_behind_plus2)
+        ror
 
         clc                     ; + gstep[h].
-        adc     gstep_low,x
-
-        ; It's faster to store and backup there instead of just
-        ; backing up and always transferring Y back to A at
-        ; val_stored, then storing
+        adc     gstep_low,x     ; Sets carry if overflow
 
         sta     (idx)           ; *idx = val
-        sta     val_col_minus2  ; Remember val for next loop
-        tay                     ; Backup val's low byte
+        tay                     ; Backup val's low byte to Y for later
 
-        lda     tmp1
-        adc     gstep_high,x    ; val's high byte in A
-
-        beq     val_stored      ; High byte 0, No need to clamp
-        asl     a               ; Get high byte sign into carry
-        ldy     #$00
-        bcs     store_clamped   ; High byte negative, clamp to 0
-        dey
-
-store_clamped:
-        tya                     ; Store again, clamped
+        lda     gstep_high,x    ; Carry set by previous adc if overflowed
+        adc     #0              ; Will re-set carry if underflow
+        beq     val_stored      ; No overflow
+        sbc     #0              ; Convert $FF or $01 to $FF or $00
+        eor     #$FF            ; Invert for clamping
+                                ; Thanks to John Brooks for this neat idea!
+store_val:
         sta     (idx)           ; *idx = val
-        sta     val_col_minus2  ; Remember val for next loop
+        tay                     ; Backup
 
 val_stored:
+        sty     val_col_minus2  ; val_col_minus2 = val
+
         ; idx_behind = idx_behind_plus2
         lda     idx_behind_plus2
         sta     idx_behind
@@ -461,7 +443,7 @@ val_stored:
         inx
         stx     idx_behind_plus2+1
 
-:       lda     at_very_first_col
+:       ldx     at_very_first_col
         beq     not_at_first_col
 
         tya                     ; *(idx_forward) = *(idx_min2) = val (still in Y)
@@ -470,9 +452,10 @@ val_stored:
         stz     at_very_first_col
 
 not_at_first_col:
-        lda     at_very_first_row
+        ldx     at_very_first_row
         beq     not_at_first_row
-        tya                     ; *(idx_behind_plus2) = *(idx_behind) = val (still in Y)
+        tya                     ; get val back from Y
+                                ; *(idx_behind_plus2) = *(idx_behind) = val
         sta     (idx_behind_plus2)
         sta     (idx_behind)
 
