@@ -37,9 +37,9 @@ extern uint8 scrw, scrh;
 
 #define BUF_SIZE 64
 
-#define DITHER_NONE   0
+#define DITHER_NONE   2
 #define DITHER_BAYER  1
-#define DITHER_SIERRA 2
+#define DITHER_SIERRA 0
 #define DITHER_THRESHOLD 128U
 #define DEFAULT_BRIGHTEN 0
 
@@ -899,8 +899,7 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
       }
 
 #ifndef __CC65__
-      opt_val = *buf_ptr;
-      opt_val = opt_histogram[opt_val];
+      opt_val = opt_histogram[*buf_ptr];
 #else
       /* Compensate optimizer */
       __asm__("lda   (%v)", buf_ptr);
@@ -989,10 +988,23 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
         cur_err_x_y++;
         cur_err_x_yplus1++;
         cur_err_xmin1_yplus1++;
+
       } else if (dither_alg == DITHER_BAYER) {
         buf_plus_err = opt_val;
 #ifndef __CC65__
         buf_plus_err += *bayer_map_x;
+
+        if (buf_plus_err < DITHER_THRESHOLD) {
+          x86_64_tgi_set(dx, y, TGI_COLOR_BLACK);
+        } else {
+          *ptr |= pixel;
+          x86_64_tgi_set(dx, y, TGI_COLOR_WHITE);
+        }
+
+        /* Advance Bayer X */
+        bayer_map_x++;
+        if (bayer_map_x == end_bayer_map_x)
+          bayer_map_x = bayer_map_y + 0;
 #else
         __asm__("ldx #$00");
         __asm__("lda (%v)", bayer_map_x);
@@ -1005,17 +1017,35 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
         __asm__("txa");
         __asm__("adc %v+1", buf_plus_err);
         __asm__("sta %v+1", buf_plus_err);
-#endif
-        if (buf_plus_err < DITHER_THRESHOLD) {
-          x86_64_tgi_set(dx, y, TGI_COLOR_BLACK);
-        } else {
-          *ptr |= pixel;
-          x86_64_tgi_set(dx, y, TGI_COLOR_WHITE);
-        }
+
+        __asm__("bmi %g", black_pix_bayer);
+        __asm__("bne %g", white_pix_bayer);
+        __asm__("lda %v", buf_plus_err);
+        __asm__("cmp #<(%b)", DITHER_THRESHOLD);
+        __asm__("bcc %g", black_pix_bayer);
+        white_pix_bayer:
+        __asm__("lda (%v)", ptr);
+        __asm__("ora %v", pixel);
+        __asm__("sta (%v)", ptr);
+
+        black_pix_bayer:
         /* Advance Bayer X */
-        bayer_map_x++;
-        if (bayer_map_x == end_bayer_map_x)
-          bayer_map_x = bayer_map_y + 0;
+        __asm__("lda %v", bayer_map_x);
+        __asm__("ldx %v+1", bayer_map_x);
+        __asm__("inc a");
+        __asm__("bne %g", noof5);
+        __asm__("inx");
+        noof5:
+        __asm__("cmp %v", end_bayer_map_x);
+        __asm__("bne %g", bayer_map_x_done); /* No need to check high byte */
+
+        __asm__("lda %v", bayer_map_y);
+        __asm__("ldx %v+1", bayer_map_y);
+        bayer_map_x_done:
+        __asm__("sta %v", bayer_map_x);
+        __asm__("stx %v+1", bayer_map_x);
+#endif
+
       } else if (dither_alg == DITHER_NONE) {
         if (opt_val < DITHER_THRESHOLD) {
           x86_64_tgi_set(dx, y, TGI_COLOR_BLACK);
