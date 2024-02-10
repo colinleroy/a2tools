@@ -193,10 +193,9 @@ void qt_load_raw(uint16 top)
     src += PIX_WIDTH;
 
     while (idx != idx_end) {
-      val = ((*(idx_behind) // row,col-1
-            + (*(idx) << 2) //row,col
-            +  *(idx_forward)) >> 1) //row,col+1
-            - 0x100;
+      val = (*idx << 1)
+          + ((*idx_behind + *idx_forward) >> 1)
+          - 0x100;
 
       if (val < 0)
         *(idx) = 0;

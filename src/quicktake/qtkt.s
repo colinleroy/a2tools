@@ -542,37 +542,37 @@ second_pass_row_work:
         sta     src+1
 
 second_pass_col_loop:
-        lda     (idx)           ; *idx << 2
-        stz     tmp1
-        asl     a
-        rol     tmp1
-        asl     a
-        rol     tmp1
+        ; val = (*idx << 1)
+        ;    + ((*idx_behind + *idx_forward) >> 1)
+        ;    - 0x100;
 
-        clc                     ; + idx_behind
-        adc     (idx_behind)
+        ldx     #1
+
+        clc
+        lda     (idx_behind)
+        adc     (idx_forward)
+        ror                     ; >> 1 and get carry back to high bit
+        sta     tmp1
+
+        lda     (idx)           ; *idx << 1
+        asl
+
         bcc     :+
-        inc     tmp1
+        dex
         clc
 
-:       adc     (idx_forward)   ; + idx_forward
+:       adc     tmp1
         bcc     :+
-        inc     tmp1
+        dex
 
-:       lsr     tmp1            ; >> 1
-        ror     a
+        ; Now X = 1 means < 0, X = 0 means val in range, X = $FF means > 255
+:       cpx     #0
+        beq     :+
+        txa
+        bmi     :+              ; $FF is good as is
+        dec     a               ; Transform 1 to 0
 
-        dec     tmp1            ; - 0x100
-
-        beq     store_val_lb_2
-        bmi     val_neg_2
-        lda     #$FF
-        jmp     store_val_lb_2
-val_neg_2:
-        lda     #$00
-
-store_val_lb_2:
-        sta     (idx)           ; *idx = val
+:       sta     (idx)           ; *idx = val
 
         ; Shift indexes by 2, in order
         ldx     idx+1
