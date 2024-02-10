@@ -112,9 +112,14 @@ void qt_load_raw(uint16 top)
 
   /* We start at line 2. */
   src = pix_direct_row[2];
-  for (row = QT_BAND; row != 0; row--) {
 
+  /* In reality we do rows from 0 to QT_BAND, but decrementing is faster
+   * and the only use of the variable is to check for oddity, so nothing
+   * changes */
+  for (row = QT_BAND; row != 0; row--) {
     idx = src;
+
+    /* Adapt indexes depending on the row's oddity */
     if (row & 1) {
       idx_forward = src + PIX_WIDTH;
       idx_min2 = idx = src + 1;
@@ -127,7 +132,10 @@ void qt_load_raw(uint16 top)
       idx_forward = src + PIX_WIDTH + 1;
     }
 
+    /* Initial set of the value two columns behind */
     val_col_minus2 = (*idx);
+
+    /* row, col index */
     idx += 2;
 
     /* row-1, col-1 */
@@ -136,11 +144,12 @@ void qt_load_raw(uint16 top)
     /* row-1, col+1 */
     idx_behind_plus2 = idx_behind + 2;
 
-    /* Shift for next line */
+    /* Shift source buffer for next line */
     src += PIX_WIDTH;
 
     at_very_first_col = 1;
 
+    /* First pass */
     while (idx != idx_end) {
       uint8 h = get_four_bits();
 
@@ -150,7 +159,7 @@ void qt_load_raw(uint16 top)
               + gstep[h];
       if (val < 0)
         val = 0;
-      else if (val & 0xff00) /* > 255, but faster as we're sure it's non-negative */
+      else if (val > 255)
         val = 255;
 
       *(idx) = val;
@@ -158,14 +167,18 @@ void qt_load_raw(uint16 top)
       /* Cache it for next loop before shifting */
       val_col_minus2 = val;
 
+      /* Shift indexes */
       idx_behind = idx_behind_plus2;
       idx_behind_plus2+=2;
 
+      /* At first columns, we have to set scratch values for the next line.
+       * We'll need them in the second pass */
       if (at_very_first_col) {
         *(idx_forward) = *(idx_min2) = val;
         at_very_first_col = 0;
       }
 
+      /* Same for the first line of the image */
       if (at_very_first_row) {
         /* row-1,col+1 / row-1,col+3*/
         *(idx_behind) = *(idx_behind_plus2) = val;
@@ -177,19 +190,23 @@ void qt_load_raw(uint16 top)
     at_very_first_row = 0;
   }
 
-  /* Finish */
+  /* Second pass */
   src = pix_direct_row[2];
-  //for (row = 2; row != QT_BAND + 2; row++) {
+
   for (row = QT_BAND; row != 0; row--) {
+    /* Adapt indexes for oddity */
     if (row & 1) {
       idx_behind = src+1;
     } else {
       idx_behind = src+2;
     }
+
+    /* Setup the rest of the indexes */
     idx = idx_behind+1;
     idx_end = idx + width;
     idx_forward = idx + 1;
 
+    /* Shift source buffer */
     src += PIX_WIDTH;
 
     while (idx != idx_end) {
@@ -197,9 +214,10 @@ void qt_load_raw(uint16 top)
           + ((*idx_behind + *idx_forward) >> 1)
           - 0x100;
 
+      /* Fixup */
       if (val < 0)
         *(idx) = 0;
-      else if (val & 0xff00) /* > 255, but faster as we're sure it's non-negative */
+      else if (val > 255)
         *(idx) = 255;
       else
         *(idx) = val;
@@ -210,6 +228,9 @@ void qt_load_raw(uint16 top)
     }
   }
 
+  /* Finish by copying the actual data, leaving out the two first scratch rows,
+   * the two last scratch rows (which will be reused for the next band), and
+   * the two first and two last pixels of each line, which are scratch too */
   dst = raw_image;
   src = pix_direct_row[2] + 2;
   for (row = 0; row < QT_BAND; row++) {

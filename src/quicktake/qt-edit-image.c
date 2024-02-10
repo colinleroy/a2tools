@@ -560,12 +560,13 @@ static uint8 thumb_buf[THUMB_WIDTH * 2];
 void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint16 p_height, uint8 serial_model) {
   /* Rotation/cropping variables */
   uint8 start_x, i;
-  uint8 x, end_x;
+  uint8 x, end_x, y;
   uint16 dx;
 
   uint16 dy;
-  uint16 off_x, y, off_y;
+  uint16 off_x, off_y;
   uint16 file_width;
+  uint8 *cur_buf_page;
 #ifdef __CC65__
   #define cur_d7 zp6p
   #define cur_m7 zp8p
@@ -655,7 +656,7 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
     case 90:
       off_x = 0;
       if (resize) {
-        off_y = 212 * 4 / 3;
+        off_y = 212U * 4 / 3;
       } else {
         off_y = HGR_WIDTH - 45;
         start_x = 32;
@@ -668,7 +669,7 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
     case 270:
       if (resize) {
         off_x = file_width - 1;
-        off_y = 68 * 4 / 3;
+        off_y = 68U * 4 / 3;
       } else {
         off_x = HGR_HEIGHT - 1;
         off_y = 44;
@@ -694,11 +695,34 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
   bayer_map_y = bayer_map + 0;
   end_bayer_map_y = bayer_map_y + 64;
 
+  cur_buf_page = buffer; /* Init once (in case of thumbnail) */
   for(y = 0, dy = off_y; y != file_height;) {
 
     /* Load data from file */
     if (!is_thumb) {
-      fread(buffer, 1, FILE_WIDTH, ifp);
+
+#if (BLOCK_SIZE*2 != 1024)
+#error Wrong BLOCK_SIZE, has to be 2*256
+#endif
+
+#ifndef __CC65__
+      if (y % 4) {
+        cur_buf_page += FILE_WIDTH;
+      } else {
+        fread(buffer, 1, BLOCK_SIZE*2, ifp);
+        cur_buf_page = buffer;
+      }
+#else
+      __asm__("lda %v", y);
+      __asm__("and #3");
+      __asm__("beq %g", read_buf);
+      __asm__("inc %v+1", cur_buf_page);
+      goto dither;
+      read_buf:
+      fread(buffer, 1, BLOCK_SIZE*2, ifp);
+      __asm__("lda #>(%v)", buffer);
+      __asm__("sta %v+1", cur_buf_page);
+#endif
     } else {
       uint8 a, b, c, d, off;
       /* assume thumbnail at 4bpp and zoom it */
@@ -787,6 +811,10 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
       }
     }
 
+#ifdef __CC65__
+    dither:
+#endif
+
     /* Calculate hgr base coordinates for the line */
     if (invert_coords) {
       if (resize) {
@@ -805,7 +833,7 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
     }
 #ifndef __CC65__
     x = start_x;
-    buf_ptr = buffer + x;
+    buf_ptr = cur_buf_page + x;
     dx = off_x;
 
     cur_d7 = div7_table + dx;
@@ -814,9 +842,9 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
     __asm__("lda %v", start_x);
     __asm__("sta %v", x);
 
-    __asm__("ldx #>(%v)", buffer);
+    __asm__("ldx %v+1", cur_buf_page);
     __asm__("clc");
-    __asm__("adc #<(%v)", buffer);
+    __asm__("adc %v", cur_buf_page);
     __asm__("sta %v", buf_ptr);
     __asm__("bcc %g", noof2);
     __asm__("inx");
