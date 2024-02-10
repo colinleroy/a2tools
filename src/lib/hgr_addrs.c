@@ -55,7 +55,7 @@ void init_hgr_base_addrs (void)
 
     /* line of eight */
     __asm__("lda %v", y);
-    __asm__("tax");
+    __asm__("tay");
     __asm__("and #$07");
     __asm__("asl"); /* shift 2 and add to temp var high byte */
     __asm__("asl");
@@ -63,21 +63,17 @@ void init_hgr_base_addrs (void)
     __asm__("adc %v+1", x);
     __asm__("sta %v+1", x);
 
-    /* group of sixty four */
-    __asm__("stx ptr1"); /* Get Y back */
-    __asm__("stz ptr1+1");
-    __asm__("lda #64");
-    __asm__("sta ptr4");
-    __asm__("stz ptr4+1");
-    __asm__("jsr udiv16");
-    __asm__("lda ptr1"); /* quotient */
-    __asm__("stz tmp1"); /* *4 */
-    __asm__("asl");
-    __asm__("rol tmp1");
-    __asm__("asl");
-    __asm__("rol tmp1");
-    __asm__("ldx tmp1");
-    __asm__("jsr mulax10"); /* and 10 */
+    /* group of sixty four : Y/64 * 40
+     * => ((Y>>6) <<2) * 10
+     * => (Y>> 4 & 0b11111100) * 10 */
+    __asm__("tya"); /* Get Y back */
+    __asm__("lsr"); /* >> 6 to /64 */
+    __asm__("lsr");
+    __asm__("lsr");
+    __asm__("lsr");
+    __asm__("and #$FC");
+    __asm__("ldx #0");
+    __asm__("jsr mulax10"); /* and *10 */
 
     __asm__("clc");         /* and add to temp */
     __asm__("adc %v", x);
@@ -86,13 +82,21 @@ void init_hgr_base_addrs (void)
     __asm__("adc %v+1", x);
     __asm__("sta %v+1", x);
 
-    /* group of eight */
-    __asm__("lda sreg"); /* remainder, untouched by mulax10 */
-    __asm__("lsr"); /* div by 8 */
-    __asm__("lsr");
-    __asm__("lsr");
-    __asm__("ldx #0");
-    __asm__("jsr aslax7");
+    /* group of eight : (Y%64)/8 * 128
+     * => (Y%64) & 0b11111000 * 16
+     * => Y&0b00111000 << 4 */
+    __asm__("tya"); /* get Y back */
+    __asm__("and #$38"); /* 0b00111000 */
+
+    __asm__("stz tmp1"); /* << 4 */
+    __asm__("asl a");    /* Don't care about high bit for two shifts */
+    __asm__("asl a");
+
+    __asm__("asl a");
+    __asm__("rol tmp1"); /* now care about high bit */
+    __asm__("asl a");
+    __asm__("rol tmp1");
+    __asm__("ldx tmp1");
 
     __asm__("clc");         /* and add to temp */
     __asm__("adc %v", x);
