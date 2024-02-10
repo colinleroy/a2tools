@@ -860,42 +860,40 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
 
       err2 = 0;
 #else
-      __asm__("lda %v", cur_err_line);
-      __asm__("ldx %v+1", cur_err_line);
-      __asm__("tay"); /* start swapping cur/next, now tmp in YX */
-      __asm__("phx");
+      /* swap cur/next low bytes */
+      __asm__("ldy %v", cur_err_line);
       __asm__("lda %v", next_err_line);
-      __asm__("ldx %v+1", next_err_line);
+      __asm__("sty %v", next_err_line);
       __asm__("sta %v", cur_err_line);
-      __asm__("stx %v+1", cur_err_line);
+      __asm__("sty ptr1"); /* Push next_err_line to ptr1 */
+
+      /* swap cur/next high bytes */
+      __asm__("ldx %v+1", cur_err_line);
+      __asm__("ldy %v+1", next_err_line);
+      __asm__("stx %v+1", next_err_line);
+      __asm__("sty %v+1", cur_err_line);
+      __asm__("stx ptr1+1"); /* Push next_err_line to ptr1 */
 
       /* cur_err_x_y = cur_err_line + x; */
       __asm__("clc");
       __asm__("adc %v", x);
       __asm__("sta %v", cur_err_x_y);
       __asm__("bcc %g", noof3);
-      __asm__("inx");
+      __asm__("iny");
       noof3:
-      __asm__("stx %v+1", cur_err_x_y);
+      __asm__("sty %v+1", cur_err_x_y);
 
-      __asm__("plx"); /* finish swapping cur/next */
-      __asm__("tya");
-      __asm__("sta %v", next_err_line);
-      __asm__("stx %v+1", next_err_line);
-      
-      /* Push next_err_line to ptr1 and clear it */
-      __asm__("sta ptr1");
-      __asm__("stx ptr1+1");
+      /* Clear next line */
       __asm__("ldy %v", file_width);
-      __asm__("pha");
       __asm__("lda #0");
       clear_next_err_line:
       __asm__("sta (ptr1),y");
       __asm__("dey");
       __asm__("bne %g", clear_next_err_line);
+      __asm__("sty %v", err2);
 
       /* cur_err_x_yplus1 = next_err_line + x; */
-      __asm__("pla");
+      __asm__("lda %v", next_err_line); /* High byte still in X */
       __asm__("clc");
       __asm__("adc %v", x);
       __asm__("sta %v", cur_err_x_yplus1);
@@ -912,8 +910,6 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
       __asm__("dex");
       nouf1:
       __asm__("stx %v+1", cur_err_xmin1_yplus1);
-
-      __asm__("stz %v", err2);
 #endif
 
     } else if (dither_alg == DITHER_BAYER) {
