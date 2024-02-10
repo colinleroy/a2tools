@@ -112,7 +112,6 @@ idx               = regbank+4
 src               = _zp6p
 idx_forward       = _zp8p
 idx_behind        = _zp10p
-idx_behind_plus2  = _zp12p
 idx_pix_rows      = _zp12ip
 idx_min2          = _prev_rom_irq_vector
 
@@ -371,17 +370,8 @@ first_pass_row_work:
         txa
         sbc     #>(PIX_WIDTH+1)
         sta     idx_behind+1
-        tax
 
         clc
-        lda     idx_behind      ; Set idx_behind_plus2 = idx_behind+2
-        adc     #2
-        sta     idx_behind_plus2
-        bcc     :+
-        inx
-        clc
-:       stx     idx_behind_plus2+1
-
         lda     #<PIX_WIDTH     ; src += PIX_WIDTH
         adc     src
         sta     src
@@ -399,7 +389,7 @@ first_pass_col_loop:
         ; Thanks to Kent Dickey for the simplification!
         ; val = ((*idx_behind            // row-1, col-1
         ;      + val_col_minus2) >> 1    // row,   col-2
-        ;      + *idx_behind_plus2) >> 1 // row-1, col+1
+        ;      + *idx_behind+2) >> 1 // row-1, col+1
         ;      + gstep[h];
 
         clc
@@ -408,7 +398,8 @@ first_pass_col_loop:
         ror
 
         clc
-        adc     (idx_behind_plus2)
+        ldy     #2
+        adc     (idx_behind),y
         ror
 
         clc                     ; + gstep[h].
@@ -430,18 +421,12 @@ store_val:
 val_stored:
         sty     val_col_minus2  ; val_col_minus2 = val
 
-        ; idx_behind = idx_behind_plus2
-        lda     idx_behind_plus2
-        sta     idx_behind
-        ldx     idx_behind_plus2+1
-        stx     idx_behind+1
-
-        clc                     ; idx_behind_plus2 += 2
+        clc                     ; idx_behind += 2
+        lda     idx_behind
         adc     #2
-        sta     idx_behind_plus2
+        sta     idx_behind
         bcc     :+
-        inx
-        stx     idx_behind_plus2+1
+        inc     idx_behind+1
 
 :       ldx     at_very_first_col
         beq     not_at_first_col
@@ -455,8 +440,9 @@ not_at_first_col:
         ldx     at_very_first_row
         beq     not_at_first_row
         tya                     ; get val back from Y
-                                ; *(idx_behind_plus2) = *(idx_behind) = val
-        sta     (idx_behind_plus2)
+                                ; *(idx_behind+2) = *(idx_behind) = val
+        ldy     #2
+        sta     (idx_behind),y
         sta     (idx_behind)
 
 not_at_first_row:
@@ -506,33 +492,19 @@ second_pass_next_row:
         and     #$01
         bne     second_pass_row_work
         iny                     ; no, increment index one more
-        bne     :+
+        bne     second_pass_row_work
         inx
-:
 
 second_pass_row_work:
-        sty     idx_behind      ; idx_behind = idx-1
-        stx     idx_behind+1
-        iny
-        bne     :+
-        inx
-
-:       sty     idx             ; idx
+        tya
+        sta     idx
         stx     idx+1
 
-        tya                     ; idx_end = idx + width
-        adc     _width
+        adc     _width          ; idx_end = idx + width
         sta     check_second_pass_col_loop+1
         txa
         adc     _width+1
         sta     check_second_pass_col_loop_hi+1
-
-        iny                     ; idx_forward = idx + 1
-        bne     :+
-        inx
-
-:       sty     idx_forward
-        stx     idx_forward+1
 
         lda     #<PIX_WIDTH     ; src += PIX_WIDTH
         adc     src
@@ -542,19 +514,19 @@ second_pass_row_work:
         sta     src+1
 
 second_pass_col_loop:
-        ; val = (*idx << 1)
-        ;    + ((*idx_behind + *idx_forward) >> 1)
+        ; val = (*(idx+1) << 1)
+        ;    + ((*(idx) + *(idx+2)) >> 1)
         ;    - 0x100;
 
         ldx     #1
-
+        ldy     #2
         clc
-        lda     (idx_behind)
-        adc     (idx_forward)
+        lda     (idx)
+        adc     (idx),y
         ror                     ; >> 1 and get carry back to high bit
         sta     tmp1
-
-        lda     (idx)           ; *idx << 1
+        dey
+        lda     (idx),y  ; *idx << 1
         asl
 
         bcc     :+
@@ -572,33 +544,22 @@ second_pass_col_loop:
         bmi     :+              ; $FF is good as is
         dec     a               ; Transform 1 to 0
 
-:       sta     (idx)           ; *idx = val
+:       sta     (idx),y  ; *(idx+1) = val (Y still 1)
 
         ; Shift indexes by 2, in order
+
         ldx     idx+1
         lda     idx
-        inc     a
-        bne     :+
-        inx
-
-:       stx     idx_behind+1
-        sta     idx_behind
-        inc     a
-        bne     :+
-        inx
-
-:       stx     idx+1
+        clc
+        adc     #2
         sta     idx
-        tay
-        inc     a
-        sta     idx_forward
-        stx     idx_forward+1   ; Let's hope we don't cross page
-        bne     check_second_pass_col_loop
-        inc     idx_forward+1   ; We did. Don't touch X (idx high byte) for end of row comparison
+        bcc     check_second_pass_col_loop
+        inx
+        stx     idx+1
 
 check_second_pass_col_loop:
         ; Are we done for this row?
-        cpy     #0              ; Patched (idx_end)
+        cmp     #0              ; Patched (idx_end)
         bne     second_pass_col_loop
 check_second_pass_col_loop_hi:
         cpx     #0              ; Patched (idx_end+1)
