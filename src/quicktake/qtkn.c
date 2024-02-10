@@ -47,7 +47,7 @@ static int8 tk;
 static uint8 tmp8;
 static uint16 tmp16;
 #endif
-static uint32 tmp32, tmp32_2;
+static uint32 tmp32;
 
 #ifdef __CC65__
 #define raw_ptr1 zp6p
