@@ -44,7 +44,7 @@ typedef struct _thumb_info {
 
 /* Communication buffer */
 #define BLOCK_SIZE 512
-extern unsigned char buffer[BLOCK_SIZE];
+extern unsigned char buffer[BLOCK_SIZE*2];
 extern uint8 serial_model;
 
 /* Camera interface functions, protocol-agnostic */
