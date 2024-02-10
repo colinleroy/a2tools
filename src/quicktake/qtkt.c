@@ -142,7 +142,7 @@ void qt_load_raw(uint16 top)
     idx_behind = idx - (PIX_WIDTH+1);
 
     /* row-1, col+1 */
-    idx_behind_plus2 = idx_behind + 2;
+    //idx_behind_plus2 = idx_behind + 2;
 
     /* Shift source buffer for next line */
     src += PIX_WIDTH;
@@ -155,7 +155,7 @@ void qt_load_raw(uint16 top)
 
       val = ((((*idx_behind               // row-1, col-1
               + val_col_minus2) >> 1)
-              + *idx_behind_plus2) >> 1) // row-1, col+1
+              + *(idx_behind+2)) >> 1) // row-1, col+1
               + gstep[h];
       if (val < 0)
         val = 0;
@@ -168,8 +168,7 @@ void qt_load_raw(uint16 top)
       val_col_minus2 = val;
 
       /* Shift indexes */
-      idx_behind = idx_behind_plus2;
-      idx_behind_plus2+=2;
+      idx_behind +=2;
 
       /* At first columns, we have to set scratch values for the next line.
        * We'll need them in the second pass */
@@ -181,7 +180,7 @@ void qt_load_raw(uint16 top)
       /* Same for the first line of the image */
       if (at_very_first_row) {
         /* row-1,col+1 / row-1,col+3*/
-        *(idx_behind) = *(idx_behind_plus2) = val;
+        *(idx_behind) = *(idx_behind+2) = val;
       }
 
       idx+=2;
@@ -196,35 +195,31 @@ void qt_load_raw(uint16 top)
   for (row = QT_BAND; row != 0; row--) {
     /* Adapt indexes for oddity */
     if (row & 1) {
-      idx_behind = src+1;
+      idx = src+1;
     } else {
-      idx_behind = src+2;
+      idx = src+2;
     }
 
     /* Setup the rest of the indexes */
-    idx = idx_behind+1;
     idx_end = idx + width;
-    idx_forward = idx + 1;
 
     /* Shift source buffer */
     src += PIX_WIDTH;
 
     while (idx != idx_end) {
-      val = (*idx << 1)
-          + ((*idx_behind + *idx_forward) >> 1)
+      val = (*(idx+1) << 1)
+          + ((*(idx) + *(idx+2)) >> 1)
           - 0x100;
 
       /* Fixup */
       if (val < 0)
-        *(idx) = 0;
+        *(idx+1) = 0;
       else if (val > 255)
-        *(idx) = 255;
+        *(idx+1) = 255;
       else
-        *(idx) = val;
+        *(idx+1) = val;
 
-      idx_behind = ++idx;
-      idx_forward = ++idx;
-      idx_forward++;
+      idx += 2;
     }
   }
 
