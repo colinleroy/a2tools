@@ -153,10 +153,70 @@ static void histogram_equalize(void) {
     cputs("Histogram equalization...\r\n");
     cur_histogram = histogram;
     cur_opt_histogram = opt_histogram;
+#ifndef __CC65__
     do {
+      uint32 tmp;
       curr_hist += *(cur_histogram++);
-      *(cur_opt_histogram++) = (uint8)((((uint32)curr_hist * 255)) / NUM_PIXELS);
+      tmp = ((uint32)curr_hist << 8) - curr_hist;
+      tmp >>= 8; /* / 256 */
+      tmp /= 192;
+      *(cur_opt_histogram++) = tmp;
     } while (++x);
+#else
+    next_h:
+    __asm__("ldy #1");
+    __asm__("clc");
+    __asm__("lda (%v)", cur_histogram);
+    __asm__("adc %v", curr_hist);
+    __asm__("sta %v", curr_hist);
+    __asm__("tax"); /* *256 */
+    __asm__("lda (%v),y", cur_histogram);
+    __asm__("adc %v+1", curr_hist);
+    __asm__("sta %v+1", curr_hist);
+    __asm__("sta sreg"); /* * 256 */
+
+    /* Finish curr_hist * 256 with low and high bytes 0 */
+    __asm__("lda #0");
+    __asm__("sta sreg+1");
+
+    /* -curr_hist => curr_hist * 255 */
+    __asm__("sec");
+    __asm__("sbc %v", curr_hist);
+    __asm__("tay");
+    __asm__("txa");
+    __asm__("sbc %v+1", curr_hist);
+    __asm__("tax");
+    __asm__("lda sreg");
+    __asm__("sbc #0");
+    __asm__("sta sreg");
+    __asm__("tya");
+
+    /* / 256 */
+    __asm__("txa");
+    __asm__("ldx sreg");
+
+    /* / 192 */
+    __asm__("jsr pushax");
+    __asm__("lda #<%w", HGR_HEIGHT);
+    __asm__("jsr tosudiva0");
+
+    __asm__("sta (%v)", cur_opt_histogram);
+
+    __asm__("clc");
+    __asm__("lda %v", cur_histogram);
+    __asm__("adc #2");
+    __asm__("sta %v", cur_histogram);
+    __asm__("bcc %g", noof10);
+    __asm__("inc %v+1", cur_histogram);
+    __asm__("clc");
+    noof10:
+    __asm__("inc %v", cur_opt_histogram);
+    __asm__("bne %g", noof11);
+    __asm__("inc %v+1", cur_opt_histogram);
+    noof11:
+    __asm__("inc %v", x);
+    __asm__("bne %g", next_h);
+#endif
   } else {
 fallback_std:
     cur_opt_histogram = opt_histogram;
