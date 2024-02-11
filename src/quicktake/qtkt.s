@@ -474,7 +474,7 @@ second_pass_col_loop:
         ;    + ((*(idx) + *(idx+2)) >> 1)
         ;    - 0x100;
 
-        ldx     #1
+        ldx     #1              ; Overflow counter
         ldy     #2
         clc
         lda     (idx)
@@ -502,21 +502,20 @@ second_pass_col_loop:
 
 :       sta     (idx),y  ; *(idx+1) = val (Y still 1)
 
-        ; Shift indexes by 2, in order
+        ; Shift index by 2
 
-        ldx     idx+1
         lda     idx
         clc
         adc     #2
         sta     idx
         bcc     check_second_pass_col_loop
-        inx
-        stx     idx+1
+        inc     idx+1
 
 check_second_pass_col_loop:
         ; Are we done for this row?
         cmp     #0              ; Patched (idx_end)
         bne     second_pass_col_loop
+        ldx     idx+1
 check_second_pass_col_loop_hi:
         cpx     #0              ; Patched (idx_end+1)
         bne     second_pass_col_loop
