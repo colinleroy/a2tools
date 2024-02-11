@@ -1093,7 +1093,7 @@ void qt_load_raw(uint16 top)
       pDst_row += QT200_HEIGHT * 2;
 
       progress_bar(-1, -1, 80*22, dst_y >> 1, height);
-      if (dst_y % (QT_BAND*2) == 0) {
+      if (dst_y % (BAND_HEIGHT*2) == 0) {
         break;
       }
     }

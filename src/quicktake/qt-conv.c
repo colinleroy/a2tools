@@ -49,8 +49,8 @@ static void reload_menu(const char *filename);
 
 /* Shared with decoders */
 uint16 height, width;
-uint16 raw_image_size = (QT_BAND) * 640;
-uint8 raw_image[(QT_BAND) * 640];
+uint16 raw_image_size = (BAND_HEIGHT) * 640;
+uint8 raw_image[(BAND_HEIGHT) * 640];
 
 /* Cache */
 uint8 *cache_end;
@@ -162,7 +162,7 @@ static uint8 identify(const char *name)
 
 static uint16 histogram[256];
 
-static uint8 *orig_y_table[QT_BAND];
+static uint8 *orig_y_table[BAND_HEIGHT];
 static uint16 orig_x_table[640];
 static uint8 scaled_band_height;
 static uint16 output_write_len;
@@ -188,26 +188,26 @@ static void build_scale_table(const char *ofname) {
     switch (effective_width) {
       case 640:
         scaling_factor = 4;
-        scaled_band_height = (QT_BAND * 4 / 10);
-        output_write_len = FILE_WIDTH * (QT_BAND * 4 / 10);
+        scaled_band_height = (BAND_HEIGHT * 4 / 10);
+        output_write_len = FILE_WIDTH * (BAND_HEIGHT * 4 / 10);
         break;
       case 320:
         scaling_factor = 8;
-        scaled_band_height = (QT_BAND * 8 / 10);
-        output_write_len = FILE_WIDTH * (QT_BAND * 8 / 10);
+        scaled_band_height = (BAND_HEIGHT * 8 / 10);
+        output_write_len = FILE_WIDTH * (BAND_HEIGHT * 8 / 10);
         effective_width = 321; /* Prevent re-cropping from menu */
         break;
       case 512:
         scaling_factor = 5;
-        scaled_band_height = (QT_BAND * 5 / 10);
-        output_write_len = FILE_WIDTH * (QT_BAND * 5 / 10);
+        scaled_band_height = (BAND_HEIGHT * 5 / 10);
+        output_write_len = FILE_WIDTH * (BAND_HEIGHT * 5 / 10);
         last_band = crop_start_y + 380;
         last_band_crop = 2; /* 4, scaled */
         break;
       case 256:
         scaling_factor = 10;
-        scaled_band_height = (QT_BAND * 10 / 10);
-        output_write_len = FILE_WIDTH * (QT_BAND * 10 / 10);
+        scaled_band_height = (BAND_HEIGHT * 10 / 10);
+        output_write_len = FILE_WIDTH * (BAND_HEIGHT * 10 / 10);
         last_band = crop_start_y + 180;
         last_band_crop = 12;
         break;
@@ -222,13 +222,13 @@ static void build_scale_table(const char *ofname) {
     switch (effective_width) {
       case 320:
         scaling_factor = 8;
-        scaled_band_height = (QT_BAND * 8 / 10);
-        output_write_len = FILE_WIDTH * (QT_BAND * 8 / 10);
+        scaled_band_height = (BAND_HEIGHT * 8 / 10);
+        output_write_len = FILE_WIDTH * (BAND_HEIGHT * 8 / 10);
         break;
       case 256:
         scaling_factor = 10;
-        scaled_band_height = (QT_BAND * 10 / 10);
-        output_write_len = FILE_WIDTH * (QT_BAND * 10 / 10);
+        scaled_band_height = (BAND_HEIGHT * 10 / 10);
+        output_write_len = FILE_WIDTH * (BAND_HEIGHT * 10 / 10);
         last_band = crop_start_y + 180;
         last_band_crop = 12;
         break;
@@ -456,7 +456,7 @@ try_again:
   printf("Decompressing...\n");
   progress_bar(0, 1, 80*22, 0, height);
 
-  for (h = 0; h < crop_end_y; h += QT_BAND) {
+  for (h = 0; h < crop_end_y; h += BAND_HEIGHT) {
     qt_load_raw(h);
     if (h >= crop_start_y)
       write_raw(h);
