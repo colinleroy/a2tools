@@ -371,23 +371,11 @@ val_stored:
         inc     idx_behind+1
 
 :       ldx     at_very_first_col
-        beq     not_at_first_col
-
-                                ; *(idx_forward) = *(idx_min2) = val (still in Y)
-store_idx_forward:
-        sty     $FFFF           ; Patched
-store_idx_min2:
-        sty     $FFFF           ; Patched
-        stz     at_very_first_col
+        bne     handle_first_col
 
 not_at_first_col:
         ldx     at_very_first_row
-        beq     not_at_first_row
-        tya                     ; get val back from Y
-                                ; *(idx_behind+2) = *(idx_behind) = val
-        ldy     #2
-        sta     (idx_behind),y
-        sta     (idx_behind)
+        bne     handle_first_row
 
 not_at_first_row:
         clc                     ; idx += 2
@@ -414,6 +402,25 @@ end_of_line:
         beq     start_second_pass
         jmp     first_pass_next_row
 
+
+        ; First cols and first row handlers, out of main loop
+handle_first_col:               ; *(idx_forward) = *(idx_min2) = val (still in Y)
+store_idx_forward:
+        sty     $FFFF           ; Patched
+store_idx_min2:
+        sty     $FFFF           ; Patched
+        stz     at_very_first_col
+        jmp     not_at_first_col; Back to common codepath
+
+handle_first_row:               ; *(idx_behind+2) = *(idx_behind) = val
+        tya                     ; get val back from Y
+        ldy     #2
+        sta     (idx_behind),y
+        sta     (idx_behind)
+        jmp     not_at_first_row
+        ; End of first col/row handlers
+
+
 start_second_pass:
         lda     pix_direct_row+(2*2)+1
         sta     src+1
@@ -438,14 +445,15 @@ second_pass_next_row:
         lda     row             ; row & 1?
         bit     #$01
         bne     second_pass_row_work
-        inc     idx             ; no, increment idx one more
+        iny                     ; no, increment idx one more
         bne     second_pass_row_work
-        inc     idx+1
+        inx
 
 second_pass_row_work:
-        lda     idx
-        ldx     idx+1
+        sty     idx
+        stx     idx+1
 
+        tya
         adc     _width          ; idx_end = idx + width
         sta     check_second_pass_col_loop+1
         txa
