@@ -58,7 +58,7 @@ uint8 *idx_end;
 uint8 *idx_behind_plus2;
 uint16 *idx_pix_rows;
 
-uint8 val_col_minus2;
+uint8 last_val;
 
 
 /* Internal data buffer
@@ -133,7 +133,7 @@ void qt_load_raw(uint16 top)
     }
 
     /* Initial set of the value two columns behind */
-    val_col_minus2 = (*idx);
+    last_val = (*idx);
 
     /* row, col index */
     idx += 2;
@@ -154,7 +154,7 @@ void qt_load_raw(uint16 top)
       uint8 h = get_four_bits();
 
       val = ((((*idx_behind               // row-1, col-1
-              + val_col_minus2) >> 1)
+              + last_val) >> 1)
               + *(idx_behind+2)) >> 1) // row-1, col+1
               + gstep[h];
       if (val < 0)
@@ -165,7 +165,7 @@ void qt_load_raw(uint16 top)
       *(idx) = val;
 
       /* Cache it for next loop before shifting */
-      val_col_minus2 = val;
+      last_val = val;
 
       /* Shift indexes */
       idx_behind +=2;

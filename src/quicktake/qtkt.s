@@ -112,11 +112,11 @@ src               = _zp6p
 idx               = _zp8p
 idx_behind        = _zp10p
 
-; idx_pix_rows is used before at_very_first_col and val_col_minus2,
+; idx_pix_rows is used before at_very_first_col and last_val,
 ; so they share the same ZP address
 idx_pix_rows      = _zp12ip
 at_very_first_col = _zp12
-val_col_minus2    = _zp13
+last_val          = _zp13
 
 .segment        "CODE"
 _qt_load_raw:
@@ -291,7 +291,7 @@ even_row:
 
 first_pass_row_work:
         lda     (idx)           ; Remember previous val before shifting
-        sta     val_col_minus2  ; index
+        sta     last_val        ; index
 
         lda     idx
         ldx     idx+1
@@ -330,13 +330,13 @@ _got_four_bits:
 
         ; Thanks to Kent Dickey for the simplification!
         ; val = ((*idx_behind            // row-1, col-1
-        ;      + val_col_minus2) >> 1    // row,   col-2
+        ;      + last_val) >> 1    // row,   col-2
         ;      + *idx_behind+2) >> 1 // row-1, col+1
         ;      + gstep[h];
 
         clc
         lda     (idx_behind)
-        adc     val_col_minus2
+        adc     last_val
         ror
 
         clc
@@ -353,17 +353,16 @@ _got_four_bits:
         lda     gstep_high,x    ; Carry set by previous adc if overflowed
         adc     #0
         beq     val_stored      ; No overflow
-        asl     a
-        lda     #$00
-        bcs     store_val
-        dec     a
+        asl     a               ; Get sign (sets carry if negative)
+        lda     #$FF
+        adc     #0              ; FF => 00 if carry set
 
 store_val:
         sta     (idx)           ; *idx = val
         tay
 
 val_stored:
-        sty     val_col_minus2  ; val_col_minus2 = val
+        sty     last_val        ; last_val = val
 
         clc                     ; idx_behind += 2
         lda     idx_behind
@@ -406,6 +405,7 @@ end_of_line:
 
 
         ; First cols and first row handlers, out of main loop
+
 handle_first_col:               ; *(idx_forward) = *(idx_min2) = val (still in Y)
 store_idx_forward:
         sty     $FFFF           ; Patched
@@ -421,6 +421,7 @@ handle_first_row:               ; *(idx_behind+2) = *(idx_behind) = val
         sta     (idx_behind)
         tay                     ; set Y back to val
         jmp     not_at_first_row
+
         ; End of first col/row handlers
 
 
