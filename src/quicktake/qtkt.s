@@ -1,6 +1,6 @@
-        .importzp        sp, sreg, regbank
+        .importzp        sp, sreg
         .importzp        tmp1, tmp2, tmp3, tmp4, ptr1, ptr2, ptr3, ptr4
-        .importzp        _prev_rom_irq_vector, _zp6p, _zp8p, _zp10p, _zp12p, _zp12ip
+        .importzp        _prev_rom_irq_vector, _zp6p, _zp8p, _zp10p, _zp12, _zp13, _zp12ip
 
         .import          _memcpy, _memset, _progress_bar
 				.import          pushax, pusha, pusha0, decsp6, incsp6, subysp
@@ -105,32 +105,21 @@ pix_direct_row:
 
 .segment        "CODE"
 
-val               = regbank+0
-val_col_minus2    = regbank+1
-row               = regbank+2
-at_very_first_col = regbank+3
+val               = _prev_rom_irq_vector
+row               = _prev_rom_irq_vector+1
 
 src               = _zp6p
 idx               = _zp8p
 idx_behind        = _zp10p
-idx_forward       = _zp12p
+
+; idx_pix_rows is used before at_very_first_col and val_col_minus2,
+; so they share the same ZP address
 idx_pix_rows      = _zp12ip
-idx_min2          = _prev_rom_irq_vector
+at_very_first_col = _zp12
+val_col_minus2    = _zp13
 
 .segment        "CODE"
 _qt_load_raw:
-        pha                     ; Backup top
-        phx
-
-        jsr     decsp6          ; Backup regbank
-        ldy     #5
-:       lda     regbank+0,y
-        sta     (sp),y
-        dey
-        bpl     :-
-
-        plx
-        pla
         cmp     #$00
         bne     :+
         cpx     #$00
@@ -264,11 +253,11 @@ first_pass_next_row:
         lda     src             ; Set idx_forward = src + PIX_WIDTH and idx = src + 1
         tay
         adc     #<PIX_WIDTH
-        sta     idx_forward
+        sta     store_idx_forward+1
         lda     src+1
         tax
         adc     #>PIX_WIDTH
-        sta     idx_forward+1
+        sta     store_idx_forward+2
 
         iny                     ; Finish with idx = src + 1
         bne     :+
@@ -294,11 +283,11 @@ even_row:
         lda     src             ; Set idx_forward = src + PIX_WIDTH + 1 and idx = src
         sta     idx
         adc     #<(PIX_WIDTH+1)
-        sta     idx_forward
+        sta     store_idx_forward+1
         lda     src+1
         sta     idx+1
         adc     #>(PIX_WIDTH+1)
-        sta     idx_forward+1
+        sta     store_idx_forward+2
 
 first_pass_row_work:
         lda     (idx)           ; Remember previous val before shifting
@@ -306,8 +295,8 @@ first_pass_row_work:
 
         lda     idx
         ldx     idx+1
-        sta     idx_min2        ; Remember idx-2
-        stx     idx_min2+1
+        sta     store_idx_min2+1; Remember idx-2 for first columns
+        stx     store_idx_min2+2
 
         clc
         adc     #2
@@ -384,11 +373,11 @@ val_stored:
 :       ldx     at_very_first_col
         beq     not_at_first_col
 
-        tya                     ; *(idx_forward) = *(idx_min2) = val (still in Y)
+                                ; *(idx_forward) = *(idx_min2) = val (still in Y)
 store_idx_forward:
-        sta     (idx_forward)
+        sty     $FFFF           ; Patched
 store_idx_min2:
-        sta     (idx_min2)
+        sty     $FFFF           ; Patched
         stz     at_very_first_col
 
 not_at_first_col:
@@ -581,14 +570,7 @@ copy_row:
         jmp     copy_row
 
 copy_done:
-        ldy     #$00            ; Restore regbank
-:
-        lda     (sp),y
-        sta     regbank,y
-        iny
-        cpy     #$06
-        bne     :-
-        jmp     incsp6
+        rts
 
 
 update_progress_bar:
