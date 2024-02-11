@@ -69,9 +69,10 @@ uint8 last_val;
  * two pixels on a 25th line because they are re-
  * used at the start of the next band.
  */
-#define PIX_WIDTH 644
-static uint8 pixelbuf[(QT_BAND + 4)*PIX_WIDTH + 2];
-static uint8 *pix_direct_row[QT_BAND + 5];
+#define SCRATCH_WIDTH 644
+#define SCRATCH_HEIGHT (BAND_HEIGHT + 4)
+static uint8 pixelbuf[SCRATCH_HEIGHT * SCRATCH_WIDTH + 2];
+static uint8 *pix_direct_row[SCRATCH_HEIGHT];
 
 void qt_load_raw(uint16 top)
 {
@@ -89,15 +90,15 @@ void qt_load_raw(uint16 top)
     pgbar_state = 0;
 
     /* Init direct pointers to each line */
-    for (row = 0; row < QT_BAND + 5; row++) {
-      pix_direct_row[row] = pixelbuf + (row * PIX_WIDTH);
+    for (row = 0; row < SCRATCH_HEIGHT; row++) {
+      pix_direct_row[row] = pixelbuf + (row * SCRATCH_WIDTH);
     }
 
     /* calculate offsets to shift the last two lines + 2px
      * from the end of the previous band to the start of
      * the new one.
      */
-    last_two_lines = pix_direct_row[QT_BAND];
+    last_two_lines = pix_direct_row[BAND_HEIGHT];
     third_line = pix_direct_row[2] + 2;
 
     /* Init the whole buffer with grey. */
@@ -105,23 +106,23 @@ void qt_load_raw(uint16 top)
   } else {
     /* Shift the last band's last 2 lines, plus 2 pixels,
      * to the start of the new band. */
-    memcpy(pixelbuf, last_two_lines, 2*PIX_WIDTH + 2);
+    memcpy(pixelbuf, last_two_lines, 2*SCRATCH_WIDTH + 2);
     /* And reset the others to grey */
-    memset (third_line, 0x80, sizeof pixelbuf - (2*PIX_WIDTH + 2));
+    memset (third_line, 0x80, sizeof pixelbuf - (2*SCRATCH_WIDTH + 2));
   }
 
   /* We start at line 2. */
   src = pix_direct_row[2];
 
-  /* In reality we do rows from 0 to QT_BAND, but decrementing is faster
+  /* In reality we do rows from 0 to BAND_HEIGHT, but decrementing is faster
    * and the only use of the variable is to check for oddity, so nothing
    * changes */
-  for (row = QT_BAND; row != 0; row--) {
+  for (row = BAND_HEIGHT; row != 0; row--) {
     idx = src;
 
     /* Adapt indexes depending on the row's oddity */
     if (row & 1) {
-      idx_forward = src + PIX_WIDTH;
+      idx_forward = src + SCRATCH_WIDTH;
       idx_min2 = idx = src + 1;
       idx_end = src + width_plus2 + 1;
       pgbar_state+=2;
@@ -129,7 +130,7 @@ void qt_load_raw(uint16 top)
     } else {
       idx_min2 = idx = src;
       idx_end = src + width_plus2;
-      idx_forward = src + PIX_WIDTH + 1;
+      idx_forward = src + SCRATCH_WIDTH + 1;
     }
 
     /* Initial set of the value two columns behind */
@@ -139,13 +140,13 @@ void qt_load_raw(uint16 top)
     idx += 2;
 
     /* row-1, col-1 */
-    idx_behind = idx - (PIX_WIDTH+1);
+    idx_behind = idx - (SCRATCH_WIDTH+1);
 
     /* row-1, col+1 */
     //idx_behind_plus2 = idx_behind + 2;
 
     /* Shift source buffer for next line */
-    src += PIX_WIDTH;
+    src += SCRATCH_WIDTH;
 
     at_very_first_col = 1;
 
@@ -192,7 +193,7 @@ void qt_load_raw(uint16 top)
   /* Second pass */
   src = pix_direct_row[2];
 
-  for (row = QT_BAND; row != 0; row--) {
+  for (row = BAND_HEIGHT; row != 0; row--) {
     /* Adapt indexes for oddity */
     if (row & 1) {
       idx = src+1;
@@ -204,7 +205,7 @@ void qt_load_raw(uint16 top)
     idx_end = idx + width;
 
     /* Shift source buffer */
-    src += PIX_WIDTH;
+    src += SCRATCH_WIDTH;
 
     while (idx != idx_end) {
       val = (*(idx+1) << 1)
@@ -228,9 +229,9 @@ void qt_load_raw(uint16 top)
    * the two first and two last pixels of each line, which are scratch too */
   dst = raw_image;
   src = pix_direct_row[2] + 2;
-  for (row = 0; row < QT_BAND; row++) {
+  for (row = 0; row < BAND_HEIGHT; row++) {
     memcpy(dst, src, width);
     dst+=width;
-    src+=PIX_WIDTH;
+    src+=SCRATCH_WIDTH;
   }
 }

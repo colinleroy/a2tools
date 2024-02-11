@@ -423,7 +423,7 @@ start_edit:
          * to start on a band boundary */
         uint8 move_offset;
 crop_again:
-        move_offset = src_width == 640 ? QT_BAND : QT_BAND*2;
+        move_offset = src_width == 640 ? BAND_HEIGHT : BAND_HEIGHT*2;
         clrscr();
         if (src_width == 640) {
           cputs("+: Zoom in; -: Zoom out; ");

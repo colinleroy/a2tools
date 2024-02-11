@@ -140,7 +140,7 @@ void qt_load_raw(uint16 top)
   row_idx = 0;
   row_idx_plus2 = width * 2;
 
-  for (row=0; row != QT_BAND; row+=4) {
+  for (row=0; row != BAND_HEIGHT; row+=4) {
     progress_bar(-1, -1, 80*22, (top + row), height);
     huff_ptr = NULL;
     t = getbithuff(6);

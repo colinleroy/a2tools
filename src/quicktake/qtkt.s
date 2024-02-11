@@ -20,9 +20,10 @@
 
 ; Defines
 
-QT_BAND       = 20
-PIX_WIDTH     = 644
-PIXELBUF_SIZE = ((QT_BAND + 4)*PIX_WIDTH + 2)
+BAND_HEIGHT   = 20
+SCRATCH_WIDTH = (640 + 4)
+SCRATCH_HEIGHT= (BAND_HEIGHT + 4)
+PIXELBUF_SIZE = (SCRATCH_HEIGHT * SCRATCH_WIDTH + 2)
 
 .segment        "DATA"
 
@@ -97,7 +98,7 @@ at_very_first_row:
 pixelbuf:
         .res        PIXELBUF_SIZE,$00
 pix_direct_row:
-        .res        (2*(QT_BAND + 5)),$00
+        .res        (2*(SCRATCH_HEIGHT)),$00
 
 ; ---------------------------------------------------------------
 ; void __near__ qt_load_raw (unsigned int top)
@@ -148,7 +149,7 @@ top:    jsr     _reset_bitbuff  ; Yes. Initialize things
         lda     #>(pix_direct_row)
         sta     idx_pix_rows+1
 
-        ldx     #(QT_BAND+4)
+        ldx     #(SCRATCH_HEIGHT)
         ldy     #1
         sty     at_very_first_row
 precalc_row_index:              ; Init direct pointers to each line
@@ -157,10 +158,10 @@ precalc_row_index:              ; Init direct pointers to each line
         lda     idx+1
         sta     (idx_pix_rows),y
 
-        lda     #<PIX_WIDTH
+        lda     #<SCRATCH_WIDTH
         adc     idx
         sta     idx
-        lda     #>PIX_WIDTH
+        lda     #>SCRATCH_WIDTH
         adc     idx+1
         sta     idx+1
 
@@ -175,9 +176,9 @@ precalc_row_index:              ; Init direct pointers to each line
         bne     precalc_row_index
 
         ; Calculate offset to raw start of line 20
-        lda     pix_direct_row+(QT_BAND*2)
+        lda     pix_direct_row+(BAND_HEIGHT*2)
         sta     last_two_lines
-        lda     pix_direct_row+(QT_BAND*2)+1
+        lda     pix_direct_row+(BAND_HEIGHT*2)+1
         sta     last_two_lines+1
 
         ; Calculate offset to final start of third line, line 2
@@ -208,8 +209,8 @@ not_top:
         lda     last_two_lines
         ldx     last_two_lines+1
         jsr     pushax
-        lda     #<(2*PIX_WIDTH + 2)
-        ldx     #>(2*PIX_WIDTH + 2)
+        lda     #<(2*SCRATCH_WIDTH + 2)
+        ldx     #>(2*SCRATCH_WIDTH + 2)
         jsr     _memcpy
 
         ; Reset the rest of the lines with grey
@@ -218,8 +219,8 @@ not_top:
         jsr     pushax
         lda     #$80
         jsr     pusha0
-        lda     #<(PIXELBUF_SIZE-(2*PIX_WIDTH + 2))
-        ldx     #>(PIXELBUF_SIZE-(2*PIX_WIDTH + 2))
+        lda     #<(PIXELBUF_SIZE-(2*SCRATCH_WIDTH + 2))
+        ldx     #>(PIXELBUF_SIZE-(2*SCRATCH_WIDTH + 2))
         jsr     _memset
 
 start_work:
@@ -230,7 +231,7 @@ start_work:
         sta     src
 
         ; We iterate over 20 lines
-        lda     #QT_BAND
+        lda     #BAND_HEIGHT
         sta     row
 
 first_pass_next_row:
@@ -250,13 +251,13 @@ first_pass_next_row:
         inc     a
 :       sta     check_first_pass_col_loop_hi+1
 
-        lda     src             ; Set idx_forward = src + PIX_WIDTH and idx = src + 1
+        lda     src             ; Set idx_forward = src + SCRATCH_WIDTH and idx = src + 1
         tay
-        adc     #<PIX_WIDTH
+        adc     #<SCRATCH_WIDTH
         sta     store_idx_forward+1
         lda     src+1
         tax
-        adc     #>PIX_WIDTH
+        adc     #>SCRATCH_WIDTH
         sta     store_idx_forward+2
 
         iny                     ; Finish with idx = src + 1
@@ -280,13 +281,13 @@ even_row:
         adc     width_plus2+1
         sta     check_first_pass_col_loop_hi+1
 
-        lda     src             ; Set idx_forward = src + PIX_WIDTH + 1 and idx = src
+        lda     src             ; Set idx_forward = src + SCRATCH_WIDTH + 1 and idx = src
         sta     idx
-        adc     #<(PIX_WIDTH+1)
+        adc     #<(SCRATCH_WIDTH+1)
         sta     store_idx_forward+1
         lda     src+1
         sta     idx+1
-        adc     #>(PIX_WIDTH+1)
+        adc     #>(SCRATCH_WIDTH+1)
         sta     store_idx_forward+2
 
 first_pass_row_work:
@@ -306,18 +307,18 @@ first_pass_row_work:
 :       sta     idx             ; idx += 2
         stx     idx+1
 
-        sec                     ; Set idx_behind = idx - (PIX_WIDTH+1)
-        sbc     #<(PIX_WIDTH+1)
+        sec                     ; Set idx_behind = idx - (SCRATCH_WIDTH+1)
+        sbc     #<(SCRATCH_WIDTH+1)
         sta     idx_behind
         txa
-        sbc     #>(PIX_WIDTH+1)
+        sbc     #>(SCRATCH_WIDTH+1)
         sta     idx_behind+1
 
         clc
-        lda     #<PIX_WIDTH     ; src += PIX_WIDTH
+        lda     #<SCRATCH_WIDTH ; src += SCRATCH_WIDTH
         adc     src
         sta     src
-        lda     #>PIX_WIDTH
+        lda     #>SCRATCH_WIDTH
         adc     src+1
         sta     src+1
 
@@ -431,7 +432,7 @@ start_second_pass:
         lda     pix_direct_row+(2*2)
         sta     src
 
-        lda     #QT_BAND
+        lda     #BAND_HEIGHT
         sta     row
 
 second_pass_next_row:
@@ -461,10 +462,10 @@ second_pass_row_work:
         adc     _width+1
         sta     check_second_pass_col_loop_hi+1
 
-        lda     #<PIX_WIDTH     ; src += PIX_WIDTH
+        lda     #<SCRATCH_WIDTH ; src += SCRATCH_WIDTH
         adc     src
         sta     src
-        lda     #>PIX_WIDTH
+        lda     #>SCRATCH_WIDTH
         adc     src+1
         sta     src+1
 
@@ -524,7 +525,8 @@ second_pass_row_done:
         dec     row
         bne     second_pass_next_row
 
-        ; Both passes done, memcpy QT_BAND lines to destination buffer
+        ; Both passes done, memcpy BAND_HEIGHT lines to destination buffer,
+        ; excluding two leftmost and rightmost scratch pixels 
         lda     #<(_raw_image)
         sta     dst
         ldx     #>(_raw_image)
@@ -542,7 +544,7 @@ second_pass_row_done:
 :       stx     src+1
         jsr     pushax
 
-        lda     #QT_BAND
+        lda     #BAND_HEIGHT
         sta     row
 
 copy_row:
@@ -565,13 +567,13 @@ copy_row:
         tya
         jsr     pushax          ; push dst to memcpy
 
-        clc                     ; src += PIX_WIDTH
+        clc                     ; src += SCRATCH_WIDTH
         lda     src
-        adc     #<PIX_WIDTH
+        adc     #<SCRATCH_WIDTH
         sta     src
         tay
         lda     src+1
-        adc     #>PIX_WIDTH
+        adc     #>SCRATCH_WIDTH
         sta     src+1
         tax
         tya

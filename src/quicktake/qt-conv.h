@@ -21,7 +21,7 @@ extern FILE *ifp;
 extern uint8 *cur_cache_ptr;
 #endif
 
-#define QT_BAND 20
+#define BAND_HEIGHT 20
 
 #define QTKT_MAGIC      "qktk"
 #define QTKN_MAGIC      "qktn"
