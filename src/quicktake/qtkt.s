@@ -10,6 +10,7 @@
         .import          _reset_bitbuff
         .import          _get_four_bits
 
+        .export          _got_four_bits
         .export          _magic
         .export          _model
         .export          _huff_ptr
@@ -108,16 +109,16 @@ val               = regbank+0
 val_col_minus2    = regbank+1
 row               = regbank+2
 at_very_first_col = regbank+3
-idx               = regbank+4
+
 src               = _zp6p
-idx_forward       = _zp8p
+idx               = _zp8p
 idx_behind        = _zp10p
+idx_forward       = _zp12p
 idx_pix_rows      = _zp12ip
 idx_min2          = _prev_rom_irq_vector
 
-.proc        _qt_load_raw: near
-
 .segment        "CODE"
+_qt_load_raw:
         pha                     ; Backup top
         phx
 
@@ -246,10 +247,9 @@ start_work:
 first_pass_next_row:
         lda     row             ; Row & 1?
         bit     #$01
-        bne     :+
-        jmp     even_row
+        beq     even_row
 
-:       clc
+        clc
         lda     src             ; idx_end = src + width_plus2 + 1
         adc     width_plus2
         tay
@@ -277,60 +277,13 @@ first_pass_next_row:
 :       sty     idx
         stx     idx+1
 
-        bit     #$02            ; Row & 2?
-        beq     first_pass_row_work
-
-        lda     pgbar_state    ; Update progress bar
-        clc
-        adc     #4
-        sta     pgbar_state
-        bcc     :+
-        inc     pgbar_state+1
-        clc
-
-:       ldy     #10
-        jsr     subysp
-        lda     #$FF
-
-        dey                     ; -1,
-        sta     (sp),y
-        dey
-        sta     (sp),y
-
-        dey                     ; -1,
-        sta     (sp),y
-        dey
-        sta     (sp),y
-
-        dey                     ; 80*22,
-        lda     #>(80*22)
-        sta     (sp),y
-        dey
-        lda     #<(80*22)
-        sta     (sp),y
-
-        dey                     ; pgbar_state (long)
-        lda     #0
-        sta     (sp),y
-        dey
-        sta     (sp),y
-        dey
-        lda     pgbar_state+1
-        sta     (sp),y
-        dey
-        lda     pgbar_state
-        sta     (sp),y
-
-        stz     sreg+1          ; height (long)
-        stz     sreg
-        lda     _height
-        ldx     _height+1
-        jsr     _progress_bar
-
         jmp     first_pass_row_work
-
 even_row:
-        clc
+        and     #$02            ; Row % 8?
+        bne     :+
+        jsr     update_progress_bar
+
+:       clc
         lda     src             ; idx_end = src + width_plus2
         adc     width_plus2
         sta     check_first_pass_col_loop+1
@@ -383,8 +336,8 @@ first_pass_row_work:
         sta     at_very_first_col
 
 first_pass_col_loop:
-        jsr     _get_four_bits
-        tax
+        jmp     _get_four_bits
+_got_four_bits:
 
         ; Thanks to Kent Dickey for the simplification!
         ; val = ((*idx_behind            // row-1, col-1
@@ -432,7 +385,9 @@ val_stored:
         beq     not_at_first_col
 
         tya                     ; *(idx_forward) = *(idx_min2) = val (still in Y)
+store_idx_forward:
         sta     (idx_forward)
+store_idx_min2:
         sta     (idx_min2)
         stz     at_very_first_col
 
@@ -488,17 +443,19 @@ second_pass_next_row:
         bne     :+
         inx
 
-:       lda     row             ; row & 1?
-        and     #$01
+:       sty     idx
+        stx     idx+1
+
+        lda     row             ; row & 1?
+        bit     #$01
         bne     second_pass_row_work
-        iny                     ; no, increment index one more
+        inc     idx             ; no, increment idx one more
         bne     second_pass_row_work
-        inx
+        inc     idx+1
 
 second_pass_row_work:
-        tya
-        sta     idx
-        stx     idx+1
+        lda     idx
+        ldx     idx+1
 
         adc     _width          ; idx_end = idx + width
         sta     check_second_pass_col_loop+1
@@ -567,11 +524,10 @@ check_second_pass_col_loop_hi:
 
 second_pass_row_done:
         dec     row
-        beq     :+
-        jmp     second_pass_next_row
+        bne     second_pass_next_row
 
         ; Both passes done, memcpy QT_BAND lines to destination buffer
-:       lda     #<(_raw_image)
+        lda     #<(_raw_image)
         sta     dst
         ldx     #>(_raw_image)
         stx     dst+1
@@ -623,8 +579,8 @@ copy_row:
         tya
         jsr     pushax          ; push src to memcpy
         jmp     copy_row
-copy_done:
 
+copy_done:
         ldy     #$00            ; Restore regbank
 :
         lda     (sp),y
@@ -634,4 +590,51 @@ copy_done:
         bne     :-
         jmp     incsp6
 
-.endproc
+
+update_progress_bar:
+        lda     pgbar_state    ; Update progress bar
+        clc
+        adc     #4
+        sta     pgbar_state
+        bcc     :+
+        inc     pgbar_state+1
+        clc
+
+:       ldy     #10
+        jsr     subysp
+        lda     #$FF
+
+        dey                     ; -1,
+        sta     (sp),y
+        dey
+        sta     (sp),y
+
+        dey                     ; -1,
+        sta     (sp),y
+        dey
+        sta     (sp),y
+
+        dey                     ; 80*22,
+        lda     #>(80*22)
+        sta     (sp),y
+        dey
+        lda     #<(80*22)
+        sta     (sp),y
+
+        dey                     ; pgbar_state (long)
+        lda     #0
+        sta     (sp),y
+        dey
+        sta     (sp),y
+        dey
+        lda     pgbar_state+1
+        sta     (sp),y
+        dey
+        lda     pgbar_state
+        sta     (sp),y
+
+        stz     sreg+1          ; height (long)
+        stz     sreg
+        lda     _height
+        ldx     _height+1
+        jmp     _progress_bar

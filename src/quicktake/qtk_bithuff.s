@@ -13,6 +13,7 @@
         .import         _cache_start
         .import         _cache_end
         .import         _ifp
+        .import         _got_four_bits
         .import         _huff_ptr
         .export         _reset_bitbuff
         .export         _get_four_bits
@@ -45,12 +46,12 @@ _reset_bitbuff:
 ; Don't put this one in LC as it is patched on runtime
 
 _get_four_bits:
-        lda     #0              ; Patched
+        lda     #0              ; Patched (flip-flop)
         beq     not_enough_vbits
-        stz     _get_four_bits+1
-        lda     _bitbuf_nohuff
-        and     #$0F
-        rts
+        stz     _get_four_bits+1; Patch flip-flop
+low_nibble:
+        ldx     #$00            ; Patched
+        jmp     _got_four_bits
 
 not_enough_vbits:
         lda     #0              ; Patched when resetting (_cache_end)
@@ -59,18 +60,18 @@ not_enough_vbits:
 
 fetch_vbits:
         lda     (cur_cache_ptr)
-        sta     _bitbuf_nohuff
+        tay
+
+        and     #$0F            ; Patch low nibble for next call
+        sta     low_nibble+1
 
         inc     cur_cache_ptr
         bne     :+
         inc     cur_cache_ptr+1
 
-:       inc     _get_four_bits+1
-        lsr     a
-        lsr     a
-        lsr     a
-        lsr     a
-        rts
+:       inc     _get_four_bits+1; Patch flip-flop
+        ldx     high_nibble,y
+        jmp     _got_four_bits
 
 cache_check_high:
         ldx     #0              ; Patched when resetting (_cache_end+1)
@@ -301,3 +302,8 @@ min8:   .byte 8
         .byte 2
         .byte 1
         .byte 0
+
+high_nibble:
+    .repeat 256, I
+        .byte I >> 4
+    .endrep
