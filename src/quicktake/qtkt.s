@@ -351,14 +351,16 @@ _got_four_bits:
         tay                     ; Backup val's low byte to Y for later
 
         lda     gstep_high,x    ; Carry set by previous adc if overflowed
-        adc     #0              ; Will re-set carry if underflow
+        adc     #0
         beq     val_stored      ; No overflow
-        sbc     #0              ; Convert $FF or $01 to $FF or $00
-        eor     #$FF            ; Invert for clamping
-                                ; Thanks to John Brooks for this neat idea!
+        asl     a
+        lda     #$00
+        bcs     store_val
+        dec     a
+
 store_val:
         sta     (idx)           ; *idx = val
-        tay                     ; Backup
+        tay
 
 val_stored:
         sty     val_col_minus2  ; val_col_minus2 = val
@@ -417,6 +419,7 @@ handle_first_row:               ; *(idx_behind+2) = *(idx_behind) = val
         ldy     #2
         sta     (idx_behind),y
         sta     (idx_behind)
+        tay                     ; set Y back to val
         jmp     not_at_first_row
         ; End of first col/row handlers
 
@@ -439,13 +442,10 @@ second_pass_next_row:
         bne     :+
         inx
 
-:       sty     idx
-        stx     idx+1
-
-        lda     row             ; row & 1?
+:       lda     row             ; row & 1?
         bit     #$01
         bne     second_pass_row_work
-        iny                     ; no, increment idx one more
+        iny                     ; no,  idx = src + 2
         bne     second_pass_row_work
         inx
 
