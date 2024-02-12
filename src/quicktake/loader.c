@@ -77,7 +77,7 @@ void main(int argc, char *argv[]) {
         } else {
           off_t offset = y*w + x;
 
-          printf("0x%04X: Pixel differ at %d,%d: %u vs %u\n", offset, x, y, c, c2);
+          printf("0x%04lX: Pixel differ at %d,%d: %u vs %u\n", offset, x, y, c, c2);
           sdl_set_pixel(screen, x*2, y*2, 255, 0, 0);
           sdl_set_pixel(screen, x*2+1, y*2, 255, 0, 0);
           sdl_set_pixel(screen, x*2, y*2+1, 255, 0, 0);
@@ -138,11 +138,11 @@ void main(int argc, char *argv[]) {
         fseek(fp2, offset, SEEK_SET);
         fread(&c2, 1, 1, fp2);
         if (c != c2)
-          printf("0x%04X: Pixel at %d,%d: %u vs %u\n", offset, x, y, c, c2);
+          printf("0x%04lX: Pixel at %d,%d: %u vs %u\n", offset, x, y, c, c2);
         else
-          printf("0x%04X: Pixel at %d,%d: %u\n", offset, x, y, c);
+          printf("0x%04lX: Pixel at %d,%d: %u\n", offset, x, y, c);
       } else {
-        printf("0x%04X: Pixel at %d,%d: %u\n", offset, x, y, c);
+        printf("0x%04lX: Pixel at %d,%d: %u\n", offset, x, y, c);
       }
     }
     if (e.type == SDL_MOUSEBUTTONUP) {
