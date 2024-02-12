@@ -367,12 +367,35 @@ static uint8 setup(int argc, char *argv[]) {
   register_start_device();
 
   videomode(VIDEOMODE_80COL);
+
+// Start decoding right away when debugging decoders
+#ifdef DEBUG_HD
   if (argc == 1) {
-  // exec("QTKTCONV","/QT100/TEST100.QTK 0 0 640 480");
-  // exec("QTKNCONV","/QT150/TEST150.QTK 0 0 640 480");
-  // exec("JPEGCONV","/QT150/TEST200.JPG 0 0 640 480");
-  // exec("IMGVIEW","/ADTPRO.2.1.0/VELO.HGR");
+  #if DEBUG_HD==100
+  exec("QTKTCONV","/HD/TEST100.QTK 0 0 640 480");
+  #endif
+  #if DEBUG_HD==150
+  exec("QTKNCONV","/HD/TEST150.QTK 0 0 640 480");
+  #endif
+  #if DEBUG_HD==200
+  exec("JPEGCONV","/HD/TEST200.JPG 0 0 640 480");
+  #endif
   }
+#endif
+#ifdef DEBUG_FLOPPY
+  if (argc == 1) {
+  #if DEBUG_FLOPPY==100
+  exec("QTKTCONV","/QT100/TEST100.QTK 0 0 640 480");
+  #endif
+  #if DEBUG_FLOPPY==150
+  exec("QTKNCONV","/QT150/TEST150.QTK 0 0 640 480");
+  #endif
+  #if DEBUG_FLOPPY==200
+  exec("JPEGCONV","/QT200/TEST200.JPG 0 0 640 480");
+  #endif
+  }
+#endif
+
   screensize(&scrw, &scrh);
   print_welcome();
 
