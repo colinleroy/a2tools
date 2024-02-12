@@ -474,10 +474,13 @@ second_pass_col_loop:
         ;    + ((*(idx) + *(idx+2)) >> 1)
         ;    - 0x100;
 
+.repeat 2,I                     ; Unroll that a bit
+
         ldx     #1              ; Overflow counter
-        ldy     #2
+        ldy     #(I*2)
         clc
-        lda     (idx)
+        lda     (idx),y
+        ldy     #((I*2)+2)
         adc     (idx),y
         ror                     ; >> 1 and get carry back to high bit
         sta     tmp1
@@ -502,11 +505,13 @@ second_pass_col_loop:
 
 :       sta     (idx),y  ; *(idx+1) = val (Y still 1)
 
-        ; Shift index by 2
+.endrep
+
+        ; Shift index by 2*unroll factor
 
         lda     idx
         clc
-        adc     #2
+        adc     #(2*2)
         sta     idx
         bcc     check_second_pass_col_loop
         inc     idx+1
@@ -522,11 +527,12 @@ check_second_pass_col_loop_hi:
 
 second_pass_row_done:
         dec     row
-        bne     second_pass_next_row
+        beq     :+
+        jmp     second_pass_next_row
 
         ; Both passes done, memcpy BAND_HEIGHT lines to destination buffer,
         ; excluding two leftmost and rightmost scratch pixels 
-        lda     #<(_raw_image)
+:       lda     #<(_raw_image)
         sta     dst
         ldx     #>(_raw_image)
         stx     dst+1
