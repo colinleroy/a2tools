@@ -36,7 +36,14 @@ extern uint8 *cur_cache_ptr;
 #define QT200_JPEG_HEIGHT 240
 
 #ifdef __CC65__
+
+//Save temp file to HD instead of RAM when debugging decoders
+#ifdef DEBUG_HD
+#define TMP_NAME "/HD/GREY"
+#else
 #define TMP_NAME "/RAM/GREY"
+#endif
+
 #define HIST_NAME "/RAM/HIST"
 #define THUMBNAIL_NAME "/RAM/THUMBNAIL"
 #else

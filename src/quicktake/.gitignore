@@ -6,7 +6,7 @@
 *.jpg
 *.dump
 loader
-GREY
+GREY*
 HIST
 THUMBNAIL
 HGR

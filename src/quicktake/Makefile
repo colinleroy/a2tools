@@ -9,6 +9,14 @@ endif
 TARGET := apple2enh
 USE_LANGCARD := -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD
 
+ifdef DEBUG_HD
+debug_CFLAGS := $(debug_CFLAGS) -DDEBUG_HD=$(DEBUG_HD)
+endif
+
+ifdef DEBUG_FLOPPY
+debug_CFLAGS := $(debug_CFLAGS) -DDEBUG_FLOPPY=$(DEBUG_FLOPPY)
+endif
+
 ifdef IIGS
 iigs_CFLAGS := -DIIGS --asm-define IIGS
 suffix := -iigs
@@ -49,8 +57,8 @@ slowtake_GCCSOURCES := ../lib/tgi_sdl.c ../lib/tgi_fastline.c
 qtktconv_SOURCES := \
 	qt-conv.c ../lib/path_helper.c ../lib/progress_bar.c
 
-qtktconv_CC65SOURCES := qtkt.s ../lib/extrazp.s qtk_bithuff.s
-qtktconv_GCCSOURCES := qtkt.c qtk_bithuff.c
+qtktconv_CC65SOURCES := qtkt.s ../lib/extrazp.s
+qtktconv_GCCSOURCES := qtkt.c
 
 qtknconv_SOURCES := \
 	qt-conv.c qtkn.c  ../lib/path_helper.c ../lib/progress_bar.c
@@ -91,7 +99,8 @@ all: \
 	slowtake.bin slowtake.x86_64 \
 	qtktconv.bin qtktconv.x86_64 \
 	qtknconv.bin qtknconv.x86_64 \
-	jpegconv.bin jpegconv.x86_64
+	jpegconv.bin jpegconv.x86_64 \
+	loader.x86_64
 
 splash.h: splash.hgr
 	./make-splash.sh
@@ -120,7 +129,7 @@ jpegconv.bin: $(jpegconv_SOURCES) $(jpegconv_CC65SOURCES)
 jpegconv.x86_64: $(jpegconv_SOURCES) $(jpegconv_GCCSOURCES) $(GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	
 
-loader.x86_64:
+loader.x86_64: loader.c
 	gcc -o $@ -I/usr/include/SDL loader.c ../lib/extended_conio.c ../lib/clrzone.c -lSDL_image -lSDL
 
 clean:

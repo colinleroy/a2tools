@@ -1,2 +1,0 @@
-#!/bin/bash
-make clean all SER_DEBUG=1 && cd ../.. && make quicktake.dsk && mame apple2ee -window -flop1 quicktake.dsk -resolution 560x384 -sl2 ssc -sl2:ssc:rs232 null_modem -bitb socket.localhost:2000 -nomouse -debug; cd src/quicktake

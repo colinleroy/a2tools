@@ -1,3 +1,40 @@
 #!/bin/bash
-FLOP2="-flop2 disks/qt100.dsk"
-make clean all IIGS=1 && cd ../.. && make quicktake.dsk && mame apple2gs -window -flop1 quicktake.dsk $FLOP2 -resolution 560x384 -modem null_modem -bitb socket.localhost:2000 -nomouse -debug -sl7 scsi -hard disks/smart0.po; cd src/quicktake
+TYPE="full"
+if [ "$1" != "" ]; then
+  TYPE=$1
+fi
+make clean all IIGS=1 DEBUG_HD=$TYPE && \
+  cd ../.. && make quicktake.dsk && mame apple2gs -window -flop1 quicktake.dsk -resolution 560x384 -modem null_modem -bitb socket.localhost:2000 -nomouse -debug -sl7 scsi -hard disks/smart0.po -sound none; cd src/quicktake
+
+if [ "$1" != "" ]; then
+  get image from HD
+  if [ "$1" = "100" ]; then
+    java -jar ../../bin/ac.jar -g ../../disks/smart0.po TEST$1.QTK > /tmp/TEST$1.QTK
+    ./qtktconv.x86_64 /tmp/TEST$1.QTK 0 0 640 480
+  elif [ "$1" = "150" ]; then
+    java -jar ../../bin/ac.jar -g ../../disks/smart0.po TEST$1.QTK > /tmp/TEST$1.QTK
+    ./qtknconv.x86_64 /tmp/TEST$1.QTK 0 0 640 480
+  elif [ "$1" = "200" ]; then
+    java -jar ../../bin/ac.jar -g ../../disks/smart0.po TEST$1.JPG > /tmp/TEST$1.JPG
+    ./jpegconv.x86_64 /tmp/TEST$1.JPG 0 0 640 480
+  fi
+  #get result from HD
+  java -jar ../../bin/ac.jar -g ../../disks/smart0.po GREY > GREY.A2
+  echo Files sha1sum:
+  expected_sha1sum=$(sha1sum GREY|cut -d' ' -f1)
+  if [ "$1" = "150" ]; then
+    # The approximated division changes the output file in an acceptable way
+    expected_sha1sum="a24b1e6d7d94b5fa05331383ff1faaecd2343799"
+  fi
+
+  final_sha1sum=$(sha1sum GREY.A2|cut -d' ' -f1)
+  echo "Ref:      $(sha1sum GREY|cut -d' ' -f1)"
+  echo "Expected: $expected_sha1sum"
+  echo "Got:      $final_sha1sum"
+
+  if [ "$final_sha1sum" != "$expected_sha1sum" ]; then
+    echo UNEXPECTED SHA1SUM
+  else
+    echo sha1sum is OK
+  fi
+fi

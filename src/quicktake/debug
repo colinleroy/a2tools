@@ -1,5 +1,11 @@
 #!/bin/bash
-if [ "$2" != "" ]; then
-	FLOP2="-flop2 disks/qt$2.dsk"
+TYPE="full"
+if [ "$1" != "" ]; then
+  TYPE=$1
+	FLOP2="-flop2 disks/qt$1.dsk"
+else
+	FLOP2="-flop2 disks/qt100.dsk"
 fi
-make clean all && cd ../.. && make quicktake.dsk && mame apple2c0 -window -flop1 quicktake.dsk $FLOP2 -resolution 560x384 -modem null_modem -bitb socket.localhost:2000 -nomouse -debug; cd src/quicktake
+
+make clean all DEBUG_FLOPPY=$TYPE \
+	&& cd ../.. && make quicktake.dsk && mame apple2c0 -window -flop1 quicktake.dsk $FLOP2 -resolution 560x384 -modem null_modem -bitb socket.localhost:2000 -nomouse -debug; cd src/quicktake
