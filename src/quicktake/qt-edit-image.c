@@ -588,8 +588,7 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
 
   /* Sierra variables */
   #define cur_err_x_y regptr1
-  #define cur_err_xmin1_yplus1 regptr2
-  #define cur_err_x_yplus1 regptr3
+  #define cur_err_x_yplus1 regptr2
   int16 buf_plus_err;
   int8 *cur_err_line = err;
   int8 *next_err_line;
@@ -882,7 +881,6 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
 
       next_err_line = tmp;
       cur_err_x_yplus1 = next_err_line + x;
-      cur_err_xmin1_yplus1 = cur_err_x_yplus1 - 1;
 
       bzero(next_err_line, file_width);
 
@@ -920,24 +918,15 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
       __asm__("bne %g", clear_next_err_line);
       __asm__("sty %v", err2);
 
-      /* cur_err_x_yplus1 = next_err_line + x; */
+      /* cur_err_x_yplus1 = next_err_line + x - 1;*/
       __asm__("lda %v", next_err_line); /* High byte still in X */
       __asm__("clc");
       __asm__("adc %v", x);
-      __asm__("sta %v", cur_err_x_yplus1);
       __asm__("bcc %g", noof4);
       __asm__("inx");
       noof4:
+      __asm__("sta %v", cur_err_x_yplus1);
       __asm__("stx %v+1", cur_err_x_yplus1);
-
-      /* cur_err_xmin1_yplus1 = cur_err_x_yplus1 - 1;*/
-      __asm__("sec");
-      __asm__("sbc #1");
-      __asm__("sta %v", cur_err_xmin1_yplus1);
-      __asm__("bcs %g", nouf1);
-      __asm__("dex");
-      nouf1:
-      __asm__("stx %v+1", cur_err_xmin1_yplus1);
 #endif
 
     } else if (dither_alg == DITHER_BAYER) {
@@ -1005,7 +994,7 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
       if (dither_alg == DITHER_SIERRA) {
         buf_plus_err = opt_val + err2;
 #ifndef __CC65__
-        buf_plus_err += *cur_err_x_y;
+        buf_plus_err += *(cur_err_x_y+x);
         if (buf_plus_err < DITHER_THRESHOLD) {
           /* pixel's already black */
           x86_64_tgi_set(dx, y, TGI_COLOR_BLACK);
@@ -1017,7 +1006,8 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
         err1 = err2 >> 1;    /* cur_err * 1 / 4 */
 #else
         __asm__("ldx #$00");
-        __asm__("lda (%v)", cur_err_x_y);
+        __asm__("ldy %v", x);
+        __asm__("lda (%v),y", cur_err_x_y);
         __asm__("bpl %g", positive_s);
         __asm__("dex");
         positive_s:
@@ -1051,28 +1041,25 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
 
         if (x > 0) {
 #ifndef __CC65__
-          *cur_err_xmin1_yplus1    += err1;
+          *(cur_err_x_yplus1+x-1)    += err1;
 #else
-          __asm__("lda (%v)", cur_err_xmin1_yplus1);
+          __asm__("ldy %v", x);
+          __asm__("dey");
+          __asm__("lda (%v),y", cur_err_x_yplus1);
           __asm__("clc");
           __asm__("adc %v", err1);
-          __asm__("sta (%v)", cur_err_xmin1_yplus1);
+          __asm__("sta (%v),y", cur_err_x_yplus1);
 #endif
         }
 #ifndef __CC65__
-        *cur_err_x_yplus1          += err1;
+        *(cur_err_x_yplus1+x)   += err1;
 #else
-        __asm__("lda (%v)", cur_err_x_yplus1);
+        __asm__("ldy %v", x);
+        __asm__("lda (%v),y", cur_err_x_yplus1);
         __asm__("clc");
         __asm__("adc %v", err1);
-        __asm__("sta (%v)", cur_err_x_yplus1);
+        __asm__("sta (%v),y", cur_err_x_yplus1);
 #endif
-
-        /* Advance cursors */
-        cur_err_x_y++;
-        cur_err_x_yplus1++;
-        cur_err_xmin1_yplus1++;
-
       } else if (dither_alg == DITHER_BAYER) {
         buf_plus_err = opt_val;
 #ifndef __CC65__

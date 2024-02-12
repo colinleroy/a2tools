@@ -13,106 +13,10 @@
         .import         _cache_start
         .import         _cache_end
         .import         _ifp
-        .import         _got_four_bits
         .import         _huff_ptr
-        .export         _reset_bitbuff
-        .export         _get_four_bits
         .export         _getbithuff
 
 cur_cache_ptr = _prev_ram_irq_vector
-
-; ---------------------------------------------------------------
-; unsigned char __near__ __fastcall__ reset_bitbuff(void)
-; ---------------------------------------------------------------
-
-
-; Don't put this one in LC as it is patched on runtime
-
-_reset_bitbuff:
-        stz     _bitbuf_nohuff
-        stz     _vbits
-
-        ; Patch end-of-cache comparisons
-        lda     _cache_end
-        sta     not_enough_vbits+1
-        lda     _cache_end+1
-        sta     cache_check_high+1
-        rts
-
-; ---------------------------------------------------------------
-; unsigned char __near__ __fastcall__ get_four_bits(void)
-; ---------------------------------------------------------------
-
-; Don't put this one in LC as it is patched on runtime
-
-_get_four_bits:
-        lda     #0              ; Patched (flip-flop)
-        beq     not_enough_vbits
-        stz     _get_four_bits+1; Patch flip-flop
-low_nibble:
-        ldx     #$00            ; Patched
-        jmp     _got_four_bits
-
-not_enough_vbits:
-        lda     #0              ; Patched when resetting (_cache_end)
-        cmp     cur_cache_ptr
-        beq     cache_check_high
-
-fetch_vbits:
-        lda     (cur_cache_ptr)
-        tay
-
-        and     #$0F            ; Patch low nibble for next call
-        sta     low_nibble+1
-
-        inc     cur_cache_ptr
-        bne     :+
-        inc     cur_cache_ptr+1
-
-:       inc     _get_four_bits+1; Patch flip-flop
-        ldx     high_nibble,y
-        jmp     _got_four_bits
-
-cache_check_high:
-        ldx     #0              ; Patched when resetting (_cache_end+1)
-        cpx     cur_cache_ptr+1
-        bne     fetch_vbits
-
-must_read:
-        jsr     decsp6
-
-        ; Push fread dest pointer
-        ldy     #$05
-
-        lda     _cache_start+1
-        sta     cur_cache_ptr+1
-        sta     (sp),y
-
-        lda     _cache_start
-        sta     cur_cache_ptr
-        dey
-        sta     (sp),y
-
-        ; Push size (1)
-        dey
-        lda     #0
-        sta     (sp),y
-        dey
-        inc     a
-        sta     (sp),y
-
-        ; Push count ($1000, CACHE_SIZE)
-        dey
-        lda     #>CACHE_SIZE
-        sta     (sp),y
-        dey
-        lda     #<CACHE_SIZE
-        sta     (sp),y
-
-        lda     _ifp
-        ldx     _ifp+1
-        jsr     _fread
-        jmp     fetch_vbits
 
 .segment        "BSS"
 
@@ -302,8 +206,3 @@ min8:   .byte 8
         .byte 2
         .byte 1
         .byte 0
-
-high_nibble:
-    .repeat 256, I
-        .byte I >> 4
-    .endrep

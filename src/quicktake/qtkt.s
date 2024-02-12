@@ -1,16 +1,14 @@
         .importzp        sp, sreg
         .importzp        tmp1, tmp2, tmp3, tmp4, ptr1, ptr2, ptr3, ptr4
-        .importzp        _prev_rom_irq_vector, _zp6p, _zp8p, _zp10p, _zp12, _zp13, _zp12ip
+        .importzp        _prev_rom_irq_vector, _prev_ram_irq_vector, _zp6p, _zp8p, _zp10p, _zp12, _zp13, _zp12ip
 
         .import          _memcpy, _memset, _progress_bar
 				.import          pushax, pusha, pusha0, decsp6, incsp6, subysp
         .import          _height
         .import          _width
         .import          _raw_image
-        .import          _reset_bitbuff
-        .import          _get_four_bits
+        .import          _fread, _ifp, _cache_end
 
-        .export          _got_four_bits
         .export          _magic
         .export          _model
         .export          _huff_ptr
@@ -38,7 +36,66 @@ _cache_start:
 
 .segment        "RODATA"
 
-gstep_low:
+high_nibble_gstep_low:
+        .repeat 16
+        .byte        $A7
+        .endrep
+        .repeat 16
+        .byte        $C4
+        .endrep
+        .repeat 16
+        .byte        $D4
+        .endrep
+        .repeat 16
+        .byte        $E0
+        .endrep
+        .repeat 16
+        .byte        $EA
+        .endrep
+        .repeat 16
+        .byte        $F1
+        .endrep
+        .repeat 16
+        .byte        $F8
+        .endrep
+        .repeat 16
+        .byte        $FE
+        .endrep
+        .repeat 16
+        .byte        $02
+        .endrep
+        .repeat 16
+        .byte        $08
+        .endrep
+        .repeat 16
+        .byte        $0F
+        .endrep
+        .repeat 16
+        .byte        $16
+        .endrep
+        .repeat 16
+        .byte        $20
+        .endrep
+        .repeat 16
+        .byte        $2C
+        .endrep
+        .repeat 16
+        .byte        $3C
+        .endrep
+        .repeat 16
+        .byte        $59
+        .endrep
+
+high_nibble_gstep_high:
+        .repeat 128
+        .byte        $FF
+        .endrep
+        .repeat 128
+        .byte        $00
+        .endrep
+
+low_nibble_gstep_low:
+        .repeat 16
         .byte        $A7
         .byte        $C4
         .byte        $D4
@@ -56,8 +113,10 @@ gstep_low:
         .byte        $2C
         .byte        $3C
         .byte        $59
+        .endrep
 
-gstep_high:
+low_nibble_gstep_high:
+        .repeat 16
         .byte        $FF
         .byte        $FF
         .byte        $FF
@@ -75,6 +134,7 @@ gstep_high:
         .byte        $00
         .byte        $00
         .byte        $00
+        .endrep
 
 model_str:
         .byte        $31,$30,$30,$00
@@ -105,6 +165,60 @@ pix_direct_row:
 ; ---------------------------------------------------------------
 
 .segment        "CODE"
+
+cur_cache_ptr = _prev_ram_irq_vector
+
+; ---------------------------------------------------------------
+; unsigned char __near__ __fastcall__ reset_bitbuff(void)
+; ---------------------------------------------------------------
+
+
+; Don't put this one in LC as it is patched on runtime
+
+_reset_bitbuff:
+        ; Patch end-of-cache comparisons
+        lda     _cache_end
+        sta     cache_check_low_byte+1
+        lda     _cache_end+1
+        sta     cache_check_high_byte+1
+        rts
+
+fill_cache:
+        jsr     decsp6
+
+        ; Push fread dest pointer
+        ldy     #$05
+
+        lda     _cache_start+1
+        sta     cur_cache_ptr+1
+        sta     (sp),y
+
+        lda     _cache_start
+        sta     cur_cache_ptr
+        dey
+        sta     (sp),y
+
+        ; Push size (1)
+        dey
+        lda     #0
+        sta     (sp),y
+        dey
+        inc     a
+        sta     (sp),y
+
+        ; Push count ($1000, CACHE_SIZE)
+        dey
+        lda     #>CACHE_SIZE
+        sta     (sp),y
+        dey
+        lda     #<CACHE_SIZE
+        sta     (sp),y
+
+        lda     _ifp
+        ldx     _ifp+1
+        jsr     _fread
+        rts
+
 
 val               = _prev_rom_irq_vector
 row               = _prev_rom_irq_vector+1
@@ -240,11 +354,11 @@ first_pass_next_row:
         beq     even_row
 
         clc
-        lda     src             ; idx_end = src + width_plus2 + 1
-        adc     width_plus2
+        lda     src             ; idx_end = src + width + 1
+        adc     _width
         tay
         lda     src+1
-        adc     width_plus2+1
+        adc     _width+1
         iny                     ; + 1
         sty     check_first_pass_col_loop+1
         bne     :+
@@ -268,17 +382,18 @@ first_pass_next_row:
         stx     idx+1
 
         jmp     first_pass_row_work
+
 even_row:
         and     #$02            ; Row % 8?
         bne     :+
         jsr     update_progress_bar
 
 :       clc
-        lda     src             ; idx_end = src + width_plus2
-        adc     width_plus2
+        lda     src             ; idx_end = src + width
+        adc     _width
         sta     check_first_pass_col_loop+1
         lda     src+1
-        adc     width_plus2+1
+        adc     _width+1
         sta     check_first_pass_col_loop_hi+1
 
         lda     src             ; Set idx_forward = src + SCRATCH_WIDTH + 1 and idx = src
@@ -299,19 +414,11 @@ first_pass_row_work:
         sta     store_idx_min2+1; Remember idx-2 for first columns
         stx     store_idx_min2+2
 
-        clc
-        adc     #2
-        bcc     :+
-        inx
-
-:       sta     idx             ; idx += 2
-        stx     idx+1
-
-        sec                     ; Set idx_behind = idx - (SCRATCH_WIDTH+1)
-        sbc     #<(SCRATCH_WIDTH+1)
+        sec                     ; Set idx_behind = idx - (SCRATCH_WIDTH-1)
+        sbc     #<(SCRATCH_WIDTH-1)
         sta     idx_behind
         txa
-        sbc     #>(SCRATCH_WIDTH+1)
+        sbc     #>(SCRATCH_WIDTH-1)
         sta     idx_behind+1
 
         clc
@@ -325,15 +432,36 @@ first_pass_row_work:
         ; We're at first column
         sta     at_very_first_col
 
-first_pass_col_loop:
-        jmp     _get_four_bits
-_got_four_bits:
+        jmp     first_pass_col_loop
 
-        ; Thanks to Kent Dickey for the simplification!
-        ; val = ((*idx_behind            // row-1, col-1
-        ;      + last_val) >> 1    // row,   col-2
-        ;      + *idx_behind+2) >> 1 // row-1, col+1
-        ;      + gstep[h];
+cache_check_high_byte:
+        ldx     #0              ; Patched when resetting (_cache_end+1)
+        cpx     cur_cache_ptr+1
+        bne     fetch_byte
+        jsr     fill_cache
+        jmp     fetch_byte
+
+first_pass_col_loop:
+
+cache_check_low_byte:
+        lda     #0              ; Patched when resetting (_cache_end)
+        cmp     cur_cache_ptr
+        beq     cache_check_high_byte
+
+fetch_byte:
+        lda     (cur_cache_ptr)
+
+        inc     cur_cache_ptr
+        bne     :+
+        inc     cur_cache_ptr+1
+
+:       tax                     ; Get gstep vals to X (keep it in X!)
+
+        ; HIGH NIBBLE
+        ; val = ((((*idx_behind
+        ;         + last_val) >> 1)
+        ;         + *(idx_behind+2)) >> 1)
+        ;         + gstep[high_nibble];
 
         clc
         lda     (idx_behind)
@@ -346,58 +474,103 @@ _got_four_bits:
         ror
 
         clc                     ; + gstep[h].
-        adc     gstep_low,x     ; Sets carry if overflow
+        adc     high_nibble_gstep_low,x
+                                ; Sets carry if overflow
 
-        sta     (idx)           ; *idx = val
-        tay                     ; Backup val's low byte to Y for later
+        sta     (idx),y         ; *(idx+2) = val
+        sta     last_val        ; last_val = val
 
-        lda     gstep_high,x    ; Carry set by previous adc if overflowed
+        lda     high_nibble_gstep_high,x
+                                ; Carry set by previous adc if overflowed
+
         adc     #0
-        beq     val_stored      ; No overflow
+        beq     :+              ; No overflow
         asl     a               ; Get sign (sets carry if negative)
         lda     #$FF
         adc     #0              ; FF => 00 if carry set
 
-store_val:
-        sta     (idx)           ; *idx = val
-        tay
+        sta     (idx),y         ; *(idx+2) = val
+        sta     last_val
 
-val_stored:
-        sty     last_val        ; last_val = val
+:       lda     at_very_first_col
+        bne     handle_first_col
 
-        clc                     ; idx_behind += 2
+first_col_done:
+        lda     at_very_first_row
+        bne     handle_first_row_high_nibble
+
+        ; REPEAT WITH LOW NIBBLE (same, with +2 offsets on Y)
+
+do_low_nibble:
+        ; val = ((((*(idx_behind+2)
+        ;         + last_val) >> 1)
+        ;         + *(idx_behind+4)) >> 1)
+        ;         + gstep[low_nibble];
+
+        clc
+        ldy     #2
+        lda     (idx_behind),y
+        adc     last_val
+        ror
+
+        clc
+        ldy     #4
+        adc     (idx_behind),y
+        ror
+
+        clc                     ; + gstep[h].
+        adc     low_nibble_gstep_low,x
+                                ; Sets carry if overflow
+
+        sta     (idx),y         ; *(idx+4) = val
+        sta     last_val
+
+        lda     low_nibble_gstep_high,x
+                                ; Carry set by previous adc if overflowed
+
+        adc     #0
+        beq     :+              ; No overflow
+        asl     a               ; Get sign (sets carry if negative)
+        lda     #$FF
+        adc     #0              ; FF => 00 if carry set
+
+        sta     (idx),y         ; *(idx+4) = val
+        sta     last_val
+
+:       lda     at_very_first_row
+        bne     handle_first_row_low_nibble
+
+        ; END LOW NIBBLE
+
+shift_indexes:
+        clc                     ; idx_behind += 4
         lda     idx_behind
-        adc     #2
+        adc     #4
         sta     idx_behind
         bcc     :+
         inc     idx_behind+1
+        clc
 
-:       ldx     at_very_first_col
-        bne     handle_first_col
-
-not_at_first_col:
-        ldx     at_very_first_row
-        bne     handle_first_row
-
-not_at_first_row:
-        clc                     ; idx += 2
-        lda     idx
-        adc     #2
+:       lda     idx             ; idx += 4
+        adc     #4
         sta     idx
         bcc     check_first_pass_col_loop
         inc     idx+1
 
 check_first_pass_col_loop:
         cmp     #0              ; Patched (idx_end)
-        bne     first_pass_col_loop
-        lda     idx+1
+        beq     :+
+        jmp     first_pass_col_loop
+:       lda     idx+1
 check_first_pass_col_loop_hi:
         cmp     #0              ; Patched (idx_end+1)
-        bne     first_pass_col_loop
+        beq     end_of_line
+        jmp     first_pass_col_loop
 
 end_of_line:
-        tya                     ; *idx = val (still in Y)
-        sta     (idx)
+        lda     last_val        ; *(idx+2) = val
+        ldy     #2
+        sta     (idx),y
         stz     at_very_first_row
 
         dec     row
@@ -407,21 +580,28 @@ end_of_line:
 
         ; First cols and first row handlers, out of main loop
 
-handle_first_col:               ; *(idx_forward) = *(idx_min2) = val (still in Y)
+handle_first_col:
+        lda     last_val
 store_idx_forward:
-        sty     $FFFF           ; Patched
+        sta     $FFFF           ; Patched
 store_idx_min2:
-        sty     $FFFF           ; Patched
+        sta     $FFFF           ; Patched
         stz     at_very_first_col
-        jmp     not_at_first_col; Back to common codepath
+        jmp     first_col_done
 
-handle_first_row:               ; *(idx_behind+2) = *(idx_behind) = val
-        tya                     ; get val back from Y
-        ldy     #2
+handle_first_row_high_nibble:
+        lda     last_val        ; get val back
+        sta     (idx_behind),y  ; *(idx_behind+2) = *(idx_behind+4) = val;
+        ldy     #4
         sta     (idx_behind),y
-        sta     (idx_behind)
-        tay                     ; set Y back to val
-        jmp     not_at_first_row
+        jmp     do_low_nibble
+
+handle_first_row_low_nibble:
+        lda     last_val        ; get val back
+        sta     (idx_behind),y  ; *(idx_behind+4) = *(idx_behind+6) = val;
+        ldy     #6
+        sta     (idx_behind),y
+        jmp     shift_indexes
 
         ; End of first col/row handlers
 
@@ -452,10 +632,10 @@ second_pass_next_row:
         inx
 
 second_pass_row_work:
-        sty     idx
+        tya
+        sta     idx
         stx     idx+1
 
-        tya
         adc     _width          ; idx_end = idx + width
         sta     check_second_pass_col_loop+1
         txa
@@ -474,7 +654,8 @@ second_pass_col_loop:
         ;    + ((*(idx) + *(idx+2)) >> 1)
         ;    - 0x100;
 
-.repeat 2,I                     ; Unroll that a bit
+UNROLL_FACTOR = 4
+.repeat UNROLL_FACTOR,I         ; Unroll that a bit
 
         ldx     #1              ; Overflow counter
         ldy     #(I*2)
@@ -507,11 +688,11 @@ second_pass_col_loop:
 
 .endrep
 
-        ; Shift index by 2*unroll factor
+        ; Shift index by sizeof(uint16)*UNROLL_FACTOR
 
         lda     idx
         clc
-        adc     #(2*2)
+        adc     #(2*UNROLL_FACTOR)
         sta     idx
         bcc     check_second_pass_col_loop
         inc     idx+1
@@ -519,11 +700,13 @@ second_pass_col_loop:
 check_second_pass_col_loop:
         ; Are we done for this row?
         cmp     #0              ; Patched (idx_end)
-        bne     second_pass_col_loop
-        ldx     idx+1
+        beq     :+
+        jmp     second_pass_col_loop
+:       ldx     idx+1
 check_second_pass_col_loop_hi:
         cpx     #0              ; Patched (idx_end+1)
-        bne     second_pass_col_loop
+        beq     second_pass_row_done
+        jmp     second_pass_col_loop
 
 second_pass_row_done:
         dec     row

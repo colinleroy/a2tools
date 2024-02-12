@@ -6,26 +6,6 @@
 static uint32 tmp;
 static uint8 shift;
 
-void __fastcall__ reset_bitbuff (void) {
-  bitbuf_nohuff = 0;
-  vbits = 0;
-}
-
-uint8 __fastcall__ get_four_bits (void)
-{
-  if(vbits) {
-    vbits--;
-    return bitbuf_nohuff & 0x0F;
-  } else {
-    if (cur_cache_ptr == cache_end) {
-      fread(cur_cache_ptr = cache, 1, CACHE_SIZE, ifp);
-    }
-    bitbuf_nohuff = *(cur_cache_ptr++);
-    vbits = 1;
-    return (bitbuf_nohuff) >> 4;
-  }
-}
-
 uint8 __fastcall__ getbithuff (uint8 n)
 {
   uint16 h;
