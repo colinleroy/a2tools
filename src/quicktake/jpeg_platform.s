@@ -55,9 +55,10 @@ _huffExtend:
         tax
 
 :       cpx     extendX+1
-        beq     :+
-        bcs     retExtend
-:       cpy     extendX
+        bcc     retNormal
+        bne     retExtend
+
+        cpy     extendX
         bcc     retNormal
         beq     retNormal
 
@@ -373,9 +374,12 @@ _imul_b1_b3:
         sta    dw+2
 
         ; Was val negative?
-        lda    neg
-        beq    :+
-
+        ldy    neg
+        bne    :+
+        tax
+        lda    dw+1
+        rts
+:
         ; dw ^= 0xffffffff
         lda    #$FF
         eor    dw
@@ -396,7 +400,6 @@ _imul_b1_b3:
         inc    a
         bne    :+
         inx
-
 :       rts
 
 ; uint16 __fastcall__ imul_b2(int16 w)
@@ -442,9 +445,12 @@ _imul_b2:
         sta    dw+2
 
         ; Was val negative?
-        lda    neg
-        beq    :+
-
+        ldy    neg
+        bne    :+
+        tax
+        lda    dw+1
+        rts
+:
         ; dw ^= 0xffffffff
         lda    #$FF
         eor    dw
@@ -511,9 +517,12 @@ _imul_b4:
         sta    dw+2
 
         ; Was val negative?
-        lda    neg
-        beq    :+
-
+        ldy    neg
+        bne    :+
+        tax
+        lda    dw+1
+        rts
+:
         ; dw ^= 0xffffffff
         lda    #$FF
         eor    dw
@@ -580,9 +589,12 @@ _imul_b5:
         sta    dw+2
 
         ; Was val negative?
-        lda    neg
-        beq    :+
-
+        ldy    neg
+        bne    :+
+        tax
+        lda    dw+1
+        rts
+:
         ; dw ^= 0xffffffff _
         lda    #$FF
         eor    dw
@@ -804,7 +816,7 @@ nextIdctRowsLoop:
         bne    full_idct_rows
         lda    (rowSrc_6)
         bne    full_idct_rows
-        lda    (ptr1)
+        lda    (rowSrc_7)
         bne    full_idct_rows
 
         ldy    #1
@@ -820,7 +832,7 @@ nextIdctRowsLoop:
         bne    full_idct_rows
         lda    (rowSrc_6),y
         bne    full_idct_rows
-        lda    (ptr1),y
+        lda    (rowSrc_7),y
         bne    full_idct_rows
 
         ; Short circuit the 1D IDCT if only the DC component is non-zero
@@ -916,18 +928,19 @@ full_idct_rows:
         sbc    x13+1
         sta    x32+1
 
-        lda    x5
         sec
+        lda    x5
         sbc    x7
         sta    x15
         lda    x5+1
         sbc    x7+1
         sta    x15+1
 
-        lda    x5
         clc
+        lda    x5
         adc    x7
         sta    x17
+        pha
         lda    x5+1
         adc    x7+1
         sta    x17+1
@@ -935,6 +948,7 @@ full_idct_rows:
 
         ;*(rowSrc) = x30 + x13 + x17;
         clc
+        pla                     ; x17
         adc    x13
         tay
         txa
@@ -1225,8 +1239,8 @@ full_idct_cols:
         sta     x5+1
 
         ;x15 = x5 - x7;
-        lda     x5
         sec
+        lda     x5
         sbc     x7
         sta     x15
         lda     x5+1
@@ -1234,8 +1248,8 @@ full_idct_cols:
         sta     x15+1
 
         ;x17 = x5 + x7;
-        lda     x5
         clc
+        lda     x5
         adc     x7
         sta     x17
         lda     x5+1
@@ -1243,8 +1257,8 @@ full_idct_cols:
         sta     x17+1
 
         ;res1 = imul_b5(x4 - x6
-        lda     x4
         sec
+        lda     x4
         sbc     x6
         tay
         lda     x4+1
@@ -1261,8 +1275,9 @@ full_idct_cols:
         jsr     _imul_b2
         sta     ptr1
         stx     ptr1+1
-        lda     res1
+
         sec
+        lda     res1
         sbc     ptr1
         sta     x24
         lda     res1+1
@@ -1274,6 +1289,7 @@ full_idct_cols:
         lda     x6
         ldx     x6+1
         jsr     _imul_b4
+
         sec
         sbc     res1
         tay
@@ -1281,6 +1297,7 @@ full_idct_cols:
         sbc     res1+1
         tax
         tya
+
         sec
         sbc     x17
         sta     res2
@@ -1300,8 +1317,8 @@ full_idct_cols:
         sta     res3+1
 
         ;x44 = res3 + x24;
-        lda     res3
         clc
+        lda     res3
         adc     x24
         sta     x44
         lda     res3+1
@@ -1365,8 +1382,8 @@ full_idct_cols:
         sta     x41+1
 
         ;x42 = x31 - x32;
-        lda     x31
         sec
+        lda     x31
         sbc     x32
         sta     x42
         lda     x31+1
@@ -1374,8 +1391,8 @@ full_idct_cols:
         sta     x42+1
 
         ;x40 = x30 + x13;
-        lda     x30
         clc
+        lda     x30
         adc     x13
         sta     x40
         lda     x30+1
@@ -1383,8 +1400,8 @@ full_idct_cols:
         sta     x40+1
 
         ;x43 = x30 - x13;
-        lda     x30
         sec
+        lda     x30
         sbc     x13
         sta     x43
         lda     x30+1
@@ -1404,14 +1421,18 @@ full_idct_cols:
         pha
         lda     x40+1
         adc     x17+1
+
         tax
         pla
+
         jsr     asrax7
         clc
+
         adc     #$80
         bcc     :+
         inx
         clc
+
 :       cpx     #$80
         bcc     :+
         lda     #0
@@ -1669,7 +1690,7 @@ doDec:
         bne     :+
         inc     cur_gMCUOrg+1
 
-:       lda     sDMCU
+:       lda     sDMCU ; FIXME can remove
         and     #$0F
         beq     :+
         jsr     _getBits2
@@ -1797,15 +1818,14 @@ storeExtraBits:
         lsr     a
         sta     rDMCU
         stz     rDMCU+1
+
         lda     sDMCU
         and     #$0F
         sta     sDMCU
 
-        lda     sDMCU
         beq     sZero
 
         lda     rDMCU
-        ora     rDMCU+1
         beq     zeroZAGDone
 zeroZAG:
         lda     (cur_ZAG_coeff)
@@ -1832,10 +1852,6 @@ zeroZAG:
         inc     cur_pQ+1
         clc
 
-:       lda     rDMCU
-        bne     :+
-        dec     rDMCU+1
-        bmi     zeroZAGDone
 :       dec     rDMCU
         bne     zeroZAG
 
@@ -1865,15 +1881,13 @@ zeroZAGDone:
         bra     sNotZero
 
 sZero:
-        lda     rDMCU+1
-        bne     ZAG_Done
         lda     rDMCU
         cmp     #$0F
         bne     ZAG_Done
 
         sta     sDMCU
 decS:
-        lda     (cur_ZAG_coeff)
+        lda     (cur_ZAG_coeff) ; FIXME this should not be there
         sta     ptr1
         ldy     #1
         lda     (cur_ZAG_coeff),y
@@ -1913,6 +1927,7 @@ sNotZero:
         sta     cur_ZAG_coeff
         bcc     :+
         inc     cur_ZAG_coeff+1
+        clc
 :       jmp     checkZAGLoop
 
 ZAG_Done:

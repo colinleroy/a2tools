@@ -34,7 +34,6 @@ uint16 *huff_ptr;
 uint8 cache[CACHE_SIZE];
 uint8 *cache_start = cache;
 
-uint8 got_four_bits; /* HACK to build */
 static uint16 val_from_last[256];
 static uint16 huff[19][256], *huff_9, *huff_10;
 static int16 x, s, i, tmp_i16, tree;
@@ -187,16 +186,19 @@ void qt_load_raw(uint16 top)
     not_null_buf:
 
     __asm__("ldy %v+1", val);
-    __asm__("sty ptr1+1");
+    __asm__("sty ptr2+1");
     __asm__("ldx %v", val);
-    __asm__("stx ptr1");
-    /* multiply */
+    __asm__("stx ptr2");
+
     __asm__("ldy #$01");
     __asm__("lda (%v),y", cur_buf_y);
-    __asm__("sta ptr2+1");
+    __asm__("sta ptr1+1");
     __asm__("lda (%v)", cur_buf_y);
-    __asm__("sta ptr2");
+    __asm__("sta ptr1");
+
+    /* multiply */
     __asm__("jsr mult16x16x32_direct");
+
     /* decrement */
     __asm__("cmp #0");
     __asm__("bne %g", nouf12);
@@ -210,6 +212,7 @@ void qt_load_raw(uint16 top)
     nouf13:
     __asm__("dex");
     nouf12:
+
     // No need to DEC A, we're about to shift right
 
     /* Shift >> 8 */
@@ -1253,11 +1256,16 @@ void qt_load_raw(uint16 top)
           __asm__("ldy #1");
           __asm__("lda (%v),y", cur_buf_x);
           __asm__("sta ptr2+1");
+          //__asm__("tax");
           __asm__("lda (%v)", cur_buf_x);
           __asm__("sta ptr2");
+          //__asm__("jsr pushax");
           __asm__("tax");
           __asm__("ldy %v", t);
+          //__asm__("ldx #0");
+          //__asm__("lda %v", t);
           __asm__("jsr approx_div16x8_direct");
+          //__asm__("jsr tosudiva0");
           __asm__("cpx #0");
           __asm__("beq %g", no_val_clamp);
           __asm__("lda #$FF");

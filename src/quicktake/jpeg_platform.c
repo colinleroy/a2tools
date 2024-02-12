@@ -6,16 +6,15 @@
 
 int16 __fastcall__ huffExtend(uint16 x, uint8 s)
 {
-  uint16 lx = x, t = 0;
-  uint8 ls = s;
+  uint16 t = 0;
 
-  if (ls < 16)
-    t = extendTests[ls];
+  if (s < 16)
+    t = extendTests[s];
 
-  if (t > lx)
-    return (int16)lx + getExtendOffset(ls);
+  if (t > x)
+    return (int16)x + getExtendOffset(s);
 
-  return (int16)lx;
+  return (int16)x;
 }
 
 extern uint16 gBitBuf;
@@ -218,15 +217,15 @@ nextIdctRowsLoop:
 
       full_idct_rows:
        x7  = *(rowSrc_5) + *(rowSrc_3);
-       x5  = *(rowSrc_1) + *(rowSrc_7);
-
-       x6  = *(rowSrc_1) - *(rowSrc_7);
        x4  = *(rowSrc_5) - *(rowSrc_3);
 
-       x30 = *(rowSrc) + *(rowSrc_4);
-       x13 = *(rowSrc_2) + *(rowSrc_6);
+       x5  = *(rowSrc_1) + *(rowSrc_7);
+       x6  = *(rowSrc_1) - *(rowSrc_7);
 
+       x30 = *(rowSrc) + *(rowSrc_4);
        x31 = *(rowSrc) - *(rowSrc_4);
+
+       x13 = *(rowSrc_2) + *(rowSrc_6);
        x12 = *(rowSrc_2) - *(rowSrc_6);
 
        x32 = imul_b1_b3(x12) - x13;
@@ -331,10 +330,11 @@ void idctCols(void)
 
        x32 = imul_b1_b3(x12) - x13;
 
-       x40 = x30 + x13;
-       x43 = x30 - x13;
        x41 = x31 + x32;
        x42 = x31 - x32;
+
+       x40 = x30 + x13;
+       x43 = x30 - x13;
 
        // descale, convert to unsigned and clamp to 8-bit
        t = ((x40 + x17) >> PJPG_DCT_SCALE_BITS) +128;
@@ -418,8 +418,8 @@ uint8 decodeNextMCU(void)
   for (mcuBlock = 0; mcuBlock < 2; mcuBlock++) {
     componentID = *cur_gMCUOrg;
     compQuant = gCompQuant[componentID];	
-    compDCTab = gCompDCTab[componentID];
     pQ = compQuant ? gQuant1 : gQuant0;
+    compDCTab = gCompDCTab[componentID];
     if (compDCTab)
       s = huffDecode(&gHuffTab1, gHuffVal1);
     else
@@ -431,6 +431,7 @@ uint8 decodeNextMCU(void)
     numExtraBits = s & 0xF;
     if (numExtraBits)
        r = getBits2(numExtraBits);
+
     dc = huffExtend(r, s);
 
     dc = dc + gLastDC[componentID];
