@@ -53,7 +53,6 @@ static const int16 gstep[16] =
  */
 uint8 *idx_forward;
 uint8 *idx_behind;
-uint8 *idx_min2;
 uint8 *idx_end;
 uint8 *idx_behind_plus2;
 uint16 *idx_pix_rows;
@@ -73,6 +72,9 @@ uint8 last_val;
 #define SCRATCH_HEIGHT (BAND_HEIGHT + 4)
 static uint8 pixelbuf[SCRATCH_HEIGHT * SCRATCH_WIDTH + 2];
 static uint8 *pix_direct_row[SCRATCH_HEIGHT];
+
+void __fastcall__ reset_bitbuff (void) {
+}
 
 void qt_load_raw(uint16 top)
 {
@@ -118,18 +120,16 @@ void qt_load_raw(uint16 top)
    * and the only use of the variable is to check for oddity, so nothing
    * changes */
   for (row = BAND_HEIGHT; row != 0; row--) {
-    idx = src;
-
     /* Adapt indexes depending on the row's oddity */
     if (row & 1) {
       idx_forward = src + SCRATCH_WIDTH;
-      idx_min2 = idx = src + 1;
-      idx_end = src + width_plus2 + 1;
+      idx = src + 1;
+      idx_end = src + width + 1;
       pgbar_state+=2;
       progress_bar(-1, -1, 80*22, pgbar_state, height);
     } else {
-      idx_min2 = idx = src;
-      idx_end = src + width_plus2;
+      idx = src;
+      idx_end = src + width;
       idx_forward = src + SCRATCH_WIDTH + 1;
     }
 
@@ -137,13 +137,10 @@ void qt_load_raw(uint16 top)
     last_val = (*idx);
 
     /* row, col index */
-    idx += 2;
+    //idx += 2;
 
     /* row-1, col-1 */
-    idx_behind = idx - (SCRATCH_WIDTH+1);
-
-    /* row-1, col+1 */
-    //idx_behind_plus2 = idx_behind + 2;
+    idx_behind = idx - (SCRATCH_WIDTH-1);
 
     /* Shift source buffer for next line */
     src += SCRATCH_WIDTH;
@@ -152,41 +149,75 @@ void qt_load_raw(uint16 top)
 
     /* First pass */
     while (idx != idx_end) {
-      uint8 h = get_four_bits();
+      uint8 high_nibble, low_nibble;
+      if (cur_cache_ptr == cache_end) {
+        fread(cur_cache_ptr = cache, 1, CACHE_SIZE, ifp);
+      }
+
+      high_nibble = *(cur_cache_ptr++);
+      low_nibble = high_nibble & 0x0F;
+      high_nibble >>= 4;
+
+      /* Do high nibble */
 
       val = ((((*idx_behind               // row-1, col-1
               + last_val) >> 1)
               + *(idx_behind+2)) >> 1) // row-1, col+1
-              + gstep[h];
+              + gstep[high_nibble];
+
       if (val < 0)
         val = 0;
       else if (val > 255)
         val = 255;
 
-      *(idx) = val;
+      *(idx+2) = val;
 
       /* Cache it for next loop before shifting */
       last_val = val;
 
-      /* Shift indexes */
-      idx_behind +=2;
 
       /* At first columns, we have to set scratch values for the next line.
        * We'll need them in the second pass */
       if (at_very_first_col) {
-        *(idx_forward) = *(idx_min2) = val;
+        *(idx_forward) = *(idx) = val;
         at_very_first_col = 0;
       }
 
       /* Same for the first line of the image */
       if (at_very_first_row) {
         /* row-1,col+1 / row-1,col+3*/
-        *(idx_behind) = *(idx_behind+2) = val;
+        *(idx_behind+4) = *(idx_behind+2) = val;
       }
 
-      idx+=2;
+      /* Do low nibble with indexes shifted 2 */
+
+      val = ((((*(idx_behind+2)               // row-1, col-1
+              + last_val) >> 1)
+              + *(idx_behind+4)) >> 1) // row-1, col+1
+              + gstep[low_nibble];
+
+      if (val < 0)
+        val = 0;
+      else if (val > 255)
+        val = 255;
+
+      *(idx+4) = val;
+
+      /* Cache it for next loop before shifting */
+      last_val = val;
+
+
+      /* Same for the first line of the image */
+      if (at_very_first_row) {
+        /* row-1,col+1 / row-1,col+3*/
+        *(idx_behind+6) = *(idx_behind+4) = val;
+      }
+
+      /* Shift indexes */
+      idx_behind +=4;
+      idx+=4;
     }
-    *(idx) = val;
+    *(idx+2) = val;
     at_very_first_row = 0;
   }
 
@@ -208,6 +239,7 @@ void qt_load_raw(uint16 top)
     src += SCRATCH_WIDTH;
 
     while (idx != idx_end) {
+      /* Unroll twice */
       val = (*(idx+1) << 1)
           + ((*(idx) + *(idx+2)) >> 1)
           - 0x100;
@@ -220,7 +252,21 @@ void qt_load_raw(uint16 top)
       else
         *(idx+1) = val;
 
-      idx += 2;
+      /* second time */
+      val = (*(idx+3) << 1)
+          + ((*(idx+2) + *(idx+4)) >> 1)
+          - 0x100;
+
+      /* Fixup */
+      if (val < 0)
+        *(idx+3) = 0;
+      else if (val > 255)
+        *(idx+3) = 255;
+      else
+        *(idx+3) = val;
+
+      /* Shift indexes */
+      idx += 4;
     }
   }
 
