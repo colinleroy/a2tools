@@ -336,26 +336,22 @@ static void write_raw(uint16 h)
     __asm__("sta (%v)", dst_ptr);
 
     /* histogram[*dst_ptr]++; */
-    __asm__("ldx #$00");
     __asm__("asl a");
+    __asm__("tax");
     __asm__("bcc %g", noof6);
-    __asm__("inx");
     __asm__("clc");
-    noof6:
-    __asm__("adc #<(%v)", histogram);
-    __asm__("sta ptr1");
-    __asm__("txa");
-    __asm__("adc #>(%v)", histogram);
-    __asm__("sta ptr1+1");
-
-    __asm__("lda (ptr1)");
-    __asm__("inc a");
-    __asm__("sta (ptr1)");
+    /* Second page of histogram */
+    __asm__("inc %v+256,x", histogram);
     __asm__("bne %g", inc_dst);
-    __asm__("ldy #$01");
-    __asm__("lda (ptr1),y");
-    __asm__("inc a");
-    __asm__("sta (ptr1),y");
+    __asm__("inx");
+    __asm__("inc %v+256,x", histogram);
+    goto inc_dst;
+    noof6:
+    /* first page of histogram */
+    __asm__("inc %v,x", histogram);
+    __asm__("bne %g", inc_dst);
+    __asm__("inx");
+    __asm__("inc %v,x", histogram);
 
     inc_dst:
     /* dst_ptr++; */
