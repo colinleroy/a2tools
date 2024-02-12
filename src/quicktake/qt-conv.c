@@ -63,6 +63,8 @@ FILE *ifp;
 static FILE *ofp;
 static const char *ifname;
 
+#pragma code-name (push, "LC")
+
 void __fastcall__ src_file_seek(uint32 off) {
   fseek(ifp, off, SEEK_SET);
   fread(cur_cache_ptr = cache_start, 1, CACHE_SIZE, ifp);
@@ -97,8 +99,6 @@ static uint16 __fastcall__ src_file_get_uint16(void) {
   ((unsigned char *)&v)[0] = *(cur_cache_ptr++);
   return v;
 }
-
-#pragma code-name (push, "LC")
 
 #pragma inline-stdfuncs(push, on)
 #pragma allow-eager-inline(push, on)
@@ -258,6 +258,9 @@ static void build_scale_table(const char *ofname) {
   } while (col); /* FILE_WIDTH == 256 */
 }
 
+#pragma code-name (pop) 
+/* Patched func */
+
 static void write_raw(uint16 h)
 {
 #ifdef __CC65__
@@ -306,6 +309,12 @@ static void write_raw(uint16 h)
   __asm__("lda #>(%v)", orig_y_table);
   __asm__("sta %v+1", cur_orig_y);
   next_y:
+    __asm__("lda (%v)", cur_orig_y);    /* patch cur_orig_y in loop */
+    __asm__("sta %g+1", cur_orig_y_lb);
+    __asm__("ldy #1");
+    __asm__("lda (%v),y", cur_orig_y);
+    __asm__("sta %g+1", cur_orig_y_hb);
+
     __asm__("lda #<(%v)", orig_x_table);
     __asm__("sta %v", cur_orig_x);
     __asm__("lda #>(%v)", orig_x_table);
@@ -314,11 +323,14 @@ static void write_raw(uint16 h)
     next_x:
     /* *dst_ptr = *(*cur_orig_y + *cur_orig_x); */
     __asm__("lda (%v)", cur_orig_x);
-    __asm__("adc (%v)", cur_orig_y);
+    cur_orig_y_lb:
+    __asm__("adc #$33"); /* Patched (init to 33 to avoid optimizer) */
     __asm__("sta ptr1");
     __asm__("ldy #$01");
+
     __asm__("lda (%v),y", cur_orig_x);
-    __asm__("adc (%v),y", cur_orig_y);
+    cur_orig_y_hb:
+    __asm__("adc #$33"); /* Patched (init to 33 to avoid optimizer) */
     __asm__("sta ptr1+1");
     __asm__("lda (ptr1)");
     __asm__("sta (%v)", dst_ptr);
@@ -371,6 +383,7 @@ static void write_raw(uint16 h)
   __asm__("inc %v+1", cur_orig_y);
   __asm__("clc");
   noof5b:
+
   /* y_len? */
   __asm__("dec %v", y_len);
   __asm__("bne %g", next_y);
@@ -378,6 +391,8 @@ static void write_raw(uint16 h)
 
   fwrite (raw_image, 1, output_write_len, ofp);
 }
+
+#pragma code-name (push, "LC")
 
 #pragma register-vars(pop)
 #pragma codesize(pop)
