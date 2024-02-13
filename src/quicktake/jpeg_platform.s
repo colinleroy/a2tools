@@ -8,6 +8,7 @@
         .import     _mul362_l, _mul362_m, _mul362_h
         .import     _mul277_l, _mul277_m, _mul277_h
         .import     _mul196_l, _mul196_m, _mul196_h
+        .import     asrax7
         .import     _gCoeffBuf, _gRestartInterval, _gRestartsLeft
         .import     _gMaxBlocksPerMCU, _processRestart, _gCompACTab, _gCompQuant
         .import     _gQuant0, _gQuant1, _gCompDCTab, _gMCUOrg, _gLastDC, _gCoeffBuf, _ZAG_Coeff
@@ -27,15 +28,6 @@
 _cur_cache_ptr = _prev_ram_irq_vector
 
 ; PJPG_INLINE int16 __fastcall__ huffExtend(uint16 x, uint8 sDMCU)
-
-asrax7:
-        asl                     ;          AAAAAAA0, h->C
-        txa
-        rol                     ;          XXXXXXLh, H->C
-        ldx     #$00            ; 00000000 XXXXXXLh
-        bcc     :+
-        dex                     ; 11111111 XXXXXXLh if C
-:       rts
 
 _huffExtend:
         sta     tmp1
@@ -655,13 +647,7 @@ _huffDecode:
         sta     huffC
 
 nextLoop:
-        ; huffC == 16 ?
-        lda     huffC
-        bpl     :+
-        lda     #0
-        bra     huffDecodeDone
-
-:       ; *curMaxCode != 0xFFFF?
+        ; *curMaxCode != 0xFFFF?
         ldy     #1
         lda     (curMaxCode),y
         tax
@@ -676,7 +662,6 @@ nextLoop:
         cmp     code            ; test low     byte
         bcs     loopDone        ; low byte >, do break
 noTest:
-        dec     huffC
         clc
         lda     curMaxCode
         adc     #2              ; sizeof(uint16)
@@ -701,8 +686,9 @@ noTest:
         jsr     _getBit
         ora     code
         sta     code
-        bra     nextLoop
-
+        dec     huffC
+        bne     nextLoop
+        jmp     huffDecodeDone
 loopDone:
         clc
         lda     (curValPtr)
@@ -1652,16 +1638,28 @@ nextMcuBlock:
         beq     :+
 
         lda     #<(_gQuant1)
-        sta     pQ
+        sta     load_pq0+1
+        sta     load_pq0b+1
+        sta     load_pq1+1
+        sta     load_pq2+1
         lda     #>(_gQuant1)
-        sta     pQ+1
+        sta     load_pq0+2
+        sta     load_pq0b+2
+        sta     load_pq1+2
+        sta     load_pq2+2
 
         bra     loadDCTab
 
 :       lda     #<(_gQuant0)
-        sta     pQ
+        sta     load_pq0+1
+        sta     load_pq0b+1
+        sta     load_pq1+1
+        sta     load_pq2+1
         lda     #>(_gQuant0)
-        sta     pQ+1
+        sta     load_pq0+2
+        sta     load_pq0b+2
+        sta     load_pq1+2
+        sta     load_pq2+2
 
 loadDCTab:
         lda     _gCompDCTab,y
@@ -1732,14 +1730,12 @@ doExtend:
 
         ;gCoeffBuf[0] = dc * pQ[0];
         jsr     pushax
-        lda     pQ
-        sta     ptr1
-        lda     pQ+1
-        sta     ptr1+1
         ldy     #1
-        lda     (ptr1),y
-        tax
-        lda     (ptr1)
+load_pq0:
+        ldx     $FFFF,y
+load_pq0b:
+        lda     $FFFF
+
         jsr     tosumulax
         sta     _gCoeffBuf
         stx     _gCoeffBuf+1
@@ -1760,22 +1756,13 @@ doExtend:
         sta     compACTab
 
         ;cur_pQ = pQ + 1;
-        lda     pQ
-        clc
-        adc     #2
+        lda     #2
         sta     cur_pQ
-        lda     pQ+1
-        adc     #0
-        sta     cur_pQ+1
 
 checkZAGLoop:
         lda     cur_ZAG_coeff
         cmp     end_ZAG_coeff
-        bne     doZAGLoop
-
-        lda     cur_ZAG_coeff+1
-        cmp     end_ZAG_coeff+1
-        bne     doZAGLoop
+        bne     doZAGLoop       ; No need to check high byte
         jmp     ZAG_Done
 
 doZAGLoop:
@@ -1842,11 +1829,9 @@ zeroZAG:
 :       lda     cur_pQ
         adc     #2
         sta     cur_pQ
-        bcc     :+
-        inc     cur_pQ+1
         clc
 
-:       dec     rDMCU
+        dec     rDMCU
         bne     zeroZAG
 
 zeroZAGDone:
@@ -1858,10 +1843,12 @@ zeroZAGDone:
         ;**cur_ZAG_coeff = ac * *cur_pQ;
         jsr     pushax
 
-        ldy     #1
-        lda     (cur_pQ),y
-        tax
-        lda     (cur_pQ)
+        ldy     cur_pQ
+load_pq1:
+        lda     $FFFF,y
+        iny
+load_pq2:
+        ldx     $FFFF,y
         jsr     tosumulax
         pha
 
@@ -1890,10 +1877,7 @@ decS:
 :       lda     cur_pQ
         adc     #(15*2)
         sta     cur_pQ
-        bcc     :+
-        inc     cur_pQ+1
-        clc
-:
+
         jmp     checkZAGLoop
 
 sNotZero:
@@ -1901,11 +1885,8 @@ sNotZero:
         lda     cur_pQ
         adc     #2
         sta     cur_pQ
-        bcc     :+
-        inc     cur_pQ+1
-        clc
 
-:       inc     cur_ZAG_coeff
+        inc     cur_ZAG_coeff
         bne     :+
         inc     cur_ZAG_coeff+1
 :       jmp     checkZAGLoop
@@ -1914,12 +1895,9 @@ ZAG_Done:
 finishZAG:
         lda     cur_ZAG_coeff
         cmp     end_ZAG_coeff
-        bne     :+
-        lda     cur_ZAG_coeff+1
-        cmp     end_ZAG_coeff+1
-        beq     ZAG_finished
+        beq     ZAG_finished  ; No need to check high byte
 
-:       lda     (cur_ZAG_coeff)
+        lda     (cur_ZAG_coeff)
         asl
         tay
         lda     #0
@@ -2186,7 +2164,6 @@ status:     .res 1
 mcuBlock:   .res 1
 componentID:.res 1
 compACTab:  .res 1
-pQ:         .res 2
 rDMCU:      .res 2
 sDMCU:      .res 1
 iDMCU:      .res 1

@@ -145,35 +145,22 @@ _cache:
         .res        CACHE_SIZE,$00
 dst:
         .res        2,$00
-width_plus2:
-        .res        2,$00
 pgbar_state:
         .res        2,$00
-last_two_lines:
-        .res        2,$00
-third_line:
-        .res        2,$00
-at_very_first_row:
-        .res        1,$00
 pixelbuf:
         .res        PIXELBUF_SIZE,$00
-pix_direct_row:
-        .res        (2*(SCRATCH_HEIGHT)),$00
 
-; ---------------------------------------------------------------
-; void __near__ qt_load_raw (unsigned int top)
-; ---------------------------------------------------------------
+
+; Offset to scratch start of last scratch lines, row 20 col 0
+LAST_TWO_LINES = pixelbuf + (BAND_HEIGHT * SCRATCH_WIDTH)
+
+; Offset to real start of third line, row 2 col 2
+THIRD_LINE     = pixelbuf + (2 * SCRATCH_WIDTH) + 2
+
 
 .segment        "CODE"
 
 cur_cache_ptr = _prev_ram_irq_vector
-
-; ---------------------------------------------------------------
-; unsigned char __near__ __fastcall__ reset_bitbuff(void)
-; ---------------------------------------------------------------
-
-
-; Don't put this one in LC as it is patched on runtime
 
 _reset_bitbuff:
         ; Patch end-of-cache comparisons
@@ -216,8 +203,7 @@ fill_cache:
 
         lda     _ifp
         ldx     _ifp+1
-        jsr     _fread
-        rts
+        jmp     _fread
 
 
 val               = _prev_rom_irq_vector
@@ -226,14 +212,9 @@ row               = _prev_rom_irq_vector+1
 src               = _zp6p
 idx               = _zp8p
 idx_behind        = _zp10p
+last_val          = _zp12
 
-; idx_pix_rows is used before at_very_first_col and last_val,
-; so they share the same ZP address
-idx_pix_rows      = _zp12ip
-at_very_first_col = _zp12
-last_val          = _zp13
-
-.segment        "CODE"
+; Don't put this one in LC as it is patched on runtime
 _qt_load_raw:
         cmp     #$00
         bne     :+
@@ -243,65 +224,7 @@ _qt_load_raw:
 
 top:    jsr     _reset_bitbuff  ; Yes. Initialize things
 
-        lda     _width
-        clc
-        adc     #2
-        sta     width_plus2
-        lda     _width+1
-        adc     #0
-        sta     width_plus2+1
-
         stz     pgbar_state
-
-        lda     #<(pixelbuf)
-        sta     idx
-        lda     #>(pixelbuf)
-        sta     idx+1
-
-        lda     #<(pix_direct_row)
-        sta     idx_pix_rows
-        lda     #>(pix_direct_row)
-        sta     idx_pix_rows+1
-
-        ldx     #(SCRATCH_HEIGHT)
-        ldy     #1
-        sty     at_very_first_row
-precalc_row_index:              ; Init direct pointers to each line
-        lda     idx
-        sta     (idx_pix_rows)
-        lda     idx+1
-        sta     (idx_pix_rows),y
-
-        lda     #<SCRATCH_WIDTH
-        adc     idx
-        sta     idx
-        lda     #>SCRATCH_WIDTH
-        adc     idx+1
-        sta     idx+1
-
-        lda     idx_pix_rows
-        adc     #2
-        sta     idx_pix_rows
-        bcc     :+
-        inc     idx_pix_rows+1
-        clc
-
-:       dex
-        bne     precalc_row_index
-
-        ; Calculate offset to raw start of line 20
-        lda     pix_direct_row+(BAND_HEIGHT*2)
-        sta     last_two_lines
-        lda     pix_direct_row+(BAND_HEIGHT*2)+1
-        sta     last_two_lines+1
-
-        ; Calculate offset to final start of third line, line 2
-        lda     pix_direct_row+(2*2)
-        adc     #2
-        sta     third_line
-        lda     pix_direct_row+(2*2)+1
-        adc     #0
-        sta     third_line+1
 
         ; Fill whole buffer with grey
         lda     #<(pixelbuf)
@@ -313,6 +236,10 @@ precalc_row_index:              ; Init direct pointers to each line
         ldx     #>PIXELBUF_SIZE
         jsr     _memset
 
+        lda     #1
+        sta     check_first_row+1  ; Init with non-zero value
+        sta     check_first_row2+1  ; Init with non-zero value
+
         jmp     start_work
 not_top:
         ; Shift the previous band's last two lines, plus 2 pixels,
@@ -320,16 +247,16 @@ not_top:
         lda     #<(pixelbuf)
         ldx     #>(pixelbuf)
         jsr     pushax
-        lda     last_two_lines
-        ldx     last_two_lines+1
+        lda     #<(LAST_TWO_LINES)
+        ldx     #>(LAST_TWO_LINES)
         jsr     pushax
         lda     #<(2*SCRATCH_WIDTH + 2)
         ldx     #>(2*SCRATCH_WIDTH + 2)
         jsr     _memcpy
 
         ; Reset the rest of the lines with grey
-        lda     third_line
-        ldx     third_line+1
+        lda     #<(THIRD_LINE)
+        ldx     #>(THIRD_LINE)
         jsr     pushax
         lda     #$80
         jsr     pusha0
@@ -339,9 +266,9 @@ not_top:
 
 start_work:
         ; We start at line 2
-        lda     pix_direct_row+(2*2)+1
+        lda     #>(pixelbuf + (2 * SCRATCH_WIDTH))
         sta     src+1
-        lda     pix_direct_row+(2*2)
+        lda     #<(pixelbuf + (2 * SCRATCH_WIDTH))
         sta     src
 
         ; We iterate over 20 lines
@@ -430,7 +357,7 @@ first_pass_row_work:
         sta     src+1
 
         ; We're at first column
-        sta     at_very_first_col
+        sta     check_first_col+1
 
         jmp     first_pass_col_loop
 
@@ -484,7 +411,7 @@ fetch_byte:
                                 ; Carry set by previous adc if overflowed
 
         adc     #0
-        beq     :+              ; No overflow
+        beq     check_first_col ; No overflow
         asl     a               ; Get sign (sets carry if negative)
         lda     #$FF
         adc     #0              ; FF => 00 if carry set
@@ -492,11 +419,12 @@ fetch_byte:
         sta     (idx),y         ; *(idx+2) = val
         sta     last_val
 
-:       lda     at_very_first_col
+check_first_col:
+        lda     #1              ; Patched
         bne     handle_first_col
 
-first_col_done:
-        lda     at_very_first_row
+check_first_row:
+        lda     #1              ; Patched
         bne     handle_first_row_high_nibble
 
         ; REPEAT WITH LOW NIBBLE (same, with +2 offsets on Y)
@@ -508,8 +436,7 @@ do_low_nibble:
         ;         + gstep[low_nibble];
 
         clc
-        ldy     #2
-        lda     (idx_behind),y
+        lda     (idx_behind),y  ; Y expected to be 2 there
         adc     last_val
         ror
 
@@ -529,7 +456,7 @@ do_low_nibble:
                                 ; Carry set by previous adc if overflowed
 
         adc     #0
-        beq     :+              ; No overflow
+        beq     check_first_row2; No overflow
         asl     a               ; Get sign (sets carry if negative)
         lda     #$FF
         adc     #0              ; FF => 00 if carry set
@@ -537,7 +464,8 @@ do_low_nibble:
         sta     (idx),y         ; *(idx+4) = val
         sta     last_val
 
-:       lda     at_very_first_row
+check_first_row2:
+        lda     #1              ; Patched
         bne     handle_first_row_low_nibble
 
         ; END LOW NIBBLE
@@ -571,12 +499,12 @@ end_of_line:
         lda     last_val        ; *(idx+2) = val
         ldy     #2
         sta     (idx),y
-        stz     at_very_first_row
+        stz     check_first_row+1
+        stz     check_first_row2+1
 
         dec     row
         beq     start_second_pass
         jmp     first_pass_next_row
-
 
         ; First cols and first row handlers, out of main loop
 
@@ -586,14 +514,15 @@ store_idx_forward:
         sta     $FFFF           ; Patched
 store_idx_min2:
         sta     $FFFF           ; Patched
-        stz     at_very_first_col
-        jmp     first_col_done
+        stz     check_first_col+1
+        jmp     check_first_row
 
 handle_first_row_high_nibble:
         lda     last_val        ; get val back
         sta     (idx_behind),y  ; *(idx_behind+2) = *(idx_behind+4) = val;
         ldy     #4
         sta     (idx_behind),y
+        ldy     #2              ; Set Y back for low nibble
         jmp     do_low_nibble
 
 handle_first_row_low_nibble:
@@ -607,9 +536,9 @@ handle_first_row_low_nibble:
 
 
 start_second_pass:
-        lda     pix_direct_row+(2*2)+1
+        lda     #>(pixelbuf + (2 * SCRATCH_WIDTH))
         sta     src+1
-        lda     pix_direct_row+(2*2)
+        lda     #<(pixelbuf + (2 * SCRATCH_WIDTH))
         sta     src
 
         lda     #BAND_HEIGHT
@@ -684,7 +613,7 @@ UNROLL_FACTOR = 4
         bmi     :+              ; $FF is good as is
         dec     a               ; Transform 1 to 0
 
-:       sta     (idx),y  ; *(idx+1) = val (Y still 1)
+:       sta     (idx),y         ; *(idx+1) = val (Y still (I*2)+1)
 
 .endrep
 
@@ -722,8 +651,8 @@ second_pass_row_done:
         jsr     pushax
 
         clc
-        lda     pix_direct_row+(2*2)
-        ldx     pix_direct_row+(2*2)+1
+        lda     #<(pixelbuf + (2 * SCRATCH_WIDTH))
+        ldx     #>(pixelbuf + (2 * SCRATCH_WIDTH))
         adc     #2
         sta     src
         bcc     :+
