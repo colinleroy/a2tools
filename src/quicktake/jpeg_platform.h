@@ -21,7 +21,7 @@ extern uint8 mul196_l[256], mul196_m[256], mul196_h[256];
 extern int16 gCoeffBuf[8*8];
 extern uint16 gRestartInterval;
 extern uint16 gRestartsLeft;
-extern int16 *ZAG_Coeff[];
+extern uint8 ZAG_Coeff[];
 extern uint8 gMaxBlocksPerMCU;
 extern uint8 gCompsInFrame;
 extern uint8 gCompIdent[3];

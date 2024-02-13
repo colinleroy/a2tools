@@ -113,16 +113,16 @@ typedef enum
 // 128 bytes
 int16 gCoeffBuf[8*8];
 
-int16 *ZAG_Coeff[] =
+uint8 ZAG_Coeff[] =
 {
-   gCoeffBuf+0,  gCoeffBuf+1,  gCoeffBuf+8, gCoeffBuf+16,  gCoeffBuf+9,  gCoeffBuf+2,  gCoeffBuf+3, gCoeffBuf+10,
-   gCoeffBuf+17, gCoeffBuf+24, gCoeffBuf+32, gCoeffBuf+25, gCoeffBuf+18, gCoeffBuf+11,  gCoeffBuf+4,  gCoeffBuf+5,
-   gCoeffBuf+12, gCoeffBuf+19, gCoeffBuf+26, gCoeffBuf+33, gCoeffBuf+40, gCoeffBuf+48, gCoeffBuf+41, gCoeffBuf+34,
-   gCoeffBuf+27, gCoeffBuf+20, gCoeffBuf+13,  gCoeffBuf+6,  gCoeffBuf+7, gCoeffBuf+14, gCoeffBuf+21, gCoeffBuf+28,
-   gCoeffBuf+35, gCoeffBuf+42, gCoeffBuf+49, gCoeffBuf+56, gCoeffBuf+57, gCoeffBuf+50, gCoeffBuf+43, gCoeffBuf+36,
-   gCoeffBuf+29, gCoeffBuf+22, gCoeffBuf+15, gCoeffBuf+23, gCoeffBuf+30, gCoeffBuf+37, gCoeffBuf+44, gCoeffBuf+51,
-   gCoeffBuf+58, gCoeffBuf+59, gCoeffBuf+52, gCoeffBuf+45, gCoeffBuf+38, gCoeffBuf+31, gCoeffBuf+39, gCoeffBuf+46,
-   gCoeffBuf+53, gCoeffBuf+60, gCoeffBuf+61, gCoeffBuf+54, gCoeffBuf+47, gCoeffBuf+55, gCoeffBuf+62, gCoeffBuf+63,
+   0,  1,  8, 16,  9,  2,  3, 10,
+   17, 24, 32, 25, 18, 11,  4,  5,
+   12, 19, 26, 33, 40, 48, 41, 34,
+   27, 20, 13,  6,  7, 14, 21, 28,
+   35, 42, 49, 56, 57, 50, 43, 36,
+   29, 22, 15, 23, 30, 37, 44, 51,
+   58, 59, 52, 45, 38, 31, 39, 46,
+   53, 60, 61, 54, 47, 55, 62, 63,
 };
 // 8*8*4 bytes * 3 = 768
 uint8 gMCUBufG[256];

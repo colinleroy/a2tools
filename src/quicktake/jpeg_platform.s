@@ -1,7 +1,7 @@
 
-        .import     popptr1
-        .importzp   tmp1, tmp2, ptr1, _prev_ram_irq_vector, _prev_rom_irq_vector, sp, regbank, ptr4
+        .importzp   tmp1, tmp2, ptr1, ptr2, _prev_ram_irq_vector, _prev_rom_irq_vector, sp, regbank, ptr4
         .importzp   _zp6sip, _zp8sip, _zp10sip, _zp12sip, _zp6ip, _zp6p
+        .import     popptr1
         .import     _extendTests, _extendOffsets, _gBitsLeft, _gBitBuf
         .import     _cache_end, _fillInBuf
         .import     _mul669_l, _mul669_m, _mul669_h
@@ -1690,8 +1690,7 @@ doDec:
         bne     :+
         inc     cur_gMCUOrg+1
 
-:       lda     sDMCU ; FIXME can remove
-        and     #$0F
+:       and     #$0F
         beq     :+
         jsr     _getBits2
         bra     doExtend
@@ -1745,14 +1744,14 @@ doExtend:
         sta     _gCoeffBuf
         stx     _gCoeffBuf+1
 
-        lda     #<(_ZAG_Coeff+2)  ; 1*sizeof(uint16)
+        lda     #<(_ZAG_Coeff+1)
         sta     cur_ZAG_coeff
-        lda     #>(_ZAG_Coeff+2)
+        lda     #>(_ZAG_Coeff+1)
         sta     cur_ZAG_coeff+1
 
-        lda     #<(_ZAG_Coeff+126) ; (64-1)*sizeof(uint16)
+        lda     #<(_ZAG_Coeff+63) ; (64-1)
         sta     end_ZAG_coeff
-        lda     #>(_ZAG_Coeff+126)
+        lda     #>(_ZAG_Coeff+63)
         sta     end_ZAG_coeff+1
 
         ;compACTab = gCompACTab[componentID];
@@ -1769,8 +1768,8 @@ doExtend:
         adc     #0
         sta     cur_pQ+1
 
-        lda     cur_ZAG_coeff
 checkZAGLoop:
+        lda     cur_ZAG_coeff
         cmp     end_ZAG_coeff
         bne     doZAGLoop
 
@@ -1829,21 +1828,16 @@ storeExtraBits:
         beq     zeroZAGDone
 zeroZAG:
         lda     (cur_ZAG_coeff)
-        sta     ptr1
-        ldy     #1
-        lda     (cur_ZAG_coeff),y
-        sta     ptr1+1
+        asl
+        tay
         lda     #0
-        sta     (ptr1)
-        sta     (ptr1),y
+        sta     _gCoeffBuf,y
+        iny     
+        sta     _gCoeffBuf,y
 
-        clc
-        lda     cur_ZAG_coeff
-        adc     #2
-        sta     cur_ZAG_coeff
-        bcc     :+
+        inc     cur_ZAG_coeff
+        bne     :+
         inc     cur_ZAG_coeff+1
-        clc
 
 :       lda     cur_pQ
         adc     #2
@@ -1861,57 +1855,46 @@ zeroZAGDone:
         lda     sDMCU
         jsr     _huffExtend
 
-        ;*cur_ZAG_coeff = ac * *cur_pQ;
+        ;**cur_ZAG_coeff = ac * *cur_pQ;
         jsr     pushax
+
         ldy     #1
         lda     (cur_pQ),y
         tax
         lda     (cur_pQ)
         jsr     tosumulax
         pha
+
         lda     (cur_ZAG_coeff)
-        sta     ptr1
-        ldy     #1
-        lda     (cur_ZAG_coeff),y
-        sta     ptr1+1
+        asl
+        tay
         pla
-        sta     (ptr1)
+        sta     _gCoeffBuf,y
+        iny
         txa
-        sta     (ptr1),y
+        sta     _gCoeffBuf,y
         bra     sNotZero
 
 sZero:
         lda     rDMCU
-        cmp     #$0F
+        cmp     #15
         bne     ZAG_Done
 
-        sta     sDMCU
+        ; Advance 15
 decS:
-        lda     (cur_ZAG_coeff) ; FIXME this should not be there
-        sta     ptr1
-        ldy     #1
-        lda     (cur_ZAG_coeff),y
-        sta     ptr1+1
-        lda     #0
-        sta     (ptr1)
-        sta     (ptr1),y
-
-        clc
         lda     cur_ZAG_coeff
-        adc     #2
-        sta     cur_ZAG_coeff
+        adc     #15
         bcc     :+
         inc     cur_ZAG_coeff+1
-        clc
 
 :       lda     cur_pQ
-        adc     #2
+        adc     #(15*2)
         sta     cur_pQ
         bcc     :+
         inc     cur_pQ+1
         clc
-:       dec     sDMCU
-        bne     decS
+:
+        jmp     checkZAGLoop
 
 sNotZero:
         clc
@@ -1922,17 +1905,14 @@ sNotZero:
         inc     cur_pQ+1
         clc
 
-:       lda     cur_ZAG_coeff
-        adc     #2
-        sta     cur_ZAG_coeff
-        bcc     :+
+:       inc     cur_ZAG_coeff
+        bne     :+
         inc     cur_ZAG_coeff+1
-        clc
 :       jmp     checkZAGLoop
 
 ZAG_Done:
-        lda     cur_ZAG_coeff
 finishZAG:
+        lda     cur_ZAG_coeff
         cmp     end_ZAG_coeff
         bne     :+
         lda     cur_ZAG_coeff+1
@@ -1940,28 +1920,16 @@ finishZAG:
         beq     ZAG_finished
 
 :       lda     (cur_ZAG_coeff)
-        sta     ptr1
-        ldy     #1
-        lda     (cur_ZAG_coeff),y
-        sta     ptr1+1
+        asl
+        tay
         lda     #0
-        sta     (ptr1)
-        sta     (ptr1),y
+        sta     _gCoeffBuf,y
+        iny
+        sta     _gCoeffBuf,y
 
-        clc
-        lda     cur_pQ
-        adc     #2
-        sta     cur_pQ
-        bcc     :+
-        inc     cur_pQ+1
-        clc
-
-:       lda     cur_ZAG_coeff
-        adc     #2
-        sta     cur_ZAG_coeff
-        bcc     finishZAG
+        inc     cur_ZAG_coeff
+        bne     finishZAG
         inc     cur_ZAG_coeff+1
-        clc
         bra     finishZAG
 
 ZAG_finished:
@@ -2006,7 +1974,6 @@ nextUselessBlock:
 
 doDecb:
         jsr     _huffDecode
-        and     #$0F
         sta     sDMCU
 
         ldy     componentID
@@ -2014,6 +1981,7 @@ doDecb:
         sta     compACTab
 
         lda     sDMCU
+        and     #$0F
         beq     :+
         jsr     _getBits2
         bra     doExtend2
@@ -2066,7 +2034,6 @@ storeExtraBits2:
         lsr     a
         lsr     a
         sta     rDMCU
-        stz     rDMCU+1
         pla
         sta     sDMCU
         beq     :+
@@ -2085,12 +2052,10 @@ storeExtraBits2:
 :       lda     rDMCU
         cmp     #$0F
         bne     ZAG2_Done
-        lda     rDMCU+1
-        bne     ZAG2_Done
 
         lda     iDMCU
         clc
-        adc     #$0F
+        adc     #15
         sta     iDMCU
 
 sZeroDone2:
