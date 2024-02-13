@@ -55,7 +55,7 @@ void main(int argc, char *argv[]) {
     printf("Couldn't initialize screen: %s\n", SDL_GetError());
     return;
   }
-  
+
   SDL_LockSurface(screen);
   unsigned char c, c2;
   int x, y;

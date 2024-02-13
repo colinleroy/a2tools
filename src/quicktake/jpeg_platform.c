@@ -401,8 +401,8 @@ uint8 decodeNextMCU(void)
   uint16 dc;
   uint16 ac;
   uint16 *cur_pQ;
-  int16 **cur_ZAG_coeff;
-  int16 **end_ZAG_coeff;
+  uint8 *cur_ZAG_coeff;
+  uint8 *end_ZAG_coeff;
 
 
   if (gRestartInterval) {
@@ -460,7 +460,7 @@ uint8 decodeNextMCU(void)
 
       if (s) {
         while (r) {
-          **cur_ZAG_coeff = 0;
+          gCoeffBuf[*cur_ZAG_coeff] = 0;
 
           cur_ZAG_coeff++;
           cur_pQ++;
@@ -468,22 +468,19 @@ uint8 decodeNextMCU(void)
         }
 
         ac = huffExtend(extraBits, s);
-        **cur_ZAG_coeff =  ac * *cur_pQ;
+        gCoeffBuf[*cur_ZAG_coeff] =  ac * *cur_pQ;
       } else {
         if (r == 15) {
-          for (s = r; s > 0; s--) {
-            cur_ZAG_coeff++;
-            cur_pQ++;
-          }
+          cur_ZAG_coeff+=15;
+          cur_pQ+=15;
         } else {
           break;
         }
       }
     }
     while (cur_ZAG_coeff != end_ZAG_coeff) {
-      **cur_ZAG_coeff = 0;
+      gCoeffBuf[*cur_ZAG_coeff] = 0;
       cur_ZAG_coeff++;
-      cur_pQ++;
     }
 
     transformBlock(mcuBlock);
@@ -493,15 +490,15 @@ uint8 decodeNextMCU(void)
     componentID = *cur_gMCUOrg;
 
     if (gCompDCTab[componentID])
-      numExtraBits = huffDecode(&gHuffTab1, gHuffVal1) & 0xF;
+      s = huffDecode(&gHuffTab1, gHuffVal1);
     else
-      numExtraBits = huffDecode(&gHuffTab0, gHuffVal0) & 0xF;
+      s = huffDecode(&gHuffTab0, gHuffVal0);
 
     compACTab = gCompACTab[componentID];
 
     r = 0;
-    if (numExtraBits)
-      r = getBits2(numExtraBits);
+    if (s & 0xF)
+      r = getBits2(s & 0xF);
 
     huffExtend(r, s);
 
