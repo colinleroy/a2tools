@@ -163,7 +163,7 @@ static uint8 identify(const char *name)
 static uint16 histogram[256];
 
 static uint8 *orig_y_table[BAND_HEIGHT];
-static uint16 orig_x_table[640];
+static uint8 orig_x_offset[640];
 static uint8 scaled_band_height;
 static uint16 output_write_len;
 static uint8 scaling_factor = 4;
@@ -182,7 +182,8 @@ static uint16 effective_width;
  */
 static void build_scale_table(const char *ofname) {
   uint8 row, col;
-  
+  uint16 xoff, prev_xoff;
+
   if (width == 640) {
     effective_width = crop_end_x - crop_start_x;
     switch (effective_width) {
@@ -251,9 +252,12 @@ static void build_scale_table(const char *ofname) {
   } while (row < scaled_band_height);
 
   col = 0;
+  prev_xoff = 0;
   do {
     /* X cropping is handled here in lookup table */
-    orig_x_table[col] = (col * 10 / scaling_factor) + crop_start_x;
+    xoff = (col * 10 / scaling_factor) + crop_start_x;
+    orig_x_offset[col] = xoff - prev_xoff;
+    prev_xoff = xoff;
     col++;
   } while (col); /* FILE_WIDTH == 256 */
 }
@@ -266,13 +270,13 @@ static void write_raw(uint16 h)
 #ifdef __CC65__
   #define dst_ptr zp6p
   #define cur_y zp8p
-  #define cur_orig_x zp10ip
+  #define cur_orig_x zp10p
   #define cur_orig_y zp12ip
   static uint8 x_len;
 #else
   uint8 *dst_ptr;
   uint8 *cur_y;
-  uint16 *cur_orig_x;
+  uint8 *cur_orig_x;
   uint8 **cur_orig_y;
   static uint16 x_len;
 #endif
@@ -287,22 +291,24 @@ static void write_raw(uint16 h)
   }
 
   /* Scale (nearest neighbor)*/
-  dst_ptr = raw_image;
 #ifndef __CC65__
+  dst_ptr = raw_image;
   cur_orig_y = orig_y_table + 0;
   do {
-    cur_orig_x = orig_x_table + 0;
-    cur_y = (uint8 *)*cur_orig_y;
+    cur_orig_x = orig_x_offset + 0;
+    cur_y = *cur_orig_y;
     x_len = FILE_WIDTH;
     do {
-      *dst_ptr = *(cur_y + *cur_orig_x);
+      cur_y += *cur_orig_x;
+      *dst_ptr = *(cur_y);
       histogram[*dst_ptr]++;
-      dst_ptr++;
       cur_orig_x++;
+      dst_ptr ++;
     } while (--x_len);
     cur_orig_y++;
 } while (--y_len);
 #else
+  dst_ptr = raw_image;
   __asm__("clc");
   __asm__("lda #<(%v)", orig_y_table);
   __asm__("sta %v", cur_orig_y);
@@ -310,29 +316,28 @@ static void write_raw(uint16 h)
   __asm__("sta %v+1", cur_orig_y);
   next_y:
     __asm__("lda (%v)", cur_orig_y);    /* patch cur_orig_y in loop */
-    __asm__("sta %g+1", cur_orig_y_lb);
+    __asm__("sta %g+1", cur_orig_y_addr);
     __asm__("ldy #1");
     __asm__("lda (%v),y", cur_orig_y);
-    __asm__("sta %g+1", cur_orig_y_hb);
+    __asm__("sta %g+2", cur_orig_y_addr);
+    __asm__("clc");
 
-    __asm__("lda #<(%v)", orig_x_table);
+    __asm__("lda #<(%v)", orig_x_offset);
     __asm__("sta %v", cur_orig_x);
-    __asm__("lda #>(%v)", orig_x_table);
+    __asm__("lda #>(%v)", orig_x_offset);
     __asm__("sta %v+1", cur_orig_x);
     __asm__("stz %v", x_len); // 256, but in 8bits
     next_x:
-    /* *dst_ptr = *(*cur_orig_y + *cur_orig_x); */
+    /* *cur_y += *cur_orig_x; */
     __asm__("lda (%v)", cur_orig_x);
-    cur_orig_y_lb:
-    __asm__("adc #$33"); /* Patched (init to 33 to avoid optimizer) */
-    __asm__("sta ptr1");
-    __asm__("ldy #$01");
-
-    __asm__("lda (%v),y", cur_orig_x);
-    cur_orig_y_hb:
-    __asm__("adc #$33"); /* Patched (init to 33 to avoid optimizer) */
-    __asm__("sta ptr1+1");
-    __asm__("lda (ptr1)");
+    __asm__("adc %g+1", cur_orig_y_addr);
+    __asm__("sta %g+1", cur_orig_y_addr);
+    __asm__("bcc %g", cur_orig_y_addr);
+    __asm__("inc %g+2", cur_orig_y_addr);
+    __asm__("clc");
+    cur_orig_y_addr:
+    /* *dst_ptr = *(cur_y); */
+    __asm__("lda $FFFF"); /* Patched */
     __asm__("sta (%v)", dst_ptr);
 
     /* histogram[*dst_ptr]++; */
@@ -361,12 +366,9 @@ static void write_raw(uint16 h)
 
     noof7:
     /* ++cur_orig_x */
-    __asm__("lda #$02");
-    __asm__("adc %v", cur_orig_x);
-    __asm__("sta %v", cur_orig_x);
-    __asm__("bcc %g", noof5);
+    __asm__("inc %v", cur_orig_x);
+    __asm__("bne %g", noof5);
     __asm__("inc %v+1", cur_orig_x);
-    __asm__("clc");
     noof5:
     /* x_len? */
     __asm__("dec %v", x_len);
