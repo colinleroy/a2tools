@@ -65,8 +65,6 @@ extern uint8 vbits;
 
 void __fastcall__ src_file_seek(uint32 off);
 
-void __fastcall__ src_file_get_bytes(uint8 *dst, uint16 count);
-
 extern uint16 *huff_ptr;
 uint8 __fastcall__ getbithuff (uint8 nbits);
 

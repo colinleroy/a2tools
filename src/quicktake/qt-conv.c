@@ -70,22 +70,6 @@ void __fastcall__ src_file_seek(uint32 off) {
   fread(cur_cache_ptr = cache_start, 1, CACHE_SIZE, ifp);
 }
 
-void __fastcall__ src_file_get_bytes(uint8 *dst, uint16 count) {
-  uint16 start, end;
-
-  if (cur_cache_ptr + count < cache_end) {
-    memcpy(dst, cur_cache_ptr, count);
-    cur_cache_ptr += count;
-  } else {
-    start = cache_end - cur_cache_ptr;
-    memcpy(dst, cur_cache_ptr, start);
-    end = count - start;
-    fread(cache_start, 1, CACHE_SIZE, ifp);
-    memcpy(dst + start, cache_start, end);
-    cur_cache_ptr = cache_start + end;
-  }
-}
-
 static uint16 __fastcall__ src_file_get_uint16(void) {
   uint16 v;
 
