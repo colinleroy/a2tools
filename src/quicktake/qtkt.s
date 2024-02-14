@@ -19,8 +19,9 @@
 ; Defines
 
 BAND_HEIGHT   = 20
-SCRATCH_WIDTH = (640 + 4)
-SCRATCH_HEIGHT= (BAND_HEIGHT + 4)
+SCRATCH_PAD   = 4
+SCRATCH_WIDTH = (640 + SCRATCH_PAD)
+SCRATCH_HEIGHT= (BAND_HEIGHT + SCRATCH_PAD)
 PIXELBUF_SIZE = (SCRATCH_HEIGHT * SCRATCH_WIDTH + 2)
 
 Y_LOOP_LEN    = 160
@@ -144,6 +145,9 @@ model_str:
         .byte        $31,$30,$30,$00
 
 .segment        "BSS"
+.align 256
+pixelbuf:
+        .res        PIXELBUF_SIZE,$00
 
 _cache:
         .res        CACHE_SIZE,$00
@@ -151,8 +155,6 @@ dst:
         .res        2,$00
 pgbar_state:
         .res        2,$00
-pixelbuf:
-        .res        PIXELBUF_SIZE,$00
 
 ; Offset to scratch start of last scratch lines, row 20 col 0
 LAST_TWO_LINES = pixelbuf + (BAND_HEIGHT * SCRATCH_WIDTH)
@@ -673,10 +675,9 @@ second_pass_row_done:
         ; Both passes done, memcpy BAND_HEIGHT lines to destination buffer,
         ; excluding two leftmost and rightmost scratch pixels 
 :       lda     #<(_raw_image)
-        sta     dst
+        sta     idx
         ldx     #>(_raw_image)
-        stx     dst+1
-        jsr     pushax
+        stx     idx+1
 
         clc
         lda     #<(pixelbuf + (2 * SCRATCH_WIDTH))
@@ -687,45 +688,88 @@ second_pass_row_done:
         inx
         clc
 :       stx     src+1
-        jsr     pushax
 
         lda     #BAND_HEIGHT
         sta     row
 
-copy_row:
         lda     _width
-        ldx     _width+1
-        jsr     _memcpy
+        cmp     #<(640)
+        bne     next_row_320
 
-        dec     row
-        beq     copy_done
+next_row_640:
+        ldx     #2              ; Two pages
+page_640:
+        ldy     #0
+:
+.repeat 4                       ; One page
+        lda     (src),y
+        sta     (idx),y
+        dey
+.endrep
+        bne     :-
+        inc     src+1
+        inc     idx+1
+        dex
+        bne     page_640
 
-        clc                     ; dst += width
-        lda     dst
-        adc     _width
-        sta     dst
-        tay
-        lda     dst+1
-        adc     _width+1
-        sta     dst+1
-        tax
-        tya
-        jsr     pushax          ; push dst to memcpy
+        ldy     #<(640-(256*2)-1) ; Last part
+:       lda     (src),y
+        sta     (idx),y
+        dey
+        bpl     :-
 
-        clc                     ; src += SCRATCH_WIDTH
-        lda     src
-        adc     #<SCRATCH_WIDTH
+        clc
+        lda     idx
+        adc     #<(640-(256*2))
+        sta     idx
+        bcc     :+
+        inc     idx+1
+        clc
+
+:       lda     src
+        adc     #<(640-(256*2)+SCRATCH_PAD)
         sta     src
-        tay
-        lda     src+1
-        adc     #>SCRATCH_WIDTH
-        sta     src+1
-        tax
-        tya
-        jsr     pushax          ; push src to memcpy
-        jmp     copy_row
+        bcc     :+
+        inc     src+1
+        clc
+:       dec     row
+        bne     next_row_640
+        rts
 
-copy_done:
+next_row_320:
+        ldy     #00
+:
+.repeat 4                       ; One page
+        lda     (src),y
+        sta     (idx),y
+        dey
+.endrep
+        bne     :-
+        inc     src+1
+        inc     idx+1
+
+        ldy     #<(320-(256*2)-1) ; Last part
+:       lda     (src),y
+        sta     (idx),y
+        dey
+        bpl     :-
+
+        clc
+        lda     idx
+        adc     #<(320-(256*2))
+        sta     idx
+        bcc     :+
+        inc     idx+1
+        clc
+
+:       lda     src
+        adc     #<(640-256+SCRATCH_PAD)
+        sta     src
+        lda     src+1           ; Finish add, can cross two pages
+        adc     #>(640-256+SCRATCH_PAD)
+        sta     src+1
+        dec     row
+        bne     next_row_320
         rts
 
 

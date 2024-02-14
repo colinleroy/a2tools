@@ -387,6 +387,9 @@ static uint8 setup(int argc, char *argv[]) {
   #if DEBUG_FLOPPY==100
   exec("QTKTCONV","/QT100/TEST100.QTK 0 0 640 480");
   #endif
+  #if DEBUG_FLOPPY==98
+  exec("QTKTCONV","/QT100/TEST100.QTK 0 0 640 480");
+  #endif
   #if DEBUG_FLOPPY==150
   exec("QTKNCONV","/QT150/TEST150.QTK 0 0 640 480");
   #endif
