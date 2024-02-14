@@ -25,9 +25,17 @@ extern int PRODOS_IRQ_ADDR;
 #define ADDR_MODE_ZEROXY         5  /* ADC $40,x     */
 #define ADDR_MODE_ABS            6  /* ADC $C080     */
 #define ADDR_MODE_ABSXY          7  /* ADC $CO80,x   */
-#define ADDR_MODE_INDX           8  /* ADC ($1234,x) */
-#define ADDR_MODE_INDY           9  /* ADC ($1234),y */
-#define NUM_ADDR_MODES          10
+#define ADDR_MODE_ZINDX          8  /* ADC ($1234,x) */
+#define ADDR_MODE_ZINDY          9  /* ADC ($1234),y */
+#define ADDR_MODE_INDX          10  /* JMP ($1234,x) */
+#define NUM_ADDR_MODES          11
+
+#define FLAG_N 0b10000000
+#define FLAG_V 0b01000000
+#define FLAG_D 0b00001000
+#define FLAG_I 0b00000100
+#define FLAG_Z 0b00000010
+#define FLAG_C 0b00000001
 
 void allocate_trace_counters(void);
 void start_tracing(int cpu);
@@ -37,7 +45,7 @@ int is_instruction_write(const char *instr);
 int analyze_instruction(int cpu, int op_addr, const char *instr, int param_addr, char *comment);
 
 int instruction_get_addressing_mode(int cpu, const char *instr, const char *arg);
-int get_cycles_for_instr(int cpu, const char *instr, int a_mode, int *extra_cost_if_taken);
+int get_cycles_for_instr(int cpu, const char *instr, int a_mode, int flags);
 
 /* Memory banking */
 int is_addr_in_cc65_user_bank (int op_addr);

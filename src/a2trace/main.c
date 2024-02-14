@@ -112,12 +112,12 @@ static const char *print_flags(int flags) {
   if (flagstr == NULL)
     flagstr = strdup("........");
 
-  flagstr[0] = ((flags & 0b10000000) != 0) ? 'N':'.';
-  flagstr[1] = ((flags & 0b01000000) != 0) ? 'V':'.';
-  flagstr[4] = ((flags & 0b00001000) != 0) ? 'D':'.';
-  flagstr[5] = ((flags & 0b00000100) != 0) ? 'I':'.';
-  flagstr[6] = ((flags & 0b00000010) != 0) ? 'Z':'.';
-  flagstr[7] = ((flags & 0b00000001) != 0) ? 'C':'.';
+  flagstr[0] = ((flags & FLAG_N) != 0) ? 'N':'.';
+  flagstr[1] = ((flags & FLAG_V) != 0) ? 'V':'.';
+  flagstr[4] = ((flags & FLAG_D) != 0) ? 'D':'.';
+  flagstr[5] = ((flags & FLAG_I) != 0) ? 'I':'.';
+  flagstr[6] = ((flags & FLAG_Z) != 0) ? 'Z':'.';
+  flagstr[7] = ((flags & FLAG_C) != 0) ? 'C':'.';
 
   return flagstr;
 }
@@ -128,8 +128,6 @@ static void annotate_run(const char *file) {
   char line_buf[BUF_SIZE];
   int cur_line = 0;
   int op_idx = -1;
-  int cost_if_taken = 0;
-  int prev_instr_param = 0;
 
   if (fp == NULL) {
     fprintf(stderr, "Can not open file %s: %s\n", file, strerror(errno));
@@ -140,7 +138,7 @@ static void annotate_run(const char *file) {
     printf("Line #  ; Registers     ; Flags   ; Addr: Instruction            ;"
            " Resolved address                            "
            "; Instruction with symbol                    "
-           "; Location\n");
+           "; C; Location\n");
   }
 skip_to_start:
   line_buf[0] = '\0';
@@ -268,16 +266,15 @@ skip_to_start:
         }
       }
 
-      cycles = 0;
-      if (cost_if_taken > 0 && prev_instr_param == op_addr) {
-        cycles += cost_if_taken;
-      }
+      /* Figure out A X Y and P */
+      update_regs(parts[0], &a, &x, &y, &p);
+
       /* get addressing mode and cycles count.
        * Done here instead of in instructions.c to be
        * able to display a potentially problematic line
        */
       a_mode = instruction_get_addressing_mode(cpu, instr, arg);
-      if ((cycles += get_cycles_for_instr(cpu, instr, a_mode, &cost_if_taken)) < 0) {
+      if ((cycles = get_cycles_for_instr(cpu, instr, a_mode, p)) < 0) {
         fprintf(stderr, "%s\n", buf);
         exit(1);
       }
@@ -288,9 +285,6 @@ skip_to_start:
           goto addr_without_dollar;
         }
       }
-
-      /* Figure out A X Y */
-      update_regs(parts[0], &a, &x, &y, &p);
 
       if (arg && arg[0] == '$') {
         if (strchr(arg, '\n'))
@@ -352,8 +346,6 @@ try_gen:
         param_addr = symbol_get_addr(param_symbol);
       }
 
-      prev_instr_param = param_addr;
-
       int backtab = 0;
       /* Print the line as-is */
       if (!do_callgrind) {
@@ -407,6 +399,9 @@ try_gen:
         } else {
           tabulate(NULL, FIELD_WIDTH);
         }
+
+        if (!do_callgrind) 
+          printf("%d ", cycles);
 
         /* Print the source location */
         if (sloc && !do_callgrind) {

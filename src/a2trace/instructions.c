@@ -45,91 +45,91 @@ struct _instr_cycles {
  * Ref2: http://6502.org/tutorials/65c02opcodes.html
  */
 instr_cycles instr_cost[] = {
-/* {name, {imm, imp, acc, zero, zeroind,zeroxy, abs, absxy, indx, indy}} */
+/* {name, {imm, imp, acc, zero, zeroind,zeroxy, abs, absxy, zindx, zindy, indx}} */
 /* Math */
-  {"adc", {2,   0,   0,   3,    5,      4,      4,   4,     6,    5}, 0},
-  {"and", {2,   0,   0,   3,    5,      4,      4,   4,     6,    5}, 0},
-  {"asl", {0,   0,   2,   5,    0,      6,      6,   6,     0,    0}, 0},
-  {"eor", {2,   0,   0,   3,    5,      4,      4,   4,     6,    5}, 0},
-  {"bit", {2,   0,   0,   3,    0,      4,      4,   4,     0,    0}, 0},
-  {"lsr", {0,   0,   2,   5,    0,      6,      6,   6,     0,    0}, 0},
-  {"ora", {2,   0,   0,   3,    5,      4,      4,   4,     6,    5}, 0},
-  {"rol", {0,   0,   2,   5,    0,      6,      6,   6,     0,    0}, 0},
-  {"ror", {0,   0,   2,   5,    0,      6,      6,   6,     0,    0}, 0},
-  {"sbc", {2,   0,   0,   3,    5,      4,      4,   4,     6,    5}, 0},
-  {"trb", {0,   0,   0,   5,    0,      0,      6,   0,     0,    0}, 0},
-  {"tsb", {0,   0,   0,   5,    0,      0,      6,   0,     0,    0}, 0},
+  {"adc", {2,   0,   0,   3,    5,      4,      4,   4,     6,     5,     0}, 0},
+  {"and", {2,   0,   0,   3,    5,      4,      4,   4,     6,     5,     0}, 0},
+  {"asl", {0,   0,   2,   5,    0,      6,      6,   6,     0,     0,     0}, 0},
+  {"eor", {2,   0,   0,   3,    5,      4,      4,   4,     6,     5,     0}, 0},
+  {"bit", {2,   0,   0,   3,    0,      4,      4,   4,     0,     0,     0}, 0},
+  {"lsr", {0,   0,   2,   5,    0,      6,      6,   6,     0,     0,     0}, 0},
+  {"ora", {2,   0,   0,   3,    5,      4,      4,   4,     6,     5,     0}, 0},
+  {"rol", {0,   0,   2,   5,    0,      6,      6,   6,     0,     0,     0}, 0},
+  {"ror", {0,   0,   2,   5,    0,      6,      6,   6,     0,     0,     0}, 0},
+  {"sbc", {2,   0,   0,   3,    5,      4,      4,   4,     6,     5,     0}, 0},
+  {"trb", {0,   0,   0,   5,    0,      0,      6,   0,     0,     0,     0}, 0},
+  {"tsb", {0,   0,   0,   5,    0,      0,      6,   0,     0,     0,     0}, 0},
 
 /* Flow */
-  {"bcc", {0,   0,   0,   0,    0,      0,      2,   0,     0,    0}, 1},
-  {"bcs", {0,   0,   0,   0,    0,      0,      2,   0,     0,    0}, 1},
-  {"beq", {0,   0,   0,   0,    0,      0,      2,   0,     0,    0}, 1},
-  {"bmi", {0,   0,   0,   0,    0,      0,      2,   0,     0,    0}, 1},
-  {"bne", {0,   0,   0,   0,    0,      0,      2,   0,     0,    0}, 1},
-  {"bpl", {0,   0,   0,   0,    0,      0,      2,   0,     0,    0}, 1},
-  {"bvc", {0,   0,   0,   0,    0,      0,      2,   0,     0,    0}, 1},
-  {"bvs", {0,   0,   0,   0,    0,      0,      2,   0,     0,    0}, 1},
-  {"bra", {0,   0,   0,   0,    0,      0,      3,   0,     0,    0}, 0},
-  {"brk", {0,   7,   0,   0,    0,      0,      4,   0,     0,    0}, 0},
-  {"jmp", {0,   0,   0,   0,    0,      0,      3,   6,     5,    5}, 0},
-  {"jsr", {0,   0,   0,   0,    0,      0,      6,   0,     0,    0}, 0},
-  {"nop", {0,   2,   0,   0,    0,      0,      0,   0,     0,    0}, 0},
-  {"rti", {0,   6,   0,   0,    0,      0,      0,   0,     0,    0}, 0},
-  {"rts", {0,   6,   0,   0,    0,      0,      0,   0,     0,    0}, 0},
+  {"bcc", {0,   0,   0,   0,    0,      0,      2,   0,     0,     0,     0}, 1},
+  {"bcs", {0,   0,   0,   0,    0,      0,      2,   0,     0,     0,     0}, 1},
+  {"beq", {0,   0,   0,   0,    0,      0,      2,   0,     0,     0,     0}, 1},
+  {"bmi", {0,   0,   0,   0,    0,      0,      2,   0,     0,     0,     0}, 1},
+  {"bne", {0,   0,   0,   0,    0,      0,      2,   0,     0,     0,     0}, 1},
+  {"bpl", {0,   0,   0,   0,    0,      0,      2,   0,     0,     0,     0}, 1},
+  {"bvc", {0,   0,   0,   0,    0,      0,      2,   0,     0,     0,     0}, 1},
+  {"bvs", {0,   0,   0,   0,    0,      0,      2,   0,     0,     0,     0}, 1},
+  {"bra", {0,   0,   0,   0,    0,      0,      3,   0,     0,     0,     0}, 0},
+  {"brk", {0,   7,   0,   0,    0,      0,      4,   0,     0,     0,     0}, 0},
+  {"jmp", {0,   0,   0,   0,    0,      0,      3,   6,     0,     0,     6}, 0},
+  {"jsr", {0,   0,   0,   0,    0,      0,      6,   0,     0,     0,     0}, 0},
+  {"nop", {0,   2,   0,   0,    0,      0,      0,   0,     0,     0,     0}, 0},
+  {"rti", {0,   6,   0,   0,    0,      0,      0,   0,     0,     0,     0}, 0},
+  {"rts", {0,   6,   0,   0,    0,      0,      0,   0,     0,     0,     0}, 0},
 
 /* Flags */
-/* {name, {imm, imp, acc, zero, zeroind,zeroxy, abs, absxy, indx, indy}} */
-  {"clc", {0,   2,   0,   0,    0,      0,      0,   0,     0,    0}, 0},
-  {"cld", {0,   2,   0,   0,    0,      0,      0,   0,     0,    0}, 0},
-  {"cli", {0,   2,   0,   0,    0,      0,      0,   0,     0,    0}, 0},
-  {"clv", {0,   2,   0,   0,    0,      0,      0,   0,     0,    0}, 0},
-  {"sec", {0,   2,   0,   0,    0,      0,      0,   0,     0,    0}, 0},
-  {"sed", {0,   2,   0,   0,    0,      0,      0,   0,     0,    0}, 0},
-  {"sei", {0,   2,   0,   0,    0,      0,      0,   0,     0,    0}, 0},
+/* {name, {imm, imp, acc, zero, zeroind,zeroxy, abs, absxy, zindx, zindy}} */
+  {"clc", {0,   2,   0,   0,    0,      0,      0,   0,     0,     0,     0}, 0},
+  {"cld", {0,   2,   0,   0,    0,      0,      0,   0,     0,     0,     0}, 0},
+  {"cli", {0,   2,   0,   0,    0,      0,      0,   0,     0,     0,     0}, 0},
+  {"clv", {0,   2,   0,   0,    0,      0,      0,   0,     0,     0,     0}, 0},
+  {"sec", {0,   2,   0,   0,    0,      0,      0,   0,     0,     0,     0}, 0},
+  {"sed", {0,   2,   0,   0,    0,      0,      0,   0,     0,     0,     0}, 0},
+  {"sei", {0,   2,   0,   0,    0,      0,      0,   0,     0,     0,     0}, 0},
 
 /* Compare */
-  {"cmp", {2,   0,   0,   3,    5,      4,      4,   4,     6,    5}, 0},
-  {"cpx", {2,   0,   0,   3,    0,      0,      4,   0,     0,    0}, 0},
-  {"cpy", {2,   0,   0,   3,    0,      0,      4,   0,     0,    0}, 0},
+  {"cmp", {2,   0,   0,   3,    5,      4,      4,   4,     6,     5,     0}, 0},
+  {"cpx", {2,   0,   0,   3,    0,      0,      4,   0,     0,     0,     0}, 0},
+  {"cpy", {2,   0,   0,   3,    0,      0,      4,   0,     0,     0,     0}, 0},
 
 /* Decrement */
-  {"dec", {0,   0,   2,   5,    0,      6,      6,   7,     0,    0}, 0},
-  {"dex", {0,   2,   0,   0,    0,      0,      0,   0,     0,    0}, 0},
-  {"dey", {0,   2,   0,   0,    0,      0,      0,   0,     0,    0}, 0},
+  {"dec", {0,   0,   2,   5,    0,      6,      6,   7,     0,     0,     0}, 0},
+  {"dex", {0,   2,   0,   0,    0,      0,      0,   0,     0,     0,     0}, 0},
+  {"dey", {0,   2,   0,   0,    0,      0,      0,   0,     0,     0,     0}, 0},
 
 /* Increment */
-  {"inc", {0,   0,   2,   5,    0,      6,      6,   7,     0,    0}, 0},
-  {"inx", {0,   2,   0,   0,    0,      0,      0,   0,     0,    0}, 0},
-  {"iny", {0,   2,   0,   0,    0,      0,      0,   0,     0,    0}, 0},
+  {"inc", {0,   0,   2,   5,    0,      6,      6,   7,     0,     0,     0}, 0},
+  {"inx", {0,   2,   0,   0,    0,      0,      0,   0,     0,     0,     0}, 0},
+  {"iny", {0,   2,   0,   0,    0,      0,      0,   0,     0,     0,     0}, 0},
 
 /* Loads and stores */
-/* {name, {imm, imp, acc, zero, zeroind,zeroxy, abs, absxy, indx, indy}} */
-  {"lda", {2,   0,   0,   3,    5,      4,      4,   4,     6,    5}, 0},
-  {"ldx", {2,   0,   0,   3,    0,      4,      4,   4,     0,    0}, 0},
-  {"ldy", {2,   0,   0,   3,    0,      4,      4,   4,     0,    0}, 0},
-  {"sta", {0,   0,   0,   3,    5,      4,      4,   5,     6,    6}, 0},
-  {"stx", {0,   0,   0,   3,    0,      4,      4,   0,     0,    0}, 0},
-  {"sty", {0,   0,   0,   3,    0,      4,      4,   0,     0,    0}, 0},
-  {"stz", {0,   0,   0,   3,    0,      4,      4,   5,     0,    0}, 0},
-  {"tax", {0,   2,   0,   0,    0,      0,      0,   0,     0,    0}, 0},
-  {"tay", {0,   2,   0,   0,    0,      0,      0,   0,     0,    0}, 0},
-  {"tsx", {0,   2,   0,   0,    0,      0,      0,   0,     0,    0}, 0},
-  {"txa", {0,   2,   0,   0,    0,      0,      0,   0,     0,    0}, 0},
-  {"txs", {0,   2,   0,   0,    0,      0,      0,   0,     0,    0}, 0},
-  {"tya", {0,   2,   0,   0,    0,      0,      0,   0,     0,    0}, 0},
+/* {name, {imm, imp, acc, zero, zeroind,zeroxy, abs, absxy, zindx, zindy}} */
+  {"lda", {2,   0,   0,   3,    5,      4,      4,   4,     6,     5,     0}, 0},
+  {"ldx", {2,   0,   0,   3,    0,      4,      4,   4,     0,     0,     0}, 0},
+  {"ldy", {2,   0,   0,   3,    0,      4,      4,   4,     0,     0,     0}, 0},
+  {"sta", {0,   0,   0,   3,    5,      4,      4,   5,     6,     6,     0}, 0},
+  {"stx", {0,   0,   0,   3,    0,      4,      4,   0,     0,     0,     0}, 0},
+  {"sty", {0,   0,   0,   3,    0,      4,      4,   0,     0,     0,     0}, 0},
+  {"stz", {0,   0,   0,   3,    0,      4,      4,   5,     0,     0,     0}, 0},
+  {"tax", {0,   2,   0,   0,    0,      0,      0,   0,     0,     0,     0}, 0},
+  {"tay", {0,   2,   0,   0,    0,      0,      0,   0,     0,     0,     0}, 0},
+  {"tsx", {0,   2,   0,   0,    0,      0,      0,   0,     0,     0,     0}, 0},
+  {"txa", {0,   2,   0,   0,    0,      0,      0,   0,     0,     0,     0}, 0},
+  {"txs", {0,   2,   0,   0,    0,      0,      0,   0,     0,     0,     0}, 0},
+  {"tya", {0,   2,   0,   0,    0,      0,      0,   0,     0,     0,     0}, 0},
 
 /* Stack */
-  {"pha", {0,   3,   0,   0,    0,      0,      0,   0,     0,    0}, 0},
-  {"php", {0,   3,   0,   0,    0,      0,      0,   0,     0,    0}, 0},
-  {"phx", {0,   3,   0,   0,    0,      0,      0,   0,     0,    0}, 0},
-  {"phy", {0,   3,   0,   0,    0,      0,      0,   0,     0,    0}, 0},
-  {"pla", {0,   4,   0,   0,    0,      0,      0,   0,     0,    0}, 0},
-  {"plp", {0,   4,   0,   0,    0,      0,      0,   0,     0,    0}, 0},
-  {"plx", {0,   4,   0,   0,    0,      0,      0,   0,     0,    0}, 0},
-  {"ply", {0,   4,   0,   0,    0,      0,      0,   0,     0,    0}, 0},
+  {"pha", {0,   3,   0,   0,    0,      0,      0,   0,     0,     0,     0}, 0},
+  {"php", {0,   3,   0,   0,    0,      0,      0,   0,     0,     0,     0}, 0},
+  {"phx", {0,   3,   0,   0,    0,      0,      0,   0,     0,     0,     0}, 0},
+  {"phy", {0,   3,   0,   0,    0,      0,      0,   0,     0,     0,     0}, 0},
+  {"pla", {0,   4,   0,   0,    0,      0,      0,   0,     0,     0,     0}, 0},
+  {"plp", {0,   4,   0,   0,    0,      0,      0,   0,     0,     0,     0}, 0},
+  {"plx", {0,   4,   0,   0,    0,      0,      0,   0,     0,     0,     0}, 0},
+  {"ply", {0,   4,   0,   0,    0,      0,      0,   0,     0,     0,     0}, 0},
 
-/* {name, {imm, imp, acc, zero, zeroind,zeroxy, abs, absxy, indx, indy}} */
-  {NULL,  {0,   0,   0,   0,    0,      0,      0,   0,     0,    0}, 0}
+/* {name, {imm, imp, acc, zero, zeroind,zeroxy, abs, absxy, zindx, zindy}} */
+  {NULL,  {0,   0,   0,   0,    0,      0,      0,   0,     0,     0,     0}, 0}
 };
 
 /* Current memory banking */
@@ -219,7 +219,6 @@ int is_addr_in_cc65_user_bank (int op_addr) {
 /* Figure out the addressing mode for the instruction */
 int instruction_get_addressing_mode(int cpu, const char *instr, const char *arg) {
   int len;
-  int shift = 0;
 
   /* no arg */
   if (!arg || arg[0] == '\0')
@@ -251,48 +250,38 @@ int instruction_get_addressing_mode(int cpu, const char *instr, const char *arg)
     return ADDR_MODE_ABSXY; /* FIXME that's not true */
   }
 
-  if (len >= 5) {
-indexed_modes:
-    /* $ff, x */
-    if (arg[0] == '$' && arg[3] == ',')
-      return ADDR_MODE_ZEROXY;
+  /* ($ff) */
+  if (len == 5 && arg[0] == '(' && arg[1] == '$' && arg[4] == ')')
+    return ADDR_MODE_ZEROIND;
 
-    /* ($ff), y */
-    if (arg[0] == '(' && arg[shift+4] == ')' && len > 7 && (arg[shift+7] == 'x' || arg[shift+7] == 'y'))
-      return ADDR_MODE_ZEROXY;
+  /* $ff, x */
+  if (len == 6 && arg[0] == '$' && arg[3] == ',')
+    return ADDR_MODE_ZEROXY;
 
-    /* ($ff) */
-    if (arg[0] == '(' && arg[shift+4] == ')')
-      return ADDR_MODE_ZEROIND;
-  
-    /* $ffff */
-    if (len == shift+5 && arg[0] == '$')
-      return ADDR_MODE_ABS;
+  /* ($ff), y */
+  if (len == 8 && arg[0] == '(' && arg[4] == ')' && arg[7] == 'y')
+    return ADDR_MODE_ZINDY;
 
-    /* $ffff, x */
-    if (len >= 6 && arg[0] == '$' && arg[shift+5] == ',')
-      return ADDR_MODE_ABSXY;
+  /* $ffff */
+  if (len == 5 && arg[0] == '$')
+    return ADDR_MODE_ABS;
 
-    /* ($ffff, x) */
-    if (len >= shift+6 && arg[0] == '(' && arg[shift+6] == ',' && arg[shift+8] == 'x')
-      return ADDR_MODE_INDX;
+  /* $ffff, x */
+  if (len == 8 && arg[0] == '$' && arg[5] == ',')
+    return ADDR_MODE_ABSXY;
 
-    /* ($ff, x) */
-    if (arg[0] == '(' && arg[shift+4] == ',' && arg[shift+6] == 'x')
-      return ADDR_MODE_INDX;
+  /* ($ffff) */
+  if (len == 7 && arg[0] == '(' && arg[6] == ')')
+    return ADDR_MODE_INDX;
 
-    /* ($ffff), y */
-    if (len >= shift+7 && arg[0] == '(' && arg[shift+6] == ')')
-      return ADDR_MODE_INDY;
+  /* ($ffff, x) */
+  if (len == 10 && arg[0] == '(' && arg[6] == ',' && arg[8] == 'x')
+    return ADDR_MODE_INDX;
 
-    /* ($ff), y */
-    if (arg[0] == '(' && arg[shift+4] == ',' && arg[shift+7] == 'x')
-      return ADDR_MODE_INDX;
-  }
-  if (len >= 7 && shift == 0) {
-    shift = 2;
-    goto indexed_modes;
-  }
+  /* ($ff, x) */
+  if (len == 8 && arg[0] == '(' && arg[4] == ',' && arg[6] == 'x')
+    return ADDR_MODE_ZINDX;
+
   fprintf(stderr, "Warning: unknown addressing mode for %s %s\n", instr, arg);
   return ADDR_MODE_ABS;
 }
@@ -483,15 +472,38 @@ static function_calls *get_function_calls_for_addr(int addr) {
 /* Get cycles number for instruction / addressing mode
  * TODO Hugely inefficient, add a instruction str <=> number mapping
  */
-int get_cycles_for_instr(int cpu, const char *instr, int a_mode, int *extra_cost_if_taken) {
+int get_cycles_for_instr(int cpu, const char *instr, int a_mode, int flags) {
   for (int i = 0; instr_cost[i].instruction != NULL; i++) {
     if (!strcmp(instr, instr_cost[i].instruction)) {
+      int cost;
       if (instr_cost[i].cost[a_mode] == 0) {
         fprintf(stderr, "Warning, addressing mode %d invalid for %s\n", a_mode, instr);
         return instr_cost[i].cost[ADDR_MODE_ABS];
       }
-      *extra_cost_if_taken = instr_cost[i].cost_if_taken;
-      return instr_cost[i].cost[a_mode];
+      cost = instr_cost[i].cost[a_mode];
+
+      if (instr_cost[i].cost_if_taken) {
+        if (!strcmp(instr, "beq") && (flags & FLAG_Z) != 0)
+          cost += instr_cost[i].cost_if_taken;
+        else if (!strcmp(instr, "bne") && (flags & FLAG_Z) == 0)
+          cost += instr_cost[i].cost_if_taken;
+
+        else if (!strcmp(instr, "bcs") && (flags & FLAG_C) != 0)
+          cost += instr_cost[i].cost_if_taken;
+        else if (!strcmp(instr, "bcc") && (flags & FLAG_C) == 0)
+          cost += instr_cost[i].cost_if_taken;
+
+        else if (!strcmp(instr, "bmi") && (flags & FLAG_N) != 0)
+          cost += instr_cost[i].cost_if_taken;
+        else if (!strcmp(instr, "bpl") && (flags & FLAG_N) == 0)
+          cost += instr_cost[i].cost_if_taken;
+
+        else if (!strcmp(instr, "bvs") && (flags & FLAG_V) != 0)
+          cost += instr_cost[i].cost_if_taken;
+        else if (!strcmp(instr, "bvc") && (flags & FLAG_V) == 0)
+          cost += instr_cost[i].cost_if_taken;
+      }
+      return cost;
     }
   }
   if (cpu == CPU_6502) {
