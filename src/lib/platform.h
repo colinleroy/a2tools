@@ -35,4 +35,5 @@
 void __fastcall__ platform_msleep(uint16 ms);
 #else
 #define platform_msleep(n) usleep(n*1000)
+#define beep()
 #endif
