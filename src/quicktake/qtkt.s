@@ -23,6 +23,8 @@ SCRATCH_WIDTH = (640 + 4)
 SCRATCH_HEIGHT= (BAND_HEIGHT + 4)
 PIXELBUF_SIZE = (SCRATCH_HEIGHT * SCRATCH_WIDTH + 2)
 
+Y_LOOP_LEN    = 160
+
 .segment        "DATA"
 
 _magic:
@@ -35,6 +37,8 @@ _cache_start:
         .addr        _cache
 
 .segment        "RODATA"
+
+clamper:.byte $00,$80,$FF
 
 high_nibble_gstep_low:
         .repeat 16
@@ -149,7 +153,6 @@ pgbar_state:
         .res        2,$00
 pixelbuf:
         .res        PIXELBUF_SIZE,$00
-
 
 ; Offset to scratch start of last scratch lines, row 20 col 0
 LAST_TWO_LINES = pixelbuf + (BAND_HEIGHT * SCRATCH_WIDTH)
@@ -365,11 +368,25 @@ cache_check_high_byte:
         ldx     #0              ; Patched when resetting (_cache_end+1)
         cpx     cur_cache_ptr+1
         bne     fetch_byte
+        phy
         jsr     fill_cache
+        ply
         jmp     fetch_byte
+
+clamp_high_nibble:
+        eor     #$FF            ; => 00 if negative, FE if positive
+        bpl     :+
+        lda     #$FF            ; => FF if positive
+
+:       sta     (idx),y         ; *(idx+2) = val
+        sta     last_val
+        jmp     check_first_col
 
 first_pass_col_loop:
 
+        ldy    #0
+
+first_pass_col_y_loop:
 cache_check_low_byte:
         lda     #0              ; Patched when resetting (_cache_end)
         cmp     cur_cache_ptr
@@ -391,14 +408,16 @@ fetch_byte:
         ;         + gstep[high_nibble];
 
         clc
-        lda     (idx_behind)
-        adc     last_val
-        ror
+        lda     (idx_behind),y  ; (*idx_behind)
+        adc     last_val        ; + last_val
+        ror                     ; >> 1
 
         clc
-        ldy     #2
-        adc     (idx_behind),y
-        ror
+
+        iny
+        iny
+        adc     (idx_behind),y  ; + *(idx_behind+2)
+        ror                     ; >> 1
 
         clc                     ; + gstep[h].
         adc     high_nibble_gstep_low,x
@@ -411,13 +430,8 @@ fetch_byte:
                                 ; Carry set by previous adc if overflowed
 
         adc     #0
-        beq     check_first_col ; No overflow
-        asl     a               ; Get sign (sets carry if negative)
-        lda     #$FF
-        adc     #0              ; FF => 00 if carry set
-
-        sta     (idx),y         ; *(idx+2) = val
-        sta     last_val
+        bne     clamp_high_nibble; overflow
+        clc
 
 check_first_col:
         lda     #1              ; Patched
@@ -435,13 +449,14 @@ do_low_nibble:
         ;         + *(idx_behind+4)) >> 1)
         ;         + gstep[low_nibble];
 
-        clc
         lda     (idx_behind),y  ; Y expected to be 2 there
         adc     last_val
         ror
 
         clc
-        ldy     #4
+
+        iny
+        iny
         adc     (idx_behind),y
         ror
 
@@ -456,13 +471,7 @@ do_low_nibble:
                                 ; Carry set by previous adc if overflowed
 
         adc     #0
-        beq     check_first_row2; No overflow
-        asl     a               ; Get sign (sets carry if negative)
-        lda     #$FF
-        adc     #0              ; FF => 00 if carry set
-
-        sta     (idx),y         ; *(idx+4) = val
-        sta     last_val
+        bne     clamp_low_nibble; Overflow
 
 check_first_row2:
         lda     #1              ; Patched
@@ -470,17 +479,21 @@ check_first_row2:
 
         ; END LOW NIBBLE
 
+check_first_pass_col_y_loop:
+        cpy     #Y_LOOP_LEN
+        bne     first_pass_col_y_loop
+
 shift_indexes:
         clc                     ; idx_behind += 4
         lda     idx_behind
-        adc     #4
+        adc     #Y_LOOP_LEN
         sta     idx_behind
         bcc     :+
         inc     idx_behind+1
         clc
 
 :       lda     idx             ; idx += 4
-        adc     #4
+        adc     #Y_LOOP_LEN
         sta     idx
         bcc     check_first_pass_col_loop
         inc     idx+1
@@ -508,6 +521,16 @@ end_of_line:
 
         ; First cols and first row handlers, out of main loop
 
+clamp_low_nibble:
+        beq     check_first_row2; No overflow
+        eor     #$FF            ; => 00 if negative, FE if positive
+        bpl     :+
+        lda     #$FF            ; => FF if positive
+
+:       sta     (idx),y         ; *(idx+4) = val
+        sta     last_val
+        jmp     check_first_pass_col_y_loop
+
 handle_first_col:
         lda     last_val
 store_idx_forward:
@@ -520,17 +543,22 @@ store_idx_min2:
 handle_first_row_high_nibble:
         lda     last_val        ; get val back
         sta     (idx_behind),y  ; *(idx_behind+2) = *(idx_behind+4) = val;
-        ldy     #4
+        iny
+        iny
         sta     (idx_behind),y
-        ldy     #2              ; Set Y back for low nibble
+        dey
+        dey                     ; Set Y back for low nibble
         jmp     do_low_nibble
 
 handle_first_row_low_nibble:
         lda     last_val        ; get val back
         sta     (idx_behind),y  ; *(idx_behind+4) = *(idx_behind+6) = val;
-        ldy     #6
+        iny
+        iny
         sta     (idx_behind),y
-        jmp     shift_indexes
+        dey
+        dey
+        jmp     check_first_pass_col_y_loop
 
         ; End of first col/row handlers
 
@@ -583,45 +611,45 @@ second_pass_col_loop:
         ;    + ((*(idx) + *(idx+2)) >> 1)
         ;    - 0x100;
 
-UNROLL_FACTOR = 4
-.repeat UNROLL_FACTOR,I         ; Unroll that a bit
+        ldy     #0
 
-        ldx     #1              ; Overflow counter
-        ldy     #(I*2)
+second_pass_col_y_loop:
+        ldx     #0              ; Overflow counter
         clc
-        lda     (idx),y
-        ldy     #((I*2)+2)
-        adc     (idx),y
+        lda     (idx),y         ; *(idx)
+        iny
+        iny
+        adc     (idx),y         ; *(idx+2)
         ror                     ; >> 1 and get carry back to high bit
         sta     tmp1
+
         dey
-        lda     (idx),y  ; *idx << 1
+        lda     (idx),y         ; *(idx+1) << 1
         asl
 
         bcc     :+
-        dex
+        inx
         clc
 
 :       adc     tmp1
         bcc     :+
-        dex
+        inx
 
-        ; Now X = 1 means < 0, X = 0 means val in range, X = $FF means > 255
-:       cpx     #0
+        ; Now X = 0 means val < 0, X = 1 means val in range, X = 2 means val > 255
+:       cpx     #1
         beq     :+
-        txa
-        bmi     :+              ; $FF is good as is
-        dec     a               ; Transform 1 to 0
+        lda     clamper,x
 
-:       sta     (idx),y         ; *(idx+1) = val (Y still (I*2)+1)
+:       sta     (idx),y         ; *(idx+1) = val
 
-.endrep
-
-        ; Shift index by sizeof(uint16)*UNROLL_FACTOR
-
+        iny
+        cpy     #Y_LOOP_LEN
+        bne     second_pass_col_y_loop
+        
+        ; Shift index
         lda     idx
         clc
-        adc     #(2*UNROLL_FACTOR)
+        adc     #Y_LOOP_LEN
         sta     idx
         bcc     check_second_pass_col_loop
         inc     idx+1

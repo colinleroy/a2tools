@@ -38,6 +38,7 @@
 #include "extrazp.h"
 #include "clrzone.h"
 #include "qt-conv.h"
+#include "platform.h"
 #include "path_helper.h"
 #include "progress_bar.h"
 
@@ -153,7 +154,7 @@ static uint16 output_write_len;
 static uint8 scaling_factor = 4;
 static uint16 crop_start_x, crop_start_y, crop_end_x, crop_end_y;
 static uint16 last_band = 0;
-static uint16 last_band_crop = 0;
+static uint8 last_band_crop = 0;
 static uint16 effective_width;
 /* Scales:
  * 640x480 non-cropped        => 256x192, * 4  / 10, bands of 20 end up 8px
@@ -249,6 +250,8 @@ static void build_scale_table(const char *ofname) {
 #pragma code-name (pop) 
 /* Patched func */
 
+/* Optimizer bug in there */
+#pragma optimize (push,off)
 static void write_raw(uint16 h)
 {
 #ifdef __CC65__
@@ -256,7 +259,6 @@ static void write_raw(uint16 h)
   #define cur_y zp8p
   #define cur_orig_x zp10p
   #define cur_orig_y zp12ip
-  static uint8 x_len;
 #else
   uint8 *dst_ptr;
   uint8 *cur_y;
@@ -264,19 +266,20 @@ static void write_raw(uint16 h)
   uint8 **cur_orig_y;
   static uint16 x_len;
 #endif
-  static uint8 y_len;
+  static uint8 y_len, y_end;
 
-  if (h == last_band && last_band_crop) {
+#ifndef __CC65__
+  if (last_band_crop && h == last_band) {
     /* Skip end of last band if cropping */
-    y_len = last_band_crop;
+    y_end = last_band_crop;
     output_write_len -= (scaled_band_height - last_band_crop) * FILE_WIDTH;
   } else {
-    y_len = scaled_band_height;
+    y_end = scaled_band_height;
   }
-
+  y_len = 0;
   /* Scale (nearest neighbor)*/
-#ifndef __CC65__
   dst_ptr = raw_image;
+
   cur_orig_y = orig_y_table + 0;
   do {
     cur_orig_x = orig_x_offset + 0;
@@ -290,30 +293,71 @@ static void write_raw(uint16 h)
       dst_ptr ++;
     } while (--x_len);
     cur_orig_y++;
-} while (--y_len);
+  } while (++y_len < y_end);
 #else
-  dst_ptr = raw_image;
+  __asm__("lda %v", last_band_crop);
+  __asm__("beq %g", full_band);
+  __asm__("lda (sp)");
+  __asm__("cmp %v", last_band);
+  __asm__("bne %g", full_band);
+  __asm__("ldy #1");
+  __asm__("lda (sp),y");
+  __asm__("cmp %v+1", last_band);
+  __asm__("bne %g", full_band);
+
+  __asm__("lda %v", last_band_crop);
+  __asm__("sta %v", y_end);
+
+  /* output_write_len -= (scaled_band_height - last_band_crop) * FILE_WIDTH; */
+  /* FILE_WIDTH = 256 so shift 8 */
+  __asm__("lda %v", scaled_band_height);
+  __asm__("sec");
+  __asm__("sbc %v", last_band_crop);
+  __asm__("sta tmp1");
+  __asm__("sec");
+  __asm__("lda %v+1", output_write_len);
+  __asm__("sbc tmp1");
+  __asm__("sta %v+1", output_write_len);
+  __asm__("bra %g", no_crop);
+
+full_band:
+  __asm__("lda %v", scaled_band_height);
+  __asm__("sta %v", y_end);
+
+no_crop:
+  __asm__("stz %v", y_len);
+  __asm__("lda #>(%v)", raw_image);
+  __asm__("sta %v+1", dst_ptr);
+  __asm__("lda #<(%v)", raw_image);
+  __asm__("sta %v", dst_ptr);
+
   __asm__("clc");
   __asm__("lda #<(%v)", orig_y_table);
   __asm__("sta %v", cur_orig_y);
   __asm__("lda #>(%v)", orig_y_table);
   __asm__("sta %v+1", cur_orig_y);
+
+  __asm__("lda #<(%v)", orig_x_offset);
+  __asm__("sta %v", cur_orig_x);
+  __asm__("lda #>(%v)", orig_x_offset);
+  __asm__("sta %v+1", cur_orig_x);
+
+  __asm__("lda #0");
   next_y:
-    __asm__("lda (%v)", cur_orig_y);    /* patch cur_orig_y in loop */
+    __asm__("pha");
+    __asm__("asl");
+    __asm__("tay");
+    __asm__("lda (%v),y", cur_orig_y);    /* patch cur_orig_y in loop */
     __asm__("sta %g+1", cur_orig_y_addr);
-    __asm__("ldy #1");
+    __asm__("iny");
     __asm__("lda (%v),y", cur_orig_y);
     __asm__("sta %g+2", cur_orig_y_addr);
     __asm__("clc");
 
-    __asm__("lda #<(%v)", orig_x_offset);
-    __asm__("sta %v", cur_orig_x);
-    __asm__("lda #>(%v)", orig_x_offset);
-    __asm__("sta %v+1", cur_orig_x);
-    __asm__("stz %v", x_len); // 256, but in 8bits
+    __asm__("ldy #0");
     next_x:
     /* *cur_y += *cur_orig_x; */
-    __asm__("lda (%v)", cur_orig_x);
+    __asm__("lda (%v),y", cur_orig_x);
     __asm__("adc %g+1", cur_orig_y_addr);
     __asm__("sta %g+1", cur_orig_y_addr);
     __asm__("bcc %g", cur_orig_y_addr);
@@ -350,29 +394,19 @@ static void write_raw(uint16 h)
 
     noof7:
     /* ++cur_orig_x */
-    __asm__("inc %v", cur_orig_x);
-    __asm__("bne %g", noof5);
-    __asm__("inc %v+1", cur_orig_x);
-    noof5:
-    /* x_len? */
-    __asm__("dec %v", x_len);
+    __asm__("iny");
     __asm__("bne %g", next_x);
-  /* ++cur_orig_y */
-  __asm__("lda #$02");
-  __asm__("adc %v", cur_orig_y);
-  __asm__("sta %v", cur_orig_y);
-  __asm__("bcc %g", noof5b);
-  __asm__("inc %v+1", cur_orig_y);
-  __asm__("clc");
-  noof5b:
 
   /* y_len? */
-  __asm__("dec %v", y_len);
-  __asm__("bne %g", next_y);
+  __asm__("pla");
+  __asm__("inc a");
+  __asm__("cmp %v", y_end);
+  __asm__("bcc %g", next_y);
 #endif
 
   fwrite (raw_image, 1, output_write_len, ofp);
 }
+#pragma optimize (pop)
 
 #pragma code-name (push, "LC")
 
