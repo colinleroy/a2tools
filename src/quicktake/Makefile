@@ -85,7 +85,7 @@ CFLAGS  = -I ../lib -DCONF_FILE_PATH=\"/etc/a2tools/quicktake.conf\"
 CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x200 $(USE_LANGCARD) $(debug_CFLAGS) $(iigs_CFLAGS)
 
 slowtake_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-hgr.cfg $(CC65_TARGET)-iobuf-0800.o --start-addr 0xC00 #One file buffer
-qtktconv_CLCFLAGS = -D_CACHE_SIZE=4096 --asm-define CACHE_SIZE=4096 $(CLCFLAGS) -C ../../config/apple2enh-alignbss.cfg $(CC65_TARGET)-iobuf-0800.o --start-addr 0x1000    #Two file buffers
+qtktconv_CLCFLAGS = -D_CACHE_SIZE=1024 --asm-define CACHE_SIZE=1024 $(CLCFLAGS) -C ../../config/apple2enh-alignbss.cfg $(CC65_TARGET)-iobuf-0800.o --start-addr 0x1000    #Two file buffers
 qtknconv_CLCFLAGS = -D_CACHE_SIZE=4096 --asm-define CACHE_SIZE=4096 $(CLCFLAGS) -C ../../config/apple2enh-aligndata.cfg $(CC65_TARGET)-iobuf-0800.o --start-addr 0x1000
 jpegconv_CLCFLAGS = -D_CACHE_SIZE=4096 --asm-define CACHE_SIZE=4096 $(CLCFLAGS) -C ../../config/apple2enh.cfg $(CC65_TARGET)-iobuf-0800.o --start-addr 0x1000
 
