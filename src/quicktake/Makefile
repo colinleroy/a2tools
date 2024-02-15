@@ -111,7 +111,7 @@ slowtake.bin: $(slowtake_SOURCES) $(slowtake_CC65SOURCES)
 slowtake.x86_64: $(slowtake_SOURCES) $(slowtake_GCCSOURCES) $(GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@
 
-qtktconv.bin: $(qtktconv_SOURCES) $(qtktconv_CC65SOURCES)
+qtktconv.bin: $(qtktconv_CC65SOURCES) $(qtktconv_SOURCES)
 	cl65 --debug-info -Wl --dbgfile,"qtktconv.dbg" $(CFLAGS) $(qtktconv_CLCFLAGS) -vm -m qtktconv.map -o $@ $^
 
 qtktconv.x86_64: $(qtktconv_SOURCES) $(qtktconv_GCCSOURCES) $(GCCSOURCES)

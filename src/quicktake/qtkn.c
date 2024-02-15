@@ -33,6 +33,7 @@ char *model = "150";
 uint16 *huff_ptr;
 uint8 cache[CACHE_SIZE];
 uint8 *cache_start = cache;
+uint8 raw_image[RAW_IMAGE_SIZE];
 
 static uint16 val_from_last[256];
 static uint16 huff[19][256], *huff_9, *huff_10;

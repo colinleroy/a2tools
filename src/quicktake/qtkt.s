@@ -6,9 +6,9 @@
 				.import          pushax, pusha, pusha0, decsp6, incsp6, subysp
         .import          _height
         .import          _width
-        .import          _raw_image
         .import          _fread, _ifp, _cache_end
 
+        .export          _raw_image
         .export          _magic
         .export          _model
         .export          _huff_ptr
@@ -23,6 +23,7 @@ SCRATCH_PAD   = 4
 SCRATCH_WIDTH = (640 + SCRATCH_PAD)
 SCRATCH_HEIGHT= (BAND_HEIGHT + SCRATCH_PAD)
 PIXELBUF_SIZE = (SCRATCH_HEIGHT * SCRATCH_WIDTH + 2)
+RAW_IMAGE_SIZE= BAND_HEIGHT * 640
 
 Y_LOOP_LEN    = 160
 
@@ -145,6 +146,9 @@ model_str:
         .byte        $31,$30,$30,$00
 
 .segment        "BSS"
+.align 256
+_raw_image:
+        .res        RAW_IMAGE_SIZE,$00
 .align 256
 pixelbuf:
         .res        PIXELBUF_SIZE,$00
