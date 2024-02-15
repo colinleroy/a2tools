@@ -50,8 +50,6 @@ static void reload_menu(const char *filename);
 
 /* Shared with decoders */
 uint16 height, width;
-uint16 raw_image_size = (BAND_HEIGHT) * 640;
-uint8 raw_image[(BAND_HEIGHT) * 640];
 
 /* Cache */
 uint8 *cache_end;
@@ -480,7 +478,7 @@ try_again:
     goto out;
   }
 
-  bzero(raw_image, raw_image_size);
+  bzero(raw_image, RAW_IMAGE_SIZE);
   build_scale_table(ofname);
 
   clrscr();

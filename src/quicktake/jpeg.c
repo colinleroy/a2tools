@@ -34,6 +34,7 @@ uint16 *huff_ptr;
 #define N_STUFF_CHARS 4
 uint8 cache[CACHE_SIZE + N_STUFF_CHARS];
 uint8 *cache_start = cache + N_STUFF_CHARS;
+uint8 raw_image[RAW_IMAGE_SIZE];
 
 #define QT200_WIDTH 640
 #define QT200_HEIGHT 480

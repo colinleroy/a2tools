@@ -31,6 +31,7 @@ uint16 *huff_ptr = NULL; /* unused here, just for linking */
 uint8 *dst, *src;
 uint8 cache[CACHE_SIZE];
 uint8 *cache_start = cache;
+uint8 raw_image[RAW_IMAGE_SIZE];
 
 /* Pointer arithmetic helpers */
 static uint16 width_plus2;
