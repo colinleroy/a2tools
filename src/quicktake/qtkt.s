@@ -2,7 +2,7 @@
         .importzp        tmp1, tmp2, tmp3, tmp4, ptr1, ptr2, ptr3, ptr4
         .importzp        _prev_rom_irq_vector, _prev_ram_irq_vector, _zp6p, _zp8p, _zp10p, _zp12, _zp13, _zp12ip
 
-        .import          _memcpy, _memset, _progress_bar
+        .import          _memcpy, _progress_bar
 				.import          pushax, pusha, pusha0, decsp6, incsp6, subysp
         .import          _height
         .import          _width
@@ -238,12 +238,12 @@ top:    jsr     _reset_bitbuff  ; Yes. Initialize things
         ; Fill whole buffer with grey
         lda     #<(pixelbuf)
         ldx     #>(pixelbuf)
-        jsr     pushax
+        sta     ptr1
+        stx     ptr1+1
         lda     #$80
-        jsr     pusha0
-        lda     #<PIXELBUF_SIZE
+        ldy     #<PIXELBUF_SIZE
         ldx     #>PIXELBUF_SIZE
-        jsr     _memset
+        jsr     reset_buffer
 
         lda     #1
         sta     check_first_row+1  ; Init with non-zero value
@@ -266,12 +266,12 @@ not_top:
         ; Reset the rest of the lines with grey
         lda     #<(THIRD_LINE)
         ldx     #>(THIRD_LINE)
-        jsr     pushax
+        sta     ptr1
+        stx     ptr1+1
         lda     #$80
-        jsr     pusha0
-        lda     #<(PIXELBUF_SIZE-(2*SCRATCH_WIDTH + 2))
+        ldy     #<(PIXELBUF_SIZE-(2*SCRATCH_WIDTH + 2))
         ldx     #>(PIXELBUF_SIZE-(2*SCRATCH_WIDTH + 2))
-        jsr     _memset
+        jsr     reset_buffer
 
 start_work:
         ; We start at line 2
@@ -673,12 +673,13 @@ check_second_pass_col_loop_hi:
 
 second_pass_row_done:
         dec     row
-        beq     :+
+        beq     copy_buffer
         jmp     second_pass_next_row
 
         ; Both passes done, memcpy BAND_HEIGHT lines to destination buffer,
-        ; excluding two leftmost and rightmost scratch pixels 
-:       lda     #<(_raw_image)
+        ; excluding two leftmost and rightmost scratch pixels
+copy_buffer:
+        lda     #<(_raw_image)
         sta     idx
         ldx     #>(_raw_image)
         stx     idx+1
@@ -776,6 +777,78 @@ next_row_320:
         bne     next_row_320
         rts
 
+        ; buffer in ptr1, value in A, size in YX
+reset_buffer:
+        phy
+        cpx     #0
+        beq     finish_reset
+        cpx     #4
+        bmi     reset_next_page
+
+        ldy     ptr1            ; We'll reset four pages
+        sty     ptr2
+        sty     ptr3
+        sty     ptr4
+
+        ldy     ptr1+1
+        iny
+        sty     ptr2+1
+        iny
+        sty     ptr3+1
+        iny
+        sty     ptr4+1
+
+reset_four_pages:
+        ldy     #0
+:
+.repeat 4                       ; One page
+        sta     (ptr1),y
+        sta     (ptr2),y
+        sta     (ptr3),y
+        sta     (ptr4),y
+        dey
+.endrep
+        bne     :-
+        ldy     ptr4+1
+        iny
+        sty     ptr1+1
+        dex
+        iny
+        sty     ptr2+1
+        dex
+        iny
+        sty     ptr3+1
+        dex
+        iny
+        sty     ptr4+1
+        dex
+        beq     finish_reset
+        cpx     #4
+        bpl    reset_four_pages
+
+reset_next_page:
+        ldy     #0
+:
+.repeat 4                       ; One page
+        sta     (ptr1),y
+        dey
+.endrep
+        bne     :-
+        inc     ptr1+1
+        dex
+        bne     reset_next_page
+
+finish_reset:
+        ply
+        dey
+        beq     reset_done
+
+:       sta     (ptr1),y        ; Last page
+        dey
+        bpl     :-
+
+reset_done:
+        rts
 
 update_progress_bar:
         lda     pgbar_state    ; Update progress bar
