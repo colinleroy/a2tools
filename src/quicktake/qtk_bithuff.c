@@ -26,7 +26,6 @@ uint8 __fastcall__ getbithuff (uint8 n)
     vbits += 8;
   }
   shift = 32-vbits;
-  printf("vbits %d, shift %d\n", vbits, shift);
   if (shift >= 24) {
     FAST_SHIFT_LEFT_24_LONG_TO(bitbuf, tmp);
   } else if (shift >= 16) {
