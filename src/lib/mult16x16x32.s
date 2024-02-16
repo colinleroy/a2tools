@@ -14,7 +14,6 @@
 
 inputA = ptr1
 inputB = ptr2
-result = tmp1     ; tmp1/tmp2/sreg/sreg+1
 
 ; ***************************************************************************************
 ; 16 bit x 16 bit unsigned multiply, 32 bit result
@@ -49,11 +48,11 @@ mult16x16x32_direct:
 getLow1:
         lda     sqrLow,x        ; Patched
         sbc     sqrLow,y
-        sta     result          ; low byte
+        sta     sta_result+1    ; low byte
 getHigh1:
         lda     sqrHigh,x       ; Patched
         sbc     sqrHigh,y
-        sta     result+1        ; high byte
+        sta     sta_tmp_result_1a+1        ; high byte
 
         lda     inputA+1        ; (a1*b0)
         ldx     inputB
@@ -78,12 +77,13 @@ temp1:
         lda     #0              ; Patched
 
         clc
-        adc     result+1
-        sta     result+1
+sta_tmp_result_1a:
+        adc     #$FF
+        sta     sta_tmp_result_1b+1
 
         txa
         adc     #0
-        sta     sreg
+        sta     sta_tmp_result_2a+1
 
         lda     inputA          ;(a0*b1)
         ldx     inputB+1
@@ -108,15 +108,17 @@ temp2:
         lda     #0              ; Patched
 
         clc
-        adc     result+1
-        sta     result+1
+sta_tmp_result_1b:
+        adc     #$FF
+        sta     sta_tmp_result_1c+1
         txa
-        adc     sreg
-        sta     sreg
+sta_tmp_result_2a:
+        adc     #$FF
+        sta     sta_tmp_result_2b+1
 
         lda     #0
         rol                     ; remember the carry for sreg+1
-        sta     sreg+1
+        sta     sta_tmp_result_3a+1
 
         lda     inputA+1        ; (a1*b1)
         ldx     inputB+1
@@ -141,11 +143,15 @@ temp3:
         lda     #0              ; Patched
 
         clc
-        adc     sreg
+sta_tmp_result_2b:
+        adc     #$FF
         sta     sreg
         txa
-        adc     sreg+1
+sta_tmp_result_3a:
+        adc     #$FF
         sta     sreg+1
-        lda     result
-        ldx     result+1
+sta_result:
+        lda     #$FF
+sta_tmp_result_1c:
+        ldx     #$FF
         rts
