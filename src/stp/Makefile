@@ -44,7 +44,7 @@ CL65SOURCES = ../lib/simple_serial_io.s \
  ../lib/extrazp.s \
  ../lib/clrzone.s
 
-GCC_SOURCES = ../lib/strtrim.c ../lib/extended_conio.c ../lib/clrzone.c
+GCC_SOURCES = ../lib/strtrim.c ../lib/extended_conio.c ../lib/clrzone.c ../lib/simple_serial_io.c
 
 DEPS := 
 

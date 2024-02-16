@@ -52,13 +52,13 @@ slowtake_CC65SOURCES := \
 	../lib/runtime_once_clean.s \
 	../lib/simple_serial_io.s
 
-slowtake_GCCSOURCES := ../lib/tgi_sdl.c ../lib/tgi_fastline.c
+slowtake_GCCSOURCES := ../lib/tgi_sdl.c ../lib/tgi_fastline.c ../lib/simple_serial_io.c
 
 qtktconv_SOURCES := \
 	qt-conv.c ../lib/path_helper.c ../lib/progress_bar.c
 
 qtktconv_CC65SOURCES := qtkt.s ../lib/extrazp.s
-qtktconv_GCCSOURCES := qtkt.c
+qtktconv_GCCSOURCES := qtkt.c 
 
 qtknconv_SOURCES := \
 	qt-conv.c qtkn.c  ../lib/path_helper.c ../lib/progress_bar.c
