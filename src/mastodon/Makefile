@@ -107,7 +107,7 @@ mastoconf_SOURCES := \
 	../lib/malloc0.c
 mastoconf_CC65SOURCES := ../lib/FVTABZ.s ../lib/clrzone.s
 
-GCCSOURCES := ../lib/extended_conio.c ../lib/clrzone.c ../lib/strtrim.c ../lib/tgi_sdl.c ../lib/tgi_fastline.c
+GCCSOURCES := ../lib/extended_conio.c ../lib/clrzone.c ../lib/strtrim.c ../lib/tgi_sdl.c ../lib/tgi_fastline.c ../lib/simple_serial.c ../lib/simple_serial_io.c
 DEPS :=
 
 CC65_TARGET = $(TARGET)

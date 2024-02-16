@@ -32,7 +32,7 @@ imgview_CC65SOURCES := \
 	../lib/clrzone.s ../lib/fastirq$(suffix).s \
 	../lib/extrazp.s ../lib/simple_serial_io.s
 
-imgview_GCCSOURCES := ../lib/tgi_sdl.c ../lib/tgi_fastline.c ../lib/strtrim.c ../lib/clrzone.c
+imgview_GCCSOURCES := ../lib/tgi_sdl.c ../lib/tgi_fastline.c ../lib/strtrim.c ../lib/clrzone.c ../lib/simple_serial_io.c
 
 GCCSOURCES := ../lib/extended_conio.c ../lib/clrzone.c
 DEPS :=

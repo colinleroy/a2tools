@@ -21,7 +21,7 @@ CC65SOURCES := ../lib/simple_serial_io.s \
  	 ../lib/fastirq$(suffix).s \
  	 ../lib/extrazp.s
 
-GCCSOURCES := ../lib/strtrim.c ../lib/extended_conio.c ../lib/clrzone.c 
+GCCSOURCES := ../lib/strtrim.c ../lib/extended_conio.c ../lib/clrzone.c ../lib/simple_serial_io.c
 DEPS := 
 
 CC65_TARGET = apple2enh
