@@ -255,11 +255,15 @@ int instruction_get_addressing_mode(int cpu, const char *instr, const char *arg)
     return ADDR_MODE_ZEROIND;
 
   /* $ff, x */
-  if (len == 6 && arg[0] == '$' && arg[3] == ',')
+  if ((len == 5 || len == 6) && arg[0] == '$' && arg[3] == ',')
     return ADDR_MODE_ZEROXY;
 
   /* ($ff), y */
   if (len == 8 && arg[0] == '(' && arg[4] == ')' && arg[7] == 'y')
+    return ADDR_MODE_ZINDY;
+
+  /* ($ff),y */
+  if (len == 7 && arg[0] == '(' && arg[4] == ')' && arg[6] == 'y')
     return ADDR_MODE_ZINDY;
 
   /* $ffff */
@@ -267,7 +271,7 @@ int instruction_get_addressing_mode(int cpu, const char *instr, const char *arg)
     return ADDR_MODE_ABS;
 
   /* $ffff, x */
-  if (len == 8 && arg[0] == '$' && arg[5] == ',')
+  if ((len == 7 || len == 8) && arg[0] == '$' && arg[5] == ',')
     return ADDR_MODE_ABSXY;
 
   /* ($ffff) */
@@ -278,9 +282,25 @@ int instruction_get_addressing_mode(int cpu, const char *instr, const char *arg)
   if (len == 10 && arg[0] == '(' && arg[6] == ',' && arg[8] == 'x')
     return ADDR_MODE_INDX;
 
+  /* ($ffff,x) */
+  if (len == 9 && arg[0] == '(' && arg[6] == ',' && arg[7] == 'x')
+    return ADDR_MODE_INDX;
+
   /* ($ff, x) */
   if (len == 8 && arg[0] == '(' && arg[4] == ',' && arg[6] == 'x')
     return ADDR_MODE_ZINDX;
+
+  /* ($ff,x) */
+  if (len == 7 && arg[0] == '(' && arg[4] == ',' && arg[5] == 'x')
+    return ADDR_MODE_ZINDX;
+
+  /* $ffffff */
+  if (len == 7 && arg[0] == '$')
+    return ADDR_MODE_ABS;
+
+  /* $ffffff,x */
+  if (len == 9 && arg[0] == '$' && arg[7]==',')
+    return ADDR_MODE_ABSXY;
 
   fprintf(stderr, "Warning: unknown addressing mode for %s %s\n", instr, arg);
   return ADDR_MODE_ABS;
