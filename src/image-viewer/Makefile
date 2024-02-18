@@ -2,10 +2,12 @@ TARGET := apple2enh
 USE_LANGCARD := -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD
 
 ifdef IIGS
+serial_hw_SOURCES := ../lib/serial_zilog.s
 iigs_CFLAGS := -DIIGS --asm-define IIGS
 suffix := -iigs
 upload_subdir := /iigs
 else
+serial_hw_SOURCES := ../lib/serial_acia.s
 ifdef OLDII
 iigs_FLAGS :=
 suffix :=
@@ -21,7 +23,7 @@ endif
 
 imgview_SOURCES := \
 	imageview.c \
-	../lib/simple_serial.c ../lib/simple_serial_ext.c \
+	../lib/simple_serial.c \
 	../lib/path_helper.c \
 	../lib/file_select.c ../lib/progress_bar.c ../lib/hgr.c \
 	../lib/hgr_addrs.c ../lib/scrollwindow.c \
@@ -30,9 +32,13 @@ imgview_SOURCES := \
 imgview_CC65SOURCES := \
 	../lib/dputc.s ../lib/scroll.s ../lib/FVTABZ.s \
 	../lib/clrzone.s ../lib/fastirq$(suffix).s \
-	../lib/extrazp.s ../lib/simple_serial_io.s
+	../lib/extrazp.s ../lib/simple_serial_io.s \
+	$(serial_hw_SOURCES)
 
-imgview_GCCSOURCES := ../lib/tgi_sdl.c ../lib/tgi_fastline.c ../lib/strtrim.c ../lib/clrzone.c ../lib/simple_serial_io.c
+imgview_GCCSOURCES := ../lib/tgi_sdl.c \
+	../lib/tgi_fastline.c ../lib/strtrim.c \
+	../lib/clrzone.c ../lib/simple_serial_io.c \
+	 ../lib/simple_serial_ext.c
 
 GCCSOURCES := ../lib/extended_conio.c ../lib/clrzone.c
 DEPS :=

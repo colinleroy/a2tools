@@ -1,6 +1,6 @@
 ifdef SER_DEBUG
 debug_CFLAGS := -DSER_DEBUG=1
-debug_SOURCES :=  ../lib/simple_serial_ext.c
+debug_SOURCES :=
 else
 debug_CFLAGS :=
 debug_SOURCES :=
@@ -18,10 +18,12 @@ debug_CFLAGS := $(debug_CFLAGS) -DDEBUG_FLOPPY=$(DEBUG_FLOPPY)
 endif
 
 ifdef IIGS
+serial_hw_SOURCES := ../lib/serial_zilog.s
 iigs_CFLAGS := -DIIGS --asm-define IIGS
 suffix := -iigs
 upload_subdir := /iigs
 else
+serial_hw_SOURCES := ../lib/serial_acia.s
 ifdef OLDII
 iigs_FLAGS :=
 suffix :=
@@ -39,7 +41,7 @@ slowtake_SOURCES := \
 	qt-menu.c qt-serial.c qt1x0-serial.c qt200-serial.c qt-edit-image.c \
 	qt-state.c \
 	../lib/dgets.c ../lib/scrollwindow.c ../lib/path_helper.c \
-	../lib/simple_serial.c ../lib/simple_serial_ext.c \
+	../lib/simple_serial.c \
 	../lib/strtrim.c ../lib/malloc0.c \
 	../lib/file_select.c ../lib/progress_bar.c ../lib/hgr.c \
 	../lib/hgr_addrs.c ../lib/scrollwindow.c \
@@ -50,9 +52,12 @@ slowtake_CC65SOURCES := \
 	../lib/clrzone.s ../lib/fastirq$(suffix).s \
 	../lib/platform_sleep.s ../lib/extrazp.s \
 	../lib/runtime_once_clean.s \
-	../lib/simple_serial_io.s
+	../lib/simple_serial_io.s $(serial_hw_SOURCES)
 
-slowtake_GCCSOURCES := ../lib/tgi_sdl.c ../lib/tgi_fastline.c ../lib/simple_serial_io.c
+slowtake_GCCSOURCES := ../lib/tgi_sdl.c \
+	../lib/tgi_fastline.c \
+	../lib/simple_serial_io.c \
+	../lib/simple_serial_ext.c
 
 qtktconv_SOURCES := \
 	qt-conv.c ../lib/path_helper.c ../lib/progress_bar.c
