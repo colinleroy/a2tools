@@ -60,6 +60,7 @@ char *api_send_hgr_image(char *filename, char *description, char **err, char x, 
 
   if (w > 0)
     progress_bar(x, y, w, 0, HGR_LEN);
+
   get_surl_for_endpoint(SURL_METHOD_POST_DATA, "/api/v2/media");
 
   /* Send num fields */
@@ -121,7 +122,7 @@ send_again:
     surl_send_data(body, len);
 
     free(body);
-
+    
     surl_read_response_header();
   }
 

@@ -113,6 +113,7 @@ const surl_response * __fastcall__ surl_start_request(const char method, char *u
     return resp;
   } else if (method == SURL_METHOD_PING) {
     if (i == SURL_ANSWER_PONG) {
+      simple_serial_putc(SURL_CLIENT_READY);
       resp->code = simple_serial_getc();
       return resp;
     } else {
@@ -132,7 +133,9 @@ void __fastcall__ surl_read_response_header(void) {
   if (resp->content_type) {
     free(resp->content_type);
   }
-  simple_serial_read((char *)resp, 10);
+
+  surl_read_with_barrier((char *)resp, 10);
+
 /* coverity[var_assign] */
   resp->size = ntohl(resp->size);
 /* coverity[var_assign] */
@@ -144,7 +147,8 @@ void __fastcall__ surl_read_response_header(void) {
   /* Includes the zero byte */
 
   resp->content_type = malloc0(resp->content_type_size);
-  simple_serial_read(resp->content_type, resp->content_type_size);
+
+  surl_read_with_barrier(resp->content_type, resp->content_type_size);
 }
 
 char __fastcall__ surl_response_ok(void) {
@@ -154,6 +158,13 @@ char __fastcall__ surl_response_ok(void) {
 int __fastcall__ surl_response_code(void) {
   return resp != NULL ? resp->code : 504;
 }
+
+#ifndef __CC65__
+void __fastcall__ surl_read_with_barrier(char *buffer, size_t nmemb) {
+  simple_serial_putc(SURL_CLIENT_READY);
+  simple_serial_read(buffer, nmemb);
+}
+#endif
 
 #ifdef __CC65__
 #pragma code-name (pop)

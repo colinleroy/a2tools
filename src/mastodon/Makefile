@@ -10,10 +10,12 @@ TARGET := apple2enh
 USE_LANGCARD := -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD
 
 ifdef IIGS
+serial_hw_SOURCES := ../lib/serial_zilog.s
 iigs_CFLAGS := -DIIGS --asm-define IIGS
 suffix := -iigs
 upload_subdir := /iigs
 else
+serial_hw_SOURCES := ../lib/serial_acia.s
 ifdef OLDII
 iigs_FLAGS :=
 suffix :=
@@ -41,6 +43,7 @@ common_SOURCES := \
 
 common_CC65SOURCES := \
 	../lib/simple_serial_io.s \
+	$(serial_hw_SOURCES) \
 	../lib/clrzone.s \
 	../lib/dputs.s \
 	../lib/dputc.s \
@@ -57,7 +60,6 @@ mastodon_SOURCES := \
 	cli/img.c \
 	api/media.c \
 	api/oauth.c \
-	../lib/progress_bar.c \
 	../lib/surl_find_line.c \
 	../lib/surl_ping.c \
 	../lib/file_select.c \

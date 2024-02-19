@@ -35,7 +35,17 @@ char __fastcall__ simple_serial_open(void);
 char __fastcall__ simple_serial_open_printer(void);
 char __fastcall__ simple_serial_close(void);
 void __fastcall__ simple_serial_flush(void);
+void __fastcall__ simple_serial_set_irq(unsigned char on);
 void __fastcall__ simple_serial_configure(void);
+void __fastcall__ simple_serial_finish_setup(void);
+
+#ifdef IIGS
+void __fastcall__ simple_serial_read(char *ptr, size_t nmemb);
+#define simple_serial_read_no_irq simple_serial_read
+#else
+void __fastcall__ simple_serial_read_no_irq(char *ptr, size_t nmemb);
+#define simple_serial_read simple_serial_read_no_irq
+#endif
 
 #define tty_speed_to_str(speed)        \
   ((speed == SER_BAUD_2400) ? "2400":  \
@@ -44,7 +54,7 @@ void __fastcall__ simple_serial_configure(void);
    (speed == SER_BAUD_19200)? "19200": \
    (speed == SER_BAUD_57600)? "57600":"115200")
 
-#define simple_serial_putc(c) ser_put(c)
+#define simple_serial_putc ser_put
 #else
 int simple_serial_open(void);
 int simple_serial_open_printer(void);
@@ -53,6 +63,7 @@ void simple_serial_flush(void);
 #define simple_serial_configure()
 unsigned char __fastcall__ simple_serial_putc(char c);
 char *tty_speed_to_str(int speed);
+void __fastcall__ simple_serial_read(char *ptr, size_t nmemb);
 #endif
 
 /* Input */
@@ -61,8 +72,6 @@ int __fastcall__ simple_serial_getc_with_timeout(void);
 int __fastcall__ simple_serial_getc_immediate(void);
 
 char * __fastcall__ simple_serial_gets(char *out, size_t size);
-
-void __fastcall__ simple_serial_read(char *ptr, size_t nmemb);
 
 /* Output */
 void __fastcall__ simple_serial_puts(const char *buf);

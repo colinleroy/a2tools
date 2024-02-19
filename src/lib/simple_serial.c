@@ -36,30 +36,31 @@
 #pragma static-locals(push, on)
 
 unsigned char baudrate = 0;
-unsigned char data_baudrate = SER_BAUD_19200;
+unsigned char data_baudrate = SER_BAUD_115200;
 unsigned char printer_baudrate = SER_BAUD_9600;
 unsigned char flow_control = SER_HS_HW;
 
-static char *baud_strs[] = {
-  " 2400",
-  " 4800",
-  " 9600",
-  "19200",
-#ifdef IIGS
-  "57600",
-#endif
-  NULL
-};
-
-static char baud_rates[] = {
-  SER_BAUD_2400,
-  SER_BAUD_4800,
-  SER_BAUD_9600,
-  SER_BAUD_19200,
-  SER_BAUD_57600
-};
   unsigned char open_slot = 0;
 #ifdef IIGS
+  static char *baud_strs[] = {
+    " 2400",
+    " 4800",
+    " 9600",
+    "19200",
+    "57600",
+    "115200",
+    NULL
+  };
+
+  static char baud_rates[] = {
+    SER_BAUD_2400,
+    SER_BAUD_4800,
+    SER_BAUD_9600,
+    SER_BAUD_19200,
+    SER_BAUD_57600,
+    SER_BAUD_115200
+  };
+
   unsigned char data_slot = 0;
   unsigned char printer_slot = 1;
   static char *slots_strs[] = {
@@ -68,8 +69,25 @@ static char baud_rates[] = {
     NULL
   };
   #define MAX_SLOT_IDX 1
-  #define MAX_SPEED_IDX 4
+  #define MAX_SPEED_IDX 5
 #else
+  static char *baud_strs[] = {
+    " 2400",
+    " 4800",
+    " 9600",
+    "19200",
+    "115200",
+    NULL
+  };
+
+  static char baud_rates[] = {
+    SER_BAUD_2400,
+    SER_BAUD_4800,
+    SER_BAUD_9600,
+    SER_BAUD_19200,
+    SER_BAUD_115200
+  };
+
   unsigned char data_slot = 2;
   unsigned char printer_slot = 1;
   static char *slots_strs[] = {
@@ -83,11 +101,11 @@ static char baud_rates[] = {
     NULL
   };
   #define MAX_SLOT_IDX 6
-  #define MAX_SPEED_IDX 3
+  #define MAX_SPEED_IDX 4
 #endif
 /* Setup */
 static struct ser_params default_params = {
-    SER_BAUD_19200,     /* Baudrate */
+    SER_BAUD_115200,    /* Baudrate */
     SER_BITS_8,         /* Number of data bits */
     SER_STOP_1,         /* Number of stop bits */
     SER_PAR_NONE,       /* Parity setting */
@@ -152,11 +170,12 @@ void simple_serial_configure(void) {
 #ifdef IIGS
   signed char slot_idx = 0;
   signed char printer_slot_idx = 1;
+  signed char speed_idx = 5;
 #else
   signed char slot_idx = 1;
   signed char printer_slot_idx = 0;
+  signed char speed_idx = 4;
 #endif
-  signed char speed_idx = 3;
   signed char printer_speed_idx = 2;
   signed char setting_offset = 0;
 
@@ -315,6 +334,8 @@ static char __fastcall__ simple_serial_open_slot(unsigned char my_slot) {
   err = ser_open (&default_params);
 
   if (err == 0) {
+    simple_serial_finish_setup();
+    simple_serial_set_irq(1);
     simple_serial_flush();
   }
 
@@ -392,12 +413,12 @@ extern char *readbuf;
 int bps = B19200;
 
 static char *opt_tty_path = NULL;
-static int opt_tty_speed = B19200;
+static int opt_tty_speed = B115200;
 static int opt_tty_hw_handshake = 1;
 
 unsigned char data_slot = 0;
 unsigned char printer_slot = 0;
-unsigned int data_baudrate = B19200;
+unsigned int data_baudrate = B115200;
 unsigned int printer_baudrate = B9600;
 
 static const char *get_cfg_path(void) {
@@ -470,7 +491,7 @@ static void simple_serial_write_defaults(void) {
     fp = stdout;
   }
   fprintf(fp, "tty: /dev/ttyUSB0\n"
-              "baudrate: 19200\n"
+              "baudrate: 115200\n"
               "hw_handshake: off\n"
               "\n"
               "#Alternatively, you can export environment vars:\n"

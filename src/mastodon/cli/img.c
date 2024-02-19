@@ -28,7 +28,6 @@
 #include "extended_conio.h"
 #include "clrzone.h"
 #include "file_select.h"
-#include "progress_bar.h"
 #include "scrollwindow.h"
 #include "hgr.h"
 #include "surl.h"
@@ -47,10 +46,8 @@ char monochrome = 1;
 
 #ifdef __APPLE2ENH__
   #define TEXTMODE VIDEOMODE_80COL
-  #define PROGRESS_STEPS 64
 #else
   #define TEXTMODE VIDEOMODE_40COL
-  #define PROGRESS_STEPS 32
 #endif
 #ifdef __CC65__
   #pragma rodata-name (push, "HGR")
@@ -123,25 +120,22 @@ static void img_display(media *m, char idx, char num_images) {
     gotoxy(0, 22);
     cputs("Loading image...");
 
-    /* Init bar before serial firehose */
-    progress_bar(0, 23, NUMCOLS, 0, HGR_LEN);
     simple_serial_putc(SURL_CMD_HGR);
     simple_serial_putc(monochrome);
 
+    simple_serial_putc(SURL_CLIENT_READY);
     if (simple_serial_getc() == SURL_ERROR_OK) {
-      simple_serial_read((char *)&len, 2);
+
+      surl_read_with_barrier((char *)&len, 2);
       len = ntohs(len);
 
       if (len == HGR_LEN) {
         int r = 0;
-        while (len > 0) {
-          simple_serial_read((char *)HGR_PAGE + r, HGR_LEN/PROGRESS_STEPS);
-          len -= HGR_LEN/PROGRESS_STEPS;
-          r+= HGR_LEN/PROGRESS_STEPS;
-          progress_bar(-1, -1, NUMCOLS, r, HGR_LEN);
-        }
-        clrzone(0, 22, NUMCOLS-1, 23);
+
         toggle_legend(0);
+        surl_read_with_barrier((char *)HGR_PAGE + r, HGR_LEN);
+
+        clrzone(0, 22, NUMCOLS-1, 23);
       } else {
         set_legend("Bad response, not an HGR file.", idx, num_images);
         toggle_legend(1);

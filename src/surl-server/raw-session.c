@@ -133,6 +133,7 @@ static void set_non_blocking(int sockfd) {
   fcntl(sockfd, F_SETFL, fcntl(sockfd, F_GETFL) | O_NONBLOCK);
 }
 
+extern int serial_delay;
 #define RAW_BUFSIZE 1024
 void surl_server_raw_session(char *remote_url) {
   unsigned char i, last_i, o;
@@ -143,6 +144,8 @@ void surl_server_raw_session(char *remote_url) {
   time_t last_traffic;
 
   printf("RAW: starting raw session.\n");
+
+  serial_delay = 600;
 
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
   if (sockfd < 0) {
@@ -237,5 +240,6 @@ cleanup:
     tcflush(sockfd, TCIOFLUSH);
     close(sockfd);
   }
+  serial_delay = 0;
   simple_serial_flush();
 }

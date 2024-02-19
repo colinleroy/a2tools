@@ -11,10 +11,10 @@
         .export         _simple_serial_set_parity
         .export         _simple_serial_set_flow_control
 
-        .ifdef SERIAL_115K_HACK
         .export         _simple_serial_finish_setup
+        .export         _simple_serial_set_irq
         .export         _simple_serial_read_no_irq
-        .endif
+        .export         _surl_read_with_barrier
 
         .include        "apple2.inc"
         .include        "ser-kernel.inc"
@@ -106,7 +106,6 @@ _simple_serial_set_flow_control:
         sta     _flow_control
         rts
 
-.ifdef SERIAL_115K_HACK
 _simple_serial_set_irq:
         tay
 
@@ -148,11 +147,11 @@ _simple_serial_read_no_irq:
         sta     ptr4            ; Store buffer
         stx     ptr4+1
 
-        ldy     #0              ; Assume full pages
-        sty     check_page_done+1
-
-        ldx     ptr3+1          ; Get full pages
+        ldx     ptr3+1          ; Get number of full pages
         beq     last_page
+
+        ldy     #0
+        sty     check_page_done+1
 
 do_page:
 acia_status_reg:
@@ -162,6 +161,7 @@ acia_status_reg:
 acia_data_reg:
         lda     $FFFF           ; We do!
         sta     (ptr4),y
+        iny
 check_page_done:
         cpy     #$FF            ; Patched
         bne     do_page
@@ -171,15 +171,28 @@ check_page_done:
         bne     do_page
 last_page:
         ldy     ptr3
-        beq     done
+        beq     done            ; Nothing to read
         sty     check_page_done+1
         ldy     #0
         beq     do_page
-
 done:
         rts
 
-.endif
+_surl_read_with_barrier:
+        pha
+        txa
+        pha
+        lda     #0
+        jsr     _simple_serial_set_irq
+
+        lda     #$2F            ; SURL_CLIENT_READY
+        jsr     _ser_put
+        pla
+        tax
+        pla
+        jsr     _simple_serial_read_no_irq
+        lda     #1
+        jmp     _simple_serial_set_irq
 
         .rodata
 

@@ -1,7 +1,7 @@
 #ifndef __surl_protocol_h
 #define __surl_protocol_h
 
-#define SURL_PROTOCOL_VERSION 0x07
+#define SURL_PROTOCOL_VERSION 0x08
 
 #define SURL_METHOD_ABORT     ('d'|0x80)
 #define SURL_METHOD_RAW       0x05
@@ -24,6 +24,8 @@
 #define SURL_ANSWER_PONG            0x25
 
 #define SURL_IS_ANSWER(x) ((x) >= SURL_ANSWER_WAIT && (x) <= SURL_ANSWER_PONG)
+
+#define SURL_CLIENT_READY           0x2F
 
 #define SURL_CMD_SEND      0x30
 #define SURL_CMD_HEADERS   0x31

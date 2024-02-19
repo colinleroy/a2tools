@@ -2,20 +2,20 @@
 ;
 
         .import         _baudrate, _open_slot, _flow_control
-        .import         popa, pusha, popax
+        .import         popa, pusha, popax, pushax
         .importzp       ptr3, ptr4
 
         .export         _simple_serial_set_speed
         .export         _simple_serial_dtr_onoff
         .export         _simple_serial_set_parity
         .export         _simple_serial_set_flow_control
+        .export         _simple_serial_set_irq
 
-        .ifdef SERIAL_115K_HACK
         .export         _simple_serial_finish_setup
         .export         _simple_serial_read_no_irq
-        .endif
+        .export         _surl_read_with_barrier
 
-        .import         _platform_msleep
+        .import         _simple_serial_read
 
         .include        "apple2.inc"
         .include        "ser-kernel.inc"
@@ -34,6 +34,9 @@ WR_TX_CTRL     = 5
 WR_BAUDL_CTRL  = 12
 WR_BAUDH_CTRL  = 13
 
+; FIXME does not handle 115200 bps yet. Not a problem as of now, as the
+; only current user of this is the Quicktake program, which doesn't do 115200.
+
 _simple_serial_set_speed:
         sta     _baudrate
         tay
@@ -49,6 +52,7 @@ _simple_serial_set_speed:
         sta     ZILOG_REG_B
         rts
 
+; Fixme: assumes 8 data bits, TX on, RTS on
 _simple_serial_dtr_onoff:
         cmp     #0
         beq     :+
@@ -75,11 +79,33 @@ _simple_serial_set_parity:
         sta     ZILOG_REG_B
         rts
 
+; Only before opening port
 _simple_serial_set_flow_control:
         sta     _flow_control
         rts
 
         .rodata
+
+; Unneeded
+_simple_serial_set_irq:
+        rts
+
+; Unneeded
+_simple_serial_finish_setup:
+        rts
+
+; Unneeded
+_simple_serial_read_no_irq:
+        jmp     _simple_serial_read
+
+_surl_read_with_barrier:
+        pha
+        phx
+        lda     #$2F            ; SURL_CLIENT_READY
+        jsr     _ser_put
+        plx
+        pla
+        jmp     _simple_serial_read
 
 BaudTable:                      ; Table used to translate RS232 baudrate param
                                 ; into control register value

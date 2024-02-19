@@ -34,6 +34,8 @@ int __fastcall__ surl_response_code(void);
 
 void __fastcall__ surl_read_response_header(void);
 
+void __fastcall__ surl_read_with_barrier(char *buffer, size_t nmemb);
+
 size_t __fastcall__ surl_receive_data(char *buffer, size_t max_len);
 size_t __fastcall__ surl_receive_headers(char *buffer, size_t max_len);
 
