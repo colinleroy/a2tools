@@ -32,7 +32,8 @@ void __fastcall__ surl_set_time(void) {
   surl_start_request(SURL_METHOD_GETTIME, "time://", NULL, 0);
   if (surl_response_ok()) {
     struct timespec now;
-    simple_serial_read((char *)&now.tv_sec, 4);
+
+    surl_read_with_barrier((char *)&now.tv_sec, 4);
     now.tv_sec = ntohl(now.tv_sec);
     now.tv_nsec = 0;
 #ifdef __CC65__

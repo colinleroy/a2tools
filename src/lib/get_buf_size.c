@@ -4,12 +4,6 @@
 unsigned int get_buf_size(void) {
 #ifdef __CC65__
   unsigned int avail = _heapmaxavail();
-  if (avail > 18000) {
-    return 16384;
-  }
-  if (avail > 9000) {
-    return 8192;
-  }
   if (avail > 5000) {
     return 4096;
   }

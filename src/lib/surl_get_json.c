@@ -47,6 +47,7 @@ int __fastcall__ surl_get_json(char *buffer, size_t len, char striphtml, const c
   simple_serial_puts(selector);
   simple_serial_putc('\n');
 
+  simple_serial_putc(SURL_CLIENT_READY);
   r = simple_serial_getc();
 
   if (r == SURL_ERROR_NOT_FOUND || r == SURL_ERROR_NOT_JSON) {
@@ -54,12 +55,12 @@ int __fastcall__ surl_get_json(char *buffer, size_t len, char striphtml, const c
     return -1;
   }
 
-  simple_serial_read((char *)&len, 2);
+  surl_read_with_barrier((char *)&len, 2);
 
   /* coverity[var_assign] */
   len = ntohs(len);
 
-  simple_serial_read(buffer, len);
+  surl_read_with_barrier(buffer, len);
 
   buffer[len] = '\0';
 

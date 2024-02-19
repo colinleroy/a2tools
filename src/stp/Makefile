@@ -7,10 +7,12 @@ debug_CFLAGS :=
 endif
 
 ifdef IIGS
+serial_hw_SOURCES := ../lib/serial_zilog.s
 iigs_CFLAGS := -DIIGS --asm-define IIGS
 suffix := -iigs
 upload_subdir := /iigs
 else
+serial_hw_SOURCES := ../lib/serial_acia.s
 iigs_FLAGS :=
 suffix :=
 upload_subdir :=
@@ -35,6 +37,7 @@ SOURCES := stp.c stp_cli.c stp_save.c stp_send_file.c stp_delete.c \
 	../lib/path_helper.c
 
 CL65SOURCES = ../lib/simple_serial_io.s \
+	$(serial_hw_SOURCES) \
  ../lib/dputc.s \
  ../lib/dputs.s \
  ../lib/scroll.s \

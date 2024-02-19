@@ -1,8 +1,10 @@
 ifdef IIGS
+serial_hw_SOURCES := ../lib/serial_zilog.s
 iigs_CFLAGS := -DIIGS --asm-define IIGS
 suffix := -iigs
 upload_subdir := /iigs
 else
+serial_hw_SOURCES := ../lib/serial_acia.s
 iigs_FLAGS :=
 suffix :=
 upload_subdir :=
@@ -11,7 +13,7 @@ endif
 PROGRAM=surl
 surl_SOURCES := surl-client.c ../lib/malloc0.c ../lib/simple_serial.c ../lib/cgets.c ../lib/scrollwindow.c ../lib/surl_core.c ../lib/surl_receive.c ../lib/path_helper.c
 GCCSOURCES := ../lib/strtrim.c ../lib/simple_serial_io.c
-CL65SOURCES := ../lib/simple_serial_io.s ../lib/fastirq$(suffix).s ../lib/extrazp.s ../lib/FVTABZ.s
+CL65SOURCES := ../lib/simple_serial_io.s $(serial_hw_SOURCES) ../lib/fastirq$(suffix).s ../lib/extrazp.s ../lib/FVTABZ.s
 DEPS := 
 
 CC65_TARGET = apple2enh

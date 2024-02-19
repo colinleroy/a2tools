@@ -47,7 +47,8 @@ size_t __fastcall__ surl_receive_data(char *buffer, size_t max_len) {
   r = htons(to_read);
   simple_serial_putc(SURL_CMD_SEND);
   simple_serial_write((char *)&r, 2);
-  simple_serial_read(buffer, to_read);
+
+  surl_read_with_barrier(buffer, to_read);
 
   buffer[to_read] = '\0';
   resp->cur_pos += to_read;
@@ -58,6 +59,7 @@ size_t __fastcall__ surl_receive_data(char *buffer, size_t max_len) {
 void surl_strip_html(char strip_level) {
   simple_serial_putc(SURL_CMD_STRIPHTML);
   simple_serial_putc(strip_level);
+
   surl_read_response_header();
 }
 
@@ -65,6 +67,7 @@ void surl_translit(char *charset) {
   simple_serial_putc(SURL_CMD_TRANSLIT);
   simple_serial_puts(charset);
   simple_serial_putc('\n');
+
   surl_read_response_header();
 }
 

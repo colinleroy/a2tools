@@ -41,18 +41,19 @@ int __fastcall__ surl_find_line(char *buffer, size_t max_len, char *search_str) 
   simple_serial_puts(search_str);
   simple_serial_putc('\n');
 
+  simple_serial_putc(SURL_CLIENT_READY);
   r = simple_serial_getc();
   if (r == SURL_ERROR_NOT_FOUND) {
     buffer[0] = '\0';
     return -1;
   }
 
-  simple_serial_read((char *)&res_len, 2);
+  surl_read_with_barrier((char *)&res_len, 2);
 
   /* coverity[tainted_return_value] */
   res_len = ntohs(res_len);
 
-  simple_serial_read(buffer, res_len);
+  surl_read_with_barrier(buffer, res_len);
 
   buffer[res_len] = '\0';
 

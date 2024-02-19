@@ -1,8 +1,10 @@
 ifdef IIGS
+serial_hw_SOURCES := ../lib/serial_zilog.s
 iigs_CFLAGS := -DIIGS --asm-define IIGS
 suffix := -iigs
 upload_subdir := /iigs
 else
+serial_hw_SOURCES := ../lib/serial_acia.s
 iigs_FLAGS :=
 suffix :=
 upload_subdir :=
@@ -13,6 +15,7 @@ SOURCES := telnet.c ../lib/simple_serial.c ../lib/simple_serial_printf.c \
 	../lib/surl_core.c ../lib/dgets.c ../lib/scrollwindow.c \
 	../lib/path_helper.c ../lib/malloc0.c
 CC65SOURCES := ../lib/simple_serial_io.s \
+	$(serial_hw_SOURCES) \
 	../lib/clrzone.s \
  	 ../lib/dputs.s \
  	 ../lib/dputc.s \

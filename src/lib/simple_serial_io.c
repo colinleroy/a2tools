@@ -144,6 +144,8 @@ int simple_serial_getc_immediate(void) {
 }
 
 /* Output */
+int n_sent_bytes;
+int serial_delay = 0;
 unsigned char __fastcall__ simple_serial_putc(char c) {
   int r;
   fd_set fds;
@@ -168,16 +170,12 @@ unsigned char __fastcall__ simple_serial_putc(char c) {
 
     flags &= ~O_NONBLOCK;
     fcntl(fileno(ttyfp), F_SETFL, flags);
+    tcdrain(fileno(ttyfp));
 
-    if (!flow_control_enabled) {
-      switch (bps) {
-        case B57600:
-          usleep(60);
-          break;
-        default:
-          usleep(600);
-      }
-    }
+    n_sent_bytes++;
+
+    /* Insert a delay if needed */
+    usleep(serial_delay);
   } else {
     r = EOF;
   }

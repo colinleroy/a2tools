@@ -1,8 +1,10 @@
 ifdef IIGS
+serial_hw_SOURCES := ../lib/serial_zilog.s
 iigs_CFLAGS := -DIIGS --asm-define IIGS
 suffix := -iigs
 upload_subdir := /iigs
 else
+serial_hw_SOURCES := ../lib/serial_acia.s
 iigs_FLAGS :=
 suffix :=
 upload_subdir :=
@@ -25,7 +27,8 @@ homectrl_SOURCES := main.c network.c \
 	../lib/surl_ping.c
 
 homectrl_GCCSOURCES = 	../lib/strtrim.c ../lib/clrzone.c ../lib/simple_serial_io.c
-homectrl_CL65SOURCES = ../lib/simple_serial_io.s\
+homectrl_CL65SOURCES = ../lib/simple_serial_io.s \
+	$(serial_hw_SOURCES) \
 	../lib/dputc.s\
 	../lib/dputs.s \
 	../lib/scroll.s \
@@ -42,7 +45,10 @@ grphview_SOURCES := graph-viewer.c \
 	../lib/path_helper.c
 
 grphview_GCCSOURCES := ../lib/strtrim.c ../lib/extended_conio.c ../lib/clrzone.c ../lib/tgi_sdl.c ../lib/tgi_fastline.c ../lib/simple_serial_io.c
-grphview_CL65SOURCES = ../lib/simple_serial_io.s ../lib/clrzone.s ../lib/fastirq$(suffix).s ../lib/extrazp.s ../lib/FVTABZ.s
+grphview_CL65SOURCES = \
+	../lib/simple_serial_io.s 	$(serial_hw_SOURCES) \
+	../lib/clrzone.s ../lib/fastirq$(suffix).s \
+	../lib/extrazp.s ../lib/FVTABZ.s
 
 DEPS := 
 

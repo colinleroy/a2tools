@@ -139,6 +139,15 @@ static void do_debug(char *file_line) {
   fflush(stdout);
 }
 
+extern int n_sent_bytes;
+#define IO_BARRIER(msg) do {                            \
+    printf("IO Barrier ("msg                            \
+           ") - sent %d bytes since last barrier.\n",   \
+           n_sent_bytes);                               \
+    n_sent_bytes = 0;                                   \
+    while (simple_serial_getc() != SURL_CLIENT_READY);  \
+} while (0)
+
 static void send_response_headers(curl_buffer *response) {
   uint16 code, hdr_size, ct_size;
   uint32 size;
@@ -147,10 +156,12 @@ static void send_response_headers(curl_buffer *response) {
   hdr_size = htons(response->headers_size);
   ct_size = htons(strlen(response->content_type) + 1);
 
+  IO_BARRIER("response headers");
   simple_serial_write((char *)&size, 4);
   simple_serial_write((char *)&code, 2);
   simple_serial_write((char *)&hdr_size, 2);
   simple_serial_write((char *)&ct_size, 2);
+  IO_BARRIER("response content-type");
   simple_serial_puts(response->content_type);
   simple_serial_putc('\0');
 }
@@ -402,6 +413,8 @@ abort:
         goto new_req;
       }
 
+      IO_BARRIER("Client command");
+
       /* Parameters are set, now answer */
       if (cmd == SURL_CMD_SEND) {
         /* SEND response format:
@@ -468,13 +481,18 @@ abort:
           l = htons(len);
 
           simple_serial_putc(SURL_ERROR_OK);
+          IO_BARRIER("FIND, pre-len");
+
           simple_serial_write((char *)&l, 2);
+          IO_BARRIER("FIND, pre-content");
+
           simple_serial_puts(found);
           simple_serial_putc('\n');
 
           free(found);
         } else {
           printf("not found\n");
+
           simple_serial_putc(SURL_ERROR_NOT_FOUND);
         }
 
@@ -540,7 +558,11 @@ abort:
 
             /* And send the result */
             l = htons(strlen(result));
+
+            IO_BARRIER("JSON, pre-len");
             simple_serial_write((char *)&l, 2);
+
+            IO_BARRIER("JSON, pre-content");
             simple_serial_puts(result);
             free(result);
           } else {
@@ -559,7 +581,11 @@ abort:
             printf("RESP: HGR %zu bytes\n", response->hgr_len);
             simple_serial_putc(SURL_ERROR_OK);
             l = htons(response->hgr_len);
+
+            IO_BARRIER("HGR, pre-len");
             simple_serial_write((char *)&l, 2);
+
+            IO_BARRIER("HGR, pre-content");
             simple_serial_write((char *)response->hgr_buf, response->hgr_len);
         } else {
           printf("RESP: HGR: No HGR data\n");
@@ -1130,10 +1156,12 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
   if (method == SURL_METHOD_GETTIME) {
     uint32_t now = htonl((uint32_t)time(NULL));
     simple_serial_putc(SURL_ANSWER_TIME);
+    IO_BARRIER("GETTIME");
     simple_serial_write((char *)&now, 4);
     return NULL;
   } else if (method == SURL_METHOD_PING) {
     simple_serial_putc(SURL_ANSWER_PONG);
+    IO_BARRIER("PONG");
     simple_serial_putc(SURL_PROTOCOL_VERSION);
     return NULL;
   } else if (method == SURL_METHOD_RAW) {
