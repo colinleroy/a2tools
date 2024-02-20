@@ -65,7 +65,6 @@ void simple_serial_flush(void) {
 
   /* flush */
   tcflush(fileno(ttyfp), TCIOFLUSH);
-  tcdrain(fileno(ttyfp));
 
   /* Reenable flow control */
   if (flow_control_enabled) {
