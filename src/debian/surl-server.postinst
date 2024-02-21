@@ -4,3 +4,6 @@ if ! getent passwd surl-server >/dev/null 2>&1; then
     adduser --system --no-create-home surl-server
     adduser surl-server dialout
 fi
+systemctl daemon-reload
+systemctl enable surl-server.service
+systemctl start surl-server.service
