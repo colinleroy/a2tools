@@ -58,7 +58,7 @@ sync
 
 Install the SD card into a Raspberry, connect Ethernet, connect USB/serial adapter and boot. Everything should be up and running if you have a DHCP server. 
 
-You can ssh into the pi with the default Raspbian login, pi/raspberry.
+You can ssh into the pi with the default Raspbian login, pi/raspberry. The Pi should get on the network as `surl-server.local`.
 
 If you already have a running Raspberry that you'd want to use for this, you can instead add the following source and packages:
 
