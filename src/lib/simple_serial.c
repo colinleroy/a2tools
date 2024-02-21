@@ -36,7 +36,7 @@
 #pragma static-locals(push, on)
 
 unsigned char baudrate = 0;
-unsigned char data_baudrate = SER_BAUD_57600;
+unsigned char data_baudrate = SER_BAUD_115200;
 unsigned char printer_baudrate = SER_BAUD_9600;
 unsigned char flow_control = SER_HS_HW;
 

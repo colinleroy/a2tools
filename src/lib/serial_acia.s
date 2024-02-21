@@ -13,7 +13,6 @@
 
         .export         _simple_serial_finish_setup
         .export         _simple_serial_set_irq
-        .export         _simple_serial_read_no_irq
         .export         _surl_read_with_barrier
 
         .include        "apple2.inc"
@@ -139,7 +138,7 @@ _simple_serial_finish_setup:
         sta     acia_data_reg+2
         rts
 
-_simple_serial_read_no_irq:
+simple_serial_read_no_irq:
         sta     ptr3            ; Store nmemb
         stx     ptr3+1
 
@@ -190,7 +189,7 @@ _surl_read_with_barrier:
         pla
         tax
         pla
-        jsr     _simple_serial_read_no_irq
+        jsr     simple_serial_read_no_irq
         lda     #1
         jmp     _simple_serial_set_irq
 
