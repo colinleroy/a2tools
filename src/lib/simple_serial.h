@@ -39,13 +39,7 @@ void __fastcall__ simple_serial_set_irq(unsigned char on);
 void __fastcall__ simple_serial_configure(void);
 void __fastcall__ simple_serial_finish_setup(void);
 
-#ifdef IIGS
 void __fastcall__ simple_serial_read(char *ptr, size_t nmemb);
-#define simple_serial_read_no_irq simple_serial_read
-#else
-void __fastcall__ simple_serial_read_no_irq(char *ptr, size_t nmemb);
-#define simple_serial_read simple_serial_read_no_irq
-#endif
 
 #define tty_speed_to_str(speed)        \
   ((speed == SER_BAUD_2400) ? "2400":  \
