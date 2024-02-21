@@ -18,12 +18,12 @@ debug_CFLAGS := $(debug_CFLAGS) -DDEBUG_FLOPPY=$(DEBUG_FLOPPY)
 endif
 
 ifdef IIGS
-serial_hw_SOURCES := ../lib/serial_zilog.s
+serial_hw_SOURCES := ../lib/serial/z8530/common.s ../lib/serial/z8530/control.s
 iigs_CFLAGS := -DIIGS --asm-define IIGS
 suffix := -iigs
 upload_subdir := /iigs
 else
-serial_hw_SOURCES := ../lib/serial_acia.s
+serial_hw_SOURCES := ../lib/serial/acia/common.s ../lib/serial/acia/control.s
 ifdef OLDII
 iigs_FLAGS :=
 suffix :=
@@ -38,50 +38,87 @@ endif
 endif
 
 slowtake_SOURCES := \
-	qt-menu.c qt-serial.c qt1x0-serial.c qt200-serial.c qt-edit-image.c \
+	qt-menu.c \
+	qt-serial.c \
+	qt1x0-serial.c \
+	qt200-serial.c \
+	qt-edit-image.c \
 	qt-state.c \
-	../lib/dgets.c ../lib/scrollwindow.c ../lib/path_helper.c \
-	../lib/simple_serial.c \
-	../lib/strtrim.c ../lib/malloc0.c \
-	../lib/file_select.c ../lib/progress_bar.c ../lib/hgr.c \
-	../lib/hgr_addrs.c ../lib/scrollwindow.c \
+	../lib/dgets.c \
+	../lib/scrollwindow.c \
+	../lib/path_helper.c \
+	../lib/serial/simple_serial.c \
+	../lib/strtrim.c \
+	../lib/malloc0.c \
+	../lib/file_select.c \
+	../lib/progress_bar.c \
+	../lib/hgr.c \
+	../lib/hgr_addrs.c \
+	../lib/scrollwindow.c \
 	$(debug_SOURCES)
 
 slowtake_CC65SOURCES := \
-	../lib/dputc.s ../lib/scroll.s ../lib/FVTABZ.s \
-	../lib/clrzone.s ../lib/fastirq$(suffix).s \
-	../lib/platform_sleep.s ../lib/extrazp.s \
+	../lib/dputc.s \
+	../lib/scroll.s \
+	../lib/FVTABZ.s \
+	../lib/clrzone.s \
+	../lib/fastirq$(suffix).s \
+	../lib/platform_sleep.s \
+	../lib/extrazp.s \
 	../lib/runtime_once_clean.s \
-	../lib/simple_serial_io.s $(serial_hw_SOURCES)
+	../lib/serial/simple_serial_io.s \
+	$(serial_hw_SOURCES)
 
-slowtake_GCCSOURCES := ../lib/tgi_sdl.c \
+slowtake_GCCSOURCES := \
+	../lib/tgi_sdl.c \
 	../lib/tgi_fastline.c \
-	../lib/simple_serial_io.c \
-	../lib/simple_serial_ext.c
+	../lib/serial/simple_serial_io.c \
+	../lib/serial/serial_control.c
 
 qtktconv_SOURCES := \
-	qt-conv.c ../lib/path_helper.c ../lib/progress_bar.c
+	qt-conv.c \
+	../lib/path_helper.c \
+	../lib/progress_bar.c
 
-qtktconv_CC65SOURCES := qtkt.s ../lib/extrazp.s
-qtktconv_GCCSOURCES := qtkt.c 
+qtktconv_CC65SOURCES := \
+	qtkt.s \
+	../lib/extrazp.s
+qtktconv_GCCSOURCES := \
+	qtkt.c 
 
 qtknconv_SOURCES := \
-	qt-conv.c qtkn.c  ../lib/path_helper.c ../lib/progress_bar.c
+	qt-conv.c \
+	qtkn.c \
+	../lib/path_helper.c \
+	../lib/progress_bar.c
 
-qtknconv_CC65SOURCES := ../lib/extrazp.s qtk_bithuff.s \
+qtknconv_CC65SOURCES := \
+	../lib/extrazp.s \
+	qtk_bithuff.s \
 	../lib/mult16x16x32.s \
 	../lib/approxdiv16x8.s \
 	../lib/square_table.s
 	
-qtknconv_GCCSOURCES := qtk_bithuff.c
+qtknconv_GCCSOURCES := \
+	qtk_bithuff.c
 
 jpegconv_SOURCES := \
-	qt-conv.c jpeg.c ../lib/path_helper.c ../lib/progress_bar.c
+	qt-conv.c \
+	jpeg.c \
+	../lib/path_helper.c \
+	../lib/progress_bar.c
 
-jpegconv_CC65SOURCES := jpeg_platform.s ../lib/extrazp.s
-jpegconv_GCCSOURCES := jpeg_platform.c
+jpegconv_CC65SOURCES := \
+	jpeg_platform.s \
+	../lib/extrazp.s
 
-GCCSOURCES := ../lib/extended_conio.c ../lib/clrzone.c
+jpegconv_GCCSOURCES := \
+	jpeg_platform.c
+
+GCCSOURCES := \
+	../lib/extended_conio.c \
+	../lib/clrzone.c
+
 DEPS :=
 
 CC65_TARGET = $(TARGET)

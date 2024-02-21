@@ -2,12 +2,12 @@ TARGET := apple2enh
 USE_LANGCARD := -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD
 
 ifdef IIGS
-serial_hw_SOURCES := ../lib/serial_zilog.s
+serial_hw_SOURCES := ../lib/serial/z8530/common.s ../lib/serial/z8530/no_irq.s ../lib/serial/z8530/control.s
 iigs_CFLAGS := -DIIGS --asm-define IIGS
 suffix := -iigs
 upload_subdir := /iigs
 else
-serial_hw_SOURCES := ../lib/serial_acia.s
+serial_hw_SOURCES := ../lib/serial/acia/common.s ../lib/serial/acia/no_irq.s ../lib/serial/acia/control.s
 ifdef OLDII
 iigs_FLAGS :=
 suffix :=
@@ -23,24 +23,37 @@ endif
 
 imgview_SOURCES := \
 	imageview.c \
-	../lib/simple_serial.c \
+	../lib/serial/simple_serial.c \
 	../lib/path_helper.c \
-	../lib/file_select.c ../lib/progress_bar.c ../lib/hgr.c \
-	../lib/hgr_addrs.c ../lib/scrollwindow.c \
+	../lib/file_select.c \
+	../lib/progress_bar.c \
+	../lib/hgr.c \
+	../lib/hgr_addrs.c \
+	../lib/scrollwindow.c \
 	../lib/malloc0.c
 
 imgview_CC65SOURCES := \
-	../lib/dputc.s ../lib/scroll.s ../lib/FVTABZ.s \
-	../lib/clrzone.s ../lib/fastirq$(suffix).s \
-	../lib/extrazp.s ../lib/simple_serial_io.s \
+	../lib/dputc.s \
+	../lib/scroll.s \
+	../lib/FVTABZ.s \
+	../lib/clrzone.s \
+	../lib/fastirq$(suffix).s \
+	../lib/extrazp.s \
+	../lib/serial/simple_serial_io.s \
 	$(serial_hw_SOURCES)
 
-imgview_GCCSOURCES := ../lib/tgi_sdl.c \
-	../lib/tgi_fastline.c ../lib/strtrim.c \
-	../lib/clrzone.c ../lib/simple_serial_io.c \
-	 ../lib/simple_serial_ext.c
+imgview_GCCSOURCES := \
+	../lib/tgi_sdl.c \
+	../lib/tgi_fastline.c \
+	../lib/strtrim.c \
+	../lib/clrzone.c \
+	../lib/serial/simple_serial_io.c \
+	../lib/serial/serial_control.c
 
-GCCSOURCES := ../lib/extended_conio.c ../lib/clrzone.c
+GCCSOURCES := \
+	../lib/extended_conio.c \
+	../lib/clrzone.c
+
 DEPS :=
 
 CC65_TARGET = $(TARGET)

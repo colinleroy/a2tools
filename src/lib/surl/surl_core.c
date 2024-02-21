@@ -48,6 +48,7 @@ char surl_connect_proxy(void) {
   proxy_opened = (r == 0);
 
   if (r == 0) {
+    simple_serial_setup_no_irq_regs();
     /* Break previous session if needed */
     simple_serial_flush();
     simple_serial_putc(SURL_METHOD_ABORT);

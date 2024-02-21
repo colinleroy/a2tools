@@ -241,6 +241,7 @@ static void select_sensor(void) {
   /* TODO */
   printf("exec GRPHVIEW %s", params);
   free(params);
+  exit(0);
 #endif
 }
 

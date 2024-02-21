@@ -3,8 +3,13 @@ PROGRAM=surl-server
 SOURCES := main.c raw-session.c \
 	helpers/char-convert.c helpers/jq-get.c helpers/html2txt.c helpers/hgr-convert.c \
 	../lib/strtrim.c ../lib/strsplit.c \
-	../lib/simple_serial.c ../lib/simple_serial_gets.c  ../lib/simple_serial_printf.c \
-	../lib/simple_serial_io.c ../lib/clrzone.c ../lib/extended_conio.c ../lib/malloc0.c 
+	../lib/serial/simple_serial.c \
+	../lib/serial/simple_serial_gets.c \
+	../lib/serial/simple_serial_printf.c \
+	../lib/serial/simple_serial_io.c \
+	../lib/clrzone.c \
+	../lib/extended_conio.c \
+	../lib/malloc0.c 
 
 hgrconv_SOURCES := hgr-convert.c helpers/hgr-convert.c
 

@@ -1,30 +1,45 @@
 ifdef IIGS
-serial_hw_SOURCES := ../lib/serial_zilog.s
+serial_hw_SOURCES := ../lib/serial/z8530/common.s ../lib/serial/z8530/no_irq.s
 iigs_CFLAGS := -DIIGS --asm-define IIGS
 suffix := -iigs
 upload_subdir := /iigs
 else
-serial_hw_SOURCES := ../lib/serial_acia.s
+serial_hw_SOURCES := ../lib/serial/acia/common.s ../lib/serial/acia/no_irq.s
 iigs_FLAGS :=
 suffix :=
 upload_subdir :=
 endif
 
 PROGRAM=telnet
-SOURCES := telnet.c ../lib/simple_serial.c ../lib/simple_serial_printf.c \
-	../lib/surl_core.c ../lib/dgets.c ../lib/scrollwindow.c \
-	../lib/path_helper.c ../lib/malloc0.c
-CC65SOURCES := ../lib/simple_serial_io.s \
+SOURCES := \
+	telnet.c \
+	../lib/serial/simple_serial.c \
+	../lib/serial/simple_serial_printf.c \
+	../lib/surl/surl_core.c \
+	../lib/dgets.c \
+	../lib/scrollwindow.c \
+	../lib/path_helper.c \
+	../lib/malloc0.c
+
+CC65SOURCES := \
+	../lib/surl/surl_read_with_barrier.s \
+	../lib/serial/serial_read_no_irq.s \
+	../lib/serial/simple_serial_io.s \
 	$(serial_hw_SOURCES) \
 	../lib/clrzone.s \
- 	 ../lib/dputs.s \
- 	 ../lib/dputc.s \
- 	 ../lib/scroll.s \
- 	 ../lib/FVTABZ.s \
- 	 ../lib/fastirq$(suffix).s \
- 	 ../lib/extrazp.s
+	../lib/dputs.s \
+	../lib/dputc.s \
+	../lib/scroll.s \
+	../lib/FVTABZ.s \
+	../lib/fastirq$(suffix).s \
+	../lib/extrazp.s
 
-GCCSOURCES := ../lib/strtrim.c ../lib/extended_conio.c ../lib/clrzone.c ../lib/simple_serial_io.c
+GCCSOURCES := \
+	../lib/strtrim.c \
+	../lib/extended_conio.c \
+	../lib/clrzone.c \
+	../lib/serial/simple_serial_io.c
+
 DEPS := 
 
 CC65_TARGET = apple2enh

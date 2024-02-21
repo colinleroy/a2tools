@@ -194,6 +194,8 @@ int main(int argc, char **argv)
     }
   }
 
+  printf("surl-server Protocol %d\n", SURL_PROTOCOL_VERSION);
+
   install_sig_handler();
 
   curl_global_init(CURL_GLOBAL_ALL);

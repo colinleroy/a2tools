@@ -1,10 +1,10 @@
 ifdef IIGS
-serial_hw_SOURCES := ../lib/serial_zilog.s
+serial_hw_SOURCES := ../lib/serial/z8530/common.s ../lib/serial/z8530/no_irq.s
 iigs_CFLAGS := -DIIGS --asm-define IIGS
 suffix := -iigs
 upload_subdir := /iigs
 else
-serial_hw_SOURCES := ../lib/serial_acia.s
+serial_hw_SOURCES := ../lib/serial/acia/common.s ../lib/serial/acia/no_irq.s
 iigs_FLAGS :=
 suffix :=
 upload_subdir :=
@@ -15,19 +15,21 @@ homectrl_SOURCES := main.c network.c \
 	switches.c sensors.c climate.c \
 	server_url.c \
 	../lib/malloc0.c \
-	../lib/simple_serial.c \
+	../lib/serial/simple_serial.c \
 	../lib/extended_conio.c \
 	../lib/dgets.c \
 	../lib/scrollwindow.c \
 	../lib/strsplit.c \
 	../lib/strellipsis.c \
-	../lib/surl_core.c \
-	../lib/surl_receive.c \
+	../lib/surl/surl_core.c \
+	../lib/surl/surl_receive.c \
 	../lib/path_helper.c \
-	../lib/surl_ping.c
-
-homectrl_GCCSOURCES = 	../lib/strtrim.c ../lib/clrzone.c ../lib/simple_serial_io.c
-homectrl_CL65SOURCES = ../lib/simple_serial_io.s \
+	../lib/surl/surl_ping.c
+	
+	homectrl_CL65SOURCES = \
+	../lib/surl/surl_read_with_barrier.s \
+	../lib/serial/serial_read_no_irq.s \
+	../lib/serial/simple_serial_io.s \
 	$(serial_hw_SOURCES) \
 	../lib/dputc.s\
 	../lib/dputs.s \
@@ -37,18 +39,35 @@ homectrl_CL65SOURCES = ../lib/simple_serial_io.s \
 	../lib/extrazp.s \
 	../lib/clrzone.s
 
+homectrl_GCCSOURCES = \
+	../lib/strtrim.c \
+	../lib/clrzone.c \
+	../lib/serial/simple_serial_io.c
+
 grphview_SOURCES := graph-viewer.c \
 	../lib/malloc0.c \
-	../lib/surl_core.c \
-	../lib/surl_receive_lines.c \
-	../lib/simple_serial.c \
+	../lib/surl/surl_core.c \
+	../lib/surl/surl_receive_lines.c \
+	../lib/serial/simple_serial.c \
 	../lib/path_helper.c
+	
+	grphview_CL65SOURCES = \
+	../lib/surl/surl_read_with_barrier.s \
+	../lib/serial/serial_read_no_irq.s \
+	../lib/serial/simple_serial_io.s \
+	$(serial_hw_SOURCES) \
+	../lib/clrzone.s \
+	../lib/fastirq$(suffix).s \
+	../lib/extrazp.s \
+	../lib/FVTABZ.s
 
-grphview_GCCSOURCES := ../lib/strtrim.c ../lib/extended_conio.c ../lib/clrzone.c ../lib/tgi_sdl.c ../lib/tgi_fastline.c ../lib/simple_serial_io.c
-grphview_CL65SOURCES = \
-	../lib/simple_serial_io.s 	$(serial_hw_SOURCES) \
-	../lib/clrzone.s ../lib/fastirq$(suffix).s \
-	../lib/extrazp.s ../lib/FVTABZ.s
+grphview_GCCSOURCES := \
+	../lib/strtrim.c \
+	../lib/extended_conio.c \
+	../lib/clrzone.c \
+	../lib/tgi_sdl.c \
+	../lib/tgi_fastline.c \
+	../lib/serial/simple_serial_io.c
 
 DEPS := 
 
@@ -63,13 +82,13 @@ GCCLDFLAGS = $(shell sdl-config --libs)
 all: homectrl.bin homectrl.x86_64 grphview.bin grphview.x86_64
 
 homectrl.bin: $(homectrl_SOURCES) $(homectrl_CL65SOURCES)
-	cl65 $(CFLAGS) $(homectrl_CLCFLAGS) -m homectrl.map -o $@ $^
+	cl65 -g --debug-info -Wl --dbgfile,"homectrl.dbg" $(CFLAGS) $(homectrl_CLCFLAGS) -m homectrl.map -o $@ $^
 
 homectrl.x86_64: $(homectrl_SOURCES) $(homectrl_GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@
 
 grphview.bin: $(grphview_SOURCES) $(grphview_CL65SOURCES)
-	cl65 $(CFLAGS) $(grphview_CLCFLAGS) -m grphview.map -o $@ $^
+	cl65 -g --debug-info -Wl --dbgfile,"grphview.dbg" $(CFLAGS) $(grphview_CLCFLAGS) -m grphview.map -o $@ $^
 
 grphview.x86_64: $(grphview_SOURCES) $(grphview_GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@

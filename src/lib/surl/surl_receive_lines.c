@@ -65,27 +65,23 @@ size_t __fastcall__ surl_receive_lines(char *buffer, size_t max_len) {
   simple_serial_putc(SURL_CMD_SEND);
   simple_serial_write((char *)&net_len, 2);
 
-  simple_serial_putc(SURL_CLIENT_READY);
-  while (to_read > 0) {
-    *w = simple_serial_getc();
+  surl_read_with_barrier(w, to_read);
 
-    if(*w == '\n') {
-      last_return = r;
-    }
-
-    ++w;
-    ++r;
-    --to_read;
+  if (strchr(buffer, '\n')) {
+    last_return = strrchr(buffer, '\n') - buffer;
   }
-  
+
   /* Change the character after the last \n in the buffer
    * to a NULL byte, so the caller gets a full line,
    * and remember it. We'll reuse it at next read.
    */
+
   if (last_return > 0 && last_return + 1 < max_len) {
     overwritten_offset = last_return + 1;
     overwritten_char = *(buffer + overwritten_offset);
     r = overwritten_offset;
+  } else {
+    r += to_read;
   }
 
   buffer[r] = '\0';

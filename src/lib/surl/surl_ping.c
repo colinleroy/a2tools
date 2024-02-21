@@ -47,11 +47,23 @@ try_again:
       simple_serial_flush();
       goto try_again;
     }
-    cprintf("\r\n\r\n%s. Press any key to try again or C to configure.\r\n",
-            resp->code == 504 ? "Timeout"
-              : (resp->code == 600 ? "Can not open serial port."
-                : (resp->code != SURL_PROTOCOL_VERSION ? "Wrong protocol version"
-                  : "Unknown error")));
+    cputs("\r\n\r\n");
+    switch(resp->code) {
+      case 504: 
+        cprintf("Timeout");
+        break;
+      case 600:
+        cprintf("Can not open serial port");
+        break;
+      default:
+        if (resp->code != SURL_PROTOCOL_VERSION) {
+          cprintf("surl-server Protocol %d required", SURL_PROTOCOL_VERSION);
+        } else {
+          cprintf("Unknown error %d", resp->code);
+        }
+    }
+    cprintf(". Press any key to try again or C to configure.\r\n");
+
     if (tolower(cgetc()) == 'c') {
       surl_disconnect_proxy();
       simple_serial_configure();

@@ -1,5 +1,5 @@
 ifdef SER_DEBUG
-ser_debug_SOURCES := ../lib/simple_serial_printf.c
+ser_debug_SOURCES := ../lib/serial/simple_serial_printf.c
 debug_CFLAGS := -DSER_DEBUG=1
 else
 ser_debug_SOURCES :=
@@ -10,12 +10,12 @@ TARGET := apple2enh
 USE_LANGCARD := -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD
 
 ifdef IIGS
-serial_hw_SOURCES := ../lib/serial_zilog.s
+serial_hw_SOURCES := ../lib/serial/z8530/common.s ../lib/serial/z8530/no_irq.s
 iigs_CFLAGS := -DIIGS --asm-define IIGS
 suffix := -iigs
 upload_subdir := /iigs
 else
-serial_hw_SOURCES := ../lib/serial_acia.s
+serial_hw_SOURCES := ../lib/serial/acia/common.s ../lib/serial/acia/no_irq.s
 ifdef OLDII
 iigs_FLAGS :=
 suffix :=
@@ -33,16 +33,18 @@ common_SOURCES := \
 	../lib/dgets.c \
 	../lib/path_helper.c \
 	../lib/scrollwindow.c \
-	../lib/simple_serial.c \
+	../lib/serial/simple_serial.c \
 	$(ser_debug_SOURCES) \
 	../lib/malloc0.c \
 	../lib/strsplit.c \
-	../lib/surl_core.c \
-	../lib/surl_get_json.c \
-	../lib/surl_send.c
+	../lib/surl/surl_core.c \
+	../lib/surl/surl_get_json.c \
+	../lib/surl/surl_send.c
 
 common_CC65SOURCES := \
-	../lib/simple_serial_io.s \
+	../lib/surl/surl_read_with_barrier.s \
+	../lib/serial/serial_read_no_irq.s \
+	../lib/serial/simple_serial_io.s \
 	$(serial_hw_SOURCES) \
 	../lib/clrzone.s \
 	../lib/dputs.s \
@@ -60,8 +62,8 @@ mastodon_SOURCES := \
 	cli/img.c \
 	api/media.c \
 	api/oauth.c \
-	../lib/surl_find_line.c \
-	../lib/surl_ping.c \
+	../lib/surl/surl_find_line.c \
+	../lib/surl/surl_ping.c \
 	../lib/file_select.c \
 	../lib/path_helper.c \
 	../lib/hgr.c
@@ -107,9 +109,19 @@ mastoconf_SOURCES := \
 	cli/logo.c \
 	../lib/scrollwindow.c \
 	../lib/malloc0.c
-mastoconf_CC65SOURCES := ../lib/FVTABZ.s ../lib/clrzone.s
+mastoconf_CC65SOURCES := \
+	../lib/FVTABZ.s \
+	../lib/clrzone.s
 
-GCCSOURCES := ../lib/extended_conio.c ../lib/clrzone.c ../lib/strtrim.c ../lib/tgi_sdl.c ../lib/tgi_fastline.c ../lib/simple_serial.c ../lib/simple_serial_io.c
+GCCSOURCES := \
+	../lib/extended_conio.c \
+	../lib/clrzone.c \
+	../lib/strtrim.c \
+	../lib/tgi_sdl.c \
+	../lib/tgi_fastline.c \
+	../lib/serial/simple_serial.c \
+	../lib/serial/simple_serial_io.c
+
 DEPS :=
 
 CC65_TARGET = $(TARGET)

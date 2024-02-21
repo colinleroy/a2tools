@@ -1,5 +1,5 @@
 ifdef SER_DEBUG
-ser_debug_SOURCES := ../lib/simple_serial_printf.c
+ser_debug_SOURCES := ../lib/serial/simple_serial_printf.c
 debug_CFLAGS := -DSER_DEBUG=1
 else
 ser_debug_SOURCES :=
@@ -7,12 +7,12 @@ debug_CFLAGS :=
 endif
 
 ifdef IIGS
-serial_hw_SOURCES := ../lib/serial_zilog.s
+serial_hw_SOURCES := ../lib/serial/z8530/common.s ../lib/serial/z8530/no_irq.s
 iigs_CFLAGS := -DIIGS --asm-define IIGS
 suffix := -iigs
 upload_subdir := /iigs
 else
-serial_hw_SOURCES := ../lib/serial_acia.s
+serial_hw_SOURCES := ../lib/serial/acia/common.s ../lib/serial/acia/no_irq.s
 iigs_FLAGS :=
 suffix :=
 upload_subdir :=
@@ -21,22 +21,25 @@ endif
 PROGRAM=stp
 SOURCES := stp.c stp_cli.c stp_save.c stp_send_file.c stp_delete.c \
 	../lib/malloc0.c \
-	../lib/simple_serial.c \
+	../lib/serial/simple_serial.c \
 	$(ser_debug_SOURCES) \
 	../lib/get_buf_size.c \
 	../lib/progress_bar.c \
 	../lib/strsplit.c \
 	../lib/dgets.c \
 	../lib/scrollwindow.c \
-	../lib/surl_core.c \
-	../lib/surl_receive.c \
-	../lib/surl_send.c \
-	../lib/surl_set_time.c \
-	../lib/surl_ping.c \
+	../lib/surl/surl_core.c \
+	../lib/surl/surl_receive.c \
+	../lib/surl/surl_send.c \
+	../lib/surl/surl_set_time.c \
+	../lib/surl/surl_ping.c \
 	../lib/file_select.c \
 	../lib/path_helper.c
 
-CL65SOURCES = ../lib/simple_serial_io.s \
+CL65SOURCES = \
+	../lib/surl/surl_read_with_barrier.s \
+	../lib/serial/serial_read_no_irq.s \
+	../lib/serial/simple_serial_io.s \
 	$(serial_hw_SOURCES) \
  ../lib/dputc.s \
  ../lib/dputs.s \
@@ -47,7 +50,11 @@ CL65SOURCES = ../lib/simple_serial_io.s \
  ../lib/extrazp.s \
  ../lib/clrzone.s
 
-GCC_SOURCES = ../lib/strtrim.c ../lib/extended_conio.c ../lib/clrzone.c ../lib/simple_serial_io.c
+GCC_SOURCES = \
+	../lib/strtrim.c \
+	../lib/extended_conio.c \
+	../lib/clrzone.c \
+	../lib/serial/simple_serial_io.c
 
 DEPS := 
 
