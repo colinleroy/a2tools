@@ -169,7 +169,11 @@ unsigned char __fastcall__ simple_serial_putc(char c) {
 
     flags &= ~O_NONBLOCK;
     fcntl(fileno(ttyfp), F_SETFL, flags);
-    tcdrain(fileno(ttyfp));
+
+    if (serial_delay) {
+      /* Don't let the kernel buffer bytes */
+      tcdrain(fileno(ttyfp));
+    }
 
     n_sent_bytes++;
 

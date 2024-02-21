@@ -334,7 +334,6 @@ static char __fastcall__ simple_serial_open_slot(unsigned char my_slot) {
   err = ser_open (&default_params);
 
   if (err == 0) {
-    simple_serial_finish_setup();
     simple_serial_set_irq(1);
     simple_serial_flush();
   }

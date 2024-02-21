@@ -499,6 +499,11 @@ err_usage:
       goto err_usage;
     }
   }
+  if (do_callgrind && found_start_addr) {
+    fprintf(stderr, "-p and -nx flags are incompatible:\n"
+            "Profiling has to start from start address.\n");
+    exit(1);
+  }
 
   if (!loaded_something) {
     goto err_usage;
