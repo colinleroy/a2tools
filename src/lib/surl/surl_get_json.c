@@ -47,7 +47,6 @@ int __fastcall__ surl_get_json(char *buffer, size_t len, char striphtml, const c
   simple_serial_puts(selector);
   simple_serial_putc('\n');
 
-  simple_serial_putc(SURL_CLIENT_READY);
   r = simple_serial_getc();
 
   if (r == SURL_ERROR_NOT_FOUND || r == SURL_ERROR_NOT_JSON) {

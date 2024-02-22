@@ -89,7 +89,7 @@ handle_ram_irq:
         sta     _a_backup       ; Save A
         pla                     ; Check for BRK
         pha
-        and     #%0010000       ; Check bit 4 (BRK flag)
+        and     #%00010000       ; Check bit 4 (BRK flag)
         bne     do_brk
 
         ; It's an IRQ

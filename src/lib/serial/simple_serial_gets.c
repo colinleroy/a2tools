@@ -30,6 +30,10 @@
   extern FILE *ttyfp;
 #endif
 
+#ifdef __CC65__
+#error Function too slow to use as is
+#endif
+
 char * __fastcall__ simple_serial_gets(char *out, size_t size) {
   static char c;
   static char *cur;
