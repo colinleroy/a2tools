@@ -123,7 +123,6 @@ static void img_display(media *m, char idx, char num_images) {
     simple_serial_putc(SURL_CMD_HGR);
     simple_serial_putc(monochrome);
 
-    simple_serial_putc(SURL_CLIENT_READY);
     if (simple_serial_getc() == SURL_ERROR_OK) {
 
       surl_read_with_barrier((char *)&len, 2);

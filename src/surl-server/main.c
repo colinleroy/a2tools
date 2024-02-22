@@ -415,8 +415,6 @@ abort:
         goto new_req;
       }
 
-      IO_BARRIER("Client command");
-
       /* Parameters are set, now answer */
       if (cmd == SURL_CMD_SEND) {
         /* SEND response format:
@@ -425,6 +423,9 @@ abort:
          * Warning: It is up to the client to make sure they don't
          * read more bytes than available, using surl_response->size.
          */
+
+         IO_BARRIER("Client command");
+
         if (!sending_body) {
           /* Switching from HEADERS resets the cursor */
           sent = 0;
@@ -443,6 +444,9 @@ abort:
          * Warning: It is up to the client to make sure they don't
          * read more bytes than available, using surl_response->headers_size.
          */
+
+         IO_BARRIER("Client command");
+
         if (!sending_headers) {
           /* Switching from BODY resets the cursor */
           sent = 0;
@@ -597,6 +601,7 @@ abort:
         char *tmp = html2text(response->buffer,
                       striphtml == SURL_HTMLSTRIP_FULL ? 
                         HTML2TEXT_EXCLUDE_LINKS : HTML2TEXT_DISPLAY_LINKS);
+
         if (tmp) {
           free(response->buffer);
           response->buffer = tmp;
@@ -609,6 +614,7 @@ abort:
         if (translit[0] != '\0') {
           tmp = do_charset_convert(response->buffer, OUTGOING, translit, 0, &l);
         }
+
         if (tmp) {
           free(response->buffer);
           response->buffer = tmp;
