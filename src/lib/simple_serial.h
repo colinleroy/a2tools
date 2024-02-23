@@ -39,7 +39,7 @@ void __fastcall__ simple_serial_set_irq(unsigned char on);
 void __fastcall__ simple_serial_configure(void);
 void __fastcall__ simple_serial_setup_no_irq_regs(void);
 unsigned char __fastcall__ serial_read_byte_no_irq(void);
-
+void __fastcall__ serial_putc_direct(unsigned char c);
 void __fastcall__ simple_serial_read(char *ptr, size_t nmemb);
 
 #define tty_speed_to_str(speed)        \
@@ -49,7 +49,8 @@ void __fastcall__ simple_serial_read(char *ptr, size_t nmemb);
    (speed == SER_BAUD_19200)? "19200": \
    (speed == SER_BAUD_57600)? "57600":"115200")
 
-#define simple_serial_putc ser_put
+#define simple_serial_putc serial_putc_direct
+
 #else
 int simple_serial_open(void);
 int simple_serial_open_printer(void);

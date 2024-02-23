@@ -18,12 +18,12 @@ debug_CFLAGS := $(debug_CFLAGS) -DDEBUG_FLOPPY=$(DEBUG_FLOPPY)
 endif
 
 ifdef IIGS
-serial_hw_SOURCES := ../lib/serial/z8530/common.s ../lib/serial/z8530/control.s
+serial_hw_SOURCES := ../lib/serial/z8530/common.s ../lib/serial/z8530/control.s ../lib/serial/z8530/no_irq.s
 iigs_CFLAGS := -DIIGS --asm-define IIGS
 suffix := -iigs
 upload_subdir := /iigs
 else
-serial_hw_SOURCES := ../lib/serial/acia/common.s ../lib/serial/acia/control.s
+serial_hw_SOURCES := ../lib/serial/acia/common.s ../lib/serial/acia/control.s ../lib/serial/acia/no_irq.s
 ifdef OLDII
 iigs_FLAGS :=
 suffix :=

@@ -1,9 +1,11 @@
 ; Colin Leroy-Mira <colin@colino.net>, 2023
 ;
 
+        .importzp       tmp2
         .import         _open_slot
         .import         _simple_serial_read
 
+        .export         _serial_putc_direct
         .export         _serial_read_byte_no_irq
         .export         _simple_serial_setup_no_irq_regs
 
@@ -48,4 +50,12 @@ zilog_status_reg:
         beq     :-
 zilog_data_reg:
         lda     $FFFF           ; We do!
+        rts
+
+_serial_putc_direct:
+        sta     tmp2
+:       lda     tmp2
+        jsr     _ser_put
+        cmp     #SER_ERR_OVERFLOW
+        beq     :-
         rts
