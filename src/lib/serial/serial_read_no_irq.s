@@ -17,7 +17,8 @@
         .segment "LOWCODE"
         .endif
 
-_simple_serial_read_no_irq:
+_simple_serial_read_no_irq:     ; Average of 17.2 cycles per byte on 8kB transfers
+        sei
         sta     ptr3            ; Store nmemb
         stx     ptr3+1
 
@@ -25,29 +26,30 @@ _simple_serial_read_no_irq:
         sta     ptr4            ; Store buffer
         stx     ptr4+1
 
+        ldy     #0              ; Inner loop counter
+
         ldx     ptr3+1          ; Get number of full pages
-        beq     last_page
+        beq     last_page       ; Only a partial one
 
-        ldy     #0
-        sty     check_page_done+1
-
-do_page:
-        jsr     _serial_read_byte_no_irq
+:       jsr     _serial_read_byte_no_irq
         sta     (ptr4),y
-
         iny
-check_page_done:
-        cpy     #$FF            ; Patched
-        bne     do_page
+        bne     :-              ; next byte
+
         inc     ptr4+1
         dex
-        bmi     done
-        bne     do_page
+        bne     :-              ; next page
+
 last_page:
-        ldy     ptr3
+        ldx     ptr3            ; Y safely 0 there
         beq     done            ; Nothing to read
-        sty     check_page_done+1
-        ldy     #0
-        beq     do_page
+
+:       jsr     _serial_read_byte_no_irq
+        sta     (ptr4),y
+        iny
+        dex
+        bne     :-
+
 done:
+        cli
         rts

@@ -10,7 +10,7 @@
         .export         _simple_serial_flush
 
         .import         _simple_serial_getc_with_timeout
-        .import         _ser_get, _ser_put, _strlen
+        .import         _ser_get, _serial_putc_direct, _strlen
         .import         pushax, popax
         .importzp       tmp2, ptr3, ptr4
         .include        "apple2.inc"
@@ -78,9 +78,7 @@ _simple_serial_write:
 write_again:
         ldy     #$00
         lda     (ptr4),y
-        jsr     _ser_put
-        cmp     #SER_ERR_OVERFLOW
-        beq     write_again
+        jsr     _serial_putc_direct
 
         inc     ptr4
         bne     :+

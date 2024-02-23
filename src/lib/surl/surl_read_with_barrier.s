@@ -1,7 +1,7 @@
 ; Colin Leroy-Mira <colin@colino.net>, 2023
 ;
 
-        .import         _ser_put
+        .import         _serial_putc_direct
         .import         _simple_serial_set_irq
         .import         _simple_serial_read_no_irq
 
@@ -28,7 +28,7 @@ _surl_read_with_barrier:
         lda     #0
         jsr     _simple_serial_set_irq
         lda     #$2F            ; SURL_CLIENT_READY
-        jsr     _ser_put
+        jsr     _serial_putc_direct
         .if (.cpu .bitand CPU_ISET_65C02)
         plx
         .else
