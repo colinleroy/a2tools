@@ -631,7 +631,6 @@ cleanup:
   return out_buf;
 }
 
-#if 0
 static void mono_dither_bayer(SDL_Surface* s) {
   Uint32 x, y;
 
@@ -659,7 +658,7 @@ static void mono_dither_bayer(SDL_Surface* s) {
       Uint16 val = in + in * map[y % 8][x % 8] / 63;
 
       // If >= 192 choose white, else choose black
-      if(val >= 192)
+      if(val >= 92)
         val = 255;
       else
         val = 0;
@@ -669,7 +668,6 @@ static void mono_dither_bayer(SDL_Surface* s) {
     }
   }
 }
-#endif
 
 static void mono_dither_burkes(SDL_Surface* s) {
   Uint32 x, y;
@@ -759,7 +757,7 @@ static int sdl_mono_hgr(SDL_Surface *src, unsigned char *hgr) {
   return 0x2000;
 }
 
-unsigned char *sdl_to_hgr(const char *filename, char monochrome, char save_preview, int *len) {
+unsigned char *sdl_to_hgr(const char *filename, char monochrome, char save_preview, int *len, char bayer_dither) {
   SDL_Surface *image, *resized;
 
   init_base_addrs();
@@ -778,7 +776,12 @@ unsigned char *sdl_to_hgr(const char *filename, char monochrome, char save_previ
 
   sdl_image_scale(image, resized, monochrome ? 0.952381 : 1.904762);
   if (monochrome) {
-    mono_dither_burkes(resized);
+
+    if (bayer_dither)
+      mono_dither_bayer(resized);
+    else
+      mono_dither_burkes(resized);
+
     *len = sdl_mono_hgr(resized, grbuf);
   } else {
     color_dither(resized);
