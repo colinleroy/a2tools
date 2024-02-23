@@ -21,7 +21,6 @@ iigs_FLAGS :=
 suffix :=
 upload_subdir :=
 TARGET := apple2
-USE_LANGCARD :=
 else
 iigs_FLAGS :=
 suffix :=
