@@ -8,7 +8,11 @@
 #include "strsplit.h"
 #include "api.h"
 
-#pragma code-name(push, "LC")
+#ifdef SURL_TO_LANGCARD
+  #pragma code-name (push, "LC")
+  #else
+  #pragma code-name (push, "LOWCODE")
+#endif
 
 void poll_free(poll *p) {
   char i;
@@ -65,7 +69,11 @@ void poll_fill(poll *p, char from_reblog) {
   }
 }
 
-#pragma code-name(push, "LC")
+#ifdef SURL_TO_LANGCARD
+  #pragma code-name (push, "LC")
+  #else
+  #pragma code-name (push, "LOWCODE")
+#endif
 
 void poll_update_vote(poll *p) {
   char params[128] = "A|choices\n[";
