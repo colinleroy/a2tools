@@ -128,6 +128,8 @@ instr_cycles instr_cost[] = {
   {"plx", {0,   4,   0,   0,    0,      0,      0,   0,     0,     0,     0}, 0},
   {"ply", {0,   4,   0,   0,    0,      0,      0,   0,     0,     0,     0}, 0},
 
+  {"kil", {0,   0,   0,   0,    0,      0,      0,   0,     0,     0,     0}, 0},
+
 /* {name, {imm, imp, acc, zero, zeroind,zeroxy, abs, absxy, zindx, zindy}} */
   {NULL,  {0,   0,   0,   0,    0,      0,      0,   0,     0,     0,     0}, 0}
 };
