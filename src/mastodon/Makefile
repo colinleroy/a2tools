@@ -69,6 +69,7 @@ mastodon_SOURCES := \
 
 mastodon_CC65SOURCES := \
 	$(common_CC65SOURCES) \
+	../lib/surl/surl_stream.s \
 
 mastocli_SOURCES := \
 	$(common_SOURCES) \

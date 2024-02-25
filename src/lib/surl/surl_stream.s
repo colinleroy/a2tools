@@ -4,6 +4,7 @@
         .import               _serial_read_byte_no_irq
         .import               _simple_serial_setup_no_irq_regs
         .import               _simple_serial_set_irq
+        .import               _simple_serial_flush
         .import               _serial_putc_direct
         .import               _cgetc
 
@@ -13,7 +14,7 @@ KBD     :=      $C000   ; Read keyboard
 KBDSTRB :=      $C010   ; Clear keyboard strobe
 
 MAX_OFFSET =126
-NUM_BASES  =(8192/MAX_OFFSET)
+NUM_BASES  =(8192/MAX_OFFSET)+1
 
 calc_bases:
         lda     #<(base_addr)
@@ -65,7 +66,15 @@ frame_done:
         jmp     handle_kbd
 :       lda     #$00
         jmp     _serial_putc_direct
-        
+
+cleanup:
+        lda     #$01
+        jsr     _simple_serial_set_irq
+        jsr     _simple_serial_flush
+        lda     #$00
+        tax
+        rts
+
 _surl_stream:
         lda     #$00
         sta     Stop
@@ -76,6 +85,7 @@ _surl_stream:
         jsr     _simple_serial_set_irq
 
         jsr     _serial_read_byte_no_irq
+        bit     $C052           ; Clear HGR mix
         cmp     #$27            ; SURL_ANSWER_STREAM_START
         beq     :+
         lda     #$FF
@@ -96,7 +106,10 @@ set_base:
         jsr     frame_done      ; Sync point, send $00 and check kbd
         lda     Stop
         beq     :+
-        rts
+        jmp     cleanup
+:       cmp     #((NUM_BASES+1)*2) ; End of stream?
+        bne     :+
+        jmp     cleanup
 :       lda     base_addr,y
         sta     store_dest+1
         iny
