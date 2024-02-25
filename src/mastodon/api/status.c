@@ -42,7 +42,7 @@ static __fastcall__ char atoc(const char *str) {
 #endif
 
 static const char *basic_selector   = ".reblog|(.created_at,.account.display_name,.reblog.id//\"-\",.spoiler_text//\"\","
-                                      "(.media_attachments|map(. | select(.type==\"image\"))|length),"
+                                      "(.media_attachments|map(. | select(.type==\"image\" or .type==\"video\"))|length),"
                                       ".replies_count,.reblogs_count,.favourites_count,"
                                       ".account.id,.account.acct,.account.username,.visibility,"
                                       ".reblogged,.favourited,.bookmarked,.poll.id)";

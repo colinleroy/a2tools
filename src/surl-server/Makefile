@@ -1,7 +1,11 @@
 prefix ?= /usr/local
 PROGRAM=surl-server
 SOURCES := main.c raw-session.c \
-	helpers/char-convert.c helpers/jq-get.c helpers/html2txt.c helpers/hgr-convert.c \
+	helpers/char-convert.c \
+	helpers/jq-get.c \
+	helpers/html2txt.c \
+	helpers/hgr-convert.c \
+	helpers/stream.c \
 	../lib/strtrim.c ../lib/strsplit.c \
 	../lib/serial/simple_serial.c \
 	../lib/serial/simple_serial_gets.c \

@@ -5,8 +5,12 @@
         .import               _simple_serial_setup_no_irq_regs
         .import               _simple_serial_set_irq
         .import               _serial_putc_direct
+        .import               _cgetc
 
         .export               _surl_stream
+
+KBD     :=      $C000   ; Read keyboard
+KBDSTRB :=      $C010   ; Clear keyboard strobe
 
 MAX_OFFSET =126
 NUM_BASES  =(8192/MAX_OFFSET)
@@ -40,15 +44,45 @@ next_base:
         bcc     next_base
         rts
 
+handle_kbd:
+        cmp    #' '
+        bne    :+
+        jsr    _serial_putc_direct ; Pause
+        jsr    _cgetc           ; Wait for play.
+        lda    #$00
+:       cmp    #$1B             ; Escape
+        bne    :+
+        sta    Stop
+:       jsr    _serial_putc_direct
+        ldy    #$00             ; Main loop expects Y 0 there
+        rts
 
+frame_done:
+        lda     KBD
+        bpl     :+
+        and     #$7F            ; Clear high bit
+        bit     KBDSTRB         ; Clear keyboard strobe
+        jmp     handle_kbd
+:       lda     #$00
+        jmp     _serial_putc_direct
+        
 _surl_stream:
+        lda     #$00
+        sta     Stop
         jsr     calc_bases
-
+        
         jsr     _simple_serial_setup_no_irq_regs
         lda     #$00
         jsr     _simple_serial_set_irq
 
-        ldx     #$00            ; Offset
+        jsr     _serial_read_byte_no_irq
+        cmp     #$27            ; SURL_ANSWER_STREAM_START
+        beq     :+
+        lda     #$FF
+        tax
+        rts
+
+:       ldx     #$00            ; Offset
         lda     #($00|$80)      ; Base
         jmp     loop
 
@@ -59,7 +93,10 @@ set_base:
         asl     a               ; shift for array index
         tay
         bne     :+
-        jsr     _serial_putc_direct ; Sync point
+        jsr     frame_done      ; Sync point, send $00 and check kbd
+        lda     Stop
+        beq     :+
+        rts
 :       lda     base_addr,y
         sta     store_dest+1
         iny
@@ -94,3 +131,4 @@ set_offset:
 
         .bss
 base_addr:      .res (NUM_BASES*2)
+Stop:           .res 1

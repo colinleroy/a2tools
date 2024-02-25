@@ -77,7 +77,7 @@ void show_help (list *l, status *root_status, notification *root_notif) {
       dputs(" Toggle CW : W     \r\n");
     }
     if (root_status->n_images > 0) {
-      dputs(" Images    : I     \r\n");
+      dputs(" Medias    : I     \r\n");
     }
     if (root_status->poll) {
       dputs(" Vote      : V     \r\n");

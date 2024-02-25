@@ -64,12 +64,18 @@ char monochrome = 1;
 #pragma GCC diagnostic pop
 #endif
 
-static void show_help(void) {
+static void show_help(unsigned char video) {
   clrzone(0, 17, NUMCOLS-1, 23);
-  cputs("Toggle legend: L\r\n"
-        "Save image   : S\r\n"
-        "Quit viewer  : Esc\r\n"
-        "Next image   : Any other key");
+  if (video) {
+    cputs("Play/Pause : Space\r\n"
+          "Fullscreen : F\r\n"
+          "Quit viewer: Esc");
+  } else {
+    cputs("Toggle legend: L\r\n"
+          "Save image   : S\r\n"
+          "Quit viewer  : Esc\r\n"
+          "Next image   : Any other key");
+  }
 #ifdef __APPLE2__
   gotoxy(0, 22);
   cprintf("%zuB free\r\n", _heapmemavail());
@@ -89,7 +95,7 @@ static void toggle_legend(char force) {
 #endif
 }
 
-static void set_legend(char *str, int idx, int num_images) {
+static void set_legend(char *str, unsigned char video, unsigned char idx, unsigned char num_images) {
   set_hscrollwindow(0, NUMCOLS);
   clrscr();
   cprintf("Image %d/%d: \r\n\r\n", idx + 1, num_images);
@@ -98,13 +104,28 @@ static void set_legend(char *str, int idx, int num_images) {
   else
     cputs("No description provided :-(");
 
-  show_help();
+  show_help(video);
+}
+
+static void video_stream(media *m, char idx, char num_images) {
+  unsigned char r;
+  surl_start_request(SURL_METHOD_STREAM, m->media_url[idx], NULL, 0);
+  r = simple_serial_getc();
+  if (r == SURL_ANSWER_WAIT) {
+    surl_stream();
+  } else {
+    set_legend("Request failed.", 0, idx, num_images);
+    toggle_legend(1);
+  }
 }
 
 static void img_display(media *m, char idx, char num_images) {
   size_t len;
 
-
+  if (!strcmp(m->media_type[idx], "video")) {
+    video_stream(m, idx, num_images);
+    return;
+  }
   surl_start_request(SURL_METHOD_GET, m->media_url[idx], NULL, 0);
 
   if (surl_response_ok()) {
@@ -136,15 +157,15 @@ static void img_display(media *m, char idx, char num_images) {
 
         clrzone(0, 22, NUMCOLS-1, 23);
       } else {
-        set_legend("Bad response, not an HGR file.", idx, num_images);
+        set_legend("Bad response, not an HGR file.", 0, idx, num_images);
         toggle_legend(1);
       }
     } else {
-      set_legend("Request error.", idx, num_images);
+      set_legend("Request error.", 0, idx, num_images);
       toggle_legend(1);
     }
   } else {
-    set_legend("Request failed.", idx, num_images);
+    set_legend("Request failed.", 0, idx, num_images);
     toggle_legend(1);
   }
 }
@@ -223,7 +244,7 @@ int img_main(int argc, char **argv) {
   gotoxy(0, 2);
   cputs("Loading medias...\r\n\r\n");
 
-  show_help();
+  show_help(0);
 
   if (type[0] == 's') {
     m = api_get_status_media(id);
@@ -241,7 +262,7 @@ int img_main(int argc, char **argv) {
 
   i = 0;
   while (1) {
-    set_legend(m->media_alt_text[i], i, m->n_media);
+    set_legend(m->media_alt_text[i], m->media_type[i][0] == 'v', i, m->n_media);
     img_display(m, i, m->n_media);
 getc_again:
     c = cgetc();
@@ -253,7 +274,7 @@ getc_again:
         goto getc_again;
       case 's':
         save_image();
-        set_legend(m->media_alt_text[i], i, m->n_media);
+        set_legend(m->media_alt_text[i], m->media_type[i][0] == 'v', i, m->n_media);
         goto getc_again;
         break;
       default:
