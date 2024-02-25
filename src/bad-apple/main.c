@@ -2,13 +2,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <time.h>
 #include "simple_serial.h"
 #include "extended_conio.h"
 
 #define FRAMES_DIR "frames/"
 
 #define MAX_OFFSET 126
-#define MAX_REPS 12
+#define MIN_REPS 3
+#define MAX_REPS 10
 
 #if 0
   #define DEBUG printf
@@ -25,7 +27,8 @@ extern int serial_delay;
 
 static void send(unsigned char b) {
   bytes_sent++;
-  if (do_send) simple_serial_putc(b);
+  if (do_send)
+    simple_serial_putc(b);
 }
 
 static void send_base(unsigned char b) {
@@ -67,7 +70,7 @@ static void send_byte(unsigned char b) {
 }
 
 static void flush_ident(int ident_vals, int last_val) {
-  if (ident_vals > 3) {
+  if (ident_vals > MIN_REPS) {
     send_num_reps(ident_vals);
     send_byte(last_val);
   } else {
@@ -80,12 +83,15 @@ static void flush_ident(int ident_vals, int last_val) {
 
 int main(int argc, char *argv[]) {
   int i, j, diffs;
-  int last_base, last_diff;
+  int last_diff;
   int last_val, ident_vals;
   int total = 0, min = 0xFFFF, max = 0;
   FILE *fp1 = NULL, *fp2 = NULL;
   char filename1[FILENAME_MAX], filename2[FILENAME_MAX];
   unsigned char buf1[8192], buf2[8192];
+  // time_t last_time;
+  // time_t now;
+  // int fps = 0;
 
   simple_serial_open();
 
@@ -97,7 +103,7 @@ int main(int argc, char *argv[]) {
   send_offset(offset);
   for(cur_base = 0; cur_base < 8192/MAX_OFFSET; cur_base++) {
     send_base(cur_base);
-    while (offset < MAX_OFFSET) {
+    while (1) {
       flush_ident(MAX_REPS, 0);
       offset += MAX_REPS;
       if (offset >= MAX_OFFSET) {
@@ -109,10 +115,12 @@ int main(int argc, char *argv[]) {
       }
     }
   }
+  /* clear finished */
+  send_base(cur_base);
 
-  i = 40;
+  i = 12;
   memset(buf1, 0, 8192);
-  last_base = 0xFF;
+
 next_file:
   i++;
   sprintf(filename2, FRAMES_DIR"out-%05d.jpg.hgr", i);
@@ -133,20 +141,23 @@ next_file:
   cur_base = 0;
   ident_vals = 0;
 
-  last_base = 0xFF;
+  /* Sync point - force a switch to base 0 */
+  send_offset(0);
+  send_base(0);
+  printf("sync point\n");
+  simple_serial_getc();
 
   last_val = -1;
   for (j = 0; j < 8192; j++) {
     if (buf1[j] != buf2[j]) {
       offset = j - (cur_base*MAX_OFFSET);
-      if (offset >= MAX_OFFSET || last_base > cur_base) {
+      if (offset >= MAX_OFFSET) {
         /* must flush ident */
         flush_ident(ident_vals, last_val);
         ident_vals = 0;
 
         /* we have to update base */
         cur_base = j / MAX_OFFSET;
-        last_base = cur_base;
         offset = j - (cur_base*MAX_OFFSET);
 
         send_offset(offset);
@@ -181,7 +192,7 @@ next_file:
   if (diffs > max) {
     max = diffs;
   }
-  printf("%s => %s : %d differences\n", filename1, filename2, diffs);
+  DEBUG("%s => %s : %d differences\n", filename1, filename2, diffs);
 
   // cgetc();
   /* First image has fp1 NULL */

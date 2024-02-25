@@ -50,6 +50,7 @@ _surl_stream:
 
         ldx     #$00            ; Offset
         lda     #($00|$80)      ; Base
+        jmp     loop
 
 set_base:
         cmp     #$FF            ; Is it a rep in reality ?
@@ -57,7 +58,9 @@ set_base:
         and     #%01111111      ; Get rid of the sign
         asl     a               ; shift for array index
         tay
-        lda     base_addr,y
+        bne     :+
+        jsr     _serial_putc_direct ; Sync point
+:       lda     base_addr,y
         sta     store_dest+1
         iny
         lda     base_addr,y
