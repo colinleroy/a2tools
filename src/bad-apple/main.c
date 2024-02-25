@@ -2,16 +2,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <time.h>
+#include <sys/time.h>
 #include "simple_serial.h"
 #include "extended_conio.h"
 
 #define FRAMES_DIR "frames/"
 
 #define MAX_OFFSET 126
-#define MIN_REPS 3
-#define MAX_REPS 10
-
+#define MIN_REPS   3
+#define MAX_REPS   10
+#define FPS        25
 #if 0
   #define DEBUG printf
 #else
@@ -81,6 +81,43 @@ static void flush_ident(int ident_vals, int last_val) {
   }
 }
 
+static long lateness = 0;
+/* Returns 1 if should skip frame */
+static int sync_fps(struct timeval *start, struct timeval *end) {
+  unsigned long secs      = (end->tv_sec - start->tv_sec)*1000000;
+  unsigned long microsecs = end->tv_usec - start->tv_usec;
+  unsigned long elapsed   = secs + microsecs;
+  long wait      = 1000000/FPS;
+
+  wait = wait-elapsed;
+  if (wait > 0) {
+    DEBUG("frame took %lu microsecs, late %ld\n", elapsed, lateness);
+    if (lateness > 0) {
+      if (wait < lateness) {
+        lateness -= wait;
+        wait = 0;
+      } else {
+        wait -= lateness;
+        lateness = 0;
+      }
+    }
+    if (wait == 0) {
+      DEBUG("catching up, now late %ld\n", lateness);
+    } else {
+      DEBUG("sleeping %ld\n", wait);
+      usleep(wait);
+    }
+  } else {
+    lateness += -wait;
+    DEBUG("frame took %lu microsecs, late %ld, not sleeping\n", elapsed, lateness);
+  }
+  if (lateness > (1000000/FPS)) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
 int main(int argc, char *argv[]) {
   int i, j, diffs;
   int last_diff;
@@ -89,14 +126,12 @@ int main(int argc, char *argv[]) {
   FILE *fp1 = NULL, *fp2 = NULL;
   char filename1[FILENAME_MAX], filename2[FILENAME_MAX];
   unsigned char buf1[8192], buf2[8192];
-  // time_t last_time;
-  // time_t now;
-  // int fps = 0;
+  struct timeval frame_start, frame_end;
 
   simple_serial_open();
 
-  printf("hit to start\n");
-  cgetc();
+  // printf("hit to start\n");
+  // cgetc();
 
   /* Force clear */
   offset = 0;
@@ -121,6 +156,8 @@ int main(int argc, char *argv[]) {
   i = 12;
   memset(buf1, 0, 8192);
 
+  gettimeofday(&frame_start, 0);
+
 next_file:
   i++;
   sprintf(filename2, FRAMES_DIR"out-%05d.jpg.hgr", i);
@@ -144,8 +181,16 @@ next_file:
   /* Sync point - force a switch to base 0 */
   send_offset(0);
   send_base(0);
-  printf("sync point\n");
+  DEBUG("sync point\n");
   simple_serial_getc();
+  gettimeofday(&frame_end, 0);
+  if (sync_fps(&frame_start, &frame_end)) {
+    gettimeofday(&frame_start, 0);
+    DEBUG("skipping frame\n");
+    fclose(fp2);
+    goto next_file;
+  }
+  gettimeofday(&frame_start, 0);
 
   last_val = -1;
   for (j = 0; j < 8192; j++) {
