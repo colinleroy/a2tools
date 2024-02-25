@@ -6,22 +6,13 @@
 #include <errno.h>
 #include <conio.h>
 #include <unistd.h>
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <sys/statvfs.h>
-#include <time.h>
-#include <accelerator.h>
-#include <joystick.h>
-#include "clrzone.h"
-#include "dputc.h"
-#include "scroll.h"
-#include "scrollwindow.h"
-#include "platform.h"
-
+#include "hgr.h"
+#include "simple_serial.h"
+#include "surl.h"
 
 int main(int argc, char *argv[]) {
-  dputc(0x07);
-  platform_msleep(200);
-  dputc(0x07);
-  cgetc();
+  memset(0x2000, 0, 0x2000);
+  init_hgr(1);
+  simple_serial_open();
+  surl_stream();
 }
