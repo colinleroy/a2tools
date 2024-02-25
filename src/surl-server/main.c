@@ -385,7 +385,7 @@ new_req:
           printf("RESP: converting to %s HGR\n", monochrome?"monochrome":"color");
           response->hgr_buf = sdl_to_hgr(
               dump_response_to_file(response->buffer, response->size),
-              monochrome, 0, &(response->hgr_len), 0);
+              monochrome, 0, &(response->hgr_len), 0, 0);
         } else if (cmd == SURL_CMD_STRIPHTML) {
           /* Strip the HTML in a response, and update size
            * Input: char: Strip level
