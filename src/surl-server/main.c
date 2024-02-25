@@ -33,6 +33,7 @@
 #include "jq-get.h"
 #include "html2txt.h"
 #include "hgr-convert.h"
+#include "stream.h"
 
 #define BUFSIZE 1024
 
@@ -80,6 +81,7 @@ static const char *surl_method_str(unsigned char method) {
     case SURL_METHOD_GETTIME:   return "GETTIME";
     case SURL_METHOD_PING:      return "PING";
     case SURL_METHOD_DEBUG:     return "DEBUG";
+    case SURL_METHOD_STREAM:     return "STREAM";
     default:                    return "[UNKNOWN]";
   }
 }
@@ -1175,6 +1177,10 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
   } else if (method == SURL_METHOD_RAW) {
     simple_serial_putc(SURL_ANSWER_RAW_START);
     surl_server_raw_session(url);
+    return NULL;
+  } else if (method == SURL_METHOD_STREAM) {
+    simple_serial_putc(SURL_ANSWER_WAIT);
+    surl_stream_url(url);
     return NULL;
   }
 

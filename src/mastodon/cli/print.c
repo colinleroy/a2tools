@@ -177,7 +177,7 @@ int print_status(status *s, char hide, char full) {
 #if NUMCOLS == 40
   cprintf("%d rep, %s%d boost, %s%d fav, %1d img %s",
 #else
-  cprintf("%d replies, %s%d boosts, %s%d favs, %1d images %s",
+  cprintf("%d replies, %s%d boosts, %s%d favs, %1d medias %s",
 #endif
         s->n_replies,
         (s->flags & REBLOGGED) ? "*":"", s->n_reblogs,

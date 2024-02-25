@@ -13,8 +13,9 @@
 #define SURL_METHOD_GETTIME   0x11
 #define SURL_METHOD_PING      0x12
 #define SURL_METHOD_DEBUG     0x13
+#define SURL_METHOD_STREAM    0x14
 
-#define SURL_IS_METHOD(x) ((x) == SURL_METHOD_ABORT || ((x) >= SURL_METHOD_RAW && (x) <= SURL_METHOD_DEBUG))
+#define SURL_IS_METHOD(x) ((x) == SURL_METHOD_ABORT || ((x) >= SURL_METHOD_RAW && (x) <= SURL_METHOD_STREAM))
 
 #define SURL_ANSWER_WAIT            0x20
 #define SURL_ANSWER_SEND_SIZE       0x21
@@ -22,8 +23,9 @@
 #define SURL_ANSWER_SEND_NUM_FIELDS 0x23
 #define SURL_ANSWER_TIME            0x24
 #define SURL_ANSWER_PONG            0x25
-
-#define SURL_IS_ANSWER(x) ((x) >= SURL_ANSWER_WAIT && (x) <= SURL_ANSWER_PONG)
+#define SURL_ANSWER_STREAM_ERROR    0x26
+#define SURL_ANSWER_STREAM_START    0x27
+#define SURL_IS_ANSWER(x) ((x) >= SURL_ANSWER_WAIT && (x) <= SURL_ANSWER_STREAM_START)
 
 #define SURL_CLIENT_READY           0x2F
 
