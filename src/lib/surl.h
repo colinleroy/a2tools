@@ -50,8 +50,11 @@ int __fastcall__ surl_send_data_params(uint32 total, int raw);
 int __fastcall__ surl_find_line(char *buffer, size_t max_len, char *search_str);
 int __fastcall__ surl_get_json(char *buffer, size_t max_len, char striphtml, const char *translit, const char *selector);
 
-void __fastcall__ surl_stream(void);
-
+#ifdef __CC65__
+int __fastcall__ surl_stream(void);
+#else
+#define surl_stream()
+#endif
 /* Helper to set the date */
 void __fastcall__ surl_set_time(void);
 

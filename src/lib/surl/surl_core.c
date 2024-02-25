@@ -109,6 +109,12 @@ const surl_response * __fastcall__ surl_start_request(const char method, char *u
   } else if (method == SURL_METHOD_RAW && i == SURL_ANSWER_RAW_START) {
     resp->code = 100;
     return resp;
+  } else if (method == SURL_METHOD_STREAM && i == SURL_ANSWER_WAIT) {
+    if (i == SURL_ANSWER_WAIT)
+      resp->code = 100;
+    else
+      resp->code = 508;
+    return resp;
   } else if (method == SURL_METHOD_GETTIME && i == SURL_ANSWER_TIME) {
     resp->code = 200;
     return resp;
@@ -152,9 +158,14 @@ void __fastcall__ surl_read_response_header(void) {
   surl_read_with_barrier(resp->content_type, resp->content_type_size);
 }
 
+#ifdef __CC65__
+#pragma code-name (pop)
+#endif
+
 char __fastcall__ surl_response_ok(void) {
   return resp != NULL && resp->code >= 200 && resp->code < 300;
 }
+
 
 int __fastcall__ surl_response_code(void) {
   return resp != NULL ? resp->code : 504;
@@ -165,10 +176,6 @@ void __fastcall__ surl_read_with_barrier(char *buffer, size_t nmemb) {
   simple_serial_putc(SURL_CLIENT_READY);
   simple_serial_read(buffer, nmemb);
 }
-#endif
-
-#ifdef __CC65__
-#pragma code-name (pop)
 #endif
 
 #ifdef SER_DEBUG

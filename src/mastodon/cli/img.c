@@ -64,18 +64,12 @@ char monochrome = 1;
 #pragma GCC diagnostic pop
 #endif
 
-static void show_help(unsigned char video) {
+static void show_help(void) {
   clrzone(0, 17, NUMCOLS-1, 23);
-  if (video) {
-    cputs("Play/Pause : Space\r\n"
-          "Fullscreen : F\r\n"
-          "Quit viewer: Esc");
-  } else {
-    cputs("Toggle legend: L\r\n"
-          "Save image   : S\r\n"
-          "Quit viewer  : Esc\r\n"
-          "Next image   : Any other key");
-  }
+  cputs("Toggle legend: L\r\n"
+        "Save image   : S\r\n"
+        "Quit viewer  : Esc\r\n"
+        "Next image   : Any other key");
 #ifdef __APPLE2__
   gotoxy(0, 22);
   cprintf("%zuB free\r\n", _heapmemavail());
@@ -104,19 +98,43 @@ static void set_legend(char *str, unsigned char video, unsigned char idx, unsign
   else
     cputs("No description provided :-(");
 
-  show_help(video);
+  if (!video)
+    show_help();
 }
 
+static void stream_msg(char *msg) {
+  hgr_mixon();
+  clrscr();
+  gotoxy(0, 20);
+  cputs(msg);
+}
 static void video_stream(media *m, char idx, char num_images) {
   unsigned char r;
+
+  toggle_legend(1);
   surl_start_request(SURL_METHOD_STREAM, m->media_url[idx], NULL, 0);
-  r = simple_serial_getc();
-  if (r == SURL_ANSWER_WAIT) {
-    surl_stream();
-  } else {
+
+#ifdef __CC65__
+  if (surl_response_code() != 100) {
+    goto stream_err;
+  }
+
+  memset((char *)HGR_PAGE, 0x00, HGR_LEN);
+#endif
+  toggle_legend(0);
+  stream_msg("Play/Pause : Space\r\n"
+             "Fullscreen : F\r\n"
+             "Quit viewer: Esc\r\n"
+             "Waiting for proxy transcoding...");
+#ifdef __CC65__
+  if (surl_stream() != 0) {
+stream_err:
     set_legend("Request failed.", 0, idx, num_images);
     toggle_legend(1);
+  } else {
+    stream_msg("\r\n\r\n\r\nStream done. Press Esc to exit or another key to restart.");
   }
+#endif
 }
 
 static void img_display(media *m, char idx, char num_images) {
@@ -244,7 +262,7 @@ int img_main(int argc, char **argv) {
   gotoxy(0, 2);
   cputs("Loading medias...\r\n\r\n");
 
-  show_help(0);
+  show_help();
 
   if (type[0] == 's') {
     m = api_get_status_media(id);
