@@ -4,6 +4,7 @@
         .import               _serial_read_byte_no_irq
         .import               _simple_serial_setup_no_irq_regs
         .import               _simple_serial_set_irq
+        .import               _serial_putc_direct
 
         .export               _surl_stream
 

@@ -44,6 +44,7 @@ install:
 	mkdir -p $(DESTDIR)/etc/surl-server
 	mkdir -p $(DESTDIR)/$(prefix)/bin
 	install $(PROGRAM) $(DESTDIR)/$(prefix)/bin/$(PROGRAM)
+	install hgr-convert $(DESTDIR)/$(prefix)/bin/hgr-convert
 	mkdir -p $(DESTDIR)/lib/systemd/system/
 	if [ "$(DESTDIR)" = "" ]; then \
 		id surl-server || (adduser --system --no-create-home surl-server && adduser surl-server dialout) \

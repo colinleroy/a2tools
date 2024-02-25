@@ -361,7 +361,7 @@ static void color_dither (SDL_Surface *src)
 }
 
 
-static void sdl_image_scale (SDL_Surface *src, SDL_Surface *dst, float asprat)
+static void sdl_image_scale (SDL_Surface *src, SDL_Surface *dst, int w, int h, float asprat)
 {
   int sw, sh, bx, sx, sy;
   Uint8 red, green, blue;
@@ -370,8 +370,8 @@ static void sdl_image_scale (SDL_Surface *src, SDL_Surface *dst, float asprat)
 
   srcw = (float)src->w;
   srch = (float)src->h;
-  dstw = (float)dst->w;
-  dsth = (float)dst->h;
+  dstw = (float)w;
+  dsth = (float)h;
 
 
   if (srch != dsth || srcw != dstw)
@@ -757,9 +757,9 @@ static int sdl_mono_hgr(SDL_Surface *src, unsigned char *hgr) {
   return 0x2000;
 }
 
-unsigned char *sdl_to_hgr(const char *filename, char monochrome, char save_preview, int *len, char bayer_dither) {
+unsigned char *sdl_to_hgr(const char *filename, char monochrome, char save_preview, int *len, char bayer_dither, char small) {
   SDL_Surface *image, *resized;
-
+  int dst_w, dst_h;
   init_base_addrs();
 
   /* Open the image file */
@@ -772,9 +772,15 @@ unsigned char *sdl_to_hgr(const char *filename, char monochrome, char save_previ
     return NULL;
   }
 
-  resized = SDL_CreateRGBSurface (0, monochrome ? 280 : 140, 192, 32, 0, 0, 0, 0);
+  dst_w = monochrome ? 280 : 140;
+  dst_h = 192;
+  resized = SDL_CreateRGBSurface (0, dst_w, dst_h, 32, 0, 0, 0, 0);
 
-  sdl_image_scale(image, resized, monochrome ? 0.952381 : 1.904762);
+  if (small) {
+    dst_w /= 2;
+    dst_h /= 2;
+  }
+  sdl_image_scale(image, resized, dst_w, dst_h, monochrome ? 0.952381 : 1.904762);
   if (monochrome) {
 
     if (bayer_dither)
