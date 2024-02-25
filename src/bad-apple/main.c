@@ -3,15 +3,19 @@
 #include <string.h>
 #include <errno.h>
 #include <sys/time.h>
+#include <sys/wait.h>
+#include <dirent.h>
+
 #include "simple_serial.h"
 #include "extended_conio.h"
-
-#define FRAMES_DIR "frames/"
+#include "hgr-convert.h"
 
 #define MAX_OFFSET 126
 #define MIN_REPS   3
 #define MAX_REPS   10
 #define FPS        25
+#define FPS_STR   "25"
+
 #if 0
   #define DEBUG printf
 #else
@@ -118,6 +122,90 @@ static int sync_fps(struct timeval *start, struct timeval *end) {
   }
 }
 
+char frames_directory[64] = "/tmp/frames-XXXXXX";
+
+static void generate_frames(char *uri) {
+  char *ffmpeg_args[7];
+  char frame_format[FILENAME_MAX];
+  pid_t pid;
+  
+  if (mkdtemp(frames_directory) == NULL) {
+    printf("Could not make temporary directory.\n");
+    exit(1);
+  }
+
+  sprintf(frame_format, "%s/out-%%06d.jpg", frames_directory);
+  ffmpeg_args[0] = "ffmpeg";
+  ffmpeg_args[1] = "-i";
+  ffmpeg_args[2] = uri;
+  ffmpeg_args[3] = "-vf";
+  ffmpeg_args[4] = "fps="FPS_STR",scale=128:-1";
+  ffmpeg_args[5] = frame_format;
+  ffmpeg_args[6] = NULL;
+  
+  printf("Dumping frames (%s %s %s %s %s %s)...\n",
+         ffmpeg_args[0], ffmpeg_args[1],
+         ffmpeg_args[2], ffmpeg_args[3],
+         ffmpeg_args[4], ffmpeg_args[5]);
+  
+  pid = fork();
+  if (pid == -1) {
+    printf("Could not fork\n");
+    exit(1);
+  }
+  if (pid == 0) {
+    int r = execvp(ffmpeg_args[0], ffmpeg_args);
+    exit(r);
+  } else {
+    int status;
+    wait(&status);
+    if (status != 0) {
+      printf("ffmpeg failed: %d\n", status);
+      exit(1);
+    }
+  }
+}
+
+static void generate_hgr_files(void) {
+  DIR *d = opendir(frames_directory);
+  struct dirent *file;
+  char full_name[FILENAME_MAX-5];
+  if (!d) {
+    printf("Could not open directory %s\n", frames_directory);
+    exit(1);
+  }
+  printf("Converting frames...\n");
+  while ((file = readdir(d)) != NULL) {
+    if (strstr(file->d_name, ".jpg")) {
+      size_t len;
+      unsigned char *hgr_buf;
+      char hgr_filename[FILENAME_MAX];
+      FILE *fp;
+      sprintf(full_name, "%s/%s", frames_directory, file->d_name);
+      if ((hgr_buf = sdl_to_hgr(full_name, 1, 0, &len, 1, 1)) == NULL) {
+        printf("Could not convert %s\n", full_name);
+        exit(1);
+      }
+      strcpy(hgr_filename, full_name);
+      strcpy(strstr(hgr_filename, ".jpg"), ".hgr");
+
+      if ((fp = fopen(hgr_filename, "wb")) == NULL) {
+        printf("Could not open %s\n", hgr_filename);
+        exit(1);
+      }
+      if (fwrite(hgr_buf, 1, len, fp) != len) {
+        printf("Could not write to %s\n", hgr_filename);
+        fclose(fp);
+        exit(1);
+      }
+      fclose(fp);
+      unlink(full_name);
+    }
+  }
+  printf("done.\n");
+  closedir(d);
+}
+
 int main(int argc, char *argv[]) {
   int i, j, diffs;
   int last_diff;
@@ -128,6 +216,12 @@ int main(int argc, char *argv[]) {
   unsigned char buf1[8192], buf2[8192];
   struct timeval frame_start, frame_end;
 
+  if (argc < 2) {
+    printf("Usage: %s [video URI]\n", argv[0]);
+    exit(1);
+  }
+  generate_frames(argv[1]);
+  generate_hgr_files();
   simple_serial_open();
 
   // printf("hit to start\n");
@@ -160,7 +254,7 @@ int main(int argc, char *argv[]) {
 
 next_file:
   i++;
-  sprintf(filename2, FRAMES_DIR"out-%05d.jpg.hgr", i);
+  sprintf(filename2, "%s/out-%06d.hgr", frames_directory, i);
   fp2 = fopen(filename2, "rb");
   if (!fp2) {
     printf("Can't open %s: %s\n", filename2, strerror(errno));
@@ -251,7 +345,8 @@ next_file:
   goto next_file;
 
 close_last:
-    fclose(fp1);
+    if (fp1)
+      fclose(fp1);
 
     printf("Max: %d, Min: %d, Average: %d\n", max, min, total / i);
     printf("Sent %lu bytes for %d frames: %lu avg\n", bytes_sent, i, bytes_sent/i);

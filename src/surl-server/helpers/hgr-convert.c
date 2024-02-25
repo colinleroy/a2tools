@@ -766,7 +766,7 @@ unsigned char *sdl_to_hgr(const char *filename, char monochrome, char save_previ
   image = IMG_Load(filename);
   if ( image == NULL) {
     if (!save_preview) {
-      printf("Couldn't load image: %s\n", SDL_GetError());
+      printf("Couldn't load image %s: %s\n", filename, SDL_GetError());
     }
     *len = 0;
     return NULL;
