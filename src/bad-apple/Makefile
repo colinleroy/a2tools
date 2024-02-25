@@ -6,9 +6,10 @@ SOURCES := main.c \
 	../lib/malloc0.c \
 	../lib/strtrim.c \
 	../lib/extended_conio.c \
-	../lib/clrzone.c
+	../lib/clrzone.c \
+	../surl-server/helpers/hgr-convert.c
 
-CFLAGS= -I ../lib -g -O0 -Wall -Wno-char-subscripts -Wno-deprecated-declarations -Werror -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
+CFLAGS= -I ../lib -I ../surl-server/helpers -g -O0 -Wall -Wno-char-subscripts -Wno-deprecated-declarations -Werror -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
 .PHONY: all clean
 all: $(PROGRAM)
 
