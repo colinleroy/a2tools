@@ -22,6 +22,12 @@
 #define HGR_SUFFIX   ".hgr"
 #define SMALL_SUFFIX ".sgr"
 
+#define DOUBLE_BUFFER
+#ifdef DOUBLE_BUFFER
+#define NUM_PAGES 2
+#else
+#define NUM_PAGES 1
+#endif
 
 #if 0
   #define DEBUG printf
@@ -255,13 +261,13 @@ int surl_stream_url(char *url) {
   int last_diff;
   int last_val, ident_vals;
   int total = 0, min = 0xFFFF, max = 0;
-  FILE *fp1 = NULL, *fp2 = NULL;
+  FILE *fp_prev[2] = {NULL, NULL}, *fp[2] = {NULL, NULL};
   char filename1[FILENAME_MAX], filename2[FILENAME_MAX];
-  unsigned char buf1[8192], buf2[8192];
+  unsigned char buf_prev[2][8192], buf[2][8192];
   struct timeval frame_start, frame_end;
   unsigned char small = 1;
-  int skipped = 0, duration;
-  int command;
+  int skipped = 0, skip_next = 0, duration;
+  int command, page = 0;
 
   if (generate_frames(url) != 0) {
     printf("Error generating frames\n");
@@ -278,43 +284,45 @@ int surl_stream_url(char *url) {
   simple_serial_putc(SURL_ANSWER_STREAM_START);
 
   /* Force clear */
-  offset = 0;
-  send_offset(offset);
-  for(cur_base = 0; cur_base < 8192/MAX_OFFSET; cur_base++) {
-    send_base(cur_base);
-    while (1) {
-      flush_ident(MAX_REPS, 0);
-      offset += MAX_REPS;
-      if (offset >= MAX_OFFSET) {
-        offset -= MAX_OFFSET;
-        send_offset(offset);
-        break;
-      } else {
-        send_offset(offset);
+  for (page = 0; page < NUM_PAGES; page++) {
+    offset = 0;
+    send_offset(offset);
+    for(cur_base = 0; cur_base < 8192/MAX_OFFSET; cur_base++) {
+      send_base(cur_base);
+      while (1) {
+        flush_ident(MAX_REPS, 0);
+        offset += MAX_REPS;
+        if (offset >= MAX_OFFSET) {
+          offset -= MAX_OFFSET;
+          send_offset(offset);
+          break;
+        } else {
+          send_offset(offset);
+        }
       }
     }
+    /* clear finished */
+    send_base(cur_base);
   }
-  /* clear finished */
-  send_base(cur_base);
-
-  i = 12;
-  memset(buf1, 0, 8192);
+  i = 1;
+  memset(buf_prev[0], 0, 8192);
+  memset(buf_prev[1], 0, 8192);
 
   gettimeofday(&frame_start, 0);
 
 next_file:
   i++;
   sprintf(filename2, "%s/out-%06d%s", frames_directory, i, small ? SMALL_SUFFIX : HGR_SUFFIX);
-  fp2 = fopen(filename2, "rb");
-  if (!fp2) {
+  fp[page] = fopen(filename2, "rb");
+  if (!fp[page]) {
     printf("Can't open %s: %s\n", filename2, strerror(errno));
     goto close_last;
   }
 
-  if (fp1 != NULL) {
-    fread(buf1, 1, 8192, fp1);
+  if (fp_prev[page] != NULL) {
+    fread(buf_prev[page], 1, 8192, fp_prev[page]);
   }
-  fread(buf2, 1, 8192, fp2);
+  fread(buf[page], 1, 8192, fp[page]);
 
   /* count diffs */
   diffs = 0;
@@ -352,18 +360,27 @@ next_file:
       printf("Play.\n");
   }
   gettimeofday(&frame_end, 0);
-  if (sync_fps(&frame_start, &frame_end)) {
+  if (sync_fps(&frame_start, &frame_end) || skip_next) {
     gettimeofday(&frame_start, 0);
     DEBUG("skipping frame\n");
     skipped++;
-    fclose(fp2);
+    fclose(fp[page]);
+#ifdef DOUBLE_BUFFER
+    if (!skip_next) {
+      skip_next = 1;
+    } else {
+      skip_next = 0;
+    }
+    page = !page;
+#endif
     goto next_file;
   }
+
   gettimeofday(&frame_start, 0);
 
   last_val = -1;
   for (j = 0; j < 8192; j++) {
-    if (buf1[j] != buf2[j]) {
+    if (buf_prev[page][j] != buf[page][j]) {
       offset = j - (cur_base*MAX_OFFSET);
       if (offset >= MAX_OFFSET) {
         /* must flush ident */
@@ -384,13 +401,13 @@ next_file:
         send_offset(offset);
       }
       if (last_val == -1 || 
-         (ident_vals < MAX_REPS && buf2[j] == last_val && j == last_diff+1)) {
+         (ident_vals < MAX_REPS && buf[page][j] == last_val && j == last_diff+1)) {
         ident_vals++;
       } else {
         flush_ident(ident_vals, last_val);
         ident_vals = 1;
       }
-      last_val = buf2[j];
+      last_val = buf[page][j];
 
       last_diff = j;
       diffs++;
@@ -409,21 +426,26 @@ next_file:
   DEBUG("%s => %s : %d differences\n", filename1, filename2, diffs);
 
   // cgetc();
-  /* First image has fp1 NULL */
-  if (fp1 != NULL) {
-    fclose(fp1);
+  /* First image has fp_prev NULL */
+  if (fp_prev[page] != NULL) {
+    fclose(fp_prev[page]);
   }
-  fp1 = fp2;
-  rewind(fp1);
-  memcpy(buf1, buf2, 8192);
+  fp_prev[page] = fp[page];
+  rewind(fp_prev[page]);
+  memcpy(buf_prev[page], buf[page], 8192);
   strcpy (filename1, filename2);
+#ifdef DOUBLE_BUFFER
+  page = !page;
+#endif
   goto next_file;
 
 close_last:
   send_offset(0);
   send_base(NUM_BASES+1); /* Done */
-  if (fp1)
-    fclose(fp1);
+  if (fp_prev[0])
+    fclose(fp_prev[0]);
+  if (fp_prev[1])
+    fclose(fp_prev[1]);
 
   /* Remove frames */
   cleanup();
@@ -431,8 +453,10 @@ close_last:
   simple_serial_flush();
   printf("Max: %d, Min: %d, Average: %d\n", max, min, total / i);
   printf("Sent %lu bytes for %d frames: %lu avg\n", bytes_sent, i, bytes_sent/i);
-  duration = i/FPS;
-  printf("%d seconds, %d frames skipped / %d: %d fps\n", duration,
-         skipped, i, (i-skipped)/duration);
+  if (i > FPS) {
+    duration = i/FPS;
+    printf("%d seconds, %d frames skipped / %d: %d fps\n", duration,
+          skipped, i, (i-skipped)/duration);
+  }
   return 0;
 }

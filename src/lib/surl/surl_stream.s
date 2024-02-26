@@ -1,5 +1,5 @@
 
-        .importzp             ptr1
+        .importzp             ptr1, ptr2, ptr3
 
         .import               _serial_read_byte_no_irq
         .import               _simple_serial_setup_no_irq_regs
@@ -10,6 +10,7 @@
 
         .export               _surl_stream
 
+
 KBD     :=      $C000   ; Read keyboard
 KBDSTRB :=      $C010   ; Clear keyboard strobe
 
@@ -17,14 +18,11 @@ MAX_OFFSET =126
 NUM_BASES  =(8192/MAX_OFFSET)+1
 
 calc_bases:
-        lda     #<(base_addr)
         sta     ptr1
-        lda     #>(base_addr)
-        sta     ptr1+1
+        sty     ptr1+1
 
         ldy     #0
         lda     #$00
-        ldx     #$20
 
         clc
 
@@ -59,6 +57,21 @@ handle_kbd:
         rts
 
 frame_done:
+.ifdef DOUBLE_BUFFER
+
+        ldx     #$54            ; Double buffer
+        lda     #<(ptr3)
+        cpx     page_softswitch+1
+        bne     :+
+        lda     #<(ptr2)
+        inx
+:       stx     page_softswitch+1
+        sta     base_ptr_a+1
+        sta     base_ptr_b+1
+        ldx     #$00            ; X (offset) is supposed to be 0 after this
+page_softswitch:
+        bit     $C054
+.endif
         lda     KBD
         bpl     :+
         and     #$7F            ; Clear high bit
@@ -78,8 +91,25 @@ cleanup:
 _surl_stream:
         lda     #$00
         sta     Stop
+
+        lda     #<(base_addr1)  ; Calculate bases for HGR page 1
+        ldy     #>(base_addr1)
+        sta     ptr2
+        sty     ptr2+1
+        ldx     #$20
         jsr     calc_bases
-        
+
+.ifdef DOUBLE_BUFFER
+
+        lda     #<(base_addr2)  ; Calculate bases for HGR page 2
+        ldy     #>(base_addr2)
+        sta     ptr3
+        sty     ptr3+1
+        ldx     #$40
+        jsr     calc_bases
+
+.endif
+
         jsr     _simple_serial_setup_no_irq_regs
         lda     #$00
         jsr     _simple_serial_set_irq
@@ -110,10 +140,13 @@ set_base:
 :       cmp     #((NUM_BASES+1)*2) ; End of stream?
         bne     :+
         jmp     cleanup
-:       lda     base_addr,y
+:       
+base_ptr_a:
+        lda     (ptr2),y
         sta     store_dest+1
         iny
-        lda     base_addr,y
+base_ptr_b:
+        lda     (ptr2),y
         sta     store_dest+2
 
 loop:
@@ -143,5 +176,6 @@ set_offset:
 
 
         .bss
-base_addr:      .res (NUM_BASES*2)
+base_addr1:     .res (NUM_BASES*2)
+base_addr2:     .res (NUM_BASES*2)
 Stop:           .res 1
