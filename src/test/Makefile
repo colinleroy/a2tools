@@ -23,7 +23,7 @@ SOURCES := main.c \
 	../lib/surl/surl_stream.s \
 	../lib/malloc0.c
 
-CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Wl -D,__STACKSIZE__=0x0400 --start-addr 0x4000 -C ../../config/apple2enh-rtonce.cfg -vm -m $(PROGRAM).map -DSURL_TO_LANGCARD -O
+CLCFLAGS = -t $(CC65_TARGET) --asm-define DOUBLE_BUFFER -I ../lib -Wl -D,__STACKSIZE__=0x0400 --start-addr 0x6000 -C ../../config/apple2enh-rtonce.cfg -vm -m $(PROGRAM).map -DSURL_TO_LANGCARD -O
 
 .PHONY: all clean
 
