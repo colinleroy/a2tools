@@ -63,8 +63,8 @@ frame_done:
         lda     #<(ptr3)
         cpx     page_softswitch+1
         bne     :+
-        lda     #<(ptr2)
         inx
+        lda     #<(ptr2)
 :       stx     page_softswitch+1
         sta     base_ptr_a+1
         sta     base_ptr_b+1

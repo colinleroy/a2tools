@@ -16,8 +16,8 @@
 
 #define MIN_REPS   3
 #define MAX_REPS   10
-#define FPS        25
-#define FPS_STR   "25"
+#define FPS        15
+#define FPS_STR   "15"
 
 #define HGR_SUFFIX   ".hgr"
 #define SMALL_SUFFIX ".sgr"
@@ -38,14 +38,22 @@
 unsigned long bytes_sent = 0;
 int do_send = 1;
 
+char changes_buffer[8192*2];
+int changes_num = 0;
+
 int cur_base, offset;
 
 extern int serial_delay;
 
-static void send(unsigned char b) {
+static void enqueue_byte(unsigned char b) {
   bytes_sent++;
   if (do_send)
-    simple_serial_putc(b);
+    changes_buffer[changes_num++] = b;
+}
+
+void flush_changes(void) {
+  simple_serial_write(changes_buffer, changes_num);
+  changes_num = 0;
 }
 
 static void send_base(unsigned char b) {
@@ -56,7 +64,10 @@ static void send_base(unsigned char b) {
     printf("Error! Should not!\n");
     exit(1);
   }
-  send(b|0x80);
+  enqueue_byte(b|0x80);
+  if (b == 0) {
+    flush_changes();
+  }
   // cgetc();
 }
 static void send_offset(unsigned char o) {
@@ -65,17 +76,17 @@ static void send_offset(unsigned char o) {
     printf("Error! Should not!\n");
     exit(1);
   }
-  send(o|0x80);
+  enqueue_byte(o|0x80);
   // cgetc();
 }
 static void send_num_reps(unsigned char b) {
   DEBUG("  => %d * ", b);
-  send(0xFF);
+  enqueue_byte(0xFF);
   if ((b & 0x80) != 0) {
     printf("Error! Should not!\n");
     exit(1);
   }
-  send(b);
+  enqueue_byte(b);
 }
 static void send_byte(unsigned char b) {
   DEBUG("  => %d\n", b);
@@ -83,7 +94,7 @@ static void send_byte(unsigned char b) {
     printf("Error! Should not!\n");
     exit(1);
   }
-  send(b);
+  enqueue_byte(b);
 }
 
 static void flush_ident(int ident_vals, int last_val) {
@@ -282,6 +293,8 @@ int surl_stream_url(char *url) {
 
   printf("Starting stream\n");
   simple_serial_putc(SURL_ANSWER_STREAM_START);
+
+  memset(changes_buffer, 0, sizeof changes_buffer);
 
   /* Force clear */
   for (page = 0; page < NUM_PAGES; page++) {
