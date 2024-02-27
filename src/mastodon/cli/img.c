@@ -38,11 +38,12 @@
 #include "path_helper.h"
 #include "dgets.h"
 
-extern char *instance_url;
-extern char *oauth_token;
+char *instance_url;
+char *oauth_token;
 char *type = NULL;
 char *id = NULL;
 char monochrome = 1;
+unsigned char scrw, scrh;
 
 #ifdef __APPLE2ENH__
   #define TEXTMODE VIDEOMODE_80COL
@@ -109,8 +110,6 @@ static void stream_msg(char *msg) {
   cputs(msg);
 }
 static void video_stream(media *m, char idx, char num_images) {
-  unsigned char r;
-
   toggle_legend(1);
   surl_start_request(SURL_METHOD_STREAM, m->media_url[idx], NULL, 0);
 
@@ -238,10 +237,14 @@ out_no_conf:
     toggle_legend(0);
 }
 
-int img_main(int argc, char **argv) {
+int main(int argc, char **argv) {
   char *params;
   media *m;
   char i, c;
+
+#ifdef __CC65__
+  _heapadd ((void *) 0x0803, 0x17FD);
+#endif
 
 #ifdef __APPLE2ENH__
   videomode(TEXTMODE);

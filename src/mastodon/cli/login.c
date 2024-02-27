@@ -34,8 +34,8 @@
 #include "api.h"
 #include "oauth.h"
 #include "logo.h"
-#include "img.h"
 #include "runtime_once_clean.h"
+#include "config.h"
 
 #define BUF_SIZE 255
 
@@ -158,12 +158,8 @@ int main(int argc, char **argv) {
   char *params;
   char y;
 
-#ifdef __CC65__
-  _heapadd ((void *) 0x0803, 0x17FD);
-#endif
-
   if (argc > 1) {
-    return img_main(argc, argv);
+    return conf_main(argc, argv);
   }
 
   params = malloc0(BUF_SIZE);

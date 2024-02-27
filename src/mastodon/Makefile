@@ -1,11 +1,3 @@
-ifdef SER_DEBUG
-ser_debug_SOURCES := ../lib/serial/simple_serial_printf.c
-debug_CFLAGS := -DSER_DEBUG=1
-else
-ser_debug_SOURCES :=
-debug_CFLAGS :=
-endif
-
 TARGET := apple2enh
 USE_LANGCARD := -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD
 
@@ -33,7 +25,6 @@ common_SOURCES := \
 	../lib/path_helper.c \
 	../lib/scrollwindow.c \
 	../lib/serial/simple_serial.c \
-	$(ser_debug_SOURCES) \
 	../lib/malloc0.c \
 	../lib/strsplit.c \
 	../lib/surl/surl_core.c \
@@ -58,19 +49,47 @@ mastodon_SOURCES := \
 	$(common_SOURCES) \
 	cli/login.c \
 	cli/logo.c \
-	cli/img.c \
-	api/media.c \
 	api/oauth.c \
+	cli/config.c \
+	cli/logo.c \
 	../lib/surl/surl_find_line.c \
 	../lib/surl/surl_ping.c \
-	../lib/file_select.c \
 	../lib/path_helper.c \
-	../lib/hgr.c
+	../lib/scrollwindow.c \
+	../lib/malloc0.c
 
 mastodon_CC65SOURCES := \
-	$(common_CC65SOURCES) \
-	../lib/surl/surl_stream.s \
+	$(common_CC65SOURCES)
 
+mastoimg_SOURCES := \
+	api/common.c \
+	cli/img.c \
+	api/media.c \
+	../lib/serial/simple_serial.c \
+	../lib/surl/surl_core.c \
+	../lib/surl/surl_get_json.c \
+	../lib/path_helper.c \
+	../lib/file_select.c \
+	../lib/strsplit.c \
+	../lib/malloc0.c \
+	../lib/hgr.c \
+	../lib/scrollwindow.c \
+	../lib/dgets.c \
+
+mastoimg_CC65SOURCES := \
+	../lib/surl/surl_read_with_barrier.s \
+	../lib/serial/serial_read_no_irq.s \
+	../lib/serial/simple_serial_io.s \
+	$(serial_hw_SOURCES) \
+	../lib/clrzone.s \
+	../lib/FVTABZ.s \
+	../lib/fastirq$(suffix).s \
+	 ../lib/extrazp.s \
+	../lib/runtime_once_clean.s \
+	../lib/surl/surl_stream.s \
+	../lib/dputc.s \
+	../lib/scroll.s
+	
 mastocli_SOURCES := \
 	$(common_SOURCES) \
 	cli/header.c \
@@ -104,15 +123,6 @@ mastowrite_SOURCES := \
 mastowrite_CC65SOURCES := \
 	$(common_CC65SOURCES) \
 
-mastoconf_SOURCES := \
-	cli/config.c \
-	cli/logo.c \
-	../lib/scrollwindow.c \
-	../lib/malloc0.c
-mastoconf_CC65SOURCES := \
-	../lib/FVTABZ.s \
-	../lib/clrzone.s
-
 GCCSOURCES := \
 	../lib/extended_conio.c \
 	../lib/clrzone.c \
@@ -129,7 +139,11 @@ CFLAGS  = -I ../lib -I api -I cli -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
 
 CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x400 $(USE_LANGCARD) -C ../../config/apple2enh-rtonce.cfg $(debug_CFLAGS)  $(iigs_CFLAGS)
 #Using start address 0x4000 is easier than HGR page 2, and also allows to use 80 columns
-mastodon_CLCFLAGS = $(CLCFLAGS) --start-addr 0x4000
+
+mastodon_CLCFLAGS = $(CLCFLAGS)
+mastocli_CLCFLAGS = $(CLCFLAGS)
+mastoimg_CLCFLAGS = $(CLCFLAGS) --start-addr 0x6000
+mastowrite_CLCFLAGS = $(CLCFLAGS) -DDGETS_MULTILINE
 
 GCCCFLAGS = -g -O0 -Wall -Wno-char-subscripts -Wno-unused-but-set-variable -Wno-unused-variable -Wno-unknown-pragmas -Werror $(shell sdl-config --cflags)
 GCCLDFLAGS = $(shell sdl-config --libs)
@@ -139,16 +153,16 @@ GCCLDFLAGS = $(shell sdl-config --libs)
 all: mastodon.bin mastodon.x86_64 \
 	mastocli.bin mastocli.x86_64 \
 	mastowrite.bin mastowrite.x86_64 \
-	mastoconf.bin mastoconf.x86_64
+	mastoimg.bin mastoimg.x86_64
 
 mastodon.bin: $(mastodon_SOURCES) $(mastodon_CC65SOURCES)
 	cl65 --debug-info -Wl --dbgfile,"mastodon.dbg" $(CFLAGS) $(mastodon_CLCFLAGS) -vm -m mastodon.map -o $@ $^
 mastocli.bin: $(mastocli_SOURCES) $(mastocli_CC65SOURCES)
-	cl65 --debug-info -Wl --dbgfile,"mastocli.dbg" $(CFLAGS) $(CLCFLAGS) -vm -m mastocli.map -o $@ $^
+	cl65 --debug-info -Wl --dbgfile,"mastocli.dbg" $(CFLAGS) $(mastocli_CLCFLAGS) -vm -m mastocli.map -o $@ $^
 mastowrite.bin: $(mastowrite_SOURCES) $(mastowrite_CC65SOURCES)
-	cl65 --debug-info -Wl --dbgfile,"mastowrite.dbg" $(CFLAGS) $(CLCFLAGS) -vm -m mastowrite.map -o $@ $^
-mastoconf.bin: $(mastoconf_SOURCES) $(mastoconf_CC65SOURCES)
-	cl65 $(CFLAGS) $(CLCFLAGS) -vm -m mastoconf.map -o $@ $^
+	cl65 --debug-info -Wl --dbgfile,"mastowrite.dbg" $(CFLAGS) $(mastowrite_CLCFLAGS) -vm -m mastowrite.map -o $@ $^
+mastoimg.bin: $(mastoimg_SOURCES) $(mastoimg_CC65SOURCES)
+	cl65 --debug-info -Wl --dbgfile,"mastoimg.dbg" $(CFLAGS) $(mastoimg_CLCFLAGS) -vm -m mastoimg.map -o $@ $^
 
 mastodon.x86_64: $(mastodon_SOURCES) $(GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	
@@ -156,7 +170,7 @@ mastocli.x86_64: $(mastocli_SOURCES) $(GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	
 mastowrite.x86_64: $(mastowrite_SOURCES) $(GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	
-mastoconf.x86_64: $(mastoconf_SOURCES) $(GCCSOURCES)
+mastoimg.x86_64: $(mastoimg_SOURCES) $(GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	
 
 clean:

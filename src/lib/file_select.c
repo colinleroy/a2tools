@@ -21,6 +21,7 @@
 #include <unistd.h>
 #ifdef __CC65__
 #include <device.h>
+#include <apple2.h>
 #else
 #define _DE_ISDIR(x) ((x) == DT_DIR)
 #endif
@@ -29,7 +30,6 @@
 #include <errno.h>
 #include <dirent.h>
 #include "clrzone.h"
-#include "dputc.h"
 #include "malloc0.h"
 
 static char last_dir[FILENAME_MAX] = "";
@@ -155,7 +155,9 @@ disp_again:
     case CH_CURS_RIGHT:
       if (!file_entries[sel].is_dir) {
 err_bell:
-        dputc(0x07);
+#ifdef __CC65__
+        beep();
+#endif
         break;
       }
       if (file_entries[sel].name[0] != '/')

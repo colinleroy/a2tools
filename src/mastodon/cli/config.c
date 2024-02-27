@@ -11,8 +11,8 @@
 #include "api.h"
 #include "logo.h"
 
-char *instance_url;
-char *oauth_token;
+extern char *instance_url;
+extern char *oauth_token;
 static unsigned char scrw, scrh;
 
 static int save_config(char *charset, char monochrome) {
@@ -100,7 +100,7 @@ monochrome_again:
   save_config(charset, monochrome);
 }
 
-int main(int argc, char **argv) {
+int conf_main(int argc, char **argv) {
   char *params = malloc0(BUF_SIZE);
 
   if (argc < 3) {
