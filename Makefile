@@ -21,7 +21,7 @@ homectrl_disk_PROGS = src/homecontrol-client/homectrl.bin \
 mastodon_disk_PROGS = src/mastodon/mastodon.bin \
 				src/mastodon/mastocli.bin \
 				src/mastodon/mastowrite.bin \
-				src/mastodon/mastoconf.bin
+				src/mastodon/mastoimg.bin
 
 quicktake_disk_PROGS = \
 	src/quicktake/slowtake.bin \

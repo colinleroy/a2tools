@@ -518,6 +518,8 @@ next_file:
 close_last:
   send_offset(0);
   send_base(NUM_BASES+1); /* Done */
+  flush_changes();
+
   if (fp_prev[0])
     fclose(fp_prev[0]);
   if (fp_prev[1])

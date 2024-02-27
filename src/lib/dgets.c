@@ -287,10 +287,11 @@ down_left:
       gotoxy(cur_x, cur_y);
 #ifdef __APPLE2ENH__
     } else if (c == CH_CURS_UP) {
+      #ifdef DGETS_MULTILINE
       if (!cmd_cb || !enter_accepted || cur_insert == 0) {
         /* No up/down in standard line edit */
         goto err_beep;
-      } 
+      }
       if (cur_insert == cur_x) {
         /* we are at the first line, go at its beginning */
         cur_x = 0;
@@ -323,7 +324,11 @@ down_left:
         }
       }
       gotoxy(cur_x, cur_y);
+    #else
+      goto err_beep;
+    #endif
     } else if (c == CH_CURS_DOWN) {
+      #ifdef DGETS_MULTILINE
       if (!cmd_cb || !enter_accepted || cur_insert == max_insert) {
         /* No down in standard editor mode */
         goto err_beep;
@@ -361,6 +366,9 @@ down_left:
       }
 stop_down:
       gotoxy(cur_x, cur_y);
+    #else
+      goto err_beep;
+    #endif
 #endif
     } else {
       if (max_insert == size) {

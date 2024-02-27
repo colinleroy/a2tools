@@ -1294,7 +1294,7 @@ navigate_reuse_list:
         }
         break;
       case CONFIGURE:
-          launch_command("mastoconf", NULL, NULL, NULL);
+          launch_command("mastodon", "conf", NULL, NULL);
           /* we're never coming back */
       case COMPOSE:
           launch_command("mastowrite", NULL, NULL, NULL);
@@ -1311,9 +1311,9 @@ navigate_reuse_list:
           break;
       case IMAGES:
           if (current_list->account && (!disp_status || disp_status->displayed_at > 0)) {
-            launch_command("mastodon", monochrome?"1":"0", "a", current_list->account->id);
+            launch_command("mastoimg", monochrome?"1":"0", "a", current_list->account->id);
           } else if (disp_status && disp_status->n_images) {
-            launch_command("mastodon", monochrome?"1":"0", "s", disp_status->id);
+            launch_command("mastoimg", monochrome?"1":"0", "s", disp_status->id);
           }
           cur_action = NAVIGATE;
           break;
