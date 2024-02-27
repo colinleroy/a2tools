@@ -22,6 +22,9 @@
 void bubble_sort_array(void **array, size_t n_elts, sort_func func) {
   int i;
   int swapped_anything;
+  if (n_elts < 1) {
+    return;
+  }
 
 again:
   swapped_anything = 0;

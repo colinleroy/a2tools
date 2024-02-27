@@ -1,5 +1,5 @@
 
-        .importzp             ptr1, ptr2, ptr3
+        .importzp             ptr1, ptr2, ptr3, tmp1
 
         .import               _serial_read_byte_no_irq
         .import               _simple_serial_setup_no_irq_regs
@@ -59,18 +59,15 @@ handle_kbd:
 frame_done:
 .ifdef DOUBLE_BUFFER
 
-        ldx     #$54            ; Double buffer
-        lda     #<(ptr3)
-        cpx     page_softswitch+1
-        bne     :+
-        inx
-        lda     #<(ptr2)
-:       stx     page_softswitch+1
+        ldx     tmp1            ; page
+        lda     $C054,x
+        lda     page_addr,x
         sta     base_ptr_a+1
         sta     base_ptr_b+1
+        txa
+        eor     #$01
+        sta     tmp1
         ldx     #$00            ; X (offset) is supposed to be 0 after this
-page_softswitch:
-        bit     $C054
 .endif
         lda     KBD
         bpl     :+
@@ -90,6 +87,7 @@ cleanup:
 
 _surl_stream:
         lda     #$00
+        sta     tmp1            ; Current page
         sta     Stop
 
         lda     #<(base_addr1)  ; Calculate bases for HGR page 1
@@ -127,14 +125,14 @@ _surl_stream:
         jmp     loop
 
 set_base:
-        cmp     #$FF            ; Is it a rep in reality ?
+        cmp     #$FF            ; Is it a rep  ?
         beq     do_rep
         and     #%01111111      ; Get rid of the sign
         asl     a               ; shift for array index
         tay
         bne     :+
         jsr     frame_done      ; Sync point, send $00 and check kbd
-        lda     Stop
+        lda     Stop            ; Does user want to stop?
         beq     :+
         jmp     cleanup
 :       cmp     #((NUM_BASES+1)*2) ; End of stream?
@@ -171,9 +169,14 @@ set_offset:
         and     #%01111111      ; Get rid of sign
         tax                     ; set offset
         jsr     _serial_read_byte_no_irq
-        bmi     set_base        ; We also have a new base (or repetition?)
+        bmi     set_base        ; We have a new base (or rep maybe)
         jmp     store_dest      ; Otherwise it's a value
 
+        .data
+.ifdef DOUBLE_BUFFER
+page_addr:      .byte <(ptr3)   ; Bases addresses for page 2
+                .byte <(ptr2)   ; Bases addresses for page 1
+.endif
 
         .bss
 base_addr1:     .res (NUM_BASES*2)

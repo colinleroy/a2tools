@@ -10,14 +10,20 @@
 #include "simple_serial.h"
 #include "extended_conio.h"
 #include "hgr-convert.h"
+#include "array_sort.h"
 
 #define MAX_OFFSET 126
 #define NUM_BASES  (8192/MAX_OFFSET)+1
 
 #define MIN_REPS   3
-#define MAX_REPS   10
-#define FPS        15
-#define FPS_STR   "15"
+#define MAX_REPS   9
+#define FPS        25
+#define FPS_STR   "25"
+
+/* Set very high because it looks nicer to drop frames than to
+ * artifact all the way
+ */
+#define MAX_DIFFS_PER_FRAME 25000 
 
 #define HGR_SUFFIX   ".hgr"
 #define SMALL_SUFFIX ".sgr"
@@ -36,7 +42,6 @@
 #endif
 
 unsigned long bytes_sent = 0;
-int do_send = 1;
 
 char changes_buffer[8192*2];
 int changes_num = 0;
@@ -47,8 +52,7 @@ extern int serial_delay;
 
 static void enqueue_byte(unsigned char b) {
   bytes_sent++;
-  if (do_send)
-    changes_buffer[changes_num++] = b;
+  changes_buffer[changes_num++] = b;
 }
 
 void flush_changes(void) {
@@ -59,7 +63,7 @@ void flush_changes(void) {
 static void send_base(unsigned char b) {
   DEBUG(" new base %d\n", b);
   DEBUG(" base %d offset %d (should be written at %x)\n", b, offset, 0x2000+(cur_base*MAX_OFFSET)+offset);
-  /* Shift the base to help the Apple2 */
+
   if ((b| 0x80) == 0xFF) {
     printf("Error! Should not!\n");
     exit(1);
@@ -267,8 +271,48 @@ static int generate_hgr_files(void) {
   return 0;
 }
 
+typedef struct _byte_diff {
+  int offset;
+  int changed;
+} byte_diff;
+
+static int diff_score(unsigned char a, unsigned char b) {
+  int score = 0;
+  score += (a & 0x80) != (b & 0x80);
+  score += (a & 0x40) != (b & 0x40);
+  score += (a & 0x20) != (b & 0x20);
+  score += (a & 0x10) != (b & 0x10);
+  score += (a & 0x8) != (b & 0x8);
+  score += (a & 0x4) != (b & 0x4);
+  score += (a & 0x2) != (b & 0x2);
+  score += (a & 0x1) != (b & 0x1);
+  if ((a > 0x8) && (b < 0x10))
+    score += 10;
+  if ((b > 0x8) && (a < 0x10))
+    score += 10;
+
+  if (b && !a)
+    score += 20;
+  if (a && !b)
+    score += 20;
+
+  return score;
+}
+
+#if 0
+static int sort_by_score(byte_diff *a, byte_diff *b) {
+  return a->changed < b->changed;
+}
+
+static int sort_by_offset(byte_diff *a, byte_diff *b) {
+  return a->offset > b->offset;
+}
+#endif
+
+static byte_diff **diffs = NULL;
+
 int surl_stream_url(char *url) {
-  int i, j, diffs;
+  int i, j;
   int last_diff;
   int last_val, ident_vals;
   int total = 0, min = 0xFFFF, max = 0;
@@ -279,6 +323,14 @@ int surl_stream_url(char *url) {
   unsigned char small = 1;
   int skipped = 0, skip_next = 0, duration;
   int command, page = 0;
+  int num_diffs = 0;
+
+  if (diffs == NULL) {
+    diffs = malloc(8192 * sizeof(byte_diff *));
+    for (j = 0; j < 8192; j++) {
+      diffs[j] = malloc(sizeof(byte_diff));
+    }
+  }
 
   if (generate_frames(url) != 0) {
     printf("Error generating frames\n");
@@ -332,13 +384,9 @@ next_file:
     goto close_last;
   }
 
-  if (fp_prev[page] != NULL) {
-    fread(buf_prev[page], 1, 8192, fp_prev[page]);
-  }
   fread(buf[page], 1, 8192, fp[page]);
 
   /* count diffs */
-  diffs = 0;
   last_diff = 0;
   cur_base = 0;
   ident_vals = 0;
@@ -391,61 +439,76 @@ next_file:
 
   gettimeofday(&frame_start, 0);
 
-  last_val = -1;
-  for (j = 0; j < 8192; j++) {
+  for (num_diffs = 0, j = 0; j < 8192; j++) {
     if (buf_prev[page][j] != buf[page][j]) {
-      offset = j - (cur_base*MAX_OFFSET);
-      if (offset >= MAX_OFFSET) {
-        /* must flush ident */
-        flush_ident(ident_vals, last_val);
-        ident_vals = 0;
-
-        /* we have to update base */
-        cur_base = j / MAX_OFFSET;
-        offset = j - (cur_base*MAX_OFFSET);
-
-        send_offset(offset);
-        send_base(cur_base);
-      } else if (j != last_diff+1) {
-        /* must flush ident */
-        flush_ident(ident_vals, last_val);
-        ident_vals = 0;
-        /* We have to send offset */
-        send_offset(offset);
-      }
-      if (last_val == -1 || 
-         (ident_vals < MAX_REPS && buf[page][j] == last_val && j == last_diff+1)) {
-        ident_vals++;
-      } else {
-        flush_ident(ident_vals, last_val);
-        ident_vals = 1;
-      }
-      last_val = buf[page][j];
-
-      last_diff = j;
-      diffs++;
+      diffs[num_diffs]->offset = j;
+      diffs[num_diffs]->changed = diff_score(buf_prev[page][j], buf[page][j]);
+      num_diffs++;
     }
+  }
+
+  /* Naive attempt at priorizing changes and flushing them over multiple
+   * frames. The result sucks and it looks much better to framedrop.
+   */
+#if 0
+  /* Sort by diff */
+  bubble_sort_array((void **)diffs, num_diffs, (sort_func)sort_by_score);
+
+  /* Sort the first ones by offset */
+  bubble_sort_array((void **)diffs,
+          num_diffs < MAX_DIFFS_PER_FRAME ? num_diffs : MAX_DIFFS_PER_FRAME,
+          (sort_func)sort_by_offset);
+#endif
+  last_val = -1;
+  for (j = 0; j < num_diffs && j < MAX_DIFFS_PER_FRAME; j++) {
+    int pixel = diffs[j]->offset;
+
+    offset = pixel - (cur_base*MAX_OFFSET);
+    if (offset >= MAX_OFFSET) {
+      /* must flush ident */
+      flush_ident(ident_vals, last_val);
+      ident_vals = 0;
+
+      /* we have to update base */
+      cur_base = pixel / MAX_OFFSET;
+      offset = pixel - (cur_base*MAX_OFFSET);
+
+      send_offset(offset);
+      send_base(cur_base);
+    } else if (pixel != last_diff+1) {
+      /* must flush ident */
+      flush_ident(ident_vals, last_val);
+      ident_vals = 0;
+      /* We have to send offset */
+      send_offset(offset);
+    }
+    if (last_val == -1 || 
+       (ident_vals < MAX_REPS && buf[page][pixel] == last_val && pixel == last_diff+1)) {
+      ident_vals++;
+    } else {
+      flush_ident(ident_vals, last_val);
+      ident_vals = 1;
+    }
+    last_val = buf[page][pixel];
+
+    last_diff = pixel;
+
+    /* Note diff done */
+    buf_prev[page][pixel] = buf[page][pixel];
   }
   flush_ident(ident_vals, last_val);
   // cgetc();
   ident_vals = 0;
-  total += diffs;
-  if (diffs < min) {
-    min = diffs;
+  total += num_diffs;
+  if (num_diffs < min) {
+    min = num_diffs;
   }
-  if (diffs > max) {
-    max = diffs;
+  if (num_diffs > max) {
+    max = num_diffs;
   }
-  DEBUG("%s => %s : %d differences\n", filename1, filename2, diffs);
+  DEBUG("%s => %s : %d differences\n", filename1, filename2, num_diffs);
 
-  // cgetc();
-  /* First image has fp_prev NULL */
-  if (fp_prev[page] != NULL) {
-    fclose(fp_prev[page]);
-  }
-  fp_prev[page] = fp[page];
-  rewind(fp_prev[page]);
-  memcpy(buf_prev[page], buf[page], 8192);
+  fclose(fp[page]);
   strcpy (filename1, filename2);
 #ifdef DOUBLE_BUFFER
   page = !page;
