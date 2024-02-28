@@ -41,7 +41,6 @@ int __fastcall__ surl_find_line(char *buffer, size_t max_len, char *search_str) 
   simple_serial_puts(search_str);
   simple_serial_putc('\n');
 
-  simple_serial_putc(SURL_CLIENT_READY);
   r = simple_serial_getc();
   if (r == SURL_ERROR_NOT_FOUND) {
     buffer[0] = '\0';
