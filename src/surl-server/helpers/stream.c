@@ -169,7 +169,7 @@ static int generate_frames(char *uri) {
   ffmpeg_args[1] = "-i";
   ffmpeg_args[2] = uri;
   ffmpeg_args[3] = "-vf";
-  ffmpeg_args[4] = "fps="FPS_STR",scale=256:-1";
+  ffmpeg_args[4] = "fps="FPS_STR",scale=w=280:h=192:force_original_aspect_ratio=decrease:flags=neighbor";
   ffmpeg_args[5] = frame_format;
   ffmpeg_args[6] = NULL;
   
@@ -217,7 +217,7 @@ static void cleanup(void) {
 }
 
 static int convert_frame(char *filename, unsigned char small) {
-  size_t len;
+  size_t len = 0;
   unsigned char *hgr_buf;
   char hgr_filename[FILENAME_MAX];
   FILE *fp;
@@ -316,7 +316,7 @@ int surl_stream_url(char *url) {
   int last_diff;
   int last_val, ident_vals;
   int total = 0, min = 0xFFFF, max = 0;
-  FILE *fp_prev[2] = {NULL, NULL}, *fp[2] = {NULL, NULL};
+  FILE *fp[2] = {NULL, NULL};
   char filename1[FILENAME_MAX], filename2[FILENAME_MAX];
   unsigned char buf_prev[2][8192], buf[2][8192];
   struct timeval frame_start, frame_end;
@@ -335,11 +335,13 @@ int surl_stream_url(char *url) {
   if (generate_frames(url) != 0) {
     printf("Error generating frames\n");
     simple_serial_putc(SURL_ANSWER_STREAM_ERROR);
+    cleanup();
     return -1;
   }
   if (generate_hgr_files() != 0) {
     printf("Error generating HGR files\n");
     simple_serial_putc(SURL_ANSWER_STREAM_ERROR);
+    cleanup();
     return -1;
   }
 
@@ -386,6 +388,8 @@ next_file:
 
   fread(buf[page], 1, 8192, fp[page]);
 
+  fclose(fp[page]);
+
   /* count diffs */
   last_diff = 0;
   cur_base = 0;
@@ -425,7 +429,6 @@ next_file:
     gettimeofday(&frame_start, 0);
     DEBUG("skipping frame\n");
     skipped++;
-    fclose(fp[page]);
 #ifdef DOUBLE_BUFFER
     if (!skip_next) {
       skip_next = 1;
@@ -508,7 +511,6 @@ next_file:
   }
   DEBUG("%s => %s : %d differences\n", filename1, filename2, num_diffs);
 
-  fclose(fp[page]);
   strcpy (filename1, filename2);
 #ifdef DOUBLE_BUFFER
   page = !page;
@@ -519,11 +521,6 @@ close_last:
   send_offset(0);
   send_base(NUM_BASES+1); /* Done */
   flush_changes();
-
-  if (fp_prev[0])
-    fclose(fp_prev[0]);
-  if (fp_prev[1])
-    fclose(fp_prev[1]);
 
   /* Remove frames */
   cleanup();

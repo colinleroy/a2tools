@@ -367,15 +367,28 @@ static void sdl_image_scale (SDL_Surface *src, SDL_Surface *dst, int w, int h, f
   Uint8 red, green, blue;
   float srcw, srch, dstw, dsth, r, g, b;
   float xfactor, yfactor, scalefactor, x, y, nx, ny, ix, iy, nix, niy, area;
-
+  int fast = 0;
   srcw = (float)src->w;
   srch = (float)src->h;
   dstw = (float)w;
   dsth = (float)h;
 
 
-  if (srch != dsth || srcw != dstw)
-  {
+  if (srcw == dstw && srch < dsth) {
+    SDL_Rect outrect;
+    outrect.x = 0;
+    outrect.y = (dsth - srch) / 2;
+    outrect.w = dstw;
+    outrect.h = dsth;
+    SDL_BlitSurface(src, NULL, dst, &outrect);
+  } else if (srcw < dstw && srch == dsth) {
+    SDL_Rect outrect;
+    outrect.x = (dstw - srcw) / 2;
+    outrect.y = 0;
+    outrect.w = dstw;
+    outrect.h = dsth;
+    SDL_BlitSurface(src, NULL, dst, &outrect);
+  } else if (srch != dsth || srcw != dstw) {
     SDL_LockSurface(dst);
     xfactor = srcw / dstw / asprat;
     yfactor = srch / dsth;
@@ -390,71 +403,81 @@ static void sdl_image_scale (SDL_Surface *src, SDL_Surface *dst, int w, int h, f
     sh = (int)(srch / scalefactor);
     sx = (int)(((float)dst->w - sw) / 2);
     sy = (int)(((float)dst->h - sh) / 2);
-    bx = sx;
 
     xfactor = scalefactor * asprat;
 
     // printf("HGR: xfact:%g yfact:%g\n", xfactor, yfactor);
     // printf("HGR: srcw:%g srch:%g sw:%d sh:%d\n", srcw, srch, sw, sh);
     // printf("HGR: dstw:%g dsth:%g sx:%d sy:%d\n", dstw, dsth, sx, sy);
+    bx = sx;
 
-    for (y = 0.0; y < srch; y = ny)
-    {
-      ny = y + scalefactor;
-      for (x = 0.0; x < srcw; x = nx)
+    if (fast) {
+      for (h = sy; h < dsth; h ++)
       {
-        nx = x + xfactor;
-        r = g = b = 0;
-
-        for (iy = y; iy < ny; iy = niy)
+        for (w = sx; w < dstw; w ++)
         {
-          niy = (int)(iy + 1.0);
-
-          for (ix = x; ix < nx; ix = nix)
-          {
-            nix = (int)(ix + 1.0);
-            area = 1.0;
-
-            if ((iy - (int)iy) > 0.00001) {
-              area = niy - iy;
-            }
-            else if (iy + 1.0 >= ny) {
-              area = ny - iy;
-            }
-
-            if ((ix - (int)ix) > 0.00001) {
-              area = area * (nix - ix);
-            }
-            else if (ix + 1.0 >= nx) {
-              area = area * (nx - ix);
-            }
-
-            sdl_get_pixel(src, (int)ix, (int)iy, &red, &green, &blue);
-
-            r += (area * (float)red);
-            g += (area * (float)green);
-            b += (area * (float)blue);
-          }
+          sdl_get_pixel(src, w * xfactor, h * yfactor, &red, &green, &blue);
+          sdl_set_pixel(dst, w, h, red, green, blue);
         }
-
-        r = r / xfactor / scalefactor;
-        g = g / xfactor / scalefactor;
-        b = b / xfactor / scalefactor;
-
-        if (r < 0.0) r = 0.0; else if (r >= 256.0) r = 255.0;
-        if (g < 0.0) g = 0.0; else if (g >= 256.0) g = 255.0;
-        if (b < 0.0) b = 0.0; else if (b >= 256.0) b = 255.0;
-
-        r = (int)(r+0.1);
-        g = (int)(g+0.1);
-        b = (int)(b+0.1);
-
-        sdl_set_pixel(dst, sx, sy, r, g, b);
-        sx += 1;
       }
-      sx = bx;
-      sy += 1;
+    } else {
+      for (y = 0.0; y < srch; y = ny)
+      {
+        ny = y + scalefactor;
+        for (x = 0.0; x < srcw; x = nx)
+        {
+          nx = x + xfactor;
+          r = g = b = 0;
+          for (iy = y; iy < ny; iy = niy)
+          {
+            niy = (int)(iy + 1.0);
+            for (ix = x; ix < nx; ix = nix)
+            {
+              nix = (int)(ix + 1.0);
+              area = 1.0;
+
+              if ((iy - (int)iy) > 0.00001) {
+                area = niy - iy;
+              }
+              else if (iy + 1.0 >= ny) {
+                area = ny - iy;
+              }
+
+              if ((ix - (int)ix) > 0.00001) {
+                area = area * (nix - ix);
+              }
+              else if (ix + 1.0 >= nx) {
+                area = area * (nx - ix);
+              }
+
+              sdl_get_pixel(src, (int)ix, (int)iy, &red, &green, &blue);
+
+              r += (area * (float)red);
+              g += (area * (float)green);
+              b += (area * (float)blue);
+            }
+          }
+
+          r = r / xfactor / scalefactor;
+          g = g / xfactor / scalefactor;
+          b = b / xfactor / scalefactor;
+
+          if (r < 0.0) r = 0.0; else if (r >= 256.0) r = 255.0;
+          if (g < 0.0) g = 0.0; else if (g >= 256.0) g = 255.0;
+          if (b < 0.0) b = 0.0; else if (b >= 256.0) b = 255.0;
+
+          r = (int)(r+0.1);
+          g = (int)(g+0.1);
+          b = (int)(b+0.1);
+
+          sdl_set_pixel(dst, sx, sy, r, g, b);
+          sx += 1;
+        }
+        sx = bx;
+        sy += 1;
+      }
     }
+
     SDL_UnlockSurface(dst);
   } else {
     printf("No resizing needed.\n");
@@ -652,10 +675,10 @@ static void mono_dither_bayer(SDL_Surface* s) {
       sdl_get_pixel(s, x, y, &r, &g, &b);
 
       // Convert the pixel value to grayscale i.e. intensity
-      float in = .299 * r + .587 * g + .114 * b;
+      int val = (299 * r + 587 * g + 114 * b) / 1000;
 
       // Apply the ordered dither kernel
-      Uint16 val = in + in * map[y % 8][x % 8] / 63;
+      val += val * map[y % 8][x % 8] / 63;
 
       // If >= 192 choose white, else choose black
       if(val >= 128)
@@ -757,7 +780,7 @@ static int sdl_mono_hgr(SDL_Surface *src, unsigned char *hgr) {
   return 0x2000;
 }
 
-unsigned char *sdl_to_hgr(const char *filename, char monochrome, char save_preview, int *len, char bayer_dither, char small) {
+unsigned char *sdl_to_hgr(const char *filename, char monochrome, char save_preview, size_t *len, char bayer_dither, char small) {
   SDL_Surface *image, *resized;
   int dst_w, dst_h;
   init_base_addrs();
