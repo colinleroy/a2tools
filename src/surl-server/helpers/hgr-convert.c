@@ -658,7 +658,7 @@ static void mono_dither_bayer(SDL_Surface* s) {
       Uint16 val = in + in * map[y % 8][x % 8] / 63;
 
       // If >= 192 choose white, else choose black
-      if(val >= 92)
+      if(val >= 128)
         val = 255;
       else
         val = 0;

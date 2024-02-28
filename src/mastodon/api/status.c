@@ -19,7 +19,7 @@
 #define TL_STATUS_SHORT_BUF 512
 #define TL_STATUS_LARGE_BUF 4096
 
-status *status_new(void) {
+static status *status_new(void) {
   status *s = malloc0(sizeof(status));
   s->displayed_at = -1;
   return s;

@@ -3,7 +3,7 @@
 ; Cleanup once-used functions
 ;
 
-        .export         _runtime_once_clean, _runtime_once_cleaned
+        .export         _runtime_once_clean
 
         .import         __RT_ONCE_LOAD__, __RT_ONCE_SIZE__    ; Linker generated
         .import         ___bzero, ___heapadd, pushax

@@ -24,6 +24,7 @@ endif
 imgview_SOURCES := \
 	imageview.c \
 	../lib/serial/simple_serial.c \
+	../lib/serial/simple_serial_configure.c \
 	../lib/path_helper.c \
 	../lib/file_select.c \
 	../lib/progress_bar.c \
@@ -40,6 +41,7 @@ imgview_CC65SOURCES := \
 	../lib/fastirq$(suffix).s \
 	../lib/extrazp.s \
 	../lib/serial/simple_serial_io.s \
+	../lib/serial/simple_serial_getc_immediate.s \
 	$(serial_hw_SOURCES)
 
 imgview_GCCSOURCES := \

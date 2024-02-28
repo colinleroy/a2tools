@@ -54,6 +54,7 @@ mastodon_SOURCES := \
 	cli/logo.c \
 	../lib/surl/surl_find_line.c \
 	../lib/surl/surl_ping.c \
+	../lib/serial/simple_serial_configure.c \
 	../lib/path_helper.c \
 	../lib/scrollwindow.c \
 	../lib/malloc0.c
