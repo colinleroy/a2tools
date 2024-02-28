@@ -16,6 +16,7 @@ homectrl_SOURCES := main.c network.c \
 	server_url.c \
 	../lib/malloc0.c \
 	../lib/serial/simple_serial.c \
+	../lib/serial/simple_serial_configure.c \
 	../lib/extended_conio.c \
 	../lib/dgets.c \
 	../lib/scrollwindow.c \

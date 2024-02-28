@@ -4,10 +4,9 @@
 
         .export         _simple_serial_puts
         .export         _simple_serial_getc
-        .export         _simple_serial_getc_immediate
         .export         _simple_serial_write
-        .export         _simple_serial_read
         .export         _simple_serial_flush
+        .export         simple_serial_compute_ptr_end
 
         .import         _simple_serial_getc_with_timeout
         .import         _ser_get, _serial_putc_direct, _strlen
@@ -34,21 +33,6 @@ _simple_serial_getc:
         ldx     #$00
         rts
 
-;int __fastcall__ simple_serial_getc_immediate(void) {
-_simple_serial_getc_immediate:
-        lda     #<tmp2
-        ldx     #>tmp2
-        jsr     _ser_get
-        cmp     #SER_ERR_NO_DATA
-        beq     no_char
-        lda     tmp2
-        ldx     #$00
-        rts
-no_char:
-        lda     #$FF
-        tax
-        rts
-
 ;void __fastcall__ simple_serial_puts(const char *buf) {
 
 _simple_serial_puts:
@@ -57,7 +41,7 @@ _simple_serial_puts:
         jmp     _simple_serial_write
 
 
-compute_ptr_end:
+simple_serial_compute_ptr_end:
         sta     ptr3
         stx     ptr3+1
         jsr     popax
@@ -74,7 +58,7 @@ compute_ptr_end:
 ; void __fastcall__ simple_serial_write(const char *ptr, size_t nmemb) {
 
 _simple_serial_write:
-        jsr     compute_ptr_end
+        jsr     simple_serial_compute_ptr_end
 write_again:
         ldy     #$00
         lda     (ptr4),y
@@ -89,36 +73,6 @@ write_again:
         ldx     ptr4+1
         cpx     ptr3+1
         bne     write_again
-        rts
-
-;void __fastcall__ simple_serial_read(char *ptr, size_t nmemb) {
-
-_simple_serial_read:
-        jsr     compute_ptr_end
-
-        lda     #$00
-        beq     check_bound
-read_again:
-        lda     ptr4
-read_again_aok:
-        ldx     ptr4+1
-read_again_axok:
-        jsr     _ser_get
-        cmp     #SER_ERR_NO_DATA
-        beq     read_again
-
-        inc     ptr4
-        bne     check_bound
-        inc     ptr4+1
-
-check_bound:
-        lda     ptr4
-        cmp     ptr3
-        bne     read_again_aok
-        ldx     ptr4+1
-        cpx     ptr3+1
-        bne     read_again_axok
-
         rts
 
 _simple_serial_flush:

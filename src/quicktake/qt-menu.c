@@ -327,6 +327,8 @@ static void print_welcome(void) {
   set_scrollwindow(21, scrh);
 }
 
+#pragma code-name(pop)
+
 static void show_about(void) {
   FILE *fp;
   size_t r;
@@ -346,7 +348,6 @@ static void show_about(void) {
   cgetc();
 }
 
-#pragma code-name(pop)
 #pragma code-name(push, "RT_ONCE")
 
 static uint8 setup(int argc, char *argv[]) {

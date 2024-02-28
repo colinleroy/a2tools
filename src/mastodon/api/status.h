@@ -35,7 +35,6 @@ struct _status {
   poll *poll;
 };
 
-status *status_new(void);
 void status_free(status *s);
 
 #endif

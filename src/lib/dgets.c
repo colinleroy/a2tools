@@ -144,7 +144,9 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb, c
   unsigned char sy, ey;
 #ifdef __APPLE2ENH__
   size_t k;
+#ifdef DGETS_MULTILINE
   unsigned char tmp;
+#endif
 #endif
   char overflowed = 0;
 

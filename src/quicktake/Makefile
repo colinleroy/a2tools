@@ -48,6 +48,7 @@ slowtake_SOURCES := \
 	../lib/scrollwindow.c \
 	../lib/path_helper.c \
 	../lib/serial/simple_serial.c \
+	../lib/serial/simple_serial_configure.c \
 	../lib/strtrim.c \
 	../lib/malloc0.c \
 	../lib/file_select.c \
@@ -67,6 +68,7 @@ slowtake_CC65SOURCES := \
 	../lib/extrazp.s \
 	../lib/runtime_once_clean.s \
 	../lib/serial/simple_serial_io.s \
+	../lib/serial/simple_serial_read.s \
 	$(serial_hw_SOURCES)
 
 slowtake_GCCSOURCES := \

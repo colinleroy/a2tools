@@ -201,9 +201,11 @@ static void save_image(void) {
   if (dir == NULL) {
     goto out_no_conf;
   }
+
   strncpy(buf, dir, FILENAME_MAX);
   free(dir);
   gotox(x);
+  strcat(buf, "/");
   dget_text(buf, sizeof(buf) - 1, NULL, 0);
 
 #ifdef __APPLE2__
