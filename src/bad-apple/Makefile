@@ -9,6 +9,7 @@ SOURCES := main.c \
 	../lib/clrzone.c \
 	../surl-server/helpers/hgr-convert.c \
 	../surl-server/helpers/stream.c \
+	../surl-server/helpers/ffmpeg_to_hgr.c \
 	../lib/array_sort.c
 
 CFLAGS= -I ../lib -I ../surl-server/helpers -g -O3 -Wall -Wno-char-subscripts -Wno-deprecated-declarations -Wall -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
@@ -24,7 +25,7 @@ $(PROGRAM): $(SOURCES)
 		$(shell curl-config --libs) \
 		$(shell libpng-config --libs) \
 		$(shell pkg-config --libs SDL_image) \
-		-ljq -lgumbo -o $@
+		-ljq -lgumbo -lavfilter -lavformat -lavcodec -lavutil -o $@
 
 clean:
 	rm -f $(PROGRAM) *.o
