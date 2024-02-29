@@ -112,15 +112,17 @@ _surl_stream:
         lda     #$00
         jsr     _simple_serial_set_irq
 
+        lda     #$2F            ; SURL_CLIENT_READY
+        jsr     _serial_putc_direct
         jsr     _serial_read_byte_no_irq
-        bit     $C052           ; Clear HGR mix
         cmp     #$27            ; SURL_ANSWER_STREAM_START
         beq     :+
         lda     #$FF
         tax
         rts
 
-:       ldx     #$00            ; Offset
+:       bit     $C052           ; Clear HGR mix
+        ldx     #$00            ; Offset
         lda     #($00|$80)      ; Base
         jmp     loop
 

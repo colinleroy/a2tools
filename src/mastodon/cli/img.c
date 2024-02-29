@@ -126,9 +126,9 @@ static void video_stream(media *m, char idx, char num_images) {
              "Quit viewer: Esc\r\n"
              "Waiting for proxy transcoding...");
 #ifdef __CC65__
-  if (surl_stream() != 0) {
+  if (surl_wait_for_stream() != 0 || surl_stream() != 0) {
 stream_err:
-    set_legend("Request failed.", 0, idx, num_images);
+    set_legend("\r\n\r\n\r\nRequest failed. Press Esc to exit or another key to restart.", 0, idx, num_images);
     toggle_legend(1);
   } else {
     stream_msg("\r\n\r\n\r\nStream done. Press Esc to exit or another key to restart.");

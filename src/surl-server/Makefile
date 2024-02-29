@@ -6,13 +6,12 @@ SOURCES := main.c raw-session.c \
 	helpers/html2txt.c \
 	helpers/hgr-convert.c \
 	helpers/stream.c \
+	helpers/ffmpeg_to_hgr.c \
 	../lib/strtrim.c ../lib/strsplit.c \
 	../lib/serial/simple_serial.c \
 	../lib/serial/simple_serial_gets.c \
 	../lib/serial/simple_serial_printf.c \
 	../lib/serial/simple_serial_io.c \
-	../lib/clrzone.c \
-	../lib/extended_conio.c \
 	../lib/malloc0.c 
 
 hgrconv_SOURCES := hgr-convert.c helpers/hgr-convert.c
@@ -30,7 +29,7 @@ $(PROGRAM): $(SOURCES)
 		$(shell curl-config --libs) \
 		$(shell libpng-config --libs) \
 		$(shell pkg-config --libs SDL_image) \
-		-ljq -lgumbo -o $@
+		-ljq -lgumbo -lavfilter -lavformat -lavcodec -lavutil -o $@
 
 hgr-convert: $(hgrconv_SOURCES)
 	gcc $(CFLAGS) \

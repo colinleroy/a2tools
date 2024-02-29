@@ -5,11 +5,12 @@
 #include <sys/time.h>
 #include <sys/wait.h>
 #include <dirent.h>
+#include <pthread.h>
 
 #include "../surl_protocol.h"
 #include "simple_serial.h"
 #include "extended_conio.h"
-#include "hgr-convert.h"
+#include "ffmpeg_to_hgr.h"
 #include "array_sort.h"
 
 #define MAX_OFFSET 126
@@ -17,16 +18,11 @@
 
 #define MIN_REPS   3
 #define MAX_REPS   9
-#define FPS        25
-#define FPS_STR   "25"
 
 /* Set very high because it looks nicer to drop frames than to
  * artifact all the way
  */
 #define MAX_DIFFS_PER_FRAME 25000 
-
-#define HGR_SUFFIX   ".hgr"
-#define SMALL_SUFFIX ".sgr"
 
 #define DOUBLE_BUFFER
 #ifdef DOUBLE_BUFFER
@@ -49,6 +45,84 @@ int changes_num = 0;
 int cur_base, offset;
 
 extern int serial_delay;
+
+char output_file[64];
+
+#define FRAME_FILE_FMT "%s/frame-%06d.hgr"
+
+int vhgr_file;
+char tmp_filename[FILENAME_MAX];
+
+int video_len;
+
+static int generate_frames(char *uri) {
+  unsigned char *buf;
+  int ret = 0;
+  int frameno = 0;
+  printf("Generating frames for %s...\n", uri);
+
+  vhgr_file = -1;
+  sprintf(tmp_filename, "/tmp/vhgr-XXXXXX");
+  if ((vhgr_file = mkstemp(tmp_filename)) < 0) {
+    printf("Could not open output file %s (%s).\n", tmp_filename, strerror(errno));
+    return -1;
+  }
+
+  /* Make sure it won't linger around */
+  unlink(tmp_filename);
+  
+  if (ffmpeg_to_hgr_init(uri, &video_len) != 0) {
+    printf("Could not init ffmpeg.\n");
+    return -1;
+  }
+
+  while ((buf = ffmpeg_convert_frame()) != NULL) {
+    if (write(vhgr_file, buf, HGR_LEN) != HGR_LEN) {
+      printf("Could not write data\n");
+      close(vhgr_file);
+      vhgr_file = -1;
+      ret = -1;
+      break;
+    }
+    frameno++;
+
+    /* Send ping every 10% (and only once for every 25 frames matching the modulo)*/
+    if ((frameno/FPS) % (video_len / 10) == 0
+      && ((frameno/FPS)/(video_len / 10))*((video_len / 10)*FPS) == frameno) {
+      int r;
+      printf("Frame %d (%ds/%ds), %d\n", frameno, frameno/FPS, video_len,  (video_len / 10));
+      simple_serial_putc(SURL_ANSWER_STREAM_LOAD);
+      r = simple_serial_getc_with_timeout();
+      if (r == SURL_METHOD_ABORT) {
+        printf("Client abort\n");
+        ret = -1;
+        break;
+      }
+    }
+  }
+
+  if (lseek(vhgr_file, 0, SEEK_SET) != 0) {
+    printf("lseek: %s\n", strerror(errno));
+  }
+
+  ffmpeg_to_hgr_deinit();
+
+  if (ret == 0) {
+    simple_serial_putc(SURL_ANSWER_STREAM_READY);
+    if (simple_serial_getc() != SURL_CLIENT_READY) {
+      printf("Client not ready\n");
+      ret = -1;
+    }
+  }
+  return ret;
+}
+
+static void cleanup(void) {
+  if (vhgr_file > 0) {
+    close(vhgr_file);
+    vhgr_file = -1;
+  }
+}
 
 static void enqueue_byte(unsigned char b) {
   bytes_sent++;
@@ -114,7 +188,8 @@ static void flush_ident(int ident_vals, int last_val) {
 }
 
 static long lateness = 0;
-/* Returns 1 if should skip frame */
+
+/* Returns 1 if client is late and we should skip frame */
 static int sync_fps(struct timeval *start, struct timeval *end) {
   unsigned long secs      = (end->tv_sec - start->tv_sec)*1000000;
   unsigned long microsecs = end->tv_usec - start->tv_usec;
@@ -143,132 +218,12 @@ static int sync_fps(struct timeval *start, struct timeval *end) {
     lateness += -wait;
     DEBUG("frame took %lu microsecs, late %ld, not sleeping\n", elapsed, lateness);
   }
-  if (lateness > (1000000/FPS)) {
+  /* More than two frame late? */
+  if (lateness > 2*(1000000/FPS)) {
     return 1;
   } else {
     return 0;
   }
-}
-
-char frames_directory[64];
-
-static int generate_frames(char *uri) {
-  char *ffmpeg_args[7];
-  char frame_format[FILENAME_MAX];
-  pid_t pid;
-  
-  strcpy(frames_directory, "/tmp/frames-XXXXXX");
-
-  if (mkdtemp(frames_directory) == NULL) {
-    printf("Could not make temporary directory.\n");
-    exit(1);
-  }
-
-  sprintf(frame_format, "%s/out-%%06d.jpg", frames_directory);
-  ffmpeg_args[0] = "ffmpeg";
-  ffmpeg_args[1] = "-i";
-  ffmpeg_args[2] = uri;
-  ffmpeg_args[3] = "-vf";
-  ffmpeg_args[4] = "fps="FPS_STR",scale=w=280:h=192:force_original_aspect_ratio=decrease:flags=neighbor";
-  ffmpeg_args[5] = frame_format;
-  ffmpeg_args[6] = NULL;
-  
-  printf("Dumping frames (%s %s %s %s %s %s)...\n",
-         ffmpeg_args[0], ffmpeg_args[1],
-         ffmpeg_args[2], ffmpeg_args[3],
-         ffmpeg_args[4], ffmpeg_args[5]);
-  
-  pid = fork();
-  if (pid == -1) {
-    printf("Could not fork\n");
-    return -1;
-  }
-  if (pid == 0) {
-    /* Child process */
-    int r = execvp(ffmpeg_args[0], ffmpeg_args);
-    exit(r);
-  } else {
-    int status;
-    wait(&status);
-    if (status != 0) {
-      printf("ffmpeg failed: %d\n", status);
-      return -1;
-    }
-  }
-  return 0;
-}
-
-static void cleanup(void) {
-  DIR *d = opendir(frames_directory);
-  struct dirent *file;
-  char full_name[FILENAME_MAX-5];
-  if (!d) {
-    printf("Could not open directory %s\n", frames_directory);
-    return;
-  }
-  while ((file = readdir(d)) != NULL) {
-    if (!strstr(file->d_name, HGR_SUFFIX) && !strstr(file->d_name, SMALL_SUFFIX)) {
-      continue;
-    }
-    sprintf(full_name, "%s/%s", frames_directory, file->d_name);
-    unlink(full_name);
-  }
-  rmdir(frames_directory);
-}
-
-static int convert_frame(char *filename, unsigned char small) {
-  size_t len = 0;
-  unsigned char *hgr_buf;
-  char hgr_filename[FILENAME_MAX];
-  FILE *fp;
-
-  if ((hgr_buf = sdl_to_hgr(filename, 1, 0, &len, 1, small)) == NULL) {
-    printf("Could not convert %s\n", filename);
-    return -1;
-  }
-  strcpy(hgr_filename, filename);
-  strcpy(strstr(hgr_filename, ".jpg"), small ? SMALL_SUFFIX : HGR_SUFFIX);
-
-  if ((fp = fopen(hgr_filename, "wb")) == NULL) {
-    printf("Could not open %s\n", hgr_filename);
-    return -1;
-  }
-  if (fwrite(hgr_buf, 1, len, fp) != len) {
-    printf("Could not write to %s\n", hgr_filename);
-    fclose(fp);
-    return -1;
-  }
-  fclose(fp);
-  return 0;
-}
-
-static int generate_hgr_files(void) {
-  DIR *d = opendir(frames_directory);
-  struct dirent *file;
-  int i = 0;
-  char full_name[FILENAME_MAX-5];
-  if (!d) {
-    printf("Could not open directory %s\n", frames_directory);
-    return -1;
-  }
-  printf("Converting frames...\n");
-  while ((file = readdir(d)) != NULL) {
-    if (strstr(file->d_name, ".jpg")) {
-      i++;
-      sprintf(full_name, "%s/%s", frames_directory, file->d_name);
-
-      if (convert_frame(full_name, 0) != 0) {
-        return -1;
-      }
-      if (convert_frame(full_name, 1) != 0) {
-        return -1;
-      }
-      unlink(full_name);
-    }
-  }
-  printf("done(%d frames).\n", i);
-  closedir(d);
-  return 0;
 }
 
 typedef struct _byte_diff {
@@ -316,11 +271,9 @@ int surl_stream_url(char *url) {
   int last_diff;
   int last_val, ident_vals;
   int total = 0, min = 0xFFFF, max = 0;
-  FILE *fp[2] = {NULL, NULL};
-  char filename1[FILENAME_MAX], filename2[FILENAME_MAX];
+  size_t r;
   unsigned char buf_prev[2][8192], buf[2][8192];
   struct timeval frame_start, frame_end;
-  unsigned char small = 1;
   int skipped = 0, skip_next = 0, duration;
   int command, page = 0;
   int num_diffs = 0;
@@ -334,12 +287,6 @@ int surl_stream_url(char *url) {
 
   if (generate_frames(url) != 0) {
     printf("Error generating frames\n");
-    simple_serial_putc(SURL_ANSWER_STREAM_ERROR);
-    cleanup();
-    return -1;
-  }
-  if (generate_hgr_files() != 0) {
-    printf("Error generating HGR files\n");
     simple_serial_putc(SURL_ANSWER_STREAM_ERROR);
     cleanup();
     return -1;
@@ -377,18 +324,14 @@ int surl_stream_url(char *url) {
 
   gettimeofday(&frame_start, 0);
 
+  page = 0;
+
 next_file:
   i++;
-  sprintf(filename2, "%s/out-%06d%s", frames_directory, i, small ? SMALL_SUFFIX : HGR_SUFFIX);
-  fp[page] = fopen(filename2, "rb");
-  if (!fp[page]) {
-    printf("Can't open %s: %s\n", filename2, strerror(errno));
+
+  if ((r = read(vhgr_file, buf[page], HGR_LEN)) != HGR_LEN) {
     goto close_last;
   }
-
-  fread(buf[page], 1, 8192, fp[page]);
-
-  fclose(fp[page]);
 
   /* count diffs */
   last_diff = 0;
@@ -413,10 +356,6 @@ next_file:
     case EOF:
       printf("Timeout, exiting.\n");
       goto close_last;
-    case 'f':
-    case 'F':
-      small = !small;
-      break;
     case ' ':
       printf("Pause.\n");
       command = simple_serial_getc();
@@ -500,7 +439,7 @@ next_file:
     buf_prev[page][pixel] = buf[page][pixel];
   }
   flush_ident(ident_vals, last_val);
-  // cgetc();
+
   ident_vals = 0;
   total += num_diffs;
   if (num_diffs < min) {
@@ -509,9 +448,7 @@ next_file:
   if (num_diffs > max) {
     max = num_diffs;
   }
-  DEBUG("%s => %s : %d differences\n", filename1, filename2, num_diffs);
 
-  strcpy (filename1, filename2);
 #ifdef DOUBLE_BUFFER
   page = !page;
 #endif
@@ -521,11 +458,10 @@ close_last:
   send_offset(0);
   send_base(NUM_BASES+1); /* Done */
   flush_changes();
-
-  /* Remove frames */
-  cleanup();
   /* Get rid of possible last ack */
   simple_serial_flush();
+
+  cleanup();
   printf("Max: %d, Min: %d, Average: %d\n", max, min, total / i);
   printf("Sent %lu bytes for %d frames: %lu avg\n", bytes_sent, i, bytes_sent/i);
   if (i > FPS) {

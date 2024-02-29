@@ -32,8 +32,9 @@ static void send_buf(int sockfd, char *c, int nmemb) {
   n = select(sockfd + 1, NULL, &fds, NULL, &timeout);
 
   if (n > 0 && FD_ISSET(sockfd, &fds)) {
-    write(sockfd, c, nmemb);
-  } else if (n < 0) {
+    n = write(sockfd, c, nmemb);
+  }
+  if (n < 0) {
     printf("RAW: Write error %s\n", strerror(errno));
   }
 }
