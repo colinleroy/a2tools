@@ -26,36 +26,55 @@ _simple_serial_setup_no_irq_regs:
         beq     :+
         lda     #<ZILOG_DATA_A
         ldx     #>ZILOG_DATA_A
-        sta     zilog_data_reg+1
-        stx     zilog_data_reg+2
+        sta     zilog_data_reg_r+1
+        stx     zilog_data_reg_r+2
+        sta     zilog_data_reg_w+1
+        stx     zilog_data_reg_w+2
         lda     #<ZILOG_REG_A
         ldx     #>ZILOG_REG_A
-        sta     zilog_status_reg+1
-        stx     zilog_status_reg+2
+        sta     zilog_status_reg_r+1
+        stx     zilog_status_reg_r+2
+        sta     zilog_status_reg_w+1
+        stx     zilog_status_reg_w+2
+        sta     zilog_status_reg_w2+1
+        stx     zilog_status_reg_w2+2
         rts
 :       lda     #<ZILOG_DATA_B
         ldx     #>ZILOG_DATA_B
-        sta     zilog_data_reg+1
-        stx     zilog_data_reg+2
+        sta     zilog_data_reg_r+1
+        stx     zilog_data_reg_r+2
+        sta     zilog_data_reg_w+1
+        stx     zilog_data_reg_w+2
         lda     #<ZILOG_REG_B
         ldx     #>ZILOG_REG_B
-        sta     zilog_status_reg+1
-        stx     zilog_status_reg+2
+        sta     zilog_status_reg_r+1
+        stx     zilog_status_reg_r+2
+        sta     zilog_status_reg_w+1
+        stx     zilog_status_reg_w+2
+        sta     zilog_status_reg_w2+1
+        stx     zilog_status_reg_w2+2
         rts
 
 _serial_read_byte_no_irq:
-zilog_status_reg:
+zilog_status_reg_r:
 :       lda     $FFFF           ; Do we have a character?
         and     #$01
         beq     :-
-zilog_data_reg:
+zilog_data_reg_r:
         lda     $FFFF           ; We do!
         rts
 
 _serial_putc_direct:
-        sta     tmp2
-:       lda     tmp2
-        jsr     _ser_put
-        cmp     #SER_ERR_OVERFLOW
+        pha
+:       lda     #$00            ;
+zilog_status_reg_w:
+        sta     $FFFF           ; Patched (status reg)
+zilog_status_reg_w2:
+        lda     $FFFF
+        and     #%00000100      ; Init status ready?
         beq     :-
+
+        pla
+zilog_data_reg_w:
+        sta     $FFFF
         rts
