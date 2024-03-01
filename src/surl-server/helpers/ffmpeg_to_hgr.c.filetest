@@ -39,6 +39,14 @@
 #include <libavutil/opt.h>
 
 #include <ffmpeg_to_hgr.h>
+#include "hgr.h"
+
+
+#define MAX_OFFSET 126
+#define NUM_BASES  (HGR_LEN/MAX_OFFSET)+1
+
+#define MIN_REPS   3
+#define MAX_REPS   (MAX_OFFSET-1)
 
 /* Final buffer size, possibly including black borders */
 #define WIDTH 280
@@ -387,4 +395,152 @@ end:
         printf("done.\n");
     }
     return NULL;
+}
+
+
+static int changes_num = 0;
+static char changes_buffer[3*HGR_LEN];
+
+static void enqueue_byte(unsigned char b) {
+  changes_buffer[changes_num++] = b;
+}
+
+static void flush_changes(int fd) {
+  write(fd, changes_buffer, changes_num);
+  changes_num = 0;
+}
+
+static void write_base(int fd, unsigned char b) {
+  if ((b| 0x80) == 0xFF) {
+    printf("Error! Should not!\n");
+    exit(1);
+  }
+  enqueue_byte(b|0x80);
+  if (b == 0) {
+    flush_changes(fd);
+  }
+}
+
+static void write_offset(unsigned char o) {
+  if ((o| 0x80) == 0xFF) {
+    printf("Error! Should not!\n");
+    exit(1);
+  }
+  enqueue_byte(o|0x80);
+}
+
+static void write_num_reps(unsigned char b) {
+  enqueue_byte(0xFF);
+  if ((b & 0x80) != 0) {
+    printf("Error! Should not!\n");
+    exit(1);
+  }
+  enqueue_byte(b);
+}
+static void write_byte(unsigned char b) {
+  if ((b & 0x80) != 0) {
+    printf("Error! Should not!\n");
+    exit(1);
+  }
+  enqueue_byte(b);
+}
+
+static void flush_ident(int ident_vals, int last_val) {
+  if (ident_vals > MIN_REPS) {
+    write_num_reps(ident_vals);
+    write_byte(last_val);
+  } else {
+    while (ident_vals > 0) {
+      write_byte(last_val);
+      ident_vals--;
+    }
+  }
+}
+
+int ffmpeg_convert_video(char *uri) {
+  unsigned char *buf;
+  unsigned char buf_prev[HGR_LEN];
+  int vhgr_file;
+  char tmp_filename[FILENAME_MAX];
+  int video_len;
+  int last_diff;
+  int cur_base;
+  int ident_vals;
+  int last_val;
+  int offset;
+  int j;
+  int ret = 0;
+
+  printf("Generating video for %s...\n", uri);
+
+  vhgr_file = -1;
+  sprintf(tmp_filename, "/tmp/vhgr-XXXXXX");
+  if ((vhgr_file = mkstemp(tmp_filename)) < 0) {
+    printf("Could not open output file %s (%s).\n", tmp_filename, strerror(errno));
+    return -1;
+  }
+
+  if (ffmpeg_to_hgr_init(uri, &video_len) != 0) {
+    printf("Could not init ffmpeg.\n");
+    return -1;
+  }
+
+  memset(buf_prev, 0, HGR_LEN);
+
+  while ((buf = ffmpeg_convert_frame()) != NULL) {
+    write_offset(0);
+    write_base(vhgr_file, 0);
+    last_diff = 0;
+    cur_base = 0;
+    ident_vals = 0;
+
+    last_val = -1;
+    for (j = 0; j < HGR_LEN; j++) {
+      int pixel = j;
+
+      if (buf[pixel] != buf_prev[pixel]) {
+        offset = pixel - (cur_base*MAX_OFFSET);
+        if (offset >= MAX_OFFSET) {
+          /* must flush ident */
+          flush_ident(ident_vals, last_val);
+          ident_vals = 0;
+
+          /* we have to update base */
+          cur_base = pixel / MAX_OFFSET;
+          offset = pixel - (cur_base*MAX_OFFSET);
+
+          write_offset(offset);
+          write_base(vhgr_file, cur_base);
+        } else if (pixel != last_diff+1) {
+          /* must flush ident */
+          flush_ident(ident_vals, last_val);
+          ident_vals = 0;
+          /* We have to send offset */
+          write_offset(offset);
+        }
+        if (last_val == -1 || 
+           (ident_vals < MAX_REPS && buf[pixel] == last_val && pixel == last_diff+1)) {
+          ident_vals++;
+        } else {
+          flush_ident(ident_vals, last_val);
+          ident_vals = 1;
+        }
+        last_val = buf[pixel];
+
+        last_diff = pixel;
+      }
+    }
+
+    memcpy(buf_prev, buf, HGR_LEN);
+    flush_ident(ident_vals, last_val);
+    ident_vals = 0;
+  }
+
+  write_offset(0);
+  write_base(vhgr_file, NUM_BASES+1);
+  flush_changes(vhgr_file);
+
+  ffmpeg_to_hgr_deinit();
+
+  return ret;
 }

@@ -220,6 +220,10 @@ int main(int argc, char **argv) {
   //snprintf(params, BUF_SIZE, "%s %s ISO646-FR1 e 110882478679186108", instance_url, oauth_token);
   //snprintf(params, BUF_SIZE, "%s %s ISO646-FR1", instance_url, oauth_token);
   // exec("mastowrite", params);
+
+  // snprintf(params, BUF_SIZE, "%s %s ISO646-FR1 1 s 112016758824153809", instance_url, oauth_token);
+  // exec("mastoimg", params);
+
   exec("mastocli", params);
 #else
   printf("exec(mastocli %s)\n",params);

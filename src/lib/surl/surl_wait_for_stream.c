@@ -21,7 +21,7 @@
 #include "surl.h"
 #include "simple_serial.h"
 #include "extended_conio.h"
-#include "math.h"
+#include "hgr.h"
 
 #ifdef __CC65__
 #pragma static-locals(push, on)
@@ -35,6 +35,12 @@
 int surl_wait_for_stream(void) {
   int r;
   int x, y;
+
+  /* Clear HGR buffers */
+  memset((char *)HGR_PAGE, 0, HGR_LEN);
+#ifdef DOUBLE_BUFFER
+  memset((char *)HGR_PAGE2, 0, HGR_LEN);
+#endif
   x = wherex();
   y = wherey();
   /* Cheap progress bar */

@@ -144,7 +144,7 @@ CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x400 $(USE_LANGCARD) -
 
 mastodon_CLCFLAGS = $(CLCFLAGS)
 mastocli_CLCFLAGS = $(CLCFLAGS)
-mastoimg_CLCFLAGS = $(CLCFLAGS) --start-addr 0x6000
+mastoimg_CLCFLAGS = $(CLCFLAGS) -DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER --start-addr 0x6000
 mastowrite_CLCFLAGS = $(CLCFLAGS) -DDGETS_MULTILINE
 
 GCCCFLAGS = -g -O0 -Wall -Wno-char-subscripts -Wno-unused-but-set-variable -Wno-unused-variable -Wno-unknown-pragmas -Werror $(shell sdl-config --cflags)

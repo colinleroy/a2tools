@@ -14,7 +14,7 @@
 #include "array_sort.h"
 
 #define MAX_OFFSET 126
-#define NUM_BASES  (8192/MAX_OFFSET)+1
+#define NUM_BASES  (HGR_LEN/MAX_OFFSET)+1
 
 #define MIN_REPS   3
 #define MAX_REPS   9
@@ -39,7 +39,7 @@
 
 unsigned long bytes_sent = 0;
 
-char changes_buffer[8192*2];
+char changes_buffer[HGR_LEN*2];
 int changes_num = 0;
 
 int cur_base, offset;
@@ -129,8 +129,8 @@ static void enqueue_byte(unsigned char b) {
   changes_buffer[changes_num++] = b;
 }
 
-void flush_changes(void) {
-  simple_serial_write(changes_buffer, changes_num);
+static void flush_changes(void) {
+  simple_serial_write_fast(changes_buffer, changes_num);
   changes_num = 0;
 }
 
@@ -146,8 +146,8 @@ static void send_base(unsigned char b) {
   if (b == 0) {
     flush_changes();
   }
-  // cgetc();
 }
+
 static void send_offset(unsigned char o) {
   DEBUG("offset %d (should be written at %x)\n", o, 0x2000+(cur_base*MAX_OFFSET)+offset);
   if ((o| 0x80) == 0xFF) {
@@ -272,15 +272,15 @@ int surl_stream_url(char *url) {
   int last_val, ident_vals;
   int total = 0, min = 0xFFFF, max = 0;
   size_t r;
-  unsigned char buf_prev[2][8192], buf[2][8192];
+  unsigned char buf_prev[2][HGR_LEN], buf[2][HGR_LEN];
   struct timeval frame_start, frame_end;
   int skipped = 0, skip_next = 0, duration;
   int command, page = 0;
   int num_diffs = 0;
 
   if (diffs == NULL) {
-    diffs = malloc(8192 * sizeof(byte_diff *));
-    for (j = 0; j < 8192; j++) {
+    diffs = malloc(HGR_LEN * sizeof(byte_diff *));
+    for (j = 0; j < HGR_LEN; j++) {
       diffs[j] = malloc(sizeof(byte_diff));
     }
   }
@@ -297,30 +297,12 @@ int surl_stream_url(char *url) {
 
   memset(changes_buffer, 0, sizeof changes_buffer);
 
-  /* Force clear */
-  for (page = 0; page < NUM_PAGES; page++) {
-    offset = 0;
-    send_offset(offset);
-    for(cur_base = 0; cur_base < 8192/MAX_OFFSET; cur_base++) {
-      send_base(cur_base);
-      while (1) {
-        flush_ident(MAX_REPS, 0);
-        offset += MAX_REPS;
-        if (offset >= MAX_OFFSET) {
-          offset -= MAX_OFFSET;
-          send_offset(offset);
-          break;
-        } else {
-          send_offset(offset);
-        }
-      }
-    }
-    /* clear finished */
-    send_base(cur_base);
-  }
+  send_offset(0);
+  send_base(0);
+
   i = 1;
-  memset(buf_prev[0], 0, 8192);
-  memset(buf_prev[1], 0, 8192);
+  memset(buf_prev[0], 0, HGR_LEN);
+  memset(buf_prev[1], 0, HGR_LEN);
 
   gettimeofday(&frame_start, 0);
 
@@ -381,7 +363,7 @@ next_file:
 
   gettimeofday(&frame_start, 0);
 
-  for (num_diffs = 0, j = 0; j < 8192; j++) {
+  for (num_diffs = 0, j = 0; j < HGR_LEN; j++) {
     if (buf_prev[page][j] != buf[page][j]) {
       diffs[num_diffs]->offset = j;
       diffs[num_diffs]->changed = diff_score(buf_prev[page][j], buf[page][j]);
@@ -439,8 +421,8 @@ next_file:
     buf_prev[page][pixel] = buf[page][pixel];
   }
   flush_ident(ident_vals, last_val);
-
   ident_vals = 0;
+
   total += num_diffs;
   if (num_diffs < min) {
     min = num_diffs;
@@ -458,6 +440,7 @@ close_last:
   send_offset(0);
   send_base(NUM_BASES+1); /* Done */
   flush_changes();
+
   /* Get rid of possible last ack */
   simple_serial_flush();
 

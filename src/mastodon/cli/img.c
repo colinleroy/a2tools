@@ -106,32 +106,33 @@ static void set_legend(char *str, unsigned char video, unsigned char idx, unsign
 static void stream_msg(char *msg) {
   hgr_mixon();
   clrscr();
-  gotoxy(0, 20);
+  gotoxy(0, 21);
   cputs(msg);
 }
 static void video_stream(media *m, char idx, char num_images) {
-  toggle_legend(1);
-  surl_start_request(SURL_METHOD_STREAM, m->media_url[idx], NULL, 0);
-
-#ifdef __CC65__
-  if (surl_response_code() != 100) {
-    goto stream_err;
-  }
-
-  memset((char *)HGR_PAGE, 0x00, HGR_LEN);
+#ifdef DOUBLE_BUFFER
+  videomode(VIDEOMODE_40COL);
 #endif
   toggle_legend(0);
   stream_msg("Play/Pause : Space\r\n"
-             "Fullscreen : F\r\n"
              "Quit viewer: Esc\r\n"
-             "Waiting for proxy transcoding...");
+             "Waiting for proxy...");
+  init_hgr(1);
+  hgr_mixon();
+  surl_start_request(SURL_METHOD_STREAM, m->media_url[idx], NULL, 0);
+
 #ifdef __CC65__
   if (surl_wait_for_stream() != 0 || surl_stream() != 0) {
-stream_err:
-    set_legend("\r\n\r\n\r\nRequest failed. Press Esc to exit or another key to restart.", 0, idx, num_images);
+#ifdef DOUBLE_BUFFER
+    videomode(VIDEOMODE_80COL);
+#endif
+    set_legend("\r\n\r\nRequest failed. Press Esc to exit or another key to restart.", 0, idx, num_images);
     toggle_legend(1);
   } else {
-    stream_msg("\r\n\r\n\r\nStream done. Press Esc to exit or another key to restart.");
+#ifdef DOUBLE_BUFFER
+    videomode(VIDEOMODE_80COL);
+#endif
+    stream_msg("\r\n\r\nStream done. Press Esc to exit or another key to restart.");
   }
 #endif
 }

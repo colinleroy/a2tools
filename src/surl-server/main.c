@@ -117,9 +117,11 @@ static const char *dump_response_to_file(char *buffer, size_t size) {
   char *filename = "/tmp/imgdata";
   FILE *fp = fopen(filename, "w+b");
   if (!fp) {
+    printf("Could not open file: %s.\n", strerror(errno));
     return NULL;
   }
   if (fwrite(buffer, 1, size, fp) < size) {
+    printf("Could not write to file: %s.\n", strerror(errno));
     fclose(fp);
     return NULL;
   }
@@ -141,12 +143,8 @@ static void do_debug(char *file_line) {
   fflush(stdout);
 }
 
-extern int n_sent_bytes;
 #define IO_BARRIER(msg) do {                            \
-    printf("IO Barrier ("msg                            \
-           ") - sent %d bytes since last barrier.\n",   \
-           n_sent_bytes);                               \
-    n_sent_bytes = 0;                                   \
+    printf("IO Barrier\n");                             \
     while (simple_serial_getc() != SURL_CLIENT_READY);  \
 } while (0)
 
@@ -159,10 +157,10 @@ static void send_response_headers(curl_buffer *response) {
   ct_size = htons(strlen(response->content_type) + 1);
 
   IO_BARRIER("response headers");
-  simple_serial_write((char *)&size, 4);
-  simple_serial_write((char *)&code, 2);
-  simple_serial_write((char *)&hdr_size, 2);
-  simple_serial_write((char *)&ct_size, 2);
+  simple_serial_write_fast((char *)&size, 4);
+  simple_serial_write_fast((char *)&code, 2);
+  simple_serial_write_fast((char *)&hdr_size, 2);
+  simple_serial_write_fast((char *)&ct_size, 2);
   IO_BARRIER("response content-type");
   simple_serial_puts(response->content_type);
   simple_serial_putc('\0');
@@ -436,7 +434,7 @@ abort:
         sending_body = 1;
         to_send = min(bufsize, response->size - sent);
         printf("RESP: SEND %zu body bytes from %zu\n", to_send, sent);
-        simple_serial_write(response->buffer + sent, to_send);
+        simple_serial_write_fast(response->buffer + sent, to_send);
         sent += to_send;
 
       } else if (cmd == SURL_CMD_HEADERS) {
@@ -457,7 +455,7 @@ abort:
         sending_headers = 1;
         to_send = min(bufsize, response->headers_size - sent);
         printf("RESP: HEADERS %zu header bytes from %zu\n", to_send, sent);
-        simple_serial_write(response->headers + sent, to_send);
+        simple_serial_write_fast(response->headers + sent, to_send);
         sent += to_send;
 
       } else if (cmd == SURL_CMD_FIND) {
@@ -491,7 +489,7 @@ abort:
           simple_serial_putc(SURL_ERROR_OK);
           IO_BARRIER("FIND, pre-len");
 
-          simple_serial_write((char *)&l, 2);
+          simple_serial_write_fast((char *)&l, 2);
           IO_BARRIER("FIND, pre-content");
 
           simple_serial_puts(found);
@@ -568,7 +566,7 @@ abort:
             l = htons(strlen(result));
 
             IO_BARRIER("JSON, pre-len");
-            simple_serial_write((char *)&l, 2);
+            simple_serial_write_fast((char *)&l, 2);
 
             IO_BARRIER("JSON, pre-content");
             simple_serial_puts(result);
@@ -591,10 +589,10 @@ abort:
             l = htons(response->hgr_len);
 
             IO_BARRIER("HGR, pre-len");
-            simple_serial_write((char *)&l, 2);
+            simple_serial_write_fast((char *)&l, 2);
 
             IO_BARRIER("HGR, pre-content");
-            simple_serial_write((char *)response->hgr_buf, response->hgr_len);
+            simple_serial_write_fast((char *)response->hgr_buf, response->hgr_len);
         } else {
           printf("RESP: HGR: No HGR data\n");
           simple_serial_putc(SURL_ERROR_CONV_FAILED);
@@ -1167,7 +1165,7 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
     uint32_t now = htonl((uint32_t)time(NULL));
     simple_serial_putc(SURL_ANSWER_TIME);
     IO_BARRIER("GETTIME");
-    simple_serial_write((char *)&now, 4);
+    simple_serial_write_fast((char *)&now, 4);
     return NULL;
   } else if (method == SURL_METHOD_PING) {
     simple_serial_putc(SURL_ANSWER_PONG);
