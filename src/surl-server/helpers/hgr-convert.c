@@ -785,6 +785,10 @@ unsigned char *sdl_to_hgr(const char *filename, char monochrome, char save_previ
   int dst_w, dst_h;
   init_base_addrs();
 
+  if (filename == NULL) {
+    return NULL;
+  }
+
   /* Open the image file */
   image = IMG_Load(filename);
   if ( image == NULL) {

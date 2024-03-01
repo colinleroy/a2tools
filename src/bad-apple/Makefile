@@ -12,7 +12,8 @@ SOURCES := main.c \
 	../surl-server/helpers/ffmpeg_to_hgr.c \
 	../lib/array_sort.c
 
-CFLAGS= -I ../lib -I ../surl-server/helpers -g -O3 -Wall -Wno-char-subscripts -Wno-deprecated-declarations -Wall -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
+CFLAGS= -I ../lib -I ../surl-server/helpers -g -O3 -Wall \
+				-Wno-char-subscripts -Wno-deprecated-declarations -Wall -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
 .PHONY: all clean
 all: $(PROGRAM)
 

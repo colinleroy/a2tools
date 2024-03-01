@@ -8,7 +8,8 @@
 #define HGR_HEIGHT 192U
 
 #ifdef __CC65__
-#define HGR_PAGE 0x2000
+#define HGR_PAGE  0x2000
+#define HGR_PAGE2 0x4000
 #else
 extern char HGR_PAGE[HGR_LEN];
 #endif

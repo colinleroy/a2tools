@@ -31,6 +31,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
+#include <sys/time.h>
 #include "platform.h"
 
 char *readbuf = NULL;
@@ -143,13 +144,13 @@ int simple_serial_getc_immediate(void) {
 }
 
 /* Output */
-int n_sent_bytes;
 int serial_delay = 0;
 unsigned char __fastcall__ simple_serial_putc(char c) {
   int r;
   fd_set fds;
   struct timeval tv_timeout;
   int n;
+  
 
   FD_ZERO(&fds);
   FD_SET(fileno(ttyfp), &fds);
@@ -174,8 +175,6 @@ unsigned char __fastcall__ simple_serial_putc(char c) {
       /* Don't let the kernel buffer bytes */
       tcdrain(fileno(ttyfp));
     }
-
-    n_sent_bytes++;
 
     /* Insert a delay if needed */
     usleep(serial_delay);
@@ -222,5 +221,49 @@ void __fastcall__ simple_serial_write(const char *ptr, size_t nmemb) {
     if (simple_serial_putc(*cur) == (unsigned char)-1)
       break;
     ++cur;
+  }
+}
+
+void __fastcall__ simple_serial_write_fast(const char *ptr, size_t nmemb) {
+  fd_set fds;
+  struct timeval tv_timeout;
+  int n, w, total = 0;
+
+again:
+  FD_ZERO(&fds);
+  FD_SET(fileno(ttyfp), &fds);
+
+  tv_timeout.tv_sec  = 1;
+  tv_timeout.tv_usec = 0;
+
+  n = select(fileno(ttyfp) + 1, NULL, &fds, NULL, &tv_timeout);
+
+  if (n > 0 && FD_ISSET(fileno(ttyfp), &fds)) {
+    int flags = fcntl(fileno(ttyfp), F_GETFL);
+    flags |= O_NONBLOCK;
+    fcntl(fileno(ttyfp), F_SETFL, flags);
+
+    w = fwrite(ptr, 1, nmemb - total, ttyfp);
+    total += w;
+    if (total < nmemb) {
+      if (errno == EAGAIN) {
+        ptr += w;
+        fflush(ttyfp);
+        goto again;
+      }
+    }
+    fflush(ttyfp);
+
+    flags &= ~O_NONBLOCK;
+    fcntl(fileno(ttyfp), F_SETFL, flags);
+
+    if (serial_delay) {
+      /* Don't let the kernel buffer bytes */
+      tcdrain(fileno(ttyfp));
+    }
+  } else {
+    if (errno == EAGAIN && total < nmemb) {
+      goto again;
+    }
   }
 }

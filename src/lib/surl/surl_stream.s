@@ -108,7 +108,6 @@ _surl_stream:
 
 .endif
 
-        jsr     _simple_serial_setup_no_irq_regs
         lda     #$00
         jsr     _simple_serial_set_irq
 
