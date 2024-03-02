@@ -26,7 +26,7 @@ calc_bases:
 
         clc
 
-next_base:
+calc_next_base:
         sta     (ptr1),y
         iny
         pha
@@ -40,7 +40,7 @@ next_base:
         inx
         clc
 :       cpy     #(NUM_BASES*2)
-        bcc     next_base
+        bcc     calc_next_base
         rts
 
 handle_kbd:
@@ -51,7 +51,7 @@ handle_kbd:
         lda    #$00
 :       cmp    #$1B             ; Escape
         bne    :+
-        sta    Stop
+        sta    stop
 :       jsr    _serial_putc_direct
         ldy    #$00             ; Main loop expects Y 0 there
         rts
@@ -88,7 +88,7 @@ cleanup:
 _surl_stream:
         lda     #$00
         sta     tmp1            ; Current page
-        sta     Stop
+        sta     stop
 
         lda     #<(base_addr1)  ; Calculate bases for HGR page 1
         ldy     #>(base_addr1)
@@ -122,6 +122,7 @@ _surl_stream:
 
 :       bit     $C052           ; Clear HGR mix
         ldx     #$00            ; Offset
+        stx     last_offset
         lda     #($00|$80)      ; Base
         jmp     loop
 
@@ -133,13 +134,13 @@ set_base:
         tay
         bne     :+
         jsr     frame_done      ; Sync point, send $00 and check kbd
-        lda     Stop            ; Does user want to stop?
+        lda     stop            ; Does user want to stop?
         beq     :+
         jmp     cleanup
-:       cmp     #((NUM_BASES+1)*2) ; End of stream?
+:       cmp     #((NUM_BASES+2)*2) ; End of stream?
         bne     :+
         jmp     cleanup
-:       
+:
 base_ptr_a:
         lda     (ptr2),y
         sta     store_dest+1
@@ -169,6 +170,17 @@ store_dest:
 set_offset:
         and     #%01111111      ; Get rid of sign
         tax                     ; set offset
+
+        cpx     last_offset     ; If offset diminished, presume we're
+        bcs     :+              ; going to next base.
+
+        lda     store_dest+1    ; Increment base savagely for less cycles
+        adc     #(MAX_OFFSET)
+        sta     store_dest+1
+        bcc     :+
+        inc     store_dest+2
+
+:       stx     last_offset
         jsr     _serial_read_byte_no_irq
         bmi     set_base        ; We have a new base (or rep maybe)
         jmp     store_dest      ; Otherwise it's a value
@@ -182,4 +194,5 @@ page_addr:      .byte <(ptr3)   ; Bases addresses for page 2
         .bss
 base_addr1:     .res (NUM_BASES*2)
 base_addr2:     .res (NUM_BASES*2)
-Stop:           .res 1
+stop:           .res 1
+last_offset:    .res 1
