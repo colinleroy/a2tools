@@ -111,7 +111,9 @@ static void stream_msg(char *msg) {
 }
 static void video_stream(media *m, char idx, char num_images) {
 #ifdef DOUBLE_BUFFER
+#ifdef __APPLE2ENH__
   videomode(VIDEOMODE_40COL);
+#endif
 #endif
   toggle_legend(0);
   stream_msg("Play/Pause : Space\r\n"
@@ -124,13 +126,17 @@ static void video_stream(media *m, char idx, char num_images) {
 #ifdef __CC65__
   if (surl_wait_for_stream() != 0 || surl_stream() != 0) {
 #ifdef DOUBLE_BUFFER
+#ifdef __APPLE2ENH__
     videomode(VIDEOMODE_80COL);
+#endif
 #endif
     set_legend("\r\n\r\nRequest failed. Press Esc to exit or another key to restart.", 0, idx, num_images);
     toggle_legend(1);
   } else {
 #ifdef DOUBLE_BUFFER
+#ifdef __APPLE2ENH__
     videomode(VIDEOMODE_80COL);
+#endif
 #endif
     stream_msg("\r\n\r\nStream done. Press Esc to exit or another key to restart.");
   }
