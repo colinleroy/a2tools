@@ -17,12 +17,12 @@
 #define NUM_BASES  (HGR_LEN/MAX_OFFSET)+1
 
 #define MIN_REPS   3
-#define MAX_REPS   9
+#define MAX_REPS   7
 
 /* Set very high because it looks nicer to drop frames than to
  * artifact all the way
  */
-#define MAX_DIFFS_PER_FRAME 25000 
+#define MAX_DIFFS_PER_FRAME 25000
 
 #define DOUBLE_BUFFER
 #ifdef DOUBLE_BUFFER
@@ -37,7 +37,7 @@
  #define DEBUG if (0) printf
 #endif
 
-unsigned long bytes_sent = 0;
+unsigned long bytes_sent = 0, data_bytes = 0, offset_bytes = 0, base_bytes = 0;
 
 char changes_buffer[HGR_LEN*2];
 int changes_num = 0;
@@ -70,7 +70,7 @@ static int generate_frames(char *uri) {
 
   /* Make sure it won't linger around */
   unlink(tmp_filename);
-  
+
   if (ffmpeg_to_hgr_init(uri, &video_len) != 0) {
     printf("Could not init ffmpeg.\n");
     return -1;
@@ -134,10 +134,10 @@ static void flush_changes(void) {
   changes_num = 0;
 }
 
+static int last_sent_base = -1;
 static void send_base(unsigned char b) {
   DEBUG(" new base %d\n", b);
   DEBUG(" base %d offset %d (should be written at %x)\n", b, offset, 0x2000+(cur_base*MAX_OFFSET)+offset);
-
   if ((b| 0x80) == 0xFF) {
     printf("Error! Should not!\n");
     exit(1);
@@ -146,8 +146,11 @@ static void send_base(unsigned char b) {
   if (b == 0) {
     flush_changes();
   }
+  last_sent_base = b;
+  base_bytes++;
 }
 
+int last_sent_offset = -1;
 static void send_offset(unsigned char o) {
   DEBUG("offset %d (should be written at %x)\n", o, 0x2000+(cur_base*MAX_OFFSET)+offset);
   if ((o| 0x80) == 0xFF) {
@@ -155,7 +158,9 @@ static void send_offset(unsigned char o) {
     exit(1);
   }
   enqueue_byte(o|0x80);
-  // cgetc();
+
+  last_sent_offset = o;
+  offset_bytes++;
 }
 static void send_num_reps(unsigned char b) {
   DEBUG("  => %d * ", b);
@@ -165,6 +170,8 @@ static void send_num_reps(unsigned char b) {
     exit(1);
   }
   enqueue_byte(b);
+
+  data_bytes += 2;
 }
 static void send_byte(unsigned char b) {
   DEBUG("  => %d\n", b);
@@ -173,6 +180,8 @@ static void send_byte(unsigned char b) {
     exit(1);
   }
   enqueue_byte(b);
+
+  data_bytes++;
 }
 
 static void flush_ident(int ident_vals, int last_val) {
@@ -297,6 +306,7 @@ int surl_stream_url(char *url) {
 
   memset(changes_buffer, 0, sizeof changes_buffer);
 
+  offset = cur_base = 0;
   send_offset(0);
   send_base(0);
 
@@ -321,6 +331,7 @@ next_file:
   ident_vals = 0;
 
   /* Sync point - force a switch to base 0 */
+  offset = cur_base = 0;
   send_offset(0);
   send_base(0);
 
@@ -388,7 +399,10 @@ next_file:
     int pixel = diffs[j]->offset;
 
     offset = pixel - (cur_base*MAX_OFFSET);
-    if (offset >= MAX_OFFSET) {
+    /* If there's no hole in updated bytes, we can let offset
+     * increment up to 255 */
+    if ((offset >= MAX_OFFSET && pixel != last_diff+1)
+      || offset > 255) {
       /* must flush ident */
       flush_ident(ident_vals, last_val);
       ident_vals = 0;
@@ -397,8 +411,17 @@ next_file:
       cur_base = pixel / MAX_OFFSET;
       offset = pixel - (cur_base*MAX_OFFSET);
 
-      send_offset(offset);
-      send_base(cur_base);
+      if (offset < last_sent_offset && cur_base == last_sent_base + 1) {
+        DEBUG("skip sending base (offset %d => %d, base %d => %d)\n",
+                last_sent_offset, offset, last_sent_base, cur_base);
+        send_offset(offset);
+        last_sent_base = cur_base;
+      } else {
+        DEBUG("must send base (offset %d => %d, base %d => %d)\n",
+                last_sent_offset, offset, last_sent_base, cur_base);
+        send_offset(offset);
+        send_base(cur_base);
+      }
     } else if (pixel != last_diff+1) {
       /* must flush ident */
       flush_ident(ident_vals, last_val);
@@ -406,7 +429,7 @@ next_file:
       /* We have to send offset */
       send_offset(offset);
     }
-    if (last_val == -1 || 
+    if (last_val == -1 ||
        (ident_vals < MAX_REPS && buf[page][pixel] == last_val && pixel == last_diff+1)) {
       ident_vals++;
     } else {
@@ -438,16 +461,20 @@ next_file:
 
 close_last:
   send_offset(0);
-  send_base(NUM_BASES+1); /* Done */
+  send_base(NUM_BASES+2); /* Done */
   flush_changes();
 
   /* Get rid of possible last ack */
   simple_serial_flush();
 
   cleanup();
-  printf("Max: %d, Min: %d, Average: %d\n", max, min, total / i);
-  printf("Sent %lu bytes for %d frames: %lu avg\n", bytes_sent, i, bytes_sent/i);
-  if (i > FPS) {
+  if (i - skipped > 0) {
+    printf("Max: %d, Min: %d, Average: %d\n", max, min, total / (i-skipped));
+    printf("Sent %lu bytes for %d non-skipped frames: %lu avg (%lu data, %lu offset, %lu base)\n",
+            bytes_sent, (i-skipped), bytes_sent/(i-skipped),
+            data_bytes/(i-skipped), offset_bytes/(i-skipped), base_bytes/(i-skipped));
+  }
+  if (i - skipped > FPS) {
     duration = i/FPS;
     printf("%d seconds, %d frames skipped / %d: %d fps\n", duration,
           skipped, i, (i-skipped)/duration);
