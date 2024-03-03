@@ -614,6 +614,7 @@ again:
       cgetc();
       goto again;
     }
+    simple_serial_setup_no_irq_regs();
   } else {
     response = surl_start_request(SURL_METHOD_RAW, buf, NULL, 0);
     if (response->code != 100) {
