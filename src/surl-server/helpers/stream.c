@@ -316,10 +316,11 @@ int surl_stream_url(char *url) {
 
   gettimeofday(&frame_start, 0);
 
-  page = 0;
+  page = 1;
 
 next_file:
   i++;
+  page = !page;
 
   if ((r = read(vhgr_file, buf[page], HGR_LEN)) != HGR_LEN) {
     goto close_last;
@@ -342,7 +343,7 @@ next_file:
 
   }
 
-  DEBUG("sync point\n");
+  DEBUG("sync point %d\n", i);
   command = simple_serial_getc_with_timeout();
   switch (command) {
     case CH_ESC:
@@ -355,6 +356,9 @@ next_file:
       if (command == SURL_METHOD_ABORT)
         goto close_last;
       printf("Play.\n");
+      lateness = 0;
+      skip_next = 0;
+      break;
   }
   gettimeofday(&frame_end, 0);
   if (sync_fps(&frame_start, &frame_end) || skip_next) {
@@ -367,7 +371,6 @@ next_file:
     } else {
       skip_next = 0;
     }
-    page = !page;
 #endif
     goto next_file;
   }
@@ -454,9 +457,6 @@ next_file:
     max = num_diffs;
   }
 
-#ifdef DOUBLE_BUFFER
-  page = !page;
-#endif
   goto next_file;
 
 close_last:
