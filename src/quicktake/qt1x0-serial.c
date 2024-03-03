@@ -131,7 +131,9 @@ uint8 qt1x0_wakeup(uint16 speed) {
 #endif
     return QT_MODEL_UNKNOWN;
   }
-  send_hello(speed);
+  if (send_hello(speed) != 0) {
+    return QT_MODEL_UNKNOWN;
+  }
 
   cputs("Done. ");
   return model;
