@@ -1,171 +1,131 @@
 
-        .importzp             ptr1, ptr2, ptr3, tmp1
+        .importzp             ptr1, _zp6, _zp7, _zp8, _zp10
 
         .import               _serial_read_byte_no_irq
         .import               _simple_serial_setup_no_irq_regs
         .import               _simple_serial_set_irq
         .import               _simple_serial_flush
         .import               _serial_putc_direct
-        .import               _cgetc
 
         .export               _surl_stream
 
 
-KBD     :=      $C000   ; Read keyboard
-KBDSTRB :=      $C010   ; Clear keyboard strobe
+KBD          := $C000   ; Read keyboard
+KBDSTRB      := $C010   ; Clear keyboard strobe
 
-MAX_OFFSET =126
-NUM_BASES  =(8192/MAX_OFFSET)+1
+MAX_OFFSET    = 126
+N_BASES       = (8192/MAX_OFFSET)+1
 
-calc_bases:
-        sta     ptr1
-        sty     ptr1+1
-
-        ldy     #0
-        lda     #$00
-
-        clc
-
-calc_next_base:
-        sta     (ptr1),y
-        iny
-        pha
-        txa
-        sta     (ptr1),y
-        pla
-        iny
-
-        adc     #(MAX_OFFSET)
-        bcc     :+
-        inx
-        clc
-:       cpy     #(NUM_BASES*2)
-        bcc     calc_next_base
-        rts
-
-handle_kbd:
-        cmp    #' '
-        bne    :+
-        jsr    _serial_putc_direct ; Pause
-        jsr    _cgetc           ; Wait for play.
-        lda    #$00
-:       cmp    #$1B             ; Escape
-        bne    :+
-        sta    stop
-:       jsr    _serial_putc_direct
-        ldy    #$00             ; Main loop expects Y 0 there
-        rts
-
-frame_done:
 .ifdef DOUBLE_BUFFER
-
-        ldx     tmp1            ; page
-        lda     $C054,x
-        lda     page_addr,x
-        sta     base_ptr_a+1
-        sta     base_ptr_b+1
-        txa
-        eor     #$01
-        sta     tmp1
-        ldx     #$00            ; X (offset) is supposed to be 0 after this
+PAGE1_HB      = $20
+PAGE2_HB      = $40
+.else
+PAGE1_HB      = $20
+PAGE2_HB      = PAGE1_HB
 .endif
-        lda     KBD
-        bpl     :+
-        and     #$7F            ; Clear high bit
-        bit     KBDSTRB         ; Clear keyboard strobe
-        jmp     handle_kbd
-:       lda     #$00
-        jmp     _serial_putc_direct
 
-cleanup:
-        lda     #$01
-        jsr     _simple_serial_set_irq
-        jsr     _simple_serial_flush
-        lda     #$00
-        tax
-        rts
+page1_addr_ptr= _zp8
+page2_addr_ptr= _zp10
+page          = _zp6
+last_offset   = _zp7
 
 _surl_stream:
+        ; Setup
         lda     #$00
-        sta     tmp1            ; Current page
+        sta     page
         sta     stop
 
-        lda     #<(base_addr1)  ; Calculate bases for HGR page 1
-        ldy     #>(base_addr1)
-        sta     ptr2
-        sty     ptr2+1
-        ldx     #$20
+        ; Calculate bases for HGR page 1
+        lda     #<(page1_addrs_arr)
+        ldy     #>(page1_addrs_arr)
+        sta     page1_addr_ptr
+        sty     page1_addr_ptr+1
+        ldx     #PAGE1_HB
         jsr     calc_bases
 
-.ifdef DOUBLE_BUFFER
-
-        lda     #<(base_addr2)  ; Calculate bases for HGR page 2
-        ldy     #>(base_addr2)
-        sta     ptr3
-        sty     ptr3+1
-        ldx     #$40
+        ; Calculate bases for HGR page 2
+        lda     #<(page2_addrs_arr)
+        ldy     #>(page2_addrs_arr)
+        sta     page2_addr_ptr
+        sty     page2_addr_ptr+1
+        ldx     #PAGE2_HB
         jsr     calc_bases
 
-.endif
-
+        ; Shutdown IRQs, inform server we're ready
         lda     #$00
         jsr     _simple_serial_set_irq
 
         lda     #$2F            ; SURL_CLIENT_READY
         jsr     _serial_putc_direct
+
         jsr     _serial_read_byte_no_irq
         cmp     #$27            ; SURL_ANSWER_STREAM_START
         beq     :+
-        lda     #$FF
+        lda     #$FF            ; Server error
         tax
         rts
 
 :       bit     $C052           ; Clear HGR mix
-        ldx     #$00            ; Offset
+        ldx     #$00            ; Start offset
         stx     last_offset
-        lda     #($00|$80)      ; Base
-        jmp     loop
+        lda     #($00|$80)      ; Start base
+        jmp     loop            ; and go!
 
 set_base:
-        cmp     #$FF            ; Is it a rep  ?
-        beq     do_rep
+        cmp     #$FF            ; Is it a rep? It can be.
+        beq     do_rep          ; Go handle repetition
+
         and     #%01111111      ; Get rid of the sign
-        asl     a               ; shift for array index
-        tay
-        bne     :+
-        jsr     frame_done      ; Sync point, send $00 and check kbd
-        lda     stop            ; Does user want to stop?
+        asl     a               ; Shift for array index
+
+        bne     :+              ; If base is 0, it's a new frame.
+        jsr     frame_done      ; In which case, sync point.
+
+        lda     stop            ; Did user press ESC?
         beq     :+
         jmp     cleanup
-:       cmp     #((NUM_BASES+2)*2) ; End of stream?
+
+:       cmp     #((N_BASES+2)*2); Base not 0. Is it the end of stream?
         bne     :+
         jmp     cleanup
-:
-base_ptr_a:
-        lda     (ptr2),y
+
+:       tay
+page_ptr_a:
+        ; Update where to store pixels. Both these pointers are patched
+        ; when switching page.
+        lda     (page1_addr_ptr),y
         sta     store_dest+1
         iny
-base_ptr_b:
-        lda     (ptr2),y
+page_ptr_b:
+        lda     (page1_addr_ptr),y
         sta     store_dest+2
+        ; Done with our new base, back to main loop
 
 loop:
-        ldy     #$01
+        ; Main loop - either we get a positive value and it's
+        ; a block of pixels to store at the current offset, or
+        ; it's a negative value, in which case it's either an
+        ; offset between 0 and MAX_OFFSET, or $FF, to indicate
+        ; there's a value to repeat N times incoming.
+        ldy     #$01            ; Set repetitions to 1
+
         jsr     _serial_read_byte_no_irq
-        bpl     store_dest
+        bpl     store_dest      ; It's a value, store it
         cmp     #$FF            ; Is it a rep?
-        bne     set_offset
+        bne     set_offset      ; No, so it's an offset
 do_rep:
-        ; handle repetitions
-        jsr     _serial_read_byte_no_irq ; get repetitions
+        ; handle repetitions: get N,
+        jsr     _serial_read_byte_no_irq
         tay
-        jsr     _serial_read_byte_no_irq ; get value
+        ; and get value to repeat
+        jsr     _serial_read_byte_no_irq
+
 store_dest:
         sta     $FFFF,x
         inx
-        dey
+        dey                     ; Y is N repetitions
         bne    store_dest
-        jmp    loop
+        jmp    loop             ; Back to main loop
 
 set_offset:
         and     #%01111111      ; Get rid of sign
@@ -181,18 +141,101 @@ set_offset:
         inc     store_dest+2
 
 :       stx     last_offset
+        ; Read next byte. It will either be positive, in which case
+        ; it's a value, or negative, in which case it's either a new
+        ; base that is further away than the one we just calculated,
+        ; or $FF, indicating a repetition of a value.
         jsr     _serial_read_byte_no_irq
         bmi     set_base        ; We have a new base (or rep maybe)
         jmp     store_dest      ; Otherwise it's a value
 
-        .data
+calc_bases:
+        ; Precalculate addresses inside pages, so we can easily jump
+        ; from one to another without complicated computations. X
+        ; contains the base page address's high byte on entry ($20 for
+        ; page 1, $40 for page 2)
+        sta     ptr1
+        sty     ptr1+1
+
+        ldy     #0              ; Y is the index - Start at base 0
+        lda     #$00            ; A is the address's low byte
+                                ; (and X the address's high byte)
+
+        clc
+calc_next_base:
+        sta     (ptr1),y        ; Store AX
+        iny
+        pha
+        txa
+        sta     (ptr1),y
+        pla
+        iny
+
+        adc     #(MAX_OFFSET)   ; Compute next base
+        bcc     :+
+        inx
+        clc
+:       cpy     #(N_BASES*2)
+        bcc     calc_next_base
+        rts
+
+frame_done:
+        ; New frame begins. We'll switch page, check keyboard input,
+        ; send status to server.
+        ldx     page
 .ifdef DOUBLE_BUFFER
-page_addr:      .byte <(ptr3)   ; Bases addresses for page 2
-                .byte <(ptr2)   ; Bases addresses for page 1
+        lda     $C054,x         ; Switch displayed page
 .endif
+        lda     page_addr_ptr,x ; Update pointers in set_base
+        sta     page_ptr_a+1
+        sta     page_ptr_b+1
+        txa
+        eor     #$01            ; Toggle page for next time
+        sta     page
+
+        ldx     #$00            ; X (offset) is supposed to be 0 at frame start
+
+        lda     KBD             ; Did user press a key ?
+        bpl     :+
+        and     #$7F            ; Clear high bit
+        bit     KBDSTRB         ; Clear keyboard strobe
+        jmp     handle_kbd      ; Send pressed key to server
+:       lda     #$00            ; Else, send 0 to server
+        jmp     _serial_putc_direct
+
+handle_kbd:
+        cmp     #' '            ; Space to pause ?
+        bne     :++
+
+        jsr     _serial_putc_direct
+:       lda     KBD             ; Wait for another keypress to resume.
+        bpl     :-
+        bit     KBDSTRB
+        lda     #$00
+
+:       jsr     _serial_putc_direct
+        cmp     #$1B            ; Escape to quit ?
+        bne     :+
+        sta     stop
+
+:       lda     #$00            ; Main loop expects A 0 there
+        rts                     ; Return to main loop
+
+cleanup:
+        ; We're all done! Re-enable IRQs, and return.
+        lda     #$01
+        jsr     _simple_serial_set_irq
+        jsr     _simple_serial_flush
+        lda     #$00
+        tax
+        rts
+
+        .data
+
+page_addr_ptr:  .byte <(page2_addr_ptr)   ; Base addresses pointer for page 2
+                .byte <(page1_addr_ptr)   ; Base addresses pointer for page 1
 
         .bss
-base_addr1:     .res (NUM_BASES*2)
-base_addr2:     .res (NUM_BASES*2)
+page1_addrs_arr:.res (N_BASES*2)          ; Base addresses arrays
+page2_addrs_arr:.res (N_BASES*2)
 stop:           .res 1
-last_offset:    .res 1
