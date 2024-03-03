@@ -109,6 +109,7 @@ scale_again:
     }
     goto out;
   }
+  simple_serial_setup_no_irq_regs();
 
   /* Calculate X boundaries */
   for (sx = 0; sx < 100; sx++) {
