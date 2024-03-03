@@ -49,8 +49,8 @@ uint8 qt_serial_connect(uint16 speed) {
     cputs("Cannot open port\r\n");
     return -1;
   }
+  simple_serial_setup_no_irq_regs();
   simple_serial_flush();
-
   /* Try and detect a QuickTake 1x0 */
   serial_model = qt1x0_wakeup(speed);
 
