@@ -9,26 +9,73 @@
 #include "jq-get.h"
 
 char out[8192];
+
+typedef struct _precompiled_jq {
+  char *selector;
+  jq_state *jq;
+} precompiled_jq;
+
+#define N_JQS_MAX 512
+
+static precompiled_jq jqs[N_JQS_MAX];
+static int n_jqs = 0;
+
+jq_state *jq_get_for_selector(char *selector) {
+  int i;
+  static jq_state *fallback_jq = NULL;
+  if (n_jqs == 0) {
+    memset(jqs, 0, sizeof(jqs));
+  }
+
+  for (i = 0; i < n_jqs; i++) {
+    if (!strcmp(selector, jqs[i].selector)) {
+      return jqs[i].jq;
+    }
+  }
+
+  if (i < N_JQS_MAX) {
+    jq_state *new_jq = jq_init();
+    if (new_jq == NULL) {
+      return NULL;
+    }
+    if (!jq_compile(new_jq, selector)) {
+      return NULL;
+    }
+    jqs[i].selector = strdup(selector);
+    jqs[i].jq = new_jq;
+    n_jqs = i + 1;
+    printf("Adding precompiled jq %p for selector %s [%d/%d]\n", jqs[i].jq, selector, i, N_JQS_MAX);
+
+    return new_jq;
+  } else {
+    printf("out of precompiled jqs, using static one\n");
+    if (fallback_jq == NULL) {
+      fallback_jq = jq_init();
+      if (fallback_jq == NULL) {
+        return NULL;
+      }
+    }
+    if (!jq_compile(fallback_jq, selector)) {
+      return NULL;
+    }
+    return fallback_jq;
+  }
+}
+
 char *jq_get(jv json_data, char *selector) {
-  static jq_state *jq = NULL;
+  jq_state *jq = NULL;
   jv result;
   size_t out_len = 0;
   size_t rem = sizeof(out) - 1;
 
   out[0] = '\0';
 
-  if (jq == NULL) {
-    jq = jq_init();
-  }
-  if (jq == NULL) {
-    return NULL;
-  }
-
   if (!jv_is_valid(json_data)) {
     return NULL;
   }
 
-  if (!jq_compile(jq, selector)) {
+  jq = jq_get_for_selector(selector);
+  if (jq == NULL) {
     return NULL;
   }
 

@@ -178,10 +178,12 @@ int main(int argc, char **argv)
   int sending_headers = 0;
   int sending_body = 0;
   curl_buffer *response = NULL;
+  long start_secs = 0;
+  long start_msecs = 0;
   time_t secs;
   long msecs;
   struct timespec cur_time;
-  
+
   if (argc > 1) {
     if (!strcmp(argv[1], "--help")) {
       printf("Usage: %s [--verbose|--very-verbose]\n", argv[0]);
@@ -275,6 +277,10 @@ new_req:
       }
     } while (strcmp(reqbuf, "\n"));
 
+    clock_gettime(CLOCK_REALTIME, &cur_time);
+    start_secs = cur_time.tv_sec;
+    start_msecs = cur_time.tv_nsec / 1000000;
+
     /* Perform the request */
     response = surl_handle_request(method, url, headers, n_headers);
     if (response == NULL) {
@@ -291,9 +297,20 @@ new_req:
 
     /* Parse JSON if it is */
     if (!strncasecmp(response->content_type, "application/json", 16)) {
+      clock_gettime(CLOCK_REALTIME, &cur_time);
+      start_secs = cur_time.tv_sec;
+      start_msecs = cur_time.tv_nsec / 1000000;
+
       response->json_data = jv_parse(response->buffer);
-      printf(" [built json data]");
+
+      clock_gettime(CLOCK_REALTIME, &cur_time);
+      secs = cur_time.tv_sec - 1;
+      msecs = 1000 + (cur_time.tv_nsec / 1000000);
+
+      printf(" [built json data in %lums]",
+          (1000*(secs - start_secs))+(msecs - start_msecs));
     }
+
     printf("\n");
 
     if (VERBOSE && VERY_VERBOSE) {
@@ -315,8 +332,6 @@ new_req:
       char *translit = NULL;
       unsigned short size;
       size_t l;
-      long start_secs = 0;
-      long start_msecs = 0;
 
       /* read command */
       cmd = simple_serial_getc();
@@ -526,12 +541,20 @@ abort:
           simple_serial_putc(SURL_ERROR_NOT_JSON);
         } else {
           /* Extract result */
-          char *result = jq_get(jv_copy(response->json_data), param);
-          printf("RESP: JSON '%s' into %zu bytes%s, translit: %s: %zu bytes %s\n", param, bufsize,
+          char *result;
+
+          result = jq_get(jv_copy(response->json_data), param);
+
+          clock_gettime(CLOCK_REALTIME, &cur_time);
+          secs = cur_time.tv_sec - 1;
+          msecs = 1000 + (cur_time.tv_nsec / 1000000);
+
+          printf("RESP: JSON '%s' into %zu bytes%s, translit: %s: %zu bytes %s (%lums)\n", param, bufsize,
                   striphtml ? ", striphtml":"",
                   translit,
                   result != NULL ? min(strlen(result),bufsize) : 0,
-                  result != NULL ? "" :"not found");
+                  result != NULL ? "" :"not found",
+                  (1000*(secs - start_secs))+(msecs - start_msecs));
 
           if (result) {
             /* We have a result */
