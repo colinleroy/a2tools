@@ -47,6 +47,7 @@ Run MAME:
 ```
 mame apple2c -debug -window -flop1 dist/$(program).dsk -resolution 560x384 -modem null_modem -bitb socket.localhost:2000 -nomouse
 ```
+Make sure to set the serial port to 115200,8n1 in MAME's configuration dialogs.
 
 Quick test rebuild of Mastodon, keeping the conf files in the .dsk: (you can extract CLISETTINGS and MASTSETTINGS after a successful login, using java -jar bin/ac.jar ...)
 ```
