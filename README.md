@@ -17,7 +17,7 @@ here:
 - a Telnet client
 - a Mastodon client
 
-## Building
+## Building the Apple II programs
 
 Install cc65:
 
@@ -41,6 +41,19 @@ make dist
 ```
 
 You can then transfer the images in dist/ using ADTPro.
+
+## Building only the proxy
+
+To build only the proxy, you can skip installing cc65. Install the build dependancies, then compile the proxy:
+
+```
+sudo apt-get install libcurl4-gnutls-dev libgumbo-dev libpng-dev libjq-dev \
+  libsdl-image1.2-dev libavcodec-dev libavformat-dev libavfilter-dev libavutil-dev
+
+cd src/surl-server
+make
+./surl-server
+```
 
 ## Notes
 
