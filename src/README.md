@@ -1,11 +1,11 @@
 ## Subdirectories:
 
-./surl-server: the proxy
-./mastodon: the Mastodon client
-./stp: the FTP client
-./telnet: the Telnet client
-./quicktake: The Quicktake for Apple II program (does not require proxy, untestable via serial port emulation)
-./homecontrol: My own thing for home automation, probably useless to you reading this file unless you hack it a lot to fit your usecase
+* ./surl-server: the proxy
+* ./mastodon: the Mastodon client
+* ./stp: the FTP client
+* ./telnet: the Telnet client
+* ./quicktake: The Quicktake for Apple II program (does not require proxy, untestable via serial port emulation)
+* ./homecontrol: My own thing for home automation, probably useless to you reading this file unless you hack it a lot to fit your usecase
 
 The rest are more or less POCs or things of no interest.
 
