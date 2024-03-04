@@ -6,6 +6,9 @@
 * ./telnet: the Telnet client
 * ./quicktake: The Quicktake for Apple II program (does not require proxy, untestable via serial port emulation)
 * ./homecontrol: My own thing for home automation, probably useless to you reading this file unless you hack it a lot to fit your usecase
+* ./lib/serial: The serial lib
+* ./lib/surl: The SURL (serial proxy) client lib
+* ./lib/*: The rest of my lib
 
 The rest are more or less POCs or things of no interest.
 
