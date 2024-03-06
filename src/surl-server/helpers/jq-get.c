@@ -83,6 +83,8 @@ char *jq_get(jv json_data, char *selector) {
   
   while (jv_is_valid(result = jq_next(jq))) {
     jv str;
+    size_t len;
+
     const char *tmp;
     if (jv_get_kind(result) == JV_KIND_NULL
      || jv_get_kind(result) == JV_KIND_INVALID) {
@@ -93,14 +95,16 @@ char *jq_get(jv json_data, char *selector) {
       str = jv_dump_string(result, 0);
       tmp = jv_string_value(str);
       strncpy(out + out_len, tmp, rem);
-      rem -= strlen(tmp);
-      out_len += strlen(tmp);
+      len = strlen(tmp);
+      rem -= len;
+      out_len += len;
       jv_free(str);
     } else {
       tmp = jv_string_value(result);
       strncpy(out + out_len, tmp, rem);
-      rem -= strlen(tmp);
-      out_len += strlen(tmp);
+      len = strlen(tmp);
+      rem -= len;
+      out_len += len;
       jv_free(result);
     }
 
