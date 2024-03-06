@@ -8,6 +8,7 @@
         .export         _serial_putc_direct
         .export         _simple_serial_setup_no_irq_regs
 
+        .export         acia_status_reg_r, acia_data_reg_r
         .include        "apple2.inc"
         .include        "ser-kernel.inc"
         .include        "ser-error.inc"

@@ -9,7 +9,7 @@
         .export         _serial_read_byte_no_irq
         .export         _simple_serial_setup_no_irq_regs
 
-
+        .export         zilog_status_reg_r, zilog_data_reg_r
         .include        "apple2.inc"
         .include        "ser-kernel.inc"
         .include        "ser-error.inc"

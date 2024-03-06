@@ -13,7 +13,9 @@ trgt = apple2c0
 endif
 
 PROGRAM=test
-SOURCES := main.c \
+SOURCES := \
+	../lib/pwm.s \
+	main.c \
 	../lib/hgr.c \
 	../lib/serial/simple_serial.c \
 	../lib/serial/simple_serial_io.s \
@@ -24,13 +26,11 @@ SOURCES := main.c \
 	../lib/path_helper.c \
 	../lib/surl/surl_core.c \
 	../lib/surl/surl_read_with_barrier.s \
-	../lib/surl/surl_wait_for_stream.c \
-	../lib/surl/surl_stream.s \
 	../lib/fastirq$(iigs_suffix).s \
 	../lib/extrazp.s \
-	../lib/malloc0.c
+	../lib/malloc0.c \
 
-CLCFLAGS = -t $(CC65_TARGET) -DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER -I ../lib -Wl -D,__STACKSIZE__=0x0400 --start-addr 0x6000 -C ../../config/apple2enh-rtonce.cfg -vm -m $(PROGRAM).map -DSURL_TO_LANGCARD -O
+CLCFLAGS = -t $(CC65_TARGET) -DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER -I ../lib -Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-pwmstreamer.cfg -vm -m $(PROGRAM).map -DSURL_TO_LANGCARD -O
 
 .PHONY: all clean
 
@@ -47,7 +47,7 @@ test: clean all
 	java -jar ../../bin/ac.jar -p test.dsk TEST.SYSTEM SYS < ../../bin/loader.system && \
 	java -jar ../../bin/ac.jar -as test.dsk TEST BIN < test.bin && \
 	java -jar ../../bin/ac.jar -d test.dsk BASIC.SYSTEM && \
-	mame $(trgt)  -window -flop1 test.dsk -resolution 560x384 -modem null_modem -bitb socket.localhost:2000 -mouse -debug -sound none
+	mame $(trgt)  -window -flop1 test.dsk -resolution 560x384 -modem null_modem -bitb socket.localhost:2000 -mouse -debug
 
 test-hd: clean all
 	cp ../../disks/basic-empty.dsk ./test.dsk && \
