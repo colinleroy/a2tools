@@ -80,6 +80,7 @@ int main(void) {
   char *url;
   char c;
   char full_update = 1;
+  const surl_response *resp;
 
   videomode(VIDEOMODE_80COL);
 
@@ -99,11 +100,17 @@ int main(void) {
   runtime_once_clean();
 
   while(1) {
-    switch (stp_get_data(url)) {
-      case KEYBOARD_INPUT: goto keyb_input;
-      case URL_UP:         goto up_dir;
+    switch (stp_get_data(url, &resp)) {
+      case KEYBOARD_INPUT:
+        goto keyb_input;
+      case SAVE_DIALOG:
+        stp_save_dialog(url, resp, NULL);
+        clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
+        stp_print_result(resp);
+        goto up_dir;
       case UPDATE_LIST:
-      default:             break;
+      default:
+        break;
     }
 
 update_list:

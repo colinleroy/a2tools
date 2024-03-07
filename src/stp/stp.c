@@ -22,9 +22,6 @@
 #include <errno.h>
 #include "stp.h"
 #include "stp_cli.h"
-#include "stp_save.h"
-#include "stp_send_file.h"
-#include "stp_delete.h"
 #include "surl.h"
 #include "simple_serial.h"
 #include "extended_conio.h"
@@ -264,11 +261,11 @@ void stp_update_list(char full_update) {
   dputc('>');
 }
 
-int stp_get_data(char *url) {
+int stp_get_data(char *url, const surl_response **resp) {
   size_t r;
-  const surl_response *resp = NULL;
   char center_x = 30; /* 12 in 40COLS */
 
+  *resp = NULL;
   num_lines = 0;
   cur_line = 0;
   cur_display_line = 0;
@@ -279,13 +276,13 @@ int stp_get_data(char *url) {
   gotoxy(center_x, 12);
   dputs("Loading...   ");
 
-  resp = surl_start_request(SURL_METHOD_GET, url, NULL, 0);
+  *resp = surl_start_request(SURL_METHOD_GET, url, NULL, 0);
 
-  stp_print_result(resp);
+  stp_print_result(*resp);
 
   gotoxy(0, 2);
 
-  if (resp->size == 0) {
+  if ((*resp)->size == 0) {
     gotoxy(center_x, 12);
     if (surl_response_ok()) {
       dputs("Empty.       ");
@@ -295,16 +292,13 @@ int stp_get_data(char *url) {
     return KEYBOARD_INPUT;
   }
 
-  if (resp->content_type && strcmp(resp->content_type, "directory")) {
-    stp_save_dialog(url, resp, NULL);
-    clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
-    stp_print_result(resp);
-    return URL_UP;
+  if ((*resp)->content_type && strcmp((*resp)->content_type, "directory")) {
+    return SAVE_DIALOG;
   } else {
-    data = malloc(resp->size + 1);
-    r = surl_receive_data(data, resp->size);
+    data = malloc((*resp)->size + 1);
+    r = surl_receive_data(data, (*resp)->size);
   }
-  if (r < resp->size) {
+  if (r < (*resp)->size) {
     gotoxy(center_x - 7, 12);
     dputs("Can not load response.");
     return KEYBOARD_INPUT;

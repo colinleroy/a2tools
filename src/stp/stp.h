@@ -18,6 +18,8 @@
 #ifndef __stp_h__
 #define __stp_h__
 
+#include "surl.h"
+
 #define BUFSIZE 255
 #define STP_URL_FILE "STPSTARTURL"
 
@@ -26,7 +28,7 @@
 
 enum StpDataAction {
   KEYBOARD_INPUT,
-  URL_UP,
+  SAVE_DIALOG,
   UPDATE_LIST
 };
 
@@ -41,6 +43,6 @@ char stp_list_scroll(signed char shift);
 char *stp_build_login_url(char *url);
 char *stp_get_start_url(void);
 void stp_update_list(char full_update);
-int stp_get_data(char *url);
+int stp_get_data(char *url, const surl_response **resp);
 
 #endif
