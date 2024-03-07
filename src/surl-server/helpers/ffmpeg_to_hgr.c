@@ -32,11 +32,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <libavutil/avutil.h>
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libavfilter/buffersink.h>
 #include <libavfilter/buffersrc.h>
 #include <libavutil/opt.h>
+#include <libswresample/swresample.h>
 
 #include <ffmpeg_to_hgr.h>
 
@@ -51,14 +53,14 @@
 /* ffmpeg settings: Get a known fps rate, and scale to size.
  * if scaling is smaller than buffer size, we'll center the video.
  */
-const char *filter_descr = "fps="FPS_STR",scale="VIDEO_SIZE":force_original_aspect_ratio=decrease:flags=neighbor";
+const char *video_filter_descr = "fps="FPS_STR",scale="VIDEO_SIZE":force_original_aspect_ratio=decrease:flags=neighbor";
 
 static AVFormatContext *fmt_ctx;
 static AVCodecContext *dec_ctx;
 AVFilterContext *buffersink_ctx;
 AVFilterContext *buffersrc_ctx;
 AVFilterGraph *filter_graph;
-static int video_stream_index = -1;
+static int stream_index = -1;
 AVPacket *packet;
 AVFrame *frame;
 AVFrame *filt_frame;
@@ -78,7 +80,7 @@ static void init_base_addrs (void)
   }
 }
 
-static int open_input_file(const char *filename)
+static int open_file(const char *filename, enum AVMediaType type)
 {
     const AVCodec *dec;
     int ret;
@@ -95,23 +97,23 @@ static int open_input_file(const char *filename)
         return ret;
     }
 
-    /* select the video stream */
-    ret = av_find_best_stream(fmt_ctx, AVMEDIA_TYPE_VIDEO, -1, -1, &dec, 0);
+    /* select the stream */
+    ret = av_find_best_stream(fmt_ctx, type, -1, -1, &dec, 0);
     if (ret < 0) {
-        av_log(NULL, AV_LOG_ERROR, "Cannot find a video stream in the input file\n");
+        av_log(NULL, AV_LOG_ERROR, "Cannot find a corresponding stream in the input file\n");
         return ret;
     }
-    video_stream_index = ret;
+    stream_index = ret;
 
     /* create decoding context */
     dec_ctx = avcodec_alloc_context3(dec);
     if (!dec_ctx)
         return AVERROR(ENOMEM);
-    avcodec_parameters_to_context(dec_ctx, fmt_ctx->streams[video_stream_index]->codecpar);
+    avcodec_parameters_to_context(dec_ctx, fmt_ctx->streams[stream_index]->codecpar);
 
-    /* init the video decoder */
+    /* init the decoder */
     if ((ret = avcodec_open2(dec_ctx, dec, NULL)) < 0) {
-        av_log(NULL, AV_LOG_ERROR, "Cannot open video decoder\n");
+        av_log(NULL, AV_LOG_ERROR, "Cannot open decoder\n");
         return ret;
     }
 
@@ -126,7 +128,7 @@ static int init_filters(const char *filters_descr)
     const AVFilter *buffersink = avfilter_get_by_name("buffersink");
     AVFilterInOut *outputs = avfilter_inout_alloc();
     AVFilterInOut *inputs  = avfilter_inout_alloc();
-    AVRational time_base = fmt_ctx->streams[video_stream_index]->time_base;
+    AVRational time_base = fmt_ctx->streams[stream_index]->time_base;
     enum AVPixelFormat pix_fmts[] = { AV_PIX_FMT_GRAY8, AV_PIX_FMT_NONE };
 
     filter_graph = avfilter_graph_alloc();
@@ -284,10 +286,10 @@ int ffmpeg_to_hgr_init(const char *filename, int *video_len) {
         goto end;
     }
 
-    if ((ret = open_input_file(filename)) < 0) {
+    if ((ret = open_file(filename, AVMEDIA_TYPE_VIDEO)) < 0) {
         goto end;
     }
-    if ((ret = init_filters(filter_descr)) < 0) {
+    if ((ret = init_filters(video_filter_descr)) < 0) {
         goto end;
     }
 
@@ -310,7 +312,7 @@ unsigned char *ffmpeg_convert_frame(void) {
         if (av_read_frame(fmt_ctx, packet) < 0)
             goto end;
 
-        if (packet->stream_index == video_stream_index) {
+        if (packet->stream_index == stream_index) {
             ret = avcodec_send_packet(dec_ctx, packet);
             if (ret < 0) {
                 av_log(NULL, AV_LOG_ERROR, "Error while sending a packet to the decoder\n");
@@ -387,4 +389,87 @@ end:
         printf("done.\n");
     }
     return NULL;
+}
+
+int ffmpeg_to_raw_snd(const char *filename, int sample_rate, unsigned char **data, size_t *size) {
+    int ret = 0;
+    const AVCodecParameters *codec;
+    struct SwrContext* swr = swr_alloc();
+
+    frame = av_frame_alloc();
+    filt_frame = av_frame_alloc();
+    packet = av_packet_alloc();
+
+    if (!frame || !filt_frame || !packet) {
+        fprintf(stderr, "Could not allocate frame or packet\n");
+        ret = -ENOMEM;
+        goto end;
+    }
+
+    if ((ret = open_file(filename, AVMEDIA_TYPE_AUDIO)) < 0) {
+        goto end;
+    }
+
+    codec = fmt_ctx->streams[stream_index]->codecpar;
+
+    av_opt_set_int(swr, "in_channel_count",  codec->channels, 0);
+    av_opt_set_int(swr, "out_channel_count", 1, 0);
+    av_opt_set_int(swr, "in_channel_layout",  codec->channel_layout, 0);
+    av_opt_set_int(swr, "out_channel_layout", AV_CH_LAYOUT_MONO, 0);
+    av_opt_set_int(swr, "in_sample_rate", codec->sample_rate, 0);
+    av_opt_set_int(swr, "out_sample_rate", sample_rate, 0);
+    av_opt_set_sample_fmt(swr, "in_sample_fmt",  codec->format, 0);
+    av_opt_set_sample_fmt(swr, "out_sample_fmt", AV_SAMPLE_FMT_U8,  0);
+    swr_init(swr);
+
+    printf("Duration %lu (%d channels, %d sample rate)\n", fmt_ctx->duration/1000000, codec->channels, codec->sample_rate);
+
+    while (av_read_frame(fmt_ctx, packet) >= 0) {
+      // decode one frame
+
+      if (packet->stream_index == stream_index) {
+        ret = avcodec_send_packet(dec_ctx, packet);
+        if (ret < 0) {
+            printf("Error while sending a packet to the decoder\n");
+            goto end;
+        }
+
+        while (ret >= 0) {
+          unsigned char *buffer;
+
+          ret = avcodec_receive_frame(dec_ctx, frame);
+          if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
+              printf("Error while receiving a frame from the decoder\n");
+              goto end;
+          }
+          // resample frames
+          av_samples_alloc((unsigned char**) &buffer, NULL, 1, frame->nb_samples, AV_SAMPLE_FMT_U8, 0);
+          int frame_count = swr_convert(swr, (unsigned char**) &buffer, frame->nb_samples, (const unsigned char**) frame->data, frame->nb_samples);
+          // append resampled frames to data
+          *data = (unsigned char*) realloc(*data, (*size + frame->nb_samples) * sizeof(unsigned char));
+          memcpy(*data + *size, buffer, frame_count * sizeof(unsigned char));
+          *size += frame_count;
+
+          if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
+            ret = 0;
+            break;
+          }
+        }
+      }
+    }
+ 
+    // clean up
+    swr_free(&swr);
+    av_packet_unref(packet);
+    avcodec_free_context(&dec_ctx);
+    avformat_close_input(&fmt_ctx);
+    av_frame_free(&frame);
+    av_frame_free(&filt_frame);
+    av_packet_free(&packet);
+
+end:
+    if (ret < 0)
+        printf("Error occurred: %s\n", av_err2str(ret));
+
+    return ret;
 }
