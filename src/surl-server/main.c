@@ -1150,6 +1150,7 @@ static int setup_ftp_delete(CURL *curl, const char *url) {
 
 static curl_buffer *surl_handle_request(char method, char *url, char **headers, int n_headers) {
   static CURL *curl = NULL;
+  static CURLU *c_url = NULL;
   CURLcode res;
   int i;
   CURLcode r = 0;
@@ -1231,6 +1232,7 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
   /* Init curl */
   if (curl == NULL) {
     curl = curl_easy_init();
+    
   } else {
     curl_easy_reset(curl);
   }
@@ -1292,8 +1294,15 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
 
   printf("%s %s - start\n", surl_method_str(method), url);
 
+  if (c_url == NULL) {
+    c_url = curl_url();
+  }
+  r |= curl_url_set(c_url, CURLUPART_URL, url, CURLU_URLENCODE);
+  if (r != 0) {
+    printf("Can't set URL %s (%d)\n", url, r);
+  }
   /* Setup standards options */
-  r |= curl_easy_setopt(curl, CURLOPT_URL, url);
+  r |= curl_easy_setopt(curl, CURLOPT_CURLU, c_url);
   r |= curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_data_cb);
   r |= curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, curl_write_header_cb);
   r |= curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)curlbuf);
