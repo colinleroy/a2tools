@@ -7,7 +7,7 @@
 #include <sys/wait.h>
 #include <dirent.h>
 
-#include "ffmpeg_to_hgr.h"
+#include "ffmpeg.h"
 #include "simple_serial.h"
 #include "extended_conio.h"
 

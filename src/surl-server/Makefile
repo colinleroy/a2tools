@@ -6,7 +6,7 @@ SOURCES := main.c raw-session.c \
 	helpers/html2txt.c \
 	helpers/hgr-convert.c \
 	helpers/stream.c \
-	helpers/ffmpeg_to_hgr.c \
+	helpers/ffmpeg.c \
 	../lib/strtrim.c ../lib/strsplit.c \
 	../lib/serial/simple_serial.c \
 	../lib/serial/simple_serial_gets.c \

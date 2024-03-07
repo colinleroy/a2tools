@@ -40,7 +40,7 @@
 #include <libavutil/opt.h>
 #include <libswresample/swresample.h>
 
-#include <ffmpeg_to_hgr.h>
+#include <ffmpeg.h>
 
 /* Final buffer size, possibly including black borders */
 #define WIDTH 280

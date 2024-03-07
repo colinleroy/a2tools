@@ -10,7 +10,7 @@
 #include "extended_conio.h"
 #include "hgr-convert.h"
 #include "stream.h"
-#include "ffmpeg_to_hgr.h"
+#include "ffmpeg.h"
 
 int main(int argc, char *argv[]) {
 
