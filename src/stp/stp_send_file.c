@@ -59,7 +59,7 @@ static char *stp_send_dialog(char recursive) {
 
 static unsigned long total = 0;
 static int buf_size;
-static char *data = NULL;
+static char *send_data = NULL;
 
 void stp_send_file(char *remote_dir, char recursive) {
   static FILE *fp;
@@ -133,9 +133,9 @@ read_next_ent:
   snprintf(remote_filename, BUFSIZE, "%s/%s", remote_dir, filename);
 
   buf_size = get_buf_size();
-  data = malloc(buf_size + 1);
+  send_data = malloc(buf_size + 1);
 
-  if (data == NULL) {
+  if (send_data == NULL) {
     cprintf("Cannot allocate buffer.");
     cgetc();
     goto err_out;
@@ -167,12 +167,12 @@ read_next_ent:
     gotoxy(0, start_y);
     cprintf("Sending %s: %lu/%lu bytes...", filename, total, stbuf.st_size);
 
-    r = fread(data, sizeof(char), chunksize, fp);
+    r = fread(send_data, sizeof(char), chunksize, fp);
     progress_bar(0, start_y + 3, scrw, total + (chunksize / 2), stbuf.st_size);
 
     total = total + r;
 
-    surl_send_data(data, r);
+    surl_send_data(send_data, r);
 
     progress_bar(-1, -1, scrw, total, stbuf.st_size);
   } while (total < stbuf.st_size);
@@ -191,7 +191,7 @@ err_out:
 
   free(path);
   free(remote_filename);
-  free(data);
+  free(send_data);
   clrzone(0, 19, scrw - 1, 20);
   stp_print_footer();
   if (recursive && d) {

@@ -37,12 +37,12 @@
 #include "strsplit.h"
 #include "runtime_once_clean.h"
 
-static char *url_go_up(char *url);
 static char *url_enter(char *url, char *suffix);
 
 static char *login = NULL;
 static char *password = NULL;
-char *get_start_url(void) {
+
+char *stp_get_start_url(void) {
   FILE *fp;
   char *start_url = NULL;
   char *last_start_url = NULL;
@@ -163,11 +163,13 @@ char *get_start_url(void) {
   return start_url;
 }
 
-static int num_lines = 0;
-static int cur_line = 0;
-static int cur_display_line = 0;
+char **lines = NULL;
+int num_lines = 0;
+int cur_line = 0;
+int cur_display_line = 0;
+char *data = NULL;
 
-static char scroll(signed char shift) {
+char stp_list_scroll(signed char shift) {
   signed char scroll_changed = 0, scroll_way = 0;
   char rollover = 0;
 
@@ -217,9 +219,9 @@ static char scroll(signed char shift) {
   return scroll_changed && rollover;
 }
 
-unsigned char scrw = 255, scrh = 255;
+extern unsigned char scrw, scrh;
 
-static char *build_login_url(char *url) {
+char *stp_build_login_url(char *url) {
   char *host = strstr(url, "://");
   char *proto;
   char *full_url;
@@ -244,182 +246,76 @@ static char *build_login_url(char *url) {
   return full_url;
 }
 
-static void get_all(const char *url, char **lines, int n_lines) {
-  int i, r;
-  char *out_dir;
-  if (lines == NULL || (out_dir = stp_confirm_save_all()) == NULL) {
-    return;
-  }
-  for (i = 0; i < n_lines; i++) {
-    const surl_response *resp = NULL;
-    char *cur_url = strdup(url);
-    cur_url = url_enter(cur_url, lines[i]);
-    resp = surl_start_request(SURL_METHOD_GET, cur_url, NULL, 0);
-
-    stp_print_result(resp);
-
-    gotoxy(0, 2);
-
-    if (resp->size == 0) {
-      free(cur_url);
-      continue;
-    }
-
-    if (resp->content_type && strcmp(resp->content_type, "directory")) {
-      r = stp_save_dialog(cur_url, resp, out_dir);
-      stp_print_result(resp);
-    } else {
-      r = -1;
-    }
-    free(cur_url);
-    if (r != 0) {
-      break;
-    }
-  }
-  clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
-  free(out_dir);
-}
-
-int main(void) {
-  char *url;
-  char c;
-  int full_update = 1;
-
-  videomode(VIDEOMODE_80COL);
-
-  clrscr();
-  screensize(&scrw, &scrh);
-
-  surl_ping();
-  clrscr();
-
-  url = get_start_url();
-  url = build_login_url(url);
-  //clrscr();
-
-  stp_print_footer();
-  surl_set_time();
-
-  runtime_once_clean();
-
-  while(1) {
-    const surl_response *resp = NULL;
-    char *data = NULL, **lines = NULL;
-    int i;
-    size_t r;
-    char center_x = 30; /* 12 in 40COLS */
-
-    num_lines = 0;
-    cur_line = 0;
-    cur_display_line = 0;
-
-    stp_print_header(url);
-
+void stp_update_list(char full_update) {
+  int i;
+  if (full_update) {
     clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
-    gotoxy(center_x, 12);
-    dputs("Loading...   ");
-
-    resp = surl_start_request(SURL_METHOD_GET, url, NULL, 0);
-
-    stp_print_result(resp);
-
-    gotoxy(0, 2);
-
-    if (resp->size == 0) {
-      gotoxy(center_x, 12);
-      if (surl_response_ok()) {
-        dputs("Empty.       ");
-      } else {
-        dputs("Bad response.");
-      }
-      goto keyb_input;
+    for (i = 0; i + cur_display_line < num_lines && i <= PAGE_HEIGHT; i++) {
+      gotoxy(2, i + PAGE_BEGIN);
+      dputs(lines[i + cur_display_line]);
     }
+  } else if (cur_line < num_lines) {
+    gotoxy (2, PAGE_BEGIN + cur_line - cur_display_line);
+    dputs(lines[cur_line]);
 
-    if (resp->content_type && strcmp(resp->content_type, "directory")) {
-      stp_save_dialog(url, resp, NULL);
-      clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
-      stp_print_result(resp);
-      goto up_dir;
-    } else {
-      data = malloc(resp->size + 1);
-      r = surl_receive_data(data, resp->size);
-    }
-    if (r < resp->size) {
-      gotoxy(center_x - 7, 12);
-      dputs("Can not load response.");
-      goto keyb_input;
-    }
-
-    num_lines = strsplit_in_place(data, '\n', &lines);
-
-update_list:
-    if (full_update) {
-      clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
-      for (i = 0; i + cur_display_line < num_lines && i <= PAGE_HEIGHT; i++) {
-        gotoxy(2, i + PAGE_BEGIN);
-        dputs(lines[i + cur_display_line]);
-      }
-    } else if (cur_line < num_lines) {
-      gotoxy (2, PAGE_BEGIN + cur_line - cur_display_line);
-      dputs(lines[cur_line]);
-
-      clrzone(0, PAGE_BEGIN, 1, PAGE_BEGIN + PAGE_HEIGHT);
-    }
-    gotoxy(0, PAGE_BEGIN + cur_line - cur_display_line);
-    dputc('>');
-
-keyb_input:
-    c = cgetc();
-    switch(c) {
-      case CH_ESC:
-up_dir:
-        url = url_go_up(url);
-        full_update = 1;
-        break;
-      case CH_ENTER:
-        if (lines)
-          url = url_enter(url, lines[cur_line]);
-        full_update = 1;
-        break;
-      case 'a':
-      case 'A':
-        get_all(url, lines, num_lines);
-        break;
-      case CH_CURS_UP:
-        full_update = scroll(-1);
-        goto update_list;
-      case CH_CURS_DOWN:
-        full_update = scroll(+1);
-        goto update_list;
-      case 's':
-      case 'S':
-        stp_send_file(url, 0);
-        full_update = 1;
-        break;
-      case 'r':
-      case 'R':
-        stp_send_file(url, 1);
-        full_update = 1;
-        break;
-      case 'd':
-      case 'D':
-        if (lines)
-          stp_delete_dialog(url, lines[cur_line]);
-        full_update = 1;
-        break;
-      default:
-        goto update_list;
-    }
-    free(data);
-    data = NULL;
-    free(lines);
-    lines = NULL;
+    clrzone(0, PAGE_BEGIN, 1, PAGE_BEGIN + PAGE_HEIGHT);
   }
-
-  exit(0);
+  gotoxy(0, PAGE_BEGIN + cur_line - cur_display_line);
+  dputc('>');
 }
 
-static char *url_go_up(char *url) {
+int stp_get_data(char *url) {
+  size_t r;
+  const surl_response *resp = NULL;
+  char center_x = 30; /* 12 in 40COLS */
+
+  num_lines = 0;
+  cur_line = 0;
+  cur_display_line = 0;
+
+  stp_print_header(url);
+
+  clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
+  gotoxy(center_x, 12);
+  dputs("Loading...   ");
+
+  resp = surl_start_request(SURL_METHOD_GET, url, NULL, 0);
+
+  stp_print_result(resp);
+
+  gotoxy(0, 2);
+
+  if (resp->size == 0) {
+    gotoxy(center_x, 12);
+    if (surl_response_ok()) {
+      dputs("Empty.       ");
+    } else {
+      dputs("Bad response.");
+    }
+    return KEYBOARD_INPUT;
+  }
+
+  if (resp->content_type && strcmp(resp->content_type, "directory")) {
+    stp_save_dialog(url, resp, NULL);
+    clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
+    stp_print_result(resp);
+    return URL_UP;
+  } else {
+    data = malloc(resp->size + 1);
+    r = surl_receive_data(data, resp->size);
+  }
+  if (r < resp->size) {
+    gotoxy(center_x - 7, 12);
+    dputs("Can not load response.");
+    return KEYBOARD_INPUT;
+  }
+
+  num_lines = strsplit_in_place(data, '\n', &lines);
+
+  return UPDATE_LIST;
+}
+
+char *stp_url_up(char *url) {
   int url_len = strlen(url);
   char *last_slash;
 
@@ -436,7 +332,7 @@ static char *url_go_up(char *url) {
   return url;
 }
 
-static char *url_enter(char *url, char *suffix) {
+char *stp_url_enter(char *url, char *suffix) {
   int url_len = strlen(url);
   int suffix_len = strlen(suffix);
   int url_ends_slash = url[url_len - 1] == '/';

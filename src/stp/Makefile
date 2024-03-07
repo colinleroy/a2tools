@@ -19,7 +19,7 @@ upload_subdir :=
 endif
 
 PROGRAM=stp
-SOURCES := stp.c stp_cli.c stp_save.c stp_send_file.c stp_delete.c \
+SOURCES := stp.c stp_main.c stp_cli.c stp_save.c stp_send_file.c stp_delete.c \
 	../lib/malloc0.c \
 	../lib/serial/simple_serial.c \
 	../lib/serial/simple_serial_configure.c \
