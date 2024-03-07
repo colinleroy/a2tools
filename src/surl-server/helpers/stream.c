@@ -10,7 +10,7 @@
 #include "../surl_protocol.h"
 #include "simple_serial.h"
 #include "extended_conio.h"
-#include "ffmpeg_to_hgr.h"
+#include "ffmpeg.h"
 #include "array_sort.h"
 
 #define MAX_OFFSET 126
