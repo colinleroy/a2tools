@@ -33,6 +33,12 @@
   #define CH_ESC         0x1B
   #define CH_LLCORNER    'L'
 
+/* Apple II values */
+  #define APPLE_CH_CURS_LEFT  0x08
+  #define APPLE_CH_CURS_RIGHT 0x15
+  #define APPLE_CH_CURS_DOWN  0x0A
+  #define APPLE_CH_CURS_UP    0x0B
+  
   #define __fastcall__
   #define cputc(c) putc(c, stdout)
   #define cursor(a) do {} while(0)

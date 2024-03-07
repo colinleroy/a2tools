@@ -26,7 +26,7 @@ $(PROGRAM): $(SOURCES)
 		$(shell curl-config --libs) \
 		$(shell libpng-config --libs) \
 		$(shell pkg-config --libs SDL_image) \
-		-ljq -lgumbo -lavfilter -lavformat -lavcodec -lavutil -o $@
+		-ljq -lgumbo -lavfilter -lavformat -lavcodec -lavutil -lswresample -o $@
 
 clean:
 	rm -f $(PROGRAM) *.o

@@ -3,7 +3,8 @@
 ;
         .export         _pwm
         .importzp       _zp6, _zp8, _zp10, _zp12, tmp1
-        
+
+        .import         _serial_putc_direct, _serial_read_byte_no_irq
 .ifdef IIGS
         .import         zilog_status_reg_r, zilog_data_reg_r
         .import         _get_iigs_speed, _set_iigs_speed
@@ -26,29 +27,30 @@ serial_data_reg   = acia_data_reg_r
 HAS_BYTE          = $08
 .endif
 
-spkr     =     $C030
+SPKR         := $C030
 
-data     =     $FFFF            ; Placeholders for legibility, going to be patched
-status   =     $FFFF
+data         := $FFFF           ; Placeholders for legibility, going to be patched
+status       := $FFFF
 
-spkr_ptr =     _zp6
-dummy    =     _zp8
-status_ptr =   _zp10
-data_ptr   =   _zp12
+spkr_ptr      = _zp6
+dummy_ptr     = _zp8
+status_ptr    = _zp10
+data_ptr      = _zp12
+dummy_zp      = tmp1
 
         .segment        "DATA"
 
 .align 256
 BASE = *
-.assert * = $4000, error
+.assert * = $8000, error
 duty_cycle0:
-        sta     spkr            ; 4  !
-        sta     spkr            ; 8  !
-        sta     dummy_dst       ; 12
-        sta     dummy_dst       ; 16
-        sta     dummy_dst       ; 20
-        sta     dummy_dst       ; 24
-        sta     tmp1            ; 27
+        inc     dummy_abs       ; 6
+        inc     dummy_abs       ; 12
+        sta     dummy_abs       ; 16
+        lda     KBD             ; 20
+        bpl     :+              ; 23
+        jsr     kbd_send
+:       sta     dummy_abs       ; 27
 
 s0:     lda     status          ; 31      - have byte?
         and     #HAS_BYTE       ; 33
@@ -59,19 +61,20 @@ dest0:
         jmp     $0000           ; 46
 :
         iny                     ;    38
-        sta     dummy_dst       ;    42
+        sta     dummy_abs       ;    42
         jmp     duty_cycle0     ;    46
 
 .align 256
 .assert * = BASE+$100, error
 duty_cycle1:
-        sta     spkr            ; 4  !
-        sta     (spkr_ptr)      ; 9  !
-        sta     dummy_dst       ; 13
-        sta     dummy_dst       ; 17
-        sta     dummy_dst       ; 21
-        sta     dummy_dst       ; 25
-        iny                     ; 27
+        sta     SPKR            ; 4  !
+        sta     spkr_ptr        ; 8  !
+        sta     (dummy_ptr)     ; 13
+        sta     dummy_abs       ; 17
+        lda     KBD             ; 21
+        bpl     :+              ; 24
+        jsr     kbd_send
+:       sta     dummy_zp        ; 27
 
 s1:     lda     status          ; 31      - have byte?
         and     #HAS_BYTE       ; 33
@@ -82,19 +85,20 @@ dest1:
         jmp     $0000           ; 46
 :
         iny                     ;    38
-        sta     dummy_dst       ;    42
+        sta     dummy_abs       ;    42
         jmp     duty_cycle1     ;    46
 
 .align 256
 .assert * = BASE+$200, error
 duty_cycle2:
-        sta     spkr            ; 4  !
+        sta     SPKR            ; 4  !
         iny                     ; 6  !
-        sta     spkr            ; 10 !
-        sta     dummy_dst       ; 14
-        sta     dummy_dst       ; 18
-        sta     dummy_dst       ; 22
-        sta     (dummy)         ; 27
+        sta     SPKR            ; 10 !
+        sta     dummy_abs       ; 14
+        lda     KBD             ; 18
+        bpl     :+              ; 21
+        jsr     kbd_send
+:       inc     dummy_abs       ; 27
 
 s2:     lda     status          ; 31      - have byte?
         and     #HAS_BYTE       ; 33
@@ -105,19 +109,20 @@ dest2:
         jmp     $0000           ; 46
 :
         iny                     ;    38
-        sta     dummy_dst       ;    42
+        sta     dummy_abs       ;    42
         jmp     duty_cycle2     ;    46
 
 .align 256
 .assert * = BASE+$300, error
 duty_cycle3:
-        sta     spkr            ; 4  !
+        sta     SPKR            ; 4  !
         iny                     ; 6  !
         sta     (spkr_ptr)      ; 11 !
-        sta     dummy_dst       ; 15
-        sta     dummy_dst       ; 19
-        sta     dummy_dst       ; 23
-        sta     dummy_dst       ; 27
+        lda     KBD             ; 15
+        bpl     :+              ; 18
+        jsr     kbd_send
+:       sta     dummy_abs       ; 22
+        sta     (dummy_ptr)     ; 27
 
 s3:     lda     status          ; 31      - have byte?
         and     #HAS_BYTE       ; 33
@@ -128,20 +133,21 @@ dest3:
         jmp     $0000           ; 46
 :
         iny                     ;    38
-        sta     dummy_dst       ;    42
+        sta     dummy_abs       ;    42
         jmp     duty_cycle3     ;    46
 
 
 .align 256
 .assert * = BASE+$400, error
 duty_cycle4:
-        sta     spkr            ; 4  !
-        sta     dummy_dst       ; 8  !
-        sta     spkr            ; 12 !
-        sta     dummy_dst       ; 16
-        sta     dummy_dst       ; 20
-        sta     dummy_dst       ; 24
-        sta     tmp1            ; 27
+        sta     SPKR            ; 4  !
+        sta     dummy_abs       ; 8  !
+        sta     SPKR            ; 12 !
+        sta     dummy_abs       ; 16
+        lda     KBD             ; 20
+        bpl     :+              ; 23
+        jsr     kbd_send
+:       sta     dummy_abs       ; 27
 
 s4:     lda     status          ; 31      - have byte?
         and     #HAS_BYTE       ; 33
@@ -152,20 +158,21 @@ dest4:
         jmp     $0000           ; 46
 :
         iny                     ;    38
-        sta     dummy_dst       ;    42
+        sta     dummy_abs       ;    42
         jmp     duty_cycle4     ;    46
 
 
 .align 256
 .assert * = BASE+$500, error
 duty_cycle5:
-        sta     spkr            ; 4  !
-        sta     dummy_dst       ; 8  !
+        sta     SPKR            ; 4  !
+        sta     dummy_abs       ; 8  !
         sta     (spkr_ptr)      ; 13 !
-        sta     dummy_dst       ; 17
-        sta     dummy_dst       ; 21
-        sta     dummy_dst       ; 25
-        iny                     ; 27
+        lda     KBD             ; 17
+        bpl     :+              ; 20
+        jsr     kbd_send
+:       sta     dummy_abs       ; 24
+        sta     dummy_zp        ; 27
 
 s5:     lda     status          ; 31      - have byte?
         and     #HAS_BYTE       ; 33
@@ -176,20 +183,20 @@ dest5:
         jmp     $0000           ; 46
 :
         iny                     ;    38
-        sta     dummy_dst       ;    42
+        sta     dummy_abs       ;    42
         jmp     duty_cycle5     ;    46
 
 
 .align 256
 .assert * = BASE+$600, error
 duty_cycle6:
-        sta     spkr            ; 4  !
-        sta     dummy_dst       ; 8  !
-        iny                     ; 10 !
-        sta     spkr            ; 14 !
-        sta     dummy_dst       ; 18
-        sta     dummy_dst       ; 22
-        sta     (dummy)         ; 27
+        sta     SPKR            ; 4  !
+        inc     dummy_abs       ; 10 !
+        sta     SPKR            ; 14 !
+        lda     KBD             ; 18
+        bpl     :+              ; 21
+        jsr     kbd_send
+:       inc     dummy_abs       ; 27
 
 s6:     lda     status          ; 31      - have byte?
         and     #HAS_BYTE       ; 33
@@ -200,20 +207,20 @@ dest6:
         jmp     $0000           ; 46
 :
         iny                     ;    38
-        sta     dummy_dst       ;    42
+        sta     dummy_abs       ;    42
         jmp     duty_cycle6     ;    46
 
 
 .align 256
 .assert * = BASE+$700, error
 duty_cycle7:
-        sta     spkr            ; 4  !
-        sta     dummy_dst       ; 8  !
-        iny                     ; 10 !
+        sta     SPKR            ; 4  !
+        inc     dummy_abs       ; 10 !
         sta     (spkr_ptr)      ; 15 !
-        sta     dummy_dst       ; 19
-        sta     dummy_dst       ; 23
-        sta     dummy_dst       ; 27
+        lda     KBD             ; 19
+        bpl     :+              ; 22
+        jsr     kbd_send
+:       sta     (dummy_ptr)     ; 27
 
 s7:     lda     status          ; 31      - have byte?
         and     #HAS_BYTE       ; 33
@@ -224,20 +231,21 @@ dest7:
         jmp     $0000           ; 46
 :
         iny                     ;    38
-        sta     dummy_dst       ;    42
+        sta     dummy_abs       ;    42
         jmp     duty_cycle7     ;    46
 
 
 .align 256
 .assert * = BASE+$800, error
 duty_cycle8:
-        sta     spkr            ; 4  !
-        sta     dummy_dst       ; 8  !
-        sta     dummy_dst       ; 12 !
-        sta     spkr            ; 16 !
-        sta     dummy_dst       ; 20
-        sta     dummy_dst       ; 24
-        sta     tmp1            ; 27
+        sta     SPKR            ; 4  !
+        sta     dummy_abs       ; 8  !
+        sta     dummy_abs       ; 12 !
+        sta     SPKR            ; 16 !
+        lda     KBD             ; 20
+        bpl     :+              ; 23
+        jsr     kbd_send
+:       sta     dummy_abs       ; 27
 
 s8:     lda     status          ; 31      - have byte?
         and     #HAS_BYTE       ; 33
@@ -248,20 +256,21 @@ dest8:
         jmp     $0000           ; 46
 :
         iny                     ;    38
-        sta     dummy_dst       ;    42
+        sta     dummy_abs       ;    42
         jmp     duty_cycle8     ;    46
 
 
 .align 256
 .assert * = BASE+$900, error
 duty_cycle9:
-        sta     spkr            ; 4  !
-        sta     dummy_dst       ; 8  !
-        sta     dummy_dst       ; 12 !
+        sta     SPKR            ; 4  !
+        sta     dummy_abs       ; 8  !
+        sta     dummy_abs       ; 12 !
         sta     (spkr_ptr)      ; 17 !
-        sta     dummy_dst       ; 21
-        sta     dummy_dst       ; 25
-        iny                     ; 27
+        lda     KBD             ; 21
+        bpl     :+              ; 24
+        jsr     kbd_send
+:       sta     dummy_zp        ; 27
 
 s9:     lda     status          ; 31      - have byte?
         and     #HAS_BYTE       ; 33
@@ -272,21 +281,21 @@ dest9:
         jmp     $0000           ; 46
 :
         iny                     ;    38
-        sta     dummy_dst       ;    42
+        sta     dummy_abs       ;    42
         jmp     duty_cycle9     ;    46
 
 
 .align 256
 .assert * = BASE+$A00, error
 duty_cycle10:
-        sta     spkr            ; 4  !
-        sta     dummy_dst       ; 8  !
-        sta     dummy_dst       ; 12 !
-        iny                     ; 14 !
-        sta     spkr            ; 18 !
-        sta     dummy_dst       ; 22
-        sta     tmp1            ; 25
-        iny                     ; 27
+        sta     SPKR            ; 4  !
+        sta     dummy_abs       ; 8  !
+        inc     dummy_abs       ; 14 !
+        sta     SPKR            ; 18 !
+        lda     KBD             ; 22
+        bpl     :+              ; 25
+        jsr     kbd_send
+:       iny                     ; 27
 
 s10:    lda     status          ; 31      - have byte?
         and     #HAS_BYTE       ; 33
@@ -297,22 +306,22 @@ dest10:
         jmp     $0000           ; 46
 :
         iny                     ;    38
-        sta     dummy_dst       ;    42
+        sta     dummy_abs       ;    42
         jmp     duty_cycle10    ;    46
 
 
 .align 256
 .assert * = BASE+$B00, error
 duty_cycle11:
-        sta     spkr            ; 4  !
-        sta     dummy_dst       ; 8  !
-        sta     dummy_dst       ; 12 !
-        iny                     ; 14 !
+        sta     SPKR            ; 4  !
+        sta     dummy_abs       ; 8  !
+        inc     dummy_abs       ; 14 !
         sta     (spkr_ptr)      ; 19 !
-        sta     dummy_dst       ; 23
-        sta     dummy_dst       ; 27
+        lda     KBD             ; 23
+        bpl     :+              ; 26
+        jsr     kbd_send
 
-s11:    lda     status          ; 31      - have byte?
+:       lda     (status_ptr)    ; 31      - have byte?
         and     #HAS_BYTE       ; 33
         beq     :+              ; 35 36
 d11:    lda     data            ; 39      - yes
@@ -321,21 +330,22 @@ dest11:
         jmp     $0000           ; 46
 :
         iny                     ;    38
-        sta     dummy_dst       ;    42
+        sta     dummy_abs       ;    42
         jmp     duty_cycle11    ;    46
 
 
 .align 256
 .assert * = BASE+$C00, error
 duty_cycle12:
-        sta     spkr            ; 4  !
-        sta     dummy_dst       ; 8  !
-        sta     dummy_dst       ; 12 !
-        sta     dummy_dst       ; 16 !
-        sta     spkr            ; 20 !
-        sta     dummy_dst       ; 24
-        sta     tmp1            ; 27
-
+        sta     SPKR            ; 4  !
+        sta     dummy_abs       ; 8  !
+        sta     dummy_abs       ; 12 !
+        sta     dummy_abs       ; 16 !
+        sta     SPKR            ; 20 !
+        lda     KBD             ; 24
+        bpl     :+              ; 27
+        jsr     kbd_send
+:
 s12:    lda     status          ; 31      - have byte?
         and     #HAS_BYTE       ; 33
         beq     :+              ; 35 36
@@ -345,19 +355,19 @@ dest12:
         jmp     $0000           ; 46
 :
         iny                     ;    38
-        sta     dummy_dst       ;    42
+        sta     dummy_abs       ;    42
         jmp     duty_cycle12    ;    46
 
 
 .align 256
 .assert * = BASE+$D00, error
 duty_cycle13:
-        sta     spkr            ; 4  !
-        sta     dummy_dst       ; 8  !
-        sta     dummy_dst       ; 12 !
-        sta     dummy_dst       ; 16 !
+        sta     SPKR            ; 4  !
+        sta     dummy_abs       ; 8  !
+        sta     dummy_abs       ; 12 !
+        sta     dummy_abs       ; 16 !
         sta     (spkr_ptr)      ; 21 !
-        sta     dummy_dst       ; 25
+        sta     dummy_abs       ; 25
         iny                     ; 27
 
 s13:    lda     status          ; 31      - have byte?
@@ -369,19 +379,20 @@ dest13:
         jmp     $0000           ; 46
 :
         iny                     ;    38
-        sta     dummy_dst       ;    42
+        sta     dummy_abs       ;    42
         jmp     duty_cycle13    ;    46
 
 .align 256
 .assert * = BASE+$E00, error
 duty_cycle14:
-        sta     spkr            ; 4  !
-        sta     dummy_dst       ; 8  !
-        sta     dummy_dst       ; 12 !
-        sta     dummy_dst       ; 16 !
-        iny                     ; 18 !
-        sta     spkr            ; 22 !
-        sta     (dummy)         ; 27
+        sta     SPKR            ; 4  !
+        lda     KBD             ; 8  !
+        bpl     :+              ; 11 !
+        jsr     kbd_send        ;    !
+:       sta     dummy_abs       ; 15 !
+        sta     dummy_zp        ; 18 !
+        sta     SPKR            ; 22 !
+        sta     (dummy_ptr)     ; 27
 
 s14:    lda     status          ; 31      - have byte?
         and     #HAS_BYTE       ; 33
@@ -392,20 +403,21 @@ dest14:
         jmp     $0000           ; 46
 :
         iny                     ;    38
-        sta     dummy_dst       ;    42
+        sta     dummy_abs       ;    42
         jmp     duty_cycle14    ;    46
 
 
 .align 256
 .assert * = BASE+$F00, error
 duty_cycle15:
-        sta     spkr            ; 4  !
-        sta     dummy_dst       ; 8  !
-        sta     dummy_dst       ; 12 !
-        sta     dummy_dst       ; 16 !
-        iny                     ; 18 !
-        sta     (spkr_ptr)      ; 23 !
-        sta     dummy_dst       ; 27
+        sta     SPKR            ; 4  !
+        lda     KBD             ; 8  !
+        bpl     :+              ; 11 !
+        jsr     kbd_send        ;    !
+:       inc     dummy_abs       ; 17 !
+        iny                     ; 19 !
+        sta     SPKR            ; 23 !
+        sta     dummy_abs       ; 27
 
 s15:    lda     status          ; 31      - have byte?
         and     #HAS_BYTE       ; 33
@@ -416,20 +428,21 @@ dest15:
         jmp     $0000           ; 46
 :
         iny                     ;    38
-        sta     dummy_dst       ;    42
+        sta     dummy_abs       ;    42
         jmp     duty_cycle15    ;    46
 
 
 .align 256
 .assert * = BASE+$1000, error
 duty_cycle16:
-        sta     spkr            ; 4  !
-        sta     dummy_dst       ; 8  !
-        sta     dummy_dst       ; 12 !
-        sta     dummy_dst       ; 16 !
-        sta     dummy_dst       ; 20 !
-        sta     spkr            ; 24 !
-        sta     tmp1            ; 27
+        sta     SPKR            ; 4  !
+        lda     KBD             ; 8  !
+        bpl     :+              ; 11 !
+        jsr     kbd_send        ;    !
+:       sta     dummy_abs       ; 15 !
+        sta     (dummy_ptr)     ; 20 !
+        sta     SPKR            ; 24 !
+        sta     dummy_zp        ; 27
 
 s16:    lda     status          ; 31      - have byte?
         and     #HAS_BYTE       ; 33
@@ -440,18 +453,19 @@ dest16:
         jmp     $0000           ; 46
 :
         iny                     ;    38
-        sta     dummy_dst       ;    42
+        sta     dummy_abs       ;    42
         jmp     duty_cycle16    ;    46
 
 
 .align 256
 .assert * = BASE+$1100, error
 duty_cycle17:
-        sta     spkr            ; 4  !
-        sta     dummy_dst       ; 8  !
-        sta     dummy_dst       ; 12 !
-        sta     dummy_dst       ; 16 !
-        sta     dummy_dst       ; 20 !
+        sta     SPKR            ; 4  !
+        lda     KBD             ; 8  !
+        bpl     :+              ; 11 !
+        jsr     kbd_send        ;    !
+:       inc     dummy_abs       ; 17 !
+        sta     dummy_zp        ; 20 !
         sta     (spkr_ptr)      ; 25 !
         iny                     ; 27
 
@@ -464,20 +478,20 @@ dest17:
         jmp     $0000           ; 46
 :
         iny                     ;    38
-        sta     dummy_dst       ;    42
+        sta     dummy_abs       ;    42
         jmp     duty_cycle17    ;    46
 
 
 .align 256
 .assert * = BASE+$1200, error
 duty_cycle18:
-        sta     spkr            ; 4  !
-        sta     dummy_dst       ; 8  !
-        sta     dummy_dst       ; 12 !
-        sta     dummy_dst       ; 16 !
-        sta     dummy_dst       ; 20 !
-        iny                     ; 22 !
-        sta     spkr            ; 26 !
+        sta     SPKR            ; 4  !
+        lda     KBD             ; 8  !
+        bpl     :+              ; 11 !
+        jsr     kbd_send        ;    !
+:       inc     dummy_abs       ; 17 !
+        sta     (dummy_ptr)     ; 22 !
+        sta     SPKR            ; 26 !
 
         lda     (status_ptr)    ; 31      - have byte?
         and     #HAS_BYTE       ; 33
@@ -488,19 +502,19 @@ dest18:
         jmp     $0000           ; 46
 :
         iny                     ;    38
-        sta     dummy_dst       ;    42
+        sta     dummy_abs       ;    42
         jmp     duty_cycle18    ;    46
 
 
 .align 256
 .assert * = BASE+$1300, error
 duty_cycle19:
-        sta     spkr            ; 4  !
-        sta     dummy_dst       ; 8  !
-        sta     dummy_dst       ; 12 !
-        sta     dummy_dst       ; 16 !
-        sta     dummy_dst       ; 20 !
-        iny                     ; 22 !
+        sta     SPKR            ; 4  !
+        lda     KBD             ; 8  !
+        bpl     :+              ; 11 !
+        jsr     kbd_send        ;    !
+:       inc     dummy_abs       ; 17 !
+        sta     (dummy_ptr)     ; 22 !
         sta     (spkr_ptr)      ; 27 !
 
 s19:    lda     status          ; 31      - have byte?
@@ -512,22 +526,22 @@ dest19:
         jmp     $0000           ; 46
 :
         iny                     ;    38
-        sta     dummy_dst       ;    42
+        sta     dummy_abs       ;    42
         jmp     duty_cycle19    ;    46
 
 
 .align 256
 .assert * = BASE+$1400, error
 duty_cycle20:
-        sta     spkr            ; 4  !
-        sta     dummy_dst       ; 8  !
-        sta     dummy_dst       ; 12 !
-        sta     dummy_dst       ; 16 !
-        sta     dummy_dst       ; 20 !
-        sta     (dummy)         ; 23 !
+        sta     SPKR            ; 4  !
+        lda     KBD             ; 8  !
+        bpl     :+              ; 11 !
+        jsr     kbd_send        ;    !
+:       inc     dummy_abs       ; 17 !
+        inc     dummy_abs       ; 23 !
 
 s20:    lda     status          ; 27 !      - have byte?
-        sta     spkr            ; 31 !
+        sta     SPKR            ; 31 !
         and     #HAS_BYTE       ; 33
         beq     :+              ; 35 36
 d20:    lda     data            ; 39      - yes
@@ -536,18 +550,19 @@ dest20:
         jmp     $0000           ; 46
 :
         iny                     ;    38
-        sta     dummy_dst       ;    42
+        sta     dummy_abs       ;    42
         jmp     duty_cycle20    ;    46
 
 
 .align 256
 .assert * = BASE+$1500, error
 duty_cycle21:
-        sta     spkr            ; 4  !
-        sta     dummy_dst       ; 8  !
-        sta     dummy_dst       ; 12 !
-        sta     dummy_dst       ; 16 !
-        sta     (dummy)         ; 21 !
+        sta     SPKR            ; 4  !
+        lda     KBD             ; 8  !
+        bpl     :+              ; 11 !
+        jsr     kbd_send        ;    !
+:       inc     dummy_abs       ; 17 !
+        sta     dummy_abs       ; 21 !
 
 s21:    lda     status          ; 25 !      - have byte?
         and     #HAS_BYTE       ; 27 !
@@ -559,18 +574,19 @@ dest21:
         jmp     $0000           ; 46
 :
         iny                     ;    38
-        sta     (dummy)         ;    43
+        sta     (dummy_ptr)         ;    43
         jmp     duty_cycle21    ;    46
 
 
 .align 256
 .assert * = BASE+$1600, error
 duty_cycle22:
-        sta     spkr            ; 4  !
-        sta     dummy_dst       ; 8  !
-        sta     dummy_dst       ; 12 !
-        sta     dummy_dst       ; 16 !
-        sta     dummy_dst       ; 20 !
+        sta     SPKR            ; 4  !
+        lda     KBD             ; 8  !
+        bpl     :+              ; 11 !
+        jsr     kbd_send        ;    !
+:       inc     dummy_abs       ; 17 !
+        sta     dummy_zp        ; 20 !
 
 s22:    lda     status          ; 24 !      - have byte?
         and     #HAS_BYTE       ; 26 !
@@ -582,9 +598,9 @@ d22:    lda     data            ; 39      - yes
 dest22:
         jmp     $0000           ; 46
 :
-        sta     spkr            ;    33 !
-        sta     dummy_dst       ;    37
-        sta     dummy_dst       ;    41
+        sta     SPKR            ;    33 !
+        sta     dummy_abs       ;    37
+        sta     dummy_abs       ;    41
         iny                     ;    43
         jmp     duty_cycle22    ;    46
 
@@ -592,36 +608,38 @@ dest22:
 .align 256
 .assert * = BASE+$1700, error
 duty_cycle23:
-        sta     spkr            ; 4  !
-        sta     dummy_dst       ; 8  !
-        sta     dummy_dst       ; 12 !
-        sta     dummy_dst       ; 16 !
-        sta     dummy_dst       ; 20 !
+        sta     SPKR            ; 4  !
+        lda     KBD             ; 8  !
+        bpl     :+              ; 11 !
+        jsr     kbd_send        ;    !
+:       inc     dummy_abs       ; 17 !
+        sta     dummy_zp        ; 20 !
 
 s23:    lda     status          ; 24 !      - have byte?
         and     #HAS_BYTE       ; 26 !
         beq     :+              ; 28 ! 30
         iny                     ; 30 !
-        sta     spkr            ; 34 !
+        sta     SPKR            ; 34 !
         lda     (data_ptr)      ; 39      - yes
         sta     dest23+2        ; 43
 dest23:
         jmp     $0000           ; 46
 :
-        sta     spkr            ;    34 !
-        sta     (dummy)         ;    39
-        sta     dummy_dst       ;    43
+        sta     SPKR            ;    34 !
+        sta     (dummy_ptr)     ;    39
+        sta     dummy_abs       ;    43
         jmp     duty_cycle23    ;    46
 
 
 .align 256
 .assert * = BASE+$1800, error
 duty_cycle24:
-        sta     spkr            ; 4  !
-        sta     dummy_dst       ; 8  !
-        sta     dummy_dst       ; 12 !
-        sta     dummy_dst       ; 16 !
-        sta     dummy_dst       ; 20 !
+        sta     SPKR            ; 4  !
+        lda     KBD             ; 8  !
+        bpl     :+              ; 11 !
+        jsr     kbd_send        ;    !
+:       inc     dummy_abs       ; 17 !
+        sta     dummy_zp        ; 20 !
 
 s24:    lda     status          ; 24 !      - have byte?
         and     #HAS_BYTE       ; 26 !
@@ -634,46 +652,48 @@ dest24:
         jmp     $0000           ; 46
 :
         sta     (spkr_ptr)      ;    35 !
-        sta     dummy_dst       ;    39
-        sta     dummy_dst       ;    43
+        sta     dummy_abs       ;    39
+        sta     dummy_abs       ;    43
         jmp     duty_cycle24    ;    46
 
 
 .align 256
 .assert * = BASE+$1900, error
 duty_cycle25:
-        sta     spkr            ; 4  !
-        sta     dummy_dst       ; 8  !
-        sta     dummy_dst       ; 12 !
-        sta     dummy_dst       ; 16 !
-        sta     dummy_dst       ; 20 !
+        sta     SPKR            ; 4  !
+        lda     KBD             ; 8  !
+        bpl     :+              ; 11 !
+        jsr     kbd_send        ;    !
+:       inc     dummy_abs       ; 17 !
+        sta     dummy_zp        ; 20 !
 
 s25:    lda     status          ; 24 !      - have byte?
         and     #HAS_BYTE       ; 26 !
         beq     :+              ; 28 ! 30
 d25:    lda     data            ; 32 !     - yes
         iny                     ; 34 !
-        sta     spkr            ; 36 !
+        sta     SPKR            ; 36 !
         sta     dest25+2        ; 40
-        sta     tmp1            ; 43
+        sta     dummy_zp        ; 43
 dest25:
         jmp     $0000           ; 46
 :
         iny                     ;    32 !
-        sta     spkr            ;    36 !
-        sta     tmp1            ;    39
-        sta     dummy_dst       ;    43
+        sta     SPKR            ;    36 !
+        sta     dummy_zp        ;    39
+        sta     dummy_abs       ;    43
         jmp     duty_cycle25    ;    46
 
 
 .align 256
 .assert * = BASE+$1A00, error
 duty_cycle26:
-        sta     spkr            ; 4  !
-        sta     dummy_dst       ; 8  !
-        sta     dummy_dst       ; 12 !
-        sta     dummy_dst       ; 16 !
-        sta     dummy_dst       ; 20 !
+        sta     SPKR            ; 4  !
+        lda     KBD             ; 8  !
+        bpl     :+              ; 11 !
+        jsr     kbd_send        ;    !
+:       inc     dummy_abs       ; 17 !
+        sta     dummy_zp        ; 20 !
 
 s26:    lda     status          ; 24 !      - have byte?
         and     #HAS_BYTE       ; 26 !
@@ -689,43 +709,45 @@ dest26:
         iny                     ;    32 !
         sta     (spkr_ptr)      ;    37 !
         iny                     ;    39
-        sta     dummy_dst       ;    43
+        sta     dummy_abs       ;    43
         jmp     duty_cycle26    ;    46
 
 
 .align 256
 .assert * = BASE+$1B00, error
 duty_cycle27:
-        sta     spkr            ; 4  !
-        sta     dummy_dst       ; 8  !
-        sta     dummy_dst       ; 12 !
-        sta     dummy_dst       ; 16 !
-        sta     dummy_dst       ; 20 !
+        sta     SPKR            ; 4  !
+        lda     KBD             ; 8  !
+        bpl     :+              ; 11 !
+        jsr     kbd_send        ;    !
+:       inc     dummy_abs       ; 17 !
+        sta     dummy_zp        ; 20 !
 
 s27:    lda     status          ; 24 !      - have byte?
         and     #HAS_BYTE       ; 26 !
         beq     :+              ; 28 ! 30
 d27:    lda     data            ; 32 !     - yes
         ldx     #$02            ; 34 !
-        sta     spkr            ; 38 !
+        sta     SPKR            ; 38 !
         sta     dest27,x        ; 43
 dest27:
         jmp     $0000           ; 46
 :
-        sta     dummy_dst       ;    34 !
-        sta     spkr            ;    38 !
-        sta     (dummy)         ;    43
+        sta     dummy_abs       ;    34 !
+        sta     SPKR            ;    38 !
+        sta     (dummy_ptr)     ;    43
         jmp     duty_cycle27    ;    46
 
 
 .align 256
 .assert * = BASE+$1C00, error
 duty_cycle28:
-        sta     spkr            ; 4  !
-        sta     dummy_dst       ; 8  !
-        sta     dummy_dst       ; 12 !
-        sta     dummy_dst       ; 16 !
-        sta     dummy_dst       ; 20 !
+        sta     SPKR            ; 4  !
+        lda     KBD             ; 8  !
+        bpl     :+              ; 11 !
+        jsr     kbd_send        ;    !
+:       inc     dummy_abs       ; 17 !
+        sta     dummy_zp        ; 20 !
 
 s28:    lda     status          ; 24 !      - have byte?
         and     #HAS_BYTE       ; 26 !
@@ -737,34 +759,35 @@ d28:    lda     data            ; 32 !     - yes
 dest28:
         jmp     $0000           ; 46
 :
-        sta     dummy_dst       ;    34 !
+        sta     dummy_abs       ;    34 !
         sta     (spkr_ptr)      ;    39 !
-        sta     dummy_dst       ;    43
+        sta     dummy_abs       ;    43
         jmp     duty_cycle28    ;    46
 
 
 .align 256
 .assert * = BASE+$1D00, error
 duty_cycle29:
-        sta     spkr            ; 4  !
-        sta     dummy_dst       ; 8  !
-        sta     dummy_dst       ; 12 !
-        sta     dummy_dst       ; 16 !
-        sta     dummy_dst       ; 20 !
+        sta     SPKR            ; 4  !
+        lda     KBD             ; 8  !
+        bpl     :+              ; 11 !
+        jsr     kbd_send        ;    !
+:       inc     dummy_abs       ; 17 !
+        sta     dummy_zp        ; 20 !
 
 s29:    lda     status          ; 24 !      - have byte?
         and     #HAS_BYTE       ; 26 !
         beq     :+              ; 28 ! 30
 d29:    lda     data            ; 32 !     - yes
         sta     dest29+2        ; 36 !
-        sta     spkr            ; 40 !
+        sta     SPKR            ; 40 !
         bra     dest29          ; 43
 dest29:
         jmp     $0000           ; 46
 :
-        sta     dummy_dst       ;    34 !
+        sta     dummy_abs       ;    34 !
         iny                     ;    36 !
-        sta     spkr            ;    40 !
+        sta     SPKR            ;    40 !
         bra     :+              ;    43
 :       jmp     duty_cycle29    ;    46
 
@@ -772,11 +795,12 @@ dest29:
 .align 256
 .assert * = BASE+$1E00, error
 duty_cycle30:
-        sta     spkr            ; 4  !
-        sta     dummy_dst       ; 8  !
-        sta     dummy_dst       ; 12 !
-        sta     dummy_dst       ; 16 !
-        sta     dummy_dst       ; 20 !
+        sta     SPKR            ; 4  !
+        lda     KBD             ; 8  !
+        bpl     :+              ; 11 !
+        jsr     kbd_send        ;    !
+:       inc     dummy_abs       ; 17 !
+        sta     dummy_zp        ; 20 !
 
 s30:    lda     status          ; 24 !      - have byte?
         and     #HAS_BYTE       ; 26 !
@@ -788,7 +812,7 @@ d30:    lda     data            ; 32 !     - yes
 dest30:
         jmp     $0000           ; 46
 :
-        sta     dummy_dst       ;    34 !
+        sta     dummy_abs       ;    34 !
         iny                     ;    36 !
         sta     (spkr_ptr)      ;    41 !
         iny                     ;    43
@@ -798,12 +822,12 @@ dest30:
 .align 256
 .assert * = BASE+$1F00, error
 duty_cycle31:
-        sta     spkr            ; 4  !
-        sta     dummy_dst       ; 8  !
-        sta     dummy_dst       ; 12 !
-        sta     dummy_dst       ; 16 !
-        sta     dummy_dst       ; 20 !
-        iny                     ; 22 !
+        sta     SPKR            ; 4  !
+        lda     KBD             ; 8  !
+        bpl     :+              ; 11 !
+        jsr     kbd_send        ;    !
+:       inc     dummy_abs       ; 17 !
+        sta     (dummy_ptr)         ; 22 !
 
 s31:    lda     status          ; 26 !      - have byte?
         and     #HAS_BYTE       ; 28 !
@@ -814,9 +838,9 @@ d31:    lda     data            ; 34 !     - yes
 dest31:
         jmp     $0000           ; 46
 :
-        sta     dummy_dst       ;    36 !
+        sta     dummy_abs       ;    36 !
         bra     :+              ;    39 !
-:       sta     spkr            ;    43 !
+:       sta     SPKR            ;    43 !
         jmp     duty_cycle31    ;    46
 
 .align 256
@@ -829,16 +853,20 @@ break_out:
         rts
 
 _pwm:
-        lda     #<(spkr)
+        ; Setup pointer access to SPKR
+        lda     #<(SPKR)
         sta     spkr_ptr
-        lda     #>(spkr)
+        lda     #>(SPKR)
         sta     spkr_ptr+1
 
-        lda     #<(dummy_dst)
-        sta     dummy
-        lda     #>(dummy_dst)
-        sta     dummy+1
+        ; Setup pointer access to dummy var
+        lda     #<(dummy_abs)
+        sta     dummy_ptr
+        lda     #>(dummy_abs)
+        sta     dummy_ptr+1
 
+        ; Patch ALL the serial regs!
+        ; Status low byte
         lda     serial_status_reg+1
         sta     status_ptr
         sta     s0+1
@@ -852,7 +880,7 @@ _pwm:
         sta     s8+1
         sta     s9+1
         sta     s10+1
-        sta     s11+1
+        ; sta     s11+1
         sta     s12+1
         sta     s13+1
         sta     s14+1
@@ -873,6 +901,8 @@ _pwm:
         sta     s29+1
         sta     s30+1
         sta     s31+1
+
+        ; Status high byte
         lda     serial_status_reg+2
         sta     status_ptr+1
         sta     s0+2
@@ -886,7 +916,7 @@ _pwm:
         sta     s8+2
         sta     s9+2
         sta     s10+2
-        sta     s11+2
+        ; sta     s11+2
         sta     s12+2
         sta     s13+2
         sta     s14+2
@@ -908,6 +938,7 @@ _pwm:
         sta     s30+2
         sta     s31+2
 
+        ; Data low byte
         lda     serial_data_reg+1
         sta     data_ptr
         sta     d0+1
@@ -942,6 +973,8 @@ _pwm:
         sta     d29+1
         sta     d30+1
         sta     d31+1
+
+        ; Data high byte
         lda     serial_data_reg+2
         sta     data_ptr+1
         sta     d0+2
@@ -978,15 +1011,23 @@ _pwm:
         sta     d31+2
 
 .ifdef IIGS
+        ; Slow down IIgs
         jsr     _get_iigs_speed
         sta     prevspd
         lda     #SPEED_SLOW
         jsr     _set_iigs_speed
 .endif
-
+        ; Start with silence
         jmp     duty_cycle0
 
+kbd_send:
+        and     #$7F            ; Clear high bit
+        bit     KBDSTRB         ; Clear keyboard strobe
+        jmp     _serial_putc_direct
+
         .bss
-dummy_dst: .res 1
+dummy_abs: .res 1
 counter:   .res 1
 prevspd:   .res 1
+minutes:   .res 1
+seconds:   .res 1
