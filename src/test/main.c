@@ -11,7 +11,6 @@
 #include "surl.h"
 #include "pwm.h"
 
-static char buf[1024];
 int main(int argc, char *argv[]) {
   surl_connect_proxy();
   simple_serial_set_irq(0);
