@@ -22,7 +22,7 @@
 #include <unistd.h>
 #include "extended_conio.h"
 #include "stp_delete.h"
-#include "stp.h"
+#include "stp_list.h"
 #include "stp_cli.h"
 #include "get_buf_size.h"
 #include "simple_serial.h"

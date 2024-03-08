@@ -20,7 +20,7 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
-#include "stp.h"
+#include "stp_list.h"
 #include "stp_save.h"
 #include "get_buf_size.h"
 #include "simple_serial.h"

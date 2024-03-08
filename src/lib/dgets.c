@@ -28,6 +28,7 @@
 #ifdef __CC65__
 #pragma optimize(push, on)
 #pragma static-locals(push, on)
+#pragma code-name (push, "LOWCODE")
 #endif
 
 static char echo_on = 1;
@@ -463,5 +464,6 @@ out:
 }
 
 #ifdef __CC65__
+#pragma code-name (pop)
 #pragma optimize(pop)
 #endif

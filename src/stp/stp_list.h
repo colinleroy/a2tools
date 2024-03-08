@@ -44,5 +44,7 @@ char *stp_build_login_url(char *url);
 char *stp_get_start_url(void);
 void stp_update_list(char full_update);
 int stp_get_data(char *url, const surl_response **resp);
+void stp_print_header(char *url);
+void stp_print_result(const surl_response *response);
 
 #endif
