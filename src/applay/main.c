@@ -20,11 +20,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
-#include "stp_list.h"
-#include "stp_cli.h"
-#include "stp_save.h"
-#include "stp_send_file.h"
-#include "stp_delete.h"
 #include "surl.h"
 #include "simple_serial.h"
 #include "extended_conio.h"
@@ -34,47 +29,23 @@
 #include "clrzone.h"
 #include "scroll.h"
 #include "scrollwindow.h"
-#include "strsplit.h"
+#include "stp_list.h"
 #include "runtime_once_clean.h"
+#include "hgr.h"
+
+#ifdef __CC65__
+#pragma code-name (push, "LOWCODE")
+#endif
 
 unsigned char scrw = 255, scrh = 255;
 
-static void get_all(const char *url, char **lines, int n_lines) {
-  int i, r;
-  char *out_dir;
-  if (lines == NULL || (out_dir = stp_confirm_save_all()) == NULL) {
-    return;
-  }
-  for (i = 0; i < n_lines; i++) {
-    const surl_response *resp = NULL;
-    char *cur_url = strdup(url);
-    cur_url = stp_url_enter(cur_url, lines[i]);
-    resp = surl_start_request(SURL_METHOD_GET, cur_url, NULL, 0);
-
-    stp_print_result(resp);
-
-    gotoxy(0, 2);
-
-    if (resp->size == 0) {
-      free(cur_url);
-      continue;
-    }
-
-    if (resp->content_type && strcmp(resp->content_type, "directory")) {
-      r = stp_save_dialog(cur_url, resp, out_dir);
-      stp_print_result(resp);
-    } else {
-      r = -1;
-    }
-    free(cur_url);
-    if (r != 0) {
-      break;
-    }
-  }
-  clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
-  free(out_dir);
+void stp_print_footer(void) {
+  gotoxy(0, 22);
+  chline(scrw);
+  clrzone(0, 23, scrw - 1, 23);
+  gotoxy(0, 23);
+  dputs("Up/Down, Enter: nav, Esc: back");
 }
-
 
 int main(void) {
   char *url;
@@ -94,7 +65,6 @@ int main(void) {
   url = stp_build_login_url(url);
 
   stp_print_footer();
-  surl_set_time();
 
   runtime_once_clean();
 
@@ -103,7 +73,7 @@ int main(void) {
       case KEYBOARD_INPUT:
         goto keyb_input;
       case SAVE_DIALOG:
-        stp_save_dialog(url, resp, NULL);
+        /* Play */
         clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
         stp_print_result(resp);
         goto up_dir;
@@ -128,32 +98,12 @@ up_dir:
           url = stp_url_enter(url, lines[cur_line]);
         full_update = 1;
         break;
-      case 'a':
-      case 'A':
-        get_all(url, lines, num_lines);
-        break;
       case CH_CURS_UP:
         full_update = stp_list_scroll(-1);
         goto update_list;
       case CH_CURS_DOWN:
         full_update = stp_list_scroll(+1);
         goto update_list;
-      case 's':
-      case 'S':
-        stp_send_file(url, 0);
-        full_update = 1;
-        break;
-      case 'r':
-      case 'R':
-        stp_send_file(url, 1);
-        full_update = 1;
-        break;
-      case 'd':
-      case 'D':
-        if (lines)
-          stp_delete_dialog(url, lines[cur_line]);
-        full_update = 1;
-        break;
       default:
         goto update_list;
     }
@@ -165,3 +115,6 @@ up_dir:
 
   exit(0);
 }
+#ifdef __CC65__
+#pragma code-name (pop)
+#endif

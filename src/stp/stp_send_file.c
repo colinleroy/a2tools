@@ -24,7 +24,7 @@
 #include <sys/stat.h>
 #include "platform.h"
 #include "file_select.h"
-#include "stp.h"
+#include "stp_list.h"
 #include "stp_cli.h"
 #include "stp_send_file.h"
 #include "simple_serial.h"

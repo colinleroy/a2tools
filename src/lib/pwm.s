@@ -38,11 +38,11 @@ status_ptr    = _zp10
 data_ptr      = _zp12
 dummy_zp      = tmp1
 
-        .segment        "DATA"
+        .code
 
 .align 256
 BASE = *
-.assert * = $8000, error
+.assert * = $4000, error
 duty_cycle0:
         inc     dummy_abs       ; 6
         inc     dummy_abs       ; 12

@@ -20,7 +20,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
-#include "stp.h"
+#include "stp_list.h"
 #include "stp_cli.h"
 #include "surl.h"
 #include "simple_serial.h"
@@ -33,6 +33,11 @@
 #include "scrollwindow.h"
 #include "strsplit.h"
 #include "runtime_once_clean.h"
+#include "malloc0.h"
+
+#ifdef __CC65__
+#pragma code-name (push, "LOWCODE")
+#endif
 
 static char *url_enter(char *url, char *suffix);
 
@@ -270,7 +275,6 @@ int stp_get_data(char *url, const surl_response **resp) {
   cur_line = 0;
   cur_display_line = 0;
 
-  stp_print_header(url);
 
   clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
   gotoxy(center_x, 12);
@@ -295,9 +299,12 @@ int stp_get_data(char *url, const surl_response **resp) {
   if ((*resp)->content_type && strcmp((*resp)->content_type, "directory")) {
     return SAVE_DIALOG;
   } else {
-    data = malloc((*resp)->size + 1);
+    data = malloc0((*resp)->size + 1);
     r = surl_receive_data(data, (*resp)->size);
   }
+
+  stp_print_header(url);
+
   if (r < (*resp)->size) {
     gotoxy(center_x - 7, 12);
     dputs("Can not load response.");
@@ -340,3 +347,52 @@ char *stp_url_enter(char *url, char *suffix) {
 
   return url;
 }
+
+void stp_print_header(char *url) {
+  char *no_pass_url = strdup(url);
+
+  if (strchr(no_pass_url, ':') != strrchr(no_pass_url,':')) {
+    /* Means there's a login */
+    char *t = strrchr(no_pass_url, ':') + 1;
+    while(*t != '@') {
+      *t = '*';
+      t++;
+    }
+  }
+  clrzone(0, 0, scrw - 1, 0);
+  gotoxy(0, 0);
+  if (strlen(no_pass_url) > scrw - 10) {
+    char *tmp = strdup(no_pass_url + strlen(no_pass_url) - scrw + 5);
+    dputs("...");
+    dputs(tmp);
+    free(tmp);
+  } else {
+    dputs(no_pass_url);
+  }
+  free(no_pass_url);
+#ifdef __CC65__
+  gotoxy(69, 0);
+  printf("%zub free", _heapmemavail());
+#endif
+  gotoxy(0, 1);
+  chline(scrw);
+}
+
+void stp_print_result(const surl_response *response) {
+  gotoxy(0, 20);
+  chline(scrw);
+  clrzone(0, 21, scrw - 1, 21);
+  gotoxy(0, 21);
+  if (response == NULL) {
+    dputs("Unknown request error.");
+  } else {
+    cprintf("Response code %d - %lu bytes, %s",
+            response->code,
+            response->size,
+            response->content_type != NULL ? response->content_type : "");
+  }
+}
+
+#ifdef __CC65__
+#pragma code-name (pop)
+#endif
