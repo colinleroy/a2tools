@@ -40,6 +40,7 @@ extern char *data;
 char *stp_url_enter(char *url, char *suffix);
 char *stp_url_up(char *url);
 char stp_list_scroll(signed char shift);
+void stp_list_search(void);
 char *stp_build_login_url(char *url);
 char *stp_get_start_url(void);
 void stp_update_list(char full_update);
