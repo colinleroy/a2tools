@@ -35,7 +35,9 @@
 #include "pwm.h"
 
 #ifdef __CC65__
-#pragma code-name (push, "LOWCODE")
+#pragma bss-name (push, "HGR")
+char hgr[0x2000];
+#pragma bss-name (pop)
 #endif
 
 char *welcome_header = 
@@ -60,11 +62,11 @@ void stp_print_footer(void) {
 }
 
 extern char tmp_buf[80];
-static void applay_url(char *url) {
+static void play_url(char *url) {
   char r;
   
   clrzone(0, 12, scrw - 1, 12);
-  clrzone(0, 22, scrw - 1, 23);
+  clrzone(0, 21, scrw - 1, 23);
   
   if (strchr(url, '/')) {
     strncpy(tmp_buf, strrchr(url, '/')+1, scrw - 1);
@@ -72,20 +74,34 @@ static void applay_url(char *url) {
     strncpy(tmp_buf, url, scrw - 1);
   }
   tmp_buf[scrw] = '\0';
-  gotoxy(0, 22);
+  gotoxy(0, 21);
   dputs(tmp_buf);
 
   surl_start_request(SURL_METHOD_STREAM_AUDIO, url, NULL, 0);
   r = simple_serial_getc();
+  if (r == SURL_ANSWER_STREAM_ART) {
+    surl_read_with_barrier(HGR_PAGE, HGR_LEN);
+    init_hgr(1);
+    hgr_mixon();
+    simple_serial_putc(SURL_CLIENT_READY);
+    r = simple_serial_getc();
+  } else {
+    init_text();
+  }
   if (r != SURL_ANSWER_STREAM_START) {
     dputs("Playback error");
   } else {
     simple_serial_putc(SURL_CLIENT_READY);
     pwm(scrw-34, 23);
+    init_text();
     clrzone(0, 22, scrw - 1, 23);
     stp_print_footer();
   }
 }
+
+#ifdef __CC65__
+#pragma code-name (push, "LOWCODE")
+#endif
 
 int main(void) {
   char *url;
@@ -97,12 +113,12 @@ int main(void) {
 
   surl_ping();
 
+  runtime_once_clean();
+
   url = stp_get_start_url();
   url = stp_build_login_url(url);
 
   stp_print_footer();
-
-  runtime_once_clean();
 
   while(1) {
     switch (stp_get_data(url, &resp)) {
@@ -110,7 +126,7 @@ int main(void) {
         goto keyb_input;
       case SAVE_DIALOG:
         /* Play */
-        applay_url(url);
+        play_url(url);
         clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
         goto up_dir;
       case UPDATE_LIST:

@@ -13,6 +13,7 @@
 #include "extended_conio.h"
 #include "ffmpeg.h"
 #include "array_sort.h"
+#include "hgr-convert.h"
 
 #define MAX_OFFSET 126
 #define NUM_BASES  (HGR_LEN/MAX_OFFSET)+1
@@ -302,17 +303,46 @@ int surl_stream_audio(char *url) {
   size_t cur = 0;
   unsigned char *data = NULL;
   unsigned char *img_data = NULL;
-  size_t size = 0, img_size = 0;
+  unsigned char *hgr_buf = NULL;
+  size_t size = 0;
+  size_t img_size = 0;
 
   if (ffmpeg_to_raw_snd(url, sample_rate, &data, &size, &img_data, &img_size) != 0) {
     simple_serial_putc(SURL_ANSWER_STREAM_ERROR);
     return -1;
   } else {
-    simple_serial_putc(SURL_ANSWER_STREAM_START);
+    if (img_data && img_size) {
+      FILE *fp = fopen("/tmp/imgdata", "w+b");
+      if (fp) {
+        if (fwrite(img_data, 1, img_size, fp) == img_size) {
+          fclose(fp);
+          hgr_buf = sdl_to_hgr("/tmp/imgdata", 1, 0, &img_size, 0, 0);
+          if (img_size != HGR_LEN) {
+            hgr_buf = NULL;
+          }
+        } else {
+          fclose(fp);
+        }
+      }
+    }
+    free(img_data);
+    img_data = NULL;
+    simple_serial_putc(hgr_buf ? SURL_ANSWER_STREAM_ART : SURL_ANSWER_STREAM_START);
     if (simple_serial_getc() != SURL_CLIENT_READY) {
       return -1;
     }
     printf("Client ready\n");
+    if (hgr_buf) {
+      printf("Sending image\n");
+      simple_serial_write_fast((char *)hgr_buf, img_size);
+      if (simple_serial_getc() != SURL_CLIENT_READY) {
+        return -1;
+      }
+      simple_serial_putc(SURL_ANSWER_STREAM_START);
+      if (simple_serial_getc() != SURL_CLIENT_READY) {
+        return -1;
+      }
+    }
   }
 
   if (img_data && img_size) {

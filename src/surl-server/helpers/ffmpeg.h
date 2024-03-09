@@ -10,6 +10,6 @@ unsigned char *ffmpeg_convert_frame(void);
 
 int ffmpeg_to_raw_snd(const char *filename, int sample_rate,
                       unsigned char **data, size_t *size,
-                      char **img_data, size_t *img_size);
+                      unsigned char **img_data, size_t *img_size);
 
 #endif
