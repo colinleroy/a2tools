@@ -1,2 +1,0 @@
-#!/bin/bash
-make clean all SER_DEBUG=1 && cd ../.. && make applayperso.dsk && mame apple2c0 -window -flop1 applayperso.dsk -flop2 disks/qt100.dsk -resolution 560x384 -modem null_modem -bitb socket.localhost:2000 -nomouse -debug; cd src/applay

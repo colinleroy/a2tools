@@ -301,9 +301,10 @@ int surl_stream_audio(char *url) {
   int max = 0;
   size_t cur = 0;
   unsigned char *data = NULL;
-  size_t size = 0;
+  unsigned char *img_data = NULL;
+  size_t size = 0, img_size = 0;
 
-  if (ffmpeg_to_raw_snd(url, sample_rate, &data, &size) != 0) {
+  if (ffmpeg_to_raw_snd(url, sample_rate, &data, &size, &img_data, &img_size) != 0) {
     simple_serial_putc(SURL_ANSWER_STREAM_ERROR);
     return -1;
   } else {
@@ -312,6 +313,11 @@ int surl_stream_audio(char *url) {
       return -1;
     }
     printf("Client ready\n");
+  }
+
+  if (img_data && img_size) {
+    printf("Will send embedded img\n");
+    free(img_data);
   }
 
   for (cur = 0; cur < size; cur++) {

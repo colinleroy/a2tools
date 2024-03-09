@@ -42,6 +42,9 @@
 
 #include <ffmpeg.h>
 
+#include "hgr.h"
+#include "hgr-convert.h"
+
 /* Final buffer size, possibly including black borders */
 #define WIDTH 280
 #define HEIGHT 192
@@ -391,7 +394,9 @@ end:
     return NULL;
 }
 
-int ffmpeg_to_raw_snd(const char *filename, int sample_rate, unsigned char **data, size_t *size) {
+int ffmpeg_to_raw_snd(const char *filename, int sample_rate,
+                      unsigned char **data, size_t *size,
+                      char **img_data, size_t *img_size) {
     int ret = 0;
     const AVCodecParameters *codec;
     struct SwrContext* swr = swr_alloc();
@@ -401,13 +406,25 @@ int ffmpeg_to_raw_snd(const char *filename, int sample_rate, unsigned char **dat
     packet = av_packet_alloc();
 
     if (!frame || !filt_frame || !packet) {
-        fprintf(stderr, "Could not allocate frame or packet\n");
-        ret = -ENOMEM;
-        goto end;
+      fprintf(stderr, "Could not allocate frame or packet\n");
+      ret = -ENOMEM;
+      goto end;
     }
 
     if ((ret = open_file(filename, AVMEDIA_TYPE_AUDIO)) < 0) {
-        goto end;
+      goto end;
+    }
+
+    *img_data = NULL;
+    *img_size = 0;
+
+    for (int i = 0; i < fmt_ctx->nb_streams; i++) {
+      if (fmt_ctx->streams[i]->disposition & AV_DISPOSITION_ATTACHED_PIC) {
+        AVPacket img = fmt_ctx->streams[i]->attached_pic;
+        *img_data = malloc(img.size);
+        memcpy(*img_data, img.data, img.size);
+        *img_size = img.size;
+      }
     }
 
     codec = fmt_ctx->streams[stream_index]->codecpar;
