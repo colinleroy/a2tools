@@ -34,6 +34,7 @@ CL65SOURCES = \
 	../lib/pwm.s \
 	../lib/surl/surl_read_with_barrier.s \
 	../lib/serial/serial_read_no_irq.s \
+	../lib/serial/simple_serial_read.s \
 	../lib/serial/simple_serial_io.s \
 	../lib/serial/$(serial_hw)/common.s \
 	../lib/serial/$(serial_hw)/control.s \

@@ -13,7 +13,7 @@ endif
 SUBDIRS = src doc
 
 stp_disk_PROGS = src/stp/stp.bin
-applay_disk_PROGS = src/applay/applay.bin
+wozamp_disk_PROGS = src/wozamp/wozamp.bin
 telnet_disk_PROGS = src/telnet/telnet.bin
 
 homectrl_disk_PROGS = src/homecontrol-client/homectrl.bin \
@@ -52,10 +52,10 @@ all upload:
 		$(MAKE) -C $$dir -f Makefile $@ || exit; \
 	done
 
-applay$(suffix).dsk: $(applay_disk_PROGS)
+wozamp$(suffix).dsk: $(wozamp_disk_PROGS)
 	cp $(CLEANDISK) $@; \
-	java -jar bin/ac.jar -n $@ APPLAY
-	java -jar bin/ac.jar -p $@ APPLAY.SYSTEM SYS < bin/loader.system; \
+	java -jar bin/ac.jar -n $@ WOZAMP
+	java -jar bin/ac.jar -p $@ WOZAMP.SYSTEM SYS < bin/loader.system; \
 	java -jar bin/ac.jar -d $@ BASIC.SYSTEM; \
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
@@ -63,11 +63,11 @@ applay$(suffix).dsk: $(applay_disk_PROGS)
 	cp $@ ~/Documents/ADTPro-2.1.0/disks/; \
 	cp $@ dist/; \
 
-applayperso$(suffix).dsk: $(applay_disk_PROGS)
+wozampperso$(suffix).dsk: $(wozamp_disk_PROGS)
 	cp $(CLEANDISK) $@; \
-	java -jar bin/ac.jar -n $@ APPLAY
-	java -jar bin/ac.jar -p $@ APPLAY.SYSTEM SYS < bin/loader.system; \
-	java -jar bin/ac.jar -p $@ STPSTARTURL TXT < src/applay/STPSTARTURL; \
+	java -jar bin/ac.jar -n $@ WOZAMP
+	java -jar bin/ac.jar -p $@ WOZAMP.SYSTEM SYS < bin/loader.system; \
+	java -jar bin/ac.jar -p $@ STPSTARTURL TXT < src/wozamp/STPSTARTURL; \
 	java -jar bin/ac.jar -d $@ BASIC.SYSTEM; \
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \

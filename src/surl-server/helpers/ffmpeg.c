@@ -42,9 +42,6 @@
 
 #include <ffmpeg.h>
 
-#include "hgr.h"
-#include "hgr-convert.h"
-
 /* Final buffer size, possibly including black borders */
 #define WIDTH 280
 #define HEIGHT 192
@@ -396,7 +393,7 @@ end:
 
 int ffmpeg_to_raw_snd(const char *filename, int sample_rate,
                       unsigned char **data, size_t *size,
-                      char **img_data, size_t *img_size) {
+                      unsigned char **img_data, size_t *img_size) {
     int ret = 0;
     const AVCodecParameters *codec;
     struct SwrContext* swr = swr_alloc();
@@ -404,6 +401,11 @@ int ffmpeg_to_raw_snd(const char *filename, int sample_rate,
     frame = av_frame_alloc();
     filt_frame = av_frame_alloc();
     packet = av_packet_alloc();
+
+    *data = NULL;
+    *size = 0;
+    *img_data = NULL;
+    *img_size = 0;
 
     if (!frame || !filt_frame || !packet) {
       fprintf(stderr, "Could not allocate frame or packet\n");
@@ -414,9 +416,6 @@ int ffmpeg_to_raw_snd(const char *filename, int sample_rate,
     if ((ret = open_file(filename, AVMEDIA_TYPE_AUDIO)) < 0) {
       goto end;
     }
-
-    *img_data = NULL;
-    *img_size = 0;
 
     for (int i = 0; i < fmt_ctx->nb_streams; i++) {
       if (fmt_ctx->streams[i]->disposition & AV_DISPOSITION_ATTACHED_PIC) {
@@ -474,7 +473,7 @@ int ffmpeg_to_raw_snd(const char *filename, int sample_rate,
         }
       }
     }
- 
+
     // clean up
     swr_free(&swr);
     av_packet_unref(packet);
