@@ -71,17 +71,18 @@ static void curl_buffer_free(curl_buffer *curlbuf);
 
 static const char *surl_method_str(unsigned char method) {
   switch (method) {
-    case SURL_METHOD_ABORT:     return "ABORT";
-    case SURL_METHOD_RAW:       return "RAW";
-    case SURL_METHOD_GET:       return "GET";
-    case SURL_METHOD_POST:      return "POST";
-    case SURL_METHOD_PUT:       return "PUT";
-    case SURL_METHOD_DELETE:    return "DELETE";
-    case SURL_METHOD_POST_DATA: return "POST_DATA";
-    case SURL_METHOD_GETTIME:   return "GETTIME";
-    case SURL_METHOD_PING:      return "PING";
-    case SURL_METHOD_DEBUG:     return "DEBUG";
-    case SURL_METHOD_STREAM:     return "STREAM";
+    case SURL_METHOD_ABORT:        return "ABORT";
+    case SURL_METHOD_RAW:          return "RAW";
+    case SURL_METHOD_GET:          return "GET";
+    case SURL_METHOD_POST:         return "POST";
+    case SURL_METHOD_PUT:          return "PUT";
+    case SURL_METHOD_DELETE:       return "DELETE";
+    case SURL_METHOD_POST_DATA:    return "POST_DATA";
+    case SURL_METHOD_GETTIME:      return "GETTIME";
+    case SURL_METHOD_PING:         return "PING";
+    case SURL_METHOD_DEBUG:        return "DEBUG";
+    case SURL_METHOD_STREAM_AUDIO: return "STREAM_AUDIO";
+    case SURL_METHOD_STREAM_VIDEO: return "STREAM_VIDEO";
     default:                    return "[UNKNOWN]";
   }
 }
@@ -449,7 +450,7 @@ abort:
         sending_body = 1;
         to_send = min(bufsize, response->size - sent);
         printf("RESP: SEND %zu body bytes from %zu\n", to_send, sent);
-        simple_serial_write_fast(response->buffer + sent, to_send);
+        simple_serial_write(response->buffer + sent, to_send);
         sent += to_send;
 
       } else if (cmd == SURL_CMD_HEADERS) {
@@ -470,7 +471,7 @@ abort:
         sending_headers = 1;
         to_send = min(bufsize, response->headers_size - sent);
         printf("RESP: HEADERS %zu header bytes from %zu\n", to_send, sent);
-        simple_serial_write_fast(response->headers + sent, to_send);
+        simple_serial_write(response->headers + sent, to_send);
         sent += to_send;
 
       } else if (cmd == SURL_CMD_FIND) {
@@ -1200,9 +1201,13 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
     simple_serial_putc(SURL_ANSWER_RAW_START);
     surl_server_raw_session(url);
     return NULL;
-  } else if (method == SURL_METHOD_STREAM) {
+  } else if (method == SURL_METHOD_STREAM_VIDEO) {
     simple_serial_putc(SURL_ANSWER_WAIT);
-    surl_stream_url(url);
+    surl_stream_video(url);
+    return NULL;
+  } else if (method == SURL_METHOD_STREAM_AUDIO) {
+    simple_serial_putc(SURL_ANSWER_WAIT);
+    surl_stream_audio(url);
     return NULL;
   }
 

@@ -2,9 +2,15 @@
 ; Colin Leroy-Mira, 2024
 ;
         .export         _pwm
-        .importzp       _zp6, _zp8, _zp10, _zp12, tmp1
+        .export         _SAMPLES_BASE
 
-        .import         _serial_putc_direct, _serial_read_byte_no_irq
+        .importzp       _zp6, _zp8, _zp10, _zp12, tmp1, ptr1
+
+        .import         _serial_putc_direct
+        .import         _simple_serial_set_irq
+        .import         _simple_serial_flush
+        .import         popa, VTABZ
+
 .ifdef IIGS
         .import         zilog_status_reg_r, zilog_data_reg_r
         .import         _get_iigs_speed, _set_iigs_speed
@@ -37,824 +43,1089 @@ dummy_ptr     = _zp8
 status_ptr    = _zp10
 data_ptr      = _zp12
 dummy_zp      = tmp1
+vumeter_base  = ptr1
 
+; ---------------------------------------------------------
+;
+; Macros to ease cycle counting
+
+.macro WASTE_2                  ; Cycles wasters
+        nop
+.endmacro
+.macro WASTE_3
+        sta     dummy_zp
+.endmacro
+.macro WASTE_4
+        sta     dummy_abs
+.endmacro
+.macro WASTE_5
+        sta     (dummy_ptr)
+.endmacro
+.macro WASTE_6
+        inc     dummy_abs
+.endmacro
+
+.macro WASTE_7
+        WASTE_2
+        WASTE_5
+.endmacro
+.macro WASTE_8
+        WASTE_2
+        WASTE_6
+.endmacro
+.macro WASTE_9
+        WASTE_3
+        WASTE_6
+.endmacro
+.macro WASTE_10
+        WASTE_4
+        WASTE_6
+.endmacro
+.macro WASTE_11
+        WASTE_5
+        WASTE_6
+.endmacro
+.macro WASTE_12
+        WASTE_6
+        WASTE_6
+.endmacro
+.macro WASTE_13
+        WASTE_2
+        WASTE_11
+.endmacro
+.macro WASTE_14
+        WASTE_2
+        WASTE_12
+.endmacro
+.macro WASTE_15
+        WASTE_3
+        WASTE_12
+.endmacro
+.macro WASTE_16
+        WASTE_4
+        WASTE_12
+.endmacro
+.macro WASTE_17
+        WASTE_5
+        WASTE_12
+.endmacro
+.macro WASTE_18
+        WASTE_6
+        WASTE_12
+.endmacro
+
+.macro KBD_LOAD_7               ; Check keyboard and jsr if key pressed (trashes A)
+        lda     KBD             ; 4
+        bpl     :+              ; 7
+        jsr     kbd_send
+:
+.endmacro
+
+.macro VU_CLEAR_7               ; Clear previous VU meter level (trashes A)
+        lda     #' '|$80        ; 2
+        sta     (vumeter_base),y; 7
+.endmacro
+
+.macro VU_SET_9                     ; Set new VU meter level (trashes A)
+        ldy     #>(*-_SAMPLES_BASE) ; 2
+        lda     #' '                ; 4
+        sta     (vumeter_base),y    ; 9
+.endmacro
+
+.macro VU_CLEAR_AND_SET_16      ; Clear and set VU meter (trashes A)
+        VU_CLEAR_7
+        VU_SET_9
+.endmacro
+
+.macro ____SPKR_DUTY____4       ; Toggle speaker
+        sta     SPKR            ; 4
+.endmacro
+
+.macro ____SPKR_DUTY____5       ; Toggle speaker slower
+        sta     (spkr_ptr)      ; 5
+.endmacro
+
+.macro SER_AVAIL_A_6            ; Get byte availability to A
+        lda     status          ; 4
+        and     #HAS_BYTE       ; 6
+.endmacro
+
+.macro SER_AVAIL_A_7            ; Get byte availability to A, slower
+        lda     (status_ptr)    ; 5
+        and     #HAS_BYTE       ; 7
+.endmacro
+
+.macro SER_LOOP_IF_NOT_AVAIL_2  ; Loop if no byte available
+        beq     :+              ; 2 / 3
+.endmacro
+
+.macro SER_FETCH_DEST_A_4       ; Fetch next duty cycle to A
+        lda     data            ; 4
+.endmacro
+
+.macro SER_FETCH_DEST_A_5       ; Fetch next duty cycle to A, slower
+        lda     (data_ptr)      ; 5
+.endmacro
         .code
 
 .align 256
-BASE = *
+_SAMPLES_BASE = *
 .assert * = $4000, error
 duty_cycle0:
-        inc     dummy_abs       ; 6
-        inc     dummy_abs       ; 12
-        sta     dummy_abs       ; 16
-        lda     KBD             ; 20
-        bpl     :+              ; 23
-        jsr     kbd_send
-:       sta     dummy_abs       ; 27
+        ____SPKR_DUTY____4      ; 4  !
+        ____SPKR_DUTY____4      ; 8  !
 
-s0:     lda     status          ; 31      - have byte?
-        and     #HAS_BYTE       ; 33
-        beq     :+              ; 35 36
-d0:     lda     data            ; 39      - yes
-        sta     dest0+2         ; 43
+        KBD_LOAD_7              ; 15
+        VU_CLEAR_AND_SET_16     ; 31
+
+        WASTE_14                ; 45
+
+        ____SPKR_DUTY____4      ; 49  !
+        ____SPKR_DUTY____4      ; 53  !
+
+        WASTE_18                ; 71
+
+s0:     SER_AVAIL_A_6           ; 77
+        SER_LOOP_IF_NOT_AVAIL_2 ; 79 80
+d0:     SER_FETCH_DEST_A_4      ; 83      - yes
+        sta     dest0+2         ; 87
 dest0:
-        jmp     $0000           ; 46
+        jmp     $0000           ; 90
 :
-        iny                     ;    38
-        sta     dummy_abs       ;    42
-        jmp     duty_cycle0     ;    46
+        WASTE_7                 ;    87
+        jmp     duty_cycle0     ;    90
 
 .align 256
-.assert * = BASE+$100, error
+.assert * = _SAMPLES_BASE+$100, error
 duty_cycle1:
-        sta     SPKR            ; 4  !
-        sta     spkr_ptr        ; 8  !
-        sta     (dummy_ptr)     ; 13
-        sta     dummy_abs       ; 17
-        lda     KBD             ; 21
-        bpl     :+              ; 24
-        jsr     kbd_send
-:       sta     dummy_zp        ; 27
+        ____SPKR_DUTY____4      ; 4  !
+        ____SPKR_DUTY____5      ; 9  !
 
-s1:     lda     status          ; 31      - have byte?
-        and     #HAS_BYTE       ; 33
-        beq     :+              ; 35 36
-d1:     lda     data            ; 39      - yes
-        sta     dest1+2         ; 43
+        KBD_LOAD_7              ; 16
+        VU_CLEAR_AND_SET_16     ; 32
+
+        WASTE_13                ; 45
+
+        ____SPKR_DUTY____4      ; 49  !
+        ____SPKR_DUTY____5      ; 54  !
+
+        WASTE_17                ; 71
+
+s1:     SER_AVAIL_A_6           ; 77
+        SER_LOOP_IF_NOT_AVAIL_2 ; 79 80
+d1:     SER_FETCH_DEST_A_4      ; 83      - yes
+        sta     dest1+2         ; 87
 dest1:
-        jmp     $0000           ; 46
+        jmp     $0000           ; 90
 :
-        iny                     ;    38
-        sta     dummy_abs       ;    42
-        jmp     duty_cycle1     ;    46
+        WASTE_7                 ;    87
+        jmp     duty_cycle1     ;    90
 
 .align 256
-.assert * = BASE+$200, error
+.assert * = _SAMPLES_BASE+$200, error
 duty_cycle2:
-        sta     SPKR            ; 4  !
-        iny                     ; 6  !
-        sta     SPKR            ; 10 !
-        sta     dummy_abs       ; 14
-        lda     KBD             ; 18
-        bpl     :+              ; 21
-        jsr     kbd_send
-:       inc     dummy_abs       ; 27
+        ____SPKR_DUTY____4      ; 4  !
+        WASTE_2                 ; 6  !
+        ____SPKR_DUTY____4      ; 10 !
 
-s2:     lda     status          ; 31      - have byte?
-        and     #HAS_BYTE       ; 33
-        beq     :+              ; 35 36
-d2:     lda     data            ; 39      - yes
-        sta     dest2+2         ; 43
+        KBD_LOAD_7              ; 17
+        VU_CLEAR_AND_SET_16     ; 33
+
+        WASTE_12                ; 45
+
+        ____SPKR_DUTY____4      ; 49 !
+        WASTE_2                 ; 51 !
+        ____SPKR_DUTY____4      ; 55 !
+
+        WASTE_16                ; 71
+
+s2:     SER_AVAIL_A_6           ; 77
+        SER_LOOP_IF_NOT_AVAIL_2 ; 79 80
+d2:     SER_FETCH_DEST_A_4      ; 83      - yes
+        sta     dest2+2         ; 87
 dest2:
-        jmp     $0000           ; 46
+        jmp     $0000           ; 90
 :
-        iny                     ;    38
-        sta     dummy_abs       ;    42
-        jmp     duty_cycle2     ;    46
+        WASTE_7                 ;    87
+        jmp     duty_cycle2     ;    90
 
 .align 256
-.assert * = BASE+$300, error
+.assert * = _SAMPLES_BASE+$300, error
 duty_cycle3:
-        sta     SPKR            ; 4  !
-        iny                     ; 6  !
-        sta     (spkr_ptr)      ; 11 !
-        lda     KBD             ; 15
-        bpl     :+              ; 18
-        jsr     kbd_send
-:       sta     dummy_abs       ; 22
-        sta     (dummy_ptr)     ; 27
+        ____SPKR_DUTY____4      ; 4  !
+        WASTE_2                   ; 6  !
+        ____SPKR_DUTY____5      ; 11 !
+        
+        KBD_LOAD_7              ; 18
+        VU_CLEAR_AND_SET_16     ; 34
 
-s3:     lda     status          ; 31      - have byte?
-        and     #HAS_BYTE       ; 33
-        beq     :+              ; 35 36
-d3:     lda     data            ; 39      - yes
-        sta     dest3+2         ; 43
+        WASTE_11                ; 45
+
+        ____SPKR_DUTY____4      ; 49 !
+        WASTE_2                 ; 51 !
+        ____SPKR_DUTY____5      ; 56 !
+
+        WASTE_15                ; 71
+
+s3:     SER_AVAIL_A_6           ; 77
+        SER_LOOP_IF_NOT_AVAIL_2 ; 79 80
+d3:     SER_FETCH_DEST_A_4      ; 83      - yes
+        sta     dest3+2         ; 87
 dest3:
-        jmp     $0000           ; 46
+        jmp     $0000           ; 90
 :
-        iny                     ;    38
-        sta     dummy_abs       ;    42
-        jmp     duty_cycle3     ;    46
+        WASTE_7                 ;    87
+        jmp     duty_cycle3     ;    90
 
 
 .align 256
-.assert * = BASE+$400, error
+.assert * = _SAMPLES_BASE+$400, error
 duty_cycle4:
-        sta     SPKR            ; 4  !
-        sta     dummy_abs       ; 8  !
-        sta     SPKR            ; 12 !
-        sta     dummy_abs       ; 16
-        lda     KBD             ; 20
-        bpl     :+              ; 23
-        jsr     kbd_send
-:       sta     dummy_abs       ; 27
+        ____SPKR_DUTY____4      ; 4  !
+        WASTE_4                 ; 8  !
+        ____SPKR_DUTY____4      ; 12 !
 
-s4:     lda     status          ; 31      - have byte?
-        and     #HAS_BYTE       ; 33
-        beq     :+              ; 35 36
-d4:     lda     data            ; 39      - yes
-        sta     dest4+2         ; 43
+        KBD_LOAD_7              ; 19
+        VU_CLEAR_AND_SET_16     ; 35
+
+        WASTE_10                ; 45
+
+        ____SPKR_DUTY____4      ; 49 !
+        WASTE_4                 ; 53 !
+        ____SPKR_DUTY____4      ; 57 !
+
+        WASTE_14                ; 71
+
+s4:     SER_AVAIL_A_6           ; 77
+        SER_LOOP_IF_NOT_AVAIL_2 ; 79 80
+d4:     SER_FETCH_DEST_A_4      ; 83      - yes
+        sta     dest4+2         ; 87
 dest4:
-        jmp     $0000           ; 46
+        jmp     $0000           ; 90
 :
-        iny                     ;    38
-        sta     dummy_abs       ;    42
-        jmp     duty_cycle4     ;    46
+        WASTE_7                 ;    87
+        jmp     duty_cycle4     ;    90
 
 
 .align 256
-.assert * = BASE+$500, error
+.assert * = _SAMPLES_BASE+$500, error
 duty_cycle5:
-        sta     SPKR            ; 4  !
-        sta     dummy_abs       ; 8  !
-        sta     (spkr_ptr)      ; 13 !
-        lda     KBD             ; 17
-        bpl     :+              ; 20
-        jsr     kbd_send
-:       sta     dummy_abs       ; 24
-        sta     dummy_zp        ; 27
+        ____SPKR_DUTY____4      ; 4  !
+        WASTE_5                 ; 9  !
+        ____SPKR_DUTY____4      ; 13 !
+        
+        KBD_LOAD_7              ; 20
+        VU_CLEAR_AND_SET_16     ; 36
 
-s5:     lda     status          ; 31      - have byte?
-        and     #HAS_BYTE       ; 33
-        beq     :+              ; 35 36
-d5:     lda     data            ; 39      - yes
-        sta     dest5+2         ; 43
+        WASTE_9                 ; 45
+
+        ____SPKR_DUTY____4      ; 49 !
+        WASTE_5                 ; 54 !
+        ____SPKR_DUTY____4      ; 58 !
+
+        WASTE_13                ; 71
+
+s5:     SER_AVAIL_A_6           ; 77
+        SER_LOOP_IF_NOT_AVAIL_2 ; 79 80
+d5:     SER_FETCH_DEST_A_4      ; 83      - yes
+        sta     dest5+2         ; 87
 dest5:
-        jmp     $0000           ; 46
+        jmp     $0000           ; 90
 :
-        iny                     ;    38
-        sta     dummy_abs       ;    42
-        jmp     duty_cycle5     ;    46
+        WASTE_7                 ;    87
+        jmp     duty_cycle5     ;    90
 
 
 .align 256
-.assert * = BASE+$600, error
+.assert * = _SAMPLES_BASE+$600, error
 duty_cycle6:
-        sta     SPKR            ; 4  !
-        inc     dummy_abs       ; 10 !
-        sta     SPKR            ; 14 !
-        lda     KBD             ; 18
-        bpl     :+              ; 21
-        jsr     kbd_send
-:       inc     dummy_abs       ; 27
+        ____SPKR_DUTY____4      ; 4  !
+        WASTE_6                 ; 10  !
+        ____SPKR_DUTY____4      ; 14 !
+        
+        KBD_LOAD_7              ; 21
+        VU_CLEAR_AND_SET_16     ; 37
 
-s6:     lda     status          ; 31      - have byte?
-        and     #HAS_BYTE       ; 33
-        beq     :+              ; 35 36
-d6:     lda     data            ; 39      - yes
-        sta     dest6+2         ; 43
+        WASTE_8                 ; 45
+
+        ____SPKR_DUTY____4      ; 49 !
+        WASTE_6                 ; 55 !
+        ____SPKR_DUTY____4      ; 59 !
+
+        WASTE_12                ; 71
+
+s6:     SER_AVAIL_A_6           ; 77
+        SER_LOOP_IF_NOT_AVAIL_2 ; 79 80
+d6:     SER_FETCH_DEST_A_4      ; 83      - yes
+        sta     dest6+2         ; 87
 dest6:
-        jmp     $0000           ; 46
+        jmp     $0000           ; 90
 :
-        iny                     ;    38
-        sta     dummy_abs       ;    42
-        jmp     duty_cycle6     ;    46
+        WASTE_7                 ;    87
+        jmp     duty_cycle6     ;    90
 
 
 .align 256
-.assert * = BASE+$700, error
+.assert * = _SAMPLES_BASE+$700, error
 duty_cycle7:
-        sta     SPKR            ; 4  !
-        inc     dummy_abs       ; 10 !
-        sta     (spkr_ptr)      ; 15 !
-        lda     KBD             ; 19
-        bpl     :+              ; 22
-        jsr     kbd_send
-:       sta     (dummy_ptr)     ; 27
+        ____SPKR_DUTY____4      ; 4  !
+        WASTE_7                 ; 11 !
+        ____SPKR_DUTY____4      ; 15 !
+        
+        KBD_LOAD_7              ; 22
+        VU_CLEAR_AND_SET_16     ; 38
 
-s7:     lda     status          ; 31      - have byte?
-        and     #HAS_BYTE       ; 33
-        beq     :+              ; 35 36
-d7:     lda     data            ; 39      - yes
-        sta     dest7+2         ; 43
+        WASTE_7                 ; 45
+
+        ____SPKR_DUTY____4      ; 49 !
+        WASTE_7                 ; 56 !
+        ____SPKR_DUTY____4      ; 60 !
+
+        WASTE_11                ; 71
+
+s7:     SER_AVAIL_A_6           ; 77
+        SER_LOOP_IF_NOT_AVAIL_2 ; 79 80
+d7:     SER_FETCH_DEST_A_4      ; 83      - yes
+        sta     dest7+2         ; 87
 dest7:
-        jmp     $0000           ; 46
+        jmp     $0000           ; 90
 :
-        iny                     ;    38
-        sta     dummy_abs       ;    42
-        jmp     duty_cycle7     ;    46
+        WASTE_7                 ;    87
+        jmp     duty_cycle7     ;    90
 
 
 .align 256
-.assert * = BASE+$800, error
+.assert * = _SAMPLES_BASE+$800, error
 duty_cycle8:
-        sta     SPKR            ; 4  !
-        sta     dummy_abs       ; 8  !
-        sta     dummy_abs       ; 12 !
-        sta     SPKR            ; 16 !
-        lda     KBD             ; 20
-        bpl     :+              ; 23
-        jsr     kbd_send
-:       sta     dummy_abs       ; 27
+        ____SPKR_DUTY____4      ; 4  !
+        WASTE_8                 ; 12 !
+        ____SPKR_DUTY____4      ; 16 !
 
-s8:     lda     status          ; 31      - have byte?
-        and     #HAS_BYTE       ; 33
-        beq     :+              ; 35 36
-d8:     lda     data            ; 39      - yes
-        sta     dest8+2         ; 43
+        KBD_LOAD_7              ; 23
+        VU_CLEAR_AND_SET_16     ; 39
+
+        WASTE_6                 ; 45
+
+        ____SPKR_DUTY____4      ; 49 !
+        WASTE_8                 ; 57 !
+        ____SPKR_DUTY____4      ; 61 !
+
+        WASTE_10                ; 71
+
+s8:     SER_AVAIL_A_6           ; 77
+        SER_LOOP_IF_NOT_AVAIL_2 ; 79 80
+d8:     SER_FETCH_DEST_A_4      ; 83      - yes
+        sta     dest8+2         ; 87
 dest8:
-        jmp     $0000           ; 46
+        jmp     $0000           ; 90
 :
-        iny                     ;    38
-        sta     dummy_abs       ;    42
-        jmp     duty_cycle8     ;    46
+        WASTE_7                 ;    87
+        jmp     duty_cycle8     ;    90
 
 
 .align 256
-.assert * = BASE+$900, error
+.assert * = _SAMPLES_BASE+$900, error
 duty_cycle9:
-        sta     SPKR            ; 4  !
-        sta     dummy_abs       ; 8  !
-        sta     dummy_abs       ; 12 !
-        sta     (spkr_ptr)      ; 17 !
-        lda     KBD             ; 21
-        bpl     :+              ; 24
-        jsr     kbd_send
-:       sta     dummy_zp        ; 27
+        ____SPKR_DUTY____4      ; 4  !
+        WASTE_9                 ; 13 !
+        ____SPKR_DUTY____4      ; 17 !
+        
+        KBD_LOAD_7              ; 24
+        VU_CLEAR_AND_SET_16     ; 40
 
-s9:     lda     status          ; 31      - have byte?
-        and     #HAS_BYTE       ; 33
-        beq     :+              ; 35 36
-d9:     lda     data            ; 39      - yes
-        sta     dest9+2         ; 43
+        WASTE_5                 ; 45
+
+        ____SPKR_DUTY____4      ; 49 !
+        WASTE_9                 ; 58 !
+        ____SPKR_DUTY____4      ; 62 !
+
+        WASTE_9                 ; 71
+
+s9:     SER_AVAIL_A_6           ; 77
+        SER_LOOP_IF_NOT_AVAIL_2 ; 79 80
+d9:     SER_FETCH_DEST_A_4      ; 83      - yes
+        sta     dest9+2         ; 87
 dest9:
-        jmp     $0000           ; 46
+        jmp     $0000           ; 90
 :
-        iny                     ;    38
-        sta     dummy_abs       ;    42
-        jmp     duty_cycle9     ;    46
+        WASTE_7                 ;    87
+        jmp     duty_cycle9     ;    90
 
 
 .align 256
-.assert * = BASE+$A00, error
+.assert * = _SAMPLES_BASE+$A00, error
 duty_cycle10:
-        sta     SPKR            ; 4  !
-        sta     dummy_abs       ; 8  !
-        inc     dummy_abs       ; 14 !
-        sta     SPKR            ; 18 !
-        lda     KBD             ; 22
-        bpl     :+              ; 25
-        jsr     kbd_send
-:       iny                     ; 27
+        ____SPKR_DUTY____4      ; 4  !
+        WASTE_10                ; 14 !
+        ____SPKR_DUTY____4      ; 18 !
+        
+        KBD_LOAD_7              ; 25
+        VU_CLEAR_AND_SET_16     ; 41
 
-s10:    lda     status          ; 31      - have byte?
-        and     #HAS_BYTE       ; 33
-        beq     :+              ; 35 36
-d10:    lda     data            ; 39      - yes
-        sta     dest10+2        ; 43
+        WASTE_4                 ; 45
+
+        ____SPKR_DUTY____4      ; 49 !
+        WASTE_10                ; 59 !
+        ____SPKR_DUTY____4      ; 63 !
+
+        WASTE_8                 ; 71
+
+s10:    SER_AVAIL_A_6           ; 77
+        SER_LOOP_IF_NOT_AVAIL_2 ; 79 80
+d10:    SER_FETCH_DEST_A_4      ; 83      - yes
+        sta     dest10+2        ; 87
 dest10:
-        jmp     $0000           ; 46
+        jmp     $0000           ; 90
 :
-        iny                     ;    38
-        sta     dummy_abs       ;    42
-        jmp     duty_cycle10    ;    46
+        WASTE_7                 ;    87
+        jmp     duty_cycle10    ;    90
 
 
 .align 256
-.assert * = BASE+$B00, error
+.assert * = _SAMPLES_BASE+$B00, error
 duty_cycle11:
-        sta     SPKR            ; 4  !
-        sta     dummy_abs       ; 8  !
-        inc     dummy_abs       ; 14 !
-        sta     (spkr_ptr)      ; 19 !
-        lda     KBD             ; 23
-        bpl     :+              ; 26
-        jsr     kbd_send
+        ____SPKR_DUTY____4      ; 4  !
+        WASTE_11                ; 15 !
+        ____SPKR_DUTY____4      ; 19 !
+        
+        KBD_LOAD_7              ; 26
+        VU_CLEAR_AND_SET_16     ; 42
 
-:       lda     (status_ptr)    ; 31      - have byte?
-        and     #HAS_BYTE       ; 33
-        beq     :+              ; 35 36
-d11:    lda     data            ; 39      - yes
-        sta     dest11+2        ; 43
+        WASTE_3                 ; 45
+
+        ____SPKR_DUTY____4      ; 49 !
+        WASTE_11                ; 60 !
+        ____SPKR_DUTY____4      ; 64 !
+
+        WASTE_7                 ; 71
+
+s11:    SER_AVAIL_A_6           ; 77
+        SER_LOOP_IF_NOT_AVAIL_2 ; 79 80
+d11:    SER_FETCH_DEST_A_4      ; 83      - yes
+        sta     dest11+2        ; 87
 dest11:
-        jmp     $0000           ; 46
+        jmp     $0000           ; 90
 :
-        iny                     ;    38
-        sta     dummy_abs       ;    42
-        jmp     duty_cycle11    ;    46
+        WASTE_7                 ;    87
+        jmp     duty_cycle11    ;    90
 
 
 .align 256
-.assert * = BASE+$C00, error
+.assert * = _SAMPLES_BASE+$C00, error
 duty_cycle12:
-        sta     SPKR            ; 4  !
-        sta     dummy_abs       ; 8  !
-        sta     dummy_abs       ; 12 !
-        sta     dummy_abs       ; 16 !
-        sta     SPKR            ; 20 !
-        lda     KBD             ; 24
-        bpl     :+              ; 27
-        jsr     kbd_send
-:
-s12:    lda     status          ; 31      - have byte?
-        and     #HAS_BYTE       ; 33
-        beq     :+              ; 35 36
-d12:    lda     data            ; 39      - yes
-        sta     dest12+2        ; 43
+        ____SPKR_DUTY____4      ; 4  !
+        WASTE_12                ; 16 !
+        ____SPKR_DUTY____4      ; 20 !
+        
+        KBD_LOAD_7              ; 27
+        VU_CLEAR_AND_SET_16     ; 43
+
+        WASTE_2                   ; 45
+
+        ____SPKR_DUTY____4      ; 49 !
+        WASTE_12                ; 61 !
+        ____SPKR_DUTY____4      ; 65 !
+
+        WASTE_6                 ; 71
+
+s12:    SER_AVAIL_A_6           ; 77
+        SER_LOOP_IF_NOT_AVAIL_2 ; 79 80
+d12:    SER_FETCH_DEST_A_4      ; 83      - yes
+        sta     dest12+2        ; 87
 dest12:
-        jmp     $0000           ; 46
+        jmp     $0000           ; 90
 :
-        iny                     ;    38
-        sta     dummy_abs       ;    42
-        jmp     duty_cycle12    ;    46
+        WASTE_7                 ;    87
+        jmp     duty_cycle12    ;    90
 
 
 .align 256
-.assert * = BASE+$D00, error
+.assert * = _SAMPLES_BASE+$D00, error
 duty_cycle13:
-        sta     SPKR            ; 4  !
-        sta     dummy_abs       ; 8  !
-        sta     dummy_abs       ; 12 !
-        sta     dummy_abs       ; 16 !
-        sta     (spkr_ptr)      ; 21 !
-        sta     dummy_abs       ; 25
-        iny                     ; 27
+        ____SPKR_DUTY____4      ; 4  !
+        WASTE_6                 ; 10 !
+        KBD_LOAD_7              ; 17 !
+        ____SPKR_DUTY____4      ; 21 !
+        
+        VU_CLEAR_AND_SET_16     ; 37
 
-s13:    lda     status          ; 31      - have byte?
-        and     #HAS_BYTE       ; 33
-        beq     :+              ; 35 36
-d13:    lda     data            ; 39      - yes
-        sta     dest13+2        ; 43
+        WASTE_8                 ; 45
+
+        ____SPKR_DUTY____4      ; 49 !
+        WASTE_13                ; 62 !
+        ____SPKR_DUTY____4      ; 66 !
+
+        WASTE_5                 ; 71
+
+s13:    SER_AVAIL_A_6           ; 77
+        SER_LOOP_IF_NOT_AVAIL_2 ; 79 80
+d13:    SER_FETCH_DEST_A_4      ; 83      - yes
+        sta     dest13+2        ; 87
 dest13:
-        jmp     $0000           ; 46
+        jmp     $0000           ; 90
 :
-        iny                     ;    38
-        sta     dummy_abs       ;    42
-        jmp     duty_cycle13    ;    46
+        WASTE_7                 ;    87
+        jmp     duty_cycle13    ;    90
 
 .align 256
-.assert * = BASE+$E00, error
+.assert * = _SAMPLES_BASE+$E00, error
 duty_cycle14:
-        sta     SPKR            ; 4  !
-        lda     KBD             ; 8  !
-        bpl     :+              ; 11 !
-        jsr     kbd_send        ;    !
-:       sta     dummy_abs       ; 15 !
-        sta     dummy_zp        ; 18 !
-        sta     SPKR            ; 22 !
-        sta     (dummy_ptr)     ; 27
+        ____SPKR_DUTY____4      ; 4  !
+        WASTE_7                 ; 11 !
+        KBD_LOAD_7              ; 18 !
+        ____SPKR_DUTY____4      ; 22 !
+        
+        VU_CLEAR_AND_SET_16     ; 38
 
-s14:    lda     status          ; 31      - have byte?
-        and     #HAS_BYTE       ; 33
-        beq     :+              ; 35 36
-d14:    lda     data            ; 39      - yes
-        sta     dest14+2        ; 43
+        WASTE_8                 ; 45
+
+        ____SPKR_DUTY____4      ; 49 !
+        WASTE_14                ; 63 !
+        ____SPKR_DUTY____4      ; 67 !
+
+        WASTE_4                 ; 71
+
+s14:    SER_AVAIL_A_6           ; 77
+        SER_LOOP_IF_NOT_AVAIL_2 ; 79 80
+d14:    SER_FETCH_DEST_A_4      ; 83      - yes
+        sta     dest14+2        ; 87
 dest14:
-        jmp     $0000           ; 46
+        jmp     $0000           ; 90
 :
-        iny                     ;    38
-        sta     dummy_abs       ;    42
-        jmp     duty_cycle14    ;    46
+        WASTE_7                 ;    87
+        jmp     duty_cycle14    ;    90
 
 
 .align 256
-.assert * = BASE+$F00, error
+.assert * = _SAMPLES_BASE+$F00, error
 duty_cycle15:
-        sta     SPKR            ; 4  !
-        lda     KBD             ; 8  !
-        bpl     :+              ; 11 !
-        jsr     kbd_send        ;    !
-:       inc     dummy_abs       ; 17 !
-        iny                     ; 19 !
-        sta     SPKR            ; 23 !
-        sta     dummy_abs       ; 27
+        ____SPKR_DUTY____4      ; 4  !
+        WASTE_8                 ; 12 !
+        KBD_LOAD_7              ; 19 !
+        ____SPKR_DUTY____4      ; 23 !
+        
+        VU_CLEAR_AND_SET_16     ; 39
 
-s15:    lda     status          ; 31      - have byte?
-        and     #HAS_BYTE       ; 33
-        beq     :+              ; 35 36
-d15:    lda     data            ; 39      - yes
-        sta     dest15+2        ; 43
+        WASTE_6                 ; 45
+
+        ____SPKR_DUTY____4      ; 49 !
+        WASTE_15                ; 64 !
+        ____SPKR_DUTY____4      ; 68 !
+
+        WASTE_3                 ; 71
+
+s15:    SER_AVAIL_A_6           ; 77
+        SER_LOOP_IF_NOT_AVAIL_2 ; 79 80
+d15:    SER_FETCH_DEST_A_4      ; 83      - yes
+        sta     dest15+2        ; 87
 dest15:
-        jmp     $0000           ; 46
+        jmp     $0000           ; 90
 :
-        iny                     ;    38
-        sta     dummy_abs       ;    42
-        jmp     duty_cycle15    ;    46
+        WASTE_7                 ;    87
+        jmp     duty_cycle15    ;    90
 
 
 .align 256
-.assert * = BASE+$1000, error
+.assert * = _SAMPLES_BASE+$1000, error
 duty_cycle16:
-        sta     SPKR            ; 4  !
-        lda     KBD             ; 8  !
-        bpl     :+              ; 11 !
-        jsr     kbd_send        ;    !
-:       sta     dummy_abs       ; 15 !
-        sta     (dummy_ptr)     ; 20 !
-        sta     SPKR            ; 24 !
-        sta     dummy_zp        ; 27
+        ____SPKR_DUTY____4      ; 4  !
+        WASTE_9                 ; 13 !
+        KBD_LOAD_7              ; 20 !
+        ____SPKR_DUTY____4      ; 24 !
 
-s16:    lda     status          ; 31      - have byte?
-        and     #HAS_BYTE       ; 33
-        beq     :+              ; 35 36
-d16:    lda     data            ; 39      - yes
-        sta     dest16+2        ; 43
+        VU_CLEAR_AND_SET_16     ; 40
+
+        WASTE_5                 ; 45
+
+        ____SPKR_DUTY____4      ; 49 !
+        WASTE_16                ; 65 !
+        ____SPKR_DUTY____4      ; 69 !
+
+        WASTE_2                 ; 71
+
+s16:    SER_AVAIL_A_6           ; 77
+        SER_LOOP_IF_NOT_AVAIL_2 ; 79 80
+d16:    SER_FETCH_DEST_A_4      ; 83      - yes
+        sta     dest16+2        ; 87
 dest16:
-        jmp     $0000           ; 46
+        jmp     $0000           ; 90
 :
-        iny                     ;    38
-        sta     dummy_abs       ;    42
-        jmp     duty_cycle16    ;    46
+        WASTE_7                 ;    87
+        jmp     duty_cycle16    ;    90
 
 
 .align 256
-.assert * = BASE+$1100, error
+.assert * = _SAMPLES_BASE+$1100, error
 duty_cycle17:
-        sta     SPKR            ; 4  !
-        lda     KBD             ; 8  !
-        bpl     :+              ; 11 !
-        jsr     kbd_send        ;    !
-:       inc     dummy_abs       ; 17 !
-        sta     dummy_zp        ; 20 !
-        sta     (spkr_ptr)      ; 25 !
-        iny                     ; 27
+        ____SPKR_DUTY____4      ; 4  !
+        WASTE_10                ; 14 !
+        KBD_LOAD_7              ; 21 !
+        ____SPKR_DUTY____4      ; 25 !
+        
+        VU_CLEAR_AND_SET_16     ; 41
 
-s17:    lda     status          ; 31      - have byte?
-        and     #HAS_BYTE       ; 33
-        beq     :+              ; 35 36
-d17:    lda     data            ; 39      - yes
-        sta     dest17+2        ; 43
+        WASTE_4                 ; 45
+
+        ____SPKR_DUTY____4      ; 49 !
+        WASTE_17                ; 66 !
+        ____SPKR_DUTY____4      ; 70 !
+
+        SER_AVAIL_A_7           ; 77
+        SER_LOOP_IF_NOT_AVAIL_2 ; 79 80
+d17:    SER_FETCH_DEST_A_4      ; 83      - yes
+        sta     dest17+2        ; 87
 dest17:
-        jmp     $0000           ; 46
+        jmp     $0000           ; 90
 :
-        iny                     ;    38
-        sta     dummy_abs       ;    42
-        jmp     duty_cycle17    ;    46
+        WASTE_7                 ;    87
+        jmp     duty_cycle17    ;    90
 
 
 .align 256
-.assert * = BASE+$1200, error
+.assert * = _SAMPLES_BASE+$1200, error
 duty_cycle18:
-        sta     SPKR            ; 4  !
-        lda     KBD             ; 8  !
-        bpl     :+              ; 11 !
-        jsr     kbd_send        ;    !
-:       inc     dummy_abs       ; 17 !
-        sta     (dummy_ptr)     ; 22 !
-        sta     SPKR            ; 26 !
+        ____SPKR_DUTY____4      ; 4  !
+        VU_CLEAR_AND_SET_16     ; 20 !
+        WASTE_2                 ; 22 !
+        ____SPKR_DUTY____4      ; 26 !
+        
+        KBD_LOAD_7              ; 33
+        WASTE_12                ; 45
 
-        lda     (status_ptr)    ; 31      - have byte?
-        and     #HAS_BYTE       ; 33
-        beq     :+              ; 35 36
-d18:    lda     data            ; 39      - yes
-        sta     dest18+2        ; 43
+        ____SPKR_DUTY____4      ; 49 !
+        WASTE_18                ; 67 !
+        ____SPKR_DUTY____4      ; 71 !
+
+s18:    SER_AVAIL_A_6           ; 77
+        SER_LOOP_IF_NOT_AVAIL_2 ; 79 80
+d18:    SER_FETCH_DEST_A_4      ; 83      - yes
+        sta     dest18+2        ; 87
 dest18:
-        jmp     $0000           ; 46
+        jmp     $0000           ; 90
 :
-        iny                     ;    38
-        sta     dummy_abs       ;    42
-        jmp     duty_cycle18    ;    46
+        WASTE_7                 ;    87
+        jmp     duty_cycle18    ;    90
 
 
 .align 256
-.assert * = BASE+$1300, error
+.assert * = _SAMPLES_BASE+$1300, error
 duty_cycle19:
-        sta     SPKR            ; 4  !
-        lda     KBD             ; 8  !
-        bpl     :+              ; 11 !
-        jsr     kbd_send        ;    !
-:       inc     dummy_abs       ; 17 !
-        sta     (dummy_ptr)     ; 22 !
-        sta     (spkr_ptr)      ; 27 !
+        ____SPKR_DUTY____4      ; 4  !
+        VU_CLEAR_AND_SET_16     ; 20 !
+        WASTE_3                 ; 23 !
+        ____SPKR_DUTY____4      ; 27 !
+        
+        KBD_LOAD_7              ; 34
+        WASTE_11                ; 45
 
-s19:    lda     status          ; 31      - have byte?
-        and     #HAS_BYTE       ; 33
-        beq     :+              ; 35 36
-d19:    lda     data            ; 39      - yes
-        sta     dest19+2        ; 43
+        ____SPKR_DUTY____4      ; 49 !
+        WASTE_13                ; 62 !
+s19:    SER_AVAIL_A_6           ; 68 !
+        ____SPKR_DUTY____4      ; 72 !
+
+        WASTE_5                 ; 77
+
+        SER_LOOP_IF_NOT_AVAIL_2 ; 79 80
+d19:    SER_FETCH_DEST_A_4      ; 83      - yes
+        sta     dest19+2        ; 87
 dest19:
-        jmp     $0000           ; 46
+        jmp     $0000           ; 90
 :
-        iny                     ;    38
-        sta     dummy_abs       ;    42
-        jmp     duty_cycle19    ;    46
+        WASTE_7                 ;    87
+        jmp     duty_cycle19    ;    90
 
 
 .align 256
-.assert * = BASE+$1400, error
+.assert * = _SAMPLES_BASE+$1400, error
 duty_cycle20:
-        sta     SPKR            ; 4  !
-        lda     KBD             ; 8  !
-        bpl     :+              ; 11 !
-        jsr     kbd_send        ;    !
-:       inc     dummy_abs       ; 17 !
-        inc     dummy_abs       ; 23 !
+        ____SPKR_DUTY____4      ; 4  !
+        VU_CLEAR_AND_SET_16     ; 20 !
+        WASTE_4                 ; 24 !
+        ____SPKR_DUTY____4      ; 28 !
 
-s20:    lda     status          ; 27 !      - have byte?
-        sta     SPKR            ; 31 !
-        and     #HAS_BYTE       ; 33
-        beq     :+              ; 35 36
-d20:    lda     data            ; 39      - yes
-        sta     dest20+2        ; 43
+        KBD_LOAD_7              ; 35
+        WASTE_10                ; 45
+
+        ____SPKR_DUTY____4      ; 49 !
+        WASTE_14                ; 63 !
+s20:    SER_AVAIL_A_6           ; 69 !
+        ____SPKR_DUTY____4      ; 73 !
+
+        WASTE_4                 ; 77
+
+        SER_LOOP_IF_NOT_AVAIL_2 ; 79 80
+d20:    SER_FETCH_DEST_A_4      ; 83      - yes
+        sta     dest20+2        ; 87
 dest20:
-        jmp     $0000           ; 46
+        jmp     $0000           ; 90
 :
-        iny                     ;    38
-        sta     dummy_abs       ;    42
-        jmp     duty_cycle20    ;    46
+        WASTE_7                 ;    87
+        jmp     duty_cycle20    ;    90
 
 
 .align 256
-.assert * = BASE+$1500, error
+.assert * = _SAMPLES_BASE+$1500, error
 duty_cycle21:
-        sta     SPKR            ; 4  !
-        lda     KBD             ; 8  !
-        bpl     :+              ; 11 !
-        jsr     kbd_send        ;    !
-:       inc     dummy_abs       ; 17 !
-        sta     dummy_abs       ; 21 !
+        ____SPKR_DUTY____4      ; 4  !
+        VU_CLEAR_AND_SET_16     ; 20 !
+        WASTE_5                 ; 25 !
+        ____SPKR_DUTY____4      ; 29 !
+        
+        KBD_LOAD_7              ; 36
+        WASTE_9                 ; 45
 
-s21:    lda     status          ; 25 !      - have byte?
-        and     #HAS_BYTE       ; 27 !
-        sta     (spkr_ptr)      ; 32 !
-        beq     :+              ; 34 35
-        lda     (data_ptr)      ; 39      - yes
-        sta     dest21+2        ; 43
+        ____SPKR_DUTY____4      ; 49 !
+        WASTE_15                ; 64 !
+s21:    SER_AVAIL_A_6           ; 70 !
+        ____SPKR_DUTY____4      ; 74 !
+
+        WASTE_3                 ; 77
+
+        SER_LOOP_IF_NOT_AVAIL_2 ; 79 80
+d21:    SER_FETCH_DEST_A_4      ; 83      - yes
+        sta     dest21+2        ; 87
 dest21:
-        jmp     $0000           ; 46
+        jmp     $0000           ; 90
 :
-        iny                     ;    38
-        sta     (dummy_ptr)         ;    43
-        jmp     duty_cycle21    ;    46
+        WASTE_7                 ;    87
+        jmp     duty_cycle21    ;    90
 
 
 .align 256
-.assert * = BASE+$1600, error
+.assert * = _SAMPLES_BASE+$1600, error
 duty_cycle22:
-        sta     SPKR            ; 4  !
-        lda     KBD             ; 8  !
-        bpl     :+              ; 11 !
-        jsr     kbd_send        ;    !
-:       inc     dummy_abs       ; 17 !
-        sta     dummy_zp        ; 20 !
+        ____SPKR_DUTY____4      ; 4  !
+        VU_CLEAR_AND_SET_16     ; 20 !
+        WASTE_6                 ; 26 !
+        ____SPKR_DUTY____4      ; 30 !
+        
+        KBD_LOAD_7              ; 37
+        WASTE_8                 ; 45
 
-s22:    lda     status          ; 24 !      - have byte?
-        and     #HAS_BYTE       ; 26 !
-        beq     :+              ; 28 ! 29
-        sta     (spkr_ptr)      ; 33 !
-        iny                     ; 35
-d22:    lda     data            ; 39      - yes
-        sta     dest22+2        ; 43
+        ____SPKR_DUTY____4      ; 49 !
+        WASTE_16                ; 65 !
+s22:    SER_AVAIL_A_6           ; 71 !
+        ____SPKR_DUTY____4      ; 75 !
+
+        WASTE_2                 ; 77
+
+        SER_LOOP_IF_NOT_AVAIL_2 ; 79 80
+d22:    SER_FETCH_DEST_A_4      ; 83      - yes
+        sta     dest22+2        ; 87
 dest22:
-        jmp     $0000           ; 46
+        jmp     $0000           ; 90
 :
-        sta     SPKR            ;    33 !
-        sta     dummy_abs       ;    37
-        sta     dummy_abs       ;    41
-        iny                     ;    43
-        jmp     duty_cycle22    ;    46
+        WASTE_7                 ;    87
+        jmp     duty_cycle22    ;    90
 
 
 .align 256
-.assert * = BASE+$1700, error
+.assert * = _SAMPLES_BASE+$1700, error
 duty_cycle23:
-        sta     SPKR            ; 4  !
-        lda     KBD             ; 8  !
-        bpl     :+              ; 11 !
-        jsr     kbd_send        ;    !
-:       inc     dummy_abs       ; 17 !
-        sta     dummy_zp        ; 20 !
+        ____SPKR_DUTY____4      ; 4  !
+        VU_CLEAR_AND_SET_16     ; 20 !
+        WASTE_7                 ; 27 !
+        ____SPKR_DUTY____4      ; 31 !
+        
+        KBD_LOAD_7              ; 38
+        WASTE_7                 ; 45
 
-s23:    lda     status          ; 24 !      - have byte?
-        and     #HAS_BYTE       ; 26 !
-        beq     :+              ; 28 ! 30
-        iny                     ; 30 !
-        sta     SPKR            ; 34 !
-        lda     (data_ptr)      ; 39      - yes
-        sta     dest23+2        ; 43
+        ____SPKR_DUTY____4      ; 49 !
+        WASTE_17                ; 66 !
+s23:    SER_AVAIL_A_6           ; 72 !
+        ____SPKR_DUTY____4      ; 76 !
+
+        SER_LOOP_IF_NOT_AVAIL_2 ; 78 79
+        SER_FETCH_DEST_A_5      ; 83      - yes
+        sta     dest23+2        ; 87
 dest23:
-        jmp     $0000           ; 46
+        jmp     $0000           ; 90
 :
-        sta     SPKR            ;    34 !
-        sta     (dummy_ptr)     ;    39
-        sta     dummy_abs       ;    43
-        jmp     duty_cycle23    ;    46
+        WASTE_8                 ;    87
+        jmp     duty_cycle23    ;    90
 
 
 .align 256
-.assert * = BASE+$1800, error
+.assert * = _SAMPLES_BASE+$1800, error
 duty_cycle24:
-        sta     SPKR            ; 4  !
-        lda     KBD             ; 8  !
-        bpl     :+              ; 11 !
-        jsr     kbd_send        ;    !
-:       inc     dummy_abs       ; 17 !
-        sta     dummy_zp        ; 20 !
+        ____SPKR_DUTY____4      ; 4  !
+        VU_CLEAR_AND_SET_16     ; 20 !
+        WASTE_8                 ; 28 !
+        ____SPKR_DUTY____4      ; 32 !
+        
+        KBD_LOAD_7              ; 39
+        WASTE_6                 ; 45
 
-s24:    lda     status          ; 24 !      - have byte?
-        and     #HAS_BYTE       ; 26 !
-        beq     :+              ; 28 ! 30
-        iny                     ; 30 !
-        sta     (spkr_ptr)      ; 35 !
-d24:    lda     data            ; 39      - yes
-        sta     dest24+2        ; 43
+        ____SPKR_DUTY____4      ; 49 !
+        WASTE_18                ; 67 !
+s24:    SER_AVAIL_A_6           ; 73 !
+        ____SPKR_DUTY____4      ; 77 !
+
+        SER_LOOP_IF_NOT_AVAIL_2 ; 79 80
+d24:    SER_FETCH_DEST_A_4      ; 83      - yes
+        sta     dest24+2        ; 87
 dest24:
-        jmp     $0000           ; 46
+        jmp     $0000           ; 90
 :
-        sta     (spkr_ptr)      ;    35 !
-        sta     dummy_abs       ;    39
-        sta     dummy_abs       ;    43
-        jmp     duty_cycle24    ;    46
+        WASTE_7                 ;    87
+        jmp     duty_cycle24    ;    90
 
 
 .align 256
-.assert * = BASE+$1900, error
+.assert * = _SAMPLES_BASE+$1900, error
 duty_cycle25:
-        sta     SPKR            ; 4  !
-        lda     KBD             ; 8  !
-        bpl     :+              ; 11 !
-        jsr     kbd_send        ;    !
-:       inc     dummy_abs       ; 17 !
-        sta     dummy_zp        ; 20 !
+        ____SPKR_DUTY____4      ; 4  !
+        VU_CLEAR_AND_SET_16     ; 20 !
+        WASTE_9                 ; 29 !
+        ____SPKR_DUTY____4      ; 33 !
+        
+        KBD_LOAD_7              ; 40
+        WASTE_5                 ; 45
 
-s25:    lda     status          ; 24 !      - have byte?
-        and     #HAS_BYTE       ; 26 !
-        beq     :+              ; 28 ! 30
-d25:    lda     data            ; 32 !     - yes
-        iny                     ; 34 !
-        sta     SPKR            ; 36 !
-        sta     dest25+2        ; 40
-        sta     dummy_zp        ; 43
+        ____SPKR_DUTY____4      ; 49 !
+        WASTE_14                ; 63 !
+s25:    SER_AVAIL_A_6           ; 69 !
+        SER_LOOP_IF_NOT_AVAIL_2 ; 71 ! 72
+        WASTE_3                 ; 74 !
+        ____SPKR_DUTY____4      ; 78 !
+
+        SER_FETCH_DEST_A_5      ; 83      - yes
+        sta     dest25+2        ; 87
 dest25:
-        jmp     $0000           ; 46
+        jmp     $0000           ; 90
 :
-        iny                     ;    32 !
-        sta     SPKR            ;    36 !
-        sta     dummy_zp        ;    39
-        sta     dummy_abs       ;    43
-        jmp     duty_cycle25    ;    46
+        WASTE_12                ;    74 !
+        ____SPKR_DUTY____4      ;    78 !
+        WASTE_9                 ;    87
+        jmp     duty_cycle25    ;    90
 
 
 .align 256
-.assert * = BASE+$1A00, error
+.assert * = _SAMPLES_BASE+$1A00, error
 duty_cycle26:
-        sta     SPKR            ; 4  !
-        lda     KBD             ; 8  !
-        bpl     :+              ; 11 !
-        jsr     kbd_send        ;    !
-:       inc     dummy_abs       ; 17 !
-        sta     dummy_zp        ; 20 !
+        ____SPKR_DUTY____4      ; 4  !
+        VU_CLEAR_AND_SET_16     ; 20 !
+        WASTE_10                ; 30 !
+        ____SPKR_DUTY____4      ; 34 !
+        
+        KBD_LOAD_7              ; 41
+        WASTE_4                 ; 45
 
-s26:    lda     status          ; 24 !      - have byte?
-        and     #HAS_BYTE       ; 26 !
-        beq     :+              ; 28 ! 30
-d26:    lda     data            ; 32 !     - yes
-        iny                     ; 34 !
-        sta     (spkr_ptr)      ; 37 !
-        sta     dest26+2        ; 41
-        iny                     ; 43
+        ____SPKR_DUTY____4      ; 49 !
+        WASTE_15                ; 64 !
+s26:    SER_AVAIL_A_6           ; 70 !
+        SER_LOOP_IF_NOT_AVAIL_2 ; 72 ! 73
+        WASTE_3                 ; 75 !
+        ____SPKR_DUTY____4      ; 79 !
+
+d26:    SER_FETCH_DEST_A_4      ; 83      - yes
+        sta     dest26+2        ; 87
 dest26:
-        jmp     $0000           ; 46
+        jmp     $0000           ; 90
 :
-        iny                     ;    32 !
-        sta     (spkr_ptr)      ;    37 !
-        iny                     ;    39
-        sta     dummy_abs       ;    43
-        jmp     duty_cycle26    ;    46
+        WASTE_2                 ;    75 !
+        ____SPKR_DUTY____4      ;    79 !
+        WASTE_8                 ;    87
+        jmp     duty_cycle26    ;    90
 
 
 .align 256
-.assert * = BASE+$1B00, error
+.assert * = _SAMPLES_BASE+$1B00, error
 duty_cycle27:
-        sta     SPKR            ; 4  !
-        lda     KBD             ; 8  !
-        bpl     :+              ; 11 !
-        jsr     kbd_send        ;    !
-:       inc     dummy_abs       ; 17 !
-        sta     dummy_zp        ; 20 !
+        ____SPKR_DUTY____4      ; 4  !
+        VU_CLEAR_AND_SET_16     ; 20 !
+        WASTE_11                ; 31 !
+        ____SPKR_DUTY____4      ; 35 !
+        
+        KBD_LOAD_7              ; 42
+        WASTE_3                 ; 45
 
-s27:    lda     status          ; 24 !      - have byte?
-        and     #HAS_BYTE       ; 26 !
-        beq     :+              ; 28 ! 30
-d27:    lda     data            ; 32 !     - yes
-        ldx     #$02            ; 34 !
-        sta     SPKR            ; 38 !
-        sta     dest27,x        ; 43
+        ____SPKR_DUTY____4      ; 49 !
+        WASTE_15                ; 64 !
+s27:    SER_AVAIL_A_6           ; 70 !
+        SER_LOOP_IF_NOT_AVAIL_2 ; 72 ! 73
+        WASTE_4                 ; 76 !
+        ____SPKR_DUTY____4      ; 80 !
+
+d27:    SER_FETCH_DEST_A_4      ; 83      - yes
+        sta     dest27+2        ; 87
 dest27:
-        jmp     $0000           ; 46
+        jmp     $0000           ; 90
 :
-        sta     dummy_abs       ;    34 !
-        sta     SPKR            ;    38 !
-        sta     (dummy_ptr)     ;    43
-        jmp     duty_cycle27    ;    46
+        WASTE_3                 ;    76 !
+        ____SPKR_DUTY____4      ;    80 !
+        WASTE_7                 ;    87
+        jmp     duty_cycle27    ;    90
 
 
 .align 256
-.assert * = BASE+$1C00, error
+.assert * = _SAMPLES_BASE+$1C00, error
 duty_cycle28:
-        sta     SPKR            ; 4  !
-        lda     KBD             ; 8  !
-        bpl     :+              ; 11 !
-        jsr     kbd_send        ;    !
-:       inc     dummy_abs       ; 17 !
-        sta     dummy_zp        ; 20 !
+        ____SPKR_DUTY____4      ; 4  !
+        VU_CLEAR_AND_SET_16     ; 20 !
+        WASTE_12                ; 32 !
+        ____SPKR_DUTY____4      ; 36 !
+        
+        KBD_LOAD_7              ; 43
+        WASTE_2                 ; 45
 
-s28:    lda     status          ; 24 !      - have byte?
-        and     #HAS_BYTE       ; 26 !
-        beq     :+              ; 28 ! 30
-d28:    lda     data            ; 32 !     - yes
-        iny                     ; 34 !
-        sta     (spkr_ptr)      ; 39 !
-        sta     dest28+2        ; 43
+        ____SPKR_DUTY____4      ; 49 !
+        WASTE_15                ; 64 !
+s28:    SER_AVAIL_A_6           ; 70 !
+        SER_LOOP_IF_NOT_AVAIL_2 ; 72 ! 73
+        SER_FETCH_DEST_A_5      ; 77 !
+        ____SPKR_DUTY____4      ; 81 !
+
+        WASTE_2                 ; 83
+        sta     dest28+2        ; 87
 dest28:
-        jmp     $0000           ; 46
+        jmp     $0000           ; 90
 :
-        sta     dummy_abs       ;    34 !
-        sta     (spkr_ptr)      ;    39 !
-        sta     dummy_abs       ;    43
-        jmp     duty_cycle28    ;    46
+        WASTE_4                 ;    77 !
+        ____SPKR_DUTY____4      ;    81 !
+        WASTE_6                 ;    87
+        jmp     duty_cycle28    ;    90
 
 
 .align 256
-.assert * = BASE+$1D00, error
+.assert * = _SAMPLES_BASE+$1D00, error
 duty_cycle29:
-        sta     SPKR            ; 4  !
-        lda     KBD             ; 8  !
-        bpl     :+              ; 11 !
-        jsr     kbd_send        ;    !
-:       inc     dummy_abs       ; 17 !
-        sta     dummy_zp        ; 20 !
+        ____SPKR_DUTY____4      ; 4  !
+        VU_CLEAR_AND_SET_16     ; 20 !
+        KBD_LOAD_7              ; 27 !
+        WASTE_6                 ; 33 !
+        ____SPKR_DUTY____4      ; 37 !
+        
+        WASTE_8                 ; 45
+        
+        ____SPKR_DUTY____4      ; 49 !
+        ldx     #$00            ; 51 !
+        WASTE_15                ; 66 !
+s29:    SER_AVAIL_A_6           ; 72 !
+        SER_LOOP_IF_NOT_AVAIL_2 ; 74 ! 75
+        SER_FETCH_DEST_A_4      ; 78 !
+        ____SPKR_DUTY____4      ; 82 !
 
-s29:    lda     status          ; 24 !      - have byte?
-        and     #HAS_BYTE       ; 26 !
-        beq     :+              ; 28 ! 30
-d29:    lda     data            ; 32 !     - yes
-        sta     dest29+2        ; 36 !
-        sta     SPKR            ; 40 !
-        bra     dest29          ; 43
+        sta     dest29+2,x      ; 87
 dest29:
-        jmp     $0000           ; 46
+        jmp     $0000           ; 90
 :
-        sta     dummy_abs       ;    34 !
-        iny                     ;    36 !
-        sta     SPKR            ;    40 !
-        bra     :+              ;    43
-:       jmp     duty_cycle29    ;    46
+        WASTE_3                 ;    78 !
+        ____SPKR_DUTY____4      ;    82 !
+        WASTE_5                 ;    87
+        jmp     duty_cycle29    ;    90
 
 
 .align 256
-.assert * = BASE+$1E00, error
+.assert * = _SAMPLES_BASE+$1E00, error
 duty_cycle30:
-        sta     SPKR            ; 4  !
-        lda     KBD             ; 8  !
-        bpl     :+              ; 11 !
-        jsr     kbd_send        ;    !
-:       inc     dummy_abs       ; 17 !
-        sta     dummy_zp        ; 20 !
+        ____SPKR_DUTY____4      ; 4  !
+        VU_CLEAR_AND_SET_16     ; 20 !
+        WASTE_14                ; 34 !
+        ____SPKR_DUTY____4      ; 38 !
+        
+        KBD_LOAD_7              ; 45
 
-s30:    lda     status          ; 24 !      - have byte?
-        and     #HAS_BYTE       ; 26 !
-        beq     :+              ; 28 ! 30
-d30:    lda     data            ; 32 !     - yes
-        sta     dest30+2        ; 36 !
-        sta     (spkr_ptr)      ; 41 !
-        iny                     ; 43
+        ____SPKR_DUTY____4      ; 49 !
+        WASTE_16                ; 65 !
+s30:    SER_AVAIL_A_6           ; 71 !
+        WASTE_2                 ; 73 !
+        SER_LOOP_IF_NOT_AVAIL_2 ; 75 ! 76
+d30:    SER_FETCH_DEST_A_4      ; 79 !
+        ____SPKR_DUTY____4      ; 83 !
+
+        sta     dest30+2        ; 87
 dest30:
-        jmp     $0000           ; 46
+        jmp     $0000           ; 90
 :
-        sta     dummy_abs       ;    34 !
-        iny                     ;    36 !
-        sta     (spkr_ptr)      ;    41 !
-        iny                     ;    43
-        jmp     duty_cycle30    ;    46
+        WASTE_3                 ;    79 !
+        ____SPKR_DUTY____4      ;    83 !
+        WASTE_4                 ;    87
+        jmp     duty_cycle30    ;    90
 
 
 .align 256
-.assert * = BASE+$1F00, error
+.assert * = _SAMPLES_BASE+$1F00, error
 duty_cycle31:
-        sta     SPKR            ; 4  !
-        lda     KBD             ; 8  !
-        bpl     :+              ; 11 !
-        jsr     kbd_send        ;    !
-:       inc     dummy_abs       ; 17 !
-        sta     (dummy_ptr)         ; 22 !
+        ____SPKR_DUTY____4      ; 4  !
+        VU_CLEAR_AND_SET_16     ; 20 !
+        WASTE_11                ; 31 !
+        lda     KBD             ; 35 !
+        ____SPKR_DUTY____4      ; 39 !
+        WASTE_3                 ; 42
+        bpl     :+              ; 45
+        jsr     kbd_send
 
-s31:    lda     status          ; 26 !      - have byte?
-        and     #HAS_BYTE       ; 28 !
-        beq     :+              ; 30 ! 32
-d31:    lda     data            ; 34 !     - yes
-        sta     dest31+2        ; 38 !
-        sta     (spkr_ptr)      ; 43 !
-dest31:
-        jmp     $0000           ; 46
 :
-        sta     dummy_abs       ;    36 !
-        bra     :+              ;    39 !
-:       sta     SPKR            ;    43 !
-        jmp     duty_cycle31    ;    46
+        ____SPKR_DUTY____4      ; 49 !
+        WASTE_15                ; 64 !
+s31:    SER_AVAIL_A_6           ; 70 !
+        SER_LOOP_IF_NOT_AVAIL_2 ; 72 ! 73
+d31:    SER_FETCH_DEST_A_4      ; 76 !
+        sta     dest31+2        ; 80 !
+        ____SPKR_DUTY____4      ; 84 !
+dest31:
+        jmp     $0000           ; 90
+:
+        WASTE_7                 ;    80 !
+        ____SPKR_DUTY____4      ;    84 !
+        WASTE_3                 ;    87
+        jmp     duty_cycle31    ;    90
 
 .align 256
-.assert * = BASE+$2000, error
+.assert * = _SAMPLES_BASE+$2000, error
 break_out:
 .ifdef IIGS
         lda     prevspd
         jsr     _set_iigs_speed
 .endif
-        rts
+        lda     #$01            ; Reenable IRQ and flush
+        jsr     _simple_serial_set_irq
+        jmp     _simple_serial_flush
+
+silence:
+:       lda     (status_ptr)
+        and     #HAS_BYTE
+        beq     :-
+        lda     (data_ptr)
+        sta     start_duty+2
+start_duty:
+        jmp     $0000
 
 _pwm:
+        pha
+        ; Disable interrupts
+        lda     #$00
+        jsr     _simple_serial_set_irq
+
+        ; Setup vumeter pointer
+        pla
+        sta     CV
+        jsr     VTABZ
+        jsr     popa
+        sta     CH
+        tay
+        pha
+        lda     #'('|$80
+        sta     (BASL),y
+        tya
+        clc
+        adc     #33
+        sta     CH
+        tay
+        lda     #')'|$80
+        sta     (BASL),y
+        pla
+        clc
+        adc     #1
+        adc     BASL
+        sta     vumeter_base
+        lda     BASH
+        adc     #0
+        sta     vumeter_base+1
+
         ; Setup pointer access to SPKR
-        lda     #<(SPKR)
+:       lda     #<(SPKR)
         sta     spkr_ptr
         lda     #>(SPKR)
         sta     spkr_ptr+1
@@ -880,14 +1151,14 @@ _pwm:
         sta     s8+1
         sta     s9+1
         sta     s10+1
-        ; sta     s11+1
+        sta     s11+1
         sta     s12+1
         sta     s13+1
         sta     s14+1
         sta     s15+1
         sta     s16+1
-        sta     s17+1
-        ; sta     s18+1
+        ; sta     s17+1
+        sta     s18+1
         sta     s19+1
         sta     s20+1
         sta     s21+1
@@ -916,14 +1187,14 @@ _pwm:
         sta     s8+2
         sta     s9+2
         sta     s10+2
-        ; sta     s11+2
+        sta     s11+2
         sta     s12+2
         sta     s13+2
         sta     s14+2
         sta     s15+2
         sta     s16+2
-        sta     s17+2
-        ; sta     s18+2
+        ; sta     s17+2
+        sta     s18+2
         sta     s19+2
         sta     s20+2
         sta     s21+2
@@ -962,15 +1233,15 @@ _pwm:
         sta     d18+1
         sta     d19+1
         sta     d20+1
-        ; sta     d21+1
+        sta     d21+1
         sta     d22+1
         ; sta     d23+1
         sta     d24+1
-        sta     d25+1
+        ; sta     d25+1
         sta     d26+1
         sta     d27+1
-        sta     d28+1
-        sta     d29+1
+        ; sta     d28+1
+        ; sta     d29+1
         sta     d30+1
         sta     d31+1
 
@@ -998,15 +1269,15 @@ _pwm:
         sta     d18+2
         sta     d19+2
         sta     d20+2
-        ; sta     d21+2
+        sta     d21+2
         sta     d22+2
         ; sta     d23+2
         sta     d24+2
-        sta     d25+2
+        ; sta     d25+2
         sta     d26+2
         sta     d27+2
-        sta     d28+2
-        sta     d29+2
+        ; sta     d28+2
+        ; sta     d29+2
         sta     d30+2
         sta     d31+2
 
@@ -1018,7 +1289,8 @@ _pwm:
         jsr     _set_iigs_speed
 .endif
         ; Start with silence
-        jmp     duty_cycle0
+        ldy     #15              ; Vumeter
+        jmp     silence
 
 kbd_send:
         and     #$7F            ; Clear high bit
@@ -1029,5 +1301,3 @@ kbd_send:
 dummy_abs: .res 1
 counter:   .res 1
 prevspd:   .res 1
-minutes:   .res 1
-seconds:   .res 1

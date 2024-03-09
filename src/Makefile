@@ -1,6 +1,8 @@
-SUBDIRS = lib a2trace surl-server homecontrol-client mastodon telnet surl stp quicktake image-viewer
+SUBDIRS = lib a2trace surl-server bad-apple pwm-server \
+	homecontrol-client mastodon telnet surl stp quicktake image-viewer \
+	applay
 INSTALL_SUBDIRS = a2trace surl-server
-UPLOAD_SUBDIRS = homecontrol-client mastodon telnet surl stp quicktake image-viewer
+UPLOAD_SUBDIRS = homecontrol-client mastodon telnet surl stp quicktake image-viewer applay
 
 .PHONY: all clean
 

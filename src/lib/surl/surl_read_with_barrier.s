@@ -5,6 +5,7 @@
         .import         _simple_serial_set_irq
         .import         _simple_serial_read_no_irq
 
+        .importzp       tmp1, tmp2
         .export         _surl_read_with_barrier
 
         .include        "apple2.inc"
@@ -18,24 +19,18 @@
         .endif
 
 _surl_read_with_barrier:
-        pha
-        .if (.cpu .bitand CPU_ISET_65C02)
-        phx
-        .else
-        txa
-        pha
-        .endif
+        sta     tmp1
+        stx     tmp2
+
         lda     #0
         jsr     _simple_serial_set_irq
+
+        ldx     tmp2
+
         lda     #$2F            ; SURL_CLIENT_READY
         jsr     _serial_putc_direct
-        .if (.cpu .bitand CPU_ISET_65C02)
-        plx
-        .else
-        pla
-        tax
-        .endif
-        pla
+
+        lda     tmp1
         jsr     _simple_serial_read_no_irq
         lda     #1
         jmp     _simple_serial_set_irq

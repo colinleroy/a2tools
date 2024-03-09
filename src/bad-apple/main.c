@@ -22,5 +22,5 @@ int main(int argc, char *argv[]) {
     printf("Usage: %s [video]\n", argv[0]);
     exit(1);
   }
-  surl_stream_url(argv[1]);
+  surl_stream_video(argv[1]);
 }

@@ -50,6 +50,10 @@ char surl_connect_proxy(void) {
   if (r == 0) {
     simple_serial_setup_no_irq_regs();
     /* Break previous session if needed */
+    #ifdef __CC65__
+    serial_putc_direct(SURL_METHOD_ABORT);
+    simple_serial_set_irq(1);
+    #endif
     simple_serial_flush();
     simple_serial_putc(SURL_METHOD_ABORT);
     simple_serial_putc('\n');
@@ -109,11 +113,11 @@ const surl_response * __fastcall__ surl_start_request(const char method, char *u
   } else if (method == SURL_METHOD_RAW && i == SURL_ANSWER_RAW_START) {
     resp->code = 100;
     return resp;
-  } else if (method == SURL_METHOD_STREAM && i == SURL_ANSWER_WAIT) {
-    if (i == SURL_ANSWER_WAIT)
-      resp->code = 100;
-    else
-      resp->code = 508;
+  } else if (method == SURL_METHOD_STREAM_VIDEO && i == SURL_ANSWER_WAIT) {
+    resp->code = 100;
+    return resp;
+  } else if (method == SURL_METHOD_STREAM_AUDIO && i == SURL_ANSWER_WAIT) {
+    resp->code = 100;
     return resp;
   } else if (method == SURL_METHOD_GETTIME && i == SURL_ANSWER_TIME) {
     resp->code = 200;
