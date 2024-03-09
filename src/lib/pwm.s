@@ -58,9 +58,18 @@ vumeter_base  = ptr1
 .macro WASTE_4
         sta     dummy_abs
 .endmacro
-.macro WASTE_5
+
+.ifdef __APPLE2ENH__
+  .macro WASTE_5
         sta     (dummy_ptr)
-.endmacro
+  .endmacro
+.else
+  .macro WASTE_5
+        WASTE_2
+        WASTE_3
+  .endmacro
+.endif
+
 .macro WASTE_6
         inc     dummy_abs
 .endmacro
@@ -141,18 +150,15 @@ vumeter_base  = ptr1
         sta     SPKR            ; 4
 .endmacro
 
-.macro ____SPKR_DUTY____5       ; Toggle speaker slower
-        sta     (spkr_ptr)      ; 5
-.endmacro
+.ifdef __APPLE2ENH__
+  .macro ____SPKR_DUTY____5       ; Toggle speaker slower
+          sta     (spkr_ptr)      ; 5
+  .endmacro
+.endif
 
 .macro SER_AVAIL_A_6            ; Get byte availability to A
         lda     status          ; 4
         and     #HAS_BYTE       ; 6
-.endmacro
-
-.macro SER_AVAIL_A_7            ; Get byte availability to A, slower
-        lda     (status_ptr)    ; 5
-        and     #HAS_BYTE       ; 7
 .endmacro
 
 .macro SER_LOOP_IF_NOT_AVAIL_2  ; Loop if no byte available
@@ -161,10 +167,6 @@ vumeter_base  = ptr1
 
 .macro SER_FETCH_DEST_A_4       ; Fetch next duty cycle to A
         lda     data            ; 4
-.endmacro
-
-.macro SER_FETCH_DEST_A_5       ; Fetch next duty cycle to A, slower
-        lda     (data_ptr)      ; 5
 .endmacro
         .code
 
@@ -199,17 +201,26 @@ dest0:
 .assert * = _SAMPLES_BASE+$100, error
 duty_cycle1:
         ____SPKR_DUTY____4      ; 4  !
+        .ifdef __APPLE2ENH__
         ____SPKR_DUTY____5      ; 9  !
+        WASTE_13                ; 22
+        .else
+        ____SPKR_DUTY____4      ; 8  ! Approximation here
+        WASTE_14                ; 22
+        .endif
 
-        KBD_LOAD_7              ; 16
-        VU_CLEAR_AND_SET_16     ; 32
+        KBD_LOAD_7              ; 29
+        VU_CLEAR_AND_SET_16     ; 45
 
-        WASTE_13                ; 45
 
         ____SPKR_DUTY____4      ; 49  !
+        .ifdef __APPLE2ENH__
         ____SPKR_DUTY____5      ; 54  !
-
         WASTE_17                ; 71
+        .else
+        ____SPKR_DUTY____4      ; 53  ! Approximation here
+        WASTE_18                ; 71
+        .endif
 
 s1:     SER_AVAIL_A_6           ; 77
         SER_LOOP_IF_NOT_AVAIL_2 ; 79 80
@@ -253,8 +264,8 @@ dest2:
 .assert * = _SAMPLES_BASE+$300, error
 duty_cycle3:
         ____SPKR_DUTY____4      ; 4  !
-        WASTE_2                   ; 6  !
-        ____SPKR_DUTY____5      ; 11 !
+        WASTE_3                 ; 7  !
+        ____SPKR_DUTY____4      ; 11 !
         
         KBD_LOAD_7              ; 18
         VU_CLEAR_AND_SET_16     ; 34
@@ -262,8 +273,8 @@ duty_cycle3:
         WASTE_11                ; 45
 
         ____SPKR_DUTY____4      ; 49 !
-        WASTE_2                 ; 51 !
-        ____SPKR_DUTY____5      ; 56 !
+        WASTE_3                 ; 52 !
+        ____SPKR_DUTY____4      ; 56 !
 
         WASTE_15                ; 71
 
@@ -577,7 +588,7 @@ duty_cycle14:
         
         VU_CLEAR_AND_SET_16     ; 38
 
-        WASTE_8                 ; 45
+        WASTE_7                 ; 45
 
         ____SPKR_DUTY____4      ; 49 !
         WASTE_14                ; 63 !
@@ -667,17 +678,18 @@ duty_cycle17:
         WASTE_4                 ; 45
 
         ____SPKR_DUTY____4      ; 49 !
-        WASTE_17                ; 66 !
+        WASTE_15                ; 64 !
+        ldx     #$00            ; 66 !
         ____SPKR_DUTY____4      ; 70 !
 
-        SER_AVAIL_A_7           ; 77
-        SER_LOOP_IF_NOT_AVAIL_2 ; 79 80
-d17:    SER_FETCH_DEST_A_4      ; 83      - yes
-        sta     dest17+2        ; 87
+s17:    SER_AVAIL_A_6           ; 76
+        SER_LOOP_IF_NOT_AVAIL_2 ; 78 79
+d17:    SER_FETCH_DEST_A_4      ; 82      - yes
+        sta     dest17+2,x      ; 87
 dest17:
         jmp     $0000           ; 90
 :
-        WASTE_7                 ;    87
+        WASTE_8                 ;    87
         jmp     duty_cycle17    ;    90
 
 
@@ -831,13 +843,14 @@ duty_cycle23:
         WASTE_7                 ; 45
 
         ____SPKR_DUTY____4      ; 49 !
-        WASTE_17                ; 66 !
+        ldx     #$00            ; 51 !
+        WASTE_15                ; 66 !
 s23:    SER_AVAIL_A_6           ; 72 !
         ____SPKR_DUTY____4      ; 76 !
 
         SER_LOOP_IF_NOT_AVAIL_2 ; 78 79
-        SER_FETCH_DEST_A_5      ; 83      - yes
-        sta     dest23+2        ; 87
+d23:    SER_FETCH_DEST_A_4      ; 83      - yes
+        sta     dest23+2,x      ; 87
 dest23:
         jmp     $0000           ; 90
 :
@@ -883,18 +896,19 @@ duty_cycle25:
         WASTE_5                 ; 45
 
         ____SPKR_DUTY____4      ; 49 !
-        WASTE_14                ; 63 !
+        ldx     #$00            ; 51 !
+        WASTE_12                ; 63 !
 s25:    SER_AVAIL_A_6           ; 69 !
         SER_LOOP_IF_NOT_AVAIL_2 ; 71 ! 72
         WASTE_3                 ; 74 !
         ____SPKR_DUTY____4      ; 78 !
 
-        SER_FETCH_DEST_A_5      ; 83      - yes
-        sta     dest25+2        ; 87
+d25:    SER_FETCH_DEST_A_4      ; 82      - yes
+        sta     dest25+2,x      ; 87
 dest25:
         jmp     $0000           ; 90
 :
-        WASTE_12                ;    74 !
+        WASTE_2                 ;    74 !
         ____SPKR_DUTY____4      ;    78 !
         WASTE_9                 ;    87
         jmp     duty_cycle25    ;    90
@@ -944,10 +958,10 @@ duty_cycle27:
         WASTE_15                ; 64 !
 s27:    SER_AVAIL_A_6           ; 70 !
         SER_LOOP_IF_NOT_AVAIL_2 ; 72 ! 73
-        WASTE_4                 ; 76 !
+d27:    SER_FETCH_DEST_A_4      ; 76      - yes
         ____SPKR_DUTY____4      ; 80 !
 
-d27:    SER_FETCH_DEST_A_4      ; 83      - yes
+        WASTE_3                 ; 83
         sta     dest27+2        ; 87
 dest27:
         jmp     $0000           ; 90
@@ -970,10 +984,10 @@ duty_cycle28:
         WASTE_2                 ; 45
 
         ____SPKR_DUTY____4      ; 49 !
-        WASTE_15                ; 64 !
-s28:    SER_AVAIL_A_6           ; 70 !
-        SER_LOOP_IF_NOT_AVAIL_2 ; 72 ! 73
-        SER_FETCH_DEST_A_5      ; 77 !
+        WASTE_16                ; 65 !
+s28:    SER_AVAIL_A_6           ; 71 !
+        SER_LOOP_IF_NOT_AVAIL_2 ; 73 ! 74
+d28:    SER_FETCH_DEST_A_4      ; 77 !
         ____SPKR_DUTY____4      ; 81 !
 
         WASTE_2                 ; 83
@@ -981,7 +995,7 @@ s28:    SER_AVAIL_A_6           ; 70 !
 dest28:
         jmp     $0000           ; 90
 :
-        WASTE_4                 ;    77 !
+        WASTE_3                 ;    77 !
         ____SPKR_DUTY____4      ;    81 !
         WASTE_6                 ;    87
         jmp     duty_cycle28    ;    90
@@ -1003,7 +1017,7 @@ duty_cycle29:
         WASTE_15                ; 66 !
 s29:    SER_AVAIL_A_6           ; 72 !
         SER_LOOP_IF_NOT_AVAIL_2 ; 74 ! 75
-        SER_FETCH_DEST_A_4      ; 78 !
+d29:    SER_FETCH_DEST_A_4      ; 78 !
         ____SPKR_DUTY____4      ; 82 !
 
         sta     dest29+2,x      ; 87
@@ -1056,14 +1070,14 @@ duty_cycle31:
         bpl     :+              ; 45
         jsr     kbd_send
 
-:
-        ____SPKR_DUTY____4      ; 49 !
+:       ____SPKR_DUTY____4      ; 49 !
         WASTE_15                ; 64 !
 s31:    SER_AVAIL_A_6           ; 70 !
         SER_LOOP_IF_NOT_AVAIL_2 ; 72 ! 73
 d31:    SER_FETCH_DEST_A_4      ; 76 !
         sta     dest31+2        ; 80 !
         ____SPKR_DUTY____4      ; 84 !
+        WASTE_3                 ; 87
 dest31:
         jmp     $0000           ; 90
 :
@@ -1084,10 +1098,10 @@ break_out:
         jmp     _simple_serial_flush
 
 silence:
-:       lda     (status_ptr)
+ssil:   lda     status
         and     #HAS_BYTE
-        beq     :-
-        lda     (data_ptr)
+        beq     silence
+dsil:   lda     data
         sta     start_duty+2
 start_duty:
         jmp     $0000
@@ -1157,7 +1171,7 @@ _pwm:
         sta     s14+1
         sta     s15+1
         sta     s16+1
-        ; sta     s17+1
+        sta     s17+1
         sta     s18+1
         sta     s19+1
         sta     s20+1
@@ -1172,6 +1186,7 @@ _pwm:
         sta     s29+1
         sta     s30+1
         sta     s31+1
+        sta     ssil+1
 
         ; Status high byte
         lda     serial_status_reg+2
@@ -1193,7 +1208,7 @@ _pwm:
         sta     s14+2
         sta     s15+2
         sta     s16+2
-        ; sta     s17+2
+        sta     s17+2
         sta     s18+2
         sta     s19+2
         sta     s20+2
@@ -1208,6 +1223,7 @@ _pwm:
         sta     s29+2
         sta     s30+2
         sta     s31+2
+        sta     ssil+2
 
         ; Data low byte
         lda     serial_data_reg+1
@@ -1235,15 +1251,16 @@ _pwm:
         sta     d20+1
         sta     d21+1
         sta     d22+1
-        ; sta     d23+1
+        sta     d23+1
         sta     d24+1
-        ; sta     d25+1
+        sta     d25+1
         sta     d26+1
         sta     d27+1
-        ; sta     d28+1
-        ; sta     d29+1
+        sta     d28+1
+        sta     d29+1
         sta     d30+1
         sta     d31+1
+        sta     dsil+1
 
         ; Data high byte
         lda     serial_data_reg+2
@@ -1271,15 +1288,16 @@ _pwm:
         sta     d20+2
         sta     d21+2
         sta     d22+2
-        ; sta     d23+2
+        sta     d23+2
         sta     d24+2
-        ; sta     d25+2
+        sta     d25+2
         sta     d26+2
         sta     d27+2
-        ; sta     d28+2
-        ; sta     d29+2
+        sta     d28+2
+        sta     d29+2
         sta     d30+2
         sta     d31+2
+        sta     dsil+2
 
 .ifdef IIGS
         ; Slow down IIgs

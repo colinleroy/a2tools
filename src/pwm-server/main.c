@@ -75,7 +75,7 @@ int main(int argc, char *argv[]) {
 
   /* test samples */
   // for (i = 0; i < 32; i++) {
-  //   for (num = 0; num < 1000; num++) {
+  //   for (num = 0; num < 5000; num++) {
   //     send_sample(i);
   //   }
   // }
