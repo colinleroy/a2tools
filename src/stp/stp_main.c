@@ -40,6 +40,8 @@
 unsigned char scrw = 255, scrh = 255;
 char center_x = 30; /* 12 in 40COLS */
 
+char *welcome_header = NULL;
+
 static void get_all(const char *url, char **lines, int n_lines) {
   int i, r;
   char *out_dir;
@@ -89,7 +91,6 @@ int main(void) {
   screensize(&scrw, &scrh);
 
   surl_ping();
-  clrscr();
 
   url = stp_get_start_url();
   url = stp_build_login_url(url);

@@ -12,7 +12,7 @@ CC65_TARGET = apple2enh
 trgt = apple2c0
 endif
 
-PROGRAM=applay
+PROGRAM=wozamp
 SOURCES := \
 	main.c \
 	../lib/hgr.c \
@@ -65,12 +65,12 @@ CLCFLAGS = -t $(CC65_TARGET) -DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER \
 all: $(PROGRAM).bin
 
 $(PROGRAM).bin: $(CL65SOURCES) $(SOURCES)
-	cl65 -g -Wl --dbgfile,applay.dbg -Ln applay.lbl $(CFLAGS) $(iigs_CFLAGS) $(CLCFLAGS) -o $@ $^
+	cl65 -g -Wl --dbgfile,$(PROGRAM).dbg -Ln $(PROGRAM).lbl $(CFLAGS) $(iigs_CFLAGS) $(CLCFLAGS) -o $@ $^
 
 clean:
 	rm -f $(PROGRAM).bin *.o *.map
 
 upload: all
-	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/applay/ || \
-	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/applay/ && \
-	cp applay.bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/applay/
+	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/wozamp/ || \
+	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/wozamp/ && \
+	cp wozamp.bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/wozamp/

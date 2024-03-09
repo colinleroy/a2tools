@@ -38,6 +38,16 @@
 #pragma code-name (push, "LOWCODE")
 #endif
 
+char *welcome_header = 
+  "*   *  ***  *****   *    * *  ****\r\n"
+  "*   * *   *    *   * *  * * * *   *\r\n"
+  "*   * *   *   *   ***** *   * ****\r\n"
+  "* * * *   *  *    *   * *   * *\r\n"
+  " * *   ***  ***** *   * *   * *\r\n"
+  "\r\n"
+  "https://colino.net - GPL licensed";
+
+
 unsigned char scrw = 255, scrh = 255;
 char center_x = 14; /* 30 in 80COLS */
 
@@ -83,11 +93,9 @@ int main(void) {
   char full_update = 1;
   const surl_response *resp;
 
-  clrscr();
   screensize(&scrw, &scrh);
 
   surl_ping();
-  clrscr();
 
   url = stp_get_start_url();
   url = stp_build_login_url(url);

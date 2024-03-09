@@ -45,6 +45,8 @@ static char *url_enter(char *url, char *suffix);
 static char *login = NULL;
 static char *password = NULL;
 
+extern char *welcome_header;
+
 char *stp_get_start_url(void) {
   FILE *fp;
   char *start_url = NULL;
@@ -78,7 +80,13 @@ char *stp_get_start_url(void) {
     last_password = strdup("");
   }
 
-  gotoxy(0, 9);
+  clrscr();
+  gotoxy(0, 1);
+  if (welcome_header) {
+    dputs(welcome_header);
+  }
+
+  gotoxy(0, 14);
   dputs("Please enter the server's root URL,\r\n"
         "or Enter to reuse the last one:\r\n\r\n"
         "'");
@@ -163,6 +171,7 @@ char *stp_get_start_url(void) {
     password = NULL;
   }
 
+  clrscr();
   return start_url;
 }
 
