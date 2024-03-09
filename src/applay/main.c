@@ -32,12 +32,14 @@
 #include "stp_list.h"
 #include "runtime_once_clean.h"
 #include "hgr.h"
+#include "pwm.h"
 
 #ifdef __CC65__
 #pragma code-name (push, "LOWCODE")
 #endif
 
 unsigned char scrw = 255, scrh = 255;
+char center_x = 14; /* 30 in 80COLS */
 
 void stp_print_footer(void) {
   gotoxy(0, 22);
@@ -47,13 +49,39 @@ void stp_print_footer(void) {
   dputs("Up/Down, Enter: nav, Esc: back");
 }
 
+extern char tmp_buf[80];
+static void applay_url(char *url) {
+  char r;
+  
+  clrzone(0, 12, scrw - 1, 12);
+  clrzone(0, 22, scrw - 1, 23);
+  
+  if (strchr(url, '/')) {
+    strncpy(tmp_buf, strrchr(url, '/')+1, scrw - 1);
+  } else {
+    strncpy(tmp_buf, url, scrw - 1);
+  }
+  tmp_buf[scrw] = '\0';
+  gotoxy(0, 22);
+  dputs(tmp_buf);
+
+  surl_start_request(SURL_METHOD_STREAM_AUDIO, url, NULL, 0);
+  r = simple_serial_getc();
+  if (r != SURL_ANSWER_STREAM_START) {
+    dputs("Playback error");
+  } else {
+    simple_serial_putc(SURL_CLIENT_READY);
+    pwm(scrw-34, 23);
+    clrzone(0, 22, scrw - 1, 23);
+    stp_print_footer();
+  }
+}
+
 int main(void) {
   char *url;
   char c;
   char full_update = 1;
   const surl_response *resp;
-
-  videomode(VIDEOMODE_80COL);
 
   clrscr();
   screensize(&scrw, &scrh);
@@ -74,8 +102,8 @@ int main(void) {
         goto keyb_input;
       case SAVE_DIALOG:
         /* Play */
+        applay_url(url);
         clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
-        stp_print_result(resp);
         goto up_dir;
       case UPDATE_LIST:
       default:

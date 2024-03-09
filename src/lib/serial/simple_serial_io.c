@@ -245,6 +245,7 @@ again:
 
     w = fwrite(ptr, 1, nmemb - total, ttyfp);
     total += w;
+    printf("sent %zu / %zu\n", w, total);
     if (total < nmemb) {
       if (errno == EAGAIN) {
         ptr += w;

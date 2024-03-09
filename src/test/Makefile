@@ -32,7 +32,7 @@ SOURCES := \
 
 CLCFLAGS = -t $(CC65_TARGET) -DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER -I ../lib \
 	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-pwmstreamer.cfg \
-	-vm -m $(PROGRAM).map -DSURL_TO_LANGCARD -O --start-addr 0x4000
+	-vm -m $(PROGRAM).map -DSURL_TO_LANGCARD -O
 
 .PHONY: all clean
 

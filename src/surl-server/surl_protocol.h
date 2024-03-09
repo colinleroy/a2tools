@@ -3,19 +3,20 @@
 
 #define SURL_PROTOCOL_VERSION 0x0A
 
-#define SURL_METHOD_ABORT     ('d'|0x80)
-#define SURL_METHOD_RAW       0x05
-#define SURL_METHOD_GET       0x06
-#define SURL_METHOD_POST      0x07
-#define SURL_METHOD_PUT       0x08
-#define SURL_METHOD_DELETE    0x09
-#define SURL_METHOD_POST_DATA 0x10
-#define SURL_METHOD_GETTIME   0x11
-#define SURL_METHOD_PING      0x12
-#define SURL_METHOD_DEBUG     0x13
-#define SURL_METHOD_STREAM    0x14
+#define SURL_METHOD_ABORT           ('d'|0x80)
+#define SURL_METHOD_RAW             0x05
+#define SURL_METHOD_GET             0x06
+#define SURL_METHOD_POST            0x07
+#define SURL_METHOD_PUT             0x08
+#define SURL_METHOD_DELETE          0x09
+#define SURL_METHOD_POST_DATA       0x10
+#define SURL_METHOD_GETTIME         0x11
+#define SURL_METHOD_PING            0x12
+#define SURL_METHOD_DEBUG           0x13
+#define SURL_METHOD_STREAM_VIDEO    0x14
+#define SURL_METHOD_STREAM_AUDIO    0x15
 
-#define SURL_IS_METHOD(x) ((x) == SURL_METHOD_ABORT || ((x) >= SURL_METHOD_RAW && (x) <= SURL_METHOD_STREAM))
+#define SURL_IS_METHOD(x) ((x) == SURL_METHOD_ABORT || ((x) >= SURL_METHOD_RAW && (x) <= SURL_METHOD_STREAM_AUDIO))
 
 #define SURL_ANSWER_WAIT            0x20
 #define SURL_ANSWER_SEND_SIZE       0x21

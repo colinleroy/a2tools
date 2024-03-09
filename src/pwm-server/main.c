@@ -13,14 +13,20 @@
 
 extern FILE *ttyfp;
 
+
+
+int sample_rate;
+
 #define SAMPLE_OFFSET 0x40
 #define MAX_LEVEL       31
 #define END_OF_STREAM   32
 
-#define send_sample(i) simple_serial_putc((i) + SAMPLE_OFFSET)
-
-int sample_rate;
-
+#define send_sample(i) do {                 \
+  if ((i) + SAMPLE_OFFSET < 0x40) {         \
+    printf("woah %d\n", i);                 \
+  }                                         \
+  simple_serial_putc((i) + SAMPLE_OFFSET);  \
+} while (0)
 
 static void send_end_of_stream(void) {
   send_sample(END_OF_STREAM);
@@ -66,6 +72,13 @@ int main(int argc, char *argv[]) {
   printf("Max volume: %d\n", max);
 
   gettimeofday(&samp_start, 0);
+
+  /* test samples */
+  // for (i = 0; i < 32; i++) {
+  //   for (num = 0; num < 1000; num++) {
+  //     send_sample(i);
+  //   }
+  // }
 
   for (cur = 0; cur < size; cur++) {
     send_sample(data[cur] * MAX_LEVEL/max);

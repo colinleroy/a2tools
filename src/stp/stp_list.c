@@ -223,6 +223,8 @@ char stp_list_scroll(signed char shift) {
 
 extern unsigned char scrw, scrh;
 
+char tmp_buf[80];
+
 char *stp_build_login_url(char *url) {
   char *host = strstr(url, "://");
   char *proto;
@@ -254,11 +256,15 @@ void stp_update_list(char full_update) {
     clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
     for (i = 0; i + cur_display_line < num_lines && i <= PAGE_HEIGHT; i++) {
       gotoxy(2, i + PAGE_BEGIN);
-      dputs(lines[i + cur_display_line]);
+      strncpy(tmp_buf, lines[i + cur_display_line], scrw - 3);
+      tmp_buf[scrw-3] = '\0';
+      dputs(tmp_buf);
     }
   } else if (cur_line < num_lines) {
     gotoxy (2, PAGE_BEGIN + cur_line - cur_display_line);
-    dputs(lines[cur_line]);
+    strncpy(tmp_buf, lines[cur_line], scrw - 3);
+    tmp_buf[scrw-3] = '\0';
+    dputs(tmp_buf);
 
     clrzone(0, PAGE_BEGIN, 1, PAGE_BEGIN + PAGE_HEIGHT);
   }
@@ -266,9 +272,9 @@ void stp_update_list(char full_update) {
   dputc('>');
 }
 
+extern char center_x;
 int stp_get_data(char *url, const surl_response **resp) {
   size_t r;
-  char center_x = 30; /* 12 in 40COLS */
 
   *resp = NULL;
   num_lines = 0;
@@ -361,19 +367,16 @@ void stp_print_header(char *url) {
   }
   clrzone(0, 0, scrw - 1, 0);
   gotoxy(0, 0);
-  if (strlen(no_pass_url) > scrw - 10) {
-    char *tmp = strdup(no_pass_url + strlen(no_pass_url) - scrw + 5);
+
+  if (strlen(no_pass_url) > scrw - 3) {
     dputs("...");
-    dputs(tmp);
-    free(tmp);
+    strncpy(tmp_buf, no_pass_url + strlen(no_pass_url) - scrw + 3, scrw - 3);
+    tmp_buf[scrw - 3] = '\0';
+    dputs(tmp_buf);
   } else {
     dputs(no_pass_url);
   }
   free(no_pass_url);
-#ifdef __CC65__
-  gotoxy(69, 0);
-  printf("%zub free", _heapmemavail());
-#endif
   gotoxy(0, 1);
   chline(scrw);
 }
@@ -386,10 +389,9 @@ void stp_print_result(const surl_response *response) {
   if (response == NULL) {
     dputs("Unknown request error.");
   } else {
-    cprintf("Response code %d - %lu bytes, %s",
+    cprintf("Response code %d - %lu bytes",
             response->code,
-            response->size,
-            response->content_type != NULL ? response->content_type : "");
+            response->size);
   }
 }
 

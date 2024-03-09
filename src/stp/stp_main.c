@@ -38,6 +38,7 @@
 #include "runtime_once_clean.h"
 
 unsigned char scrw = 255, scrh = 255;
+char center_x = 30; /* 12 in 40COLS */
 
 static void get_all(const char *url, char **lines, int n_lines) {
   int i, r;

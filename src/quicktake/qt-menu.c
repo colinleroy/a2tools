@@ -22,8 +22,6 @@
 
 #include "runtime_once_clean.h"
 
-#pragma code-name(push, "LOWCODE")
-
 uint8 scrw, scrh;
 uint8 camera_connected;
 camera_info cam_info;
@@ -54,6 +52,8 @@ static void print_header(void) {
 #endif
   chline(scrw);
 }
+
+#pragma code-name(push, "LOWCODE")
 
 static uint8 print_menu(void) {
   cputs("Menu\r\n\r\n");
@@ -155,6 +155,8 @@ err_io:
     cgetc();
   }
 }
+
+#pragma code-name(pop)
 
 static void get_one_picture(uint8 num_pics) {
 #ifdef __CC65__
@@ -326,8 +328,6 @@ static void print_welcome(void) {
   cputs(WELCOME_STR);
   set_scrollwindow(21, scrh);
 }
-
-#pragma code-name(pop)
 
 static void show_about(void) {
   FILE *fp;

@@ -68,8 +68,6 @@ void get_program_disk(void) {
   }
 }
 
-#pragma code-name(push, "LOWCODE")
-
 static char imgname[FILENAME_MAX];
 #ifdef __CC65__
 #define FOUR_NUM_WIDTH 16
@@ -225,8 +223,6 @@ fallback_std:
     } while (++x);
   }
 }
-
-#pragma code-name(pop)
 
 #ifdef __CC65__
 #define cur_thumb_data zp10p

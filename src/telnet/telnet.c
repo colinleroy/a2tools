@@ -615,6 +615,7 @@ again:
       goto again;
     }
     simple_serial_setup_no_irq_regs();
+    simple_serial_set_irq(1);
   } else {
     response = surl_start_request(SURL_METHOD_RAW, buf, NULL, 0);
     if (response->code != 100) {

@@ -3,5 +3,5 @@
 
 #include "platform.h"
 
-void pwm(void);
+void __fastcall__ pwm(unsigned char vumeter_x, unsigned char vumeter_y);
 #endif

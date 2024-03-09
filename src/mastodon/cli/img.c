@@ -121,7 +121,7 @@ static void video_stream(media *m, char idx, char num_images) {
              "Waiting for proxy...");
   init_hgr(1);
   hgr_mixon();
-  surl_start_request(SURL_METHOD_STREAM, m->media_url[idx], NULL, 0);
+  surl_start_request(SURL_METHOD_STREAM_VIDEO, m->media_url[idx], NULL, 0);
 
 #ifdef __CC65__
   if (surl_wait_for_stream() != 0 || surl_stream() != 0) {
