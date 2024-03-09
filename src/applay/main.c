@@ -132,8 +132,13 @@ up_dir:
       case CH_CURS_DOWN:
         full_update = stp_list_scroll(+1);
         goto update_list;
-      default:
+      case '/':
+        stp_list_search();
+        stp_print_header(url);
+        full_update = 1;
         goto update_list;
+      default:
+      goto update_list;
     }
     free(data);
     data = NULL;

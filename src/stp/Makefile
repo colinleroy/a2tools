@@ -35,7 +35,8 @@ SOURCES := stp_main.c stp_list.c stp_cli.c stp_save.c stp_send_file.c stp_delete
 	../lib/surl/surl_set_time.c \
 	../lib/surl/surl_ping.c \
 	../lib/file_select.c \
-	../lib/path_helper.c
+	../lib/path_helper.c \
+	../lib/strcasestr.c
 
 CL65SOURCES = \
 	../lib/surl/surl_read_with_barrier.s \

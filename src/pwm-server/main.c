@@ -74,11 +74,11 @@ int main(int argc, char *argv[]) {
   gettimeofday(&samp_start, 0);
 
   /* test samples */
-  // for (i = 0; i < 32; i++) {
-  //   for (num = 0; num < 5000; num++) {
-  //     send_sample(i);
-  //   }
-  // }
+  for (i = 0; i < 32; i++) {
+    for (num = 0; num < 5000; num++) {
+      send_sample(i);
+    }
+  }
 
   for (cur = 0; cur < size; cur++) {
     send_sample(data[cur] * MAX_LEVEL/max);

@@ -34,6 +34,7 @@
 #include "strsplit.h"
 #include "runtime_once_clean.h"
 #include "malloc0.h"
+#include "strcasestr.h"
 
 #ifdef __CC65__
 #pragma code-name (push, "LOWCODE")
@@ -222,8 +223,52 @@ char stp_list_scroll(signed char shift) {
 }
 
 extern unsigned char scrw, scrh;
-
+static char search_buf[80] = { 0 };
 char tmp_buf[80];
+static int search_from = 0;
+
+void stp_list_search(void) {
+  int i;
+
+search_again:
+  clrzone(0, 0, scrw - 1, 0);
+  gotoxy(0, 0);
+  dputs("Search: ");
+  strcpy(tmp_buf, search_buf);
+  dget_text(tmp_buf, 79, NULL, 0);
+  if (tmp_buf[0] == '\0') {
+    return;
+  }
+
+  search_from = cur_line + 1;
+
+  strcpy(search_buf, tmp_buf);
+
+  /* Do the actual search */
+search_from_start:
+  for (i = search_from; i < num_lines; i++) {
+    if (strcasestr(lines[i], search_buf) != NULL) {
+      search_from = i;
+      cur_display_line = search_from;
+      cur_line = cur_display_line;
+      stp_update_list(1);
+      break;
+    }
+  }
+  if (i == num_lines) {
+    if (search_from != 0) {
+      search_from = 0;
+      goto search_from_start;
+    } else {
+      beep();
+    }
+  }
+
+  /* Keep going until user escapes */
+  goto search_again;
+}
+
+
 
 char *stp_build_login_url(char *url) {
   char *host = strstr(url, "://");
