@@ -351,12 +351,12 @@ int surl_stream_audio(char *url) {
     printf("Will send embedded img\n");
     free(img_data);
   }
-
-  for (cur = 0; cur < size; cur++) {
-    if (data[cur] > max)
-      max = data[cur];
-  }
-
+  // 
+  // for (cur = 0; cur < size; cur++) {
+  //   if (data[cur] > max)
+  //     max = data[cur];
+  // }
+  // 
   if (max == 0) {
     max = 255;
   }
