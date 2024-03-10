@@ -284,13 +284,15 @@ static int sample_rate = 115200 / (1+8+1);
 #define MAX_LEVEL       31
 #define END_OF_STREAM   32
 
-#define send_sample(i) simple_serial_putc((i) + SAMPLE_OFFSET)
+extern FILE *ttyfp;
+
+#define send_sample(i) fputc((i) + SAMPLE_OFFSET, ttyfp)
 
 static void send_end_of_stream(void) {
   send_sample(END_OF_STREAM);
+  fflush(ttyfp);
 }
 
-extern FILE *ttyfp;
 
 int surl_stream_audio(char *url) {
   int num = 0;
