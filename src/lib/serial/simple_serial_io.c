@@ -26,6 +26,7 @@
 #include <ctype.h>
 #include <termios.h>
 #include <sys/types.h>
+#include <sys/param.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -224,10 +225,25 @@ void __fastcall__ simple_serial_write(const char *ptr, size_t nmemb) {
   }
 }
 
+#define MAX_WRITE_LEN 2048
 void __fastcall__ simple_serial_write_fast(const char *ptr, size_t nmemb) {
   fd_set fds;
   struct timeval tv_timeout;
   int n, w, total = 0;
+
+  if (nmemb > 256 && nmemb % 256) {
+    size_t full_pages = MIN (MAX_WRITE_LEN, nmemb - (nmemb % 256));
+    while (full_pages > 0) {
+      simple_serial_write_fast(ptr, full_pages);
+      ptr += full_pages;
+      nmemb -= full_pages;
+      fflush(ttyfp);
+      full_pages = MIN (MAX_WRITE_LEN, nmemb - (nmemb % 256));
+    }
+    simple_serial_write_fast(ptr, nmemb);
+    fflush(ttyfp);
+    return;
+  }
 
 again:
   FD_ZERO(&fds);
@@ -265,6 +281,8 @@ again:
   } else {
     if (errno == EAGAIN && total < nmemb) {
       goto again;
+    } else {
+      printf("write error %d\n", errno);
     }
   }
 }

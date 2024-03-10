@@ -145,13 +145,14 @@ static void do_debug(char *file_line) {
 }
 
 #define IO_BARRIER(msg) do {                            \
-    printf("IO Barrier\n");                             \
+    printf("IO Barrier (%s)\n", msg);                   \
     while (simple_serial_getc() != SURL_CLIENT_READY);  \
 } while (0)
 
 static void send_response_headers(curl_buffer *response) {
   uint16 code, hdr_size, ct_size;
   uint32 size;
+
   size = htonl(response->size);
   code = htons(response->response_code);
   hdr_size = htons(response->headers_size);
@@ -440,7 +441,7 @@ abort:
          * read more bytes than available, using surl_response->size.
          */
 
-         IO_BARRIER("Client command");
+        IO_BARRIER("Client command");
 
         if (!sending_body) {
           /* Switching from HEADERS resets the cursor */
@@ -450,7 +451,7 @@ abort:
         sending_body = 1;
         to_send = min(bufsize, response->size - sent);
         printf("RESP: SEND %zu body bytes from %zu\n", to_send, sent);
-        simple_serial_write(response->buffer + sent, to_send);
+        simple_serial_write_fast(response->buffer + sent, to_send);
         sent += to_send;
 
       } else if (cmd == SURL_CMD_HEADERS) {
@@ -461,7 +462,7 @@ abort:
          * read more bytes than available, using surl_response->headers_size.
          */
 
-         IO_BARRIER("Client command");
+        IO_BARRIER("Client command");
 
         if (!sending_headers) {
           /* Switching from BODY resets the cursor */
@@ -471,7 +472,7 @@ abort:
         sending_headers = 1;
         to_send = min(bufsize, response->headers_size - sent);
         printf("RESP: HEADERS %zu header bytes from %zu\n", to_send, sent);
-        simple_serial_write(response->headers + sent, to_send);
+        simple_serial_write_fast(response->headers + sent, to_send);
         sent += to_send;
 
       } else if (cmd == SURL_CMD_FIND) {
