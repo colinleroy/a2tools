@@ -1139,7 +1139,7 @@ _pwm:
         sta     vumeter_base+1
 
         ; Setup pointer access to SPKR
-:       lda     #<(SPKR)
+        lda     #<(SPKR)
         sta     spkr_ptr
         lda     #>(SPKR)
         sta     spkr_ptr+1
