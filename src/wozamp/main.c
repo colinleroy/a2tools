@@ -20,6 +20,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#include <ctype.h>
 #include "surl.h"
 #include "simple_serial.h"
 #include "extended_conio.h"
@@ -53,12 +54,21 @@ char *welcome_header =
 unsigned char scrw = 255, scrh = 255;
 char center_x = 14; /* 30 in 80COLS */
 
+extern char search_buf[80];
+
 void stp_print_footer(void) {
   gotoxy(0, 22);
   chline(scrw);
   clrzone(0, 23, scrw - 1, 23);
   gotoxy(0, 23);
-  dputs("Up/Down, Enter: nav, Esc: back");
+  #ifdef __APPLE2ENH__
+  dputs("Up/Down/Enter/Esc:nav, S:search");
+  #else
+  dputs("U/J/Enter/Esc:nav, S:search");
+  #endif
+  if (search_buf[0]) {
+    dputs(", N:next");
+  }
 }
 
 extern char tmp_buf[80];
@@ -75,12 +85,13 @@ static void play_url(char *url) {
   }
   tmp_buf[scrw] = '\0';
   gotoxy(0, 21);
+  dputs("Spc:pause, Esc:stop, Left/Right:fwd/rew");
+  gotoxy(0, 22);
   dputs(tmp_buf);
-
   surl_start_request(SURL_METHOD_STREAM_AUDIO, url, NULL, 0);
   r = simple_serial_getc();
   if (r == SURL_ANSWER_STREAM_ART) {
-    surl_read_with_barrier(HGR_PAGE, HGR_LEN);
+    surl_read_with_barrier((char *)HGR_PAGE, HGR_LEN);
     init_hgr(1);
     hgr_mixon();
     simple_serial_putc(SURL_CLIENT_READY);
@@ -138,7 +149,9 @@ update_list:
     stp_update_list(full_update);
 
 keyb_input:
-    c = cgetc();
+    stp_print_footer();
+
+    c = tolower(cgetc());
     switch(c) {
       case CH_ESC:
 up_dir:
@@ -150,17 +163,27 @@ up_dir:
           url = stp_url_enter(url, lines[cur_line]);
         full_update = 1;
         break;
+#ifdef __APPLE2ENH__
       case CH_CURS_UP:
+#else
+      case 'u':
+#endif
         full_update = stp_list_scroll(-1);
         goto update_list;
+#ifdef __APPLE2ENH__
       case CH_CURS_DOWN:
+#else
+      case 'j':
+#endif
         full_update = stp_list_scroll(+1);
         goto update_list;
       case '/':
-        stp_list_search();
+        stp_list_search(1);
         stp_print_header(url);
-        full_update = 1;
-        goto update_list;
+        goto keyb_input;
+      case 'n':
+        stp_list_search(0);
+        goto keyb_input;
       default:
       goto update_list;
     }
