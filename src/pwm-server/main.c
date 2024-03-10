@@ -42,7 +42,8 @@ int main(int argc, char *argv[]) {
   int max = 0;
   int i;
   unsigned char *data = NULL;
-  size_t cur = 0, size = 0;
+  unsigned char *img_data = NULL;
+  size_t cur = 0, size = 0, img_size = 0;
 
   if (simple_serial_open() != 0) {
     printf("Can't open serial\n");
@@ -58,16 +59,17 @@ int main(int argc, char *argv[]) {
     sample_rate = atoi(argv[2]);
   }
 
-  ffmpeg_to_raw_snd(argv[1], sample_rate, &data, &size);
-
-  for (cur = 0; cur < size; cur++) {
-    if (data[cur] > max)
-      max = data[cur];
-  }
+  ffmpeg_to_raw_snd(argv[1], sample_rate, &data, &size, &img_data, &img_size);
 
   if (max == 0) {
     max = 255;
   }
+
+  FILE *fptest = fopen("5bits.raw","wb");
+  for (cur = 0; cur < size; cur++) {
+    fputc((data[cur] * MAX_LEVEL/max) * (max/MAX_LEVEL), fptest);
+  }
+  fclose(fptest);
 
   printf("Max volume: %d\n", max);
 
