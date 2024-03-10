@@ -232,26 +232,26 @@ char stp_list_scroll(signed char shift) {
 }
 
 extern unsigned char scrw, scrh;
-static char search_buf[80] = { 0 };
+char search_buf[80] = { 0 };
 char tmp_buf[80];
 static int search_from = 0;
 
-void stp_list_search(void) {
+void stp_list_search(unsigned char new_search) {
   int i;
 
-search_again:
-  clrzone(0, 0, scrw - 1, 0);
-  gotoxy(0, 0);
-  dputs("Search: ");
-  strcpy(tmp_buf, search_buf);
-  dget_text(tmp_buf, 79, NULL, 0);
-  if (tmp_buf[0] == '\0') {
-    return;
+  if (new_search) {
+    clrzone(0, 0, scrw - 1, 0);
+    gotoxy(0, 0);
+    dputs("Search: ");
+    strcpy(tmp_buf, search_buf);
+    dget_text(tmp_buf, 79, NULL, 0);
+    if (tmp_buf[0] == '\0') {
+      return;
+    }
+    strcpy(search_buf, tmp_buf);
   }
 
   search_from = cur_line + 1;
-
-  strcpy(search_buf, tmp_buf);
 
   /* Do the actual search */
 search_from_start:
@@ -272,9 +272,6 @@ search_from_start:
       beep();
     }
   }
-
-  /* Keep going until user escapes */
-  goto search_again;
 }
 
 
