@@ -18,6 +18,7 @@
         .endif
 
 _simple_serial_read_no_irq:     ; Average of 17.2 cycles per byte on 8kB transfers
+        php
         sei
         sta     ptr3            ; Store nmemb
         stx     ptr3+1
@@ -51,5 +52,5 @@ last_page:
         bne     :-
 
 done:
-        cli
+        plp
         rts
