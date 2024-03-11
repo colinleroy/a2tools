@@ -281,8 +281,8 @@ static byte_diff **diffs = NULL;
 static int sample_rate = 115200 / (1+8+1);
 
 #define SAMPLE_OFFSET 0x40
-#define MAX_LEVEL       31
-#define END_OF_STREAM   32
+#define MAX_LEVEL       32
+#define END_OF_STREAM   (MAX_LEVEL+1)
 
 extern FILE *ttyfp;
 
@@ -351,14 +351,9 @@ int surl_stream_audio(char *url) {
     printf("Will send embedded img\n");
     free(img_data);
   }
-  // 
-  // for (cur = 0; cur < size; cur++) {
-  //   if (data[cur] > max)
-  //     max = data[cur];
-  // }
-  // 
+
   if (max == 0) {
-    max = 255;
+    max = 256;
   }
 
   printf("Max volume: %d\n", max);

@@ -14,5 +14,5 @@
 int main(int argc, char *argv[]) {
   surl_connect_proxy();
   simple_serial_set_irq(0);
-  pwm(4, 23);
+  pwm();
 }

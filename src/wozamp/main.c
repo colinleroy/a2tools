@@ -103,7 +103,7 @@ static void play_url(char *url) {
     dputs("Playback error");
   } else {
     simple_serial_putc(SURL_CLIENT_READY);
-    pwm(scrw-34, 23);
+    pwm();
     init_text();
     clrzone(0, 22, scrw - 1, 23);
     stp_print_footer();

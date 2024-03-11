@@ -18,8 +18,8 @@ extern FILE *ttyfp;
 int sample_rate;
 
 #define SAMPLE_OFFSET 0x40
-#define MAX_LEVEL       31
-#define END_OF_STREAM   32
+#define MAX_LEVEL       32
+#define END_OF_STREAM   (MAX_LEVEL+1)
 
 #define send_sample(i) do {                 \
   if ((i) + SAMPLE_OFFSET < 0x40) {         \
@@ -31,6 +31,8 @@ int sample_rate;
 static void send_end_of_stream(void) {
   send_sample(END_OF_STREAM);
 }
+
+#define ABS(x) ((x) < 0 ? -(x) : (x))
 
 int main(int argc, char *argv[]) {
   int num = 0;
@@ -61,9 +63,23 @@ int main(int argc, char *argv[]) {
 
   ffmpeg_to_raw_snd(argv[1], sample_rate, &data, &size, &img_data, &img_size);
 
-  if (max == 0) {
-    max = 255;
+  
+  for (cur = 0; cur < size; cur++) {
+    int offset = data[cur] - 128;
+    if (ABS(offset) > max)
+      max = ABS(offset);
   }
+  printf("max %d\n", max);
+  if (max == 0) {
+    max = 128;
+  }
+  // for (cur = 0; cur < size; cur++) {
+  //   int offset = data[cur] - 128;
+  //   offset = offset * 128/max;
+  //   data[cur] = offset + 128;
+  // }
+
+  max = 256;
 
   FILE *fptest = fopen("5bits.raw","wb");
   for (cur = 0; cur < size; cur++) {
@@ -76,10 +92,13 @@ int main(int argc, char *argv[]) {
   gettimeofday(&samp_start, 0);
 
   /* test samples */
-  for (i = 0; i < 32; i++) {
-    for (num = 0; num < 5000; num++) {
-      send_sample(i);
-    }
+  for (i = 0; i < END_OF_STREAM; i++) {
+    printf("send %d\n", i);
+    send_sample(i);
+    cgetc();
+    printf("send %d again\n", i);
+    send_sample(i);
+    cgetc();
   }
 
   for (cur = 0; cur < size; cur++) {
