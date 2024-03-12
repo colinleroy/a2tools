@@ -145,8 +145,11 @@ static void do_debug(char *file_line) {
 }
 
 #define IO_BARRIER(msg) do {                            \
+    int r;                                              \
     printf("IO Barrier (%s)\n", msg);                   \
-    while (simple_serial_getc() != SURL_CLIENT_READY);  \
+    r = simple_serial_getc();                           \
+    while (r != SURL_CLIENT_READY                       \
+        && r != SURL_METHOD_ABORT);                     \
 } while (0)
 
 static void send_response_headers(curl_buffer *response) {

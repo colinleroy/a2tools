@@ -57,11 +57,15 @@ char center_x = 14; /* 30 in 80COLS */
 
 extern char search_buf[80];
 
+#ifdef __CC65__
+#pragma code-name (push, "LC")
+#endif
+
 void stp_print_footer(void) {
+
+  clrzone(0, 22, scrw - 1, 23);
+
   gotoxy(0, 22);
-  chline(scrw);
-  clrzone(0, 23, scrw - 1, 23);
-  gotoxy(0, 23);
   #ifdef __APPLE2ENH__
   dputs("Up/Down/Enter/Esc:nav, S:search");
   #else
@@ -69,6 +73,23 @@ void stp_print_footer(void) {
   #endif
   if (search_buf[0]) {
     dputs(", N:next");
+  }
+
+  dputs("\r\nA:play all files in directory");
+}
+
+
+void stp_print_result(const surl_response *response) {
+  gotoxy(0, 20);
+  chline(scrw);
+  clrzone(0, 21, scrw - 1, 21);
+
+  if (response == NULL) {
+    dputs("Unknown request error.");
+  } else if (response->code / 100 != 2){
+    cprintf("Error: Response code %d - %lu bytes",
+            response->code,
+            response->size);
   }
 }
 
@@ -112,8 +133,45 @@ static void play_url(char *url) {
 }
 
 #ifdef __CC65__
-#pragma code-name (push, "LOWCODE")
+#pragma code-name (pop)
+#pragma code-name (push, "LC")
 #endif
+
+char *play_directory(char *url) {
+  const surl_response *resp;
+  int dir_index;
+
+  for (dir_index = 0; dir_index < num_lines; dir_index++) {
+    int r;
+    url = stp_url_enter(url, lines[dir_index]);
+
+    r = stp_get_data(url, &resp);
+
+    if (!resp || resp->code / 100 != 2) {
+      break;
+    }
+
+    if (r == SAVE_DIALOG) {
+      /* Play */
+      play_url(url);
+      clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
+    }
+
+    /* Fetch original list back */
+    url = stp_url_up(url);
+    stp_get_data(url, &resp);
+
+    if (!resp || resp->code / 100 != 2) {
+      break;
+    }
+
+    /* Stop loop if user pressed esc a second time */
+    if (kbhit() && cgetc() == CH_ESC) {
+      break;
+    }
+  }
+  return url;
+}
 
 int main(void) {
   char *url;
@@ -164,6 +222,10 @@ up_dir:
           url = stp_url_enter(url, lines[cur_line]);
         full_update = 1;
         break;
+      case 'a':
+        url = play_directory(url);
+        full_update = 1;
+        break;
 #ifdef __APPLE2ENH__
       case CH_CURS_UP:
 #else
@@ -188,10 +250,6 @@ up_dir:
       default:
       goto update_list;
     }
-    free(data);
-    data = NULL;
-    free(lines);
-    lines = NULL;
   }
 
   exit(0);
