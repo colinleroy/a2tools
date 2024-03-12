@@ -42,11 +42,12 @@ char hgr[0x2000];
 #endif
 
 char *welcome_header = 
-  "*   *  ***  *****   *    * *  ****\r\n"
-  "*   * *   *    *   * *  * * * *   *\r\n"
-  "*   * *   *   *   ***** *   * ****\r\n"
-  "* * * *   *  *    *   * *   * *\r\n"
-  " * *   ***  ***** *   * *   * *\r\n"
+  "        *\r\n"
+  "*   *  *-*  *****   *    * *  ****\r\n"
+  "*   * *****    *   * *  * * * *   *\r\n"
+  "*   * ****    *   ***** *   * ****\r\n"
+  "* * * *****  *    *   * *   * *\r\n"
+  " * *   *-*  ***** *   * *   * *\r\n"
   "\r\n"
   "https://colino.net - GPL licensed";
 
@@ -103,7 +104,7 @@ static void play_url(char *url) {
     dputs("Playback error");
   } else {
     simple_serial_putc(SURL_CLIENT_READY);
-    pwm();
+    pwm(scrw-36, 23);
     init_text();
     clrzone(0, 22, scrw - 1, 23);
     stp_print_footer();
