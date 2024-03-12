@@ -42,6 +42,10 @@ char center_x = 30; /* 12 in 40COLS */
 
 char *welcome_header = NULL;
 
+#ifdef __CC65__
+#pragma code-name (push, "LC")
+#endif
+
 static void get_all(const char *url, char **lines, int n_lines) {
   int i, r;
   char *out_dir;
@@ -78,6 +82,27 @@ static void get_all(const char *url, char **lines, int n_lines) {
   free(out_dir);
 }
 
+void stp_print_footer(void) {
+  gotoxy(0, 22);
+  chline(scrw);
+  clrzone(0, 23, scrw - 1, 23);
+  gotoxy(0, 23);
+  dputs("Up/Down, Enter: nav, S: send (R: recursive), D: delete, A: get all, Esc: back");
+}
+
+void stp_print_result(const surl_response *response) {
+  gotoxy(0, 20);
+  chline(scrw);
+  clrzone(0, 21, scrw - 1, 21);
+  gotoxy(0, 21);
+  if (response == NULL) {
+    dputs("Unknown request error.");
+  } else {
+    cprintf("Response code %d - %lu bytes",
+            response->code,
+            response->size);
+  }
+}
 
 int main(void) {
   char *url;
@@ -159,11 +184,10 @@ up_dir:
       default:
         goto update_list;
     }
-    free(data);
-    data = NULL;
-    free(lines);
-    lines = NULL;
   }
 
   exit(0);
 }
+#ifdef __CC65__
+#pragma code-name (pop)
+#endif

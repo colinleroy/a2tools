@@ -19,6 +19,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef __CC65__
+#pragma code-name (push, "LOWCODE")
+#endif
+
 char *strcasestr(char *str, char *substr) {
   int i = 0;
   int len_a = strlen(str);
@@ -33,3 +37,7 @@ char *strcasestr(char *str, char *substr) {
   }
   return NULL;
 }
+
+#ifdef __CC65__
+#pragma code-name (pop)
+#endif

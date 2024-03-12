@@ -332,6 +332,12 @@ int stp_get_data(char *url, const surl_response **resp) {
   cur_line = 0;
   cur_display_line = 0;
 
+  if (data)
+    free(data);
+  data = NULL;
+  if (lines)
+    free(lines);
+  lines = NULL;
 
   clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
   gotoxy(center_x, 12);
@@ -430,20 +436,6 @@ void stp_print_header(char *url) {
   free(no_pass_url);
   gotoxy(0, 1);
   chline(scrw);
-}
-
-void stp_print_result(const surl_response *response) {
-  gotoxy(0, 20);
-  chline(scrw);
-  clrzone(0, 21, scrw - 1, 21);
-  gotoxy(0, 21);
-  if (response == NULL) {
-    dputs("Unknown request error.");
-  } else {
-    cprintf("Response code %d - %lu bytes",
-            response->code,
-            response->size);
-  }
 }
 
 #ifdef __CC65__

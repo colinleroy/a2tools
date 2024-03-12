@@ -28,7 +28,7 @@ SOURCES := \
 	../lib/scrollwindow.c \
 	../lib/strsplit.c \
 	../stp/stp_list.c \
-  ../lib/strcasestr.c
+	../lib/strcasestr.c
 
 CL65SOURCES = \
 	../lib/pwm.s \
