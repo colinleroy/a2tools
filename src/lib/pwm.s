@@ -23,6 +23,8 @@
 
 ; ------------------------------------------------------------------------
 
+MAX_LEVEL         = 32
+
 .ifdef IIGS
 serial_status_reg = zilog_status_reg_r
 serial_data_reg   = zilog_data_reg_r
@@ -43,6 +45,7 @@ dummy_ptr     = _zp8
 status_ptr    = _zp10
 data_ptr      = _zp12
 dummy_zp      = tmp1
+vumeter_base  = ptr1
 
 ; ---------------------------------------------------------
 ;
@@ -152,6 +155,36 @@ dummy_zp      = tmp1
 .macro SER_FETCH_DEST_A_4       ; Fetch next duty cycle to A
         lda     data            ; 4
 .endmacro
+
+.macro VU_START_CLEAR_2         ; Start clearing previous VU meter level (trashes A)
+        lda     #' '|$80        ; 2
+.endmacro
+
+.macro VU_END_CLEAR_5           ; Finish clearing previous VU meter level
+        sta     $FFFF,y         ; 5
+.endmacro
+
+.macro VU_START_SET_A_2         ; Start setting new VU level (trashes A)
+        ldy     #>(*-_SAMPLES_BASE) ; 2
+.endmacro
+
+.macro VU_START_SET_B_2         ; Second part of VU setting start
+        lda     #' '            ; 2
+.endmacro
+
+.macro VU_START_SET_4           ; Both parts of new VU meter level set start (trashes A)
+        VU_START_SET_A_2
+        VU_START_SET_B_2
+.endmacro
+
+.macro VU_END_SET_DIRECT_4      ; Finish new VU meter level set (direct)
+        sta     $FFFF           ; 4
+.endmacro
+
+.macro VU_END_SET_5             ; Finish new VU meter level set (indexed)
+        sta     $FFFF,y         ; 5
+.endmacro
+
         .code
 
 .align 256
@@ -161,8 +194,11 @@ duty_cycle0:                    ; Max negative level, 8 cycles
         ____SPKR_DUTY____4      ; 4  !
         ____SPKR_DUTY____4      ; 8  !
 
-        WASTE_11                ; 19
-        KBD_LOAD_7              ; 26
+        VU_START_CLEAR_2        ; 10
+vc0:    VU_END_CLEAR_5          ; 15
+        VU_START_SET_4          ; 19
+vs0:    VU_END_SET_5            ; 24
+        WASTE_2                 ; 26
 
 s0:     SER_AVAIL_A_6           ; 32
         SER_LOOP_IF_NOT_AVAIL_2 ; 34 35
@@ -226,6 +262,30 @@ dest1:
 
 ; ------------------------------------------------------------------
 setup_pointers:
+        sta     CV
+        jsr     VTABZ
+        jsr     popa
+        sta     CH
+        tay
+        pha
+        lda     #'('|$80
+        sta     (BASL),y
+        tya
+        clc
+        adc     #(MAX_LEVEL+2)
+        sta     CH
+        tay
+        lda     #')'|$80
+        sta     (BASL),y
+        pla
+        clc
+        adc     #1
+        adc     BASL
+        sta     vumeter_base
+        lda     BASH
+        adc     #0
+        sta     vumeter_base+1
+
         ; Setup pointer access to SPKR
         lda     #<(SPKR)
         sta     spkr_ptr
@@ -247,7 +307,10 @@ duty_cycle2:
         WASTE_2                 ; 6 !
         ____SPKR_DUTY____4      ; 10 !
 
-        WASTE_16                ; 26
+        VU_START_CLEAR_2        ; 12
+vc2:    VU_END_CLEAR_5          ; 17
+        VU_START_SET_4          ; 21
+vs2:    VU_END_SET_5            ; 26
 
 s2:     SER_AVAIL_A_6           ; 32
         SER_LOOP_IF_NOT_AVAIL_2 ; 34 35
@@ -443,11 +506,13 @@ patch_data_register:
 .assert * = _SAMPLES_BASE+$400, error
 duty_cycle4:
         ____SPKR_DUTY____4      ; 4 !
-        WASTE_4                 ; 8 !
+        WASTE_2                 ; 6 !
+        VU_START_CLEAR_2        ; 8 !
         ____SPKR_DUTY____4      ; 12 !
 
-        KBD_LOAD_7              ; 19
-        WASTE_7                 ; 26
+vc4:    VU_END_CLEAR_5          ; 17
+        VU_START_SET_4          ; 21
+vs4:    VU_END_SET_5            ; 26
 
 s4:     SER_AVAIL_A_6           ; 32
         SER_LOOP_IF_NOT_AVAIL_2 ; 34 35
@@ -458,6 +523,33 @@ dest4:
 :
         WASTE_7                 ;    42
         jmp     duty_cycle4     ;    45
+
+; ------------------------------------------------------------------
+_pwm:
+        pha
+        ; Disable interrupts
+        lda     #$00
+        jsr     _simple_serial_set_irq
+
+        pla
+        ; Setup pointers
+        jsr     setup_pointers
+        ; Patch serial registers
+        jsr     patch_status_register
+        jsr     patch_data_register
+        ; Patch vumeter address
+        jsr     patch_vumeter_addr
+
+.ifdef IIGS
+        ; Slow down IIgs
+        jsr     _get_iigs_speed
+        sta     prevspd
+        lda     #SPEED_SLOW
+        jsr     _set_iigs_speed
+.endif
+        ; Start with silence
+        jmp     silence
+; ------------------------------------------------------------------
 
 
 .align 256
@@ -480,6 +572,73 @@ dest5:
         WASTE_7                 ;    42
         jmp     duty_cycle5     ;    45
 
+patch_vumeter_addr:
+        clc
+        lda     vumeter_base
+        sta     vc0+1
+        sta     vs0+1
+        sta     vc2+1
+        sta     vs2+1
+        sta     vc4+1
+        sta     vs4+1
+        sta     vc7+1
+        sta     vs7+1
+        sta     vc9+1
+        sta     vs9+1
+        sta     vc11+1
+        sta     vs11+1
+        sta     vc13+1
+        sta     vs13+1
+        sta     vc16+1
+        sta     vs16+1
+        sta     vc18+1
+        sta     vs18+1
+        sta     vc20+1
+        sta     vc22+1
+        sta     vs22+1
+        sta     vc24+1
+        sta     vs24+1
+        sta     vc28+1
+        sta     vs28+1
+        sta     vc30+1
+        sta     vs30+1
+        sta     vc32+1
+        sta     vs32+1
+        adc     #20             ; Special case for level 20
+        sta     vsd20+1         ; needing 4-cycle direct access
+        lda     vumeter_base+1
+        sta     vc0+2
+        sta     vs0+2
+        sta     vc2+2
+        sta     vs2+2
+        sta     vc4+2
+        sta     vs4+2
+        sta     vc7+2
+        sta     vs7+2
+        sta     vc9+2
+        sta     vs9+2
+        sta     vc11+2
+        sta     vs11+2
+        sta     vc13+2
+        sta     vs13+2
+        sta     vc16+2
+        sta     vs16+2
+        sta     vc18+2
+        sta     vs18+2
+        sta     vc20+2
+        sta     vc22+2
+        sta     vs22+2
+        sta     vc24+2
+        sta     vs24+2
+        sta     vc28+2
+        sta     vs28+2
+        sta     vc30+2
+        sta     vs30+2
+        sta     vc32+2
+        sta     vs32+2
+        adc     #0
+        sta     vsd20+2
+        rts
 
 .align 256
 .assert * = _SAMPLES_BASE+$600, error
@@ -506,10 +665,13 @@ dest6:
 .assert * = _SAMPLES_BASE+$700, error
 duty_cycle7:
         ____SPKR_DUTY____4      ; 4 !
-        KBD_LOAD_7              ; 11 !
+        VU_START_CLEAR_2        ; 6 !
+vc7:    VU_END_CLEAR_5          ; 11 !
         ____SPKR_DUTY____4      ; 15 !
 
-        WASTE_11                ; 26
+        VU_START_SET_4          ; 19
+vs7:    VU_END_SET_5            ; 24
+        WASTE_2                 ; 26
 
 s7:     SER_AVAIL_A_6           ; 32
         SER_LOOP_IF_NOT_AVAIL_2 ; 34 35
@@ -547,11 +709,14 @@ dest8:
 .assert * = _SAMPLES_BASE+$900, error
 duty_cycle9:
         ____SPKR_DUTY____4      ; 4 !
-        WASTE_2                 ; 6 !
-        KBD_LOAD_7              ; 13 !
+        VU_START_CLEAR_2        ; 6 !
+vc9:    VU_END_CLEAR_5          ; 11 !
+        VU_START_SET_A_2        ; 13 !
         ____SPKR_DUTY____4      ; 17 !
 
-        WASTE_9                ; 26
+        VU_START_SET_B_2        ; 19
+vs9:    VU_END_SET_5            ; 24
+        WASTE_2                 ; 26
 
 s9:     SER_AVAIL_A_6           ; 32
         SER_LOOP_IF_NOT_AVAIL_2 ; 34 35
@@ -589,11 +754,13 @@ dest10:
 .assert * = _SAMPLES_BASE+$B00, error
 duty_cycle11:
         ____SPKR_DUTY____4      ; 4 !
-        KBD_LOAD_7              ; 11 !
-        WASTE_4                 ; 15 !
+        VU_START_CLEAR_2        ; 6 !
+vc11:   VU_END_CLEAR_5          ; 11 !
+        VU_START_SET_4          ; 15 !
         ____SPKR_DUTY____4      ; 19 !
 
-        WASTE_7                 ; 26
+vs11:   VU_END_SET_5            ; 24
+        WASTE_2                 ; 26
 
 s11:    SER_AVAIL_A_6           ; 32
         SER_LOOP_IF_NOT_AVAIL_2 ; 34 35
@@ -631,11 +798,13 @@ dest12:
 .assert * = _SAMPLES_BASE+$D00, error
 duty_cycle13:
         ____SPKR_DUTY____4      ; 4 !
-        KBD_LOAD_7              ; 11 !
-        WASTE_6                 ; 17 !
+        VU_START_CLEAR_2        ; 6 !
+vc13:   VU_END_CLEAR_5          ; 11 !
+        VU_START_SET_4          ; 15 !
+        WASTE_2                 ; 17 !
         ____SPKR_DUTY____4      ; 21 !
 
-        WASTE_5                 ; 26
+vs13:   VU_END_SET_5            ; 26
 
 s13:    SER_AVAIL_A_6           ; 32
         SER_LOOP_IF_NOT_AVAIL_2 ; 34 35
@@ -693,8 +862,10 @@ dest15:
 .assert * = _SAMPLES_BASE+$1000, error
 duty_cycle16:
         ____SPKR_DUTY____4      ; 4 !
-        KBD_LOAD_7              ; 11 !
-        WASTE_9                 ; 19 !
+        VU_START_CLEAR_2        ; 6 !
+vc16:   VU_END_CLEAR_5          ; 11 !
+        VU_START_SET_4          ; 15 !
+vs16:   VU_END_SET_5            ; 20 !
         ____SPKR_DUTY____4      ; 24 !
 
         WASTE_2                 ; 26
@@ -734,8 +905,11 @@ dest17:
 .assert * = _SAMPLES_BASE+$1200, error
 duty_cycle18:
         ____SPKR_DUTY____4      ; 4 !
-        KBD_LOAD_7              ; 11 !
-        WASTE_11                ; 22 !
+        VU_START_CLEAR_2        ; 6 !
+vc18:   VU_END_CLEAR_5          ; 11 !
+        VU_START_SET_4          ; 15 !
+vs18:   VU_END_SET_5            ; 20 !
+        WASTE_2                 ; 22 !
         ____SPKR_DUTY____4      ; 26 !
 
 s18:    SER_AVAIL_A_6           ; 32
@@ -774,12 +948,14 @@ dest19:
 .assert * = _SAMPLES_BASE+$1400, error
 duty_cycle20:
         ____SPKR_DUTY____4      ; 4 !
-        KBD_LOAD_7              ; 11 !
-        WASTE_7                 ; 18 !
+        VU_START_CLEAR_2        ; 6 !
+vc20:   VU_END_CLEAR_5          ; 11 !
+        VU_START_SET_4          ; 15 !
+        WASTE_3                 ; 18 !
 s20:    SER_AVAIL_A_6           ; 24 !
         ____SPKR_DUTY____4      ; 28 !
 
-        WASTE_4                 ; 32
+vsd20:  VU_END_SET_DIRECT_4     ; 32
 
         SER_LOOP_IF_NOT_AVAIL_2 ; 34 35
 d20:    SER_FETCH_DEST_A_4      ; 38      - yes
@@ -816,8 +992,10 @@ dest21:
 .assert * = _SAMPLES_BASE+$1600, error
 duty_cycle22:
         ____SPKR_DUTY____4      ; 4 !
-        KBD_LOAD_7              ; 11 !
-        WASTE_9                 ; 20 !
+        VU_START_CLEAR_2        ; 6 !
+vc22:   VU_END_CLEAR_5          ; 11 !
+        VU_START_SET_4          ; 15 !
+vs22:   VU_END_SET_5            ; 20 !
 s22:    SER_AVAIL_A_6           ; 26 !
         ____SPKR_DUTY____4      ; 30 !
 
@@ -857,8 +1035,11 @@ dest23:
 .assert * = _SAMPLES_BASE+$1800, error
 duty_cycle24:
         ____SPKR_DUTY____4      ; 4 !
-        KBD_LOAD_7              ; 11 !
-        WASTE_11                ; 22 !
+        VU_START_CLEAR_2        ; 6 !
+vc24:   VU_END_CLEAR_5          ; 11 !
+        VU_START_SET_4          ; 15 !
+vs24:   VU_END_SET_5            ; 20 !
+        WASTE_2                 ; 22 !
 s24:    SER_AVAIL_A_6           ; 28 !
         ____SPKR_DUTY____4      ; 32 !
 
@@ -943,8 +1124,10 @@ dest27:
 .assert * = _SAMPLES_BASE+$1C00, error
 duty_cycle28:
         ____SPKR_DUTY____4      ; 4 !
-        KBD_LOAD_7              ; 11 !
-        WASTE_9                 ; 20 !
+        VU_START_CLEAR_2        ; 6 !
+vc28:   VU_END_CLEAR_5          ; 11 !
+        VU_START_SET_4          ; 15 !
+vs28:   VU_END_SET_5            ; 20 !
 s28:    SER_AVAIL_A_6           ; 26 !
         SER_LOOP_IF_NOT_AVAIL_2 ; 28 ! 29
 d28:    SER_FETCH_DEST_A_4      ; 32 !
@@ -987,8 +1170,10 @@ dest29:
 .assert * = _SAMPLES_BASE+$1E00, error
 duty_cycle30:
         ____SPKR_DUTY____4      ; 4 !
-        KBD_LOAD_7              ; 11 !
-        WASTE_9                 ; 20 !
+        VU_START_CLEAR_2        ; 6 !
+vc30:   VU_END_CLEAR_5          ; 11 !
+        VU_START_SET_4          ; 15 !
+vs30:   VU_END_SET_5            ; 20 !
 s30:    SER_AVAIL_A_6           ; 26 !
         WASTE_2                 ; 28 !
         SER_LOOP_IF_NOT_AVAIL_2 ; 30 ! 31
@@ -1029,8 +1214,10 @@ dest31:
 .assert * = _SAMPLES_BASE+$2000, error
 duty_cycle32:                   ; Max positive level, 40 cycles
         ____SPKR_DUTY____4      ; 4 !
-        KBD_LOAD_7              ; 11 !
-        WASTE_9                 ; 20 !
+        VU_START_CLEAR_2        ; 6 !
+vc32:   VU_END_CLEAR_5          ; 11 !
+        VU_START_SET_4          ; 15 !
+vs32:   VU_END_SET_5            ; 20 !
 s32:    SER_AVAIL_A_6           ; 26 !
         SER_LOOP_IF_NOT_AVAIL_2 ; 28 ! 29
 d32:    SER_FETCH_DEST_A_4      ; 32 !
@@ -1055,29 +1242,6 @@ break_out:
         lda     #$01            ; Reenable IRQ and flush
         jsr     _simple_serial_set_irq
         jmp     _simple_serial_flush
-
-_pwm:
-        pha
-        ; Disable interrupts
-        lda     #$00
-        jsr     _simple_serial_set_irq
-
-        pla
-        ; Setup pointers
-        jsr     setup_pointers
-        ; Patch serial registers
-        jsr     patch_status_register
-        jsr     patch_data_register
-
-.ifdef IIGS
-        ; Slow down IIgs
-        jsr     _get_iigs_speed
-        sta     prevspd
-        lda     #SPEED_SLOW
-        jsr     _set_iigs_speed
-.endif
-        ; Start with silence
-        jmp     silence
 
         .bss
 dummy_abs: .res 1
