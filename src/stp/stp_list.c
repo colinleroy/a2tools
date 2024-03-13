@@ -33,7 +33,6 @@
 #include "scrollwindow.h"
 #include "strsplit.h"
 #include "runtime_once_clean.h"
-#include "malloc0.h"
 #include "strcasestr.h"
 
 #ifdef __CC65__
@@ -175,11 +174,9 @@ char *stp_get_start_url(void) {
   return start_url;
 }
 
-char **lines = NULL;
 int num_lines = 0;
 int cur_line = 0;
 int cur_display_line = 0;
-char *data = NULL;
 
 char stp_list_scroll(signed char shift) {
   signed char scroll_changed = 0, scroll_way = 0;
@@ -332,9 +329,6 @@ int stp_get_data(char *url, const surl_response **resp) {
   cur_line = 0;
   cur_display_line = 0;
 
-  if (data)
-    free(data);
-  data = NULL;
   if (lines)
     free(lines);
   lines = NULL;
@@ -362,7 +356,11 @@ int stp_get_data(char *url, const surl_response **resp) {
   if ((*resp)->content_type && strcmp((*resp)->content_type, "directory")) {
     return SAVE_DIALOG;
   } else {
-    data = malloc0((*resp)->size + 1);
+    if ((*resp)->size > STP_DATA_SIZE) {
+      gotoxy(center_x, 18);
+      dputs("Not enough memory :-(");
+      return KEYBOARD_INPUT;
+    }
     r = surl_receive_data(data, (*resp)->size);
   }
 
@@ -400,8 +398,12 @@ char *stp_url_enter(char *url, char *suffix) {
   int url_len = strlen(url);
   int suffix_len = strlen(suffix);
   int url_ends_slash = url[url_len - 1] == '/';
-
-  url = realloc(url, url_len + suffix_len + (url_ends_slash ? 1 : 2));
+  char *tmp = realloc(url, url_len + suffix_len + (url_ends_slash ? 1 : 2));
+  if (!tmp) {
+    gotoxy(center_x, 12);
+    dputs("Not enough memory :-(");
+  }
+  url = tmp;
   if (!url_ends_slash) {
     url[url_len] = '/';
     url_len++;

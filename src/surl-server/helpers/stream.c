@@ -417,6 +417,13 @@ int surl_stream_audio(char *url) {
 done:
   send_sample(0);
   send_end_of_stream();
+
+  do {
+    c = simple_serial_getc();
+    printf("ignoring %02X\n", c);
+  } while (c != SURL_CLIENT_READY
+        && c != SURL_METHOD_ABORT);
+
   return 0;
 }
 

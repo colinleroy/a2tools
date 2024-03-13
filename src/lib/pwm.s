@@ -164,24 +164,33 @@ vumeter_base  = ptr1
         sta     $FFFF,y         ; 5
 .endmacro
 
-.macro VU_START_SET_A_2         ; Start setting new VU level (trashes A)
+.macro VU_START_SET_Y_2         ; Start setting new VU level (trashes A)
         ldy     #>(*-_SAMPLES_BASE) ; 2
 .endmacro
 
-.macro VU_START_SET_B_2         ; Second part of VU setting start
+.macro VU_START_SET_A_2         ; Second part of VU setting start
         lda     #' '            ; 2
 .endmacro
 
-.macro VU_START_SET_4           ; Both parts of new VU meter level set start (trashes A)
+.macro VU_START_SET_X_2         ; Second part of VU setting start
+        ldx     #' '            ; 2
+.endmacro
+
+.macro VU_START_SET_A_4           ; Both parts of new VU meter level set start (trashes A)
+        VU_START_SET_Y_2
         VU_START_SET_A_2
-        VU_START_SET_B_2
 .endmacro
 
-.macro VU_END_SET_DIRECT_4      ; Finish new VU meter level set (direct)
-        sta     $FFFF           ; 4
+.macro VU_START_SET_X_4           ; Both parts of new VU meter level set start (trashes A)
+        VU_START_SET_Y_2
+        VU_START_SET_X_2
 .endmacro
 
-.macro VU_END_SET_5             ; Finish new VU meter level set (indexed)
+.macro VU_END_SET_X_4           ; Finish new VU meter level set (direct)
+        stx     $FFFF           ; 4
+.endmacro
+
+.macro VU_END_SET_A_5             ; Finish new VU meter level set (indexed)
         sta     $FFFF,y         ; 5
 .endmacro
 
@@ -196,8 +205,8 @@ duty_cycle0:                    ; Max negative level, 8 cycles
 
         VU_START_CLEAR_2        ; 10
 vc0:    VU_END_CLEAR_5          ; 15
-        VU_START_SET_4          ; 19
-vs0:    VU_END_SET_5            ; 24
+        VU_START_SET_A_4        ; 19
+vs0:    VU_END_SET_A_5          ; 24
         WASTE_2                 ; 26
 
 s0:     SER_AVAIL_A_6           ; 32
@@ -309,8 +318,8 @@ duty_cycle2:
 
         VU_START_CLEAR_2        ; 12
 vc2:    VU_END_CLEAR_5          ; 17
-        VU_START_SET_4          ; 21
-vs2:    VU_END_SET_5            ; 26
+        VU_START_SET_A_4        ; 21
+vs2:    VU_END_SET_A_5          ; 26
 
 s2:     SER_AVAIL_A_6           ; 32
         SER_LOOP_IF_NOT_AVAIL_2 ; 34 35
@@ -511,8 +520,8 @@ duty_cycle4:
         ____SPKR_DUTY____4      ; 12 !
 
 vc4:    VU_END_CLEAR_5          ; 17
-        VU_START_SET_4          ; 21
-vs4:    VU_END_SET_5            ; 26
+        VU_START_SET_A_4        ; 21
+vs4:    VU_END_SET_A_5          ; 26
 
 s4:     SER_AVAIL_A_6           ; 32
         SER_LOOP_IF_NOT_AVAIL_2 ; 34 35
@@ -669,8 +678,8 @@ duty_cycle7:
 vc7:    VU_END_CLEAR_5          ; 11 !
         ____SPKR_DUTY____4      ; 15 !
 
-        VU_START_SET_4          ; 19
-vs7:    VU_END_SET_5            ; 24
+        VU_START_SET_A_4        ; 19
+vs7:    VU_END_SET_A_5          ; 24
         WASTE_2                 ; 26
 
 s7:     SER_AVAIL_A_6           ; 32
@@ -711,11 +720,11 @@ duty_cycle9:
         ____SPKR_DUTY____4      ; 4 !
         VU_START_CLEAR_2        ; 6 !
 vc9:    VU_END_CLEAR_5          ; 11 !
-        VU_START_SET_A_2        ; 13 !
+        VU_START_SET_Y_2        ; 13 !
         ____SPKR_DUTY____4      ; 17 !
 
-        VU_START_SET_B_2        ; 19
-vs9:    VU_END_SET_5            ; 24
+        VU_START_SET_A_2        ; 19
+vs9:    VU_END_SET_A_5          ; 24
         WASTE_2                 ; 26
 
 s9:     SER_AVAIL_A_6           ; 32
@@ -756,10 +765,10 @@ duty_cycle11:
         ____SPKR_DUTY____4      ; 4 !
         VU_START_CLEAR_2        ; 6 !
 vc11:   VU_END_CLEAR_5          ; 11 !
-        VU_START_SET_4          ; 15 !
+        VU_START_SET_A_4        ; 15 !
         ____SPKR_DUTY____4      ; 19 !
 
-vs11:   VU_END_SET_5            ; 24
+vs11:   VU_END_SET_A_5          ; 24
         WASTE_2                 ; 26
 
 s11:    SER_AVAIL_A_6           ; 32
@@ -800,11 +809,11 @@ duty_cycle13:
         ____SPKR_DUTY____4      ; 4 !
         VU_START_CLEAR_2        ; 6 !
 vc13:   VU_END_CLEAR_5          ; 11 !
-        VU_START_SET_4          ; 15 !
+        VU_START_SET_A_4        ; 15 !
         WASTE_2                 ; 17 !
         ____SPKR_DUTY____4      ; 21 !
 
-vs13:   VU_END_SET_5            ; 26
+vs13:   VU_END_SET_A_5          ; 26
 
 s13:    SER_AVAIL_A_6           ; 32
         SER_LOOP_IF_NOT_AVAIL_2 ; 34 35
@@ -864,8 +873,8 @@ duty_cycle16:
         ____SPKR_DUTY____4      ; 4 !
         VU_START_CLEAR_2        ; 6 !
 vc16:   VU_END_CLEAR_5          ; 11 !
-        VU_START_SET_4          ; 15 !
-vs16:   VU_END_SET_5            ; 20 !
+        VU_START_SET_A_4        ; 15 !
+vs16:   VU_END_SET_A_5          ; 20 !
         ____SPKR_DUTY____4      ; 24 !
 
         WASTE_2                 ; 26
@@ -907,8 +916,8 @@ duty_cycle18:
         ____SPKR_DUTY____4      ; 4 !
         VU_START_CLEAR_2        ; 6 !
 vc18:   VU_END_CLEAR_5          ; 11 !
-        VU_START_SET_4          ; 15 !
-vs18:   VU_END_SET_5            ; 20 !
+        VU_START_SET_A_4        ; 15 !
+vs18:   VU_END_SET_A_5          ; 20 !
         WASTE_2                 ; 22 !
         ____SPKR_DUTY____4      ; 26 !
 
@@ -950,12 +959,12 @@ duty_cycle20:
         ____SPKR_DUTY____4      ; 4 !
         VU_START_CLEAR_2        ; 6 !
 vc20:   VU_END_CLEAR_5          ; 11 !
-        VU_START_SET_4          ; 15 !
+        VU_START_SET_X_4        ; 15 !
         WASTE_3                 ; 18 !
 s20:    SER_AVAIL_A_6           ; 24 !
         ____SPKR_DUTY____4      ; 28 !
 
-vsd20:  VU_END_SET_DIRECT_4     ; 32
+vsd20:  VU_END_SET_X_4          ; 32
 
         SER_LOOP_IF_NOT_AVAIL_2 ; 34 35
 d20:    SER_FETCH_DEST_A_4      ; 38      - yes
@@ -994,8 +1003,8 @@ duty_cycle22:
         ____SPKR_DUTY____4      ; 4 !
         VU_START_CLEAR_2        ; 6 !
 vc22:   VU_END_CLEAR_5          ; 11 !
-        VU_START_SET_4          ; 15 !
-vs22:   VU_END_SET_5            ; 20 !
+        VU_START_SET_A_4        ; 15 !
+vs22:   VU_END_SET_A_5          ; 20 !
 s22:    SER_AVAIL_A_6           ; 26 !
         ____SPKR_DUTY____4      ; 30 !
 
@@ -1037,8 +1046,8 @@ duty_cycle24:
         ____SPKR_DUTY____4      ; 4 !
         VU_START_CLEAR_2        ; 6 !
 vc24:   VU_END_CLEAR_5          ; 11 !
-        VU_START_SET_4          ; 15 !
-vs24:   VU_END_SET_5            ; 20 !
+        VU_START_SET_A_4        ; 15 !
+vs24:   VU_END_SET_A_5          ; 20 !
         WASTE_2                 ; 22 !
 s24:    SER_AVAIL_A_6           ; 28 !
         ____SPKR_DUTY____4      ; 32 !
@@ -1126,8 +1135,8 @@ duty_cycle28:
         ____SPKR_DUTY____4      ; 4 !
         VU_START_CLEAR_2        ; 6 !
 vc28:   VU_END_CLEAR_5          ; 11 !
-        VU_START_SET_4          ; 15 !
-vs28:   VU_END_SET_5            ; 20 !
+        VU_START_SET_A_4        ; 15 !
+vs28:   VU_END_SET_A_5          ; 20 !
 s28:    SER_AVAIL_A_6           ; 26 !
         SER_LOOP_IF_NOT_AVAIL_2 ; 28 ! 29
 d28:    SER_FETCH_DEST_A_4      ; 32 !
@@ -1172,8 +1181,8 @@ duty_cycle30:
         ____SPKR_DUTY____4      ; 4 !
         VU_START_CLEAR_2        ; 6 !
 vc30:   VU_END_CLEAR_5          ; 11 !
-        VU_START_SET_4          ; 15 !
-vs30:   VU_END_SET_5            ; 20 !
+        VU_START_SET_A_4        ; 15 !
+vs30:   VU_END_SET_A_5          ; 20 !
 s30:    SER_AVAIL_A_6           ; 26 !
         WASTE_2                 ; 28 !
         SER_LOOP_IF_NOT_AVAIL_2 ; 30 ! 31
@@ -1216,8 +1225,8 @@ duty_cycle32:                   ; Max positive level, 40 cycles
         ____SPKR_DUTY____4      ; 4 !
         VU_START_CLEAR_2        ; 6 !
 vc32:   VU_END_CLEAR_5          ; 11 !
-        VU_START_SET_4          ; 15 !
-vs32:   VU_END_SET_5            ; 20 !
+        VU_START_SET_A_4        ; 15 !
+vs32:   VU_END_SET_A_5          ; 20 !
 s32:    SER_AVAIL_A_6           ; 26 !
         SER_LOOP_IF_NOT_AVAIL_2 ; 28 ! 29
 d32:    SER_FETCH_DEST_A_4      ; 32 !
@@ -1241,7 +1250,9 @@ break_out:
 .endif
         lda     #$01            ; Reenable IRQ and flush
         jsr     _simple_serial_set_irq
-        jmp     _simple_serial_flush
+        jsr     _simple_serial_flush
+        lda     #$2F            ; SURL_CLIENT_READY
+        jmp     _serial_putc_direct
 
         .bss
 dummy_abs: .res 1

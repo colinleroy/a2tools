@@ -37,9 +37,11 @@
 
 #ifdef __CC65__
 #pragma bss-name (push, "HGR")
-char hgr[0x2000];
+char data[STP_DATA_SIZE];
 #pragma bss-name (pop)
 #endif
+
+char **lines = NULL;
 
 char *welcome_header = 
   "        *\r\n"
@@ -152,7 +154,7 @@ char *play_directory(char *url) {
     }
 
     if (r == SAVE_DIALOG) {
-      /* Play */
+      /* Play - warning ! trashes data with HGR page */
       play_url(url);
       clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
     }

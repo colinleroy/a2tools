@@ -1,0 +1,2 @@
+#!/bin/bash
+make clean all && cd ../.. && make wozamp.dsk && mame apple2p -window -flop1 wozamp.dsk -resolution 560x384 -sl2 ssc -sl2:ssc:rs232 null_modem -bitb socket.localhost:2000 -nomouse -debug; cd src/wozamp
