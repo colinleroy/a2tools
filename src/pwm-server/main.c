@@ -95,7 +95,7 @@ int main(int argc, char *argv[]) {
   for (i = 0; i < END_OF_STREAM; i++) {
     printf("send %d\n", i);
     send_sample(i);
-    cgetc();
+    usleep(500);
     printf("send %d again\n", i);
     send_sample(i);
     cgetc();

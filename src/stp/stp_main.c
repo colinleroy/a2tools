@@ -42,6 +42,9 @@ char center_x = 30; /* 12 in 40COLS */
 
 char *welcome_header = NULL;
 
+char data[STP_DATA_SIZE];
+char **lines = NULL;
+
 #ifdef __CC65__
 #pragma code-name (push, "LC")
 #endif

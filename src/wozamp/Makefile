@@ -57,6 +57,7 @@ GCC_SOURCES = \
 #AVOID_ROM_CALLS Needed for scrolldown in 40cols mode
 CLCFLAGS = -t $(CC65_TARGET) -DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER \
 	-DAVOID_ROM_CALLS --asm-define AVOID_ROM_CALLS \
+	-DSTP_DATA_SIZE=8192 \
 	-I ../lib -I ../stp \
 	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-pwmstreamer.cfg \
 	-vm -m $(PROGRAM).map -DSURL_TO_LANGCARD -O

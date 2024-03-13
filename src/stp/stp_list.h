@@ -36,7 +36,8 @@ extern char **lines;
 extern int num_lines;
 extern int cur_line;
 extern int cur_display_line;
-extern char *data;
+extern char data[STP_DATA_SIZE];
+
 char *stp_url_enter(char *url, char *suffix);
 char *stp_url_up(char *url);
 char stp_list_scroll(signed char shift);
