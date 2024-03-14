@@ -4,12 +4,21 @@ serial_hw := z8530
 iigs_suffix := -iigs
 iigs_CFLAGS := -DIIGS --asm-define IIGS
 trgt = apple2gs
+upload_subdir := /iigs
+else
+ifdef OLDII
+serial_hw := acia
+iigs_FLAGS :=
+suffix :=
+upload_subdir :=
+CC65_TARGET := apple2
 else
 serial_hw := acia
 iigs_suffix :=
 iigs_CFLAGS :=
 CC65_TARGET = apple2enh
 trgt = apple2c0
+endif
 endif
 
 PROGRAM=wozamp

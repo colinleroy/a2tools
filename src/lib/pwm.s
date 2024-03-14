@@ -332,7 +332,7 @@ dest2:
         jmp     duty_cycle2     ;    45
 
 ; ------------------------------------------------------------------
-patch_status_register:
+patch_status_register_low:
         ; Patch ALL the serial regs!
         ; Status low byte
         lda     serial_status_reg+1
@@ -371,44 +371,6 @@ patch_status_register:
         sta     s31+1
         sta     s32+1
         sta     ssil+1
-
-        ; Status high byte
-        lda     serial_status_reg+2
-        sta     status_ptr+1
-        sta     s0+2
-        sta     s1+2
-        sta     s2+2
-        sta     s3+2
-        sta     s4+2
-        sta     s5+2
-        sta     s6+2
-        sta     s7+2
-        sta     s8+2
-        sta     s9+2
-        sta     s10+2
-        sta     s11+2
-        sta     s12+2
-        sta     s13+2
-        sta     s14+2
-        sta     s15+2
-        sta     s16+2
-        sta     s17+2
-        sta     s18+2
-        sta     s19+2
-        sta     s20+2
-        sta     s21+2
-        sta     s22+2
-        sta     s23+2
-        sta     s24+2
-        sta     s25+2
-        sta     s26+2
-        sta     s27+2
-        sta     s28+2
-        sta     s29+2
-        sta     s30+2
-        sta     s31+2
-        sta     s32+2
-        sta     ssil+2
         rts
 ; ------------------------------------------------------------------
 
@@ -432,7 +394,7 @@ dest3:
         jmp     duty_cycle3     ;    45
 
 ; ------------------------------------------------------------------
-patch_data_register:
+patch_data_register_low:
         ; Data low byte
         lda     serial_data_reg+1
         sta     data_ptr
@@ -470,44 +432,6 @@ patch_data_register:
         sta     d31+1
         sta     d32+1
         sta     dsil+1
-
-        ; Data high byte
-        lda     serial_data_reg+2
-        sta     data_ptr+1
-        sta     d0+2
-        sta     d1+2
-        sta     d2+2
-        sta     d3+2
-        sta     d4+2
-        sta     d5+2
-        sta     d6+2
-        sta     d7+2
-        sta     d8+2
-        sta     d9+2
-        sta     d10+2
-        sta     d11+2
-        sta     d12+2
-        sta     d13+2
-        sta     d14+2
-        sta     d15+2
-        sta     d16+2
-        sta     d17+2
-        sta     d18+2
-        sta     d19+2
-        sta     d20+2
-        sta     d21+2
-        sta     d22+2
-        sta     d23+2
-        sta     d24+2
-        sta     d25+2
-        sta     d26+2
-        sta     d27+2
-        sta     d28+2
-        sta     d29+2
-        sta     d30+2
-        sta     d31+2
-        sta     d32+2
-        sta     dsil+2
         rts
 ; ------------------------------------------------------------------
 
@@ -544,8 +468,10 @@ _pwm:
         ; Setup pointers
         jsr     setup_pointers
         ; Patch serial registers
-        jsr     patch_status_register
-        jsr     patch_data_register
+        jsr     patch_status_register_low
+        jsr     patch_status_register_high
+        jsr     patch_data_register_low
+        jsr     patch_data_register_high
         ; Patch vumeter address
         jsr     patch_vumeter_addr
 
@@ -669,6 +595,45 @@ dest6:
         WASTE_7                 ;    42
         jmp     duty_cycle6     ;    45
 
+patch_status_register_high:
+        ; Status high byte
+        lda     serial_status_reg+2
+        sta     status_ptr+1
+        sta     s0+2
+        sta     s1+2
+        sta     s2+2
+        sta     s3+2
+        sta     s4+2
+        sta     s5+2
+        sta     s6+2
+        sta     s7+2
+        sta     s8+2
+        sta     s9+2
+        sta     s10+2
+        sta     s11+2
+        sta     s12+2
+        sta     s13+2
+        sta     s14+2
+        sta     s15+2
+        sta     s16+2
+        sta     s17+2
+        sta     s18+2
+        sta     s19+2
+        sta     s20+2
+        sta     s21+2
+        sta     s22+2
+        sta     s23+2
+        sta     s24+2
+        sta     s25+2
+        sta     s26+2
+        sta     s27+2
+        sta     s28+2
+        sta     s29+2
+        sta     s30+2
+        sta     s31+2
+        sta     s32+2
+        sta     ssil+2
+        rts
 
 .align 256
 .assert * = _SAMPLES_BASE+$700, error
@@ -692,6 +657,45 @@ dest7:
         WASTE_7                 ;    42
         jmp     duty_cycle7     ;    45
 
+patch_data_register_high:
+        ; Data high byte
+        lda     serial_data_reg+2
+        sta     data_ptr+1
+        sta     d0+2
+        sta     d1+2
+        sta     d2+2
+        sta     d3+2
+        sta     d4+2
+        sta     d5+2
+        sta     d6+2
+        sta     d7+2
+        sta     d8+2
+        sta     d9+2
+        sta     d10+2
+        sta     d11+2
+        sta     d12+2
+        sta     d13+2
+        sta     d14+2
+        sta     d15+2
+        sta     d16+2
+        sta     d17+2
+        sta     d18+2
+        sta     d19+2
+        sta     d20+2
+        sta     d21+2
+        sta     d22+2
+        sta     d23+2
+        sta     d24+2
+        sta     d25+2
+        sta     d26+2
+        sta     d27+2
+        sta     d28+2
+        sta     d29+2
+        sta     d30+2
+        sta     d31+2
+        sta     d32+2
+        sta     dsil+2
+        rts
 
 .align 256
 .assert * = _SAMPLES_BASE+$800, error

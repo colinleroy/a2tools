@@ -87,6 +87,12 @@ static int open_file(const char *filename, enum AVMediaType type)
 
     init_base_addrs();
 
+    if (!strncasecmp("sftp://", filename, 7)) {
+      memcpy(filename, "sftp", 4);
+    } else if (!strncasecmp("ftp://", filename, 6)) {
+      memcpy(filename, "ftp", 3);
+    }
+
     if ((ret = avformat_open_input(&fmt_ctx, filename, NULL, NULL)) < 0) {
         av_log(NULL, AV_LOG_ERROR, "Cannot open input file\n");
         return ret;
