@@ -5,7 +5,7 @@
 ;
 
         .export         FVTABZ
-        .import         tmp1
+        .importzp       tmp1
         .include        "apple2.inc"
 .ifndef AVOID_ROM_CALLS
         .import         VTABZ

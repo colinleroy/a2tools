@@ -1176,9 +1176,9 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
     upload_buf = malloc(4096);
   }
 
-  if (!strncmp("sftp", url, 4)) {
+  if (!strncasecmp("sftp", url, 4)) {
     is_ftp = is_sftp = 1;
-  } else if (!strncmp("ftp", url, 3)) {
+  } else if (!strncasecmp("ftp", url, 3)) {
     is_ftp = 1;
   }
 

@@ -190,4 +190,5 @@ dist: all \
 	homectrlperso$(suffix).dsk \
 	stpperso$(suffix).dsk \
 	quicktake$(suffix).dsk \
+	wozamp$(suffix).dsk \
 	doc-dist
