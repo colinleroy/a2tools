@@ -120,7 +120,7 @@ int main(void) {
 
   surl_ping();
 
-  url = stp_get_start_url();
+  url = stp_get_start_url("Please enter the server's root URL.", "ftp://ftp.apple.asimov.net/");
   url = stp_build_login_url(url);
 
   stp_print_footer();

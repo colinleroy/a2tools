@@ -32,7 +32,7 @@ $(PROGRAM): $(SOURCES)
 		$(shell curl-config --libs) \
 		$(shell libpng-config --libs) \
 		$(shell pkg-config --libs SDL_image) \
-		-ljq -lgumbo \
+		-ljq -lgumbo -lpthread \
 		-lavfilter -lavformat -lavcodec -lavutil -lswresample \
 		-o $@
 

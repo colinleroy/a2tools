@@ -43,7 +43,7 @@ char *stp_url_up(char *url);
 char stp_list_scroll(signed char shift);
 void stp_list_search(unsigned char new_search);
 char *stp_build_login_url(char *url);
-char *stp_get_start_url(void);
+char *stp_get_start_url(char *header, char *default_url);
 void stp_update_list(char full_update);
 int stp_get_data(char *url, const surl_response **resp);
 void stp_print_header(char *url);
