@@ -80,7 +80,7 @@ static void init_base_addrs (void)
   }
 }
 
-static int open_file(const char *filename, enum AVMediaType type)
+static int open_file(char *filename, enum AVMediaType type)
 {
     const AVCodec *dec;
     int ret;
@@ -279,7 +279,7 @@ static uint8_t *dither_and_center_frame(const AVFrame *frame, AVRational time_ba
   return out_buf;
 }
 
-int ffmpeg_to_hgr_init(const char *filename, int *video_len) {
+int ffmpeg_to_hgr_init(char *filename, int *video_len) {
     int ret = 0;
 
     frame = av_frame_alloc();
@@ -397,7 +397,7 @@ end:
     return NULL;
 }
 
-int ffmpeg_to_raw_snd(const char *filename, int sample_rate,
+int ffmpeg_to_raw_snd(char *filename, int sample_rate,
                       unsigned char **data, size_t *size,
                       unsigned char **img_data, size_t *img_size) {
     int ret = 0;
