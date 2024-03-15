@@ -46,7 +46,7 @@ static char *password = NULL;
 
 extern char *welcome_header;
 
-char *stp_get_start_url(void) {
+char *stp_get_start_url(char *header, char *default_url) {
   FILE *fp;
   char *start_url = NULL;
   char *last_start_url = NULL;
@@ -74,7 +74,7 @@ char *stp_get_start_url(void) {
     if (strchr(last_password,'\n'))
     *strchr(last_password,'\n') = '\0';
   } else {
-    last_start_url = strdup("ftp://ftp.apple.asimov.net/");
+    last_start_url = strdup(default_url);
     last_login = strdup("");
     last_password = strdup("");
   }
@@ -86,8 +86,8 @@ char *stp_get_start_url(void) {
   }
 
   gotoxy(0, 14);
-  dputs("Please enter the server's root URL,\r\n"
-        "or Enter to reuse the last one:\r\n\r\n"
+  dputs(header);
+  dputs("\r\nHit Enter to reuse the last one:\r\n\r\n"
         "'");
   dputs(last_start_url);
   dputs("'\r\n\r\n\r\n"

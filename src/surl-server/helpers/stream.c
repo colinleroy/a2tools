@@ -293,6 +293,12 @@ static void send_end_of_stream(void) {
   fflush(ttyfp);
 }
 
+void *ffmpeg_decode(void *arg) {
+  decode_data *th_data = (decode_data *)arg;
+
+  ffmpeg_to_raw_snd(th_data);
+  return (void *)0;
+}
 
 int surl_stream_audio(char *url) {
   int num = 0;
@@ -304,11 +310,39 @@ int surl_stream_audio(char *url) {
   unsigned char *hgr_buf = NULL;
   size_t size = 0;
   size_t img_size = 0;
+  int ret = 0;
 
-  if (ffmpeg_to_raw_snd(url, sample_rate, &data, &size, &img_data, &img_size) != 0) {
+  pthread_t decode_thread;
+  decode_data *th_data = malloc(sizeof(decode_data));
+  int ready = 0;
+  int stop = 0;
+
+  memset(th_data, 0, sizeof(decode_data));
+  th_data->url = url;
+  th_data->sample_rate = sample_rate;
+  pthread_mutex_init(&th_data->mutex, NULL);
+
+  printf("Starting decode thread\n");
+  pthread_create(&decode_thread, NULL, *ffmpeg_decode, (void *)th_data);
+
+  while(!ready && !stop) {
+    pthread_mutex_lock(&th_data->mutex);
+    ready = th_data->data_ready;
+    stop = th_data->decoding_end;
+    pthread_mutex_unlock(&th_data->mutex);
+  }
+
+  printf("Decode thread state: %s\n", ready ? "ready" : stop ? "failure" : "unknown");
+
+  if (!ready && stop) {
     simple_serial_putc(SURL_ANSWER_STREAM_ERROR);
     return -1;
   } else {
+    pthread_mutex_lock(&th_data->mutex);
+    img_data = th_data->img_data;
+    img_size = th_data->img_size;
+    pthread_mutex_unlock(&th_data->mutex);
+
     if (img_data && img_size) {
       FILE *fp = fopen("/tmp/imgdata", "w+b");
       if (fp) {
@@ -323,12 +357,16 @@ int surl_stream_audio(char *url) {
         }
       }
     }
-    free(img_data);
-    img_data = NULL;
+
     simple_serial_putc(hgr_buf ? SURL_ANSWER_STREAM_ART : SURL_ANSWER_STREAM_START);
     if (simple_serial_getc() != SURL_CLIENT_READY) {
-      return -1;
+      pthread_mutex_lock(&th_data->mutex);
+      th_data->stop = 1;
+      pthread_mutex_unlock(&th_data->mutex);
+      ret = -1;
+      goto cleanup_thread;
     }
+
     printf("Client ready\n");
     if (hgr_buf) {
       printf("Sending image\n");
@@ -343,19 +381,27 @@ int surl_stream_audio(char *url) {
     }
   }
 
-  if (img_data && img_size) {
-    printf("Will send embedded img\n");
-    free(img_data);
-  }
+  max = 256;
+  sleep(1); /* Let ffmpeg have a bit of time to push data so we don't starve */
 
-  if (max == 0) {
-    max = 256;
-  }
+  while (1) {
+    pthread_mutex_lock(&th_data->mutex);
+    data = th_data->data;
+    size = th_data->size;
+    stop = th_data->decoding_end;
+    pthread_mutex_unlock(&th_data->mutex);
 
-  printf("Max volume: %d\n", max);
-
-  for (cur = 0; cur < size; cur++) {
+    if (cur == size) {
+      if (stop) {
+        printf("Stopping at %zu/%zu\n", cur, size);
+        break;
+      } else {
+        /* We're starved but not done :-( */
+        continue;
+      }
+    }
     send_sample(data[cur] * MAX_LEVEL/max);
+    cur++;
 
     /* Kbd input polled directly for no wait at all */
     {
@@ -391,7 +437,7 @@ int surl_stream_audio(char *url) {
             goto done;
           case SURL_METHOD_ABORT:
             printf("Connection reset\n");
-            return 0;
+            goto cleanup_thread;
         }
       }
     }
@@ -409,7 +455,18 @@ done:
   } while (c != SURL_CLIENT_READY
         && c != SURL_METHOD_ABORT);
 
-  return 0;
+cleanup_thread:
+  printf("Cleaning up decoder thread\n");
+  pthread_mutex_lock(&th_data->mutex);
+  th_data->stop = 1;
+  pthread_mutex_unlock(&th_data->mutex);
+  pthread_join(decode_thread, NULL);
+  free(th_data->img_data);
+  free(th_data->data);
+  free(th_data);
+  printf("Done\n");
+
+  return ret;
 }
 
 int surl_stream_video(char *url) {

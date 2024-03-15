@@ -6,6 +6,7 @@
 #include <sys/time.h>
 #include <sys/wait.h>
 #include <dirent.h>
+#include <pthread.h>
 
 #include "ffmpeg.h"
 #include "simple_serial.h"
@@ -34,6 +35,13 @@ static void send_end_of_stream(void) {
 
 #define ABS(x) ((x) < 0 ? -(x) : (x))
 
+void *ffmpeg_decode(void *arg) {
+  decode_data *th_data = (decode_data *)arg;
+
+  ffmpeg_to_raw_snd(th_data);
+  return (void *)0;
+}
+
 int main(int argc, char *argv[]) {
   int num = 0;
   unsigned char c;
@@ -41,11 +49,15 @@ int main(int argc, char *argv[]) {
   unsigned long secs;
   unsigned long microsecs;
   unsigned long elapsed;
-  int max = 0;
+  int max = 256;
   int i;
   unsigned char *data = NULL;
   unsigned char *img_data = NULL;
   size_t cur = 0, size = 0, img_size = 0;
+  pthread_t decode_thread;
+  decode_data *th_data = malloc(sizeof(decode_data));
+  int ready = 0;
+  int stop = 0;
 
   if (simple_serial_open() != 0) {
     printf("Can't open serial\n");
@@ -61,48 +73,37 @@ int main(int argc, char *argv[]) {
     sample_rate = atoi(argv[2]);
   }
 
-  ffmpeg_to_raw_snd(argv[1], sample_rate, &data, &size, &img_data, &img_size);
+  memset(th_data, 0, sizeof(decode_data));
+  th_data->url = argv[1];
+  th_data->sample_rate = sample_rate;
+  pthread_mutex_init(&th_data->mutex, NULL);
 
-  
-  for (cur = 0; cur < size; cur++) {
-    int offset = data[cur] - 128;
-    if (ABS(offset) > max)
-      max = ABS(offset);
-  }
-  printf("max %d\n", max);
-  if (max == 0) {
-    max = 128;
-  }
-  // for (cur = 0; cur < size; cur++) {
-  //   int offset = data[cur] - 128;
-  //   offset = offset * 128/max;
-  //   data[cur] = offset + 128;
-  // }
+  pthread_create(&decode_thread, NULL, *ffmpeg_decode, (void *)th_data);
 
-  max = 256;
-
-  FILE *fptest = fopen("5bits.raw","wb");
-  for (cur = 0; cur < size; cur++) {
-    fputc((data[cur] * MAX_LEVEL/max) * (max/MAX_LEVEL), fptest);
-  }
-  fclose(fptest);
-
-  printf("Max volume: %d\n", max);
-
-  gettimeofday(&samp_start, 0);
-
-  /* test samples */
-  for (i = 0; i < END_OF_STREAM; i++) {
-    printf("send %d\n", i);
-    send_sample(i);
-    usleep(500);
-    printf("send %d again\n", i);
-    send_sample(i);
-    cgetc();
+  printf("waiting for data\n");
+  while(!ready && !stop) {
+    pthread_mutex_lock(&th_data->mutex);
+    ready = th_data->data_ready;
+    stop = th_data->stop;
+    pthread_mutex_unlock(&th_data->mutex);
   }
 
-  for (cur = 0; cur < size; cur++) {
+  printf("starting\n");
+  cur = 0;
+  while (1) {
+    unsigned char *data = NULL;
+    size_t size;
+
+    pthread_mutex_lock(&th_data->mutex);
+    data = th_data->data;
+    size = th_data->size;
+    pthread_mutex_unlock(&th_data->mutex);
+
+    if (cur == size) {
+      break;
+    }
     send_sample(data[cur] * MAX_LEVEL/max);
+    cur++;
     if (num == sample_rate) {
       gettimeofday(&samp_end, 0);
       secs      = (samp_end.tv_sec - samp_start.tv_sec)*1000000;
@@ -144,6 +145,9 @@ int main(int argc, char *argv[]) {
             break;
           case CH_ESC:
             printf("Stop\n");
+            pthread_mutex_lock(&th_data->mutex);
+            th_data->stop = 1;
+            pthread_mutex_unlock(&th_data->mutex);
             goto done;
         }
       }
@@ -154,6 +158,8 @@ int main(int argc, char *argv[]) {
 
 done:
   send_sample(0);
-  free(data);
+  free(th_data->data);
+  free(th_data->img_data);
+  free(th_data);
   //send_end_of_stream();
 }

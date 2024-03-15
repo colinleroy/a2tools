@@ -8,7 +8,6 @@ SOURCES := main.c \
 	../lib/extended_conio.c \
 	../lib/clrzone.c \
 	../surl-server/helpers/hgr-convert.c \
-	../surl-server/helpers/stream.c \
 	../surl-server/helpers/ffmpeg.c \
 	../lib/array_sort.c
 

@@ -174,10 +174,13 @@ char *play_directory(char *url) {
   return url;
 }
 
+char navigated = 0;
+
 int main(void) {
-  char *url;
+  char *url = NULL;
   char c;
   char full_update = 1;
+
   const surl_response *resp;
 
   screensize(&scrw, &scrh);
@@ -186,7 +189,14 @@ int main(void) {
 
   runtime_once_clean();
 
-  url = stp_get_start_url();
+restart:
+  if (url) {
+    free(url);
+    url = NULL;
+  }
+  url = stp_get_start_url("Please enter an FTP server url or an\r\n"
+                          "internet stream URL.\r\n",
+                          "http://8bit.fm:8000/live");
   url = stp_build_login_url(url);
 
   stp_print_footer();
@@ -199,7 +209,10 @@ int main(void) {
         /* Play */
         play_url(url);
         clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
-        goto up_dir;
+        if (navigated)
+          goto up_dir;
+        else
+          goto restart;
       case UPDATE_LIST:
       default:
         break;
@@ -219,8 +232,10 @@ up_dir:
         full_update = 1;
         break;
       case CH_ENTER:
-        if (lines)
+        if (lines) {
+          navigated = 1;
           url = stp_url_enter(url, lines[cur_line]);
+        }
         full_update = 1;
         break;
       case 'a':
