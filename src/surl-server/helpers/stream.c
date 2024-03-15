@@ -297,10 +297,6 @@ static void send_end_of_stream(void) {
 int surl_stream_audio(char *url) {
   int num = 0;
   unsigned char c;
-  struct timeval samp_start, samp_end;
-  unsigned long secs;
-  unsigned long microsecs;
-  unsigned long elapsed;
   int max = 0;
   size_t cur = 0;
   unsigned char *data = NULL;
@@ -358,19 +354,8 @@ int surl_stream_audio(char *url) {
 
   printf("Max volume: %d\n", max);
 
-  gettimeofday(&samp_start, 0);
-
   for (cur = 0; cur < size; cur++) {
     send_sample(data[cur] * MAX_LEVEL/max);
-    if (num == sample_rate) {
-      gettimeofday(&samp_end, 0);
-      secs      = (samp_end.tv_sec - samp_start.tv_sec)*1000000;
-      microsecs = samp_end.tv_usec - samp_start.tv_usec;
-      elapsed   = secs + microsecs;
-      printf("%d samples in %luµs\n", num, elapsed);
-      num = 0;
-      gettimeofday(&samp_start, 0);
-    }
 
     /* Kbd input polled directly for no wait at all */
     {
