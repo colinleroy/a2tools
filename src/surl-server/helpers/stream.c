@@ -280,6 +280,7 @@ static int sort_by_offset(byte_diff *a, byte_diff *b) {
 static byte_diff **diffs = NULL;
 static int sample_rate = 115200 / (1+8+1);
 
+#define BUFFER_LEN    (60*10)
 #define SAMPLE_OFFSET 0x40
 #define MAX_LEVEL       32
 #define END_OF_STREAM   (MAX_LEVEL+1)
@@ -386,6 +387,13 @@ int surl_stream_audio(char *url) {
 
   while (1) {
     pthread_mutex_lock(&th_data->mutex);
+    if (cur > sample_rate*(2*BUFFER_LEN)) {
+      /* Avoid ever-expanding buffer */
+      memmove(th_data->data, th_data->data + sample_rate*BUFFER_LEN, sample_rate*BUFFER_LEN);
+      th_data->data = realloc(th_data->data, th_data->size - sample_rate*BUFFER_LEN);
+      th_data->size -= sample_rate*BUFFER_LEN;
+      cur -= sample_rate*BUFFER_LEN;
+    }
     data = th_data->data;
     size = th_data->size;
     stop = th_data->decoding_end;
