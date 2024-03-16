@@ -1126,12 +1126,12 @@ static curl_mime *setup_multipart_upload_request(char method, CURL *curl,
   return form;
 }
 
+static struct curl_slist *curl_ftp_opts = NULL;
 static int setup_ftp_delete(CURL *curl, const char *url) {
   char r = 0;
   char *path = strdup(url);
   char *o_path = path;
   char *cmd;
-  struct curl_slist *curl_ftp_opts = NULL;
 
   path = strstr(path, "://");
   if (path) {
@@ -1150,7 +1150,6 @@ static int setup_ftp_delete(CURL *curl, const char *url) {
   printf("REQ: DELE %s in %s:\n", path, url);
   free(o_path);
   r |= curl_easy_setopt(curl, CURLOPT_PROTOCOLS, CURLPROTO_FTP);
-  curl_ftp_opts = curl_slist_append(curl_ftp_opts, "*OPTS UTF8 ON");
   curl_ftp_opts = curl_slist_append(curl_ftp_opts, cmd);
   r |= curl_easy_setopt(curl, CURLOPT_QUOTE, curl_ftp_opts);
 
@@ -1252,7 +1251,6 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
   proxy_set_curl_opts(curl);
 
   if (is_ftp) {
-    struct curl_slist *curl_ftp_opts = NULL;
     curl_ftp_opts = curl_slist_append(curl_ftp_opts, "*OPTS UTF8 ON");
     r |= curl_easy_setopt(curl, CURLOPT_QUOTE, curl_ftp_opts);
   }
@@ -1364,7 +1362,10 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
       (1000*(secs - curlbuf->start_secs))+(msecs - curlbuf->start_msecs));
 
   curl_slist_free_all(curl_headers);
-
+  if (curl_ftp_opts) {
+    curl_slist_free_all(curl_ftp_opts);
+    curl_ftp_opts = NULL;
+  }
   if (form) {
     curl_mime_free(form);
     form = NULL;

@@ -626,12 +626,12 @@ end:
     pthread_mutex_unlock(&data->mutex);
     // clean up
     av_packet_unref(packet);
+    avfilter_graph_free(&filter_graph);
     avcodec_free_context(&dec_ctx);
     avformat_close_input(&fmt_ctx);
     av_frame_free(&frame);
     av_frame_free(&filt_frame);
     av_packet_free(&packet);
-
 
     if (ret < 0)
         printf("Error occurred: %s\n", av_err2str(ret));
