@@ -146,6 +146,9 @@ update_list:
     stp_update_list(full_update);
 
 keyb_input:
+    while (!kbhit()) {
+      stp_animate_list(0);
+    }
     c = cgetc();
     switch(c) {
       case CH_ESC:
