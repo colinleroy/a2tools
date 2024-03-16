@@ -731,7 +731,7 @@ static void mono_dither_burkes(SDL_Surface* s) {
     }
   }
 
-  for (y = 0; y < s->h + 4; y++) {
+  for (y = 0; y < s->h + 5; y++) {
     free(error_table[y]);
   }
   free(error_table);

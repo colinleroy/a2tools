@@ -331,6 +331,7 @@ int surl_stream_audio(char *url) {
     ready = th_data->data_ready;
     stop = th_data->decoding_end;
     pthread_mutex_unlock(&th_data->mutex);
+    usleep(100);
   }
 
   printf("Decode thread state: %s\n", ready ? "ready" : stop ? "failure" : "unknown");
