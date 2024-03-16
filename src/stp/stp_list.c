@@ -182,6 +182,9 @@ char stp_list_scroll(signed char shift) {
   signed char scroll_changed = 0, scroll_way = 0;
   char rollover = 0;
 
+  /* Unscroll potentially long name */
+  stp_animate_list(1);
+
   /* Handle list offset */
   if (shift < 0) {
     if (cur_line > 0) {
@@ -298,8 +301,50 @@ char *stp_build_login_url(char *url) {
   return full_url;
 }
 
+static int hscroll_off = 0;
+static int hscroll_dir = 1;
+void stp_animate_list(char reset) {
+  int line_off;
+  int cur_line_len;
+  if (num_lines == 0) {
+    return;
+  }
+
+  line_off = cur_line - cur_display_line;
+  if (reset) {
+    hscroll_off = 0;
+    goto reprint;
+  }
+
+  cur_line_len = strlen(lines[cur_line]);
+  if (cur_line_len > scrw - 3) {
+    if (hscroll_dir == 1 && cur_line_len - hscroll_off == scrw - 3) {
+      hscroll_dir = -1;
+      platform_msleep(500);
+    } else if (hscroll_off == 0) {
+      hscroll_dir = 1;
+      platform_msleep(500);
+    }
+
+    hscroll_off += hscroll_dir;
+
+reprint:
+    gotoxy(2, PAGE_BEGIN + line_off);
+    strncpy(tmp_buf, lines[cur_line] + hscroll_off, scrw - 3);
+    tmp_buf[scrw-3] = '\0';
+    dputs(tmp_buf);
+    if (!reset) {
+      platform_msleep(100);
+    }
+  }
+}
+
 void stp_update_list(char full_update) {
   int i;
+
+  hscroll_off = 0;
+  hscroll_dir = 1;
+
   if (full_update) {
     clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
     for (i = 0; i + cur_display_line < num_lines && i <= PAGE_HEIGHT; i++) {
@@ -413,6 +458,10 @@ char *stp_url_enter(char *url, char *suffix) {
   return url;
 }
 
+#ifdef __CC65__
+#pragma code-name (pop)
+#endif
+
 void stp_print_header(char *url) {
   char *no_pass_url = strdup(url);
 
@@ -439,7 +488,3 @@ void stp_print_header(char *url) {
   gotoxy(0, 1);
   chline(scrw);
 }
-
-#ifdef __CC65__
-#pragma code-name (pop)
-#endif

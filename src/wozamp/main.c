@@ -34,6 +34,7 @@
 #include "runtime_once_clean.h"
 #include "hgr.h"
 #include "pwm.h"
+#include "platform.h"
 
 #ifdef __CC65__
 #pragma bss-name (push, "HGR")
@@ -224,6 +225,9 @@ update_list:
 keyb_input:
     stp_print_footer();
 
+    while (!kbhit()) {
+      stp_animate_list(0);
+    }
     c = tolower(cgetc());
     switch(c) {
       case CH_ESC:

@@ -55,7 +55,8 @@ CL65SOURCES = \
  ../lib/fastirq$(suffix).s \
  ../lib/runtime_once_clean.s \
  ../lib/extrazp.s \
- ../lib/clrzone.s
+ ../lib/clrzone.s \
+ ../lib/platform_sleep.s
 
 GCC_SOURCES = \
 	../lib/strtrim.c \
