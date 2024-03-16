@@ -1,3 +1,9 @@
+a2tools (2.1.5.1) bionic; urgency=medium
+
+  * Memory fixes
+
+ -- Colin Leroy-Mira <colin@colino.net>  Wed, 13 Mar 2024 21:28:19 +0200
+
 a2tools (2.1.4.1) bionic; urgency=medium
 
   * Add sound streaming
