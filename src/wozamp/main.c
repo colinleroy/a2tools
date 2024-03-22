@@ -59,10 +59,6 @@ char center_x = 14; /* 30 in 80COLS */
 
 extern char search_buf[80];
 
-#ifdef __CC65__
-#pragma code-name (push, "LC")
-#endif
-
 void stp_print_footer(void) {
 
   clrzone(0, 22, scrw - 1, 23);
@@ -80,6 +76,9 @@ void stp_print_footer(void) {
   dputs("\r\nA:play all files in directory");
 }
 
+#ifdef __CC65__
+#pragma code-name (push, "LC")
+#endif
 
 void stp_print_result(const surl_response *response) {
   gotoxy(0, 20);
@@ -95,12 +94,83 @@ void stp_print_result(const surl_response *response) {
   }
 }
 
+void show_metadata (char *data) {
+  char *value = strchr(data, '\n');
+  char max_len;
+  if (value == NULL) {
+    return;
+  }
+  value++;
+  /* clrzone goes gotoxy */
+  if (!strncmp(data, "title\n", 6)) {
+    max_len = scrw - 6;
+    clrzone(0, 20, max_len, 20);
+  }
+  if (!strncmp(data, "track\n", 6)) {
+    max_len = 5;
+    clrzone(scrw - 6, 20, scrw - 6 + max_len, 20);
+  }
+  if (!strncmp(data, "artist\n", 6)) {
+    max_len = scrw - 1;
+    clrzone(0, 21, max_len, 21);
+  }
+  if (!strncmp(data, "album\n", 6)) {
+    max_len = scrw - 1;
+    clrzone(0, 22, max_len, 22);
+  }
+  if (strlen(value) > max_len)
+    value[max_len] = '\0';
+
+  dputs(value);
+}
+
+static unsigned char got_cover = 0;
+void get_cover_file(char *url) {
+  char *cover_url;
+  size_t len;
+
+  got_cover = 0;
+
+  len = strlen(url) + 11; /* strlen("/cover.jpg") + 1 */
+  cover_url = malloc(len);
+  if (!cover_url) {
+    /* No memory, well, too bad */
+    return;
+  }
+  if (strchr(url, '/')) {
+    strcpy(cover_url, url);
+    *strrchr(cover_url, '/') = 0;
+    strcat(cover_url, "/cover.jpg");
+
+    surl_start_request(SURL_METHOD_GET, cover_url, NULL, 0);
+    if (surl_response_ok()) {
+      simple_serial_putc(SURL_CMD_HGR);
+      simple_serial_putc(1);
+
+      if (simple_serial_getc() == SURL_ERROR_OK) {
+
+        surl_read_with_barrier((char *)&len, 2);
+        len = ntohs(len);
+
+        if (len == HGR_LEN) {
+          surl_read_with_barrier((char *)HGR_PAGE, HGR_LEN);
+          got_cover = 1;
+        }
+      }
+    }
+  }
+  free(cover_url);
+}
+
 extern char tmp_buf[80];
 static void play_url(char *url) {
   char r;
-  
+
+  /* Try to get /cover.jpg as a fallback for media with no embedded art */
+  get_cover_file(url);
+
   clrzone(0, 12, scrw - 1, 12);
-  clrzone(0, 21, scrw - 1, 23);
+  clrzone(0, 20, scrw - 1, 23);
   
   if (strchr(url, '/')) {
     strncpy(tmp_buf, strrchr(url, '/')+1, scrw - 1);
@@ -108,29 +178,56 @@ static void play_url(char *url) {
     strncpy(tmp_buf, url, scrw - 1);
   }
   tmp_buf[scrw] = '\0';
-  gotoxy(0, 21);
-  dputs("Spc:pause, Esc:stop, Left/Right:fwd/rew");
-  gotoxy(0, 22);
+  gotoxy(0, 20);
   dputs(tmp_buf);
+  //dputs("Spc:pause, Esc:stop, Left/Right:fwd/rew");
   surl_start_request(SURL_METHOD_STREAM_AUDIO, url, NULL, 0);
-  r = simple_serial_getc();
-  if (r == SURL_ANSWER_STREAM_ART) {
-    surl_read_with_barrier((char *)HGR_PAGE, HGR_LEN);
+
+  if (got_cover) {
     init_hgr(1);
     hgr_mixon();
-    simple_serial_putc(SURL_CLIENT_READY);
-    r = simple_serial_getc();
   } else {
     init_text();
   }
-  if (r != SURL_ANSWER_STREAM_START) {
-    dputs("Playback error");
-  } else {
+
+read_metadata_again:
+  r = simple_serial_getc();
+  if (r == SURL_ANSWER_STREAM_METADATA) {
+    char *metadata;
+    size_t len;
+    surl_read_with_barrier((char *)&len, 2);
+    len = ntohs(len);
+    metadata = malloc(len + 1);
+    surl_read_with_barrier(metadata, len);
+    metadata[len] = '\0';
+    show_metadata(metadata);
+    free(metadata);
     simple_serial_putc(SURL_CLIENT_READY);
-    pwm(scrw-36, 23);
+    goto read_metadata_again;
+
+  } else if (r == SURL_ANSWER_STREAM_ART) {
+    if (got_cover) {
+      simple_serial_putc(SURL_CMD_SKIP);
+    } else {
+      surl_read_with_barrier((char *)HGR_PAGE, HGR_LEN);
+      init_hgr(1);
+      hgr_mixon();
+      simple_serial_putc(SURL_CLIENT_READY);
+    }
+    goto read_metadata_again;
+
+  } else if (r == SURL_ANSWER_STREAM_START) {
+    simple_serial_putc(SURL_CLIENT_READY);
+    pwm(2, 23);
     init_text();
-    clrzone(0, 22, scrw - 1, 23);
+    clrzone(0, 20, scrw - 1, 23);
     stp_print_footer();
+
+  } else {
+    init_text();
+    gotoxy(center_x, 10);
+    dputs("Playback error");
+    sleep(1);
   }
 }
 
