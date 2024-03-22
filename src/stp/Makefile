@@ -36,22 +36,22 @@ SOURCES := stp_main.c stp_list.c stp_save.c stp_send_file.c stp_delete.c \
 	../lib/surl/surl_ping.c \
 	../lib/file_select.c \
 	../lib/path_helper.c \
-	../lib/strcasestr.c
 
 CL65SOURCES = \
 	../lib/surl/surl_read_with_barrier.s \
 	../lib/serial/serial_read_no_irq.s \
 	../lib/serial/simple_serial_io.s \
 	$(serial_hw_SOURCES) \
- ../lib/dputc.s \
- ../lib/dputs.s \
- ../lib/scroll.s \
- ../lib/FVTABZ.s \
- ../lib/fastirq$(suffix).s \
- ../lib/runtime_once_clean.s \
- ../lib/extrazp.s \
- ../lib/clrzone.s \
- ../lib/platform_sleep.s
+	../lib/dputc.s \
+	../lib/dputs.s \
+	../lib/scroll.s \
+	../lib/FVTABZ.s \
+	../lib/fastirq$(suffix).s \
+	../lib/runtime_once_clean.s \
+	../lib/extrazp.s \
+	../lib/clrzone.s \
+	../lib/platform_sleep.s \
+	../lib/strcasestr.s
 
 GCC_SOURCES = \
 	../lib/strtrim.c \

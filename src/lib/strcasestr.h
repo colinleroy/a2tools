@@ -7,5 +7,5 @@
 
 #include <string.h>
 
-char *strcasestr(register char *str, register char *substr);
+char * __fastcall__ strcasestr(const char *str, const char *substr);
 #endif
