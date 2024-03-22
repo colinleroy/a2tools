@@ -33,10 +33,13 @@ enum StpDataAction {
 };
 
 extern char **lines;
+extern char **nat_lines;
+
 extern int num_lines;
 extern int cur_line;
 extern int cur_display_line;
 extern char data[STP_DATA_SIZE];
+extern char *nat_data;
 
 char *stp_url_enter(char *url, char *suffix);
 char *stp_url_up(char *url);

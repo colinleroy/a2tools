@@ -61,6 +61,7 @@ void surl_strip_html(char strip_level) {
   simple_serial_putc(strip_level);
 
   surl_read_response_header();
+  resp->cur_pos = 0;
 }
 
 void surl_translit(char *charset) {
@@ -69,6 +70,7 @@ void surl_translit(char *charset) {
   simple_serial_putc('\n');
 
   surl_read_response_header();
+  resp->cur_pos = 0;
 }
 
 #ifdef __CC65__

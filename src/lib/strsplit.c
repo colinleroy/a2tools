@@ -24,6 +24,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "malloc0.h"
 
 #ifdef __CC65__
 #pragma static-locals(push, on)
@@ -90,7 +91,7 @@ int __fastcall__ _strsplit_int(char in_place, char *in, char split, char ***out)
     }
     ++src;
   }
-  *out = malloc(n_tokens * sizeof(char *));
+  *out = malloc0(n_tokens * sizeof(char *));
   return _strnsplit_int(in_place, in, split, *out, n_tokens);
 }
 

@@ -652,6 +652,8 @@ abort:
           printf("RESP: TRANSLIT to %zd response bytes\n", response->size);
         }
         send_response_headers(response);
+        sending_body = 1;
+        sent = 0; /* Reset cursor */
       }
 
       clock_gettime(CLOCK_REALTIME, &cur_time);
