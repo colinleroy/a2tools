@@ -505,6 +505,7 @@ end:
 int ffmpeg_to_raw_snd(decode_data *data) {
     int ret = 0;
     char audio_filter_descr[200];
+    const AVDictionaryEntry *tag = NULL;
 
     frame = av_frame_alloc();
     filt_frame = av_frame_alloc();
@@ -534,6 +535,27 @@ int ffmpeg_to_raw_snd(decode_data *data) {
     if ((ret = init_audio_filters(audio_filter_descr, data->sample_rate)) < 0) {
         goto end;
     }
+
+    pthread_mutex_lock(&data->mutex);
+    while ((tag = av_dict_get(fmt_ctx->metadata, "", tag, AV_DICT_IGNORE_SUFFIX))) {
+      if (!strcmp(tag->key, "artist")) {
+        data->artist = strdup(tag->value);
+      } else if (!strcmp(tag->key, "album")) {
+        data->album = strdup(tag->value);
+      } else if (!strcmp(tag->key, "title")) {
+        data->title = strdup(tag->value);
+      } else if (!strcmp(tag->key, "track")) {
+        data->track = strdup(tag->value);
+      }
+    }
+    if (data->artist == NULL) {
+      while ((tag = av_dict_get(fmt_ctx->metadata, "", tag, AV_DICT_IGNORE_SUFFIX))) {
+        if (!strcmp(tag->key, "album_artist")) {
+          data->artist = strdup(tag->value);
+        }
+      }
+    }
+    pthread_mutex_unlock(&data->mutex);
 
     for (int i = 0; i < fmt_ctx->nb_streams; i++) {
       if (fmt_ctx->streams[i]->disposition & AV_DISPOSITION_ATTACHED_PIC) {

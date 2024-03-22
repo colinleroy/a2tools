@@ -174,10 +174,8 @@ static void img_display(media *m, char idx, char num_images) {
       len = ntohs(len);
 
       if (len == HGR_LEN) {
-        int r = 0;
-
         toggle_legend(0);
-        surl_read_with_barrier((char *)HGR_PAGE + r, HGR_LEN);
+        surl_read_with_barrier((char *)HGR_PAGE, HGR_LEN);
 
         clrzone(0, 22, NUMCOLS-1, 23);
       } else {

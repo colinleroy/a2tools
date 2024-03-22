@@ -88,6 +88,16 @@ int main(int argc, char *argv[]) {
     pthread_mutex_unlock(&th_data->mutex);
   }
 
+  /* test samples */
+  for (i = 0; i < END_OF_STREAM; i++) {
+    printf("send %d\n", i);
+    for (argc = 20000; argc > 0; argc--)
+      send_sample(i);
+    printf("send %d again\n", i);
+    send_sample(i);
+    cgetc();
+  }
+
   printf("starting\n");
   cur = 0;
   while (1) {

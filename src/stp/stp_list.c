@@ -32,8 +32,8 @@
 #include "scroll.h"
 #include "scrollwindow.h"
 #include "strsplit.h"
-#include "runtime_once_clean.h"
 #include "strcasestr.h"
+#include "runtime_once_clean.h"
 
 #ifdef __CC65__
 #pragma code-name (push, "LOWCODE")

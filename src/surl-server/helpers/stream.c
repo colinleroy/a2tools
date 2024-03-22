@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <sys/time.h>
 #include <sys/wait.h>
+#include <arpa/inet.h>
 #include <dirent.h>
 #include <pthread.h>
 #include <poll.h>
@@ -301,6 +302,36 @@ void *ffmpeg_decode(void *arg) {
   return (void *)0;
 }
 
+#define IO_BARRIER(msg) do {                            \
+    int r;                                              \
+    printf("IO Barrier (%s)\n", msg);                   \
+    do {                                                \
+      r = simple_serial_getc();                         \
+    } while (r != SURL_CLIENT_READY                     \
+          && r != SURL_METHOD_ABORT);                   \
+} while (0)
+
+static void send_metadata(const char *key, const char *value) {
+  char *buf;
+  size_t len;
+  if (value == NULL) {
+    return;
+  }
+  len = strlen(key) + strlen("\n") + strlen(value);
+  buf = malloc(len + 1);
+  sprintf(buf, "%s\n%s", key, value);
+
+  simple_serial_putc(SURL_ANSWER_STREAM_METADATA);
+  IO_BARRIER("metadata len");
+  len = htons(len);
+  simple_serial_write_fast((char *)&len, 2);
+  IO_BARRIER("metadata");
+  simple_serial_puts(buf);
+  IO_BARRIER("metadata done");
+
+  free(buf);
+}
+
 int surl_stream_audio(char *url) {
   int num = 0;
   unsigned char c;
@@ -360,26 +391,34 @@ int surl_stream_audio(char *url) {
       }
     }
 
-    simple_serial_putc(hgr_buf ? SURL_ANSWER_STREAM_ART : SURL_ANSWER_STREAM_START);
+    pthread_mutex_lock(&th_data->mutex);
+    send_metadata("artist", th_data->artist);
+    send_metadata("album", th_data->album);
+    send_metadata("title", th_data->title);
+    send_metadata("track", th_data->track);
+    pthread_mutex_unlock(&th_data->mutex);
+
+    printf("Client ready\n");
+    if (hgr_buf) {
+      simple_serial_putc(SURL_ANSWER_STREAM_ART);
+      if (simple_serial_getc() == SURL_CLIENT_READY) {
+        printf("Sending image\n");
+        simple_serial_write_fast((char *)hgr_buf, img_size);
+        if (simple_serial_getc() != SURL_CLIENT_READY) {
+          return -1;
+        }
+      } else {
+        printf("Skip image sending\n");
+      }
+    }
+
+    simple_serial_putc(SURL_ANSWER_STREAM_START);
     if (simple_serial_getc() != SURL_CLIENT_READY) {
       pthread_mutex_lock(&th_data->mutex);
       th_data->stop = 1;
       pthread_mutex_unlock(&th_data->mutex);
       ret = -1;
       goto cleanup_thread;
-    }
-
-    printf("Client ready\n");
-    if (hgr_buf) {
-      printf("Sending image\n");
-      simple_serial_write_fast((char *)hgr_buf, img_size);
-      if (simple_serial_getc() != SURL_CLIENT_READY) {
-        return -1;
-      }
-      simple_serial_putc(SURL_ANSWER_STREAM_START);
-      if (simple_serial_getc() != SURL_CLIENT_READY) {
-        return -1;
-      }
     }
   }
 
@@ -472,6 +511,10 @@ cleanup_thread:
   pthread_join(decode_thread, NULL);
   free(th_data->img_data);
   free(th_data->data);
+  free(th_data->artist);
+  free(th_data->album);
+  free(th_data->title);
+  free(th_data->track);
   free(th_data);
   printf("Done\n");
 

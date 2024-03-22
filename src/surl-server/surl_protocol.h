@@ -1,7 +1,7 @@
 #ifndef __surl_protocol_h
 #define __surl_protocol_h
 
-#define SURL_PROTOCOL_VERSION 0x0B
+#define SURL_PROTOCOL_VERSION 0x0C
 
 #define SURL_METHOD_ABORT           ('d'|0x80)
 #define SURL_METHOD_RAW             0x05
@@ -29,8 +29,9 @@
 #define SURL_ANSWER_STREAM_LOAD     0x28
 #define SURL_ANSWER_STREAM_READY    0x29
 #define SURL_ANSWER_STREAM_ART      0x2A
+#define SURL_ANSWER_STREAM_METADATA 0x2B
 
-#define SURL_IS_ANSWER(x) ((x) >= SURL_ANSWER_WAIT && (x) <= SURL_ANSWER_STREAM_ART)
+#define SURL_IS_ANSWER(x) ((x) >= SURL_ANSWER_WAIT && (x) <= SURL_ANSWER_STREAM_METADATA)
 
 #define SURL_CLIENT_READY           0x2F
 
@@ -41,8 +42,9 @@
 #define SURL_CMD_HGR       0x34
 #define SURL_CMD_STRIPHTML 0x35
 #define SURL_CMD_TRANSLIT  0x36
+#define SURL_CMD_SKIP      0x37
 
-#define SURL_IS_CMD(x) ((x) >= SURL_CMD_SEND && (x) <= SURL_CMD_TRANSLIT)
+#define SURL_IS_CMD(x) ((x) >= SURL_CMD_SEND && (x) <= SURL_CMD_SKIP)
 
 #define SURL_ERROR_OK           0x40
 #define SURL_ERROR_NOT_FOUND    0x41

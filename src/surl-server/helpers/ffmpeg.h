@@ -26,6 +26,11 @@ typedef struct _decode_data {
   int stop;
   int decoding_ret;
   int decoding_end;
+
+  char *artist;
+  char *album;
+  char *title;
+  char *track;
 } decode_data;
 
 int ffmpeg_to_raw_snd(decode_data *data);
