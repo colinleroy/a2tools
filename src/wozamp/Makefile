@@ -24,6 +24,7 @@ endif
 PROGRAM=wozamp
 SOURCES := \
 	main.c \
+	config.c \
 	../lib/hgr.c \
 	../lib/serial/simple_serial.c \
 	../lib/serial/simple_serial_configure.c \

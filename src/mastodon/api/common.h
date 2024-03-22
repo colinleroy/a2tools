@@ -1,6 +1,8 @@
 #ifndef __common_h
 #define __common_h
 
+#include "charsets.h"
+
 typedef struct _item item;
 struct _item {
   /* common fields to status, account, notification */
@@ -11,15 +13,6 @@ struct _item {
 
 extern char *tl_endpoints[4];
 extern char *tl_filter[4];
-
-/* Refs: https://www.aivosto.com/articles/charsets-7bit.html
- * and https://archive.org/details/Apple_IIgs_Hardware_Reference_HiRes/page/n275/mode/1up?view=theater
- * FIXME make that configurable */
-#define US_CHARSET "US-ASCII"
-#define FR_CHARSET "ISO646-FR1"
-#define ES_CHARSET "ISO646-ES"
-#define IT_CHARSET "ISO646-IT"
-#define DE_CHARSET "ISO646-DE"
 
 /* Shared buffers */
 #define BUF_SIZE 255
@@ -36,7 +29,6 @@ extern char *lines[MAX_LINES_NUM];
 
 extern char *instance_url;
 extern char *oauth_token;
-extern char *translit_charset;
 extern char arobase;
 
 #define TIMELINE_ENDPOINT       "/api/v1/timelines"

@@ -7,32 +7,38 @@
 #include "platform.h"
 #include "surl.h"
 #include "extended_conio.h"
-#include "api.h"
-#include "logo.h"
 #include "charsets.h"
+#include "stp_list.h"
+#include "clrzone.h"
 
-extern char *instance_url;
-extern char *oauth_token;
-static unsigned char scrw, scrh;
+extern unsigned char scrw;
+char *translit_charset;
+char monochrome;
 
-static int save_config(char *charset, char monochrome) {
+static FILE *open_config(char *mode) {
+  FILE *fp;
+  #ifdef PRODOS_T_TXT
+  _filetype = PRODOS_T_TXT;
+  #endif
+  fp = fopen("clisettings", mode);
+  if (fp == NULL && mode[0] == 'w') {
+    cputs("Could not open settings file.\r\n");
+  }
+  return fp;
+}
+
+static int save_config(void) {
   FILE *fp;
   int r;
 
-#ifdef PRODOS_T_TXT
-  _filetype = PRODOS_T_TXT;
-#endif
-
   cputs("Saving config...\r\n");
-
-  fp = fopen("clisettings", "w");
+  fp = open_config("w");
   if (fp == NULL) {
-    cputs("Could not open settings file.\r\n");
     return -1;
   }
 
   r = fprintf(fp, "%s\n%d\n",
-                  charset, monochrome);
+                  translit_charset, monochrome);
 
   if (r < 0 || fclose(fp) != 0) {
     cputs("Could not save settings file.\r\n");
@@ -41,14 +47,38 @@ static int save_config(char *charset, char monochrome) {
   return 0;
 }
 
-static void cli() {
-  char c, monochrome;
-  char *charset;
+void load_config(void) {
+  FILE *fp;
 
-  clrscr();
-  gotoxy(0, 0);
+  translit_charset = US_CHARSET;
+  monochrome = 0;
 
-  print_logo(scrw);
+  cputs("Loading config...\r\n");
+  fp = open_config("r");
+  if (fp == NULL) {
+    return;
+  }
+
+
+  if (fp != NULL) {
+    fgets(data, 16, fp);
+    if (strchr(data, '\n')) {
+      *strchr(data, '\n') = '\0';
+    }
+#ifdef __APPLE2ENH__
+    translit_charset = strdup(data);
+#endif
+
+    fgets(data, 16, fp);
+    monochrome = (data[0] != '0');
+
+    fclose(fp);
+  }
+}
+void config(void) {
+  char c;
+
+  clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
 
 #ifdef __APPLE2ENH__
   cputs("Please choose your keyboard layout:\r\n");
@@ -62,19 +92,19 @@ charset_again:
   c = cgetc();
   switch(c) {
     case '0':
-      charset = US_CHARSET;
+      translit_charset = US_CHARSET;
       break;
     case '1':
-      charset = FR_CHARSET;
+      translit_charset = FR_CHARSET;
       break;
     case '2':
-      charset = ES_CHARSET;
+      translit_charset = ES_CHARSET;
       break;
     case '3':
-      charset = IT_CHARSET;
+      translit_charset = IT_CHARSET;
       break;
     case '4':
-      charset = DE_CHARSET;
+      translit_charset = DE_CHARSET;
       break;
     default:
       goto charset_again;
@@ -97,31 +127,5 @@ monochrome_again:
       goto monochrome_again;
   }
 
-  save_config(charset, monochrome);
-}
-
-int conf_main(int argc, char **argv) {
-  char *params = malloc0(BUF_SIZE);
-
-  if (argc < 3) {
-    cputs("Missing instance_url and/or oauth_token parameters.\n");
-  }
-
-#ifdef __APPLE2ENH__
-  videomode(VIDEOMODE_80COL);
-#endif
-  screensize(&scrw, &scrh);
-
-  instance_url = argv[1];
-  oauth_token = argv[2];
-  cli();
-
-  snprintf(params, BUF_SIZE, "%s %s", instance_url, oauth_token);
-
-#ifdef __CC65__
-  exec("mastocli", params);
-#else
-  printf("exec(mastocli %s)\n",params);
-#endif
-  exit(0);
+  save_config();
 }

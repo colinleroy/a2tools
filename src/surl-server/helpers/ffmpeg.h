@@ -13,20 +13,23 @@ unsigned char *ffmpeg_convert_frame(void);
 typedef struct _decode_data {
   pthread_mutex_t mutex;
 
+  /* params */
   char *url;
   int sample_rate;
 
+  /* data */
   unsigned char *img_data;
   size_t img_size;
-
   int data_ready;
   unsigned char *data;
   size_t size;
 
+  /* flags */
   int stop;
   int decoding_ret;
   int decoding_end;
 
+  /* metadata */
   char *artist;
   char *album;
   char *title;
