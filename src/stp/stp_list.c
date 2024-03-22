@@ -44,7 +44,10 @@ static char *url_enter(char *url, char *suffix);
 static char *login = NULL;
 static char *password = NULL;
 
+extern char *translit_charset;
 extern char *welcome_header;
+
+static char **display_lines;
 
 char *stp_get_start_url(char *header, char *default_url) {
   FILE *fp;
@@ -256,7 +259,7 @@ void stp_list_search(unsigned char new_search) {
   /* Do the actual search */
 search_from_start:
   for (i = search_from; i < num_lines; i++) {
-    if (strcasestr(lines[i], search_buf) != NULL) {
+    if (strcasestr(display_lines[i], search_buf) != NULL) {
       search_from = i;
       cur_display_line = search_from;
       cur_line = cur_display_line;
@@ -316,7 +319,7 @@ void stp_animate_list(char reset) {
     goto reprint;
   }
 
-  cur_line_len = strlen(lines[cur_line]);
+  cur_line_len = strlen(display_lines[cur_line]);
   if (cur_line_len > scrw - 3) {
     if (hscroll_dir == 1 && cur_line_len - hscroll_off == scrw - 3) {
       hscroll_dir = -1;
@@ -330,7 +333,7 @@ void stp_animate_list(char reset) {
 
 reprint:
     gotoxy(2, PAGE_BEGIN + line_off);
-    strncpy(tmp_buf, lines[cur_line] + hscroll_off, scrw - 3);
+    strncpy(tmp_buf, display_lines[cur_line] + hscroll_off, scrw - 3);
     tmp_buf[scrw-3] = '\0';
     dputs(tmp_buf);
     if (!reset) {
@@ -349,13 +352,13 @@ void stp_update_list(char full_update) {
     clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
     for (i = 0; i + cur_display_line < num_lines && i <= PAGE_HEIGHT; i++) {
       gotoxy(2, i + PAGE_BEGIN);
-      strncpy(tmp_buf, lines[i + cur_display_line], scrw - 3);
+      strncpy(tmp_buf, display_lines[i + cur_display_line], scrw - 3);
       tmp_buf[scrw-3] = '\0';
       dputs(tmp_buf);
     }
   } else if (cur_line < num_lines) {
     gotoxy (2, PAGE_BEGIN + cur_line - cur_display_line);
-    strncpy(tmp_buf, lines[cur_line], scrw - 3);
+    strncpy(tmp_buf, display_lines[cur_line], scrw - 3);
     tmp_buf[scrw-3] = '\0';
     dputs(tmp_buf);
 
@@ -367,8 +370,6 @@ void stp_update_list(char full_update) {
 
 extern char center_x;
 int stp_get_data(char *url, const surl_response **resp) {
-  size_t r;
-
   *resp = NULL;
   num_lines = 0;
   cur_line = 0;
@@ -377,6 +378,13 @@ int stp_get_data(char *url, const surl_response **resp) {
   if (lines)
     free(lines);
   lines = NULL;
+  if (nat_lines)
+    free(nat_lines);
+  if (nat_data)
+    free(nat_data);
+  lines = NULL;
+  nat_lines = NULL;
+  nat_data = NULL;
 
   clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
   gotoxy(center_x, 12);
@@ -406,19 +414,29 @@ int stp_get_data(char *url, const surl_response **resp) {
       dputs("Not enough memory :-(");
       return KEYBOARD_INPUT;
     }
-    r = surl_receive_data(data, (*resp)->size);
+    surl_receive_data(data, (*resp)->size);
+
+    surl_translit(translit_charset);
+    if ((*resp)->code / 100 == 2) {
+      nat_data = malloc((*resp)->size);
+      if (nat_data) {
+        surl_receive_data(nat_data, (*resp)->size);
+      } else {
+        simple_serial_putc(SURL_METHOD_ABORT);
+      }
+    }
   }
 
   stp_print_header(url);
 
-  if (r < (*resp)->size) {
-    gotoxy(center_x - 7, 12);
-    dputs("Can not load response.");
-    return KEYBOARD_INPUT;
-  }
-
   num_lines = strsplit_in_place(data, '\n', &lines);
-
+  if (nat_data) {
+    strsplit_in_place(nat_data, '\n', &nat_lines);
+    display_lines = nat_lines;
+  } else {
+    nat_lines = NULL;
+    display_lines = lines;
+  }
   return UPDATE_LIST;
 }
 

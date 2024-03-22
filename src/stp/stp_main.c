@@ -36,14 +36,19 @@
 #include "scrollwindow.h"
 #include "strsplit.h"
 #include "runtime_once_clean.h"
+#include "charsets.h"
 
 unsigned char scrw = 255, scrh = 255;
 char center_x = 30; /* 12 in 40COLS */
 
 char *welcome_header = NULL;
 
+char *translit_charset = US_CHARSET;
+
 char data[STP_DATA_SIZE];
 char **lines = NULL;
+char *nat_data = NULL;
+char **nat_lines = NULL;
 
 #ifdef __CC65__
 #pragma code-name (push, "LC")

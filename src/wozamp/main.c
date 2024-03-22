@@ -43,7 +43,10 @@ char data[STP_DATA_SIZE];
 #pragma bss-name (pop)
 #endif
 
+char *nat_data = NULL;
+
 char **lines = NULL;
+char **nat_lines = NULL;
 
 char *welcome_header = 
   "*   *  ***  *****   *    * *  ****\r\n"
@@ -290,7 +293,6 @@ int main(void) {
   surl_ping();
 #ifdef __CC65__
   printf("Mem available: %zub\n", _heapmaxavail());
-  cgetc();
 #endif
   runtime_once_clean();
 
