@@ -21,6 +21,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <ctype.h>
+#include "config.h"
 #include "surl.h"
 #include "simple_serial.h"
 #include "extended_conio.h"
@@ -65,9 +66,9 @@ void stp_print_footer(void) {
 
   gotoxy(0, 22);
   #ifdef __APPLE2ENH__
-  dputs("Up/Down/Enter/Esc:nav, S:search");
+  dputs("Up,Down,Enter,Esc:nav /:search C:config");
   #else
-  dputs("U/J/Enter/Esc:nav, S:search");
+  dputs("U,J,Enter,Esc:nav /:search C:config");
   #endif
   if (search_buf[0]) {
     dputs(", N:next");
@@ -75,10 +76,6 @@ void stp_print_footer(void) {
 
   dputs("\r\nA:play all files in directory");
 }
-
-#ifdef __CC65__
-#pragma code-name (push, "LC")
-#endif
 
 void stp_print_result(const surl_response *response) {
   gotoxy(0, 20);
@@ -93,6 +90,10 @@ void stp_print_result(const surl_response *response) {
             response->size);
   }
 }
+
+#ifdef __CC65__
+#pragma code-name (push, "LC")
+#endif
 
 void show_metadata (char *data) {
   char *value = strchr(data, '\n');
@@ -145,7 +146,7 @@ void get_cover_file(char *url) {
     surl_start_request(SURL_METHOD_GET, cover_url, NULL, 0);
     if (surl_response_ok()) {
       simple_serial_putc(SURL_CMD_HGR);
-      simple_serial_putc(1);
+      simple_serial_putc(monochrome);
 
       if (simple_serial_getc() == SURL_ERROR_OK) {
 
@@ -182,6 +183,9 @@ static void play_url(char *url) {
   dputs(tmp_buf);
   //dputs("Spc:pause, Esc:stop, Left/Right:fwd/rew");
   surl_start_request(SURL_METHOD_STREAM_AUDIO, url, NULL, 0);
+  simple_serial_write(translit_charset, strlen(translit_charset));
+  simple_serial_putc('\n');
+  simple_serial_putc(monochrome);
 
   if (got_cover) {
     init_hgr(1);
@@ -284,8 +288,13 @@ int main(void) {
   screensize(&scrw, &scrh);
 
   surl_ping();
-
+#ifdef __CC65__
+  printf("Mem available: %zub\n", _heapmaxavail());
+  cgetc();
+#endif
   runtime_once_clean();
+
+  load_config();
 
 restart:
   if (url) {
@@ -316,6 +325,7 @@ restart:
         break;
     }
 
+    full_update = 1;
 update_list:
     stp_update_list(full_update);
 
@@ -337,11 +347,9 @@ up_dir:
           navigated = 1;
           url = stp_url_enter(url, lines[cur_line]);
         }
-        full_update = 1;
         break;
       case 'a':
         url = play_directory(url);
-        full_update = 1;
         break;
 #ifdef __APPLE2ENH__
       case CH_CURS_UP:
@@ -361,11 +369,14 @@ up_dir:
         stp_list_search(1);
         stp_print_header(url);
         goto keyb_input;
+      case 'c':
+        config();
+        break;
       case 'n':
         stp_list_search(0);
         goto keyb_input;
       default:
-      goto update_list;
+        goto update_list;
     }
   }
 

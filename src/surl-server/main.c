@@ -172,9 +172,10 @@ static void send_response_headers(curl_buffer *response) {
   simple_serial_putc('\0');
 }
 
+char reqbuf[BUFSIZE];
+
 int main(int argc, char **argv)
 {
-  char reqbuf[BUFSIZE];
   unsigned char method = SURL_METHOD_ABORT;
   char *url = NULL;
   char cmd;
@@ -1213,8 +1214,14 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
     surl_stream_video(url);
     return NULL;
   } else if (method == SURL_METHOD_STREAM_AUDIO) {
+    char *translit;
+    char monochrome;
     simple_serial_putc(SURL_ANSWER_WAIT);
-    surl_stream_audio(url);
+    simple_serial_gets(reqbuf, BUFSIZE);
+    translit = reqbuf;
+    monochrome = simple_serial_getc();
+
+    surl_stream_audio(url, translit, monochrome);
     return NULL;
   }
 

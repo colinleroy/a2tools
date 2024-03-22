@@ -15,6 +15,7 @@
 #include "ffmpeg.h"
 #include "array_sort.h"
 #include "hgr-convert.h"
+#include "char-convert.h"
 
 #define MAX_OFFSET 126
 #define NUM_BASES  (HGR_LEN/MAX_OFFSET)+1
@@ -311,15 +312,16 @@ void *ffmpeg_decode(void *arg) {
           && r != SURL_METHOD_ABORT);                   \
 } while (0)
 
-static void send_metadata(const char *key, const char *value) {
-  char *buf;
-  size_t len;
+static void send_metadata(char *key, char *value, char *translit) {
+  char *buf, *translit_buf;
+  size_t len, l;
   if (value == NULL) {
     return;
   }
-  len = strlen(key) + strlen("\n") + strlen(value);
+  translit_buf = do_charset_convert(value, OUTGOING, translit, 0, &l);
+  len = strlen(key) + strlen("\n") + l;
   buf = malloc(len + 1);
-  sprintf(buf, "%s\n%s", key, value);
+  sprintf(buf, "%s\n%s", key, translit_buf);
 
   simple_serial_putc(SURL_ANSWER_STREAM_METADATA);
   IO_BARRIER("metadata len");
@@ -329,10 +331,11 @@ static void send_metadata(const char *key, const char *value) {
   simple_serial_puts(buf);
   IO_BARRIER("metadata done");
 
+  free(translit_buf);
   free(buf);
 }
 
-int surl_stream_audio(char *url) {
+int surl_stream_audio(char *url, char *translit, char monochrome) {
   int num = 0;
   unsigned char c;
   int max = 0;
@@ -354,7 +357,7 @@ int surl_stream_audio(char *url) {
   th_data->sample_rate = sample_rate;
   pthread_mutex_init(&th_data->mutex, NULL);
 
-  printf("Starting decode thread\n");
+  printf("Starting decode thread (charset %s, monochrome %d)\n", translit, monochrome);
   pthread_create(&decode_thread, NULL, *ffmpeg_decode, (void *)th_data);
 
   while(!ready && !stop) {
@@ -381,7 +384,7 @@ int surl_stream_audio(char *url) {
       if (fp) {
         if (fwrite(img_data, 1, img_size, fp) == img_size) {
           fclose(fp);
-          hgr_buf = sdl_to_hgr("/tmp/imgdata", 1, 0, &img_size, 0, 0);
+          hgr_buf = sdl_to_hgr("/tmp/imgdata", monochrome, 0, &img_size, 0, 0);
           if (img_size != HGR_LEN) {
             hgr_buf = NULL;
           }
@@ -392,10 +395,10 @@ int surl_stream_audio(char *url) {
     }
 
     pthread_mutex_lock(&th_data->mutex);
-    send_metadata("artist", th_data->artist);
-    send_metadata("album", th_data->album);
-    send_metadata("title", th_data->title);
-    send_metadata("track", th_data->track);
+    send_metadata("artist", th_data->artist, translit);
+    send_metadata("album", th_data->album, translit);
+    send_metadata("title", th_data->title, translit);
+    send_metadata("track", th_data->track, translit);
     pthread_mutex_unlock(&th_data->mutex);
 
     printf("Client ready\n");
