@@ -494,7 +494,7 @@ int surl_stream_audio(char *url) {
   }
 
 done:
-  send_sample(0);
+  send_sample(MAX_LEVEL/2);
   send_end_of_stream();
 
   do {

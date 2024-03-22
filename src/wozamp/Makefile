@@ -36,8 +36,7 @@ SOURCES := \
 	../lib/dgets.c \
 	../lib/scrollwindow.c \
 	../lib/strsplit.c \
-	../stp/stp_list.c \
-	../lib/strcasestr.c
+	../stp/stp_list.c
 
 CL65SOURCES = \
 	../lib/pwm.s \
@@ -48,15 +47,16 @@ CL65SOURCES = \
 	../lib/serial/$(serial_hw)/common.s \
 	../lib/serial/$(serial_hw)/control.s \
 	../lib/serial/$(serial_hw)/no_irq.s \
- ../lib/dputc.s \
- ../lib/dputs.s \
- ../lib/scroll.s \
- ../lib/FVTABZ.s \
- ../lib/fastirq$(suffix).s \
- ../lib/runtime_once_clean.s \
- ../lib/extrazp.s \
- ../lib/clrzone.s \
- ../lib/platform_sleep.s
+	../lib/dputc.s \
+	../lib/dputs.s \
+	../lib/scroll.s \
+	../lib/FVTABZ.s \
+	../lib/fastirq$(suffix).s \
+	../lib/runtime_once_clean.s \
+	../lib/extrazp.s \
+	../lib/clrzone.s \
+	../lib/platform_sleep.s \
+	../lib/strcasestr.s
 
 GCC_SOURCES = \
 	../lib/strtrim.c \
