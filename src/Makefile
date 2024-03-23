@@ -1,4 +1,4 @@
-SUBDIRS = lib a2trace surl-server bad-apple pwm-server \
+SUBDIRS = lib a2trace surl-server pwm-server \
 	homecontrol-client mastodon telnet surl stp quicktake image-viewer \
 	wozamp
 INSTALL_SUBDIRS = a2trace surl-server
