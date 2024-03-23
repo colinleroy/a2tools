@@ -635,7 +635,7 @@ abort:
         if (tmp) {
           free(response->buffer);
           response->buffer = tmp;
-          response->size = strlen(response->buffer);
+          response->size = strlen(response->buffer) + 1;
           printf("RESP: HTML_STRIP to %zd response bytes\n", response->size);
         }
         send_response_headers(response);
@@ -648,7 +648,7 @@ abort:
         if (tmp) {
           free(response->buffer);
           response->buffer = tmp;
-          response->size = strlen(response->buffer);
+          response->size = strlen(response->buffer) + 1;
           printf("RESP: TRANSLIT to %zd response bytes\n", response->size);
         }
         send_response_headers(response);

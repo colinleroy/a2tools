@@ -48,7 +48,7 @@ char *nat_data = NULL;
 char **lines = NULL;
 char **nat_lines = NULL;
 
-char *welcome_header = 
+char *welcome_header =
   "*   *  ***  *****   *    * *  ****\r\n"
   "*   * *   *    *   * *  * * * *   *\r\n"
   "*   * *   *   *   ***** *   * ****\r\n"
@@ -62,6 +62,7 @@ unsigned char scrw = 255, scrh = 255;
 char center_x = 14; /* 30 in 80COLS */
 
 extern char search_buf[80];
+extern char **display_lines;
 
 void stp_print_footer(void) {
 
@@ -73,11 +74,11 @@ void stp_print_footer(void) {
   #else
   dputs("U,J,Enter,Esc:nav /:search C:config");
   #endif
-  if (search_buf[0]) {
-    dputs(", N:next");
-  }
 
   dputs("\r\nA:play all files in directory");
+  if (search_buf[0]) {
+    dputs(" N:next");
+  }
 }
 
 void stp_print_result(const surl_response *response) {
@@ -93,10 +94,6 @@ void stp_print_result(const surl_response *response) {
             response->size);
   }
 }
-
-#ifdef __CC65__
-#pragma code-name (push, "LC")
-#endif
 
 void show_metadata (char *data) {
   char *value = strchr(data, '\n');
@@ -127,6 +124,11 @@ void show_metadata (char *data) {
 
   dputs(value);
 }
+
+#ifdef __CC65__
+#pragma code-name (push, "LC")
+#endif
+
 
 static unsigned char got_cover = 0;
 void get_cover_file(char *url) {
@@ -167,7 +169,7 @@ void get_cover_file(char *url) {
 }
 
 extern char tmp_buf[80];
-static void play_url(char *url) {
+static void play_url(char *url, char *filename) {
   char r;
 
   /* Try to get /cover.jpg as a fallback for media with no embedded art */
@@ -175,12 +177,8 @@ static void play_url(char *url) {
 
   clrzone(0, 12, scrw - 1, 12);
   clrzone(0, 20, scrw - 1, 23);
-  
-  if (strchr(url, '/')) {
-    strncpy(tmp_buf, strrchr(url, '/')+1, scrw - 1);
-  } else {
-    strncpy(tmp_buf, url, scrw - 1);
-  }
+ 
+  strncpy(tmp_buf, filename ? filename : "Unknown file", scrw - 1);
   tmp_buf[scrw] = '\0';
   gotoxy(0, 20);
   dputs(tmp_buf);
@@ -238,11 +236,6 @@ read_metadata_again:
   }
 }
 
-#ifdef __CC65__
-#pragma code-name (pop)
-#pragma code-name (push, "LC")
-#endif
-
 char *play_directory(char *url) {
   const surl_response *resp;
   int dir_index;
@@ -250,6 +243,7 @@ char *play_directory(char *url) {
   for (dir_index = 0; dir_index < num_lines; dir_index++) {
     int r;
     url = stp_url_enter(url, lines[dir_index]);
+    stp_print_header(display_lines[dir_index], URL_ADD);
 
     r = stp_get_data(url, &resp);
 
@@ -259,7 +253,7 @@ char *play_directory(char *url) {
 
     if (r == SAVE_DIALOG) {
       /* Play - warning ! trashes data with HGR page */
-      play_url(url);
+      play_url(url, display_lines[dir_index]);
       clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
     }
 
@@ -267,9 +261,12 @@ char *play_directory(char *url) {
     url = stp_url_up(url);
     stp_get_data(url, &resp);
 
+
     if (!resp || resp->code / 100 != 2) {
       break;
     }
+
+    stp_print_header(NULL, URL_UP);
 
     /* Stop loop if user pressed esc a second time */
     if (kbhit() && cgetc() == CH_ESC) {
@@ -308,15 +305,19 @@ restart:
                           "http://8bit.fm:8000/live");
   url = stp_build_login_url(url);
 
+  stp_print_header(url, URL_SET);
+
   stp_print_footer();
 
   while(1) {
+    char *prev_filename = (cur_line < num_lines ?
+                            strdup(display_lines[cur_line]) : NULL);
     switch (stp_get_data(url, &resp)) {
       case KEYBOARD_INPUT:
         goto keyb_input;
       case SAVE_DIALOG:
         /* Play */
-        play_url(url);
+        play_url(url, prev_filename);
         clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
         if (navigated)
           goto up_dir;
@@ -325,6 +326,9 @@ restart:
       case UPDATE_LIST:
       default:
         break;
+    }
+    if (prev_filename) {
+      free(prev_filename);
     }
 
     full_update = 1;
@@ -342,12 +346,15 @@ keyb_input:
       case CH_ESC:
 up_dir:
         url = stp_url_up(url);
+        stp_print_header(NULL, URL_UP);
+
         full_update = 1;
         break;
       case CH_ENTER:
         if (lines) {
           navigated = 1;
           url = stp_url_enter(url, lines[cur_line]);
+          stp_print_header(display_lines[cur_line], URL_ADD);
         }
         break;
       case 'a':
@@ -369,7 +376,7 @@ up_dir:
         goto update_list;
       case '/':
         stp_list_search(1);
-        stp_print_header(url);
+        stp_print_header(NULL, URL_RESTORE);
         goto keyb_input;
       case 'c':
         config();

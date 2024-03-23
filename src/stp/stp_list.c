@@ -47,7 +47,7 @@ static char *password = NULL;
 extern char *translit_charset;
 extern char *welcome_header;
 
-static char **display_lines;
+char **display_lines;
 
 char *stp_get_start_url(char *header, char *default_url) {
   FILE *fp;
@@ -418,7 +418,7 @@ int stp_get_data(char *url, const surl_response **resp) {
 
     surl_translit(translit_charset);
     if ((*resp)->code / 100 == 2) {
-      nat_data = malloc((*resp)->size);
+      nat_data = malloc((*resp)->size + 1);
       if (nat_data) {
         surl_receive_data(nat_data, (*resp)->size);
       } else {
@@ -426,8 +426,6 @@ int stp_get_data(char *url, const surl_response **resp) {
       }
     }
   }
-
-  stp_print_header(url);
 
   num_lines = strsplit_in_place(data, '\n', &lines);
   if (nat_data) {
@@ -480,8 +478,36 @@ char *stp_url_enter(char *url, char *suffix) {
 #pragma code-name (pop)
 #endif
 
-void stp_print_header(char *url) {
-  char *no_pass_url = strdup(url);
+void stp_print_header(char *url, enum HeaderUrlAction action) {
+  char *no_pass_url = NULL;
+  static char *header_url = NULL;
+
+  if (header_url == NULL) {
+    if (action != URL_SET)
+      return;
+    else
+      header_url = strdup(url);
+  }
+
+  no_pass_url = strdup(header_url);
+  switch(action) {
+    case URL_RESTORE:
+    case URL_SET:
+      break;
+    case URL_ADD:
+      no_pass_url = realloc(no_pass_url, strlen(header_url) + strlen(url) + 3);
+      if (header_url[strlen(header_url)-1] != '/')
+        strcat(no_pass_url, "/");
+      strcat(no_pass_url, url);
+      break;
+    case URL_UP:
+      if (strchr(no_pass_url, '/'))
+        *(strrchr(no_pass_url, '/')) = '\0';
+      break;
+  }
+
+  free(header_url);
+  header_url = strdup(no_pass_url);
 
   if (strchr(no_pass_url, ':') != strrchr(no_pass_url,':')) {
     /* Means there's a login */

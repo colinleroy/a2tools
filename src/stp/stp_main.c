@@ -49,6 +49,7 @@ char data[STP_DATA_SIZE];
 char **lines = NULL;
 char *nat_data = NULL;
 char **nat_lines = NULL;
+extern char **display_lines;
 
 #ifdef __CC65__
 #pragma code-name (push, "LC")
@@ -64,6 +65,7 @@ static void get_all(const char *url, char **lines, int n_lines) {
     const surl_response *resp = NULL;
     char *cur_url = strdup(url);
     cur_url = stp_url_enter(cur_url, lines[i]);
+    stp_print_header(display_lines[i], URL_ADD);
     resp = surl_start_request(SURL_METHOD_GET, cur_url, NULL, 0);
 
     stp_print_result(resp);
@@ -81,6 +83,7 @@ static void get_all(const char *url, char **lines, int n_lines) {
     } else {
       r = -1;
     }
+    stp_print_header(NULL, URL_UP);
     free(cur_url);
     if (r != 0) {
       break;
@@ -127,6 +130,7 @@ int main(void) {
 
   url = stp_get_start_url("Please enter the server's root URL.", "ftp://ftp.apple.asimov.net/");
   url = stp_build_login_url(url);
+  stp_print_header(url, URL_SET);
 
   stp_print_footer();
   surl_set_time();
@@ -159,11 +163,14 @@ keyb_input:
       case CH_ESC:
 up_dir:
         url = stp_url_up(url);
+        stp_print_header(NULL, URL_UP);
         full_update = 1;
         break;
       case CH_ENTER:
-        if (lines)
+        if (lines) {
           url = stp_url_enter(url, lines[cur_line]);
+          stp_print_header(display_lines[cur_line], URL_ADD);
+        }
         full_update = 1;
         break;
       case 'a':
