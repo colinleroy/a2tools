@@ -335,7 +335,7 @@ static void send_metadata(char *key, char *value, char *translit) {
   free(buf);
 }
 
-int surl_stream_audio(char *url, char *translit, char monochrome) {
+int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightScale scale) {
   int num = 0;
   unsigned char c;
   int max = 0;
@@ -357,7 +357,7 @@ int surl_stream_audio(char *url, char *translit, char monochrome) {
   th_data->sample_rate = sample_rate;
   pthread_mutex_init(&th_data->mutex, NULL);
 
-  printf("Starting decode thread (charset %s, monochrome %d)\n", translit, monochrome);
+  printf("Starting decode thread (charset %s, monochrome %d, scale %d)\n", translit, monochrome, scale);
   pthread_create(&decode_thread, NULL, *ffmpeg_decode, (void *)th_data);
 
   while(!ready && !stop) {
@@ -384,7 +384,7 @@ int surl_stream_audio(char *url, char *translit, char monochrome) {
       if (fp) {
         if (fwrite(img_data, 1, img_size, fp) == img_size) {
           fclose(fp);
-          hgr_buf = sdl_to_hgr("/tmp/imgdata", monochrome, 0, &img_size, 0, 0);
+          hgr_buf = sdl_to_hgr("/tmp/imgdata", monochrome, 0, &img_size, 0, scale);
           if (img_size != HGR_LEN) {
             hgr_buf = NULL;
           }

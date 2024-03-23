@@ -31,6 +31,7 @@
 #include <time.h>
 #include <assert.h>
 
+#include "../surl_protocol.h"
 #include "jpeglib.h"
 #include "png.h"
 #include <SDL_image.h>
@@ -361,7 +362,7 @@ static void color_dither (SDL_Surface *src)
 }
 
 
-static void sdl_image_scale (SDL_Surface *src, SDL_Surface *dst, int w, int h, float asprat)
+static void sdl_image_scale (SDL_Surface *src, SDL_Surface *dst, int w, int h, float asprat, int center_y)
 {
   int sw, sh, bx, sx, sy;
   Uint8 red, green, blue;
@@ -402,7 +403,7 @@ static void sdl_image_scale (SDL_Surface *src, SDL_Surface *dst, int w, int h, f
     sw = (int)(srcw / scalefactor / asprat);
     sh = (int)(srch / scalefactor);
     sx = (int)(((float)dst->w - sw) / 2);
-    sy = (int)(((float)dst->h - sh) / 2);
+    sy = center_y ? (int)(((float)dst->h - sh) / 2) : 0;
 
     xfactor = scalefactor * asprat;
 
@@ -780,7 +781,7 @@ static int sdl_mono_hgr(SDL_Surface *src, unsigned char *hgr) {
   return 0x2000;
 }
 
-unsigned char *sdl_to_hgr(const char *filename, char monochrome, char save_preview, size_t *len, char bayer_dither, char small) {
+unsigned char *sdl_to_hgr(const char *filename, char monochrome, char save_preview, size_t *len, char bayer_dither, enum HeightScale size) {
   SDL_Surface *image, *resized;
   int dst_w, dst_h;
   init_base_addrs();
@@ -803,11 +804,14 @@ unsigned char *sdl_to_hgr(const char *filename, char monochrome, char save_previ
   dst_h = 192;
   resized = SDL_CreateRGBSurface (0, dst_w, dst_h, 32, 0, 0, 0, 0);
 
-  if (small) {
+  if (size == HGR_SCALE_HALF) {
     dst_w /= 2;
     dst_h /= 2;
+  } else if (size == HGR_SCALE_MIXHGR) {
+    dst_w = 234;
+    dst_h = 160;
   }
-  sdl_image_scale(image, resized, dst_w, dst_h, monochrome ? 0.952381 : 1.904762);
+  sdl_image_scale(image, resized, dst_w, dst_h, monochrome ? 0.952381 : 1.904762, size != HGR_SCALE_MIXHGR);
   if (monochrome) {
 
     if (bayer_dither)

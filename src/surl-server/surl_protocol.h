@@ -65,4 +65,11 @@
 #define SURL_HTMLSTRIP_NONE       0
 #define SURL_HTMLSTRIP_FULL       1
 #define SURL_HTMLSTRIP_WITH_LINKS 2
+
+enum HeightScale {
+  HGR_SCALE_FULL,
+  HGR_SCALE_HALF,
+  HGR_SCALE_MIXHGR
+};
+
 #endif

@@ -402,12 +402,14 @@ new_req:
         } else if (cmd == SURL_CMD_HGR) {
           /* Client wants an image
            * Input: char: Monochrome (\1) or color (\0)
+           *        char: scale (full / small / mixhgr)
            */
           char monochrome = simple_serial_getc();
-          printf("RESP: converting to %s HGR\n", monochrome?"monochrome":"color");
+          enum HeightScale scale = simple_serial_getc();
+          printf("RESP: converting to %s HGR (%d)\n", monochrome?"monochrome":"color", scale);
           response->hgr_buf = sdl_to_hgr(
               dump_response_to_file(response->buffer, response->size),
-              monochrome, 0, &(response->hgr_len), 0, 0);
+              monochrome, 0, &(response->hgr_len), 0, scale);
         } else if (cmd == SURL_CMD_STRIPHTML) {
           /* Strip the HTML in a response, and update size
            * Input: char: Strip level
@@ -1218,12 +1220,13 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
   } else if (method == SURL_METHOD_STREAM_AUDIO) {
     char *translit;
     char monochrome;
+    enum HeightScale scale;
     simple_serial_putc(SURL_ANSWER_WAIT);
     simple_serial_gets(reqbuf, BUFSIZE);
     translit = reqbuf;
     monochrome = simple_serial_getc();
-
-    surl_stream_audio(url, translit, monochrome);
+    scale = simple_serial_getc();
+    surl_stream_audio(url, translit, monochrome, scale);
     return NULL;
   }
 

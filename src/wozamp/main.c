@@ -152,7 +152,7 @@ void get_cover_file(char *url) {
     if (surl_response_ok()) {
       simple_serial_putc(SURL_CMD_HGR);
       simple_serial_putc(monochrome);
-
+      simple_serial_putc(HGR_SCALE_MIXHGR);
       if (simple_serial_getc() == SURL_ERROR_OK) {
 
         surl_read_with_barrier((char *)&len, 2);
@@ -187,6 +187,7 @@ static void play_url(char *url, char *filename) {
   simple_serial_write(translit_charset, strlen(translit_charset));
   simple_serial_putc('\n');
   simple_serial_putc(monochrome);
+  simple_serial_putc(HGR_SCALE_MIXHGR);
 
   if (got_cover) {
     init_hgr(1);
