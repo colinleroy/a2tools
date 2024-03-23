@@ -90,17 +90,13 @@ char *stp_get_start_url(char *header, char *default_url) {
 
   gotoxy(0, 14);
   dputs(header);
-  dputs("\r\nHit Enter to reuse the last one:\r\n\r\n"
-        "'");
-  dputs(last_start_url);
-  dputs("'\r\n\r\n\r\n"
-        "URL: ");
+  dputs("\r\n\r\nURL: ");
 
   start_url = malloc(BUFSIZE + 1);
-  start_url[0] = '\0';
+  strcpy(start_url, last_start_url);
   dget_text(start_url, BUFSIZE, NULL, 0);
 
-  if (*start_url == '\0') {
+  if (*start_url == '\0' || !strcmp(start_url, last_start_url)) {
     free(start_url);
     start_url = last_start_url;
   } else {
@@ -452,6 +448,8 @@ char *stp_url_up(char *url) {
     *(last_slash + 1) = '\0';
   }
 
+  search_buf[0] = '\0';
+
   return url;
 }
 
@@ -470,6 +468,7 @@ char *stp_url_enter(char *url, char *suffix) {
     url_len++;
   }
   strcpy(url + url_len, suffix);
+  search_buf[0] = '\0';
 
   return url;
 }
