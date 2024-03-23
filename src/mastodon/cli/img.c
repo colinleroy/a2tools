@@ -167,6 +167,7 @@ static void img_display(media *m, char idx, char num_images) {
 
     simple_serial_putc(SURL_CMD_HGR);
     simple_serial_putc(monochrome);
+    simple_serial_putc(HGR_SCALE_FULL);
 
     if (simple_serial_getc() == SURL_ERROR_OK) {
 
