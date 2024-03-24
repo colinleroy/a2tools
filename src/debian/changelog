@@ -1,3 +1,9 @@
+a2tools (2.2.0.1) bionic; urgency=medium
+
+  * New protocol (12) to allow more HGR / streaming parameters
+
+ -- Colin Leroy-Mira <colin@colino.net>  Sun, 24 Mar 2024 21:28:19 +0200
+
 a2tools (2.1.5.1) bionic; urgency=medium
 
   * Memory fixes

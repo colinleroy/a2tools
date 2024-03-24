@@ -8,8 +8,10 @@ fi
 rm *.dsk
 make clean all dist upload && make clean all dist upload IIGS=1 || exit
 
-#Only mastodon is ported to old II yet
-cd src/mastodon
-make clean all OLDII=1
-cd ../../
-make mastodon-oldii.dsk OLDII=1
+#Only mastodon and wozamp ported to old II yet
+for old in mastodon wozamp; do
+	cd src/$old
+	make clean all OLDII=1 || exit
+	cd ../../
+	make ${old}-oldii.dsk OLDII=1
+done
