@@ -110,7 +110,7 @@ charset_again:
       goto charset_again;
   }
 #else
-  charset = US_CHARSET;
+  translit_charset = US_CHARSET;
 #endif
 
   cputs("\r\nIs your monitor monochrome? (y/n)\r\n");
