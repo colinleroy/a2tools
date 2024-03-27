@@ -146,8 +146,11 @@ all: \
 	jpegconv.bin jpegconv.x86_64 \
 	loader.x86_64
 
+splash.hgr:
+	hgr-convert splash.png
+
 splash.h: splash.hgr
-	./make-splash.sh
+	../../bin/make-splash.sh splash.png
 
 slowtake.bin: $(slowtake_SOURCES) $(slowtake_CC65SOURCES)
 	cl65 --debug-info -Wl --dbgfile,"slowtake.dbg" $(CFLAGS) $(slowtake_CLCFLAGS) -vm -m slowtake.map -o $@ $^

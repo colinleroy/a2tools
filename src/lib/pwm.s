@@ -72,55 +72,6 @@ vumeter_ptr   = ptr2
         inc     dummy_abs
 .endmacro
 
-.macro WASTE_7
-        WASTE_2
-        WASTE_5
-.endmacro
-.macro WASTE_8
-        WASTE_2
-        WASTE_6
-.endmacro
-.macro WASTE_9
-        WASTE_3
-        WASTE_6
-.endmacro
-.macro WASTE_10
-        WASTE_4
-        WASTE_6
-.endmacro
-.macro WASTE_11
-        WASTE_5
-        WASTE_6
-.endmacro
-.macro WASTE_12
-        WASTE_6
-        WASTE_6
-.endmacro
-.macro WASTE_13
-        WASTE_2
-        WASTE_11
-.endmacro
-.macro WASTE_14
-        WASTE_2
-        WASTE_12
-.endmacro
-.macro WASTE_15
-        WASTE_3
-        WASTE_12
-.endmacro
-.macro WASTE_16
-        WASTE_4
-        WASTE_12
-.endmacro
-.macro WASTE_17
-        WASTE_5
-        WASTE_12
-.endmacro
-.macro WASTE_18
-        WASTE_6
-        WASTE_12
-.endmacro
-
 .macro KBD_LOAD_7               ; Check keyboard and jsr if key pressed (trashes A)
         lda     KBD             ; 4
         bpl     :+              ; 7
@@ -128,7 +79,7 @@ vumeter_ptr   = ptr2
 :
 .endmacro
 
-.macro KBD_LOAD_8               ; Check keyboard and jsr if key pressed (X=0, trashes A)
+.macro KBD_LOAD_8               ; Check keyboard and jsr if key pressed (X=2, trashes A)
         lda     KBD_OFFSET,x    ; 5
         bpl     :+              ; 8
         jsr     kbd_send
@@ -140,7 +91,7 @@ vumeter_ptr   = ptr2
 .endmacro
 
 .ifdef __APPLE2ENH__
-  .macro ____SPKR_DUTY____5       ; Toggle speaker slower
+  .macro ____SPKR_DUTY____5       ; Toggle speaker slower (but without phantom-read)
           sta     (spkr_ptr)      ; 5
   .endmacro
 .endif

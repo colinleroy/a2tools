@@ -91,9 +91,11 @@ int main(int argc, char *argv[]) {
   /* test samples */
   for (i = 0; i < END_OF_STREAM; i++) {
     printf("send %d\n", i);
-    for (argc = 20000; argc > 0; argc--)
+    for (argc = 200; argc > 0; argc--) {
       send_sample(i);
-    printf("send %d again\n", i);
+      usleep(10000);
+    }
+    printf("send %d done\n", i);
     send_sample(i);
     cgetc();
   }

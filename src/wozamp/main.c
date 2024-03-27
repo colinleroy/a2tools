@@ -36,27 +36,13 @@
 #include "hgr.h"
 #include "pwm.h"
 #include "platform.h"
+#include "splash.h"
 
-#ifdef __CC65__
-#pragma bss-name (push, "HGR")
-char data[STP_DATA_SIZE];
-#pragma bss-name (pop)
-#endif
-
+char *data = (char *)splash_hgr;
 char *nat_data = NULL;
 
 char **lines = NULL;
 char **nat_lines = NULL;
-
-char *welcome_header =
-  "*   *  ***  *****   *    * *  ****\r\n"
-  "*   * *   *    *   * *  * * * *   *\r\n"
-  "*   * *   *   *   ***** *   * ****\r\n"
-  "* * * *   *  *    *   * *   * *\r\n"
-  " * *   ***  ***** *   * *   * *\r\n"
-  "\r\n"
-  "https://colino.net - GPL licensed";
-
 
 unsigned char scrw = 255, scrh = 255;
 char center_x = 14; /* 30 in 80COLS */
@@ -168,6 +154,21 @@ void get_cover_file(char *url) {
   free(cover_url);
 }
 
+#ifdef __APPLE2ENH__
+static void backup_restore_logo(char *op) {
+  FILE *fp = fopen("/RAM/WOZAMP.HGR", op);
+  if (!fp) {
+    return;
+  }
+  if (op[0] == 'w') {
+    fwrite((char *)HGR_PAGE, 1, HGR_LEN, fp);
+  } else {
+    fread((char *)HGR_PAGE, 1, HGR_LEN, fp);
+  }
+  fclose(fp);
+}
+#endif
+
 extern char tmp_buf[80];
 static void play_url(char *url, char *filename) {
   char r;
@@ -178,7 +179,7 @@ static void play_url(char *url, char *filename) {
   clrzone(0, 12, scrw - 1, 12);
   clrzone(0, 20, scrw - 1, 23);
  
-  strncpy(tmp_buf, filename ? filename : "Unknown file", scrw - 1);
+  strncpy(tmp_buf, filename ? filename : "Streaming...", scrw - 1);
   tmp_buf[scrw] = '\0';
   gotoxy(0, 20);
   dputs(tmp_buf);
@@ -189,12 +190,20 @@ static void play_url(char *url, char *filename) {
   simple_serial_putc(monochrome);
   simple_serial_putc(HGR_SCALE_MIXHGR);
 
+#ifdef __APPLE2ENH__
+  if (!got_cover) {
+    backup_restore_logo("r");
+  }
+  init_hgr(1);
+  hgr_mixon();
+#else
   if (got_cover) {
     init_hgr(1);
     hgr_mixon();
   } else {
     init_text();
   }
+#endif
 
 read_metadata_again:
   r = simple_serial_getc();
@@ -281,13 +290,18 @@ char navigated = 0;
 
 int main(void) {
   char *url = NULL;
-  char c;
   char full_update = 1;
-
+  char c;
   const surl_response *resp;
 
+  init_hgr(1);
+  hgr_mixon();
+#ifdef __APPLE2ENH__
+  backup_restore_logo("w");
+#endif
   screensize(&scrw, &scrh);
-
+  set_scrollwindow(20, scrh);
+  
   surl_ping();
 #ifdef __CC65__
   printf("Mem available: %zub\n", _heapmaxavail());
@@ -301,11 +315,14 @@ restart:
     free(url);
     url = NULL;
   }
-  url = stp_get_start_url("Please enter an FTP server url or an\r\n"
-                          "internet stream URL.\r\n",
+
+  clrscr();
+  url = stp_get_start_url("Please enter an FTP or internet stream\r\n",
                           "http://8bit.fm:8000/live");
   url = stp_build_login_url(url);
 
+  set_scrollwindow(0, scrh);
+  init_text();
   stp_print_header(url, URL_SET);
 
   stp_print_footer();

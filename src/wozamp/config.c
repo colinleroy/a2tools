@@ -47,6 +47,7 @@ static int save_config(void) {
   return 0;
 }
 
+extern char tmp_buf[80];
 void load_config(void) {
   FILE *fp;
 
@@ -61,16 +62,16 @@ void load_config(void) {
 
 
   if (fp != NULL) {
-    fgets(data, 16, fp);
-    if (strchr(data, '\n')) {
-      *strchr(data, '\n') = '\0';
+    fgets(tmp_buf, 16, fp);
+    if (strchr(tmp_buf, '\n')) {
+      *strchr(tmp_buf, '\n') = '\0';
     }
 #ifdef __APPLE2ENH__
-    translit_charset = strdup(data);
+    translit_charset = strdup(tmp_buf);
 #endif
 
-    fgets(data, 16, fp);
-    monochrome = (data[0] != '0');
+    fgets(tmp_buf, 16, fp);
+    monochrome = (tmp_buf[0] != '0');
 
     fclose(fp);
   }

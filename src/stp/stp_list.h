@@ -46,7 +46,7 @@ extern char **nat_lines;
 extern int num_lines;
 extern int cur_line;
 extern int cur_display_line;
-extern char data[STP_DATA_SIZE];
+extern char *data;
 extern char *nat_data;
 
 char *stp_url_enter(char *url, char *suffix);
@@ -57,7 +57,7 @@ char *stp_build_login_url(char *url);
 char *stp_get_start_url(char *header, char *default_url);
 void stp_update_list(char full_update);
 int stp_get_data(char *url, const surl_response **resp);
-void stp_print_header(char *url, enum HeaderUrlAction action);
+void stp_print_header(const char *url, enum HeaderUrlAction action);
 void stp_print_result(const surl_response *response);
 void stp_animate_list(char reset);
 #endif
