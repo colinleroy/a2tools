@@ -41,11 +41,10 @@
 unsigned char scrw = 255, scrh = 255;
 char center_x = 30; /* 12 in 40COLS */
 
-char *welcome_header = NULL;
-
 char *translit_charset = US_CHARSET;
 
-char data[STP_DATA_SIZE];
+char large_buf[STP_DATA_SIZE];
+char *data = (char *)large_buf;
 char **lines = NULL;
 char *nat_data = NULL;
 char **nat_lines = NULL;
@@ -128,7 +127,9 @@ int main(void) {
 
   surl_ping();
 
-  url = stp_get_start_url("Please enter the server's root URL.", "ftp://ftp.apple.asimov.net/");
+  clrscr();
+  gotoxy(0, 14);
+  url = stp_get_start_url("Please enter the server's root URL.\r\n\r\n", "ftp://ftp.apple.asimov.net/");
   url = stp_build_login_url(url);
   stp_print_header(url, URL_SET);
 

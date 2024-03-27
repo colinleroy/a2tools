@@ -69,10 +69,10 @@ int main(int argc, char **argv) {
   size_t out_len;
   char *out_buf;
   char out_file[255];
-  char bayer = 0, small = 0;
+  char bayer = 0, small = 0, mono = 1;
 
   if (argc < 2) {
-    printf("Usage: %s [-bayer] [list of files]\n", argv[0]);
+    printf("Usage: %s [-bayer] [-small] [-color] [list of files]\n", argv[0]);
     exit(1);
   }
 
@@ -85,13 +85,17 @@ int main(int argc, char **argv) {
     small = 1;
     i++;
   }
+  if (argc > i && !strcmp(argv[i], "-color")) {
+    mono = 0;
+    i++;
+  }
   for (; i < argc; i++) {
     printf("Converting %s...\n", argv[i]);
 
     /* Try to convert an image to HGR. It will fail if
      * it's not an SDLimage-supported format.
      */
-    if ((out_buf = (char *)sdl_to_hgr(argv[i], 1, 1, &len, bayer, small)) != NULL && len > 0) {
+    if ((out_buf = (char *)sdl_to_hgr(argv[i], mono, 1, &len, bayer, small)) != NULL && len > 0) {
       snprintf(out_file, sizeof(out_file), "%s.hgr", argv[i]);
       write_file(out_file, out_buf, len);
       printf("Converted to hgr: %s\n", out_file);

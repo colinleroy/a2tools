@@ -45,7 +45,6 @@ static char *login = NULL;
 static char *password = NULL;
 
 extern char *translit_charset;
-extern char *welcome_header;
 
 char **display_lines;
 
@@ -82,15 +81,8 @@ char *stp_get_start_url(char *header, char *default_url) {
     last_password = strdup("");
   }
 
-  clrscr();
-  gotoxy(0, 1);
-  if (welcome_header) {
-    dputs(welcome_header);
-  }
-
-  gotoxy(0, 14);
   dputs(header);
-  dputs("\r\n\r\nURL: ");
+  dputs("URL: ");
 
   start_url = malloc(BUFSIZE + 1);
   strcpy(start_url, last_start_url);
@@ -477,8 +469,8 @@ char *stp_url_enter(char *url, char *suffix) {
 #pragma code-name (pop)
 #endif
 
-void stp_print_header(char *url, enum HeaderUrlAction action) {
-  char *no_pass_url = NULL;
+void stp_print_header(const char *url, enum HeaderUrlAction action) {
+  char *no_pass_url = NULL, *host;
   static char *header_url = NULL;
 
   if (header_url == NULL) {
@@ -508,12 +500,16 @@ void stp_print_header(char *url, enum HeaderUrlAction action) {
   free(header_url);
   header_url = strdup(no_pass_url);
 
-  if (strchr(no_pass_url, ':') != strrchr(no_pass_url,':')) {
-    /* Means there's a login */
-    char *t = strrchr(no_pass_url, ':') + 1;
-    while(*t != '@') {
-      *t = '*';
-      t++;
+  host = strstr(no_pass_url, "://");
+  if (host) {
+    host += 3;
+    if (strchr(host, ':') && strchr(host, ':') < strchr(host, '@')) {
+      /* Means there's a login */
+      char *t = strchr(host, ':') + 1;
+      while(*t != '@') {
+        *t = '*';
+        t++;
+      }
     }
   }
   clrzone(0, 0, scrw - 1, 0);

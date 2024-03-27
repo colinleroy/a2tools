@@ -75,7 +75,15 @@ CLCFLAGS = -t $(CC65_TARGET) -DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER \
 
 .PHONY: all clean
 
-all: $(PROGRAM).bin
+all: \
+	splash.h \
+	$(PROGRAM).bin
+
+wozamp.hgr:
+	hgr-convert wozamp.png
+
+splash.h: wozamp.hgr
+	../../bin/make-splash.sh wozamp.png
 
 $(PROGRAM).bin: $(CL65SOURCES) $(SOURCES)
 	cl65 -g -Wl --dbgfile,$(PROGRAM).dbg -Ln $(PROGRAM).lbl $(CFLAGS) $(iigs_CFLAGS) $(CLCFLAGS) -o $@ $^
