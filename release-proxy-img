@@ -1,0 +1,28 @@
+#!/bin/bash
+set -e
+
+#jq package updated to 1.7.1 for performance reason, and patched to disable valgrind tests
+#See https://apt-rpi.colino.net/debian/pool/main/j/jq/jq_1.7.1-2.debian.tar.xz :
+# - debian/rules
+# Valgrind tests disabled because they were failing on 1.7.1, see:
+# - https://github.com/jqlang/jq/pull/3058
+
+#glibc patched to include emoji transliteration
+#See https://apt-rpi.colino.net/debian/pool/main/g/glibc/glibc_2.31-13%2Brpt2%2Brpi1%2Bdeb11u8.debian.tar.xz :
+# - debian/patches/series
+# - debian/patches/localedata/translit-common-emojis-to-smileys-BZ-3064.patch
+# Emoji transliteration upstreamed in glibc-2.39, local package will be dropped when available in official Raspberry images
+
+BRANCH="bullseye-surl-server"
+
+TMPDIR=$(mktemp -d)
+
+cd "$TMPDIR"
+
+git clone https://github.com/colinleroy/pi-gen
+
+cd pi-gen
+git checkout "$BRANCH"
+sudo ./build-docker.sh
+
+ls -l "$TMPDIR"/pi-gen/deploy/surl-server*lite.img.gz

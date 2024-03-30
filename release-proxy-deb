@@ -1,0 +1,10 @@
+#!/bin/bash
+ssh a2proxy.lan " \
+rm -rf a2tools && \
+  git clone https://github.com/colinleroy/a2tools.git && \
+  cd a2tools/src && \
+  dpkg-buildpackage -us -uc -rfakeroot && \
+  cd .. && \
+  reprepro includedeb bullseye *.deb && \
+  reprepro includedsc bullseye *.dsc && \
+  reprepro sync"
