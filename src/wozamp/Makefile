@@ -30,7 +30,6 @@ SOURCES := \
 	../lib/serial/simple_serial_configure.c \
 	../lib/path_helper.c \
 	../lib/surl/surl_core.c \
-	../lib/surl/surl_wait_for_stream.c \
 	../lib/surl/surl_receive.c \
 	../lib/surl/surl_ping.c \
 	../lib/malloc0.c \
