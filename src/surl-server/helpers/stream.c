@@ -113,6 +113,7 @@ static void *generate_frames(void *th_data) {
   }
 
   pthread_mutex_lock(&data->mutex);
+  data->data_ready = 1;
   data->decoding_end = 1;
   data->decoding_ret = 0;
   pthread_mutex_unlock(&data->mutex);
@@ -120,9 +121,6 @@ static void *generate_frames(void *th_data) {
   close(vhgr_file);
 
   ffmpeg_to_hgr_deinit();
-  if (frameno == 0) {
-    return NULL;
-  }
   return NULL;
 }
 
@@ -545,8 +543,6 @@ int surl_stream_video(char *url) {
   printf("Starting video decode thread\n");
   pthread_create(&decode_thread, NULL, *generate_frames, (void *)th_data);
 
-  simple_serial_putc(SURL_ANSWER_STREAM_LOAD);
-
   while(!ready && !stop) {
     pthread_mutex_lock(&th_data->mutex);
     ready = th_data->data_ready;
@@ -560,12 +556,7 @@ int surl_stream_video(char *url) {
     printf("Error generating frames\n");
     simple_serial_putc(SURL_ANSWER_STREAM_ERROR);
 
-    pthread_mutex_lock(&th_data->mutex);
-    th_data->stop = 1;
-    pthread_mutex_unlock(&th_data->mutex);
-    pthread_join(decode_thread, NULL);
-
-    return -1;
+    goto cleanup;
   }
 
   if (diffs == NULL) {
@@ -579,30 +570,19 @@ int surl_stream_video(char *url) {
 
   unlink(tmp_filename);
   if (vhgr_file == -1) {
+    printf("Error opening %s\n", tmp_filename);
     simple_serial_putc(SURL_ANSWER_STREAM_ERROR);
-
-    pthread_mutex_lock(&th_data->mutex);
-    th_data->stop = 1;
-    pthread_mutex_unlock(&th_data->mutex);
-    pthread_join(decode_thread, NULL);
-
-    return -1;
+    goto cleanup;
   }
 
-  simple_serial_putc(SURL_ANSWER_STREAM_READY);
   if (simple_serial_getc() != SURL_CLIENT_READY) {
     printf("Client not ready\n");
-
-    pthread_mutex_lock(&th_data->mutex);
-    th_data->stop = 1;
-    pthread_mutex_unlock(&th_data->mutex);
-    pthread_join(decode_thread, NULL);
-
-    return -1;
+    goto cleanup;
   }
 
   printf("Starting stream\n");
   simple_serial_putc(SURL_ANSWER_STREAM_START);
+  printf("sent\n");
 
   memset(changes_buffer, 0, sizeof changes_buffer);
 
@@ -755,12 +735,6 @@ close_last:
   /* Get rid of possible last ack */
   simple_serial_flush();
 
-  close(vhgr_file);
-
-  pthread_mutex_lock(&th_data->mutex);
-  th_data->stop = 1;
-  pthread_mutex_unlock(&th_data->mutex);
-  pthread_join(decode_thread, NULL);
 
   if (i - skipped > 0) {
     printf("Max: %d, Min: %d, Average: %d\n", max, min, total / (i-skipped));
@@ -772,6 +746,18 @@ close_last:
     duration = i/FPS;
     printf("%d seconds, %d frames skipped / %d: %d fps\n", duration,
           skipped, i, (i-skipped)/duration);
+  }
+
+cleanup:
+  if (vhgr_file != -1) {
+    close(vhgr_file);
+  }
+  if (th_data) {
+    pthread_mutex_lock(&th_data->mutex);
+    th_data->stop = 1;
+    pthread_mutex_unlock(&th_data->mutex);
+    pthread_join(decode_thread, NULL);
+    free(th_data);
   }
   return 0;
 }
