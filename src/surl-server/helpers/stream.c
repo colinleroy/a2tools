@@ -21,7 +21,7 @@
 #define NUM_BASES  (HGR_LEN/MAX_OFFSET)+1
 
 #define MIN_REPS   3
-#define MAX_REPS   7
+#define MAX_REPS   10
 
 /* Set very high because it looks nicer to drop frames than to
  * artifact all the way
@@ -593,11 +593,11 @@ next_file:
   }
 
   DEBUG("sync point %d\n", i);
-  command = simple_serial_getc_with_timeout();
+  command = simple_serial_getc_immediate();
   switch (command) {
     case CH_ESC:
-    case EOF:
-      printf("Timeout, exiting.\n");
+    case SURL_METHOD_ABORT:
+      printf("Abort, exiting.\n");
       goto close_last;
     case ' ':
       printf("Pause.\n");
