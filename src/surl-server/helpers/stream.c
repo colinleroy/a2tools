@@ -8,6 +8,7 @@
 #include <dirent.h>
 #include <pthread.h>
 #include <poll.h>
+#include <fcntl.h>
 
 #include "../surl_protocol.h"
 #include "simple_serial.h"
@@ -54,80 +55,75 @@ char output_file[64];
 
 #define FRAME_FILE_FMT "%s/frame-%06d.hgr"
 
-int vhgr_file;
 char tmp_filename[FILENAME_MAX];
 
 int video_len;
 
-static int generate_frames(char *uri) {
+static void *generate_frames(void *th_data) {
+  decode_data *data = (decode_data *)th_data;
   unsigned char *buf;
-  int ret = 0;
   int frameno = 0;
-  printf("Generating frames for %s...\n", uri);
+  int vhgr_file;
+
+  printf("Generating frames for %s...\n", data->url);
 
   vhgr_file = -1;
   sprintf(tmp_filename, "/tmp/vhgr-XXXXXX");
   if ((vhgr_file = mkstemp(tmp_filename)) < 0) {
     printf("Could not open output file %s (%s).\n", tmp_filename, strerror(errno));
-    return -1;
+    pthread_mutex_lock(&data->mutex);
+    data->decoding_end = 1;
+    data->decoding_ret = -1;
+    pthread_mutex_unlock(&data->mutex);
   }
 
-  /* Make sure it won't linger around */
-  unlink(tmp_filename);
-
-  if (ffmpeg_to_hgr_init(uri, &video_len) != 0) {
+  pthread_mutex_lock(&data->mutex);
+  if (ffmpeg_to_hgr_init(data->url, &video_len) != 0) {
     printf("Could not init ffmpeg.\n");
-    return -1;
+    data->decoding_end = 1;
+    data->decoding_ret = -1;
   }
+  pthread_mutex_unlock(&data->mutex);
 
   while ((buf = ffmpeg_convert_frame()) != NULL) {
     if (write(vhgr_file, buf, HGR_LEN) != HGR_LEN) {
       printf("Could not write data\n");
       close(vhgr_file);
       vhgr_file = -1;
-      ret = -1;
+      pthread_mutex_lock(&data->mutex);
+      data->decoding_end = 1;
+      data->decoding_ret = -1;
+      pthread_mutex_unlock(&data->mutex);
       break;
     }
     frameno++;
-
-    /* Send ping every 10% (and only once for every 25 frames matching the modulo)*/
-    if ((frameno/FPS) % (video_len / 10) == 0
-      && ((frameno/FPS)/(video_len / 10))*((video_len / 10)*FPS) == frameno) {
-      int r;
-      printf("Frame %d (%ds/%ds), %d\n", frameno, frameno/FPS, video_len,  (video_len / 10));
-      simple_serial_putc(SURL_ANSWER_STREAM_LOAD);
-      r = simple_serial_getc_with_timeout();
-      if (r == SURL_METHOD_ABORT) {
-        printf("Client abort\n");
-        ret = -1;
-        break;
-      }
+    if (frameno % 100 == 0) {
+      printf("%d frames decoded...\n", frameno);
+    }
+    pthread_mutex_lock(&data->mutex);
+    if (frameno == 24 * 10) {
+      data->data_ready = 1;
+    }
+    if (data->stop) {
+      pthread_mutex_unlock(&data->mutex);
+      break;
+    } else {
+      pthread_mutex_unlock(&data->mutex);
     }
   }
 
-  if (lseek(vhgr_file, 0, SEEK_SET) != 0) {
-    printf("lseek: %s\n", strerror(errno));
-  }
+  pthread_mutex_lock(&data->mutex);
+  data->decoding_end = 1;
+  data->decoding_ret = 0;
+  pthread_mutex_unlock(&data->mutex);
+
+  close(vhgr_file);
 
   ffmpeg_to_hgr_deinit();
   if (frameno == 0) {
-    return -1;
+    return NULL;
   }
-  if (ret == 0) {
-    simple_serial_putc(SURL_ANSWER_STREAM_READY);
-    if (simple_serial_getc() != SURL_CLIENT_READY) {
-      printf("Client not ready\n");
-      ret = -1;
-    }
-  }
-  return ret;
-}
-
-static void cleanup(void) {
-  if (vhgr_file > 0) {
-    close(vhgr_file);
-    vhgr_file = -1;
-  }
+  return NULL;
 }
 
 static void enqueue_byte(unsigned char b) {
@@ -535,11 +531,40 @@ int surl_stream_video(char *url) {
   int skipped = 0, skip_next = 0, duration;
   int command, page = 0;
   int num_diffs = 0;
+  int vhgr_file;
 
-  if (generate_frames(url) != 0) {
+  pthread_t decode_thread;
+  decode_data *th_data = malloc(sizeof(decode_data));
+  int ready = 0;
+  int stop = 0;
+  int err = 0;
+  memset(th_data, 0, sizeof(decode_data));
+  th_data->url = url;
+  pthread_mutex_init(&th_data->mutex, NULL);
+
+  printf("Starting video decode thread\n");
+  pthread_create(&decode_thread, NULL, *generate_frames, (void *)th_data);
+
+  simple_serial_putc(SURL_ANSWER_STREAM_LOAD);
+
+  while(!ready && !stop) {
+    pthread_mutex_lock(&th_data->mutex);
+    ready = th_data->data_ready;
+    stop = th_data->decoding_end;
+    err = th_data->decoding_ret;
+    pthread_mutex_unlock(&th_data->mutex);
+    usleep(100);
+  }
+
+  if (stop && err) {
     printf("Error generating frames\n");
     simple_serial_putc(SURL_ANSWER_STREAM_ERROR);
-    cleanup();
+
+    pthread_mutex_lock(&th_data->mutex);
+    th_data->stop = 1;
+    pthread_mutex_unlock(&th_data->mutex);
+    pthread_join(decode_thread, NULL);
+
     return -1;
   }
 
@@ -549,7 +574,33 @@ int surl_stream_video(char *url) {
       diffs[j] = malloc(sizeof(byte_diff));
     }
   }
-  
+
+  vhgr_file = open(tmp_filename, O_RDONLY);
+
+  unlink(tmp_filename);
+  if (vhgr_file == -1) {
+    simple_serial_putc(SURL_ANSWER_STREAM_ERROR);
+
+    pthread_mutex_lock(&th_data->mutex);
+    th_data->stop = 1;
+    pthread_mutex_unlock(&th_data->mutex);
+    pthread_join(decode_thread, NULL);
+
+    return -1;
+  }
+
+  simple_serial_putc(SURL_ANSWER_STREAM_READY);
+  if (simple_serial_getc() != SURL_CLIENT_READY) {
+    printf("Client not ready\n");
+
+    pthread_mutex_lock(&th_data->mutex);
+    th_data->stop = 1;
+    pthread_mutex_unlock(&th_data->mutex);
+    pthread_join(decode_thread, NULL);
+
+    return -1;
+  }
+
   printf("Starting stream\n");
   simple_serial_putc(SURL_ANSWER_STREAM_START);
 
@@ -634,18 +685,6 @@ next_file:
     }
   }
 
-  /* Naive attempt at priorizing changes and flushing them over multiple
-   * frames. The result sucks and it looks much better to framedrop.
-   */
-#if 0
-  /* Sort by diff */
-  bubble_sort_array((void **)diffs, num_diffs, (sort_func)sort_by_score);
-
-  /* Sort the first ones by offset */
-  bubble_sort_array((void **)diffs,
-          num_diffs < MAX_DIFFS_PER_FRAME ? num_diffs : MAX_DIFFS_PER_FRAME,
-          (sort_func)sort_by_offset);
-#endif
   last_val = -1;
   for (j = 0; j < num_diffs && j < MAX_DIFFS_PER_FRAME; j++) {
     int pixel = diffs[j]->offset;
@@ -716,7 +755,13 @@ close_last:
   /* Get rid of possible last ack */
   simple_serial_flush();
 
-  cleanup();
+  close(vhgr_file);
+
+  pthread_mutex_lock(&th_data->mutex);
+  th_data->stop = 1;
+  pthread_mutex_unlock(&th_data->mutex);
+  pthread_join(decode_thread, NULL);
+
   if (i - skipped > 0) {
     printf("Max: %d, Min: %d, Average: %d\n", max, min, total / (i-skipped));
     printf("Sent %lu bytes for %d non-skipped frames: %lu avg (%lu data, %lu offset, %lu base)\n",

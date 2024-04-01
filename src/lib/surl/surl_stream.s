@@ -7,8 +7,23 @@
         .import               _simple_serial_flush
         .import               _serial_putc_direct
 
+.ifdef IIGS
+        .import         zilog_status_reg_r, zilog_data_reg_r
+.else
+        .import         acia_status_reg_r, acia_data_reg_r
+.endif
+
         .export               _surl_stream
 
+.ifdef IIGS
+serial_status_reg = zilog_status_reg_r
+serial_data_reg   = zilog_data_reg_r
+HAS_BYTE          = $01
+.else
+serial_status_reg = acia_status_reg_r
+serial_data_reg   = acia_data_reg_r
+HAS_BYTE          = $08
+.endif
 
 KBD          := $C000   ; Read keyboard
 KBDSTRB      := $C010   ; Clear keyboard strobe
@@ -34,6 +49,29 @@ _surl_stream:
         lda     #$00
         sta     page
         sta     stop
+
+        ; Patch serial registers
+        lda     serial_status_reg+1
+        sta     ss0+1
+        sta     ss1+1
+        sta     ss2+1
+        sta     ss3+1
+        lda     serial_status_reg+2
+        sta     ss0+2
+        sta     ss1+2
+        sta     ss2+2
+        sta     ss3+2
+
+        lda     serial_data_reg+1
+        sta     sd0+1
+        sta     sd1+1
+        sta     sd2+1
+        sta     sd3+1
+        lda     serial_data_reg+2
+        sta     sd0+2
+        sta     sd1+2
+        sta     sd2+2
+        sta     sd3+2
 
         ; Calculate bases for HGR page 1
         lda     #<(page1_addrs_arr)
@@ -78,17 +116,27 @@ loop:
         ; there's a value to repeat N times incoming.
         ldy     #$01            ; Set repetitions to 1
 
-        jsr     _serial_read_byte_no_irq
+ss0:    lda     $FFFF           ; serial status
+        and     #HAS_BYTE
+        beq     ss0
+sd0:    lda     $FFFF           ; serial data
+
         bpl     store_dest      ; It's a value, store it
         cmp     #$FF            ; Is it a rep?
         bne     set_offset      ; No, so it's an offset
 
 do_rep:
         ; handle repetitions: get N,
-        jsr     _serial_read_byte_no_irq
-        tay
+ss1:    lda     $FFFF           ; serial status
+        and     #HAS_BYTE
+        beq     ss1
+sd1:    ldy     $FFFF           ; serial data
+
         ; and get value to repeat
-        jsr     _serial_read_byte_no_irq
+ss2:    lda     $FFFF           ; serial status
+        and     #HAS_BYTE
+        beq     ss2
+sd2:    lda     $FFFF           ; serial data
 
 store_dest:
         sta     $FFFF,x
@@ -115,7 +163,10 @@ set_offset:
         ; it's a value, or negative, in which case it's either a new
         ; base that is further away than the one we just calculated,
         ; or $FF, indicating a repetition of a value.
-        jsr     _serial_read_byte_no_irq
+ss3:    lda     $FFFF           ; serial status
+        and     #HAS_BYTE
+        beq     ss3
+sd3:    lda     $FFFF           ; serial data
         bpl     store_dest      ; It's a value
 
 set_base:                       ; We have a new base (or rep maybe)
