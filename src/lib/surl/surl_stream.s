@@ -69,37 +69,6 @@ _surl_stream:
         ldx     #$00            ; Start offset
         stx     last_offset
         lda     #($00|$80)      ; Start base
-        jmp     loop            ; and go!
-
-set_base:
-        cmp     #$FF            ; Is it a rep? It can be.
-        beq     do_rep          ; Go handle repetition
-
-        and     #%01111111      ; Get rid of the sign
-        asl     a               ; Shift for array index
-
-        bne     :+              ; If base is 0, it's a new frame.
-        jsr     frame_done      ; In which case, sync point.
-
-        lda     stop            ; Did user press ESC?
-        beq     :+
-        jmp     cleanup
-
-:       cmp     #((N_BASES+2)*2); Base not 0. Is it the end of stream?
-        bne     :+
-        jmp     cleanup
-
-:       tay
-page_ptr_a:
-        ; Update where to store pixels. Both these pointers are patched
-        ; when switching page.
-        lda     (page1_addr_ptr),y
-        sta     store_dest+1
-        iny
-page_ptr_b:
-        lda     (page1_addr_ptr),y
-        sta     store_dest+2
-        ; Done with our new base, back to main loop
 
 loop:
         ; Main loop - either we get a positive value and it's
@@ -113,6 +82,7 @@ loop:
         bpl     store_dest      ; It's a value, store it
         cmp     #$FF            ; Is it a rep?
         bne     set_offset      ; No, so it's an offset
+
 do_rep:
         ; handle repetitions: get N,
         jsr     _serial_read_byte_no_irq
@@ -146,8 +116,38 @@ set_offset:
         ; base that is further away than the one we just calculated,
         ; or $FF, indicating a repetition of a value.
         jsr     _serial_read_byte_no_irq
-        bmi     set_base        ; We have a new base (or rep maybe)
-        jmp     store_dest      ; Otherwise it's a value
+        bpl     store_dest      ; It's a value
+
+set_base:                       ; We have a new base (or rep maybe)
+        cmp     #$FF            ; Is it a rep? It can be.
+        beq     do_rep          ; Go handle repetition
+
+        and     #%01111111      ; Get rid of the sign
+        asl     a               ; Shift for array index
+
+        bne     :+              ; If base is 0, it's a new frame.
+        jsr     frame_done      ; In which case, sync point.
+
+        lda     stop            ; Did user press ESC?
+        beq     :+
+        jmp     cleanup
+
+:       cmp     #((N_BASES+2)*2); Base not 0. Is it the end of stream?
+        bne     :+
+        jmp     cleanup
+
+:       tay
+page_ptr_a:
+        ; Update where to store pixels. Both these pointers are patched
+        ; when switching page.
+        lda     (page1_addr_ptr),y
+        sta     store_dest+1
+        iny
+page_ptr_b:
+        lda     (page1_addr_ptr),y
+        sta     store_dest+2
+        ; Done with our new base, back to main loop
+        jmp     loop
 
 calc_bases:
         ; Precalculate addresses inside pages, so we can easily jump
@@ -196,12 +196,11 @@ frame_done:
         ldx     #$00            ; X (offset) is supposed to be 0 at frame start
 
         lda     KBD             ; Did user press a key ?
-        bpl     :+
-        and     #$7F            ; Clear high bit
+        bmi     :+
+        rts
+:       and     #$7F            ; Clear high bit
         bit     KBDSTRB         ; Clear keyboard strobe
         jmp     handle_kbd      ; Send pressed key to server
-:       lda     #$00            ; Else, send 0 to server
-        jmp     _serial_putc_direct
 
 handle_kbd:
         cmp     #' '            ; Space to pause ?
