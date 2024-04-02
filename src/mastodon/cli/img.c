@@ -122,18 +122,10 @@ static void video_stream(media *m, char idx, char num_images) {
   init_hgr(1);
   hgr_mixon();
 
-  /* Clear HGR buffers */
-#ifdef __CC65__
-  memset((char *)HGR_PAGE, 0, HGR_LEN);
-#ifdef DOUBLE_BUFFER
-  memset((char *)HGR_PAGE2, 0, HGR_LEN);
-#endif
-#endif
-
   surl_start_request(SURL_METHOD_STREAM_VIDEO, m->media_url[idx], NULL, 0);
 
 #ifdef __CC65__
-  if (surl_stream() != 0) {
+  if (surl_wait_for_stream() != 0 || surl_stream() != 0) {
 #ifdef DOUBLE_BUFFER
 #ifdef __APPLE2ENH__
     videomode(VIDEOMODE_80COL);

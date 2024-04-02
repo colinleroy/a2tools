@@ -59,11 +59,18 @@ char tmp_filename[FILENAME_MAX];
 
 int video_len;
 
+#define PREDECODE_SECS 10
+
 static void *generate_frames(void *th_data) {
   decode_data *data = (decode_data *)th_data;
   unsigned char *buf;
   int frameno = 0;
   int vhgr_file;
+  struct timeval decode_start, cur_time;
+  unsigned long secs;
+  unsigned long microsecs;
+  unsigned long elapsed;
+  int decode_slow = 0;
 
   printf("Generating frames for %s...\n", data->url);
 
@@ -77,14 +84,24 @@ static void *generate_frames(void *th_data) {
     pthread_mutex_unlock(&data->mutex);
   }
 
-  pthread_mutex_lock(&data->mutex);
   if (ffmpeg_to_hgr_init(data->url, &video_len) != 0) {
     printf("Could not init ffmpeg.\n");
+    pthread_mutex_lock(&data->mutex);
     data->decoding_end = 1;
     data->decoding_ret = -1;
+    pthread_mutex_unlock(&data->mutex);
+    return NULL;
+  }
+
+  pthread_mutex_lock(&data->mutex);
+
+  if (data->decoding_end == 1) {
+    pthread_mutex_unlock(&data->mutex);
+    goto out;
   }
   pthread_mutex_unlock(&data->mutex);
 
+  gettimeofday(&decode_start, 0);
   while ((buf = ffmpeg_convert_frame()) != NULL) {
     if (write(vhgr_file, buf, HGR_LEN) != HGR_LEN) {
       printf("Could not write data\n");
@@ -101,9 +118,59 @@ static void *generate_frames(void *th_data) {
       printf("%d frames decoded...\n", frameno);
     }
     pthread_mutex_lock(&data->mutex);
-    if (frameno == 24 * 10) {
-      data->data_ready = 1;
+    if (frameno == FPS * PREDECODE_SECS) {
+      gettimeofday(&cur_time, 0);
+      secs      = (cur_time.tv_sec - decode_start.tv_sec)*1000000;
+      microsecs = cur_time.tv_usec - decode_start.tv_usec;
+      elapsed   = secs + microsecs;
+      printf("Decoded %d seconds in %luµs\n", PREDECODE_SECS, elapsed);
+      if (elapsed / 1000000 > PREDECODE_SECS / 2) {
+        printf("decoding too slow, not starting early\n");
+        decode_slow = 1;
+      } else {
+        data->data_ready = 1;
+      }
+    } else if (decode_slow) {
+      unsigned long usecs_per_frame, remaining_frames, done_len, remaining_len;
+      /* We can start streaming as soon as what is remaining should
+       * take less than the time we already spent decoding */
+      gettimeofday(&cur_time, 0);
+      secs      = (cur_time.tv_sec - decode_start.tv_sec)*1000000;
+      microsecs = cur_time.tv_usec - decode_start.tv_usec;
+      elapsed   = secs + microsecs;
+
+      usecs_per_frame = elapsed / frameno;
+      remaining_frames = video_len*FPS - frameno;
+      remaining_len = remaining_frames * usecs_per_frame;
+      done_len = frameno / FPS;
+
+      if (frameno % 100 == 0) {
+        printf("decoded %d frames (%lus) in %lus, remaining %lu frames, should take %lus\n",
+              frameno, done_len, elapsed/1000000, remaining_frames, remaining_len/1000000);
+      }
+      if (remaining_len < done_len) {
+        data->data_ready = 1;
+        decode_slow = 0;
+      } else {
+        /* Send ping every 10% (and only once for every 25 frames matching the modulo)*/
+        if ((frameno/FPS) % (video_len / 10) == 0
+          && ((frameno/FPS)/(video_len / 10))*((video_len / 10)*FPS) == frameno) {
+          int r;
+          printf("Frame %d (%ds/%ds), %d\n", frameno, frameno/FPS, video_len,  (video_len / 10));
+          simple_serial_putc(SURL_ANSWER_STREAM_LOAD);
+          r = simple_serial_getc_with_timeout();
+          if (r != SURL_CLIENT_READY) {
+            printf("Client abort\n");
+            pthread_mutex_lock(&data->mutex);
+            data->decoding_end = 1;
+            data->decoding_ret = -1;
+            pthread_mutex_unlock(&data->mutex);
+            goto out;
+          }
+        }
+      }
     }
+
     if (data->stop) {
       pthread_mutex_unlock(&data->mutex);
       break;
@@ -118,6 +185,7 @@ static void *generate_frames(void *th_data) {
   data->decoding_ret = 0;
   pthread_mutex_unlock(&data->mutex);
 
+out:
   close(vhgr_file);
 
   ffmpeg_to_hgr_deinit();
@@ -574,6 +642,8 @@ int surl_stream_video(char *url) {
     simple_serial_putc(SURL_ANSWER_STREAM_ERROR);
     goto cleanup;
   }
+
+  simple_serial_putc(SURL_ANSWER_STREAM_READY);
 
   if (simple_serial_getc() != SURL_CLIENT_READY) {
     printf("Client not ready\n");

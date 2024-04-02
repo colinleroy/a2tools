@@ -298,7 +298,7 @@ int ffmpeg_to_hgr_init(char *filename, int *video_len) {
         goto end;
     }
 
-    printf("Duration %lu\n", fmt_ctx->duration/1000000);
+    printf("Duration %lus\n", fmt_ctx->duration/1000000);
     *video_len = fmt_ctx->duration/1000000;
 end:
     if (ret < 0)
