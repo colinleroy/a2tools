@@ -148,7 +148,7 @@ static void *generate_frames(void *th_data) {
         printf("decoded %d frames (%lus) in %lus, remaining %lu frames, should take %lus\n",
               frameno, done_len, elapsed/1000000, remaining_frames, remaining_len/1000000);
       }
-      if (remaining_len < done_len) {
+      if ((remaining_len/1000000)/2 < done_len) {
         data->data_ready = 1;
         decode_slow = 0;
       } else {
