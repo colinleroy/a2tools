@@ -25,6 +25,8 @@ SOURCES := \
 	../lib/serial/$(serial_hw)/no_irq.s \
 	../lib/path_helper.c \
 	../lib/surl/surl_core.c \
+	../lib/surl/surl_stream.s \
+	../lib/surl/surl_wait_for_stream.c \
 	../lib/surl/surl_read_with_barrier.s \
 	../lib/fastirq$(iigs_suffix).s \
 	../lib/extrazp.s \
