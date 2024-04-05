@@ -15,8 +15,9 @@
 #define SURL_METHOD_DEBUG           0x13
 #define SURL_METHOD_STREAM_VIDEO    0x14
 #define SURL_METHOD_STREAM_AUDIO    0x15
+#define SURL_METHOD_STREAM_AV       0x16
 
-#define SURL_IS_METHOD(x) ((x) == SURL_METHOD_ABORT || ((x) >= SURL_METHOD_RAW && (x) <= SURL_METHOD_STREAM_AUDIO))
+#define SURL_IS_METHOD(x) ((x) == SURL_METHOD_ABORT || ((x) >= SURL_METHOD_RAW && (x) <= SURL_METHOD_STREAM_AV))
 
 #define SURL_ANSWER_WAIT            0x20
 #define SURL_ANSWER_SEND_SIZE       0x21

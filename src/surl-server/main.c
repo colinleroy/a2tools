@@ -83,7 +83,8 @@ static const char *surl_method_str(unsigned char method) {
     case SURL_METHOD_DEBUG:        return "DEBUG";
     case SURL_METHOD_STREAM_AUDIO: return "STREAM_AUDIO";
     case SURL_METHOD_STREAM_VIDEO: return "STREAM_VIDEO";
-    default:                    return "[UNKNOWN]";
+    case SURL_METHOD_STREAM_AV:    return "STREAM_AV";
+    default:                       return "[UNKNOWN]";
   }
 }
 static void handle_signal(int signal) {
@@ -1213,6 +1214,22 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
     simple_serial_putc(SURL_ANSWER_RAW_START);
     surl_server_raw_session(url);
     return NULL;
+  } else if (method == SURL_METHOD_STREAM_AV) {
+    char *translit;
+    char monochrome;
+    enum HeightScale scale;
+    printf("send wait\n");
+    simple_serial_putc(SURL_ANSWER_WAIT);
+    printf("get charset\n");
+    simple_serial_gets(reqbuf, BUFSIZE);
+    translit = reqbuf;
+    printf("get mono\n");
+    monochrome = simple_serial_getc();
+    printf("get scale\n");
+    scale = simple_serial_getc();
+    printf("starting\n");
+    surl_stream_audio_video(url, translit, monochrome, scale);
+    return NULL;
   } else if (method == SURL_METHOD_STREAM_VIDEO) {
     simple_serial_putc(SURL_ANSWER_WAIT);
     surl_stream_video(url);
@@ -1221,11 +1238,16 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
     char *translit;
     char monochrome;
     enum HeightScale scale;
+    printf("send wait\n");
     simple_serial_putc(SURL_ANSWER_WAIT);
+    printf("get charset\n");
     simple_serial_gets(reqbuf, BUFSIZE);
     translit = reqbuf;
+    printf("get mono\n");
     monochrome = simple_serial_getc();
+    printf("get scale\n");
     scale = simple_serial_getc();
+    printf("starting\n");
     surl_stream_audio(url, translit, monochrome, scale);
     return NULL;
   }

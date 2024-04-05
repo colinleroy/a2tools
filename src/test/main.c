@@ -9,33 +9,59 @@
 #include "hgr.h"
 #include "simple_serial.h"
 #include "surl.h"
+#include "pwm_av.h"
 
-static char buf[1024];
+char *translit_charset = "ISO646-FR1";
+char monochrome = 1;
+
 int main(int argc, char *argv[]) {
+  unsigned char r;
   surl_connect_proxy();
-//  surl_start_request(SURL_METHOD_STREAM, "https://static.piaille.fr/media_attachments/files/112/016/730/859/068/160/original/c71d5f0431c7c5f4.mp4", NULL, 0);
-again:
+
+  /* Clear HGR buffers */
+  memset((char *)HGR_PAGE, 0, HGR_LEN);
+  memset((char *)HGR_PAGE2, 0, HGR_LEN);
+  surl_start_request(SURL_METHOD_STREAM_AV, "file:///home/colin/Downloads/ba.webm", NULL, 0);
+  simple_serial_write(translit_charset, strlen(translit_charset));
+  simple_serial_putc('\n');
+  simple_serial_putc(monochrome);
+  simple_serial_putc(HGR_SCALE_MIXHGR);
+
   init_hgr(1);
   hgr_mixon();
-  clrscr();
-  gotoxy(0, 22);
-  cputs("press a key to start");
-  cgetc();
-  clrscr();
-  gotoxy(0, 22);
-  surl_start_request(SURL_METHOD_STREAM_VIDEO, "/home/colin/Downloads/ba.webm", NULL, 0);
-  cputs("Waiting for stream...");
 
-  if (surl_wait_for_stream() != 0) {
-    goto again;
+read_metadata_again:
+  r = simple_serial_getc();
+  if (r == SURL_ANSWER_STREAM_METADATA) {
+    char *metadata;
+    size_t len;
+    surl_read_with_barrier((char *)&len, 2);
+    len = ntohs(len);
+    metadata = malloc(len + 1);
+    surl_read_with_barrier(metadata, len);
+    metadata[len] = '\0';
+    //show_metadata(metadata);
+    free(metadata);
+    simple_serial_putc(SURL_CLIENT_READY);
+    goto read_metadata_again;
+
+  } else if (r == SURL_ANSWER_STREAM_ART) {
+    surl_read_with_barrier((char *)HGR_PAGE, HGR_LEN);
+    init_hgr(1);
+    hgr_mixon();
+    simple_serial_putc(SURL_CLIENT_READY);
+    goto read_metadata_again;
+
+  } else if (r == SURL_ANSWER_STREAM_START) {
+    simple_serial_putc(SURL_CLIENT_READY);
+    pwm();
+    init_text();
+    // clrzone(0, 20, scrw - 1, 23);
+    // stp_print_footer();
+  } else {
+    init_text();
+    // gotoxy(center_x, 10);
+    cputs("Playback error");
+    sleep(1);
   }
-
-  surl_stream();
-
-  clrscr();
-  gotoxy(0, 22);
-  cputs("Stream finished!\n");
-goto again;
-  hgr_mixon();
-  cgetc();
 }
