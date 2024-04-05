@@ -1,2 +1,2 @@
 #!/bin/bash
-make clean all && cd ../.. && make telnet.dsk && mame apple2c0 -window -flop1 telnet.dsk -resolution 560x384 -modem null_modem -bitb socket.localhost:2000 -nomouse -nodebug; cd src/surl
+make clean all && cd ../.. && make telnet.dsk && mame apple2c0 -window -flop1 telnet.dsk -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -nodebug; cd src/surl

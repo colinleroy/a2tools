@@ -119,7 +119,7 @@ loop:
 ss0:    lda     $FFFF           ; serial status
         and     #HAS_BYTE
         beq     ss0
-sd0:    lda     $FFFF           ; serial data
+sd0:    lda     $FFFF           ; serial data (14 cycles since loop)
 
         bpl     store_dest      ; It's a value, store it
         cmp     #$FF            ; Is it a rep?

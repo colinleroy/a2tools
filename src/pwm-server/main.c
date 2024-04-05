@@ -18,8 +18,8 @@ extern FILE *ttyfp;
 
 int sample_rate;
 
-#define SAMPLE_OFFSET 0x40
-#define MAX_LEVEL       32
+#define SAMPLE_OFFSET 0x60
+#define MAX_LEVEL       31
 #define END_OF_STREAM   (MAX_LEVEL+1)
 
 #define send_sample(i) do {                 \
@@ -93,11 +93,11 @@ int main(int argc, char *argv[]) {
     printf("send %d\n", i);
     for (argc = 200; argc > 0; argc--) {
       send_sample(i);
-      usleep(10000);
+      usleep(1000);
     }
     printf("send %d done\n", i);
     send_sample(i);
-    cgetc();
+    //cgetc();
   }
 
   printf("starting\n");

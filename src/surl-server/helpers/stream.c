@@ -349,12 +349,22 @@ static int sample_rate = 115200 / (1+8+1);
 #define MAX_LEVEL       32
 #define END_OF_STREAM   (MAX_LEVEL+1)
 
+#define AV_SAMPLE_OFFSET 0x60
+#define AV_MAX_LEVEL       31
+#define AV_END_OF_STREAM   (AV_MAX_LEVEL+1)
+
 extern FILE *ttyfp;
 
 #define send_sample(i) fputc((i) + SAMPLE_OFFSET, ttyfp)
+#define send_av_sample(i) fputc((i) + AV_SAMPLE_OFFSET, ttyfp)
 
 static void send_end_of_stream(void) {
   send_sample(END_OF_STREAM);
+  fflush(ttyfp);
+}
+
+static void send_end_of_av_stream(void) {
+  send_av_sample(AV_END_OF_STREAM);
   fflush(ttyfp);
 }
 
@@ -830,4 +840,237 @@ cleanup:
     free(th_data);
   }
   return 0;
+}
+
+int surl_stream_audio_video(char *url, char *translit, char monochrome, enum HeightScale scale) {
+  /* Video vars */
+  int i, j;
+  int last_diff;
+  int last_val, ident_vals;
+  int total = 0, min = 0xFFFF, max = 0;
+  size_t r;
+  unsigned char buf_prev[2][HGR_LEN], buf[2][HGR_LEN];
+  struct timeval frame_start, frame_end;
+  int skipped = 0, skip_next = 0, duration;
+  int command, page = 0;
+  int num_diffs = 0;
+  int vhgr_file;
+
+  /* Audio vars */
+  int num = 0;
+  unsigned char c;
+  int audio_max = 0;
+  size_t cur = 0;
+  unsigned char *data = NULL;
+  unsigned char *img_data = NULL;
+  unsigned char *hgr_buf = NULL;
+  size_t size = 0;
+  size_t img_size = 0;
+  int ret = 0;
+
+  /* Control vars */
+  pthread_t audio_decode_thread, video_decode_thread;
+  decode_data *audio_th_data = malloc(sizeof(decode_data));
+  decode_data *video_th_data = malloc(sizeof(decode_data));
+  int ready = 0;
+  int stop = 0;
+  int err = 0;
+
+  memset(video_th_data, 0, sizeof(decode_data));
+  video_th_data->url = url;
+  pthread_mutex_init(&video_th_data->mutex, NULL);
+
+  printf("Starting video decode thread\n");
+  pthread_create(&video_decode_thread, NULL, *generate_frames, (void *)video_th_data);
+
+  memset(audio_th_data, 0, sizeof(decode_data));
+  audio_th_data->url = url;
+  audio_th_data->sample_rate = sample_rate;
+  pthread_mutex_init(&audio_th_data->mutex, NULL);
+
+  printf("Starting decode thread (charset %s, monochrome %d, scale %d)\n", translit, monochrome, scale);
+  pthread_create(&audio_decode_thread, NULL, *ffmpeg_decode, (void *)audio_th_data);
+
+  while(!ready && !stop && !err) {
+    pthread_mutex_lock(&audio_th_data->mutex);
+    pthread_mutex_lock(&video_th_data->mutex);
+    ready = audio_th_data->data_ready && video_th_data->data_ready;
+    stop = audio_th_data->decoding_end && video_th_data->decoding_end;
+    err = video_th_data->decoding_ret;
+    pthread_mutex_unlock(&audio_th_data->mutex);
+    pthread_mutex_unlock(&video_th_data->mutex);
+    usleep(100);
+  }
+
+  printf("Decode thread state: %s\n", ready ? "ready" : stop ? "failure" : "unknown");
+
+  if (!ready && (stop || err)) {
+    simple_serial_putc(SURL_ANSWER_STREAM_ERROR);
+    goto cleanup_thread;
+  }
+
+  pthread_mutex_lock(&audio_th_data->mutex);
+  img_data = audio_th_data->img_data;
+  img_size = audio_th_data->img_size;
+  pthread_mutex_unlock(&audio_th_data->mutex);
+
+  if (img_data && img_size) {
+    FILE *fp = fopen("/tmp/imgdata", "w+b");
+    if (fp) {
+      if (fwrite(img_data, 1, img_size, fp) == img_size) {
+        fclose(fp);
+        hgr_buf = sdl_to_hgr("/tmp/imgdata", monochrome, 0, &img_size, 0, scale);
+        if (img_size != HGR_LEN) {
+          hgr_buf = NULL;
+        }
+      } else {
+        fclose(fp);
+      }
+    }
+  }
+
+  pthread_mutex_lock(&audio_th_data->mutex);
+  send_metadata("artist", audio_th_data->artist, translit);
+  send_metadata("album", audio_th_data->album, translit);
+  send_metadata("title", audio_th_data->title, translit);
+  send_metadata("track", audio_th_data->track, translit);
+  pthread_mutex_unlock(&audio_th_data->mutex);
+
+  if (diffs == NULL) {
+    diffs = malloc(HGR_LEN * sizeof(byte_diff *));
+    for (j = 0; j < HGR_LEN; j++) {
+      diffs[j] = malloc(sizeof(byte_diff));
+    }
+  }
+
+  vhgr_file = open(tmp_filename, O_RDONLY);
+
+  unlink(tmp_filename);
+  if (vhgr_file == -1) {
+    printf("Error opening %s\n", tmp_filename);
+    // simple_serial_putc(SURL_ANSWER_STREAM_ERROR);
+    // goto cleanup_thread;
+  }
+
+  printf("AV: Client ready\n");
+  if (hgr_buf) {
+    simple_serial_putc(SURL_ANSWER_STREAM_ART);
+    if (simple_serial_getc() == SURL_CLIENT_READY) {
+      printf("Sending image\n");
+      simple_serial_write_fast((char *)hgr_buf, img_size);
+      if (simple_serial_getc() != SURL_CLIENT_READY) {
+        goto cleanup_thread;
+      }
+    } else {
+      printf("Skip image sending\n");
+    }
+  }
+
+  simple_serial_putc(SURL_ANSWER_STREAM_START);
+  if (simple_serial_getc() != SURL_CLIENT_READY) {
+    pthread_mutex_lock(&audio_th_data->mutex);
+    audio_th_data->stop = 1;
+    pthread_mutex_unlock(&audio_th_data->mutex);
+    ret = -1;
+    goto cleanup_thread;
+  }
+
+  audio_max = 256;
+  sleep(1); /* Let ffmpeg have a bit of time to push data so we don't starve */
+
+  while (1) {
+    pthread_mutex_lock(&audio_th_data->mutex);
+    if (cur > sample_rate*(2*BUFFER_LEN)) {
+      /* Avoid ever-expanding buffer */
+      memmove(audio_th_data->data, audio_th_data->data + sample_rate*BUFFER_LEN, sample_rate*BUFFER_LEN);
+      audio_th_data->data = realloc(audio_th_data->data, audio_th_data->size - sample_rate*BUFFER_LEN);
+      audio_th_data->size -= sample_rate*BUFFER_LEN;
+      cur -= sample_rate*BUFFER_LEN;
+    }
+    data = audio_th_data->data;
+    size = audio_th_data->size;
+    stop = audio_th_data->decoding_end;
+    pthread_mutex_unlock(&audio_th_data->mutex);
+
+    if (cur == size) {
+      if (stop) {
+        printf("Stopping at %zu/%zu\n", cur, size);
+        break;
+      } else {
+        /* We're starved but not done :-( */
+        continue;
+      }
+    }
+    send_av_sample(data[cur] * AV_MAX_LEVEL/audio_max);
+    cur++;
+
+    /* Kbd input polled directly for no wait at all */
+    {
+      struct pollfd fds[1];
+      fds[0].fd = fileno(ttyfp);
+      fds[0].events = POLLIN;
+      if (poll(fds, 1, 0) > 0 && (fds[0].revents & POLLIN)) {
+        c = simple_serial_getc();
+        switch (c) {
+          case ' ':
+            printf("Pause\n");
+            send_av_sample(AV_MAX_LEVEL/2);
+            simple_serial_getc();
+            break;
+          case APPLE_CH_CURS_LEFT:
+            printf("Rewind\n");
+            if (cur < sample_rate * 10) {
+              cur = 0;
+            } else {
+              cur -= sample_rate * 10;
+            }
+            break;
+          case APPLE_CH_CURS_RIGHT:
+            if (cur + sample_rate * 10 < size) {
+              cur += sample_rate * 10;
+            } else {
+              cur = size;
+            }
+            printf("Forward\n");
+            break;
+          case CH_ESC:
+            printf("Stop\n");
+            goto done;
+          case SURL_METHOD_ABORT:
+            printf("Connection reset\n");
+            goto cleanup_thread;
+        }
+      }
+    }
+
+    num++;
+  }
+
+done:
+  send_av_sample(AV_MAX_LEVEL/2);
+  send_end_of_av_stream();
+
+  do {
+    c = simple_serial_getc();
+    printf("ignoring %02X\n", c);
+  } while (c != SURL_CLIENT_READY
+        && c != SURL_METHOD_ABORT);
+
+cleanup_thread:
+  printf("Cleaning up decoder thread\n");
+  pthread_mutex_lock(&audio_th_data->mutex);
+  audio_th_data->stop = 1;
+  pthread_mutex_unlock(&audio_th_data->mutex);
+  pthread_join(audio_decode_thread, NULL);
+  pthread_join(video_decode_thread, NULL);
+  free(audio_th_data->img_data);
+  free(audio_th_data->data);
+  free(audio_th_data->artist);
+  free(audio_th_data->album);
+  free(audio_th_data->title);
+  free(audio_th_data->track);
+  free(audio_th_data);
+  printf("Done\n");
+
+  return ret;
 }
