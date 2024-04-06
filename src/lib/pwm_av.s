@@ -4,7 +4,7 @@
         .export         _pwm
         .export         _SAMPLES_BASE
 
-        .importzp       _zp6, _zp8, _zp10, _zp12, tmp1, tmp2, tmp3, ptr1, ptr2, ptr3, ptr4
+        .importzp       _zp6, _zp8, _zp9, _zp10, _zp12, tmp1, tmp2, tmp3, tmp4, ptr1, ptr2, ptr3, ptr4
 
         .import         _serial_putc_direct
         .import         _simple_serial_set_irq
@@ -49,12 +49,15 @@ PAGE2_HB      = PAGE1_HB
 SPKR         := $C030
 
 spkr_ptr      = _zp6
+last_offset   = _zp8
+got_offset    = _zp9
 next          = _zp10
-page_ptr      = _zp12
+page          = _zp12
 audio_status  = ptr1
 audio_data    = ptr2
 store_dest    = tmp1 ; + tmp2
-
+dummy_zp      = tmp3
+last_base     = tmp4
 page1_addr_ptr= ptr3
 page2_addr_ptr= ptr4
 
@@ -65,9 +68,11 @@ page2_addr_ptr= ptr4
 .macro WASTE_2                  ; Cycles wasters
         nop
 .endmacro
+
 .macro WASTE_3
-        sta     tmp3
+        sta     dummy_zp
 .endmacro
+
 .macro WASTE_4
         nop
         nop
@@ -79,7 +84,9 @@ page2_addr_ptr= ptr4
 .endmacro
 
 .macro WASTE_6
-        inc     dummy_abs
+        nop
+        nop
+        nop
 .endmacro
 
 .macro WASTE_7
@@ -192,6 +199,34 @@ page2_addr_ptr= ptr4
         WASTE_7
 .endmacro
 
+.macro WASTE_38
+        WASTE_12
+        WASTE_12
+        WASTE_7
+        WASTE_7
+.endmacro
+
+.macro WASTE_40
+        WASTE_12
+        WASTE_12
+        WASTE_12
+        WASTE_4
+.endmacro
+
+.macro WASTE_42
+        WASTE_12
+        WASTE_12
+        WASTE_12
+        WASTE_6
+.endmacro
+
+.macro WASTE_44
+        WASTE_12
+        WASTE_12
+        WASTE_12
+        WASTE_8
+.endmacro
+
 .macro KBD_LOAD_7               ; Check keyboard and jsr if key pressed (trashes A)
         lda     KBD             ; 4
         bpl     :+              ; 7
@@ -217,17 +252,25 @@ _SAMPLES_BASE = *
 duty_cycle0:
         ____SPKR_DUTY____4      ; 4
         ____SPKR_DUTY____4      ; 8
-        lda     (audio_status)  ; 13
-        and     #HAS_BYTE       ; 15
-        beq     :+              ; 17/18
-        lda     (audio_data)    ; 22
-        sta     next+1          ; 25
+as0:    lda     $C0A9           ; 12
+        and     #HAS_BYTE       ; 14
+        beq     :+              ; 16/17
+ad0:    ldx     $C0A8           ; 20
+        stx     next+1          ; 23
 
-        WASTE_16                ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+        WASTE_6                 ; 29
+vs0:    lda     $C099           ; 33
+        and     #HAS_BYTE       ; 35
+        beq     no_vid0         ; 37/38
+vd0:    lda     $C098           ; 41
+        jmp     video_direct    ; 86 (takes 45 cycles, jumps to next)
 
-:       WASTE_23                ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+:       WASTE_12                ; 29
+        jmp     video           ; 88 (takes 57 cycles, jumps to next)
+
+no_vid0:
+        WASTE_42                ; 80
+        jmp     (next)          ; 86
 
 .align 256
 .assert * = _SAMPLES_BASE + $100, error
@@ -785,80 +828,99 @@ duty_cycle30:
 
 .align 256
 .assert * = _SAMPLES_BASE + $1F00, error
-duty_cycle31:
+duty_cycle31:                   ; end spkr at 38
         ____SPKR_DUTY____4      ; 4
-        lda     (audio_status)  ;
-        and     #HAS_BYTE       ;
-        beq     :+              ;
-        lda     (audio_data)    ;
-        WASTE_16                ;
-        ____SPKR_DUTY____4      ; 38
-        sta     next+1          ; 41
+as31:   lda     $C0A9           ; 8
+        and     #HAS_BYTE       ; 10
+        beq     noa31           ; 12/13
+ad31:   ldx     $C0A8           ; 16
+        stx     next+1          ; 19
+        bra     vs31            ; 22
 
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+noa31:  WASTE_9                 ; 22
 
-:       WASTE_20                ; 34
+vs31:   lda     $C099           ; 26
+        and     #HAS_BYTE       ; 28
+        beq     no_vid31        ; 30/31
+vd31:   lda     $C098           ; 34
+
         ____SPKR_DUTY____4      ; 38
-        WASTE_3                 ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+        WASTE_4                 ; 42
+        jmp     video_direct    ; 45=>86 (takes 41 cycles, jumps to next)
+
+no_vid31:
+        WASTE_3                 ; 34
+        ____SPKR_DUTY____4      ; 38
+        WASTE_42                ; 80
+        jmp     (next)          ; 86
+
+.align 256
+page1_addrs_arr:.res (N_BASES*2)          ; Base addresses arrays
+.align 256                                ; Aligned for correct cycle counting
+page2_addrs_arr:.res (N_BASES*2)
 
 video_toggle_spkr:
         ____SPKR_DUTY____4      ; 37
         WASTE_4                 ; 41
 video:
-video_status:
-        lda     $FFFF           ; 4
-        and     #HAS_BYTE       ; 6
-        beq     no_vid          ; 8/9
-video_data:
-        lda     $FFFF           ; 12
-        bpl     set_pixel       ; 14/15
-        cmp     #$FF            ; 16
-        beq     toggle_page     ; 18/19
-        and     #%01111111      ; 20
+video_direct:
+        bmi     control           ; 2/3
+set_pixel:
+        ldy     last_base         ; 5 Finish storing base
+        tax                       ; 7
+page_ptr_a:
+        lda     (page1_addr_ptr),y; 12
+        sta     store_dest+1      ; 15
+        txa                       ; 17
+        ldy     last_offset       ; 20
+        sta     (store_dest),y    ; 26
+        iny                       ; 28
+        sty     last_offset       ; 31
+        .byte   $9C ; stz ABSOLUTE to waste one cycle
+        .byte   got_offset
+        .byte   $00               ; 35
+        jmp     (next)            ; 41
+
+control:
+        cmp     #$FF            ; 5
+        beq     toggle_page     ; 7/8
+        and     #%01111111      ; 9
 
         ; offset or base?
-        ldx     got_offset      ; 24
-        beq     set_offset      ; 26/27
-
-set_base:
-        tay                       ; 28
-        lda     (page_ptr),y      ; 33
-        sta     store_dest        ; 36
-        iny                       ; 38
-        lda     (page_ptr),y      ; 43
-        sta     store_dest+1      ; 46
-        jmp     (next)            ; 52
-
-toggle_page:
-        ldx     page              ; 23
-        lda     $C054,x           ; 27
-        lda     page_addr_ptr,x   ; 31
-        sta     page_ptr+1        ; 35
-        txa                       ; 37
-        eor     #$01              ; 39 Toggle page for next time
-        sta     page              ; 43
-        WASTE_3                   ; 46
-        jmp     (next)            ; 52
+        ldx     got_offset      ; 12
+        bne     set_base        ; 14/15
 
 set_offset:
-        sta     last_offset       ; 31
-        inc     got_offset        ; 37
-        WASTE_9                   ; 46
-        jmp     (next)            ; 52
+        sta     last_offset       ; 17
+        inc     got_offset        ; 22
+        WASTE_13                  ; 35
+        jmp     (next)            ; 41
 
-set_pixel:
-        ldy     last_offset       ; 19
-        sta     (store_dest),y    ; 24
-        iny                       ; 26
-        sty     last_offset       ; 30
-        stz     got_offset        ; 34
-        WASTE_12                  ; 46
-        jmp     (next)            ; 52
+set_base:
+        asl     a                 ; 17
+        tay                       ; 19
+page_ptr_b:
+        lda     (page1_addr_ptr),y; 24
+        sta     store_dest        ; 27
+        iny                       ; 29
+        sty     last_base         ; 32
+        stz     got_offset        ; 35
+        jmp     (next)            ; 41
+
+toggle_page:
+        ldx     page              ; 11
+        sta     $C054,x           ; 16
+        lda     page_addr_ptr,x   ; 20
+        sta     page_ptr_a+1      ; 24
+        sta     page_ptr_b+1      ; 28
+        txa                       ; 30
+        eor     #$01              ; 32 Toggle page for next time
+        sta     page              ; 35
+        jmp     (next)            ; 41
 
 no_vid: 
-        WASTE_37                  ; 46 - no video
-        jmp     (next)            ; 52
+        WASTE_38                  ; 47 - no video
+        jmp     (next)            ; 53
 
 ; -----------------------------------------------------------------
 kbd_send:
@@ -911,9 +973,9 @@ setup_pointers:
         jsr     calc_bases
 
         ; Init cycle destination
-        lda     #<(duty_cycle0)
+        lda     #<(duty_cycle31)
         sta     next
-        lda     #>(duty_cycle0)
+        lda     #>(duty_cycle31)
         sta     next+1
 
         ; Setup serial registers
@@ -927,15 +989,15 @@ setup_pointers:
         lda     serial_data_reg+2
         sta     audio_data+1
 
-        lda     #<($C098+1)
-        sta     video_status+1
-        lda     #>($C098+1)
-        sta     video_status+2
-
-        lda     #<($C098)
-        sta     video_data+1
-        lda     #>($C098)
-        sta     video_data+2
+        ; lda     #<($C098+1)
+        ; sta     video_status+1
+        ; lda     #>($C098+1)
+        ; sta     video_status+2
+        ; 
+        ; lda     #<($C098)
+        ; sta     video_data+1
+        ; lda     #>($C098)
+        ; sta     video_data+2
 
         lda     $C0A8+2
         sta     $C098+2
@@ -1007,12 +1069,6 @@ page_addr_ptr:  .byte <(page2_addr_ptr)   ; Base addresses pointer for page 2
                 .byte <(page1_addr_ptr)   ; Base addresses pointer for page 1
 
         .bss
-page1_addrs_arr:.res (N_BASES*2)          ; Base addresses arrays
-page2_addrs_arr:.res (N_BASES*2)
-page:           .res 1
 stop:           .res 1
-dummy_abs:      .res 1
-counter:        .res 1
+dummy_abs:      .res 2
 prevspd:        .res 1
-last_offset:    .res 1
-got_offset:     .res 1

@@ -23,6 +23,7 @@ int cur_65816_bank = 0;
 int dst_65816_bank = 0;
 
 int start_addr = 0;
+long inter_cycle = 0;
 
 extern int read_from;
 extern int write_to;
@@ -379,6 +380,10 @@ try_gen:
             printf("%s", symbol_get_name(instr_symbol));
             tabulate(symbol_get_name(instr_symbol), FIELD_WIDTH + backtab);
           }
+          if (!strcmp(symbol_get_name(instr_symbol), "duty_cycle31")) {
+            printf("(%lu)", inter_cycle);
+            inter_cycle = 0;
+          }
         } else {
           tabulate(NULL, FIELD_WIDTH + backtab);
         }
@@ -400,9 +405,10 @@ try_gen:
           tabulate(NULL, FIELD_WIDTH);
         }
 
-        if (!do_callgrind) 
+        if (!do_callgrind) {
           printf("%d ", cycles);
-
+          inter_cycle += cycles;
+        }
         /* Print the source location */
         if (sloc && !do_callgrind) {
           printf("(%s:%d)", sloc_get_filename(sloc), sloc_get_line(sloc));

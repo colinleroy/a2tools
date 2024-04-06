@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
   simple_serial_putc(HGR_SCALE_MIXHGR);
 
   init_hgr(1);
-  hgr_mixon();
+  hgr_mixoff();
 
 read_metadata_again:
   r = simple_serial_getc();
@@ -48,7 +48,7 @@ read_metadata_again:
   } else if (r == SURL_ANSWER_STREAM_ART) {
     surl_read_with_barrier((char *)HGR_PAGE, HGR_LEN);
     init_hgr(1);
-    hgr_mixon();
+    hgr_mixoff();
     simple_serial_putc(SURL_CLIENT_READY);
     goto read_metadata_again;
 
