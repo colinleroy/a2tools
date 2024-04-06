@@ -870,6 +870,7 @@ static void *audio_push(void *unused) {
   unsigned char c;
   size_t cur = 0;
   int ret = 0;
+  int toggle = 0;
 
   while (1) {
     pthread_mutex_lock(&audio_th_data->mutex);
@@ -897,7 +898,12 @@ static void *audio_push(void *unused) {
         continue;
       }
     }
-    send_av_sample(31);//audio_data[cur] * AV_MAX_LEVEL/audio_max);
+    send_av_sample(toggle);//audio_data[cur] * AV_MAX_LEVEL/audio_max);
+    // toggle = !toggle;
+    if (!toggle) toggle = 15;
+    else if (toggle == 15) toggle = 16;
+    else if (toggle == 16) toggle = 31;
+    else if (toggle == 31) toggle = 0;
     cur++;
 
     /* Kbd input polled directly for no wait at all */

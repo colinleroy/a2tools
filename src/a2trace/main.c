@@ -380,7 +380,7 @@ try_gen:
             printf("%s", symbol_get_name(instr_symbol));
             tabulate(symbol_get_name(instr_symbol), FIELD_WIDTH + backtab);
           }
-          if (!strcmp(symbol_get_name(instr_symbol), "duty_cycle31")) {
+          if (!strncmp(symbol_get_name(instr_symbol), "duty_cycle", 10)) {
             printf("(%lu)", inter_cycle);
             inter_cycle = 0;
           }
