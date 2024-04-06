@@ -394,9 +394,9 @@ static void setup_tty(int port, int baudrate, int hw_flow_control) {
   }
 }
 
-static int simple_serial_open_slot(int slot) {
+FILE *simple_serial_open_file(char *tty_path) {
   struct flock lock;
-
+  FILE *fp;
   lock.l_start = 0;
   lock.l_len = 0;
   lock.l_pid = getpid();
@@ -404,23 +404,28 @@ static int simple_serial_open_slot(int slot) {
   lock.l_whence = SEEK_SET;
 
   /* Open file */
-  ttyfp = fopen(opt_tty_path, "r+b");
+  fp = fopen(tty_path, "r+b");
 
   /* Try to lock file */
   if (ttyfp != NULL && fcntl(fileno(ttyfp), F_SETLK, &lock) < 0) {
-    printf("%s is already opened by another process.\n", opt_tty_path);
-    fclose(ttyfp);
-    ttyfp = NULL;
+    printf("%s is already opened by another process.\n", tty_path);
+    fclose(fp);
+    fp = NULL;
   }
-  if (ttyfp == NULL) {
-    printf("Can't open %s\n", opt_tty_path);
-    return -1;
+  if (fp == NULL) {
+    printf("Can't open %s\n", tty_path);
+    return NULL;
   }
 
-  simple_serial_flush();
-  setup_tty(fileno(ttyfp), opt_tty_speed, opt_tty_hw_handshake);
+  simple_serial_flush_file(fp);
+  setup_tty(fileno(fp), opt_tty_speed, opt_tty_hw_handshake);
 
-  return 0;
+  return fp;
+}
+
+static int simple_serial_open_slot(int slot) {
+  ttyfp = simple_serial_open_file(opt_tty_path);
+  return ttyfp != NULL  ? 0 : -1;
 }
 
 int simple_serial_open(void) {

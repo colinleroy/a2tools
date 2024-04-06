@@ -17,6 +17,7 @@
 #include "array_sort.h"
 #include "hgr-convert.h"
 #include "char-convert.h"
+#include "extended_conio.h"
 
 #define MAX_OFFSET 126
 #define NUM_BASES  (HGR_LEN/MAX_OFFSET)+1
@@ -36,7 +37,7 @@
 #define NUM_PAGES 1
 #endif
 
-#if 0
+#if 1
   #define DEBUG printf
 #else
  #define DEBUG if (0) printf
@@ -192,18 +193,26 @@ out:
   return NULL;
 }
 
-static void enqueue_byte(unsigned char b) {
-  bytes_sent++;
-  changes_buffer[changes_num++] = b;
-}
+FILE *ttyfp2 = NULL;
 
-static void flush_changes(void) {
-  simple_serial_write_fast(changes_buffer, changes_num);
+
+static void flush_changes(FILE *fp) {
+  //simple_serial_write_fast_fp(fp, changes_buffer, changes_num);
   changes_num = 0;
 }
 
+static void enqueue_byte(unsigned char b) {
+  bytes_sent++;
+  changes_buffer[changes_num++] = b;
+  //simple_serial_write_fast_fp(ttyfp2, &b, 1);
+  fputc(b, ttyfp2);
+  fflush(ttyfp2);
+  //cgetc();
+}
+
 static int last_sent_base = -1;
-static void send_base(unsigned char b) {
+
+static void send_base(unsigned char b, FILE *fp) {
   DEBUG(" new base %d\n", b);
   DEBUG(" base %d offset %d (should be written at %x)\n", b, offset, 0x2000+(cur_base*MAX_OFFSET)+offset);
   if ((b| 0x80) == 0xFF) {
@@ -212,7 +221,7 @@ static void send_base(unsigned char b) {
   }
   enqueue_byte(b|0x80);
   if (b == 0) {
-    flush_changes();
+    flush_changes(fp);
   }
   last_sent_base = b;
   base_bytes++;
@@ -252,8 +261,8 @@ static void send_byte(unsigned char b) {
   data_bytes++;
 }
 
-static void flush_ident(int ident_vals, int last_val) {
-  if (ident_vals > MIN_REPS) {
+static void flush_ident(int min_reps, int ident_vals, int last_val) {
+  if (ident_vals > min_reps) {
     send_num_reps(ident_vals);
     send_byte(last_val);
   } else {
@@ -668,7 +677,7 @@ int surl_stream_video(char *url) {
 
   offset = cur_base = 0;
   send_offset(0);
-  send_base(0);
+  send_base(0, ttyfp);
 
   i = 1;
   memset(buf_prev[0], 0, HGR_LEN);
@@ -694,7 +703,7 @@ next_file:
   /* Sync point - force a switch to base 0 */
   offset = cur_base = 0;
   send_offset(0);
-  send_base(0);
+  send_base(0, ttyfp);
 
   if (i > FPS && (i % (15*FPS)) == 0) {
     duration = i/FPS;
@@ -755,7 +764,7 @@ next_file:
     if ((offset >= MAX_OFFSET && pixel != last_diff+1)
       || offset > 255) {
       /* must flush ident */
-      flush_ident(ident_vals, last_val);
+      flush_ident(MIN_REPS, ident_vals, last_val);
       ident_vals = 0;
 
       /* we have to update base */
@@ -771,11 +780,11 @@ next_file:
         DEBUG("must send base (offset %d => %d, base %d => %d)\n",
                 last_sent_offset, offset, last_sent_base, cur_base);
         send_offset(offset);
-        send_base(cur_base);
+        send_base(cur_base, ttyfp);
       }
     } else if (pixel != last_diff+1) {
       /* must flush ident */
-      flush_ident(ident_vals, last_val);
+      flush_ident(MIN_REPS, ident_vals, last_val);
       ident_vals = 0;
       /* We have to send offset */
       send_offset(offset);
@@ -784,7 +793,7 @@ next_file:
        (ident_vals < MAX_REPS && buf[page][pixel] == last_val && pixel == last_diff+1)) {
       ident_vals++;
     } else {
-      flush_ident(ident_vals, last_val);
+      flush_ident(MIN_REPS, ident_vals, last_val);
       ident_vals = 1;
     }
     last_val = buf[page][pixel];
@@ -794,7 +803,7 @@ next_file:
     /* Note diff done */
     buf_prev[page][pixel] = buf[page][pixel];
   }
-  flush_ident(ident_vals, last_val);
+  flush_ident(MIN_REPS, ident_vals, last_val);
   ident_vals = 0;
 
   total += num_diffs;
@@ -809,8 +818,8 @@ next_file:
 
 close_last:
   send_offset(0);
-  send_base(NUM_BASES+2); /* Done */
-  flush_changes();
+  send_base(NUM_BASES+2, ttyfp); /* Done */
+  flush_changes(ttyfp);
 
   /* Get rid of possible last ack */
   simple_serial_flush();
@@ -842,8 +851,104 @@ cleanup:
   return 0;
 }
 
-int surl_stream_audio_video(char *url, char *translit, char monochrome, enum HeightScale scale) {
-  /* Video vars */
+decode_data *audio_th_data;
+decode_data *video_th_data;
+int ready;
+int stop;
+int err;
+
+unsigned char *audio_data = NULL;
+unsigned char *img_data = NULL;
+unsigned char *hgr_buf = NULL;
+int audio_max = 0;
+size_t audio_size = 0;
+size_t img_size = 0;
+
+static void *audio_push(void *unused) {
+  /* Audio vars */
+  int num = 0;
+  unsigned char c;
+  size_t cur = 0;
+  int ret = 0;
+
+  while (1) {
+    pthread_mutex_lock(&audio_th_data->mutex);
+    if (cur > sample_rate*(2*BUFFER_LEN)) {
+      /* Avoid ever-expanding buffer */
+      memmove(audio_th_data->data, audio_th_data->data + sample_rate*BUFFER_LEN, sample_rate*BUFFER_LEN);
+      audio_th_data->data = realloc(audio_th_data->data, audio_th_data->size - sample_rate*BUFFER_LEN);
+      audio_th_data->size -= sample_rate*BUFFER_LEN;
+      cur -= sample_rate*BUFFER_LEN;
+    }
+    audio_data = audio_th_data->data;
+    audio_size = audio_th_data->size;
+    stop = audio_th_data->decoding_end;
+    pthread_mutex_unlock(&audio_th_data->mutex);
+
+    if (cur == audio_size) {
+      if (stop) {
+        printf("Stopping at %zu/%zu\n", cur, audio_size);
+        pthread_mutex_lock(&audio_th_data->mutex);
+        audio_th_data->stop = 1;
+        pthread_mutex_unlock(&audio_th_data->mutex);
+        break;
+      } else {
+        /* We're starved but not done :-( */
+        continue;
+      }
+    }
+    send_av_sample(31);//audio_data[cur] * AV_MAX_LEVEL/audio_max);
+    cur++;
+
+    /* Kbd input polled directly for no wait at all */
+    {
+      struct pollfd fds[1];
+      fds[0].fd = fileno(ttyfp);
+      fds[0].events = POLLIN;
+      if (poll(fds, 1, 0) > 0 && (fds[0].revents & POLLIN)) {
+        c = simple_serial_getc();
+        switch (c) {
+          case ' ':
+            printf("Pause\n");
+            send_av_sample(AV_MAX_LEVEL/2);
+            simple_serial_getc();
+            break;
+          case APPLE_CH_CURS_LEFT:
+            printf("Rewind\n");
+            if (cur < sample_rate * 10) {
+              cur = 0;
+            } else {
+              cur -= sample_rate * 10;
+            }
+            break;
+          case APPLE_CH_CURS_RIGHT:
+            if (cur + sample_rate * 10 < audio_size) {
+              cur += sample_rate * 10;
+            } else {
+              cur = audio_size;
+            }
+            printf("Forward\n");
+            break;
+          case CH_ESC:
+            printf("Stop\n");
+            pthread_mutex_lock(&audio_th_data->mutex);
+            audio_th_data->stop = 1;
+            pthread_mutex_unlock(&audio_th_data->mutex);
+            return NULL;
+          case SURL_METHOD_ABORT:
+            printf("Connection reset\n");
+            return NULL;
+        }
+      }
+    }
+    num++;
+  }
+  return NULL;
+}
+
+int vhgr_file;
+
+void *video_push(void *unused) {
   int i, j;
   int last_diff;
   int last_val, ident_vals;
@@ -854,27 +959,152 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
   int skipped = 0, skip_next = 0, duration;
   int command, page = 0;
   int num_diffs = 0;
-  int vhgr_file;
 
-  /* Audio vars */
-  int num = 0;
-  unsigned char c;
-  int audio_max = 0;
-  size_t cur = 0;
-  unsigned char *data = NULL;
-  unsigned char *img_data = NULL;
-  unsigned char *hgr_buf = NULL;
-  size_t size = 0;
-  size_t img_size = 0;
-  int ret = 0;
+  i = 1;
+  memset(buf_prev[0], 0, HGR_LEN);
+  memset(buf_prev[1], 0, HGR_LEN);
+
+  gettimeofday(&frame_start, 0);
+
+  page = 1;
+
+next_file:
+  i++;
+  page = !page;
+
+  if ((r = read(vhgr_file, buf[page], HGR_LEN)) != HGR_LEN) {
+    goto close_last;
+  }
+
+  /* count diffs */
+  last_diff = 0;
+  cur_base = 0;
+  ident_vals = 0;
+
+  /* Sync point - force a switch to base 0 */
+  offset = cur_base = 0;
+  send_offset(0);
+  send_base(0, ttyfp2);
+  enqueue_byte(0xFF); /* Switch page */
+
+  if (i > FPS && (i % (15*FPS)) == 0) {
+    duration = i/FPS;
+    printf("%d seconds, %d frames skipped / %d: %d fps\n", duration,
+         skipped, i, (i-skipped)/duration);
+
+  }
+
+  gettimeofday(&frame_end, 0);
+  if (sync_fps(&frame_start, &frame_end) || skip_next) {
+    gettimeofday(&frame_start, 0);
+    DEBUG("skipping frame\n");
+    skipped++;
+#ifdef DOUBLE_BUFFER
+    if (!skip_next) {
+      skip_next = 1;
+    } else {
+      skip_next = 0;
+    }
+#endif
+    goto next_file;
+  }
+
+  gettimeofday(&frame_start, 0);
+
+  for (num_diffs = 0, j = 0; j < HGR_LEN; j++) {
+    if (buf_prev[page][j] != buf[page][j]) {
+      diffs[num_diffs]->offset = j;
+      diffs[num_diffs]->changed = diff_score(buf_prev[page][j], buf[page][j]);
+      num_diffs++;
+    }
+  }
+
+  last_val = -1;
+  for (j = 0; j < num_diffs && j < MAX_DIFFS_PER_FRAME; j++) {
+    int pixel = diffs[j]->offset;
+
+    offset = pixel - (cur_base*MAX_OFFSET);
+    /* If there's no hole in updated bytes, we can let offset
+     * increment up to 255 */
+    if ((offset >= MAX_OFFSET && pixel != last_diff+1)
+      || offset > 255) {
+      /* must flush ident */
+      flush_ident(20000, ident_vals, last_val);
+      ident_vals = 0;
+
+      /* we have to update base */
+      cur_base = pixel / MAX_OFFSET;
+      offset = pixel - (cur_base*MAX_OFFSET);
+
+      DEBUG("send base (offset %d => %d, base %d => %d)\n",
+              last_sent_offset, offset, last_sent_base, cur_base);
+      send_offset(offset);
+      send_base(cur_base, ttyfp2);
+    } else if (pixel != last_diff+1) {
+      /* must flush ident */
+      flush_ident(20000, ident_vals, last_val);
+      ident_vals = 0;
+      /* We have to send offset */
+      send_offset(offset);
+    }
+    if (last_val == -1 ||
+       (ident_vals < MAX_REPS && buf[page][pixel] == last_val && pixel == last_diff+1)) {
+      ident_vals++;
+    } else {
+      flush_ident(20000, ident_vals, last_val);
+      ident_vals = 1;
+    }
+    last_val = buf[page][pixel];
+
+    last_diff = pixel;
+
+    /* Note diff done */
+    buf_prev[page][pixel] = buf[page][pixel];
+  }
+  flush_ident(20000, ident_vals, last_val);
+  ident_vals = 0;
+
+  total += num_diffs;
+  if (num_diffs < min) {
+    min = num_diffs;
+  }
+  if (num_diffs > max) {
+    max = num_diffs;
+  }
+
+  goto next_file;
+
+close_last:
+  if (i - skipped > 0) {
+    printf("Max: %d, Min: %d, Average: %d\n", max, min, total / (i-skipped));
+    printf("Sent %lu bytes for %d non-skipped frames: %lu avg (%lu data, %lu offset, %lu base)\n",
+            bytes_sent, (i-skipped), bytes_sent/(i-skipped),
+            data_bytes/(i-skipped), offset_bytes/(i-skipped), base_bytes/(i-skipped));
+  }
+  if (i - skipped > FPS) {
+    duration = i/FPS;
+    printf("%d seconds, %d frames skipped / %d: %d fps\n", duration,
+          skipped, i, (i-skipped)/duration);
+  }
+  return NULL;
+}
+
+int surl_stream_audio_video(char *url, char *translit, char monochrome, enum HeightScale scale) {
+  int j;
 
   /* Control vars */
+  unsigned char c;
+  int ret = 0;
+  int sample;
   pthread_t audio_decode_thread, video_decode_thread;
-  decode_data *audio_th_data = malloc(sizeof(decode_data));
-  decode_data *video_th_data = malloc(sizeof(decode_data));
-  int ready = 0;
-  int stop = 0;
-  int err = 0;
+  pthread_t audio_push_thread, video_push_thread;
+  audio_th_data = malloc(sizeof(decode_data));
+  video_th_data = malloc(sizeof(decode_data));
+  ready = 0;
+  stop = 0;
+  err = 0;
+
+  ttyfp2 = simple_serial_open_file("/dev/tnt2");
 
   memset(video_th_data, 0, sizeof(decode_data));
   video_th_data->url = url;
@@ -952,6 +1182,12 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
     // goto cleanup_thread;
   }
 
+  memset(changes_buffer, 0, sizeof changes_buffer);
+
+  offset = cur_base = 0;
+  send_offset(0);
+  send_base(0, ttyfp2);
+
   printf("AV: Client ready\n");
   if (hgr_buf) {
     simple_serial_putc(SURL_ANSWER_STREAM_ART);
@@ -978,83 +1214,22 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
   audio_max = 256;
   sleep(1); /* Let ffmpeg have a bit of time to push data so we don't starve */
 
-  while (1) {
-    pthread_mutex_lock(&audio_th_data->mutex);
-    if (cur > sample_rate*(2*BUFFER_LEN)) {
-      /* Avoid ever-expanding buffer */
-      memmove(audio_th_data->data, audio_th_data->data + sample_rate*BUFFER_LEN, sample_rate*BUFFER_LEN);
-      audio_th_data->data = realloc(audio_th_data->data, audio_th_data->size - sample_rate*BUFFER_LEN);
-      audio_th_data->size -= sample_rate*BUFFER_LEN;
-      cur -= sample_rate*BUFFER_LEN;
-    }
-    data = audio_th_data->data;
-    size = audio_th_data->size;
-    stop = audio_th_data->decoding_end;
-    pthread_mutex_unlock(&audio_th_data->mutex);
+  pthread_create(&audio_push_thread, NULL, *audio_push, NULL);
+  pthread_create(&video_push_thread, NULL, *video_push, NULL);
+  pthread_join(audio_push_thread, NULL);
+  pthread_join(video_push_thread, NULL);
 
-    if (cur == size) {
-      if (stop) {
-        printf("Stopping at %zu/%zu\n", cur, size);
-        break;
-      } else {
-        /* We're starved but not done :-( */
-        continue;
-      }
-    }
-    send_av_sample(data[cur] * AV_MAX_LEVEL/audio_max);
-    cur++;
+  printf("done (complete: %d)\n", audio_th_data->stop);
+  if (audio_th_data->stop) {
+    send_av_sample(AV_MAX_LEVEL/2);
+    send_end_of_av_stream();
 
-    /* Kbd input polled directly for no wait at all */
-    {
-      struct pollfd fds[1];
-      fds[0].fd = fileno(ttyfp);
-      fds[0].events = POLLIN;
-      if (poll(fds, 1, 0) > 0 && (fds[0].revents & POLLIN)) {
-        c = simple_serial_getc();
-        switch (c) {
-          case ' ':
-            printf("Pause\n");
-            send_av_sample(AV_MAX_LEVEL/2);
-            simple_serial_getc();
-            break;
-          case APPLE_CH_CURS_LEFT:
-            printf("Rewind\n");
-            if (cur < sample_rate * 10) {
-              cur = 0;
-            } else {
-              cur -= sample_rate * 10;
-            }
-            break;
-          case APPLE_CH_CURS_RIGHT:
-            if (cur + sample_rate * 10 < size) {
-              cur += sample_rate * 10;
-            } else {
-              cur = size;
-            }
-            printf("Forward\n");
-            break;
-          case CH_ESC:
-            printf("Stop\n");
-            goto done;
-          case SURL_METHOD_ABORT:
-            printf("Connection reset\n");
-            goto cleanup_thread;
-        }
-      }
-    }
-
-    num++;
+    do {
+      c = simple_serial_getc();
+      printf("ignoring %02X\n", c);
+    } while (c != SURL_CLIENT_READY
+          && c != SURL_METHOD_ABORT);
   }
-
-done:
-  send_av_sample(AV_MAX_LEVEL/2);
-  send_end_of_av_stream();
-
-  do {
-    c = simple_serial_getc();
-    printf("ignoring %02X\n", c);
-  } while (c != SURL_CLIENT_READY
-        && c != SURL_METHOD_ABORT);
 
 cleanup_thread:
   printf("Cleaning up decoder thread\n");
@@ -1070,6 +1245,12 @@ cleanup_thread:
   free(audio_th_data->title);
   free(audio_th_data->track);
   free(audio_th_data);
+  free(video_th_data);
+  if (vhgr_file != -1) {
+    close(vhgr_file);
+  }
+  fclose(ttyfp2);
+
   printf("Done\n");
 
   return ret;
