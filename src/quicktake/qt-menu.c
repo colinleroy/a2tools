@@ -53,8 +53,6 @@ static void print_header(void) {
   chline(scrw);
 }
 
-#pragma code-name(push, "LOWCODE")
-
 static uint8 print_menu(void) {
   cputs("Menu\r\n\r\n");
   if (camera_connected) {
@@ -82,6 +80,8 @@ static uint8 print_menu(void) {
            " 0. Exit\r\n\r\n");
   return cgetc();
 }
+
+#pragma code-name(push, "LOWCODE")
 
 static void save_picture(uint8 n_pic) {
   char filename[64];

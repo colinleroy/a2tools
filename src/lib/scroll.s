@@ -15,7 +15,7 @@
 
 NLINES: .res 1
 
-        .code
+        .segment "LOWCODE"
 
 BAS2L  := $2A
 BAS2H  := $2B

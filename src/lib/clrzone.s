@@ -5,6 +5,8 @@
                 .importzp sp
                 .include "apple2.inc"
 
+        .segment "LOWCODE"
+
 _clreol:
         lda     CH
         sta     clr_lxs

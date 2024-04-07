@@ -10,6 +10,8 @@
 
 ;void __fastcall__ platform_msleep(uint16 ms)
 
+        .segment "LOWCODE"
+
 _platform_msleep:
         pha                     ; Backup AX
         txa

@@ -27,6 +27,8 @@ static FILE *open_config(char *mode) {
   return fp;
 }
 
+#pragma code-name(push, "LOWCODE")
+
 static int save_config(void) {
   FILE *fp;
   int r;
@@ -48,34 +50,7 @@ static int save_config(void) {
 }
 
 extern char tmp_buf[80];
-void load_config(void) {
-  FILE *fp;
 
-  translit_charset = US_CHARSET;
-  monochrome = 0;
-
-  cputs("Loading config...\r\n");
-  fp = open_config("r");
-  if (fp == NULL) {
-    return;
-  }
-
-
-  if (fp != NULL) {
-    fgets(tmp_buf, 16, fp);
-    if (strchr(tmp_buf, '\n')) {
-      *strchr(tmp_buf, '\n') = '\0';
-    }
-#ifdef __APPLE2ENH__
-    translit_charset = strdup(tmp_buf);
-#endif
-
-    fgets(tmp_buf, 16, fp);
-    monochrome = (tmp_buf[0] != '0');
-
-    fclose(fp);
-  }
-}
 void config(void) {
   char c;
 
@@ -130,3 +105,36 @@ monochrome_again:
 
   save_config();
 }
+
+#pragma code-name(pop)
+#pragma code-name(push, "RT_ONCE")
+
+void load_config(void) {
+  FILE *fp;
+
+  translit_charset = US_CHARSET;
+  monochrome = 0;
+
+  cputs("Loading config...\r\n");
+  fp = open_config("r");
+  if (fp == NULL) {
+    return;
+  }
+
+
+  if (fp != NULL) {
+    fgets(tmp_buf, 16, fp);
+    if (strchr(tmp_buf, '\n')) {
+      *strchr(tmp_buf, '\n') = '\0';
+    }
+#ifdef __APPLE2ENH__
+    translit_charset = strdup(tmp_buf);
+#endif
+
+    fgets(tmp_buf, 16, fp);
+    monochrome = (tmp_buf[0] != '0');
+
+    fclose(fp);
+  }
+}
+#pragma code-name(pop)
