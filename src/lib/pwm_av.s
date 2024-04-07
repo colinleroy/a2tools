@@ -11,13 +11,7 @@
         .import         _simple_serial_flush
         .import         popa, VTABZ
 
-.ifdef IIGS
-        .import         zilog_status_reg_r, zilog_data_reg_r
-        .import         _get_iigs_speed, _set_iigs_speed
-        .include        "accelerator.inc"
-.else
         .import         acia_status_reg_r, acia_data_reg_r
-.endif
 
         .include        "apple2.inc"
 
@@ -25,15 +19,9 @@
 
 MAX_LEVEL         = 32
 
-.ifdef IIGS
-serial_status_reg = zilog_status_reg_r
-serial_data_reg   = zilog_data_reg_r
-HAS_BYTE          = $01
-.else
 serial_status_reg = acia_status_reg_r
 serial_data_reg   = acia_data_reg_r
 HAS_BYTE          = $08
-.endif
 
 MAX_OFFSET    = 126
 N_BASES       = (8192/MAX_OFFSET)+1
@@ -1278,6 +1266,15 @@ ad31b:  ldx     $C0A8           ; 43
         jmp     (next)          ; 83
 
 .align 256
+.assert * = _SAMPLES_BASE+$2000, error
+break_out:
+        lda     #$01            ; Reenable IRQ and flush
+        jsr     _simple_serial_set_irq
+        jsr     _simple_serial_flush
+        lda     #$2F            ; SURL_CLIENT_READY
+        jmp     _serial_putc_direct
+
+.align 256
 page1_addrs_arr:.res (N_BASES*2)          ; Base addresses arrays
 .align 256                                ; Aligned for correct cycle counting
 page2_addrs_arr:.res (N_BASES*2)
@@ -1366,17 +1363,6 @@ pause:
         jmp     _serial_putc_direct
 
 ; ------------------------------------------------------------------
-silence:
-        lda     (audio_status)
-        and     #HAS_BYTE
-        beq     silence
-        lda     (audio_data)
-        sta     start_duty+2
-start_duty:
-        jmp     $0000
-; ------------------------------------------------------------------
-
-; ------------------------------------------------------------------
 setup_pointers:
         ; Setup pointer access to SPKR
         lda     #<(SPKR)
@@ -1451,22 +1437,6 @@ as31:   lda     $C0A9
         and     #HAS_BYTE
         beq     as31
         jmp     duty_cycle31
-
-; ------------------------------------------------------------------
-
-; .align 256
-; .assert * = _SAMPLES_BASE+$2100, error
-; break_out:
-; .ifdef IIGS
-;         lda     prevspd
-;         jsr     _set_iigs_speed
-; .endif
-;         lda     #$01            ; Reenable IRQ and flush
-;         jsr     _simple_serial_set_irq
-;         jsr     _simple_serial_flush
-;         lda     #$2F            ; SURL_CLIENT_READY
-;         jmp     _serial_putc_direct
-
 
 calc_bases:
         ; Precalculate addresses inside pages, so we can easily jump
