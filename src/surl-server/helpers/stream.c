@@ -37,7 +37,7 @@
 #define NUM_PAGES 1
 #endif
 
-#if 1
+#if 0
   #define DEBUG printf
 #else
  #define DEBUG if (0) printf
@@ -193,21 +193,29 @@ out:
   return NULL;
 }
 
+extern FILE *ttyfp;
 FILE *ttyfp2 = NULL;
 
-
 static void flush_changes(FILE *fp) {
-  //simple_serial_write_fast_fp(fp, changes_buffer, changes_num);
+  if (changes_num == 0) {
+    return;
+  }
+  simple_serial_write_fast_fp(fp, changes_buffer, changes_num);
   changes_num = 0;
 }
 
-static void enqueue_byte(unsigned char b) {
+static void enqueue_byte(unsigned char b, FILE *fp) {
+  if (!fp) {
+    return;
+  }
   bytes_sent++;
-  changes_buffer[changes_num++] = b;
-  //simple_serial_write_fast_fp(ttyfp2, &b, 1);
-  fputc(b, ttyfp2);
-  fflush(ttyfp2);
-  //cgetc();
+  /* Video only ? */
+  if (fp == ttyfp) {
+    changes_buffer[changes_num++] = b;
+    return;
+  }
+  /* Otherwise don't buffer */
+  fputc(b, fp);
 }
 
 static int last_sent_base = -1;
@@ -219,7 +227,7 @@ static void send_base(unsigned char b, FILE *fp) {
     printf("Error! Should not!\n");
     exit(1);
   }
-  enqueue_byte(b|0x80);
+  enqueue_byte(b|0x80, fp);
   if (b == 0) {
     flush_changes(fp);
   }
@@ -228,46 +236,46 @@ static void send_base(unsigned char b, FILE *fp) {
 }
 
 int last_sent_offset = -1;
-static void send_offset(unsigned char o) {
+static void send_offset(unsigned char o, FILE *fp) {
   DEBUG("offset %d (should be written at %x)\n", o, 0x2000+(cur_base*MAX_OFFSET)+offset);
   if ((o| 0x80) == 0xFF) {
     printf("Error! Should not!\n");
     exit(1);
   }
-  enqueue_byte(o|0x80);
+  enqueue_byte(o|0x80, fp);
 
   last_sent_offset = o;
   offset_bytes++;
 }
-static void send_num_reps(unsigned char b) {
+static void send_num_reps(unsigned char b, FILE *fp) {
   DEBUG("  => %d * ", b);
-  enqueue_byte(0xFF);
+  enqueue_byte(0xFF, fp);
   if ((b & 0x80) != 0) {
     printf("Error! Should not!\n");
     exit(1);
   }
-  enqueue_byte(b);
+  enqueue_byte(b, fp);
 
   data_bytes += 2;
 }
-static void send_byte(unsigned char b) {
+static void send_byte(unsigned char b, FILE *fp) {
   DEBUG("  => %d\n", b);
   if ((b & 0x80) != 0) {
     printf("Error! Should not!\n");
     exit(1);
   }
-  enqueue_byte(b);
+  enqueue_byte(b, fp);
 
   data_bytes++;
 }
 
-static void flush_ident(int min_reps, int ident_vals, int last_val) {
+static void flush_ident(int min_reps, int ident_vals, int last_val, FILE *fp) {
   if (ident_vals > min_reps) {
-    send_num_reps(ident_vals);
-    send_byte(last_val);
+    send_num_reps(ident_vals, fp);
+    send_byte(last_val, fp);
   } else {
     while (ident_vals > 0) {
-      send_byte(last_val);
+      send_byte(last_val, fp);
       ident_vals--;
     }
   }
@@ -361,8 +369,6 @@ static int sample_rate = 115200 / (1+8+1);
 #define AV_SAMPLE_OFFSET 0x60
 #define AV_MAX_LEVEL       31
 #define AV_END_OF_STREAM   (AV_MAX_LEVEL+1)
-
-extern FILE *ttyfp;
 
 #define send_sample(i) fputc((i) + SAMPLE_OFFSET, ttyfp)
 #define send_av_sample(i) fputc((i) + AV_SAMPLE_OFFSET, ttyfp)
@@ -676,7 +682,7 @@ int surl_stream_video(char *url) {
   memset(changes_buffer, 0, sizeof changes_buffer);
 
   offset = cur_base = 0;
-  send_offset(0);
+  send_offset(0, ttyfp);
   send_base(0, ttyfp);
 
   i = 1;
@@ -702,7 +708,7 @@ next_file:
 
   /* Sync point - force a switch to base 0 */
   offset = cur_base = 0;
-  send_offset(0);
+  send_offset(0, ttyfp);
   send_base(0, ttyfp);
 
   if (i > FPS && (i % (15*FPS)) == 0) {
@@ -764,7 +770,7 @@ next_file:
     if ((offset >= MAX_OFFSET && pixel != last_diff+1)
       || offset > 255) {
       /* must flush ident */
-      flush_ident(MIN_REPS, ident_vals, last_val);
+      flush_ident(MIN_REPS, ident_vals, last_val, ttyfp);
       ident_vals = 0;
 
       /* we have to update base */
@@ -774,26 +780,26 @@ next_file:
       if (offset < last_sent_offset && cur_base == last_sent_base + 1) {
         DEBUG("skip sending base (offset %d => %d, base %d => %d)\n",
                 last_sent_offset, offset, last_sent_base, cur_base);
-        send_offset(offset);
+        send_offset(offset, ttyfp);
         last_sent_base = cur_base;
       } else {
         DEBUG("must send base (offset %d => %d, base %d => %d)\n",
                 last_sent_offset, offset, last_sent_base, cur_base);
-        send_offset(offset);
+        send_offset(offset, ttyfp);
         send_base(cur_base, ttyfp);
       }
     } else if (pixel != last_diff+1) {
       /* must flush ident */
-      flush_ident(MIN_REPS, ident_vals, last_val);
+      flush_ident(MIN_REPS, ident_vals, last_val, ttyfp);
       ident_vals = 0;
       /* We have to send offset */
-      send_offset(offset);
+      send_offset(offset, ttyfp);
     }
     if (last_val == -1 ||
        (ident_vals < MAX_REPS && buf[page][pixel] == last_val && pixel == last_diff+1)) {
       ident_vals++;
     } else {
-      flush_ident(MIN_REPS, ident_vals, last_val);
+      flush_ident(MIN_REPS, ident_vals, last_val, ttyfp);
       ident_vals = 1;
     }
     last_val = buf[page][pixel];
@@ -803,7 +809,7 @@ next_file:
     /* Note diff done */
     buf_prev[page][pixel] = buf[page][pixel];
   }
-  flush_ident(MIN_REPS, ident_vals, last_val);
+  flush_ident(MIN_REPS, ident_vals, last_val, ttyfp);
   ident_vals = 0;
 
   total += num_diffs;
@@ -817,7 +823,7 @@ next_file:
   goto next_file;
 
 close_last:
-  send_offset(0);
+  send_offset(0, ttyfp);
   send_base(NUM_BASES+2, ttyfp); /* Done */
   flush_changes(ttyfp);
 
@@ -869,9 +875,11 @@ static void *audio_push(void *unused) {
   int num = 0;
   unsigned char c;
   size_t cur = 0;
-  int ret = 0;
-  int toggle = 0;
 
+  // for (int i = 0; i < 32; i++) {
+  //   for (int j = 0; j < 1000; j++)
+  //     send_av_sample(i);
+  // }
   while (1) {
     pthread_mutex_lock(&audio_th_data->mutex);
     if (cur > sample_rate*(2*BUFFER_LEN)) {
@@ -898,12 +906,8 @@ static void *audio_push(void *unused) {
         continue;
       }
     }
-    send_av_sample(toggle);//audio_data[cur] * AV_MAX_LEVEL/audio_max);
-    // toggle = !toggle;
-    if (!toggle) toggle = 15;
-    else if (toggle == 15) toggle = 16;
-    else if (toggle == 16) toggle = 31;
-    else if (toggle == 31) toggle = 0;
+    send_av_sample(audio_data[cur] * AV_MAX_LEVEL/audio_max);
+    // send_av_sample(31);
     cur++;
 
     /* Kbd input polled directly for no wait at all */
@@ -963,7 +967,7 @@ void *video_push(void *unused) {
   unsigned char buf_prev[2][HGR_LEN], buf[2][HGR_LEN];
   struct timeval frame_start, frame_end;
   int skipped = 0, skip_next = 0, duration;
-  int command, page = 0;
+  int page = 0;
   int num_diffs = 0;
 
   i = 1;
@@ -989,9 +993,10 @@ next_file:
 
   /* Sync point - force a switch to base 0 */
   offset = cur_base = 0;
-  send_offset(0);
+  send_offset(0, ttyfp2);
   send_base(0, ttyfp2);
-  enqueue_byte(0xFF); /* Switch page */
+  enqueue_byte(0xFF, ttyfp2); /* Switch page */
+  fflush(ttyfp2);
 
   if (i > FPS && (i % (15*FPS)) == 0) {
     duration = i/FPS;
@@ -1035,7 +1040,7 @@ next_file:
     if ((offset >= MAX_OFFSET && pixel != last_diff+1)
       || offset > 255) {
       /* must flush ident */
-      flush_ident(20000, ident_vals, last_val);
+      flush_ident(20000, ident_vals, last_val, ttyfp2);
       ident_vals = 0;
 
       /* we have to update base */
@@ -1044,20 +1049,20 @@ next_file:
 
       DEBUG("send base (offset %d => %d, base %d => %d)\n",
               last_sent_offset, offset, last_sent_base, cur_base);
-      send_offset(offset);
+      send_offset(offset, ttyfp2);
       send_base(cur_base, ttyfp2);
     } else if (pixel != last_diff+1) {
       /* must flush ident */
-      flush_ident(20000, ident_vals, last_val);
+      flush_ident(20000, ident_vals, last_val, ttyfp2);
       ident_vals = 0;
       /* We have to send offset */
-      send_offset(offset);
+      send_offset(offset, ttyfp2);
     }
     if (last_val == -1 ||
        (ident_vals < MAX_REPS && buf[page][pixel] == last_val && pixel == last_diff+1)) {
       ident_vals++;
     } else {
-      flush_ident(20000, ident_vals, last_val);
+      flush_ident(20000, ident_vals, last_val, ttyfp2);
       ident_vals = 1;
     }
     last_val = buf[page][pixel];
@@ -1067,7 +1072,7 @@ next_file:
     /* Note diff done */
     buf_prev[page][pixel] = buf[page][pixel];
   }
-  flush_ident(20000, ident_vals, last_val);
+  flush_ident(20000, ident_vals, last_val, ttyfp2);
   ident_vals = 0;
 
   total += num_diffs;
@@ -1101,7 +1106,6 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
   /* Control vars */
   unsigned char c;
   int ret = 0;
-  int sample;
   pthread_t audio_decode_thread, video_decode_thread;
   pthread_t audio_push_thread, video_push_thread;
   audio_th_data = malloc(sizeof(decode_data));
@@ -1191,7 +1195,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
   memset(changes_buffer, 0, sizeof changes_buffer);
 
   offset = cur_base = 0;
-  send_offset(0);
+  send_offset(0, ttyfp2);
   send_base(0, ttyfp2);
 
   printf("AV: Client ready\n");
@@ -1255,7 +1259,8 @@ cleanup_thread:
   if (vhgr_file != -1) {
     close(vhgr_file);
   }
-  fclose(ttyfp2);
+  if (ttyfp2)
+    fclose(ttyfp2);
 
   printf("Done\n");
 
