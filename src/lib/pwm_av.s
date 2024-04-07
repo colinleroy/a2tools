@@ -1229,18 +1229,15 @@ ad30:   ldx     $C0A8           ; 8
 vs30:   lda     $C099           ; 12
         and     #HAS_BYTE       ; 14
         beq     no_vid30        ; 16/17
-        WASTE_10                ; 26
-        jmp     video_tog_spkr  ; 29=>83 (takes 50 cycles, turns spkr off, jumps to next)
+vd30:   lda     $C098           ; 20
+        WASTE_11                ; 31
+        jmp     video_tog_spkr  ; 34=>83 (turns spkr off, jumps to next)
 
 no_vid30:
-vs30b:  lda     $C099           ; 21
-        and     has_byte_zp     ; 24
-        beq     no_vid30b       ; 26/27
-        jmp     video_tog_spkr  ; 29=>83 (takes 50 cycles, turns spkr off, jumps to next)
+        jmp     duty_cycle30_v2 ; 20=>83 (takes 63 cycles)
 
 no_vid30b:
-        stx     next+1          ; 30
-        WASTE_4                 ; 34
+        WASTE_2                 ; 34
         ____SPKR_DUTY____4      ; 38
 ad30b:  ldx     $C0A8           ; 42
         stx     next+1          ; 45
@@ -1285,9 +1282,16 @@ page1_addrs_arr:.res (N_BASES*2)          ; Base addresses arrays
 .align 256                                ; Aligned for correct cycle counting
 page2_addrs_arr:.res (N_BASES*2)
 
+duty_cycle30_v2:
+vs30b:  lda     $C099           ; 24
+        and     has_byte_zp     ; 27
+        bne     vd30b           ; 29/30
+        jmp     no_vid30b       ; 32
+
+vd30b:  lda     $C098           ; 34
+
 video_tog_spkr:
-vd30b:  lda     $C098           ; 33
-        ____SPKR_DUTY____5      ; 38
+        ____SPKR_DUTY____4      ; 38
         ABS_STX next+1          ; 42
 
 video:
