@@ -878,10 +878,6 @@ static void *audio_push(void *unused) {
   unsigned char c;
   size_t cur = 0;
 
-  // for (int i = 0; i < 32; i++) {
-  //   for (int j = 0; j < 1000; j++)
-  //     send_av_sample(i);
-  // }
   while (1) {
     pthread_mutex_lock(&audio_th_data->mutex);
     if (cur > sample_rate*(2*BUFFER_LEN)) {
@@ -920,41 +916,21 @@ static void *audio_push(void *unused) {
       if (poll(fds, 1, 0) > 0 && (fds[0].revents & POLLIN)) {
         c = simple_serial_getc();
         switch (c) {
-          case ' ':
-            printf("Pause\n");
-            send_av_sample(AV_MAX_LEVEL/2);
-            simple_serial_getc();
-            break;
-          case APPLE_CH_CURS_LEFT:
-            printf("Rewind\n");
-            if (cur < sample_rate * 10) {
-              cur = 0;
-            } else {
-              cur -= sample_rate * 10;
-            }
-            break;
-          case APPLE_CH_CURS_RIGHT:
-            if (cur + sample_rate * 10 < audio_size) {
-              cur += sample_rate * 10;
-            } else {
-              cur = audio_size;
-            }
-            printf("Forward\n");
-            break;
           case CH_ESC:
             printf("Stop\n");
-            pthread_mutex_lock(&audio_th_data->mutex);
-            audio_th_data->stop = 1;
-            pthread_mutex_unlock(&audio_th_data->mutex);
-            return NULL;
+            goto out;
           case SURL_METHOD_ABORT:
             printf("Connection reset\n");
-            return NULL;
+            goto out;
         }
       }
     }
     num++;
   }
+out:
+  pthread_mutex_lock(&audio_th_data->mutex);
+  audio_th_data->stop = 1;
+  pthread_mutex_unlock(&audio_th_data->mutex);
   return NULL;
 }
 
@@ -1035,6 +1011,14 @@ next_file:
   last_val = -1;
   for (j = 0; j < num_diffs && j < MAX_DIFFS_PER_FRAME; j++) {
     int pixel = diffs[j]->offset;
+
+    pthread_mutex_lock(&video_th_data->mutex);
+    stop = video_th_data->stop;
+    pthread_mutex_unlock(&video_th_data->mutex);
+    if (stop) {
+      printf("Video thread stopping\n");
+      goto close_last;
+    }
 
     offset = pixel - (cur_base*MAX_OFFSET);
     /* If there's no hole in updated bytes, we can let offset
@@ -1232,6 +1216,20 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
 
   pthread_create(&audio_push_thread, NULL, *audio_push, NULL);
   pthread_create(&video_push_thread, NULL, *video_push, NULL);
+  while (1) {
+    pthread_mutex_lock(&audio_th_data->mutex);
+    stop = audio_th_data->stop;
+    pthread_mutex_unlock(&audio_th_data->mutex);
+    if (stop) {
+      printf("Audio thread done\n");
+      pthread_mutex_lock(&video_th_data->mutex);
+      video_th_data->stop = 1;
+      pthread_mutex_unlock(&video_th_data->mutex);
+      break;
+    }
+    sleep(1);
+  }
+
   pthread_join(audio_push_thread, NULL);
   pthread_join(video_push_thread, NULL);
 
