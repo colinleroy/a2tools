@@ -216,6 +216,7 @@ static void enqueue_byte(unsigned char b, FILE *fp) {
   }
   /* Otherwise don't buffer */
   fputc(b, fp);
+  //fflush(fp);
 }
 
 static int last_sent_base = -1;
@@ -906,8 +907,10 @@ static void *audio_push(void *unused) {
         continue;
       }
     }
-    send_av_sample(audio_data[cur] * AV_MAX_LEVEL/audio_max);
-    // send_av_sample(31);
+    if (audio_data[cur] * AV_MAX_LEVEL/audio_max != 30)
+      send_av_sample(audio_data[cur] * AV_MAX_LEVEL/audio_max);
+    else
+      send_av_sample(25);
     cur++;
 
     /* Kbd input polled directly for no wait at all */
@@ -1114,7 +1117,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
   stop = 0;
   err = 0;
 
-  ttyfp2 = simple_serial_open_file("/dev/tnt2");
+  ttyfp2 = simple_serial_open_file("/dev/ttyUSB1");
 
   memset(video_th_data, 0, sizeof(decode_data));
   video_th_data->url = url;
