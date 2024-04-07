@@ -194,6 +194,7 @@ out:
 }
 
 extern FILE *ttyfp;
+extern char *av_tty_path;
 FILE *ttyfp2 = NULL;
 
 static void flush_changes(FILE *fp) {
@@ -1115,7 +1116,11 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
   stop = 0;
   err = 0;
 
-  ttyfp2 = simple_serial_open_file("/dev/ttyUSB1");
+  if (av_tty_path)
+    ttyfp2 = simple_serial_open_file(av_tty_path);
+
+  if (ttyfp2 == NULL)
+    printf("No TTY for video\n");
 
   memset(video_th_data, 0, sizeof(decode_data));
   video_th_data->url = url;
