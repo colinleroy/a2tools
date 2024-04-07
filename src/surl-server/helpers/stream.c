@@ -907,10 +907,8 @@ static void *audio_push(void *unused) {
         continue;
       }
     }
-    if (audio_data[cur] * AV_MAX_LEVEL/audio_max != 30)
-      send_av_sample(audio_data[cur] * AV_MAX_LEVEL/audio_max);
-    else
-      send_av_sample(25);
+    send_av_sample(audio_data[cur] * AV_MAX_LEVEL/audio_max);
+    // send_av_sample(30);
     cur++;
 
     /* Kbd input polled directly for no wait at all */
