@@ -640,7 +640,7 @@ vs11:   lda     $C099           ; 12
         beq     no_vid11        ; 23/24
 vd11:   lda     $C098           ; 27
         stx     next+1          ; 30
-        WASTE_9                ; 39
+        WASTE_9                 ; 39
         jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
 no_vid11:
@@ -855,11 +855,10 @@ vd18:   lda     $C098           ; 20
         jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
 no_vid18:
-vs18b:  lda     $C099           ; 21
+vs18b:  ABS_STX next+1          ; 21
         ____SPKR_DUTY____5      ; 26
-        stx     next+1          ; 29
-        and     #HAS_BYTE       ; 31
-        WASTE_2                 ; 33
+        lda     $C099           ; 30
+        and     has_byte_zp     ; 33
         beq     no_vid18b       ; 35/36
 vd18b:  lda     $C098           ; 39
         jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
@@ -887,9 +886,9 @@ vd19:   lda     $C098           ; 20
 
 no_vid19:
         WASTE_2                 ; 19
-vs19b:  lda     $C099           ; 23
+        ABS_STX next+1          ; 23 stx absolute
         ____SPKR_DUTY____4      ; 27
-        ABS_STX next+1          ; 31 stx absolute
+vs19b:  lda     $C099           ; 31
         and     #HAS_BYTE       ; 33
         beq     no_vid19b       ; 35/36
 vd19b:  lda     $C098           ; 39
@@ -917,10 +916,10 @@ vd20:   lda     $C098           ; 20
         jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
 no_vid20:
-        WASTE_2                 ; 19
-vs20b:  lda     $C099           ; 23
-        ____SPKR_DUTY____5      ; 28
-        stx     next+1          ; 31
+        stx     next+1          ; 20
+vs20b:  lda     $C099           ; 24
+        ____SPKR_DUTY____4      ; 28
+        WASTE_3                 ; 31
         and     #HAS_BYTE       ; 33
         beq     no_vid20b       ; 35/36
 vd20b:  lda     $C098           ; 39
