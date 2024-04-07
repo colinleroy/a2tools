@@ -53,7 +53,7 @@ last_offset   = _zp8
 got_offset    = _zp9
 next          = _zp10
 page          = _zp12
-zero          = _zp13
+has_byte_zp   = _zp13
 audio_status  = ptr1
 audio_data    = ptr2
 store_dest    = tmp1 ; + tmp2
@@ -214,6 +214,13 @@ page2_addr_ptr= ptr4
         WASTE_4
 .endmacro
 
+.macro WASTE_39
+        WASTE_12
+        WASTE_12
+        WASTE_12
+        WASTE_3
+.endmacro
+
 .macro WASTE_41
         WASTE_12
         WASTE_12
@@ -249,6 +256,17 @@ page2_addr_ptr= ptr4
         WASTE_9
 .endmacro
 
+.macro ABS_STX  zpvar
+        .byte   $8E             ; stx absolute
+        .byte   zpvar
+        .byte   $00
+.endmacro
+
+.macro ABS_STZ  zpvar
+        .byte   $9C             ; stz absolute
+        .byte   zpvar
+        .byte   $00
+.endmacro
 
 .macro KBD_LOAD_7               ; Check keyboard and jsr if key pressed (trashes A)
         lda     KBD             ; 4
@@ -300,200 +318,303 @@ no_vid0b:
 
 .align 256
 .assert * = _SAMPLES_BASE + $100, error
-duty_cycle1:
+duty_cycle1:                    ; end spkr at 9
         ____SPKR_DUTY____4      ; 4
         ____SPKR_DUTY____5      ; 9
-        lda     (audio_status)  ; 14
-        and     #HAS_BYTE       ; 16
-        beq     :+              ; 18/19
-        lda     (audio_data)    ; 23
-        sta     next+1          ; 26
+ad1:    ldx     $C0A8           ; 13
+vs1:    lda     $C099           ; 17
+        and     #HAS_BYTE       ; 19
+        beq     no_vid1         ; 21/22
+vd1:    lda     $C098           ; 25
+        stx     next+1          ; 28
+        WASTE_11                ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-        WASTE_15                ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid1:
+        WASTE_2                 ; 24
+        stx     next+1          ; 27
+        lda     $C099           ; 31
+        and     #HAS_BYTE       ; 33
+        beq     no_vid1b        ; 35/36
+vd1b:   lda     $C098           ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-:       WASTE_22                ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid1b:
+        WASTE_41                ; 77
+        jmp     (next)          ; 83
 
 .align 256
 .assert * = _SAMPLES_BASE + $200, error
-duty_cycle2:
+duty_cycle2:                    ; end spkr at 10
         ____SPKR_DUTY____4      ; 4
-        WASTE_2
+        WASTE_2                 ; 6
         ____SPKR_DUTY____4      ; 10
-        lda     (audio_status)  ; 15
-        and     #HAS_BYTE       ; 17
-        beq     :+              ; 19/20
-        lda     (audio_data)    ; 24
-        sta     next+1          ; 27
+ad2:    ldx     $C0A8           ; 14
+vs2:    lda     $C099           ; 18
+        and     #HAS_BYTE       ; 20
+        beq     no_vid2         ; 22/23
+vd2:    lda     $C098           ; 26
+        stx     next+1          ; 29
+        WASTE_10                ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-        WASTE_14                ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid2:
+        ABS_STX next+1          ; 27 stx absolute
+        lda     $C099           ; 31
+        and     #HAS_BYTE       ; 33
+        beq     no_vid2b        ; 35/36
+vd2b:   lda     $C098           ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-:       WASTE_21                ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid2b:
+        WASTE_41                ; 77
+        jmp     (next)          ; 83
 
 .align 256
 .assert * = _SAMPLES_BASE + $300, error
-duty_cycle3:
+duty_cycle3:                    ; end spkr at 11
         ____SPKR_DUTY____4      ; 4
-        WASTE_3
+        WASTE_3                 ; 7
         ____SPKR_DUTY____4      ; 11
-        lda     (audio_status)  ; 16
-        and     #HAS_BYTE       ; 18
-        beq     :+              ; 20/21
-        lda     (audio_data)    ; 25
-        sta     next+1          ; 28
+ad3:    ldx     $C0A8           ; 15
+vs3:    lda     $C099           ; 19
+        and     #HAS_BYTE       ; 21
+        beq     no_vid3         ; 23/24
+vd3:    lda     $C098           ; 27
+        stx     next+1          ; 30
+        WASTE_9                 ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-        WASTE_13                ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid3:
+        stx   next+1            ; 27
+        lda     $C099           ; 31
+        and     #HAS_BYTE       ; 33
+        beq     no_vid3b        ; 35/36
+vd3b:   lda     $C098           ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-:       WASTE_20                ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid3b:
+        WASTE_41                ; 77
+        jmp     (next)          ; 83
 
 .align 256
 .assert * = _SAMPLES_BASE + $400, error
-duty_cycle4:
+duty_cycle4:                    ; end spkr at 12
         ____SPKR_DUTY____4      ; 4
-        WASTE_4
+ad4:    ldx     $C0A8           ; 8
         ____SPKR_DUTY____4      ; 12
-        lda     (audio_status)  ; 17
-        and     #HAS_BYTE       ; 19
-        beq     :+              ; 21/22
-        lda     (audio_data)    ; 26
-        sta     next+1          ; 29
+vs4:    lda     $C099           ; 16
+        and     #HAS_BYTE       ; 18
+        beq     no_vid4         ; 20/21
+vd4:    lda     $C098           ; 24
+        stx     next+1          ; 27
+        WASTE_12                ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-        WASTE_12                ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid4:
+        WASTE_3                 ; 24
+        stx   next+1            ; 27
+        lda     $C099           ; 31
+        and     #HAS_BYTE       ; 33
+        beq     no_vid4b        ; 35/36
+vd4b:   lda     $C098           ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-:       WASTE_19                ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid4b:
+        WASTE_41                ; 77
+        jmp     (next)          ; 83
 
 .align 256
 .assert * = _SAMPLES_BASE + $500, error
-duty_cycle5:
+duty_cycle5:                    ; end spkr at 13
         ____SPKR_DUTY____4      ; 4
-        WASTE_5
-        ____SPKR_DUTY____4      ; 13
-        lda     (audio_status)  ; 18
-        and     #HAS_BYTE       ; 20
-        beq     :+              ; 22/23
-        lda     (audio_data)    ; 27
-        sta     next+1          ; 30
+ad5:    ldx     $C0A8           ; 8
+        ____SPKR_DUTY____5      ; 13
+vs5:    lda     $C099           ; 17
+        and     #HAS_BYTE       ; 19
+        beq     no_vid5         ; 21/22
+vd5:    lda     $C098           ; 25
+        stx     next+1          ; 28
+        WASTE_11                ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-        WASTE_11                ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid5:
+        WASTE_2                 ; 24
+        stx   next+1            ; 27
+        lda     $C099           ; 31
+        and     #HAS_BYTE       ; 33
+        beq     no_vid5b        ; 35/36
+vd5b:   lda     $C098           ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-:       WASTE_18                ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid5b:
+        WASTE_41                ; 77
+        jmp     (next)          ; 83
 
 .align 256
 .assert * = _SAMPLES_BASE + $600, error
-duty_cycle6:
+duty_cycle6:                    ; end spkr at 14
         ____SPKR_DUTY____4      ; 4
-        WASTE_6
+ad6:    ldx     $C0A8           ; 8
+        WASTE_2                 ; 10
         ____SPKR_DUTY____4      ; 14
-        lda     (audio_status)  ; 19
-        and     #HAS_BYTE       ; 21
-        beq     :+              ; 23/24
-        lda     (audio_data)    ; 28
-        sta     next+1          ; 31
+vs6:    lda     $C099           ; 18
+        and     #HAS_BYTE       ; 20
+        beq     no_vid6         ; 22/23
+vd6:    lda     $C098           ; 26
+        stx     next+1          ; 29
+        WASTE_10                ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-        WASTE_10                ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid6:
+        ABS_STX next+1          ; 27 stx absolute
+        lda     $C099           ; 31
+        and     #HAS_BYTE       ; 33
+        beq     no_vid6b        ; 35/36
+vd6b:   lda     $C098           ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-:       WASTE_17                ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid6b:
+        WASTE_41                ; 77
+        jmp     (next)          ; 83
 
 .align 256
 .assert * = _SAMPLES_BASE + $700, error
-duty_cycle7:
+duty_cycle7:                    ; end spkr at 15
         ____SPKR_DUTY____4      ; 4
-        WASTE_7
+ad7:    ldx     $C0A8           ; 8
+        WASTE_3                 ; 11
         ____SPKR_DUTY____4      ; 15
-        lda     (audio_status)  ; 20
-        and     #HAS_BYTE       ; 22
-        beq     :+              ; 24/25
-        lda     (audio_data)    ; 29
-        sta     next+1          ; 32
+vs7:    lda     $C099           ; 19
+        and     #HAS_BYTE       ; 21
+        beq     no_vid7         ; 23/24
+vd7:    lda     $C098           ; 27
+        stx     next+1          ; 30
+        WASTE_9                 ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-        WASTE_9                 ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid7:
+        stx     next+1          ; 27
+        lda     $C099           ; 31
+        and     #HAS_BYTE       ; 33
+        beq     no_vid7b        ; 35/36
+vd7b:   lda     $C098           ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-:       WASTE_16                ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid7b:
+        WASTE_41                ; 77
+        jmp     (next)          ; 83
 
 .align 256
 .assert * = _SAMPLES_BASE + $800, error
-duty_cycle8:
+duty_cycle8:                    ; end spkr at 16
         ____SPKR_DUTY____4      ; 4
-        WASTE_8
+ad8:    ldx     $C0A8           ; 8
+vs8:    lda     $C099           ; 12
         ____SPKR_DUTY____4      ; 16
-        lda     (audio_status)  ; 21
-        and     #HAS_BYTE       ; 23
-        beq     :+              ; 25/26
-        lda     (audio_data)    ; 30
-        sta     next+1          ; 33
+        and     #HAS_BYTE       ; 18
+        beq     no_vid8         ; 20/21
+vd8:    lda     $C098           ; 24
+        stx     next+1          ; 27
+        WASTE_12                ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-        WASTE_8                 ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid8:
+        WASTE_3                 ; 24
+        stx     next+1          ; 27
+        lda     $C099           ; 31
+        and     #HAS_BYTE       ; 33
+        beq     no_vid8b        ; 35/36
+vd8b:   lda     $C098           ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-:       WASTE_15                ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid8b:
+        WASTE_41                ; 77
+        jmp     (next)          ; 83
+
 
 .align 256
 .assert * = _SAMPLES_BASE + $900, error
-duty_cycle9:
+duty_cycle9:                    ; end spkr at 17
         ____SPKR_DUTY____4      ; 4
-        WASTE_9
-        ____SPKR_DUTY____4      ; 17
-        lda     (audio_status)  ; 22
-        and     #HAS_BYTE       ; 24
-        beq     :+              ; 26/27
-        lda     (audio_data)    ; 31
-        sta     next+1          ; 34
+ad9:    ldx     $C0A8           ; 8
+vs9:    lda     $C099           ; 12
+        ____SPKR_DUTY____5      ; 17
+        and     #HAS_BYTE       ; 19
+        beq     no_vid9         ; 21/22
+vd9:    lda     $C098           ; 25
+        stx     next+1          ; 28
+        WASTE_11                ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-        WASTE_7                 ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid9:
+        WASTE_2                 ; 24
+        stx     next+1          ; 27
+        lda     $C099           ; 31
+        and     #HAS_BYTE       ; 33
+        beq     no_vid9b        ; 35/36
+vd9b:   lda     $C098           ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-:       WASTE_14                ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid9b:
+        WASTE_41                ; 77
+        jmp     (next)          ; 83
 
 .align 256
 .assert * = _SAMPLES_BASE + $A00, error
-duty_cycle10:
+duty_cycle10:                    ; end spkr at 18
         ____SPKR_DUTY____4      ; 4
-        WASTE_10
+ad10:   ldx     $C0A8           ; 8
+vs10:   lda     $C099           ; 12
+        WASTE_2                 ; 14
         ____SPKR_DUTY____4      ; 18
-        lda     (audio_status)  ; 23
-        and     #HAS_BYTE       ; 25
-        beq     :+              ; 27/28
-        lda     (audio_data)    ; 32
-        sta     next+1          ; 35
+        and     #HAS_BYTE       ; 20
+        beq     no_vid10        ; 22/23
+vd10:   lda     $C098           ; 26
+        stx     next+1          ; 29
+        WASTE_10                ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-        WASTE_6                 ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid10:
+        ABS_STX next+1          ; 27 stx absolute
+        lda     $C099           ; 31
+        and     #HAS_BYTE       ; 33
+        beq     no_vid10b       ; 35/36
+vd10b:  lda     $C098           ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-:       WASTE_13                ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid10b:
+        WASTE_41                ; 77
+        jmp     (next)          ; 83
+
 
 .align 256
 .assert * = _SAMPLES_BASE + $B00, error
-duty_cycle11:
+duty_cycle11:                    ; end spkr at 19
         ____SPKR_DUTY____4      ; 4
-        WASTE_11
+ad11:   ldx     $C0A8           ; 8
+vs11:   lda     $C099           ; 12
+        WASTE_3                 ; 15
         ____SPKR_DUTY____4      ; 19
-        lda     (audio_status)  ;
-        and     #HAS_BYTE       ;
-        beq     :+              ;
-        lda     (audio_data)    ;
-        sta     next+1          ; 36
+        and     #HAS_BYTE       ; 21
+        beq     no_vid11        ; 23/24
+vd11:   lda     $C098           ; 27
+        stx     next+1          ; 30
+        WASTE_9                ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-        WASTE_5                 ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid11:
+        stx     next+1          ; 27
+        lda     $C099           ; 31
+        and     #HAS_BYTE       ; 33
+        beq     no_vid11b       ; 35/36
+vd11b:  lda     $C098           ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-:       WASTE_12                ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid11b:
+        WASTE_41                ; 77
+        jmp     (next)          ; 83
+
 
 .align 256
 .assert * = _SAMPLES_BASE + $C00, error
@@ -511,9 +632,7 @@ vd12:   lda     $C098           ; 26
         jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
 no_vid12:
-        .byte   $8E             ; 27 stx absolute
-        .byte   next+1
-        .byte   $00
+        ABS_STX next+1          ; 27 stx absolute
         lda     $C099           ; 31
         and     #HAS_BYTE       ; 33
         beq     no_vid12b       ; 35/36
@@ -599,9 +718,7 @@ vd15:   lda     $C098           ; 27
 no_vid15:
         WASTE_2                 ; 19
         ____SPKR_DUTY____4      ; 23
-        .byte   $8E             ; 27 stx absolute
-        .byte   next+1
-        .byte   $00
+        ABS_STX next+1          ; 27 stx absolute
         lda     $C099           ; 31
         and     #HAS_BYTE       ; 33
         beq     no_vid15b       ; 35/36
@@ -629,8 +746,8 @@ vd16:   lda     $C098           ; 20
 no_vid16:
         stx     next+1          ; 20
         ____SPKR_DUTY____4      ; 24
-vs16b:  WASTE_3                 ; 27
-        lda     $C099           ; 31
+        WASTE_3                 ; 27
+vs16b:  lda     $C099           ; 31
         and     #HAS_BYTE       ; 33
         beq     no_vid16b       ; 35/36
 vd16b:  lda     $C098           ; 39
@@ -642,280 +759,416 @@ no_vid16b:
 
 .align 256
 .assert * = _SAMPLES_BASE + $1100, error
-duty_cycle17:
+duty_cycle17:                    ; end spkr at 25
         ____SPKR_DUTY____4      ; 4
-        lda     (audio_status)  ; 9
-        and     #HAS_BYTE       ; 11
-        WASTE_9                 ;
-        ____SPKR_DUTY____4      ; 24
-        beq     :+              ; 
-        lda     (audio_data)    ; 
-        sta     next+1          ; 34
+ad17:   ldx     $C0A8           ; 8
+vs17:   lda     $C099           ; 12
+        and     #HAS_BYTE       ; 14
+        beq     no_vid17        ; 16/17
+vd17:   lda     $C098           ; 20
+        ____SPKR_DUTY____5      ; 25
+        stx     next+1          ; 28
+        WASTE_11                ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-        WASTE_7                 ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid17:
+        stx     next+1          ; 20
+        ____SPKR_DUTY____5      ; 25
+        WASTE_2                 ; 27
+vs17b:  lda     $C099           ; 31
+        and     #HAS_BYTE       ; 33
+        beq     no_vid17b       ; 35/36
+vd17b:  lda     $C098           ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-:       WASTE_14                ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid17b:
+        WASTE_41                ; 77
+        jmp     (next)          ; 83
 
 .align 256
 .assert * = _SAMPLES_BASE + $1200, error
-duty_cycle18:
+duty_cycle18:                    ; end spkr at 26
         ____SPKR_DUTY____4      ; 4
-        lda     (audio_status)  ; 9
-        and     #HAS_BYTE       ; 11
-        WASTE_10
-        ____SPKR_DUTY____4      ; 25
-        beq     :+              ; 
-        lda     (audio_data)    ; 
-        sta     next+1          ; 35
+ad18:   ldx     $C0A8           ; 8
+vs18:   lda     $C099           ; 12
+        and     #HAS_BYTE       ; 14
+        beq     no_vid18        ; 16/17
+vd18:   lda     $C098           ; 20
+        WASTE_2                 ; 22
+        ____SPKR_DUTY____4      ; 26
+        stx     next+1          ; 29
+        WASTE_10                ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-        WASTE_6                 ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid18:
+vs18b:  lda     $C099           ; 21
+        ____SPKR_DUTY____5      ; 26
+        stx     next+1          ; 29
+        and     #HAS_BYTE       ; 31
+        WASTE_2                 ; 33
+        beq     no_vid18b       ; 35/36
+vd18b:  lda     $C098           ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-:       WASTE_13                ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid18b:
+        WASTE_41                ; 77
+        jmp     (next)          ; 83
 
 .align 256
 .assert * = _SAMPLES_BASE + $1300, error
-duty_cycle19:
+duty_cycle19:                    ; end spkr at 27
         ____SPKR_DUTY____4      ; 4
-        lda     (audio_status)  ; 9
-        and     #HAS_BYTE       ; 11
-        WASTE_11
-        ____SPKR_DUTY____4      ; 26
-        beq     :+              ; 
-        lda     (audio_data)    ; 
-        sta     next+1          ; 36
+ad19:   ldx     $C0A8           ; 8
+vs19:   lda     $C099           ; 12
+        and     #HAS_BYTE       ; 14
+        beq     no_vid19        ; 16/17
+vd19:   lda     $C098           ; 20
+        WASTE_2                 ; 22
+        ____SPKR_DUTY____5      ; 27
+        stx     next+1          ; 30
+        WASTE_9                 ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-        WASTE_5                 ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid19:
+        WASTE_2                 ; 19
+vs19b:  lda     $C099           ; 23
+        ____SPKR_DUTY____4      ; 27
+        ABS_STX next+1          ; 31 stx absolute
+        and     #HAS_BYTE       ; 33
+        beq     no_vid19b       ; 35/36
+vd19b:  lda     $C098           ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-:       WASTE_12                ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid19b:
+        WASTE_41                ; 77
+        jmp     (next)          ; 83
 
 .align 256
 .assert * = _SAMPLES_BASE + $1400, error
-duty_cycle20:
+duty_cycle20:                    ; end spkr at 28
         ____SPKR_DUTY____4      ; 4
-        lda     (audio_status)  ; 9
-        and     #HAS_BYTE       ; 11
-        WASTE_12
-        ____SPKR_DUTY____4      ; 27
-        beq     :+              ; 
-        lda     (audio_data)    ; 
-        sta     next+1          ; 37
+ad20:   ldx     $C0A8           ; 8
+vs20:   lda     $C099           ; 12
+        and     #HAS_BYTE       ; 14
+        beq     no_vid20        ; 16/17
+vd20:   lda     $C098           ; 20
+        WASTE_4                 ; 24
+        ____SPKR_DUTY____4      ; 28
+        stx     next+1          ; 31
+        WASTE_8                 ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-        WASTE_4                 ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid20:
+        WASTE_2                 ; 19
+vs20b:  lda     $C099           ; 23
+        ____SPKR_DUTY____5      ; 28
+        stx     next+1          ; 31
+        and     #HAS_BYTE       ; 33
+        beq     no_vid20b       ; 35/36
+vd20b:  lda     $C098           ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-:       WASTE_11                ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid20b:
+        WASTE_41                ; 77
+        jmp     (next)          ; 83
 
 .align 256
 .assert * = _SAMPLES_BASE + $1500, error
-duty_cycle21:
+duty_cycle21:                    ; end spkr at 29
         ____SPKR_DUTY____4      ; 4
-        lda     (audio_status)  ; 9
-        and     #HAS_BYTE       ; 11
-        WASTE_13
-        ____SPKR_DUTY____4      ; 28
-        beq     :+              ; 
-        lda     (audio_data)    ; 
-        sta     next+1          ; 38
+ad21:   ldx     $C0A8           ; 8
+vs21:   lda     $C099           ; 12
+        and     #HAS_BYTE       ; 14
+        beq     no_vid21        ; 16/17
+vd21:   lda     $C098           ; 20
+        stx     next+1          ; 23
+        WASTE_2                 ; 25
+        ____SPKR_DUTY____4      ; 29
+        WASTE_10                ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-        WASTE_3                 ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid21:
+        ABS_STX next+1          ; 21 stx absolute
+vs21b:  lda     $C099           ; 25
+        ____SPKR_DUTY____4      ; 29
+        WASTE_2                 ; 31
+        and     #HAS_BYTE       ; 33
+        beq     no_vid21b       ; 35/36
+vd21b:  lda     $C098           ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-:       WASTE_10                ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid21b:
+        WASTE_41                ; 77
+        jmp     (next)          ; 83
 
 .align 256
 .assert * = _SAMPLES_BASE + $1600, error
-duty_cycle22:
+duty_cycle22:                    ; end spkr at 30
         ____SPKR_DUTY____4      ; 4
-        lda     (audio_status)  ; 9
-        and     #HAS_BYTE       ; 11
-        WASTE_14
-        ____SPKR_DUTY____4      ; 29
-        beq     :+              ; 
-        lda     (audio_data)    ; 
-        sta     next+1          ; 39
+ad22:   ldx     $C0A8           ; 8
+vs22:   lda     $C099           ; 12
+        and     #HAS_BYTE       ; 14
+        beq     no_vid22        ; 16/17
+vd22:   lda     $C098           ; 20
+        stx     next+1          ; 23
+        WASTE_3                 ; 26
+        ____SPKR_DUTY____4      ; 30
+        WASTE_9                 ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-        WASTE_2                 ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid22:
+        stx     next+1          ; 20
+vs22b:  lda     $C099           ; 24
+        and     #HAS_BYTE       ; 26
+        ____SPKR_DUTY____4      ; 30
+        beq     no_vid22b       ; 32/33
+        WASTE_3                 ; 35
+vd22b:  lda     $C098           ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-:       WASTE_9                 ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid22b:
+        WASTE_44                ; 77
+        jmp     (next)          ; 83
 
 .align 256
 .assert * = _SAMPLES_BASE + $1700, error
-duty_cycle23:
+duty_cycle23:                    ; end spkr at 31
         ____SPKR_DUTY____4      ; 4
-        lda     (audio_status)  ; 9
-        and     #HAS_BYTE       ; 11
-        beq     :+              ; 13/14
-        lda     (audio_data)    ; 18
-        WASTE_8                 ; 26
-        ____SPKR_DUTY____4      ; 30
-        sta     next+1          ; 33
+ad23:   ldx     $C0A8           ; 8
+vs23:   lda     $C099           ; 12
+        and     #HAS_BYTE       ; 14
+        beq     no_vid23        ; 16/17
+vd23:   lda     $C098           ; 20
+        stx     next+1          ; 23
+        WASTE_4                 ; 27
+        ____SPKR_DUTY____4      ; 31
+        WASTE_8                 ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-        WASTE_8                 ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid23:
+        stx     next+1          ; 20
+vs23b:  lda     $C099           ; 24
+        and     #HAS_BYTE       ; 26
+        ____SPKR_DUTY____5      ; 31
+        WASTE_2                 ; 33
+        beq     no_vid23b       ; 35/36
+vd23b:  lda     $C098           ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-:       WASTE_12                ; 26
-        ____SPKR_DUTY____4      ; 30
-        WASTE_11                ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid23b:
+        WASTE_41                ; 77
+        jmp     (next)          ; 83
 
 
 .align 256
 .assert * = _SAMPLES_BASE + $1800, error
-duty_cycle24:
+duty_cycle24:                    ; end spkr at 32
         ____SPKR_DUTY____4      ; 4
-        lda     (audio_status)  ;
-        and     #HAS_BYTE       ;
-        beq     :+              ;
-        lda     (audio_data)    ;
-        WASTE_9                 ;
-        ____SPKR_DUTY____4      ; 31
-        sta     next+1          ;
+ad24:   ldx     $C0A8           ; 8
+vs24:   lda     $C099           ; 12
+        and     #HAS_BYTE       ; 14
+        beq     no_vid24        ; 16/17
+vd24:   lda     $C098           ; 20
+        stx     next+1          ; 23
+        WASTE_5                 ; 28
+        ____SPKR_DUTY____4      ; 32
+        WASTE_7                 ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-        WASTE_7                 ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid24:
+        WASTE_2                 ; 19
+vs24b:  lda     $C099           ; 23
+        and     #HAS_BYTE       ; 25
+        beq     no_vid24b       ; 27/28
+        ____SPKR_DUTY____5      ; 32
+        stx     next+1          ; 35
+vd24b:  lda     $C098           ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-:       WASTE_13                ; 27
-        ____SPKR_DUTY____4      ; 31
-        WASTE_10                ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid24b:
+        ____SPKR_DUTY____4      ; 32
+        WASTE_45                ; 77
+        jmp     (next)          ; 83
 
 .align 256
 .assert * = _SAMPLES_BASE + $1900, error
-duty_cycle25:
+duty_cycle25:                    ; end spkr at 33
         ____SPKR_DUTY____4      ; 4
-        lda     (audio_status)  ;
-        and     #HAS_BYTE       ;
-        beq     :+              ;
-        lda     (audio_data)    ;
-        WASTE_10                ;
-        ____SPKR_DUTY____4      ; 32
-        sta     next+1          ;
+ad25:   ldx     $C0A8           ; 8
+vs25:   lda     $C099           ; 12
+        and     #HAS_BYTE       ; 14
+        beq     no_vid25        ; 16/17
+vd25:   lda     $C098           ; 20
+        stx     next+1          ; 23
+        WASTE_6                 ; 29
+        ____SPKR_DUTY____4      ; 33
+        WASTE_6                 ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-        WASTE_6                 ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid25:
+        stx     next+1          ; 20
+vs25b:  lda     $C099           ; 24
+        and     #HAS_BYTE       ; 26
+        beq     no_vid25b       ; 28/29
+        ____SPKR_DUTY____5      ; 33
+        WASTE_2                 ; 35
+vd25b:  lda     $C098           ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-:       WASTE_14                ; 28
-        ____SPKR_DUTY____4      ; 32
-        WASTE_9                 ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid25b:
+        ____SPKR_DUTY____4      ; 33
+        WASTE_44                ; 77
+        jmp     (next)          ; 83
 
 .align 256
 .assert * = _SAMPLES_BASE + $1A00, error
-duty_cycle26:
+duty_cycle26:                    ; end spkr at 34
         ____SPKR_DUTY____4      ; 4
-        lda     (audio_status)  ;
-        and     #HAS_BYTE       ;
-        beq     :+              ;
-        lda     (audio_data)    ;
-        WASTE_11                ;
-        ____SPKR_DUTY____4      ; 33
-        sta     next+1          ;
+ad26:   ldx     $C0A8           ; 8
+vs26:   lda     $C099           ; 12
+        and     #HAS_BYTE       ; 14
+        beq     no_vid26        ; 16/17
+vd26:   lda     $C098           ; 20
+        stx     next+1          ; 23
+        WASTE_7                 ; 30
+        ____SPKR_DUTY____4      ; 34
+        WASTE_5                 ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-        WASTE_5                 ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid26:
+vs26b:  lda     $C099           ; 21
+        and     #HAS_BYTE       ; 23
+        beq     no_vid26b       ; 25/26
+vd26b:  lda     $C098           ; 29
+        ____SPKR_DUTY____5      ; 34
+        WASTE_2                 ; 36
+        stx     next+1          ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-:       WASTE_15                ; 29
-        ____SPKR_DUTY____4      ; 33
-        WASTE_8                 ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid26b:
+        WASTE_4                 ; 30
+        ____SPKR_DUTY____4      ; 34
+        stx     next+1          ; 37
+        WASTE_40                ; 77
+        jmp     (next)          ; 83
 
 .align 256
 .assert * = _SAMPLES_BASE + $1B00, error
-duty_cycle27:
+duty_cycle27:                    ; end spkr at 35
         ____SPKR_DUTY____4      ; 4
-        lda     (audio_status)  ;
-        and     #HAS_BYTE       ;
-        beq     :+              ;
-        lda     (audio_data)    ;
-        WASTE_12                ;
-        ____SPKR_DUTY____4      ; 34
-        sta     next+1          ;
+ad27:   ldx     $C0A8           ; 8
+vs27:   lda     $C099           ; 12
+        and     #HAS_BYTE       ; 14
+        beq     no_vid27        ; 16/17
+vd27:   lda     $C098           ; 20
+        stx     next+1          ; 23
+        WASTE_8                 ; 31
+        ____SPKR_DUTY____4      ; 35
+        WASTE_4                 ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-        WASTE_4                 ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid27:
+        stx     next+1          ; 20
+        WASTE_2                 ; 22
+vs27b:  lda     $C099           ; 26
+        and     #HAS_BYTE       ; 28
+        beq     no_vid27b       ; 30/31
+        ____SPKR_DUTY____5      ; 35
+vd27b:  lda     $C098           ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-:       WASTE_16                ; 30
-        ____SPKR_DUTY____4      ; 34
-        WASTE_7                 ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid27b:
+        ____SPKR_DUTY____4      ; 35
+        WASTE_42                ; 77
+        jmp     (next)          ; 83
 
 .align 256
 .assert * = _SAMPLES_BASE + $1C00, error
-duty_cycle28:
+duty_cycle28:                    ; end spkr at 36
         ____SPKR_DUTY____4      ; 4
-        lda     (audio_status)  ;
-        and     #HAS_BYTE       ;
-        beq     :+              ;
-        lda     (audio_data)    ;
-        WASTE_13                ;
-        ____SPKR_DUTY____4      ; 35
-        sta     next+1          ;
+ad28:   ldx     $C0A8           ; 8
+vs28:   lda     $C099           ; 12
+        and     #HAS_BYTE       ; 14
+        beq     no_vid28        ; 16/17
+vd28:   lda     $C098           ; 20
+        stx     next+1          ; 23
+        WASTE_9                 ; 32
+        ____SPKR_DUTY____4      ; 36
+        WASTE_3                 ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-        WASTE_3                 ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid28:
+        WASTE_2                 ; 19
+vs28b:  lda     $C099           ; 23
+        and     #HAS_BYTE       ; 25
+        beq     no_vid28b       ; 27/28
+vd28b:  lda     $C098           ; 31
+        ____SPKR_DUTY____5      ; 36
+        stx     next+1          ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-:       WASTE_17                ; 31
-        ____SPKR_DUTY____4      ; 35
-        WASTE_6                 ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid28b:
+        WASTE_4                 ; 32
+        ____SPKR_DUTY____4      ; 36
+        stx     next+1          ; 39
+        WASTE_38                ; 77
+        jmp     (next)          ; 83
+
 
 .align 256
 .assert * = _SAMPLES_BASE + $1D00, error
-duty_cycle29:
+duty_cycle29:                    ; end spkr at 37
         ____SPKR_DUTY____4      ; 4
-        lda     (audio_status)  ;
-        and     #HAS_BYTE       ;
-        beq     :+              ;
-        lda     (audio_data)    ;
-        WASTE_14                ;
-        ____SPKR_DUTY____4      ; 36
-        sta     next+1          ;
+ad29:   ldx     $C0A8           ; 8
+vs29:   lda     $C099           ; 12
+        and     #HAS_BYTE       ; 14
+        beq     no_vid29        ; 16/17
+vd29:   lda     $C098           ; 20
+        stx     next+1          ; 23
+        WASTE_10                ; 33
+        ____SPKR_DUTY____4      ; 37
+        WASTE_2                 ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-        WASTE_2                 ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid29:
+        stx     next+1          ; 20
+vs29b:  lda     $C099           ; 24
+        and     #HAS_BYTE       ; 26
+        beq     no_vid29b       ; 28/29
+vd29b:  lda     $C098           ; 32
+        ____SPKR_DUTY____5      ; 37
+        WASTE_2                 ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-:       WASTE_18                ; 32
-        ____SPKR_DUTY____4      ; 36
-        WASTE_5                 ; 41
-        jmp     video           ; 90 (takes 49 cycles, jumps to next)
+no_vid29b:
+        WASTE_4                 ; 33
+        ____SPKR_DUTY____4      ; 37
+        WASTE_40                ; 77
+        jmp     (next)          ; 83
 
 .align 256
 .assert * = _SAMPLES_BASE + $1E00, error
-duty_cycle30:                   ; end spkr at 37
+duty_cycle30:                    ; end spkr at 38
         ____SPKR_DUTY____4      ; 4
-as30:   lda     $C0A9           ; 8
-        and     #HAS_BYTE       ; 10
-        beq     noa30           ; 12/13
-ad30:   ldx     $C0A8           ; 16
-        stx     next+1          ; 19
-        bra     vs30            ; 22
-
-noa30:  WASTE_9                 ; 22
-
-vs30:   lda     $C099           ; 26
-        and     #HAS_BYTE       ; 28
-        beq     no_vid30        ; 30/31
-vd30:   lda     $C098           ; 34
-
-        ____SPKR_DUTY____4      ; 38
-        WASTE_4                 ; 42
-        jmp     video_direct    ; 45=>86 (takes 41 cycles, jumps to next)
+ad30:   ldx     $C0A8           ; 8
+vs30:   lda     $C099           ; 12
+        and     #HAS_BYTE       ; 14
+        beq     no_vid30        ; 16/17
+        WASTE_10                ; 26
+        jmp     video_tog_spkr  ; 29=>83 (takes 50 cycles, turns spkr off, jumps to next)
 
 no_vid30:
-        WASTE_2                 ; 33
-        ____SPKR_DUTY____4      ; 37
-        WASTE_43                ; 80
-        jmp     (next)          ; 86
+vs30b:  lda     $C099           ; 21
+        and     has_byte_zp     ; 24
+        beq     no_vid30b       ; 26/27
+        jmp     video_tog_spkr  ; 29=>83 (takes 50 cycles, turns spkr off, jumps to next)
+
+no_vid30b:
+        stx     next+1          ; 30
+        WASTE_4                 ; 34
+        ____SPKR_DUTY____4      ; 38
+        WASTE_39                ; 77
+        jmp     (next)          ; 83
 
 
 .align 256
@@ -934,16 +1187,16 @@ vd31:   lda     $C098           ; 20
 
 no_vid31:
         stx     next+1          ; 20
-        WASTE_3                 ; 23
-        lda     $C099           ; 27
-        and     #HAS_BYTE       ; 29
-        beq     no_vid31b       ; 31/32
-vd31b:  lda     $C098           ; 35
-        ____SPKR_DUTY____4      ; 39
+vs31b:  lda     $C099           ; 24
+        and     #HAS_BYTE       ; 26
+        beq     no_vid31b       ; 28/29
+vd31b:  lda     $C098           ; 32
+        WASTE_2                 ; 34
+        ____SPKR_DUTY____5      ; 39
         jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
 no_vid31b:
-        WASTE_3                 ; 35
+        WASTE_6                 ; 35
         ____SPKR_DUTY____4      ; 39
         WASTE_38                ; 77
         jmp     (next)          ; 83
@@ -953,9 +1206,11 @@ page1_addrs_arr:.res (N_BASES*2)          ; Base addresses arrays
 .align 256                                ; Aligned for correct cycle counting
 page2_addrs_arr:.res (N_BASES*2)
 
-video_toggle_spkr:
-        ____SPKR_DUTY____4      ; 37
-        WASTE_4                 ; 41
+video_tog_spkr:
+vd30b:  lda     $C098           ; 33
+        ____SPKR_DUTY____5      ; 38
+        ABS_STX next+1          ; 42
+
 video:
 video_direct:
         bmi     control           ; 2/3
@@ -970,9 +1225,7 @@ page_ptr_a:
         sta     (store_dest),y    ; 26
         iny                       ; 28
         sty     last_offset       ; 31
-        .byte   $9C ; stz ABSOLUTE to waste one cycle
-        .byte   got_offset
-        .byte   $00               ; 35
+        ABS_STZ got_offset        ; 35 - stz ABSOLUTE to waste one cycle
         jmp     (next)            ; 41
 
 control:
@@ -1094,7 +1347,8 @@ setup_pointers:
         lda     $C0A8+3
         sta     $C098+3
 
-        stz     zero
+        lda     #HAS_BYTE
+        sta     has_byte_zp
         rts
 
 _pwm:
