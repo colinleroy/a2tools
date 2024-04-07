@@ -878,6 +878,10 @@ static void *audio_push(void *unused) {
   unsigned char c;
   size_t cur = 0;
 
+  // for (int i = 0; i < 32; i++)
+  //   for (int j = 0; j < 1000; j++)
+  //     send_av_sample(i);
+
   while (1) {
     pthread_mutex_lock(&audio_th_data->mutex);
     if (cur > sample_rate*(2*BUFFER_LEN)) {
@@ -895,17 +899,13 @@ static void *audio_push(void *unused) {
     if (cur == audio_size) {
       if (stop) {
         printf("Stopping at %zu/%zu\n", cur, audio_size);
-        pthread_mutex_lock(&audio_th_data->mutex);
-        audio_th_data->stop = 1;
-        pthread_mutex_unlock(&audio_th_data->mutex);
-        break;
+        return NULL; /* Don't set stop, so video can finish */
       } else {
         /* We're starved but not done :-( */
         continue;
       }
     }
     send_av_sample(audio_data[cur] * AV_MAX_LEVEL/audio_max);
-    // send_av_sample(30);
     cur++;
 
     /* Kbd input polled directly for no wait at all */
@@ -918,16 +918,17 @@ static void *audio_push(void *unused) {
         switch (c) {
           case CH_ESC:
             printf("Stop\n");
-            goto out;
+            goto abort;
           case SURL_METHOD_ABORT:
             printf("Connection reset\n");
-            goto out;
+            goto abort;
         }
       }
     }
     num++;
   }
-out:
+  return NULL;
+abort:
   pthread_mutex_lock(&audio_th_data->mutex);
   audio_th_data->stop = 1;
   pthread_mutex_unlock(&audio_th_data->mutex);
@@ -1083,12 +1084,16 @@ close_last:
     printf("%d seconds, %d frames skipped / %d: %d fps\n", duration,
           skipped, i, (i-skipped)/duration);
   }
+  pthread_mutex_lock(&video_th_data->mutex);
+  video_th_data->stop = 1;
+  pthread_mutex_unlock(&video_th_data->mutex);
+
   return NULL;
 }
 
 int surl_stream_audio_video(char *url, char *translit, char monochrome, enum HeightScale scale) {
   int j;
-
+  int cancelled = 0;
   /* Control vars */
   unsigned char c;
   int ret = 0;
@@ -1218,23 +1223,33 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
   pthread_create(&video_push_thread, NULL, *video_push, NULL);
   while (1) {
     pthread_mutex_lock(&audio_th_data->mutex);
-    stop = audio_th_data->stop;
+    cancelled = audio_th_data->stop;
     pthread_mutex_unlock(&audio_th_data->mutex);
-    if (stop) {
-      printf("Audio thread done\n");
+    if (cancelled) {
+      printf("Audio thread cancelled\n");
       pthread_mutex_lock(&video_th_data->mutex);
       video_th_data->stop = 1;
       pthread_mutex_unlock(&video_th_data->mutex);
+      pthread_join(audio_push_thread, NULL);
+      pthread_join(video_push_thread, NULL);
+      break;
+    }
+
+    pthread_mutex_lock(&video_th_data->mutex);
+    stop = video_th_data->stop;
+    pthread_mutex_unlock(&video_th_data->mutex);
+    if (stop) {
       break;
     }
     sleep(1);
   }
+  if (!cancelled) {
+    pthread_join(audio_push_thread, NULL);
+    pthread_join(video_push_thread, NULL);
+  }
 
-  pthread_join(audio_push_thread, NULL);
-  pthread_join(video_push_thread, NULL);
-
-  printf("done (complete: %d)\n", audio_th_data->stop);
-  if (audio_th_data->stop) {
+  printf("done (cancelled: %d)\n", cancelled);
+  if (!cancelled) {
     send_av_sample(AV_MAX_LEVEL/2);
     send_end_of_av_stream();
 
