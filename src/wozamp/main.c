@@ -184,7 +184,7 @@ static void play_url(char *url, char *filename) {
   gotoxy(0, 20);
   dputs(tmp_buf);
   //dputs("Spc:pause, Esc:stop, Left/Right:fwd/rew");
-  surl_start_request(SURL_METHOD_STREAM_AUDIO, url, NULL, 0);
+  surl_start_request(SURL_METHOD_STREAM_AV, url, NULL, 0);
   simple_serial_write(translit_charset, strlen(translit_charset));
   simple_serial_putc('\n');
   simple_serial_putc(monochrome);
@@ -306,11 +306,8 @@ int main(void) {
 #ifdef __CC65__
   printf("Mem available: %zub\n", _heapmaxavail());
 #endif
-  runtime_once_clean();
-
   load_config();
 
-restart:
   if (url) {
     free(url);
     url = NULL;
@@ -320,6 +317,8 @@ restart:
   url = stp_get_start_url("Please enter an FTP or internet stream\r\n",
                           "http://8bit.fm:8000/live");
   url = stp_build_login_url(url);
+
+  runtime_once_clean();
 
   set_scrollwindow(0, scrh);
   init_text();
@@ -340,7 +339,7 @@ restart:
         if (navigated)
           goto up_dir;
         else
-          goto restart;
+          exec("WOZAMP", NULL);
       case UPDATE_LIST:
       default:
         break;

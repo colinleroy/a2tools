@@ -9,6 +9,8 @@
         .importzp       ptr1, ptr2, ptr3, ptr4, tmp1, tmp2, tmp3, tmp4
         .include        "ctype.inc"
 
+        .segment "LOWCODE"
+
 tolower_safe:
         pha                     ; save char
         jsr     ctypemaskdirect ; get character classification

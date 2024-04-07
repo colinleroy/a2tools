@@ -35,10 +35,6 @@
 #include "strcasestr.h"
 #include "runtime_once_clean.h"
 
-#ifdef __CC65__
-#pragma code-name (push, "LOWCODE")
-#endif
-
 static char *url_enter(char *url, char *suffix);
 
 static char *login = NULL;
@@ -48,6 +44,7 @@ extern char *translit_charset;
 
 char **display_lines;
 
+#pragma code-name(push, "RT_ONCE")
 char *stp_get_start_url(char *header, char *default_url) {
   FILE *fp;
   char *start_url = NULL;
@@ -165,6 +162,11 @@ char *stp_get_start_url(char *header, char *default_url) {
   return start_url;
 }
 
+#ifdef __CC65__
+#pragma code-name(pop)
+#pragma code-name (push, "LOWCODE")
+#endif
+
 int num_lines = 0;
 int cur_line = 0;
 int cur_display_line = 0;
@@ -266,7 +268,10 @@ search_from_start:
 }
 
 
-
+#ifdef __CC65__
+#pragma code-name(pop)
+#pragma code-name (push, "RT_ONCE")
+#endif
 char *stp_build_login_url(char *url) {
   char *host = strstr(url, "://");
   char *proto;
@@ -291,6 +296,10 @@ char *stp_build_login_url(char *url) {
   free(url);
   return full_url;
 }
+#ifdef __CC65__
+#pragma code-name(pop)
+#pragma code-name (push, "LOWCODE")
+#endif
 
 static int hscroll_off = 0;
 static int hscroll_dir = 1;
@@ -464,10 +473,6 @@ char *stp_url_enter(char *url, char *suffix) {
 
   return url;
 }
-
-#ifdef __CC65__
-#pragma code-name (pop)
-#endif
 
 void stp_print_header(const char *url, enum HeaderUrlAction action) {
   char *no_pass_url = NULL, *host;
