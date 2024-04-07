@@ -17,7 +17,7 @@
 
 ; ------------------------------------------------------------------------
 
-MAX_LEVEL         = 32
+MAX_LEVEL         = 31
 
 serial_status_reg = acia_status_reg_r
 serial_data_reg   = acia_data_reg_r
@@ -163,6 +163,47 @@ page2_addr_ptr= ptr4
         WASTE_11
 .endmacro
 
+.macro WASTE_24
+        WASTE_12
+        WASTE_12
+.endmacro
+
+.macro WASTE_25
+        WASTE_12
+        WASTE_10
+        WASTE_3
+.endmacro
+
+.macro WASTE_26
+        WASTE_12
+        WASTE_12
+        WASTE_2
+.endmacro
+
+.macro WASTE_27
+        WASTE_12
+        WASTE_12
+        WASTE_3
+.endmacro
+
+.macro WASTE_28
+        WASTE_12
+        WASTE_12
+        WASTE_4
+.endmacro
+
+.macro WASTE_29
+        WASTE_12
+        WASTE_12
+        WASTE_5
+.endmacro
+
+.macro WASTE_30
+        WASTE_12
+        WASTE_12
+        WASTE_6
+.endmacro
+
 .macro WASTE_31
         WASTE_12
         WASTE_12
@@ -274,11 +315,15 @@ page2_addr_ptr= ptr4
         .byte   $00
 .endmacro
 
-.macro KBD_LOAD_7               ; Check keyboard and jsr if key pressed (trashes A)
+.macro KBD_LOAD_13              ; Check keyboard and jsr if key pressed (trashes A)
         lda     KBD             ; 4
-        bpl     :+              ; 7
-        jsr     kbd_send
+        sta     KBDSTRB         ; 8
+        cmp     #($1B|$80)      ; 10 - Escape?
+        bne     :+              ; 12/13
+        and     #$7F            ;
+        jmp     _serial_putc_direct
 :
+
 .endmacro
 
 .macro ____SPKR_DUTY____4       ; Toggle speaker
@@ -321,8 +366,106 @@ no_vid0b:
         WASTE_3                 ; 39
 ad0b:   ldx     $C0A8           ; 43
         stx     next+1          ; 46
-        WASTE_31                ; 77
+        KBD_LOAD_13             ; 59
+        WASTE_18                ; 77
         jmp     (next)          ; 83
+
+; -----------------------------------------------------------------
+_pwm:
+        pha
+        ; Disable interrupts
+        lda     #$00
+        jsr     _simple_serial_set_irq
+
+        pla
+        ; Setup pointers
+        jsr     setup_pointers
+
+        ; Start with silence
+as31:   lda     $C0A9
+        and     #HAS_BYTE
+        beq     as31
+        jmp     duty_cycle31
+; -----------------------------------------------------------------
+setup_pointers:
+        ; Setup pointer access to SPKR
+        lda     #<(SPKR)
+        sta     spkr_ptr
+        lda     #>(SPKR)
+        sta     spkr_ptr+1
+
+        ; Calculate bases for HGR page 1
+        lda     #<(page1_addrs_arr)
+        ldy     #>(page1_addrs_arr)
+        sta     page1_addr_ptr
+        sty     page1_addr_ptr+1
+        ldx     #PAGE1_HB
+        jsr     calc_bases
+
+        ; Calculate bases for HGR page 2
+        lda     #<(page2_addrs_arr)
+        ldy     #>(page2_addrs_arr)
+        sta     page2_addr_ptr
+        sty     page2_addr_ptr+1
+        ldx     #PAGE2_HB
+        jsr     calc_bases
+
+        ; Init cycle destination
+        lda     #<(duty_cycle31)
+        sta     next
+        lda     #>(duty_cycle31)
+        sta     next+1
+
+        ; Setup serial registers
+        lda     serial_status_reg+1
+        sta     audio_status
+        lda     serial_status_reg+2
+        sta     audio_status+1
+
+        lda     serial_data_reg+1
+        sta     audio_data
+        lda     serial_data_reg+2
+        sta     audio_data+1
+
+        lda     $C0A8+2
+        sta     $C098+2
+        lda     $C0A8+3
+        sta     $C098+3
+
+        lda     #HAS_BYTE
+        sta     has_byte_zp
+        rts
+; -----------------------------------------------------------------
+calc_bases:
+        ; Precalculate addresses inside pages, so we can easily jump
+        ; from one to another without complicated computations. X
+        ; contains the base page address's high byte on entry ($20 for
+        ; page 1, $40 for page 2)
+        sta     ptr1
+        sty     ptr1+1
+
+        ldy     #0              ; Y is the index - Start at base 0
+        lda     #$00            ; A is the address's low byte
+                                ; (and X the address's high byte)
+
+        clc
+calc_next_base:
+        sta     (ptr1),y        ; Store AX
+        iny
+        pha
+        txa
+        sta     (ptr1),y
+        pla
+        iny
+
+        adc     #(MAX_OFFSET)   ; Compute next base
+        bcc     :+
+        inx
+        clc
+:       cpy     #(N_BASES*2)
+        bcc     calc_next_base
+        rts
+; -----------------------------------------------------------------
 
 .align 256
 .assert * = _SAMPLES_BASE + $100, error
@@ -350,7 +493,8 @@ vd1b:   lda     $C098           ; 39
 no_vid1b:
 ad1b:   ldx     $C0A8           ; 40
         stx     next+1          ; 43
-        WASTE_34                ; 77
+        KBD_LOAD_13             ; 56
+        WASTE_21                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -379,7 +523,8 @@ vd2b:   lda     $C098           ; 39
 no_vid2b:
 ad2b:   ldx     $C0A8           ; 40
         stx     next+1          ; 43
-        WASTE_34                ; 77
+        KBD_LOAD_13             ; 56
+        WASTE_21                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -408,7 +553,8 @@ vd3b:   lda     $C098           ; 39
 no_vid3b:
 ad3b:   ldx     $C0A8           ; 40
         stx     next+1          ; 43
-        WASTE_34                ; 77
+        KBD_LOAD_13             ; 56
+        WASTE_21                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -437,7 +583,8 @@ vd4b:   lda     $C098           ; 39
 no_vid4b:
 ad4b:   ldx     $C0A8           ; 40
         stx     next+1          ; 43
-        WASTE_34                ; 77
+        KBD_LOAD_13             ; 56
+        WASTE_21                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -466,7 +613,8 @@ vd5b:   lda     $C098           ; 39
 no_vid5b:
 ad5b:   ldx     $C0A8           ; 40
         stx     next+1          ; 43
-        WASTE_34                ; 77
+        KBD_LOAD_13             ; 56
+        WASTE_21                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -495,7 +643,8 @@ vd6b:   lda     $C098           ; 39
 no_vid6b:
 ad6b:   ldx     $C0A8           ; 40
         stx     next+1          ; 43
-        WASTE_34                ; 77
+        KBD_LOAD_13             ; 56
+        WASTE_21                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -524,7 +673,8 @@ vd7b:   lda     $C098           ; 39
 no_vid7b:
 ad7b:   ldx     $C0A8           ; 40
         stx     next+1          ; 43
-        WASTE_34                ; 77
+        KBD_LOAD_13             ; 56
+        WASTE_21                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -553,7 +703,8 @@ vd8b:   lda     $C098           ; 39
 no_vid8b:
 ad8b:   ldx     $C0A8           ; 40
         stx     next+1          ; 43
-        WASTE_34                ; 77
+        KBD_LOAD_13             ; 56
+        WASTE_21                ; 77
         jmp     (next)          ; 83
 
 
@@ -583,7 +734,8 @@ vd9b:   lda     $C098           ; 39
 no_vid9b:
 ad9b:   ldx     $C0A8           ; 40
         stx     next+1          ; 43
-        WASTE_34                ; 77
+        KBD_LOAD_13             ; 56
+        WASTE_21                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -612,7 +764,8 @@ vd10b:  lda     $C098           ; 39
 no_vid10b:
 ad10b:  ldx     $C0A8           ; 40
         stx     next+1          ; 43
-        WASTE_34                ; 77
+        KBD_LOAD_13             ; 56
+        WASTE_21                ; 77
         jmp     (next)          ; 83
 
 
@@ -642,7 +795,8 @@ vd11b:  lda     $C098           ; 39
 no_vid11b:
 ad11b:  ldx     $C0A8           ; 40
         stx     next+1          ; 43
-        WASTE_34                ; 77
+        KBD_LOAD_13             ; 56
+        WASTE_21                ; 77
         jmp     (next)          ; 83
 
 
@@ -672,7 +826,8 @@ vd12b:  lda     $C098           ; 39
 no_vid12b:
 ad12b:  ldx     $C0A8           ; 40
         stx     next+1          ; 43
-        WASTE_34                ; 77
+        KBD_LOAD_13             ; 56
+        WASTE_21                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -702,7 +857,8 @@ vd13b:  lda     $C098           ; 39
 no_vid13b:
 ad13b:  ldx     $C0A8           ; 40
         stx     next+1          ; 43
-        WASTE_34                ; 77
+        KBD_LOAD_13             ; 56
+        WASTE_21                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -733,7 +889,8 @@ vd14b:  lda     $C098           ; 39
 no_vid14b:
 ad14b:  ldx     $C0A8           ; 40
         stx     next+1          ; 43
-        WASTE_34                ; 77
+        KBD_LOAD_13             ; 56
+        WASTE_21                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -764,7 +921,8 @@ vd15b:  lda     $C098           ; 39
 no_vid15b:
 ad15b:  ldx     $C0A8           ; 40
         stx     next+1          ; 43
-        WASTE_34                ; 77
+        KBD_LOAD_13             ; 56
+        WASTE_21                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -794,7 +952,8 @@ vd16b:  lda     $C098           ; 39
 no_vid16b:
 ad16b:  ldx     $C0A8           ; 40
         stx     next+1          ; 43
-        WASTE_34                ; 77
+        KBD_LOAD_13             ; 56
+        WASTE_21                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -824,7 +983,8 @@ vd17b:  lda     $C098           ; 39
 no_vid17b:
 ad17b:  ldx     $C0A8           ; 40
         stx     next+1          ; 43
-        WASTE_34                ; 77
+        KBD_LOAD_13             ; 56
+        WASTE_21                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -854,7 +1014,8 @@ vd18b:  lda     $C098           ; 39
 no_vid18b:
 ad18b:  ldx     $C0A8           ; 40
         stx     next+1          ; 43
-        WASTE_34                ; 77
+        KBD_LOAD_13             ; 56
+        WASTE_21                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -885,7 +1046,8 @@ vd19b:  lda     $C098           ; 39
 no_vid19b:
 ad19b:  ldx     $C0A8           ; 40
         stx     next+1          ; 43
-        WASTE_34                ; 77
+        KBD_LOAD_13             ; 56
+        WASTE_21                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -916,7 +1078,8 @@ vd20b:  lda     $C098           ; 39
 no_vid20b:
 ad20b:  ldx     $C0A8           ; 40
         stx     next+1          ; 43
-        WASTE_34                ; 77
+        KBD_LOAD_13             ; 56
+        WASTE_21                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -947,7 +1110,8 @@ vd21b:  lda     $C098           ; 39
 no_vid21b:
 ad21b:  ldx     $C0A8           ; 40
         stx     next+1          ; 43
-        WASTE_34                ; 77
+        KBD_LOAD_13             ; 56
+        WASTE_21                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -976,9 +1140,10 @@ vd22b:  lda     $C098           ; 39
         jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
 no_vid22b:
-ad22b:  ldx     $C0A8           ; 40
-        stx     next+1          ; 43
-        WASTE_37                ; 77
+ad22b:  ldx     $C0A8           ; 37
+        stx     next+1          ; 40
+        KBD_LOAD_13             ; 53
+        WASTE_24                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -1009,7 +1174,8 @@ vd23b:  lda     $C098           ; 39
 no_vid23b:
 ad23b:  ldx     $C0A8           ; 40
         stx     next+1          ; 43
-        WASTE_34                ; 77
+        KBD_LOAD_13             ; 56
+        WASTE_21                ; 77
         jmp     (next)          ; 83
 
 
@@ -1042,7 +1208,8 @@ no_vid24b:
         ____SPKR_DUTY____4      ; 32
 ad24b:  ldx     $C0A8           ; 36
         stx     next+1          ; 39
-        WASTE_38                ; 77
+        KBD_LOAD_13             ; 52
+        WASTE_25                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -1074,7 +1241,8 @@ no_vid25b:
         ____SPKR_DUTY____4      ; 33
 ad25b:  ldx     $C0A8           ; 37
         stx     next+1          ; 40
-        WASTE_37                ; 77
+        KBD_LOAD_13             ; 53
+        WASTE_24                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -1107,7 +1275,8 @@ no_vid26b:
         ____SPKR_DUTY____4      ; 34
 ad26b:  ldx     $C0A8           ; 38
         stx     next+1          ; 41
-        WASTE_36                ; 77
+        KBD_LOAD_13             ; 54
+        WASTE_23                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -1139,7 +1308,8 @@ no_vid27b:
         ____SPKR_DUTY____4      ; 35
 ad27b:  ldx     $C0A8           ; 39
         stx     next+1          ; 42
-        WASTE_35                ; 77
+        KBD_LOAD_13             ; 55
+        WASTE_22                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -1172,7 +1342,8 @@ no_vid28b:
         ____SPKR_DUTY____4      ; 36
 ad28b:  ldx     $C0A8           ; 40
         stx     next+1          ; 43
-        WASTE_34                ; 77
+        KBD_LOAD_13             ; 56
+        WASTE_21                ; 77
         jmp     (next)          ; 83
 
 
@@ -1206,7 +1377,8 @@ no_vid29b:
         ____SPKR_DUTY____4      ; 37
 ad29b:  ldx     $C0A8           ; 41
         stx     next+1          ; 44
-        WASTE_33                ; 77
+        KBD_LOAD_13             ; 57
+        WASTE_20                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -1229,55 +1401,9 @@ no_vid30b:
         ____SPKR_DUTY____4      ; 38
 ad30b:  ldx     $C0A8           ; 42
         stx     next+1          ; 45
-        WASTE_32                ; 77
+        KBD_LOAD_13             ; 58
+        WASTE_19                ; 77
         jmp     (next)          ; 83
-
-
-.align 256
-.assert * = _SAMPLES_BASE + $1F00, error
-duty_cycle31:                    ; end spkr at 39
-        ____SPKR_DUTY____4      ; 4
-ad31:   ldx     $C0A8           ; 8
-vs31:   lda     $C099           ; 12
-        and     #HAS_BYTE       ; 14
-        beq     no_vid31        ; 16/17
-vd31:   lda     $C098           ; 20
-        stx     next+1          ; 23
-        WASTE_12                ; 35
-        ____SPKR_DUTY____4      ; 39
-        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
-
-no_vid31:
-        stx     next+1          ; 20
-vs31b:  lda     $C099           ; 24
-        and     #HAS_BYTE       ; 26
-        beq     no_vid31b       ; 28/29
-vd31b:  lda     $C098           ; 32
-        WASTE_2                 ; 34
-        ____SPKR_DUTY____5      ; 39
-        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
-
-no_vid31b:
-        WASTE_6                 ; 35
-        ____SPKR_DUTY____4      ; 39
-ad31b:  ldx     $C0A8           ; 43
-        stx     next+1          ; 46
-        WASTE_31                ; 77
-        jmp     (next)          ; 83
-
-.align 256
-.assert * = _SAMPLES_BASE+$2000, error
-break_out:
-        lda     #$01            ; Reenable IRQ and flush
-        jsr     _simple_serial_set_irq
-        jsr     _simple_serial_flush
-        lda     #$2F            ; SURL_CLIENT_READY
-        jmp     _serial_putc_direct
-
-.align 256
-page1_addrs_arr:.res (N_BASES*2)          ; Base addresses arrays
-.align 256                                ; Aligned for correct cycle counting
-page2_addrs_arr:.res (N_BASES*2)
 
 duty_cycle30_v2:
 vs30b:  lda     $C099           ; 24
@@ -1287,6 +1413,7 @@ vs30b:  lda     $C099           ; 24
 
 vd30b:  lda     $C098           ; 34
 
+; -----------------------------------------------------------------
 video_tog_spkr:
         ____SPKR_DUTY____4      ; 38
         ABS_STX next+1          ; 42
@@ -1346,127 +1473,54 @@ toggle_page:
         eor     #$01              ; 32 Toggle page for next time
         sta     page              ; 35
         jmp     (next)            ; 41
-
 ; -----------------------------------------------------------------
-kbd_send:
-        and     #$7F            ; Clear high bit
-        bit     KBDSTRB         ; Clear keyboard strobe
-        cmp     #' '
-        beq     pause
-        jmp     _serial_putc_direct
-pause:
-        jsr     _serial_putc_direct
-:       lda     KBD
-        bpl     :-
-        and     #$7F            ; Clear high bit
-        bit     KBDSTRB         ; Clear keyboard strobe
-        jmp     _serial_putc_direct
 
-; ------------------------------------------------------------------
-setup_pointers:
-        ; Setup pointer access to SPKR
-        lda     #<(SPKR)
-        sta     spkr_ptr
-        lda     #>(SPKR)
-        sta     spkr_ptr+1
+.align 256
+.assert * = _SAMPLES_BASE + $1F00, error
+duty_cycle31:                    ; end spkr at 39
+        ____SPKR_DUTY____4      ; 4
+ad31:   ldx     $C0A8           ; 8
+vs31:   lda     $C099           ; 12
+        and     #HAS_BYTE       ; 14
+        beq     no_vid31        ; 16/17
+vd31:   lda     $C098           ; 20
+        stx     next+1          ; 23
+        WASTE_12                ; 35
+        ____SPKR_DUTY____4      ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-        ; Calculate bases for HGR page 1
-        lda     #<(page1_addrs_arr)
-        ldy     #>(page1_addrs_arr)
-        sta     page1_addr_ptr
-        sty     page1_addr_ptr+1
-        ldx     #PAGE1_HB
-        jsr     calc_bases
+no_vid31:
+        stx     next+1          ; 20
+vs31b:  lda     $C099           ; 24
+        and     #HAS_BYTE       ; 26
+        beq     no_vid31b       ; 28/29
+vd31b:  lda     $C098           ; 32
+        WASTE_2                 ; 34
+        ____SPKR_DUTY____5      ; 39
+        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
-        ; Calculate bases for HGR page 2
-        lda     #<(page2_addrs_arr)
-        ldy     #>(page2_addrs_arr)
-        sta     page2_addr_ptr
-        sty     page2_addr_ptr+1
-        ldx     #PAGE2_HB
-        jsr     calc_bases
+no_vid31b:
+        WASTE_6                 ; 35
+        ____SPKR_DUTY____4      ; 39
+ad31b:  ldx     $C0A8           ; 43
+        stx     next+1          ; 46
+        KBD_LOAD_13             ; 59
+        WASTE_18                ; 77
+        jmp     (next)          ; 83
 
-        ; Init cycle destination
-        lda     #<(duty_cycle31)
-        sta     next
-        lda     #>(duty_cycle31)
-        sta     next+1
-
-        ; Setup serial registers
-        lda     serial_status_reg+1
-        sta     audio_status
-        lda     serial_status_reg+2
-        sta     audio_status+1
-
-        lda     serial_data_reg+1
-        sta     audio_data
-        lda     serial_data_reg+2
-        sta     audio_data+1
-
-        ; lda     #<($C098+1)
-        ; sta     video_status+1
-        ; lda     #>($C098+1)
-        ; sta     video_status+2
-        ; 
-        ; lda     #<($C098)
-        ; sta     video_data+1
-        ; lda     #>($C098)
-        ; sta     video_data+2
-
-        lda     $C0A8+2
-        sta     $C098+2
-        lda     $C0A8+3
-        sta     $C098+3
-
-        lda     #HAS_BYTE
-        sta     has_byte_zp
-        rts
-
-_pwm:
-        pha
-        ; Disable interrupts
-        lda     #$00
+.align 256
+.assert * = _SAMPLES_BASE+$2000, error
+break_out:
+        lda     #$01            ; Reenable IRQ and flush
         jsr     _simple_serial_set_irq
+        jsr     _simple_serial_flush
+        lda     #$2F            ; SURL_CLIENT_READY
+        jmp     _serial_putc_direct
 
-        pla
-        ; Setup pointers
-        jsr     setup_pointers
-
-        ; Start with silence
-as31:   lda     $C0A9
-        and     #HAS_BYTE
-        beq     as31
-        jmp     duty_cycle31
-
-calc_bases:
-        ; Precalculate addresses inside pages, so we can easily jump
-        ; from one to another without complicated computations. X
-        ; contains the base page address's high byte on entry ($20 for
-        ; page 1, $40 for page 2)
-        sta     ptr1
-        sty     ptr1+1
-
-        ldy     #0              ; Y is the index - Start at base 0
-        lda     #$00            ; A is the address's low byte
-                                ; (and X the address's high byte)
-
-        clc
-calc_next_base:
-        sta     (ptr1),y        ; Store AX
-        iny
-        pha
-        txa
-        sta     (ptr1),y
-        pla
-        iny
-
-        adc     #(MAX_OFFSET)   ; Compute next base
-        bcc     :+
-        inx
-        clc
-:       cpy     #(N_BASES*2)
-        bcc     calc_next_base
-        rts
+.align 256
+page1_addrs_arr:.res (N_BASES*2)          ; Base addresses arrays
+.align 256                                ; Aligned for correct cycle counting
+page2_addrs_arr:.res (N_BASES*2)
 
 page_addr_ptr:  .byte <(page2_addr_ptr)   ; Base addresses pointer for page 2
                 .byte <(page1_addr_ptr)   ; Base addresses pointer for page 1
