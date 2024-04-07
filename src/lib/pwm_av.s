@@ -175,6 +175,24 @@ page2_addr_ptr= ptr4
         WASTE_11
 .endmacro
 
+.macro WASTE_31
+        WASTE_12
+        WASTE_12
+        WASTE_7
+.endmacro
+
+.macro WASTE_32
+        WASTE_12
+        WASTE_12
+        WASTE_8
+.endmacro
+
+.macro WASTE_33
+        WASTE_12
+        WASTE_12
+        WASTE_9
+.endmacro
+
 .macro WASTE_34
         WASTE_12
         WASTE_12
@@ -313,7 +331,9 @@ vd0b:   lda     $C098           ; 39
 
 no_vid0b:
         WASTE_3                 ; 39
-        WASTE_38                ; 77
+ad0b:   ldx     $C0A8           ; 43
+        stx     next+1          ; 46
+        WASTE_31                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -340,7 +360,9 @@ vd1b:   lda     $C098           ; 39
         jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
 no_vid1b:
-        WASTE_41                ; 77
+ad1b:   ldx     $C0A8           ; 40
+        stx     next+1          ; 43
+        WASTE_34                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -367,7 +389,9 @@ vd2b:   lda     $C098           ; 39
         jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
 no_vid2b:
-        WASTE_41                ; 77
+ad2b:   ldx     $C0A8           ; 40
+        stx     next+1          ; 43
+        WASTE_34                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -394,7 +418,9 @@ vd3b:   lda     $C098           ; 39
         jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
 no_vid3b:
-        WASTE_41                ; 77
+ad3b:   ldx     $C0A8           ; 40
+        stx     next+1          ; 43
+        WASTE_34                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -421,7 +447,9 @@ vd4b:   lda     $C098           ; 39
         jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
 no_vid4b:
-        WASTE_41                ; 77
+ad4b:   ldx     $C0A8           ; 40
+        stx     next+1          ; 43
+        WASTE_34                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -448,7 +476,9 @@ vd5b:   lda     $C098           ; 39
         jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
 no_vid5b:
-        WASTE_41                ; 77
+ad5b:   ldx     $C0A8           ; 40
+        stx     next+1          ; 43
+        WASTE_34                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -475,7 +505,9 @@ vd6b:   lda     $C098           ; 39
         jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
 no_vid6b:
-        WASTE_41                ; 77
+ad6b:   ldx     $C0A8           ; 40
+        stx     next+1          ; 43
+        WASTE_34                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -502,7 +534,9 @@ vd7b:   lda     $C098           ; 39
         jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
 no_vid7b:
-        WASTE_41                ; 77
+ad7b:   ldx     $C0A8           ; 40
+        stx     next+1          ; 43
+        WASTE_34                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -529,7 +563,9 @@ vd8b:   lda     $C098           ; 39
         jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
 no_vid8b:
-        WASTE_41                ; 77
+ad8b:   ldx     $C0A8           ; 40
+        stx     next+1          ; 43
+        WASTE_34                ; 77
         jmp     (next)          ; 83
 
 
@@ -557,7 +593,9 @@ vd9b:   lda     $C098           ; 39
         jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
 no_vid9b:
-        WASTE_41                ; 77
+ad9b:   ldx     $C0A8           ; 40
+        stx     next+1          ; 43
+        WASTE_34                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -584,7 +622,9 @@ vd10b:  lda     $C098           ; 39
         jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
 no_vid10b:
-        WASTE_41                ; 77
+ad10b:  ldx     $C0A8           ; 40
+        stx     next+1          ; 43
+        WASTE_34                ; 77
         jmp     (next)          ; 83
 
 
@@ -612,7 +652,9 @@ vd11b:  lda     $C098           ; 39
         jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
 no_vid11b:
-        WASTE_41                ; 77
+ad11b:  ldx     $C0A8           ; 40
+        stx     next+1          ; 43
+        WASTE_34                ; 77
         jmp     (next)          ; 83
 
 
@@ -640,7 +682,9 @@ vd12b:  lda     $C098           ; 39
         jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
 no_vid12b:
-        WASTE_41                ; 77
+ad12b:  ldx     $C0A8           ; 40
+        stx     next+1          ; 43
+        WASTE_34                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -668,7 +712,9 @@ vd13b:  lda     $C098           ; 39
         jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
 no_vid13b:
-        WASTE_41                ; 77
+ad13b:  ldx     $C0A8           ; 40
+        stx     next+1          ; 43
+        WASTE_34                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -697,7 +743,9 @@ vd14b:  lda     $C098           ; 39
         jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
 no_vid14b:
-        WASTE_41                ; 77
+ad14b:  ldx     $C0A8           ; 40
+        stx     next+1          ; 43
+        WASTE_34                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -726,7 +774,9 @@ vd15b:  lda     $C098           ; 39
         jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
 no_vid15b:
-        WASTE_41                ; 77
+ad15b:  ldx     $C0A8           ; 40
+        stx     next+1          ; 43
+        WASTE_34                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -754,7 +804,9 @@ vd16b:  lda     $C098           ; 39
         jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
 no_vid16b:
-        WASTE_41                ; 77
+ad16b:  ldx     $C0A8           ; 40
+        stx     next+1          ; 43
+        WASTE_34                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -782,7 +834,9 @@ vd17b:  lda     $C098           ; 39
         jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
 no_vid17b:
-        WASTE_41                ; 77
+ad17b:  ldx     $C0A8           ; 40
+        stx     next+1          ; 43
+        WASTE_34                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -811,7 +865,9 @@ vd18b:  lda     $C098           ; 39
         jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
 no_vid18b:
-        WASTE_41                ; 77
+ad18b:  ldx     $C0A8           ; 40
+        stx     next+1          ; 43
+        WASTE_34                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -840,7 +896,9 @@ vd19b:  lda     $C098           ; 39
         jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
 no_vid19b:
-        WASTE_41                ; 77
+ad19b:  ldx     $C0A8           ; 40
+        stx     next+1          ; 43
+        WASTE_34                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -869,7 +927,9 @@ vd20b:  lda     $C098           ; 39
         jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
 no_vid20b:
-        WASTE_41                ; 77
+ad20b:  ldx     $C0A8           ; 40
+        stx     next+1          ; 43
+        WASTE_34                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -898,7 +958,9 @@ vd21b:  lda     $C098           ; 39
         jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
 no_vid21b:
-        WASTE_41                ; 77
+ad21b:  ldx     $C0A8           ; 40
+        stx     next+1          ; 43
+        WASTE_34                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -927,7 +989,9 @@ vd22b:  lda     $C098           ; 39
         jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
 no_vid22b:
-        WASTE_44                ; 77
+ad22b:  ldx     $C0A8           ; 40
+        stx     next+1          ; 43
+        WASTE_37                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -956,7 +1020,9 @@ vd23b:  lda     $C098           ; 39
         jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
 no_vid23b:
-        WASTE_41                ; 77
+ad23b:  ldx     $C0A8           ; 40
+        stx     next+1          ; 43
+        WASTE_34                ; 77
         jmp     (next)          ; 83
 
 
@@ -987,7 +1053,9 @@ vd24b:  lda     $C098           ; 39
 
 no_vid24b:
         ____SPKR_DUTY____4      ; 32
-        WASTE_45                ; 77
+ad24b:  ldx     $C0A8           ; 36
+        stx     next+1          ; 39
+        WASTE_38                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -1017,7 +1085,9 @@ vd25b:  lda     $C098           ; 39
 
 no_vid25b:
         ____SPKR_DUTY____4      ; 33
-        WASTE_44                ; 77
+ad25b:  ldx     $C0A8           ; 37
+        stx     next+1          ; 40
+        WASTE_37                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -1048,8 +1118,9 @@ vd26b:  lda     $C098           ; 29
 no_vid26b:
         WASTE_4                 ; 30
         ____SPKR_DUTY____4      ; 34
-        stx     next+1          ; 37
-        WASTE_40                ; 77
+ad26b:  ldx     $C0A8           ; 38
+        stx     next+1          ; 41
+        WASTE_36                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -1079,7 +1150,9 @@ vd27b:  lda     $C098           ; 39
 
 no_vid27b:
         ____SPKR_DUTY____4      ; 35
-        WASTE_42                ; 77
+ad27b:  ldx     $C0A8           ; 39
+        stx     next+1          ; 42
+        WASTE_35                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -1110,8 +1183,9 @@ vd28b:  lda     $C098           ; 31
 no_vid28b:
         WASTE_4                 ; 32
         ____SPKR_DUTY____4      ; 36
-        stx     next+1          ; 39
-        WASTE_38                ; 77
+ad28b:  ldx     $C0A8           ; 40
+        stx     next+1          ; 43
+        WASTE_34                ; 77
         jmp     (next)          ; 83
 
 
@@ -1143,7 +1217,9 @@ vd29b:  lda     $C098           ; 32
 no_vid29b:
         WASTE_4                 ; 33
         ____SPKR_DUTY____4      ; 37
-        WASTE_40                ; 77
+ad29b:  ldx     $C0A8           ; 41
+        stx     next+1          ; 44
+        WASTE_33                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -1167,7 +1243,9 @@ no_vid30b:
         stx     next+1          ; 30
         WASTE_4                 ; 34
         ____SPKR_DUTY____4      ; 38
-        WASTE_39                ; 77
+ad30b:  ldx     $C0A8           ; 42
+        stx     next+1          ; 45
+        WASTE_32                ; 77
         jmp     (next)          ; 83
 
 
@@ -1198,7 +1276,9 @@ vd31b:  lda     $C098           ; 32
 no_vid31b:
         WASTE_6                 ; 35
         ____SPKR_DUTY____4      ; 39
-        WASTE_38                ; 77
+ad31b:  ldx     $C0A8           ; 43
+        stx     next+1          ; 46
+        WASTE_31                ; 77
         jmp     (next)          ; 83
 
 .align 256
@@ -1240,7 +1320,9 @@ control:
 set_offset:
         sta     last_offset       ; 17
         inc     got_offset        ; 22
-        WASTE_13                  ; 35
+adv:    ldx     $C0A8             ; 26
+        stx     next+1            ; 29
+        WASTE_6                   ; 35
         jmp     (next)            ; 41
 
 set_base:
