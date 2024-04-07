@@ -210,6 +210,8 @@ extern char *readbuf;
 int bps = B19200;
 
 static char *opt_tty_path = NULL;
+char *av_tty_path = NULL;
+
 static int opt_tty_speed = B115200;
 static int opt_tty_hw_handshake = 1;
 
@@ -290,11 +292,13 @@ static void simple_serial_write_defaults(void) {
   fprintf(fp, "tty: /dev/ttyUSB0\n"
               "baudrate: 115200\n"
               "hw_handshake: off\n"
+              "av_tty: /dev/ttyUSB1\n"
               "\n"
               "#Alternatively, you can export environment vars:\n"
               "#A2_TTY (unset by default)\n"
               "#A2_TTY_SPEED (default %s)\n"
-              "#A2_TTY_HW_HANDSHAKE (default %s)\n",
+              "#A2_TTY_HW_HANDSHAKE (default %s)\n"
+              "#A2_AV_TTY (unset by default)\n",
               tty_speed_to_str(opt_tty_speed),
               opt_tty_hw_handshake ? "true":"false");
   if (fp == stdout) {
@@ -320,6 +324,11 @@ static int simple_serial_read_opts(void) {
       opt_tty_path = trim(buf + 4);
     }
 
+    if(!strncmp(buf, "av_tty:", 7)) {
+      free(av_tty_path);
+      av_tty_path = trim(buf + 7);
+    }
+
     if (!strncmp(buf,"baudrate:", 9)) {
       char *tmp = trim(buf + 9);
       opt_tty_speed = tty_speed_from_str(tmp);
@@ -340,6 +349,11 @@ static int simple_serial_read_opts(void) {
   if (getenv("A2_TTY")) {
     free(opt_tty_path);
     opt_tty_path = strdup(getenv("A2_TTY"));
+  }
+
+  if (getenv("A2_AV_TTY")) {
+    free(av_tty_path);
+    av_tty_path = strdup(getenv("A2_AV_TTY"));
   }
 
   if (getenv("A2_TTY_SPEED")) {
