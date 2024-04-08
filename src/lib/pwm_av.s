@@ -303,12 +303,14 @@ page2_addr_ptr= ptr4
         WASTE_9
 .endmacro
 
+; Hack to waste 1 cycle. Use absolute stx with $00nn
 .macro ABS_STX  zpvar
         .byte   $8E             ; stx absolute
         .byte   zpvar
         .byte   $00
 .endmacro
 
+; Hack to waste 1 cycle. Use absolute stz with $00nn
 .macro ABS_STZ  zpvar
         .byte   $9C             ; stz absolute
         .byte   zpvar
@@ -339,40 +341,95 @@ page2_addr_ptr= ptr4
 
         .code
 
+; General principles. we expect audio to be pushed on one serial port, video on
+; the other. Execution flow  is controlled via the audio stream, with each
+; received byte being the next duty cycle's address high byte.
+;
+; This means that duty cycle functions have to be page-aligned so their low byte
+; is always 00.
+; Functions that don't need to be aligned are stuffed between duty_cycle functions
+; when possible, to waste less space.
+;
+; There are 32 different duty cycles (0-31), each moving the speaker by toggling
+; it on and off at a certain cycles interval (from 8 to 39).
+; The tasks of each duty cycle handler is:
+; - Toggle the speaker on, wait a certain amount of cycles, toggle it off
+; - Fetch the next byte of audio
+; - Fetch the next byte of video
+; - If there is a video byte, handle it
+;
+; It is possible to lose audio bytes without horrible effects (the sound quality
+; would just be badder), but every video byte has to be fetched and handled,
+; otherwise the video handler, being a state machine, will get messed up.
+; Reading the same audio byte twice has no big drawback either, but reading the
+; same video byte would, for the same reasons.
+; In accordance to that, we spare ourselves the cycles required to verify the
+; audio serial port's status register and unconditionnaly read the audio serial
+; port's data register.
+;
+; Each duty cycle takes 83 cycles to complete (just below the 86µs interval at
+; which bytes arrive on a serial port at 115200 bps), but as precisely timing
+; the speaker toggling moves the serial fetching code around, it is possible to
+; lose bytes of video if we only check once per duty cycle.
+;
+; Hence, each duty cycle does the following:
+; - Load whatever is in the audio data register into jump destination
+; - If there is a video byte,
+;    - Load it,
+;    - Finish driving speaker,
+;    - Waste the required amount of cycles
+;    - Jump to video handler
+; - Otherwise,
+;    - Waste the required amount of cycles (less than in the first case),
+;    - Check video byte again,
+;    - If there is one, jump to video handler,
+; - Otherwise,
+;    - Handle keyboard input,
+;    - Load audio byte again,
+;    - Waste (a lot) of cycles,
+;    - Jump to the next duty cycle.
+;
+; The video handler has one code path where cycles are wasted, in which
+; the next audio byte is loaded again so we lose less. It is responsible
+; for jumping directly to the next duty cycle once the video byte is handled.
+;
+; As a rule of thumb, no bytes are dropped if we check for video byte around
+; cycles 12-20 and 24-31.
+
 .align 256
 _SAMPLES_BASE = *
 .assert * = $6000, error
 duty_cycle0:                    ; end spkr at 8
-        ____SPKR_DUTY____4      ; 4
-        ____SPKR_DUTY____4      ; 8
-vs0:    lda     $C099           ; 12
-ad0:    ldx     $C0A8           ; 16
-        and     #HAS_BYTE       ; 18
-        beq     no_vid0         ; 20/21
-vd0:    lda     $C098           ; 24
-        stx     next+1          ; 27
-        WASTE_12                ; 39
-        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
+        ____SPKR_DUTY____4      ; 4      toggle speaker on
+        ____SPKR_DUTY____4      ; 8      toggle speaker off
+vs0:    lda     $C099           ; 12     load video status register
+ad0:    ldx     $C0A8           ; 16     load audio data register
+        and     #HAS_BYTE       ; 18     check if video has byte
+        beq     no_vid0         ; 20/21  branch accordingly
+vd0:    lda     $C098           ; 24     load video data
+        stx     next+1          ; 27     store next duty cycle destination
+        WASTE_12                ; 39     waste extra cycles
+        jmp     video_direct    ; 42=>83 handle video byte
 
-no_vid0:
-        stx     next+1          ; 24
-        WASTE_3                 ; 27
-        lda     $C099           ; 31
-        and     #HAS_BYTE       ; 33
-        beq     no_vid0b        ; 35/36
-vd0b:   lda     $C098           ; 39
-        jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
+no_vid0:                        ;        we had no video byte first try
+        stx     next+1          ; 24     store next duty cycle destination
+        WASTE_3                 ; 27     waste extra cycles
+        lda     $C099           ; 31     check video status register again
+        and     #HAS_BYTE       ; 33     do we have one?
+        beq     no_vid0b        ; 35/36  branch accordingly
+vd0b:   lda     $C098           ; 39     load video data
+        jmp     video_direct    ; 42=>83 handle video byte
 
-no_vid0b:
-        WASTE_3                 ; 39
-ad0b:   ldx     $C0A8           ; 43
-        stx     next+1          ; 46
-        KBD_LOAD_13             ; 59
-        WASTE_18                ; 77
-        jmp     (next)          ; 83
+no_vid0b:                       ;        we had no video byte second try
+        WASTE_3                 ; 39     waste cycles
+ad0b:   ldx     $C0A8           ; 43     load audio data register again
+        stx     next+1          ; 46     store next duty cycle destination
+        KBD_LOAD_13             ; 59     handle keyboard
+        WASTE_18                ; 77     waste extra cycles
+        jmp     (next)          ; 83     jump to next duty cycle
 
 ; -----------------------------------------------------------------
-_pwm:
+_pwm:                           ; Entry point
         pha
         ; Disable interrupts
         lda     #$00
@@ -382,11 +439,10 @@ _pwm:
         ; Setup pointers
         jsr     setup_pointers
 
-        ; Start with silence
-as31:   lda     $C0A9
+as31:   lda     $C0A9           ; Wait for first byte,
         and     #HAS_BYTE
         beq     as31
-        jmp     duty_cycle31
+        jmp     duty_cycle31    ; And start!
 ; -----------------------------------------------------------------
 setup_pointers:
         ; Setup pointer access to SPKR
@@ -428,11 +484,13 @@ setup_pointers:
         lda     serial_data_reg+2
         sta     audio_data+1
 
-        lda     $C0A8+2
-        sta     $C098+2
-        lda     $C0A8+3
-        sta     $C098+3
+        lda     $C0A8+2         ; Copy command and control registers from
+        sta     $C098+2         ; the main serial port to the second serial
+        lda     $C0A8+3         ; port, it's easier than setting it up from
+        sta     $C098+3         ; scratch
 
+        ; Extra ZP variable to be able to waste one cycle using CMP ZP instead
+        ; of CMP IMM in some duty cycles
         lda     #HAS_BYTE
         sta     has_byte_zp
         rts
@@ -1382,8 +1440,12 @@ ad29b:  ldx     $C0A8           ; 41
         WASTE_20                ; 77
         jmp     (next)          ; 83
 
+
 .align 256
 .assert * = _SAMPLES_BASE + $1E00, error
+; Duty cycle 30 must toggle off speaker at cycle 38, but we would have to jump
+; to video_direct at cycle 39, so this one uses different entry points to
+; the video handler to fix this.
 duty_cycle30:                    ; end spkr at 38
         ____SPKR_DUTY____4      ; 4
 ad30:   ldx     $C0A8           ; 8
@@ -1406,7 +1468,7 @@ ad30b:  ldx     $C0A8           ; 42
         WASTE_19                ; 77
         jmp     (next)          ; 83
 
-duty_cycle30_v2:
+duty_cycle30_v2:                ; Alternate entry point for duty cycle 30
 vs30b:  lda     $C099           ; 24
         and     has_byte_zp     ; 27
         bne     vd30b           ; 29/30
@@ -1415,65 +1477,67 @@ vs30b:  lda     $C099           ; 24
 vd30b:  lda     $C098           ; 34
 
 ; -----------------------------------------------------------------
-video_tog_spkr:
+; VIDEO HANDLER
+
+video_tog_spkr:                 ; Alternate entry point for duty cycle 30
         ____SPKR_DUTY____4      ; 38
         ABS_STX next+1          ; 42
 
-video:
+; Video handler expects the video byte in A register.
+; Video handler must take 41 cycles on every code path.
 video_direct:
-        bmi     control           ; 2/3
-set_pixel:
-        ldy     last_base         ; 5 Finish storing base
-        tax                       ; 7
+        bmi     control           ; 2/3   Is it a control byte?
+set_pixel:                        ;       No, it is a data byte
+        ldy     last_base         ; 5     Finish storing base (we didn't have enough cycles to do all of it in set_base).
+        tax                       ; 7     Save data byte to X
 page_ptr_a:
-        lda     (page1_addr_ptr),y; 12
-        sta     store_dest+1      ; 15
-        txa                       ; 17
-        ldy     last_offset       ; 20
-        sta     (store_dest),y    ; 26
-        iny                       ; 28
-        sty     last_offset       ; 31
-        ABS_STZ got_offset        ; 35 - stz ABSOLUTE to waste one cycle
-        jmp     (next)            ; 41
+        lda     (page1_addr_ptr),y; 12    Load base pointer high byte from base array
+        sta     store_dest+1      ; 15    Store it to destination pointer high byte
+        txa                       ; 17    Restore data byte
+        ldy     last_offset       ; 20    Load the offset to the start of the base
+        sta     (store_dest),y    ; 26    Store data byte
+        iny                       ; 28    Increment offset
+        sty     last_offset       ; 31    and store it.
+        ABS_STZ got_offset        ; 35    Reset the offset-received flag. (stz ABSOLUTE to waste one cycle)
+        jmp     (next)            ; 41    Done, go to next duty cycle
 
-control:
-        cmp     #$FF            ; 5
-        beq     toggle_page     ; 7/8
-        and     #%01111111      ; 9
+control:                          ;       It is a control byte
+        cmp     #$FF              ; 5     Is it the page toggle command?
+        beq     toggle_page       ; 7/8   Yes
+        and     #%01111111        ; 9     No. Strip high byte to get the positive value
 
-        ; offset or base?
-        ldx     got_offset      ; 12
-        bne     set_base        ; 14/15
+        ldx     got_offset        ; 12    Did we get an offset byte earlier?
+        bne     set_base          ; 14/15 Yes, so this one is a base byte
 
-set_offset:
-        sta     last_offset       ; 17
-        inc     got_offset        ; 22
-adv:    ldx     $C0A8             ; 26
-        stx     next+1            ; 29
-        WASTE_6                   ; 35
-        jmp     (next)            ; 41
+set_offset:                       ;       No, so set offset
+        sta     last_offset       ; 17    Store offset
+        inc     got_offset        ; 22    Set the offset-received flag
+adv:    ldx     $C0A8             ; 26    We have extra time, so load audio byte
+        stx     next+1            ; 29    And update jump destination accordingly
+        WASTE_6                   ; 35    (So much extra cycles!)
+        jmp     (next)            ; 41    Done, go to next duty cycle
 
-set_base:
-        asl     a                 ; 17
-        tay                       ; 19
+set_base:                         ;       This is a base byte
+        asl     a                 ; 17    Double it as the base array is uint16
+        tay                       ; 19    Transfer to Y for array access
 page_ptr_b:
-        lda     (page1_addr_ptr),y; 24
-        sta     store_dest        ; 27
-        iny                       ; 29
-        sty     last_base         ; 32
-        stz     got_offset        ; 35
-        jmp     (next)            ; 41
+        lda     (page1_addr_ptr),y; 24    Load base pointer low byte from base array
+        sta     store_dest        ; 27    Store it to destination pointer low byte
+        iny                       ; 29    Increment Y for high byte
+        sty     last_base         ; 32    Store it, we don't have time here, we'll finish updating base on a data byte
+        stz     got_offset        ; 35    Reset the offset-received flag
+        jmp     (next)            ; 41    Done, go to next duty cycle
 
-toggle_page:
-        ldx     page              ; 11
-        sta     $C054,x           ; 16
-        lda     page_addr_ptr,x   ; 20
-        sta     page_ptr_a+1      ; 24
-        sta     page_ptr_b+1      ; 28
-        txa                       ; 30
-        eor     #$01              ; 32 Toggle page for next time
-        sta     page              ; 35
-        jmp     (next)            ; 41
+toggle_page:                      ;       Page toggling command
+        ldx     page              ; 11    Get next page to activate
+        sta     $C054,x           ; 16    Toggle soft switch
+        lda     page_addr_ptr,x   ; 20    Load the page's base address high byte
+        sta     page_ptr_a+1      ; 24    Update the base array pointer (low byte handler in set_base)
+        sta     page_ptr_b+1      ; 28    Update the base array pointer (high byte handler in set_pixel)
+        txa                       ; 30    Transfer X to A to invert it
+        eor     #$01              ; 32    Invert (toggle page for next time)
+        sta     page              ; 35    Store next page
+        jmp     (next)            ; 41    Done, go to next duty cycle
 ; -----------------------------------------------------------------
 
 .align 256
