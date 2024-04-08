@@ -5,6 +5,7 @@ iigs_suffix := -iigs
 iigs_CFLAGS := -DIIGS --asm-define IIGS
 trgt = apple2gs
 upload_subdir := /iigs
+APPLE2ENH := 1
 else
 ifdef OLDII
 serial_hw := acia
@@ -18,14 +19,13 @@ iigs_suffix :=
 iigs_CFLAGS :=
 CC65_TARGET = apple2enh
 trgt = apple2c0
+APPLE2ENH := 1
 endif
 endif
 
-PROGRAM=wozamp
-SOURCES := \
+wozamp_SOURCES := \
 	main.c \
 	config.c \
-	../lib/hgr.c \
 	../lib/serial/simple_serial.c \
 	../lib/serial/simple_serial_configure.c \
 	../lib/path_helper.c \
@@ -38,8 +38,9 @@ SOURCES := \
 	../lib/strsplit.c \
 	../stp/stp_list.c
 
-CL65SOURCES = \
+wozamp_CL65SOURCES = \
 	../lib/pwm.s \
+	../lib/hgr.c \
 	../lib/surl/surl_read_with_barrier.s \
 	../lib/serial/serial_read_no_irq.s \
 	../lib/serial/simple_serial_read.s \
@@ -58,25 +59,65 @@ CL65SOURCES = \
 	../lib/platform_sleep.s \
 	../lib/strcasestr.s
 
-GCC_SOURCES = \
+wozamp_GCC_SOURCES = \
 	../lib/strtrim.c \
 	../lib/extended_conio.c \
 	../lib/clrzone.c \
 	../lib/serial/simple_serial_io.c
 
 #AVOID_ROM_CALLS Needed for scrolldown in 40cols mode
-CLCFLAGS = -t $(CC65_TARGET) -DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER \
+wozamp_CLCFLAGS = -t $(CC65_TARGET) -DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER \
 	-DAVOID_ROM_CALLS --asm-define AVOID_ROM_CALLS \
 	-DSTP_DATA_SIZE=8192 \
 	-I ../lib -I ../stp \
 	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-pwmstreamer.cfg \
-	-vm -m $(PROGRAM).map -DSURL_TO_LANGCARD -O
+	-vm -m wozamp.map -DSURL_TO_LANGCARD -O
+
+GCCCFLAGS = -g -O0 -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\" \
+	-I ../lib -I ../stp -Wall -Wno-format \
+	-Wno-unused-function -Wno-char-subscripts -Wno-unknown-pragmas \
+	-Werror -DSTP_DATA_SIZE=8192
 
 .PHONY: all clean
 
+ifdef APPLE2ENH
+videoplay_SOURCES := \
+	../lib/pwm_av.s \
+	videoplay.c \
+	../lib/hgr.c \
+	../lib/serial/simple_serial.c \
+	../lib/serial/simple_serial_io.s \
+	../lib/serial/serial_read_no_irq.s \
+	../lib/serial/$(serial_hw)/common.s \
+	../lib/serial/$(serial_hw)/control.s \
+	../lib/serial/$(serial_hw)/no_irq.s \
+	../lib/path_helper.c \
+	../lib/surl/surl_core.c \
+	../lib/surl/surl_read_with_barrier.s \
+	../lib/fastirq$(iigs_suffix).s \
+	../lib/extrazp.s \
+	../lib/malloc0.c \
+
+videoplay_CLCFLAGS = -t $(CC65_TARGET) -DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER -I ../lib \
+	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-avstreamer.cfg \
+	-vm -m $(PROGRAM).map -DSURL_TO_LANGCARD -O
+
 all: \
 	splash.h \
-	$(PROGRAM).bin
+	wozamp.bin \
+	wozamp.x86_64 \
+	videoplay.bin
+else
+
+all: \
+	splash.h \
+	wozamp.bin \
+	wozamp.x86_64
+
+endif
+
+clean:
+	rm -f *.bin *.o *.map
 
 wozamp.hgr:
 	hgr-convert wozamp.png
@@ -84,13 +125,16 @@ wozamp.hgr:
 splash.h: wozamp.hgr
 	../../bin/make-splash.sh wozamp.png
 
-$(PROGRAM).bin: $(CL65SOURCES) $(SOURCES)
-	cl65 -g -Wl --dbgfile,$(PROGRAM).dbg -Ln $(PROGRAM).lbl $(CFLAGS) $(iigs_CFLAGS) $(CLCFLAGS) -o $@ $^
+wozamp.bin: $(wozamp_CL65SOURCES) $(wozamp_SOURCES)
+	cl65 -g -Wl --dbgfile,wozamp.dbg -Ln wozamp.lbl $(CFLAGS) $(iigs_CFLAGS) $(wozamp_CLCFLAGS) -o $@ $^
 
-clean:
-	rm -f $(PROGRAM).bin *.o *.map
+wozamp.x86_64: $(wozamp_SOURCES) $(wozamp_GCC_SOURCES)
+	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	
+
+videoplay.bin: $(videoplay_CL65SOURCES) $(videoplay_SOURCES)
+	cl65 -g -Wl --dbgfile,videoplay.dbg -Ln videoplay.lbl $(CFLAGS) $(iigs_CFLAGS) $(videoplay_CLCFLAGS) -o $@ $^
 
 upload: all
 	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/wozamp/ || \
 	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/wozamp/ && \
-	cp wozamp.bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/wozamp/
+	cp *.bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/wozamp/
