@@ -221,6 +221,7 @@ reopen:
   while(1) {
 
     /* read request */
+    printf("Waiting for request\n");
     if (simple_serial_gets(reqbuf, BUFSIZE) != NULL) {
       int i;
 
@@ -259,7 +260,7 @@ new_req:
       if (method == SURL_METHOD_ABORT) {
         continue;
       } else if (url[0] == '\0') {
-        printf("REQ: Could not parse request.\n");
+        printf("REQ: Could not parse request (method %d).\n", method);
         continue;
       }
     } else {
@@ -433,7 +434,7 @@ new_req:
         }
 
 abort:
-        printf("RESP: finished\n");
+        printf("RESP: finished (cmd %d)\n", cmd);
         /* Put that back as a REQUEST */
         reqbuf[0] = cmd;
         simple_serial_gets(reqbuf + 1, BUFSIZE - 1);

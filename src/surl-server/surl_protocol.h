@@ -3,7 +3,7 @@
 
 #define SURL_PROTOCOL_VERSION 0x0C
 
-#define SURL_METHOD_ABORT           ('d'|0x80)
+#define SURL_METHOD_ABORT           ('d'|0x80) // $E4
 #define SURL_METHOD_RAW             0x05
 #define SURL_METHOD_GET             0x06
 #define SURL_METHOD_POST            0x07

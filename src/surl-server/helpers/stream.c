@@ -385,7 +385,7 @@ static void send_end_of_av_stream(void) {
   fflush(ttyfp);
 }
 
-void *ffmpeg_decode(void *arg) {
+void *ffmpeg_decode_snd(void *arg) {
   decode_data *th_data = (decode_data *)arg;
 
   ffmpeg_to_raw_snd(th_data);
@@ -411,7 +411,7 @@ static void send_metadata(char *key, char *value, char *translit) {
   len = strlen(key) + strlen("\n") + l;
   buf = malloc(len + 1);
   sprintf(buf, "%s\n%s", key, translit_buf);
-
+  printf("=> %s %s\n", key, value);
   simple_serial_putc(SURL_ANSWER_STREAM_METADATA);
   IO_BARRIER("metadata len");
   len = htons(len);
@@ -447,7 +447,7 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
   pthread_mutex_init(&th_data->mutex, NULL);
 
   printf("Starting decode thread (charset %s, monochrome %d, scale %d)\n", translit, monochrome, scale);
-  pthread_create(&decode_thread, NULL, *ffmpeg_decode, (void *)th_data);
+  pthread_create(&decode_thread, NULL, *ffmpeg_decode_snd, (void *)th_data);
 
   while(!ready && !stop) {
     pthread_mutex_lock(&th_data->mutex);
@@ -484,6 +484,7 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
     }
 
     pthread_mutex_lock(&th_data->mutex);
+    send_metadata("has_video", th_data->has_video ? "1":"0", translit);
     send_metadata("artist", th_data->artist, translit);
     send_metadata("album", th_data->album, translit);
     send_metadata("title", th_data->title, translit);
@@ -873,6 +874,7 @@ unsigned char *hgr_buf = NULL;
 int audio_max = 0;
 size_t audio_size = 0;
 size_t img_size = 0;
+int audio_ready = 0;
 
 static void *audio_push(void *unused) {
   /* Audio vars */
@@ -959,6 +961,7 @@ void *video_push(void *unused) {
   gettimeofday(&frame_start, 0);
 
   page = 1;
+  send_byte(0, ttyfp2);
 
 next_file:
   i++;
@@ -1001,7 +1004,7 @@ next_file:
 #endif
     goto next_file;
   }
-
+send:
   gettimeofday(&frame_start, 0);
 
   for (num_diffs = 0, j = 0; j < HGR_LEN; j++) {
@@ -1128,7 +1131,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
   pthread_mutex_init(&audio_th_data->mutex, NULL);
 
   printf("Starting decode thread (charset %s, monochrome %d, scale %d)\n", translit, monochrome, scale);
-  pthread_create(&audio_decode_thread, NULL, *ffmpeg_decode, (void *)audio_th_data);
+  pthread_create(&audio_decode_thread, NULL, *ffmpeg_decode_snd, (void *)audio_th_data);
 
   while(!ready && !stop && !err) {
     pthread_mutex_lock(&audio_th_data->mutex);
@@ -1169,6 +1172,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
   }
 
   pthread_mutex_lock(&audio_th_data->mutex);
+  send_metadata("has_video", audio_th_data->has_video ? "1":"0", translit);
   send_metadata("artist", audio_th_data->artist, translit);
   send_metadata("album", audio_th_data->album, translit);
   send_metadata("title", audio_th_data->title, translit);
@@ -1224,6 +1228,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
   audio_max = 256;
   sleep(1); /* Let ffmpeg have a bit of time to push data so we don't starve */
 
+  audio_ready = 0;
   pthread_create(&audio_push_thread, NULL, *audio_push, NULL);
   pthread_create(&video_push_thread, NULL, *video_push, NULL);
   while (1) {
