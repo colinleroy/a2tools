@@ -418,8 +418,6 @@ int stp_get_data(char *url, const surl_response **resp) {
       nat_data = malloc((*resp)->size + 1);
       if (nat_data) {
         surl_receive_data(nat_data, (*resp)->size);
-      } else {
-        simple_serial_putc(SURL_METHOD_ABORT);
       }
     }
   }
