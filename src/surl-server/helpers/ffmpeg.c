@@ -551,6 +551,8 @@ int ffmpeg_to_raw_snd(decode_data *data) {
     int ret = 0;
     char audio_filter_descr[200];
     const AVDictionaryEntry *tag = NULL;
+    const AVCodec *vdec;
+    char has_video = 0;
 
     audio_frame = av_frame_alloc();
     audio_filt_frame = av_frame_alloc();
@@ -574,6 +576,12 @@ int ffmpeg_to_raw_snd(decode_data *data) {
       goto end;
     }
 
+    if (av_find_best_stream(audio_fmt_ctx, AVMEDIA_TYPE_VIDEO, -1, -1, &vdec, 0) == 0) {
+      has_video = 1;
+    } else {
+      has_video = 0;
+    }
+
     sprintf(audio_filter_descr, "aresample=%d,aformat=sample_fmts=u8:channel_layouts=mono",
             data->sample_rate);
 
@@ -582,6 +590,7 @@ int ffmpeg_to_raw_snd(decode_data *data) {
     }
 
     pthread_mutex_lock(&data->mutex);
+    data->has_video = has_video;
     while ((tag = av_dict_get(audio_fmt_ctx->metadata, "", tag, AV_DICT_IGNORE_SUFFIX))) {
       if (!strcmp(tag->key, "artist")) {
         data->artist = strdup(tag->value);

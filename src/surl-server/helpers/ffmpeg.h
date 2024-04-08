@@ -30,6 +30,7 @@ typedef struct _decode_data {
   int decoding_end;
 
   /* metadata */
+  char has_video; 
   char *artist;
   char *album;
   char *title;
