@@ -33,8 +33,11 @@
 #include "scrollwindow.h"
 #include "stp_list.h"
 #include "runtime_once_clean.h"
+#ifdef __APPLE2__
 #include "hgr.h"
+#endif
 #include "pwm.h"
+#include "path_helper.h"
 #include "platform.h"
 #include "splash.h"
 
@@ -49,6 +52,8 @@ char center_x = 14; /* 30 in 80COLS */
 
 extern char search_buf[80];
 extern char **display_lines;
+
+static char in_list = 0;
 
 void stp_print_footer(void) {
 
@@ -67,18 +72,44 @@ void stp_print_footer(void) {
   }
 }
 
-void stp_print_result(const surl_response *response) {
-  gotoxy(0, 20);
-  chline(scrw);
-  clrzone(0, 21, scrw - 1, 21);
+static unsigned char got_cover = 0;
+void get_cover_file(char *url) {
+  char *cover_url;
+  size_t len;
 
-  if (response == NULL) {
-    dputs("Unknown request error.");
-  } else if (response->code / 100 != 2){
-    cprintf("Error: Response code %d - %lu bytes",
-            response->code,
-            response->size);
+  got_cover = 0;
+
+  len = strlen(url) + 11; /* strlen("/cover.jpg") + 1 */
+  cover_url = malloc(len);
+  if (!cover_url) {
+    /* No memory, well, too bad */
+    return;
   }
+  if (strchr(url, '/')) {
+    strcpy(cover_url, url);
+    *strrchr(cover_url, '/') = 0;
+    strcat(cover_url, "/cover.jpg");
+
+    surl_start_request(SURL_METHOD_GET, cover_url, NULL, 0);
+    if (surl_response_ok()) {
+      simple_serial_putc(SURL_CMD_HGR);
+      simple_serial_putc(monochrome);
+      simple_serial_putc(HGR_SCALE_MIXHGR);
+      if (simple_serial_getc() == SURL_ERROR_OK) {
+
+        surl_read_with_barrier((char *)&len, 2);
+        len = ntohs(len);
+
+#ifdef __APPLE2__
+        if (len == HGR_LEN) {
+          surl_read_with_barrier((char *)HGR_PAGE, HGR_LEN);
+          got_cover = 1;
+        }
+#endif
+      }
+    }
+  }
+  free(cover_url);
 }
 
 void show_metadata (char *data) {
@@ -111,48 +142,23 @@ void show_metadata (char *data) {
   dputs(value);
 }
 
+void stp_print_result(const surl_response *response) {
+  gotoxy(0, 20);
+  chline(scrw);
+  clrzone(0, 21, scrw - 1, 21);
+
+  if (response == NULL) {
+    dputs("Unknown request error.");
+  } else if (response->code / 100 != 2){
+    cprintf("Error: Response code %d - %lu bytes",
+            response->code,
+            response->size);
+  }
+}
+
 #ifdef __CC65__
 #pragma code-name (push, "LC")
 #endif
-
-
-static unsigned char got_cover = 0;
-void get_cover_file(char *url) {
-  char *cover_url;
-  size_t len;
-
-  got_cover = 0;
-
-  len = strlen(url) + 11; /* strlen("/cover.jpg") + 1 */
-  cover_url = malloc(len);
-  if (!cover_url) {
-    /* No memory, well, too bad */
-    return;
-  }
-  if (strchr(url, '/')) {
-    strcpy(cover_url, url);
-    *strrchr(cover_url, '/') = 0;
-    strcat(cover_url, "/cover.jpg");
-
-    surl_start_request(SURL_METHOD_GET, cover_url, NULL, 0);
-    if (surl_response_ok()) {
-      simple_serial_putc(SURL_CMD_HGR);
-      simple_serial_putc(monochrome);
-      simple_serial_putc(HGR_SCALE_MIXHGR);
-      if (simple_serial_getc() == SURL_ERROR_OK) {
-
-        surl_read_with_barrier((char *)&len, 2);
-        len = ntohs(len);
-
-        if (len == HGR_LEN) {
-          surl_read_with_barrier((char *)HGR_PAGE, HGR_LEN);
-          got_cover = 1;
-        }
-      }
-    }
-  }
-  free(cover_url);
-}
 
 #ifdef __APPLE2ENH__
 static void backup_restore_logo(char *op) {
@@ -172,6 +178,9 @@ static void backup_restore_logo(char *op) {
 extern char tmp_buf[80];
 static void play_url(char *url, char *filename) {
   char r;
+#ifdef __APPLE2ENH__
+  char has_video = 0;
+#endif
 
   /* Try to get /cover.jpg as a fallback for media with no embedded art */
   get_cover_file(url);
@@ -184,7 +193,7 @@ static void play_url(char *url, char *filename) {
   gotoxy(0, 20);
   dputs(tmp_buf);
   //dputs("Spc:pause, Esc:stop, Left/Right:fwd/rew");
-  surl_start_request(SURL_METHOD_STREAM_AV, url, NULL, 0);
+  surl_start_request(SURL_METHOD_STREAM_AUDIO, url, NULL, 0);
   simple_serial_write(translit_charset, strlen(translit_charset));
   simple_serial_putc('\n');
   simple_serial_putc(monochrome);
@@ -196,7 +205,7 @@ static void play_url(char *url, char *filename) {
   }
   init_hgr(1);
   hgr_mixon();
-#else
+#elif defined(__APPLE2__)
   if (got_cover) {
     init_hgr(1);
     hgr_mixon();
@@ -215,7 +224,15 @@ read_metadata_again:
     metadata = malloc(len + 1);
     surl_read_with_barrier(metadata, len);
     metadata[len] = '\0';
-    show_metadata(metadata);
+
+    if (!strncmp(metadata, "has_video\n", 10)) {
+      #ifdef __APPLE2ENH__
+      char *value = strchr(metadata, '\n')+1;
+      has_video = value[0] == '1';
+#endif
+    } else {
+      show_metadata(metadata);
+    }
     free(metadata);
     simple_serial_putc(SURL_CLIENT_READY);
     goto read_metadata_again;
@@ -224,22 +241,47 @@ read_metadata_again:
     if (got_cover) {
       simple_serial_putc(SURL_CMD_SKIP);
     } else {
+#ifdef __APPLE2__
       surl_read_with_barrier((char *)HGR_PAGE, HGR_LEN);
       init_hgr(1);
       hgr_mixon();
+#endif
       simple_serial_putc(SURL_CLIENT_READY);
     }
     goto read_metadata_again;
 
   } else if (r == SURL_ANSWER_STREAM_START) {
+#ifdef __APPLE2ENH__
+    if (has_video && !in_list) {
+      FILE *video_url_fp = fopen("/RAM/VIDURL","w");
+      if (video_url_fp == NULL) {
+        goto novid;
+      }
+      fputs(url, video_url_fp);
+      fclose(video_url_fp);
+      simple_serial_putc(SURL_METHOD_ABORT);
+      init_text();
+      reopen_start_device();
+      exec("VIDEOPLAY", NULL);
+      return;
+    } else {
+novid:
+      simple_serial_putc(SURL_CLIENT_READY);
+    }
+#else
     simple_serial_putc(SURL_CLIENT_READY);
+#endif
+#ifdef __APPLE2__
     pwm(2, 23);
     init_text();
+#endif
     clrzone(0, 20, scrw - 1, 23);
     stp_print_footer();
 
   } else {
+#ifdef __APPLE2__
     init_text();
+#endif
     gotoxy(center_x, 10);
     dputs("Playback error");
     sleep(1);
@@ -250,6 +292,7 @@ char *play_directory(char *url) {
   const surl_response *resp;
   int dir_index;
 
+  in_list = 1;
   for (dir_index = 0; dir_index < num_lines; dir_index++) {
     int r;
     url = stp_url_enter(url, lines[dir_index]);
@@ -283,6 +326,7 @@ char *play_directory(char *url) {
       break;
     }
   }
+  in_list = 0;
   return url;
 }
 
@@ -292,10 +336,13 @@ int main(void) {
   char *url = NULL;
   char full_update = 1;
   char c;
+  FILE *tmpfp;
   const surl_response *resp;
 
+#ifdef __APPLE2__
   init_hgr(1);
   hgr_mixon();
+#endif
 #ifdef __APPLE2ENH__
   backup_restore_logo("w");
 #endif
@@ -314,14 +361,23 @@ int main(void) {
   }
 
   clrscr();
-  url = stp_get_start_url("Please enter an FTP or internet stream\r\n",
+  tmpfp = fopen("/RAM/VIDURL","r");
+  if (tmpfp == NULL) {
+    url = stp_get_start_url("Please enter an FTP or internet stream\r\n",
                           "http://8bit.fm:8000/live");
-  url = stp_build_login_url(url);
+    url = stp_build_login_url(url);
+  } else {
+    url = malloc(512);
+    fgets(url, 511, tmpfp);
+    fclose(tmpfp);
+  }
 
   runtime_once_clean();
 
   set_scrollwindow(0, scrh);
-  init_text();
+#ifdef __APPLE2__
+    init_text();
+#endif
   stp_print_header(url, URL_SET);
 
   stp_print_footer();
