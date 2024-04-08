@@ -62,7 +62,6 @@ read_metadata_again:
     goto read_metadata_again;
 
   } else if (r == SURL_ANSWER_STREAM_START) {
-    simple_serial_putc(SURL_CLIENT_READY);
     pwm();
     init_text();
     // clrzone(0, 20, scrw - 1, 23);

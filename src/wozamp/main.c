@@ -251,7 +251,7 @@ read_metadata_again:
     goto read_metadata_again;
 
   } else if (r == SURL_ANSWER_STREAM_START) {
-#ifdef __APPLE2ENH__
+#if (defined(__APPLE2ENH__) && !defined(IIGS))
     if (has_video && !in_list) {
       FILE *video_url_fp = fopen("/RAM/VIDURL","w");
       if (video_url_fp == NULL) {
