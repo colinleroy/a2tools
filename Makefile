@@ -1,19 +1,25 @@
 ifdef IIGS
 iigs_CFLAGS := -DIIGS
 suffix := -iigs
+APPLE2ENH := 1
 else
 ifdef OLDII
 suffix := -oldii
 else
 iigs_FLAGS :=
 suffix :=
+APPLE2ENH := 1
 endif
 endif
 
 SUBDIRS = src doc
 
 stp_disk_PROGS = src/stp/stp.bin
+ifdef APPLE2ENH
+wozamp_disk_PROGS = src/wozamp/wozamp.bin src/wozamp/videoplay.bin
+else
 wozamp_disk_PROGS = src/wozamp/wozamp.bin
+endif
 telnet_disk_PROGS = src/telnet/telnet.bin
 
 homectrl_disk_PROGS = src/homecontrol-client/homectrl.bin \
