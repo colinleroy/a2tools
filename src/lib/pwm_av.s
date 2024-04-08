@@ -396,6 +396,17 @@ page2_addr_ptr= ptr4
 ;
 ; As a rule of thumb, no bytes are dropped if we check for video byte around
 ; cycles 12-20 and 24-31.
+;
+; Almost every reference to serial registers is direct, so every duty cycle
+; is patched in multiple places. The patched instructions are labelled like
+; ad0 (audio data cycle 0), and they need to be in *_patches arrays to be
+; patched at start.
+; Hardcoded placeholders have $xxFF where $xx is the register's address low
+; byte for my setup, for reference.
+; vs = video status = $99 (printer port in slot 1)
+; vd = video data   = $98 (printer port in slot 1)
+; as = audio status = $A9 (modem port in slot 2)
+; ad = audio data   = $A8 (modem port in slot 2)
 
 .align 256
 _SAMPLES_BASE = *
@@ -730,6 +741,73 @@ ad3b:   ldx     $A8FF           ; 40
         WASTE_21                ; 77
         jmp     (next)          ; 83
 
+video_status_patches:
+                .word vs0
+                .word vs0b
+                .word vs1
+                .word vs1b
+                .word vs2
+                .word vs2b
+                .word vs3
+                .word vs3b
+                .word vs4
+                .word vs4b
+                .word vs5
+                .word vs5b
+                .word vs6
+                .word vs6b
+                .word vs7
+                .word vs7b
+                .word vs8
+                .word vs8b
+                .word vs9
+                .word vs9b
+                .word vs10
+                .word vs10b
+                .word vs11
+                .word vs11b
+                .word vs12
+                .word vs12b
+                .word vs13
+                .word vs13b
+                .word vs14
+                .word vs14b
+                .word vs15
+                .word vs15b
+                .word vs16
+                .word vs16b
+                .word vs17
+                .word vs17b
+                .word vs18
+                .word vs18b
+                .word vs19
+                .word vs19b
+                .word vs20
+                .word vs20b
+                .word vs21
+                .word vs21b
+                .word vs22
+                .word vs22b
+                .word vs23
+                .word vs23b
+                .word vs24
+                .word vs24b
+                .word vs25
+                .word vs25b
+                .word vs26
+                .word vs26b
+                .word vs27
+                .word vs27b
+                .word vs28
+                .word vs28b
+                .word vs29
+                .word vs29b
+                .word vs30
+                .word vs30b
+                .word vs31
+                .word vs31b
+                .word $0000
+
 .align 256
 .assert * = _SAMPLES_BASE + $400, error
 duty_cycle4:                    ; end spkr at 12
@@ -760,6 +838,73 @@ ad4b:   ldx     $A8FF           ; 40
         WASTE_21                ; 77
         jmp     (next)          ; 83
 
+video_data_patches:
+                .word vd0
+                .word vd0b
+                .word vd1
+                .word vd1b
+                .word vd2
+                .word vd2b
+                .word vd3
+                .word vd3b
+                .word vd4
+                .word vd4b
+                .word vd5
+                .word vd5b
+                .word vd6
+                .word vd6b
+                .word vd7
+                .word vd7b
+                .word vd8
+                .word vd8b
+                .word vd9
+                .word vd9b
+                .word vd10
+                .word vd10b
+                .word vd11
+                .word vd11b
+                .word vd12
+                .word vd12b
+                .word vd13
+                .word vd13b
+                .word vd14
+                .word vd14b
+                .word vd15
+                .word vd15b
+                .word vd16
+                .word vd16b
+                .word vd17
+                .word vd17b
+                .word vd18
+                .word vd18b
+                .word vd19
+                .word vd19b
+                .word vd20
+                .word vd20b
+                .word vd21
+                .word vd21b
+                .word vd22
+                .word vd22b
+                .word vd23
+                .word vd23b
+                .word vd24
+                .word vd24b
+                .word vd25
+                .word vd25b
+                .word vd26
+                .word vd26b
+                .word vd27
+                .word vd27b
+                .word vd28
+                .word vd28b
+                .word vd29
+                .word vd29b
+                .word vd30
+                .word vd30b
+                .word vd31
+                .word vd31b
+                .word $0000
+
 .align 256
 .assert * = _SAMPLES_BASE + $500, error
 duty_cycle5:                    ; end spkr at 13
@@ -789,6 +934,78 @@ ad5b:   ldx     $A8FF           ; 40
         KBD_LOAD_13             ; 56
         WASTE_21                ; 77
         jmp     (next)          ; 83
+
+audio_status_patches:
+                .word as31
+                .word $0000
+
+audio_data_patches:
+                .word ad0
+                .word ad0b
+                .word ad1
+                .word ad1b
+                .word ad2
+                .word ad2b
+                .word ad3
+                .word ad3b
+                .word ad4
+                .word ad4b
+                .word ad5
+                .word ad5b
+                .word ad6
+                .word ad6b
+                .word ad7
+                .word ad7b
+                .word ad8
+                .word ad8b
+                .word ad9
+                .word ad9b
+                .word ad10
+                .word ad10b
+                .word ad11
+                .word ad11b
+                .word ad12
+                .word ad12b
+                .word ad13
+                .word ad13b
+                .word ad14
+                .word ad14b
+                .word ad15
+                .word ad15b
+                .word ad16
+                .word ad16b
+                .word ad17
+                .word ad17b
+                .word ad18
+                .word ad18b
+                .word ad19
+                .word ad19b
+                .word ad20
+                .word ad20b
+                .word ad21
+                .word ad21b
+                .word ad22
+                .word ad22b
+                .word ad23
+                .word ad23b
+                .word ad24
+                .word ad24b
+                .word ad25
+                .word ad25b
+                .word ad26
+                .word ad26b
+                .word ad27
+                .word ad27b
+                .word ad28
+                .word ad28b
+                .word ad29
+                .word ad29b
+                .word ad30
+                .word ad30b
+                .word adv
+                .word ad31
+                .word ad31b
+                .word $0000
 
 .align 256
 .assert * = _SAMPLES_BASE + $600, error
@@ -1703,212 +1920,6 @@ page2_addrs_arr:.res (N_BASES*2)
 
 page_addr_ptr:  .byte <(page2_addr_ptr)   ; Base addresses pointer for page 2
                 .byte <(page1_addr_ptr)   ; Base addresses pointer for page 1
-
-video_status_patches:
-                .word vs0
-                .word vs0b
-                .word vs1
-                .word vs1b
-                .word vs2
-                .word vs2b
-                .word vs3
-                .word vs3b
-                .word vs4
-                .word vs4b
-                .word vs5
-                .word vs5b
-                .word vs6
-                .word vs6b
-                .word vs7
-                .word vs7b
-                .word vs8
-                .word vs8b
-                .word vs9
-                .word vs9b
-                .word vs10
-                .word vs10b
-                .word vs11
-                .word vs11b
-                .word vs12
-                .word vs12b
-                .word vs13
-                .word vs13b
-                .word vs14
-                .word vs14b
-                .word vs15
-                .word vs15b
-                .word vs16
-                .word vs16b
-                .word vs17
-                .word vs17b
-                .word vs18
-                .word vs18b
-                .word vs19
-                .word vs19b
-                .word vs20
-                .word vs20b
-                .word vs21
-                .word vs21b
-                .word vs22
-                .word vs22b
-                .word vs23
-                .word vs23b
-                .word vs24
-                .word vs24b
-                .word vs25
-                .word vs25b
-                .word vs26
-                .word vs26b
-                .word vs27
-                .word vs27b
-                .word vs28
-                .word vs28b
-                .word vs29
-                .word vs29b
-                .word vs30
-                .word vs30b
-                .word vs31
-                .word vs31b
-                .word $0000
-
-video_data_patches:
-                .word vd0
-                .word vd0b
-                .word vd1
-                .word vd1b
-                .word vd2
-                .word vd2b
-                .word vd3
-                .word vd3b
-                .word vd4
-                .word vd4b
-                .word vd5
-                .word vd5b
-                .word vd6
-                .word vd6b
-                .word vd7
-                .word vd7b
-                .word vd8
-                .word vd8b
-                .word vd9
-                .word vd9b
-                .word vd10
-                .word vd10b
-                .word vd11
-                .word vd11b
-                .word vd12
-                .word vd12b
-                .word vd13
-                .word vd13b
-                .word vd14
-                .word vd14b
-                .word vd15
-                .word vd15b
-                .word vd16
-                .word vd16b
-                .word vd17
-                .word vd17b
-                .word vd18
-                .word vd18b
-                .word vd19
-                .word vd19b
-                .word vd20
-                .word vd20b
-                .word vd21
-                .word vd21b
-                .word vd22
-                .word vd22b
-                .word vd23
-                .word vd23b
-                .word vd24
-                .word vd24b
-                .word vd25
-                .word vd25b
-                .word vd26
-                .word vd26b
-                .word vd27
-                .word vd27b
-                .word vd28
-                .word vd28b
-                .word vd29
-                .word vd29b
-                .word vd30
-                .word vd30b
-                .word vd31
-                .word vd31b
-                .word $0000
-
-audio_status_patches:
-                .word as31
-                .word $0000
-
-audio_data_patches:
-                .word ad0
-                .word ad0b
-                .word ad1
-                .word ad1b
-                .word ad2
-                .word ad2b
-                .word ad3
-                .word ad3b
-                .word ad4
-                .word ad4b
-                .word ad5
-                .word ad5b
-                .word ad6
-                .word ad6b
-                .word ad7
-                .word ad7b
-                .word ad8
-                .word ad8b
-                .word ad9
-                .word ad9b
-                .word ad10
-                .word ad10b
-                .word ad11
-                .word ad11b
-                .word ad12
-                .word ad12b
-                .word ad13
-                .word ad13b
-                .word ad14
-                .word ad14b
-                .word ad15
-                .word ad15b
-                .word ad16
-                .word ad16b
-                .word ad17
-                .word ad17b
-                .word ad18
-                .word ad18b
-                .word ad19
-                .word ad19b
-                .word ad20
-                .word ad20b
-                .word ad21
-                .word ad21b
-                .word ad22
-                .word ad22b
-                .word ad23
-                .word ad23b
-                .word ad24
-                .word ad24b
-                .word ad25
-                .word ad25b
-                .word ad26
-                .word ad26b
-                .word ad27
-                .word ad27b
-                .word ad28
-                .word ad28b
-                .word ad29
-                .word ad29b
-                .word ad30
-                .word ad30b
-                .word adv
-                .word ad31
-                .word ad31b
-                .word $0000
 
         .bss
 stop:           .res 1
