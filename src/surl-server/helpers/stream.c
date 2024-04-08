@@ -508,6 +508,7 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
     if (simple_serial_getc() != SURL_CLIENT_READY) {
       pthread_mutex_lock(&th_data->mutex);
       th_data->stop = 1;
+      printf("stop\n");
       pthread_mutex_unlock(&th_data->mutex);
       ret = -1;
       goto cleanup_thread;
@@ -852,6 +853,7 @@ cleanup:
   if (th_data) {
     pthread_mutex_lock(&th_data->mutex);
     th_data->stop = 1;
+    printf("cleanup\n");
     pthread_mutex_unlock(&th_data->mutex);
     pthread_join(decode_thread, NULL);
     free(th_data);
@@ -877,7 +879,7 @@ static void *audio_push(void *unused) {
   int num = 0;
   unsigned char c;
   size_t cur = 0;
-
+  int stop;
   // for (int i = 0; i < 32; i++)
   //   for (int j = 0; j < 1000; j++)
   //     send_av_sample(i);
@@ -931,6 +933,7 @@ static void *audio_push(void *unused) {
 abort:
   pthread_mutex_lock(&audio_th_data->mutex);
   audio_th_data->stop = 1;
+  printf("abort\n");
   pthread_mutex_unlock(&audio_th_data->mutex);
   return NULL;
 }
@@ -1012,11 +1015,11 @@ next_file:
   last_val = -1;
   for (j = 0; j < num_diffs && j < MAX_DIFFS_PER_FRAME; j++) {
     int pixel = diffs[j]->offset;
-
+    int vidstop;
     pthread_mutex_lock(&video_th_data->mutex);
-    stop = video_th_data->stop;
+    vidstop = video_th_data->stop;
     pthread_mutex_unlock(&video_th_data->mutex);
-    if (stop) {
+    if (vidstop) {
       printf("Video thread stopping\n");
       goto close_last;
     }
@@ -1086,6 +1089,7 @@ close_last:
   }
   pthread_mutex_lock(&video_th_data->mutex);
   video_th_data->stop = 1;
+  printf("vstop\n");
   pthread_mutex_unlock(&video_th_data->mutex);
 
   return NULL;
@@ -1093,7 +1097,7 @@ close_last:
 
 int surl_stream_audio_video(char *url, char *translit, char monochrome, enum HeightScale scale) {
   int j;
-  int cancelled = 0;
+  int cancelled = 0, playback_stop = 0;
   /* Control vars */
   unsigned char c;
   int ret = 0;
@@ -1211,6 +1215,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
   if (simple_serial_getc() != SURL_CLIENT_READY) {
     pthread_mutex_lock(&audio_th_data->mutex);
     audio_th_data->stop = 1;
+    printf("audio stop\n");
     pthread_mutex_unlock(&audio_th_data->mutex);
     ret = -1;
     goto cleanup_thread;
@@ -1236,9 +1241,10 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
     }
 
     pthread_mutex_lock(&video_th_data->mutex);
-    stop = video_th_data->stop;
+    playback_stop = video_th_data->stop;
     pthread_mutex_unlock(&video_th_data->mutex);
-    if (stop) {
+    if (playback_stop) {
+      printf("Video playback stop\n");
       break;
     }
     sleep(1);
@@ -1248,17 +1254,19 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
     pthread_join(video_push_thread, NULL);
   }
 
-  printf("done (cancelled: %d)\n", cancelled);
-  if (!cancelled) {
-    send_av_sample(AV_MAX_LEVEL/2);
-    send_end_of_av_stream();
+  fflush(ttyfp);
+  if (ttyfp2)
+    fflush(ttyfp2);
 
-    do {
-      c = simple_serial_getc();
-      printf("ignoring %02X\n", c);
-    } while (c != SURL_CLIENT_READY
-          && c != SURL_METHOD_ABORT);
-  }
+  printf("done (cancelled: %d)\n", cancelled);
+  send_av_sample(AV_MAX_LEVEL/2);
+  send_end_of_av_stream();
+
+  do {
+    c = simple_serial_getc();
+    printf("ignoring %02X\n", c);
+  } while (c != SURL_CLIENT_READY
+        && c != SURL_METHOD_ABORT);
 
 cleanup_thread:
   printf("Cleaning up decoder thread\n");

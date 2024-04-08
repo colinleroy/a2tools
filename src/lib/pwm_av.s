@@ -321,7 +321,8 @@ page2_addr_ptr= ptr4
         cmp     #($1B|$80)      ; 10 - Escape?
         bne     :+              ; 12/13
         and     #$7F            ;
-        jmp     _serial_putc_direct
+        jsr     _serial_putc_direct
+        jmp     break_out
 :
 
 .endmacro
