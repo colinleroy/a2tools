@@ -946,7 +946,6 @@ int vhgr_file;
 void *video_push(void *unused) {
   int i, j;
   int last_diff;
-  int last_val, ident_vals;
   int total = 0, min = 0xFFFF, max = 0;
   size_t r;
   unsigned char buf_prev[2][HGR_LEN], buf[2][HGR_LEN];
@@ -979,7 +978,6 @@ next_file:
   /* count diffs */
   last_diff = 0;
   cur_base = 0;
-  ident_vals = 0;
 
   /* Sync point - force a switch to base 0 */
   offset = cur_base = 0;
@@ -1020,7 +1018,6 @@ send:
     }
   }
 
-  last_val = -1;
   for (j = 0; j < num_diffs && j < MAX_DIFFS_PER_FRAME; j++) {
     int pixel = diffs[j]->offset;
     int vidstop;
@@ -1037,10 +1034,6 @@ send:
      * increment up to 255 */
     if ((offset >= MAX_OFFSET && pixel != last_diff+1)
       || offset > 255) {
-      /* must flush ident */
-      flush_ident(20000, ident_vals, last_val, ttyfp2);
-      ident_vals = 0;
-
       /* we have to update base */
       cur_base = pixel / MAX_OFFSET;
       offset = pixel - (cur_base*MAX_OFFSET);
@@ -1050,28 +1043,16 @@ send:
       send_offset(offset, ttyfp2);
       send_base(cur_base, ttyfp2);
     } else if (pixel != last_diff+1) {
-      /* must flush ident */
-      flush_ident(20000, ident_vals, last_val, ttyfp2);
-      ident_vals = 0;
       /* We have to send offset */
       send_offset(offset, ttyfp2);
     }
-    if (last_val == -1 ||
-       (ident_vals < MAX_REPS && buf[page][pixel] == last_val && pixel == last_diff+1)) {
-      ident_vals++;
-    } else {
-      flush_ident(20000, ident_vals, last_val, ttyfp2);
-      ident_vals = 1;
-    }
-    last_val = buf[page][pixel];
+    send_byte(buf[page][pixel], ttyfp2);
 
     last_diff = pixel;
 
     /* Note diff done */
     buf_prev[page][pixel] = buf[page][pixel];
   }
-  flush_ident(20000, ident_vals, last_val, ttyfp2);
-  ident_vals = 0;
 
   total += num_diffs;
   if (num_diffs < min) {
