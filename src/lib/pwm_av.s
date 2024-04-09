@@ -1,7 +1,7 @@
 ;
 ; Colin Leroy-Mira, 2024
 ;
-        .export         _pwm
+        .export         _pwm_av
         .export         _SAMPLES_BASE
 
         .importzp       _zp6, _zp8, _zp9, _zp10, _zp12, _zp13, tmp1, tmp2, tmp3, tmp4, ptr1, ptr2, ptr3, ptr4
@@ -441,7 +441,7 @@ ad0b:   ldx     $A8FF           ; 43     load audio data register again
         jmp     (next)          ; 83     jump to next duty cycle
 
 ; -----------------------------------------------------------------
-_pwm:                           ; Entry point
+_pwm_av:                           ; Entry point
         pha
         ; Disable interrupts
         lda     #$00
@@ -450,6 +450,16 @@ _pwm:                           ; Entry point
         pla
         ; Setup pointers
         jsr     setup_pointers
+
+        ; Clear pages
+        bit     $C082
+        lda     #$40
+        sta     $E6
+        jsr     $F3F2
+        lda     #$20
+        sta     $E6
+        jsr     $F3F2
+        bit     $C080
 
         lda     #$2F            ; Surl client ready
         jsr     _serial_putc_direct

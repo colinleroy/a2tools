@@ -11,6 +11,7 @@
 #include "path_helper.h"
 #include "surl.h"
 #include "pwm_av.h"
+#include "splash.h"
 
 char *translit_charset = "ISO646-FR1";
 char monochrome = 1;
@@ -27,9 +28,6 @@ int main(void) {
   fgets(url, 511, url_fp);
   fclose(url_fp);
 
-  /* Clear HGR buffers */
-  memset((char *)HGR_PAGE, 0, HGR_LEN);
-  memset((char *)HGR_PAGE2, 0, HGR_LEN);
   surl_start_request(SURL_METHOD_STREAM_AV, url, NULL, 0);
   simple_serial_write(translit_charset, strlen(translit_charset));
   simple_serial_putc('\n');
@@ -62,7 +60,7 @@ read_metadata_again:
     goto read_metadata_again;
 
   } else if (r == SURL_ANSWER_STREAM_START) {
-    pwm();
+    pwm_av();
     init_text();
     // clrzone(0, 20, scrw - 1, 23);
     // stp_print_footer();
