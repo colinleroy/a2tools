@@ -10,8 +10,7 @@
 #include "simple_serial.h"
 #include "path_helper.h"
 #include "surl.h"
-#include "pwm_av.h"
-#include "splash.h"
+#include "splash-video.h"
 
 char *translit_charset = "ISO646-FR1";
 char monochrome = 1;
@@ -37,6 +36,10 @@ int main(void) {
   init_hgr(1);
   hgr_mixoff();
 
+  clrscr();
+  gotoxy(0, 20);
+  cputs("Loading");
+
 read_metadata_again:
   r = simple_serial_getc();
   if (r == SURL_ANSWER_STREAM_METADATA) {
@@ -59,8 +62,15 @@ read_metadata_again:
     simple_serial_putc(SURL_CLIENT_READY);
     goto read_metadata_again;
 
+  } else if (r == SURL_ANSWER_STREAM_LOAD) {
+    hgr_mixon();
+    cputs("...");
+    simple_serial_putc(SURL_CLIENT_READY);
+    goto read_metadata_again;
+
   } else if (r == SURL_ANSWER_STREAM_START) {
-    pwm_av();
+    hgr_mixoff();
+    surl_stream_av();
     init_text();
     // clrzone(0, 20, scrw - 1, 23);
     // stp_print_footer();

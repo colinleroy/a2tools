@@ -125,7 +125,7 @@ static void *generate_frames(void *th_data) {
       microsecs = cur_time.tv_usec - decode_start.tv_usec;
       elapsed   = secs + microsecs;
       printf("Decoded %d seconds in %luµs\n", PREDECODE_SECS, elapsed);
-      if (elapsed / 1000000 > PREDECODE_SECS / 2) {
+      if (elapsed / 1000000 > PREDECODE_SECS / 3) {
         printf("decoding too slow, not starting early\n");
         decode_slow = 1;
       } else {
@@ -162,10 +162,8 @@ static void *generate_frames(void *th_data) {
           r = simple_serial_getc_with_timeout();
           if (r != SURL_CLIENT_READY) {
             printf("Client abort\n");
-            pthread_mutex_lock(&data->mutex);
             data->decoding_end = 1;
             data->decoding_ret = -1;
-            pthread_mutex_unlock(&data->mutex);
             goto out;
           }
         }
@@ -184,9 +182,9 @@ static void *generate_frames(void *th_data) {
   data->data_ready = 1;
   data->decoding_end = 1;
   data->decoding_ret = 0;
+out:
   pthread_mutex_unlock(&data->mutex);
 
-out:
   close(vhgr_file);
 
   ffmpeg_to_hgr_deinit();
@@ -958,9 +956,9 @@ void *video_push(void *unused) {
   page = 1;
   memset(buf_prev[0], 0x00, HGR_LEN);
   memset(buf_prev[1], 0x00, HGR_LEN);
-  /* Send ten full-black bytes first to make sure everything
+  /* Send 30 full-black bytes first to make sure everything
   * started client-side (but don't change the first one) */
-  memset(buf_prev[1] + 1, 0x7F, 10);
+  memset(buf_prev[1] + 1, 0x7F, 30);
 
   gettimeofday(&frame_start, 0);
 
@@ -972,6 +970,7 @@ next_file:
   page = !page;
 
   if ((r = read(vhgr_file, buf[page], HGR_LEN)) != HGR_LEN) {
+    printf("Starved!\n");
     goto close_last;
   }
 
@@ -1119,7 +1118,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
   printf("Starting decode thread (charset %s, monochrome %d, scale %d)\n", translit, monochrome, scale);
   pthread_create(&audio_decode_thread, NULL, *ffmpeg_decode_snd, (void *)audio_th_data);
 
-  while(!ready && !stop && !err) {
+  while(!ready && !stop && err != -1) {
     pthread_mutex_lock(&audio_th_data->mutex);
     pthread_mutex_lock(&video_th_data->mutex);
     ready = audio_th_data->data_ready && video_th_data->data_ready;

@@ -125,7 +125,7 @@ static void video_stream(media *m, char idx, char num_images) {
   surl_start_request(SURL_METHOD_STREAM_VIDEO, m->media_url[idx], NULL, 0);
 
 #ifdef __CC65__
-  if (surl_wait_for_stream() != 0 || surl_stream() != 0) {
+  if (surl_wait_for_stream() != 0 || surl_stream_video() != 0) {
 #ifdef DOUBLE_BUFFER
 #ifdef __APPLE2ENH__
     videomode(VIDEOMODE_80COL);

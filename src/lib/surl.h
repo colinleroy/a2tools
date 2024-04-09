@@ -52,9 +52,13 @@ int __fastcall__ surl_get_json(char *buffer, size_t max_len, char striphtml, con
 
 #ifdef __CC65__
 int surl_wait_for_stream(void);
-int __fastcall__ surl_stream(void);
+int __fastcall__ surl_stream_video(void);
+int __fastcall__ surl_stream_audio(char vu_x, char vu_y);
+int __fastcall__ surl_stream_av(void);
 #else
-#define surl_stream()
+#define surl_stream_video()
+#define surl_stream_audio()
+#define surl_stream_av()
 #endif
 /* Helper to set the date */
 void __fastcall__ surl_set_time(void);

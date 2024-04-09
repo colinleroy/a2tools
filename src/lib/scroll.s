@@ -15,8 +15,6 @@
 
 NLINES: .res 1
 
-        .segment "LOWCODE"
-
 BAS2L  := $2A
 BAS2H  := $2B
 TXTPAGE1 := $C054
@@ -31,6 +29,8 @@ dnagain:
         dec     NLINES
         bne     dnagain
         rts
+
+        .segment "LOWCODE"
 
 _scrollup_n:
         sta     NLINES          ;save A (# of lines)

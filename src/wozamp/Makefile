@@ -5,7 +5,6 @@ iigs_suffix := -iigs
 iigs_CFLAGS := -DIIGS --asm-define IIGS
 trgt = apple2gs
 upload_subdir := /iigs
-APPLE2ENH := 1
 else
 ifdef OLDII
 serial_hw := acia
@@ -19,7 +18,7 @@ iigs_suffix :=
 iigs_CFLAGS :=
 CC65_TARGET = apple2enh
 trgt = apple2c0
-APPLE2ENH := 1
+BUILD_VIDEOPLAY := 1
 endif
 endif
 
@@ -39,7 +38,7 @@ wozamp_SOURCES := \
 	../stp/stp_list.c
 
 wozamp_CL65SOURCES = \
-	../lib/pwm.s \
+	../lib/surl/surl_stream_audio.s \
 	../lib/hgr.c \
 	../lib/surl/surl_read_with_barrier.s \
 	../lib/serial/serial_read_no_irq.s \
@@ -80,9 +79,9 @@ GCCCFLAGS = -g -O0 -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\" \
 
 .PHONY: all clean
 
-ifdef APPLE2ENH
+ifdef BUILD_VIDEOPLAY
 videoplay_SOURCES := \
-	../lib/pwm_av.s \
+	../lib/surl/surl_stream_av.s \
 	videoplay.c \
 	../lib/hgr.c \
 	../lib/serial/simple_serial.c \
@@ -104,6 +103,7 @@ videoplay_CLCFLAGS = -t $(CC65_TARGET) -DDOUBLE_BUFFER --asm-define DOUBLE_BUFFE
 
 all: \
 	splash.h \
+	splash-video.h \
 	wozamp.bin \
 	wozamp.x86_64 \
 	videoplay.bin
@@ -122,8 +122,14 @@ clean:
 wozamp.hgr:
 	hgr-convert wozamp.png
 
+wozamp-video.hgr:
+	hgr-convert wozamp-video.png
+
 splash.h: wozamp.hgr
-	../../bin/make-splash.sh wozamp.png
+	../../bin/make-splash.sh wozamp.png splash.h
+
+splash-video.h: wozamp-video.hgr
+	../../bin/make-splash.sh wozamp-video.png splash-video.h
 
 wozamp.bin: $(wozamp_CL65SOURCES) $(wozamp_SOURCES)
 	cl65 -g -Wl --dbgfile,wozamp.dbg -Ln wozamp.lbl $(CFLAGS) $(iigs_CFLAGS) $(wozamp_CLCFLAGS) -o $@ $^

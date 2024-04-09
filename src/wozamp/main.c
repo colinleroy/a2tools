@@ -36,7 +36,6 @@
 #ifdef __APPLE2__
 #include "hgr.h"
 #endif
-#include "pwm.h"
 #include "path_helper.h"
 #include "platform.h"
 #include "splash.h"
@@ -275,7 +274,7 @@ novid:
     simple_serial_putc(SURL_CLIENT_READY);
 #endif
 #ifdef __APPLE2__
-    pwm(2, 23);
+    surl_stream_audio(2, 23);
     init_text();
 #endif
     clrzone(0, 20, scrw - 1, 23);

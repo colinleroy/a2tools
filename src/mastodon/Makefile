@@ -87,7 +87,7 @@ mastoimg_CC65SOURCES := \
 	../lib/fastirq$(suffix).s \
 	 ../lib/extrazp.s \
 	../lib/runtime_once_clean.s \
-	../lib/surl/surl_stream.s \
+	../lib/surl/surl_stream_video.s \
 	../lib/surl/surl_wait_for_stream.c \
 	../lib/dputc.s \
 	../lib/scroll.s

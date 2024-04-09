@@ -1,4 +1,9 @@
 #!/bin/bash
+if [ "$2" = "" ]; then
+  OUT="splash.h"
+else
+  OUT=$2
+fi
 
 (
 echo '#ifndef __splash_h'
@@ -13,4 +18,4 @@ echo '};'
 echo '#pragma data-name(pop)'
 echo
 echo '#endif'
-) > splash.h
+) > $OUT
