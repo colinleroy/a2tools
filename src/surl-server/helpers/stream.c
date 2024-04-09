@@ -954,14 +954,18 @@ void *video_push(void *unused) {
   int page = 0;
   int num_diffs = 0;
 
-  i = 1;
-  memset(buf_prev[0], 0, HGR_LEN);
-  memset(buf_prev[1], 0, HGR_LEN);
+  i = 0;
+  page = 1;
+  memset(buf_prev[0], 0x00, HGR_LEN);
+  memset(buf_prev[1], 0x00, HGR_LEN);
+  /* Send ten full-black bytes first to make sure everything
+  * started client-side */
+  memset(buf_prev[1], 0x7F, 10);
 
   gettimeofday(&frame_start, 0);
 
-  page = 1;
-  send_byte(0, ttyfp2);
+  memset(buf[page], 0x00, HGR_LEN);
+  goto send;
 
 next_file:
   i++;
