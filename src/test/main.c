@@ -9,7 +9,6 @@
 #include "hgr.h"
 #include "simple_serial.h"
 #include "surl.h"
-#include "pwm_av.h"
 
 char *translit_charset = "ISO646-FR1";
 char monochrome = 1;
@@ -21,7 +20,7 @@ int main(int argc, char *argv[]) {
   /* Clear HGR buffers */
   memset((char *)HGR_PAGE, 0, HGR_LEN);
   memset((char *)HGR_PAGE2, 0, HGR_LEN);
-  surl_start_request(SURL_METHOD_STREAM_AV, "file:///home/colin/Downloads/ba.webm", NULL, 0);
+  surl_start_request(SURL_METHOD_STREAM_AV, "file:///home/colin/Downloads/matrix.webm", NULL, 0);
   simple_serial_write(translit_charset, strlen(translit_charset));
   simple_serial_putc('\n');
   simple_serial_putc(monochrome);
@@ -54,7 +53,7 @@ read_metadata_again:
 
   } else if (r == SURL_ANSWER_STREAM_START) {
     simple_serial_putc(SURL_CLIENT_READY);
-    pwm();
+    surl_stream_av();
     init_text();
     // clrzone(0, 20, scrw - 1, 23);
     // stp_print_footer();

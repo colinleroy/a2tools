@@ -1,34 +1,42 @@
 ifdef IIGS
 iigs_CFLAGS := -DIIGS
 suffix := -iigs
-APPLE2ENH := 1
 else
 ifdef OLDII
 suffix := -oldii
 else
 iigs_FLAGS :=
 suffix :=
-APPLE2ENH := 1
+WOZAMP_VIDEOPLAY := 1
 endif
 endif
 
 SUBDIRS = src doc
 
-stp_disk_PROGS = src/stp/stp.bin
-ifdef APPLE2ENH
-wozamp_disk_PROGS = src/wozamp/wozamp.bin src/wozamp/videoplay.bin
+stp_disk_PROGS = \
+	src/stp/stp.bin
+
+ifdef WOZAMP_VIDEOPLAY
+wozamp_disk_PROGS = \
+	src/wozamp/wozamp.bin \
+	src/wozamp/videoplay.bin
 else
-wozamp_disk_PROGS = src/wozamp/wozamp.bin
+wozamp_disk_PROGS = \
+	src/wozamp/wozamp.bin
 endif
-telnet_disk_PROGS = src/telnet/telnet.bin
 
-homectrl_disk_PROGS = src/homecontrol-client/homectrl.bin \
-				src/homecontrol-client/grphview.bin \
+telnet_disk_PROGS = \
+	src/telnet/telnet.bin
 
-mastodon_disk_PROGS = src/mastodon/mastodon.bin \
-				src/mastodon/mastocli.bin \
-				src/mastodon/mastowrite.bin \
-				src/mastodon/mastoimg.bin
+homectrl_disk_PROGS = \
+	src/homecontrol-client/homectrl.bin \
+	src/homecontrol-client/grphview.bin
+
+mastodon_disk_PROGS = \
+	src/mastodon/mastodon.bin \
+	src/mastodon/mastocli.bin \
+	src/mastodon/mastowrite.bin \
+	src/mastodon/mastoimg.bin
 
 quicktake_disk_PROGS = \
 	src/quicktake/slowtake.bin \

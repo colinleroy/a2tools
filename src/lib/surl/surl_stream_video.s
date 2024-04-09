@@ -1,3 +1,17 @@
+;
+; Colin Leroy-Mira <colin@colino.net>, 2024
+;
+; This program is free software; you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation; either version 3 of the License, or
+; (at your option) any later version.
+
+; This program is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+; You should have received a copy of the GNU General Public License
+; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
         .importzp             ptr1, _zp6, _zp7, _zp8, _zp10
 
@@ -13,7 +27,7 @@
         .import         acia_status_reg_r, acia_data_reg_r
 .endif
 
-        .export               _surl_stream
+        .export               _surl_stream_video
 
 .ifdef IIGS
 serial_status_reg = zilog_status_reg_r
@@ -44,7 +58,7 @@ page2_addr_ptr= _zp10
 page          = _zp6
 last_offset   = _zp7
 
-_surl_stream:
+_surl_stream_video:
         ; Setup
         lda     #$00
         sta     page

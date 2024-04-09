@@ -14,7 +14,7 @@ endif
 
 PROGRAM=test
 SOURCES := \
-	../lib/pwm_av.s \
+	../lib/surl/surl_stream_av.s \
 	main.c \
 	../lib/hgr.c \
 	../lib/serial/simple_serial.c \
