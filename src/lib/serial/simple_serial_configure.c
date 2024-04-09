@@ -29,6 +29,8 @@
 #include "strtrim.h"
 #include "path_helper.h"
 #include "clrzone.h"
+#include "hgr.h"
+#include "scrollwindow.h"
 
 #ifdef __CC65__
 #include <accelerator.h>
@@ -126,6 +128,9 @@ void simple_serial_configure(void) {
 #endif
   signed char printer_speed_idx = 2;
   signed char setting_offset = 0;
+
+  switch_text();
+  set_scrollwindow(0, 24);
 
   #ifdef IIGS
     slot_idx = data_slot;

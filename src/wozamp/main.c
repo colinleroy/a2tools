@@ -257,10 +257,13 @@ read_metadata_again:
       if (video_url_fp == NULL) {
         goto novid;
       }
+      init_text();
+      clrscr();
+      gotoxy(8, 12);
+      dputs("Loading video player...");
       fputs(url, video_url_fp);
       fclose(video_url_fp);
       simple_serial_putc(SURL_METHOD_ABORT);
-      init_text();
       reopen_start_device();
       exec("VIDEOPLAY", NULL);
       return;

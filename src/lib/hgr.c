@@ -65,9 +65,7 @@ void init_hgr(uint8 mono) {
 
 void init_text(void) {
 #ifdef __APPLE2__
-  __asm__("bit     $C054"); /* LOWSCR */
-  __asm__("bit     $C051"); /* TXTSET */
-  __asm__("bit     $C056"); /* LORES */
+  switch_text();
 #endif
   hgr_init_done = 0;
 }

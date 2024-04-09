@@ -3,5 +3,5 @@
 
 #include "platform.h"
 
-void __fastcall__ pwm(void);
+void __fastcall__ pwm_av(void);
 #endif

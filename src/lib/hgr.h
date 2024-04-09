@@ -22,6 +22,11 @@ void init_text(void);
 #ifdef __CC65__
 #define hgr_mixon() do { __asm__("bit $C053"); hgr_mix_is_on = 1; } while (0)
 #define hgr_mixoff() do { __asm__("bit $C052"); hgr_mix_is_on = 0; } while (0)
+#define switch_text() do {                \
+  __asm__("bit     $C054"); /* LOWSCR */  \
+  __asm__("bit     $C051"); /* TXTSET */  \
+  __asm__("bit     $C056"); /* LORES */   \
+} while (0)
 #define hgr_mix_is_on() hgr_mix_is_on
 #else
 #define hgr_mixon()
