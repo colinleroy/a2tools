@@ -226,7 +226,7 @@ static void send_base(unsigned char b, FILE *fp) {
   DEBUG(" new base %d\n", b);
   DEBUG(" base %d offset %d (should be written at %x)\n", b, offset, 0x2000+(cur_base*MAX_OFFSET)+offset);
   if ((b| 0x80) == 0xFF) {
-    printf("Error! Should not!\n");
+    printf("Base error! Should not!\n");
     exit(1);
   }
   enqueue_byte(b|0x80, fp);
@@ -241,7 +241,7 @@ int last_sent_offset = -1;
 static void send_offset(unsigned char o, FILE *fp) {
   DEBUG("offset %d (should be written at %x)\n", o, 0x2000+(cur_base*MAX_OFFSET)+offset);
   if ((o| 0x80) == 0xFF) {
-    printf("Error! Should not!\n");
+    printf("Offset error! Should not!\n");
     exit(1);
   }
   enqueue_byte(o|0x80, fp);
@@ -253,7 +253,7 @@ static void send_num_reps(unsigned char b, FILE *fp) {
   DEBUG("  => %d * ", b);
   enqueue_byte(0xFF, fp);
   if ((b & 0x80) != 0) {
-    printf("Error! Should not!\n");
+    printf("Reps error! Should not!\n");
     exit(1);
   }
   enqueue_byte(b, fp);
@@ -263,7 +263,7 @@ static void send_num_reps(unsigned char b, FILE *fp) {
 static void send_byte(unsigned char b, FILE *fp) {
   DEBUG("  => %d\n", b);
   if ((b & 0x80) != 0) {
-    printf("Error! Should not!\n");
+    printf("Byte error! Should not!\n");
     exit(1);
   }
   enqueue_byte(b, fp);
@@ -618,7 +618,8 @@ cleanup_thread:
 int surl_stream_video(char *url) {
   int i, j;
   int last_diff;
-  int last_val, ident_vals;
+  signed int last_val;
+  int ident_vals;
   int total = 0, min = 0xFFFF, max = 0;
   size_t r;
   unsigned char buf_prev[2][HGR_LEN], buf[2][HGR_LEN];
@@ -959,8 +960,8 @@ void *video_push(void *unused) {
   memset(buf_prev[0], 0x00, HGR_LEN);
   memset(buf_prev[1], 0x00, HGR_LEN);
   /* Send ten full-black bytes first to make sure everything
-  * started client-side */
-  memset(buf_prev[1], 0x7F, 10);
+  * started client-side (but don't change the first one) */
+  memset(buf_prev[1] + 1, 0x7F, 10);
 
   gettimeofday(&frame_start, 0);
 
