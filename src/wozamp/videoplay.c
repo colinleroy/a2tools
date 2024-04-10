@@ -33,6 +33,20 @@ int main(void) {
   simple_serial_putc(monochrome);
   simple_serial_putc(HGR_SCALE_MIXHGR);
 
+  /* Remove filename from URL in advance, so we don't get stuck in
+   * a loop if the player crashes for some reason */
+  reopen_start_device();
+  if (strchr(url, '/')) {
+    *(strrchr(url, '/')) = '\0';
+  }
+  url_fp = fopen("/RAM/VIDURL","w");
+
+  if (url_fp) {
+    fputs(url, url_fp);
+    fclose(url_fp);
+  }
+  reopen_start_device();
+
   init_hgr(1);
   hgr_mixoff();
 

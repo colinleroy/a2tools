@@ -21,7 +21,7 @@
         .import         _serial_putc_direct
         .import         _simple_serial_set_irq
         .import         _simple_serial_flush
-        .import         popa, VTABZ
+        .import         _sleep, _init_text
         .import         _printer_slot, _data_slot
 
         .import         acia_status_reg_r, acia_data_reg_r
@@ -1929,6 +1929,10 @@ ad31b:  ldx     $A8FF           ; 43
 .align 256
 .assert * = _SAMPLES_BASE+$2000, error
 break_out:
+        jsr     _init_text
+        lda     #$01
+        ldx     #$00
+        jsr     _sleep
         lda     #$01            ; Reenable IRQ and flush
         jsr     _simple_serial_set_irq
         jsr     _simple_serial_flush
