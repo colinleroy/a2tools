@@ -21,7 +21,7 @@
         .import         _serial_putc_direct
         .import         _simple_serial_set_irq
         .import         _simple_serial_flush
-        .import         _sleep, _init_text
+        .import         _sleep, _init_text, _clrscr
         .import         _printer_slot, _data_slot
 
         .import         acia_status_reg_r, acia_data_reg_r
@@ -1929,6 +1929,7 @@ ad31b:  ldx     $A8FF           ; 43
 .align 256
 .assert * = _SAMPLES_BASE+$2000, error
 break_out:
+        jsr     _clrscr
         jsr     _init_text
         lda     #$01
         ldx     #$00
@@ -1939,7 +1940,7 @@ break_out:
         lda     #$2F            ; SURL_CLIENT_READY
         jmp     _serial_putc_direct
 
-.align 256
+;.align 256                               ; No need to align there, it won't cross page
 page1_addrs_arr:.res (N_BASES*2)          ; Base addresses arrays
 .align 256                                ; Aligned for correct cycle counting
 page2_addrs_arr:.res (N_BASES*2)
