@@ -11,16 +11,14 @@
         .endif
         .include        "apple2.inc"
 
-        .bss
-
-NLINES: .res 1
-
 BAS2L  := $2A
 BAS2H  := $2B
 TXTPAGE1 := $C054
 TXTPAGE2 := $C055
 TEMP1    := $778+3
 SEV1     := $CB06
+
+        .segment "LOWCODE"
 
 _scrolldown_n:
         sta     NLINES          ;save A (# of lines)
@@ -29,8 +27,6 @@ dnagain:
         dec     NLINES
         bne     dnagain
         rts
-
-        .segment "LOWCODE"
 
 _scrollup_n:
         sta     NLINES          ;save A (# of lines)
@@ -286,3 +282,7 @@ cleol2: sta     (BASL),y
         rts
 
 .endif
+
+        .bss
+
+NLINES: .res 1

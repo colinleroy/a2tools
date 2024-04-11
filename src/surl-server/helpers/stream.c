@@ -192,7 +192,7 @@ out:
 }
 
 extern FILE *ttyfp;
-extern char *av_tty_path;
+extern char *aux_tty_path;
 FILE *ttyfp2 = NULL;
 
 static void flush_changes(FILE *fp) {
@@ -881,9 +881,10 @@ static void *audio_push(void *unused) {
   unsigned char c;
   size_t cur = 0;
   int stop;
-  // for (int i = 0; i < 32; i++)
-  //   for (int j = 0; j < 1000; j++)
-  //     send_av_sample(i);
+
+  for (int i = 0; i < 32; i++)
+    for (int j = 0; j < 1000; j++)
+      send_av_sample(i);
 
   while (1) {
     pthread_mutex_lock(&audio_th_data->mutex);
@@ -1097,8 +1098,8 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
   stop = 0;
   err = 0;
 
-  if (av_tty_path)
-    ttyfp2 = simple_serial_open_file(av_tty_path);
+  if (aux_tty_path)
+    ttyfp2 = simple_serial_open_file(aux_tty_path);
 
   if (ttyfp2 == NULL)
     printf("No TTY for video\n");
