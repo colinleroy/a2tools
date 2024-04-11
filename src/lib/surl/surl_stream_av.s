@@ -55,8 +55,7 @@ got_offset    = _zp9
 next          = _zp10
 page          = _zp12
 has_byte_zp   = _zp13
-audio_status  = ptr1
-audio_data    = ptr2
+video_data    = ptr2
 store_dest    = tmp1 ; + tmp2
 dummy_zp      = tmp3
 last_base     = tmp4
@@ -479,7 +478,7 @@ _surl_stream_av:                ; Entry point
 as31:   lda     $A9FF           ; Wait for first byte,
         and     #HAS_BYTE
         beq     as31
-        jmp     duty_cycle31    ; And start!
+        jmp     duty_cycle15    ; And start!
 ; -----------------------------------------------------------------
 setup_pointers:
         ; Setup pointer access to SPKR
@@ -512,16 +511,6 @@ setup_pointers:
 
         ; Setup serial registers
         jsr     patch_serial_registers
-
-        lda     serial_status_reg+1
-        sta     audio_status
-        lda     serial_status_reg+2
-        sta     audio_status+1
-
-        lda     serial_data_reg+1
-        sta     audio_data
-        lda     serial_data_reg+2
-        sta     audio_data+1
 
 acmd:   lda     $A8FF           ; Copy command and control registers from
 vcmd:   sta     $98FF           ; the main serial port to the second serial
@@ -690,6 +679,8 @@ patch_serial_registers:
         sta     tmp2
         jsr     patch_addresses
         lda     tmp2
+        sta     video_data_tmp
+        stx     video_data_tmp+1
         clc
         adc     #2
         sta     vcmd+1
@@ -730,6 +721,12 @@ patch_serial_registers:
         adc     #1
         sta     actrl+1
         stx     actrl+2
+
+        lda     video_data_tmp  ; ptr2 is safe now
+        sta     video_data
+        lda     video_data_tmp+1
+        sta     video_data+1
+
         rts
         .endif
 
@@ -914,7 +911,6 @@ video_data_patches:
                 .word vd25
                 .word vd25b
                 .word vd26
-                .word vd26b
                 .word vd27
                 .word vd27b
                 .word vd28
@@ -1673,18 +1669,17 @@ vd26:   lda     $98FF           ; 20
         jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
 no_vid26:
-vs26b:  lda     $99FF           ; 21
-        and     #HAS_BYTE       ; 23
-        beq     no_vid26b       ; 25/26
-vd26b:  lda     $98FF           ; 29
-        ____SPKR_DUTY____5      ; 34
-        WASTE_2                 ; 36
-        stx     next+1          ; 39
+        stx     next+1          ; 20
+vs26b:  lda     $99FF           ; 24
+        and     #HAS_BYTE       ; 26
+        beq     no_vid26b       ; 28/29
+        WASTE_2                 ; 30
+        ____SPKR_DUTY____4      ; 34
+        lda     (video_data)    ; 39
         jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
 no_vid26b:
-        WASTE_4                 ; 30
-        ____SPKR_DUTY____4      ; 34
+        ____SPKR_DUTY____5      ; 34
 ad26b:  ldx     $A8FF           ; 38
         stx     next+1          ; 41
         KBD_LOAD_13             ; 54
@@ -1740,17 +1735,17 @@ vd28:   lda     $98FF           ; 20
         jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
 no_vid28:
-        WASTE_2                 ; 19
-vs28b:  lda     $99FF           ; 23
-        and     #HAS_BYTE       ; 25
-        beq     no_vid28b       ; 27/28
-vd28b:  lda     $98FF           ; 31
-        ____SPKR_DUTY____5      ; 36
+        WASTE_3                 ; 20
+vs28b:  lda     $99FF           ; 24
+        and     #HAS_BYTE       ; 26
+        beq     no_vid28b       ; 28/29
+vd28b:  lda     $98FF           ; 32
+        ____SPKR_DUTY____4      ; 36
         stx     next+1          ; 39
         jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
 no_vid28b:
-        WASTE_4                 ; 32
+        WASTE_3                 ; 32
         ____SPKR_DUTY____4      ; 36
 ad28b:  ldx     $A8FF           ; 40
         stx     next+1          ; 43
@@ -1909,16 +1904,16 @@ vd31:   lda     $98FF           ; 20
 
 no_vid31:
         stx     next+1          ; 20
-vs31b:  lda     $99FF           ; 24
-        and     #HAS_BYTE       ; 26
-        beq     no_vid31b       ; 28/29
-vd31b:  lda     $98FF           ; 32
-        WASTE_2                 ; 34
+        WASTE_2                 ; 22
+vs31b:  lda     $99FF           ; 26
+        and     #HAS_BYTE       ; 28
+        beq     no_vid31b       ; 30/31
+vd31b:  lda     $98FF           ; 34
         ____SPKR_DUTY____5      ; 39
         jmp     video_direct    ; 42=>83 (takes 41 cycles, jumps to next)
 
 no_vid31b:
-        WASTE_6                 ; 35
+        WASTE_4                 ; 35
         ____SPKR_DUTY____4      ; 39
 ad31b:  ldx     $A8FF           ; 43
         stx     next+1          ; 46
@@ -1953,3 +1948,4 @@ stop:           .res 1
 dummy_abs:      .res 2
 prevspd:        .res 1
 next_slow:      .res 2
+video_data_tmp: .res 2
