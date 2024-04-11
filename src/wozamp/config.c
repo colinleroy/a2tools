@@ -14,6 +14,7 @@
 extern unsigned char scrw;
 char *translit_charset;
 char monochrome;
+char enable_video;
 
 static FILE *open_config(char *mode) {
   FILE *fp;
@@ -27,8 +28,6 @@ static FILE *open_config(char *mode) {
   return fp;
 }
 
-#pragma code-name(push, "LOWCODE")
-
 static int save_config(void) {
   FILE *fp;
   int r;
@@ -39,8 +38,8 @@ static int save_config(void) {
     return -1;
   }
 
-  r = fprintf(fp, "%s\n%d\n",
-                  translit_charset, monochrome);
+  r = fprintf(fp, "%s\n%d\n%d\n",
+                  translit_charset, monochrome, enable_video);
 
   if (r < 0 || fclose(fp) != 0) {
     cputs("Could not save settings file.\r\n");
@@ -48,6 +47,8 @@ static int save_config(void) {
   }
   return 0;
 }
+
+#pragma code-name(push, "LOWCODE")
 
 extern char tmp_buf[80];
 
@@ -103,6 +104,24 @@ monochrome_again:
       goto monochrome_again;
   }
 
+#if (defined (__APPLE2ENH__) && !defined (__IIGS__))
+  cputs("\r\nEnable video playback? (y/n)\r\n");
+enable_video_again:
+  c = cgetc();
+  switch(tolower(c)) {
+    case 'y':
+      enable_video = 1;
+      break;
+    case 'n':
+      enable_video = 0;
+      break;
+    default:
+      goto enable_video_again;
+  }
+#else
+  enable_video = 0;
+#endif
+
   save_config();
 }
 
@@ -114,6 +133,11 @@ void load_config(void) {
 
   translit_charset = US_CHARSET;
   monochrome = 0;
+#ifdef __APPLE2ENH__
+  enable_video = 1;
+#else
+  enable_video = 0;
+#endif
 
   cputs("Loading config...\r\n");
   fp = open_config("r");
@@ -133,6 +157,11 @@ void load_config(void) {
 
     fgets(tmp_buf, 16, fp);
     monochrome = (tmp_buf[0] != '0');
+
+    fgets(tmp_buf, 16, fp);
+#ifdef __APPLE2ENH__
+    enable_video = (tmp_buf[0] != '0');
+#endif
 
     fclose(fp);
   }
