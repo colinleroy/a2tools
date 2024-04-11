@@ -52,7 +52,7 @@ int main(void) {
 
   clrscr();
   gotoxy(0, 20);
-  cputs("Loading");
+  cputs("Still loading");
 
 read_metadata_again:
   r = simple_serial_getc();
@@ -95,15 +95,5 @@ read_metadata_again:
     sleep(1);
   }
 out:
-  reopen_start_device();
-  if (strchr(url, '/')) {
-    *(strrchr(url, '/')) = '\0';
-  }
-  url_fp = fopen("/RAM/VIDURL","w");
-
-  if (url_fp) {
-    fputs(url, url_fp);
-    fclose(url_fp);
-  }
   exec("WOZAMP", NULL);
 }
