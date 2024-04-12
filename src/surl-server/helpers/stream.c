@@ -103,7 +103,7 @@ static void *generate_frames(void *th_data) {
   pthread_mutex_unlock(&data->mutex);
 
   gettimeofday(&decode_start, 0);
-  while ((buf = ffmpeg_convert_frame()) != NULL) {
+  while ((buf = ffmpeg_convert_frame(video_len*FPS, frameno)) != NULL) {
     if (write(vhgr_file, buf, HGR_LEN) != HGR_LEN) {
       printf("Could not write data\n");
       close(vhgr_file);
@@ -881,10 +881,6 @@ static void *audio_push(void *unused) {
   unsigned char c;
   size_t cur = 0;
   int stop;
-
-  for (int i = 0; i < 32; i++)
-    for (int j = 0; j < 1000; j++)
-      send_av_sample(i);
 
   while (1) {
     pthread_mutex_lock(&audio_th_data->mutex);

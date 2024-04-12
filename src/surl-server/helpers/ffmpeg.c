@@ -49,10 +49,15 @@
 #define VIDEO_SIZE "140:96"
 
 #define GREYSCALE_TO_HGR 1
-/* ffmpeg settings: Get a known fps rate, and scale to size.
- * if scaling is smaller than buffer size, we'll center the video.
- */
-const char *video_filter_descr = "fps="FPS_STR",scale="VIDEO_SIZE":force_original_aspect_ratio=decrease:flags=neighbor";
+
+const char *video_filter_descr = /* Set frames per second to a known value */
+                                 "fps="FPS_STR","
+                                 /* Scale to VIDEO_SIZE, respect aspect ratio, scale fast (no interpolation) */
+                                 "scale="VIDEO_SIZE":force_original_aspect_ratio=decrease:flags=neighbor,"
+                                 /* Pad in the middle of the HGR screen */
+                                 "pad=width=280:height=192:x=-1:y=-1,"
+                                 /* Add subtitles, bigger than necessary because anti-aliasing ruins legibility */
+                                 "subtitles=force_style='Fontsize=24,Hinting=light':filename=";
 
 static AVFormatContext *audio_fmt_ctx, *video_fmt_ctx;
 static AVCodecContext *audio_dec_ctx, *video_dec_ctx;
@@ -272,7 +277,7 @@ void ffmpeg_to_hgr_deinit(void) {
 static int frameno = 0;
 uint8_t out_buf[WIDTH*HEIGHT];
 
-static uint8_t *dither_and_center_frame(const AVFrame *frame, AVRational time_base)
+static uint8_t *dither_and_center_frame(const AVFrame *frame, AVRational time_base, int progress)
 {
   int x, y;
   uint8_t *p0, *p, *out;
@@ -320,11 +325,34 @@ static uint8_t *dither_and_center_frame(const AVFrame *frame, AVRational time_ba
     p0 += frame->linesize[0];
     out += WIDTH - (frame->width + x_offset);
   }
+  /* Progress bar */
+
+  for (x = 0; x < progress; x++) {
+    out_buf[(HEIGHT-1)*WIDTH + x] = 255;
+  }
+
   return out_buf;
+}
+
+static char *escape_filename_for_ffmpeg_filter(char *filename) {
+  char *out = malloc(2*strlen(filename)+1);
+  int i, o;
+  for (i = 0, o = 0; i < strlen(filename); i++) {
+    if (filename[i] == ':' || filename[i] == ',' || filename[i] == '=') {
+      out[o++] = '\\';
+    }
+    out[o++] = filename[i];
+  }
+  out[o++] = '\0';
+
+  return out;
 }
 
 int ffmpeg_to_hgr_init(char *filename, int *video_len) {
     int ret = 0;
+    char *esc_filename = escape_filename_for_ffmpeg_filter(filename);
+    char *vf_str = malloc(strlen(video_filter_descr) + strlen(esc_filename) + 3);
+    int try_with_subs = 1;
 
     video_frame = av_frame_alloc();
     video_filt_frame = av_frame_alloc();
@@ -339,23 +367,41 @@ int ffmpeg_to_hgr_init(char *filename, int *video_len) {
     if ((ret = open_video_file(filename)) < 0) {
         goto end;
     }
-    if ((ret = init_video_filters(video_filter_descr)) < 0) {
+
+    sprintf(vf_str, "%s'%s'", video_filter_descr, esc_filename);
+    free(esc_filename);
+
+
+try_again:
+    printf("Filter string '%s'\n", vf_str);
+    if ((ret = init_video_filters(vf_str)) < 0) {
+        if (try_with_subs) {
+          try_with_subs = 0;
+          *(strstr(vf_str, ",subtitles")) = '\0';
+          goto try_again;
+        }
         goto end;
     }
 
     printf("Duration %lus\n", video_fmt_ctx->duration/1000000);
     *video_len = video_fmt_ctx->duration/1000000;
 end:
+    free(vf_str);
     if (ret < 0)
-        printf("Error occurred: %s\n", av_err2str(ret));
+        printf("Init error occurred: %s\n", av_err2str(ret));
 
     return ret;
 }
 
 uint8_t hgr[0x2000];
-unsigned char *ffmpeg_convert_frame(void) {
+unsigned char *ffmpeg_convert_frame(int total_frames, int current_frame) {
+    int progress = 0;
     uint8_t *buf = NULL;
     int ret;
+
+    if (total_frames > 0) {
+      progress = WIDTH*current_frame / total_frames;
+    }
 
     while (1) {
         /* read one packets */
@@ -395,7 +441,7 @@ unsigned char *ffmpeg_convert_frame(void) {
                         printf("Error: %s\n", av_err2str(ret));
                         goto end;
                     }
-                    buf = dither_and_center_frame(video_filt_frame, video_buffersink_ctx->inputs[0]->time_base);
+                    buf = dither_and_center_frame(video_filt_frame, video_buffersink_ctx->inputs[0]->time_base, progress);
                     av_frame_unref(video_filt_frame);
                 }
                 av_frame_unref(video_frame);
