@@ -260,7 +260,9 @@ read_metadata_again:
       clrscr();
       gotoxy(8, 12);
       dputs("Loading video player...");
+      fputc(enable_subtitles, video_url_fp);
       fputs(url, video_url_fp);
+
       fclose(video_url_fp);
       simple_serial_putc(SURL_METHOD_ABORT);
       reopen_start_device();
@@ -370,6 +372,7 @@ int main(void) {
     url = stp_build_login_url(url);
   } else {
     url = malloc(512);
+    fgetc(tmpfp); // Ignore subtitles parameter */
     fgets(url, 511, tmpfp);
     fclose(tmpfp);
   }
