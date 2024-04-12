@@ -8,7 +8,7 @@
 
 int ffmpeg_to_hgr_init(char *filename, int *video_len);
 void ffmpeg_to_hgr_deinit(void);
-unsigned char *ffmpeg_convert_frame(void);
+unsigned char *ffmpeg_convert_frame(int total_frames, int current_frame);
 
 typedef struct _decode_data {
   pthread_mutex_t mutex;
