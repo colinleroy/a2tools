@@ -1218,6 +1218,7 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
   } else if (method == SURL_METHOD_STREAM_AV) {
     char *translit;
     char monochrome;
+    char subtitles;
     enum HeightScale scale;
     printf("send wait\n");
     simple_serial_putc(SURL_ANSWER_WAIT);
@@ -1228,8 +1229,10 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
     monochrome = simple_serial_getc();
     printf("get scale\n");
     scale = simple_serial_getc();
+    printf("get subtitles\n");
+    subtitles = simple_serial_getc();
     printf("starting\n");
-    surl_stream_audio_video(url, translit, monochrome, scale);
+    surl_stream_audio_video(url, translit, monochrome, scale, subtitles);
     return NULL;
   } else if (method == SURL_METHOD_STREAM_VIDEO) {
     simple_serial_putc(SURL_ANSWER_WAIT);

@@ -15,6 +15,7 @@ extern unsigned char scrw;
 char *translit_charset;
 char monochrome;
 char enable_video;
+char enable_subtitles;
 
 static FILE *open_config(char *mode) {
   FILE *fp;
@@ -38,8 +39,8 @@ static int save_config(void) {
     return -1;
   }
 
-  r = fprintf(fp, "%s\n%d\n%d\n",
-                  translit_charset, monochrome, enable_video);
+  r = fprintf(fp, "%s\n%d\n%d\n%d\n",
+                  translit_charset, monochrome, enable_video, enable_subtitles);
 
   if (r < 0 || fclose(fp) != 0) {
     cputs("Could not save settings file.\r\n");
@@ -118,8 +119,24 @@ enable_video_again:
     default:
       goto enable_video_again;
   }
+
+  cputs("\r\nEnable subtitles? (y/n)\r\n");
+enable_subtitles_again:
+  c = cgetc();
+  switch(tolower(c)) {
+    case 'y':
+      enable_subtitles = 1;
+      break;
+    case 'n':
+      enable_subtitles = 0;
+      break;
+    default:
+      goto enable_subtitles_again;
+  }
+
 #else
   enable_video = 0;
+  enable_subtitles = 0;
 #endif
 
   save_config();
@@ -138,6 +155,7 @@ void load_config(void) {
 #else
   enable_video = 0;
 #endif
+  enable_subtitles = 1;
 
   cputs("Loading config...\r\n");
   fp = open_config("r");
@@ -162,6 +180,9 @@ void load_config(void) {
 #ifdef __APPLE2ENH__
     enable_video = (tmp_buf[0] != '0');
 #endif
+
+    fgets(tmp_buf, 16, fp);
+    enable_subtitles = (tmp_buf[0] != '0');
 
     fclose(fp);
   }

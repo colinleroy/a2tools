@@ -14,16 +14,18 @@
 
 char *translit_charset = "ISO646-FR1";
 char monochrome = 1;
+
 static char url[512];
 
 int main(void) {
-  unsigned char r;
+  unsigned char r, subtitles;
   FILE *url_fp = fopen("/RAM/VIDURL","r");
   surl_connect_proxy();
 
   if (url_fp == NULL) {
     goto out;
   }
+  subtitles = fgetc(url_fp);
   fgets(url, 511, url_fp);
   fclose(url_fp);
 
@@ -32,6 +34,7 @@ int main(void) {
   simple_serial_putc('\n');
   simple_serial_putc(monochrome);
   simple_serial_putc(HGR_SCALE_MIXHGR);
+  simple_serial_putc(subtitles);
 
   /* Remove filename from URL in advance, so we don't get stuck in
    * a loop if the player crashes for some reason */
@@ -42,6 +45,7 @@ int main(void) {
   url_fp = fopen("/RAM/VIDURL","w");
 
   if (url_fp) {
+    fputc(subtitles, url_fp);
     fputs(url, url_fp);
     fclose(url_fp);
   }

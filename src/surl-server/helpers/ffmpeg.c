@@ -188,8 +188,7 @@ static int init_video_filters(const char *filters_descr)
 
     video_filter_graph = avfilter_graph_alloc();
     if (!outputs || !inputs || !video_filter_graph) {
-        ret = AVERROR(ENOMEM);
-        goto end;
+        return AVERROR(ENOMEM);
     }
 
     /* buffer video source: the decoded frames from the decoder will be inserted here. */
@@ -348,11 +347,11 @@ static char *escape_filename_for_ffmpeg_filter(char *filename) {
   return out;
 }
 
-int ffmpeg_to_hgr_init(char *filename, int *video_len) {
+int ffmpeg_to_hgr_init(char *filename, int *video_len, char subtitles) {
     int ret = 0;
     char *esc_filename = escape_filename_for_ffmpeg_filter(filename);
-    char *vf_str = malloc(strlen(video_filter_descr) + strlen(esc_filename) + 3);
-    int try_with_subs = 1;
+    char *vf_str = malloc(strlen(video_filter_descr) + strlen(esc_filename) + 6);
+    int try_with_subs = subtitles * 2; /* 2 = try embedded, 1 = try .srt, 0 = no subtitles. */
 
     video_frame = av_frame_alloc();
     video_filt_frame = av_frame_alloc();
@@ -371,13 +370,20 @@ int ffmpeg_to_hgr_init(char *filename, int *video_len) {
     sprintf(vf_str, "%s'%s'", video_filter_descr, esc_filename);
     free(esc_filename);
 
-
 try_again:
+    if (!try_with_subs) {
+      *(strstr(vf_str, ",subtitles")) = '\0';
+    } else if (try_with_subs == 1) {
+      /* Try .srt file? */
+      if (strchr(vf_str, '.'))
+        sprintf(strrchr(vf_str, '.'), "%s", ".srt");
+
+    } /* First try with embedded subs */
+
     printf("Filter string '%s'\n", vf_str);
     if ((ret = init_video_filters(vf_str)) < 0) {
         if (try_with_subs) {
-          try_with_subs = 0;
-          *(strstr(vf_str, ",subtitles")) = '\0';
+          try_with_subs--;
           goto try_again;
         }
         goto end;

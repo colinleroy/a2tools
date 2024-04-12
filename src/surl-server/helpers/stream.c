@@ -85,7 +85,7 @@ static void *generate_frames(void *th_data) {
     pthread_mutex_unlock(&data->mutex);
   }
 
-  if (ffmpeg_to_hgr_init(data->url, &video_len) != 0) {
+  if (ffmpeg_to_hgr_init(data->url, &video_len, data->subtitles) != 0) {
     printf("Could not init ffmpeg.\n");
     pthread_mutex_lock(&data->mutex);
     data->decoding_end = 1;
@@ -1080,7 +1080,7 @@ close_last:
   return NULL;
 }
 
-int surl_stream_audio_video(char *url, char *translit, char monochrome, enum HeightScale scale) {
+int surl_stream_audio_video(char *url, char *translit, char monochrome, enum HeightScale scale, char subtitles) {
   int j;
   int cancelled = 0, playback_stop = 0;
   /* Control vars */
@@ -1102,6 +1102,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
 
   memset(video_th_data, 0, sizeof(decode_data));
   video_th_data->url = url;
+  video_th_data->subtitles = subtitles;
   pthread_mutex_init(&video_th_data->mutex, NULL);
 
   printf("Starting video decode thread\n");

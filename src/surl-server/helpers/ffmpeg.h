@@ -6,7 +6,7 @@
 #define FPS        24
 #define FPS_STR   "24"
 
-int ffmpeg_to_hgr_init(char *filename, int *video_len);
+int ffmpeg_to_hgr_init(char *filename, int *video_len, char subtitles);
 void ffmpeg_to_hgr_deinit(void);
 unsigned char *ffmpeg_convert_frame(int total_frames, int current_frame);
 
@@ -16,6 +16,7 @@ typedef struct _decode_data {
   /* params */
   char *url;
   int sample_rate;
+  char subtitles;
 
   /* data */
   unsigned char *img_data;
