@@ -1,3 +1,10 @@
+a2tools (2.3.0.1) bionic; urgency=medium
+
+  * New protocol (13)
+  * A/V streaming
+
+ -- Colin Leroy-Mira <colin@colino.net>  Sat, 13 Apr 2024 21:28:19 +0200
+
 a2tools (2.2.0.1) bionic; urgency=medium
 
   * New protocol (12) to allow more HGR / streaming parameters
