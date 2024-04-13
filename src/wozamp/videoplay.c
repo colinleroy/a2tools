@@ -10,6 +10,7 @@
 #include "simple_serial.h"
 #include "path_helper.h"
 #include "surl.h"
+#include "config.h"
 #include "splash-video.h"
 
 char *translit_charset = "ISO646-FR1";
@@ -19,7 +20,7 @@ static char url[512];
 
 int main(void) {
   unsigned char r, subtitles;
-  FILE *url_fp = fopen("/RAM/VIDURL","r");
+  FILE *url_fp = fopen(URL_PASSER_FILE,"r");
   surl_connect_proxy();
 
   if (url_fp == NULL) {
@@ -42,7 +43,7 @@ int main(void) {
   if (strchr(url, '/')) {
     *(strrchr(url, '/')) = '\0';
   }
-  url_fp = fopen("/RAM/VIDURL","w");
+  url_fp = fopen(URL_PASSER_FILE,"w");
 
   if (url_fp) {
     fputc(subtitles, url_fp);
