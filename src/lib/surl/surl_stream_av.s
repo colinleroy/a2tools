@@ -453,9 +453,12 @@ ad0b:   ldx     $A8FF           ; 43     load audio data register again
 
 ; -----------------------------------------------------------------
 _surl_stream_av:                ; Entry point
+        php
+        sei                     ; Disable all interrupts
+
         pha
-        ; Disable interrupts
-        lda     #$00
+
+        lda     #$00            ; Disable serial interrupts
         jsr     _simple_serial_set_irq
 
         pla
@@ -685,6 +688,8 @@ patch_serial_registers:
         adc     #2
         sta     vcmd+1
         stx     vcmd+2
+        sta     vcmd2+1
+        stx     vcmd2+2
         adc     #1
         sta     vctrl+1
         stx     vctrl+2
@@ -1929,7 +1934,12 @@ break_out:
         lda     #$01
         ldx     #$00
         jsr     _sleep
-        lda     #$01            ; Reenable IRQ and flush
+
+        lda     #$02            ; Disable second port
+vcmd2:  sta     $98FF
+
+        plp                     ; Reenable all interrupts
+        lda     #$01            ; Reenable serial interrupts and flush
         jsr     _simple_serial_set_irq
         jsr     _simple_serial_flush
         lda     #$2F            ; SURL_CLIENT_READY

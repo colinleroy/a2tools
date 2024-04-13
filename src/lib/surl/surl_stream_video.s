@@ -59,6 +59,9 @@ page          = _zp6
 last_offset   = _zp7
 
 _surl_stream_video:
+        php
+        sei                     ; Disable all interrupts
+
         ; Setup
         lda     #$00
         sta     page
@@ -115,6 +118,7 @@ _surl_stream_video:
         beq     :+
         lda     #$FF            ; Server error
         tax
+        plp
         rts
 
 :       bit     $C052           ; Clear HGR mix
@@ -292,6 +296,7 @@ cleanup:
         jsr     _simple_serial_flush
         lda     #$00
         tax
+        plp
         rts
 
         .data
