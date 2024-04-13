@@ -1,2 +1,3 @@
 usr/bin/surl-server
 lib/systemd/system/surl-server.service
+usr/share/fonts/truetype/Apple2/PrintChar21.ttf

@@ -58,6 +58,6 @@ install:
 		id surl-server || (adduser --system --no-create-home surl-server && adduser surl-server dialout) \
 	fi
 	install -m 644 systemd/surl-server.service $(DESTDIR)/lib/systemd/system/surl-server.service
-	mkdir -p $(DESTDIR)/usr/local/share/fonts/truetype/Apple2
-	install -m 644 fonts/PrintChar21.ttf $(DESTDIR)/usr/local/share/fonts/truetype/Apple2
+	mkdir -p $(DESTDIR)/$(prefix)/share/fonts/truetype/Apple2
+	install -m 644 fonts/PrintChar21.ttf $(DESTDIR)/$(prefix)/share/fonts/truetype/Apple2
 	fc-cache || true
