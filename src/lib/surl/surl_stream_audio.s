@@ -443,9 +443,11 @@ dest4:
 
 ; ------------------------------------------------------------------
 _surl_stream_audio:
+        php
+        sei                     ; Disable all interrupts
         pha
-        ; Disable interrupts
-        lda     #$00
+
+        lda     #$00            ; Disable serial interrupts
         jsr     _simple_serial_set_irq
 
         pla
@@ -1402,6 +1404,7 @@ break_out:
         lda     prevspd
         jsr     _set_iigs_speed
 .endif
+        plp
         lda     #$01            ; Reenable IRQ and flush
         jsr     _simple_serial_set_irq
         jsr     _simple_serial_flush
