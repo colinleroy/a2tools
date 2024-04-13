@@ -59,6 +59,14 @@ int main(void) {
   cputs("Still loading");
 
 read_metadata_again:
+  if (kbhit()) {
+    if (cgetc() == CH_ESC) {
+      init_text();
+      simple_serial_putc(SURL_METHOD_ABORT);
+      goto out;
+    }
+  }
+
   r = simple_serial_getc();
   if (r == SURL_ANSWER_STREAM_METADATA) {
     char *metadata;
