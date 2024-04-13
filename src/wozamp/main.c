@@ -355,7 +355,7 @@ int main(void) {
   
   surl_ping();
 #ifdef __CC65__
-  printf("Mem available: %zu\n", _heapmemavail());
+  printf("Mem available: %zub\n", _heapmemavail());
 #endif
   load_config();
 
@@ -365,7 +365,7 @@ int main(void) {
   }
 
   clrscr();
-  tmpfp = fopen("/RAM/VIDURL","r");
+  tmpfp = fopen(URL_PASSER_FILE,"r");
   if (tmpfp == NULL) {
     url = stp_get_start_url("Please enter an FTP or internet stream\r\n",
                           "http://8bit.fm:8000/live");
@@ -375,6 +375,7 @@ int main(void) {
     fgetc(tmpfp); // Ignore subtitles parameter */
     fgets(url, 511, tmpfp);
     fclose(tmpfp);
+    unlink(URL_PASSER_FILE);
   }
 
   runtime_once_clean();
