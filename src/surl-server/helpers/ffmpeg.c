@@ -57,7 +57,7 @@ const char *video_filter_descr = /* Set frames per second to a known value */
                                  /* Pad in the middle of the HGR screen */
                                  "pad=width=280:height=192:x=-1:y=-1,"
                                  /* Add subtitles, bigger than necessary because anti-aliasing ruins legibility */
-                                 "subtitles=force_style='Fontsize=24,Hinting=light':filename=";
+                                 "subtitles=force_style='Fontsize=15,Fontname=Print Char 21':filename=";
 
 static AVFormatContext *audio_fmt_ctx, *video_fmt_ctx;
 static AVCodecContext *audio_dec_ctx, *video_dec_ctx;
