@@ -355,7 +355,7 @@ int main(void) {
   
   surl_ping();
 #ifdef __CC65__
-  printf("Mem available: %zub\n", _heapmaxavail());
+  printf("Mem available: %zu/%zub\n", _heapmemavail(), _heapmaxavail());
 #endif
   load_config();
 
@@ -378,6 +378,11 @@ int main(void) {
   }
 
   runtime_once_clean();
+
+#ifdef __CC65__
+  printf("Mem available after clean: %zu/%zub\n", _heapmemavail(), _heapmaxavail());
+  cgetc();
+#endif
 
   set_scrollwindow(0, scrh);
 #ifdef __APPLE2__

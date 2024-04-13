@@ -591,7 +591,7 @@ done:
 
   do {
     c = simple_serial_getc();
-    printf("ignoring %02X\n", c);
+    printf("got %02X\n", c);
   } while (c != SURL_CLIENT_READY
         && c != SURL_METHOD_ABORT);
 
@@ -906,6 +906,7 @@ static void *audio_push(void *unused) {
       }
     }
     send_av_sample(audio_data[cur] * AV_MAX_LEVEL/audio_max);
+    fflush(ttyfp);
     cur++;
 
     /* Kbd input polled directly for no wait at all */
@@ -1252,7 +1253,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
 
   do {
     c = simple_serial_getc();
-    printf("ignoring %02X\n", c);
+    printf("got %02X\n", c);
   } while (c != SURL_CLIENT_READY
         && c != SURL_METHOD_ABORT);
 
