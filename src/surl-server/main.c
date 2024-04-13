@@ -175,11 +175,22 @@ static void send_response_headers(curl_buffer *response) {
 
 char reqbuf[BUFSIZE];
 
+static void dump_url(char *url) {
+  if (url == NULL) {
+    printf("URL NULL\n");
+    return;
+  }
+  printf("URL: ");
+  for (int i = 0; i < strlen(url); i++) {
+    printf("%02x ", url[i]);
+  }
+  printf("\n");
+}
 int main(int argc, char **argv)
 {
   unsigned char method = SURL_METHOD_ABORT;
   char *url = NULL;
-  char cmd;
+  unsigned char cmd;
   char **headers = NULL;
   int n_headers = 0;
   size_t bufsize = 0, sent = 0;
@@ -258,9 +269,12 @@ new_req:
         continue;
       }
       if (method == SURL_METHOD_ABORT) {
+        printf("REQ: method abort - continue\n");
+        url[0] = '\0';
+        dump_url(url);
         continue;
       } else if (url[0] == '\0') {
-        printf("REQ: Could not parse request (method %d).\n", method);
+        printf("REQ: Could not parse request (method %u).\n", method);
         continue;
       }
     } else {
@@ -434,7 +448,7 @@ new_req:
         }
 
 abort:
-        printf("RESP: finished (cmd %d)\n", cmd);
+        printf("RESP: finished (cmd %u)\n", cmd);
         /* Put that back as a REQUEST */
         reqbuf[0] = cmd;
         simple_serial_gets(reqbuf + 1, BUFSIZE - 1);
