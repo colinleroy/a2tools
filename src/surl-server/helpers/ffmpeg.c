@@ -42,39 +42,27 @@
 #include <ffmpeg.h>
 
 /* Final buffer size, possibly including black borders */
-#define WIDTH 280
-#define HEIGHT 192
-#define WIDTH_STR "280"
-#define HEIGHT_STR "192"
+#define HGR_WIDTH 280
+#define HGR_HEIGHT 192
 
 /* Video size - the bigger, the less fps */
-
-// About 18 FPS
-// #define VIDEO_SIZE "140:96"
-// int pic_width = 140, pic_height = 96;
-
-// About 16 FPS
-#define VIDEO_SIZE "160:109"
-int pic_width = 160, pic_height = 109;
-
-// About 13 FPS
-// #define VIDEO_SIZE "200:137"
-// int pic_width = 200, pic_height = 137;
-
-// About 7 FPS
-// #define VIDEO_SIZE "280:192"
-// int pic_width = 280, pic_height = 192;
+#define MAX_BYTES_PER_FRAME 2000
+int pic_width, pic_height;
 
 int ditherer = 0; /* 0 = bayer 1 = burkes */
 
 #define GREYSCALE_TO_HGR 1
 
 const char *video_filter_descr = /* Set frames per second to a known value */
-                                 "fps="FPS_STR","
+                                 "fps=%d,"
                                  /* Scale to VIDEO_SIZE, respect aspect ratio, scale fast (no interpolation) */
-                                 "scale="VIDEO_SIZE":force_original_aspect_ratio=decrease:flags=neighbor,"
+                                 "scale=%d:%d:flags=neighbor,"
+                                 /* Black border */
+                                 "pad=width=%d:height=%d:x=-1:y=-1:color=Black,"
+                                 /* White border */
+                                 "pad=width=%d:height=%d:x=-1:y=-1:color=White,"
                                  /* Pad in the middle of the HGR screen */
-                                 "pad=width="WIDTH_STR":height="HEIGHT_STR":x=-1:y=-1,"
+                                 "pad=width=%d:height=%d:x=-1:y=-1:color=Black,"
                                  /* Add subtitles, bigger than necessary because anti-aliasing ruins legibility */
                                  "subtitles=force_style='Fontsize=15,Fontname=Print Char 21':filename=";
 
@@ -87,7 +75,7 @@ static int audio_stream_index = -1, video_stream_index = -1;
 AVPacket *video_packet, *audio_packet;
 AVFrame *video_frame, *audio_frame;
 AVFrame *video_filt_frame, *audio_filt_frame;
-static unsigned baseaddr[HEIGHT];
+static unsigned baseaddr[HGR_HEIGHT];
 
 static void init_base_addrs (void)
 {
@@ -194,7 +182,7 @@ static int open_audio_file(char *filename)
     return 0;
 }
 
-static int init_video_filters(const char *filters_descr)
+static int init_video_filters(const char *filters_descr_fmt)
 {
     char args[512];
     int ret = 0;
@@ -204,6 +192,26 @@ static int init_video_filters(const char *filters_descr)
     AVFilterInOut *inputs  = avfilter_inout_alloc();
     AVRational time_base = video_fmt_ctx->streams[video_stream_index]->time_base;
     enum AVPixelFormat pix_fmts[] = { AV_PIX_FMT_GRAY8, AV_PIX_FMT_NONE };
+    char *filters_descr = malloc(strlen(filters_descr_fmt) * 2);
+    float aspect_ratio = (float)video_dec_ctx->width / (float)video_dec_ctx->height;
+
+    printf("Original video %dx%d (%.2f)\n", video_dec_ctx->width, video_dec_ctx->height, aspect_ratio);
+
+    /* Get final resolution. We don't want too much "square pixels". */
+    for (pic_width = HGR_WIDTH; pic_width > HGR_WIDTH/2; pic_width--) {
+      pic_height = pic_width / aspect_ratio;
+      if (pic_width * pic_height < MAX_BYTES_PER_FRAME * 8) {
+        break;
+      }
+    }
+    printf("Rescaling to %dx%d (%d pixels)\n", pic_width, pic_height, pic_width * pic_height);
+
+    sprintf(filters_descr, filters_descr_fmt,
+            FPS,
+            pic_width, pic_height,
+            pic_width + 2, pic_height + 2, /* Black border */
+            pic_width + 4, pic_height + 4, /* White border */
+            HGR_WIDTH, HGR_HEIGHT);
 
     video_filter_graph = avfilter_graph_alloc();
     if (!outputs || !inputs || !video_filter_graph) {
@@ -274,6 +282,7 @@ static int init_video_filters(const char *filters_descr)
         goto end;
 
 end:
+    free(filters_descr);
     avfilter_inout_free(&inputs);
     avfilter_inout_free(&outputs);
 
@@ -293,14 +302,13 @@ void ffmpeg_to_hgr_deinit(void) {
 
 
 static int frameno = 0;
-uint8_t out_buf[WIDTH*HEIGHT];
-uint8_t prev_buf[WIDTH*HEIGHT];
+uint8_t out_buf[HGR_WIDTH*HGR_HEIGHT];
+uint8_t prev_buf[HGR_WIDTH*HGR_HEIGHT];
 
 static uint8_t *bayer_dither_frame(const AVFrame *frame, AVRational time_base, int progress)
 {
   int x, y;
   uint8_t *p0, *p, *out;
-  int bsx, bsy, bex, bey;
 
   static int x_offset = 0, y_offset = 0;
 
@@ -318,22 +326,17 @@ static uint8_t *bayer_dither_frame(const AVFrame *frame, AVRational time_base, i
 
   frameno++;
 
-  if (frame->width < WIDTH) {
-    x_offset = (WIDTH - frame->width) / 2;
+  if (frame->width < HGR_WIDTH) {
+    x_offset = (HGR_WIDTH - frame->width) / 2;
   }
-  if (frame->height < HEIGHT) {
-    y_offset = (HEIGHT - frame->height) / 2;
+  if (frame->height < HGR_HEIGHT) {
+    y_offset = (HGR_HEIGHT - frame->height) / 2;
   }
   memset(out_buf, 0, sizeof out_buf);
 
-  bsx = ((WIDTH - pic_width) / 2) - 2;
-  bex = ((WIDTH + pic_width) / 2) + 2;
-  bsy = ((HEIGHT - pic_height) / 2) - 2;
-  bey = ((HEIGHT + pic_height) / 2) + 2;
-
   /* Trivial ASCII grayscale display. */
   p0 = frame->data[0];
-  out = out_buf + (y_offset * WIDTH);
+  out = out_buf + (y_offset * HGR_WIDTH);
 
   for (y = 0; y < frame->height; y++) {
     p = p0;
@@ -349,25 +352,12 @@ static uint8_t *bayer_dither_frame(const AVFrame *frame, AVRational time_base, i
       p++;
     }
     p0 += frame->linesize[0];
-    out += WIDTH - (frame->width + x_offset);
+    out += HGR_WIDTH - (frame->width + x_offset);
   }
 
-  /* Border */
-  if (bsx > 0 && bex < WIDTH) {
-    for (x = bsx; x <= bex; x++) {
-      out_buf[bsy*WIDTH + x] = 255;
-      out_buf[bey*WIDTH + x] = 255;
-    }
-  }
-  if (bsy > 0 && bey < HEIGHT) {
-    for (x = bsy; x <= bey; x++) {
-      out_buf[(x)*WIDTH + bsx] = 255;
-      out_buf[(x)*WIDTH + bex] = 255;
-    }
-  }
   /* Progress bar */
   for (x = 0; x < progress; x++) {
-    out_buf[(HEIGHT-1)*WIDTH + x] = 255;
+    out_buf[(HGR_HEIGHT-1)*HGR_WIDTH + x] = 255;
   }
 
   return out_buf;
@@ -384,17 +374,17 @@ static uint8_t *burkes_dither_frame(const AVFrame *frame, AVRational time_base, 
 
   frameno++;
 
-  if (pic_width < WIDTH) {
-    x_offset = (WIDTH - pic_width) / 2;
+  if (pic_width < HGR_WIDTH) {
+    x_offset = (HGR_WIDTH - pic_width) / 2;
   }
-  if (pic_height < HEIGHT) {
-    y_offset = (HEIGHT - pic_height) / 2;
+  if (pic_height < HGR_HEIGHT) {
+    y_offset = (HGR_HEIGHT - pic_height) / 2;
   }
   memset(out_buf, 0, sizeof out_buf);
 
   /* Trivial ASCII grayscale display. */
   p0 = frame->data[0];
-  out = out_buf + (y_offset * WIDTH);
+  out = out_buf + (y_offset * HGR_WIDTH);
 
   for (y = 0; y < frame->height; y++) {
     p = p0;
@@ -417,7 +407,7 @@ static uint8_t *burkes_dither_frame(const AVFrame *frame, AVRational time_base, 
        2/3:              668 avg (404 data, 208 offset, 54 base)
        3/5:              576 avg (341 data, 182 offset, 51 base)
       */
-      time_stab_val = ((*p * 3) / 5) + ((prev_buf[y*WIDTH+x] * 2) / 5);
+      time_stab_val = ((*p * 3) / 5) + ((prev_buf[y*HGR_WIDTH+x] * 2) / 5);
       if (threshold > time_stab_val + error_table[y][x+ERR_X_OFF]) {
         *(out++) = 0;
         current_error = time_stab_val + error_table[y][x + ERR_X_OFF];
@@ -441,7 +431,7 @@ skip_line:
   /* Progress bar */
 
   for (x = 0; x < progress; x++) {
-    out_buf[(HEIGHT-1)*WIDTH + x] = 255;
+    out_buf[(HGR_HEIGHT-1)*HGR_WIDTH + x] = 255;
   }
 
   return out_buf;
@@ -524,7 +514,7 @@ unsigned char *ffmpeg_convert_frame(int total_frames, int current_frame) {
     }
 
     if (total_frames > 0) {
-      progress = WIDTH*current_frame / total_frames;
+      progress = HGR_WIDTH*current_frame / total_frames;
     }
 
     while (1) {
@@ -591,14 +581,14 @@ end:
 
         memset(hgr, 0x00, 0x2000);
 
-        for (y = 0; y < HEIGHT; y++) {
+        for (y = 0; y < HGR_HEIGHT; y++) {
           base = baseaddr[y];
-          for (x = 0; x < WIDTH; x++) {
+          for (x = 0; x < HGR_WIDTH; x++) {
             xoff = base + x/7;
             pixel = x%7;
             ptr = hgr + xoff;
-            // printf("%d,%d: buf %d\n", x, y, buf[y*WIDTH + x]);
-            if (buf[y*WIDTH + x] != 0x00) {
+
+            if (buf[y*HGR_WIDTH + x] != 0x00) {
               ptr[0] |= dhwmono[pixel];
             } else {
               ptr[0] &= dhbmono[pixel];
@@ -850,7 +840,7 @@ push:
 
                         data->data = (unsigned char*) realloc(data->data,
                                   (data->size + audio_filt_frame->nb_samples) * sizeof(unsigned char));
-                        memcpy(data->data + data->size, 
+                        memcpy(data->data + data->size,
                                audio_filt_frame->data[0], audio_filt_frame->nb_samples * sizeof(unsigned char));
                         data->size += audio_filt_frame->nb_samples;
                         data->data_ready = 1;
