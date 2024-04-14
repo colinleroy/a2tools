@@ -244,17 +244,18 @@ void __fastcall__ simple_serial_write_fast_fp(FILE *fp, const char *ptr, size_t 
   if (nmemb > 256 && nmemb % 256) {
     size_t full_pages = MIN (MAX_WRITE_LEN, nmemb - (nmemb % 256));
     while (full_pages > 0) {
-      simple_serial_write_fast(ptr, full_pages);
+      simple_serial_write_fast_fp(fp, ptr, full_pages);
       ptr += full_pages;
       nmemb -= full_pages;
       fflush(fp);
       full_pages = MIN (MAX_WRITE_LEN, nmemb - (nmemb % 256));
     }
-    simple_serial_write_fast(ptr, nmemb);
+    simple_serial_write_fast_fp(fp, ptr, nmemb);
     fflush(fp);
     return;
   }
 
+  /* Less than a page */
 again:
   FD_ZERO(&fds);
   FD_SET(fileno(fp), &fds);
@@ -292,7 +293,7 @@ again:
     if (errno == EAGAIN && total < nmemb) {
       goto again;
     } else {
-      printf("write error %d\n", errno);
+      printf("write error %d (%d)\n", errno, n);
     }
   }
 }
