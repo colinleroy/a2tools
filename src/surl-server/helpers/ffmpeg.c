@@ -276,7 +276,7 @@ void ffmpeg_to_hgr_deinit(void) {
 static int frameno = 0;
 uint8_t out_buf[WIDTH*HEIGHT];
 
-static uint8_t *dither_and_center_frame(const AVFrame *frame, AVRational time_base, int progress)
+static uint8_t *bayer_dither_frame(const AVFrame *frame, AVRational time_base, int progress)
 {
   int x, y;
   uint8_t *p0, *p, *out;
@@ -323,6 +323,74 @@ static uint8_t *dither_and_center_frame(const AVFrame *frame, AVRational time_ba
     }
     p0 += frame->linesize[0];
     out += WIDTH - (frame->width + x_offset);
+  }
+  /* Progress bar */
+
+  for (x = 0; x < progress; x++) {
+    out_buf[(HEIGHT-1)*WIDTH + x] = 255;
+  }
+
+  return out_buf;
+}
+
+static uint8_t *burkes_dither_frame(const AVFrame *frame, AVRational time_base, int progress)
+{
+  int x, y;
+  uint8_t *p0, *p, *out;
+  static int x_offset = 0, y_offset = 0;
+#define ERR_X_OFF 2 //avoid special cases at start/end of line
+  int error_table[192+5][280+5] = {0};
+  int threshold = 180;
+  int pic_width = 140, pic_height = 96;
+
+  frameno++;
+
+  if (pic_width < WIDTH) {
+    x_offset = (WIDTH - pic_width) / 2;
+  }
+  if (pic_height < HEIGHT) {
+    y_offset = (HEIGHT - pic_height) / 2;
+  }
+  memset(out_buf, 0, sizeof out_buf);
+
+  /* Trivial ASCII grayscale display. */
+  p0 = frame->data[0];
+  out = out_buf + (y_offset * WIDTH);
+
+  for (y = 0; y < frame->height; y++) {
+    p = p0;
+
+    if (y < y_offset || y > y_offset + pic_height) {
+      goto skip_line;
+    }
+    for (x = 0; x < frame->width; x++) {
+      int current_error;
+
+      if (x < x_offset || x > x_offset + pic_width) {
+        p++;
+        out++;
+        continue;
+      }
+
+      if (threshold > *p + error_table[y][x+ERR_X_OFF]) {
+        *(out++) = 0;
+        current_error = *p + error_table[y][x + ERR_X_OFF];
+      } else {
+        *(out++) = 255;
+        current_error = *p + error_table[y][x + ERR_X_OFF] - 255;
+      }
+      error_table[y][x + 1 + ERR_X_OFF] += (int)(8.0L / 32.0L * current_error);
+      error_table[y][x + 2 + ERR_X_OFF] += (int)(4.0L / 32.0L * current_error);
+      error_table[y + 1][x + ERR_X_OFF] += (int)(8.0L / 32.0L * current_error);
+      error_table[y + 1][x + 1 + ERR_X_OFF] += (int)(4.0L / 32.0L * current_error);
+      error_table[y + 1][x + 2 + ERR_X_OFF] += (int)(2.0L / 32.0L * current_error);
+      error_table[y + 1][x - 1 + ERR_X_OFF] += (int)(4.0L / 32.0L * current_error);
+      error_table[y + 1][x - 2 + ERR_X_OFF] += (int)(2.0L / 32.0L * current_error);
+
+      p++;
+    }
+skip_line:
+    p0 += frame->linesize[0];
   }
   /* Progress bar */
 
@@ -447,7 +515,7 @@ unsigned char *ffmpeg_convert_frame(int total_frames, int current_frame) {
                         printf("Error: %s\n", av_err2str(ret));
                         goto end;
                     }
-                    buf = dither_and_center_frame(video_filt_frame, video_buffersink_ctx->inputs[0]->time_base, progress);
+                    buf = bayer_dither_frame(video_filt_frame, video_buffersink_ctx->inputs[0]->time_base, progress);
                     av_frame_unref(video_filt_frame);
                 }
                 av_frame_unref(video_frame);
