@@ -55,8 +55,10 @@ int ditherer = 0; /* 0 = bayer 1 = burkes */
 
 const char *video_filter_descr = /* Set frames per second to a known value */
                                  "fps=%d,"
-                                 /* Scale to VIDEO_SIZE, respect aspect ratio, scale fast (no interpolation) */
+                                 /* Scale to VIDEO_SIZE, scale fast (no interpolation) */
                                  "scale=%d:%d:flags=neighbor,"
+                                 /* Equalize histogram (Use 1/x instead of 0.100 because of LC_ALL, decimal separator, etc) */
+                                 "histeq=strength=1/10,"
                                  /* Black border */
                                  "pad=width=%d:height=%d:x=-1:y=-1:color=Black,"
                                  /* White border */
