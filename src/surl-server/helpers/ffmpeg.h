@@ -4,7 +4,6 @@
 #include <pthread.h>
 
 #define FPS        24
-#define FPS_STR   "24"
 
 int ffmpeg_to_hgr_init(char *filename, int *video_len, char subtitles);
 void ffmpeg_to_hgr_deinit(void);

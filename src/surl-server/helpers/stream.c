@@ -282,13 +282,34 @@ static void flush_ident(int min_reps, int ident_vals, int last_val, FILE *fp) {
 static long lateness = 0;
 
 /* Returns 1 if client is late and we should skip frame */
-static int sync_fps(struct timeval *start, struct timeval *end) {
-  unsigned long secs      = (end->tv_sec - start->tv_sec)*1000000;
-  unsigned long microsecs = end->tv_usec - start->tv_usec;
+static int sync_duration = 0;
+static unsigned long syncs_done = 0;
+static unsigned long total_sync_duration = 0;
+
+#define UPDATE_SYNC_DURATION() do {                           \
+  gettimeofday(&sync_end, 0);                                 \
+  secs      = (sync_end.tv_sec - sync_start.tv_sec)*1000000;  \
+  microsecs = sync_end.tv_usec - sync_start.tv_usec;          \
+  elapsed   = secs + microsecs;                               \
+  if (wait > 0) {                                             \
+    elapsed -= wait;                                          \
+  }                                                           \
+  total_sync_duration += elapsed;                             \
+  sync_duration = total_sync_duration / (++syncs_done);       \
+} while (0)
+
+static inline int sync_fps(struct timeval *start) {
+  struct timeval frame_end, sync_start, sync_end;
+  gettimeofday(&sync_start, 0);
+  
+  gettimeofday(&frame_end, 0);
+
+  unsigned long secs      = (frame_end.tv_sec - start->tv_sec)*1000000;
+  unsigned long microsecs = frame_end.tv_usec - start->tv_usec;
   unsigned long elapsed   = secs + microsecs;
   long wait      = 1000000/FPS;
 
-  wait = wait-elapsed;
+  wait = wait-elapsed-sync_duration;
   if (wait > 0) {
     DEBUG("frame took %lu microsecs, late %ld\n", elapsed, lateness);
     if (lateness > 0) {
@@ -310,10 +331,13 @@ static int sync_fps(struct timeval *start, struct timeval *end) {
     lateness += -wait;
     DEBUG("frame took %lu microsecs, late %ld, not sleeping\n", elapsed, lateness);
   }
+
   /* More than two frame late? */
   if (lateness > 2*(1000000/FPS)) {
+    UPDATE_SYNC_DURATION();
     return 1;
   } else {
+    UPDATE_SYNC_DURATION();
     return 0;
   }
 }
@@ -610,17 +634,19 @@ int surl_stream_video(char *url) {
   int total = 0, min = 0xFFFF, max = 0;
   size_t r;
   unsigned char buf_prev[2][HGR_LEN], buf[2][HGR_LEN];
-  struct timeval frame_start, frame_end;
+  struct timeval frame_start;
   int skipped = 0, skip_next = 0, duration;
   int command, page = 0;
   int num_diffs = 0;
   int vhgr_file;
-
   pthread_t decode_thread;
   decode_data *th_data = malloc(sizeof(decode_data));
   int ready = 0;
   int stop = 0;
   int err = 0;
+
+  total_sync_duration = syncs_done = 0;
+
   memset(th_data, 0, sizeof(decode_data));
   th_data->url = url;
   pthread_mutex_init(&th_data->mutex, NULL);
@@ -681,13 +707,27 @@ int surl_stream_video(char *url) {
   memset(buf_prev[0], 0, HGR_LEN);
   memset(buf_prev[1], 0, HGR_LEN);
 
-  gettimeofday(&frame_start, 0);
-
   page = 1;
 
+  gettimeofday(&frame_start, 0);
 next_file:
   i++;
   page = !page;
+
+  if (sync_fps(&frame_start) || skip_next) {
+    gettimeofday(&frame_start, 0);
+    DEBUG("skipping frame\n");
+    skipped++;
+#ifdef DOUBLE_BUFFER
+    if (!skip_next) {
+      skip_next = 1;
+    } else {
+      skip_next = 0;
+    }
+#endif
+    goto next_file;
+  }
+  gettimeofday(&frame_start, 0);
 
   if ((r = read(vhgr_file, buf[page], HGR_LEN)) != HGR_LEN) {
     goto close_last;
@@ -728,22 +768,6 @@ next_file:
       skip_next = 0;
       break;
   }
-  gettimeofday(&frame_end, 0);
-  if (sync_fps(&frame_start, &frame_end) || skip_next) {
-    gettimeofday(&frame_start, 0);
-    DEBUG("skipping frame\n");
-    skipped++;
-#ifdef DOUBLE_BUFFER
-    if (!skip_next) {
-      skip_next = 1;
-    } else {
-      skip_next = 0;
-    }
-#endif
-    goto next_file;
-  }
-
-  gettimeofday(&frame_start, 0);
 
   for (num_diffs = 0, j = 0; j < HGR_LEN; j++) {
     if (buf_prev[page][j] != buf[page][j]) {
@@ -935,10 +959,12 @@ void *video_push(void *unused) {
   int total = 0, min = 0xFFFF, max = 0;
   size_t r;
   unsigned char buf_prev[2][HGR_LEN], buf[2][HGR_LEN];
-  struct timeval frame_start, frame_end;
+  struct timeval frame_start;
   int skipped = 0, skip_next = 0, duration;
   int page = 0;
   int num_diffs = 0;
+
+  total_sync_duration = syncs_done = 0;
 
   i = 0;
   page = 1;
@@ -947,8 +973,6 @@ void *video_push(void *unused) {
   /* Send 30 full-black bytes first to make sure everything
   * started client-side (but don't change the first one) */
   memset(buf_prev[1] + 1, 0x7F, 30);
-
-  gettimeofday(&frame_start, 0);
 
   memset(buf[page], 0x00, HGR_LEN);
   goto send;
@@ -973,15 +997,7 @@ next_file:
   enqueue_byte(0xFF, ttyfp2); /* Switch page */
   flush_changes(ttyfp2);
 
-  if (i > FPS && (i % (15*FPS)) == 0) {
-    duration = i/FPS;
-    printf("%d seconds, %d frames skipped / %d: %d fps\n", duration,
-         skipped, i, (i-skipped)/duration);
-
-  }
-
-  gettimeofday(&frame_end, 0);
-  if (sync_fps(&frame_start, &frame_end) || skip_next) {
+  if (sync_fps(&frame_start) || skip_next) {
     gettimeofday(&frame_start, 0);
     DEBUG("skipping frame\n");
     skipped++;
@@ -994,6 +1010,14 @@ next_file:
 #endif
     goto next_file;
   }
+
+  if (i > FPS && (i % (15*FPS)) == 0) {
+    duration = i/FPS;
+    printf("%d seconds, %d frames skipped / %d: %d fps\n", duration,
+         skipped, i, (i-skipped)/duration);
+
+  }
+
 send:
   gettimeofday(&frame_start, 0);
 
@@ -1082,6 +1106,8 @@ close_last:
     printf("%d seconds, %d frames skipped / %d: %d fps\n", duration,
           skipped, i, (i-skipped)/duration);
   }
+  printf("avg sync duration %d\n", sync_duration);
+
   pthread_mutex_lock(&video_th_data->mutex);
   video_th_data->stop = 1;
   printf("vstop\n");
