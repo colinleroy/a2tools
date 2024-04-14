@@ -12,7 +12,11 @@ SOURCES := main.c raw-session.c \
 	../lib/serial/simple_serial_gets.c \
 	../lib/serial/simple_serial_printf.c \
 	../lib/serial/simple_serial_io.c \
-	../lib/malloc0.c ../lib/extended_conio.c ../lib/clrzone.c
+	../lib/malloc0.c \
+	../lib/extended_conio.c \
+	../lib/clrzone.c \
+	../lib/array_sort.c
+	
 
 hgrconv_SOURCES := hgr-convert.c helpers/hgr-convert.c
 

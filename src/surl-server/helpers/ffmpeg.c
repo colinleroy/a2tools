@@ -44,9 +44,28 @@
 /* Final buffer size, possibly including black borders */
 #define WIDTH 280
 #define HEIGHT 192
+#define WIDTH_STR "280"
+#define HEIGHT_STR "192"
 
-/* Video size */
-#define VIDEO_SIZE "140:96"
+/* Video size - the bigger, the less fps */
+
+// About 18 FPS
+// #define VIDEO_SIZE "140:96"
+// int pic_width = 140, pic_height = 96;
+
+// About 16 FPS
+#define VIDEO_SIZE "160:109"
+int pic_width = 160, pic_height = 109;
+
+// About 13 FPS
+// #define VIDEO_SIZE "200:137"
+// int pic_width = 200, pic_height = 137;
+
+// About 7 FPS
+// #define VIDEO_SIZE "280:192"
+// int pic_width = 280, pic_height = 192;
+
+int ditherer = 0; /* 0 = bayer 1 = burkes */
 
 #define GREYSCALE_TO_HGR 1
 
@@ -55,7 +74,7 @@ const char *video_filter_descr = /* Set frames per second to a known value */
                                  /* Scale to VIDEO_SIZE, respect aspect ratio, scale fast (no interpolation) */
                                  "scale="VIDEO_SIZE":force_original_aspect_ratio=decrease:flags=neighbor,"
                                  /* Pad in the middle of the HGR screen */
-                                 "pad=width=280:height=192:x=-1:y=-1,"
+                                 "pad=width="WIDTH_STR":height="HEIGHT_STR":x=-1:y=-1,"
                                  /* Add subtitles, bigger than necessary because anti-aliasing ruins legibility */
                                  "subtitles=force_style='Fontsize=15,Fontname=Print Char 21':filename=";
 
@@ -275,11 +294,14 @@ void ffmpeg_to_hgr_deinit(void) {
 
 static int frameno = 0;
 uint8_t out_buf[WIDTH*HEIGHT];
+uint8_t prev_buf[WIDTH*HEIGHT];
 
 static uint8_t *bayer_dither_frame(const AVFrame *frame, AVRational time_base, int progress)
 {
   int x, y;
   uint8_t *p0, *p, *out;
+  int bsx, bsy, bex, bey;
+
   static int x_offset = 0, y_offset = 0;
 
   // Ordered dither kernel
@@ -304,6 +326,11 @@ static uint8_t *bayer_dither_frame(const AVFrame *frame, AVRational time_base, i
   }
   memset(out_buf, 0, sizeof out_buf);
 
+  bsx = ((WIDTH - pic_width) / 2) - 2;
+  bex = ((WIDTH + pic_width) / 2) + 2;
+  bsy = ((HEIGHT - pic_height) / 2) - 2;
+  bey = ((HEIGHT + pic_height) / 2) + 2;
+
   /* Trivial ASCII grayscale display. */
   p0 = frame->data[0];
   out = out_buf + (y_offset * WIDTH);
@@ -324,8 +351,21 @@ static uint8_t *bayer_dither_frame(const AVFrame *frame, AVRational time_base, i
     p0 += frame->linesize[0];
     out += WIDTH - (frame->width + x_offset);
   }
-  /* Progress bar */
 
+  /* Border */
+  if (bsx > 0 && bex < WIDTH) {
+    for (x = bsx; x <= bex; x++) {
+      out_buf[bsy*WIDTH + x] = 255;
+      out_buf[bey*WIDTH + x] = 255;
+    }
+  }
+  if (bsy > 0 && bey < HEIGHT) {
+    for (x = bsy; x <= bey; x++) {
+      out_buf[(x)*WIDTH + bsx] = 255;
+      out_buf[(x)*WIDTH + bex] = 255;
+    }
+  }
+  /* Progress bar */
   for (x = 0; x < progress; x++) {
     out_buf[(HEIGHT-1)*WIDTH + x] = 255;
   }
@@ -340,8 +380,7 @@ static uint8_t *burkes_dither_frame(const AVFrame *frame, AVRational time_base, 
   static int x_offset = 0, y_offset = 0;
 #define ERR_X_OFF 2 //avoid special cases at start/end of line
   int error_table[192+5][280+5] = {0};
-  int threshold = 180;
-  int pic_width = 140, pic_height = 96;
+  int threshold = 128;
 
   frameno++;
 
@@ -364,7 +403,7 @@ static uint8_t *burkes_dither_frame(const AVFrame *frame, AVRational time_base, 
       goto skip_line;
     }
     for (x = 0; x < frame->width; x++) {
-      int current_error;
+      int current_error, time_stab_val;
 
       if (x < x_offset || x > x_offset + pic_width) {
         p++;
@@ -372,12 +411,19 @@ static uint8_t *burkes_dither_frame(const AVFrame *frame, AVRational time_base, 
         continue;
       }
 
-      if (threshold > *p + error_table[y][x+ERR_X_OFF]) {
+      /*
+       No stabilisation: 1605 avg (1263 data, 276 offset, 64 base)
+       1/2:              480 avg (275 data, 156 offset, 47 base)
+       2/3:              668 avg (404 data, 208 offset, 54 base)
+       3/5:              576 avg (341 data, 182 offset, 51 base)
+      */
+      time_stab_val = ((*p * 3) / 5) + ((prev_buf[y*WIDTH+x] * 2) / 5);
+      if (threshold > time_stab_val + error_table[y][x+ERR_X_OFF]) {
         *(out++) = 0;
-        current_error = *p + error_table[y][x + ERR_X_OFF];
+        current_error = time_stab_val + error_table[y][x + ERR_X_OFF];
       } else {
         *(out++) = 255;
-        current_error = *p + error_table[y][x + ERR_X_OFF] - 255;
+        current_error = time_stab_val + error_table[y][x + ERR_X_OFF] - 255;
       }
       error_table[y][x + 1 + ERR_X_OFF] += (int)(8.0L / 32.0L * current_error);
       error_table[y][x + 2 + ERR_X_OFF] += (int)(4.0L / 32.0L * current_error);
@@ -473,6 +519,10 @@ unsigned char *ffmpeg_convert_frame(int total_frames, int current_frame) {
     uint8_t *buf = NULL;
     int ret;
 
+    if (current_frame == 0) {
+      memset(prev_buf, 0, sizeof(prev_buf));
+    }
+
     if (total_frames > 0) {
       progress = WIDTH*current_frame / total_frames;
     }
@@ -515,7 +565,11 @@ unsigned char *ffmpeg_convert_frame(int total_frames, int current_frame) {
                         printf("Error: %s\n", av_err2str(ret));
                         goto end;
                     }
-                    buf = bayer_dither_frame(video_filt_frame, video_buffersink_ctx->inputs[0]->time_base, progress);
+                    if (ditherer == 0)
+                      buf = bayer_dither_frame(video_filt_frame, video_buffersink_ctx->inputs[0]->time_base, progress);
+                    else
+                      buf = burkes_dither_frame(video_filt_frame, video_buffersink_ctx->inputs[0]->time_base, progress);
+                    memcpy(prev_buf, buf, sizeof(prev_buf));
                     av_frame_unref(video_filt_frame);
                 }
                 av_frame_unref(video_frame);

@@ -28,7 +28,8 @@
 /* Set very high because it looks nicer to drop frames than to
  * artifact all the way
  */
-#define MAX_DIFFS_PER_FRAME 25000
+#define MAX_BYTES_PER_FRAME 900
+#define ACCEPT_ARTEFACT 0
 
 #define DOUBLE_BUFFER
 #ifdef DOUBLE_BUFFER
@@ -209,7 +210,7 @@ static void enqueue_byte(unsigned char b, FILE *fp) {
   }
   bytes_sent++;
   /* Video only ? */
-  if (fp == ttyfp) {
+  if (1) {
     changes_buffer[changes_num++] = b;
     return;
   }
@@ -228,9 +229,6 @@ static void send_base(unsigned char b, FILE *fp) {
     exit(1);
   }
   enqueue_byte(b|0x80, fp);
-  if (b == 0) {
-    flush_changes(fp);
-  }
   last_sent_base = b;
   base_bytes++;
 }
@@ -335,20 +333,11 @@ static int diff_score(unsigned char a, unsigned char b) {
   score += (a & 0x4) != (b & 0x4);
   score += (a & 0x2) != (b & 0x2);
   score += (a & 0x1) != (b & 0x1);
-  if ((a > 0x8) && (b < 0x10))
-    score += 10;
-  if ((b > 0x8) && (a < 0x10))
-    score += 10;
-
-  if (b && !a)
-    score += 20;
-  if (a && !b)
-    score += 20;
 
   return score;
 }
 
-#if 0
+#if ACCEPT_ARTEFACT
 static int sort_by_score(byte_diff *a, byte_diff *b) {
   return a->changed < b->changed;
 }
@@ -687,7 +676,7 @@ int surl_stream_video(char *url) {
   offset = cur_base = 0;
   send_offset(0, ttyfp);
   send_base(0, ttyfp);
-
+  flush_changes(ttyfp);
   i = 1;
   memset(buf_prev[0], 0, HGR_LEN);
   memset(buf_prev[1], 0, HGR_LEN);
@@ -713,6 +702,7 @@ next_file:
   offset = cur_base = 0;
   send_offset(0, ttyfp);
   send_base(0, ttyfp);
+  flush_changes(ttyfp);
 
   if (i > FPS && (i % (15*FPS)) == 0) {
     duration = i/FPS;
@@ -764,7 +754,7 @@ next_file:
   }
 
   last_val = -1;
-  for (j = 0; j < num_diffs && j < MAX_DIFFS_PER_FRAME; j++) {
+  for (j = 0; j < num_diffs; j++) {
     int pixel = diffs[j]->offset;
 
     offset = pixel - (cur_base*MAX_OFFSET);
@@ -981,7 +971,7 @@ next_file:
   send_offset(0, ttyfp2);
   send_base(0, ttyfp2);
   enqueue_byte(0xFF, ttyfp2); /* Switch page */
-  fflush(ttyfp2);
+  flush_changes(ttyfp2);
 
   if (i > FPS && (i % (15*FPS)) == 0) {
     duration = i/FPS;
@@ -1015,9 +1005,27 @@ send:
     }
   }
 
-  for (j = 0; j < num_diffs && j < MAX_DIFFS_PER_FRAME; j++) {
+#if ACCEPT_ARTEFACT
+  /* Sort by diff */
+  bubble_sort_array((void **)diffs, num_diffs, (sort_func)sort_by_score);
+
+  /* Keep every diff with 4 or more pixels changed */
+  for (j = 0; j < num_diffs; j++) {
+    if (diffs[j]->changed < 4 && j > MAX_BYTES_PER_FRAME)
+      break;
+  }
+  if (j < num_diffs)
+    num_diffs = j;
+
+  /* Sort the first ones by offset */
+  bubble_sort_array((void **)diffs, num_diffs,
+          (sort_func)sort_by_offset);
+#endif
+
+  for (j = 0; j < num_diffs; j++) {
     int pixel = diffs[j]->offset;
     int vidstop;
+
     pthread_mutex_lock(&video_th_data->mutex);
     vidstop = video_th_data->stop;
     pthread_mutex_unlock(&video_th_data->mutex);
@@ -1062,6 +1070,7 @@ send:
   goto next_file;
 
 close_last:
+  flush_changes(ttyfp2);
   if (i - skipped > 0) {
     printf("Max: %d, Min: %d, Average: %d\n", max, min, total / (i-skipped));
     printf("Sent %lu bytes for %d non-skipped frames: %lu avg (%lu data, %lu offset, %lu base)\n",

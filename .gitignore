@@ -42,3 +42,4 @@ history/
 *.deb
 *.ddeb
 src/kept-around
+*.gz
