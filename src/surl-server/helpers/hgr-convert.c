@@ -697,7 +697,7 @@ static void mono_dither_burkes(SDL_Surface* s) {
   Uint32 x, y;
   float **error_table;
   int threshold = 180;
-#define ERR_X_OFF 2
+#define ERR_X_OFF 2 //avoid special cases at start/end of line
   error_table = malloc(sizeof(float *) * (s->h + 5));
   for (y = 0; y < s->h + 5; y++) {
     error_table[y] = malloc(sizeof(float) * (s->w + 5));
