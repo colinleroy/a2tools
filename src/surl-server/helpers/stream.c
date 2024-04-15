@@ -283,8 +283,6 @@ static long lateness = 0;
 
 /* Returns 1 if client is late and we should skip frame */
 static int sync_duration = 0;
-static unsigned long syncs_done = 0;
-static unsigned long total_sync_duration = 0;
 
 #define UPDATE_SYNC_DURATION() do {                           \
   gettimeofday(&sync_end, 0);                                 \
@@ -294,8 +292,7 @@ static unsigned long total_sync_duration = 0;
   if (wait > 0) {                                             \
     elapsed -= wait;                                          \
   }                                                           \
-  total_sync_duration += elapsed;                             \
-  sync_duration = total_sync_duration / (++syncs_done);       \
+  sync_duration = elapsed;                                    \
 } while (0)
 
 static inline int sync_fps(struct timeval *start) {
@@ -645,8 +642,6 @@ int surl_stream_video(char *url) {
   int stop = 0;
   int err = 0;
 
-  total_sync_duration = syncs_done = 0;
-
   memset(th_data, 0, sizeof(decode_data));
   th_data->url = url;
   pthread_mutex_init(&th_data->mutex, NULL);
@@ -963,8 +958,6 @@ void *video_push(void *unused) {
   int skipped = 0, skip_next = 0, duration;
   int page = 0;
   int num_diffs = 0;
-
-  total_sync_duration = syncs_done = 0;
 
   i = 0;
   page = 1;
