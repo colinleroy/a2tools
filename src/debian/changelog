@@ -1,3 +1,9 @@
+a2tools (2.3.1.1) bionic; urgency=medium
+
+  * Better sync
+
+ -- Colin Leroy-Mira <colin@colino.net>  Mon, 15 Apr 2024 21:28:19 +0200
+
 a2tools (2.3.0.3) bionic; urgency=medium
 
   * New protocol (13)
