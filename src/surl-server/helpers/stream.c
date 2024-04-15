@@ -914,6 +914,8 @@ static void *audio_push(void *unused) {
         continue;
       }
     }
+
+    /* FIXME I should be able to sem_post */
     send_av_sample(audio_data[cur] * AV_MAX_LEVEL/audio_max);
     fflush(ttyfp);
     cur++;
@@ -990,6 +992,8 @@ next_file:
   enqueue_byte(0xFF, ttyfp2); /* Switch page */
   flush_changes(ttyfp2);
 
+  /* FIXME I should be able to sync with sem_wait() if it weren't
+   * for unpredicable buffering */
   if (sync_fps(&frame_start) || skip_next) {
     gettimeofday(&frame_start, 0);
     DEBUG("skipping frame\n");
