@@ -184,6 +184,8 @@ static int open_audio_file(char *filename)
     return 0;
 }
 
+int FPS = 24;
+
 static int init_video_filters(const char *filters_descr_fmt)
 {
     char args[512];
@@ -193,11 +195,27 @@ static int init_video_filters(const char *filters_descr_fmt)
     AVFilterInOut *outputs = avfilter_inout_alloc();
     AVFilterInOut *inputs  = avfilter_inout_alloc();
     AVRational time_base = video_fmt_ctx->streams[video_stream_index]->time_base;
+    AVRational fps_tb = video_fmt_ctx->streams[video_stream_index]->r_frame_rate;
+    double fps;
+
     enum AVPixelFormat pix_fmts[] = { AV_PIX_FMT_GRAY8, AV_PIX_FMT_NONE };
     char *filters_descr = malloc(strlen(filters_descr_fmt) * 2);
     float aspect_ratio = (float)video_dec_ctx->width / (float)video_dec_ctx->height;
 
-    printf("Original video %dx%d (%.2f)\n", video_dec_ctx->width, video_dec_ctx->height, aspect_ratio);
+    if (fps_tb.num > 0 && fps_tb.den > 0) {
+      fps = av_q2d(fps_tb);
+    } else {
+      fps = 24.0;
+    }
+
+    if (fps >= 30.0) {
+      FPS = 30;
+    } else {
+      FPS = 24;
+    }
+
+    printf("Original video %dx%d (%.2f), %.2ffps, doing %d fps\n", video_dec_ctx->width, video_dec_ctx->height, aspect_ratio,
+           fps, FPS);
 
     /* Get final resolution. We don't want too much "square pixels". */
     for (pic_width = HGR_WIDTH; pic_width > HGR_WIDTH/2; pic_width--) {
