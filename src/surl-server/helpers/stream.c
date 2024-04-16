@@ -9,6 +9,7 @@
 #include <pthread.h>
 #include <poll.h>
 #include <fcntl.h>
+#include <semaphore.h>
 
 #include "../surl_protocol.h"
 #include "simple_serial.h"
@@ -196,7 +197,7 @@ extern FILE *ttyfp;
 extern char *aux_tty_path;
 FILE *ttyfp2 = NULL;
 
-static void flush_changes(FILE *fp) {
+static void flush_video_bytes(FILE *fp) {
   if (changes_num == 0) {
     return;
   }
@@ -295,6 +296,16 @@ static int sync_duration = 0;
   sync_duration = elapsed;                                    \
 } while (0)
 
+static inline void check_duration(const char *str, struct timeval *start) {
+  struct timeval frame_end;
+  gettimeofday(&frame_end, 0);
+
+  unsigned long secs      = (frame_end.tv_sec - start->tv_sec)*1000000;
+  unsigned long microsecs = frame_end.tv_usec - start->tv_usec;
+  unsigned long elapsed   = secs + microsecs;
+  DEBUG("%s took %lu microsecs\n", str, elapsed);
+}
+
 static inline int sync_fps(struct timeval *start) {
   struct timeval frame_end, sync_start, sync_end;
   gettimeofday(&sync_start, 0);
@@ -369,7 +380,7 @@ static int sort_by_offset(byte_diff *a, byte_diff *b) {
 #endif
 
 static byte_diff **diffs = NULL;
-static int sample_rate = 115200 / (1+8+1);
+#define SAMPLE_RATE (115200 / (1+8+1))
 
 #define BUFFER_LEN    (60*10)
 #define SAMPLE_OFFSET 0x40
@@ -381,16 +392,28 @@ static int sample_rate = 115200 / (1+8+1);
 #define AV_END_OF_STREAM   (AV_MAX_LEVEL+1)
 
 #define send_sample(i) fputc((i) + SAMPLE_OFFSET, ttyfp)
-#define send_av_sample(i) fputc((i) + AV_SAMPLE_OFFSET, ttyfp)
+
+static int num_samples = 0;
+static unsigned char samples_buffer[SAMPLE_RATE];
+
+static inline void buffer_audio_sample(unsigned char i) {
+  samples_buffer[num_samples++] = i + AV_SAMPLE_OFFSET;
+}
+
+static inline void flush_audio_samples(void) {
+  fwrite((char *)samples_buffer, 1, num_samples, ttyfp);
+  fflush(ttyfp);
+  num_samples = 0;
+}
 
 static void send_end_of_stream(void) {
   send_sample(END_OF_STREAM);
   fflush(ttyfp);
 }
 
-static void send_end_of_av_stream(void) {
-  send_av_sample(AV_END_OF_STREAM);
-  fflush(ttyfp);
+static void send_end_of_audio_stream(void) {
+  buffer_audio_sample(AV_END_OF_STREAM);
+  flush_audio_samples();
 }
 
 void *ffmpeg_decode_snd(void *arg) {
@@ -451,7 +474,7 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
 
   memset(th_data, 0, sizeof(decode_data));
   th_data->url = url;
-  th_data->sample_rate = sample_rate;
+  th_data->sample_rate = SAMPLE_RATE;
   pthread_mutex_init(&th_data->mutex, NULL);
 
   printf("Starting decode thread (charset %s, monochrome %d, scale %d)\n", translit, monochrome, scale);
@@ -529,12 +552,12 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
 
   while (1) {
     pthread_mutex_lock(&th_data->mutex);
-    if (cur > sample_rate*(2*BUFFER_LEN)) {
+    if (cur > SAMPLE_RATE*(2*BUFFER_LEN)) {
       /* Avoid ever-expanding buffer */
-      memmove(th_data->data, th_data->data + sample_rate*BUFFER_LEN, sample_rate*BUFFER_LEN);
-      th_data->data = realloc(th_data->data, th_data->size - sample_rate*BUFFER_LEN);
-      th_data->size -= sample_rate*BUFFER_LEN;
-      cur -= sample_rate*BUFFER_LEN;
+      memmove(th_data->data, th_data->data + SAMPLE_RATE*BUFFER_LEN, SAMPLE_RATE*BUFFER_LEN);
+      th_data->data = realloc(th_data->data, th_data->size - SAMPLE_RATE*BUFFER_LEN);
+      th_data->size -= SAMPLE_RATE*BUFFER_LEN;
+      cur -= SAMPLE_RATE*BUFFER_LEN;
     }
     data = th_data->data;
     size = th_data->size;
@@ -568,15 +591,15 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
             break;
           case APPLE_CH_CURS_LEFT:
             printf("Rewind\n");
-            if (cur < sample_rate * 10) {
+            if (cur < SAMPLE_RATE * 10) {
               cur = 0;
             } else {
-              cur -= sample_rate * 10;
+              cur -= SAMPLE_RATE * 10;
             }
             break;
           case APPLE_CH_CURS_RIGHT:
-            if (cur + sample_rate * 10 < size) {
-              cur += sample_rate * 10;
+            if (cur + SAMPLE_RATE * 10 < size) {
+              cur += SAMPLE_RATE * 10;
             } else {
               cur = size;
             }
@@ -697,7 +720,7 @@ int surl_stream_video(char *url) {
   offset = cur_base = 0;
   send_offset(0, ttyfp);
   send_base(0, ttyfp);
-  flush_changes(ttyfp);
+  flush_video_bytes(ttyfp);
   i = 1;
   memset(buf_prev[0], 0, HGR_LEN);
   memset(buf_prev[1], 0, HGR_LEN);
@@ -737,7 +760,7 @@ next_file:
   offset = cur_base = 0;
   send_offset(0, ttyfp);
   send_base(0, ttyfp);
-  flush_changes(ttyfp);
+  flush_video_bytes(ttyfp);
 
   if (i > FPS && (i % (15*FPS)) == 0) {
     duration = i/FPS;
@@ -837,7 +860,7 @@ next_file:
 close_last:
   send_offset(0, ttyfp);
   send_base(NUM_BASES+2, ttyfp); /* Done */
-  flush_changes(ttyfp);
+  flush_video_bytes(ttyfp);
 
   /* Get rid of possible last ack */
   simple_serial_flush();
@@ -884,21 +907,25 @@ size_t audio_size = 0;
 size_t img_size = 0;
 int audio_ready = 0;
 
+sem_t av_sem;
 static void *audio_push(void *unused) {
   /* Audio vars */
   int num = 0;
   unsigned char c;
   size_t cur = 0;
   int stop;
+  struct timeval frame_start;
+
+  gettimeofday(&frame_start, 0);
 
   while (1) {
     pthread_mutex_lock(&audio_th_data->mutex);
-    if (cur > sample_rate*(2*BUFFER_LEN)) {
+    if (cur > SAMPLE_RATE*(2*BUFFER_LEN)) {
       /* Avoid ever-expanding buffer */
-      memmove(audio_th_data->data, audio_th_data->data + sample_rate*BUFFER_LEN, sample_rate*BUFFER_LEN);
-      audio_th_data->data = realloc(audio_th_data->data, audio_th_data->size - sample_rate*BUFFER_LEN);
-      audio_th_data->size -= sample_rate*BUFFER_LEN;
-      cur -= sample_rate*BUFFER_LEN;
+      memmove(audio_th_data->data, audio_th_data->data + SAMPLE_RATE*BUFFER_LEN, SAMPLE_RATE*BUFFER_LEN);
+      audio_th_data->data = realloc(audio_th_data->data, audio_th_data->size - SAMPLE_RATE*BUFFER_LEN);
+      audio_th_data->size -= SAMPLE_RATE*BUFFER_LEN;
+      cur -= SAMPLE_RATE*BUFFER_LEN;
     }
     audio_data = audio_th_data->data;
     audio_size = audio_th_data->size;
@@ -915,9 +942,13 @@ static void *audio_push(void *unused) {
       }
     }
 
-    /* FIXME I should be able to sem_post */
-    send_av_sample(audio_data[cur] * AV_MAX_LEVEL/audio_max);
-    fflush(ttyfp);
+    buffer_audio_sample(audio_data[cur] * AV_MAX_LEVEL/audio_max);
+    if (cur % (SAMPLE_RATE/FPS) == 0) {
+      check_duration("audio", &frame_start);
+      gettimeofday(&frame_start, 0);
+      flush_audio_samples();
+      sem_post(&av_sem);
+    }
     cur++;
 
     /* Kbd input polled directly for no wait at all */
@@ -960,9 +991,16 @@ void *video_push(void *unused) {
   int skipped = 0, skip_next = 0, duration;
   int page = 0;
   int num_diffs = 0;
+  int sem_val;
 
   i = 0;
   page = 1;
+
+
+  /* Fill cache */
+  read(vhgr_file, buf[page], HGR_LEN);
+  lseek(vhgr_file, 0, SEEK_SET);
+
   memset(buf_prev[0], 0x00, HGR_LEN);
   memset(buf_prev[1], 0x00, HGR_LEN);
   /* Send 30 full-black bytes first to make sure everything
@@ -990,11 +1028,15 @@ next_file:
   send_offset(0, ttyfp2);
   send_base(0, ttyfp2);
   enqueue_byte(0xFF, ttyfp2); /* Switch page */
-  flush_changes(ttyfp2);
+  flush_video_bytes(ttyfp2);
 
+  check_duration("video", &frame_start);
   /* FIXME I should be able to sync with sem_wait() if it weren't
    * for unpredicable buffering */
-  if (sync_fps(&frame_start) || skip_next) {
+  sem_wait(&av_sem);
+  sem_getvalue(&av_sem, &sem_val);
+
+  if (sem_val > 1 || skip_next) {
     gettimeofday(&frame_start, 0);
     DEBUG("skipping frame\n");
     skipped++;
@@ -1091,7 +1133,7 @@ send:
   goto next_file;
 
 close_last:
-  flush_changes(ttyfp2);
+  flush_video_bytes(ttyfp2);
   if (i - skipped > 0) {
     printf("Max: %d, Min: %d, Average: %d\n", max, min, total / (i-skipped));
     printf("Sent %lu bytes for %d non-skipped frames: %lu avg (%lu data, %lu offset, %lu base)\n",
@@ -1143,7 +1185,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
 
   memset(audio_th_data, 0, sizeof(decode_data));
   audio_th_data->url = url;
-  audio_th_data->sample_rate = sample_rate;
+  audio_th_data->sample_rate = SAMPLE_RATE;
   pthread_mutex_init(&audio_th_data->mutex, NULL);
 
   printf("Starting decode thread (charset %s, monochrome %d, scale %d)\n", translit, monochrome, scale);
@@ -1245,6 +1287,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
   sleep(1); /* Let ffmpeg have a bit of time to push data so we don't starve */
 
   audio_ready = 0;
+  sem_init(&av_sem, 0, 0);
   pthread_create(&audio_push_thread, NULL, *audio_push, NULL);
   pthread_create(&video_push_thread, NULL, *video_push, NULL);
   while (1) {
@@ -1256,6 +1299,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
       pthread_mutex_lock(&video_th_data->mutex);
       video_th_data->stop = 1;
       pthread_mutex_unlock(&video_th_data->mutex);
+      sem_post(&av_sem);
       pthread_join(audio_push_thread, NULL);
       pthread_join(video_push_thread, NULL);
       break;
@@ -1280,8 +1324,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
     fflush(ttyfp2);
 
   printf("done (cancelled: %d)\n", cancelled);
-  send_av_sample(AV_MAX_LEVEL/2);
-  send_end_of_av_stream();
+  send_end_of_audio_stream();
 
   do {
     c = simple_serial_getc();
