@@ -1010,8 +1010,8 @@ next_file:
 
   if (i > FPS && (i % (15*FPS)) == 0) {
     duration = i/FPS;
-    printf("%d seconds, %d frames skipped / %d: %d fps\n", duration,
-         skipped, i, (i-skipped)/duration);
+    printf("%d seconds, %d frames skipped / %d: %.2f fps\n", duration,
+         skipped, i, (float)(i-skipped)/duration);
 
   }
 
@@ -1100,8 +1100,8 @@ close_last:
   }
   if (i - skipped > FPS) {
     duration = i/FPS;
-    printf("%d seconds, %d frames skipped / %d: %d fps\n", duration,
-          skipped, i, (i-skipped)/duration);
+    printf("%d seconds, %d frames skipped / %d: %.2f fps\n", duration,
+          skipped, i, (float)(i-skipped)/duration);
   }
   printf("avg sync duration %d\n", sync_duration);
 
