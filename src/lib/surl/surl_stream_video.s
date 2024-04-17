@@ -20,6 +20,7 @@
         .import               _simple_serial_set_irq
         .import               _simple_serial_flush
         .import               _serial_putc_direct
+        .import               _sleep
 
 .ifdef IIGS
         .import         zilog_status_reg_r, zilog_data_reg_r
@@ -290,13 +291,17 @@ handle_kbd:
         rts                     ; Return to main loop
 
 cleanup:
+        lda     #$01
+        ldx     #$00
+        jsr     _sleep
+
         ; We're all done! Re-enable IRQs, and return.
+        plp
         lda     #$01
         jsr     _simple_serial_set_irq
         jsr     _simple_serial_flush
         lda     #$00
         tax
-        plp
         rts
 
         .data
