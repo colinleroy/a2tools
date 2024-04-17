@@ -218,7 +218,7 @@ static int init_video_filters(const char *filters_descr_fmt)
            fps, FPS);
 
     /* Get final resolution. We don't want too much "square pixels". */
-    for (pic_width = HGR_WIDTH; pic_width > HGR_WIDTH/2; pic_width--) {
+    for (pic_width = HGR_WIDTH; pic_width > HGR_WIDTH/4; pic_width--) {
       pic_height = pic_width / aspect_ratio;
       if (pic_width * pic_height < MAX_BYTES_PER_FRAME * 8) {
         break;
@@ -524,10 +524,11 @@ end:
 }
 
 uint8_t hgr[0x2000];
-unsigned char *ffmpeg_convert_frame(int total_frames, int current_frame) {
+unsigned char *ffmpeg_convert_frame(decode_data *data, int total_frames, int current_frame) {
     int progress = 0;
     uint8_t *buf = NULL;
     int ret;
+    int first = 1;
 
     if (current_frame == 0) {
       memset(prev_buf, 0, sizeof(prev_buf));
@@ -575,6 +576,15 @@ unsigned char *ffmpeg_convert_frame(int total_frames, int current_frame) {
                         printf("Error: %s\n", av_err2str(ret));
                         goto end;
                     }
+
+                    if (first && current_frame == 0) {
+                      AVRational time_base = video_fmt_ctx->streams[video_stream_index]->time_base;
+                      data->pts = (float)video_filt_frame->pts * 1000.0 * av_q2d(time_base);
+                      first = 0;
+                      printf("video frame pts %ld duration %ld timebase %d/%d %f\n",
+                      data->pts, video_filt_frame->pkt_duration, time_base.num, time_base.den, av_q2d(time_base));
+                    }
+
                     if (ditherer == 0)
                       buf = bayer_dither_frame(video_filt_frame, video_buffersink_ctx->inputs[0]->time_base, progress);
                     else
@@ -737,6 +747,7 @@ int ffmpeg_to_raw_snd(decode_data *data) {
     const AVDictionaryEntry *tag = NULL;
     const AVCodec *vdec;
     char has_video = 0;
+    int first = 1;
 
     audio_frame = av_frame_alloc();
     audio_filt_frame = av_frame_alloc();
@@ -826,12 +837,13 @@ int ffmpeg_to_raw_snd(decode_data *data) {
                     break;
                 } else if (ret == AVERROR_EOF) {
                   printf("Last frame...\n");
-                  goto push;
                 } else if (ret < 0) {
                     printf("Error while receiving a frame from the decoder\n");
                     goto end;
                 }
-push:
+
+                audio_frame->pts = audio_frame->best_effort_timestamp;
+
                 if (ret >= 0) {
                     /* push the audio data from decoded frame into the filtergraph */
                     if (av_buffersrc_add_frame_flags(audio_buffersrc_ctx, audio_frame, AV_BUFFERSRC_FLAG_KEEP_REF) < 0) {
@@ -846,6 +858,14 @@ push:
                             break;
                         if (ret < 0)
                             goto end;
+
+                        if (first) {
+                          AVRational time_base = audio_fmt_ctx->streams[audio_stream_index]->time_base;
+                          data->pts = (float)audio_filt_frame->pts * 1000.0 * av_q2d(time_base);
+                          first = 0;
+                          printf("audio frame pts %ld duration %ld timebase %d/%d %f\n",
+                          data->pts, audio_filt_frame->pkt_duration, time_base.num, time_base.den, av_q2d(time_base));
+                        }
 
                         pthread_mutex_lock(&data->mutex);
                         if (data->stop) {

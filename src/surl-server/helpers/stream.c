@@ -105,7 +105,7 @@ static void *generate_frames(void *th_data) {
   pthread_mutex_unlock(&data->mutex);
 
   gettimeofday(&decode_start, 0);
-  while ((buf = ffmpeg_convert_frame(video_len*FPS, frameno)) != NULL) {
+  while ((buf = ffmpeg_convert_frame(data, video_len*FPS, frameno)) != NULL) {
     if (write(vhgr_file, buf, HGR_LEN) != HGR_LEN) {
       printf("Could not write data\n");
       close(vhgr_file);
@@ -341,7 +341,7 @@ static inline int sync_fps(struct timeval *start) {
   }
 
   /* More than two frame late? */
-  if (lateness > 2*(1000000/FPS)) {
+  if (lateness > (1000000/FPS)) {
     UPDATE_SYNC_DURATION();
     return 1;
   } else {
@@ -401,6 +401,11 @@ static inline void buffer_audio_sample(unsigned char i) {
 }
 
 static inline void flush_audio_samples(void) {
+  /* Use the simplest possible way to write audio.
+   * fflush will lie and return too early as long as the
+   * tty buffer is not full, but we'll count on that to
+   * stabilize in a few frames.
+   */
   fwrite((char *)samples_buffer, 1, num_samples, ttyfp);
   fflush(ttyfp);
   num_samples = 0;
@@ -655,7 +660,7 @@ int surl_stream_video(char *url) {
   size_t r;
   unsigned char buf_prev[2][HGR_LEN], buf[2][HGR_LEN];
   struct timeval frame_start;
-  int skipped = 0, skip_next = 0, duration;
+  int skipped = 0, duration;
   int command, page = 0;
   int num_diffs = 0;
   int vhgr_file;
@@ -717,35 +722,25 @@ int surl_stream_video(char *url) {
 
   memset(changes_buffer, 0, sizeof changes_buffer);
 
-  offset = cur_base = 0;
-  send_offset(0, ttyfp);
-  send_base(0, ttyfp);
-  flush_video_bytes(ttyfp);
-  i = 1;
-  memset(buf_prev[0], 0, HGR_LEN);
-  memset(buf_prev[1], 0, HGR_LEN);
-
+  i = 0;
   page = 1;
 
-  gettimeofday(&frame_start, 0);
+  /* Fill cache */
+  read(vhgr_file, buf[page], HGR_LEN);
+  lseek(vhgr_file, 0, SEEK_SET);
+
+  memset(buf_prev[0], 0x00, HGR_LEN);
+  memset(buf_prev[1], 0x00, HGR_LEN);
+  /* Send 30 full-black bytes first to make sure everything
+  * started client-side (but don't change the first one) */
+  memset(buf_prev[1] + 1, 0x7F, 30);
+
+  memset(buf[page], 0x00, HGR_LEN);
+  goto send;
+
 next_file:
   i++;
   page = !page;
-
-  if (sync_fps(&frame_start) || skip_next) {
-    gettimeofday(&frame_start, 0);
-    DEBUG("skipping frame\n");
-    skipped++;
-#ifdef DOUBLE_BUFFER
-    if (!skip_next) {
-      skip_next = 1;
-    } else {
-      skip_next = 0;
-    }
-#endif
-    goto next_file;
-  }
-  gettimeofday(&frame_start, 0);
 
   if ((r = read(vhgr_file, buf[page], HGR_LEN)) != HGR_LEN) {
     goto close_last;
@@ -755,6 +750,18 @@ next_file:
   last_diff = 0;
   cur_base = 0;
   ident_vals = 0;
+
+
+  if (sync_fps(&frame_start)) {
+    gettimeofday(&frame_start, 0);
+    DEBUG("skipping frame\n");
+    skipped++;
+    page = !page;
+    goto next_file;
+  }
+
+send:
+  gettimeofday(&frame_start, 0);
 
   /* Sync point - force a switch to base 0 */
   offset = cur_base = 0;
@@ -783,7 +790,6 @@ next_file:
         goto close_last;
       printf("Play.\n");
       lateness = 0;
-      skip_next = 0;
       break;
   }
 
@@ -838,6 +844,9 @@ next_file:
       ident_vals = 1;
     }
     last_val = buf[page][pixel];
+    if (last_val & 0x80) {
+      printf("wrong val\n");
+    }
 
     last_diff = pixel;
 
@@ -947,6 +956,7 @@ static void *audio_push(void *unused) {
       check_duration("audio", &frame_start);
       gettimeofday(&frame_start, 0);
       flush_audio_samples();
+      /* Signal video thread to push a frame */
       sem_post(&av_sem);
     }
     cur++;
@@ -988,14 +998,13 @@ void *video_push(void *unused) {
   size_t r;
   unsigned char buf_prev[2][HGR_LEN], buf[2][HGR_LEN];
   struct timeval frame_start;
-  int skipped = 0, skip_next = 0, duration;
+  int skipped = 0, duration;
   int page = 0;
   int num_diffs = 0;
   int sem_val;
 
   i = 0;
   page = 1;
-
 
   /* Fill cache */
   read(vhgr_file, buf[page], HGR_LEN);
@@ -1012,11 +1021,22 @@ void *video_push(void *unused) {
 
 next_file:
   i++;
-  page = !page;
 
   if ((r = read(vhgr_file, buf[page], HGR_LEN)) != HGR_LEN) {
     printf("Starved!\n");
     goto close_last;
+  }
+
+  check_duration("video", &frame_start);
+
+  /* Wait for audio thread signal that we can push a frame */
+  sem_wait(&av_sem);
+  sem_getvalue(&av_sem, &sem_val);
+
+  if (sem_val > 1) {
+    gettimeofday(&frame_start, 0);
+    skipped++;
+    goto next_file;
   }
 
   /* count diffs */
@@ -1029,26 +1049,7 @@ next_file:
   send_base(0, ttyfp2);
   enqueue_byte(0xFF, ttyfp2); /* Switch page */
   flush_video_bytes(ttyfp2);
-
-  check_duration("video", &frame_start);
-  /* FIXME I should be able to sync with sem_wait() if it weren't
-   * for unpredicable buffering */
-  sem_wait(&av_sem);
-  sem_getvalue(&av_sem, &sem_val);
-
-  if (sem_val > 1 || skip_next) {
-    gettimeofday(&frame_start, 0);
-    DEBUG("skipping frame\n");
-    skipped++;
-#ifdef DOUBLE_BUFFER
-    if (!skip_next) {
-      skip_next = 1;
-    } else {
-      skip_next = 0;
-    }
-#endif
-    goto next_file;
-  }
+  page = !page;
 
   if (i > FPS && (i % (15*FPS)) == 0) {
     duration = i/FPS;
@@ -1286,6 +1287,40 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
   audio_max = 256;
   sleep(1); /* Let ffmpeg have a bit of time to push data so we don't starve */
 
+  pthread_mutex_lock(&audio_th_data->mutex);
+  if (audio_th_data->pts < video_th_data->pts) {
+    long cut_ms = video_th_data->pts - audio_th_data->pts;
+    long cut_samples = cut_ms * SAMPLE_RATE / 1000;
+    printf("Audio starts early (A %ld V %ld), cutting %ld\n", audio_th_data->pts, video_th_data->pts, cut_samples);
+    memmove(audio_th_data->data, audio_th_data->data + cut_samples, audio_th_data->size - cut_samples);
+    audio_th_data->data = realloc(audio_th_data->data, audio_th_data->size - cut_samples);
+    audio_th_data->size -= cut_samples;
+  }
+
+  if (audio_th_data->pts > video_th_data->pts) {
+    long add_ms = audio_th_data->pts - video_th_data->pts;
+    long add_samples = add_ms * SAMPLE_RATE / 1000;
+    printf("Audio starts late (A %ld V %ld)\n", audio_th_data->pts, video_th_data->pts);
+    audio_th_data->data = realloc(audio_th_data->data, audio_th_data->size + add_samples);
+    memmove(audio_th_data->data, audio_th_data->data + add_samples, audio_th_data->size);
+    memset(audio_th_data->data, 128, add_samples);
+    audio_th_data->size += add_samples;
+  }
+
+  if (audio_th_data->pts == video_th_data->pts) {
+    printf("Audio starts same as video (A %ld V %ld)\n", audio_th_data->pts, video_th_data->pts);
+  }
+
+  /* Add one frame of silence so we can start posting first video frame on time */
+  {
+    long add_samples = SAMPLE_RATE / FPS;
+    audio_th_data->data = realloc(audio_th_data->data, audio_th_data->size + add_samples);
+    memmove(audio_th_data->data, audio_th_data->data + add_samples, audio_th_data->size);
+    memset(audio_th_data->data, 128, add_samples);
+    audio_th_data->size += add_samples;
+  }
+  pthread_mutex_unlock(&audio_th_data->mutex);
+
   audio_ready = 0;
   sem_init(&av_sem, 0, 0);
   pthread_create(&audio_push_thread, NULL, *audio_push, NULL);
@@ -1299,6 +1334,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
       pthread_mutex_lock(&video_th_data->mutex);
       video_th_data->stop = 1;
       pthread_mutex_unlock(&video_th_data->mutex);
+      /* Signal video thread so it can stop */
       sem_post(&av_sem);
       pthread_join(audio_push_thread, NULL);
       pthread_join(video_push_thread, NULL);
