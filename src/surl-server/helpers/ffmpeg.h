@@ -7,7 +7,6 @@ extern int FPS;
 
 int ffmpeg_to_hgr_init(char *filename, int *video_len, char subtitles);
 void ffmpeg_to_hgr_deinit(void);
-unsigned char *ffmpeg_convert_frame(int total_frames, int current_frame);
 
 typedef struct _decode_data {
   pthread_mutex_t mutex;
@@ -35,8 +34,12 @@ typedef struct _decode_data {
   char *album;
   char *title;
   char *track;
+
+  /* sync */
+  long pts;
 } decode_data;
 
 int ffmpeg_to_raw_snd(decode_data *data);
+unsigned char *ffmpeg_convert_frame(decode_data *data, int total_frames, int current_frame);
 
 #endif
