@@ -269,6 +269,9 @@ static void send_byte(unsigned char b, FILE *fp) {
 }
 
 static void flush_ident(int min_reps, int ident_vals, int last_val, FILE *fp) {
+  if (last_val == -1) {
+    return;
+  }
   if (ident_vals > min_reps) {
     send_num_reps(ident_vals, fp);
     send_byte(last_val, fp);
