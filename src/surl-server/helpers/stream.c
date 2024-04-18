@@ -229,7 +229,7 @@ static void send_base(unsigned char b, FILE *fp) {
     printf("Base error! Should not!\n");
     exit(1);
   }
-  enqueue_byte(b|0x80, fp);
+  enqueue_byte(b, fp);
   last_sent_base = b;
   base_bytes++;
 }
@@ -241,14 +241,14 @@ static void send_offset(unsigned char o, FILE *fp) {
     printf("Offset error! Should not!\n");
     exit(1);
   }
-  enqueue_byte(o|0x80, fp);
+  enqueue_byte(o, fp);
 
   last_sent_offset = o;
   offset_bytes++;
 }
 static void send_num_reps(unsigned char b, FILE *fp) {
   DEBUG("  => %d * ", b);
-  enqueue_byte(0xFF, fp);
+  enqueue_byte(0x7F, fp);
   if ((b & 0x80) != 0) {
     printf("Reps error! Should not!\n");
     exit(1);
@@ -263,7 +263,7 @@ static void send_byte(unsigned char b, FILE *fp) {
     printf("Byte error! Should not!\n");
     exit(1);
   }
-  enqueue_byte(b, fp);
+  enqueue_byte(b|0x80, fp);
 
   data_bytes++;
 }
@@ -1017,6 +1017,8 @@ void *video_push(void *unused) {
   memset(buf_prev[1] + 1, 0x7F, 30);
 
   memset(buf[page], 0x00, HGR_LEN);
+
+  offset = cur_base = 0x100;
   goto send;
 
 next_file:
@@ -1041,13 +1043,9 @@ next_file:
 
   /* count diffs */
   last_diff = 0;
-  cur_base = 0;
 
   /* Sync point - force a switch to base 0 */
-  offset = cur_base = 0;
-  send_offset(0, ttyfp2);
-  send_base(0, ttyfp2);
-  enqueue_byte(0xFF, ttyfp2); /* Switch page */
+  enqueue_byte(0x7F, ttyfp2); /* Switch page */
   flush_video_bytes(ttyfp2);
   page = !page;
 
@@ -1102,7 +1100,7 @@ send:
     /* If there's no hole in updated bytes, we can let offset
      * increment up to 255 */
     if ((offset >= MAX_OFFSET && pixel != last_diff+1)
-      || offset > 255) {
+      || offset > 255 || offset < 0) {
       /* we have to update base */
       cur_base = pixel / MAX_OFFSET;
       offset = pixel - (cur_base*MAX_OFFSET);
@@ -1112,6 +1110,7 @@ send:
       send_offset(offset, ttyfp2);
       send_base(cur_base, ttyfp2);
     } else if (pixel != last_diff+1) {
+      DEBUG("send offset %d (base is %d)\n", offset, cur_base);
       /* We have to send offset */
       send_offset(offset, ttyfp2);
     }

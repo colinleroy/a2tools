@@ -140,8 +140,8 @@ ss0:    lda     $FFFF           ; serial status
         beq     ss0
 sd0:    lda     $FFFF           ; serial data (14 cycles since loop)
 
-        bpl     store_dest      ; It's a value, store it
-        cmp     #$FF            ; Is it a rep?
+        bmi     store_dest      ; It's a value, store it
+        cmp     #$7F            ; Is it a rep?
         bne     set_offset      ; No, so it's an offset
 
 do_rep:
@@ -186,13 +186,12 @@ ss3:    lda     $FFFF           ; serial status
         and     #HAS_BYTE
         beq     ss3
 sd3:    lda     $FFFF           ; serial data
-        bpl     store_dest      ; It's a value
+        bmi     store_dest      ; It's a value
 
 set_base:                       ; We have a new base (or rep maybe)
-        cmp     #$FF            ; Is it a rep? It can be.
+        cmp     #$7F            ; Is it a rep? It can be.
         beq     do_rep          ; Go handle repetition
 
-        and     #%01111111      ; Get rid of the sign
         asl     a               ; Shift for array index
 
         bne     :+              ; If base is 0, it's a new frame.
