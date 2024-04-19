@@ -307,6 +307,11 @@ static inline void check_duration(const char *str, struct timeval *start) {
   unsigned long microsecs = frame_end.tv_usec - start->tv_usec;
   unsigned long elapsed   = secs + microsecs;
   DEBUG("%s took %lu microsecs\n", str, elapsed);
+
+  /* For emulation */
+  if (!strcmp(str,"audio") && elapsed < 1000) {
+    usleep((1000000/FPS)-elapsed);
+  }
 }
 
 static inline int sync_fps(struct timeval *start) {
@@ -1038,19 +1043,23 @@ next_file:
   sem_wait(&av_sem);
   sem_getvalue(&av_sem, &sem_val);
 
+  if (changes_num > 0) {
+    /* Sync point */
+    enqueue_byte(0x7F, ttyfp2); /* Switch page */
+    flush_video_bytes(ttyfp2);
+  }
+
   if (sem_val > 1) {
     gettimeofday(&frame_start, 0);
     skipped++;
     goto next_file;
   }
 
+  page = !page;
+
   /* count diffs */
   last_diff = 0;
 
-  /* Sync point - force a switch to base 0 */
-  enqueue_byte(0x7F, ttyfp2); /* Switch page */
-  flush_video_bytes(ttyfp2);
-  page = !page;
 
   if (i > FPS && (i % (15*FPS)) == 0) {
     duration = i/FPS;
