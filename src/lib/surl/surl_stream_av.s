@@ -55,11 +55,12 @@ got_offset    = _zp9            ; byte
 next          = _zp10           ; word
 page          = _zp12           ; byte
 has_byte_zp   = _zp13           ; byte
+
 store_dest    = ptr1            ; word
-zp_zero       = tmp1            ; byte
-zp_vflag      = tmp2            ; byte
 page_ptr_low  = ptr3            ; word
 page_ptr_high = ptr4            ; word
+zp_zero       = tmp1            ; byte
+zp_vflag      = tmp2            ; byte
 
 ; Used to cross page
 VD_PAGE_OFFSET = 254
@@ -356,18 +357,6 @@ VD_PAGE_OFFSET = 254
         .byte   $00
 .endmacro
 
-.macro KBD_LOAD_13              ; Check keyboard and jsr if key pressed (trashes A)
-        lda     KBD             ; 4
-        sta     KBDSTRB         ; 8
-        cmp     #($1B|$80)      ; 10 - Escape?
-        bne     :+              ; 12/13
-        and     #$7F            ;
-        jsr     _serial_putc_direct
-        jmp     break_out
-:
-
-.endmacro
-
 .macro ____SPKR_DUTY____4       ; Toggle speaker
         sta     SPKR            ; 4
 .endmacro
@@ -479,11 +468,9 @@ vd0b:   ldy     $98FF           ; 39     load video data
         jmp     video_direct    ; 42=>75 handle video byte
 
 no_vid0b:                       ;        we had no video byte second try
-        WASTE_3                 ; 39     waste cycles
-ad0b:   ldx     $A8FF           ; 43     load audio data register again
-        stx     next+1          ; 46     store next duty cycle destination
-        KBD_LOAD_13             ; 59     handle keyboard
-        WASTE_10                ; 69     waste extra cycles
+ad0b:   ldx     $A8FF           ; 40     load audio data register again
+        stx     next+1          ; 43     store next duty cycle destination
+        WASTE_26                ; 69     waste extra cycles
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
@@ -627,8 +614,7 @@ vd1b:   ldy     $98FF           ; 39
 no_vid1b:
 ad1b:   ldx     $A8FF           ; 40
         stx     next+1          ; 43
-        KBD_LOAD_13             ; 56
-        WASTE_13                ; 69
+        WASTE_26                ; 69     waste extra cycles
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
@@ -692,8 +678,7 @@ vd2b:   ldy     $98FF           ; 39
 no_vid2b:
 ad2b:   ldx     $A8FF           ; 40
         stx     next+1          ; 43
-        KBD_LOAD_13             ; 56
-        WASTE_13                ; 69
+        WASTE_26                ; 69     waste extra cycles
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
@@ -809,8 +794,7 @@ vd3b:   ldy     $98FF           ; 39
 no_vid3b:
 ad3b:   ldx     $A8FF           ; 40
         stx     next+1          ; 43
-        KBD_LOAD_13             ; 56
-        WASTE_13                ; 69
+        WASTE_26                ; 69     waste extra cycles
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
@@ -908,8 +892,7 @@ vd4b:   ldy     $98FF           ; 39
 no_vid4b:
 ad4b:   ldx     $A8FF           ; 40
         stx     next+1          ; 43
-        KBD_LOAD_13             ; 56
-        WASTE_13                ; 69
+        WASTE_26                ; 69     waste extra cycles
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
@@ -1007,17 +990,18 @@ vd5b:   ldy     $98FF           ; 39
 no_vid5b:
 ad5b:   ldx     $A8FF           ; 40
         stx     next+1          ; 43
-        KBD_LOAD_13             ; 56
-        WASTE_13                ; 69
+        WASTE_26                ; 69     waste extra cycles
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
 audio_status_patches:
                 .word ass
+                .word asp
                 .word $0000
 
 audio_data_patches:
                 .word ads
+                .word adp
                 .word ad0
                 .word ad0b
                 .word ad1
@@ -1099,6 +1083,21 @@ vd6:    ldy     $98FF           ; 26
         WASTE_10                ; 39
         jmp     video_direct    ; 42=>75 (takes 33 cycles, jumps to next)
 
+no_vid6:
+        ABS_STX next+1          ; 27 stx absolute
+vs6b:   lda     $99FF           ; 31
+        and     #HAS_BYTE       ; 33
+        beq     no_vid6b        ; 35/36
+vd6b:   ldy     $98FF           ; 39
+        jmp     video_direct    ; 42=>75 (takes 33 cycles, jumps to next)
+
+no_vid6b:
+ad6b:   ldx     $A8FF           ; 40
+        stx     next+1          ; 43
+        WASTE_26                ; 69     waste extra cycles
+        CYCLE_TWEAKER
+        jmp     (next)          ; 75     jump to next duty cycle
+
 ; --------------------------------------------------------------
 duty_start:
         ; Init cycle destination
@@ -1120,22 +1119,6 @@ vss:    lda     $99FF
 vds:    ldy     $98FF
         jmp     video_direct
 ; --------------------------------------------------------------
-
-no_vid6:
-        ABS_STX next+1          ; 27 stx absolute
-vs6b:   lda     $99FF           ; 31
-        and     #HAS_BYTE       ; 33
-        beq     no_vid6b        ; 35/36
-vd6b:   ldy     $98FF           ; 39
-        jmp     video_direct    ; 42=>75 (takes 33 cycles, jumps to next)
-
-no_vid6b:
-ad6b:   ldx     $A8FF           ; 40
-        stx     next+1          ; 43
-        KBD_LOAD_13             ; 56
-        WASTE_13                ; 69
-        CYCLE_TWEAKER
-        jmp     (next)          ; 75     jump to next duty cycle
 
 .align 256
 .assert * = _SAMPLES_BASE + $700, error
@@ -1163,8 +1146,7 @@ vd7b:   ldy     $98FF           ; 39
 no_vid7b:
 ad7b:   ldx     $A8FF           ; 40
         stx     next+1          ; 43
-        KBD_LOAD_13             ; 56
-        WASTE_13                ; 69
+        WASTE_26                ; 69     waste extra cycles
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
@@ -1194,8 +1176,7 @@ vd8b:   ldy     $98FF           ; 39
 no_vid8b:
 ad8b:   ldx     $A8FF           ; 40
         stx     next+1          ; 43
-        KBD_LOAD_13             ; 56
-        WASTE_13                ; 69
+        WASTE_26                ; 69     waste extra cycles
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
@@ -1226,8 +1207,7 @@ vd9b:   ldy     $98FF           ; 39
 no_vid9b:
 ad9b:   ldx     $A8FF           ; 40
         stx     next+1          ; 43
-        KBD_LOAD_13             ; 56
-        WASTE_13                ; 69
+        WASTE_26                ; 69     waste extra cycles
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
@@ -1257,8 +1237,7 @@ vd10b:  ldy     $98FF           ; 39
 no_vid10b:
 ad10b:  ldx     $A8FF           ; 40
         stx     next+1          ; 43
-        KBD_LOAD_13             ; 56
-        WASTE_13                ; 69
+        WASTE_26                ; 69     waste extra cycles
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
@@ -1289,8 +1268,7 @@ vd11b:  ldy     $98FF           ; 39
 no_vid11b:
 ad11b:  ldx     $A8FF           ; 40
         stx     next+1          ; 43
-        KBD_LOAD_13             ; 56
-        WASTE_13                ; 69
+        WASTE_26                ; 69     waste extra cycles
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
@@ -1321,8 +1299,7 @@ vd12b:  ldy     $98FF           ; 39
 no_vid12b:
 ad12b:  ldx     $A8FF           ; 40
         stx     next+1          ; 43
-        KBD_LOAD_13             ; 56
-        WASTE_13                ; 69
+        WASTE_26                ; 69     waste extra cycles
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
@@ -1353,8 +1330,7 @@ vd13b:  ldy     $98FF           ; 39
 no_vid13b:
 ad13b:  ldx     $A8FF           ; 40
         stx     next+1          ; 43
-        KBD_LOAD_13             ; 56
-        WASTE_13                ; 69
+        WASTE_26                ; 69     waste extra cycles
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
@@ -1386,8 +1362,7 @@ vd14b:  ldy     $98FF           ; 39
 no_vid14b:
 ad14b:  ldx     $A8FF           ; 40
         stx     next+1          ; 43
-        KBD_LOAD_13             ; 56
-        WASTE_13                ; 69
+        WASTE_26                ; 69     waste extra cycles
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
@@ -1419,8 +1394,7 @@ vd15b:  ldy     $98FF           ; 39
 no_vid15b:
 ad15b:  ldx     $A8FF           ; 40
         stx     next+1          ; 43
-        KBD_LOAD_13             ; 56
-        WASTE_13                ; 69
+        WASTE_26                ; 69     waste extra cycles
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
@@ -1451,8 +1425,7 @@ vd16b:  ldy     $98FF           ; 39
 no_vid16b:
 ad16b:  ldx     $A8FF           ; 40
         stx     next+1          ; 43
-        KBD_LOAD_13             ; 56
-        WASTE_13                ; 69
+        WASTE_26                ; 69     waste extra cycles
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
@@ -1483,8 +1456,7 @@ vd17b:  ldy     $98FF           ; 39
 no_vid17b:
 ad17b:  ldx     $A8FF           ; 40
         stx     next+1          ; 43
-        KBD_LOAD_13             ; 56
-        WASTE_13                ; 69
+        WASTE_26                ; 69     waste extra cycles
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
@@ -1515,8 +1487,7 @@ vd18b:  ldy     $98FF           ; 39
 no_vid18b:
 ad18b:  ldx     $A8FF           ; 40
         stx     next+1          ; 43
-        KBD_LOAD_13             ; 56
-        WASTE_13                ; 69
+        WASTE_26                ; 69     waste extra cycles
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
@@ -1548,8 +1519,7 @@ vd19b:  ldy     $98FF           ; 39
 no_vid19b:
 ad19b:  ldx     $A8FF           ; 40
         stx     next+1          ; 43
-        KBD_LOAD_13             ; 56
-        WASTE_13                ; 69
+        WASTE_26                ; 69     waste extra cycles
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
@@ -1581,8 +1551,7 @@ vd20b:  ldy     $98FF           ; 39
 no_vid20b:
 ad20b:  ldx     $A8FF           ; 40
         stx     next+1          ; 43
-        KBD_LOAD_13             ; 56
-        WASTE_13                ; 69
+        WASTE_26                ; 69     waste extra cycles
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
@@ -1614,8 +1583,7 @@ vd21b:  ldy     $98FF           ; 39
 no_vid21b:
 ad21b:  ldx     $A8FF           ; 40
         stx     next+1          ; 43
-        KBD_LOAD_13             ; 56
-        WASTE_13                ; 69
+        WASTE_26                ; 69     waste extra cycles
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
@@ -1647,8 +1615,7 @@ vd22b:  ldy     $98FF           ; 39
 no_vid22b:
 ad22b:  ldx     $A8FF           ; 37
         stx     next+1          ; 40
-        KBD_LOAD_13             ; 53
-        WASTE_16                ; 69
+        WASTE_29                ; 69
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
@@ -1680,8 +1647,7 @@ vd23b:  ldy     $98FF           ; 39
 no_vid23b:
 ad23b:  ldx     $A8FF           ; 40
         stx     next+1          ; 43
-        KBD_LOAD_13             ; 56
-        WASTE_13                ; 69
+        WASTE_26                ; 69     waste extra cycles
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
@@ -1715,10 +1681,23 @@ no_vid24b:
         ____SPKR_DUTY____4      ; 32
 ad24b:  ldx     $A8FF           ; 36
         stx     next+1          ; 39
-        KBD_LOAD_13             ; 52
-        WASTE_17                ; 69
-        CYCLE_TWEAKER
+        ldx     KBD             ; 43    keyboard handling
+        bpl     nokbd           ; 45/46
+        sta     KBDSTRB         ; 49
+asp:    lda     $FFFF           ; 53    check serial tx empty
+        and     #$10            ; 55
+        beq     noser           ; 57/58
+        txa                     ; 59
+        and     #$7F            ; 61     clear high bit
+adp:    sta     $FFFF           ; 65     send
+        cmp     #$1B            ; 67
+        beq     out             ; 69/70  if escape, exit forcefully
         jmp     (next)          ; 75     jump to next duty cycle
+noser:  WASTE_11                ; 69
+        jmp     (next)          ; 75     jump to next duty cycle
+nokbd:  WASTE_23                ; 69
+        jmp     (next)          ; 75     jump to next duty cycle
+out:    jmp     break_out
 
 .align 256
 .assert * = _SAMPLES_BASE + $1900, error
@@ -1749,8 +1728,7 @@ no_vid25b:
         ____SPKR_DUTY____4      ; 33
 ad25b:  ldx     $A8FF           ; 37
         stx     next+1          ; 40
-        KBD_LOAD_13             ; 53
-        WASTE_16                ; 69
+        WASTE_29                ; 69
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
@@ -1783,8 +1761,7 @@ no_vid26b:
         ____SPKR_DUTY____5      ; 34
 ad26b:  ldx     $A8FF           ; 38
         stx     next+1          ; 41
-        KBD_LOAD_13             ; 54
-        WASTE_15                ; 69
+        WASTE_28                ; 69     waste extra cycles
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
@@ -1817,8 +1794,7 @@ no_vid27b:
         ____SPKR_DUTY____4      ; 35
 ad27b:  ldx     $A8FF           ; 39
         stx     next+1          ; 42
-        KBD_LOAD_13             ; 55
-        WASTE_14                ; 69
+        WASTE_27                ; 69     waste extra cycles
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
@@ -1852,8 +1828,7 @@ no_vid28b:
         ____SPKR_DUTY____4      ; 36
 ad28b:  ldx     $A8FF           ; 40
         stx     next+1          ; 43
-        KBD_LOAD_13             ; 56
-        WASTE_13                ; 69
+        WASTE_26                ; 69     waste extra cycles
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
@@ -1888,8 +1863,7 @@ no_vid29b:
         ____SPKR_DUTY____4      ; 37
 ad29b:  ldx     $A8FF           ; 41
         stx     next+1          ; 44
-        KBD_LOAD_13             ; 57
-        WASTE_12                ; 69
+        WASTE_25                ; 69     waste extra cycles
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
@@ -1917,8 +1891,7 @@ no_vid30b:
         ____SPKR_DUTY____4      ; 38
 ad30b:  ldx     $A8FF           ; 42
         stx     next+1          ; 45
-        KBD_LOAD_13             ; 58
-        WASTE_11                ; 69
+        WASTE_24                ; 69     waste extra cycles
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
@@ -2024,8 +1997,7 @@ no_vid31b:
         ____SPKR_DUTY____4      ; 39
 ad31b:  ldx     $A8FF           ; 43
         stx     next+1          ; 46
-        KBD_LOAD_13             ; 59
-        WASTE_10                ; 69
+        WASTE_23                ; 69     waste extra cycles
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
