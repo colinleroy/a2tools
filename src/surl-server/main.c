@@ -1354,7 +1354,7 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
       simple_serial_putc(SURL_ANSWER_WAIT);
     }
   } else {
-    printf("Unsupported method 0x%02x\n", method);
+    printf("Unsupported method 0x%02x (url %s)\n", method, url);
     curlbuf->response_code = 500;
     curlbuf->size = 0;
     curlbuf->content_type = strdup("application/octet-stream");
