@@ -74,7 +74,6 @@ wozamp$(suffix).dsk: $(wozamp_disk_PROGS)
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
-	cp $@ ~/Documents/ADTPro-2.1.0/disks/; \
 	cp $@ dist/; \
 
 wozampperso$(suffix).dsk: $(wozamp_disk_PROGS)
@@ -86,7 +85,6 @@ wozampperso$(suffix).dsk: $(wozamp_disk_PROGS)
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
-	cp $@ ~/Documents/ADTPro-2.1.0/disks/;
 
 stp$(suffix).dsk: $(stp_disk_PROGS)
 	cp $(CLEANDISK) $@; \
@@ -96,7 +94,6 @@ stp$(suffix).dsk: $(stp_disk_PROGS)
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
-	cp $@ ~/Documents/ADTPro-2.1.0/disks/; \
 	cp $@ dist/; \
 
 stpperso$(suffix).dsk: $(stp_disk_PROGS)
@@ -108,7 +105,6 @@ stpperso$(suffix).dsk: $(stp_disk_PROGS)
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
-	cp $@ ~/Documents/ADTPro-2.1.0/disks/;
 
 telnet$(suffix).dsk: $(telnet_disk_PROGS)
 	cp $(CLEANDISK) $@; \
@@ -118,7 +114,6 @@ telnet$(suffix).dsk: $(telnet_disk_PROGS)
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
-	cp $@ ~/Documents/ADTPro-2.1.0/disks/; \
 	cp $@ dist/; \
 
 homectrl$(suffix).dsk: $(homectrl_disk_PROGS)
@@ -129,7 +124,6 @@ homectrl$(suffix).dsk: $(homectrl_disk_PROGS)
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
-	cp $@ ~/Documents/ADTPro-2.1.0/disks/; \
 	cp $@ dist/; \
 
 homectrlperso$(suffix).dsk: $(homectrl_disk_PROGS)
@@ -141,7 +135,6 @@ homectrlperso$(suffix).dsk: $(homectrl_disk_PROGS)
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
-	cp $@ ~/Documents/ADTPro-2.1.0/disks/;
 
 mastoperso$(suffix).dsk: $(mastodon_disk_PROGS)
 	cp $(CLEANDISK) $@; \
@@ -153,7 +146,6 @@ mastoperso$(suffix).dsk: $(mastodon_disk_PROGS)
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
-	cp $@ ~/Documents/ADTPro-2.1.0/disks/;
 
 mastodon$(suffix).dsk: $(mastodon_disk_PROGS)
 	cp $(CLEANDISK) $@; \
@@ -163,7 +155,6 @@ mastodon$(suffix).dsk: $(mastodon_disk_PROGS)
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
-	cp $@ ~/Documents/ADTPro-2.1.0/disks/; \
 	cp $@ dist/; \
 
 quicktake$(suffix).dsk: $(quicktake_disk_PROGS)
@@ -177,7 +168,6 @@ quicktake$(suffix).dsk: $(quicktake_disk_PROGS)
 	for img in $(quicktake_disk_IMGS); do \
 		java -jar bin/ac.jar -p $@ $$(basename $$img) BIN 0x2000 < $$img; \
 	done
-	cp $@ ~/Documents/ADTPro-2.1.0/disks/; \
 	cp $@ dist/; \
 
 imageviewer$(suffix).dsk: $(imageviewer_disk_PROGS)
@@ -188,7 +178,6 @@ imageviewer$(suffix).dsk: $(imageviewer_disk_PROGS)
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
-	cp $@ ~/Documents/ADTPro-2.1.0/disks/; \
 	cp $@ dist/; \
 
 doc-dist:
