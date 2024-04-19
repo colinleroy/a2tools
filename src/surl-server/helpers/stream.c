@@ -983,6 +983,8 @@ static void *audio_push(void *unused) {
           case SURL_METHOD_ABORT:
             printf("Connection reset\n");
             goto abort;
+          default:
+            printf("key '%02X'\n", c);
         }
       }
     }
