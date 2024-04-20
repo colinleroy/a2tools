@@ -53,11 +53,13 @@ int main(void) {
   reopen_start_device();
 
   init_hgr(1);
-  hgr_mixoff();
+  hgr_mixon();
 
   clrscr();
   gotoxy(0, 20);
-  cputs("Still loading");
+  cputs("Loading\r\n\r\n"
+        "Controls: Space: play/pause, Esc: quit\r\n"
+        "          Left/Right: rewind/forward");
 
 read_metadata_again:
   if (kbhit()) {
@@ -92,18 +94,20 @@ read_metadata_again:
   } else if (r == SURL_ANSWER_STREAM_LOAD) {
     hgr_mixon();
     cputs("...");
-    simple_serial_putc(SURL_CLIENT_READY);
+    if (kbhit() && cgetc() == CH_ESC)
+      simple_serial_putc(SURL_METHOD_ABORT);
+    else
+      simple_serial_putc(SURL_CLIENT_READY);
     goto read_metadata_again;
 
   } else if (r == SURL_ANSWER_STREAM_START) {
     hgr_mixoff();
     surl_stream_av();
     init_text();
-    // clrzone(0, 20, scrw - 1, 23);
-    // stp_print_footer();
   } else {
     init_text();
-    // gotoxy(center_x, 10);
+    clrscr();
+    gotoxy(13, 10);
     cputs("Playback error");
     sleep(1);
   }
