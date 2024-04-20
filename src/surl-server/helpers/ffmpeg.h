@@ -37,6 +37,8 @@ typedef struct _decode_data {
 
   /* sync */
   long pts;
+  long decode_remaining;
+  long max_seekable;
 } decode_data;
 
 int ffmpeg_to_raw_snd(decode_data *data);
