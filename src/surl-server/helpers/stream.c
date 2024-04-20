@@ -398,6 +398,8 @@ static byte_diff **diffs = NULL;
 #define AV_SAMPLE_OFFSET 0x60
 #define AV_MAX_LEVEL       31
 #define AV_END_OF_STREAM   (AV_MAX_LEVEL+1)
+#define AV_KBD_LOAD_LEVEL  15
+#define AV_KBD_SEND_LEVEL  16
 
 #define send_sample(i) fputc((i) + SAMPLE_OFFSET, ttyfp)
 
@@ -927,10 +929,9 @@ int audio_ready = 0;
 sem_t av_sem;
 static void *audio_push(void *unused) {
   /* Audio vars */
-  int num = 0;
   unsigned char c;
   size_t cur = 0;
-  int stop;
+  int stop, pause = 0, pause_level;
   struct timeval frame_start;
 
   gettimeofday(&frame_start, 0);
@@ -959,16 +960,26 @@ static void *audio_push(void *unused) {
       }
     }
 
-    buffer_audio_sample(audio_data[cur] * AV_MAX_LEVEL/audio_max);
-    if (cur % (SAMPLE_RATE/FPS) == 0) {
-      check_duration("audio", &frame_start);
-      gettimeofday(&frame_start, 0);
+    if (!pause) {
+      buffer_audio_sample(audio_data[cur] * AV_MAX_LEVEL/audio_max);
+      if (cur % (SAMPLE_RATE/FPS) == 0) {
+        check_duration("audio", &frame_start);
+        gettimeofday(&frame_start, 0);
+        flush_audio_samples();
+        /* Signal video thread to push a frame */
+        sem_post(&av_sem);
+      }
+      cur++;
+    } else {
+      /* During pause, we have to drive client in the duty
+       * cycles where it handles the keyboard. */
+      buffer_audio_sample(pause_level);
       flush_audio_samples();
-      /* Signal video thread to push a frame */
-      sem_post(&av_sem);
+      if (pause_level == AV_KBD_LOAD_LEVEL)
+        pause_level = AV_KBD_SEND_LEVEL;
+      else
+        pause_level = AV_KBD_LOAD_LEVEL;
     }
-    cur++;
-
     /* Kbd input polled directly for no wait at all */
     {
       struct pollfd fds[1];
@@ -983,12 +994,16 @@ static void *audio_push(void *unused) {
           case SURL_METHOD_ABORT:
             printf("Connection reset\n");
             goto abort;
+          case ' ':
+            /* Pause */
+            pause = !pause;
+            pause_level = AV_KBD_LOAD_LEVEL;
+            break;
           default:
             printf("key '%02X'\n", c);
         }
       }
     }
-    num++;
   }
   return NULL;
 abort:
