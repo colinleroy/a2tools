@@ -106,6 +106,7 @@ static void *generate_frames(void *th_data) {
 
   gettimeofday(&decode_start, 0);
   while ((buf = ffmpeg_convert_frame(data, video_len*FPS, frameno)) != NULL) {
+    unsigned long usecs_per_frame, remaining_frames, done_len, remaining_len;
     if (write(vhgr_file, buf, HGR_LEN) != HGR_LEN) {
       printf("Could not write data\n");
       close(vhgr_file);
@@ -117,16 +118,26 @@ static void *generate_frames(void *th_data) {
       break;
     }
     frameno++;
+
+    gettimeofday(&cur_time, 0);
+    secs      = (cur_time.tv_sec - decode_start.tv_sec)*1000000;
+    microsecs = cur_time.tv_usec - decode_start.tv_usec;
+    elapsed   = secs + microsecs;
+
+    usecs_per_frame = elapsed / frameno;
+    remaining_frames = video_len*FPS - frameno;
+    remaining_len = remaining_frames * usecs_per_frame;
+    done_len = frameno / FPS;
+
     if (frameno % 100 == 0) {
-      printf("%d frames decoded...\n", frameno);
+      printf("decoded %d frames (%lus) in %lus, remaining %lu frames, should take %lus\n",
+            frameno, done_len, elapsed/1000000, remaining_frames, remaining_len/1000000);
     }
     pthread_mutex_lock(&data->mutex);
+    data->decode_remaining = remaining_frames;
+    data->max_seekable = frameno/2;
+
     if (frameno == FPS * PREDECODE_SECS) {
-      gettimeofday(&cur_time, 0);
-      secs      = (cur_time.tv_sec - decode_start.tv_sec)*1000000;
-      microsecs = cur_time.tv_usec - decode_start.tv_usec;
-      elapsed   = secs + microsecs;
-      printf("Decoded %d seconds in %luµs\n", PREDECODE_SECS, elapsed);
       if (elapsed / 1000000 > PREDECODE_SECS / 3) {
         printf("decoding too slow, not starting early\n");
         decode_slow = 1;
@@ -134,23 +145,8 @@ static void *generate_frames(void *th_data) {
         data->data_ready = 1;
       }
     } else if (decode_slow) {
-      unsigned long usecs_per_frame, remaining_frames, done_len, remaining_len;
       /* We can start streaming as soon as what is remaining should
        * take less than the time we already spent decoding */
-      gettimeofday(&cur_time, 0);
-      secs      = (cur_time.tv_sec - decode_start.tv_sec)*1000000;
-      microsecs = cur_time.tv_usec - decode_start.tv_usec;
-      elapsed   = secs + microsecs;
-
-      usecs_per_frame = elapsed / frameno;
-      remaining_frames = video_len*FPS - frameno;
-      remaining_len = remaining_frames * usecs_per_frame;
-      done_len = frameno / FPS;
-
-      if (frameno % 100 == 0) {
-        printf("decoded %d frames (%lus) in %lus, remaining %lu frames, should take %lus\n",
-              frameno, done_len, elapsed/1000000, remaining_frames, remaining_len/1000000);
-      }
       if ((remaining_len/1000000)/2 < done_len) {
         data->data_ready = 1;
         decode_slow = 0;
@@ -181,6 +177,8 @@ static void *generate_frames(void *th_data) {
   }
 
   pthread_mutex_lock(&data->mutex);
+  data->decode_remaining = 0;
+  data->max_seekable = frameno;
   data->data_ready = 1;
   data->decoding_end = 1;
   data->decoding_ret = 0;
@@ -925,6 +923,7 @@ int audio_max = 0;
 size_t audio_size = 0;
 size_t img_size = 0;
 int audio_ready = 0;
+int vhgr_file;
 
 sem_t av_sem;
 static void *audio_push(void *unused) {
@@ -994,6 +993,41 @@ static void *audio_push(void *unused) {
           case SURL_METHOD_ABORT:
             printf("Connection reset\n");
             goto abort;
+          case APPLE_CH_CURS_LEFT:
+            if (cur < SAMPLE_RATE * 10) {
+              cur = 0;
+            } else {
+              cur -= SAMPLE_RATE * 10;
+            }
+            printf("Rewind to sample %ld\n", cur);
+            if (cur % SAMPLE_RATE) {
+              cur = cur - cur % SAMPLE_RATE;
+              printf("Fixed to %ld\n", cur);
+            }
+            printf("Seek video to %ld frames (%ld bytes)\n", (cur/SAMPLE_RATE)*FPS, (cur/SAMPLE_RATE)*FPS*HGR_LEN);
+            lseek(vhgr_file, (cur/SAMPLE_RATE)*FPS*HGR_LEN, SEEK_SET);
+            break;
+          case APPLE_CH_CURS_RIGHT:
+            if (cur + SAMPLE_RATE * 10 < audio_size) {
+              cur += SAMPLE_RATE * 10;
+            } else {
+              cur = audio_size;
+            }
+            printf("Forward to sample %ld\n", cur);
+            if (cur % SAMPLE_RATE) {
+              cur = cur - cur % SAMPLE_RATE;
+              printf("Fixed to %ld\n", cur);
+            }
+            pthread_mutex_lock(&video_th_data->mutex);
+            if (video_th_data->max_seekable < (cur/SAMPLE_RATE)*FPS) {
+              cur = (video_th_data->max_seekable / FPS) * SAMPLE_RATE;
+              printf("Cannot skip so far, skipping to %ld samples (frame %ld)\n",
+                     cur, video_th_data->max_seekable);
+            }
+            pthread_mutex_unlock(&video_th_data->mutex);
+            printf("Seek video to %ld frames (%ld bytes)\n", (cur/SAMPLE_RATE)*FPS, (cur/SAMPLE_RATE)*FPS*HGR_LEN);
+            lseek(vhgr_file, (cur/SAMPLE_RATE)*FPS*HGR_LEN, SEEK_SET);
+            break;
           case ' ':
             /* Pause */
             pause = !pause;
@@ -1013,8 +1047,6 @@ abort:
   pthread_mutex_unlock(&audio_th_data->mutex);
   return NULL;
 }
-
-int vhgr_file;
 
 void *video_push(void *unused) {
   int i, j;
