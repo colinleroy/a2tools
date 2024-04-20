@@ -412,10 +412,13 @@ VD_PAGE_OFFSET = 254
 ;    - Check video byte again,
 ;    - If there is one, jump to video handler,
 ; - Otherwise,
-;    - Handle keyboard input,
 ;    - Load audio byte again,
 ;    - Waste (a lot) of cycles,
 ;    - Jump to the next duty cycle.
+;
+; Keyboard handling is cycle-expensive, so it is done in two parts. Reading
+; the keyboard in cycle 15, sending command in cycle 16. These cycles, being
+; in the middle, are, hopefully, called multiple hundreds of time per second.
 ;
 ; The video handler has one code path where cycles are wasted, in which
 ; the next audio byte is loaded again so we lose less. It is responsible
@@ -1394,7 +1397,14 @@ vd15b:  ldy     $98FF           ; 39
 no_vid15b:
 ad15b:  ldx     $A8FF           ; 40
         stx     next+1          ; 43
-        WASTE_26                ; 69     waste extra cycles
+        lda     KBD             ; 47     keyboard handling
+        bpl     nokbd           ; 49/50
+        sta     KBDSTRB         ; 51
+        and     #$7F            ; 53     clear high byte
+        sta     cmd             ; 57     store cmd for sending
+        WASTE_12                ; 69
+        jmp     (next)          ; 75     jump to next duty cycle
+nokbd:  WASTE_19                ; 69
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
@@ -1423,11 +1433,26 @@ vd16b:  ldy     $98FF           ; 39
         jmp     video_direct    ; 42=>75 (takes 33 cycles, jumps to next)
 
 no_vid16b:
-ad16b:  ldx     $A8FF           ; 40
-        stx     next+1          ; 43
-        WASTE_26                ; 69     waste extra cycles
-        CYCLE_TWEAKER
+        ldx     cmd             ; 40    check if we have a command
+        beq     nocmd           ; 42/43
+asp:    lda     $FFFF           ; 46    check serial tx empty
+        and     #$10            ; 48
+        beq     noser           ; 50/51
+        txa                     ; 52
+adp:    sta     $FFFF           ; 56     send cmd
+        cmp     #$1B            ; 58
+        beq     out             ; 60/61  if escape, exit forcefully
+        stz     cmd             ; 64
+        WASTE_5                 ; 69
         jmp     (next)          ; 75     jump to next duty cycle
+noser:  WASTE_18                ; 69
+        jmp     (next)          ; 75     jump to next duty cycle
+nocmd:
+ad16b:  ldx     $A8FF           ; 47
+        stx     next+1          ; 50
+        WASTE_19                ; 69
+        jmp     (next)          ; 75     jump to next duty cycle
+out:    jmp     break_out
 
 .align 256
 .assert * = _SAMPLES_BASE + $1100, error
@@ -1681,23 +1706,8 @@ no_vid24b:
         ____SPKR_DUTY____4      ; 32
 ad24b:  ldx     $A8FF           ; 36
         stx     next+1          ; 39
-        ldx     KBD             ; 43    keyboard handling
-        bpl     nokbd           ; 45/46
-        sta     KBDSTRB         ; 49
-asp:    lda     $FFFF           ; 53    check serial tx empty
-        and     #$10            ; 55
-        beq     noser           ; 57/58
-        txa                     ; 59
-        and     #$7F            ; 61     clear high bit
-adp:    sta     $FFFF           ; 65     send
-        cmp     #$1B            ; 67
-        beq     out             ; 69/70  if escape, exit forcefully
+        WASTE_30                ; 69
         jmp     (next)          ; 75     jump to next duty cycle
-noser:  WASTE_11                ; 69
-        jmp     (next)          ; 75     jump to next duty cycle
-nokbd:  WASTE_23                ; 69
-        jmp     (next)          ; 75     jump to next duty cycle
-out:    jmp     break_out
 
 .align 256
 .assert * = _SAMPLES_BASE + $1900, error
@@ -2031,3 +2041,6 @@ page_addr_ptr:  .byte >(page2_addrs_arr_low)   ; Base addresses pointer for page
                 .byte >(page1_addrs_arr_low)   ; Base addresses pointer for page 1
 
 abs_vflag:      .byte $40
+
+        .bss
+cmd:            .res 1
