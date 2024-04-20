@@ -60,6 +60,7 @@ int main(void) {
   cputs("Loading\r\n\r\n"
         "Controls: Space: play/pause, Esc: quit\r\n"
         "          Left/Right: rewind/forward");
+  gotoxy(7, 20); /* strlen("Loading") */
 
 read_metadata_again:
   if (kbhit()) {

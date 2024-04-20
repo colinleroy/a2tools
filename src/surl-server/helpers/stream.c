@@ -397,7 +397,6 @@ static byte_diff **diffs = NULL;
 #define AV_MAX_LEVEL       31
 #define AV_END_OF_STREAM   (AV_MAX_LEVEL+1)
 #define AV_KBD_LOAD_LEVEL  15
-#define AV_KBD_SEND_LEVEL  16
 
 #define send_sample(i) fputc((i) + SAMPLE_OFFSET, ttyfp)
 
@@ -930,7 +929,7 @@ static void *audio_push(void *unused) {
   /* Audio vars */
   unsigned char c;
   size_t cur = 0;
-  int stop, pause = 0, pause_level;
+  int stop, pause = 0;
   struct timeval frame_start;
 
   gettimeofday(&frame_start, 0);
@@ -972,12 +971,8 @@ static void *audio_push(void *unused) {
     } else {
       /* During pause, we have to drive client in the duty
        * cycles where it handles the keyboard. */
-      buffer_audio_sample(pause_level);
+      buffer_audio_sample(AV_KBD_LOAD_LEVEL);
       flush_audio_samples();
-      if (pause_level == AV_KBD_LOAD_LEVEL)
-        pause_level = AV_KBD_SEND_LEVEL;
-      else
-        pause_level = AV_KBD_LOAD_LEVEL;
     }
     /* Kbd input polled directly for no wait at all */
     {
@@ -1031,7 +1026,6 @@ static void *audio_push(void *unused) {
           case ' ':
             /* Pause */
             pause = !pause;
-            pause_level = AV_KBD_LOAD_LEVEL;
             break;
           default:
             printf("key '%02X'\n", c);

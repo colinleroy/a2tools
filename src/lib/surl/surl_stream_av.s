@@ -331,11 +331,6 @@ VD_PAGE_OFFSET = 254
         WASTE_9
 .endmacro
 
-.macro CYCLE_TWEAKER ; For checking various cycle length
-        ; Waste nothing
-        ; WASTE_10
-.endmacro
-
 ; Hack to waste 1 cycle. Use absolute stx with $00nn
 .macro ABS_STX  zpvar
         .byte   $8E             ; stx absolute
@@ -416,13 +411,12 @@ VD_PAGE_OFFSET = 254
 ;    - Waste (a lot) of cycles,
 ;    - Jump to the next duty cycle.
 ;
-; Keyboard handling is cycle-expensive, so it is done in two parts. Reading
-; the keyboard in cycle 15, sending command in cycle 16. These cycles, being
-; in the middle, are, hopefully, called multiple hundreds of time per second.
+; Keyboard handling is cycle-expensive and can't be macroized properly, so
+; reading the keyboard in cycle 15. This cycle, being in the middle, is,
+; hopefully, called multiple hundreds of time per second.
 ;
-; The video handler has one code path where cycles are wasted, in which
-; the next audio byte is loaded again so we lose less. It is responsible
-; for jumping directly to the next duty cycle once the video byte is handled.
+; The video handler is responsible for jumping directly to the next duty
+; cycle once the video byte is handled.
 ;
 ; As a rule of thumb, no bytes are dropped if we check for video byte around
 ; cycles 12-20 and 24-31.
@@ -474,7 +468,6 @@ no_vid0b:                       ;        we had no video byte second try
 ad0b:   ldx     $A8FF           ; 40     load audio data register again
         stx     next+1          ; 43     store next duty cycle destination
         WASTE_26                ; 69     waste extra cycles
-        CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
 ; -----------------------------------------------------------------
@@ -618,7 +611,6 @@ no_vid1b:
 ad1b:   ldx     $A8FF           ; 40
         stx     next+1          ; 43
         WASTE_26                ; 69     waste extra cycles
-        CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
 patch_addresses:                ; Patch all registers in ptr1 array with A
@@ -682,7 +674,6 @@ no_vid2b:
 ad2b:   ldx     $A8FF           ; 40
         stx     next+1          ; 43
         WASTE_26                ; 69     waste extra cycles
-        CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
 patch_serial_registers:
@@ -798,7 +789,6 @@ no_vid3b:
 ad3b:   ldx     $A8FF           ; 40
         stx     next+1          ; 43
         WASTE_26                ; 69     waste extra cycles
-        CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
 video_status_patches:
@@ -896,7 +886,6 @@ no_vid4b:
 ad4b:   ldx     $A8FF           ; 40
         stx     next+1          ; 43
         WASTE_26                ; 69     waste extra cycles
-        CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
 video_data_patches:
@@ -994,7 +983,6 @@ no_vid5b:
 ad5b:   ldx     $A8FF           ; 40
         stx     next+1          ; 43
         WASTE_26                ; 69     waste extra cycles
-        CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
 audio_status_patches:
@@ -1098,7 +1086,6 @@ no_vid6b:
 ad6b:   ldx     $A8FF           ; 40
         stx     next+1          ; 43
         WASTE_26                ; 69     waste extra cycles
-        CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
 ; --------------------------------------------------------------
@@ -1150,7 +1137,6 @@ no_vid7b:
 ad7b:   ldx     $A8FF           ; 40
         stx     next+1          ; 43
         WASTE_26                ; 69     waste extra cycles
-        CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
 .align $100
@@ -1180,7 +1166,6 @@ no_vid8b:
 ad8b:   ldx     $A8FF           ; 40
         stx     next+1          ; 43
         WASTE_26                ; 69     waste extra cycles
-        CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
 
@@ -1211,7 +1196,6 @@ no_vid9b:
 ad9b:   ldx     $A8FF           ; 40
         stx     next+1          ; 43
         WASTE_26                ; 69     waste extra cycles
-        CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
 .align $100
@@ -1241,7 +1225,6 @@ no_vid10b:
 ad10b:  ldx     $A8FF           ; 40
         stx     next+1          ; 43
         WASTE_26                ; 69     waste extra cycles
-        CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
 
@@ -1272,7 +1255,6 @@ no_vid11b:
 ad11b:  ldx     $A8FF           ; 40
         stx     next+1          ; 43
         WASTE_26                ; 69     waste extra cycles
-        CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
 
@@ -1303,7 +1285,6 @@ no_vid12b:
 ad12b:  ldx     $A8FF           ; 40
         stx     next+1          ; 43
         WASTE_26                ; 69     waste extra cycles
-        CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
 .align $100
@@ -1334,7 +1315,6 @@ no_vid13b:
 ad13b:  ldx     $A8FF           ; 40
         stx     next+1          ; 43
         WASTE_26                ; 69     waste extra cycles
-        CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
 .align $100
@@ -1366,7 +1346,6 @@ no_vid14b:
 ad14b:  ldx     $A8FF           ; 40
         stx     next+1          ; 43
         WASTE_26                ; 69     waste extra cycles
-        CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
 .align $100
@@ -1395,18 +1374,27 @@ vd15b:  ldy     $98FF           ; 39
         jmp     video_direct    ; 42=>75 (takes 33 cycles, jumps to next)
 
 no_vid15b:
-ad15b:  ldx     $A8FF           ; 40
-        stx     next+1          ; 43
-        lda     KBD             ; 47     keyboard handling
-        bpl     nokbd           ; 49/50
-        sta     KBDSTRB         ; 51
-        and     #$7F            ; 53     clear high byte
-        sta     cmd             ; 57     store cmd for sending
-        WASTE_12                ; 69
+        ldx     KBD             ; 40    keyboard handling
+        bpl     nokbd           ; 42/43
+        sta     KBDSTRB         ; 46    we have a key, clear strobe
+asp:    lda     $FFFF           ; 50    check serial tx empty
+        and     #$10            ; 52
+        beq     noser           ; 54/55
+        txa                     ; 56
+        and     #$7F            ; 58
+adp:    sta     $FFFF           ; 62     send cmd
+        cmp     #$1B            ; 64
+        beq     out             ; 66/65  if escape, exit forcefully
+        WASTE_3                 ; 69
         jmp     (next)          ; 75     jump to next duty cycle
-nokbd:  WASTE_19                ; 69
-        CYCLE_TWEAKER
+nokbd:
+ad15b:  ldx     $A8FF           ; 47
+        stx     next+1          ; 50
+        WASTE_19                ; 69
         jmp     (next)          ; 75     jump to next duty cycle
+noser:  WASTE_14                ; 69
+        jmp     (next)          ; 75     jump to next duty cycle
+out:    jmp     break_out
 
 .align $100
 .assert * = _SAMPLES_BASE + $1000, error
@@ -1433,26 +1421,10 @@ vd16b:  ldy     $98FF           ; 39
         jmp     video_direct    ; 42=>75 (takes 33 cycles, jumps to next)
 
 no_vid16b:
-        ldx     cmd             ; 40    check if we have a command
-        beq     nocmd           ; 42/43
-asp:    lda     $FFFF           ; 46    check serial tx empty
-        and     #$10            ; 48
-        beq     noser           ; 50/51
-        txa                     ; 52
-adp:    sta     $FFFF           ; 56     send cmd
-        cmp     #$1B            ; 58
-        beq     out             ; 60/61  if escape, exit forcefully
-        stz     cmd             ; 64
-        WASTE_5                 ; 69
+ad16b:  ldx     $A8FF           ; 40
+        stx     next+1          ; 43
+        WASTE_26                ; 69
         jmp     (next)          ; 75     jump to next duty cycle
-noser:  WASTE_18                ; 69
-        jmp     (next)          ; 75     jump to next duty cycle
-nocmd:
-ad16b:  ldx     $A8FF           ; 47
-        stx     next+1          ; 50
-        WASTE_19                ; 69
-        jmp     (next)          ; 75     jump to next duty cycle
-out:    jmp     break_out
 
 .align $100
 .assert * = _SAMPLES_BASE + $1100, error
@@ -1482,7 +1454,6 @@ no_vid17b:
 ad17b:  ldx     $A8FF           ; 40
         stx     next+1          ; 43
         WASTE_26                ; 69     waste extra cycles
-        CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
 .align $100
@@ -1513,7 +1484,6 @@ no_vid18b:
 ad18b:  ldx     $A8FF           ; 40
         stx     next+1          ; 43
         WASTE_26                ; 69     waste extra cycles
-        CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
 .align $100
@@ -1545,7 +1515,6 @@ no_vid19b:
 ad19b:  ldx     $A8FF           ; 40
         stx     next+1          ; 43
         WASTE_26                ; 69     waste extra cycles
-        CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
 .align $100
@@ -1577,7 +1546,6 @@ no_vid20b:
 ad20b:  ldx     $A8FF           ; 40
         stx     next+1          ; 43
         WASTE_26                ; 69     waste extra cycles
-        CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
 .align $100
@@ -1609,7 +1577,6 @@ no_vid21b:
 ad21b:  ldx     $A8FF           ; 40
         stx     next+1          ; 43
         WASTE_26                ; 69     waste extra cycles
-        CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
 .align $100
@@ -1641,7 +1608,6 @@ no_vid22b:
 ad22b:  ldx     $A8FF           ; 37
         stx     next+1          ; 40
         WASTE_29                ; 69
-        CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
 .align $100
@@ -1673,7 +1639,6 @@ no_vid23b:
 ad23b:  ldx     $A8FF           ; 40
         stx     next+1          ; 43
         WASTE_26                ; 69     waste extra cycles
-        CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
 
@@ -1739,7 +1704,6 @@ no_vid25b:
 ad25b:  ldx     $A8FF           ; 37
         stx     next+1          ; 40
         WASTE_29                ; 69
-        CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
 .align $100
@@ -1772,7 +1736,6 @@ no_vid26b:
 ad26b:  ldx     $A8FF           ; 38
         stx     next+1          ; 41
         WASTE_28                ; 69     waste extra cycles
-        CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
 .align $100
@@ -1805,7 +1768,6 @@ no_vid27b:
 ad27b:  ldx     $A8FF           ; 39
         stx     next+1          ; 42
         WASTE_27                ; 69     waste extra cycles
-        CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
 .align $100
@@ -1839,7 +1801,6 @@ no_vid28b:
 ad28b:  ldx     $A8FF           ; 40
         stx     next+1          ; 43
         WASTE_26                ; 69     waste extra cycles
-        CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
 
@@ -1874,7 +1835,6 @@ no_vid29b:
 ad29b:  ldx     $A8FF           ; 41
         stx     next+1          ; 44
         WASTE_25                ; 69     waste extra cycles
-        CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
 .align $20 ; page1_ and page2_ addresses arrays must share the same low byte
@@ -1906,7 +1866,6 @@ no_vid30b:
 ad30b:  ldx     $A8FF           ; 42
         stx     next+1          ; 45
         WASTE_24                ; 69     waste extra cycles
-        CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
 duty_cycle30_v2:                ; Alternate entry point for duty cycle 30
@@ -1927,7 +1886,6 @@ video_tog_spkr:                 ; Alternate entry point for duty cycle 30
 ; Video handler expects the video byte in A register.
 ; Video handler must take 41 cycles on every code path.
 video_direct:
-        CYCLE_TWEAKER
         bmi     @set_pixel              ; 2/3   Is it a control byte?
 @control:                               ;       It is a control byte
         cpy     #$7F                    ; 4     Is it the page toggle command?
@@ -2012,7 +1970,6 @@ no_vid31b:
 ad31b:  ldx     $A8FF           ; 43
         stx     next+1          ; 46
         WASTE_23                ; 69     waste extra cycles
-        CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
 .align $20
@@ -2040,6 +1997,3 @@ vcmd2:  sta     $98FF
         jsr     _simple_serial_flush
         lda     #$2F            ; SURL_CLIENT_READY
         jmp     _serial_putc_direct
-
-        .bss
-cmd:            .res 1
