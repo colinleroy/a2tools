@@ -741,6 +741,101 @@ end:
     return ret;
 }
 
+int ffmpeg_decode_subs(decode_data *data) {
+    int ret = 0, index;
+    static AVFormatContext *ctx;
+    static AVCodecContext *dec;
+    const AVCodec *codec;
+    AVPacket *packet = av_packet_alloc();
+
+    if (packet == NULL) {
+      ret = AVERROR(ENOMEM);
+      goto end;
+    }
+
+    if ((ret = avformat_open_input(&ctx, data->url, NULL, NULL)) < 0) {
+      printf("Cannot open input file\n");
+      goto end;
+    }
+
+    if ((ret = avformat_find_stream_info(ctx, NULL)) < 0) {
+      printf("Cannot find stream information\n");
+      goto end;
+    }
+
+    /* select the stream */
+    ret = av_find_best_stream(ctx, AVMEDIA_TYPE_SUBTITLE, -1, -1, &codec, 0);
+    if (ret < 0) {
+      printf("Cannot find a corresponding stream in the input file\n");
+      goto end;
+    }
+
+    index = ret;
+
+    dec = avcodec_alloc_context3(codec);
+    if (!dec) {
+      ret = AVERROR(ENOMEM);
+      goto end;
+    }
+
+    avcodec_parameters_to_context(dec, ctx->streams[index]->codecpar);
+
+    /* init the decoder */
+    if ((ret = avcodec_open2(dec, codec, NULL)) < 0) {
+      printf("Cannot open decoder\n");
+      goto end;
+    }
+
+    while (1) {
+skip:
+      if ((ret = av_read_frame(ctx, packet)) < 0)
+        break;
+
+      if (packet->stream_index == index) {
+        AVSubtitle subtitle;
+        int gotSub;
+        float start, end;
+        const char *text;
+
+        ret = avcodec_decode_subtitle2(dec, &subtitle, &gotSub, packet);
+
+        if (gotSub) {
+          start = packet->pts * (1000.0*av_q2d(ctx->streams[index]->time_base))
+                      + subtitle.start_display_time;
+          end = (packet->pts + packet->duration) * (1000.0*av_q2d(ctx->streams[index]->time_base))
+                      + subtitle.end_display_time;
+          for (int i = 0; i < subtitle.num_rects; i++) {
+            AVSubtitleRect *rect = subtitle.rects[i];
+            if (rect->type == SUBTITLE_ASS) {
+              text = rect->ass;
+              for (int j = 0; j < 8; j++) {
+                text = strchr(text, ',');
+                if (!text) {
+                  goto skip;
+                }
+                text++;
+              }
+
+            }
+            else if (rect->type == SUBTITLE_TEXT)
+              text = rect->text;
+            else
+              continue;
+            printf("sub %ld-%ld: %s\n",
+                   (unsigned long)start, (unsigned long)end, text);
+          }
+        }
+      }
+    }
+
+end:
+    av_packet_free(&packet);
+    avcodec_free_context(&dec);
+    avformat_close_input(&ctx);
+
+    return ret;
+}
+
 int ffmpeg_to_raw_snd(decode_data *data) {
     int ret = 0;
     char audio_filter_descr[200];

@@ -42,6 +42,7 @@ typedef struct _decode_data {
 } decode_data;
 
 int ffmpeg_to_raw_snd(decode_data *data);
+int ffmpeg_decode_subs(decode_data *data);
 unsigned char *ffmpeg_convert_frame(decode_data *data, int total_frames, int current_frame);
 
 #endif
