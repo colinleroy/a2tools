@@ -318,6 +318,7 @@ static void free_subs(void) {
   for (i = 0; i < nsubs; i++) {
     if (subs[i])
       free(subs[i]);
+    subs[i] = NULL;
   }
   free(subs);
   subs = NULL;
@@ -325,7 +326,6 @@ static void free_subs(void) {
 }
 
 void ffmpeg_to_hgr_deinit(void) {
-    free_subs();
     av_packet_unref(video_packet);
     avfilter_graph_free(&video_filter_graph);
     avcodec_free_context(&video_dec_ctx);
@@ -818,8 +818,8 @@ int ffmpeg_decode_subs(const char *filename) {
 
     printf("got subtitles stream\n");
     nsubs = SUBS_BLOCK;
-    subs = malloc(nsubs);
-    memset(subs, 0, nsubs);
+    subs = malloc(nsubs*sizeof(char *));
+    memset(subs, 0, nsubs*sizeof(char *));
     while (1) {
 skip:
       if ((ret = av_read_frame(ctx, packet)) < 0)
