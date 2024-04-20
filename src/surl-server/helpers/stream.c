@@ -1235,6 +1235,8 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
   video_th_data->subtitles = subtitles;
   pthread_mutex_init(&video_th_data->mutex, NULL);
 
+  //WIP ffmpeg_decode_subs(video_th_data);
+
   printf("Starting video decode thread\n");
   pthread_create(&video_decode_thread, NULL, *generate_frames, (void *)video_th_data);
 
