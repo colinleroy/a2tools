@@ -1053,6 +1053,8 @@ void *video_push(void *unused) {
   int page = 0;
   int num_diffs = 0;
   int sem_val;
+  int cur_frame;
+  const char *push_sub = NULL;
 
   i = 0;
   page = 1;
@@ -1075,6 +1077,7 @@ void *video_push(void *unused) {
 next_file:
   i++;
 
+  cur_frame = lseek(vhgr_file, 0, SEEK_CUR) / HGR_LEN;
   if ((r = read(vhgr_file, buf[page], HGR_LEN)) != HGR_LEN) {
     printf("Starved!\n");
     goto close_last;
@@ -1092,6 +1095,10 @@ next_file:
     flush_video_bytes(ttyfp2);
   }
 
+  /* Check sub before skipping */
+  if (push_sub == NULL) {
+    push_sub = ffmpeg_sub_at_frame(cur_frame);
+  }
   if (sem_val > 1) {
     gettimeofday(&frame_start, 0);
     skipped++;
@@ -1185,6 +1192,10 @@ send:
     max = num_diffs;
   }
 
+  if (push_sub) {
+    printf("frame %d pushing sub '%s'\n", cur_frame, push_sub);
+    push_sub = NULL;
+  }
   goto next_file;
 
 close_last:
@@ -1234,8 +1245,6 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
   video_th_data->url = url;
   video_th_data->subtitles = subtitles;
   pthread_mutex_init(&video_th_data->mutex, NULL);
-
-  //WIP ffmpeg_decode_subs(video_th_data);
 
   printf("Starting video decode thread\n");
   pthread_create(&video_decode_thread, NULL, *generate_frames, (void *)video_th_data);
