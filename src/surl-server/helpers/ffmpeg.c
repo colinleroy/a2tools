@@ -77,6 +77,10 @@ static int audio_stream_index = -1, video_stream_index = -1;
 AVPacket *video_packet, *audio_packet;
 AVFrame *video_frame, *audio_frame;
 AVFrame *video_filt_frame, *audio_filt_frame;
+
+static char **subs = NULL;
+static unsigned long nsubs = 0;
+
 static unsigned baseaddr[HGR_HEIGHT];
 
 static void init_base_addrs (void)
@@ -309,8 +313,19 @@ end:
     return ret;
 }
 
+static void free_subs(void) {
+  unsigned long i;
+  for (i = 0; i < nsubs; i++) {
+    if (subs[i])
+      free(subs[i]);
+  }
+  free(subs);
+  subs = NULL;
+  nsubs = 0;
+}
 
 void ffmpeg_to_hgr_deinit(void) {
+    free_subs();
     av_packet_unref(video_packet);
     avfilter_graph_free(&video_filter_graph);
     avcodec_free_context(&video_dec_ctx);
@@ -511,6 +526,17 @@ try_again:
           goto try_again;
         }
         goto end;
+    }
+
+    if (subtitles) {
+      if (ffmpeg_decode_subs(filename) < 0) {
+        char *srt = malloc(strlen(filename) + 10);
+        strcpy(srt, filename);
+        if (strchr(srt, '.'))
+          strcpy(strrchr(srt, '.'), ".srt");
+        ffmpeg_decode_subs(srt);
+        free(srt);
+      }
     }
 
     printf("Duration %lus\n", video_fmt_ctx->duration/1000000);
@@ -741,19 +767,23 @@ end:
     return ret;
 }
 
-int ffmpeg_decode_subs(decode_data *data) {
+#define SUBS_BLOCK (3600*4*FPS)
+
+int ffmpeg_decode_subs(const char *filename) {
     int ret = 0, index;
     static AVFormatContext *ctx;
     static AVCodecContext *dec;
     const AVCodec *codec;
     AVPacket *packet = av_packet_alloc();
 
+    free_subs();
+
     if (packet == NULL) {
       ret = AVERROR(ENOMEM);
       goto end;
     }
 
-    if ((ret = avformat_open_input(&ctx, data->url, NULL, NULL)) < 0) {
+    if ((ret = avformat_open_input(&ctx, filename, NULL, NULL)) < 0) {
       printf("Cannot open input file\n");
       goto end;
     }
@@ -786,6 +816,10 @@ int ffmpeg_decode_subs(decode_data *data) {
       goto end;
     }
 
+    printf("got subtitles stream\n");
+    nsubs = SUBS_BLOCK;
+    subs = malloc(nsubs);
+    memset(subs, 0, nsubs);
     while (1) {
 skip:
       if ((ret = av_read_frame(ctx, packet)) < 0)
@@ -795,6 +829,7 @@ skip:
         AVSubtitle subtitle;
         int gotSub;
         float start, end;
+        unsigned long start_frame, end_frame, prev_end_frame = 0;
         const char *text;
 
         ret = avcodec_decode_subtitle2(dec, &subtitle, &gotSub, packet);
@@ -821,8 +856,23 @@ skip:
               text = rect->text;
             else
               continue;
-            printf("sub %ld-%ld: %s\n",
-                   (unsigned long)start, (unsigned long)end, text);
+
+            start_frame = (unsigned long)(start)/(1000.0/FPS);
+            end_frame = (unsigned long)(end)/(1000.0/FPS);
+
+            if (start_frame >= nsubs || end_frame >= nsubs) {
+              goto end;
+            }
+
+            /* Remove end of previous if it ends after this one starts */
+            if (prev_end_frame >= start_frame) {
+              free(subs[prev_end_frame]);
+              subs[prev_end_frame] = NULL;
+            }
+
+            subs[start_frame] = strdup(text);
+            subs[end_frame] = strdup("");
+            prev_end_frame = end_frame;
           }
         }
       }
@@ -834,6 +884,13 @@ end:
     avformat_close_input(&ctx);
 
     return ret;
+}
+
+const char *ffmpeg_sub_at_frame(unsigned long frame) {
+  if (subs == NULL || frame >= nsubs) {
+    return NULL;
+  }
+  return subs[frame];
 }
 
 int ffmpeg_to_raw_snd(decode_data *data) {
