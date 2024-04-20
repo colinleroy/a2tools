@@ -1877,6 +1877,10 @@ ad29b:  ldx     $A8FF           ; 41
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
+.align 32 ; page1_ and page2_ addresses arrays must share the same low byte
+.assert * = _SAMPLES_BASE + $1D60, error
+page1_addrs_arr_low: .res (N_BASES+1)          ; Base addresses arrays
+page1_addrs_arr_high:.res (N_BASES+1)          ; Base addresses arrays
 
 .align 256
 .assert * = _SAMPLES_BASE + $1E00, error
@@ -2011,6 +2015,13 @@ ad31b:  ldx     $A8FF           ; 43
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
+.align 32
+.assert * = _SAMPLES_BASE + $1F60, error
+page2_addrs_arr_low: .res (N_BASES+1)          ; Base addresses arrays
+page2_addrs_arr_high:.res (N_BASES+1)          ; Base addresses arrays
+
+abs_vflag:      .byte $40
+
 .align 256
 .assert * = _SAMPLES_BASE+$2000, error
 break_out:
@@ -2029,18 +2040,6 @@ vcmd2:  sta     $98FF
         jsr     _simple_serial_flush
         lda     #$2F            ; SURL_CLIENT_READY
         jmp     _serial_putc_direct
-
-.align 256                                     ; Aligned for correct cycle counting
-page1_addrs_arr_low: .res (N_BASES+1)          ; Base addresses arrays
-page1_addrs_arr_high:.res (N_BASES+1)          ; Base addresses arrays
-.align 256                                     ; Aligned for correct cycle counting
-page2_addrs_arr_low: .res (N_BASES+1)          ; Base addresses arrays
-page2_addrs_arr_high:.res (N_BASES+1)          ; Base addresses arrays
-
-page_addr_ptr:  .byte >(page2_addrs_arr_low)   ; Base addresses pointer for page 2
-                .byte >(page1_addrs_arr_low)   ; Base addresses pointer for page 1
-
-abs_vflag:      .byte $40
 
         .bss
 cmd:            .res 1
