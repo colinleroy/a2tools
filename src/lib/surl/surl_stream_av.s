@@ -446,7 +446,7 @@ VD_PAGE_OFFSET = 254
 ; This seems difficult to achieve (8 cycles needed for the second toggling,
 ; going from 75 cycles without to 80 with means no wasting at all)
 
-.align 256
+.align $100
 _SAMPLES_BASE = *
 .assert * = $6000, error
 duty_cycle0:                    ; end spkr at 8
@@ -591,7 +591,7 @@ calc_addr_high:
         rts
 ; -----------------------------------------------------------------
 
-.align 256
+.align $100
 .assert * = _SAMPLES_BASE + $100, error
 duty_cycle1:                    ; end spkr at 9
         ____SPKR_DUTY____4      ; 4
@@ -655,7 +655,7 @@ next_addr:
 done:
         rts
 
-.align 256
+.align $100
 .assert * = _SAMPLES_BASE + $200, error
 duty_cycle2:                    ; end spkr at 10
         ____SPKR_DUTY____4      ; 4
@@ -771,7 +771,7 @@ patch_serial_registers:
         rts
         .endif
 
-.align 256
+.align $100
 .assert * = _SAMPLES_BASE + $300, error
 duty_cycle3:                    ; end spkr at 11
         ____SPKR_DUTY____4      ; 4
@@ -869,7 +869,7 @@ video_status_patches:
                 .word vs31b
                 .word $0000
 
-.align 256
+.align $100
 .assert * = _SAMPLES_BASE + $400, error
 duty_cycle4:                    ; end spkr at 12
         ____SPKR_DUTY____4      ; 4
@@ -967,7 +967,7 @@ video_data_patches:
                 .word vd31b
                 .word $0000
 
-.align 256
+.align $100
 .assert * = _SAMPLES_BASE + $500, error
 duty_cycle5:                    ; end spkr at 13
         ____SPKR_DUTY____4      ; 4
@@ -1071,7 +1071,7 @@ audio_data_patches:
                 .word ad31b
                 .word $0000
 
-.align 256
+.align $100
 .assert * = _SAMPLES_BASE + $600, error
 duty_cycle6:                    ; end spkr at 14
         ____SPKR_DUTY____4      ; 4
@@ -1123,7 +1123,7 @@ vds:    ldy     $98FF
         jmp     video_direct
 ; --------------------------------------------------------------
 
-.align 256
+.align $100
 .assert * = _SAMPLES_BASE + $700, error
 duty_cycle7:                    ; end spkr at 15
         ____SPKR_DUTY____4      ; 4
@@ -1153,7 +1153,7 @@ ad7b:   ldx     $A8FF           ; 40
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
-.align 256
+.align $100
 .assert * = _SAMPLES_BASE + $800, error
 duty_cycle8:                    ; end spkr at 16
         ____SPKR_DUTY____4      ; 4
@@ -1184,7 +1184,7 @@ ad8b:   ldx     $A8FF           ; 40
         jmp     (next)          ; 75     jump to next duty cycle
 
 
-.align 256
+.align $100
 .assert * = _SAMPLES_BASE + $900, error
 duty_cycle9:                    ; end spkr at 17
         ____SPKR_DUTY____4      ; 4
@@ -1214,7 +1214,7 @@ ad9b:   ldx     $A8FF           ; 40
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
-.align 256
+.align $100
 .assert * = _SAMPLES_BASE + $A00, error
 duty_cycle10:                    ; end spkr at 18
         ____SPKR_DUTY____4      ; 4
@@ -1245,7 +1245,7 @@ ad10b:  ldx     $A8FF           ; 40
         jmp     (next)          ; 75     jump to next duty cycle
 
 
-.align 256
+.align $100
 .assert * = _SAMPLES_BASE + $B00, error
 duty_cycle11:                    ; end spkr at 19
         ____SPKR_DUTY____4      ; 4
@@ -1276,7 +1276,7 @@ ad11b:  ldx     $A8FF           ; 40
         jmp     (next)          ; 75     jump to next duty cycle
 
 
-.align 256
+.align $100
 .assert * = _SAMPLES_BASE + $C00, error
 duty_cycle12:                    ; end spkr at 20
         ____SPKR_DUTY____4      ; 4
@@ -1306,7 +1306,7 @@ ad12b:  ldx     $A8FF           ; 40
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
-.align 256
+.align $100
 .assert * = _SAMPLES_BASE + $D00, error
 duty_cycle13:                    ; end spkr at 21
         ____SPKR_DUTY____4      ; 4
@@ -1337,7 +1337,7 @@ ad13b:  ldx     $A8FF           ; 40
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
-.align 256
+.align $100
 .assert * = _SAMPLES_BASE + $E00, error
 duty_cycle14:                    ; end spkr at 22
         ____SPKR_DUTY____4      ; 4
@@ -1369,7 +1369,7 @@ ad14b:  ldx     $A8FF           ; 40
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
-.align 256
+.align $100
 .assert * = _SAMPLES_BASE + $F00, error
 duty_cycle15:                    ; end spkr at 23
         ____SPKR_DUTY____4      ; 4
@@ -1408,7 +1408,7 @@ nokbd:  WASTE_19                ; 69
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
-.align 256
+.align $100
 .assert * = _SAMPLES_BASE + $1000, error
 duty_cycle16:                    ; end spkr at 24
         ____SPKR_DUTY____4      ; 4
@@ -1454,7 +1454,7 @@ ad16b:  ldx     $A8FF           ; 47
         jmp     (next)          ; 75     jump to next duty cycle
 out:    jmp     break_out
 
-.align 256
+.align $100
 .assert * = _SAMPLES_BASE + $1100, error
 duty_cycle17:                    ; end spkr at 25
         ____SPKR_DUTY____4      ; 4
@@ -1485,7 +1485,7 @@ ad17b:  ldx     $A8FF           ; 40
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
-.align 256
+.align $100
 .assert * = _SAMPLES_BASE + $1200, error
 duty_cycle18:                    ; end spkr at 26
         ____SPKR_DUTY____4      ; 4
@@ -1516,7 +1516,7 @@ ad18b:  ldx     $A8FF           ; 40
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
-.align 256
+.align $100
 .assert * = _SAMPLES_BASE + $1300, error
 duty_cycle19:                    ; end spkr at 27
         ____SPKR_DUTY____4      ; 4
@@ -1548,7 +1548,7 @@ ad19b:  ldx     $A8FF           ; 40
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
-.align 256
+.align $100
 .assert * = _SAMPLES_BASE + $1400, error
 duty_cycle20:                    ; end spkr at 28
         ____SPKR_DUTY____4      ; 4
@@ -1580,7 +1580,7 @@ ad20b:  ldx     $A8FF           ; 40
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
-.align 256
+.align $100
 .assert * = _SAMPLES_BASE + $1500, error
 duty_cycle21:                    ; end spkr at 29
         ____SPKR_DUTY____4      ; 4
@@ -1612,7 +1612,7 @@ ad21b:  ldx     $A8FF           ; 40
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
-.align 256
+.align $100
 .assert * = _SAMPLES_BASE + $1600, error
 duty_cycle22:                    ; end spkr at 30
         ____SPKR_DUTY____4      ; 4
@@ -1644,7 +1644,7 @@ ad22b:  ldx     $A8FF           ; 37
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
-.align 256
+.align $100
 .assert * = _SAMPLES_BASE + $1700, error
 duty_cycle23:                    ; end spkr at 31
         ____SPKR_DUTY____4      ; 4
@@ -1677,7 +1677,7 @@ ad23b:  ldx     $A8FF           ; 40
         jmp     (next)          ; 75     jump to next duty cycle
 
 
-.align 256
+.align $100
 .assert * = _SAMPLES_BASE + $1800, error
 duty_cycle24:                    ; end spkr at 32
         ____SPKR_DUTY____4      ; 4
@@ -1709,7 +1709,7 @@ ad24b:  ldx     $A8FF           ; 36
         WASTE_30                ; 69
         jmp     (next)          ; 75     jump to next duty cycle
 
-.align 256
+.align $100
 .assert * = _SAMPLES_BASE + $1900, error
 duty_cycle25:                    ; end spkr at 33
         ____SPKR_DUTY____4      ; 4
@@ -1742,7 +1742,7 @@ ad25b:  ldx     $A8FF           ; 37
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
-.align 256
+.align $100
 .assert * = _SAMPLES_BASE + $1A00, error
 duty_cycle26:                    ; end spkr at 34
         ____SPKR_DUTY____4      ; 4
@@ -1775,7 +1775,7 @@ ad26b:  ldx     $A8FF           ; 38
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
-.align 256
+.align $100
 .assert * = _SAMPLES_BASE + $1B00, error
 duty_cycle27:                    ; end spkr at 35
         ____SPKR_DUTY____4      ; 4
@@ -1808,7 +1808,7 @@ ad27b:  ldx     $A8FF           ; 39
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
-.align 256
+.align $100
 .assert * = _SAMPLES_BASE + $1C00, error
 duty_cycle28:                    ; end spkr at 36
         ____SPKR_DUTY____4      ; 4
@@ -1843,7 +1843,7 @@ ad28b:  ldx     $A8FF           ; 40
         jmp     (next)          ; 75     jump to next duty cycle
 
 
-.align 256
+.align $100
 .assert * = _SAMPLES_BASE + $1D00, error
 duty_cycle29:                    ; end spkr at 37
         ____SPKR_DUTY____4      ; 4
@@ -1877,12 +1877,12 @@ ad29b:  ldx     $A8FF           ; 41
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
-.align 32 ; page1_ and page2_ addresses arrays must share the same low byte
+.align $20 ; page1_ and page2_ addresses arrays must share the same low byte
 .assert * = _SAMPLES_BASE + $1D60, error
 page1_addrs_arr_low: .res (N_BASES+1)          ; Base addresses arrays
 page1_addrs_arr_high:.res (N_BASES+1)          ; Base addresses arrays
 
-.align 256
+.align $100
 .assert * = _SAMPLES_BASE + $1E00, error
 ; Duty cycle 30 must toggle off speaker at cycle 38, but we would have to jump
 ; to video_direct at cycle 39, so this one uses different entry points to
@@ -1982,7 +1982,7 @@ video_direct:
 
 ; -----------------------------------------------------------------
 
-.align 256
+.align $100
 .assert * = _SAMPLES_BASE + $1F00, error
 duty_cycle31:                    ; end spkr at 39
         ____SPKR_DUTY____4      ; 4
@@ -2015,14 +2015,14 @@ ad31b:  ldx     $A8FF           ; 43
         CYCLE_TWEAKER
         jmp     (next)          ; 75     jump to next duty cycle
 
-.align 32
+.align $20
 .assert * = _SAMPLES_BASE + $1F60, error
 page2_addrs_arr_low: .res (N_BASES+1)          ; Base addresses arrays
 page2_addrs_arr_high:.res (N_BASES+1)          ; Base addresses arrays
 
 abs_vflag:      .byte $40
 
-.align 256
+.align $100
 .assert * = _SAMPLES_BASE+$2000, error
 break_out:
         jsr     _clrscr
