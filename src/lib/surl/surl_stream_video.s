@@ -44,7 +44,7 @@ KBD          := $C000   ; Read keyboard
 KBDSTRB      := $C010   ; Clear keyboard strobe
 
 MAX_OFFSET    = 126
-N_BASES       = (8192/MAX_OFFSET)+1
+N_BASES       = (8192/MAX_OFFSET)+4+1 ; Count text lines, but we don't do subs 
 
 .ifdef DOUBLE_BUFFER
 PAGE1_HB      = $20

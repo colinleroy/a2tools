@@ -19,9 +19,11 @@
 #include "hgr-convert.h"
 #include "char-convert.h"
 #include "extended_conio.h"
+#include "strsplit.h"
 
 #define MAX_OFFSET 126
-#define NUM_BASES  (HGR_LEN/MAX_OFFSET)+1
+#define NUM_BASES  (HGR_LEN/MAX_OFFSET)+4+1
+#define TEXT_BASE_0 (HGR_LEN/MAX_OFFSET)+1
 
 #define MIN_REPS   3
 #define MAX_REPS   10
@@ -87,7 +89,7 @@ static void *generate_frames(void *th_data) {
     pthread_mutex_unlock(&data->mutex);
   }
 
-  if (ffmpeg_to_hgr_init(data->url, &video_len, data->subtitles) != 0) {
+  if (ffmpeg_to_hgr_init(data->url, &video_len, data->subtitles, data->translit) != 0) {
     printf("Could not init ffmpeg.\n");
     pthread_mutex_lock(&data->mutex);
     data->decoding_end = 1;
@@ -393,7 +395,7 @@ static byte_diff **diffs = NULL;
 #define MAX_LEVEL       32
 #define END_OF_STREAM   (MAX_LEVEL+1)
 
-#define AV_SAMPLE_OFFSET 0x60
+#define AV_SAMPLE_OFFSET 0x64
 #define AV_MAX_LEVEL       31
 #define AV_END_OF_STREAM   (AV_MAX_LEVEL+1)
 #define AV_KBD_LOAD_LEVEL  15
@@ -1042,6 +1044,55 @@ abort:
   return NULL;
 }
 
+static char sub_line_off[4] = {0};
+static char sub_line_len[4] = {0};
+static char sub_line[4][160] = {0};
+
+static void build_sub_display(const char *text) {
+  int l;
+  for (l = 0; l < 4; l++) {
+    memset(sub_line[l], ' ', sub_line_len[l]);
+  }
+  if (*text) {
+    char **words;
+    size_t num_words = strsplit((char *)text, ' ', &words);
+    int cur_word;
+    
+    for (l = 0; l < 4; l++) {
+      sub_line_len[l] = 0;
+    }
+    
+    l = 0;
+    cur_word = 0;
+next_line:
+    sub_line[l][0] = '\0';
+next_word:
+    if (cur_word < num_words) {
+      sub_line_len[l] = strlen(sub_line[l]);
+      if (sub_line_len[l] + strlen(words[cur_word]) < 39) {
+        strcat(sub_line[l], words[cur_word]);
+        strcat(sub_line[l], " ");
+        sub_line_len[l] = strlen(sub_line[l]);
+        sub_line_off[l] = (40 - sub_line_len[l])/2;
+        cur_word++;
+        goto next_word;
+      } else {
+        l++;
+        if (l < 4) {
+          goto next_line;
+        }
+      }
+    }
+    for (cur_word = 0; cur_word < num_words; cur_word++) {
+      free(words[cur_word]);
+    }
+    free(words);
+  }
+  for (l = 0; l < 4; l++) {
+    DEBUG("line %d: %s (%d)\n", l, sub_line[l], sub_line_len[l]);
+  }
+}
+
 void *video_push(void *unused) {
   int i, j;
   int last_diff;
@@ -1055,6 +1106,7 @@ void *video_push(void *unused) {
   int sem_val;
   int cur_frame;
   const char *push_sub = NULL;
+  int push_sub_page = 0;
 
   i = 0;
   page = 1;
@@ -1093,13 +1145,24 @@ next_file:
     /* Sync point */
     enqueue_byte(0x7F, ttyfp2); /* Switch page */
     flush_video_bytes(ttyfp2);
+    if (push_sub && push_sub_page) {
+      push_sub_page--;
+      if (push_sub_page == 0) {
+        push_sub = NULL;
+      }
+    }
   }
 
   /* Check sub before skipping */
   if (push_sub == NULL) {
     push_sub = ffmpeg_sub_at_frame(cur_frame);
+    if (push_sub) {
+      build_sub_display(push_sub);
+      push_sub_page = 2;
+    }
   }
   if (sem_val > 1) {
+    printf("skipping\n");
     gettimeofday(&frame_start, 0);
     skipped++;
     goto next_file;
@@ -1193,8 +1256,20 @@ send:
   }
 
   if (push_sub) {
-    printf("frame %d pushing sub '%s'\n", cur_frame, push_sub);
-    push_sub = NULL;
+    int line;
+    int text_base;
+    for (line = 0, text_base = TEXT_BASE_0; line < 4; line++, text_base++) {
+      int c;
+      if (sub_line_len[line] > 0) {
+        send_offset(sub_line_off[line], ttyfp2);
+        send_base(text_base, ttyfp2);
+        
+        for (c = 0; c < sub_line_len[line]; c++) {
+          send_byte(sub_line[line][c], ttyfp2);
+        }
+      }
+    }
+    printf("frame %d pushing sub to page %d\n", cur_frame, page);
   }
   goto next_file;
 
@@ -1244,6 +1319,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
   memset(video_th_data, 0, sizeof(decode_data));
   video_th_data->url = url;
   video_th_data->subtitles = subtitles;
+  video_th_data->translit = translit;
   pthread_mutex_init(&video_th_data->mutex, NULL);
 
   printf("Starting video decode thread\n");

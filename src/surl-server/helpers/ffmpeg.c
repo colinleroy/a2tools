@@ -40,6 +40,7 @@
 #include <libavutil/opt.h>
 
 #include <ffmpeg.h>
+#include "char-convert.h"
 
 /* Final buffer size, possibly including black borders */
 #define HGR_WIDTH 280
@@ -64,9 +65,7 @@ const char *video_filter_descr = /* Set frames per second to a known value */
                                  /* White border */
                                  "pad=width=%d:height=%d:x=-1:y=-1:color=White,"
                                  /* Pad in the middle of the HGR screen */
-                                 "pad=width=%d:height=%d:x=-1:y=-1:color=Black,"
-                                 /* Add subtitles, bigger than necessary because anti-aliasing ruins legibility */
-                                 "subtitles=force_style='Fontsize=15,Fontname=Print Char 21':filename=";
+                                 "pad=width=%d:height=%d:x=-1:y=-1:color=Black";
 
 static AVFormatContext *audio_fmt_ctx, *video_fmt_ctx;
 static AVCodecContext *audio_dec_ctx, *video_dec_ctx;
@@ -392,7 +391,7 @@ static uint8_t *bayer_dither_frame(const AVFrame *frame, AVRational time_base, i
 
   /* Progress bar */
   for (x = 0; x < progress; x++) {
-    out_buf[(HGR_HEIGHT-1)*HGR_WIDTH + x] = 255;
+    out_buf[x] = 255;
   }
 
   return out_buf;
@@ -463,34 +462,17 @@ static uint8_t *burkes_dither_frame(const AVFrame *frame, AVRational time_base, 
 skip_line:
     p0 += frame->linesize[0];
   }
-  /* Progress bar */
 
+  /* Progress bar */
   for (x = 0; x < progress; x++) {
-    out_buf[(HGR_HEIGHT-1)*HGR_WIDTH + x] = 255;
+    out_buf[x] = 255;
   }
 
   return out_buf;
 }
 
-static char *escape_filename_for_ffmpeg_filter(char *filename) {
-  char *out = malloc(2*strlen(filename)+1);
-  int i, o;
-  for (i = 0, o = 0; i < strlen(filename); i++) {
-    if (filename[i] == ':' || filename[i] == ',' || filename[i] == '=') {
-      out[o++] = '\\';
-    }
-    out[o++] = filename[i];
-  }
-  out[o++] = '\0';
-
-  return out;
-}
-
-int ffmpeg_to_hgr_init(char *filename, int *video_len, char subtitles) {
+int ffmpeg_to_hgr_init(char *filename, int *video_len, char subtitles, char *translit) {
     int ret = 0;
-    char *esc_filename = escape_filename_for_ffmpeg_filter(filename);
-    char *vf_str = malloc(strlen(video_filter_descr) + strlen(esc_filename) + 6);
-    int try_with_subs = subtitles * 2; /* 2 = try embedded, 1 = try .srt, 0 = no subtitles. */
 
     video_frame = av_frame_alloc();
     video_filt_frame = av_frame_alloc();
@@ -506,35 +488,17 @@ int ffmpeg_to_hgr_init(char *filename, int *video_len, char subtitles) {
         goto end;
     }
 
-    sprintf(vf_str, "%s'%s'", video_filter_descr, esc_filename);
-    free(esc_filename);
-
-try_again:
-    if (!try_with_subs) {
-      *(strstr(vf_str, ",subtitles")) = '\0';
-    } else if (try_with_subs == 1) {
-      /* Try .srt file? */
-      if (strchr(vf_str, '.'))
-        sprintf(strrchr(vf_str, '.'), "%s", ".srt");
-
-    } /* First try with embedded subs */
-
-    printf("Filter string '%s'\n", vf_str);
-    if ((ret = init_video_filters(vf_str)) < 0) {
-        if (try_with_subs) {
-          try_with_subs--;
-          goto try_again;
-        }
+    if ((ret = init_video_filters(video_filter_descr)) < 0) {
         goto end;
     }
 
     if (subtitles) {
-      if (ffmpeg_decode_subs(filename) < 0) {
+      if (ffmpeg_decode_subs(filename, translit) < 0) {
         char *srt = malloc(strlen(filename) + 10);
         strcpy(srt, filename);
         if (strchr(srt, '.'))
           strcpy(strrchr(srt, '.'), ".srt");
-        ffmpeg_decode_subs(srt);
+        ffmpeg_decode_subs(srt, translit);
         free(srt);
       }
     }
@@ -542,7 +506,6 @@ try_again:
     printf("Duration %lus\n", video_fmt_ctx->duration/1000000);
     *video_len = video_fmt_ctx->duration/1000000;
 end:
-    free(vf_str);
     if (ret < 0)
         printf("Init error occurred: %s\n", av_err2str(ret));
 
@@ -769,7 +732,7 @@ end:
 
 #define SUBS_BLOCK (3600*4*FPS)
 
-int ffmpeg_decode_subs(const char *filename) {
+int ffmpeg_decode_subs(const char *filename, const char *translit) {
     int ret = 0, index;
     static AVFormatContext *ctx;
     static AVCodecContext *dec;
@@ -840,6 +803,7 @@ skip:
           end = (packet->pts + packet->duration) * (1000.0*av_q2d(ctx->streams[index]->time_base))
                       + subtitle.end_display_time;
           for (int i = 0; i < subtitle.num_rects; i++) {
+            size_t l;
             AVSubtitleRect *rect = subtitle.rects[i];
             if (rect->type == SUBTITLE_ASS) {
               text = rect->ass;
@@ -865,12 +829,15 @@ skip:
             }
 
             /* Remove end of previous if it ends after this one starts */
-            if (prev_end_frame >= start_frame) {
-              free(subs[prev_end_frame]);
+            if (prev_end_frame >= start_frame && start_frame > 0) {
+              subs[start_frame-1] = subs[prev_end_frame];
               subs[prev_end_frame] = NULL;
             }
 
-            subs[start_frame] = strdup(text);
+            subs[start_frame] = do_charset_convert(strdup(text), OUTGOING, translit ? translit:"US_ASCII", 0, &l);
+            while (strchr(subs[start_frame], '\n')) {
+              *strchr(subs[start_frame], '\n') = ' ';
+            }
             subs[end_frame] = strdup("");
             prev_end_frame = end_frame;
           }
