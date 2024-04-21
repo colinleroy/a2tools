@@ -312,7 +312,7 @@ end:
     return ret;
 }
 
-static void free_subs(void) {
+void free_subs(void) {
   unsigned long i;
   for (i = 0; i < nsubs; i++) {
     if (subs[i])
@@ -536,6 +536,7 @@ unsigned char *ffmpeg_convert_frame(decode_data *data, int total_frames, int cur
             ret = avcodec_send_packet(video_dec_ctx, video_packet);
             if (ret < 0) {
                 printf("Error while sending a packet to the decoder\n");
+                av_packet_unref(video_packet);
                 goto end;
             }
 
@@ -545,6 +546,7 @@ unsigned char *ffmpeg_convert_frame(decode_data *data, int total_frames, int cur
                     break;
                 } else if (ret < 0) {
                     printf("Error while receiving a frame from the decoder\n");
+                    av_packet_unref(video_packet);
                     goto end;
                 }
 
@@ -553,6 +555,8 @@ unsigned char *ffmpeg_convert_frame(decode_data *data, int total_frames, int cur
                 /* push the decoded frame into the filtergraph */
                 if (av_buffersrc_add_frame_flags(video_buffersrc_ctx, video_frame, AV_BUFFERSRC_FLAG_KEEP_REF) < 0) {
                     printf("Error while feeding the filtergraph\n");
+                    av_frame_unref(video_frame);
+                    av_packet_unref(video_packet);
                     goto end;
                 }
 
@@ -563,6 +567,8 @@ unsigned char *ffmpeg_convert_frame(decode_data *data, int total_frames, int cur
                         break;
                     if (ret < 0) {
                         printf("Error: %s\n", av_err2str(ret));
+                        av_frame_unref(video_frame);
+                        av_packet_unref(video_packet);
                         goto end;
                     }
 
@@ -584,6 +590,7 @@ unsigned char *ffmpeg_convert_frame(decode_data *data, int total_frames, int cur
                 av_frame_unref(video_frame);
             }
         }
+        av_packet_unref(video_packet);
         if (buf) {
             /* We got our frame */
             break;
@@ -867,6 +874,7 @@ skip:
           avsubtitle_free(&subtitle);
         }
       }
+      av_packet_unref(packet);
     }
 
 end:
