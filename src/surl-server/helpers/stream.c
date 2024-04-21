@@ -403,7 +403,7 @@ static byte_diff **diffs = NULL;
 #define send_sample(i) fputc((i) + SAMPLE_OFFSET, ttyfp)
 
 static int num_samples = 0;
-static unsigned char samples_buffer[SAMPLE_RATE];
+static unsigned char samples_buffer[SAMPLE_RATE*2];
 
 static inline void buffer_audio_sample(unsigned char i) {
   samples_buffer[num_samples++] = i + AV_SAMPLE_OFFSET;
@@ -643,7 +643,7 @@ done:
         && c != SURL_METHOD_ABORT);
 
 cleanup_thread:
-  printf("Cleaning up decoder thread\n");
+  printf("Cleaning up audio decoder thread\n");
   pthread_mutex_lock(&th_data->mutex);
   th_data->stop = 1;
   pthread_mutex_unlock(&th_data->mutex);
@@ -1509,7 +1509,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
         && c != SURL_METHOD_ABORT);
 
 cleanup_thread:
-  printf("Cleaning up decoder thread\n");
+  printf("Cleaning up A/V decoder thread\n");
   pthread_mutex_lock(&audio_th_data->mutex);
   audio_th_data->stop = 1;
   pthread_mutex_unlock(&audio_th_data->mutex);
@@ -1523,6 +1523,7 @@ cleanup_thread:
   free(audio_th_data->track);
   free(audio_th_data);
   free(video_th_data);
+  free_subs();
   if (vhgr_file != -1) {
     close(vhgr_file);
   }
