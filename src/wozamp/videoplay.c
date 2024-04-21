@@ -64,7 +64,7 @@ int main(void) {
   gotoxy(0, 20);
   cputs("Loading\r\n\r\n"
         "Controls: Space: play/pause, Esc: quit\r\n"
-        "          Left/Right: rew/fwd, tab: subs");
+        "          Left/Right: rew/fwd, Tab: subs");
   gotoxy(7, 20); /* strlen("Loading") */
 
 read_metadata_again:

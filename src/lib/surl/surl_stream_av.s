@@ -1474,7 +1474,7 @@ ad16b:  ldx     $A8FF           ; 40
         jmp     (next)          ; 75     jump to next duty cycle
 
 not_tab:
-        WASTE_26                ; 69
+        WASTE_14                ; 69
         jmp     (next)          ; 75     jump to next duty cycle
 
 .align $100
