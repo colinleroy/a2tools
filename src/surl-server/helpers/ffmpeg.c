@@ -835,6 +835,7 @@ skip:
             }
           }
           if (text) {
+            char *idx;
             start_frame = (unsigned long)(start)/(1000.0/FPS);
             end_frame = (unsigned long)(end)/(1000.0/FPS);
 
@@ -848,13 +849,18 @@ skip:
               subs[prev_end_frame] = NULL;
             }
 
-            subs[start_frame] = do_charset_convert(strdup(text), OUTGOING, translit ? translit:"US_ASCII", 0, &l);
-            while (strchr(subs[start_frame], '\r')) {
-              *strchr(subs[start_frame], '\r') = ' ';
+            while ((idx = strchr(text, '\r'))) {
+              *idx = ' ';
             }
-            while (strchr(subs[start_frame], '\n')) {
-              *strchr(subs[start_frame], '\n') = ' ';
+            while ((idx = strchr(text, '\n'))) {
+              *idx = ' ';
             }
+            while ((idx = strstr(text, "\\N"))) {
+              *idx = *(idx+1) = ' ';
+            }
+            idx = strdup(text);
+            subs[start_frame] = do_charset_convert(idx, OUTGOING, translit ? translit:"US_ASCII", 0, &l);
+            free(idx);
             subs[end_frame] = strdup("");
             prev_end_frame = end_frame;
           }
