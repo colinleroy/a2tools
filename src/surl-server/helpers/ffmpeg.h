@@ -5,7 +5,7 @@
 
 extern int FPS;
 
-int ffmpeg_to_hgr_init(char *filename, int *video_len, char subtitles);
+int ffmpeg_to_hgr_init(char *filename, int *video_len, char subtitles, char *translit);
 void ffmpeg_to_hgr_deinit(void);
 
 typedef struct _decode_data {
@@ -15,6 +15,7 @@ typedef struct _decode_data {
   char *url;
   int sample_rate;
   char subtitles;
+  char *translit;
 
   /* data */
   unsigned char *img_data;
@@ -42,7 +43,7 @@ typedef struct _decode_data {
 } decode_data;
 
 int ffmpeg_to_raw_snd(decode_data *data);
-int ffmpeg_decode_subs(const char *filename);
+int ffmpeg_decode_subs(const char *filename, const char *translit);
 const char *ffmpeg_sub_at_frame(unsigned long frame);
 unsigned char *ffmpeg_convert_frame(decode_data *data, int total_frames, int current_frame);
 

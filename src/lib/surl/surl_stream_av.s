@@ -16,7 +16,7 @@
         .export         _surl_stream_av
         .export         _SAMPLES_BASE
 
-        .importzp       _zp6, _zp8, _zp9, _zp10, _zp12, _zp13, tmp1, tmp2, ptr1, ptr2, ptr3, ptr4
+        .importzp       _zp6, _zp8, _zp9, _zp10, _zp12, _zp13, tmp1, tmp2, tmp3, ptr1, ptr2, ptr3, ptr4
 
         .import         _serial_putc_direct
         .import         _simple_serial_set_irq
@@ -38,6 +38,7 @@ HAS_BYTE          = $08
 
 MAX_OFFSET    = 126
 N_BASES       = (8192/MAX_OFFSET)+1
+N_TEXT_BASES  = 4
 
 .ifdef DOUBLE_BUFFER
 PAGE1_HB      = $20
@@ -61,7 +62,7 @@ page_ptr_low  = ptr3            ; word
 page_ptr_high = ptr4            ; word
 zp_zero       = tmp1            ; byte
 zp_vflag      = tmp2            ; byte
-
+kbd_cmd       = tmp3            ; byte
 ; Used to cross page
 VD_PAGE_OFFSET = 254
 
@@ -442,7 +443,7 @@ VD_PAGE_OFFSET = 254
 
 .align $100
 _SAMPLES_BASE = *
-.assert * = $6000, error
+.assert * = $6400, error
 duty_cycle0:                    ; end spkr at 8
         ____SPKR_DUTY____4      ; 4      toggle speaker on
         ____SPKR_DUTY____4      ; 8      toggle speaker off
@@ -512,18 +513,29 @@ setup:
         lda     #>(page1_addrs_arr_low)
         sta     calc_addr_low+2
         sta     calc_addr_high+2
+        sta     calc_addr_text_low+2
+        sta     calc_addr_text_high+2
         ldx     #PAGE1_HB
         jsr     calc_bases
+        lda     #$50
+        ldx     #$06
+        jsr     calc_text_bases
 
         ; Calculate bases for HGR page 2
         lda     #>(page2_addrs_arr_low)
         sta     calc_addr_low+2
         sta     calc_addr_high+2
+        sta     calc_addr_text_low+2
+        sta     calc_addr_text_high+2
         ldx     #PAGE2_HB
         jsr     calc_bases
+        lda     #$50
+        ldx     #$0A
+        jsr     calc_text_bases
 
         ; Init vars
         stz     got_offset
+        stz     kbd_cmd
 
         ; Extra ZP variable to be able to waste one cycle using CMP ZP instead
         ; of CMP IMM in some duty cycles
@@ -553,34 +565,6 @@ vctrl:  sta     $98FF           ; scratch
         lda     #>(page1_addrs_arr_high)
         sta     page_ptr_high+1
 
-        rts
-; -----------------------------------------------------------------
-calc_bases:
-        ; Precalculate addresses inside pages, so we can easily jump
-        ; from one to another without complicated computations. X
-        ; contains the base page address's high byte on entry ($20 for
-        ; page 1, $40 for page 2)
-        ldy     #0              ; Y is the index - Start at base 0
-        lda     #$00            ; A is the address's low byte
-                                ; (and X the address's high byte)
-
-        clc
-calc_next_base:
-calc_addr_low:
-        sta     page1_addrs_arr_low,y        ; Store AX
-        pha
-        txa
-calc_addr_high:
-        sta     page1_addrs_arr_high,y
-        pla
-        iny
-
-        adc     #(MAX_OFFSET)   ; Compute next base
-        bcc     :+
-        inx
-        clc
-:       cpy     #(N_BASES+1)
-        bcc     calc_next_base
         rts
 ; -----------------------------------------------------------------
 
@@ -1139,6 +1123,61 @@ ad7b:   ldx     $A8FF           ; 40
         WASTE_26                ; 69     waste extra cycles
         jmp     (next)          ; 75     jump to next duty cycle
 
+; -----------------------------------------------------------------
+calc_bases:
+        ; Precalculate addresses inside pages, so we can easily jump
+        ; from one to another without complicated computations. X
+        ; contains the base page address's high byte on entry ($20 for
+        ; page 1, $40 for page 2)
+        ldy     #0              ; Y is the index - Start at base 0
+        lda     #$00            ; A is the address's low byte
+                                ; (and X the address's high byte)
+
+        clc
+calc_next_base:
+calc_addr_low:
+        sta     page1_addrs_arr_low,y        ; Store AX
+        pha
+        txa
+calc_addr_high:
+        sta     page1_addrs_arr_high,y
+        pla
+        iny
+
+        adc     #(MAX_OFFSET)   ; Compute next base
+        bcc     :+
+        inx
+        clc
+:       cpy     #(N_BASES)
+        bcc     calc_next_base
+        rts
+
+calc_text_bases:
+        ; Precalculate addresses inside pages, so we can easily jump
+        ; from one to another without complicated computations. X
+        ; contains the base page address's high byte on entry ($20 for
+        ; page 1, $40 for page 2)
+        ldy     #(N_BASES)    ; Y is the index - Start after HGR bases
+
+        clc
+calc_next_text_base:
+calc_addr_text_low:
+        sta     page1_addrs_arr_low,y        ; Store AX
+        pha
+        txa
+calc_addr_text_high:
+        sta     page1_addrs_arr_high,y
+        pla
+        iny
+
+        adc     #$80                         ; Compute next base
+        bcc     :+
+        inx
+        clc
+:       cpy     #(N_BASES+4+1)
+        bcc     calc_next_text_base
+        rts
+
 .align $100
 .assert * = _SAMPLES_BASE + $800, error
 duty_cycle8:                    ; end spkr at 16
@@ -1385,7 +1424,7 @@ asp:    lda     $FFFF           ; 50    check serial tx empty
 adp:    sta     $FFFF           ; 62     send cmd
         cmp     #$1B            ; 64
         beq     out             ; 66/65  if escape, exit forcefully
-        WASTE_3                 ; 69
+        sta     kbd_cmd         ; 69
         jmp     (next)          ; 75     jump to next duty cycle
 nokbd:
 ad15b:  ldx     $A8FF           ; 47
@@ -1423,6 +1462,18 @@ vd16b:  ldy     $98FF           ; 39
 no_vid16b:
 ad16b:  ldx     $A8FF           ; 40
         stx     next+1          ; 43
+        lda     kbd_cmd         ; 46     handle subtitles switch
+        ldx     cur_mix         ; 50
+        cmp     #$09            ; 52
+        bne     not_tab         ; 54/55
+        bit     $C052,x         ; 58
+        txa                     ; 60
+        eor     #$01            ; 62
+        sta     cur_mix         ; 66
+        stz     kbd_cmd         ; 69
+        jmp     (next)          ; 75     jump to next duty cycle
+
+not_tab:
         WASTE_26                ; 69
         jmp     (next)          ; 75     jump to next duty cycle
 
@@ -1839,8 +1890,8 @@ ad29b:  ldx     $A8FF           ; 41
 
 .align $20 ; page1_ and page2_ addresses arrays must share the same low byte
 .assert * = _SAMPLES_BASE + $1D60, error
-page1_addrs_arr_low: .res (N_BASES+1)          ; Base addresses arrays
-page1_addrs_arr_high:.res (N_BASES+1)          ; Base addresses arrays
+page1_addrs_arr_low: .res (N_BASES+4+1)          ; Base addresses arrays
+page1_addrs_arr_high:.res (N_BASES+4+1)          ; Base addresses arrays
 
 .align $100
 .assert * = _SAMPLES_BASE + $1E00, error
@@ -1974,10 +2025,11 @@ ad31b:  ldx     $A8FF           ; 43
 
 .align $20
 .assert * = _SAMPLES_BASE + $1F60, error
-page2_addrs_arr_low: .res (N_BASES+1)          ; Base addresses arrays
-page2_addrs_arr_high:.res (N_BASES+1)          ; Base addresses arrays
+page2_addrs_arr_low: .res (N_BASES+4+1)          ; Base addresses arrays
+page2_addrs_arr_high:.res (N_BASES+4+1)          ; Base addresses arrays
 
 abs_vflag:      .byte $40
+cur_mix:        .byte $0
 
 .align $100
 .assert * = _SAMPLES_BASE+$2000, error
@@ -1997,3 +2049,5 @@ vcmd2:  sta     $98FF
         jsr     _simple_serial_flush
         lda     #$2F            ; SURL_CLIENT_READY
         jmp     _serial_putc_direct
+
+.reloc

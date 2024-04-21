@@ -11,10 +11,12 @@
 #include "path_helper.h"
 #include "surl.h"
 #include "config.h"
-#include "splash-video.h"
+// #include "splash-video.h"
 
 char *translit_charset = "ISO646-FR1";
 char monochrome = 1;
+
+#pragma code-name(push, "LOWCODE")
 
 static char url[512];
 
@@ -56,10 +58,13 @@ int main(void) {
   hgr_mixon();
 
   clrscr();
+  /* clear text page 2 */
+  memset((char*)0x800, ' '|0x80, 0x400);
+
   gotoxy(0, 20);
   cputs("Loading\r\n\r\n"
         "Controls: Space: play/pause, Esc: quit\r\n"
-        "          Left/Right: rewind/forward");
+        "          Left/Right: rew/fwd, tab: subs");
   gotoxy(7, 20); /* strlen("Loading") */
 
 read_metadata_again:
@@ -102,7 +107,8 @@ read_metadata_again:
     goto read_metadata_again;
 
   } else if (r == SURL_ANSWER_STREAM_START) {
-    hgr_mixoff();
+    //hgr_mixoff();
+    clrscr();
     surl_stream_av();
     init_text();
   } else {
@@ -115,3 +121,4 @@ read_metadata_again:
 out:
   exec("WOZAMP", NULL);
 }
+#pragma code-name(pop)

@@ -10,7 +10,7 @@
 #include "char-convert.h"
 #include "math.h"
 
-static char *do_conv(char *in, char *from, char *to, size_t *new_len) {
+static char *do_conv(char *in, const char *from, char *to, size_t *new_len) {
   char *out = NULL;
   char *orig_out, *orig_in;
   size_t in_len, out_len;
@@ -52,7 +52,7 @@ static char *do_conv(char *in, char *from, char *to, size_t *new_len) {
   return orig_out;
 }
 
-char *do_charset_convert(char *in, int way, char *a2charset, int lowercase, size_t *new_len) {
+char *do_charset_convert(char *in, int way, const char *a2charset, int lowercase, size_t *new_len) {
   char *out_final = NULL;
   char *out_ascii = NULL;
   char translit_charset[50];
