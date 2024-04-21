@@ -13,7 +13,7 @@
 #include "config.h"
 // #include "splash-video.h"
 
-char *translit_charset = "ISO646-FR1";
+char *translit_charset;
 char monochrome = 1;
 
 #pragma code-name(push, "LOWCODE")
@@ -22,13 +22,17 @@ static char url[512];
 
 int main(void) {
   unsigned char r, subtitles;
-  FILE *url_fp = fopen(URL_PASSER_FILE,"r");
+  FILE *url_fp = fopen(URL_PASSER_FILE, "r");
   surl_connect_proxy();
 
   if (url_fp == NULL) {
     goto out;
   }
   subtitles = fgetc(url_fp);
+  translit_charset = malloc(32);
+  fgets(translit_charset, 31, url_fp);
+  if (strchr(translit_charset, '\n'))
+    *strchr(translit_charset, '\n') = '\0';
   fgets(url, 511, url_fp);
   fclose(url_fp);
 
@@ -49,6 +53,8 @@ int main(void) {
 
   if (url_fp) {
     fputc(subtitles, url_fp);
+    fputs(translit_charset, url_fp);
+    fputc('\n', url_fp);
     fputs(url, url_fp);
     fclose(url_fp);
   }

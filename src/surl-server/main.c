@@ -1234,18 +1234,17 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
     char monochrome;
     char subtitles;
     enum HeightScale scale;
-    printf("send wait\n");
+
     simple_serial_putc(SURL_ANSWER_WAIT);
-    printf("get charset\n");
     simple_serial_gets(reqbuf, BUFSIZE);
+    if (strchr(reqbuf, '\n'))
+      *strchr(reqbuf, '\n') = '\0';
     translit = reqbuf;
-    printf("get mono\n");
     monochrome = simple_serial_getc();
-    printf("get scale\n");
     scale = simple_serial_getc();
-    printf("get subtitles\n");
     subtitles = simple_serial_getc();
-    printf("starting\n");
+
+    printf("starting A/V stream\n");
     surl_stream_audio_video(url, translit, monochrome, scale, subtitles);
     return NULL;
   } else if (method == SURL_METHOD_STREAM_VIDEO) {
@@ -1256,16 +1255,14 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
     char *translit;
     char monochrome;
     enum HeightScale scale;
-    printf("send wait\n");
     simple_serial_putc(SURL_ANSWER_WAIT);
-    printf("get charset\n");
     simple_serial_gets(reqbuf, BUFSIZE);
+    if (strchr(reqbuf, '\n'))
+      *strchr(reqbuf, '\n') = '\0';
     translit = reqbuf;
-    printf("get mono\n");
     monochrome = simple_serial_getc();
-    printf("get scale\n");
     scale = simple_serial_getc();
-    printf("starting\n");
+    printf("starting video stream\n");
     surl_stream_audio(url, translit, monochrome, scale);
     return NULL;
   }

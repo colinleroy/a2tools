@@ -155,10 +155,6 @@ void stp_print_result(const surl_response *response) {
   }
 }
 
-#ifdef __CC65__
-#pragma code-name (push, "LC")
-#endif
-
 #ifdef __APPLE2ENH__
 static void backup_restore_logo(char *op) {
   FILE *fp = fopen("/RAM/WOZAMP.HGR", op);
@@ -172,6 +168,10 @@ static void backup_restore_logo(char *op) {
   }
   fclose(fp);
 }
+#endif
+
+#ifdef __CC65__
+#pragma code-name (push, "LC")
 #endif
 
 extern char tmp_buf[80];
@@ -261,6 +261,8 @@ read_metadata_again:
       gotoxy(8, 12);
       dputs("Loading video player...");
       fputc(enable_subtitles, video_url_fp);
+      fputs(translit_charset, video_url_fp);
+      fputc('\n', video_url_fp);
       fputs(url, video_url_fp);
 
       fclose(video_url_fp);
@@ -372,7 +374,8 @@ int main(void) {
     url = stp_build_login_url(url);
   } else {
     url = malloc(512);
-    fgetc(tmpfp); // Ignore subtitles parameter */
+    fgetc(tmpfp); // Ignore subtitles parameter
+    fgets(url, 511, tmpfp);  // Ignore charset parameter */
     fgets(url, 511, tmpfp);
     fclose(tmpfp);
     unlink(URL_PASSER_FILE);
