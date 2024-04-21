@@ -785,42 +785,56 @@ int ffmpeg_decode_subs(const char *filename, const char *translit) {
     memset(subs, 0, nsubs*sizeof(char *));
     while (1) {
 skip:
-      if ((ret = av_read_frame(ctx, packet)) < 0)
+      if ((ret = av_read_frame(ctx, packet)) < 0) {
+        if (ret == AVERROR_EOF) {
+          ret = 0;
+        }
         break;
+      }
 
       if (packet->stream_index == index) {
         AVSubtitle subtitle;
         int gotSub;
         float start, end;
         unsigned long start_frame, end_frame, prev_end_frame = 0;
-        const char *text;
+        const char *text = NULL;
 
         ret = avcodec_decode_subtitle2(dec, &subtitle, &gotSub, packet);
 
         if (gotSub) {
+          size_t l;
           start = packet->pts * (1000.0*av_q2d(ctx->streams[index]->time_base))
                       + subtitle.start_display_time;
           end = (packet->pts + packet->duration) * (1000.0*av_q2d(ctx->streams[index]->time_base))
                       + subtitle.end_display_time;
-          for (int i = 0; i < subtitle.num_rects; i++) {
-            size_t l;
-            AVSubtitleRect *rect = subtitle.rects[i];
-            if (rect->type == SUBTITLE_ASS) {
-              text = rect->ass;
-              for (int j = 0; j < 8; j++) {
-                text = strchr(text, ',');
-                if (!text) {
-                  goto skip;
+          if (packet->data && packet->data[0] != '\0') {
+            text = (char *)packet->data;
+            printf("dat '%s'\n", text);
+          } else {
+            for (int i = 0; i < subtitle.num_rects; i++) {
+              AVSubtitleRect *rect = subtitle.rects[i];
+              if (rect->type == SUBTITLE_ASS) {
+                text = rect->ass;
+                printf("ass '%s'\n", text);
+                for (int j = 0; j < 8; j++) {
+                  text = strchr(text, ',');
+                  if (!text) {
+                    goto skip;
+                  }
+                  text++;
                 }
-                text++;
+                if (text[0] == ',') {
+                  text++; /* FIXME that's ugly */
+                }
+              } else if (rect->type == SUBTITLE_TEXT) {
+                text = rect->text;
+                printf("srt '%s'\n", text);
+              } else {
+                continue;
               }
-
             }
-            else if (rect->type == SUBTITLE_TEXT)
-              text = rect->text;
-            else
-              continue;
-
+          }
+          if (text) {
             start_frame = (unsigned long)(start)/(1000.0/FPS);
             end_frame = (unsigned long)(end)/(1000.0/FPS);
 
@@ -835,12 +849,16 @@ skip:
             }
 
             subs[start_frame] = do_charset_convert(strdup(text), OUTGOING, translit ? translit:"US_ASCII", 0, &l);
+            while (strchr(subs[start_frame], '\r')) {
+              *strchr(subs[start_frame], '\r') = ' ';
+            }
             while (strchr(subs[start_frame], '\n')) {
               *strchr(subs[start_frame], '\n') = ' ';
             }
             subs[end_frame] = strdup("");
             prev_end_frame = end_frame;
           }
+          avsubtitle_free(&subtitle);
         }
       }
     }

@@ -1162,7 +1162,6 @@ next_file:
     }
   }
   if (sem_val > 1) {
-    printf("skipping\n");
     gettimeofday(&frame_start, 0);
     skipped++;
     goto next_file;
