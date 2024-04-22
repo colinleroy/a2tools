@@ -118,7 +118,7 @@ static void video_stream(media *m, char idx, char num_images) {
   toggle_legend(0);
   stream_msg("Play/Pause : Space\r\n"
              "Quit viewer: Esc\r\n"
-             "Waiting for proxy...");
+             "Loading...   ");
   init_hgr(1);
   hgr_mixon();
 

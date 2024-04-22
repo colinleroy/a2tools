@@ -49,8 +49,8 @@
 
 unsigned long bytes_sent = 0, data_bytes = 0, offset_bytes = 0, base_bytes = 0;
 
-char changes_buffer[HGR_LEN*2];
-int changes_num = 0;
+char video_bytes_buffer[HGR_LEN*2];
+int num_video_bytes = 0;
 
 int cur_base, offset;
 
@@ -58,15 +58,13 @@ extern int serial_delay;
 
 char output_file[64];
 
-#define FRAME_FILE_FMT "%s/frame-%06d.hgr"
-
 char tmp_filename[FILENAME_MAX];
 
 int video_len;
 
 #define PREDECODE_SECS 10
 
-static void *generate_frames(void *th_data) {
+static void *ffmpeg_video_decode_thread(void *th_data) {
   decode_data *data = (decode_data *)th_data;
   unsigned char *buf;
   int frameno = 0;
@@ -89,7 +87,7 @@ static void *generate_frames(void *th_data) {
     pthread_mutex_unlock(&data->mutex);
   }
 
-  if (ffmpeg_to_hgr_init(data->url, &video_len, data->subtitles, data->translit) != 0) {
+  if (ffmpeg_video_decode_init(data, &video_len) != 0) {
     printf("Could not init ffmpeg.\n");
     pthread_mutex_lock(&data->mutex);
     data->decoding_end = 1;
@@ -106,8 +104,13 @@ static void *generate_frames(void *th_data) {
   }
   pthread_mutex_unlock(&data->mutex);
 
+  if (data->enable_subtitles) {
+    printf("Waiting for subtitle thread.\n");
+    sem_wait(&data->sub_thread_ready);
+  }
+
   gettimeofday(&decode_start, 0);
-  while ((buf = ffmpeg_convert_frame(data, video_len*FPS, frameno)) != NULL) {
+  while ((buf = ffmpeg_video_decode_frame(data, video_len*FPS, frameno)) != NULL) {
     unsigned long usecs_per_frame, remaining_frames, done_len, remaining_len;
     if (write(vhgr_file, buf, HGR_LEN) != HGR_LEN) {
       printf("Could not write data\n");
@@ -135,6 +138,7 @@ static void *generate_frames(void *th_data) {
       printf("decoded %d frames (%lus) in %lus, remaining %lu frames, should take %lus\n",
             frameno, done_len, elapsed/1000000, remaining_frames, remaining_len/1000000);
     }
+
     pthread_mutex_lock(&data->mutex);
     data->decode_remaining = remaining_frames;
     data->max_seekable = frameno/2;
@@ -154,11 +158,21 @@ static void *generate_frames(void *th_data) {
         decode_slow = 0;
       } else {
         /* Send ping every 10% (and only once for every 25 frames matching the modulo)*/
-        if ((frameno/FPS) % (video_len / 10) == 0
-          && ((frameno/FPS)/(video_len / 10))*((video_len / 10)*FPS) == frameno) {
-          int r;
-          printf("Frame %d (%ds/%ds), %d\n", frameno, frameno/FPS, video_len,  (video_len / 10));
+        if ((frameno) % 100 == 0) {
+          int r, eta;
+          eta = (remaining_len/1000000) - (done_len*2);
+
+          printf("Frame %d ETA %d\n", frameno, eta);
           simple_serial_putc(SURL_ANSWER_STREAM_LOAD);
+          eta /= 8;
+          if (eta > 255) {
+            eta = 255;
+          }
+          if (eta < 0) {
+            eta = 0;
+          }
+          simple_serial_putc(eta);
+
           r = simple_serial_getc_with_timeout();
           if (r != SURL_CLIENT_READY) {
             printf("Client abort\n");
@@ -189,7 +203,7 @@ out:
 
   close(vhgr_file);
 
-  ffmpeg_to_hgr_deinit();
+  ffmpeg_video_decode_deinit(data);
   return NULL;
 }
 
@@ -198,21 +212,21 @@ extern char *aux_tty_path;
 FILE *ttyfp2 = NULL;
 
 static void flush_video_bytes(FILE *fp) {
-  if (changes_num == 0) {
+  if (num_video_bytes == 0) {
     return;
   }
-  simple_serial_write_fast_fp(fp, changes_buffer, changes_num);
-  changes_num = 0;
+  simple_serial_write_fast_fp(fp, video_bytes_buffer, num_video_bytes);
+  num_video_bytes = 0;
 }
 
-static void enqueue_byte(unsigned char b, FILE *fp) {
+static void enqueue_video_byte(unsigned char b, FILE *fp) {
   if (!fp) {
     return;
   }
   bytes_sent++;
   /* Video only ? */
   if (1) {
-    changes_buffer[changes_num++] = b;
+    video_bytes_buffer[num_video_bytes++] = b;
     return;
   }
   /* Otherwise don't buffer */
@@ -222,62 +236,62 @@ static void enqueue_byte(unsigned char b, FILE *fp) {
 
 static int last_sent_base = -1;
 
-static void send_base(unsigned char b, FILE *fp) {
+static void buffer_video_base(unsigned char b, FILE *fp) {
   DEBUG(" new base %d\n", b);
   DEBUG(" base %d offset %d (should be written at %x)\n", b, offset, 0x2000+(cur_base*MAX_OFFSET)+offset);
   if ((b| 0x80) == 0xFF) {
     printf("Base error! Should not!\n");
     exit(1);
   }
-  enqueue_byte(b, fp);
+  enqueue_video_byte(b, fp);
   last_sent_base = b;
   base_bytes++;
 }
 
 int last_sent_offset = -1;
-static void send_offset(unsigned char o, FILE *fp) {
+static void buffer_video_offset(unsigned char o, FILE *fp) {
   DEBUG("offset %d (should be written at %x)\n", o, 0x2000+(cur_base*MAX_OFFSET)+offset);
   if ((o| 0x80) == 0xFF) {
     printf("Offset error! Should not!\n");
     exit(1);
   }
-  enqueue_byte(o, fp);
+  enqueue_video_byte(o, fp);
 
   last_sent_offset = o;
   offset_bytes++;
 }
-static void send_num_reps(unsigned char b, FILE *fp) {
+static void buffer_video_num_reps(unsigned char b, FILE *fp) {
   DEBUG("  => %d * ", b);
-  enqueue_byte(0x7F, fp);
+  enqueue_video_byte(0x7F, fp);
   if ((b & 0x80) != 0) {
     printf("Reps error! Should not!\n");
     exit(1);
   }
-  enqueue_byte(b, fp);
+  enqueue_video_byte(b, fp);
 
   data_bytes += 2;
 }
-static void send_byte(unsigned char b, FILE *fp) {
+static void buffer_video_byte(unsigned char b, FILE *fp) {
   DEBUG("  => %d\n", b);
   if ((b & 0x80) != 0) {
     printf("Byte error! Should not!\n");
     exit(1);
   }
-  enqueue_byte(b|0x80, fp);
+  enqueue_video_byte(b|0x80, fp);
 
   data_bytes++;
 }
 
-static void flush_ident(int min_reps, int ident_vals, int last_val, FILE *fp) {
+static void buffer_video_repetitions(int min_reps, int ident_vals, int last_val, FILE *fp) {
   if (last_val == -1) {
     return;
   }
   if (ident_vals > min_reps) {
-    send_num_reps(ident_vals, fp);
-    send_byte(last_val, fp);
+    buffer_video_num_reps(ident_vals, fp);
+    buffer_video_byte(last_val, fp);
   } else {
     while (ident_vals > 0) {
-      send_byte(last_val, fp);
+      buffer_video_byte(last_val, fp);
       ident_vals--;
     }
   }
@@ -314,7 +328,7 @@ static inline void check_duration(const char *str, struct timeval *start) {
   }
 }
 
-static inline int sync_fps(struct timeval *start) {
+static inline int video_sync_fps(struct timeval *start) {
   struct timeval frame_end, sync_start, sync_end;
   gettimeofday(&sync_start, 0);
   
@@ -402,11 +416,11 @@ static byte_diff **diffs = NULL;
 
 #define send_sample(i) fputc((i) + SAMPLE_OFFSET, ttyfp)
 
-static int num_samples = 0;
-static unsigned char samples_buffer[SAMPLE_RATE*2];
+static int num_audio_samples = 0;
+static unsigned char audio_samples_buffer[SAMPLE_RATE*2];
 
 static inline void buffer_audio_sample(unsigned char i) {
-  samples_buffer[num_samples++] = i + AV_SAMPLE_OFFSET;
+  audio_samples_buffer[num_audio_samples++] = i + AV_SAMPLE_OFFSET;
 }
 
 static inline void flush_audio_samples(void) {
@@ -415,25 +429,25 @@ static inline void flush_audio_samples(void) {
    * tty buffer is not full, but we'll count on that to
    * stabilize in a few frames.
    */
-  fwrite((char *)samples_buffer, 1, num_samples, ttyfp);
+  fwrite((char *)audio_samples_buffer, 1, num_audio_samples, ttyfp);
   fflush(ttyfp);
-  num_samples = 0;
+  num_audio_samples = 0;
 }
 
-static void send_end_of_stream(void) {
+static void send_end_of_audio_stream(void) {
   send_sample(END_OF_STREAM);
   fflush(ttyfp);
 }
 
-static void send_end_of_audio_stream(void) {
+static void send_end_of_av_stream(void) {
   buffer_audio_sample(AV_END_OF_STREAM);
   flush_audio_samples();
 }
 
-void *ffmpeg_decode_snd(void *arg) {
+static void *ffmpeg_audio_decode_thread(void *arg) {
   decode_data *th_data = (decode_data *)arg;
 
-  ffmpeg_to_raw_snd(th_data);
+  ffmpeg_audio_decode(th_data);
   return (void *)0;
 }
 
@@ -492,7 +506,7 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
   pthread_mutex_init(&th_data->mutex, NULL);
 
   printf("Starting decode thread (charset %s, monochrome %d, scale %d)\n", translit, monochrome, scale);
-  pthread_create(&decode_thread, NULL, *ffmpeg_decode_snd, (void *)th_data);
+  pthread_create(&decode_thread, NULL, *ffmpeg_audio_decode_thread, (void *)th_data);
 
   while(!ready && !stop) {
     pthread_mutex_lock(&th_data->mutex);
@@ -634,7 +648,7 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
 
 done:
   send_sample(MAX_LEVEL/2);
-  send_end_of_stream();
+  send_end_of_audio_stream();
 
   do {
     c = simple_serial_getc();
@@ -684,7 +698,7 @@ int surl_stream_video(char *url) {
   pthread_mutex_init(&th_data->mutex, NULL);
 
   printf("Starting video decode thread\n");
-  pthread_create(&decode_thread, NULL, *generate_frames, (void *)th_data);
+  pthread_create(&decode_thread, NULL, *ffmpeg_video_decode_thread, (void *)th_data);
 
   while(!ready && !stop) {
     pthread_mutex_lock(&th_data->mutex);
@@ -729,7 +743,7 @@ int surl_stream_video(char *url) {
   simple_serial_putc(SURL_ANSWER_STREAM_START);
   printf("sent\n");
 
-  memset(changes_buffer, 0, sizeof changes_buffer);
+  memset(video_bytes_buffer, 0, sizeof video_bytes_buffer);
 
   i = 0;
   page = 1;
@@ -761,7 +775,7 @@ next_file:
   ident_vals = 0;
 
 
-  if (sync_fps(&frame_start)) {
+  if (video_sync_fps(&frame_start)) {
     gettimeofday(&frame_start, 0);
     DEBUG("skipping frame\n");
     skipped++;
@@ -774,8 +788,8 @@ send:
 
   /* Sync point - force a switch to base 0 */
   offset = cur_base = 0;
-  send_offset(0, ttyfp);
-  send_base(0, ttyfp);
+  buffer_video_offset(0, ttyfp);
+  buffer_video_base(0, ttyfp);
   flush_video_bytes(ttyfp);
 
   if (i > FPS && (i % (15*FPS)) == 0) {
@@ -820,7 +834,7 @@ send:
     if ((offset >= MAX_OFFSET && pixel != last_diff+1)
       || offset > 255) {
       /* must flush ident */
-      flush_ident(MIN_REPS, ident_vals, last_val, ttyfp);
+      buffer_video_repetitions(MIN_REPS, ident_vals, last_val, ttyfp);
       ident_vals = 0;
 
       /* we have to update base */
@@ -830,26 +844,26 @@ send:
       if (offset < last_sent_offset && cur_base == last_sent_base + 1) {
         DEBUG("skip sending base (offset %d => %d, base %d => %d)\n",
                 last_sent_offset, offset, last_sent_base, cur_base);
-        send_offset(offset, ttyfp);
+        buffer_video_offset(offset, ttyfp);
         last_sent_base = cur_base;
       } else {
         DEBUG("must send base (offset %d => %d, base %d => %d)\n",
                 last_sent_offset, offset, last_sent_base, cur_base);
-        send_offset(offset, ttyfp);
-        send_base(cur_base, ttyfp);
+        buffer_video_offset(offset, ttyfp);
+        buffer_video_base(cur_base, ttyfp);
       }
     } else if (pixel != last_diff+1) {
       /* must flush ident */
-      flush_ident(MIN_REPS, ident_vals, last_val, ttyfp);
+      buffer_video_repetitions(MIN_REPS, ident_vals, last_val, ttyfp);
       ident_vals = 0;
       /* We have to send offset */
-      send_offset(offset, ttyfp);
+      buffer_video_offset(offset, ttyfp);
     }
     if (last_val == -1 ||
        (ident_vals < MAX_REPS && buf[page][pixel] == last_val && pixel == last_diff+1)) {
       ident_vals++;
     } else {
-      flush_ident(MIN_REPS, ident_vals, last_val, ttyfp);
+      buffer_video_repetitions(MIN_REPS, ident_vals, last_val, ttyfp);
       ident_vals = 1;
     }
     last_val = buf[page][pixel];
@@ -862,7 +876,7 @@ send:
     /* Note diff done */
     buf_prev[page][pixel] = buf[page][pixel];
   }
-  flush_ident(MIN_REPS, ident_vals, last_val, ttyfp);
+  buffer_video_repetitions(MIN_REPS, ident_vals, last_val, ttyfp);
   ident_vals = 0;
 
   total += num_diffs;
@@ -876,8 +890,8 @@ send:
   goto next_file;
 
 close_last:
-  send_offset(0, ttyfp);
-  send_base(NUM_BASES+2, ttyfp); /* Done */
+  buffer_video_offset(0, ttyfp);
+  buffer_video_base(NUM_BASES+2, ttyfp); /* Done */
   flush_video_bytes(ttyfp);
 
   /* Get rid of possible last ack */
@@ -927,6 +941,7 @@ int audio_ready = 0;
 int vhgr_file;
 
 sem_t av_sem;
+
 static void *audio_push(void *unused) {
   /* Audio vars */
   unsigned char c;
@@ -1069,9 +1084,24 @@ next_line:
     sub_line[l][0] = '\0';
 next_word:
     if (cur_word < num_words) {
+      char *cur_word_str = words[cur_word];
+      int cur_word_len = strlen(cur_word_str);
       sub_line_len[l] = strlen(sub_line[l]);
-      if (sub_line_len[l] + strlen(words[cur_word]) < 39) {
-        strcat(sub_line[l], words[cur_word]);
+      if (cur_word_str[0] == '\n') {
+        /* Force newline */
+        cur_word_str++;
+        cur_word_len--;
+        l++;
+        if (l == 4)
+          goto sub_full;
+        sub_line[l][0] = '\0';
+        if (cur_word_len == 0) {
+          cur_word++;
+          goto next_word;
+        }
+      }
+      if (sub_line_len[l] + cur_word_len < 39) {
+        strcat(sub_line[l], cur_word_str);
         strcat(sub_line[l], " ");
         sub_line_len[l] = strlen(sub_line[l]);
         sub_line_off[l] = (40 - sub_line_len[l])/2;
@@ -1084,6 +1114,7 @@ next_word:
         }
       }
     }
+sub_full:
     free(words);
     free(orig_sub);
   }
@@ -1104,7 +1135,7 @@ void *video_push(void *unused) {
   int num_diffs = 0;
   int sem_val;
   int cur_frame;
-  const char *push_sub = NULL;
+  char *push_sub = NULL;
   int push_sub_page = 0;
 
   i = 0;
@@ -1140,26 +1171,32 @@ next_file:
   sem_wait(&av_sem);
   sem_getvalue(&av_sem, &sem_val);
 
-  if (changes_num > 0) {
+  if (num_video_bytes > 0) {
     /* Sync point */
-    enqueue_byte(0x7F, ttyfp2); /* Switch page */
+    enqueue_video_byte(0x7F, ttyfp2); /* Switch page */
     flush_video_bytes(ttyfp2);
     if (push_sub && push_sub_page) {
       push_sub_page--;
       if (push_sub_page == 0) {
+        free(push_sub);
         push_sub = NULL;
       }
     }
   }
 
-  /* Check sub before skipping */
+  /* Check if we should push a subtitle, before skipping */
   if (push_sub == NULL) {
-    push_sub = ffmpeg_sub_at_frame(cur_frame);
+    push_sub = ffmpeg_get_subtitle_at_frame(video_th_data, cur_frame);
     if (push_sub) {
       build_sub_display(push_sub);
       push_sub_page = 2;
     }
+  } else {
+    /* We already have a subtitle to push, so move the
+     * potential next one forward so we don't forget it. */
+    ffmpeg_shift_subtitle_at_frame(video_th_data, cur_frame);
   }
+
   if (sem_val > 1) {
     gettimeofday(&frame_start, 0);
     skipped++;
@@ -1230,14 +1267,14 @@ send:
 
       DEBUG("send base (offset %d => %d, base %d => %d)\n",
               last_sent_offset, offset, last_sent_base, cur_base);
-      send_offset(offset, ttyfp2);
-      send_base(cur_base, ttyfp2);
+      buffer_video_offset(offset, ttyfp2);
+      buffer_video_base(cur_base, ttyfp2);
     } else if (pixel != last_diff+1) {
       DEBUG("send offset %d (base is %d)\n", offset, cur_base);
       /* We have to send offset */
-      send_offset(offset, ttyfp2);
+      buffer_video_offset(offset, ttyfp2);
     }
-    send_byte(buf[page][pixel], ttyfp2);
+    buffer_video_byte(buf[page][pixel], ttyfp2);
 
     last_diff = pixel;
 
@@ -1259,11 +1296,11 @@ send:
     for (line = 0, text_base = TEXT_BASE_0; line < 4; line++, text_base++) {
       int c;
       if (sub_line_len[line] > 0) {
-        send_offset(sub_line_off[line], ttyfp2);
-        send_base(text_base, ttyfp2);
+        buffer_video_offset(sub_line_off[line], ttyfp2);
+        buffer_video_base(text_base, ttyfp2);
         
         for (c = 0; c < sub_line_len[line]; c++) {
-          send_byte(sub_line[line][c], ttyfp2);
+          buffer_video_byte(sub_line[line][c], ttyfp2);
         }
       }
     }
@@ -1316,12 +1353,12 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
 
   memset(video_th_data, 0, sizeof(decode_data));
   video_th_data->url = url;
-  video_th_data->subtitles = subtitles;
+  video_th_data->enable_subtitles = subtitles;
   video_th_data->translit = translit;
   pthread_mutex_init(&video_th_data->mutex, NULL);
 
   printf("Starting video decode thread\n");
-  pthread_create(&video_decode_thread, NULL, *generate_frames, (void *)video_th_data);
+  pthread_create(&video_decode_thread, NULL, *ffmpeg_video_decode_thread, (void *)video_th_data);
 
   memset(audio_th_data, 0, sizeof(decode_data));
   audio_th_data->url = url;
@@ -1329,7 +1366,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
   pthread_mutex_init(&audio_th_data->mutex, NULL);
 
   printf("Starting decode thread (charset %s, monochrome %d, scale %d)\n", translit, monochrome, scale);
-  pthread_create(&audio_decode_thread, NULL, *ffmpeg_decode_snd, (void *)audio_th_data);
+  pthread_create(&audio_decode_thread, NULL, *ffmpeg_audio_decode_thread, (void *)audio_th_data);
 
   while(!ready && !stop && err != -1) {
     pthread_mutex_lock(&audio_th_data->mutex);
@@ -1393,11 +1430,11 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
     // goto cleanup_thread;
   }
 
-  memset(changes_buffer, 0, sizeof changes_buffer);
+  memset(video_bytes_buffer, 0, sizeof video_bytes_buffer);
 
   offset = cur_base = 0;
-  send_offset(0, ttyfp2);
-  send_base(0, ttyfp2);
+  buffer_video_offset(0, ttyfp2);
+  buffer_video_base(0, ttyfp2);
 
   printf("AV: Client ready\n");
   if (hgr_buf) {
@@ -1499,7 +1536,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
     fflush(ttyfp2);
 
   printf("done (cancelled: %d)\n", cancelled);
-  send_end_of_audio_stream();
+  send_end_of_av_stream();
 
   do {
     c = simple_serial_getc();
@@ -1520,9 +1557,9 @@ cleanup_thread:
   free(audio_th_data->album);
   free(audio_th_data->title);
   free(audio_th_data->track);
+  ffmpeg_subtitles_free(video_th_data);
   free(audio_th_data);
   free(video_th_data);
-  free_subs();
   if (vhgr_file != -1) {
     close(vhgr_file);
   }

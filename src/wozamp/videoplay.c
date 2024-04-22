@@ -16,6 +16,16 @@
 char *translit_charset;
 char monochrome = 1;
 
+static void update_progress(void) {
+  unsigned char eta = simple_serial_getc();
+  hgr_mixon();
+  gotoxy(11, 20); /* strlen("Loading...") + 1 */
+  if (eta == 255)
+    cputs("(More than 30m remaining)");
+  else
+    cprintf("(About %ds remaining)   ", eta*8);
+}
+
 #pragma code-name(push, "LOWCODE")
 
 static char url[512];
@@ -68,10 +78,9 @@ int main(void) {
   memset((char*)0x800, ' '|0x80, 0x400);
 
   gotoxy(0, 20);
-  cputs("Loading\r\n\r\n"
-        "Controls: Space: play/pause, Esc: quit\r\n"
+  cputs("Loading...\r\n\r\n"
+        "Controls: Space: play/pause,   Esc: quit"
         "          Left/Right: rew/fwd, Tab: subs");
-  gotoxy(7, 20); /* strlen("Loading") */
 
 read_metadata_again:
   if (kbhit()) {
@@ -104,8 +113,7 @@ read_metadata_again:
     goto read_metadata_again;
 
   } else if (r == SURL_ANSWER_STREAM_LOAD) {
-    hgr_mixon();
-    cputs("...");
+    update_progress();
     if (kbhit() && cgetc() == CH_ESC)
       simple_serial_putc(SURL_METHOD_ABORT);
     else

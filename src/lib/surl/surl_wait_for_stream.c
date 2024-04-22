@@ -33,7 +33,7 @@
 
 
 int surl_wait_for_stream(void) {
-  int r;
+  int r, eta;
   int x, y;
 
   /* Clear HGR buffers */
@@ -43,15 +43,17 @@ int surl_wait_for_stream(void) {
 #endif
   x = wherex();
   y = wherey();
-  /* Cheap progress bar */
-  cputs("\177\177\177\177\177\177\177\177\177\177");
-  gotoxy(x,y);
-  revers(1);
   while (1) {
     r = simple_serial_getc_with_timeout();
     switch (r) {
       case SURL_ANSWER_STREAM_LOAD:
-        cputc(' ');
+        gotoxy(x,y);
+        eta = simple_serial_getc();
+        if (eta == 255)
+          cputs("(More than 30m remaining)");
+        else
+          cprintf("(About %ds remaining)   ", eta*8);
+
         if (kbhit()) {
           if (cgetc() == CH_ESC) {
             simple_serial_putc(SURL_METHOD_ABORT);
