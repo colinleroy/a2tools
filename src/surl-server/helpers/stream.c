@@ -1055,7 +1055,8 @@ static void build_sub_display(const char *text) {
   }
   if (*text) {
     char **words;
-    size_t num_words = strsplit((char *)text, ' ', &words);
+    char *orig_sub = strdup(text);
+    size_t num_words = strsplit_in_place(orig_sub, ' ', &words);
     int cur_word;
     
     for (l = 0; l < 4; l++) {
@@ -1083,10 +1084,8 @@ next_word:
         }
       }
     }
-    for (cur_word = 0; cur_word < num_words; cur_word++) {
-      free(words[cur_word]);
-    }
     free(words);
+    free(orig_sub);
   }
   for (l = 0; l < 4; l++) {
     DEBUG("line %d: %s (%d)\n", l, sub_line[l], sub_line_len[l]);
