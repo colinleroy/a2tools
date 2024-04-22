@@ -59,7 +59,7 @@ const char *video_filter_descr = /* Set frames per second to a known value */
                                  /* Scale to VIDEO_SIZE, scale fast (no interpolation) */
                                  "scale=%d:%d:flags=neighbor,"
                                  /* Equalize histogram (Use 1/x instead of 0.100 because of LC_ALL, decimal separator, etc) */
-                                 "histeq=strength=1/10,"
+                                 "histeq=strength=1/20,"
                                  /* Black border */
                                  "pad=width=%d:height=%d:x=-1:y=-1:color=Black,"
                                  /* White border */
@@ -76,9 +76,6 @@ static int audio_stream_index = -1, video_stream_index = -1;
 AVPacket *video_packet, *audio_packet;
 AVFrame *video_frame, *audio_frame;
 AVFrame *video_filt_frame, *audio_filt_frame;
-
-static char **subs = NULL;
-static unsigned long nsubs = 0;
 
 static unsigned baseaddr[HGR_HEIGHT];
 
@@ -312,19 +309,20 @@ end:
     return ret;
 }
 
-void free_subs(void) {
+void ffmpeg_subtitles_free(decode_data *data) {
   unsigned long i;
-  for (i = 0; i < nsubs; i++) {
-    if (subs[i])
-      free(subs[i]);
-    subs[i] = NULL;
+  pthread_mutex_lock(&data->sub_mutex);
+  for (i = 0; i < data->nsubs; i++) {
+    if (data->subs[i])
+      free(data->subs[i]);
   }
-  free(subs);
-  subs = NULL;
-  nsubs = 0;
+  free(data->subs);
+  data->subs = NULL;
+  data->nsubs = 0;
+  pthread_mutex_unlock(&data->sub_mutex);
 }
 
-void ffmpeg_to_hgr_deinit(void) {
+void ffmpeg_video_decode_deinit(decode_data *data) {
     av_packet_unref(video_packet);
     avfilter_graph_free(&video_filter_graph);
     avcodec_free_context(&video_dec_ctx);
@@ -332,6 +330,8 @@ void ffmpeg_to_hgr_deinit(void) {
     av_frame_free(&video_frame);
     av_frame_free(&video_filt_frame);
     av_packet_free(&video_packet);
+    if (data->enable_subtitles)
+      pthread_join(data->sub_thread, NULL);
 }
 
 
@@ -471,7 +471,20 @@ skip_line:
   return out_buf;
 }
 
-int ffmpeg_to_hgr_init(char *filename, int *video_len, char subtitles, char *translit) {
+static void *ffmpeg_subtitles_decode_thread(void *data) {
+  decode_data *th_data = (decode_data *)data;
+  if (ffmpeg_subtitles_decode(th_data, th_data->url) < 0) {
+    char *srt = malloc(strlen(th_data->url) + 10);
+    strcpy(srt, th_data->url);
+    if (strchr(srt, '.'))
+      strcpy(strrchr(srt, '.'), ".srt");
+    ffmpeg_subtitles_decode(data, srt);
+    free(srt);
+  }
+  return NULL;
+}
+
+int ffmpeg_video_decode_init(decode_data *data, int *video_len) {
     int ret = 0;
 
     video_frame = av_frame_alloc();
@@ -484,7 +497,7 @@ int ffmpeg_to_hgr_init(char *filename, int *video_len, char subtitles, char *tra
         goto end;
     }
 
-    if ((ret = open_video_file(filename)) < 0) {
+    if ((ret = open_video_file(data->url)) < 0) {
         goto end;
     }
 
@@ -492,15 +505,9 @@ int ffmpeg_to_hgr_init(char *filename, int *video_len, char subtitles, char *tra
         goto end;
     }
 
-    if (subtitles) {
-      if (ffmpeg_decode_subs(filename, translit) < 0) {
-        char *srt = malloc(strlen(filename) + 10);
-        strcpy(srt, filename);
-        if (strchr(srt, '.'))
-          strcpy(strrchr(srt, '.'), ".srt");
-        ffmpeg_decode_subs(srt, translit);
-        free(srt);
-      }
+    if (data->enable_subtitles) {
+      pthread_mutex_init(&data->sub_mutex, NULL);
+      pthread_create(&data->sub_thread, NULL, *ffmpeg_subtitles_decode_thread, (void *)data);
     }
 
     printf("Duration %lus\n", video_fmt_ctx->duration/1000000);
@@ -513,7 +520,7 @@ end:
 }
 
 uint8_t hgr[0x2000];
-unsigned char *ffmpeg_convert_frame(decode_data *data, int total_frames, int current_frame) {
+unsigned char *ffmpeg_video_decode_frame(decode_data *data, int total_frames, int current_frame) {
     int progress = 0;
     uint8_t *buf = NULL;
     int ret;
@@ -739,14 +746,15 @@ end:
 
 #define SUBS_BLOCK (3600*4*FPS)
 
-int ffmpeg_decode_subs(const char *filename, const char *translit) {
+int ffmpeg_subtitles_decode(decode_data *data, const char *filename) {
     int ret = 0, index;
     static AVFormatContext *ctx;
     static AVCodecContext *dec;
     const AVCodec *codec;
     AVPacket *packet = av_packet_alloc();
+    unsigned long prev_end_frame = 0;
 
-    free_subs();
+    ffmpeg_subtitles_free(data);
 
     if (packet == NULL) {
       ret = AVERROR(ENOMEM);
@@ -787,10 +795,20 @@ int ffmpeg_decode_subs(const char *filename, const char *translit) {
     }
 
     printf("got subtitles stream\n");
-    nsubs = SUBS_BLOCK;
-    subs = malloc(nsubs*sizeof(char *));
-    memset(subs, 0, nsubs*sizeof(char *));
+    pthread_mutex_lock(&data->sub_mutex);
+    data->nsubs = SUBS_BLOCK;
+    data->subs = malloc(data->nsubs*sizeof(char *));
+    memset(data->subs, 0, data->nsubs*sizeof(char *));
+    pthread_mutex_unlock(&data->sub_mutex);
     while (1) {
+      pthread_mutex_lock(&data->mutex);
+      if (data->stop) {
+        printf("Stopping subtitles thread\n");
+        pthread_mutex_unlock(&data->mutex);
+        goto end;
+      }
+      pthread_mutex_unlock(&data->mutex);
+
 skip:
       if ((ret = av_read_frame(ctx, packet)) < 0) {
         if (ret == AVERROR_EOF) {
@@ -803,7 +821,7 @@ skip:
         AVSubtitle subtitle;
         int gotSub;
         float start, end;
-        unsigned long start_frame, end_frame, prev_end_frame = 0;
+        unsigned long start_frame, end_frame;
         const char *text = NULL;
 
         ret = avcodec_decode_subtitle2(dec, &subtitle, &gotSub, packet);
@@ -816,13 +834,13 @@ skip:
                       + subtitle.end_display_time;
           if (packet->data && packet->data[0] != '\0') {
             text = (char *)packet->data;
-            printf("dat '%s'\n", text);
+            //printf("dat '%s'\n", text);
           } else {
             for (int i = 0; i < subtitle.num_rects; i++) {
               AVSubtitleRect *rect = subtitle.rects[i];
               if (rect->type == SUBTITLE_ASS) {
                 text = rect->ass;
-                printf("ass '%s'\n", text);
+                //printf("ass '%s'\n", text);
                 for (int j = 0; j < 8; j++) {
                   text = strchr(text, ',');
                   if (!text) {
@@ -835,7 +853,7 @@ skip:
                 }
               } else if (rect->type == SUBTITLE_TEXT) {
                 text = rect->text;
-                printf("srt '%s'\n", text);
+                //printf("srt '%s'\n", text);
               } else {
                 continue;
               }
@@ -846,14 +864,18 @@ skip:
             start_frame = (unsigned long)(start)/(1000.0/FPS);
             end_frame = (unsigned long)(end)/(1000.0/FPS);
 
-            if (start_frame >= nsubs || end_frame >= nsubs) {
+            pthread_mutex_lock(&data->sub_mutex);
+
+            if (start_frame >= data->nsubs || end_frame >= data->nsubs) {
+              pthread_mutex_unlock(&data->sub_mutex);
               goto end;
             }
 
             /* Remove end of previous if it ends after this one starts */
-            if (prev_end_frame >= start_frame && start_frame > 0) {
-              subs[start_frame-1] = subs[prev_end_frame];
-              subs[prev_end_frame] = NULL;
+            if (prev_end_frame >= start_frame && start_frame > 1) {
+              printf("moving previous subtitle end from %ld to %ld\n", prev_end_frame, start_frame-2);
+              data->subs[start_frame-2] = data->subs[prev_end_frame];
+              data->subs[prev_end_frame] = NULL;
             }
 
             while ((idx = strchr(text, '\r'))) {
@@ -863,13 +885,18 @@ skip:
               *idx = ' ';
             }
             while ((idx = strstr(text, "\\N"))) {
-              *idx = *(idx+1) = ' ';
+              *idx = ' ';
+              *(idx+1) = '\n';
             }
             idx = strdup(text);
-            subs[start_frame] = do_charset_convert(idx, OUTGOING, translit ? translit:"US_ASCII", 0, &l);
+            data->subs[start_frame] = do_charset_convert(idx, OUTGOING,
+                                        data->translit ? data->translit:"US_ASCII", 0, &l);
+            data->subs[end_frame] = strdup("");
+            printf("sub frames %ld-%ld: %s\n", start_frame, end_frame, text);
             free(idx);
-            subs[end_frame] = strdup("");
             prev_end_frame = end_frame;
+            pthread_mutex_unlock(&data->sub_mutex);
+            sem_post(&data->sub_thread_ready);
           }
           avsubtitle_free(&subtitle);
         }
@@ -878,6 +905,7 @@ skip:
     }
 
 end:
+    sem_post(&data->sub_thread_ready);
     av_packet_free(&packet);
     avcodec_free_context(&dec);
     avformat_close_input(&ctx);
@@ -885,14 +913,30 @@ end:
     return ret;
 }
 
-const char *ffmpeg_sub_at_frame(unsigned long frame) {
-  if (subs == NULL || frame >= nsubs) {
-    return NULL;
+char *ffmpeg_get_subtitle_at_frame(decode_data *data, unsigned long frame) {
+  char *sub = NULL;
+  
+  pthread_mutex_lock(&data->sub_mutex);
+  if (data->subs != NULL && frame < data->nsubs && data->subs[frame]) {
+    sub = strdup(data->subs[frame]);
   }
-  return subs[frame];
+  pthread_mutex_unlock(&data->sub_mutex);
+  return sub;
 }
 
-int ffmpeg_to_raw_snd(decode_data *data) {
+void ffmpeg_shift_subtitle_at_frame(decode_data *data, unsigned long frame) {
+  pthread_mutex_lock(&data->sub_mutex);
+  if (data->subs && frame < data->nsubs) {
+    if (data->subs[frame] && frame + 2 < data->nsubs) {
+      printf("pushing sub %s to %ld\n", data->subs[frame], frame+2);
+      data->subs[frame + 2] = data->subs[frame];
+      data->subs[frame] = NULL;
+    }
+  }
+  pthread_mutex_unlock(&data->sub_mutex);
+}
+
+int ffmpeg_audio_decode(decode_data *data) {
     int ret = 0;
     char audio_filter_descr[200];
     const AVDictionaryEntry *tag = NULL;

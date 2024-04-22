@@ -2,11 +2,8 @@
 #define __ffmpeg_to_hgr_h
 
 #include <pthread.h>
-
+#include <semaphore.h>
 extern int FPS;
-
-int ffmpeg_to_hgr_init(char *filename, int *video_len, char subtitles, char *translit);
-void ffmpeg_to_hgr_deinit(void);
 
 typedef struct _decode_data {
   pthread_mutex_t mutex;
@@ -14,7 +11,7 @@ typedef struct _decode_data {
   /* params */
   char *url;
   int sample_rate;
-  char subtitles;
+  char enable_subtitles;
   char *translit;
 
   /* data */
@@ -40,12 +37,25 @@ typedef struct _decode_data {
   long pts;
   long decode_remaining;
   long max_seekable;
+
+  /* subs (for video stream) */
+  pthread_mutex_t sub_mutex;
+  pthread_t sub_thread;
+  sem_t sub_thread_ready;
+  unsigned long nsubs;
+  char **subs;
 } decode_data;
 
-int ffmpeg_to_raw_snd(decode_data *data);
-int ffmpeg_decode_subs(const char *filename, const char *translit);
-const char *ffmpeg_sub_at_frame(unsigned long frame);
-unsigned char *ffmpeg_convert_frame(decode_data *data, int total_frames, int current_frame);
-void free_subs(void);
+int ffmpeg_video_decode_init(decode_data *data, int *video_len);
+void ffmpeg_video_decode_deinit(decode_data *data);
+unsigned char *ffmpeg_video_decode_frame(decode_data *data, int total_frames, int current_frame);
+
+int ffmpeg_audio_decode(decode_data *data);
+
+int ffmpeg_subtitles_decode(decode_data *data, const char *filename);
+char *ffmpeg_get_subtitle_at_frame(decode_data *data, unsigned long frame);
+void ffmpeg_shift_subtitle_at_frame(decode_data *data, unsigned long frame);
+void ffmpeg_subtitles_free(decode_data *data);
+
 
 #endif
