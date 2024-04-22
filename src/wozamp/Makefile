@@ -99,7 +99,7 @@ videoplay_SOURCES := \
 
 videoplay_CLCFLAGS = -t $(CC65_TARGET) -DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER -I ../lib \
 	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-avstreamer.cfg \
-	-vm -m videoplay.map -DSURL_TO_LANGCARD -O --start-addr 0x6000
+	-vm -m videoplay.map -DSURL_TO_LANGCARD -O --start-addr 0xD00
 
 all: \
 	splash.h \

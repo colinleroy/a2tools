@@ -409,7 +409,7 @@ static byte_diff **diffs = NULL;
 #define MAX_LEVEL       32
 #define END_OF_STREAM   (MAX_LEVEL+1)
 
-#define AV_SAMPLE_OFFSET 0x64
+#define AV_SAMPLE_OFFSET 0x60
 #define AV_MAX_LEVEL       31
 #define AV_END_OF_STREAM   (AV_MAX_LEVEL+1)
 #define AV_KBD_LOAD_LEVEL  15
