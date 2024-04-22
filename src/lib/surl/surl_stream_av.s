@@ -443,7 +443,7 @@ VD_PAGE_OFFSET = 254
 
 .align $100
 _SAMPLES_BASE = *
-.assert * = $6400, error
+.assert * = $6000, error
 duty_cycle0:                    ; end spkr at 8
         ____SPKR_DUTY____4      ; 4      toggle speaker on
         ____SPKR_DUTY____4      ; 8      toggle speaker off
@@ -2049,5 +2049,3 @@ vcmd2:  sta     $98FF
         jsr     _simple_serial_flush
         lda     #$2F            ; SURL_CLIENT_READY
         jmp     _serial_putc_direct
-
-.reloc

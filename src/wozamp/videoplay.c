@@ -11,7 +11,7 @@
 #include "path_helper.h"
 #include "surl.h"
 #include "config.h"
-// #include "splash-video.h"
+#include "splash-video.h"
 
 char *translit_charset;
 char monochrome = 1;
