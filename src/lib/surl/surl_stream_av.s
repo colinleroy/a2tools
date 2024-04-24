@@ -440,6 +440,23 @@ VD_PAGE_OFFSET = 254
 ; toggle4-other29-toggle4-other3-toggle4-other29-toggle4-jump3
 ; This seems difficult to achieve (8 cycles needed for the second toggling,
 ; going from 75 cycles without to 80 with means no wasting at all)
+;
+; Warning about the alignment of the 32 duty cycles: as we read the next
+; sample without verifying the ACIA's status register, we may read an
+; incomplete byte, while it is being landed in the data register.
+;
+; So, we have to align the duty cycles in a way that even when this happens,
+; we do not jump to a place where we have no duty cycle. This is why, here,
+; we have them from $6000 to $7F00:
+; $60 = 01100000
+; $7F = 01111111
+;
+; At worst, we'll play a wrong sample from time to time. Tests with duty
+; cycles from $6400 to $8300 crashed into the monitor quite fast:
+; $64 = 01100100
+; $83 = 10000011
+; Reading an incomplete byte there could result in reading 11111111, for
+; example, but not only. We don't want that.
 
 .align $100
 _SAMPLES_BASE = *
