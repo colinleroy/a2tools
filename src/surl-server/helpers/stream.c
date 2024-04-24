@@ -21,12 +21,15 @@
 #include "extended_conio.h"
 #include "strsplit.h"
 
-#define MAX_OFFSET 126
-#define NUM_BASES  (HGR_LEN/MAX_OFFSET)+4+1
-#define TEXT_BASE_0 (HGR_LEN/MAX_OFFSET)+1
+#define MAX_VIDEO_OFFSET 126
+#define NUM_VIDEO_BASES  (HGR_LEN/MAX_VIDEO_OFFSET)+1
+#define MIN_VIDEO_REPS   3
+#define MAX_VIDEO_REPS   10
 
-#define MIN_REPS   3
-#define MAX_REPS   10
+#define MAX_AV_OFFSET    126
+#define NUM_AV_BASES     (HGR_LEN/MAX_AV_OFFSET)+4+1
+#define AV_TEXT_BASE_0   (HGR_LEN/MAX_AV_OFFSET)+1
+
 
 /* Set very high because it looks nicer to drop frames than to
  * artifact all the way
@@ -238,7 +241,7 @@ static int last_sent_base = -1;
 
 static void buffer_video_base(unsigned char b, FILE *fp) {
   DEBUG(" new base %d\n", b);
-  DEBUG(" base %d offset %d (should be written at %x)\n", b, offset, 0x2000+(cur_base*MAX_OFFSET)+offset);
+  DEBUG(" base %d offset %d\n", b, offset);
   if ((b| 0x80) == 0xFF) {
     printf("Base error! Should not!\n");
     exit(1);
@@ -250,7 +253,7 @@ static void buffer_video_base(unsigned char b, FILE *fp) {
 
 int last_sent_offset = -1;
 static void buffer_video_offset(unsigned char o, FILE *fp) {
-  DEBUG("offset %d (should be written at %x)\n", o, 0x2000+(cur_base*MAX_OFFSET)+offset);
+  DEBUG("offset %d\n", o);
   if ((o| 0x80) == 0xFF) {
     printf("Offset error! Should not!\n");
     exit(1);
@@ -693,6 +696,9 @@ int surl_stream_video(char *url) {
   int stop = 0;
   int err = 0;
 
+  /* Reset stats */
+  bytes_sent = data_bytes = offset_bytes = base_bytes = 0;
+
   memset(th_data, 0, sizeof(decode_data));
   th_data->url = url;
   pthread_mutex_init(&th_data->mutex, NULL);
@@ -828,18 +834,18 @@ send:
   for (j = 0; j < num_diffs; j++) {
     int pixel = diffs[j]->offset;
 
-    offset = pixel - (cur_base*MAX_OFFSET);
+    offset = pixel - (cur_base*MAX_VIDEO_OFFSET);
     /* If there's no hole in updated bytes, we can let offset
      * increment up to 255 */
-    if ((offset >= MAX_OFFSET && pixel != last_diff+1)
+    if ((offset >= MAX_VIDEO_OFFSET && pixel != last_diff+1)
       || offset > 255) {
       /* must flush ident */
-      buffer_video_repetitions(MIN_REPS, ident_vals, last_val, ttyfp);
+      buffer_video_repetitions(MIN_VIDEO_REPS, ident_vals, last_val, ttyfp);
       ident_vals = 0;
 
       /* we have to update base */
-      cur_base = pixel / MAX_OFFSET;
-      offset = pixel - (cur_base*MAX_OFFSET);
+      cur_base = pixel / MAX_VIDEO_OFFSET;
+      offset = pixel - (cur_base*MAX_VIDEO_OFFSET);
 
       if (offset < last_sent_offset && cur_base == last_sent_base + 1) {
         DEBUG("skip sending base (offset %d => %d, base %d => %d)\n",
@@ -854,16 +860,16 @@ send:
       }
     } else if (pixel != last_diff+1) {
       /* must flush ident */
-      buffer_video_repetitions(MIN_REPS, ident_vals, last_val, ttyfp);
+      buffer_video_repetitions(MIN_VIDEO_REPS, ident_vals, last_val, ttyfp);
       ident_vals = 0;
       /* We have to send offset */
       buffer_video_offset(offset, ttyfp);
     }
     if (last_val == -1 ||
-       (ident_vals < MAX_REPS && buf[page][pixel] == last_val && pixel == last_diff+1)) {
+       (ident_vals < MAX_VIDEO_REPS && buf[page][pixel] == last_val && pixel == last_diff+1)) {
       ident_vals++;
     } else {
-      buffer_video_repetitions(MIN_REPS, ident_vals, last_val, ttyfp);
+      buffer_video_repetitions(MIN_VIDEO_REPS, ident_vals, last_val, ttyfp);
       ident_vals = 1;
     }
     last_val = buf[page][pixel];
@@ -876,7 +882,7 @@ send:
     /* Note diff done */
     buf_prev[page][pixel] = buf[page][pixel];
   }
-  buffer_video_repetitions(MIN_REPS, ident_vals, last_val, ttyfp);
+  buffer_video_repetitions(MIN_VIDEO_REPS, ident_vals, last_val, ttyfp);
   ident_vals = 0;
 
   total += num_diffs;
@@ -891,7 +897,7 @@ send:
 
 close_last:
   buffer_video_offset(0, ttyfp);
-  buffer_video_base(NUM_BASES+2, ttyfp); /* Done */
+  buffer_video_base(NUM_VIDEO_BASES+2, ttyfp); /* Done */
   flush_video_bytes(ttyfp);
 
   /* Get rid of possible last ack */
@@ -900,8 +906,8 @@ close_last:
 
   if (i - skipped > 0) {
     printf("Max: %d, Min: %d, Average: %d\n", max, min, total / (i-skipped));
-    printf("Sent %lu bytes for %d non-skipped frames: %lu avg (%lu data, %lu offset, %lu base)\n",
-            bytes_sent, (i-skipped), bytes_sent/(i-skipped),
+    printf("Sent %lu bytes for %d non-skipped frames: %lu/s, %lu/frame avg (%lu data, %lu offset, %lu base)\n",
+            bytes_sent, (i-skipped), bytes_sent/(i/FPS), bytes_sent/(i-skipped),
             data_bytes/(i-skipped), offset_bytes/(i-skipped), base_bytes/(i-skipped));
   }
   if (i - skipped > FPS) {
@@ -1137,9 +1143,13 @@ void *video_push(void *unused) {
   int cur_frame;
   char *push_sub = NULL;
   int push_sub_page = 0;
+  int vidstop;
 
   i = 0;
   page = 1;
+
+  /* Reset stats */
+  bytes_sent = data_bytes = offset_bytes = base_bytes = 0;
 
   /* Fill cache */
   read(vhgr_file, buf[page], HGR_LEN);
@@ -1208,7 +1218,6 @@ next_file:
   /* count diffs */
   last_diff = 0;
 
-
   if (i > FPS && (i % (15*FPS)) == 0) {
     duration = i/FPS;
     printf("%d seconds, %d frames skipped / %d: %.2f fps\n", duration,
@@ -1217,6 +1226,15 @@ next_file:
   }
 
 send:
+
+  pthread_mutex_lock(&video_th_data->mutex);
+  vidstop = video_th_data->stop;
+  pthread_mutex_unlock(&video_th_data->mutex);
+  if (vidstop) {
+    printf("Video thread stopping\n");
+    goto close_last;
+  }
+
   gettimeofday(&frame_start, 0);
 
   for (num_diffs = 0, j = 0; j < HGR_LEN; j++) {
@@ -1246,24 +1264,15 @@ send:
 
   for (j = 0; j < num_diffs; j++) {
     int pixel = diffs[j]->offset;
-    int vidstop;
 
-    pthread_mutex_lock(&video_th_data->mutex);
-    vidstop = video_th_data->stop;
-    pthread_mutex_unlock(&video_th_data->mutex);
-    if (vidstop) {
-      printf("Video thread stopping\n");
-      goto close_last;
-    }
-
-    offset = pixel - (cur_base*MAX_OFFSET);
+    offset = pixel - (cur_base*MAX_AV_OFFSET);
     /* If there's no hole in updated bytes, we can let offset
      * increment up to 255 */
-    if ((offset >= MAX_OFFSET && pixel != last_diff+1)
+    if ((offset >= MAX_AV_OFFSET && pixel != last_diff+1)
       || offset > 255 || offset < 0) {
       /* we have to update base */
-      cur_base = pixel / MAX_OFFSET;
-      offset = pixel - (cur_base*MAX_OFFSET);
+      cur_base = pixel / MAX_AV_OFFSET;
+      offset = pixel - (cur_base*MAX_AV_OFFSET);
 
       DEBUG("send base (offset %d => %d, base %d => %d)\n",
               last_sent_offset, offset, last_sent_base, cur_base);
@@ -1293,7 +1302,7 @@ send:
   if (push_sub) {
     int line;
     int text_base;
-    for (line = 0, text_base = TEXT_BASE_0; line < 4; line++, text_base++) {
+    for (line = 0, text_base = AV_TEXT_BASE_0; line < 4; line++, text_base++) {
       int c;
       if (sub_line_len[line] > 0) {
         buffer_video_offset(sub_line_off[line], ttyfp2);
@@ -1312,8 +1321,8 @@ close_last:
   flush_video_bytes(ttyfp2);
   if (i - skipped > 0) {
     printf("Max: %d, Min: %d, Average: %d\n", max, min, total / (i-skipped));
-    printf("Sent %lu bytes for %d non-skipped frames: %lu avg (%lu data, %lu offset, %lu base)\n",
-            bytes_sent, (i-skipped), bytes_sent/(i-skipped),
+    printf("Sent %lu bytes for %d non-skipped frames: %lub/s, %lub/frame avg (%lu data, %lu offset, %lu base)\n",
+            bytes_sent, (i-skipped), bytes_sent/(i/FPS), bytes_sent/(i-skipped),
             data_bytes/(i-skipped), offset_bytes/(i-skipped), base_bytes/(i-skipped));
   }
   if (i - skipped > FPS) {
