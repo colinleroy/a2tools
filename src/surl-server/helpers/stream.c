@@ -38,11 +38,6 @@
 #define ACCEPT_ARTEFACT 0
 
 #define DOUBLE_BUFFER
-#ifdef DOUBLE_BUFFER
-#define NUM_PAGES 2
-#else
-#define NUM_PAGES 1
-#endif
 
 #if 0
   #define DEBUG printf
@@ -769,7 +764,9 @@ int surl_stream_video(char *url) {
 
 next_file:
   i++;
+#ifdef  DOUBLE_BUFFER
   page = !page;
+#endif
 
   if ((r = read(vhgr_file, buf[page], HGR_LEN)) != HGR_LEN) {
     goto close_last;
@@ -785,7 +782,9 @@ next_file:
     gettimeofday(&frame_start, 0);
     DEBUG("skipping frame\n");
     skipped++;
+#ifdef DOUBLE_BUFFER
     page = !page;
+#endif
     goto next_file;
   }
 
@@ -1213,7 +1212,9 @@ next_file:
     goto next_file;
   }
 
+#ifdef DOUBLE_BUFFER
   page = !page;
+#endif
 
   /* count diffs */
   last_diff = 0;
