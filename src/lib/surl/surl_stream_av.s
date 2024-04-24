@@ -1976,6 +1976,7 @@ video_direct:
         jmp     (next)                  ; 33    Done, go to next duty cycle
 
 @toggle_page:                           ;       Page toggling command
+.ifdef DOUBLE_BUFFER
         bvs     @page0                  ; 9/10
 @page1:
         sta     $C055                   ; 13    Activate page 1
@@ -1994,6 +1995,10 @@ video_direct:
         clv                             ; 24    Set next page to 1 (not 0)
         WASTE_3                         ; 27
         jmp     (next)                  ; 33
+.else
+        WASTE_17                        ; 27
+        jmp     (next)                  ; 33
+.endif
 
 @set_pixel:                             ;       No, it is a data byte
         tya                             ; 5
