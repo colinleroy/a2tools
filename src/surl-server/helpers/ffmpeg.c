@@ -106,19 +106,19 @@ static int open_video_file(char *filename)
     }
 
     if ((ret = avformat_open_input(&video_fmt_ctx, filename, NULL, NULL)) < 0) {
-        printf("Cannot open input file\n");
+        printf("Video: Cannot open input file\n");
         return ret;
     }
 
     if ((ret = avformat_find_stream_info(video_fmt_ctx, NULL)) < 0) {
-        printf("Cannot find stream information\n");
+        printf("Video: Cannot find stream information\n");
         return ret;
     }
 
     /* select the stream */
     ret = av_find_best_stream(video_fmt_ctx, AVMEDIA_TYPE_VIDEO, -1, -1, &dec, 0);
     if (ret < 0) {
-        printf("Cannot find a corresponding stream in the input file\n");
+        printf("Video: Cannot find a corresponding stream in the input file\n");
         return ret;
     }
 
@@ -132,7 +132,7 @@ static int open_video_file(char *filename)
 
     /* init the decoder */
     if ((ret = avcodec_open2(video_dec_ctx, dec, NULL)) < 0) {
-        printf("Cannot open decoder\n");
+        printf("Video: Cannot open decoder\n");
         return ret;
     }
 
@@ -151,19 +151,19 @@ static int open_audio_file(char *filename)
     }
 
     if ((ret = avformat_open_input(&audio_fmt_ctx, filename, NULL, NULL)) < 0) {
-        printf("Cannot open input file\n");
+        printf("Audio: Cannot open input file\n");
         return ret;
     }
 
     if ((ret = avformat_find_stream_info(audio_fmt_ctx, NULL)) < 0) {
-        printf("Cannot find stream information\n");
+        printf("Audio: Cannot find stream information\n");
         return ret;
     }
 
     /* select the stream */
     ret = av_find_best_stream(audio_fmt_ctx, AVMEDIA_TYPE_AUDIO, -1, -1, &dec, 0);
     if (ret < 0) {
-        printf("Cannot find a corresponding stream in the input file\n");
+        printf("Audio: Cannot find a corresponding stream in the input file\n");
         return ret;
     }
 
@@ -177,7 +177,7 @@ static int open_audio_file(char *filename)
 
     /* init the decoder */
     if ((ret = avcodec_open2(audio_dec_ctx, dec, NULL)) < 0) {
-        printf("Cannot open decoder\n");
+        printf("Audio: Cannot open decoder\n");
         return ret;
     }
 
@@ -762,19 +762,19 @@ int ffmpeg_subtitles_decode(decode_data *data, const char *filename) {
     }
 
     if ((ret = avformat_open_input(&ctx, filename, NULL, NULL)) < 0) {
-      printf("Cannot open input file\n");
+      printf("Subtitles: Cannot open input file\n");
       goto end;
     }
 
     if ((ret = avformat_find_stream_info(ctx, NULL)) < 0) {
-      printf("Cannot find stream information\n");
+      printf("Subtitles: Cannot find stream information\n");
       goto end;
     }
 
     /* select the stream */
     ret = av_find_best_stream(ctx, AVMEDIA_TYPE_SUBTITLE, -1, -1, &codec, 0);
     if (ret < 0) {
-      printf("Cannot find a corresponding stream in the input file\n");
+      printf("Subtitles: Cannot find a corresponding stream in the input file\n");
       goto end;
     }
 
@@ -790,7 +790,7 @@ int ffmpeg_subtitles_decode(decode_data *data, const char *filename) {
 
     /* init the decoder */
     if ((ret = avcodec_open2(dec, codec, NULL)) < 0) {
-      printf("Cannot open decoder\n");
+      printf("Subtitles: Cannot open decoder\n");
       goto end;
     }
 

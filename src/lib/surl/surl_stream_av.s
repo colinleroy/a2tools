@@ -1446,8 +1446,7 @@ adp:    sta     $FFFF           ; 62     send cmd
 nokbd:
 ad15b:  ldx     $A8FF           ; 47
         stx     next+1          ; 50
-        WASTE_19                ; 69
-        jmp     (next)          ; 75     jump to next duty cycle
+        WASTE_5                 ; 55
 noser:  WASTE_14                ; 69
         jmp     (next)          ; 75     jump to next duty cycle
 out:    jmp     break_out
@@ -1990,7 +1989,7 @@ video_direct:
 @page0:
         sta     $C054                   ; 14    Activate page 0
         lda     #>(page2_addrs_arr_low) ; 16    Write to page 1
-        sta     page_ptr_low+1          ; 19    Update pointers to page 0
+        sta     page_ptr_low+1          ; 19    Update pointers to page 1
         sta     page_ptr_high+1         ; 22
         clv                             ; 24    Set next page to 1 (not 0)
         WASTE_3                         ; 27
