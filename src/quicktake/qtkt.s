@@ -528,7 +528,6 @@ end_of_line:
         ; First cols and first row handlers, out of main loop
 
 clamp_low_nibble:
-        beq     check_first_row2; No overflow
         eor     #$FF            ; => 00 if negative, FE if positive
         bpl     :+
         lda     #$FF            ; => FF if positive
