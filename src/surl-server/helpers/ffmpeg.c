@@ -47,7 +47,7 @@
 #define HGR_HEIGHT 192
 
 /* Video size - the bigger, the less fps */
-#define MAX_BYTES_PER_FRAME 2000
+#define MAX_BYTES_PER_FRAME 1600
 int pic_width, pic_height;
 
 int ditherer = 0; /* 0 = bayer 1 = burkes */
