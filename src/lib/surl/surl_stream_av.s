@@ -28,7 +28,7 @@
 
         .include        "apple2.inc"
 
-; ------------------------------------------------------------------------
+; -----------------------------------------------------------------
 
 MAX_LEVEL         = 31
 
@@ -41,11 +41,11 @@ N_BASES       = (8192/MAX_OFFSET)+1
 N_TEXT_BASES  = 4
 
 .ifdef DOUBLE_BUFFER
-PAGE1_HB      = $20
-PAGE2_HB      = $40
+PAGE0_HB      = $20
+PAGE1_HB      = $40
 .else
-PAGE1_HB      = $20
-PAGE2_HB      = PAGE1_HB
+PAGE0_HB      = $20
+PAGE1_HB      = PAGE0_HB
 .endif
 
 SPKR         := $C030
@@ -517,72 +517,7 @@ _surl_stream_av:                ; Entry point
 
         clv                     ; set page 1
 
-        jmp     duty_start    ; And start!
-; -----------------------------------------------------------------
-setup:
-        ; Setup pointer access to SPKR
-        lda     #<(SPKR)
-        sta     spkr_ptr
-        lda     #>(SPKR)
-        sta     spkr_ptr+1
-
-        ; Calculate bases for HGR page 1
-        lda     #>(page1_addrs_arr_low)
-        sta     calc_addr_low+2
-        sta     calc_addr_high+2
-        sta     calc_addr_text_low+2
-        sta     calc_addr_text_high+2
-        ldx     #PAGE1_HB
-        jsr     calc_bases
-        lda     #$50
-        ldx     #$06
-        jsr     calc_text_bases
-
-        ; Calculate bases for HGR page 2
-        lda     #>(page2_addrs_arr_low)
-        sta     calc_addr_low+2
-        sta     calc_addr_high+2
-        sta     calc_addr_text_low+2
-        sta     calc_addr_text_high+2
-        ldx     #PAGE2_HB
-        jsr     calc_bases
-        lda     #$50
-        ldx     #$0A
-        jsr     calc_text_bases
-
-        ; Init vars
-        stz     got_offset
-        stz     kbd_cmd
-
-        ; Extra ZP variable to be able to waste one cycle using CMP ZP instead
-        ; of CMP IMM in some duty cycles
-        lda     #HAS_BYTE
-        sta     has_byte_zp
-
-        ; Vars to emulate "sev" (set overflow), in either 3 or 4 cycles
-        lda     #$40
-        sta     zp_vflag
-        sta     abs_vflag
-
-        ; Setup serial registers
-        jsr     patch_serial_registers
-
-acmd:   lda     $A8FF           ; Copy command and control registers from
-vcmd:   sta     $98FF           ; the main serial port to the second serial
-actrl:  lda     $A8FF           ; port, it's easier than setting it up from
-vctrl:  sta     $98FF           ; scratch
-
-        lda     #<(page1_addrs_arr_low)
-        sta     page_ptr_low
-        lda     #>(page1_addrs_arr_low)
-        sta     page_ptr_low+1
-
-        lda     #<(page1_addrs_arr_high)
-        sta     page_ptr_high
-        lda     #>(page1_addrs_arr_high)
-        sta     page_ptr_high+1
-
-        rts
+        jmp     duty_start      ; And start!
 ; -----------------------------------------------------------------
 
 .align $100
@@ -614,6 +549,7 @@ ad1b:   ldx     $A8FF           ; 40
         WASTE_26                ; 69     waste extra cycles
         jmp     (next)          ; 75     jump to next duty cycle
 
+; -----------------------------------------------------------------
 patch_addresses:                ; Patch all registers in ptr1 array with A
         ldy     #$00            ; Start at beginning
         sta     tmp1            ; Save value
@@ -647,6 +583,7 @@ next_addr:
         bra     next_addr
 done:
         rts
+; -----------------------------------------------------------------
 
 .align $100
 .assert * = _SAMPLES_BASE + $200, error
@@ -677,6 +614,7 @@ ad2b:   ldx     $A8FF           ; 40
         WASTE_26                ; 69     waste extra cycles
         jmp     (next)          ; 75     jump to next duty cycle
 
+; -----------------------------------------------------------------
 patch_serial_registers:
         .ifdef IIGS
         brk                     ; Todo
@@ -762,6 +700,7 @@ patch_serial_registers:
 
         rts
         .endif
+; -----------------------------------------------------------------
 
 .align $100
 .assert * = _SAMPLES_BASE + $300, error
@@ -779,7 +718,7 @@ vd3:    ldy     $98FF           ; 27
         jmp     video_direct    ; 42=>75 (takes 33 cycles, jumps to next)
 
 no_vid3:
-        stx   next+1            ; 27
+        stx     next+1          ; 27
 vs3b:   lda     $99FF           ; 31
         and     #HAS_BYTE       ; 33
         beq     no_vid3b        ; 35/36
@@ -792,6 +731,7 @@ ad3b:   ldx     $A8FF           ; 40
         WASTE_26                ; 69     waste extra cycles
         jmp     (next)          ; 75     jump to next duty cycle
 
+; -----------------------------------------------------------------
 video_status_patches:
                 .word vss
                 .word vs0
@@ -859,6 +799,7 @@ video_status_patches:
                 .word vs31
                 .word vs31b
                 .word $0000
+; -----------------------------------------------------------------
 
 .align $100
 .assert * = _SAMPLES_BASE + $400, error
@@ -889,6 +830,7 @@ ad4b:   ldx     $A8FF           ; 40
         WASTE_26                ; 69     waste extra cycles
         jmp     (next)          ; 75     jump to next duty cycle
 
+; -----------------------------------------------------------------
 video_data_patches:
                 .word vds
                 .word vd0
@@ -956,6 +898,7 @@ video_data_patches:
                 .word vd31
                 .word vd31b
                 .word $0000
+; -----------------------------------------------------------------
 
 .align $100
 .assert * = _SAMPLES_BASE + $500, error
@@ -986,6 +929,7 @@ ad5b:   ldx     $A8FF           ; 40
         WASTE_26                ; 69     waste extra cycles
         jmp     (next)          ; 75     jump to next duty cycle
 
+; -----------------------------------------------------------------
 audio_status_patches:
                 .word ass
                 .word asp
@@ -1059,6 +1003,7 @@ audio_data_patches:
                 .word ad31
                 .word ad31b
                 .word $0000
+; -----------------------------------------------------------------
 
 .align $100
 .assert * = _SAMPLES_BASE + $600, error
@@ -1145,7 +1090,7 @@ calc_bases:
         ; Precalculate addresses inside pages, so we can easily jump
         ; from one to another without complicated computations. X
         ; contains the base page address's high byte on entry ($20 for
-        ; page 1, $40 for page 2)
+        ; page 0, $40 for page 1)
         ldy     #0              ; Y is the index - Start at base 0
         lda     #$00            ; A is the address's low byte
                                 ; (and X the address's high byte)
@@ -1153,11 +1098,11 @@ calc_bases:
         clc
 calc_next_base:
 calc_addr_low:
-        sta     page1_addrs_arr_low,y        ; Store AX
+        sta     page0_addrs_arr_low,y        ; Store AX
         pha
         txa
 calc_addr_high:
-        sta     page1_addrs_arr_high,y
+        sta     page0_addrs_arr_high,y
         pla
         iny
 
@@ -1168,22 +1113,24 @@ calc_addr_high:
 :       cpy     #(N_BASES)
         bcc     calc_next_base
         rts
+; -----------------------------------------------------------------
 
+; -----------------------------------------------------------------
 calc_text_bases:
-        ; Precalculate addresses inside pages, so we can easily jump
+        ; Precalculate text lines 20-23 adresses, so we can easily jump
         ; from one to another without complicated computations. X
-        ; contains the base page address's high byte on entry ($20 for
-        ; page 1, $40 for page 2)
+        ; contains line 20's base page address high byte on entry ($02 for
+        ; page 0, $06 for page 1).
         ldy     #(N_BASES)    ; Y is the index - Start after HGR bases
 
         clc
 calc_next_text_base:
 calc_addr_text_low:
-        sta     page1_addrs_arr_low,y        ; Store AX
+        sta     page0_addrs_arr_low,y        ; Store AX
         pha
         txa
 calc_addr_text_high:
-        sta     page1_addrs_arr_high,y
+        sta     page0_addrs_arr_high,y
         pla
         iny
 
@@ -1194,6 +1141,7 @@ calc_addr_text_high:
 :       cpy     #(N_BASES+4+1)
         bcc     calc_next_text_base
         rts
+; -----------------------------------------------------------------
 
 .align $100
 .assert * = _SAMPLES_BASE + $800, error
@@ -1224,6 +1172,72 @@ ad8b:   ldx     $A8FF           ; 40
         WASTE_26                ; 69     waste extra cycles
         jmp     (next)          ; 75     jump to next duty cycle
 
+; -----------------------------------------------------------------
+setup:
+        ; Setup pointer access to SPKR
+        lda     #<(SPKR)
+        sta     spkr_ptr
+        lda     #>(SPKR)
+        sta     spkr_ptr+1
+
+        ; Calculate bases for HGR page 0
+        lda     #>(page0_addrs_arr_low)
+        sta     calc_addr_low+2
+        sta     calc_addr_high+2
+        sta     calc_addr_text_low+2
+        sta     calc_addr_text_high+2
+        ldx     #PAGE0_HB
+        jsr     calc_bases
+        lda     #$50
+        ldx     #$06
+        jsr     calc_text_bases
+
+        ; Calculate bases for HGR page 1
+        lda     #>(page1_addrs_arr_low)
+        sta     calc_addr_low+2
+        sta     calc_addr_high+2
+        sta     calc_addr_text_low+2
+        sta     calc_addr_text_high+2
+        ldx     #PAGE1_HB
+        jsr     calc_bases
+        lda     #$50
+        ldx     #$0A
+        jsr     calc_text_bases
+
+        ; Init vars
+        stz     got_offset
+        stz     kbd_cmd
+
+        ; Extra ZP variable to be able to waste one cycle using CMP ZP instead
+        ; of CMP IMM in some duty cycles
+        lda     #HAS_BYTE
+        sta     has_byte_zp
+
+        ; Vars to emulate "sev" (set overflow), in either 3 or 4 cycles
+        lda     #$40
+        sta     zp_vflag
+        sta     abs_vflag
+
+        ; Setup serial registers
+        jsr     patch_serial_registers
+
+acmd:   lda     $A8FF           ; Copy command and control registers from
+vcmd:   sta     $98FF           ; the main serial port to the second serial
+actrl:  lda     $A8FF           ; port, it's easier than setting it up from
+vctrl:  sta     $98FF           ; scratch
+
+        lda     #<(page0_addrs_arr_low)
+        sta     page_ptr_low
+        lda     #>(page0_addrs_arr_low)
+        sta     page_ptr_low+1
+
+        lda     #<(page0_addrs_arr_high)
+        sta     page_ptr_high
+        lda     #>(page0_addrs_arr_high)
+        sta     page_ptr_high+1
+
+        rts
+; -----------------------------------------------------------------
 
 .align $100
 .assert * = _SAMPLES_BASE + $900, error
@@ -1482,7 +1496,7 @@ ad16b:  ldx     $A8FF           ; 40
         ldx     cur_mix         ; 50
         cmp     #$09            ; 52
         bne     not_tab         ; 54/55
-        bit     $C052,x         ; 58
+        lda     $C052,x         ; 58     not BIT, to preserve V flag
         txa                     ; 60
         eor     #$01            ; 62
         sta     cur_mix         ; 66
@@ -1904,10 +1918,10 @@ ad29b:  ldx     $A8FF           ; 41
         WASTE_25                ; 69     waste extra cycles
         jmp     (next)          ; 75     jump to next duty cycle
 
-.align $20 ; page1_ and page2_ addresses arrays must share the same low byte
+.align $20 ; page0_ and page1_ addresses arrays must share the same low byte
 .assert * = _SAMPLES_BASE + $1D60, error
-page1_addrs_arr_low: .res (N_BASES+4+1)          ; Base addresses arrays
-page1_addrs_arr_high:.res (N_BASES+4+1)          ; Base addresses arrays
+page0_addrs_arr_low: .res (N_BASES+4+1)          ; Base addresses arrays
+page0_addrs_arr_high:.res (N_BASES+4+1)          ; Base addresses arrays
 
 .align $100
 .assert * = _SAMPLES_BASE + $1E00, error
@@ -1950,8 +1964,9 @@ video_tog_spkr:                 ; Alternate entry point for duty cycle 30
         ____SPKR_DUTY____4      ; 38
         ABS_STX next+1          ; 42
 
-; Video handler expects the video byte in A register.
-; Video handler must take 41 cycles on every code path.
+; Video handler expects the video byte in Y register, and the N flag set by
+; its loading.
+; Video handler must take 33 cycles on every code path.
 video_direct:
         bmi     @set_pixel              ; 2/3   Is it a control byte?
 @control:                               ;       It is a control byte
@@ -1960,47 +1975,48 @@ video_direct:
 
 @dest_ctrl:
         ldx     got_offset              ; 9     Did we get an offset byte earlier?
-        beq     @set_offset             ; 11/12 Yes, so this one is a base byte
+        beq     @set_offset             ; 11/12 If yes, this one is a base byte
 
-@set_base:                              ;       This is a base byte
+@set_base:                              ;       This is a base byte (branch takes 22 cycles minimum)
         lda     (page_ptr_low),y        ; 16    Load base pointer low byte from base array
         sta     store_dest              ; 19    Store it to destination pointer low byte
         lda     (page_ptr_high),y       ; 24    Load base pointer high byte from base array
         sta     store_dest+1            ; 27    Store it to destination pointer high byte
         jmp     (next)                  ; 33    Done, go to next duty cycle
 
-@set_offset:                            ;       No, so set offset
+@set_offset:                            ;       No, so set offset (branch takes 14 cyles minimum)
         sty     last_offset             ; 15    Store offset
         inc     got_offset              ; 20    Set the offset-received flag
         WASTE_7                         ; 27    (So much extra cycles!)
         jmp     (next)                  ; 33    Done, go to next duty cycle
 
-@toggle_page:                           ;       Page toggling command
+@toggle_page:                           ;       Page toggling command (branch takes 23 cycles minimum)
 .ifdef DOUBLE_BUFFER
         bvs     @page0                  ; 9/10
-@page1:
+@page1:                                 ;       (branch takes 21 cycles minimum)
         sta     $C055                   ; 13    Activate page 1
-        lda     #>(page1_addrs_arr_low) ; 15    Write to page 0
+        lda     #>(page0_addrs_arr_low) ; 15    Write to page 0
         sta     page_ptr_low+1          ; 18    Update pointers to page 0
         sta     page_ptr_high+1         ; 21
         SEV_ZP                          ; 24    Set next page to 0
         WASTE_3                         ; 27
         jmp     (next)                  ; 33
 
-@page0:
+@page0:                                 ;       (branch takes 20 cycles minimum)
         sta     $C054                   ; 14    Activate page 0
-        lda     #>(page2_addrs_arr_low) ; 16    Write to page 1
+        lda     #>(page1_addrs_arr_low) ; 16    Write to page 1
         sta     page_ptr_low+1          ; 19    Update pointers to page 1
         sta     page_ptr_high+1         ; 22
         clv                             ; 24    Set next page to 1 (not 0)
         WASTE_3                         ; 27
         jmp     (next)                  ; 33
 .else
-        WASTE_17                        ; 27
+        WASTE_17                        ; 24
+        WASTE_3                         ; 27
         jmp     (next)                  ; 33
 .endif
 
-@set_pixel:                             ;       No, it is a data byte
+@set_pixel:                             ;       No, it is a data byte (branch takes 25 cycles minimum)
         tya                             ; 5
         ldy     last_offset             ; 8    Load the offset to the start of the base
         sta     (store_dest),y          ; 14    Store data byte
@@ -2046,8 +2062,8 @@ ad31b:  ldx     $A8FF           ; 43
 
 .align $20
 .assert * = _SAMPLES_BASE + $1F60, error
-page2_addrs_arr_low: .res (N_BASES+4+1)          ; Base addresses arrays
-page2_addrs_arr_high:.res (N_BASES+4+1)          ; Base addresses arrays
+page1_addrs_arr_low: .res (N_BASES+4+1)          ; Base addresses arrays
+page1_addrs_arr_high:.res (N_BASES+4+1)          ; Base addresses arrays
 
 abs_vflag:      .byte $40
 cur_mix:        .byte $0

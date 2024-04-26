@@ -480,8 +480,8 @@ _surl_stream_audio:
 .assert * = _SAMPLES_BASE+$500, error
 duty_cycle5:
         ____SPKR_DUTY____4      ; 4 !
-        VU_START_CLEAR_2        ; 6 !
-        WASTE_3                 ; 9 !
+        WASTE_3                 ; 7 !
+        VU_START_CLEAR_2        ; 9 !
         ____SPKR_DUTY____4      ; 13 !
 
 vc5:    VU_END_CLEAR_5          ; 18
@@ -1176,7 +1176,7 @@ vsd23:  VU_END_SET_X_4          ; 19 !
 s23:    SER_AVAIL_A_6           ; 27 !
         ____SPKR_DUTY____4      ; 31 !
 
-        SER_LOOP_IF_NOT_AVAIL_2 ; 33 35
+        SER_LOOP_IF_NOT_AVAIL_2 ; 33 34
 d23:    SER_FETCH_DEST_A_4      ; 37      - yes
         sta     dest23,x        ; 42
 dest23:
