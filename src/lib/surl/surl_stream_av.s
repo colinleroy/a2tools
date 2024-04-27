@@ -473,19 +473,10 @@ vd0:    ldy     $98FF           ; 24     load video data
         WASTE_12                ; 39     waste extra cycles
         jmp     video_direct    ; 42=>73
 
-no_vid0:                        ;        we had no video byte first try
-        stx     next+1          ; 24     store next duty cycle destination
-        WASTE_3                 ; 27     waste extra cycles
-vs0b:   lda     $99FF           ; 31     check video status register again
-        and     #HAS_BYTE       ; 33     do we have one?
-        beq     no_vid0b        ; 35/36  branch accordingly
-vd0b:   ldy     $98FF           ; 39     load video data
-        jmp     video_direct    ; 42=>73
-
-no_vid0b:                       ;        we had no video byte second try
-ad0b:   ldx     $A8FF           ; 40     load audio data register again
-        stx     next+1          ; 43     store next duty cycle destination
-        WASTE_24                ; 67     waste extra cycles
+no_vid0:                        ;        we had no video byte
+ad0b:   ldx     $A8FF           ; 25     load audio data register again
+        stx     next+1          ; 28     store next duty cycle destination
+        WASTE_39                ; 67     waste extra cycles
         jmp     (next)          ; 73     jump to next duty cycle
 
 ; -----------------------------------------------------------------
@@ -535,18 +526,9 @@ vd1:    ldy     $98FF           ; 25
         jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
 
 no_vid1:
-        WASTE_2                 ; 24
-        stx     next+1          ; 27
-vs1b:   lda     $99FF           ; 31
-        and     #HAS_BYTE       ; 33
-        beq     no_vid1b        ; 35/36
-vd1b:   ldy     $98FF           ; 39
-        jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
-
-no_vid1b:
-ad1b:   ldx     $A8FF           ; 40
-        stx     next+1          ; 43
-        WASTE_24                ; 67     waste extra cycles
+ad1b:   ldx     $A8FF           ; 26
+        stx     next+1          ; 29
+        WASTE_38                ; 67     waste extra cycles
         jmp     (next)          ; 73     jump to next duty cycle
 
 ; -----------------------------------------------------------------
@@ -601,17 +583,9 @@ vd2:    ldy     $98FF           ; 26
         jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
 
 no_vid2:
-        ABS_STX next+1          ; 27 stx absolute
-vs2b:   lda     $99FF           ; 31
-        and     #HAS_BYTE       ; 33
-        beq     no_vid2b        ; 35/36
-vd2b:   ldy     $98FF           ; 39
-        jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
-
-no_vid2b:
-ad2b:   ldx     $A8FF           ; 40
-        stx     next+1          ; 43
-        WASTE_24                ; 67     waste extra cycles
+ad2b:   ldx     $A8FF           ; 27
+        stx     next+1          ; 30
+        WASTE_37                ; 67     waste extra cycles
         jmp     (next)          ; 73     jump to next duty cycle
 
 ; -----------------------------------------------------------------
@@ -655,15 +629,6 @@ patch_serial_registers:
         adc     #1
         sta     vctrl+1
         stx     vctrl+2
-
-        ; Special case for vd26b, we want to cross page
-        sec
-        lda     vd26b+1
-        sbc     #VD_PAGE_OFFSET
-        sta     vd26b+1
-        lda     vd26b+2
-        sbc     #0
-        sta     vd26b+2
 
         lda     #<(audio_status_patches)
         sta     ptr1
@@ -718,86 +683,46 @@ vd3:    ldy     $98FF           ; 27
         jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
 
 no_vid3:
-        stx     next+1          ; 27
-vs3b:   lda     $99FF           ; 31
-        and     #HAS_BYTE       ; 33
-        beq     no_vid3b        ; 35/36
-vd3b:   ldy     $98FF           ; 39
-        jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
-
-no_vid3b:
-ad3b:   ldx     $A8FF           ; 40
-        stx     next+1          ; 43
-        WASTE_24                ; 67     waste extra cycles
+ad3b:   ldx     $A8FF           ; 28
+        stx     next+1          ; 31
+        WASTE_36                ; 67     waste extra cycles
         jmp     (next)          ; 73     jump to next duty cycle
 
 ; -----------------------------------------------------------------
 video_status_patches:
                 .word vss
                 .word vs0
-                .word vs0b
                 .word vs1
-                .word vs1b
                 .word vs2
-                .word vs2b
                 .word vs3
-                .word vs3b
                 .word vs4
-                .word vs4b
                 .word vs5
-                .word vs5b
                 .word vs6
-                .word vs6b
                 .word vs7
-                .word vs7b
                 .word vs8
-                .word vs8b
                 .word vs9
-                .word vs9b
                 .word vs10
-                .word vs10b
                 .word vs11
-                .word vs11b
                 .word vs12
-                .word vs12b
                 .word vs13
-                .word vs13b
                 .word vs14
-                .word vs14b
                 .word vs15
-                .word vs15b
                 .word vs16
-                .word vs16b
                 .word vs17
-                .word vs17b
                 .word vs18
-                .word vs18b
                 .word vs19
-                .word vs19b
                 .word vs20
-                .word vs20b
                 .word vs21
-                .word vs21b
                 .word vs22
-                .word vs22b
                 .word vs23
-                .word vs23b
                 .word vs24
-                .word vs24b
                 .word vs25
-                .word vs25b
                 .word vs26
-                .word vs26b
                 .word vs27
-                .word vs27b
                 .word vs28
-                .word vs28b
                 .word vs29
-                .word vs29b
                 .word vs30
-                .word vs30b
                 .word vs31
-                .word vs31b
                 .word $0000
 ; -----------------------------------------------------------------
 
@@ -816,87 +741,46 @@ vd4:    ldy     $98FF           ; 24
         jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
 
 no_vid4:
-        WASTE_3                 ; 24
-        stx   next+1            ; 27
-vs4b:   lda     $99FF           ; 31
-        and     #HAS_BYTE       ; 33
-        beq     no_vid4b        ; 35/36
-vd4b:   ldy     $98FF           ; 39
-        jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
-
-no_vid4b:
-ad4b:   ldx     $A8FF           ; 40
-        stx     next+1          ; 43
-        WASTE_24                ; 67     waste extra cycles
+ad4b:   ldx     $A8FF           ; 25
+        stx     next+1          ; 28
+        WASTE_39                ; 67     waste extra cycles
         jmp     (next)          ; 73     jump to next duty cycle
 
 ; -----------------------------------------------------------------
 video_data_patches:
                 .word vds
                 .word vd0
-                .word vd0b
                 .word vd1
-                .word vd1b
                 .word vd2
-                .word vd2b
                 .word vd3
-                .word vd3b
                 .word vd4
-                .word vd4b
                 .word vd5
-                .word vd5b
                 .word vd6
-                .word vd6b
                 .word vd7
-                .word vd7b
                 .word vd8
-                .word vd8b
                 .word vd9
-                .word vd9b
                 .word vd10
-                .word vd10b
                 .word vd11
-                .word vd11b
                 .word vd12
-                .word vd12b
                 .word vd13
-                .word vd13b
                 .word vd14
-                .word vd14b
                 .word vd15
-                .word vd15b
                 .word vd16
-                .word vd16b
                 .word vd17
-                .word vd17b
                 .word vd18
-                .word vd18b
                 .word vd19
-                .word vd19b
                 .word vd20
-                .word vd20b
                 .word vd21
-                .word vd21b
                 .word vd22
-                .word vd22b
                 .word vd23
-                .word vd23b
                 .word vd24
-                .word vd24b
                 .word vd25
-                .word vd25b
                 .word vd26
-                .word vd26b
                 .word vd27
-                .word vd27b
                 .word vd28
-                .word vd28b
                 .word vd29
-                .word vd29b
                 .word vd30
-                .word vd30b
                 .word vd31
-                .word vd31b
                 .word $0000
 ; -----------------------------------------------------------------
 
@@ -915,18 +799,9 @@ vd5:    ldy     $98FF           ; 25
         jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
 
 no_vid5:
-        WASTE_2                 ; 24
-        stx   next+1            ; 27
-vs5b:   lda     $99FF           ; 31
-        and     #HAS_BYTE       ; 33
-        beq     no_vid5b        ; 35/36
-vd5b:   ldy     $98FF           ; 39
-        jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
-
-no_vid5b:
-ad5b:   ldx     $A8FF           ; 40
-        stx     next+1          ; 43
-        WASTE_24                ; 67     waste extra cycles
+ad5b:   ldx     $A8FF           ; 26
+        stx     next+1          ; 29
+        WASTE_38                ; 67     waste extra cycles
         jmp     (next)          ; 73     jump to next duty cycle
 
 ; -----------------------------------------------------------------
@@ -1021,17 +896,9 @@ vd6:    ldy     $98FF           ; 26
         jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
 
 no_vid6:
-        ABS_STX next+1          ; 27 stx absolute
-vs6b:   lda     $99FF           ; 31
-        and     #HAS_BYTE       ; 33
-        beq     no_vid6b        ; 35/36
-vd6b:   ldy     $98FF           ; 39
-        jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
-
-no_vid6b:
-ad6b:   ldx     $A8FF           ; 40
-        stx     next+1          ; 43
-        WASTE_24                ; 67     waste extra cycles
+ad6b:   ldx     $A8FF           ; 27
+        stx     next+1          ; 30
+        WASTE_37                ; 67     waste extra cycles
         jmp     (next)          ; 73     jump to next duty cycle
 
 ; --------------------------------------------------------------
@@ -1072,17 +939,9 @@ vd7:    ldy     $98FF           ; 27
         jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
 
 no_vid7:
-        stx     next+1          ; 27
-vs7b:   lda     $99FF           ; 31
-        and     #HAS_BYTE       ; 33
-        beq     no_vid7b        ; 35/36
-vd7b:   ldy     $98FF           ; 39
-        jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
-
-no_vid7b:
-ad7b:   ldx     $A8FF           ; 40
-        stx     next+1          ; 43
-        WASTE_24                ; 67     waste extra cycles
+ad7b:   ldx     $A8FF           ; 28
+        stx     next+1          ; 31
+        WASTE_36                ; 67     waste extra cycles
         jmp     (next)          ; 73     jump to next duty cycle
 
 ; -----------------------------------------------------------------
@@ -1158,18 +1017,9 @@ vd8:    ldy     $98FF           ; 24
         jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
 
 no_vid8:
-        WASTE_3                 ; 24
-        stx     next+1          ; 27
-vs8b:   lda     $99FF           ; 31
-        and     #HAS_BYTE       ; 33
-        beq     no_vid8b        ; 35/36
-vd8b:   ldy     $98FF           ; 39
-        jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
-
-no_vid8b:
-ad8b:   ldx     $A8FF           ; 40
-        stx     next+1          ; 43
-        WASTE_24                ; 67     waste extra cycles
+ad8b:   ldx     $A8FF           ; 25
+        stx     next+1          ; 28
+        WASTE_39                ; 67     waste extra cycles
         jmp     (next)          ; 73     jump to next duty cycle
 
 ; -----------------------------------------------------------------
@@ -1255,18 +1105,9 @@ vd9:    ldy     $98FF           ; 25
         jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
 
 no_vid9:
-        WASTE_2                 ; 24
-        stx     next+1          ; 27
-vs9b:   lda     $99FF           ; 31
-        and     #HAS_BYTE       ; 33
-        beq     no_vid9b        ; 35/36
-vd9b:   ldy     $98FF           ; 39
-        jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
-
-no_vid9b:
-ad9b:   ldx     $A8FF           ; 40
-        stx     next+1          ; 43
-        WASTE_24                ; 67     waste extra cycles
+ad9b:   ldx     $A8FF           ; 26
+        stx     next+1          ; 29
+        WASTE_38                ; 67     waste extra cycles
         jmp     (next)          ; 73     jump to next duty cycle
 
 .align $100
@@ -1285,17 +1126,9 @@ vd10:   ldy     $98FF           ; 26
         jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
 
 no_vid10:
-        ABS_STX next+1          ; 27 stx absolute
-vs10b:  lda     $99FF           ; 31
-        and     #HAS_BYTE       ; 33
-        beq     no_vid10b       ; 35/36
-vd10b:  ldy     $98FF           ; 39
-        jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
-
-no_vid10b:
-ad10b:  ldx     $A8FF           ; 40
-        stx     next+1          ; 43
-        WASTE_24                ; 67     waste extra cycles
+ad10b:  ldx     $A8FF           ; 27
+        stx     next+1          ; 30
+        WASTE_37                ; 67     waste extra cycles
         jmp     (next)          ; 73     jump to next duty cycle
 
 
@@ -1315,17 +1148,9 @@ vd11:   ldy     $98FF           ; 27
         jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
 
 no_vid11:
-        stx     next+1          ; 27
-vs11b:  lda     $99FF           ; 31
-        and     #HAS_BYTE       ; 33
-        beq     no_vid11b       ; 35/36
-vd11b:  ldy     $98FF           ; 39
-        jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
-
-no_vid11b:
-ad11b:  ldx     $A8FF           ; 40
-        stx     next+1          ; 43
-        WASTE_24                ; 67     waste extra cycles
+ad11b:  ldx     $A8FF           ; 28
+        stx     next+1          ; 31
+        WASTE_36                ; 67     waste extra cycles
         jmp     (next)          ; 73     jump to next duty cycle
 
 
@@ -1345,17 +1170,9 @@ vd12:   ldy     $98FF           ; 26
         jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
 
 no_vid12:
-        ABS_STX next+1          ; 27 stx absolute
-vs12b:  lda     $99FF           ; 31
-        and     #HAS_BYTE       ; 33
-        beq     no_vid12b       ; 35/36
-vd12b:  ldy     $98FF           ; 39
-        jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
-
-no_vid12b:
-ad12b:  ldx     $A8FF           ; 40
-        stx     next+1          ; 43
-        WASTE_24                ; 67     waste extra cycles
+ad12b:  ldx     $A8FF           ; 27
+        stx     next+1          ; 30
+        WASTE_37                ; 67     waste extra cycles
         jmp     (next)          ; 73     jump to next duty cycle
 
 .align $100
@@ -1374,18 +1191,9 @@ vd13:   ldy     $98FF           ; 25
 
 no_vid13:
         ____SPKR_DUTY____4      ; 21
-        stx     next+1          ; 24
-        WASTE_3                 ; 27
-vs13b:  lda     $99FF           ; 31
-        and     #HAS_BYTE       ; 33
-        beq     no_vid13b       ; 35/36
-vd13b:  ldy     $98FF           ; 39
-        jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
-
-no_vid13b:
-ad13b:  ldx     $A8FF           ; 40
-        stx     next+1          ; 43
-        WASTE_24                ; 67     waste extra cycles
+ad13b:  ldx     $A8FF           ; 25
+        stx     next+1          ; 28
+        WASTE_39                ; 67     waste extra cycles
         jmp     (next)          ; 73     jump to next duty cycle
 
 .align $100
@@ -1405,18 +1213,9 @@ vd14:   ldy     $98FF           ; 26
 
 no_vid14:
         ____SPKR_DUTY____5      ; 22
-        stx     next+1          ; 25
-        WASTE_2                 ; 27
-vs14b:  lda     $99FF           ; 31
-        and     #HAS_BYTE       ; 33
-        beq     no_vid14b       ; 35/36
-vd14b:  ldy     $98FF           ; 39
-        jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
-
-no_vid14b:
-ad14b:  ldx     $A8FF           ; 40
-        stx     next+1          ; 43
-        WASTE_24                ; 67     waste extra cycles
+ad14b:  ldx     $A8FF           ; 26
+        stx     next+1          ; 29
+        WASTE_38                ; 67     waste extra cycles
         jmp     (next)          ; 73     jump to next duty cycle
 
 .align $100
@@ -1437,33 +1236,26 @@ vd15:   ldy     $98FF           ; 27
 no_vid15:
         WASTE_2                 ; 19
         ____SPKR_DUTY____4      ; 23
-        ABS_STX next+1          ; 27 stx absolute
-vs15b:  lda     $99FF           ; 31
-        and     #HAS_BYTE       ; 33
-        beq     no_vid15b       ; 35/36
-vd15b:  ldy     $98FF           ; 39
-        jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
+asp:    lda     $FFFF           ; 27     check serial tx empty
+        and     #$10            ; 29
+        beq     noser           ; 31/32
 
-no_vid15b:
-asp:    lda     $FFFF           ; 40     check serial tx empty
-        and     #$10            ; 42
-        beq     noser           ; 44/45
-
-        lda     KBD             ; 48     keyboard handling
-        bpl     nokbd           ; 50/51
-        sta     KBDSTRB         ; 54     we have a key, clear strobe
-        and     #$7F            ; 56
-adp:    sta     $FFFF           ; 60     send cmd
-        cmp     #$1B            ; 62
-        beq     out             ; 64/65  if escape, exit forcefully
-        sta     kbd_cmd         ; 67
+        lda     KBD             ; 35     keyboard handling
+        bpl     nokbd           ; 37/38
+        sta     KBDSTRB         ; 41     we have a key, clear strobe
+        and     #$7F            ; 43
+adp:    sta     $FFFF           ; 47     send cmd
+        cmp     #$1B            ; 49
+        beq     out             ; 51/52  if escape, exit forcefully
+        sta     kbd_cmd         ; 54
+        WASTE_13                ; 67
         jmp     (next)          ; 73     jump to next duty cycle
 nokbd:
-ad15b:  ldx     $A8FF           ; 55
-        stx     next+1          ; 58
-        WASTE_9                 ; 67
+ad15b:  ldx     $A8FF           ; 42
+        stx     next+1          ; 45
+        WASTE_22                ; 67
         jmp     (next)          ; 73     jump to next duty cycle
-noser:  WASTE_22                ; 67
+noser:  WASTE_35                ; 67
         jmp     (next)          ; 73     jump to next duty cycle
 out:    jmp     break_out
 
@@ -1482,31 +1274,24 @@ vd16:   ldy     $98FF           ; 20
         jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
 
 no_vid16:
-        stx     next+1          ; 20
+        WASTE_3                 ; 20
         ____SPKR_DUTY____4      ; 24
-        WASTE_3                 ; 27
-vs16b:  lda     $99FF           ; 31
-        and     #HAS_BYTE       ; 33
-        beq     no_vid16b       ; 35/36
-vd16b:  ldy     $98FF           ; 39
-        jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
-
-no_vid16b:
-ad16b:  ldx     $A8FF           ; 40
-        stx     next+1          ; 43
-        lda     kbd_cmd         ; 46     handle subtitles switch
-        ldx     cur_mix         ; 49
-        cmp     #$09            ; 51
-        bne     not_tab         ; 53/54
-        lda     $C052,x         ; 57     not BIT, to preserve V flag
-        txa                     ; 59
-        eor     #$01            ; 61
-        sta     cur_mix         ; 64
-        stz     kbd_cmd         ; 67
+ad16b:  ldx     $A8FF           ; 28
+        stx     next+1          ; 31
+        lda     kbd_cmd         ; 34     handle subtitles switch
+        ldx     cur_mix         ; 37
+        cmp     #$09            ; 39
+        bne     not_tab         ; 41/42
+        lda     $C052,x         ; 45     not BIT, to preserve V flag
+        txa                     ; 47
+        eor     #$01            ; 49
+        sta     cur_mix         ; 52
+        stz     kbd_cmd         ; 55
+        WASTE_12                ; 67
         jmp     (next)          ; 73     jump to next duty cycle
 
 not_tab:
-        WASTE_13                ; 67
+        WASTE_25                ; 67
         jmp     (next)          ; 73     jump to next duty cycle
 
 .align $100
@@ -1524,19 +1309,10 @@ vd17:   ldy     $98FF           ; 20
         jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
 
 no_vid17:
-        stx     next+1          ; 20
-        ____SPKR_DUTY____5      ; 25
-        WASTE_2                 ; 27
-vs17b:  lda     $99FF           ; 31
-        and     #HAS_BYTE       ; 33
-        beq     no_vid17b       ; 35/36
-vd17b:  ldy     $98FF           ; 39
-        jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
-
-no_vid17b:
-ad17b:  ldx     $A8FF           ; 40
-        stx     next+1          ; 43
-        WASTE_24                ; 67     waste extra cycles
+ad17b:  ldx     $A8FF           ; 21
+        ____SPKR_DUTY____4      ; 25
+        stx     next+1          ; 28
+        WASTE_39                ; 67     waste extra cycles
         jmp     (next)          ; 73     jump to next duty cycle
 
 .align $100
@@ -1555,18 +1331,10 @@ vd18:   ldy     $98FF           ; 20
         jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
 
 no_vid18:
-        ABS_STX next+1          ; 21
+ad18b:  ldx     $A8FF           ; 21
         ____SPKR_DUTY____5      ; 26
-vs18b:  lda     $99FF           ; 30
-        and     has_byte_zp     ; 33
-        beq     no_vid18b       ; 35/36
-vd18b:  ldy     $98FF           ; 39
-        jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
-
-no_vid18b:
-ad18b:  ldx     $A8FF           ; 40
-        stx     next+1          ; 43
-        WASTE_24                ; 67     waste extra cycles
+        stx     next+1          ; 29
+        WASTE_38                ; 67     waste extra cycles
         jmp     (next)          ; 73     jump to next duty cycle
 
 .align $100
@@ -1585,19 +1353,11 @@ vd19:   ldy     $98FF           ; 20
         jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
 
 no_vid19:
-        WASTE_2                 ; 19
-        ABS_STX next+1          ; 23 stx absolute
+ad19b:  ldx     $A8FF           ; 21
+        WASTE_2                 ; 23
         ____SPKR_DUTY____4      ; 27
-vs19b:  lda     $99FF           ; 31
-        and     #HAS_BYTE       ; 33
-        beq     no_vid19b       ; 35/36
-vd19b:  ldy     $98FF           ; 39
-        jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
-
-no_vid19b:
-ad19b:  ldx     $A8FF           ; 40
-        stx     next+1          ; 43
-        WASTE_24                ; 67     waste extra cycles
+        stx     next+1          ; 30
+        WASTE_37                ; 67     waste extra cycles
         jmp     (next)          ; 73     jump to next duty cycle
 
 .align $100
@@ -1616,19 +1376,10 @@ vd20:   ldy     $98FF           ; 20
         jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
 
 no_vid20:
-        stx     next+1          ; 20
-vs20b:  lda     $99FF           ; 24
+ad20b:  ldx     $A8FF           ; 21
+        stx     next+1          ; 24
         ____SPKR_DUTY____4      ; 28
-        WASTE_3                 ; 31
-        and     #HAS_BYTE       ; 33
-        beq     no_vid20b       ; 35/36
-vd20b:  ldy     $98FF           ; 39
-        jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
-
-no_vid20b:
-ad20b:  ldx     $A8FF           ; 40
-        stx     next+1          ; 43
-        WASTE_24                ; 67     waste extra cycles
+        WASTE_39                ; 67     waste extra cycles
         jmp     (next)          ; 73     jump to next duty cycle
 
 .align $100
@@ -1647,19 +1398,10 @@ vd21:   ldy     $98FF           ; 20
         jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
 
 no_vid21:
-        ABS_STX next+1          ; 21 stx absolute
-vs21b:  lda     $99FF           ; 25
-        ____SPKR_DUTY____4      ; 29
-        WASTE_2                 ; 31
-        and     #HAS_BYTE       ; 33
-        beq     no_vid21b       ; 35/36
-vd21b:  ldy     $98FF           ; 39
-        jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
-
-no_vid21b:
-ad21b:  ldx     $A8FF           ; 40
-        stx     next+1          ; 43
-        WASTE_24                ; 67     waste extra cycles
+ad21b:  ldx     $A8FF           ; 21
+        stx     next+1          ; 24
+        ____SPKR_DUTY____5      ; 29
+        WASTE_38                ; 67     waste extra cycles
         jmp     (next)          ; 73     jump to next duty cycle
 
 .align $100
@@ -1678,19 +1420,11 @@ vd22:   ldy     $98FF           ; 20
         jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
 
 no_vid22:
-        stx     next+1          ; 20
-vs22b:  lda     $99FF           ; 24
-        and     #HAS_BYTE       ; 26
+ad22b:  ldx     $A8FF           ; 21
+        stx     next+1          ; 24
+        WASTE_2                 ; 26
         ____SPKR_DUTY____4      ; 30
-        beq     no_vid22b       ; 32/33
-        WASTE_3                 ; 35
-vd22b:  ldy     $98FF           ; 39
-        jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
-
-no_vid22b:
-ad22b:  ldx     $A8FF           ; 37
-        stx     next+1          ; 40
-        WASTE_27                ; 67
+        WASTE_37                ; 67
         jmp     (next)          ; 73     jump to next duty cycle
 
 .align $100
@@ -1709,19 +1443,11 @@ vd23:   ldy     $98FF           ; 20
         jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
 
 no_vid23:
-        stx     next+1          ; 20
-vs23b:  lda     $99FF           ; 24
-        and     #HAS_BYTE       ; 26
-        ____SPKR_DUTY____5      ; 31
-        WASTE_2                 ; 33
-        beq     no_vid23b       ; 35/36
-vd23b:  ldy     $98FF           ; 39
-        jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
-
-no_vid23b:
-ad23b:  ldx     $A8FF           ; 40
-        stx     next+1          ; 43
-        WASTE_24                ; 67     waste extra cycles
+ad23b:  ldx     $A8FF           ; 21
+        stx     next+1          ; 24
+        WASTE_3                 ; 27
+        ____SPKR_DUTY____4      ; 31
+        WASTE_36                ; 67
         jmp     (next)          ; 73     jump to next duty cycle
 
 
@@ -1741,20 +1467,11 @@ vd24:   ldy     $98FF           ; 20
         jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
 
 no_vid24:
-        WASTE_2                 ; 19
-vs24b:  lda     $99FF           ; 23
-        and     #HAS_BYTE       ; 25
-        beq     no_vid24b       ; 27/28
-        ____SPKR_DUTY____5      ; 32
-        stx     next+1          ; 35
-vd24b:  ldy     $98FF           ; 39
-        jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
-
-no_vid24b:
+ad24b:  ldx     $A8FF           ; 21
+        stx     next+1          ; 24
+        WASTE_4                 ; 28
         ____SPKR_DUTY____4      ; 32
-ad24b:  ldx     $A8FF           ; 36
-        stx     next+1          ; 39
-        WASTE_28                ; 67
+        WASTE_35                ; 67
         jmp     (next)          ; 73     jump to next duty cycle
 
 .align $100
@@ -1773,20 +1490,11 @@ vd25:   ldy     $98FF           ; 20
         jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
 
 no_vid25:
-        stx     next+1          ; 20
-vs25b:  lda     $99FF           ; 24
-        and     #HAS_BYTE       ; 26
-        beq     no_vid25b       ; 28/29
-        ____SPKR_DUTY____5      ; 33
-        WASTE_2                 ; 35
-vd25b:  ldy     $98FF           ; 39
-        jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
-
-no_vid25b:
+ad25b:  ldx     $A8FF           ; 21
+        stx     next+1          ; 24
+        WASTE_5                 ; 29
         ____SPKR_DUTY____4      ; 33
-ad25b:  ldx     $A8FF           ; 37
-        stx     next+1          ; 40
-        WASTE_27                ; 67
+        WASTE_34                ; 67
         jmp     (next)          ; 73     jump to next duty cycle
 
 .align $100
@@ -1805,20 +1513,11 @@ vd26:   ldy     $98FF           ; 20
         jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
 
 no_vid26:
-        stx     next+1          ; 20
-vs26b:  lda     $99FF           ; 24
-        and     #HAS_BYTE       ; 26
-        beq     no_vid26b       ; 28/29
-        ldx     #VD_PAGE_OFFSET ; 30
+ad26b:  ldx     $A8FF           ; 21
+        stx     next+1          ; 24
+        WASTE_6                 ; 30
         ____SPKR_DUTY____4      ; 34
-vd26b:  ldy     $98FF,x         ; 39
-        jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
-
-no_vid26b:
-        ____SPKR_DUTY____5      ; 34
-ad26b:  ldx     $A8FF           ; 38
-        stx     next+1          ; 41
-        WASTE_26                ; 67     waste extra cycles
+        WASTE_33                ; 67
         jmp     (next)          ; 73     jump to next duty cycle
 
 .align $100
@@ -1837,20 +1536,11 @@ vd27:   ldy     $98FF           ; 20
         jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
 
 no_vid27:
-        stx     next+1          ; 20
-        WASTE_2                 ; 22
-vs27b:  lda     $99FF           ; 26
-        and     #HAS_BYTE       ; 28
-        beq     no_vid27b       ; 30/31
-        ____SPKR_DUTY____5      ; 35
-vd27b:  ldy     $98FF           ; 39
-        jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
-
-no_vid27b:
+ad27b:  ldx     $A8FF           ; 21
+        stx     next+1          ; 24
+        WASTE_7                 ; 31
         ____SPKR_DUTY____4      ; 35
-ad27b:  ldx     $A8FF           ; 39
-        stx     next+1          ; 42
-        WASTE_25                ; 67     waste extra cycles
+        WASTE_32                ; 67
         jmp     (next)          ; 73     jump to next duty cycle
 
 .align $100
@@ -1869,21 +1559,11 @@ vd28:   ldy     $98FF           ; 20
         jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
 
 no_vid28:
-        WASTE_3                 ; 20
-vs28b:  lda     $99FF           ; 24
-        and     #HAS_BYTE       ; 26
-        beq     no_vid28b       ; 28/29
-vd28b:  ldy     $98FF           ; 32
+ad28b:  ldx     $A8FF           ; 21
+        stx     next+1          ; 24
+        WASTE_8                 ; 32
         ____SPKR_DUTY____4      ; 36
-        stx     next+1          ; 39
-        jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
-
-no_vid28b:
-        WASTE_3                 ; 32
-        ____SPKR_DUTY____4      ; 36
-ad28b:  ldx     $A8FF           ; 40
-        stx     next+1          ; 43
-        WASTE_24                ; 67     waste extra cycles
+        WASTE_31                ; 67
         jmp     (next)          ; 73     jump to next duty cycle
 
 
@@ -1903,25 +1583,15 @@ vd29:   ldy     $98FF           ; 20
         jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
 
 no_vid29:
-        stx     next+1          ; 20
-vs29b:  lda     $99FF           ; 24
-        and     #HAS_BYTE       ; 26
-        beq     no_vid29b       ; 28/29
-vd29b:  ldy     $98FF           ; 32
-        ____SPKR_DUTY____5      ; 37
-        WASTE_2                 ; 39
-        jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
-
-no_vid29b:
-        WASTE_4                 ; 33
+ad29b:  ldx     $A8FF           ; 21
+        stx     next+1          ; 24
+        WASTE_9                 ; 33
         ____SPKR_DUTY____4      ; 37
-ad29b:  ldx     $A8FF           ; 41
-        stx     next+1          ; 44
-        WASTE_23                ; 67     waste extra cycles
+        WASTE_30                ; 67
         jmp     (next)          ; 73     jump to next duty cycle
 
-.align $20 ; page0_ and page1_ addresses arrays must share the same low byte
-.assert * = _SAMPLES_BASE + $1D60, error
+.align $40 ; page0_ and page1_ addresses arrays must share the same low byte
+.assert * = _SAMPLES_BASE + $1D40, error
 PAGE0_ARRAY = *
 page0_addrs_arr_low: .res (N_BASES+4+1)          ; Base addresses arrays
 page0_addrs_arr_high:.res (N_BASES+4+1)          ; Base addresses arrays
@@ -1942,23 +1612,12 @@ vd30:   ldy     $98FF           ; 20
         jmp     video_tog_spkr  ; 34=>73 (turns spkr off, jumps to next)
 
 no_vid30:
-        jmp     duty_cycle30_v2 ; 20=>73 (takes 53 cycles)
-
-no_vid30b:
-        WASTE_2                 ; 34
+ad30b:  ldx     $A8FF           ; 21
+        stx     next+1          ; 24
+        WASTE_10                ; 34
         ____SPKR_DUTY____4      ; 38
-ad30b:  ldx     $A8FF           ; 42
-        stx     next+1          ; 45
-        WASTE_22                ; 67     waste extra cycles
+        WASTE_29                ; 67
         jmp     (next)          ; 73     jump to next duty cycle
-
-duty_cycle30_v2:                ; Alternate entry point for duty cycle 30
-vs30b:  lda     $99FF           ; 24
-        and     has_byte_zp     ; 27
-        bne     vd30b           ; 29/30
-        jmp     no_vid30b       ; 32
-
-vd30b:  ldy     $98FF           ; 34
 
 ; -----------------------------------------------------------------
 ; VIDEO HANDLER
@@ -1969,7 +1628,8 @@ video_tog_spkr:                 ; Alternate entry point for duty cycle 30
 
 ; Video handler expects the video byte in Y register, and the N flag set by
 ; its loading.
-; Video handler must take 33 cycles on every code path.
+; Video handler must take 31 cycles on every code path.
+
 video_direct:
         bmi     @set_pixel              ; 2/3   Is it a control byte?
 @control:                               ;       It is a control byte
@@ -2044,25 +1704,15 @@ vd31:   ldy     $98FF           ; 20
         jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
 
 no_vid31:
-        stx     next+1          ; 20
-        WASTE_2                 ; 22
-vs31b:  lda     $99FF           ; 26
-        and     #HAS_BYTE       ; 28
-        beq     no_vid31b       ; 30/31
-vd31b:  ldy     $98FF           ; 34
-        ____SPKR_DUTY____5      ; 39
-        jmp     video_direct    ; 42=>73 (takes 31 cycles, jumps to next)
-
-no_vid31b:
-        WASTE_4                 ; 35
+ad31b:  ldx     $A8FF           ; 21
+        stx     next+1          ; 24
+        WASTE_11                ; 35
         ____SPKR_DUTY____4      ; 39
-ad31b:  ldx     $A8FF           ; 43
-        stx     next+1          ; 46
-        WASTE_21                ; 67     waste extra cycles
+        WASTE_28                ; 67
         jmp     (next)          ; 73     jump to next duty cycle
 
-.align $20
-.assert * = _SAMPLES_BASE + $1F60, error
+.align $40
+.assert * = _SAMPLES_BASE + $1F40, error
 PAGE1_ARRAY = *
 page1_addrs_arr_low: .res (N_BASES+4+1)          ; Base addresses arrays
 page1_addrs_arr_high:.res (N_BASES+4+1)          ; Base addresses arrays
