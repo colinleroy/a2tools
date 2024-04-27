@@ -34,8 +34,8 @@
 /* Set very high because it looks nicer to drop frames than to
  * artifact all the way
  */
-#define MAX_BYTES_PER_FRAME 900
-#define ACCEPT_ARTEFACT 0
+#define MAX_BYTES_PER_FRAME 600
+int accept_artefact = 0;
 
 #define DOUBLE_BUFFER
 
@@ -389,7 +389,7 @@ static int diff_score(unsigned char a, unsigned char b) {
   return score;
 }
 
-#if ACCEPT_ARTEFACT
+
 static int sort_by_score(byte_diff *a, byte_diff *b) {
   return a->changed < b->changed;
 }
@@ -397,7 +397,6 @@ static int sort_by_score(byte_diff *a, byte_diff *b) {
 static int sort_by_offset(byte_diff *a, byte_diff *b) {
   return a->offset > b->offset;
 }
-#endif
 
 static byte_diff **diffs = NULL;
 #define SAMPLE_RATE (115200 / (1+8+1))
@@ -1049,6 +1048,10 @@ static void *audio_push(void *unused) {
             /* Pause */
             pause = !pause;
             break;
+          case 'a':
+          case 'A':
+            accept_artefact = !accept_artefact;
+            break;
           default:
             printf("key '%02X'\n", c);
         }
@@ -1246,22 +1249,22 @@ send:
     }
   }
 
-#if ACCEPT_ARTEFACT
-  /* Sort by diff */
-  bubble_sort_array((void **)diffs, num_diffs, (sort_func)sort_by_score);
+  if (accept_artefact) {
+    /* Sort by diff */
+    bubble_sort_array((void **)diffs, num_diffs, (sort_func)sort_by_score);
 
-  /* Keep every diff with 4 or more pixels changed */
-  for (j = 0; j < num_diffs; j++) {
-    if (diffs[j]->changed < 4 && j > MAX_BYTES_PER_FRAME)
-      break;
+    /* Keep every diff with 4 or more pixels changed */
+    for (j = 0; j < num_diffs; j++) {
+      if (diffs[j]->changed < 4 && j > MAX_BYTES_PER_FRAME)
+        break;
+    }
+    if (j < num_diffs)
+      num_diffs = j;
+
+    /* Sort the first ones by offset */
+    bubble_sort_array((void **)diffs, num_diffs,
+            (sort_func)sort_by_offset);
   }
-  if (j < num_diffs)
-    num_diffs = j;
-
-  /* Sort the first ones by offset */
-  bubble_sort_array((void **)diffs, num_diffs,
-          (sort_func)sort_by_offset);
-#endif
 
   for (j = 0; j < num_diffs; j++) {
     int pixel = diffs[j]->offset;
