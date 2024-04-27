@@ -376,9 +376,20 @@ static uint8_t *bayer_dither_frame(const AVFrame *frame, AVRational time_base, i
     p = p0;
     out += x_offset;
     for (x = 0; x < frame->width; x++) {
-      uint16_t val = *p + *p * map[y % 8][x % 8] / 63;
+      uint16_t pixel_value = *p;
+      uint16_t val;
+      int16_t time_stab_val = prev_buf[y*HGR_WIDTH+x] ? +20 : -20;
 
-      if(val >= 128)
+      /*
+       No stabilisation: 1183b/frame avg (904 data, 216 offset, 61 base),  9.49fps
+       10:               1138b/frame avg (864 data, 212 offset, 60 base),  9.83fps
+       20:               1092b/frame avg (820 data, 211 offset, 60 base), 10.18fps
+       32:               1054b/frame avg (780 data, 212 offset, 60 base), 10.55fps
+      */
+
+      val = pixel_value + pixel_value * map[y % 8][x % 8] / 63;
+
+      if(val + time_stab_val >= 128)
         val = 255;
       else
         val = 0;
