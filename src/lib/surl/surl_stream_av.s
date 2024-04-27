@@ -50,36 +50,25 @@ PAGE1_HB      = PAGE0_HB
 
 SPKR         := $C030
 
-spkr_ptr      = _zp6            ; word
-last_offset   = _zp8            ; byte
-cur_mix       = _zp9            ; byte
-next          = _zp10           ; word
-page          = _zp12           ; byte
-has_byte_zp   = _zp13           ; byte
+spkr_ptr      = _zp6            ; word - Pointer to SPKR to access in 5 cycles
+next_offset   = _zp8            ; byte - Where to write next video byte
+cur_mix       = _zp9            ; byte - HGR MIX status (for subtitles toggling)
+next          = _zp10           ; word - Next duty cycle address
+page          = _zp12           ; byte - Next HGR page flag
 
-store_dest    = ptr1            ; word
-page_ptr_low  = ptr3            ; word
-page_ptr_high = ptr4            ; word
-zp_zero       = tmp1            ; byte
-zp_vflag      = tmp2            ; byte
-kbd_cmd       = tmp3            ; byte
-; Used to cross page
-VD_PAGE_OFFSET = 254
+cur_base      = ptr1            ; word - Current HGR base to write to
+page_ptr_low  = ptr3            ; word - Pointer to bases addresses (low byte) array
+page_ptr_high = ptr4            ; word - Pointer to bases addresses (high byte) array
+zp_zero       = tmp1            ; byte - A zero in zero page (mostly to waste 3 cycles)
+zp_vflag      = tmp2            ; byte - A $40 in zero page (to set V flag)
+kbd_cmd       = tmp3            ; byte - Deferred keyboard command to handle
 
 ; ---------------------------------------------------------
 ;
 ; Macros
 
-.macro SEV_ABS                  ; We use V flag to track HGR page
-        bit     abs_vflag       ; dedicate a var because BIT #IMMEDIATE
-.endmacro                       ; does NOT affect V flag
-
 .macro SEV_ZP                   ; We use V flag to track HGR page
         bit     zp_vflag        ; dedicate a var because BIT #IMMEDIATE
-.endmacro                       ; does NOT affect V flag
-
-.macro CLV_ZP                   ; We use V flag to track HGR page
-        bit     zp_zero         ; dedicate a var because BIT #IMMEDIATE
 .endmacro                       ; does NOT affect V flag
 
 ; ease cycle counting
@@ -325,7 +314,7 @@ VD_PAGE_OFFSET = 254
         WASTE_8
 .endmacro
 
-.macro WASTE_45   ; 18 nop + sta zp + 3 nop = 21+2 = 23 bytes
+.macro WASTE_45
         WASTE_12
         WASTE_12
         WASTE_12
@@ -363,6 +352,10 @@ VD_PAGE_OFFSET = 254
   .endmacro
 .endif
 
+.macro JUMP_NEXT_17
+        WASTE_11                ; 11
+        jmp     (next)          ; 17     jump to next duty cycle
+.endmacro
         .code
 
 ; General principles. we expect audio to be pushed on one serial port, video on
@@ -391,11 +384,6 @@ VD_PAGE_OFFSET = 254
 ; audio serial port's status register and unconditionnaly read the audio serial
 ; port's data register.
 ;
-; Each duty cycle takes 73 cycles to complete (just below the 86µs interval at
-; which bytes arrive on a serial port at 115200 bps), but as precisely timing
-; the speaker toggling moves the serial fetching code around, it is possible to
-; lose bytes of video if we only check once per duty cycle.
-;
 ; Hence, each duty cycle does the following:
 ; - Load whatever is in the audio data register into jump destination
 ; - If there is a video byte,
@@ -404,12 +392,8 @@ VD_PAGE_OFFSET = 254
 ;    - Waste the required amount of cycles
 ;    - Jump to video handler
 ; - Otherwise,
-;    - Waste the required amount of cycles (less than in the first case),
-;    - Check video byte again,
-;    - If there is one, jump to video handler,
-; - Otherwise,
 ;    - Load audio byte again,
-;    - Waste (a lot) of cycles,
+;    - Waste the required amount of cycles (less than in the first case),
 ;    - Jump to the next duty cycle.
 ;
 ; Keyboard handling is cycle-expensive and can't be macroized properly, so
@@ -418,9 +402,6 @@ VD_PAGE_OFFSET = 254
 ;
 ; The video handler is responsible for jumping directly to the next duty
 ; cycle once the video byte is handled.
-;
-; As a rule of thumb, no bytes are dropped if we check for video byte around
-; cycles 12-20 and 24-31.
 ;
 ; Almost every reference to serial registers is direct, so every duty cycle
 ; is patched in multiple places. The patched instructions are labelled like
@@ -476,8 +457,8 @@ vd0:    ldy     $98FF           ; 24     load video data
 no_vid0:                        ;        we had no video byte
 ad0b:   ldx     $A8FF           ; 25     load audio data register again
         stx     next+1          ; 28     store next duty cycle destination
-        WASTE_39                ; 67     waste extra cycles
-        jmp     (next)          ; 73     jump to next duty cycle
+        WASTE_28                ; 56
+        JUMP_NEXT_17            ; 73
 
 ; -----------------------------------------------------------------
 _surl_stream_av:                ; Entry point
@@ -528,8 +509,8 @@ vd1:    ldy     $98FF           ; 25
 no_vid1:
 ad1b:   ldx     $A8FF           ; 26
         stx     next+1          ; 29
-        WASTE_38                ; 67     waste extra cycles
-        jmp     (next)          ; 73     jump to next duty cycle
+        WASTE_27                ; 56
+        JUMP_NEXT_17            ; 73
 
 ; -----------------------------------------------------------------
 patch_addresses:                ; Patch all registers in ptr1 array with A
@@ -585,8 +566,8 @@ vd2:    ldy     $98FF           ; 26
 no_vid2:
 ad2b:   ldx     $A8FF           ; 27
         stx     next+1          ; 30
-        WASTE_37                ; 67     waste extra cycles
-        jmp     (next)          ; 73     jump to next duty cycle
+        WASTE_26                ; 56
+        JUMP_NEXT_17            ; 73
 
 ; -----------------------------------------------------------------
 patch_serial_registers:
@@ -685,8 +666,8 @@ vd3:    ldy     $98FF           ; 27
 no_vid3:
 ad3b:   ldx     $A8FF           ; 28
         stx     next+1          ; 31
-        WASTE_36                ; 67     waste extra cycles
-        jmp     (next)          ; 73     jump to next duty cycle
+        WASTE_25                ; 56
+        JUMP_NEXT_17            ; 73
 
 ; -----------------------------------------------------------------
 video_status_patches:
@@ -743,8 +724,8 @@ vd4:    ldy     $98FF           ; 24
 no_vid4:
 ad4b:   ldx     $A8FF           ; 25
         stx     next+1          ; 28
-        WASTE_39                ; 67     waste extra cycles
-        jmp     (next)          ; 73     jump to next duty cycle
+        WASTE_28                ; 56
+        JUMP_NEXT_17            ; 73
 
 ; -----------------------------------------------------------------
 video_data_patches:
@@ -801,8 +782,8 @@ vd5:    ldy     $98FF           ; 25
 no_vid5:
 ad5b:   ldx     $A8FF           ; 26
         stx     next+1          ; 29
-        WASTE_38                ; 67     waste extra cycles
-        jmp     (next)          ; 73     jump to next duty cycle
+        WASTE_27                ; 56
+        JUMP_NEXT_17            ; 73
 
 ; -----------------------------------------------------------------
 audio_status_patches:
@@ -898,8 +879,8 @@ vd6:    ldy     $98FF           ; 26
 no_vid6:
 ad6b:   ldx     $A8FF           ; 27
         stx     next+1          ; 30
-        WASTE_37                ; 67     waste extra cycles
-        jmp     (next)          ; 73     jump to next duty cycle
+        WASTE_26                ; 56
+        JUMP_NEXT_17            ; 73
 
 ; --------------------------------------------------------------
 duty_start:
@@ -941,8 +922,8 @@ vd7:    ldy     $98FF           ; 27
 no_vid7:
 ad7b:   ldx     $A8FF           ; 28
         stx     next+1          ; 31
-        WASTE_36                ; 67     waste extra cycles
-        jmp     (next)          ; 73     jump to next duty cycle
+        WASTE_25                ; 56
+        JUMP_NEXT_17            ; 73
 
 ; -----------------------------------------------------------------
 calc_bases:
@@ -1019,8 +1000,8 @@ vd8:    ldy     $98FF           ; 24
 no_vid8:
 ad8b:   ldx     $A8FF           ; 25
         stx     next+1          ; 28
-        WASTE_39                ; 67     waste extra cycles
-        jmp     (next)          ; 73     jump to next duty cycle
+        WASTE_28                ; 56
+        JUMP_NEXT_17            ; 73
 
 ; -----------------------------------------------------------------
 setup:
@@ -1058,11 +1039,6 @@ setup:
         stz     page
         stz     kbd_cmd
         stz     cur_mix
-
-        ; Extra ZP variable to be able to waste one cycle using CMP ZP instead
-        ; of CMP IMM in some duty cycles
-        lda     #HAS_BYTE
-        sta     has_byte_zp
 
         ; Vars to emulate "sev" (set overflow), in either 3 or 4 cycles
         lda     #$40
@@ -1107,8 +1083,8 @@ vd9:    ldy     $98FF           ; 25
 no_vid9:
 ad9b:   ldx     $A8FF           ; 26
         stx     next+1          ; 29
-        WASTE_38                ; 67     waste extra cycles
-        jmp     (next)          ; 73     jump to next duty cycle
+        WASTE_27                ; 56
+        JUMP_NEXT_17            ; 73
 
 .align $100
 .assert * = _SAMPLES_BASE + $A00, error
@@ -1128,8 +1104,8 @@ vd10:   ldy     $98FF           ; 26
 no_vid10:
 ad10b:  ldx     $A8FF           ; 27
         stx     next+1          ; 30
-        WASTE_37                ; 67     waste extra cycles
-        jmp     (next)          ; 73     jump to next duty cycle
+        WASTE_26                ; 56
+        JUMP_NEXT_17            ; 73
 
 
 .align $100
@@ -1150,8 +1126,8 @@ vd11:   ldy     $98FF           ; 27
 no_vid11:
 ad11b:  ldx     $A8FF           ; 28
         stx     next+1          ; 31
-        WASTE_36                ; 67     waste extra cycles
-        jmp     (next)          ; 73     jump to next duty cycle
+        WASTE_25                ; 56
+        JUMP_NEXT_17            ; 73
 
 
 .align $100
@@ -1172,8 +1148,8 @@ vd12:   ldy     $98FF           ; 26
 no_vid12:
 ad12b:  ldx     $A8FF           ; 27
         stx     next+1          ; 30
-        WASTE_37                ; 67     waste extra cycles
-        jmp     (next)          ; 73     jump to next duty cycle
+        WASTE_26                ; 56
+        JUMP_NEXT_17            ; 73
 
 .align $100
 .assert * = _SAMPLES_BASE + $D00, error
@@ -1193,8 +1169,8 @@ no_vid13:
         ____SPKR_DUTY____4      ; 21
 ad13b:  ldx     $A8FF           ; 25
         stx     next+1          ; 28
-        WASTE_39                ; 67     waste extra cycles
-        jmp     (next)          ; 73     jump to next duty cycle
+        WASTE_28                ; 56
+        JUMP_NEXT_17            ; 73
 
 .align $100
 .assert * = _SAMPLES_BASE + $E00, error
@@ -1215,8 +1191,8 @@ no_vid14:
         ____SPKR_DUTY____5      ; 22
 ad14b:  ldx     $A8FF           ; 26
         stx     next+1          ; 29
-        WASTE_38                ; 67     waste extra cycles
-        jmp     (next)          ; 73     jump to next duty cycle
+        WASTE_27                ; 56
+        JUMP_NEXT_17            ; 73
 
 .align $100
 .assert * = _SAMPLES_BASE + $F00, error
@@ -1248,15 +1224,17 @@ adp:    sta     $FFFF           ; 47     send cmd
         cmp     #$1B            ; 49
         beq     out             ; 51/52  if escape, exit forcefully
         sta     kbd_cmd         ; 54
-        WASTE_13                ; 67
-        jmp     (next)          ; 73     jump to next duty cycle
+        WASTE_2                 ; 56
+        JUMP_NEXT_17            ; 73     jump to next duty cycle
 nokbd:
 ad15b:  ldx     $A8FF           ; 42
         stx     next+1          ; 45
-        WASTE_22                ; 67
-        jmp     (next)          ; 73     jump to next duty cycle
-noser:  WASTE_35                ; 67
-        jmp     (next)          ; 73     jump to next duty cycle
+        WASTE_11                ; 56
+        JUMP_NEXT_17            ; 73
+noser:  
+        WASTE_24                ; 56
+        JUMP_NEXT_17            ; 73
+
 out:    jmp     break_out
 
 .align $100
@@ -1286,13 +1264,12 @@ ad16b:  ldx     $A8FF           ; 28
         txa                     ; 47
         eor     #$01            ; 49
         sta     cur_mix         ; 52
-        stz     kbd_cmd         ; 55
-        WASTE_12                ; 67
-        jmp     (next)          ; 73     jump to next duty cycle
+        ABS_STZ kbd_cmd         ; 56
+        JUMP_NEXT_17            ; 73
 
 not_tab:
-        WASTE_25                ; 67
-        jmp     (next)          ; 73     jump to next duty cycle
+        WASTE_14                ; 56
+        JUMP_NEXT_17            ; 73
 
 .align $100
 .assert * = _SAMPLES_BASE + $1100, error
@@ -1312,8 +1289,8 @@ no_vid17:
 ad17b:  ldx     $A8FF           ; 21
         ____SPKR_DUTY____4      ; 25
         stx     next+1          ; 28
-        WASTE_39                ; 67     waste extra cycles
-        jmp     (next)          ; 73     jump to next duty cycle
+        WASTE_28                ; 56
+        JUMP_NEXT_17            ; 73
 
 .align $100
 .assert * = _SAMPLES_BASE + $1200, error
@@ -1334,8 +1311,8 @@ no_vid18:
 ad18b:  ldx     $A8FF           ; 21
         ____SPKR_DUTY____5      ; 26
         stx     next+1          ; 29
-        WASTE_38                ; 67     waste extra cycles
-        jmp     (next)          ; 73     jump to next duty cycle
+        WASTE_27                ; 56
+        JUMP_NEXT_17            ; 73
 
 .align $100
 .assert * = _SAMPLES_BASE + $1300, error
@@ -1357,8 +1334,8 @@ ad19b:  ldx     $A8FF           ; 21
         WASTE_2                 ; 23
         ____SPKR_DUTY____4      ; 27
         stx     next+1          ; 30
-        WASTE_37                ; 67     waste extra cycles
-        jmp     (next)          ; 73     jump to next duty cycle
+        WASTE_26                ; 56
+        JUMP_NEXT_17            ; 73
 
 .align $100
 .assert * = _SAMPLES_BASE + $1400, error
@@ -1379,8 +1356,8 @@ no_vid20:
 ad20b:  ldx     $A8FF           ; 21
         stx     next+1          ; 24
         ____SPKR_DUTY____4      ; 28
-        WASTE_39                ; 67     waste extra cycles
-        jmp     (next)          ; 73     jump to next duty cycle
+        WASTE_28                ; 56
+        JUMP_NEXT_17            ; 73
 
 .align $100
 .assert * = _SAMPLES_BASE + $1500, error
@@ -1401,8 +1378,8 @@ no_vid21:
 ad21b:  ldx     $A8FF           ; 21
         stx     next+1          ; 24
         ____SPKR_DUTY____5      ; 29
-        WASTE_38                ; 67     waste extra cycles
-        jmp     (next)          ; 73     jump to next duty cycle
+        WASTE_27                ; 56
+        JUMP_NEXT_17            ; 73
 
 .align $100
 .assert * = _SAMPLES_BASE + $1600, error
@@ -1424,8 +1401,8 @@ ad22b:  ldx     $A8FF           ; 21
         stx     next+1          ; 24
         WASTE_2                 ; 26
         ____SPKR_DUTY____4      ; 30
-        WASTE_37                ; 67
-        jmp     (next)          ; 73     jump to next duty cycle
+        WASTE_26                ; 56
+        JUMP_NEXT_17            ; 73
 
 .align $100
 .assert * = _SAMPLES_BASE + $1700, error
@@ -1447,8 +1424,8 @@ ad23b:  ldx     $A8FF           ; 21
         stx     next+1          ; 24
         WASTE_3                 ; 27
         ____SPKR_DUTY____4      ; 31
-        WASTE_36                ; 67
-        jmp     (next)          ; 73     jump to next duty cycle
+        WASTE_25                ; 56
+        JUMP_NEXT_17            ; 73
 
 
 .align $100
@@ -1471,8 +1448,8 @@ ad24b:  ldx     $A8FF           ; 21
         stx     next+1          ; 24
         WASTE_4                 ; 28
         ____SPKR_DUTY____4      ; 32
-        WASTE_35                ; 67
-        jmp     (next)          ; 73     jump to next duty cycle
+        WASTE_24                ; 56
+        JUMP_NEXT_17            ; 73
 
 .align $100
 .assert * = _SAMPLES_BASE + $1900, error
@@ -1494,8 +1471,8 @@ ad25b:  ldx     $A8FF           ; 21
         stx     next+1          ; 24
         WASTE_5                 ; 29
         ____SPKR_DUTY____4      ; 33
-        WASTE_34                ; 67
-        jmp     (next)          ; 73     jump to next duty cycle
+        WASTE_23                ; 56
+        JUMP_NEXT_17            ; 73
 
 .align $100
 .assert * = _SAMPLES_BASE + $1A00, error
@@ -1517,8 +1494,8 @@ ad26b:  ldx     $A8FF           ; 21
         stx     next+1          ; 24
         WASTE_6                 ; 30
         ____SPKR_DUTY____4      ; 34
-        WASTE_33                ; 67
-        jmp     (next)          ; 73     jump to next duty cycle
+        WASTE_22                ; 56
+        JUMP_NEXT_17            ; 73
 
 .align $100
 .assert * = _SAMPLES_BASE + $1B00, error
@@ -1540,8 +1517,8 @@ ad27b:  ldx     $A8FF           ; 21
         stx     next+1          ; 24
         WASTE_7                 ; 31
         ____SPKR_DUTY____4      ; 35
-        WASTE_32                ; 67
-        jmp     (next)          ; 73     jump to next duty cycle
+        WASTE_21                ; 56
+        JUMP_NEXT_17            ; 73
 
 .align $100
 .assert * = _SAMPLES_BASE + $1C00, error
@@ -1563,8 +1540,8 @@ ad28b:  ldx     $A8FF           ; 21
         stx     next+1          ; 24
         WASTE_8                 ; 32
         ____SPKR_DUTY____4      ; 36
-        WASTE_31                ; 67
-        jmp     (next)          ; 73     jump to next duty cycle
+        WASTE_20                ; 56
+        JUMP_NEXT_17            ; 73
 
 
 .align $100
@@ -1587,8 +1564,8 @@ ad29b:  ldx     $A8FF           ; 21
         stx     next+1          ; 24
         WASTE_9                 ; 33
         ____SPKR_DUTY____4      ; 37
-        WASTE_30                ; 67
-        jmp     (next)          ; 73     jump to next duty cycle
+        WASTE_19                ; 56
+        JUMP_NEXT_17            ; 73
 
 .align $40 ; page0_ and page1_ addresses arrays must share the same low byte
 .assert * = _SAMPLES_BASE + $1D40, error
@@ -1616,8 +1593,8 @@ ad30b:  ldx     $A8FF           ; 21
         stx     next+1          ; 24
         WASTE_10                ; 34
         ____SPKR_DUTY____4      ; 38
-        WASTE_29                ; 67
-        jmp     (next)          ; 73     jump to next duty cycle
+        WASTE_18                ; 56
+        JUMP_NEXT_17            ; 73
 
 ; -----------------------------------------------------------------
 ; VIDEO HANDLER
@@ -1660,17 +1637,17 @@ video_direct:
 .endif
 
 @dest_ctrl:
-        bvc     @set_offset             ; 9/10 If yes, this one is a base byte
+        bvc     @set_offset             ; 9/10  If yes, this one is a base byte
 
 @set_base:                              ;       This is a base byte (branch takes 22 cycles minimum)
         lda     (page_ptr_low),y        ; 14    Load base pointer low byte from base array
-        sta     store_dest              ; 17    Store it to destination pointer low byte
+        sta     cur_base                ; 17    Store it to destination pointer low byte
         lda     (page_ptr_high),y       ; 22    Load base pointer high byte from base array
-        sta     store_dest+1            ; 25    Store it to destination pointer high byte
+        sta     cur_base+1              ; 25    Store it to destination pointer high byte
         jmp     (next)                  ; 31    Done, go to next duty cycle
 
 @set_offset:                            ;       No, so set offset (branch takes 14 cyles minimum)
-        sty     last_offset             ; 13    Store offset
+        sty     next_offset             ; 13    Store offset
         SEV_ZP                          ; 16    Set the offset-received flag
         lda     page_ptr_high+1         ; 19    Update the page flag here, where we have time
         eor     #>(PAGE1_ARRAY)        ; 21
@@ -1679,9 +1656,9 @@ video_direct:
 
 @set_pixel:                             ;       No, it is a data byte (branch takes 25 cycles minimum)
         tya                             ; 5
-        ldy     last_offset             ; 8    Load the offset to the start of the base
-        sta     (store_dest),y          ; 14    Store data byte
-        inc     last_offset             ; 19    and store it.
+        ldy     next_offset             ; 8     Load the offset to the start of the base
+        sta     (cur_base),y            ; 14    Store data byte
+        inc     next_offset             ; 19    and store it.
         clv                             ; 21    Reset the offset-received flag.
         WASTE_4                         ; 25
         jmp     (next)                  ; 31    Done, go to next duty cycle
@@ -1708,8 +1685,8 @@ ad31b:  ldx     $A8FF           ; 21
         stx     next+1          ; 24
         WASTE_11                ; 35
         ____SPKR_DUTY____4      ; 39
-        WASTE_28                ; 67
-        jmp     (next)          ; 73     jump to next duty cycle
+        WASTE_17                ; 56
+        JUMP_NEXT_17            ; 73
 
 .align $40
 .assert * = _SAMPLES_BASE + $1F40, error
