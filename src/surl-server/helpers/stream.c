@@ -1147,12 +1147,18 @@ void *video_push(void *unused) {
   int push_sub_page = 0;
   int vidstop;
   int last_offset = 0;
-
+  int has_subtitles = 1;
   i = 0;
   page = 1;
 
   /* Reset stats */
   bytes_sent = data_bytes = offset_bytes = base_bytes = 0;
+
+  pthread_mutex_lock(&video_th_data->mutex);
+  has_subtitles = video_th_data->has_subtitles;
+  pthread_mutex_unlock(&video_th_data->mutex);
+
+  printf("Video has %ssubtitles.\n", has_subtitles == 0 ? "no ":"");
 
   /* Fill cache */
   read(vhgr_file, buf[page], HGR_LEN);
@@ -1201,16 +1207,18 @@ next_file:
   }
 
   /* Check if we should push a subtitle, before skipping */
-  if (push_sub == NULL) {
-    push_sub = ffmpeg_get_subtitle_at_frame(video_th_data, cur_frame);
-    if (push_sub) {
-      build_sub_display(push_sub);
-      push_sub_page = 2;
+  if (has_subtitles) {
+    if (push_sub == NULL) {
+      push_sub = ffmpeg_get_subtitle_at_frame(video_th_data, cur_frame);
+      if (push_sub) {
+        build_sub_display(push_sub);
+        push_sub_page = 2;
+      }
+    } else {
+      /* We already have a subtitle to push, so move the
+       * potential next one forward so we don't forget it. */
+      ffmpeg_shift_subtitle_at_frame(video_th_data, cur_frame);
     }
-  } else {
-    /* We already have a subtitle to push, so move the
-     * potential next one forward so we don't forget it. */
-    ffmpeg_shift_subtitle_at_frame(video_th_data, cur_frame);
   }
 
   if (sem_val > 1) {
@@ -1267,7 +1275,7 @@ send:
             (sort_func)sort_by_offset);
   }
 
-  if (0) {
+  if (has_subtitles) {
     for (j = 0; j < num_diffs; j++) {
       int pixel = diffs[j]->offset;
 
@@ -1494,6 +1502,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
     }
   }
 
+
   simple_serial_putc(SURL_ANSWER_STREAM_START);
   if (simple_serial_getc() != SURL_CLIENT_READY) {
     pthread_mutex_lock(&audio_th_data->mutex);
@@ -1507,6 +1516,13 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
   audio_max = 256;
   sleep(1); /* Let ffmpeg have a bit of time to push data so we don't starve */
 
+  /* Send protocol to choose */
+  pthread_mutex_lock(&video_th_data->mutex);
+  simple_serial_putc(video_th_data->has_subtitles);
+  pthread_mutex_unlock(&video_th_data->mutex);
+  if (simple_serial_getc() != SURL_CLIENT_READY) {
+      goto cleanup_thread;
+  }
   pthread_mutex_lock(&audio_th_data->mutex);
   if (audio_th_data->pts < video_th_data->pts) {
     long cut_ms = video_th_data->pts - audio_th_data->pts;
