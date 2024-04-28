@@ -1558,46 +1558,45 @@ video_spkr_sub:              ; Alternate entry point for duty cycle 30
         ABS_STX next+1          ; 42
 
 video_sub:
-        bmi     @set_pixel              ; 2/3   Is it a control byte?
 @control:                               ;       It is a control byte
-        cpy     #$7F                    ; 4     Is it the page toggle command?
-        bne     @dest_ctrl              ; 6/7   Yes
-
-@toggle_page:
-        lda     cur_base+1              ; 9
-        and     #$40                    ; 11
-        bne     @page1                  ; 13/14
-@page0:                                 ;
-        sta     $C054                   ; 17    Activate page 0
-        lda     #$40                    ; 19    Write to page 1
-        sta     cur_base+1              ; 22    Update pointers to page 1
-        stz     cur_base                ; 25
-        jmp     (next)                  ; 31    We'll do it in @set_offset
-
-@page1:                                 ;
-        sta     $C055                   ; 18    Activate page 1
-        lda     #$20                    ; 20    Write to page 0
-        sta     cur_base+1              ; 23    Update pointers to page 0
-        stz     cur_base                ; 26 PROBLEM HERE
-        jmp     (next)                  ; 31    We'll do it in @set_offset
+        cpy     #$7F                    ; 2     Is it the page toggle command?
+        beq     @toggle_page            ; 4/5
+        tya                             ; 6
+        bmi     @set_pixel              ; 8/9   Is it a control byte?
 
 @dest_ctrl:
-        tya                             ; 9
-        adc     cur_base                ; 12
-        sta     cur_base                ; 15
-        stz     next_offset             ; 18
+        adc     cur_base                ; 11
+        sta     cur_base                ; 14
+        ABS_STZ next_offset             ; 18
         bcc     :+                      ; 20/21
         inc     cur_base+1              ; 25
         jmp     (next)                  ; 31
 :       WASTE_4                         ; 25
         jmp     (next)                  ; 31
 
+@toggle_page:
+        lda     cur_base+1              ; 8
+        and     #$40                    ; 10
+        bne     @page1                  ; 12/13
+@page0:                                 ;
+        sta     $C054                   ; 16    Activate page 0
+        lda     #$40                    ; 18    Write to page 1
+        sta     cur_base+1              ; 21    Update pointers to page 1
+        ABS_STZ cur_base                ; 25
+        jmp     (next)                  ; 31    We'll do it in @set_offset
+
+@page1:                                 ;
+        sta     $C055                   ; 17    Activate page 1
+        lda     #$20                    ; 19    Write to page 0
+        sta     cur_base+1              ; 22    Update pointers to page 0
+        stz     cur_base                ; 25
+        jmp     (next)                  ; 31    We'll do it in @set_offset
+
 @set_pixel:                             ;       No, it is a data byte (branch takes 25 cycles minimum)
-        tya                             ; 5
-        ldy     next_offset             ; 8     Load the offset to the start of the base
-        sta     (cur_base),y            ; 14    Store data byte
-        inc     next_offset             ; 19    and store it.
-        WASTE_6                         ; 25
+        ldy     next_offset             ; 12     Load the offset to the start of the base
+        sta     (cur_base),y            ; 18    Store data byte
+        inc     next_offset             ; 23    and store it.
+        WASTE_2                         ; 25
         jmp     (next)                  ; 31    Done, go to next duty cycle
 ; -----------------------------------------------------
 
