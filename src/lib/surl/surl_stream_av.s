@@ -1650,7 +1650,7 @@ video_direct:
         sty     next_offset             ; 13    Store offset
         SEV_ZP                          ; 16    Set the offset-received flag
         lda     page_ptr_high+1         ; 19    Update the page flag here, where we have time
-        eor     #>(PAGE1_ARRAY)        ; 21
+        eor     #>(PAGE1_ARRAY)         ; 21
         ABS_STA page                    ; 25
         jmp     (next)                  ; 31    Done, go to next duty cycle
 
