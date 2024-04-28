@@ -1146,6 +1146,7 @@ void *video_push(void *unused) {
   char *push_sub = NULL;
   int push_sub_page = 0;
   int vidstop;
+  int last_offset = 0;
 
   i = 0;
   page = 1;
@@ -1183,10 +1184,13 @@ next_file:
   sem_wait(&av_sem);
   sem_getvalue(&av_sem, &sem_val);
 
+  last_diff = 0x2001;
+
   if (num_video_bytes > 0) {
     /* Sync point */
     enqueue_video_byte(0x7F, ttyfp2); /* Switch page */
     flush_video_bytes(ttyfp2);
+    DEBUG("send page toggle\n");
     if (push_sub && push_sub_page) {
       push_sub_page--;
       if (push_sub_page == 0) {
@@ -1218,9 +1222,6 @@ next_file:
 #ifdef DOUBLE_BUFFER
   page = !page;
 #endif
-
-  /* count diffs */
-  last_diff = 0;
 
   if (i > FPS && (i % (15*FPS)) == 0) {
     duration = i/FPS;
@@ -1266,33 +1267,65 @@ send:
             (sort_func)sort_by_offset);
   }
 
-  for (j = 0; j < num_diffs; j++) {
-    int pixel = diffs[j]->offset;
+  if (0) {
+    for (j = 0; j < num_diffs; j++) {
+      int pixel = diffs[j]->offset;
 
-    offset = pixel - (cur_base*MAX_AV_OFFSET);
-    /* If there's no hole in updated bytes, we can let offset
-     * increment up to 255 */
-    if ((offset >= MAX_AV_OFFSET && pixel != last_diff+1)
-      || offset > 255 || offset < 0) {
-      /* we have to update base */
-      cur_base = pixel / MAX_AV_OFFSET;
       offset = pixel - (cur_base*MAX_AV_OFFSET);
+      /* If there's no hole in updated bytes, we can let offset
+       * increment up to 255 */
+      if ((offset >= MAX_AV_OFFSET && pixel != last_diff+1)
+        || offset > 255 || offset < 0) {
+        /* we have to update base */
+        cur_base = pixel / MAX_AV_OFFSET;
+        offset = pixel - (cur_base*MAX_AV_OFFSET);
 
-      DEBUG("send base (offset %d => %d, base %d => %d)\n",
-              last_sent_offset, offset, last_sent_base, cur_base);
-      buffer_video_offset(offset, ttyfp2);
-      buffer_video_base(cur_base, ttyfp2);
-    } else if (pixel != last_diff+1) {
-      DEBUG("send offset %d (base is %d)\n", offset, cur_base);
-      /* We have to send offset */
-      buffer_video_offset(offset, ttyfp2);
+        DEBUG("send base (offset %d => %d, base %d => %d)\n",
+                last_sent_offset, offset, last_sent_base, cur_base);
+        buffer_video_offset(offset, ttyfp2);
+        buffer_video_base(cur_base, ttyfp2);
+      } else if (pixel != last_diff+1) {
+        DEBUG("send offset %d (base is %d)\n", offset, cur_base);
+        /* We have to send offset */
+        buffer_video_offset(offset, ttyfp2);
+      }
+      buffer_video_byte(buf[page][pixel], ttyfp2);
+
+      last_diff = pixel;
+
+      /* Note diff done */
+      buf_prev[page][pixel] = buf[page][pixel];
     }
-    buffer_video_byte(buf[page][pixel], ttyfp2);
+  } else {
+    for (j = 0; j < num_diffs; j++) {
+      int pixel = diffs[j]->offset;
 
-    last_diff = pixel;
+      if (j == 0) {
+        buffer_video_offset(0x00, ttyfp2); /* Reset offset */
+        last_offset = 0;
+      }
 
-    /* Note diff done */
-    buf_prev[page][pixel] = buf[page][pixel];
+      offset = pixel - last_offset;
+      /* If there's no hole in updated bytes, we can let offset
+       * increment up to 255 */
+      if (offset >= MAX_AV_OFFSET || pixel != last_diff+1) {
+        /* we have to update base */
+        while (last_offset != pixel) {
+          unsigned char skip = pixel - last_offset > MAX_AV_OFFSET ? MAX_AV_OFFSET : pixel - last_offset;
+          buffer_video_offset(skip, ttyfp2);
+          last_offset += skip;
+          DEBUG("send skip %d, offset now %d\n", skip, last_offset);
+        }
+        offset = 0;
+      }
+      DEBUG("send pixel %d at %d:%d\n", buf[page][pixel], last_offset, offset);
+      buffer_video_byte(buf[page][pixel], ttyfp2);
+
+      last_diff = pixel;
+
+      /* Note diff done */
+      buf_prev[page][pixel] = buf[page][pixel];
+    }
   }
 
   total += num_diffs;
@@ -1446,8 +1479,6 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
   memset(video_bytes_buffer, 0, sizeof video_bytes_buffer);
 
   offset = cur_base = 0;
-  buffer_video_offset(0, ttyfp2);
-  buffer_video_base(0, ttyfp2);
 
   printf("AV: Client ready\n");
   if (hgr_buf) {
