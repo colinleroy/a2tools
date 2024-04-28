@@ -218,7 +218,7 @@ static int init_video_filters(const char *filters_descr_fmt)
            fps, FPS);
 
     /* Get final resolution. We don't want too much "square pixels". */
-    for (pic_width = HGR_WIDTH; pic_width > HGR_WIDTH/4; pic_width--) {
+    for (pic_width = HGR_WIDTH - 4; pic_width > HGR_WIDTH/4; pic_width--) {
       pic_height = pic_width / aspect_ratio;
       if (pic_width * pic_height < MAX_BYTES_PER_FRAME * 8) {
         break;
