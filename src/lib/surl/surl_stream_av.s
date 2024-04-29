@@ -1644,37 +1644,37 @@ video_no_sub:
         bmi     @set_pixel              ; 8/9   Is it a control byte?
 
 @dest_ctrl:
-        adc     cur_base                ; 11
+        adc     cur_base                ; 11    Add shift value to current pointer
         sta     cur_base                ; 14
-        ABS_STZ next_offset             ; 18
+        ABS_STZ next_offset             ; 18    Reset offset
         bcc     :+                      ; 20/21
-        inc     cur_base+1              ; 25
+        inc     cur_base+1              ; 25    Increment high byte if needed
         jmp     (next)                  ; 31
 :       WASTE_4                         ; 25
         jmp     (next)                  ; 31
 
 @toggle_page:
-        lda     cur_base+1              ; 8
-        and     #$40                    ; 10
+        lda     cur_base+1              ; 8     Determine which page we were
+        and     #$40                    ; 10    writing to
         bne     @page1                  ; 12/13
 @page0:                                 ;
         sta     $C054                   ; 16    Activate page 0
         lda     #$40                    ; 18    Write to page 1
         sta     cur_base+1              ; 21    Update pointers to page 1
         ABS_STZ cur_base                ; 25
-        jmp     (next)                  ; 31    We'll do it in @set_offset
+        jmp     (next)                  ; 31
 
 @page1:                                 ;
         sta     $C055                   ; 17    Activate page 1
         lda     #$20                    ; 19    Write to page 0
         sta     cur_base+1              ; 22    Update pointers to page 0
         stz     cur_base                ; 25
-        jmp     (next)                  ; 31    We'll do it in @set_offset
+        jmp     (next)                  ; 31
 
-@set_pixel:                             ;       No, it is a data byte (branch takes 25 cycles minimum)
-        ldy     next_offset             ; 12     Load the offset to the start of the base
+@set_pixel:                             ;       No, it is a data byte
+        ldy     next_offset             ; 12    Load the offset to the start of the base
         sta     (cur_base),y            ; 18    Store data byte
-        inc     next_offset             ; 23    and store it.
+        inc     next_offset             ; 23    and increment offset.
         WASTE_2                         ; 25
         jmp     (next)                  ; 31    Done, go to next duty cycle
 ; -----------------------------------------------------
