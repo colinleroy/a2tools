@@ -46,6 +46,8 @@
 #define HGR_WIDTH 280
 #define HGR_HEIGHT 192
 
+#define STAB_VALUE 20
+
 /* Video size - the bigger, the less fps */
 #define MAX_BYTES_PER_FRAME 1600
 int pic_width, pic_height;
@@ -322,6 +324,10 @@ void ffmpeg_subtitles_free(decode_data *data) {
   pthread_mutex_unlock(&data->sub_mutex);
 }
 
+static uint8_t hgr_buf[HGR_WIDTH*HGR_HEIGHT];
+static uint8_t prev_hgr_buf[HGR_WIDTH*HGR_HEIGHT];
+static uint8_t *prev_grayscale_buf = NULL;
+
 void ffmpeg_video_decode_deinit(decode_data *data) {
     av_packet_unref(video_packet);
     avfilter_graph_free(&video_filter_graph);
@@ -330,15 +336,16 @@ void ffmpeg_video_decode_deinit(decode_data *data) {
     av_frame_free(&video_frame);
     av_frame_free(&video_filt_frame);
     av_packet_free(&video_packet);
+    if (prev_grayscale_buf) {
+      free(prev_grayscale_buf);
+      prev_grayscale_buf = NULL;
+    }
     if (data->enable_subtitles)
       pthread_join(data->sub_thread, NULL);
 }
 
 
 static int frameno = 0;
-uint8_t out_buf[HGR_WIDTH*HGR_HEIGHT];
-uint8_t prev_buf[HGR_WIDTH*HGR_HEIGHT];
-
 static uint8_t *bayer_dither_frame(const AVFrame *frame, AVRational time_base, int progress)
 {
   int x, y;
@@ -366,19 +373,37 @@ static uint8_t *bayer_dither_frame(const AVFrame *frame, AVRational time_base, i
   if (frame->height < HGR_HEIGHT) {
     y_offset = (HGR_HEIGHT - frame->height) / 2;
   }
-  memset(out_buf, 0, sizeof out_buf);
+  memset(hgr_buf, 0, sizeof hgr_buf);
+
+  if (prev_grayscale_buf == NULL) {
+    prev_grayscale_buf = malloc(frame->height*frame->width);
+    memset(prev_grayscale_buf, 0, frame->height*frame->width);
+    memset(prev_hgr_buf, 0, HGR_WIDTH*HGR_HEIGHT);
+  }
 
   /* Trivial ASCII grayscale display. */
   p0 = frame->data[0];
-  out = out_buf + (y_offset * HGR_WIDTH);
+  out = hgr_buf + (y_offset * HGR_WIDTH);
 
   for (y = 0; y < frame->height; y++) {
     p = p0;
     out += x_offset;
     for (x = 0; x < frame->width; x++) {
+      uint16_t coord = y*frame->width + x;
       uint16_t pixel_value = *p;
       uint16_t val;
-      int16_t time_stab_val = prev_buf[y*HGR_WIDTH+x] ? +20 : -20;
+      int16_t time_stab_val = prev_hgr_buf[y*HGR_WIDTH+x] ? +STAB_VALUE : -STAB_VALUE;
+
+      /* Stabilise source video */
+      if (*p != prev_grayscale_buf[coord] && abs(prev_grayscale_buf[coord] - *p) < STAB_VALUE) {
+        uint16_t new_val = *p;
+        *p = prev_grayscale_buf[coord];
+        prev_grayscale_buf[coord] = new_val;
+      } else {
+        prev_grayscale_buf[coord] = *p;
+      }
+
+      pixel_value = *p;
 
       /*
        No stabilisation: 1183b/frame avg (904 data, 216 offset, 61 base),  9.49fps
@@ -402,10 +427,10 @@ static uint8_t *bayer_dither_frame(const AVFrame *frame, AVRational time_base, i
 
   /* Progress bar */
   for (x = 0; x < progress; x++) {
-    out_buf[x] = 255;
+    hgr_buf[x] = 255;
   }
 
-  return out_buf;
+  return hgr_buf;
 }
 
 static uint8_t *burkes_dither_frame(const AVFrame *frame, AVRational time_base, int progress)
@@ -425,11 +450,11 @@ static uint8_t *burkes_dither_frame(const AVFrame *frame, AVRational time_base, 
   if (pic_height < HGR_HEIGHT) {
     y_offset = (HGR_HEIGHT - pic_height) / 2;
   }
-  memset(out_buf, 0, sizeof out_buf);
+  memset(hgr_buf, 0, sizeof hgr_buf);
 
   /* Trivial ASCII grayscale display. */
   p0 = frame->data[0];
-  out = out_buf + (y_offset * HGR_WIDTH);
+  out = hgr_buf + (y_offset * HGR_WIDTH);
 
   for (y = 0; y < frame->height; y++) {
     p = p0;
@@ -452,7 +477,7 @@ static uint8_t *burkes_dither_frame(const AVFrame *frame, AVRational time_base, 
        2/3:              668 avg (404 data, 208 offset, 54 base)
        3/5:              576 avg (341 data, 182 offset, 51 base)
       */
-      time_stab_val = ((*p * 3) / 5) + ((prev_buf[y*HGR_WIDTH+x] * 2) / 5);
+      time_stab_val = ((*p * 3) / 5) + ((prev_hgr_buf[y*HGR_WIDTH+x] * 2) / 5);
       if (threshold > time_stab_val + error_table[y][x+ERR_X_OFF]) {
         *(out++) = 0;
         current_error = time_stab_val + error_table[y][x + ERR_X_OFF];
@@ -476,10 +501,10 @@ skip_line:
 
   /* Progress bar */
   for (x = 0; x < progress; x++) {
-    out_buf[x] = 255;
+    hgr_buf[x] = 255;
   }
 
-  return out_buf;
+  return hgr_buf;
 }
 
 static void *ffmpeg_subtitles_decode_thread(void *data) {
@@ -541,7 +566,7 @@ unsigned char *ffmpeg_video_decode_frame(decode_data *data, int total_frames, in
     int first = 1;
 
     if (current_frame == 0) {
-      memset(prev_buf, 0, sizeof(prev_buf));
+      memset(prev_hgr_buf, 0, sizeof(prev_hgr_buf));
     }
 
     if (total_frames > 0) {
@@ -605,7 +630,7 @@ unsigned char *ffmpeg_video_decode_frame(decode_data *data, int total_frames, in
                       buf = bayer_dither_frame(video_filt_frame, video_buffersink_ctx->inputs[0]->time_base, progress);
                     else
                       buf = burkes_dither_frame(video_filt_frame, video_buffersink_ctx->inputs[0]->time_base, progress);
-                    memcpy(prev_buf, buf, sizeof(prev_buf));
+                    memcpy(prev_hgr_buf, buf, sizeof(prev_hgr_buf));
                     av_frame_unref(video_filt_frame);
                 }
                 av_frame_unref(video_frame);
@@ -929,7 +954,7 @@ end:
 
 char *ffmpeg_get_subtitle_at_frame(decode_data *data, unsigned long frame) {
   char *sub = NULL;
-  
+
   pthread_mutex_lock(&data->sub_mutex);
   if (data->subs != NULL && frame < data->nsubs && data->subs[frame]) {
     sub = strdup(data->subs[frame]);
