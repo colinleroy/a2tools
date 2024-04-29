@@ -60,6 +60,8 @@ char tmp_filename[FILENAME_MAX];
 
 int video_len;
 
+unsigned int vol_mult = 10;
+
 #define PREDECODE_SECS 10
 
 static void *ffmpeg_video_decode_thread(void *th_data) {
@@ -491,7 +493,7 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
   size_t size = 0;
   size_t img_size = 0;
   int ret = 0;
-
+  int vol_adj_done = 0;
   pthread_t decode_thread;
   decode_data *th_data = malloc(sizeof(decode_data));
   int ready = 0;
@@ -574,6 +576,7 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
 
   max = 256;
   sleep(1); /* Let ffmpeg have a bit of time to push data so we don't starve */
+  vol_mult = 10;
 
   while (1) {
     pthread_mutex_lock(&th_data->mutex);
@@ -587,6 +590,16 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
     data = th_data->data;
     size = th_data->size;
     stop = th_data->decoding_end;
+
+    /* Update max volume for auto-leveling after decoding */
+    if (th_data->decoding_end && th_data->max_audio_volume != 0) {
+      /* Adjust volume */
+      if (th_data->max_audio_volume != 0 && vol_mult == 10 && !vol_adj_done) {
+        vol_mult = ((max/2) * vol_mult) / (th_data->max_audio_volume-127);
+        printf("Max detected level now %d, vol set to %d\n", th_data->max_audio_volume, vol_mult);
+        vol_adj_done = 1;
+      }
+    }
     pthread_mutex_unlock(&th_data->mutex);
 
     if (cur == size) {
@@ -598,7 +611,13 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
         continue;
       }
     }
-    send_sample(data[cur] * MAX_LEVEL/max);
+    int32_t samp_val = (int32_t)((((int32_t)data[cur]-((int32_t)max/2))*(int32_t)vol_mult)/10)+((int32_t)max/2);
+    if (samp_val < 0) {
+      samp_val = 0;
+    } else if (samp_val >= max) {
+      samp_val = max-1;
+    }
+    send_sample((uint8_t)samp_val*MAX_LEVEL/max);
     cur++;
 
     /* Kbd input polled directly for no wait at all */
@@ -609,6 +628,18 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
       if (poll(fds, 1, 0) > 0 && (fds[0].revents & POLLIN)) {
         c = simple_serial_getc();
         switch (c) {
+          case '+':
+            if (vol_mult < 80) {
+              vol_mult ++;
+              printf("volume %d\n", vol_mult);
+            }
+            break;
+          case '-':
+            if (vol_mult > 2) {
+              vol_mult --;
+              printf("volume %d\n", vol_mult);
+            }
+            break;
           case ' ':
             printf("Pause\n");
             send_sample(MAX_LEVEL/2);
@@ -952,8 +983,10 @@ static void *audio_push(void *unused) {
   size_t cur = 0;
   int stop, pause = 0;
   struct timeval frame_start;
+  int vol_adj_done = 0;
 
   gettimeofday(&frame_start, 0);
+  vol_mult = 10;
 
   while (1) {
     pthread_mutex_lock(&audio_th_data->mutex);
@@ -967,6 +1000,16 @@ static void *audio_push(void *unused) {
     audio_data = audio_th_data->data;
     audio_size = audio_th_data->size;
     stop = audio_th_data->decoding_end;
+
+    /* Update max volume for auto-leveling after decoding */
+    if (audio_th_data->decoding_end && audio_th_data->max_audio_volume != 0) {
+      /* Adjust volume */
+      if (audio_th_data->max_audio_volume != 0 && vol_mult == 10 && !vol_adj_done) {
+        vol_mult = ((audio_max/2) * vol_mult) / (audio_th_data->max_audio_volume-127);
+        printf("Max detected level now %d, vol set to %d\n", audio_th_data->max_audio_volume, vol_mult);
+        vol_adj_done = 1;
+      }
+    }
     pthread_mutex_unlock(&audio_th_data->mutex);
 
     if (cur == audio_size) {
@@ -980,7 +1023,14 @@ static void *audio_push(void *unused) {
     }
 
     if (!pause) {
-      buffer_audio_sample(audio_data[cur] * AV_MAX_LEVEL/audio_max);
+      int32_t samp_val = (int32_t)((((int32_t)audio_data[cur]-((int32_t)audio_max/2))*(int32_t)vol_mult)/10)+((int32_t)audio_max/2);
+      if (samp_val < 0) {
+        samp_val = 0;
+      } else if (samp_val >= audio_max) {
+        samp_val = audio_max-1;
+      }
+      buffer_audio_sample((uint8_t)samp_val*AV_MAX_LEVEL/audio_max);
+
       if (cur % (SAMPLE_RATE/FPS) == 0) {
         check_duration("audio", &frame_start);
         gettimeofday(&frame_start, 0);
@@ -1043,6 +1093,18 @@ static void *audio_push(void *unused) {
             pthread_mutex_unlock(&video_th_data->mutex);
             printf("Seek video to %ld frames (%ld bytes)\n", (cur/SAMPLE_RATE)*FPS, (cur/SAMPLE_RATE)*FPS*HGR_LEN);
             lseek(vhgr_file, (cur/SAMPLE_RATE)*FPS*HGR_LEN, SEEK_SET);
+            break;
+          case '+':
+            if (vol_mult < 80) {
+              vol_mult ++;
+              printf("volume %d\n", vol_mult);
+            }
+            break;
+          case '-':
+            if (vol_mult > 2) {
+              vol_mult --;
+              printf("volume %d\n", vol_mult);
+            }
             break;
           case ' ':
             /* Pause */

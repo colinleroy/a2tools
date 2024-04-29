@@ -324,9 +324,12 @@ void ffmpeg_subtitles_free(decode_data *data) {
   pthread_mutex_unlock(&data->sub_mutex);
 }
 
-static uint8_t hgr_buf[HGR_WIDTH*HGR_HEIGHT];
-static uint8_t prev_hgr_buf[HGR_WIDTH*HGR_HEIGHT];
+static uint8_t dithered_buf[HGR_WIDTH*HGR_HEIGHT];
+static uint8_t prev_dithered_buf[HGR_WIDTH*HGR_HEIGHT];
 static uint8_t *prev_grayscale_buf = NULL;
+static uint8_t hgr_buf[0x2000];
+static uint8_t byte_age[0x2000];
+static uint8_t prev_hgr_buf[0x2000];
 
 void ffmpeg_video_decode_deinit(decode_data *data) {
     av_packet_unref(video_packet);
@@ -373,17 +376,18 @@ static uint8_t *bayer_dither_frame(const AVFrame *frame, AVRational time_base, i
   if (frame->height < HGR_HEIGHT) {
     y_offset = (HGR_HEIGHT - frame->height) / 2;
   }
-  memset(hgr_buf, 0, sizeof hgr_buf);
+  memset(dithered_buf, 0, sizeof dithered_buf);
 
   if (prev_grayscale_buf == NULL) {
     prev_grayscale_buf = malloc(frame->height*frame->width);
     memset(prev_grayscale_buf, 0, frame->height*frame->width);
-    memset(prev_hgr_buf, 0, HGR_WIDTH*HGR_HEIGHT);
+    memset(prev_dithered_buf, 0, HGR_WIDTH*HGR_HEIGHT);
+    memset(prev_hgr_buf, 0, 0x2000);
   }
 
   /* Trivial ASCII grayscale display. */
   p0 = frame->data[0];
-  out = hgr_buf + (y_offset * HGR_WIDTH);
+  out = dithered_buf + (y_offset * HGR_WIDTH);
 
   for (y = 0; y < frame->height; y++) {
     p = p0;
@@ -392,7 +396,7 @@ static uint8_t *bayer_dither_frame(const AVFrame *frame, AVRational time_base, i
       uint16_t coord = y*frame->width + x;
       uint16_t pixel_value = *p;
       uint16_t val;
-      int16_t time_stab_val = prev_hgr_buf[y*HGR_WIDTH+x] ? +STAB_VALUE : -STAB_VALUE;
+      int16_t time_stab_val = prev_dithered_buf[y*HGR_WIDTH+x] ? +STAB_VALUE : -STAB_VALUE;
 
       /* Stabilise source video */
       if (*p != prev_grayscale_buf[coord] && abs(prev_grayscale_buf[coord] - *p) < STAB_VALUE) {
@@ -401,6 +405,15 @@ static uint8_t *bayer_dither_frame(const AVFrame *frame, AVRational time_base, i
         prev_grayscale_buf[coord] = new_val;
       } else {
         prev_grayscale_buf[coord] = *p;
+      }
+
+      /* Drop single-pixel changes */
+      if (*p != prev_grayscale_buf[coord]
+      && (x == 0               || *(p-1) == prev_grayscale_buf[coord-1])
+      && (x == frame->width-1  || *(p+1) == prev_grayscale_buf[coord+1])
+      && (y == 0               || *(p-frame->linesize[0]) == prev_grayscale_buf[coord-frame->height])
+      && (y == frame->height-1 || *(p+frame->linesize[0]) == prev_grayscale_buf[coord+frame->height])) {
+        *p = prev_grayscale_buf[coord];
       }
 
       pixel_value = *p;
@@ -427,10 +440,10 @@ static uint8_t *bayer_dither_frame(const AVFrame *frame, AVRational time_base, i
 
   /* Progress bar */
   for (x = 0; x < progress; x++) {
-    hgr_buf[x] = 255;
+    dithered_buf[x] = 255;
   }
 
-  return hgr_buf;
+  return dithered_buf;
 }
 
 static uint8_t *burkes_dither_frame(const AVFrame *frame, AVRational time_base, int progress)
@@ -450,11 +463,11 @@ static uint8_t *burkes_dither_frame(const AVFrame *frame, AVRational time_base, 
   if (pic_height < HGR_HEIGHT) {
     y_offset = (HGR_HEIGHT - pic_height) / 2;
   }
-  memset(hgr_buf, 0, sizeof hgr_buf);
+  memset(dithered_buf, 0, sizeof dithered_buf);
 
   /* Trivial ASCII grayscale display. */
   p0 = frame->data[0];
-  out = hgr_buf + (y_offset * HGR_WIDTH);
+  out = dithered_buf + (y_offset * HGR_WIDTH);
 
   for (y = 0; y < frame->height; y++) {
     p = p0;
@@ -477,7 +490,7 @@ static uint8_t *burkes_dither_frame(const AVFrame *frame, AVRational time_base, 
        2/3:              668 avg (404 data, 208 offset, 54 base)
        3/5:              576 avg (341 data, 182 offset, 51 base)
       */
-      time_stab_val = ((*p * 3) / 5) + ((prev_hgr_buf[y*HGR_WIDTH+x] * 2) / 5);
+      time_stab_val = ((*p * 3) / 5) + ((prev_dithered_buf[y*HGR_WIDTH+x] * 2) / 5);
       if (threshold > time_stab_val + error_table[y][x+ERR_X_OFF]) {
         *(out++) = 0;
         current_error = time_stab_val + error_table[y][x + ERR_X_OFF];
@@ -501,15 +514,16 @@ skip_line:
 
   /* Progress bar */
   for (x = 0; x < progress; x++) {
-    hgr_buf[x] = 255;
+    dithered_buf[x] = 255;
   }
 
-  return hgr_buf;
+  return dithered_buf;
 }
 
 static void *ffmpeg_subtitles_decode_thread(void *data) {
   decode_data *th_data = (decode_data *)data;
   th_data->has_subtitles = 1;
+  sleep(8);
   if (ffmpeg_subtitles_decode(th_data, th_data->url) < 0) {
     char *srt = malloc(strlen(th_data->url) + 10);
     strcpy(srt, th_data->url);
@@ -517,6 +531,8 @@ static void *ffmpeg_subtitles_decode_thread(void *data) {
       strcpy(strrchr(srt, '.'), ".srt");
     if (ffmpeg_subtitles_decode(data, srt) < 0) {
       th_data->has_subtitles = 0;
+      /* We're ready, without subtitles. */
+      sem_post(&th_data->sub_thread_ready);
     }
     free(srt);
   }
@@ -558,7 +574,6 @@ end:
     return ret;
 }
 
-uint8_t hgr[0x2000];
 unsigned char *ffmpeg_video_decode_frame(decode_data *data, int total_frames, int current_frame) {
     int progress = 0;
     uint8_t *buf = NULL;
@@ -566,7 +581,8 @@ unsigned char *ffmpeg_video_decode_frame(decode_data *data, int total_frames, in
     int first = 1;
 
     if (current_frame == 0) {
-      memset(prev_hgr_buf, 0, sizeof(prev_hgr_buf));
+      memset(prev_dithered_buf, 0, sizeof(prev_dithered_buf));
+      memset(prev_hgr_buf, 0, 0x2000);
     }
 
     if (total_frames > 0) {
@@ -630,7 +646,7 @@ unsigned char *ffmpeg_video_decode_frame(decode_data *data, int total_frames, in
                       buf = bayer_dither_frame(video_filt_frame, video_buffersink_ctx->inputs[0]->time_base, progress);
                     else
                       buf = burkes_dither_frame(video_filt_frame, video_buffersink_ctx->inputs[0]->time_base, progress);
-                    memcpy(prev_hgr_buf, buf, sizeof(prev_hgr_buf));
+                    memcpy(prev_dithered_buf, buf, sizeof(prev_dithered_buf));
                     av_frame_unref(video_filt_frame);
                 }
                 av_frame_unref(video_frame);
@@ -647,18 +663,23 @@ end:
     if (buf) {
 #ifdef GREYSCALE_TO_HGR
         int x, y, base, xoff, pixel;
+        // int changes = 0;
         unsigned char *ptr;
         unsigned char dhbmono[] = {0x7e,0x7d,0x7b,0x77,0x6f,0x5f,0x3f};
         unsigned char dhwmono[] = {0x1,0x2,0x4,0x8,0x10,0x20,0x40};
 
-        memset(hgr, 0x00, 0x2000);
+        memset(hgr_buf, 0x00, 0x2000);
+
+        if (current_frame == 0) {
+          memset(byte_age, 0, 0x2000);
+        }
 
         for (y = 0; y < HGR_HEIGHT; y++) {
           base = baseaddr[y];
           for (x = 0; x < HGR_WIDTH; x++) {
             xoff = base + x/7;
             pixel = x%7;
-            ptr = hgr + xoff;
+            ptr = hgr_buf + xoff;
 
             if (buf[y*HGR_WIDTH + x] != 0x00) {
               ptr[0] |= dhwmono[pixel];
@@ -667,7 +688,44 @@ end:
             }
           }
         }
-        return hgr;
+
+        /* Count changes */
+        // for (x = 0; x < 0x2000; x++) {
+        //   if (hgr_buf[x] != prev_hgr_buf[x]) {
+        //     changes++;
+        //     if (changes > MAX_BYTES_PER_FRAME/2) {
+        //       break;
+        //     }
+        //   }
+        // }
+        // 
+        // /* Filter out single byte changes */
+        // if (changes > MAX_BYTES_PER_FRAME/2) {
+        //   for (y = 0; y < HGR_HEIGHT; y++) {
+        //     base = baseaddr[y];
+        //     for (x = 0; x < 40; x++) {
+        //       int prev_line_xoff, next_line_xoff;
+        //       xoff = base + x;
+        //       prev_line_xoff = y > 0 ? baseaddr[y-1] + x : 0;
+        //       next_line_xoff = y < HGR_HEIGHT-1 ? baseaddr[y+1] + x : 0;
+        // 
+        //       if (*(hgr_buf + xoff) != *(prev_hgr_buf + xoff)
+        //        && byte_age[xoff] < 5
+        //        && (x == 0            || *(hgr_buf + xoff - 1) == *(prev_hgr_buf + xoff - 1))
+        //        && (x == 39           || *(hgr_buf + xoff + 1) == *(prev_hgr_buf + xoff + 1))
+        //        && (y == 0            || *(hgr_buf + prev_line_xoff) == *(prev_hgr_buf + prev_line_xoff))
+        //        && (y == HGR_HEIGHT-1 || *(hgr_buf + next_line_xoff) == *(prev_hgr_buf + next_line_xoff))) {
+        //         printf("frame %d single byte change at %04x, pixel age %d.\n", current_frame, xoff+0x2000, byte_age[xoff]);
+        //         *(hgr_buf + xoff) = *(prev_hgr_buf + xoff);
+        //         byte_age[xoff]++;
+        //       } else {
+        //         byte_age[xoff] = 0;
+        //       }
+        //     }
+        //   }
+        // }
+        // memcpy(prev_hgr_buf, hgr_buf, 0x2000);
+        return hgr_buf;
 #else
         return buf;
 #endif
@@ -935,6 +993,7 @@ skip:
             free(idx);
             prev_end_frame = end_frame;
             pthread_mutex_unlock(&data->sub_mutex);
+            /* We got subtitles, we're ready */
             sem_post(&data->sub_thread_ready);
           }
           avsubtitle_free(&subtitle);
@@ -944,7 +1003,6 @@ skip:
     }
 
 end:
-    sem_post(&data->sub_thread_ready);
     av_packet_free(&packet);
     avcodec_free_context(&dec);
     avformat_close_input(&ctx);
@@ -993,6 +1051,7 @@ int ffmpeg_audio_decode(decode_data *data) {
     data->size = 0;
     data->img_data = NULL;
     data->img_size = 0;
+    data->max_audio_volume = 0;
     pthread_mutex_unlock(&data->mutex);
 
     if (!audio_frame || !audio_filt_frame || !audio_packet) {
@@ -1117,6 +1176,10 @@ int ffmpeg_audio_decode(decode_data *data) {
                         memcpy(data->data + data->size,
                                audio_filt_frame->data[0], audio_filt_frame->nb_samples * sizeof(unsigned char));
                         data->size += audio_filt_frame->nb_samples;
+                        for (int i = 0; i < audio_filt_frame->nb_samples; i++) {
+                          if (audio_filt_frame->data[0][i] > data->max_audio_volume)
+                            data->max_audio_volume = audio_filt_frame->data[0][i];
+                        }
                         data->data_ready = 1;
                         pthread_mutex_unlock(&data->mutex);
 

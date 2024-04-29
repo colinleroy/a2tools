@@ -13,6 +13,7 @@ typedef struct _decode_data {
   int sample_rate;
   char enable_subtitles;
   char has_subtitles;
+  uint8_t max_audio_volume;
   char *translit;
 
   /* data */
