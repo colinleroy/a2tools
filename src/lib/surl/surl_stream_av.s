@@ -1735,7 +1735,7 @@ video_no_sub:
         jmp     (next)                  ; 27
 
 @set_pixel:                             ;       No, it is a data byte
-        ldy     next_offset             ; 8    Load the offset to the start of the base
+        ldy     next_offset             ; 8     Load the offset to the start of the base
         sta     (cur_base),y            ; 14    Store data byte
         inc     next_offset             ; 19    and increment offset.
         WASTE_2                         ; 21
