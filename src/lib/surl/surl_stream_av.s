@@ -55,7 +55,6 @@ spkr_ptr      = _zp6            ; word - Pointer to SPKR to access in 5 cycles
 next_offset   = _zp8            ; byte - Where to write next video byte
 cur_mix       = _zp9            ; byte - HGR MIX status (for subtitles toggling)
 next          = _zp10           ; word - Next duty cycle address
-page          = _zp12           ; byte - Next HGR page flag
 
 cur_base      = ptr1            ; word - Current HGR base to write to
 page_ptr_low  = ptr3            ; word - Pointer to bases addresses (low byte) array
@@ -343,6 +342,13 @@ kbd_cmd       = tmp3            ; byte - Deferred keyboard command to handle
 ; Hack to waste 1 cycle. Use absolute stz with $00nn
 .macro ABS_STA  zpvar
         .byte   $8D             ; sta absolute
+        .byte   zpvar
+        .byte   $00
+.endmacro
+
+; Hack to waste 1 cycle. Use absolute sty with $00nn
+.macro ABS_STY  zpvar
+        .byte   $8C             ; sty absolute
         .byte   zpvar
         .byte   $00
 .endmacro
@@ -1117,7 +1123,6 @@ setup:
         jsr     calc_text_bases
 
         ; Init vars
-        stz     page
         stz     kbd_cmd
         stz     cur_mix
         stz     next_offset
@@ -1591,10 +1596,10 @@ ad26b:  ldx     $A8FF           ; 21
         JUMP_NEXT_16            ; 72
 
 .align $40 ; page0_ and page1_ addresses arrays must share the same low byte
-.assert * = _SAMPLES_BASE + $1A40, error         ; We want this one's high byte to be even
+.assert * = $7A40, error                         ; We want this one's high byte to be even
 PAGE0_ARRAY = *                                  ; for and'ing at video_sub:@set_offset
-page0_addrs_arr_low: .res (N_BASES+4+1)          ; Base addresses arrays
-page0_addrs_arr_high:.res (N_BASES+4+1)          ; Base addresses arrays
+page0_addrs_arr_low: .res (N_BASES+4+1)          ; Also $7A+$10 sets V flag in video_sub:@set_offset
+page0_addrs_arr_high:.res (N_BASES+4+1)
 
 
 .align $100
@@ -1655,6 +1660,7 @@ video_no_sub:
         tya                             ; 6
         bmi     @set_pixel              ; 8/9   Is it a control byte?
 
+; Zero cycle wasted here :(
 @dest_ctrl:
         adc     cur_base                ; 11    Add shift value to current pointer
         sta     cur_base                ; 14
@@ -1662,12 +1668,15 @@ video_no_sub:
         bcc     :+                      ; 19/20
         inc     cur_base+1              ; 24    Increment high byte if needed
         jmp     (next)                  ; 30
+
 :       WASTE_4                         ; 24
         jmp     (next)                  ; 30
 
 @toggle_page:
         bit     cur_base+1              ; 8     Determine which page we were in
         bvs     @page1                  ; 10/11
+
+; Two cycles wasted here
 @page0:                                 ;
         sta     $C054                   ; 14    Activate page 0
         lda     #$40                    ; 16    Write to page 1
@@ -1676,6 +1685,7 @@ video_no_sub:
         WASTE_2                         ; 24
         jmp     (next)                  ; 30
 
+; One cycle wasted here
 @page1:                                 ;
         sta     $C055                   ; 15    Activate page 1
         lda     #$20                    ; 17    Write to page 0
@@ -1683,6 +1693,7 @@ video_no_sub:
         ABS_STZ cur_base                ; 24
         jmp     (next)                  ; 30
 
+; One cycle wasted here
 @set_pixel:                             ;       No, it is a data byte
         ABS_LDY next_offset             ; 13    Load the offset to the start of the base
         sta     (cur_base),y            ; 19    Store data byte
@@ -1755,6 +1766,7 @@ video_sub:
 @dest_ctrl:
         bvc     @set_offset             ; 8/9  If yes, this one is a base byte
 
+; Zero cycle wasted here :(
 @set_base:                              ;       This is a base byte (branch takes 22 cycles minimum)
         lda     (page_ptr_low),y        ; 13    Load base pointer low byte from base array
         sta     cur_base                ; 16    Store it to destination pointer low byte
@@ -1762,27 +1774,30 @@ video_sub:
         sta     cur_base+1              ; 24    Store it to destination pointer high byte
         jmp     (next)                  ; 30    Done, go to next duty cycle
 
+; One cycle wasted here
 @set_offset:                            ;       No, so set offset (branch takes 14 cyles minimum)
-        sty     next_offset             ; 12    Store offset
-        SEV_ZP                          ; 15    Set the offset-received flag
-        lda     page_ptr_high+1         ; 18    Update the page flag here, where we have time
+        ABS_STY next_offset             ; 13    Store offset
+        lda     page_ptr_high+1         ; 16    Update the page flag here, where we have time
+        adc     #$10                    ; 18    $7A/$7F + $10 => sets V flag
         and     #1                      ; 20    Use the fact that page1 array's high byte is odd
-        ABS_STA page                    ; 24
+        sta     @toggle_page+1          ; 24
         jmp     (next)                  ; 30    Done, go to next duty cycle
 
+; One cycle wasted here
 @toggle_page:                           ;       Page toggling command (branch takes 23 cycles minimum)
 .ifdef DOUBLE_BUFFER
-        ldx     page                    ; 10
-        lda     $C054,x                 ; 14    Activate page 1
-        lda     page_addrs_arr,x        ; 18    Write to page 0
-        sta     page_ptr_low+1          ; 21    Update pointers to page 0
-        sta     page_ptr_high+1         ; 24    No time to update page flag,
+        ldx     #$00                    ; 9
+        lda     $C054,x                 ; 13    Activate page 1
+        lda     page_addrs_arr,x        ; 17    Write to page 0
+        sta     page_ptr_low+1          ; 20    Update pointers to page 0
+        ABS_STA     page_ptr_high+1     ; 24    No time to update page flag,
         jmp     (next)                  ; 30    We'll do it in @set_offset
 .else
         WASTE_17                        ; 24
         jmp     (next)                  ; 30
 .endif
 
+; Three cycles wasted here
 @set_pixel:                             ;       No, it is a data byte (branch takes 25 cycles minimum)
         tya                             ; 5
         ldy     next_offset             ; 8     Load the offset to the start of the base
@@ -1818,10 +1833,10 @@ ad31b:  ldx     $A8FF           ; 21
         JUMP_NEXT_16            ; 72
 
 .align $40
-.assert * = _SAMPLES_BASE + $1F40, error         ; We want high byte to be odd
+.assert * = $7F40, error                         ; We want high byte to be odd
 PAGE1_ARRAY = *                                  ; for and'ing at video_sub:@set_offset
-page1_addrs_arr_low: .res (N_BASES+4+1)          ; Base addresses arrays
-page1_addrs_arr_high:.res (N_BASES+4+1)          ; Base addresses arrays
+page1_addrs_arr_low: .res (N_BASES+4+1)          ; also need $7F+$10 to set V flag at the same spot
+page1_addrs_arr_high:.res (N_BASES+4+1)
 
 page_addrs_arr: .byte >(page1_addrs_arr_low)     ; Inverted because we write to page 1
                 .byte >(page0_addrs_arr_low)     ; when page 0 is active, and vice-versa
