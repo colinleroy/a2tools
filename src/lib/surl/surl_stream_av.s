@@ -469,7 +469,8 @@ ad0:    ldx     $A8FF           ; 16     load audio data register
         beq     no_vid0         ; 20/21  branch accordingly
 vd0:    ldy     $98FF           ; 24     load video data
         stx     next+1          ; 27     store next duty cycle destination
-        WASTE_12                ; 39     waste extra cycles
+        WASTE_10                ; 37     waste extra cycles
+        tya                     ; 39     Get video byte in A
 vh0:    jmp     $FFFF           ; 42=>72
 
 no_vid0:                        ;        we had no video byte
@@ -521,7 +522,8 @@ vs1:    lda     $99FF           ; 17
         beq     no_vid1         ; 21/22
 vd1:    ldy     $98FF           ; 25
         stx     next+1          ; 28
-        WASTE_11                ; 39
+        WASTE_9                 ; 37
+        tya                     ; 39     Get video byte in A
 vh1:    jmp     $FFFF           ; 42=>72
 
 no_vid1:
@@ -578,7 +580,8 @@ vs2:    lda     $99FF           ; 18
         beq     no_vid2         ; 22/23
 vd2:    ldy     $98FF           ; 26
         stx     next+1          ; 29
-        WASTE_10                ; 39
+        WASTE_8                 ; 37
+        tya                     ; 39     Get video byte in A
 vh2:    jmp     $FFFF           ; 42=>72
 
 no_vid2:
@@ -709,7 +712,8 @@ vs3:    lda     $99FF           ; 19
         beq     no_vid3         ; 23/24
 vd3:    ldy     $98FF           ; 27
         stx     next+1          ; 30
-        WASTE_9                 ; 39
+        WASTE_7                 ; 37
+        tya                     ; 39     Get video byte in A
 vh3:    jmp     $FFFF           ; 42=>72
 
 no_vid3:
@@ -767,7 +771,8 @@ vs4:    lda     $99FF           ; 16
         beq     no_vid4         ; 20/21
 vd4:    ldy     $98FF           ; 24
         stx     next+1          ; 27
-        WASTE_12                ; 39
+        WASTE_10                ; 37
+        tya                     ; 39     Get video byte in A
 vh4:    jmp     $FFFF           ; 42=>72
 
 no_vid4:
@@ -825,7 +830,8 @@ vs5:    lda     $99FF           ; 17
         beq     no_vid5         ; 21/22
 vd5:    ldy     $98FF           ; 25
         stx     next+1          ; 28
-        WASTE_11                ; 39
+        WASTE_9                 ; 37
+        tya                     ; 39     Get video byte in A
 vh5:    jmp     $FFFF           ; 42=>72
 
 no_vid5:
@@ -922,7 +928,8 @@ vs6:    lda     $99FF           ; 18
         beq     no_vid6         ; 22/23
 vd6:    ldy     $98FF           ; 26
         stx     next+1          ; 29
-        WASTE_10                ; 39
+        WASTE_8                 ; 37
+        tya                     ; 39     Get video byte in A
 vh6:    jmp     $FFFF           ; 42=>72
 
 no_vid6:
@@ -1005,7 +1012,8 @@ vs7:    lda     $99FF           ; 19
         beq     no_vid7         ; 23/24
 vd7:    ldy     $98FF           ; 27
         stx     next+1          ; 30
-        WASTE_9                 ; 39
+        WASTE_7                 ; 37
+        tya                     ; 39     Get video byte in A
 vh7:    jmp     $FFFF           ; 42=>72
 
 no_vid7:
@@ -1081,7 +1089,8 @@ vs8:    lda     $99FF           ; 12
         beq     no_vid8         ; 20/21
 vd8:    ldy     $98FF           ; 24
         stx     next+1          ; 27
-        WASTE_12                ; 39
+        WASTE_10                ; 37
+        tya                     ; 39     Get video byte in A
 vh8:    jmp     $FFFF           ; 42=>72
 
 no_vid8:
@@ -1175,7 +1184,8 @@ vs9:    lda     $99FF           ; 12
         beq     no_vid9         ; 21/22
 vd9:    ldy     $98FF           ; 25
         stx     next+1          ; 28
-        WASTE_11                ; 39
+        WASTE_9                 ; 37
+        tya                     ; 39     Get video byte in A
 vh9:    jmp     $FFFF           ; 42=>72
 
 no_vid9:
@@ -1196,7 +1206,8 @@ vs10:   lda     $99FF           ; 12
         beq     no_vid10        ; 22/23
 vd10:   ldy     $98FF           ; 26
         stx     next+1          ; 29
-        WASTE_10                ; 39
+        WASTE_8                 ; 37
+        tya                     ; 39     Get video byte in A
 vh10:   jmp     $FFFF           ; 42=>72
 
 no_vid10:
@@ -1218,7 +1229,8 @@ vs11:   lda     $99FF           ; 12
         beq     no_vid11        ; 23/24
 vd11:   ldy     $98FF           ; 27
         stx     next+1          ; 30
-        WASTE_9                 ; 39
+        WASTE_7                 ; 37
+        tya                     ; 39     Get video byte in A
 vh11:   jmp     $FFFF           ; 42=>72
 
 no_vid11:
@@ -1240,7 +1252,8 @@ vs12:   lda     $99FF           ; 12
         beq     no_vid12        ; 22/23
 vd12:   ldy     $98FF           ; 26
         stx     next+1          ; 29
-        WASTE_10                ; 39
+        WASTE_8                 ; 37
+        tya                     ; 39     Get video byte in A
 vh12:   jmp     $FFFF           ; 42=>72
 
 no_vid12:
@@ -1260,7 +1273,8 @@ vs13:   lda     $99FF           ; 12
         ____SPKR_DUTY____5      ; 21
 vd13:   ldy     $98FF           ; 25
         stx     next+1          ; 28
-        WASTE_11                ; 39
+        WASTE_9                 ; 37
+        tya                     ; 39     Get video byte in A
 vh13:   jmp     $FFFF           ; 42=>72
 
 no_vid13:
@@ -1282,7 +1296,8 @@ vs14:   lda     $99FF           ; 12
         ____SPKR_DUTY____4      ; 22
 vd14:   ldy     $98FF           ; 26
         stx     next+1          ; 29
-        WASTE_10                ; 39
+        WASTE_8                 ; 37
+        tya                     ; 39     Get video byte in A
 vh14:   jmp     $FFFF           ; 42=>72
 
 no_vid14:
@@ -1304,7 +1319,8 @@ vs15:   lda     $99FF           ; 12
         ____SPKR_DUTY____4      ; 23
 vd15:   ldy     $98FF           ; 27
         stx     next+1          ; 30
-        WASTE_9                 ; 39
+        WASTE_7                 ; 37
+        tya                     ; 39     Get video byte in A
 vh15:   jmp     $FFFF           ; 42=>72
 
 no_vid15:
@@ -1346,7 +1362,8 @@ vs16:   lda     $99FF           ; 12
 vd16:   ldy     $98FF           ; 20
         ____SPKR_DUTY____4      ; 24
         stx     next+1          ; 27
-        WASTE_12                ; 39
+        WASTE_10                ; 37
+        tya                     ; 39     Get video byte in A
 vh16:   jmp     $FFFF           ; 42=>72
 
 no_vid16:
@@ -1380,7 +1397,8 @@ vs17:   lda     $99FF           ; 12
 vd17:   ldy     $98FF           ; 20
         ____SPKR_DUTY____5      ; 25
         stx     next+1          ; 28
-        WASTE_11                ; 39
+        WASTE_9                 ; 37
+        tya                     ; 39     Get video byte in A
 vh17:   jmp     $FFFF           ; 42=>72
 
 no_vid17:
@@ -1402,7 +1420,8 @@ vd18:   ldy     $98FF           ; 20
         WASTE_2                 ; 22
         ____SPKR_DUTY____4      ; 26
         stx     next+1          ; 29
-        WASTE_10                ; 39
+        WASTE_8                 ; 37
+        tya                     ; 39     Get video byte in A
 vh18:   jmp     $FFFF           ; 42=>72
 
 no_vid18:
@@ -1424,7 +1443,8 @@ vd19:   ldy     $98FF           ; 20
         WASTE_2                 ; 22
         ____SPKR_DUTY____5      ; 27
         stx     next+1          ; 30
-        WASTE_9                 ; 39
+        WASTE_7                 ; 37
+        tya                     ; 39     Get video byte in A
 vh19:   jmp     $FFFF           ; 42=>72
 
 no_vid19:
@@ -1447,7 +1467,8 @@ vd20:   ldy     $98FF           ; 20
         WASTE_4                 ; 24
         ____SPKR_DUTY____4      ; 28
         stx     next+1          ; 31
-        WASTE_8                 ; 39
+        WASTE_6                 ; 37
+        tya                     ; 39     Get video byte in A
 vh20:   jmp     $FFFF           ; 42=>72
 
 no_vid20:
@@ -1469,7 +1490,8 @@ vd21:   ldy     $98FF           ; 20
         stx     next+1          ; 23
         WASTE_2                 ; 25
         ____SPKR_DUTY____4      ; 29
-        WASTE_10                ; 39
+        WASTE_8                 ; 37
+        tya                     ; 39     Get video byte in A
 vh21:   jmp     $FFFF           ; 42=>72
 
 no_vid21:
@@ -1491,7 +1513,8 @@ vd22:   ldy     $98FF           ; 20
         stx     next+1          ; 23
         WASTE_3                 ; 26
         ____SPKR_DUTY____4      ; 30
-        WASTE_9                 ; 39
+        WASTE_7                 ; 37
+        tya                     ; 39     Get video byte in A
 vh22:   jmp     $FFFF           ; 42=>72
 
 no_vid22:
@@ -1514,7 +1537,8 @@ vd23:   ldy     $98FF           ; 20
         stx     next+1          ; 23
         WASTE_4                 ; 27
         ____SPKR_DUTY____4      ; 31
-        WASTE_8                 ; 39
+        WASTE_6                 ; 37
+        tya                     ; 39     Get video byte in A
 vh23:   jmp     $FFFF           ; 42=>72
 
 no_vid23:
@@ -1538,7 +1562,8 @@ vd24:   ldy     $98FF           ; 20
         stx     next+1          ; 23
         WASTE_5                 ; 28
         ____SPKR_DUTY____4      ; 32
-        WASTE_7                 ; 39
+        WASTE_5                 ; 37
+        tya                     ; 39     Get video byte in A
 vh24:   jmp     $FFFF           ; 42=>72
 
 no_vid24:
@@ -1561,7 +1586,8 @@ vd25:   ldy     $98FF           ; 20
         stx     next+1          ; 23
         WASTE_6                 ; 29
         ____SPKR_DUTY____4      ; 33
-        WASTE_6                 ; 39
+        WASTE_4                 ; 37
+        tya                     ; 39     Get video byte in A
 vh25:   jmp     $FFFF           ; 42=>72
 
 no_vid25:
@@ -1584,7 +1610,8 @@ vd26:   ldy     $98FF           ; 20
         stx     next+1          ; 23
         WASTE_7                 ; 30
         ____SPKR_DUTY____4      ; 34
-        WASTE_5                 ; 39
+        WASTE_3                 ; 37
+        tya                     ; 39     Get video byte in A
 vh26:   jmp     $FFFF           ; 42=>72
 
 no_vid26:
@@ -1614,7 +1641,8 @@ vd27:   ldy     $98FF           ; 20
         stx     next+1          ; 23
         WASTE_8                 ; 31
         ____SPKR_DUTY____4      ; 35
-        WASTE_4                 ; 39
+        WASTE_2                 ; 37
+        tya                     ; 39     Get video byte in A
 vh27:   jmp     $FFFF           ; 42=>72
 
 no_vid27:
@@ -1635,7 +1663,8 @@ vs28:   lda     $99FF           ; 12
         beq     no_vid28        ; 16/17
 vd28:   ldy     $98FF           ; 20
         stx     next+1          ; 23
-        WASTE_9                 ; 32
+        WASTE_7                 ; 30
+        tya                     ; 32     Get video byte in A
         ____SPKR_DUTY____4      ; 36
         WASTE_3                 ; 39
 vh28:   jmp     $FFFF           ; 42=>72
@@ -1674,7 +1703,7 @@ video_no_sub:
 
 @toggle_page:
         bit     cur_base+1              ; 8     Determine which page we were in
-        bvs     @page1                  ; 10/11
+        bvs     @page1                  ; 10/11 V flag set = $40-$5F
 
 ; Two cycles wasted here
 @page0:                                 ;
@@ -1713,7 +1742,7 @@ vd29:   ldy     $98FF           ; 20
         stx     next+1          ; 23
         WASTE_10                ; 33
         ____SPKR_DUTY____4      ; 37
-        WASTE_2                 ; 39
+        tya                     ; 39     Get video byte in A
 vh29:   jmp     $FFFF           ; 42=>72
 
 no_vid29:
@@ -1736,7 +1765,8 @@ vs30:   lda     $99FF           ; 12
         and     #HAS_BYTE       ; 14
         beq     no_vid30        ; 16/17
 vd30:   ldy     $98FF           ; 20
-        WASTE_11                ; 31
+        WASTE_9                 ; 29
+        tya                     ; 31     Get video byte in A
 vhsd:   jmp     $FFFF           ; 34=>72
 
 no_vid30:
@@ -1790,7 +1820,7 @@ video_sub:
         lda     $C054,x                 ; 13    Activate page 1
         lda     page_addrs_arr,x        ; 17    Write to page 0
         sta     page_ptr_low+1          ; 20    Update pointers to page 0
-        ABS_STA     page_ptr_high+1     ; 24    No time to update page flag,
+        ABS_STA page_ptr_high+1         ; 24    No time to update page flag,
         jmp     (next)                  ; 30    We'll do it in @set_offset
 .else
         WASTE_17                        ; 24
@@ -1820,7 +1850,8 @@ vs31:   lda     $99FF           ; 12
         beq     no_vid31        ; 16/17
 vd31:   ldy     $98FF           ; 20
         stx     next+1          ; 23
-        WASTE_12                ; 35
+        WASTE_10                ; 33
+        tya                     ; 35     Get video byte in A
         ____SPKR_DUTY____4      ; 39
 vh31:   jmp     $FFFF           ; 42=>72
 
