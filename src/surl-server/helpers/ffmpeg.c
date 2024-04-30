@@ -522,8 +522,9 @@ skip_line:
 
 static void *ffmpeg_subtitles_decode_thread(void *data) {
   decode_data *th_data = (decode_data *)data;
+
   th_data->has_subtitles = 1;
-  sleep(8);
+
   if (ffmpeg_subtitles_decode(th_data, th_data->url) < 0) {
     char *srt = malloc(strlen(th_data->url) + 10);
     strcpy(srt, th_data->url);
