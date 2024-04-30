@@ -1585,6 +1585,13 @@ ad26b:  ldx     $A8FF           ; 21
         WASTE_22                ; 56
         JUMP_NEXT_17            ; 73
 
+.align $40 ; page0_ and page1_ addresses arrays must share the same low byte
+.assert * = _SAMPLES_BASE + $1A40, error         ; We want this one's high byte to be even
+PAGE0_ARRAY = *                                  ; for and'ing at video_sub:@set_offset
+page0_addrs_arr_low: .res (N_BASES+4+1)          ; Base addresses arrays
+page0_addrs_arr_high:.res (N_BASES+4+1)          ; Base addresses arrays
+
+
 .align $100
 .assert * = _SAMPLES_BASE + $1B00, error
 duty_cycle27:                    ; end spkr at 35
@@ -1703,12 +1710,6 @@ ad29b:  ldx     $A8FF           ; 21
         WASTE_19                ; 56
         JUMP_NEXT_17            ; 73
 
-.align $40 ; page0_ and page1_ addresses arrays must share the same low byte
-.assert * = _SAMPLES_BASE + $1D40, error
-PAGE0_ARRAY = *
-page0_addrs_arr_low: .res (N_BASES+4+1)          ; Base addresses arrays
-page0_addrs_arr_high:.res (N_BASES+4+1)          ; Base addresses arrays
-
 .align $100
 .assert * = _SAMPLES_BASE + $1E00, error
 ; Duty cycle 30 must toggle off speaker at cycle 38, but we would have to jump
@@ -1751,21 +1752,12 @@ video_sub:
 @toggle_page:                           ;       Page toggling command (branch takes 23 cycles minimum)
 .ifdef DOUBLE_BUFFER
         ldx     page                    ; 9
-        bne     @page0                  ; 11/12
-@page1:                                 ;       (branch takes 21 cycles minimum)
-        sta     $C055                   ; 15    Activate page 1
-        lda     #>(page0_addrs_arr_low) ; 17    Write to page 0
+        lda     $C054,x                 ; 13    Activate page 1
+        lda     page_addrs_arr,x        ; 17    Write to page 0
         sta     page_ptr_low+1          ; 20    Update pointers to page 0
-        sta     page_ptr_high+1         ; 23
-        WASTE_2                         ; 25    No time to update page flag,
+        sta     page_ptr_high+1         ; 23    No time to update page flag,
+        WASTE_2                         ; 25
         jmp     (next)                  ; 31    We'll do it in @set_offset
-
-@page0:                                 ;       (branch takes 20 cycles minimum)
-        sta     $C054                   ; 16    Activate page 0
-        lda     #>(page1_addrs_arr_low) ; 18    Write to page 1
-        sta     page_ptr_low+1          ; 21    Update pointers to page 1
-        ABS_STA page_ptr_high+1         ; 25
-        jmp     (next)                  ; 31
 .else
         WASTE_19                        ; 25
         jmp     (next)                  ; 31
@@ -1785,7 +1777,7 @@ video_sub:
         sty     next_offset             ; 13    Store offset
         SEV_ZP                          ; 16    Set the offset-received flag
         lda     page_ptr_high+1         ; 19    Update the page flag here, where we have time
-        eor     #>(PAGE1_ARRAY)         ; 21
+        and     #1                      ; 21    Use the fact that page1 array's high byte is odd
         ABS_STA page                    ; 25
         jmp     (next)                  ; 31    Done, go to next duty cycle
 
@@ -1824,10 +1816,13 @@ ad31b:  ldx     $A8FF           ; 21
         JUMP_NEXT_17            ; 73
 
 .align $40
-.assert * = _SAMPLES_BASE + $1F40, error
-PAGE1_ARRAY = *
+.assert * = _SAMPLES_BASE + $1F40, error         ; We want high byte to be odd
+PAGE1_ARRAY = *                                  ; for and'ing at video_sub:@set_offset
 page1_addrs_arr_low: .res (N_BASES+4+1)          ; Base addresses arrays
 page1_addrs_arr_high:.res (N_BASES+4+1)          ; Base addresses arrays
+
+page_addrs_arr: .byte >(page1_addrs_arr_low)
+                .byte >(page0_addrs_arr_low)
 
 abs_vflag:      .byte $40
 enable_subs:    .byte $1
