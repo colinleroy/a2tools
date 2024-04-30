@@ -369,9 +369,9 @@ kbd_cmd       = tmp3            ; byte - Deferred keyboard command to handle
   .endmacro
 .endif
 
-.macro JUMP_NEXT_16
-        WASTE_10                ; 10
-        jmp     (next)          ; 16     jump to next duty cycle
+.macro JUMP_NEXT_15
+        WASTE_9                 ; 9
+        jmp     (next)          ; 15     jump to next duty cycle
 .endmacro
         .code
 
@@ -437,7 +437,7 @@ kbd_cmd       = tmp3            ; byte - Deferred keyboard command to handle
 ; to:
 ; toggle4-other29-toggle4-other3-toggle4-other29-toggle4-jump3
 ; This seems difficult to achieve (8 cycles needed for the second toggling,
-; going from 72 cycles without to 80 with means no wasting at all)
+; going from 71 cycles without to 80 with means no wasting at all)
 ;
 ; Warning about the alignment of the 32 duty cycles: as we read the next
 ; sample without verifying the ACIA's status register, we may read an
@@ -470,13 +470,13 @@ vd0:    ldy     $98FF           ; 24     load video data
         stx     next+1          ; 27     store next duty cycle destination
         WASTE_10                ; 37     waste extra cycles
         tya                     ; 39     Get video byte in A
-vh0:    jmp     $FFFF           ; 42=>72
+vh0:    jmp     $FFFF           ; 42=>71
 
 no_vid0:                        ;        we had no video byte
 ad0b:   ldx     $A8FF           ; 25     load audio data register again
         stx     next+1          ; 28     store next duty cycle destination
         WASTE_28                ; 56
-        JUMP_NEXT_16            ; 72
+        JUMP_NEXT_15            ; 71
 
 ; -----------------------------------------------------------------
 _surl_stream_av:                ; Entry point
@@ -523,13 +523,13 @@ vd1:    ldy     $98FF           ; 25
         stx     next+1          ; 28
         WASTE_9                 ; 37
         tya                     ; 39     Get video byte in A
-vh1:    jmp     $FFFF           ; 42=>72
+vh1:    jmp     $FFFF           ; 42=>71
 
 no_vid1:
 ad1b:   ldx     $A8FF           ; 26
         stx     next+1          ; 29
         WASTE_27                ; 56
-        JUMP_NEXT_16            ; 72
+        JUMP_NEXT_15            ; 71
 
 ; -----------------------------------------------------------------
 patch_addresses:                ; Patch all registers in ptr1 array with A
@@ -581,13 +581,13 @@ vd2:    ldy     $98FF           ; 26
         stx     next+1          ; 29
         WASTE_8                 ; 37
         tya                     ; 39     Get video byte in A
-vh2:    jmp     $FFFF           ; 42=>72
+vh2:    jmp     $FFFF           ; 42=>71
 
 no_vid2:
 ad2b:   ldx     $A8FF           ; 27
         stx     next+1          ; 30
         WASTE_26                ; 56
-        JUMP_NEXT_16            ; 72
+        JUMP_NEXT_15            ; 71
 
 ; -----------------------------------------------------------------
 patch_serial_registers:
@@ -713,13 +713,13 @@ vd3:    ldy     $98FF           ; 27
         stx     next+1          ; 30
         WASTE_7                 ; 37
         tya                     ; 39     Get video byte in A
-vh3:    jmp     $FFFF           ; 42=>72
+vh3:    jmp     $FFFF           ; 42=>71
 
 no_vid3:
 ad3b:   ldx     $A8FF           ; 28
         stx     next+1          ; 31
         WASTE_25                ; 56
-        JUMP_NEXT_16            ; 72
+        JUMP_NEXT_15            ; 71
 
 ; -----------------------------------------------------------------
 video_status_patches:
@@ -772,13 +772,13 @@ vd4:    ldy     $98FF           ; 24
         stx     next+1          ; 27
         WASTE_10                ; 37
         tya                     ; 39     Get video byte in A
-vh4:    jmp     $FFFF           ; 42=>72
+vh4:    jmp     $FFFF           ; 42=>71
 
 no_vid4:
 ad4b:   ldx     $A8FF           ; 25
         stx     next+1          ; 28
         WASTE_28                ; 56
-        JUMP_NEXT_16            ; 72
+        JUMP_NEXT_15            ; 71
 
 ; -----------------------------------------------------------------
 video_data_patches:
@@ -831,13 +831,13 @@ vd5:    ldy     $98FF           ; 25
         stx     next+1          ; 28
         WASTE_9                 ; 37
         tya                     ; 39     Get video byte in A
-vh5:    jmp     $FFFF           ; 42=>72
+vh5:    jmp     $FFFF           ; 42=>71
 
 no_vid5:
 ad5b:   ldx     $A8FF           ; 26
         stx     next+1          ; 29
         WASTE_27                ; 56
-        JUMP_NEXT_16            ; 72
+        JUMP_NEXT_15            ; 71
 
 ; -----------------------------------------------------------------
 audio_status_patches:
@@ -929,13 +929,13 @@ vd6:    ldy     $98FF           ; 26
         stx     next+1          ; 29
         WASTE_8                 ; 37
         tya                     ; 39     Get video byte in A
-vh6:    jmp     $FFFF           ; 42=>72
+vh6:    jmp     $FFFF           ; 42=>71
 
 no_vid6:
 ad6b:   ldx     $A8FF           ; 27
         stx     next+1          ; 30
         WASTE_26                ; 56
-        JUMP_NEXT_16            ; 72
+        JUMP_NEXT_15            ; 71
 
 ; --------------------------------------------------------------
 duty_start:
@@ -1013,13 +1013,13 @@ vd7:    ldy     $98FF           ; 27
         stx     next+1          ; 30
         WASTE_7                 ; 37
         tya                     ; 39     Get video byte in A
-vh7:    jmp     $FFFF           ; 42=>72
+vh7:    jmp     $FFFF           ; 42=>71
 
 no_vid7:
 ad7b:   ldx     $A8FF           ; 28
         stx     next+1          ; 31
         WASTE_25                ; 56
-        JUMP_NEXT_16            ; 72
+        JUMP_NEXT_15            ; 71
 
 ; -----------------------------------------------------------------
 calc_bases:
@@ -1088,13 +1088,13 @@ vd8:    ldy     $98FF           ; 24
         stx     next+1          ; 27
         WASTE_10                ; 37
         tya                     ; 39     Get video byte in A
-vh8:    jmp     $FFFF           ; 42=>72
+vh8:    jmp     $FFFF           ; 42=>71
 
 no_vid8:
 ad8b:   ldx     $A8FF           ; 25
         stx     next+1          ; 28
         WASTE_28                ; 56
-        JUMP_NEXT_16            ; 72
+        JUMP_NEXT_15            ; 71
 
 ; -----------------------------------------------------------------
 setup:
@@ -1174,13 +1174,13 @@ vd9:    ldy     $98FF           ; 25
         stx     next+1          ; 28
         WASTE_9                 ; 37
         tya                     ; 39     Get video byte in A
-vh9:    jmp     $FFFF           ; 42=>72
+vh9:    jmp     $FFFF           ; 42=>71
 
 no_vid9:
 ad9b:   ldx     $A8FF           ; 26
         stx     next+1          ; 29
         WASTE_27                ; 56
-        JUMP_NEXT_16            ; 72
+        JUMP_NEXT_15            ; 71
 
 .align $100
 .assert * = _SAMPLES_BASE + $A00, error
@@ -1196,13 +1196,13 @@ vd10:   ldy     $98FF           ; 26
         stx     next+1          ; 29
         WASTE_8                 ; 37
         tya                     ; 39     Get video byte in A
-vh10:   jmp     $FFFF           ; 42=>72
+vh10:   jmp     $FFFF           ; 42=>71
 
 no_vid10:
 ad10b:  ldx     $A8FF           ; 27
         stx     next+1          ; 30
         WASTE_26                ; 56
-        JUMP_NEXT_16            ; 72
+        JUMP_NEXT_15            ; 71
 
 
 .align $100
@@ -1219,13 +1219,13 @@ vd11:   ldy     $98FF           ; 27
         stx     next+1          ; 30
         WASTE_7                 ; 37
         tya                     ; 39     Get video byte in A
-vh11:   jmp     $FFFF           ; 42=>72
+vh11:   jmp     $FFFF           ; 42=>71
 
 no_vid11:
 ad11b:  ldx     $A8FF           ; 28
         stx     next+1          ; 31
         WASTE_25                ; 56
-        JUMP_NEXT_16            ; 72
+        JUMP_NEXT_15            ; 71
 
 
 .align $100
@@ -1242,13 +1242,13 @@ vd12:   ldy     $98FF           ; 26
         stx     next+1          ; 29
         WASTE_8                 ; 37
         tya                     ; 39     Get video byte in A
-vh12:   jmp     $FFFF           ; 42=>72
+vh12:   jmp     $FFFF           ; 42=>71
 
 no_vid12:
 ad12b:  ldx     $A8FF           ; 27
         stx     next+1          ; 30
         WASTE_26                ; 56
-        JUMP_NEXT_16            ; 72
+        JUMP_NEXT_15            ; 71
 
 .align $100
 .assert * = _SAMPLES_BASE + $D00, error
@@ -1263,14 +1263,14 @@ vd13:   ldy     $98FF           ; 25
         stx     next+1          ; 28
         WASTE_9                 ; 37
         tya                     ; 39     Get video byte in A
-vh13:   jmp     $FFFF           ; 42=>72
+vh13:   jmp     $FFFF           ; 42=>71
 
 no_vid13:
         ____SPKR_DUTY____4      ; 21
 ad13b:  ldx     $A8FF           ; 25
         stx     next+1          ; 28
         WASTE_28                ; 56
-        JUMP_NEXT_16            ; 72
+        JUMP_NEXT_15            ; 71
 
 .align $100
 .assert * = _SAMPLES_BASE + $E00, error
@@ -1286,14 +1286,14 @@ vd14:   ldy     $98FF           ; 26
         stx     next+1          ; 29
         WASTE_8                 ; 37
         tya                     ; 39     Get video byte in A
-vh14:   jmp     $FFFF           ; 42=>72
+vh14:   jmp     $FFFF           ; 42=>71
 
 no_vid14:
         ____SPKR_DUTY____5      ; 22
 ad14b:  ldx     $A8FF           ; 26
         stx     next+1          ; 29
         WASTE_27                ; 56
-        JUMP_NEXT_16            ; 72
+        JUMP_NEXT_15            ; 71
 
 .align $100
 .assert * = _SAMPLES_BASE + $F00, error
@@ -1309,7 +1309,7 @@ vd15:   ldy     $98FF           ; 27
         stx     next+1          ; 30
         WASTE_7                 ; 37
         tya                     ; 39     Get video byte in A
-vh15:   jmp     $FFFF           ; 42=>72
+vh15:   jmp     $FFFF           ; 42=>71
 
 no_vid15:
         WASTE_2                 ; 19
@@ -1327,15 +1327,15 @@ adp:    sta     $FFFF           ; 47     send cmd
         beq     out             ; 51/52  if escape, exit forcefully
         sta     kbd_cmd         ; 54
         WASTE_2                 ; 56
-        JUMP_NEXT_16            ; 72     jump to next duty cycle
+        JUMP_NEXT_15            ; 71     jump to next duty cycle
 nokbd:
 ad15b:  ldx     $A8FF           ; 42
         stx     next+1          ; 45
         WASTE_11                ; 56
-        JUMP_NEXT_16            ; 72
+        JUMP_NEXT_15            ; 71
 noser:  
         WASTE_24                ; 56
-        JUMP_NEXT_16            ; 72
+        JUMP_NEXT_15            ; 71
 
 out:    jmp     break_out
 
@@ -1352,7 +1352,7 @@ vd16:   ldy     $98FF           ; 20
         stx     next+1          ; 27
         WASTE_10                ; 37
         tya                     ; 39     Get video byte in A
-vh16:   jmp     $FFFF           ; 42=>72
+vh16:   jmp     $FFFF           ; 42=>71
 
 no_vid16:
         WASTE_3                 ; 20
@@ -1368,11 +1368,11 @@ ad16b:  ldx     $A8FF           ; 28
         eor     #$01            ; 49
         sta     cur_mix         ; 52
         ABS_STZ kbd_cmd         ; 56
-        JUMP_NEXT_16            ; 72
+        JUMP_NEXT_15            ; 71
 
 not_tab:
         WASTE_14                ; 56
-        JUMP_NEXT_16            ; 72
+        JUMP_NEXT_15            ; 71
 
 .align $100
 .assert * = _SAMPLES_BASE + $1100, error
@@ -1387,14 +1387,14 @@ vd17:   ldy     $98FF           ; 20
         stx     next+1          ; 28
         WASTE_9                 ; 37
         tya                     ; 39     Get video byte in A
-vh17:   jmp     $FFFF           ; 42=>72
+vh17:   jmp     $FFFF           ; 42=>71
 
 no_vid17:
 ad17b:  ldx     $A8FF           ; 21
         ____SPKR_DUTY____4      ; 25
         stx     next+1          ; 28
         WASTE_28                ; 56
-        JUMP_NEXT_16            ; 72
+        JUMP_NEXT_15            ; 71
 
 .align $100
 .assert * = _SAMPLES_BASE + $1200, error
@@ -1410,14 +1410,14 @@ vd18:   ldy     $98FF           ; 20
         stx     next+1          ; 29
         WASTE_8                 ; 37
         tya                     ; 39     Get video byte in A
-vh18:   jmp     $FFFF           ; 42=>72
+vh18:   jmp     $FFFF           ; 42=>71
 
 no_vid18:
 ad18b:  ldx     $A8FF           ; 21
         ____SPKR_DUTY____5      ; 26
         stx     next+1          ; 29
         WASTE_27                ; 56
-        JUMP_NEXT_16            ; 72
+        JUMP_NEXT_15            ; 71
 
 .align $100
 .assert * = _SAMPLES_BASE + $1300, error
@@ -1433,7 +1433,7 @@ vd19:   ldy     $98FF           ; 20
         stx     next+1          ; 30
         WASTE_7                 ; 37
         tya                     ; 39     Get video byte in A
-vh19:   jmp     $FFFF           ; 42=>72
+vh19:   jmp     $FFFF           ; 42=>71
 
 no_vid19:
 ad19b:  ldx     $A8FF           ; 21
@@ -1441,7 +1441,7 @@ ad19b:  ldx     $A8FF           ; 21
         ____SPKR_DUTY____4      ; 27
         stx     next+1          ; 30
         WASTE_26                ; 56
-        JUMP_NEXT_16            ; 72
+        JUMP_NEXT_15            ; 71
 
 .align $100
 .assert * = _SAMPLES_BASE + $1400, error
@@ -1457,14 +1457,14 @@ vd20:   ldy     $98FF           ; 20
         stx     next+1          ; 31
         WASTE_6                 ; 37
         tya                     ; 39     Get video byte in A
-vh20:   jmp     $FFFF           ; 42=>72
+vh20:   jmp     $FFFF           ; 42=>71
 
 no_vid20:
 ad20b:  ldx     $A8FF           ; 21
         stx     next+1          ; 24
         ____SPKR_DUTY____4      ; 28
         WASTE_28                ; 56
-        JUMP_NEXT_16            ; 72
+        JUMP_NEXT_15            ; 71
 
 .align $100
 .assert * = _SAMPLES_BASE + $1500, error
@@ -1480,14 +1480,14 @@ vd21:   ldy     $98FF           ; 20
         ____SPKR_DUTY____4      ; 29
         WASTE_8                 ; 37
         tya                     ; 39     Get video byte in A
-vh21:   jmp     $FFFF           ; 42=>72
+vh21:   jmp     $FFFF           ; 42=>71
 
 no_vid21:
 ad21b:  ldx     $A8FF           ; 21
         stx     next+1          ; 24
         ____SPKR_DUTY____5      ; 29
         WASTE_27                ; 56
-        JUMP_NEXT_16            ; 72
+        JUMP_NEXT_15            ; 71
 
 .align $100
 .assert * = _SAMPLES_BASE + $1600, error
@@ -1503,7 +1503,7 @@ vd22:   ldy     $98FF           ; 20
         ____SPKR_DUTY____4      ; 30
         WASTE_7                 ; 37
         tya                     ; 39     Get video byte in A
-vh22:   jmp     $FFFF           ; 42=>72
+vh22:   jmp     $FFFF           ; 42=>71
 
 no_vid22:
 ad22b:  ldx     $A8FF           ; 21
@@ -1511,7 +1511,7 @@ ad22b:  ldx     $A8FF           ; 21
         WASTE_2                 ; 26
         ____SPKR_DUTY____4      ; 30
         WASTE_26                ; 56
-        JUMP_NEXT_16            ; 72
+        JUMP_NEXT_15            ; 71
 
 .align $100
 .assert * = _SAMPLES_BASE + $1700, error
@@ -1527,7 +1527,7 @@ vd23:   ldy     $98FF           ; 20
         ____SPKR_DUTY____4      ; 31
         WASTE_6                 ; 37
         tya                     ; 39     Get video byte in A
-vh23:   jmp     $FFFF           ; 42=>72
+vh23:   jmp     $FFFF           ; 42=>71
 
 no_vid23:
 ad23b:  ldx     $A8FF           ; 21
@@ -1535,7 +1535,7 @@ ad23b:  ldx     $A8FF           ; 21
         WASTE_3                 ; 27
         ____SPKR_DUTY____4      ; 31
         WASTE_25                ; 56
-        JUMP_NEXT_16            ; 72
+        JUMP_NEXT_15            ; 71
 
 
 .align $100
@@ -1552,7 +1552,7 @@ vd24:   ldy     $98FF           ; 20
         ____SPKR_DUTY____4      ; 32
         WASTE_5                 ; 37
         tya                     ; 39     Get video byte in A
-vh24:   jmp     $FFFF           ; 42=>72
+vh24:   jmp     $FFFF           ; 42=>71
 
 no_vid24:
 ad24b:  ldx     $A8FF           ; 21
@@ -1560,7 +1560,7 @@ ad24b:  ldx     $A8FF           ; 21
         WASTE_4                 ; 28
         ____SPKR_DUTY____4      ; 32
         WASTE_24                ; 56
-        JUMP_NEXT_16            ; 72
+        JUMP_NEXT_15            ; 71
 
 .align $100
 .assert * = _SAMPLES_BASE + $1900, error
@@ -1576,7 +1576,7 @@ vd25:   ldy     $98FF           ; 20
         ____SPKR_DUTY____4      ; 33
         WASTE_4                 ; 37
         tya                     ; 39     Get video byte in A
-vh25:   jmp     $FFFF           ; 42=>72
+vh25:   jmp     $FFFF           ; 42=>71
 
 no_vid25:
 ad25b:  ldx     $A8FF           ; 21
@@ -1584,7 +1584,7 @@ ad25b:  ldx     $A8FF           ; 21
         WASTE_5                 ; 29
         ____SPKR_DUTY____4      ; 33
         WASTE_23                ; 56
-        JUMP_NEXT_16            ; 72
+        JUMP_NEXT_15            ; 71
 
 .align $100
 .assert * = _SAMPLES_BASE + $1A00, error
@@ -1600,7 +1600,7 @@ vd26:   ldy     $98FF           ; 20
         ____SPKR_DUTY____4      ; 34
         WASTE_3                 ; 37
         tya                     ; 39     Get video byte in A
-vh26:   jmp     $FFFF           ; 42=>72
+vh26:   jmp     $FFFF           ; 42=>71
 
 no_vid26:
 ad26b:  ldx     $A8FF           ; 21
@@ -1608,7 +1608,7 @@ ad26b:  ldx     $A8FF           ; 21
         WASTE_6                 ; 30
         ____SPKR_DUTY____4      ; 34
         WASTE_22                ; 56
-        JUMP_NEXT_16            ; 72
+        JUMP_NEXT_15            ; 71
 
 .align $40 ; page0_ and page1_ addresses arrays must share the same low byte
 .assert * = $7A40, error                         ; We want this one's high byte to be even
@@ -1631,7 +1631,7 @@ vd27:   ldy     $98FF           ; 20
         ____SPKR_DUTY____4      ; 35
         WASTE_2                 ; 37
         tya                     ; 39     Get video byte in A
-vh27:   jmp     $FFFF           ; 42=>72
+vh27:   jmp     $FFFF           ; 42=>71
 
 no_vid27:
 ad27b:  ldx     $A8FF           ; 21
@@ -1639,7 +1639,7 @@ ad27b:  ldx     $A8FF           ; 21
         WASTE_7                 ; 31
         ____SPKR_DUTY____4      ; 35
         WASTE_21                ; 56
-        JUMP_NEXT_16            ; 72
+        JUMP_NEXT_15            ; 71
 
 .align $100
 .assert * = _SAMPLES_BASE + $1C00, error
@@ -1655,7 +1655,7 @@ vd28:   ldy     $98FF           ; 20
         tya                     ; 32     Get video byte in A
         ____SPKR_DUTY____4      ; 36
         WASTE_3                 ; 39
-vh28:   jmp     $FFFF           ; 42=>72
+vh28:   jmp     $FFFF           ; 42=>71
 
 no_vid28:
 ad28b:  ldx     $A8FF           ; 21
@@ -1663,7 +1663,7 @@ ad28b:  ldx     $A8FF           ; 21
         WASTE_8                 ; 32
         ____SPKR_DUTY____4      ; 36
         WASTE_20                ; 56
-        JUMP_NEXT_16            ; 72
+        JUMP_NEXT_15            ; 71
 
 ; -----------------------------------------------------
 video_spkr_no_sub:              ; Alternate entry point for duty cycle 30
@@ -1680,43 +1680,38 @@ video_no_sub:
 @dest_ctrl:
         adc     cur_base                ; 9    Add shift value to current pointer
         sta     cur_base                ; 12
-        stz     next_offset             ; 15    Reset offset
-        bcc     :+                      ; 17/18
-        inc     cur_base+1              ; 22    Increment high byte if needed
-        WASTE_2                         ; 24
-        jmp     (next)                  ; 30
+        ABS_STZ next_offset             ; 16    Reset offset
+        bcc     :+                      ; 18/19
+        inc     cur_base+1              ; 23    Increment high byte if needed
+        jmp     (next)                  ; 29
 
-:       WASTE_6                         ; 24
-        jmp     (next)                  ; 30
+:       WASTE_4                         ; 23
+        jmp     (next)                  ; 29
 
 @toggle_page:
         bit     cur_base+1              ; 8     Determine which page we were in
         bvs     @page1                  ; 10/11 V flag set = $40-$5F
 
-; Two cycles wasted here
 @page0:                                 ;
         sta     $C054                   ; 14    Activate page 0
         lda     #$40                    ; 16    Write to page 1
         sta     cur_base+1              ; 19    Update pointers to page 1
-        stz     cur_base                ; 22
-        WASTE_2                         ; 24
-        jmp     (next)                  ; 30
+        ABS_STZ cur_base                ; 23
+        jmp     (next)                  ; 29
 
-; One cycle wasted here
 @page1:                                 ;
         sta     $C055                   ; 15    Activate page 1
         lda     #$20                    ; 17    Write to page 0
         sta     cur_base+1              ; 20    Update pointers to page 0
-        ABS_STZ cur_base                ; 24
-        jmp     (next)                  ; 30
+        stz     cur_base                ; 23
+        jmp     (next)                  ; 29
 
-; Three cycles wasted here
 @set_pixel:                             ;       No, it is a data byte
         ldy     next_offset             ; 10    Load the offset to the start of the base
         sta     (cur_base),y            ; 16    Store data byte
         inc     next_offset             ; 21    and increment offset.
-        WASTE_3                         ; 24
-        jmp     (next)                  ; 30    Done, go to next duty cycle
+        WASTE_2                         ; 23
+        jmp     (next)                  ; 29    Done, go to next duty cycle
 ; -----------------------------------------------------
 
 .align $100
@@ -1732,7 +1727,7 @@ vd29:   ldy     $98FF           ; 20
         WASTE_10                ; 33
         ____SPKR_DUTY____4      ; 37
         tya                     ; 39     Get video byte in A
-vh29:   jmp     $FFFF           ; 42=>72
+vh29:   jmp     $FFFF           ; 42=>71
 
 no_vid29:
 ad29b:  ldx     $A8FF           ; 21
@@ -1740,7 +1735,7 @@ ad29b:  ldx     $A8FF           ; 21
         WASTE_9                 ; 33
         ____SPKR_DUTY____4      ; 37
         WASTE_19                ; 56
-        JUMP_NEXT_16            ; 72
+        JUMP_NEXT_15            ; 71
 
 .align $100
 .assert * = _SAMPLES_BASE + $1E00, error
@@ -1756,7 +1751,7 @@ vs30:   lda     $99FF           ; 12
 vd30:   ldy     $98FF           ; 20
         WASTE_9                 ; 29
         tya                     ; 31     Get video byte in A
-vhsd:   jmp     $FFFF           ; 34=>72
+vhsd:   jmp     $FFFF           ; 34=>71
 
 no_vid30:
 ad30b:  ldx     $A8FF           ; 21
@@ -1764,7 +1759,7 @@ ad30b:  ldx     $A8FF           ; 21
         WASTE_10                ; 34
         ____SPKR_DUTY____4      ; 38
         WASTE_18                ; 56
-        JUMP_NEXT_16            ; 72
+        JUMP_NEXT_15            ; 71
 
 ; -----------------------------------------------------------------
 ; VIDEO HANDLER
@@ -1785,45 +1780,41 @@ video_sub:
 @dest_ctrl:
         bvc     @set_offset             ; 8/9  If yes, this one is a base byte
 
-; Zero cycle wasted here :(
 @set_base:                              ;       This is a base byte (branch takes 22 cycles minimum)
         lda     pages_addrs_arr_low,y   ; 12    Load base pointer low byte from base array
         sta     cur_base                ; 15    Store it to destination pointer low byte
         lda     (page_ptr_high),y       ; 20    Load base pointer high byte from base array
-        ABS_STA cur_base+1              ; 24    Store it to destination pointer high byte
-        jmp     (next)                  ; 30    Done, go to next duty cycle
+        sta     cur_base+1              ; 23    Store it to destination pointer high byte
+        jmp     (next)                  ; 29    Done, go to next duty cycle
 
-; One cycle wasted here
 @set_offset:                            ;       No, so set offset (branch takes 14 cyles minimum)
-        ABS_STY next_offset             ; 13    Store offset
-        lda     page_ptr_high+1         ; 16    Update the page flag here, where we have time
-        adc     #$10                    ; 18    $7A/$7F + $10 => sets V flag
-        and     #1                      ; 20    Use the fact that page1 array's high byte is odd
-        sta     @toggle_page+1          ; 24
-        jmp     (next)                  ; 30    Done, go to next duty cycle
+        sty     next_offset             ; 12    Store offset
+        lda     page_ptr_high+1         ; 15    Update the page flag here, where we have time
+        adc     #$10                    ; 17    $7A/$7F + $10 => sets V flag
+        and     #1                      ; 19    Use the fact that page1 array's high byte is odd
+        sta     @toggle_page+1          ; 23
+        jmp     (next)                  ; 29    Done, go to next duty cycle
 
-; One cycle wasted here
 @toggle_page:                           ;       Page toggling command (branch takes 23 cycles minimum)
 .ifdef DOUBLE_BUFFER
         ldx     #$00                    ; 9
         lda     $C054,x                 ; 13    Activate page 1
         lda     page_addrs_arr,x        ; 17    Write to page 0
         sta     page_ptr_high+1         ; 20    No time to update page flag,
-        WASTE_4                         ; 24
-        jmp     (next)                  ; 30    We'll do it in @set_offset
+        WASTE_3                         ; 23
+        jmp     (next)                  ; 29    We'll do it in @set_offset
 .else
-        WASTE_17                        ; 24
-        jmp     (next)                  ; 30
+        WASTE_16                        ; 23
+        jmp     (next)                  ; 29
 .endif
 
-; Five cycles wasted here
 @set_pixel:                             ;       No, it is a data byte (branch takes 25 cycles minimum)
         ldy     next_offset             ; 6     Load the offset to the start of the base
         sta     (cur_base),y            ; 12    Store data byte
         inc     next_offset             ; 17    and store it.
         clv                             ; 19    Reset the offset-received flag.
-        WASTE_5                         ; 24
-        jmp     (next)                  ; 30    Done, go to next duty cycle
+        WASTE_4                         ; 23
+        jmp     (next)                  ; 29    Done, go to next duty cycle
 
 
 ; -----------------------------------------------------------------
@@ -1841,7 +1832,7 @@ vd31:   ldy     $98FF           ; 20
         WASTE_10                ; 33
         tya                     ; 35     Get video byte in A
         ____SPKR_DUTY____4      ; 39
-vh31:   jmp     $FFFF           ; 42=>72
+vh31:   jmp     $FFFF           ; 42=>71
 
 no_vid31:
 ad31b:  ldx     $A8FF           ; 21
@@ -1849,7 +1840,7 @@ ad31b:  ldx     $A8FF           ; 21
         WASTE_11                ; 35
         ____SPKR_DUTY____4      ; 39
         WASTE_17                ; 56
-        JUMP_NEXT_16            ; 72
+        JUMP_NEXT_15            ; 71
 
 .align $40
 .assert * = $7F40, error                         ; We want high byte to be odd
