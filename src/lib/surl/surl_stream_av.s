@@ -1654,21 +1654,22 @@ video_no_sub:
         jmp     (next)                  ; 31
 
 @toggle_page:
-        lda     cur_base+1              ; 8     Determine which page we were
-        and     #$40                    ; 10    writing to
-        bne     @page1                  ; 12/13
+        bit     cur_base+1              ; 8     Determine which page we were in
+        bvs     @page1                  ; 10/11
 @page0:                                 ;
-        sta     $C054                   ; 16    Activate page 0
-        lda     #$40                    ; 18    Write to page 1
-        sta     cur_base+1              ; 21    Update pointers to page 1
-        ABS_STZ cur_base                ; 25
+        sta     $C054                   ; 14    Activate page 0
+        lda     #$40                    ; 16    Write to page 1
+        sta     cur_base+1              ; 19    Update pointers to page 1
+        stz     cur_base                ; 22
+        WASTE_3                         ; 25
         jmp     (next)                  ; 31
 
 @page1:                                 ;
-        sta     $C055                   ; 17    Activate page 1
-        lda     #$20                    ; 19    Write to page 0
-        sta     cur_base+1              ; 22    Update pointers to page 0
-        stz     cur_base                ; 25
+        sta     $C055                   ; 15    Activate page 1
+        lda     #$20                    ; 17    Write to page 0
+        sta     cur_base+1              ; 20    Update pointers to page 0
+        stz     cur_base                ; 23
+        WASTE_2                         ; 25
         jmp     (next)                  ; 31
 
 @set_pixel:                             ;       No, it is a data byte
