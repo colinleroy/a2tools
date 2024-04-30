@@ -1371,7 +1371,7 @@ send:
       int pixel = diffs[j]->offset;
 
       if (j == 0) {
-        buffer_video_offset(0x00, ttyfp2); /* Reset offset */
+        buffer_video_offset(0x00, ttyfp2); /* Reset skip */
         last_offset = 0;
       }
 
