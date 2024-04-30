@@ -1032,7 +1032,6 @@ calc_addr_high:
         adc     #(MAX_OFFSET)   ; Compute next base
         bcc     :+
         inx
-        clc
 :       cpy     #(N_BASES)
         bcc     calc_next_base
         rts
@@ -1060,7 +1059,6 @@ calc_addr_text_high:
         adc     #$80                         ; Compute next base
         bcc     :+
         inx
-        clc
 :       cpy     #(N_BASES+4+1)
         bcc     calc_next_text_base
         rts
@@ -1311,15 +1309,14 @@ asp:    lda     $FFFF           ; 27     check serial tx empty
         and     #$10            ; 29
         beq     noser           ; 31/32
 
-        lda     KBD             ; 35     keyboard handling
+        lda     KBDSTRB         ; 35     read kbd and clear strobe
         bpl     nokbd           ; 37/38
-        sta     KBDSTRB         ; 41     we have a key, clear strobe
-        and     #$7F            ; 43
-adp:    sta     $FFFF           ; 47     send cmd
-        cmp     #$1B            ; 49
-        beq     out             ; 51/52  if escape, exit forcefully
-        sta     kbd_cmd         ; 54
-        WASTE_2                 ; 56
+        and     #$7F            ; 39
+adp:    sta     $FFFF           ; 43     send cmd
+        cmp     #$1B            ; 45
+        beq     out             ; 47/48  if escape, exit forcefully
+        sta     kbd_cmd         ; 49
+        WASTE_7                 ; 56
         JUMP_NEXT_16            ; 72     jump to next duty cycle
 nokbd:
 ad15b:  ldx     $A8FF           ; 42
