@@ -40,6 +40,7 @@ HAS_BYTE          = $08
 MAX_OFFSET    = 126
 N_BASES       = (8192/MAX_OFFSET)+1
 N_TEXT_BASES  = 4
+PAGE_TOGGLE   = $7F
 
 .ifdef DOUBLE_BUFFER
 PAGE0_HB      = $20
@@ -468,8 +469,9 @@ ad0:    ldx     $A8FF           ; 16     load audio data register
         beq     no_vid0         ; 20/21  branch accordingly
 vd0:    ldy     $98FF           ; 24     load video data
         stx     next+1          ; 27     store next duty cycle destination
-        WASTE_10                ; 37     waste extra cycles
-        tya                     ; 39     Get video byte in A
+        WASTE_8                 ; 35     waste extra cycles
+        tya                     ; 37     Get video byte in A
+        cpy     #PAGE_TOGGLE    ; 39     Check for page toggle
 vh0:    jmp     $FFFF           ; 42=>71
 
 no_vid0:                        ;        we had no video byte
@@ -521,8 +523,9 @@ vs1:    lda     $99FF           ; 17
         beq     no_vid1         ; 21/22
 vd1:    ldy     $98FF           ; 25
         stx     next+1          ; 28
-        WASTE_9                 ; 37
-        tya                     ; 39     Get video byte in A
+        WASTE_7                 ; 35
+        tya                     ; 37     Get video byte in A
+        cpy     #PAGE_TOGGLE    ; 39     Check for page toggle
 vh1:    jmp     $FFFF           ; 42=>71
 
 no_vid1:
@@ -579,8 +582,9 @@ vs2:    lda     $99FF           ; 18
         beq     no_vid2         ; 22/23
 vd2:    ldy     $98FF           ; 26
         stx     next+1          ; 29
-        WASTE_8                 ; 37
-        tya                     ; 39     Get video byte in A
+        WASTE_6                 ; 35
+        tya                     ; 37
+        cpy     #PAGE_TOGGLE    ; 39
 vh2:    jmp     $FFFF           ; 42=>71
 
 no_vid2:
@@ -711,8 +715,9 @@ vs3:    lda     $99FF           ; 19
         beq     no_vid3         ; 23/24
 vd3:    ldy     $98FF           ; 27
         stx     next+1          ; 30
-        WASTE_7                 ; 37
-        tya                     ; 39     Get video byte in A
+        WASTE_5                 ; 35
+        tya                     ; 37
+        cpy     #PAGE_TOGGLE    ; 39
 vh3:    jmp     $FFFF           ; 42=>71
 
 no_vid3:
@@ -770,8 +775,9 @@ vs4:    lda     $99FF           ; 16
         beq     no_vid4         ; 20/21
 vd4:    ldy     $98FF           ; 24
         stx     next+1          ; 27
-        WASTE_10                ; 37
-        tya                     ; 39     Get video byte in A
+        WASTE_8                 ; 35
+        tya                     ; 37
+        cpy     #PAGE_TOGGLE    ; 39
 vh4:    jmp     $FFFF           ; 42=>71
 
 no_vid4:
@@ -829,8 +835,9 @@ vs5:    lda     $99FF           ; 17
         beq     no_vid5         ; 21/22
 vd5:    ldy     $98FF           ; 25
         stx     next+1          ; 28
-        WASTE_9                 ; 37
-        tya                     ; 39     Get video byte in A
+        WASTE_7                 ; 35
+        tya                     ; 37
+        cpy     #PAGE_TOGGLE    ; 39
 vh5:    jmp     $FFFF           ; 42=>71
 
 no_vid5:
@@ -927,8 +934,9 @@ vs6:    lda     $99FF           ; 18
         beq     no_vid6         ; 22/23
 vd6:    ldy     $98FF           ; 26
         stx     next+1          ; 29
-        WASTE_8                 ; 37
-        tya                     ; 39     Get video byte in A
+        WASTE_6                 ; 35
+        tya                     ; 37
+        cpy     #PAGE_TOGGLE    ; 39
 vh6:    jmp     $FFFF           ; 42=>71
 
 no_vid6:
@@ -1011,8 +1019,9 @@ vs7:    lda     $99FF           ; 19
         beq     no_vid7         ; 23/24
 vd7:    ldy     $98FF           ; 27
         stx     next+1          ; 30
-        WASTE_7                 ; 37
-        tya                     ; 39     Get video byte in A
+        WASTE_5                 ; 35
+        tya                     ; 37
+        cpy     #PAGE_TOGGLE    ; 39
 vh7:    jmp     $FFFF           ; 42=>71
 
 no_vid7:
@@ -1086,8 +1095,9 @@ vs8:    lda     $99FF           ; 12
         beq     no_vid8         ; 20/21
 vd8:    ldy     $98FF           ; 24
         stx     next+1          ; 27
-        WASTE_10                ; 37
-        tya                     ; 39     Get video byte in A
+        WASTE_8                 ; 35
+        tya                     ; 37
+        cpy     #PAGE_TOGGLE    ; 39
 vh8:    jmp     $FFFF           ; 42=>71
 
 no_vid8:
@@ -1172,8 +1182,9 @@ vs9:    lda     $99FF           ; 12
         beq     no_vid9         ; 21/22
 vd9:    ldy     $98FF           ; 25
         stx     next+1          ; 28
-        WASTE_9                 ; 37
-        tya                     ; 39     Get video byte in A
+        WASTE_7                 ; 35
+        tya                     ; 37
+        cpy     #PAGE_TOGGLE    ; 39
 vh9:    jmp     $FFFF           ; 42=>71
 
 no_vid9:
@@ -1194,8 +1205,9 @@ vs10:   lda     $99FF           ; 12
         beq     no_vid10        ; 22/23
 vd10:   ldy     $98FF           ; 26
         stx     next+1          ; 29
-        WASTE_8                 ; 37
-        tya                     ; 39     Get video byte in A
+        WASTE_6                 ; 35
+        tya                     ; 37
+        cpy     #PAGE_TOGGLE    ; 39
 vh10:   jmp     $FFFF           ; 42=>71
 
 no_vid10:
@@ -1217,8 +1229,9 @@ vs11:   lda     $99FF           ; 12
         beq     no_vid11        ; 23/24
 vd11:   ldy     $98FF           ; 27
         stx     next+1          ; 30
-        WASTE_7                 ; 37
-        tya                     ; 39     Get video byte in A
+        WASTE_5                 ; 35
+        tya                     ; 37
+        cpy     #PAGE_TOGGLE    ; 39
 vh11:   jmp     $FFFF           ; 42=>71
 
 no_vid11:
@@ -1240,8 +1253,9 @@ vs12:   lda     $99FF           ; 12
         beq     no_vid12        ; 22/23
 vd12:   ldy     $98FF           ; 26
         stx     next+1          ; 29
-        WASTE_8                 ; 37
-        tya                     ; 39     Get video byte in A
+        WASTE_6                 ; 35
+        tya                     ; 37
+        cpy     #PAGE_TOGGLE    ; 39
 vh12:   jmp     $FFFF           ; 42=>71
 
 no_vid12:
@@ -1261,8 +1275,9 @@ vs13:   lda     $99FF           ; 12
         ____SPKR_DUTY____5      ; 21
 vd13:   ldy     $98FF           ; 25
         stx     next+1          ; 28
-        WASTE_9                 ; 37
-        tya                     ; 39     Get video byte in A
+        WASTE_7                 ; 35
+        tya                     ; 37
+        cpy     #PAGE_TOGGLE    ; 39
 vh13:   jmp     $FFFF           ; 42=>71
 
 no_vid13:
@@ -1284,8 +1299,9 @@ vs14:   lda     $99FF           ; 12
         ____SPKR_DUTY____4      ; 22
 vd14:   ldy     $98FF           ; 26
         stx     next+1          ; 29
-        WASTE_8                 ; 37
-        tya                     ; 39     Get video byte in A
+        WASTE_6                 ; 35
+        tya                     ; 37
+        cpy     #PAGE_TOGGLE    ; 39
 vh14:   jmp     $FFFF           ; 42=>71
 
 no_vid14:
@@ -1307,8 +1323,9 @@ vs15:   lda     $99FF           ; 12
         ____SPKR_DUTY____4      ; 23
 vd15:   ldy     $98FF           ; 27
         stx     next+1          ; 30
-        WASTE_7                 ; 37
-        tya                     ; 39     Get video byte in A
+        WASTE_5                 ; 35
+        tya                     ; 37
+        cpy     #PAGE_TOGGLE    ; 39
 vh15:   jmp     $FFFF           ; 42=>71
 
 no_vid15:
@@ -1350,8 +1367,9 @@ vs16:   lda     $99FF           ; 12
 vd16:   ldy     $98FF           ; 20
         ____SPKR_DUTY____4      ; 24
         stx     next+1          ; 27
-        WASTE_10                ; 37
-        tya                     ; 39     Get video byte in A
+        WASTE_8                 ; 35
+        tya                     ; 37
+        cpy     #PAGE_TOGGLE    ; 39
 vh16:   jmp     $FFFF           ; 42=>71
 
 no_vid16:
@@ -1385,8 +1403,9 @@ vs17:   lda     $99FF           ; 12
 vd17:   ldy     $98FF           ; 20
         ____SPKR_DUTY____5      ; 25
         stx     next+1          ; 28
-        WASTE_9                 ; 37
-        tya                     ; 39     Get video byte in A
+        WASTE_7                 ; 35
+        tya                     ; 37
+        cpy     #PAGE_TOGGLE    ; 39
 vh17:   jmp     $FFFF           ; 42=>71
 
 no_vid17:
@@ -1408,8 +1427,9 @@ vd18:   ldy     $98FF           ; 20
         WASTE_2                 ; 22
         ____SPKR_DUTY____4      ; 26
         stx     next+1          ; 29
-        WASTE_8                 ; 37
-        tya                     ; 39     Get video byte in A
+        WASTE_6                 ; 35
+        tya                     ; 37
+        cpy     #PAGE_TOGGLE    ; 39
 vh18:   jmp     $FFFF           ; 42=>71
 
 no_vid18:
@@ -1431,8 +1451,9 @@ vd19:   ldy     $98FF           ; 20
         WASTE_2                 ; 22
         ____SPKR_DUTY____5      ; 27
         stx     next+1          ; 30
-        WASTE_7                 ; 37
-        tya                     ; 39     Get video byte in A
+        WASTE_5                 ; 35
+        tya                     ; 37
+        cpy     #PAGE_TOGGLE    ; 39
 vh19:   jmp     $FFFF           ; 42=>71
 
 no_vid19:
@@ -1455,8 +1476,9 @@ vd20:   ldy     $98FF           ; 20
         WASTE_4                 ; 24
         ____SPKR_DUTY____4      ; 28
         stx     next+1          ; 31
-        WASTE_6                 ; 37
-        tya                     ; 39     Get video byte in A
+        WASTE_4                 ; 35
+        tya                     ; 37
+        cpy     #PAGE_TOGGLE    ; 39
 vh20:   jmp     $FFFF           ; 42=>71
 
 no_vid20:
@@ -1478,8 +1500,9 @@ vd21:   ldy     $98FF           ; 20
         stx     next+1          ; 23
         WASTE_2                 ; 25
         ____SPKR_DUTY____4      ; 29
-        WASTE_8                 ; 37
-        tya                     ; 39     Get video byte in A
+        WASTE_6                 ; 35
+        tya                     ; 37
+        cpy     #PAGE_TOGGLE    ; 39
 vh21:   jmp     $FFFF           ; 42=>71
 
 no_vid21:
@@ -1501,8 +1524,9 @@ vd22:   ldy     $98FF           ; 20
         stx     next+1          ; 23
         WASTE_3                 ; 26
         ____SPKR_DUTY____4      ; 30
-        WASTE_7                 ; 37
-        tya                     ; 39     Get video byte in A
+        WASTE_5                 ; 35
+        tya                     ; 37
+        cpy     #PAGE_TOGGLE    ; 39
 vh22:   jmp     $FFFF           ; 42=>71
 
 no_vid22:
@@ -1525,8 +1549,9 @@ vd23:   ldy     $98FF           ; 20
         stx     next+1          ; 23
         WASTE_4                 ; 27
         ____SPKR_DUTY____4      ; 31
-        WASTE_6                 ; 37
-        tya                     ; 39     Get video byte in A
+        WASTE_4                 ; 35
+        tya                     ; 37
+        cpy     #PAGE_TOGGLE    ; 39
 vh23:   jmp     $FFFF           ; 42=>71
 
 no_vid23:
@@ -1550,8 +1575,9 @@ vd24:   ldy     $98FF           ; 20
         stx     next+1          ; 23
         WASTE_5                 ; 28
         ____SPKR_DUTY____4      ; 32
-        WASTE_5                 ; 37
-        tya                     ; 39     Get video byte in A
+        WASTE_3                 ; 35
+        tya                     ; 37
+        cpy     #PAGE_TOGGLE    ; 39
 vh24:   jmp     $FFFF           ; 42=>71
 
 no_vid24:
@@ -1574,8 +1600,9 @@ vd25:   ldy     $98FF           ; 20
         stx     next+1          ; 23
         WASTE_6                 ; 29
         ____SPKR_DUTY____4      ; 33
-        WASTE_4                 ; 37
-        tya                     ; 39     Get video byte in A
+        WASTE_2                 ; 35
+        tya                     ; 37
+        cpy     #PAGE_TOGGLE    ; 39
 vh25:   jmp     $FFFF           ; 42=>71
 
 no_vid25:
@@ -1596,10 +1623,11 @@ vs26:   lda     $99FF           ; 12
         beq     no_vid26        ; 16/17
 vd26:   ldy     $98FF           ; 20
         stx     next+1          ; 23
-        WASTE_7                 ; 30
+        WASTE_3                 ; 26
+        tya                     ; 28
+        cpy     #PAGE_TOGGLE    ; 30
         ____SPKR_DUTY____4      ; 34
-        WASTE_3                 ; 37
-        tya                     ; 39     Get video byte in A
+        WASTE_5                 ; 39
 vh26:   jmp     $FFFF           ; 42=>71
 
 no_vid26:
@@ -1629,8 +1657,8 @@ vd27:   ldy     $98FF           ; 20
         stx     next+1          ; 23
         WASTE_8                 ; 31
         ____SPKR_DUTY____4      ; 35
-        WASTE_2                 ; 37
-        tya                     ; 39     Get video byte in A
+        tya                     ; 37
+        cpy     #PAGE_TOGGLE    ; 39
 vh27:   jmp     $FFFF           ; 42=>71
 
 no_vid27:
@@ -1651,8 +1679,9 @@ vs28:   lda     $99FF           ; 12
         beq     no_vid28        ; 16/17
 vd28:   ldy     $98FF           ; 20
         stx     next+1          ; 23
-        WASTE_7                 ; 30
-        tya                     ; 32     Get video byte in A
+        WASTE_5                 ; 28
+        tya                     ; 30
+        cpy     #PAGE_TOGGLE    ; 32
         ____SPKR_DUTY____4      ; 36
         WASTE_3                 ; 39
 vh28:   jmp     $FFFF           ; 42=>71
@@ -1672,45 +1701,47 @@ video_spkr_no_sub:              ; Alternate entry point for duty cycle 30
 
 video_no_sub:
 @control:                               ;       It is a control byte
-        cpy     #$7F                    ; 2     Is it the page toggle command?
-        beq     @toggle_page            ; 4/5
-        bcs     @set_pixel              ; 6/7   Is it a control byte?
+        beq     @toggle_page            ; 2/3   Result of cpy #$7F
+        bcs     @set_pixel              ; 4/5   Is it a control byte?
 
 ; Two cycles wasted here
 @dest_ctrl:
-        adc     cur_base                ; 9    Add shift value to current pointer
-        sta     cur_base                ; 12
-        ABS_STZ next_offset             ; 16    Reset offset
-        bcc     :+                      ; 18/19
-        inc     cur_base+1              ; 23    Increment high byte if needed
+        adc     cur_base                ; 7    Add shift value to current pointer
+        sta     cur_base                ; 10
+        ABS_STZ next_offset             ; 14    Reset offset
+        bcc     :+                      ; 16/17
+        inc     cur_base+1              ; 21    Increment high byte if needed
+        WASTE_2                         ; 23
         jmp     (next)                  ; 29
 
-:       WASTE_4                         ; 23
+:       WASTE_6                         ; 23
         jmp     (next)                  ; 29
 
 @toggle_page:
-        bit     cur_base+1              ; 8     Determine which page we were in
-        bvs     @page1                  ; 10/11 V flag set = $40-$5F
+        bit     cur_base+1              ; 6     Determine which page we were in
+        bvs     @page1                  ; 8/9   V flag set = $40-$5F
 
 @page0:                                 ;
-        sta     $C054                   ; 14    Activate page 0
-        lda     #$40                    ; 16    Write to page 1
-        sta     cur_base+1              ; 19    Update pointers to page 1
-        ABS_STZ cur_base                ; 23
+        sta     $C054                   ; 12    Activate page 0
+        lda     #$40                    ; 14    Write to page 1
+        sta     cur_base+1              ; 17    Update pointers to page 1
+        stz     cur_base                ; 20
+        WASTE_3                         ; 23
         jmp     (next)                  ; 29
 
 @page1:                                 ;
-        sta     $C055                   ; 15    Activate page 1
-        lda     #$20                    ; 17    Write to page 0
-        sta     cur_base+1              ; 20    Update pointers to page 0
-        stz     cur_base                ; 23
+        sta     $C055                   ; 13    Activate page 1
+        lda     #$20                    ; 15    Write to page 0
+        sta     cur_base+1              ; 18    Update pointers to page 0
+        stz     cur_base                ; 21
+        WASTE_2                         ; 23
         jmp     (next)                  ; 29
 
 @set_pixel:                             ;       No, it is a data byte
-        ldy     next_offset             ; 10    Load the offset to the start of the base
-        sta     (cur_base),y            ; 16    Store data byte
-        inc     next_offset             ; 21    and increment offset.
-        WASTE_2                         ; 23
+        ldy     next_offset             ; 8    Load the offset to the start of the base
+        sta     (cur_base),y            ; 14    Store data byte
+        inc     next_offset             ; 19    and increment offset.
+        WASTE_4                         ; 23
         jmp     (next)                  ; 29    Done, go to next duty cycle
 ; -----------------------------------------------------
 
@@ -1724,9 +1755,11 @@ vs29:   lda     $99FF           ; 12
         beq     no_vid29        ; 16/17
 vd29:   ldy     $98FF           ; 20
         stx     next+1          ; 23
-        WASTE_10                ; 33
+        WASTE_6                 ; 29
+        tya                     ; 31
+        cpy     #PAGE_TOGGLE    ; 33
         ____SPKR_DUTY____4      ; 37
-        tya                     ; 39     Get video byte in A
+        WASTE_2                 ; 39
 vh29:   jmp     $FFFF           ; 42=>71
 
 no_vid29:
@@ -1749,8 +1782,9 @@ vs30:   lda     $99FF           ; 12
         and     #HAS_BYTE       ; 14
         beq     no_vid30        ; 16/17
 vd30:   ldy     $98FF           ; 20
-        WASTE_9                 ; 29
-        tya                     ; 31     Get video byte in A
+        WASTE_7                 ; 27
+        tya                     ; 29
+        cpy     #PAGE_TOGGLE    ; 31
 vhsd:   jmp     $FFFF           ; 34=>71
 
 no_vid30:
@@ -1772,45 +1806,46 @@ video_spkr_sub:                 ; Alternate entry point for duty cycle 30
 ; Video handler must take 31 cycles on every code path.
 
 video_sub:
-        bmi     @set_pixel              ; 2/3   Is it a control byte?
-        bvs     @set_base               ; 4/5   If V flag is set, this one is a base byte
-
-@set_offset:                            ;       No, so set offset or toggle page
-        cpy     #$7F                    ; 6     Is it the page toggle command?
-        beq     @toggle_page            ; 8/9   Yes
-        ABS_STY next_offset             ; 12    Store offset
-        lda     page_ptr_high+1         ; 15    Update the page flag here, where we have time
-        adc     #$10                    ; 17    $7A/$7F + $10 => sets V flag
-        and     #1                      ; 19    Use the fact that page1 array's high byte is odd
-        sta     @toggle_page+1          ; 23
-        jmp     (next)                  ; 29    Done, go to next duty cycle
+        beq     @toggle_page            ; 2/3   Result of cpy #$7F
+        bcs     @set_pixel              ; 4/5   Is it a data byte?
+        bvc     @set_offset             ; 6/7   If V flag is set, this one is a base byte
 
 @set_base:                              ;       This is a base byte (branch takes 22 cycles minimum)
-        lda     pages_addrs_arr_low,y   ; 9    Load base pointer low byte from base array
-        sta     cur_base                ; 12    Store it to destination pointer low byte
-        lda     (page_ptr_high),y       ; 17    Load base pointer high byte from base array
-        sta     cur_base+1              ; 20    Store it to destination pointer high byte
-        WASTE_3                         ; 23
+        lda     pages_addrs_arr_low,y   ; 10    Load base pointer low byte from base array
+        sta     cur_base                ; 13    Store it to destination pointer low byte
+        lda     (page_ptr_high),y       ; 18    Load base pointer high byte from base array
+        sta     cur_base+1              ; 21    Store it to destination pointer high byte
+        WASTE_2                         ; 23
+        jmp     (next)                  ; 29    Done, go to next duty cycle
+
+@set_offset:                            ;       No, so set offset or toggle page
+        sty     next_offset             ; 10    Store offset
+        lda     page_ptr_high+1         ; 13    Update the page flag here, where we have time
+        adc     #$10                    ; 15    $7A/$7F + $10 => sets V flag
+        and     #1                      ; 17    Use the fact that page1 array's high byte is odd
+        sta     @toggle_page+1          ; 21
+        WASTE_2                         ; 23
         jmp     (next)                  ; 29    Done, go to next duty cycle
 
 @toggle_page:                           ;       Page toggling command (branch takes 23 cycles minimum)
 .ifdef DOUBLE_BUFFER
-        ldx     #$00                    ; 11
-        lda     $C054,x                 ; 15    Activate page 1
-        lda     page_addrs_arr,x        ; 19    Write to page 0
-        ABS_STA page_ptr_high+1         ; 23    No time to update page flag,
+        ldx     #$00                    ; 5
+        lda     $C054,x                 ; 9    Activate page 1
+        lda     page_addrs_arr,x        ; 13    Write to page 0
+        sta     page_ptr_high+1         ; 16    No time to update page flag,
+        WASTE_7                         ; 23
         jmp     (next)                  ; 29    We'll do it in @set_offset
 .else
-        WASTE_16                        ; 23
+        WASTE_20                        ; 23
         jmp     (next)                  ; 29
 .endif
 
 @set_pixel:                             ;       No, it is a data byte (branch takes 25 cycles minimum)
-        ldy     next_offset             ; 6     Load the offset to the start of the base
-        sta     (cur_base),y            ; 12    Store data byte
-        inc     next_offset             ; 17    and store it.
-        clv                             ; 19    Reset the offset-received flag.
-        WASTE_4                         ; 23
+        ldy     next_offset             ; 8     Load the offset to the start of the base
+        sta     (cur_base),y            ; 14    Store data byte
+        inc     next_offset             ; 19    and store it.
+        clv                             ; 21    Reset the offset-received flag.
+        WASTE_2                         ; 23
         jmp     (next)                  ; 29    Done, go to next duty cycle
 
 
@@ -1826,8 +1861,9 @@ vs31:   lda     $99FF           ; 12
         beq     no_vid31        ; 16/17
 vd31:   ldy     $98FF           ; 20
         stx     next+1          ; 23
-        WASTE_10                ; 33
-        tya                     ; 35     Get video byte in A
+        WASTE_8                 ; 31
+        tya                     ; 33
+        cpy     #PAGE_TOGGLE    ; 35
         ____SPKR_DUTY____4      ; 39
 vh31:   jmp     $FFFF           ; 42=>71
 
