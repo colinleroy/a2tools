@@ -57,7 +57,6 @@ cur_mix       = _zp9            ; byte - HGR MIX status (for subtitles toggling)
 next          = _zp10           ; word - Next duty cycle address
 
 cur_base      = ptr1            ; word - Current HGR base to write to
-page_ptr_low  = ptr3            ; word - Pointer to bases addresses (low byte) array
 page_ptr_high = ptr4            ; word - Pointer to bases addresses (high byte) array
 zp_zero       = tmp1            ; byte - A zero in zero page (mostly to waste 3 cycles)
 zp_vflag      = tmp2            ; byte - A $40 in zero page (to set V flag)
@@ -1034,8 +1033,7 @@ calc_bases:
 
         clc
 calc_next_base:
-calc_addr_low:
-        sta     page0_addrs_arr_low,y        ; Store AX
+        sta     pages_addrs_arr_low,y         ; Store AX
         pha
         txa
 calc_addr_high:
@@ -1061,8 +1059,7 @@ calc_text_bases:
 
         clc
 calc_next_text_base:
-calc_addr_text_low:
-        sta     page0_addrs_arr_low,y        ; Store AX
+        sta     pages_addrs_arr_low,y        ; Store AX
         pha
         txa
 calc_addr_text_high:
@@ -1108,10 +1105,8 @@ setup:
         sta     spkr_ptr+1
 
         ; Calculate bases for HGR page 0
-        lda     #>(page0_addrs_arr_low)
-        sta     calc_addr_low+2
+        lda     #>(page0_addrs_arr_high)
         sta     calc_addr_high+2
-        sta     calc_addr_text_low+2
         sta     calc_addr_text_high+2
         ldx     #PAGE0_HB
         jsr     calc_bases
@@ -1120,10 +1115,8 @@ setup:
         jsr     calc_text_bases
 
         ; Calculate bases for HGR page 1
-        lda     #>(page1_addrs_arr_low)
-        sta     calc_addr_low+2
+        lda     #>(page1_addrs_arr_high)
         sta     calc_addr_high+2
-        sta     calc_addr_text_low+2
         sta     calc_addr_text_high+2
         ldx     #PAGE1_HB
         jsr     calc_bases
@@ -1155,11 +1148,6 @@ vctrl:  sta     $98FF           ; scratch
         jsr     _serial_read_byte_no_irq
         sta     enable_subs
         jsr     patch_video_handlers
-
-        lda     #<(page0_addrs_arr_low)
-        sta     page_ptr_low
-        lda     #>(page0_addrs_arr_low)
-        sta     page_ptr_low+1
 
         lda     #<(page0_addrs_arr_high)
         sta     page_ptr_high
@@ -1625,8 +1613,8 @@ ad26b:  ldx     $A8FF           ; 21
 .align $40 ; page0_ and page1_ addresses arrays must share the same low byte
 .assert * = $7A40, error                         ; We want this one's high byte to be even
 PAGE0_ARRAY = *                                  ; for and'ing at video_sub:@set_offset
-page0_addrs_arr_low: .res (N_BASES+4+1)          ; Also $7A+$10 sets V flag in video_sub:@set_offset
-page0_addrs_arr_high:.res (N_BASES+4+1)
+page0_addrs_arr_high:.res (N_BASES+4+1)          ; Also $7A+$10 sets V flag in video_sub:@set_offset
+pages_addrs_arr_low: .res (N_BASES+4+1)
 
 
 .align $100
@@ -1799,10 +1787,10 @@ video_sub:
 
 ; Zero cycle wasted here :(
 @set_base:                              ;       This is a base byte (branch takes 22 cycles minimum)
-        lda     (page_ptr_low),y        ; 13    Load base pointer low byte from base array
-        sta     cur_base                ; 16    Store it to destination pointer low byte
-        lda     (page_ptr_high),y       ; 21    Load base pointer high byte from base array
-        sta     cur_base+1              ; 24    Store it to destination pointer high byte
+        lda     pages_addrs_arr_low,y   ; 12    Load base pointer low byte from base array
+        sta     cur_base                ; 15    Store it to destination pointer low byte
+        lda     (page_ptr_high),y       ; 20    Load base pointer high byte from base array
+        ABS_STA cur_base+1              ; 24    Store it to destination pointer high byte
         jmp     (next)                  ; 30    Done, go to next duty cycle
 
 ; One cycle wasted here
@@ -1820,8 +1808,8 @@ video_sub:
         ldx     #$00                    ; 9
         lda     $C054,x                 ; 13    Activate page 1
         lda     page_addrs_arr,x        ; 17    Write to page 0
-        sta     page_ptr_low+1          ; 20    Update pointers to page 0
-        ABS_STA page_ptr_high+1         ; 24    No time to update page flag,
+        sta     page_ptr_high+1         ; 20    No time to update page flag,
+        WASTE_4                         ; 24
         jmp     (next)                  ; 30    We'll do it in @set_offset
 .else
         WASTE_17                        ; 24
@@ -1866,11 +1854,10 @@ ad31b:  ldx     $A8FF           ; 21
 .align $40
 .assert * = $7F40, error                         ; We want high byte to be odd
 PAGE1_ARRAY = *                                  ; for and'ing at video_sub:@set_offset
-page1_addrs_arr_low: .res (N_BASES+4+1)          ; also need $7F+$10 to set V flag at the same spot
-page1_addrs_arr_high:.res (N_BASES+4+1)
+page1_addrs_arr_high:.res (N_BASES+4+1)          ; also need $7F+$10 to set V flag at the same spot
 
-page_addrs_arr: .byte >(page1_addrs_arr_low)     ; Inverted because we write to page 1
-                .byte >(page0_addrs_arr_low)     ; when page 0 is active, and vice-versa
+page_addrs_arr: .byte >(page1_addrs_arr_high)     ; Inverted because we write to page 1
+                .byte >(page0_addrs_arr_high)     ; when page 0 is active, and vice-versa
 
 abs_vflag:      .byte $40
 enable_subs:    .byte $1
