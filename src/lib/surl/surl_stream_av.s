@@ -1686,19 +1686,19 @@ video_no_sub:
 @control:                               ;       It is a control byte
         cpy     #$7F                    ; 2     Is it the page toggle command?
         beq     @toggle_page            ; 4/5
-        tya                             ; 6
-        bmi     @set_pixel              ; 8/9   Is it a control byte?
+        bcs     @set_pixel              ; 6/7   Is it a control byte?
 
-; Zero cycle wasted here :(
+; Two cycles wasted here
 @dest_ctrl:
-        adc     cur_base                ; 11    Add shift value to current pointer
-        sta     cur_base                ; 14
-        stz     next_offset             ; 17    Reset offset
-        bcc     :+                      ; 19/20
-        inc     cur_base+1              ; 24    Increment high byte if needed
+        adc     cur_base                ; 9    Add shift value to current pointer
+        sta     cur_base                ; 12
+        stz     next_offset             ; 15    Reset offset
+        bcc     :+                      ; 17/18
+        inc     cur_base+1              ; 22    Increment high byte if needed
+        WASTE_2                         ; 24
         jmp     (next)                  ; 30
 
-:       WASTE_4                         ; 24
+:       WASTE_6                         ; 24
         jmp     (next)                  ; 30
 
 @toggle_page:
@@ -1722,11 +1722,12 @@ video_no_sub:
         ABS_STZ cur_base                ; 24
         jmp     (next)                  ; 30
 
-; One cycle wasted here
+; Three cycles wasted here
 @set_pixel:                             ;       No, it is a data byte
-        ABS_LDY next_offset             ; 13    Load the offset to the start of the base
-        sta     (cur_base),y            ; 19    Store data byte
-        inc     next_offset             ; 24    and increment offset.
+        ldy     next_offset             ; 10    Load the offset to the start of the base
+        sta     (cur_base),y            ; 16    Store data byte
+        inc     next_offset             ; 21    and increment offset.
+        WASTE_3                         ; 24
         jmp     (next)                  ; 30    Done, go to next duty cycle
 ; -----------------------------------------------------
 
@@ -1827,14 +1828,13 @@ video_sub:
         jmp     (next)                  ; 30
 .endif
 
-; Three cycles wasted here
+; Five cycles wasted here
 @set_pixel:                             ;       No, it is a data byte (branch takes 25 cycles minimum)
-        tya                             ; 5
-        ldy     next_offset             ; 8     Load the offset to the start of the base
-        sta     (cur_base),y            ; 14    Store data byte
-        inc     next_offset             ; 19    and store it.
-        clv                             ; 21    Reset the offset-received flag.
-        WASTE_3                         ; 24
+        ldy     next_offset             ; 6     Load the offset to the start of the base
+        sta     (cur_base),y            ; 12    Store data byte
+        inc     next_offset             ; 17    and store it.
+        clv                             ; 19    Reset the offset-received flag.
+        WASTE_5                         ; 24
         jmp     (next)                  ; 30    Done, go to next duty cycle
 
 
