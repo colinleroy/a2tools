@@ -1773,35 +1773,32 @@ video_spkr_sub:                 ; Alternate entry point for duty cycle 30
 
 video_sub:
         bmi     @set_pixel              ; 2/3   Is it a control byte?
-@control:                               ;       It is a control byte
-        cpy     #$7F                    ; 4     Is it the page toggle command?
-        beq     @toggle_page            ; 6/7   Yes
+        bvs     @set_base               ; 4/5   If V flag is set, this one is a base byte
 
-@dest_ctrl:
-        bvc     @set_offset             ; 8/9  If yes, this one is a base byte
-
-@set_base:                              ;       This is a base byte (branch takes 22 cycles minimum)
-        lda     pages_addrs_arr_low,y   ; 12    Load base pointer low byte from base array
-        sta     cur_base                ; 15    Store it to destination pointer low byte
-        lda     (page_ptr_high),y       ; 20    Load base pointer high byte from base array
-        sta     cur_base+1              ; 23    Store it to destination pointer high byte
-        jmp     (next)                  ; 29    Done, go to next duty cycle
-
-@set_offset:                            ;       No, so set offset (branch takes 14 cyles minimum)
-        sty     next_offset             ; 12    Store offset
+@set_offset:                            ;       No, so set offset or toggle page
+        cpy     #$7F                    ; 6     Is it the page toggle command?
+        beq     @toggle_page            ; 8/9   Yes
+        ABS_STY next_offset             ; 12    Store offset
         lda     page_ptr_high+1         ; 15    Update the page flag here, where we have time
         adc     #$10                    ; 17    $7A/$7F + $10 => sets V flag
         and     #1                      ; 19    Use the fact that page1 array's high byte is odd
         sta     @toggle_page+1          ; 23
         jmp     (next)                  ; 29    Done, go to next duty cycle
 
+@set_base:                              ;       This is a base byte (branch takes 22 cycles minimum)
+        lda     pages_addrs_arr_low,y   ; 9    Load base pointer low byte from base array
+        sta     cur_base                ; 12    Store it to destination pointer low byte
+        lda     (page_ptr_high),y       ; 17    Load base pointer high byte from base array
+        sta     cur_base+1              ; 20    Store it to destination pointer high byte
+        WASTE_3                         ; 23
+        jmp     (next)                  ; 29    Done, go to next duty cycle
+
 @toggle_page:                           ;       Page toggling command (branch takes 23 cycles minimum)
 .ifdef DOUBLE_BUFFER
-        ldx     #$00                    ; 9
-        lda     $C054,x                 ; 13    Activate page 1
-        lda     page_addrs_arr,x        ; 17    Write to page 0
-        sta     page_ptr_high+1         ; 20    No time to update page flag,
-        WASTE_3                         ; 23
+        ldx     #$00                    ; 11
+        lda     $C054,x                 ; 15    Activate page 1
+        lda     page_addrs_arr,x        ; 19    Write to page 0
+        ABS_STA page_ptr_high+1         ; 23    No time to update page flag,
         jmp     (next)                  ; 29    We'll do it in @set_offset
 .else
         WASTE_16                        ; 23
