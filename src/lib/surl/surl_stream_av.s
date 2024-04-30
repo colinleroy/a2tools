@@ -1309,14 +1309,15 @@ asp:    lda     $FFFF           ; 27     check serial tx empty
         and     #$10            ; 29
         beq     noser           ; 31/32
 
-        lda     KBDSTRB         ; 35     read kbd and clear strobe
+        lda     KBD             ; 35     read keyboard
         bpl     nokbd           ; 37/38
-        and     #$7F            ; 39
-adp:    sta     $FFFF           ; 43     send cmd
-        cmp     #$1B            ; 45
-        beq     out             ; 47/48  if escape, exit forcefully
-        sta     kbd_cmd         ; 49
-        WASTE_7                 ; 56
+        sta     KBDSTRB         ; 41     clear keystrobe
+        and     #$7F            ; 43
+adp:    sta     $FFFF           ; 47     send cmd
+        cmp     #$1B            ; 49
+        beq     out             ; 51/52  if escape, exit forcefully
+        sta     kbd_cmd         ; 54
+        WASTE_2                 ; 56
         JUMP_NEXT_16            ; 72     jump to next duty cycle
 nokbd:
 ad15b:  ldx     $A8FF           ; 42
