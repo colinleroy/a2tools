@@ -934,13 +934,13 @@ close_last:
   simple_serial_flush();
 
 
-  if (i - skipped > 0) {
+  if (i - skipped > 0 && i/FPS > 0) {
     printf("Max: %d, Min: %d, Average: %d\n", max, min, total / (i-skipped));
     printf("Sent %lu bytes for %d non-skipped frames: %lu/s, %lu/frame avg (%lu data, %lu offset, %lu base)\n",
             bytes_sent, (i-skipped), bytes_sent/(i/FPS), bytes_sent/(i-skipped),
             data_bytes/(i-skipped), offset_bytes/(i-skipped), base_bytes/(i-skipped));
   }
-  if (i - skipped > FPS) {
+  if (i - skipped > FPS && i/FPS > 0) {
     duration = i/FPS;
     printf("%d seconds, %d frames skipped / %d: %.2f fps\n", duration,
           skipped, i, (float)(i-skipped)/duration);
