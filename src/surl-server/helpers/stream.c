@@ -402,18 +402,21 @@ static int sort_by_offset(byte_diff *a, byte_diff *b) {
 
 static byte_diff **diffs = NULL;
 #define SAMPLE_RATE (115200 / (1+8+1))
+#define AUDIO_MAX          256
+#define BUFFER_LEN         (60*10)
 
-#define BUFFER_LEN    (60*10)
-#define SAMPLE_OFFSET 0x40
-#define MAX_LEVEL       32
-#define END_OF_STREAM   (MAX_LEVEL+1)
+#define AUDIO_SAMPLE_OFFSET      0x40
+#define AUDIO_MAX_LEVEL          32
+#define AUDIO_NUM_LEVELS         (AUDIO_MAX_LEVEL+1)
+#define AUDIO_END_OF_STREAM      AUDIO_NUM_LEVELS
 
-#define AV_SAMPLE_OFFSET 0x60
-#define AV_MAX_LEVEL       31
-#define AV_END_OF_STREAM   (AV_MAX_LEVEL+1)
-#define AV_KBD_LOAD_LEVEL  15
+#define AV_SAMPLE_OFFSET         0x60
+#define AV_MAX_LEVEL             31
+#define AV_NUM_LEVELS            (AV_MAX_LEVEL+1)
+#define AV_END_OF_STREAM         AV_NUM_LEVELS
+#define AV_KBD_LOAD_LEVEL        15
 
-#define send_sample(i) fputc((i) + SAMPLE_OFFSET, ttyfp)
+#define send_sample(i) fputc((i) + AUDIO_SAMPLE_OFFSET, ttyfp)
 
 static int num_audio_samples = 0;
 static unsigned char audio_samples_buffer[SAMPLE_RATE*2];
@@ -434,7 +437,7 @@ static inline void flush_audio_samples(void) {
 }
 
 static void send_end_of_audio_stream(void) {
-  send_sample(END_OF_STREAM);
+  send_sample(AUDIO_END_OF_STREAM);
   fflush(ttyfp);
 }
 
@@ -485,7 +488,6 @@ static void send_metadata(char *key, char *value, char *translit) {
 int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightScale scale) {
   int num = 0;
   unsigned char c;
-  int max = 0;
   size_t cur = 0;
   unsigned char *data = NULL;
   unsigned char *img_data = NULL;
@@ -574,7 +576,6 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
     }
   }
 
-  max = 256;
   sleep(1); /* Let ffmpeg have a bit of time to push data so we don't starve */
   vol_mult = 10;
 
@@ -595,7 +596,7 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
     if (th_data->decoding_end && th_data->max_audio_volume != 0) {
       /* Adjust volume */
       if (th_data->max_audio_volume != 0 && vol_mult == 10 && !vol_adj_done) {
-        vol_mult = ((max/2) * vol_mult) / (th_data->max_audio_volume-127);
+        vol_mult = ((AUDIO_MAX/2) * vol_mult) / (th_data->max_audio_volume-127);
         printf("Max detected level now %d, vol set to %d\n", th_data->max_audio_volume, vol_mult);
         vol_adj_done = 1;
       }
@@ -611,13 +612,13 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
         continue;
       }
     }
-    int32_t samp_val = (int32_t)((((int32_t)data[cur]-((int32_t)max/2))*(int32_t)vol_mult)/10)+((int32_t)max/2);
+    int32_t samp_val = (int32_t)((((int32_t)data[cur]-((int32_t)AUDIO_MAX/2))*(int32_t)vol_mult)/10)+((int32_t)AUDIO_MAX/2);
     if (samp_val < 0) {
       samp_val = 0;
-    } else if (samp_val >= max) {
-      samp_val = max-1;
+    } else if (samp_val >= AUDIO_MAX) {
+      samp_val = AUDIO_MAX-1;
     }
-    send_sample((uint8_t)samp_val*MAX_LEVEL/max);
+    send_sample((uint8_t)samp_val*AUDIO_NUM_LEVELS/AUDIO_MAX);
     cur++;
 
     /* Kbd input polled directly for no wait at all */
@@ -642,7 +643,7 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
             break;
           case ' ':
             printf("Pause\n");
-            send_sample(MAX_LEVEL/2);
+            send_sample(AUDIO_MAX_LEVEL/2);
             simple_serial_getc();
             break;
           case APPLE_CH_CURS_LEFT:
@@ -675,7 +676,7 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
   }
 
 done:
-  send_sample(MAX_LEVEL/2);
+  send_sample(AUDIO_MAX_LEVEL/2);
   send_end_of_audio_stream();
 
   do {
@@ -969,7 +970,6 @@ int err;
 unsigned char *audio_data = NULL;
 unsigned char *img_data = NULL;
 unsigned char *hgr_buf = NULL;
-int audio_max = 0;
 size_t audio_size = 0;
 size_t img_size = 0;
 int audio_ready = 0;
@@ -1005,7 +1005,7 @@ static void *audio_push(void *unused) {
     if (audio_th_data->decoding_end && audio_th_data->max_audio_volume != 0) {
       /* Adjust volume */
       if (audio_th_data->max_audio_volume != 0 && vol_mult == 10 && !vol_adj_done) {
-        vol_mult = ((audio_max/2) * vol_mult) / (audio_th_data->max_audio_volume-127);
+        vol_mult = ((AUDIO_MAX/2) * vol_mult) / (audio_th_data->max_audio_volume-127);
         printf("Max detected level now %d, vol set to %d\n", audio_th_data->max_audio_volume, vol_mult);
         vol_adj_done = 1;
       }
@@ -1023,13 +1023,13 @@ static void *audio_push(void *unused) {
     }
 
     if (!pause) {
-      int32_t samp_val = (int32_t)((((int32_t)audio_data[cur]-((int32_t)audio_max/2))*(int32_t)vol_mult)/10)+((int32_t)audio_max/2);
+      int32_t samp_val = (int32_t)((((int32_t)audio_data[cur]-((int32_t)AUDIO_MAX/2))*(int32_t)vol_mult)/10)+((int32_t)AUDIO_MAX/2);
       if (samp_val < 0) {
         samp_val = 0;
-      } else if (samp_val >= audio_max) {
-        samp_val = audio_max-1;
+      } else if (samp_val >= AUDIO_MAX) {
+        samp_val = AUDIO_MAX-1;
       }
-      buffer_audio_sample((uint8_t)samp_val*AV_MAX_LEVEL/audio_max);
+      buffer_audio_sample((uint8_t)samp_val*AV_NUM_LEVELS/AUDIO_MAX);
 
       if (cur % (SAMPLE_RATE/FPS) == 0) {
         check_duration("audio", &frame_start);
@@ -1575,7 +1575,6 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
     goto cleanup_thread;
   }
 
-  audio_max = 256;
   sleep(1); /* Let ffmpeg have a bit of time to push data so we don't starve */
 
   /* Send protocol to choose */
