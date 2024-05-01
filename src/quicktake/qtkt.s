@@ -506,13 +506,11 @@ shift_indexes:
 
 check_first_pass_col_loop:
         cmp     #0              ; Patched (idx_end)
-        beq     :+
-        jmp     first_pass_col_loop
-:       lda     idx+1
+        bne     first_pass_col_loop
+        lda     idx+1
 check_first_pass_col_loop_hi:
         cmp     #0              ; Patched (idx_end+1)
-        beq     end_of_line
-        jmp     first_pass_col_loop
+        bne     first_pass_col_loop
 
 end_of_line:
         lda     last_val        ; *(idx+2) = val
@@ -662,18 +660,15 @@ second_pass_col_y_loop:
 check_second_pass_col_loop:
         ; Are we done for this row?
         cmp     #0              ; Patched (idx_end)
-        beq     :+
-        jmp     second_pass_col_loop
-:       ldx     idx+1
+        bne     second_pass_col_loop
+        ldx     idx+1
 check_second_pass_col_loop_hi:
         cpx     #0              ; Patched (idx_end+1)
-        beq     second_pass_row_done
-        jmp     second_pass_col_loop
+        bne     second_pass_col_loop
 
 second_pass_row_done:
         dec     row
-        beq     copy_buffer
-        jmp     second_pass_next_row
+        bne     second_pass_next_row
 
         ; Both passes done, memcpy BAND_HEIGHT lines to destination buffer,
         ; excluding two leftmost and rightmost scratch pixels
