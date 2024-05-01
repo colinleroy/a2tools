@@ -1682,7 +1682,6 @@ video_no_sub:
         beq     @toggle_page            ; 2/3   Result of cpy #$7F
         bcs     @set_pixel              ; 4/5   Is it a control byte?
 
-; Two cycles wasted here
 @dest_ctrl:
         adc     cur_base                ; 7    Add shift value to current pointer
         sta     cur_base                ; 10
