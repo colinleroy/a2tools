@@ -274,7 +274,8 @@ new_req:
         dump_url(url);
         continue;
       } else if (url[0] == '\0') {
-        printf("REQ: Could not parse request (method %u).\n", method);
+        printf("REQ: Could not parse request (method 0x%02x).\n", method);
+        simple_serial_flush();
         continue;
       }
     } else {
@@ -286,7 +287,8 @@ new_req:
     do {
       reqbuf[0] = '\0';
       if (simple_serial_gets(reqbuf, BUFSIZE) != NULL) {
-        if ((unsigned char)reqbuf[0] == SURL_METHOD_ABORT) {
+        if ((unsigned char)reqbuf[0] == SURL_METHOD_ABORT ||
+            (unsigned char)reqbuf[0] == SURL_CLIENT_READY) {
           /* It's a reset */
           goto reopen;
         } else if (strcmp(reqbuf, "\n")) {
@@ -1352,6 +1354,7 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
     }
   } else {
     printf("Unsupported method 0x%02x (url %s)\n", method, url);
+    simple_serial_flush();
     curlbuf->response_code = 500;
     curlbuf->size = 0;
     curlbuf->content_type = strdup("application/octet-stream");
