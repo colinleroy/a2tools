@@ -360,6 +360,13 @@ kbd_cmd       = tmp3            ; byte - Deferred keyboard command to handle
         .byte   $00
 .endmacro
 
+; Hack to waste 1 cycle. Use absolute lda with $00nn
+.macro ABS_LDA  zpvar
+        .byte   $AD             ; lda absolute
+        .byte   zpvar
+        .byte   $00
+.endmacro
+
 .macro ____SPKR_DUTY____4       ; Toggle speaker
         sta     SPKR            ; 4
 .endmacro
@@ -964,10 +971,13 @@ vss:    lda     $99FF
         and     #HAS_BYTE
         beq     ass
 vds:    ldy     $98FF
-        jmp     video_sub   
+        tya
+        cpy     #PAGE_TOGGLE
+vhs:    jmp     $FFFF
 ; --------------------------------------------------------------
 ; -----------------------------------------------------------------
 video_handler_patches:
+                .word vhs
                 .word vh0
                 .word vh1
                 .word vh2
@@ -1638,13 +1648,6 @@ ad26b:  ldx     $A8FF           ; 21
         WASTE_22                ; 56
         JUMP_NEXT_13            ; 69
 
-.align $40 ; page0_ and page1_ addresses arrays must share the same low byte
-.assert * = $7A40, error                         ; We want this one's high byte to be even
-PAGE0_ARRAY = *                                  ; for and'ing at video_sub:@set_offset
-page0_addrs_arr_high:.res (N_BASES+4+1)          ; Also $7A+$10 sets V flag in video_sub:@set_offset
-pages_addrs_arr_low: .res (N_BASES+4+1)
-
-
 .align $100
 .assert * = _SAMPLES_BASE + $1B00, error
 duty_cycle27:                    ; end spkr at 35
@@ -1667,31 +1670,6 @@ ad27b:  ldx     $A8FF           ; 21
         WASTE_7                 ; 31
         ____SPKR_DUTY____4      ; 35
         WASTE_21                ; 56
-        JUMP_NEXT_13            ; 69
-
-.align $100
-.assert * = _SAMPLES_BASE + $1C00, error
-duty_cycle28:                    ; end spkr at 36
-        ____SPKR_DUTY____4      ; 4
-ad28:   ldx     $A8FF           ; 8
-vs28:   lda     $99FF           ; 12
-        and     #HAS_BYTE       ; 14
-        beq     no_vid28        ; 16/17
-vd28:   ldy     $98FF           ; 20
-        stx     next+1          ; 23
-        WASTE_5                 ; 28
-        tya                     ; 30
-        cpy     #PAGE_TOGGLE    ; 32
-        ____SPKR_DUTY____4      ; 36
-        WASTE_3                 ; 39
-vh28:   jmp     $FFFF           ; 42=>69
-
-no_vid28:
-ad28b:  ldx     $A8FF           ; 21
-        stx     next+1          ; 24
-        WASTE_8                 ; 32
-        ____SPKR_DUTY____4      ; 36
-        WASTE_20                ; 56
         JUMP_NEXT_13            ; 69
 
 ; -----------------------------------------------------
@@ -1741,6 +1719,37 @@ video_no_sub:
         WASTE_2                         ; 21
         jmp     (next)                  ; 27    Done, go to next duty cycle
 ; -----------------------------------------------------
+
+.align $100
+.assert * = _SAMPLES_BASE + $1C00, error
+duty_cycle28:                    ; end spkr at 36
+        ____SPKR_DUTY____4      ; 4
+ad28:   ldx     $A8FF           ; 8
+vs28:   lda     $99FF           ; 12
+        and     #HAS_BYTE       ; 14
+        beq     no_vid28        ; 16/17
+vd28:   ldy     $98FF           ; 20
+        stx     next+1          ; 23
+        WASTE_5                 ; 28
+        tya                     ; 30
+        cpy     #PAGE_TOGGLE    ; 32
+        ____SPKR_DUTY____4      ; 36
+        WASTE_3                 ; 39
+vh28:   jmp     $FFFF           ; 42=>69
+
+no_vid28:
+ad28b:  ldx     $A8FF           ; 21
+        stx     next+1          ; 24
+        WASTE_8                 ; 32
+        ____SPKR_DUTY____4      ; 36
+        WASTE_20                ; 56
+        JUMP_NEXT_13            ; 69
+
+.align $40 ; page0_ and page1_ addresses arrays must share the same low byte
+.assert * = $7C40, error                         ; We want this one's high byte to be even
+PAGE0_ARRAY = *                                  ; for and'ing at video_sub:@set_offset
+page0_addrs_arr_high:.res (N_BASES+4+1)          ; Also $7C & $55 = $54
+pages_addrs_arr_low: .res (N_BASES+4+1)
 
 .align $100
 .assert * = _SAMPLES_BASE + $1D00, error
@@ -1803,45 +1812,47 @@ video_spkr_sub:                 ; Alternate entry point for duty cycle 30
 ; Video handler must take 31 cycles on every code path.
 
 video_sub:
-        beq     @toggle_page            ; 2/3   Result of cpy #$7F
-        bcs     @set_pixel              ; 4/5   Is it a data byte?
-        bvc     @set_offset             ; 6/7   If V flag is set, this one is a base byte
+        bcc     @maybe_control          ; 2/3   Is it a data byte?
 
-@set_base:                              ;       This is a base byte (branch takes 22 cycles minimum)
-        lda     pages_addrs_arr_low,y   ; 10    Load base pointer low byte from base array
-        sta     cur_base                ; 13    Store it to destination pointer low byte
-        lda     (page_ptr_high),y       ; 18    Load base pointer high byte from base array
-        sta     cur_base+1              ; 21    Store it to destination pointer high byte
-        jmp     (next)                  ; 27    Done, go to next duty cycle
-
-@set_offset:                            ;       No, so set offset or toggle page
-        sty     next_offset             ; 10    Store offset
-        lda     page_ptr_high+1         ; 13    Update the page flag here, where we have time
-        adc     #$10                    ; 15    $7A/$7F + $10 => sets V flag
-        and     #1                      ; 17    Use the fact that page1 array's high byte is odd
-        sta     @toggle_page+1          ; 21
-        jmp     (next)                  ; 27    Done, go to next duty cycle
-
-@toggle_page:                           ;       Page toggling command (branch takes 23 cycles minimum)
-.ifdef DOUBLE_BUFFER
-        ldx     #$00                    ; 5
-        lda     $C054,x                 ; 9    Activate page 1
-        lda     page_addrs_arr,x        ; 13    Write to page 0
-        sta     page_ptr_high+1         ; 16    No time to update page flag,
-        WASTE_5                         ; 21
-        jmp     (next)                  ; 27    We'll do it in @set_offset
-.else
-        WASTE_18                        ; 21
-        jmp     (next)                  ; 27
-.endif
-
-@set_pixel:                             ;       No, it is a data byte (branch takes 25 cycles minimum)
-        ldy     next_offset             ; 8     Load the offset to the start of the base
+@set_pixel:                             ;       It is a data byte
+        beq     @toggle_page            ; 4/5   Result of cpy #$7F
+        ABS_LDY next_offset             ; 8     Load the offset to the start of the base
         sta     (cur_base),y            ; 14    Store data byte
         inc     next_offset             ; 19    and store it.
         clv                             ; 21    Reset the offset-received flag.
         jmp     (next)                  ; 27    Done, go to next duty cycle
 
+@maybe_control:
+        bvc     @set_offset             ; 5/6   If V flag is set, this one is a base byte
+
+@set_base:                              ;       This is a base byte (branch takes 22 cycles minimum)
+        lda     pages_addrs_arr_low,y   ; 9     Load base pointer low byte from base array
+        sta     cur_base                ; 12    Store it to destination pointer low byte
+        lda     (page_ptr_high),y       ; 17    Load base pointer high byte from base array
+        ABS_STA cur_base+1              ; 21    Store it to destination pointer high byte
+        jmp     (next)                  ; 27    Done, go to next duty cycle
+
+@set_offset:                            ;       No, so set offset or toggle page
+        sty     next_offset             ; 9     Store offset
+        ABS_LDA page_ptr_high+1         ; 13    Update the page flag here, where we have time
+        and     #$55                    ; 15    Use the fact that page1 array's high byte is odd
+        sta     @toggle_page+1          ; 19
+        adc     #$30                    ; 21    $54/$55 + $30 => sets V flag
+        jmp     (next)                  ; 27    Done, go to next duty cycle
+
+@toggle_page:                           ;       Page toggling command (branch takes 21 cycles minimum)
+.ifdef DOUBLE_BUFFER
+        lda     $C054                   ; 9     Activate page (patched by set_offset)
+        lda     page_ptr_high+1         ; 12    Toggle written page
+        eor     #>page1_addrs_arr_high ^ >page0_addrs_arr_high
+                                        ; 14
+        sta     page_ptr_high+1         ; 17    No time to update page flag,
+        WASTE_4                         ; 21
+        jmp     (next)                  ; 27    We'll do it in @set_offset
+.else
+        WASTE_16                        ; 21
+        jmp     (next)                  ; 27
+.endif
 
 ; -----------------------------------------------------------------
 
@@ -1872,7 +1883,7 @@ ad31b:  ldx     $A8FF           ; 21
 .align $40
 .assert * = $7F40, error                         ; We want high byte to be odd
 PAGE1_ARRAY = *                                  ; for and'ing at video_sub:@set_offset
-page1_addrs_arr_high:.res (N_BASES+4+1)          ; also need $7F+$10 to set V flag at the same spot
+page1_addrs_arr_high:.res (N_BASES+4+1)          ; also $7F & $55 = $55
 
 page_addrs_arr: .byte >(page1_addrs_arr_high)     ; Inverted because we write to page 1
                 .byte >(page0_addrs_arr_high)     ; when page 0 is active, and vice-versa
