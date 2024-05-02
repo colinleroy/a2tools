@@ -1426,13 +1426,13 @@ send:
 
 close_last:
   flush_video_bytes(ttyfp2);
-  if (i - skipped > 0) {
+  if (i - skipped > 0 && i/FPS > 0) {
     printf("Max: %d, Min: %d, Average: %d\n", max, min, total / (i-skipped));
     printf("Sent %lu bytes for %d non-skipped frames: %lub/s, %lub/frame avg (%lu data, %lu offset, %lu base)\n",
             bytes_sent, (i-skipped), bytes_sent/(i/FPS), bytes_sent/(i-skipped),
             data_bytes/(i-skipped), offset_bytes/(i-skipped), base_bytes/(i-skipped));
   }
-  if (i - skipped > FPS) {
+  if (i - skipped > FPS && i/FPS > 0) {
     duration = i/FPS;
     printf("%d seconds, %d frames skipped / %d: %.2f fps\n", duration,
           skipped, i, (float)(i-skipped)/duration);
@@ -1571,6 +1571,10 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
     audio_th_data->stop = 1;
     printf("audio stop\n");
     pthread_mutex_unlock(&audio_th_data->mutex);
+    pthread_mutex_lock(&video_th_data->mutex);
+    video_th_data->stop = 1;
+    printf("video stop\n");
+    pthread_mutex_unlock(&video_th_data->mutex);
     ret = -1;
     goto cleanup_thread;
   }
@@ -1647,10 +1651,9 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
     }
     sleep(1);
   }
-  if (!cancelled) {
-    pthread_join(audio_push_thread, NULL);
-    pthread_join(video_push_thread, NULL);
-  }
+
+  pthread_join(audio_push_thread, NULL);
+  pthread_join(video_push_thread, NULL);
 
   fflush(ttyfp);
   if (ttyfp2)
