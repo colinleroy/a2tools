@@ -380,7 +380,7 @@ static uint8_t *bayer_dither_frame(const AVFrame *frame, AVRational time_base, i
 
   if (prev_grayscale_buf == NULL) {
     prev_grayscale_buf = malloc(frame->height*frame->width);
-    memset(prev_grayscale_buf, 0, frame->height*frame->width);
+    memset(prev_grayscale_buf, 0x7F, frame->height*frame->width);
     memset(prev_dithered_buf, 0, HGR_WIDTH*HGR_HEIGHT);
     memset(prev_hgr_buf, 0, 0x2000);
   }
@@ -394,40 +394,29 @@ static uint8_t *bayer_dither_frame(const AVFrame *frame, AVRational time_base, i
     out += x_offset;
     for (x = 0; x < frame->width; x++) {
       uint16_t coord = y*frame->width + x;
-      uint16_t pixel_value = *p;
       uint16_t val;
-      int16_t time_stab_val = prev_dithered_buf[y*HGR_WIDTH+x] ? +STAB_VALUE : -STAB_VALUE;
+      uint16_t time_stab_val;
 
       /* Stabilise source video */
-      if (*p != prev_grayscale_buf[coord] && abs(prev_grayscale_buf[coord] - *p) < STAB_VALUE) {
-        uint16_t new_val = *p;
-        *p = prev_grayscale_buf[coord];
-        prev_grayscale_buf[coord] = new_val;
-      } else {
-        prev_grayscale_buf[coord] = *p;
-      }
+      /*
+       No stabilisation: 1183b/frame avg (904 data, 216 offset, 61 base),  9.49fps
+       3/5:              1112b/frame avg (875 data, 236 offset, 0 base),  10,11fps
+      */
+      time_stab_val = ((*p * 3) + (prev_grayscale_buf[coord]) * 2) / 5;
 
       /* Drop single-pixel changes */
-      if (*p != prev_grayscale_buf[coord]
+      if (time_stab_val != prev_grayscale_buf[coord]
       && (x == 0               || *(p-1) == prev_grayscale_buf[coord-1])
       && (x == frame->width-1  || *(p+1) == prev_grayscale_buf[coord+1])
       && (y == 0               || *(p-frame->linesize[0]) == prev_grayscale_buf[coord-frame->height])
       && (y == frame->height-1 || *(p+frame->linesize[0]) == prev_grayscale_buf[coord+frame->height])) {
-        *p = prev_grayscale_buf[coord];
+        time_stab_val = prev_grayscale_buf[coord];
       }
+      prev_grayscale_buf[coord] = time_stab_val;
 
-      pixel_value = *p;
+      val = time_stab_val + time_stab_val * map[y % 8][x % 8] / 63;
 
-      /*
-       No stabilisation: 1183b/frame avg (904 data, 216 offset, 61 base),  9.49fps
-       10:               1138b/frame avg (864 data, 212 offset, 60 base),  9.83fps
-       20:               1092b/frame avg (820 data, 211 offset, 60 base), 10.18fps
-       32:               1054b/frame avg (780 data, 212 offset, 60 base), 10.55fps
-      */
-
-      val = pixel_value + pixel_value * map[y % 8][x % 8] / 63;
-
-      if(val + time_stab_val >= 128)
+      if(val >= 128)
         val = 255;
       else
         val = 0;
