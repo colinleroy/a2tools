@@ -269,6 +269,7 @@ read_metadata_again:
       gotoxy(28, 12);
       dputs("Loading video player...");
       fputc(enable_subtitles, video_url_fp);
+      fputc(video_size, video_url_fp);
       fputs(translit_charset, video_url_fp);
       fputc('\n', video_url_fp);
       fputs(url, video_url_fp);

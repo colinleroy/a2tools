@@ -12,6 +12,7 @@ typedef struct _decode_data {
   char *url;
   int sample_rate;
   char enable_subtitles;
+  char video_size;
   char has_subtitles;
   uint8_t max_audio_volume;
   char *translit;
@@ -48,7 +49,7 @@ typedef struct _decode_data {
   char **subs;
 } decode_data;
 
-int ffmpeg_video_decode_init(decode_data *data, int *video_len);
+int ffmpeg_video_decode_init(decode_data *data, int *video_len, char size);
 void ffmpeg_video_decode_deinit(decode_data *data);
 unsigned char *ffmpeg_video_decode_frame(decode_data *data, int total_frames, int current_frame);
 

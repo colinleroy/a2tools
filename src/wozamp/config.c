@@ -16,6 +16,7 @@ char *translit_charset;
 char monochrome;
 char enable_video;
 char enable_subtitles;
+char video_size;
 
 static FILE *open_config(char *mode) {
   FILE *fp;
@@ -39,8 +40,12 @@ static int save_config(void) {
     return -1;
   }
 
-  r = fprintf(fp, "%s\n%d\n%d\n%d\n",
-                  translit_charset, monochrome, enable_video, enable_subtitles);
+  r = fprintf(fp, "%s\n%d\n%d\n%d\n%d\n",
+                  translit_charset,
+                  monochrome,
+                  enable_video,
+                  enable_subtitles,
+                  video_size);
 
   if (r < 0 || fclose(fp) != 0) {
     cputs("Could not save settings file.\r\n");
@@ -53,8 +58,24 @@ static int save_config(void) {
 
 extern char tmp_buf[80];
 
-void config(void) {
+static char get_yesno(void) {
   char c;
+again:
+  c = cgetc();
+  switch(tolower(c)) {
+    case 'y':
+      return 1;
+    case 'n':
+      return 0;
+    default:
+      goto again;
+  }
+}
+
+void config(void) {
+#ifdef __APPLE2ENH__
+  char c;
+#endif
 
   clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
 
@@ -92,50 +113,32 @@ charset_again:
 #endif
 
   cputs("\r\nIs your monitor monochrome? (y/n)\r\n");
-monochrome_again:
-  c = cgetc();
-  switch(tolower(c)) {
-    case 'y':
-      monochrome = 1;
-      break;
-    case 'n':
-      monochrome = 0;
-      break;
-    default:
-      goto monochrome_again;
-  }
+  monochrome = get_yesno();
 
 #if (defined (__APPLE2ENH__) && !defined (__IIGS__))
   cputs("\r\nEnable video playback? (y/n)\r\n");
-enable_video_again:
+  enable_video = get_yesno();
+
+  cputs("\r\nVideo size (Small - more FPS / Large - less FPS)? (s/l)\r\n");
+video_size_again:
   c = cgetc();
   switch(tolower(c)) {
-    case 'y':
-      enable_video = 1;
+    case 's':
+      video_size = 0;
       break;
-    case 'n':
-      enable_video = 0;
+    case 'l':
+      video_size = 1;
       break;
     default:
-      goto enable_video_again;
+      goto video_size_again;
   }
 
   cputs("\r\nEnable subtitles? (y/n)\r\n");
-enable_subtitles_again:
-  c = cgetc();
-  switch(tolower(c)) {
-    case 'y':
-      enable_subtitles = 1;
-      break;
-    case 'n':
-      enable_subtitles = 0;
-      break;
-    default:
-      goto enable_subtitles_again;
-  }
+  enable_subtitles = get_yesno();
 
 #else
   enable_video = 0;
+  video_size = 0;
   enable_subtitles = 0;
 #endif
 
@@ -150,6 +153,7 @@ void load_config(void) {
 
   translit_charset = US_CHARSET;
   monochrome = 0;
+  video_size = 0;
 #ifdef __APPLE2ENH__
   enable_video = 1;
 #else
@@ -183,6 +187,11 @@ void load_config(void) {
 
     fgets(tmp_buf, 16, fp);
     enable_subtitles = (tmp_buf[0] != '0');
+
+    fgets(tmp_buf, 16, fp);
+#ifdef __APPLE2ENH__
+    video_size = (tmp_buf[0]-'0');
+#endif
 
     fclose(fp);
   }

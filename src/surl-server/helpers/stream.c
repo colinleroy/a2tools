@@ -87,7 +87,7 @@ static void *ffmpeg_video_decode_thread(void *th_data) {
     pthread_mutex_unlock(&data->mutex);
   }
 
-  if (ffmpeg_video_decode_init(data, &video_len) != 0) {
+  if (ffmpeg_video_decode_init(data, &video_len, data->video_size) != 0) {
     printf("Could not init ffmpeg.\n");
     pthread_mutex_lock(&data->mutex);
     data->decoding_end = 1;
@@ -1460,7 +1460,7 @@ close_last:
   return NULL;
 }
 
-int surl_stream_audio_video(char *url, char *translit, char monochrome, enum HeightScale scale, char subtitles) {
+int surl_stream_audio_video(char *url, char *translit, char monochrome, char subtitles, char size) {
   int j;
   int cancelled = 0, playback_stop = 0;
   /* Control vars */
@@ -1483,6 +1483,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
   memset(video_th_data, 0, sizeof(decode_data));
   video_th_data->url = url;
   video_th_data->enable_subtitles = subtitles;
+  video_th_data->video_size = size;
   video_th_data->translit = translit;
   pthread_mutex_init(&video_th_data->mutex, NULL);
 
@@ -1494,7 +1495,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
   audio_th_data->sample_rate = SAMPLE_RATE;
   pthread_mutex_init(&audio_th_data->mutex, NULL);
 
-  printf("Starting decode thread (charset %s, monochrome %d, scale %d)\n", translit, monochrome, scale);
+  printf("Starting decode thread (charset %s, monochrome %d, size %d)\n", translit, monochrome, size);
   pthread_create(&audio_decode_thread, NULL, *ffmpeg_audio_decode_thread, (void *)audio_th_data);
 
   while(!ready && !stop && err != -1) {
@@ -1518,29 +1519,6 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, enum Hei
   pthread_mutex_lock(&audio_th_data->mutex);
   img_data = audio_th_data->img_data;
   img_size = audio_th_data->img_size;
-  pthread_mutex_unlock(&audio_th_data->mutex);
-
-  if (img_data && img_size) {
-    FILE *fp = fopen("/tmp/imgdata", "w+b");
-    if (fp) {
-      if (fwrite(img_data, 1, img_size, fp) == img_size) {
-        fclose(fp);
-        hgr_buf = sdl_to_hgr("/tmp/imgdata", monochrome, 0, &img_size, 0, scale);
-        if (img_size != HGR_LEN) {
-          hgr_buf = NULL;
-        }
-      } else {
-        fclose(fp);
-      }
-    }
-  }
-
-  pthread_mutex_lock(&audio_th_data->mutex);
-  send_metadata("has_video", audio_th_data->has_video ? "1":"0", translit);
-  send_metadata("artist", audio_th_data->artist, translit);
-  send_metadata("album", audio_th_data->album, translit);
-  send_metadata("title", audio_th_data->title, translit);
-  send_metadata("track", audio_th_data->track, translit);
   pthread_mutex_unlock(&audio_th_data->mutex);
 
   if (diffs == NULL) {

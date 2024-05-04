@@ -56,7 +56,7 @@ int ditherer = 0; /* 0 = bayer 1 = burkes */
 
 #define GREYSCALE_TO_HGR 1
 
-const char *video_filter_descr = /* Set frames per second to a known value */
+const char *video_filter_descr_s = /* Set frames per second to a known value */
                                  "fps=%d,"
                                  /* Scale to VIDEO_SIZE, scale fast (no interpolation) */
                                  "scale=%d:%d:flags=neighbor,"
@@ -66,6 +66,15 @@ const char *video_filter_descr = /* Set frames per second to a known value */
                                  "pad=width=%d:height=%d:x=-1:y=-1:color=Black,"
                                  /* White border */
                                  "pad=width=%d:height=%d:x=-1:y=-1:color=White,"
+                                 /* Pad in the middle of the HGR screen */
+                                 "pad=width=%d:height=%d:x=-1:y=-1:color=Black";
+
+const char *video_filter_descr_l = /* Set frames per second to a known value */
+                                 "fps=%d,"
+                                 /* Scale to VIDEO_SIZE, scale fast (no interpolation) */
+                                 "scale=%d:%d:flags=neighbor,"
+                                 /* Equalize histogram (Use 1/x instead of 0.100 because of LC_ALL, decimal separator, etc) */
+                                 "histeq=strength=1/20,"
                                  /* Pad in the middle of the HGR screen */
                                  "pad=width=%d:height=%d:x=-1:y=-1:color=Black";
 
@@ -188,7 +197,7 @@ static int open_audio_file(char *filename)
 
 int FPS = 24;
 
-static int init_video_filters(const char *filters_descr_fmt)
+static int init_video_filters(char size)
 {
     char args[512];
     int ret = 0;
@@ -201,7 +210,7 @@ static int init_video_filters(const char *filters_descr_fmt)
     double fps;
 
     enum AVPixelFormat pix_fmts[] = { AV_PIX_FMT_GRAY8, AV_PIX_FMT_NONE };
-    char *filters_descr = malloc(strlen(filters_descr_fmt) * 2);
+    char *filters_descr = malloc(strlen(video_filter_descr_s) * 2);
     float aspect_ratio = (float)video_dec_ctx->width / (float)video_dec_ctx->height;
 
     if (fps_tb.num > 0 && fps_tb.den > 0) {
@@ -222,18 +231,26 @@ static int init_video_filters(const char *filters_descr_fmt)
     /* Get final resolution. We don't want too much "square pixels". */
     for (pic_width = HGR_WIDTH - 4; pic_width > HGR_WIDTH/4; pic_width--) {
       pic_height = pic_width / aspect_ratio;
-      if (pic_width * pic_height < MAX_BYTES_PER_FRAME * 8) {
+      if (pic_height > 191)
+        continue;
+      if (pic_width * pic_height < (size ? 0x2000 : MAX_BYTES_PER_FRAME) * 8) {
         break;
       }
     }
     printf("Rescaling to %dx%d (%d pixels)\n", pic_width, pic_height, pic_width * pic_height);
 
-    sprintf(filters_descr, filters_descr_fmt,
-            FPS,
-            pic_width, pic_height,
-            pic_width + 2, pic_height + 2, /* Black border */
-            pic_width + 4, pic_height + 4, /* White border */
-            HGR_WIDTH, HGR_HEIGHT);
+    if (size == 0)
+      sprintf(filters_descr, video_filter_descr_s,
+              FPS,
+              pic_width, pic_height,
+              pic_width + 2, pic_height + 2, /* Black border */
+              pic_width + 4, pic_height + 4, /* White border */
+              HGR_WIDTH, HGR_HEIGHT);
+    else
+      sprintf(filters_descr, video_filter_descr_l,
+              FPS,
+              pic_width, pic_height,
+              HGR_WIDTH, HGR_HEIGHT);
 
     video_filter_graph = avfilter_graph_alloc();
     if (!outputs || !inputs || !video_filter_graph) {
@@ -529,7 +546,7 @@ static void *ffmpeg_subtitles_decode_thread(void *data) {
   return NULL;
 }
 
-int ffmpeg_video_decode_init(decode_data *data, int *video_len) {
+int ffmpeg_video_decode_init(decode_data *data, int *video_len, char size) {
     int ret = 0;
 
     video_frame = av_frame_alloc();
@@ -546,7 +563,7 @@ int ffmpeg_video_decode_init(decode_data *data, int *video_len) {
         goto end;
     }
 
-    if ((ret = init_video_filters(video_filter_descr)) < 0) {
+    if ((ret = init_video_filters(size)) < 0) {
         goto end;
     }
 
