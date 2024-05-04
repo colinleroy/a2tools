@@ -231,7 +231,7 @@ static int init_video_filters(char size)
     /* Get final resolution. We don't want too much "square pixels". */
     for (pic_width = HGR_WIDTH - 4; pic_width > HGR_WIDTH/4; pic_width--) {
       pic_height = pic_width / aspect_ratio;
-      if (pic_height > 191)
+      if (pic_height > 187)
         continue;
       if (pic_width * pic_height < (size ? 0x2000 : MAX_BYTES_PER_FRAME) * 8) {
         break;
