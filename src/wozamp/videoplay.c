@@ -68,6 +68,7 @@ int main(void) {
 
   if (url_fp) {
     fputc(subtitles, url_fp);
+    fputc(size, url_fp);
     fputs(translit_charset, url_fp);
     fputc('\n', url_fp);
     fputs(url, url_fp);
@@ -128,6 +129,9 @@ read_metadata_again:
 
   } else if (r == SURL_ANSWER_STREAM_START) {
     videomode(VIDEOMODE_40COL);
+    if (!subtitles) {
+      hgr_mixoff();
+    }
     clrscr();
     surl_stream_av();
     init_text();

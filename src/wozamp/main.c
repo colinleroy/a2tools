@@ -392,8 +392,9 @@ int main(void) {
   } else {
     url = malloc(512);
     fgetc(tmpfp); // Ignore subtitles parameter
+    fgetc(tmpfp); // Ignore size parameter
     fgets(url, 511, tmpfp);  // Ignore charset parameter */
-    fgets(url, 511, tmpfp);
+    fgets(url, 511, tmpfp);  // URL
     fclose(tmpfp);
     unlink(URL_PASSER_FILE);
   }
