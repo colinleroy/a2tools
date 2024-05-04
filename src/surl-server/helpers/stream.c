@@ -87,7 +87,7 @@ static void *ffmpeg_video_decode_thread(void *th_data) {
     pthread_mutex_unlock(&data->mutex);
   }
 
-  if (ffmpeg_video_decode_init(data, &video_len, data->video_size) != 0) {
+  if (ffmpeg_video_decode_init(data, &video_len) != 0) {
     printf("Could not init ffmpeg.\n");
     pthread_mutex_lock(&data->mutex);
     data->decoding_end = 1;

@@ -76,7 +76,7 @@ const char *video_filter_descr_l = /* Set frames per second to a known value */
                                  /* Equalize histogram (Use 1/x instead of 0.100 because of LC_ALL, decimal separator, etc) */
                                  "histeq=strength=1/20,"
                                  /* Pad in the middle of the HGR screen */
-                                 "pad=width=%d:height=%d:x=-1:y=-1:color=Black";
+                                 "pad=width=%d:height=%d:x=-1:y=%d:color=Black";
 
 static AVFormatContext *audio_fmt_ctx, *video_fmt_ctx;
 static AVCodecContext *audio_dec_ctx, *video_dec_ctx;
@@ -197,7 +197,7 @@ static int open_audio_file(char *filename)
 
 int FPS = 24;
 
-static int init_video_filters(char size)
+static int init_video_filters(char subtitles, char size)
 {
     char args[512];
     int ret = 0;
@@ -233,6 +233,8 @@ static int init_video_filters(char size)
       pic_height = pic_width / aspect_ratio;
       if (pic_height > 187)
         continue;
+      if (subtitles && pic_height > 156)
+        continue;
       if (pic_width * pic_height < (size ? 0x2000 : MAX_BYTES_PER_FRAME) * 8) {
         break;
       }
@@ -250,7 +252,8 @@ static int init_video_filters(char size)
       sprintf(filters_descr, video_filter_descr_l,
               FPS,
               pic_width, pic_height,
-              HGR_WIDTH, HGR_HEIGHT);
+              HGR_WIDTH, HGR_HEIGHT,
+              subtitles && size ? 2 : -1);
 
     video_filter_graph = avfilter_graph_alloc();
     if (!outputs || !inputs || !video_filter_graph) {
@@ -546,7 +549,7 @@ static void *ffmpeg_subtitles_decode_thread(void *data) {
   return NULL;
 }
 
-int ffmpeg_video_decode_init(decode_data *data, int *video_len, char size) {
+int ffmpeg_video_decode_init(decode_data *data, int *video_len) {
     int ret = 0;
 
     video_frame = av_frame_alloc();
@@ -563,7 +566,7 @@ int ffmpeg_video_decode_init(decode_data *data, int *video_len, char size) {
         goto end;
     }
 
-    if ((ret = init_video_filters(size)) < 0) {
+    if ((ret = init_video_filters(data->enable_subtitles, data->video_size)) < 0) {
         goto end;
     }
 

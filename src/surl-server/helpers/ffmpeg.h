@@ -49,7 +49,7 @@ typedef struct _decode_data {
   char **subs;
 } decode_data;
 
-int ffmpeg_video_decode_init(decode_data *data, int *video_len, char size);
+int ffmpeg_video_decode_init(decode_data *data, int *video_len);
 void ffmpeg_video_decode_deinit(decode_data *data);
 unsigned char *ffmpeg_video_decode_frame(decode_data *data, int total_frames, int current_frame);
 
