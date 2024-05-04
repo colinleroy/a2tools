@@ -31,7 +31,7 @@ static void update_progress(void) {
 static char url[512];
 
 int main(void) {
-  unsigned char r, subtitles;
+  unsigned char r, subtitles, size;
   FILE *url_fp;
 
   videomode(VIDEOMODE_80COL);
@@ -43,6 +43,7 @@ int main(void) {
     goto out;
   }
   subtitles = fgetc(url_fp);
+  size = fgetc(url_fp);
   translit_charset = malloc(32);
   fgets(translit_charset, 31, url_fp);
   if (strchr(translit_charset, '\n'))
@@ -54,8 +55,8 @@ int main(void) {
   simple_serial_write(translit_charset, strlen(translit_charset));
   simple_serial_putc('\n');
   simple_serial_putc(monochrome);
-  simple_serial_putc(HGR_SCALE_MIXHGR);
   simple_serial_putc(subtitles);
+  simple_serial_putc(size);
 
   /* Remove filename from URL in advance, so we don't get stuck in
    * a loop if the player crashes for some reason */
