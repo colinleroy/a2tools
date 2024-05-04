@@ -32,7 +32,11 @@ static char url[512];
 
 int main(void) {
   unsigned char r, subtitles;
-  FILE *url_fp = fopen(URL_PASSER_FILE, "r");
+  FILE *url_fp;
+
+  videomode(VIDEOMODE_80COL);
+
+  url_fp = fopen(URL_PASSER_FILE, "r");
   surl_connect_proxy();
 
   if (url_fp == NULL) {
@@ -78,9 +82,10 @@ int main(void) {
   memset((char*)0x800, ' '|0x80, 0x400);
 
   gotoxy(0, 20);
-  cputs("Loading...\r\n\r\n"
-        "Controls: Space: play/pause,   Esc: quit"
-        "          Left/Right: rew/fwd, Tab: subs");
+  cputs("Loading...\r\n"
+        "Controls: Space:      Play/Pause,             Esc: Quit player\r\n"
+        "          Left/Right: Rewind/Forward,         Tab: Toggle subtitles\r\n"
+        "          -/=/+:      Volume up/default/down");
 
 read_metadata_again:
   if (kbhit()) {
@@ -121,7 +126,7 @@ read_metadata_again:
     goto read_metadata_again;
 
   } else if (r == SURL_ANSWER_STREAM_START) {
-    //hgr_mixoff();
+    videomode(VIDEOMODE_40COL);
     clrscr();
     surl_stream_av();
     init_text();
