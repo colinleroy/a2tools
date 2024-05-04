@@ -1519,6 +1519,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, char sub
   pthread_mutex_lock(&audio_th_data->mutex);
   img_data = audio_th_data->img_data;
   img_size = audio_th_data->img_size;
+  send_metadata("has_video", audio_th_data->has_video ? "1":"0", translit);
   pthread_mutex_unlock(&audio_th_data->mutex);
 
   if (diffs == NULL) {
@@ -1628,8 +1629,6 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, char sub
       pthread_mutex_unlock(&video_th_data->mutex);
       /* Signal video thread so it can stop */
       sem_post(&av_sem);
-      pthread_join(audio_push_thread, NULL);
-      pthread_join(video_push_thread, NULL);
       break;
     }
 
