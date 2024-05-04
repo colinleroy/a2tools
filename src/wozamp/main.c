@@ -47,7 +47,12 @@ char **lines = NULL;
 char **nat_lines = NULL;
 
 unsigned char scrw = 255, scrh = 255;
-char center_x = 14; /* 30 in 80COLS */
+
+#ifdef __APPLE2ENH__
+char center_x = 30;
+#else
+char center_x = 14;
+#endif
 
 extern char search_buf[80];
 extern char **display_lines;
@@ -59,16 +64,19 @@ void stp_print_footer(void) {
   clrzone(0, 22, scrw - 1, 23);
 
   gotoxy(0, 22);
-  #ifdef __APPLE2ENH__
-  dputs("Up,Down,Enter,Esc:nav /:search C:config");
-  #else
+#ifdef __APPLE2ENH__
+  dputs("Up,Down,Enter,Esc: Navigate         /: Search       C: Configure\r\n");
+  dputs("A:Play all files in directory       ");
+  if (search_buf[0]) {
+    dputs("N: Search next");
+  }
+#else
   dputs("U,J,Enter,Esc:nav /:search C:config");
-  #endif
-
   dputs("\r\nA:play all files in directory");
   if (search_buf[0]) {
     dputs(" N:next");
   }
+#endif
 }
 
 static unsigned char got_cover = 0;
@@ -258,7 +266,7 @@ read_metadata_again:
       }
       init_text();
       clrscr();
-      gotoxy(8, 12);
+      gotoxy(28, 12);
       dputs("Loading video player...");
       fputc(enable_subtitles, video_url_fp);
       fputs(translit_charset, video_url_fp);
@@ -345,6 +353,9 @@ int main(void) {
   FILE *tmpfp;
   const surl_response *resp;
 
+#ifdef __APPLE2ENH__
+  videomode(VIDEOMODE_80COL);
+#endif
 #ifdef __APPLE2__
   init_hgr(1);
   hgr_mixon();
@@ -369,8 +380,13 @@ int main(void) {
   clrscr();
   tmpfp = fopen(URL_PASSER_FILE,"r");
   if (tmpfp == NULL) {
+#ifdef __APPLE2ENH__
+    url = stp_get_start_url("Please enter an FTP server or internet stream URL.\r\n",
+                          "http://8bit.fm:8000/live");
+#else
     url = stp_get_start_url("Please enter an FTP or internet stream\r\n",
                           "http://8bit.fm:8000/live");
+#endif
     url = stp_build_login_url(url);
   } else {
     url = malloc(512);

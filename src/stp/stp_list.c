@@ -53,6 +53,7 @@ char *stp_get_start_url(char *header, char *default_url) {
   char *last_start_url = NULL;
   char *last_login = NULL;
   char *last_password = NULL;
+  char *tmp = NULL;
   int changed = 0;
 
 #ifdef __APPLE2ENH__
@@ -158,6 +159,11 @@ char *stp_get_start_url(char *header, char *default_url) {
   if (*password == '\0') {
     free(password);
     password = NULL;
+  }
+
+  tmp = start_url + strlen(start_url) - 1;
+  if (*tmp == '/') {
+    *tmp = '\0';
   }
 
   clrscr();
