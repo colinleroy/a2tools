@@ -496,6 +496,8 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
   size_t img_size = 0;
   int ret = 0;
   int vol_adj_done = 0;
+  int auto_vol = vol_mult;
+
   pthread_t decode_thread;
   decode_data *th_data = malloc(sizeof(decode_data));
   int ready = 0;
@@ -599,6 +601,7 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
         vol_mult = ((AUDIO_MAX/2) * vol_mult) / (th_data->max_audio_volume-127);
         printf("Max detected level now %d, vol set to %d\n", th_data->max_audio_volume, vol_mult);
         vol_adj_done = 1;
+        auto_vol = vol_mult;
       }
     }
     pthread_mutex_unlock(&th_data->mutex);
@@ -640,6 +643,10 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
               vol_mult --;
               printf("volume %d\n", vol_mult);
             }
+            break;
+          case '=':
+            vol_mult = auto_vol;
+            printf("volume %d\n", vol_mult);
             break;
           case ' ':
             printf("Pause\n");
@@ -984,6 +991,7 @@ static void *audio_push(void *unused) {
   int stop, pause = 0;
   struct timeval frame_start;
   int vol_adj_done = 0;
+  int auto_vol = vol_mult;
 
   gettimeofday(&frame_start, 0);
   vol_mult = 10;
@@ -1008,6 +1016,7 @@ static void *audio_push(void *unused) {
         vol_mult = ((AUDIO_MAX/2) * vol_mult) / (audio_th_data->max_audio_volume-127);
         printf("Max detected level now %d, vol set to %d\n", audio_th_data->max_audio_volume, vol_mult);
         vol_adj_done = 1;
+        auto_vol = vol_mult;
       }
     }
     pthread_mutex_unlock(&audio_th_data->mutex);
@@ -1105,6 +1114,10 @@ static void *audio_push(void *unused) {
               vol_mult --;
               printf("volume %d\n", vol_mult);
             }
+            break;
+          case '=':
+            vol_mult = auto_vol;
+            printf("volume %d\n", vol_mult);
             break;
           case ' ':
             /* Pause */
