@@ -995,6 +995,11 @@ skip:
               *idx = ' ';
               *(idx+1) = '\n';
             }
+            while ((idx = strchr(text, '\\'))) {
+              *idx = ' ';
+              if (*(idx+1) != '\0')
+                *(idx+1) = ' ';
+            }
             idx = strdup(text);
             data->subs[start_frame] = do_charset_convert(idx, OUTGOING,
                                         data->translit ? data->translit:"US_ASCII", 0, &l);
