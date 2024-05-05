@@ -54,23 +54,20 @@ static int save_config(void) {
   return 0;
 }
 
-#pragma code-name(push, "LOWCODE")
-
 extern char tmp_buf[80];
 
-static char get_yesno(void) {
+static char get_bool(char one, char zero) {
   char c;
 again:
-  c = cgetc();
-  switch(tolower(c)) {
-    case 'y':
-      return 1;
-    case 'n':
-      return 0;
-    default:
-      goto again;
-  }
+  c = tolower(cgetc());
+  if (c == zero)
+    return 0;
+  if (c == one)
+    return 1;
+  goto again;
 }
+
+#pragma code-name(push, "LOWCODE")
 
 void config(void) {
 #ifdef __APPLE2ENH__
@@ -113,28 +110,17 @@ charset_again:
 #endif
 
   cputs("\r\nIs your monitor monochrome? (y/n)\r\n");
-  monochrome = get_yesno();
+  monochrome = get_bool('y', 'n');
 
 #if (defined (__APPLE2ENH__) && !defined (__IIGS__))
   cputs("\r\nEnable video playback? (y/n)\r\n");
-  enable_video = get_yesno();
+  enable_video = get_bool('y', 'n');
 
   cputs("\r\nVideo size (Small - more FPS / Large - less FPS)? (s/l)\r\n");
-video_size_again:
-  c = cgetc();
-  switch(tolower(c)) {
-    case 's':
-      video_size = 0;
-      break;
-    case 'l':
-      video_size = 1;
-      break;
-    default:
-      goto video_size_again;
-  }
+  video_size = get_bool('l', 's');
 
   cputs("\r\nEnable subtitles? (y/n)\r\n");
-  enable_subtitles = get_yesno();
+  enable_subtitles = get_bool('y', 'n');
 
 #else
   enable_video = 0;
