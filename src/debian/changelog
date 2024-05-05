@@ -1,3 +1,19 @@
+a2tools (2.4.0.1) bionic; urgency=medium
+
+  * New protocol (14)
+  * Better sound
+  * Better sync
+  * Better compression
+  * Implement pause, rewind, forward
+  * Implement volume normalization and control
+  * Implement clean text subtitles
+  * Leak fixes
+  * Implement full-screen mode
+  * Implement half-lines mode
+  * 80-columns UI on Wozamp
+
+ -- Colin Leroy-Mira <colin@colino.net>  Sun, 05 May 2024 21:28:19 +0200
+
 a2tools (2.3.1.1) bionic; urgency=medium
 
   * Better sync
