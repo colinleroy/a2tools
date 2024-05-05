@@ -35,7 +35,6 @@
  * artifact all the way
  */
 #define MAX_BYTES_PER_FRAME 600
-int accept_artefact = 0;
 
 #define DOUBLE_BUFFER
 
@@ -1125,7 +1124,15 @@ static void *audio_push(void *unused) {
             break;
           case 'a':
           case 'A':
-            accept_artefact = !accept_artefact;
+            pthread_mutex_lock(&video_th_data->mutex);
+            video_th_data->accept_artefact = !video_th_data->accept_artefact;
+            pthread_mutex_unlock(&video_th_data->mutex);
+            break;
+          case 's':
+          case 'S':
+            pthread_mutex_lock(&video_th_data->mutex);
+            video_th_data->interlace = !video_th_data->interlace;
+            pthread_mutex_unlock(&video_th_data->mutex);
             break;
           default:
             printf("key '%02X'\n", c);
@@ -1206,6 +1213,21 @@ sub_full:
   }
 }
 
+static unsigned baseaddr[192];
+static void init_base_addrs (void)
+{
+  unsigned int i, group_of_eight, line_of_eight, group_of_sixtyfour;
+
+  for (i = 0; i < 192; ++i)
+  {
+    line_of_eight = i % 8;
+    group_of_eight = (i % 64) / 8;
+    group_of_sixtyfour = i / 64;
+
+    baseaddr[i] = line_of_eight * 1024 + group_of_eight * 128 + group_of_sixtyfour * 40;
+  }
+}
+
 void *video_push(void *unused) {
   int i, j;
   int last_diff;
@@ -1223,8 +1245,12 @@ void *video_push(void *unused) {
   int vidstop;
   int last_offset = 0;
   int has_subtitles = 1;
+  int interlace = 0;
+  int accept_artefact = 0;
+
   i = 0;
   page = 1;
+  init_base_addrs();
 
   /* Reset stats */
   bytes_sent = data_bytes = offset_bytes = base_bytes = 0;
@@ -1317,6 +1343,8 @@ send:
 
   pthread_mutex_lock(&video_th_data->mutex);
   vidstop = video_th_data->stop;
+  interlace = video_th_data->interlace;
+  accept_artefact = video_th_data->accept_artefact;
   pthread_mutex_unlock(&video_th_data->mutex);
   if (vidstop) {
     printf("Video thread stopping\n");
@@ -1325,7 +1353,20 @@ send:
 
   gettimeofday(&frame_start, 0);
 
+  if (interlace) {
+    int line;
+    for (line = 1; line < 192; line+=2) {
+      int line_addr = baseaddr[line];
+      memset(buf[page]+line_addr, 0, 40);
+    }
+  }
+
   for (num_diffs = 0, j = 0; j < HGR_LEN; j++) {
+    // uint16_t offset = (uint16_t)j;
+    // uint8_t line  = ((offset & 0b0001110000000000) >> 10)
+    //                |((offset & 0b0000001110000000) >> 4)
+    //                |((offset & 0b0000000001100000) << 1);
+
     if (buf_prev[page][j] != buf[page][j]) {
       diffs[num_diffs]->offset = j;
       diffs[num_diffs]->changed = diff_score(buf_prev[page][j], buf[page][j]);

@@ -16,6 +16,8 @@ typedef struct _decode_data {
   char has_subtitles;
   uint8_t max_audio_volume;
   char *translit;
+  char interlace;
+  char accept_artefact;
 
   /* data */
   unsigned char *img_data;
