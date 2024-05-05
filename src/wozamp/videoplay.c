@@ -87,7 +87,7 @@ int main(void) {
   cputs("Loading...\r\n"
         "Controls: Space:      Play/Pause,             Esc: Quit player\r\n"
         "          Left/Right: Rewind/Forward,         Tab: Toggle subtitles\r\n"
-        "          -/=/+:      Volume up/default/down");
+        "          -/=/+:      Volume up/default/down  S:   Toggle speed/quality");
 
 read_metadata_again:
   if (kbhit()) {
