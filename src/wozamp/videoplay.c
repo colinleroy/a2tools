@@ -86,7 +86,11 @@ int main(void) {
   gotoxy(0, 20);
   cputs("Loading...\r\n"
         "Controls: Space:      Play/Pause,             Esc: Quit player\r\n"
-        "          Left/Right: Rewind/Forward,         Tab: Toggle subtitles\r\n"
+        "          Left/Right: Rewind/Forward,         ");
+  if (subtitles) {
+    cputs(                                             "Tab: Toggle subtitles");
+  }
+  cputs("\r\n"
         "          -/=/+:      Volume up/default/down  S:   Toggle speed/quality");
 
 read_metadata_again:
