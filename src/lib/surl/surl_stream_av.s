@@ -60,20 +60,11 @@ next          = _zp10           ; word - Next duty cycle address
 cur_base      = ptr1            ; word - Current HGR base to write to
 page_ptr_high = ptr4            ; word - Pointer to bases addresses (high byte) array
 zp_zero       = tmp1            ; byte - A zero in zero page (mostly to waste 3 cycles)
-zp_vflag      = tmp2            ; byte - A $40 in zero page (to set V flag)
 kbd_cmd       = tmp3            ; byte - Deferred keyboard command to handle
 
 ; ---------------------------------------------------------
 ;
 ; Macros
-
-.macro SEV_ZP                   ; We use V flag to track HGR page
-        bit     zp_vflag        ; dedicate a var because BIT #IMMEDIATE
-.endmacro                       ; does NOT affect V flag
-
-.macro SEV_ABS                  ; We use V flag to track HGR page
-        bit     abs_vflag       ; dedicate a var because BIT #IMMEDIATE
-.endmacro                       ; does NOT affect V flag
 
 ; ease cycle counting
 .macro WASTE_2                  ; Cycles wasters
@@ -1145,11 +1136,6 @@ setup:
         stz     cur_mix
         stz     next_offset
 
-        ; Vars to emulate "sev" (set overflow), in either 3 or 4 cycles
-        lda     #$40
-        sta     zp_vflag
-        sta     abs_vflag
-
         ; Setup serial registers
         jsr     patch_serial_registers
 
@@ -1860,7 +1846,6 @@ page1_addrs_arr_high:.res (N_BASES+4+1)          ; also $7F & $55 = $55
 page_addrs_arr: .byte >(page1_addrs_arr_high)     ; Inverted because we write to page 1
                 .byte >(page0_addrs_arr_high)     ; when page 0 is active, and vice-versa
 
-abs_vflag:      .byte $40
 enable_subs:    .byte $1
 
 .align $100
