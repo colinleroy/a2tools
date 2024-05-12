@@ -345,26 +345,26 @@ no_crop:
     __asm__("pha");
     __asm__("asl");
     __asm__("tay");
-    __asm__("lda (%v),y", cur_orig_y);    /* patch cur_orig_y in loop */
-    __asm__("sta %g+1", cur_orig_y_addr);
+    __asm__("lda (%v),y", cur_orig_y);
+    __asm__("sta %v", cur_y);
     __asm__("iny");
     __asm__("lda (%v),y", cur_orig_y);
-    __asm__("sta %g+2", cur_orig_y_addr);
+    __asm__("sta %v+1", cur_y);
     __asm__("clc");
 
     __asm__("ldy #0");
     next_x:
-    /* *cur_y += *cur_orig_x; */
+    /* cur_y += *cur_orig_x; */
     __asm__("lda (%v),y", cur_orig_x);
-    __asm__("adc %g+1", cur_orig_y_addr);
-    __asm__("sta %g+1", cur_orig_y_addr);
+    __asm__("adc %v", cur_y);
+    __asm__("sta %v", cur_y);
     __asm__("bcc %g", cur_orig_y_addr);
-    __asm__("inc %g+2", cur_orig_y_addr);
+    __asm__("inc %v+1", cur_y);
     __asm__("clc");
     cur_orig_y_addr:
     /* *dst_ptr = *(cur_y); */
-    __asm__("lda $FFFF"); /* Patched */
-    __asm__("sta (%v)", dst_ptr);
+    __asm__("lda (%v)", cur_y);
+    __asm__("sta (%v),y", dst_ptr);
 
     /* histogram[*dst_ptr]++; */
     __asm__("asl a");
@@ -373,27 +373,24 @@ no_crop:
     __asm__("clc");
     /* Second page of histogram */
     __asm__("inc %v+256,x", histogram);
-    __asm__("bne %g", inc_dst);
+    __asm__("bne %g", noof7);
     __asm__("inx");
     __asm__("inc %v+256,x", histogram);
-    goto inc_dst;
+    goto noof7;
     noof6:
     /* first page of histogram */
     __asm__("inc %v,x", histogram);
-    __asm__("bne %g", inc_dst);
+    __asm__("bne %g", noof7);
     __asm__("inx");
     __asm__("inc %v,x", histogram);
-
-    inc_dst:
-    /* dst_ptr++; */
-    __asm__("inc %v", dst_ptr);
-    __asm__("bne %g", noof7);
-    __asm__("inc %v+1", dst_ptr);
 
     noof7:
     /* ++cur_orig_x */
     __asm__("iny");
     __asm__("bne %g", next_x);
+
+  /* Increment dst_ptr by FILE_WIDTH (256) */
+  __asm__("inc %v+1", dst_ptr);
 
   /* y_len? */
   __asm__("pla");
