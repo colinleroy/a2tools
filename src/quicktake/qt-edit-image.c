@@ -554,31 +554,45 @@ static uint8 thumb_buf[THUMB_WIDTH * 2];
 void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint16 p_height, uint8 serial_model) {
   /* Rotation/cropping variables */
   uint8 start_x, i;
-  uint8 x, end_x, y;
-  uint16 dx;
+  uint8 y;
+  uint8 dx;
 
   uint16 dy;
-  uint16 off_x, off_y;
+  uint8 off_x;
+  uint16 off_y;
   uint16 file_width;
   uint8 *cur_buf_page;
+
+  uint8 *shifted_div7_table = div7_table + 0;
+  uint8 *shifted_mod7_table = mod7_table + 0;
+
 #ifdef __CC65__
   #define cur_hgr_baseaddr_ptr zp2ip
-  #define cur_hgr_baseaddr_val zp4p
-  #define cur_d7 zp6p
-  #define cur_m7 zp8p
+  
+  #define d7 zp6s //FIXME using "zp6" here is compiled with the ZP var replaced by a local var (M0003)
+  #define m7 zp7
+  #define x zp8
+  #define end_x zp9
   #define buf_ptr zp10p
   #define ptr zp12p
 #else
   uint8 **cur_hgr_baseaddr_ptr;
   uint8 *cur_hgr_baseaddr_val; /* shortcut ptr */
   uint8 *buf_ptr;
-  uint8 *cur_d7, *cur_m7;
   uint8 *ptr;
+  uint8 scaled_dx, scaled_dy;
+  uint8 m7;
+  uint8 x;
+  uint8 end_x;
+  uint8 d7;
 #endif
-  uint8 scaled_dx, scaled_dy, prev_scaled_dx, prev_scaled_dy;
-  int8 xdir = 1, ydir = 1;
-  int8 err2, err1;
 
+  uint8 prev_scaled_dx, prev_scaled_dy;
+  int8 xdir = 1, ydir = 1;
+  int8 err2;
+#ifndef __CC65__
+  int8 err1;
+#endif
   uint8 invert_coords = 0;
 
   /* Used for both Sierra and Bayer */
@@ -642,14 +656,21 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
   /* Setup offsets and directions */
   switch (angle) {
     case 0:
-      off_x = X_OFFSET;
+      off_x = 0;
       off_y = (HGR_HEIGHT - file_height) / 2;
+      shifted_div7_table = div7_table + X_OFFSET;
+      shifted_mod7_table = mod7_table + X_OFFSET;
 #ifndef __CC65__
       cur_hgr_baseaddr_ptr = (hgr_baseaddr + off_y);
       cur_hgr_baseaddr_val = *cur_hgr_baseaddr_ptr;
 #else
       cur_hgr_baseaddr_ptr = (uint16 *)(hgr_baseaddr + off_y);
-      cur_hgr_baseaddr_val = (uint8 *)*cur_hgr_baseaddr_ptr;
+      //cur_hgr_baseaddr_val = (uint8 *)*cur_hgr_baseaddr_ptr;
+      __asm__("lda (%v)", cur_hgr_baseaddr_ptr);
+      __asm__("sta %g+1", cur_hgr_baseaddr_val_low);
+      __asm__("ldy #1");
+      __asm__("lda (%v),y", cur_hgr_baseaddr_ptr);
+      __asm__("sta %g+1", cur_hgr_baseaddr_val_high);
 #endif
       xdir = +1;
       ydir = +1;
@@ -683,14 +704,23 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
       invert_coords = 1;
       break;
     case 180:
-      off_x = HGR_WIDTH - X_OFFSET;
+      off_x = file_width - 1;
       off_y = file_height - 1;
+
+      shifted_div7_table = div7_table + X_OFFSET;
+      shifted_mod7_table = mod7_table + X_OFFSET;
+
 #ifndef __CC65__
       cur_hgr_baseaddr_ptr = (hgr_baseaddr + off_y);
       cur_hgr_baseaddr_val = *cur_hgr_baseaddr_ptr;
 #else
       cur_hgr_baseaddr_ptr = (uint16 *)(hgr_baseaddr + off_y);
-      cur_hgr_baseaddr_val = (uint8 *)*cur_hgr_baseaddr_ptr;
+      // cur_hgr_baseaddr_val = (uint8 *)*cur_hgr_baseaddr_ptr;
+      __asm__("lda (%v)", cur_hgr_baseaddr_ptr);
+      __asm__("sta %g+1", cur_hgr_baseaddr_val_low);
+      __asm__("ldy #1");
+      __asm__("lda (%v),y", cur_hgr_baseaddr_ptr);
+      __asm__("sta %g+1", cur_hgr_baseaddr_val_high);
 #endif
       xdir = -1;
       ydir = -1;
@@ -703,7 +733,11 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
   end_bayer_map_y = bayer_map_y + 64;
 
   cur_buf_page = buffer; /* Init once (in case of thumbnail) */
-  for(y = 0, dy = off_y; y != file_height;) {
+  y = 0;
+  dy = off_y;
+
+  next_y:
+  //for (y = 0, dy = off_y; y != file_height;) {
 
     /* Load data from file */
     if (!is_thumb) {
@@ -724,7 +758,7 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
       __asm__("and #3");
       __asm__("beq %g", read_buf);
       __asm__("inc %v+1", cur_buf_page);
-      goto dither;
+      __asm__("jmp %g", compute_coords);
       read_buf:
       fread(buffer, 1, BLOCK_SIZE*2, ifp);
       __asm__("lda #>(%v)", buffer);
@@ -818,10 +852,7 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
       }
     }
 
-#ifdef __CC65__
-    dither:
-#endif
-
+#ifndef __CC65__
     /* Calculate hgr base coordinates for the line */
     if (invert_coords) {
       if (resize) {
@@ -835,17 +866,62 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
       } else {
         scaled_dy = dy;
       }
-      cur_hgr_row = div7_table[scaled_dy];
-      cur_hgr_mod = mod7_table[scaled_dy];
+      cur_hgr_row = shifted_div7_table[scaled_dy];
+      cur_hgr_mod = shifted_mod7_table[scaled_dy];
     }
-#ifndef __CC65__
+
+    //dither_line:
     x = start_x;
     buf_ptr = cur_buf_page + x;
     dx = off_x;
 
-    cur_d7 = div7_table + dx;
-    cur_m7 = mod7_table + dx;
+    d7 = *(shifted_div7_table + dx);
+    m7 = *(shifted_mod7_table + dx);
 #else
+    compute_coords:
+    /* Calculate hgr base coordinates for the line */
+    __asm__("lda %v", invert_coords);
+    __asm__("beq %g", dither_line);
+
+    __asm__("ldy %v", resize);
+    __asm__("beq %g", no_resize);
+
+    //scaled_dy = (dy + (dy << 1)) >> 2;  /* *3/4 */
+    __asm__("lda %v", dy);
+    __asm__("ldx %v+1", dy);
+    __asm__("stx tmp1");
+    __asm__("asl a");
+    __asm__("rol tmp1");
+
+    __asm__("adc %v", dy);
+    __asm__("tay"); /* backup low byte */
+    __asm__("lda %v+1", dy);
+    __asm__("adc tmp1");
+    __asm__("lsr a");
+    __asm__("sta tmp1");
+
+    __asm__("tya");
+    __asm__("ror a");
+    __asm__("lsr tmp1");
+    __asm__("ror a");
+
+    __asm__("cmp %v", prev_scaled_dy);
+    __asm__("beq %g", next_line);
+
+    __asm__("sta %v", prev_scaled_dy);
+
+    __asm__("tay"); /* scaled_dy not > 255 here */
+    __asm__("bra %g", set_hgr);
+
+    no_resize:
+    __asm__("ldy %v", dy); /* dy not > 255 here */
+    set_hgr:
+    __asm__("lda %v,y", div7_table); /* Not shifted, there* */
+    __asm__("sta %v", cur_hgr_row);
+    __asm__("lda %v,y", mod7_table);
+    __asm__("sta %v", cur_hgr_mod);
+
+    dither_line:
     __asm__("lda %v", start_x);
     __asm__("sta %v", x);
 
@@ -861,26 +937,41 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
 
     __asm__("lda %v", off_x);
     __asm__("sta %v", dx);
-    __asm__("ldx %v+1", off_x);
-    __asm__("stx %v+1", dx);
 
     __asm__("tay"); /* backup dx low */
-    __asm__("adc #<(%v)", div7_table);
-    __asm__("sta %v", cur_d7);
-    __asm__("txa");
-    __asm__("adc #>(%v)", div7_table);
-    __asm__("sta %v+1", cur_d7);
+    __asm__("adc %v", shifted_div7_table);
+    __asm__("sta ptr1");
+    __asm__("lda #0");
+    __asm__("adc %v+1", shifted_div7_table);
+    __asm__("sta ptr1+1");
+
+    __asm__("lda (ptr1)");
+    __asm__("sta %v", d7);
 
     __asm__("tya"); /* restore dx low */
-    __asm__("adc #<(%v)", mod7_table);
-    __asm__("sta %v", cur_m7);
-    __asm__("txa");
-    __asm__("adc #>(%v)", mod7_table);
-    __asm__("sta %v+1", cur_m7);
+    __asm__("adc %v", shifted_mod7_table);
+    __asm__("sta ptr1");
+    __asm__("lda #0");
+    __asm__("adc %v+1", shifted_mod7_table);
+    __asm__("sta ptr1+1");
+
+    __asm__("lda (ptr1)");
+    __asm__("sta %v", m7);
 #endif
 
-    if (dither_alg == DITHER_SIERRA) {
 #ifndef __CC65__
+    if (dither_alg == DITHER_SIERRA) {
+      goto prepare_dither_sierra;
+    } else if (dither_alg == DITHER_NONE) {
+      goto prepare_dither_done;
+    } // else prepare_dither_bayer
+
+    //prepare_dither_bayer:
+      bayer_map_x = bayer_map_y + 0;
+      end_bayer_map_x = bayer_map_x + 8;
+      goto prepare_dither_done;
+
+    prepare_dither_sierra:
       /* Rollover next error line */
       int8 *tmp = cur_err_line;
 
@@ -894,6 +985,27 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
 
       err2 = 0;
 #else
+    __asm__("lda %v", dither_alg);
+    __asm__("beq %g", prepare_dither_sierra);
+    __asm__("cmp #%b", DITHER_NONE);
+    __asm__("beq %g", prepare_dither_done);
+
+    //prepare_dither_bayer:
+      __asm__("lda %v", bayer_map_y);
+      __asm__("sta %v", bayer_map_x);
+      __asm__("ldx %v+1", bayer_map_y);
+      __asm__("stx %v+1", bayer_map_x);
+
+      __asm__("clc");
+      __asm__("adc #8");
+      __asm__("bcc %g", noof13);
+      __asm__("inx");
+      noof13:
+      __asm__("sta %v", end_bayer_map_x);
+      __asm__("stx %v+1", end_bayer_map_x);
+      __asm__("bra %g", prepare_dither_done);
+
+    prepare_dither_sierra:
       /* swap cur/next low bytes */
       __asm__("ldy %v", cur_err_line);
       __asm__("lda %v", next_err_line);
@@ -937,13 +1049,11 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
       __asm__("stx %v+1", cur_err_x_yplus1);
 #endif
 
-    } else if (dither_alg == DITHER_BAYER) {
-      bayer_map_x = bayer_map_y + 0;
-      end_bayer_map_x = bayer_map_x + 8;
-    }
+    prepare_dither_done:
 
     /* Column loop */
     next_x:
+#ifndef __CC65__
       /* Get destination pixel */
       if (invert_coords) {
         if (resize) {
@@ -960,34 +1070,99 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
         ptr = hgr_baseaddr[scaled_dx] + cur_hgr_row;
         pixel = cur_hgr_mod;
       } else {
-#ifndef __CC65__
-        ptr = cur_hgr_baseaddr_val + *cur_d7;
-        pixel = *cur_m7;
-#else
-        __asm__("ldx %v+1", cur_hgr_baseaddr_val);
-        __asm__("lda %v", cur_hgr_baseaddr_val);
-        __asm__("clc");
-        __asm__("adc (%v)", cur_d7);
-        __asm__("sta %v", ptr);
-        __asm__("bcc %g", noof1);
-        __asm__("inx");
-        noof1:
-        __asm__("stx %v+1", ptr);
-
-        __asm__("lda (%v)", cur_m7);
-        __asm__("sta %v", pixel);
-#endif
+        ptr = cur_hgr_baseaddr_val + d7;
+        pixel = m7;
       }
+#else
+      /* Get destination pixel */
+      __asm__("lda %v", invert_coords);
+      __asm__("beq %g", set_pixel_coords);
+
+      __asm__("ldy %v", resize);
+      __asm__("beq %g", no_resize_pixel);
+
+      //scaled_dx = (dx + (dx << 1)) >> 2;  /* *3/4 */
+      __asm__("lda %v", dx);
+      __asm__("stz tmp1");
+      __asm__("asl a");
+      __asm__("rol tmp1");
+
+      __asm__("adc %v", dx);
+      __asm__("tay"); /* backup low byte */
+
+      __asm__("lda #0");
+      __asm__("adc tmp1");
+      __asm__("lsr a");
+      __asm__("sta tmp1");
+
+      __asm__("tya");
+      __asm__("ror a");
+      __asm__("lsr tmp1");
+      __asm__("ror a");
+
+      __asm__("cmp %v", prev_scaled_dx);
+      __asm__("beq %g", next_pixel);
+
+      __asm__("sta %v", prev_scaled_dx);
+
+      __asm__("bra %g", inv_pixel_coords);
+
+      no_resize_pixel:
+      __asm__("lda %v", dx);
+      inv_pixel_coords:
+
+      //ptr = hgr_baseaddr[scaled_dx] + cur_hgr_row;
+      __asm__("ldx #>(%v)", hgr_baseaddr);
+      __asm__("asl a");
+      __asm__("bcc %g", noof15);
+      __asm__("inx");
+      __asm__("clc");
+      noof15:
+      __asm__("adc #<(%v)", hgr_baseaddr);
+      __asm__("bcc %g", noof16);
+      __asm__("inx");
+      __asm__("clc");
+      noof16:
+      __asm__("stx ptr1+1");
+      __asm__("sta ptr1");
+      __asm__("ldy #1");
+      __asm__("lda (ptr1),y");
+      __asm__("sta %v+1", ptr);
+      __asm__("lda (ptr1)");
+
+      __asm__("adc %v", cur_hgr_row);
+      __asm__("bcc %g", noof17);
+      __asm__("inc %v+1", ptr);
+      noof17:
+      __asm__("sta %v", ptr);
+
+      //pixel = cur_hgr_mod;
+      __asm__("lda %v", cur_hgr_mod);
+      __asm__("sta %v", pixel);
+
+      __asm__("bra %g", dither_pixel);
+
+      set_pixel_coords:
+      cur_hgr_baseaddr_val_high:
+      __asm__("ldx #$FF"); // PATCHED
+      cur_hgr_baseaddr_val_low:
+      __asm__("lda #$FF"); // PATCHED
+      __asm__("clc");
+      __asm__("adc %v", d7);
+      __asm__("sta %v", ptr);
+      __asm__("bcc %g", noof1);
+      __asm__("inx");
+      noof1:
+      __asm__("stx %v+1", ptr);
+
+      __asm__("lda %v", m7);
+      __asm__("sta %v", pixel);
+
+      dither_pixel:
+#endif
 
 #ifndef __CC65__
       opt_val = opt_histogram[*buf_ptr];
-#else
-      /* Compensate optimizer */
-      __asm__("lda   (%v)", buf_ptr);
-      __asm__("tay");
-      __asm__("lda %v,y",   opt_histogram);
-      __asm__("sta %v",     opt_val);
-#endif
       if (brighten) {
         int16 t = opt_val + brighten;
         if (t < 0)
@@ -997,28 +1172,50 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
         else
           opt_val = t;
       }
+#else
+      //opt_val = opt_histogram[*buf_ptr];
+      __asm__("lda   (%v)", buf_ptr);
+      __asm__("tay");
+      __asm__("lda %v,y",   opt_histogram);
+      __asm__("sta %v",     opt_val);
+
+      //if (brighten) {
+      __asm__("ldy %v", brighten);
+      __asm__("beq %g", no_brighten);
+
+      __asm__("ldx #0");
+      __asm__("lda %v", brighten);
+      __asm__("bpl %g", brighten_pos);
+      __asm__("dex");
+      brighten_pos:
+      __asm__("adc %v", opt_val);
+      __asm__("bcc %g", noof18);
+      __asm__("inx");
+      noof18:
+      __asm__("cpx #0");
+      __asm__("beq %g", store_opt);
+      __asm__("bpl %g", pos_opt);
+      __asm__("stz %v", opt_val);
+      __asm__("bra %g", no_brighten);
+      pos_opt:
+      __asm__("lda #$FF");
+      store_opt:
+      __asm__("sta %v", opt_val);
+      no_brighten:
+#endif
 
       /* Dither */
-
 #ifndef __CC65__
       if (dither_alg == DITHER_SIERRA) {
         goto dither_sierra;
       } else if (dither_alg == DITHER_NONE) {
         goto dither_none;
       } // else dither_bayer
-#else
-      __asm__("lda %v", dither_alg);
-      __asm__("beq %g", dither_sierra);
-      __asm__("cmp #%b", DITHER_NONE);
-      __asm__("beq %g", dither_none);
-#endif
 
       //dither_bayer:
-        buf_plus_err = opt_val;
-#ifndef __CC65__
-        buf_plus_err += *bayer_map_x;
+        opt_val += *bayer_map_x;
 
-        if (buf_plus_err < DITHER_THRESHOLD) {
+        if (opt_val < DITHER_THRESHOLD) {
           x86_64_tgi_set(dx, y, TGI_COLOR_BLACK);
         } else {
           *ptr |= pixel;
@@ -1029,23 +1226,57 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
         bayer_map_x++;
         if (bayer_map_x == end_bayer_map_x)
           bayer_map_x = bayer_map_y + 0;
+
+        goto next_pixel;
+
+      dither_none:
+        if (opt_val < DITHER_THRESHOLD) {
+          x86_64_tgi_set(dx, y, TGI_COLOR_BLACK);
+        } else {
+          *ptr |= pixel;
+          x86_64_tgi_set(dx, y, TGI_COLOR_WHITE);
+        }
+        goto next_pixel;
+
+      dither_sierra:
+        buf_plus_err = opt_val + err2;
+        buf_plus_err += *(cur_err_x_y+x);
+        if (buf_plus_err < DITHER_THRESHOLD) {
+          /* pixel's already black */
+          x86_64_tgi_set(dx, y, TGI_COLOR_BLACK);
+        } else {
+          *ptr |= pixel;
+          x86_64_tgi_set(dx, y, TGI_COLOR_WHITE);
+        }
+        err2 = ((int8)buf_plus_err) >> 1; /* cur_err * 2 / 4 */
+        err1 = err2 >> 1;    /* cur_err * 1 / 4 */
+
+        *(cur_err_x_yplus1+x)   += err1;
+        if (x > 0) {
+          *(cur_err_x_yplus1+x-1)    += err1;
+        }
+
 #else
+      __asm__("lda %v", dither_alg);
+      __asm__("beq %g", dither_sierra);
+      __asm__("cmp #%b", DITHER_NONE);
+      __asm__("beq %g", dither_none);
+
+      //dither_bayer:
         __asm__("ldx #$00");
         __asm__("lda (%v)", bayer_map_x);
         __asm__("bpl %g", positive_b);
         __asm__("dex");
         positive_b:
         __asm__("clc");
-        __asm__("adc %v", buf_plus_err);
-        __asm__("sta %v", buf_plus_err);
+        __asm__("adc %v", opt_val);
+        __asm__("tay"); /* Backup low byte */
         __asm__("txa");
-        __asm__("adc %v+1", buf_plus_err);
-        __asm__("sta %v+1", buf_plus_err);
+        __asm__("adc #0");
 
         __asm__("bmi %g", black_pix_bayer);
         __asm__("bne %g", white_pix_bayer);
-        __asm__("lda %v", buf_plus_err);
-        __asm__("cmp #<(%b)", DITHER_THRESHOLD);
+        __asm__("cpy #<(%b)", DITHER_THRESHOLD);
         __asm__("bcc %g", black_pix_bayer);
         white_pix_bayer:
         __asm__("lda (%v)", ptr);
@@ -1067,32 +1298,20 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
         __asm__("stx %v+1", bayer_map_x);
         bayer_map_x_done:
         __asm__("sta %v", bayer_map_x);
-#endif
-        goto dither_done;
+
+        __asm__("bra %g", next_pixel);
 
       dither_none:
-        if (opt_val < DITHER_THRESHOLD) {
-          x86_64_tgi_set(dx, y, TGI_COLOR_BLACK);
-        } else {
-          *ptr |= pixel;
-          x86_64_tgi_set(dx, y, TGI_COLOR_WHITE);
-        }
-        goto dither_done;
+        __asm__("lda %v", opt_val);
+        __asm__("cmp #<(%b)", DITHER_THRESHOLD);
+        __asm__("bcc %g", next_pixel);
+
+        __asm__("lda (%v)", ptr);
+        __asm__("ora %v", pixel);
+        __asm__("sta (%v)", ptr);
+        __asm__("bra %g", next_pixel);
 
       dither_sierra:
-#ifndef __CC65__
-        buf_plus_err = opt_val + err2;
-        buf_plus_err += *(cur_err_x_y+x);
-        if (buf_plus_err < DITHER_THRESHOLD) {
-          /* pixel's already black */
-          x86_64_tgi_set(dx, y, TGI_COLOR_BLACK);
-        } else {
-          *ptr |= pixel;
-          x86_64_tgi_set(dx, y, TGI_COLOR_WHITE);
-        }
-        err2 = ((int8)buf_plus_err) >> 1; /* cur_err * 2 / 4 */
-        err1 = err2 >> 1;    /* cur_err * 1 / 4 */
-#else
         __asm__("ldx #$00");
         __asm__("lda %v", err2);
         __asm__("bpl %g", pos_err2);
@@ -1113,69 +1332,69 @@ void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width,
         positive_s:
         __asm__("clc");
         __asm__("adc %v", buf_plus_err);
-        __asm__("sta %v", buf_plus_err);
+        __asm__("tay"); /* Backup low byte */
+
         __asm__("txa");
         __asm__("adc %v+1", buf_plus_err);
-        __asm__("sta %v+1", buf_plus_err);
 
-        __asm__("bmi %g", black_pix);
+        /* High byte negative */
+        __asm__("bmi %g", forward_err);
+        /* High byte not zero */
         __asm__("bne %g", white_pix);
-        __asm__("lda %v", buf_plus_err);
+
+        /* Must check low byte */
+        __asm__("tya"); /* Restore low byte */
         __asm__("cmp #<(%b)", DITHER_THRESHOLD);
-        __asm__("bcc %g", black_pix_direct);
+        __asm__("bcc %g", forward_err_direct);
         white_pix:
         __asm__("lda (%v)", ptr);
         __asm__("ora %v", pixel);
         __asm__("sta (%v)", ptr);
 
-        black_pix:
-        __asm__("lda %v", buf_plus_err);
-        black_pix_direct:
+        forward_err:
+        __asm__("tya"); /* Restore low byte */
+        forward_err_direct:
         __asm__("cmp #$80");
         __asm__("ror a");
         __asm__("sta %v", err2);
         __asm__("cmp #$80");
         __asm__("ror a");
-        __asm__("sta %v", err1);
-#endif
+        __asm__("tax"); /* Backup err1 to X */
 
-#ifndef __CC65__
-        if (x > 0) {
-          *(cur_err_x_yplus1+x-1)    += err1;
-        }
-#else
+        // *(cur_err_x_yplus1+x)   += err1;
         __asm__("ldy %v", x);
-        __asm__("beq %g", x_zero);
-          __asm__("dey");
-          __asm__("lda (%v),y", cur_err_x_yplus1);
-          __asm__("clc");
-          __asm__("adc %v", err1);
-          __asm__("sta (%v),y", cur_err_x_yplus1);
-        x_zero:
-#endif
-
-#ifndef __CC65__
-        *(cur_err_x_yplus1+x)   += err1;
-#else
-        __asm__("ldy %v", x);
-        __asm__("lda (%v),y", cur_err_x_yplus1);
         __asm__("clc");
-        __asm__("adc %v", err1);
+        __asm__("adc (%v),y", cur_err_x_yplus1);
         __asm__("sta (%v),y", cur_err_x_yplus1);
-#endif
 
-      dither_done:
+        // if (x > 0) {
+        //   *(cur_err_x_yplus1+x-1)    += err1;
+        // }
+        __asm__("cpy #0");
+        __asm__("beq %g", next_pixel);
+          __asm__("dey");
+          __asm__("txa"); /* Restore err1 */
+          __asm__("clc");
+          __asm__("adc (%v),y", cur_err_x_yplus1);
+          __asm__("sta (%v),y", cur_err_x_yplus1);
+#endif
 
 next_pixel:
 #ifndef __CC65__
       if (xdir < 0) {
         dx--;
-        cur_d7--;
-        cur_m7--;
+        m7 >>= 1;
+        if (m7 == 0x00) {
+          m7 = 0x40;
+          d7--;
+        }
       } else {
         dx++;
-        cur_d7++;
-        cur_m7++;
+        m7 <<= 1;
+        if (m7 == 0x80) {
+          m7 = 0x01;
+          d7++;
+        }
       }
       x++;
       buf_ptr++;
@@ -1202,21 +1421,40 @@ next_pixel:
 #else
       __asm__("lda %v", xdir);
       __asm__("bmi %g", dec_counters);
-        dx++;
-        cur_d7++;
-        cur_m7++;
-        __asm__("bra %g", inc_x);
+      __asm__("inc %v", dx);
+
+      __asm__("asl %v", m7);
+      __asm__("bpl %g", inc_x);
+
+      __asm__("lda #1");
+      __asm__("sta %v", m7);
+      __asm__("inc %v", d7);
+
+      goto inc_x;
+
       dec_counters:
-        dx--;
-        cur_d7--;
-        cur_m7--;
+      // __asm__("lda %v", dx);
+      // __asm__("bne %g", nouf_dx);
+      // __asm__("dec %v+1", dx);
+      // nouf_dx:
+      __asm__("dec %v", dx);
+
+      __asm__("lsr %v", m7);
+      __asm__("bne %g", inc_x);
+      __asm__("lda #$40");
+      __asm__("sta %v", m7);
+      __asm__("dec %v", d7);
+
       inc_x:
-      buf_ptr++;
-      
-      __asm__("lda %v", x);
+
+      __asm__("inc %v", buf_ptr);
+      __asm__("bne %g", noof_bptr);
+      __asm__("inc %v+1", buf_ptr);
+      noof_bptr:
+
       //x++;
-      __asm__("inc a");
-      __asm__("sta %v", x);
+      __asm__("inc %v", x);
+      __asm__("lda %v", x);
 
       // if (x != end_x)
       //   goto next_x;
@@ -1237,27 +1475,46 @@ next_pixel:
     __asm__("lda %v", dither_alg);
     __asm__("cmp #%b", DITHER_BAYER);
     __asm__("bne %g", no_bayer);
+
       /* Advance Bayer Y */
-      bayer_map_y += 8;
-      if (bayer_map_y == end_bayer_map_y) {
-        bayer_map_y = bayer_map + 0;
-      }
+      __asm__("lda %v", bayer_map_y);
+      __asm__("ldx %v+1", bayer_map_y);
+      __asm__("clc");
+      __asm__("adc #8");
+      __asm__("bcc %g", noof14);
+      __asm__("inx");
+      noof14:
+      __asm__("cmp %v", end_bayer_map_y);
+      __asm__("bne %g", store_bayer_y);
+      __asm__("cpx %v+1", end_bayer_map_y);
+      __asm__("bne %g", store_bayer_y);
+
+      __asm__("lda #<(%v)", bayer_map);
+      __asm__("ldx #>(%v)", bayer_map);
+
+      store_bayer_y:
+      __asm__("sta %v", bayer_map_y);
+      __asm__("stx %v+1", bayer_map_y);
+
     no_bayer:
 
 #endif
-    
+
 next_line:
 #ifndef __CC65__
     if (ydir < 0) {
       cur_hgr_baseaddr_ptr--;
-      cur_hgr_baseaddr_val = *cur_hgr_baseaddr_ptr;
       dy--;
     } else {
       cur_hgr_baseaddr_ptr++;
-      cur_hgr_baseaddr_val = *cur_hgr_baseaddr_ptr;
       dy++;
     }
+    cur_hgr_baseaddr_val = *cur_hgr_baseaddr_ptr;
+
     y++;
+    if (y != file_height) {
+      goto next_y;
+    }
 #else
     __asm__("lda %v", ydir);
     __asm__("bmi %g", dec_ycounters);
@@ -1267,7 +1524,7 @@ next_line:
       __asm__("adc #2");
       __asm__("bcc %g", finish_inc);
       __asm__("inc %v+1", cur_hgr_baseaddr_ptr);
-      goto finish_inc;
+      __asm__("bra %g", finish_inc);
 
     dec_ycounters:
       dy--;
@@ -1279,13 +1536,19 @@ next_line:
     finish_inc:
     __asm__("sta %v", cur_hgr_baseaddr_ptr);
     __asm__("lda (%v)", cur_hgr_baseaddr_ptr);
-    __asm__("sta %v", cur_hgr_baseaddr_val);
-    __asm__("ldy #$01");
+
+    __asm__("sta %g+1", cur_hgr_baseaddr_val_low);
+    __asm__("ldy #1");
     __asm__("lda (%v),y", cur_hgr_baseaddr_ptr);
-    __asm__("sta %v+1", cur_hgr_baseaddr_val);
-    y++;
+    __asm__("sta %g+1", cur_hgr_baseaddr_val_high);
+
+    __asm__("inc %v", y);
+    __asm__("lda %v", y);
+    __asm__("cmp %v", file_height);
+    __asm__("bne %g", next_y);
 #endif
-  }
+
+
   progress_bar(-1, -1, scrw, file_height, file_height);
 stop:
   fclose(ifp);

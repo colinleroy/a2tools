@@ -226,10 +226,9 @@ last_val          = _zp12
 ; Don't put this one in LC as it is patched on runtime
 _qt_load_raw:
         cmp     #$00
-        bne     :+
+        bne     not_top
         cpx     #$00
-        beq     top
-:       jmp     not_top
+        bne     not_top
 
 top:    jsr     _reset_bitbuff  ; Yes. Initialize things
 

@@ -254,12 +254,12 @@ static void write_raw(uint16 h)
 {
 #ifdef __CC65__
   #define dst_ptr zp6p
-  #define cur_y zp8p
+  #define cur zp8p
   #define cur_orig_x zp10p
   #define cur_orig_y zp12ip
 #else
   uint8 *dst_ptr;
-  uint8 *cur_y;
+  uint8 *cur;
   uint8 *cur_orig_x;
   uint8 **cur_orig_y;
   static uint16 x_len;
@@ -281,11 +281,11 @@ static void write_raw(uint16 h)
   cur_orig_y = orig_y_table + 0;
   do {
     cur_orig_x = orig_x_offset + 0;
-    cur_y = *cur_orig_y;
+    cur = *cur_orig_y;
     x_len = FILE_WIDTH;
     do {
-      cur_y += *cur_orig_x;
-      *dst_ptr = *(cur_y);
+      cur += *cur_orig_x;
+      *dst_ptr = *(cur);
       histogram[*dst_ptr]++;
       cur_orig_x++;
       dst_ptr ++;
@@ -346,24 +346,24 @@ no_crop:
     __asm__("asl");
     __asm__("tay");
     __asm__("lda (%v),y", cur_orig_y);
-    __asm__("sta %v", cur_y);
+    __asm__("sta %v", cur);
     __asm__("iny");
     __asm__("lda (%v),y", cur_orig_y);
-    __asm__("sta %v+1", cur_y);
+    __asm__("sta %v+1", cur);
     __asm__("clc");
 
     __asm__("ldy #0");
     next_x:
-    /* cur_y += *cur_orig_x; */
+    /* cur += *cur_orig_x; */
     __asm__("lda (%v),y", cur_orig_x);
-    __asm__("adc %v", cur_y);
-    __asm__("sta %v", cur_y);
+    __asm__("adc %v", cur);
+    __asm__("sta %v", cur);
     __asm__("bcc %g", cur_orig_y_addr);
-    __asm__("inc %v+1", cur_y);
+    __asm__("inc %v+1", cur);
     __asm__("clc");
     cur_orig_y_addr:
-    /* *dst_ptr = *(cur_y); */
-    __asm__("lda (%v)", cur_y);
+    /* *dst_ptr = *(cur); */
+    __asm__("lda (%v)", cur);
     __asm__("sta (%v),y", dst_ptr);
 
     /* histogram[*dst_ptr]++; */
