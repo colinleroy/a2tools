@@ -9,7 +9,7 @@ uint8 qt_view_image(const char *filename);
 void finish_img_view(void);
 void get_program_disk(void);
 
-void convert_temp_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint16 p_height, uint8 serial_model);
+void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint16 p_height, uint8 serial_model);
 
 void hgr_print(void);
 #endif

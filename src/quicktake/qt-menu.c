@@ -300,7 +300,7 @@ err_thumb_io:
     tmp = i;
     state_set(STATE_PREVIEW, tmp, NULL);
     sprintf(thumb_buf, "Thumbnail %d", i);
-    convert_temp_to_hgr(THUMBNAIL_NAME, thumb_buf, THUMB_WIDTH*2, THUMB_HEIGHT*2, serial_model);
+    dither_to_hgr(THUMBNAIL_NAME, thumb_buf, THUMB_WIDTH*2, THUMB_HEIGHT*2, serial_model);
 
     clrscr();
     gotoxy(0,20);
