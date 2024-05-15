@@ -1768,7 +1768,7 @@ video_spkr_sub:                 ; Alternate entry point for duty cycle 30
 
 ; Video handler expects the video byte in Y register, and the N flag set by
 ; its loading.
-; Video handler must take 31 cycles on every code path.
+; Video handler must take 26 cycles on every code path.
 
 video_sub:
         bcc     @maybe_control          ; 2/3   Is it a data byte?
