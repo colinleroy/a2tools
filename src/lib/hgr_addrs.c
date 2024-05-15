@@ -46,64 +46,48 @@ void init_hgr_base_addrs (void)
   __asm__("sty %v", y);
   // for (y = 0; y < HGR_HEIGHT; ++y)
   // {
+  __asm__("ldx #0"); /* Iterating over y with x, because we'll need ,y */
   next_y:
-    /* use x as temporary variable */
-    __asm__("lda #<%w", HGR_PAGE);
-    __asm__("sta %v", x);
-    __asm__("lda #>%w", HGR_PAGE);
-    __asm__("sta %v+1", x);
+    /* ABCDEFGH -> pppFGHCD EABAB000 */
+    __asm__("txa");
+    /* ABAB */
+    __asm__("and #$C0");
+    __asm__("lsr");
+    __asm__("sta tmp1");
+    __asm__("lsr");
+    __asm__("lsr");
+    __asm__("ora tmp1");
+    __asm__("sta tmp1");
 
-    /* line of eight */
-    __asm__("lda %v", y);
-    __asm__("tay");
-    __asm__("and #$07");
-    __asm__("asl"); /* shift 2 and add to temp var high byte */
+    /* E */
+    __asm__("txa");
+    __asm__("and #$8");
     __asm__("asl");
-    __asm__("clc");
-    __asm__("adc %v+1", x);
-    __asm__("sta %v+1", x);
-
-    /* group of sixty four : Y/64 * 40
-     * => ((Y>>6) <<2) * 10
-     * => (Y>> 4 & 0b11111100) * 10 */
-    __asm__("tya"); /* Get Y back */
-    __asm__("lsr"); /* >> 6 to /64 */
-    __asm__("lsr");
-    __asm__("lsr");
-    __asm__("lsr");
-    __asm__("and #$FC");
-    __asm__("ldx #0");
-    __asm__("jsr mulax10"); /* and *10 */
-
-    __asm__("clc");         /* and add to temp */
-    __asm__("adc %v", x);
-    __asm__("sta %v", x);
-    __asm__("txa");
-    __asm__("adc %v+1", x);
-    __asm__("sta %v+1", x);
-
-    /* group of eight : (Y%64)/8 * 128
-     * => (Y%64) & 0b11111000 * 16
-     * => Y&0b00111000 << 4 */
-    __asm__("tya"); /* get Y back */
-    __asm__("and #$38"); /* 0b00111000 */
-
-    __asm__("stz tmp1"); /* << 4 */
-    __asm__("asl a");    /* Don't care about high bit for two shifts */
-    __asm__("asl a");
-
-    __asm__("asl a");
-    __asm__("rol tmp1"); /* now care about high bit */
-    __asm__("asl a");
-    __asm__("rol tmp1");
-    __asm__("ldx tmp1");
-
-    __asm__("clc");         /* and add to temp */
-    __asm__("adc %v", x);
+    __asm__("asl");
+    __asm__("asl");
+    __asm__("asl");
+    __asm__("ora tmp1");
     __asm__("sta (ptr2)");
+
+    /* CD */
     __asm__("txa");
+    __asm__("and #$30");
+    __asm__("lsr");
+    __asm__("lsr");
+    __asm__("lsr");
+    __asm__("lsr");
+    __asm__("sta tmp1");
+
+    /* FGH */
+    __asm__("txa");
+    __asm__("and #$7");
+    __asm__("asl");
+    __asm__("asl");
+    __asm__("ora tmp1");
+
+    /* ppp */
+    __asm__("ora #$20"); /* first page */
     __asm__("ldy #1");
-    __asm__("adc %v+1", x);
     __asm__("sta (ptr2),y");
 
     __asm__("lda ptr2");
@@ -113,11 +97,8 @@ void init_hgr_base_addrs (void)
     __asm__("inc ptr2+1");
     noof6:
     __asm__("clc");
-    //hgr_baseaddr[y] = x; //(uint8 *)HGR_PAGE + line_of_eight * 1024 + group_of_eight * 128 + group_of_sixtyfour * 40;
   //}
-  __asm__("inc %v", y);
-  __asm__("lda %v", y);
-  __asm__("cmp #<(%b)", HGR_HEIGHT);
+  __asm__("inx");
   __asm__("bne %g", next_y);
 
 
@@ -135,6 +116,7 @@ void init_hgr_base_addrs (void)
   __asm__("lda #0");
   __asm__("sta %v", x);
   __asm__("sta %v+1", x);
+  __asm__("sta tmp1");
   next_x:
     __asm__("sta ptr1");
     __asm__("lda %v+1", x);
@@ -144,24 +126,23 @@ void init_hgr_base_addrs (void)
     __asm__("stz ptr4+1");
     __asm__("jsr udiv16");
     __asm__("lda ptr1");
-    __asm__("sta (ptr2)");
+
+    __asm__("ldy tmp1");
+    __asm__("sta (ptr2),y");
+
     __asm__("lda #1");
-    __asm__("ldy sreg");
+    __asm__("ldx sreg");
     __asm__("beq %g", no_shift);
     shift_b:
     __asm__("asl");
-    __asm__("dey");
+    __asm__("dex");
     __asm__("bne %g", shift_b);
     no_shift:
-    __asm__("sta (ptr3)");
+    __asm__("sta (ptr3),y");
 
-    __asm__("inc ptr2");
-    __asm__("bne %g", noof7);
-    __asm__("inc ptr2+1");
-    noof7:
-
-    __asm__("inc ptr3");
+    __asm__("inc tmp1");
     __asm__("bne %g", noof8);
+    __asm__("inc ptr2+1");
     __asm__("inc ptr3+1");
     noof8:
   __asm__("inc %v", x);
