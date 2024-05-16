@@ -47,58 +47,50 @@ void init_hgr_base_addrs (void)
   // for (y = 0; y < HGR_HEIGHT; ++y)
   // {
   __asm__("ldx #0"); /* Iterating over y with x, because we'll need ,y */
+  __asm__("ldy #0");
   next_y:
     /* ABCDEFGH -> pppFGHCD EABAB000 */
+
+    /* CD(E) */
     __asm__("txa");
-    /* ABAB */
+    __asm__("and #$38");
+    __asm__("lsr");
+    __asm__("lsr");
+    __asm__("lsr");
+    __asm__("lsr");
+    __asm__("sta tmp2");
+
+    /* EABAB */
+    __asm__("txa");
     __asm__("and #$C0");
-    __asm__("lsr");
+    __asm__("ror"); /* E */
     __asm__("sta tmp1");
+    __asm__("and #$60");
     __asm__("lsr");
     __asm__("lsr");
     __asm__("ora tmp1");
-    __asm__("sta tmp1");
-
-    /* E */
-    __asm__("txa");
-    __asm__("and #$8");
-    __asm__("asl");
-    __asm__("asl");
-    __asm__("asl");
-    __asm__("asl");
-    __asm__("ora tmp1");
-    __asm__("sta (ptr2)");
-
-    /* CD */
-    __asm__("txa");
-    __asm__("and #$30");
-    __asm__("lsr");
-    __asm__("lsr");
-    __asm__("lsr");
-    __asm__("lsr");
-    __asm__("sta tmp1");
+    __asm__("sta (ptr2),y");
 
     /* FGH */
     __asm__("txa");
     __asm__("and #$7");
     __asm__("asl");
     __asm__("asl");
-    __asm__("ora tmp1");
+    __asm__("ora tmp2");
 
     /* ppp */
     __asm__("ora #$20"); /* first page */
-    __asm__("ldy #1");
+    __asm__("iny");
     __asm__("sta (ptr2),y");
 
-    __asm__("lda ptr2");
-    __asm__("adc #2");
-    __asm__("sta ptr2");
-    __asm__("bcc %g", noof6);
+    __asm__("iny");
+    __asm__("bne %g", noof6);
     __asm__("inc ptr2+1");
     noof6:
     __asm__("clc");
   //}
   __asm__("inx");
+  __asm__("cpx #%b", HGR_HEIGHT);
   __asm__("bne %g", next_y);
 
 
