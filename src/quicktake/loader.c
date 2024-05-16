@@ -18,7 +18,7 @@ static void sdl_set_pixel(SDL_Surface *surface, int x, int y, Uint8 r, Uint8 g, 
 void main(int argc, char *argv[]) {
   FILE *fp = fopen(argv[1],"r");
   FILE *fp2 = NULL;
-  int w, h;
+  int w, h, qt150;
   SDL_Surface *screen = NULL;
 
   if (argc < 4) {
@@ -43,6 +43,7 @@ void main(int argc, char *argv[]) {
   } else {
     w = atoi(argv[2]);
     h = atoi(argv[3]);
+    qt150 = atoi(argv[4]);
   }
 
   if (SDL_Init(SDL_INIT_VIDEO) < 0) {
@@ -89,35 +90,67 @@ void main(int argc, char *argv[]) {
     char line[80], *cur_in;
     char out[160], *cur_out;
     int i, a, b, c, x, y;
-    for (y = 0; y < 60; y+=2) {
-      fread(line, 1, 80, fp);
-      cur_in = line;
-      cur_out = out;
-      for (i = 0; i < 80; i++) {
-        c = *cur_in++;
-        a   = (((c>>4) & 0b00001111) << 4);
-        b   = (((c)    & 0b00001111) << 4);
-        *cur_out++ = a;
-        *cur_out++ = b;
-      }
-      i = 0;
-      x = 0;
-      cur_out = out;
-      for (i = 0; i < 80 * 2; ) {
-        if (i < 120) {
+    for (y = 0; y < 60*2; y+=2) {
+      if (qt150) {
+        fread(line, 1, 80, fp);
+        cur_in = line;
+        cur_out = out;
+        for (i = 0; i < 80; i++) {
+          c = *cur_in++;
+          a   = (((c>>4) & 0b00001111) << 4);
+          b   = (((c)    & 0b00001111) << 4);
+          *cur_out++ = a;
+          *cur_out++ = b;
+        }
+        i = 0;
+        x = 0;
+        cur_out = out;
+        for (i = 0; i < 80 * 2; ) {
+          if (i < 120) {
+            a = *cur_out++;
+            b = *cur_out++;
+            c = *cur_out++;
+            sdl_set_pixel(screen, x, (y), a, a, a);
+            sdl_set_pixel(screen, x+1, (y), b, b, b);
+            sdl_set_pixel(screen, x, (y)+1, c, c, c);
+            x+=2;
+            i+=3;
+          } else {
+            a = *cur_out++;
+            sdl_set_pixel(screen, 1+((i - 120)*2), (y)+1, a, a, a);
+            i++;
+          }
+        }
+      } else {
+        fread(line, 1, 40, fp);
+        cur_in = line;
+        cur_out = out;
+        for (i = 0; i < 40; i++) {
+          c = *cur_in++;
+          a   = (((c>>4) & 0b00001111) << 4);
+          b   = (((c)    & 0b00001111) << 4);
+          printf("%02d %02d ", a, b);
+          *cur_out++ = a;
+          *cur_out++ = b;
+        }
+        i = 0;
+        x = 0;
+        cur_out = out;
+        for (i = 0; i < 40; i++) {
           a = *cur_out++;
           b = *cur_out++;
-          c = *cur_out++;
-          sdl_set_pixel(screen, x, (y), a, a, a);
-          sdl_set_pixel(screen, x+1, (y), b, b, b);
-          sdl_set_pixel(screen, x, (y)+1, c, c, c);
+          sdl_set_pixel(screen, x, y, a, a, a);
+          sdl_set_pixel(screen, x+1, y, a, a, a);
+          sdl_set_pixel(screen, x, y+1, a, a, a);
+          sdl_set_pixel(screen, x+1, y+1, a, a, a);
           x+=2;
-          i+=3;
-        } else {
-          a = *cur_out++;
-          sdl_set_pixel(screen, 1+((i - 120)*2), (y)+1, a, a, a);
-          i++;
+          sdl_set_pixel(screen, x, y, b, b, b);
+          sdl_set_pixel(screen, x+1, y, b, b, b);
+          sdl_set_pixel(screen, x, y+1, b, b, b);
+          sdl_set_pixel(screen, x+1, y+1, b, b, b);
+          x+=2;
         }
+        printf("\n");
       }
     }
   }
