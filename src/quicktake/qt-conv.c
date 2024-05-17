@@ -31,7 +31,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <arpa/inet.h>
 #include <unistd.h>
 
 #include "hgr.h"
@@ -143,7 +142,12 @@ static uint8 identify(const char *name)
   return 0;
 }
 
+#ifndef __CC65__
 static uint16 histogram[256];
+#else
+static uint8 histogram_low[256];
+static uint8 histogram_high[256];
+#endif
 
 static uint8 *orig_y_table[BAND_HEIGHT];
 static uint8 orig_x_offset[640];
@@ -367,24 +371,11 @@ no_crop:
     __asm__("sta (%v),y", dst_ptr);
 
     /* histogram[*dst_ptr]++; */
-    __asm__("asl a");
     __asm__("tax");
-    __asm__("bcc %g", noof6);
-    __asm__("clc");
-    /* Second page of histogram */
-    __asm__("inc %v+256,x", histogram);
-    __asm__("bne %g", noof7);
-    __asm__("inx");
-    __asm__("inc %v+256,x", histogram);
-    __asm__("bra %g", noof7);
 
-    noof6:
-    /* first page of histogram */
-    __asm__("inc %v,x", histogram);
+    __asm__("inc %v,x", histogram_low);
     __asm__("bne %g", noof7);
-    __asm__("inx");
-    __asm__("inc %v,x", histogram);
-
+    __asm__("inc %v,x", histogram_high);
     noof7:
     /* ++cur_orig_x */
     __asm__("iny");
@@ -498,7 +489,12 @@ try_again:
   /* Save histogram to /RAM */
   ofp = fopen(HIST_NAME, "w");
   if (ofp) {
+#ifndef __CC65__
     fwrite(histogram, sizeof(uint16), 256, ofp);
+#else
+    fwrite(histogram_low, sizeof(uint8), 256, ofp);
+    fwrite(histogram_high, sizeof(uint8), 256, ofp);
+#endif
     fclose(ofp);
   }
 
