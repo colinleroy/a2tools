@@ -40,8 +40,6 @@ _cache_start:
 
 .segment        "RODATA"
 
-clamper:.byte $00,$80,$FF
-
 high_nibble_gstep_low:
         .repeat 16
         .byte        $A7
@@ -163,10 +161,6 @@ pgbar_state:
 ; Offset to scratch start of last scratch lines, row 20 col 0
 LAST_TWO_LINES = pixelbuf + (BAND_HEIGHT * SCRATCH_WIDTH)
 
-; Offset to real start of third line, row 2 col 2
-THIRD_LINE     = pixelbuf + (2 * SCRATCH_WIDTH) + 2
-
-
 .segment        "CODE"
 
 cur_cache_ptr = _prev_ram_irq_vector
@@ -234,14 +228,14 @@ top:    jsr     _reset_bitbuff  ; Yes. Initialize things
 
         stz     pgbar_state
 
-        ; Fill whole buffer with grey
+        ; Fill first two lines, plus 2 pixels with grey
         lda     #<(pixelbuf)
         ldx     #>(pixelbuf)
         sta     ptr1
         stx     ptr1+1
         lda     #$80
-        ldy     #<PIXELBUF_SIZE
-        ldx     #>PIXELBUF_SIZE
+        ldy     #<(2*SCRATCH_WIDTH + 2)
+        ldx     #>(2*SCRATCH_WIDTH + 2)
         jsr     reset_buffer
 
         lda     #1
@@ -261,16 +255,6 @@ not_top:
         lda     #<(2*SCRATCH_WIDTH + 2)
         ldx     #>(2*SCRATCH_WIDTH + 2)
         jsr     _memcpy
-
-        ; Reset the rest of the lines with grey
-        lda     #<(THIRD_LINE)
-        ldx     #>(THIRD_LINE)
-        sta     ptr1
-        stx     ptr1+1
-        lda     #$80
-        ldy     #<(PIXELBUF_SIZE-(2*SCRATCH_WIDTH + 2))
-        ldx     #>(PIXELBUF_SIZE-(2*SCRATCH_WIDTH + 2))
-        jsr     reset_buffer
 
 start_work:
         ; We start at line 2
@@ -434,9 +418,9 @@ fetch_byte:
         lda     high_nibble_gstep_high,x
                                 ; Carry set by previous adc if overflowed
 
-        adc     #0
+        adc     #0              ; If A = $FF and C set, C will stay set
+        clc                     ; so clear it.
         bne     clamp_high_nibble; overflow
-        clc
 
 check_first_col:
         lda     #1              ; Patched
@@ -609,40 +593,21 @@ second_pass_row_work:
         sta     src+1
 
 second_pass_col_loop:
-        ; val = (*(idx+1) << 1)
-        ;    + ((*(idx) + *(idx+2)) >> 1)
-        ;    - 0x100;
+        ; val = ((*(idx) + *(idx+2)) >> 1)
 
         ldy     #0
+        clc
 
 second_pass_col_y_loop:
-        ldx     #0              ; Overflow counter
-        clc
         lda     (idx),y         ; *(idx)
         iny
         iny
-        adc     (idx),y         ; *(idx+2)
-        ror                     ; >> 1 and get carry back to high bit
-        sta     tmp1
+                                ; no need to clc here, it's been done
+        adc     (idx),y         ; + *(idx+2)
+        ror                     ; >> 1 with carry from add back to high bit
 
         dey
-        lda     (idx),y         ; *(idx+1) << 1
-        asl
-
-        bcc     :+
-        inx
-        clc
-
-:       adc     tmp1
-        bcc     :+
-        inx
-
-        ; Now X = 0 means val < 0, X = 1 means val in range, X = 2 means val > 255
-:       cpx     #1
-        beq     :+
-        lda     clamper,x
-
-:       sta     (idx),y         ; *(idx+1) = val
+        sta     (idx),y         ; *(idx+1) = val
 
         iny
         cpy     #Y_LOOP_LEN

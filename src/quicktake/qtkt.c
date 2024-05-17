@@ -36,7 +36,7 @@ uint8 raw_image[RAW_IMAGE_SIZE];
 /* Pointer arithmetic helpers */
 static uint16 width_plus2;
 static uint16 pgbar_state;
-static uint8 *last_two_lines, *third_line;
+static uint8 *last_two_lines;
 static uint8 at_very_first_row;
 
 /* Decoding stuff. The values from 0-7 are negative
@@ -96,16 +96,13 @@ void qt_load_raw(uint16 top)
      * the new one.
      */
     last_two_lines = pixelbuf + (BAND_HEIGHT * SCRATCH_WIDTH);
-    third_line = pixelbuf + (2 * SCRATCH_WIDTH) + 2;
 
-    /* Init the whole buffer with grey. */
-    memset (pixelbuf, 0x80, sizeof pixelbuf);
+    /* Init the first two lines + 2 bytes of buffer with grey. */
+    memset (pixelbuf, 0x80, 2*SCRATCH_WIDTH + 2);
   } else {
     /* Shift the last band's last 2 lines, plus 2 pixels,
      * to the start of the new band. */
     memcpy(pixelbuf, last_two_lines, 2*SCRATCH_WIDTH + 2);
-    /* And reset the others to grey */
-    memset (third_line, 0x80, sizeof pixelbuf - (2*SCRATCH_WIDTH + 2));
   }
 
   /* We start at line 2. */
@@ -235,9 +232,7 @@ void qt_load_raw(uint16 top)
 
     while (idx != idx_end) {
       /* Unroll twice */
-      val = (*(idx+1) << 1)
-          + ((*(idx) + *(idx+2)) >> 1)
-          - 0x100;
+      val = ((*(idx) + *(idx+2)) >> 1);
 
       /* Fixup */
       if (val < 0)
@@ -248,9 +243,7 @@ void qt_load_raw(uint16 top)
         *(idx+1) = val;
 
       /* second time */
-      val = (*(idx+3) << 1)
-          + ((*(idx+2) + *(idx+4)) >> 1)
-          - 0x100;
+      val = ((*(idx+2) + *(idx+4)) >> 1);
 
       /* Fixup */
       if (val < 0)
