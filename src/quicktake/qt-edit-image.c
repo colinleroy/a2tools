@@ -1048,13 +1048,14 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
       __asm__("sta %v+1", cur_buf_page);
 #endif
     } else {
-      uint8 a, b, c, d, off;
+      uint8 a, b, c, d;
       /* assume thumbnail at 4bpp and zoom it */
       if (is_qt100) {
         if (!(y & 1)) {
           fread(buffer, 1, THUMB_WIDTH / 2, ifp);
           /* Unpack */
 #ifndef __CC65__
+          uint8 off;
           i = 39;
           do {
             c   = buffer[i];
