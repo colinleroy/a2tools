@@ -231,7 +231,6 @@ void qt_load_raw(uint16 top)
     src += SCRATCH_WIDTH;
 
     while (idx != idx_end) {
-      /* Unroll twice */
       val = ((*(idx) + *(idx+2)) >> 1);
 
       /* Fixup */
@@ -242,19 +241,8 @@ void qt_load_raw(uint16 top)
       else
         *(idx+1) = val;
 
-      /* second time */
-      val = ((*(idx+2) + *(idx+4)) >> 1);
-
-      /* Fixup */
-      if (val < 0)
-        *(idx+3) = 0;
-      else if (val > 255)
-        *(idx+3) = 255;
-      else
-        *(idx+3) = val;
-
       /* Shift indexes */
-      idx += 4;
+      idx += 2;
     }
   }
 
