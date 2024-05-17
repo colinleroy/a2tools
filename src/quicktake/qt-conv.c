@@ -263,8 +263,9 @@ static void write_raw(uint16 h)
   uint8 *cur_orig_x;
   uint8 **cur_orig_y;
   static uint16 x_len;
+  static uint8 y_end;
+  static uint8 y_len;
 #endif
-  static uint8 y_len, y_end;
 
 #ifndef __CC65__
   if (last_band_crop && h == last_band) {
@@ -304,7 +305,7 @@ static void write_raw(uint16 h)
   __asm__("bne %g", full_band);
 
   __asm__("lda %v", last_band_crop);
-  __asm__("sta %v", y_end);
+  __asm__("sta %g+1", y_end);
 
   /* output_write_len -= (scaled_band_height - last_band_crop) * FILE_WIDTH; */
   /* FILE_WIDTH = 256 so shift 8 */
@@ -320,10 +321,9 @@ static void write_raw(uint16 h)
 
 full_band:
   __asm__("lda %v", scaled_band_height);
-  __asm__("sta %v", y_end);
+  __asm__("sta %g+1", y_end);
 
 no_crop:
-  __asm__("stz %v", y_len);
   __asm__("lda #>(%v)", raw_image);
   __asm__("sta %v+1", dst_ptr);
   __asm__("lda #<(%v)", raw_image);
@@ -376,7 +376,8 @@ no_crop:
     __asm__("bne %g", noof7);
     __asm__("inx");
     __asm__("inc %v+256,x", histogram);
-    goto noof7;
+    __asm__("bra %g", noof7);
+
     noof6:
     /* first page of histogram */
     __asm__("inc %v,x", histogram);
@@ -395,7 +396,8 @@ no_crop:
   /* y_len? */
   __asm__("pla");
   __asm__("inc a");
-  __asm__("cmp %v", y_end);
+  y_end:
+  __asm__("cmp #$FF"); /* PATCHED */
   __asm__("bcc %g", next_y);
 #endif
 
