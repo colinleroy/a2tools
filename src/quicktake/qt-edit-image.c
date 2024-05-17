@@ -122,20 +122,25 @@ void qt_convert_image(const char *filename) {
   qt_convert_image_with_crop(filename, 0, 0, 640, 480);
 }
 
+#ifndef __CC65__
 static uint16 histogram[256];
+#else
+static uint8 histogram_low[256];
+static uint8 histogram_high[256];
+#endif
+
 static uint8 opt_histogram[256];
 #define NUM_PIXELS 49152U //256*192
 
-#ifdef __CC65__
-#define cur_histogram zp6ip
-#define cur_opt_histogram zp8p
-#else
+#ifndef __CC65__
 uint16 *cur_histogram;
 uint8 *cur_opt_histogram;
 #endif
 
 static void histogram_equalize(void) {
+#ifndef __CC65__
   uint8 x = 0;
+#endif
   uint16 curr_hist = 0;
 
   if (auto_level) {
@@ -143,13 +148,18 @@ static void histogram_equalize(void) {
     if (ifp == NULL) {
       goto fallback_std;
     }
+#ifndef __CC65__
     fread(histogram, sizeof(uint16), 256, ifp);
+#else
+    fread(histogram_low, sizeof(uint8), 256, ifp);
+    fread(histogram_high, sizeof(uint8), 256, ifp);
+#endif
     fclose(ifp);
 
     cputs("Histogram equalization...\r\n");
-    cur_histogram = histogram;
-    cur_opt_histogram = opt_histogram;
 #ifndef __CC65__
+    cur_opt_histogram = opt_histogram;
+    cur_histogram = histogram;
     do {
       uint32 tmp;
       curr_hist += *(cur_histogram++);
@@ -162,12 +172,12 @@ static void histogram_equalize(void) {
     __asm__("ldy #0");
     next_h:
     __asm__("clc");
-    __asm__("lda (%v),y", cur_histogram);
+    __asm__("lda %v,y", histogram_low);
     __asm__("adc %v", curr_hist);
     __asm__("sta %v", curr_hist);
     __asm__("tax"); /* *256 */
-    __asm__("iny");
-    __asm__("lda (%v),y", cur_histogram);
+
+    __asm__("lda %v,y", histogram_high);
     __asm__("adc %v+1", curr_hist);
     __asm__("sta %v+1", curr_hist);
     __asm__("sta sreg"); /* * 256 */
@@ -196,29 +206,32 @@ static void histogram_equalize(void) {
     __asm__("jsr tosudiva0");
     __asm__("ply");
 
-    __asm__("sta (%v)", cur_opt_histogram);
+    __asm__("sta %v,y", opt_histogram);
 
     __asm__("iny");
-    __asm__("bne %g", noof10);
-    __asm__("inc %v+1", cur_histogram);
-    noof10:
-    __asm__("inc %v", cur_opt_histogram);
-    __asm__("bne %g", noof11);
-    __asm__("inc %v+1", cur_opt_histogram);
-    noof11:
-    __asm__("inc %v", x);
     __asm__("bne %g", next_h);
 #endif
   } else {
 fallback_std:
+#ifndef __CC65__
     cur_opt_histogram = opt_histogram;
     do {
       *(cur_opt_histogram++) = x;
     } while (++x);
+#else
+    __asm__("ldy #0");
+    next_val:
+    __asm__("tya");
+    __asm__("sta %v,y", opt_histogram);
+    __asm__("iny");
+    __asm__("bne %g", next_val);
+#endif
   }
 }
 
 #ifdef __CC65__
+#define cur_histogram zp6ip
+#define cur_opt_histogram zp8p
 #define cur_thumb_data zp10p
 #else
 uint8 *cur_thumb_data;
