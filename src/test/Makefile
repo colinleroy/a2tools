@@ -45,18 +45,18 @@ clean:
 	rm -f $(PROGRAM).bin *.o *.map
 
 test: clean all
-	cp ../../disks/basic-empty.dsk ./test.dsk && \
-	java -jar ../../bin/ac.jar -p test.dsk TEST.SYSTEM SYS < ../../bin/loader.system && \
-	java -jar ../../bin/ac.jar -as test.dsk TEST BIN < test.bin && \
-	java -jar ../../bin/ac.jar -d test.dsk BASIC.SYSTEM && \
-	mame $(trgt)  -window -flop1 test.dsk -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -mouse -debug
+	cp ../../disks/ProDOS_2.4.3.po ./test.po && \
+	java -jar ../../bin/ac.jar -p test.po TEST.SYSTEM SYS < ../../bin/loader.system && \
+	java -jar ../../bin/ac.jar -as test.po TEST BIN < test.bin && \
+	java -jar ../../bin/ac.jar -d test.po BASIC.SYSTEM && \
+	mame $(trgt)  -window -flop1 test.po -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -mouse -debug
 
 test-hd: clean all
-	cp ../../disks/basic-empty.dsk ./test.dsk && \
-	java -jar ../../bin/ac.jar -p test.dsk TEST.SYSTEM SYS < ../../bin/loader.system && \
-	java -jar ../../bin/ac.jar -as test.dsk TEST BIN < test.bin && \
-	java -jar ../../bin/ac.jar -d test.dsk BASIC.SYSTEM && \
-	mame apple2gs -window -flop1 test.dsk -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -mouse -debug -sound none -sl7 scsi -hard ../../disks/smart0.po
+	cp ../../disks/ProDOS_2.4.3.po ./test.po && \
+	java -jar ../../bin/ac.jar -p test.po TEST.SYSTEM SYS < ../../bin/loader.system && \
+	java -jar ../../bin/ac.jar -as test.po TEST BIN < test.bin && \
+	java -jar ../../bin/ac.jar -d test.po BASIC.SYSTEM && \
+	mame apple2gs -window -flop1 test.po -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -mouse -debug -sound none -sl7 scsi -hard ../../disks/smart0.po
 
 upload: all
 	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/test/ || \

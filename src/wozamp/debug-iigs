@@ -1,2 +1,2 @@
 #!/bin/bash
-make clean all IIGS=1 SER_DEBUG=1 && cd ../.. && make wozampperso-iigs.dsk IIGS=1 && mame apple2gs -window -flop1 wozampperso-iigs.dsk -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug ; cd src/wozamp
+make clean all IIGS=1 SER_DEBUG=1 && cd ../.. && make wozampperso-iigs.po IIGS=1 && mame apple2gs -window -flop1 wozampperso-iigs.po -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug ; cd src/wozamp

@@ -1,6 +1,6 @@
 #!/bin/bash
 make clean all IIGS=1 && \
   cd ../.. && \
-  make IIGS=1 telnet-iigs.dsk && \
-  mame apple2gs -window -flop1 telnet-iigs.dsk -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug; 
+  make IIGS=1 telnet-iigs.po && \
+  mame apple2gs -window -flop1 telnet-iigs.po -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug; 
 cd src/telnet

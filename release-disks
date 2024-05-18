@@ -6,7 +6,7 @@ if [ "$BRANCH" != "master" ]; then
 	echo Not on release branch
 	exit 1
 fi
-rm *.dsk
+rm *.po
 make clean all dist upload
 make clean all dist upload IIGS=1
 
@@ -15,5 +15,5 @@ for old in mastodon wozamp; do
 	cd src/$old
 	make clean all OLDII=1
 	cd ../../
-	make ${old}-oldii.dsk OLDII=1
+	make ${old}-oldii.po OLDII=1
 done
