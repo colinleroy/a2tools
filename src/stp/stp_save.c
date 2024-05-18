@@ -20,6 +20,11 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
+#include <ctype.h>
+#ifdef __CC65__
+#include <device.h>
+#include <dio.h>
+#endif
 #include "stp_list.h"
 #include "stp_save.h"
 #include "get_buf_size.h"
@@ -29,6 +34,7 @@
 #include "progress_bar.h"
 #include "math.h"
 #include "file_select.h"
+#include "get_dev_from_path.h"
 
 #define APPLESINGLE_HEADER_LEN 58
 
@@ -91,14 +97,97 @@ int stp_save_dialog(char *url, const surl_response *resp, char *out_dir) {
     cprintf("%s", out_dir);
   }
 
-  gotoxy(0, 12);
-  cprintf("Saving file...              ");
   r = stp_save(filename, out_dir, resp);
 
   free(filename);
   if (free_out_dir)
     free(out_dir);
   return r;
+}
+
+static int stp_write_disk(const surl_response *resp, char *out_dir) {
+#ifdef __CC65__
+  char dev = get_dev_from_path(out_dir);
+  dhandle_t dev_handle;
+  size_t r = 0;
+  uint16 cur_block = 0;
+  char *data = NULL, *check = NULL;
+  #define BLOCK_SIZE 512
+  uint16 num_blocks = (resp->size / BLOCK_SIZE);
+
+  if (dev == INVALID_DEVICE) {
+    goto err_out_no_free_data;
+  }
+
+  data = malloc(BLOCK_SIZE);
+  if (!data) {
+    goto err_out_no_free_data;
+  }
+  check = malloc(BLOCK_SIZE);
+  if (!check) {
+    goto err_out_no_free_check;
+  }
+
+  dev_handle = dio_open(dev);
+  if (dev_handle == NULL) {
+    goto err_out_no_close;
+  }
+
+  gotoxy(0, 12);
+  cprintf("Writing disk...              ");
+
+  progress_bar(0, 15, scrw - 1, 0, num_blocks);
+
+  do {
+    r = surl_receive_data(data, BLOCK_SIZE);
+
+    if (r != BLOCK_SIZE) {
+      break;
+    }
+
+    if (cur_block == 0) {
+      /* Check this is a ProDOS image, ProDOS-ordered. */
+      if (dio_read(dev_handle, cur_block, check) != 0) {
+        goto err_out;
+      }
+      if (memcmp(check, data, BLOCK_SIZE)) {
+        gotoxy(0, 13);
+        cprintf("Unsupported image format or floppy disk.\r\n"
+                "Only ProDOS-ordered .po images to ProDOS disks are supported.");
+        goto err_out;
+      }
+    } else {
+      if (dio_write(dev_handle, cur_block, data) != 0) {
+        goto err_out;
+      }
+    }
+
+    if (cur_block % 4 == 0) {
+      gotoxy(0, 14);
+      cprintf("Block %d/%d...", cur_block, num_blocks);
+      progress_bar(0, 15, scrw - 1, cur_block, num_blocks);
+    }
+    cur_block++;
+  } while (r > 0);
+
+  dio_close(dev_handle);
+  free(data);
+  return 0;
+
+err_out:
+  free(data);
+err_out_no_free_data:
+  free(check);
+err_out_no_free_check:
+  dio_close(dev_handle);
+err_out_no_close:
+  gotoxy(0, 15);
+  cprintf("Error opening disk.");
+  cgetc();
+  return -1;
+#else
+  return -1;
+#endif
 }
 
 int stp_save(char *full_filename, char *out_dir, const surl_response *resp) {
@@ -128,7 +217,15 @@ int stp_save(char *full_filename, char *out_dir, const surl_response *resp) {
     filetype = "TXT";
   }
 
-  if (!strcasecmp(filetype, "TXT")) {
+  if (!strcasecmp(filetype, "PO")) {
+    free(filename);
+    gotoxy(0, 15);
+    cprintf("Overwrite disk %s? (y/N)", out_dir);
+    if (tolower(cgetc()) != 'y') {
+      return -1;
+    }
+    return stp_write_disk(resp, out_dir);
+  } else if (!strcasecmp(filetype, "TXT")) {
     _filetype = PRODOS_T_TXT;
     _auxtype  = PRODOS_AUX_T_TXT_SEQ;
   } else if (!strcasecmp(filetype,"HGR")) {
@@ -167,6 +264,9 @@ int stp_save(char *full_filename, char *out_dir, const surl_response *resp) {
     filename = strdup(full_filename);
     _filetype = PRODOS_T_BIN;
   }
+
+  gotoxy(0, 12);
+  cprintf("Saving file...              ");
 
   filename = cleanup_filename(filename);
 #endif

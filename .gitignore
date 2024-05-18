@@ -12,6 +12,7 @@ a.out
 *.bin
 *.x86_64
 *.dsk
+*.po
 *.tr
 *.trace
 *.callg

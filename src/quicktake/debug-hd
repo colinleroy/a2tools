@@ -4,7 +4,7 @@ if [ "$1" != "" ]; then
   TYPE=$1
 fi
 make clean all IIGS=1 DEBUG_HD=$TYPE && \
-  cd ../.. && make quicktake.dsk && mame apple2gs -window -flop1 quicktake.dsk -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug -sl7 scsi -hard disks/smart0.po -sound none; cd src/quicktake
+  cd ../.. && make quicktake.po && mame apple2gs -window -flop1 quicktake.po -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug -sl7 scsi -hard disks/smart0.po -sound none; cd src/quicktake
 
 if [ "$1" != "" ]; then
   get image from HD

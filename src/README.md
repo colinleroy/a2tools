@@ -48,11 +48,11 @@ A2_TTY=/dev/tnt0 ./src/surl-server
 ```
 Run MAME:
 ```
-mame apple2c -debug -window -flop1 dist/$(program).dsk -resolution 560x384 -modem null_modem -bitb socket.localhost:2000 -nomouse
+mame apple2c -debug -window -flop1 dist/$(program).po -resolution 560x384 -modem null_modem -bitb socket.localhost:2000 -nomouse
 ```
 Make sure to set the serial port to 115200,8n1 in MAME's configuration dialogs.
 
-Quick test rebuild of Mastodon, keeping the conf files in the .dsk: (you can extract CLISETTINGS and MASTSETTINGS after a successful login, using java -jar bin/ac.jar ...)
+Quick test rebuild of Mastodon, keeping the conf files in the .po: (you can extract CLISETTINGS and MASTSETTINGS after a successful login, using java -jar bin/ac.jar ...)
 ```
-cd src/mastodon/ && make clean all; cd ../.. && make mastoperso.dsk && mame apple2c -window -flop1 mastoperso.dsk -resolution 560x384 -modem null_modem -bitb socket.localhost:2000 -nomouse
+cd src/mastodon/ && make clean all; cd ../.. && make mastoperso.po && mame apple2c -window -flop1 mastoperso.po -resolution 560x384 -modem null_modem -bitb socket.localhost:2000 -nomouse
 ```

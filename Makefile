@@ -51,12 +51,12 @@ quicktake_disk_IMGS = \
 imageviewer_disk_PROGS = \
 	src/image-viewer/imgview.bin
 
-CLEANDISK = disks/basic-empty.dsk
+CLEANDISK = disks/ProDOS_2_4_3.po
 
 .PHONY: all clean
 
 clean:
-	rm -f *$(suffix).dsk && \
+	rm -f *$(suffix).po && \
 	for dir in $(SUBDIRS); do \
 		$(MAKE) -C $$dir -f Makefile $@ || exit; \
 	done
@@ -66,7 +66,7 @@ all upload:
 		$(MAKE) -C $$dir -f Makefile $@ || exit; \
 	done
 
-wozamp$(suffix).dsk: $(wozamp_disk_PROGS)
+wozamp$(suffix).po: $(wozamp_disk_PROGS)
 	cp $(CLEANDISK) $@; \
 	java -jar bin/ac.jar -n $@ WOZAMP
 	java -jar bin/ac.jar -p $@ WOZAMP.SYSTEM SYS < bin/loader.system; \
@@ -76,7 +76,7 @@ wozamp$(suffix).dsk: $(wozamp_disk_PROGS)
 	done
 	cp $@ dist/; \
 
-wozampperso$(suffix).dsk: $(wozamp_disk_PROGS)
+wozampperso$(suffix).po: $(wozamp_disk_PROGS)
 	cp $(CLEANDISK) $@; \
 	java -jar bin/ac.jar -n $@ WOZAMP
 	java -jar bin/ac.jar -p $@ WOZAMP.SYSTEM SYS < bin/loader.system; \
@@ -86,7 +86,7 @@ wozampperso$(suffix).dsk: $(wozamp_disk_PROGS)
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
 
-stp$(suffix).dsk: $(stp_disk_PROGS)
+stp$(suffix).po: $(stp_disk_PROGS)
 	cp $(CLEANDISK) $@; \
 	java -jar bin/ac.jar -n $@ STP
 	java -jar bin/ac.jar -p $@ STP.SYSTEM SYS < bin/loader.system; \
@@ -96,7 +96,7 @@ stp$(suffix).dsk: $(stp_disk_PROGS)
 	done
 	cp $@ dist/; \
 
-stpperso$(suffix).dsk: $(stp_disk_PROGS)
+stpperso$(suffix).po: $(stp_disk_PROGS)
 	cp $(CLEANDISK) $@; \
 	java -jar bin/ac.jar -n $@ STP
 	java -jar bin/ac.jar -p $@ STP.SYSTEM SYS < bin/loader.system; \
@@ -106,7 +106,7 @@ stpperso$(suffix).dsk: $(stp_disk_PROGS)
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
 
-telnet$(suffix).dsk: $(telnet_disk_PROGS)
+telnet$(suffix).po: $(telnet_disk_PROGS)
 	cp $(CLEANDISK) $@; \
 	java -jar bin/ac.jar -n $@ TELNET
 	java -jar bin/ac.jar -p $@ TELNET.SYSTEM SYS < bin/loader.system; \
@@ -116,7 +116,7 @@ telnet$(suffix).dsk: $(telnet_disk_PROGS)
 	done
 	cp $@ dist/; \
 
-homectrl$(suffix).dsk: $(homectrl_disk_PROGS)
+homectrl$(suffix).po: $(homectrl_disk_PROGS)
 	cp $(CLEANDISK) $@; \
 	java -jar bin/ac.jar -n $@ HOMECONTROL
 	java -jar bin/ac.jar -p $@ HOMECTRL.SYSTEM SYS < bin/loader.system; \
@@ -126,7 +126,7 @@ homectrl$(suffix).dsk: $(homectrl_disk_PROGS)
 	done
 	cp $@ dist/; \
 
-homectrlperso$(suffix).dsk: $(homectrl_disk_PROGS)
+homectrlperso$(suffix).po: $(homectrl_disk_PROGS)
 	cp $(CLEANDISK) $@; \
 	java -jar bin/ac.jar -n $@ HOMECONTROL
 	java -jar bin/ac.jar -p $@ HOMECTRL.SYSTEM SYS < bin/loader.system; \
@@ -136,7 +136,7 @@ homectrlperso$(suffix).dsk: $(homectrl_disk_PROGS)
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
 
-mastoperso$(suffix).dsk: $(mastodon_disk_PROGS)
+mastoperso$(suffix).po: $(mastodon_disk_PROGS)
 	cp $(CLEANDISK) $@; \
 	java -jar bin/ac.jar -n $@ MASTODON
 	java -jar bin/ac.jar -p $@ MASTODON.SYSTEM SYS < bin/loader.system; \
@@ -147,7 +147,7 @@ mastoperso$(suffix).dsk: $(mastodon_disk_PROGS)
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
 
-mastodon$(suffix).dsk: $(mastodon_disk_PROGS)
+mastodon$(suffix).po: $(mastodon_disk_PROGS)
 	cp $(CLEANDISK) $@; \
 	java -jar bin/ac.jar -n $@ MASTODON
 	java -jar bin/ac.jar -p $@ MASTODON.SYSTEM SYS < bin/loader.system; \
@@ -157,7 +157,7 @@ mastodon$(suffix).dsk: $(mastodon_disk_PROGS)
 	done
 	cp $@ dist/; \
 
-quicktake$(suffix).dsk: $(quicktake_disk_PROGS)
+quicktake$(suffix).po: $(quicktake_disk_PROGS)
 	cp $(CLEANDISK) $@; \
 	java -jar bin/ac.jar -n $@ QUICKTAKE
 	java -jar bin/ac.jar -p $@ SLOWTAKE.SYSTEM SYS < bin/loader.system; \
@@ -170,7 +170,7 @@ quicktake$(suffix).dsk: $(quicktake_disk_PROGS)
 	done
 	cp $@ dist/; \
 
-imageviewer$(suffix).dsk: $(imageviewer_disk_PROGS)
+imageviewer$(suffix).po: $(imageviewer_disk_PROGS)
 	cp $(CLEANDISK) $@; \
 	java -jar bin/ac.jar -n $@ QUICKTAKE
 	java -jar bin/ac.jar -p $@ IMGVIEW.SYSTEM SYS < bin/loader.system; \
@@ -184,14 +184,14 @@ doc-dist:
 	$(MAKE) -C doc -f Makefile dist
 
 dist: all \
-	stp$(suffix).dsk \
-	telnet$(suffix).dsk \
-	homectrl$(suffix).dsk \
-	imageviewer$(suffix).dsk \
-	mastodon$(suffix).dsk \
-	mastoperso$(suffix).dsk \
-	homectrlperso$(suffix).dsk \
-	stpperso$(suffix).dsk \
-	quicktake$(suffix).dsk \
-	wozamp$(suffix).dsk \
+	stp$(suffix).po \
+	telnet$(suffix).po \
+	homectrl$(suffix).po \
+	imageviewer$(suffix).po \
+	mastodon$(suffix).po \
+	mastoperso$(suffix).po \
+	homectrlperso$(suffix).po \
+	stpperso$(suffix).po \
+	quicktake$(suffix).po \
+	wozamp$(suffix).po \
 	doc-dist
