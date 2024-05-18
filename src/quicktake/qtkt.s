@@ -656,7 +656,7 @@ copy_buffer:
         sta     row
 
         lda     _width
-        cmp     #<(640)
+        cmp     #<(640)         ; No need to chek high byte
         bne     next_row_320
 
 next_row_640:
@@ -675,21 +675,21 @@ page_640:
         dex
         bne     page_640
 
-        ldy     #<(640-(256*2)-1) ; Last part
-:       lda     (src),y
+        ldy     #<(640-(256*2)-1) ; Last part, 640-512 bytes remaining
+:       lda     (src),y           ; Mind the off by one, we ended at 511
         sta     (idx),y
         dey
         bpl     :-
 
         clc
         lda     idx
-        adc     #<(640-(256*2))
+        adc     #<(640-(256*2))   ; Shift idx to start of next row
         sta     idx
         bcc     :+
         inc     idx+1
         clc
 
-:       lda     src
+:       lda     src               ; Shift src to start of next row - exlude 4 pixels
         adc     #<(640-(256*2)+SCRATCH_PAD)
         sta     src
         bcc     :+
@@ -711,24 +711,24 @@ next_row_320:
         inc     src+1
         inc     idx+1
 
-        ldy     #<(320-(256*2)-1) ; Last part
+        ldy     #<(320-(256*2)-1) ; Last part, 320-256 bytes remain
 :       lda     (src),y
         sta     (idx),y
         dey
         bpl     :-
 
         clc
-        lda     idx
-        adc     #<(320-(256*2))
-        sta     idx
+        lda     idx               ; Shift idx to start of next row
+        adc     #<(320-(256*2))   ; raw_image is packed so each line start
+        sta     idx               ; at the end of the previous one
         bcc     :+
         inc     idx+1
         clc
 
-:       lda     src
+:       lda     src               ; Shift src to start of next row - exlude 4 pixels
         adc     #<(640-256+SCRATCH_PAD)
-        sta     src
-        lda     src+1           ; Finish add, can cross two pages
+        sta     src               ; src lines aren't packed, there are 320 unused 
+        lda     src+1             ; bytes per line. Finish add, can cross two pages
         adc     #>(640-256+SCRATCH_PAD)
         sta     src+1
         dec     row
@@ -743,7 +743,7 @@ reset_buffer:
         cpx     #4
         bmi     reset_next_page
 
-        ldy     ptr1            ; We'll reset four pages
+        ldy     ptr1            ; We'll reset four pages at once for performance
         sty     ptr2
         sty     ptr3
         sty     ptr4
@@ -759,7 +759,7 @@ reset_buffer:
 reset_four_pages:
         ldy     #0
 :
-.repeat 4                       ; One page
+.repeat 4                       ; 4 bytes on each page
         sta     (ptr1),y
         sta     (ptr2),y
         sta     (ptr3),y
@@ -767,7 +767,7 @@ reset_four_pages:
         dey
 .endrep
         bne     :-
-        ldy     ptr4+1
+        ldy     ptr4+1          ; 4 next pages
         iny
         sty     ptr1+1
         dex
@@ -781,13 +781,13 @@ reset_four_pages:
         sty     ptr4+1
         dex
         beq     finish_reset
-        cpx     #4
+        cpx     #4               ; Less then 4 pages remaining?
         bpl    reset_four_pages
 
 reset_next_page:
         ldy     #0
 :
-.repeat 4                       ; One page
+.repeat 4                        ; Clear one page
         sta     (ptr1),y
         dey
 .endrep
@@ -797,11 +797,11 @@ reset_next_page:
         bne     reset_next_page
 
 finish_reset:
-        ply
+        ply                       ; Last bytes on last page
         dey
         beq     reset_done
 
-:       sta     (ptr1),y        ; Last page
+:       sta     (ptr1),y
         dey
         bpl     :-
 
