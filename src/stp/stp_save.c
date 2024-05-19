@@ -160,6 +160,10 @@ static int stp_write_disk(const surl_response *resp, char *out_dir, char prodos_
   }
 
   gotoxy(0, 12);
+  if (dio_query_sectcount(dev_handle) != num_blocks) {
+    cprintf("Wrong volume size (%d blocks)", dio_query_sectcount(dev_handle));
+    goto err_out;
+  }
   cprintf("Writing disk...              ");
 
   progress_bar(0, 15, scrw - 1, 0, num_blocks);
