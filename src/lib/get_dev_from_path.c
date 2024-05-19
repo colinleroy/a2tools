@@ -9,7 +9,14 @@
 
 char get_dev_from_path(const char *path) {
   char dev;
-  char *buf = malloc(18);
+  char *buf;
+
+  if (path[0] == 'S') {
+    /* SsDd */
+    return (path[1]-'0') | ((path[3]-'0'-1) << 3);
+  }
+
+  buf = malloc(18);
 
   if (!buf) {
     return -1;
