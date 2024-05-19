@@ -79,7 +79,9 @@ list_again:
     do {
       file_entries = realloc_safe(file_entries, sizeof(file_entry)*(n+1));
       if (getdevicedir(dev, file_entries[n].name, 17) == NULL) {
-        continue;
+        /* Dev: 0000DSSS (as ProDOS, but shifted >>4)*/
+        sprintf(file_entries[n].name, "S%dD%d",
+          (dev & 0x07), (dev & 0x08) ? 2:1);
       }
       file_entries[n].is_dir = 1;
       n++;
