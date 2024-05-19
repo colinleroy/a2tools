@@ -110,8 +110,9 @@ static int stp_write_disk(const surl_response *resp, char *out_dir) {
   char dev = get_dev_from_path(out_dir);
   dhandle_t dev_handle;
   size_t r = 0;
-  uint16 cur_block = 0;
-  char *data = NULL, *check = NULL;
+  uint16 cur_block = 0, buf_size;
+  uint8 i;
+  char *data = NULL, *check = NULL, *cur_data;
   #define BLOCK_SIZE 512
   uint16 num_blocks = (resp->size / BLOCK_SIZE);
 
@@ -119,10 +120,12 @@ static int stp_write_disk(const surl_response *resp, char *out_dir) {
     goto err_out_no_free_data;
   }
 
-  data = malloc(BLOCK_SIZE);
+  buf_size = get_buf_size();
+  data = malloc(buf_size);
   if (!data) {
     goto err_out_no_free_data;
   }
+
   check = malloc(BLOCK_SIZE);
   if (!check) {
     goto err_out_no_free_check;
@@ -139,9 +142,12 @@ static int stp_write_disk(const surl_response *resp, char *out_dir) {
   progress_bar(0, 15, scrw - 1, 0, num_blocks);
 
   do {
-    r = surl_receive_data(data, BLOCK_SIZE);
+    r = surl_receive_data(data, buf_size);
 
-    if (r != BLOCK_SIZE) {
+    if (r % BLOCK_SIZE) {
+      goto err_out;
+    }
+    if (r == 0) {
       break;
     }
 
@@ -156,19 +162,19 @@ static int stp_write_disk(const surl_response *resp, char *out_dir) {
                 "Only ProDOS-ordered .po images to ProDOS disks are supported.");
         goto err_out;
       }
-    } else {
-      if (dio_write(dev_handle, cur_block, data) != 0) {
+    }
+    
+    for (i = r / BLOCK_SIZE, cur_data = data; i ; i--, cur_data += BLOCK_SIZE) {
+      if (dio_write(dev_handle, cur_block++, cur_data) != 0) {
         goto err_out;
       }
     }
 
-    if (cur_block % 4 == 0) {
-      gotoxy(0, 14);
-      cprintf("Block %d/%d...", cur_block, num_blocks);
-      progress_bar(0, 15, scrw - 1, cur_block, num_blocks);
-    }
-    cur_block++;
-  } while (r > 0);
+    gotoxy(0, 14);
+    cprintf("Block %d/%d...", cur_block, num_blocks);
+    progress_bar(0, 15, scrw - 1, cur_block, num_blocks);
+
+  } while (1);
 
   dio_close(dev_handle);
   free(data);
