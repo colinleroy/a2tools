@@ -119,30 +119,33 @@ static char cancel_transfer(void) {
   return 0;
 }
 
-static int stp_write_disk(const surl_response *resp, char *out_dir) {
+#define PRODOS_BLOCK_SIZE 512U
+#define TRACK_SIZE (PRODOS_BLOCK_SIZE * 8)
+
+static int stp_write_disk(const surl_response *resp, char *out_dir, char prodos_order) {
 #ifdef __CC65__
   char dev = get_dev_from_path(out_dir);
   dhandle_t dev_handle;
   size_t r = 0;
-  uint16 cur_block = 0, buf_size;
-  uint8 i;
-  char *data = NULL, *check = NULL, *cur_data;
-  #define BLOCK_SIZE 512
-  uint16 num_blocks = (resp->size / BLOCK_SIZE);
+  uint16 cur_block = 0;
+  uint8 cur_sector, i;
+  char *data = NULL, *block_buffer = NULL, *cur_data;
+  uint16 num_blocks = (resp->size / PRODOS_BLOCK_SIZE);
+  char dos_sector_map[16] = {0x0, 0xE, 0xD, 0xC, 0xB, 0xA, 0x9, 0x8,
+                             0x7, 0x6, 0x5, 0x4, 0x3, 0x2, 0x1, 0xF};
 
   if (dev == INVALID_DEVICE) {
     goto err_out_no_free_data;
   }
 
-  buf_size = get_buf_size();
-  data = malloc(buf_size);
+  data = malloc(TRACK_SIZE);
   if (!data) {
     goto err_out_no_free_data;
   }
 
-  check = malloc(BLOCK_SIZE);
-  if (!check) {
-    goto err_out_no_free_check;
+  block_buffer = malloc(PRODOS_BLOCK_SIZE);
+  if (!block_buffer) {
+    goto err_out_no_free_block_buffer;
   }
 
   dev_handle = dio_open(dev);
@@ -156,31 +159,30 @@ static int stp_write_disk(const surl_response *resp, char *out_dir) {
   progress_bar(0, 15, scrw - 1, 0, num_blocks);
 
   do {
-    r = surl_receive_data(data, buf_size);
+    r = surl_receive_data(data, TRACK_SIZE);
 
-    if (r % BLOCK_SIZE) {
+    if (r % PRODOS_BLOCK_SIZE) {
       goto err_out;
     }
     if (r == 0) {
       break;
     }
 
-    if (cur_block == 0) {
-      /* Check this is a ProDOS image, ProDOS-ordered. */
-      if (dio_read(dev_handle, cur_block, check) != 0) {
-        goto err_out;
+    if (prodos_order) {
+      for (i = r / PRODOS_BLOCK_SIZE, cur_data = data; i ; i--, cur_data += PRODOS_BLOCK_SIZE) {
+        if (dio_write(dev_handle, cur_block, cur_data) != 0) {
+          goto err_out;
+        }
+        cur_block++;
       }
-      if (memcmp(check, data, BLOCK_SIZE)) {
-        gotoxy(0, 13);
-        cprintf("Unsupported image format or floppy disk.\r\n"
-                "Only ProDOS-ordered .po images to ProDOS disks are supported.");
-        goto err_out;
-      }
-    }
-    
-    for (i = r / BLOCK_SIZE, cur_data = data; i ; i--, cur_data += BLOCK_SIZE) {
-      if (dio_write(dev_handle, cur_block++, cur_data) != 0) {
-        goto err_out;
+    } else {
+      for (cur_sector = 0; cur_sector < 16; cur_sector += 2) {
+        memcpy(block_buffer, data + (dos_sector_map[cur_sector] << 8), 0x100);
+        memcpy(block_buffer+0x100, data + (dos_sector_map[cur_sector+1] << 8), 0x100);
+        if (dio_write(dev_handle, cur_block, block_buffer) != 0) {
+          goto err_out;
+        }
+        cur_block++;
       }
     }
 
@@ -201,8 +203,8 @@ out:
 err_out:
   free(data);
 err_out_no_free_data:
-  free(check);
-err_out_no_free_check:
+  free(block_buffer);
+err_out_no_free_block_buffer:
   dio_close(dev_handle);
 err_out_no_close:
   gotoxy(0, 14);
@@ -241,14 +243,17 @@ int stp_save(char *full_filename, char *out_dir, const surl_response *resp) {
     filetype = "TXT";
   }
 
-  if (!strcasecmp(filetype, "PO")) {
+  if (!strcasecmp(filetype, "PO") || !strcasecmp(filetype, "DSK")) {
+    char prodos = !strcasecmp(filetype, "PO") || resp->size != ((uint32)PRODOS_BLOCK_SIZE * 280U);
     free(filename);
-    gotoxy(0, 15);
+    gotoxy(0, 14);
+    cprintf("Detected disk image with %s sector order.\r\n", prodos ? "ProDOS":"DOS3.3");
     cprintf("Overwrite disk %s? (y/N)", out_dir);
     if (tolower(cgetc()) != 'y') {
       return -1;
     }
-    return stp_write_disk(resp, out_dir);
+    clrzone(0, 14, scrw - 1, 14);
+    return stp_write_disk(resp, out_dir, prodos);
   } else if (!strcasecmp(filetype, "TXT")) {
     _filetype = PRODOS_T_TXT;
     _auxtype  = PRODOS_AUX_T_TXT_SEQ;
