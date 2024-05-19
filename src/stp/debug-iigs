@@ -1,2 +1,2 @@
 #!/bin/bash
-make clean all IIGS=1 SER_DEBUG=1 && cd ../.. && make stpperso-iigs.po IIGS=1 && mame apple2gs -window -flop1 stpperso-iigs.po -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug; cd src/stp
+make clean all IIGS=1 SER_DEBUG=1 && cd ../.. && make stpperso-iigs.po IIGS=1 && mame apple2gs -window -flop1 stpperso-iigs.po -flop2 disks/qt100.dsk -sl7 scsi -hard disks/smart0.po -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug; cd src/stp
