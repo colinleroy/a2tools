@@ -124,7 +124,7 @@ static char cancel_transfer(void) {
 
 static int stp_write_disk(const surl_response *resp, char *out_dir, char prodos_order) {
 #ifdef __CC65__
-  char dev = get_dev_from_path(out_dir);
+  char dev;
   dhandle_t dev_handle;
   size_t r = 0;
   uint16 cur_block = 0;
@@ -134,20 +134,26 @@ static int stp_write_disk(const surl_response *resp, char *out_dir, char prodos_
   char dos_sector_map[16] = {0x0, 0xE, 0xD, 0xC, 0xB, 0xA, 0x9, 0x8,
                              0x7, 0x6, 0x5, 0x4, 0x3, 0x2, 0x1, 0xF};
 
+  /* Get device */
+  dev = get_dev_from_path(out_dir);
   if (dev == INVALID_DEVICE) {
     goto err_out_no_free_data;
   }
 
+  /* We need to receive full tracks to reorder sectors in case the image
+   * is DOS-ordered. */
   data = malloc(TRACK_SIZE);
   if (!data) {
     goto err_out_no_free_data;
   }
 
+  /* One-block buffer for sector reordering */
   block_buffer = malloc(PRODOS_BLOCK_SIZE);
   if (!block_buffer) {
     goto err_out_no_free_block_buffer;
   }
 
+  /* Open device */
   dev_handle = dio_open(dev);
   if (dev_handle == NULL) {
     goto err_out_no_close;
@@ -159,16 +165,21 @@ static int stp_write_disk(const surl_response *resp, char *out_dir, char prodos_
   progress_bar(0, 15, scrw - 1, 0, num_blocks);
 
   do {
+    /* Get one track from network */
     r = surl_receive_data(data, TRACK_SIZE);
 
+    /* This should not happen. */
     if (r % PRODOS_BLOCK_SIZE) {
       goto err_out;
     }
+
+    /* Are we done? */
     if (r == 0) {
       break;
     }
 
     if (prodos_order) {
+      /* ProDOS-ordered images are easy, 1:1 mapping */
       for (i = r / PRODOS_BLOCK_SIZE, cur_data = data; i ; i--, cur_data += PRODOS_BLOCK_SIZE) {
         if (dio_write(dev_handle, cur_block, cur_data) != 0) {
           goto err_out;
@@ -176,6 +187,7 @@ static int stp_write_disk(const surl_response *resp, char *out_dir, char prodos_
         cur_block++;
       }
     } else {
+      /* Reorder sectors for DOS order to ProDOS order */
       for (cur_sector = 0; cur_sector < 16; cur_sector += 2) {
         memcpy(block_buffer, data + (dos_sector_map[cur_sector] << 8), 0x100);
         memcpy(block_buffer+0x100, data + (dos_sector_map[cur_sector+1] << 8), 0x100);
@@ -190,16 +202,19 @@ static int stp_write_disk(const surl_response *resp, char *out_dir, char prodos_
     cprintf("Block %d/%d...", cur_block, num_blocks);
     progress_bar(0, 15, scrw - 1, cur_block, num_blocks);
 
+    /* Check for user cancel */
     if (cancel_transfer()) {
       goto out;
     }
   } while (1);
 
 out:
+  /* All done */
   dio_close(dev_handle);
   free(data);
   return 0;
 
+  /* Error path */
 err_out:
   free(data);
 err_out_no_free_data:
