@@ -105,6 +105,20 @@ int stp_save_dialog(char *url, const surl_response *resp, char *out_dir) {
   return r;
 }
 
+static char cancel_transfer(void) {
+  if (kbhit()) {
+    if (cgetc() == CH_ESC) {
+      gotoxy(0, 14);
+      cprintf("Cancel transfer? (y/N)                  ");
+      if (tolower(cgetc()) == 'y') {
+        return 1;
+      }
+      clrzone(0, 14, scrw - 1, 14);
+    }
+  }
+  return 0;
+}
+
 static int stp_write_disk(const surl_response *resp, char *out_dir) {
 #ifdef __CC65__
   char dev = get_dev_from_path(out_dir);
@@ -174,8 +188,12 @@ static int stp_write_disk(const surl_response *resp, char *out_dir) {
     cprintf("Block %d/%d...", cur_block, num_blocks);
     progress_bar(0, 15, scrw - 1, cur_block, num_blocks);
 
+    if (cancel_transfer()) {
+      goto out;
+    }
   } while (1);
 
+out:
   dio_close(dev_handle);
   free(data);
   return 0;
@@ -187,7 +205,7 @@ err_out_no_free_data:
 err_out_no_free_check:
   dio_close(dev_handle);
 err_out_no_close:
-  gotoxy(0, 15);
+  gotoxy(0, 14);
   cprintf("Error opening disk.");
   cgetc();
   return -1;
@@ -333,8 +351,13 @@ int stp_save(char *full_filename, char *out_dir, const surl_response *resp) {
     total += r;
     cprintf("Saving %lu/%lu bytes...", total, resp->size);
 
+    if (cancel_transfer()) {
+      had_error = 1;
+      goto err_out;
+    }
+
     if (fwrite(data, sizeof(char), r, fp) < r) {
-      gotoxy(0, 15);
+      gotoxy(0, 14);
       cprintf("%s.", strerror(errno));
       cgetc();
       had_error = 1;
