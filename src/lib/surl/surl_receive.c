@@ -36,7 +36,7 @@
 
 extern surl_response *resp;
 
-size_t __fastcall__ surl_receive_data(char *buffer, size_t max_len) {
+size_t __fastcall__ surl_receive_bindata(char *buffer, size_t max_len, char binary) {
   size_t to_read = min(resp->size - resp->cur_pos, max_len);
   size_t r;
 
@@ -50,7 +50,9 @@ size_t __fastcall__ surl_receive_data(char *buffer, size_t max_len) {
 
   surl_read_with_barrier(buffer, to_read);
 
-  buffer[to_read] = '\0';
+  if (!binary)
+    buffer[to_read] = '\0';
+
   resp->cur_pos += to_read;
 
   return to_read;
