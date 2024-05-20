@@ -84,7 +84,7 @@ void stp_send_file(char *remote_dir, char recursive) {
     return;
   }
 
-#ifdef __APPLE2ENH__
+#ifdef __APPLE2__
   /* We want to send raw files */
   _filetype = PRODOS_T_BIN;
   _auxtype  = PRODOS_AUX_T_TXT_SEQ;

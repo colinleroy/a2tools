@@ -1,0 +1,2 @@
+#!/bin/bash
+make clean all OLDII=1 && cd ../.. && make stp-oldii.po OLDII=1 && mame apple2p -window -flop1 stp-oldii.po -resolution 560x384 -sl2 ssc -sl2:ssc:rs232 null_modem -bitb socket.localhost:2000 -nomouse -debug; cd src/wozamp

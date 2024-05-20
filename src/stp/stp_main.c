@@ -20,6 +20,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#include <ctype.h>
 #include "stp_list.h"
 #include "stp_cli.h"
 #include "stp_save.h"
@@ -39,7 +40,12 @@
 #include "charsets.h"
 
 unsigned char scrw = 255, scrh = 255;
-char center_x = 30; /* 12 in 40COLS */
+
+#ifdef __APPLE2ENH__
+char center_x = 30;
+#else
+char center_x = 12;
+#endif
 
 char *translit_charset = US_CHARSET;
 
@@ -97,7 +103,11 @@ void stp_print_footer(void) {
   chline(scrw);
   clrzone(0, 23, scrw - 1, 23);
   gotoxy(0, 23);
+#ifdef __APPLEENH__
   dputs("Up/Down, Enter: nav, S: send (R: recursive), D: delete, A: get all, Esc: back");
+#else
+  dputs("U/J/Ret:nav, S:send, A:get all, Esc:bck");
+#endif
 }
 
 void stp_print_result(const surl_response *response) {
@@ -120,7 +130,9 @@ int main(void) {
   char full_update = 1;
   const surl_response *resp;
 
+#ifdef __APPLE2ENH__
   videomode(VIDEOMODE_80COL);
+#endif
 
   clrscr();
   screensize(&scrw, &scrh);
@@ -159,7 +171,7 @@ keyb_input:
     while (!kbhit()) {
       stp_animate_list(0);
     }
-    c = cgetc();
+    c = tolower(cgetc());
     switch(c) {
       case CH_ESC:
 up_dir:
@@ -175,27 +187,31 @@ up_dir:
         full_update = 1;
         break;
       case 'a':
-      case 'A':
         get_all(url, lines, num_lines);
         break;
+#ifdef __APPLE2ENH__
       case CH_CURS_UP:
+#else
+      case 'u':
+#endif
         full_update = stp_list_scroll(-1);
         goto update_list;
+#ifdef __APPLE2ENH__
       case CH_CURS_DOWN:
+#else
+      case 'j':
+#endif
         full_update = stp_list_scroll(+1);
         goto update_list;
       case 's':
-      case 'S':
         stp_send_file(url, 0);
         full_update = 1;
         break;
       case 'r':
-      case 'R':
         stp_send_file(url, 1);
         full_update = 1;
         break;
       case 'd':
-      case 'D':
         if (lines)
           stp_delete_dialog(url, lines[cur_line]);
         full_update = 1;

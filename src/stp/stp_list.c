@@ -56,7 +56,7 @@ char *stp_get_start_url(char *header, char *default_url) {
   char *tmp = NULL;
   int changed = 0;
 
-#ifdef __APPLE2ENH__
+#ifdef __APPLE2__
   _filetype = PRODOS_T_TXT;
 #endif
 
@@ -415,7 +415,7 @@ int stp_get_data(char *url, const surl_response **resp) {
   if ((*resp)->content_type && strcmp((*resp)->content_type, "directory")) {
     return SAVE_DIALOG;
   } else {
-    if ((*resp)->size > STP_DATA_SIZE) {
+    if ((*resp)->size > STP_DATA_SIZE-1) {
       gotoxy(center_x, 18);
       dputs("Not enough memory :-(");
       return KEYBOARD_INPUT;
@@ -452,7 +452,7 @@ char *stp_url_up(char *url) {
   }
 
   last_slash = strrchr(url, '/');
-  if (last_slash && last_slash - url > 6) {
+  if (last_slash && last_slash - url > strlen("sftp://")) {
     *(last_slash + 1) = '\0';
   }
 
@@ -504,7 +504,7 @@ void stp_print_header(const char *url, enum HeaderUrlAction action) {
       strcat(no_pass_url, url);
       break;
     case URL_UP:
-      if (strchr(no_pass_url, '/'))
+      if (strchr(no_pass_url + 8 /*strlen("sftp://")+1*/, '/'))
         *(strrchr(no_pass_url, '/')) = '\0';
       break;
   }
