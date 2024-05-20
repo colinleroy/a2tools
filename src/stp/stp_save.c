@@ -40,6 +40,9 @@
 
 extern unsigned char scrw, scrh;
 
+
+#pragma code-name(push, "LC")
+
 char *stp_confirm_save_all(void) {
   char *out_dir;
 
@@ -73,6 +76,7 @@ char *cleanup_filename(char *in) {
   }
   return in;
 }
+#pragma code-name(pop)
 
 int stp_save_dialog(char *url, const surl_response *resp, char *out_dir) {
   char *filename = strdup(strrchr(url, '/') + 1);
@@ -119,8 +123,11 @@ static char cancel_transfer(void) {
   return 0;
 }
 
+#define SECTOR_SIZE 256U
 #define PRODOS_BLOCK_SIZE 512U
 #define TRACK_SIZE (PRODOS_BLOCK_SIZE * 8)
+#define SECTORS_PER_TRACK (TRACK_SIZE/SECTOR_SIZE)
+#define BLOCKS_PER_TRACK (TRACK_SIZE/PRODOS_BLOCK_SIZE)
 
 static int stp_write_disk(const surl_response *resp, char *out_dir, char prodos_order) {
 #ifdef __CC65__
@@ -129,7 +136,7 @@ static int stp_write_disk(const surl_response *resp, char *out_dir, char prodos_
   size_t r = 0;
   uint16 cur_block = 0;
   uint8 cur_sector, i;
-  char *data = NULL, *block_buffer = NULL, *cur_data;
+  char *data = NULL, *cur_data;
   uint16 num_blocks = (resp->size / PRODOS_BLOCK_SIZE);
   char dos_sector_map[16] = {0x0, 0xE, 0xD, 0xC, 0xB, 0xA, 0x9, 0x8,
                              0x7, 0x6, 0x5, 0x4, 0x3, 0x2, 0x1, 0xF};
@@ -145,12 +152,6 @@ static int stp_write_disk(const surl_response *resp, char *out_dir, char prodos_
   data = malloc(TRACK_SIZE);
   if (!data) {
     goto err_out_no_free_data;
-  }
-
-  /* One-block buffer for sector reordering */
-  block_buffer = malloc(PRODOS_BLOCK_SIZE);
-  if (!block_buffer) {
-    goto err_out_no_free_block_buffer;
   }
 
   /* Open device */
@@ -169,37 +170,42 @@ static int stp_write_disk(const surl_response *resp, char *out_dir, char prodos_
   progress_bar(0, 15, scrw - 1, 0, num_blocks);
 
   do {
-    /* Get one track from network */
-    r = surl_receive_data(data, TRACK_SIZE);
-
-    /* This should not happen. */
-    if (r % PRODOS_BLOCK_SIZE) {
-      goto err_out;
-    }
-
-    /* Are we done? */
-    if (r == 0) {
-      break;
-    }
-
     if (prodos_order) {
       /* ProDOS-ordered images are easy, 1:1 mapping */
-      for (i = r / PRODOS_BLOCK_SIZE, cur_data = data; i ; i--, cur_data += PRODOS_BLOCK_SIZE) {
-        if (dio_write(dev_handle, cur_block, cur_data) != 0) {
-          goto err_out;
-        }
-        cur_block++;
+      /* Get one track from network */
+      r = surl_receive_bindata(data, TRACK_SIZE, 1);
+
+      /* Are we done? */
+      if (r == 0) {
+        goto out;
+      }
+
+      /* This should not happen. */
+      if (r % PRODOS_BLOCK_SIZE) {
+        goto err_out;
       }
     } else {
       /* Reorder sectors for DOS order to ProDOS order */
-      for (cur_sector = 0; cur_sector < 16; cur_sector += 2) {
-        memcpy(block_buffer, data + (dos_sector_map[cur_sector] << 8), 0x100);
-        memcpy(block_buffer+0x100, data + (dos_sector_map[cur_sector+1] << 8), 0x100);
-        if (dio_write(dev_handle, cur_block, block_buffer) != 0) {
+      for (cur_sector = 0; cur_sector < SECTORS_PER_TRACK; cur_sector ++) {
+        char *cur_sector_ptr = data + (dos_sector_map[cur_sector] << 8);
+        /* Build track from network */
+        r = surl_receive_bindata(cur_sector_ptr, SECTOR_SIZE, 1);
+        /* Are we done? */
+        if (r == 0) {
+          goto out;
+        }
+        if (r != SECTOR_SIZE) {
           goto err_out;
         }
-        cur_block++;
       }
+    }
+
+    /* Write track */
+    for (i = BLOCKS_PER_TRACK, cur_data = data; i ; i--, cur_data += PRODOS_BLOCK_SIZE) {
+      if (dio_write(dev_handle, cur_block, cur_data) != 0) {
+        goto err_out;
+      }
+      cur_block++;
     }
 
     gotoxy(0, 14);
@@ -222,8 +228,6 @@ out:
 err_out:
   free(data);
 err_out_no_free_data:
-  free(block_buffer);
-err_out_no_free_block_buffer:
   dio_close(dev_handle);
 err_out_no_close:
   gotoxy(0, 14);
@@ -239,7 +243,7 @@ int stp_save(char *full_filename, char *out_dir, const surl_response *resp) {
   FILE *fp = NULL;
   char *data = NULL;
   char *filename;
-#ifdef __APPLE2ENH__
+#ifdef __APPLE2__
   char *filetype;
 #endif
   size_t r = 0;
@@ -249,21 +253,25 @@ int stp_save(char *full_filename, char *out_dir, const surl_response *resp) {
   char had_error = 0;
   char *full_path = NULL;
   char start_y = 10;
-
+#ifdef __APPLE2__
+  char is_prodos_disk, is_dos_disk;
+#endif
   filename = strdup(full_filename);
 
   clrzone(0, start_y, scrw - 1, start_y);
   gotoxy(0, start_y);
 
-#ifdef __APPLE2ENH__
+#ifdef __APPLE2__
   if (strchr(filename, '.') != NULL) {
     filetype = strrchr(filename, '.') + 1;
   } else {
     filetype = "TXT";
   }
 
-  if (!strcasecmp(filetype, "PO") || !strcasecmp(filetype, "DSK")) {
-    char prodos = !strcasecmp(filetype, "PO") || resp->size != ((uint32)PRODOS_BLOCK_SIZE * 280U);
+  is_prodos_disk = !strcasecmp(filetype, "PO");
+  is_dos_disk = !strcasecmp(filetype, "DSK");
+  if (is_prodos_disk || is_dos_disk) {
+    char prodos = is_prodos_disk || resp->size != ((uint32)PRODOS_BLOCK_SIZE * 280U);
     free(filename);
     gotoxy(0, 14);
     cprintf("Detected disk image with %s sector order.\r\n", prodos ? "ProDOS":"DOS3.3");
@@ -278,16 +286,17 @@ int stp_save(char *full_filename, char *out_dir, const surl_response *resp) {
     _auxtype  = PRODOS_AUX_T_TXT_SEQ;
   } else if (!strcasecmp(filetype,"HGR")) {
     _filetype = PRODOS_T_BIN;
-  } else if (!strcasecmp(filetype,"SYSTEM")) {
+  } else if (!strncasecmp(filetype,"SYS", 3)) {
     _filetype = PRODOS_T_SYS;
     _auxtype = 0x2000;
+    *(strrchr(filename, '.')) = '\0';
   } else if (!strcasecmp(filetype,"BIN")) {
     _filetype = PRODOS_T_BIN;
     *(strrchr(filename, '.')) = '\0';
 
     /* Look into the header, and skip it by the way */
     data = malloc(APPLESINGLE_HEADER_LEN);
-    r = surl_receive_data(data, APPLESINGLE_HEADER_LEN);
+    r = surl_receive_bindata(data, APPLESINGLE_HEADER_LEN, 1);
 
     if (r == APPLESINGLE_HEADER_LEN
      && data[0] == 0x00 && data[1] == 0x05
@@ -300,16 +309,8 @@ int stp_save(char *full_filename, char *out_dir, const surl_response *resp) {
     }
     total = r;
 
-  } else if (!strcasecmp(filetype,"SYS") || !strcasecmp(filetype,"SYSTEM")) {
-    char *tmp = malloc(255);
-    sprintf(tmp, "%s.system", filename);
-    free(filename);
-    filename = tmp;
-    _filetype = PRODOS_T_SYS;
   } else {
     cprintf("Filetype unknown, using BIN.");
-    free(filename);
-    filename = strdup(full_filename);
     _filetype = PRODOS_T_BIN;
   }
 
@@ -347,7 +348,7 @@ int stp_save(char *full_filename, char *out_dir, const surl_response *resp) {
   }
 
   buf_size = get_buf_size();
-  data = malloc(buf_size + 1);
+  data = malloc(buf_size);
 
   if (data == NULL) {
     gotoxy(0, 15);
@@ -367,7 +368,7 @@ int stp_save(char *full_filename, char *out_dir, const surl_response *resp) {
     gotoxy(0, 14);
     cprintf("Reading %zu bytes...", bytes_to_read);
 
-    r = surl_receive_data(data, bytes_to_read);
+    r = surl_receive_bindata(data, bytes_to_read, 1);
 
     progress_bar(0, 15, scrw - 1, total + (bytes_to_read / 2), resp->size);
     clrzone(0,14, scrw - 1, 14);
@@ -396,7 +397,7 @@ err_out:
     fclose(fp);
   }
   if (had_error) {
-    unlink(filename);
+    unlink(full_path);
   }
   free(full_path);
   free(filename);

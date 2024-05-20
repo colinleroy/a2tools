@@ -1,17 +1,14 @@
-ifdef SER_DEBUG
-ser_debug_SOURCES := ../lib/serial/simple_serial_printf.c
-debug_CFLAGS := -DSER_DEBUG=1
-else
-ser_debug_SOURCES :=
-debug_CFLAGS :=
-endif
-
 ifdef IIGS
 serial_hw_SOURCES := ../lib/serial/z8530/common.s ../lib/serial/z8530/no_irq.s
 iigs_CFLAGS := -DIIGS --asm-define IIGS
 suffix := -iigs
 upload_subdir := /iigs
 else
+ifdef OLDII
+CC65_TARGET := apple2
+else
+CC65_TARGET = apple2enh
+endif
 serial_hw_SOURCES := ../lib/serial/acia/common.s ../lib/serial/acia/no_irq.s
 iigs_FLAGS :=
 suffix :=
@@ -23,7 +20,6 @@ SOURCES := stp_main.c stp_list.c stp_save.c stp_send_file.c stp_delete.c \
 	../lib/malloc0.c \
 	../lib/serial/simple_serial.c \
 	../lib/serial/simple_serial_configure.c \
-	$(ser_debug_SOURCES) \
 	../lib/get_buf_size.c \
 	../lib/progress_bar.c \
 	../lib/strsplit.c \
@@ -62,11 +58,11 @@ GCC_SOURCES = \
 
 DEPS := 
 
-CC65_TARGET = apple2enh
 CFLAGS  = -I ../lib -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\" $(debug_CFLAGS)
 CLCFLAGS = -t $(CC65_TARGET) -g -O -Cl -Wl -D,__STACKSIZE__=0x0400 \
 	-C ../../config/apple2enh-rtonce.cfg -vm -m $(PROGRAM).map \
 	-DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD -DFILESEL_TO_LANGCARD \
+	-DFILESEL_ALLOW_NONPRODOS_VOLUMES \
 	$(iigs_CFLAGS) -DSTP_DATA_SIZE=8192
 GCCCFLAGS = -g -O0 -Wall -Wno-format -Wno-unused-function -Wno-char-subscripts -Wno-unknown-pragmas -Werror -DSTP_DATA_SIZE=8192
 GCCLDFLAGS = 
