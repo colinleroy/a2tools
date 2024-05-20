@@ -20,6 +20,7 @@
 #include <string.h>
 #include <unistd.h>
 #ifdef __CC65__
+#include <dio.h>
 #include <device.h>
 #include <apple2.h>
 #else
@@ -79,9 +80,23 @@ list_again:
     do {
       file_entries = realloc_safe(file_entries, sizeof(file_entry)*(n+1));
       if (getdevicedir(dev, file_entries[n].name, 17) == NULL) {
+#ifdef FILESEL_ALLOW_NONPRODOS_VOLUMES
+        int blocks;
+        dhandle_t dev_handle = dio_open(dev);
+        if (!dev_handle) {
+          continue;
+        }
+        blocks = dio_query_sectcount(dev_handle);
+        dio_close(dev_handle);
+        if (blocks != 280U) {
+          continue;
+        }
         /* Dev: 0000DSSS (as ProDOS, but shifted >>4)*/
         sprintf(file_entries[n].name, "S%dD%d",
           (dev & 0x07), (dev & 0x08) ? 2:1);
+#else
+        continue;
+#endif
       }
       file_entries[n].is_dir = 1;
       n++;
