@@ -421,11 +421,9 @@ try_gen:
       if (!do_callgrind) 
         printf("%s\n", line_buf);
       if (do_callgrind) {
-        printf("Error: unexpected line :\n%s\n", line_buf);
-        printf("Profiles must be generated from MAME with full traces:\n"
+        fprintf(stderr, "Error: unexpected line at line %d :\n'%s'\n", cur_line, line_buf);
+        fprintf(stderr, "Profiles must be generated from MAME with full traces:\n"
                "trace log.run,maincpu,noloop'\n");
-        fclose(fp);
-        return;
       }
     }
 
