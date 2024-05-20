@@ -3,6 +3,7 @@ serial_hw_SOURCES := ../lib/serial/z8530/common.s ../lib/serial/z8530/no_irq.s
 iigs_CFLAGS := -DIIGS --asm-define IIGS
 suffix := -iigs
 upload_subdir := /iigs
+CC65_TARGET := apple2enh
 else
 ifdef OLDII
 CC65_TARGET := apple2
