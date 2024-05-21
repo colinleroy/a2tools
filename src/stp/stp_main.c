@@ -98,15 +98,20 @@ static void get_all(const char *url, char **lines, int n_lines) {
   free(out_dir);
 }
 
+extern char search_buf[80];
+
 void stp_print_footer(void) {
   gotoxy(0, 22);
   chline(scrw);
   clrzone(0, 23, scrw - 1, 23);
   gotoxy(0, 23);
-#ifdef __APPLEENH__
-  dputs("Up/Down, Enter: nav, S: send (R: recursive), D: delete, A: get all, Esc: back");
+#ifdef __APPLE2ENH__
+  dputs("Up/Down/Ret/Esc:nav, S:send (R:all), D:delete, A:get all, /:Search");
+  if (search_buf[0]) {
+     cputs(", N:Next");
+  }
 #else
-  dputs("U/J/Ret:nav, S:send, A:get all, Esc:bck");
+  dputs("U/J/Ret/Esc:nav, S:send, A:get all");
 #endif
 }
 
@@ -168,6 +173,7 @@ update_list:
     stp_update_list(full_update);
 
 keyb_input:
+  stp_print_footer();
     while (!kbhit()) {
       stp_animate_list(0);
     }
@@ -216,6 +222,11 @@ up_dir:
           stp_delete_dialog(url, lines[cur_line]);
         full_update = 1;
         break;
+      case '/':
+      case 'n':
+        stp_list_search((c == '/'));
+        stp_print_header(NULL, URL_RESTORE);
+        goto keyb_input;
       default:
         goto update_list;
     }
