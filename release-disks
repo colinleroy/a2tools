@@ -6,8 +6,7 @@ if [ "$BRANCH" != "master" ]; then
 	echo Not on release branch
 	exit 1
 fi
-rm *.po
-make clean all dist upload
+rm -f *.po
 make clean all dist upload IIGS=1
 
 #Only mastodon and wozamp ported to old II yet
@@ -17,3 +16,9 @@ for old in mastodon wozamp; do
 	cd ../../
 	make ${old}-oldii.po OLDII=1
 done
+
+make clean all dist upload
+
+test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/disks/ || \
+	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/disks/ && \
+	cp *.po /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/disks/
