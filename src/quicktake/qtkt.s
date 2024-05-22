@@ -412,6 +412,7 @@ fetch_byte:
         adc     high_nibble_gstep_low,x
                                 ; Sets carry if overflow
 
+                                ; Write them now even if overwritten in clamp_*nibble - it's faster
         sta     (idx),y         ; *(idx+2) = val
         sta     last_val        ; last_val = val
 
@@ -430,6 +431,8 @@ check_first_row:
         lda     #1              ; Patched
         bne     handle_first_row_high_nibble
 
+        lda     last_val        ; Reload last_val if !first_col && !first_row
+
         ; REPEAT WITH LOW NIBBLE (same, with +2 offsets on Y)
 
 do_low_nibble:
@@ -438,8 +441,8 @@ do_low_nibble:
         ;         + *(idx_behind+4)) >> 1)
         ;         + gstep[low_nibble];
 
-        lda     (idx_behind),y  ; Y expected to be 2 there
-        adc     last_val
+        ; A = last_val here.
+        adc     (idx_behind),y  ; Y expected to be 2 there
         ror
 
         clc
@@ -473,7 +476,7 @@ check_first_pass_col_y_loop:
         bne     first_pass_col_y_loop
 
 shift_indexes:
-        clc                     ; idx_behind += 4
+        clc                     ; idx_behind += Y_LOOP_LEN
         lda     idx_behind
         adc     #Y_LOOP_LEN
         sta     idx_behind
@@ -481,7 +484,7 @@ shift_indexes:
         inc     idx_behind+1
         clc
 
-:       lda     idx             ; idx += 4
+:       lda     idx             ; idx += Y_LOOP_LEN
         adc     #Y_LOOP_LEN
         sta     idx
         bcc     check_first_pass_col_loop
@@ -515,7 +518,7 @@ clamp_low_nibble:
 
 :       sta     (idx),y         ; *(idx+4) = val
         sta     last_val
-        jmp     check_first_pass_col_y_loop
+        jmp     check_first_row2
 
 handle_first_col:
         lda     last_val
@@ -563,11 +566,7 @@ second_pass_next_row:
         ldy     src
         ldx     src+1
 
-        iny
-        bne     :+
-        inx
-
-:       lda     row             ; row & 1?
+        lda     row             ; row & 1?
         bit     #$01
         bne     second_pass_row_work
         iny                     ; no,  idx = src + 2
@@ -575,7 +574,14 @@ second_pass_next_row:
         inx
 
 second_pass_row_work:
-        tya
+        sty     idx_behind
+        stx     idx_behind+1
+
+        iny
+        bne     :+
+        inx
+
+:       tya
         sta     idx
         stx     idx+1
 
@@ -606,26 +612,31 @@ second_pass_col_y_loop:
         adc     (idx),y         ; + *(idx+2)
         ror                     ; >> 1 with carry from add back to high bit
 
-        dey
-        sta     (idx),y         ; *(idx+1) = val
+        sta     (idx_behind),y         ; *(idx+1) = val
 
-        iny
         cpy     #Y_LOOP_LEN
         bne     second_pass_col_y_loop
         
-        ; Shift index
-        lda     idx
+        ; Shift indexes
+        lda     idx_behind
+        ldx     idx_behind+1
         clc
         adc     #Y_LOOP_LEN
+        sta     idx_behind
+        bcc     :+
+        inx
+
+:       stx     idx_behind+1
+        inc     a
         sta     idx
-        bcc     check_second_pass_col_loop
-        inc     idx+1
+        bne     :+
+        inx
+:       stx     idx+1
 
 check_second_pass_col_loop:
         ; Are we done for this row?
         cmp     #0              ; Patched (idx_end)
         bne     second_pass_col_loop
-        ldx     idx+1
 check_second_pass_col_loop_hi:
         cpx     #0              ; Patched (idx_end+1)
         bne     second_pass_col_loop
