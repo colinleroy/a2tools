@@ -231,15 +231,7 @@ void qt_load_raw(uint16 top)
     src += SCRATCH_WIDTH;
 
     while (idx != idx_end) {
-      val = ((*(idx) + *(idx+2)) >> 1);
-
-      /* Fixup */
-      if (val < 0)
-        *(idx+1) = 0;
-      else if (val > 255)
-        *(idx+1) = 255;
-      else
-        *(idx+1) = val;
+      *(idx+1) = ((*(idx) + *(idx+2)) >> 1);
 
       /* Shift indexes */
       idx += 2;
