@@ -348,31 +348,36 @@ static uint8 receive_data(uint32 size, FILE *fp) {
   uint8 y = wherey();
   uint16 i;
   uint8 err = 0;
+  uint16 blocks = (uint16)(size / BLOCK_SIZE);
+  uint16 rem    = (uint16)(size % BLOCK_SIZE);
 
   DUMP_START("data");
 
   cputs("  Getting data...\r\n");
 
-  progress_bar(2, y, scrw - 2, 0, (uint16)(size / BLOCK_SIZE));
+  progress_bar(2, y, scrw - 2, 0, blocks);
 
-  for (i = 0; i < (uint16)(size / BLOCK_SIZE); i++) {
-
+  for (i = 0; i < blocks; i++) {
+    /* No need to be smart, read more than one block and
+     * batch multiple blocks writes, this isn't faster, on
+     * the contrary. */
     simple_serial_read((char *)buffer, BLOCK_SIZE);
     if (fwrite(buffer, 1, BLOCK_SIZE, fp) < BLOCK_SIZE) {
       err = -1;
     }
     DUMP_DATA(buffer, BLOCK_SIZE);
 
-    progress_bar(-1, -1, scrw - 2, i, (uint16)(size / BLOCK_SIZE));
+    progress_bar(-1, -1, scrw - 2, i, blocks);
 
     send_ack();
   }
-  simple_serial_read((char *)buffer, (uint16)(size % BLOCK_SIZE));
-  if (fwrite(buffer, 1, size % BLOCK_SIZE, fp) < size % BLOCK_SIZE) {
+
+  simple_serial_read((char *)buffer, rem);
+  if (fwrite(buffer, 1, rem, fp) < rem) {
     err = -1;
   }
 
-  DUMP_DATA(buffer, size % BLOCK_SIZE);
+  DUMP_DATA(buffer, rem);
 
   progress_bar(-1, -1, scrw - 2, 100, 100);
 
