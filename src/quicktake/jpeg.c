@@ -771,7 +771,8 @@ static uint8 init(void)
      mul196_m[i] = (r & (0x0000ff00)) >> 8;
      mul196_h[i] = (r & (0x00ff0000)) >> 16;
    } while(++i);
-   fillInBuf();
+   /* Buf pre-filled by qt-conv.c::identify */
+   //fillInBuf();
 
    getBits1(8);
    getBits1(8);

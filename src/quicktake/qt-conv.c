@@ -101,23 +101,22 @@ uint8 *cur_cache_ptr;
 
 static uint8 identify(const char *name)
 {
-  char head[32];
-
 /* INIT */
   height = width = 0;
 
-  fread (head, 1, HDR_LEN, ifp);
+  fread (cache_start, 1, CACHE_SIZE, ifp);
 
   printf("Converting QuickTake ");
-  if (!memcmp (head, magic, 4)) {
+  if (!memcmp (cache_start, magic, 4)) {
     printf("%s", model);
   } else {
     printf("??? - Invalid file.\n");
     return -1;
   }
 
-  if (!memcmp(head, QTKT_MAGIC, 3)) {
-    src_file_seek(WH_OFFSET);
+  /* For Quicktake 1x0 */
+  if (!memcmp(cache_start, QTKT_MAGIC, 3)) {
+    cur_cache_ptr = cache_start + WH_OFFSET;
     height = src_file_get_uint16();
     width  = src_file_get_uint16();
 
@@ -128,16 +127,16 @@ static uint8 identify(const char *name)
     src_file_get_uint16();
 
     if (src_file_get_uint16() == 30)
-      cur_cache_ptr = cache_start + (738 - WH_OFFSET);
+      cur_cache_ptr = cache_start + (738);
     else
-      cur_cache_ptr = cache_start + (736 - WH_OFFSET);
+      cur_cache_ptr = cache_start + (736);
 
-  } else if (!memcmp(head, JPEG_EXIF_MAGIC, 4)) {
+  } else if (!memcmp(cache_start, JPEG_EXIF_MAGIC, 4)) {
     /* FIXME QT 200 implied, 640x480 (scaled down) implied, that sucks */
     printf(" image %s (640x480)...\n", name);
     width = QT200_JPEG_WIDTH;
     height = QT200_JPEG_HEIGHT;
-    rewind(ifp);
+    cur_cache_ptr = cache_start;
   }
   return 0;
 }
