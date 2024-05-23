@@ -58,8 +58,6 @@ uint8 *idx_end;
 uint8 *idx_behind_plus2;
 uint16 *idx_pix_rows;
 
-uint8 last_val;
-
 
 /* Internal data buffer
  * We don't use the destination raw_image directly,
@@ -82,6 +80,7 @@ void qt_load_raw(uint16 top)
   register uint8 at_very_first_col;
   register uint8 row;
   register int16 val;
+  uint8 ln_val, hn_val;
 
   /* First band: init variables */
   if (top == 0) {
@@ -126,10 +125,7 @@ void qt_load_raw(uint16 top)
     }
 
     /* Initial set of the value two columns behind */
-    last_val = (*idx);
-
-    /* row, col index */
-    //idx += 2;
+    ln_val = (*idx);
 
     /* row-1, col-1 */
     idx_behind = idx - (SCRATCH_WIDTH-1);
@@ -153,7 +149,7 @@ void qt_load_raw(uint16 top)
       /* Do high nibble */
 
       val = ((((*idx_behind               // row-1, col-1
-              + last_val) >> 1)
+              + ln_val) >> 1)
               + *(idx_behind+2)) >> 1) // row-1, col+1
               + gstep[high_nibble];
 
@@ -162,18 +158,10 @@ void qt_load_raw(uint16 top)
       else if (val > 255)
         val = 255;
 
-      *(idx+2) = val;
-
       /* Cache it for next loop before shifting */
-      last_val = val;
+      hn_val = val;
 
-
-      /* At first columns, we have to set scratch values for the next line.
-       * We'll need them in the second pass */
-      if (at_very_first_col) {
-        *(idx_forward) = *(idx) = val;
-        at_very_first_col = 0;
-      }
+      *(idx+2) = val;
 
       /* Same for the first line of the image */
       if (at_very_first_row) {
@@ -181,10 +169,19 @@ void qt_load_raw(uint16 top)
         *(idx_behind+4) = *(idx_behind+2) = val;
       }
 
+      /* At first columns, we have to set scratch values for the next line.
+       * We'll need them in the second pass */
+      if (at_very_first_col) {
+        *(idx+1) = *(idx_forward) = *(idx) = val;
+        at_very_first_col = 0;
+      } else {
+        *(idx+1) = (val + ln_val) >> 1;
+      }
+
       /* Do low nibble with indexes shifted 2 */
 
       val = ((((*(idx_behind+2)               // row-1, col-1
-              + last_val) >> 1)
+              + hn_val) >> 1)
               + *(idx_behind+4)) >> 1) // row-1, col+1
               + gstep[low_nibble];
 
@@ -193,11 +190,11 @@ void qt_load_raw(uint16 top)
       else if (val > 255)
         val = 255;
 
-      *(idx+4) = val;
-
       /* Cache it for next loop before shifting */
-      last_val = val;
+      ln_val = val;
 
+      *(idx+4) = val;
+      *(idx+3) = (val + hn_val) >> 1;
 
       /* Same for the first line of the image */
       if (at_very_first_row) {
@@ -211,31 +208,6 @@ void qt_load_raw(uint16 top)
     }
     *(idx+2) = val;
     at_very_first_row = 0;
-  }
-
-  /* Second pass */
-  src = pixelbuf + (2 * SCRATCH_WIDTH);
-
-  for (row = BAND_HEIGHT; row != 0; row--) {
-    /* Adapt indexes for oddity */
-    if (row & 1) {
-      idx = src+1;
-    } else {
-      idx = src+2;
-    }
-
-    /* Setup the rest of the indexes */
-    idx_end = idx + width;
-
-    /* Shift source buffer */
-    src += SCRATCH_WIDTH;
-
-    while (idx != idx_end) {
-      *(idx+1) = ((*(idx) + *(idx+2)) >> 1);
-
-      /* Shift indexes */
-      idx += 2;
-    }
   }
 
   /* Finish by copying the actual data, leaving out the two first scratch rows,

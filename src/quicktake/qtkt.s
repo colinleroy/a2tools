@@ -1,6 +1,7 @@
         .importzp        sp, sreg
         .importzp        tmp1, tmp2, tmp3, tmp4, ptr1, ptr2, ptr3, ptr4
-        .importzp        _prev_rom_irq_vector, _prev_ram_irq_vector, _zp6p, _zp8p, _zp10p, _zp12, _zp13, _zp12ip
+        .importzp        _prev_rom_irq_vector, _prev_ram_irq_vector
+        .importzp        _zp4p, _zp6p, _zp8p, _zp10p, _zp12, _zp13
 
         .import          _memcpy, _progress_bar
 				.import          pushax, pusha, pusha0, decsp6, incsp6, subysp
@@ -144,15 +145,15 @@ model_str:
         .byte        $31,$30,$30,$00
 
 .segment        "BSS"
+.align 1024
+_cache:
+        .res        CACHE_SIZE,$00
 .align 256
 _raw_image:
         .res        RAW_IMAGE_SIZE,$00
 .align 256
 pixelbuf:
         .res        PIXELBUF_SIZE,$00
-
-_cache:
-        .res        CACHE_SIZE,$00
 dst:
         .res        2,$00
 pgbar_state:
@@ -196,7 +197,7 @@ fill_cache:
         inc     a
         sta     (sp),y
 
-        ; Push count ($1000, CACHE_SIZE)
+        ; Push count (CACHE_SIZE)
         dey
         lda     #>CACHE_SIZE
         sta     (sp),y
@@ -212,10 +213,12 @@ fill_cache:
 val               = _prev_rom_irq_vector
 row               = _prev_rom_irq_vector+1
 
+idx_one           = _zp4p
 src               = _zp6p
 idx               = _zp8p
 idx_behind        = _zp10p
-last_val          = _zp12
+ln_val            = _zp12
+hn_val            = _zp13
 
 ; Don't put this one in LC as it is patched on runtime
 _qt_load_raw:
@@ -238,9 +241,9 @@ top:    jsr     _reset_bitbuff  ; Yes. Initialize things
         ldx     #>(2*SCRATCH_WIDTH + 2)
         jsr     reset_buffer
 
-        lda     #1
-        sta     check_first_row+1  ; Init with non-zero value
-        sta     check_first_row2+1  ; Init with non-zero value
+        lda     #$4C              ; handle first row - JMP
+        sta     check_first_row
+        sta     check_first_row2
 
         jmp     start_work
 not_top:
@@ -317,16 +320,25 @@ even_row:
 
         lda     src             ; Set idx_forward = src + SCRATCH_WIDTH + 1 and idx = src
         sta     idx
+        tay
         adc     #<(SCRATCH_WIDTH+1)
         sta     store_idx_forward+1
         lda     src+1
         sta     idx+1
+        tax
         adc     #>(SCRATCH_WIDTH+1)
         sta     store_idx_forward+2
 
 first_pass_row_work:
+        cpy     #$00
+        bne     :+
+        dex
+:       dey
+        sty     idx_one
+        stx     idx_one+1
+
         lda     (idx)           ; Remember previous val before shifting
-        sta     last_val        ; index
+        sta     ln_val          ; index
 
         lda     idx
         ldx     idx+1
@@ -349,7 +361,8 @@ first_pass_row_work:
         sta     src+1
 
         ; We're at first column
-        sta     check_first_col+1
+        lda     #$4C               ; JMP
+        sta     check_first_col
 
         jmp     first_pass_col_loop
 
@@ -367,8 +380,16 @@ clamp_high_nibble:
         bpl     :+
         lda     #$FF            ; => FF if positive
 
-:       sta     (idx),y         ; *(idx+2) = val
-        sta     last_val
+:       sta     hn_val
+        jmp     store_high_nibble
+
+handle_first_row_high_nibble:
+        sta     (idx_behind),y  ; *(idx_behind+2) = *(idx_behind+4) = val;
+        iny
+        iny
+        sta     (idx_behind),y
+        dey
+        dey                     ; Set Y back for low nibble
         jmp     check_first_col
 
 first_pass_col_loop:
@@ -392,13 +413,13 @@ fetch_byte:
 
         ; HIGH NIBBLE
         ; val = ((((*idx_behind
-        ;         + last_val) >> 1)
+        ;         + ln_val) >> 1)
         ;         + *(idx_behind+2)) >> 1)
         ;         + gstep[high_nibble];
 
         clc
         lda     (idx_behind),y  ; (*idx_behind)
-        adc     last_val        ; + last_val
+        adc     ln_val          ; + ln_val
         ror                     ; >> 1
 
         clc
@@ -413,38 +434,43 @@ fetch_byte:
                                 ; Sets carry if overflow
 
                                 ; Write them now even if overwritten in clamp_*nibble - it's faster
-        sta     (idx),y         ; *(idx+2) = val
-        sta     last_val        ; last_val = val
+        sta     hn_val          ; hn_val = val
 
         lda     high_nibble_gstep_high,x
                                 ; Carry set by previous adc if overflowed
 
         adc     #0              ; If A = $FF and C set, C will stay set
         clc                     ; so clear it.
-        bne     clamp_high_nibble; overflow
+        bne     clamp_high_nibble; overflow - handle it
+        lda     hn_val          ; Otherwise reload hn_val
 
-check_first_col:
-        lda     #1              ; Patched
-        bne     handle_first_col
+store_high_nibble:
+        sta     (idx),y         ; First store high nibble's result
 
 check_first_row:
-        lda     #1              ; Patched
-        bne     handle_first_row_high_nibble
+        jmp     handle_first_row_high_nibble ; Patched
 
-        lda     last_val        ; Reload last_val if !first_col && !first_row
+check_first_col:
+        jmp     handle_first_col; Patched
+
+first_col_checked:
+                                ; Not first col:
+        adc     ln_val          ; *(idx+1) = (val + ln_val) >> 1;
+        ror
+        clc
+        sta     (idx_one),y
 
         ; REPEAT WITH LOW NIBBLE (same, with +2 offsets on Y)
 
 do_low_nibble:
         ; val = ((((*(idx_behind+2)
-        ;         + last_val) >> 1)
+        ;         + hn_val) >> 1)
         ;         + *(idx_behind+4)) >> 1)
         ;         + gstep[low_nibble];
 
-        ; A = last_val here.
+        lda     hn_val          ; Reload hn_val
         adc     (idx_behind),y  ; Y expected to be 2 there
         ror
-
         clc
 
         iny
@@ -456,19 +482,25 @@ do_low_nibble:
         adc     low_nibble_gstep_low,x
                                 ; Sets carry if overflow
 
-        sta     (idx),y         ; *(idx+4) = val
-        sta     last_val
+        sta     ln_val
 
         lda     low_nibble_gstep_high,x
                                 ; Carry set by previous adc if overflowed
 
-        adc     #0
-        bne     clamp_low_nibble; Overflow
+        adc     #0              ; If A = $FF and C set, C will stay set
+        clc                     ; so clear it.
+        bne     clamp_low_nibble; Overflow - handle it
+        lda     ln_val          ; otherwise reload ln_val
 
 check_first_row2:
-        lda     #1              ; Patched
-        bne     handle_first_row_low_nibble
+        jmp     handle_first_row_low_nibble ; Patched
 
+low_nibble_end:                 ; We have ln_val in A, store it
+        sta     (idx),y         ; at idx
+        adc     hn_val          ; and handle idx+1
+        ror
+        clc
+        sta     (idx_one),y
         ; END LOW NIBBLE
 
 check_first_pass_col_y_loop:
@@ -477,173 +509,78 @@ check_first_pass_col_y_loop:
 
 shift_indexes:
         clc                     ; idx_behind += Y_LOOP_LEN
-        lda     idx_behind
-        adc     #Y_LOOP_LEN
+        tya                     ; Y = Y_LOOP_LEN here
+        adc     idx_behind
         sta     idx_behind
         bcc     :+
         inc     idx_behind+1
         clc
 
-:       lda     idx             ; idx += Y_LOOP_LEN
-        adc     #Y_LOOP_LEN
-        sta     idx
+:       tya
+        adc     idx_one             ; idx_one += Y_LOOP_LEN
+        sta     idx_one
+        bcc     :+
+        inc     idx_one+1
+        clc
+
+:       tya
+        adc     idx             ; idx += Y_LOOP_LEN
+        sta     idx             ; increment idx last for bound checking
         bcc     check_first_pass_col_loop
         inc     idx+1
 
 check_first_pass_col_loop:
         cmp     #0              ; Patched (idx_end)
-        bne     first_pass_col_loop
-        lda     idx+1
+        beq     :+
+        jmp     first_pass_col_loop
+:       lda     idx+1
 check_first_pass_col_loop_hi:
         cmp     #0              ; Patched (idx_end+1)
-        bne     first_pass_col_loop
+        beq     end_of_line
+        jmp     first_pass_col_loop
 
 end_of_line:
-        lda     last_val        ; *(idx+2) = val
+        lda     ln_val          ; *(idx+2) = val
         ldy     #2
         sta     (idx),y
-        stz     check_first_row+1
-        stz     check_first_row2+1
+        lda     #$2C
+        sta     check_first_row
+        sta     check_first_row2
 
         dec     row
-        beq     start_second_pass
+        beq     copy_buffer
         jmp     first_pass_next_row
 
         ; First cols and first row handlers, out of main loop
+
+handle_first_col:
+        sta     (idx_one),y
+store_idx_forward:
+        sta     $FFFF           ; Patched
+store_idx_min2:
+        sta     $FFFF           ; Patched
+        lda     #$2C
+        sta     check_first_col ; Unplug first col handler
+        jmp     do_low_nibble
 
 clamp_low_nibble:
         eor     #$FF            ; => 00 if negative, FE if positive
         bpl     :+
         lda     #$FF            ; => FF if positive
 
-:       sta     (idx),y         ; *(idx+4) = val
-        sta     last_val
+:       sta     ln_val
         jmp     check_first_row2
 
-handle_first_col:
-        lda     last_val
-store_idx_forward:
-        sta     $FFFF           ; Patched
-store_idx_min2:
-        sta     $FFFF           ; Patched
-        stz     check_first_col+1
-        jmp     check_first_row
-
-handle_first_row_high_nibble:
-        lda     last_val        ; get val back
-        sta     (idx_behind),y  ; *(idx_behind+2) = *(idx_behind+4) = val;
-        iny
-        iny
-        sta     (idx_behind),y
-        dey
-        dey                     ; Set Y back for low nibble
-        jmp     do_low_nibble
-
 handle_first_row_low_nibble:
-        lda     last_val        ; get val back
         sta     (idx_behind),y  ; *(idx_behind+4) = *(idx_behind+6) = val;
         iny
         iny
         sta     (idx_behind),y
         dey
         dey
-        jmp     check_first_pass_col_y_loop
+        jmp     low_nibble_end
 
         ; End of first col/row handlers
-
-
-start_second_pass:
-        lda     #>(pixelbuf + (2 * SCRATCH_WIDTH))
-        sta     src+1
-        lda     #<(pixelbuf + (2 * SCRATCH_WIDTH))
-        sta     src
-
-        lda     #BAND_HEIGHT
-        sta     row
-
-second_pass_next_row:
-        clc
-        ldy     src
-        ldx     src+1
-
-        lda     row             ; row & 1?
-        bit     #$01
-        bne     second_pass_row_work
-        iny                     ; no,  idx = src + 2
-        bne     second_pass_row_work
-        inx
-
-second_pass_row_work:
-        sty     idx_behind
-        stx     idx_behind+1
-
-        iny
-        bne     :+
-        inx
-
-:       tya
-        sta     idx
-        stx     idx+1
-
-        adc     _width          ; idx_end = idx + width
-        sta     check_second_pass_col_loop+1
-        txa
-        adc     _width+1
-        sta     check_second_pass_col_loop_hi+1
-
-        lda     #<SCRATCH_WIDTH ; src += SCRATCH_WIDTH
-        adc     src
-        sta     src
-        lda     #>SCRATCH_WIDTH
-        adc     src+1
-        sta     src+1
-
-second_pass_col_loop:
-        ; val = ((*(idx) + *(idx+2)) >> 1)
-
-        ldy     #0
-        clc
-
-second_pass_col_y_loop:
-        lda     (idx),y         ; *(idx)
-        iny
-        iny
-                                ; no need to clc here, it's been done
-        adc     (idx),y         ; + *(idx+2)
-        ror                     ; >> 1 with carry from add back to high bit
-
-        sta     (idx_behind),y         ; *(idx+1) = val
-
-        cpy     #Y_LOOP_LEN
-        bne     second_pass_col_y_loop
-        
-        ; Shift indexes
-        lda     idx_behind
-        ldx     idx_behind+1
-        clc
-        adc     #Y_LOOP_LEN
-        sta     idx_behind
-        bcc     :+
-        inx
-
-:       stx     idx_behind+1
-        inc     a
-        sta     idx
-        bne     :+
-        inx
-:       stx     idx+1
-
-check_second_pass_col_loop:
-        ; Are we done for this row?
-        cmp     #0              ; Patched (idx_end)
-        bne     second_pass_col_loop
-check_second_pass_col_loop_hi:
-        cpx     #0              ; Patched (idx_end+1)
-        bne     second_pass_col_loop
-
-second_pass_row_done:
-        dec     row
-        bne     second_pass_next_row
 
         ; Both passes done, memcpy BAND_HEIGHT lines to destination buffer,
         ; excluding two leftmost and rightmost scratch pixels
