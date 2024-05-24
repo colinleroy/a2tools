@@ -723,6 +723,7 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
 #ifndef __CC65__
       cur_hgr_baseaddr_ptr = (hgr_baseaddr + off_y);
       d7 = *(shifted_div7_table + off_x);
+      ptr = *cur_hgr_baseaddr_ptr + d7;
       cur_hgr_baseaddr_val = *cur_hgr_baseaddr_ptr + d7;
 
       xdir = +1;
@@ -879,6 +880,7 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
       cur_hgr_baseaddr_ptr = (hgr_baseaddr + off_y);
       d7 = *(shifted_div7_table + off_x);
       cur_hgr_baseaddr_val = *cur_hgr_baseaddr_ptr + d7;
+      ptr = *cur_hgr_baseaddr_ptr + d7;
       xdir = -1;
       ydir = -1;
       invert_coords = 0;

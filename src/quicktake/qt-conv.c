@@ -106,11 +106,11 @@ static uint8 identify(const char *name)
 
   fread (cache_start, 1, CACHE_SIZE, ifp);
 
-  printf("Converting QuickTake ");
+  printf("Decompressing ");
   if (!memcmp (cache_start, magic, 4)) {
-    printf("%s", model);
+    printf("QT%s", model);
   } else {
-    printf("??? - Invalid file.\n");
+    printf("- Invalid file.\n");
     return -1;
   }
 
@@ -454,6 +454,7 @@ try_again:
       goto try_again;
   }
 
+  clrscr();
   if (identify(ifname) != 0) {
     goto out;
   }
@@ -470,8 +471,6 @@ try_again:
   bzero(raw_image, RAW_IMAGE_SIZE);
   build_scale_table(ofname);
 
-  clrscr();
-  printf("Decompressing...\n");
   progress_bar(0, 1, 80*22, 0, height);
 
   for (h = 0; h < crop_end_y; h += BAND_HEIGHT) {
