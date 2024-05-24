@@ -69,19 +69,26 @@ read:
  */
 static uint8 send_hello(uint16 speed) {
   #define SPD_IDX 0x06
-  #define CHK_IDX 0x0C
-  char str_hello[] = {0x5A,0xA5,0x55,0x05,0x00,0x00,0x25,0x80,0x00,0x80,0x02,0x00,0x80};
-  int c;
+  #define CHKSUM_IDX 0x0C
+  char str_hello[] = {0x5A,0xA5,0x55,0x05,0x01,0x00,0x25,0x80,0x00,0x80,0x02,0x00,0xFF};
+  int c, chk;
 
   if (speed == 19200) {
     str_hello[SPD_IDX]   = 0x4B;
     str_hello[SPD_IDX+1] = 0x00;
-    str_hello[CHK_IDX]   = 0x26;
   } else if (speed == 57600U) {
     str_hello[SPD_IDX]   = 0xE1;
     str_hello[SPD_IDX+1] = 0x00;
-    str_hello[CHK_IDX]   = 0xBC;
   }
+
+  for (c = 0, chk = 0; c < CHKSUM_IDX; c++) {
+    chk += str_hello[c];
+  }
+  str_hello[CHKSUM_IDX] = chk & 0xFF;
+
+  DUMP_START("qt_speed");
+  DUMP_DATA(str_hello, CHKSUM_IDX+1);
+  DUMP_END();
 
   simple_serial_write(str_hello, sizeof(str_hello));
   if ((c = simple_serial_getc_with_timeout()) == EOF) {
@@ -222,7 +229,7 @@ static uint8 qt1x0_send_ping(void) {
  * to raw 4-bit data for a 80x60 image.
  */
 static uint8 send_photo_thumbnail_command(uint8 pnum) {
-  //            {????,????,????,????,????,????,PNUM,RESPONSE__SIZE,????}
+  //            {????,????,????,FMT?,????,????,PNUM,RESPONSE__SIZE,????}
   char str[] = {0x16,0x28,0x00,0x00,0x00,0x00,0x01,0x00,0x09,0x60,0x00};
 
   str[PNUM_IDX] = pnum;
@@ -236,7 +243,7 @@ static uint8 send_photo_thumbnail_command(uint8 pnum) {
 
 /* Gets photo header */
 static uint8 send_photo_header_command(uint8 pnum) {
-  //           {????,????,????,????,????,????,PNUM,RESPONSE__SIZE,????}
+  //           {????,????,????,FMT?,????,????,PNUM,RESPONSE__SIZE,????}
   char str[] = {0x16,0x28,0x00,0x21,0x00,0x00,0x01,0x00,0x00,0x40,0x00};
   /* Interesting bytes from the header */
   #define IMG_NUM_IDX     0x03
@@ -263,7 +270,7 @@ static uint8 send_photo_header_command(uint8 pnum) {
 
 /* Gets photo data */
 static uint8 send_photo_data_command(uint8 pnum, uint8 *picture_size) {
-  //           {????,????,????,????,????,????,PNUM,RESPONSE__SIZE,????}
+  //           {????,????,????,FMT?,????,????,PNUM,RESPONSE__SIZE,????}
   char str[] = {0x16,0x28,0x00,0x10,0x00,0x00,0x01,0x00,0x70,0x80,0x00};
 
   str[PNUM_IDX] = pnum;

@@ -133,9 +133,14 @@ static void save_picture(uint8 n_pic) {
     unlink(filename);
   }
 
+#ifdef __CC65__
   if (statvfs(filename, &sv) != 0) {
     goto err_io;
   }
+#else
+  sv.f_bfree=1024;
+  sv.f_bsize=512;
+#endif
 
   fp = fopen(filename, "w");
   if (!fp) {
