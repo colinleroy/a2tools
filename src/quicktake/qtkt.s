@@ -624,7 +624,7 @@ page_640:
         bne     page_640
 
         ldy     #<(640-(256*2)-1) ; Last part, 640-512 bytes remaining
-:       lda     (src),y           ; Mind the off by one, we ended at 511
+:       lda     (src),y           ; Mind the off by one, we dey so want bytes 127-0 inclusive
         sta     (idx),y
         dey
         bpl     :-
