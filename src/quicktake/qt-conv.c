@@ -49,6 +49,7 @@ static void reload_menu(const char *filename);
 
 /* Shared with decoders */
 uint16 height, width;
+uint8 read_from_dev = 0;
 
 /* Cache */
 uint8 *cache_end;
@@ -248,7 +249,7 @@ static void build_scale_table(const char *ofname) {
   } while (col); /* FILE_WIDTH == 256 */
 }
 
-#pragma code-name (pop) 
+#pragma code-name (pop)
 /* Patched func */
 
 /* Optimizer bug in there */
@@ -423,6 +424,9 @@ int main (int argc, const char **argv)
 {
   uint16 h;
   char ofname[64];
+#ifdef __CC65__
+  struct statvfs svbuf;
+#endif
 
   register_start_device();
 
@@ -453,6 +457,30 @@ try_again:
     else
       goto try_again;
   }
+
+#ifdef __CC65__
+  __asm__("stz %v", read_from_dev);
+
+  /* Figure if file is on a floppy, and if so compute where to poke to keep the
+   * floppy motor running.
+   * Ref: https://downloads.reactivemicro.com/Apple%20II%20Items/Documentation/Books/Beneath%20Apple%20ProDOS%20v1.2%20&%201.3%20-%20Supplement.PDF
+   * Ref: https://bitsavers.org/pdf/apple/disk/sony/Software_control_of_IWM.pdf
+   */
+
+  __asm__("lda $FED1");                 /* Check jmp vector at $FED1/FED2 */
+  __asm__("bne %g", no_disk2);
+  __asm__("lda $FED2");
+  __asm__("cmp #$D0");
+  __asm__("bne %g", no_disk2);
+                                        /* jmp vector points to DiskII driver at $D000 */
+  __asm__("lda $43");                   /* load unit number */
+  __asm__("clc");
+  __asm__("adc #$9");                   /* Add 9 to point to DiskII/IWM Turn Motor On softswitch */
+
+  __asm__("sta %v", read_from_dev);
+
+  no_disk2:
+#endif
 
   clrscr();
   if (identify(ifname) != 0) {
