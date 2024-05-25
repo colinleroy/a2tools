@@ -69,8 +69,7 @@ slowtake_CC65SOURCES := \
 	../lib/runtime_once_clean.s \
 	../lib/serial/simple_serial_io.s \
 	../lib/serial/simple_serial_read.s \
-	$(serial_hw_SOURCES) \
-	../lib/check_floppy.s
+	$(serial_hw_SOURCES)
 
 slowtake_GCCSOURCES := \
 	../lib/tgi_sdl.c \
