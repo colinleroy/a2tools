@@ -6,16 +6,43 @@
         .export               _check_floppy
         .export               floppy_motor_on
 
+        .importzp             tmp1, ptr1
+
 _check_floppy:
         stz     floppy_motor_on
 
-        lda     $FED1           ; Check jmp vector at $FED1/FED2
+        lda     $BF30           ; Get last accessed device
+        and     #$7F            ; Clear drive number and keep slot
+        sta     tmp1
+        lsr                     ; Shift to low nibble
+        lsr
+        lsr
+        lsr
+        clc
+
+        adc     #$C0            ; Build slot ROM pointer
+        sta     ptr1+1
+        stz     ptr1
+
+        ldy     #$01            ; Check for DiskII/IWM in slot
+        lda     (ptr1),y
+        cmp     #$20
         bne     :+
-        lda     $FED2
-        cmp     #$D0
+
+        ldy     #$03
+        lda     (ptr1),y
         bne     :+
-                                ; jmp vector points to DiskII driver at $D000
-        lda     $43             ; load unit/drive number (DSSS0000)
+
+        ldy     #$05
+        lda     (ptr1),y
+        cmp     #$03
+        bne     :+
+
+        ldy     #$FF
+        lda     (ptr1),y
+        bne     :+
+
+        lda     tmp1            ; Restore DEVNUM
         ora     #$80            ; clear drive number and set high bit (1SSS000)
         clc
         adc     #$9             ; Add 9 to point to DiskII/IWM Turn Motor On softswitch */
