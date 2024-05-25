@@ -69,7 +69,8 @@ slowtake_CC65SOURCES := \
 	../lib/runtime_once_clean.s \
 	../lib/serial/simple_serial_io.s \
 	../lib/serial/simple_serial_read.s \
-	$(serial_hw_SOURCES)
+	$(serial_hw_SOURCES) \
+	../lib/check_floppy.s
 
 slowtake_GCCSOURCES := \
 	../lib/tgi_sdl.c \
@@ -84,7 +85,9 @@ qtktconv_SOURCES := \
 
 qtktconv_CC65SOURCES := \
 	qtkt.s \
-	../lib/extrazp.s
+	../lib/extrazp.s \
+	../lib/check_floppy.s
+
 qtktconv_GCCSOURCES := \
 	qtkt.c 
 
@@ -99,7 +102,8 @@ qtknconv_CC65SOURCES := \
 	qtk_bithuff.s \
 	../lib/mult16x16x32.s \
 	../lib/approxdiv16x8.s \
-	../lib/square_table.s
+	../lib/square_table.s \
+	../lib/check_floppy.s
 	
 qtknconv_GCCSOURCES := \
 	qtk_bithuff.c
@@ -112,7 +116,8 @@ jpegconv_SOURCES := \
 
 jpegconv_CC65SOURCES := \
 	jpeg_platform.s \
-	../lib/extrazp.s
+	../lib/extrazp.s \
+	../lib/check_floppy.s
 
 jpegconv_GCCSOURCES := \
 	jpeg_platform.c

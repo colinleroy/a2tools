@@ -153,14 +153,6 @@ uint8 qt_get_information(camera_info *info) {
     return qt200_get_information(info);
 }
 
-/* Helper functions */
-void write_qtk_header(FILE *fp, const char *pic_format) {
-  char hdr[] = {0xFF,0xFF,0xFF,0xFF,0x00,0x00,0x00,0x04,0x00,0x00,0x73,0xE4,0x00,0x01};
-
-  memcpy(hdr, pic_format, 4);
-  fwrite(hdr, 1, sizeof hdr, fp);
-}
-
 const char *qt_get_quality_str(uint8 mode) {
   switch(mode) {
     case QUALITY_STANDARD:
