@@ -9,6 +9,8 @@
         .import          _width
         .import          _fread, _ifp, _cache_end
 
+        .import          _read_from_dev
+
         .export          _raw_image
         .export          _magic
         .export          _model
@@ -158,6 +160,8 @@ dst:
         .res        2,$00
 pgbar_state:
         .res        2,$00
+motor_on:
+        .res        2,$00
 
 ; Offset to scratch start of last scratch lines, row 20 col 0
 LAST_TWO_LINES = pixelbuf + (BAND_HEIGHT * SCRATCH_WIDTH)
@@ -244,6 +248,12 @@ top:    jsr     _reset_bitbuff  ; Yes. Initialize things
         lda     #$4C              ; handle first row - JMP
         sta     check_first_row
         sta     check_first_row2
+
+        lda     _read_from_dev    ; Patch motor-on if we use a floppy
+        beq     start_work
+        sta     keep_motor_on+1
+        lda     #$C0
+        sta     keep_motor_on+2
 
         jmp     start_work
 not_top:
@@ -408,6 +418,8 @@ fetch_byte:
         inc     cur_cache_ptr
         bne     :+
         inc     cur_cache_ptr+1
+keep_motor_on:
+        sta     motor_on        ; Keep drive motor running
 
 :       tax                     ; Get gstep vals to X (keep it in X!)
 
@@ -659,7 +671,7 @@ next_row_320:
         inc     src+1
         inc     idx+1
 
-        ldy     #<(320-(256*2)-1) ; Last part, 320-256 bytes remain
+        ldy     #<(320-(256)-1)   ; Last part, 320-256 bytes remain
 :       lda     (src),y
         sta     (idx),y
         dey
@@ -667,7 +679,7 @@ next_row_320:
 
         clc
         lda     idx               ; Shift idx to start of next row
-        adc     #<(320-(256*2))   ; raw_image is packed so each line start
+        adc     #<(320-(256))     ; raw_image is packed so each line start
         sta     idx               ; at the end of the previous one
         bcc     :+
         inc     idx+1
