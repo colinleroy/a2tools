@@ -9,7 +9,7 @@
         .import          _width
         .import          _fread, _ifp, _cache_end
 
-        .import          _read_from_dev
+        .import          floppy_motor_on
 
         .export          _raw_image
         .export          _magic
@@ -249,11 +249,16 @@ top:    jsr     _reset_bitbuff  ; Yes. Initialize things
         sta     check_first_row
         sta     check_first_row2
 
-        lda     _read_from_dev    ; Patch motor-on if we use a floppy
+        lda     floppy_motor_on    ; Patch motor-on if we use a floppy
         beq     start_work
         sta     keep_motor_on+1
+        sta     keep_motor_on_beg+1
         lda     #$C0
         sta     keep_motor_on+2
+        sta     keep_motor_on_beg+2
+
+keep_motor_on_beg:
+        sta     motor_on        ; Keep drive motor running
 
         jmp     start_work
 not_top:
@@ -383,6 +388,8 @@ cache_check_high_byte:
         phy
         jsr     fill_cache
         ply
+keep_motor_on:
+        sta     motor_on        ; Keep drive motor running
         jmp     fetch_byte
 
 clamp_high_nibble:
@@ -418,8 +425,6 @@ fetch_byte:
         inc     cur_cache_ptr
         bne     :+
         inc     cur_cache_ptr+1
-keep_motor_on:
-        sta     motor_on        ; Keep drive motor running
 
 :       tax                     ; Get gstep vals to X (keep it in X!)
 

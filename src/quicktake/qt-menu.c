@@ -14,6 +14,7 @@
 #include "scrollwindow.h"
 #include "simple_serial.h"
 #include "clrzone.h"
+#include "check_floppy.h"
 #include "splash.h"
 #include "qt-conv.h"
 #include "qt-edit-image.h"
@@ -146,6 +147,10 @@ static void save_picture(uint8 n_pic) {
   if (!fp) {
     goto err_io;
   }
+
+#ifdef __CC65__
+  check_floppy();
+#endif
 
   if (qt_get_picture(n_pic, fp, sv.f_bfree * sv.f_bsize) == 0) {
     uint16 tmp = n_pic;

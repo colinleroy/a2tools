@@ -406,6 +406,7 @@ uint8 qt1x0_get_picture(uint8 n_pic, FILE *picture, off_t avail) {
   unsigned long pic_size_int;
   uint8 i;
   const char *format;
+  char hdr[] = {0x00,0x00,0x00,0x04,0x00,0x00,0x73,0xE4,0x00,0x01};
 
   sleep(1);
 
@@ -448,26 +449,25 @@ uint8 qt1x0_get_picture(uint8 n_pic, FILE *picture, off_t avail) {
   width = char_to_n_uint16(buffer + IMG_WIDTH_IDX);
   height = char_to_n_uint16(buffer  + IMG_HEIGHT_IDX);
 
-  format = QTKN_MAGIC; /* Default to QuickTake 150/200 format */
+  format = QTKN_MAGIC; /* Default to QuickTake 150 format */
 
   if (serial_model == QT_MODEL_100) {
     format = QTKT_MAGIC;
   }
 
+  /* Copy the header to 0x0E */
+  memcpy(buffer+0x0E, buffer+HDR_SKIP, 64-HDR_SKIP);
+
   /* Write the start of the header */
-  write_qtk_header(picture, format);
-  for (i = 0; i != 2; i++)
-    fwrite(buffer, 1, BLOCK_SIZE, picture);
+  memcpy(buffer, format, 4);
+  memcpy(buffer+4, hdr, sizeof(hdr));
 
-  /* Write the rest of the header */
-  fseek(picture, 0x0E, SEEK_SET);
-  fwrite(buffer + HDR_SKIP, 1, 64 - HDR_SKIP, picture);
+  /* Set height & width */
+  memcpy(buffer+WH_OFFSET, (char*)&height, 2);
+  memcpy(buffer+WH_OFFSET+2, (char*)&width, 2);
 
-  /* Set them in the file */
-  fseek(picture, WH_OFFSET, SEEK_SET);
-  fwrite((char *)&height, 2, 1, picture);
-  fwrite((char *)&width, 2, 1, picture);
-
+  /* Write the header to file and seek to data offset. */
+  fwrite(buffer, 1, BUFFER_SIZE, picture);
   fseek(picture, DATA_OFFSET, SEEK_SET);
 
   printf("  Width %u, height %u, %lu bytes (%s)\n",
@@ -503,7 +503,6 @@ uint8 qt1x0_get_thumbnail(uint8 n_pic, FILE *picture, thumb_info *info) {
   DUMP_DATA(buffer, 64);
   DUMP_END();
 
-  
   info->quality_mode = buffer[IMG_QUALITY_IDX];
   info->flash_mode   = buffer[IMG_FLASH_IDX];
   info->date.year    = buffer[IMG_YEAR_IDX] + 2000;

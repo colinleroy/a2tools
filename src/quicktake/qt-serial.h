@@ -44,7 +44,7 @@ typedef struct _thumb_info {
 
 /* Communication buffer */
 #define BLOCK_SIZE 512
-#define BUFFER_BLOCKS 2
+#define BUFFER_BLOCKS 4
 #define BUFFER_SIZE (BLOCK_SIZE*BUFFER_BLOCKS)
 extern unsigned char buffer[BUFFER_SIZE];
 extern uint8 serial_model;
@@ -64,7 +64,6 @@ uint8 qt_set_quality(uint8 quality);
 uint8 qt_set_flash(uint8 mode);
 
 /* Helper functions */
-void write_qtk_header(FILE *fp, const char *pic_format);
 const char *qt_get_quality_str(uint8 mode);
 const char *qt_get_flash_str(uint8 mode);
 
