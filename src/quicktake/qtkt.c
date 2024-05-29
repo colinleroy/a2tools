@@ -31,7 +31,6 @@ uint16 *huff_ptr = NULL; /* unused here, just for linking */
 uint8 *dst, *src;
 uint8 cache[CACHE_SIZE];
 uint8 *cache_start = cache;
-uint8 raw_image[RAW_IMAGE_SIZE];
 
 /* Pointer arithmetic helpers */
 static uint16 width_plus2;
@@ -69,7 +68,7 @@ uint16 *idx_pix_rows;
  */
 #define SCRATCH_WIDTH 644
 #define SCRATCH_HEIGHT (BAND_HEIGHT + 4)
-static uint8 pixelbuf[SCRATCH_HEIGHT * SCRATCH_WIDTH + 2];
+uint8 raw_image[SCRATCH_HEIGHT * SCRATCH_WIDTH + 2];
 
 void __fastcall__ reset_bitbuff (void) {
 }
@@ -94,18 +93,18 @@ void qt_load_raw(uint16 top)
      * from the end of the previous band to the start of
      * the new one.
      */
-    last_two_lines = pixelbuf + (BAND_HEIGHT * SCRATCH_WIDTH);
+    last_two_lines = raw_image + (BAND_HEIGHT * SCRATCH_WIDTH);
 
-    /* Init the first two lines + 2 bytes of buffer with grey. */
-    memset (pixelbuf, 0x80, 2*SCRATCH_WIDTH + 2);
+    /* Init the second line + 2 bytes of buffer with grey. */
+    memset (raw_image+SCRATCH_WIDTH, 0x80, SCRATCH_WIDTH + 2);
   } else {
-    /* Shift the last band's last 2 lines, plus 2 pixels,
-     * to the start of the new band. */
-    memcpy(pixelbuf, last_two_lines, 2*SCRATCH_WIDTH + 2);
+    /* Shift the last band's last line, plus 2 pixels,
+     * to second line of the new band. */
+    memcpy(raw_image+SCRATCH_WIDTH, last_two_lines+SCRATCH_WIDTH, SCRATCH_WIDTH + 2);
   }
 
   /* We start at line 2. */
-  src = pixelbuf + (2 * SCRATCH_WIDTH);
+  src = raw_image + (2 * SCRATCH_WIDTH);
 
   /* In reality we do rows from 0 to BAND_HEIGHT, but decrementing is faster
    * and the only use of the variable is to check for oddity, so nothing
@@ -208,16 +207,5 @@ void qt_load_raw(uint16 top)
     }
     *(idx+2) = val;
     at_very_first_row = 0;
-  }
-
-  /* Finish by copying the actual data, leaving out the two first scratch rows,
-   * the two last scratch rows (which will be reused for the next band), and
-   * the two first and two last pixels of each line, which are scratch too */
-  dst = raw_image;
-  src = pixelbuf + (2 * SCRATCH_WIDTH) + 2;
-  for (row = 0; row < BAND_HEIGHT; row++) {
-    memcpy(dst, src, width);
-    dst+=width;
-    src+=SCRATCH_WIDTH;
   }
 }

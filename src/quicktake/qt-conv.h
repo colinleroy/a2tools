@@ -76,7 +76,7 @@ void qt_load_raw(uint16 top);
 #define RAW_DIRECT_IDX(idx) raw_image[idx]
 
 #define FILE(row,col) raw_image[((row)*width)+(col)]
-#define FILE_IDX(row,col) (((row)*width)+(col))
+#define FILE_IDX(row,col) (((row)*RAW_WIDTH)+(col))
 #define FILE_DIRECT_IDX(idx) raw_image[idx]
 
 #ifdef __CC65__
