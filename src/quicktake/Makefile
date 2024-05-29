@@ -88,7 +88,7 @@ qtktconv_CC65SOURCES := \
 	../lib/check_floppy.s
 
 qtktconv_GCCSOURCES := \
-	qtkt.c 
+	qtkt.c
 
 qtknconv_SOURCES := \
 	qt-conv.c \
@@ -133,11 +133,26 @@ CFLAGS  = -I ../lib -DCONF_FILE_PATH=\"/etc/a2tools/quicktake.conf\"
 CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x200 $(USE_LANGCARD) $(debug_CFLAGS) $(iigs_CFLAGS)
 
 slowtake_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-hgr.cfg $(CC65_TARGET)-iobuf-0800.o --start-addr 0xC00 #One file buffer
-qtktconv_CLCFLAGS = -D_CACHE_SIZE=4096 --asm-define CACHE_SIZE=4096 $(CLCFLAGS) -C ../../config/apple2enh-alignbss.cfg $(CC65_TARGET)-iobuf-0800.o --start-addr 0x1000    #Two file buffers
-qtknconv_CLCFLAGS = -D_CACHE_SIZE=4096 --asm-define CACHE_SIZE=4096 $(CLCFLAGS) -C ../../config/apple2enh-aligndata.cfg $(CC65_TARGET)-iobuf-0800.o --start-addr 0x1000
-jpegconv_CLCFLAGS = -D_CACHE_SIZE=4096 --asm-define CACHE_SIZE=4096 $(CLCFLAGS) -C ../../config/apple2enh.cfg $(CC65_TARGET)-iobuf-0800.o --start-addr 0x1000
+
+qtktconv_CLCFLAGS = -D_CACHE_SIZE=16384 --asm-define CACHE_SIZE=16384 \
+	-DRAW_X_OFFSET=2 -DRAW_Y_OFFSET=2 -DRAW_WIDTH=644 \
+	$(CLCFLAGS) -C ../../config/apple2enh-alignbss.cfg $(CC65_TARGET)-iobuf-0800.o --start-addr 0x1000    #Two file buffers
+
+qtknconv_CLCFLAGS = -D_CACHE_SIZE=4096 --asm-define CACHE_SIZE=4096 \
+	-DRAW_X_OFFSET=0 -DRAW_Y_OFFSET=0 -DRAW_WIDTH=width \
+	$(CLCFLAGS) -C ../../config/apple2enh-aligndata.cfg $(CC65_TARGET)-iobuf-0800.o --start-addr 0x1000
+
+jpegconv_CLCFLAGS = -D_CACHE_SIZE=4096 --asm-define CACHE_SIZE=4096 \
+	-DRAW_X_OFFSET=0 -DRAW_Y_OFFSET=0 -DRAW_WIDTH=width \
+	$(CLCFLAGS) -C ../../config/apple2enh.cfg $(CC65_TARGET)-iobuf-0800.o --start-addr 0x1000
 
 GCCCFLAGS = -D_CACHE_SIZE=4096 -g -O0 -Wall -Wno-pointer-sign -Wno-char-subscripts -Wno-unused-but-set-variable -Wno-unused-variable -Wno-unknown-pragmas $(shell sdl-config --cflags)
+qtktconv_GCCCFLAGS = -DRAW_X_OFFSET=2 -DRAW_Y_OFFSET=2 -DRAW_WIDTH=644
+
+qtknconv_GCCCFLAGS = -DRAW_X_OFFSET=0 -DRAW_Y_OFFSET=0 -DRAW_WIDTH=width
+
+jpegconv_GCCCFLAGS = -DRAW_X_OFFSET=0 -DRAW_Y_OFFSET=0 -DRAW_WIDTH=width
+
 GCCLDFLAGS = $(shell sdl-config --libs)
 
 .PHONY: all clean
@@ -166,19 +181,19 @@ qtktconv.bin: $(qtktconv_CC65SOURCES) $(qtktconv_SOURCES)
 	cl65 --debug-info -Wl --dbgfile,"qtktconv.dbg" $(CFLAGS) $(qtktconv_CLCFLAGS) -vm -m qtktconv.map -o $@ $^
 
 qtktconv.x86_64: $(qtktconv_SOURCES) $(qtktconv_GCCSOURCES) $(GCCSOURCES)
-	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	
+	gcc $(CFLAGS) $(GCCCFLAGS) $(qtktconv_GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@
 
 qtknconv.bin: $(qtknconv_SOURCES) $(qtknconv_CC65SOURCES)
 	cl65 --debug-info -Wl --dbgfile,"qtknconv.dbg" $(CFLAGS) $(qtknconv_CLCFLAGS) -vm -m qtknconv.map -o $@ $^
 
 qtknconv.x86_64: $(qtknconv_SOURCES) $(qtknconv_GCCSOURCES) $(GCCSOURCES)
-	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	
+	gcc $(CFLAGS) $(GCCCFLAGS) $(qtknconv_GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@
 
 jpegconv.bin: $(jpegconv_SOURCES) $(jpegconv_CC65SOURCES)
 	cl65 --debug-info -Wl --dbgfile,"jpegconv.dbg" $(CFLAGS) $(jpegconv_CLCFLAGS) -vm -m jpegconv.map -o $@ $^
 
 jpegconv.x86_64: $(jpegconv_SOURCES) $(jpegconv_GCCSOURCES) $(GCCSOURCES)
-	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	
+	gcc $(CFLAGS) $(GCCCFLAGS) $(jpegconv_GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@
 
 loader.x86_64: loader.c
 	gcc -o $@ -I/usr/include/SDL loader.c ../lib/extended_conio.c ../lib/clrzone.c -lSDL_image -lSDL

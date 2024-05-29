@@ -150,6 +150,7 @@ static uint8 histogram_high[256];
 #endif
 
 static uint8 *orig_y_table[BAND_HEIGHT];
+static uint16 orig_x0_offset;
 static uint8 orig_x_offset[640];
 static uint8 scaled_band_height;
 static uint16 output_write_len;
@@ -167,6 +168,7 @@ static uint16 effective_width;
  * 320x240 non-cropped        => 256x192, * 8  / 10, bands of 20 end up 16px
  * 320x240 cropped to 256x192 => 256x192, * 10 / 10, bands of 20 end up 20px, crop last band to 12px
  */
+
 static void build_scale_table(const char *ofname) {
   uint8 row, col;
   uint16 xoff, prev_xoff;
@@ -231,22 +233,28 @@ static void build_scale_table(const char *ofname) {
     }
   }
 
-  row = 0;
-  do {
-    /* Y cropping is handled in main decode/save loop */
-    orig_y_table[row] = raw_image + FILE_IDX((row) * 10 / scaling_factor, 0);
-    row++;
-  } while (row < scaled_band_height);
-
   col = 0;
   prev_xoff = 0;
   do {
     /* X cropping is handled here in lookup table */
-    xoff = (col * 10 / scaling_factor) + crop_start_x;
-    orig_x_offset[col] = xoff - prev_xoff;
+    xoff = ((col) * 10 / scaling_factor) + crop_start_x + RAW_X_OFFSET;
+    if (col == 0) {
+      orig_x0_offset = xoff;  /* Hack to keep x offsets uint8 */
+      orig_x_offset[col] = 0;
+    } else {
+      orig_x_offset[col] = (uint8)((uint16)xoff - (uint16)prev_xoff);
+    }
     prev_xoff = xoff;
     col++;
   } while (col); /* FILE_WIDTH == 256 */
+
+  row = 0;
+  do {
+    /* Y cropping is handled in main decode/save loop */
+    orig_y_table[row] = raw_image + FILE_IDX((row) * 10 / scaling_factor, 0) + RAW_Y_OFFSET*RAW_WIDTH + orig_x0_offset;
+    row++;
+  } while (row < scaled_band_height);
+
 }
 
 #pragma code-name (pop)

@@ -3,7 +3,7 @@
         .importzp        _prev_rom_irq_vector, _prev_ram_irq_vector
         .importzp        _zp4p, _zp6p, _zp8p, _zp10p, _zp12, _zp13
 
-        .import          _memcpy, _progress_bar
+        .import          _memcpy, _memset, _progress_bar
 				.import          pushax, pusha, pusha0, decsp6, incsp6, subysp
         .import          _height
         .import          _width
@@ -25,8 +25,7 @@ BAND_HEIGHT   = 20
 SCRATCH_PAD   = 4
 SCRATCH_WIDTH = (640 + SCRATCH_PAD)
 SCRATCH_HEIGHT= (BAND_HEIGHT + SCRATCH_PAD)
-PIXELBUF_SIZE = (SCRATCH_HEIGHT * SCRATCH_WIDTH + 2)
-RAW_IMAGE_SIZE= BAND_HEIGHT * 640
+RAW_IMAGE_SIZE= (SCRATCH_HEIGHT * SCRATCH_WIDTH + 2)
 
 Y_LOOP_LEN    = 160
 
@@ -154,8 +153,6 @@ _cache:
 _raw_image:
         .res        RAW_IMAGE_SIZE,$00
 .align 256
-pixelbuf:
-        .res        PIXELBUF_SIZE,$00
 dst:
         .res        2,$00
 pgbar_state:
@@ -164,7 +161,7 @@ motor_on:
         .res        2,$00
 
 ; Offset to scratch start of last scratch lines, row 20 col 0
-LAST_TWO_LINES = pixelbuf + (BAND_HEIGHT * SCRATCH_WIDTH)
+LAST_TWO_LINES = _raw_image + (BAND_HEIGHT * SCRATCH_WIDTH)
 
 .segment        "CODE"
 
@@ -235,15 +232,16 @@ top:    jsr     _reset_bitbuff  ; Yes. Initialize things
 
         stz     pgbar_state
 
-        ; Fill first two lines, plus 2 pixels with grey
-        lda     #<(pixelbuf)
-        ldx     #>(pixelbuf)
-        sta     ptr1
-        stx     ptr1+1
+        ; Init the second line + 2 bytes of buffer with grey
+        lda     #<(_raw_image+SCRATCH_WIDTH)
+        ldx     #>(_raw_image+SCRATCH_WIDTH)
+        jsr     pushax
         lda     #$80
-        ldy     #<(2*SCRATCH_WIDTH + 2)
-        ldx     #>(2*SCRATCH_WIDTH + 2)
-        jsr     reset_buffer
+        ldx     #$00
+        jsr     pushax
+        lda     #<(SCRATCH_WIDTH + 2)
+        ldx     #>(SCRATCH_WIDTH + 2)
+        jsr     _memset
 
         lda     #$4C              ; handle first row - JMP
         sta     check_first_row
@@ -262,23 +260,23 @@ keep_motor_on_beg:
 
         jmp     start_work
 not_top:
-        ; Shift the previous band's last two lines, plus 2 pixels,
-        ; to the start of the new band.
-        lda     #<(pixelbuf)
-        ldx     #>(pixelbuf)
+        ; Shift the last band's last line, plus 2 pixels,
+        ; to second line of the new band.
+        lda     #<(_raw_image+SCRATCH_WIDTH)
+        ldx     #>(_raw_image+SCRATCH_WIDTH)
         jsr     pushax
-        lda     #<(LAST_TWO_LINES)
-        ldx     #>(LAST_TWO_LINES)
+        lda     #<(LAST_TWO_LINES+SCRATCH_WIDTH)
+        ldx     #>(LAST_TWO_LINES+SCRATCH_WIDTH)
         jsr     pushax
-        lda     #<(2*SCRATCH_WIDTH + 2)
-        ldx     #>(2*SCRATCH_WIDTH + 2)
+        lda     #<(SCRATCH_WIDTH + 2)
+        ldx     #>(SCRATCH_WIDTH + 2)
         jsr     _memcpy
 
 start_work:
         ; We start at line 2
-        lda     #>(pixelbuf + (2 * SCRATCH_WIDTH))
+        lda     #>(_raw_image + (2 * SCRATCH_WIDTH))
         sta     src+1
-        lda     #<(pixelbuf + (2 * SCRATCH_WIDTH))
+        lda     #<(_raw_image + (2 * SCRATCH_WIDTH))
         sta     src
 
         ; We iterate over 20 lines
@@ -565,8 +563,9 @@ end_of_line:
         sta     check_first_row2
 
         dec     row
-        beq     copy_buffer
+        beq     :+
         jmp     first_pass_next_row
+:       rts
 
         ; First cols and first row handlers, out of main loop
 
@@ -598,180 +597,6 @@ handle_first_row_low_nibble:
         jmp     low_nibble_end
 
         ; End of first col/row handlers
-
-        ; Both passes done, memcpy BAND_HEIGHT lines to destination buffer,
-        ; excluding two leftmost and rightmost scratch pixels
-copy_buffer:
-        lda     #<(_raw_image)
-        sta     idx
-        ldx     #>(_raw_image)
-        stx     idx+1
-
-        clc
-        lda     #<(pixelbuf + (2 * SCRATCH_WIDTH))
-        ldx     #>(pixelbuf + (2 * SCRATCH_WIDTH))
-        adc     #2
-        sta     src
-        bcc     :+
-        inx
-        clc
-:       stx     src+1
-
-        lda     #BAND_HEIGHT
-        sta     row
-
-        lda     _width
-        cmp     #<(640)         ; No need to chek high byte
-        bne     next_row_320
-
-next_row_640:
-        ldx     #2              ; Two pages
-page_640:
-        ldy     #0
-:
-.repeat 4                       ; One page
-        lda     (src),y
-        sta     (idx),y
-        dey
-.endrep
-        bne     :-
-        inc     src+1
-        inc     idx+1
-        dex
-        bne     page_640
-
-        ldy     #<(640-(256*2)-1) ; Last part, 640-512 bytes remaining
-:       lda     (src),y           ; Mind the off by one, we dey so want bytes 127-0 inclusive
-        sta     (idx),y
-        dey
-        bpl     :-
-
-        clc
-        lda     idx
-        adc     #<(640-(256*2))   ; Shift idx to start of next row
-        sta     idx
-        bcc     :+
-        inc     idx+1
-        clc
-
-:       lda     src               ; Shift src to start of next row - exlude 4 pixels
-        adc     #<(640-(256*2)+SCRATCH_PAD)
-        sta     src
-        bcc     :+
-        inc     src+1
-        clc
-:       dec     row
-        bne     next_row_640
-        rts
-
-next_row_320:
-        ldy     #00
-:
-.repeat 4                       ; One page
-        lda     (src),y
-        sta     (idx),y
-        dey
-.endrep
-        bne     :-
-        inc     src+1
-        inc     idx+1
-
-        ldy     #<(320-(256)-1)   ; Last part, 320-256 bytes remain
-:       lda     (src),y
-        sta     (idx),y
-        dey
-        bpl     :-
-
-        clc
-        lda     idx               ; Shift idx to start of next row
-        adc     #<(320-(256))     ; raw_image is packed so each line start
-        sta     idx               ; at the end of the previous one
-        bcc     :+
-        inc     idx+1
-        clc
-
-:       lda     src               ; Shift src to start of next row - exlude 4 pixels
-        adc     #<(640-256+SCRATCH_PAD)
-        sta     src               ; src lines aren't packed, there are 320 unused 
-        lda     src+1             ; bytes per line. Finish add, can cross two pages
-        adc     #>(640-256+SCRATCH_PAD)
-        sta     src+1
-        dec     row
-        bne     next_row_320
-        rts
-
-        ; buffer in ptr1, value in A, size in YX
-reset_buffer:
-        phy
-        cpx     #0
-        beq     finish_reset
-        cpx     #4
-        bmi     reset_next_page
-
-        ldy     ptr1            ; We'll reset four pages at once for performance
-        sty     ptr2
-        sty     ptr3
-        sty     ptr4
-
-        ldy     ptr1+1
-        iny
-        sty     ptr2+1
-        iny
-        sty     ptr3+1
-        iny
-        sty     ptr4+1
-
-reset_four_pages:
-        ldy     #0
-:
-.repeat 4                       ; 4 bytes on each page
-        sta     (ptr1),y
-        sta     (ptr2),y
-        sta     (ptr3),y
-        sta     (ptr4),y
-        dey
-.endrep
-        bne     :-
-        ldy     ptr4+1          ; 4 next pages
-        iny
-        sty     ptr1+1
-        dex
-        iny
-        sty     ptr2+1
-        dex
-        iny
-        sty     ptr3+1
-        dex
-        iny
-        sty     ptr4+1
-        dex
-        beq     finish_reset
-        cpx     #4               ; Less then 4 pages remaining?
-        bpl    reset_four_pages
-
-reset_next_page:
-        ldy     #0
-:
-.repeat 4                        ; Clear one page
-        sta     (ptr1),y
-        dey
-.endrep
-        bne     :-
-        inc     ptr1+1
-        dex
-        bne     reset_next_page
-
-finish_reset:
-        ply                       ; Last bytes on last page
-        dey
-        beq     reset_done
-
-:       sta     (ptr1),y
-        dey
-        bpl     :-
-
-reset_done:
-        rts
 
 update_progress_bar:
         lda     pgbar_state    ; Update progress bar
