@@ -168,10 +168,10 @@ LAST_TWO_LINES = _raw_image + (BAND_HEIGHT * SCRATCH_WIDTH)
 cur_cache_ptr = _prev_ram_irq_vector
 
 _reset_bitbuff:
-        ; Patch end-of-cache comparisons
         lda     _cache_end
-        sta     cache_check_low_byte+1
-        lda     _cache_end+1
+        beq     :+
+        brk                     ; Make sure cache end is aligned
+:       lda     _cache_end+1    ; Patch end-of-cache comparison
         sta     cache_check_high_byte+1
         rts
 
@@ -413,8 +413,7 @@ first_pass_col_loop:
 
 first_pass_col_y_loop:
 cache_check_low_byte:
-        lda     #0              ; Patched when resetting (_cache_end)
-        cmp     cur_cache_ptr
+        lda     cur_cache_ptr
         beq     cache_check_high_byte
 
 fetch_byte:
