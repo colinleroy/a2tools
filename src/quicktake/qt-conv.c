@@ -260,16 +260,9 @@ static void build_scale_table(const char *ofname) {
 #pragma code-name (pop)
 /* Patched func */
 
-/* Optimizer bug in there */
-#pragma optimize (push,off)
 static void write_raw(uint16 h)
 {
-#ifdef __CC65__
-  #define dst_ptr zp6p
-  #define cur zp8p
-  #define cur_orig_x zp10p
-  #define cur_orig_y zp12ip
-#else
+#ifndef __CC65__
   uint8 *dst_ptr;
   uint8 *cur;
   uint8 *cur_orig_x;
@@ -277,9 +270,7 @@ static void write_raw(uint16 h)
   static uint16 x_len;
   static uint8 y_end;
   static uint8 y_len;
-#endif
 
-#ifndef __CC65__
   if (last_band_crop && h == last_band) {
     /* Skip end of last band if cropping */
     y_end = last_band_crop;
@@ -305,7 +296,14 @@ static void write_raw(uint16 h)
     } while (--x_len);
     cur_orig_y++;
   } while (++y_len < y_end);
+
 #else
+  #define y_ptr      zp4
+  #define dst_ptr    zp6p
+  #define cur        zp8p
+  #define cur_orig_x zp10p
+  #define cur_orig_y zp12p
+
   __asm__("lda %v", last_band_crop);
   __asm__("beq %g", full_band);
   __asm__("lda (sp)");
@@ -317,6 +315,7 @@ static void write_raw(uint16 h)
   __asm__("bne %g", full_band);
 
   __asm__("lda %v", last_band_crop);
+  __asm__("asl");
   __asm__("sta %g+1", y_end);
 
   /* output_write_len -= (scaled_band_height - last_band_crop) * FILE_WIDTH; */
@@ -333,6 +332,7 @@ static void write_raw(uint16 h)
 
 full_band:
   __asm__("lda %v", scaled_band_height);
+  __asm__("asl");
   __asm__("sta %g+1", y_end);
 
 no_crop:
@@ -352,19 +352,20 @@ no_crop:
   __asm__("lda #>(%v)", orig_x_offset);
   __asm__("sta %v+1", cur_orig_x);
 
-  __asm__("lda #0");
+  __asm__("ldy #0");
+  __asm__("sty %v", y_ptr);
   next_y:
-    __asm__("pha");
-    __asm__("asl");
-    __asm__("tay");
     __asm__("lda (%v),y", cur_orig_y);
     __asm__("sta %v", cur);
     __asm__("iny");
     __asm__("lda (%v),y", cur_orig_y);
+    __asm__("iny");
+    __asm__("sty %v", y_ptr);
+
     __asm__("sta %v+1", cur);
-    __asm__("clc");
 
     __asm__("ldy #0");
+
     next_x:
     /* cur += *cur_orig_x; */
     __asm__("lda (%v),y", cur_orig_x);
@@ -373,6 +374,7 @@ no_crop:
     __asm__("bcc %g", cur_orig_y_addr);
     __asm__("inc %v+1", cur);
     __asm__("clc");
+
     cur_orig_y_addr:
     /* *dst_ptr = *(cur); */
     __asm__("lda (%v)", cur);
@@ -393,16 +395,14 @@ no_crop:
   __asm__("inc %v+1", dst_ptr);
 
   /* y_len? */
-  __asm__("pla");
-  __asm__("inc a");
+  __asm__("ldy %v", y_ptr);
   y_end:
-  __asm__("cmp #$FF"); /* PATCHED */
+  __asm__("cpy #$FF"); /* PATCHED */
   __asm__("bcc %g", next_y);
 #endif
 
   fwrite (raw_image, 1, output_write_len, ofp);
 }
-#pragma optimize (pop)
 
 #pragma code-name (push, "LC")
 
