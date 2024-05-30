@@ -7,7 +7,7 @@ make clean all IIGS=1 DEBUG_HD=$TYPE && \
   cd ../.. && make quicktake.po && mame apple2gs -window -flop1 quicktake.po -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug -sl7 scsi -hard disks/smart0.po -sound none; cd src/quicktake
 
 if [ "$1" != "" ]; then
-  get image from HD
+  #get image from HD
   if [ "$1" = "100" ]; then
     java -jar ../../bin/ac.jar -g ../../disks/smart0.po TEST$1.QTK > /tmp/TEST$1.QTK
     ./qtktconv.x86_64 /tmp/TEST$1.QTK 0 0 640 480
