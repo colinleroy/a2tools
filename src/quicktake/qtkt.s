@@ -273,9 +273,6 @@ top:    jsr     set_cache_end           ; Yes. Initialize things
         sta     keep_motor_on+2
         sta     keep_motor_on_beg+2
 
-keep_motor_on_beg:
-        sta     motor_on                ; Keep drive motor running
-
         jmp     start_work
 
 not_top:; Subsequent bands
@@ -387,26 +384,37 @@ set_row_loops:
 
         bra     col_outer_loop
 
-; Helper function to check for cache end and refill it
+; --------------------------------------; Inlined helpers, close enough to branch 
+
+; Increment cache pointer page
+inc_cache_high:
+        inc     cur_cache_ptr+1
+keep_motor_on_beg:
+        sta     motor_on                ; Keep drive motor running
+; Check for cache end and refill cache
 cache_check_high_byte:
         ldx     #0                      ; Patched when resetting (_cache_end+1)
         cpx     cur_cache_ptr+1
-        bne     fetch_byte
+        bne     handle_byte
         phy
+        pha
         jsr     fill_cache
+        pla
         ply
 keep_motor_on:
         sta     motor_on                ; Keep drive motor running
-        bra     fetch_byte
+        bra     handle_byte
 
+; Clamp value to 8bits
 clamp_high_nibble:
         eor     #$FF                    ; => 00 if negative, FE if positive
         bpl     :+
         lda     #$FF                    ; => FF if positive
 
 :       sta     hn_val
-        bra     store_high_nibble
+        bra     store_high_nibble       ; Back to main loop
 
+; Handle first row's special case, for high nibble
 handle_first_row_high:
         sta     (idx_behind),y          ; *(idx_behind+2) = *(idx_behind+4) = val;
         iny
@@ -414,26 +422,19 @@ handle_first_row_high:
         sta     (idx_behind),y
         dey
         dey                             ; Set Y back for low nibble
-        bra     check_first_col
+        bra     check_first_col         ; Back to main loop
 
-inc_cache_high:
-        inc     cur_cache_ptr+1
-        bra     handle_byte
+; --------------------------------------; End of inlined helpers
 
 col_outer_loop:                         ; Outer column loop, iterating 2 or 4 times
 
         ldy    #0
 
 col_inner_loop:                         ; Inner column loop, iterating over Y
-cache_check_low_byte:
-        lda     cur_cache_ptr           ; Check end of cache (it's aligned)
-        beq     cache_check_high_byte
 
-fetch_byte:
         lda     (cur_cache_ptr)
-
         inc     cur_cache_ptr
-        beq     inc_cache_high
+        beq     inc_cache_high          ; Increment cache ptr page and refill if needed
 
 handle_byte:
         tax                             ; Get gstep vals to X (keep it in X!)
