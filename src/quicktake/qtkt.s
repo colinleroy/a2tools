@@ -53,7 +53,7 @@ _cache_start:
         .addr        _cache
 
 .segment        "RODATA"
-
+.align 256
 high_nibble_gstep_low:
         .repeat 16
         .byte        $A7
@@ -396,7 +396,7 @@ cache_check_high_byte:
         ldx     #0                      ; Patched when resetting (_cache_end+1)
         cpx     cur_cache_ptr+1
         bne     handle_byte
-        phy
+        phy                             ; Backup registers before loading from disk
         pha
         jsr     fill_cache
         pla
@@ -411,7 +411,7 @@ clamp_high_nibble:
         bpl     :+
         lda     #$FF                    ; => FF if positive
 
-:       sta     hn_val
+:       sta     hn_val                  ; Update val
         bra     store_high_nibble       ; Back to main loop
 
 ; Handle first row's special case, for high nibble
@@ -474,7 +474,7 @@ store_high_nibble:
         sta     (idx),y                 ; *(idx+2) = val
 
 check_first_row_high:
-        bra     handle_first_row_high ; Patched
+        bra     handle_first_row_high   ; Patched
 
 check_first_col:
         bra     handle_first_col        ; Patched

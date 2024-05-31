@@ -136,7 +136,7 @@ slowtake_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-hgr.cfg $(CC65_TARGET)
 
 qtktconv_CLCFLAGS = -D_CACHE_SIZE=16384 --asm-define CACHE_SIZE=16384 \
 	-DRAW_X_OFFSET=2 -DRAW_Y_OFFSET=2 -DRAW_WIDTH=644 \
-	$(CLCFLAGS) -C ../../config/apple2enh-alignbss.cfg $(CC65_TARGET)-iobuf-0800.o --start-addr 0x1000    #Two file buffers
+	$(CLCFLAGS) -C ../../config/apple2enh-alignbssrodata.cfg $(CC65_TARGET)-iobuf-0800.o --start-addr 0x1000    #Two file buffers
 
 qtknconv_CLCFLAGS = -D_CACHE_SIZE=4096 --asm-define CACHE_SIZE=4096 \
 	-DRAW_X_OFFSET=0 -DRAW_Y_OFFSET=0 -DRAW_WIDTH=width \
