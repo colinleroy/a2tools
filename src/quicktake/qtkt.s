@@ -406,14 +406,14 @@ keep_motor_on:
         bra     handle_byte
 
 ; Clamp value to 8bits
-clamp_high_nibble:
-        eor     #$FF                    ; => 00 if negative, FE if positive
-        bpl     :+
-        lda     #$FF                    ; => FF if positive
+clamp_high_nibble_high:
+        lda     #$FF
+        clc
+        bra     high_nibble_special      ; Back to main loop
 
-:       sta     hn_val                  ; Update val
-high_nibble_clamped:
-        bra     handle_first_pixel      ; Back to main loop
+clamp_high_nibble_low:
+        lda     #$00
+        bra     high_nibble_special      ; Back to main loop
 
 handle_first_pixel:
         sta     (idx_one),y
@@ -428,14 +428,12 @@ store_idx_min2_first_pixel:
         dey
         dey                             ; Set Y back for low nibble
 
+        sta     hn_val
         ; compute new branch offset (from high_nibble_special to first_row)
         lda     #<(handle_first_row_high-high_nibble_special-2)
         sta     high_nibble_special+1
 
-        ; compute new branch offset (from high_nibble_clamped to first_row)
-        lda     #<(handle_first_row_high-high_nibble_clamped-2)
-        sta     high_nibble_clamped+1
-
+        lda     hn_val
         bra     do_low_nibble           ; Back to main loop
 
 ; Handle first row's special case, for high nibble
@@ -455,13 +453,12 @@ store_idx_forward_first_col:
 store_idx_min2_first_col:
         sta     $FFFF                   ; Patched
 
+        sta     hn_val
         ; compute new branch offset (from high_nibble_special to high_nibble_end)
         lda     #<(high_nibble_end-high_nibble_special-2)
         sta     high_nibble_special+1
 
-        ; compute new branch offset (from high_nibble_special to high_nibble_end)
-        lda     #<(high_nibble_end-high_nibble_clamped-2)
-        sta     high_nibble_clamped+1
+        lda     hn_val
         bra     do_low_nibble
 
 ; --------------------------------------; End of inlined helpers
@@ -477,6 +474,7 @@ col_inner_loop:                         ; Inner column loop, iterating over Y
         beq     inc_cache_high          ; Increment cache ptr page and refill if needed
 
 handle_byte:
+        clc
         tax                             ; Get gstep vals to X (keep it in X!)
 
         ; HIGH NIBBLE
@@ -485,7 +483,27 @@ handle_byte:
         ;         + *(idx_behind+2)) >> 1)
         ;         + gstep[high_nibble];
 
+
+        bpl     gstep_high_neg
+
+        lda     (idx_behind),y          ; (*idx_behind)
+        adc     ln_val                  ; + ln_val
+        ror                             ; >> 1
         clc
+
+        iny
+        iny
+        adc     (idx_behind),y          ; + *(idx_behind+2)
+        ror                             ; >> 1
+
+        clc
+        adc     high_nibble_gstep_low,x
+                                        ; Sets carry if overflow
+
+        bcs     clamp_high_nibble_high
+        bra     high_nibble_special
+
+gstep_high_neg:
         lda     (idx_behind),y          ; (*idx_behind)
         adc     ln_val                  ; + ln_val
         ror                             ; >> 1
@@ -500,25 +518,20 @@ handle_byte:
         adc     high_nibble_gstep_low,x
                                         ; Sets carry if overflow
 
-        sta     hn_val                  ; hn_val = val
-
-        lda     high_nibble_gstep_high,x
-                                        ; Carry set by previous adc if overflowed
-
-        adc     #0                      ; If A = $FF and C set, C will stay set
-        clc                             ; so clear it.
-        bne     clamp_high_nibble       ; under/overflow - handle it
-        lda     hn_val                  ; Otherwise reload hn_val
+        bcc     clamp_high_nibble_low   ; Clamp low as gstep is negative
+        clc
 
 high_nibble_special:
         bra     handle_first_pixel      ; Patched (first_pixel, then first_row, then first_col or high_nibble_end)
 
 high_nibble_end:
+        sta     hn_val
                                         ; Not first col:
         adc     ln_val                   ; *(idx+1) = (val + ln_val) >> 1;
         ror
         clc
         sta     (idx_one),y
+        lda     hn_val
 
         ; REPEAT WITH LOW NIBBLE (same, with +2 offsets on Y)
 
@@ -527,8 +540,6 @@ do_low_nibble:
         ;         + hn_val) >> 1)
         ;         + *(idx_behind+4)) >> 1)
         ;         + gstep[low_nibble];
-
-        lda     hn_val                  ; Reload hn_val
         sta     (idx),y                 ; store *(idx+2) = val, we didn't do it earlier
         adc     (idx_behind),y          ; Y expected to be 2 there
         ror
@@ -588,7 +599,8 @@ shift_indexes:
         inc     idx+1
 
 :       dec     cur_row_loop            ; Are we at end of line?
-        bne     col_outer_loop
+        beq     end_of_row
+        jmp     col_outer_loop
 
 end_of_row:
         lda     ln_val                  ; *(idx+2) = val
@@ -611,9 +623,6 @@ end_of_row:
         ; Put back first col handler for high nibble
         lda     #<(handle_first_col-high_nibble_special-2)
         sta     high_nibble_special+1
-
-        lda     #<(handle_first_col-high_nibble_clamped-2)
-        sta     high_nibble_clamped+1
 
         dec     row
         beq     :+
