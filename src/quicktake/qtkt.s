@@ -484,7 +484,8 @@ handle_byte:
         ;         + gstep[high_nibble];
 
 
-        bpl     gstep_high_neg
+        bpl     gstep_high_neg          ; gstep add simplification depending
+                                        ; on the sign of its high byte
 
         lda     (idx_behind),y          ; (*idx_behind)
         adc     ln_val                  ; + ln_val
