@@ -175,6 +175,7 @@ val               = _prev_rom_irq_vector
 row               = _prev_rom_irq_vector+1
 cur_cache_ptr     = _prev_ram_irq_vector
 
+at_first_row      = _zp2
 cur_row_loop      = _zp3
 idx_one           = _zp4p
 src               = _zp6p
@@ -250,6 +251,9 @@ top:    jsr     set_cache_end           ; Yes. Initialize things
         lda     #(320/INNER_X_LOOP_LEN)
 :       sta     set_row_loops+1         ; Patch outer col loop bound
 
+        lda     #1
+        sta     at_first_row
+
         ; Init the second line + 2 bytes of buffer with grey
         lda     #<(_raw_image+SCRATCH_WIDTH)
         ldx     #>(_raw_image+SCRATCH_WIDTH)
@@ -260,10 +264,6 @@ top:    jsr     set_cache_end           ; Yes. Initialize things
         lda     #<(SCRATCH_WIDTH + 2)
         ldx     #>(SCRATCH_WIDTH + 2)
         jsr     _memset
-
-        lda     #$80                    ; handle first row - BRA
-        sta     check_first_row_high
-        sta     check_first_row_low
 
         lda     floppy_motor_on         ; Patch motor-on if we use a floppy
         beq     start_work
@@ -308,11 +308,11 @@ row_loop:                               ; Row loop
         lda     src                     ; Set idx_forward = src + SCRATCH_WIDTH
         tay
         adc     #<SCRATCH_WIDTH
-        sta     store_idx_forward+1
+        sta     store_idx_forward_first_col+1   ; No need to update store_idx_forward_first_pixel here
         lda     src+1
         tax
         adc     #>SCRATCH_WIDTH
-        sta     store_idx_forward+2
+        sta     store_idx_forward_first_col+2
 
         iny                             ; Finish with idx = src + 1
         bne     :+
@@ -334,13 +334,15 @@ even_row:
         sta     idx
         tay
         adc     #<(SCRATCH_WIDTH+1)
-        sta     store_idx_forward+1
+        sta     store_idx_forward_first_pixel+1
+        sta     store_idx_forward_first_col+1
 
         lda     src+1
         sta     idx+1
         tax
         adc     #>(SCRATCH_WIDTH+1)
-        sta     store_idx_forward+2
+        sta     store_idx_forward_first_pixel+2
+        sta     store_idx_forward_first_col+2
 
 row_work:
         ; We now have idx as a word in YX
@@ -360,8 +362,10 @@ set_row_loops:
 
         lda     idx
         ldx     idx+1
-        sta     store_idx_min2+1        ; Remember idx-2 for first columns
-        stx     store_idx_min2+2
+        sta     store_idx_min2_first_pixel+1      ; Remember idx-2 for first pixel
+        stx     store_idx_min2_first_pixel+2
+        sta     store_idx_min2_first_col+1      ; Remember idx-2 for first columns
+        stx     store_idx_min2_first_col+2
 
         sec                             ; Set idx_behind = idx - (SCRATCH_WIDTH-1)
         sbc     #<(SCRATCH_WIDTH-1)
@@ -377,10 +381,6 @@ set_row_loops:
         lda     #>SCRATCH_WIDTH
         adc     src+1
         sta     src+1
-
-        ; We're at first column
-        lda     #$80                      ; BRA - enable first column handler
-        sta     check_first_col
 
         bra     col_outer_loop
 
@@ -412,7 +412,31 @@ clamp_high_nibble:
         lda     #$FF                    ; => FF if positive
 
 :       sta     hn_val                  ; Update val
-        bra     store_high_nibble       ; Back to main loop
+high_nibble_clamped:
+        bra     handle_first_pixel      ; Back to main loop
+
+handle_first_pixel:
+        sta     (idx_one),y
+store_idx_forward_first_pixel:
+        sta     $FFFF                   ; Patched
+store_idx_min2_first_pixel:
+        sta     $FFFF                   ; Patched
+        sta     (idx_behind),y          ; *(idx_behind+2) = *(idx_behind+4) = val;
+        iny
+        iny
+        sta     (idx_behind),y
+        dey
+        dey                             ; Set Y back for low nibble
+
+        ; compute new branch offset (from high_nibble_special to first_row)
+        lda     #<(handle_first_row_high-high_nibble_special-2)
+        sta     high_nibble_special+1
+
+        ; compute new branch offset (from high_nibble_clamped to first_row)
+        lda     #<(handle_first_row_high-high_nibble_clamped-2)
+        sta     high_nibble_clamped+1
+
+        bra     do_low_nibble           ; Back to main loop
 
 ; Handle first row's special case, for high nibble
 handle_first_row_high:
@@ -422,7 +446,23 @@ handle_first_row_high:
         sta     (idx_behind),y
         dey
         dey                             ; Set Y back for low nibble
-        bra     check_first_col         ; Back to main loop
+        bra     high_nibble_end         ; Back to main loop
+
+handle_first_col:
+        sta     (idx_one),y
+store_idx_forward_first_col:
+        sta     $FFFF                   ; Patched
+store_idx_min2_first_col:
+        sta     $FFFF                   ; Patched
+
+        ; compute new branch offset (from high_nibble_special to high_nibble_end)
+        lda     #<(high_nibble_end-high_nibble_special-2)
+        sta     high_nibble_special+1
+
+        ; compute new branch offset (from high_nibble_special to high_nibble_end)
+        lda     #<(high_nibble_end-high_nibble_clamped-2)
+        sta     high_nibble_clamped+1
+        bra     do_low_nibble
 
 ; --------------------------------------; End of inlined helpers
 
@@ -470,16 +510,10 @@ handle_byte:
         bne     clamp_high_nibble       ; under/overflow - handle it
         lda     hn_val                  ; Otherwise reload hn_val
 
-store_high_nibble:
-        sta     (idx),y                 ; *(idx+2) = val
+high_nibble_special:
+        bra     handle_first_pixel      ; Patched (first_pixel, then first_row, then first_col or high_nibble_end)
 
-check_first_row_high:
-        bra     handle_first_row_high   ; Patched
-
-check_first_col:
-        bra     handle_first_col        ; Patched
-
-first_col_checked:
+high_nibble_end:
                                         ; Not first col:
         adc     ln_val                   ; *(idx+1) = (val + ln_val) >> 1;
         ror
@@ -495,6 +529,7 @@ do_low_nibble:
         ;         + gstep[low_nibble];
 
         lda     hn_val                  ; Reload hn_val
+        sta     (idx),y                 ; store *(idx+2) = val, we didn't do it earlier
         adc     (idx_behind),y          ; Y expected to be 2 there
         ror
         clc
@@ -517,8 +552,8 @@ do_low_nibble:
         bne     clamp_low_nibble        ; Overflow - handle it
         lda     ln_val                  ; otherwise reload ln_val
 
-check_first_row_low:
-        bra     handle_first_row_low ; Patched
+low_nibble_special:
+        bra     handle_first_row_low    ; Patched (first_row, then low_nibble_end)
 
 low_nibble_end:                         ; We have ln_val in A, store it
         sta     (idx),y                 ; at idx
@@ -555,13 +590,30 @@ shift_indexes:
 :       dec     cur_row_loop            ; Are we at end of line?
         bne     col_outer_loop
 
-end_of_line:
+end_of_row:
         lda     ln_val                  ; *(idx+2) = val
         ldy     #2
         sta     (idx),y
-        lda     #$24                    ; Disable first row special case (bit ZP)
-        sta     check_first_row_high
-        sta     check_first_row_low
+
+
+        ; Unplug first row handler for low nibble
+        lda     at_first_row
+        beq     :+
+        ;lda     #<(low_nibble_end-low_nibble_special-2) == 0
+        stz     low_nibble_special+1
+
+        lda     #<(low_nibble_end-low_nibble_clamped-2)
+        sta     low_nibble_clamped+1
+
+        stz     at_first_row
+:
+
+        ; Put back first col handler for high nibble
+        lda     #<(handle_first_col-high_nibble_special-2)
+        sta     high_nibble_special+1
+
+        lda     #<(handle_first_col-high_nibble_clamped-2)
+        sta     high_nibble_clamped+1
 
         dec     row
         beq     :+
@@ -570,23 +622,14 @@ end_of_line:
 
         ; First cols and first row handlers, out of main loop
 
-handle_first_col:
-        sta     (idx_one),y
-store_idx_forward:
-        sta     $FFFF                   ; Patched
-store_idx_min2:
-        sta     $FFFF                   ; Patched
-        lda     #$24
-        sta     check_first_col         ; Unplug first col handler with BIT ZP
-        jmp     do_low_nibble
-
 clamp_low_nibble:
         eor     #$FF                     ; => 00 if negative, FE if positive
         bpl     :+
         lda     #$FF                     ; => FF if positive
 
 :       sta     ln_val
-        jmp     check_first_row_low
+low_nibble_clamped:
+        bra     handle_first_row_low
 
 handle_first_row_low:
         sta     (idx_behind),y           ; *(idx_behind+4) = *(idx_behind+6) = val;
