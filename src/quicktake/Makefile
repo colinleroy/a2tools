@@ -140,7 +140,7 @@ qtktconv_CLCFLAGS = -D_CACHE_SIZE=16384 --asm-define CACHE_SIZE=16384 \
 
 qtknconv_CLCFLAGS = -D_CACHE_SIZE=4096 --asm-define CACHE_SIZE=4096 \
 	-DRAW_X_OFFSET=0 -DRAW_Y_OFFSET=0 -DRAW_WIDTH=width \
-	$(CLCFLAGS) -C ../../config/apple2enh-aligndata.cfg $(CC65_TARGET)-iobuf-0800.o --start-addr 0x1000
+	$(CLCFLAGS) -C ../../config/apple2enh-alignbssdata.cfg $(CC65_TARGET)-iobuf-0800.o --start-addr 0x1000
 
 jpegconv_CLCFLAGS = -D_CACHE_SIZE=4096 --asm-define CACHE_SIZE=4096 \
 	-DRAW_X_OFFSET=0 -DRAW_Y_OFFSET=0 -DRAW_WIDTH=width \
@@ -189,7 +189,7 @@ qtknconv.bin: $(qtknconv_SOURCES) $(qtknconv_CC65SOURCES)
 qtknconv.x86_64: $(qtknconv_SOURCES) $(qtknconv_GCCSOURCES) $(GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $(qtknconv_GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@
 
-jpegconv.bin: $(jpegconv_SOURCES) $(jpegconv_CC65SOURCES)
+jpegconv.bin: $(jpegconv_CC65SOURCES) $(jpegconv_SOURCES)
 	cl65 --debug-info -Wl --dbgfile,"jpegconv.dbg" $(CFLAGS) $(jpegconv_CLCFLAGS) -vm -m jpegconv.map -o $@ $^
 
 jpegconv.x86_64: $(jpegconv_SOURCES) $(jpegconv_GCCSOURCES) $(GCCSOURCES)

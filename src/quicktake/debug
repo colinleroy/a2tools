@@ -8,4 +8,4 @@ else
 fi
 
 make clean all DEBUG_FLOPPY=$TYPE \
-	&& cd ../.. && make quicktake.po && mame apple2c0 -window -flop1 quicktake.po $FLOP2 -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug; cd src/quicktake
+	&& cd ../.. && make quicktake.po && mame apple2c0 -window -flop1 quicktake.po $FLOP2 -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug -sound none; cd src/quicktake

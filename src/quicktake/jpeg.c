@@ -114,6 +114,7 @@ typedef enum
 // 128 bytes
 int16 gCoeffBuf[8*8];
 
+#ifndef __CC65__
 uint8 ZAG_Coeff[] =
 {
    0,  1,  8, 16,  9,  2,  3, 10,
@@ -125,6 +126,20 @@ uint8 ZAG_Coeff[] =
    58, 59, 52, 45, 38, 31, 39, 46,
    53, 60, 61, 54, 47, 55, 62, 63,
 };
+#else
+uint8 ZAG_Coeff[] =
+{
+   0*2,  1*2,  8*2,  16*2,  9*2,  2*2,  3*2, 10*2,
+   17*2, 24*2, 32*2, 25*2, 18*2, 11*2,  4*2,  5*2,
+   12*2, 19*2, 26*2, 33*2, 40*2, 48*2, 41*2, 34*2,
+   27*2, 20*2, 13*2,  6*2,  7*2, 14*2, 21*2, 28*2,
+   35*2, 42*2, 49*2, 56*2, 57*2, 50*2, 43*2, 36*2,
+   29*2, 22*2, 15*2, 23*2, 30*2, 37*2, 44*2, 51*2,
+   58*2, 59*2, 52*2, 45*2, 38*2, 31*2, 39*2, 46*2,
+   53*2, 60*2, 61*2, 54*2, 47*2, 55*2, 62*2, 63*2,
+};
+#endif
+
 // 8*8*4 bytes * 3 = 768
 uint8 gMCUBufG[256];
 // 256 bytes
@@ -206,7 +221,7 @@ static void huffCreate(uint8* pBits, HuffTable* pHuffTable)
   uint8 *l_pBits = pBits;
   register uint16 *curMaxCode = pHuffTable->mMaxCode;
   register uint16 *curMinCode = pHuffTable->mMinCode;
-  register uint8 *curValPtr = pHuffTable->mValPtr;
+  register uint16 *curValPtr = pHuffTable->mValPtr;
 
    for ( ; ; )
    {
@@ -706,6 +721,7 @@ static uint8 locateSOFMarker(void)
 
    return 0;
 }
+
 //------------------------------------------------------------------------------
 // Find a start of scan (SOS) marker.
 static uint8 locateSOSMarker(uint8* pFoundEOI)

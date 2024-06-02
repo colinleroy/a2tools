@@ -8,7 +8,7 @@ typedef struct HuffTableT
 {
    uint16 mMinCode[16];
    uint16 mMaxCode[16];
-   uint8 mValPtr[16];
+   uint16 mValPtr[16];
 } HuffTable;
 
 

@@ -46,9 +46,10 @@ uint16 __fastcall__ getBits(uint8 numBits, uint8 FFCheck)
     gBitsLeft = gBitsLeft - n;
     gBitBuf <<= n;
   }
-
+  printf("- res %016b\n", ret>>final_shift);
   return ret >> final_shift;
 }
+
 uint16 __fastcall__ getBits1(uint8 numBits) {
   return getBits(numBits, 0);
 }
@@ -157,7 +158,7 @@ uint8 huffDecode(HuffTable* pHuffTable, const uint8* pHuffVal)
   HuffTable *curTable = pHuffTable;
   register uint16 *curMaxCode = curTable->mMaxCode;
   register uint16 *curMinCode = curTable->mMinCode;
-  register uint8 *curValPtr = curTable->mValPtr;
+  register uint16 *curValPtr = curTable->mValPtr;
 
   for ( ; ; ) {
     if (i == 16)
@@ -438,8 +439,8 @@ uint8 decodeNextMCU(void)
     gLastDC[componentID] = dc;
     gCoeffBuf[0] = dc * pQ[0];
 
-    cur_ZAG_coeff = (ZAG_Coeff + 1);
-    end_ZAG_coeff = ZAG_Coeff + (64 - 1);
+    cur_ZAG_coeff = ZAG_Coeff + 1;
+    end_ZAG_coeff = ZAG_Coeff + 64;
 
     compACTab = gCompACTab[componentID];
     cur_pQ = pQ + 1;
