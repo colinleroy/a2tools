@@ -26,6 +26,10 @@ if [ "$1" != "" ]; then
     # The approximated division changes the output file in an acceptable way
     expected_sha1sum="a24b1e6d7d94b5fa05331383ff1faaecd2343799"
   fi
+  if [ "$1" = "200" ]; then
+    # The approximated division changes the output file in an acceptable way
+    expected_sha1sum="4a1453160b4f189f3886cc639d718eac77b2255f"
+  fi
 
   final_sha1sum=$(sha1sum GREY.A2|cut -d' ' -f1)
   echo "Ref:      $(sha1sum GREY|cut -d' ' -f1)"
