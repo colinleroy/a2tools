@@ -31,7 +31,7 @@
 char magic[5] = QTKN_MAGIC;
 char *model = "150";
 uint16 *huff_ptr;
-uint8 cache[CACHE_SIZE];
+extern uint8 cache[CACHE_SIZE];
 uint8 *cache_start = cache;
 uint8 raw_image[RAW_IMAGE_SIZE];
 

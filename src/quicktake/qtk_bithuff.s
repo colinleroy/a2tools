@@ -15,10 +15,13 @@
         .import         _ifp
         .import         _huff_ptr
         .export         _getbithuff
+        .export         _cache
 
 cur_cache_ptr = _prev_ram_irq_vector
 
 .segment        "BSS"
+.align 256
+_cache: .res        CACHE_SIZE,$00
 
 nbits:
         .res        1,$00
@@ -28,24 +31,13 @@ nbits:
 ; ---------------------------------------------------------------
 
 .segment        "LC"
-_getbithuff:
-        sta     nbits
-        cmp     _vbits
-        bcc     have_enough_vbits_h
-        ldx     _bitbuf+2
-        stx     _bitbuf+3
-        ldx     _bitbuf+1
-        stx     _bitbuf+2
-        ldx     _bitbuf
-        stx     _bitbuf+1
-        ; _bitbuf low byte will be set below
 
-        lda     _cache_end
-        cmp     cur_cache_ptr
-        bne     no_read_required_h
-        ldx     _cache_end+1
-        cpx     cur_cache_ptr+1
-        bne     no_read_required_h
+inc_cache_high:
+        inc     cur_cache_ptr+1
+        ldx     cur_cache_ptr+1
+        cpx     _cache_end+1
+        bne     handle_byte
+
         jsr     decsp6
 
         ; Push fread dest pointer
@@ -78,18 +70,31 @@ _getbithuff:
         lda     _ifp
         ldx     _ifp+1
         jsr     _fread
+        clc
+        bra     handle_byte
 
-no_read_required_h:
+_getbithuff:
+        sta     nbits
+        cmp     _vbits
+        bcc     have_enough_vbits_h
+        ldx     _bitbuf+2
+        stx     _bitbuf+3
+        ldx     _bitbuf+1
+        stx     _bitbuf+2
+        ldx     _bitbuf
+        stx     _bitbuf+1
+        ; _bitbuf low byte will be set below
+
         lda     (cur_cache_ptr)
         sta     _bitbuf
 
         inc     cur_cache_ptr
-        bne     :+
-        inc     cur_cache_ptr+1
+        lda     cur_cache_ptr
+        beq     inc_cache_high
 
-:       clc
-        lda     #$08
-        adc     _vbits
+handle_byte:
+        ldy     _vbits
+        lda     plus8,y
         sta     _vbits
 
 have_enough_vbits_h:
@@ -206,3 +211,37 @@ min8:   .byte 8
         .byte 2
         .byte 1
         .byte 0
+
+plus8:  .byte 8
+        .byte 9
+        .byte 10
+        .byte 11
+        .byte 12
+        .byte 13
+        .byte 14
+        .byte 15
+        .byte 16
+        .byte 17
+        .byte 18
+        .byte 19
+        .byte 20
+        .byte 21
+        .byte 22
+        .byte 23
+        .byte 24
+        .byte 25
+        .byte 26
+        .byte 27
+        .byte 28
+        .byte 29
+        .byte 30
+        .byte 31
+        .byte 32
+        .byte 33
+        .byte 34
+        .byte 35
+        .byte 36
+        .byte 37
+        .byte 38
+        .byte 39
+        .byte 40

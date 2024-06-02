@@ -5,6 +5,7 @@
 
 static uint32 tmp;
 static uint8 shift;
+uint8 cache[CACHE_SIZE];
 
 uint8 __fastcall__ getbithuff (uint8 n)
 {
