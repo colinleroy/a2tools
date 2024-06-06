@@ -154,6 +154,46 @@ low_nibble_gstep_high:
         .byte        $00
         .endrep
 
+.align 256
+idx_low:
+        .repeat BAND_HEIGHT+1,row
+        .byte <(_raw_image + (22-row)*SCRATCH_WIDTH + (row .mod 2))
+        .endrep
+idx_high:
+        .repeat BAND_HEIGHT+1,row
+        .byte >(_raw_image + (22-row)*SCRATCH_WIDTH + (row .mod 2))
+        .endrep
+
+.align 256
+idx_one_low:
+        .repeat BAND_HEIGHT+1,row
+        .byte <(_raw_image + (22-row)*SCRATCH_WIDTH + (row .mod 2) - 1)
+        .endrep
+idx_one_high:
+        .repeat BAND_HEIGHT+1,row
+        .byte >(_raw_image + (22-row)*SCRATCH_WIDTH + (row .mod 2) - 1)
+        .endrep
+
+.align 256
+idx_forward_low:
+        .repeat BAND_HEIGHT+1,row
+        .byte <(_raw_image + (23-row)*SCRATCH_WIDTH - (row .mod 2) + 1)
+        .endrep
+idx_forward_high:
+        .repeat BAND_HEIGHT+1,row
+        .byte >(_raw_image + (23-row)*SCRATCH_WIDTH - (row .mod 2) + 1)
+        .endrep
+
+.align 256
+idx_behind_low:
+        .repeat BAND_HEIGHT+1,row
+        .byte <(_raw_image + (21-row)*SCRATCH_WIDTH + (row .mod 2) + 1)
+        .endrep
+idx_behind_high:
+        .repeat BAND_HEIGHT+1,row
+        .byte >(_raw_image + (21-row)*SCRATCH_WIDTH + (row .mod 2) + 1)
+        .endrep
+
 model_str:
         .byte        $31,$30,$30,$00
 
@@ -178,7 +218,6 @@ cur_cache_ptr     = _prev_ram_irq_vector
 at_first_row      = _zp2
 cur_row_loop      = _zp3
 idx_one           = _zp4p
-src               = _zp6p
 idx               = _zp8p
 idx_behind        = _zp10p
 ln_val            = _zp12
@@ -265,15 +304,28 @@ top:    jsr     set_cache_end           ; Yes. Initialize things
         ldx     #>(SCRATCH_WIDTH + 2)
         jsr     _memset
 
+        lda     idx_low+BAND_HEIGHT     ; Set first pixel indexes
+        sta     store_idx_min2_first_pixel+1
+        lda     idx_high+BAND_HEIGHT
+        sta     store_idx_min2_first_pixel+2
+
+        lda     idx_forward_low+BAND_HEIGHT
+        sta     store_idx_forward_first_pixel+1
+        lda     idx_forward_high+BAND_HEIGHT
+        sta     store_idx_forward_first_pixel+2
+
+        ldy     #BAND_HEIGHT            ; We iterate over 20 lines
+        sty     row
+
         lda     floppy_motor_on         ; Patch motor-on if we use a floppy
-        beq     start_work
+        beq     row_loop
         sta     keep_motor_on+1
         sta     keep_motor_on_beg+1
         lda     #$C0
         sta     keep_motor_on+2
         sta     keep_motor_on_beg+2
 
-        jmp     start_work
+        jmp     row_loop
 
 not_top:; Subsequent bands
         ; Shift the last band's last line, plus 2 pixels,
@@ -288,99 +340,39 @@ not_top:; Subsequent bands
         ldx     #>(SCRATCH_WIDTH + 2)
         jsr     _memcpy
 
-start_work:
-        ; We start at line 2
-        lda     #>(_raw_image + (2 * SCRATCH_WIDTH))
-        sta     src+1
-        lda     #<(_raw_image + (2 * SCRATCH_WIDTH))
-        sta     src
-
-        lda     #BAND_HEIGHT            ; We iterate over 20 lines
-        sta     row
+        ldy     #BAND_HEIGHT            ; We iterate over 20 lines
+        sty     row
 
 row_loop:                               ; Row loop
-        clc
-        lda     row                     ; Row & 1?
-        bit     #$01
-        beq     even_row
-
-        ; Odd row
-        lda     src                     ; Set idx_forward = src + SCRATCH_WIDTH
-        tay
-        adc     #<SCRATCH_WIDTH
-        sta     store_idx_forward_first_col+1   ; No need to update store_idx_forward_first_pixel here
-        lda     src+1
-        tax
-        adc     #>SCRATCH_WIDTH
-        sta     store_idx_forward_first_col+2
-
-        iny                             ; Finish with idx = src + 1
-        bne     :+
-        inx
-
-:       sty     idx
-        stx     idx+1
-
-        jmp     row_work
-
-even_row:
-        ; Even row
-        and     #$02            ; Row % 8?
-        bne     :+
-        jsr     update_progress_bar
-
-:       clc
-        lda     src                     ; Set idx_forward = src + SCRATCH_WIDTH + 1 and idx = src
-        sta     idx
-        tay
-        adc     #<(SCRATCH_WIDTH+1)
-        sta     store_idx_forward_first_pixel+1
-        sta     store_idx_forward_first_col+1
-
-        lda     src+1
-        sta     idx+1
-        tax
-        adc     #>(SCRATCH_WIDTH+1)
-        sta     store_idx_forward_first_pixel+2
-        sta     store_idx_forward_first_col+2
-
-row_work:
-        ; We now have idx as a word in YX
-        cpy     #$00
-        bne     :+
-        dex
-:       dey
-        sty     idx_one                 ; idx_one = idx-1
-        stx     idx_one+1
-
 set_row_loops:
         lda     #0                      ; Patched (# of outer loops per row)
         sta     cur_row_loop
 
-        lda     (idx)                   ; Remember previous val before shifting
-        sta     ln_val                  ; index
+        ; Set indexes
+        lda     idx_low,y               ; Y = row there
+        sta     idx
+        sta     store_idx_min2_first_col+1
+        lda     idx_high,y
+        sta     idx+1
+        sta     store_idx_min2_first_col+2
 
-        lda     idx
-        ldx     idx+1
-        sta     store_idx_min2_first_pixel+1      ; Remember idx-2 for first pixel
-        stx     store_idx_min2_first_pixel+2
-        sta     store_idx_min2_first_col+1      ; Remember idx-2 for first columns
-        stx     store_idx_min2_first_col+2
+        lda     idx_one_low,y
+        sta     idx_one
+        lda     idx_one_high,y
+        sta     idx_one+1
 
-        sec                             ; Set idx_behind = idx - (SCRATCH_WIDTH-1)
-        sbc     #<(SCRATCH_WIDTH-1)
+        lda     idx_forward_low,y
+        sta     store_idx_forward_first_col+1
+        lda     idx_forward_high,y
+        sta     store_idx_forward_first_col+2
+
+        lda     idx_behind_low,y
         sta     idx_behind
-        txa
-        sbc     #>(SCRATCH_WIDTH-1)
+        lda     idx_behind_high,y
         sta     idx_behind+1
 
-        clc
-        lda     #<SCRATCH_WIDTH         ; src += SCRATCH_WIDTH
-        adc     src
-        sta     src
-        lda     #>SCRATCH_WIDTH
-        adc     src+1
-        sta     src+1
+        lda     (idx)                   ; Remember previous val before shifting
+        sta     ln_val                  ; index
 
         bra     col_outer_loop
 
@@ -395,6 +387,7 @@ keep_motor_on_beg:
 cache_check_high_byte:
         ldx     #0                      ; Patched when resetting (_cache_end+1)
         cpx     cur_cache_ptr+1
+        clc
         bne     handle_byte
         phy                             ; Backup registers before loading from disk
         pha
@@ -474,7 +467,6 @@ col_inner_loop:                         ; Inner column loop, iterating over Y
         beq     inc_cache_high          ; Increment cache ptr page and refill if needed
 
 handle_byte:
-        clc
         tax                             ; Get gstep vals to X (keep it in X!)
 
         ; HIGH NIBBLE
@@ -586,18 +578,19 @@ shift_indexes:
         inc     idx_behind+1
         clc
 
-:       tya                             ; Y = INNER_X_LOOP_LEN here
+:       lda     #INNER_X_LOOP_LEN
         adc     idx_one                 ; idx_one += INNER_X_LOOP_LEN
         sta     idx_one
         bcc     :+
         inc     idx_one+1
         clc
 
-:       tya
+:       lda     #INNER_X_LOOP_LEN
         adc     idx                     ; idx += INNER_X_LOOP_LEN
-        sta     idx                     ; increment idx last for bound checking
+        sta     idx
         bcc     :+
         inc     idx+1
+        clc
 
 :       dec     cur_row_loop            ; Are we at end of line?
         beq     end_of_row
@@ -625,10 +618,13 @@ end_of_row:
         lda     #<(handle_first_col-high_nibble_special-2)
         sta     high_nibble_special+1
 
-        dec     row
+        ldy     row
+        dey
         beq     :+
+        sty     row
         jmp     row_loop
-:       rts
+:       jmp     update_progress_bar
+        ; And we're done for this band
 
         ; First cols and first row handlers, out of main loop
 
@@ -655,7 +651,7 @@ handle_first_row_low:
 update_progress_bar:
         lda     pgbar_state             ; Update progress bar
         clc
-        adc     #4
+        adc     #20
         sta     pgbar_state
         bcc     :+
         inc     pgbar_state+1
