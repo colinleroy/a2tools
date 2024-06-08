@@ -299,7 +299,6 @@ static void write_raw(uint16 h)
 
 #else
   #define y_ptr      zp4
-  #define dst_ptr    zp6p
   #define cur        zp8p
   #define cur_orig_x zp10p
   #define cur_orig_y zp12p
@@ -337,9 +336,7 @@ full_band:
 
 no_crop:
   __asm__("lda #>(%v)", raw_image);
-  __asm__("sta %v+1", dst_ptr);
-  __asm__("lda #<(%v)", raw_image);
-  __asm__("sta %v", dst_ptr);
+  __asm__("sta %g+2", dst_ptr);
 
   __asm__("clc");
   __asm__("lda #<(%v)", orig_y_table);
@@ -378,7 +375,8 @@ no_crop:
     cur_orig_y_addr:
     /* *dst_ptr = *(cur); */
     __asm__("lda (%v)", cur);
-    __asm__("sta (%v),y", dst_ptr);
+    dst_ptr:
+    __asm__("sta %v,y", raw_image);
 
     /* histogram[*dst_ptr]++; */
     __asm__("tax");
@@ -392,7 +390,7 @@ no_crop:
     __asm__("bne %g", next_x);
 
   /* Increment dst_ptr by FILE_WIDTH (256) */
-  __asm__("inc %v+1", dst_ptr);
+  __asm__("inc %g+2", dst_ptr);
 
   /* y_len? */
   __asm__("ldy %v", y_ptr);
