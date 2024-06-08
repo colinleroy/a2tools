@@ -24,7 +24,7 @@ BAND_HEIGHT   = 20
 ; QTKT algorithm relies on two pixels "borders" around the
 ; image to simplify bound checking.
 SCRATCH_PAD   = 4
-SCRATCH_WIDTH = (640 + SCRATCH_PAD)
+SCRATCH_WIDTH = (640 + SCRATCH_PAD + 1)
 SCRATCH_HEIGHT= (BAND_HEIGHT + SCRATCH_PAD)
 RAW_IMAGE_SIZE= (SCRATCH_HEIGHT * SCRATCH_WIDTH + 2)
 
@@ -158,20 +158,12 @@ low_nibble_gstep_high:
 idx_low:
         .repeat BAND_HEIGHT+1,row
         .byte <(_raw_image + (22-row)*SCRATCH_WIDTH + (row .mod 2))
+        ; We want to make sure no idx low byte == $00 so we can decrement it to compute idx_one
+        .assert (_raw_image + (22-row)*SCRATCH_WIDTH + (row .mod 2)) .mod $100 <> $00,error
         .endrep
 idx_high:
         .repeat BAND_HEIGHT+1,row
         .byte >(_raw_image + (22-row)*SCRATCH_WIDTH + (row .mod 2))
-        .endrep
-
-.align 256
-idx_one_low:
-        .repeat BAND_HEIGHT+1,row
-        .byte <(_raw_image + (22-row)*SCRATCH_WIDTH + (row .mod 2) - 1)
-        .endrep
-idx_one_high:
-        .repeat BAND_HEIGHT+1,row
-        .byte >(_raw_image + (22-row)*SCRATCH_WIDTH + (row .mod 2) - 1)
         .endrep
 
 .align 256
@@ -352,14 +344,13 @@ set_row_loops:
         lda     idx_low,y               ; Y = row there
         sta     idx
         sta     store_idx_min2_first_col+1
-        lda     idx_high,y
-        sta     idx+1
-        sta     store_idx_min2_first_col+2
+        ldx     idx_high,y
+        stx     idx+1
+        stx     store_idx_min2_first_col+2
 
-        lda     idx_one_low,y
+        dec     a
         sta     idx_one
-        lda     idx_one_high,y
-        sta     idx_one+1
+        stx     idx_one+1
 
         lda     idx_forward_low,y
         sta     store_idx_forward_first_col+1
@@ -579,17 +570,13 @@ shift_indexes:
         clc
 
 :       lda     #INNER_X_LOOP_LEN
-        adc     idx_one                 ; idx_one += INNER_X_LOOP_LEN
-        sta     idx_one
-        bcc     :+
-        inc     idx_one+1
-        clc
-
-:       lda     #INNER_X_LOOP_LEN
         adc     idx                     ; idx += INNER_X_LOOP_LEN
         sta     idx
+        dec     a
+        sta     idx_one                 ; idx_one = idx-1
         bcc     :+
         inc     idx+1
+        inc     idx_one+1
         clc
 
 :       dec     cur_row_loop            ; Are we at end of line?

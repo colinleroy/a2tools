@@ -66,7 +66,7 @@ uint16 *idx_pix_rows;
  * two pixels on a 25th line because they are re-
  * used at the start of the next band.
  */
-#define SCRATCH_WIDTH 644
+#define SCRATCH_WIDTH 645
 #define SCRATCH_HEIGHT (BAND_HEIGHT + 4)
 uint8 raw_image[SCRATCH_HEIGHT * SCRATCH_WIDTH + 2];
 
