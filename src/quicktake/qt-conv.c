@@ -305,10 +305,11 @@ static void write_raw(uint16 h)
 
   __asm__("lda %v", last_band_crop);
   __asm__("beq %g", full_band);
-  __asm__("lda (sp)");
+  __asm__("ldy %o", h);
+  __asm__("lda (sp),y");
   __asm__("cmp %v", last_band);
   __asm__("bne %g", full_band);
-  __asm__("ldy #1");
+  __asm__("iny");
   __asm__("lda (sp),y");
   __asm__("cmp %v+1", last_band);
   __asm__("bne %g", full_band);
