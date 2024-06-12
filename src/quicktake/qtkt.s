@@ -54,6 +54,7 @@ _cache_start:
 
 .segment        "RODATA"
 .align 256
+; gstep correction (value byte for high nibble)
 high_nibble_gstep_low:
         .repeat 16
         .byte        $A7
@@ -104,6 +105,7 @@ high_nibble_gstep_low:
         .byte        $59
         .endrep
 
+; gstep correction (value byte for low nibble)
 low_nibble_gstep_low:
         .repeat 16
         .byte        $A7
@@ -125,6 +127,8 @@ low_nibble_gstep_low:
         .byte        $59
         .endrep
 
+
+; gstep correction (sign byte for low nibble)
 low_nibble_gstep_high:
         .repeat 16
         .byte        $FF
@@ -146,65 +150,87 @@ low_nibble_gstep_high:
         .byte        $00
         .endrep
 
+; gstep correction sign byte for high nibble is derived from high nibble's high bit
+; in the main loop so no array.
+
 .align 256
+; Index offsets for start of each row (low byte)
 idx_low:
         .repeat BAND_HEIGHT+1,row
         .byte <(_raw_image + (22-row)*SCRATCH_WIDTH + (row .mod 2))
         ; We want to make sure no idx low byte == $00 so we can decrement it to compute idx_one
         .assert (_raw_image + (22-row)*SCRATCH_WIDTH + (row .mod 2)) .mod $100 <> $00,error
         .endrep
+
+; Index offsets for start of each row (high byte)
 idx_high:
         .repeat BAND_HEIGHT+1,row
         .byte >(_raw_image + (22-row)*SCRATCH_WIDTH + (row .mod 2))
         .endrep
 
 .align 256
+; Forward index offsets for start of each row (low byte)
 idx_forward_low:
         .repeat BAND_HEIGHT+1,row
         .byte <(_raw_image + (23-row)*SCRATCH_WIDTH - (row .mod 2) + 1)
         .endrep
+
+; Forward index offsets for start of each row (high byte)
 idx_forward_high:
         .repeat BAND_HEIGHT+1,row
         .byte >(_raw_image + (23-row)*SCRATCH_WIDTH - (row .mod 2) + 1)
         .endrep
 
 .align 256
+; Backward index offsets for start of each row (low byte)
 idx_behind_low:
         .repeat BAND_HEIGHT+1,row
         .byte <(_raw_image + (21-row)*SCRATCH_WIDTH + (row .mod 2) + 1)
         .endrep
+
+; Backward index offsets for start of each row (high byte)
 idx_behind_high:
         .repeat BAND_HEIGHT+1,row
         .byte >(_raw_image + (21-row)*SCRATCH_WIDTH + (row .mod 2) + 1)
         .endrep
 
+; QTKT file magic
 model_str:
         .byte        $31,$30,$30,$00
 
 .segment        "BSS"
 .align 1024
+; Disk cache
 _cache:
         .res        CACHE_SIZE,$00
 .align 256
+
+; Destination buffer for the band (8bpp grayscale)
 _raw_image:
         .res        RAW_IMAGE_SIZE,$00
 .align 256
+
+; Status bar state, kept between bands
 pgbar_state:
         .res        2,$00
+
+; Whether to keep floppy motor on (patched to softswitch in the code)
 motor_on:
         .res        2,$00
 
-; Zero page
-val               = _prev_rom_irq_vector
-row               = _prev_rom_irq_vector+1
-cur_cache_ptr     = _prev_ram_irq_vector
+; Zero page pointers and variables
 
-cur_row_loop      = _zp3
-idx_one           = _zp4p
+row               = _prev_rom_irq_vector ; Current row, 1 byte
+cur_cache_ptr     = _prev_ram_irq_vector ; Cache pointer, 2-bytes
+
+cur_row_loop      = _zp3                 ; Intra-row outer column loop counter
+
+idx_one           = _zp4p                ; Pointers to destination buffer
 idx               = _zp8p
 idx_behind        = _zp10p
-ln_val            = _zp12
-hn_val            = _zp13
+
+ln_val            = _zp12                 ; Last low nibble computed value
+hn_val            = _zp13                 ; Last high nibble computed value
 
 
 ; Offset to scratch start of last scratch lines, row 20 col 0
@@ -212,6 +238,7 @@ LAST_TWO_LINES = _raw_image + (BAND_HEIGHT * SCRATCH_WIDTH)
 
 .segment        "CODE"
 
+; Patcher for end-of-cache high byte check.
 set_cache_end:
         lda     _cache_end
         beq     :+
@@ -220,6 +247,7 @@ set_cache_end:
         sta     cache_check_high_byte+1
         rts
 
+; Cache filler
 fill_cache:
         jsr     decsp6
 
@@ -255,16 +283,16 @@ fill_cache:
         ldx     _ifp+1
         jmp     _fread
 
-; Don't put this one in LC as it is patched on runtime
+; Main loop, decodes a band
 _qt_load_raw:
-        cmp     #$00
+        cmp     #$00                    ; Check if we're on the first band
         bne     not_top
         cpx     #$00
         bne     not_top
 
 top:    jsr     set_cache_end           ; Yes. Initialize things
 
-        stz     pgbar_state
+        stz     pgbar_state             ; Zero progress bar
 
         lda     #(640/INNER_X_LOOP_LEN) ; How many outer loops per row ?
         ldx     _width
@@ -284,7 +312,7 @@ top:    jsr     set_cache_end           ; Yes. Initialize things
         ldx     #>(SCRATCH_WIDTH + 2)
         jsr     _memset
 
-        lda     idx_low+BAND_HEIGHT     ; Set first pixel indexes
+        lda     idx_low+BAND_HEIGHT     ; Set indexes for first pixel special case
         sta     store_idx_min2_first_pixel+1
         lda     idx_high+BAND_HEIGHT
         sta     store_idx_min2_first_pixel+2
@@ -294,10 +322,10 @@ top:    jsr     set_cache_end           ; Yes. Initialize things
         lda     idx_forward_high+BAND_HEIGHT
         sta     store_idx_forward_first_pixel+2
 
-        ldy     #BAND_HEIGHT            ; We iterate over 20 lines
+        ldy     #BAND_HEIGHT            ; We iterate over 20 rows
         sty     row
 
-        lda     floppy_motor_on         ; Patch motor-on if we use a floppy
+        lda     floppy_motor_on         ; Patch motor_on if we use a floppy
         beq     row_loop
         sta     keep_motor_on+1
         sta     keep_motor_on_beg+1
@@ -307,9 +335,9 @@ top:    jsr     set_cache_end           ; Yes. Initialize things
 
         jmp     row_loop
 
-not_top:; Subsequent bands
-        ; Shift the last band's last line, plus 2 pixels,
-        ; to second line of the new band.
+not_top:                                ; Subsequent bands
+                                        ; Shift the last band's last line, plus 2 pixels,
+                                        ; to second line of the new band.
         lda     #<(_raw_image+SCRATCH_WIDTH)
         ldx     #>(_raw_image+SCRATCH_WIDTH)
         jsr     pushax
@@ -320,12 +348,12 @@ not_top:; Subsequent bands
         ldx     #>(SCRATCH_WIDTH + 2)
         jsr     _memcpy
 
-        ldy     #BAND_HEIGHT            ; We iterate over 20 lines
+        ldy     #BAND_HEIGHT            ; We iterate over 20 rows
         sty     row
 
 row_loop:                               ; Row loop
-        ; Set indexes
-        lda     idx_low,y               ; Y = row there
+
+        lda     idx_low,y               ; Set indexes (Y = row there)
         sta     idx
         sta     store_idx_min2_first_col+1
         ldx     idx_high,y
@@ -346,7 +374,7 @@ row_loop:                               ; Row loop
         lda     idx_behind_high,y
         sta     idx_behind+1
 
-        lda     (idx)                   ; Remember previous val before shifting
+        lda     (idx)                   ; Remember previous value before shifting
         sta     ln_val                  ; index
 
 set_row_loops:
@@ -354,7 +382,7 @@ set_row_loops:
         sta     cur_row_loop
         bra     col_outer_loop
 
-; --------------------------------------; Inlined helpers, close enough to branch 
+; --------------------------------------; Inlined helpers, close enough to branch
 
 ; Increment cache pointer page
 inc_cache_high:
@@ -367,7 +395,7 @@ cache_check_high_byte:
         cpx     cur_cache_ptr+1
         clc
         bne     handle_byte
-        phy                             ; Backup registers before loading from disk
+        phy                             ; Backup needed registers before loading from disk
         pha
         jsr     fill_cache
         pla
@@ -376,16 +404,19 @@ keep_motor_on:
         sta     motor_on                ; Keep drive motor running
         bra     handle_byte
 
+; ------
 ; Clamp value to 8bits
 clamp_high_nibble_high:
         lda     #$FF
         clc
-        bra     high_nibble_special      ; Back to main loop
+        bra     high_nibble_special_pos    ; Back to main loop
 
 clamp_high_nibble_low:
         lda     #$00
-        bra     high_nibble_special      ; Back to main loop
+        bra     high_nibble_special_pos    ; Back to main loop
 
+; ------
+; Handle first pixel special case
 handle_first_pixel:
         sta     (idx_one),y
 store_idx_forward_first_pixel:
@@ -401,12 +432,15 @@ store_idx_min2_first_pixel:
 
         sta     hn_val
         ; compute new branch offset (from high_nibble_special to first_row)
-        lda     #<(handle_first_row_high-high_nibble_special-2)
-        sta     high_nibble_special+1
+        lda     #<(handle_first_row_high-high_nibble_special_neg-2)
+        sta     high_nibble_special_neg+1
+        lda     #<(handle_first_row_high-high_nibble_special_pos-2)
+        sta     high_nibble_special_pos+1
 
         lda     hn_val
         bra     do_low_nibble           ; Back to main loop
 
+; ------
 ; Handle first row's special case, for high nibble
 handle_first_row_high:
         sta     (idx_behind),y          ; *(idx_behind+2) = *(idx_behind+4) = val;
@@ -417,6 +451,8 @@ handle_first_row_high:
         dey                             ; Set Y back for low nibble
         bra     high_nibble_end         ; Back to main loop
 
+; ------
+; Handle first column special case
 handle_first_col:
         sta     (idx_one),y
 store_idx_forward_first_col:
@@ -426,8 +462,10 @@ store_idx_min2_first_col:
 
         sta     hn_val
         ; compute new branch offset (from high_nibble_special to high_nibble_end)
-        lda     #<(high_nibble_end-high_nibble_special-2)
-        sta     high_nibble_special+1
+        lda     #<(high_nibble_end-high_nibble_special_neg-2)
+        sta     high_nibble_special_neg+1
+        lda     #<(high_nibble_end-high_nibble_special_pos-2)
+        sta     high_nibble_special_pos+1
 
         lda     hn_val
         bra     do_low_nibble
@@ -455,6 +493,7 @@ handle_byte:
         bmi     gstep_high_pos          ; gstep add simplification depending
                                         ; on the sign of its high byte
 
+gstep_high_neg:
         lda     (idx_behind),y          ; (*idx_behind)
         adc     ln_val                  ; + ln_val
         ror                             ; >> 1
@@ -470,7 +509,8 @@ handle_byte:
 
         bcc     clamp_high_nibble_low   ; Clamp low as gstep is negative
         clc
-        bra     high_nibble_special
+high_nibble_special_neg:
+        bra     handle_first_pixel      ; Patched for special cases (first_pixel, then first_row, then first_col or high_nibble_end)
 
 gstep_high_pos:
         lda     (idx_behind),y          ; (*idx_behind)
@@ -489,13 +529,13 @@ gstep_high_pos:
 
         bcs     clamp_high_nibble_high
 
-high_nibble_special:
-        bra     handle_first_pixel      ; Patched (first_pixel, then first_row, then first_col or high_nibble_end)
+high_nibble_special_pos:
+        bra     handle_first_pixel      ; Patched for special cases (first_pixel, then first_row, then first_col or high_nibble_end)
 
 high_nibble_end:
-        sta     hn_val                  ; Not first col:
+        sta     hn_val                  ; Done on not-first columns:
         adc     ln_val                  ; *(idx+1) = (val + ln_val) >> 1;
-        ror
+        ror                             ; (handle_first_col will branch back to do_low_nibble)
         clc
         sta     (idx_one),y
         lda     hn_val
@@ -508,7 +548,7 @@ do_low_nibble:
         ;         + *(idx_behind+4)) >> 1)
         ;         + gstep[low_nibble];
         sta     (idx),y                 ; store *(idx+2) = val, we didn't do it earlier
-        adc     (idx_behind),y          ; Y expected to be 2 there
+        adc     (idx_behind),y
         ror
         clc
 
@@ -516,77 +556,86 @@ do_low_nibble:
         iny
         adc     (idx_behind),y
         ror
-        clc                             ; + gstep[h].
+        clc
 
         adc     low_nibble_gstep_low,x  ; Sets carry if overflow
 
-        sta     ln_val
+        sta     ln_val                  ; Store low nibble value
 
         lda     low_nibble_gstep_high,x ; Carry set by previous adc if overflowed
         adc     #0                      ; If A = $FF and C set, C will stay set
         clc                             ; so clear it.
-        bne     clamp_low_nibble        ; Overflow - handle it
+        bne     clamp_low_nibble        ; Overflow - handle it (will rewrite and reload ln_val)
         lda     ln_val                  ; otherwise reload ln_val
 
 low_nibble_special:
         bra     handle_first_row_low    ; Patched (first_row, then low_nibble_end)
 
-low_nibble_end:                         ; We have ln_val in A, store it
-        sta     (idx),y                 ; at idx
+low_nibble_end:
+        sta     (idx),y                 ; We have ln_val in A, store it at idx
         adc     hn_val                  ; and handle idx+1
-        ror                             ; (don't bother clc, carry cleared by cpy)
+        ror                             ; (don't bother to clc, carry cleared by cpy just after)
         sta     (idx_one),y
         ; END LOW NIBBLE
 
 check_col_inner_loop:
-        cpy     #(INNER_X_LOOP_LEN)
+        cpy     #(INNER_X_LOOP_LEN)     ; End of inner column loop?
         bne     col_inner_loop
 
-shift_indexes:
-        lda     #(INNER_X_LOOP_LEN-1)   ; idx_behind += INNER_X_LOOP_LEN
-        adc     idx_behind              ; Adding INNER_X_LOOP_LEN-1 because
-        sta     idx_behind              ; carry is set by the previous cpy
+shift_indexes:                          ; Yes so shift indexes for next inner loop
+        lda     #(INNER_X_LOOP_LEN-1)   ; idx += INNER_X_LOOP_LEN
+        adc     idx                     ; Adding INNER_X_LOOP_LEN-1 because
+        sta     idx                     ; carry is set by the previous cpy
+        bcc     :+
+        inc     idx+1                   ; Don't clear carry, for idx_one
+
+:       dec     cur_row_loop            ; Are we at end of line?
+        beq     end_of_row              ; If so, no need to update idx_one and idx_behind
+
+        dec     a
+        sta     idx_one                 ; idx_one = idx-1
+        bcc     :+
+        inc     idx_one+1
+        clc
+
+:       tya                             ; Y = INNER_X_LOOP_LEN
+        adc     idx_behind              ; idx_behind += INNER_X_LOOP_LEN
+        sta     idx_behind
         bcc     :+
         inc     idx_behind+1
         clc
 
-:       tya                             ; idx += INNER_X_LOOP_LEN
-        adc     idx
-        sta     idx
-        dec     a
-        sta     idx_one                 ; idx_one = idx-1
-        bcc     :+
-        inc     idx+1
-        inc     idx_one+1
-        clc
-
-:       dec     cur_row_loop            ; Are we at end of line?
-        beq     end_of_row
-        jmp     col_outer_loop
+:       jmp     col_outer_loop
 
 end_of_row:
         lda     ln_val                  ; *(idx+2) = val
         ldy     #2
         sta     (idx),y
 
-
 first_row_special:                      ; Update special handlers at end of first row
         bra     finish_first_row        ; (will be patched out)
 
+
+; --------------------------------------; Inlined helpers, close enough to branch
+
+; Handle end of row
 row_done:
         ; Put back first col handler for high nibble
-        lda     #<(handle_first_col-high_nibble_special-2)
-        sta     high_nibble_special+1
+        lda     #<(handle_first_col-high_nibble_special_neg-2)
+        sta     high_nibble_special_neg+1
+        lda     #<(handle_first_col-high_nibble_special_pos-2)
+        sta     high_nibble_special_pos+1
 
         ldy     row
         dey
         beq     band_done
         sty     row
         jmp     row_loop
-        ; And we're done for this band
 
         ; First cols and first row handlers, out of main loop
 
+; ------
+; Clamp value to 8 bits
 clamp_low_nibble:
         eor     #$FF                     ; => 00 if negative, FE if positive
         bpl     :+
@@ -596,6 +645,8 @@ clamp_low_nibble:
 low_nibble_clamped:
         bra     handle_first_row_low
 
+; ------
+; Handle first row special case (low nibble)
 handle_first_row_low:
         sta     (idx_behind),y           ; *(idx_behind+4) = *(idx_behind+6) = val;
         iny
@@ -607,6 +658,8 @@ handle_first_row_low:
 
         ; End of first col/row handlers
 
+; ------
+; Handle end of first row
 finish_first_row:
         ;lda     #<(low_nibble_end-low_nibble_special-2) == 0
         stz     low_nibble_special+1
@@ -617,10 +670,12 @@ finish_first_row:
         stz     first_row_special+1     ; Unplug first row handler
         bra     row_done
 
+; ------
+; Update progress bar at end of band and return
 band_done:
         lda     pgbar_state             ; Update progress bar
         clc
-        adc     #20
+        adc     #BAND_HEIGHT
         sta     pgbar_state
         bcc     :+
         inc     pgbar_state+1
