@@ -151,7 +151,7 @@ static uint8 histogram_high[256];
 
 static uint8 *orig_y_table[BAND_HEIGHT];
 static uint16 orig_x0_offset;
-static uint8 orig_x_offset[640];
+static uint8 orig_x_offset[256];
 static uint8 scaled_band_height;
 static uint16 output_write_len;
 static uint8 scaling_factor = 4;

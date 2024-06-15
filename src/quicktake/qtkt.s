@@ -18,6 +18,13 @@
         .export          _cache
         .export          _cache_start
 
+.macro UPDATE_BRANCH from, to
+        .assert (to-from-2) >= -128, error
+        .assert (to-from-2) <= 127, error
+        lda     #<(to-from-2)
+        sta     from+1
+.endmacro
+
 ; Defines
 
 BAND_HEIGHT   = 20
@@ -329,7 +336,7 @@ top:    jsr     set_cache_end           ; Yes. Initialize things
         beq     row_loop
         sta     keep_motor_on+1
         sta     keep_motor_on_beg+1
-        lda     #$C0
+        lda     #$C0                    ; Firmware access space
         sta     keep_motor_on+2
         sta     keep_motor_on_beg+2
 
@@ -431,11 +438,10 @@ store_idx_min2_first_pixel:
         dey                             ; Set Y back for low nibble
 
         sta     hn_val
+
         ; compute new branch offset (from high_nibble_special to first_row)
-        lda     #<(handle_first_row_high-high_nibble_special_neg-2)
-        sta     high_nibble_special_neg+1
-        lda     #<(handle_first_row_high-high_nibble_special_pos-2)
-        sta     high_nibble_special_pos+1
+        UPDATE_BRANCH high_nibble_special_neg, handle_first_row_high
+        UPDATE_BRANCH high_nibble_special_pos, handle_first_row_high
 
         lda     hn_val
         bra     do_low_nibble           ; Back to main loop
@@ -461,11 +467,10 @@ store_idx_min2_first_col:
         sta     $FFFF                   ; Patched
 
         sta     hn_val
+
         ; compute new branch offset (from high_nibble_special to high_nibble_end)
-        lda     #<(high_nibble_end-high_nibble_special_neg-2)
-        sta     high_nibble_special_neg+1
-        lda     #<(high_nibble_end-high_nibble_special_pos-2)
-        sta     high_nibble_special_pos+1
+        UPDATE_BRANCH high_nibble_special_neg, high_nibble_end
+        UPDATE_BRANCH high_nibble_special_pos, high_nibble_end
 
         lda     hn_val
         bra     do_low_nibble
@@ -621,10 +626,8 @@ first_row_special:                      ; Update special handlers at end of firs
 ; Handle end of row
 row_done:
         ; Put back first col handler for high nibble
-        lda     #<(handle_first_col-high_nibble_special_neg-2)
-        sta     high_nibble_special_neg+1
-        lda     #<(handle_first_col-high_nibble_special_pos-2)
-        sta     high_nibble_special_pos+1
+        UPDATE_BRANCH high_nibble_special_neg, handle_first_col
+        UPDATE_BRANCH high_nibble_special_pos, handle_first_col
 
         ldy     row
         dey
@@ -661,11 +664,8 @@ handle_first_row_low:
 ; ------
 ; Handle end of first row
 finish_first_row:
-        ;lda     #<(low_nibble_end-low_nibble_special-2) == 0
-        stz     low_nibble_special+1
-
-        lda     #<(low_nibble_end-low_nibble_clamped-2)
-        sta     low_nibble_clamped+1
+        UPDATE_BRANCH low_nibble_special, low_nibble_end
+        UPDATE_BRANCH low_nibble_clamped, low_nibble_end
 
         stz     first_row_special+1     ; Unplug first row handler
         bra     row_done
