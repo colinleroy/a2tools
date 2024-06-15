@@ -552,7 +552,6 @@ void qt_load_raw(uint16 top)
             __asm__("tya");
             __asm__("adc #>%w", (DATABUF_SIZE) * 2);
             __asm__("sta %v+1", cur_buf_x);
-            __asm__("tay");
 
             //cur_huff = huff[tree + 10];
             __asm__("lda %v", tree);
