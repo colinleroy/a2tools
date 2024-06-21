@@ -315,8 +315,8 @@ top:    jsr     set_cache_end           ; Yes. Initialize things
         lda     #$80
         ldx     #$00
         jsr     pushax
-        lda     #<(SCRATCH_WIDTH + 2)
-        ldx     #>(SCRATCH_WIDTH + 2)
+        lda     #<(SCRATCH_WIDTH + 1)
+        ldx     #>(SCRATCH_WIDTH + 1)
         jsr     _memset
 
         lda     idx_low+BAND_HEIGHT     ; Set indexes for first pixel special case
@@ -351,8 +351,8 @@ not_top:                                ; Subsequent bands
         lda     #<(LAST_TWO_LINES+SCRATCH_WIDTH)
         ldx     #>(LAST_TWO_LINES+SCRATCH_WIDTH)
         jsr     pushax
-        lda     #<(SCRATCH_WIDTH + 2)
-        ldx     #>(SCRATCH_WIDTH + 2)
+        lda     #<(SCRATCH_WIDTH + 1)
+        ldx     #>(SCRATCH_WIDTH + 1)
         jsr     _memcpy
 
         ldy     #BAND_HEIGHT            ; We iterate over 20 rows
