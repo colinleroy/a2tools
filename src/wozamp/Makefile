@@ -55,8 +55,7 @@ wozamp_CL65SOURCES = \
 	../lib/runtime_once_clean.s \
 	../lib/extrazp.s \
 	../lib/clrzone.s \
-	../lib/platform_sleep.s \
-	../lib/strcasestr.s
+	../lib/platform_sleep.s
 
 wozamp_GCC_SOURCES = \
 	../lib/strtrim.c \
