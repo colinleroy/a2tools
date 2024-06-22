@@ -15,9 +15,12 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifndef __CC65__
+#define _GNU_SOURCE
+#endif
+#include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
 #include <unistd.h>
 #include <errno.h>
 #include "stp_list.h"
@@ -32,7 +35,6 @@
 #include "scroll.h"
 #include "scrollwindow.h"
 #include "strsplit.h"
-#include "strcasestr.h"
 #include "runtime_once_clean.h"
 
 static char *url_enter(char *url, char *suffix);
