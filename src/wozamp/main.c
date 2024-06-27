@@ -178,6 +178,14 @@ static void backup_restore_logo(char *op) {
 }
 #endif
 
+#ifdef __APPLE2ENH__
+static void print_err(const char *file) {
+  init_text();
+  clrscr();
+  printf("%s : Error %d", file, errno);
+}
+#endif
+
 #ifdef __CC65__
 #pragma code-name (push, "LC")
 #endif
@@ -262,6 +270,8 @@ read_metadata_again:
     if (has_video && !in_list && enable_video) {
       FILE *video_url_fp = fopen("/RAM/VIDURL","w");
       if (video_url_fp == NULL) {
+        print_err("VIDURL");
+        cgetc();
         goto novid;
       }
       init_text();
@@ -277,7 +287,9 @@ read_metadata_again:
       fclose(video_url_fp);
       simple_serial_putc(SURL_METHOD_ABORT);
       reopen_start_device();
-      exec("VIDEOPLAY", NULL);
+      if (exec("VIDEOPLAY", NULL) != 0) {
+        print_err("VIDEOPLAY");
+      }
       return;
     } else {
 novid:
