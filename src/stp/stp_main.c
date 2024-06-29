@@ -106,12 +106,13 @@ void stp_print_footer(void) {
   clrzone(0, 23, scrw - 1, 23);
   gotoxy(0, 23);
 #ifdef __APPLE2ENH__
-  dputs("Up/Down/Ret/Esc:nav, S:send (R:all), D:delete, A:get all, /:Search");
+  dputs("Up/Down/Ret/Esc:nav, S:send (R:all), D:del, A:get all, /:Search");
   if (search_buf[0]) {
      cputs(", N:Next");
   }
+  cputs(", Q:Quit");
 #else
-  dputs("U/J/Ret/Esc:nav, S:send, A:get all");
+  dputs("U/J/Ret/Esc:nav, S:send, Q:quit");
 #endif
 }
 
@@ -227,11 +228,13 @@ up_dir:
         stp_list_search((c == '/'));
         stp_print_header(NULL, URL_RESTORE);
         goto keyb_input;
+      case 'q':
+        goto quit;
       default:
         goto update_list;
     }
   }
-
+quit:
   exit(0);
 }
 #ifdef __CC65__

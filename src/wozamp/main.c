@@ -68,14 +68,16 @@ void stp_print_footer(void) {
   dputs("Up,Down,Enter,Esc: Navigate         /: Search       C: Configure\r\n");
   dputs("A:Play all files in directory       ");
   if (search_buf[0]) {
-    dputs("N: Search next");
+    dputs("N: Search next  ");
   }
+  dputs("Q: Quit");
 #else
   dputs("U,J,Enter,Esc:nav /:search C:config");
-  dputs("\r\nA:play all files in directory");
+  dputs("\r\nA:play dir");
   if (search_buf[0]) {
     dputs(" N:next");
   }
+  dputs("Q: Quit");
 #endif
 }
 
@@ -496,11 +498,13 @@ up_dir:
       case 'n':
         stp_list_search(0);
         goto keyb_input;
+      case 'q':
+        goto quit;
       default:
         goto update_list;
     }
   }
-
+quit:
   exit(0);
 }
 #ifdef __CC65__
