@@ -410,6 +410,7 @@ static void setup_tty(int port, int baudrate, int hw_flow_control) {
 
 FILE *simple_serial_open_file(char *tty_path) {
   struct flock lock;
+  static char cannot_open = 0;
   FILE *fp;
   lock.l_start = 0;
   lock.l_len = 0;
@@ -427,9 +428,13 @@ FILE *simple_serial_open_file(char *tty_path) {
     fp = NULL;
   }
   if (fp == NULL) {
-    printf("Can't open %s\n", tty_path);
+    if (cannot_open == 0) {
+      printf("Can't open %s...\n", tty_path);
+    }
+    cannot_open = 1;
     return NULL;
   }
+  cannot_open = 0;
 
   simple_serial_flush_file(fp);
   setup_tty(fileno(fp), opt_tty_speed, opt_tty_hw_handshake);
