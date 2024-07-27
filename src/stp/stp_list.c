@@ -434,8 +434,7 @@ int stp_get_data(char *url, const surl_response **resp) {
   }
 
   num_lines = strsplit_in_place(data, '\n', &lines);
-  if (nat_data) {
-    strsplit_in_place(nat_data, '\n', &nat_lines);
+  if (nat_data && strsplit_in_place(nat_data, '\n', &nat_lines) > 0) {
     display_lines = nat_lines;
   } else {
     nat_lines = NULL;

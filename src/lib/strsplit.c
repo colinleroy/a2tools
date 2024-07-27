@@ -92,6 +92,9 @@ int __fastcall__ _strsplit_int(char in_place, char *in, char split, char ***out)
     ++src;
   }
   *out = malloc(n_tokens * sizeof(char *));
+  if (*out == NULL) {
+    return 0;
+  }
   return _strnsplit_int(in_place, in, split, *out, n_tokens);
 }
 
