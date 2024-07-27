@@ -119,6 +119,11 @@ try_again:
   if (n > 0 && FD_ISSET(fileno(ttyfp), &fds)) {
     int flags = fcntl(fileno(ttyfp), F_GETFL);
     int r;
+
+    if (feof(ttyfp)) {
+        return EOF;
+    }
+
     flags |= O_NONBLOCK;
     fcntl(fileno(ttyfp), F_SETFL, flags);
 
