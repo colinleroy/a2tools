@@ -50,6 +50,9 @@ char * __fastcall__ simple_serial_gets(char *out, size_t size) {
     while (ser_get(&c) == SER_ERR_NO_DATA);
 #else
     c = simple_serial_getc();
+    if (feof(ttyfp)) {
+        return NULL;
+    }
 #endif
     
     if (c == '\r') {
