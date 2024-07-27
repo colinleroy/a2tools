@@ -66,11 +66,14 @@ void stp_print_footer(void) {
   gotoxy(0, 22);
 #ifdef __APPLE2ENH__
   dputs("Up,Down,Enter,Esc: Navigate         /: Search       C: Configure\r\n");
+//      "A:Play all files in directory       N: Search next  Q: Quit  (12345B free)");
   dputs("A:Play all files in directory       ");
   if (search_buf[0]) {
     dputs("N: Search next  ");
+  } else {
+    gotox(52);
   }
-  dputs("Q: Quit");
+  cprintf("Q: Quit       (%zuB free)", _heapmemavail());
 #else
   dputs("U,J,Enter,Esc:nav /:search C:config");
   dputs("\r\nA:play dir");
@@ -361,67 +364,18 @@ char *play_directory(char *url) {
 
 char navigated = 0;
 
-int main(void) {
-  char *url = NULL;
+static void do_nav(char *base_url) {
   char full_update = 1;
-  char c;
-  FILE *tmpfp;
+  char c, l;
+  char *url;
   const surl_response *resp;
 
-#ifdef __APPLE2ENH__
-  videomode(VIDEOMODE_80COL);
-#endif
-#ifdef __APPLE2__
-  init_hgr(1);
-  hgr_mixon();
-#endif
-#ifdef __APPLE2ENH__
-  backup_restore_logo("w");
-#endif
-  screensize(&scrw, &scrh);
-  set_scrollwindow(20, scrh);
-  
-  surl_ping();
-#ifdef __CC65__
-  printf("Mem available: %zub\n", _heapmemavail());
-#endif
-  load_config();
-
-  if (url) {
-    free(url);
-    url = NULL;
-  }
-
-  clrscr();
-  tmpfp = fopen(URL_PASSER_FILE,"r");
-  if (tmpfp == NULL) {
-#ifdef __APPLE2ENH__
-    url = stp_get_start_url("Please enter an FTP server or internet stream URL.\r\n",
-                          "http://8bit.fm:8000/live");
-#else
-    url = stp_get_start_url("Please enter an FTP or internet stream\r\n",
-                          "http://8bit.fm:8000/live");
-#endif
-    url = stp_build_login_url(url);
-  } else {
-    url = malloc(512);
-    fgetc(tmpfp); // Ignore subtitles parameter
-    fgetc(tmpfp); // Ignore size parameter
-    fgets(url, 511, tmpfp);  // Ignore charset parameter */
-    fgets(url, 511, tmpfp);  // URL
-    fclose(tmpfp);
-    unlink(URL_PASSER_FILE);
-  }
 
   runtime_once_clean();
 
-  set_scrollwindow(0, scrh);
-#ifdef __APPLE2__
-    init_text();
-#endif
+  url = strdup(base_url);
+  free(base_url);
   stp_print_header(url, URL_SET);
-
-  stp_print_footer();
 
   while(1) {
     char *prev_filename = (cur_line < num_lines ?
@@ -456,7 +410,10 @@ keyb_input:
       stp_animate_list(0);
     }
     c = tolower(cgetc());
-    switch(c) {
+    l = (c & 0x80) ? PAGE_HEIGHT : 1;
+    full_update = 0;
+
+    switch(c & ~0x80) {
       case CH_ESC:
 up_dir:
         url = stp_url_up(url);
@@ -479,14 +436,16 @@ up_dir:
 #else
       case 'u':
 #endif
-        full_update = stp_list_scroll(-1);
+        while (l--)
+          full_update |= stp_list_scroll(-1);
         goto update_list;
 #ifdef __APPLE2ENH__
       case CH_CURS_DOWN:
 #else
       case 'j':
 #endif
-        full_update = stp_list_scroll(+1);
+        while (l--)
+          full_update |= stp_list_scroll(+1);
         goto update_list;
       case '/':
         stp_list_search(1);
@@ -499,14 +458,74 @@ up_dir:
         stp_list_search(0);
         goto keyb_input;
       case 'q':
-        goto quit;
+        exit(0);
       default:
         goto update_list;
     }
   }
-quit:
-  exit(0);
 }
+
+#ifdef __CC65__
+#pragma code-name (pop)
+#pragma code-name (push, "RT_ONCE")
+#endif
+
+static char *do_setup(void) {
+  FILE *tmpfp;
+  char *url = NULL;
+
+  clrscr();
+  tmpfp = fopen(URL_PASSER_FILE,"r");
+  if (tmpfp == NULL) {
+#ifdef __APPLE2ENH__
+    url = stp_get_start_url("Please enter an FTP server or internet stream URL.\r\n",
+                          "http://8bit.fm:8000/live");
+#else
+    url = stp_get_start_url("Please enter an FTP or internet stream\r\n",
+                          "http://8bit.fm:8000/live");
+#endif
+    url = stp_build_login_url(url);
+  } else {
+    url = malloc(512);
+    fgetc(tmpfp); // Ignore subtitles parameter
+    fgetc(tmpfp); // Ignore size parameter
+    fgets(url, 511, tmpfp);  // Ignore charset parameter */
+    fgets(url, 511, tmpfp);  // URL
+    fclose(tmpfp);
+    unlink(URL_PASSER_FILE);
+  }
+  set_scrollwindow(0, scrh);
+  #ifdef __APPLE2__
+  init_text();
+  #endif
+
+  return url;
+}
+
+int main(void) {
+  char *url = NULL;
+
+#ifdef __APPLE2ENH__
+  videomode(VIDEOMODE_80COL);
+#endif
+#ifdef __APPLE2__
+  init_hgr(1);
+  hgr_mixon();
+#endif
+#ifdef __APPLE2ENH__
+  backup_restore_logo("w");
+#endif
+  screensize(&scrw, &scrh);
+  set_scrollwindow(20, scrh);
+  
+  surl_ping();
+  load_config();
+
+  url = do_setup();
+
+  do_nav(url);
+}
+
 #ifdef __CC65__
 #pragma code-name (pop)
 #endif
