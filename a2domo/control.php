@@ -46,5 +46,5 @@
     }
 
     $response = curl_exec($curl);
-    echo iconv("UTF-8", "US-ASCII//TRANSLIT", $response);
+    echo $response;
 ?>

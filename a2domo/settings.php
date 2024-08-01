@@ -28,7 +28,7 @@
       "token_header" => "Authorization: Bearer $token",
       "content_type" => "application/json",
       "endpoint" => "$ha_root_url/api/template",
-      "body" => json_encode(["template" => "{%set sensors = states|selectattr('entity_id', 'search', '^sensor\\..*(_circuit_power|_circuit_total|eau.*_total|envoy_[a-z].*power|gaz_kwh_total|gaz_power|linky|otgw_)') %}
+      "body" => json_encode(["template" => "{%set sensors = states|selectattr('entity_id', 'search', '^sensor\\..*(_circuit_power|_circuit_total|eau.*_total|envoy_[a-z].*power|gaz_kwh_total|gaz_power|linky|otgw_|_current_temperature)') %}
 {% for item in sensors -%}
 {{item.entity_id}};{{item.attributes.friendly_name}};{%if item.attributes.unit_of_measurement|default('?')|regex_search('[Lh]$') %}30{% else %}1{% endif %};{{item.state|default('0')|int(0)}};{{item.attributes.unit_of_measurement|default('?')}}
 {% endfor %}"])

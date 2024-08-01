@@ -18,7 +18,7 @@
 <?php
     require_once("settings.php");
 
-    //header("Content-Type: text/csv");
+    header("Content-Type: text/csv");
     $curl = curl_init();
 
     curl_setopt($curl, CURLOPT_URL, $list[$item_type]["endpoint"]);
@@ -46,5 +46,8 @@
     }
 
     $response = curl_exec($curl);
-    echo iconv("UTF-8", "US-ASCII//TRANSLIT", $response);
+    if (!json_decode($response))
+        echo iconv("UTF-8", "ISO646-FR1//TRANSLIT", $response);
+    else
+	echo $response;
 ?>
