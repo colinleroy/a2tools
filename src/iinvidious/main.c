@@ -70,7 +70,6 @@ static void load_video(char *id) {
 
   if (!surl_response_ok()) {
     clrscr();
-    gotoxy(0, 20);
     printf("Error loading video: %d", surl_response_code());
     cgetc();
     return;
@@ -79,6 +78,13 @@ static void load_video(char *id) {
   if (surl_get_json((char *)BUF_1K_ADDR, BUF_1K_SIZE, SURL_HTMLSTRIP_NONE, translit_charset,
                     ".formatStreams[]|select(.itag==\"18\").url") >= 0) {
     stream_url((char *)BUF_1K_ADDR);
+
+    videomode(VIDEOMODE_80COL);
+    set_scrollwindow(20, scrh);
+    init_hgr(1);
+    hgr_mixon();
+    clrscr();
+    backup_restore_logo("r");
   }
 }
 
@@ -102,7 +108,6 @@ static int search_results(void) {
 
 display_result:
   clrscr();
-  gotoxy(0, 20);
   printf("%s (%s)\nUploaded by %s\n\n%d/%d results", lines[cur_line], lines[cur_line+1], lines[cur_line+2],
          (cur_line/4)+1, n_lines/4);
 
@@ -131,7 +136,6 @@ display_result:
       /* relaunch search */
       return 0;
     case CH_ESC:
-      init_text();
       return -1;
     case CH_CURS_LEFT:
       if (cur_line > 3) {
@@ -153,6 +157,8 @@ static int search(void) {
   surl_start_request(SURL_METHOD_GET, (char *)BUF_1K_ADDR, NULL, 0);
 
   if (!surl_response_ok()) {
+    printf("Error %d\n", surl_response_code());
+    cgetc();
     return -1;
   }
 
@@ -171,28 +177,17 @@ static int search(void) {
 static char *do_setup(void) {
   clrscr();
   url = strdup("https://invidious.fdn.fr/");
-
-  set_scrollwindow(0, scrh);
-  #ifdef __APPLE2__
-  init_text();
-  #endif
-
   return url;
 }
 
 int main(void) {
   char *url = NULL;
 
-#ifdef __APPLE2ENH__
   videomode(VIDEOMODE_80COL);
-#endif
-#ifdef __APPLE2__
   init_hgr(1);
   hgr_mixon();
-#endif
-#ifdef __APPLE2ENH__
   backup_restore_logo("w");
-#endif
+
   screensize(&scrw, &scrh);
   set_scrollwindow(20, scrh);
   
@@ -204,7 +199,7 @@ int main(void) {
 
 new_search:
   clrscr();
-  cputs("Search: ");
+  cputs("Search videos: ");
   dget_text(search_str, 80, NULL, 0);
   cur_line = 0;
 same_search:
