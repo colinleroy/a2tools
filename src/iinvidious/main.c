@@ -63,7 +63,13 @@ static void backup_restore_logo(char *op) {
   fclose(fp);
 }
 
+static void load_indicator(char on) {
+  gotoxy(76,3);
+  cputs(on ? "...":"   ");
+}
+
 static void load_video(char *id) {
+  load_indicator(1);
   sprintf((char *)BUF_1K_ADDR, "%s/api/v1/videos/%s?local=true", url, id);
 
   surl_start_request(SURL_METHOD_GET, (char *)BUF_1K_ADDR, NULL, 0);
@@ -72,20 +78,23 @@ static void load_video(char *id) {
     clrscr();
     printf("Error loading video: %d", surl_response_code());
     cgetc();
-    return;
+    goto out;
   }
 
   if (surl_get_json((char *)BUF_1K_ADDR, BUF_1K_SIZE, SURL_HTMLSTRIP_NONE, translit_charset,
                     ".formatStreams[]|select(.itag==\"18\").url") >= 0) {
+    load_indicator(0);
     stream_url((char *)BUF_1K_ADDR);
 
+    backup_restore_logo("r");
     videomode(VIDEOMODE_80COL);
     set_scrollwindow(20, scrh);
     init_hgr(1);
     hgr_mixon();
     clrscr();
-    backup_restore_logo("r");
   }
+out:
+  load_indicator(0);
 }
 
 char **lines;
@@ -108,9 +117,11 @@ static int search_results(void) {
 
 display_result:
   clrscr();
-  printf("%s (%s)\nUploaded by %s\n\n%d/%d results", lines[cur_line], lines[cur_line+1], lines[cur_line+2],
+  printf("%s\nUploaded by %s\n\n%d/%d results", lines[cur_line], lines[cur_line+2],
          (cur_line/4)+1, n_lines/4);
 
+  load_indicator(1);
+  bzero((char *)HGR_PAGE, HGR_LEN);
   surl_start_request(SURL_METHOD_GET, lines[cur_line+3], NULL, 0);
 
   if (surl_response_ok()) {
@@ -129,6 +140,8 @@ display_result:
       }
     }
   }
+  load_indicator(0);
+
   c = cgetc();
   switch (c) {
     case CH_ENTER:
@@ -154,18 +167,22 @@ display_result:
 static int search(void) {
   sprintf((char *)BUF_1K_ADDR, "%s/api/v1/search?type=video&q=%s", url, search_str);
 
+  load_indicator(1);
   surl_start_request(SURL_METHOD_GET, (char *)BUF_1K_ADDR, NULL, 0);
 
   if (!surl_response_ok()) {
     printf("Error %d\n", surl_response_code());
     cgetc();
-    return -1;
+    goto out;
   }
 
   if (surl_get_json((char *)BUF_8K_ADDR, BUF_8K_SIZE, SURL_HTMLSTRIP_NONE, translit_charset,
                     ".[]|.title,.videoId,.author,(.videoThumbnails[]|select(.quality == \"medium\")|.url)") >= 0) {
+    load_indicator(0);
     return search_results();
   }
+out:
+  load_indicator(0);
   return -1;
 }
 
