@@ -42,6 +42,12 @@
 #include "malloc0.h"
 #include "videoplay.h"
 
+
+#define SEARCH_API_ENDPOINT         "/api/v1/search?type=video&sort=relevance&q=%s"
+#define VIDEO_DETAILS_JSON_SELECTOR ".[]|.title,.videoId,.author,(.videoThumbnails[]|select(.quality == \"medium\")|.url)"
+#define VIDEO_DETAILS_ENDPOINT      "/api/v1/videos/%s?local=true"
+#define VIDEO_URL_JSON_SELECTOR     ".formatStreams[]|select(.itag==\"18\").url"
+
 char *url = NULL;
 
 unsigned char scrw = 255, scrh = 255;
@@ -70,7 +76,7 @@ static void load_indicator(char on) {
 
 static void load_video(char *id) {
   load_indicator(1);
-  sprintf((char *)BUF_1K_ADDR, "%s/api/v1/videos/%s?local=true", url, id);
+  sprintf((char *)BUF_1K_ADDR, "%s" VIDEO_DETAILS_ENDPOINT, url, id);
 
   surl_start_request(SURL_METHOD_GET, (char *)BUF_1K_ADDR, NULL, 0);
 
@@ -82,7 +88,7 @@ static void load_video(char *id) {
   }
 
   if (surl_get_json((char *)BUF_1K_ADDR, BUF_1K_SIZE, SURL_HTMLSTRIP_NONE, translit_charset,
-                    ".formatStreams[]|select(.itag==\"18\").url") >= 0) {
+                    VIDEO_URL_JSON_SELECTOR) >= 0) {
     load_indicator(0);
     stream_url((char *)BUF_1K_ADDR);
 
@@ -165,7 +171,7 @@ display_result:
 }
 
 static int search(void) {
-  sprintf((char *)BUF_1K_ADDR, "%s/api/v1/search?type=video&q=%s", url, search_str);
+  sprintf((char *)BUF_1K_ADDR, "%s" SEARCH_API_ENDPOINT, url, search_str);
 
   load_indicator(1);
   surl_start_request(SURL_METHOD_GET, (char *)BUF_1K_ADDR, NULL, 0);
@@ -177,7 +183,7 @@ static int search(void) {
   }
 
   if (surl_get_json((char *)BUF_8K_ADDR, BUF_8K_SIZE, SURL_HTMLSTRIP_NONE, translit_charset,
-                    ".[]|.title,.videoId,.author,(.videoThumbnails[]|select(.quality == \"medium\")|.url)") >= 0) {
+                    VIDEO_DETAILS_JSON_SELECTOR) >= 0) {
     load_indicator(0);
     return search_results();
   }
