@@ -25,6 +25,9 @@ wozamp_disk_PROGS = \
 	src/wozamp/wozamp.bin
 endif
 
+iinvidious_disk_PROGS = \
+	src/iinvidious/iinvid.bin
+
 telnet_disk_PROGS = \
 	src/telnet/telnet.bin
 
@@ -64,6 +67,26 @@ clean:
 all upload:
 	for dir in $(SUBDIRS); do \
 		$(MAKE) -C $$dir -f Makefile $@ || exit; \
+	done
+
+iinvidious$(suffix).po: $(iinvidious_disk_PROGS)
+	cp $(CLEANDISK) $@; \
+	java -jar bin/ac.jar -n $@ IINVID
+	java -jar bin/ac.jar -p $@ IINVID.SYSTEM SYS < bin/loader.system; \
+	java -jar bin/ac.jar -d $@ BASIC.SYSTEM; \
+	for prog in $^; do \
+		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
+	done
+	cp $@ dist/; \
+
+iinvidiousperso$(suffix).po: $(iinvidious_disk_PROGS)
+	cp $(CLEANDISK) $@; \
+	java -jar bin/ac.jar -n $@ IINVID
+	java -jar bin/ac.jar -p $@ IINVID.SYSTEM SYS < bin/loader.system; \
+	java -jar bin/ac.jar -p $@ STPSTARTURL TXT < src/iinvidious/STPSTARTURL; \
+	java -jar bin/ac.jar -d $@ BASIC.SYSTEM; \
+	for prog in $^; do \
+		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
 
 wozamp$(suffix).po: $(wozamp_disk_PROGS)
@@ -194,4 +217,5 @@ dist: all \
 	stpperso$(suffix).po \
 	quicktake$(suffix).po \
 	wozamp$(suffix).po \
+	iinvidious$(suffix).po \
 	doc-dist
