@@ -93,16 +93,11 @@ read_metadata_again:
     hgr_mixoff();
     clrscr();
     surl_stream_av();
-    init_text();
   } else {
-    init_text();
     clrscr();
-    gotoxy(13, 10);
     cputs("Playback error");
     sleep(1);
   }
-  videomode(VIDEOMODE_80COL);
-  init_text();
   return 0;
 }
 #pragma code-name(pop)

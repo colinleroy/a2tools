@@ -1,6 +1,6 @@
 SUBDIRS = lib a2trace surl-server \
 	homecontrol-client mastodon telnet surl stp quicktake image-viewer \
-	wozamp
+	wozamp iinvidious
 INSTALL_SUBDIRS = a2trace surl-server
 UPLOAD_SUBDIRS = homecontrol-client mastodon telnet surl stp quicktake image-viewer wozamp
 
