@@ -757,6 +757,8 @@ static void proxy_set_curl_opts(CURL *curl) {
   r |= curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, NULL);
   r |= curl_easy_setopt(curl, CURLOPT_QUOTE, NULL);
   r |= curl_easy_setopt(curl, CURLOPT_DIRLISTONLY, 0L);
+  r |= curl_easy_setopt(curl, CURLOPT_ACCEPT_ENCODING, ""); /* Allow compression */
+
   if (r) {
     printf("CURL: Couldn't set standard options\n");
   }
