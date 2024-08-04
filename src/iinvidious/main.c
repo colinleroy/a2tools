@@ -191,15 +191,38 @@ out:
 #pragma code-name (push, "RT_ONCE")
 #endif
 
-static char *do_setup(void) {
+static void do_setup_url(char *op) {
+  FILE *fp = fopen("STPSTARTURL", op);
+  if (!fp) {
+    return;
+  }
+  if (op[0] == 'w') {
+    fputs(url, fp);
+  } else {
+    fgets((char *)BUF_1K_ADDR, BUF_1K_SIZE, fp);
+    if(strchr((char *)BUF_1K_ADDR,'\n'))
+      *strchr((char *)BUF_1K_ADDR,'\n') = '\0';
+    url = strdup((char *)BUF_1K_ADDR);
+  }
+  fclose(fp);
+}
+
+
+static void do_setup(void) {
   clrscr();
-  url = strdup("https://invidious.fdn.fr/");
-  return url;
+  do_setup_url("r");
+
+  if (url == NULL)
+    url = strdup("https://invidious.fdn.fr/");
+
+  cputs("Instance URL: ");
+  dget_text((char *)BUF_1K_ADDR, BUF_1K_SIZE, NULL, 0);
+  free(url);
+  url = strdup((char *)BUF_1K_ADDR);
+  do_setup_url("w");
 }
 
 int main(void) {
-  char *url = NULL;
-
   videomode(VIDEOMODE_80COL);
   init_hgr(1);
   hgr_mixon();
@@ -211,7 +234,7 @@ int main(void) {
   surl_ping();
   load_config();
 
-  url = do_setup();
+  do_setup();
   printf("started; %zuB free\n", _heapmaxavail());
 
 new_search:
