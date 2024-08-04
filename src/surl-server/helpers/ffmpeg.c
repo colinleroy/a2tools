@@ -1212,7 +1212,7 @@ end:
     ret = 0;
 
     pthread_mutex_lock(&data->mutex);
-    printf("Decoding finished at %zu\n", data->size);
+    printf("Audio decoding finished at %zu\n", data->size);
     data->decoding_end = 1;
     data->decoding_ret = ret;
     pthread_mutex_unlock(&data->mutex);
