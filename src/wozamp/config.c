@@ -18,6 +18,8 @@ char enable_video;
 char enable_subtitles;
 char video_size;
 
+#pragma code-name(push, "LOWCODE")
+
 static FILE *open_config(char *mode) {
   FILE *fp;
   #ifdef PRODOS_T_TXT
@@ -67,7 +69,7 @@ again:
   goto again;
 }
 
-#pragma code-name(push, "LOWCODE")
+#pragma code-name(pop)
 
 void config(void) {
 #ifdef __APPLE2ENH__
@@ -131,7 +133,6 @@ charset_again:
   save_config();
 }
 
-#pragma code-name(pop)
 #pragma code-name(push, "RT_ONCE")
 
 void load_config(void) {
