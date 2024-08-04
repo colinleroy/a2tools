@@ -552,11 +552,13 @@ next_addr:
         sta     ptr2+1
         iny
 
+        .ifdef STREAM_CHECK_ADDR_PATCH
         lda     (ptr2)          ; Debug to be sure
         cmp     #$FF
         beq     :+
         brk
 :
+        .endif
 
         lda     tmp1            ; Patch low byte
         sta     (ptr2)
