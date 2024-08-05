@@ -54,6 +54,7 @@ iinvidious_SOURCES := \
 	../lib/surl/surl_get_json.c \
 	../lib/surl/surl_read_with_barrier.s \
 	../lib/fastirq$(iigs_suffix).s \
+	../lib/runtime_once_clean.s \
 	../lib/extrazp.s \
 	../lib/malloc0.c \
 
