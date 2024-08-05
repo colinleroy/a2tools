@@ -42,11 +42,22 @@
 #include "malloc0.h"
 #include "videoplay.h"
 
+#ifdef PEERTUBE
+
+#define SEARCH_API_ENDPOINT         "/api/v1/search/videos?search=%s"
+#define VIDEO_DETAILS_JSON_SELECTOR ".data[]|.name,.uuid,.account.displayName,.previewPath"
+
+#define VIDEO_DETAILS_ENDPOINT      "/api/v1/videos/%s"
+#define VIDEO_URL_JSON_SELECTOR     "[.files+.streamingPlaylists[0].files|.[]|select(.resolution.id > 0)]|sort_by(.size)|first|.fileDownloadUrl"
+
+#else
 
 #define SEARCH_API_ENDPOINT         "/api/v1/search?type=video&sort=relevance&q=%s"
 #define VIDEO_DETAILS_JSON_SELECTOR ".[]|.title,.videoId,.author,(.videoThumbnails[]|select(.quality == \"medium\")|.url)"
 #define VIDEO_DETAILS_ENDPOINT      "/api/v1/videos/%s?local=true"
 #define VIDEO_URL_JSON_SELECTOR     ".formatStreams[]|select(.itag==\"18\").url"
+
+#endif
 
 char *url = NULL;
 
@@ -206,8 +217,9 @@ static void do_setup_url(char *op) {
     fputs(url, fp);
   } else {
     fgets((char *)BUF_1K_ADDR, BUF_1K_SIZE, fp);
-    if(strchr((char *)BUF_1K_ADDR,'\n'))
+    if(strchr((char *)BUF_1K_ADDR,'\n')) {
       *strchr((char *)BUF_1K_ADDR,'\n') = '\0';
+    }
     url = strdup((char *)BUF_1K_ADDR);
   }
   fclose(fp);
@@ -219,12 +231,15 @@ static void do_setup(void) {
   do_setup_url("r");
 
   if (url == NULL)
-    url = strdup("https://invidious.fdn.fr/");
+    url = strdup("https://invidious.fdn.fr");
 
   cputs("Instance URL: ");
   dget_text((char *)BUF_1K_ADDR, BUF_1K_SIZE, NULL, 0);
   free(url);
   url = strdup((char *)BUF_1K_ADDR);
+  if (url[strlen(url)-1] == '/') {
+    url[strlen(url)-1] = '\0';
+  }
   do_setup_url("w");
 }
 
