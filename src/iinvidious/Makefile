@@ -57,11 +57,12 @@ iinvidious_SOURCES := \
 	../lib/extrazp.s \
 	../lib/malloc0.c \
 
+#0x800-0xC00 reserved for file iobuf
 iinvidious_CLCFLAGS = -t $(CC65_TARGET) -DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER -I ../lib \
 	-DBUF_1K_ADDR=0x800 -DBUF_1K_SIZE=0x3FF \
 	-DBUF_8K_ADDR=0x4000 -DBUF_8K_SIZE=0x1FFF \
 	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-avstreamer.cfg \
-	-vm -m iinvidious.map -DSURL_TO_LANGCARD -O --start-addr 0xC3A #$800 + EXEHDR size
+	-vm -m iinvidious.map -DSURL_TO_LANGCARD -O --start-addr 0xC3A #$C00 + EXEHDR size
 
 all: \
 	splash.h \
@@ -77,7 +78,7 @@ splash.h: iinvidious.hgr
 	../../bin/make-splash.sh iinvidious.png splash.h
 
 iinvid.bin: $(iinvidious_CL65SOURCES) $(iinvidious_SOURCES)
-	cl65 -g -Wl --dbgfile,iinvidious.dbg -Ln iinvidious.lbl $(CFLAGS) $(iigs_CFLAGS) $(iinvidious_CLCFLAGS) -o $@ $^
+	cl65 -g -Wl --dbgfile,iinvidious.dbg -Ln iinvidious.lbl $(CFLAGS) $(iigs_CFLAGS) $(iinvidious_CLCFLAGS) -o $@ $^  $(CC65_TARGET)-iobuf-0800.o
 
 upload: all
 	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/iinvidious/ || \
