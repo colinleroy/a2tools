@@ -1,0 +1,29 @@
+list videos:
+  curl https://peertube.fr/api/v1/videos
+  ?hasHLSFiles=true
+  ?hasWebVideoFiles=true
+
+search videos:
+  curl https://peertube.fr/api/v1/search/videos?search=punk
+
+search channels:
+  curl https://peertube.fr/api/v1/search/video-channels?search=Livingston
+
+get channel:
+  channel_url=$(curl https://peertube.fr/api/v1/search/video-channels?search=Livingston |jq .data[0].url)
+  curl {channel_url}
+
+get channel videos:
+  channel_url=$(curl https://peertube.fr/api/v1/search/video-channels?search=Livingston |jq .data[0].url)
+  curl {channel_url}/videos
+
+get video details:
+  curl https://www.yiny.org/api/v1/video-channels/f9c7aa8b-63ac-48a6-900a-cb5a60870e0c/videos|jq '.data[0]'
+
+get video file url:
+  curl https://www.yiny.org/api/v1/video-channels/f9c7aa8b-63ac-48a6-900a-cb5a60870e0c/videos|jq '.data[0].uuid'
+  curl https://peertube.fr/api/v1/videos/e9520747-9481-4fbd-8de4-b3612968df01| jq .files.[X].fileDownloadUrl (WebVideoFiles)
+  OR
+  curl https://peertube.fr/api/v1/videos/aa468f32-1a16-44b9-9831-4a6e1626a7df| jq .streamingPlaylists[0].files.[X].fileDownloadUrl (HLSFiles)
+
+  select lowest resolution: jq "[.files[]|select(.resolution.id > 0)]|sort_by(.size)|first"
