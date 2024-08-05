@@ -1022,8 +1022,8 @@ static void *audio_push(void *unused) {
 
     if (cur == audio_size) {
       if (stop) {
-        printf("Stopping at %zu/%zu\n", cur, audio_size);
-        return NULL; /* Don't set stop, so video can finish */
+        printf("Audio stop at %zu/%zu\n", cur, audio_size);
+        goto abort;
       } else {
         /* We're starved but not done :-( */
         continue;
