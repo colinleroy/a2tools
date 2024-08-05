@@ -53,10 +53,21 @@
 #define INVIDIOUS_SEARCH_API_ENDPOINT         "/api/v1/search?type=video&sort=relevance&q=%s"
 #define INVIDIOUS_VIDEO_DETAILS_API_ENDPOINT  "/api/v1/videos/%s?local=true"
 
+/* Peertube's .previewPath is an absolute URL without domain, but this can be
+ * not addressed as the thumbnail request comes right after the video details
+ * request, so the CURL handle proxy-side is set on the correct host already.
+ */
 static const char *VIDEO_DETAILS_JSON_SELECTOR[] = {
-  ".data[]|.name,.uuid,.account.displayName,.previewPath",
-  ".[]|.title,.videoId,.author,(.videoThumbnails[]|select(.quality == \"medium\")|.url)"
+  ".data[]|.name,.uuid,.account.displayName,.previewPath,.duration",
+  ".[]|.title,.videoId,.author,(.videoThumbnails[]|select(.quality == \"medium\")|.url),.lengthSeconds"
 };
+
+#define N_VIDEO_DETAILS 5
+#define VIDEO_NAME   0
+#define VIDEO_ID     1
+#define VIDEO_AUTHOR 2
+#define VIDEO_THUMB  3
+#define VIDEO_LENGTH 4
 
 static const char *VIDEO_URL_JSON_SELECTOR[] = {
   "[.files+.streamingPlaylists[0].files|.[]|select(.resolution.id > 0)]|sort_by(.size)|first|.fileDownloadUrl",
@@ -68,7 +79,7 @@ char instance_type = INVIDIOUS;
 
 unsigned char scrw = 255, scrh = 255;
 
-char search_str[80];
+char search_str[80] = "";
 
 #pragma code-name(push, "LOWCODE")
 
@@ -101,13 +112,13 @@ static void load_video(char *id) {
 
   if (!surl_response_ok()) {
     clrscr();
-    printf("Error loading video: %d", surl_response_code());
+    printf("Error %d", surl_response_code());
     cgetc();
     goto out;
   }
 
   if (surl_get_json((char *)BUF_1K_ADDR, BUF_1K_SIZE, SURL_HTMLSTRIP_NONE, translit_charset,
-                    VIDEO_URL_JSON_SELECTOR[instance_type]) >= 0) {
+                    VIDEO_URL_JSON_SELECTOR[instance_type]) > 0) {
     load_indicator(0);
     stream_url((char *)BUF_1K_ADDR);
 
@@ -131,7 +142,7 @@ static int search_results(void) {
   char c;
 
   n_lines = strsplit_in_place((char *)BUF_8K_ADDR, '\n', &lines);
-  if (n_lines % 4 != 0) {
+  if (n_lines % 5 != 0) {
     cputs("Search error\n");
     cgetc();
     return -1;
@@ -142,8 +153,15 @@ static int search_results(void) {
 
 display_result:
   clrscr();
-  printf("%s\nUploaded by %s\n\n%d/%d results", lines[cur_line], lines[cur_line+2],
-         (cur_line/4)+1, n_lines/4);
+  len = atoi(lines[cur_line+VIDEO_LENGTH]);
+  printf("%s\n"
+         "%dm%ds - Uploaded by %s\n"
+         "\n"
+         "%d/%d results",
+         lines[cur_line+VIDEO_NAME],
+         len/60, len%60,
+         lines[cur_line+VIDEO_AUTHOR],
+         (cur_line/N_VIDEO_DETAILS)+1, n_lines/N_VIDEO_DETAILS);
 
   load_indicator(1);
   bzero((char *)HGR_PAGE, HGR_LEN);
@@ -176,13 +194,13 @@ display_result:
     case CH_ESC:
       return -1;
     case CH_CURS_LEFT:
-      if (cur_line > 3) {
-        cur_line -= 4;
+      if (cur_line > N_VIDEO_DETAILS-1) {
+        cur_line -= N_VIDEO_DETAILS;
       }
       break;
     case CH_CURS_RIGHT:
-      if (cur_line + 4 < n_lines) {
-        cur_line += 4;
+      if (cur_line + N_VIDEO_DETAILS < n_lines) {
+        cur_line += N_VIDEO_DETAILS;
       }
       break;
   }
@@ -200,19 +218,58 @@ static int search(void) {
   surl_start_request(SURL_METHOD_GET, (char *)BUF_1K_ADDR, NULL, 0);
 
   if (!surl_response_ok()) {
-    printf("Error %d\n", surl_response_code());
+    clrscr();
+    printf("Error %d", surl_response_code());
     cgetc();
     goto out;
   }
 
   if (surl_get_json((char *)BUF_8K_ADDR, BUF_8K_SIZE, SURL_HTMLSTRIP_NONE, translit_charset,
-                    VIDEO_DETAILS_JSON_SELECTOR[instance_type]) >= 0) {
+                    VIDEO_DETAILS_JSON_SELECTOR[instance_type]) > 0) {
     load_indicator(0);
     return search_results();
   }
 out:
   load_indicator(0);
   return -1;
+}
+
+static char cmd_cb(char c) {
+  switch(tolower(c)) {
+    case 'c':
+      set_scrollwindow(0, 19);
+      clrscr();
+      init_text();
+      config();
+      set_scrollwindow(20, scrh);
+      init_hgr(1);
+      hgr_mixon();
+      return 0;
+    case 'q':
+      exit(0);
+  }
+  return 0;
+}
+
+static void do_ui(void) {
+  runtime_once_clean();
+
+new_search:
+  clrscr();
+  gotoxy(0, 3);
+  cputc('A'|0x80);
+  cputs("-C: Configure ; ");
+  cputc('A'|0x80);
+  cputs("-Q: Quit");
+  gotoxy(0, 0);
+  cputs("Search videos: ");
+  dget_text(search_str, 80, cmd_cb, 0);
+  cur_line = 0;
+same_search:
+  if (search() == 0) {
+    goto same_search;
+  }
+  goto new_search;
 }
 
 #ifdef __CC65__
@@ -285,16 +342,7 @@ int main(void) {
   do_setup();
   printf("started; %zuB free\n", _heapmaxavail());
 
-new_search:
-  clrscr();
-  cputs("Search videos: ");
-  dget_text(search_str, 80, NULL, 0);
-  cur_line = 0;
-same_search:
-  if (search() == 0) {
-    goto same_search;
-  }
-  goto new_search;
+  do_ui();
 }
 
 #ifdef __CC65__

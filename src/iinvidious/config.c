@@ -69,8 +69,6 @@ void config(void) {
   char c;
 #endif
 
-  clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
-
 #ifdef __APPLE2ENH__
   cputs("Please choose your keyboard layout:\r\n");
   cputs("0. US      ("US_CHARSET" charset)\r\n");
@@ -124,7 +122,6 @@ void load_config(void) {
   if (fp == NULL) {
     return;
   }
-
 
   if (fp != NULL) {
     fgets(tmp_buf, 16, fp);
