@@ -42,24 +42,29 @@
 #include "malloc0.h"
 #include "videoplay.h"
 
-#ifdef PEERTUBE
+#define PEERTUBE 0
+#define INVIDIOUS 1
 
-#define SEARCH_API_ENDPOINT         "/api/v1/search/videos?search=%s"
-#define VIDEO_DETAILS_JSON_SELECTOR ".data[]|.name,.uuid,.account.displayName,.previewPath"
+#define PING_API_ENDPOINT           "/api/v1/ping"
 
-#define VIDEO_DETAILS_ENDPOINT      "/api/v1/videos/%s"
-#define VIDEO_URL_JSON_SELECTOR     "[.files+.streamingPlaylists[0].files|.[]|select(.resolution.id > 0)]|sort_by(.size)|first|.fileDownloadUrl"
+#define PEERTUBE_SEARCH_API_ENDPOINT         "/api/v1/search/videos?search=%s"
+#define PEERTUBE_VIDEO_DETAILS_API_ENDPOINT  "/api/v1/videos/%s"
 
-#else
+#define INVIDIOUS_SEARCH_API_ENDPOINT         "/api/v1/search?type=video&sort=relevance&q=%s"
+#define INVIDIOUS_VIDEO_DETAILS_API_ENDPOINT  "/api/v1/videos/%s?local=true"
 
-#define SEARCH_API_ENDPOINT         "/api/v1/search?type=video&sort=relevance&q=%s"
-#define VIDEO_DETAILS_JSON_SELECTOR ".[]|.title,.videoId,.author,(.videoThumbnails[]|select(.quality == \"medium\")|.url)"
-#define VIDEO_DETAILS_ENDPOINT      "/api/v1/videos/%s?local=true"
-#define VIDEO_URL_JSON_SELECTOR     ".formatStreams[]|select(.itag==\"18\").url"
+static const char *VIDEO_DETAILS_JSON_SELECTOR[] = {
+  ".data[]|.name,.uuid,.account.displayName,.previewPath",
+  ".[]|.title,.videoId,.author,(.videoThumbnails[]|select(.quality == \"medium\")|.url)"
+};
 
-#endif
+static const char *VIDEO_URL_JSON_SELECTOR[] = {
+  "[.files+.streamingPlaylists[0].files|.[]|select(.resolution.id > 0)]|sort_by(.size)|first|.fileDownloadUrl",
+  ".formatStreams[]|select(.itag==\"18\").url"
+};
 
 char *url = NULL;
+char instance_type = INVIDIOUS;
 
 unsigned char scrw = 255, scrh = 255;
 
@@ -87,7 +92,10 @@ static void load_indicator(char on) {
 
 static void load_video(char *id) {
   load_indicator(1);
-  sprintf((char *)BUF_1K_ADDR, "%s" VIDEO_DETAILS_ENDPOINT, url, id);
+  if (instance_type == PEERTUBE)
+    sprintf((char *)BUF_1K_ADDR, "%s" PEERTUBE_VIDEO_DETAILS_API_ENDPOINT, url, id);
+  else
+    sprintf((char *)BUF_1K_ADDR, "%s" INVIDIOUS_VIDEO_DETAILS_API_ENDPOINT, url, id);
 
   surl_start_request(SURL_METHOD_GET, (char *)BUF_1K_ADDR, NULL, 0);
 
@@ -99,7 +107,7 @@ static void load_video(char *id) {
   }
 
   if (surl_get_json((char *)BUF_1K_ADDR, BUF_1K_SIZE, SURL_HTMLSTRIP_NONE, translit_charset,
-                    VIDEO_URL_JSON_SELECTOR) >= 0) {
+                    VIDEO_URL_JSON_SELECTOR[instance_type]) >= 0) {
     load_indicator(0);
     stream_url((char *)BUF_1K_ADDR);
 
@@ -181,8 +189,12 @@ display_result:
   goto display_result;
 }
 
+
 static int search(void) {
-  sprintf((char *)BUF_1K_ADDR, "%s" SEARCH_API_ENDPOINT, url, search_str);
+  if (instance_type == PEERTUBE)
+    sprintf((char *)BUF_1K_ADDR, "%s" PEERTUBE_SEARCH_API_ENDPOINT, url, search_str);
+  else
+    sprintf((char *)BUF_1K_ADDR, "%s" INVIDIOUS_SEARCH_API_ENDPOINT, url, search_str);
 
   load_indicator(1);
   surl_start_request(SURL_METHOD_GET, (char *)BUF_1K_ADDR, NULL, 0);
@@ -194,7 +206,7 @@ static int search(void) {
   }
 
   if (surl_get_json((char *)BUF_8K_ADDR, BUF_8K_SIZE, SURL_HTMLSTRIP_NONE, translit_charset,
-                    VIDEO_DETAILS_JSON_SELECTOR) >= 0) {
+                    VIDEO_DETAILS_JSON_SELECTOR[instance_type]) >= 0) {
     load_indicator(0);
     return search_results();
   }
@@ -207,6 +219,20 @@ out:
 #pragma code-name (pop)
 #pragma code-name (push, "RT_ONCE")
 #endif
+
+static int define_instance(void) {
+  const surl_response *resp;
+  sprintf((char *)BUF_1K_ADDR, "%s" PING_API_ENDPOINT, url);
+
+  load_indicator(1);
+  resp = surl_start_request(SURL_METHOD_GET, (char *)BUF_1K_ADDR, NULL, 0);
+
+  if (surl_response_ok() && resp->size > 0) {
+    instance_type = PEERTUBE;
+  } else {
+    instance_type = INVIDIOUS;
+  }
+}
 
 static void do_setup_url(char *op) {
   FILE *fp = fopen("STPSTARTURL", op);
@@ -241,6 +267,7 @@ static void do_setup(void) {
     url[strlen(url)-1] = '\0';
   }
   do_setup_url("w");
+  define_instance();
 }
 
 int main(void) {
