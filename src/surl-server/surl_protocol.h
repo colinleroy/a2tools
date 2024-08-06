@@ -1,7 +1,7 @@
 #ifndef __surl_protocol_h
 #define __surl_protocol_h
 
-#define SURL_PROTOCOL_VERSION 0x0E
+#define SURL_PROTOCOL_VERSION 0x0F
 
 #define SURL_METHOD_ABORT           ('d'|0x80) // $E4
 #define SURL_METHOD_RAW             0x05
@@ -71,6 +71,12 @@ enum HeightScale {
   HGR_SCALE_FULL,
   HGR_SCALE_HALF,
   HGR_SCALE_MIXHGR
+};
+
+enum SubtitlesMode {
+  SUBTITLES_NO,
+  SUBTITLES_AUTO,
+  SUBTITLES_URL
 };
 
 #endif

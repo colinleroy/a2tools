@@ -1240,19 +1240,27 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
     char *translit;
     char monochrome;
     char subtitles;
+    char *subtitles_url = NULL;
     char size;
 
     simple_serial_putc(SURL_ANSWER_WAIT);
     simple_serial_gets(reqbuf, BUFSIZE);
     if (strchr(reqbuf, '\n'))
       *strchr(reqbuf, '\n') = '\0';
-    translit = reqbuf;
+    translit = strdup(reqbuf);
     monochrome = simple_serial_getc();
     subtitles = simple_serial_getc();
+    if (subtitles == SUBTITLES_URL) {
+      simple_serial_gets(reqbuf, BUFSIZE);
+      if (strchr(reqbuf, '\n'))
+        *strchr(reqbuf, '\n') = '\0';
+      subtitles_url = reqbuf;
+    }
     size = simple_serial_getc();
 
     printf("starting A/V stream\n");
-    surl_stream_audio_video(url, translit, monochrome, subtitles, size);
+    surl_stream_audio_video(url, translit, monochrome, subtitles, subtitles_url, size);
+    free(translit);
     return NULL;
   } else if (method == SURL_METHOD_STREAM_VIDEO) {
     simple_serial_putc(SURL_ANSWER_WAIT);
