@@ -1008,6 +1008,10 @@ skip:
               if (*(idx+1) != '\0')
                 *(idx+1) = ' ';
             }
+            while ((idx = strstr(text, "&nbsp;"))) {
+              *idx = ' ';
+              memmove(idx+1, idx+6, strlen(idx)-5);
+            }
             idx = strdup(text);
             data->subs[start_frame] = do_charset_convert(idx, OUTGOING,
                                         data->translit ? data->translit:"US_ASCII", 0, &l);
