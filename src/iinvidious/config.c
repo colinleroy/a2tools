@@ -14,6 +14,8 @@
 extern unsigned char scrw;
 char *translit_charset;
 char video_size;
+char enable_subtitles;
+
 char tmp_buf[80];
 
 #pragma code-name(push, "LOWCODE")
@@ -40,9 +42,10 @@ static int save_config(void) {
     return -1;
   }
 
-  r = fprintf(fp, "%s\n%d\n",
+  r = fprintf(fp, "%s\n%d\n%d\n",
                   translit_charset,
-                  video_size);
+                  video_size,
+                  enable_subtitles);
 
   if (r < 0 || fclose(fp) != 0) {
     cputs("Could not save settings file.\r\n");
@@ -105,6 +108,9 @@ charset_again:
   cputs("\r\nVideo size (Small - more FPS / Large - less FPS)? (s/l)\r\n");
   video_size = get_bool('l', 's');
 
+  cputs("\r\nEnable subtitles? (y/n)\r\n");
+  enable_subtitles = get_bool('y', 'n');
+
   save_config();
 }
 
@@ -116,6 +122,7 @@ void load_config(void) {
 
   translit_charset = US_CHARSET;
   video_size = 0;
+  enable_subtitles = 1;
 
   cputs("Loading config...\r\n");
   fp = open_config("r");
@@ -128,14 +135,13 @@ void load_config(void) {
     if (strchr(tmp_buf, '\n')) {
       *strchr(tmp_buf, '\n') = '\0';
     }
-#ifdef __APPLE2ENH__
     translit_charset = strdup(tmp_buf);
-#endif
 
     fgets(tmp_buf, 16, fp);
-#ifdef __APPLE2ENH__
     video_size = (tmp_buf[0]-'0');
-#endif
+
+    fgets(tmp_buf, 16, fp);
+    enable_subtitles = (tmp_buf[0] != '0');
 
     fclose(fp);
   }
