@@ -975,7 +975,6 @@ int err;
 
 unsigned char *audio_data = NULL;
 unsigned char *img_data = NULL;
-unsigned char *hgr_buf = NULL;
 size_t audio_size = 0;
 size_t img_size = 0;
 int audio_ready = 0;
@@ -1560,7 +1559,6 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, char sub
   pthread_mutex_lock(&audio_th_data->mutex);
   img_data = audio_th_data->img_data;
   img_size = audio_th_data->img_size;
-  send_metadata("has_video", audio_th_data->has_video ? "1":"0", translit);
   pthread_mutex_unlock(&audio_th_data->mutex);
 
   if (diffs == NULL) {
@@ -1584,19 +1582,6 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, char sub
   offset = cur_base = 0;
 
   printf("AV: Client ready\n");
-  if (hgr_buf) {
-    simple_serial_putc(SURL_ANSWER_STREAM_ART);
-    if (simple_serial_getc() == SURL_CLIENT_READY) {
-      printf("Sending image\n");
-      simple_serial_write_fast((char *)hgr_buf, img_size);
-      if (simple_serial_getc() != SURL_CLIENT_READY) {
-        goto cleanup_thread;
-      }
-    } else {
-      printf("Skip image sending\n");
-    }
-  }
-
 
   simple_serial_putc(SURL_ANSWER_STREAM_START);
   if (simple_serial_getc() != SURL_CLIENT_READY) {
