@@ -7,6 +7,9 @@
 
 extern char *translit_charset;
 extern char video_size;
+extern char enable_subtitles;
+extern char tmp_buf[80];
+
 void config(void);
 void load_config(void);
 

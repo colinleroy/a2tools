@@ -26,19 +26,17 @@ static void update_progress(void) {
     cprintf("(About %ds remaining)   ", eta*8);
 }
 
-int stream_url(char *url) {
+int stream_url(char *url, char *subtitles_url) {
   char r;
 
   surl_start_request(SURL_METHOD_STREAM_AV, url, NULL, 0);
   simple_serial_write(translit_charset, strlen(translit_charset));
   simple_serial_putc('\n');
   simple_serial_putc(1); /* Monochrome */
-  simple_serial_putc(0); /* Enable subtitles */
+  simple_serial_putc(subtitles_url != NULL); /* Enable subtitles */
   simple_serial_putc(video_size);
 
   clrscr();
-  /* clear text page 2 */
-  memset((char*)0x800, ' '|0x80, 0x400);
 
   cputs("Loading...\r\n"
         "Controls: Space:      Play/Pause,             Esc: Quit player,\r\n"
@@ -65,6 +63,8 @@ wait_load:
     goto wait_load;
 
   } else if (r == SURL_ANSWER_STREAM_START) {
+    /* clear text page 2 */
+    memset((char*)0x800, ' '|0x80, 0x400);
     videomode(VIDEOMODE_40COL);
     hgr_mixoff();
     clrscr();

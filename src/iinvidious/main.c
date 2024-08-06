@@ -47,11 +47,13 @@
 
 #define PING_API_ENDPOINT           "/api/v1/ping"
 
-#define PEERTUBE_SEARCH_API_ENDPOINT         "/api/v1/search/videos?search=%s"
+#define PEERTUBE_SEARCH_API_ENDPOINT         "/api/v1/search/videos?sort=match&search=%s"
 #define PEERTUBE_VIDEO_DETAILS_API_ENDPOINT  "/api/v1/videos/%s"
+#define PEERTUBE_CAPTIONS_API_ENDPOINT       "/api/v1/videos/%s/captions"
 
 #define INVIDIOUS_SEARCH_API_ENDPOINT         "/api/v1/search?type=video&sort=relevance&q=%s"
 #define INVIDIOUS_VIDEO_DETAILS_API_ENDPOINT  "/api/v1/videos/%s?local=true"
+#define INVIDIOUS_CAPTIONS_API_ENDPOINT       "/api/v1/captions/%s"
 
 /* Peertube's .previewPath is an absolute URL without domain, but this can be
  * not addressed as the thumbnail request comes right after the video details
@@ -60,6 +62,11 @@
 static const char *VIDEO_DETAILS_JSON_SELECTOR[] = {
   ".data[]|.name,.uuid,.account.displayName,.previewPath,.duration",
   ".[]|.title,.videoId,.author,(.videoThumbnails[]|select(.quality == \"medium\")|.url),.lengthSeconds"
+};
+
+static const char *CAPTIONS_JSON_SELECTOR[] = {
+  "(.data[]|select(.language.id == \"en\")|.captionPath),.data[0].captionPath",
+  "(.captions[]|select(.label==\"English\")|.url),.captions[0].url"
 };
 
 #define N_VIDEO_DETAILS 5
@@ -102,11 +109,12 @@ static void load_indicator(char on) {
 }
 
 static void load_video(char *id) {
+  strcpy(tmp_buf, id); /* Make it safe, id points to BUF_8K */
   load_indicator(1);
   if (instance_type == PEERTUBE)
-    sprintf((char *)BUF_1K_ADDR, "%s" PEERTUBE_VIDEO_DETAILS_API_ENDPOINT, url, id);
+    sprintf((char *)BUF_1K_ADDR, "%s" PEERTUBE_VIDEO_DETAILS_API_ENDPOINT, url, tmp_buf);
   else
-    sprintf((char *)BUF_1K_ADDR, "%s" INVIDIOUS_VIDEO_DETAILS_API_ENDPOINT, url, id);
+    sprintf((char *)BUF_1K_ADDR, "%s" INVIDIOUS_VIDEO_DETAILS_API_ENDPOINT, url, tmp_buf);
 
   surl_start_request(SURL_METHOD_GET, (char *)BUF_1K_ADDR, NULL, 0);
 
@@ -117,10 +125,46 @@ static void load_video(char *id) {
     goto out;
   }
 
-  if (surl_get_json((char *)BUF_1K_ADDR, BUF_1K_SIZE, SURL_HTMLSTRIP_NONE, translit_charset,
+  if (surl_get_json((char *)BUF_8K_ADDR, BUF_8K_SIZE, SURL_HTMLSTRIP_NONE, translit_charset,
                     VIDEO_URL_JSON_SELECTOR[instance_type]) > 0) {
+    char *captions = NULL;
+
+    if (enable_subtitles) {
+      if (instance_type == PEERTUBE)
+        sprintf((char *)BUF_1K_ADDR, "%s" PEERTUBE_CAPTIONS_API_ENDPOINT, url, tmp_buf);
+      else
+        sprintf((char *)BUF_1K_ADDR, "%s" INVIDIOUS_CAPTIONS_API_ENDPOINT, url, tmp_buf);
+
+      surl_start_request(SURL_METHOD_GET, (char *)BUF_1K_ADDR, NULL, 0);
+
+      if (surl_response_ok()) {
+        int url_len = strlen(url);
+
+        /* Prefix first result with instance URL */
+        strcpy((char *)BUF_1K_ADDR, url);
+        /* Get JSON right after the instance URL */
+        if (surl_get_json((char *)(BUF_1K_ADDR + url_len), BUF_1K_SIZE - url_len,
+                          SURL_HTMLSTRIP_NONE, translit_charset,
+                          CAPTIONS_JSON_SELECTOR[instance_type]) > 0) {
+          char *eol = strchr((char *)BUF_1K_ADDR, '\n');
+          /* Cut at end of first match */
+          if (eol) {
+            *eol = '\0';
+          }
+          /* If we had an absolute URL without host */
+          if (((char *)BUF_1K_ADDR)[url_len] == '/') {
+            /* Pass our built URL */
+            captions = (char *)BUF_1K_ADDR;
+          } else {
+            /* Pass what the server returned */
+            captions = (char *)(BUF_1K_ADDR + url_len);
+          }
+        }
+      }
+
+    }
     load_indicator(0);
-    stream_url((char *)BUF_1K_ADDR);
+    stream_url((char *)BUF_8K_ADDR, captions);
 
     backup_restore_logo("r");
     videomode(VIDEOMODE_80COL);
@@ -335,7 +379,7 @@ int main(void) {
 
   screensize(&scrw, &scrh);
   set_scrollwindow(20, scrh);
-  
+ 
   surl_ping();
   load_config();
 
