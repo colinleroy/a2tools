@@ -19,7 +19,7 @@ extern uint8 splash_hgr;
 static void update_progress(void) {
   unsigned char eta = simple_serial_getc();
   hgr_mixon();
-  gotoxy(11, 20); /* strlen("Loading...") + 1 */
+  gotoxy(11, 0); /* strlen("Loading...") + 1 */
   if (eta == 255)
     cputs("(More than 30m remaining)");
   else
@@ -46,7 +46,7 @@ int stream_url(char *url) {
   cputs("\r\n"
         "          -/=/+:      Volume up/default/down  S:   Toggle speed/quality");
 
-read_metadata_again:
+wait_load:
   if (kbhit()) {
     if (cgetc() == CH_ESC) {
       init_text();
@@ -56,33 +56,13 @@ read_metadata_again:
   }
 
   r = simple_serial_getc();
-  if (r == SURL_ANSWER_STREAM_METADATA) {
-    char *metadata;
-    size_t len;
-    surl_read_with_barrier((char *)&len, 2);
-    len = ntohs(len);
-    metadata = malloc(len + 1);
-    surl_read_with_barrier(metadata, len);
-    metadata[len] = '\0';
-    //show_metadata(metadata);
-    free(metadata);
-    simple_serial_putc(SURL_CLIENT_READY);
-    goto read_metadata_again;
-
-  } else if (r == SURL_ANSWER_STREAM_ART) {
-    surl_read_with_barrier((char *)HGR_PAGE, HGR_LEN);
-    init_hgr(1);
-    hgr_mixoff();
-    simple_serial_putc(SURL_CLIENT_READY);
-    goto read_metadata_again;
-
-  } else if (r == SURL_ANSWER_STREAM_LOAD) {
+  if (r == SURL_ANSWER_STREAM_LOAD) {
     update_progress();
     if (kbhit() && cgetc() == CH_ESC)
       simple_serial_putc(SURL_METHOD_ABORT);
     else
       simple_serial_putc(SURL_CLIENT_READY);
-    goto read_metadata_again;
+    goto wait_load;
 
   } else if (r == SURL_ANSWER_STREAM_START) {
     videomode(VIDEOMODE_40COL);
