@@ -323,7 +323,8 @@ new_req:
            response->content_type);
 
     /* Parse JSON if it is */
-    if (!strncasecmp(response->content_type, "application/json", 16)) {
+    if (!strncasecmp(response->content_type, "application/json", 16)
+        && response->buffer != NULL) {
       clock_gettime(CLOCK_REALTIME, &cur_time);
       start_secs = cur_time.tv_sec;
       start_msecs = cur_time.tv_nsec / 1000000;
