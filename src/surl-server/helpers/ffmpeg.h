@@ -12,6 +12,7 @@ typedef struct _decode_data {
   char *url;
   int sample_rate;
   char enable_subtitles;
+  char *subtitles_url;
   char video_size;
   char has_subtitles;
   uint8_t max_audio_volume;

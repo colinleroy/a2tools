@@ -55,7 +55,7 @@ int main(void) {
   simple_serial_write(translit_charset, strlen(translit_charset));
   simple_serial_putc('\n');
   simple_serial_putc(monochrome);
-  simple_serial_putc(subtitles);
+  simple_serial_putc(subtitles ? SUBTITLES_AUTO : SUBTITLES_NO);
   simple_serial_putc(size);
 
   /* Remove filename from URL in advance, so we don't get stuck in

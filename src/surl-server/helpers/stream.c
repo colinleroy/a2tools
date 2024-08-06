@@ -1500,7 +1500,7 @@ close_last:
   return NULL;
 }
 
-int surl_stream_audio_video(char *url, char *translit, char monochrome, char subtitles, char size) {
+int surl_stream_audio_video(char *url, char *translit, char monochrome, char subtitles, char *subtitles_url, char size) {
   int j;
   int cancelled = 0, playback_stop = 0;
   /* Control vars */
@@ -1525,6 +1525,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, char sub
   video_th_data->enable_subtitles = subtitles;
   video_th_data->video_size = size;
   video_th_data->translit = translit;
+  video_th_data->subtitles_url = subtitles_url;
   pthread_mutex_init(&video_th_data->mutex, NULL);
 
   printf("Starting video decode thread\n");

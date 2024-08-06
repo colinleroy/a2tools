@@ -33,7 +33,11 @@ int stream_url(char *url, char *subtitles_url) {
   simple_serial_write(translit_charset, strlen(translit_charset));
   simple_serial_putc('\n');
   simple_serial_putc(1); /* Monochrome */
-  simple_serial_putc(subtitles_url != NULL); /* Enable subtitles */
+  simple_serial_putc(subtitles_url != NULL ? SUBTITLES_URL : SUBTITLES_NO); /* Enable subtitles */
+  if (subtitles_url != NULL) {
+    simple_serial_puts(subtitles_url);
+    simple_serial_putc('\n');
+  }
   simple_serial_putc(video_size);
 
   clrscr();
@@ -66,7 +70,9 @@ wait_load:
     /* clear text page 2 */
     memset((char*)0x800, ' '|0x80, 0x400);
     videomode(VIDEOMODE_40COL);
-    hgr_mixoff();
+    if (!subtitles_url) {
+      hgr_mixoff();
+    }
     clrscr();
     surl_stream_av();
   } else {
