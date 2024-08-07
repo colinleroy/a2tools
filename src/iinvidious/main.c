@@ -32,7 +32,6 @@
 #include "clrzone.h"
 #include "scroll.h"
 #include "scrollwindow.h"
-#include "runtime_once_clean.h"
 #ifdef __APPLE2__
 #include "hgr.h"
 #endif
@@ -71,8 +70,8 @@ static const char *VIDEO_DETAILS_JSON_SELECTOR[] = {
 };
 
 static const char *CAPTIONS_JSON_SELECTOR[] = {
-  "(.data[]|select(.language.id == \"en\")|.captionPath),.data[0].captionPath",
-  "(.captions[]|select(.label==\"English\")|.url),.captions[0].url"
+  "(.data[]|select(.language.id == \"LG\")|.captionPath),.data[0].captionPath",
+  "(.captions[]|select(.lang==\"LG\")|.url),.captions[0].url"
 };
 
 #define N_VIDEO_DETAILS 5
@@ -101,10 +100,6 @@ static void load_indicator(char on) {
   cputs(on ? "...":"   ");
 }
 
-#pragma code-name(pop)
-#pragma code-name(push, "LOWCODE")
-
-
 static void backup_restore_logo(char *op) {
   FILE *fp = fopen("/RAM/LOGO.HGR", op);
   if (!fp) {
@@ -117,6 +112,26 @@ static void backup_restore_logo(char *op) {
   }
   fclose(fp);
 }
+
+static char cmd_cb(char c) {
+  switch(tolower(c)) {
+    case 'c':
+      set_scrollwindow(0, 19);
+      clrscr();
+      init_text();
+      config();
+      set_scrollwindow(20, scrh);
+      init_hgr(1);
+      hgr_mixon();
+      return 0;
+    case 'q':
+      exit(0);
+  }
+  return 0;
+}
+
+#pragma code-name(pop)
+#pragma code-name(push, "LOWCODE")
 
 static void load_video(char *id) {
   strcpy(tmp_buf, id); /* Make it safe, id points to BUF_8K */
@@ -149,9 +164,14 @@ static void load_video(char *id) {
 
       if (surl_response_ok()) {
         int url_len = strlen(url);
-
+        char *sel;
         /* Prefix first result with instance URL */
         strcpy((char *)BUF_1K_ADDR, url);
+        
+        /* Update preferred subtitle language */
+        sel = strstr(CAPTIONS_JSON_SELECTOR[instance_type], "LG");
+        memcpy(sel, sub_language, 2);
+
         /* Get JSON right after the instance URL */
         if (surl_get_json((char *)(BUF_1K_ADDR + url_len), BUF_1K_SIZE - url_len,
                           SURL_HTMLSTRIP_NONE, translit_charset,
@@ -170,6 +190,8 @@ static void load_video(char *id) {
             captions = (char *)(BUF_1K_ADDR + url_len);
           }
         }
+        /* Put language placeholder back */
+        memcpy(sel, "LG", 2);
       }
 
     }
@@ -312,26 +334,7 @@ static int search(void) {
   }
 }
 
-static char cmd_cb(char c) {
-  switch(tolower(c)) {
-    case 'c':
-      set_scrollwindow(0, 19);
-      clrscr();
-      init_text();
-      config();
-      set_scrollwindow(20, scrh);
-      init_hgr(1);
-      hgr_mixon();
-      return 0;
-    case 'q':
-      exit(0);
-  }
-  return 0;
-}
-
 static void do_ui(void) {
-  runtime_once_clean();
-
 new_search:
   clrscr();
   gotoxy(0, 3);
@@ -345,6 +348,7 @@ new_search:
   dget_text(search_str, 80, cmd_cb, 0);
   cur_line = 0;
   search();
+  backup_restore_logo("r");
   goto new_search;
 }
 

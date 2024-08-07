@@ -78,6 +78,12 @@ GCCCFLAGS = -g -O0 -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\" \
 
 .PHONY: all clean
 
+### Warning! some memory tricks happen.
+
+#0x4000-0x6000 is HGR page 2,
+#0x4000-0x6000 is ALSO used to store setup code in RT_ONCE in order to shrink
+#              the binary a bit. But DO NOT runtime_once_clean() as usual!
+
 ifdef BUILD_VIDEOPLAY
 videoplay_SOURCES := \
 	../lib/surl/surl_stream_av.s \
