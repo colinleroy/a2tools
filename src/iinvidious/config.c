@@ -10,12 +10,13 @@
 #include "charsets.h"
 #include "clrzone.h"
 #include "config.h"
+#include "dgets.h"
 
 extern unsigned char scrw;
 char *translit_charset;
 char video_size;
 char enable_subtitles;
-
+char sub_language[3] = "en";
 char tmp_buf[80];
 
 #pragma code-name(push, "LOWCODE")
@@ -42,10 +43,11 @@ static int save_config(void) {
     return -1;
   }
 
-  r = fprintf(fp, "%s\n%d\n%d\n",
+  r = fprintf(fp, "%s\n%d\n%d\n%s\n",
                   translit_charset,
                   video_size,
-                  enable_subtitles);
+                  enable_subtitles,
+                  sub_language);
 
   if (r < 0 || fclose(fp) != 0) {
     cputs("Could not save settings file.\r\n");
@@ -111,6 +113,12 @@ charset_again:
   cputs("\r\nEnable subtitles? (y/n)\r\n");
   enable_subtitles = get_bool('y', 'n');
 
+  if (enable_subtitles) {
+    cputs("\r\nPreferred subtitles language code (two lowercase letters)? ");
+    dget_text(sub_language, 2, NULL, 0);
+    if (sub_language[0] == '\0')
+      strcpy(sub_language, "en");
+  }
   save_config();
 }
 
@@ -123,6 +131,7 @@ void load_config(void) {
   translit_charset = US_CHARSET;
   video_size = 0;
   enable_subtitles = 1;
+  strcpy(sub_language, "en");
 
   cputs("Loading config...\r\n");
   fp = open_config("r");
@@ -142,6 +151,8 @@ void load_config(void) {
 
     fgets(tmp_buf, 16, fp);
     enable_subtitles = (tmp_buf[0] != '0');
+
+    fgets(sub_language, 3, fp);
 
     fclose(fp);
   }

@@ -84,6 +84,7 @@ iinvidiousperso$(suffix).po: $(iinvidious_disk_PROGS)
 	java -jar bin/ac.jar -n $@ IINVID
 	java -jar bin/ac.jar -p $@ IINVID.SYSTEM SYS < bin/loader.system; \
 	java -jar bin/ac.jar -p $@ STPSTARTURL TXT < src/iinvidious/STPSTARTURL; \
+	java -jar bin/ac.jar -p $@ CLISETTINGS TXT < src/iinvidious/CLISETTINGS; \
 	java -jar bin/ac.jar -d $@ BASIC.SYSTEM; \
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \

@@ -54,11 +54,23 @@ iinvidious_SOURCES := \
 	../lib/surl/surl_get_json.c \
 	../lib/surl/surl_read_with_barrier.s \
 	../lib/fastirq$(iigs_suffix).s \
-	../lib/runtime_once_clean.s \
 	../lib/extrazp.s \
 	../lib/malloc0.c \
 
-#0x800-0xC00 reserved for file iobuf
+### Warning! some memory tricks happen.
+
+#Carefully consider the life-cycle of any data put in there as it will be
+#overwritten at some point!
+
+#0x800-0xC00 is reserved for file iobuf via iobuf-0800.o,
+#0x800-0xC00 is ALSO a 1k buffer for network I/O,
+#0x800-0xC00 is ALSO the text page 2 (and will be overwritten by subtitles)
+
+#0x4000-0x6000 is HGR page 2,
+#0x4000-0x6000 is ALSO an 8k buffer for network I/O,
+#0x4000-0x6000 is ALSO used to store setup code in RT_ONCE in order to shrink
+#              the binary a bit. But DO NOT runtime_once_clean() as usual!
+
 iinvidious_CLCFLAGS = -t $(CC65_TARGET) -DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER -I ../lib \
 	-DBUF_1K_ADDR=0x800 -DBUF_1K_SIZE=0x3FF \
 	-DBUF_8K_ADDR=0x4000 -DBUF_8K_SIZE=0x1FFF \
