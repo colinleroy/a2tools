@@ -41,6 +41,8 @@ int stream_url(char *url, char *subtitles_url) {
   simple_serial_putc(video_size);
 
   clrscr();
+  /* clear text page 2 */
+  memset((char*)0x800, ' '|0x80, 0x400);
 
   cputs("Loading...\r\n"
         "Controls: Space:      Play/Pause,             Esc: Quit player,\r\n"
@@ -67,8 +69,6 @@ wait_load:
     goto wait_load;
 
   } else if (r == SURL_ANSWER_STREAM_START) {
-    /* clear text page 2 */
-    memset((char*)0x800, ' '|0x80, 0x400);
     videomode(VIDEOMODE_40COL);
     if (!subtitles_url) {
       hgr_mixoff();

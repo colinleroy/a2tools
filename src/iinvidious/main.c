@@ -42,12 +42,18 @@
 #include "malloc0.h"
 #include "videoplay.h"
 
-#define PEERTUBE 0
-#define INVIDIOUS 1
+enum InstanceType {
+  PEERTUBE,
+  INVIDIOUS,
+  N_INSTANCE_TYPES
+};
 
-#define PING_API_ENDPOINT           "/api/v1/ping"
+static const char *CHECK_API_ENDPOINT[] = {
+  "/api/v1/config/about",
+  "/api/v1/trending"
+};
 
-#define PEERTUBE_SEARCH_API_ENDPOINT         "/api/v1/search/videos?sort=match&search=%s"
+#define PEERTUBE_SEARCH_API_ENDPOINT         "/api/v1/search/videos?sort=-match&search=%s"
 #define PEERTUBE_VIDEO_DETAILS_API_ENDPOINT  "/api/v1/videos/%s"
 #define PEERTUBE_CAPTIONS_API_ENDPOINT       "/api/v1/videos/%s/captions"
 
@@ -305,6 +311,7 @@ new_search:
   cputs("-C: Configure ; ");
   cputc('A'|0x80);
   cputs("-Q: Quit");
+  printf(" - %zuB free", _heapmaxavail());
   gotoxy(0, 0);
   cputs("Search videos: ");
   dget_text(search_str, 80, cmd_cb, 0);
@@ -323,16 +330,20 @@ same_search:
 
 static int define_instance(void) {
   const surl_response *resp;
-  sprintf((char *)BUF_1K_ADDR, "%s" PING_API_ENDPOINT, url);
+  char i;
 
-  load_indicator(1);
-  resp = surl_start_request(SURL_METHOD_GET, (char *)BUF_1K_ADDR, NULL, 0);
+  for (i = 0; i < N_INSTANCE_TYPES; i++) {
+    sprintf((char *)BUF_1K_ADDR, "%s%s", url, CHECK_API_ENDPOINT[i]);
 
-  if (surl_response_ok() && resp->size > 0) {
-    instance_type = PEERTUBE;
-  } else {
-    instance_type = INVIDIOUS;
+    resp = surl_start_request(SURL_METHOD_GET, (char *)BUF_1K_ADDR, NULL, 0);
+
+    if (surl_response_ok() && resp->size > 0) {
+      instance_type = i;
+      return 0;
+    }
   }
+
+  return -1;
 }
 
 static void do_setup_url(char *op) {
@@ -354,21 +365,33 @@ static void do_setup_url(char *op) {
 
 
 static void do_setup(void) {
-  clrscr();
+  char modified;
+
   do_setup_url("r");
 
   if (url == NULL)
     url = strdup("https://invidious.fdn.fr");
 
+again:
+  clrscr();
+  printf("Free memory: %zuB\n", _heapmaxavail());
   cputs("Instance URL: ");
+  strcpy((char *)BUF_1K_ADDR, url);
   dget_text((char *)BUF_1K_ADDR, BUF_1K_SIZE, NULL, 0);
+  modified = strcmp((char *)BUF_1K_ADDR, url) != 0;
   free(url);
   url = strdup((char *)BUF_1K_ADDR);
   if (url[strlen(url)-1] == '/') {
     url[strlen(url)-1] = '\0';
   }
-  do_setup_url("w");
-  define_instance();
+  if (define_instance() < 0) {
+    cputs("Could not identify instance type.");
+    cgetc();
+    goto again;
+  }
+  if (modified) {
+    do_setup_url("w");
+  }
 }
 
 int main(void) {
