@@ -16,6 +16,8 @@
 char *translit_charset;
 char monochrome = 1;
 
+#pragma code-name(push, "LOWCODE")
+
 static void update_progress(void) {
   unsigned char eta = simple_serial_getc();
   hgr_mixon();
@@ -25,8 +27,6 @@ static void update_progress(void) {
   else
     cprintf("(About %ds remaining)   ", eta*8);
 }
-
-#pragma code-name(push, "LOWCODE")
 
 static char url[512];
 
