@@ -113,6 +113,7 @@ static void backup_restore_logo(char *op) {
   fclose(fp);
 }
 
+static char did_cmd = 0;
 static char cmd_cb(char c) {
   switch(tolower(c)) {
     case 'c':
@@ -123,11 +124,12 @@ static char cmd_cb(char c) {
       set_scrollwindow(20, scrh);
       init_hgr(1);
       hgr_mixon();
-      return 0;
+      did_cmd = 1;
+      return -1;
     case 'q':
       exit(0);
   }
-  return 0;
+  return -1;
 }
 
 #pragma code-name(pop)
@@ -345,7 +347,11 @@ new_search:
   printf(" - %zuB free", _heapmemavail());
   gotoxy(0, 0);
   cputs("Search videos: ");
+  did_cmd = 0;
   dget_text(search_str, 80, cmd_cb, 0);
+  if (did_cmd) {
+    goto new_search;
+  }
   cur_line = 0;
   search();
   backup_restore_logo("r");
