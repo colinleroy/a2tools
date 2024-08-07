@@ -94,7 +94,16 @@ unsigned char scrw = 255, scrh = 255;
 
 char search_str[80] = "";
 
+#pragma code-name(push, "LC")
+
+static void load_indicator(char on) {
+  gotoxy(76,3);
+  cputs(on ? "...":"   ");
+}
+
+#pragma code-name(pop)
 #pragma code-name(push, "LOWCODE")
+
 
 static void backup_restore_logo(char *op) {
   FILE *fp = fopen("/RAM/LOGO.HGR", op);
@@ -107,11 +116,6 @@ static void backup_restore_logo(char *op) {
     fread((char *)HGR_PAGE, 1, HGR_LEN, fp);
   }
   fclose(fp);
-}
-
-static void load_indicator(char on) {
-  gotoxy(76,3);
-  cputs(on ? "...":"   ");
 }
 
 static void load_video(char *id) {
@@ -183,19 +187,40 @@ out:
   load_indicator(0);
 }
 
-char **lines;
+char **lines = NULL;
 char n_lines;
 char cur_line = 0;
 
-static int search_results(void) {
+static void load_save_search_json(char *mode) {
+  FILE *fp = fopen("/RAM/IINVSRCH", mode);
+  if (!fp) {
+    bzero((char *)BUF_8K_ADDR, BUF_8K_SIZE);
+    return;
+  }
+
+  if (mode[0] == 'r') {
+    fread((char *)BUF_8K_ADDR, 1, BUF_8K_SIZE, fp);
+  } else {
+    fwrite((char *)BUF_8K_ADDR, 1, BUF_8K_SIZE, fp);
+  }
+  fclose(fp);
+}
+
+static void search_results(void) {
   int len;
   char c;
 
+reload_search:
+  load_save_search_json("r");
+  if (lines) {
+    free(lines);
+    lines = NULL;
+  }
   n_lines = strsplit_in_place((char *)BUF_8K_ADDR, '\n', &lines);
   if (n_lines % 5 != 0) {
     cputs("Search error\n");
     cgetc();
-    return -1;
+    return;
   }
 
   init_hgr(1);
@@ -240,9 +265,9 @@ display_result:
     case CH_ENTER:
       load_video(lines[cur_line+1]);
       /* relaunch search */
-      return 0;
+      goto reload_search;
     case CH_ESC:
-      return -1;
+      return;
     case CH_CURS_LEFT:
       if (cur_line > N_VIDEO_DETAILS-1) {
         cur_line -= N_VIDEO_DETAILS;
@@ -270,18 +295,21 @@ static int search(void) {
   if (!surl_response_ok()) {
     clrscr();
     printf("Error %d", surl_response_code());
-    cgetc();
-    goto out;
-  }
-
-  if (surl_get_json((char *)BUF_8K_ADDR, BUF_8K_SIZE, SURL_HTMLSTRIP_NONE, translit_charset,
-                    VIDEO_DETAILS_JSON_SELECTOR[instance_type]) > 0) {
     load_indicator(0);
-    return search_results();
+    cgetc();
+  } else {
+    if (surl_get_json((char *)BUF_8K_ADDR, BUF_8K_SIZE, SURL_HTMLSTRIP_NONE, translit_charset,
+                      VIDEO_DETAILS_JSON_SELECTOR[instance_type]) > 0) {
+      load_indicator(0);
+      load_save_search_json("w");
+      search_results();
+    } else {
+      clrscr();
+      printf("No results.");
+      load_indicator(0);
+      cgetc();
+    }
   }
-out:
-  load_indicator(0);
-  return -1;
 }
 
 static char cmd_cb(char c) {
@@ -311,15 +339,12 @@ new_search:
   cputs("-C: Configure ; ");
   cputc('A'|0x80);
   cputs("-Q: Quit");
-  printf(" - %zuB free", _heapmaxavail());
+  printf(" - %zuB free", _heapmemavail());
   gotoxy(0, 0);
   cputs("Search videos: ");
   dget_text(search_str, 80, cmd_cb, 0);
   cur_line = 0;
-same_search:
-  if (search() == 0) {
-    goto same_search;
-  }
+  search();
   goto new_search;
 }
 
@@ -374,7 +399,7 @@ static void do_setup(void) {
 
 again:
   clrscr();
-  printf("Free memory: %zuB\n", _heapmaxavail());
+  printf("Free memory: %zuB\n", _heapmemavail());
   cputs("Instance URL: ");
   strcpy((char *)BUF_1K_ADDR, url);
   dget_text((char *)BUF_1K_ADDR, BUF_1K_SIZE, NULL, 0);
