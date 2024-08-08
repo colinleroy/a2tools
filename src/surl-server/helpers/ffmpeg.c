@@ -108,6 +108,8 @@ static int open_video_file(char *filename)
 {
     const AVCodec *dec;
     int ret;
+    AVDictionary *video_options = NULL;
+
     init_base_addrs();
 
     if (!strncasecmp("sftp://", filename, 7)) {
@@ -116,21 +118,28 @@ static int open_video_file(char *filename)
       memcpy(filename, "ftp", 3);
     }
 
-    if ((ret = avformat_open_input(&video_fmt_ctx, filename, NULL, NULL)) < 0) {
-        printf("Video: Cannot open input file\n");
-        return ret;
+    av_dict_set(&video_options, "reconnect_on_network_error", "1", 0);
+    av_dict_set(&video_options, "reconnect_at_eof", "1", 0);
+    av_dict_set(&video_options, "reconnect", "1", 0);
+
+    if ((ret = avformat_open_input(&video_fmt_ctx, filename, NULL, &video_options)) < 0) {
+      av_dict_free(&video_options);
+      printf("Video: Cannot open input file\n");
+      return ret;
     }
 
+    av_dict_free(&video_options);
+
     if ((ret = avformat_find_stream_info(video_fmt_ctx, NULL)) < 0) {
-        printf("Video: Cannot find stream information\n");
-        return ret;
+      printf("Video: Cannot find stream information\n");
+      return ret;
     }
 
     /* select the stream */
     ret = av_find_best_stream(video_fmt_ctx, AVMEDIA_TYPE_VIDEO, -1, -1, &dec, 0);
     if (ret < 0) {
-        printf("Video: Cannot find a corresponding stream in the input file\n");
-        return ret;
+      printf("Video: Cannot find a corresponding stream in the input file\n");
+      return ret;
     }
 
     video_stream_index = ret;
