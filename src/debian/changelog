@@ -1,3 +1,9 @@
+a2tools (2.5.1.1) bionic; urgency=medium
+
+  * Fix Youtube closing connection when decoding is long
+
+ -- Colin Leroy-Mira <colin@colino.net>  Fri, 09 Aug 2024 21:28:19 +0200
+
 a2tools (2.5.0.1) bionic; urgency=medium
 
   * New protocol (15)
