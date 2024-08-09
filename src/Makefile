@@ -1,6 +1,13 @@
+
+ifdef IIGS
+SUBDIRS = lib a2trace surl-server \
+	homecontrol-client mastodon telnet surl stp quicktake image-viewer \
+	wozamp
+else
 SUBDIRS = lib a2trace surl-server \
 	homecontrol-client mastodon telnet surl stp quicktake image-viewer \
 	wozamp iinvidious
+endif
 INSTALL_SUBDIRS = a2trace surl-server
 UPLOAD_SUBDIRS = homecontrol-client mastodon telnet surl stp quicktake image-viewer wozamp
 
