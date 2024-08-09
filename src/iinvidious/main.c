@@ -270,7 +270,7 @@ display_result:
 
     simple_serial_putc(SURL_CMD_HGR);
     simple_serial_putc(1); /* monochrome */
-    simple_serial_putc(HGR_SCALE_FULL);
+    simple_serial_putc(HGR_SCALE_MIXHGR);
 
     if (simple_serial_getc() == SURL_ERROR_OK) {
 
