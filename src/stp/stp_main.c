@@ -198,6 +198,7 @@ up_dir:
         break;
       case 'a':
         get_all(url, lines, num_lines);
+        full_update = 1;
         break;
 #ifdef __APPLE2ENH__
       case CH_CURS_UP:
