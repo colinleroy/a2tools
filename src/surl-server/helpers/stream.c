@@ -1397,8 +1397,10 @@ send:
       offset = pixel - (cur_base*MAX_AV_OFFSET);
       /* If there's no hole in updated bytes, we can let offset
        * increment up to 255 */
-      if ((offset >= MAX_AV_OFFSET && pixel != last_diff+1)
-        || offset > 255 || offset < 0) {
+      if (j == 0
+          || (offset >= MAX_AV_OFFSET && pixel != last_diff+1)
+          || offset > 255
+          || offset < 0) {
         /* we have to update base */
         cur_base = pixel / MAX_AV_OFFSET;
         offset = pixel - (cur_base*MAX_AV_OFFSET);
