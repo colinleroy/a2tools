@@ -119,7 +119,6 @@ static int open_video_file(char *filename)
     }
 
     av_dict_set(&video_options, "reconnect_on_network_error", "1", 0);
-    av_dict_set(&video_options, "reconnect_at_eof", "1", 0);
     av_dict_set(&video_options, "reconnect", "1", 0);
 
     if ((ret = avformat_open_input(&video_fmt_ctx, filename, NULL, &video_options)) < 0) {

@@ -35,7 +35,7 @@
 #include "hgr-convert.h"
 #include "stream.h"
 
-#define BUFSIZE 1024
+#define BUFSIZE 8192
 
 static int VERBOSE = 0;
 static int VERY_VERBOSE = 0;
