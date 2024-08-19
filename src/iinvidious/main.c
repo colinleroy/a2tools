@@ -132,10 +132,29 @@ static char cmd_cb(char c) {
   return -1;
 }
 
+static void load_save_search_json(char *mode) {
+  FILE *fp = fopen("/RAM/IINVSRCH", mode);
+  if (!fp) {
+    bzero((char *)BUF_8K_ADDR, BUF_8K_SIZE);
+    return;
+  }
+
+  if (mode[0] == 'r') {
+    fread((char *)BUF_8K_ADDR, 1, BUF_8K_SIZE, fp);
+  } else {
+    fwrite((char *)BUF_8K_ADDR, 1, BUF_8K_SIZE, fp);
+  }
+  fclose(fp);
+}
+
 #pragma code-name(pop)
 #pragma code-name(push, "LOWCODE")
 
 static void load_video(char *id) {
+  int url_len = strlen(url);
+  char *video_url = NULL;
+  char *captions_url = NULL;
+
   strcpy(tmp_buf, id); /* Make it safe, id points to BUF_8K */
   load_indicator(1);
   if (instance_type == PEERTUBE)
@@ -152,9 +171,21 @@ static void load_video(char *id) {
     goto out;
   }
 
-  if (surl_get_json((char *)BUF_8K_ADDR, BUF_8K_SIZE, SURL_HTMLSTRIP_NONE, translit_charset,
+  /* Prefix result with instance URL in case it has no http[s]://host */
+  strcpy((char *)BUF_8K_ADDR, url);
+
+  if (surl_get_json((char *)(BUF_8K_ADDR + url_len), BUF_8K_SIZE - url_len,
+                    SURL_HTMLSTRIP_NONE, translit_charset,
                     VIDEO_URL_JSON_SELECTOR[instance_type]) > 0) {
-    char *captions = NULL;
+
+    /* If we had an absolute URL without host */
+    if (((char *)BUF_8K_ADDR)[url_len] == '/') {
+      /* Pass our built URL */
+      video_url = (char *)BUF_8K_ADDR;
+    } else {
+      /* Pass what the server returned */
+      video_url = (char *)(BUF_8K_ADDR + url_len);
+    }
 
     if (enable_subtitles) {
       if (instance_type == PEERTUBE)
@@ -165,7 +196,6 @@ static void load_video(char *id) {
       surl_start_request(SURL_METHOD_GET, (char *)BUF_1K_ADDR, NULL, 0);
 
       if (surl_response_ok()) {
-        int url_len = strlen(url);
         char *sel;
         /* Prefix first result with instance URL */
         strcpy((char *)BUF_1K_ADDR, url);
@@ -186,10 +216,10 @@ static void load_video(char *id) {
           /* If we had an absolute URL without host */
           if (((char *)BUF_1K_ADDR)[url_len] == '/') {
             /* Pass our built URL */
-            captions = (char *)BUF_1K_ADDR;
+            captions_url = (char *)BUF_1K_ADDR;
           } else {
             /* Pass what the server returned */
-            captions = (char *)(BUF_1K_ADDR + url_len);
+            captions_url = (char *)(BUF_1K_ADDR + url_len);
           }
         }
         /* Put language placeholder back */
@@ -198,7 +228,7 @@ static void load_video(char *id) {
 
     }
     load_indicator(0);
-    stream_url((char *)BUF_8K_ADDR, captions);
+    stream_url(video_url, captions_url);
 
     backup_restore_logo("r");
     videomode(VIDEOMODE_80COL);
@@ -214,21 +244,6 @@ out:
 char **lines = NULL;
 char n_lines;
 char cur_line = 0;
-
-static void load_save_search_json(char *mode) {
-  FILE *fp = fopen("/RAM/IINVSRCH", mode);
-  if (!fp) {
-    bzero((char *)BUF_8K_ADDR, BUF_8K_SIZE);
-    return;
-  }
-
-  if (mode[0] == 'r') {
-    fread((char *)BUF_8K_ADDR, 1, BUF_8K_SIZE, fp);
-  } else {
-    fwrite((char *)BUF_8K_ADDR, 1, BUF_8K_SIZE, fp);
-  }
-  fclose(fp);
-}
 
 static void search_results(void) {
   int len;
