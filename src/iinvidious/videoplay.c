@@ -11,8 +11,10 @@
 #include "path_helper.h"
 #include "surl.h"
 #include "config.h"
+#include "scrollwindow.h"
 
 extern uint8 splash_hgr;
+extern char scrh;
 
 #pragma code-name(push, "LOWCODE")
 
@@ -73,8 +75,11 @@ wait_load:
     if (!subtitles_url) {
       hgr_mixoff();
     }
+    set_scrollwindow(0, scrh);
     clrscr();
     surl_stream_av();
+    videomode(VIDEOMODE_80COL);
+    set_scrollwindow(20, scrh);
   } else {
     clrscr();
     cputs("Playback error");

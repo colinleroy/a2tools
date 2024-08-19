@@ -231,8 +231,6 @@ static void load_video(char *id) {
     stream_url(video_url, captions_url);
 
     backup_restore_logo("r");
-    videomode(VIDEOMODE_80COL);
-    set_scrollwindow(20, scrh);
     init_hgr(1);
     hgr_mixon();
     clrscr();
