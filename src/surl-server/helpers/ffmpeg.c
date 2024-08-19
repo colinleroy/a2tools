@@ -545,10 +545,12 @@ static void *ffmpeg_subtitles_decode_thread(void *data) {
   if (th_data->subtitles_url == NULL) {
     if (ffmpeg_subtitles_decode(th_data, th_data->url) < 0) {
       char *srt = malloc(strlen(th_data->url) + 10);
+      printf("No embedded subtitles.\n");
       strcpy(srt, th_data->url);
       if (strchr(srt, '.'))
         strcpy(strrchr(srt, '.'), ".srt");
       if (ffmpeg_subtitles_decode(data, srt) < 0) {
+        printf("No srt subtitles.\n");
         th_data->has_subtitles = 0;
         /* We're ready, without subtitles. */
         sem_post(&th_data->sub_thread_ready);
@@ -558,6 +560,7 @@ static void *ffmpeg_subtitles_decode_thread(void *data) {
   } else {
     if (ffmpeg_subtitles_decode(data, th_data->subtitles_url) < 0) {
       th_data->has_subtitles = 0;
+      printf("No subtitles at URL %s.\n", th_data->subtitles_url);
       /* We're ready, without subtitles. */
       sem_post(&th_data->sub_thread_ready);
     }
@@ -1028,8 +1031,6 @@ skip:
             free(idx);
             prev_end_frame = end_frame;
             pthread_mutex_unlock(&data->sub_mutex);
-            /* We got subtitles, we're ready */
-            sem_post(&data->sub_thread_ready);
           }
           avsubtitle_free(&subtitle);
         }
@@ -1038,6 +1039,9 @@ skip:
     }
 
 end:
+    data->has_subtitles = (prev_end_frame > 0);
+    /* We're done with subtitles */
+    sem_post(&data->sub_thread_ready);
     av_packet_free(&packet);
     avcodec_free_context(&dec);
     avformat_close_input(&ctx);
