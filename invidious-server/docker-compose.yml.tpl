@@ -21,6 +21,7 @@ services:
           host: invidious-db
           port: 5432
         check_tables: true
+        use_innertube_for_captions: true
         signature_server: inv_sig_helper:12999
         po_token: PO_TOKEN_VALUE
         visitor_data: VISITOR_DATA_VALUE
