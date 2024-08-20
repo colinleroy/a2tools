@@ -103,11 +103,6 @@ static void *ffmpeg_video_decode_thread(void *th_data) {
   }
   pthread_mutex_unlock(&data->mutex);
 
-  if (data->enable_subtitles) {
-    printf("Waiting for subtitle thread.\n");
-    sem_wait(&data->sub_thread_ready);
-  }
-
   gettimeofday(&decode_start, 0);
   while ((buf = ffmpeg_video_decode_frame(data, video_len*FPS, frameno)) != NULL) {
     unsigned long usecs_per_frame, remaining_frames, done_len, remaining_len;

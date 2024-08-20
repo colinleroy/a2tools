@@ -1156,7 +1156,9 @@ vctrl:  sta     $98FF           ; scratch
 
         jsr     _serial_read_byte_no_irq
         sta     enable_subs
-        jsr     patch_video_handlers
+        beq     :+
+        bit     $C053           ; HGR mixon
+:       jsr     patch_video_handlers
 
         lda     #<(page0_addrs_arr_high)
         sta     page_ptr_high
