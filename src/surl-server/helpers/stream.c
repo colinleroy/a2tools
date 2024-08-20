@@ -409,7 +409,7 @@ static byte_diff **diffs = NULL;
 #define AUDIO_NUM_LEVELS         (AUDIO_MAX_LEVEL+1)
 #define AUDIO_END_OF_STREAM      AUDIO_NUM_LEVELS
 
-#define AV_SAMPLE_OFFSET         0x60
+#define AV_SAMPLE_OFFSET         0x00
 #define AV_MAX_LEVEL             31
 #define AV_NUM_LEVELS            (AV_MAX_LEVEL+1)
 #define AV_END_OF_STREAM         AV_NUM_LEVELS
@@ -421,7 +421,7 @@ static int num_audio_samples = 0;
 static unsigned char audio_samples_buffer[SAMPLE_RATE*2];
 
 static inline void buffer_audio_sample(unsigned char i) {
-  audio_samples_buffer[num_audio_samples++] = i + AV_SAMPLE_OFFSET;
+  audio_samples_buffer[num_audio_samples++] = (i + AV_SAMPLE_OFFSET)*2;
 }
 
 static inline void flush_audio_samples(void) {
