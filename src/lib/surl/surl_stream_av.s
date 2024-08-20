@@ -374,7 +374,7 @@ kbd_cmd       = tmp3            ; byte - Deferred keyboard command to handle
 .endif
 
 .macro PREPARE_VIDEO_6
-        ldx     #$20            ; 2      Needed by video_no_sub:@toggle_page:@page1
+        nop                     ; 2
         tya                     ; 4      Get video byte in A
         cpy     #PAGE_TOGGLE    ; 6      Check for page toggle
 .endmacro
@@ -480,7 +480,7 @@ vd0:    ldy     $98FF           ; 24     load video data
         stx     next+1          ; 27     store next duty cycle destination
         WASTE_6                 ; 33     waste extra cycles
         PREPARE_VIDEO_6         ; 39
-vh0:    jmp     $FFFF           ; 42=>68
+        jmp     video_sub       ; 42=>68
 
 no_vid0:                        ;        we had no video byte
 ad0b:   ldx     $A8FF           ; 25     load audio data register again
@@ -533,7 +533,7 @@ vd1:    ldy     $98FF           ; 25
         stx     next+1          ; 28
         WASTE_5                 ; 33
         PREPARE_VIDEO_6         ; 39
-vh1:    jmp     $FFFF           ; 42=>68
+        jmp     video_sub       ; 42=>68
 
 no_vid1:
 ad1b:   ldx     $A8FF           ; 26
@@ -593,7 +593,7 @@ vd2:    ldy     $98FF           ; 26
         stx     next+1          ; 29
         WASTE_4                 ; 33
         PREPARE_VIDEO_6         ; 39
-vh2:    jmp     $FFFF           ; 42=>68
+        jmp     video_sub       ; 42=>68
 
 no_vid2:
 ad2b:   ldx     $A8FF           ; 27
@@ -678,37 +678,6 @@ patch_serial_registers:
         rts
         .endif
 
-patch_video_handlers:
-        lda     #<(video_handler_patches)       ; Video handlers
-        sta     ptr1
-        lda     #>(video_handler_patches)
-        sta     ptr1+1
-        ldx     enable_subs
-        beq     :+
-        ldx     #>(video_sub)
-        lda     #<(video_sub)
-        jsr     patch_addresses
-        bra     next_patches
-
-:       ldx     #>(video_no_sub)
-        lda     #<(video_no_sub)
-        jsr     patch_addresses
-
-next_patches:
-        lda     #<(video_spkr_handler_patches)
-        sta     ptr1
-        lda     #>(video_spkr_handler_patches)
-        sta     ptr1+1
-        ldx     enable_subs
-        beq     :+
-        ldx     #>(video_spkr_sub)           ; Video handler with speaker toggle
-        lda     #<(video_spkr_sub)
-        jmp     patch_addresses
-
-:       ldx     #>(video_spkr_no_sub)           ; Video handler with speaker toggle
-        lda     #<(video_spkr_no_sub)
-        jmp     patch_addresses
-
 ; -----------------------------------------------------------------
 
 .align $100
@@ -725,7 +694,7 @@ vd3:    ldy     $98FF           ; 27
         stx     next+1          ; 30
         WASTE_3                 ; 33
         PREPARE_VIDEO_6         ; 39
-vh3:    jmp     $FFFF           ; 42=>68
+        jmp     video_sub       ; 42=>68
 
 no_vid3:
 ad3b:   ldx     $A8FF           ; 28
@@ -784,7 +753,7 @@ vd4:    ldy     $98FF           ; 24
         stx     next+1          ; 27
         WASTE_6                 ; 33
         PREPARE_VIDEO_6         ; 39
-vh4:    jmp     $FFFF           ; 42=>68
+        jmp     video_sub       ; 42=>68
 
 no_vid4:
 ad4b:   ldx     $A8FF           ; 25
@@ -843,7 +812,7 @@ vd5:    ldy     $98FF           ; 25
         stx     next+1          ; 28
         WASTE_5                 ; 33
         PREPARE_VIDEO_6         ; 39
-vh5:    jmp     $FFFF           ; 42=>68
+        jmp     video_sub       ; 42=>68
 
 no_vid5:
 ad5b:   ldx     $A8FF           ; 26
@@ -941,7 +910,7 @@ vd6:    ldy     $98FF           ; 26
         stx     next+1          ; 29
         WASTE_4                 ; 33
         PREPARE_VIDEO_6         ; 39
-vh6:    jmp     $FFFF           ; 42=>68
+        jmp     video_sub       ; 42=>68
 
 no_vid6:
 ad6b:   ldx     $A8FF           ; 27
@@ -969,49 +938,9 @@ vss:    lda     $99FF
         beq     ass
 vds:    ldy     $98FF
         PREPARE_VIDEO_6
-vhs:    jmp     $FFFF
+        jmp     video_sub
+
 ; --------------------------------------------------------------
-; -----------------------------------------------------------------
-video_handler_patches:
-                .word vhs
-                .word vh0
-                .word vh1
-                .word vh2
-                .word vh3
-                .word vh4
-                .word vh5
-                .word vh6
-                .word vh7
-                .word vh8
-                .word vh9
-                .word vh10
-                .word vh11
-                .word vh12
-                .word vh13
-                .word vh14
-                .word vh15
-                .word vh16
-                .word vh17
-                .word vh18
-                .word vh19
-                .word vh20
-                .word vh21
-                .word vh22
-                .word vh23
-                .word vh24
-                .word vh25
-                .word vh26
-                .word vh27
-                .word vh28
-                .word vh29
-                .word vh31
-                .word $0000
-
-video_spkr_handler_patches:
-                .word vhsd
-                .word $0000
-
-; -----------------------------------------------------------------
 
 .align $100
 .assert * = _SAMPLES_BASE + $700, error
@@ -1027,7 +956,7 @@ vd7:    ldy     $98FF           ; 27
         stx     next+1          ; 30
         WASTE_3                 ; 33
         PREPARE_VIDEO_6         ; 39
-vh7:    jmp     $FFFF           ; 42=>68
+        jmp     video_sub       ; 42=>68
 
 no_vid7:
 ad7b:   ldx     $A8FF           ; 28
@@ -1102,7 +1031,7 @@ vd8:    ldy     $98FF           ; 24
         stx     next+1          ; 27
         WASTE_6                 ; 33
         PREPARE_VIDEO_6         ; 39
-vh8:    jmp     $FFFF           ; 42=>68
+        jmp     video_sub       ; 42=>68
 
 no_vid8:
 ad8b:   ldx     $A8FF           ; 25
@@ -1156,7 +1085,6 @@ vctrl:  sta     $98FF           ; scratch
 
         jsr     _serial_read_byte_no_irq
         sta     enable_subs
-        jsr     patch_video_handlers
 
         lda     #<(page0_addrs_arr_high)
         sta     page_ptr_high
@@ -1183,7 +1111,7 @@ vd9:    ldy     $98FF           ; 25
         stx     next+1          ; 28
         WASTE_5                 ; 33
         PREPARE_VIDEO_6         ; 39
-vh9:    jmp     $FFFF           ; 42=>68
+        jmp     video_sub       ; 42=>68
 
 no_vid9:
 ad9b:   ldx     $A8FF           ; 26
@@ -1205,7 +1133,7 @@ vd10:   ldy     $98FF           ; 26
         stx     next+1          ; 29
         WASTE_4                 ; 33
         PREPARE_VIDEO_6         ; 39
-vh10:   jmp     $FFFF           ; 42=>68
+        jmp     video_sub       ; 42=>68
 
 no_vid10:
 ad10b:  ldx     $A8FF           ; 27
@@ -1228,7 +1156,7 @@ vd11:   ldy     $98FF           ; 27
         stx     next+1          ; 30
         WASTE_3                 ; 33
         PREPARE_VIDEO_6         ; 39
-vh11:   jmp     $FFFF           ; 42=>68
+        jmp     video_sub       ; 42=>68
 
 no_vid11:
 ad11b:  ldx     $A8FF           ; 28
@@ -1251,7 +1179,7 @@ vd12:   ldy     $98FF           ; 26
         stx     next+1          ; 29
         WASTE_4                 ; 33
         PREPARE_VIDEO_6         ; 39
-vh12:   jmp     $FFFF           ; 42=>68
+        jmp     video_sub       ; 42=>68
 
 no_vid12:
 ad12b:  ldx     $A8FF           ; 27
@@ -1272,7 +1200,7 @@ vd13:   ldy     $98FF           ; 25
         stx     next+1          ; 28
         WASTE_5                 ; 33
         PREPARE_VIDEO_6         ; 39
-vh13:   jmp     $FFFF           ; 42=>68
+        jmp     video_sub       ; 42=>68
 
 no_vid13:
         ____SPKR_DUTY____4      ; 21
@@ -1295,7 +1223,7 @@ vd14:   ldy     $98FF           ; 26
         stx     next+1          ; 29
         WASTE_4                 ; 33
         PREPARE_VIDEO_6         ; 39
-vh14:   jmp     $FFFF           ; 42=>68
+        jmp     video_sub       ; 42=>68
 
 no_vid14:
         ____SPKR_DUTY____5      ; 22
@@ -1318,7 +1246,7 @@ vd15:   ldy     $98FF           ; 27
         stx     next+1          ; 30
         WASTE_3                 ; 33
         PREPARE_VIDEO_6         ; 39
-vh15:   jmp     $FFFF           ; 42=>68
+        jmp     video_sub       ; 42=>68
 
 no_vid15:
         WASTE_2                 ; 19
@@ -1361,7 +1289,7 @@ vd16:   ldy     $98FF           ; 20
         stx     next+1          ; 27
         WASTE_6                 ; 33
         PREPARE_VIDEO_6         ; 39
-vh16:   jmp     $FFFF           ; 42=>68
+        jmp     video_sub       ; 42=>68
 
 no_vid16:
         WASTE_3                 ; 20
@@ -1396,7 +1324,7 @@ vd17:   ldy     $98FF           ; 20
         stx     next+1          ; 28
         WASTE_5                 ; 33
         PREPARE_VIDEO_6         ; 39
-vh17:   jmp     $FFFF           ; 42=>68
+        jmp     video_sub       ; 42=>68
 
 no_vid17:
 ad17b:  ldx     $A8FF           ; 21
@@ -1419,7 +1347,7 @@ vd18:   ldy     $98FF           ; 20
         stx     next+1          ; 29
         WASTE_4                 ; 33
         PREPARE_VIDEO_6         ; 39
-vh18:   jmp     $FFFF           ; 42=>68
+        jmp     video_sub       ; 42=>68
 
 no_vid18:
 ad18b:  ldx     $A8FF           ; 21
@@ -1442,7 +1370,7 @@ vd19:   ldy     $98FF           ; 20
         stx     next+1          ; 30
         WASTE_3                 ; 33
         PREPARE_VIDEO_6         ; 39
-vh19:   jmp     $FFFF           ; 42=>68
+        jmp     video_sub       ; 42=>68
 
 no_vid19:
 ad19b:  ldx     $A8FF           ; 21
@@ -1466,7 +1394,7 @@ vd20:   ldy     $98FF           ; 20
         stx     next+1          ; 31
         WASTE_2                 ; 33
         PREPARE_VIDEO_6         ; 39
-vh20:   jmp     $FFFF           ; 42=>68
+        jmp     video_sub       ; 42=>68
 
 no_vid20:
 ad20b:  ldx     $A8FF           ; 21
@@ -1489,7 +1417,7 @@ vd21:   ldy     $98FF           ; 20
         ____SPKR_DUTY____4      ; 29
         WASTE_4                 ; 33
         PREPARE_VIDEO_6         ; 39
-vh21:   jmp     $FFFF           ; 42=>68
+        jmp     video_sub       ; 42=>68
 
 no_vid21:
 ad21b:  ldx     $A8FF           ; 21
@@ -1512,7 +1440,7 @@ vd22:   ldy     $98FF           ; 20
         ____SPKR_DUTY____4      ; 30
         WASTE_3                 ; 33
         PREPARE_VIDEO_6         ; 39
-vh22:   jmp     $FFFF           ; 42=>68
+        jmp     video_sub       ; 42=>68
 
 no_vid22:
 ad22b:  ldx     $A8FF           ; 21
@@ -1536,7 +1464,7 @@ vd23:   ldy     $98FF           ; 20
         ____SPKR_DUTY____4      ; 31
         WASTE_2                 ; 33
         PREPARE_VIDEO_6         ; 39
-vh23:   jmp     $FFFF           ; 42=>68
+        jmp     video_sub       ; 42=>68
 
 no_vid23:
 ad23b:  ldx     $A8FF           ; 21
@@ -1563,7 +1491,7 @@ vd24:   ldy     $98FF           ; 20
         WASTE_3                 ; 35
         tya                     ; 37
         cpy     #PAGE_TOGGLE    ; 39
-vh24:   jmp     $FFFF           ; 42=>68
+        jmp     video_sub       ; 42=>68
 
 no_vid24:
 ad24b:  ldx     $A8FF           ; 21
@@ -1586,7 +1514,7 @@ vd25:   ldy     $98FF           ; 20
         WASTE_6                 ; 29
         ____SPKR_DUTY____4      ; 33
         PREPARE_VIDEO_6         ; 39
-vh25:   jmp     $FFFF           ; 42=>68
+        jmp     video_sub       ; 42=>68
 
 no_vid25:
 ad25b:  ldx     $A8FF           ; 21
@@ -1609,7 +1537,7 @@ vd26:   ldy     $98FF           ; 20
         PREPARE_VIDEO_6         ; 30
         ____SPKR_DUTY____4      ; 34
         WASTE_5                 ; 39
-vh26:   jmp     $FFFF           ; 42=>68
+        jmp     video_sub       ; 42=>68
 
 no_vid26:
 ad26b:  ldx     $A8FF           ; 21
@@ -1633,7 +1561,7 @@ vd27:   ldy     $98FF           ; 20
         PREPARE_VIDEO_6         ; 31
         ____SPKR_DUTY____4      ; 35
         WASTE_4                 ; 39
-vh27:   jmp     $FFFF           ; 42=>68
+        jmp     video_sub       ; 42=>68
 
 no_vid27:
 ad27b:  ldx     $A8FF           ; 21
@@ -1642,51 +1570,6 @@ ad27b:  ldx     $A8FF           ; 21
         ____SPKR_DUTY____4      ; 35
         WASTE_21                ; 56
         JUMP_NEXT_12            ; 68
-
-; -----------------------------------------------------
-video_spkr_no_sub:              ; Alternate entry point for duty cycle 30
-        ____SPKR_DUTY____4      ; 38
-        WASTE_4                 ; 42
-
-video_no_sub:
-@control:                               ;       It is a control byte
-        beq     @toggle_page            ; 2/3   Result of cpy #$7F
-        bcs     @set_pixel              ; 4/5   Is it a control byte?
-
-@dest_ctrl:
-        adc     cur_base                ; 7    Add shift value to current pointer
-        sta     cur_base                ; 10
-        stz     next_offset             ; 13    Reset offset
-        bcc     :+                      ; 15/16
-        inc     cur_base+1              ; 20    Increment high byte if needed
-        jmp     (next)                  ; 26
-
-:       WASTE_4                         ; 20
-        jmp     (next)                  ; 26
-
-@toggle_page:
-        bit     cur_base+1              ; 6     Determine which page we were in
-        bvs     @page1                  ; 8/9   V flag set = $40-$5F
-
-@page0:                                 ;
-        sta     $C054                   ; 12    Activate page 0
-        ldx     #$40                    ; 14    Write to page 1
-        stx     cur_base+1              ; 17    Update pointers to page 1
-        stz     cur_base                ; 20
-        jmp     (next)                  ; 26
-
-@page1:                                 ;
-        sta     $C055                   ; 13    Activate page 1
-        stx     cur_base+1              ; 16    Update pointers to page 0
-        ABS_STZ cur_base                ; 20
-        jmp     (next)                  ; 26
-
-@set_pixel:                             ;       No, it is a data byte
-        ABS_LDY next_offset             ; 9     Load the offset to the start of the base
-        sta     (cur_base),y            ; 15    Store data byte
-        inc     next_offset             ; 20    and increment offset.
-        jmp     (next)                  ; 26    Done, go to next duty cycle
-; -----------------------------------------------------
 
 .align $100
 .assert * = _SAMPLES_BASE + $1C00, error
@@ -1702,7 +1585,7 @@ vd28:   ldy     $98FF           ; 20
         PREPARE_VIDEO_6         ; 32
         ____SPKR_DUTY____4      ; 36
         WASTE_3                 ; 39
-vh28:   jmp     $FFFF           ; 42=>68
+        jmp     video_sub       ; 42=>68
 
 no_vid28:
 ad28b:  ldx     $A8FF           ; 21
@@ -1732,7 +1615,7 @@ vd29:   ldy     $98FF           ; 20
         PREPARE_VIDEO_6         ; 33
         ____SPKR_DUTY____4      ; 37
         WASTE_2                 ; 39
-vh29:   jmp     $FFFF           ; 42=>68
+        jmp     video_sub       ; 42=>68
 
 no_vid29:
 ad29b:  ldx     $A8FF           ; 21
@@ -1757,7 +1640,7 @@ vd30:   ldy     $98FF           ; 20
         stx     next+1          ; 23
         WASTE_2                 ; 25
         PREPARE_VIDEO_6         ; 31
-vhsd:   jmp     $FFFF           ; 34=>68
+        jmp     video_spkr_sub  ; 34=>68
 
 no_vid30:
 ad30b:  ldx     $A8FF           ; 21
@@ -1835,7 +1718,7 @@ vd31:   ldy     $98FF           ; 20
         WASTE_6                 ; 29
         PREPARE_VIDEO_6         ; 35
         ____SPKR_DUTY____4      ; 39
-vh31:   jmp     $FFFF           ; 42=>68
+        jmp     video_sub       ; 42=>68
 
 no_vid31:
 ad31b:  ldx     $A8FF           ; 21
