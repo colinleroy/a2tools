@@ -26,6 +26,7 @@
 #include "simple_serial.h"
 #include "extended_conio.h"
 #include "dgets.h"
+#include "hgr.h"
 #include "dputc.h"
 #include "dputs.h"
 #include "clrzone.h"
@@ -523,9 +524,11 @@ int main(void) {
   
   surl_ping();
 
+#ifdef __APPLE2__
   init_hgr(1);
   hgr_mixon();
   set_scrollwindow(20, scrh);
+#endif
 
   load_config();
 
