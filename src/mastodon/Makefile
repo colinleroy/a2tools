@@ -99,10 +99,19 @@ mastoimg_CC65SOURCES := \
 
 else
 
+ifdef OLDII
+
+mastoimg_CC65SOURCES := \
+	$(mastoimg_CC65SOURCES) \
+	../lib/surl/surl_stream_video.s \
+	../lib/surl/surl_wait_for_stream.c
+else
+
 mastoimg_CC65SOURCES := \
 	$(mastoimg_CC65SOURCES) \
 	../lib/surl/surl_stream_av.s
 
+endif
 endif
 
 mastocli_SOURCES := \
