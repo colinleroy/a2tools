@@ -73,6 +73,7 @@ mastoimg_SOURCES := \
 	../lib/file_select.c \
 	../lib/strsplit.c \
 	../lib/malloc0.c \
+	../lib/realloc_safe.c \
 	../lib/hgr.c \
 	../lib/scrollwindow.c \
 	../lib/dgets.c \
@@ -120,7 +121,8 @@ mastowrite_SOURCES := \
 	api/poll.c \
 	../lib/file_select.c \
 	../lib/progress_bar.c \
-	../lib/path_helper.c
+	../lib/path_helper.c \
+	../lib/realloc_safe.c \
 
 mastowrite_CC65SOURCES := \
 	$(common_CC65SOURCES) \

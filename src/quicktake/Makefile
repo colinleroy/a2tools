@@ -51,6 +51,7 @@ slowtake_SOURCES := \
 	../lib/serial/simple_serial_configure.c \
 	../lib/strtrim.c \
 	../lib/malloc0.c \
+	../lib/realloc_safe.c \
 	../lib/file_select.c \
 	../lib/progress_bar.c \
 	../lib/hgr.c \
