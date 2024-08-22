@@ -184,11 +184,13 @@ static void backup_restore_logo(char *op) {
 #endif
 
 #ifdef __APPLE2ENH__
+#ifndef IIGS
 static void print_err(const char *file) {
   init_text();
   clrscr();
   printf("%s : Error %d", file, errno);
 }
+#endif
 #endif
 
 #ifdef __CC65__
@@ -320,6 +322,10 @@ novid:
   }
 }
 
+#ifdef __CC65__
+#pragma code-name (pop)
+#endif
+
 char *play_directory(char *url) {
   const surl_response *resp;
   int dir_index;
@@ -361,6 +367,8 @@ char *play_directory(char *url) {
   in_list = 0;
   return url;
 }
+
+#pragma code-name (push, "LC")
 
 char navigated = 0;
 

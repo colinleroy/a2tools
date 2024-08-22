@@ -413,7 +413,7 @@ static byte_diff **diffs = NULL;
 #define AV_MAX_LEVEL             31
 #define AV_NUM_LEVELS            (AV_MAX_LEVEL+1)
 #define AV_END_OF_STREAM         AV_NUM_LEVELS
-#define AV_KBD_LOAD_LEVEL        15
+#define AV_KBD_LOAD_LEVEL        16
 
 #define send_sample(i) fputc((i) + AUDIO_SAMPLE_OFFSET, ttyfp)
 
@@ -977,7 +977,6 @@ unsigned char *audio_data = NULL;
 unsigned char *img_data = NULL;
 size_t audio_size = 0;
 size_t img_size = 0;
-int audio_ready = 0;
 int vhgr_file;
 
 sem_t av_sem;
@@ -1610,7 +1609,6 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, char sub
   }
   pthread_mutex_unlock(&audio_th_data->mutex);
 
-  audio_ready = 0;
   sem_init(&av_sem, 0, 0);
   pthread_create(&audio_push_thread, NULL, *audio_push, NULL);
   pthread_create(&video_push_thread, NULL, *video_push, NULL);

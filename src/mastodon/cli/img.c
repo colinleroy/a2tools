@@ -16,7 +16,7 @@
  */
 
 #ifdef __CC65__
-#pragma code-name (push, "LOWCODE")
+#pragma code-name (push, "LC")
 #endif
 
 #include <stdlib.h>
@@ -103,17 +103,96 @@ static void set_legend(char *str, unsigned char video, unsigned char idx, unsign
     show_help();
 }
 
+#ifndef IIGS
+
+static void update_progress(void) {
+  unsigned char eta = simple_serial_getc();
+  hgr_mixon();
+  gotoxy(11, 20); /* strlen("Loading...") + 1 */
+  if (eta == 255)
+    cputs("(More than 30m remaining)");
+  else
+    cprintf("(About %ds remaining)   ", eta*8);
+}
+
+int video_stream(char *url) {
+  char r;
+
+  surl_start_request(SURL_METHOD_STREAM_AV, url, NULL, 0);
+  simple_serial_write(translit_charset, strlen(translit_charset));
+  simple_serial_putc('\n');
+  simple_serial_putc(1); /* Monochrome */
+  simple_serial_putc(SUBTITLES_AUTO); /* Enable subtitles */
+  simple_serial_putc(HGR_SCALE_HALF);
+
+  clrscr();
+  /* clear text page 2 */
+#ifdef __CC65__
+  memset((char*)0x800, ' '|0x80, 0x400);
+  bzero((char*)HGR_PAGE, HGR_LEN);
+#endif
+  gotoxy(0,20);
+  cputs("Loading...\r\n"
+        "Controls: Space:      Play/Pause,             Esc: Quit player,\r\n"
+        "          Left/Right: Rewind/Forward,         ");
+  cputs("\r\n"
+        "          -/=/+:      Volume up/default/down  S:   Toggle speed/quality");
+
+wait_load:
+  if (kbhit()) {
+    if (cgetc() == CH_ESC) {
+      init_text();
+      simple_serial_putc(SURL_METHOD_ABORT);
+      return -1;
+    }
+  }
+
+  r = simple_serial_getc();
+  if (r == SURL_ANSWER_STREAM_LOAD) {
+    update_progress();
+    if (kbhit() && cgetc() == CH_ESC)
+      simple_serial_putc(SURL_METHOD_ABORT);
+    else
+      simple_serial_putc(SURL_CLIENT_READY);
+    goto wait_load;
+
+  } else if (r == SURL_ANSWER_STREAM_START) {
+    videomode(VIDEOMODE_40COL);
+    hgr_mixoff();
+    init_hgr(1);
+    clrscr();
+#ifdef __CC65__
+    /* Backup STARTUP code at __MAIN_START__ */
+    memcpy(gen_buf, (char *)START_ADDR, BUF_SIZE);
+    surl_stream_av();
+    /* Restore STARTUP code */
+    memcpy((char *)START_ADDR, gen_buf, BUF_SIZE);
+#endif
+
+    videomode(VIDEOMODE_80COL);
+    init_text();
+    gotoxy(0, 20);
+    cputs("Stream done. Press Esc to exit or another key to restart.");
+  } else {
+    clrscr();
+    cputs("Playback error");
+    sleep(1);
+  }
+  return 0;
+}
+
+#else
+
 static void stream_msg(char *msg) {
   hgr_mixon();
   clrscr();
   gotoxy(0, 21);
   cputs(msg);
 }
-static void video_stream(media *m, char idx, char num_images) {
+
+static void video_stream(char *url) {
 #ifdef DOUBLE_BUFFER
-#ifdef __APPLE2ENH__
   videomode(VIDEOMODE_40COL);
-#endif
 #endif
   toggle_legend(0);
   stream_msg("Play/Pause : Space\r\n"
@@ -122,33 +201,35 @@ static void video_stream(media *m, char idx, char num_images) {
   init_hgr(1);
   hgr_mixon();
 
-  surl_start_request(SURL_METHOD_STREAM_VIDEO, m->media_url[idx], NULL, 0);
+  surl_start_request(SURL_METHOD_STREAM_VIDEO, url, NULL, 0);
 
-#ifdef __CC65__
+  /* Backup STARTUP code at __MAIN_START__ */
+  memcpy(gen_buf, (char *)START_ADDR, BUF_SIZE);
+
   if (surl_wait_for_stream() != 0 || surl_stream_video() != 0) {
 #ifdef DOUBLE_BUFFER
-#ifdef __APPLE2ENH__
     videomode(VIDEOMODE_80COL);
 #endif
-#endif
-    set_legend("\r\n\r\nRequest failed. Press Esc to exit or another key to restart.", 0, idx, num_images);
-    toggle_legend(1);
+    stream_msg("\r\n\r\nRequest failed. Press Esc to exit or another key to restart.");
+    hgr_mixon();
   } else {
 #ifdef DOUBLE_BUFFER
-#ifdef __APPLE2ENH__
     videomode(VIDEOMODE_80COL);
-#endif
 #endif
     stream_msg("\r\n\r\nStream done. Press Esc to exit or another key to restart.");
   }
-#endif
+
+  /* Restore STARTUP */
+  memcpy((char *)START_ADDR, gen_buf, BUF_SIZE);
 }
+
+#endif
 
 static void img_display(media *m, char idx, char num_images) {
   size_t len;
 
   if (!strcmp(m->media_type[idx], "video")) {
-    video_stream(m, idx, num_images);
+    video_stream(m->media_url[idx]);
     return;
   }
   surl_start_request(SURL_METHOD_GET, m->media_url[idx], NULL, 0);
@@ -193,6 +274,11 @@ static void img_display(media *m, char idx, char num_images) {
     toggle_legend(1);
   }
 }
+
+#ifdef __CC65__
+#pragma code-name (pop)
+#pragma code-name (push, "LOWCODE")
+#endif
 
 static void save_image(void) {
   unsigned char prev_legend = legend;
@@ -247,12 +333,12 @@ out_no_conf:
 }
 
 int main(int argc, char **argv) {
-  char *params;
   media *m;
   char i, c;
 
 #ifdef __CC65__
-  _heapadd ((void *) 0x0803, 0x17FD);
+  /* Leave 0x800-0xC00 for iobuf */
+  _heapadd ((void *) 0x0C00, 0x13FF);
 #endif
 
 #ifdef __APPLE2ENH__
@@ -321,14 +407,15 @@ done:
     init_text();
   }
 
-  params = malloc0(127);
-  snprintf(params, 127, "%s %s", instance_url, oauth_token);
+  media_free(m);
+
+  snprintf(gen_buf, BUF_SIZE, "%s %s", instance_url, oauth_token);
   reopen_start_device();
 #ifdef __CC65__
-  exec("mastocli", params);
+  exec("mastocli", gen_buf);
   exit(0);
 #else
-  printf("exec(mastocli %s)\n",params);
+  printf("exec(mastocli %s)\n", gen_buf);
   exit(0);
 #endif
 }

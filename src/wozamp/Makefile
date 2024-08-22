@@ -104,8 +104,8 @@ videoplay_SOURCES := \
 
 #start address minimum is at 0xC3A (0xC00+EXEHDR size) to leave text page 2 free at 0x800
 videoplay_CLCFLAGS = -t $(CC65_TARGET) -DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER -I ../lib \
-	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-avstreamer.cfg \
-	-vm -m videoplay.map -DSURL_TO_LANGCARD -O --start-addr 0x1B00
+	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-wozamp-videoplay.cfg \
+	-vm -m videoplay.map -DSURL_TO_LANGCARD -O --start-addr 0x1F00
 
 all: \
 	splash.h \

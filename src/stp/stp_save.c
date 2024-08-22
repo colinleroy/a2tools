@@ -55,6 +55,8 @@ char *stp_confirm_save_all(void) {
   return out_dir;
 }
 
+#pragma code-name(pop)
+
 char *cleanup_filename(char *in) {
   int len = strlen(in), i;
   if (len > 15) {
@@ -76,7 +78,6 @@ char *cleanup_filename(char *in) {
   }
   return in;
 }
-#pragma code-name(pop)
 
 int stp_save_dialog(char *url, const surl_response *resp, char *out_dir) {
   char *filename = strdup(strrchr(url, '/') + 1);

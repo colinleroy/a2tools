@@ -45,6 +45,10 @@ char __fastcall__ print_header(list *l, status *root_status, notification *root_
   return 0;
 }
 
+#ifdef SURL_TO_LANGCARD
+#pragma code-name (pop)
+#endif
+
 void show_help (list *l, status *root_status, notification *root_notif) {
 
   gotoxy(0, 0);
@@ -147,7 +151,3 @@ void __fastcall__ print_free_ram(void) {
           _heapmemavail());
 #endif
 }
-
-#ifdef SURL_TO_LANGCARD
-#pragma code-name (pop)
-#endif

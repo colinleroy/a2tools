@@ -19,8 +19,6 @@ char enable_subtitles;
 char sub_language[3] = "en";
 char tmp_buf[80];
 
-#pragma code-name(push, "LOWCODE")
-
 static FILE *open_config(char *mode) {
   FILE *fp;
   #ifdef PRODOS_T_TXT
@@ -122,7 +120,6 @@ charset_again:
   save_config();
 }
 
-#pragma code-name(pop)
 #pragma code-name(push, "RT_ONCE")
 
 void load_config(void) {
