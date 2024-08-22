@@ -45,11 +45,6 @@ char *id = NULL;
 char monochrome = 1;
 unsigned char scrw, scrh;
 
-#ifdef __APPLE2ENH__
-  #define TEXTMODE VIDEOMODE_80COL
-#else
-  #define TEXTMODE VIDEOMODE_40COL
-#endif
 #ifdef __CC65__
   #pragma rodata-name (push, "HGR")
   char *hgr_page;
@@ -103,7 +98,7 @@ static void set_legend(char *str, unsigned char video, unsigned char idx, unsign
     show_help();
 }
 
-#ifndef IIGS
+#if defined(__APPLE2ENH__) && !defined(IIGS)
 
 static void update_progress(void) {
   unsigned char eta = simple_serial_getc();
@@ -183,6 +178,7 @@ wait_load:
 
 #else
 
+#ifdef __CC65__
 static void stream_msg(char *msg) {
   hgr_mixon();
   clrscr();
@@ -191,7 +187,7 @@ static void stream_msg(char *msg) {
 }
 
 static void video_stream(char *url) {
-#ifdef DOUBLE_BUFFER
+#ifdef __APPLE2ENH__
   videomode(VIDEOMODE_40COL);
 #endif
   toggle_legend(0);
@@ -203,25 +199,29 @@ static void video_stream(char *url) {
 
   surl_start_request(SURL_METHOD_STREAM_VIDEO, url, NULL, 0);
 
+  #ifdef __APPLE2__
   /* Backup STARTUP code at __MAIN_START__ */
   memcpy(gen_buf, (char *)START_ADDR, BUF_SIZE);
-
+#endif
   if (surl_wait_for_stream() != 0 || surl_stream_video() != 0) {
-#ifdef DOUBLE_BUFFER
+#ifdef __APPLE2ENH__
     videomode(VIDEOMODE_80COL);
 #endif
     stream_msg("\r\n\r\nRequest failed. Press Esc to exit or another key to restart.");
     hgr_mixon();
   } else {
-#ifdef DOUBLE_BUFFER
+#ifdef __APPLE2ENH__
     videomode(VIDEOMODE_80COL);
 #endif
     stream_msg("\r\n\r\nStream done. Press Esc to exit or another key to restart.");
   }
 
+#ifdef __APPLE2__
   /* Restore STARTUP */
   memcpy((char *)START_ADDR, gen_buf, BUF_SIZE);
+#endif
 }
+#endif
 
 #endif
 
@@ -229,7 +229,9 @@ static void img_display(media *m, char idx, char num_images) {
   size_t len;
 
   if (!strcmp(m->media_type[idx], "video")) {
+#ifdef __CC65__
     video_stream(m->media_url[idx]);
+#endif
     return;
   }
   surl_start_request(SURL_METHOD_GET, m->media_url[idx], NULL, 0);
@@ -342,7 +344,7 @@ int main(int argc, char **argv) {
 #endif
 
 #ifdef __APPLE2ENH__
-  videomode(TEXTMODE);
+  videomode(VIDEOMODE_80COL);
 #endif
 
   if (argc < 6) {
