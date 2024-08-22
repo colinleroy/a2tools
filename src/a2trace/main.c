@@ -187,7 +187,7 @@ skip_to_start:
     }
 
     /* We want at least an "ADDR: op" */
-    if (n_parts >= 2) {
+    if ((cpu == CPU_6502 && n_parts >= 2) || (cpu == CPU_65816 && n_parts >= 3)) {
       int op_addr = 0;
       int param_addr = 0;
       dbg_slocdef *sloc = NULL;

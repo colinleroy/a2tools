@@ -43,7 +43,6 @@ common_CC65SOURCES := \
 	../lib/FVTABZ.s \
 	../lib/fastirq$(suffix).s \
 	 ../lib/extrazp.s \
-	../lib/runtime_once_clean.s
 
 mastodon_SOURCES := \
 	$(common_SOURCES) \
@@ -60,7 +59,8 @@ mastodon_SOURCES := \
 	../lib/malloc0.c
 
 mastodon_CC65SOURCES := \
-	$(common_CC65SOURCES)
+	$(common_CC65SOURCES) \
+	../lib/runtime_once_clean.s
 
 mastoimg_SOURCES := \
 	api/common.c \
@@ -86,12 +86,24 @@ mastoimg_CC65SOURCES := \
 	../lib/FVTABZ.s \
 	../lib/fastirq$(suffix).s \
 	 ../lib/extrazp.s \
-	../lib/runtime_once_clean.s \
-	../lib/surl/surl_stream_video.s \
 	../lib/surl/surl_wait_for_stream.c \
 	../lib/dputc.s \
 	../lib/scroll.s
-	
+
+ifdef IIGS
+
+mastoimg_CC65SOURCES := \
+	$(mastoimg_CC65SOURCES) \
+	../lib/surl/surl_stream_video.s
+
+else
+
+mastoimg_CC65SOURCES := \
+	$(mastoimg_CC65SOURCES) \
+	../lib/surl/surl_stream_av.s
+
+endif
+
 mastocli_SOURCES := \
 	$(common_SOURCES) \
 	cli/header.c \
@@ -107,6 +119,7 @@ mastocli_SOURCES := \
 
 mastocli_CC65SOURCES := \
 	$(common_CC65SOURCES) \
+	../lib/runtime_once_clean.s
 
 mastowrite_SOURCES := \
 	$(common_SOURCES) \
@@ -124,6 +137,7 @@ mastowrite_SOURCES := \
 
 mastowrite_CC65SOURCES := \
 	$(common_CC65SOURCES) \
+	../lib/runtime_once_clean.s
 
 GCCSOURCES := \
 	../lib/extended_conio.c \
@@ -139,13 +153,13 @@ DEPS :=
 CC65_TARGET = $(TARGET)
 CFLAGS  = -I ../lib -I api -I cli -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
 
-CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x400 $(USE_LANGCARD) -C ../../config/apple2enh-rtonce.cfg $(debug_CFLAGS)  $(iigs_CFLAGS)
+CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x400 $(USE_LANGCARD) $(debug_CFLAGS)  $(iigs_CFLAGS)
 #Using start address 0x4000 is easier than HGR page 2, and also allows to use 80 columns
 
-mastodon_CLCFLAGS = $(CLCFLAGS)
-mastocli_CLCFLAGS = $(CLCFLAGS)
-mastoimg_CLCFLAGS = $(CLCFLAGS) -DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER --start-addr 0x6000
-mastowrite_CLCFLAGS = $(CLCFLAGS) -DDGETS_MULTILINE
+mastodon_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-rtonce.cfg
+mastocli_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-rtonce.cfg
+mastoimg_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-mastoimg.cfg -DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER -DSTART_ADDR=0x5DA0 --start-addr 0x5DA0
+mastowrite_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-rtonce.cfg -DDGETS_MULTILINE
 
 GCCCFLAGS = -g -O0 -Wall -Wno-char-subscripts -Wno-unused-but-set-variable -Wno-unused-variable -Wno-unknown-pragmas -Werror $(shell sdl-config --cflags)
 GCCLDFLAGS = $(shell sdl-config --libs)
@@ -164,7 +178,7 @@ mastocli.bin: $(mastocli_SOURCES) $(mastocli_CC65SOURCES)
 mastowrite.bin: $(mastowrite_SOURCES) $(mastowrite_CC65SOURCES)
 	cl65 --debug-info -Wl --dbgfile,"mastowrite.dbg" $(CFLAGS) $(mastowrite_CLCFLAGS) -vm -m mastowrite.map -o $@ $^
 mastoimg.bin: $(mastoimg_SOURCES) $(mastoimg_CC65SOURCES)
-	cl65 --debug-info -Wl --dbgfile,"mastoimg.dbg" $(CFLAGS) $(mastoimg_CLCFLAGS) -vm -m mastoimg.map -o $@ $^
+	cl65 --debug-info -Wl --dbgfile,"mastoimg.dbg" $(CFLAGS) $(mastoimg_CLCFLAGS) -vm -m mastoimg.map -o $@ $^ $(CC65_TARGET)-iobuf-0800.o
 
 mastodon.x86_64: $(mastodon_SOURCES) $(GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	

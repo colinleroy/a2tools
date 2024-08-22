@@ -165,10 +165,6 @@ void __fastcall__ surl_read_response_header(void) {
   surl_read_with_barrier(resp->content_type, resp->content_type_size);
 }
 
-#ifdef __CC65__
-#pragma code-name (pop)
-#endif
-
 char __fastcall__ surl_response_ok(void) {
   return resp != NULL && resp->code >= 200 && resp->code < 300;
 }
@@ -183,6 +179,10 @@ void __fastcall__ surl_read_with_barrier(char *buffer, size_t nmemb) {
   simple_serial_putc(SURL_CLIENT_READY);
   simple_serial_read(buffer, nmemb);
 }
+#endif
+
+#ifdef __CC65__
+#pragma code-name (pop)
 #endif
 
 #ifdef SER_DEBUG

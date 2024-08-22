@@ -25,6 +25,10 @@
 
 static char start_dir[FILENAME_MAX*2];
 
+#ifdef __CC65__
+#pragma code-name (push, "LC")
+#endif
+
 void register_start_device(void) {
 #ifdef __APPLE2__
   static char argv0_len;
@@ -69,4 +73,8 @@ int reopen_start_device(void) {
 #else
 void register_start_device(void) {}
 int reopen_start_device(void) { return 0; }
+#endif
+
+#ifdef __CC65__
+#pragma code-name (pop)
 #endif

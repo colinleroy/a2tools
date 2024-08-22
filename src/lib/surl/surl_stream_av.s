@@ -382,7 +382,6 @@ kbd_cmd       = tmp3            ; byte - Deferred keyboard command to handle
         WASTE_6                 ; 6
         jmp     (next,x)        ; 12     jump to next duty cycle
 .endmacro
-        .code
 
 ; General principles. we expect audio to be pushed on one serial port, video on
 ; the other. Execution flow  is controlled via the audio stream, with each
@@ -465,8 +464,86 @@ kbd_cmd       = tmp3            ; byte - Deferred keyboard command to handle
 ; Reading an incomplete byte there could result in reading 11111111, for
 ; example, but not only. We don't want that.
 
+
+        .segment        "AVMAGIC"
+
+.align $40 ; page0_ and page1_ addresses arrays must share the same low byte
+.assert * = $7C40, error                         ; We want this one's high byte to be even
+PAGE0_ARRAY = *                                  ; for and'ing at video_sub:@set_offset
+page0_addrs_arr_high:.res (N_BASES+4+1)          ; Also $7C & $55 = $54
+pages_addrs_arr_low: .res (N_BASES+4+1)
+
+; -----------------------------------------------------------------
+setup:
+        ; Setup pointer access to SPKR
+        lda     #<(SPKR)
+        sta     spkr_ptr
+        lda     #>(SPKR)
+        sta     spkr_ptr+1
+
+        ; Calculate bases for HGR page 0
+        lda     #>(page0_addrs_arr_high)
+        sta     calc_addr_high+2
+        sta     calc_addr_text_high+2
+        ldx     #PAGE0_HB
+        jsr     calc_bases
+        lda     #$50
+        ldx     #$06
+        jsr     calc_text_bases
+
+        ; Calculate bases for HGR page 1
+        lda     #>(page1_addrs_arr_high)
+        sta     calc_addr_high+2
+        sta     calc_addr_text_high+2
+        ldx     #PAGE1_HB
+        jsr     calc_bases
+        lda     #$50
+        ldx     #$0A
+        jsr     calc_text_bases
+
+        ; Init vars
+        stz     kbd_cmd
+        stz     cur_mix
+        stz     next_offset
+
+        ; Setup serial registers
+        jsr     patch_serial_registers
+
+acmd:   lda     $A8FF           ; Copy command and control registers from
+vcmd:   sta     $98FF           ; the main serial port to the second serial
+actrl:  lda     $A8FF           ; port, it's easier than setting it up from
+vctrl:  sta     $98FF           ; scratch
+
+        lda     #$2F            ; Surl client ready
+        jsr     _serial_putc_direct
+
+        jsr     _serial_read_byte_no_irq
+        sta     enable_subs
+
+        lda     #<(page0_addrs_arr_high)
+        sta     page_ptr_high
+        lda     #>(page0_addrs_arr_high)
+        sta     page_ptr_high+1
+
+        lda     #$40
+        sta     cur_base+1
+        stz     cur_base
+
+        rts
+
+.align $40
+.assert * = $7D40, error                         ; We want high byte to be odd
+PAGE1_ARRAY = *                                  ; for and'ing at video_sub:@set_offset
+page1_addrs_arr_high:.res (N_BASES+4+1)          ; also $7F & $55 = $55
+
+page_addrs_arr: .byte >(page1_addrs_arr_high)     ; Inverted because we write to page 1
+                .byte >(page0_addrs_arr_high)     ; when page 0 is active, and vice-versa
+
+enable_subs:    .byte $1
+
+        .segment        "AVCODE"
+
 .align $100
-.assert * = $6000, error
 _SAMPLES_BASE = *
 ; -----------------------------------------------------------------
 duty_cycle0:                    ; end spkr at 8
@@ -776,29 +853,22 @@ vd15:   ldy     $98FF           ; 27
 no_vid15:
         WASTE_2                 ; 19
         ____SPKR_DUTY____4      ; 23
-asp:    lda     $FFFF           ; 27     check serial tx empty
-        and     #$10            ; 29
-        beq     noser           ; 31/32
+ad15b:  ldx     $A8FF           ; 27
+        WASTE_4                 ; 31
+        lda     kbd_cmd         ; 34     handle subtitles switch
+        ldy     cur_mix         ; 37
+        cmp     #$09            ; 39
+        bne     not_tab         ; 41/42
+        lda     $C052,y         ; 45     not BIT, to preserve V flag
+        tya                     ; 47
+        eor     #$01            ; 49
+        sta     cur_mix         ; 52
+        ABS_STZ kbd_cmd         ; 56
+        JUMP_NEXT_12            ; 68
 
-        lda     KBD             ; 35     read keyboard
-        bpl     nokbd           ; 37/38
-        sta     KBDSTRB         ; 41     clear keystrobe
-        and     #$7F            ; 43
-adp:    sta     $FFFF           ; 47     send cmd
-        cmp     #$1B            ; 49
-        beq     out             ; 51/52  if escape, exit forcefully
-        sta     kbd_cmd         ; 54
-        WASTE_2                 ; 56
-        JUMP_NEXT_12            ; 68     jump to next duty cycle
-nokbd:
-ad15b:  ldx     $A8FF           ; 42
+not_tab:
         WASTE_14                ; 56
         JUMP_NEXT_12            ; 68
-noser:  
-        WASTE_24                ; 56
-        JUMP_NEXT_12            ; 68
-
-out:    jmp     break_out
 
 ; -----------------------------------------------------------------
 duty_cycle16:                    ; end spkr at 24
@@ -816,22 +886,28 @@ vd16:   ldy     $98FF           ; 20
 no_vid16:
         WASTE_3                 ; 20
         ____SPKR_DUTY____4      ; 24
-ad16b:  ldx     $A8FF           ; 28
-        WASTE_3                 ; 31
-        lda     kbd_cmd         ; 34     handle subtitles switch
-        ldy     cur_mix         ; 37
-        cmp     #$09            ; 39
-        bne     not_tab         ; 41/42
-        lda     $C052,y         ; 45     not BIT, to preserve V flag
-        tya                     ; 47
-        eor     #$01            ; 49
-        sta     cur_mix         ; 52
-        ABS_STZ kbd_cmd         ; 56
+asp:    lda     $FFFF           ; 28     check serial tx empty
+        and     #$10            ; 30
+        beq     noser           ; 32/33
+
+        lda     KBD             ; 36     read keyboard
+        bpl     nokbd           ; 38/39
+        sta     KBDSTRB         ; 42     clear keystrobe
+        and     #$7F            ; 44
+adp:    sta     $FFFF           ; 48     send cmd
+        cmp     #$1B            ; 50
+        beq     out             ; 52/53  if escape, exit forcefully
+        ABS_STA kbd_cmd         ; 56
+        JUMP_NEXT_12            ; 68     jump to next duty cycle
+nokbd:
+ad16b:  ldx     $A8FF           ; 43
+        WASTE_13                ; 56
+        JUMP_NEXT_12            ; 68
+noser:  
+        WASTE_23                ; 56
         JUMP_NEXT_12            ; 68
 
-not_tab:
-        WASTE_14                ; 56
-        JUMP_NEXT_12            ; 68
+out:    jmp     break_out
 
 ; -----------------------------------------------------------------
 duty_cycle17:                    ; end spkr at 25
@@ -1067,8 +1143,6 @@ ad27b:  ldx     $A8FF           ; 21
         WASTE_21                ; 56
         JUMP_NEXT_12            ; 68
 
-.align $100
-.assert * = _SAMPLES_BASE + $800, error
 ; -----------------------------------------------------------------
 duty_cycle28:                    ; end spkr at 36
         ____SPKR_DUTY____4      ; 4
@@ -1090,14 +1164,6 @@ ad28b:  ldx     $A8FF           ; 21
         WASTE_20                ; 56
         JUMP_NEXT_12            ; 68
 
-.align $40 ; page0_ and page1_ addresses arrays must share the same low byte
-.assert * = $6840, error                         ; We want this one's high byte to be even
-PAGE0_ARRAY = *                                  ; for and'ing at video_sub:@set_offset
-page0_addrs_arr_high:.res (N_BASES+4+1)          ; Also $7C & $55 = $54
-pages_addrs_arr_low: .res (N_BASES+4+1)
-
-.align $100
-.assert * = _SAMPLES_BASE + $900, error
 ; -----------------------------------------------------------------
 duty_cycle29:                    ; end spkr at 37
         ____SPKR_DUTY____4      ; 4
@@ -1119,16 +1185,8 @@ ad29b:  ldx     $A8FF           ; 21
         WASTE_19                ; 56
         JUMP_NEXT_12            ; 68
 
-.align $40
-.assert * = $6940, error                         ; We want high byte to be odd
-PAGE1_ARRAY = *                                  ; for and'ing at video_sub:@set_offset
-page1_addrs_arr_high:.res (N_BASES+4+1)          ; also $7F & $55 = $55
-
-page_addrs_arr: .byte >(page1_addrs_arr_high)     ; Inverted because we write to page 1
-                .byte >(page0_addrs_arr_high)     ; when page 0 is active, and vice-versa
-
-enable_subs:    .byte $1
-
+.align $100
+.assert * = _SAMPLES_BASE + $800, error
 ; Duty cycle 30 must toggle off speaker at cycle 38, but we would have to jump
 ; to video_sub at cycle 39, so this one uses different entry points to
 ; the video handler to fix this.
@@ -1170,128 +1228,6 @@ ad31b:  ldx     $A8FF           ; 21
         ____SPKR_DUTY____4      ; 39
         WASTE_17                ; 56
         JUMP_NEXT_12            ; 68
-
-.align $100
-.assert * = _SAMPLES_BASE + $A00, error
-; -----------------------------------------------------------------
-break_out:
-        jsr     _clrscr
-        jsr     _init_text
-        lda     #$01
-        ldx     #$00
-        jsr     _sleep
-
-        lda     #$02            ; Disable second port
-vcmd2:  sta     $98FF
-
-        plp                     ; Reenable all interrupts
-        lda     #$01            ; Reenable serial interrupts and flush
-        jsr     _simple_serial_set_irq
-        jsr     _simple_serial_flush
-        lda     #$2F            ; SURL_CLIENT_READY
-        jmp     _serial_putc_direct
-
-; -----------------------------------------------------------------
-_surl_stream_av:                ; Entry point
-        php
-        sei                     ; Disable all interrupts
-
-        pha
-
-        lda     #$00            ; Disable serial interrupts
-        jsr     _simple_serial_set_irq
-
-        pla
-        ; Setup pointers
-        jsr     setup
-
-        ; Clear pages
-        bit     $C082
-        lda     #$40
-        sta     $E6
-        jsr     $F3F2
-        lda     #$20
-        sta     $E6
-        jsr     $F3F2
-        bit     $C080
-
-        lda     #$2F            ; Surl client ready
-        jsr     _serial_putc_direct
-
-        clv                     ; clear offset-received flag
-
-duty_start:                     ; Initial cycle destination
-        ldx     #32             ; duty_start
-
-ass:    lda     $A9FF
-        and     #HAS_BYTE
-        beq     vss
-ads:    ldx     $A8FF
-
-vss:    lda     $99FF
-        and     #HAS_BYTE
-        beq     ass
-vds:    ldy     $98FF
-        PREPARE_VIDEO_6
-        jmp     video_sub
-
-; -----------------------------------------------------------------
-setup:
-        ; Setup pointer access to SPKR
-        lda     #<(SPKR)
-        sta     spkr_ptr
-        lda     #>(SPKR)
-        sta     spkr_ptr+1
-
-        ; Calculate bases for HGR page 0
-        lda     #>(page0_addrs_arr_high)
-        sta     calc_addr_high+2
-        sta     calc_addr_text_high+2
-        ldx     #PAGE0_HB
-        jsr     calc_bases
-        lda     #$50
-        ldx     #$06
-        jsr     calc_text_bases
-
-        ; Calculate bases for HGR page 1
-        lda     #>(page1_addrs_arr_high)
-        sta     calc_addr_high+2
-        sta     calc_addr_text_high+2
-        ldx     #PAGE1_HB
-        jsr     calc_bases
-        lda     #$50
-        ldx     #$0A
-        jsr     calc_text_bases
-
-        ; Init vars
-        stz     kbd_cmd
-        stz     cur_mix
-        stz     next_offset
-
-        ; Setup serial registers
-        jsr     patch_serial_registers
-
-acmd:   lda     $A8FF           ; Copy command and control registers from
-vcmd:   sta     $98FF           ; the main serial port to the second serial
-actrl:  lda     $A8FF           ; port, it's easier than setting it up from
-vctrl:  sta     $98FF           ; scratch
-
-        lda     #$2F            ; Surl client ready
-        jsr     _serial_putc_direct
-
-        jsr     _serial_read_byte_no_irq
-        sta     enable_subs
-
-        lda     #<(page0_addrs_arr_high)
-        sta     page_ptr_high
-        lda     #>(page0_addrs_arr_high)
-        sta     page_ptr_high+1
-
-        lda     #$40
-        sta     cur_base+1
-        stz     cur_base
-
-        rts
 
 ; -----------------------------------------------------------------
 ; VIDEO HANDLER
@@ -1345,6 +1281,61 @@ video_sub:
         WASTE_15                        ; 20
         jmp     (next,x)                ; 26
 .endif
+
+.assert * < _SAMPLES_BASE + $A00, error ; We don't want to cross page in the middle of video_sub
+
+; -----------------------------------------------------------------
+break_out:
+        jsr     _clrscr
+        jsr     _init_text
+        lda     #$01
+        ldx     #$00
+        jsr     _sleep
+
+        lda     #$02            ; Disable second port
+vcmd2:  sta     $98FF
+
+        plp                     ; Reenable all interrupts
+        lda     #$01            ; Reenable serial interrupts and flush
+        jsr     _simple_serial_set_irq
+        jsr     _simple_serial_flush
+        lda     #$2F            ; SURL_CLIENT_READY
+        jmp     _serial_putc_direct
+
+; -----------------------------------------------------------------
+_surl_stream_av:                ; Entry point
+        php
+        sei                     ; Disable all interrupts
+
+        pha
+
+        lda     #$00            ; Disable serial interrupts
+        jsr     _simple_serial_set_irq
+
+        pla
+        ; Setup pointers
+        jsr     setup
+
+        ; Clear pages
+        bit     $C082
+        lda     #$40
+        sta     $E6
+        jsr     $F3F2
+        lda     #$20
+        sta     $E6
+        jsr     $F3F2
+        bit     $C080
+
+        lda     #$2F            ; Surl client ready
+        jsr     _serial_putc_direct
+
+        clv                     ; clear offset-received flag
+
+ass:    lda     $A9FF           ; Wait for an audio byte
+        and     #HAS_BYTE
+        beq     ass
+ads:    ldx     $A8FF
+        jmp     (next,x)
 
 ; -----------------------------------------------------------------
 calc_bases:
@@ -1514,7 +1505,6 @@ patch_serial_registers:
 
 ; -----------------------------------------------------------------
 video_status_patches:
-                .word vss
                 .word vs0
                 .word vs1
                 .word vs2
@@ -1551,7 +1541,6 @@ video_status_patches:
 
 ; -----------------------------------------------------------------
 video_data_patches:
-                .word vds
                 .word vd0
                 .word vd1
                 .word vd2
@@ -1696,4 +1685,6 @@ next:
                 .word duty_cycle29
                 .word duty_cycle30
                 .word duty_cycle31
-                .word duty_start
+                .repeat 32          ; Make sure we cover every number from
+                .word break_out     ; to 32 to 63, in case we catch the end
+                .endrep             ; of stream byte mid-byte
