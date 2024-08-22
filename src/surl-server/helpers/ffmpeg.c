@@ -41,6 +41,7 @@
 
 #include <ffmpeg.h>
 #include "char-convert.h"
+#include "../surl_protocol.h"
 
 /* Final buffer size, possibly including black borders */
 #define HGR_WIDTH 280
@@ -243,13 +244,13 @@ static int init_video_filters(char subtitles, char size)
         continue;
       if (subtitles && pic_height > 156)
         continue;
-      if (pic_width * pic_height < (size ? 0x2000 : MAX_BYTES_PER_FRAME) * 8) {
+      if (pic_width * pic_height < (size != HGR_SCALE_HALF ? 0x2000 : MAX_BYTES_PER_FRAME) * 8) {
         break;
       }
     }
     printf("Rescaling to %dx%d (%d pixels)\n", pic_width, pic_height, pic_width * pic_height);
 
-    if (size == 0)
+    if (size == HGR_SCALE_HALF)
       sprintf(filters_descr, video_filter_descr_s,
               FPS,
               pic_width, pic_height,

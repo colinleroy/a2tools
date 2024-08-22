@@ -444,14 +444,15 @@ again:
 
 int main(void) {
   videomode(VIDEOMODE_80COL);
-  init_hgr(1);
-  hgr_mixon();
   backup_restore_logo("w");
 
   screensize(&scrw, &scrh);
-  set_scrollwindow(20, scrh);
- 
   surl_ping();
+
+  init_hgr(1);
+  hgr_mixon();
+  set_scrollwindow(20, scrh);
+
   load_config();
 
   do_setup();
