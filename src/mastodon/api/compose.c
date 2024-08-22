@@ -135,27 +135,19 @@ signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medi
   char *body;
   int i, o, len;
   char *extra_buf;
+  char c;
 
   body = malloc0(1536);
 
   if (n_medias > 0) {
     extra_buf = malloc0(768);
-    snprintf(extra_buf, 768, "A|media_ids\n[\"%s\""
-                                "%s%s%s"
-                                "%s%s%s"
-                                "%s%s%s"
-                                "]\n",
-                                media_ids[0],
-                                n_medias > 1 ? ",\"":"",
-                                n_medias > 1 ? media_ids[1]:"",
-                                n_medias > 1 ? "\"":"",
-                                n_medias > 2 ? ",\"":"",
-                                n_medias > 2 ? media_ids[2]:"",
-                                n_medias > 2 ? "\"":"",
-                                n_medias > 3 ? ",\"":"",
-                                n_medias > 3 ? media_ids[3]:"",
-                                n_medias > 3 ? "\"":""
-                              );
+    snprintf(extra_buf, 768, "A|media_ids\n[\"%s\"", media_ids[0]);
+    for (c = 1; c < n_medias; c++) {
+      strcat(extra_buf, ",\"");
+      strcat(extra_buf, media_ids[c]);
+      strcat(extra_buf, "\"");
+    }
+    strcat(extra_buf, "]\n");
   } else if (toot_poll != NULL) {
     char duration, n_options;
     for (duration = 0; duration < NUM_POLL_DURATIONS; duration++) {
@@ -168,24 +160,16 @@ signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medi
     snprintf(extra_buf, 768, "O|poll\n{"
                              "\"expires_in\": %s,"
                              "\"multiple\": %s,"
-                             "\"options\":[\"%s\""
-                                           "%s%s%s"
-                                           "%s%s%s"
-                                           "%s%s%s"
-                                           "]"
-                             "}\n",
+                             "\"options\":[\"%s\"",
                              compose_poll_durations_seconds[duration],
                              toot_poll->multiple ? "true":"false",
-                             toot_poll->options[0].title,
-                             n_options > 1 ? ",\"":"",
-                             n_options > 1 ? toot_poll->options[1].title:"",
-                             n_options > 1 ? "\"":"",
-                             n_options > 2 ? ",\"":"",
-                             n_options > 2 ? toot_poll->options[2].title:"",
-                             n_options > 2 ? "\"":"",
-                             n_options > 3 ? ",\"":"",
-                             n_options > 3 ? toot_poll->options[3].title:"",
-                             n_options > 3 ? "\"":"");
+                             toot_poll->options[0].title);
+    for (c = 1; c < n_options; c++) {
+      strcat(extra_buf, ",\"");
+      strcat(extra_buf, toot_poll->options[c].title);
+      strcat(extra_buf, "\"");
+    }
+    strcat(extra_buf, "]}\n");
   } else {
     extra_buf = NULL;
   }

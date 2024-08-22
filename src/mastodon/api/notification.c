@@ -30,8 +30,7 @@ int api_get_notifications(char to_load, char notifications_type, char *load_befo
             to_load,
             notifications_type == NOTIFICATION_FAVOURITE ? 
               "&types[]=follow&types[]=favourite&types[]=reblog" : "",
-            load_after ? load_after : "",
-            load_before ? load_before : ""
+            load_after, load_before
           );
   get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
   

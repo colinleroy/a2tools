@@ -42,7 +42,7 @@ static unsigned char win_width_min1, win_height_min1;
 static size_t cur_insert, max_insert;
 static char *text_buf;
 
-static char __fastcall__ get_prev_line_len() {
+static char __fastcall__ get_prev_line_len(void) {
   int back;
   char prev_line_len;
 
@@ -65,7 +65,7 @@ static char __fastcall__ get_prev_line_len() {
 #pragma GCC diagnostic ignored "-Wunused-function"
 #endif
 
-static void __fastcall__ scroll_down_and_rewrite_start_of_buffer() {
+static void __fastcall__ scroll_down_and_rewrite_start_of_buffer(void) {
   char prev_line_len;
   int k;
 
