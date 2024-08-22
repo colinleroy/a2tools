@@ -474,6 +474,7 @@ page0_addrs_arr_high:.res (N_BASES+4+1)          ; Also $7C & $55 = $54
 pages_addrs_arr_low: .res (N_BASES+4+1)
 
 ; -----------------------------------------------------------------
+; Sneak function in available hole
 setup:
         ; Setup pointer access to SPKR
         lda     #<(SPKR)
@@ -695,7 +696,6 @@ ad7b:   ldx     $A8FF           ; 28
         WASTE_28                ; 56
         JUMP_NEXT_12            ; 68
 
-
 .align $100
 .assert * = _SAMPLES_BASE + $200, error
 ; -----------------------------------------------------------------
@@ -834,8 +834,6 @@ ad14b:  ldx     $A8FF           ; 26
         WASTE_30                ; 56
         JUMP_NEXT_12            ; 68
 
-.align $100
-.assert * = _SAMPLES_BASE + $400, error
 ; -----------------------------------------------------------------
 duty_cycle15:                    ; end spkr at 23
         ____SPKR_DUTY____4      ; 4
@@ -870,6 +868,8 @@ not_tab:
         WASTE_14                ; 56
         JUMP_NEXT_12            ; 68
 
+.align $100
+.assert * = _SAMPLES_BASE + $400, error
 ; -----------------------------------------------------------------
 duty_cycle16:                    ; end spkr at 24
         ____SPKR_DUTY____4      ; 4
@@ -928,8 +928,6 @@ ad17b:  ldx     $A8FF           ; 21
         WASTE_31                ; 56
         JUMP_NEXT_12            ; 68
 
-.align $100
-.assert * = _SAMPLES_BASE + $500, error
 ; -----------------------------------------------------------------
 duty_cycle18:                    ; end spkr at 26
         ____SPKR_DUTY____4      ; 4
@@ -950,6 +948,8 @@ ad18b:  ldx     $A8FF           ; 21
         WASTE_30                ; 56
         JUMP_NEXT_12            ; 68
 
+.align $100
+.assert * = _SAMPLES_BASE + $500, error
 ; -----------------------------------------------------------------
 duty_cycle19:                    ; end spkr at 27
         ____SPKR_DUTY____4      ; 4
@@ -1013,8 +1013,6 @@ ad21b:  ldx     $A8FF           ; 21
         WASTE_27                ; 56
         JUMP_NEXT_12            ; 68
 
-.align $100
-.assert * = _SAMPLES_BASE + $600, error
 ; -----------------------------------------------------------------
 duty_cycle22:                    ; end spkr at 30
         ____SPKR_DUTY____4      ; 4
@@ -1036,6 +1034,8 @@ ad22b:  ldx     $A8FF           ; 21
         WASTE_26                ; 56
         JUMP_NEXT_12            ; 68
 
+.align $100
+.assert * = _SAMPLES_BASE + $600, error
 ; -----------------------------------------------------------------
 duty_cycle23:                    ; end spkr at 31
         ____SPKR_DUTY____4      ; 4
@@ -1099,8 +1099,6 @@ ad25b:  ldx     $A8FF           ; 21
         WASTE_23                ; 56
         JUMP_NEXT_12            ; 68
 
-.align $100
-.assert * = _SAMPLES_BASE + $700, error
 ; -----------------------------------------------------------------
 duty_cycle26:                    ; end spkr at 34
         ____SPKR_DUTY____4      ; 4
@@ -1122,6 +1120,8 @@ ad26b:  ldx     $A8FF           ; 21
         WASTE_22                ; 56
         JUMP_NEXT_12            ; 68
 
+.align $100
+.assert * = _SAMPLES_BASE + $700, error
 ; -----------------------------------------------------------------
 duty_cycle27:                    ; end spkr at 35
         ____SPKR_DUTY____4      ; 4
@@ -1185,8 +1185,6 @@ ad29b:  ldx     $A8FF           ; 21
         WASTE_19                ; 56
         JUMP_NEXT_12            ; 68
 
-.align $100
-.assert * = _SAMPLES_BASE + $800, error
 ; Duty cycle 30 must toggle off speaker at cycle 38, but we would have to jump
 ; to video_sub at cycle 39, so this one uses different entry points to
 ; the video handler to fix this.
@@ -1209,6 +1207,8 @@ ad30b:  ldx     $A8FF           ; 21
         WASTE_18                ; 56
         JUMP_NEXT_12            ; 68
 
+.align $100
+.assert * = _SAMPLES_BASE + $800, error
 ; -----------------------------------------------------------------
 duty_cycle31:                    ; end spkr at 39
         ____SPKR_DUTY____4      ; 4
