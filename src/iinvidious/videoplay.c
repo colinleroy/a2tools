@@ -72,9 +72,7 @@ wait_load:
 
   } else if (r == SURL_ANSWER_STREAM_START) {
     videomode(VIDEOMODE_40COL);
-    if (!subtitles_url) {
-      hgr_mixoff();
-    }
+    hgr_mixoff();
     set_scrollwindow(0, scrh);
     clrscr();
     surl_stream_av();
