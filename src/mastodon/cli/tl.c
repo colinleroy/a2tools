@@ -187,7 +187,7 @@ static item *item_get(list *l, char i, char full) {
 static char load_around(list *l, char to_load, char *first, char *last, char **new_ids) {
   char loaded;
   l->half_displayed_post = 0;
-  if (l->kind == SHOW_BOOKMARKS && (first[0] || last[0])) {
+  if (l->kind == SHOW_BOOKMARKS && (first || last)) {
     /* Must paginate those with Link: HTTP headers :( */
     return 0;
   }
@@ -258,7 +258,7 @@ static char load_next_posts(list *l) {
   list_len = l->n_posts;
   last_id = list_len > 0 ? l->ids[list_len - 1] : NULL;
 
-  loaded = load_around(l, to_load, "", last_id, new_ids);
+  loaded = load_around(l, to_load, NULL, last_id, new_ids);
 
   if (loaded > 0) {
     char split;
@@ -305,7 +305,7 @@ static char load_prev_posts(list *l) {
   list_len = l->n_posts;
   first_id = list_len > 0 ? l->ids[0] : NULL;
 
-  loaded = load_around(l, to_load, first_id, "", new_ids);
+  loaded = load_around(l, to_load, first_id, NULL, new_ids);
 
   if (loaded > 0) {
     char split;
@@ -412,7 +412,7 @@ static list *build_list(char *root, char *leaf_root, char kind) {
 
   l->kind = kind;
 
-  n_posts = load_around(l, N_STATUS_TO_LOAD, "", "", l->ids);
+  n_posts = load_around(l, N_STATUS_TO_LOAD, NULL, NULL, l->ids);
 
   memset(l->displayed_posts, 0, n_posts * sizeof(item *));
   memset(l->post_height, -1, n_posts);
