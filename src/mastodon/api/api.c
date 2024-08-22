@@ -39,9 +39,16 @@ int api_search(char to_load, char *search, char search_type, char *load_before, 
 
 int api_get_posts(char *endpoint, char to_load, char *load_before, char *load_after, char *filter, char *sel, char **post_ids) {
   int n_status = 0;
-  char *w = endpoint_buf;
 
-  w += snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s?limit=%d&max_id=%s&min_id=%s", endpoint, to_load, load_after, load_before);
+  snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s?limit=%d", endpoint, to_load);
+  if (load_before) {
+    strcat(endpoint_buf, "&min_id=");
+    strcat(endpoint_buf, load_before);
+  }
+  if (load_after) {
+    strcat(endpoint_buf, "&max_id=");
+    strcat(endpoint_buf, load_after);
+  }
   if (filter) {
     strcat(endpoint_buf, filter);
   }
@@ -78,7 +85,7 @@ int api_get_status_and_replies(char to_load, char *root_id, char *root_leaf_id, 
    * array, root_id as array, descendants array, and then we return the 
    * #to_load results (at max) before or after the boundary.
    */
-  if (load_after[0] == '\0' && load_before[0] == '\0') {
+  if (load_after == NULL && load_before == NULL) {
     n_before = to_load/3;
     n_after  = (2 * to_load) / 3;
     if (n_before + n_after == to_load) {
@@ -89,7 +96,7 @@ int api_get_status_and_replies(char to_load, char *root_id, char *root_leaf_id, 
     snprintf(selector, SELECTOR_SIZE, "(.ancestors|.[-%d:]|.[].id),\"%s\","
                                       "(.descendants|.[0:%d]|.[].id)",
                                       n_before, root_id, n_after);
-  } else if (load_after[0] != '\0'){
+  } else if (load_after != NULL){
     /* flatten ancestors[],root,descendants[] :
      * [((.ancestors|map(.id)),["root_leaf_id"],(.descendants|map(.id)))|.[]]
      * get strings: |.[]
@@ -122,7 +129,7 @@ int api_get_status_and_replies(char to_load, char *root_id, char *root_leaf_id, 
                                         root_id,
                                         load_after,
                                         n_after);
-  } else if (load_before[0] != '\0'){
+  } else if (load_before != NULL){
     /* flatten ancestors[],root,descendants[] :
      * [((.ancestors|map(.id)),["root_leaf_id"],(.descendants|map(.id)))|.[]]
      * get strings: |.[]
