@@ -19,6 +19,7 @@ endif
 PROGRAM=stp
 SOURCES := stp_main.c stp_list.c stp_save.c stp_send_file.c stp_delete.c \
 	../lib/malloc0.c \
+	../lib/realloc_safe.c \
 	../lib/serial/simple_serial.c \
 	../lib/serial/simple_serial_configure.c \
 	../lib/get_buf_size.c \

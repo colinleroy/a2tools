@@ -31,7 +31,8 @@ imgview_SOURCES := \
 	../lib/hgr.c \
 	../lib/hgr_addrs.c \
 	../lib/scrollwindow.c \
-	../lib/malloc0.c
+	../lib/malloc0.c \
+	../lib/realloc_safe.c \
 
 imgview_CC65SOURCES := \
 	../lib/dputc.s \
