@@ -119,7 +119,7 @@ charset_again:
   enable_video = get_bool('y', 'n');
 
   cputs("\r\nVideo size (Small - more FPS / Large - less FPS)? (s/l)\r\n");
-  video_size = get_bool('l', 's');
+  video_size = get_bool('s' /* HGR_SCALE_HALF */, 'l' /* HGR_SCALE_FULL */);
 
   cputs("\r\nEnable subtitles? (y/n)\r\n");
   enable_subtitles = get_bool('y', 'n');

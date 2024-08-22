@@ -374,7 +374,7 @@ stop_down:
     #endif
 #endif
     } else {
-      if (max_insert == size) {
+      if (max_insert == size - 1) {
         /* Full buffer */
         goto err_beep;
       }

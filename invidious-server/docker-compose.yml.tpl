@@ -8,7 +8,7 @@ services:
     volumes:
       - ./config/trusted_session:/config/trusted_session
     ports:
-      - "127.0.0.1:3000:3000"
+      - "3000:3000"
     environment:
       # Please read the following file for a comprehensive list of all available
       # configuration options and their associated syntax:

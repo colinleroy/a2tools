@@ -516,17 +516,17 @@ int main(void) {
 #ifdef __APPLE2ENH__
   videomode(VIDEOMODE_80COL);
 #endif
-#ifdef __APPLE2__
-  init_hgr(1);
-  hgr_mixon();
-#endif
 #ifdef __APPLE2ENH__
   backup_restore_logo("w");
 #endif
   screensize(&scrw, &scrh);
-  set_scrollwindow(20, scrh);
   
   surl_ping();
+
+  init_hgr(1);
+  hgr_mixon();
+  set_scrollwindow(20, scrh);
+
   load_config();
 
   url = do_setup();
