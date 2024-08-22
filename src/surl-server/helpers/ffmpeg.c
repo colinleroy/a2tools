@@ -233,8 +233,8 @@ static int init_video_filters(char subtitles, char size)
       FPS = 24;
     }
 
-    printf("Original video %dx%d (%.2f), %.2ffps, doing %d fps\n", video_dec_ctx->width, video_dec_ctx->height, aspect_ratio,
-           fps, FPS);
+    printf("Original video %dx%d (%.2f), %.2ffps, doing %d fps with size %d, %ssubs\n", video_dec_ctx->width, video_dec_ctx->height, aspect_ratio,
+           fps, FPS, size, subtitles?"":"no ");
 
     /* Get final resolution. We don't want too much "square pixels". */
     for (pic_width = HGR_WIDTH - 4; pic_width > HGR_WIDTH/4; pic_width--) {
@@ -261,7 +261,7 @@ static int init_video_filters(char subtitles, char size)
               FPS,
               pic_width, pic_height,
               HGR_WIDTH, HGR_HEIGHT,
-              subtitles && size ? 2 : -1);
+              subtitles ? 2 : -1);
 
     video_filter_graph = avfilter_graph_alloc();
     if (!outputs || !inputs || !video_filter_graph) {
@@ -581,13 +581,15 @@ int ffmpeg_video_decode_init(decode_data *data, int *video_len) {
         goto end;
     }
 
-    if ((ret = init_video_filters(data->enable_subtitles, data->video_size)) < 0) {
-        goto end;
-    }
-
     if (data->enable_subtitles) {
       pthread_mutex_init(&data->sub_mutex, NULL);
       pthread_create(&data->sub_thread, NULL, *ffmpeg_subtitles_decode_thread, (void *)data);
+      printf("Waiting for subtitle thread.\n");
+      sem_wait(&data->sub_thread_ready);
+    }
+
+    if ((ret = init_video_filters(data->has_subtitles, data->video_size)) < 0) {
+        goto end;
     }
 
     printf("Duration %lus\n", video_fmt_ctx->duration/1000000);
