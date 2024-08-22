@@ -61,7 +61,7 @@ wozamp_GCC_SOURCES = \
 	../lib/strtrim.c \
 	../lib/extended_conio.c \
 	../lib/clrzone.c \
-	../lib/serial/simple_serial_io.c
+	../lib/serial/simple_serial_io.c 
 
 #AVOID_ROM_CALLS Needed for scrolldown in 40cols mode
 wozamp_CLCFLAGS = -t $(CC65_TARGET) -DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER \

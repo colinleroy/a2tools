@@ -449,9 +449,11 @@ int main(void) {
   screensize(&scrw, &scrh);
   surl_ping();
 
+#ifdef __APPLE2__
   init_hgr(1);
   hgr_mixon();
   set_scrollwindow(20, scrh);
+#endif
 
   load_config();
 

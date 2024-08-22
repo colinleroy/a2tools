@@ -728,6 +728,7 @@ int surl_stream_video(char *url) {
 
   memset(th_data, 0, sizeof(decode_data));
   th_data->url = url;
+  th_data->video_size = HGR_SCALE_HALF;
   pthread_mutex_init(&th_data->mutex, NULL);
 
   printf("Starting video decode thread\n");
