@@ -112,10 +112,12 @@ charset_again:
   enable_subtitles = get_bool('y', 'n');
 
   if (enable_subtitles) {
-    cputs("\r\nPreferred subtitles language code (two lowercase letters)? ");
+    cputs("\r\nPreferred subtitles language code (two letters)? ");
     dget_text(sub_language, 3, NULL, 0);
     if (sub_language[0] == '\0')
       strcpy(sub_language, "en");
+    sub_language[0] = tolower(sub_language[0]);
+    sub_language[1] = tolower(sub_language[1]);
   }
   save_config();
 }
@@ -126,8 +128,8 @@ void load_config(void) {
   FILE *fp;
 
   translit_charset = US_CHARSET;
-  video_size = 0;
-  enable_subtitles = 1;
+  video_size = HGR_SCALE_HALF;
+  enable_subtitles = SUBTITLES_AUTO;
   strcpy(sub_language, "en");
 
   cputs("Loading config...\r\n");

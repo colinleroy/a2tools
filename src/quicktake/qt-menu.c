@@ -372,7 +372,9 @@ static uint8 setup(int argc, char *argv[]) {
 #endif
   register_start_device();
 
+#ifdef __APPLE2ENH__
   videomode(VIDEOMODE_80COL);
+#endif
 
 // Start decoding right away when debugging decoders
 #ifdef DEBUG_HD

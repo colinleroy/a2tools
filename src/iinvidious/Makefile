@@ -12,12 +12,16 @@ iigs_FLAGS :=
 suffix :=
 upload_subdir :=
 CC65_TARGET := apple2
+STREAMER_VER := 6502
+START_ADDR := 0xC3A
 else
 serial_hw := acia
 iigs_suffix :=
 iigs_CFLAGS :=
 CC65_TARGET = apple2enh
 trgt = apple2c0
+STREAMER_VER := 65c02
+START_ADDR := 0x1F3A
 endif
 endif
 
@@ -29,7 +33,7 @@ GCCCFLAGS = -g -O0 -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\" \
 .PHONY: all clean
 
 iinvidious_SOURCES := \
-	../lib/surl/surl_stream_av.s \
+	../lib/surl/surl_stream_av/$(STREAMER_VER).s \
 	main.c \
 	videoplay.c \
 	config.c \
@@ -74,8 +78,8 @@ iinvidious_SOURCES := \
 iinvidious_CLCFLAGS = -t $(CC65_TARGET) -DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER -I ../lib \
 	-DBUF_1K_ADDR=0x800 -DBUF_1K_SIZE=0x3FF \
 	-DBUF_8K_ADDR=0x4000 -DBUF_8K_SIZE=0x1FFF \
-	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-iinvidious.cfg \
-	-vm -m iinvidious.map -DSURL_TO_LANGCARD -O --start-addr 0x1F3A #$C00 + EXEHDR size
+	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-iinvidious-$(STREAMER_VER).cfg \
+	-vm -m iinvidious.map -DSURL_TO_LANGCARD -O --start-addr $(START_ADDR)
 
 all: \
 	splash.h \

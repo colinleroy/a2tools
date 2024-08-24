@@ -25,7 +25,7 @@ static void update_progress(void) {
   if (eta == 255)
     cputs("(More than 30m remaining)");
   else
-    cprintf("(About %ds remaining)   ", eta*8);
+    cprintf("(About %ds remaining)  ", eta*8);
 }
 
 int stream_url(char *url, char *subtitles_url) {
@@ -46,11 +46,15 @@ int stream_url(char *url, char *subtitles_url) {
   /* clear text page 2 */
   memset((char*)0x800, ' '|0x80, 0x400);
 
+#ifdef __APPLE2ENH__
   cputs("Loading...\r\n"
         "Controls: Space:      Play/Pause,             Esc: Quit player,\r\n"
         "          Left/Right: Rewind/Forward,         ");
   cputs("\r\n"
         "          -/=/+:      Volume up/default/down  S:   Toggle speed/quality");
+#else
+  cputs("Loading...");
+#endif
 
 wait_load:
   if (kbhit()) {
@@ -71,12 +75,16 @@ wait_load:
     goto wait_load;
 
   } else if (r == SURL_ANSWER_STREAM_START) {
+#ifdef __APPLE2ENH__
     videomode(VIDEOMODE_40COL);
+#endif
     hgr_mixoff();
     set_scrollwindow(0, scrh);
     clrscr();
     surl_stream_av();
+#ifdef __APPLE2ENH__
     videomode(VIDEOMODE_80COL);
+#endif
     set_scrollwindow(20, scrh);
   } else {
     clrscr();

@@ -72,9 +72,7 @@ again:
 #pragma code-name(pop)
 
 void config(void) {
-#ifdef __APPLE2ENH__
   char c;
-#endif
 
   clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
 
@@ -114,7 +112,7 @@ charset_again:
   cputs("\r\nIs your monitor monochrome? (y/n)\r\n");
   monochrome = get_bool('y', 'n');
 
-#if (defined (__APPLE2ENH__) && !defined (__IIGS__))
+#ifndef IIGS
   cputs("\r\nEnable video playback? (y/n)\r\n");
   enable_video = get_bool('y', 'n');
 
@@ -123,7 +121,6 @@ charset_again:
 
   cputs("\r\nEnable subtitles? (y/n)\r\n");
   enable_subtitles = get_bool('y', 'n');
-
 #else
   enable_video = 0;
   video_size = 0;
@@ -140,13 +137,13 @@ void load_config(void) {
 
   translit_charset = US_CHARSET;
   monochrome = 0;
-  video_size = 0;
-#ifdef __APPLE2ENH__
+  video_size = HGR_SCALE_HALF;
+#ifndef IIGS
   enable_video = 1;
 #else
   enable_video = 0;
 #endif
-  enable_subtitles = 1;
+  enable_subtitles = SUBTITLES_AUTO;
 
   cputs("Loading config...\r\n");
   fp = open_config("r");
@@ -168,15 +165,16 @@ void load_config(void) {
     monochrome = (tmp_buf[0] != '0');
 
     fgets(tmp_buf, 16, fp);
-#ifdef __APPLE2ENH__
+#ifndef IIGS
     enable_video = (tmp_buf[0] != '0');
 #endif
 
     fgets(tmp_buf, 16, fp);
+#ifndef IIGS
     enable_subtitles = (tmp_buf[0] != '0');
-
+#endif
     fgets(tmp_buf, 16, fp);
-#ifdef __APPLE2ENH__
+#ifndef IIGS
     video_size = (tmp_buf[0]-'0');
 #endif
 
