@@ -48,7 +48,6 @@ iinvidious_SOURCES := \
 	../lib/serial/simple_serial.c \
 	../lib/serial/simple_serial_configure.c \
 	../lib/serial/simple_serial_io.s \
-	../lib/serial/serial_read_no_irq.s \
 	../lib/serial/$(serial_hw)/common.s \
 	../lib/serial/$(serial_hw)/control.s \
 	../lib/serial/$(serial_hw)/no_irq.s \
