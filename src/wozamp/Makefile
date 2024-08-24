@@ -12,6 +12,9 @@ iigs_FLAGS :=
 suffix :=
 upload_subdir :=
 CC65_TARGET := apple2
+BUILD_VIDEOPLAY := 1
+STREAMER_VER := 6502
+VIDEOPLAY_START_ADDR := 0x1E00
 else
 serial_hw := acia
 iigs_suffix :=
@@ -19,6 +22,8 @@ iigs_CFLAGS :=
 CC65_TARGET = apple2enh
 trgt = apple2c0
 BUILD_VIDEOPLAY := 1
+STREAMER_VER := 65c02
+VIDEOPLAY_START_ADDR := 0x1F00
 endif
 endif
 
@@ -86,7 +91,7 @@ GCCCFLAGS = -g -O0 -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\" \
 
 ifdef BUILD_VIDEOPLAY
 videoplay_SOURCES := \
-	../lib/surl/surl_stream_av.s \
+	../lib/surl/surl_stream_av/$(STREAMER_VER).s \
 	videoplay.c \
 	../lib/hgr.c \
 	../lib/serial/simple_serial.c \
@@ -102,23 +107,20 @@ videoplay_SOURCES := \
 	../lib/extrazp.s \
 	../lib/malloc0.c \
 
-#start address minimum is at 0xC3A (0xC00+EXEHDR size) to leave text page 2 free at 0x800
 videoplay_CLCFLAGS = -t $(CC65_TARGET) -DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER -I ../lib \
-	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-wozamp-videoplay.cfg \
-	-vm -m videoplay.map -DSURL_TO_LANGCARD -O --start-addr 0x1F00
+	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-wozamp-videoplay-$(STREAMER_VER).cfg \
+	-vm -m videoplay.map -DSURL_TO_LANGCARD -O --start-addr $(VIDEOPLAY_START_ADDR)
 
 all: \
 	splash.h \
 	splash-video.h \
 	wozamp.bin \
-	wozamp.x86_64 \
 	videoplay.bin
 else
 
 all: \
 	splash.h \
 	wozamp.bin \
-	wozamp.x86_64
 
 endif
 

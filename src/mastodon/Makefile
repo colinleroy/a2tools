@@ -109,7 +109,7 @@ else
 
 mastoimg_CC65SOURCES := \
 	$(mastoimg_CC65SOURCES) \
-	../lib/surl/surl_stream_av.s
+	../lib/surl/surl_stream_av/65c02.s
 
 endif
 endif

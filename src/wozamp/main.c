@@ -184,14 +184,12 @@ static void backup_restore_logo(char *op) {
 }
 #endif
 
-#ifdef __APPLE2ENH__
 #ifndef IIGS
 static void print_err(const char *file) {
   init_text();
   clrscr();
   printf("%s : Error %d", file, errno);
 }
-#endif
 #endif
 
 #ifdef __CC65__
@@ -201,9 +199,7 @@ static void print_err(const char *file) {
 extern char tmp_buf[80];
 static void play_url(char *url, char *filename) {
   char r;
-#ifdef __APPLE2ENH__
   char has_video = 0;
-#endif
 
   /* Try to get /cover.jpg as a fallback for media with no embedded art */
   get_cover_file(url);
@@ -249,10 +245,8 @@ read_metadata_again:
     metadata[len] = '\0';
 
     if (!strncmp(metadata, "has_video\n", 10)) {
-      #ifdef __APPLE2ENH__
       char *value = strchr(metadata, '\n')+1;
       has_video = value[0] == '1';
-#endif
     } else {
       show_metadata(metadata);
     }
@@ -274,9 +268,9 @@ read_metadata_again:
     goto read_metadata_again;
 
   } else if (r == SURL_ANSWER_STREAM_START) {
-#if (defined(__APPLE2ENH__) && !defined(IIGS))
+#ifndef IIGS
     if (has_video && !in_list && enable_video) {
-      FILE *video_url_fp = fopen("/RAM/VIDURL","w");
+      FILE *video_url_fp = fopen(URL_PASSER_FILE, "w");
       if (video_url_fp == NULL) {
         print_err("VIDURL");
         cgetc();
@@ -284,7 +278,7 @@ read_metadata_again:
       }
       init_text();
       clrscr();
-      gotoxy(28, 12);
+      gotoxy(center_x, 12);
       dputs("Loading video player...");
       fputc(enable_subtitles, video_url_fp);
       fputc(video_size, video_url_fp);

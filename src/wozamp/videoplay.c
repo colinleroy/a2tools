@@ -16,7 +16,11 @@
 char *translit_charset;
 char monochrome = 1;
 
+#ifdef __APPLE2ENH__
 #pragma code-name(push, "LOWCODE")
+#else
+#pragma code-name(push, "CODE")
+#endif
 
 static void update_progress(void) {
   unsigned char eta = simple_serial_getc();
@@ -34,7 +38,9 @@ int main(void) {
   unsigned char r, subtitles, size;
   FILE *url_fp;
 
+#ifdef __APPLE2ENH__
   videomode(VIDEOMODE_80COL);
+#endif
 
   url_fp = fopen(URL_PASSER_FILE, "r");
   surl_connect_proxy();
@@ -64,7 +70,11 @@ int main(void) {
   if (strchr(url, '/')) {
     *(strrchr(url, '/')) = '\0';
   }
-  url_fp = fopen(URL_PASSER_FILE,"w");
+
+  init_hgr(1);
+  hgr_mixon();
+
+  url_fp = fopen(URL_PASSER_FILE, "w");
 
   if (url_fp) {
     fputc(subtitles, url_fp);
@@ -76,14 +86,12 @@ int main(void) {
   }
   reopen_start_device();
 
-  init_hgr(1);
-  hgr_mixon();
-
   clrscr();
   /* clear text page 2 */
   memset((char*)0x800, ' '|0x80, 0x400);
 
   gotoxy(0, 20);
+#ifdef __APPLE2ENH__
   cputs("Loading...\r\n"
         "Controls: Space:      Play/Pause,             Esc: Quit player\r\n"
         "          Left/Right: Rewind/Forward,         ");
@@ -92,6 +100,9 @@ int main(void) {
   }
   cputs("\r\n"
         "          -/=/+:      Volume up/default/down  S:   Toggle speed/quality");
+#else
+  cputs("Loading...\r\n");
+#endif
 
 wait_load:
   if (kbhit()) {
@@ -112,7 +123,9 @@ wait_load:
     goto wait_load;
 
   } else if (r == SURL_ANSWER_STREAM_START) {
+#ifdef __APPLE2ENH__
     videomode(VIDEOMODE_40COL);
+#endif
     hgr_mixoff();
     clrscr();
     surl_stream_av();

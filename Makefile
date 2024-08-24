@@ -4,6 +4,7 @@ suffix := -iigs
 else
 ifdef OLDII
 suffix := -oldii
+WOZAMP_VIDEOPLAY := 1
 else
 iigs_FLAGS :=
 suffix :=
@@ -207,6 +208,7 @@ imageviewer$(suffix).po: $(imageviewer_disk_PROGS)
 doc-dist:
 	$(MAKE) -C doc -f Makefile dist
 
+ifndef IIGS
 dist: all \
 	stp$(suffix).po \
 	telnet$(suffix).po \
@@ -220,3 +222,17 @@ dist: all \
 	wozamp$(suffix).po \
 	iinvidious$(suffix).po \
 	doc-dist
+else
+dist: all \
+	stp$(suffix).po \
+	telnet$(suffix).po \
+	homectrl$(suffix).po \
+	imageviewer$(suffix).po \
+	mastodon$(suffix).po \
+	mastoperso$(suffix).po \
+	homectrlperso$(suffix).po \
+	stpperso$(suffix).po \
+	quicktake$(suffix).po \
+	wozamp$(suffix).po \
+	doc-dist
+endif

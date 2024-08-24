@@ -1,7 +1,11 @@
 #ifndef __config_h
 #define __config_h
 
+#ifdef __APPLE2ENH__
 #define URL_PASSER_FILE "/RAM/VIDURL"
+#else
+#define URL_PASSER_FILE "VIDURL"
+#endif
 
 extern char *translit_charset;
 extern char monochrome;

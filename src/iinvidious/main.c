@@ -96,10 +96,15 @@ char search_str[80] = "";
 #pragma code-name(push, "LC")
 
 static void load_indicator(char on) {
-  gotoxy(76,3);
+#ifdef __APPLE2ENH__
+  gotoxy(76, 3);
+#else
+  gotoxy(36, 3);
+#endif
   cputs(on ? "...":"   ");
 }
 
+#ifdef __APPLE2ENH__
 static void backup_restore_logo(char *op) {
   FILE *fp = fopen("/RAM/LOGO.HGR", op);
   if (!fp) {
@@ -112,6 +117,7 @@ static void backup_restore_logo(char *op) {
   }
   fclose(fp);
 }
+#endif
 
 static char did_cmd = 0;
 static char cmd_cb(char c) {
@@ -133,9 +139,14 @@ static char cmd_cb(char c) {
 }
 
 static void load_save_search_json(char *mode) {
+#ifdef __APPLE2ENH__
   FILE *fp = fopen("/RAM/IINVSRCH", mode);
+#else
+  FILE *fp = fopen("IINVSRCH", mode);
+#endif
   if (!fp) {
-    bzero((char *)BUF_8K_ADDR, BUF_8K_SIZE);
+    if (mode[0] == 'r')
+      bzero((char *)BUF_8K_ADDR, BUF_8K_SIZE);
     return;
   }
 
@@ -230,7 +241,9 @@ static void load_video(char *id) {
     load_indicator(0);
     stream_url(video_url, captions_url);
 
+#ifdef __APPLE2ENH__
     backup_restore_logo("r");
+#endif
     init_hgr(1);
     hgr_mixon();
     clrscr();
@@ -266,6 +279,20 @@ reload_search:
 display_result:
   clrscr();
   len = atoi(lines[cur_line+VIDEO_LENGTH]);
+#ifdef __APPLE2ENH__
+  if (strlen(lines[cur_line+VIDEO_NAME]) > 78)
+    lines[cur_line+VIDEO_NAME][78] = '\0';
+
+  if (strlen(lines[cur_line+VIDEO_AUTHOR]) > 64)
+    lines[cur_line+VIDEO_AUTHOR][64] = '\0';
+#else
+  if (strlen(lines[cur_line+VIDEO_NAME]) > 38)
+    lines[cur_line+VIDEO_NAME][38] = '\0';
+
+  if (strlen(lines[cur_line+VIDEO_AUTHOR]) > 24)
+    lines[cur_line+VIDEO_AUTHOR][24] = '\0';
+#endif
+
   printf("%s\n"
          "%dm%ds - Uploaded by %s\n"
          "\n"
@@ -277,7 +304,7 @@ display_result:
 
   load_indicator(1);
   bzero((char *)HGR_PAGE, HGR_LEN);
-  surl_start_request(SURL_METHOD_GET, lines[cur_line+3], NULL, 0);
+  surl_start_request(SURL_METHOD_GET, lines[cur_line+VIDEO_THUMB], NULL, 0);
 
   if (surl_response_ok()) {
 
@@ -353,11 +380,15 @@ static void do_ui(void) {
 new_search:
   clrscr();
   gotoxy(0, 3);
+#ifdef __APPLE2ENH__
   cputc('A'|0x80);
   cputs("-C: Configure ; ");
   cputc('A'|0x80);
   cputs("-Q: Quit");
   printf(" - %zuB free", _heapmemavail());
+#else
+  cputs("Ctrl-C: Configure; Ctrl-Q: Quit");
+#endif
   gotoxy(0, 0);
   cputs("Search videos: ");
   did_cmd = 0;
@@ -367,7 +398,9 @@ new_search:
   }
   cur_line = 0;
   search();
+#ifdef __APPLE2ENH__
   backup_restore_logo("r");
+#endif
   goto new_search;
 }
 
@@ -425,7 +458,7 @@ again:
   printf("Free memory: %zuB\n", _heapmemavail());
   cputs("Instance URL: ");
   strcpy((char *)BUF_1K_ADDR, url);
-  dget_text((char *)BUF_1K_ADDR, BUF_1K_SIZE, NULL, 0);
+  dget_text((char *)BUF_1K_ADDR, 80, NULL, 0);
   modified = strcmp((char *)BUF_1K_ADDR, url) != 0;
   free(url);
   url = strdup((char *)BUF_1K_ADDR);
@@ -443,8 +476,10 @@ again:
 }
 
 int main(void) {
+#ifdef __APPLE2ENH__
   videomode(VIDEOMODE_80COL);
   backup_restore_logo("w");
+#endif
 
   screensize(&scrw, &scrh);
   surl_ping();
