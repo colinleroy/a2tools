@@ -1,2 +1,2 @@
 #!/bin/bash
-make clean all && cd ../.. && make homectrlperso.po && mame apple2c0 -window -flop1 homectrlperso.po -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug; cd src/homecontrol-client
+make clean all && cd ../.. && make homectrlperso-65c02.po && mame apple2c0 -window -flop1 homectrlperso-65c02.po -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug; cd src/homecontrol-client
