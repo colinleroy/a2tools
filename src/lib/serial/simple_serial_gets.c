@@ -27,7 +27,9 @@
   #pragma code-name (push, "LOWCODE")
   extern unsigned char open_slot;
 #else
+#include <sys/stat.h>
   extern FILE *ttyfp;
+  extern char *opt_tty_path;
 #endif
 
 #ifdef __CC65__
@@ -38,6 +40,9 @@ char * __fastcall__ simple_serial_gets(char *out, size_t size) {
   static char c;
   static char *cur;
   static char *end;
+#ifndef __CC65__
+  struct stat stbuf;
+#endif
 
   if (size == 0) {
     return NULL;
@@ -50,7 +55,7 @@ char * __fastcall__ simple_serial_gets(char *out, size_t size) {
     while (ser_get(&c) == SER_ERR_NO_DATA);
 #else
     c = simple_serial_getc();
-    if (feof(ttyfp)) {
+    if (feof(ttyfp) && stat(opt_tty_path, &stbuf) != 0) {
         return NULL;
     }
 #endif
