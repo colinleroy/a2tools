@@ -214,8 +214,7 @@ dist: all \
 	stp$(suffix).po \
 	mastodon$(suffix).po \
 	wozamp$(suffix).po \
-	iinvidious$(suffix).po \
-	doc-dist
+	iinvidious$(suffix).po
 
 else
 #65c02 things
@@ -246,6 +245,5 @@ dist: all \
 	homectrlperso$(suffix).po \
 	stpperso$(suffix).po \
 	quicktake$(suffix).po \
-	wozamp$(suffix).po \
-	doc-dist
+	wozamp$(suffix).po
 endif
