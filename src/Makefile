@@ -1,15 +1,18 @@
 
 ifdef IIGS
-SUBDIRS = lib a2trace surl-server \
-	homecontrol-client mastodon telnet surl stp quicktake image-viewer \
-	wozamp
+UPLOAD_SUBDIRS = homecontrol-client mastodon telnet stp quicktake image-viewer wozamp
+
 else
-SUBDIRS = lib a2trace surl-server \
-	homecontrol-client mastodon telnet surl stp quicktake image-viewer \
-	wozamp iinvidious
+ifdef OLDII
+UPLOAD_SUBDIRS = homecontrol-client mastodon stp wozamp iinvidious
+
+else
+UPLOAD_SUBDIRS = homecontrol-client mastodon telnet stp quicktake image-viewer wozamp iinvidious
+
 endif
+endif
+SUBDIRS = a2trace surl-server $(UPLOAD_SUBDIRS)
 INSTALL_SUBDIRS = a2trace surl-server
-UPLOAD_SUBDIRS = homecontrol-client mastodon telnet surl stp quicktake image-viewer wozamp iinvidious
 
 .PHONY: all clean
 
