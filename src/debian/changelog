@@ -1,3 +1,12 @@
+a2tools (2.7.0.1) bionic; urgency=medium
+
+  * Fix proxy package version to match releases
+  * Protocol version bump (16)
+  * Invidious fixes
+  * Port AV streamer to 6502
+
+ -- Colin Leroy-Mira <colin@colino.net>  Fri, 09 Aug 2024 21:28:19 +0200
+
 a2tools (2.5.1.1) bionic; urgency=medium
 
   * Fix Youtube closing connection when decoding is long
