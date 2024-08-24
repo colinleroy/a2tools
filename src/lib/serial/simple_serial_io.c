@@ -283,10 +283,13 @@ again:
     total += w;
 
     if (total < nmemb) {
+      ptr += w;
+      fflush(fp);
       if (errno == EAGAIN) {
-        ptr += w;
-        fflush(fp);
         goto again;
+      } else {
+        printf("Write error %d at %d\n", errno, total);
+        usleep(10000);
       }
     }
     fflush(fp);
