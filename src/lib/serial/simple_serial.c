@@ -209,7 +209,7 @@ int flow_control_enabled;
 extern char *readbuf;
 int bps = B19200;
 
-static char *opt_tty_path = NULL;
+char *opt_tty_path = NULL;
 char *aux_tty_path = NULL;
 
 static int opt_tty_speed = B115200;

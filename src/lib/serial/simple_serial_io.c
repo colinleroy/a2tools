@@ -33,6 +33,7 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <sys/time.h>
+#include <sys/stat.h>
 #include "platform.h"
 
 char *readbuf = NULL;
@@ -84,6 +85,8 @@ void simple_serial_flush_file(FILE *fp) {
     while(simple_serial_getc_with_timeout() != EOF);
 }
 
+extern char *opt_tty_path;
+
 /* Input
  * Very complicated because select() won't mark fd as readable
  * if there was more than one byte available last time and we only
@@ -93,6 +96,7 @@ int __simple_serial_getc_with_tv_timeout(int timeout, int secs, int msecs) {
   fd_set fds;
   struct timeval tv_timeout;
   int n;
+  struct stat stbuf;
 
   if (readbuf == NULL) {
     readbuf = malloc0(16384);
@@ -120,7 +124,7 @@ try_again:
     int flags = fcntl(fileno(ttyfp), F_GETFL);
     int r;
 
-    if (feof(ttyfp)) {
+    if (feof(ttyfp) && stat(opt_tty_path, &stbuf) != 0) {
         return EOF;
     }
 
