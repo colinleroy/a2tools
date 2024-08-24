@@ -37,7 +37,6 @@ SOURCES := stp_main.c stp_list.c stp_save.c stp_send_file.c stp_delete.c \
 
 CL65SOURCES = \
 	../lib/surl/surl_read_with_barrier.s \
-	../lib/serial/serial_read_no_irq.s \
 	../lib/serial/simple_serial_io.s \
 	$(serial_hw_SOURCES) \
 	../lib/dputc.s \

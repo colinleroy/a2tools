@@ -23,7 +23,6 @@ SOURCES := \
 
 CC65SOURCES := \
 	../lib/surl/surl_read_with_barrier.s \
-	../lib/serial/serial_read_no_irq.s \
 	../lib/serial/simple_serial_io.s \
 	$(serial_hw_SOURCES) \
 	../lib/clrzone.s \

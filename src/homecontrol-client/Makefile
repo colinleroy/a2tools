@@ -29,7 +29,6 @@ homectrl_SOURCES := main.c network.c \
 	
 	homectrl_CL65SOURCES = \
 	../lib/surl/surl_read_with_barrier.s \
-	../lib/serial/serial_read_no_irq.s \
 	../lib/serial/simple_serial_io.s \
 	$(serial_hw_SOURCES) \
 	../lib/dputc.s\
@@ -54,7 +53,6 @@ grphview_SOURCES := graph-viewer.c \
 	
 	grphview_CL65SOURCES = \
 	../lib/surl/surl_read_with_barrier.s \
-	../lib/serial/serial_read_no_irq.s \
 	../lib/serial/simple_serial_io.s \
 	$(serial_hw_SOURCES) \
 	../lib/clrzone.s \
