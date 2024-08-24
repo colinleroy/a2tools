@@ -1,4 +1,6 @@
 prefix ?= /usr/local
+etc_prefix ?= /usr/local/etc
+
 PROGRAM=surl-server
 SOURCES := main.c raw-session.c \
 	helpers/char-convert.c \
@@ -22,7 +24,7 @@ hgrconv_SOURCES := hgr-convert.c helpers/hgr-convert.c
 
 CFLAGS= -I ../lib -I helpers $(shell sdl-config --cflags) \
 				-g -O0 -Wall -Wno-char-subscripts -Wno-deprecated-declarations \
-				-Wall -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
+				-Wall -DCONF_FILE_PATH=\"$(etc_prefix)/a2tools/tty.conf\"
 
 .PHONY: all clean
 all: $(PROGRAM) hgr-convert
@@ -53,7 +55,7 @@ clean:
 	rm -f $(PROGRAM) *.o
 
 install:
-	mkdir -p $(DESTDIR)/etc/surl-server
+	mkdir -p $(DESTDIR)/$(etc_prefix)/a2tools
 	mkdir -p $(DESTDIR)/$(prefix)/bin
 	install $(PROGRAM) $(DESTDIR)/$(prefix)/bin/$(PROGRAM)
 	install hgr-convert $(DESTDIR)/$(prefix)/bin/hgr-convert

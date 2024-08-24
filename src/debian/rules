@@ -30,4 +30,4 @@ override_dh_auto_build:
 	./make-debian.sh ${DESTDIR}
 
 override_dh_auto_install:
-	dh_auto_install --destdir=${DESTDIR} -- prefix=/usr
+	dh_auto_install --destdir=${DESTDIR} -- prefix=/usr etc_prefix=/etc
