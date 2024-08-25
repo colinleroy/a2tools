@@ -292,10 +292,10 @@ again:
         usleep(10000);
       }
     }
-    fflush(fp);
 
     flags &= ~O_NONBLOCK;
     fcntl(fileno(fp), F_SETFL, flags);
+    fflush(fp);
 
     if (serial_delay) {
       /* Don't let the kernel buffer bytes */
