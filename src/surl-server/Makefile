@@ -52,7 +52,7 @@ hgr-convert: $(hgrconv_SOURCES)
 		-o $@
 
 clean:
-	rm -f $(PROGRAM) *.o
+	rm -f $(PROGRAM) hgr-convert *.o
 
 install:
 	mkdir -p $(DESTDIR)/$(etc_prefix)/a2tools

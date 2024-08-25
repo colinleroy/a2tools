@@ -121,13 +121,13 @@ all: \
 endif
 
 clean:
-	rm -f *.bin *.o *.map
+	rm -f *.bin *.o *.map splash.h splash-video.h splash.hgr splash-video.hgr
 
 wozamp.hgr:
-	hgr-convert wozamp.png
+	../surl-server/hgr-convert wozamp.png
 
 wozamp-video.hgr:
-	hgr-convert wozamp-video.png
+	../surl-server/hgr-convert wozamp-video.png
 
 splash.h: wozamp.hgr
 	../../bin/make-splash.sh wozamp.png splash.h
