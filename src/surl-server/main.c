@@ -160,6 +160,7 @@ static void do_dump(void) {
   end = ntohs(end);
   snprintf(filename, BUFSIZE, "/tmp/surl-dump-%c-0x%04x-0x%04x.bin", c, start, end);
 
+  printf("DUMP: dumping %u bytes to %s\n", (end-start), filename);
   fp = fopen(filename, "wb");
   if (fp) {
     char *buf = malloc((end-start) * sizeof(char));
@@ -170,6 +171,8 @@ static void do_dump(void) {
     fwrite(buf, 1, (end-start), fp);
     fclose(fp);
     printf("DUMP: wrote %u bytes to %s\n", (end-start), filename);
+  } else {
+    printf("DUMP: error opening file: %s\n", strerror(errno));
   }
   free(filename);
 }
