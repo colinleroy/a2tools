@@ -87,10 +87,10 @@ all: \
 	iinvid.bin
 
 clean:
-	rm -f *.bin *.o *.map
+	rm -f *.bin *.o *.map splash.h splash.hgr
 
 iinvidious.hgr:
-	hgr-convert iinvidious.png
+	../surl-server/hgr-convert iinvidious.png
 
 splash.h: iinvidious.hgr
 	../../bin/make-splash.sh iinvidious.png splash.h

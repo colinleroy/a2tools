@@ -167,7 +167,7 @@ all: \
 	loader.x86_64
 
 splash.hgr:
-	hgr-convert splash.png
+	../surl-server/hgr-convert splash.png
 
 splash.h: splash.hgr
 	../../bin/make-splash.sh splash.png
@@ -200,7 +200,7 @@ loader.x86_64: loader.c
 	gcc -o $@ -I/usr/include/SDL loader.c ../lib/extended_conio.c ../lib/clrzone.c -lSDL_image -lSDL
 
 clean:
-	rm -f *.bin *.x86_64 *.o *.map splash.h
+	rm -f *.bin *.x86_64 *.o *.map splash.h splash.hgr
 
 upload: all
 	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/quicktake/ || \
