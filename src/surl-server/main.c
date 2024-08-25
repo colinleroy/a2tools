@@ -84,6 +84,7 @@ static const char *surl_method_str(unsigned char method) {
     case SURL_METHOD_STREAM_AUDIO: return "STREAM_AUDIO";
     case SURL_METHOD_STREAM_VIDEO: return "STREAM_VIDEO";
     case SURL_METHOD_STREAM_AV:    return "STREAM_AV";
+    case SURL_METHOD_DUMP:         return "DUMP";
     default:                       return "[UNKNOWN]";
   }
 }
@@ -143,6 +144,34 @@ static void do_debug(char *file_line) {
   simple_serial_read(debug_buf, len);
   printf("%s\n", debug_buf);
   fflush(stdout);
+}
+
+static void do_dump(void) {
+  char *filename;
+  FILE *fp;
+  int c;
+  unsigned int start = 0, end = 0;
+  filename = malloc(BUFSIZE);
+
+  c = simple_serial_getc();
+  simple_serial_read((char *)&start, 2);
+  start = ntohs(start);
+  simple_serial_read((char *)&end, 2);
+  end = ntohs(end);
+  snprintf(filename, BUFSIZE, "/tmp/surl-dump-%c-0x%04x-0x%04x.bin", c, start, end);
+
+  fp = fopen(filename, "wb");
+  if (fp) {
+    char *buf = malloc((end-start) * sizeof(char));
+    simple_serial_read(buf, (end-start));
+    for (c = 0; c < start; c++) {
+      fputc(0x00, fp); /* Fill start so addresses are aligned */
+    }
+    fwrite(buf, 1, (end-start), fp);
+    fclose(fp);
+    printf("DUMP: wrote %u bytes to %s\n", (end-start), filename);
+  }
+  free(filename);
 }
 
 #define IO_BARRIER(msg) do {                            \
@@ -260,6 +289,9 @@ new_req:
 
       if (method == SURL_METHOD_DEBUG) {
         do_debug(reqbuf + 1);
+        continue;
+      } else if (method == SURL_METHOD_DUMP) {
+        do_dump();
         continue;
       }
 
@@ -449,6 +481,10 @@ new_req:
           reqbuf[0] = cmd;
           simple_serial_gets(reqbuf + 1, BUFSIZE - 1);
           do_debug(reqbuf + 1);
+          continue;
+        } else if (cmd == SURL_METHOD_DUMP) {
+          simple_serial_getc(); /* Eat \n */
+          do_dump();
           continue;
         }
 

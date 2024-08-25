@@ -74,9 +74,11 @@ iinvidious_SOURCES := \
 #0x4000-0x6000 is ALSO used to store setup code in RT_ONCE in order to shrink
 #              the binary a bit. But DO NOT runtime_once_clean() as usual!
 
-iinvidious_CLCFLAGS = -t $(CC65_TARGET) -DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER -I ../lib \
+iinvidious_CLCFLAGS = -t $(CC65_TARGET) -I ../lib \
 	-DBUF_1K_ADDR=0x800 -DBUF_1K_SIZE=0x3FF \
 	-DBUF_8K_ADDR=0x4000 -DBUF_8K_SIZE=0x1FFF \
+	-DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER \
+	-DSIMPLE_SERIAL_DUMP --asm-define SIMPLE_SERIAL_DUMP \
 	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-iinvidious-$(STREAMER_VER).cfg \
 	-vm -m iinvidious.map -DSURL_TO_LANGCARD -O --start-addr $(START_ADDR)
 

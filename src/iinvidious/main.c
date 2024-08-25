@@ -307,7 +307,10 @@ display_result:
   surl_start_request(SURL_METHOD_GET, lines[cur_line+VIDEO_THUMB], NULL, 0);
 
   if (surl_response_ok()) {
-
+    #ifdef SIMPLE_SERIAL_DUMP
+    simple_serial_dump('B', (char *)0x400, 0xBFFF-0x400);
+    simple_serial_dump('B', (char *)0xD400, 0xDFFF-0xD400);
+    #endif
     simple_serial_putc(SURL_CMD_HGR);
     simple_serial_putc(1); /* monochrome */
     simple_serial_putc(HGR_SCALE_MIXHGR);
@@ -494,6 +497,11 @@ int main(void) {
 
   do_setup();
   printf("started; %zuB free\n", _heapmaxavail());
+
+  #ifdef SIMPLE_SERIAL_DUMP
+  simple_serial_dump('A', (char *)0x400, 0xBFFF-0x400);
+  simple_serial_dump('A', (char *)0xD400, 0xDFFF-0xD400);
+  #endif
 
   do_ui();
 }
