@@ -121,6 +121,7 @@ static void backup_restore_logo(char *op) {
 
 static char did_cmd = 0;
 static char cmd_cb(char c) {
+  char prev_cursor = cursor(0);
   switch(tolower(c)) {
     case 'c':
       set_scrollwindow(0, 19);
@@ -131,11 +132,24 @@ static char cmd_cb(char c) {
       init_hgr(1);
       hgr_mixon();
       did_cmd = 1;
-      return -1;
+      break;
     case 'q':
       exit(0);
   }
+  cursor(prev_cursor);
   return -1;
+}
+
+static void print_menu(void) {
+#ifdef __APPLE2ENH__
+  cputc('A'|0x80);
+  cputs("-C: Configure ; ");
+  cputc('A'|0x80);
+  cputs("-Q: Quit");
+  printf(" - %zuB free", _heapmemavail());
+#else
+  cputs("Ctrl-C: Configure; Ctrl-Q: Quit");
+#endif
 }
 
 static void load_save_search_json(char *mode) {
@@ -273,6 +287,8 @@ reload_search:
     return;
   }
 
+reinit_hgr:
+  clrscr();
   init_hgr(1);
   hgr_mixon();
 
@@ -295,12 +311,12 @@ display_result:
 
   printf("%s\n"
          "%dm%ds - Uploaded by %s\n"
-         "\n"
-         "%d/%d results",
+         "%d/%d results\n",
          lines[cur_line+VIDEO_NAME],
          len/60, len%60,
          lines[cur_line+VIDEO_AUTHOR],
          (cur_line/N_VIDEO_DETAILS)+1, n_lines/N_VIDEO_DETAILS);
+  print_menu();
 
   load_indicator(1);
   bzero((char *)HGR_PAGE, HGR_LEN);
@@ -328,7 +344,19 @@ display_result:
   load_indicator(0);
 
   c = cgetc();
+#ifdef __APPLE2ENH__
+  if (c & 0x80) {
+    cmd_cb(c & ~0x80);
+    goto reinit_hgr;
+  }
+#endif
   switch (c) {
+#ifndef __APPLE2ENH__
+    case 'C' - 'A' + 1:
+    case 'Q' - 'A' + 1:
+      cmd_cb(c + 'A' - 1);
+      goto reinit_hgr;
+#endif
     case CH_ENTER:
       load_video(lines[cur_line+1]);
       /* relaunch search */
@@ -383,15 +411,7 @@ static void do_ui(void) {
 new_search:
   clrscr();
   gotoxy(0, 3);
-#ifdef __APPLE2ENH__
-  cputc('A'|0x80);
-  cputs("-C: Configure ; ");
-  cputc('A'|0x80);
-  cputs("-Q: Quit");
-  printf(" - %zuB free", _heapmemavail());
-#else
-  cputs("Ctrl-C: Configure; Ctrl-Q: Quit");
-#endif
+  print_menu();
   gotoxy(0, 0);
   cputs("Search videos: ");
   did_cmd = 0;
