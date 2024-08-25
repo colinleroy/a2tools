@@ -1,7 +1,7 @@
 #ifndef __surl_protocol_h
 #define __surl_protocol_h
 
-#define SURL_PROTOCOL_VERSION 0x10
+#define SURL_PROTOCOL_VERSION 0x11
 
 #define SURL_METHOD_ABORT           ('d'|0x80) // $E4
 #define SURL_METHOD_RAW             0x05
@@ -16,8 +16,9 @@
 #define SURL_METHOD_STREAM_VIDEO    0x14
 #define SURL_METHOD_STREAM_AUDIO    0x15
 #define SURL_METHOD_STREAM_AV       0x16
+#define SURL_METHOD_DUMP            0x17
 
-#define SURL_IS_METHOD(x) ((x) == SURL_METHOD_ABORT || ((x) >= SURL_METHOD_RAW && (x) <= SURL_METHOD_STREAM_AV))
+#define SURL_IS_METHOD(x) ((x) == SURL_METHOD_ABORT || ((x) >= SURL_METHOD_RAW && (x) <= SURL_METHOD_DUMP))
 
 #define SURL_ANSWER_WAIT            0x20
 #define SURL_ANSWER_SEND_SIZE       0x21

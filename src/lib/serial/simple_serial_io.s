@@ -8,6 +8,11 @@
         .export         _simple_serial_flush
         .export         simple_serial_compute_ptr_end
 
+        .ifdef          SIMPLE_SERIAL_DUMP
+        .export         _simple_serial_dump
+        .import         popa
+        .endif
+
         .import         _simple_serial_getc_with_timeout
         .import         _ser_get, _serial_putc_direct, _strlen
         .import         pushax, popax
@@ -55,8 +60,29 @@ simple_serial_compute_ptr_end:
         sta     ptr3+1
         rts
 
-; void __fastcall__ simple_serial_write(const char *ptr, size_t nmemb) {
+        .ifdef  SIMPLE_SERIAL_DUMP
+_simple_serial_dump:
+        jsr     simple_serial_compute_ptr_end
+        lda     #$17            ; SURL_METHOD_DUMP
+        jsr     _serial_putc_direct
+        lda     #$0A            ; \n
+        jsr     _serial_putc_direct
+        jsr     popa            ; dump ID
+        jsr     _serial_putc_direct
 
+        lda     ptr4+1          ; Dump start
+        jsr     _serial_putc_direct
+        lda     ptr4
+        jsr     _serial_putc_direct
+
+        lda     ptr3+1          ; Dump end
+        jsr     _serial_putc_direct
+        lda     ptr3
+        jsr     _serial_putc_direct
+        jmp     write_again
+        .endif
+
+; void __fastcall__ simple_serial_write(const char *ptr, size_t nmemb) {
 _simple_serial_write:
         jsr     simple_serial_compute_ptr_end
 write_again:
