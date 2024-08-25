@@ -5,7 +5,7 @@ dist: clean
 	libreoffice --headless --convert-to pdf *.odt && \
 	cp *.pdf ../dist
 
-all: dist
+all:
 
 upload: dist
 	scp *.pdf colino.net:www/wordpress/wp-content/ && \
