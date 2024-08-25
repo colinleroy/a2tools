@@ -260,8 +260,8 @@ static void search_results(void) {
   int len;
   char c;
 
+  load_save_search_json("w");
 reload_search:
-  load_save_search_json("r");
   if (lines) {
     free(lines);
     lines = NULL;
@@ -329,6 +329,7 @@ display_result:
     case CH_ENTER:
       load_video(lines[cur_line+1]);
       /* relaunch search */
+      load_save_search_json("r");
       goto reload_search;
     case CH_ESC:
       return;
@@ -365,7 +366,6 @@ static int search(void) {
     if (surl_get_json((char *)BUF_8K_ADDR, BUF_8K_SIZE, SURL_HTMLSTRIP_NONE, translit_charset,
                       VIDEO_DETAILS_JSON_SELECTOR[instance_type]) > 0) {
       load_indicator(0);
-      load_save_search_json("w");
       search_results();
     } else {
       clrscr();
