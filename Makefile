@@ -78,7 +78,7 @@ iinvidious$(suffix).po: $(iinvidious_disk_PROGS)
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
-	cp $@ dist/; \
+	mkdir -p dist && cp $@ dist/; \
 
 iinvidiousperso$(suffix).po: $(iinvidious_disk_PROGS)
 	cp $(CLEANDISK) $@; \
@@ -99,7 +99,7 @@ wozamp$(suffix).po: $(wozamp_disk_PROGS)
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
-	cp $@ dist/; \
+	mkdir -p dist && cp $@ dist/; \
 
 wozampperso$(suffix).po: $(wozamp_disk_PROGS)
 	cp $(CLEANDISK) $@; \
@@ -119,7 +119,7 @@ stp$(suffix).po: $(stp_disk_PROGS)
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
-	cp $@ dist/; \
+	mkdir -p dist && cp $@ dist/; \
 
 stpperso$(suffix).po: $(stp_disk_PROGS)
 	cp $(CLEANDISK) $@; \
@@ -139,7 +139,7 @@ telnet$(suffix).po: $(telnet_disk_PROGS)
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
-	cp $@ dist/; \
+	mkdir -p dist && cp $@ dist/; \
 
 homectrl$(suffix).po: $(homectrl_disk_PROGS)
 	cp $(CLEANDISK) $@; \
@@ -179,7 +179,7 @@ mastodon$(suffix).po: $(mastodon_disk_PROGS)
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
-	cp $@ dist/; \
+	mkdir -p dist && cp $@ dist/; \
 
 quicktake$(suffix).po: $(quicktake_disk_PROGS)
 	cp $(CLEANDISK) $@; \
@@ -192,7 +192,7 @@ quicktake$(suffix).po: $(quicktake_disk_PROGS)
 	for img in $(quicktake_disk_IMGS); do \
 		java -jar bin/ac.jar -p $@ $$(basename $$img) BIN 0x2000 < $$img; \
 	done
-	cp $@ dist/; \
+	mkdir -p dist && cp $@ dist/; \
 
 imageviewer$(suffix).po: $(imageviewer_disk_PROGS)
 	cp $(CLEANDISK) $@; \
@@ -202,7 +202,7 @@ imageviewer$(suffix).po: $(imageviewer_disk_PROGS)
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
-	cp $@ dist/; \
+	mkdir -p dist && cp $@ dist/; \
 
 doc-dist:
 	$(MAKE) -C doc -f Makefile dist
