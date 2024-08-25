@@ -67,6 +67,7 @@ _simple_serial_dump:
         jsr     _serial_putc_direct
         lda     #$0A            ; \n
         jsr     _serial_putc_direct
+
         jsr     popa            ; dump ID
         jsr     _serial_putc_direct
 
@@ -79,7 +80,8 @@ _simple_serial_dump:
         jsr     _serial_putc_direct
         lda     ptr3
         jsr     _serial_putc_direct
-        jmp     write_again
+
+        jmp     write_again     ; Jump to serial_write without recomputing ptr_end
         .endif
 
 ; void __fastcall__ simple_serial_write(const char *ptr, size_t nmemb) {
