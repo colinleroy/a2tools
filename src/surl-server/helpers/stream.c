@@ -1575,7 +1575,16 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, char sub
   simple_serial_putc(video_th_data->has_subtitles);
   pthread_mutex_unlock(&video_th_data->mutex);
   if (simple_serial_getc() != SURL_CLIENT_READY) {
-      goto cleanup_thread;
+    pthread_mutex_lock(&audio_th_data->mutex);
+    audio_th_data->stop = 1;
+    printf("audio stop\n");
+    pthread_mutex_unlock(&audio_th_data->mutex);
+    pthread_mutex_lock(&video_th_data->mutex);
+    video_th_data->stop = 1;
+    printf("video stop\n");
+    pthread_mutex_unlock(&video_th_data->mutex);
+    ret = -1;
+    goto read_and_cleanup_thread;
   }
   pthread_mutex_lock(&audio_th_data->mutex);
   if (audio_th_data->pts < video_th_data->pts) {
@@ -1648,6 +1657,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, char sub
   printf("done (cancelled: %d)\n", cancelled);
   send_end_of_av_stream();
 
+read_and_cleanup_thread:
   do {
     c = simple_serial_getc();
     printf("got %02X\n", c);
