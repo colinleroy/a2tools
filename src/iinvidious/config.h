@@ -8,7 +8,9 @@
 extern char *translit_charset;
 extern char video_size;
 extern char enable_subtitles;
-extern char tmp_buf[80];
+
+#define TMP_BUF_SIZE 128
+extern char tmp_buf[TMP_BUF_SIZE];
 extern char sub_language[3];
 
 void config(void);

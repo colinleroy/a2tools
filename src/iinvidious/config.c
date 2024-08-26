@@ -17,7 +17,7 @@ char *translit_charset;
 char video_size;
 char enable_subtitles;
 char sub_language[3] = "en";
-char tmp_buf[80];
+char tmp_buf[TMP_BUF_SIZE];
 
 static FILE *open_config(char *mode) {
   FILE *fp;
@@ -53,8 +53,6 @@ static int save_config(void) {
   }
   return 0;
 }
-
-extern char tmp_buf[80];
 
 static char get_bool(char one, char zero) {
   char c;

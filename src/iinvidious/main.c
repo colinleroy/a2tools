@@ -458,11 +458,12 @@ static void do_setup_url(char *op) {
   if (op[0] == 'w') {
     fputs(url, fp);
   } else {
-    fgets((char *)BUF_1K_ADDR, BUF_1K_SIZE, fp);
-    if(strchr((char *)BUF_1K_ADDR,'\n')) {
-      *strchr((char *)BUF_1K_ADDR,'\n') = '\0';
+    fgets(tmp_buf, TMP_BUF_SIZE, fp);
+    tmp_buf[TMP_BUF_SIZE-1] = '\0';
+    if(strchr(tmp_buf,'\n')) {
+      *strchr(tmp_buf,'\n') = '\0';
     }
-    url = strdup((char *)BUF_1K_ADDR);
+    url = strdup(tmp_buf);
   }
   fclose(fp);
 }
