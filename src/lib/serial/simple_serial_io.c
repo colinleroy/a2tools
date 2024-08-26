@@ -280,15 +280,27 @@ again:
     fcntl(fileno(fp), F_SETFL, flags);
 
     w = fwrite(ptr, 1, nmemb - total, fp);
-    total += w;
+    if (w == -1) {
+      if (errno == EAGAIN) {
+        fflush(fp);
+        goto again;
+      } else {
+        printf("Wrote nothing, error %d at byte %d\n", errno, total);
+        usleep(10000);
+      }
+    } else {
+      total += w;
+    }
 
     if (total < nmemb) {
-      ptr += w;
+      if (w != -1) {
+        ptr += w;
+      }
       fflush(fp);
       if (errno == EAGAIN) {
         goto again;
       } else {
-        printf("Write error %d at %d\n", errno, total);
+        printf("Short write, error %d at %d\n", errno, total);
         usleep(10000);
       }
     }
