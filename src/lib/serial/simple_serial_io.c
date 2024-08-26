@@ -248,24 +248,9 @@ void __fastcall__ simple_serial_write_fast(const char *ptr, size_t nmemb) {
 void __fastcall__ simple_serial_write_fast_fp(FILE *fp, const char *ptr, size_t nmemb) {
   fd_set fds;
   struct timeval tv_timeout;
-  int n, w, total = 0;
+  int n, w;
 
-  if (nmemb > 256 && nmemb % 256) {
-    size_t full_pages = MIN (MAX_WRITE_LEN, nmemb - (nmemb % 256));
-    while (full_pages > 0) {
-      simple_serial_write_fast_fp(fp, ptr, full_pages);
-      ptr += full_pages;
-      nmemb -= full_pages;
-      fflush(fp);
-      full_pages = MIN (MAX_WRITE_LEN, nmemb - (nmemb % 256));
-    }
-    simple_serial_write_fast_fp(fp, ptr, nmemb);
-    fflush(fp);
-    return;
-  }
-
-  /* Less than a page */
-again:
+select_again:
   FD_ZERO(&fds);
   FD_SET(fileno(fp), &fds);
 
@@ -275,38 +260,28 @@ again:
   n = select(fileno(fp) + 1, NULL, &fds, NULL, &tv_timeout);
 
   if (n > 0 && FD_ISSET(fileno(fp), &fds)) {
-    int flags = fcntl(fileno(fp), F_GETFL);
-    flags |= O_NONBLOCK;
-    fcntl(fileno(fp), F_SETFL, flags);
-
-    w = fwrite(ptr, 1, nmemb - total, fp);
-    if (w == -1) {
-      if (errno == EAGAIN) {
-        fflush(fp);
-        goto again;
+write_again:
+    w = fwrite(ptr, 1, nmemb, fp);
+    if (w != nmemb) {
+      printf("Only wrote %d bytes\n", w);
+      if (w < 0) {
+        if (errno == EAGAIN) {
+          goto write_again;
+        } else {
+          printf("Error writing: %d (%s)\n", errno, strerror(errno));
+          return;
+        }
       } else {
-        printf("Wrote nothing, error %d at byte %d\n", errno, total);
-        usleep(10000);
-      }
-    } else {
-      total += w;
-    }
-
-    if (total < nmemb) {
-      if (w != -1) {
-        ptr += w;
-      }
-      fflush(fp);
-      if (errno == EAGAIN) {
-        goto again;
-      } else {
-        printf("Short write, error %d at %d\n", errno, total);
-        usleep(10000);
+        if (errno == EAGAIN) {
+          nmemb -= w;
+          ptr += w;
+          goto write_again;
+        } else {
+          printf("Error writing: %d (%s)\n", errno, strerror(errno));
+          return;
+        }
       }
     }
-
-    flags &= ~O_NONBLOCK;
-    fcntl(fileno(fp), F_SETFL, flags);
     fflush(fp);
 
     if (serial_delay) {
@@ -314,8 +289,8 @@ again:
       tcdrain(fileno(fp));
     }
   } else {
-    if (errno == EAGAIN && total < nmemb) {
-      goto again;
+    if (errno == EAGAIN) {
+      goto select_again;
     } else {
       printf("write error %d (%d)\n", errno, n);
     }
