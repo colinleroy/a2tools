@@ -201,20 +201,20 @@ out:
   return NULL;
 }
 
-extern FILE *ttyfp;
+extern int ttyfd;
 extern char *aux_tty_path;
-FILE *ttyfp2 = NULL;
+int ttyfd2 = -1;
 
-static void flush_video_bytes(FILE *fp) {
+static void flush_video_bytes(int fd) {
   if (num_video_bytes == 0) {
     return;
   }
-  simple_serial_write_fast_fp(fp, video_bytes_buffer, num_video_bytes);
+  simple_serial_write_fast_fd(fd, video_bytes_buffer, num_video_bytes);
   num_video_bytes = 0;
 }
 
-static void enqueue_video_byte(unsigned char b, FILE *fp) {
-  if (!fp) {
+static void enqueue_video_byte(unsigned char b, int fd) {
+  if (fd < 0) {
     return;
   }
   bytes_sent++;
@@ -224,68 +224,68 @@ static void enqueue_video_byte(unsigned char b, FILE *fp) {
     return;
   }
   /* Otherwise don't buffer */
-  fputc(b, fp);
+  write(fd, &b, 1);
   //fflush(fp);
 }
 
 static int last_sent_base = -1;
 
-static void buffer_video_base(unsigned char b, FILE *fp) {
+static void buffer_video_base(unsigned char b, int fd) {
   DEBUG(" new base %d\n", b);
   DEBUG(" base %d offset %d\n", b, offset);
   if ((b| 0x80) == 0xFF) {
     printf("Base error! Should not!\n");
     exit(1);
   }
-  enqueue_video_byte(b, fp);
+  enqueue_video_byte(b, fd);
   last_sent_base = b;
   base_bytes++;
 }
 
 int last_sent_offset = -1;
-static void buffer_video_offset(unsigned char o, FILE *fp) {
+static void buffer_video_offset(unsigned char o, int fd) {
   DEBUG("offset %d\n", o);
   if ((o| 0x80) == 0xFF) {
     printf("Offset error! Should not!\n");
     exit(1);
   }
-  enqueue_video_byte(o, fp);
+  enqueue_video_byte(o, fd);
 
   last_sent_offset = o;
   offset_bytes++;
 }
-static void buffer_video_num_reps(unsigned char b, FILE *fp) {
+static void buffer_video_num_reps(unsigned char b, int fd) {
   DEBUG("  => %d * ", b);
-  enqueue_video_byte(0x7F, fp);
+  enqueue_video_byte(0x7F, fd);
   if ((b & 0x80) != 0) {
     printf("Reps error! Should not!\n");
     exit(1);
   }
-  enqueue_video_byte(b, fp);
+  enqueue_video_byte(b, fd);
 
   data_bytes += 2;
 }
-static void buffer_video_byte(unsigned char b, FILE *fp) {
+static void buffer_video_byte(unsigned char b, int fd) {
   DEBUG("  => %d\n", b);
   if ((b & 0x80) != 0) {
     printf("Byte error! Should not!\n");
     exit(1);
   }
-  enqueue_video_byte(b|0x80, fp);
+  enqueue_video_byte(b|0x80, fd);
 
   data_bytes++;
 }
 
-static void buffer_video_repetitions(int min_reps, int ident_vals, int last_val, FILE *fp) {
+static void buffer_video_repetitions(int min_reps, int ident_vals, int last_val, int fd) {
   if (last_val == -1) {
     return;
   }
   if (ident_vals > min_reps) {
-    buffer_video_num_reps(ident_vals, fp);
-    buffer_video_byte(last_val, fp);
+    buffer_video_num_reps(ident_vals, fd);
+    buffer_video_byte(last_val, fd);
   } else {
     while (ident_vals > 0) {
-      buffer_video_byte(last_val, fp);
+      buffer_video_byte(last_val, fd);
       ident_vals--;
     }
   }
@@ -412,7 +412,14 @@ static byte_diff **diffs = NULL;
 int av_sample_offset = 0;
 int av_sample_multiplier = 2;
 
-#define send_sample(i) fputc((i) + AUDIO_SAMPLE_OFFSET, ttyfp)
+static inline int send_sample(char i) {
+  char v = i + AUDIO_SAMPLE_OFFSET;
+  if (write(ttyfd, &v, 1) != 1) {
+    printf("Audio: write error %d (%s)\n", errno, strerror(errno));
+    return EOF;
+  }
+  return 0;
+}
 
 static int num_audio_samples = 0;
 static unsigned char audio_samples_buffer[SAMPLE_RATE*2];
@@ -421,25 +428,32 @@ static inline void buffer_audio_sample(unsigned char i) {
   audio_samples_buffer[num_audio_samples++] = (i + av_sample_offset)*av_sample_multiplier;
 }
 
-static inline void flush_audio_samples(void) {
+static inline int flush_audio_samples(void) {
   /* Use the simplest possible way to write audio.
    * fflush will lie and return too early as long as the
    * tty buffer is not full, but we'll count on that to
    * stabilize in a few frames.
    */
-  fwrite((char *)audio_samples_buffer, 1, num_audio_samples, ttyfp);
-  fflush(ttyfp);
+  if (write(ttyfd, (char *)audio_samples_buffer, num_audio_samples) < num_audio_samples) {
+    printf("Audio flush: write error %d (%s)\n", errno, strerror(errno));
+    return EOF;
+  }
+
   num_audio_samples = 0;
+  return 0;
 }
 
-static void send_end_of_audio_stream(void) {
-  send_sample(AUDIO_END_OF_STREAM);
-  fflush(ttyfp);
+static int send_end_of_audio_stream(void) {
+  if (send_sample(AUDIO_END_OF_STREAM) == EOF) {
+    return EOF;
+  }
+
+  return 0;
 }
 
-static void send_end_of_av_stream(void) {
+static int send_end_of_av_stream(void) {
   buffer_audio_sample(AV_END_OF_STREAM);
-  flush_audio_samples();
+  return flush_audio_samples();
 }
 
 static void *ffmpeg_audio_decode_thread(void *arg) {
@@ -617,13 +631,15 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
     } else if (samp_val >= AUDIO_MAX) {
       samp_val = AUDIO_MAX-1;
     }
-    send_sample((uint8_t)samp_val*AUDIO_NUM_LEVELS/AUDIO_MAX);
+    if (send_sample((uint8_t)samp_val*AUDIO_NUM_LEVELS/AUDIO_MAX) == EOF) {
+      goto cleanup_thread;
+    }
     cur++;
 
     /* Kbd input polled directly for no wait at all */
     {
       struct pollfd fds[1];
-      fds[0].fd = fileno(ttyfp);
+      fds[0].fd = ttyfd;
       fds[0].events = POLLIN;
       if (poll(fds, 1, 0) > 0 && (fds[0].revents & POLLIN)) {
         c = simple_serial_getc();
@@ -646,7 +662,9 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
             break;
           case ' ':
             printf("Pause\n");
-            send_sample(AUDIO_MAX_LEVEL/2);
+            if (send_sample(AUDIO_MAX_LEVEL/2) == EOF) {
+              goto cleanup_thread;
+            }
             simple_serial_getc();
             break;
           case APPLE_CH_CURS_LEFT:
@@ -679,8 +697,10 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
   }
 
 done:
-  send_sample(AUDIO_MAX_LEVEL/2);
-  send_end_of_audio_stream();
+  if (send_sample(AUDIO_MAX_LEVEL/2) == EOF
+   || send_end_of_audio_stream() == EOF) {
+     goto cleanup_thread;
+   }
 
   do {
     c = simple_serial_getc();
@@ -828,9 +848,9 @@ send:
 
   /* Sync point - force a switch to base 0 */
   offset = cur_base = 0;
-  buffer_video_offset(0, ttyfp);
-  buffer_video_base(0, ttyfp);
-  flush_video_bytes(ttyfp);
+  buffer_video_offset(0, ttyfd);
+  buffer_video_base(0, ttyfd);
+  flush_video_bytes(ttyfd);
 
   if (i > FPS && (i % (15*FPS)) == 0) {
     duration = i/FPS;
@@ -874,7 +894,7 @@ send:
     if ((offset >= MAX_VIDEO_OFFSET && pixel != last_diff+1)
       || offset > 255) {
       /* must flush ident */
-      buffer_video_repetitions(MIN_VIDEO_REPS, ident_vals, last_val, ttyfp);
+      buffer_video_repetitions(MIN_VIDEO_REPS, ident_vals, last_val, ttyfd);
       ident_vals = 0;
 
       /* we have to update base */
@@ -884,26 +904,26 @@ send:
       if (offset < last_sent_offset && cur_base == last_sent_base + 1) {
         DEBUG("skip sending base (offset %d => %d, base %d => %d)\n",
                 last_sent_offset, offset, last_sent_base, cur_base);
-        buffer_video_offset(offset, ttyfp);
+        buffer_video_offset(offset, ttyfd);
         last_sent_base = cur_base;
       } else {
         DEBUG("must send base (offset %d => %d, base %d => %d)\n",
                 last_sent_offset, offset, last_sent_base, cur_base);
-        buffer_video_offset(offset, ttyfp);
-        buffer_video_base(cur_base, ttyfp);
+        buffer_video_offset(offset, ttyfd);
+        buffer_video_base(cur_base, ttyfd);
       }
     } else if (pixel != last_diff+1) {
       /* must flush ident */
-      buffer_video_repetitions(MIN_VIDEO_REPS, ident_vals, last_val, ttyfp);
+      buffer_video_repetitions(MIN_VIDEO_REPS, ident_vals, last_val, ttyfd);
       ident_vals = 0;
       /* We have to send offset */
-      buffer_video_offset(offset, ttyfp);
+      buffer_video_offset(offset, ttyfd);
     }
     if (last_val == -1 ||
        (ident_vals < MAX_VIDEO_REPS && buf[page][pixel] == last_val && pixel == last_diff+1)) {
       ident_vals++;
     } else {
-      buffer_video_repetitions(MIN_VIDEO_REPS, ident_vals, last_val, ttyfp);
+      buffer_video_repetitions(MIN_VIDEO_REPS, ident_vals, last_val, ttyfd);
       ident_vals = 1;
     }
     last_val = buf[page][pixel];
@@ -916,7 +936,7 @@ send:
     /* Note diff done */
     buf_prev[page][pixel] = buf[page][pixel];
   }
-  buffer_video_repetitions(MIN_VIDEO_REPS, ident_vals, last_val, ttyfp);
+  buffer_video_repetitions(MIN_VIDEO_REPS, ident_vals, last_val, ttyfd);
   ident_vals = 0;
 
   total += num_diffs;
@@ -930,9 +950,9 @@ send:
   goto next_file;
 
 close_last:
-  buffer_video_offset(0, ttyfp);
-  buffer_video_base(NUM_VIDEO_BASES+2, ttyfp); /* Done */
-  flush_video_bytes(ttyfp);
+  buffer_video_offset(0, ttyfd);
+  buffer_video_base(NUM_VIDEO_BASES+2, ttyfd); /* Done */
+  flush_video_bytes(ttyfd);
 
   /* Get rid of possible last ack */
   simple_serial_flush();
@@ -1038,7 +1058,9 @@ static void *audio_push(void *unused) {
       if (cur % (SAMPLE_RATE/FPS) == 0) {
         check_duration("audio", &frame_start);
         gettimeofday(&frame_start, 0);
-        flush_audio_samples();
+        if (flush_audio_samples() == EOF) {
+          goto abort;
+        }
         /* Signal video thread to push a frame */
         sem_post(&av_sem);
       }
@@ -1047,12 +1069,14 @@ static void *audio_push(void *unused) {
       /* During pause, we have to drive client in the duty
        * cycles where it handles the keyboard. */
       buffer_audio_sample(AV_KBD_LOAD_LEVEL);
-      flush_audio_samples();
+      if (flush_audio_samples() == EOF) {
+        goto abort;
+      }
     }
     /* Kbd input polled directly for no wait at all */
     {
       struct pollfd fds[1];
-      fds[0].fd = fileno(ttyfp);
+      fds[0].fd = ttyfd;
       fds[0].events = POLLIN;
       if (poll(fds, 1, 0) > 0 && (fds[0].revents & POLLIN)) {
         c = simple_serial_getc();
@@ -1290,8 +1314,8 @@ next_file:
 
   if (num_video_bytes > 0) {
     /* Sync point */
-    enqueue_video_byte(0x7F, ttyfp2); /* Switch page */
-    flush_video_bytes(ttyfp2);
+    enqueue_video_byte(0x7F, ttyfd2); /* Switch page */
+    flush_video_bytes(ttyfd2);
     DEBUG("send page toggle\n");
     if (push_sub && push_sub_page) {
       push_sub_page--;
@@ -1402,14 +1426,14 @@ send:
 
       DEBUG("send base (offset %d => %d, base %d => %d)\n",
               last_sent_offset, offset, last_sent_base, cur_base);
-      buffer_video_offset(offset, ttyfp2);
-      buffer_video_base(cur_base, ttyfp2);
+      buffer_video_offset(offset, ttyfd2);
+      buffer_video_base(cur_base, ttyfd2);
     } else if (pixel != last_diff+1) {
       DEBUG("send offset %d (base is %d)\n", offset, cur_base);
       /* We have to send offset */
-      buffer_video_offset(offset, ttyfp2);
+      buffer_video_offset(offset, ttyfd2);
     }
-    buffer_video_byte(buf[page][pixel], ttyfp2);
+    buffer_video_byte(buf[page][pixel], ttyfd2);
 
     last_diff = pixel;
 
@@ -1431,11 +1455,11 @@ send:
     for (line = 0, text_base = AV_TEXT_BASE_0; line < 4; line++, text_base++) {
       int c;
       if (sub_line_len[line] > 0) {
-        buffer_video_offset(sub_line_off[line], ttyfp2);
-        buffer_video_base(text_base, ttyfp2);
+        buffer_video_offset(sub_line_off[line], ttyfd2);
+        buffer_video_base(text_base, ttyfd2);
         
         for (c = 0; c < sub_line_len[line]; c++) {
-          buffer_video_byte(sub_line[line][c], ttyfp2);
+          buffer_video_byte(sub_line[line][c], ttyfd2);
         }
       }
     }
@@ -1444,7 +1468,7 @@ send:
   goto next_file;
 
 close_last:
-  flush_video_bytes(ttyfp2);
+  flush_video_bytes(ttyfd2);
   if (i - skipped > 0 && i/FPS > 0) {
     printf("Max: %d, Min: %d, Average: %d\n", max, min, total / (i-skipped));
     printf("Sent %lu bytes for %d non-skipped frames: %lub/s, %lub/frame avg (%lu data, %lu offset, %lu base)\n",
@@ -1481,9 +1505,9 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, char sub
   err = 0;
 
   if (aux_tty_path)
-    ttyfp2 = simple_serial_open_file(aux_tty_path);
+    ttyfd2 = simple_serial_open_file(aux_tty_path);
 
-  if (ttyfp2 == NULL)
+  if (ttyfd2 < 0)
     printf("No TTY for video\n");
 
   memset(video_th_data, 0, sizeof(decode_data));
@@ -1650,10 +1674,6 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, char sub
   pthread_join(audio_push_thread, NULL);
   pthread_join(video_push_thread, NULL);
 
-  fflush(ttyfp);
-  if (ttyfp2)
-    fflush(ttyfp2);
-
   printf("done (cancelled: %d)\n", cancelled);
   send_end_of_av_stream();
 
@@ -1683,8 +1703,8 @@ cleanup_thread:
   if (vhgr_file != -1) {
     close(vhgr_file);
   }
-  if (ttyfp2)
-    fclose(ttyfp2);
+  if (ttyfd2 > 0)
+    close(ttyfd2);
 
   printf("Done\n");
 

@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <ctype.h>
 #include "malloc0.h"
 #include "platform.h"
@@ -203,10 +204,9 @@ int __fastcall__ simple_serial_getc_with_timeout(void) {
 #include <unistd.h>
 #include <sys/ioctl.h>
 
-FILE *ttyfp = NULL;
+int ttyfd = -1;
 int flow_control_enabled;
 
-extern char *readbuf;
 int bps = B19200;
 
 char *opt_tty_path = NULL;
@@ -408,10 +408,11 @@ static void setup_tty(int port, int baudrate, int hw_flow_control) {
   }
 }
 
-FILE *simple_serial_open_file(char *tty_path) {
+int simple_serial_open_file(char *tty_path) {
   struct flock lock;
   static char cannot_open = 0;
-  FILE *fp;
+  int fd;
+
   lock.l_start = 0;
   lock.l_len = 0;
   lock.l_pid = getpid();
@@ -419,32 +420,32 @@ FILE *simple_serial_open_file(char *tty_path) {
   lock.l_whence = SEEK_SET;
 
   /* Open file */
-  fp = fopen(tty_path, "r+b");
+  fd = open(tty_path, O_RDWR);
 
   /* Try to lock file */
-  if (ttyfp != NULL && fcntl(fileno(ttyfp), F_SETLK, &lock) < 0) {
+  if (fd > 0 && fcntl(fd, F_SETLK, &lock) < 0) {
     printf("%s is already opened by another process.\n", tty_path);
-    fclose(fp);
-    fp = NULL;
+    close(fd);
+    fd = -1;
   }
-  if (fp == NULL) {
+  if (fd < 0) {
     if (cannot_open == 0) {
       printf("Can't open %s...\n", tty_path);
     }
     cannot_open = 1;
-    return NULL;
+    return -1;
   }
   cannot_open = 0;
 
-  simple_serial_flush_file(fp);
-  setup_tty(fileno(fp), opt_tty_speed, opt_tty_hw_handshake);
+  simple_serial_flush_fd(fd);
+  setup_tty(fd, opt_tty_speed, opt_tty_hw_handshake);
 
-  return fp;
+  return fd;
 }
 
 static int simple_serial_open_slot(int slot) {
-  ttyfp = simple_serial_open_file(opt_tty_path);
-  return ttyfp != NULL  ? 0 : -1;
+  ttyfd = simple_serial_open_file(opt_tty_path);
+  return ttyfd > 0  ? 0 : -1;
 }
 
 int simple_serial_open(void) {
@@ -460,14 +461,10 @@ int simple_serial_open_printer(void) {
 }
 
 int simple_serial_close(void) {
-  if (ttyfp) {
-    fclose(ttyfp);
+  if (ttyfd) {
+    close(ttyfd);
   }
-  ttyfp = NULL;
-  if (readbuf) {
-    free(readbuf);
-    readbuf = NULL;
-  }
+  ttyfd = -1;
   return 0;
 }
 

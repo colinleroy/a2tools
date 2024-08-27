@@ -36,115 +36,83 @@
 #include <sys/stat.h>
 #include "platform.h"
 
-char *readbuf = NULL;
-
 extern int bps;
 extern unsigned char baudrate;
 extern unsigned char data_baudrate;
 extern unsigned char printer_baudrate;
 extern unsigned char flow_control;
-extern FILE *ttyfp;
-extern int flow_control_enabled;
 
-static int readbuf_idx = 0;
-static int readbuf_avail = 0;
+extern int ttyfd;
+
+extern int flow_control_enabled;
 
 #define DELAY_MS 3
 
 void simple_serial_flush(void) {
-  simple_serial_flush_file(ttyfp);
+  simple_serial_flush_fd(ttyfd);
 }
 
-void simple_serial_flush_file(FILE *fp) {
+void simple_serial_flush_fd(int fd) {
   struct termios tty;
 
   /* Disable flow control if needed */
   if (flow_control_enabled) {
-    if(tcgetattr(fileno(fp), &tty) != 0) {
+    if(tcgetattr(fd, &tty) != 0) {
       printf("tcgetattr error: %s\n", strerror(errno));
     }
 
     tty.c_cflag &= ~CRTSCTS;
-    if (tcsetattr(fileno(fp), TCSANOW, &tty) != 0) {
+    if (tcsetattr(fd, TCSANOW, &tty) != 0) {
       printf("tcgetattr error: %s\n", strerror(errno));
     }
   }
 
   /* flush */
-  tcflush(fileno(fp), TCIOFLUSH);
+  tcflush(fd, TCIOFLUSH);
 
   /* Reenable flow control */
   if (flow_control_enabled) {
     tty.c_cflag |= CRTSCTS;
 
-    if (tcsetattr(fileno(fp), TCSANOW, &tty) != 0) {
+    if (tcsetattr(fd, TCSANOW, &tty) != 0) {
       printf("tcgetattr error: %s\n", strerror(errno));
     }
   }
-  if (fp == ttyfp)
+  if (fd == ttyfd)
     while(simple_serial_getc_with_timeout() != EOF);
 }
 
 extern char *opt_tty_path;
 
-/* Input
- * Very complicated because select() won't mark fd as readable
- * if there was more than one byte available last time and we only
- * read one. So we're doing our own buffer.
- */
 int __simple_serial_getc_with_tv_timeout(int timeout, int secs, int msecs) {
   fd_set fds;
   struct timeval tv_timeout;
-  int n;
-  struct stat stbuf;
-
-  if (readbuf == NULL) {
-    readbuf = malloc0(16384);
-  }
-
-send_from_buf:
-  if (readbuf_avail > 0) {
-    int r = (unsigned char)readbuf[readbuf_idx];
-    readbuf_idx++;
-    readbuf_avail--;
-
-    return r;
-  }
+  int n, r;
+  char c;
 
 try_again:
   FD_ZERO(&fds);
-  FD_SET(fileno(ttyfp), &fds);
+  FD_SET(ttyfd, &fds);
 
   tv_timeout.tv_sec  = secs;
   tv_timeout.tv_usec = msecs*1000;
 
-  n = select(fileno(ttyfp) + 1, &fds, NULL, NULL, &tv_timeout);
+  n = select(ttyfd + 1, &fds, NULL, NULL, &tv_timeout);
 
-  if (n > 0 && FD_ISSET(fileno(ttyfp), &fds)) {
-    int flags = fcntl(fileno(ttyfp), F_GETFL);
-    int r;
-
-    if (feof(ttyfp) && stat(opt_tty_path, &stbuf) != 0) {
-        return EOF;
-    }
+  if (n > 0 && FD_ISSET(ttyfd, &fds)) {
+    int flags = fcntl(ttyfd, F_GETFL);
 
     flags |= O_NONBLOCK;
-    fcntl(fileno(ttyfp), F_SETFL, flags);
+    fcntl(ttyfd, F_SETFL, flags);
 
-    r = fread(readbuf, sizeof(char), 16383, ttyfp);
-    if (r > 0) {
-      readbuf_avail = r;
-    }
-    readbuf_idx = 0;
+    r = read(ttyfd, &c, 1);
 
     flags &= ~O_NONBLOCK;
-    fcntl(fileno(ttyfp), F_SETFL, flags);
-
-    goto send_from_buf;
+    fcntl(ttyfd, F_SETFL, flags);
   } else if (!timeout) {
     goto try_again;
   }
-  return EOF;
+  return r == 1 ? c : EOF;
 }
 
 int simple_serial_getc_with_timeout(void) {
@@ -169,36 +137,35 @@ unsigned char __fastcall__ simple_serial_putc(char c) {
   
 
   FD_ZERO(&fds);
-  FD_SET(fileno(ttyfp), &fds);
+  FD_SET(ttyfd, &fds);
 
   tv_timeout.tv_sec  = 1;
   tv_timeout.tv_usec = 0;
 
-  n = select(fileno(ttyfp) + 1, NULL, &fds, NULL, &tv_timeout);
+  n = select(ttyfd + 1, NULL, &fds, NULL, &tv_timeout);
 
-  if (n > 0 && FD_ISSET(fileno(ttyfp), &fds)) {
-    int flags = fcntl(fileno(ttyfp), F_GETFL);
+  if (n > 0 && FD_ISSET(ttyfd, &fds)) {
+    int flags = fcntl(ttyfd, F_GETFL);
     flags |= O_NONBLOCK;
-    fcntl(fileno(ttyfp), F_SETFL, flags);
+    fcntl(ttyfd, F_SETFL, flags);
 
-    r = fputc(c, ttyfp);
-    fflush(ttyfp);
+    r = write(ttyfd, &c, 1);
 
     flags &= ~O_NONBLOCK;
-    fcntl(fileno(ttyfp), F_SETFL, flags);
+    fcntl(ttyfd, F_SETFL, flags);
 
     if (serial_delay) {
       /* Don't let the kernel buffer bytes */
-      tcdrain(fileno(ttyfp));
+      tcdrain(ttyfd);
     }
 
     /* Insert a delay if needed */
     usleep(serial_delay);
   } else {
-    r = EOF;
+    r = 0;
   }
 
-  return r == EOF ? -1 : 0;
+  return r != 1 ? -1 : 0;
 }
 
 void __fastcall__ simple_serial_puts(const char *buf) {
@@ -242,70 +209,59 @@ void __fastcall__ simple_serial_write(const char *ptr, size_t nmemb) {
 
 #define MAX_WRITE_LEN 2048
 void __fastcall__ simple_serial_write_fast(const char *ptr, size_t nmemb) {
-  simple_serial_write_fast_fp(ttyfp, ptr, nmemb);
+  simple_serial_write_fast_fd(ttyfd, ptr, nmemb);
 }
 
-void __fastcall__ simple_serial_write_fast_fp(FILE *fp, const char *ptr, size_t nmemb) {
+void __fastcall__ simple_serial_write_fast_fd(int fd, const char *ptr, size_t nmemb) {
   fd_set fds;
   struct timeval tv_timeout;
   int n, w, total = 0;
 
-  if (nmemb > 256 && nmemb % 256) {
-    size_t full_pages = MIN (MAX_WRITE_LEN, nmemb - (nmemb % 256));
-    while (full_pages > 0) {
-      simple_serial_write_fast_fp(fp, ptr, full_pages);
-      ptr += full_pages;
-      nmemb -= full_pages;
-      fflush(fp);
-      full_pages = MIN (MAX_WRITE_LEN, nmemb - (nmemb % 256));
-    }
-    simple_serial_write_fast_fp(fp, ptr, nmemb);
-    fflush(fp);
-    return;
-  }
-
-  /* Less than a page */
-again:
+select_again:
   FD_ZERO(&fds);
-  FD_SET(fileno(fp), &fds);
+  FD_SET(fd, &fds);
 
   tv_timeout.tv_sec  = 1;
   tv_timeout.tv_usec = 0;
 
-  n = select(fileno(fp) + 1, NULL, &fds, NULL, &tv_timeout);
+  n = select(fd + 1, NULL, &fds, NULL, &tv_timeout);
 
-  if (n > 0 && FD_ISSET(fileno(fp), &fds)) {
-    int flags = fcntl(fileno(fp), F_GETFL);
+  if (n > 0 && FD_ISSET(fd, &fds)) {
+    int flags = fcntl(fd, F_GETFL);
     flags |= O_NONBLOCK;
-    fcntl(fileno(fp), F_SETFL, flags);
+    fcntl(fd, F_SETFL, flags);
 
-    w = fwrite(ptr, 1, nmemb - total, fp);
-    total += w;
+write_again:
+    w = write(fd, ptr, nmemb - total);
+    if (w == -1) {
+      if (errno == EAGAIN) {
+        goto write_again;
+      } else {
+        flags &= ~O_NONBLOCK;
+        fcntl(fd, F_SETFL, flags);
+        goto select_again;
+      }
+    } else {
+      total += w;
+      ptr += w;
+    }
 
     if (total < nmemb) {
-      ptr += w;
-      fflush(fp);
-      if (errno == EAGAIN) {
-        goto again;
-      } else {
-        printf("Write error %d at %d\n", errno, total);
-        usleep(10000);
-      }
+      goto write_again;
     }
 
     flags &= ~O_NONBLOCK;
-    fcntl(fileno(fp), F_SETFL, flags);
-    fflush(fp);
+    fcntl(fd, F_SETFL, flags);
 
     if (serial_delay) {
       /* Don't let the kernel buffer bytes */
-      tcdrain(fileno(fp));
+      tcdrain(fd);
     }
   } else {
     if (errno == EAGAIN && total < nmemb) {
-      goto again;
+      goto select_again;
     } else {
-      printf("write error %d (%d)\n", errno, n);
+      printf("Write error %d (%s)\n", errno, strerror(errno));
     }
   }
 }
