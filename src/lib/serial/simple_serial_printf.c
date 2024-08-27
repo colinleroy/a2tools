@@ -28,7 +28,7 @@
   #pragma code-name (push, "LOWCODE")
   extern unsigned char open_slot;
 #else
-  extern FILE *ttyfp;
+  extern int ttyfd;
 #endif
 
 char *simple_serial_buf = NULL;

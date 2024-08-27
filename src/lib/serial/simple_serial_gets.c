@@ -28,7 +28,7 @@
   extern unsigned char open_slot;
 #else
 #include <sys/stat.h>
-  extern FILE *ttyfp;
+  extern int ttyfd;
   extern char *opt_tty_path;
 #endif
 
@@ -55,7 +55,7 @@ char * __fastcall__ simple_serial_gets(char *out, size_t size) {
     while (ser_get(&c) == SER_ERR_NO_DATA);
 #else
     c = simple_serial_getc();
-    if (feof(ttyfp) && stat(opt_tty_path, &stbuf) != 0) {
+    if (c == EOF && stat(opt_tty_path, &stbuf) != 0) {
         return NULL;
     }
 #endif

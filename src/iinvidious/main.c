@@ -196,7 +196,9 @@ static void load_video(char *id) {
     goto out;
   }
 
-  /* Prefix result with instance URL in case it has no http[s]://host */
+  /* Prefix result with instance URL in case it has no http[s]://host,
+   * and video URI into the very large buffer, because Youtube's videos
+   * URIs are enormous */
   strcpy((char *)BUF_8K_ADDR, url);
 
   if (surl_get_json((char *)(BUF_8K_ADDR + url_len), BUF_8K_SIZE - url_len,

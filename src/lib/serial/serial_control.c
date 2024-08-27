@@ -29,7 +29,7 @@
 
 extern unsigned char baudrate;
 extern unsigned char flow_control;
-extern FILE *ttyfp;
+extern int ttyfd;
 
 void simple_serial_set_speed(int b) {
   struct termios tty;
@@ -37,23 +37,23 @@ void simple_serial_set_speed(int b) {
 
   /* Set speed before the port is opened */
   setenv("A2_TTY_SPEED", spd_str, 1);
-  if (ttyfp == NULL) {
+  if (ttyfd < 0) {
     return;
   }
 
   #ifdef TCFLSH
-  ioctl(fileno(ttyfp), TCFLSH, TCIOFLUSH);
+  ioctl(ttyfd, TCFLSH, TCIOFLUSH);
   #endif
 
   /* Set speed after the port is opened */
-  if(tcgetattr(fileno(ttyfp), &tty) != 0) {
+  if(tcgetattr(ttyfd, &tty) != 0) {
     printf("tcgetattr error\n");
     exit(1);
   }
 
   cfsetispeed(&tty, b);
   cfsetospeed(&tty, b);
-  tcsetattr(fileno(ttyfp), TCSANOW, &tty);
+  tcsetattr(ttyfd, TCSANOW, &tty);
 }
 
 void simple_serial_dtr_onoff(unsigned char on) {
@@ -61,20 +61,20 @@ void simple_serial_dtr_onoff(unsigned char on) {
 
   if (on) {
     b = TIOCM_DTR;
-    ioctl(fileno(ttyfp), TIOCMBIS, &b);
+    ioctl(ttyfd, TIOCMBIS, &b);
   } else {
     b = TIOCM_DTR;
-    ioctl(fileno(ttyfp), TIOCMBIC, &b);
+    ioctl(ttyfd, TIOCMBIC, &b);
   }
 }
 
 
 void simple_serial_set_parity(unsigned int p) {
   struct termios tty;
-  if (ttyfp == NULL) {
+  if (ttyfd < 0) {
     return;
   }
-  if(tcgetattr(fileno(ttyfp), &tty) != 0) {
+  if(tcgetattr(ttyfd, &tty) != 0) {
     printf("tcgetattr error\n");
     exit(1);
   }
@@ -86,9 +86,9 @@ void simple_serial_set_parity(unsigned int p) {
     tty.c_cflag &= ~PARENB;
   }
 
-  if (tcsetattr(fileno(ttyfp), TCSANOW, &tty) != 0) {
+  if (tcsetattr(ttyfd, TCSANOW, &tty) != 0) {
     printf("tcgetattr error\n");
     exit(1);
   }
-  tcgetattr(fileno(ttyfp), &tty);
+  tcgetattr(ttyfd, &tty);
 }
