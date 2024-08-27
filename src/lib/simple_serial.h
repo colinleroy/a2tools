@@ -57,11 +57,11 @@ void __fastcall__ simple_serial_read(char *ptr, size_t nmemb);
 
 #else
 int simple_serial_open(void);
-FILE *simple_serial_open_file(char *tty_path);
+int simple_serial_open_file(char *tty_path);
 int simple_serial_open_printer(void);
 int simple_serial_close(void);
 void simple_serial_flush(void);
-void simple_serial_flush_file(FILE *fp);
+void simple_serial_flush_fd(int fd);
 #define simple_serial_configure()
 #define simple_serial_setup_no_irq_regs()
 #define simple_serial_set_irq(i)
@@ -69,7 +69,7 @@ unsigned char __fastcall__ simple_serial_putc(char c);
 char *tty_speed_to_str(int speed);
 void __fastcall__ simple_serial_read(char *ptr, size_t nmemb);
 void simple_serial_write_fast(const char *ptr, size_t nmemb);
-void simple_serial_write_fast_fp(FILE *fp, const char *ptr, size_t nmemb);
+void simple_serial_write_fast_fd(int fd, const char *ptr, size_t nmemb);
 
 #endif
 
