@@ -1,7 +1,7 @@
 #ifndef __surl_protocol_h
 #define __surl_protocol_h
 
-#define SURL_PROTOCOL_VERSION 0x11
+#define SURL_PROTOCOL_VERSION 0x12
 
 #define SURL_METHOD_ABORT           ('d'|0x80) // $E4
 #define SURL_METHOD_RAW             0x05
@@ -69,15 +69,20 @@
 #define SURL_HTMLSTRIP_WITH_LINKS 2
 
 enum HeightScale {
-  HGR_SCALE_FULL,
+  HGR_SCALE_FULL     = 0,
   HGR_SCALE_HALF,
   HGR_SCALE_MIXHGR
 };
 
 enum SubtitlesMode {
-  SUBTITLES_NO,
+  SUBTITLES_NO       = 0,
   SUBTITLES_AUTO,
   SUBTITLES_URL
+};
+
+enum VideoPortStatus {
+  SURL_VIDEO_PORT_OK = 0,
+  SURL_VIDEO_PORT_NOK
 };
 
 #endif
