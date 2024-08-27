@@ -39,7 +39,7 @@
 #include "platform.h"
 #include "splash.h"
 #include "malloc0.h"
-#include "videoplay.h"
+#include "surl/surl_stream_av/stream_url.h"
 
 enum InstanceType {
   PEERTUBE,
@@ -255,6 +255,7 @@ static void load_video(char *id) {
     }
     load_indicator(0);
     stream_url(video_url, captions_url);
+    set_scrollwindow(20, scrh);
 
 #ifdef __APPLE2ENH__
     backup_restore_logo("r");
@@ -354,7 +355,7 @@ read_kbd:
     case 'C' - 'A' + 1:
     case 'Q' - 'A' + 1:
       cmd_cb(c + 'A' - 1);
-      goto reinit_hgr;
+      goto read_kbd;
 #endif
     case CH_ENTER:
       load_video(lines[cur_line+1]);
@@ -406,6 +407,10 @@ static int search(void) {
   }
 }
 
+#ifdef __CC65__
+#pragma code-name (pop)
+#endif
+
 static void do_ui(void) {
 new_search:
   clrscr();
@@ -427,7 +432,6 @@ new_search:
 }
 
 #ifdef __CC65__
-#pragma code-name (pop)
 #pragma code-name (push, "RT_ONCE")
 #endif
 

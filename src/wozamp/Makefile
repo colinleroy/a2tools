@@ -14,6 +14,7 @@ upload_subdir :=
 CC65_TARGET := apple2
 BUILD_VIDEOPLAY := 1
 STREAMER_VER := 6502
+STREAM_URL_SEGMENT := "CODE"
 VIDEOPLAY_START_ADDR := 0x1E00
 else
 serial_hw := acia
@@ -23,6 +24,7 @@ CC65_TARGET = apple2enh
 trgt = apple2c0
 BUILD_VIDEOPLAY := 1
 STREAMER_VER := 65c02
+STREAM_URL_SEGMENT := "LOWCODE"
 VIDEOPLAY_START_ADDR := 0x1F00
 endif
 endif
@@ -89,8 +91,11 @@ GCCCFLAGS = -g -O0 -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\" \
 ifdef BUILD_VIDEOPLAY
 videoplay_SOURCES := \
 	../lib/surl/surl_stream_av/$(STREAMER_VER).s \
+	../lib/surl/surl_stream_av/stream_url.c \
 	videoplay.c \
 	../lib/hgr.c \
+	../lib/scrollwindow.c \
+	../lib/FVTABZ.s \
 	../lib/serial/simple_serial.c \
 	../lib/serial/simple_serial_io.s \
 	../lib/serial/$(serial_hw)/common.s \
@@ -103,7 +108,10 @@ videoplay_SOURCES := \
 	../lib/extrazp.s \
 	../lib/malloc0.c \
 
-videoplay_CLCFLAGS = -t $(CC65_TARGET) -DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER -I ../lib \
+videoplay_CLCFLAGS = -t $(CC65_TARGET) \
+	-DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER \
+	-DSTREAM_URL_SEGMENT='$(STREAM_URL_SEGMENT)' \
+	-I ../lib \
 	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-wozamp-videoplay-$(STREAMER_VER).cfg \
 	-vm -m videoplay.map -DSURL_TO_LANGCARD -O --start-addr $(VIDEOPLAY_START_ADDR)
 

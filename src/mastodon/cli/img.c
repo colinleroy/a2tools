@@ -37,6 +37,7 @@
 #include "common.h"
 #include "path_helper.h"
 #include "dgets.h"
+#include "surl/surl_stream_av/stream_url.h"
 
 char *instance_url;
 char *oauth_token;
@@ -85,7 +86,7 @@ static void toggle_legend(char force) {
 #endif
 }
 
-static void set_legend(char *str, unsigned char video, unsigned char idx, unsigned char num_images) {
+static void set_legend(char *str, unsigned char idx, unsigned char num_images) {
   set_hscrollwindow(0, NUMCOLS);
   clrscr();
   cprintf("Image %d/%d: \r\n\r\n", idx + 1, num_images);
@@ -94,87 +95,13 @@ static void set_legend(char *str, unsigned char video, unsigned char idx, unsign
   else
     cputs("No description provided :-(");
 
-  if (!video)
-    show_help();
+  show_help();
 }
 
 #if defined(__APPLE2ENH__) && !defined(IIGS)
 
-static void update_progress(void) {
-  unsigned char eta = simple_serial_getc();
-  hgr_mixon();
-  gotoxy(11, 20); /* strlen("Loading...") + 1 */
-  if (eta == 255)
-    cputs("(More than 30m remaining)");
-  else
-    cprintf("(About %ds remaining)   ", eta*8);
-}
-
-int video_stream(char *url) {
-  char r;
-
-  surl_start_request(SURL_METHOD_STREAM_AV, url, NULL, 0);
-  simple_serial_write(translit_charset, strlen(translit_charset));
-  simple_serial_putc('\n');
-  simple_serial_putc(1); /* Monochrome */
-  simple_serial_putc(SUBTITLES_AUTO); /* Enable subtitles */
-  simple_serial_putc(HGR_SCALE_HALF);
-
-  clrscr();
-  /* clear text page 2 */
-#ifdef __CC65__
-  memset((char*)0x800, ' '|0x80, 0x400);
-  bzero((char*)HGR_PAGE, HGR_LEN);
-#endif
-  gotoxy(0,20);
-  cputs("Loading...\r\n"
-        "Controls: Space:      Play/Pause,             Esc: Quit player,\r\n"
-        "          Left/Right: Rewind/Forward,         ");
-  cputs("\r\n"
-        "          -/=/+:      Volume up/default/down  S:   Toggle speed/quality");
-
-wait_load:
-  if (kbhit()) {
-    if (cgetc() == CH_ESC) {
-      init_text();
-      simple_serial_putc(SURL_METHOD_ABORT);
-      return -1;
-    }
-  }
-
-  r = simple_serial_getc();
-  if (r == SURL_ANSWER_STREAM_LOAD) {
-    update_progress();
-    if (kbhit() && cgetc() == CH_ESC)
-      simple_serial_putc(SURL_METHOD_ABORT);
-    else
-      simple_serial_putc(SURL_CLIENT_READY);
-    goto wait_load;
-
-  } else if (r == SURL_ANSWER_STREAM_START) {
-    videomode(VIDEOMODE_40COL);
-    hgr_mixoff();
-    init_hgr(1);
-    clrscr();
-#ifdef __CC65__
-    /* Backup STARTUP code at __MAIN_START__ */
-    memcpy(gen_buf, (char *)START_ADDR, BUF_SIZE);
-    surl_stream_av();
-    /* Restore STARTUP code */
-    memcpy((char *)START_ADDR, gen_buf, BUF_SIZE);
-#endif
-
-    videomode(VIDEOMODE_80COL);
-    init_text();
-    gotoxy(0, 20);
-    cputs("Stream done. Press Esc to exit or another key to restart.");
-  } else {
-    clrscr();
-    cputs("Playback error");
-    sleep(1);
-  }
-  return 0;
-}
+char enable_subtitles = SUBTITLES_AUTO;
+char video_size = HGR_SCALE_HALF;
 
 #else
 
@@ -186,7 +113,7 @@ static void stream_msg(char *msg) {
   cputs(msg);
 }
 
-static void video_stream(char *url) {
+int stream_url(char *url, char *unused) {
 #ifdef __APPLE2ENH__
   videomode(VIDEOMODE_40COL);
 #endif
@@ -199,10 +126,6 @@ static void video_stream(char *url) {
 
   surl_start_request(SURL_METHOD_STREAM_VIDEO, url, NULL, 0);
 
-  #ifdef __APPLE2__
-  /* Backup STARTUP code at __MAIN_START__ */
-  memcpy(gen_buf, (char *)START_ADDR, BUF_SIZE);
-#endif
   if (surl_wait_for_stream() != 0 || surl_stream_video() != 0) {
 #ifdef __APPLE2ENH__
     videomode(VIDEOMODE_80COL);
@@ -215,11 +138,11 @@ static void video_stream(char *url) {
 #endif
     stream_msg("\r\n\r\nStream done. Press Esc to exit or another key to restart.");
   }
-
-#ifdef __APPLE2__
-  /* Restore STARTUP */
-  memcpy((char *)START_ADDR, gen_buf, BUF_SIZE);
-#endif
+  return 0;
+}
+#else
+int stream_url(char *url, char *unused) {
+  return 0;
 }
 #endif
 
@@ -229,9 +152,6 @@ static void img_display(media *m, char idx, char num_images) {
   size_t len;
 
   if (!strcmp(m->media_type[idx], "video")) {
-#ifdef __CC65__
-    video_stream(m->media_url[idx]);
-#endif
     return;
   }
   surl_start_request(SURL_METHOD_GET, m->media_url[idx], NULL, 0);
@@ -264,15 +184,15 @@ static void img_display(media *m, char idx, char num_images) {
 
         clrzone(0, 22, NUMCOLS-1, 23);
       } else {
-        set_legend("Bad response, not an HGR file.", 0, idx, num_images);
+        set_legend("Bad response, not an HGR file.", idx, num_images);
         toggle_legend(1);
       }
     } else {
-      set_legend("Request error.", 0, idx, num_images);
+      set_legend("Request error.", idx, num_images);
       toggle_legend(1);
     }
   } else {
-    set_legend("Request failed.", 0, idx, num_images);
+    set_legend("Request failed.", idx, num_images);
     toggle_legend(1);
   }
 }
@@ -341,6 +261,7 @@ int main(int argc, char **argv) {
 #ifdef __CC65__
   /* Leave 0x800-0xC00 for iobuf */
   _heapadd ((void *) 0x0C00, 0x13FF);
+  screensize(&scrw, &scrh);
 #endif
 
 #ifdef __APPLE2ENH__
@@ -378,9 +299,20 @@ int main(int argc, char **argv) {
     goto err_out;
   }
 
+  if (m->media_type[0][0] == 'v') {
+#ifdef __CC65__
+    bzero((char *)HGR_PAGE, HGR_LEN);
+    clrscr();
+    stream_url(m->media_url[0], NULL);
+    clrscr();
+    init_text();
+#endif
+    goto done;
+  }
+
   i = 0;
   while (1) {
-    set_legend(m->media_alt_text[i], m->media_type[i][0] == 'v', i, m->n_media);
+    set_legend(m->media_alt_text[i], i, m->n_media);
     img_display(m, i, m->n_media);
 getc_again:
     c = cgetc();
@@ -392,7 +324,7 @@ getc_again:
         goto getc_again;
       case 's':
         save_image();
-        set_legend(m->media_alt_text[i], m->media_type[i][0] == 'v', i, m->n_media);
+        set_legend(m->media_alt_text[i], i, m->n_media);
         goto getc_again;
         break;
       default:

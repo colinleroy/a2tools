@@ -1574,7 +1574,16 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, char sub
 
   printf("AV: Client ready\n");
 
+  /* start point for client to enter the AV streamer */
   simple_serial_putc(SURL_ANSWER_STREAM_START);
+
+  /* Inform client whether we have video */
+  if (ttyfd2 > 0) {
+    simple_serial_putc(SURL_VIDEO_PORT_OK);
+  } else {
+    simple_serial_putc(SURL_VIDEO_PORT_NOK);
+  }
+
   if (simple_serial_getc() != SURL_CLIENT_READY) {
     pthread_mutex_lock(&audio_th_data->mutex);
     audio_th_data->stop = 1;
@@ -1594,10 +1603,12 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, char sub
 
   sleep(1); /* Let ffmpeg have a bit of time to push data so we don't starve */
 
-  /* Send protocol to choose */
+  /* Send subtitles info */
   pthread_mutex_lock(&video_th_data->mutex);
   simple_serial_putc(video_th_data->has_subtitles);
   pthread_mutex_unlock(&video_th_data->mutex);
+
+  /* start point for client to enter the data read loop */
   if (simple_serial_getc() != SURL_CLIENT_READY) {
     pthread_mutex_lock(&audio_th_data->mutex);
     audio_th_data->stop = 1;
