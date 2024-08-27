@@ -128,9 +128,8 @@ static char cmd_cb(char c) {
       clrscr();
       init_text();
       config();
+      clrscr();
       set_scrollwindow(20, scrh);
-      init_hgr(1);
-      hgr_mixon();
       did_cmd = 1;
       break;
     case 'q':
@@ -289,11 +288,6 @@ reload_search:
     return;
   }
 
-reinit_hgr:
-  clrscr();
-  init_hgr(1);
-  hgr_mixon();
-
 display_result:
   clrscr();
   len = atoi(lines[cur_line+VIDEO_LENGTH]);
@@ -321,9 +315,9 @@ display_result:
   print_menu();
 
   load_indicator(1);
-  bzero((char *)HGR_PAGE, HGR_LEN);
+  init_text();
   surl_start_request(SURL_METHOD_GET, lines[cur_line+VIDEO_THUMB], NULL, 0);
-
+  bzero((char *)HGR_PAGE, HGR_LEN);
   if (surl_response_ok()) {
     #ifdef SIMPLE_SERIAL_DUMP
     simple_serial_dump('B', (char *)0x400, 0xBFFF-0x400);
@@ -345,11 +339,14 @@ display_result:
   }
   load_indicator(0);
 
+read_kbd:
+  init_hgr(1);
+  hgr_mixon();
   c = cgetc();
 #ifdef __APPLE2ENH__
   if (c & 0x80) {
     cmd_cb(c & ~0x80);
-    goto reinit_hgr;
+    goto read_kbd;
   }
 #endif
   switch (c) {
@@ -514,6 +511,7 @@ int main(void) {
   init_hgr(1);
   hgr_mixon();
   set_scrollwindow(20, scrh);
+  clrscr();
 #endif
 
   load_config();
