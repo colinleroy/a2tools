@@ -20,6 +20,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <errno.h>
 #include "simple_serial.h"
 
 #ifdef __CC65__
@@ -40,9 +41,6 @@ char * __fastcall__ simple_serial_gets(char *out, size_t size) {
   static char c;
   static char *cur;
   static char *end;
-#ifndef __CC65__
-  struct stat stbuf;
-#endif
 
   if (size == 0) {
     return NULL;
@@ -55,8 +53,8 @@ char * __fastcall__ simple_serial_gets(char *out, size_t size) {
     while (ser_get(&c) == SER_ERR_NO_DATA);
 #else
     c = simple_serial_getc();
-    if (c == EOF && stat(opt_tty_path, &stbuf) != 0) {
-        return NULL;
+    if (c == (char)EOF && errno == EBADF) {
+      return NULL;
     }
 #endif
     
