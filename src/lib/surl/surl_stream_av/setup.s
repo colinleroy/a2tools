@@ -51,7 +51,10 @@ vctrl:  sta     $98FF           ; scratch
         jsr     _serial_putc_direct
 
         jsr     _serial_read_byte_no_irq
-        sta     enable_subs
+        sta     cur_mix
+
+        tay
+        lda     $C052,y
 
         lda     #<(page0_addrs_arr_high)
         sta     page_ptr_high
