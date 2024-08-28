@@ -31,6 +31,7 @@ char enable_subtitles;
 
 int main(void) {
   FILE *url_fp;
+  char *last_sep;
 
   screensize(&scrw, &scrh);
 
@@ -52,6 +53,25 @@ int main(void) {
     *strchr(translit_charset, '\n') = '\0';
   fgets(url, 511, url_fp);
   fclose(url_fp);
+
+  /* Remove filename from URL in advance, so we don't get stuck in
+   * a loop if the player crashes for some reason */
+  if ((last_sep = strrchr(url, '/')) != NULL) {
+    *last_sep = '\0';
+
+    url_fp = fopen(URL_PASSER_FILE, "w");
+
+    if (url_fp) {
+      fputc(enable_subtitles, url_fp);
+      fputc(video_size, url_fp);
+      fputs(translit_charset, url_fp);
+      fputc('\n', url_fp);
+      fputs(url, url_fp);
+      fclose(url_fp);
+    }
+    *last_sep = '/';
+  }
+  reopen_start_device();
 
   stream_url(url, NULL);
 
