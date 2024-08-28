@@ -227,6 +227,7 @@ _SAMPLES_BASE = *
 
 ; Stuff code between duty cycles to optimize size
 .include "video-handler.s"
+.include "cycle-wasters.s"
 
 .align $100
 .assert * = _SAMPLES_BASE + $1800, error
