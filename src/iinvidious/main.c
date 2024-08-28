@@ -105,8 +105,15 @@ static void load_indicator(char on) {
 }
 
 #ifdef __APPLE2ENH__
+#define SEARCH_SAVE_FILE "/RAM/IINVSRCH"
+#define LOGO_SAVE_FILE "/RAM/LOGO.HGR"
+#else
+#define SEARCH_SAVE_FILE "IINVSRCH"
+#endif
+
+#ifdef __APPLE2ENH__
 static void backup_restore_logo(char *op) {
-  FILE *fp = fopen("/RAM/LOGO.HGR", op);
+  FILE *fp = fopen(LOGO_SAVE_FILE, op);
   if (!fp) {
     return;
   }
@@ -133,6 +140,12 @@ static char cmd_cb(char c) {
       did_cmd = 1;
       break;
     case 'q':
+#ifdef SEARCH_SAVE_FILE
+      unlink(SEARCH_SAVE_FILE);
+#endif
+#ifdef LOGO_SAVE_FILE
+      unlink(LOGO_SAVE_FILE);
+#endif
       exit(0);
   }
   cursor(prev_cursor);
@@ -152,11 +165,7 @@ static void print_menu(void) {
 }
 
 static void load_save_search_json(char *mode) {
-#ifdef __APPLE2ENH__
-  FILE *fp = fopen("/RAM/IINVSRCH", mode);
-#else
-  FILE *fp = fopen("IINVSRCH", mode);
-#endif
+  FILE *fp = fopen(SEARCH_SAVE_FILE, mode);
   if (!fp) {
     if (mode[0] == 'r')
       bzero((char *)BUF_8K_ADDR, BUF_8K_SIZE);
