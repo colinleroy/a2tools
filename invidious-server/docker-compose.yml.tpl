@@ -2,7 +2,7 @@ version: "3"
 services:
 
   invidious:
-    image: quay.io/invidious/invidious:master
+    image: quay.io/invidious/invidious:latest
     # image: quay.io/invidious/invidious:latest-arm64 # ARM64/AArch64 devices
     restart: unless-stopped
     volumes:
