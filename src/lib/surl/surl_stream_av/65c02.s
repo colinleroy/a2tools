@@ -137,72 +137,76 @@ _SAMPLES_BASE = *
 .include "duty-cycles/1.s"
 .include "duty-cycles/2.s"
 .include "duty-cycles/3.s"
+.include "duty-cycles/4.s"
 
 .align $100
 .assert * = _SAMPLES_BASE + $100, error
-.include "duty-cycles/4.s"
 .include "duty-cycles/5.s"
 .include "duty-cycles/6.s"
 .include "duty-cycles/7.s"
+.include "duty-cycles/8.s"
+.include "duty-cycles/9.s"
+
+; Stuff data between duty cycles to optimize size
+.include "patch_addresses.s"
 
 .align $100
 .assert * = _SAMPLES_BASE + $200, error
-.include "duty-cycles/8.s"
-.include "duty-cycles/9.s"
 .include "duty-cycles/10.s"
 .include "duty-cycles/11.s"
-
-
-.align $100
-.assert * = _SAMPLES_BASE + $300, error
 .include "duty-cycles/12.s"
 .include "duty-cycles/13.s"
 .include "duty-cycles/14.s"
+
+; Stuff data between duty cycles to optimize size
+.include "calc_text_bases.s"
+
+.align $100
+.assert * = _SAMPLES_BASE + $300, error
 .include "duty-cycles/15.s"
+.include "duty-cycles/17.s"
+.include "duty-cycles/18.s"
+.include "duty-cycles/19.s"
+
+; Stuff data between duty cycles to optimize size
+.include "calc_bases.s"
 
 .align $100
 .assert * = _SAMPLES_BASE + $400, error
 .include "duty-cycles/16.s"
-.include "duty-cycles/17.s"
-.include "duty-cycles/18.s"
-
-.align $100
-.assert * = _SAMPLES_BASE + $500, error
-.include "duty-cycles/19.s"
 .include "duty-cycles/20.s"
 .include "duty-cycles/21.s"
 .include "duty-cycles/22.s"
 
 .align $100
-.assert * = _SAMPLES_BASE + $600, error
+.assert * = _SAMPLES_BASE + $500, error
 .include "duty-cycles/23.s"
 .include "duty-cycles/24.s"
 .include "duty-cycles/25.s"
 .include "duty-cycles/26.s"
+.include "duty-cycles/27.s"
 
 .align $100
-.assert * = _SAMPLES_BASE + $700, error
-.include "duty-cycles/27.s"
+.assert * = _SAMPLES_BASE + $600, error
 .include "duty-cycles/28.s"
 .include "duty-cycles/29.s"
 .include "duty-cycles/30.s"
+.include "duty-cycles/31.s"
+
+; Stuff data between duty cycles to optimize size
+.include "break_out.s"
 
 .align $100
-.assert * = _SAMPLES_BASE + $800, error
-.include "duty-cycles/31.s"
+.assert * = _SAMPLES_BASE + $700, error
 .include "video-handler.s"
+.include "cycle-wasters.s"
 
 ; Check we didn't cross page in the middle of video_sub
-.assert * < _SAMPLES_BASE + $900, error
+.assert * < _SAMPLES_BASE + $800, error
 
 ; The rest of the functions don't need to be aligned.
-.include "break_out.s"
 .include "surl_stream_av.s"
 
-.include "calc_bases.s"
-.include "calc_text_bases.s"
-
-.include "patch_addresses.s"
 .include "patch_serial_registers.s"
 
 .include "video-status-data.inc"

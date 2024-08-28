@@ -1,0 +1,40 @@
+waste_30:
+        WASTE_2
+waste_28:
+        WASTE_2
+waste_26:
+        WASTE_2
+waste_24:
+        WASTE_2
+waste_22:
+        WASTE_2
+waste_20:
+        WASTE_2
+waste_18:
+        WASTE_2
+waste_16:
+        WASTE_2
+waste_14:
+        WASTE_2
+waste_12:
+        rts
+
+waste_31:
+        WASTE_2
+waste_29:
+        WASTE_2
+waste_27:
+        WASTE_2
+waste_25:
+        WASTE_2
+waste_23:
+        WASTE_2
+waste_21:
+        WASTE_2
+waste_19:
+        WASTE_2
+waste_17:
+        WASTE_2
+waste_15:
+        WASTE_3
+        rts
