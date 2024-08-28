@@ -420,7 +420,7 @@ int simple_serial_open_file(char *tty_path) {
   lock.l_whence = SEEK_SET;
 
   /* Open file */
-  fd = open(tty_path, O_RDWR);
+  fd = open(tty_path, O_RDWR|O_SYNC|O_NOCTTY);
 
   /* Try to lock file */
   if (fd > 0 && fcntl(fd, F_SETLK, &lock) < 0) {
