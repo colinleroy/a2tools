@@ -429,11 +429,6 @@ static inline void buffer_audio_sample(unsigned char i) {
 }
 
 static inline int flush_audio_samples(void) {
-  /* Use the simplest possible way to write audio.
-   * fflush will lie and return too early as long as the
-   * tty buffer is not full, but we'll count on that to
-   * stabilize in a few frames.
-   */
   if (write(ttyfd, (char *)audio_samples_buffer, num_audio_samples) < num_audio_samples) {
     printf("Audio flush: write error %d (%s)\n", errno, strerror(errno));
     return EOF;
