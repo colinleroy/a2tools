@@ -38,6 +38,7 @@ typedef struct _decode_data {
   char *album;
   char *title;
   char *track;
+  int title_changed;
 
   /* sync */
   long pts;
