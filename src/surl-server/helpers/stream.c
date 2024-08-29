@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <sys/time.h>
 #include <sys/wait.h>
+#include <sys/param.h>
 #include <arpa/inet.h>
 #include <dirent.h>
 #include <pthread.h>
@@ -325,7 +326,7 @@ static inline void check_duration(const char *str, struct timeval *start) {
 static inline int video_sync_fps(struct timeval *start) {
   struct timeval frame_end, sync_start, sync_end;
   gettimeofday(&sync_start, 0);
-  
+
   gettimeofday(&frame_end, 0);
 
   unsigned long secs      = (frame_end.tv_sec - start->tv_sec)*1000000;
@@ -402,7 +403,8 @@ static byte_diff **diffs = NULL;
 #define AUDIO_SAMPLE_OFFSET      0x40
 #define AUDIO_MAX_LEVEL          32
 #define AUDIO_NUM_LEVELS         (AUDIO_MAX_LEVEL+1)
-#define AUDIO_END_OF_STREAM      AUDIO_NUM_LEVELS
+#define AUDIO_STREAM_TITLE       AUDIO_NUM_LEVELS
+#define AUDIO_END_OF_STREAM      AUDIO_NUM_LEVELS + 1
 
 #define AV_MAX_LEVEL             31
 #define AV_NUM_LEVELS            (AV_MAX_LEVEL+1)
@@ -444,6 +446,31 @@ static int send_end_of_audio_stream(void) {
   }
 
   return 0;
+}
+
+static int audio_numcols = 40;
+static void send_audio_title(char *title, char *translit) {
+  int i, w;
+  size_t l;
+  char *translit_buf;
+  char space = ' ';
+
+  if (title == NULL) {
+    return;
+  }
+
+  translit_buf = do_charset_convert(title, OUTGOING, translit, 0, &l);
+  send_sample(AUDIO_STREAM_TITLE);
+
+  /* Limit to audio_numcols chars */
+  w = write(ttyfd, translit_buf, MIN(audio_numcols, strlen(translit_buf)));
+  if (w < 0)
+    w = 0;
+
+  /* Fill to audio_numcols chars */
+  for (i = 0; i < audio_numcols - w; i++) {
+    write(ttyfd, &space, 1);
+  }
 }
 
 static int send_end_of_av_stream(void) {
@@ -556,6 +583,7 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
     send_metadata("album", th_data->album, translit);
     send_metadata("title", th_data->title, translit);
     send_metadata("track", th_data->track, translit);
+    th_data->title_changed = 0;
     pthread_mutex_unlock(&th_data->mutex);
 
     printf("Client ready\n");
@@ -583,6 +611,9 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
     }
   }
 
+  audio_numcols = simple_serial_getc();
+  printf("Client has %d columns\n", audio_numcols);
+
   sleep(1); /* Let ffmpeg have a bit of time to push data so we don't starve */
   vol_mult = 10;
 
@@ -608,6 +639,13 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
         vol_adj_done = 1;
         auto_vol = vol_mult;
       }
+    }
+    if (th_data->title_changed) {
+      if (th_data->title) {
+        printf("Title change: %s\n", th_data->title);
+        send_audio_title(th_data->title, translit);
+      }
+      th_data->title_changed = 0;
     }
     pthread_mutex_unlock(&th_data->mutex);
 
@@ -1178,11 +1216,11 @@ static void build_sub_display(const char *text) {
     char *orig_sub = strdup(text);
     size_t num_words = strsplit_in_place(orig_sub, ' ', &words);
     int cur_word;
-    
+
     for (l = 0; l < 4; l++) {
       sub_line_len[l] = 0;
     }
-    
+
     l = 0;
     cur_word = 0;
 next_line:
@@ -1452,7 +1490,7 @@ send:
       if (sub_line_len[line] > 0) {
         buffer_video_offset(sub_line_off[line], ttyfd2);
         buffer_video_base(text_base, ttyfd2);
-        
+
         for (c = 0; c < sub_line_len[line]; c++) {
           buffer_video_byte(sub_line[line][c], ttyfd2);
         }

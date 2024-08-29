@@ -56,7 +56,7 @@ int __fastcall__ surl_get_json(char *buffer, size_t max_len, char striphtml, con
 #ifdef __CC65__
 int surl_wait_for_stream(void);
 int __fastcall__ surl_stream_video(void);
-int __fastcall__ surl_stream_audio(char vu_x, char vu_y);
+int __fastcall__ surl_stream_audio(char numcols, char title_y, char vu_x, char vu_y);
 int __fastcall__ surl_stream_av(void);
 void __fastcall__ simple_serial_dump(char id, char *ptr, int nmemb);
 #else

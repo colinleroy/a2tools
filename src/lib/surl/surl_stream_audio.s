@@ -16,12 +16,12 @@
         .export         _surl_stream_audio
         .export         _SAMPLES_BASE
 
-        .importzp       _zp6, _zp8, _zp10, _zp12, tmp1, tmp2, ptr1, ptr2
+        .importzp       _zp6, _zp8, _zp10, _zp12, tmp1, tmp2, ptr1, ptr2, ptr3
 
         .import         _serial_putc_direct
         .import         _simple_serial_set_irq
         .import         _simple_serial_flush
-        .import         popa, VTABZ
+        .import         popa, VTABZ, putchardirect, uppercasemask
 
 .ifdef IIGS
         .import         zilog_status_reg_r, zilog_data_reg_r
@@ -59,6 +59,7 @@ dummy_ptr     = _zp8
 dummy_zp      = tmp1
 vumeter_base  = ptr1
 vumeter_ptr   = ptr2
+title_addr    = ptr3
 
 ; ---------------------------------------------------------
 ;
@@ -249,6 +250,7 @@ dest1:
 
 ; ------------------------------------------------------------------
 setup_pointers:
+        ; Setup vumeter X/Y
         sta     CV
         jsr     VTABZ
         jsr     popa
@@ -274,6 +276,26 @@ setup_pointers:
         adc     #0
         sta     vumeter_base+1
         sta     vumeter_ptr+1
+
+        ; Setup title X/Y
+        jsr     popa
+        sta     CV
+        jsr     VTABZ
+        lda     #0
+        sta     CH
+        clc
+        adc     BASL
+        sta     title_addr
+        lda     BASH
+        adc     #0
+        sta     title_addr+1
+
+        ; Setup numcols
+        jsr     popa
+        sta     numcols+1
+
+        ; Set numcols on proxy
+        jsr     _serial_putc_direct
 
         ; Setup pointer access to SPKR
         lda     #<(SPKR)
@@ -354,6 +376,8 @@ patch_status_register_low:
         sta     s31+1
         sta     s32+1
         sta     ssil+1
+        sta     st+1
+        sta     st2+1
         rts
 ; ------------------------------------------------------------------
 
@@ -416,6 +440,8 @@ patch_data_register_low:
         sta     d31+1
         sta     d32+1
         sta     dsil+1
+        sta     dt+1
+        sta     dt2+1
         rts
 ; ------------------------------------------------------------------
 
@@ -607,6 +633,8 @@ patch_status_register_high:
         sta     s31+2
         sta     s32+2
         sta     ssil+2
+        sta     st+2
+        sta     st2+2
         rts
 
 .align 256
@@ -668,6 +696,8 @@ patch_data_register_high:
         sta     d31+2
         sta     d32+2
         sta     dsil+2
+        sta     dt+2
+        sta     dt2+2
         rts
 
 .align 256
@@ -1399,6 +1429,64 @@ dest32:
 
 .align 256
 .assert * = _SAMPLES_BASE+$2100, error
+update_title:
+        tya                     ; Backup Y
+        pha
+
+        lda     title_addr      ; gotoxy
+        sta     BASL
+        lda     title_addr+1
+        sta     BASH
+        lda     #0
+        sta     CH
+
+numcols:ldx     #0              ; Reset char counter
+
+st:     SER_AVAIL_A_6           ; Fetch a title character
+        beq     st
+dt:     SER_FETCH_DEST_A_4
+        ora     #$80
+        .ifndef __APPLE2ENH__
+        cmp     #$E0            ; Should we uppercase?
+        bcc     :+
+        and     uppercasemask
+:
+        .endif
+
+        pha                     ; Local copy of putchardirect
+        .ifdef  __APPLE2ENH__   ; to save 12 cycles
+        lda     CH
+        bit     RD80VID         ; In 80 column mode?
+        bpl     put             ; No, just go ahead
+        lsr                     ; Div by 2
+        bcs     put             ; Odd cols go in main memory
+        bit     HISCR           ; Assume SET80COL
+put:    tay
+        .else
+        ldy     CH
+        .endif
+        pla
+        sta     (BASL),Y
+        .ifdef  __APPLE2ENH__
+        bit     LOWSCR          ; Doesn't hurt in 40 column mode
+        .endif
+        inc     CH              ; Can't wrap line!
+
+        dex
+        bne     st
+
+        pla                     ; Restore Y
+        tay
+
+st2:    SER_AVAIL_A_6           ; Fetch next cycle
+        beq     st2
+dt2:    SER_FETCH_DEST_A_4
+        sta     desttitle+2
+desttitle:
+        jmp     $0000
+
+.align 256
+.assert * = _SAMPLES_BASE+$2200, error
 break_out:
 .ifdef IIGS
         lda     prevspd

@@ -40,6 +40,9 @@
 #include <libavutil/opt.h>
 
 #include <ffmpeg.h>
+
+#include <curl/curl.h>
+
 #include "char-convert.h"
 #include "../surl_protocol.h"
 
@@ -105,6 +108,30 @@ static void init_base_addrs (void)
   }
 }
 
+/* Very simple libcurl handler for streaming art */
+static size_t curl_art_cb(void *contents, size_t size, size_t nmemb, void *userp)
+{
+  size_t realsize = size * nmemb;
+  decode_data *data = (decode_data *)userp;
+  unsigned char *ptr = realloc(data->img_data, data->img_size + realsize + 1);
+
+  if(!ptr) {
+    /* out of memory! */
+    printf("not enough memory (realloc returned NULL)\n");
+    free(data->img_data);
+    data->img_data = NULL;
+    data->img_size = 0;
+    return 0;
+  }
+
+  data->img_data = ptr;
+  memcpy(&(data->img_data[data->img_size]), contents, realsize);
+  data->img_size += realsize;
+  data->img_data[data->img_size] = 0;
+
+  return realsize;
+}
+
 static int open_video_file(char *filename)
 {
     const AVCodec *dec;
@@ -158,10 +185,13 @@ static int open_video_file(char *filename)
 
     return 0;
 }
+
 static int open_audio_file(char *filename)
 {
     const AVCodec *dec;
     int ret;
+    AVDictionary *audio_options = NULL;
+
     init_base_addrs();
 
     if (!strncasecmp("sftp://", filename, 7)) {
@@ -170,21 +200,26 @@ static int open_audio_file(char *filename)
       memcpy(filename, "ftp", 3);
     }
 
-    if ((ret = avformat_open_input(&audio_fmt_ctx, filename, NULL, NULL)) < 0) {
-        printf("Audio: Cannot open input file\n");
-        return ret;
+    av_dict_set(&audio_options, "icy", "1", 0);
+
+    if ((ret = avformat_open_input(&audio_fmt_ctx, filename, NULL, &audio_options)) < 0) {
+      av_dict_free(&audio_options);
+      printf("Audio: Cannot open input file\n");
+      return ret;
     }
 
+    av_dict_free(&audio_options);
+
     if ((ret = avformat_find_stream_info(audio_fmt_ctx, NULL)) < 0) {
-        printf("Audio: Cannot find stream information\n");
-        return ret;
+      printf("Audio: Cannot find stream information\n");
+      return ret;
     }
 
     /* select the stream */
     ret = av_find_best_stream(audio_fmt_ctx, AVMEDIA_TYPE_AUDIO, -1, -1, &dec, 0);
     if (ret < 0) {
-        printf("Audio: Cannot find a corresponding stream in the input file\n");
-        return ret;
+      printf("Audio: Cannot find a corresponding stream in the input file\n");
+      return ret;
     }
 
     audio_stream_index = ret;
@@ -192,13 +227,13 @@ static int open_audio_file(char *filename)
     /* create decoding context */
     audio_dec_ctx = avcodec_alloc_context3(dec);
     if (!audio_dec_ctx)
-        return AVERROR(ENOMEM);
+      return AVERROR(ENOMEM);
     avcodec_parameters_to_context(audio_dec_ctx, audio_fmt_ctx->streams[audio_stream_index]->codecpar);
 
     /* init the decoder */
     if ((ret = avcodec_open2(audio_dec_ctx, dec, NULL)) < 0) {
-        printf("Audio: Cannot open decoder\n");
-        return ret;
+      printf("Audio: Cannot open decoder\n");
+      return ret;
     }
 
     return 0;
@@ -726,7 +761,7 @@ end:
         //     }
         //   }
         // }
-        // 
+        //
         // /* Filter out single byte changes */
         // if (changes > MAX_BYTES_PER_FRAME/2) {
         //   for (y = 0; y < HGR_HEIGHT; y++) {
@@ -736,7 +771,7 @@ end:
         //       xoff = base + x;
         //       prev_line_xoff = y > 0 ? baseaddr[y-1] + x : 0;
         //       next_line_xoff = y < HGR_HEIGHT-1 ? baseaddr[y+1] + x : 0;
-        // 
+        //
         //       if (*(hgr_buf + xoff) != *(prev_hgr_buf + xoff)
         //        && byte_age[xoff] < 5
         //        && (x == 0            || *(hgr_buf + xoff - 1) == *(prev_hgr_buf + xoff - 1))
@@ -1126,6 +1161,7 @@ int ffmpeg_audio_decode(decode_data *data) {
         data->track = strdup(tag->value);
       }
     }
+
     if (data->artist == NULL) {
       while ((tag = av_dict_get(audio_fmt_ctx->metadata, "", tag, AV_DICT_IGNORE_SUFFIX))) {
         if (!strcmp(tag->key, "album_artist")) {
@@ -1148,8 +1184,88 @@ int ffmpeg_audio_decode(decode_data *data) {
       }
     }
 
+    if (data->artist == NULL || data->img_data == NULL) {
+        char *icy_header = NULL;
+        av_opt_get(audio_fmt_ctx, "icy_metadata_headers", AV_OPT_SEARCH_CHILDREN, (uint8_t**) &icy_header);
+        if (icy_header != NULL) {
+          printf("ICY headers: %s\n", icy_header);
+
+          /* Cast name */
+          if (strcasestr(icy_header, "\nicy-name: ") != NULL) {
+            data->artist = strdup(strcasestr(icy_header, "\nicy-name: ") + strlen("\nicy-name: "));
+            if (strchr(data->artist, '\r'))
+              *(strchr(data->artist, '\r')) = '\0';
+            if (strchr(data->artist, '\n'))
+              *(strchr(data->artist, '\n')) = '\0';
+          }
+
+          /* Cast logo */
+          if (strcasestr(icy_header, "\nicy-logo: ") != NULL) {
+            char *art_url = strdup(strcasestr(icy_header, "\nicy-logo: ") + strlen("\nicy-logo: "));
+            CURL *curl_handle;
+            CURLcode res;
+
+            if (strchr(art_url, '\r'))
+              *(strchr(art_url, '\r')) = '\0';
+            if (strchr(art_url, '\n'))
+              *(strchr(art_url, '\n')) = '\0';
+
+            curl_handle = curl_easy_init();
+            curl_easy_setopt(curl_handle, CURLOPT_URL, art_url);
+            curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, curl_art_cb);
+            curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, data);
+            res = curl_easy_perform(curl_handle);
+
+            if (res != CURLE_OK) {
+              data->img_data = NULL;
+              data->img_size = 0;
+              printf("Failed fetching %s\n", art_url);
+            }
+            curl_easy_cleanup(curl_handle);
+            free(art_url);
+          }
+
+          av_free(icy_header);
+          icy_header = NULL;
+        }
+    }
+
     /* read all packets */
     while (1) {
+        char* icy_metadata = NULL;
+
+        /* Check for cast metadata */
+        av_opt_get(audio_fmt_ctx, "icy_metadata_packet", AV_OPT_SEARCH_CHILDREN, (uint8_t**) &icy_metadata);
+
+        if (icy_metadata != NULL) {
+          char *new_title = icy_metadata;
+
+          /* Cleanup cast title */
+          if (strstr(icy_metadata, "StreamTitle='")) {
+            new_title = strstr(icy_metadata, "StreamTitle='") + strlen("StreamTitle='");
+
+            if (strchr(new_title, '\''))
+              *(strrchr(new_title, '\'')) = '\0';
+
+            while(strchr(new_title, '\\')) {
+              *(strchr(new_title, '\\')) = ' ';
+            }
+          }
+
+          /* Refresh cast title */
+          if (data->title != NULL && strcmp(data->title, new_title)) {
+            free(data->title);
+            data->title = strdup(new_title);
+            data->title_changed = 1;
+          } else  if (data->title == NULL) {
+            data->title = strdup(new_title);
+            data->title_changed = 1;
+          }
+        }
+
+        av_free(icy_metadata);
+        icy_metadata = NULL;
+
         if ((ret = av_read_frame(audio_fmt_ctx, audio_packet)) < 0)
             break;
 

@@ -299,3 +299,5 @@ _SAMPLES_BASE = *
 ; -----------------------------------------------------------------------------
 ; CPU-specific data - The initial value of the 'next' duty cycle address
 next:           .word $6000
+
+av_streamer_end = *

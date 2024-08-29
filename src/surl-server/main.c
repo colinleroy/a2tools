@@ -1297,12 +1297,13 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
     }
     size = simple_serial_getc();
 
-    printf("starting A/V stream\n");
+    printf("starting audio-video streaming\n");
     surl_stream_audio_video(url, translit, monochrome, subtitles, subtitles_url, size);
     free(translit);
     return NULL;
   } else if (method == SURL_METHOD_STREAM_VIDEO) {
     simple_serial_putc(SURL_ANSWER_WAIT);
+    printf("starting video-only streaming\n");
     surl_stream_video(url);
     return NULL;
   } else if (method == SURL_METHOD_STREAM_AUDIO) {
@@ -1316,7 +1317,7 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
     translit = reqbuf;
     monochrome = simple_serial_getc();
     scale = simple_serial_getc();
-    printf("starting video stream\n");
+    printf("starting audio-only streaming\n");
     surl_stream_audio(url, translit, monochrome, scale);
     return NULL;
   }

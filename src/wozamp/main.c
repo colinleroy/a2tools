@@ -51,8 +51,10 @@ unsigned char scrw = 255, scrh = 255;
 
 #ifdef __APPLE2ENH__
 char center_x = 30;
+#define NUMCOLS 80
 #else
 char center_x = 14;
+#define NUMCOLS 40
 #endif
 
 extern char search_buf[80];
@@ -301,7 +303,7 @@ novid:
     simple_serial_putc(SURL_CLIENT_READY);
 #endif
 #ifdef __APPLE2__
-    surl_stream_audio(2, 23);
+    surl_stream_audio(NUMCOLS, 20, 2, 23);
     init_text();
 #endif
     clrzone(0, 20, scrw - 1, 23);
@@ -372,7 +374,7 @@ static void do_nav(char *base_url) {
   char c, l;
   char *url;
   const surl_response *resp;
-
+  char *prev_filename = NULL;
 
   runtime_once_clean();
 
@@ -381,8 +383,10 @@ static void do_nav(char *base_url) {
   stp_print_header(url, URL_SET);
 
   while(1) {
-    char *prev_filename = (cur_line < num_lines ?
-                            strdup(display_lines[cur_line]) : NULL);
+    if (prev_filename) {
+      free(prev_filename);
+    }
+    prev_filename = (cur_line < num_lines ? strdup(display_lines[cur_line]) : NULL);
     switch (stp_get_data(url, &resp)) {
       case KEYBOARD_INPUT:
         goto keyb_input;
@@ -397,9 +401,6 @@ static void do_nav(char *base_url) {
       case UPDATE_LIST:
       default:
         break;
-    }
-    if (prev_filename) {
-      free(prev_filename);
     }
 
     full_update = 1;
@@ -482,10 +483,10 @@ static char *do_setup(void) {
   if (tmpfp == NULL) {
 #ifdef __APPLE2ENH__
     url = stp_get_start_url("Please enter an FTP server or internet stream URL.\r\n",
-                          "http://8bit.fm:8000/live");
+                          "http://relay.radiofreefedi.net/listen/rff/rff.mp3");
 #else
     url = stp_get_start_url("Please enter an FTP or internet stream\r\n",
-                          "http://8bit.fm:8000/live");
+                          "http://relay.radiofreefedi.net/listen/rff/rff.mp3");
 #endif
     url = stp_build_login_url(url);
   } else {
