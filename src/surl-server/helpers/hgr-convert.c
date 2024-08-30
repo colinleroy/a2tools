@@ -362,7 +362,7 @@ static void color_dither (SDL_Surface *src)
 }
 
 
-static void sdl_image_scale (SDL_Surface *src, SDL_Surface *dst, int w, int h, float asprat, int center_y)
+static void sdl_image_scale (SDL_Surface *src, SDL_Surface *dst, int w, int h, float asprat, int resizeto)
 {
   int sw, sh, bx, sx, sy;
   Uint8 red, green, blue;
@@ -403,7 +403,13 @@ static void sdl_image_scale (SDL_Surface *src, SDL_Surface *dst, int w, int h, f
     sw = (int)(srcw / scalefactor / asprat);
     sh = (int)(srch / scalefactor);
     sx = (int)(((float)dst->w - sw) / 2);
-    sy = center_y ? (int)(((float)dst->h - sh) / 2) : 0;
+    sy = (int)(((float)dst->h - sh) / 2);
+    if (resizeto == HGR_SCALE_MIXHGR) {
+      sy -= (192-160)/2;
+      if (sy < 0) {
+        sy = 0;
+      }
+    }
 
     xfactor = scalefactor * asprat;
 
@@ -811,7 +817,7 @@ unsigned char *sdl_to_hgr(const char *filename, char monochrome, char save_previ
     dst_w = 234;
     dst_h = 160;
   }
-  sdl_image_scale(image, resized, dst_w, dst_h, monochrome ? 0.952381 : 1.904762, size != HGR_SCALE_MIXHGR);
+  sdl_image_scale(image, resized, dst_w, dst_h, monochrome ? 0.952381 : 1.904762, size);
   if (monochrome) {
 
     if (bayer_dither)
