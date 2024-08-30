@@ -181,6 +181,7 @@ int main(int argc, char **argv) {
   set_scrollwindow(y, scrh);
 
   surl_ping();
+  surl_user_agent = "Mastodon for Apple II / "VERSION;
 
   runtime_once_clean();
 

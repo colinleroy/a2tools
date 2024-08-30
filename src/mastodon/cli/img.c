@@ -268,6 +268,8 @@ int main(int argc, char **argv) {
   videomode(VIDEOMODE_80COL);
 #endif
 
+  surl_user_agent = "Mastodon for Apple II / "VERSION;
+
   if (argc < 6) {
     cputs("IMG: Missing parameters.\r\n");
     goto err_out;

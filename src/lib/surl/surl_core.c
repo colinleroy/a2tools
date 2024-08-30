@@ -37,6 +37,8 @@
 
 #define BUFSIZE 255
 
+char *surl_user_agent = NULL;
+
 static char proxy_opened = 0;
 char surl_connect_proxy(void) {
   static char r;
@@ -94,6 +96,12 @@ const surl_response * __fastcall__ surl_start_request(const char method, char *u
   while (n_headers > 0) {
     n_headers--;
     simple_serial_puts(headers[n_headers]);
+    simple_serial_putc('\n');
+  }
+
+  if (surl_user_agent[0]) {
+    simple_serial_puts("User-Agent: ");
+    simple_serial_puts(surl_user_agent);
     simple_serial_putc('\n');
   }
 
