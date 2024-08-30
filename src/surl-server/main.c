@@ -786,7 +786,6 @@ static void curl_buffer_free(curl_buffer *curlbuf) {
 static void proxy_set_curl_opts(CURL *curl) {
   CURLcode r = 0;
   r |= curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-  r |= curl_easy_setopt(curl, CURLOPT_USERAGENT, "surl-server/1.0");
   r |= curl_easy_setopt(curl, CURLOPT_COOKIEJAR, "cookies.txt");
   r |= curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "cookies.txt");
   r |= curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);

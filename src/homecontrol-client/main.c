@@ -289,6 +289,7 @@ int main(int argc, char **argv) {
   clrscr();
   screensize(&scrw, &scrh);
   surl_ping();
+  surl_user_agent = "HomeControl "VERSION"/Apple II";
   print_header();
   
   /* init if needed */

@@ -543,6 +543,8 @@ try_again:
 int main(int argc, char **argv) {
   char *params;
 
+  surl_user_agent = "Mastodon for Apple II / "VERSION;
+
   if (argc < 4) {
     dputs("Missing parameters.\n");
   }

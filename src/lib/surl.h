@@ -23,6 +23,8 @@ struct _surl_response {
 
 };
 
+extern char *surl_user_agent;
+
 char __fastcall__ surl_connect_proxy(void);
 void surl_disconnect_proxy(void);
 
