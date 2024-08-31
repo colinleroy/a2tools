@@ -82,7 +82,7 @@ void stp_print_footer(void) {
 
   cputs("S: Server     Q: Quit (");
   cutoa(_heapmemavail());
-  cputs(" free)");
+  cputs("B free)");
 #else
   dputs("U,J,Enter,Esc:nav;  /:search;  C:config");
   //    "A:play dir; N:next; S:server;  Q: quit"
