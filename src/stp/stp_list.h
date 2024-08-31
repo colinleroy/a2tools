@@ -19,6 +19,7 @@
 #define __stp_h__
 
 #include "surl.h"
+#include "dgets.h"
 
 #define BUFSIZE 255
 #define STP_URL_FILE "STPSTARTURL"
@@ -42,6 +43,7 @@ enum HeaderUrlAction {
 
 extern char **lines;
 extern char **nat_lines;
+extern char tmp_buf[BUFSIZE];
 
 extern int num_lines;
 extern int cur_line;
@@ -54,7 +56,7 @@ char *stp_url_up(char *url);
 char stp_list_scroll(signed char shift);
 void stp_list_search(unsigned char new_search);
 char *stp_build_login_url(char *url);
-char *stp_get_start_url(char *header, char *default_url);
+char *stp_get_start_url(char *header, char *default_url, cmd_handler_func cmd_cb);
 void stp_update_list(char full_update);
 int stp_get_data(char *url, const surl_response **resp);
 void stp_print_header(const char *url, enum HeaderUrlAction action);

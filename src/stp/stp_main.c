@@ -144,10 +144,12 @@ int main(void) {
   screensize(&scrw, &scrh);
 
   surl_ping();
+  surl_user_agent = "STP "VERSION"/Apple II";
 
   clrscr();
   gotoxy(0, 14);
-  url = stp_get_start_url("Please enter the server's root URL.\r\n\r\n", "ftp://ftp.apple.asimov.net/");
+  url = stp_get_start_url("Please enter the server's root URL.\r\n\r\n",
+                          "ftp://ftp.apple.asimov.net/", NULL);
   url = stp_build_login_url(url);
   stp_print_header(url, URL_SET);
 

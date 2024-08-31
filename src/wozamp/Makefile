@@ -32,6 +32,7 @@ endif
 wozamp_SOURCES := \
 	main.c \
 	config.c \
+	backup_logo.c \
 	../lib/serial/simple_serial.c \
 	../lib/serial/simple_serial_configure.c \
 	../lib/path_helper.c \
@@ -61,19 +62,64 @@ wozamp_CL65SOURCES = \
 	../lib/runtime_once_clean.s \
 	../lib/extrazp.s \
 	../lib/clrzone.s \
-	../lib/platform_sleep.s
+	../lib/platform_sleep.s \
+	../lib/citoa.s \
+	../lib/cutoa.s \
+	../lib/cntoabuf.s
 
 wozamp_GCC_SOURCES = \
 	../lib/strtrim.c \
 	../lib/extended_conio.c \
 	../lib/clrzone.c \
-	../lib/serial/simple_serial_io.c 
+	../lib/serial/simple_serial_io.c
 
 wozamp_CLCFLAGS = -t $(CC65_TARGET) -DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER \
 	-DSTP_DATA_SIZE=8192 \
 	-I ../lib -I ../stp \
 	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-pwmstreamer.cfg \
 	-vm -m wozamp.map -DSURL_TO_LANGCARD -O
+
+rbrowser_SOURCES := \
+	radio-browser.c \
+	config.c \
+	backup_logo.c \
+	../lib/serial/simple_serial.c \
+	../lib/path_helper.c \
+	../lib/surl/surl_core.c \
+	../lib/surl/surl_get_json.c \
+	../lib/malloc0.c \
+	../lib/dgets.c \
+	../lib/scrollwindow.c \
+	../lib/strsplit.c
+
+rbrowser_CL65SOURCES = \
+	../lib/hgr.c \
+	../lib/surl/surl_read_with_barrier.s \
+	../lib/serial/simple_serial_read.s \
+	../lib/serial/simple_serial_io.s \
+	../lib/serial/$(serial_hw)/common.s \
+	../lib/serial/$(serial_hw)/control.s \
+	../lib/serial/$(serial_hw)/no_irq.s \
+	../lib/dputc.s \
+	../lib/dputs.s \
+	../lib/scroll.s \
+	../lib/FVTABZ.s \
+	../lib/fastirq$(suffix).s \
+	../lib/runtime_once_clean.s \
+	../lib/extrazp.s \
+	../lib/clrzone.s
+
+rbrowser_GCC_SOURCES = \
+	../lib/strtrim.c \
+	../lib/extended_conio.c \
+	../lib/clrzone.c \
+	../lib/serial/simple_serial_io.c
+
+rbrowser_CLCFLAGS = -t $(CC65_TARGET) \
+	-I ../lib -I ../stp \
+	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-rtonce.cfg \
+	-vm -m rbrowser.map -DSURL_TO_LANGCARD -O --start-addr 0x4000
+
 
 GCCCFLAGS = -g -O0 -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\" \
 	-I ../lib -I ../stp -Wall -Wno-format \
@@ -119,6 +165,7 @@ all: \
 	splash.h \
 	splash-video.h \
 	wozamp.bin \
+	rbrowser.bin \
 	videoplay.bin
 else
 
@@ -145,6 +192,9 @@ splash-video.h: wozamp-video.hgr
 
 wozamp.bin: $(wozamp_CL65SOURCES) $(wozamp_SOURCES)
 	cl65 -g -Wl --dbgfile,wozamp.dbg -Ln wozamp.lbl $(CFLAGS) $(iigs_CFLAGS) $(wozamp_CLCFLAGS) -o $@ $^
+
+rbrowser.bin: $(rbrowser_CL65SOURCES) $(rbrowser_SOURCES)
+	cl65 -g -Wl --dbgfile,rbrowser.dbg -Ln rbrowser.lbl $(CFLAGS) $(iigs_CFLAGS) $(rbrowser_CLCFLAGS) -o $@ $^
 
 wozamp.x86_64: $(wozamp_SOURCES) $(wozamp_GCC_SOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	

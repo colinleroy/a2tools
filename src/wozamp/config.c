@@ -18,6 +18,8 @@ char enable_video;
 char enable_subtitles;
 char video_size;
 
+#pragma code-name(push, "LOWCODE")
+
 static FILE *open_config(char *mode) {
   FILE *fp;
   #ifdef PRODOS_T_TXT
@@ -30,11 +32,10 @@ static FILE *open_config(char *mode) {
   return fp;
 }
 
-#pragma code-name(push, "LOWCODE")
+#pragma code-name(pop)
 
 static int save_config(void) {
   FILE *fp;
-  int r;
 
   cputs("Saving config...\r\n");
   fp = open_config("w");
@@ -42,21 +43,25 @@ static int save_config(void) {
     return -1;
   }
 
-  r = fprintf(fp, "%s\n%d\n%d\n%d\n%d\n",
-                  translit_charset,
-                  monochrome,
-                  enable_video,
-                  enable_subtitles,
-                  video_size);
+  fputs(translit_charset, fp);
+  fputc('\n', fp);
+  fputc(monochrome+'0', fp);
+  fputc('\n', fp);
+  fputc(enable_video+'0', fp);
+  fputc('\n', fp);
+  fputc(enable_subtitles+'0', fp);
+  fputc('\n', fp);
+  fputc(video_size+'0', fp);
+  fputc('\n', fp);
 
-  if (r < 0 || fclose(fp) != 0) {
+  if (fclose(fp) != 0) {
     cputs("Could not save settings file.\r\n");
     return -1;
   }
   return 0;
 }
 
-extern char tmp_buf[80];
+#pragma code-name(push, "LOWCODE")
 
 static char get_bool(char one, char zero) {
   char c;
@@ -69,8 +74,6 @@ again:
   goto again;
 }
 
-#pragma code-name(pop)
-
 void config(void) {
   char c;
 
@@ -78,11 +81,11 @@ void config(void) {
 
 #ifdef __APPLE2ENH__
   cputs("Please choose your keyboard layout:\r\n");
-  cputs("0. US      ("US_CHARSET" charset)\r\n");
-  cputs("1. French  ("FR_CHARSET" charset)\r\n");
-  cputs("2. Spanish ("ES_CHARSET" charset)\r\n");
-  cputs("3. Italian ("IT_CHARSET" charset)\r\n");
-  cputs("4. German  ("DE_CHARSET" charset)\r\n");
+  cputs("0. US\r\n");
+  cputs("1. French\r\n");
+  cputs("2. Spanish\r\n");
+  cputs("3. Italian\r\n");
+  cputs("4. German\r\n");
   
 charset_again:
   c = cgetc();
@@ -130,6 +133,7 @@ charset_again:
   save_config();
 }
 
+#pragma code-name(pop)
 #pragma code-name(push, "RT_ONCE")
 
 void load_config(void) {
