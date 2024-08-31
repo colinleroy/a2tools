@@ -1244,7 +1244,9 @@ int ffmpeg_audio_decode(decode_data *data) {
           if (strstr(icy_metadata, "StreamTitle='")) {
             new_title = strstr(icy_metadata, "StreamTitle='") + strlen("StreamTitle='");
 
-            if (strchr(new_title, '\''))
+            if (strstr(new_title, "';Stream"))
+              *(strstr(new_title, "';Stream")) = '\0';
+            else if (strchr(new_title, '\''))
               *(strrchr(new_title, '\'')) = '\0';
 
             while(strchr(new_title, '\\')) {
