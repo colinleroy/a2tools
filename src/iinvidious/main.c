@@ -39,6 +39,7 @@
 #include "platform.h"
 #include "splash.h"
 #include "malloc0.h"
+#include "citoa.h"
 #include "surl/surl_stream_av/stream_url.h"
 
 enum InstanceType {
@@ -74,12 +75,12 @@ static const char *CAPTIONS_JSON_SELECTOR[] = {
   "(.captions[]|select(.lang==\"LG\")|.url),.captions[0].url"
 };
 
-#define N_VIDEO_DETAILS 5
 #define VIDEO_NAME   0
 #define VIDEO_ID     1
 #define VIDEO_AUTHOR 2
 #define VIDEO_THUMB  3
 #define VIDEO_LENGTH 4
+#define N_VIDEO_DETAILS 5
 
 static const char *VIDEO_URL_JSON_SELECTOR[] = {
   "[.files+.streamingPlaylists[0].files|.[]|select(.resolution.id > 0)]|sort_by(.size)|first|.fileDownloadUrl",
@@ -157,8 +158,9 @@ static void print_menu(void) {
   cputc('A'|0x80);
   cputs("-C: Configure ; ");
   cputc('A'|0x80);
-  cputs("-Q: Quit");
-  printf(" - %zuB free", _heapmemavail());
+  cputs("-Q: Quit - ");
+  cutoa(_heapmemavail());
+  cputs("B free");
 #else
   cputs("Ctrl-C: Configure; Ctrl-Q: Quit");
 #endif
@@ -292,7 +294,7 @@ reload_search:
     lines = NULL;
   }
   n_lines = strsplit_in_place((char *)BUF_8K_ADDR, '\n', &lines);
-  if (n_lines % 5 != 0) {
+  if (n_lines % N_VIDEO_DETAILS != 0) {
     cputs("Search error\n");
     cgetc();
     return;
@@ -352,7 +354,7 @@ display_result:
 read_kbd:
   init_hgr(1);
   hgr_mixon();
-  c = cgetc();
+  c = tolower(cgetc());
 #ifdef __APPLE2ENH__
   if (c & 0x80) {
     cmd_cb(c & ~0x80);
@@ -377,14 +379,15 @@ read_kbd:
       if (cur_line > N_VIDEO_DETAILS-1) {
         cur_line -= N_VIDEO_DETAILS;
       }
-      break;
+      goto display_result;
     case CH_CURS_RIGHT:
       if (cur_line + N_VIDEO_DETAILS < n_lines) {
         cur_line += N_VIDEO_DETAILS;
       }
-      break;
+      goto display_result;
+    default:
+      goto read_kbd;
   }
-  goto display_result;
 }
 
 
@@ -519,6 +522,7 @@ int main(void) {
 
   screensize(&scrw, &scrh);
   surl_ping();
+  surl_user_agent = "IInvidious "VERSION"/Apple II";
 
 #ifdef __APPLE2__
   init_hgr(1);

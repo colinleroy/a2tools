@@ -59,6 +59,9 @@ iinvidious_SOURCES := \
 	../lib/fastirq$(iigs_suffix).s \
 	../lib/extrazp.s \
 	../lib/malloc0.c \
+	../lib/citoa.s \
+	../lib/cutoa.s \
+	../lib/cntoabuf.s
 
 ### Warning! some memory tricks happen.
 

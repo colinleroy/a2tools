@@ -28,6 +28,7 @@
 #include "surl.h"
 #include "simple_serial.h"
 #include "clrzone.h"
+#include "citoa.h"
 
 #ifdef __CC65__
 #pragma static-locals(push, on)
@@ -40,7 +41,6 @@ void __fastcall__ surl_ping(void) {
 try_again:
   clrscr();
   cputs("Establishing serial connection... ");
-  
   resp = surl_start_request(SURL_METHOD_PING, "ping://", NULL, 0);
   if (resp->code != SURL_PROTOCOL_VERSION) {
     if (resp->code == 404) {
@@ -50,19 +50,22 @@ try_again:
     cputs("\r\n\r\n");
     switch(resp->code) {
       case 504: 
-        cprintf("Timeout");
+        cputs("Timeout");
         break;
       case 600:
-        cprintf("Can not open serial port");
+        cputs("Can not open serial port");
         break;
       default:
         if (resp->code != SURL_PROTOCOL_VERSION) {
-          cprintf("surl-server Protocol %d required", SURL_PROTOCOL_VERSION);
+          cputs("surl-server Protocol ");
+          citoa(SURL_PROTOCOL_VERSION);
+          cputs(" required");
         } else {
-          cprintf("Unknown error %d", resp->code);
+          cputs("Unknown error ");
+          citoa(resp->code);
         }
     }
-    cprintf(". Press any key to try again or C to configure.\r\n");
+    cputs(". Press any key to try again or C to configure.\r\n");
 
     if (tolower(cgetc()) == 'c') {
       surl_disconnect_proxy();
