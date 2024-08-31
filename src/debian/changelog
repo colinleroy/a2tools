@@ -1,3 +1,14 @@
+a2tools (18.0.0.1) bionic; urgency=medium
+
+  * Low-level serial fixes, correct transfer issues in some corner cases
+  * IInvidious: UI work
+  * Wozamp: RadioBrowser support, makes streaming from any webradio easy
+  * Size optimisations
+  * Protocol version bump (18)
+  * Versioning scheme change (major is now protocol version)
+
+ -- Colin Leroy-Mira <colin@colino.net>  Sat, 31 Aug 2024 21:28:19 +0200
+
 a2tools (2.7.1.1) bionic; urgency=medium
 
   * Fix USB disconnect handling
