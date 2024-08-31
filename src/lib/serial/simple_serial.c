@@ -461,7 +461,7 @@ int simple_serial_open_printer(void) {
 }
 
 int simple_serial_close(void) {
-  if (ttyfd) {
+  if (ttyfd > 0) {
     close(ttyfd);
   }
   ttyfd = -1;
