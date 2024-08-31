@@ -172,6 +172,7 @@ else
 all: \
 	splash.h \
 	wozamp.bin \
+	rbrowser.bin \
 
 endif
 
