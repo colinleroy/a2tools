@@ -48,7 +48,10 @@ CL65SOURCES = \
 	../lib/extrazp.s \
 	../lib/clrzone.s \
 	../lib/platform_sleep.s \
-	../lib/get_dev_from_path.c
+	../lib/get_dev_from_path.c \
+	../lib/citoa.s \
+	../lib/cutoa.s \
+	../lib/cntoabuf.s
 
 GCC_SOURCES = \
 	../lib/strtrim.c \

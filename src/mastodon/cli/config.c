@@ -52,11 +52,11 @@ static void cli() {
 
 #ifdef __APPLE2ENH__
   cputs("Please choose your keyboard layout:\r\n");
-  cputs("0. US      ("US_CHARSET" charset)\r\n");
-  cputs("1. French  ("FR_CHARSET" charset)\r\n");
-  cputs("2. Spanish ("ES_CHARSET" charset)\r\n");
-  cputs("3. Italian ("IT_CHARSET" charset)\r\n");
-  cputs("4. German  ("DE_CHARSET" charset)\r\n");
+  cputs("0. US\r\n");
+  cputs("1. French\r\n");
+  cputs("2. Spanish\r\n");
+  cputs("3. Italian\r\n");
+  cputs("4. German\r\n");
   
 charset_again:
   c = cgetc();

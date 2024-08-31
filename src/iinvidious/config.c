@@ -19,6 +19,8 @@ char enable_subtitles;
 char sub_language[3] = "en";
 char tmp_buf[TMP_BUF_SIZE];
 
+#pragma code-name (push, "LOWCODE")
+
 static FILE *open_config(char *mode) {
   FILE *fp;
   #ifdef PRODOS_T_TXT
@@ -31,27 +33,29 @@ static FILE *open_config(char *mode) {
   return fp;
 }
 
-static int save_config(void) {
+#pragma code-name (pop)
+
+static void save_config(void) {
   FILE *fp;
-  int r;
 
   cputs("Saving config...\r\n");
   fp = open_config("w");
   if (fp == NULL) {
-    return -1;
+    return;
   }
 
-  r = fprintf(fp, "%s\n%d\n%d\n%s\n",
-                  translit_charset,
-                  video_size,
-                  enable_subtitles,
-                  sub_language);
+  fputs(translit_charset, fp);
+  fputc('\n', fp);
+  fputc(video_size+'0', fp);
+  fputc('\n', fp);
+  fputc(enable_subtitles+'0', fp);
+  fputc('\n', fp);
+  fputs(sub_language, fp);
+  fputc('\n', fp);
 
-  if (r < 0 || fclose(fp) != 0) {
+  if (fclose(fp) != 0) {
     cputs("Could not save settings file.\r\n");
-    return -1;
   }
-  return 0;
 }
 
 static char get_bool(char one, char zero) {
@@ -72,11 +76,11 @@ void config(void) {
 
 #ifdef __APPLE2ENH__
   cputs("Please choose your keyboard layout:\r\n");
-  cputs("0. US      ("US_CHARSET" charset)\r\n");
-  cputs("1. French  ("FR_CHARSET" charset)\r\n");
-  cputs("2. Spanish ("ES_CHARSET" charset)\r\n");
-  cputs("3. Italian ("IT_CHARSET" charset)\r\n");
-  cputs("4. German  ("DE_CHARSET" charset)\r\n");
+  cputs("0. US\r\n");
+  cputs("1. French\r\n");
+  cputs("2. Spanish\r\n");
+  cputs("3. Italian\r\n");
+  cputs("4. German\r\n");
   
 charset_again:
   c = cgetc();

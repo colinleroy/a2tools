@@ -59,7 +59,10 @@ mastodon_SOURCES := \
 
 mastodon_CC65SOURCES := \
 	$(common_CC65SOURCES) \
-	../lib/runtime_once_clean.s
+	../lib/runtime_once_clean.s \
+	../lib/citoa.s \
+	../lib/cutoa.s \
+	../lib/cntoabuf.s
 
 mastoimg_SOURCES := \
 	api/common.c \

@@ -37,7 +37,11 @@ homectrl_SOURCES := main.c network.c \
 	../lib/FVTABZ.s \
 	../lib/fastirq$(suffix).s \
 	../lib/extrazp.s \
-	../lib/clrzone.s
+	../lib/clrzone.s \
+	../lib/citoa.s \
+	../lib/cutoa.s \
+	../lib/cntoabuf.s
+
 
 homectrl_GCCSOURCES = \
 	../lib/strtrim.c \
