@@ -49,7 +49,7 @@ char **display_lines;
 char tmp_buf[BUFSIZE];
 
 #pragma code-name(push, "RT_ONCE")
-char *stp_get_start_url(char *header, char *default_url) {
+char *stp_get_start_url(char *header, char *default_url, cmd_handler_func cmd_cb) {
   FILE *fp;
   char *start_url = NULL;
   char *last_start_url = NULL;
@@ -66,10 +66,15 @@ char *stp_get_start_url(char *header, char *default_url) {
   if (fp != NULL) {
     fgets(tmp_buf, BUFSIZE, fp);
     last_start_url = strdup(tmp_buf);
+
+    tmp_buf[0] = '\0';
     fgets(tmp_buf, BUFSIZE, fp);
     last_login = strdup(tmp_buf);
+
+    tmp_buf[0] = '\0';
     fgets(tmp_buf, BUFSIZE, fp);
     last_password = strdup(tmp_buf);
+
     fclose(fp);
     if (strchr(last_start_url,'\n'))
       *strchr(last_start_url,'\n') = '\0';
@@ -87,8 +92,10 @@ char *stp_get_start_url(char *header, char *default_url) {
   dputs("URL: ");
 
   strcpy(tmp_buf, last_start_url);
-  dget_text(tmp_buf, BUFSIZE, NULL, 0);
-
+  dget_text(tmp_buf, BUFSIZE, cmd_cb, 0);
+  if (cmd_cb) {
+    cputs("\r\n");
+  }
   if (*tmp_buf == '\0' || !strcmp(tmp_buf, last_start_url)) {
     start_url = last_start_url;
   } else {
@@ -112,7 +119,10 @@ char *stp_get_start_url(char *header, char *default_url) {
   }
 
   tmp_buf[0] = '\0';
-  dget_text(tmp_buf, BUFSIZE, NULL, 0);
+  dget_text(tmp_buf, BUFSIZE, cmd_cb, 0);
+  if (cmd_cb) {
+    cputs("\r\n");
+  }
   login = strdup(tmp_buf);
 
   if (*login == '\0') {
@@ -121,8 +131,11 @@ char *stp_get_start_url(char *header, char *default_url) {
     tmp_buf[0] = '\0';
     dputs("Password: ");
     echo(0);
-    dget_text(tmp_buf, BUFSIZE, NULL, 0);
+    dget_text(tmp_buf, BUFSIZE, cmd_cb, 0);
     echo(1);
+    if (cmd_cb) {
+      cputs("\r\n");
+    }
     free(last_password);
     password = strdup(tmp_buf);
     changed = 1;
@@ -142,10 +155,12 @@ char *stp_get_start_url(char *header, char *default_url) {
   if (changed) {
     fp = fopen(STP_URL_FILE, "w");
     if (fp != NULL) {
-      fprintf(fp, "%s\n%s\n%s\n",
-                  start_url,
-                  login,
-                  password);
+      fputs(start_url, fp);
+      fputc('\n', fp);
+      fputs(login, fp);
+      fputc('\n', fp);
+      fputs(password, fp);
+      fputc('\n', fp);
       fclose(fp);
     } else {
       dputs("Can't save URL: ");
@@ -299,13 +314,23 @@ char *stp_build_login_url(char *url) {
   }
 
   if (login) {
-    snprintf(full_url, BUFSIZE, "%s://%s:%s@%s", proto, login, password, host);
+    strcpy(full_url, proto);
+    strcat(full_url, "://");
+    strcat(full_url, login);
+    strcat(full_url, ":");
+    strcat(full_url, password);
+    strcat(full_url, "@");
+    strcat(full_url, host);
+
     free(login);
     free(password);
     login = NULL;
     password = NULL;
-  } else
-    snprintf(full_url, BUFSIZE, "%s://%s", proto, host);
+  } else {
+    strcpy(full_url, proto);
+    strcat(full_url, "://");
+    strcat(full_url, host);
+  }
   full_url = realloc(full_url, strlen(full_url) + 1);
 
   free(url);

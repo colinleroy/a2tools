@@ -40,12 +40,16 @@
 #include "path_helper.h"
 #include "platform.h"
 #include "splash.h"
+#include "citoa.h"
+#include "backup_logo.h"
 
 char *data = (char *)splash_hgr;
 char *nat_data = NULL;
 
 char **lines = NULL;
 char **nat_lines = NULL;
+
+char quit_to_rbrowser = 0;
 
 unsigned char scrw = 255, scrh = 255;
 
@@ -68,22 +72,26 @@ void stp_print_footer(void) {
 
   gotoxy(0, 22);
 #ifdef __APPLE2ENH__
-  dputs("Up,Down,Enter,Esc: Navigate         /: Search       C: Configure\r\n");
-//      "A:Play all files in directory       N: Search next  Q: Quit  (12345B free)");
-  dputs("A:Play all files in directory       ");
+  dputs("Up,Down,Enter,Esc: Navigate      /: Search    C: Configure\r\n");
+//      "A:Play all files in directory    N: Next      S: Server     Q: Quit (12345B free)");
+  dputs("A:Play all files in directory    ");
   if (search_buf[0]) {
-    dputs("N: Search next  ");
-  } else {
-    gotox(52);
+    dputs("N: Next");
   }
-  cprintf("Q: Quit       (%zuB free)", _heapmemavail());
+  gotox(46);
+
+  cputs("S: Server     Q: Quit (");
+  cutoa(_heapmemavail());
+  cputs(" free)");
 #else
-  dputs("U,J,Enter,Esc:nav /:search C:config");
-  dputs("\r\nA:play dir");
+  dputs("U,J,Enter,Esc:nav;  /:search;  C:config");
+  //    "A:play dir; N:next; S:server;  Q: quit"
+  dputs("\r\nA:play dir;");
   if (search_buf[0]) {
-    dputs(" N:next");
+    dputs(" N:next;");
   }
-  dputs("Q: Quit");
+  gotox(19);
+  dputs(" S:server;  Q: quit");
 #endif
 }
 
@@ -165,40 +173,26 @@ void stp_print_result(const surl_response *response) {
   if (response == NULL) {
     dputs("Unknown request error.");
   } else if (response->code / 100 != 2){
-    cprintf("Error: Response code %d - %lu bytes",
-            response->code,
-            response->size);
+    cputs("Error: Response code ");
+    citoa(response->code);
   }
 }
 
-#ifdef __APPLE2ENH__
-static void backup_restore_logo(char *op) {
-  FILE *fp = fopen("/RAM/WOZAMP.HGR", op);
-  if (!fp) {
-    return;
-  }
-  if (op[0] == 'w') {
-    fwrite((char *)HGR_PAGE, 1, HGR_LEN, fp);
-  } else {
-    fread((char *)HGR_PAGE, 1, HGR_LEN, fp);
-  }
-  fclose(fp);
-}
+#ifdef __CC65__
+#pragma code-name (push, "LC")
 #endif
 
 #ifndef IIGS
 static void print_err(const char *file) {
   init_text();
   clrscr();
-  printf("%s : Error %d", file, errno);
+  cputs("Error on ");
+  cputs(file);
+  cputs(": ");
+  citoa(errno);
 }
 #endif
 
-#ifdef __CC65__
-#pragma code-name (push, "LC")
-#endif
-
-extern char tmp_buf[80];
 static void play_url(char *url, char *filename) {
   char r;
   char has_video = 0;
@@ -282,11 +276,11 @@ read_metadata_again:
       clrscr();
       gotoxy(center_x, 12);
       dputs("Loading video player...");
+      fputs(url, video_url_fp);
+      fputc('\n', video_url_fp);
       fputc(enable_subtitles, video_url_fp);
       fputc(video_size, video_url_fp);
       fputs(translit_charset, video_url_fp);
-      fputc('\n', video_url_fp);
-      fputs(url, video_url_fp);
 
       fclose(video_url_fp);
       simple_serial_putc(SURL_METHOD_ABORT);
@@ -396,6 +390,8 @@ static void do_nav(char *base_url) {
         clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
         if (navigated)
           goto up_dir;
+        else if (quit_to_rbrowser)
+          exec("RBROWSER", NULL);
         else
           exec("WOZAMP", NULL);
       case UPDATE_LIST:
@@ -417,7 +413,7 @@ keyb_input:
     l = (c & 0x80) ? PAGE_HEIGHT : 1;
     full_update = 0;
 
-    switch(c & ~0x80) {
+    switch(c) {
       case CH_ESC:
 up_dir:
         url = stp_url_up(url);
@@ -437,16 +433,20 @@ up_dir:
         break;
 #ifdef __APPLE2ENH__
       case CH_CURS_UP:
+      case CH_CURS_UP|0x80:
 #else
       case 'u':
+      case 'u'|0x80:
 #endif
         while (l--)
           full_update |= stp_list_scroll(-1);
         goto update_list;
 #ifdef __APPLE2ENH__
       case CH_CURS_DOWN:
+      case CH_CURS_DOWN|0x80:
 #else
       case 'j':
+      case 'j'|0x80:
 #endif
         while (l--)
           full_update |= stp_list_scroll(+1);
@@ -461,10 +461,15 @@ up_dir:
       case 'n':
         stp_list_search(0);
         goto keyb_input;
+      case 's':
+        if (quit_to_rbrowser)
+          exec("RBROWSER", NULL);
+        else
+          exec("WOZAMP", NULL);
       case 'q':
         exit(0);
       default:
-        goto update_list;
+        goto keyb_input;
     }
   }
 }
@@ -474,29 +479,61 @@ up_dir:
 #pragma code-name (push, "RT_ONCE")
 #endif
 
-static char *do_setup(void) {
+static char cmd_cb(char c) {
+  char prev_cursor = cursor(0);
+  if (tolower(c) == 'r') {
+    exec("RBROWSER", NULL);
+  }
+  cursor(prev_cursor);
+  return 0;
+}
+
+static char *do_setup(char from_rbrowser) {
   FILE *tmpfp;
   char *url = NULL;
 
   clrscr();
-  tmpfp = fopen(URL_PASSER_FILE,"r");
+
+  quit_to_rbrowser = from_rbrowser;
+
+  /* Are we back from VIDEOPLAY? */
+  tmpfp = fopen(URL_PASSER_FILE, "r");
   if (tmpfp == NULL) {
 #ifdef __APPLE2ENH__
+    gotoxy(80-17, 3);
+    cputc('A'|0x80);
+    cputs("-R: RadioBrowser");
+    gotoxy(0, 0);
     url = stp_get_start_url("Please enter an FTP server or internet stream URL.\r\n",
-                          "http://relay.radiofreefedi.net/listen/rff/rff.mp3");
+                          "http://relay.radiofreefedi.net/listen/rff/rff.mp3",
+                          cmd_cb);
 #else
+    gotoxy(40-20, 3);
+    cputs("Ctrl-R: RadioBrowser");
+    gotoxy(0, 0);
     url = stp_get_start_url("Please enter an FTP or internet stream\r\n",
-                          "http://relay.radiofreefedi.net/listen/rff/rff.mp3");
+                          "http://relay.radiofreefedi.net/listen/rff/rff.mp3",
+                          cmd_cb);
 #endif
     url = stp_build_login_url(url);
   } else {
+    char *lf;
     url = malloc(512);
-    fgetc(tmpfp); // Ignore subtitles parameter
-    fgetc(tmpfp); // Ignore size parameter
-    fgets(url, 511, tmpfp);  // Ignore charset parameter */
     fgets(url, 511, tmpfp);  // URL
+    if ((lf = strchr(url, '\n')) != NULL)
+      *lf = '\0';
+
     fclose(tmpfp);
     unlink(URL_PASSER_FILE);
+    reopen_start_device();
+    if (from_rbrowser) {
+      tmpfp = fopen(STP_URL_FILE, "w");
+      if (tmpfp) {
+        fputs(url, tmpfp);
+        fputs("\n\n", tmpfp);
+        fclose(tmpfp);
+      }
+    }
   }
   set_scrollwindow(0, scrh);
   #ifdef __APPLE2__
@@ -506,28 +543,33 @@ static char *do_setup(void) {
   return url;
 }
 
-int main(void) {
+int main(int argc, char *argv[]) {
   char *url = NULL;
 
 #ifdef __APPLE2ENH__
   videomode(VIDEOMODE_80COL);
 #endif
-#ifdef __APPLE2ENH__
-  backup_restore_logo("w");
-#endif
+  clrscr();
   screensize(&scrw, &scrh);
-  
-  surl_ping();
+  scrh = 24;
 
 #ifdef __APPLE2__
   init_hgr(1);
   hgr_mixon();
   set_scrollwindow(20, scrh);
+
+  clrscr();
 #endif
+
+#ifdef __APPLE2ENH__
+  backup_restore_logo("w");
+#endif
+  surl_ping();
+  surl_user_agent = "Wozamp "VERSION"/Apple II";
 
   load_config();
 
-  url = do_setup();
+  url = do_setup(argc > 1 && argv[1][0] == 'r');
 
   do_nav(url);
 }

@@ -20,10 +20,12 @@ stp_disk_PROGS = \
 ifdef WOZAMP_VIDEOPLAY
 wozamp_disk_PROGS = \
 	src/wozamp/wozamp.bin \
+	src/wozamp/rbrowser.bin \
 	src/wozamp/videoplay.bin
 else
 wozamp_disk_PROGS = \
-	src/wozamp/wozamp.bin
+	src/wozamp/wozamp.bin \
+	src/wozamp/rbrowser.bin
 endif
 
 iinvidious_disk_PROGS = \

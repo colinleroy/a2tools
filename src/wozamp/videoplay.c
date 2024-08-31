@@ -42,16 +42,18 @@ int main(void) {
   url_fp = fopen(URL_PASSER_FILE, "r");
   surl_connect_proxy();
 
+  surl_user_agent = "Wozamp for Apple II / "VERSION;
+
   if (url_fp == NULL) {
     goto out;
   }
+  fgets(url, 511, url_fp);
+  if ((last_sep = strchr(url, '\n')) != NULL)
+    *last_sep = '\0';
   enable_subtitles = fgetc(url_fp);
   video_size = fgetc(url_fp);
   translit_charset = malloc(32);
   fgets(translit_charset, 31, url_fp);
-  if (strchr(translit_charset, '\n'))
-    *strchr(translit_charset, '\n') = '\0';
-  fgets(url, 511, url_fp);
   fclose(url_fp);
 
   /* Remove filename from URL in advance, so we don't get stuck in
@@ -62,10 +64,6 @@ int main(void) {
     url_fp = fopen(URL_PASSER_FILE, "w");
 
     if (url_fp) {
-      fputc(enable_subtitles, url_fp);
-      fputc(video_size, url_fp);
-      fputs(translit_charset, url_fp);
-      fputc('\n', url_fp);
       fputs(url, url_fp);
       fclose(url_fp);
     }
