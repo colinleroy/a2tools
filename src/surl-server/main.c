@@ -397,7 +397,12 @@ new_req:
       size_t l;
 
       /* read command */
+      printf("Waiting for command\n");
       cmd = simple_serial_getc();
+      if (cmd == (unsigned char)EOF) {
+        printf("Read error\n");
+        goto reopen;
+      }
       clock_gettime(CLOCK_REALTIME, &cur_time);
       start_secs = cur_time.tv_sec;
       start_msecs = cur_time.tv_nsec / 1000000;
