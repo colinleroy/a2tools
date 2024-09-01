@@ -1074,8 +1074,11 @@ static void *audio_push(void *unused) {
         goto abort;
       } else {
         /* We're starved but not done :-( */
-        continue;
+        goto handle_kbd_starved;
       }
+    }
+    if (cur > SAMPLE_RATE * 15) {
+      goto handle_kbd_starved;
     }
 
     if (!pause) {
@@ -1100,11 +1103,13 @@ static void *audio_push(void *unused) {
     } else {
       /* During pause, we have to drive client in the duty
        * cycles where it handles the keyboard. */
+handle_kbd_starved:
       buffer_audio_sample(AV_KBD_LOAD_LEVEL);
       if (flush_audio_samples() == EOF) {
         goto abort;
       }
     }
+
     /* Kbd input polled directly for no wait at all */
     {
       struct pollfd fds[1];
