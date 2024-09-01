@@ -738,7 +738,8 @@ done:
     c = simple_serial_getc();
     printf("got %02X\n", c);
   } while (c != SURL_CLIENT_READY
-        && c != SURL_METHOD_ABORT);
+        && c != SURL_METHOD_ABORT
+        && c != (unsigned char)EOF);
 
 cleanup_thread:
   printf("Cleaning up audio decoder thread\n");
@@ -1727,7 +1728,8 @@ read_and_cleanup_thread:
     c = simple_serial_getc();
     printf("got %02X\n", c);
   } while (c != SURL_CLIENT_READY
-        && c != SURL_METHOD_ABORT);
+        && c != SURL_METHOD_ABORT
+        && c != (unsigned char)EOF);
 
 cleanup_thread:
   printf("Cleaning up A/V decoder thread\n");
