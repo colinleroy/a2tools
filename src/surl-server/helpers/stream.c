@@ -411,23 +411,14 @@ static byte_diff **diffs = NULL;
 #define AV_END_OF_STREAM         AV_NUM_LEVELS
 #define AV_KBD_LOAD_LEVEL        16
 
-int av_sample_offset = 0;
-int av_sample_multiplier = 2;
-
-static inline int send_sample(char i) {
-  char v = i + AUDIO_SAMPLE_OFFSET;
-  if (write(ttyfd, &v, 1) != 1) {
-    printf("Audio: write error %d (%s)\n", errno, strerror(errno));
-    return EOF;
-  }
-  return 0;
-}
+int audio_sample_offset = 0;
+int audio_sample_multiplier = 2;
 
 static int num_audio_samples = 0;
 static unsigned char audio_samples_buffer[SAMPLE_RATE*2];
 
 static inline void buffer_audio_sample(unsigned char i) {
-  audio_samples_buffer[num_audio_samples++] = (i + av_sample_offset)*av_sample_multiplier;
+  audio_samples_buffer[num_audio_samples++] = (i + audio_sample_offset)*audio_sample_multiplier;
 }
 
 static inline int flush_audio_samples(void) {
@@ -441,11 +432,8 @@ static inline int flush_audio_samples(void) {
 }
 
 static int send_end_of_audio_stream(void) {
-  if (send_sample(AUDIO_END_OF_STREAM) == EOF) {
-    return EOF;
-  }
-
-  return 0;
+  buffer_audio_sample(AUDIO_END_OF_STREAM);
+  return flush_audio_samples();
 }
 
 static int audio_numcols = 40;
@@ -460,7 +448,8 @@ static void send_audio_title(char *title, char *translit) {
   }
 
   translit_buf = do_charset_convert(title, OUTGOING, translit, 0, &l);
-  send_sample(AUDIO_STREAM_TITLE);
+  buffer_audio_sample(AUDIO_STREAM_TITLE);
+  flush_audio_samples();
 
   /* Limit to audio_numcols chars */
   w = write(ttyfd, translit_buf, MIN(audio_numcols, strlen(translit_buf)));
@@ -617,6 +606,9 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
   sleep(1); /* Let ffmpeg have a bit of time to push data so we don't starve */
   vol_mult = 10;
 
+  audio_sample_offset = AUDIO_SAMPLE_OFFSET;
+  audio_sample_multiplier = 1;
+
   while (1) {
     pthread_mutex_lock(&th_data->mutex);
     if (cur > SAMPLE_RATE*(2*BUFFER_LEN)) {
@@ -664,8 +656,11 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
     } else if (samp_val >= AUDIO_MAX) {
       samp_val = AUDIO_MAX-1;
     }
-    if (send_sample((uint8_t)samp_val*AUDIO_NUM_LEVELS/AUDIO_MAX) == EOF) {
-      goto cleanup_thread;
+    buffer_audio_sample((uint8_t)samp_val*AUDIO_NUM_LEVELS/AUDIO_MAX);
+    if (cur % SAMPLE_RATE == 0) {
+      if (flush_audio_samples() == EOF) {
+        goto cleanup_thread;
+      }
     }
     cur++;
 
@@ -695,7 +690,8 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
             break;
           case ' ':
             printf("Pause\n");
-            if (send_sample(AUDIO_MAX_LEVEL/2) == EOF) {
+            buffer_audio_sample(AUDIO_MAX_LEVEL/2);
+            if (flush_audio_samples() == EOF) {
               goto cleanup_thread;
             }
             simple_serial_getc();
@@ -730,10 +726,10 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
   }
 
 done:
-  if (send_sample(AUDIO_MAX_LEVEL/2) == EOF
-   || send_end_of_audio_stream() == EOF) {
-     goto cleanup_thread;
-   }
+  buffer_audio_sample(AUDIO_MAX_LEVEL/2);
+  if (send_end_of_audio_stream() == EOF) {
+    goto cleanup_thread;
+  }
 
   do {
     c = simple_serial_getc();
@@ -1630,9 +1626,9 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, char sub
     goto cleanup_thread;
   }
 
-  av_sample_offset = simple_serial_getc();
-  av_sample_multiplier = simple_serial_getc();
-  printf("Sample offset is %d mult %d\n", av_sample_offset, av_sample_multiplier);
+  audio_sample_offset = simple_serial_getc();
+  audio_sample_multiplier = simple_serial_getc();
+  printf("Sample offset is %d mult %d\n", audio_sample_offset, audio_sample_multiplier);
 
   sleep(1); /* Let ffmpeg have a bit of time to push data so we don't starve */
 
