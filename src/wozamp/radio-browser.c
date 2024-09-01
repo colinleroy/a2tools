@@ -315,7 +315,7 @@ search_again:
   gotoxy(0, 0);
   cputs("Station name: ");
   dget_text(search_buf, SEARCH_BUF_SIZE, cmd_cb, 0);
-
+  cputs("\r\n");
   search_stations(search_buf);
 #ifdef __APPLE2ENH__
   backup_restore_logo("r");
