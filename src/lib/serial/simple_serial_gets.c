@@ -41,7 +41,7 @@ char * __fastcall__ simple_serial_gets(char *out, size_t size) {
   static char c;
   static char *cur;
   static char *end;
-
+  static int last_err = 0;
   if (size == 0) {
     return NULL;
   }
@@ -53,8 +53,17 @@ char * __fastcall__ simple_serial_gets(char *out, size_t size) {
     while (ser_get(&c) == SER_ERR_NO_DATA);
 #else
     c = simple_serial_getc();
-    if (c == (char)EOF && errno == EBADF) {
-      return NULL;
+    if (c == (char)EOF) {
+      switch (errno) {
+        case EBADF:
+        case EIO:
+          return NULL;
+        default:
+          if (errno != last_err) {
+            printf("Read error %d (%s)\n", errno, strerror(errno));
+            last_err = errno;
+          }
+      }
     }
 #endif
     
