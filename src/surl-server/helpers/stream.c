@@ -610,6 +610,7 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
   audio_sample_multiplier = 1;
 
   while (1) {
+
     pthread_mutex_lock(&th_data->mutex);
     if (cur > SAMPLE_RATE*(2*BUFFER_LEN)) {
       /* Avoid ever-expanding buffer */
@@ -647,9 +648,10 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
         break;
       } else {
         /* We're starved but not done :-( */
-        continue;
+        goto handle_kbd;
       }
     }
+
     int32_t samp_val = (int32_t)((((int32_t)data[cur]-((int32_t)AUDIO_MAX/2))*(int32_t)vol_mult)/10)+((int32_t)AUDIO_MAX/2);
     if (samp_val < 0) {
       samp_val = 0;
@@ -664,6 +666,7 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
     }
     cur++;
 
+handle_kbd:
     /* Kbd input polled directly for no wait at all */
     {
       struct pollfd fds[1];

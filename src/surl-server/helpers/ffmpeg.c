@@ -1256,12 +1256,16 @@ int ffmpeg_audio_decode(decode_data *data) {
 
           /* Refresh cast title */
           if (data->title != NULL && strcmp(data->title, new_title)) {
+            pthread_mutex_lock(&data->mutex);
             free(data->title);
             data->title = strdup(new_title);
             data->title_changed = 1;
+            pthread_mutex_unlock(&data->mutex);
           } else  if (data->title == NULL) {
+            pthread_mutex_lock(&data->mutex);
             data->title = strdup(new_title);
             data->title_changed = 1;
+            pthread_mutex_unlock(&data->mutex);
           }
         }
 
