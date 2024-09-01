@@ -771,7 +771,7 @@ int surl_stream_video(char *url) {
   int skipped = 0, duration;
   int command, page = 0;
   int num_diffs = 0;
-  int vhgr_file;
+  int vhgr_file = -1;
   pthread_t decode_thread;
   decode_data *th_data = malloc(sizeof(decode_data));
   int ready = 0;

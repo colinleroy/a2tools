@@ -87,7 +87,7 @@ extern char *opt_tty_path;
 int __simple_serial_getc_with_tv_timeout(int timeout, int secs, int msecs) {
   fd_set fds;
   struct timeval tv_timeout;
-  int n, r;
+  int n, r = 0;
   char c;
 
 try_again:
