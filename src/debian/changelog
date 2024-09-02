@@ -1,3 +1,9 @@
+a2tools (18.0.1.1) bionic; urgency=medium
+
+  * More serial fixes.
+
+ -- Colin Leroy-Mira <colin@colino.net>  Mon, 02 Sep 2024 21:28:19 +0200
+
 a2tools (18.0.0.1) bionic; urgency=medium
 
   * Low-level serial fixes, correct transfer issues in some corner cases
