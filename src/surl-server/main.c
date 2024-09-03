@@ -64,6 +64,8 @@ struct _curl_buffer {
   long start_msecs;
 
   jv json_data;
+  
+  int download_cancelled;
 };
 
 static curl_buffer *surl_handle_request(char method, char *url, char **headers, int n_headers);
@@ -740,8 +742,19 @@ static size_t curl_write_data_cb(void *contents, size_t size, size_t nmemb, void
 {
   size_t realsize = size * nmemb;
   curl_buffer *curlbuf = (curl_buffer *)data;
+  char *ptr;
 
-  char *ptr = realloc(curlbuf->buffer, curlbuf->size + realsize + 1);
+  /* Download only a bit of data if audio/ or video/ */
+  if (curlbuf->headers && curlbuf->size > 0) {
+    if (strcasestr(curlbuf->headers, "content-type: audio/") ||
+        strcasestr(curlbuf->headers, "content-type: video/")) {
+      printf("Streamable content-type, aborting download\n");
+      curlbuf->download_cancelled = 1;
+      return 0;
+    }
+  }
+
+  ptr = realloc(curlbuf->buffer, curlbuf->size + realsize + 1);
 
   if(!ptr) {
     printf("ERR: not enough memory\n");
@@ -760,7 +773,6 @@ static size_t curl_write_header_cb(void *contents, size_t size, size_t nmemb, vo
 {
   size_t realsize = size * nmemb;
   curl_buffer *curlbuf = (curl_buffer *)data;
-
   char *ptr = realloc(curlbuf->headers, curlbuf->headers_size + realsize + 1);
 
   if(!ptr) {
@@ -1352,7 +1364,6 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
   /* Init curl */
   if (curl == NULL) {
     curl = curl_easy_init();
-    
   } else {
     curl_easy_reset(curl);
   }
@@ -1486,6 +1497,9 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
       curlbuf->response_code = 401;
     } else if (res == CURLE_OPERATION_TIMEDOUT) {
       curlbuf->response_code = 504;
+    } else if (res == CURLE_WRITE_ERROR && curlbuf->download_cancelled){
+      /* Audio/ or Video/ content-type, streamable only */
+      curlbuf->response_code = 200;
     } else {
       curlbuf->response_code = 599;
     }
