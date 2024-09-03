@@ -302,7 +302,7 @@ void main(void) {
   init_hgr(1);
   hgr_mixon();
 #endif
-
+  load_config();
   surl_user_agent = "Wozamp for Apple II / "VERSION;
 
   screensize(&scrw, &scrh);
