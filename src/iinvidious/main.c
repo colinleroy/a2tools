@@ -490,7 +490,7 @@ static void do_setup(void) {
   do_setup_url("r");
 
   if (url == NULL)
-    url = strdup("https://invidious.adminforge.de");
+    url = strdup("https://invidious.fdn.fr");
 
 again:
   clrscr();
