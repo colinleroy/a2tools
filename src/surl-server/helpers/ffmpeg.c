@@ -72,6 +72,8 @@ const char *video_filter_descr_s = /* Set frames per second to a known value */
                                  "pad=width=%d:height=%d:x=-1:y=-1:color=White,"
                                  /* Pad in the middle of the HGR screen */
                                  "pad=width=%d:height=%d:x=-1:y=-1:color=Black";
+                                 // WIP dither with ffmpeg
+                                 //" [o1]; [o1][1:v] paletteuse=dither=bayer:bayer_scale=1/2:diff_mode=rectangle";
 
 const char *video_filter_descr_l = /* Set frames per second to a known value */
                                  "fps=%d,"
@@ -81,6 +83,8 @@ const char *video_filter_descr_l = /* Set frames per second to a known value */
                                  "histeq=strength=1/20,"
                                  /* Pad in the middle of the HGR screen */
                                  "pad=width=%d:height=%d:x=-1:y=%d:color=Black";
+                                 // WIP dither with ffmpeg
+                                 //" [o1]; [o1][1:v] paletteuse=dither=bayer:bayer_scale=1/2:diff_mode=rectangle";
 
 static AVFormatContext *audio_fmt_ctx, *video_fmt_ctx;
 static AVCodecContext *audio_dec_ctx, *video_dec_ctx;
@@ -154,6 +158,13 @@ static int open_video_file(char *filename)
       printf("Video: Cannot open input file\n");
       return ret;
     }
+
+    // WIP dither via ffmpeg
+    // if ((ret = avformat_open_input(&video_fmt_ctx, "/tmp/palette.png", NULL, &video_options)) < 0) {
+    //   av_dict_free(&video_options);
+    //   printf("Video: Cannot open palette file (%d)\n", AVERROR(ret));
+    //   return ret;
+    // }
 
     av_dict_free(&video_options);
 

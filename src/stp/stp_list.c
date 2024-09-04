@@ -62,7 +62,7 @@ char *stp_get_start_url(char *header, char *default_url, cmd_handler_func cmd_cb
   _filetype = PRODOS_T_TXT;
 #endif
 
-  fp = fopen(STP_URL_FILE,"r");
+  fp = fopen(STP_URL_FILE, "r");
   if (fp != NULL) {
     fgets(tmp_buf, BUFSIZE, fp);
     last_start_url = strdup(tmp_buf);
@@ -81,7 +81,7 @@ char *stp_get_start_url(char *header, char *default_url, cmd_handler_func cmd_cb
     if (strchr(last_login,'\n'))
       *strchr(last_login,'\n') = '\0';
     if (strchr(last_password,'\n'))
-    *strchr(last_password,'\n') = '\0';
+      *strchr(last_password,'\n') = '\0';
   } else {
     last_start_url = strdup(default_url);
     last_login = strdup("");

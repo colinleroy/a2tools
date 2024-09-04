@@ -93,6 +93,7 @@ rbrowser_SOURCES := \
 	../lib/strsplit.c
 
 rbrowser_CL65SOURCES = \
+	../lib/surl/surl_stream_audio.s \
 	../lib/hgr.c \
 	../lib/surl/surl_read_with_barrier.s \
 	../lib/serial/simple_serial_read.s \
@@ -117,7 +118,7 @@ rbrowser_GCC_SOURCES = \
 
 rbrowser_CLCFLAGS = -t $(CC65_TARGET) \
 	-I ../lib -I ../stp \
-	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-rtonce.cfg \
+	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-rbrowser.cfg \
 	-vm -m rbrowser.map -DSURL_TO_LANGCARD -O --start-addr 0x4000
 
 

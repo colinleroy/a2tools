@@ -176,7 +176,6 @@ title_addr    = ptr3
 
 .align 256
 _SAMPLES_BASE = *
-.assert * = $4000, error
 duty_cycle0:                    ; Max negative level, 8 cycles
         ____SPKR_DUTY____4      ; 4  !
         ____SPKR_DUTY____4      ; 8  !
@@ -293,9 +292,6 @@ setup_pointers:
         ; Setup numcols
         jsr     popa
         sta     numcols+1
-
-        ; Set numcols on proxy
-        jsr     _serial_putc_direct
 
         ; Setup pointer access to SPKR
         lda     #<(SPKR)
@@ -497,6 +493,15 @@ _surl_stream_audio:
         lda     #SPEED_SLOW
         jsr     _set_iigs_speed
 .endif
+
+        lda     #$2F                    ; Ready
+        jsr     _serial_putc_direct
+
+        lda     numcols+1               ; Set numcols on proxy
+        jsr     _serial_putc_direct
+        lda     #>(duty_cycle0)         ; Send sample base
+        jsr     _serial_putc_direct
+
         ; Start with silence
         jmp     silence
 ; ------------------------------------------------------------------

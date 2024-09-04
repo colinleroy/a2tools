@@ -400,7 +400,6 @@ static byte_diff **diffs = NULL;
 #define AUDIO_MAX          256
 #define BUFFER_LEN         (60*10)
 
-#define AUDIO_SAMPLE_OFFSET      0x40
 #define AUDIO_MAX_LEVEL          32
 #define AUDIO_NUM_LEVELS         (AUDIO_MAX_LEVEL+1)
 #define AUDIO_STREAM_TITLE       AUDIO_NUM_LEVELS
@@ -602,12 +601,13 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
 
   audio_numcols = simple_serial_getc();
   printf("Client has %d columns\n", audio_numcols);
+  audio_sample_offset = simple_serial_getc();
+  printf("Sample base 0x%02x\n", audio_sample_offset);
+  audio_sample_multiplier = 1;
 
   sleep(1); /* Let ffmpeg have a bit of time to push data so we don't starve */
   vol_mult = 10;
 
-  audio_sample_offset = AUDIO_SAMPLE_OFFSET;
-  audio_sample_multiplier = 1;
 
   while (1) {
 
