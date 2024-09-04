@@ -49,8 +49,6 @@ char *nat_data = NULL;
 char **lines = NULL;
 char **nat_lines = NULL;
 
-char quit_to_rbrowser = 0;
-
 unsigned char scrw = 255, scrh = 255;
 
 #ifdef __APPLE2ENH__
@@ -289,12 +287,8 @@ read_metadata_again:
         print_err("VIDEOPLAY");
       }
       return;
-    } else {
-novid:
-      simple_serial_putc(SURL_CLIENT_READY);
     }
-#else
-    simple_serial_putc(SURL_CLIENT_READY);
+novid:
 #endif
 #ifdef __APPLE2__
     surl_stream_audio(NUMCOLS, 20, 2, 23);
@@ -390,8 +384,6 @@ static void do_nav(char *base_url) {
         clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
         if (navigated)
           goto up_dir;
-        else if (quit_to_rbrowser)
-          exec("RBROWSER", NULL);
         else
           exec("WOZAMP", NULL);
       case UPDATE_LIST:
@@ -462,10 +454,7 @@ up_dir:
         stp_list_search(0);
         goto keyb_input;
       case 's':
-        if (quit_to_rbrowser)
-          exec("RBROWSER", NULL);
-        else
-          exec("WOZAMP", NULL);
+        exec("WOZAMP", NULL);
       case 'q':
         exit(0);
       default:
@@ -488,13 +477,11 @@ static char cmd_cb(char c) {
   return 0;
 }
 
-static char *do_setup(char from_rbrowser) {
+static char *do_setup(void) {
   FILE *tmpfp;
   char *url = NULL;
 
   clrscr();
-
-  quit_to_rbrowser = from_rbrowser;
 
   /* Are we back from VIDEOPLAY? */
   tmpfp = fopen(URL_PASSER_FILE, "r");
@@ -526,14 +513,6 @@ static char *do_setup(char from_rbrowser) {
     fclose(tmpfp);
     unlink(URL_PASSER_FILE);
     reopen_start_device();
-    if (from_rbrowser) {
-      tmpfp = fopen(STP_URL_FILE, "w");
-      if (tmpfp) {
-        fputs(url, tmpfp);
-        fputs("\n\n", tmpfp);
-        fclose(tmpfp);
-      }
-    }
   }
   set_scrollwindow(0, scrh);
   #ifdef __APPLE2__
@@ -569,7 +548,7 @@ int main(int argc, char *argv[]) {
 
   load_config();
 
-  url = do_setup(argc > 1 && argv[1][0] == 'r');
+  url = do_setup();
 
   do_nav(url);
 }

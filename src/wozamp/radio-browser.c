@@ -39,6 +39,7 @@
 #include "platform.h"
 #include "malloc0.h"
 #include "backup_logo.h"
+#include "stp_list.h"
 
 #ifdef __CC65__
 #pragma code-name (push, "RT_ONCE")
@@ -46,12 +47,18 @@
 #pragma rodata-name (push, "RT_ONCE")
 #endif
 
+#ifdef __APPLE2ENH__
+#define NUMCOLS 80
+#else
+#define NUMCOLS 40
+#endif
+
 #define BUFSIZE 255
 char tmp_buf[BUFSIZE];
 
 #define SEARCH_BUF_SIZE 128
 char search_buf[SEARCH_BUF_SIZE];
-#define JSON_BUF_SIZE 8192
+#define JSON_BUF_SIZE 4096
 char json_buf[JSON_BUF_SIZE];
 
 unsigned char scrh, scrw;
@@ -74,7 +81,7 @@ enum JsonFieldIdx {
 
 char **lines = NULL;
 char n_lines = 0;
-char cur_line;
+int cur_line;
 
 static void print_footer(void) {
 #ifdef __APPLE2ENH__
@@ -100,13 +107,75 @@ static void station_click(char *station_uuid) {
     surl_start_request(SURL_METHOD_GET, tmp_buf, NULL, 0);
 }
 
-static void launch_wozamp_with_url(char *url) {
-  FILE *url_fp = fopen(URL_PASSER_FILE, "w");
+void show_metadata (char *data) {
+  char *value = strchr(data, '\n');
+  char max_len;
+  if (value == NULL) {
+    return;
+  }
+  value++;
+  /* clrzone goes gotoxy */
+  if (!strncmp(data, "title\n", 6)) {
+    max_len = scrw - 6;
+    clrzone(0, 0, max_len, 0);
+  }
+  if (!strncmp(data, "artist\n", 6)) {
+    max_len = scrw - 1;
+    clrzone(0, 1, max_len, 1);
+  }
+  if (strlen(value) > max_len)
+    value[max_len] = '\0';
 
-  if (url_fp) {
-    fputs(url, url_fp);
-    fclose(url_fp);
-    exec("WOZAMP", "rbrowser");
+  dputs(value);
+}
+
+
+static void play_url(char *url) {
+  char r;
+
+  clrscr();
+
+  surl_start_request(SURL_METHOD_STREAM_AUDIO, url, NULL, 0);
+  simple_serial_write(translit_charset, strlen(translit_charset));
+  simple_serial_putc('\n');
+  simple_serial_putc(monochrome);
+  simple_serial_putc(HGR_SCALE_MIXHGR);
+
+read_metadata_again:
+  r = simple_serial_getc();
+  if (r == SURL_ANSWER_STREAM_METADATA) {
+    char *metadata;
+    size_t len;
+    surl_read_with_barrier((char *)&len, 2);
+    len = ntohs(len);
+    metadata = malloc(len + 1);
+    surl_read_with_barrier(metadata, len);
+    metadata[len] = '\0';
+
+    show_metadata(metadata);
+    free(metadata);
+    simple_serial_putc(SURL_CLIENT_READY);
+    goto read_metadata_again;
+
+  } else if (r == SURL_ANSWER_STREAM_ART) {
+    surl_read_with_barrier((char *)HGR_PAGE, HGR_LEN);
+    simple_serial_putc(SURL_CLIENT_READY);
+    goto read_metadata_again;
+
+  } else if (r == SURL_ANSWER_STREAM_START) {
+    /* Save new start url */
+    FILE *tmpfp = fopen(STP_URL_FILE, "w");
+    if (tmpfp) {
+      fputs(url, tmpfp);
+      fputs("\n\n", tmpfp);
+      fclose(tmpfp);
+    }
+    surl_stream_audio(NUMCOLS, 20, 2, 23);
+
+  } else {
+    gotoxy(0, 0);
+    dputs("Playback error");
+    sleep(1);
   }
 }
 
@@ -237,8 +306,8 @@ read_kbd:
       /* Be a good netizen and register click */
       station_click(lines[cur_line+IDX_STATION_UUID]);
       /* Launch streamer */
-      launch_wozamp_with_url(lines[cur_line+IDX_URL_RESOLVED]);
-      /* We should be exited by now. If not fallback to ESC */
+      play_url(lines[cur_line+IDX_URL_RESOLVED]);
+      goto display_result;
     case CH_ESC:
       free(lines);
       lines = NULL;
@@ -303,6 +372,8 @@ void main(void) {
   hgr_mixon();
 #endif
   load_config();
+  surl_connect_proxy();
+
   surl_user_agent = "Wozamp for Apple II / "VERSION;
 
   screensize(&scrw, &scrh);
@@ -316,7 +387,9 @@ search_again:
   cputs("Station name: ");
   dget_text(search_buf, SEARCH_BUF_SIZE, cmd_cb, 0);
   cputs("\r\n");
-  search_stations(search_buf);
+  if (search_buf[0]) {
+    search_stations(search_buf);
+  }
 #ifdef __APPLE2ENH__
   backup_restore_logo("r");
 #endif
