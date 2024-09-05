@@ -31,12 +31,10 @@
 
 #define APPLESINGLE_HEADER_LEN 58
 
-extern unsigned char scrw, scrh;
-
 void stp_delete_dialog(char *url, char *filename) {
   char c;
 
-  clrzone(0, 2, scrw - 1, 2 + PAGE_HEIGHT);
+  clrzone(0, 2, NUMCOLS - 1, 2 + PAGE_HEIGHT);
   gotoxy(0, 7);
 
   cprintf("Delete %s?", filename);
@@ -55,9 +53,6 @@ void stp_delete_dialog(char *url, char *filename) {
 void stp_delete(char *url, char *filename) {
   char *full_url;
   const surl_response *resp = NULL;
-
-  if (scrw == 255)
-    screensize(&scrw, &scrh);
 
   full_url = malloc(strlen(url) + 1 + strlen(filename) + 1);
   sprintf(full_url, "%s/%s", url, filename);

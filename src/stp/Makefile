@@ -40,7 +40,6 @@ CL65SOURCES = \
 	../lib/serial/simple_serial_io.s \
 	$(serial_hw_SOURCES) \
 	../lib/dputc.s \
-	../lib/dputs.s \
 	../lib/scroll.s \
 	../lib/FVTABZ.s \
 	../lib/fastirq$(suffix).s \

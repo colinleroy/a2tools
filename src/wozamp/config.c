@@ -11,7 +11,6 @@
 #include "stp_list.h"
 #include "clrzone.h"
 
-extern unsigned char scrw;
 char *translit_charset;
 char monochrome;
 char enable_video;
@@ -77,7 +76,7 @@ again:
 void config(void) {
   char c;
 
-  clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
+  clrzone(0, PAGE_BEGIN, NUMCOLS - 1, PAGE_BEGIN + PAGE_HEIGHT);
 
 #ifdef __APPLE2ENH__
   cputs("Please choose your keyboard layout:\r\n");

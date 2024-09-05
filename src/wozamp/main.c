@@ -28,7 +28,6 @@
 #include "dgets.h"
 #include "hgr.h"
 #include "dputc.h"
-#include "dputs.h"
 #include "clrzone.h"
 #include "scroll.h"
 #include "scrollwindow.h"
@@ -49,14 +48,10 @@ char *nat_data = NULL;
 char **lines = NULL;
 char **nat_lines = NULL;
 
-unsigned char scrw = 255, scrh = 255;
-
 #ifdef __APPLE2ENH__
 char center_x = 30;
-#define NUMCOLS 80
 #else
 char center_x = 14;
-#define NUMCOLS 40
 #endif
 
 extern char search_buf[80];
@@ -64,33 +59,8 @@ extern char **display_lines;
 
 static char in_list = 0;
 
-void stp_print_footer(void) {
-
-  clrzone(0, 22, scrw - 1, 23);
-
-  gotoxy(0, 22);
-#ifdef __APPLE2ENH__
-  dputs("Up,Down,Enter,Esc: Navigate     /: Search   C: Configure\r\n");
-//      "A:Play all files in directory   N: Next     S: Server     Q: Quit  (12345B free)");
-  dputs("A:Play all files in directory   ");
-  if (search_buf[0]) {
-    dputs("N: Next");
-  }
-  gotox(44);
-
-  cputs("S: Server     Q: Quit  (");
-  cutoa(_heapmemavail());
-  cputs("B free)");
-#else
-  dputs("U,J,Enter,Esc:nav;  /:search;  C:config");
-  //    "A:play dir; N:next; S:server;  Q: quit"
-  dputs("\r\nA:play dir;");
-  if (search_buf[0]) {
-    dputs(" N:next;");
-  }
-  gotox(19);
-  dputs(" S:server;  Q: quit");
-#endif
+static void clr_footer(void) {
+  clrzone(0, 22, NUMCOLS - 1, 23);
 }
 
 static unsigned char got_cover = 0;
@@ -133,50 +103,98 @@ void get_cover_file(char *url) {
   free(cover_url);
 }
 
+#ifdef __CC65__
+#pragma code-name (push, "LOWCODE")
+#endif
+
+void stp_print_footer(void) {
+  clr_footer();
+
+  gotoxy(0, 22);
+#ifdef __APPLE2ENH__
+  cputs("Up,Down,Enter,Esc: Navigate     /: Search   C: Configure\r\n"
+        "A:Play all files in directory   ");
+//      "A:Play all files in directory   N: Next     S: Server     Q: Quit  (12345B free)");
+  if (search_buf[0]) {
+    cputs("N: Next");
+  }
+  gotox(44);
+
+  cputs("S: Server     Q: Quit  (");
+  cutoa(_heapmemavail());
+  cputs("B free)");
+#else
+  cputs("U,J,Enter,Esc:nav;  /:search;  C:config\r\n"
+        "A:play dir;");
+//    "A:play dir; N:next; S:server;  Q: quit"
+  if (search_buf[0]) {
+    cputs(" N:next;");
+  }
+  gotox(19);
+  cputs(" S:server;  Q: quit");
+#endif
+}
+
 void show_metadata (char *data) {
   char *value = strchr(data, '\n');
-  char max_len;
+  char x, y, max_len;
+
   if (value == NULL) {
     return;
   }
   value++;
-  /* clrzone goes gotoxy */
-  if (!strncmp(data, "title\n", 6)) {
-    max_len = scrw - 6;
-    clrzone(0, 20, max_len, 20);
-  }
-  if (!strncmp(data, "track\n", 6)) {
-    max_len = 5;
-    clrzone(scrw - 6, 20, scrw - 6 + max_len, 20);
-  }
-  if (!strncmp(data, "artist\n", 6)) {
-    max_len = scrw - 1;
-    clrzone(0, 21, max_len, 21);
-  }
-  if (!strncmp(data, "album\n", 6)) {
-    max_len = scrw - 1;
-    clrzone(0, 22, max_len, 22);
-  }
-  if (strlen(value) > max_len)
-    value[max_len] = '\0';
 
-  dputs(value);
+  x = 0;
+  y = 20;
+  max_len = NUMCOLS - 1;
+
+  switch(data[3]) {
+    //case 'l': /* titLe, nothing to do */
+    case 'c': /* traCk */
+      max_len = 5;
+      x = NUMCOLS - 7;
+      break;
+    case 'i': /* artIst */
+      y = 21;
+      break;
+    case 'u': /* albUm */
+      y = 22;
+      break;
+  }
+
+  clrzone(x, y, NUMCOLS - 1, y);
+
+  if (strlen(value) >= max_len) {
+    value[max_len] = '\0';
+  }
+
+  cputs(value);
 }
 
 void stp_print_result(const surl_response *response) {
   gotoxy(0, 20);
-  chline(scrw);
-  clrzone(0, 21, scrw - 1, 21);
+  chline(NUMCOLS);
+  clrzone(0, 21, NUMCOLS - 1, 21);
 
   if (response == NULL) {
-    dputs("Unknown request error.");
+    cputs("Unknown request error.");
   } else if (response->code / 100 != 2){
     cputs("Error: Response code ");
     citoa(response->code);
   }
 }
 
+static char cmd_cb(char c) {
+  char prev_cursor = cursor(0);
+  if (tolower(c) == 'r') {
+    exec("RBROWSER", NULL);
+  }
+  cursor(prev_cursor);
+  return 0;
+}
+
 #ifdef __CC65__
+#pragma code-name (pop)
 #pragma code-name (push, "LC")
 #endif
 
@@ -198,14 +216,14 @@ static void play_url(char *url, char *filename) {
   /* Try to get /cover.jpg as a fallback for media with no embedded art */
   get_cover_file(url);
 
-  clrzone(0, 12, scrw - 1, 12);
-  clrzone(0, 20, scrw - 1, 23);
+  clrzone(0, 12, NUMCOLS - 1, 12);
+  clr_footer();
  
-  strncpy(tmp_buf, filename ? filename : "Streaming...", scrw - 1);
-  tmp_buf[scrw] = '\0';
-  gotoxy(0, 20);
-  dputs(tmp_buf);
-  //dputs("Spc:pause, Esc:stop, Left/Right:fwd/rew");
+  strncpy(tmp_buf, filename ? filename : "Streaming...", NUMCOLS - 1);
+  tmp_buf[NUMCOLS] = '\0';
+  cputs(tmp_buf);
+
+  //cputs("Spc:pause, Esc:stop, Left/Right:fwd/rew");
   surl_start_request(SURL_METHOD_STREAM_AUDIO, url, NULL, 0);
   simple_serial_write(translit_charset, strlen(translit_charset));
   simple_serial_putc('\n');
@@ -273,7 +291,7 @@ read_metadata_again:
       init_text();
       clrscr();
       gotoxy(center_x, 12);
-      dputs("Loading video player...");
+      cputs("Loading video player...");
       fputs(url, video_url_fp);
       fputc('\n', video_url_fp);
       fputc(enable_subtitles, video_url_fp);
@@ -294,7 +312,7 @@ novid:
     surl_stream_audio(NUMCOLS, 20, 2, 23);
     init_text();
 #endif
-    clrzone(0, 20, scrw - 1, 23);
+    clr_footer();
     stp_print_footer();
 
   } else {
@@ -302,7 +320,7 @@ novid:
     init_text();
 #endif
     gotoxy(center_x, 10);
-    dputs("Playback error");
+    cputs("Playback error");
     sleep(1);
   }
 }
@@ -330,7 +348,7 @@ char *play_directory(char *url) {
     if (r == SAVE_DIALOG) {
       /* Play - warning ! trashes data with HGR page */
       play_url(url, display_lines[dir_index]);
-      clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
+      stp_clr_page();
     }
 
     /* Fetch original list back */
@@ -353,15 +371,6 @@ char *play_directory(char *url) {
   return url;
 }
 
-static char cmd_cb(char c) {
-  char prev_cursor = cursor(0);
-  if (tolower(c) == 'r') {
-    exec("RBROWSER", NULL);
-  }
-  cursor(prev_cursor);
-  return 0;
-}
-
 char *start_url_ui(void) {
   char *url = NULL;
 
@@ -369,7 +378,7 @@ char *start_url_ui(void) {
   backup_restore_logo("r");
   init_hgr(1);
   hgr_mixon();
-  set_scrollwindow(20, scrh);
+  set_scrollwindow(20, NUMROWS);
 
 #ifdef __APPLE2ENH__
   gotoxy(80-17, 3);
@@ -388,7 +397,7 @@ char *start_url_ui(void) {
                         cmd_cb);
 #endif
 
-  set_scrollwindow(0, scrh);
+  set_scrollwindow(0, NUMROWS);
   clrscr();
   init_text();
 
@@ -425,7 +434,7 @@ static void do_nav(char *base_url) {
       case SAVE_DIALOG:
         /* Play */
         play_url(url, prev_filename);
-        clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
+        stp_clr_page();
         if (navigated)
           goto up_dir;
         else
@@ -546,9 +555,7 @@ void main(void) {
   clrscr();
   init_hgr(1);
   hgr_mixon();
-  screensize(&scrw, &scrh);
-  scrh = 24;
-  set_scrollwindow(20, scrh);
+  set_scrollwindow(20, NUMROWS);
 
 #ifdef __APPLE2ENH__
   backup_restore_logo("w");
