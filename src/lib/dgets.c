@@ -175,7 +175,7 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb, c
     for (cur_insert = 0; cur_insert < max_insert; cur_insert++) {
       char c = text_buf[cur_insert];
       if (c != '\n') {
-        dputc(c);
+        dputc(echo_on ? c : '*');
       } else {
         dputc('\r');
         dputc('\n');
