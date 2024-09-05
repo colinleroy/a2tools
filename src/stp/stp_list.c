@@ -39,8 +39,9 @@
 
 static char *url_enter(char *url, char *suffix);
 
-static char *login = NULL;
-static char *password = NULL;
+
+static char login[32] = "";
+static char password[32] = "";
 
 extern char *translit_charset;
 
@@ -48,13 +49,9 @@ char **display_lines;
 
 char tmp_buf[BUFSIZE];
 
-#pragma code-name(push, "RT_ONCE")
 char *stp_get_start_url(char *header, char *default_url, cmd_handler_func cmd_cb) {
   FILE *fp;
   char *start_url = NULL;
-  char *last_start_url = NULL;
-  char *last_login = NULL;
-  char *last_password = NULL;
   char *tmp = NULL;
   int changed = 0;
 
@@ -64,93 +61,54 @@ char *stp_get_start_url(char *header, char *default_url, cmd_handler_func cmd_cb
 
   fp = fopen(STP_URL_FILE, "r");
   if (fp != NULL) {
-    fgets(tmp_buf, BUFSIZE, fp);
-    last_start_url = strdup(tmp_buf);
-
-    tmp_buf[0] = '\0';
-    fgets(tmp_buf, BUFSIZE, fp);
-    last_login = strdup(tmp_buf);
-
-    tmp_buf[0] = '\0';
-    fgets(tmp_buf, BUFSIZE, fp);
-    last_password = strdup(tmp_buf);
+    fgets(tmp_buf, BUFSIZE-1, fp);
+    fgets(login, 31, fp);
+    fgets(password, 31, fp);
 
     fclose(fp);
-    if (strchr(last_start_url,'\n'))
-      *strchr(last_start_url,'\n') = '\0';
-    if (strchr(last_login,'\n'))
-      *strchr(last_login,'\n') = '\0';
-    if (strchr(last_password,'\n'))
-      *strchr(last_password,'\n') = '\0';
+    if ((tmp = strchr(tmp_buf,'\n')))
+      *tmp = '\0';
+    if ((tmp = strchr(login,'\n')))
+      *tmp = '\0';
+    if ((tmp = strchr(password,'\n')))
+      *tmp = '\0';
+
   } else {
-    last_start_url = strdup(default_url);
-    last_login = strdup("");
-    last_password = strdup("");
+    strcpy(tmp_buf, default_url);
   }
+
+  start_url = strdup(tmp_buf);
 
   dputs(header);
   dputs("URL: ");
 
-  strcpy(tmp_buf, last_start_url);
   dget_text(tmp_buf, BUFSIZE, cmd_cb, 0);
   if (cmd_cb) {
     cputs("\r\n");
   }
-  if (*tmp_buf == '\0' || !strcmp(tmp_buf, last_start_url)) {
-    start_url = last_start_url;
-  } else {
-    free(last_start_url);
-    start_url = strdup(tmp_buf);
-    changed = 1;
 
-    /* Forget login and password too */
-    free(last_login);
-    free(last_password);
-    last_login = strdup("");
-    last_password = strdup("");
-  }
+  changed = strcmp(tmp_buf, start_url);
 
-  if (*last_login != '\0') {
-    dputs("Login (");
-    dputs(last_login);
-    dputs("): ");
-  } else {
-    dputs("Login (anonymous): ");
-  }
+  free(start_url);
+  start_url = strdup(tmp_buf);
 
-  tmp_buf[0] = '\0';
-  dget_text(tmp_buf, BUFSIZE, cmd_cb, 0);
+  dputs("Login: ");
+  strcpy(tmp_buf, login);
+  dget_text(login, 32, cmd_cb, 0);
   if (cmd_cb) {
     cputs("\r\n");
   }
-  login = strdup(tmp_buf);
+  changed |= strcmp(tmp_buf, login);
 
-  if (*login == '\0') {
-    password = last_password;
-  } else {
-    tmp_buf[0] = '\0';
-    dputs("Password: ");
-    echo(0);
-    dget_text(tmp_buf, BUFSIZE, cmd_cb, 0);
-    echo(1);
-    if (cmd_cb) {
-      cputs("\r\n");
-    }
-    free(last_password);
-    password = strdup(tmp_buf);
-    changed = 1;
+  dputs("Password: ");
+  echo(0);
+  strcpy(tmp_buf, password);
+  dget_text(password, 32, cmd_cb, 0);
+  echo(1);
+  if (cmd_cb) {
+    cputs("\r\n");
   }
-
-  if (strchr(password,'\n'))
-    *strchr(password,'\n') = '\0';
-
-  if (*login == '\0') {
-    free(login);
-    login = last_login;
-  } else {
-    free(last_login);
-    changed = 1;
-  }
+  changed |= strcmp(tmp_buf, password);
 
   if (changed) {
     fp = fopen(STP_URL_FILE, "w");
@@ -162,20 +120,7 @@ char *stp_get_start_url(char *header, char *default_url, cmd_handler_func cmd_cb
       fputs(password, fp);
       fputc('\n', fp);
       fclose(fp);
-    } else {
-      dputs("Can't save URL: ");
-      dputs(strerror(errno));
-      cgetc();
-      exit(1);
     }
-  }
-  if (*login == '\0') {
-    free(login);
-    login = NULL;
-  }
-  if (*password == '\0') {
-    free(password);
-    password = NULL;
   }
 
   tmp = start_url + strlen(start_url) - 1;
@@ -187,8 +132,44 @@ char *stp_get_start_url(char *header, char *default_url, cmd_handler_func cmd_cb
   return start_url;
 }
 
+char *stp_build_login_url(char *url) {
+  char *host = strstr(url, "://");
+  char *proto;
+  char *full_url;
+  char *tmp;
+
+  full_url = malloc(BUFSIZE);
+
+  if (host != NULL) {
+    *host = '\0';
+    /* url is now protocol */
+    proto = url;
+    host = host + 3;
+  } else {
+    proto = "ftp";
+    host = url;
+  }
+
+  if (login[0] != '\0') {
+    tmp = stpcpy(full_url, proto);
+    tmp = stpcpy(tmp, "://");
+    tmp = stpcpy(tmp, login);
+    tmp = stpcpy(tmp, ":");
+    tmp = stpcpy(tmp, password);
+    tmp = stpcpy(tmp, "@");
+    stpcpy(tmp, host);
+  } else {
+    tmp = stpcpy(full_url, proto);
+    tmp = stpcpy(tmp, "://");
+    stpcpy(tmp, host);
+  }
+  full_url = realloc(full_url, strlen(full_url) + 1);
+
+  free(url);
+  return full_url;
+}
+
 #ifdef __CC65__
-#pragma code-name(pop)
 #pragma code-name (push, "LOWCODE")
 #endif
 
@@ -250,7 +231,7 @@ char stp_list_scroll(signed char shift) {
 }
 
 extern unsigned char scrw, scrh;
-char search_buf[80] = { 0 };
+char search_buf[80] = "";
 static int search_from = 0;
 
 void stp_list_search(unsigned char new_search) {
@@ -290,56 +271,6 @@ search_from_start:
     }
   }
 }
-
-
-#ifdef __CC65__
-#pragma code-name(pop)
-#pragma code-name (push, "RT_ONCE")
-#endif
-char *stp_build_login_url(char *url) {
-  char *host = strstr(url, "://");
-  char *proto;
-  char *full_url;
-
-  full_url = malloc(BUFSIZE);
-
-  if (host != NULL) {
-    *host = '\0';
-    /* url is now protocol */
-    proto = url;
-    host = host + 3;
-  } else {
-    proto = "ftp";
-    host = url;
-  }
-
-  if (login) {
-    strcpy(full_url, proto);
-    strcat(full_url, "://");
-    strcat(full_url, login);
-    strcat(full_url, ":");
-    strcat(full_url, password);
-    strcat(full_url, "@");
-    strcat(full_url, host);
-
-    free(login);
-    free(password);
-    login = NULL;
-    password = NULL;
-  } else {
-    strcpy(full_url, proto);
-    strcat(full_url, "://");
-    strcat(full_url, host);
-  }
-  full_url = realloc(full_url, strlen(full_url) + 1);
-
-  free(url);
-  return full_url;
-}
-#ifdef __CC65__
-#pragma code-name(pop)
-#pragma code-name (push, "LOWCODE")
-#endif
 
 static int hscroll_off = 0;
 static int hscroll_dir = 1;
@@ -515,11 +446,10 @@ void stp_print_header(const char *url, enum HeaderUrlAction action) {
   char *no_pass_url = NULL, *host;
   static char *header_url = NULL;
 
-  if (header_url == NULL) {
-    if (action != URL_SET)
-      return;
-    else
-      header_url = strdup(url);
+  if (action == URL_SET) {
+    if (header_url != NULL)
+      free(header_url);
+    header_url = strdup(url);
   }
 
   no_pass_url = strdup(header_url);

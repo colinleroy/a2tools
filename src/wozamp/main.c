@@ -70,15 +70,15 @@ void stp_print_footer(void) {
 
   gotoxy(0, 22);
 #ifdef __APPLE2ENH__
-  dputs("Up,Down,Enter,Esc: Navigate      /: Search    C: Configure\r\n");
-//      "A:Play all files in directory    N: Next      S: Server     Q: Quit (12345B free)");
-  dputs("A:Play all files in directory    ");
+  dputs("Up,Down,Enter,Esc: Navigate     /: Search   C: Configure\r\n");
+//      "A:Play all files in directory   N: Next     S: Server     Q: Quit  (12345B free)");
+  dputs("A:Play all files in directory   ");
   if (search_buf[0]) {
     dputs("N: Next");
   }
-  gotox(46);
+  gotox(44);
 
-  cputs("S: Server     Q: Quit (");
+  cputs("S: Server     Q: Quit  (");
   cutoa(_heapmemavail());
   cputs("B free)");
 #else
@@ -353,6 +353,50 @@ char *play_directory(char *url) {
   return url;
 }
 
+static char cmd_cb(char c) {
+  char prev_cursor = cursor(0);
+  if (tolower(c) == 'r') {
+    exec("RBROWSER", NULL);
+  }
+  cursor(prev_cursor);
+  return 0;
+}
+
+char *start_url_ui(void) {
+  char *url = NULL;
+
+  clrscr();
+  backup_restore_logo("r");
+  init_hgr(1);
+  hgr_mixon();
+  set_scrollwindow(20, scrh);
+
+#ifdef __APPLE2ENH__
+  gotoxy(80-17, 3);
+  cputc('A'|0x80);
+  cputs("-R: RadioBrowser");
+  gotoxy(0, 0);
+  url = stp_get_start_url("Please enter an FTP server or internet stream URL.\r\n",
+                        "http://relay.radiofreefedi.net/listen/rff/rff.mp3",
+                        cmd_cb);
+#else
+  gotoxy(40-20, 3);
+  cputs("Ctrl-R: RadioBrowser");
+  gotoxy(0, 0);
+  url = stp_get_start_url("Please enter an FTP or internet stream\r\n",
+                        "http://relay.radiofreefedi.net/listen/rff/rff.mp3",
+                        cmd_cb);
+#endif
+
+  set_scrollwindow(0, scrh);
+  clrscr();
+  init_text();
+
+  url = stp_build_login_url(url);
+  stp_print_header(url, URL_SET);
+  return url;
+}
+
 #pragma code-name (push, "LC")
 
 char navigated = 0;
@@ -454,7 +498,9 @@ up_dir:
         stp_list_search(0);
         goto keyb_input;
       case 's':
-        exec("WOZAMP", NULL);
+        free(url);
+        url = start_url_ui();
+        break;
       case 'q':
         exit(0);
       default:
@@ -468,41 +514,14 @@ up_dir:
 #pragma code-name (push, "RT_ONCE")
 #endif
 
-static char cmd_cb(char c) {
-  char prev_cursor = cursor(0);
-  if (tolower(c) == 'r') {
-    exec("RBROWSER", NULL);
-  }
-  cursor(prev_cursor);
-  return 0;
-}
-
-static char *do_setup(void) {
+static void do_setup(void) {
   FILE *tmpfp;
   char *url = NULL;
-
-  clrscr();
 
   /* Are we back from VIDEOPLAY? */
   tmpfp = fopen(URL_PASSER_FILE, "r");
   if (tmpfp == NULL) {
-#ifdef __APPLE2ENH__
-    gotoxy(80-17, 3);
-    cputc('A'|0x80);
-    cputs("-R: RadioBrowser");
-    gotoxy(0, 0);
-    url = stp_get_start_url("Please enter an FTP server or internet stream URL.\r\n",
-                          "http://relay.radiofreefedi.net/listen/rff/rff.mp3",
-                          cmd_cb);
-#else
-    gotoxy(40-20, 3);
-    cputs("Ctrl-R: RadioBrowser");
-    gotoxy(0, 0);
-    url = stp_get_start_url("Please enter an FTP or internet stream\r\n",
-                          "http://relay.radiofreefedi.net/listen/rff/rff.mp3",
-                          cmd_cb);
-#endif
-    url = stp_build_login_url(url);
+    url = start_url_ui();
   } else {
     char *lf;
     url = malloc(512);
@@ -514,31 +533,22 @@ static char *do_setup(void) {
     unlink(URL_PASSER_FILE);
     reopen_start_device();
   }
-  set_scrollwindow(0, scrh);
-  #ifdef __APPLE2__
-  init_text();
-  #endif
 
-  return url;
+  do_nav(url);
 }
 
-int main(int argc, char *argv[]) {
+void main(void) {
   char *url = NULL;
 
 #ifdef __APPLE2ENH__
   videomode(VIDEOMODE_80COL);
 #endif
   clrscr();
-  screensize(&scrw, &scrh);
-  scrh = 24;
-
-#ifdef __APPLE2__
   init_hgr(1);
   hgr_mixon();
+  screensize(&scrw, &scrh);
+  scrh = 24;
   set_scrollwindow(20, scrh);
-
-  clrscr();
-#endif
 
 #ifdef __APPLE2ENH__
   backup_restore_logo("w");
@@ -548,9 +558,7 @@ int main(int argc, char *argv[]) {
 
   load_config();
 
-  url = do_setup();
-
-  do_nav(url);
+  do_setup();
 }
 
 #ifdef __CC65__
