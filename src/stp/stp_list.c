@@ -29,8 +29,6 @@
 #include "simple_serial.h"
 #include "extended_conio.h"
 #include "dgets.h"
-#include "dputc.h"
-#include "dputs.h"
 #include "clrzone.h"
 #include "scroll.h"
 #include "scrollwindow.h"
@@ -38,7 +36,6 @@
 #include "runtime_once_clean.h"
 
 static char *url_enter(char *url, char *suffix);
-
 
 static char login[32] = "";
 static char password[32] = "";
@@ -48,6 +45,10 @@ extern char *translit_charset;
 char **display_lines;
 
 char tmp_buf[BUFSIZE];
+
+void stp_clr_page(void) {
+  clrzone(0, PAGE_BEGIN, NUMCOLS - 1, PAGE_BEGIN + PAGE_HEIGHT);
+}
 
 char *stp_get_start_url(char *header, char *default_url, cmd_handler_func cmd_cb) {
   FILE *fp;
@@ -79,8 +80,8 @@ char *stp_get_start_url(char *header, char *default_url, cmd_handler_func cmd_cb
 
   start_url = strdup(tmp_buf);
 
-  dputs(header);
-  dputs("URL: ");
+  cputs(header);
+  cputs("URL: ");
 
   dget_text(tmp_buf, BUFSIZE, cmd_cb, 0);
   if (cmd_cb) {
@@ -92,7 +93,7 @@ char *stp_get_start_url(char *header, char *default_url, cmd_handler_func cmd_cb
   free(start_url);
   start_url = strdup(tmp_buf);
 
-  dputs("Login: ");
+  cputs("Login: ");
   strcpy(tmp_buf, login);
   dget_text(login, 32, cmd_cb, 0);
   if (cmd_cb) {
@@ -100,7 +101,7 @@ char *stp_get_start_url(char *header, char *default_url, cmd_handler_func cmd_cb
   }
   changed |= strcmp(tmp_buf, login);
 
-  dputs("Password: ");
+  cputs("Password: ");
   echo(0);
   strcpy(tmp_buf, password);
   dget_text(password, 32, cmd_cb, 0);
@@ -131,6 +132,10 @@ char *stp_get_start_url(char *header, char *default_url, cmd_handler_func cmd_cb
   clrscr();
   return start_url;
 }
+
+#ifdef __CC65__
+#pragma code-name (push, "LOWCODE")
+#endif
 
 char *stp_build_login_url(char *url) {
   char *host = strstr(url, "://");
@@ -169,10 +174,6 @@ char *stp_build_login_url(char *url) {
   return full_url;
 }
 
-#ifdef __CC65__
-#pragma code-name (push, "LOWCODE")
-#endif
-
 int num_lines = 0;
 int cur_line = 0;
 int cur_display_line = 0;
@@ -208,13 +209,12 @@ char stp_list_scroll(signed char shift) {
   }
 
   /* Handle scroll */
+  set_scrollwindow(PAGE_BEGIN, PAGE_BEGIN + PAGE_HEIGHT + 1);
   if (scroll_way < 0 && cur_line < cur_display_line) {
     cur_display_line = cur_line;
     scroll_changed = 1;
     if (!rollover) {
-      set_scrollwindow(PAGE_BEGIN, PAGE_BEGIN + PAGE_HEIGHT + 1);
       scrolldown_one();
-      set_scrollwindow(0, 24);
     }
   }
 
@@ -222,15 +222,14 @@ char stp_list_scroll(signed char shift) {
     cur_display_line = cur_line - PAGE_HEIGHT;
     scroll_changed = 1;
     if (!rollover) {
-      set_scrollwindow(PAGE_BEGIN, PAGE_BEGIN + PAGE_HEIGHT + 1);
       scrollup_one();
-      set_scrollwindow(0, 24);
     }
   }
+  set_scrollwindow(0, 24);
+
   return scroll_changed && rollover;
 }
 
-extern unsigned char scrw, scrh;
 char search_buf[80] = "";
 static int search_from = 0;
 
@@ -238,15 +237,12 @@ void stp_list_search(unsigned char new_search) {
   int i;
 
   if (new_search) {
-    clrzone(0, 0, scrw - 1, 0);
-    gotoxy(0, 0);
-    dputs("Search: ");
-    strcpy(tmp_buf, search_buf);
-    dget_text(tmp_buf, 79, NULL, 0);
-    if (tmp_buf[0] == '\0') {
+    clrzone(0, 0, NUMCOLS - 1, 0);
+    cputs("Search: ");
+    dget_text(search_buf, BUFSIZE-1, NULL, 0);
+    if (search_buf[0] == '\0') {
       return;
     }
-    strcpy(search_buf, tmp_buf);
   }
 
   search_from = cur_line + 1;
@@ -272,24 +268,33 @@ search_from_start:
   }
 }
 
-static int hscroll_off = 0;
-static int hscroll_dir = 1;
+static void cnputs_nowrap(const char *str) {
+  strncpy(tmp_buf, str, NUMCOLS - 3);
+  tmp_buf[NUMCOLS-3] = '\0';
+  cputs(tmp_buf);
+}
+
+static unsigned char hscroll_off = 0;
+static signed char hscroll_dir = 1;
+
 void stp_animate_list(char reset) {
-  int line_off;
-  int cur_line_len;
+  unsigned char line_off;
+  unsigned char cur_line_len;
+
   if (num_lines == 0) {
     return;
   }
 
   line_off = cur_line - cur_display_line;
+
   if (reset) {
     hscroll_off = 0;
     goto reprint;
   }
 
   cur_line_len = strlen(display_lines[cur_line]);
-  if (cur_line_len > scrw - 3) {
-    if (hscroll_dir == 1 && cur_line_len - hscroll_off == scrw - 3) {
+  if (cur_line_len > NUMCOLS - 3) {
+    if (hscroll_dir == 1 && cur_line_len - hscroll_off == NUMCOLS - 3) {
       hscroll_dir = -1;
       platform_msleep(500);
     } else if (hscroll_off == 0) {
@@ -301,9 +306,7 @@ void stp_animate_list(char reset) {
 
 reprint:
     gotoxy(2, PAGE_BEGIN + line_off);
-    strncpy(tmp_buf, display_lines[cur_line] + hscroll_off, scrw - 3);
-    tmp_buf[scrw-3] = '\0';
-    dputs(tmp_buf);
+    cnputs_nowrap(display_lines[cur_line] + hscroll_off);
     if (!reset) {
       platform_msleep(100);
     }
@@ -311,29 +314,28 @@ reprint:
 }
 
 void stp_update_list(char full_update) {
-  int i;
+  unsigned char i;
+  int j;
 
   hscroll_off = 0;
   hscroll_dir = 1;
 
   if (full_update) {
-    clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
-    for (i = 0; i + cur_display_line < num_lines && i <= PAGE_HEIGHT; i++) {
-      gotoxy(2, i + PAGE_BEGIN);
-      strncpy(tmp_buf, display_lines[i + cur_display_line], scrw - 3);
-      tmp_buf[scrw-3] = '\0';
-      dputs(tmp_buf);
+    stp_clr_page();
+    for (i = PAGE_BEGIN, j = cur_display_line; j < num_lines && i <= PAGE_BEGIN+PAGE_HEIGHT; i++, j++) {
+      gotoxy(2, i);
+      cnputs_nowrap(display_lines[j]);
     }
-  } else if (cur_line < num_lines) {
-    gotoxy (2, PAGE_BEGIN + cur_line - cur_display_line);
-    strncpy(tmp_buf, display_lines[cur_line], scrw - 3);
-    tmp_buf[scrw-3] = '\0';
-    dputs(tmp_buf);
+  } 
+  i = PAGE_BEGIN + cur_line - cur_display_line;
+  if (cur_line < num_lines) {
+    gotoxy (2, i);
+    cnputs_nowrap(display_lines[cur_line]);
 
     clrzone(0, PAGE_BEGIN, 1, PAGE_BEGIN + PAGE_HEIGHT);
   }
-  gotoxy(0, PAGE_BEGIN + cur_line - cur_display_line);
-  dputc('>');
+  gotoxy(0, i);
+  cputc('>');
 }
 
 extern char center_x;
@@ -354,9 +356,9 @@ int stp_get_data(char *url, const surl_response **resp) {
   nat_lines = NULL;
   nat_data = NULL;
 
-  clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
+  stp_clr_page();
   gotoxy(center_x, 12);
-  dputs("Loading...   ");
+  cputs("Loading...   ");
 
   *resp = surl_start_request(SURL_METHOD_GET, url, NULL, 0);
 
@@ -367,9 +369,9 @@ int stp_get_data(char *url, const surl_response **resp) {
   if ((*resp)->size == 0) {
     gotoxy(center_x, 12);
     if (surl_response_ok()) {
-      dputs("Empty.       ");
+      cputs("Empty.       ");
     } else {
-      dputs("Bad response.");
+      cputs("Bad response.");
     }
     return KEYBOARD_INPUT;
   }
@@ -379,13 +381,13 @@ int stp_get_data(char *url, const surl_response **resp) {
   } else {
     if ((*resp)->size > STP_DATA_SIZE-1) {
       gotoxy(center_x, 18);
-      dputs("Not enough memory :-(");
+      cputs("Not enough memory :-(");
       return KEYBOARD_INPUT;
     }
     surl_receive_data(data, (*resp)->size);
 
     surl_translit(translit_charset);
-    if ((*resp)->code / 100 == 2) {
+    if (surl_response_ok()) {
       nat_data = malloc((*resp)->size + 1);
       if (nat_data) {
         surl_receive_data(nat_data, (*resp)->size);
@@ -404,16 +406,10 @@ int stp_get_data(char *url, const surl_response **resp) {
 }
 
 char *stp_url_up(char *url) {
-  int url_len = strlen(url);
   char *last_slash;
 
-  while (url_len > 1 && url[url_len - 1] == '/') {
-    url[url_len - 1] = '\0';
-    url_len = strlen(url);
-  }
-
   last_slash = strrchr(url, '/');
-  if (last_slash && last_slash - url > strlen("sftp://")) {
+  if (last_slash && last_slash - url > 7 /*strlen("sftp://") */) {
     *(last_slash + 1) = '\0';
   }
 
@@ -426,11 +422,14 @@ char *stp_url_enter(char *url, char *suffix) {
   int url_len = strlen(url);
   int suffix_len = strlen(suffix);
   int url_ends_slash = url[url_len - 1] == '/';
-  char *tmp = realloc(url, url_len + suffix_len + (url_ends_slash ? 1 : 2));
+  char *tmp = realloc(url, url_len + suffix_len + 2);
+
   if (!tmp) {
     gotoxy(center_x, 12);
-    dputs("Not enough memory :-(");
+    cputs("Not enough memory :-(");
+    return url;
   }
+
   url = tmp;
   if (!url_ends_slash) {
     url[url_len] = '/';
@@ -443,8 +442,9 @@ char *stp_url_enter(char *url, char *suffix) {
 }
 
 void stp_print_header(const char *url, enum HeaderUrlAction action) {
-  char *no_pass_url = NULL, *host;
+  char *no_pass_url = NULL, *host, *tmp;
   static char *header_url = NULL;
+  int header_url_len;
 
   if (action == URL_SET) {
     if (header_url != NULL)
@@ -458,14 +458,15 @@ void stp_print_header(const char *url, enum HeaderUrlAction action) {
     case URL_SET:
       break;
     case URL_ADD:
-      no_pass_url = realloc(no_pass_url, strlen(header_url) + strlen(url) + 3);
-      if (header_url[strlen(header_url)-1] != '/')
+      header_url_len = strlen(header_url);
+      no_pass_url = realloc(no_pass_url, header_url_len + strlen(url) + 3);
+      if (header_url[header_url_len-1] != '/')
         strcat(no_pass_url, "/");
       strcat(no_pass_url, url);
       break;
     case URL_UP:
-      if (strchr(no_pass_url + 8 /*strlen("sftp://")+1*/, '/'))
-        *(strrchr(no_pass_url, '/')) = '\0';
+      if ((tmp = strrchr(no_pass_url + 7 /*strlen("sftp://")*/, '/')))
+        *tmp = '\0';
       break;
   }
 
@@ -474,28 +475,29 @@ void stp_print_header(const char *url, enum HeaderUrlAction action) {
 
   host = strstr(no_pass_url, "://");
   if (host) {
+    char *pass_sep;
+
     host += 3;
-    if (strchr(host, ':') && strchr(host, ':') < strchr(host, '@')) {
+    pass_sep = strchr(host, ':');
+
+    if (pass_sep && pass_sep < strchr(host, '@')) {
       /* Means there's a login */
-      char *t = strchr(host, ':') + 1;
-      while(*t != '@') {
-        *t = '*';
-        t++;
+      pass_sep++;
+      while(*pass_sep != '@') {
+        *pass_sep = '*';
+        pass_sep++;
       }
     }
   }
-  clrzone(0, 0, scrw - 1, 0);
-  gotoxy(0, 0);
+  clrzone(0, 0, NUMCOLS - 1, 0);
 
-  if (strlen(no_pass_url) > scrw - 3) {
-    dputs("...");
-    strncpy(tmp_buf, no_pass_url + strlen(no_pass_url) - scrw + 3, scrw - 3);
-    tmp_buf[scrw - 3] = '\0';
-    dputs(tmp_buf);
+  if (strlen(no_pass_url) > NUMCOLS - 3) {
+    cputs("...");
+    cnputs_nowrap(no_pass_url + strlen(no_pass_url) - NUMCOLS + 3);
   } else {
-    dputs(no_pass_url);
+    cputs(no_pass_url);
   }
   free(no_pass_url);
   gotoxy(0, 1);
-  chline(scrw);
+  chline(NUMCOLS);
 }

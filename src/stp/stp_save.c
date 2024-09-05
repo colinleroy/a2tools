@@ -38,20 +38,17 @@
 
 #define APPLESINGLE_HEADER_LEN 58
 
-extern unsigned char scrw, scrh;
-
-
 #pragma code-name(push, "LC")
 
 char *stp_confirm_save_all(void) {
   char *out_dir;
 
-  clrzone(0, 2, scrw - 1, 2 + PAGE_HEIGHT);
+  clrzone(0, 2, NUMCOLS - 1, 2 + PAGE_HEIGHT);
   gotoxy(0, 4);
   cprintf("Save all files in current directory\r\n\r\n");
 
   cprintf("Save to: ");
-  out_dir = file_select(wherex(), wherey(), scrw - 1, 17, 1, "Select destination directory");
+  out_dir = file_select(wherex(), wherey(), NUMCOLS - 1, 17, 1, "Select destination directory");
   return out_dir;
 }
 
@@ -84,7 +81,7 @@ int stp_save_dialog(char *url, const surl_response *resp, char *out_dir) {
   int r;
   char free_out_dir = (out_dir == NULL);
 
-  clrzone(0, 2, scrw - 1, 2 + PAGE_HEIGHT);
+  clrzone(0, 2, NUMCOLS - 1, 2 + PAGE_HEIGHT);
   gotoxy(0, 4);
   cprintf("%s\r\n"
           "%s, %lu bytes\r\n"
@@ -92,7 +89,7 @@ int stp_save_dialog(char *url, const surl_response *resp, char *out_dir) {
           "Save to: ", filename, resp->content_type ? resp->content_type : "", resp->size);
 
   if (!out_dir) {
-    out_dir = file_select(wherex(), wherey(), scrw - 1, 17, 1, "Select destination directory");
+    out_dir = file_select(wherex(), wherey(), NUMCOLS - 1, 17, 1, "Select destination directory");
 
     if (!out_dir) {
       free(filename);
@@ -118,7 +115,7 @@ static char cancel_transfer(void) {
       if (tolower(cgetc()) == 'y') {
         return 1;
       }
-      clrzone(0, 14, scrw - 1, 14);
+      clrzone(0, 14, NUMCOLS - 1, 14);
     }
   }
   return 0;
@@ -168,7 +165,7 @@ static int stp_write_disk(const surl_response *resp, char *out_dir, char prodos_
   }
   cprintf("Writing disk...              ");
 
-  progress_bar(0, 15, scrw - 1, 0, num_blocks);
+  progress_bar(0, 15, NUMCOLS - 1, 0, num_blocks);
 
   do {
     if (prodos_order) {
@@ -211,7 +208,7 @@ static int stp_write_disk(const surl_response *resp, char *out_dir, char prodos_
 
     gotoxy(0, 14);
     cprintf("Block %d/%d...", cur_block, num_blocks);
-    progress_bar(0, 15, scrw - 1, cur_block, num_blocks);
+    progress_bar(0, 15, NUMCOLS - 1, cur_block, num_blocks);
 
     /* Check for user cancel */
     if (cancel_transfer()) {
@@ -259,7 +256,7 @@ int stp_save(char *full_filename, char *out_dir, const surl_response *resp) {
 #endif
   filename = strdup(full_filename);
 
-  clrzone(0, start_y, scrw - 1, start_y);
+  clrzone(0, start_y, NUMCOLS - 1, start_y);
   gotoxy(0, start_y);
 
 #ifdef __APPLE2__
@@ -280,7 +277,7 @@ int stp_save(char *full_filename, char *out_dir, const surl_response *resp) {
     if (tolower(cgetc()) != 'y') {
       return -1;
     }
-    clrzone(0, 14, scrw - 1, 14);
+    clrzone(0, 14, NUMCOLS - 1, 14);
     return stp_write_disk(resp, out_dir, prodos);
   } else if (!strcasecmp(filetype, "TXT")) {
     _filetype = PRODOS_T_TXT;
@@ -359,20 +356,20 @@ int stp_save(char *full_filename, char *out_dir, const surl_response *resp) {
     goto err_out;
   }
 
-  progress_bar(0, 15, scrw - 1, 0, resp->size);
+  progress_bar(0, 15, NUMCOLS - 1, 0, resp->size);
   do {
     size_t bytes_to_read = buf_size;
     if (resp->size - total < (uint32)buf_size)
       bytes_to_read = (uint16)(resp->size - total);
 
-    clrzone(0,14, scrw - 1, 14);
+    clrzone(0,14, NUMCOLS - 1, 14);
     gotoxy(0, 14);
     cprintf("Reading %zu bytes...", bytes_to_read);
 
     r = surl_receive_bindata(data, bytes_to_read, 1);
 
-    progress_bar(0, 15, scrw - 1, total + (bytes_to_read / 2), resp->size);
-    clrzone(0,14, scrw - 1, 14);
+    progress_bar(0, 15, NUMCOLS - 1, total + (bytes_to_read / 2), resp->size);
+    clrzone(0,14, NUMCOLS - 1, 14);
     gotoxy(0, 14);
     total += r;
     cprintf("Saving %lu/%lu bytes...", total, resp->size);
@@ -390,7 +387,7 @@ int stp_save(char *full_filename, char *out_dir, const surl_response *resp) {
       goto err_out;
     }
 
-    progress_bar(0, 15, scrw - 1, total, resp->size);
+    progress_bar(0, 15, NUMCOLS - 1, total, resp->size);
   } while (r > 0);
 
 err_out:

@@ -43,14 +43,6 @@
 
 #ifdef __CC65__
 #pragma code-name (push, "RT_ONCE")
-#pragma data-name (push, "RT_ONCE")
-#pragma rodata-name (push, "RT_ONCE")
-#endif
-
-#ifdef __APPLE2ENH__
-#define NUMCOLS 80
-#else
-#define NUMCOLS 40
 #endif
 
 #define BUFSIZE 255
@@ -398,6 +390,4 @@ search_again:
 
 #ifdef __CC65__
 #pragma code-name (pop)
-#pragma data-name (pop)
-#pragma rodata-name (pop)
 #endif

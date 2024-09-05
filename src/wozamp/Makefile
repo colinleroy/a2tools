@@ -55,7 +55,6 @@ wozamp_CL65SOURCES = \
 	../lib/serial/$(serial_hw)/control.s \
 	../lib/serial/$(serial_hw)/no_irq.s \
 	../lib/dputc.s \
-	../lib/dputs.s \
 	../lib/scroll.s \
 	../lib/FVTABZ.s \
 	../lib/fastirq$(suffix).s \
@@ -66,12 +65,6 @@ wozamp_CL65SOURCES = \
 	../lib/citoa.s \
 	../lib/cutoa.s \
 	../lib/cntoabuf.s
-
-wozamp_GCC_SOURCES = \
-	../lib/strtrim.c \
-	../lib/extended_conio.c \
-	../lib/clrzone.c \
-	../lib/serial/simple_serial_io.c
 
 wozamp_CLCFLAGS = -t $(CC65_TARGET) -DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER \
 	-DSTP_DATA_SIZE=8192 \
@@ -110,22 +103,11 @@ rbrowser_CL65SOURCES = \
 	../lib/extrazp.s \
 	../lib/clrzone.s
 
-rbrowser_GCC_SOURCES = \
-	../lib/strtrim.c \
-	../lib/extended_conio.c \
-	../lib/clrzone.c \
-	../lib/serial/simple_serial_io.c
-
 rbrowser_CLCFLAGS = -t $(CC65_TARGET) \
 	-I ../lib -I ../stp \
 	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-rbrowser.cfg \
 	-vm -m rbrowser.map -DSURL_TO_LANGCARD -O --start-addr 0x4000
 
-
-GCCCFLAGS = -g -O0 -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\" \
-	-I ../lib -I ../stp -Wall -Wno-format \
-	-Wno-unused-function -Wno-char-subscripts -Wno-unknown-pragmas \
-	-Werror -DSTP_DATA_SIZE=8192
 
 .PHONY: all clean
 
@@ -197,9 +179,6 @@ wozamp.bin: $(wozamp_CL65SOURCES) $(wozamp_SOURCES)
 
 rbrowser.bin: $(rbrowser_CL65SOURCES) $(rbrowser_SOURCES)
 	cl65 -g -Wl --dbgfile,rbrowser.dbg -Ln rbrowser.lbl $(CFLAGS) $(iigs_CFLAGS) $(rbrowser_CLCFLAGS) -o $@ $^
-
-wozamp.x86_64: $(wozamp_SOURCES) $(wozamp_GCC_SOURCES)
-	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	
 
 videoplay.bin: $(videoplay_CL65SOURCES) $(videoplay_SOURCES)
 	cl65 -g -Wl --dbgfile,videoplay.dbg -Ln videoplay.lbl $(CFLAGS) $(iigs_CFLAGS) $(videoplay_CLCFLAGS) -o $@ $^

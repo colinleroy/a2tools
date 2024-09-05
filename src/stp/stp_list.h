@@ -21,6 +21,13 @@
 #include "surl.h"
 #include "dgets.h"
 
+#ifdef __APPLE2ENH__
+#define NUMCOLS 80
+#else
+#define NUMCOLS 40
+#endif
+#define NUMROWS 24
+
 #define BUFSIZE 255
 #define STP_URL_FILE "STPSTARTURL"
 
@@ -62,4 +69,5 @@ int stp_get_data(char *url, const surl_response **resp);
 void stp_print_header(const char *url, enum HeaderUrlAction action);
 void stp_print_result(const surl_response *response);
 void stp_animate_list(char reset);
+void stp_clr_page(void);
 #endif

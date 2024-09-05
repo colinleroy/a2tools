@@ -41,18 +41,16 @@
 #define _DE_ISDIR(x) ((x) == DT_DIR)
 #endif
 
-extern unsigned char scrw, scrh;
-
 static char *stp_send_dialog(char recursive) {
   char *filename;
-  clrzone(0, 2, scrw - 1, 2 + PAGE_HEIGHT);
+  clrzone(0, 2, NUMCOLS - 1, 2 + PAGE_HEIGHT);
   gotoxy(0, 3);
   if (recursive) {
     cprintf("Directory: ");
-    filename = file_select(wherex(), wherey(), scrw - 1, PAGE_HEIGHT, 1, "Select directory to send");
+    filename = file_select(wherex(), wherey(), NUMCOLS - 1, PAGE_HEIGHT, 1, "Select directory to send");
   } else {
     cprintf("File name: ");
-    filename = file_select(wherex(), wherey(), scrw - 1, PAGE_HEIGHT, 0, "Select file to send");
+    filename = file_select(wherex(), wherey(), NUMCOLS - 1, PAGE_HEIGHT, 0, "Select file to send");
   }
   return filename;
 }
@@ -109,7 +107,7 @@ read_next_ent:
     }
   }
 
-  clrzone(0, 2, scrw - 1, 2 + PAGE_HEIGHT);
+  clrzone(0, 2, NUMCOLS - 1, 2 + PAGE_HEIGHT);
   gotoxy(0, 3);
   cprintf("Opening %s...", path);
 
@@ -141,7 +139,7 @@ read_next_ent:
     goto err_out;
   }
 
-  progress_bar(0, start_y + 3, scrw, 0, stbuf.st_size);
+  progress_bar(0, start_y + 3, NUMCOLS, 0, stbuf.st_size);
 
   resp = surl_start_request(SURL_METHOD_PUT, remote_filename, NULL, 0);
   if (resp->code != 100) {
@@ -163,23 +161,23 @@ read_next_ent:
     if (rem < (unsigned long)chunksize)
       chunksize = (size_t)rem;
 
-    clrzone(0, start_y, scrw - 1, start_y);
+    clrzone(0, start_y, NUMCOLS - 1, start_y);
     gotoxy(0, start_y);
     cprintf("Sending %s: %lu/%lu bytes...", filename, total, stbuf.st_size);
 
     r = fread(send_data, sizeof(char), chunksize, fp);
-    progress_bar(0, start_y + 3, scrw, total + (chunksize / 2), stbuf.st_size);
+    progress_bar(0, start_y + 3, NUMCOLS, total + (chunksize / 2), stbuf.st_size);
 
     total = total + r;
 
     surl_send_data(send_data, r);
 
-    progress_bar(-1, -1, scrw, total, stbuf.st_size);
+    progress_bar(-1, -1, NUMCOLS, total, stbuf.st_size);
   } while (total < stbuf.st_size);
 
 finished:
   surl_read_response_header();
-  clrzone(0, 2, scrw - 1, 2 + PAGE_HEIGHT);
+  clrzone(0, 2, NUMCOLS - 1, 2 + PAGE_HEIGHT);
   gotoxy(0, start_y);
   cprintf("Sent %lu bytes.\r\n", total);
   cprintf("File %s sent, response code: %d\r\n", filename, resp->code);
@@ -192,7 +190,7 @@ err_out:
   free(path);
   free(remote_filename);
   free(send_data);
-  clrzone(0, 19, scrw - 1, 20);
+  clrzone(0, 19, NUMCOLS - 1, 20);
   stp_print_footer();
   if (recursive && d) {
     goto read_next_ent;
@@ -201,7 +199,7 @@ all_ents_read:
   if (dir) {
     free(dir);
   }
-  clrzone(0, 5, scrw - 1, PAGE_HEIGHT - 1);
+  clrzone(0, 5, NUMCOLS - 1, PAGE_HEIGHT - 1);
   gotoxy(0, start_y + 3);
   cprintf("Hit a key to continue.");
   cgetc();

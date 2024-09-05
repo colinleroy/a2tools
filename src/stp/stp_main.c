@@ -31,15 +31,12 @@
 #include "extended_conio.h"
 #include "dgets.h"
 #include "dputc.h"
-#include "dputs.h"
 #include "clrzone.h"
 #include "scroll.h"
 #include "scrollwindow.h"
 #include "strsplit.h"
 #include "runtime_once_clean.h"
 #include "charsets.h"
-
-unsigned char scrw = 255, scrh = 255;
 
 #ifdef __APPLE2ENH__
 char center_x = 30;
@@ -94,7 +91,7 @@ static void get_all(const char *url, char **lines, int n_lines) {
       break;
     }
   }
-  clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
+  clrzone(0, PAGE_BEGIN, NUMCOLS - 1, PAGE_BEGIN + PAGE_HEIGHT);
   free(out_dir);
 }
 
@@ -102,27 +99,27 @@ extern char search_buf[80];
 
 void stp_print_footer(void) {
   gotoxy(0, 22);
-  chline(scrw);
-  clrzone(0, 23, scrw - 1, 23);
+  chline(NUMCOLS);
+  clrzone(0, 23, NUMCOLS - 1, 23);
   gotoxy(0, 23);
 #ifdef __APPLE2ENH__
-  dputs("Up/Down/Ret/Esc:nav, S:send (R:all), D:del, A:get all, /:Search");
+  cputs("Up/Down/Ret/Esc:nav, S:send (R:all), D:del, A:get all, /:Search");
   if (search_buf[0]) {
      cputs(", N:Next");
   }
   cputs(", Q:Quit");
 #else
-  dputs("U/J/Ret/Esc:nav, S:send, Q:quit");
+  cputs("U/J/Ret/Esc:nav, S:send, Q:quit");
 #endif
 }
 
 void stp_print_result(const surl_response *response) {
   gotoxy(0, 20);
-  chline(scrw);
-  clrzone(0, 21, scrw - 1, 21);
+  chline(NUMCOLS);
+  clrzone(0, 21, NUMCOLS - 1, 21);
   gotoxy(0, 21);
   if (response == NULL) {
-    dputs("Unknown request error.");
+    cputs("Unknown request error.");
   } else {
     cprintf("Response code %d - %lu bytes",
             response->code,
@@ -141,7 +138,6 @@ int main(void) {
 #endif
 
   clrscr();
-  screensize(&scrw, &scrh);
 
   surl_ping();
   surl_user_agent = "STP "VERSION"/Apple II";
@@ -164,7 +160,7 @@ int main(void) {
         goto keyb_input;
       case SAVE_DIALOG:
         stp_save_dialog(url, resp, NULL);
-        clrzone(0, PAGE_BEGIN, scrw - 1, PAGE_BEGIN + PAGE_HEIGHT);
+        clrzone(0, PAGE_BEGIN, NUMCOLS - 1, PAGE_BEGIN + PAGE_HEIGHT);
         stp_print_result(resp);
         goto up_dir;
       case UPDATE_LIST:
