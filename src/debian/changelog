@@ -3,8 +3,9 @@ a2tools (19.0.0.1) bionic; urgency=medium
   * Emojis fix
   * Faster preloading of audio/video files
   * Faster streaming of webradios
+  * Fit radio browser in the same binary on 65c02
 
- -- Colin Leroy-Mira <colin@colino.net>  Mon, 02 Sep 2024 21:28:19 +0200
+ -- Colin Leroy-Mira <colin@colino.net>  Sat, 07 Sep 2024 21:28:19 +0200
 
 a2tools (18.0.1.1) bionic; urgency=medium
 
