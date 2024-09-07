@@ -109,7 +109,9 @@ rbrowser_CL65SOURCES = \
 	../lib/fastirq$(suffix).s \
 	../lib/runtime_once_clean.s \
 	../lib/extrazp.s \
-	../lib/clrzone.s
+	../lib/clrzone.s \
+	../lib/cntoabuf.s \
+	../lib/cutoa.s \
 
 rbrowser_CLCFLAGS = -t $(CC65_TARGET) \
 	-I ../lib -I ../stp \

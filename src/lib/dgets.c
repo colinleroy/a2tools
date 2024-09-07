@@ -373,6 +373,9 @@ stop_down:
       goto err_beep;
     #endif
 #endif
+    } else if (c == 0x09) {
+      /* Tab */
+      goto err_beep;
     } else {
       if (max_insert == size - 1) {
         /* Full buffer */
