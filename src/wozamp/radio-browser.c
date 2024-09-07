@@ -57,7 +57,7 @@ char n_lines = 0;
 #define BUFSIZE 255
 
 #define JSON_BUF_SIZE 4096
-char json_buf[JSON_BUF_SIZE];
+char *json_buf = NULL;
 
 #define RADIO_BROWSER_API       "http://all.api.radio-browser.info"
 #define SEARCH_ENDPOINT         "/json/stations/byname/"
@@ -344,6 +344,8 @@ exit_results:
 static void search_stations(char *search_str) {
   char *w;
 
+  json_buf = malloc0(JSON_BUF_SIZE);
+
   strcpy(json_buf, RADIO_BROWSER_API);
   strcat(json_buf, SEARCH_ENDPOINT);
 
@@ -368,7 +370,7 @@ static void search_stations(char *search_str) {
                     SURL_HTMLSTRIP_NONE, translit_charset,
                     SEARCH_RESULT_SELECTOR) > 0) {
     show_results();
-    return;
+    goto out;
   } else {
     printf("No results.");
     goto err_out;
@@ -376,6 +378,8 @@ static void search_stations(char *search_str) {
 
 err_out:
   cgetc();
+out:
+  free(json_buf);
 }
 
 void radio_browser_ui(void) {
