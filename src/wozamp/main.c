@@ -375,7 +375,9 @@ char *start_url_ui(void) {
   char *url = NULL;
 
   clrscr();
+#ifdef __APPLE2ENH__
   backup_restore_logo("r");
+#endif
   init_hgr(1);
   hgr_mixon();
   set_scrollwindow(20, NUMROWS);

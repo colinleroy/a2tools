@@ -35,7 +35,7 @@
 
 ; ------------------------------------------------------------------------
 
-MAX_LEVEL         = 32
+MAX_LEVEL         = 31
 
 .ifdef IIGS
 serial_status_reg = zilog_status_reg_r
@@ -370,7 +370,6 @@ patch_status_register_low:
         sta     s29+1
         sta     s30+1
         sta     s31+1
-        sta     s32+1
         sta     ssil+1
         sta     st+1
         sta     st2+1
@@ -434,7 +433,6 @@ patch_data_register_low:
         sta     d29+1
         sta     d30+1
         sta     d31+1
-        sta     d32+1
         sta     dsil+1
         sta     dt+1
         sta     dt2+1
@@ -500,6 +498,8 @@ _surl_stream_audio:
         lda     numcols+1               ; Set numcols on proxy
         jsr     _serial_putc_direct
         lda     #>(duty_cycle0)         ; Send sample base
+        jsr     _serial_putc_direct
+        lda     #1                      ; Send sample multiplier
         jsr     _serial_putc_direct
 
         ; Start with silence
@@ -572,8 +572,6 @@ patch_vumeter_addr_low:
         sta     vc30+1
         sta     vs30+1
         sta     vc31+1
-        sta     vc32+1
-        sta     vs32+1
         rts
 
 .align 256
@@ -636,7 +634,6 @@ patch_status_register_high:
         sta     s29+2
         sta     s30+2
         sta     s31+2
-        sta     s32+2
         sta     ssil+2
         sta     st+2
         sta     st2+2
@@ -699,7 +696,6 @@ patch_data_register_high:
         sta     d29+2
         sta     d30+2
         sta     d31+2
-        sta     d32+2
         sta     dsil+2
         sta     dt+2
         sta     dt2+2
@@ -769,8 +765,6 @@ patch_vumeter_addr_high:
         sta     vc30+2
         sta     vs30+2
         sta     vc31+2
-        sta     vc32+2
-        sta     vs32+2
         rts
 
 .align 256
@@ -1412,28 +1406,6 @@ dest31:
 
 .align 256
 .assert * = _SAMPLES_BASE+$2000, error
-duty_cycle32:                   ; Max positive level, 40 cycles
-        ____SPKR_DUTY____4      ; 4 !
-        VU_START_CLEAR_2        ; 6 !
-vc32:   VU_END_CLEAR_5          ; 11 !
-        VU_START_SET_A_4        ; 15 !
-vs32:   VU_END_SET_A_5          ; 20 !
-s32:    SER_AVAIL_A_6           ; 26 !
-        SER_LOOP_IF_NOT_AVAIL_2 ; 28 ! 29
-d32:    SER_FETCH_DEST_A_4      ; 32 !
-        sta     dest32+2        ; 36 !
-        ____SPKR_DUTY____4      ; 40 !
-        WASTE_2                 ; 42
-dest32:
-        jmp     $0000           ; 45
-:
-        KBD_LOAD_7              ;    36 !
-        ____SPKR_DUTY____4      ;    40 !
-        WASTE_2                 ;    42
-        jmp     duty_cycle32    ;    45
-
-.align 256
-.assert * = _SAMPLES_BASE+$2100, error
 update_title:
         tya                     ; Backup Y
         pha
@@ -1503,7 +1475,7 @@ counter:   .res 1
 prevspd:   .res 1
 
 .align 256
-.assert * = _SAMPLES_BASE+$2200, error
+.assert * = _SAMPLES_BASE+$2100, error
 break_out:
 .ifdef IIGS
         lda     prevspd
