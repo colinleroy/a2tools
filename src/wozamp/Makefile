@@ -6,6 +6,8 @@ iigs_CFLAGS := -DIIGS --asm-define IIGS
 STREAMER_VER := 65c02
 trgt = apple2gs
 upload_subdir := /iigs
+EMBED_RBROWSER := radio-browser.c ../lib/surl/surl_get_json.c
+EXTERNAL_RBROWSER :=
 else
 ifdef OLDII
 serial_hw := acia
@@ -17,6 +19,8 @@ BUILD_VIDEOPLAY := 1
 STREAMER_VER := 6502
 STREAM_URL_SEGMENT := "CODE"
 VIDEOPLAY_START_ADDR := 0x1E00
+EMBED_RBROWSER :=
+EXTERNAL_RBROWSER := rbrowser.bin
 else
 serial_hw := acia
 iigs_suffix :=
@@ -27,6 +31,8 @@ BUILD_VIDEOPLAY := 1
 STREAMER_VER := 65c02
 STREAM_URL_SEGMENT := "LOWCODE"
 VIDEOPLAY_START_ADDR := 0x1F00
+EMBED_RBROWSER := radio-browser.c ../lib/surl/surl_get_json.c
+EXTERNAL_RBROWSER :=
 endif
 endif
 
@@ -34,6 +40,7 @@ wozamp_SOURCES := \
 	main.c \
 	config.c \
 	backup_logo.c \
+	$(EMBED_RBROWSER) \
 	../lib/serial/simple_serial.c \
 	../lib/serial/simple_serial_configure.c \
 	../lib/path_helper.c \
@@ -149,14 +156,14 @@ all: \
 	splash.h \
 	splash-video.h \
 	wozamp.bin \
-	rbrowser.bin \
+	$(EXTERNAL_RBROWSER) \
 	videoplay.bin
 else
 
 all: \
 	splash.h \
 	wozamp.bin \
-	rbrowser.bin \
+	$(EXTERNAL_RBROWSER) \
 
 endif
 

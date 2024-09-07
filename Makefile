@@ -1,14 +1,17 @@
 ifdef IIGS
 iigs_CFLAGS := -DIIGS
 suffix := -iigs
+RBROWSER_BIN := 
 else
 ifdef OLDII
 suffix := -6502
 WOZAMP_VIDEOPLAY := 1
+RBROWSER_BIN := src/wozamp/rbrowser.bin
 else
 iigs_FLAGS :=
 suffix := -65c02
 WOZAMP_VIDEOPLAY := 1
+RBROWSER_BIN := 
 endif
 endif
 
@@ -20,12 +23,12 @@ stp_disk_PROGS = \
 ifdef WOZAMP_VIDEOPLAY
 wozamp_disk_PROGS = \
 	src/wozamp/wozamp.bin \
-	src/wozamp/rbrowser.bin \
+	$(RBROWSER_BIN) \
 	src/wozamp/videoplay.bin
 else
 wozamp_disk_PROGS = \
 	src/wozamp/wozamp.bin \
-	src/wozamp/rbrowser.bin
+	$(RBROWSER_BIN)
 endif
 
 iinvidious_disk_PROGS = \

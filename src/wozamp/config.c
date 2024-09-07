@@ -17,7 +17,7 @@ char enable_video;
 char enable_subtitles;
 char video_size;
 
-#pragma code-name(push, "LOWCODE")
+#pragma code-name(push, "LC")
 
 static FILE *open_config(char *mode) {
   FILE *fp;

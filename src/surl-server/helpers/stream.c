@@ -608,14 +608,14 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
   sleep(1); /* Let ffmpeg have a bit of time to push data so we don't starve */
   vol_mult = 10;
 
-  /* Debug */
-  for (int samp_val = 0; samp_val < AUDIO_NUM_LEVELS; samp_val++) {
-    int count;
-    for (count = 0; count < 100; count++) {
-      buffer_audio_sample((uint8_t)samp_val);
-    }
-    flush_audio_samples();
-  }
+  /* Debug for cycle-counting */
+  // for (int samp_val = 0; samp_val < AUDIO_NUM_LEVELS; samp_val++) {
+  //   int count;
+  //   for (count = 0; count < 100; count++) {
+  //     buffer_audio_sample((uint8_t)samp_val);
+  //   }
+  //   flush_audio_samples();
+  // }
 
   while (1) {
 

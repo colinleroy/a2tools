@@ -28,7 +28,6 @@
 #include "extended_conio.h"
 #include "dgets.h"
 #include "dputc.h"
-#include "dputs.h"
 #include "clrzone.h"
 #include "scroll.h"
 #include "scrollwindow.h"
@@ -41,25 +40,31 @@
 #include "backup_logo.h"
 #include "stp_list.h"
 
-#ifdef __CC65__
-#pragma code-name (push, "RT_ONCE")
+#define SEARCH_BUF_SIZE 128
+#ifndef __APPLE2ENH__
+char search_buf[SEARCH_BUF_SIZE];
+char tmp_buf[BUFSIZE];
+char **lines = NULL;
+int cur_line;
+#else
+extern char search_buf[SEARCH_BUF_SIZE];
+extern char tmp_buf[BUFSIZE];
+extern char **lines;
+extern int cur_line;
 #endif
 
+char n_lines = 0;
 #define BUFSIZE 255
-char tmp_buf[BUFSIZE];
 
-#define SEARCH_BUF_SIZE 128
-char search_buf[SEARCH_BUF_SIZE];
 #define JSON_BUF_SIZE 4096
 char json_buf[JSON_BUF_SIZE];
-
-unsigned char scrh, scrw;
 
 #define RADIO_BROWSER_API       "http://all.api.radio-browser.info"
 #define SEARCH_ENDPOINT         "/json/stations/byname/"
 #define SEARCH_PARAMETERS       "?limit=10&order=votes&reverse=true&hidebroken=true"
 #define SEARCH_RESULT_SELECTOR  ".[]|select(.hls == 0)|(.name, .homepage, .country, .favicon, .url_resolved, .stationuuid)"
 #define CLICK_ENDPOINT          "/json/url/"
+#define RADIO_SEARCH_FILE       "RBRESULTS"
 
 enum JsonFieldIdx {
   IDX_NAME = 0,
@@ -71,9 +76,7 @@ enum JsonFieldIdx {
   IDX_MAX
 };
 
-char **lines = NULL;
-char n_lines = 0;
-int cur_line;
+#pragma code-name(push, "LC")
 
 static void print_footer(void) {
 #ifdef __APPLE2ENH__
@@ -99,7 +102,7 @@ static void station_click(char *station_uuid) {
     surl_start_request(SURL_METHOD_GET, tmp_buf, NULL, 0);
 }
 
-void show_metadata (char *data) {
+void show_radio_metadata (char *data) {
   char *value = strchr(data, '\n');
   char max_len;
   if (value == NULL) {
@@ -108,19 +111,47 @@ void show_metadata (char *data) {
   value++;
   /* clrzone goes gotoxy */
   if (!strncmp(data, "title\n", 6)) {
-    max_len = scrw - 6;
+    max_len = NUMCOLS - 6;
     clrzone(0, 0, max_len, 0);
   }
   if (!strncmp(data, "artist\n", 6)) {
-    max_len = scrw - 1;
+    max_len = NUMCOLS - 1;
     clrzone(0, 1, max_len, 1);
   }
   if (strlen(value) > max_len)
     value[max_len] = '\0';
 
-  dputs(value);
+  cputs(value);
 }
 
+static void load_indicator(char on) {
+#ifdef __APPLE2ENH__
+  gotoxy(77, 0);
+#else
+  gotoxy(37, 0);
+#endif
+  cputs(on ? "...":"   ");
+}
+
+static char do_server_screen = 0;
+static char cmd_cb(char c) {
+  char prev_cursor = cursor(0);
+  switch (tolower(c)) {
+    case 'q':
+      exit(0);
+    case 's':
+#ifdef __APPLE2ENH__
+      do_server_screen = 1;
+      return 1;
+#else
+      exec("WOZAMP", NULL);
+#endif
+  }
+  cursor(prev_cursor);
+  return 0;
+}
+
+#pragma code-name(pop)
 
 static void play_url(char *url) {
   char r;
@@ -144,7 +175,7 @@ read_metadata_again:
     surl_read_with_barrier(metadata, len);
     metadata[len] = '\0';
 
-    show_metadata(metadata);
+    show_radio_metadata(metadata);
     free(metadata);
     simple_serial_putc(SURL_CLIENT_READY);
     goto read_metadata_again;
@@ -156,40 +187,19 @@ read_metadata_again:
 
   } else if (r == SURL_ANSWER_STREAM_START) {
     /* Save new start url */
-    FILE *tmpfp = fopen(STP_URL_FILE, "w");
+    FILE *tmpfp = fopen(RADIO_SEARCH_FILE, "w");
     if (tmpfp) {
-      fputs(url, tmpfp);
-      fputs("\n\n", tmpfp);
+      fputc(cur_line, tmpfp);
+      fputs(search_buf, tmpfp);
       fclose(tmpfp);
     }
     surl_stream_audio(NUMCOLS, 20, 2, 23);
 
   } else {
     gotoxy(0, 0);
-    dputs("Playback error");
+    cputs("Playback error");
     sleep(1);
   }
-}
-
-static void load_indicator(char on) {
-#ifdef __APPLE2ENH__
-  gotoxy(77, 0);
-#else
-  gotoxy(37, 0);
-#endif
-  cputs(on ? "...":"   ");
-}
-
-static char cmd_cb(char c) {
-  char prev_cursor = cursor(0);
-  switch (tolower(c)) {
-    case 'q':
-      exit(0);
-    case 's':
-      exec("WOZAMP", NULL);
-  }
-  cursor(prev_cursor);
-  return 0;
 }
 
 static void show_results(void) {
@@ -202,7 +212,9 @@ static void show_results(void) {
     cgetc();
     return;
   }
-  cur_line = 0;
+
+  if (cur_line >= n_lines)
+    cur_line = 0;
 
 display_result:
   clrscr();
@@ -272,9 +284,7 @@ display_result:
     }
     load_indicator(0);
   } else {
-#ifdef __APPLE2ENH__
     backup_restore_logo("r");
-#endif
   }
 
   init_hgr(1);
@@ -284,6 +294,13 @@ read_kbd:
 #ifdef __APPLE2ENH__
   if (c & 0x80) {
     cmd_cb(c & ~0x80);
+    if (do_server_screen) {
+exit_results:
+      free(lines);
+      lines = NULL;
+      n_lines = 0;
+      return;
+    }
     goto read_kbd;
   }
 #endif
@@ -301,10 +318,14 @@ read_kbd:
       play_url(lines[cur_line+IDX_URL_RESOLVED]);
       goto display_result;
     case CH_ESC:
+#ifdef __APPLE2ENH__
+      goto exit_results;
+#else
       free(lines);
       lines = NULL;
       n_lines = 0;
       return;
+#endif
     case CH_CURS_LEFT:
       if (cur_line > IDX_MAX-1) {
         cur_line -= IDX_MAX;
@@ -357,37 +378,51 @@ err_out:
   cgetc();
 }
 
-void main(void) {
+void radio_browser_ui(void) {
+  FILE *tmpfp = fopen(RADIO_SEARCH_FILE, "r");
+
 #ifdef __APPLE2ENH__
-  videomode(VIDEOMODE_80COL);
   init_hgr(1);
   hgr_mixon();
 #endif
-  load_config();
-  surl_connect_proxy();
 
-  surl_user_agent = "Wozamp for Apple II / "VERSION;
+  do_server_screen = 0;
+  set_scrollwindow(20, NUMROWS);
 
-  screensize(&scrw, &scrh);
-  scrh = 24;
+  if (tmpfp) {
+    cur_line = fgetc(tmpfp);
+    fgets(search_buf, SEARCH_BUF_SIZE-1, tmpfp);
+    fclose(tmpfp);
+    search_stations(search_buf);
+  }
 
-  set_scrollwindow(20, scrh);
 search_again:
   clrscr();
   print_footer();
   gotoxy(0, 0);
   cputs("Station name: ");
   dget_text(search_buf, SEARCH_BUF_SIZE, cmd_cb, 0);
+  if (do_server_screen) {
+    return;
+  }
   cputs("\r\n");
   if (search_buf[0]) {
+    cur_line = 0;
     search_stations(search_buf);
   }
-#ifdef __APPLE2ENH__
   backup_restore_logo("r");
-#endif
-  goto search_again;
+  if (!do_server_screen) {
+    goto search_again;
+  }
 }
 
-#ifdef __CC65__
-#pragma code-name (pop)
+#ifndef __APPLE2ENH__
+void main(void) {
+  load_config();
+  surl_connect_proxy();
+
+  surl_user_agent = "Wozamp for Apple II / "VERSION;
+
+  radio_browser_ui();
+}
 #endif
