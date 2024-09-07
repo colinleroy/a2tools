@@ -46,6 +46,8 @@ char **display_lines;
 
 char tmp_buf[BUFSIZE];
 
+char cmd_cb_handled = 0;
+
 void stp_clr_page(void) {
   clrzone(0, PAGE_BEGIN, NUMCOLS - 1, PAGE_BEGIN + PAGE_HEIGHT);
 }
@@ -91,6 +93,9 @@ char *stp_get_start_url(char *header, char *default_url, cmd_handler_func cmd_cb
   changed = strcmp(tmp_buf, start_url);
 
   free(start_url);
+  if (cmd_cb_handled) {
+    return NULL;
+  }
   start_url = strdup(tmp_buf);
 
   cputs("Login: ");
@@ -98,6 +103,9 @@ char *stp_get_start_url(char *header, char *default_url, cmd_handler_func cmd_cb
   dget_text(login, 32, cmd_cb, 0);
   if (cmd_cb) {
     cputs("\r\n");
+  }
+  if (cmd_cb_handled) {
+    return NULL;
   }
   changed |= strcmp(tmp_buf, login);
 
@@ -108,6 +116,9 @@ char *stp_get_start_url(char *header, char *default_url, cmd_handler_func cmd_cb
   echo(1);
   if (cmd_cb) {
     cputs("\r\n");
+  }
+  if (cmd_cb_handled) {
+    return NULL;
   }
   changed |= strcmp(tmp_buf, password);
 
@@ -338,13 +349,7 @@ void stp_update_list(char full_update) {
   cputc('>');
 }
 
-extern char center_x;
-int stp_get_data(char *url, const surl_response **resp) {
-  *resp = NULL;
-  num_lines = 0;
-  cur_line = 0;
-  cur_display_line = 0;
-
+void stp_free_data(void) {
   if (lines)
     free(lines);
   lines = NULL;
@@ -355,6 +360,16 @@ int stp_get_data(char *url, const surl_response **resp) {
   lines = NULL;
   nat_lines = NULL;
   nat_data = NULL;
+}
+
+extern char center_x;
+int stp_get_data(char *url, const surl_response **resp) {
+  *resp = NULL;
+  num_lines = 0;
+  cur_line = 0;
+  cur_display_line = 0;
+
+  stp_free_data();
 
   stp_clr_page();
   gotoxy(center_x, 12);
@@ -410,7 +425,7 @@ char *stp_url_up(char *url) {
 
   last_slash = strrchr(url, '/');
   if (last_slash && last_slash - url > 7 /*strlen("sftp://") */) {
-    *(last_slash + 1) = '\0';
+    *(last_slash) = '\0';
   }
 
   search_buf[0] = '\0';

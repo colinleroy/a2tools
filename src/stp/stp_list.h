@@ -70,4 +70,5 @@ void stp_print_header(const char *url, enum HeaderUrlAction action);
 void stp_print_result(const surl_response *response);
 void stp_animate_list(char reset);
 void stp_clr_page(void);
+void stp_free_data(void);
 #endif

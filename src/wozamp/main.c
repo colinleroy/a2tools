@@ -41,6 +41,7 @@
 #include "splash.h"
 #include "citoa.h"
 #include "backup_logo.h"
+#include "radio-browser.h"
 
 char *data = (char *)splash_hgr;
 char *nat_data = NULL;
@@ -114,13 +115,15 @@ void stp_print_footer(void) {
 #ifdef __APPLE2ENH__
   cputs("Up,Down,Enter,Esc: Navigate     /: Search   C: Configure\r\n"
         "A:Play all files in directory   ");
-//      "A:Play all files in directory   N: Next     S: Server     Q: Quit  (12345B free)");
+//      "A:Play all files in directory   N: Next   .-S: Server   .-Q: Quit  (12345B free)");
   if (search_buf[0]) {
     cputs("N: Next");
   }
-  gotox(44);
-
-  cputs("S: Server     Q: Quit  (");
+  gotox(42);
+  cputc('A'|0x80);
+  cputs("-S: Server   ");
+  cputc('A'|0x80);
+  cputs("-Q: Quit  (");
   cutoa(_heapmemavail());
   cputs("B free)");
 #else
@@ -184,10 +187,23 @@ void stp_print_result(const surl_response *response) {
   }
 }
 
+#ifdef __APPLE2ENH__
+char do_radio_browser = 0;
+#endif
+
+extern char cmd_cb_handled;
+
 static char cmd_cb(char c) {
   char prev_cursor = cursor(0);
   if (tolower(c) == 'r') {
+#ifdef __APPLE2ENH__
+    do_radio_browser = 1;
+    cmd_cb_handled = 1;
+    return 1;
+#else
+    clrscr();
     exec("RBROWSER", NULL);
+#endif
   }
   cursor(prev_cursor);
   return 0;
@@ -195,6 +211,9 @@ static char cmd_cb(char c) {
 
 #ifdef __CC65__
 #pragma code-name (pop)
+#endif
+
+#ifdef __CC65__
 #pragma code-name (push, "LC")
 #endif
 
@@ -374,10 +393,8 @@ char *play_directory(char *url) {
 char *start_url_ui(void) {
   char *url = NULL;
 
+start_again:
   clrscr();
-#ifdef __APPLE2ENH__
-  backup_restore_logo("r");
-#endif
   init_hgr(1);
   hgr_mixon();
   set_scrollwindow(20, NUMROWS);
@@ -387,9 +404,16 @@ char *start_url_ui(void) {
   cputc('A'|0x80);
   cputs("-R: RadioBrowser");
   gotoxy(0, 0);
+  cmd_cb_handled = 0;
+  do_radio_browser = 0;
   url = stp_get_start_url("Please enter an FTP server or internet stream URL.\r\n",
                         "http://relay.radiofreefedi.net/listen/rff/rff.mp3",
                         cmd_cb);
+  if (do_radio_browser) {
+    search_buf[0] = '\0';
+    radio_browser_ui();
+    goto start_again;
+  }
 #else
   gotoxy(40-20, 3);
   cputs("Ctrl-R: RadioBrowser");
@@ -408,7 +432,6 @@ char *start_url_ui(void) {
   return url;
 }
 
-#pragma code-name (push, "LC")
 
 char navigated = 0;
 
@@ -508,11 +531,21 @@ up_dir:
       case 'n':
         stp_list_search(0);
         goto keyb_input;
+#ifdef __APPLE2ENH__
+      case 's'|0x80:
+#else
       case 's':
+#endif
         free(url);
+        stp_free_data();
+        backup_restore_logo("r");
         url = start_url_ui();
         break;
+#ifdef __APPLE2ENH__
+      case 'q'|0x80:
+#else
       case 'q':
+#endif
         exit(0);
       default:
         goto keyb_input;
@@ -521,7 +554,6 @@ up_dir:
 }
 
 #ifdef __CC65__
-#pragma code-name (pop)
 #pragma code-name (push, "RT_ONCE")
 #endif
 
@@ -559,9 +591,7 @@ void main(void) {
   hgr_mixon();
   set_scrollwindow(20, NUMROWS);
 
-#ifdef __APPLE2ENH__
   backup_restore_logo("w");
-#endif
   surl_ping();
   surl_user_agent = "Wozamp "VERSION"/Apple II";
 
