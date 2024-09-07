@@ -421,6 +421,9 @@ void radio_browser_ui(void) {
     fgets(search_buf, SEARCH_BUF_SIZE-1, tmpfp);
     fclose(tmpfp);
     search_stations(search_buf);
+    if (do_server_screen) {
+      goto out;
+    }
   }
 
 search_again:
@@ -441,6 +444,7 @@ search_again:
   if (!do_server_screen) {
     goto search_again;
   }
+out:
   search_buf[0] = '\0';
 }
 
