@@ -39,6 +39,7 @@
 #include "malloc0.h"
 #include "backup_logo.h"
 #include "stp_list.h"
+#include "citoa.h"
 
 #define SEARCH_BUF_SIZE 128
 #ifndef __APPLE2ENH__
@@ -205,6 +206,7 @@ read_metadata_again:
 static void show_results(void) {
   int len;
   char c, n_res, total_res;
+  char *tmp;
 
   n_lines = strsplit_in_place(json_buf, '\n', &lines);
   if (n_lines % IDX_MAX != 0) {
@@ -218,46 +220,64 @@ static void show_results(void) {
 
 display_result:
   clrscr();
-#ifdef __APPLE2ENH__
-  if (strlen(lines[cur_line+IDX_NAME]) > 78)
-    lines[cur_line+IDX_NAME][78] = '\0';
 
-  if (strlen(lines[cur_line+IDX_COUNTRY]) > 20)
-    lines[cur_line+IDX_COUNTRY][20] = '\0';
-
-  if (strlen(lines[cur_line+IDX_HOMEPAGE]) > 55)
-    lines[cur_line+IDX_HOMEPAGE][55] = '\0';
-#else
-  if (strlen(lines[cur_line+IDX_NAME]) > 38)
-    lines[cur_line+IDX_NAME][38] = '\0';
-
-  if (strlen(lines[cur_line+IDX_COUNTRY]) > 13)
-    lines[cur_line+IDX_COUNTRY][13] = '\0';
-
-  if (strlen(lines[cur_line+IDX_HOMEPAGE]) > 24)
-    lines[cur_line+IDX_HOMEPAGE][24] = '\0';
-#endif
    n_res = (cur_line/IDX_MAX)+1;
    total_res = n_lines/IDX_MAX;
 
-  clrscr();
-  cprintf("%s\r\n"
-         "%s - %s\r\n\r\n"
 #ifdef __APPLE2ENH__
-         "%c %d/%d results %c",
+  tmp = lines[cur_line+IDX_NAME];
+  if (strlen(tmp) > 78)
+    tmp[78] = '\0';
+
+  cputs(tmp);
+  cputs("\r\n");
+
+  tmp = lines[cur_line+IDX_COUNTRY];
+  if (strlen(tmp) > 20)
+    tmp[20] = '\0';
+
+  cputs(tmp);
+  cputs(" - ");
+
+  tmp = lines[cur_line+IDX_HOMEPAGE];
+  if (strlen(tmp) > 55)
+    tmp[55] = '\0';
+
+  cputs(tmp);
+  cputs("\r\n\r\n");
+  cputc(n_res == 1 ? ' ':('H'|0x80));
+  cputc(' ');
+  cutoa(n_res);
+  cputc('/');
+  cutoa(total_res);
+  cputc(n_res == total_res ? ' ':('U'|0x80));
+
 #else
-         "%d/%d",
+  tmp = lines[cur_line+IDX_NAME];
+  if (strlen(tmp) > 38)
+    tmp[38] = '\0';
+
+  cputs(tmp);
+  cputs("\r\n");
+
+  tmp = lines[cur_line+IDX_COUNTRY];
+  if (strlen(tmp) > 13)
+    tmp[13] = '\0';
+
+  cputs(tmp);
+  cputs(" - ");
+
+  tmp = lines[cur_line+IDX_HOMEPAGE];
+  if (strlen(tmp) > 24)
+    tmp[24] = '\0';
+
+  cputs(tmp);
+  cputs("\r\n\r\n");
+  cutoa(n_res);
+  cputc('/');
+  cutoa(total_res);
+
 #endif
-         lines[cur_line+IDX_NAME],
-         lines[cur_line+IDX_COUNTRY],
-         lines[cur_line+IDX_HOMEPAGE],
-#ifdef __APPLE2ENH__
-         n_res == 1 ? ' ':('H'|0x80), /* Mousetext left arrow */
-         n_res, total_res,
-         n_res == total_res ? ' ':('U'|0x80));
-#else
-         n_res, total_res);
- #endif
 
   print_footer();
 
@@ -352,8 +372,10 @@ static void search_stations(char *search_str) {
   /* very basic urlencoder, encodes everything */
   w = json_buf + strlen(json_buf);
   while (*search_str) {
-    snprintf(w, 4, "%%%02x", *search_str);
-    w+= 3;
+    *w = '%';
+    w++;
+    utoa(*search_str, w, 16);
+    w+= 2;
     ++search_str;
   }
 
@@ -362,7 +384,8 @@ static void search_stations(char *search_str) {
   surl_start_request(SURL_METHOD_GET, json_buf, NULL, 0);
 
   if (!surl_response_ok()) {
-    printf("Error %d", surl_response_code());
+    cputs("Error ");
+    cutoa(surl_response_code());
     goto err_out;
   }
 
@@ -372,7 +395,7 @@ static void search_stations(char *search_str) {
     show_results();
     goto out;
   } else {
-    printf("No results.");
+    cputs("No results.");
     goto err_out;
   }
 
