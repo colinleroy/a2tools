@@ -575,6 +575,9 @@ static void do_setup(void) {
     fclose(tmpfp);
     unlink(URL_PASSER_FILE);
     reopen_start_device();
+    set_scrollwindow(0, NUMROWS);
+    clrscr();
+    init_text();
   }
 
   do_nav(url);
