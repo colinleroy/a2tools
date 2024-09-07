@@ -463,7 +463,7 @@ static void do_nav(char *base_url) {
         if (navigated)
           goto up_dir;
         else
-          exec("WOZAMP", NULL);
+          goto restart_ui;
       case UPDATE_LIST:
       default:
         break;
@@ -536,6 +536,7 @@ up_dir:
 #else
       case 's':
 #endif
+restart_ui:
         free(url);
         stp_free_data();
         backup_restore_logo("r");
