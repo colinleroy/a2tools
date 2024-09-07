@@ -441,6 +441,7 @@ search_again:
   if (!do_server_screen) {
     goto search_again;
   }
+  search_buf[0] = '\0';
 }
 
 #ifndef __APPLE2ENH__
