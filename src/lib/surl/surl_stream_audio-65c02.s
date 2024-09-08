@@ -1340,16 +1340,15 @@ s30:    lda     ser_status      ; 8     Check serial
         beq     :+              ; 12/13
 d30:    ldx     ser_data        ; 16    Load serial
 
-        lda     next,x          ; 21    Update target
-        sta     dest30+1        ; 25
-        inx                     ; 27
-        lda     next,x          ; 32
+        lda     next,x          ; 20    Update target
+        sta     dest30+1        ; 24
+        inx                     ; 26
+        lda     next,x          ; 30
 
-        WASTE_2                 ; 34
+        WASTE_4                 ; 34
         ____SPKR_DUTY____4      ; 38    Toggle speaker
-        sta     dest30+2        ; 40    Finish updating target
+        sta     dest30+2        ; 42    Finish updating target
 
-        WASTE_2                 ; 42
 dest30: jmp     $0000           ; 45
 
 :
