@@ -78,6 +78,7 @@ const surl_response * __fastcall__ surl_start_request(const char method, char *u
   resp = &static_resp;
   if (resp->content_type) {
     free(resp->content_type);
+    resp->content_type = NULL;
   }
 
   memset(resp, 0, sizeof(surl_response));
@@ -113,23 +114,17 @@ const surl_response * __fastcall__ surl_start_request(const char method, char *u
     resp->code = 504;
     return resp;
   } else if (method == SURL_METHOD_GET && i != SURL_ANSWER_WAIT) {
-    resp->code = 508;
-    return resp;
+    goto ret_508;
   } else if (method == SURL_METHOD_DELETE && i != SURL_ANSWER_WAIT) {
-    resp->code = 508;
-    return resp;
+    goto ret_508;
   } else if (method == SURL_METHOD_RAW && i == SURL_ANSWER_RAW_START) {
-    resp->code = 100;
-    return resp;
+    goto ret_100;
   } else if (method == SURL_METHOD_STREAM_VIDEO && i == SURL_ANSWER_WAIT) {
-    resp->code = 100;
-    return resp;
+    goto ret_100;
   } else if (method == SURL_METHOD_STREAM_AUDIO && i == SURL_ANSWER_WAIT) {
-    resp->code = 100;
-    return resp;
+    goto ret_100;
   } else if (method == SURL_METHOD_STREAM_AV && i == SURL_ANSWER_WAIT) {
-    resp->code = 100;
-    return resp;
+    goto ret_100;
   } else if (method == SURL_METHOD_GETTIME && i == SURL_ANSWER_TIME) {
     resp->code = 200;
     return resp;
@@ -139,15 +134,20 @@ const surl_response * __fastcall__ surl_start_request(const char method, char *u
       resp->code = simple_serial_getc();
       return resp;
     } else {
-      resp->code = 404;
-      return resp;
+      goto ret_508;
     }
   } else if (i == SURL_ANSWER_SEND_SIZE || i == SURL_ANSWER_SEND_NUM_FIELDS) {
-    resp->code = 100;
-    return resp;
+    goto ret_100;
   }
 
   surl_read_response_header();
+  return resp;
+
+ret_100:
+  resp->code = 100;
+  return resp;
+ret_508:
+  resp->code = 508;
   return resp;
 }
 
