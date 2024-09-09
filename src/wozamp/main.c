@@ -336,11 +336,11 @@ novid:
 
   } else {
 #ifdef __APPLE2__
-    init_text();
 #endif
-    gotoxy(center_x, 10);
+    gotoxy(0, 21);
     cputs("Playback error");
-    sleep(1);
+    cgetc();
+    init_text();
   }
 }
 
@@ -552,6 +552,8 @@ restart_ui:
         goto keyb_input;
     }
   }
+  /* Unreachable */
+  __asm__("brk");
 }
 
 #ifdef __CC65__

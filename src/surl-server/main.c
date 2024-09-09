@@ -22,6 +22,7 @@
 #include <signal.h>
 #include <curl/curl.h>
 #include <arpa/inet.h>
+#include <magic.h>
 #include "platform.h"
 #include "surl_protocol.h"
 #include "simple_serial.h"
@@ -67,6 +68,8 @@ struct _curl_buffer {
   
   int download_cancelled;
 };
+
+static magic_t magic_handle = NULL;
 
 static curl_buffer *surl_handle_request(char method, char *url, char **headers, int n_headers);
 static void curl_buffer_free(curl_buffer *curlbuf);
@@ -255,6 +258,10 @@ int main(int argc, char **argv)
 
   curl_global_init(CURL_GLOBAL_ALL);
 
+  magic_handle = magic_open(MAGIC_MIME_TYPE|MAGIC_CHECK);
+  magic_load(magic_handle, NULL);
+  printf("compiled magic: %s\n", magic_error(magic_handle));
+
 reopen:
   simple_serial_close();
   while (simple_serial_open() != 0) {
@@ -352,6 +359,12 @@ new_req:
       continue;
     }
 
+    if (response->response_code / 100 == 2 &&
+        !strcmp(response->content_type, "application/octet-stream")) {
+      const char *mime_type;
+      mime_type = magic_buffer(magic_handle, response->buffer, response->size);
+      printf("got mime_type %s (%s)\n", mime_type, magic_error(magic_handle));
+    }
     /* Send short response headers */
     send_response_headers(response);
 
@@ -736,6 +749,7 @@ abort:
     fflush(stdout);
 
   }
+  magic_close(magic_handle);
 }
 
 static size_t curl_write_data_cb(void *contents, size_t size, size_t nmemb, void *data)

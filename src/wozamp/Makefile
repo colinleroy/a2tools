@@ -48,6 +48,7 @@ wozamp_SOURCES := \
 	../lib/surl/surl_receive.c \
 	../lib/surl/surl_ping.c \
 	../lib/malloc0.c \
+	../lib/realloc_safe.c \
 	../lib/dgets.c \
 	../lib/scrollwindow.c \
 	../lib/strsplit.c \

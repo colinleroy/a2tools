@@ -172,12 +172,13 @@ read_metadata_again:
     size_t len;
     surl_read_with_barrier((char *)&len, 2);
     len = ntohs(len);
+
     metadata = malloc(len + 1);
     surl_read_with_barrier(metadata, len);
     metadata[len] = '\0';
-
     show_radio_metadata(metadata);
     free(metadata);
+
     simple_serial_putc(SURL_CLIENT_READY);
     goto read_metadata_again;
 

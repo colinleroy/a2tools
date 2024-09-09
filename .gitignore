@@ -44,3 +44,4 @@ history/
 *.ddeb
 src/kept-around
 *.gz
+magic.mgc
