@@ -34,6 +34,7 @@
 #include "scrollwindow.h"
 #include "strsplit.h"
 #include "runtime_once_clean.h"
+#include "malloc0.h"
 
 static char *url_enter(char *url, char *suffix);
 
@@ -456,39 +457,34 @@ char *stp_url_enter(char *url, char *suffix) {
   return url;
 }
 
+static char *header_url = NULL;
 void stp_print_header(const char *url, enum HeaderUrlAction action) {
   char *no_pass_url = NULL, *host, *tmp;
-  static char *header_url = NULL;
-  int header_url_len;
+  int header_url_len, url_len = strlen(url);
 
   if (action == URL_SET) {
-    if (header_url != NULL)
-      free(header_url);
-    header_url = strdup(url);
+    header_url = realloc_safe(header_url, url_len);
+    strcpy(header_url, url);
   }
 
-  no_pass_url = strdup(header_url);
   switch(action) {
     case URL_RESTORE:
     case URL_SET:
       break;
     case URL_ADD:
       header_url_len = strlen(header_url);
-      no_pass_url = realloc(no_pass_url, header_url_len + strlen(url) + 3);
+      header_url = realloc_safe(header_url, header_url_len + url_len + 1);
       if (header_url[header_url_len-1] != '/')
-        strcat(no_pass_url, "/");
-      strcat(no_pass_url, url);
+        strcat(header_url, "/");
+      strcat(header_url, url);
       break;
     case URL_UP:
-      if ((tmp = strrchr(no_pass_url + 7 /*strlen("sftp://")*/, '/')))
+      if ((tmp = strrchr(header_url + 7 /*strlen("sftp://")*/, '/')))
         *tmp = '\0';
       break;
   }
 
-  free(header_url);
-  header_url = strdup(no_pass_url);
-
-  host = strstr(no_pass_url, "://");
+  host = strstr(header_url, "://");
   if (host) {
     char *pass_sep;
 
@@ -506,13 +502,12 @@ void stp_print_header(const char *url, enum HeaderUrlAction action) {
   }
   clrzone(0, 0, NUMCOLS - 1, 0);
 
-  if (strlen(no_pass_url) > NUMCOLS - 3) {
+  if (strlen(header_url) > NUMCOLS - 3) {
     cputs("...");
-    cnputs_nowrap(no_pass_url + strlen(no_pass_url) - NUMCOLS + 3);
+    cnputs_nowrap(header_url + strlen(header_url) - NUMCOLS + 3);
   } else {
-    cputs(no_pass_url);
+    cputs(header_url);
   }
-  free(no_pass_url);
   gotoxy(0, 1);
   chline(NUMCOLS);
 }

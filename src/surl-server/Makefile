@@ -34,10 +34,12 @@ $(PROGRAM): $(SOURCES)
 		$(shell curl-config --cflags) \
 		$(shell libpng-config --cflags) \
 		$(shell pkg-config --cflags SDL_image) \
+		$(shell pkg-config --cflags libmagic) \
 		$^ \
 		$(shell curl-config --libs) \
 		$(shell libpng-config --libs) \
 		$(shell pkg-config --libs SDL_image) \
+		$(shell pkg-config --libs libmagic) \
 		-ljq -lgumbo -lpthread \
 		-lavfilter -lavformat -lavcodec -lavutil -lswresample \
 		-o $@
