@@ -56,7 +56,7 @@ static void init_base_addrs (void)
 }
 
 static void sdl_set_pixel32(SDL_Surface *surface, int x, int y, Uint32 p) {
-  if (x < surface->w && y < surface->h)
+  if (x >= 0 && x < surface->w && y >= 0 && y < surface->h)
     *((Uint32*)(surface->pixels) + x + y * surface->w) = p;
 }
 
@@ -331,15 +331,15 @@ static void color_dither (SDL_Surface *src)
   Uint32 buf1[9], buf2[9];
   static int pal_init = 0;
   if (!pal_init) {
-    pal1[0] = SDL_MapRGB(src->format, 0, 0, 0);
-    pal1[1] = SDL_MapRGB(src->format, 0xe8,0x2c,0xf8);
-    pal1[2] = SDL_MapRGB(src->format, 0x1d,0xd6,0x09);
-    pal1[3] = SDL_MapRGB(src->format, 0xff,0xff,0xff);
+    pal1[0] = SDL_MapRGB(src->format, 0, 0, 0);        /* black */
+    pal1[1] = SDL_MapRGB(src->format, 0xe8,0x2c,0xf8); /* violet */
+    pal1[2] = SDL_MapRGB(src->format, 0x1d,0xd6,0x09); /* green */
+    pal1[3] = SDL_MapRGB(src->format, 0xff,0xff,0xff); /* white */
 
-    pal2[0] = SDL_MapRGB(src->format, 0, 0, 0);
-    pal2[1] = SDL_MapRGB(src->format, 0x34,0x85,0xfc);
-    pal2[2] = SDL_MapRGB(src->format, 0xd0,0x81,0x01);
-    pal2[3] = SDL_MapRGB(src->format, 0xff,0xff,0xff);
+    pal2[0] = SDL_MapRGB(src->format, 0, 0, 0);        /* black */
+    pal2[1] = SDL_MapRGB(src->format, 0x34,0x85,0xfc); /* blue */
+    pal2[2] = SDL_MapRGB(src->format, 0xd0,0x81,0x01); /* orange */
+    pal2[3] = SDL_MapRGB(src->format, 0xff,0xff,0xff); /* white */
     pal_init = 1;
   }
   for (y = 0; y < src->h; y += 1) {

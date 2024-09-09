@@ -289,7 +289,7 @@ display_result:
     surl_start_request(SURL_METHOD_GET, lines[cur_line+IDX_FAVICON], NULL, 0);
     if (surl_response_ok()) {
       simple_serial_putc(SURL_CMD_HGR);
-      simple_serial_putc(1); /* monochrome */
+      simple_serial_putc(monochrome);
       simple_serial_putc(HGR_SCALE_MIXHGR);
 
       if (simple_serial_getc() == SURL_ERROR_OK) {

@@ -336,7 +336,7 @@ display_result:
     simple_serial_dump('B', (char *)0xD400, 0xDFFF-0xD400);
     #endif
     simple_serial_putc(SURL_CMD_HGR);
-    simple_serial_putc(1); /* monochrome */
+    simple_serial_putc(0); /* monochrome */
     simple_serial_putc(HGR_SCALE_MIXHGR);
 
     if (simple_serial_getc() == SURL_ERROR_OK) {
