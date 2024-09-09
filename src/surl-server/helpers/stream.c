@@ -1333,7 +1333,8 @@ void *video_push(void *unused) {
   * started client-side (but don't change the first one) */
   memset(buf_prev[1] + 1, 0x7F, 30);
 
-  memset(buf[page], 0x00, HGR_LEN);
+  memset(buf[0], 0x00, HGR_LEN);
+  memset(buf[1], 0x00, HGR_LEN);
 
   offset = cur_base = 0x100;
   goto send;
