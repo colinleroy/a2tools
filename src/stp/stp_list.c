@@ -459,7 +459,7 @@ char *stp_url_enter(char *url, char *suffix) {
 
 static char *header_url = NULL;
 void stp_print_header(const char *url, enum HeaderUrlAction action) {
-  char *no_pass_url = NULL, *host, *tmp;
+  char *host, *tmp;
   int header_url_len, url_len = strlen(url);
 
   if (action == URL_SET) {

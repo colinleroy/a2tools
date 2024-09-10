@@ -65,6 +65,27 @@ static void clr_footer(void) {
 }
 
 static unsigned char got_cover = 0;
+static void display_image(void) {
+  size_t len;
+  simple_serial_putc(SURL_CMD_HGR);
+  simple_serial_putc(monochrome);
+  simple_serial_putc(HGR_SCALE_MIXHGR);
+  if (simple_serial_getc() == SURL_ERROR_OK) {
+
+    surl_read_with_barrier((char *)&len, 2);
+    len = ntohs(len);
+
+#ifdef __APPLE2__
+    if (len == HGR_LEN) {
+      surl_read_with_barrier((char *)HGR_PAGE, HGR_LEN);
+      got_cover = 1;
+      init_hgr(1);
+      hgr_mixon();
+    }
+#endif
+  }
+}
+
 void get_cover_file(char *url) {
   char *cover_url;
   size_t len;
@@ -84,21 +105,7 @@ void get_cover_file(char *url) {
 
     surl_start_request(SURL_METHOD_GET, cover_url, NULL, 0);
     if (surl_response_ok()) {
-      simple_serial_putc(SURL_CMD_HGR);
-      simple_serial_putc(monochrome);
-      simple_serial_putc(HGR_SCALE_MIXHGR);
-      if (simple_serial_getc() == SURL_ERROR_OK) {
-
-        surl_read_with_barrier((char *)&len, 2);
-        len = ntohs(len);
-
-#ifdef __APPLE2__
-        if (len == HGR_LEN) {
-          surl_read_with_barrier((char *)HGR_PAGE, HGR_LEN);
-          got_cover = 1;
-        }
-#endif
-      }
+      display_image();
     }
   }
   free(cover_url);
@@ -228,16 +235,47 @@ static void print_err(const char *file) {
 }
 #endif
 
-static void play_url(char *url, char *filename) {
+static void open_url(char *url, char *filename) {
   char r;
   char has_video = 0;
+  const char *content_type = surl_content_type();
+
+  clr_footer();
+  gotoxy(0, 22);
+
+  if (content_type) {
+    if (!strncmp(content_type, "image/", 6) && !in_list) {
+      display_image();
+      goto out;
+      return;
+    } else if (!strncmp(content_type, "video/", 6)) {
+#ifndef IIGS
+      if (!in_list && enable_video) {
+        has_video = 1;
+        goto do_video;
+      }
+#else
+      /* Fallthrough to audio */
+#endif
+    } else if (!strncmp(content_type, "audio/", 6)) {
+      /* fallthrough to audio */
+    } else if (!strcmp(content_type, "application/octet-stream")) {
+      /* fallthrough to audio, in case it's audio but MIME type
+       * is unknown */
+    } else {
+      cputs("Unsupported file type ");
+      cputs(content_type);
+      goto err_out;
+      return;
+    }
+  }
 
   /* Try to get /cover.jpg as a fallback for media with no embedded art */
   get_cover_file(url);
 
   clrzone(0, 12, NUMCOLS - 1, 12);
   clr_footer();
- 
+
   strncpy(tmp_buf, filename ? filename : "Streaming...", NUMCOLS - 1);
   tmp_buf[NUMCOLS] = '\0';
   cputs(tmp_buf);
@@ -249,20 +287,13 @@ static void play_url(char *url, char *filename) {
   simple_serial_putc(monochrome);
   simple_serial_putc(HGR_SCALE_MIXHGR);
 
-#ifdef __APPLE2ENH__
   if (!got_cover) {
+#ifdef __APPLE2ENH__
     backup_restore_logo("r");
-  }
-  init_hgr(1);
-  hgr_mixon();
 #elif defined(__APPLE2__)
-  if (got_cover) {
-    init_hgr(1);
-    hgr_mixon();
-  } else {
     init_text();
-  }
 #endif
+  }
 
 read_metadata_again:
   r = simple_serial_getc();
@@ -300,6 +331,7 @@ read_metadata_again:
 
   } else if (r == SURL_ANSWER_STREAM_START) {
 #ifndef IIGS
+do_video:
     if (has_video && !in_list && enable_video) {
       FILE *video_url_fp = fopen(URL_PASSER_FILE, "w");
       if (video_url_fp == NULL) {
@@ -307,9 +339,6 @@ read_metadata_again:
         cgetc();
         goto novid;
       }
-      init_text();
-      clrscr();
-      gotoxy(center_x, 12);
       cputs("Loading video player...");
       fputs(url, video_url_fp);
       fputc('\n', video_url_fp);
@@ -339,7 +368,12 @@ novid:
 #endif
     gotoxy(0, 21);
     cputs("Playback error");
-    cgetc();
+err_out:
+    cputs("\r\n");
+out:
+    cputs("Press a key to exit");
+    if (!in_list)
+      cgetc();
     init_text();
   }
 }
@@ -360,13 +394,13 @@ char *play_directory(char *url) {
 
     r = stp_get_data(url, &resp);
 
-    if (!resp || resp->code / 100 != 2) {
+    if (!surl_response_ok()) {
       break;
     }
 
     if (r == SAVE_DIALOG) {
       /* Play - warning ! trashes data with HGR page */
-      play_url(url, display_lines[dir_index]);
+      open_url(url, display_lines[dir_index]);
       stp_clr_page();
     }
 
@@ -458,7 +492,7 @@ static void do_nav(char *base_url) {
         goto keyb_input;
       case SAVE_DIALOG:
         /* Play */
-        play_url(url, prev_filename);
+        open_url(url, prev_filename);
         stp_clr_page();
         if (navigated)
           goto up_dir;

@@ -182,6 +182,13 @@ int __fastcall__ surl_response_code(void) {
   return resp != NULL ? resp->code : 504;
 }
 
+const char * __fastcall__ surl_content_type(void) {
+  if (resp) {
+    return resp->content_type;
+  }
+  return NULL;
+}
+
 #ifndef __CC65__
 void __fastcall__ surl_read_with_barrier(char *buffer, size_t nmemb) {
   simple_serial_putc(SURL_CLIENT_READY);
