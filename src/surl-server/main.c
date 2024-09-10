@@ -260,7 +260,6 @@ int main(int argc, char **argv)
 
   magic_handle = magic_open(MAGIC_MIME_TYPE|MAGIC_CHECK);
   magic_load(magic_handle, NULL);
-  printf("compiled magic: %s\n", magic_error(magic_handle));
 
 reopen:
   simple_serial_close();
@@ -363,7 +362,13 @@ new_req:
         !strcmp(response->content_type, "application/octet-stream")) {
       const char *mime_type;
       mime_type = magic_buffer(magic_handle, response->buffer, response->size);
-      printf("got mime_type %s (%s)\n", mime_type, magic_error(magic_handle));
+      printf("got mime type %s from libmagic\n", mime_type ? mime_type : "NULL");
+      if (mime_type) {
+        if (response->content_type) {
+          free(response->content_type);
+        }
+        response->content_type = strdup(mime_type);
+      }
     }
     /* Send short response headers */
     send_response_headers(response);
@@ -760,11 +765,19 @@ static size_t curl_write_data_cb(void *contents, size_t size, size_t nmemb, void
 
   /* Download only a bit of data if audio/ or video/ */
   if (curlbuf->headers && curlbuf->size > 0) {
-    if (strcasestr(curlbuf->headers, "content-type: audio/") ||
-        strcasestr(curlbuf->headers, "content-type: video/")) {
-      printf("Streamable content-type, aborting download\n");
+    if (strcasestr(curlbuf->headers, "\ncontent-type: audio/") ||
+        strcasestr(curlbuf->headers, "\ncontent-type: video/")) {
+      printf("Streamable content-type announced, aborting download\n");
       curlbuf->download_cancelled = 1;
       return 0;
+    } else if (!curlbuf->headers || !strcasestr(curlbuf->headers, "\ncontent-type: ")) {
+      /* Try and guess */
+      const char *mime_type = magic_buffer(magic_handle, curlbuf->buffer, curlbuf->size);
+      if (mime_type && (!strncmp(mime_type, "audio/", 6) || !strncmp(mime_type, "video/", 6))) {
+        printf("Streamable content-type %s found, aborting download\n", mime_type);
+        curlbuf->download_cancelled = 1;
+        return 0;
+      }
     }
   }
 
@@ -1327,13 +1340,13 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
     }
     size = simple_serial_getc();
 
-    printf("starting audio-video streaming\n");
+    printf("REQ: %s %s - start\n", surl_method_str(method), url);
     surl_stream_audio_video(url, translit, monochrome, subtitles, subtitles_url, size);
     free(translit);
     return NULL;
   } else if (method == SURL_METHOD_STREAM_VIDEO) {
     simple_serial_putc(SURL_ANSWER_WAIT);
-    printf("starting video-only streaming\n");
+    printf("REQ: %s %s - start\n", surl_method_str(method), url);
     surl_stream_video(url);
     return NULL;
   } else if (method == SURL_METHOD_STREAM_AUDIO) {
@@ -1347,7 +1360,7 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
     translit = reqbuf;
     monochrome = simple_serial_getc();
     scale = simple_serial_getc();
-    printf("starting audio-only streaming\n");
+    printf("REQ: %s %s - start\n", surl_method_str(method), url);
     surl_stream_audio(url, translit, monochrome, scale);
     return NULL;
   }
@@ -1512,8 +1525,8 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
     } else if (res == CURLE_OPERATION_TIMEDOUT) {
       curlbuf->response_code = 504;
     } else if (res == CURLE_WRITE_ERROR && curlbuf->download_cancelled){
-      /* Audio/ or Video/ content-type, streamable only */
-      curlbuf->response_code = 200;
+      /* Audio/ or Video/ content-type, streamable only - partial content */
+      curlbuf->response_code = 206;
     } else {
       curlbuf->response_code = 599;
     }

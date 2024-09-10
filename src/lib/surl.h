@@ -33,6 +33,7 @@ const surl_response * __fastcall__ surl_start_request(const char method, char *u
 void __fastcall__ surl_response_done(void);
 char __fastcall__ surl_response_ok(void);
 int __fastcall__ surl_response_code(void);
+const char * __fastcall__ surl_content_type(void);
 
 void __fastcall__ surl_read_response_header(void);
 
