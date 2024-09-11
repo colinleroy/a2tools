@@ -250,8 +250,11 @@ static void open_url(char *url, char *filename) {
   gotoxy(0, 22);
 
   if (content_type) {
-    if (!strncmp(content_type, "image/", 6) && !in_list) {
+    if (!strncmp(content_type, "image/", 6)) {
       display_image();
+      if (in_list) {
+        sleep(5);
+      }
       goto out;
       return;
     } else if (!strncmp(content_type, "video/", 6)) {
@@ -376,10 +379,14 @@ novid:
     cputs("Playback error");
 err_out:
     cputs("\r\n");
+    if (in_list) {
+      sleep(1);
+    }
 out:
-    cputs("Press a key to exit");
-    if (!in_list)
+    if (!in_list) {
+      cputs("Press a key to exit");
       cgetc();
+    }
     init_text();
   }
 }
@@ -415,7 +422,7 @@ char *play_directory(char *url) {
     stp_get_data(url, &resp);
 
 
-    if (!resp || resp->code / 100 != 2) {
+    if (!surl_response_ok()) {
       break;
     }
 
