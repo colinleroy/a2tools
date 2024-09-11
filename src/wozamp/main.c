@@ -190,7 +190,7 @@ void stp_print_result(const surl_response *response) {
 
   if (response == NULL) {
     cputs("Unknown request error.");
-  } else if (response->code / 100 != 2){
+  } else if (!surl_response_ok()) {
     cputs("Error: Response code ");
     citoa(response->code);
   }

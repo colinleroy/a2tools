@@ -393,17 +393,17 @@ int stp_get_data(char *url, const surl_response **resp) {
 
   stp_print_result(*resp);
 
-  gotoxy(0, 2);
-
-  if ((*resp)->size == 0) {
+  if (!surl_response_ok()) {
     gotoxy(center_x, 12);
-    if (surl_response_ok()) {
-      cputs("Empty.       ");
-    } else {
-      cputs("Bad response.");
-    }
+    cputs("Bad response.");
+    return KEYBOARD_INPUT;
+  } else if ((*resp)->size == 0) {
+    gotoxy(center_x, 12);
+    cputs("Empty.       ");
     return KEYBOARD_INPUT;
   }
+
+  gotoxy(0, 2);
 
   if ((*resp)->content_type && strcmp((*resp)->content_type, "directory")) {
     return SAVE_DIALOG;
