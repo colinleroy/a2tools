@@ -85,7 +85,9 @@ static void print_footer(void) {
     gotoxy(80-37, 2);
     cputs("Enter: Stream radio, Esc: Edit search");
   }
-  gotoxy(80-29, 3);
+  gotoxy(80-45, 3);
+  cputc('A'|0x80);
+  cputs("-C: Configure, ");
   cputc('A'|0x80);
   cputs("-S: Change server, ");
   cputc('A'|0x80);
@@ -140,11 +142,15 @@ static char cmd_cb(char c) {
   switch (tolower(c)) {
     case 'q':
       exit(0);
-    case 's':
 #ifdef __APPLE2ENH__
+    case 's':
       do_server_screen = 1;
       return 1;
+    case 'c':
+      text_config();
+      break;
 #else
+    case 's':
       exec("WOZAMP", NULL);
 #endif
   }
@@ -247,7 +253,6 @@ display_result:
   cputs(tmp);
   cputs("\r\n\r\n");
   cputc(n_res == 1 ? ' ':('H'|0x80));
-  cputc(' ');
   cutoa(n_res);
   cputc('/');
   cutoa(total_res);

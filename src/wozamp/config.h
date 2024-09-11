@@ -12,6 +12,7 @@ extern char monochrome;
 extern char enable_video;
 extern char enable_subtitles;
 extern char video_size;
+void text_config(void);
 void config(void);
 void load_config(void);
 

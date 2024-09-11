@@ -10,6 +10,8 @@
 #include "charsets.h"
 #include "stp_list.h"
 #include "clrzone.h"
+#include "hgr.h"
+#include "scrollwindow.h"
 
 char *translit_charset;
 char monochrome;
@@ -133,6 +135,17 @@ charset_again:
 }
 
 #pragma code-name(pop)
+
+void text_config(void) {
+  set_scrollwindow(0, NUMROWS);
+  init_text();
+  config();
+  init_hgr(1);
+  hgr_mixon();
+  clrzone(0, 0, NUMCOLS, 19);
+  set_scrollwindow(20, NUMROWS);
+}
+
 #pragma code-name(push, "RT_ONCE")
 
 void load_config(void) {
