@@ -215,12 +215,7 @@ static char cmd_cb(char c) {
       exec("RBROWSER", NULL);
 #endif
     case 'c':
-      set_scrollwindow(0, NUMROWS);
-      init_text();
-      config();
-      init_hgr(1);
-      hgr_mixon();
-      set_scrollwindow(20, NUMROWS);
+      text_config();
       break;
   }
   cursor(prev_cursor);
@@ -229,10 +224,6 @@ static char cmd_cb(char c) {
 
 #ifdef __CC65__
 #pragma code-name (pop)
-#endif
-
-#ifdef __CC65__
-#pragma code-name (push, "LC")
 #endif
 
 #ifndef IIGS
@@ -244,6 +235,10 @@ static void print_err(const char *file) {
   cputs(": ");
   citoa(errno);
 }
+#endif
+
+#ifdef __CC65__
+#pragma code-name (push, "LC")
 #endif
 
 static void open_url(char *url, char *filename) {
