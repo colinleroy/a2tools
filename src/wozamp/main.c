@@ -120,9 +120,11 @@ void stp_print_footer(void) {
 
   gotoxy(0, 22);
 #ifdef __APPLE2ENH__
-  cputs("Up,Down,Enter,Esc: Navigate     /: Search   C: Configure\r\n"
-        "A:Play all files in directory   ");
-//      "A:Play all files in directory   N: Next   .-S: Server   .-Q: Quit  (12345B free)");
+//      "Up,Down,Enter,Esc: Navigate   /: Search                 .-C: Configure");
+//      "A:Play all in directory       N: Next     .-S: Server   .-Q: Quit  (12345B free)");
+  cputs("Up,Down,Enter,Esc: Navigate   /: Search                 ");
+  cputc('A'|0x80);                                         cputs("-C: Configure\r\n"
+        "A:Play all in directory       ");
   if (search_buf[0]) {
     cputs("N: Next");
   }
@@ -202,15 +204,24 @@ extern char cmd_cb_handled;
 
 static char cmd_cb(char c) {
   char prev_cursor = cursor(0);
-  if (tolower(c) == 'r') {
+  switch (tolower(c)) {
+    case 'r':
 #ifdef __APPLE2ENH__
-    do_radio_browser = 1;
-    cmd_cb_handled = 1;
-    return 1;
+      do_radio_browser = 1;
+      cmd_cb_handled = 1;
+      return 1;
 #else
-    clrscr();
-    exec("RBROWSER", NULL);
+      clrscr();
+      exec("RBROWSER", NULL);
 #endif
+    case 'c':
+      set_scrollwindow(0, NUMROWS);
+      init_text();
+      config();
+      init_hgr(1);
+      hgr_mixon();
+      set_scrollwindow(20, NUMROWS);
+      break;
   }
   cursor(prev_cursor);
   return 0;
@@ -424,6 +435,8 @@ char *play_directory(char *url) {
   return url;
 }
 
+extern char stp_list_scroll_after_url;
+
 char *start_url_ui(void) {
   char *url = NULL;
 
@@ -433,8 +446,11 @@ start_again:
   hgr_mixon();
   set_scrollwindow(20, NUMROWS);
 
+  stp_list_scroll_after_url = 1;
 #ifdef __APPLE2ENH__
-  gotoxy(80-17, 3);
+  gotoxy(80-16-17, 3);
+  cputc('A'|0x80);
+  cputs("-C: Configure, ");
   cputc('A'|0x80);
   cputs("-R: RadioBrowser");
   gotoxy(0, 0);
@@ -449,8 +465,8 @@ start_again:
     goto start_again;
   }
 #else
-  gotoxy(40-20, 3);
-  cputs("Ctrl-R: RadioBrowser");
+  gotoxy(40-39, 3);
+  cputs("Ctrl-C: Configure, Ctrl-R: RadioBrowser");
   gotoxy(0, 0);
   url = stp_get_start_url("Please enter an FTP or internet stream\r\n",
                         "http://relay.radiofreefedi.net/listen/rff/rff.mp3",
@@ -559,7 +575,11 @@ up_dir:
         stp_list_search(1);
         stp_print_header(NULL, URL_RESTORE);
         goto keyb_input;
+#ifdef __APPLE2ENH__
+      case 'c'|0x80:
+#else
       case 'c':
+#endif
         config();
         break;
       case 'n':
