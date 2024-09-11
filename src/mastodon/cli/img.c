@@ -211,8 +211,8 @@ static void save_image(void) {
   clrscr();
   cputs("Save to: ");
 
-  
-  dir = file_select((x = wherex()), wherey(), scrw - wherex(), wherey() + 10, 1, "Select directory");
+  x = wherex();
+  dir = file_select(x, wherey(), scrw - x, wherey() + 10, 1, "Select directory");
   if (dir == NULL) {
     goto out_no_conf;
   }
@@ -258,14 +258,13 @@ int main(int argc, char **argv) {
   media *m;
   char i, c;
 
+#ifdef __APPLE2ENH__
+  videomode(VIDEOMODE_80COL);
+#endif
 #ifdef __CC65__
   /* Leave 0x800-0xC00 for iobuf */
   _heapadd ((void *) 0x0C00, 0x13FF);
   screensize(&scrw, &scrh);
-#endif
-
-#ifdef __APPLE2ENH__
-  videomode(VIDEOMODE_80COL);
 #endif
 
   surl_user_agent = "Mastodon for Apple II / "VERSION;
