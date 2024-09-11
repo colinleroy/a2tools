@@ -463,7 +463,7 @@ void stp_print_header(const char *url, enum HeaderUrlAction action) {
   int header_url_len, url_len = strlen(url);
 
   if (action == URL_SET) {
-    header_url = realloc_safe(header_url, url_len);
+    header_url = realloc_safe(header_url, url_len + 1);
     strcpy(header_url, url);
   }
 
