@@ -32,7 +32,10 @@ video_sub:
 @set_offset:                            ;       This is an offset byte
         sty     next_offset             ; 9     Store offset
         lda     page_ptr_high+1         ; 12    Update the page flag here, where we have time
-        and     #$55                    ; 14    Use the fact that page1 array's high byte is odd, and page0's is even
+        and     #$55                    ; 14    Use the fact that page1 array's high byte is odd,
+                                        ;       that page0's is even, and that
+                                                .assert >PAGE0_ARRAY & $55 = $54, error
+                                                .assert >PAGE1_ARRAY & $55 = $55, error
         sta     @toggle_page+1          ; 18
         adc     #$30                    ; 20    $54/$55 + $30 => sets V flag
         JUMP_NEXT_DUTY                  ; 26    Done, go to next duty cycle
