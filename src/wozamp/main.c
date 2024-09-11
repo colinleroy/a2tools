@@ -299,6 +299,8 @@ static void open_url(char *url, char *filename) {
   if (!got_cover) {
 #ifdef __APPLE2ENH__
     backup_restore_logo("r");
+    init_hgr(1);
+    hgr_mixon();
 #elif defined(__APPLE2__)
     init_text();
 #endif
