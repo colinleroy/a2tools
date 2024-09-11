@@ -486,7 +486,7 @@ void stp_print_header(const char *url, enum HeaderUrlAction action) {
       break;
     case URL_ADD:
       header_url_len = strlen(header_url);
-      header_url = realloc_safe(header_url, header_url_len + url_len + 1);
+      header_url = realloc_safe(header_url, header_url_len + url_len + 2);
       if (header_url[header_url_len-1] != '/')
         strcat(header_url, "/");
       strcat(header_url, url);
