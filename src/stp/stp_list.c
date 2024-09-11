@@ -53,11 +53,15 @@ void stp_clr_page(void) {
   clrzone(0, PAGE_BEGIN, NUMCOLS - 1, PAGE_BEGIN + PAGE_HEIGHT);
 }
 
+/* Wozamp hack to scroll */
+char stp_list_scroll_after_url = 0;
+
 char *stp_get_start_url(char *header, char *default_url, cmd_handler_func cmd_cb) {
   FILE *fp;
   char *start_url = NULL;
   char *tmp = NULL;
   int changed = 0;
+  char orig_x, orig_y;
 
 #ifdef __APPLE2__
   _filetype = PRODOS_T_TXT;
@@ -83,6 +87,8 @@ char *stp_get_start_url(char *header, char *default_url, cmd_handler_func cmd_cb
 
   start_url = strdup(tmp_buf);
 
+  orig_x = wherex();
+  orig_y = wherey();
   cputs(header);
   cputs("URL: ");
 
@@ -98,6 +104,13 @@ char *stp_get_start_url(char *header, char *default_url, cmd_handler_func cmd_cb
     return NULL;
   }
   start_url = strdup(tmp_buf);
+
+  if (stp_list_scroll_after_url) {
+    clrzone(orig_x, orig_y, NUMCOLS - orig_x, orig_y + 1);
+    cputs("URL: ");
+    cputs(start_url);
+    cputs("\r\n");
+}
 
   cputs("Login: ");
   strcpy(tmp_buf, login);
