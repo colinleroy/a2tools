@@ -85,6 +85,7 @@ static void *ffmpeg_video_decode_thread(void *th_data) {
     data->decoding_end = 1;
     data->decoding_ret = -1;
     pthread_mutex_unlock(&data->mutex);
+    return NULL;
   }
 
   if (ffmpeg_video_decode_init(data, &video_len) != 0) {
@@ -99,9 +100,9 @@ static void *ffmpeg_video_decode_thread(void *th_data) {
   pthread_mutex_lock(&data->mutex);
 
   if (data->decoding_end == 1) {
-    pthread_mutex_unlock(&data->mutex);
-    goto out;
+    goto out; /* out unlocks mutex */
   }
+
   pthread_mutex_unlock(&data->mutex);
 
   gettimeofday(&decode_start, 0);
@@ -196,7 +197,9 @@ static void *ffmpeg_video_decode_thread(void *th_data) {
 out:
   pthread_mutex_unlock(&data->mutex);
 
-  close(vhgr_file);
+  if (vhgr_file > 0) {
+    close(vhgr_file);
+  }
 
   ffmpeg_video_decode_deinit(data);
   return NULL;
@@ -452,8 +455,11 @@ static void send_audio_title(char *title, char *translit) {
 
   /* Limit to audio_numcols chars */
   w = write(ttyfd, translit_buf, MIN(audio_numcols, strlen(translit_buf)));
+
   if (w < 0)
     w = 0;
+
+  free(translit_buf);
 
   /* Fill to audio_numcols chars */
   for (i = 0; i < audio_numcols - w; i++) {
@@ -509,7 +515,6 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
   int num = 0;
   unsigned char c;
   size_t cur = 0;
-  unsigned char *data = NULL;
   unsigned char *img_data = NULL;
   unsigned char *hgr_buf = NULL;
   size_t size = 0;
@@ -618,6 +623,7 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
   // }
 
   while (1) {
+    int32_t cur_val, samp_val;
 
     pthread_mutex_lock(&th_data->mutex);
     if (cur > SAMPLE_RATE*(2*BUFFER_LEN)) {
@@ -627,8 +633,10 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
       th_data->size -= SAMPLE_RATE*BUFFER_LEN;
       cur -= SAMPLE_RATE*BUFFER_LEN;
     }
-    data = th_data->data;
     size = th_data->size;
+    if (cur < size) {
+      cur_val = (int32_t)th_data->data[cur];
+    }
     stop = th_data->decoding_end;
 
     /* Update max volume for auto-leveling after decoding */
@@ -660,7 +668,7 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
       }
     }
 
-    int32_t samp_val = (int32_t)((((int32_t)data[cur]-((int32_t)AUDIO_MAX/2))*(int32_t)vol_mult)/10)+((int32_t)AUDIO_MAX/2);
+    samp_val = (int32_t)(((cur_val-((int32_t)AUDIO_MAX/2))*(int32_t)vol_mult)/10)+((int32_t)AUDIO_MAX/2);
     if (samp_val < 0) {
       samp_val = 0;
     } else if (samp_val >= AUDIO_MAX) {
@@ -1032,7 +1040,6 @@ int ready;
 int stop;
 int err;
 
-unsigned char *audio_data = NULL;
 unsigned char *img_data = NULL;
 size_t audio_size = 0;
 size_t img_size = 0;
@@ -1053,6 +1060,8 @@ static void *audio_push(void *unused) {
   vol_mult = 10;
 
   while (1) {
+    int32_t cur_val, samp_val;
+
     pthread_mutex_lock(&audio_th_data->mutex);
     if (cur > SAMPLE_RATE*(2*BUFFER_LEN)) {
       /* Avoid ever-expanding buffer */
@@ -1061,8 +1070,10 @@ static void *audio_push(void *unused) {
       audio_th_data->size -= SAMPLE_RATE*BUFFER_LEN;
       cur -= SAMPLE_RATE*BUFFER_LEN;
     }
-    audio_data = audio_th_data->data;
     audio_size = audio_th_data->size;
+    if (cur < audio_size) {
+      cur_val = audio_th_data->data[cur];
+    }
     stop = audio_th_data->decoding_end;
 
     /* Update max volume for auto-leveling after decoding */
@@ -1088,7 +1099,7 @@ static void *audio_push(void *unused) {
     }
 
     if (!pause) {
-      int32_t samp_val = (int32_t)((((int32_t)audio_data[cur]-((int32_t)AUDIO_MAX/2))*(int32_t)vol_mult)/10)+((int32_t)AUDIO_MAX/2);
+      samp_val = (int32_t)(((cur_val-((int32_t)AUDIO_MAX/2))*(int32_t)vol_mult)/10)+((int32_t)AUDIO_MAX/2);
       if (samp_val < 0) {
         samp_val = 0;
       } else if (samp_val >= AUDIO_MAX) {

@@ -31,6 +31,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 #include <libavutil/avutil.h>
 #include <libavcodec/avcodec.h>
@@ -312,7 +313,8 @@ static int init_video_filters(char subtitles, char size)
 
     video_filter_graph = avfilter_graph_alloc();
     if (!outputs || !inputs || !video_filter_graph) {
-        return AVERROR(ENOMEM);
+        ret = AVERROR(ENOMEM);
+        goto end;
     }
 
     /* buffer video source: the decoded frames from the decoder will be inserted here. */
@@ -1115,6 +1117,44 @@ void ffmpeg_shift_subtitle_at_frame(decode_data *data, unsigned long frame) {
   pthread_mutex_unlock(&data->sub_mutex);
 }
 
+static void update_title_locked(decode_data *data) {
+  char* icy_metadata = NULL;
+
+  /* Check for cast metadata */
+  av_opt_get(audio_fmt_ctx, "icy_metadata_packet", AV_OPT_SEARCH_CHILDREN, (uint8_t**) &icy_metadata);
+
+  if (icy_metadata != NULL) {
+    char *new_title = icy_metadata;
+
+    /* Cleanup cast title */
+    if (strstr(icy_metadata, "StreamTitle='")) {
+      new_title = strstr(icy_metadata, "StreamTitle='") + strlen("StreamTitle='");
+
+      if (strstr(new_title, "';Stream"))
+        *(strstr(new_title, "';Stream")) = '\0';
+      else if (strchr(new_title, '\''))
+        *(strrchr(new_title, '\'')) = '\0';
+
+      while(strchr(new_title, '\\')) {
+        *(strchr(new_title, '\\')) = ' ';
+      }
+    }
+
+    /* Refresh cast title */
+    if (data->title != NULL && strcmp(data->title, new_title)) {
+      free(data->title);
+      data->title = strdup(new_title);
+      data->title_changed = 1;
+    } else  if (data->title == NULL) {
+      data->title = strdup(new_title);
+      data->title_changed = 1;
+    }
+  }
+
+  av_free(icy_metadata);
+  icy_metadata = NULL;
+}
+
 int ffmpeg_audio_decode(decode_data *data) {
     int ret = 0;
     char audio_filter_descr[200];
@@ -1243,46 +1283,6 @@ int ffmpeg_audio_decode(decode_data *data) {
 
     /* read all packets */
     while (1) {
-        char* icy_metadata = NULL;
-
-        /* Check for cast metadata */
-        av_opt_get(audio_fmt_ctx, "icy_metadata_packet", AV_OPT_SEARCH_CHILDREN, (uint8_t**) &icy_metadata);
-
-        if (icy_metadata != NULL) {
-          char *new_title = icy_metadata;
-
-          /* Cleanup cast title */
-          if (strstr(icy_metadata, "StreamTitle='")) {
-            new_title = strstr(icy_metadata, "StreamTitle='") + strlen("StreamTitle='");
-
-            if (strstr(new_title, "';Stream"))
-              *(strstr(new_title, "';Stream")) = '\0';
-            else if (strchr(new_title, '\''))
-              *(strrchr(new_title, '\'')) = '\0';
-
-            while(strchr(new_title, '\\')) {
-              *(strchr(new_title, '\\')) = ' ';
-            }
-          }
-
-          /* Refresh cast title */
-          if (data->title != NULL && strcmp(data->title, new_title)) {
-            pthread_mutex_lock(&data->mutex);
-            free(data->title);
-            data->title = strdup(new_title);
-            data->title_changed = 1;
-            pthread_mutex_unlock(&data->mutex);
-          } else  if (data->title == NULL) {
-            pthread_mutex_lock(&data->mutex);
-            data->title = strdup(new_title);
-            data->title_changed = 1;
-            pthread_mutex_unlock(&data->mutex);
-          }
-        }
-
-        av_free(icy_metadata);
-        icy_metadata = NULL;
-
         if ((ret = av_read_frame(audio_fmt_ctx, audio_packet)) < 0)
             break;
 
@@ -1350,6 +1350,9 @@ int ffmpeg_audio_decode(decode_data *data) {
                             data->max_audio_volume = audio_filt_frame->data[0][i];
                         }
                         data->data_ready = 1;
+
+                        update_title_locked(data);
+
                         pthread_mutex_unlock(&data->mutex);
 
                         av_frame_unref(audio_filt_frame);
