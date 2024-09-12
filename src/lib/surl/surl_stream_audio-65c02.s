@@ -351,12 +351,9 @@ setup_pointers:
         jsr     popa
         sta     CV
         jsr     VTABZ
-        stz     CH              ; Title X is always 0
-        clc
-        adc     BASL
+        lda     BASL
         sta     title_addr
         lda     BASH
-        adc     #0
         sta     title_addr+1
 
         ; Setup numcols
