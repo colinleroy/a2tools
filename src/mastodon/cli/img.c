@@ -255,7 +255,7 @@ out_no_conf:
 }
 
 int main(int argc, char **argv) {
-  media *m;
+  media *m = NULL;
   char i, c;
 
 #ifdef __APPLE2ENH__
