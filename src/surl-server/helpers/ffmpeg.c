@@ -675,7 +675,7 @@ unsigned char *ffmpeg_video_decode_frame(decode_data *data, int total_frames, in
             if (ret < 0) {
                 printf("Error while sending a packet to the decoder\n");
                 av_packet_unref(video_packet);
-                goto end;
+                continue;
             }
 
             while (ret >= 0) {
@@ -1290,7 +1290,8 @@ int ffmpeg_audio_decode(decode_data *data) {
             ret = avcodec_send_packet(audio_dec_ctx, audio_packet);
             if (ret < 0) {
                 printf("Error while sending a packet to the decoder\n");
-                break;
+                av_packet_unref(audio_packet);
+                continue;
             }
 
             while (ret >= 0) {
