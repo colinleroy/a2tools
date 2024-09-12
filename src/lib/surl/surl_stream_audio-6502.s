@@ -280,13 +280,9 @@ setup_pointers:
         jsr     popa
         sta     CV
         jsr     VTABZ
-        lda     #0
-        sta     CH
-        clc
-        adc     BASL
+        lda     BASL
         sta     title_addr
         lda     BASH
-        adc     #0
         sta     title_addr+1
 
         ; Setup numcols
