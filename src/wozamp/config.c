@@ -19,8 +19,6 @@ char enable_video;
 char enable_subtitles;
 char video_size;
 
-#pragma code-name(push, "LC")
-
 static FILE *open_config(char *mode) {
   FILE *fp;
   #ifdef PRODOS_T_TXT
@@ -32,8 +30,6 @@ static FILE *open_config(char *mode) {
   }
   return fp;
 }
-
-#pragma code-name(pop)
 
 static int save_config(void) {
   FILE *fp;

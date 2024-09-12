@@ -22,7 +22,7 @@ asp:    lda     $FFFF           ; 28     check serial tx empty
         sta     KBDSTRB         ; 42     clear keystrobe
         and     #$7F            ; 44
 adp:    sta     $FFFF           ; 48     send cmd
-        cmp     #$1B            ; 50
+        cmp     #$1B            ; 50     escape?
         beq     out             ; 52/53  if escape, exit forcefully
         ABS_STA kbd_cmd         ; 56
         JUMP_NEXT_12            ; 68     jump to next duty cycle
@@ -34,4 +34,6 @@ noser:
         WASTE_23                ; 56
         JUMP_NEXT_12            ; 68
 
-out:    jmp     break_out
+out:    lda     #1
+        sta     cancelled
+        jmp     break_out

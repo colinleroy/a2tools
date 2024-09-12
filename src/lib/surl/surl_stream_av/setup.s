@@ -27,12 +27,6 @@ setup:
         ldx     #$0A
         jsr     calc_text_bases
 
-        ; Init vars
-        lda     #$00
-        sta     kbd_cmd
-        sta     cur_mix
-        sta     next_offset
-
         ; Setup serial registers
         jsr     patch_serial_registers
 
@@ -61,9 +55,14 @@ vctrl:  sta     $98FF           ; scratch
         lda     #>(page0_addrs_arr_high)
         sta     page_ptr_high+1
 
+        ; Init vars
         lda     #$40
         sta     cur_base+1
         lda     #$00
         sta     cur_base
+        sta     kbd_cmd
+        sta     cur_mix
+        sta     next_offset
+        sta     cancelled
 
         rts

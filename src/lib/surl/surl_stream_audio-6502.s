@@ -202,7 +202,10 @@ kbd_send:
         bit     KBDSTRB         ; Clear keyboard strobe
         cmp     #' '
         beq     pause
-        jmp     _serial_putc_direct
+        cmp     #$1B            ; Escape ?
+        bne     :+
+        sta     cancelled
+:       jmp     _serial_putc_direct
 pause:
         jsr     _serial_putc_direct
 :       lda     KBD
@@ -304,6 +307,9 @@ setup_pointers:
         ; Setup a space for vumeter
         lda     #' '|$80
         sta     tmp2
+
+        lda     #0
+        sta     cancelled
         rts
 ; ------------------------------------------------------------------
 
@@ -1469,6 +1475,7 @@ desttitle:
 dummy_abs: .res 1
 counter:   .res 1
 prevspd:   .res 1
+cancelled: .res 1
 
 .align 256
 .assert * = _SAMPLES_BASE+$2100, error
@@ -1482,6 +1489,10 @@ break_out:
         jsr     _simple_serial_set_irq
         jsr     _simple_serial_flush
         lda     #$2F            ; SURL_CLIENT_READY
-        jmp     _serial_putc_direct
+        jsr     _serial_putc_direct
+
+        lda     cancelled
+        ldx     #0
+        rts
 
 end_audio_streamer = *
