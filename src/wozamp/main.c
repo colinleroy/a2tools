@@ -241,9 +241,10 @@ static void print_err(const char *file) {
 #pragma code-name (push, "LC")
 #endif
 
-static void open_url(char *url, char *filename) {
+static int open_url(char *url, char *filename) {
   char r;
   char has_video = 0;
+  int cancelled = 0;
   const char *content_type = surl_content_type();
 
   clr_footer();
@@ -256,7 +257,6 @@ static void open_url(char *url, char *filename) {
         sleep(5);
       }
       goto out;
-      return;
     } else if (!strncmp(content_type, "video/", 6)) {
 #ifndef IIGS
       if (!in_list && enable_video) {
@@ -275,7 +275,6 @@ static void open_url(char *url, char *filename) {
       cputs("Unsupported file type ");
       cputs(content_type);
       goto err_out;
-      return;
     }
   }
 
@@ -363,20 +362,18 @@ do_video:
       if (exec("VIDEOPLAY", NULL) != 0) {
         print_err("VIDEOPLAY");
       }
-      return;
+      return 0;
     }
 novid:
 #endif
 #ifdef __APPLE2__
-    surl_stream_audio(NUMCOLS, 20, 2, 23);
+    cancelled = surl_stream_audio(NUMCOLS, 20, 2, 23);
     init_text();
 #endif
     clr_footer();
     stp_print_footer();
 
   } else {
-#ifdef __APPLE2__
-#endif
     gotoxy(0, 21);
     cputs("Playback error");
 err_out:
@@ -391,6 +388,7 @@ out:
     }
     init_text();
   }
+  return cancelled;
 }
 
 #ifdef __CC65__
@@ -400,6 +398,7 @@ out:
 char *play_directory(char *url) {
   const surl_response *resp;
   int dir_index;
+  int cancelled = 0;
 
   in_list = 1;
   for (dir_index = 0; dir_index < num_lines; dir_index++) {
@@ -409,13 +408,15 @@ char *play_directory(char *url) {
 
     r = stp_get_data(url, &resp);
 
+    cancelled = 0;
     if (!surl_response_ok()) {
-      break;
+      cancelled = 1;
+      goto check_cont;
     }
 
     if (r == SAVE_DIALOG) {
       /* Play - warning ! trashes data with HGR page */
-      open_url(url, display_lines[dir_index]);
+      cancelled = open_url(url, display_lines[dir_index]);
       stp_clr_page();
     }
 
@@ -423,16 +424,20 @@ char *play_directory(char *url) {
     url = stp_url_up(url);
     stp_get_data(url, &resp);
 
-
     if (!surl_response_ok()) {
-      break;
+      cancelled = 1;
+      goto check_cont;
     }
 
     stp_print_header(NULL, URL_UP);
 
-    /* Stop loop if user pressed esc a second time */
-    if (kbhit() && cgetc() == CH_ESC) {
-      break;
+check_cont:
+    if (cancelled) {
+      gotoxy(0, 21);
+      cputs("Keep playing directory? (Y/n)");
+      if (tolower(cgetc()) == 'n') {
+        break;
+      }
     }
   }
   in_list = 0;

@@ -13,4 +13,8 @@ vcmd2:  sta     $98FF
         jsr     _simple_serial_set_irq
         jsr     _simple_serial_flush
         lda     #$2F            ; SURL_CLIENT_READY
-        jmp     _serial_putc_direct
+        jsr     _serial_putc_direct
+
+        lda     cancelled
+        ldx     #0
+        rts
