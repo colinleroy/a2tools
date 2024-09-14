@@ -31,6 +31,19 @@
 #define NUM_AV_BASES     (HGR_LEN/MAX_AV_OFFSET)+4+1
 #define AV_TEXT_BASE_0   (HGR_LEN/MAX_AV_OFFSET)+1
 
+#define SAMPLE_RATE (115200 / (1+8+1))
+#define AUDIO_MAX          256
+#define BUFFER_LEN         (60*10)
+
+#define AUDIO_MAX_LEVEL          31
+#define AUDIO_NUM_LEVELS         (AUDIO_MAX_LEVEL+1)
+#define AUDIO_STREAM_TITLE       AUDIO_NUM_LEVELS
+#define AUDIO_END_OF_STREAM      AUDIO_NUM_LEVELS + 1
+
+#define AV_MAX_LEVEL             31
+#define AV_NUM_LEVELS            (AV_MAX_LEVEL+1)
+#define AV_END_OF_STREAM         AV_NUM_LEVELS
+#define AV_KBD_LOAD_LEVEL        16
 
 /* Set very high because it looks nicer to drop frames than to
  * artifact all the way
@@ -210,10 +223,30 @@ extern char *aux_tty_path;
 int ttyfd2 = -1;
 
 static void flush_video_bytes(int fd) {
-  if (num_video_bytes == 0) {
-    return;
-  }
+  struct timeval vid_send_start;
+  struct timeval vid_send_end;
+  gettimeofday(&vid_send_start, 0);
+
+
   simple_serial_write_fast_fd(fd, video_bytes_buffer, num_video_bytes);
+
+  gettimeofday(&vid_send_end, 0);
+
+  unsigned long secs      = (vid_send_end.tv_sec - vid_send_start.tv_sec)*1000000;
+  unsigned long microsecs = vid_send_end.tv_usec - vid_send_start.tv_usec;
+  unsigned long elapsed   = secs + microsecs;
+  unsigned long real_elapsed;
+  DEBUG("video flushed %d bytes in %lu microsecs\n", num_video_bytes, elapsed);
+
+  /* Force wait on emulation (where pushing to "serial port" is
+   * not constrained by the laws of physics)
+   * In reality at 115200bps we flush one byte every 86 µs */
+  real_elapsed = num_video_bytes*86;
+  if (elapsed < real_elapsed/2) {
+    DEBUG("video: sleeping %luµs\n", real_elapsed-elapsed);
+    usleep(real_elapsed-elapsed);
+  }
+  
   num_video_bytes = 0;
 }
 
@@ -320,7 +353,8 @@ static inline void check_duration(const char *str, struct timeval *start) {
   unsigned long elapsed   = secs + microsecs;
   DEBUG("%s took %lu microsecs\n", str, elapsed);
 
-  /* For emulation */
+  /* Force wait on emulation (where pushing to "serial port" is
+   * not constrained by the laws of physics) */
   if (!strcmp(str,"audio") && elapsed < 1000) {
     usleep((1000000/FPS)-elapsed);
   }
@@ -399,19 +433,6 @@ static int sort_by_offset(byte_diff *a, byte_diff *b) {
 }
 
 static byte_diff **diffs = NULL;
-#define SAMPLE_RATE (115200 / (1+8+1))
-#define AUDIO_MAX          256
-#define BUFFER_LEN         (60*10)
-
-#define AUDIO_MAX_LEVEL          31
-#define AUDIO_NUM_LEVELS         (AUDIO_MAX_LEVEL+1)
-#define AUDIO_STREAM_TITLE       AUDIO_NUM_LEVELS
-#define AUDIO_END_OF_STREAM      AUDIO_NUM_LEVELS + 1
-
-#define AV_MAX_LEVEL             31
-#define AV_NUM_LEVELS            (AV_MAX_LEVEL+1)
-#define AV_END_OF_STREAM         AV_NUM_LEVELS
-#define AV_KBD_LOAD_LEVEL        16
 
 int audio_sample_offset = 0;
 int audio_sample_multiplier = 2;
@@ -522,7 +543,7 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
   int ret = 0;
   int vol_adj_done = 0;
   int auto_vol = vol_mult;
-
+  struct timeval frame_start;
   pthread_t decode_thread;
   decode_data *th_data = malloc(sizeof(decode_data));
   int ready = 0;
@@ -622,6 +643,7 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
   //   flush_audio_samples();
   // }
 
+  gettimeofday(&frame_start, 0);
   while (1) {
     int32_t cur_val, samp_val;
 
@@ -675,7 +697,9 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
       samp_val = AUDIO_MAX-1;
     }
     buffer_audio_sample((uint8_t)samp_val*AUDIO_NUM_LEVELS/AUDIO_MAX);
-    if (cur % SAMPLE_RATE == 0) {
+    if (cur % (SAMPLE_RATE/FPS) == 0) {
+      check_duration("audio", &frame_start);
+      gettimeofday(&frame_start, 0);
       if (flush_audio_samples() == EOF) {
         goto cleanup_thread;
       }
