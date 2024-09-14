@@ -1655,7 +1655,10 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, char sub
 
   /* start point for client to enter the AV streamer */
   simple_serial_putc(SURL_ANSWER_STREAM_START);
+
+  /* There should be a barrier there */
   usleep(200);
+
   /* Inform client whether we have video */
   printf("Informing client that video is %s\n", ttyfd2 > 0 ? "on":"off");
   if (ttyfd2 > 0) {
