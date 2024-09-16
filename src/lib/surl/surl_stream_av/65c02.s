@@ -207,7 +207,8 @@ _SAMPLES_BASE = *
 ; The rest of the functions don't need to be aligned.
 .include "surl_stream_av.s"
 
-.include "patch_serial_registers.s"
+.include "patch_audio_registers.s"
+.include "patch_video_registers.s"
 
 .include "video-status-data.inc"
 .include "video-data-data.inc"

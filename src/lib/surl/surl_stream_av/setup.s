@@ -28,12 +28,8 @@ setup:
         jsr     calc_text_bases
 
         ; Setup serial registers
-        jsr     patch_serial_registers
-
-acmd:   lda     $A8FF           ; Copy command and control registers from
-vcmd:   sta     $98FF           ; the main serial port to the second serial
-actrl:  lda     $A8FF           ; port, it's easier than setting it up from
-vctrl:  sta     $98FF           ; scratch
+        jsr     patch_audio_registers
+        jsr     patch_video_registers
 
         lda     #$2F            ; Surl client ready
         jsr     _serial_putc_direct

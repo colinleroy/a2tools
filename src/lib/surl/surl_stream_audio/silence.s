@@ -1,5 +1,8 @@
 ; --------------------------------------
 silence:
+.ifdef IIGS
+        jsr     slow_iigs
+.endif
 ssil:   lda     ser_status
         and     #HAS_BYTE
         beq     silence

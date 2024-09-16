@@ -1,4 +1,4 @@
-data_patches:
+audio_data_patches:
                 .word d0
                 .word d1
                 .word d2

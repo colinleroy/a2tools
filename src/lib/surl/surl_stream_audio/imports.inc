@@ -3,6 +3,10 @@
 
         .importzp       _zp6, _zp8, _zp10, _zp12, tmp1, tmp2, ptr1, ptr2, ptr3
 
+        .import         _simple_serial_get_data_reg
+        .import         _simple_serial_get_status_reg
+        .import         _data_slot
+
         .import         _serial_putc_direct
         .import         _simple_serial_set_irq
         .import         _simple_serial_flush
