@@ -47,8 +47,8 @@ SAMPLE_MULT   = 1
 .include "vars.s"
 .include "kbd_send.s"
 .include "silence.s"
-.include "patch_addresses.s"
-.include "patch_audio_registers.s"
+.include "../surl_stream_common/patch_addresses.s"
+.include "../surl_stream_common/patch_audio_registers.s"
 .include "patch_vu_meters.s"
 
 .align 256

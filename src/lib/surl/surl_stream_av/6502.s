@@ -252,14 +252,14 @@ _SAMPLES_BASE = *
 .include "surl_stream_av.s"
 .include "calc_bases.s"
 .include "calc_text_bases.s"
-.include "patch_addresses.s"
+.include "../surl_stream_common/patch_addresses.s"
 
 .align $100
 .assert * = _SAMPLES_BASE + $1B00, error
 .include "duty-cycles/27.s"
 
 ; Stuff code between duty cycles to optimize size
-.include "patch_audio_registers.s"
+.include "../surl_stream_common/patch_audio_registers.s"
 .include "patch_video_registers.s"
 
 .align $100
