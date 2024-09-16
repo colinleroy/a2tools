@@ -55,7 +55,7 @@ wozamp_SOURCES := \
 	../stp/stp_list.c
 
 wozamp_CL65SOURCES = \
-	../lib/surl/surl_stream_audio-$(STREAMER_VER).s \
+	../lib/surl/surl_stream_audio/$(STREAMER_VER).s \
 	../lib/hgr.c \
 	../lib/surl/surl_read_with_barrier.s \
 	../lib/serial/simple_serial_read.s \
@@ -95,7 +95,7 @@ rbrowser_SOURCES := \
 	../lib/strsplit.c
 
 rbrowser_CL65SOURCES = \
-	../lib/surl/surl_stream_audio-$(STREAMER_VER).s \
+	../lib/surl/surl_stream_audio/$(STREAMER_VER).s \
 	../lib/hgr.c \
 	../lib/surl/surl_read_with_barrier.s \
 	../lib/serial/simple_serial_read.s \
