@@ -4,6 +4,8 @@
         .importzp       tmp2
         .import         _open_slot
         .import         _simple_serial_read
+        .import         _simple_serial_get_data_reg
+        .import         _simple_serial_get_status_reg
 
         .export         _serial_putc_direct
         .export         _serial_read_byte_no_irq
@@ -23,30 +25,13 @@
 
 _simple_serial_setup_no_irq_regs:
         lda     _open_slot
-        beq     :+
-        lda     #<ZILOG_DATA_A
-        ldx     #>ZILOG_DATA_A
+        jsr     _simple_serial_get_data_reg
         sta     zilog_data_reg_r+1
         stx     zilog_data_reg_r+2
         sta     zilog_data_reg_w+1
         stx     zilog_data_reg_w+2
-        lda     #<ZILOG_REG_A
-        ldx     #>ZILOG_REG_A
-        sta     zilog_status_reg_r+1
-        stx     zilog_status_reg_r+2
-        sta     zilog_status_reg_w+1
-        stx     zilog_status_reg_w+2
-        sta     zilog_status_reg_w2+1
-        stx     zilog_status_reg_w2+2
-        rts
-:       lda     #<ZILOG_DATA_B
-        ldx     #>ZILOG_DATA_B
-        sta     zilog_data_reg_r+1
-        stx     zilog_data_reg_r+2
-        sta     zilog_data_reg_w+1
-        stx     zilog_data_reg_w+2
-        lda     #<ZILOG_REG_B
-        ldx     #>ZILOG_REG_B
+        lda     _open_slot
+        jsr     _simple_serial_get_status_reg
         sta     zilog_status_reg_r+1
         stx     zilog_status_reg_r+2
         sta     zilog_status_reg_w+1
