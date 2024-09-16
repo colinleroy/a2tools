@@ -2,8 +2,9 @@
 ;
 
         .import         _open_slot
+        .import         _simple_serial_get_data_reg
+        .import         _simple_serial_get_status_reg
 
-        .import         get_acia_reg_idx
         .export         _serial_read_byte_no_irq
         .export         _serial_putc_direct
         .export         _simple_serial_setup_no_irq_regs
@@ -22,25 +23,18 @@
 
 _simple_serial_setup_no_irq_regs:
         lda     _open_slot
-        jsr     get_acia_reg_idx
-        txa
-        clc
-        adc     #<ACIA_STATUS
+        jsr     _simple_serial_get_status_reg
         sta     acia_status_reg_r+1
         sta     acia_status_reg_w+1
-        lda     #>ACIA_STATUS
-        adc     #0
-        sta     acia_status_reg_r+2
-        sta     acia_status_reg_w+2
-        txa
-        clc
-        adc     #<ACIA_DATA
+        stx     acia_status_reg_r+2
+        stx     acia_status_reg_w+2
+
+        lda     _open_slot
+        jsr     _simple_serial_get_data_reg
         sta     acia_data_reg_r+1
         sta     acia_data_reg_w+1
-        lda     #>ACIA_DATA
-        adc     #0
-        sta     acia_data_reg_r+2
-        sta     acia_data_reg_w+2
+        stx     acia_data_reg_r+2
+        stx     acia_data_reg_w+2
         rts
 
 _serial_read_byte_no_irq:

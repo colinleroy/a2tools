@@ -4,6 +4,8 @@
         .import         _open_slot
 
         .export         _simple_serial_set_irq
+        .export         _simple_serial_get_data_reg
+        .export         _simple_serial_get_status_reg
 
         .include        "apple2.inc"
         .include        "ser-kernel.inc"
@@ -27,33 +29,26 @@ _simple_serial_set_irq:
         
         rts
 
-_simple_serial_setup_no_irq_regs:
-        lda     _open_slot
+; int simple_serial_get_data_reg(char slot)
+; returns data register address in AX
+_simple_serial_get_data_reg:
+        cmp     #0
         beq     :+
         lda     #<ZILOG_DATA_A
         ldx     #>ZILOG_DATA_A
-        sta     zilog_data_reg+1
-        stx     zilog_data_reg+2
-        lda     #<ZILOG_REG_A
-        ldx     #>ZILOG_REG_A
-        sta     zilog_status_reg+1
-        stx     zilog_status_reg+2
         rts
 :       lda     #<ZILOG_DATA_B
         ldx     #>ZILOG_DATA_B
-        sta     zilog_data_reg+1
-        stx     zilog_data_reg+2
-        lda     #<ZILOG_REG_B
-        ldx     #>ZILOG_REG_B
-        sta     zilog_status_reg+1
-        stx     zilog_status_reg+2
         rts
 
-serial_read_byte_no_irq:
-zilog_status_reg:
-:       lda     $FFFF           ; Do we have a character?
-        and     #$01
-        beq     :-
-zilog_data_reg:
-        lda     $FFFF           ; We do!
+; int simple_serial_get_status_reg(char slot)
+; returns status register address in AX
+_simple_serial_get_status_reg:
+        cmp     #0
+        beq     :+
+        lda     #<ZILOG_REG_A
+        ldx     #>ZILOG_REG_A
+        rts
+:       lda     #<ZILOG_REG_B
+        ldx     #>ZILOG_REG_B
         rts
