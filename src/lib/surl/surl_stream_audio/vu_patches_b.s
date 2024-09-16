@@ -1,0 +1,35 @@
+; --------------------------------------
+vu_patches_b:
+                .word v0b
+                .word v1b
+                .word v2b
+                .word v3b
+                .word v4b
+                .word v5b
+                .word v6b
+                .word v7b
+                .word v8b
+                .word v9b
+                .word v10b
+                .word v11b
+                .word v12b
+                .word v13b
+                .word v14b
+                .word v15b
+                .word v16b
+                .word v17b
+                .word v18b
+                .word v19b
+                .word v20b
+                .word v21b
+                .word v22b
+                .word v23b
+                .word v24b
+                .word v25b
+                .word v26b
+                .word v27b
+                .word v28b
+                .word v29b
+                .word v30b
+                .word v31b
+                .word $0000
