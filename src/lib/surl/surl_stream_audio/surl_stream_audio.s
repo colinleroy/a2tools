@@ -10,11 +10,8 @@ _surl_stream_audio:
         ; Setup pointers
         jsr     setup_pointers
         ; Patch serial registers
-        jsr     patch_serial_registers
-
-.ifdef IIGS
-        jsr     slow_iigs
-.endif
+        jsr     patch_audio_registers
+        jsr     patch_vu_meters
 
         lda     #$2F                    ; Ready
         jsr     _serial_putc_direct

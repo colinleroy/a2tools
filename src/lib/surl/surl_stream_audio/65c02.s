@@ -48,7 +48,8 @@ SAMPLE_MULT   = 2
 .include "kbd_send.s"
 .include "silence.s"
 .include "patch_addresses.s"
-.include "patch_serial_registers_and_vumeters.s"
+.include "patch_audio_registers.s"
+.include "patch_vu_meters.s"
 
 ; ------------------------------------------------------------------------
 .align 256

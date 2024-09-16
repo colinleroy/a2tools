@@ -1,36 +1,19 @@
-; --------------------------------------
-patch_serial_registers:
-        lda     #<(status_patches)
-        sta     ptr1
-        lda     #>(status_patches)
-        sta     ptr1+1
-        lda     serial_status_reg+1
-        ldx     serial_status_reg+2
-        jsr     patch_addresses
-
-        lda     #<(data_patches)
-        sta     ptr1
-        lda     #>(data_patches)
-        sta     ptr1+1
-        lda     serial_data_reg+1
-        ldx     serial_data_reg+2
-        jsr     patch_addresses
-
+patch_vu_meters:
         lda     #<(vu_patches_a)
         sta     ptr1
         lda     #>(vu_patches_a)
         sta     ptr1+1
-        jsr     patch_vumeters
+        jsr     patch_incr
 
         lda     #<(vu_patches_b)
         sta     ptr1
         lda     #>(vu_patches_b)
         sta     ptr1+1
-        ; jsr   patch_vumeters  ; Fallthrough 
+        ; jsr   patch_incr  ; Fallthrough 
         ; rts
 
 ; --------------------------------------
-patch_vumeters:                 ; Patch all registers in ptr1 array with vumeter_base
+patch_incr:                     ; Patch all registers in ptr1 array with vumeter_base + n
         ldy     #$00            ; Start at beginning
         lda    vumeter_base
         sta    tmp1

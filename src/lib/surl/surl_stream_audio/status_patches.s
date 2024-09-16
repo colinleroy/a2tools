@@ -1,4 +1,4 @@
-status_patches:
+audio_status_patches:
                 .word s0
                 .word s1
                 .word s2

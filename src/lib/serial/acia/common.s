@@ -7,6 +7,8 @@
         .export         _simple_serial_set_irq
         .export         _simple_serial_get_data_reg
         .export         _simple_serial_get_status_reg
+        .export         _simple_serial_get_cmd_reg
+        .export         _simple_serial_get_ctrl_reg
 
         .importzp       tmp1
 

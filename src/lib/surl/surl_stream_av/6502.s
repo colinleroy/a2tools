@@ -259,7 +259,8 @@ _SAMPLES_BASE = *
 .include "duty-cycles/27.s"
 
 ; Stuff code between duty cycles to optimize size
-.include "patch_serial_registers.s"
+.include "patch_audio_registers.s"
+.include "patch_video_registers.s"
 
 .align $100
 .assert * = _SAMPLES_BASE + $1C00, error
