@@ -1,4 +1,3 @@
-; --------------------------------------
 patch_addresses:                ; Patch all registers in ptr1 array with A
         ldy     #$00            ; Start at beginning
         sta     tmp1            ; Save value
@@ -17,7 +16,7 @@ next_addr:
         tya
         pha
         ldy     #$00
-        
+
         lda     tmp1            ; Patch low byte
         sta     (ptr2),y
 

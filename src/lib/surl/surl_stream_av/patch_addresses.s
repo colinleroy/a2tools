@@ -13,14 +13,6 @@ next_addr:
         sta     ptr2+1
         iny
 
-        .ifdef STREAM_CHECK_ADDR_PATCH
-        lda     (ptr2)          ; Debug to be sure
-        cmp     #$FF
-        beq     :+
-        brk
-:
-        .endif
-
         tya
         pha
         ldy     #$00
