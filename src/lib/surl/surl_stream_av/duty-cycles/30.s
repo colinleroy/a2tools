@@ -17,5 +17,5 @@ no_vid30:
 ad30b:  ldx     $A8FF           ; 21
         WASTE_13                ; 34
         ____SPKR_DUTY____4      ; 38
-        WASTE_18                ; 56
-        JUMP_NEXT_12            ; 68
+        WASTE_21                ; 59
+        JUMP_NEXT_9             ; 68

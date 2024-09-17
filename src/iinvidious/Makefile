@@ -13,7 +13,7 @@ suffix :=
 upload_subdir :=
 CC65_TARGET := apple2
 STREAMER_VER := 6502
-START_ADDR := 0xC3A
+START_ADDR := 0xD3A
 else
 serial_hw := acia
 iigs_suffix :=
@@ -21,7 +21,7 @@ iigs_CFLAGS :=
 CC65_TARGET = apple2enh
 trgt = apple2c0
 STREAMER_VER := 65c02
-START_ADDR := 0x1F3A
+START_ADDR := 0xD3A
 endif
 endif
 
@@ -82,7 +82,7 @@ iinvidious_CLCFLAGS = -t $(CC65_TARGET) -I ../lib \
 	-DBUF_8K_ADDR=0x4000 -DBUF_8K_SIZE=0x1FFF \
 	-DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER \
 	-DSTREAM_URL_SEGMENT='"LOWCODE"' \
-	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-iinvidious-$(STREAMER_VER).cfg \
+	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-iinvidious.cfg \
 	-vm -m iinvidious.map -DSURL_TO_LANGCARD -O --start-addr $(START_ADDR)
 
 all: \

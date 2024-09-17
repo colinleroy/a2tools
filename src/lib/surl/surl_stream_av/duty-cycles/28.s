@@ -15,5 +15,5 @@ no_vid28:
 ad28b:  ldx     $A8FF           ; 21
         WASTE_11                ; 32
         ____SPKR_DUTY____4      ; 36
-        WASTE_20                ; 56
-        JUMP_NEXT_12            ; 68
+        WASTE_23                ; 59
+        JUMP_NEXT_9             ; 68

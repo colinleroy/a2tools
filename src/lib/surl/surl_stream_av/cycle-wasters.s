@@ -1,3 +1,7 @@
+waste_34:
+        WASTE_2
+waste_32:
+        WASTE_2
 waste_30:
         WASTE_2
 waste_28:
@@ -19,6 +23,8 @@ waste_14:
 waste_12:
         rts
 
+waste_33:
+        WASTE_2
 waste_31:
         WASTE_2
 waste_29:

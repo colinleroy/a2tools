@@ -61,4 +61,8 @@ setup:
         sta     next_offset
         sta     cancelled
 
+        .ifndef __APPLE2ENH__
+        sta     next            ; Clear low byte of next pointer
+        .endif
+
         rts

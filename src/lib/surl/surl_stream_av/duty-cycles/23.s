@@ -14,5 +14,5 @@ no_vid23:
 ad23b:  ldx     $A8FF           ; 21
         WASTE_6                 ; 27
         ____SPKR_DUTY____4      ; 31
-        WASTE_25                ; 56
-        JUMP_NEXT_12            ; 68
+        WASTE_28                ; 59
+        JUMP_NEXT_9             ; 68

@@ -15,5 +15,5 @@ no_vid19:
 ad19b:  ldx     $A8FF           ; 21
         WASTE_2                 ; 23
         ____SPKR_DUTY____4      ; 27
-        WASTE_29                ; 56
-        JUMP_NEXT_12            ; 68
+        WASTE_32                ; 59
+        JUMP_NEXT_9             ; 68
