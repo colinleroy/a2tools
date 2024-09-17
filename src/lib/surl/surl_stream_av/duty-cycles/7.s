@@ -13,5 +13,5 @@ vd7:    ldy     $98FF           ; 27
 
 no_vid7:
 ad7b:   ldx     $A8FF           ; 28
-        WASTE_28                ; 56
-        JUMP_NEXT_12            ; 68
+        WASTE_31                ; 59
+        JUMP_NEXT_9             ; 68

@@ -32,10 +32,9 @@ video_sub:
 @set_offset:                            ;       This is an offset byte
         sty     next_offset             ; 9     Store offset
         lda     page_ptr_high+1         ; 12    Update the page flag here, where we have time
-        and     #$55                    ; 14    Use the fact that page1 array's high byte is odd,
-                                        ;       that page0's is even, and that
-                                                .assert >PAGE0_ARRAY & $55 = $54, error
-                                                .assert >PAGE1_ARRAY & $55 = $55, error
+        sbc     #(PAGE_ARR_TO_SWITCH-1) ; 14    Carry clear so substract one less. Use the fact that:
+                                                .assert >PAGE0_ARRAY - PAGE_ARR_TO_SWITCH = $54, error
+                                                .assert >PAGE1_ARRAY - PAGE_ARR_TO_SWITCH = $55, error
         sta     @toggle_page+1          ; 18
         adc     #$30                    ; 20    $54/$55 + $30 => sets V flag
         JUMP_NEXT_DUTY                  ; 26    Done, go to next duty cycle
@@ -44,8 +43,8 @@ video_sub:
 .ifdef DOUBLE_BUFFER
         lda     $C054                   ; 9     Activate page (patched by set_offset)
         lda     page_ptr_high+1         ; 12    Toggle written page
-        eor     #>page1_addrs_arr_high ^ >page0_addrs_arr_high
-                                        ; 14
+        eor     #(>PAGE0_ARRAY ^ >PAGE1_ARRAY)  
+                                        ; 14    The other array is right in the next/prev page
         sta     page_ptr_high+1         ; 17    No time to update page flag,
         WASTE_3                         ; 20
         JUMP_NEXT_DUTY                  ; 26    We'll do it in @set_offset

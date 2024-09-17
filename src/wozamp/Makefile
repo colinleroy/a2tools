@@ -29,8 +29,8 @@ CC65_TARGET = apple2enh
 trgt = apple2c0
 BUILD_VIDEOPLAY := 1
 STREAMER_VER := 65c02
-STREAM_URL_SEGMENT := "LOWCODE"
-VIDEOPLAY_START_ADDR := 0x1F00
+STREAM_URL_SEGMENT := "CODE"
+VIDEOPLAY_START_ADDR := 0x1D00
 EMBED_RBROWSER := radio-browser.c ../lib/surl/surl_get_json.c
 EXTERNAL_RBROWSER :=
 endif
@@ -152,7 +152,7 @@ videoplay_CLCFLAGS = -t $(CC65_TARGET) \
 	-DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER \
 	-DSTREAM_URL_SEGMENT='$(STREAM_URL_SEGMENT)' \
 	-I ../lib \
-	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-wozamp-videoplay-$(STREAMER_VER).cfg \
+	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-wozamp-videoplay.cfg \
 	-vm -m videoplay.map -DSURL_TO_LANGCARD -O --start-addr $(VIDEOPLAY_START_ADDR)
 
 all: \

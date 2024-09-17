@@ -101,12 +101,14 @@ SAMPLE_MULT       = 1
 ; -----------------------------------------------------------------------------
 ; CPU-specific constant and macros
 
+next       = _zp10            ; word - next cycle
+
 .macro ____SPKR_DUTY____4       ; Toggle speaker
         sta     SPKR            ; 4
 .endmacro
 
-.macro ____SPKR_DUTY____5       ; Toggle speaker slower (without phantom-read)
-        sta     $BFCF,x         ; 5     Must only be called from cycle_duty1.
+.macro ____SPKR_DUTY____5 DC    ; Toggle speaker slower (but without phantom-read)
+          sta     SPKR-(SAMPLE_OFFSET+DC),x     ; 5
 .endmacro
 
 .macro JUMP_NEXT_DUTY
@@ -119,10 +121,9 @@ SAMPLE_MULT       = 1
         cpy     #PAGE_TOGGLE    ; 7      Check for page toggle
 .endmacro
 
-.macro JUMP_NEXT_12
+.macro JUMP_NEXT_9
         stx     next+1          ; 3
-        WASTE_3                 ; 6
-        JUMP_NEXT_DUTY          ; 12     jump to next duty cycle
+        JUMP_NEXT_DUTY          ; 9      jump to next duty cycle
 .endmacro
 
         .segment        "CODE"
@@ -130,12 +131,17 @@ SAMPLE_MULT       = 1
 ; Align each duty cycle function
 .align $100
 _SAMPLES_BASE = *
-.assert _SAMPLES_BASE = $6000, error
 .include "duty-cycles/0.s"
+
+; Put the page0 array at the correct place. It must be at $XX40.
+.include "page0-array.s"
 
 .align $100
 .assert * = _SAMPLES_BASE + $100, error
 .include "duty-cycles/1.s"
+
+; Put the page1 array at the correct place. It must be at $XY40. (where XY = XX+1)
+.include "page1-array.s"
 
 .align $100
 .assert * = _SAMPLES_BASE + $200, error
@@ -266,17 +272,9 @@ _SAMPLES_BASE = *
 .assert * = _SAMPLES_BASE + $1C00, error
 .include "duty-cycles/28.s"
 
-; Put the page0 array at the correct place. It must be at $7C40.
-; the high byte is ANDed with $55 to figure out the next page switch fast.
-; See page0-array.s and video-handler.s for more explanation about this.
-.include "page0-array.s"
-
 .align $100
 .assert * = _SAMPLES_BASE + $1D00, error
 .include "duty-cycles/29.s"
-
-; This one must be at $7D40 for the same reason.
-.include "page1-array.s"
 
 ; Stuff code between duty cycles to optimize size
 .include "setup.s"
@@ -296,9 +294,5 @@ _SAMPLES_BASE = *
 .include "break_out.s"
 
 .assert * < _SAMPLES_BASE + $2100, error
-
-; -----------------------------------------------------------------------------
-; CPU-specific data - The initial value of the 'next' duty cycle address
-next:           .word $6000
 
 av_streamer_end = *

@@ -24,15 +24,16 @@ asp:    lda     $FFFF           ; 28     check serial tx empty
 adp:    sta     $FFFF           ; 48     send cmd
         cmp     #$1B            ; 50     escape?
         beq     out             ; 52/53  if escape, exit forcefully
-        ABS_STA kbd_cmd         ; 56
-        JUMP_NEXT_12            ; 68     jump to next duty cycle
+        sta kbd_cmd             ; 55
+        WASTE_4                 ; 59
+        JUMP_NEXT_9             ; 68     jump to next duty cycle
 nokbd:
 ad16b:  ldx     $A8FF           ; 43
-        WASTE_13                ; 56
-        JUMP_NEXT_12            ; 68
+        WASTE_16                ; 59
+        JUMP_NEXT_9             ; 68
 noser:  
-        WASTE_23                ; 56
-        JUMP_NEXT_12            ; 68
+        WASTE_26                ; 59
+        JUMP_NEXT_9             ; 68
 
 out:    lda     #1
         sta     cancelled

@@ -13,5 +13,5 @@ vd9:    ldy     $98FF           ; 29
 
 no_vid9:
 ad9b:   ldx     $A8FF           ; 30
-        WASTE_26                ; 56
-        JUMP_NEXT_12            ; 68
+        WASTE_29                ; 59
+        JUMP_NEXT_9             ; 68

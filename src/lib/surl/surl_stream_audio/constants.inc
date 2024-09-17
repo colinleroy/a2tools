@@ -1,12 +1,8 @@
 MAX_LEVEL         = 31
 
 .ifdef IIGS
-serial_status_reg = zilog_status_reg_r
-serial_data_reg   = zilog_data_reg_r
 HAS_BYTE          = $01
 .else
-serial_status_reg = acia_status_reg_r
-serial_data_reg   = acia_data_reg_r
 HAS_BYTE          = $08
 .endif
 

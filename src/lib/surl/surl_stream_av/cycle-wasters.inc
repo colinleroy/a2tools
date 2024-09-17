@@ -133,6 +133,18 @@
         jsr waste_31
 .endmacro
 
+.macro WASTE_32
+        jsr waste_32
+.endmacro
+
+.macro WASTE_33
+        jsr waste_33
+.endmacro
+
+.macro WASTE_34
+        jsr waste_34
+.endmacro
+
 ; Hack to waste 1 cycle. Use absolute stx with $00nn
 .macro ABS_STX  zpvar
         .byte   $8E             ; stx absolute

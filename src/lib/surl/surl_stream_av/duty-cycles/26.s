@@ -15,5 +15,5 @@ no_vid26:
 ad26b:  ldx     $A8FF           ; 21
         WASTE_9                 ; 30
         ____SPKR_DUTY____4      ; 34
-        WASTE_22                ; 56
-        JUMP_NEXT_12            ; 68
+        WASTE_25                ; 59
+        JUMP_NEXT_9             ; 68

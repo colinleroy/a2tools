@@ -107,25 +107,12 @@ SAMPLE_MULT       = 2
         cpy     #PAGE_TOGGLE    ; 7      Check for page toggle
 .endmacro
 
-.macro JUMP_NEXT_12
-        WASTE_6                 ; 6
-        JUMP_NEXT_DUTY          ; 12     jump to next duty cycle
+.macro JUMP_NEXT_9
+        WASTE_3                 ; 3
+        JUMP_NEXT_DUTY          ; 9      jump to next duty cycle
 .endmacro
 
-        .segment        "AVMAGIC"
-
-; Put the page arrays at the correct place. Segment AVMAGIC MUST start at $7C40.
-; the high byte is ANDed with $55 to figure out the next page switch fast.
-; See page0-array.s and video-handler.s for more explanation about this.
-.include "page0-array.s"
-
-; Stuff the free space with code to avoid wasting.
-.include "setup.s"
-
-; This one must be at $7D40 for the same reason.
-.include "page1-array.s"
-
-        .segment        "AVCODE"
+        .segment        "CODE"
 
 ; The AVCODE segment location is non-important (apart of course it must not be
 ; in $2000-$6000), but it is important that duty cycles don't cross pages, for
@@ -134,85 +121,85 @@ SAMPLE_MULT       = 2
 _SAMPLES_BASE = *
 ; -----------------------------------------------------------------
 .include "duty-cycles/0.s"
+; Put the page0 array at the correct place. It must be at $XX40.
+.include "page0-array.s"
 .include "duty-cycles/1.s"
-.include "duty-cycles/2.s"
-.include "duty-cycles/3.s"
-.include "duty-cycles/4.s"
 
 .align $100
 .assert * = _SAMPLES_BASE + $100, error
+.include "duty-cycles/2.s"
+
+; Put the page1 array at the correct place. It must be at $XY40. (where XY = XX+1)
+.include "page1-array.s"
+
+.include "duty-cycles/3.s"
+.include "duty-cycles/4.s"
+.include "calc_text_bases.s"
+
+.align $100
+.assert * = _SAMPLES_BASE + $200, error
 .include "duty-cycles/5.s"
 .include "duty-cycles/6.s"
 .include "duty-cycles/7.s"
 .include "duty-cycles/8.s"
 .include "duty-cycles/9.s"
-
-; Stuff data between duty cycles to optimize size
-.include "../surl_stream_common/patch_addresses.s"
+.include "duty-cycles/10.s"
 
 .align $100
-.assert * = _SAMPLES_BASE + $200, error
-.include "duty-cycles/10.s"
+.assert * = _SAMPLES_BASE + $300, error
 .include "duty-cycles/11.s"
 .include "duty-cycles/12.s"
 .include "duty-cycles/13.s"
 .include "duty-cycles/14.s"
-
-; Stuff data between duty cycles to optimize size
-.include "calc_text_bases.s"
-
-.align $100
-.assert * = _SAMPLES_BASE + $300, error
-.include "duty-cycles/15.s"
 .include "duty-cycles/17.s"
-.include "duty-cycles/18.s"
-.include "duty-cycles/19.s"
-
-; Stuff data between duty cycles to optimize size
-.include "calc_bases.s"
+.include "break_out.s"
 
 .align $100
 .assert * = _SAMPLES_BASE + $400, error
+.include "duty-cycles/15.s"
 .include "duty-cycles/16.s"
-.include "duty-cycles/20.s"
-.include "duty-cycles/21.s"
-.include "duty-cycles/22.s"
+.include "duty-cycles/18.s"
+.include "calc_bases.s"
 
 .align $100
 .assert * = _SAMPLES_BASE + $500, error
+.include "duty-cycles/19.s"
+.include "duty-cycles/20.s"
+.include "duty-cycles/21.s"
+.include "duty-cycles/22.s"
 .include "duty-cycles/23.s"
+
+.align $100
+.assert * = _SAMPLES_BASE + $600, error
 .include "duty-cycles/24.s"
 .include "duty-cycles/25.s"
 .include "duty-cycles/26.s"
 .include "duty-cycles/27.s"
-
-.align $100
-.assert * = _SAMPLES_BASE + $600, error
 .include "duty-cycles/28.s"
-.include "duty-cycles/29.s"
-.include "duty-cycles/30.s"
-.include "duty-cycles/31.s"
-
-; Stuff data between duty cycles to optimize size
-.include "break_out.s"
 
 .align $100
 .assert * = _SAMPLES_BASE + $700, error
-.include "video-handler.s"
+.include "duty-cycles/29.s"
+.include "duty-cycles/30.s"
+.include "duty-cycles/31.s"
 .include "cycle-wasters.s"
+.include "video-handler.s"
 
 ; Check we didn't cross page in the middle of video_sub
 .assert * < _SAMPLES_BASE + $800, error
 
 ; The rest of the functions don't need to be aligned.
-.include "surl_stream_av.s"
 
+.include "surl_stream_av.s"
+.include "../surl_stream_common/patch_addresses.s"
 .include "../surl_stream_common/patch_audio_registers.s"
 .include "patch_video_registers.s"
 
 .include "video-status-data.inc"
 .include "video-data-data.inc"
 .include "audio-data.inc"
+
+.include "setup.s"
 
 ; -----------------------------------------------------------------------------
 ; CPU-specific data (duty cycles handlers table)

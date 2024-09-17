@@ -14,5 +14,5 @@ vd17:   ldy     $98FF           ; 29
 no_vid17:
 ad17b:  ldx     $A8FF           ; 21
         ____SPKR_DUTY____4      ; 25
-        WASTE_31                ; 56
-        JUMP_NEXT_12            ; 68
+        WASTE_34                ; 59
+        JUMP_NEXT_9             ; 68

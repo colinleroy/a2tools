@@ -1,13 +1,10 @@
 MAX_LEVEL         = 31
 
 .ifdef IIGS                   ; Todo
-serial_status_reg = $00
-serial_data_reg   = $00
+HAS_BYTE          = $01
 .else
-serial_status_reg = acia_status_reg_r
-serial_data_reg   = acia_data_reg_r
-.endif
 HAS_BYTE          = $08
+.endif
 
 MAX_OFFSET    = 126
 N_BASES       = (8192/MAX_OFFSET)+1

@@ -12,5 +12,5 @@ vd4:    ldy     $98FF           ; 24
 
 no_vid4:
 ad4b:   ldx     $A8FF           ; 25
-        WASTE_31                ; 56
-        JUMP_NEXT_12            ; 68
+        WASTE_34                ; 59
+        JUMP_NEXT_9             ; 68
