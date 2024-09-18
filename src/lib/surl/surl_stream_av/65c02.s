@@ -93,7 +93,7 @@ SAMPLE_MULT       = 2
         sta     SPKR            ; 4
 .endmacro
 
-.macro ____SPKR_DUTY____5       ; Toggle speaker slower
+.macro ____SPKR_DUTY____5 DC    ; Toggle speaker slower (DC ignored on 65c02)
         sta     (spkr_ptr)      ; 5
 .endmacro
 
@@ -236,6 +236,6 @@ next:
                 .word duty_cycle29
                 .word duty_cycle30
                 .word duty_cycle31
-                .word break_out     ;  No need to make sure we cover every
+                .word break_out     ; No need to make sure we cover every
                                     ; number from to 32 to 63, as serial
                                     ; transfers bytes LSB to MSB.

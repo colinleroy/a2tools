@@ -532,14 +532,39 @@ static void send_metadata(char *key, char *value, char *translit) {
   free(buf);
 }
 
+static unsigned char *audio_get_stream_art(decode_data *audio_data, int monochrome, int scale) {
+  unsigned char *img_data = NULL;
+  size_t img_size = 0;
+  unsigned char *buffer = NULL;
+
+  pthread_mutex_lock(&audio_data->mutex);
+  img_data = audio_data->img_data;
+  img_size = audio_data->img_size;
+  pthread_mutex_unlock(&audio_data->mutex);
+
+  if (img_data && img_size) {
+    FILE *fp = fopen("/tmp/imgdata", "w+b");
+    if (fp) {
+      if (fwrite(img_data, 1, img_size, fp) == img_size) {
+        fclose(fp);
+        buffer = sdl_to_hgr("/tmp/imgdata", monochrome, 0, &img_size, 0, scale);
+        if (img_size != HGR_LEN) {
+          buffer = NULL;
+        }
+      } else {
+        fclose(fp);
+      }
+    }
+  }
+  return buffer;
+}
+
 int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightScale scale) {
   int num = 0;
   unsigned char c;
   size_t cur = 0;
-  unsigned char *img_data = NULL;
   unsigned char *hgr_buf = NULL;
   size_t size = 0;
-  size_t img_size = 0;
   int ret = 0;
   int vol_adj_done = 0;
   int auto_vol = vol_mult;
@@ -571,25 +596,7 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
     simple_serial_putc(SURL_ANSWER_STREAM_ERROR);
     return -1;
   } else {
-    pthread_mutex_lock(&th_data->mutex);
-    img_data = th_data->img_data;
-    img_size = th_data->img_size;
-    pthread_mutex_unlock(&th_data->mutex);
-
-    if (img_data && img_size) {
-      FILE *fp = fopen("/tmp/imgdata", "w+b");
-      if (fp) {
-        if (fwrite(img_data, 1, img_size, fp) == img_size) {
-          fclose(fp);
-          hgr_buf = sdl_to_hgr("/tmp/imgdata", monochrome, 0, &img_size, 0, scale);
-          if (img_size != HGR_LEN) {
-            hgr_buf = NULL;
-          }
-        } else {
-          fclose(fp);
-        }
-      }
-    }
+    hgr_buf = audio_get_stream_art(th_data, monochrome, scale);
 
     pthread_mutex_lock(&th_data->mutex);
     send_metadata("has_video", th_data->has_video ? "1":"0", translit);
@@ -605,7 +612,7 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
       simple_serial_putc(SURL_ANSWER_STREAM_ART);
       if (simple_serial_getc() == SURL_CLIENT_READY) {
         printf("Sending image\n");
-        simple_serial_write_fast((char *)hgr_buf, img_size);
+        simple_serial_write_fast((char *)hgr_buf, HGR_LEN);
         if (simple_serial_getc() != SURL_CLIENT_READY) {
           return -1;
         }
@@ -1064,9 +1071,6 @@ int ready;
 int stop;
 int err;
 
-unsigned char *img_data = NULL;
-size_t audio_size = 0;
-size_t img_size = 0;
 int vhgr_file;
 
 sem_t av_sem;
@@ -1079,6 +1083,7 @@ static void *audio_push(void *unused) {
   struct timeval frame_start;
   int vol_adj_done = 0;
   int auto_vol = vol_mult;
+  size_t audio_size = 0;
 
   gettimeofday(&frame_start, 0);
   vol_mult = 10;
@@ -1087,29 +1092,36 @@ static void *audio_push(void *unused) {
     int32_t cur_val, samp_val;
 
     pthread_mutex_lock(&audio_th_data->mutex);
-    if (cur > SAMPLE_RATE*(2*BUFFER_LEN)) {
-      /* Avoid ever-expanding buffer */
-      memmove(audio_th_data->data, audio_th_data->data + SAMPLE_RATE*BUFFER_LEN, SAMPLE_RATE*BUFFER_LEN);
-      audio_th_data->data = realloc(audio_th_data->data, audio_th_data->size - SAMPLE_RATE*BUFFER_LEN);
-      audio_th_data->size -= SAMPLE_RATE*BUFFER_LEN;
-      cur -= SAMPLE_RATE*BUFFER_LEN;
-    }
-    audio_size = audio_th_data->size;
-    if (cur < audio_size) {
-      cur_val = audio_th_data->data[cur];
-    }
-    stop = audio_th_data->decoding_end;
-
-    /* Update max volume for auto-leveling after decoding */
-    if (audio_th_data->decoding_end && audio_th_data->max_audio_volume != 0) {
-      /* Adjust volume */
-      if (audio_th_data->max_audio_volume != 0 && vol_mult == 10 && !vol_adj_done) {
-        vol_mult = ((AUDIO_MAX/2) * vol_mult) / (audio_th_data->max_audio_volume-127);
-        printf("Max detected level now %d, vol set to %d\n", audio_th_data->max_audio_volume, vol_mult);
-        vol_adj_done = 1;
-        auto_vol = vol_mult;
+    if (!audio_th_data->fake_data) {
+      if (cur > SAMPLE_RATE*(2*BUFFER_LEN)) {
+        /* Avoid ever-expanding buffer */
+        memmove(audio_th_data->data, audio_th_data->data + SAMPLE_RATE*BUFFER_LEN, SAMPLE_RATE*BUFFER_LEN);
+        audio_th_data->data = realloc(audio_th_data->data, audio_th_data->size - SAMPLE_RATE*BUFFER_LEN);
+        audio_th_data->size -= SAMPLE_RATE*BUFFER_LEN;
+        cur -= SAMPLE_RATE*BUFFER_LEN;
       }
+      audio_size = audio_th_data->size;
+      if (cur < audio_size) {
+        cur_val = audio_th_data->data[cur];
+      }
+      stop = audio_th_data->decoding_end;
+
+      /* Update max volume for auto-leveling after decoding */
+      if (audio_th_data->decoding_end && audio_th_data->max_audio_volume != 0) {
+        /* Adjust volume */
+        if (audio_th_data->max_audio_volume != 0 && vol_mult == 10 && !vol_adj_done) {
+          vol_mult = ((AUDIO_MAX/2) * vol_mult) / (audio_th_data->max_audio_volume-127);
+          printf("Max detected level now %d, vol set to %d\n", audio_th_data->max_audio_volume, vol_mult);
+          vol_adj_done = 1;
+          auto_vol = vol_mult;
+        }
+      }
+    } else {
+      audio_size = audio_th_data->size;
+      cur_val = AUDIO_MAX/2;
+      stop = 1;
     }
+
     pthread_mutex_unlock(&audio_th_data->mutex);
 
     if (cur == audio_size) {
@@ -1242,7 +1254,7 @@ handle_kbd:
 abort:
   pthread_mutex_lock(&audio_th_data->mutex);
   audio_th_data->stop = 1;
-  printf("abort\n");
+  printf("audio_push aborted\n");
   pthread_mutex_unlock(&audio_th_data->mutex);
   return NULL;
 }
@@ -1573,7 +1585,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, char sub
   int j;
   int cancelled = 0, playback_stop = 0;
   /* Control vars */
-  unsigned char c;
+  unsigned char c, *hgr_buf = NULL;
   int ret = 0;
   pthread_t audio_decode_thread, video_decode_thread;
   pthread_t audio_push_thread, video_push_thread;
@@ -1581,7 +1593,6 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, char sub
   video_th_data = malloc(sizeof(decode_data));
   ready = 0;
   stop = 0;
-  err = 0;
 
   if (aux_tty_path)
     ttyfd2 = simple_serial_open_file(aux_tty_path);
@@ -1605,31 +1616,46 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, char sub
   audio_th_data->sample_rate = SAMPLE_RATE;
   pthread_mutex_init(&audio_th_data->mutex, NULL);
 
-  printf("Starting decode thread (charset %s, monochrome %d, size %d)\n", translit, monochrome, size);
+  printf("Starting audio decode thread (charset %s, monochrome %d, size %d)\n", translit, monochrome, size);
   pthread_create(&audio_decode_thread, NULL, *ffmpeg_audio_decode_thread, (void *)audio_th_data);
 
-  while(!ready && !stop && err != -1) {
+  while(!ready && !stop) {
     pthread_mutex_lock(&audio_th_data->mutex);
     pthread_mutex_lock(&video_th_data->mutex);
     ready = audio_th_data->data_ready && video_th_data->data_ready;
     stop = audio_th_data->decoding_end && video_th_data->decoding_end;
-    err = video_th_data->decoding_ret;
     pthread_mutex_unlock(&audio_th_data->mutex);
     pthread_mutex_unlock(&video_th_data->mutex);
     usleep(100);
   }
+  if (!ready && stop) {
+    pthread_mutex_lock(&audio_th_data->mutex);
+    pthread_mutex_lock(&video_th_data->mutex);
+    /* We can have no audio stream */
+    if (video_th_data->data_ready && video_th_data->max_seekable > 0 && video_th_data->decoding_end && !audio_th_data->data_ready) {
+      ready = 1;
+      stop = 0;
+      audio_th_data->fake_data = 1;
+      audio_th_data->size = video_th_data->max_seekable * (SAMPLE_RATE/FPS);
+      printf("Stream has no audio\n");
+    }
 
-  printf("Decode thread state: %s\n", ready ? "ready" : stop ? "failure" : "unknown");
+    /* We can have no video stream */
+    if (audio_th_data->data_ready && audio_th_data->data && audio_th_data->decoding_end && !video_th_data->data_ready) {
+      ready = 1;
+      stop = 0;
+      printf("Stream has no video\n");
+    }
+    pthread_mutex_unlock(&audio_th_data->mutex);
+    pthread_mutex_unlock(&video_th_data->mutex);
+  }
 
-  if (!ready && (stop || err)) {
+  printf("Decode threads state: %s\n", ready ? "ready" : stop ? "failure" : "unknown");
+
+  if (!ready && stop) {
     simple_serial_putc(SURL_ANSWER_STREAM_ERROR);
     goto cleanup_thread;
   }
-
-  pthread_mutex_lock(&audio_th_data->mutex);
-  img_data = audio_th_data->img_data;
-  img_size = audio_th_data->img_size;
-  pthread_mutex_unlock(&audio_th_data->mutex);
 
   if (diffs == NULL) {
     diffs = malloc(HGR_LEN * sizeof(byte_diff *));
@@ -1652,6 +1678,29 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, char sub
   offset = cur_base = 0;
 
   printf("AV: Client ready\n");
+
+  pthread_mutex_lock(&video_th_data->mutex);
+  if (video_th_data->max_seekable == 0) {
+    /* No video ? send embedded art if there is any */
+    hgr_buf = audio_get_stream_art(audio_th_data, monochrome, HGR_SCALE_FULL);
+  }
+  pthread_mutex_unlock(&video_th_data->mutex);
+
+  if (hgr_buf) {
+    /* If we got an image from audio stream, and no frames from video stream,
+     * send it.
+     */
+    simple_serial_putc(SURL_ANSWER_STREAM_ART);
+    if (simple_serial_getc() == SURL_CLIENT_READY) {
+      printf("Sending image\n");
+      simple_serial_write_fast((char *)hgr_buf, HGR_LEN);
+      if (simple_serial_getc() != SURL_CLIENT_READY) {
+        printf("client error\n");
+      }
+    } else {
+      printf("Skip image sending\n");
+    }
+  }
 
   /* start point for client to enter the AV streamer */
   simple_serial_putc(SURL_ANSWER_STREAM_START);
@@ -1707,37 +1756,38 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, char sub
     goto read_and_cleanup_thread;
   }
   pthread_mutex_lock(&audio_th_data->mutex);
-  if (audio_th_data->pts < video_th_data->pts) {
-    long cut_ms = video_th_data->pts - audio_th_data->pts;
-    long cut_samples = cut_ms * SAMPLE_RATE / 1000;
-    printf("Audio starts early (A %ld V %ld), cutting %ld\n", audio_th_data->pts, video_th_data->pts, cut_samples);
-    memmove(audio_th_data->data, audio_th_data->data + cut_samples, audio_th_data->size - cut_samples);
-    audio_th_data->data = realloc(audio_th_data->data, audio_th_data->size - cut_samples);
-    audio_th_data->size -= cut_samples;
-  }
-
-  if (audio_th_data->pts > video_th_data->pts) {
-    long add_ms = audio_th_data->pts - video_th_data->pts;
-    long add_samples = add_ms * SAMPLE_RATE / 1000;
-    printf("Audio starts late (A %ld V %ld)\n", audio_th_data->pts, video_th_data->pts);
-    audio_th_data->data = realloc(audio_th_data->data, audio_th_data->size + add_samples);
-    memmove(audio_th_data->data, audio_th_data->data + add_samples, audio_th_data->size);
-    memset(audio_th_data->data, 128, add_samples);
-    audio_th_data->size += add_samples;
-  }
-
-  if (audio_th_data->pts == video_th_data->pts) {
-    printf("Audio starts same as video (A %ld V %ld)\n", audio_th_data->pts, video_th_data->pts);
-  }
-
-  /* Add one frame of silence so we can start posting first video frame on time */
-  {
+  if (!audio_th_data->fake_data) {
     long add_samples = SAMPLE_RATE / FPS;
+    if (audio_th_data->pts < video_th_data->pts) {
+      long cut_ms = video_th_data->pts - audio_th_data->pts;
+      long cut_samples = cut_ms * SAMPLE_RATE / 1000;
+      printf("Audio starts early (A %ld V %ld), cutting %ld\n", audio_th_data->pts, video_th_data->pts, cut_samples);
+      memmove(audio_th_data->data, audio_th_data->data + cut_samples, audio_th_data->size - cut_samples);
+      audio_th_data->data = realloc(audio_th_data->data, audio_th_data->size - cut_samples);
+      audio_th_data->size -= cut_samples;
+    }
+
+    if (audio_th_data->pts > video_th_data->pts) {
+      long add_ms = audio_th_data->pts - video_th_data->pts;
+      long add_samples = add_ms * SAMPLE_RATE / 1000;
+      printf("Audio starts late (A %ld V %ld)\n", audio_th_data->pts, video_th_data->pts);
+      audio_th_data->data = realloc(audio_th_data->data, audio_th_data->size + add_samples);
+      memmove(audio_th_data->data, audio_th_data->data + add_samples, audio_th_data->size);
+      memset(audio_th_data->data, 128, add_samples);
+      audio_th_data->size += add_samples;
+    }
+
+    if (audio_th_data->pts == video_th_data->pts) {
+      printf("Audio starts same as video (A %ld V %ld)\n", audio_th_data->pts, video_th_data->pts);
+    }
+
+    /* Add one frame of silence so we can start posting first video frame on time */
     audio_th_data->data = realloc(audio_th_data->data, audio_th_data->size + add_samples);
     memmove(audio_th_data->data, audio_th_data->data + add_samples, audio_th_data->size);
     memset(audio_th_data->data, 128, add_samples);
     audio_th_data->size += add_samples;
   }
+
   pthread_mutex_unlock(&audio_th_data->mutex);
 
   sem_init(&av_sem, 0, 0);

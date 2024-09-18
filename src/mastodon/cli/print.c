@@ -175,17 +175,18 @@ int print_status(status *s, char hide, char full) {
   CHECK_AND_CRLF();
 
 #if NUMCOLS == 40
-  cprintf("%d rep, %s%d boost, %s%d fav, %1d img %s",
+  cprintf("%d rep, %s%d boost, %s%d fav, %1d %s %s",
 #else
-  cprintf("%d replies, %s%d boosts, %s%d favs, %1d medias %s",
+  cprintf("%d replies, %s%d boosts, %s%d favs, %1d %s%s %s",
 #endif
         s->n_replies,
         (s->flags & REBLOGGED) ? "*":"", s->n_reblogs,
         (s->flags & FAVOURITED) ? "*":"", s->n_favourites,
-        s->n_images,
+        s->n_medias, media_type_str[s->media_type],
 #if NUMCOLS == 40
         (s->flags & BOOKMARKED) ? " - bkm":"      ");
 #else
+        s->n_medias > 1 ? "s":"",
         (s->flags & BOOKMARKED) ? " - bookmarked":"             ");
 #endif
   CHECK_AND_CRLF();

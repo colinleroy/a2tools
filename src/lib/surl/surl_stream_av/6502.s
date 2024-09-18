@@ -70,7 +70,8 @@
 ; vd = video data   = $98 (printer port in slot 1)
 ; as = audio status = $A9 (modem port in slot 2)
 ; ad = audio data   = $A8 (modem port in slot 2)
-
+;
+; 6502 limitation:
 ; Warning about the alignment of the 32 duty cycles: as we read the next
 ; sample without verifying the ACIA's status register, we may read an
 ; incomplete byte, while it is being landed in the data register.
@@ -131,6 +132,7 @@ next       = _zp10            ; word - next cycle
 ; Align each duty cycle function
 .align $100
 _SAMPLES_BASE = *
+.assert SAMPLE_OFFSET = >_SAMPLES_BASE, error ; Cf $6000 to $7F00 comment at top of file
 .include "duty-cycles/0.s"
 
 ; Put the page0 array at the correct place. It must be at $XX40.

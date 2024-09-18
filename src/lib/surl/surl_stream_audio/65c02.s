@@ -24,7 +24,7 @@
         sta     SPKR            ; 4
 .endmacro
 
-.macro ____SPKR_DUTY____5 DC    ; Toggle speaker slower (but without phantom-read)
+.macro ____SPKR_DUTY____5 DC    ; Toggle speaker slower (DC ignored on 65c02)
           sta     (spkr_ptr)    ; 5
 .endmacro
 
