@@ -120,7 +120,7 @@ static int print_account(account *a) {
 }
 
 static int print_notification(notification *n) {
-  char width;
+  char y, width;
   register char *w;
 
   width = scrw - RIGHT_COL_START;
@@ -138,6 +138,7 @@ static int print_notification(notification *n) {
 #endif
 
   w = notification_verb[n->type];
+  y = wherey();
   dputs(w);
   dputs(": ");
 
@@ -156,6 +157,10 @@ static int print_notification(notification *n) {
   if (*w) {
     dputs("...");
   }
+  if (y == wherey()) {
+    dputc('\n');
+  }
+
   CHECK_NO_CRLF();
   CHECK_AND_CRLF();
 
@@ -1312,7 +1317,7 @@ navigate_reuse_list:
       case IMAGES:
           if (current_list->account && (!disp_status || disp_status->displayed_at > 0)) {
             launch_command("mastoimg", monochrome?"1":"0", "a", current_list->account->id);
-          } else if (disp_status && disp_status->n_images) {
+          } else if (disp_status && disp_status->n_medias) {
             launch_command("mastoimg", monochrome?"1":"0", "s", disp_status->id);
           }
           cur_action = NAVIGATE;

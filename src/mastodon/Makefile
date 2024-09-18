@@ -80,7 +80,29 @@ mastoimg_SOURCES := \
 	../lib/scrollwindow.c \
 	../lib/dgets.c \
 
+ifdef IIGS
+
 mastoimg_CC65SOURCES := \
+	../lib/surl/surl_stream_video.s
+
+else
+
+ifdef OLDII
+
+mastoimg_CC65SOURCES := \
+	../lib/surl/surl_stream_video.s \
+	../lib/surl/surl_wait_for_stream.c
+else
+
+mastoimg_CC65SOURCES := \
+	../lib/surl/surl_stream_av/65c02.s \
+	../lib/surl/surl_stream_av/stream_url.c \
+
+endif
+endif
+
+mastoimg_CC65SOURCES := \
+	$(mastoimg_CC65SOURCES) \
 	../lib/surl/surl_read_with_barrier.s \
 	../lib/serial/simple_serial_io.s \
 	$(serial_hw_SOURCES) \
@@ -91,30 +113,6 @@ mastoimg_CC65SOURCES := \
 	../lib/surl/surl_wait_for_stream.c \
 	../lib/dputc.s \
 	../lib/scroll.s
-
-ifdef IIGS
-
-mastoimg_CC65SOURCES := \
-	$(mastoimg_CC65SOURCES) \
-	../lib/surl/surl_stream_video.s
-
-else
-
-ifdef OLDII
-
-mastoimg_CC65SOURCES := \
-	$(mastoimg_CC65SOURCES) \
-	../lib/surl/surl_stream_video.s \
-	../lib/surl/surl_wait_for_stream.c
-else
-
-mastoimg_CC65SOURCES := \
-	$(mastoimg_CC65SOURCES) \
-	../lib/surl/surl_stream_av/65c02.s \
-	../lib/surl/surl_stream_av/stream_url.c \
-
-endif
-endif
 
 mastocli_SOURCES := \
 	$(common_SOURCES) \
@@ -193,7 +191,7 @@ mastocli.bin: $(mastocli_SOURCES) $(mastocli_CC65SOURCES)
 	cl65 --debug-info -Wl --dbgfile,"mastocli.dbg" $(CFLAGS) $(mastocli_CLCFLAGS) -vm -m mastocli.map -o $@ $^
 mastowrite.bin: $(mastowrite_SOURCES) $(mastowrite_CC65SOURCES)
 	cl65 --debug-info -Wl --dbgfile,"mastowrite.dbg" $(CFLAGS) $(mastowrite_CLCFLAGS) -vm -m mastowrite.map -o $@ $^
-mastoimg.bin: $(mastoimg_SOURCES) $(mastoimg_CC65SOURCES)
+mastoimg.bin: $(mastoimg_CC65SOURCES) $(mastoimg_SOURCES)
 	cl65 --debug-info -Wl --dbgfile,"mastoimg.dbg" $(CFLAGS) $(mastoimg_CLCFLAGS) -vm -m mastoimg.map -o $@ $^ $(CC65_TARGET)-iobuf-0800.o
 
 mastodon.x86_64: $(mastodon_SOURCES) $(GCCSOURCES)

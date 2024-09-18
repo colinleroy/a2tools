@@ -103,7 +103,7 @@ static media *get_media(char *api_endpoint,
 
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s", api_endpoint, id);
   get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
-  
+
   if (!surl_response_ok())
     return NULL;
 
@@ -111,14 +111,14 @@ static media *get_media(char *api_endpoint,
 }
 
 media *api_get_status_media(char *id) {
-  return get_media(STATUS_ENDPOINT, 
-                   ".media_attachments|map(. | select(.type==\"image\" or .type==\"video\"))|.[]|(.id,.url,.type)",
-                   ".media_attachments|map(. | select(.type==\"image\" or .type==\"video\"))|.[%d]|.description",
+  return get_media(STATUS_ENDPOINT,
+                   ".media_attachments|.[]|(.id,.url,.type)",
+                   ".media_attachments|.[%d]|.description",
                    id);
 }
 
 media *api_get_account_media(char *id) {
-  return get_media(ACCOUNTS_ENDPOINT, 
+  return get_media(ACCOUNTS_ENDPOINT,
                    ".id,.avatar_static,.id,.header_static", NULL, id);
 }
 

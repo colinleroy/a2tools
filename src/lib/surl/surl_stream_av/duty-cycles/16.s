@@ -35,6 +35,6 @@ noser:
         WASTE_26                ; 59
         JUMP_NEXT_9             ; 68
 
-out:    lda     #1
-        sta     cancelled
-        jmp     break_out
+out:    lda     #1              ; 55
+        sta     cancelled       ; 59
+        JUMP_NEXT_9             ; 68

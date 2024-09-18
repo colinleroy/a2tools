@@ -80,9 +80,15 @@ void show_help (list *l, status *root_status, notification *root_notif) {
     if (root_status->spoiler_text) {
       dputs(" Toggle CW : W     \r\n");
     }
-    if (root_status->n_images > 0) {
+#if defined(__APPLE2ENH__) && !defined(IIGS)
+    if (root_status->n_medias > 0) {
       dputs(" Medias    : I     \r\n");
     }
+#else
+    if (root_status->n_medias > 0 && root_status->media_type != MEDIA_TYPE_AUDIO) {
+      dputs(" Medias    : I     \r\n");
+    }
+#endif
     if (root_status->poll) {
       dputs(" Vote      : V     \r\n");
     }

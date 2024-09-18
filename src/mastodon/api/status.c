@@ -19,6 +19,23 @@
 #define TL_STATUS_SHORT_BUF 512
 #define TL_STATUS_LARGE_BUF 4096
 
+/* Not in media.c because we in fact need that to display statuses */
+char *media_type_str[N_MEDIA_TYPE] = {
+#ifdef __APPLE2ENH__
+  "media",
+  "image",
+  "video",
+  "audio",
+  "gif"
+#else
+  "img",
+  "img",
+  "vid",
+  "snd",
+  "gif"
+#endif
+};
+
 static status *status_new(void) {
   status *s = malloc0(sizeof(status));
   s->displayed_at = -1;
@@ -42,10 +59,12 @@ static __fastcall__ char atoc(const char *str) {
 #endif
 
 static const char *basic_selector   = ".reblog|(.created_at,.account.display_name,.reblog.id//\"-\",.spoiler_text//\"\","
-                                      "(.media_attachments|map(. | select(.type==\"image\" or .type==\"video\"))|length),"
+                                      "(.media_attachments|length),"
+                                      ".media_attachments[0].type//\"-\","
                                       ".replies_count,.reblogs_count,.favourites_count,"
                                       ".account.id,.account.acct,.account.username,.visibility,"
-                                      ".reblogged,.favourited,.bookmarked,.poll.id)";
+                                      ".reblogged,.favourited,.bookmarked,.poll.id"
+                                      ")";
 static const char *content_selector = ".reblog|(.content)";
 
 
@@ -71,8 +90,8 @@ static __fastcall__ char status_fill_from_json(status *s, char *id, char full, c
   r = surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, translit_charset,
                     basic_selector + reblog_offset);
 
-  n_lines = strnsplit_in_place(gen_buf, '\n', lines, 16);
-  if (r >= 0 && n_lines >= 15) {
+  n_lines = strnsplit_in_place(gen_buf, '\n', lines, 17);
+  if (r >= 0 && n_lines >= 16) {
     if (!is_reblog && lines[2][0] != '-') {
       s->reblogged_by = strdup(lines[1]);
       s->reblog_id = s->id;
@@ -90,14 +109,24 @@ static __fastcall__ char status_fill_from_json(status *s, char *id, char full, c
       s->spoiler_text[TL_SPOILER_TEXT_BUF - 1] = '\0';
     }
 
-    s->n_images = atoc(lines[4]);
-    s->n_replies = atoc(lines[5]);
-    s->n_reblogs = atoc(lines[6]);
-    s->n_favourites = atoc(lines[7]);
-    s->account->id = strdup(lines[8]);
-    s->account->acct = strdup(lines[9]);
-    s->account->username = strdup(lines[10]);
-    c = lines[11][1];
+    s->n_medias = atoc(lines[4]);
+    c = lines[5][0];
+    if (c == 'g') /* gif */
+      s->media_type = MEDIA_TYPE_GIFV;
+    else if (c == 'v') /* video */
+      s->media_type = MEDIA_TYPE_VIDEO;
+    else if (c == 'a') /* audio */
+      s->media_type = MEDIA_TYPE_AUDIO;
+    else if (c == 'i')
+      s->media_type = MEDIA_TYPE_IMAGE;
+
+    s->n_replies = atoc(lines[6]);
+    s->n_reblogs = atoc(lines[7]);
+    s->n_favourites = atoc(lines[8]);
+    s->account->id = strdup(lines[9]);
+    s->account->acct = strdup(lines[10]);
+    s->account->username = strdup(lines[11]);
+    c = lines[12][1];
     if (c == 'u') /* pUblic */
       s->visibility = COMPOSE_PUBLIC;
     else if (c == 'n') /* uNlisted */
@@ -107,17 +136,17 @@ static __fastcall__ char status_fill_from_json(status *s, char *id, char full, c
     else
       s->visibility = COMPOSE_MENTION;
 
-    if (lines[12][0] == 't') /* true */
-      s->flags |= REBLOGGED;
     if (lines[13][0] == 't') /* true */
-      s->flags |= FAVOURITED;
+      s->flags |= REBLOGGED;
     if (lines[14][0] == 't') /* true */
+      s->flags |= FAVOURITED;
+    if (lines[15][0] == 't') /* true */
       s->flags |= BOOKMARKED;
 
     /* Poll */
-    if (n_lines == 16) {
+    if (n_lines == 17) {
       s->poll = poll_new();
-      s->poll->id = strdup(lines[15]);
+      s->poll->id = strdup(lines[16]);
       poll_fill(s->poll, is_reblog);
     }
 

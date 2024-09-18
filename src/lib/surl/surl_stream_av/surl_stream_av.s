@@ -11,12 +11,9 @@ _surl_stream_av:                ; Entry point
         ; Setup pointers
         jsr     setup
 
-        ; Clear pages
+        ; Clear HGR page 2 (page 1 must be done by caller)
         bit     $C082
         lda     #$40
-        sta     $E6
-        jsr     $F3F2
-        lda     #$20
         sta     $E6
         jsr     $F3F2
         bit     $C080

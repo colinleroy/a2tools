@@ -26,6 +26,7 @@ typedef struct _decode_data {
   int data_ready;
   unsigned char *data;
   size_t size;
+  unsigned char fake_data;
 
   /* flags */
   int stop;

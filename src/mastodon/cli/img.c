@@ -151,7 +151,7 @@ int stream_url(char *url, char *unused) {
 static void img_display(media *m, char idx, char num_images) {
   size_t len;
 
-  if (!strcmp(m->media_type[idx], "video")) {
+  if (m->media_type[idx][0] != 'i') {
     return;
   }
   surl_start_request(SURL_METHOD_GET, m->media_url[idx], NULL, 0);
@@ -300,7 +300,8 @@ int main(int argc, char **argv) {
     goto err_out;
   }
 
-  if (m->media_type[0][0] == 'v') {
+  /* i => image, v => video, g => gifv, a => audio */
+  if (m->media_type[0][0] != 'i') {
 #ifdef __CC65__
     bzero((char *)HGR_PAGE, HGR_LEN);
     clrscr();

@@ -29,7 +29,8 @@ struct _status {
   unsigned char n_replies;
   unsigned char n_reblogs;
   unsigned char n_favourites;
-  unsigned char n_images;
+  unsigned char n_medias;
+  char media_type;
   char flags;
   char visibility;
   poll *poll;

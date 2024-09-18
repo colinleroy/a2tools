@@ -30,7 +30,7 @@ static void update_progress(void) {
 }
 
 int stream_url(char *url, char *subtitles_url) {
-  char r;
+  char r, got_art = 0;
 
   surl_start_request(SURL_METHOD_STREAM_AV, url, NULL, 0);
   simple_serial_write(translit_charset, strlen(translit_charset));
@@ -84,11 +84,19 @@ wait_load:
       simple_serial_putc(SURL_CLIENT_READY);
     goto wait_load;
 
+  } else if (r == SURL_ANSWER_STREAM_ART) {
+    surl_read_with_barrier((char *)HGR_PAGE, HGR_LEN);
+    got_art = 1;
+    simple_serial_putc(SURL_CLIENT_READY);
+    goto wait_load;
   } else if (r == SURL_ANSWER_STREAM_START) {
     if (simple_serial_getc() == SURL_VIDEO_PORT_NOK) {
       clrscr();
       cputs("Warning: proxy couldn't open video aux_tty.\r\nNo video available.");
       sleep(5);
+    }
+    if (!got_art) {
+      bzero((char *)HGR_PAGE, HGR_LEN);
     }
 #ifdef __APPLE2ENH__
     videomode(VIDEOMODE_40COL);

@@ -588,17 +588,17 @@ int main(int argc, char **argv) {
       compose_audience = ref_status->visibility;
 
       /* If editing, set medias from reference status */
-      if (compose_mode[0] == 'e' && ref_status->n_images > 0) {
-        media *images = api_get_status_media(ref_status->id);
-        if (images) {
+      if (compose_mode[0] == 'e' && ref_status->n_medias > 0) {
+        media *medias = api_get_status_media(ref_status->id);
+        if (medias) {
           char i;
-          n_medias = images->n_media;
+          n_medias = medias->n_media;
           for (i = 0; i < n_medias; i++) {
-            media_ids[i] = strdup(images->media_id[i]);
-            media_files[i] = strdup(strrchr(images->media_url[i], '/'));
-            media_descriptions[i] = strdup(images->media_alt_text[i]);
+            media_ids[i] = strdup(medias->media_id[i]);
+            media_files[i] = strdup(strrchr(medias->media_url[i], '/'));
+            media_descriptions[i] = strdup(medias->media_alt_text[i]);
           }
-          media_free(images);
+          media_free(medias);
         }
       }
     }

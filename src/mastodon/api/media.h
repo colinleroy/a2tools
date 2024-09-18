@@ -1,6 +1,15 @@
 #ifndef __media_h
 #define __media_h
 
+#define MEDIA_TYPE_MEDIA 0
+#define MEDIA_TYPE_IMAGE 1
+#define MEDIA_TYPE_VIDEO 2
+#define MEDIA_TYPE_AUDIO 3
+#define MEDIA_TYPE_GIFV  4
+#define N_MEDIA_TYPE     5
+
+extern char *media_type_str[N_MEDIA_TYPE];
+
 typedef struct _media media;
 
 struct _media {
