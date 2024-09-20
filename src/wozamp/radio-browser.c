@@ -38,24 +38,26 @@
 #include "platform.h"
 #include "malloc0.h"
 #include "backup_logo.h"
-#include "stp_list.h"
 #include "citoa.h"
 
-#define SEARCH_BUF_SIZE 128
 #ifndef __APPLE2ENH__
-char search_buf[SEARCH_BUF_SIZE];
-char tmp_buf[BUFSIZE];
+
+#define SEARCH_BUF_SIZE 128
+#define BUFSIZE 255
+#define tmp_buf ((char *)0x300)
+#define search_buf ((char *)0x200)
+
+#define NUMCOLS 40
+#define NUMROWS 24
+
 char **lines = NULL;
 int cur_line;
+
 #else
-extern char search_buf[SEARCH_BUF_SIZE];
-extern char tmp_buf[BUFSIZE];
-extern char **lines;
-extern int cur_line;
+#include "stp_list.h"
 #endif
 
 char n_lines = 0;
-#define BUFSIZE 255
 
 #define JSON_BUF_SIZE 4096
 char *json_buf = NULL;

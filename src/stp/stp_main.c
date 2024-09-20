@@ -95,8 +95,6 @@ static void get_all(const char *url, char **lines, int n_lines) {
   free(out_dir);
 }
 
-extern char search_buf[80];
-
 void stp_print_footer(void) {
   gotoxy(0, 22);
   chline(NUMCOLS);

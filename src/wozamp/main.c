@@ -55,7 +55,6 @@ char center_x = 30;
 char center_x = 14;
 #endif
 
-extern char search_buf[80];
 extern char **display_lines;
 
 static char in_list = 0;
