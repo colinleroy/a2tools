@@ -28,7 +28,6 @@
 #endif
 #define NUMROWS 24
 
-#define BUFSIZE 255
 #define STP_URL_FILE "STPSTARTURL"
 
 #define PAGE_BEGIN 2
@@ -50,7 +49,18 @@ enum HeaderUrlAction {
 
 extern char **lines;
 extern char **nat_lines;
+
+#define BUFSIZE 255
+#define SEARCH_BUF_SIZE 128
+
+#ifdef __CC65__
+/* Do not do that if exec() with argc > 1 is required - cf cc65 exec.s */
+#define tmp_buf ((char *)0x300)
+#define search_buf ((char *)0x200)
+#else
 extern char tmp_buf[BUFSIZE];
+extern char search_buf[SEARCH_BUF_SIZE];
+#endif
 
 extern int num_lines;
 extern int cur_line;

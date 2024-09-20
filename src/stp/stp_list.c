@@ -45,7 +45,10 @@ extern char *translit_charset;
 
 char **display_lines;
 
+#ifndef __CC65__
 char tmp_buf[BUFSIZE];
+char search_buf[SEARCH_BUF_SIZE];
+#endif
 
 char cmd_cb_handled = 0;
 
@@ -255,7 +258,6 @@ char stp_list_scroll(signed char shift) {
   return scroll_changed && rollover;
 }
 
-char search_buf[80] = "";
 static int search_from = 0;
 
 void stp_list_search(unsigned char new_search) {
@@ -264,7 +266,7 @@ void stp_list_search(unsigned char new_search) {
   if (new_search) {
     clrzone(0, 0, NUMCOLS - 1, 0);
     cputs("Search: ");
-    dget_text(search_buf, BUFSIZE-1, NULL, 0);
+    dget_text(search_buf, 40, NULL, 0);
     if (search_buf[0] == '\0') {
       return;
     }
