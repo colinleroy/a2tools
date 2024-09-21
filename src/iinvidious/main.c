@@ -44,14 +44,18 @@
 
 enum InstanceType {
   PEERTUBE,
+  SEPIASEARCH,
   INVIDIOUS,
   N_INSTANCE_TYPES
 };
 
 static const char *CHECK_API_ENDPOINT[] = {
   "/api/v1/config/about",
+  "/api/v1/config",
   "/api/v1/trending"
 };
+
+#define SEPIASEARCH_SEARCH_API_ENDPOINT      "/api/v1/search/videos?count=10&search=%s"
 
 #define PEERTUBE_SEARCH_API_ENDPOINT         "/api/v1/search/videos?sort=-match&search=%s"
 #define PEERTUBE_VIDEO_DETAILS_API_ENDPOINT  "/api/v1/videos/%s"
@@ -66,11 +70,13 @@ static const char *CHECK_API_ENDPOINT[] = {
  * request, so the CURL handle proxy-side is set on the correct host already.
  */
 static const char *VIDEO_DETAILS_JSON_SELECTOR[] = {
-  ".data[]|.name,.uuid,.account.displayName,.previewPath,.duration",
-  ".[]|.title,.videoId,.author,(.videoThumbnails[]|select(.quality == \"medium\")|.url),.lengthSeconds"
+  ".data[]|.name,.uuid,.account.displayName,.previewPath,.duration,\"-\"",
+  ".data[]|.name,.uuid,.account.displayName,.previewUrl,.duration,\"https://\"+.account.host",
+  ".[]|.title,.videoId,.author,(.videoThumbnails[]|select(.quality == \"medium\")|.url),.lengthSeconds,\"-\""
 };
 
 static const char *CAPTIONS_JSON_SELECTOR[] = {
+  "(.data[]|select(.language.id == \"LG\")|.captionPath),.data[0].captionPath",
   "(.data[]|select(.language.id == \"LG\")|.captionPath),.data[0].captionPath",
   "(.captions[]|select(.lang==\"LG\")|.url),.captions[0].url"
 };
@@ -80,15 +86,16 @@ static const char *CAPTIONS_JSON_SELECTOR[] = {
 #define VIDEO_AUTHOR 2
 #define VIDEO_THUMB  3
 #define VIDEO_LENGTH 4
-#define N_VIDEO_DETAILS 5
+#define VIDEO_HOST   5
+#define N_VIDEO_DETAILS 6
 
 static const char *VIDEO_URL_JSON_SELECTOR[] = {
+  "[.files+.streamingPlaylists[0].files|.[]|select(.resolution.id > 0)]|sort_by(.size)|first|.fileDownloadUrl",
   "[.files+.streamingPlaylists[0].files|.[]|select(.resolution.id > 0)]|sort_by(.size)|first|.fileDownloadUrl",
   ".formatStreams[]|select(.itag==\"18\").url"
 };
 
 char *url = NULL;
-char instance_type = INVIDIOUS;
 
 unsigned char scrw = 255, scrh = 255;
 
@@ -183,19 +190,26 @@ static void load_save_search_json(char *mode) {
 }
 
 #pragma code-name(pop)
-#pragma code-name(push, "LOWCODE")
 
-static void load_video(char *id) {
-  int url_len = strlen(url);
+static void load_video(char *host, char instance_type, char *id) {
+  int url_len = strlen(host);
   char *video_url = NULL;
   char *captions_url = NULL;
 
   strcpy(tmp_buf, id); /* Make it safe, id points to BUF_8K */
   load_indicator(1);
-  if (instance_type == PEERTUBE)
+
+  switch (instance_type) {
+  case SEPIASEARCH:
+    sprintf((char *)BUF_1K_ADDR, "%s" PEERTUBE_VIDEO_DETAILS_API_ENDPOINT, host, tmp_buf);
+    break;
+  case PEERTUBE:
     sprintf((char *)BUF_1K_ADDR, "%s" PEERTUBE_VIDEO_DETAILS_API_ENDPOINT, url, tmp_buf);
-  else
+    break;
+  case INVIDIOUS:
     sprintf((char *)BUF_1K_ADDR, "%s" INVIDIOUS_VIDEO_DETAILS_API_ENDPOINT, url, tmp_buf);
+    break;
+  }
 
   surl_start_request(SURL_METHOD_GET, (char *)BUF_1K_ADDR, NULL, 0);
 
@@ -225,10 +239,17 @@ static void load_video(char *id) {
     }
 
     if (enable_subtitles) {
-      if (instance_type == PEERTUBE)
+      switch (instance_type) {
+      case SEPIASEARCH:
+        sprintf((char *)BUF_1K_ADDR, "%s" PEERTUBE_CAPTIONS_API_ENDPOINT, host, tmp_buf);
+        break;
+      case PEERTUBE:
         sprintf((char *)BUF_1K_ADDR, "%s" PEERTUBE_CAPTIONS_API_ENDPOINT, url, tmp_buf);
-      else
+        break;
+      case INVIDIOUS:
         sprintf((char *)BUF_1K_ADDR, "%s" INVIDIOUS_CAPTIONS_API_ENDPOINT, url, tmp_buf);
+        break;
+      }
 
       surl_start_request(SURL_METHOD_GET, (char *)BUF_1K_ADDR, NULL, 0);
 
@@ -236,7 +257,7 @@ static void load_video(char *id) {
         char *sel;
         /* Prefix first result with instance URL */
         strcpy((char *)BUF_1K_ADDR, url);
-        
+
         /* Update preferred subtitle language */
         sel = strstr(CAPTIONS_JSON_SELECTOR[instance_type], "LG");
         memcpy(sel, sub_language, 2);
@@ -279,11 +300,13 @@ out:
   load_indicator(0);
 }
 
+#pragma code-name(push, "LOWCODE")
+
 char **lines = NULL;
 char n_lines;
 char cur_line = 0;
 
-static void search_results(void) {
+static void search_results(char instance_type) {
   int len;
   char c;
 
@@ -295,7 +318,7 @@ reload_search:
   }
   n_lines = strsplit_in_place((char *)BUF_8K_ADDR, '\n', &lines);
   if (n_lines % N_VIDEO_DETAILS != 0) {
-    cputs("Search error\n");
+    cputs("Search error              \n");
     cgetc();
     return;
   }
@@ -369,7 +392,7 @@ read_kbd:
       goto read_kbd;
 #endif
     case CH_ENTER:
-      load_video(lines[cur_line+1]);
+      load_video(lines[cur_line+VIDEO_HOST], instance_type, lines[cur_line+VIDEO_ID]);
       /* relaunch search */
       load_save_search_json("r");
       goto reload_search;
@@ -391,11 +414,18 @@ read_kbd:
 }
 
 
-static int search(void) {
-  if (instance_type == PEERTUBE)
-    sprintf((char *)BUF_1K_ADDR, "%s" PEERTUBE_SEARCH_API_ENDPOINT, url, search_str);
-  else
-    sprintf((char *)BUF_1K_ADDR, "%s" INVIDIOUS_SEARCH_API_ENDPOINT, url, search_str);
+static int search(char *host, char instance_type) {
+  switch (instance_type) {
+  case SEPIASEARCH:
+    sprintf((char *)BUF_1K_ADDR, "%s" SEPIASEARCH_SEARCH_API_ENDPOINT, host, search_str);
+    break;
+  case PEERTUBE:
+    sprintf((char *)BUF_1K_ADDR, "%s" PEERTUBE_SEARCH_API_ENDPOINT, host, search_str);
+    break;
+  case INVIDIOUS:
+    sprintf((char *)BUF_1K_ADDR, "%s" INVIDIOUS_SEARCH_API_ENDPOINT, host, search_str);
+    break;
+  }
 
   load_indicator(1);
   surl_start_request(SURL_METHOD_GET, (char *)BUF_1K_ADDR, NULL, 0);
@@ -409,7 +439,7 @@ static int search(void) {
     if (surl_get_json((char *)BUF_8K_ADDR, BUF_8K_SIZE, SURL_HTMLSTRIP_NONE, translit_charset,
                       VIDEO_DETAILS_JSON_SELECTOR[instance_type]) > 0) {
       load_indicator(0);
-      search_results();
+      search_results(instance_type);
     } else {
       clrscr();
       printf("No results.");
@@ -422,6 +452,8 @@ static int search(void) {
 #ifdef __CC65__
 #pragma code-name (pop)
 #endif
+
+char global_instance_type = SEPIASEARCH;
 
 static void do_ui(void) {
 new_search:
@@ -436,7 +468,7 @@ new_search:
     goto new_search;
   }
   cur_line = 0;
-  search();
+  search(url, global_instance_type);
 #ifdef __APPLE2ENH__
   backup_restore_logo("r");
 #endif
@@ -457,7 +489,7 @@ static int define_instance(void) {
     resp = surl_start_request(SURL_METHOD_GET, (char *)BUF_1K_ADDR, NULL, 0);
 
     if (surl_response_ok() && resp->size > 0) {
-      instance_type = i;
+      global_instance_type = i;
       return 0;
     }
   }
@@ -490,17 +522,19 @@ static void do_setup(void) {
   do_setup_url("r");
 
   if (url == NULL)
-    url = strdup("https://invidious.fdn.fr");
+    url = strdup("https://sepiasearch.org");
 
 again:
   clrscr();
-  printf("Free memory: %zuB\n", _heapmemavail());
+  //printf("Free memory: %zuB\n", _heapmemavail());
+  cputs("Please enter a Peertube or Invidious server URL\r\n");
   cputs("Instance URL: ");
   strcpy((char *)BUF_1K_ADDR, url);
   dget_text((char *)BUF_1K_ADDR, 80, NULL, 0);
   modified = strcmp((char *)BUF_1K_ADDR, url) != 0;
   free(url);
   url = strdup((char *)BUF_1K_ADDR);
+
   if (url[strlen(url)-1] == '/') {
     url[strlen(url)-1] = '\0';
   }
@@ -509,6 +543,7 @@ again:
     cgetc();
     goto again;
   }
+
   if (modified) {
     do_setup_url("w");
   }
