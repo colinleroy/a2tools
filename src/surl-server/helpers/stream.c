@@ -151,6 +151,7 @@ static void *ffmpeg_video_decode_thread(void *th_data) {
     pthread_mutex_lock(&data->mutex);
     data->decode_remaining = remaining_frames;
     data->max_seekable = frameno/2;
+    data->total_frames = frameno;
 
     if (frameno == FPS * PREDECODE_SECS) {
       if (elapsed / 1000000 > PREDECODE_SECS / 3) {
@@ -204,6 +205,7 @@ static void *ffmpeg_video_decode_thread(void *th_data) {
   pthread_mutex_lock(&data->mutex);
   data->decode_remaining = 0;
   data->max_seekable = frameno;
+  data->total_frames = frameno;
   data->data_ready = 1;
   data->decoding_end = 1;
   data->decoding_ret = 0;
@@ -246,7 +248,7 @@ static void flush_video_bytes(int fd) {
     DEBUG("video: sleeping %luµs\n", real_elapsed-elapsed);
     usleep(real_elapsed-elapsed);
   }
-  
+
   num_video_bytes = 0;
 }
 
@@ -1117,7 +1119,11 @@ static void *audio_push(void *unused) {
         }
       }
     } else {
+      pthread_mutex_lock(&video_th_data->mutex);
+      audio_th_data->size = video_th_data->total_frames * (SAMPLE_RATE/FPS);
       audio_size = audio_th_data->size;
+      pthread_mutex_unlock(&video_th_data->mutex);
+
       cur_val = AUDIO_MAX/2;
       stop = 1;
     }
@@ -1619,36 +1625,50 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, char sub
   printf("Starting audio decode thread (charset %s, monochrome %d, size %d)\n", translit, monochrome, size);
   pthread_create(&audio_decode_thread, NULL, *ffmpeg_audio_decode_thread, (void *)audio_th_data);
 
-  while(!ready && !stop) {
+  stop = 0;
+  while(!ready) {
     pthread_mutex_lock(&audio_th_data->mutex);
     pthread_mutex_lock(&video_th_data->mutex);
-    ready = audio_th_data->data_ready && video_th_data->data_ready;
-    stop = audio_th_data->decoding_end && video_th_data->decoding_end;
+
+    /* data_ready is set when the thread has enough data to start streaming;
+     * decoding_end is set when the thread is finished (either with all data,
+     * or because of an error). We want to wait for both threads to be ready
+     * or done. */
+    ready = (audio_th_data->data_ready || audio_th_data->decoding_end)
+         && (video_th_data->data_ready || video_th_data->decoding_end);
+
     pthread_mutex_unlock(&audio_th_data->mutex);
     pthread_mutex_unlock(&video_th_data->mutex);
     usleep(100);
   }
-  if (!ready && stop) {
-    pthread_mutex_lock(&audio_th_data->mutex);
-    pthread_mutex_lock(&video_th_data->mutex);
-    /* We can have no audio stream */
-    if (video_th_data->data_ready && video_th_data->max_seekable > 0 && video_th_data->decoding_end && !audio_th_data->data_ready) {
-      ready = 1;
-      stop = 0;
-      audio_th_data->fake_data = 1;
-      audio_th_data->size = video_th_data->max_seekable * (SAMPLE_RATE/FPS);
-      printf("Stream has no audio\n");
-    }
 
-    /* We can have no video stream */
-    if (audio_th_data->data_ready && audio_th_data->data && audio_th_data->decoding_end && !video_th_data->data_ready) {
-      ready = 1;
-      stop = 0;
-      printf("Stream has no video\n");
-    }
-    pthread_mutex_unlock(&audio_th_data->mutex);
-    pthread_mutex_unlock(&video_th_data->mutex);
+  pthread_mutex_lock(&audio_th_data->mutex);
+  pthread_mutex_lock(&video_th_data->mutex);
+
+  /* We can have no audio stream: video thread is ready with frames, audio thread not ready but done
+   * Note: video thread could be ready AND done, so check it has frames */
+  if (video_th_data->data_ready && video_th_data->total_frames > 0
+   && !audio_th_data->data_ready && audio_th_data->decoding_end) {
+    audio_th_data->fake_data = 1;
+    printf("Stream has no audio\n");
   }
+
+  /* We can have no video stream: audio thread ready with data, video thread not ready but done
+   * Note: audio thread could be ready AND done, so check it has data */
+  if (audio_th_data->data_ready && audio_th_data->data
+   && !video_th_data->data_ready && video_th_data->decoding_end) {
+    printf("Stream has no video\n");
+  }
+
+  /* We have nothing */
+  if (!audio_th_data->data_ready && !video_th_data->data_ready) {
+    printf("Stream has no video nor audio.\n");
+    ready = 0;
+    stop = 1;
+  }
+
+  pthread_mutex_unlock(&audio_th_data->mutex);
+  pthread_mutex_unlock(&video_th_data->mutex);
 
   printf("Decode threads state: %s\n", ready ? "ready" : stop ? "failure" : "unknown");
 
@@ -1680,7 +1700,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, char sub
   printf("AV: Client ready\n");
 
   pthread_mutex_lock(&video_th_data->mutex);
-  if (video_th_data->max_seekable == 0) {
+  if (video_th_data->total_frames == 0) {
     /* No video ? send embedded art if there is any */
     hgr_buf = audio_get_stream_art(audio_th_data, monochrome, HGR_SCALE_FULL);
   }
@@ -1786,6 +1806,8 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, char sub
     memmove(audio_th_data->data, audio_th_data->data + add_samples, audio_th_data->size);
     memset(audio_th_data->data, 128, add_samples);
     audio_th_data->size += add_samples;
+  } else {
+    /* We'll have to check size from number of frames, in audio_push */
   }
 
   pthread_mutex_unlock(&audio_th_data->mutex);
