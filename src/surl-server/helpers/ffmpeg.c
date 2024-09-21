@@ -153,6 +153,9 @@ static int open_video_file(char *filename)
 
     av_dict_set(&video_options, "reconnect_on_network_error", "1", 0);
     av_dict_set(&video_options, "reconnect", "1", 0);
+    av_dict_set(&video_options, "icy", "0", 0);
+    // av_dict_set(&video_options, "probesize", "500000", 0);
+    // av_dict_set(&video_options, "analyzeduration", "5000", 0);
 
     if ((ret = avformat_open_input(&video_fmt_ctx, filename, NULL, &video_options)) < 0) {
       av_dict_free(&video_options);
@@ -213,6 +216,8 @@ static int open_audio_file(char *filename)
     }
 
     av_dict_set(&audio_options, "icy", "1", 0);
+    // av_dict_set(&audio_options, "probesize", "500000", 0);
+    // av_dict_set(&audio_options, "analyzeduration", "5000", 0);
 
     if ((ret = avformat_open_input(&audio_fmt_ctx, filename, NULL, &audio_options)) < 0) {
       av_dict_free(&audio_options);

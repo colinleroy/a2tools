@@ -45,6 +45,7 @@ typedef struct _decode_data {
   long pts;
   long decode_remaining;
   long max_seekable;
+  long total_frames;
 
   /* subs (for video stream) */
   pthread_mutex_t sub_mutex;
