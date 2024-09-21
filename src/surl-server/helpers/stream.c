@@ -80,15 +80,14 @@ unsigned int vol_mult = 10;
 static int update_eta(int eta) {
   int r;
 
-  if (eta < 0) {
-    eta = 0;
-  }
-
   simple_serial_putc(SURL_ANSWER_STREAM_LOAD);
 
   if (eta == ETA_MAX) {
     eta = 255;
   } else {
+    if (eta < 0) {
+      eta = 0;
+    }
     eta /= 8;
     if (eta > 254) {
       eta = 254;
@@ -1764,7 +1763,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, char sub
   usleep(200);
 
   /* Inform client whether we have video */
-  printf("Informing client that video is %s\n", ttyfd2 > 0 ? "on":"off");
+  printf("Informing client that video is %s (%d)\n", ttyfd2 > 0 ? "on":"off", ttyfd2);
   if (ttyfd2 > 0) {
     simple_serial_putc(SURL_VIDEO_PORT_OK);
   } else {

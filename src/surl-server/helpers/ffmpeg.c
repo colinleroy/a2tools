@@ -138,7 +138,12 @@ static size_t curl_art_cb(void *contents, size_t size, size_t nmemb, void *userp
 }
 static int open_interrupt_cb(void *ctx)
 {
-  return 0;
+  decode_data *data = (decode_data *)ctx;
+  if (data->stop) {
+    return -1;
+  } else {
+    return 0;
+  }
 }
 
 static int open_video_file(decode_data *data)
