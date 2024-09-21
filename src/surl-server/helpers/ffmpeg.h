@@ -5,6 +5,8 @@
 #include <semaphore.h>
 extern int FPS;
 
+#define ETA_MAX (0xffffffff)
+
 typedef struct _decode_data {
   pthread_mutex_t mutex;
 
@@ -32,6 +34,7 @@ typedef struct _decode_data {
   int stop;
   int decoding_ret;
   int decoding_end;
+  int eta;
 
   /* metadata */
   char has_video; 

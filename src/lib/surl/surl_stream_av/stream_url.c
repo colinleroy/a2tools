@@ -24,6 +24,8 @@ static void update_progress(void) {
   hgr_mixon();
   gotoxy(11, 0); /* strlen("Loading...") + 1 */
   if (eta == 255)
+    cputs("(Opening stream...)");
+  else if (eta == 254)
     cputs("(More than 30m remaining)");
   else
     cprintf("(About %ds remaining)   ", eta*8);
@@ -67,14 +69,6 @@ int stream_url(char *url, char *subtitles_url) {
 #endif
 
 wait_load:
-  if (kbhit()) {
-    if (cgetc() == CH_ESC) {
-      init_text();
-      simple_serial_putc(SURL_METHOD_ABORT);
-      return -1;
-    }
-  }
-
   r = simple_serial_getc();
   if (r == SURL_ANSWER_STREAM_LOAD) {
     update_progress();
@@ -83,7 +77,6 @@ wait_load:
     else
       simple_serial_putc(SURL_CLIENT_READY);
     goto wait_load;
-
   } else if (r == SURL_ANSWER_STREAM_ART) {
     surl_read_with_barrier((char *)HGR_PAGE, HGR_LEN);
     got_art = 1;
