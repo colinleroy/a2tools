@@ -136,8 +136,12 @@ static size_t curl_art_cb(void *contents, size_t size, size_t nmemb, void *userp
 
   return realsize;
 }
+static int open_interrupt_cb(void *ctx)
+{
+  return 0;
+}
 
-static int open_video_file(char *filename)
+static int open_video_file(decode_data *data)
 {
     const AVCodec *dec;
     int ret;
@@ -145,10 +149,10 @@ static int open_video_file(char *filename)
 
     init_base_addrs();
 
-    if (!strncasecmp("sftp://", filename, 7)) {
-      memcpy(filename, "sftp", 4);
-    } else if (!strncasecmp("ftp://", filename, 6)) {
-      memcpy(filename, "ftp", 3);
+    if (!strncasecmp("sftp://", data->url, 7)) {
+      memcpy(data->url, "sftp", 4);
+    } else if (!strncasecmp("ftp://", data->url, 6)) {
+      memcpy(data->url, "ftp", 3);
     }
 
     av_dict_set(&video_options, "reconnect_on_network_error", "1", 0);
@@ -157,7 +161,11 @@ static int open_video_file(char *filename)
     // av_dict_set(&video_options, "probesize", "500000", 0);
     // av_dict_set(&video_options, "analyzeduration", "5000", 0);
 
-    if ((ret = avformat_open_input(&video_fmt_ctx, filename, NULL, &video_options)) < 0) {
+    video_fmt_ctx = avformat_alloc_context();
+    video_fmt_ctx->interrupt_callback.callback = open_interrupt_cb;
+    video_fmt_ctx->interrupt_callback.opaque = data;
+
+    if ((ret = avformat_open_input(&video_fmt_ctx, data->url, NULL, &video_options)) < 0) {
       av_dict_free(&video_options);
       printf("Video: Cannot open input file\n");
       return ret;
@@ -201,7 +209,7 @@ static int open_video_file(char *filename)
     return 0;
 }
 
-static int open_audio_file(char *filename)
+static int open_audio_file(decode_data *data)
 {
     const AVCodec *dec;
     int ret;
@@ -209,17 +217,21 @@ static int open_audio_file(char *filename)
 
     init_base_addrs();
 
-    if (!strncasecmp("sftp://", filename, 7)) {
-      memcpy(filename, "sftp", 4);
-    } else if (!strncasecmp("ftp://", filename, 6)) {
-      memcpy(filename, "ftp", 3);
+    if (!strncasecmp("sftp://", data->url, 7)) {
+      memcpy(data->url, "sftp", 4);
+    } else if (!strncasecmp("ftp://", data->url, 6)) {
+      memcpy(data->url, "ftp", 3);
     }
 
     av_dict_set(&audio_options, "icy", "1", 0);
     // av_dict_set(&audio_options, "probesize", "500000", 0);
     // av_dict_set(&audio_options, "analyzeduration", "5000", 0);
 
-    if ((ret = avformat_open_input(&audio_fmt_ctx, filename, NULL, &audio_options)) < 0) {
+    audio_fmt_ctx = avformat_alloc_context();
+    audio_fmt_ctx->interrupt_callback.callback = open_interrupt_cb;
+    audio_fmt_ctx->interrupt_callback.opaque = data;
+
+    if ((ret = avformat_open_input(&audio_fmt_ctx, data->url, NULL, &audio_options)) < 0) {
       av_dict_free(&audio_options);
       printf("Audio: Cannot open input file\n");
       return ret;
@@ -631,7 +643,7 @@ int ffmpeg_video_decode_init(decode_data *data, int *video_len) {
         goto end;
     }
 
-    if ((ret = open_video_file(data->url)) < 0) {
+    if ((ret = open_video_file(data)) < 0) {
         goto end;
     }
 
@@ -939,6 +951,10 @@ int ffmpeg_subtitles_decode(decode_data *data, const char *filename) {
       goto end;
     }
 
+    ctx = avformat_alloc_context();
+    ctx->interrupt_callback.callback = open_interrupt_cb;
+    ctx->interrupt_callback.opaque = data;
+
     if ((ret = avformat_open_input(&ctx, filename, NULL, NULL)) < 0) {
       printf("Subtitles: Cannot open input file\n");
       goto end;
@@ -1187,7 +1203,7 @@ int ffmpeg_audio_decode(decode_data *data) {
       goto end;
     }
 
-    if ((ret = open_audio_file(data->url)) < 0) {
+    if ((ret = open_audio_file(data)) < 0) {
       goto end;
     }
 

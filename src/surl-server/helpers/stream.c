@@ -77,6 +77,37 @@ unsigned int vol_mult = 10;
 
 #define PREDECODE_SECS 10
 
+static int update_eta(int eta) {
+  int r;
+
+  if (eta < 0) {
+    eta = 0;
+  }
+
+  simple_serial_putc(SURL_ANSWER_STREAM_LOAD);
+
+  if (eta == ETA_MAX) {
+    eta = 255;
+  } else {
+    eta /= 8;
+    if (eta > 254) {
+      eta = 254;
+    }
+    if (eta < 0) {
+      eta = 0;
+    }
+  }
+  usleep(1000);
+  simple_serial_putc(eta);
+
+  r = simple_serial_getc_with_timeout();
+  if (r != SURL_CLIENT_READY) {
+    printf("Client abort (%02x)\n", r);
+    return -1;
+  }
+  return 0;
+}
+
 static void *ffmpeg_video_decode_thread(void *th_data) {
   decode_data *data = (decode_data *)th_data;
   unsigned char *buf;
@@ -166,35 +197,19 @@ static void *ffmpeg_video_decode_thread(void *th_data) {
       if ((remaining_len/1000000)/2 < done_len) {
         data->data_ready = 1;
         decode_slow = 0;
-      } else {
-        /* Send ping every 10% (and only once for every 25 frames matching the modulo)*/
-        if ((frameno) % 100 == 0) {
-          int r, eta;
-          eta = (remaining_len/1000000) - (done_len*2);
-
-          printf("Frame %d ETA %d\n", frameno, eta);
-          simple_serial_putc(SURL_ANSWER_STREAM_LOAD);
-          eta /= 8;
-          if (eta > 255) {
-            eta = 255;
-          }
-          if (eta < 0) {
-            eta = 0;
-          }
-          simple_serial_putc(eta);
-
-          r = simple_serial_getc_with_timeout();
-          if (r != SURL_CLIENT_READY) {
-            printf("Client abort\n");
-            data->decoding_end = 1;
-            data->decoding_ret = -1;
-            goto out;
-          }
-        }
+      }
+    }
+    /* Send ping every 10% (and only once for every 25 frames matching the modulo)*/
+    if ((frameno) % 100 == 0) {
+      data->eta = (remaining_len/1000000) - (done_len*2);
+      
+      if (data->eta > 0) {
+        printf("Frame %d ETA %d\n", frameno, data->eta);
       }
     }
 
     if (data->stop) {
+      printf("Aborting video decode\n");
       pthread_mutex_unlock(&data->mutex);
       break;
     } else {
@@ -579,17 +594,23 @@ int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightSca
   memset(th_data, 0, sizeof(decode_data));
   th_data->url = url;
   th_data->sample_rate = SAMPLE_RATE;
+  th_data->eta = ETA_MAX;
   pthread_mutex_init(&th_data->mutex, NULL);
 
   printf("Starting decode thread (charset %s, monochrome %d, scale %d)\n", translit, monochrome, scale);
   pthread_create(&decode_thread, NULL, *ffmpeg_audio_decode_thread, (void *)th_data);
 
   while(!ready && !stop) {
+    int eta;
+    usleep(10000);
     pthread_mutex_lock(&th_data->mutex);
     ready = th_data->data_ready;
     stop = th_data->decoding_end;
+    eta = th_data->eta;
     pthread_mutex_unlock(&th_data->mutex);
-    usleep(100);
+    if (update_eta(eta) != 0) {
+      stop = 1;
+    }
   }
 
   printf("Decode thread state: %s\n", ready ? "ready" : stop ? "failure" : "unknown");
@@ -833,18 +854,26 @@ int surl_stream_video(char *url) {
   memset(th_data, 0, sizeof(decode_data));
   th_data->url = url;
   th_data->video_size = HGR_SCALE_HALF;
+  th_data->eta = ETA_MAX;
   pthread_mutex_init(&th_data->mutex, NULL);
 
   printf("Starting video decode thread\n");
   pthread_create(&decode_thread, NULL, *ffmpeg_video_decode_thread, (void *)th_data);
 
+  sleep(1);
+
   while(!ready && !stop) {
+    int eta;
+    usleep(1000);
     pthread_mutex_lock(&th_data->mutex);
     ready = th_data->data_ready;
     stop = th_data->decoding_end;
     err = th_data->decoding_ret;
+    eta = th_data->eta;
     pthread_mutex_unlock(&th_data->mutex);
-    usleep(100);
+    if (update_eta(eta) != 0) {
+      stop = 1;
+    }
   }
 
   if (stop && err) {
@@ -1612,6 +1641,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, char sub
   video_th_data->video_size = size;
   video_th_data->translit = translit;
   video_th_data->subtitles_url = subtitles_url;
+  video_th_data->eta = ETA_MAX;
   pthread_mutex_init(&video_th_data->mutex, NULL);
 
   printf("Starting video decode thread\n");
@@ -1626,7 +1656,9 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, char sub
   pthread_create(&audio_decode_thread, NULL, *ffmpeg_audio_decode_thread, (void *)audio_th_data);
 
   stop = 0;
-  while(!ready) {
+  while(!ready && !stop) {
+    int eta;
+    usleep(1000);
     pthread_mutex_lock(&audio_th_data->mutex);
     pthread_mutex_lock(&video_th_data->mutex);
 
@@ -1637,9 +1669,12 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, char sub
     ready = (audio_th_data->data_ready || audio_th_data->decoding_end)
          && (video_th_data->data_ready || video_th_data->decoding_end);
 
+    eta = video_th_data->eta;
     pthread_mutex_unlock(&audio_th_data->mutex);
     pthread_mutex_unlock(&video_th_data->mutex);
-    usleep(100);
+    if (update_eta(eta) != 0) {
+      stop = 1;
+    }
   }
 
   pthread_mutex_lock(&audio_th_data->mutex);
@@ -1858,6 +1893,9 @@ cleanup_thread:
   pthread_mutex_lock(&audio_th_data->mutex);
   audio_th_data->stop = 1;
   pthread_mutex_unlock(&audio_th_data->mutex);
+  pthread_mutex_lock(&video_th_data->mutex);
+  video_th_data->stop = 1;
+  pthread_mutex_unlock(&video_th_data->mutex);
   pthread_join(audio_decode_thread, NULL);
   pthread_join(video_decode_thread, NULL);
   free(audio_th_data->img_data);

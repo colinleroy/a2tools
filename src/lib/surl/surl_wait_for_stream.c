@@ -44,12 +44,12 @@ int surl_wait_for_stream(void) {
   x = wherex();
   y = wherey();
   while (1) {
-    r = simple_serial_getc_with_timeout();
+    r = simple_serial_getc();
     switch (r) {
       case SURL_ANSWER_STREAM_LOAD:
         gotoxy(x,y);
         eta = simple_serial_getc();
-        if (eta == 255)
+        if (eta >= 254)
           cputs("(More than 30m remaining)");
         else
           cprintf("(About %ds remaining)   ", eta*8);
