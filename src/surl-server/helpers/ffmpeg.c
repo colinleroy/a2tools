@@ -61,6 +61,8 @@ int ditherer = 0; /* 0 = bayer 1 = burkes */
 
 #define GREYSCALE_TO_HGR 1
 
+#define SUB_DEFAULT_FPS 25
+
 const char *video_filter_descr_s = /* Set frames per second to a known value */
                                  "fps=%d,"
                                  /* Scale to VIDEO_SIZE, scale fast (no interpolation) */
@@ -688,6 +690,24 @@ int ffmpeg_video_decode_init(decode_data *data, int *video_len) {
         goto end;
     }
 
+    /* Now we know our FPS, recalculate subtitles frames */
+    if (data->has_subtitles && data->subs) {
+      char **new_subs = malloc(data->nsubs*sizeof(char *));
+      int i;
+      memset(new_subs, 0, data->nsubs*sizeof(char *));
+      for (i = 0; i < data->nsubs; i++) {
+        if (data->subs[i]) {
+          int j = (i * (1000.0/SUB_DEFAULT_FPS))/(1000.0/FPS);
+          if (i != j) {
+            printf("Moving sub from %d to %d (%s)\n", i, j, data->subs[i]);
+            new_subs[j] = data->subs[i];
+          }
+        }
+      }
+      free(data->subs);
+      data->subs = new_subs;
+    }
+
     printf("Duration %lus\n", video_fmt_ctx->duration/1000000);
     *video_len = video_fmt_ctx->duration/1000000;
 end:
@@ -964,7 +984,7 @@ end:
     return ret;
 }
 
-#define SUBS_BLOCK (3600*4*FPS)
+#define SUBS_BLOCK (3600*4*30)
 
 int ffmpeg_subtitles_decode(decode_data *data, const char *filename) {
     int ret = 0, index;
@@ -1069,6 +1089,9 @@ skip:
                       + subtitle.start_display_time;
           end = (packet->pts + packet->duration) * (1000.0*av_q2d(ctx->streams[index]->time_base))
                       + subtitle.end_display_time;
+          // printf("start %f (pts %lu timebase %d/%d start_display_time %u)\n",
+          //        start, packet->pts, ctx->streams[index]->time_base.num, ctx->streams[index]->time_base.den,
+          //        subtitle.start_display_time);
           if (packet->data && packet->data[0] != '\0') {
             text = (char *)packet->data;
             //printf("dat '%s'\n", text);
@@ -1098,8 +1121,9 @@ skip:
           }
           if (text) {
             char *idx;
-            start_frame = (unsigned long)(start)/(1000.0/FPS);
-            end_frame = (unsigned long)(end)/(1000.0/FPS);
+            /* Compute frames @25fps, we don't know real fps yet. */
+            start_frame = (unsigned long)(start)/(1000.0/SUB_DEFAULT_FPS);
+            end_frame = (unsigned long)(end)/(1000.0/SUB_DEFAULT_FPS);
 
             pthread_mutex_lock(&data->sub_mutex);
 
