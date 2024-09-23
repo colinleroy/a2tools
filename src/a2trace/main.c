@@ -25,6 +25,8 @@ int dst_65816_bank = 0;
 int start_addr = 0;
 long inter_cycle = 0;
 
+const char *count_sym_name = NULL;
+
 extern int read_from;
 extern int write_to;
 extern int lc_bank;
@@ -377,12 +379,19 @@ try_gen:
         /* Display the instruction's symbol */
         if (instr_symbol) {
           if (!do_callgrind) {
+            char count_buf[32];
+            int count_buf_len = 0;
             printf("%s", symbol_get_name(instr_symbol));
-            tabulate(symbol_get_name(instr_symbol), FIELD_WIDTH + backtab);
-          }
-          if (!strncmp(symbol_get_name(instr_symbol), "duty_cycle", 10)) {
-            printf("(%lu)", inter_cycle);
-            inter_cycle = 0;
+
+            /* Show cycle count between two PC matching symbol name */
+            if (count_sym_name != NULL && 
+                !strncmp(symbol_get_name(instr_symbol), count_sym_name, strlen(count_sym_name))) {
+              snprintf(count_buf, 31, " (%lu cyc)", inter_cycle);
+              count_buf_len = strlen(count_buf);
+              printf("%s", count_buf);
+              inter_cycle = 0;
+            }
+            tabulate(symbol_get_name(instr_symbol), FIELD_WIDTH + backtab - count_buf_len);
           }
         } else {
           tabulate(NULL, FIELD_WIDTH + backtab);
@@ -464,6 +473,7 @@ err_usage:
            "-t  file.tr        : point to a MAME debugger generated trace file\n"
            "-x  start_addr     : specify start address, [default: auto-detect]\n"
            "-nx                : start at beginning without looking for a start address\n"
+           "-c SYMBOL_SUBSTR   : count cycles between two PC addresses, by symbol name start\n"
            "-v                 : verbose\n"
            "-p                 : generate callgrind profile\n"
            "-f                 : tail trace file\n"
@@ -490,6 +500,9 @@ err_usage:
     }  else if (!strcmp(argv[i], "-x") && i < argc - 1) {
       i++;
       start_addr = hex2int(argv[i]);
+    }  else if (!strcmp(argv[i], "-c") && i < argc - 1) {
+      i++;
+      count_sym_name = argv[i];
     } else if (!strcmp(argv[i], "-nx")) {
       found_start_addr = 1;
     } else if (!strcmp(argv[i], "-f")) {
