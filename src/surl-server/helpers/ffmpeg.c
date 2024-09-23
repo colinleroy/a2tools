@@ -151,6 +151,7 @@ static int open_video_file(decode_data *data)
     const AVCodec *dec;
     int ret;
     AVDictionary *video_options = NULL;
+    char *m3u8_url = NULL;
 
     init_base_addrs();
 
@@ -170,11 +171,24 @@ static int open_video_file(decode_data *data)
     video_fmt_ctx->interrupt_callback.callback = open_interrupt_cb;
     video_fmt_ctx->interrupt_callback.opaque = data;
 
+    if (strstr(data->url, "-fragmented.mp4")) {
+      m3u8_url = strdup(data->url);
+      strcpy(strstr(m3u8_url, "-fragmented.mp4"), ".m3u8");
+      printf("Trying to open m3u8 url...\n");
+      ret = avformat_open_input(&video_fmt_ctx, m3u8_url, NULL, &video_options);
+      if (ret == 0) {
+        goto m3u8_ok;
+      }
+    }
     if ((ret = avformat_open_input(&video_fmt_ctx, data->url, NULL, &video_options)) < 0) {
       av_dict_free(&video_options);
       printf("Video: Cannot open input file\n");
       return ret;
     }
+
+m3u8_ok:
+    free(m3u8_url);
+    av_dict_free(&video_options);
 
     // WIP dither via ffmpeg
     // if ((ret = avformat_open_input(&video_fmt_ctx, "/tmp/palette.png", NULL, &video_options)) < 0) {
@@ -183,7 +197,6 @@ static int open_video_file(decode_data *data)
     //   return ret;
     // }
 
-    av_dict_free(&video_options);
 
     if ((ret = avformat_find_stream_info(video_fmt_ctx, NULL)) < 0) {
       printf("Video: Cannot find stream information\n");
@@ -219,6 +232,7 @@ static int open_audio_file(decode_data *data)
     const AVCodec *dec;
     int ret;
     AVDictionary *audio_options = NULL;
+    char *m3u8_url = NULL;
 
     init_base_addrs();
 
@@ -236,12 +250,23 @@ static int open_audio_file(decode_data *data)
     audio_fmt_ctx->interrupt_callback.callback = open_interrupt_cb;
     audio_fmt_ctx->interrupt_callback.opaque = data;
 
+    if (strstr(data->url, "-fragmented.mp4")) {
+      m3u8_url = strdup(data->url);
+      strcpy(strstr(m3u8_url, "-fragmented.mp4"), ".m3u8");
+      printf("Trying to open m3u8 url...\n");
+      ret = avformat_open_input(&audio_fmt_ctx, m3u8_url, NULL, &audio_options);
+      if (ret == 0) {
+        goto m3u8_ok;
+      }
+    }
     if ((ret = avformat_open_input(&audio_fmt_ctx, data->url, NULL, &audio_options)) < 0) {
       av_dict_free(&audio_options);
       printf("Audio: Cannot open input file\n");
       return ret;
     }
 
+m3u8_ok:
+    free(m3u8_url);
     av_dict_free(&audio_options);
 
     if ((ret = avformat_find_stream_info(audio_fmt_ctx, NULL)) < 0) {
@@ -948,6 +973,7 @@ int ffmpeg_subtitles_decode(decode_data *data, const char *filename) {
     const AVCodec *codec;
     AVPacket *packet = av_packet_alloc();
     unsigned long prev_end_frame = 0;
+    char *m3u8_url = NULL;
 
     ffmpeg_subtitles_free(data);
 
@@ -960,10 +986,22 @@ int ffmpeg_subtitles_decode(decode_data *data, const char *filename) {
     ctx->interrupt_callback.callback = open_interrupt_cb;
     ctx->interrupt_callback.opaque = data;
 
+    if (strstr(filename, "-fragmented.mp4")) {
+      m3u8_url = strdup(filename);
+      strcpy(strstr(m3u8_url, "-fragmented.mp4"), ".m3u8");
+      printf("Trying to open m3u8 url...\n");
+      ret = avformat_open_input(&ctx, m3u8_url, NULL, NULL);
+      if (ret == 0) {
+        goto m3u8_ok;
+      }
+    }
     if ((ret = avformat_open_input(&ctx, filename, NULL, NULL)) < 0) {
       printf("Subtitles: Cannot open input file\n");
       goto end;
     }
+
+m3u8_ok:
+    free(m3u8_url);
 
     if ((ret = avformat_find_stream_info(ctx, NULL)) < 0) {
       printf("Subtitles: Cannot find stream information\n");
