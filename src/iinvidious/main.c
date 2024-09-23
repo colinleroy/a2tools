@@ -90,8 +90,8 @@ static const char *CAPTIONS_JSON_SELECTOR[] = {
 #define N_VIDEO_DETAILS 6
 
 static const char *VIDEO_URL_JSON_SELECTOR[] = {
-  "[.files+.streamingPlaylists[0].files|.[]|select(.resolution.id > 0)]|sort_by(.size)|first|.fileDownloadUrl",
-  "[.files+.streamingPlaylists[0].files|.[]|select(.resolution.id > 0)]|sort_by(.size)|first|.fileDownloadUrl",
+  "[.files+.streamingPlaylists[0].files|.[]|select(.resolution.id > 0)]|sort_by(.size)|first|.fileUrl",
+  "[.files+.streamingPlaylists[0].files|.[]|select(.resolution.id > 0)]|sort_by(.size)|first|.fileUrl",
   ".formatStreams[]|select(.itag==\"18\").url"
 };
 
@@ -192,16 +192,19 @@ static void load_save_search_json(char *mode) {
 #pragma code-name(pop)
 
 static void load_video(char *host, char instance_type, char *id) {
-  int url_len = strlen(host);
+  int url_len = 0;
+  char *n_host;
   char *video_url = NULL;
   char *captions_url = NULL;
 
   strcpy(tmp_buf, id); /* Make it safe, id points to BUF_8K */
+  n_host = strdup(host); /* Same for host */
+
   load_indicator(1);
 
   switch (instance_type) {
   case SEPIASEARCH:
-    sprintf((char *)BUF_1K_ADDR, "%s" PEERTUBE_VIDEO_DETAILS_API_ENDPOINT, host, tmp_buf);
+    sprintf((char *)BUF_1K_ADDR, "%s" PEERTUBE_VIDEO_DETAILS_API_ENDPOINT, n_host, tmp_buf);
     break;
   case PEERTUBE:
     sprintf((char *)BUF_1K_ADDR, "%s" PEERTUBE_VIDEO_DETAILS_API_ENDPOINT, url, tmp_buf);
@@ -223,7 +226,13 @@ static void load_video(char *host, char instance_type, char *id) {
   /* Prefix result with instance URL in case it has no http[s]://host,
    * and video URI into the very large buffer, because Youtube's videos
    * URIs are enormous */
-  strcpy((char *)BUF_8K_ADDR, url);
+  if (instance_type == SEPIASEARCH) {
+    url_len = strlen(n_host);
+    strcpy((char *)BUF_8K_ADDR, n_host);
+  } else {
+    url_len = strlen(url);
+    strcpy((char *)BUF_8K_ADDR, url);
+  }
 
   if (surl_get_json((char *)(BUF_8K_ADDR + url_len), BUF_8K_SIZE - url_len,
                     SURL_HTMLSTRIP_NONE, translit_charset,
@@ -241,7 +250,7 @@ static void load_video(char *host, char instance_type, char *id) {
     if (enable_subtitles) {
       switch (instance_type) {
       case SEPIASEARCH:
-        sprintf((char *)BUF_1K_ADDR, "%s" PEERTUBE_CAPTIONS_API_ENDPOINT, host, tmp_buf);
+        sprintf((char *)BUF_1K_ADDR, "%s" PEERTUBE_CAPTIONS_API_ENDPOINT, n_host, tmp_buf);
         break;
       case PEERTUBE:
         sprintf((char *)BUF_1K_ADDR, "%s" PEERTUBE_CAPTIONS_API_ENDPOINT, url, tmp_buf);
@@ -256,7 +265,11 @@ static void load_video(char *host, char instance_type, char *id) {
       if (surl_response_ok()) {
         char *sel;
         /* Prefix first result with instance URL */
-        strcpy((char *)BUF_1K_ADDR, url);
+        if (instance_type == SEPIASEARCH) {
+          strcpy((char *)BUF_1K_ADDR, n_host);
+        } else {
+          strcpy((char *)BUF_1K_ADDR, url);
+        }
 
         /* Update preferred subtitle language */
         sel = strstr(CAPTIONS_JSON_SELECTOR[instance_type], "LG");
@@ -297,6 +310,7 @@ static void load_video(char *host, char instance_type, char *id) {
     clrscr();
   }
 out:
+  free(n_host);
   load_indicator(0);
 }
 
@@ -538,7 +552,7 @@ again:
   if (url[strlen(url)-1] == '/') {
     url[strlen(url)-1] = '\0';
   }
-  if (define_instance() < 0) {
+  if (url[0] == '\0' || define_instance() < 0) {
     cputs("Could not identify instance type.");
     cgetc();
     goto again;
