@@ -287,13 +287,6 @@ static int open_url(char *url, char *filename) {
   tmp_buf[NUMCOLS] = '\0';
   cputs(tmp_buf);
 
-  //cputs("Spc:pause, Esc:stop, Left/Right:fwd/rew");
-  surl_start_request(SURL_METHOD_STREAM_AUDIO, url, NULL, 0);
-  simple_serial_write(translit_charset, strlen(translit_charset));
-  simple_serial_putc('\n');
-  simple_serial_putc(monochrome);
-  simple_serial_putc(HGR_SCALE_MIXHGR);
-
   if (!got_cover) {
 #ifdef __APPLE2ENH__
     backup_restore_logo("r");
@@ -303,6 +296,13 @@ static int open_url(char *url, char *filename) {
     init_text();
 #endif
   }
+
+  //cputs("Spc:pause, Esc:stop, Left/Right:fwd/rew");
+  surl_start_request(SURL_METHOD_STREAM_AUDIO, url, NULL, 0);
+  simple_serial_write(translit_charset, strlen(translit_charset));
+  simple_serial_putc('\n');
+  simple_serial_putc(monochrome);
+  simple_serial_putc(HGR_SCALE_MIXHGR);
 
 read_metadata_again:
   r = simple_serial_getc();

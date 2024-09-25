@@ -47,8 +47,11 @@ int stream_url(char *url, char *subtitles_url) {
   } else {
     simple_serial_putc(SUBTITLES_NO);
   }
-  simple_serial_putc(video_size);
 
+  /* Do all of the slow things before finishing to send STREAM_AV parameters,
+   * otherwise proxy's going to start sending _STREAM_LOAD ETAs before we can
+   * answer.
+   */
   clrscr();
   set_scrollwindow(20, scrh);
   init_hgr(1);
@@ -67,6 +70,9 @@ int stream_url(char *url, char *subtitles_url) {
 #else
   cputs("Loading...");
 #endif
+
+  /* Ready, send last parameter */
+  simple_serial_putc(video_size);
 
 wait_load:
   r = simple_serial_getc();
