@@ -41,59 +41,7 @@
 #include "malloc0.h"
 #include "citoa.h"
 #include "surl/surl_stream_av/stream_url.h"
-
-enum InstanceType {
-  PEERTUBE,
-  SEPIASEARCH,
-  INVIDIOUS,
-  N_INSTANCE_TYPES
-};
-
-static const char *CHECK_API_ENDPOINT[] = {
-  "/api/v1/config/about",
-  "/api/v1/config",
-  "/api/v1/trending"
-};
-
-#define SEPIASEARCH_SEARCH_API_ENDPOINT      "/api/v1/search/videos?count=10&search=%s"
-
-#define PEERTUBE_SEARCH_API_ENDPOINT         "/api/v1/search/videos?sort=-match&search=%s"
-#define PEERTUBE_VIDEO_DETAILS_API_ENDPOINT  "/api/v1/videos/%s"
-#define PEERTUBE_CAPTIONS_API_ENDPOINT       "/api/v1/videos/%s/captions"
-
-#define INVIDIOUS_SEARCH_API_ENDPOINT         "/api/v1/search?type=video&sort=relevance&q=%s"
-#define INVIDIOUS_VIDEO_DETAILS_API_ENDPOINT  "/api/v1/videos/%s?local=true"
-#define INVIDIOUS_CAPTIONS_API_ENDPOINT       "/api/v1/captions/%s"
-
-/* Peertube's .previewPath is an absolute URL without domain, but this can be
- * not addressed as the thumbnail request comes right after the video details
- * request, so the CURL handle proxy-side is set on the correct host already.
- */
-static const char *VIDEO_DETAILS_JSON_SELECTOR[] = {
-  ".data[]|.name,.uuid,.account.displayName,.previewPath,.duration,\"-\"",
-  ".data[]|.name,.uuid,.account.displayName,.previewUrl,.duration,\"https://\"+.account.host",
-  ".[]|.title,.videoId,.author,(.videoThumbnails[]|select(.quality == \"medium\")|.url),.lengthSeconds,\"-\""
-};
-
-static const char *CAPTIONS_JSON_SELECTOR[] = {
-  "(.data[]|select(.language.id == \"LG\")|.captionPath),.data[0].captionPath",
-  "(.data[]|select(.language.id == \"LG\")|.captionPath),.data[0].captionPath",
-  "(.captions[]|select(.lang==\"LG\")|.url),.captions[0].url"
-};
-
-#define VIDEO_NAME   0
-#define VIDEO_ID     1
-#define VIDEO_AUTHOR 2
-#define VIDEO_THUMB  3
-#define VIDEO_LENGTH 4
-#define VIDEO_HOST   5
-#define N_VIDEO_DETAILS 6
-
-static const char *VIDEO_URL_JSON_SELECTOR[] = {
-  "[.files+.streamingPlaylists[0].files|.[]|select(.resolution.id > 0)]|sort_by(.size)|first|.fileUrl",
-  "[.files+.streamingPlaylists[0].files|.[]|select(.resolution.id > 0)]|sort_by(.size)|first|.fileUrl",
-  ".formatStreams[]|select(.itag==\"18\").url"
-};
+#include "video_providers.h"
 
 char *url = NULL;
 
@@ -191,7 +139,7 @@ static void load_save_search_json(char *mode) {
 
 #pragma code-name(pop)
 
-static void load_video(char *host, char instance_type, char *id) {
+static void load_video(char *host, InstanceTypeId instance_type, char *id) {
   int url_len = 0;
   char *n_host;
   char *video_url = NULL;
@@ -203,18 +151,10 @@ static void load_video(char *host, char instance_type, char *id) {
 
   load_indicator(1);
 
-  switch (instance_type) {
-  case SEPIASEARCH:
-    sprintf((char *)BUF_1K_ADDR, "%s" PEERTUBE_VIDEO_DETAILS_API_ENDPOINT, n_host, tmp_buf);
-    break;
-  case PEERTUBE:
-    sprintf((char *)BUF_1K_ADDR, "%s" PEERTUBE_VIDEO_DETAILS_API_ENDPOINT, url, tmp_buf);
-    break;
-  case INVIDIOUS:
-    sprintf((char *)BUF_1K_ADDR, "%s" INVIDIOUS_VIDEO_DETAILS_API_ENDPOINT, url, tmp_buf);
-    break;
-  }
-
+  /* Build video details URL */
+  sprintf((char *)BUF_1K_ADDR,
+          video_provider_get_protocol_string(instance_type, VIDEO_DETAILS_ENDPOINT),
+          n_host, tmp_buf);
   surl_start_request(SURL_METHOD_GET, (char *)BUF_1K_ADDR, NULL, 0);
 
   if (!surl_response_ok()) {
@@ -227,17 +167,12 @@ static void load_video(char *host, char instance_type, char *id) {
   /* Prefix result with instance URL in case it has no http[s]://host,
    * and video URI into the very large buffer, because Youtube's videos
    * URIs are enormous */
-  if (instance_type == SEPIASEARCH) {
-    url_len = strlen(n_host);
-    strcpy((char *)BUF_8K_ADDR, n_host);
-  } else {
-    url_len = strlen(url);
-    strcpy((char *)BUF_8K_ADDR, url);
-  }
+  url_len = strlen(n_host);
+  strcpy((char *)BUF_8K_ADDR, n_host);
 
   if (surl_get_json((char *)(BUF_8K_ADDR + url_len), BUF_8K_SIZE - url_len,
                     SURL_HTMLSTRIP_NONE, translit_charset,
-                    VIDEO_URL_JSON_SELECTOR[instance_type]) > 0) {
+                    video_provider_get_protocol_string(instance_type, VIDEO_URL_JSON_SELECTOR)) > 0) {
 
     /* If we had an absolute URL without host */
     if (((char *)BUF_8K_ADDR)[url_len] == '/') {
@@ -249,37 +184,29 @@ static void load_video(char *host, char instance_type, char *id) {
     }
 
     if (enable_subtitles) {
-      switch (instance_type) {
-      case SEPIASEARCH:
-        sprintf((char *)BUF_1K_ADDR, "%s" PEERTUBE_CAPTIONS_API_ENDPOINT, n_host, tmp_buf);
-        break;
-      case PEERTUBE:
-        sprintf((char *)BUF_1K_ADDR, "%s" PEERTUBE_CAPTIONS_API_ENDPOINT, url, tmp_buf);
-        break;
-      case INVIDIOUS:
-        sprintf((char *)BUF_1K_ADDR, "%s" INVIDIOUS_CAPTIONS_API_ENDPOINT, url, tmp_buf);
-        break;
-      }
+      /* Build captions URL */
+      sprintf((char *)BUF_1K_ADDR,
+              video_provider_get_protocol_string(instance_type, VIDEO_CAPTIONS_ENDPOINT),
+              n_host, tmp_buf);
 
       surl_start_request(SURL_METHOD_GET, (char *)BUF_1K_ADDR, NULL, 0);
 
       if (surl_response_ok()) {
-        char *sel;
+        char *json_sel = video_provider_get_protocol_string(instance_type, CAPTIONS_JSON_SELECTOR);
+        char *lang;
         /* Prefix first result with instance URL */
-        if (instance_type == SEPIASEARCH) {
-          strcpy((char *)BUF_1K_ADDR, n_host);
-        } else {
-          strcpy((char *)BUF_1K_ADDR, url);
-        }
+        strcpy((char *)BUF_1K_ADDR, n_host);
 
         /* Update preferred subtitle language */
-        sel = strstr(CAPTIONS_JSON_SELECTOR[instance_type], "LG");
-        memcpy(sel, sub_language, 2);
+        lang = strstr(json_sel, "LG");
+        if (lang) {
+          memcpy(lang, sub_language, 2);
+        }
 
         /* Get JSON right after the instance URL */
         if (surl_get_json((char *)(BUF_1K_ADDR + url_len), BUF_1K_SIZE - url_len,
                           SURL_HTMLSTRIP_NONE, translit_charset,
-                          CAPTIONS_JSON_SELECTOR[instance_type]) > 0) {
+                          json_sel) > 0) {
           char *eol = strchr((char *)BUF_1K_ADDR, '\n');
           /* Cut at end of first match */
           if (eol) {
@@ -295,29 +222,25 @@ static void load_video(char *host, char instance_type, char *id) {
           }
         }
         /* Put language placeholder back */
-        memcpy(sel, "LG", 2);
+        if (lang) {
+          memcpy(lang, "LG", 2);
+        }
       }
-
     }
+
     load_indicator(0);
 
-    switch (instance_type) {
-    case SEPIASEARCH:
-    case PEERTUBE:
-      if (m3u8_ptr = strstr(video_url, "-fragmented.mp4")) {
-        /* Is there an m3u8 playlist? libav* opens them much quicker. */
-        strcpy(m3u8_ptr, ".m3u8");
-        surl_start_request(SURL_METHOD_GET, video_url, NULL, 0);
-        if (surl_response_ok()) {
-          goto stream;
-        }
-        /* Otherwise keep the original file */
+    /* Peertube videos streamingPlaylists files */
+    if (m3u8_ptr = strstr(video_url, "-fragmented.mp4")) {
+      /* Is there an m3u8 playlist? libav* opens them much quicker. */
+      strcpy(m3u8_ptr, ".m3u8");
+      surl_start_request(SURL_METHOD_GET, video_url, NULL, 0);
+      if (!surl_response_ok()) {
+        /* No. keep the original file */
         strcpy(m3u8_ptr, "-fragmented.mp4");
       }
-    case INVIDIOUS:
-      break;
     }
-stream:
+
     stream_url(video_url, captions_url);
     set_scrollwindow(20, scrh);
 
@@ -339,7 +262,8 @@ char **lines = NULL;
 char n_lines;
 char cur_line = 0;
 
-static void search_results(char instance_type) {
+static void search_results(InstanceTypeId instance_type) {
+  static char *video_host;
   int len;
   char c;
 
@@ -373,6 +297,11 @@ display_result:
     lines[cur_line+VIDEO_AUTHOR][24] = '\0';
 #endif
 
+  video_host = lines[cur_line+VIDEO_HOST];
+  if (video_host[0] == '-') {
+    video_host = url;
+  }
+
   printf("%s\n"
          "%dm%ds - Uploaded by %s\n"
          "%d/%d results\n",
@@ -384,13 +313,10 @@ display_result:
 
   load_indicator(1);
   init_text();
-  surl_start_request(SURL_METHOD_GET, lines[cur_line+VIDEO_THUMB], NULL, 0);
   bzero((char *)HGR_PAGE, HGR_LEN);
+
+  surl_start_request(SURL_METHOD_GET, lines[cur_line+VIDEO_THUMB], NULL, 0);
   if (surl_response_ok()) {
-    #ifdef SIMPLE_SERIAL_DUMP
-    simple_serial_dump('B', (char *)0x400, 0xBFFF-0x400);
-    simple_serial_dump('B', (char *)0xD400, 0xDFFF-0xD400);
-    #endif
     simple_serial_putc(SURL_CMD_HGR);
     simple_serial_putc(0); /* monochrome */
     simple_serial_putc(HGR_SCALE_MIXHGR);
@@ -425,7 +351,7 @@ read_kbd:
       goto read_kbd;
 #endif
     case CH_ENTER:
-      load_video(lines[cur_line+VIDEO_HOST], instance_type, lines[cur_line+VIDEO_ID]);
+      load_video(video_host, instance_type, lines[cur_line+VIDEO_ID]);
       /* relaunch search */
       load_save_search_json("r");
       goto reload_search;
@@ -447,38 +373,31 @@ read_kbd:
 }
 
 
-static int search(char *host, char instance_type) {
-  switch (instance_type) {
-  case SEPIASEARCH:
-    sprintf((char *)BUF_1K_ADDR, "%s" SEPIASEARCH_SEARCH_API_ENDPOINT, host, search_str);
-    break;
-  case PEERTUBE:
-    sprintf((char *)BUF_1K_ADDR, "%s" PEERTUBE_SEARCH_API_ENDPOINT, host, search_str);
-    break;
-  case INVIDIOUS:
-    sprintf((char *)BUF_1K_ADDR, "%s" INVIDIOUS_SEARCH_API_ENDPOINT, host, search_str);
-    break;
-  }
+static void search(char *host, InstanceTypeId instance_type) {
+  sprintf((char *)BUF_1K_ADDR,
+          video_provider_get_protocol_string(instance_type, VIDEO_SEARCH_ENDPOINT),
+          host, search_str);
 
   load_indicator(1);
-  surl_start_request(SURL_METHOD_GET, (char *)BUF_1K_ADDR, NULL, 0);
 
+  surl_start_request(SURL_METHOD_GET, (char *)BUF_1K_ADDR, NULL, 0);
   if (!surl_response_ok()) {
     clrscr();
     printf("Error %d", surl_response_code());
     load_indicator(0);
     cgetc();
+    return;
+  }
+
+  if (surl_get_json((char *)BUF_8K_ADDR, BUF_8K_SIZE, SURL_HTMLSTRIP_NONE, translit_charset,
+                    video_provider_get_protocol_string(instance_type, VIDEO_DETAILS_JSON_SELECTOR)) > 0) {
+    load_indicator(0);
+    search_results(instance_type);
   } else {
-    if (surl_get_json((char *)BUF_8K_ADDR, BUF_8K_SIZE, SURL_HTMLSTRIP_NONE, translit_charset,
-                      VIDEO_DETAILS_JSON_SELECTOR[instance_type]) > 0) {
-      load_indicator(0);
-      search_results(instance_type);
-    } else {
-      clrscr();
-      printf("No results.");
-      load_indicator(0);
-      cgetc();
-    }
+    clrscr();
+    printf("No results.");
+    load_indicator(0);
+    cgetc();
   }
 }
 
@@ -486,7 +405,7 @@ static int search(char *host, char instance_type) {
 #pragma code-name (pop)
 #endif
 
-char global_instance_type = SEPIASEARCH;
+InstanceTypeId global_instance_type;
 
 static void do_ui(void) {
 new_search:
@@ -514,10 +433,12 @@ new_search:
 
 static int define_instance(void) {
   const surl_response *resp;
-  char i;
+  InstanceTypeId i;
 
   for (i = 0; i < N_INSTANCE_TYPES; i++) {
-    sprintf((char *)BUF_1K_ADDR, "%s%s", url, CHECK_API_ENDPOINT[i]);
+    sprintf((char *)BUF_1K_ADDR,
+            video_provider_get_protocol_string(i, API_CHECK_ENDPOINT),
+            url);
 
     resp = surl_start_request(SURL_METHOD_GET, (char *)BUF_1K_ADDR, NULL, 0);
 
@@ -551,6 +472,7 @@ static void do_setup_url(char *op) {
 
 static void do_setup(void) {
   char modified;
+  int url_len;
 
   do_setup_url("r");
 
@@ -564,12 +486,13 @@ again:
   cputs("Instance URL: ");
   strcpy((char *)BUF_1K_ADDR, url);
   dget_text((char *)BUF_1K_ADDR, 80, NULL, 0);
-  modified = strcmp((char *)BUF_1K_ADDR, url) != 0;
+  modified = (strcmp((char *)BUF_1K_ADDR, url) != 0);
   free(url);
   url = strdup((char *)BUF_1K_ADDR);
 
-  if (url[strlen(url)-1] == '/') {
-    url[strlen(url)-1] = '\0';
+  url_len = strlen(url) - 1;
+  if (url[url_len] == '/') {
+    url[url_len] = '\0';
   }
   if (url[0] == '\0' || define_instance() < 0) {
     cputs("Could not identify instance type.");
@@ -603,11 +526,6 @@ int main(void) {
 
   do_setup();
   printf("started; %zuB free\n", _heapmaxavail());
-
-  #ifdef SIMPLE_SERIAL_DUMP
-  simple_serial_dump('A', (char *)0x400, 0xBFFF-0x400);
-  simple_serial_dump('A', (char *)0xD400, 0xDFFF-0xD400);
-  #endif
 
   do_ui();
 }
