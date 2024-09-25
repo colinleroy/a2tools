@@ -863,7 +863,7 @@ int surl_stream_video(char *url) {
 
   while(!ready && !stop) {
     int eta;
-    usleep(10000);
+    usleep(1000);
     pthread_mutex_lock(&th_data->mutex);
     ready = th_data->data_ready;
     stop = th_data->decoding_end;
@@ -1657,7 +1657,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, char sub
   stop = 0;
   while(!ready && !stop) {
     int eta;
-    usleep(10000);
+    usleep(1000);
     pthread_mutex_lock(&audio_th_data->mutex);
     pthread_mutex_lock(&video_th_data->mutex);
 
