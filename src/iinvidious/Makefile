@@ -36,6 +36,7 @@ iinvidious_SOURCES := \
 	../lib/surl/surl_stream_av/$(STREAMER_VER).s \
 	../lib/surl/surl_stream_av/stream_url.c \
 	main.c \
+	video_providers.c \
 	config.c \
 	../lib/hgr.c \
 	../lib/clrzone.s \
