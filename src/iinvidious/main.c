@@ -196,6 +196,7 @@ static void load_video(char *host, char instance_type, char *id) {
   char *n_host;
   char *video_url = NULL;
   char *captions_url = NULL;
+  char *m3u8_ptr = NULL;
 
   strcpy(tmp_buf, id); /* Make it safe, id points to BUF_8K */
   n_host = strdup(host); /* Same for host */
@@ -299,6 +300,24 @@ static void load_video(char *host, char instance_type, char *id) {
 
     }
     load_indicator(0);
+
+    switch (instance_type) {
+    case SEPIASEARCH:
+    case PEERTUBE:
+      if (m3u8_ptr = strstr(video_url, "-fragmented.mp4")) {
+        /* Is there an m3u8 playlist? libav* opens them much quicker. */
+        strcpy(m3u8_ptr, ".m3u8");
+        surl_start_request(SURL_METHOD_GET, video_url, NULL, 0);
+        if (surl_response_ok()) {
+          goto stream;
+        }
+        /* Otherwise keep the original file */
+        strcpy(m3u8_ptr, "-fragmented.mp4");
+      }
+    case INVIDIOUS:
+      break;
+    }
+stream:
     stream_url(video_url, captions_url);
     set_scrollwindow(20, scrh);
 
