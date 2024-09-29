@@ -115,7 +115,7 @@ static void *ffmpeg_video_decode_thread(void *th_data) {
   struct timeval decode_start, cur_time;
   unsigned long secs;
   unsigned long microsecs;
-  unsigned long elapsed;
+  unsigned long elapsed, prev_elapsed = 0;
   int decode_slow = 0;
 
   printf("Generating frames for %s...\n", data->url);
@@ -145,12 +145,11 @@ static void *ffmpeg_video_decode_thread(void *th_data) {
   if (data->decoding_end == 1) {
     goto out; /* out unlocks mutex */
   }
-
   pthread_mutex_unlock(&data->mutex);
 
   gettimeofday(&decode_start, 0);
   while ((buf = ffmpeg_video_decode_frame(data, video_len*FPS, frameno)) != NULL) {
-    unsigned long usecs_per_frame, remaining_frames, done_len, remaining_len;
+    signed long usecs_per_frame, remaining_frames, done_len, remaining_len;
     if (write(vhgr_file, buf, HGR_LEN) != HGR_LEN) {
       printf("Could not write data\n");
       close(vhgr_file);
@@ -173,9 +172,10 @@ static void *ffmpeg_video_decode_thread(void *th_data) {
     remaining_len = remaining_frames * usecs_per_frame;
     done_len = frameno / FPS;
 
-    if (frameno % 100 == 0) {
-      printf("decoded %d frames (%lus) in %lus, remaining %lu frames, should take %lus\n",
+    if (elapsed - prev_elapsed > 2000000) {
+      printf("decoded %d frames (%lds) in %lds, remaining %ld frames, should take %lds\n",
             frameno, done_len, elapsed/1000000, remaining_frames, remaining_len/1000000);
+      prev_elapsed = elapsed;
     }
 
     pthread_mutex_lock(&data->mutex);
@@ -575,6 +575,25 @@ static unsigned char *audio_get_stream_art(decode_data *audio_data, int monochro
   return buffer;
 }
 
+int skip_secs (unsigned char c) {
+  int s = 0;
+  switch (c) {
+    case APPLE_CH_CURS_LEFT:
+    case APPLE_CH_CURS_RIGHT:
+      s = 10;
+      break;
+    case APPLE_CH_CURS_UP:
+    case APPLE_CH_CURS_DOWN:
+    case 'u':
+    case 'U':
+    case 'j':
+    case 'J':
+      s = 60;
+      break;
+  }
+  return s;
+}
+
 int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightScale scale) {
   int num = 0;
   unsigned char c;
@@ -769,16 +788,18 @@ handle_kbd:
             simple_serial_getc();
             break;
           case APPLE_CH_CURS_LEFT:
+          case APPLE_CH_CURS_DOWN:
             printf("Rewind\n");
-            if (cur < SAMPLE_RATE * 10) {
+            if (cur < SAMPLE_RATE * skip_secs(c)) {
               cur = 0;
             } else {
-              cur -= SAMPLE_RATE * 10;
+              cur -= SAMPLE_RATE * skip_secs(c);
             }
             break;
           case APPLE_CH_CURS_RIGHT:
-            if (cur + SAMPLE_RATE * 10 < size) {
-              cur += SAMPLE_RATE * 10;
+          case APPLE_CH_CURS_UP:
+            if (cur + SAMPLE_RATE * skip_secs(c) < size) {
+              cur += SAMPLE_RATE * skip_secs(c);
             } else {
               cur = size;
             }
@@ -1212,10 +1233,11 @@ handle_kbd:
             printf("Connection reset\n");
             goto abort;
           case APPLE_CH_CURS_LEFT:
-            if (cur < SAMPLE_RATE * 10) {
+          case APPLE_CH_CURS_DOWN:
+            if (cur < SAMPLE_RATE * skip_secs(c)) {
               cur = 0;
             } else {
-              cur -= SAMPLE_RATE * 10;
+              cur -= SAMPLE_RATE * skip_secs(c);
             }
             printf("Rewind to sample %ld\n", cur);
             if (cur % SAMPLE_RATE) {
@@ -1226,8 +1248,9 @@ handle_kbd:
             lseek(vhgr_file, (cur/SAMPLE_RATE)*FPS*HGR_LEN, SEEK_SET);
             break;
           case APPLE_CH_CURS_RIGHT:
-            if (cur + SAMPLE_RATE * 10 < audio_size) {
-              cur += SAMPLE_RATE * 10;
+          case APPLE_CH_CURS_UP:
+            if (cur + SAMPLE_RATE * skip_secs(c) < audio_size) {
+              cur += SAMPLE_RATE * skip_secs(c);
             } else {
               cur = audio_size;
             }
