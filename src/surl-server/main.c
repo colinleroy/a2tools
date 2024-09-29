@@ -23,6 +23,7 @@
 #include <curl/curl.h>
 #include <arpa/inet.h>
 #include <magic.h>
+#include <libavutil/log.h>
 #include "platform.h"
 #include "surl_protocol.h"
 #include "simple_serial.h"
@@ -240,15 +241,18 @@ int main(int argc, char **argv)
   long msecs;
   struct timespec cur_time;
 
+  av_log_set_level(AV_LOG_WARNING);
   if (argc > 1) {
     if (!strcmp(argv[1], "--help")) {
       printf("Usage: %s [--verbose|--very-verbose]\n", argv[0]);
       exit(0);
     } else if (!strcmp(argv[1], "--verbose")) {
       VERBOSE = 1;
+      av_log_set_level(AV_LOG_INFO);
     } else if (!strcmp(argv[1], "--very-verbose")) {
       VERBOSE = 1;
       VERY_VERBOSE = 1;
+      av_log_set_level(AV_LOG_DEBUG);
     }
   }
 
