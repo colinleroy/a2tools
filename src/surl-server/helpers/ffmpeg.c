@@ -277,7 +277,7 @@ static int open_audio_file(decode_data *data)
 
 int FPS = 24;
 
-static int init_video_filters(char subtitles, char size)
+static int init_video_filters(decode_data *data)
 {
     char args[512];
     int ret = 0;
@@ -299,6 +299,8 @@ static int init_video_filters(char subtitles, char size)
       fps = 24.0;
     }
 
+    data->orig_fps = fps;
+
     if (fps >= 30.0) {
       FPS = 30;
     } else {
@@ -306,22 +308,22 @@ static int init_video_filters(char subtitles, char size)
     }
 
     printf("Original video %dx%d (%.2f), %.2ffps, doing %d fps with size %d, %ssubs\n", video_dec_ctx->width, video_dec_ctx->height, aspect_ratio,
-           fps, FPS, size, subtitles?"":"no ");
+           data->orig_fps, FPS, data->video_size, data->has_subtitles?"":"no ");
 
     /* Get final resolution. We don't want too much "square pixels". */
     for (pic_width = HGR_WIDTH - 4; pic_width > HGR_WIDTH/4; pic_width--) {
       pic_height = pic_width / aspect_ratio;
       if (pic_height > 187)
         continue;
-      if (subtitles && pic_height > 156)
+      if (data->has_subtitles && pic_height > 156)
         continue;
-      if (pic_width * pic_height < (size != HGR_SCALE_HALF ? 0x2000 : MAX_BYTES_PER_FRAME) * 8) {
+      if (pic_width * pic_height < (data->video_size != HGR_SCALE_HALF ? 0x2000 : MAX_BYTES_PER_FRAME) * 8) {
         break;
       }
     }
     printf("Rescaling to %dx%d (%d pixels)\n", pic_width, pic_height, pic_width * pic_height);
 
-    if (size == HGR_SCALE_HALF)
+    if (data->video_size == HGR_SCALE_HALF)
       sprintf(filters_descr, video_filter_descr_s,
               FPS,
               pic_width, pic_height,
@@ -333,7 +335,7 @@ static int init_video_filters(char subtitles, char size)
               FPS,
               pic_width, pic_height,
               HGR_WIDTH, HGR_HEIGHT,
-              subtitles ? 2 : -1);
+              data->has_subtitles ? 2 : -1);
 
     video_filter_graph = avfilter_graph_alloc();
     if (!outputs || !inputs || !video_filter_graph) {
@@ -449,7 +451,6 @@ void ffmpeg_video_decode_deinit(decode_data *data) {
 }
 
 
-static int frameno = 0;
 static uint8_t *bayer_dither_frame(const AVFrame *frame, AVRational time_base, int progress)
 {
   int x, y;
@@ -468,8 +469,6 @@ static uint8_t *bayer_dither_frame(const AVFrame *frame, AVRational time_base, i
     { 11, 59, 7, 55, 10, 58, 6, 54 },
     { 43, 27, 39, 23, 42, 26, 38, 22 }
   };
-
-  frameno++;
 
   if (frame->width < HGR_WIDTH) {
     x_offset = (HGR_WIDTH - frame->width) / 2;
@@ -544,8 +543,6 @@ static uint8_t *burkes_dither_frame(const AVFrame *frame, AVRational time_base, 
 #define ERR_X_OFF 2 //avoid special cases at start/end of line
   int error_table[192+5][280+5] = {0};
   int threshold = 128;
-
-  frameno++;
 
   if (pic_width < HGR_WIDTH) {
     x_offset = (HGR_WIDTH - pic_width) / 2;
@@ -661,7 +658,7 @@ int ffmpeg_video_decode_init(decode_data *data, int *video_len) {
       sem_wait(&data->sub_thread_ready);
     }
 
-    if ((ret = init_video_filters(data->has_subtitles, data->video_size)) < 0) {
+    if ((ret = init_video_filters(data)) < 0) {
         goto end;
     }
 
