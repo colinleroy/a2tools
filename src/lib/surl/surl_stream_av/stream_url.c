@@ -63,12 +63,14 @@ int stream_url(char *url, char *subtitles_url) {
 
 #ifdef __APPLE2ENH__
   cputs("Loading...\r\n"
-        "Controls: Space:      Play/Pause,             Esc: Quit player,\r\n"
-        "          Left/Right: Rewind/Forward,         ");
-  cputs("\r\n"
-        "          -/=/+:      Volume up/default/down  S:   Toggle speed/quality");
+        "Controls: Space:      Play/Pause,             Esc:     Quit player,\r\n"
+        "          Left/Right: Rewind/Forward 10s,     Up/Down: Rewind/Forward 1m\r\n"
+        "          -/=/+:      Volume up/default/down  S:       Toggle speed/quality");
 #else
-  cputs("Loading...");
+  cputs("Loading...\r\n"
+        "Space: play/pause, Esc: Quit player,\r\n"
+        "Left/right: Rew/Fwd 10s, U/J: 60s\r\n"
+        "-/=/+: Vol up/def/down, S: spd/quality ");
 #endif
 
   /* Ready, send last parameter */
