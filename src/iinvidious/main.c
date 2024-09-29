@@ -293,8 +293,8 @@ display_result:
   if (strlen(lines[cur_line+VIDEO_NAME]) > 38)
     lines[cur_line+VIDEO_NAME][38] = '\0';
 
-  if (strlen(lines[cur_line+VIDEO_AUTHOR]) > 24)
-    lines[cur_line+VIDEO_AUTHOR][24] = '\0';
+  if (strlen(lines[cur_line+VIDEO_AUTHOR]) > 17)
+    lines[cur_line+VIDEO_AUTHOR][17] = '\0';
 #endif
 
   video_host = lines[cur_line+VIDEO_HOST];
