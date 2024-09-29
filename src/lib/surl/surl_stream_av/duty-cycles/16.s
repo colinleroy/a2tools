@@ -20,7 +20,7 @@ asp:    lda     $FFFF           ; 28     check serial tx empty
         lda     KBD             ; 36     read keyboard
         bpl     nokbd           ; 38/39
         sta     KBDSTRB         ; 42     clear keystrobe
-        and     #$7F            ; 44
+        and     #$7F            ; 44     clear high bit
 adp:    sta     $FFFF           ; 48     send cmd
         cmp     #$1B            ; 50     escape?
         beq     out             ; 52/53  if escape, exit forcefully
