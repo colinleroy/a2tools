@@ -4,10 +4,10 @@ UPLOAD_SUBDIRS = homecontrol-client mastodon telnet stp quicktake image-viewer w
 
 else
 ifdef OLDII
-UPLOAD_SUBDIRS = homecontrol-client mastodon stp wozamp iinvidious
+UPLOAD_SUBDIRS = homecontrol-client mastodon stp wozamp woztubes
 
 else
-UPLOAD_SUBDIRS = homecontrol-client mastodon telnet stp quicktake image-viewer wozamp iinvidious
+UPLOAD_SUBDIRS = homecontrol-client mastodon telnet stp quicktake image-viewer wozamp woztubes
 
 endif
 endif

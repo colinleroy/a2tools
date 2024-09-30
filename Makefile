@@ -31,8 +31,8 @@ wozamp_disk_PROGS = \
 	$(RBROWSER_BIN)
 endif
 
-iinvidious_disk_PROGS = \
-	src/iinvidious/iinvid.bin
+woztubes_disk_PROGS = \
+	src/woztubes/woztubes.bin
 
 telnet_disk_PROGS = \
 	src/telnet/telnet.bin
@@ -75,22 +75,22 @@ all upload:
 		$(MAKE) -C $$dir -f Makefile $@ || exit; \
 	done
 
-iinvidious$(suffix).po: $(iinvidious_disk_PROGS)
+woztubes$(suffix).po: $(woztubes_disk_PROGS)
 	cp $(CLEANDISK) $@; \
-	java -jar bin/ac.jar -n $@ IINVID
-	java -jar bin/ac.jar -p $@ IINVID.SYSTEM SYS < bin/loader.system; \
+	java -jar bin/ac.jar -n $@ WOZTUBES
+	java -jar bin/ac.jar -p $@ WOZTUBES.SYSTEM SYS < bin/loader.system; \
 	java -jar bin/ac.jar -d $@ BASIC.SYSTEM; \
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
 	mkdir -p dist && cp $@ dist/; \
 
-iinvidiousperso$(suffix).po: $(iinvidious_disk_PROGS)
+woztubesperso$(suffix).po: $(woztubes_disk_PROGS)
 	cp $(CLEANDISK) $@; \
-	java -jar bin/ac.jar -n $@ IINVID
-	java -jar bin/ac.jar -p $@ IINVID.SYSTEM SYS < bin/loader.system; \
-	java -jar bin/ac.jar -p $@ STPSTARTURL TXT < src/iinvidious/STPSTARTURL; \
-	java -jar bin/ac.jar -p $@ CLISETTINGS TXT < src/iinvidious/CLISETTINGS; \
+	java -jar bin/ac.jar -n $@ WOZTUBES
+	java -jar bin/ac.jar -p $@ WOZTUBES.SYSTEM SYS < bin/loader.system; \
+	java -jar bin/ac.jar -p $@ STPSTARTURL TXT < src/woztubes/STPSTARTURL; \
+	java -jar bin/ac.jar -p $@ CLISETTINGS TXT < src/woztubes/CLISETTINGS; \
 	java -jar bin/ac.jar -d $@ BASIC.SYSTEM; \
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
@@ -219,7 +219,7 @@ dist: all \
 	stp$(suffix).po \
 	mastodon$(suffix).po \
 	wozamp$(suffix).po \
-	iinvidious$(suffix).po
+	woztubes$(suffix).po
 
 else
 #65c02 things
@@ -234,7 +234,7 @@ dist: all \
 	stpperso$(suffix).po \
 	quicktake$(suffix).po \
 	wozamp$(suffix).po \
-	iinvidious$(suffix).po \
+	woztubes$(suffix).po \
 	doc-dist
 endif
 
