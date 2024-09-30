@@ -2,7 +2,7 @@
 #define __surl_protocol_h
 
 #define SURL_PROTOCOL_VERSION 20
-#define VERSION "20.0.2"
+#define VERSION "20.0.0"
 
 #define SURL_METHOD_ABORT           ('d'|0x80) // $E4
 #define SURL_METHOD_RAW             0x05
