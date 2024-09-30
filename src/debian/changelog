@@ -1,8 +1,13 @@
 a2tools (20.0.0.1) bionic; urgency=medium
 
-  * ...
+  * Mastodon handles all types of media on 65c02 (image, video, gif, audio)
+  * WozTubes: IInvidious is now known as WozTubes
+  * WozTubes: Support (and default to) Sepiasearch, a cross-instance Peertube search engine
+  * WozTubes: Faster stream start on HLS streams
+  * surl-server: Fix subtitles timing
+  * surl-server: Allow fast-forward/rewind by minutes (Audio and A/V)
 
- -- Colin Leroy-Mira <colin@colino.net>  Sat, 14 Sep 2024 21:28:19 +0200
+ -- Colin Leroy-Mira <colin@colino.net>  Mon, 30 Sep 2024 21:28:19 +0200
 
 a2tools (19.0.2.1) bionic; urgency=medium
 
