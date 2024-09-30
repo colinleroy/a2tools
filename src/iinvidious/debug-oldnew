@@ -1,2 +1,0 @@
-#!/bin/bash
-make clean all SER_DEBUG=1 OLDII=1 && cd ../.. && make iinvidiousperso-6502.po OLDII=1 && mame apple2c0 -window -flop1 iinvidiousperso-6502.po -flop2 disks/qt100.dsk -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug; cd src/iinvidious

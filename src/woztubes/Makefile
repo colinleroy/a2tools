@@ -32,7 +32,7 @@ GCCCFLAGS = -g -O0 -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\" \
 
 .PHONY: all clean
 
-iinvidious_SOURCES := \
+woztubes_SOURCES := \
 	../lib/surl/surl_stream_av/$(STREAMER_VER).s \
 	../lib/surl/surl_stream_av/stream_url.c \
 	main.c \
@@ -78,31 +78,31 @@ iinvidious_SOURCES := \
 #0x4000-0x6000 is ALSO used to store setup code in RT_ONCE in order to shrink
 #              the binary a bit. But DO NOT runtime_once_clean() as usual!
 
-iinvidious_CLCFLAGS = -t $(CC65_TARGET) -I ../lib \
+woztubes_CLCFLAGS = -t $(CC65_TARGET) -I ../lib \
 	-DBUF_1K_ADDR=0x800 -DBUF_1K_SIZE=0x3FF \
 	-DBUF_8K_ADDR=0x4000 -DBUF_8K_SIZE=0x1FFF \
 	-DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER \
 	-DSTREAM_URL_SEGMENT='"LOWCODE"' \
-	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-iinvidious.cfg \
-	-vm -m iinvidious.map -DSURL_TO_LANGCARD -O --start-addr $(START_ADDR)
+	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-woztubes.cfg \
+	-vm -m woztubes.map -DSURL_TO_LANGCARD -O --start-addr $(START_ADDR)
 
 all: \
 	splash.h \
-	iinvid.bin
+	woztubes.bin
 
 clean:
 	rm -f *.bin *.o *.map splash.h splash.hgr
 
-iinvidious.hgr:
-	../surl-server/hgr-convert iinvidious.png
+woztubes.hgr:
+	../surl-server/hgr-convert woztubes.png
 
-splash.h: iinvidious.hgr
-	../../bin/make-splash.sh iinvidious.png splash.h
+splash.h: woztubes.hgr
+	../../bin/make-splash.sh woztubes.png splash.h
 
-iinvid.bin: $(iinvidious_CL65SOURCES) $(iinvidious_SOURCES)
-	cl65 -g -Wl --dbgfile,iinvidious.dbg -Ln iinvidious.lbl $(CFLAGS) $(iigs_CFLAGS) $(iinvidious_CLCFLAGS) -o $@ $^  $(CC65_TARGET)-iobuf-0800.o
+woztubes.bin: $(woztubes_CL65SOURCES) $(woztubes_SOURCES)
+	cl65 -g -Wl --dbgfile,woztubes.dbg -Ln woztubes.lbl $(CFLAGS) $(iigs_CFLAGS) $(woztubes_CLCFLAGS) -o $@ $^  $(CC65_TARGET)-iobuf-0800.o
 
 upload: all
-	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/iinvidious/ || \
-	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/iinvidious/ && \
-	cp *.bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/iinvidious/
+	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/woztubes/ || \
+	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/woztubes/ && \
+	cp *.bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/woztubes/

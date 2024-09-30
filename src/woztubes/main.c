@@ -61,10 +61,10 @@ static void load_indicator(char on) {
 }
 
 #ifdef __APPLE2ENH__
-#define SEARCH_SAVE_FILE "/RAM/IINVSRCH"
+#define SEARCH_SAVE_FILE "/RAM/WTSRCH"
 #define LOGO_SAVE_FILE "/RAM/LOGO.HGR"
 #else
-#define SEARCH_SAVE_FILE "IINVSRCH"
+#define SEARCH_SAVE_FILE "WTSRCH"
 #endif
 
 #ifdef __APPLE2ENH__
@@ -513,7 +513,7 @@ int main(void) {
 
   screensize(&scrw, &scrh);
   surl_ping();
-  surl_user_agent = "IInvidious "VERSION"/Apple II";
+  surl_user_agent = "WozTubes "VERSION"/Apple II";
 
 #ifdef __APPLE2__
   init_hgr(1);
