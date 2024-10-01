@@ -23,7 +23,6 @@ endif
 
 imgview_SOURCES := \
 	imageview.c \
-	../lib/serial/simple_serial.c \
 	../lib/serial/simple_serial_configure.c \
 	../lib/path_helper.c \
 	../lib/file_select.c \
@@ -35,6 +34,7 @@ imgview_SOURCES := \
 	../lib/realloc_safe.c \
 
 imgview_CC65SOURCES := \
+	../lib/serial/simple_serial_cc65.c \
 	../lib/dputc.s \
 	../lib/scroll.s \
 	../lib/FVTABZ.s \
@@ -46,6 +46,7 @@ imgview_CC65SOURCES := \
 	$(serial_hw_SOURCES)
 
 imgview_GCCSOURCES := \
+	../lib/serial/simple_serial_gcc.c \
 	../lib/tgi_sdl.c \
 	../lib/tgi_fastline.c \
 	../lib/strtrim.c \

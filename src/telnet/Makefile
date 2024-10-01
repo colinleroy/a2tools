@@ -13,7 +13,6 @@ endif
 PROGRAM=telnet
 SOURCES := \
 	telnet.c \
-	../lib/serial/simple_serial.c \
 	../lib/serial/simple_serial_printf.c \
 	../lib/surl/surl_core.c \
 	../lib/dgets.c \
@@ -22,6 +21,7 @@ SOURCES := \
 	../lib/malloc0.c
 
 CC65SOURCES := \
+	../lib/serial/simple_serial_cc65.c \
 	../lib/surl/surl_read_with_barrier.s \
 	../lib/serial/simple_serial_io.s \
 	$(serial_hw_SOURCES) \
@@ -34,6 +34,7 @@ CC65SOURCES := \
 	../lib/extrazp.s
 
 GCCSOURCES := \
+	../lib/serial/simple_serial_gcc.c \
 	../lib/strtrim.c \
 	../lib/extended_conio.c \
 	../lib/clrzone.c \

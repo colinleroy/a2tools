@@ -46,7 +46,7 @@ woztubes_SOURCES := \
 	../lib/dgets.c \
 	../lib/FVTABZ.s \
 	../lib/strsplit.c \
-	../lib/serial/simple_serial.c \
+	../lib/serial/simple_serial_cc65.c \
 	../lib/serial/simple_serial_configure.c \
 	../lib/serial/simple_serial_io.s \
 	../lib/serial/$(serial_hw)/common.s \

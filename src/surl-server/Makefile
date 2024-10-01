@@ -10,7 +10,7 @@ SOURCES := main.c raw-session.c \
 	helpers/stream.c \
 	helpers/ffmpeg.c \
 	../lib/strtrim.c ../lib/strsplit.c \
-	../lib/serial/simple_serial.c \
+	../lib/serial/simple_serial_gcc.c \
 	../lib/serial/simple_serial_gets.c \
 	../lib/serial/simple_serial_printf.c \
 	../lib/serial/simple_serial_io.c \
