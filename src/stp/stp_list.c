@@ -303,6 +303,9 @@ static void cnputs_nowrap(const char *str) {
 
 static unsigned char hscroll_off = 0;
 static signed char hscroll_dir = 1;
+#define STP_ANIMATE_SHORT_DELAY 4
+#define STP_ANIMATE_LONG_DELAY  30
+static char msecs_rem = STP_ANIMATE_SHORT_DELAY;
 
 void stp_animate_list(char reset) {
   unsigned char line_off;
@@ -316,26 +319,31 @@ void stp_animate_list(char reset) {
 
   if (reset) {
     hscroll_off = 0;
+    msecs_rem = STP_ANIMATE_SHORT_DELAY;
     goto reprint;
   }
 
   cur_line_len = strlen(display_lines[cur_line]);
   if (cur_line_len > NUMCOLS - 3) {
-    if (hscroll_dir == 1 && cur_line_len - hscroll_off == NUMCOLS - 3) {
-      hscroll_dir = -1;
-      platform_msleep(500);
-    } else if (hscroll_off == 0) {
-      hscroll_dir = 1;
-      platform_msleep(500);
+    if (msecs_rem == 0) {
+      hscroll_off += hscroll_dir;
+
+      if (hscroll_dir == 1 && cur_line_len - hscroll_off == NUMCOLS - 3) {
+        hscroll_dir = -1;
+        msecs_rem = STP_ANIMATE_LONG_DELAY;
+      } else if (hscroll_off == 0) {
+        hscroll_dir = 1;
+        msecs_rem = STP_ANIMATE_LONG_DELAY;
+      } else {
+        msecs_rem = STP_ANIMATE_SHORT_DELAY;
+      }
     }
-
-    hscroll_off += hscroll_dir;
-
 reprint:
     gotoxy(2, PAGE_BEGIN + line_off);
     cnputs_nowrap(display_lines[cur_line] + hscroll_off);
     if (!reset) {
-      platform_msleep(100);
+      platform_msleep(10);
+      msecs_rem --;
     }
   }
 }
