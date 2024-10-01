@@ -25,6 +25,24 @@
 #endif
 /* Setup */
 
+#ifdef __CC65__
+typedef struct {
+  unsigned char data_baudrate;
+  unsigned char data_slot;
+  unsigned char printer_baudrate;
+  unsigned char printer_slot;
+} SimpleSerialParams;
+#else
+typedef struct {
+  unsigned int data_baudrate;
+  unsigned char data_slot;
+  unsigned int printer_baudrate;
+  unsigned char printer_slot;
+} SimpleSerialParams;
+#endif
+
+extern SimpleSerialParams ser_params;
+
 char simple_serial_settings_io(const char *path, char *mode);
 
 void __fastcall__ simple_serial_set_speed(int b);

@@ -23,9 +23,6 @@ char HGR_PAGE[HGR_LEN];
 
 static uint8 serial_opened = 0;
 
-extern unsigned char printer_baudrate;
-extern char printer_slot;
-
 /* Check for XON/XOFF */
 uint8 wait_imagewriter_ready(void) {
 #ifdef __CC65__
@@ -89,7 +86,7 @@ scale_again:
   cprintf("Please set your ImageWriter II to %sbps, XON/XOFF, connect it to the \r\n"
           "printer port (slot %u) and turn it on.\r\n"
           "Press a key when ready or Escape to cancel...\r\n",
-          tty_speed_to_str(printer_baudrate), printer_slot);
+          tty_speed_to_str(ser_params.printer_baudrate), ser_params.printer_slot);
   if (cgetc() == CH_ESC)
     goto out;
 
@@ -100,7 +97,7 @@ scale_again:
     serial_opened = (simple_serial_open_printer() == 0);
   }
   if (!serial_opened) {
-    printf("Could not open serial slot %d. Configure? (Y/n)\n", printer_slot);
+    printf("Could not open serial slot %d. Configure? (Y/n)\n", ser_params.printer_slot);
     if (tolower(cgetc()) != 'n') {
       init_text();
       clrscr();

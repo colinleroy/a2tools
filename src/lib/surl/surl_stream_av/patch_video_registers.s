@@ -6,7 +6,7 @@ patch_video_registers:
         sta     ptr1
         lda     #>(video_status_patches)
         sta     ptr1+1
-        lda     _printer_slot
+        lda     _ser_params + SIMPLE_SERIAL_PARAMS::PRINTER_SLOT
         jsr     _simple_serial_get_status_reg
         jsr     patch_addresses
 
@@ -14,28 +14,28 @@ patch_video_registers:
         sta     ptr1
         lda     #>(video_data_patches)
         sta     ptr1+1
-        lda     _printer_slot
+        lda     _ser_params + SIMPLE_SERIAL_PARAMS::PRINTER_SLOT
         jsr     _simple_serial_get_data_reg
         jsr     patch_addresses
 
-        lda     _printer_slot
+        lda     _ser_params + SIMPLE_SERIAL_PARAMS::PRINTER_SLOT
         jsr     _simple_serial_get_cmd_reg
         sta     vcmd+1
         sta     vcmd2+1
         stx     vcmd+2
         stx     vcmd2+2
 
-        lda     _printer_slot
+        lda     _ser_params + SIMPLE_SERIAL_PARAMS::PRINTER_SLOT
         jsr     _simple_serial_get_ctrl_reg
         sta     vctrl+1
         stx     vctrl+2
 
-        lda     _data_slot
+        lda     _ser_params + SIMPLE_SERIAL_PARAMS::DATA_SLOT
         jsr     _simple_serial_get_cmd_reg
         sta     acmd+1
         stx     acmd+2
 
-        lda     _data_slot
+        lda     _ser_params + SIMPLE_SERIAL_PARAMS::DATA_SLOT
         jsr     _simple_serial_get_ctrl_reg
         sta     actrl+1
         stx     actrl+2
