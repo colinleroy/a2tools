@@ -21,11 +21,20 @@ setup:
         lda     #>(page1_addrs_arr_high)
         sta     calc_addr_high+2
         sta     calc_addr_text_high+2
+
+        .ifdef DOUBLE_BUFFER
         ldx     #PAGE1_HB
         jsr     calc_bases
         lda     #$50
         ldx     #$0A
         jsr     calc_text_bases
+        .else
+        ldx     #PAGE0_HB
+        jsr     calc_bases
+        lda     #$50
+        ldx     #$06
+        jsr     calc_text_bases
+        .endif
 
         ; Setup serial registers
         jsr     patch_audio_registers

@@ -35,12 +35,16 @@ video_sub:
         sbc     #(PAGE_ARR_TO_SWITCH-1) ; 14    Carry clear so substract one less. Use the fact that:
                                                 .assert >PAGE0_ARRAY - PAGE_ARR_TO_SWITCH = $54, error
                                                 .assert >PAGE1_ARRAY - PAGE_ARR_TO_SWITCH = $55, error
+        .ifdef DOUBLE_BUFFER
         sta     @toggle_page+1          ; 18
+        .else
+        WASTE_4                         ; 18
+        .endif
         adc     #$30                    ; 20    $54/$55 + $30 => sets V flag
         JUMP_NEXT_DUTY                  ; 26    Done, go to next duty cycle
 
 @toggle_page:                           ;       Page toggling
-.ifdef DOUBLE_BUFFER
+        .ifdef DOUBLE_BUFFER
         lda     $C054                   ; 9     Activate page (patched by set_offset)
         lda     page_ptr_high+1         ; 12    Toggle written page
         eor     #(>PAGE0_ARRAY ^ >PAGE1_ARRAY)  
@@ -48,7 +52,7 @@ video_sub:
         sta     page_ptr_high+1         ; 17    No time to update page flag,
         WASTE_3                         ; 20
         JUMP_NEXT_DUTY                  ; 26    We'll do it in @set_offset
-.else
+        .else
         WASTE_15                        ; 20
         JUMP_NEXT_DUTY                  ; 26
-.endif
+        .endif

@@ -98,14 +98,7 @@ static void set_legend(char *str, unsigned char idx, unsigned char num_images) {
   show_help();
 }
 
-#if defined(__APPLE2ENH__) && !defined(IIGS)
-
-char enable_subtitles = SUBTITLES_AUTO;
-char video_size = HGR_SCALE_HALF;
-
-#else
-
-#ifdef __CC65__
+#if defined(__CC65__) && (defined(IIGS) || !defined(__APPLE2ENH__))
 static void stream_msg(char *msg) {
   hgr_mixon();
   clrscr();
@@ -141,11 +134,8 @@ int stream_url(char *url, char *unused) {
   return 0;
 }
 #else
-int stream_url(char *url, char *unused) {
-  return 0;
-}
-#endif
-
+char enable_subtitles = SUBTITLES_AUTO;
+char video_size = HGR_SCALE_HALF;
 #endif
 
 static void img_display(media *m, char idx, char num_images) {
