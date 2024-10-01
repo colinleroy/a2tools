@@ -87,17 +87,15 @@
 ; $64 = 01100100
 ; $83 = 10000011
 ; Reading an incomplete byte there could result in reading 11100111, for
-; example, but not only. We don't want that.
+; example, but not only. We don't want that. Basically we want the highest
+; possible bit set at 1 to be the same. 0x40-0x5F also fit. The rule is
+; 0x?0 to 0x?0 + 0x1F.
 
 .include "imports.inc"
 .include "constants.inc"
 .include "zp-variables.inc"
 .include "cycle-wasters.inc"
 ; -----------------------------------------------------------------
-
-; Ask proxy to send levels from $60-$7F, not multiplied.
-SAMPLE_OFFSET     = $60
-SAMPLE_MULT       = 1
 
 ; -----------------------------------------------------------------------------
 ; CPU-specific constant and macros
@@ -131,19 +129,16 @@ next       = _zp10            ; word - next cycle
 
 ; Align each duty cycle function
 .align $100
-_SAMPLES_BASE = *
-.assert SAMPLE_OFFSET = >_SAMPLES_BASE, error ; Cf $6000 to $7F00 comment at top of file
+_SAMPLES_BASE     = *
+; Ask proxy to send levels from $?0 to $?0+$1F, not multiplied.
+SAMPLE_OFFSET     = >_SAMPLES_BASE
+SAMPLE_MULT       = 1
+.assert SAMPLE_OFFSET .mod $20 = $0, error ; Cf $6000 to $7F00 comment at top of file
 .include "duty-cycles/0.s"
-
-; Put the page0 array at the correct place. It must be at $XX40.
-.include "page0-array.s"
 
 .align $100
 .assert * = _SAMPLES_BASE + $100, error
 .include "duty-cycles/1.s"
-
-; Put the page1 array at the correct place. It must be at $XY40. (where XY = XX+1)
-.include "page1-array.s"
 
 .align $100
 .assert * = _SAMPLES_BASE + $200, error
@@ -229,9 +224,15 @@ _SAMPLES_BASE = *
 .assert * = _SAMPLES_BASE + $1600, error
 .include "duty-cycles/22.s"
 
+; Put the page0 array at the correct place. It must be at $XX40 with XX >= $54
+.include "page0-array.s"
+
 .align $100
 .assert * = _SAMPLES_BASE + $1700, error
 .include "duty-cycles/23.s"
+
+; Put the page1 array at the correct place. It must be at $XY40. (where XY = XX+1)
+.include "page1-array.s"
 
 ; Stuff code between duty cycles to optimize size
 .include "video-handler.s"
