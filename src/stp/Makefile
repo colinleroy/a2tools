@@ -20,7 +20,6 @@ PROGRAM=stp
 SOURCES := stp_main.c stp_list.c stp_save.c stp_send_file.c stp_delete.c \
 	../lib/malloc0.c \
 	../lib/realloc_safe.c \
-	../lib/serial/simple_serial.c \
 	../lib/serial/simple_serial_configure.c \
 	../lib/get_buf_size.c \
 	../lib/progress_bar.c \
@@ -36,6 +35,7 @@ SOURCES := stp_main.c stp_list.c stp_save.c stp_send_file.c stp_delete.c \
 	../lib/path_helper.c \
 
 CL65SOURCES = \
+	../lib/serial/simple_serial_cc65.c \
 	../lib/surl/surl_read_with_barrier.s \
 	../lib/serial/simple_serial_io.s \
 	$(serial_hw_SOURCES) \
@@ -53,6 +53,7 @@ CL65SOURCES = \
 	../lib/cntoabuf.s
 
 GCC_SOURCES = \
+	../lib/serial/simple_serial_gcc.c \
 	../lib/strtrim.c \
 	../lib/extended_conio.c \
 	../lib/clrzone.c \

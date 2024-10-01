@@ -15,7 +15,6 @@ homectrl_SOURCES := main.c network.c \
 	switches.c sensors.c climate.c \
 	server_url.c \
 	../lib/malloc0.c \
-	../lib/serial/simple_serial.c \
 	../lib/serial/simple_serial_configure.c \
 	../lib/extended_conio.c \
 	../lib/dgets.c \
@@ -27,7 +26,8 @@ homectrl_SOURCES := main.c network.c \
 	../lib/path_helper.c \
 	../lib/surl/surl_ping.c
 	
-	homectrl_CL65SOURCES = \
+homectrl_CL65SOURCES = \
+	../lib/serial/simple_serial_cc65.c \
 	../lib/surl/surl_read_with_barrier.s \
 	../lib/serial/simple_serial_io.s \
 	$(serial_hw_SOURCES) \
@@ -44,6 +44,7 @@ homectrl_SOURCES := main.c network.c \
 
 
 homectrl_GCCSOURCES = \
+	../lib/serial/simple_serial_gcc.c \
 	../lib/strtrim.c \
 	../lib/clrzone.c \
 	../lib/serial/simple_serial_io.c
@@ -52,10 +53,10 @@ grphview_SOURCES := graph-viewer.c \
 	../lib/malloc0.c \
 	../lib/surl/surl_core.c \
 	../lib/surl/surl_receive_lines.c \
-	../lib/serial/simple_serial.c \
 	../lib/path_helper.c
 	
-	grphview_CL65SOURCES = \
+grphview_CL65SOURCES = \
+	../lib/serial/simple_serial_cc65.c \
 	../lib/surl/surl_read_with_barrier.s \
 	../lib/serial/simple_serial_io.s \
 	$(serial_hw_SOURCES) \
@@ -65,6 +66,7 @@ grphview_SOURCES := graph-viewer.c \
 	../lib/FVTABZ.s
 
 grphview_GCCSOURCES := \
+	../lib/serial/simple_serial_gcc.c \
 	../lib/strtrim.c \
 	../lib/extended_conio.c \
 	../lib/clrzone.c \

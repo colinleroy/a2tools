@@ -41,7 +41,6 @@ wozamp_SOURCES := \
 	config.c \
 	backup_logo.c \
 	$(EMBED_RBROWSER) \
-	../lib/serial/simple_serial.c \
 	../lib/serial/simple_serial_configure.c \
 	../lib/path_helper.c \
 	../lib/surl/surl_core.c \
@@ -58,6 +57,7 @@ wozamp_CL65SOURCES = \
 	../lib/surl/surl_stream_audio/$(STREAMER_VER).s \
 	../lib/hgr.c \
 	../lib/surl/surl_read_with_barrier.s \
+	../lib/serial/simple_serial_cc65.c \
 	../lib/serial/simple_serial_read.s \
 	../lib/serial/simple_serial_io.s \
 	../lib/serial/$(serial_hw)/common.s \
@@ -85,7 +85,6 @@ rbrowser_SOURCES := \
 	radio-browser.c \
 	config.c \
 	backup_logo.c \
-	../lib/serial/simple_serial.c \
 	../lib/path_helper.c \
 	../lib/surl/surl_core.c \
 	../lib/surl/surl_get_json.c \
@@ -98,6 +97,7 @@ rbrowser_CL65SOURCES = \
 	../lib/surl/surl_stream_audio/$(STREAMER_VER).s \
 	../lib/hgr.c \
 	../lib/surl/surl_read_with_barrier.s \
+	../lib/serial/simple_serial_cc65.c \
 	../lib/serial/simple_serial_read.s \
 	../lib/serial/simple_serial_io.s \
 	../lib/serial/$(serial_hw)/common.s \
@@ -136,7 +136,7 @@ videoplay_SOURCES := \
 	../lib/hgr.c \
 	../lib/scrollwindow.c \
 	../lib/FVTABZ.s \
-	../lib/serial/simple_serial.c \
+	../lib/serial/simple_serial_cc65.c \
 	../lib/serial/simple_serial_io.s \
 	../lib/serial/$(serial_hw)/common.s \
 	../lib/serial/$(serial_hw)/control.s \

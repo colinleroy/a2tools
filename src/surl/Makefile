@@ -14,14 +14,14 @@ PROGRAM=surl
 surl_SOURCES := \
 	surl-client.c \
 	../lib/malloc0.c \
-	../lib/serial/simple_serial.c \
 	../lib/cgets.c \
 	../lib/scrollwindow.c \
 	../lib/surl/surl_core.c \
 	../lib/surl/surl_receive.c \
 	../lib/path_helper.c
 
-	CL65SOURCES := \
+CL65SOURCES := \
+	../lib/serial/simple_serial_cc65.c \
 	../lib/surl/surl_read_with_barrier.s \
 	../lib/serial/simple_serial_io.s \
 	$(serial_hw_SOURCES) \
@@ -30,6 +30,7 @@ surl_SOURCES := \
 	../lib/FVTABZ.s
 
 GCCSOURCES := \
+	../lib/serial/simple_serial_gcc.c \
 	../lib/strtrim.c \
 	../lib/serial/simple_serial_io.c
 

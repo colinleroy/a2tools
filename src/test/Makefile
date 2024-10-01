@@ -17,7 +17,7 @@ SOURCES := \
 	../lib/surl/surl_stream_av/65c02.s \
 	main.c \
 	../lib/hgr.c \
-	../lib/serial/simple_serial.c \
+	../lib/serial/simple_serial_cc65.c \
 	../lib/serial/simple_serial_io.s \
 	../lib/serial/$(serial_hw)/common.s \
 	../lib/serial/$(serial_hw)/control.s \

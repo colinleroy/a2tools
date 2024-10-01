@@ -24,7 +24,6 @@ common_SOURCES := \
 	../lib/dgets.c \
 	../lib/path_helper.c \
 	../lib/scrollwindow.c \
-	../lib/serial/simple_serial.c \
 	../lib/malloc0.c \
 	../lib/strsplit.c \
 	../lib/surl/surl_core.c \
@@ -32,6 +31,7 @@ common_SOURCES := \
 	../lib/surl/surl_send.c
 
 common_CC65SOURCES := \
+	../lib/serial/simple_serial_cc65.c \
 	../lib/surl/surl_read_with_barrier.s \
 	../lib/serial/simple_serial_io.s \
 	$(serial_hw_SOURCES) \
@@ -68,7 +68,6 @@ mastoimg_SOURCES := \
 	api/common.c \
 	cli/img.c \
 	api/media.c \
-	../lib/serial/simple_serial.c \
 	../lib/surl/surl_core.c \
 	../lib/surl/surl_get_json.c \
 	../lib/path_helper.c \
@@ -78,7 +77,7 @@ mastoimg_SOURCES := \
 	../lib/realloc_safe.c \
 	../lib/hgr.c \
 	../lib/scrollwindow.c \
-	../lib/dgets.c \
+	../lib/dgets.c
 
 ifdef IIGS
 
@@ -103,6 +102,7 @@ endif
 
 mastoimg_CC65SOURCES := \
 	$(mastoimg_CC65SOURCES) \
+	../lib/serial/simple_serial_cc65.c \
 	../lib/surl/surl_read_with_barrier.s \
 	../lib/serial/simple_serial_io.s \
 	$(serial_hw_SOURCES) \
@@ -156,7 +156,7 @@ GCCSOURCES := \
 	../lib/strtrim.c \
 	../lib/tgi_sdl.c \
 	../lib/tgi_fastline.c \
-	../lib/serial/simple_serial.c \
+	../lib/serial/simple_serial_gcc.c \
 	../lib/serial/simple_serial_io.c
 
 DEPS :=

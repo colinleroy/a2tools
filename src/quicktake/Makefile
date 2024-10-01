@@ -47,7 +47,6 @@ slowtake_SOURCES := \
 	../lib/dgets.c \
 	../lib/scrollwindow.c \
 	../lib/path_helper.c \
-	../lib/serial/simple_serial.c \
 	../lib/serial/simple_serial_configure.c \
 	../lib/strtrim.c \
 	../lib/malloc0.c \
@@ -60,6 +59,7 @@ slowtake_SOURCES := \
 	$(debug_SOURCES)
 
 slowtake_CC65SOURCES := \
+	../lib/serial/simple_serial_cc65.c \
 	../lib/dputc.s \
 	../lib/scroll.s \
 	../lib/FVTABZ.s \
@@ -73,6 +73,7 @@ slowtake_CC65SOURCES := \
 	$(serial_hw_SOURCES)
 
 slowtake_GCCSOURCES := \
+	../lib/serial/simple_serial_gcc.c \
 	../lib/tgi_sdl.c \
 	../lib/tgi_fastline.c \
 	../lib/serial/simple_serial_io.c \
