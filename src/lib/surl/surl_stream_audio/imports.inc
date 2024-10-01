@@ -5,7 +5,7 @@
 
         .import         _simple_serial_get_data_reg
         .import         _simple_serial_get_status_reg
-        .import         _data_slot
+        .import         _ser_params
 
         .import         _serial_putc_direct
         .import         _simple_serial_set_irq
@@ -21,3 +21,4 @@
 .endif
 
         .include        "apple2.inc"
+        .include        "../../simple_serial.inc"

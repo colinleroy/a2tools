@@ -13,8 +13,9 @@
         .import         _simple_serial_set_irq
         .import         _simple_serial_flush
         .import         _sleep, _init_text, _clrscr
-        .import         _printer_slot, _data_slot
+        .import         _ser_params
 
         .import         acia_status_reg_r, acia_data_reg_r
 
         .include        "apple2.inc"
+        .include        "../../simple_serial.inc"

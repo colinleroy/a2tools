@@ -38,13 +38,7 @@
 #pragma static-locals(push, on)
 
 extern unsigned char baudrate;
-extern unsigned char data_baudrate;
-extern unsigned char printer_baudrate;
-
 extern unsigned char flow_control;
-extern unsigned char data_slot;
-extern unsigned char printer_slot;
-
 extern unsigned char open_slot;
 
 #ifdef IIGS
@@ -75,10 +69,10 @@ extern unsigned char open_slot;
   #define MAX_SPEED_IDX 5
 #else
   static char *baud_strs[] = {
-    " 2400",
-    " 4800",
-    " 9600",
-    "19200",
+    "  2400",
+    "  4800",
+    "  9600",
+    " 19200",
     "115200",
     NULL
   };
@@ -133,18 +127,18 @@ void simple_serial_configure(void) {
   set_scrollwindow(0, 24);
 
   #ifdef IIGS
-    slot_idx = data_slot;
-    printer_slot_idx = printer_slot;
+    slot_idx = ser_params.data_slot;
+    printer_slot_idx = ser_params.printer_slot;
   #else
-    slot_idx = data_slot - 1;
-    printer_slot_idx = printer_slot - 1;
+    slot_idx = ser_params.data_slot - 1;
+    printer_slot_idx = ser_params.printer_slot - 1;
   #endif
 
   for (c = 0; c < MAX_SPEED_IDX; c++) {
-    if (baud_rates[c] == data_baudrate) {
+    if (baud_rates[c] == ser_params.data_baudrate) {
       speed_idx = c;
     }
-    if (baud_rates[c] == printer_baudrate) {
+    if (baud_rates[c] == ser_params.printer_baudrate) {
       printer_speed_idx = c;
     }
   }
@@ -233,14 +227,14 @@ void simple_serial_configure(void) {
     }
   } while (!done);
 #ifdef IIGS
-  data_slot = slot_idx;
-  printer_slot = printer_slot_idx;
+  ser_params.data_slot = slot_idx;
+  ser_params.printer_slot = printer_slot_idx;
 #else
-  data_slot = slot_idx + 1;
-  printer_slot = printer_slot_idx + 1;
+  ser_params.data_slot = slot_idx + 1;
+  ser_params.printer_slot = printer_slot_idx + 1;
 #endif
-  data_baudrate = baud_rates[speed_idx];
-  printer_baudrate = baud_rates[printer_speed_idx];
+  ser_params.data_baudrate = baud_rates[speed_idx];
+  ser_params.printer_baudrate = baud_rates[printer_speed_idx];
 
   if (modified) {
     simple_serial_settings_io("serialcfg", "w");

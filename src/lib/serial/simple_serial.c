@@ -37,18 +37,17 @@
 #pragma static-locals(push, on)
 
 unsigned char baudrate = 0;
-unsigned char data_baudrate = SER_BAUD_115200;
-unsigned char printer_baudrate = SER_BAUD_9600;
 unsigned char flow_control = SER_HS_HW;
 
-  unsigned char open_slot = 0;
-#ifdef IIGS
-  unsigned char data_slot = 0;
-  unsigned char printer_slot = 1;
-#else
-  unsigned char data_slot = 2;
-  unsigned char printer_slot = 1;
-#endif
+unsigned char open_slot = 0;
+
+SimpleSerialParams ser_params = {
+  SER_BAUD_115200,
+  MODEM_SER_SLOT,
+  SER_BAUD_9600,
+  PRINTER_SER_SLOT
+};
+
 /* Setup */
 static struct ser_params default_params = {
     SER_BAUD_115200,    /* Baudrate */
@@ -72,15 +71,9 @@ char simple_serial_settings_io(const char *path, char *mode) {
   fp = fopen(path, mode);
   if (fp) {
     if (mode[0] == 'r') {
-      fread(&data_baudrate, sizeof(char), 1, fp);
-      fread(&data_slot, sizeof(char), 1, fp);
-      fread(&printer_baudrate, sizeof(char), 1, fp);
-      fread(&printer_slot, sizeof(char), 1, fp);
+      fread(&ser_params, sizeof(SimpleSerialParams), 1, fp);
     } else {
-      fwrite(&data_baudrate, sizeof(char), 1, fp);
-      fwrite(&data_slot, sizeof(char), 1, fp);
-      fwrite(&printer_baudrate, sizeof(char), 1, fp);
-      fwrite(&printer_slot, sizeof(char), 1, fp);
+      fwrite(&ser_params, sizeof(SimpleSerialParams), 1, fp);
     }
     fclose(fp);
     return 0;
@@ -143,15 +136,15 @@ static char __fastcall__ simple_serial_open_slot(unsigned char my_slot) {
 char __fastcall__ simple_serial_open(void) {
   simple_serial_read_opts();
   if (baudrate == 0)
-    baudrate = data_baudrate;
-  return simple_serial_open_slot(data_slot);
+    baudrate = ser_params.data_baudrate;
+  return simple_serial_open_slot(ser_params.data_slot);
 }
 
 char __fastcall__ simple_serial_open_printer(void) {
   simple_serial_read_opts();
   if (baudrate == 0)
-    baudrate = printer_baudrate;
-  return simple_serial_open_slot(printer_slot);
+    baudrate = ser_params.printer_baudrate;
+  return simple_serial_open_slot(ser_params.printer_slot);
 }
 
 char __fastcall__ simple_serial_close(void) {
@@ -214,6 +207,13 @@ char *aux_tty_path = NULL;
 
 static int opt_tty_speed = B115200;
 static int opt_tty_hw_handshake = 1;
+
+SimpleSerialParams ser_params = {
+  B115200,
+  0,
+  B9600,
+  0
+};
 
 unsigned char data_slot = 0;
 unsigned char printer_slot = 0;
