@@ -27,7 +27,6 @@ imgview_SOURCES := \
 	../lib/progress_bar.c \
 	../lib/hgr.c \
 	../lib/hgr_addrs.c \
-	../lib/scrollwindow.c \
 	../lib/realloc_safe.c \
 
 imgview_CC65SOURCES := \
@@ -35,6 +34,7 @@ imgview_CC65SOURCES := \
 	../lib/serial/asm/simple_serial_io.s \
 	../lib/serial/asm/simple_serial_configure.s \
 	../lib/serial/asm/simple_serial_getc_immediate.s \
+	../lib/asm/scrollwindow.s \
 	../lib/asm/path_helper.s \
 	../lib/asm/clrzone.s \
 	../lib/asm/malloc0.s \
@@ -49,6 +49,7 @@ imgview_GCCSOURCES := \
 	../lib/serial/c/simple_serial.c \
 	../lib/serial/c/simple_serial_io.c \
 	../lib/serial/c/serial_control.c \
+	../lib/c/scrollwindow.c \
 	../lib/c/path_helper.c \
 	../lib/c/clrzone.c \
 	../lib/c/malloc0.c \

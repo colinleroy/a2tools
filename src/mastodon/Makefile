@@ -22,7 +22,6 @@ endif
 common_SOURCES := \
 	api/common.c \
 	../lib/dgets.c \
-	../lib/scrollwindow.c \
 	../lib/strsplit.c \
 	../lib/surl/surl_core.c \
 	../lib/surl/surl_get_json.c \
@@ -33,6 +32,7 @@ common_CC65SOURCES := \
 	../lib/serial/asm/simple_serial_io.s \
 	../lib/surl/surl_read_with_barrier.s \
 	$(serial_hw_SOURCES) \
+	../lib/asm/scrollwindow.s \
 	../lib/asm/path_helper.s \
 	../lib/asm/clrzone.s \
 	../lib/asm/malloc0.s \
@@ -51,8 +51,7 @@ mastodon_SOURCES := \
 	cli/config.c \
 	cli/logo.c \
 	../lib/surl/surl_find_line.c \
-	../lib/surl/surl_ping.c \
-	../lib/scrollwindow.c
+	../lib/surl/surl_ping.c
 
 mastodon_CC65SOURCES := \
 	$(common_CC65SOURCES) \
@@ -72,7 +71,6 @@ mastoimg_SOURCES := \
 	../lib/strsplit.c \
 	../lib/realloc_safe.c \
 	../lib/hgr.c \
-	../lib/scrollwindow.c \
 	../lib/dgets.c
 
 ifdef IIGS
@@ -102,6 +100,7 @@ mastoimg_CC65SOURCES := \
 	../lib/serial/asm/simple_serial_io.s \
 	../lib/surl/surl_read_with_barrier.s \
 	$(serial_hw_SOURCES) \
+	../lib/asm/scrollwindow.s \
 	../lib/asm/path_helper.s \
 	../lib/asm/clrzone.s \
 	../lib/asm/malloc0.s \
@@ -149,6 +148,7 @@ mastowrite_CC65SOURCES := \
 GCCSOURCES := \
 	../lib/serial/c/simple_serial.c \
 	../lib/serial/c/simple_serial_io.c \
+	../lib/c/scrollwindow.c \
 	../lib/c/clrzone.c \
 	../lib/c/path_helper.c \
 	../lib/c/malloc0.c \

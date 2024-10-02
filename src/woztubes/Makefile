@@ -41,7 +41,6 @@ woztubes_SOURCES := \
 	video_providers.c \
 	config.c \
 	../lib/hgr.c \
-	../lib/scrollwindow.c \
 	../lib/scroll.s \
 	../lib/dputc.s \
 	../lib/dgets.c \
@@ -52,6 +51,7 @@ woztubes_SOURCES := \
 	../lib/serial/asm/simple_serial_configure.s \
 	../lib/serial/$(serial_hw)/common.s \
 	../lib/serial/$(serial_hw)/no_irq.s \
+	../lib/asm/scrollwindow.s \
 	../lib/asm/path_helper.s \
 	../lib/asm/clrzone.s \
 	../lib/asm/malloc0.s \

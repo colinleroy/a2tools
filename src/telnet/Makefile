@@ -16,8 +16,7 @@ PROGRAM=telnet
 SOURCES := \
 	telnet.c \
 	../lib/surl/surl_core.c \
-	../lib/dgets.c \
-	../lib/scrollwindow.c
+	../lib/dgets.c
 
 CC65SOURCES := \
 	../lib/serial/asm/simple_serial.s \
@@ -25,6 +24,7 @@ CC65SOURCES := \
 	../lib/serial/c/simple_serial_printf.c \
 	../lib/surl/surl_read_with_barrier.s \
 	$(serial_hw_SOURCES) \
+	../lib/asm/scrollwindow.s \
 	../lib/asm/path_helper.s \
 	../lib/asm/clrzone.s \
 	../lib/asm/malloc0.s \
@@ -38,6 +38,7 @@ CC65SOURCES := \
 GCCSOURCES := \
 	../lib/serial/c/simple_serial.c \
 	../lib/serial/c/simple_serial_io.c \
+	../lib/c/scrollwindow.c \
 	../lib/c/path_helper.c \
 	../lib/c/malloc0.c \
 	../lib/strtrim.c \

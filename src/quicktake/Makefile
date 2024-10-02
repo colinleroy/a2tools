@@ -45,14 +45,12 @@ slowtake_SOURCES := \
 	qt-edit-image.c \
 	qt-state.c \
 	../lib/dgets.c \
-	../lib/scrollwindow.c \
 	../lib/strtrim.c \
 	../lib/realloc_safe.c \
 	../lib/file_select.c \
 	../lib/progress_bar.c \
 	../lib/hgr.c \
 	../lib/hgr_addrs.c \
-	../lib/scrollwindow.c \
 	$(debug_SOURCES)
 
 slowtake_CC65SOURCES := \
@@ -60,6 +58,7 @@ slowtake_CC65SOURCES := \
 	../lib/serial/asm/simple_serial_io.s \
 	../lib/serial/asm/simple_serial_read.s \
 	../lib/serial/asm/simple_serial_configure.s \
+	../lib/asm/scrollwindow.s \
 	../lib/asm/path_helper.s \
 	../lib/asm/malloc0.s \
 	../lib/dputc.s \
@@ -76,6 +75,7 @@ slowtake_GCCSOURCES := \
 	../lib/serial/c/simple_serial.c \
 	../lib/serial/c/simple_serial_io.c \
 	../lib/serial/c/serial_control.c \
+	../lib/c/scrollwindow.c \
 	../lib/c/malloc0.c \
 	../lib/tgi_sdl.c \
 	../lib/tgi_fastline.c
