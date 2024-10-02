@@ -25,6 +25,8 @@ START_ADDR := 0xD3A
 endif
 endif
 
+USE_LANGCARD := -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD
+
 GCCCFLAGS = -g -O0 -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\" \
 	-I ../lib -I ../stp -Wall -Wno-format \
 	-Wno-unused-function -Wno-char-subscripts -Wno-unknown-pragmas \
@@ -39,27 +41,26 @@ woztubes_SOURCES := \
 	video_providers.c \
 	config.c \
 	../lib/hgr.c \
-	../lib/clrzone.s \
 	../lib/scrollwindow.c \
 	../lib/scroll.s \
 	../lib/dputc.s \
 	../lib/dgets.c \
 	../lib/FVTABZ.s \
 	../lib/strsplit.c \
-	../lib/serial/simple_serial_cc65.c \
-	../lib/serial/simple_serial_configure.c \
-	../lib/serial/simple_serial_io.s \
+	../lib/serial/asm/simple_serial.s \
+	../lib/serial/asm/simple_serial_io.s \
+	../lib/serial/asm/simple_serial_configure.s \
 	../lib/serial/$(serial_hw)/common.s \
-	../lib/serial/$(serial_hw)/control.s \
 	../lib/serial/$(serial_hw)/no_irq.s \
-	../lib/path_helper.c \
+	../lib/asm/path_helper.s \
+	../lib/asm/clrzone.s \
+	../lib/asm/malloc0.s \
 	../lib/surl/surl_ping.c \
 	../lib/surl/surl_core.c \
 	../lib/surl/surl_get_json.c \
 	../lib/surl/surl_read_with_barrier.s \
 	../lib/fastirq$(iigs_suffix).s \
 	../lib/extrazp.s \
-	../lib/malloc0.c \
 	../lib/citoa.s \
 	../lib/cutoa.s \
 	../lib/cntoabuf.s
@@ -84,7 +85,7 @@ woztubes_CLCFLAGS = -t $(CC65_TARGET) -I ../lib \
 	-DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER \
 	-DSTREAM_URL_SEGMENT='"LOWCODE"' \
 	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-woztubes.cfg \
-	-vm -m woztubes.map -DSURL_TO_LANGCARD -O --start-addr $(START_ADDR)
+	-vm -m woztubes.map $(USE_LANGCARD) -O --start-addr $(START_ADDR)
 
 all: \
 	splash.h \

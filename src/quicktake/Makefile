@@ -46,10 +46,7 @@ slowtake_SOURCES := \
 	qt-state.c \
 	../lib/dgets.c \
 	../lib/scrollwindow.c \
-	../lib/path_helper.c \
-	../lib/serial/simple_serial_configure.c \
 	../lib/strtrim.c \
-	../lib/malloc0.c \
 	../lib/realloc_safe.c \
 	../lib/file_select.c \
 	../lib/progress_bar.c \
@@ -59,33 +56,37 @@ slowtake_SOURCES := \
 	$(debug_SOURCES)
 
 slowtake_CC65SOURCES := \
-	../lib/serial/simple_serial_cc65.c \
+	../lib/serial/asm/simple_serial.s \
+	../lib/serial/asm/simple_serial_io.s \
+	../lib/serial/asm/simple_serial_read.s \
+	../lib/serial/asm/simple_serial_configure.s \
+	../lib/asm/path_helper.s \
+	../lib/asm/malloc0.s \
 	../lib/dputc.s \
 	../lib/scroll.s \
 	../lib/FVTABZ.s \
-	../lib/clrzone.s \
+	../lib/asm/clrzone.s \
 	../lib/fastirq$(suffix).s \
 	../lib/platform_sleep.s \
 	../lib/extrazp.s \
 	../lib/runtime_once_clean.s \
-	../lib/serial/simple_serial_io.s \
-	../lib/serial/simple_serial_read.s \
 	$(serial_hw_SOURCES)
 
 slowtake_GCCSOURCES := \
-	../lib/serial/simple_serial_gcc.c \
+	../lib/serial/c/simple_serial.c \
+	../lib/serial/c/simple_serial_io.c \
+	../lib/serial/c/serial_control.c \
+	../lib/c/malloc0.c \
 	../lib/tgi_sdl.c \
-	../lib/tgi_fastline.c \
-	../lib/serial/simple_serial_io.c \
-	../lib/serial/serial_control.c
+	../lib/tgi_fastline.c
 
 qtktconv_SOURCES := \
 	qt-conv.c \
-	../lib/path_helper.c \
 	../lib/progress_bar.c
 
 qtktconv_CC65SOURCES := \
 	qtkt.s \
+	../lib/asm/path_helper.s \
 	../lib/extrazp.s \
 	../lib/check_floppy.s
 
@@ -95,12 +96,12 @@ qtktconv_GCCSOURCES := \
 qtknconv_SOURCES := \
 	qt-conv.c \
 	qtkn.c \
-	../lib/path_helper.c \
 	../lib/progress_bar.c
 
 qtknconv_CC65SOURCES := \
-	../lib/extrazp.s \
 	qtk_bithuff.s \
+	../lib/extrazp.s \
+	../lib/asm/path_helper.s \
 	../lib/mult16x16x32.s \
 	../lib/approxdiv16x8.s \
 	../lib/square_table.s \
@@ -112,11 +113,11 @@ qtknconv_GCCSOURCES := \
 jpegconv_SOURCES := \
 	qt-conv.c \
 	jpeg.c \
-	../lib/path_helper.c \
 	../lib/progress_bar.c
 
 jpegconv_CC65SOURCES := \
 	jpeg_platform.s \
+	../lib/asm/path_helper.s \
 	../lib/extrazp.s \
 	../lib/check_floppy.s
 
@@ -125,7 +126,8 @@ jpegconv_GCCSOURCES := \
 
 GCCSOURCES := \
 	../lib/extended_conio.c \
-	../lib/clrzone.c
+	../lib/c/path_helper.c \
+	../lib/c/clrzone.c
 
 DEPS :=
 
@@ -198,7 +200,7 @@ jpegconv.x86_64: $(jpegconv_SOURCES) $(jpegconv_GCCSOURCES) $(GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $(jpegconv_GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@
 
 loader.x86_64: loader.c
-	gcc -o $@ -I/usr/include/SDL loader.c ../lib/extended_conio.c ../lib/clrzone.c -lSDL_image -lSDL
+	gcc -o $@ -I/usr/include/SDL loader.c ../lib/extended_conio.c ../lib/c/clrzone.c -lSDL_image -lSDL
 
 clean:
 	rm -f *.bin *.x86_64 *.o *.map splash.h splash.hgr

@@ -22,20 +22,20 @@ endif
 common_SOURCES := \
 	api/common.c \
 	../lib/dgets.c \
-	../lib/path_helper.c \
 	../lib/scrollwindow.c \
-	../lib/malloc0.c \
 	../lib/strsplit.c \
 	../lib/surl/surl_core.c \
 	../lib/surl/surl_get_json.c \
 	../lib/surl/surl_send.c
 
 common_CC65SOURCES := \
-	../lib/serial/simple_serial_cc65.c \
+	../lib/serial/asm/simple_serial.s \
+	../lib/serial/asm/simple_serial_io.s \
 	../lib/surl/surl_read_with_barrier.s \
-	../lib/serial/simple_serial_io.s \
 	$(serial_hw_SOURCES) \
-	../lib/clrzone.s \
+	../lib/asm/path_helper.s \
+	../lib/asm/clrzone.s \
+	../lib/asm/malloc0.s \
 	../lib/dputs.s \
 	../lib/dputc.s \
 	../lib/scroll.s \
@@ -52,13 +52,11 @@ mastodon_SOURCES := \
 	cli/logo.c \
 	../lib/surl/surl_find_line.c \
 	../lib/surl/surl_ping.c \
-	../lib/serial/simple_serial_configure.c \
-	../lib/path_helper.c \
-	../lib/scrollwindow.c \
-	../lib/malloc0.c
+	../lib/scrollwindow.c
 
 mastodon_CC65SOURCES := \
 	$(common_CC65SOURCES) \
+	../lib/serial/asm/simple_serial_configure.s \
 	../lib/runtime_once_clean.s \
 	../lib/citoa.s \
 	../lib/cutoa.s \
@@ -70,10 +68,8 @@ mastoimg_SOURCES := \
 	api/media.c \
 	../lib/surl/surl_core.c \
 	../lib/surl/surl_get_json.c \
-	../lib/path_helper.c \
 	../lib/file_select.c \
 	../lib/strsplit.c \
-	../lib/malloc0.c \
 	../lib/realloc_safe.c \
 	../lib/hgr.c \
 	../lib/scrollwindow.c \
@@ -102,11 +98,13 @@ endif
 
 mastoimg_CC65SOURCES := \
 	$(mastoimg_CC65SOURCES) \
-	../lib/serial/simple_serial_cc65.c \
+	../lib/serial/asm/simple_serial.s \
+	../lib/serial/asm/simple_serial_io.s \
 	../lib/surl/surl_read_with_barrier.s \
-	../lib/serial/simple_serial_io.s \
 	$(serial_hw_SOURCES) \
-	../lib/clrzone.s \
+	../lib/asm/path_helper.s \
+	../lib/asm/clrzone.s \
+	../lib/asm/malloc0.s \
 	../lib/FVTABZ.s \
 	../lib/fastirq$(suffix).s \
 	 ../lib/extrazp.s \
@@ -124,8 +122,7 @@ mastocli_SOURCES := \
 	api/notification.c \
 	api/status.c \
 	api/poll.c \
-	../lib/progress_bar.c \
-	../lib/path_helper.c
+	../lib/progress_bar.c
 
 mastocli_CC65SOURCES := \
 	$(common_CC65SOURCES) \
@@ -143,7 +140,6 @@ mastowrite_SOURCES := \
 	api/poll.c \
 	../lib/file_select.c \
 	../lib/progress_bar.c \
-	../lib/path_helper.c \
 	../lib/realloc_safe.c \
 
 mastowrite_CC65SOURCES := \
@@ -151,13 +147,15 @@ mastowrite_CC65SOURCES := \
 	../lib/runtime_once_clean.s
 
 GCCSOURCES := \
+	../lib/serial/c/simple_serial.c \
+	../lib/serial/c/simple_serial_io.c \
+	../lib/c/clrzone.c \
+	../lib/c/path_helper.c \
+	../lib/c/malloc0.c \
 	../lib/extended_conio.c \
-	../lib/clrzone.c \
 	../lib/strtrim.c \
 	../lib/tgi_sdl.c \
-	../lib/tgi_fastline.c \
-	../lib/serial/simple_serial_gcc.c \
-	../lib/serial/simple_serial_io.c
+	../lib/tgi_fastline.c
 
 DEPS :=
 

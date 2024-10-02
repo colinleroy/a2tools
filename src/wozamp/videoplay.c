@@ -19,12 +19,6 @@ char *translit_charset;
 char monochrome = 1;
 unsigned char scrw = 255, scrh = 255;
 
-#ifdef __APPLE2ENH__
-#pragma code-name(push, "LOWCODE")
-#else
-#pragma code-name(push, "CODE")
-#endif
-
 static char url[512];
 char video_size;
 char enable_subtitles;
@@ -78,4 +72,3 @@ out:
   init_text();
   exec("WOZAMP", NULL);
 }
-#pragma code-name(pop)

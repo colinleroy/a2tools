@@ -10,12 +10,12 @@ suffix :=
 upload_subdir :=
 endif
 
+USE_LANGCARD := -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD
+
 PROGRAM=homectrl grphview
 homectrl_SOURCES := main.c network.c \
 	switches.c sensors.c climate.c \
 	server_url.c \
-	../lib/malloc0.c \
-	../lib/serial/simple_serial_configure.c \
 	../lib/extended_conio.c \
 	../lib/dgets.c \
 	../lib/scrollwindow.c \
@@ -23,62 +23,67 @@ homectrl_SOURCES := main.c network.c \
 	../lib/strellipsis.c \
 	../lib/surl/surl_core.c \
 	../lib/surl/surl_receive.c \
-	../lib/path_helper.c \
 	../lib/surl/surl_ping.c
 	
 homectrl_CL65SOURCES = \
-	../lib/serial/simple_serial_cc65.c \
+	../lib/serial/asm/simple_serial.s \
+	../lib/serial/asm/simple_serial_configure.s \
+	../lib/serial/asm/simple_serial_io.s \
 	../lib/surl/surl_read_with_barrier.s \
-	../lib/serial/simple_serial_io.s \
 	$(serial_hw_SOURCES) \
+	../lib/asm/path_helper.s \
+	../lib/asm/clrzone.s \
+	../lib/asm/malloc0.s \
 	../lib/dputc.s\
 	../lib/dputs.s \
 	../lib/scroll.s \
 	../lib/FVTABZ.s \
 	../lib/fastirq$(suffix).s \
 	../lib/extrazp.s \
-	../lib/clrzone.s \
 	../lib/citoa.s \
 	../lib/cutoa.s \
 	../lib/cntoabuf.s
 
-
 homectrl_GCCSOURCES = \
-	../lib/serial/simple_serial_gcc.c \
-	../lib/strtrim.c \
-	../lib/clrzone.c \
-	../lib/serial/simple_serial_io.c
+	../lib/serial/c/simple_serial.c \
+	../lib/serial/c/simple_serial_io.c \
+	../lib/c/malloc0.c \
+	../lib/c/path_helper.c \
+	../lib/c/clrzone.c \
+	../lib/strtrim.c
 
 grphview_SOURCES := graph-viewer.c \
-	../lib/malloc0.c \
 	../lib/surl/surl_core.c \
-	../lib/surl/surl_receive_lines.c \
-	../lib/path_helper.c
+	../lib/surl/surl_receive_lines.c
 	
 grphview_CL65SOURCES = \
-	../lib/serial/simple_serial_cc65.c \
+	../lib/serial/asm/simple_serial.s \
+	../lib/serial/asm/simple_serial_io.s \
 	../lib/surl/surl_read_with_barrier.s \
-	../lib/serial/simple_serial_io.s \
 	$(serial_hw_SOURCES) \
-	../lib/clrzone.s \
+	../lib/asm/path_helper.s \
+	../lib/asm/clrzone.s \
+	../lib/asm/malloc0.s \
 	../lib/fastirq$(suffix).s \
 	../lib/extrazp.s \
 	../lib/FVTABZ.s
 
 grphview_GCCSOURCES := \
-	../lib/serial/simple_serial_gcc.c \
+	../lib/serial/c/simple_serial.c \
+	../lib/serial/c/simple_serial_io.c \
+	../lib/c/path_helper.c \
+	../lib/c/clrzone.c \
+	../lib/c/malloc0.c \
 	../lib/strtrim.c \
 	../lib/extended_conio.c \
-	../lib/clrzone.c \
 	../lib/tgi_sdl.c \
-	../lib/tgi_fastline.c \
-	../lib/serial/simple_serial_io.c
+	../lib/tgi_fastline.c
 
 DEPS := 
 
 CC65_TARGET = apple2enh
 CFLAGS  = -I ../lib -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
-homectrl_CLCFLAGS = -t $(CC65_TARGET) -O -Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-rtonce.cfg -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD $(iigs_CFLAGS)
+homectrl_CLCFLAGS = -t $(CC65_TARGET) -O -Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-rtonce.cfg $(USE_LANGCARD) $(iigs_CFLAGS)
 grphview_CLCFLAGS = $(homectrl_CLCFLAGS) --start-addr 0x4000 #-C ../../config/apple2enh-hgr.cfg
 GCCCFLAGS = -g -O0 -Wall  -Wno-unknown-pragmas -Wno-unused-function -Wno-char-subscripts -Werror $(shell sdl-config --cflags)
 GCCLDFLAGS = $(shell sdl-config --libs)
