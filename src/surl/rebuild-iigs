@@ -1,2 +1,0 @@
-#!/bin/bash
-make clean all IIGS=1 && cd ../.. && make telnet-iigs.po IIGS=1 && mame apple2gs -window -flop1 telnet-iigs.po -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -nodebug; cd src/surl
