@@ -10,13 +10,13 @@ SOURCES := main.c raw-session.c \
 	helpers/stream.c \
 	helpers/ffmpeg.c \
 	../lib/strtrim.c ../lib/strsplit.c \
-	../lib/serial/simple_serial_gcc.c \
-	../lib/serial/simple_serial_gets.c \
-	../lib/serial/simple_serial_printf.c \
-	../lib/serial/simple_serial_io.c \
-	../lib/malloc0.c \
+	../lib/serial/c/simple_serial.c \
+	../lib/serial/c/simple_serial_io.c \
+	../lib/serial/c/simple_serial_gets.c \
+	../lib/serial/c/simple_serial_printf.c \
+	../lib/c/malloc0.c \
+	../lib/c/clrzone.c \
 	../lib/extended_conio.c \
-	../lib/clrzone.c \
 	../lib/array_sort.c
 	
 

@@ -110,10 +110,6 @@ void get_cover_file(char *url) {
   free(cover_url);
 }
 
-#ifdef __CC65__
-#pragma code-name (push, "LOWCODE")
-#endif
-
 void stp_print_footer(void) {
   clr_footer();
 
@@ -145,6 +141,10 @@ void stp_print_footer(void) {
   cputs(" S:server;  Q: quit");
 #endif
 }
+
+#ifdef __CC65__
+#pragma code-name (push, "LOWCODE")
+#endif
 
 void show_metadata (char *data) {
   char *value = strchr(data, '\n');
@@ -201,6 +201,10 @@ char do_radio_browser = 0;
 
 extern char cmd_cb_handled;
 
+#ifdef __CC65__
+#pragma code-name (pop)
+#endif
+
 static char cmd_cb(char c) {
   char prev_cursor = cursor(0);
   switch (tolower(c)) {
@@ -221,10 +225,6 @@ static char cmd_cb(char c) {
   return 0;
 }
 
-#ifdef __CC65__
-#pragma code-name (pop)
-#endif
-
 #ifndef IIGS
 static void print_err(const char *file) {
   init_text();
@@ -234,10 +234,6 @@ static void print_err(const char *file) {
   cputs(": ");
   citoa(errno);
 }
-#endif
-
-#ifdef __CC65__
-#pragma code-name (push, "LC")
 #endif
 
 static int open_url(char *url, char *filename) {
@@ -398,7 +394,7 @@ out:
 }
 
 #ifdef __CC65__
-#pragma code-name (pop)
+#pragma code-name (push, "LC")
 #endif
 
 char *play_directory(char *url) {
@@ -497,6 +493,9 @@ start_again:
   return url;
 }
 
+#ifdef __CC65__
+#pragma code-name (pop)
+#endif
 
 char navigated = 0;
 

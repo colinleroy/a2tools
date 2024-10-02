@@ -18,7 +18,7 @@ CC65_TARGET := apple2
 BUILD_VIDEOPLAY := 1
 STREAMER_VER := 6502
 STREAM_URL_SEGMENT := "CODE"
-VIDEOPLAY_START_ADDR := 0x1E00
+VIDEOPLAY_START_ADDR := 0x1D00
 EMBED_RBROWSER :=
 EXTERNAL_RBROWSER := rbrowser.bin
 else
@@ -36,17 +36,16 @@ EXTERNAL_RBROWSER :=
 endif
 endif
 
+USE_LANGCARD := -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD
+
 wozamp_SOURCES := \
 	main.c \
 	config.c \
 	backup_logo.c \
 	$(EMBED_RBROWSER) \
-	../lib/serial/simple_serial_configure.c \
-	../lib/path_helper.c \
 	../lib/surl/surl_core.c \
 	../lib/surl/surl_receive.c \
 	../lib/surl/surl_ping.c \
-	../lib/malloc0.c \
 	../lib/realloc_safe.c \
 	../lib/dgets.c \
 	../lib/scrollwindow.c \
@@ -57,19 +56,20 @@ wozamp_CL65SOURCES = \
 	../lib/surl/surl_stream_audio/$(STREAMER_VER).s \
 	../lib/hgr.c \
 	../lib/surl/surl_read_with_barrier.s \
-	../lib/serial/simple_serial_cc65.c \
-	../lib/serial/simple_serial_read.s \
-	../lib/serial/simple_serial_io.s \
+	../lib/serial/asm/simple_serial.s \
+	../lib/serial/asm/simple_serial_io.s \
+	../lib/serial/asm/simple_serial_configure.s \
 	../lib/serial/$(serial_hw)/common.s \
-	../lib/serial/$(serial_hw)/control.s \
 	../lib/serial/$(serial_hw)/no_irq.s \
+	../lib/asm/path_helper.s \
+	../lib/asm/malloc0.s \
 	../lib/dputc.s \
 	../lib/scroll.s \
 	../lib/FVTABZ.s \
 	../lib/fastirq$(suffix).s \
 	../lib/runtime_once_clean.s \
 	../lib/extrazp.s \
-	../lib/clrzone.s \
+	../lib/asm/clrzone.s \
 	../lib/platform_sleep.s \
 	../lib/citoa.s \
 	../lib/cutoa.s \
@@ -79,16 +79,14 @@ wozamp_CLCFLAGS = -t $(CC65_TARGET) -DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER \
 	-DSTP_DATA_SIZE=8192 \
 	-I ../lib -I ../stp \
 	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-pwmstreamer.cfg \
-	-vm -m wozamp.map -DSURL_TO_LANGCARD -O
+	-vm -m wozamp.map $(USE_LANGCARD) -O
 
 rbrowser_SOURCES := \
 	radio-browser.c \
 	config.c \
 	backup_logo.c \
-	../lib/path_helper.c \
 	../lib/surl/surl_core.c \
 	../lib/surl/surl_get_json.c \
-	../lib/malloc0.c \
 	../lib/dgets.c \
 	../lib/scrollwindow.c \
 	../lib/strsplit.c
@@ -97,12 +95,13 @@ rbrowser_CL65SOURCES = \
 	../lib/surl/surl_stream_audio/$(STREAMER_VER).s \
 	../lib/hgr.c \
 	../lib/surl/surl_read_with_barrier.s \
-	../lib/serial/simple_serial_cc65.c \
-	../lib/serial/simple_serial_read.s \
-	../lib/serial/simple_serial_io.s \
+	../lib/serial/asm/simple_serial.s \
+	../lib/serial/asm/simple_serial_io.s \
 	../lib/serial/$(serial_hw)/common.s \
 	../lib/serial/$(serial_hw)/control.s \
 	../lib/serial/$(serial_hw)/no_irq.s \
+	../lib/asm/path_helper.s \
+	../lib/asm/malloc0.s \
 	../lib/dputc.s \
 	../lib/dputs.s \
 	../lib/scroll.s \
@@ -110,14 +109,14 @@ rbrowser_CL65SOURCES = \
 	../lib/fastirq$(suffix).s \
 	../lib/runtime_once_clean.s \
 	../lib/extrazp.s \
-	../lib/clrzone.s \
+	../lib/asm/clrzone.s \
 	../lib/cntoabuf.s \
 	../lib/cutoa.s \
 
 rbrowser_CLCFLAGS = -t $(CC65_TARGET) \
 	-I ../lib -I ../stp \
 	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-rbrowser.cfg \
-	-vm -m rbrowser.map -DSURL_TO_LANGCARD -O --start-addr 0x4000
+	-vm -m rbrowser.map $(USE_LANGCARD) -O --start-addr 0x4000
 
 
 .PHONY: all clean
@@ -136,24 +135,24 @@ videoplay_SOURCES := \
 	../lib/hgr.c \
 	../lib/scrollwindow.c \
 	../lib/FVTABZ.s \
-	../lib/serial/simple_serial_cc65.c \
-	../lib/serial/simple_serial_io.s \
+	../lib/serial/asm/simple_serial.s \
+	../lib/serial/asm/simple_serial_io.s \
 	../lib/serial/$(serial_hw)/common.s \
 	../lib/serial/$(serial_hw)/control.s \
 	../lib/serial/$(serial_hw)/no_irq.s \
-	../lib/path_helper.c \
+	../lib/asm/path_helper.s \
+	../lib/asm/malloc0.s \
 	../lib/surl/surl_core.c \
 	../lib/surl/surl_read_with_barrier.s \
 	../lib/fastirq$(iigs_suffix).s \
-	../lib/extrazp.s \
-	../lib/malloc0.c \
+	../lib/extrazp.s
 
 videoplay_CLCFLAGS = -t $(CC65_TARGET) \
 	-DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER \
 	-DSTREAM_URL_SEGMENT='$(STREAM_URL_SEGMENT)' \
 	-I ../lib \
 	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-wozamp-videoplay.cfg \
-	-vm -m videoplay.map -DSURL_TO_LANGCARD -O --start-addr $(VIDEOPLAY_START_ADDR)
+	-vm -m videoplay.map $(USE_LANGCARD) -O --start-addr $(VIDEOPLAY_START_ADDR)
 
 all: \
 	splash.h \

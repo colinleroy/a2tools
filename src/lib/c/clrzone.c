@@ -17,9 +17,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "extended_conio.h"
-#include "scrollwindow.h"
-#include "clrzone.h"
+#include "../extended_conio.h"
+#include "../scrollwindow.h"
+#include "../clrzone.h"
 
 static char clearbuf[82];
 

@@ -51,7 +51,7 @@ void register_start_device(void) {
   }
 
 skip_prefix:
-  /* Get the path name to the program */
+  /* Get the path name to the program (it may have relative dirs) */
   __asm__("lda $280"); /* Get its length */
   __asm__("sta %v", argv0_len);
 

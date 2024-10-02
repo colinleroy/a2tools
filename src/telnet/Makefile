@@ -10,22 +10,24 @@ suffix :=
 upload_subdir :=
 endif
 
+USE_LANGCARD := -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD
+
 PROGRAM=telnet
 SOURCES := \
 	telnet.c \
-	../lib/serial/simple_serial_printf.c \
 	../lib/surl/surl_core.c \
 	../lib/dgets.c \
-	../lib/scrollwindow.c \
-	../lib/path_helper.c \
-	../lib/malloc0.c
+	../lib/scrollwindow.c
 
 CC65SOURCES := \
-	../lib/serial/simple_serial_cc65.c \
+	../lib/serial/asm/simple_serial.s \
+	../lib/serial/asm/simple_serial_io.s \
+	../lib/serial/c/simple_serial_printf.c \
 	../lib/surl/surl_read_with_barrier.s \
-	../lib/serial/simple_serial_io.s \
 	$(serial_hw_SOURCES) \
-	../lib/clrzone.s \
+	../lib/asm/path_helper.s \
+	../lib/asm/clrzone.s \
+	../lib/asm/malloc0.s \
 	../lib/dputs.s \
 	../lib/dputc.s \
 	../lib/scroll.s \
@@ -34,17 +36,19 @@ CC65SOURCES := \
 	../lib/extrazp.s
 
 GCCSOURCES := \
-	../lib/serial/simple_serial_gcc.c \
+	../lib/serial/c/simple_serial.c \
+	../lib/serial/c/simple_serial_io.c \
+	../lib/c/path_helper.c \
+	../lib/c/malloc0.c \
 	../lib/strtrim.c \
 	../lib/extended_conio.c \
-	../lib/clrzone.c \
-	../lib/serial/simple_serial_io.c
+	../lib/c/clrzone.c
 
 DEPS := 
 
 CC65_TARGET = apple2enh
 CFLAGS  = -I ../lib -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
-CLCFLAGS = -t $(CC65_TARGET) -Osir -Cl $(iigs_CFLAGS) -C ../../config/apple2enh-rtonce.cfg -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD  -DAVOID_ROM_CALLS --asm-define AVOID_ROM_CALLS
+CLCFLAGS = -t $(CC65_TARGET) -Osir -Cl $(iigs_CFLAGS) -C ../../config/apple2enh-rtonce.cfg $(USE_LANGCARD) -DAVOID_ROM_CALLS --asm-define AVOID_ROM_CALLS
 GCCCFLAGS = -g -O0 -Wall -Wno-char-subscripts -Wno-unused-function -Wno-unknown-pragmas -Werror
 GCCLDFLAGS = 
 

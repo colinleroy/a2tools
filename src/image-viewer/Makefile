@@ -23,40 +23,42 @@ endif
 
 imgview_SOURCES := \
 	imageview.c \
-	../lib/serial/simple_serial_configure.c \
-	../lib/path_helper.c \
 	../lib/file_select.c \
 	../lib/progress_bar.c \
 	../lib/hgr.c \
 	../lib/hgr_addrs.c \
 	../lib/scrollwindow.c \
-	../lib/malloc0.c \
 	../lib/realloc_safe.c \
 
 imgview_CC65SOURCES := \
-	../lib/serial/simple_serial_cc65.c \
+	../lib/serial/asm/simple_serial.s \
+	../lib/serial/asm/simple_serial_io.s \
+	../lib/serial/asm/simple_serial_configure.s \
+	../lib/serial/asm/simple_serial_getc_immediate.s \
+	../lib/asm/path_helper.s \
+	../lib/asm/clrzone.s \
+	../lib/asm/malloc0.s \
 	../lib/dputc.s \
 	../lib/scroll.s \
 	../lib/FVTABZ.s \
-	../lib/clrzone.s \
 	../lib/fastirq$(suffix).s \
 	../lib/extrazp.s \
-	../lib/serial/simple_serial_io.s \
-	../lib/serial/simple_serial_getc_immediate.s \
 	$(serial_hw_SOURCES)
 
 imgview_GCCSOURCES := \
-	../lib/serial/simple_serial_gcc.c \
+	../lib/serial/c/simple_serial.c \
+	../lib/serial/c/simple_serial_io.c \
+	../lib/serial/c/serial_control.c \
+	../lib/c/path_helper.c \
+	../lib/c/clrzone.c \
+	../lib/c/malloc0.c \
 	../lib/tgi_sdl.c \
 	../lib/tgi_fastline.c \
-	../lib/strtrim.c \
-	../lib/clrzone.c \
-	../lib/serial/simple_serial_io.c \
-	../lib/serial/serial_control.c
+	../lib/strtrim.c
 
 GCCSOURCES := \
 	../lib/extended_conio.c \
-	../lib/clrzone.c
+	../lib/c/clrzone.c
 
 DEPS :=
 

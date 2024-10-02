@@ -43,7 +43,7 @@ typedef struct {
 
 extern SimpleSerialParams ser_params;
 
-char simple_serial_settings_io(const char *path, char *mode);
+char __fastcall__ simple_serial_settings_io(const char *path, char *mode);
 
 void __fastcall__ simple_serial_set_speed(int b);
 void __fastcall__ simple_serial_set_flow_control(unsigned char fc);

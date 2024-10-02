@@ -18,9 +18,7 @@ endif
 
 PROGRAM=stp
 SOURCES := stp_main.c stp_list.c stp_save.c stp_send_file.c stp_delete.c \
-	../lib/malloc0.c \
 	../lib/realloc_safe.c \
-	../lib/serial/simple_serial_configure.c \
 	../lib/get_buf_size.c \
 	../lib/progress_bar.c \
 	../lib/strsplit.c \
@@ -32,20 +30,22 @@ SOURCES := stp_main.c stp_list.c stp_save.c stp_send_file.c stp_delete.c \
 	../lib/surl/surl_set_time.c \
 	../lib/surl/surl_ping.c \
 	../lib/file_select.c \
-	../lib/path_helper.c \
 
 CL65SOURCES = \
-	../lib/serial/simple_serial_cc65.c \
+	../lib/serial/asm/simple_serial.s \
+	../lib/serial/asm/simple_serial_io.s \
+	../lib/serial/asm/simple_serial_configure.s \
 	../lib/surl/surl_read_with_barrier.s \
-	../lib/serial/simple_serial_io.s \
 	$(serial_hw_SOURCES) \
+	../lib/asm/path_helper.s \
+	../lib/asm/clrzone.s \
+	../lib/asm/malloc0.s \
 	../lib/dputc.s \
 	../lib/scroll.s \
 	../lib/FVTABZ.s \
 	../lib/fastirq$(suffix).s \
 	../lib/runtime_once_clean.s \
 	../lib/extrazp.s \
-	../lib/clrzone.s \
 	../lib/platform_sleep.s \
 	../lib/get_dev_from_path.c \
 	../lib/citoa.s \
@@ -53,11 +53,13 @@ CL65SOURCES = \
 	../lib/cntoabuf.s
 
 GCC_SOURCES = \
-	../lib/serial/simple_serial_gcc.c \
+	../lib/serial/c/simple_serial.c \
+	../lib/serial/c/simple_serial_io.c \
+	../lib/c/path_helper.c \
+	../lib/c/malloc0.c \
 	../lib/strtrim.c \
 	../lib/extended_conio.c \
-	../lib/clrzone.c \
-	../lib/serial/simple_serial_io.c
+	../lib/c/clrzone.c
 
 DEPS := 
 
