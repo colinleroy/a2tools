@@ -48,7 +48,6 @@ wozamp_SOURCES := \
 	../lib/surl/surl_ping.c \
 	../lib/realloc_safe.c \
 	../lib/dgets.c \
-	../lib/scrollwindow.c \
 	../lib/strsplit.c \
 	../stp/stp_list.c
 
@@ -61,6 +60,7 @@ wozamp_CL65SOURCES = \
 	../lib/serial/asm/simple_serial_configure.s \
 	../lib/serial/$(serial_hw)/common.s \
 	../lib/serial/$(serial_hw)/no_irq.s \
+	../lib/asm/scrollwindow.s \
 	../lib/asm/path_helper.s \
 	../lib/asm/malloc0.s \
 	../lib/dputc.s \
@@ -88,7 +88,6 @@ rbrowser_SOURCES := \
 	../lib/surl/surl_core.c \
 	../lib/surl/surl_get_json.c \
 	../lib/dgets.c \
-	../lib/scrollwindow.c \
 	../lib/strsplit.c
 
 rbrowser_CL65SOURCES = \
@@ -100,6 +99,7 @@ rbrowser_CL65SOURCES = \
 	../lib/serial/$(serial_hw)/common.s \
 	../lib/serial/$(serial_hw)/control.s \
 	../lib/serial/$(serial_hw)/no_irq.s \
+	../lib/asm/scrollwindow.s \
 	../lib/asm/path_helper.s \
 	../lib/asm/malloc0.s \
 	../lib/dputc.s \
@@ -133,13 +133,13 @@ videoplay_SOURCES := \
 	../lib/surl/surl_stream_av/stream_url.c \
 	videoplay.c \
 	../lib/hgr.c \
-	../lib/scrollwindow.c \
 	../lib/FVTABZ.s \
 	../lib/serial/asm/simple_serial.s \
 	../lib/serial/asm/simple_serial_io.s \
 	../lib/serial/$(serial_hw)/common.s \
 	../lib/serial/$(serial_hw)/control.s \
 	../lib/serial/$(serial_hw)/no_irq.s \
+	../lib/asm/scrollwindow.s \
 	../lib/asm/path_helper.s \
 	../lib/asm/malloc0.s \
 	../lib/surl/surl_core.c \
