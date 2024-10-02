@@ -41,7 +41,6 @@ char *api_send_hgr_image(char *filename, char *description, char **err, char x, 
   char buf[SEND_BUF_SIZE];
   int r;
   int to_send;
-  char n_lines;
   char *media_id;
 
   *err = NULL;
@@ -92,17 +91,15 @@ send_again:
   surl_read_response_header();
 
   media_id = NULL;
+  *err = NET_ERROR;
   if (surl_response_ok()) {
-    if (surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, translit_charset, ".id") >= 0) {
-      n_lines = strnsplit(gen_buf, '\n', lines, 1);
-      if (n_lines == 1) {
-        media_id = lines[0];
-      } else {
-        *err = NET_ERROR;
+    if (surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, translit_charset, ".id") > 0) {
+      if ((media_id = strchr(gen_buf, '\n'))) {
+        *media_id = '\0';
       }
+      media_id = strdup(gen_buf);
+      *err = NULL;
     }
-  } else {
-    *err = NET_ERROR;
   }
 
   if (media_id != NULL) {

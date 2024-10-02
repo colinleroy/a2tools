@@ -32,45 +32,35 @@
 #endif
 
 int __fastcall__ _strnsplit_int(char in_place, char *in, char split, char **tokens, size_t max_tokens) {
-  char *start;
   size_t n_tokens;
   /* copy to avoid stack access */
-  register char *src = in;
+  char *sep, *start;
 
-  start = src;
+  sep = start = in;
 
   n_tokens = 0;
 
-  while (*src) {
-    if (*src == split) {
-      *src = '\0';
-
-insert_token:
-      if (in_place)
-        tokens[n_tokens] = start;
-      else
-        tokens[n_tokens] = strdup(start);
-
-      ++n_tokens;
-      start = src + 1;
-
-      /* no need to check where max_tokens != 0,
-       * n_tokens won't be 0 by that point */
-      if (n_tokens == max_tokens) {
-        goto done;
-      }
+  while (1) {
+    sep = strchr(sep, split);
+    if (sep) {
+      *sep = '\0';
     }
-    ++src;
+
+    if (in_place)
+      tokens[n_tokens] = start;
+    else
+      tokens[n_tokens] = strdup(start);
+
+    if (++n_tokens == max_tokens) {
+      break;
+    }
+    if (sep) {
+      start = ++sep;
+    } else {
+      break;
+    }
   }
 
-  /* Last token */
-  if (*start) {
-      /* make sure we break out of the loop */
-      max_tokens = n_tokens + 1;
-      goto insert_token;
-  }
-
-done:
   return n_tokens;
 }
 
