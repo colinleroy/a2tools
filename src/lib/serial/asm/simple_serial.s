@@ -88,7 +88,7 @@ write_mode_str: .asciiz "w"
 ;char __fastcall__ simple_serial_open_printer(void);
 _simple_serial_open_printer:
         jsr     simple_serial_read_opts
-        ldy     SIMPLE_SERIAL_PARAMS::PRINTER_BAUDRATE
+        ldy     #SIMPLE_SERIAL_PARAMS::PRINTER_BAUDRATE
         bne     simple_serial_open_from_Y
 
 ;char __fastcall__ simple_serial_open(void);
@@ -96,7 +96,7 @@ _simple_serial_open:
         ; Get options
         jsr     simple_serial_read_opts
         ; Get speed
-        ldy     SIMPLE_SERIAL_PARAMS::DATA_BAUDRATE
+        ldy     #SIMPLE_SERIAL_PARAMS::DATA_BAUDRATE
 simple_serial_open_from_Y:
         ; Store speed
         lda     _baudrate
