@@ -625,10 +625,10 @@ int surl_stream_audio(char *url, char *translit, char monochrome, HGRScale scale
     stop = th_data->decoding_end;
     eta = th_data->eta;
     pthread_mutex_unlock(&th_data->mutex);
-    usleep(10000);
     if (update_eta(eta) != 0) {
       stop = 1;
     }
+    usleep(10000);
   }
 
   printf("Decode thread state: %s\n", ready ? "ready" : stop ? "failure" : "unknown");
@@ -890,10 +890,10 @@ int surl_stream_video(char *url) {
     err = th_data->decoding_ret;
     eta = th_data->eta;
     pthread_mutex_unlock(&th_data->mutex);
-    usleep(10000);
     if (update_eta(eta) != 0) {
       stop = 1;
     }
+    usleep(10000);
   }
 
   if (stop && err) {
@@ -1693,10 +1693,10 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, Subtitle
     eta = video_th_data->eta;
     pthread_mutex_unlock(&audio_th_data->mutex);
     pthread_mutex_unlock(&video_th_data->mutex);
-    usleep(10000);
     if (update_eta(eta) != 0) {
       stop = 1;
     }
+    usleep(10000);
   }
 
   pthread_mutex_lock(&audio_th_data->mutex);
