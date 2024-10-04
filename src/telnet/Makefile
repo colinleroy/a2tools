@@ -15,15 +15,15 @@ USE_LANGCARD := -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD
 PROGRAM=telnet
 SOURCES := \
 	telnet.c \
-	../lib/surl/surl_core.c \
 	../lib/dgets.c
 
 CC65SOURCES := \
 	../lib/serial/asm/simple_serial.s \
 	../lib/serial/asm/simple_serial_io.s \
 	../lib/serial/c/simple_serial_printf.c \
-	../lib/surl/surl_read_with_barrier.s \
 	$(serial_hw_SOURCES) \
+	../lib/surl/asm/surl_core.s \
+	../lib/surl/asm/surl_read_with_barrier.s \
 	../lib/asm/scrollwindow.s \
 	../lib/asm/path_helper.s \
 	../lib/asm/clrzone.s \
@@ -38,6 +38,7 @@ CC65SOURCES := \
 GCCSOURCES := \
 	../lib/serial/c/simple_serial.c \
 	../lib/serial/c/simple_serial_io.c \
+	../lib/surl/c/surl_core.c \
 	../lib/c/scrollwindow.c \
 	../lib/c/path_helper.c \
 	../lib/c/malloc0.c \

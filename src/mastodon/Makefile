@@ -23,15 +23,15 @@ common_SOURCES := \
 	api/common.c \
 	../lib/dgets.c \
 	../lib/strsplit.c \
-	../lib/surl/surl_core.c \
 	../lib/surl/surl_get_json.c \
 	../lib/surl/surl_send.c
 
 common_CC65SOURCES := \
 	../lib/serial/asm/simple_serial.s \
 	../lib/serial/asm/simple_serial_io.s \
-	../lib/surl/surl_read_with_barrier.s \
 	$(serial_hw_SOURCES) \
+	../lib/surl/asm/surl_core.s \
+	../lib/surl/asm/surl_read_with_barrier.s \
 	../lib/asm/scrollwindow.s \
 	../lib/asm/path_helper.s \
 	../lib/asm/clrzone.s \
@@ -65,7 +65,6 @@ mastoimg_SOURCES := \
 	api/common.c \
 	cli/img.c \
 	api/media.c \
-	../lib/surl/surl_core.c \
 	../lib/surl/surl_get_json.c \
 	../lib/file_select.c \
 	../lib/strsplit.c \
@@ -98,8 +97,9 @@ mastoimg_CC65SOURCES := \
 	$(mastoimg_CC65SOURCES) \
 	../lib/serial/asm/simple_serial.s \
 	../lib/serial/asm/simple_serial_io.s \
-	../lib/surl/surl_read_with_barrier.s \
 	$(serial_hw_SOURCES) \
+	../lib/surl/asm/surl_core.s \
+	../lib/surl/asm/surl_read_with_barrier.s \
 	../lib/asm/scrollwindow.s \
 	../lib/asm/path_helper.s \
 	../lib/asm/clrzone.s \
@@ -148,6 +148,7 @@ mastowrite_CC65SOURCES := \
 GCCSOURCES := \
 	../lib/serial/c/simple_serial.c \
 	../lib/serial/c/simple_serial_io.c \
+	../lib/surl/c/surl_core.c \
 	../lib/c/scrollwindow.c \
 	../lib/c/clrzone.c \
 	../lib/c/path_helper.c \
