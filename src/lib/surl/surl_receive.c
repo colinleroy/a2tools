@@ -34,10 +34,10 @@
 
 #define BUFSIZE 255
 
-extern surl_response *resp;
+extern surl_response resp;
 
 size_t __fastcall__ surl_receive_bindata(char *buffer, size_t max_len, char binary) {
-  size_t to_read = min(resp->size - resp->cur_pos, max_len);
+  size_t to_read = min(resp.size - resp.cur_pos, max_len);
   size_t r;
 
   if (to_read == 0) {
@@ -53,7 +53,7 @@ size_t __fastcall__ surl_receive_bindata(char *buffer, size_t max_len, char bina
   if (!binary)
     buffer[to_read] = '\0';
 
-  resp->cur_pos += to_read;
+  resp.cur_pos += to_read;
 
   return to_read;
 }
@@ -63,7 +63,7 @@ void surl_strip_html(char strip_level) {
   simple_serial_putc(strip_level);
 
   surl_read_response_header();
-  resp->cur_pos = 0;
+  resp.cur_pos = 0;
 }
 
 void surl_translit(char *charset) {
@@ -72,7 +72,7 @@ void surl_translit(char *charset) {
   simple_serial_putc('\n');
 
   surl_read_response_header();
-  resp->cur_pos = 0;
+  resp.cur_pos = 0;
 }
 
 #ifdef __CC65__
