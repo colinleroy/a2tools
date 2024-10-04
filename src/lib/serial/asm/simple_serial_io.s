@@ -16,6 +16,7 @@
 ;
 
         .export         _simple_serial_puts
+        .export         _simple_serial_puts_nl
         .export         _simple_serial_write
         .export         _simple_serial_flush
         .export         simple_serial_compute_ptr_end
@@ -39,12 +40,16 @@
         .endif
 
 ;void __fastcall__ simple_serial_puts(const char *buf) {
-
 _simple_serial_puts:
         jsr     pushax
         jsr     _strlen
         jmp     _simple_serial_write
 
+;void __fastcall__ simple_serial_puts_nl(const char *buf) {
+_simple_serial_puts_nl:
+        jsr       _simple_serial_puts
+        lda       #$0A
+        jmp       _serial_putc_direct
 
 simple_serial_compute_ptr_end:
         sta     ptr3

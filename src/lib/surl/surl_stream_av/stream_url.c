@@ -36,8 +36,7 @@ int stream_url(char *url, char *subtitles_url) {
 
   surl_start_request(NULL, 0, url, SURL_METHOD_STREAM_AV);
 
-  simple_serial_write(translit_charset, strlen(translit_charset));
-  simple_serial_putc('\n');
+  simple_serial_puts_nl(translit_charset);
   simple_serial_putc(1); /* Monochrome */
   if (enable_subtitles) {
     simple_serial_putc(subtitles_url != NULL ? SUBTITLES_URL : SUBTITLES_AUTO); /* Enable subtitles */

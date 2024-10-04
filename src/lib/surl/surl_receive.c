@@ -68,8 +68,7 @@ void surl_strip_html(char strip_level) {
 
 void surl_translit(char *charset) {
   simple_serial_putc(SURL_CMD_TRANSLIT);
-  simple_serial_puts(charset);
-  simple_serial_putc('\n');
+  simple_serial_puts_nl(charset);
 
   surl_read_response_header();
   resp.cur_pos = 0;

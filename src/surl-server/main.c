@@ -605,8 +605,7 @@ abort:
           simple_serial_write_fast((char *)&l, 2);
           IO_BARRIER("FIND, pre-content");
 
-          simple_serial_puts(found);
-          simple_serial_putc('\n');
+          simple_serial_puts_nl(found);
 
           free(found);
         } else {
@@ -991,8 +990,13 @@ static char *prepare_json_post(char *buffer, size_t *len) {
   char *out = malloc((*len * 3) + 1);
   char *out_ptr = out;
   char **lines;
-  int n_lines = strsplit_in_place(buffer, '\n', &lines);
   int i;
+  int n_lines;
+
+  if (VERBOSE) {
+    printf("JSON DATA: %s\n", buffer);
+  }
+  n_lines = strsplit_in_place(buffer, '\n', &lines);
   sprintf(out_ptr, "{");
   out_ptr++;
   for (i = 0; i < n_lines; i += 2) {
@@ -1003,7 +1007,7 @@ static char *prepare_json_post(char *buffer, size_t *len) {
     /* get type */
     type = lines[i][0];
     if (lines[i][1] != '|' || !strchr("SBAO", type)) {
-      printf("ERR: JSON: malformed input data\n");
+      printf("ERR: JSON: malformed input data at line %d: %s\n", i, lines[i]);
       break;
     }
     lines[i] += 2;

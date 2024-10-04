@@ -44,8 +44,7 @@ int __fastcall__ surl_get_json(char *buffer, size_t len, char striphtml, const c
   simple_serial_putc(striphtml);
   simple_serial_puts(translit ? translit : "0");
   simple_serial_putc(' ');
-  simple_serial_puts(selector);
-  simple_serial_putc('\n');
+  simple_serial_puts_nl(selector);
 
   r = simple_serial_getc();
 
