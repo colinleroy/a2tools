@@ -1097,6 +1097,8 @@ static int setup_simple_upload_request(char method, CURL *curl,
   size = ntohl(size);
   mode = ntohs(mode);
 
+  printf("REQ: Read %d bytes in mode %d\n", size, mode);
+
   if (mode > 2) {
     simple_serial_putc(SURL_UPLOAD_PARAM_ERROR);
     printf("REQ: Unexpected serial reply\n");

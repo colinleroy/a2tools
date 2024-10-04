@@ -23,14 +23,14 @@ common_SOURCES := \
 	api/common.c \
 	../lib/dgets.c \
 	../lib/strsplit.c \
-	../lib/surl/surl_get_json.c \
-	../lib/surl/surl_send.c
+	../lib/surl/surl_get_json.c
 
 common_CC65SOURCES := \
 	../lib/serial/asm/simple_serial.s \
 	../lib/serial/asm/simple_serial_io.s \
 	$(serial_hw_SOURCES) \
 	../lib/surl/asm/surl_core.s \
+	../lib/surl/asm/surl_send.s \
 	../lib/surl/asm/surl_read_with_barrier.s \
 	../lib/asm/scrollwindow.s \
 	../lib/asm/path_helper.s \
@@ -149,6 +149,7 @@ GCCSOURCES := \
 	../lib/serial/c/simple_serial.c \
 	../lib/serial/c/simple_serial_io.c \
 	../lib/surl/c/surl_core.c \
+	../lib/surl/c/surl_send.c \
 	../lib/c/scrollwindow.c \
 	../lib/c/clrzone.c \
 	../lib/c/path_helper.c \
