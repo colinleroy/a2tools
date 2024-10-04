@@ -69,24 +69,22 @@ void surl_disconnect_proxy(void) {
   proxy_opened = 0;
 }
 
-static surl_response static_resp;
-surl_response *resp;
+surl_response resp;
 
 const surl_response * __fastcall__ surl_start_request(const char method, char *url, char **headers, int n_headers) {
   int i;
 
-  resp = &static_resp;
-  if (resp->content_type) {
-    free(resp->content_type);
-    resp->content_type = NULL;
+  if (resp.content_type) {
+    free(resp.content_type);
+    resp.content_type = NULL;
   }
 
-  memset(resp, 0, sizeof(surl_response));
+  memset(&resp, 0, sizeof(surl_response));
 
   if (proxy_opened == 0) {
     if (surl_connect_proxy() != 0) {
-      resp->code = 600;
-      return resp;
+      resp.code = 600;
+      return &resp;
     }
   }
 
@@ -111,8 +109,8 @@ const surl_response * __fastcall__ surl_start_request(const char method, char *u
   i = simple_serial_getc_with_timeout();
 
   if (i == EOF) {
-    resp->code = 504;
-    return resp;
+    resp.code = 504;
+    return &resp;
   } else if (method == SURL_METHOD_GET && i != SURL_ANSWER_WAIT) {
     goto ret_508;
   } else if (method == SURL_METHOD_DELETE && i != SURL_ANSWER_WAIT) {
@@ -126,13 +124,13 @@ const surl_response * __fastcall__ surl_start_request(const char method, char *u
   } else if (method == SURL_METHOD_STREAM_AV && i == SURL_ANSWER_WAIT) {
     goto ret_100;
   } else if (method == SURL_METHOD_GETTIME && i == SURL_ANSWER_TIME) {
-    resp->code = 200;
-    return resp;
+    resp.code = 200;
+    return &resp;
   } else if (method == SURL_METHOD_PING) {
     if (i == SURL_ANSWER_PONG) {
       simple_serial_putc(SURL_CLIENT_READY);
-      resp->code = simple_serial_getc();
-      return resp;
+      resp.code = simple_serial_getc();
+      return &resp;
     } else {
       goto ret_508;
     }
@@ -141,52 +139,49 @@ const surl_response * __fastcall__ surl_start_request(const char method, char *u
   }
 
   surl_read_response_header();
-  return resp;
+  return &resp;
 
 ret_100:
-  resp->code = 100;
-  return resp;
+  resp.code = 100;
+  return &resp;
 ret_508:
-  resp->code = 508;
-  return resp;
+  resp.code = 508;
+  return &resp;
 }
 
 void __fastcall__ surl_read_response_header(void) {
-  if (resp->content_type) {
-    free(resp->content_type);
+  if (resp.content_type) {
+    free(resp.content_type);
   }
 
-  surl_read_with_barrier((char *)resp, 10);
+  surl_read_with_barrier((char *)&resp, 10);
 
 /* coverity[var_assign] */
-  resp->size = ntohl(resp->size);
+  resp.size = ntohl(resp.size);
 /* coverity[var_assign] */
-  resp->code = ntohs(resp->code);
+  resp.code = ntohs(resp.code);
 /* coverity[var_assign] */
-  resp->header_size = ntohs(resp->header_size);
+  resp.header_size = ntohs(resp.header_size);
 /* coverity[var_assign] */
-  resp->content_type_size = ntohs(resp->content_type_size);
+  resp.content_type_size = ntohs(resp.content_type_size);
   /* Includes the zero byte */
 
-  resp->content_type = malloc0(resp->content_type_size);
+  resp.content_type = malloc0(resp.content_type_size);
 
-  surl_read_with_barrier(resp->content_type, resp->content_type_size);
+  surl_read_with_barrier(resp.content_type, resp.content_type_size);
 }
 
 char __fastcall__ surl_response_ok(void) {
-  return resp != NULL && resp->code >= 200 && resp->code < 300;
+  return resp.code >= 200 && resp.code < 300;
 }
 
 
 int __fastcall__ surl_response_code(void) {
-  return resp != NULL ? resp->code : 504;
+  return resp.code;
 }
 
 const char * __fastcall__ surl_content_type(void) {
-  if (resp) {
-    return resp->content_type;
-  }
-  return NULL;
+  return resp.content_type;
 }
 
 #ifndef __CC65__
