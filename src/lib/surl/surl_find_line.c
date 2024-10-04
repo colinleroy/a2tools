@@ -38,8 +38,7 @@ int __fastcall__ surl_find_line(char *buffer, size_t max_len, char *search_str) 
   res_len = htons(max_len);
   simple_serial_putc(SURL_CMD_FIND);
   simple_serial_write((char *)&res_len, 2);
-  simple_serial_puts(search_str);
-  simple_serial_putc('\n');
+  simple_serial_puts_nl(search_str);
 
   r = simple_serial_getc();
   if (r == SURL_ERROR_NOT_FOUND) {

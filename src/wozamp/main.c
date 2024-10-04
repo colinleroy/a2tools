@@ -295,8 +295,7 @@ static int open_url(char *url, char *filename) {
 
   //cputs("Spc:pause, Esc:stop, Left/Right:fwd/rew");
   surl_start_request(NULL, 0, url, SURL_METHOD_STREAM_AUDIO);
-  simple_serial_write(translit_charset, strlen(translit_charset));
-  simple_serial_putc('\n');
+  simple_serial_puts_nl(translit_charset);
   simple_serial_putc(monochrome);
   simple_serial_putc(HGR_SCALE_MIXHGR);
 

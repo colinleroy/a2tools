@@ -180,6 +180,11 @@ void __fastcall__ simple_serial_puts(const char *buf) {
   }
 }
 
+void __fastcall__ simple_serial_puts_nl(const char *buf) {
+  simple_serial_puts(buf);
+  simple_serial_putc('\n');
+}
+
 void __fastcall__ simple_serial_read(char *ptr, size_t nmemb) {
   static char *cur;
   static char *end;

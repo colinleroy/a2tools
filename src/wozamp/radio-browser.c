@@ -168,8 +168,7 @@ static void play_url(char *url) {
   clrscr();
 
   surl_start_request(NULL, 0, url, SURL_METHOD_STREAM_AUDIO);
-  simple_serial_write(translit_charset, strlen(translit_charset));
-  simple_serial_putc('\n');
+  simple_serial_puts_nl(translit_charset);
   simple_serial_putc(monochrome);
   simple_serial_putc(HGR_SCALE_MIXHGR);
 

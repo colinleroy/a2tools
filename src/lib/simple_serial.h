@@ -100,6 +100,7 @@ char * __fastcall__ simple_serial_gets(char *out, size_t size);
 
 /* Output */
 void __fastcall__ simple_serial_puts(const char *buf);
+void __fastcall__ simple_serial_puts_nl(const char *buf);
 void __fastcall__ simple_serial_write(const char *ptr, size_t nmemb);
 
 void simple_serial_printf(const char* format, ...);

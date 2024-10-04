@@ -106,7 +106,7 @@ send_again:
     /* Set description */
     int len;
     char *body = malloc0(1536);
-    snprintf(body, 1536, "S|description|"TRANSLITCMD"|%s\n%s\n",
+    snprintf(body, 1536, "S|description|"TRANSLITCMD"|%s\n%s",
                           translit_charset,
                           description);
 
@@ -154,6 +154,9 @@ signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medi
     n_options = toot_poll->options_count;
 
     extra_buf = malloc0(768);
+    /* Doing real JSON here because the object is too complicated to
+     * transform. This means no translit :(
+     */
     snprintf(extra_buf, 768, "O|poll\n{"
                              "\"expires_in\": %s,"
                              "\"multiple\": %s,"
