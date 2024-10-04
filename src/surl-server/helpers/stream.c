@@ -594,7 +594,7 @@ int skip_secs (unsigned char c) {
   return s;
 }
 
-int surl_stream_audio(char *url, char *translit, char monochrome, enum HeightScale scale) {
+int surl_stream_audio(char *url, char *translit, char monochrome, HGRScale scale) {
   int num = 0;
   unsigned char c;
   size_t cur = 0;
@@ -1638,7 +1638,7 @@ close_last:
   return NULL;
 }
 
-int surl_stream_audio_video(char *url, char *translit, char monochrome, char subtitles, char *subtitles_url, char size) {
+int surl_stream_audio_video(char *url, char *translit, char monochrome, SubtitlesMode subtitles, char *subtitles_url, HGRScale size) {
   int j;
   int cancelled = 0, playback_stop = 0;
   /* Control vars */

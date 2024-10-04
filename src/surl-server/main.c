@@ -415,7 +415,7 @@ new_req:
     while (1) {
       size_t to_send;
       char *param;
-      char striphtml = 0;
+      SurlHtmlStripLevel striphtml = 0;
       char *translit = NULL;
       unsigned short size;
       size_t l;
@@ -490,7 +490,7 @@ new_req:
            *        char: scale (full / small / mixhgr)
            */
           char monochrome = simple_serial_getc();
-          enum HeightScale scale = simple_serial_getc();
+          HGRScale scale = simple_serial_getc();
           printf("RESP: converting to %s HGR (%d)\n", monochrome?"monochrome":"color", scale);
           response->hgr_buf = sdl_to_hgr(
               dump_response_to_file(response->buffer, response->size),
@@ -1329,9 +1329,9 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
   } else if (method == SURL_METHOD_STREAM_AV) {
     char *translit;
     char monochrome;
-    char subtitles;
+    SubtitlesMode subtitles;
     char *subtitles_url = NULL;
-    char size;
+    HGRScale size;
 
     simple_serial_putc(SURL_ANSWER_WAIT);
     simple_serial_gets(reqbuf, BUFSIZE);
@@ -1360,7 +1360,7 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
   } else if (method == SURL_METHOD_STREAM_AUDIO) {
     char *translit;
     char monochrome;
-    enum HeightScale scale;
+    HGRScale scale;
     simple_serial_putc(SURL_ANSWER_WAIT);
     simple_serial_gets(reqbuf, BUFSIZE);
     if (strchr(reqbuf, '\n'))
