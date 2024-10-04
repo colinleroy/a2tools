@@ -158,14 +158,15 @@ ui_base:          .byte "Serial connection",$0D,$0A,$0D,$0A
 
 ;Fixme put that where it belongs
 ;void _switch_text(void)
-_switch_text:
+.proc _switch_text: near
         bit     $C054
         bit     $C051
         bit     $C056
         rts
+.endproc
 
 ;void simple_serial_configure(void);
-_simple_serial_configure:
+.proc _simple_serial_configure: near
         jsr     _switch_text
         lda     #00
         jsr     pusha
@@ -412,3 +413,4 @@ _simple_serial_configure:
 :       lda     #MAX_SPEED_IDX
 :       sta     printer_speed_idx
         jmp     @update_ui
+.endproc

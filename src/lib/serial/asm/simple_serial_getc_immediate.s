@@ -31,7 +31,7 @@
         .endif
 
 ;int __fastcall__ simple_serial_getc_immediate(void) {
-_simple_serial_getc_immediate:
+.proc _simple_serial_getc_immediate: near
         lda     #<tmp2
         ldx     #>tmp2
         jsr     _ser_get
@@ -44,3 +44,4 @@ no_char:
         lda     #$FF
         tax
         rts
+.endproc

@@ -19,7 +19,7 @@
         .segment "LOWCODE"
         .endif
 
-_surl_read_with_barrier:
+.proc _surl_read_with_barrier: near
         php
         sei
         sta     ptr3            ; Store nmemb
@@ -65,3 +65,4 @@ done:
 
         plp
         rts
+.endproc

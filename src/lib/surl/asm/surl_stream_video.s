@@ -59,7 +59,7 @@ page2_addr_ptr= _zp10
 page          = _zp6
 last_offset   = _zp7
 
-_surl_stream_video:
+.proc _surl_stream_video: near
         php
         sei                     ; Disable all interrupts
 
@@ -302,6 +302,7 @@ cleanup:
         lda     #$00
         tax
         rts
+.endproc
 
         .data
 

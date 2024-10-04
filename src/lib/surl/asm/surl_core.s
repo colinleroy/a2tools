@@ -66,7 +66,7 @@ ua_hdr:           .asciiz "User-Agent: "
         .endif
 
 ;char surl_connect_proxy(void)
-_surl_connect_proxy:
+.proc _surl_connect_proxy: near
         lda       proxy_opened
         bne       @connect_ok
 
@@ -95,12 +95,14 @@ _surl_connect_proxy:
         lda       #$01
         sta       proxy_opened
         jmp       return0
+.endproc
 
 ;void surl_disconnect_proxy(void)
-_surl_disconnect_proxy:
+.proc _surl_disconnect_proxy: near
         lda       #$00
         sta       proxy_opened
         jmp       _simple_serial_close
+.endproc
 
 set_code_return_response:
         sta       _resp + SURL_RESPONSE::CODE
@@ -121,7 +123,7 @@ free_content_type:
 :       rts
 
 ;const surl_response * __fastcall__ surl_start_request(char **headers, unsigned char n_headers, char *url, const char method)
-_surl_start_request:
+.proc _surl_start_request: near
         ; Save method
         jsr       pusha
 
@@ -298,8 +300,9 @@ _surl_start_request:
         jmp       set_code_return_response
 
         brk       ; We shouldn't be there
+.endproc
 
-_surl_read_response_header:
+.proc _surl_read_response_header: near
         jsr       free_content_type
 
         jsr       load_response_ptr
@@ -346,8 +349,9 @@ _surl_read_response_header:
         lda       _resp + SURL_RESPONSE::CONTENT_TYPE_SIZE
         ldx       _resp + SURL_RESPONSE::CONTENT_TYPE_SIZE+1
         jmp       _surl_read_with_barrier
+.endproc
 
-_surl_response_ok:
+.proc _surl_response_ok: near
         jsr       _surl_response_code
         jsr       pushax
         lda       #<100
@@ -363,16 +367,19 @@ _surl_response_ok:
         lda       #0
         tax
         rts
+.endproc
 
-_surl_response_code:
+.proc _surl_response_code: near
         lda       _resp + SURL_RESPONSE::CODE
         ldx       _resp + SURL_RESPONSE::CODE+1
         rts
+.endproc
 
-_surl_content_type:
+.proc _surl_content_type: near
         lda       _resp + SURL_RESPONSE::CONTENT_TYPE
         ldx       _resp + SURL_RESPONSE::CONTENT_TYPE+1
         rts
+.endproc
 
         .bss
 

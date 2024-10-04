@@ -31,7 +31,7 @@
         .endif
 
 ;void __fastcall__ simple_serial_read(char *ptr, size_t nmemb) {
-_simple_serial_read:
+.proc _simple_serial_read: near
         jsr     simple_serial_compute_ptr_end
 
         lda     #$00
@@ -58,3 +58,4 @@ check_bound:
         bne     read_again_axok
 
         rts
+.endproc
