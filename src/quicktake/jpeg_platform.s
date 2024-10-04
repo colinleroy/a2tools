@@ -329,7 +329,7 @@ continue3:
         beq     inc_cache_high2
 
 continue4:
-:       cmp     #$00
+        cmp     #$00
         beq     out
 
         ; Stuff back chars

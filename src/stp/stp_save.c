@@ -76,17 +76,18 @@ char *cleanup_filename(char *in) {
   return in;
 }
 
-int stp_save_dialog(char *url, const surl_response *resp, char *out_dir) {
+int stp_save_dialog(char *url, char *out_dir) {
   char *filename = strdup(strrchr(url, '/') + 1);
   int r;
   char free_out_dir = (out_dir == NULL);
+  extern surl_response resp;
 
   clrzone(0, 2, NUMCOLS - 1, 2 + PAGE_HEIGHT);
   gotoxy(0, 4);
   cprintf("%s\r\n"
           "%s, %lu bytes\r\n"
           "\r\n"
-          "Save to: ", filename, resp->content_type ? resp->content_type : "", resp->size);
+          "Save to: ", filename, resp.content_type ? resp.content_type : "", resp.size);
 
   if (!out_dir) {
     out_dir = file_select(wherex(), wherey(), NUMCOLS - 1, 17, 1, "Select destination directory");
@@ -99,7 +100,7 @@ int stp_save_dialog(char *url, const surl_response *resp, char *out_dir) {
     cprintf("%s", out_dir);
   }
 
-  r = stp_save(filename, out_dir, resp);
+  r = stp_save(filename, out_dir);
 
   free(filename);
   if (free_out_dir)
@@ -127,7 +128,7 @@ static char cancel_transfer(void) {
 #define SECTORS_PER_TRACK (TRACK_SIZE/SECTOR_SIZE)
 #define BLOCKS_PER_TRACK (TRACK_SIZE/PRODOS_BLOCK_SIZE)
 
-static int stp_write_disk(const surl_response *resp, char *out_dir, char prodos_order) {
+static int stp_write_disk(char *out_dir, char prodos_order) {
 #ifdef __CC65__
   char dev;
   dhandle_t dev_handle;
@@ -135,7 +136,8 @@ static int stp_write_disk(const surl_response *resp, char *out_dir, char prodos_
   uint16 cur_block = 0;
   uint8 cur_sector, i;
   char *data = NULL, *cur_data;
-  uint16 num_blocks = (resp->size / PRODOS_BLOCK_SIZE);
+  extern surl_response resp;
+  uint16 num_blocks = (resp.size / PRODOS_BLOCK_SIZE);
   char dos_sector_map[16] = {0x0, 0xE, 0xD, 0xC, 0xB, 0xA, 0x9, 0x8,
                              0x7, 0x6, 0x5, 0x4, 0x3, 0x2, 0x1, 0xF};
 
@@ -237,7 +239,8 @@ err_out_no_close:
 #endif
 }
 
-int stp_save(char *full_filename, char *out_dir, const surl_response *resp) {
+int stp_save(char *full_filename, char *out_dir) {
+  extern surl_response resp;
   FILE *fp = NULL;
   char *data = NULL;
   char *filename;
@@ -269,7 +272,7 @@ int stp_save(char *full_filename, char *out_dir, const surl_response *resp) {
   is_prodos_disk = !strcasecmp(filetype, "PO");
   is_dos_disk = !strcasecmp(filetype, "DSK");
   if (is_prodos_disk || is_dos_disk) {
-    char prodos = is_prodos_disk || resp->size != ((uint32)PRODOS_BLOCK_SIZE * 280U);
+    char prodos = is_prodos_disk || resp.size != ((uint32)PRODOS_BLOCK_SIZE * 280U);
     free(filename);
     gotoxy(0, 14);
     cprintf("Detected disk image with %s sector order.\r\n", prodos ? "ProDOS":"DOS3.3");
@@ -278,7 +281,7 @@ int stp_save(char *full_filename, char *out_dir, const surl_response *resp) {
       return -1;
     }
     clrzone(0, 14, NUMCOLS - 1, 14);
-    return stp_write_disk(resp, out_dir, prodos);
+    return stp_write_disk(out_dir, prodos);
   } else if (!strcasecmp(filetype, "TXT")) {
     _filetype = PRODOS_T_TXT;
     _auxtype  = PRODOS_AUX_T_TXT_SEQ;
@@ -356,11 +359,11 @@ int stp_save(char *full_filename, char *out_dir, const surl_response *resp) {
     goto err_out;
   }
 
-  progress_bar(0, 15, NUMCOLS - 1, 0, resp->size);
+  progress_bar(0, 15, NUMCOLS - 1, 0, resp.size);
   do {
     size_t bytes_to_read = buf_size;
-    if (resp->size - total < (uint32)buf_size)
-      bytes_to_read = (uint16)(resp->size - total);
+    if (resp.size - total < (uint32)buf_size)
+      bytes_to_read = (uint16)(resp.size - total);
 
     clrzone(0,14, NUMCOLS - 1, 14);
     gotoxy(0, 14);
@@ -368,11 +371,11 @@ int stp_save(char *full_filename, char *out_dir, const surl_response *resp) {
 
     r = surl_receive_bindata(data, bytes_to_read, 1);
 
-    progress_bar(0, 15, NUMCOLS - 1, total + (bytes_to_read / 2), resp->size);
+    progress_bar(0, 15, NUMCOLS - 1, total + (bytes_to_read / 2), resp.size);
     clrzone(0,14, NUMCOLS - 1, 14);
     gotoxy(0, 14);
     total += r;
-    cprintf("Saving %lu/%lu bytes...", total, resp->size);
+    cprintf("Saving %lu/%lu bytes...", total, resp.size);
 
     if (cancel_transfer()) {
       had_error = 1;
@@ -387,7 +390,7 @@ int stp_save(char *full_filename, char *out_dir, const surl_response *resp) {
       goto err_out;
     }
 
-    progress_bar(0, 15, NUMCOLS - 1, total, resp->size);
+    progress_bar(0, 15, NUMCOLS - 1, total, resp.size);
   } while (r > 0);
 
 err_out:

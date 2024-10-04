@@ -60,28 +60,29 @@ extern char **display_lines;
 static void get_all(const char *url, char **lines, int n_lines) {
   int i, r;
   char *out_dir;
+  extern surl_response resp;
+
   if (lines == NULL || (out_dir = stp_confirm_save_all()) == NULL) {
     return;
   }
   for (i = 0; i < n_lines; i++) {
-    const surl_response *resp = NULL;
     char *cur_url = strdup(url);
     cur_url = stp_url_enter(cur_url, lines[i]);
     stp_print_header(display_lines[i], URL_ADD);
-    resp = surl_start_request(NULL, 0, cur_url, SURL_METHOD_GET);
+    surl_start_request(NULL, 0, cur_url, SURL_METHOD_GET);
 
-    stp_print_result(resp);
+    stp_print_result();
 
     gotoxy(0, 2);
 
-    if (resp->size == 0) {
+    if (resp.size == 0) {
       free(cur_url);
       continue;
     }
 
-    if (resp->content_type && strcmp(resp->content_type, "directory")) {
-      r = stp_save_dialog(cur_url, resp, out_dir);
-      stp_print_result(resp);
+    if (resp.content_type && strcmp(resp.content_type, "directory")) {
+      r = stp_save_dialog(cur_url, out_dir);
+      stp_print_result();
     } else {
       r = -1;
     }
@@ -111,25 +112,21 @@ void stp_print_footer(void) {
 #endif
 }
 
-void stp_print_result(const surl_response *response) {
+void stp_print_result(void) {
+  extern surl_response resp;
   gotoxy(0, 20);
   chline(NUMCOLS);
   clrzone(0, 21, NUMCOLS - 1, 21);
   gotoxy(0, 21);
-  if (response == NULL) {
-    cputs("Unknown request error.");
-  } else {
-    cprintf("Response code %d - %lu bytes",
-            response->code,
-            response->size);
-  }
+  cprintf("Response code %d - %lu bytes",
+          surl_response_code(),
+          resp.size);
 }
 
 int main(void) {
   char *url;
   char c, l;
   char full_update = 1;
-  const surl_response *resp;
 
 #ifdef __APPLE2ENH__
   videomode(VIDEOMODE_80COL);
@@ -153,13 +150,13 @@ int main(void) {
   runtime_once_clean();
 
   while(1) {
-    switch (stp_get_data(url, &resp)) {
+    switch (stp_get_data(url)) {
       case KEYBOARD_INPUT:
         goto keyb_input;
       case SAVE_DIALOG:
-        stp_save_dialog(url, resp, NULL);
+        stp_save_dialog(url, NULL);
         clrzone(0, PAGE_BEGIN, NUMCOLS - 1, PAGE_BEGIN + PAGE_HEIGHT);
-        stp_print_result(resp);
+        stp_print_result();
         goto up_dir;
       case UPDATE_LIST:
       default:

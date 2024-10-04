@@ -36,34 +36,31 @@
 #endif
 
 void __fastcall__ surl_ping(void) {
-  const surl_response *resp;
+  int response_code;
 
 try_again:
   clrscr();
   cputs("Establishing serial connection... ");
-  resp = surl_start_request(NULL, 0, "ping://", SURL_METHOD_PING);
-  if (resp->code != SURL_PROTOCOL_VERSION) {
-    if (resp->code == 404) {
+  surl_start_request(NULL, 0, "ping://", SURL_METHOD_PING);
+  response_code = surl_response_code();
+  if (response_code != SURL_PROTOCOL_VERSION) {
+    if (response_code == SURL_ERR_PROTOCOL_ERROR) {
       simple_serial_flush();
       goto try_again;
     }
     cputs("\r\n\r\n");
-    switch(resp->code) {
-      case 504: 
+    switch(response_code) {
+      case SURL_ERR_TIMEOUT:
         cputs("Timeout");
         break;
-      case 600:
+      case SURL_ERR_PROXY_NOT_CONNECTED:
         cputs("Can not open serial port");
         break;
       default:
-        if (resp->code != SURL_PROTOCOL_VERSION) {
-          cputs("surl-server Protocol ");
-          citoa(SURL_PROTOCOL_VERSION);
-          cputs(" required");
-        } else {
-          cputs("Unknown error ");
-          citoa(resp->code);
-        }
+        cputs("surl-server Protocol ");
+        citoa(SURL_PROTOCOL_VERSION);
+        cputs(" required, got ");
+        citoa(response_code);
     }
     cputs(". Press any key to try again or C to configure.\r\n");
 

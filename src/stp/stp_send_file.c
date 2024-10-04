@@ -66,7 +66,6 @@ void stp_send_file(char *remote_dir, char recursive) {
   static char *filename;
   static char *path, *dir;
   static char *remote_filename;
-  static const surl_response *resp;
   static int r = 0;
   static char start_y = 3;
   static struct stat stbuf;
@@ -141,8 +140,8 @@ read_next_ent:
 
   progress_bar(0, start_y + 3, NUMCOLS, 0, stbuf.st_size);
 
-  resp = surl_start_request(NULL, 0, remote_filename, SURL_METHOD_PUT);
-  if (resp->code != 100) {
+   surl_start_request(NULL, 0, remote_filename, SURL_METHOD_PUT);
+  if (surl_response_code() != 100) {
     cprintf("Bad response.");
     cgetc();
     goto err_out;
@@ -180,7 +179,7 @@ finished:
   clrzone(0, 2, NUMCOLS - 1, 2 + PAGE_HEIGHT);
   gotoxy(0, start_y);
   cprintf("Sent %lu bytes.\r\n", total);
-  cprintf("File %s sent, response code: %d\r\n", filename, resp->code);
+  cprintf("File %s sent, response code: %d\r\n", filename, surl_response_code());
 
 err_out:
   if (fp)

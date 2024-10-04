@@ -52,16 +52,15 @@ void stp_delete_dialog(char *url, char *filename) {
 
 void stp_delete(char *url, char *filename) {
   char *full_url;
-  const surl_response *resp = NULL;
 
   full_url = malloc(strlen(url) + 1 + strlen(filename) + 1);
   sprintf(full_url, "%s/%s", url, filename);
 
-  resp = surl_start_request(NULL, 0, full_url, SURL_METHOD_DELETE);
+  surl_start_request(NULL, 0, full_url, SURL_METHOD_DELETE);
 
   free(full_url);
 
-  stp_print_result(resp);
+  stp_print_result();
 
   gotoxy(0, 17);
   cprintf("Done. hit a key to continue.      ");

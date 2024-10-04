@@ -193,7 +193,9 @@ up:
         goto err_bell;
       } else {
         filename = malloc0(FILENAME_MAX+1);
+        #ifndef __CC65__
         #pragma GCC diagnostic ignored "-Wformat-truncation"
+        #endif
         snprintf(filename, FILENAME_MAX, "%s%s%s", last_dir, (last_dir[0] != '\0' ? "/":""),
                  file_entries[sel].name);
         goto out;

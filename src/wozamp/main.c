@@ -182,16 +182,14 @@ void show_metadata (char *data) {
   cputs(value);
 }
 
-void stp_print_result(const surl_response *response) {
+void stp_print_result() {
   gotoxy(0, 20);
   chline(NUMCOLS);
   clrzone(0, 21, NUMCOLS - 1, 21);
 
-  if (response == NULL) {
-    cputs("Unknown request error.");
-  } else if (!surl_response_ok()) {
+  if (!surl_response_ok()) {
     cputs("Error: Response code ");
-    citoa(response->code);
+    citoa(surl_response_code());
   }
 }
 
@@ -397,7 +395,6 @@ out:
 #endif
 
 char *play_directory(char *url) {
-  const surl_response *resp;
   int dir_index;
   int cancelled = 0;
 
@@ -407,7 +404,7 @@ char *play_directory(char *url) {
     url = stp_url_enter(url, lines[dir_index]);
     stp_print_header(display_lines[dir_index], URL_ADD);
 
-    r = stp_get_data(url, &resp);
+    r = stp_get_data(url);
 
     cancelled = 0;
     if (!surl_response_ok()) {
@@ -423,7 +420,7 @@ char *play_directory(char *url) {
 
     /* Fetch original list back */
     url = stp_url_up(url);
-    stp_get_data(url, &resp);
+    stp_get_data(url);
 
     if (!surl_response_ok()) {
       cancelled = 1;
@@ -502,7 +499,6 @@ static void do_nav(char *base_url) {
   char full_update = 1;
   char c, l;
   char *url;
-  const surl_response *resp;
   char *prev_filename = NULL;
 
   runtime_once_clean();
@@ -516,7 +512,7 @@ static void do_nav(char *base_url) {
       free(prev_filename);
     }
     prev_filename = (cur_line < num_lines ? strdup(display_lines[cur_line]) : NULL);
-    switch (stp_get_data(url, &resp)) {
+    switch (stp_get_data(url)) {
       case KEYBOARD_INPUT:
         goto keyb_input;
       case SAVE_DIALOG:

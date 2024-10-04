@@ -119,7 +119,6 @@ static char *prepare_oauth_post(char *token) {
 }
 
 int do_login(void) {
-  const surl_response *resp;
   char *authorize_url;
   char *login_url;
   char *oauth_url;
@@ -133,7 +132,6 @@ int do_login(void) {
   char login_required = 0;
   char oauth_required = 0;
 
-  resp = NULL;
   body = NULL;
 
   authorize_url = malloc0(BUF_SIZE);
@@ -153,11 +151,11 @@ int do_login(void) {
 
 /* First request to get authorization */
   dputs("GET "OAUTH_URL"... ");
-  resp = surl_start_request(NULL, 0, authorize_url, SURL_METHOD_GET);
+  surl_start_request(NULL, 0, authorize_url, SURL_METHOD_GET);
 
   body = malloc0(buf_size + 1);
 
-  if (resp->code == 200) {
+  if (surl_response_ok()) {
     dputs("OK.\r\n");
   } else {
     dputs("Error.\r\n");
@@ -170,7 +168,6 @@ int do_login(void) {
   } else {
     dputs("Login still valid.\r\n");
   }
-  resp = NULL;
 
 /* Get authorization done, password if needed */
 
@@ -195,7 +192,7 @@ password_again:
     free(token);
 
     dputs("POST "LOGIN_URL"... ");
-    resp = surl_start_request(NULL, 0, login_url, SURL_METHOD_POST);
+    surl_start_request(NULL, 0, login_url, SURL_METHOD_POST);
 
     surl_send_data_params((uint32)post_len, SURL_DATA_X_WWW_FORM_URLENCODED_HELP);
     surl_send_data(post, post_len);
@@ -203,7 +200,7 @@ password_again:
 
     surl_read_response_header();
 
-    if (resp->code != 200) {
+    if (!surl_response_ok()) {
       dputs("Invalid response to POST\r\n");
       goto err_out;
     } else {
@@ -221,7 +218,6 @@ password_again:
       otp_required = 1;
       dputs("OTP required.\r\n");
     }
-    resp = NULL;
 
   /* Third request for OTP */
     if (otp_required) {
@@ -241,7 +237,7 @@ otp_again:
       free(token);
 
       dputs("POST "LOGIN_URL"... ");
-      resp = surl_start_request(NULL, 0, login_url, SURL_METHOD_POST);
+      surl_start_request(NULL, 0, login_url, SURL_METHOD_POST);
 
       surl_send_data_params((uint32)post_len, SURL_DATA_X_WWW_FORM_URLENCODED_HELP);
       surl_send_data(post, post_len);
@@ -249,7 +245,7 @@ otp_again:
 
       surl_read_response_header();
 
-      if (resp->code != 200) {
+      if (!surl_response_ok()) {
         dputs("Invalid response to POST\r\n");
         goto err_out;
       } else {
@@ -285,7 +281,7 @@ otp_again:
     free(token);
 
     dputs("POST "OAUTH_URL"... ");
-    resp = surl_start_request(NULL, 0, oauth_url, SURL_METHOD_POST);
+    surl_start_request(NULL, 0, oauth_url, SURL_METHOD_POST);
 
     surl_send_data_params((uint32)post_len, SURL_DATA_X_WWW_FORM_URLENCODED_HELP);
     surl_send_data(post, post_len);
@@ -293,7 +289,7 @@ otp_again:
 
     surl_read_response_header();
 
-    if (resp->code != 200) {
+    if (!surl_response_ok()) {
       dputs("Invalid response to POST\r\n");
       goto err_out;
     } else {
@@ -338,7 +334,6 @@ static char *prepare_app_register_post(void) {
 }
 
 int register_app(void) {
-  const surl_response *resp;
   char *post;
   char *reg_url;
   size_t post_len;
@@ -353,7 +348,7 @@ int register_app(void) {
   sprintf(reg_url, "%s%s", instance_url, REGISTER_URL);
 
   dputs("POST "REGISTER_URL"... ");
-  resp = surl_start_request(NULL, 0, reg_url, SURL_METHOD_POST);
+  surl_start_request(NULL, 0, reg_url, SURL_METHOD_POST);
   free(reg_url);
 
   surl_send_data_params((uint32)post_len, SURL_DATA_X_WWW_FORM_URLENCODED_HELP);
@@ -362,8 +357,8 @@ int register_app(void) {
 
   surl_read_response_header();
 
-  if (resp->code != 200) {
-    cprintf("Invalid response %d to POST", resp->code);
+  if (!surl_response_ok()) {
+    cprintf("Invalid response %d to POST", surl_response_code());
     dputs("\r\n"); /* Scroll if needed */
     goto err_out;
   }
@@ -411,7 +406,6 @@ static char *prepare_oauth_token_post(void) {
 }
 
 int get_oauth_token(void) {
-  const surl_response *resp;
   char *oauth_url;
   char *post;
   size_t post_len;
@@ -426,7 +420,7 @@ int get_oauth_token(void) {
 
 /* First request to get authorization */
   dputs("POST "OAUTH_URL"... ");
-  resp = surl_start_request(NULL, 0, oauth_url, SURL_METHOD_POST);
+  surl_start_request(NULL, 0, oauth_url, SURL_METHOD_POST);
 
   post = prepare_oauth_token_post();
   post_len = strlen(post);
