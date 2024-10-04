@@ -111,6 +111,7 @@ static int socket_connect(int sock, char *remote_url) {
     if (cur->ai_family == AF_INET6) {
       ipv6 = (struct sockaddr_in6 *) cur->ai_addr;
     }
+    cur = cur->ai_next;
   }
 
   if (ipv4 != NULL) {
