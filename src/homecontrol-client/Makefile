@@ -20,7 +20,6 @@ homectrl_SOURCES := main.c network.c \
 	../lib/dgets.c \
 	../lib/strsplit.c \
 	../lib/strellipsis.c \
-	../lib/surl/surl_core.c \
 	../lib/surl/surl_receive.c \
 	../lib/surl/surl_ping.c
 	
@@ -28,8 +27,9 @@ homectrl_CL65SOURCES = \
 	../lib/serial/asm/simple_serial.s \
 	../lib/serial/asm/simple_serial_configure.s \
 	../lib/serial/asm/simple_serial_io.s \
-	../lib/surl/surl_read_with_barrier.s \
 	$(serial_hw_SOURCES) \
+	../lib/surl/asm/surl_core.s \
+	../lib/surl/asm/surl_read_with_barrier.s \
 	../lib/asm/scrollwindow.s \
 	../lib/asm/path_helper.s \
 	../lib/asm/clrzone.s \
@@ -47,6 +47,7 @@ homectrl_CL65SOURCES = \
 homectrl_GCCSOURCES = \
 	../lib/serial/c/simple_serial.c \
 	../lib/serial/c/simple_serial_io.c \
+	../lib/surl/c/surl_core.c \
 	../lib/c/scrollwindow.c \
 	../lib/c/malloc0.c \
 	../lib/c/path_helper.c \
@@ -54,14 +55,14 @@ homectrl_GCCSOURCES = \
 	../lib/strtrim.c
 
 grphview_SOURCES := graph-viewer.c \
-	../lib/surl/surl_core.c \
 	../lib/surl/surl_receive_lines.c
 	
 grphview_CL65SOURCES = \
 	../lib/serial/asm/simple_serial.s \
 	../lib/serial/asm/simple_serial_io.s \
-	../lib/surl/surl_read_with_barrier.s \
 	$(serial_hw_SOURCES) \
+	../lib/surl/asm/surl_core.s \
+	../lib/surl/asm/surl_read_with_barrier.s \
 	../lib/asm/path_helper.s \
 	../lib/asm/clrzone.s \
 	../lib/asm/malloc0.s \
@@ -72,6 +73,7 @@ grphview_CL65SOURCES = \
 grphview_GCCSOURCES := \
 	../lib/serial/c/simple_serial.c \
 	../lib/serial/c/simple_serial_io.c \
+	../lib/surl/c/surl_core.c \
 	../lib/c/path_helper.c \
 	../lib/c/clrzone.c \
 	../lib/c/malloc0.c \

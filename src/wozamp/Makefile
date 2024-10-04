@@ -43,7 +43,6 @@ wozamp_SOURCES := \
 	config.c \
 	backup_logo.c \
 	$(EMBED_RBROWSER) \
-	../lib/surl/surl_core.c \
 	../lib/surl/surl_receive.c \
 	../lib/surl/surl_ping.c \
 	../lib/realloc_safe.c \
@@ -54,12 +53,13 @@ wozamp_SOURCES := \
 wozamp_CL65SOURCES = \
 	../lib/surl/surl_stream_audio/$(STREAMER_VER).s \
 	../lib/hgr.c \
-	../lib/surl/surl_read_with_barrier.s \
 	../lib/serial/asm/simple_serial.s \
 	../lib/serial/asm/simple_serial_io.s \
 	../lib/serial/asm/simple_serial_configure.s \
 	../lib/serial/$(serial_hw)/common.s \
 	../lib/serial/$(serial_hw)/no_irq.s \
+	../lib/surl/asm/surl_core.s \
+	../lib/surl/asm/surl_read_with_barrier.s \
 	../lib/asm/scrollwindow.s \
 	../lib/asm/path_helper.s \
 	../lib/asm/malloc0.s \
@@ -85,7 +85,6 @@ rbrowser_SOURCES := \
 	radio-browser.c \
 	config.c \
 	backup_logo.c \
-	../lib/surl/surl_core.c \
 	../lib/surl/surl_get_json.c \
 	../lib/dgets.c \
 	../lib/strsplit.c
@@ -93,12 +92,13 @@ rbrowser_SOURCES := \
 rbrowser_CL65SOURCES = \
 	../lib/surl/surl_stream_audio/$(STREAMER_VER).s \
 	../lib/hgr.c \
-	../lib/surl/surl_read_with_barrier.s \
 	../lib/serial/asm/simple_serial.s \
 	../lib/serial/asm/simple_serial_io.s \
 	../lib/serial/$(serial_hw)/common.s \
 	../lib/serial/$(serial_hw)/control.s \
 	../lib/serial/$(serial_hw)/no_irq.s \
+	../lib/surl/asm/surl_core.s \
+	../lib/surl/asm/surl_read_with_barrier.s \
 	../lib/asm/scrollwindow.s \
 	../lib/asm/path_helper.s \
 	../lib/asm/malloc0.s \
@@ -139,11 +139,11 @@ videoplay_SOURCES := \
 	../lib/serial/$(serial_hw)/common.s \
 	../lib/serial/$(serial_hw)/control.s \
 	../lib/serial/$(serial_hw)/no_irq.s \
+	../lib/surl/asm/surl_core.s \
+	../lib/surl/asm/surl_read_with_barrier.s \
 	../lib/asm/scrollwindow.s \
 	../lib/asm/path_helper.s \
 	../lib/asm/malloc0.s \
-	../lib/surl/surl_core.c \
-	../lib/surl/surl_read_with_barrier.s \
 	../lib/fastirq$(iigs_suffix).s \
 	../lib/extrazp.s
 

@@ -23,7 +23,6 @@ SOURCES := stp_main.c stp_list.c stp_save.c stp_send_file.c stp_delete.c \
 	../lib/progress_bar.c \
 	../lib/strsplit.c \
 	../lib/dgets.c \
-	../lib/surl/surl_core.c \
 	../lib/surl/surl_receive.c \
 	../lib/surl/surl_send.c \
 	../lib/surl/surl_set_time.c \
@@ -34,7 +33,8 @@ CL65SOURCES = \
 	../lib/serial/asm/simple_serial.s \
 	../lib/serial/asm/simple_serial_io.s \
 	../lib/serial/asm/simple_serial_configure.s \
-	../lib/surl/surl_read_with_barrier.s \
+	../lib/surl/asm/surl_core.s \
+	../lib/surl/asm/surl_read_with_barrier.s \
 	$(serial_hw_SOURCES) \
 	../lib/asm/scrollwindow.s \
 	../lib/asm/path_helper.s \
@@ -55,6 +55,7 @@ CL65SOURCES = \
 GCC_SOURCES = \
 	../lib/serial/c/simple_serial.c \
 	../lib/serial/c/simple_serial_io.c \
+	../lib/surl/c/surl_core.c \
 	../lib/c/scrollwindow.c \
 	../lib/c/path_helper.c \
 	../lib/c/malloc0.c \
