@@ -100,4 +100,9 @@ typedef enum {
   SURL_VIDEO_PORT_NOK = 1
 } VideoPortStatus;
 
+typedef enum {
+  SURL_ERR_TIMEOUT             = 504,
+  SURL_ERR_PROTOCOL_ERROR      = 508,
+  SURL_ERR_PROXY_NOT_CONNECTED = 600
+} SurlHTTPCodes;
 #endif

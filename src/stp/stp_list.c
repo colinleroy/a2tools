@@ -387,8 +387,9 @@ void stp_free_data(void) {
 }
 
 extern char center_x;
-int stp_get_data(char *url, const surl_response **resp) {
-  *resp = NULL;
+int stp_get_data(char *url) {
+  extern surl_response resp;
+
   num_lines = 0;
   cur_line = 0;
   cur_display_line = 0;
@@ -399,15 +400,15 @@ int stp_get_data(char *url, const surl_response **resp) {
   gotoxy(center_x, 12);
   cputs("Loading...   ");
 
-  *resp = surl_start_request(NULL, 0, url, SURL_METHOD_GET);
+  surl_start_request(NULL, 0, url, SURL_METHOD_GET);
 
-  stp_print_result(*resp);
+  stp_print_result();
 
   if (!surl_response_ok()) {
     gotoxy(center_x, 12);
     cputs("Bad response.");
     return KEYBOARD_INPUT;
-  } else if ((*resp)->size == 0) {
+  } else if (resp.size == 0) {
     gotoxy(center_x, 12);
     cputs("Empty.       ");
     return KEYBOARD_INPUT;
@@ -415,21 +416,21 @@ int stp_get_data(char *url, const surl_response **resp) {
 
   gotoxy(0, 2);
 
-  if ((*resp)->content_type && strcmp((*resp)->content_type, "directory")) {
+  if (resp.content_type && strcmp(resp.content_type, "directory")) {
     return SAVE_DIALOG;
   } else {
-    if ((*resp)->size > STP_DATA_SIZE-1) {
+    if (resp.size > STP_DATA_SIZE-1) {
       gotoxy(center_x, 18);
       cputs("Not enough memory :-(");
       return KEYBOARD_INPUT;
     }
-    surl_receive_data(data, (*resp)->size);
+    surl_receive_data(data, resp.size);
 
     surl_translit(translit_charset);
     if (surl_response_ok()) {
-      nat_data = malloc((*resp)->size + 1);
+      nat_data = malloc(resp.size + 1);
       if (nat_data) {
-        surl_receive_data(nat_data, (*resp)->size);
+        surl_receive_data(nat_data, resp.size);
       }
     }
   }

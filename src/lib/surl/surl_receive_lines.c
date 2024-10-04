@@ -35,10 +35,10 @@
 static char overwritten_char = '\0';
 static size_t overwritten_offset = 0;
 
-extern surl_response *resp;
+extern surl_response resp;
 
 size_t __fastcall__ surl_receive_lines(char *buffer, size_t max_len) {
-  size_t to_read = min(resp->size - resp->cur_pos, max_len);
+  size_t to_read = min(resp.size - resp.cur_pos, max_len);
   size_t r = 0;
   size_t net_len;
   size_t last_return = 0;
@@ -85,9 +85,9 @@ size_t __fastcall__ surl_receive_lines(char *buffer, size_t max_len) {
   }
 
   buffer[r] = '\0';
-  resp->cur_pos += r;
+  resp.cur_pos += r;
 
-  if (resp->cur_pos == resp->size) {
+  if (resp.cur_pos == resp.size) {
     overwritten_char = '\0';
   }
 
