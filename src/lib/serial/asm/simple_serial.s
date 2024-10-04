@@ -86,18 +86,22 @@ write_mode_str: .asciiz "w"
         .segment "RT_ONCE"
 
 ;char __fastcall__ simple_serial_open_printer(void);
-_simple_serial_open_printer:
+.proc _simple_serial_open_printer: near
         jsr     simple_serial_read_opts
         ldy     #SIMPLE_SERIAL_PARAMS::PRINTER_BAUDRATE
-        bne     simple_serial_open_from_Y
+        jmp     simple_serial_open_direct
+.endproc
 
 ;char __fastcall__ simple_serial_open(void);
-_simple_serial_open:
+.proc _simple_serial_open: near
         ; Get options
         jsr     simple_serial_read_opts
         ; Get speed
         ldy     #SIMPLE_SERIAL_PARAMS::DATA_BAUDRATE
-simple_serial_open_from_Y:
+        jmp     simple_serial_open_direct
+.endproc
+
+.proc simple_serial_open_direct: near
         ; Store speed
         lda     _baudrate
         bne     :+
@@ -150,14 +154,16 @@ simple_serial_open_from_Y:
         jsr     _ser_open
 @simple_serial_open_slot_err:
         rts
+.endproc
 
-simple_serial_read_from_AX:
+.proc simple_serial_read_from_AX: near
         jsr     pushax
         lda     #<read_mode_str
         ldx     #>read_mode_str
         jmp     _simple_serial_settings_io
+.endproc
 
-simple_serial_read_opts:
+.proc simple_serial_read_opts: near
         jsr     _register_start_device
 
         lda     #<simple_serial_ram_settings
@@ -173,17 +179,19 @@ simple_serial_read_opts:
         jsr     simple_serial_read_from_AX
 
 :       jmp     _reopen_start_device
+.endproc
 
 ;char __fastcall__ simple_serial_close(void);
-_simple_serial_close:
+.proc _simple_serial_close: near
         lda     #$00
         sta     _baudrate
         sta     _open_slot
         jsr     _ser_close
         jmp     _ser_uninstall
+.endproc
 
 ;char __fastcall__ simple_serial_settings_io(const char *path, char *mode);
-_simple_serial_settings_io:
+.proc _simple_serial_settings_io: near
         pha
         ; Check mode (and store temporarily in c)
         sta     ptr1
@@ -239,6 +247,7 @@ _simple_serial_settings_io:
 
 @sss_err_open:
         jmp     returnFFFF
+.endproc
 
         .ifdef SURL_TO_LANGCARD
         .segment "LC"
@@ -247,14 +256,14 @@ _simple_serial_settings_io:
         .endif
 
 ;char __fastcall__ simple_serial_getc(void) {
-_simple_serial_getc:
+.proc _simple_serial_getc: near
         jsr     _simple_serial_getc_with_timeout
         cpx     #$FF
         beq     _simple_serial_getc
         rts
-
+.endproc
 ;char __fastcall__ simple_serial_getc_with_timeout(void) {
-_simple_serial_getc_with_timeout:
+.proc _simple_serial_getc_with_timeout: near
         ; Init cycle counter
         lda     #<10000
         sta     ser_timeout_cycles
@@ -306,6 +315,7 @@ _simple_serial_getc_with_timeout:
         lda     c
         ldx     c+1
         rts
+.endproc
 
         .bss
 

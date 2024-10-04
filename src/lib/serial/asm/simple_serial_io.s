@@ -40,18 +40,20 @@
         .endif
 
 ;void __fastcall__ simple_serial_puts(const char *buf) {
-_simple_serial_puts:
+.proc _simple_serial_puts: near
         jsr     pushax
         jsr     _strlen
         jmp     _simple_serial_write
+.endproc
 
 ;void __fastcall__ simple_serial_puts_nl(const char *buf) {
-_simple_serial_puts_nl:
+.proc _simple_serial_puts_nl: near
         jsr       _simple_serial_puts
         lda       #$0A
         jmp       _serial_putc_direct
+.endproc
 
-simple_serial_compute_ptr_end:
+.proc simple_serial_compute_ptr_end: near
         sta     ptr3
         stx     ptr3+1
         jsr     popax
@@ -64,9 +66,10 @@ simple_serial_compute_ptr_end:
         adc     ptr3+1
         sta     ptr3+1
         rts
+.endproc
 
         .ifdef  SIMPLE_SERIAL_DUMP
-_simple_serial_dump:
+.proc _simple_serial_dump: near
         jsr     simple_serial_compute_ptr_end
         lda     #$17            ; SURL_METHOD_DUMP
         jsr     _serial_putc_direct
@@ -87,10 +90,11 @@ _simple_serial_dump:
         jsr     _serial_putc_direct
 
         jmp     write_again     ; Jump to serial_write without recomputing ptr_end
+.endproc
         .endif
 
 ; void __fastcall__ simple_serial_write(const char *ptr, size_t nmemb) {
-_simple_serial_write:
+.proc _simple_serial_write: near
         jsr     simple_serial_compute_ptr_end
 write_again:
         ldy     #$00
@@ -107,9 +111,11 @@ write_again:
         cpx     ptr3+1
         bne     write_again
         rts
+.endproc
 
-_simple_serial_flush:
+.proc _simple_serial_flush: near
         jsr     _simple_serial_getc_with_timeout
         cpx     #$FF
         bne     _simple_serial_flush
         rts
+.endproc
