@@ -56,6 +56,10 @@ int __fastcall__ _strnsplit_int(char in_place, char *in, char split, char **toke
     }
     if (sep) {
       start = ++sep;
+      /* Ignore empty last lines */
+      if (*start == '\0') {
+        break;
+      }
     } else {
       break;
     }

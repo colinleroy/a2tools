@@ -1,6 +1,6 @@
 SURL_PROTOCOL_VERSION       = 20
 
-SURL_METHOD_ABORT           = ('d'|= $80)
+SURL_METHOD_ABORT           = ('d'|$80)
 SURL_METHOD_RAW             = $05
 SURL_METHOD_GET             = $06
 SURL_METHOD_POST            = $07
@@ -67,4 +67,9 @@ SUBTITLES_URL      = 2
 SURL_VIDEO_PORT_OK  = 0
 SURL_VIDEO_PORT_NOK = 1
 
+SURL_HTTP_CONTINUE           = 100
+SURL_HTTP_OK                 = 200
+
+SURL_ERR_TIMEOUT             = 504
+SURL_ERR_PROTOCOL_ERROR      = 508
 SURL_ERR_PROXY_NOT_CONNECTED = 600
