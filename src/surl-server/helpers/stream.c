@@ -96,7 +96,7 @@ static int update_eta(int eta) {
       eta = 0;
     }
   }
-  usleep(1000);
+  usleep(10000);
   simple_serial_putc(eta);
 
   r = simple_serial_getc_with_timeout();
@@ -620,12 +620,12 @@ int surl_stream_audio(char *url, char *translit, char monochrome, HGRScale scale
 
   while(!ready && !stop) {
     int eta;
-    usleep(10000);
     pthread_mutex_lock(&th_data->mutex);
     ready = th_data->data_ready;
     stop = th_data->decoding_end;
     eta = th_data->eta;
     pthread_mutex_unlock(&th_data->mutex);
+    usleep(10000);
     if (update_eta(eta) != 0) {
       stop = 1;
     }
@@ -884,13 +884,13 @@ int surl_stream_video(char *url) {
 
   while(!ready && !stop) {
     int eta;
-    usleep(1000);
     pthread_mutex_lock(&th_data->mutex);
     ready = th_data->data_ready;
     stop = th_data->decoding_end;
     err = th_data->decoding_ret;
     eta = th_data->eta;
     pthread_mutex_unlock(&th_data->mutex);
+    usleep(10000);
     if (update_eta(eta) != 0) {
       stop = 1;
     }
@@ -1680,7 +1680,6 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, Subtitle
   stop = 0;
   while(!ready && !stop) {
     int eta;
-    usleep(1000);
     pthread_mutex_lock(&audio_th_data->mutex);
     pthread_mutex_lock(&video_th_data->mutex);
 
@@ -1694,6 +1693,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, Subtitle
     eta = video_th_data->eta;
     pthread_mutex_unlock(&audio_th_data->mutex);
     pthread_mutex_unlock(&video_th_data->mutex);
+    usleep(10000);
     if (update_eta(eta) != 0) {
       stop = 1;
     }
