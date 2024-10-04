@@ -53,6 +53,7 @@ slowtake_SOURCES := \
 	../lib/hgr_addrs.c \
 	$(debug_SOURCES)
 
+#Fastirq needed, quicktake don't wait on us
 slowtake_CC65SOURCES := \
 	../lib/serial/asm/simple_serial.s \
 	../lib/serial/asm/simple_serial_io.s \
@@ -65,11 +66,11 @@ slowtake_CC65SOURCES := \
 	../lib/scroll.s \
 	../lib/FVTABZ.s \
 	../lib/asm/clrzone.s \
-	../lib/fastirq$(suffix).s \
 	../lib/platform_sleep.s \
 	../lib/extrazp.s \
 	../lib/runtime_once_clean.s \
-	$(serial_hw_SOURCES)
+	$(serial_hw_SOURCES) \
+	../lib/fastirq$(suffix).s \
 
 slowtake_GCCSOURCES := \
 	../lib/serial/c/simple_serial.c \

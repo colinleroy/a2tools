@@ -66,14 +66,14 @@ wozamp_CL65SOURCES = \
 	../lib/dputc.s \
 	../lib/scroll.s \
 	../lib/FVTABZ.s \
-	../lib/fastirq$(suffix).s \
 	../lib/runtime_once_clean.s \
 	../lib/extrazp.s \
 	../lib/asm/clrzone.s \
 	../lib/platform_sleep.s \
 	../lib/citoa.s \
 	../lib/cutoa.s \
-	../lib/cntoabuf.s
+	../lib/cntoabuf.s \
+	#../lib/fastirq$(suffix).s \
 
 wozamp_CLCFLAGS = -t $(CC65_TARGET) -DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER \
 	-DSTP_DATA_SIZE=8192 \

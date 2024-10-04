@@ -59,11 +59,11 @@ woztubes_SOURCES := \
 	../lib/asm/malloc0.s \
 	../lib/surl/surl_ping.c \
 	../lib/surl/surl_get_json.c \
-	../lib/fastirq$(iigs_suffix).s \
 	../lib/extrazp.s \
 	../lib/citoa.s \
 	../lib/cutoa.s \
-	../lib/cntoabuf.s
+	../lib/cntoabuf.s \
+	#../lib/fastirq$(iigs_suffix).s \
 
 ### Warning! some memory tricks happen.
 

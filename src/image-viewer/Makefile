@@ -41,9 +41,9 @@ imgview_CC65SOURCES := \
 	../lib/dputc.s \
 	../lib/scroll.s \
 	../lib/FVTABZ.s \
-	../lib/fastirq$(suffix).s \
 	../lib/extrazp.s \
-	$(serial_hw_SOURCES)
+	$(serial_hw_SOURCES) \
+	#../lib/fastirq$(suffix).s \
 
 imgview_GCCSOURCES := \
 	../lib/serial/c/simple_serial.c \

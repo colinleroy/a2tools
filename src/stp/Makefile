@@ -43,14 +43,14 @@ CL65SOURCES = \
 	../lib/dputc.s \
 	../lib/scroll.s \
 	../lib/FVTABZ.s \
-	../lib/fastirq$(suffix).s \
 	../lib/runtime_once_clean.s \
 	../lib/extrazp.s \
 	../lib/platform_sleep.s \
 	../lib/get_dev_from_path.c \
 	../lib/citoa.s \
 	../lib/cutoa.s \
-	../lib/cntoabuf.s
+	../lib/cntoabuf.s \
+	#../lib/fastirq$(suffix).s \
 
 GCC_SOURCES = \
 	../lib/serial/c/simple_serial.c \
