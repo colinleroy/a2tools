@@ -787,7 +787,7 @@ static int sdl_mono_hgr(SDL_Surface *src, unsigned char *hgr) {
   return 0x2000;
 }
 
-unsigned char *sdl_to_hgr(const char *filename, char monochrome, char save_preview, size_t *len, char bayer_dither, enum HeightScale size) {
+unsigned char *sdl_to_hgr(const char *filename, char monochrome, char save_preview, size_t *len, char bayer_dither, HGRScale size) {
   SDL_Surface *image, *resized;
   int dst_w, dst_h;
   init_base_addrs();

@@ -27,7 +27,7 @@ extern char *surl_user_agent;
 char __fastcall__ surl_connect_proxy(void);
 void surl_disconnect_proxy(void);
 
-const surl_response * __fastcall__ surl_start_request(char **headers, unsigned char n_headers, char *url, const char method);
+const surl_response * __fastcall__ surl_start_request(char **headers, unsigned char n_headers, char *url, const SurlMethod method);
 
 void __fastcall__ surl_response_done(void);
 char __fastcall__ surl_response_ok(void);

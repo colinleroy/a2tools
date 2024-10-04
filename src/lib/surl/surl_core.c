@@ -69,7 +69,7 @@ void surl_disconnect_proxy(void) {
 
 surl_response resp;
 
-const surl_response * __fastcall__ surl_start_request(char **headers, unsigned char n_headers, char *url, const char method) {
+const surl_response * __fastcall__ surl_start_request(char **headers, unsigned char n_headers, char *url, const SurlMethod method) {
   int i;
 
   if (resp.content_type) {
@@ -87,19 +87,16 @@ const surl_response * __fastcall__ surl_start_request(char **headers, unsigned c
   }
 
   simple_serial_putc(method);
-  simple_serial_puts(url);
-  simple_serial_putc('\n');
+  simple_serial_puts_nl(url);
 
   while (n_headers > 0) {
     n_headers--;
-    simple_serial_puts(headers[n_headers]);
-    simple_serial_putc('\n');
+    simple_serial_puts_nl(headers[n_headers]);
   }
 
   if (surl_user_agent) {
     simple_serial_puts("User-Agent: ");
-    simple_serial_puts(surl_user_agent);
-    simple_serial_putc('\n');
+    simple_serial_puts_nl(surl_user_agent);
   }
 
   simple_serial_putc('\n');
@@ -109,41 +106,73 @@ const surl_response * __fastcall__ surl_start_request(char **headers, unsigned c
   if (i == EOF) {
     resp.code = 504;
     return &resp;
-  } else if (method == SURL_METHOD_GET && i != SURL_ANSWER_WAIT) {
-    goto ret_508;
-  } else if (method == SURL_METHOD_DELETE && i != SURL_ANSWER_WAIT) {
-    goto ret_508;
-  } else if (method == SURL_METHOD_RAW && i == SURL_ANSWER_RAW_START) {
-    goto ret_100;
-  } else if (method == SURL_METHOD_STREAM_VIDEO && i == SURL_ANSWER_WAIT) {
-    goto ret_100;
-  } else if (method == SURL_METHOD_STREAM_AUDIO && i == SURL_ANSWER_WAIT) {
-    goto ret_100;
-  } else if (method == SURL_METHOD_STREAM_AV && i == SURL_ANSWER_WAIT) {
-    goto ret_100;
-  } else if (method == SURL_METHOD_GETTIME && i == SURL_ANSWER_TIME) {
-    resp.code = 200;
-    return &resp;
-  } else if (method == SURL_METHOD_PING) {
-    if (i == SURL_ANSWER_PONG) {
-      simple_serial_putc(SURL_CLIENT_READY);
-      resp.code = simple_serial_getc();
-      return &resp;
-    } else {
-      goto ret_508;
+  } else {
+    switch (method) {
+      case SURL_METHOD_RAW:
+        if (i == SURL_ANSWER_RAW_START){
+          goto ret_100;
+        }
+        break;
+
+      case SURL_METHOD_GET:
+      case SURL_METHOD_DELETE:
+        if (i == SURL_ANSWER_WAIT) {
+          surl_read_response_header();
+          return &resp;
+        }
+        break;
+
+      case SURL_METHOD_POST_DATA:
+      case SURL_METHOD_POST:
+      case SURL_METHOD_PUT:
+        if (i == SURL_ANSWER_SEND_SIZE || i == SURL_ANSWER_SEND_NUM_FIELDS) {
+          goto ret_100;
+        }
+        break;
+
+      case SURL_METHOD_PING:
+        if (i == SURL_ANSWER_PONG) {
+          simple_serial_putc(SURL_CLIENT_READY);
+          resp.code = simple_serial_getc();
+          return &resp;
+        }
+        break;
+
+      case SURL_METHOD_STREAM_VIDEO:
+      case SURL_METHOD_STREAM_AUDIO:
+      case SURL_METHOD_STREAM_AV:
+        if (i == SURL_ANSWER_WAIT) {
+          goto ret_100;
+        }
+        break;
+
+      case SURL_METHOD_GETTIME:
+        if (i == SURL_ANSWER_TIME) {
+          resp.code = 200;
+          return &resp;
+        }
+        break;
+
+#ifndef __CC65__
+      case SURL_METHOD_DEBUG:
+      case SURL_METHOD_DUMP:
+      case SURL_METHOD_ABORT:
+        /* We're not supposed to surl_start_request with these methods,
+         * rather just:
+         * simple_serial_putc(SURL_METHOD_DEBUG);
+         * simple_serial_printf("%s:%d\n", file, line);
+         * etc
+         */
+         break;
+#endif
     }
-  } else if (i == SURL_ANSWER_SEND_SIZE || i == SURL_ANSWER_SEND_NUM_FIELDS) {
-    goto ret_100;
   }
 
-  surl_read_response_header();
+  resp.code = 508;
   return &resp;
 
 ret_100:
   resp.code = 100;
-  return &resp;
-ret_508:
-  resp.code = 508;
   return &resp;
 }
 
