@@ -41,7 +41,7 @@ void __fastcall__ surl_ping(void) {
 try_again:
   clrscr();
   cputs("Establishing serial connection... ");
-  resp = surl_start_request(SURL_METHOD_PING, "ping://", NULL, 0);
+  resp = surl_start_request(NULL, 0, "ping://", SURL_METHOD_PING);
   if (resp->code != SURL_PROTOCOL_VERSION) {
     if (resp->code == 404) {
       simple_serial_flush();

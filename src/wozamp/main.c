@@ -102,7 +102,7 @@ void get_cover_file(char *url) {
     *strrchr(cover_url, '/') = 0;
     strcat(cover_url, "/cover.jpg");
 
-    surl_start_request(SURL_METHOD_GET, cover_url, NULL, 0);
+    surl_start_request(NULL, 0, cover_url, SURL_METHOD_GET);
     if (surl_response_ok()) {
       display_image();
     }
@@ -294,7 +294,7 @@ static int open_url(char *url, char *filename) {
   }
 
   //cputs("Spc:pause, Esc:stop, Left/Right:fwd/rew");
-  surl_start_request(SURL_METHOD_STREAM_AUDIO, url, NULL, 0);
+  surl_start_request(NULL, 0, url, SURL_METHOD_STREAM_AUDIO);
   simple_serial_write(translit_charset, strlen(translit_charset));
   simple_serial_putc('\n');
   simple_serial_putc(monochrome);

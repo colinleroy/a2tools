@@ -29,7 +29,7 @@
 #endif
 
 void __fastcall__ surl_set_time(void) {
-  surl_start_request(SURL_METHOD_GETTIME, "time://", NULL, 0);
+  surl_start_request(NULL, 0, "time://", SURL_METHOD_GETTIME);
   if (surl_response_ok()) {
     struct timespec now;
 

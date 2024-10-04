@@ -68,7 +68,7 @@ static void get_all(const char *url, char **lines, int n_lines) {
     char *cur_url = strdup(url);
     cur_url = stp_url_enter(cur_url, lines[i]);
     stp_print_header(display_lines[i], URL_ADD);
-    resp = surl_start_request(SURL_METHOD_GET, cur_url, NULL, 0);
+    resp = surl_start_request(NULL, 0, cur_url, SURL_METHOD_GET);
 
     stp_print_result(resp);
 

@@ -399,7 +399,7 @@ int stp_get_data(char *url, const surl_response **resp) {
   gotoxy(center_x, 12);
   cputs("Loading...   ");
 
-  *resp = surl_start_request(SURL_METHOD_GET, url, NULL, 0);
+  *resp = surl_start_request(NULL, 0, url, SURL_METHOD_GET);
 
   stp_print_result(*resp);
 

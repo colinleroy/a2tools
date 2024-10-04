@@ -34,7 +34,8 @@ static void update_progress(void) {
 int stream_url(char *url, char *subtitles_url) {
   char r, got_art = 0;
 
-  surl_start_request(SURL_METHOD_STREAM_AV, url, NULL, 0);
+  surl_start_request(NULL, 0, url, SURL_METHOD_STREAM_AV);
+
   simple_serial_write(translit_charset, strlen(translit_charset));
   simple_serial_putc('\n');
   simple_serial_putc(1); /* Monochrome */

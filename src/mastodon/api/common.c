@@ -65,7 +65,7 @@ const surl_response *get_surl_for_endpoint(char method, char *endpoint) {
 
   strcpy(gen_buf, instance_url);
   strcat(gen_buf, endpoint);
-  return surl_start_request(method, gen_buf, hdrs, 1);
+  return surl_start_request(hdrs, 1, gen_buf, method);
 }
 
 #ifdef __CC65__

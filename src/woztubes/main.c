@@ -155,7 +155,7 @@ static void load_video(char *host, InstanceTypeId instance_type, char *id) {
   sprintf((char *)BUF_1K_ADDR,
           video_provider_get_protocol_string(instance_type, VIDEO_DETAILS_ENDPOINT),
           n_host, tmp_buf);
-  surl_start_request(SURL_METHOD_GET, (char *)BUF_1K_ADDR, NULL, 0);
+  surl_start_request(NULL, 0, (char *)BUF_1K_ADDR, SURL_METHOD_GET);
 
   if (!surl_response_ok()) {
     clrscr();
@@ -189,7 +189,7 @@ static void load_video(char *host, InstanceTypeId instance_type, char *id) {
               video_provider_get_protocol_string(instance_type, VIDEO_CAPTIONS_ENDPOINT),
               n_host, tmp_buf);
 
-      surl_start_request(SURL_METHOD_GET, (char *)BUF_1K_ADDR, NULL, 0);
+      surl_start_request(NULL, 0, (char *)BUF_1K_ADDR, SURL_METHOD_GET);
 
       if (surl_response_ok()) {
         char *json_sel = video_provider_get_protocol_string(instance_type, CAPTIONS_JSON_SELECTOR);
@@ -234,7 +234,7 @@ static void load_video(char *host, InstanceTypeId instance_type, char *id) {
     if (m3u8_ptr = strstr(video_url, "-fragmented.mp4")) {
       /* Is there an m3u8 playlist? libav* opens them much quicker. */
       strcpy(m3u8_ptr, ".m3u8");
-      surl_start_request(SURL_METHOD_GET, video_url, NULL, 0);
+      surl_start_request(NULL, 0, video_url, SURL_METHOD_GET);
       if (!surl_response_ok()) {
         /* No. keep the original file */
         strcpy(m3u8_ptr, "-fragmented.mp4");
@@ -315,7 +315,7 @@ display_result:
   init_text();
   bzero((char *)HGR_PAGE, HGR_LEN);
 
-  surl_start_request(SURL_METHOD_GET, lines[cur_line+VIDEO_THUMB], NULL, 0);
+  surl_start_request(NULL, 0, lines[cur_line+VIDEO_THUMB], SURL_METHOD_GET);
   if (surl_response_ok()) {
     simple_serial_putc(SURL_CMD_HGR);
     simple_serial_putc(0); /* monochrome */
@@ -380,7 +380,7 @@ static void search(char *host, InstanceTypeId instance_type) {
 
   load_indicator(1);
 
-  surl_start_request(SURL_METHOD_GET, (char *)BUF_1K_ADDR, NULL, 0);
+  surl_start_request(NULL, 0, (char *)BUF_1K_ADDR, SURL_METHOD_GET);
   if (!surl_response_ok()) {
     clrscr();
     printf("Error %d", surl_response_code());
@@ -440,7 +440,7 @@ static int define_instance(void) {
             video_provider_get_protocol_string(i, API_CHECK_ENDPOINT),
             url);
 
-    resp = surl_start_request(SURL_METHOD_GET, (char *)BUF_1K_ADDR, NULL, 0);
+    resp = surl_start_request(NULL, 0, (char *)BUF_1K_ADDR, SURL_METHOD_GET);
 
     if (surl_response_ok() && resp->size > 0) {
       global_instance_type = i;

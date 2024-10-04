@@ -137,7 +137,7 @@ int main(int argc, char **argv) {
                          server_url,
                          argv[1], argv[3], argv[4]);
 
-  surl_start_request(SURL_METHOD_GET, buf, NULL, 0);
+  surl_start_request(NULL, 0, buf, SURL_METHOD_GET);
   if (!surl_response_ok()) {
     gotoxy(12, 10);
     printf("Error loading metrics.");

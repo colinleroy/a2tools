@@ -24,7 +24,7 @@ char *get_url(char *url) {
   const surl_response *resp;
   char *buffer = NULL;
 
-  resp = surl_start_request(SURL_METHOD_GET, url, NULL, 0);
+  resp = surl_start_request(NULL, 0, url, SURL_METHOD_GET);
 
   if (resp->code == 200) {
     buffer = malloc(resp->size + 1);
