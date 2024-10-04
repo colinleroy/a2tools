@@ -17,6 +17,8 @@ SOURCES := \
 	telnet.c \
 	../lib/dgets.c
 
+#Fastirq is needed in telnet
+
 CC65SOURCES := \
 	../lib/serial/asm/simple_serial.s \
 	../lib/serial/asm/simple_serial_io.s \
@@ -32,8 +34,8 @@ CC65SOURCES := \
 	../lib/dputc.s \
 	../lib/scroll.s \
 	../lib/FVTABZ.s \
+	../lib/extrazp.s \
 	../lib/fastirq$(suffix).s \
-	../lib/extrazp.s
 
 GCCSOURCES := \
 	../lib/serial/c/simple_serial.c \

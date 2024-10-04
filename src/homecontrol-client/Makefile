@@ -38,11 +38,11 @@ homectrl_CL65SOURCES = \
 	../lib/dputs.s \
 	../lib/scroll.s \
 	../lib/FVTABZ.s \
-	../lib/fastirq$(suffix).s \
 	../lib/extrazp.s \
 	../lib/citoa.s \
 	../lib/cutoa.s \
-	../lib/cntoabuf.s
+	../lib/cntoabuf.s \
+	#../lib/fastirq$(suffix).s \
 
 homectrl_GCCSOURCES = \
 	../lib/serial/c/simple_serial.c \

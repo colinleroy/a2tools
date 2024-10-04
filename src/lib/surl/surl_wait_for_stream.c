@@ -48,6 +48,7 @@ int surl_wait_for_stream(void) {
     switch (r) {
       case SURL_ANSWER_STREAM_LOAD:
         gotoxy(x,y);
+        simple_serial_putc(SURL_CLIENT_READY);
         eta = simple_serial_getc();
         if (eta >= 254)
           cputs("(More than 30m remaining)");

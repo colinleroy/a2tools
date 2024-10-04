@@ -77,11 +77,21 @@ unsigned int vol_mult = 10;
 
 #define PREDECODE_SECS 10
 
+#define IO_BARRIER(msg) do {                            \
+    int r;                                              \
+    printf("IO Barrier (%s)\n", msg);                   \
+    do {                                                \
+      r = simple_serial_getc();                         \
+    } while (r != SURL_CLIENT_READY                     \
+          && r != SURL_METHOD_ABORT);                   \
+} while (0)
+
 static int update_eta(int eta) {
   int r;
 
   simple_serial_putc(SURL_ANSWER_STREAM_LOAD);
-
+  /* Quiet IO Barrier */
+  simple_serial_getc_with_timeout();
   if (eta == ETA_MAX) {
     eta = 255;
   } else {
@@ -104,6 +114,7 @@ static int update_eta(int eta) {
     printf("Client abort (%02x)\n", r);
     return -1;
   }
+
   return 0;
 }
 
@@ -515,15 +526,6 @@ static void *ffmpeg_audio_decode_thread(void *arg) {
   ffmpeg_audio_decode(th_data);
   return (void *)0;
 }
-
-#define IO_BARRIER(msg) do {                            \
-    int r;                                              \
-    printf("IO Barrier (%s)\n", msg);                   \
-    do {                                                \
-      r = simple_serial_getc();                         \
-    } while (r != SURL_CLIENT_READY                     \
-          && r != SURL_METHOD_ABORT);                   \
-} while (0)
 
 static void send_metadata(char *key, char *value, char *translit) {
   char *buf, *translit_buf;
@@ -1782,8 +1784,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, Subtitle
   /* start point for client to enter the AV streamer */
   simple_serial_putc(SURL_ANSWER_STREAM_START);
 
-  /* There should be a barrier there */
-  usleep(200);
+  IO_BARRIER("Video state");
 
   /* Inform client whether we have video */
   printf("Informing client that video is %s (%d)\n", ttyfd2 > 0 ? "on":"off", ttyfd2);

@@ -300,6 +300,7 @@ static int open_url(char *url, char *filename) {
 read_metadata_again:
   r = simple_serial_getc();
   if (r == SURL_ANSWER_STREAM_LOAD) {
+    simple_serial_putc(SURL_CLIENT_READY);
     simple_serial_getc(); /* ETA */
     if (kbhit() && cgetc() == CH_ESC)
       simple_serial_putc(SURL_METHOD_ABORT);

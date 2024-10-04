@@ -20,7 +20,10 @@ extern char *translit_charset;
 extern unsigned char scrh;
 
 static void update_progress(void) {
-  unsigned char eta = simple_serial_getc();
+  unsigned char eta;
+
+  simple_serial_putc(SURL_CLIENT_READY);
+  eta = simple_serial_getc();
   hgr_mixon();
   gotoxy(11, 0); /* strlen("Loading...") + 1 */
   if (eta == 255)
@@ -91,6 +94,7 @@ wait_load:
     simple_serial_putc(SURL_CLIENT_READY);
     goto wait_load;
   } else if (r == SURL_ANSWER_STREAM_START) {
+    simple_serial_putc(SURL_CLIENT_READY);
     if (simple_serial_getc() == SURL_VIDEO_PORT_NOK) {
       clrscr();
       cputs("Warning: proxy couldn't open video aux_tty.\r\nNo video available.");

@@ -40,8 +40,8 @@ common_CC65SOURCES := \
 	../lib/dputc.s \
 	../lib/scroll.s \
 	../lib/FVTABZ.s \
-	../lib/fastirq$(suffix).s \
 	 ../lib/extrazp.s \
+	 #../lib/fastirq$(suffix).s \
 
 mastodon_SOURCES := \
 	$(common_SOURCES) \
@@ -105,11 +105,11 @@ mastoimg_CC65SOURCES := \
 	../lib/asm/clrzone.s \
 	../lib/asm/malloc0.s \
 	../lib/FVTABZ.s \
-	../lib/fastirq$(suffix).s \
 	 ../lib/extrazp.s \
 	../lib/surl/surl_wait_for_stream.c \
 	../lib/dputc.s \
-	../lib/scroll.s
+	../lib/scroll.s \
+	#../lib/fastirq$(suffix).s \
 
 mastocli_SOURCES := \
 	$(common_SOURCES) \
