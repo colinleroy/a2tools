@@ -104,7 +104,7 @@ static void station_click(char *station_uuid) {
     strcpy(tmp_buf, RADIO_BROWSER_API);
     strcat(tmp_buf, CLICK_ENDPOINT);
     strcat(tmp_buf, station_uuid);
-    surl_start_request(SURL_METHOD_GET, tmp_buf, NULL, 0);
+    surl_start_request(NULL, 0, tmp_buf, SURL_METHOD_GET);
 }
 
 void show_radio_metadata (char *data) {
@@ -167,7 +167,7 @@ static void play_url(char *url) {
 
   clrscr();
 
-  surl_start_request(SURL_METHOD_STREAM_AUDIO, url, NULL, 0);
+  surl_start_request(NULL, 0, url, SURL_METHOD_STREAM_AUDIO);
   simple_serial_write(translit_charset, strlen(translit_charset));
   simple_serial_putc('\n');
   simple_serial_putc(monochrome);
@@ -301,7 +301,7 @@ display_result:
 
   if (lines[cur_line+IDX_FAVICON][0] != '\0') {
     load_indicator(1);
-    surl_start_request(SURL_METHOD_GET, lines[cur_line+IDX_FAVICON], NULL, 0);
+    surl_start_request(NULL, 0, lines[cur_line+IDX_FAVICON], SURL_METHOD_GET);
     if (surl_response_ok()) {
       simple_serial_putc(SURL_CMD_HGR);
       simple_serial_putc(monochrome);
@@ -396,7 +396,7 @@ static void search_stations(char *search_str) {
 
   strcat(json_buf, SEARCH_PARAMETERS);
 
-  surl_start_request(SURL_METHOD_GET, json_buf, NULL, 0);
+  surl_start_request(NULL, 0, json_buf, SURL_METHOD_GET);
 
   if (!surl_response_ok()) {
     cputs("Error ");

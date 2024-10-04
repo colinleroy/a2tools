@@ -117,7 +117,7 @@ int stream_url(char *url, char *unused) {
   init_hgr(1);
   hgr_mixon();
 
-  surl_start_request(SURL_METHOD_STREAM_VIDEO, url, NULL, 0);
+  surl_start_request(NULL, 0, url, SURL_METHOD_STREAM_VIDEO);
 
   if (surl_wait_for_stream() != 0 || surl_stream_video() != 0) {
 #ifdef __APPLE2ENH__
@@ -144,7 +144,7 @@ static void img_display(media *m, char idx, char num_images) {
   if (m->media_type[idx][0] != 'i') {
     return;
   }
-  surl_start_request(SURL_METHOD_GET, m->media_url[idx], NULL, 0);
+  surl_start_request(NULL, 0, m->media_url[idx], SURL_METHOD_GET);
 
   if (surl_response_ok()) {
     #ifndef __CC65__

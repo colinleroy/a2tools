@@ -35,8 +35,6 @@
   #endif
 #endif
 
-#define BUFSIZE 255
-
 char *surl_user_agent = NULL;
 
 static char proxy_opened = 0;
@@ -71,7 +69,7 @@ void surl_disconnect_proxy(void) {
 
 surl_response resp;
 
-const surl_response * __fastcall__ surl_start_request(const char method, char *url, char **headers, int n_headers) {
+const surl_response * __fastcall__ surl_start_request(char **headers, unsigned char n_headers, char *url, const char method) {
   int i;
 
   if (resp.content_type) {
@@ -79,7 +77,7 @@ const surl_response * __fastcall__ surl_start_request(const char method, char *u
     resp.content_type = NULL;
   }
 
-  memset(&resp, 0, sizeof(surl_response));
+  bzero(&resp, sizeof(surl_response));
 
   if (proxy_opened == 0) {
     if (surl_connect_proxy() != 0) {
