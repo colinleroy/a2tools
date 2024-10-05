@@ -128,6 +128,10 @@ int main(void) {
   char c, l;
   char full_update = 1;
 
+  /* init bufs */
+  search_buf[0] = '\0';
+  tmp_buf[0] = '\0';
+
 #ifdef __APPLE2ENH__
   videomode(VIDEOMODE_80COL);
 #endif
