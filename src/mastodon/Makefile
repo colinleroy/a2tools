@@ -6,6 +6,7 @@ serial_hw_SOURCES := ../lib/serial/z8530/common.s ../lib/serial/z8530/no_irq.s
 iigs_CFLAGS := -DIIGS --asm-define IIGS
 suffix := -iigs
 upload_subdir := /iigs
+CPU=65c02
 else
 serial_hw_SOURCES := ../lib/serial/acia/common.s ../lib/serial/acia/no_irq.s
 ifdef OLDII
@@ -13,10 +14,12 @@ iigs_FLAGS :=
 suffix :=
 upload_subdir :=
 TARGET := apple2
+CPU=6502
 else
 iigs_FLAGS :=
 suffix :=
 upload_subdir :=
+CPU=65c02
 endif
 endif
 common_SOURCES := \
@@ -79,19 +82,10 @@ mastoimg_CC65SOURCES := \
 
 else
 
-ifdef OLDII
-
 mastoimg_CC65SOURCES := \
-	../lib/surl/surl_stream_av/6502.s \
+	../lib/surl/surl_stream_av/$(CPU).s \
 	../lib/surl/surl_stream_av/stream_url.c
 
-else
-
-mastoimg_CC65SOURCES := \
-	../lib/surl/surl_stream_av/65c02.s \
-	../lib/surl/surl_stream_av/stream_url.c
-
-endif
 endif
 
 mastoimg_CC65SOURCES := \
