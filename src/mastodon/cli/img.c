@@ -187,62 +187,7 @@ static void img_display(media *m, char idx, char num_images) {
   }
 }
 
-#ifdef __CC65__
-#pragma code-name (pop)
-#pragma code-name (push, "LOWCODE")
-#endif
-
-static void save_image(void) {
-  unsigned char prev_legend = legend;
-  char buf[FILENAME_MAX + 1];
-  char *dir = NULL;
-  unsigned char x;
-  toggle_legend(1);
-  clrscr();
-  cputs("Save to: ");
-
-  x = wherex();
-  dir = file_select(x, wherey(), scrw - x, wherey() + 10, 1, "Select directory");
-  if (dir == NULL) {
-    goto out_no_conf;
-  }
-
-  strncpy(buf, dir, FILENAME_MAX);
-  free(dir);
-  gotox(x);
-  strcat(buf, "/");
-  dget_text(buf, sizeof(buf) - 1, NULL, 0);
-
-#ifdef __APPLE2__
-  _filetype = PRODOS_T_BIN;
-  _auxtype = HGR_PAGE;
-
-  if (buf[0] != '\0') {
-    FILE *fp = fopen(buf, "w");
-    if (fp == NULL) {
-      cputs("\r\nCan not open file. ");
-      goto out;
-    }
-    if (fwrite((char *)HGR_PAGE, 1, HGR_LEN, fp) < HGR_LEN) {
-      cputs("Can not write to file. ");
-      goto out;
-    }
-    fclose(fp);
-    cputs("\r\nImage saved. ");
-  } else {
-    goto out_no_conf;
-  }
-
-out:
-#endif
-  cputs("Press a key to continue.");
-  cgetc();
-out_no_conf:
-  clrscr();
-
-  if (!prev_legend)
-    toggle_legend(0);
-}
+static void save_image(void);
 
 int main(int argc, char **argv) {
   media *m = NULL;
@@ -349,3 +294,56 @@ done:
 #ifdef __CC65__
 #pragma code-name (pop)
 #endif
+
+
+static void save_image(void) {
+  unsigned char prev_legend = legend;
+  char buf[FILENAME_MAX + 1];
+  char *dir = NULL;
+  unsigned char x;
+  toggle_legend(1);
+  clrscr();
+  cputs("Save to: ");
+
+  x = wherex();
+  dir = file_select(x, wherey(), scrw - x, wherey() + 10, 1, "Select directory");
+  if (dir == NULL) {
+    goto out_no_conf;
+  }
+
+  strncpy(buf, dir, FILENAME_MAX);
+  free(dir);
+  gotox(x);
+  strcat(buf, "/");
+  dget_text(buf, sizeof(buf) - 1, NULL, 0);
+
+#ifdef __APPLE2__
+  _filetype = PRODOS_T_BIN;
+  _auxtype = HGR_PAGE;
+
+  if (buf[0] != '\0') {
+    FILE *fp = fopen(buf, "w");
+    if (fp == NULL) {
+      cputs("\r\nCan not open file. ");
+      goto out;
+    }
+    if (fwrite((char *)HGR_PAGE, 1, HGR_LEN, fp) < HGR_LEN) {
+      cputs("Can not write to file. ");
+      goto out;
+    }
+    fclose(fp);
+    cputs("\r\nImage saved. ");
+  } else {
+    goto out_no_conf;
+  }
+
+out:
+#endif
+  cputs("Press a key to continue.");
+  cgetc();
+out_no_conf:
+  clrscr();
+
+  if (!prev_legend)
+    toggle_legend(0);
+}

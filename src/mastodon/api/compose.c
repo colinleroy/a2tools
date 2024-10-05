@@ -106,7 +106,7 @@ send_again:
     /* Set description */
     int len;
     char *body = malloc0(1536);
-    snprintf(body, 1536, "S|description|"TRANSLITCMD"|%s\n%s",
+    snprintf(body, 1536, "S|description|"TRANSLITCMD"|%s\n%s\n",
                           translit_charset,
                           description);
 

@@ -86,7 +86,7 @@ void poll_update_vote(poll *p) {
       empty = 0;
     }
   }
-  strcat(cur, "]");
+  strcat(cur, "]\n");
 
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, VOTES_ENDPOINT"/%s/votes", p->id);
   get_surl_for_endpoint(SURL_METHOD_POST, endpoint_buf);
