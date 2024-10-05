@@ -7,6 +7,12 @@ if [ "$BRANCH" != "master" ]; then
 	exit 1
 fi
 rm -f *.po
+cd src/ut
+make clean test
+if [ "$?" != "0" ]; then
+	exit 1
+fi
+cd ../..
 make clean all dist upload IIGS=1
 make clean all dist upload OLDII=1
 make clean all dist upload
