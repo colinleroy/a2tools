@@ -82,13 +82,14 @@ else
 ifdef OLDII
 
 mastoimg_CC65SOURCES := \
-	../lib/surl/asm/surl_stream_video.s \
-	../lib/surl/surl_wait_for_stream.c
+	../lib/surl/surl_stream_av/6502.s \
+	../lib/surl/surl_stream_av/stream_url.c
+
 else
 
 mastoimg_CC65SOURCES := \
 	../lib/surl/surl_stream_av/65c02.s \
-	../lib/surl/surl_stream_av/stream_url.c \
+	../lib/surl/surl_stream_av/stream_url.c
 
 endif
 endif
@@ -169,10 +170,16 @@ CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x400 $(USE_LANGCARD) $
 
 mastodon_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-rtonce.cfg
 mastocli_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-rtonce.cfg
-mastoimg_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-mastoimg.cfg \
+ifdef OLDII
+mastoimg_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-mastoimg-6502.cfg \
+	-DSTART_ADDR=0x3DA0 --start-addr 0x3DA0 \
+	-DSTREAM_URL_SEGMENT='"LC"'
+else
+mastoimg_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-mastoimg-65c02.cfg \
 	-DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER \
 	-DSTART_ADDR=0x5DA0 --start-addr 0x5DA0 \
 	-DSTREAM_URL_SEGMENT='"LC"'
+endif
 mastowrite_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-rtonce.cfg -DDGETS_MULTILINE
 
 GCCCFLAGS = -g -O0 -Wall -Wno-char-subscripts -Wno-unused-but-set-variable -Wno-unused-variable -Wno-unknown-pragmas -Werror $(shell sdl-config --cflags)

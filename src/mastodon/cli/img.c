@@ -98,7 +98,7 @@ static void set_legend(char *str, unsigned char idx, unsigned char num_images) {
   show_help();
 }
 
-#if defined(__CC65__) && (defined(IIGS) || !defined(__APPLE2ENH__))
+#if defined(__CC65__) && defined(IIGS)
 static void stream_msg(char *msg) {
   hgr_mixon();
   clrscr();
