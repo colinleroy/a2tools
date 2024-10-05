@@ -653,6 +653,10 @@ static void do_setup(void) {
 void main(void) {
   char *url = NULL;
 
+  /* init bufs */
+  search_buf[0] = '\0';
+  tmp_buf[0] = '\0';
+
 #ifdef __APPLE2ENH__
   videomode(VIDEOMODE_80COL);
 #endif
