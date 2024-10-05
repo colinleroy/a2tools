@@ -80,7 +80,7 @@ void show_help (list *l, status *root_status, notification *root_notif) {
     if (root_status->spoiler_text) {
       dputs(" Toggle CW : W     \r\n");
     }
-#if defined(__APPLE2ENH__) && !defined(IIGS)
+#if !defined(IIGS)
     if (root_status->n_medias > 0) {
       dputs(" Medias    : I     \r\n");
     }
