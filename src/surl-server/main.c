@@ -521,7 +521,7 @@ new_req:
         }
 
 abort:
-        printf("RESP: finished (cmd %u)\n", cmd);
+        printf("RESP: finished (new cmd %u: %s)\n", cmd, surl_method_str(cmd));
         /* Put that back as a REQUEST */
         reqbuf[0] = cmd;
         simple_serial_gets(reqbuf + 1, BUFSIZE - 1);
