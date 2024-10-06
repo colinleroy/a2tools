@@ -119,8 +119,9 @@ void stp_print_footer(void) {
 //      "A:Play all in directory       N: Next     .-S: Server   .-Q: Quit  (12345B free)");
   cputs("Up,Down,Enter,Esc: Navigate   /: Search                 ");
   cputc('A'|0x80);                                         cputs("-C: Configure\r\n"
-        "A:Play all in directory       ");
+        "A:Play all");
   if (search_buf[0]) {
+    gotox(30);
     cputs("N: Next");
   }
   gotox(42);
@@ -395,28 +396,44 @@ out:
 #pragma code-name (push, "LC")
 #endif
 
+
+static int is_streamable(void) {
+  const char *content_type;
+  content_type = surl_content_type();
+  return (!strncmp(content_type, "audio/", 6) ||
+          !strncmp(content_type, "video/", 6));
+}
+
+static unsigned char rec_level = 0;
+static unsigned char cancelled = 0;
 char *play_directory(char *url) {
   int dir_index;
-  int cancelled = 0;
 
   in_list = 1;
-  for (dir_index = 0; dir_index < num_lines; dir_index++) {
+  cancelled = 0;
+
+  for (dir_index = cur_line; dir_index < num_lines && !cancelled; dir_index++) {
     int r;
+    char *prev_filename = strdup(display_lines[dir_index]);
     url = stp_url_enter(url, lines[dir_index]);
-    stp_print_header(display_lines[dir_index], URL_ADD);
+    stp_print_header(prev_filename, URL_ADD);
 
     r = stp_get_data(url);
 
-    cancelled = 0;
     if (!surl_response_ok()) {
       cancelled = 1;
       goto check_cont;
     }
 
-    if (r == SAVE_DIALOG) {
+    if (r == SAVE_DIALOG && is_streamable()) {
       /* Play - warning ! trashes data with HGR page */
-      cancelled = open_url(url, display_lines[dir_index]);
+      cancelled = open_url(url, prev_filename);
       stp_clr_page();
+    } else if (r == UPDATE_LIST && rec_level < 4) {
+      /* That's a directory */
+      rec_level++;
+      url = play_directory(url);
+      rec_level--;
     }
 
     /* Fetch original list back */
@@ -431,16 +448,18 @@ char *play_directory(char *url) {
     stp_print_header(NULL, URL_UP);
 
 check_cont:
+    free(prev_filename);
     if (cancelled) {
       #ifdef __APPLE2ENH__
       gotoxy(25, 12);
-      cputs("Keep playing directory? (Y/n)");
       #else
       gotoxy(2, 12);
-      cputs("Keep playing directory? (Y/n)");
       #endif
+      cputs("Keep playing directory? (Y/n)");
       if (tolower(cgetc()) == 'n') {
         break;
+      } else {
+        cancelled = 0;
       }
     }
   }
@@ -523,8 +542,12 @@ static void do_nav(char *base_url) {
         goto keyb_input;
       case SAVE_DIALOG:
         /* Play */
-        open_url(url, prev_filename);
-        stp_clr_page();
+        if (is_streamable()) {
+          open_url(url, prev_filename);
+          stp_clr_page();
+        } else {
+          beep();
+        }
         if (navigated)
           goto up_dir;
         else
@@ -564,6 +587,7 @@ up_dir:
         }
         break;
       case 'a':
+        rec_level = 0;
         url = play_directory(url);
         break;
 #ifdef __APPLE2ENH__
