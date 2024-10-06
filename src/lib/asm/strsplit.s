@@ -20,10 +20,10 @@
 ;
 
         .export         __strnsplit_int
-        .import         popa, popax, pushax, aslax1
+        .import         popa, popax, pushax, aslax1, pushptr1
         .import         _strdup, _strchr
 
-        .importzp       ptr1
+        .importzp       ptr1, ptr2
 
         .include        "apple2.inc"
 
@@ -39,8 +39,8 @@ __strnsplit_int:
         jsr       popa
         sta       split
         jsr       popax
-        sta       sep
-        stx       sep+1
+        sta       ptr1
+        stx       ptr1+1
         sta       start
         stx       start+1
         sta       ptr1
@@ -50,69 +50,85 @@ __strnsplit_int:
 
         lda       #$00
         sta       n_tokens
+        sta       n_tokens+1
 
-@next_sep:
-        lda       sep
-        ldx       sep+1
-        jsr       pushax
-        lda       split
-        jsr       _strchr
-        sta       sep
-        stx       sep+1
-
-        cpx       #$00          ; No need to check A, it's not in ZP
-        beq       :+
-        sta       ptr1
-        stx       ptr1+1
+@check_src:
         ldy       #$00
-        tya
-        sta       (ptr1),y
+        lda       (ptr1),y
+        beq       @done
+        cmp       split
+        bne       @inc_src
 
-:       lda       n_tokens      ; Set ptr1 to tokens[n_tokens]
+@insert_token:
+        lda       n_tokens    ; Compute tokens[n_tokens]
         ldx       n_tokens+1
         jsr       aslax1
         clc
         adc       tokens
-        sta       ptr1
+        sta       ptr2
         txa
         adc       tokens+1
-        sta       ptr1+1
+        sta       ptr2+1
+
+        jsr       pushptr1    ; Backup walker
 
         lda       start
         ldx       start+1
-
         bit       in_place
         bne       :+
-        jsr       _strdup     ; strdup if needed
-
-:       ldy       #$00        ; store to tokens[n_tokens]
-        sta       (ptr1),y
+        jsr       _strdup     ; Strdup if needed
+:       ldy       #$00
+        sta       (ptr2),y
         iny
         txa
-        sta       (ptr1),y
+        sta       (ptr2),y
+        jsr       popax       ; Restore walker
+        sta       ptr1
+        stx       ptr1+1
 
-        inc       n_tokens
+        inc       n_tokens    ; Count token
         bne       :+
         inc       n_tokens+1
-:       lda       n_tokens+1
-        cmp       max_tokens+1
-        bcc       @continue
-        bne       @break
-        lda       n_tokens
-        cmp       max_tokens
-        bcs       @break
-@continue:
-        ldx       sep+1
-        beq       @break
-        inc       sep
+
+:       clc
+        adc       #1
+        sta       start       ; Update start
         bne       :+
         inx
-:       lda       sep
-        sta       start
-        stx       sep+1
-        stx       start+1
-        jmp       @next_sep
-@break:
+:       stx       start+1
+
+        lda       n_tokens    ; Check max tokens
+        cmp       max_tokens
+        bne       @inc_src
+        lda       n_tokens+1
+        cmp       max_tokens+1
+        beq       @done
+@inc_src:
+        inc       ptr1
+        bne       @check_src
+        inc       ptr1+1
+        bne       @check_src
+
+@done:
+        lda       start
+        sta       ptr1
+        lda       start+1
+        sta       ptr1+1
+        ldy       #$00
+        lda       (ptr1),y
+        beq       @really_done
+        lda       n_tokens
+        ldx       n_tokens+1
+        clc
+        adc       #1
+        bne       :+
+        inx
+:       sta       max_tokens
+        stx       max_tokens+1
+        jmp       @insert_token
+@really_done:
+        lda       n_tokens
+        ldx       n_tokens+1
         rts
 
 
@@ -121,7 +137,6 @@ __strnsplit_int:
 max_tokens: .res 2
 tokens:     .res 2
 split:      .res 1
-sep:        .res 2
 in_place:   .res 1
 start:      .res 2
 n_tokens:   .res 2
