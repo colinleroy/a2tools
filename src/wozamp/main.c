@@ -432,8 +432,13 @@ char *play_directory(char *url) {
 
 check_cont:
     if (cancelled) {
-      gotoxy(0, 21);
+      #ifdef __APPLE2ENH__
+      gotoxy(25, 12);
       cputs("Keep playing directory? (Y/n)");
+      #else
+      gotoxy(2, 12);
+      cputs("Keep playing directory? (Y/n)");
+      #endif
       if (tolower(cgetc()) == 'n') {
         break;
       }
