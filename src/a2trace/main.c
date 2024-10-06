@@ -184,7 +184,7 @@ skip_to_start:
 
     n_parts = strsplit_in_place(line, ':', &parts);
 
-    if (op_idx == -1) {
+    if (op_idx == -1 && n_parts >= 2) {
       op_idx = detect_tracelog(parts[0], parts[1]);
     }
 
