@@ -387,7 +387,7 @@ void stp_free_data(void) {
 }
 
 extern char center_x;
-int stp_get_data(char *url) {
+unsigned char stp_get_data(char *url) {
   extern surl_response resp;
 
   num_lines = 0;

@@ -75,7 +75,7 @@ void stp_list_search(unsigned char new_search);
 char *stp_build_login_url(char *url);
 char *stp_get_start_url(char *header, char *default_url, cmd_handler_func cmd_cb);
 void stp_update_list(char full_update);
-int stp_get_data(char *url);
+unsigned char stp_get_data(char *url);
 void stp_print_header(const char *url, enum HeaderUrlAction action);
 void stp_print_result(void);
 void stp_animate_list(char reset);

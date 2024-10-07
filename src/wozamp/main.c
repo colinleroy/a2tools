@@ -116,10 +116,10 @@ void stp_print_footer(void) {
   gotoxy(0, 22);
 #ifdef __APPLE2ENH__
 //      "Up,Down,Enter,Esc: Navigate   /: Search                 .-C: Configure");
-//      "A:Play all in directory       N: Next     .-S: Server   .-Q: Quit  (12345B free)");
+//      "A:Play all    R:Random        N: Next     .-S: Server   .-Q: Quit  (12345B free)");
   cputs("Up,Down,Enter,Esc: Navigate   /: Search                 ");
   cputc('A'|0x80);                                         cputs("-C: Configure\r\n"
-        "A:Play all");
+        "A:Play all    R:Random");
   if (search_buf[0]) {
     gotox(30);
     cputs("N: Next");
@@ -132,14 +132,15 @@ void stp_print_footer(void) {
   cutoa(_heapmemavail());
   cputs("B free)");
 #else
-  cputs("U,J,Enter,Esc:nav;  /:search;  C:config\r\n"
-        "A:play dir;");
-//    "A:play dir; N:next; S:server;  Q: quit"
+//      "U,J,Enter,Esc:nav;   /:search;  C:config"
+//      "A:all; R:rnd; S:srv; N:next;    Q: quit"
+  cputs("U,J,Enter,Esc:nav;   /:search;  C:config"
+        "A:all; R:rnd; S:srv; ");
   if (search_buf[0]) {
     cputs(" N:next;");
   }
-  gotox(19);
-  cputs(" S:server;  Q: quit");
+  gotox(32);
+  cputs("Q: quit");
 #endif
 }
 
@@ -406,25 +407,25 @@ static int is_streamable(void) {
 
 static unsigned char rec_level = 0;
 static unsigned char cancelled = 0;
-char *play_directory(char *url) {
-  int dir_index;
+static unsigned char rand_init = 0;
 
-  in_list = 1;
-  cancelled = 0;
+typedef enum {
+  PLAY_ALL,
+  PLAY_RANDOM
+} RecursivePlayMode;
 
-  for (dir_index = cur_line; dir_index < num_lines && !cancelled; dir_index++) {
-    int r;
-    char *prev_filename = strdup(display_lines[dir_index]);
-    url = stp_url_enter(url, lines[dir_index]);
-    stp_print_header(prev_filename, URL_ADD);
+static char *play_directory(RecursivePlayMode mode, char *url);
 
-    r = stp_get_data(url);
+static char *play_directory_at_index(RecursivePlayMode mode, char *url, unsigned int dir_index) {
+  unsigned char r;
+  char *prev_filename = strdup(display_lines[dir_index]);
 
-    if (!surl_response_ok()) {
-      cancelled = 1;
-      goto check_cont;
-    }
+  url = stp_url_enter(url, lines[dir_index]);
+  stp_print_header(prev_filename, URL_ADD);
 
+  r = stp_get_data(url);
+
+  if (surl_response_ok()) {
     if (r == SAVE_DIALOG && is_streamable()) {
       /* Play - warning ! trashes data with HGR page */
       cancelled = open_url(url, prev_filename);
@@ -432,34 +433,67 @@ char *play_directory(char *url) {
     } else if (r == UPDATE_LIST && rec_level < 4) {
       /* That's a directory */
       rec_level++;
-      url = play_directory(url);
+      url = play_directory(mode, url);
       rec_level--;
     }
+  }
 
-    /* Fetch original list back */
-    url = stp_url_up(url);
-    stp_get_data(url);
+  free(prev_filename);
 
-    if (!surl_response_ok()) {
-      cancelled = 1;
-      goto check_cont;
-    }
+  /* Fetch original list back */
+  url = stp_url_up(url);
+  stp_get_data(url);
 
+  if (surl_response_ok()) {
     stp_print_header(NULL, URL_UP);
+  } else {
+    cancelled = 1;
+  }
 
-check_cont:
-    free(prev_filename);
-    if (cancelled) {
-      #ifdef __APPLE2ENH__
-      gotoxy(25, 12);
-      #else
-      gotoxy(2, 12);
-      #endif
-      cputs("Keep playing directory? (Y/n)");
-      if (tolower(cgetc()) == 'n') {
+  return url;
+}
+
+static char *play_directory(RecursivePlayMode mode, char *url) {
+  unsigned int dir_index;
+
+  cancelled = 0;
+
+  if (mode == PLAY_ALL) {
+    for (dir_index = cur_line; dir_index < num_lines; dir_index++) {
+      in_list = 1;
+      url = play_directory_at_index(PLAY_ALL, url, dir_index);
+      if (cancelled) {
+        #ifdef __APPLE2ENH__
+        gotoxy(25, 12);
+        #else
+        gotoxy(2, 12);
+        #endif
+        cputs("Keep playing directory? (Y/n)");
+        if (tolower(cgetc()) != 'n') {
+          cancelled = 0;
+        } else {
+          break;
+        }
+      }
+    }
+  } else if (mode == PLAY_RANDOM) {
+    if (!rand_init) {
+      _randomize();
+      rand_init = 1;
+    }
+    while (!cancelled) {
+      /*
+       * 0          0
+       * rand()     dir_index
+       * RAND_MAX   num_lines-1
+       */
+      dir_index = (uint16)((((uint32)rand() * (num_lines-1)))/RAND_MAX);
+      /* Set in_list each time (going back up all the way resets it) */
+      in_list = 1;
+      url = play_directory_at_index(PLAY_RANDOM, url, dir_index);
+      if (rec_level > 0) {
+        /* go up all the way if we entered subdirectories */
         break;
-      } else {
-        cancelled = 0;
       }
     }
   }
@@ -588,7 +622,11 @@ up_dir:
         break;
       case 'a':
         rec_level = 0;
-        url = play_directory(url);
+        url = play_directory(PLAY_ALL, url);
+        break;
+      case 'r':
+        rec_level = 0;
+        url = play_directory(PLAY_RANDOM, url);
         break;
 #ifdef __APPLE2ENH__
       case CH_CURS_UP:
