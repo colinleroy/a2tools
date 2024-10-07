@@ -430,7 +430,13 @@ int stp_get_data(char *url) {
     if (surl_response_ok()) {
       nat_data = malloc(resp.size + 1);
       if (nat_data) {
+        char *tmp;
         surl_receive_data(nat_data, resp.size);
+        while ((tmp = strchr(nat_data, '/'))) {
+          /* we're not supposed to have slashes in filenames, but transliteration
+           * can put some. Change them. */
+          *tmp = '_';
+        }
       }
     }
   }
