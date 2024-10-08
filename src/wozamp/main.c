@@ -249,7 +249,13 @@ static int open_url(char *url, char *filename) {
     if (!strncmp(content_type, "image/", 6)) {
       display_image();
       if (in_list) {
-        sleep(5);
+        for (r = 0; r < 20; r++) {
+          if (kbhit()) {
+            cancelled = (cgetc() == CH_ESC);
+            break;
+          }
+          platform_msleep(500);
+        }
       }
       goto out;
     } else if (!strncmp(content_type, "video/", 6)) {
@@ -401,8 +407,11 @@ out:
 static int is_streamable(void) {
   const char *content_type;
   content_type = surl_content_type();
-  return (!strncmp(content_type, "audio/", 6) ||
-          !strncmp(content_type, "video/", 6));
+  return (!strncmp(content_type, "image/", 6) ||
+          !strncmp(content_type, "audio/", 6) ||
+          !strncmp(content_type, "video/", 6) ||
+          /* Fallback for libmagic failures */
+          !strcmp(content_type, "application/octet-stream"));
 }
 
 static unsigned char rec_level = 0;
