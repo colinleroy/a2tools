@@ -774,12 +774,19 @@ static size_t curl_write_data_cb(void *contents, size_t size, size_t nmemb, void
       curlbuf->download_cancelled = 1;
       return 0;
     } else if (!curlbuf->headers || !strcasestr(curlbuf->headers, "\ncontent-type: ")) {
-      /* Try and guess */
-      const char *mime_type = magic_buffer(magic_handle, curlbuf->buffer, curlbuf->size);
-      if (mime_type && (!strncmp(mime_type, "audio/", 6) || !strncmp(mime_type, "video/", 6))) {
-        printf("Streamable content-type %s found, aborting download\n", mime_type);
-        curlbuf->download_cancelled = 1;
-        return 0;
+      static time_t last_guess = (time_t)0;
+      const char *mime_type;
+      time_t now = time(NULL);
+      /* Don't guess too often, it is costly */
+      if (now - last_guess > 2) {
+        /* Try and guess */
+        last_guess = now;
+        mime_type = magic_buffer(magic_handle, curlbuf->buffer, curlbuf->size);
+        if (mime_type && (!strncmp(mime_type, "audio/", 6) || !strncmp(mime_type, "video/", 6))) {
+          printf("Streamable content-type %s found, aborting download\n", mime_type);
+          curlbuf->download_cancelled = 1;
+          return 0;
+        }
       }
     }
   }
