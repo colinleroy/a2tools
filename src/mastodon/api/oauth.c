@@ -10,6 +10,11 @@
 #include "dputs.h"
 #include "extended_conio.h"
 
+/* This is heavily based on screen-scraping and not very solid.
+ * Maybe using https://github.com/lexbor/lexbor proxy-side would be
+ * better.
+ */
+
 #ifdef __CC65__
 #pragma code-name (push, "LOWCODE")
 #endif
@@ -22,7 +27,7 @@
 #define OAUTH_URL "/oauth/authorize"
 
 #define CSRF_TOKEN "authenticity_token"
-#define CSRF_TOKEN_SCRAPE "name=\""CSRF_TOKEN
+#define CSRF_TOKEN_SCRAPE "name=['\"]"CSRF_TOKEN
 
 extern char *instance_url;
 extern char *client_id;
@@ -36,25 +41,27 @@ static char *get_csrf_token(char *body, size_t buf_size) {
   char *w, *token = NULL;
   size_t len;
 
-  if (surl_find_line(body, buf_size, CSRF_TOKEN_SCRAPE) == 0) {
+  if (surl_find_line(body, CSRF_TOKEN_SCRAPE, buf_size, SURL_REGEXP_CASE_SENSITIVE) == 0) {
     w = strstr(body, CSRF_TOKEN);
     if (w == NULL) {
-      return NULL;
+      goto out;
     }
     w = strstr(w, "value=");
     if (w == NULL) {
-      return NULL;
+      goto out;
     }
     w = strchr(w, '"');
     if (w == NULL) {
-      return NULL;
+      goto out;
     }
     w++;
     len = strchr(w, '"') - w;
     token = malloc0(len + 1);
     strncpy(token, w, len);
     token[len] = '\0';
-  } else {
+  }
+out:
+  if (token == NULL) {
     dputs("Error extracting CSRF token.\r\n");
   }
   return token;
@@ -153,7 +160,7 @@ int do_login(void) {
     goto err_out;
   }
 
-  if (surl_find_line(body, buf_size, "action=\""LOGIN_URL) == 0) {
+  if (surl_find_line(body, "action=['\"]"LOGIN_URL, buf_size, SURL_REGEXP_CASE_SENSITIVE) == 0) {
     login_required = 1;
     dputs("Login required.\r\n");
   } else {
@@ -198,13 +205,13 @@ password_again:
       dputs("OK\r\n");
     }
 
-    surl_find_line(body, buf_size, "class='flash-message alert");
+    surl_find_line(body, "flash-message alert", buf_size, SURL_MATCH_CASE_SENSITIVE);
     if (body[0] != '\0') {
       dputs("Authentication error.\r\n");
       goto password_again;
     }
 
-    surl_find_line(body, buf_size, "otp-authentication-form");
+    surl_find_line(body, "otp-authentication-form", buf_size, SURL_MATCH_CASE_SENSITIVE);
     if (body[0] != '\0') {
       otp_required = 1;
       dputs("OTP required.\r\n");
@@ -241,7 +248,7 @@ otp_again:
         goto err_out;
       } else {
         
-        surl_find_line(body, buf_size, "class='flash-message alert");
+        surl_find_line(body, "flash-message alert", buf_size, SURL_MATCH_CASE_SENSITIVE);
         if (body[0] != '\0') {
           dputs("OTP error.\r\n");
           goto otp_again;
@@ -254,7 +261,7 @@ otp_again:
   }
   /* End of login */
 
-  if (surl_find_line(body, buf_size, "action=\""OAUTH_URL) == 0) {
+  if (surl_find_line(body, "action=['\"]"OAUTH_URL, buf_size, SURL_REGEXP_CASE_SENSITIVE) == 0) {
     oauth_required = 1;
     dputs("OAuth authorization required.\r\n");
   } else {
@@ -262,6 +269,7 @@ otp_again:
   }
 
   if (oauth_required) {
+    /* This only works because Authorize is before Deny */
     token = get_csrf_token(body, buf_size);
     if (token == NULL)
       goto err_out;
@@ -287,7 +295,7 @@ otp_again:
       dputs("OK.\r\n");
     }
 
-    if (surl_find_header(body, buf_size, "ocation: ") == 0) {
+    if (surl_find_header(body, "Location: ", buf_size, SURL_MATCH_CASE_INSENSITIVE) == 0) {
       free(oauth_code);
       oauth_code = get_oauth_code(body);
       dputs("Got OAuth code.\r\n");
