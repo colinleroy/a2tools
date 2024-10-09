@@ -31,12 +31,13 @@
 #pragma code-name (push, "LC")
 #endif
 
-int __fastcall__ surl_find_line(char *buffer, size_t max_len, char *search_str) {
+static unsigned char in_body = 1;
+static int __fastcall__ surl_find_in(char *buffer, size_t max_len, char *search_str) {
   size_t res_len = 0;
   char r;
 
   res_len = htons(max_len);
-  simple_serial_putc(SURL_CMD_FIND);
+  simple_serial_putc(in_body ? SURL_CMD_FIND:SURL_CMD_FIND_HEADER);
   simple_serial_write((char *)&res_len, 2);
   simple_serial_puts_nl(search_str);
 
@@ -56,6 +57,16 @@ int __fastcall__ surl_find_line(char *buffer, size_t max_len, char *search_str) 
   buffer[res_len] = '\0';
 
   return 0;
+}
+
+int __fastcall__ surl_find_line(char *buffer, size_t max_len, char *search_str) {
+  in_body = 1;
+  return surl_find_in(buffer, max_len, search_str);
+}
+
+int __fastcall__ surl_find_header(char *buffer, size_t max_len, char *search_str) {
+  in_body = 0;
+  return surl_find_in(buffer, max_len, search_str);
 }
 
 #ifdef __CC65__
