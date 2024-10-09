@@ -293,7 +293,6 @@ otp_again:
       dputs("Got OAuth code.\r\n");
     } else {
       dputs("Did not get oauth code.\r\n");
-      cgetc();
       goto err_out;
     }
   }
@@ -434,9 +433,6 @@ int get_oauth_token(void) {
   ret = 0;
 
 err_out:
-  if (ret != 0) {
-    cgetc();
-  }
   free(oauth_url);
   return ret;
 }
