@@ -637,7 +637,7 @@ int surl_stream_audio(char *url, char *translit, char monochrome, HGRScale scale
 
   if (!ready && stop) {
     simple_serial_putc(SURL_ANSWER_STREAM_ERROR);
-    return -1;
+    goto cleanup_thread;
   } else {
     hgr_buf = audio_get_stream_art(th_data, monochrome, scale);
 

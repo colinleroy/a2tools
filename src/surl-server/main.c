@@ -589,7 +589,8 @@ abort:
         else
           found = strstr(response->headers, param);
 
-        printf("RESP: FIND %s '%s' into %zu bytes: ", cmd == SURL_CMD_FIND ? "body":"headers", param, bufsize);
+        printf("RESP: FIND %s '%s' into %zu bytes: ", 
+               cmd == SURL_CMD_FIND ? "body":"headers", param, bufsize);
         if (found) {
           size_t len = strlen(found);
           found = strdup(found);
@@ -609,6 +610,9 @@ abort:
           simple_serial_write_fast((char *)&l, 2);
           IO_BARRIER("FIND, pre-content");
 
+          if (VERY_VERBOSE) {
+            printf("'%s'\n", found);
+          }
           simple_serial_puts_nl(found);
 
           free(found);
