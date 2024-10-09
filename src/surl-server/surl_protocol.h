@@ -63,10 +63,11 @@ typedef enum {
   SURL_ERROR_OK           = 0x40,
   SURL_ERROR_NOT_FOUND    = 0x41,
   SURL_ERROR_NOT_JSON     = 0x42,
-  SURL_ERROR_CONV_FAILED  = 0x43
+  SURL_ERROR_CONV_FAILED  = 0x43,
+  SURL_ERROR_INV_REGEXP   = 0x44
 } SurlError;
 
-#define SURL_IS_ERROR(x) ((x) >= SURL_ERROR_OK && (x) <= SURL_ERROR_CONV_FAILED)
+#define SURL_IS_ERROR(x) ((x) >= SURL_ERROR_OK && (x) <= SURL_ERROR_INV_REGEXP)
 
 typedef enum {
   SURL_UPLOAD_GO          = 0x50,
@@ -101,6 +102,13 @@ typedef enum {
   SURL_VIDEO_PORT_OK  = 0,
   SURL_VIDEO_PORT_NOK = 1
 } VideoPortStatus;
+
+typedef enum {
+  SURL_MATCH_CASE_SENSITIVE    = 0,
+  SURL_MATCH_CASE_INSENSITIVE  = 1,
+  SURL_REGEXP_CASE_SENSITIVE   = 2,
+  SURL_REGEXP_CASE_INSENSITIVE = 3
+} MatchType;
 
 typedef enum {
   SURL_ERR_TIMEOUT             = 504,

@@ -40,11 +40,10 @@
         .segment "LOWCODE"
         .endif
 
-;static int __fastcall__ surl_find_in(char *buffer, size_t max_len, char *search_str) {
+;static int __fastcall__ surl_find_in(char *buffer, char *search_str, size_t max_len, MatchType matchtype) {
 surl_find_in:
-        ; Store search_str
-        sta       ptr1
-        stx       ptr1+1
+        ; Backup matchtype
+        pha
 
         ; Send read mode
         lda       in_body
@@ -53,6 +52,10 @@ surl_find_in:
         bne       @send_cmd
 :       lda       #SURL_CMD_FIND_HEADER
 @send_cmd:
+        jsr       _serial_putc_direct
+
+        ; Send matchtype
+        pla
         jsr       _serial_putc_direct
 
         ; Send max_len
@@ -64,8 +67,7 @@ surl_find_in:
         jsr       _serial_putc_direct
 
         ; Send search_str
-        lda       ptr1
-        ldx       ptr1+1
+        jsr       popax
         jsr       _simple_serial_puts_nl
 
         ; Get reply

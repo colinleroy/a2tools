@@ -24,6 +24,8 @@
 #include <arpa/inet.h>
 #include <magic.h>
 #include <libavutil/log.h>
+#include <regex.h>
+
 #include "platform.h"
 #include "surl_protocol.h"
 #include "simple_serial.h"
@@ -66,7 +68,7 @@ struct _curl_buffer {
   long start_msecs;
 
   jv json_data;
-  
+
   int download_cancelled;
 };
 
@@ -418,6 +420,7 @@ new_req:
       SurlHtmlStripLevel striphtml = 0;
       char *translit = NULL;
       unsigned short size;
+      MatchType matchtype = SURL_MATCH_CASE_SENSITIVE;
       size_t l;
 
       /* read command */
@@ -434,17 +437,19 @@ new_req:
       if (SURL_IS_CMD(cmd)) {
 
         if(cmd == SURL_CMD_SEND || cmd == SURL_CMD_HEADERS) {
-          /* client wants body or headers data. 
+          /* client wants body or headers data.
            * Input: 16-bit word: maximum number of bytes to return
            */
           simple_serial_read((char *)&size, 2);
           bufsize = ntohs(size);
 
         } else if (cmd == SURL_CMD_FIND || cmd == SURL_CMD_FIND_HEADER) {
-          /* client wants to body data at a substring match. 
-           * Input: 16-bit word: maximum number of bytes to return
+          /* client wants to body data at a substring match.
+           * Input: 8 bit value: MatchType
+           *        16-bit word: maximum number of bytes to return
            *        string, \n terminated: what is looked for
            */
+          matchtype = simple_serial_getc();
           simple_serial_read((char *)&size, 2);
           bufsize = ntohs(size);
 
@@ -453,7 +458,7 @@ new_req:
           *strchr(param, '\n') = '\0';
 
         } else if (cmd == SURL_CMD_JSON) {
-          /* client wants parsed json. 
+          /* client wants parsed json.
            * Input: 16-bit word: maximum number of bytes to return
            *        char (SURL_HTMLSTRIP_*): how to strip HTML in parsed result
            *        string, space (' ') terminated: Charset transliteration, "0" for none
@@ -580,23 +585,56 @@ abort:
          *                 followed by a \n
          */
 
-        char *found = NULL;
+        const char *found = NULL;
+        char *result = NULL;
+        char *source;
+        regex_t preg;
+        int err = 0;
         sending_headers = 0;
         sending_body = 0;
 
         if (cmd == SURL_CMD_FIND)
-          found = strstr(response->buffer, param);
+          source = response->buffer;
         else
-          found = strstr(response->headers, param);
+          source = response->headers;
 
-        printf("RESP: FIND %s '%s' into %zu bytes: ", 
-               cmd == SURL_CMD_FIND ? "body":"headers", param, bufsize);
-        if (found) {
+        switch(matchtype) {
+          case SURL_MATCH_CASE_SENSITIVE:
+            found = strstr(source, param);
+            break;
+          case SURL_MATCH_CASE_INSENSITIVE:
+            found = strcasestr(source, param);
+            break;
+          case SURL_REGEXP_CASE_SENSITIVE:
+          case SURL_REGEXP_CASE_INSENSITIVE:
+            err = regcomp(&preg, param, REG_EXTENDED
+                          | (matchtype == SURL_REGEXP_CASE_INSENSITIVE ? REG_ICASE : 0));
+            if (err) {
+              char buf[BUFSIZE];
+              regerror(err, &preg, buf, BUFSIZE);
+              printf("regexp error: %s\n", buf);
+            } else {
+              regmatch_t pos;
+              if (regexec(&preg, source, 1, &pos, 0) == 0 && pos.rm_so != -1) {
+                found = source + pos.rm_so;
+              }
+            }
+            regfree(&preg);
+            break;
+        }
+
+        printf("RESP: FIND in %s: '%s' (matchtype %d) into %zu bytes: ",
+               cmd == SURL_CMD_FIND ? "body":"headers", param, matchtype, bufsize);
+        if (err) {
+          printf("Regexp error\n");
+
+          simple_serial_putc(SURL_ERROR_INV_REGEXP);
+        } else if (found) {
           size_t len = strlen(found);
-          found = strdup(found);
+          result = strdup(found);
           if (len > bufsize - 1) {
-            found[bufsize - 1] = '\0';
-            len = strlen(found);
+            result[bufsize - 1] = '\0';
+            len = strlen(result);
           }
 
           /* We'll add a \n */
@@ -611,11 +649,11 @@ abort:
           IO_BARRIER("FIND, pre-content");
 
           if (VERY_VERBOSE) {
-            printf("'%s'\n", found);
+            printf("'%s'\n", result);
           }
-          simple_serial_puts_nl(found);
+          simple_serial_puts_nl(result);
 
-          free(found);
+          free(result);
         } else {
           printf("not found\n");
 
@@ -624,7 +662,7 @@ abort:
 
       } else if (cmd == SURL_CMD_JSON) {
         /* JSON response format:
-         * char:             status (SURL_ERROR_OK, SURL_ERROR_NOT_FOUND or 
+         * char:             status (SURL_ERROR_OK, SURL_ERROR_NOT_FOUND or
                              SURL_ERROR_NOT_JSON)
          * 16-bit word:      length of the result
          * array of strings: JSON result, each field matched by the selector
@@ -668,7 +706,7 @@ abort:
             /* Strip HTML at the required level */
             if (striphtml) {
               char *text = html2text(result,
-                            striphtml == SURL_HTMLSTRIP_FULL ? 
+                            striphtml == SURL_HTMLSTRIP_FULL ?
                               HTML2TEXT_EXCLUDE_LINKS : HTML2TEXT_DISPLAY_LINKS);
               free(result);
               result = text;
@@ -727,7 +765,7 @@ abort:
         }
       } else if (cmd == SURL_CMD_STRIPHTML) {
         char *tmp = html2text(response->buffer,
-                      striphtml == SURL_HTMLSTRIP_FULL ? 
+                      striphtml == SURL_HTMLSTRIP_FULL ?
                         HTML2TEXT_EXCLUDE_LINKS : HTML2TEXT_DISPLAY_LINKS);
 
         if (tmp) {

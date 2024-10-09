@@ -32,17 +32,18 @@
 #endif
 
 static unsigned char in_body = 1;
-static int __fastcall__ surl_find_in(char *buffer, size_t max_len, char *search_str) {
+static int __fastcall__ surl_find_in(char *buffer, char *search_str, size_t max_len, MatchType matchtype) {
   size_t res_len = 0;
   char r;
 
-  res_len = htons(max_len);
   simple_serial_putc(in_body ? SURL_CMD_FIND:SURL_CMD_FIND_HEADER);
+  simple_serial_putc(matchtype);
+  res_len = htons(max_len);
   simple_serial_write((char *)&res_len, 2);
   simple_serial_puts_nl(search_str);
 
   r = simple_serial_getc();
-  if (r == SURL_ERROR_NOT_FOUND) {
+  if (r != SURL_ERROR_OK) {
     buffer[0] = '\0';
     return -1;
   }
@@ -59,14 +60,14 @@ static int __fastcall__ surl_find_in(char *buffer, size_t max_len, char *search_
   return 0;
 }
 
-int __fastcall__ surl_find_line(char *buffer, size_t max_len, char *search_str) {
+int __fastcall__ surl_find_line(char *buffer, char *search_str, size_t max_len, MatchType matchtype) {
   in_body = 1;
-  return surl_find_in(buffer, max_len, search_str);
+  return surl_find_in(buffer, search_str, max_len, matchtype);
 }
 
-int __fastcall__ surl_find_header(char *buffer, size_t max_len, char *search_str) {
+int __fastcall__ surl_find_header(char *buffer, char *search_str, size_t max_len, MatchType matchtype) {
   in_body = 0;
-  return surl_find_in(buffer, max_len, search_str);
+  return surl_find_in(buffer, search_str, max_len, matchtype);
 }
 
 #ifdef __CC65__
