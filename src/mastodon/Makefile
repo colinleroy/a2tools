@@ -53,11 +53,11 @@ mastodon_SOURCES := \
 	api/oauth.c \
 	cli/config.c \
 	cli/logo.c \
-	../lib/surl/surl_find_line.c \
 	../lib/surl/surl_ping.c
 
 mastodon_CC65SOURCES := \
 	$(common_CC65SOURCES) \
+	../lib/surl/asm/surl_find_line.s \
 	../lib/serial/asm/simple_serial_configure.s \
 	../lib/runtime_once_clean.s \
 	../lib/citoa.s \
@@ -144,6 +144,7 @@ GCCSOURCES := \
 	../lib/serial/c/simple_serial.c \
 	../lib/serial/c/simple_serial_io.c \
 	../lib/surl/c/surl_core.c \
+	../lib/surl/c/surl_find_line.c \
 	../lib/surl/c/surl_send.c \
 	../lib/c/scrollwindow.c \
 	../lib/c/clrzone.c \
