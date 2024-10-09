@@ -58,19 +58,20 @@ next_line:
         lda     clr_lxs
         sta     CH
 
+        ; (backup CV in case it's last column of scrollwindow)
+        lda     CV
+        pha
+
 :       lda     #' '|$80
         jsr     cputdirect
 
         lda     CH
+        beq     :+            ; If 0, we wrapped. Go check if last line.
         cmp     clr_lxe
-        bcc     :-
+        bcc     :-            ; last X?
+        beq     :-
 
-        ; Last X (backup CV in case it's last column of scrollwindow)
-        lda     CV
-        pha
-        lda     #' '|$80
-        jsr     cputdirect
-        pla
+:       pla
         .ifdef __APPLE2ENH__
         inc     a
         .else
