@@ -23,7 +23,6 @@
 
 #define CSRF_TOKEN "authenticity_token"
 #define CSRF_TOKEN_SCRAPE "name=\""CSRF_TOKEN
-#define OAUTH_CODE_SCRAPE "class='oauth-code"
 
 extern char *instance_url;
 extern char *client_id;
@@ -65,20 +64,12 @@ static char *get_oauth_code(char *body) {
   char *w, *token = NULL;
   size_t len;
   
-  w = strstr(body, OAUTH_CODE_SCRAPE);
+  w = strstr(body, "code=");
   if (w == NULL) {
     return NULL;
   }
-  w = strstr(w, "value=");
-  if (w == NULL) {
-    return NULL;
-  }
-  w = strchr(w, '\'');
-  if (w == NULL) {
-    return NULL;
-  }
-  w++;
-  len = strchr(w, '\'') - w;
+  w+=5;
+  len = strchr(w, '\r') - w;
   token = malloc0(len + 1);
   strncpy(token, w, len);
   token[len] = '\0';
@@ -296,12 +287,13 @@ otp_again:
       dputs("OK.\r\n");
     }
 
-    if (surl_find_line(body, buf_size, "input class='oauth-code") == 0) {
+    if (surl_find_header(body, buf_size, "ocation: ") == 0) {
       free(oauth_code);
       oauth_code = get_oauth_code(body);
       dputs("Got OAuth code.\r\n");
     } else {
       dputs("Did not get oauth code.\r\n");
+      cgetc();
       goto err_out;
     }
   }

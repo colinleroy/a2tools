@@ -46,17 +46,18 @@ typedef enum {
 
 
 typedef enum {
-  SURL_CMD_SEND      = 0x30,
-  SURL_CMD_HEADERS   = 0x31,
-  SURL_CMD_FIND      = 0x32,
-  SURL_CMD_JSON      = 0x33,
-  SURL_CMD_HGR       = 0x34,
-  SURL_CMD_STRIPHTML = 0x35,
-  SURL_CMD_TRANSLIT  = 0x36,
-  SURL_CMD_SKIP      = 0x37
+  SURL_CMD_SEND        = 0x30,
+  SURL_CMD_HEADERS     = 0x31,
+  SURL_CMD_FIND        = 0x32,
+  SURL_CMD_JSON        = 0x33,
+  SURL_CMD_HGR         = 0x34,
+  SURL_CMD_STRIPHTML   = 0x35,
+  SURL_CMD_TRANSLIT    = 0x36,
+  SURL_CMD_SKIP        = 0x37,
+  SURL_CMD_FIND_HEADER = 0x38,
 } SurlCommand;
 
-#define SURL_IS_CMD(x) ((x) >= SURL_CMD_SEND && (x) <= SURL_CMD_SKIP)
+#define SURL_IS_CMD(x) ((x) >= SURL_CMD_SEND && (x) <= SURL_CMD_FIND_HEADER)
 
 typedef enum {
   SURL_ERROR_OK           = 0x40,

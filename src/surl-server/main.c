@@ -440,7 +440,7 @@ new_req:
           simple_serial_read((char *)&size, 2);
           bufsize = ntohs(size);
 
-        } else if (cmd == SURL_CMD_FIND) {
+        } else if (cmd == SURL_CMD_FIND || cmd == SURL_CMD_FIND_HEADER) {
           /* client wants to body data at a substring match. 
            * Input: 16-bit word: maximum number of bytes to return
            *        string, \n terminated: what is looked for
@@ -571,7 +571,7 @@ abort:
         simple_serial_write_fast(response->headers + sent, to_send);
         sent += to_send;
 
-      } else if (cmd == SURL_CMD_FIND) {
+      } else if (cmd == SURL_CMD_FIND || cmd == SURL_CMD_FIND_HEADER) {
         /* FIND response format:
          * char:           search status (SURL_ERROR_OK or SURL_ERROR_NOT_FOUND)
          * 16-bit word:    length of the result
@@ -584,8 +584,12 @@ abort:
         sending_headers = 0;
         sending_body = 0;
 
-        found = strstr(response->buffer, param);
-        printf("RESP: FIND '%s' into %zu bytes: ", param, bufsize);
+        if (cmd == SURL_CMD_FIND)
+          found = strstr(response->buffer, param);
+        else
+          found = strstr(response->headers, param);
+
+        printf("RESP: FIND %s '%s' into %zu bytes: ", cmd == SURL_CMD_FIND ? "body":"headers", param, bufsize);
         if (found) {
           size_t len = strlen(found);
           found = strdup(found);
@@ -1537,7 +1541,7 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
 
   if(res != CURLE_OK) {
     printf("CURL: error %d: %s\n", res, curl_easy_strerror(res));
-    if (res == CURLE_REMOTE_ACCESS_DENIED) {
+    if (res == CURLE_REMOTE_ACCESS_DENIED || res == CURLE_LOGIN_DENIED) {
       curlbuf->response_code = 401;
     } else if (res == CURLE_OPERATION_TIMEDOUT) {
       curlbuf->response_code = 504;

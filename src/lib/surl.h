@@ -53,6 +53,8 @@ int __fastcall__ surl_send_data_params(uint32 total, int raw);
 #define surl_send_data(buffer, len) simple_serial_write(buffer, len)
 
 int __fastcall__ surl_find_line(char *buffer, size_t max_len, char *search_str);
+int __fastcall__ surl_find_header(char *buffer, size_t max_len, char *search_str);
+
 int __fastcall__ surl_get_json(char *buffer, size_t max_len, char striphtml, const char *translit, const char *selector);
 
 #ifdef __CC65__
