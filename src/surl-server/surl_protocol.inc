@@ -39,6 +39,7 @@ SURL_CMD_HGR                = $34
 SURL_CMD_STRIPHTML          = $35
 SURL_CMD_TRANSLIT           = $36
 SURL_CMD_SKIP               = $37
+SURL_CMD_FIND_HEADER        = $38
 
 SURL_ERROR_OK               = $40
 SURL_ERROR_NOT_FOUND        = $41
