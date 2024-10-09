@@ -185,6 +185,7 @@ int main(int argc, char **argv) {
 
   runtime_once_clean();
 
+try_login_again:
   if (load_settings() < 0) {
     set_scrollwindow(0, scrh);
     cgetc();
@@ -192,11 +193,10 @@ int main(int argc, char **argv) {
   }
 
   if (!strlen(oauth_token)) {
-    if (do_login() < 0) {
-      exit(1);
-    }
-    if (get_oauth_token() < 0) {
-      exit(1);
+    if (do_login() < 0 || get_oauth_token() < 0) {
+      dputs("\r\nPress a key to try again.\r\n");
+      cgetc();
+      goto try_login_again;
     }
     save_settings();
     dputs("Saved OAuth token.\r\n");
