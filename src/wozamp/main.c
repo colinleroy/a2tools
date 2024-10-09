@@ -64,11 +64,11 @@ static void clr_footer(void) {
 }
 
 static unsigned char got_cover = 0;
-static void display_image(void) {
+static void display_image(HGRScale scale) {
   size_t len;
   simple_serial_putc(SURL_CMD_HGR);
   simple_serial_putc(monochrome);
-  simple_serial_putc(HGR_SCALE_MIXHGR);
+  simple_serial_putc(scale);
   if (simple_serial_getc() == SURL_ERROR_OK) {
 
     surl_read_with_barrier((char *)&len, 2);
@@ -79,7 +79,9 @@ static void display_image(void) {
       surl_read_with_barrier((char *)HGR_PAGE, HGR_LEN);
       got_cover = 1;
       init_hgr(1);
-      hgr_mixon();
+      if (scale == HGR_SCALE_MIXHGR) {
+        hgr_mixon();
+      }
     }
 #endif
   }
@@ -104,7 +106,7 @@ void get_cover_file(char *url) {
 
     surl_start_request(NULL, 0, cover_url, SURL_METHOD_GET);
     if (surl_response_ok()) {
-      display_image();
+      display_image(HGR_SCALE_MIXHGR);
     }
   }
   free(cover_url);
@@ -185,8 +187,6 @@ void show_metadata (char *data) {
 }
 
 void stp_print_result() {
-  gotoxy(0, 20);
-  chline(NUMCOLS);
   clrzone(0, 21, NUMCOLS - 1, 21);
 
   if (!surl_response_ok()) {
@@ -247,15 +247,14 @@ static int open_url(char *url, char *filename) {
 
   if (content_type) {
     if (!strncmp(content_type, "image/", 6)) {
-      display_image();
       if (in_list) {
-        for (r = 0; r < 20; r++) {
-          if (kbhit()) {
-            cancelled = (cgetc() == CH_ESC);
-            break;
-          }
-          platform_msleep(500);
+        display_image(HGR_SCALE_FULL);
+        platform_interruptible_msleep(10000);
+        if (kbhit()) {
+          cancelled = (cgetc() == CH_ESC);
         }
+      } else {
+        display_image(HGR_SCALE_MIXHGR);
       }
       goto out;
     } else if (!strncmp(content_type, "video/", 6)) {
@@ -378,8 +377,6 @@ novid:
     cancelled = surl_stream_audio(NUMCOLS, 20, 2, 23);
     init_text();
 #endif
-    clr_footer();
-    stp_print_footer();
 
   } else {
     gotoxy(0, 21);
@@ -472,17 +469,7 @@ static char *play_directory(RecursivePlayMode mode, char *url) {
       in_list = 1;
       url = play_directory_at_index(PLAY_ALL, url, dir_index);
       if (cancelled) {
-        #ifdef __APPLE2ENH__
-        gotoxy(25, 12);
-        #else
-        gotoxy(2, 12);
-        #endif
-        cputs("Keep playing directory? (Y/n)");
-        if (tolower(cgetc()) != 'n') {
-          cancelled = 0;
-        } else {
-          break;
-        }
+        break;
       }
     }
   } else if (mode == PLAY_RANDOM) {
@@ -605,7 +592,6 @@ update_list:
     stp_update_list(full_update);
 
 keyb_input:
-    stp_print_footer();
 
     while (!kbhit()) {
       stp_animate_list(0);
@@ -736,6 +722,7 @@ void main(void) {
 #ifdef __APPLE2ENH__
   videomode(VIDEOMODE_80COL);
 #endif
+
   clrscr();
   init_hgr(1);
   hgr_mixon();

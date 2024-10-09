@@ -114,8 +114,6 @@ void stp_print_footer(void) {
 
 void stp_print_result(void) {
   extern surl_response resp;
-  gotoxy(0, 20);
-  chline(NUMCOLS);
   clrzone(0, 21, NUMCOLS - 1, 21);
   gotoxy(0, 21);
   cprintf("Response code %d - %lu bytes",
@@ -148,7 +146,6 @@ int main(void) {
   url = stp_build_login_url(url);
   stp_print_header(url, URL_SET);
 
-  stp_print_footer();
   surl_set_time();
 
   runtime_once_clean();
@@ -171,7 +168,6 @@ update_list:
     stp_update_list(full_update);
 
 keyb_input:
-  stp_print_footer();
     while (!kbhit()) {
       stp_animate_list(0);
     }

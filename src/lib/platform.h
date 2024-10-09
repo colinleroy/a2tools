@@ -33,7 +33,9 @@
 
 #ifdef __APPLE2__
 void __fastcall__ platform_msleep(uint16 ms);
+void __fastcall__ platform_interruptible_msleep(uint16 ms);
 #else
 #define platform_msleep(n) usleep(n*1000)
+#define platform_interruptible_msleep(n) usleep(n*1000)
 #define beep()
 #endif

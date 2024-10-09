@@ -267,6 +267,9 @@ void stp_list_search(unsigned char new_search) {
     clrzone(0, 0, NUMCOLS - 1, 0);
     cputs("Search: ");
     dget_text(search_buf, 40, NULL, 0);
+
+    stp_print_footer();
+
     if (search_buf[0] == '\0') {
       return;
     }
@@ -278,10 +281,20 @@ void stp_list_search(unsigned char new_search) {
 search_from_start:
   for (i = search_from; i < num_lines; i++) {
     if (strcasestr(display_lines[i], search_buf) != NULL) {
-      search_from = i;
-      cur_display_line = search_from;
-      cur_line = cur_display_line;
-      stp_update_list(1);
+      unsigned char full_update = 1;
+      cur_line = search_from = i;
+
+      if (cur_line < cur_display_line) {
+        /* Result is before current offset: display it at top */
+        cur_display_line = search_from;
+      } else if (cur_line > cur_display_line + PAGE_HEIGHT) {
+        /* Result is after current offset: display it at bottom */
+        cur_display_line = search_from - PAGE_HEIGHT;
+      } else {
+        /* Result is on current page, no scroll to do */
+        full_update = 0;
+      }
+      stp_update_list(full_update);
       break;
     }
   }
@@ -299,13 +312,11 @@ static void cnputs_nowrap(const char *str) {
   strncpy(tmp_buf, str, NUMCOLS - 3);
   tmp_buf[NUMCOLS-3] = '\0';
   cputs(tmp_buf);
+  clreol();
 }
 
 static unsigned char hscroll_off = 0;
 static signed char hscroll_dir = 1;
-#define STP_ANIMATE_SHORT_DELAY 4
-#define STP_ANIMATE_LONG_DELAY  30
-static char msecs_rem = STP_ANIMATE_SHORT_DELAY;
 
 void stp_animate_list(char reset) {
   unsigned char line_off;
@@ -319,31 +330,26 @@ void stp_animate_list(char reset) {
 
   if (reset) {
     hscroll_off = 0;
-    msecs_rem = STP_ANIMATE_SHORT_DELAY;
     goto reprint;
   }
 
   cur_line_len = strlen(display_lines[cur_line]);
   if (cur_line_len > NUMCOLS - 3) {
-    if (msecs_rem == 0) {
-      hscroll_off += hscroll_dir;
-
-      if (hscroll_dir == 1 && cur_line_len - hscroll_off == NUMCOLS - 3) {
-        hscroll_dir = -1;
-        msecs_rem = STP_ANIMATE_LONG_DELAY;
-      } else if (hscroll_off == 0) {
-        hscroll_dir = 1;
-        msecs_rem = STP_ANIMATE_LONG_DELAY;
-      } else {
-        msecs_rem = STP_ANIMATE_SHORT_DELAY;
-      }
+    if (hscroll_dir == 1 && cur_line_len - hscroll_off == NUMCOLS - 3) {
+      hscroll_dir = -1;
+      platform_interruptible_msleep(500);
+    } else if (hscroll_off == 0) {
+      hscroll_dir = 1;
+      platform_interruptible_msleep(500);
     }
+
+    hscroll_off += hscroll_dir;
+
 reprint:
     gotoxy(2, PAGE_BEGIN + line_off);
     cnputs_nowrap(display_lines[cur_line] + hscroll_off);
     if (!reset) {
-      platform_msleep(10);
-      msecs_rem --;
+      platform_interruptible_msleep(100);
     }
   }
 }
@@ -356,7 +362,6 @@ void stp_update_list(char full_update) {
   hscroll_dir = 1;
 
   if (full_update) {
-    stp_clr_page();
     for (i = PAGE_BEGIN, j = cur_display_line; j < num_lines && i <= PAGE_BEGIN+PAGE_HEIGHT; i++, j++) {
       gotoxy(2, i);
       cnputs_nowrap(display_lines[j]);
@@ -387,6 +392,7 @@ void stp_free_data(void) {
 }
 
 extern char center_x;
+static char center_y = 11;
 unsigned char stp_get_data(char *url) {
   extern surl_response resp;
 
@@ -397,20 +403,21 @@ unsigned char stp_get_data(char *url) {
   stp_free_data();
 
   stp_clr_page();
-  gotoxy(center_x, 12);
+  gotoxy(center_x, center_y);
   cputs("Loading...   ");
 
   surl_start_request(NULL, 0, url, SURL_METHOD_GET);
 
   stp_print_result();
 
+  gotoxy(center_x, center_y);
   if (!surl_response_ok()) {
-    gotoxy(center_x, 12);
     cputs("Bad response.");
+    stp_print_footer();
     return KEYBOARD_INPUT;
   } else if (resp.size == 0) {
-    gotoxy(center_x, 12);
     cputs("Empty.       ");
+    stp_print_footer();
     return KEYBOARD_INPUT;
   }
 
@@ -448,6 +455,9 @@ unsigned char stp_get_data(char *url) {
     nat_lines = NULL;
     display_lines = lines;
   }
+
+  stp_print_footer();
+  stp_clr_page();
   return UPDATE_LIST;
 }
 
@@ -471,7 +481,7 @@ char *stp_url_enter(char *url, char *suffix) {
   char *tmp = realloc(url, url_len + suffix_len + 2);
 
   if (!tmp) {
-    gotoxy(center_x, 12);
+    gotoxy(center_x, center_y);
     cputs("Not enough memory :-(");
     return url;
   }
@@ -538,6 +548,9 @@ void stp_print_header(const char *url, enum HeaderUrlAction action) {
   } else {
     cputs(header_url);
   }
+
+  gotoxy(0, 20);
+  chline(NUMCOLS);
   gotoxy(0, 1);
   chline(NUMCOLS);
 }
