@@ -983,6 +983,11 @@ static void do_vote (status *status) {
   }
 vote:
   poll_update_vote(status->poll);
+  /* update display */
+  gotoxy(0, 0);
+  writable_lines = 23;
+  print_status(status, 0, 1);
+
 out:
   set_hscrollwindow(0, scrw);
   return;
