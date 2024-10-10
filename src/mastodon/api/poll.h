@@ -7,6 +7,10 @@ typedef struct _poll_option poll_option;
 #define MAX_POLL_OPTIONS 4
 #define MAX_POLL_OPTION_LEN 49
 
+#define POLL_FROM_STATUS 0
+#define POLL_FROM_REBLOG 1
+#define POLL_FROM_VOTE   2
+
 struct _poll_option {
   char *title;
   size_t votes_count;

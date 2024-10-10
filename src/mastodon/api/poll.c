@@ -34,14 +34,16 @@ static const char *poll_selector = ".reblog.poll|(.multiple,.votes_count,"
                             "(.own_votes|join(\",\")),"
                             "(.options[]|(.title,.votes_count)))";
 
-void poll_fill(poll *p, char from_reblog) {
+void poll_fill(poll *p, char source) {
   int r;
   char n_lines;
 
-  if (from_reblog)
+  if (source == POLL_FROM_REBLOG)
     n_lines = 0;
-  else
+  else if (source == POLL_FROM_STATUS)
     n_lines = 7; /* strlen(".reblog") */
+  else if (source == POLL_FROM_VOTE)
+    n_lines = 13; /* strlen(".reblog.poll|") */
 
   memset(p->own_votes, 0, MAX_POLL_OPTIONS);
 
@@ -63,7 +65,10 @@ void poll_fill(poll *p, char from_reblog) {
 
     for (r = 0; r < p->options_count; r ++) {
       char i = NUM_POLL_LINES + (r * 2);
-      p->options[r].title = strdup(lines[i]);
+      if (p->options[r].title == NULL) {
+        p->options[r].title = strdup(lines[i]);
+      } /* otherwise, it's a reload from votes, and
+         * titles won't have changed. */
       p->options[r].votes_count = (size_t)atoi(lines[i + 1]);
     }
   }
@@ -96,6 +101,9 @@ void poll_update_vote(poll *p) {
   surl_send_data(params, i);
 
   surl_read_response_header();
+  if (surl_response_ok()) {
+    poll_fill(p, POLL_FROM_VOTE);
+  }
 }
 
 #pragma code-name(pop)
