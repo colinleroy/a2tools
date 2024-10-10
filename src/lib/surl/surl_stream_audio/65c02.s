@@ -45,7 +45,6 @@ SAMPLE_MULT   = 2
 .include "duty-cycles/0.s"
 
 .include "vars.s"
-.include "kbd_send.s"
 .include "silence.s"
 .include "../surl_stream_common/patch_addresses.s"
 .include "../surl_stream_common/patch_audio_registers.s"
@@ -158,6 +157,7 @@ next:
 .include "duty-cycles/26.s"
 .include "duty-cycles/27.s"
 .include "duty-cycles/28.s"
+.include "kbd_send.s"
 
 ; ------------------------------------------------------------------------
 .align 256
