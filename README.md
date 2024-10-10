@@ -10,12 +10,14 @@ started, and then I thought
 
 _"I should do it with the Apple //c!"_
 
-One thing led to another and there are now quite a few tools
+One thing led to another and there are now quite a few things
 here:
-- an HomeAssistant frontend to control switches, heating, and view sensors' graphs.
+- a full featured Mastodon client
+- a media player (mp3, video, webradios, ...)
+- a Peertube and Youtube client
 - an FTP client
 - a Telnet client
-- a Mastodon client
+- an HomeAssistant frontend to control switches, heating, and view sensors' graphs.
 
 ## Building the Apple II programs
 
@@ -57,15 +59,15 @@ make
 
 ## Notes
 
-The Apple 2 serial port is hardcoded to be port 2. You can change that in the simple_serial_open() calls, grep for them in the src/ directory.
+The Apple 2 serial port is port 2 by default.
 
 # Raspberry installation
-For convenience, a pre-built surl-server is configured in the Raspberry image file, surl-server-buster-YYYY-MM-DD-lite.img.gz, available in the releases.
+For convenience, a pre-built surl-server is configured in the Raspberry image file,  surl-server-bullseye-YYYY-MM-DD-lite.img.gz , available in the releases.
 
 Copy it to a microSD card:
 ```
-gunzip raspios-buster-armhf-surl-server.img.gz
-dd if=raspios-buster-armhf-surl-server.img of=/dev/mmcblk0 bs=1M
+gunzip surl-server-bullseye-YYYY-MM-DD-lite.img.gz
+dd if=surl-server-bullseye-YYYY-MM-DD-lite.img of=/dev/mmcblk0 bs=4M status=progress
 sync
 ```
 
@@ -76,7 +78,7 @@ You can ssh into the pi with the default Raspbian login, pi/raspberry. The Pi sh
 If you already have a running Raspberry that you'd want to use for this, you can instead add the following source and packages:
 
 ```
-echo "deb https://apt-rpi.colino.net/debian buster main" | tee -a /etc/apt/sources.list.d/apt-rpi-colino-net.list
+echo "deb https://apt-rpi.colino.net/debian bullseye main" | tee -a /etc/apt/sources.list.d/apt-rpi-colino-net.list
 curl https://apt-rpi.colino.net/gpg.key | apt-key add -
 apt update
 apt install surl-server
