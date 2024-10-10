@@ -1,3 +1,16 @@
+a2tools (21.0.0.1) bionic; urgency=medium
+
+  * Size optimisations
+  * Mastodon: Fix logging in to Mastodon 4.3+ instances
+  * Mastodon: handle all types of media on 65c02 and 6502 (image, video, gif, audio)
+    On 6502, video is not double-buffered.
+  * Wozamp: UI improvements
+  * Wozamp: Play all is now recursive (and starts at current line)
+  * Wozamp: Add random (recursive) play
+  * Wozamp: User manual updated
+
+ -- Colin Leroy-Mira <colin@colino.net>  Wed, 09 Oct 2024 21:28:19 +0200
+
 a2tools (20.0.0.1) bionic; urgency=medium
 
   * Mastodon handles all types of media on 65c02 (image, video, gif, audio)
