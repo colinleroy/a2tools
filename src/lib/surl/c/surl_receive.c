@@ -44,8 +44,8 @@ size_t __fastcall__ surl_receive_bindata(char *buffer, size_t max_len, char bina
     return 0;
   }
 
-  r = htons(to_read);
   simple_serial_putc(SURL_CMD_SEND);
+  r = htons(to_read);
   simple_serial_write((char *)&r, 2);
 
   surl_read_with_barrier(buffer, to_read);
@@ -58,7 +58,7 @@ size_t __fastcall__ surl_receive_bindata(char *buffer, size_t max_len, char bina
   return to_read;
 }
 
-void surl_strip_html(char strip_level) {
+void __fastcall__ surl_strip_html(char strip_level) {
   simple_serial_putc(SURL_CMD_STRIPHTML);
   simple_serial_putc(strip_level);
 
@@ -66,7 +66,7 @@ void surl_strip_html(char strip_level) {
   resp.cur_pos = 0;
 }
 
-void surl_translit(char *charset) {
+void __fastcall__ surl_translit(char *charset) {
   simple_serial_putc(SURL_CMD_TRANSLIT);
   simple_serial_puts_nl(charset);
 
