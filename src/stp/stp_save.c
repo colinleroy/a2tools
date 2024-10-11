@@ -338,7 +338,8 @@ int stp_save(char *full_filename, char *out_dir) {
 
   /* coverity[dead_error_condition] */
   if (keep_bin_header) {
-    if (fwrite(data, sizeof(char), APPLESINGLE_HEADER_LEN, fp) < APPLESINGLE_HEADER_LEN) {
+    /* Write what we read */
+    if (fwrite(data, sizeof(char), r, fp) < r) {
       gotoxy(0, 15);
       cprintf("%s.", strerror(errno));
       cgetc();
