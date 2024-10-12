@@ -350,7 +350,11 @@ static void set_poll_duration(void) {
   char c, i;
   do {
     gotoxy(0, scrh - 1);
+#ifdef __APPLE2ENH__
     dputs("Left/Right to change duration, Enter to validate.");
+#else
+    dputs("Left/Right:set duration, Enter:validate");
+#endif
     for (i = 0; i < NUM_POLL_DURATIONS; i++) {
       if (toot_poll->expires_in_hours == compose_poll_durations_hours[i]) {
         break;
@@ -408,8 +412,14 @@ poll_menu:
   if (toot_poll->options_count > 0) {
     cprintf("R: remove option %d", toot_poll->options_count);
   }
+
+#ifdef __APPLE2ENH__
   cprintf("\r\nT: Set to %s choice; E: set duration"
           "\r\nD: delete poll; Escape: back to editing",
+#else
+  cprintf("\r\nT: set %s choice; E: set duration"
+          "\r\nD: delete poll; Escape: back to editing",
+#endif
           toot_poll->multiple ? "single":"multiple");
 
   c = cgetc();
@@ -430,15 +440,8 @@ poll_menu:
     case 'd':
       poll_free(toot_poll);
       toot_poll = NULL;
-      clrscr();
-      return;
+      /* Fallback to clrscr/return */
     case CH_ESC:
-      if (toot_poll->options_count > 0 && toot_poll->options_count < 2) {
-        gotoxy(0, scrh - 1);
-        dputs("Not enough options in the poll.");
-        cgetc();
-        break;
-      }
       clrscr();
       return;
   }
@@ -506,12 +509,14 @@ static void compose_toot(char *initial_buf) {
   char i;
   char *text;
 
+reedit:
   text = handle_compose_input(initial_buf);
 
   set_scrollwindow(0, scrh);
 
   if (text && !cancelled) {
     signed char r;
+    char *err;
 
 try_again:
     clrscr();
@@ -520,14 +525,26 @@ try_again:
     r = api_send_toot(compose_mode[0], text, cw, sensitive_medias,
                       ref_status ? ref_status->id : NULL,
                       media_ids, n_medias,
-                      toot_poll, compose_audience);
+                      toot_poll, compose_audience,
+                      &err);
     if (r < 0) {
       char t;
 
-      dputs("\r\nAn error happened sending the toot.\r\n\r\nTry again? (y/n)");
+      dputs("\r\nAn error happened sending the toot.\r\n\r\n");
+
+      if (err) {
+        dputs(err);
+        free(err);
+        dputs("\r\n\r\n");
+      }
+
+      dputs("Try Sending again or Reedit ? (s/R)");
       t = cgetc();
-      if (tolower(t) != 'n') {
+      if (tolower(t) == 's') {
         goto try_again;
+      } else {
+        initial_buf = text;
+        goto reedit;
       }
     }
   }

@@ -128,11 +128,13 @@ send_again:
 
 signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medias,
                           char *ref_toot_id, char **media_ids, char n_medias,
-                          poll *toot_poll, char compose_audience) {
+                          poll *toot_poll, char compose_audience, char **err) {
   char *body;
   int i, o, len;
   char *extra_buf;
   char c;
+
+  *err = NULL;
 
   body = malloc0(1536);
 
@@ -220,7 +222,14 @@ signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medi
 
   surl_read_response_header();
 
-  return surl_response_ok() ? 0 : -1;
+  if (surl_response_ok())
+    return 0;
+
+  *err = malloc(NUM_CHARS);
+  if (*err) {
+    surl_get_json(*err, NUM_CHARS, SURL_HTMLSTRIP_NONE, translit_charset, ".error");
+  }
+  return -1;
 }
 
 char *compose_get_status_text(char *status_id) {
