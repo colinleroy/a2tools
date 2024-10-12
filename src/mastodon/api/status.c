@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include "malloc0.h"
+#include "atoc.h"
 #include "surl.h"
 #include "simple_serial.h"
 #include "strsplit.h"
@@ -40,15 +41,6 @@ static status *status_new(void) {
   status *s = malloc0(sizeof(status));
   s->displayed_at = -1;
   return s;
-}
-
-static __fastcall__ char atoc(const char *str) {
-  static int i;
-  i = atoi(str);
-  if (i > 255) {
-    return 255;
-  }
-  return i;
 }
 
 #ifdef __CC65__
