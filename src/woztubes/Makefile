@@ -1,4 +1,4 @@
-CC65_TARGET = apple2enh
+fCC65_TARGET = apple2enh
 ifdef IIGS
 serial_hw := z8530
 iigs_suffix := -iigs
@@ -52,13 +52,13 @@ woztubes_SOURCES := \
 	../lib/serial/$(serial_hw)/common.s \
 	../lib/serial/$(serial_hw)/no_irq.s \
 	../lib/surl/asm/surl_core.s \
+	../lib/surl/c/surl_get_json.c \
 	../lib/surl/asm/surl_read_with_barrier.s \
 	../lib/asm/scrollwindow.s \
 	../lib/asm/path_helper.s \
 	../lib/asm/clrzone.s \
 	../lib/asm/malloc0.s \
 	../lib/surl/surl_ping.c \
-	../lib/surl/surl_get_json.c \
 	../lib/extrazp.s \
 	../lib/citoa.s \
 	../lib/cutoa.s \

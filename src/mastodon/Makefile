@@ -26,7 +26,6 @@ common_SOURCES := \
 	api/common.c \
 	../lib/dgets.c \
 	../lib/strsplit.c \
-	../lib/surl/surl_get_json.c
 
 common_CC65SOURCES := \
 	../lib/serial/asm/simple_serial.s \
@@ -34,6 +33,7 @@ common_CC65SOURCES := \
 	$(serial_hw_SOURCES) \
 	../lib/surl/asm/surl_core.s \
 	../lib/surl/asm/surl_send.s \
+	../lib/surl/c/surl_get_json.c \
 	../lib/surl/asm/surl_read_with_barrier.s \
 	../lib/asm/scrollwindow.s \
 	../lib/asm/path_helper.s \
@@ -68,7 +68,6 @@ mastoimg_SOURCES := \
 	api/common.c \
 	cli/img.c \
 	api/media.c \
-	../lib/surl/surl_get_json.c \
 	../lib/file_select.c \
 	../lib/strsplit.c \
 	../lib/realloc_safe.c \
@@ -94,6 +93,7 @@ mastoimg_CC65SOURCES := \
 	../lib/serial/asm/simple_serial_io.s \
 	$(serial_hw_SOURCES) \
 	../lib/surl/asm/surl_core.s \
+	../lib/surl/c/surl_get_json.c \
 	../lib/surl/asm/surl_read_with_barrier.s \
 	../lib/asm/scrollwindow.s \
 	../lib/asm/path_helper.s \
@@ -148,6 +148,7 @@ GCCSOURCES := \
 	../lib/surl/c/surl_core.c \
 	../lib/surl/c/surl_find_line.c \
 	../lib/surl/c/surl_send.c \
+	../lib/surl/c/surl_get_json.c \
 	../lib/c/scrollwindow.c \
 	../lib/c/clrzone.c \
 	../lib/c/path_helper.c \

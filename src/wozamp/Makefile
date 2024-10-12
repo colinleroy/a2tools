@@ -6,7 +6,7 @@ iigs_CFLAGS := -DIIGS --asm-define IIGS
 STREAMER_VER := 65c02
 trgt = apple2gs
 upload_subdir := /iigs
-EMBED_RBROWSER := radio-browser.c ../lib/surl/surl_get_json.c
+EMBED_RBROWSER := radio-browser.c ../lib/surl/c/surl_get_json.c
 EXTERNAL_RBROWSER :=
 else
 ifdef OLDII
@@ -31,7 +31,7 @@ BUILD_VIDEOPLAY := 1
 STREAMER_VER := 65c02
 STREAM_URL_SEGMENT := "CODE"
 VIDEOPLAY_START_ADDR := 0x1D00
-EMBED_RBROWSER := radio-browser.c ../lib/surl/surl_get_json.c
+EMBED_RBROWSER := radio-browser.c ../lib/surl/c/surl_get_json.c
 EXTERNAL_RBROWSER :=
 endif
 endif
@@ -85,7 +85,6 @@ rbrowser_SOURCES := \
 	radio-browser.c \
 	config.c \
 	backup_logo.c \
-	../lib/surl/surl_get_json.c \
 	../lib/dgets.c \
 	../lib/strsplit.c
 
@@ -98,6 +97,7 @@ rbrowser_CL65SOURCES = \
 	../lib/serial/$(serial_hw)/control.s \
 	../lib/serial/$(serial_hw)/no_irq.s \
 	../lib/surl/asm/surl_core.s \
+	../lib/surl/c/surl_get_json.c \
 	../lib/surl/asm/surl_read_with_barrier.s \
 	../lib/asm/scrollwindow.s \
 	../lib/asm/path_helper.s \
