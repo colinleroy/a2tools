@@ -79,8 +79,9 @@ static __fastcall__ char status_fill_from_json(status *s, char *id, char full, c
   else
     reblog_offset = 8; /* strlen(".reblog|") */
 
-  r = surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, translit_charset,
-                    basic_selector + reblog_offset);
+  r = surl_get_json(gen_buf, basic_selector + reblog_offset,
+                    translit_charset, SURL_HTMLSTRIP_NONE,
+                    BUF_SIZE);
 
   n_lines = strnsplit_in_place(gen_buf, '\n', lines, 17);
   if (r >= 0 && n_lines >= 16) {
@@ -147,8 +148,9 @@ static __fastcall__ char status_fill_from_json(status *s, char *id, char full, c
   r = full ? TL_STATUS_LARGE_BUF : TL_STATUS_SHORT_BUF;
   content = malloc0(r);
 
-  r = surl_get_json(content, r, SURL_HTMLSTRIP_FULL, translit_charset,
-                    content_selector + reblog_offset);
+  r = surl_get_json(content, content_selector + reblog_offset,
+                    translit_charset, SURL_HTMLSTRIP_FULL,
+                    r);
 
   if (!full && r == TL_STATUS_SHORT_BUF - 1) {
     strcpy(content + TL_STATUS_SHORT_BUF - 4, "...");

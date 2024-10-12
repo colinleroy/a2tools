@@ -30,7 +30,7 @@ static media *media_new_from_json(char *base_selector, char *description_selecto
 
   m = media_new();
 
-  n = surl_get_json(img_buf, IMG_BUF_SIZE, SURL_HTMLSTRIP_NONE, translit_charset, base_selector);
+  n = surl_get_json(img_buf, base_selector, translit_charset, SURL_HTMLSTRIP_NONE, IMG_BUF_SIZE);
 
   n_lines = 0;
   lines = NULL;
@@ -55,7 +55,7 @@ static media *media_new_from_json(char *base_selector, char *description_selecto
 
   for (i = 0; i < m->n_media; i ++) {
     snprintf(gen_buf, BUF_SIZE, description_selector, i);
-    if (surl_get_json(img_buf, IMG_BUF_SIZE, SURL_HTMLSTRIP_FULL, translit_charset, gen_buf) > 0) {
+    if (surl_get_json(img_buf, gen_buf, translit_charset, SURL_HTMLSTRIP_NONE, IMG_BUF_SIZE) > 0) {
       w = img_buf;
       n = 0;
       while (*w != '\0') {

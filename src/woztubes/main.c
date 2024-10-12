@@ -170,9 +170,11 @@ static void load_video(char *host, InstanceTypeId instance_type, char *id) {
   url_len = strlen(n_host);
   strcpy((char *)BUF_8K_ADDR, n_host);
 
-  if (surl_get_json((char *)(BUF_8K_ADDR + url_len), BUF_8K_SIZE - url_len,
-                    SURL_HTMLSTRIP_NONE, translit_charset,
-                    video_provider_get_protocol_string(instance_type, VIDEO_URL_JSON_SELECTOR)) > 0) {
+  if (surl_get_json((char *)(BUF_8K_ADDR + url_len), 
+                    video_provider_get_protocol_string(instance_type, VIDEO_URL_JSON_SELECTOR),
+                    translit_charset,
+                    SURL_HTMLSTRIP_NONE,
+                    BUF_8K_SIZE - url_len) > 0) {
 
     /* If we had an absolute URL without host */
     if (((char *)BUF_8K_ADDR)[url_len] == '/') {
@@ -204,9 +206,9 @@ static void load_video(char *host, InstanceTypeId instance_type, char *id) {
         }
 
         /* Get JSON right after the instance URL */
-        if (surl_get_json((char *)(BUF_1K_ADDR + url_len), BUF_1K_SIZE - url_len,
-                          SURL_HTMLSTRIP_NONE, translit_charset,
-                          json_sel) > 0) {
+        if (surl_get_json((char *)(BUF_1K_ADDR + url_len), json_sel,
+                          translit_charset, SURL_HTMLSTRIP_NONE,
+                          BUF_1K_SIZE - url_len) > 0) {
           char *eol = strchr((char *)BUF_1K_ADDR, '\n');
           /* Cut at end of first match */
           if (eol) {
@@ -389,8 +391,11 @@ static void search(char *host, InstanceTypeId instance_type) {
     return;
   }
 
-  if (surl_get_json((char *)BUF_8K_ADDR, BUF_8K_SIZE, SURL_HTMLSTRIP_NONE, translit_charset,
-                    video_provider_get_protocol_string(instance_type, VIDEO_DETAILS_JSON_SELECTOR)) > 0) {
+  if (surl_get_json((char *)BUF_8K_ADDR,
+                    video_provider_get_protocol_string(instance_type, VIDEO_DETAILS_JSON_SELECTOR),
+                    translit_charset,
+                    SURL_HTMLSTRIP_NONE,
+                    BUF_8K_SIZE) > 0) {
     load_indicator(0);
     search_results(instance_type);
   } else {
