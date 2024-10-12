@@ -47,8 +47,10 @@ void poll_fill(poll *p, char source) {
 
   memset(p->own_votes, 0, MAX_POLL_OPTIONS);
 
-  r = surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE,
-                    translit_charset, poll_selector + n_lines);
+  r = surl_get_json(gen_buf, poll_selector + n_lines,
+                    translit_charset,
+                    SURL_HTMLSTRIP_NONE,
+                    BUF_SIZE);
 
   n_lines = strnsplit_in_place(gen_buf, '\n', lines,
                                (NUM_POLL_LINES + (MAX_POLL_OPTIONS * 2)));

@@ -24,10 +24,11 @@ account *account_new_from_json(void) {
   char n_lines;
   char *note;
   
-  if (surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, translit_charset,
+  if (surl_get_json(gen_buf,
                     ".id,.username,.acct,.display_name,"
                     ".created_at,.followers_count,"
-                    ".following_count") >= 0) {
+                    ".following_count",
+                    translit_charset, SURL_HTMLSTRIP_NONE, BUF_SIZE) >= 0) {
     n_lines = strnsplit_in_place(gen_buf, '\n', lines, 7);
     if (n_lines > 5) {
       a->id = strdup(lines[0]);
@@ -42,7 +43,7 @@ account *account_new_from_json(void) {
       goto err_out;
 
     note = malloc0(2048);
-    r = surl_get_json(note, 2048, SURL_HTMLSTRIP_FULL, translit_charset, ".note");
+    r = surl_get_json(note, ".note", translit_charset, SURL_HTMLSTRIP_FULL, 2048);
     if (r < 0) {
       free(note);
     } else {
@@ -78,7 +79,7 @@ account *api_get_profile(char *id) {
 
   a = account_new();
 
-  if (surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, translit_charset, ".id,.display_name,.acct,.username") >= 0) {
+  if (surl_get_json(gen_buf, ".id,.display_name,.acct,.username", translit_charset, SURL_HTMLSTRIP_NONE, BUF_SIZE) >= 0) {
     n_lines = strnsplit_in_place(gen_buf,'\n', lines, 4);
     if (n_lines < 4) {
       account_free(a);

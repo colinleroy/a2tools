@@ -404,9 +404,9 @@ static void search_stations(char *search_str) {
     goto err_out;
   }
 
-  if (surl_get_json(json_buf, JSON_BUF_SIZE,
-                    SURL_HTMLSTRIP_NONE, translit_charset,
-                    SEARCH_RESULT_SELECTOR) > 0) {
+  if (surl_get_json(json_buf, SEARCH_RESULT_SELECTOR,
+                    translit_charset, SURL_HTMLSTRIP_NONE,
+                    JSON_BUF_SIZE) > 0) {
     show_results();
     goto out;
   } else {

@@ -362,11 +362,11 @@ int register_app(void) {
     goto err_out;
   }
 
-  if (surl_get_json(client_id, BUF_SIZE, SURL_HTMLSTRIP_NONE, NULL, ".client_id") < 0) {
+  if (surl_get_json(client_id, ".client_id", NULL, SURL_HTMLSTRIP_NONE, BUF_SIZE) < 0) {
     dputs("No client_id.\r\n");
     goto err_out;
   }
-  if (surl_get_json(client_secret, BUF_SIZE, SURL_HTMLSTRIP_NONE, NULL, ".client_secret") < 0) {
+  if (surl_get_json(client_secret, ".client_secret", NULL, SURL_HTMLSTRIP_NONE, BUF_SIZE) < 0) {
     dputs("No client_secret.\r\n");
     goto err_out;
   }
@@ -429,7 +429,7 @@ int get_oauth_token(void) {
 
   surl_read_response_header();
 
-  if (surl_get_json(oauth_token, BUF_SIZE, SURL_HTMLSTRIP_NONE, NULL, ".access_token") < 0) {
+  if (surl_get_json(oauth_token, ".access_token", NULL, SURL_HTMLSTRIP_NONE, BUF_SIZE) < 0) {
     dputs("OAuth token not found.\r\n");
     goto err_out;
   } else {

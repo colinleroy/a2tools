@@ -55,7 +55,7 @@ int __fastcall__ surl_send_data_params(uint32 total, int raw);
 int __fastcall__ surl_find_line(char *buffer, char *search_str, size_t max_len, MatchType matchtype);
 int __fastcall__ surl_find_header(char *buffer, char *search_str, size_t max_len, MatchType matchtype);
 
-int __fastcall__ surl_get_json(char *buffer, size_t max_len, char striphtml, const char *translit, const char *selector);
+int __fastcall__ surl_get_json(char *buffer, const char *selector, const char *translit, char striphtml, size_t len);
 
 #ifdef __CC65__
 int surl_wait_for_stream(void);

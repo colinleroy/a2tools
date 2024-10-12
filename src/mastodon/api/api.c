@@ -58,7 +58,7 @@ int api_get_posts(char *endpoint, char to_load, char *load_before, char *load_af
   if (!surl_response_ok())
     return 0;
 
-  if (surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, NULL, sel) >= 0) {
+  if (surl_get_json(gen_buf, sel, NULL, SURL_HTMLSTRIP_NONE, BUF_SIZE) >= 0) {
     n_status = strnsplit(gen_buf, '\n', post_ids, to_load);
   }
 
@@ -163,7 +163,7 @@ int api_get_status_and_replies(char to_load, char *root_id, char *root_leaf_id, 
                                         load_before,
                                         n_before);
   }
-  if (surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, NULL, selector) >= 0) {
+  if (surl_get_json(gen_buf, selector, NULL, SURL_HTMLSTRIP_NONE, BUF_SIZE) >= 0) {
     char **tmp;
     int i;
     n_status = strsplit(gen_buf, '\n', &tmp);
@@ -259,9 +259,10 @@ char api_relationship_get(account *a, char f) {
     if (!surl_response_ok())
       return 0;
 
-    if (surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, NULL, 
+    if (surl_get_json(gen_buf,
                       ".[]|.following,.followed_by,"
-                      ".blocking,.blocked_by,.muting,.requested") >= 0) {
+                      ".blocking,.blocked_by,.muting,.requested",
+                      NULL, SURL_HTMLSTRIP_NONE, BUF_SIZE) >= 0) {
       n_lines = strnsplit_in_place(gen_buf,'\n', lines, 6);
       if (n_lines != 6) {
         return 0;

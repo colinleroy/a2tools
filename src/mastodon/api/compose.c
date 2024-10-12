@@ -93,7 +93,7 @@ send_again:
   media_id = NULL;
   *err = NET_ERROR;
   if (surl_response_ok()) {
-    if (surl_get_json(gen_buf, BUF_SIZE, SURL_HTMLSTRIP_NONE, translit_charset, ".id") > 0) {
+    if (surl_get_json(gen_buf, ".id", translit_charset, SURL_HTMLSTRIP_NONE, BUF_SIZE) > 0) {
       if ((media_id = strchr(gen_buf, '\n'))) {
         *media_id = '\0';
       }
@@ -227,7 +227,7 @@ signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medi
 
   *err = malloc(NUM_CHARS);
   if (*err) {
-    surl_get_json(*err, NUM_CHARS, SURL_HTMLSTRIP_NONE, translit_charset, ".error");
+    surl_get_json(*err, ".error", translit_charset, SURL_HTMLSTRIP_NONE, NUM_CHARS);
   }
   return -1;
 }
@@ -243,7 +243,7 @@ char *compose_get_status_text(char *status_id) {
     
     content = malloc0(NUM_CHARS);
 
-    r = surl_get_json(content, NUM_CHARS, SURL_HTMLSTRIP_NONE, translit_charset, ".text");
+    r = surl_get_json(content, ".text", translit_charset, SURL_HTMLSTRIP_NONE, NUM_CHARS);
 
     if (r < 0) {
       free(content);
