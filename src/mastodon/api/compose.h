@@ -14,7 +14,7 @@ char *compose_audience_str(char compose_audience);
 
 signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medias,
                           char *ref_toot_id, char **media_ids, char n_medias,
-                          poll *toot_poll, char compose_audience);
+                          poll *toot_poll, char compose_audience, char **err);
 
 char *api_send_hgr_image(char *filename, char *description, char **err, char x, char y, char w);
 
