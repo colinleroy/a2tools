@@ -120,6 +120,7 @@ mastocli_SOURCES := \
 
 mastocli_CC65SOURCES := \
 	$(common_CC65SOURCES) \
+	../lib/asm/atoc.s \
 	../lib/runtime_once_clean.s
 
 mastowrite_SOURCES := \
@@ -138,6 +139,7 @@ mastowrite_SOURCES := \
 
 mastowrite_CC65SOURCES := \
 	$(common_CC65SOURCES) \
+	../lib/asm/atoc.s \
 	../lib/runtime_once_clean.s
 
 GCCSOURCES := \
@@ -150,6 +152,7 @@ GCCSOURCES := \
 	../lib/c/clrzone.c \
 	../lib/c/path_helper.c \
 	../lib/c/malloc0.c \
+	../lib/c/atoc.c \
 	../lib/extended_conio.c \
 	../lib/strtrim.c \
 	../lib/tgi_sdl.c \
