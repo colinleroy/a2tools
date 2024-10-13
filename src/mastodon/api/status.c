@@ -142,7 +142,8 @@ static __fastcall__ char status_fill_from_json(status *s, char *id, char full, c
       s->poll->id = strdup(lines[16]);
       poll_fill(s->poll, is_reblog /* POLL_FROM_REBLOG == 1, POLL_FROM_STATUS == 0 */);
     }
-
+  } else {
+    return -1;
   }
 
   r = full ? TL_STATUS_LARGE_BUF : TL_STATUS_SHORT_BUF;
