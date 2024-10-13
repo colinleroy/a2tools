@@ -52,7 +52,7 @@ woztubes_SOURCES := \
 	../lib/serial/$(serial_hw)/common.s \
 	../lib/serial/$(serial_hw)/no_irq.s \
 	../lib/surl/asm/surl_core.s \
-	../lib/surl/c/surl_get_json.c \
+	../lib/surl/asm/surl_get_json.s \
 	../lib/surl/asm/surl_read_with_barrier.s \
 	../lib/asm/scrollwindow.s \
 	../lib/asm/path_helper.s \

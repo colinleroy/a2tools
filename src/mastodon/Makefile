@@ -33,7 +33,7 @@ common_CC65SOURCES := \
 	$(serial_hw_SOURCES) \
 	../lib/surl/asm/surl_core.s \
 	../lib/surl/asm/surl_send.s \
-	../lib/surl/c/surl_get_json.c \
+	../lib/surl/asm/surl_get_json.s \
 	../lib/surl/asm/surl_read_with_barrier.s \
 	../lib/asm/scrollwindow.s \
 	../lib/asm/path_helper.s \
@@ -93,7 +93,7 @@ mastoimg_CC65SOURCES := \
 	../lib/serial/asm/simple_serial_io.s \
 	$(serial_hw_SOURCES) \
 	../lib/surl/asm/surl_core.s \
-	../lib/surl/c/surl_get_json.c \
+	../lib/surl/asm/surl_get_json.s \
 	../lib/surl/asm/surl_read_with_barrier.s \
 	../lib/asm/scrollwindow.s \
 	../lib/asm/path_helper.s \
