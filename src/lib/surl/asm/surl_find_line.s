@@ -18,6 +18,12 @@
         .export   _surl_find_line
         .export   _surl_find_header
 
+        ; From surl_get_json
+        .import   pop_tos_send_htons
+        .import   get_len_ptr2
+        .import   pop_tos_ret_empty_string
+        .import   read_val_and_terminate
+
         .import   _serial_putc_direct
         .import   _simple_serial_puts_nl
         .import   _simple_serial_getc
@@ -59,12 +65,7 @@ surl_find_in:
         jsr       _serial_putc_direct
 
         ; Send max_len
-        jsr       popax
-        tay                   ; A->Y, X->A for htons
-        txa
-        jsr       _serial_putc_direct
-        tya
-        jsr       _serial_putc_direct
+        jsr       pop_tos_send_htons
 
         ; Send search_str
         jsr       popax
@@ -75,44 +76,16 @@ surl_find_in:
         cmp       #SURL_ERROR_OK
         beq       :+
 
-        ; Get buffer
-        jsr       popptr1
-        lda       #$00
-        tay
-        sta       (ptr1),y
-        jmp       returnFFFF
+        ; Return empty string
+        jmp       pop_tos_ret_empty_string
 
 :       ; Get result length
-        lda       #<ptr2
-        ldx       #>ptr2
-        jsr       pushax
-        lda       #$02
-        ldx       #$00
-        jsr       _surl_read_with_barrier
+        jsr       get_len_ptr2
 
-        ; And get value (buffer is already at TOS, but save it
-        ; for termination)
-        jsr       popax
-        jsr       pushax
-        jsr       pushax
+        ; And get value and return
+        jsr       read_val_and_terminate
 
-        ldx       ptr2        ; ntohs
-        lda       ptr2+1
-        jsr       _surl_read_with_barrier
-
-        ; Terminate buffer
-        jsr       popax
-        clc
-        adc       ptr2+1
-        sta       ptr1
-        txa
-        adc       ptr2
-        sta       ptr1+1
-        lda       #$00
-        tay
-        sta       (ptr1),y
-
-        ; And return
+        ; Return 0 (A is 0)
         tax
         rts
 
