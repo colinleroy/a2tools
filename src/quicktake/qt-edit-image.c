@@ -419,7 +419,7 @@ start_edit:
             : dither_alg == DITHER_SIERRA ? "Sierra Lite" : "None");
   c = tolower(cgetc());
 #ifdef __CC65__
-    if (!hgr_mix_is_on()) {
+    if (!hgr_mix_is_on) {
       hgr_mixon();
     } else
 #endif

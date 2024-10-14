@@ -8,8 +8,6 @@
 #include "strsplit.h"
 #include "api.h"
 
-#define BUF_SIZE 255
-
 #ifdef __CC65__
   #ifdef SURL_TO_LANGCARD
   #pragma code-name (push, "LC")

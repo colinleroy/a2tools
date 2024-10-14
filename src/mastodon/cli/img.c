@@ -15,10 +15,6 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifdef __CC65__
-#pragma code-name (push, "LC")
-#endif
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -37,7 +33,6 @@
 #include "common.h"
 #include "path_helper.h"
 #include "dgets.h"
-#include "surl/surl_stream_av/stream_url.h"
 
 char *instance_url;
 char *oauth_token;
@@ -106,7 +101,7 @@ static void stream_msg(char *msg) {
   cputs(msg);
 }
 
-int stream_url(char *url, char *unused) {
+int __fastcall__ surl_stream_av(char *unused, char *url) {
 #ifdef __APPLE2ENH__
   videomode(VIDEOMODE_40COL);
 #endif
@@ -240,7 +235,7 @@ int main(int argc, char **argv) {
 #ifdef __CC65__
     bzero((char *)HGR_PAGE, HGR_LEN);
     clrscr();
-    stream_url(m->media_url[0], NULL);
+    surl_stream_av(NULL, m->media_url[0]);
     clrscr();
     init_text();
 #endif
@@ -292,9 +287,8 @@ done:
 }
 
 #ifdef __CC65__
-#pragma code-name (pop)
+#pragma code-name (push, "LC")
 #endif
-
 
 static void save_image(void) {
   unsigned char prev_legend = legend;
@@ -347,3 +341,6 @@ out_no_conf:
   if (!prev_legend)
     toggle_legend(0);
 }
+#ifdef __CC65__
+#pragma code-name (pop)
+#endif

@@ -81,7 +81,6 @@
 .include "constants.inc"
 .include "zp-variables.inc"
 .include "cycle-wasters.inc"
-
 ; -----------------------------------------------------------------------------
 ; CPU-specific constant and macros
 
@@ -111,6 +110,10 @@ SAMPLE_MULT       = 2
         WASTE_3                 ; 3
         JUMP_NEXT_DUTY          ; 9      jump to next duty cycle
 .endmacro
+
+        .bss
+
+got_art:          .res 1
 
         .segment        "CODE"
 
@@ -190,7 +193,7 @@ _SAMPLES_BASE = *
 
 ; The rest of the functions don't need to be aligned.
 
-.include "surl_stream_av.s"
+.include "surl_start_stream_av.s"
 .include "../surl_stream_common/patch_addresses.s"
 .include "../surl_stream_common/patch_audio_registers.s"
 .include "patch_video_registers.s"
@@ -199,7 +202,17 @@ _SAMPLES_BASE = *
 .include "video-data-data.inc"
 .include "audio-data.inc"
 
+; Setup functions
 .include "setup.s"
+.include "strings-a.inc"
+.include "strings-b.inc"
+.include "update_load_progress.s"
+.include "surl_stream_av_send_request.s"
+.include "surl_stream_av_setup_ui.s"
+.include "surl_stream_av_get_art.s"
+.include "surl_stream_av_prepare_start.s"
+.include "surl_stream_av_handle_preload.s"
+.include "surl_stream_av.s"
 
 ; -----------------------------------------------------------------------------
 ; CPU-specific data (duty cycles handlers table)

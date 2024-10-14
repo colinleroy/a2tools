@@ -40,7 +40,6 @@
 #include "splash.h"
 #include "malloc0.h"
 #include "citoa.h"
-#include "surl/surl_stream_av/stream_url.h"
 #include "video_providers.h"
 
 char *url = NULL;
@@ -243,7 +242,7 @@ static void load_video(char *host, InstanceTypeId instance_type, char *id) {
       }
     }
 
-    stream_url(video_url, captions_url);
+    surl_stream_av(captions_url, video_url);
     set_scrollwindow(20, scrh);
 
 #ifdef __APPLE2ENH__

@@ -13,7 +13,7 @@ suffix :=
 upload_subdir :=
 CC65_TARGET := apple2
 STREAMER_VER := 6502
-START_ADDR := 0xD3A
+START_ADDR := 0x113A
 else
 serial_hw := acia
 iigs_suffix :=
@@ -21,7 +21,7 @@ iigs_CFLAGS :=
 CC65_TARGET = apple2enh
 trgt = apple2c0
 STREAMER_VER := 65c02
-START_ADDR := 0xD3A
+START_ADDR := 0x113A
 endif
 endif
 
@@ -36,11 +36,9 @@ GCCCFLAGS = -g -O0 -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\" \
 
 woztubes_SOURCES := \
 	../lib/surl/surl_stream_av/$(STREAMER_VER).s \
-	../lib/surl/surl_stream_av/stream_url.c \
 	main.c \
 	video_providers.c \
 	config.c \
-	../lib/hgr.c \
 	../lib/scroll.s \
 	../lib/dputc.s \
 	../lib/dgets.c \
@@ -58,6 +56,7 @@ woztubes_SOURCES := \
 	../lib/asm/path_helper.s \
 	../lib/asm/clrzone.s \
 	../lib/asm/malloc0.s \
+	../lib/asm/hgr.s \
 	../lib/surl/surl_ping.c \
 	../lib/extrazp.s \
 	../lib/citoa.s \
@@ -83,7 +82,6 @@ woztubes_CLCFLAGS = -t $(CC65_TARGET) -I ../lib \
 	-DBUF_1K_ADDR=0x800 -DBUF_1K_SIZE=0x3FF \
 	-DBUF_8K_ADDR=0x4000 -DBUF_8K_SIZE=0x1FFF \
 	-DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER \
-	-DSTREAM_URL_SEGMENT='"LOWCODE"' \
 	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-woztubes.cfg \
 	-vm -m woztubes.map $(USE_LANGCARD) -O --start-addr $(START_ADDR)
 

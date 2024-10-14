@@ -49,7 +49,6 @@ slowtake_SOURCES := \
 	../lib/realloc_safe.c \
 	../lib/file_select.c \
 	../lib/progress_bar.c \
-	../lib/hgr.c \
 	../lib/hgr_addrs.c \
 	$(debug_SOURCES)
 
@@ -62,6 +61,7 @@ slowtake_CC65SOURCES := \
 	../lib/asm/scrollwindow.s \
 	../lib/asm/path_helper.s \
 	../lib/asm/malloc0.s \
+	../lib/asm/hgr.s \
 	../lib/dputc.s \
 	../lib/scroll.s \
 	../lib/FVTABZ.s \
@@ -78,6 +78,7 @@ slowtake_GCCSOURCES := \
 	../lib/serial/c/serial_control.c \
 	../lib/c/scrollwindow.c \
 	../lib/c/malloc0.c \
+	../lib/c/hgr.c \
 	../lib/tgi_sdl.c \
 	../lib/tgi_fastline.c
 

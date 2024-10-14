@@ -20,3 +20,6 @@ PAGE1_HB      = PAGE0_HB
 .endif
 
 SPKR         := $C030
+
+VIDEOMODE_40COL = $11
+VIDEOMODE_80COL = $12

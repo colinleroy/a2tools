@@ -71,7 +71,6 @@ mastoimg_SOURCES := \
 	../lib/file_select.c \
 	../lib/strsplit.c \
 	../lib/realloc_safe.c \
-	../lib/hgr.c \
 	../lib/dgets.c
 
 ifdef IIGS
@@ -82,8 +81,7 @@ mastoimg_CC65SOURCES := \
 else
 
 mastoimg_CC65SOURCES := \
-	../lib/surl/surl_stream_av/$(CPU).s \
-	../lib/surl/surl_stream_av/stream_url.c
+	../lib/surl/surl_stream_av/$(CPU).s
 
 endif
 
@@ -99,6 +97,7 @@ mastoimg_CC65SOURCES := \
 	../lib/asm/path_helper.s \
 	../lib/asm/clrzone.s \
 	../lib/asm/malloc0.s \
+	../lib/asm/hgr.s \
 	../lib/FVTABZ.s \
 	 ../lib/extrazp.s \
 	../lib/surl/surl_wait_for_stream.c \
@@ -153,6 +152,7 @@ GCCSOURCES := \
 	../lib/c/clrzone.c \
 	../lib/c/path_helper.c \
 	../lib/c/malloc0.c \
+	../lib/c/hgr.c \
 	../lib/c/atoc.c \
 	../lib/extended_conio.c \
 	../lib/strtrim.c \
@@ -171,13 +171,11 @@ mastodon_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-rtonce.cfg
 mastocli_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-rtonce.cfg
 ifdef OLDII
 mastoimg_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-mastoimg-6502.cfg \
-	-DSTART_ADDR=0x3DA0 --start-addr 0x3DA0 \
-	-DSTREAM_URL_SEGMENT='"LC"'
+	-DSTART_ADDR=0x3EA0 --start-addr 0x3EA0
 else
 mastoimg_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-mastoimg-65c02.cfg \
 	-DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER \
-	-DSTART_ADDR=0x5DA0 --start-addr 0x5DA0 \
-	-DSTREAM_URL_SEGMENT='"LC"'
+	-DSTART_ADDR=0x5EA0 --start-addr 0x5EA0
 endif
 mastowrite_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-rtonce.cfg -DDGETS_MULTILINE
 

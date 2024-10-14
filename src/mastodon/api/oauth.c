@@ -9,17 +9,12 @@
 #include "strsplit.h"
 #include "dputs.h"
 #include "extended_conio.h"
+#include "common.h"
 
 /* This is heavily based on screen-scraping and not very solid.
  * Maybe using https://github.com/lexbor/lexbor proxy-side would be
  * better.
  */
-
-#ifdef __CC65__
-#pragma code-name (push, "LOWCODE")
-#endif
-
-#define BUF_SIZE 255
 
 #define LOGIN_URL "/auth/sign_in"
 #define REGISTER_URL "/api/v1/apps"
@@ -66,6 +61,10 @@ out:
   }
   return token;
 }
+
+#ifdef __CC65__
+#pragma code-name (push, "LC")
+#endif
 
 static char *get_oauth_code(char *body) {
   char *w, *token = NULL;
@@ -315,6 +314,10 @@ err_out:
   return ret;
 
 }
+
+#ifdef __CC65__
+#pragma code-name (pop)
+#endif
 
 static char *prepare_app_register_post(void) {
   char *data;

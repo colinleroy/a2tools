@@ -25,7 +25,6 @@ imgview_SOURCES := \
 	imageview.c \
 	../lib/file_select.c \
 	../lib/progress_bar.c \
-	../lib/hgr.c \
 	../lib/hgr_addrs.c \
 	../lib/realloc_safe.c \
 
@@ -38,6 +37,7 @@ imgview_CC65SOURCES := \
 	../lib/asm/path_helper.s \
 	../lib/asm/clrzone.s \
 	../lib/asm/malloc0.s \
+	../lib/asm/hgr.s \
 	../lib/dputc.s \
 	../lib/scroll.s \
 	../lib/FVTABZ.s \
@@ -53,6 +53,7 @@ imgview_GCCSOURCES := \
 	../lib/c/path_helper.c \
 	../lib/c/clrzone.c \
 	../lib/c/malloc0.c \
+	../lib/c/hgr.c \
 	../lib/tgi_sdl.c \
 	../lib/tgi_fastline.c \
 	../lib/strtrim.c

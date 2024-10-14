@@ -125,6 +125,9 @@ next       = _zp10            ; word - next cycle
         JUMP_NEXT_DUTY          ; 9      jump to next duty cycle
 .endmacro
 
+        .bss
+got_art:          .res 1
+
         .segment        "CODE"
 
 ; Align each duty cycle function
@@ -139,18 +142,31 @@ SAMPLE_MULT       = 1
 .align $100
 .assert * = _SAMPLES_BASE + $100, error
 .include "duty-cycles/1.s"
+; Add some setup function to fill in the gaps
+.include "update_load_progress.s"
+.include "surl_stream_av_send_request.s"
+.include "surl_stream_av_setup_ui.s"
+.include "surl_stream_av_get_art.s"
 
 .align $100
 .assert * = _SAMPLES_BASE + $200, error
 .include "duty-cycles/2.s"
+; Add some setup function to fill in the gaps
+.include "surl_stream_av_prepare_start.s"
+.include "surl_stream_av_handle_preload.s"
+.include "surl_stream_av.s"
 
 .align $100
 .assert * = _SAMPLES_BASE + $300, error
 .include "duty-cycles/3.s"
+; Add some strings to fill in the gaps
+.include "strings-a.inc"
 
 .align $100
 .assert * = _SAMPLES_BASE + $400, error
 .include "duty-cycles/4.s"
+; Add some strings to fill in the gaps
+.include "strings-b.inc"
 
 .align $100
 .assert * = _SAMPLES_BASE + $500, error
@@ -258,7 +274,7 @@ SAMPLE_MULT       = 1
 .include "duty-cycles/26.s"
 
 ; Stuff code between duty cycles to optimize size
-.include "surl_stream_av.s"
+.include "surl_start_stream_av.s"
 .include "calc_bases.s"
 .include "calc_text_bases.s"
 .include "../surl_stream_common/patch_addresses.s"

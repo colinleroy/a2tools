@@ -13,7 +13,6 @@
 #include "config.h"
 #include "splash-video.h"
 #include "scrollwindow.h"
-#include "surl/surl_stream_av/stream_url.h"
 
 char *translit_charset;
 char monochrome = 1;
@@ -65,7 +64,7 @@ int main(void) {
   }
   reopen_start_device();
 
-  stream_url(url, NULL);
+  surl_stream_av(NULL, url);
 
 out:
   clrscr();

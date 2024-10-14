@@ -37,8 +37,6 @@
 #include "runtime_once_clean.h"
 #include "config.h"
 
-#define BUF_SIZE 255
-
 unsigned char scrw, scrh;
 char *instance_url = NULL;
 char *client_id = NULL;

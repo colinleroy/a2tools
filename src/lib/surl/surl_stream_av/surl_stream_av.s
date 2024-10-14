@@ -1,32 +1,48 @@
-_surl_stream_av:                ; Entry point
-        php
-        sei                     ; Disable all interrupts
+.proc _surl_stream_av
+        jsr       surl_stream_av_send_request
+        jsr       surl_stream_av_setup_ui
 
-        pha
+        ; Ready, send last parameter
+        lda       _video_size
+        jsr       _serial_putc_direct
 
-        lda     #$00            ; Disable serial interrupts
-        jsr     _simple_serial_set_irq
+        ; Now wait
+@wait_load:
+        jsr       _simple_serial_getc
+        cmp       #SURL_ANSWER_STREAM_LOAD
+        beq       @handle_stream_load
+        cmp       #SURL_ANSWER_STREAM_ART
+        beq       @handle_stream_art
+        cmp       #SURL_ANSWER_STREAM_START
+        bne       @handle_error
 
-        pla
-        ; Setup pointers
-        jsr     setup
+@handle_stream_start:
+        jsr       surl_stream_av_prepare_start
+        jmp       @stream_url_done
 
-        .ifdef DOUBLE_BUFFER
-        ; Clear HGR page 2 (page 1 must be done by caller)
-        bit     $C082
-        lda     #$40
-        sta     $E6
-        jsr     $F3F2
-        bit     $C080
-        .endif
+@handle_stream_load:
+        jsr       surl_stream_av_handle_preload
+        jmp       @wait_load
 
-        lda     #$2F            ; Surl client ready
-        jsr     _serial_putc_direct
+@handle_stream_art:
+        jsr       surl_stream_av_get_art
+        jmp       @wait_load
 
-        clv                     ; clear offset-received flag
+@handle_error:
+        jsr       _clrscr
+        lda       #<playback_err_str
+        ldx       #>playback_err_str
+        jsr       _cputs
+        lda       #1
+        jsr       _sleep
+        jmp       @stream_url_done
 
-ass:    lda     $A9FF           ; Wait for an audio byte
-        and     #HAS_BYTE
-        beq     ass
-ads:    ldx     $A8FF
-        JUMP_NEXT_9
+@stream_url_done:
+        lda       #$00
+        jsr       pusha
+        lda       _scrh
+        jsr       _set_scrollwindow
+        lda       #$00
+        tax
+        rts
+.endproc

@@ -559,6 +559,7 @@ try_again:
 
 int main(int argc, char **argv) {
   char *params;
+  char *text = NULL;
 
   surl_user_agent = "Mastodon for Apple II / "VERSION;
 
@@ -619,7 +620,15 @@ int main(int argc, char **argv) {
         }
       }
     }
-  } else {
+  } else if (argc == 5) {
+    text = malloc(strlen(argv[4])+2);
+    if (text) {
+      text[0] = arobase;
+      strcpy(text+1, argv[4]);
+      while (strchr(text, '@')) {
+        *(strchr(text, '@')) = arobase;
+      }
+    }
     ref_status = NULL;
   }
 
@@ -634,8 +643,12 @@ int main(int argc, char **argv) {
     compose_toot(orig_status);
     free(orig_status);
   } else {
-    compose_toot("");
+    if (text == NULL) {
+      text = strdup("");
+    }
+    compose_toot(text);
   }
+  free(text);
   set_hscrollwindow(0, scrw);
 
   params = malloc0(127);
