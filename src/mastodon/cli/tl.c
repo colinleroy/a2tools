@@ -24,7 +24,9 @@
 #include "scrollwindow.h"
 #include "runtime_once_clean.h"
 
-#define BUF_SIZE 255
+#ifdef __CC65__
+#pragma code-name (push, "LC")
+#endif
 
 #pragma register-vars(push, on)
 
@@ -181,6 +183,10 @@ static void item_free(list *l, char i) {
     notification_free((notification *)l->displayed_posts[i]);
   }
 }
+
+#ifdef __CC65__
+#pragma code-name (pop)
+#endif
 
 static item *item_get(list *l, char i, char full) {
   if (l->kind == SHOW_NOTIFICATIONS) {
@@ -1307,7 +1313,10 @@ navigate_reuse_list:
           launch_command("mastodon", "conf", NULL, NULL);
           /* we're never coming back */
       case COMPOSE:
-          launch_command("mastowrite", NULL, NULL, NULL);
+          if (current_list->account)
+            launch_command("mastowrite", current_list->account->acct, NULL, NULL);
+          else
+            launch_command("mastowrite", NULL, NULL, NULL);
           /* we're never coming back */
       case REPLY:
           if (disp_status)

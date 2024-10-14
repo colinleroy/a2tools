@@ -10,16 +10,16 @@
 #include "api.h"
 
 #ifdef __CC65__
-#pragma code-name (push, "LOWCODE")
+#pragma code-name (push, "LC")
 #endif
 
 #define IMG_BUF_SIZE 2048
 static char img_buf[IMG_BUF_SIZE];
 
-#ifdef USE_HGR2
- #define NUMCOLS 40
+#ifdef __APPLE2ENH__
+#define NUMCOLS 80
 #else
- #define NUMCOLS 80
+#define NUMCOLS 40
 #endif
 
 static media *media_new_from_json(char *base_selector, char *description_selector) {
@@ -117,11 +117,11 @@ media *api_get_status_media(char *id) {
                    id);
 }
 
+#ifdef __CC65__
+#pragma code-name (pop)
+#endif
+
 media *api_get_account_media(char *id) {
   return get_media(ACCOUNTS_ENDPOINT,
                    ".id,.avatar_static,.id,.header_static", NULL, id);
 }
-
-#ifdef __CC65__
-#pragma code-name (pop)
-#endif
