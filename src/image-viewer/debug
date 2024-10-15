@@ -1,5 +1,5 @@
 #!/bin/bash
-if [ "$2" != "" ]; then
-	FLOP2="-flop2 disks/qt$2.dsk"
+if [ "$1" != "" ]; then
+	FLOP2="-flop2 disks/qt$1.dsk"
 fi
 make clean all && cd ../.. && make imageviewer-65c02.po && mame apple2c0 -window -flop1 imageviewer-65c02.po $FLOP2 -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug; cd src/image-viewer

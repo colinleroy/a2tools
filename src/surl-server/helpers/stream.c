@@ -21,6 +21,7 @@
 #include "char-convert.h"
 #include "extended_conio.h"
 #include "strsplit.h"
+#include "printer.h"
 
 #define MAX_VIDEO_OFFSET 126
 #define NUM_VIDEO_BASES  (HGR_LEN/MAX_VIDEO_OFFSET)+1
@@ -246,8 +247,8 @@ out:
 }
 
 extern int ttyfd;
-extern char *aux_tty_path;
-int ttyfd2 = -1;
+extern char *opt_aux_tty_path;
+extern int aux_ttyfd;
 
 static void flush_video_bytes(int fd) {
   struct timeval vid_send_start;
@@ -1464,8 +1465,8 @@ next_file:
 
   if (num_video_bytes > 0) {
     /* Sync point */
-    enqueue_video_byte(0x7F, ttyfd2); /* Switch page */
-    flush_video_bytes(ttyfd2);
+    enqueue_video_byte(0x7F, aux_ttyfd); /* Switch page */
+    flush_video_bytes(aux_ttyfd);
     DEBUG("send page toggle\n");
     if (push_sub && push_sub_page) {
       push_sub_page--;
@@ -1576,14 +1577,14 @@ send:
 
       DEBUG("send base (offset %d => %d, base %d => %d)\n",
               last_sent_offset, offset, last_sent_base, cur_base);
-      buffer_video_offset(offset, ttyfd2);
-      buffer_video_base(cur_base, ttyfd2);
+      buffer_video_offset(offset, aux_ttyfd);
+      buffer_video_base(cur_base, aux_ttyfd);
     } else if (pixel != last_diff+1) {
       DEBUG("send offset %d (base is %d)\n", offset, cur_base);
       /* We have to send offset */
-      buffer_video_offset(offset, ttyfd2);
+      buffer_video_offset(offset, aux_ttyfd);
     }
-    buffer_video_byte(buf[page][pixel], ttyfd2);
+    buffer_video_byte(buf[page][pixel], aux_ttyfd);
 
     last_diff = pixel;
 
@@ -1605,11 +1606,11 @@ send:
     for (line = 0, text_base = AV_TEXT_BASE_0; line < 4; line++, text_base++) {
       int c;
       if (sub_line_len[line] > 0) {
-        buffer_video_offset(sub_line_off[line], ttyfd2);
-        buffer_video_base(text_base, ttyfd2);
+        buffer_video_offset(sub_line_off[line], aux_ttyfd);
+        buffer_video_base(text_base, aux_ttyfd);
 
         for (c = 0; c < sub_line_len[line]; c++) {
-          buffer_video_byte(sub_line[line][c], ttyfd2);
+          buffer_video_byte(sub_line[line][c], aux_ttyfd);
         }
       }
     }
@@ -1618,7 +1619,7 @@ send:
   goto next_file;
 
 close_last:
-  flush_video_bytes(ttyfd2);
+  flush_video_bytes(aux_ttyfd);
   if (i - skipped > 0 && i/FPS > 0) {
     printf("Max: %d, Min: %d, Average: %d\n", max, min, total / (i-skipped));
     printf("Sent %lu bytes for %d non-skipped frames: %lub/s, %lub/frame avg (%lu data, %lu offset, %lu base)\n",
@@ -1653,10 +1654,12 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, Subtitle
   ready = 0;
   stop = 0;
 
-  if (aux_tty_path)
-    ttyfd2 = simple_serial_open_file(aux_tty_path);
+  if (opt_aux_tty_path) {
+    stop_printer_thread();
+    aux_ttyfd = simple_serial_open_file(opt_aux_tty_path, B115200);
+  }
 
-  if (ttyfd2 < 0)
+  if (aux_ttyfd < 0)
     printf("No TTY for video\n");
 
   memset(video_th_data, 0, sizeof(decode_data));
@@ -1787,8 +1790,8 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, Subtitle
   IO_BARRIER("Video state");
 
   /* Inform client whether we have video */
-  printf("Informing client that video is %s (%d)\n", ttyfd2 > 0 ? "on":"off", ttyfd2);
-  if (ttyfd2 > 0) {
+  printf("Informing client that video is %s (%d)\n", aux_ttyfd > 0 ? "on":"off", aux_ttyfd);
+  if (aux_ttyfd > 0) {
     simple_serial_putc(SURL_VIDEO_PORT_OK);
   } else {
     simple_serial_putc(SURL_VIDEO_PORT_NOK);
@@ -1933,8 +1936,13 @@ cleanup_thread:
   if (vhgr_file != -1) {
     close(vhgr_file);
   }
-  if (ttyfd2 > 0)
-    close(ttyfd2);
+
+  if (opt_aux_tty_path) {
+    if (aux_ttyfd > 0)
+      close(aux_ttyfd);
+    aux_ttyfd = -1;
+    start_printer_thread();
+  }
 
   printf("Done\n");
 

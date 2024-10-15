@@ -9,6 +9,7 @@ SOURCES := main.c raw-session.c \
 	helpers/hgr-convert.c \
 	helpers/stream.c \
 	helpers/ffmpeg.c \
+	helpers/printer.c \
 	../lib/strtrim.c ../lib/strsplit.c \
 	../lib/serial/c/simple_serial.c \
 	../lib/serial/c/simple_serial_io.c \
@@ -58,6 +59,7 @@ clean:
 
 install:
 	mkdir -p $(DESTDIR)/$(etc_prefix)/a2tools
+	install -m 644 IWEM/IW.PS $(DESTDIR)/$(etc_prefix)/a2tools/IW.PS
 	mkdir -p $(DESTDIR)/$(prefix)/bin
 	install $(PROGRAM) $(DESTDIR)/$(prefix)/bin/$(PROGRAM)
 	install hgr-convert $(DESTDIR)/$(prefix)/bin/hgr-convert

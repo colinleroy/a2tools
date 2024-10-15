@@ -84,47 +84,48 @@ void simple_serial_flush_fd(int fd) {
 
 extern char *opt_tty_path;
 
-int __simple_serial_getc_with_tv_timeout(int timeout, int secs, int msecs) {
+int __simple_serial_getc_with_tv_timeout(int fd, int timeout, int secs, int msecs) {
   fd_set fds;
   struct timeval tv_timeout;
   int n, r = 0;
-  char c;
+  unsigned char c;
 
 try_again:
   FD_ZERO(&fds);
-  FD_SET(ttyfd, &fds);
+  FD_SET(fd, &fds);
 
   tv_timeout.tv_sec  = secs;
   tv_timeout.tv_usec = msecs*1000;
 
-  n = select(ttyfd + 1, &fds, NULL, NULL, &tv_timeout);
+  n = select(fd + 1, &fds, NULL, NULL, &tv_timeout);
 
-  if (n > 0 && FD_ISSET(ttyfd, &fds)) {
-    int flags = fcntl(ttyfd, F_GETFL);
+  if (n > 0 && FD_ISSET(fd, &fds)) {
+    int flags = fcntl(fd, F_GETFL);
 
     flags |= O_NONBLOCK;
-    fcntl(ttyfd, F_SETFL, flags);
+    fcntl(fd, F_SETFL, flags);
 
-    r = read(ttyfd, &c, 1);
+    r = read(fd, &c, 1);
 
     flags &= ~O_NONBLOCK;
-    fcntl(ttyfd, F_SETFL, flags);
+    fcntl(fd, F_SETFL, flags);
   } else if (!timeout) {
     goto try_again;
   }
+
   return r == 1 ? c : EOF;
 }
 
 int simple_serial_getc_with_timeout(void) {
-  return __simple_serial_getc_with_tv_timeout(1, 0, 500);
+  return __simple_serial_getc_with_tv_timeout(ttyfd, 1, 0, 500);
 }
 
 char simple_serial_getc(void) {
-  return (char)__simple_serial_getc_with_tv_timeout(0, 0, 500);
+  return (char)__simple_serial_getc_with_tv_timeout(ttyfd, 0, 0, 500);
 }
 
 int simple_serial_getc_immediate(void) {
-  return __simple_serial_getc_with_tv_timeout(1, 0, DELAY_MS);
+  return __simple_serial_getc_with_tv_timeout(ttyfd, 1, 0, DELAY_MS);
 }
 
 /* Output */

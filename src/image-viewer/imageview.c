@@ -51,6 +51,7 @@ void hgr_print(void) {
   uint8 y, cy, ey, bit;
   uint8 c;
   char setup_binary_print_cmd[] = {CH_ESC, 'n', CH_ESC, 'T', '1', '6'};
+  char disable_auto_line_feed[] = {CH_ESC, 'Z', 0x80, 0x00};
 #ifdef __CC65__
   char send_chars_cmd[8]; // = {CH_ESC, 'G', '0', '0', '0', '0'};
   #define cur_d7 zp6p
@@ -139,6 +140,8 @@ scale_again:
     ex = HGR_WIDTH;
 
   cprintf("Printing region %d-%d\r\n", sx, ex);
+
+  simple_serial_write(disable_auto_line_feed, sizeof(disable_auto_line_feed));
 
   /* Set line width */
   sprintf(send_chars_cmd, "%cG%04d", CH_ESC, (ex-sx) * scale);
