@@ -38,6 +38,7 @@
 #include "html2txt.h"
 #include "hgr-convert.h"
 #include "stream.h"
+#include "printer.h"
 
 #define BUFSIZE 8192
 
@@ -226,6 +227,10 @@ static void dump_url(char *url) {
   }
   printf("\n");
 }
+
+extern int ttyfd;
+extern char *opt_tty_path;
+
 int main(int argc, char **argv)
 {
   unsigned char method = SURL_METHOD_ABORT;
@@ -261,22 +266,23 @@ int main(int argc, char **argv)
   printf("surl-server Protocol %d\n", SURL_PROTOCOL_VERSION);
 
   install_sig_handler();
+  install_printer_thread();
 
   curl_global_init(CURL_GLOBAL_ALL);
 
   magic_handle = magic_open(MAGIC_MIME_TYPE|MAGIC_CHECK);
   magic_load(magic_handle, NULL);
 
+  start_printer_thread();
+
 reopen:
   simple_serial_close();
   while (simple_serial_open() != 0) {
     sleep(1);
   }
-
   fflush(stdout);
 
   while(1) {
-
     /* read request */
     printf("Waiting for request\n");
     if (simple_serial_gets(reqbuf, BUFSIZE) != NULL) {

@@ -39,14 +39,17 @@
 #include "clrzone.h"
 
 int ttyfd = -1;
+int aux_ttyfd = -1;
+
 int flow_control_enabled;
 
 int bps = B19200;
 
 char *opt_tty_path = NULL;
-char *aux_tty_path = NULL;
+char *opt_aux_tty_path = NULL;
 
 static int opt_tty_speed = B115200;
+static int opt_aux_tty_speed = B9600;
 static int opt_tty_hw_handshake = 1;
 
 SimpleSerialParams ser_params = {
@@ -63,6 +66,28 @@ unsigned int printer_baudrate = B9600;
 
 static const char *get_cfg_path(void) {
   return CONF_FILE_PATH;
+}
+
+const char *get_cfg_dir(void) {
+  static char *cfg_dir = NULL;
+  if (cfg_dir == NULL) {
+    cfg_dir = strdup(get_cfg_path());
+    if (strrchr(cfg_dir, '/'))
+      *(strrchr(cfg_dir, '/')) = '\0';
+  }
+  return cfg_dir;
+}
+
+static char iwem_path[FILENAME_MAX] = "";
+void printer_set_iwem(const char *str) {
+  snprintf(iwem_path, FILENAME_MAX, "%s", str);
+}
+
+const char *printer_get_iwem(void) {
+  if (iwem_path[0] == '\0') {
+    snprintf(iwem_path, FILENAME_MAX, "%s/IW.PS", get_cfg_dir());
+  }
+  return iwem_path;
 }
 
 static int tty_speed_from_str(char *tmp) {
@@ -131,17 +156,28 @@ static void simple_serial_write_defaults(void) {
     fp = stdout;
   }
   fprintf(fp, "tty: /dev/ttyUSB0\n"
-              "baudrate: 115200\n"
-              "hw_handshake: off\n"
+              "baudrate: %s\n"
+              "hw_handshake: %s\n"
               "aux_tty: /dev/ttyUSB1\n"
+              "aux_baudrate: %s\n"
+              "imagewriter_filter: %s\n"
               "\n"
               "#Alternatively, you can export environment vars:\n"
               "#A2_TTY (unset by default)\n"
               "#A2_TTY_SPEED (default %s)\n"
               "#A2_TTY_HW_HANDSHAKE (default %s)\n"
-              "#A2_AUX_TTY (unset by default)\n",
+              "#A2_AUX_TTY (unset by default)\n"
+              "#A2_AUX_TTY_SPEED (default %s)\n"
+              "#A2_IWEM (default %s)\n",
               tty_speed_to_str(opt_tty_speed),
-              opt_tty_hw_handshake ? "true":"false");
+              opt_tty_hw_handshake ? "true":"false",
+              tty_speed_to_str(opt_aux_tty_speed),
+              printer_get_iwem(),
+
+              tty_speed_to_str(opt_tty_speed),
+              opt_tty_hw_handshake ? "true":"false",
+              tty_speed_to_str(opt_aux_tty_speed),
+              printer_get_iwem());
   if (fp == stdout) {
     exit(1);
   }
@@ -152,8 +188,14 @@ static void simple_serial_write_defaults(void) {
 }
 
 static int simple_serial_read_opts(void) {
+  static int opts_read_done = 0;
   FILE *fp = NULL;
   char buf[255];
+
+  if (opts_read_done)
+    return 0;
+  opts_read_done = 1;
+
   fp = fopen(get_cfg_path(), "r");
   if (fp == NULL && !getenv("A2_TTY")) {
     simple_serial_write_defaults();
@@ -166,8 +208,8 @@ static int simple_serial_read_opts(void) {
     }
 
     if(!strncmp(buf, "aux_tty:", 8)) {
-      free(aux_tty_path);
-      aux_tty_path = trim(buf + 8);
+      free(opt_aux_tty_path);
+      opt_aux_tty_path = trim(buf + 8);
     }
 
     if (!strncmp(buf,"baudrate:", 9)) {
@@ -176,9 +218,21 @@ static int simple_serial_read_opts(void) {
       free(tmp);
     }
 
+    if (!strncmp(buf,"aux_baudrate:", 13)) {
+      char *tmp = trim(buf + 13);
+      opt_aux_tty_speed = tty_speed_from_str(tmp);
+      free(tmp);
+    }
+
     if (!strncmp(buf,"hw_handshake:", 13)) {
       char *tmp = trim(buf + 13);
       opt_tty_hw_handshake = get_bool(tmp);
+      free(tmp);
+    }
+
+    if (!strncmp(buf,"imagewriter_filter:", 19)) {
+      char *tmp = trim(buf + 19);
+      printer_set_iwem(tmp);
       free(tmp);
     }
   }
@@ -193,16 +247,24 @@ static int simple_serial_read_opts(void) {
   }
 
   if (getenv("A2_AUX_TTY")) {
-    free(aux_tty_path);
-    aux_tty_path = strdup(getenv("A2_AUX_TTY"));
+    free(opt_aux_tty_path);
+    opt_aux_tty_path = strdup(getenv("A2_AUX_TTY"));
   }
 
   if (getenv("A2_TTY_SPEED")) {
     opt_tty_speed = tty_speed_from_str(getenv("A2_TTY_SPEED"));
   }
 
+  if (getenv("A2_AUX_TTY_SPEED")) {
+    opt_aux_tty_speed = tty_speed_from_str(getenv("A2_AUX_TTY_SPEED"));
+  }
+
   if (getenv("A2_TTY_HW_HANDSHAKE")) {
     opt_tty_hw_handshake = get_bool(getenv("A2_TTY_HW_HANDSHAKE"));
+  }
+
+  if (getenv("A2_IWEM")) {
+    printer_set_iwem(getenv("A2_IWEM"));
   }
   return 0;
 }
@@ -249,7 +311,7 @@ static void setup_tty(int port, int baudrate, int hw_flow_control) {
   }
 }
 
-int simple_serial_open_file(char *tty_path) {
+int simple_serial_open_file(char *tty_path, int tty_speed) {
   struct flock lock;
   static char cannot_open = 0;
   int fd;
@@ -279,26 +341,23 @@ int simple_serial_open_file(char *tty_path) {
   cannot_open = 0;
 
   simple_serial_flush_fd(fd);
-  setup_tty(fd, opt_tty_speed, opt_tty_hw_handshake);
-
+  setup_tty(fd, tty_speed, opt_tty_hw_handshake);
+  printf("opened %s at %sbps\n", tty_path, tty_speed_to_str(tty_speed));
   return fd;
-}
-
-static int simple_serial_open_slot(int slot) {
-  ttyfd = simple_serial_open_file(opt_tty_path);
-  return ttyfd > 0  ? 0 : -1;
 }
 
 int simple_serial_open(void) {
   /* Get options */
   simple_serial_read_opts();
-  return simple_serial_open_slot(0);
+  ttyfd = simple_serial_open_file(opt_tty_path, opt_tty_speed);
+  return ttyfd > 0  ? 0 : -1;
 }
 
 int simple_serial_open_printer(void) {
   /* Get options */
   simple_serial_read_opts();
-  return simple_serial_open_slot(0);
+  aux_ttyfd = simple_serial_open_file(opt_aux_tty_path, opt_aux_tty_speed);
+  return aux_ttyfd > 0  ? 0 : -1;
 }
 
 int simple_serial_close(void) {
@@ -306,5 +365,13 @@ int simple_serial_close(void) {
     close(ttyfd);
   }
   ttyfd = -1;
+  return 0;
+}
+
+int simple_serial_close_printer(void) {
+  if (aux_ttyfd > 0) {
+    close(aux_ttyfd);
+  }
+  aux_ttyfd = -1;
   return 0;
 }
