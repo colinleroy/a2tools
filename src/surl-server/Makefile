@@ -10,6 +10,7 @@ SOURCES := main.c raw-session.c \
 	helpers/stream.c \
 	helpers/ffmpeg.c \
 	helpers/printer.c \
+	helpers/imagewriter.cpp \
 	../lib/strtrim.c ../lib/strsplit.c \
 	../lib/serial/c/simple_serial.c \
 	../lib/serial/c/simple_serial_io.c \
@@ -18,7 +19,8 @@ SOURCES := main.c raw-session.c \
 	../lib/c/malloc0.c \
 	../lib/c/clrzone.c \
 	../lib/extended_conio.c \
-	../lib/array_sort.c
+	../lib/array_sort.c \
+	../lib/charsets.c
 	
 
 hgrconv_SOURCES := hgr-convert.c helpers/hgr-convert.c
@@ -35,16 +37,21 @@ all: $(PROGRAM) hgr-convert
 $(PROGRAM): $(SOURCES)
 	gcc $(CFLAGS) \
 		$(shell curl-config --cflags) \
+		$(shell cups-config --cflags) \
 		$(shell libpng-config --cflags) \
-		$(shell pkg-config --cflags SDL_image) \
-		$(shell pkg-config --cflags libmagic) \
+		$(shell pkg-config --cflags \
+						SDL_image gumbo libmagic libjq\
+						libavfilter libavformat libavformat libavcodec \
+						libavutil libswresample freetype2) \
 		$^ \
 		$(shell curl-config --libs) \
+		$(shell cups-config --libs) \
 		$(shell libpng-config --libs) \
-		$(shell pkg-config --libs SDL_image) \
-		$(shell pkg-config --libs libmagic) \
-		-ljq -lgumbo -lpthread \
-		-lavfilter -lavformat -lavcodec -lavutil -lswresample \
+		$(shell pkg-config --libs \
+						SDL_image gumbo libmagic libjq\
+						libavfilter libavformat libavformat libavcodec \
+						libavutil libswresample freetype2) \
+		-lpthread -lstdc++ -lm \
 		-o $@
 
 hgr-convert: $(hgrconv_SOURCES)
@@ -61,7 +68,6 @@ clean:
 
 install:
 	mkdir -p $(DESTDIR)/$(etc_prefix)/a2tools
-	install -m 644 IWEM/IW.PS $(DESTDIR)/$(etc_prefix)/a2tools/IW.PS
 	mkdir -p $(DESTDIR)/$(prefix)/bin
 	install $(PROGRAM) $(DESTDIR)/$(prefix)/bin/$(PROGRAM)
 	install hgr-convert $(DESTDIR)/$(prefix)/bin/hgr-convert
