@@ -5,7 +5,8 @@ Maintainer: Colin Leroy-Mira <colin@colino.net>
 Rules-Requires-Root: no
 Build-Depends:
  debhelper (>= 10), libcurl4-gnutls-dev, libgumbo-dev, libpng-dev, libjq-dev, libsdl-image1.2-dev,
- libavcodec-dev, libavformat-dev, libavfilter-dev, libavutil-dev, libswresample-dev, libmagic-dev
+ libavcodec-dev, libavformat-dev, libavfilter-dev, libavutil-dev, libswresample-dev, libmagic-dev,
+ libcups2-dev, libfreetype-dev
 Standards-Version: 4.6.2
 Homepage: <https://github.com/colinleroy/a2tools>
 

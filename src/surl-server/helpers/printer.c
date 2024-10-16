@@ -21,6 +21,9 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <errno.h>
+#include <cups/cups.h>
+#include "imagewriter.h"
+#include "charsets.h"
 
 #include "simple_serial.h"
 #include "strtrim.h"
@@ -35,21 +38,81 @@ extern int aux_ttyfd;
 extern char *opt_aux_tty_path;
 extern int opt_aux_tty_speed;
 
-static char iwem_path[FILENAME_MAX] = "";
-void printer_set_iwem(const char *str) {
-  snprintf(iwem_path, FILENAME_MAX, "%s", str);
-}
+static char prints_directory[FILENAME_MAX/2] = "/tmp";
+static const char *default_charset = NULL;
+int default_charset_num = 0;
+static char *printer_default_dest = NULL;
+int job_timeout = 60;
 
-const char *printer_get_iwem(void) {
-  if (iwem_path[0] == '\0') {
-    snprintf(iwem_path, FILENAME_MAX, "%s", PRINTER_CONF_FILE_PATH);
-    if (strchr(iwem_path, '/')) {
-      *(strrchr(iwem_path, '/') + 1) = '\0';
-      strcat(iwem_path, "IW.PS");
+static int printer_start_cups_job(const char *filename, cups_dest_t **dest, cups_dinfo_t **info) {
+  int status, job_id;
+
+  *dest = NULL;
+  *info = NULL;
+
+  printf("Printer: Getting %s printer...\n",
+         printer_default_dest ? printer_default_dest:"default");
+  *dest = cupsGetNamedDest(CUPS_HTTP_DEFAULT, printer_default_dest, NULL);
+  if (*dest) {
+    printf("Printer: Found %s\n", (*dest)->name);
+    *info = cupsCopyDestInfo(CUPS_HTTP_DEFAULT, *dest);
+    if (*info) {
+      printf("Printer: Got printer info\n");
+      status = cupsCreateDestJob(CUPS_HTTP_DEFAULT, *dest, *info,
+                                 &job_id, filename, 0, NULL);
+
+      printf("Printer: Job %d created with status %d\n", job_id, status);
+      if (status == IPP_STATUS_OK) {
+        status = cupsStartDestDocument(CUPS_HTTP_DEFAULT, *dest, *info, job_id,
+                                       filename, CUPS_FORMAT_POSTSCRIPT, 0, NULL, 1);
+        if (status == HTTP_STATUS_CONTINUE) {
+          /* We're good! */
+          return HTTP_STATUS_CONTINUE;
+        } else {
+          printf("Printer: Start document: wrong status %d (%s)\n", status,
+                 cupsLastErrorString());
+        }
+      }
+      cupsFreeDestInfo(*info);
+      *info = NULL;
+    } else {
+      printf("Printer: Could not get printer info (%s)\n",
+             cupsLastErrorString());
+    }
+    cupsFreeDests(1, *dest);
+    *dest = NULL;
+  } else {
+    printf("Printer: Error: %s\n", cupsLastErrorString());
+
+    if (printer_default_dest == NULL) {
+      printf("To fix this, please set a default CUPS printer:\n"
+             "- `lpstat -v` to list available printers\n"
+             "- `lpadmin -d [NAME]` to set default printer\n"
+             "\n"
+             "Or set a specific CUPS destination in %s.\n",
+             PRINTER_CONF_FILE_PATH);
     }
   }
-  return iwem_path;
+  return -1;
 }
+
+static int printer_finish_cups_job(cups_dest_t *dest, cups_dinfo_t *info) {
+  int status;
+
+  status = cupsFinishDestDocument(CUPS_HTTP_DEFAULT, dest, info);
+  if (status != IPP_STATUS_OK) {
+    printf("Printer: End document: wrong status %d (%s)\n", status,
+           cupsLastErrorString());
+  }
+  return status;
+}
+
+int g_imagewriter_dpi = 360;
+int g_imagewriter_multipage = 1;
+char* g_imagewriter_fixed_font = "/usr/share/fonts/truetype/freefont/FreeMono.ttf";
+char* g_imagewriter_prop_font = "/usr/share/fonts/truetype/freefont/FreeSerif.ttf";
+int g_imagewriter_paper = 0;
+int g_imagewriter_banner = 0;
 
 static void handle_document(unsigned char first_byte) {
   static int filenum = 0;
@@ -58,42 +121,60 @@ static void handle_document(unsigned char first_byte) {
   size_t n_bytes = 0;
   char filename[FILENAME_MAX];
   char buffer[SIMPLE_SERIAL_BUF_SIZE];
-  FILE *fp = NULL, *filter_fp = NULL;
   char timestamp[64];
   time_t now = time(NULL);
+  int cups_status = -1;
+  cups_dest_t *dest = NULL;
+  cups_dinfo_t *info = NULL;
+  FILE *fp;
+  size_t r;
 
   strftime(timestamp, sizeof timestamp, "%Y-%m-%d-%H-%M-%S", localtime(&now));
-  snprintf(filename, FILENAME_MAX, "%s/iwprint-%s-%d.ps", "/tmp/", timestamp, filenum++);
-  fp = fopen(filename, "wb");
+  snprintf(filename, FILENAME_MAX, "%s/iwprint-%s-%d.ps", prints_directory, timestamp, filenum++);
 
-  if (fp == NULL) {
-    printf("Printer: could not open %s: %s\n", filename, strerror(errno));
-  } else {
-    filter_fp = fopen(printer_get_iwem(), "rb");
-    if (filter_fp) {
-      size_t r;
-      while ((r = fread(buffer, 1, SIMPLE_SERIAL_BUF_SIZE, filter_fp)) > 0) {
-        fwrite(buffer, 1, r, fp);
-      }
-      fclose(filter_fp);
-    } else {
-      printf("Printer: could not open filter file %s: %s\n", printer_get_iwem(), strerror(errno));
-    }
-    printf("Printer: printing to %s (%02x)\n", filename, first_byte);
-    fputc(first_byte, fp);
-  }
+  printf("Printer: starting print to %s...\n", filename);
 
-  while ((i = __simple_serial_getc_with_tv_timeout(aux_ttyfd, 1, 5, 0)) != EOF) {
+  imagewriter_init(g_imagewriter_dpi, g_imagewriter_paper, g_imagewriter_banner, filename, g_imagewriter_multipage, default_charset_num);
+  imagewriter_loop(first_byte);
+
+  while ((i = __simple_serial_getc_with_tv_timeout(aux_ttyfd, 1, 10, 0)) != EOF) {
     c = (unsigned char)i;
-    if (fp != NULL) {
-      fputc(c, fp);
+    if (n_bytes && (n_bytes % 2048) == 0) {
+      printf("Printer: got %zu bytes...\n", n_bytes);
     }
+    imagewriter_loop(c);
     n_bytes++;
   }
-  if (fp) {
-    fclose(fp);
+
+  imagewriter_feed();
+  imagewriter_close();
+  printf("Printer: Document done after %zu bytes.\n", n_bytes);
+
+  cups_status = printer_start_cups_job(filename, &dest, &info);
+  if (cups_status == HTTP_STATUS_CONTINUE) {
+    fp = fopen(filename, "rb");
+    if (fp) {
+      while ((r = fread(buffer, 1, SIMPLE_SERIAL_BUF_SIZE, fp)) > 0) {
+        if (cups_status == HTTP_STATUS_CONTINUE) {
+          cups_status = cupsWriteRequestData(CUPS_HTTP_DEFAULT, buffer, r);
+        }
+      }
+      if (cups_status == HTTP_STATUS_CONTINUE) {
+        cups_status = printer_finish_cups_job(dest, info);
+        cupsFreeDestInfo(info);
+        cupsFreeDests(1, dest);
+      }
+      fclose(fp);
+      /* We now expect cups_status to be IPP_STATUS_OK for printing to have 
+       * succeeded */
+      if (cups_status == IPP_STATUS_OK) {
+        printf("Printer: Removing file %s after successful printing\n", filename);
+        unlink(filename);
+      }
+    } else {
+      printf("Printer: can't reopen %s (%s)\n", filename, strerror(errno));
+    }
   }
-  printf("Document done after %zu bytes.\n", n_bytes);
 }
 
 static void *printer_thread_listener(void *arg) {
@@ -142,30 +223,109 @@ static void *printer_thread_listener(void *arg) {
   return (void *)0;
 }
 
-int install_printer_thread(void) {
-  pthread_mutex_init(&printer_mutex, NULL);
-  return 0;
+static void printer_write_defaults(void) {
+  FILE *fp = NULL;
+  int i;
+
+  fp = fopen(PRINTER_CONF_FILE_PATH, "w");
+  if (fp == NULL) {
+    printf("Cannot open %s for writing: %s\n", PRINTER_CONF_FILE_PATH,
+           strerror(errno));
+    printf("Please create this configuration in the following format:\n\n");
+    fp = stdout;
+  }
+  fprintf(fp, "#Leave cups_dest empty to use the system's default CUPS printer.\n"
+              "#Otherwise, set it to a CUPS printer name as shown by `lpstat -v`.\n"
+              "cups_dest:\n"
+              "\n"
+              "#How many seconds to wait for end of input before finishing the job.\n"
+              "#PrintShop needs 60.\n"
+              "job_timeout: %d\n"
+              "\n"
+              "#The directory where to put iwprint-*.ps files.\n"
+              "prints_directory: %s\n"
+              "\n"
+              "#Default printer charset:\n"
+              "default_charset: %s\n"
+              "#Possible values:\n",
+              job_timeout,
+              prints_directory,
+              default_charset);
+  for (i = 0; i < N_CHARSETS; i++) {
+    fprintf(fp, "# %s\n", charsets[i]);
+  }
+
+  if (fp != stdout) {
+    fclose(fp);
+    printf("A default printer configuration file has been generated to %s.\n"
+           "Please review it.\n", PRINTER_CONF_FILE_PATH);
+  } else {
+    printf("\n\n");
+  }
 }
 
 static void printer_read_opts(void) {
   FILE *fp;
 
+  default_charset = charsets[default_charset_num];
   fp = fopen(PRINTER_CONF_FILE_PATH, "r");
   if (fp) {
     char buf[512];
     while (fgets(buf, 512-1, fp) > 0) {
-      if (!strncmp(buf,"imagewriter_filter:", 19)) {
-        char *tmp = trim(buf + 19);
-        printer_set_iwem(tmp);
+      if (!strncmp(buf,"prints_directory:", 17)) {
+        char *tmp = trim(buf + 17);
+        snprintf(prints_directory, sizeof(prints_directory), "%s", tmp);
         free(tmp);
+      }
+
+      if (!strncmp(buf,"cups_dest:", 10)) {
+        char *tmp = trim(buf + 10);
+        if (strlen(tmp))
+          printer_default_dest = tmp;
+        else
+          free(tmp);
+      }
+
+      if (!strncmp(buf,"job_timeout:", 12)) {
+        char *tmp = trim(buf + 12);
+        job_timeout = atoi(tmp);
+      }
+
+      if (!strncmp(buf,"default_charset:", 16)) {
+        char *tmp = trim(buf + 16);
+        int i, found = 0;
+        for (i = 0; i < N_CHARSETS; i++) {
+          if (!strcmp(charsets[i], tmp)) {
+            default_charset = charsets[i];
+            default_charset_num = i;
+            found = 1;
+            printf("Charset %d %s\n", default_charset_num, charsets[default_charset_num]);
+            break;
+          }
+        }
+        if (!found) {
+          printf("Printer: ignoring unknown charset \"%s\".\n", tmp);
+        }
       }
     }
     fclose(fp);
+  } else {
+    printer_write_defaults();
   }
 
-  if (getenv("A2_IWEM")) {
-    printer_set_iwem(getenv("A2_IWEM"));
+  if (getenv("A2_PRINTS_DIR")) {
+    snprintf(prints_directory, sizeof(prints_directory), "%s", getenv("A2_PRINTS_DIR"));
   }
+
+  if (getenv("A2_CUPS_DEST")) {
+    printer_default_dest = strdup(getenv("A2_CUPS_DEST"));
+  }
+}
+
+int install_printer_thread(void) {
+  printer_read_opts();
+  pthread_mutex_init(&printer_mutex, NULL);
+  return 0;
 }
 
 int start_printer_thread(void) {
@@ -173,8 +333,6 @@ int start_printer_thread(void) {
     pthread_mutex_lock(&printer_mutex);
     printer_thread_stop_requested = 0;
     pthread_mutex_unlock(&printer_mutex);
-
-    printer_read_opts();
 
     pthread_create(&printer_thread, NULL, *printer_thread_listener, NULL);
     printer_thread_started = 1;

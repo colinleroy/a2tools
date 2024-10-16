@@ -165,7 +165,7 @@ static void simple_serial_write_defaults(void) {
     exit(1);
   }
   fclose(fp);
-  printf("A default configuration file has been generated to %s.\n"
+  printf("A default serial configuration file has been generated to %s.\n"
          "Please review it and try again.\n", get_cfg_path());
   exit(1);
 }
