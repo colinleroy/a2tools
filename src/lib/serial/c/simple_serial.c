@@ -78,18 +78,6 @@ const char *get_cfg_dir(void) {
   return cfg_dir;
 }
 
-static char iwem_path[FILENAME_MAX] = "";
-void printer_set_iwem(const char *str) {
-  snprintf(iwem_path, FILENAME_MAX, "%s", str);
-}
-
-const char *printer_get_iwem(void) {
-  if (iwem_path[0] == '\0') {
-    snprintf(iwem_path, FILENAME_MAX, "%s/IW.PS", get_cfg_dir());
-  }
-  return iwem_path;
-}
-
 static int tty_speed_from_str(char *tmp) {
   if (!strcmp(tmp, "300"))
     return B300;
@@ -160,24 +148,19 @@ static void simple_serial_write_defaults(void) {
               "hw_handshake: %s\n"
               "aux_tty: /dev/ttyUSB1\n"
               "aux_baudrate: %s\n"
-              "imagewriter_filter: %s\n"
               "\n"
               "#Alternatively, you can export environment vars:\n"
               "#A2_TTY (unset by default)\n"
               "#A2_TTY_SPEED (default %s)\n"
               "#A2_TTY_HW_HANDSHAKE (default %s)\n"
               "#A2_AUX_TTY (unset by default)\n"
-              "#A2_AUX_TTY_SPEED (default %s)\n"
-              "#A2_IWEM (default %s)\n",
+              "#A2_AUX_TTY_SPEED (default %s)\n",
               tty_speed_to_str(opt_tty_speed),
               opt_tty_hw_handshake ? "true":"false",
               tty_speed_to_str(opt_aux_tty_speed),
-              printer_get_iwem(),
-
               tty_speed_to_str(opt_tty_speed),
               opt_tty_hw_handshake ? "true":"false",
-              tty_speed_to_str(opt_aux_tty_speed),
-              printer_get_iwem());
+              tty_speed_to_str(opt_aux_tty_speed));
   if (fp == stdout) {
     exit(1);
   }
@@ -229,12 +212,6 @@ static int simple_serial_read_opts(void) {
       opt_tty_hw_handshake = get_bool(tmp);
       free(tmp);
     }
-
-    if (!strncmp(buf,"imagewriter_filter:", 19)) {
-      char *tmp = trim(buf + 19);
-      printer_set_iwem(tmp);
-      free(tmp);
-    }
   }
   if (fp != NULL) {
     fclose(fp);
@@ -261,10 +238,6 @@ static int simple_serial_read_opts(void) {
 
   if (getenv("A2_TTY_HW_HANDSHAKE")) {
     opt_tty_hw_handshake = get_bool(getenv("A2_TTY_HW_HANDSHAKE"));
-  }
-
-  if (getenv("A2_IWEM")) {
-    printer_set_iwem(getenv("A2_IWEM"));
   }
   return 0;
 }

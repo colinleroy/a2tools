@@ -23,6 +23,7 @@
 #include <errno.h>
 
 #include "simple_serial.h"
+#include "strtrim.h"
 
 static pthread_t printer_thread;
 static pthread_mutex_t printer_mutex;
@@ -33,6 +34,22 @@ static int printer_thread_stop_requested = 0;
 extern int aux_ttyfd;
 extern char *opt_aux_tty_path;
 extern int opt_aux_tty_speed;
+
+static char iwem_path[FILENAME_MAX] = "";
+void printer_set_iwem(const char *str) {
+  snprintf(iwem_path, FILENAME_MAX, "%s", str);
+}
+
+const char *printer_get_iwem(void) {
+  if (iwem_path[0] == '\0') {
+    snprintf(iwem_path, FILENAME_MAX, "%s", PRINTER_CONF_FILE_PATH);
+    if (strchr(iwem_path, '/')) {
+      *(strrchr(iwem_path, '/') + 1) = '\0';
+      strcat(iwem_path, "IW.PS");
+    }
+  }
+  return iwem_path;
+}
 
 static void handle_document(unsigned char first_byte) {
   static int filenum = 0;
@@ -59,6 +76,8 @@ static void handle_document(unsigned char first_byte) {
         fwrite(buffer, 1, r, fp);
       }
       fclose(filter_fp);
+    } else {
+      printf("Printer: could not open filter file %s: %s\n", printer_get_iwem(), strerror(errno));
     }
     printf("Printer: printing to %s (%02x)\n", filename, first_byte);
     fputc(first_byte, fp);
@@ -78,22 +97,27 @@ static void handle_document(unsigned char first_byte) {
 }
 
 static void *printer_thread_listener(void *arg) {
+  int err_warned = 0;
   /* open port */
   if (aux_ttyfd > 0) {
     printf("Error: printer serial port already opened.\n");
     exit(1);
   }
-  simple_serial_open_printer();
-
-  if (aux_ttyfd < 0) {
-    printf("Could not open printer port %s.\n", opt_aux_tty_path ? opt_aux_tty_path : "(NULL)");
-    return (void *)0;
-  }
 
   /* Listen for data */
   while (1) {
     int i;
+
     pthread_mutex_lock(&printer_mutex);
+
+    if (aux_ttyfd < 0)
+      simple_serial_open_printer();
+
+    if (aux_ttyfd < 0 && !err_warned) {
+      printf("Could not open printer port %s.\n", opt_aux_tty_path ? opt_aux_tty_path : "(NULL)");
+      err_warned = 1;
+    }
+
     if (printer_thread_stop_requested) {
       pthread_mutex_unlock(&printer_mutex);
       /* close port */
@@ -102,6 +126,11 @@ static void *printer_thread_listener(void *arg) {
       break;
     } else {
       pthread_mutex_unlock(&printer_mutex);
+    }
+
+    if (aux_ttyfd < 0) {
+      sleep(1);
+      continue;
     }
 
     /* Handle printer input here */
@@ -118,11 +147,34 @@ int install_printer_thread(void) {
   return 0;
 }
 
+static void printer_read_opts(void) {
+  FILE *fp;
+
+  fp = fopen(PRINTER_CONF_FILE_PATH, "r");
+  if (fp) {
+    char buf[512];
+    while (fgets(buf, 512-1, fp) > 0) {
+      if (!strncmp(buf,"imagewriter_filter:", 19)) {
+        char *tmp = trim(buf + 19);
+        printer_set_iwem(tmp);
+        free(tmp);
+      }
+    }
+    fclose(fp);
+  }
+
+  if (getenv("A2_IWEM")) {
+    printer_set_iwem(getenv("A2_IWEM"));
+  }
+}
+
 int start_printer_thread(void) {
   if (!printer_thread_started) {
     pthread_mutex_lock(&printer_mutex);
     printer_thread_stop_requested = 0;
     pthread_mutex_unlock(&printer_mutex);
+
+    printer_read_opts();
 
     pthread_create(&printer_thread, NULL, *printer_thread_listener, NULL);
     printer_thread_started = 1;
