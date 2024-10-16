@@ -150,6 +150,11 @@ static void handle_document(unsigned char first_byte) {
   imagewriter_close();
   printf("Printer: Document done after %zu bytes.\n", n_bytes);
 
+  if (n_bytes < 4) {
+    printf("Printer: ignoring data, probably Apple II reboot.\n");
+    unlink(filename);
+    return;
+  }
   cups_status = printer_start_cups_job(filename, &dest, &info);
   if (cups_status == HTTP_STATUS_CONTINUE) {
     fp = fopen(filename, "rb");
