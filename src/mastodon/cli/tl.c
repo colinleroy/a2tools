@@ -1406,9 +1406,20 @@ int main(int argc, char **argv) {
     fclose(fp);
   }
 
-  if(!strcmp(translit_charset, "ISO646-FR1")) {
-    /* § in french charset, cleaner than 'à' */
-    arobase = ']';
+//  0 2    7
+// "US-ASCII"
+// "ISO646-IT"  Nothing to do, § for @ and £ for #
+// "ISO646-DK"  
+// "ISO646-UK"  Nothing to do, @ for @ and £ for #
+// "ISO646-DE"  Nothing to do, § for @ and # for #
+// "ISO646-SE2"
+// "ISO646-FR1" Change @ to 0x5D for § and £ for #
+// "ISO646-ES"  Nothing to do, § for @ and £ for #
+
+  switch(translit_charset[7]) {
+    case 'F':
+      arobase = 0x5D;
+      break;
   }
 
   cli();

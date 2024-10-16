@@ -10,6 +10,7 @@
 #include "api.h"
 #include "logo.h"
 #include "charsets.h"
+#include "citoa.h"
 
 extern char *instance_url;
 extern char *oauth_token;
@@ -41,48 +42,37 @@ static int save_config(char *charset, char monochrome) {
   return 0;
 }
 
-static void cli() {
-  char c, monochrome;
-  char *charset;
-
+static void put_logo (void) {
   clrscr();
   gotoxy(0, 0);
 
   print_logo(scrw);
+}
+
+static void cli() {
+  char c, monochrome;
+  char *charset;
+
+  put_logo();
 
 #ifdef __APPLE2ENH__
-  cputs("Please choose your keyboard layout:\r\n");
-  cputs("0. US\r\n");
-  cputs("1. French\r\n");
-  cputs("2. Spanish\r\n");
-  cputs("3. Italian\r\n");
-  cputs("4. German\r\n");
+  cputs("Please choose your keyboard layout:");
+  for (c = 0; c < N_CHARSETS; c++) {
+    cputs("\r\n"); cutoa(c); cputs(". ");cputs(charsets[c]);
+  }
+  cputs("\r\n");
   
 charset_again:
   c = cgetc();
-  switch(c) {
-    case '0':
-      charset = US_CHARSET;
-      break;
-    case '1':
-      charset = FR_CHARSET;
-      break;
-    case '2':
-      charset = ES_CHARSET;
-      break;
-    case '3':
-      charset = IT_CHARSET;
-      break;
-    case '4':
-      charset = DE_CHARSET;
-      break;
-    default:
-      goto charset_again;
+  if (c >= '0' && c < '0'+N_CHARSETS) {
+    charset = charsets[c-'0'];
+  } else {
+    goto charset_again;
   }
 #else
   charset = US_CHARSET;
 #endif
-
+  put_logo();
   cputs("\r\nIs your monitor monochrome? (y/n)\r\n");
 monochrome_again:
   c = cgetc();

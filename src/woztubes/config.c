@@ -11,6 +11,7 @@
 #include "clrzone.h"
 #include "config.h"
 #include "dgets.h"
+#include "citoa.h"
 
 extern unsigned char scrw;
 char *translit_charset;
@@ -75,33 +76,18 @@ void config(void) {
 #endif
 
 #ifdef __APPLE2ENH__
-  cputs("Please choose your keyboard layout:\r\n");
-  cputs("0. US\r\n");
-  cputs("1. French\r\n");
-  cputs("2. Spanish\r\n");
-  cputs("3. Italian\r\n");
-  cputs("4. German\r\n");
+  cputs("Please choose your keyboard layout:");
+  for (c = 0; c < N_CHARSETS; c++) {
+    cputs("\r\n"); cutoa(c); cputs(". ");cputs(charsets[c]);
+  }
+  cputs("\r\n");
   
 charset_again:
   c = cgetc();
-  switch(c) {
-    case '0':
-      translit_charset = US_CHARSET;
-      break;
-    case '1':
-      translit_charset = FR_CHARSET;
-      break;
-    case '2':
-      translit_charset = ES_CHARSET;
-      break;
-    case '3':
-      translit_charset = IT_CHARSET;
-      break;
-    case '4':
-      translit_charset = DE_CHARSET;
-      break;
-    default:
-      goto charset_again;
+  if (c >= '0' && c < '0'+N_CHARSETS) {
+    translit_charset = (char *)charsets[c-'0'];
+  } else {
+    goto charset_again;
   }
 #else
   translit_charset = US_CHARSET;

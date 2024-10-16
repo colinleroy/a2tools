@@ -62,6 +62,7 @@ woztubes_SOURCES := \
 	../lib/citoa.s \
 	../lib/cutoa.s \
 	../lib/cntoabuf.s \
+	../lib/charsets.c
 	#../lib/fastirq$(iigs_suffix).s \
 
 ### Warning! some memory tricks happen.

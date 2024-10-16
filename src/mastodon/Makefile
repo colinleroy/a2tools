@@ -25,7 +25,7 @@ endif
 common_SOURCES := \
 	api/common.c \
 	../lib/dgets.c \
-	../lib/strsplit.c \
+	../lib/strsplit.c
 
 common_CC65SOURCES := \
 	../lib/serial/asm/simple_serial.s \
@@ -53,7 +53,8 @@ mastodon_SOURCES := \
 	api/oauth.c \
 	cli/config.c \
 	cli/logo.c \
-	../lib/surl/surl_ping.c
+	../lib/surl/surl_ping.c \
+	../lib/charsets.c
 
 mastodon_CC65SOURCES := \
 	$(common_CC65SOURCES) \
