@@ -63,9 +63,11 @@ static void update_compose_audience(void) {
 
   gotoxy(0, top + COMPOSE_FIELD_HEIGHT + 3);
   dputs(translit_charset);
-  if(!strcmp(translit_charset, "ISO646-FR1")) {
-    dputs(": Use ] to mention, and # for hashtags.");
-  } /* FIXME add other local charsets */
+  if(translit_charset[0] != 'U') {
+    dputs(": Use ");
+    cputc(arobase);
+    dputs(" to mention, and # for hashtags.");
+  }
 #else
   cprintf("Audience: %s     ",
         compose_audience_str(compose_audience));
@@ -583,10 +585,23 @@ int main(int argc, char **argv) {
   instance_url = argv[1];
   oauth_token = argv[2];
   translit_charset = argv[3];
-  if(!strcmp(translit_charset, "ISO646-FR1")) {
-    /* Cleaner than 'à' */
-    arobase = ']';
+
+//  0 2    7
+// "US-ASCII"
+// "ISO646-IT"  Nothing to do, § for @ and £ for #
+// "ISO646-DK"  
+// "ISO646-UK"  Nothing to do, @ for @ and £ for #
+// "ISO646-DE"  Nothing to do, § for @ and # for #
+// "ISO646-SE2"
+// "ISO646-FR1" Change @ to 0x5D for § and £ for #
+// "ISO646-ES"  Nothing to do, § for @ and £ for #
+
+  switch(translit_charset[7]) {
+    case 'F':
+      arobase = 0x5D;
+      break;
   }
+
   compose_print_header();
 
   set_hscrollwindow(RIGHT_COL_START, scrw - RIGHT_COL_START);

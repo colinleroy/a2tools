@@ -45,7 +45,8 @@ wozamp_SOURCES := \
 	../lib/realloc_safe.c \
 	../lib/dgets.c \
 	../lib/strsplit.c \
-	../stp/stp_list.c
+	../stp/stp_list.c \
+	../lib/charsets.c
 
 wozamp_CL65SOURCES = \
 	../lib/surl/surl_stream_audio/$(STREAMER_VER).s \
