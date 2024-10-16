@@ -273,14 +273,14 @@ int main(int argc, char **argv)
   magic_handle = magic_open(MAGIC_MIME_TYPE|MAGIC_CHECK);
   magic_load(magic_handle, NULL);
 
-  start_printer_thread();
-
 reopen:
   simple_serial_close();
   while (simple_serial_open() != 0) {
     sleep(1);
   }
   fflush(stdout);
+
+  start_printer_thread();
 
   while(1) {
     /* read request */

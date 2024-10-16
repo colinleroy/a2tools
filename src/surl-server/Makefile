@@ -25,7 +25,9 @@ hgrconv_SOURCES := hgr-convert.c helpers/hgr-convert.c
 
 CFLAGS= -I ../lib -I helpers $(shell sdl-config --cflags) \
 				-g -O0 -Wall -Wno-char-subscripts -Wno-deprecated-declarations \
-				-Wall -DCONF_FILE_PATH=\"$(etc_prefix)/a2tools/tty.conf\"
+				-Wall \
+				-DCONF_FILE_PATH=\"$(etc_prefix)/a2tools/tty.conf\" \
+				-DPRINTER_CONF_FILE_PATH=\"$(etc_prefix)/a2tools/printer.conf\"
 
 .PHONY: all clean
 all: $(PROGRAM) hgr-convert
