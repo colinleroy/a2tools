@@ -73,7 +73,7 @@ static int printer_start_cups_job(const char *filename, cups_dest_t **dest, cups
   } else if (strcmp(printer_default_dest, "default")) {
     printer_name = printer_default_dest;
   }
-  printf("Printer: Getting %s printer...\n", printer_name);
+  printf("Printer: Getting %s printer...\n", printer_name ? printer_name:"default");
   *dest = cupsGetNamedDest(CUPS_HTTP_DEFAULT, printer_name, NULL);
   if (*dest) {
     printf("Printer: Found %s\n", (*dest)->name);
