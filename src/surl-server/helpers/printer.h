@@ -1,6 +1,8 @@
 #ifndef __printer_h
 #define __printer_h
 
+#define N_PAPER_SIZES 7
+
 #include "../surl_protocol.h"
 
 int install_printer_thread(void);

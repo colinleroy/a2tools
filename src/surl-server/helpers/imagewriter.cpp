@@ -109,6 +109,10 @@ Imagewriter::Imagewriter(Bit16u dpi, Bit16u paperSize, Bit16u bannerSize, char* 
 		}
 		else
 		{
+			if (paperSize >= N_PAPER_SIZES) {
+				printf("Printer: unsupported paper size %d\n", paperSize);
+				paperSize = 0;
+			}
 			defaultPageWidth = ((Real64)paperSizes[paperSize][0]/(Real64)72);
 			defaultPageHeight = ((Real64)paperSizes[paperSize][1]/(Real64)72);
 		}
@@ -378,7 +382,7 @@ void Imagewriter::updateSwitch()
 {
 	//Set international character mapping (Switches A-1 to A3)
 	int charmap = switcha &= 7;
-	printf("using charset %d\n", charmap);
+
 	curMap[0x23] = intCharSets[charmap][0]; //  # ascii £ french
 	curMap[0x40] = intCharSets[charmap][1]; //  @ ascii à french
 	curMap[0x5b] = intCharSets[charmap][2]; 
@@ -866,7 +870,7 @@ bool Imagewriter::processCommandChar(Bit8u ch)
 			break;
 		case 0x3f: //Send ID string to computer (ESC ?) IW
 			//insert SCC send code here
-			printf("Sending ID String\n");
+			printf("Printer: Todo: Send ID String\n");
 			break;
 		case 0x52: // Repeat character c for nnn times (ESC R nnn c) IW
 			{
@@ -1529,7 +1533,7 @@ void Imagewriter::outputPage()
 			return;
 		}
 		else {
-			printf("Printer: opened %s\n", output);
+			printf("Printer: Writing to %s\n", output);
 		}
 
 		// Print header
