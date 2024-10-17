@@ -70,6 +70,10 @@ extern "C" char* g_imagewriter_fixed_font;
 extern "C" char* g_imagewriter_prop_font;
 #include "iw_charmaps.h"
 
+//DIP Switch 1 bits
+#define lfOnCr 						0x80
+#define perforationSkip 	0x10
+
 #ifdef HAVE_SDL
 void Imagewriter::FillPalette(Bit8u redmax, Bit8u greenmax, Bit8u bluemax, Bit8u colorID, SDL_Palette* pal)
 {
@@ -216,6 +220,7 @@ void Imagewriter::resetPrinter()
 		cpi = 12.0;
 		printRes = 2;
 		style &= (0xffff - STYLE_PROP);
+		score = SCORE_NONE;
 		LQtypeFace = fixed;
 		// style |= STYLE_PROP;
 		// LQtypeFace = prop;
@@ -381,11 +386,11 @@ void Imagewriter::updateFont()
 void Imagewriter::updateSwitch()
 {
 	//Set international character mapping (Switches A-1 to A3)
-	int charmap = switcha &= 7;
+	int charmap = switcha & 7;
 
 	curMap[0x23] = intCharSets[charmap][0]; //  # ascii £ french
 	curMap[0x40] = intCharSets[charmap][1]; //  @ ascii à french
-	curMap[0x5b] = intCharSets[charmap][2]; 
+	curMap[0x5b] = intCharSets[charmap][2];
 	curMap[0x5c] = intCharSets[charmap][3]; //  \ ascii ç french
 	curMap[0x5d] = intCharSets[charmap][4];
 	curMap[0x60] = intCharSets[charmap][5];
@@ -393,6 +398,15 @@ void Imagewriter::updateSwitch()
 	curMap[0x7c] = intCharSets[charmap][7];
 	curMap[0x7d] = intCharSets[charmap][8];
 	curMap[0x7e] = intCharSets[charmap][9];
+
+	if (switcha & perforationSkip) {
+		topMargin = 0.25;
+		bottomMargin = pageHeight - 0.25;
+	} else {
+		topMargin = 0;
+		bottomMargin = pageHeight - 0;
+	}
+
 	//MSB control (Switch B-6)
 	if (!(switchb&32))
 	{
@@ -789,8 +803,13 @@ bool Imagewriter::processCommandChar(Bit8u ch)
 				x++;
 			}
 			pageHeight = (Real64)PARAM4(0)/144;
-			bottomMargin = pageHeight;
-			topMargin = 0.0;
+			if (switcha & perforationSkip) {
+				bottomMargin = pageHeight-0.25;
+				topMargin = 0.25;
+			} else {
+				bottomMargin = pageHeight;
+				topMargin = 0.0;
+			}
 			break;
 			}
 		case 0x21: // Select bold font (ESC !) IW
@@ -1011,7 +1030,7 @@ bool Imagewriter::processCommandChar(Bit8u ch)
 			while (x < paramc(0))
 			{
 				curY += lineSpacing;
-				if (curY > bottomMargin)
+				if (curY > bottomMargin - lineSpacing)
 					newPage(true,false);
 				x++;
 			}
@@ -1065,7 +1084,7 @@ bool Imagewriter::processCommandChar(Bit8u ch)
 		{
 			curX = leftMargin;
 			curY += lineSpacing;
-			if (curY > bottomMargin)
+			if (curY > bottomMargin - lineSpacing)
 				newPage(true,false);
 		}
 		else
@@ -1077,7 +1096,7 @@ bool Imagewriter::processCommandChar(Bit8u ch)
 					moveTo = verttabs[i];
 
 			// Nothing found => Act like FF
-			if (moveTo > bottomMargin || moveTo < 0)
+			if (moveTo > bottomMargin - lineSpacing || moveTo < 0)
 				newPage(true,false);
 			else
 				curY = moveTo;
@@ -1088,13 +1107,13 @@ bool Imagewriter::processCommandChar(Bit8u ch)
 		return true;
 	case 0x0d:		// Carriage Return (CR)
 		curX = leftMargin;
-		if ((switcha&=0x80)) curY += lineSpacing; // If switch A-8 is set, send a LF after CR
+		if ((switcha&lfOnCr)) curY += lineSpacing; // If switch A-8 is set, send a LF after CR
 		if (!autoFeed)
 			return true;
 	case 0x0a:		// Line feed
 		//curX = leftMargin;
 		curY += lineSpacing;
-		if (curY > bottomMargin)
+		if (curY > bottomMargin - lineSpacing)
 			newPage(true,false);
 		return true;
 	case 0x0e:		//Select double width printing (SO) IW
@@ -1235,8 +1254,8 @@ void Imagewriter::printChar(Bit8u ch)
     curX += x_advance;
 
 	// Draw lines if desired
-	if ((score != SCORE_NONE) && (style &
-		(STYLE_UNDERLINE)))
+	if ((score != SCORE_NONE) &&
+			(style & (STYLE_UNDERLINE)))
 	{
 		// Find out where to put the line
 		Bit16u lineY = PIXY;
@@ -1254,7 +1273,7 @@ void Imagewriter::printChar(Bit8u ch)
 	if((curX + x_advance) > rightMargin) {
 		curX = leftMargin;
 		curY += lineSpacing;
-		if (curY > bottomMargin) newPage(true,false);
+		if (curY > bottomMargin - lineSpacing) newPage(true,false);
 	}
 #endif // HAVE_SDL
 }

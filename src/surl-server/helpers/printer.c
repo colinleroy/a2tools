@@ -48,6 +48,7 @@ static char *printer_default_dest = NULL;
 int job_timeout = 60;
 char* g_imagewriter_fixed_font = FONTS_DIR"/"MONO_FONT;
 char* g_imagewriter_prop_font = FONTS_DIR"/"PROP_FONT;
+int enable_printing = 1;
 
 static const char* papers[N_PAPER_SIZES] = {
 	"US_LETTER_8.5x11in",
@@ -258,7 +259,10 @@ static void printer_write_defaults(void) {
     printf("Please create this configuration in the following format:\n\n");
     fp = stdout;
   }
-  fprintf(fp, "#Leave cups_printer_name empty to print to file only. Use 'default'\n"
+  fprintf(fp, "#Enable printing\n"
+              "enable_printing: true\n"
+              "\n"
+              "#Leave cups_printer_name empty to print to file only. Use 'default'\n"
               "#to use the system's default CUPS printer.\n"
               "#Otherwise, set it to a CUPS printer name as shown by `lpstat -v`.\n"
               "cups_printer_name:\n"
@@ -323,6 +327,14 @@ static void printer_read_opts(void) {
         free(tmp);
       }
 
+      if (!strncmp(buf,"enable_printing:", 16)) {
+        char *tmp = trim(buf + 16);
+        enable_printing = !strcasecmp(tmp, "yes") ||
+                          !strcasecmp(tmp, "true") ||
+                          !strcasecmp(tmp, "1");
+        free(tmp);
+      }
+
       if (!strncmp(buf,"cups_printer_name:", 18)) {
         char *tmp = trim(buf + 18);
         if (strlen(tmp))
@@ -334,6 +346,7 @@ static void printer_read_opts(void) {
       if (!strncmp(buf,"job_timeout:", 12)) {
         char *tmp = trim(buf + 12);
         job_timeout = atoi(tmp);
+        free(tmp);
       }
 
       if (!strncmp(buf,"fixed_font:", 11)) {
@@ -361,6 +374,7 @@ static void printer_read_opts(void) {
         if (!found) {
           printf("Printer: ignoring unknown charset \"%s\".\n", tmp);
         }
+        free(tmp);
       }
 
       if (!strncmp(buf,"default_paper_size:", 19)) {
@@ -378,6 +392,7 @@ static void printer_read_opts(void) {
         if (!found) {
           printf("Printer: ignoring unknown paper size \"%s\".\n", tmp);
         }
+        free(tmp);
       }
     }
     fclose(fp);
@@ -393,6 +408,11 @@ int install_printer_thread(void) {
 }
 
 int start_printer_thread(void) {
+  if (!enable_printing) {
+    printf("Printer: disabled\n");
+    return 0;
+  }
+
   if (!printer_thread_started) {
     pthread_mutex_lock(&printer_mutex);
     printer_thread_stop_requested = 0;
