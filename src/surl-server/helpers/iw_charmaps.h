@@ -1,4 +1,5 @@
 #include "charsets.h"
+#include "printer.h"
 /*
   GSPLUS - Advanced Apple IIGS Emulator Environment
   Based on the KEGS emulator written by Kent Dickey
@@ -51,18 +52,8 @@ Paper size definitions. Units are Postscript points (1/72in).
 This list is based on the options available in the GS/OS
 Imagewriter LQ driver.
 */
-const char* paperSizesNames[8] = {
-	"US_LETTER_8.5x11in",
-	"US_LETTER_8.5x14in",
-	"ISO_A4_210x297mm",
-	"ISO_B5_176x250mm",
-	"WIDE_FANFOLD_14x11in",
-	"LEDGER_11x17in",
-	"ISO_A3_297x420mm",
-	NULL
-};
 
-static const Bit16u paperSizes[7][2] =
+static const Bit16u paperSizes[N_PAPER_SIZES][2] =
 {
 	{612, 792}, //US Letter 8.5 x 11in
 	{612, 1008}, //US Legal 8.5 x 14in

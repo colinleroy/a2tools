@@ -22,6 +22,7 @@
 #include <pthread.h>
 #include <errno.h>
 #include <cups/cups.h>
+#include "printer.h"
 #include "imagewriter.h"
 #include "charsets.h"
 
@@ -41,10 +42,22 @@ extern int opt_aux_tty_speed;
 static char prints_directory[FILENAME_MAX/2] = "/tmp";
 static const char *default_charset = NULL;
 int default_charset_num = 0;
+static const char *default_papersize = NULL;
+int default_papersize_num = 0;
 static char *printer_default_dest = NULL;
 int job_timeout = 60;
 char* g_imagewriter_fixed_font = FONTS_DIR"/"MONO_FONT;
 char* g_imagewriter_prop_font = FONTS_DIR"/"PROP_FONT;
+
+static const char* papers[N_PAPER_SIZES] = {
+	"US_LETTER_8.5x11in",
+	"US_LETTER_8.5x14in",
+	"ISO_A4_210x297mm",
+	"ISO_B5_176x250mm",
+	"WIDE_FANFOLD_14x11in",
+	"LEDGER_11x17in",
+	"ISO_A3_297x420mm"
+};
 
 static int printer_start_cups_job(const char *filename, cups_dest_t **dest, cups_dinfo_t **info) {
   int status, job_id;
@@ -117,7 +130,6 @@ static int printer_finish_cups_job(cups_dest_t *dest, cups_dinfo_t *info) {
 
 int g_imagewriter_dpi = 360;
 int g_imagewriter_multipage = 1;
-int g_imagewriter_paper = 0;
 int g_imagewriter_banner = 0;
 
 static void handle_document(unsigned char first_byte) {
@@ -138,9 +150,10 @@ static void handle_document(unsigned char first_byte) {
   strftime(timestamp, sizeof timestamp, "%Y-%m-%d-%H-%M-%S", localtime(&now));
   snprintf(filename, FILENAME_MAX, "%s/iwprint-%s-%d.ps", prints_directory, timestamp, filenum++);
 
-  printf("Printer: starting print to %s...\n", filename);
+  printf("Printer: Receiving data!\n");
 
-  imagewriter_init(g_imagewriter_dpi, g_imagewriter_paper, g_imagewriter_banner, filename, g_imagewriter_multipage, default_charset_num);
+  imagewriter_init(g_imagewriter_dpi, default_papersize_num, g_imagewriter_banner, filename,
+                   g_imagewriter_multipage, default_charset_num);
   imagewriter_loop(first_byte);
 
   while ((i = __simple_serial_getc_with_tv_timeout(aux_ttyfd, 1, 10, 0)) != EOF) {
@@ -152,9 +165,9 @@ static void handle_document(unsigned char first_byte) {
     n_bytes++;
   }
 
+  printf("Printer: End of data after %zu bytes.\n", n_bytes);
   imagewriter_feed();
   imagewriter_close();
-  printf("Printer: Document done after %zu bytes.\n", n_bytes);
 
   if (n_bytes < 4) {
     printf("Printer: ignoring data, probably Apple II reboot.\n");
@@ -176,7 +189,7 @@ static void handle_document(unsigned char first_byte) {
         cupsFreeDests(1, dest);
       }
       fclose(fp);
-      /* We now expect cups_status to be IPP_STATUS_OK for printing to have 
+      /* We now expect cups_status to be IPP_STATUS_OK for printing to have
        * succeeded */
       if (cups_status == IPP_STATUS_OK) {
         printf("Printer: Removing file %s after successful printing\n", filename);
@@ -265,14 +278,24 @@ static void printer_write_defaults(void) {
               "\n"
               "#Default printer charset:\n"
               "default_charset: %s\n"
-              "#Possible values:\n",
+              "\n"
+              "#Default printer charset:\n"
+              "default_paper_size: %s\n",
               job_timeout,
               prints_directory,
               g_imagewriter_fixed_font,
               g_imagewriter_prop_font,
-              default_charset);
+              default_charset,
+              default_papersize);
+
+  fprintf(fp, "\n#Available charsets:\n");
   for (i = 0; i < N_CHARSETS; i++) {
     fprintf(fp, "# %s\n", charsets[i]);
+  }
+
+  fprintf(fp, "\n#Available paper sizes:\n");
+  for (i = 0; i < N_PAPER_SIZES; i++) {
+    fprintf(fp, "# %s\n", papers[i]);
   }
 
   if (fp != stdout) {
@@ -288,6 +311,8 @@ static void printer_read_opts(void) {
   FILE *fp;
 
   default_charset = charsets[default_charset_num];
+  default_papersize = papers[default_papersize_num];
+
   fp = fopen(PRINTER_CONF_FILE_PATH, "r");
   if (fp) {
     char buf[512];
@@ -329,12 +354,29 @@ static void printer_read_opts(void) {
             default_charset = charsets[i];
             default_charset_num = i;
             found = 1;
-            printf("Charset %d %s\n", default_charset_num, charsets[default_charset_num]);
+            printf("Printer: charset %s\n", default_charset);
             break;
           }
         }
         if (!found) {
           printf("Printer: ignoring unknown charset \"%s\".\n", tmp);
+        }
+      }
+
+      if (!strncmp(buf,"default_paper_size:", 19)) {
+        char *tmp = trim(buf + 19);
+        int i, found = 0;
+        for (i = 0; i < N_PAPER_SIZES; i++) {
+          if (!strcmp(papers[i], tmp)) {
+            default_papersize = papers[i];
+            default_papersize_num = i;
+            found = 1;
+            printf("Printer: paper %s\n", default_papersize);
+            break;
+          }
+        }
+        if (!found) {
+          printf("Printer: ignoring unknown paper size \"%s\".\n", tmp);
         }
       }
     }
