@@ -43,16 +43,24 @@ static const char *default_charset = NULL;
 int default_charset_num = 0;
 static char *printer_default_dest = NULL;
 int job_timeout = 60;
+char* g_imagewriter_fixed_font = FONTS_DIR"/"MONO_FONT;
+char* g_imagewriter_prop_font = FONTS_DIR"/"PROP_FONT;
 
 static int printer_start_cups_job(const char *filename, cups_dest_t **dest, cups_dinfo_t **info) {
   int status, job_id;
+  const char *printer_name = NULL;
 
   *dest = NULL;
   *info = NULL;
 
-  printf("Printer: Getting %s printer...\n",
-         printer_default_dest ? printer_default_dest:"default");
-  *dest = cupsGetNamedDest(CUPS_HTTP_DEFAULT, printer_default_dest, NULL);
+  if (!printer_default_dest) {
+    /* Print to file only */
+    return -1;
+  } else if (strcmp(printer_default_dest, "default")) {
+    printer_name = printer_default_dest;
+  }
+  printf("Printer: Getting %s printer...\n", printer_name);
+  *dest = cupsGetNamedDest(CUPS_HTTP_DEFAULT, printer_name, NULL);
   if (*dest) {
     printf("Printer: Found %s\n", (*dest)->name);
     *info = cupsCopyDestInfo(CUPS_HTTP_DEFAULT, *dest);
@@ -109,8 +117,6 @@ static int printer_finish_cups_job(cups_dest_t *dest, cups_dinfo_t *info) {
 
 int g_imagewriter_dpi = 360;
 int g_imagewriter_multipage = 1;
-char* g_imagewriter_fixed_font = "/usr/share/fonts/truetype/freefont/FreeMono.ttf";
-char* g_imagewriter_prop_font = "/usr/share/fonts/truetype/freefont/FreeSerif.ttf";
 int g_imagewriter_paper = 0;
 int g_imagewriter_banner = 0;
 
@@ -239,22 +245,31 @@ static void printer_write_defaults(void) {
     printf("Please create this configuration in the following format:\n\n");
     fp = stdout;
   }
-  fprintf(fp, "#Leave cups_dest empty to use the system's default CUPS printer.\n"
+  fprintf(fp, "#Leave cups_printer_name empty to print to file only. Use 'default'\n"
+              "#to use the system's default CUPS printer.\n"
               "#Otherwise, set it to a CUPS printer name as shown by `lpstat -v`.\n"
-              "cups_dest:\n"
+              "cups_printer_name:\n"
               "\n"
               "#How many seconds to wait for end of input before finishing the job.\n"
-              "#PrintShop needs 60.\n"
+              "#PrintShop needs 60 seconds.\n"
               "job_timeout: %d\n"
               "\n"
               "#The directory where to put iwprint-*.ps files.\n"
               "prints_directory: %s\n"
+              "\n"
+              "#Fixed-width font to use.\n"
+              "fixed_font: %s\n"
+              "\n"
+              "#Proportional-width font to use.\n"
+              "proportional_font: %s\n"
               "\n"
               "#Default printer charset:\n"
               "default_charset: %s\n"
               "#Possible values:\n",
               job_timeout,
               prints_directory,
+              g_imagewriter_fixed_font,
+              g_imagewriter_prop_font,
               default_charset);
   for (i = 0; i < N_CHARSETS; i++) {
     fprintf(fp, "# %s\n", charsets[i]);
@@ -283,8 +298,8 @@ static void printer_read_opts(void) {
         free(tmp);
       }
 
-      if (!strncmp(buf,"cups_dest:", 10)) {
-        char *tmp = trim(buf + 10);
+      if (!strncmp(buf,"cups_printer_name:", 18)) {
+        char *tmp = trim(buf + 18);
         if (strlen(tmp))
           printer_default_dest = tmp;
         else
@@ -294,6 +309,16 @@ static void printer_read_opts(void) {
       if (!strncmp(buf,"job_timeout:", 12)) {
         char *tmp = trim(buf + 12);
         job_timeout = atoi(tmp);
+      }
+
+      if (!strncmp(buf,"fixed_font:", 11)) {
+        char *tmp = trim(buf + 11);
+        g_imagewriter_fixed_font = tmp;
+      }
+
+      if (!strncmp(buf,"proportional_font:", 18)) {
+        char *tmp = trim(buf + 18);
+        g_imagewriter_prop_font = tmp;
       }
 
       if (!strncmp(buf,"default_charset:", 16)) {
@@ -316,14 +341,6 @@ static void printer_read_opts(void) {
     fclose(fp);
   } else {
     printer_write_defaults();
-  }
-
-  if (getenv("A2_PRINTS_DIR")) {
-    snprintf(prints_directory, sizeof(prints_directory), "%s", getenv("A2_PRINTS_DIR"));
-  }
-
-  if (getenv("A2_CUPS_DEST")) {
-    printer_default_dest = strdup(getenv("A2_CUPS_DEST"));
   }
 }
 

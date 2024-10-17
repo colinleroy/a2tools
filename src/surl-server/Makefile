@@ -1,6 +1,10 @@
 prefix ?= /usr/local
 etc_prefix ?= /usr/local/etc
 
+FONTS_DIR = $(prefix)/share/fonts/truetype/Apple2
+MONO_FONT = "beepu-mono.ttf"
+PROP_FONT = "beepu.ttf"
+
 PROGRAM=surl-server
 SOURCES := main.c raw-session.c \
 	helpers/char-convert.c \
@@ -29,7 +33,10 @@ CFLAGS= -I ../lib -I helpers $(shell sdl-config --cflags) \
 				-g -O0 -Wall -Wno-char-subscripts -Wno-deprecated-declarations \
 				-Wall \
 				-DCONF_FILE_PATH=\"$(etc_prefix)/a2tools/tty.conf\" \
-				-DPRINTER_CONF_FILE_PATH=\"$(etc_prefix)/a2tools/printer.conf\"
+				-DPRINTER_CONF_FILE_PATH=\"$(etc_prefix)/a2tools/printer.conf\" \
+				-DFONTS_DIR=\"$(FONTS_DIR)\" \
+				-DMONO_FONT=\"$(MONO_FONT)\" \
+				-DPROP_FONT=\"$(PROP_FONT)\"
 
 .PHONY: all clean
 all: $(PROGRAM) hgr-convert
@@ -76,6 +83,7 @@ install:
 		id surl-server || (adduser --system --no-create-home surl-server && adduser surl-server dialout) \
 	fi
 	install -m 644 systemd/surl-server.service $(DESTDIR)/lib/systemd/system/surl-server.service
-	mkdir -p $(DESTDIR)/$(prefix)/share/fonts/truetype/Apple2
-	install -m 644 fonts/PrintChar21.ttf $(DESTDIR)/$(prefix)/share/fonts/truetype/Apple2
+	mkdir -p $(DESTDIR)/$(FONTS_DIR)
+	install -m 644 fonts/$(MONO_FONT) $(DESTDIR)/$(FONTS_DIR)
+	install -m 644 fonts/$(PROP_FONT) $(DESTDIR)/$(FONTS_DIR)
 	fc-cache || true

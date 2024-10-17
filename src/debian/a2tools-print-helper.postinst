@@ -1,0 +1,13 @@
+#!/bin/sh -e
+
+#Add surl-server user to lp group
+/usr/sbin/usermod -a -G lp surl-server
+
+#Create prints directory
+mkdir -p /srv/ftp/prints
+chown surl-server:nogroup /srv/ftp/prints
+chmod 775 /srv/ftp/prints
+
+#setup defaults
+sed -i "s/^cups_printer_name:$/cups_printer_name: default/" /etc/a2tools/printer.conf
+sed -i "s/^prints_directory: \/tmp$/prints_directory: \/srv\/ftp\/prints/" /etc/a2tools/printer.conf
