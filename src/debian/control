@@ -29,3 +29,11 @@ Description: Apple2 MAME trace interpreter
 Package: a2tools-common
 Architecture: all
 Description: Apple2 serial helpers configuration
+
+Package: a2tools-print-helper
+Architecture: all
+Depends:
+ cups,
+ proftpd,
+ surl-server
+Description: Apple2 configuration to print to FTP/CUPS
