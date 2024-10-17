@@ -240,7 +240,7 @@ void Imagewriter::resetPrinter()
 		multiPointSize = 0.0;
 		multicpi = 0.0;
 		hmi = -1.0;
-		switcha = default_charset;
+		switcha = default_charset|perforationSkip;
 		switchb = ' ';
 		numPrintAsChar = 0;
 		verticalDot = 0;
@@ -421,9 +421,10 @@ void Imagewriter::slashzero(Bit16u penX, Bit16u penY)
 		FT_Load_Glyph(slashFont, slashindex, FT_LOAD_DEFAULT);
 		FT_Render_Glyph(slashFont->glyph, FT_RENDER_MODE_NORMAL);
 		blitGlyph(slashFont->glyph->bitmap, penX, penY, false);
+		blitGlyph(slashFont->glyph->bitmap, penX+1, penY, false);
 		if (style & STYLE_BOLD) {
 			blitGlyph(slashFont->glyph->bitmap, penX-1, penY, true);
-			blitGlyph(slashFont->glyph->bitmap, penX+1, penY, true);
+			blitGlyph(slashFont->glyph->bitmap, penX+2, penY, true);
 		}
 }
 #endif // HAVE_SDL
@@ -1230,12 +1231,14 @@ void Imagewriter::printChar(Bit8u ch)
 	SDL_LockSurface(page);
 
 	blitGlyph(curFont->glyph->bitmap, penX, penY, false);
+	blitGlyph(curFont->glyph->bitmap, penX+1, penY, false);
 
 	// Bold => Print the glyph a second time one pixel to the right
 	// or be a bit more bold...
 	if (style & STYLE_BOLD) {
 		blitGlyph(curFont->glyph->bitmap, penX-1, penY, true);
 		blitGlyph(curFont->glyph->bitmap, penX+1, penY, true);
+		blitGlyph(curFont->glyph->bitmap, penX+2, penY, true);
 	}
 	SDL_UnlockSurface(page);
 
