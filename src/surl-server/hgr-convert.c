@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "hgr-convert.h"
+#include "log.h"
 
 static char *read_hgr(char *filename, size_t *len) {
   FILE *in = fopen(filename, "rb");
@@ -72,7 +73,7 @@ int main(int argc, char **argv) {
   char bayer = 0, small = 0, mono = 1;
 
   if (argc < 2) {
-    printf("Usage: %s [-bayer] [-small] [-color] [list of files]\n", argv[0]);
+    LOG("Usage: %s [-bayer] [-small] [-color] [list of files]\n", argv[0]);
     exit(1);
   }
 
@@ -90,7 +91,7 @@ int main(int argc, char **argv) {
     i++;
   }
   for (; i < argc; i++) {
-    printf("Converting %s...\n", argv[i]);
+    LOG("Converting %s...\n", argv[i]);
 
     /* Try to convert an image to HGR. It will fail if
      * it's not an SDLimage-supported format.
@@ -98,7 +99,7 @@ int main(int argc, char **argv) {
     if ((out_buf = (char *)sdl_to_hgr(argv[i], mono, 1, &len, bayer, small)) != NULL && len > 0) {
       snprintf(out_file, sizeof(out_file), "%s.hgr", argv[i]);
       write_file(out_file, out_buf, len);
-      printf("Converted to hgr: %s\n", out_file);
+      LOG("Converted to hgr: %s\n", out_file);
     } else {
       /* If conversion from image to HGR failed, consider it's HGR,
        * and convert that to PNG. It will have funny results if the
@@ -110,9 +111,9 @@ int main(int argc, char **argv) {
         out_buf = hgr_to_png(hgr_buf, len, 1, &out_len);
         snprintf(out_file, sizeof(out_file), "%s.png", argv[i]);
         write_file(out_file, out_buf, out_len);
-        printf("Converted to png: %s\n", out_file);
+        LOG("Converted to png: %s\n", out_file);
       } else {
-        printf("%s does not look like an HGR file.\n", argv[i]);
+        LOG("%s does not look like an HGR file.\n", argv[i]);
       }
       free(hgr_buf);
     }

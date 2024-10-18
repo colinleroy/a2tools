@@ -17,6 +17,7 @@
 #include "simple_serial.h"
 #include "raw-session.h"
 #include "char-convert.h"
+#include "log.h"
 
 static void send_buf(int sockfd, char *c, int nmemb) {
   fd_set fds;
@@ -35,7 +36,7 @@ static void send_buf(int sockfd, char *c, int nmemb) {
     n = write(sockfd, c, nmemb);
   }
   if (n < 0) {
-    printf("RAW: Write error %s\n", strerror(errno));
+    LOG("RAW: Write error %s\n", strerror(errno));
   }
 }
 
@@ -57,12 +58,12 @@ static int net_recv_char(int sockfd, unsigned char *c) {
   if (n > 0 && FD_ISSET(sockfd, &fds)) {
     n = read(sockfd, c, 1);
     if (n == 0) {
-      printf("RAW: Read error %s\n", strerror(errno));
+      LOG("RAW: Read error %s\n", strerror(errno));
       return EOF;
     }
     return 0;
   } else if (n < 0) {
-    printf("RAW: Read error %s\n", strerror(errno));
+    LOG("RAW: Read error %s\n", strerror(errno));
     return EOF;
   }
   return 0;
@@ -145,7 +146,7 @@ void surl_server_raw_session(char *remote_url) {
   int sockfd;
   time_t last_traffic;
 
-  printf("RAW: starting raw session.\n");
+  LOG("RAW: starting raw session.\n");
 
   serial_delay = 600;
 
@@ -162,7 +163,7 @@ void surl_server_raw_session(char *remote_url) {
   
   set_non_blocking(sockfd);
 
-  printf("RAW: Connected to %s: %d\n", remote_url, sockfd);
+  LOG("RAW: Connected to %s: %d\n", remote_url, sockfd);
   simple_serial_puts("Connected.\r\n");
   last_traffic = time(NULL);
   do {
@@ -177,7 +178,7 @@ maybe_finish_ctrl_ser:
       last_i = i;
 
       if (i == ('d'|0x80)) {
-        printf("RAW: Client closed connection.\n");
+        LOG("RAW: Client closed connection.\n");
         goto cleanup;
       }
       in_buf[n_in++] = i;

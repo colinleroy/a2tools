@@ -46,6 +46,7 @@
 
 #include "char-convert.h"
 #include "../surl_protocol.h"
+#include "../log.h"
 
 /* Final buffer size, possibly including black borders */
 #define HGR_WIDTH 280
@@ -124,7 +125,7 @@ static size_t curl_art_cb(void *contents, size_t size, size_t nmemb, void *userp
 
   if(!ptr) {
     /* out of memory! */
-    printf("not enough memory (realloc returned NULL)\n");
+    LOG("not enough memory (realloc returned NULL)\n");
     free(data->img_data);
     data->img_data = NULL;
     data->img_size = 0;
@@ -174,28 +175,28 @@ static int open_video_file(decode_data *data)
 
     if ((ret = avformat_open_input(&video_fmt_ctx, data->url, NULL, &video_options)) < 0) {
       av_dict_free(&video_options);
-      printf("Video: Cannot open input file\n");
+      LOG("Video: Cannot open input file\n");
       return ret;
     }
 
     // WIP dither via ffmpeg
     // if ((ret = avformat_open_input(&video_fmt_ctx, "/tmp/palette.png", NULL, &video_options)) < 0) {
     //   av_dict_free(&video_options);
-    //   printf("Video: Cannot open palette file (%d)\n", AVERROR(ret));
+    //   LOG("Video: Cannot open palette file (%d)\n", AVERROR(ret));
     //   return ret;
     // }
 
     av_dict_free(&video_options);
 
     if ((ret = avformat_find_stream_info(video_fmt_ctx, NULL)) < 0) {
-      printf("Video: Cannot find stream information\n");
+      LOG("Video: Cannot find stream information\n");
       return ret;
     }
 
     /* select the stream */
     ret = av_find_best_stream(video_fmt_ctx, AVMEDIA_TYPE_VIDEO, -1, -1, &dec, 0);
     if (ret < 0) {
-      printf("Video: Cannot find a corresponding stream in the input file\n");
+      LOG("Video: Cannot find a corresponding stream in the input file\n");
       return ret;
     }
 
@@ -209,7 +210,7 @@ static int open_video_file(decode_data *data)
 
     /* init the decoder */
     if ((ret = avcodec_open2(video_dec_ctx, dec, NULL)) < 0) {
-        printf("Video: Cannot open decoder\n");
+        LOG("Video: Cannot open decoder\n");
         return ret;
     }
 
@@ -240,21 +241,21 @@ static int open_audio_file(decode_data *data)
 
     if ((ret = avformat_open_input(&audio_fmt_ctx, data->url, NULL, &audio_options)) < 0) {
       av_dict_free(&audio_options);
-      printf("Audio: Cannot open input file\n");
+      LOG("Audio: Cannot open input file\n");
       return ret;
     }
 
     av_dict_free(&audio_options);
 
     if ((ret = avformat_find_stream_info(audio_fmt_ctx, NULL)) < 0) {
-      printf("Audio: Cannot find stream information\n");
+      LOG("Audio: Cannot find stream information\n");
       return ret;
     }
 
     /* select the stream */
     ret = av_find_best_stream(audio_fmt_ctx, AVMEDIA_TYPE_AUDIO, -1, -1, &dec, 0);
     if (ret < 0) {
-      printf("Audio: Cannot find a corresponding stream in the input file\n");
+      LOG("Audio: Cannot find a corresponding stream in the input file\n");
       return ret;
     }
 
@@ -268,7 +269,7 @@ static int open_audio_file(decode_data *data)
 
     /* init the decoder */
     if ((ret = avcodec_open2(audio_dec_ctx, dec, NULL)) < 0) {
-      printf("Audio: Cannot open decoder\n");
+      LOG("Audio: Cannot open decoder\n");
       return ret;
     }
 
@@ -307,7 +308,7 @@ static int init_video_filters(decode_data *data)
       FPS = 24;
     }
 
-    printf("Original video %dx%d (%.2f), %.2ffps, doing %d fps with size %d, %ssubs\n", video_dec_ctx->width, video_dec_ctx->height, aspect_ratio,
+    LOG("Original video %dx%d (%.2f), %.2ffps, doing %d fps with size %d, %ssubs\n", video_dec_ctx->width, video_dec_ctx->height, aspect_ratio,
            data->orig_fps, FPS, data->video_size, data->has_subtitles?"":"no ");
 
     /* Get final resolution. We don't want too much "square pixels". */
@@ -321,7 +322,7 @@ static int init_video_filters(decode_data *data)
         break;
       }
     }
-    printf("Rescaling to %dx%d (%d pixels)\n", pic_width, pic_height, pic_width * pic_height);
+    LOG("Rescaling to %dx%d (%d pixels)\n", pic_width, pic_height, pic_width * pic_height);
 
     if (data->video_size == HGR_SCALE_HALF)
       sprintf(filters_descr, video_filter_descr_s,
@@ -353,7 +354,7 @@ static int init_video_filters(decode_data *data)
     ret = avfilter_graph_create_filter(&video_buffersrc_ctx, buffersrc, "in",
                                        args, NULL, video_filter_graph);
     if (ret < 0) {
-        printf("Cannot create buffer source\n");
+        LOG("Cannot create buffer source\n");
         goto end;
     }
 
@@ -361,14 +362,14 @@ static int init_video_filters(decode_data *data)
     ret = avfilter_graph_create_filter(&video_buffersink_ctx, buffersink, "out",
                                        NULL, NULL, video_filter_graph);
     if (ret < 0) {
-        printf("Cannot create buffer sink\n");
+        LOG("Cannot create buffer sink\n");
         goto end;
     }
 
     ret = av_opt_set_int_list(video_buffersink_ctx, "pix_fmts", pix_fmts,
                               AV_PIX_FMT_NONE, AV_OPT_SEARCH_CHILDREN);
     if (ret < 0) {
-        printf("Cannot set output pixel format\n");
+        LOG("Cannot set output pixel format\n");
         goto end;
     }
 
@@ -615,17 +616,17 @@ static void *ffmpeg_subtitles_decode_thread(void *data) {
   if (th_data->subtitles_url == NULL) {
     if (ffmpeg_subtitles_decode(th_data, th_data->url) < 0) {
       char *srt = malloc(strlen(th_data->url) + 10);
-      printf("No embedded subtitles.\n");
+      LOG("No embedded subtitles.\n");
       strcpy(srt, th_data->url);
       if (strchr(srt, '.'))
         strcpy(strrchr(srt, '.'), ".srt");
       if (ffmpeg_subtitles_decode(data, srt) < 0) {
-        printf("No srt subtitles.\n");
+        LOG("No srt subtitles.\n");
       }
       free(srt);
     }
   } else if (ffmpeg_subtitles_decode(data, th_data->subtitles_url) < 0) {
-    printf("No subtitles at URL %s.\n", th_data->subtitles_url);
+    LOG("No subtitles at URL %s.\n", th_data->subtitles_url);
   }
 
   /* We're ready. */
@@ -654,7 +655,7 @@ int ffmpeg_video_decode_init(decode_data *data, int *video_len) {
     if (data->enable_subtitles) {
       pthread_mutex_init(&data->sub_mutex, NULL);
       pthread_create(&data->sub_thread, NULL, *ffmpeg_subtitles_decode_thread, (void *)data);
-      printf("Waiting for subtitle thread.\n");
+      LOG("Waiting for subtitle thread.\n");
       sem_wait(&data->sub_thread_ready);
     }
 
@@ -671,7 +672,7 @@ int ffmpeg_video_decode_init(decode_data *data, int *video_len) {
         if (data->subs[i]) {
           int j = (i * (1000.0/SUB_DEFAULT_FPS))/(1000.0/FPS);
           if (i != j) {
-            printf("Moving sub from %d to %d (%s)\n", i, j, data->subs[i]);
+            LOG("Moving sub from %d to %d (%s)\n", i, j, data->subs[i]);
             new_subs[j] = data->subs[i];
           }
         }
@@ -680,11 +681,11 @@ int ffmpeg_video_decode_init(decode_data *data, int *video_len) {
       data->subs = new_subs;
     }
 
-    printf("Duration %lus\n", video_fmt_ctx->duration/1000000);
+    LOG("Duration %lus\n", video_fmt_ctx->duration/1000000);
     *video_len = video_fmt_ctx->duration/1000000;
 end:
     if (ret < 0)
-        printf("Init error occurred: %s\n", av_err2str(ret));
+        LOG("Init error occurred: %s\n", av_err2str(ret));
 
     return ret;
 }
@@ -712,7 +713,7 @@ unsigned char *ffmpeg_video_decode_frame(decode_data *data, int total_frames, in
         if (video_packet->stream_index == video_stream_index) {
             ret = avcodec_send_packet(video_dec_ctx, video_packet);
             if (ret < 0) {
-                printf("Error while sending a packet to the decoder\n");
+                LOG("Error while sending a packet to the decoder\n");
                 av_packet_unref(video_packet);
                 continue;
             }
@@ -722,7 +723,7 @@ unsigned char *ffmpeg_video_decode_frame(decode_data *data, int total_frames, in
                 if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
                     break;
                 } else if (ret < 0) {
-                    printf("Error while receiving a frame from the decoder\n");
+                    LOG("Error while receiving a frame from the decoder\n");
                     av_packet_unref(video_packet);
                     goto end;
                 }
@@ -731,7 +732,7 @@ unsigned char *ffmpeg_video_decode_frame(decode_data *data, int total_frames, in
 
                 /* push the decoded frame into the filtergraph */
                 if (av_buffersrc_add_frame_flags(video_buffersrc_ctx, video_frame, AV_BUFFERSRC_FLAG_KEEP_REF) < 0) {
-                    printf("Error while feeding the filtergraph\n");
+                    LOG("Error while feeding the filtergraph\n");
                     av_frame_unref(video_frame);
                     av_packet_unref(video_packet);
                     goto end;
@@ -743,7 +744,7 @@ unsigned char *ffmpeg_video_decode_frame(decode_data *data, int total_frames, in
                     if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
                         break;
                     if (ret < 0) {
-                        printf("Error: %s\n", av_err2str(ret));
+                        LOG("Error: %s\n", av_err2str(ret));
                         av_frame_unref(video_frame);
                         av_packet_unref(video_packet);
                         goto end;
@@ -753,7 +754,7 @@ unsigned char *ffmpeg_video_decode_frame(decode_data *data, int total_frames, in
                       AVRational time_base = video_fmt_ctx->streams[video_stream_index]->time_base;
                       data->pts = (float)video_filt_frame->pts * 1000.0 * av_q2d(time_base);
                       first = 0;
-                      printf("video frame pts %ld duration %ld timebase %d/%d %f\n",
+                      LOG("video frame pts %ld duration %ld timebase %d/%d %f\n",
                       data->pts, video_filt_frame->pkt_duration, time_base.num, time_base.den, av_q2d(time_base));
                     }
 
@@ -830,7 +831,7 @@ end:
         //        && (x == 39           || *(hgr_buf + xoff + 1) == *(prev_hgr_buf + xoff + 1))
         //        && (y == 0            || *(hgr_buf + prev_line_xoff) == *(prev_hgr_buf + prev_line_xoff))
         //        && (y == HGR_HEIGHT-1 || *(hgr_buf + next_line_xoff) == *(prev_hgr_buf + next_line_xoff))) {
-        //         printf("frame %d single byte change at %04x, pixel age %d.\n", current_frame, xoff+0x2000, byte_age[xoff]);
+        //         LOG("frame %d single byte change at %04x, pixel age %d.\n", current_frame, xoff+0x2000, byte_age[xoff]);
         //         *(hgr_buf + xoff) = *(prev_hgr_buf + xoff);
         //         byte_age[xoff]++;
         //       } else {
@@ -845,7 +846,7 @@ end:
         return buf;
 #endif
     } else {
-        printf("done.\n");
+        LOG("done.\n");
     }
     return NULL;
 }
@@ -882,7 +883,7 @@ static int init_audio_filters(const char *filters_descr, int sample_rate)
     ret = avfilter_graph_create_filter(&audio_buffersrc_ctx, abuffersrc, "in",
                                        args, NULL, audio_filter_graph);
     if (ret < 0) {
-        printf("Cannot create audio buffer source\n");
+        LOG("Cannot create audio buffer source\n");
         goto end;
     }
 
@@ -890,28 +891,28 @@ static int init_audio_filters(const char *filters_descr, int sample_rate)
     ret = avfilter_graph_create_filter(&audio_buffersink_ctx, abuffersink, "out",
                                        NULL, NULL, audio_filter_graph);
     if (ret < 0) {
-        printf("Cannot create audio buffer sink\n");
+        LOG("Cannot create audio buffer sink\n");
         goto end;
     }
 
     ret = av_opt_set_int_list(audio_buffersink_ctx, "sample_fmts", out_sample_fmts, -1,
                               AV_OPT_SEARCH_CHILDREN);
     if (ret < 0) {
-        printf("Cannot set output sample format\n");
+        LOG("Cannot set output sample format\n");
         goto end;
     }
 
     ret = av_opt_set_int_list(audio_buffersink_ctx, "channel_layouts", out_channel_layouts, -1,
                               AV_OPT_SEARCH_CHILDREN);
     if (ret < 0) {
-        printf("Cannot set output channel layout\n");
+        LOG("Cannot set output channel layout\n");
         goto end;
     }
 
     ret = av_opt_set_int_list(audio_buffersink_ctx, "sample_rates", out_sample_rates, -1,
                               AV_OPT_SEARCH_CHILDREN);
     if (ret < 0) {
-        printf("Cannot set output sample rate\n");
+        LOG("Cannot set output sample rate\n");
         goto end;
     }
 
@@ -978,19 +979,19 @@ int ffmpeg_subtitles_decode(decode_data *data, const char *filename) {
     ctx->interrupt_callback.opaque = data;
 
     if ((ret = avformat_open_input(&ctx, filename, NULL, NULL)) < 0) {
-      printf("Subtitles: Cannot open input file\n");
+      LOG("Subtitles: Cannot open input file\n");
       goto end;
     }
 
     if ((ret = avformat_find_stream_info(ctx, NULL)) < 0) {
-      printf("Subtitles: Cannot find stream information\n");
+      LOG("Subtitles: Cannot find stream information\n");
       goto end;
     }
 
     /* select the stream */
     ret = av_find_best_stream(ctx, AVMEDIA_TYPE_SUBTITLE, -1, -1, &codec, 0);
     if (ret < 0) {
-      printf("Subtitles: Cannot find a corresponding stream in the input file\n");
+      LOG("Subtitles: Cannot find a corresponding stream in the input file\n");
       goto end;
     }
 
@@ -1006,11 +1007,11 @@ int ffmpeg_subtitles_decode(decode_data *data, const char *filename) {
 
     /* init the decoder */
     if ((ret = avcodec_open2(dec, codec, NULL)) < 0) {
-      printf("Subtitles: Cannot open decoder\n");
+      LOG("Subtitles: Cannot open decoder\n");
       goto end;
     }
 
-    printf("got subtitles stream\n");
+    LOG("got subtitles stream\n");
     pthread_mutex_lock(&data->sub_mutex);
     data->nsubs = SUBS_BLOCK;
     data->subs = malloc(data->nsubs*sizeof(char *));
@@ -1019,7 +1020,7 @@ int ffmpeg_subtitles_decode(decode_data *data, const char *filename) {
     while (1) {
       pthread_mutex_lock(&data->mutex);
       if (data->stop) {
-        printf("Stopping subtitles thread\n");
+        LOG("Stopping subtitles thread\n");
         pthread_mutex_unlock(&data->mutex);
         goto end;
       }
@@ -1048,18 +1049,18 @@ skip:
                       + subtitle.start_display_time;
           end = (packet->pts + packet->duration) * (1000.0*av_q2d(ctx->streams[index]->time_base))
                       + subtitle.end_display_time;
-          // printf("start %f (pts %lu timebase %d/%d start_display_time %u)\n",
+          // LOG("start %f (pts %lu timebase %d/%d start_display_time %u)\n",
           //        start, packet->pts, ctx->streams[index]->time_base.num, ctx->streams[index]->time_base.den,
           //        subtitle.start_display_time);
           if (packet->data && packet->data[0] != '\0') {
             text = (char *)packet->data;
-            //printf("dat '%s'\n", text);
+            //LOG("dat '%s'\n", text);
           } else {
             for (int i = 0; i < subtitle.num_rects; i++) {
               AVSubtitleRect *rect = subtitle.rects[i];
               if (rect->type == SUBTITLE_ASS) {
                 text = rect->ass;
-                //printf("ass '%s'\n", text);
+                //LOG("ass '%s'\n", text);
                 for (int j = 0; j < 8; j++) {
                   text = strchr(text, ',');
                   if (!text) {
@@ -1072,7 +1073,7 @@ skip:
                 }
               } else if (rect->type == SUBTITLE_TEXT) {
                 text = rect->text;
-                //printf("srt '%s'\n", text);
+                //LOG("srt '%s'\n", text);
               } else {
                 continue;
               }
@@ -1093,7 +1094,7 @@ skip:
 
             /* Remove end of previous if it ends after this one starts */
             if (prev_end_frame >= start_frame && start_frame > 1) {
-              printf("moving previous subtitle end from %ld to %ld\n", prev_end_frame, start_frame-2);
+              LOG("moving previous subtitle end from %ld to %ld\n", prev_end_frame, start_frame-2);
               data->subs[start_frame-2] = data->subs[prev_end_frame];
               data->subs[prev_end_frame] = NULL;
             }
@@ -1121,7 +1122,7 @@ skip:
             data->subs[start_frame] = do_charset_convert(idx, OUTGOING,
                                         data->translit ? data->translit:"US_ASCII", 0, &l);
             data->subs[end_frame] = strdup("");
-            printf("sub frames %ld-%ld: %s\n", start_frame, end_frame, text);
+            LOG("sub frames %ld-%ld: %s\n", start_frame, end_frame, text);
             free(idx);
             prev_end_frame = end_frame;
             pthread_mutex_unlock(&data->sub_mutex);
@@ -1156,7 +1157,7 @@ void ffmpeg_shift_subtitle_at_frame(decode_data *data, unsigned long frame) {
   pthread_mutex_lock(&data->sub_mutex);
   if (data->subs && frame < data->nsubs) {
     if (data->subs[frame] && frame + 2 < data->nsubs) {
-      printf("pushing sub %s to %ld\n", data->subs[frame], frame+2);
+      LOG("pushing sub %s to %ld\n", data->subs[frame], frame+2);
       data->subs[frame + 2] = data->subs[frame];
       data->subs[frame] = NULL;
     }
@@ -1273,7 +1274,7 @@ int ffmpeg_audio_decode(decode_data *data) {
       if (audio_fmt_ctx->streams[i]->disposition & AV_DISPOSITION_ATTACHED_PIC) {
         AVPacket img = audio_fmt_ctx->streams[i]->attached_pic;
 
-        printf("Pushing image\n");
+        LOG("Pushing image\n");
         pthread_mutex_lock(&data->mutex);
         data->img_data = malloc(img.size);
         memcpy(data->img_data, img.data, img.size);
@@ -1286,7 +1287,7 @@ int ffmpeg_audio_decode(decode_data *data) {
         char *icy_header = NULL;
         av_opt_get(audio_fmt_ctx, "icy_metadata_headers", AV_OPT_SEARCH_CHILDREN, (uint8_t**) &icy_header);
         if (icy_header != NULL) {
-          printf("ICY headers: %s\n", icy_header);
+          LOG("ICY headers: %s\n", icy_header);
 
           /* Cast name */
           if (strcasestr(icy_header, "\nicy-name: ") != NULL) {
@@ -1317,7 +1318,7 @@ int ffmpeg_audio_decode(decode_data *data) {
             if (res != CURLE_OK) {
               data->img_data = NULL;
               data->img_size = 0;
-              printf("Failed fetching %s\n", art_url);
+              LOG("Failed fetching %s\n", art_url);
             }
             curl_easy_cleanup(curl_handle);
             free(art_url);
@@ -1336,7 +1337,7 @@ int ffmpeg_audio_decode(decode_data *data) {
         if (audio_packet->stream_index == audio_stream_index) {
             ret = avcodec_send_packet(audio_dec_ctx, audio_packet);
             if (ret < 0) {
-                printf("Error while sending a packet to the decoder\n");
+                LOG("Error while sending a packet to the decoder\n");
                 av_packet_unref(audio_packet);
                 continue;
             }
@@ -1346,9 +1347,9 @@ int ffmpeg_audio_decode(decode_data *data) {
                 if (ret == AVERROR(EAGAIN)) {
                     break;
                 } else if (ret == AVERROR_EOF) {
-                  printf("Last frame...\n");
+                  LOG("Last frame...\n");
                 } else if (ret < 0) {
-                    printf("Error while receiving a frame from the decoder\n");
+                    LOG("Error while receiving a frame from the decoder\n");
                     goto end;
                 }
 
@@ -1357,7 +1358,7 @@ int ffmpeg_audio_decode(decode_data *data) {
                 if (ret >= 0) {
                     /* push the audio data from decoded frame into the filtergraph */
                     if (av_buffersrc_add_frame_flags(audio_buffersrc_ctx, audio_frame, AV_BUFFERSRC_FLAG_KEEP_REF) < 0) {
-                        printf("Error while feeding the audio filtergraph\n");
+                        LOG("Error while feeding the audio filtergraph\n");
                         break;
                     }
 
@@ -1373,19 +1374,19 @@ int ffmpeg_audio_decode(decode_data *data) {
                           AVRational time_base = audio_fmt_ctx->streams[audio_stream_index]->time_base;
                           data->pts = (float)audio_filt_frame->pts * 1000.0 * av_q2d(time_base);
                           first = 0;
-                          printf("audio frame pts %ld duration %ld timebase %d/%d %f\n",
+                          LOG("audio frame pts %ld duration %ld timebase %d/%d %f\n",
                           data->pts, audio_filt_frame->pkt_duration, time_base.num, time_base.den, av_q2d(time_base));
                         }
 
                         pthread_mutex_lock(&data->mutex);
                         if (data->stop) {
-                          printf("Parent thread requested stopping\n");
+                          LOG("Parent thread requested stopping\n");
                           pthread_mutex_unlock(&data->mutex);
                           goto end;
                         }
 
                         if (data->size == 0) {
-                          printf("Started pushing data\n");
+                          LOG("Started pushing data\n");
                         }
 
                         data->data = (unsigned char*) realloc(data->data,
@@ -1417,7 +1418,7 @@ end:
     ret = 0;
 
     pthread_mutex_lock(&data->mutex);
-    printf("Audio decoding finished at %zu\n", data->size);
+    LOG("Audio decoding finished at %zu\n", data->size);
     data->decoding_end = 1;
     data->decoding_ret = ret;
     pthread_mutex_unlock(&data->mutex);
@@ -1431,7 +1432,7 @@ end:
     av_packet_free(&audio_packet);
 
     if (ret < 0)
-        printf("Error occurred: %s\n", av_err2str(ret));
+        LOG("Error occurred: %s\n", av_err2str(ret));
 
     return ret;
 }
