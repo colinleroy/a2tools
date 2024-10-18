@@ -1,8 +1,8 @@
-a2tools (21.0.1.4) bionic; urgency=medium
+a2tools (21.1.0.2) bionic; urgency=medium
 
   * Virtual ImageWriter II on proxy
 
- -- Colin Leroy-Mira <colin@colino.net>  Wed, 16 Oct 2024 21:28:19 +0200
+ -- Colin Leroy-Mira <colin@colino.net>  Fri, 18 Oct 2024 21:28:19 +0200
 
 a2tools (21.0.0.1) bionic; urgency=medium
 
