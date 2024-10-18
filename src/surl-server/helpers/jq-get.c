@@ -7,6 +7,7 @@
 
 #include <jq.h>
 #include "jq-get.h"
+#include "../log.h"
 
 char out[8192];
 
@@ -44,11 +45,11 @@ jq_state *jq_get_for_selector(char *selector) {
     jqs[i].selector = strdup(selector);
     jqs[i].jq = new_jq;
     n_jqs = i + 1;
-    printf("Adding precompiled jq %p for selector %s [%d/%d]\n", jqs[i].jq, selector, i, N_JQS_MAX);
+    LOG("Adding precompiled jq %p for selector %s [%d/%d]\n", jqs[i].jq, selector, i, N_JQS_MAX);
 
     return new_jq;
   } else {
-    printf("out of precompiled jqs, using static one\n");
+    LOG("out of precompiled jqs, using static one\n");
     if (fallback_jq == NULL) {
       fallback_jq = jq_init();
       if (fallback_jq == NULL) {

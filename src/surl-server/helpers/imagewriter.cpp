@@ -46,6 +46,7 @@
 #include <cerrno>
 #include <math.h>
 #include <strings.h>
+#include "../log.h"
 
 static Imagewriter* defaultImagewriter = NULL;
 
@@ -114,7 +115,7 @@ Imagewriter::Imagewriter(Bit16u dpi, Bit16u paperSize, Bit16u bannerSize, char* 
 		else
 		{
 			if (paperSize >= N_PAPER_SIZES) {
-				printf("Printer: unsupported paper size %d\n", paperSize);
+				LOG("Printer: unsupported paper size %d\n", paperSize);
 				paperSize = 0;
 			}
 			defaultPageWidth = ((Real64)paperSizes[paperSize][0]/(Real64)72);
@@ -325,7 +326,7 @@ void Imagewriter::updateFont()
 	if (FT_New_Face(FTlib, fontName, 0, &curFont))
 	{
 
-		printf("Unable to load font %s\n", fontName);
+		LOG("Unable to load font %s\n", fontName);
 		//LOG_MSG("Unable to load font %s", fontName);
 		curFont = NULL;
 	}
@@ -843,7 +844,7 @@ bool Imagewriter::processCommandChar(Bit8u ch)
 			break;
 		case 0x72: // Reverse paper feed (ESC r) IW
 			{
-				printf("Reverse Feed\n");
+				LOG("Reverse Feed\n");
 				if(lineSpacing > 0) lineSpacing *= -1;
 				break;
 			}
@@ -890,7 +891,7 @@ bool Imagewriter::processCommandChar(Bit8u ch)
 			break;
 		case 0x3f: //Send ID string to computer (ESC ?) IW
 			//insert SCC send code here
-			printf("Printer: Todo: Send ID String\n");
+			LOG("Printer: Todo: Send ID String\n");
 			break;
 		case 0x52: // Repeat character c for nnn times (ESC R nnn c) IW
 			{
@@ -925,16 +926,16 @@ bool Imagewriter::processCommandChar(Bit8u ch)
 			if (params[3] == '.' || (numHorizTabs>0 && horiztabs[numHorizTabs-1] > (Real64)PARAM3(0)*(1/(Real64)cpi)))
 			{
 				horiztabs[numHorizTabs++] = (Real64)PARAM3(0)*(1/(Real64)cpi);
-				//printf("Adding tab %d, and end\n",PARAM3(0));
-				//printf("Number of Tabs:%d\n",numHorizTabs);
+				//LOG("Adding tab %d, and end\n",PARAM3(0));
+				//LOG("Number of Tabs:%d\n",numHorizTabs);
 			}
 			else if (params[3] == ',' && numHorizTabs < 32)
 			{
 				horiztabs[numHorizTabs++] = (Real64)PARAM3(0)*(1/(Real64)cpi);
 				numParam = 0;
 				neededParam = 4;
-				//printf("Adding tab %d, plus more\n", PARAM3(0));
-				//printf("Number of Tabs:%d\n",numHorizTabs);
+				//LOG("Adding tab %d, plus more\n", PARAM3(0));
+				//LOG("Number of Tabs:%d\n",numHorizTabs);
 				return true;
 			}
 			x = 0;
@@ -953,7 +954,7 @@ bool Imagewriter::processCommandChar(Bit8u ch)
 			while (x < numHorizTabs)
 			{
 				if (horiztabs[x] == (Real64)PARAM3(0)*(1/(Real64)cpi))
-				{	printf("Tab Found %d\n",PARAM3(0));
+				{	LOG("Tab Found %d\n",PARAM3(0));
 					horiztabs[x] = 0;
 				}
 				x++;
@@ -961,32 +962,32 @@ bool Imagewriter::processCommandChar(Bit8u ch)
 
 			if (params[3] == '.')
 			{
-				printf("Deleting tab %d, and end\n",PARAM3(0));
+				LOG("Deleting tab %d, and end\n",PARAM3(0));
 			}
 			else if (params[3] == ',')
 			{
 				numParam = 0;
 				neededParam = 4;
-				//printf("Deleting tab %d, plus more\n", PARAM3(0));
+				//LOG("Deleting tab %d, plus more\n", PARAM3(0));
 				return true;
 			}
 			x = 0;
 			break;
 			}
 		case 0x5a: // Set switches to open (off)								(ESC Z nn) IW
-			//printf ("switcha is: %x switchb is: %x\n",switcha,switchb);
-			//printf ("(Setting to 0) param 0 is: %x param 1 is: %x\n",params[0],params[1]);
+			//LOG ("switcha is: %x switchb is: %x\n",switcha,switchb);
+			//LOG ("(Setting to 0) param 0 is: %x param 1 is: %x\n",params[0],params[1]);
 			switcha &= ~params[0];
 			switchb &= ~params[1];
-			//printf ("switcha is now: %x switchb is now: %x\n",switcha,switchb);
+			//LOG ("switcha is now: %x switchb is now: %x\n",switcha,switchb);
 			updateSwitch();
 			break;
 		case 0x44: // Set switches to closed (on)								(ESC D nn) IW
-			//printf ("switcha is: %x switchb is: %x\n",switcha,switchb);
-			//printf ("(Setting to 1) param 0 is: %x param 1 is: %x\n",params[0],params[1]);
+			//LOG ("switcha is: %x switchb is: %x\n",switcha,switchb);
+			//LOG ("(Setting to 1) param 0 is: %x param 1 is: %x\n",params[0],params[1]);
 			switcha |= params[0];
 			switchb |= params[1];
-			//printf ("switcha is now: %x switchb is now: %x\n",switcha,switchb);
+			//LOG ("switcha is now: %x switchb is now: %x\n",switcha,switchb);
 			updateSwitch();
 			break;
 		case 0x75: // Add one tab stop at nnn									(ESC u nnn) IW
@@ -1009,19 +1010,19 @@ bool Imagewriter::processCommandChar(Bit8u ch)
 			{
 				if (horiztabs[x] == (Real64)PARAM3(0)*(1/(Real64)cpi))
 				{
-					//printf("We have this tab already! at list entry: %d\n", x);
+					//LOG("We have this tab already! at list entry: %d\n", x);
 					haveStop = true;
 				}
 				if (horiztabs[x] == 0) lastEmpty = x;
-				//printf("at list entry: %d\n", x);
+				//LOG("at list entry: %d\n", x);
 				x++;
 			}
 			if (!haveStop && lastEmpty < 33)
 			{
-				//printf("Adding tab %d\n", PARAM3(0));
+				//LOG("Adding tab %d\n", PARAM3(0));
 				horiztabs[lastEmpty] = (Real64)PARAM3(0)*(1/(Real64)cpi);
 				if (lastEmpty == numHorizTabs) numHorizTabs++; //only increase if we don't reuse an empty tab entry
-				//printf("Number of Tabs:%d\n",numHorizTabs);
+				//LOG("Number of Tabs:%d\n",numHorizTabs);
 			}
 			}
 			break;
@@ -1453,7 +1454,7 @@ void Imagewriter::setupBitImage(Bit8u dens, Bit16u numCols) {
 		break;
 	default:
 		//break;
-		printf("PRINTER: Unsupported bit image density");
+		LOG("PRINTER: Unsupported bit image density");
 	}
 
 	bitGraph.remBytes = numCols * bitGraph.bytesColumn;
@@ -1550,11 +1551,11 @@ void Imagewriter::outputPage()
 		psfile = fopen(output, "wb");
 		if (!psfile)
 		{
-			printf("Printer: Can't open file %s (%s)\n", output, strerror(errno));
+			LOG("Printer: Can't open file %s (%s)\n", output, strerror(errno));
 			return;
 		}
 		else {
-			printf("Printer: Writing to %s\n", output);
+			LOG("Printer: Writing to %s\n", output);
 		}
 
 		// Print header

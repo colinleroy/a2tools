@@ -22,6 +22,7 @@
 #include "extended_conio.h"
 #include "strsplit.h"
 #include "printer.h"
+#include "../log.h"
 
 #define MAX_VIDEO_OFFSET 126
 #define NUM_VIDEO_BASES  (HGR_LEN/MAX_VIDEO_OFFSET)+1
@@ -54,9 +55,9 @@
 #define DOUBLE_BUFFER
 
 #if 0
-  #define DEBUG printf
+  #define DEBUG LOG
 #else
- #define DEBUG if (0) printf
+ #define DEBUG if (0) LOG
 #endif
 
 unsigned long bytes_sent = 0, data_bytes = 0, offset_bytes = 0, base_bytes = 0;
@@ -80,7 +81,7 @@ unsigned int vol_mult = 10;
 
 #define IO_BARRIER(msg) do {                            \
     int r;                                              \
-    printf("IO Barrier (%s)\n", msg);                   \
+    LOG("IO Barrier (%s)\n", msg);                   \
     do {                                                \
       r = simple_serial_getc();                         \
     } while (r != SURL_CLIENT_READY                     \
@@ -112,7 +113,7 @@ static int update_eta(int eta) {
 
   r = simple_serial_getc_with_timeout();
   if (r != SURL_CLIENT_READY) {
-    printf("Client abort (%02x)\n", r);
+    LOG("Client abort (%02x)\n", r);
     return -1;
   }
 
@@ -130,12 +131,12 @@ static void *ffmpeg_video_decode_thread(void *th_data) {
   unsigned long elapsed, prev_elapsed = 0;
   int decode_slow = 0;
 
-  printf("Generating frames for %s...\n", data->url);
+  LOG("Generating frames for %s...\n", data->url);
 
   vhgr_file = -1;
   sprintf(tmp_filename, "/tmp/vhgr-XXXXXX");
   if ((vhgr_file = mkstemp(tmp_filename)) < 0) {
-    printf("Could not open output file %s (%s).\n", tmp_filename, strerror(errno));
+    LOG("Could not open output file %s (%s).\n", tmp_filename, strerror(errno));
     pthread_mutex_lock(&data->mutex);
     data->decoding_end = 1;
     data->decoding_ret = -1;
@@ -144,7 +145,7 @@ static void *ffmpeg_video_decode_thread(void *th_data) {
   }
 
   if (ffmpeg_video_decode_init(data, &video_len) != 0) {
-    printf("Could not init ffmpeg.\n");
+    LOG("Could not init ffmpeg.\n");
     pthread_mutex_lock(&data->mutex);
     data->decoding_end = 1;
     data->decoding_ret = -1;
@@ -163,7 +164,7 @@ static void *ffmpeg_video_decode_thread(void *th_data) {
   while ((buf = ffmpeg_video_decode_frame(data, video_len*FPS, frameno)) != NULL) {
     signed long usecs_per_frame, remaining_frames, done_len, remaining_len;
     if (write(vhgr_file, buf, HGR_LEN) != HGR_LEN) {
-      printf("Could not write data\n");
+      LOG("Could not write data\n");
       close(vhgr_file);
       vhgr_file = -1;
       pthread_mutex_lock(&data->mutex);
@@ -185,7 +186,7 @@ static void *ffmpeg_video_decode_thread(void *th_data) {
     done_len = frameno / FPS;
 
     if (elapsed - prev_elapsed > 2000000) {
-      printf("decoded %d frames (%lds) in %lds, remaining %ld frames, should take %lds\n",
+      LOG("decoded %d frames (%lds) in %lds, remaining %ld frames, should take %lds\n",
             frameno, done_len, elapsed/1000000, remaining_frames, remaining_len/1000000);
       prev_elapsed = elapsed;
     }
@@ -197,7 +198,7 @@ static void *ffmpeg_video_decode_thread(void *th_data) {
 
     if (frameno == FPS * PREDECODE_SECS) {
       if (elapsed / 1000000 > PREDECODE_SECS / 3) {
-        printf("decoding too slow, not starting early\n");
+        LOG("decoding too slow, not starting early\n");
         decode_slow = 1;
       } else {
         data->data_ready = 1;
@@ -215,12 +216,12 @@ static void *ffmpeg_video_decode_thread(void *th_data) {
       data->eta = (remaining_len/1000000) - (done_len*2);
       
       if (data->eta > 0) {
-        printf("Frame %d ETA %d\n", frameno, data->eta);
+        LOG("Frame %d ETA %d\n", frameno, data->eta);
       }
     }
 
     if (data->stop) {
-      printf("Aborting video decode\n");
+      LOG("Aborting video decode\n");
       pthread_mutex_unlock(&data->mutex);
       break;
     } else {
@@ -299,7 +300,7 @@ static void buffer_video_base(unsigned char b, int fd) {
   DEBUG(" new base %d\n", b);
   DEBUG(" base %d offset %d\n", b, offset);
   if ((b| 0x80) == 0xFF) {
-    printf("Base error! Should not!\n");
+    LOG("Base error! Should not!\n");
     exit(1);
   }
   enqueue_video_byte(b, fd);
@@ -311,7 +312,7 @@ int last_sent_offset = -1;
 static void buffer_video_offset(unsigned char o, int fd) {
   DEBUG("offset %d\n", o);
   if ((o| 0x80) == 0xFF) {
-    printf("Offset error! Should not!\n");
+    LOG("Offset error! Should not!\n");
     exit(1);
   }
   enqueue_video_byte(o, fd);
@@ -323,7 +324,7 @@ static void buffer_video_num_reps(unsigned char b, int fd) {
   DEBUG("  => %d * ", b);
   enqueue_video_byte(0x7F, fd);
   if ((b & 0x80) != 0) {
-    printf("Reps error! Should not!\n");
+    LOG("Reps error! Should not!\n");
     exit(1);
   }
   enqueue_video_byte(b, fd);
@@ -333,7 +334,7 @@ static void buffer_video_num_reps(unsigned char b, int fd) {
 static void buffer_video_byte(unsigned char b, int fd) {
   DEBUG("  => %d\n", b);
   if ((b & 0x80) != 0) {
-    printf("Byte error! Should not!\n");
+    LOG("Byte error! Should not!\n");
     exit(1);
   }
   enqueue_video_byte(b|0x80, fd);
@@ -474,7 +475,7 @@ static inline void buffer_audio_sample(unsigned char i) {
 
 static inline int flush_audio_samples(void) {
   if (write(ttyfd, (char *)audio_samples_buffer, num_audio_samples) < num_audio_samples) {
-    printf("Audio flush: write error %d (%s)\n", errno, strerror(errno));
+    LOG("Audio flush: write error %d (%s)\n", errno, strerror(errno));
     return EOF;
   }
 
@@ -538,7 +539,7 @@ static void send_metadata(char *key, char *value, char *translit) {
   len = strlen(key) + strlen("\n") + l;
   buf = malloc(len + 1);
   sprintf(buf, "%s\n%s", key, translit_buf);
-  printf("=> %s %s\n", key, value);
+  LOG("=> %s %s\n", key, value);
   simple_serial_putc(SURL_ANSWER_STREAM_METADATA);
   IO_BARRIER("metadata len");
   len = htons(len);
@@ -618,7 +619,7 @@ int surl_stream_audio(char *url, char *translit, char monochrome, HGRScale scale
   th_data->eta = ETA_MAX;
   pthread_mutex_init(&th_data->mutex, NULL);
 
-  printf("Starting decode thread (charset %s, monochrome %d, scale %d)\n", translit, monochrome, scale);
+  LOG("Starting decode thread (charset %s, monochrome %d, scale %d)\n", translit, monochrome, scale);
   pthread_create(&decode_thread, NULL, *ffmpeg_audio_decode_thread, (void *)th_data);
 
   while(!ready && !stop) {
@@ -634,7 +635,7 @@ int surl_stream_audio(char *url, char *translit, char monochrome, HGRScale scale
     usleep(10000);
   }
 
-  printf("Decode thread state: %s\n", ready ? "ready" : stop ? "failure" : "unknown");
+  LOG("Decode thread state: %s\n", ready ? "ready" : stop ? "failure" : "unknown");
 
   if (!ready && stop) {
     simple_serial_putc(SURL_ANSWER_STREAM_ERROR);
@@ -651,17 +652,17 @@ int surl_stream_audio(char *url, char *translit, char monochrome, HGRScale scale
     th_data->title_changed = 0;
     pthread_mutex_unlock(&th_data->mutex);
 
-    printf("Client ready\n");
+    LOG("Client ready\n");
     if (hgr_buf) {
       simple_serial_putc(SURL_ANSWER_STREAM_ART);
       if (simple_serial_getc() == SURL_CLIENT_READY) {
-        printf("Sending image\n");
+        LOG("Sending image\n");
         simple_serial_write_fast((char *)hgr_buf, HGR_LEN);
         if (simple_serial_getc() != SURL_CLIENT_READY) {
           return -1;
         }
       } else {
-        printf("Skip image sending\n");
+        LOG("Skip image sending\n");
       }
     }
 
@@ -669,7 +670,7 @@ int surl_stream_audio(char *url, char *translit, char monochrome, HGRScale scale
     if (simple_serial_getc() != SURL_CLIENT_READY) {
       pthread_mutex_lock(&th_data->mutex);
       th_data->stop = 1;
-      printf("stop\n");
+      LOG("stop\n");
       pthread_mutex_unlock(&th_data->mutex);
       ret = -1;
       goto cleanup_thread;
@@ -677,10 +678,10 @@ int surl_stream_audio(char *url, char *translit, char monochrome, HGRScale scale
   }
 
   audio_numcols = simple_serial_getc();
-  printf("Client has %d columns\n", audio_numcols);
+  LOG("Client has %d columns\n", audio_numcols);
   audio_sample_offset = simple_serial_getc();
   audio_sample_multiplier = simple_serial_getc();
-  printf("Sample offset is %d mult %d\n", audio_sample_offset, audio_sample_multiplier);
+  LOG("Sample offset is %d mult %d\n", audio_sample_offset, audio_sample_multiplier);
 
   sleep(1); /* Let ffmpeg have a bit of time to push data so we don't starve */
   vol_mult = 10;
@@ -717,14 +718,14 @@ int surl_stream_audio(char *url, char *translit, char monochrome, HGRScale scale
       /* Adjust volume */
       if (th_data->max_audio_volume != 0 && vol_mult == 10 && !vol_adj_done) {
         vol_mult = ((AUDIO_MAX/2) * vol_mult) / (th_data->max_audio_volume-127);
-        printf("Max detected level now %d, vol set to %d\n", th_data->max_audio_volume, vol_mult);
+        LOG("Max detected level now %d, vol set to %d\n", th_data->max_audio_volume, vol_mult);
         vol_adj_done = 1;
         auto_vol = vol_mult;
       }
     }
     if (th_data->title_changed) {
       if (th_data->title) {
-        printf("Title change: %s\n", th_data->title);
+        LOG("Title change: %s\n", th_data->title);
         send_audio_title(th_data->title, translit);
       }
       th_data->title_changed = 0;
@@ -733,7 +734,7 @@ int surl_stream_audio(char *url, char *translit, char monochrome, HGRScale scale
 
     if (cur == size) {
       if (stop) {
-        printf("Stopping at %zu/%zu\n", cur, size);
+        LOG("Stopping at %zu/%zu\n", cur, size);
         break;
       } else {
         /* We're starved but not done :-( */
@@ -769,21 +770,21 @@ handle_kbd:
           case '+':
             if (vol_mult < 80) {
               vol_mult ++;
-              printf("volume %d\n", vol_mult);
+              LOG("volume %d\n", vol_mult);
             }
             break;
           case '-':
             if (vol_mult > 2) {
               vol_mult --;
-              printf("volume %d\n", vol_mult);
+              LOG("volume %d\n", vol_mult);
             }
             break;
           case '=':
             vol_mult = auto_vol;
-            printf("volume %d\n", vol_mult);
+            LOG("volume %d\n", vol_mult);
             break;
           case ' ':
-            printf("Pause\n");
+            LOG("Pause\n");
             buffer_audio_sample(AUDIO_MAX_LEVEL/2);
             if (flush_audio_samples() == EOF) {
               goto cleanup_thread;
@@ -792,7 +793,7 @@ handle_kbd:
             break;
           case APPLE_CH_CURS_LEFT:
           case APPLE_CH_CURS_DOWN:
-            printf("Rewind\n");
+            LOG("Rewind\n");
             if (cur < SAMPLE_RATE * skip_secs(c)) {
               cur = 0;
             } else {
@@ -806,13 +807,13 @@ handle_kbd:
             } else {
               cur = size;
             }
-            printf("Forward\n");
+            LOG("Forward\n");
             break;
           case CH_ESC:
-            printf("Stop\n");
+            LOG("Stop\n");
             goto done;
           case SURL_METHOD_ABORT:
-            printf("Connection reset\n");
+            LOG("Connection reset\n");
             goto cleanup_thread;
         }
       }
@@ -829,13 +830,13 @@ done:
 
   do {
     c = simple_serial_getc();
-    printf("got %02X\n", c);
+    LOG("got %02X\n", c);
   } while (c != SURL_CLIENT_READY
         && c != SURL_METHOD_ABORT
         && c != (unsigned char)EOF);
 
 cleanup_thread:
-  printf("Cleaning up audio decoder thread\n");
+  LOG("Cleaning up audio decoder thread\n");
   pthread_mutex_lock(&th_data->mutex);
   th_data->stop = 1;
   pthread_mutex_unlock(&th_data->mutex);
@@ -847,7 +848,7 @@ cleanup_thread:
   free(th_data->title);
   free(th_data->track);
   free(th_data);
-  printf("Done\n");
+  LOG("Done\n");
 
   return ret;
 }
@@ -880,7 +881,7 @@ int surl_stream_video(char *url) {
   th_data->eta = ETA_MAX;
   pthread_mutex_init(&th_data->mutex, NULL);
 
-  printf("Starting video decode thread\n");
+  LOG("Starting video decode thread\n");
   pthread_create(&decode_thread, NULL, *ffmpeg_video_decode_thread, (void *)th_data);
 
   sleep(1);
@@ -900,7 +901,7 @@ int surl_stream_video(char *url) {
   }
 
   if (stop && err) {
-    printf("Error generating frames\n");
+    LOG("Error generating frames\n");
     simple_serial_putc(SURL_ANSWER_STREAM_ERROR);
 
     goto cleanup;
@@ -917,7 +918,7 @@ int surl_stream_video(char *url) {
 
   unlink(tmp_filename);
   if (vhgr_file == -1) {
-    printf("Error opening %s\n", tmp_filename);
+    LOG("Error opening %s\n", tmp_filename);
     simple_serial_putc(SURL_ANSWER_STREAM_ERROR);
     goto cleanup;
   }
@@ -925,13 +926,13 @@ int surl_stream_video(char *url) {
   simple_serial_putc(SURL_ANSWER_STREAM_READY);
 
   if (simple_serial_getc() != SURL_CLIENT_READY) {
-    printf("Client not ready\n");
+    LOG("Client not ready\n");
     goto cleanup;
   }
 
-  printf("Starting stream\n");
+  LOG("Starting stream\n");
   simple_serial_putc(SURL_ANSWER_STREAM_START);
-  printf("sent\n");
+  LOG("sent\n");
 
   memset(video_bytes_buffer, 0, sizeof video_bytes_buffer);
 
@@ -988,7 +989,7 @@ send:
 
   if (i > FPS && (i % (15*FPS)) == 0) {
     duration = i/FPS;
-    printf("%d seconds, %d frames skipped / %d: %.2f fps\n", duration,
+    LOG("%d seconds, %d frames skipped / %d: %.2f fps\n", duration,
          skipped, i, (float)(i-skipped)/duration);
 
   }
@@ -998,14 +999,14 @@ send:
   switch (command) {
     case CH_ESC:
     case SURL_METHOD_ABORT:
-      printf("Abort, exiting.\n");
+      LOG("Abort, exiting.\n");
       goto close_last;
     case ' ':
-      printf("Pause.\n");
+      LOG("Pause.\n");
       command = simple_serial_getc();
       if (command == SURL_METHOD_ABORT)
         goto close_last;
-      printf("Play.\n");
+      LOG("Play.\n");
       lateness = 0;
       break;
   }
@@ -1062,7 +1063,7 @@ send:
     }
     last_val = buf[page][pixel];
     if (last_val & 0x80) {
-      printf("wrong val\n");
+      LOG("wrong val\n");
     }
 
     last_diff = pixel;
@@ -1093,14 +1094,14 @@ close_last:
 
 
   if (i - skipped > 0 && i/FPS > 0) {
-    printf("Max: %d, Min: %d, Average: %d\n", max, min, total / (i-skipped));
-    printf("Sent %lu bytes for %d non-skipped frames: %lu/s, %lu/frame avg (%lu data, %lu offset, %lu base)\n",
+    LOG("Max: %d, Min: %d, Average: %d\n", max, min, total / (i-skipped));
+    LOG("Sent %lu bytes for %d non-skipped frames: %lu/s, %lu/frame avg (%lu data, %lu offset, %lu base)\n",
             bytes_sent, (i-skipped), bytes_sent/(i/FPS), bytes_sent/(i-skipped),
             data_bytes/(i-skipped), offset_bytes/(i-skipped), base_bytes/(i-skipped));
   }
   if (i - skipped > FPS && i/FPS > 0) {
     duration = i/FPS;
-    printf("%d seconds, %d frames skipped / %d: %.2f fps\n", duration,
+    LOG("%d seconds, %d frames skipped / %d: %.2f fps\n", duration,
           skipped, i, (float)(i-skipped)/duration);
   }
 
@@ -1111,7 +1112,7 @@ cleanup:
   if (th_data) {
     pthread_mutex_lock(&th_data->mutex);
     th_data->stop = 1;
-    printf("cleanup\n");
+    LOG("cleanup\n");
     pthread_mutex_unlock(&th_data->mutex);
     pthread_join(decode_thread, NULL);
     free(th_data);
@@ -1165,7 +1166,7 @@ static void *audio_push(void *unused) {
         /* Adjust volume */
         if (audio_th_data->max_audio_volume != 0 && vol_mult == 10 && !vol_adj_done) {
           vol_mult = ((AUDIO_MAX/2) * vol_mult) / (audio_th_data->max_audio_volume-127);
-          printf("Max detected level now %d, vol set to %d\n", audio_th_data->max_audio_volume, vol_mult);
+          LOG("Max detected level now %d, vol set to %d\n", audio_th_data->max_audio_volume, vol_mult);
           vol_adj_done = 1;
           auto_vol = vol_mult;
         }
@@ -1184,7 +1185,7 @@ static void *audio_push(void *unused) {
 
     if (cur == audio_size) {
       if (stop) {
-        printf("Audio stop at %zu/%zu\n", cur, audio_size);
+        LOG("Audio stop at %zu/%zu\n", cur, audio_size);
         goto abort;
       } else {
         /* We're starved but not done :-( */
@@ -1230,10 +1231,10 @@ handle_kbd:
         c = simple_serial_getc();
         switch (c) {
           case CH_ESC:
-            printf("Stop\n");
+            LOG("Stop\n");
             goto abort;
           case SURL_METHOD_ABORT:
-            printf("Connection reset\n");
+            LOG("Connection reset\n");
             goto abort;
           case APPLE_CH_CURS_LEFT:
           case APPLE_CH_CURS_DOWN:
@@ -1242,12 +1243,12 @@ handle_kbd:
             } else {
               cur -= SAMPLE_RATE * skip_secs(c);
             }
-            printf("Rewind to sample %ld\n", cur);
+            LOG("Rewind to sample %ld\n", cur);
             if (cur % SAMPLE_RATE) {
               cur = cur - cur % SAMPLE_RATE;
-              printf("Fixed to %ld\n", cur);
+              LOG("Fixed to %ld\n", cur);
             }
-            printf("Seek video to %ld frames (%ld bytes)\n", (cur/SAMPLE_RATE)*FPS, (cur/SAMPLE_RATE)*FPS*HGR_LEN);
+            LOG("Seek video to %ld frames (%ld bytes)\n", (cur/SAMPLE_RATE)*FPS, (cur/SAMPLE_RATE)*FPS*HGR_LEN);
             lseek(vhgr_file, (cur/SAMPLE_RATE)*FPS*HGR_LEN, SEEK_SET);
             break;
           case APPLE_CH_CURS_RIGHT:
@@ -1257,36 +1258,36 @@ handle_kbd:
             } else {
               cur = audio_size;
             }
-            printf("Forward to sample %ld\n", cur);
+            LOG("Forward to sample %ld\n", cur);
             if (cur % SAMPLE_RATE) {
               cur = cur - cur % SAMPLE_RATE;
-              printf("Fixed to %ld\n", cur);
+              LOG("Fixed to %ld\n", cur);
             }
             pthread_mutex_lock(&video_th_data->mutex);
             if (video_th_data->max_seekable < (cur/SAMPLE_RATE)*FPS) {
               cur = (video_th_data->max_seekable / FPS) * SAMPLE_RATE;
-              printf("Cannot skip so far, skipping to %ld samples (frame %ld)\n",
+              LOG("Cannot skip so far, skipping to %ld samples (frame %ld)\n",
                      cur, video_th_data->max_seekable);
             }
             pthread_mutex_unlock(&video_th_data->mutex);
-            printf("Seek video to %ld frames (%ld bytes)\n", (cur/SAMPLE_RATE)*FPS, (cur/SAMPLE_RATE)*FPS*HGR_LEN);
+            LOG("Seek video to %ld frames (%ld bytes)\n", (cur/SAMPLE_RATE)*FPS, (cur/SAMPLE_RATE)*FPS*HGR_LEN);
             lseek(vhgr_file, (cur/SAMPLE_RATE)*FPS*HGR_LEN, SEEK_SET);
             break;
           case '+':
             if (vol_mult < 80) {
               vol_mult ++;
-              printf("volume %d\n", vol_mult);
+              LOG("volume %d\n", vol_mult);
             }
             break;
           case '-':
             if (vol_mult > 2) {
               vol_mult --;
-              printf("volume %d\n", vol_mult);
+              LOG("volume %d\n", vol_mult);
             }
             break;
           case '=':
             vol_mult = auto_vol;
-            printf("volume %d\n", vol_mult);
+            LOG("volume %d\n", vol_mult);
             break;
           case ' ':
             /* Pause */
@@ -1305,7 +1306,7 @@ handle_kbd:
             pthread_mutex_unlock(&video_th_data->mutex);
             break;
           default:
-            printf("key '%02X'\n", c);
+            LOG("key '%02X'\n", c);
         }
       }
     }
@@ -1314,7 +1315,7 @@ handle_kbd:
 abort:
   pthread_mutex_lock(&audio_th_data->mutex);
   audio_th_data->stop = 1;
-  printf("audio_push aborted\n");
+  LOG("audio_push aborted\n");
   pthread_mutex_unlock(&audio_th_data->mutex);
   return NULL;
 }
@@ -1428,7 +1429,7 @@ void *video_push(void *unused) {
   has_subtitles = video_th_data->has_subtitles;
   pthread_mutex_unlock(&video_th_data->mutex);
 
-  printf("Video has %ssubtitles.\n", has_subtitles == 0 ? "no ":"");
+  LOG("Video has %ssubtitles.\n", has_subtitles == 0 ? "no ":"");
 
   /* Fill cache */
   read(vhgr_file, buf[page], HGR_LEN);
@@ -1451,7 +1452,7 @@ next_file:
 
   cur_frame = lseek(vhgr_file, 0, SEEK_CUR) / HGR_LEN;
   if ((r = read(vhgr_file, buf[page], HGR_LEN)) != HGR_LEN) {
-    printf("Starved!\n");
+    LOG("Starved!\n");
     goto close_last;
   }
 
@@ -1504,7 +1505,7 @@ next_file:
 
   if (i > FPS && (i % (15*FPS)) == 0) {
     duration = i/FPS;
-    printf("%d seconds, %d frames skipped / %d: %.2f fps\n", duration,
+    LOG("%d seconds, %d frames skipped / %d: %.2f fps\n", duration,
          skipped, i, (float)(i-skipped)/duration);
 
   }
@@ -1517,7 +1518,7 @@ send:
   accept_artefact = video_th_data->accept_artefact;
   pthread_mutex_unlock(&video_th_data->mutex);
   if (vidstop) {
-    printf("Video thread stopping\n");
+    LOG("Video thread stopping\n");
     goto close_last;
   }
 
@@ -1614,28 +1615,28 @@ send:
         }
       }
     }
-    printf("frame %d pushing sub to page %d\n", cur_frame, page);
+    LOG("frame %d pushing sub to page %d\n", cur_frame, page);
   }
   goto next_file;
 
 close_last:
   flush_video_bytes(aux_ttyfd);
   if (i - skipped > 0 && i/FPS > 0) {
-    printf("Max: %d, Min: %d, Average: %d\n", max, min, total / (i-skipped));
-    printf("Sent %lu bytes for %d non-skipped frames: %lub/s, %lub/frame avg (%lu data, %lu offset, %lu base)\n",
+    LOG("Max: %d, Min: %d, Average: %d\n", max, min, total / (i-skipped));
+    LOG("Sent %lu bytes for %d non-skipped frames: %lub/s, %lub/frame avg (%lu data, %lu offset, %lu base)\n",
             bytes_sent, (i-skipped), bytes_sent/(i/FPS), bytes_sent/(i-skipped),
             data_bytes/(i-skipped), offset_bytes/(i-skipped), base_bytes/(i-skipped));
   }
   if (i - skipped > FPS && i/FPS > 0) {
     duration = i/FPS;
-    printf("%d seconds, %d frames skipped / %d: %.2f fps\n", duration,
+    LOG("%d seconds, %d frames skipped / %d: %.2f fps\n", duration,
           skipped, i, (float)(i-skipped)/duration);
   }
-  printf("avg sync duration %d\n", sync_duration);
+  LOG("avg sync duration %d\n", sync_duration);
 
   pthread_mutex_lock(&video_th_data->mutex);
   video_th_data->stop = 1;
-  printf("vstop\n");
+  LOG("vstop\n");
   pthread_mutex_unlock(&video_th_data->mutex);
 
   return NULL;
@@ -1660,7 +1661,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, Subtitle
   }
 
   if (aux_ttyfd < 0)
-    printf("No TTY for video\n");
+    LOG("No TTY for video\n");
 
   memset(video_th_data, 0, sizeof(decode_data));
   video_th_data->url = url;
@@ -1671,7 +1672,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, Subtitle
   video_th_data->eta = ETA_MAX;
   pthread_mutex_init(&video_th_data->mutex, NULL);
 
-  printf("Starting video decode thread\n");
+  LOG("Starting video decode thread\n");
   pthread_create(&video_decode_thread, NULL, *ffmpeg_video_decode_thread, (void *)video_th_data);
 
   memset(audio_th_data, 0, sizeof(decode_data));
@@ -1679,7 +1680,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, Subtitle
   audio_th_data->sample_rate = SAMPLE_RATE;
   pthread_mutex_init(&audio_th_data->mutex, NULL);
 
-  printf("Starting audio decode thread (charset %s, monochrome %d, size %d)\n", translit, monochrome, size);
+  LOG("Starting audio decode thread (charset %s, monochrome %d, size %d)\n", translit, monochrome, size);
   pthread_create(&audio_decode_thread, NULL, *ffmpeg_audio_decode_thread, (void *)audio_th_data);
 
   stop = 0;
@@ -1712,19 +1713,19 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, Subtitle
   if (video_th_data->data_ready && video_th_data->total_frames > 0
    && !audio_th_data->data_ready && audio_th_data->decoding_end) {
     audio_th_data->fake_data = 1;
-    printf("Stream has no audio\n");
+    LOG("Stream has no audio\n");
   }
 
   /* We can have no video stream: audio thread ready with data, video thread not ready but done
    * Note: audio thread could be ready AND done, so check it has data */
   if (audio_th_data->data_ready && audio_th_data->data
    && !video_th_data->data_ready && video_th_data->decoding_end) {
-    printf("Stream has no video\n");
+    LOG("Stream has no video\n");
   }
 
   /* We have nothing */
   if (!audio_th_data->data_ready && !video_th_data->data_ready) {
-    printf("Stream has no video nor audio.\n");
+    LOG("Stream has no video nor audio.\n");
     ready = 0;
     stop = 1;
   }
@@ -1732,7 +1733,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, Subtitle
   pthread_mutex_unlock(&audio_th_data->mutex);
   pthread_mutex_unlock(&video_th_data->mutex);
 
-  printf("Decode threads state: %s\n", ready ? "ready" : stop ? "failure" : "unknown");
+  LOG("Decode threads state: %s\n", ready ? "ready" : stop ? "failure" : "unknown");
 
   if (!ready && stop) {
     simple_serial_putc(SURL_ANSWER_STREAM_ERROR);
@@ -1750,7 +1751,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, Subtitle
 
   unlink(tmp_filename);
   if (vhgr_file == -1) {
-    printf("Error opening %s\n", tmp_filename);
+    LOG("Error opening %s\n", tmp_filename);
     // simple_serial_putc(SURL_ANSWER_STREAM_ERROR);
     // goto cleanup_thread;
   }
@@ -1759,7 +1760,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, Subtitle
 
   offset = cur_base = 0;
 
-  printf("AV: Client ready\n");
+  LOG("AV: Client ready\n");
 
   pthread_mutex_lock(&video_th_data->mutex);
   if (video_th_data->total_frames == 0) {
@@ -1774,13 +1775,13 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, Subtitle
      */
     simple_serial_putc(SURL_ANSWER_STREAM_ART);
     if (simple_serial_getc() == SURL_CLIENT_READY) {
-      printf("Sending image\n");
+      LOG("Sending image\n");
       simple_serial_write_fast((char *)hgr_buf, HGR_LEN);
       if (simple_serial_getc() != SURL_CLIENT_READY) {
-        printf("client error\n");
+        LOG("client error\n");
       }
     } else {
-      printf("Skip image sending\n");
+      LOG("Skip image sending\n");
     }
   }
 
@@ -1790,31 +1791,31 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, Subtitle
   IO_BARRIER("Video state");
 
   /* Inform client whether we have video */
-  printf("Informing client that video is %s (%d)\n", aux_ttyfd > 0 ? "on":"off", aux_ttyfd);
+  LOG("Informing client that video is %s (%d)\n", aux_ttyfd > 0 ? "on":"off", aux_ttyfd);
   if (aux_ttyfd > 0) {
     simple_serial_putc(SURL_VIDEO_PORT_OK);
   } else {
     simple_serial_putc(SURL_VIDEO_PORT_NOK);
   }
 
-  printf("Final wait for client\n");
+  LOG("Final wait for client\n");
   if (simple_serial_getc() != SURL_CLIENT_READY) {
     pthread_mutex_lock(&audio_th_data->mutex);
     audio_th_data->stop = 1;
-    printf("audio stop\n");
+    LOG("audio stop\n");
     pthread_mutex_unlock(&audio_th_data->mutex);
     pthread_mutex_lock(&video_th_data->mutex);
     video_th_data->stop = 1;
-    printf("video stop\n");
+    LOG("video stop\n");
     pthread_mutex_unlock(&video_th_data->mutex);
     ret = -1;
     goto cleanup_thread;
   }
 
-  printf("Getting stream parameters\n");
+  LOG("Getting stream parameters\n");
   audio_sample_offset = simple_serial_getc();
   audio_sample_multiplier = simple_serial_getc();
-  printf("Sample offset is %d mult %d\n", audio_sample_offset, audio_sample_multiplier);
+  LOG("Sample offset is %d mult %d\n", audio_sample_offset, audio_sample_multiplier);
 
   sleep(1); /* Let ffmpeg have a bit of time to push data so we don't starve */
 
@@ -1827,11 +1828,11 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, Subtitle
   if (simple_serial_getc() != SURL_CLIENT_READY) {
     pthread_mutex_lock(&audio_th_data->mutex);
     audio_th_data->stop = 1;
-    printf("audio stop\n");
+    LOG("audio stop\n");
     pthread_mutex_unlock(&audio_th_data->mutex);
     pthread_mutex_lock(&video_th_data->mutex);
     video_th_data->stop = 1;
-    printf("video stop\n");
+    LOG("video stop\n");
     pthread_mutex_unlock(&video_th_data->mutex);
     ret = -1;
     goto read_and_cleanup_thread;
@@ -1842,7 +1843,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, Subtitle
     if (audio_th_data->pts < video_th_data->pts) {
       long cut_ms = video_th_data->pts - audio_th_data->pts;
       long cut_samples = cut_ms * SAMPLE_RATE / 1000;
-      printf("Audio starts early (A %ld V %ld), cutting %ld\n", audio_th_data->pts, video_th_data->pts, cut_samples);
+      LOG("Audio starts early (A %ld V %ld), cutting %ld\n", audio_th_data->pts, video_th_data->pts, cut_samples);
       memmove(audio_th_data->data, audio_th_data->data + cut_samples, audio_th_data->size - cut_samples);
       audio_th_data->data = realloc(audio_th_data->data, audio_th_data->size - cut_samples);
       audio_th_data->size -= cut_samples;
@@ -1851,7 +1852,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, Subtitle
     if (audio_th_data->pts > video_th_data->pts) {
       long add_ms = audio_th_data->pts - video_th_data->pts;
       long add_samples = add_ms * SAMPLE_RATE / 1000;
-      printf("Audio starts late (A %ld V %ld)\n", audio_th_data->pts, video_th_data->pts);
+      LOG("Audio starts late (A %ld V %ld)\n", audio_th_data->pts, video_th_data->pts);
       audio_th_data->data = realloc(audio_th_data->data, audio_th_data->size + add_samples);
       memmove(audio_th_data->data, audio_th_data->data + add_samples, audio_th_data->size);
       memset(audio_th_data->data, 128, add_samples);
@@ -1859,7 +1860,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, Subtitle
     }
 
     if (audio_th_data->pts == video_th_data->pts) {
-      printf("Audio starts same as video (A %ld V %ld)\n", audio_th_data->pts, video_th_data->pts);
+      LOG("Audio starts same as video (A %ld V %ld)\n", audio_th_data->pts, video_th_data->pts);
     }
 
     /* Add one frame of silence so we can start posting first video frame on time */
@@ -1881,7 +1882,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, Subtitle
     cancelled = audio_th_data->stop;
     pthread_mutex_unlock(&audio_th_data->mutex);
     if (cancelled) {
-      printf("Audio thread cancelled\n");
+      LOG("Audio thread cancelled\n");
       pthread_mutex_lock(&video_th_data->mutex);
       video_th_data->stop = 1;
       pthread_mutex_unlock(&video_th_data->mutex);
@@ -1894,7 +1895,7 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, Subtitle
     playback_stop = video_th_data->stop;
     pthread_mutex_unlock(&video_th_data->mutex);
     if (playback_stop) {
-      printf("Video playback stop\n");
+      LOG("Video playback stop\n");
       break;
     }
     sleep(1);
@@ -1903,19 +1904,19 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, Subtitle
   pthread_join(audio_push_thread, NULL);
   pthread_join(video_push_thread, NULL);
 
-  printf("done (cancelled: %d)\n", cancelled);
+  LOG("done (cancelled: %d)\n", cancelled);
   send_end_of_av_stream();
 
 read_and_cleanup_thread:
   do {
     c = simple_serial_getc();
-    printf("got %02X\n", c);
+    LOG("got %02X\n", c);
   } while (c != SURL_CLIENT_READY
         && c != SURL_METHOD_ABORT
         && c != (unsigned char)EOF);
 
 cleanup_thread:
-  printf("Cleaning up A/V decoder thread\n");
+  LOG("Cleaning up A/V decoder thread\n");
   pthread_mutex_lock(&audio_th_data->mutex);
   audio_th_data->stop = 1;
   pthread_mutex_unlock(&audio_th_data->mutex);
@@ -1944,7 +1945,7 @@ cleanup_thread:
     start_printer_thread();
   }
 
-  printf("Done\n");
+  LOG("Done\n");
 
   return ret;
 }

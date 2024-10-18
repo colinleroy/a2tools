@@ -30,11 +30,12 @@
 #include <math.h>
 #include <time.h>
 #include <assert.h>
+#include <SDL_image.h>
 
 #include "../surl_protocol.h"
 #include "jpeglib.h"
 #include "png.h"
-#include <SDL_image.h>
+#include "../log.h"
 
 static unsigned baseaddr[192];
 static unsigned char grbuf[65536];
@@ -413,9 +414,9 @@ static void sdl_image_scale (SDL_Surface *src, SDL_Surface *dst, int w, int h, f
 
     xfactor = scalefactor * asprat;
 
-    // printf("HGR: xfact:%g yfact:%g\n", xfactor, yfactor);
-    // printf("HGR: srcw:%g srch:%g sw:%d sh:%d\n", srcw, srch, sw, sh);
-    // printf("HGR: dstw:%g dsth:%g sx:%d sy:%d\n", dstw, dsth, sx, sy);
+    // LOG("HGR: xfact:%g yfact:%g\n", xfactor, yfactor);
+    // LOG("HGR: srcw:%g srch:%g sw:%d sh:%d\n", srcw, srch, sw, sh);
+    // LOG("HGR: dstw:%g dsth:%g sx:%d sy:%d\n", dstw, dsth, sx, sy);
     bx = sx;
 
     if (fast) {
@@ -487,7 +488,7 @@ static void sdl_image_scale (SDL_Surface *src, SDL_Surface *dst, int w, int h, f
 
     SDL_UnlockSurface(dst);
   } else {
-    printf("No resizing needed.\n");
+    LOG("No resizing needed.\n");
     SDL_BlitSurface(src, NULL, dst, NULL);
   }
 }
@@ -529,32 +530,32 @@ char *hgr_to_png(char *hgr_buf, size_t hgr_len, char monochrome, size_t *len)
   init_base_addrs();
 
   if (hgr_len != 8192) {
-    printf("HGR: Wrong HGR size %zd\n", hgr_len);
+    LOG("HGR: Wrong HGR size %zd\n", hgr_len);
     return NULL;
   }
   /* create file */
   /* coverity[secure_temp] */
   tmpfp = tmpfile();
   if (!tmpfp) {
-    printf("HGR: [write_png_file] File could not be opened for writing");
+    LOG("HGR: [write_png_file] File could not be opened for writing");
     goto cleanup;
   }
 
   /* initialize stuff */
   png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
   if (!png_ptr) {
-    printf("HGR: [write_png_file] png_create_write_struct failed");
+    LOG("HGR: [write_png_file] png_create_write_struct failed");
     goto cleanup;
   }
 
   info_ptr = png_create_info_struct(png_ptr);
   if (!info_ptr) {
-    printf("HGR: [write_png_file] png_create_info_struct failed");
+    LOG("HGR: [write_png_file] png_create_info_struct failed");
     goto cleanup;
   }
 
   if (setjmp(png_jmpbuf(png_ptr))) {
-    printf("HGR: [write_png_file] Error during init_io");
+    LOG("HGR: [write_png_file] Error during init_io");
     goto cleanup;
   }
 
@@ -562,7 +563,7 @@ char *hgr_to_png(char *hgr_buf, size_t hgr_len, char monochrome, size_t *len)
 
   /* write header */
   if (setjmp(png_jmpbuf(png_ptr))) {
-    printf("HGR: [write_png_file] Error during writing header");
+    LOG("HGR: [write_png_file] Error during writing header");
     goto cleanup;
   }
 
@@ -631,7 +632,7 @@ char *hgr_to_png(char *hgr_buf, size_t hgr_len, char monochrome, size_t *len)
 
   /* end write */
   if (setjmp(png_jmpbuf(png_ptr))) {
-    printf("HGR: [write_png_file] Error during end of write");
+    LOG("HGR: [write_png_file] Error during end of write");
     goto cleanup;
   }
 
@@ -800,7 +801,7 @@ unsigned char *sdl_to_hgr(const char *filename, char monochrome, char save_previ
   image = IMG_Load(filename);
   if ( image == NULL) {
     if (!save_preview) {
-      printf("Couldn't load image %s: %s\n", filename, SDL_GetError());
+      LOG("Couldn't load image %s: %s\n", filename, SDL_GetError());
     }
     *len = 0;
     return NULL;
@@ -835,7 +836,7 @@ unsigned char *sdl_to_hgr(const char *filename, char monochrome, char save_previ
     char preview_file[255];
     snprintf(preview_file, sizeof(preview_file), "%s.hgr-preview.png", filename);
     SDL_SaveBMP(resized, preview_file);
-    printf("Saved preview: %s\n", preview_file);
+    LOG("Saved preview: %s\n", preview_file);
   }
 
   SDL_FreeSurface(resized);
