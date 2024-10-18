@@ -158,7 +158,7 @@ static void handle_document(unsigned char first_byte) {
                    g_imagewriter_multipage, default_charset_num);
   imagewriter_loop(first_byte);
 
-  while ((i = __simple_serial_getc_with_tv_timeout(aux_ttyfd, 1, 10, 0)) != EOF) {
+  while ((i = __simple_serial_getc_with_tv_timeout(aux_ttyfd, 1, job_timeout, 0)) != EOF) {
     c = (unsigned char)i;
     if (n_bytes && (n_bytes % 2048) == 0) {
       LOG("Printer: got %zu bytes...\n", n_bytes);
