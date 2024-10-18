@@ -46,7 +46,7 @@ int default_charset_num = 0;
 static const char *default_papersize = NULL;
 int default_papersize_num = 0;
 static char *printer_default_dest = NULL;
-int job_timeout = 60;
+int job_timeout = 20;
 char* g_imagewriter_fixed_font = FONTS_DIR"/"MONO_FONT;
 char* g_imagewriter_prop_font = FONTS_DIR"/"PROP_FONT;
 int enable_printing = 1;
@@ -138,7 +138,7 @@ static void handle_document(unsigned char first_byte) {
   static int filenum = 0;
   int i;
   unsigned char c;
-  size_t n_bytes = 0;
+  size_t n_bytes = 1; /* We start with first byte as param */
   char filename[FILENAME_MAX];
   char buffer[SIMPLE_SERIAL_BUF_SIZE];
   char timestamp[64];
@@ -269,7 +269,7 @@ static void printer_write_defaults(void) {
               "cups_printer_name:\n"
               "\n"
               "#How many seconds to wait for end of input before finishing the job.\n"
-              "#PrintShop needs 60 seconds.\n"
+              "#The Print Shop seems to need at most 20 seconds.\n"
               "job_timeout: %d\n"
               "\n"
               "#The directory where to put iwprint-*.ps files.\n"
