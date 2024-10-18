@@ -1237,7 +1237,6 @@ void Imagewriter::printChar(Bit8u ch)
 	// or be a bit more bold...
 	if (style & STYLE_BOLD) {
 		blitGlyph(curFont->glyph->bitmap, penX-1, penY, true);
-		blitGlyph(curFont->glyph->bitmap, penX+1, penY, true);
 		blitGlyph(curFont->glyph->bitmap, penX+2, penY, true);
 	}
 	SDL_UnlockSurface(page);
