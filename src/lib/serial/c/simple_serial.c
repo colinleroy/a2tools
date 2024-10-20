@@ -170,7 +170,7 @@ static void simple_serial_write_defaults(void) {
   exit(1);
 }
 
-static int simple_serial_read_opts(void) {
+int simple_serial_read_opts(void) {
   static int opts_read_done = 0;
   FILE *fp = NULL;
   char buf[255];
@@ -320,15 +320,11 @@ int simple_serial_open_file(char *tty_path, int tty_speed) {
 }
 
 int simple_serial_open(void) {
-  /* Get options */
-  simple_serial_read_opts();
   ttyfd = simple_serial_open_file(opt_tty_path, opt_tty_speed);
   return ttyfd > 0  ? 0 : -1;
 }
 
 int simple_serial_open_printer(void) {
-  /* Get options */
-  simple_serial_read_opts();
   aux_ttyfd = simple_serial_open_file(opt_aux_tty_path, opt_aux_tty_speed);
   return aux_ttyfd > 0  ? 0 : -1;
 }

@@ -267,7 +267,12 @@ int main(int argc, char **argv)
   LOG("surl-server Protocol %d\n", SURL_PROTOCOL_VERSION);
 
   install_sig_handler();
+
+  /* Get options */
+  simple_serial_read_opts();
+
   install_printer_thread();
+  start_printer_thread();
 
   curl_global_init(CURL_GLOBAL_ALL);
 
@@ -280,8 +285,6 @@ reopen:
     sleep(1);
   }
   fflush(stdout);
-
-  start_printer_thread();
 
   while(1) {
     /* read request */
