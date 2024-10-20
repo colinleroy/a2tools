@@ -89,8 +89,7 @@ char *tty_speed_to_str(int speed);
 void __fastcall__ simple_serial_read(char *ptr, size_t nmemb);
 void simple_serial_write_fast(const char *ptr, size_t nmemb);
 void simple_serial_write_fast_fd(int fd, const char *ptr, size_t nmemb);
-const char *printer_get_iwem(void);
-void printer_set_iwem(const char *str);
+int simple_serial_read_opts(void);
 /* Full prototype for reading */
 int __simple_serial_getc_with_tv_timeout(int fd, int timeout, int secs, int msecs);
 #endif

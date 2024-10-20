@@ -1,3 +1,9 @@
+a2tools (21.2.0.2) bionic; urgency=medium
+
+  * Make it possible to use surl-server as only a printer emulator
+
+ -- Colin Leroy-Mira <colin@colino.net>  Sun, 20 Oct 2024 21:28:19 +0200
+
 a2tools (21.1.0.2) bionic; urgency=medium
 
   * Virtual ImageWriter II on proxy
