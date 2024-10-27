@@ -1,0 +1,5 @@
+.DS_Store
+*.o
+*.map
+weather
+found_fn-build-tools.tmp
