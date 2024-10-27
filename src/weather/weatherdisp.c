@@ -299,7 +299,7 @@ void disp_weather(WEATHER *wi) {
 //  line 12 wind speed, deg
 	row = 12;
     set_row(row);
-	wind_idx = atoi(wi->wind_deg) / 45;
+	wind_idx = (atoi(wi->wind_deg) % 360) / 45;
 	sprintf(prbuf, "Wind Speed:  %s%s%s", wi->wind_speed, speed_unit[unit_opt], wind_deg[wind_idx]);
     draw_string(prbuf);
 
@@ -402,7 +402,7 @@ void disp_forecast(FORECAST *fc, char p) {
 		draw_string(prbuf);
 
 //   wind degree
-    	wind_idx = atoi(fc->day[i+start_idx].wind_deg) / 45;
+		wind_idx = (atoi(fc->day[i+start_idx].wind_deg) % 360) / 45;
 		sprintf(prbuf, "Wind:%s", wind_deg[wind_idx]);
 		set_colrow((i*10)+2, 14);
 		draw_string(prbuf);
