@@ -3,6 +3,9 @@
 #define	LINE_LEN	40
 #define	HALF_LEN	20
 #define	QUARTER_LEN	10
+
+extern char large_buf[1024];
+
 struct location_info {
 	char	lon[HALF_LEN];
 	char	lat[HALF_LEN];

@@ -16,6 +16,7 @@
 #include "ipapi.h"
 
 #include "surl.h"
+#include "strsplit.h"
 
 extern int	err;
 
@@ -30,22 +31,34 @@ char ip_url[] = "http://ip-api.com/json/?fields=status,city,countryCode,lon,lat"
 void get_location(LOCATION *loc) {
 	char	buf[LINE_LEN];
 	char	message[LINE_LEN];
+	char	n_lines;
+	char	**lines;
 
 	surl_start_request(NULL, 0, ip_url, SURL_METHOD_GET);
 	
 	err = !surl_response_ok();
 	handle_err("ip-api parse");
 
-	surl_get_json(buf, ".status", "ISO646-FR1", 0, LINE_LEN);
-	if (strcmp(buf, "success") != 0) {
+	err = surl_get_json(large_buf, ".status,.city,.countryCode,.lon,.lat",
+											"ISO646-FR1", 0, sizeof(large_buf));
+	if (err > 0) {
+		err = 0;
+	}
+	handle_err("Wrong JSON reply");
+
+	n_lines = strsplit_in_place(large_buf, '\n', &lines);
+	
+	if (n_lines < 5 || strcmp(lines[0], "success") != 0) {
 		surl_get_json(buf, ".message", "ISO646-FR1", 0, LINE_LEN);
 		sprintf(message, "ip-api(%s)", buf);
 		err = 0xff;					// set unknown error 
 		handle_err(message);
 	}
 
-	surl_get_json(loc->city, ".city", "ISO646-FR1", 0, HALF_LEN);
-	surl_get_json(loc->countryCode, ".countryCode", "ISO646-FR1", 0, QUARTER_LEN);
-	surl_get_json(loc->lon, ".lon", "ISO646-FR1", 0, HALF_LEN);
-	surl_get_json(loc->lat, ".lat", "ISO646-FR1", 0, HALF_LEN);
+	strncpy(loc->city, lines[1], HALF_LEN);
+	strncpy(loc->countryCode, lines[2], QUARTER_LEN);
+	strncpy(loc->lon, lines[3], HALF_LEN);
+	strncpy(loc->lat, lines[4], HALF_LEN);
+
+	free(lines);
 }
