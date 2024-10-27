@@ -23,6 +23,8 @@ WEATHER  wi;
 FORECAST fc;
 char	current_screen;
 
+char large_buf[1024];
+
 typedef enum command {
 	COM_REFRESH,
 	COM_WEATHER,

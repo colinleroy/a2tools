@@ -10,6 +10,8 @@
 #include <conio.h>
 
 #include "surl.h"
+#include "strsplit.h"
+
 #include "weatherdefs.h"
 #include "weatherui.h"
 #include "weatherdisp.h"
@@ -18,6 +20,8 @@
 extern UNITOPT unit_opt;
 extern int	err;
 
+char	n_lines;
+char	**lines;
 
 char omurl[256];
 char om_head[] = "https://api.open-meteo.com/v1/forecast?latitude=";
@@ -47,14 +51,23 @@ bool om_geocoding(LOCATION *loc, char *city) {
 	err = !surl_response_ok();
 	handle_err("open meteo geocoding parse");
 
-	surl_get_json(loc->city, ".results[0].name", "ISO646-FR1", 0, HALF_LEN);
+	surl_get_json(large_buf, ".results[0]|(.name,.lon,.lat,.country_code)",
+								"ISO646-FR1", 0, sizeof(large_buf));
+	
+	n_lines = strsplit_in_place(large_buf, '\n', &lines);
+	if (n_lines != 4) {
+		err = 0xff;
+		handle_err("Unexpected number of fields(geocoding)");
+	}
+
+	strncpy(loc->city, lines[0], HALF_LEN);
 	if (strlen(loc->city) == 0) {
 		return(false);
 	}
-
-	surl_get_json(loc->lon, ".results[0].lon", "ISO646-FR1", 0, HALF_LEN);
-	surl_get_json(loc->lat, ".results[0].lat", "ISO646-FR1", 0, HALF_LEN);
-	surl_get_json(loc->countryCode, ".results[0].country_code", "ISO646-FR1", 0, QUARTER_LEN);
+	strncpy(loc->lon, lines[1], HALF_LEN);
+	strncpy(loc->lat, lines[2], HALF_LEN);
+	strncpy(loc->countryCode, lines[3], QUARTER_LEN);
+	free(lines);
 
 	return(true);
 }
@@ -89,23 +102,33 @@ void get_om_info(LOCATION *loc, WEATHER *wi, FORECAST *fc) {
 	strcpy(wi->name, loc->city);
 	strcpy(wi->country, loc->countryCode);
 
+	surl_get_json(large_buf, ".current.time,.utc_offset_seconds,.timezone,"
+													 ".current.surface_pressure,.current.relative_humidity_2m,"
+													 ".current.weather_code,.current.cloud_cover",
+								"ISO646-FR1", 0, sizeof(large_buf));
+	
+	n_lines = strsplit_in_place(large_buf, '\n', &lines);
+	if (n_lines != 7) {
+		err = 0xff;
+		handle_err("Unexpected number of fields(om_info)");
+	}
+
 //  date & time
-	surl_get_json(querybuf, ".current.time", "ISO646-FR1", 0, LINE_LEN);
-	wi->td = atol(querybuf);
+	wi->td = atol(lines[0]);
 //  timezone(offset) 
-	surl_get_json(querybuf, ".utc_offset_seconds", "ISO646-FR1", 0, LINE_LEN);
-	wi->tz = atol(querybuf);
+	wi->tz = atol(lines[1]);
 // timezone
-	surl_get_json(wi->timezone, ".timezone", "ISO646-FR1", 0, LINE_LEN);
+	strncpy(wi->timezone, lines[2], LINE_LEN);
 //  pressure
-	surl_get_json(wi->pressure, ".current.surface_pressure", "ISO646-FR1", 0, QUARTER_LEN);
+	strncpy(wi->pressure, lines[3], QUARTER_LEN);
 //  humidity
-	surl_get_json(wi->humidity, ".current.relative_humidity_2m", "ISO646-FR1", 0, QUARTER_LEN);
+	strncpy(wi->humidity, lines[4], QUARTER_LEN);
 // weather code (icon)
-	surl_get_json(querybuf, ".current.weather_code", "ISO646-FR1", 0, LINE_LEN);
-	wi->icon = atoi(querybuf);
+	wi->icon = atoi(lines[5]);
 //  clouds
-	surl_get_json(wi->clouds, ".current.cloud_cover", "ISO646-FR1", 0, QUARTER_LEN);
+	strncpy(wi->clouds, lines[6], QUARTER_LEN);
+
+	free(lines);
 
 // weather 2 query
 	setup_omurl(loc, om_tail_weather2);
@@ -116,18 +139,32 @@ void get_om_info(LOCATION *loc, WEATHER *wi, FORECAST *fc) {
 	err = !surl_response_ok();
 	handle_err("omurl parse 2");
 
+	surl_get_json(large_buf, ".current.temperature_2m,.current.apparent_temperature,"
+													 ".hourly.dew_point_2m[0],.hourly.visibility[0],"
+													 ".current.wind_speed_10m,.current.wind_direction_10m",
+								"ISO646-FR1", 0, sizeof(large_buf));
+	
+	n_lines = strsplit_in_place(large_buf, '\n', &lines);
+	if (n_lines != 6) {
+		err = 0xff;
+		handle_err("Unexpected number of fields(om_info_2)");
+	}
+
+
 //  temperature
-	surl_get_json(wi->temp, ".current.temperature_2m", "ISO646-FR1", 0, QUARTER_LEN);
+	strncpy(wi->temp, lines[0], QUARTER_LEN);
 //  feels_like
-	surl_get_json(wi->feels_like, ".current.apparent_temperature", "ISO646-FR1", 0, QUARTER_LEN);
+	strncpy(wi->feels_like, lines[1], QUARTER_LEN);
 //  dew_point
-	surl_get_json(wi->dew_point, ".hourly.dew_point_2m[0]", "ISO646-FR1", 0, QUARTER_LEN);
+	strncpy(wi->dew_point, lines[2], QUARTER_LEN);
 //  visibility
-	surl_get_json(wi->visibility, ".hourly.visibility[0]", "ISO646-FR1", 0, QUARTER_LEN);
+	strncpy(wi->visibility, lines[3], QUARTER_LEN);
 //  wind_speed
-	surl_get_json(wi->wind_speed, ".current.wind_speed_10m", "ISO646-FR1", 0, QUARTER_LEN);
+	strncpy(wi->wind_speed, lines[4], QUARTER_LEN);
 //  wind_deg
-	surl_get_json(wi->wind_deg, ".current.wind_direction_10m", "ISO646-FR1", 0, QUARTER_LEN);
+	strncpy(wi->wind_deg, lines[5], QUARTER_LEN);
+
+	free(lines);
 
 //	forecast
 //  part 1
@@ -168,53 +205,67 @@ void get_om_info(LOCATION *loc, WEATHER *wi, FORECAST *fc) {
 //
 void set_forecast1(FORECAST *fc) {
 	char	i;
-	char querybuf[LINE_LEN];
-	char prbuf[LINE_LEN];
+	
+	err = surl_get_json(large_buf, ".daily.time[],.daily.sunrise[],"
+																 ".daily.sunset[],.daily.temperature_2m_min[],"
+																 ".daily.temperature_2m_max[],.daily.weather_code[]",
+											"ISO646-FR1", 0, sizeof(large_buf));
+	if (err > 0) {
+		err = 0;
+	}
+	handle_err("Wrong JSON answer\n");
+
+	n_lines = strsplit_in_place(large_buf, '\n', &lines);
+	if (n_lines % 8 != 0) {
+		err = 0xff;
+		handle_err("Unexpected number of fields(forecast1)");
+	}
 
 	for (i=0; i<=7; i++) {
 // date & time
-		sprintf(querybuf, ".daily.time[%d]", i);
-		surl_get_json(prbuf, querybuf, "ISO646-FR1", 0, LINE_LEN);
-		fc->day[i].td = atol(prbuf);
+		fc->day[i].td = atol(lines[i]);
 // sunrise 
-		sprintf(querybuf, ".daily.sunrise[%d]", i);
-		surl_get_json(prbuf, querybuf, "ISO646-FR1", 0, LINE_LEN);
-		fc->day[i].sunrise = atol(prbuf);
+		fc->day[i].sunrise = atol(lines[i+8]);
 // sunset 
-		sprintf(querybuf, ".daily.sunset[%d]", i);
-		surl_get_json(prbuf, querybuf, "ISO646-FR1", 0, LINE_LEN);
-		fc->day[i].sunset = atol(prbuf);
+		fc->day[i].sunset = atol(lines[i+16]);
 // temp min
-		sprintf(querybuf, ".daily.temperature_2m_min[%d]", i);
-		surl_get_json(fc->day[i].temp_min, querybuf, "ISO646-FR1", 0, QUARTER_LEN);
+		strncpy(fc->day[i].temp_min, lines[i+24], QUARTER_LEN);
 // temp max
-		sprintf(querybuf, ".daily.temperature_2m_max[%d]", i);
-		surl_get_json(fc->day[i].temp_max, querybuf, "ISO646-FR1", 0, QUARTER_LEN);
+		strncpy(fc->day[i].temp_max, lines[i+32], QUARTER_LEN);
 // icon
-		sprintf(querybuf, ".daily.weather_code[%d]", i);
-		surl_get_json(prbuf, querybuf, "ISO646-FR1", 0, LINE_LEN);
-		fc->day[i].icon = atoi(prbuf);
+		fc->day[i].icon = atoi(lines[i+40]);
 	}
+	free(lines);
 }
 //
 // set forecast data part 2
 //
 void set_forecast2(FORECAST *fc) {
 	char	i;
-	char querybuf[LINE_LEN];
+
+	err = surl_get_json(large_buf, ".daily.precipitation_sum[],.daily.uv_index_max[],"
+																 ".daily.wind_speed_10m_max[],.daily.wind_direction_10m_dominant[]",
+											"ISO646-FR1", 0, sizeof(large_buf));
+	if (err > 0) {
+		err = 0;
+	}
+	handle_err("Wrong JSON answer\n");
+
+	n_lines = strsplit_in_place(large_buf, '\n', &lines);
+	if (n_lines % 8 != 0) {
+		err = 0xff;
+		handle_err("Unexpected number of fields(forecast2)");
+	}
 
 	for (i=0; i<=7; i++) {
 // precipitation sum
-		sprintf(querybuf, ".daily.precipitation_sum[%d]", i);
-		surl_get_json(fc->day[i].precipitation_sum, querybuf, "ISO646-FR1", 0, QUARTER_LEN);
+		strncpy(fc->day[i].precipitation_sum, lines[i], QUARTER_LEN);
 // uv index  max
-		sprintf(querybuf, ".daily.uv_index_max[%d]", i);
-		surl_get_json(fc->day[i].uv_index_max, querybuf, "ISO646-FR1", 0, QUARTER_LEN);
+		strncpy(fc->day[i].uv_index_max, lines[i+8], QUARTER_LEN);
 // wind  speed
-		sprintf(querybuf, ".daily.wind_speed_10m_max[%d]", i);
-		surl_get_json(fc->day[i].wind_speed, querybuf, "ISO646-FR1", 0, QUARTER_LEN);
+		strncpy(fc->day[i].wind_speed, lines[i+16], QUARTER_LEN);
 // wind  deg
-		sprintf(querybuf, ".daily.wind_direction_10m_dominant[%d]", i);
-		surl_get_json(fc->day[i].wind_deg, querybuf, "ISO646-FR1", 0, QUARTER_LEN);
+		strncpy(fc->day[i].wind_deg, lines[i+24], QUARTER_LEN);
 	}
+	free(lines);
 }

@@ -49,6 +49,7 @@ weather_SOURCES := \
 	../lib/asm/scrollwindow.s \
 	../lib/asm/path_helper.s \
 	../lib/asm/malloc0.s \
+	../lib/strsplit.c
 
 
 weather_CLCFLAGS = -t $(CC65_TARGET) -I ../lib \
