@@ -31,6 +31,9 @@ wozamp_disk_PROGS = \
 	$(RBROWSER_BIN)
 endif
 
+weather_disk_PROGS = \
+	src/weather/weather.bin
+
 woztubes_disk_PROGS = \
 	src/woztubes/woztubes.bin
 
@@ -115,6 +118,16 @@ wozampperso$(suffix).po: $(wozamp_disk_PROGS)
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done
+
+weather$(suffix).po: $(weather_disk_PROGS)
+	cp $(CLEANDISK) $@; \
+	java -jar bin/ac.jar -n $@ WEATHER
+	java -jar bin/ac.jar -p $@ WEATHER.SYSTEM SYS < bin/loader.system; \
+	java -jar bin/ac.jar -d $@ BASIC.SYSTEM; \
+	for prog in $^; do \
+		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
+	done
+	mkdir -p dist && cp $@ dist/; \
 
 stp$(suffix).po: $(stp_disk_PROGS)
 	cp $(CLEANDISK) $@; \
