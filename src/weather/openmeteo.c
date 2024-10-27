@@ -9,7 +9,7 @@
 
 #include <conio.h>
 
-#include "fujinet-network.h"
+#include "surl.h"
 #include "weatherdefs.h"
 #include "weatherui.h"
 #include "weatherdisp.h"
@@ -20,7 +20,7 @@ extern int	err;
 
 
 char omurl[256];
-char om_head[] = "N:https://api.open-meteo.com/v1/forecast?latitude=";
+char om_head[] = "https://api.open-meteo.com/v1/forecast?latitude=";
 char om_lon[] = "&longitude=";
 
 char om_tail_weather1[] ="&timezone=auto&timeformat=unixtime&current=relative_humidity_2m,weather_code,cloud_cover,surface_pressure";
@@ -33,7 +33,7 @@ char om_tail_forecast2[] ="&forecast_days=8&forecast_hours=1&daily=wind_speed_10
 char *unit_str[] = {"&wind_speed_unit=ms", "&temperature_unit=fahrenheit&wind_speed_unit=mph"};
 
 /* geocoding api */
-char om_geocoding_head[] = "N:https://geocoding-api.open-meteo.com/v1/search?name=";
+char om_geocoding_head[] = "https://geocoding-api.open-meteo.com/v1/search?name=";
 char om_geocoding_tail[] = "&count=1&language=en&format=json";
 
 char city[40];
@@ -43,19 +43,18 @@ bool om_geocoding(LOCATION *loc, char *city) {
 	strcat(omurl, city);
 	strcat(omurl, om_geocoding_tail);
 
-    network_open(omurl, OPEN_MODE_READ, OPEN_TRANS_NONE);
-    err = network_json_parse(omurl);
-    handle_err("open meteo geocoding parse");
+	surl_start_request(NULL, 0, omurl, SURL_METHOD_GET);
+	err = !surl_response_ok();
+	handle_err("open meteo geocoding parse");
 
-    network_json_query(omurl, "/results/0/name", loc->city);
+	surl_get_json(loc->city, ".results[0].name", "ISO646-FR1", 0, HALF_LEN);
 	if (strlen(loc->city) == 0) {
 		return(false);
 	}
-    network_json_query(omurl, "/results/0/longitude", loc->lon);
-    network_json_query(omurl, "/results/0/latitude", loc->lat);
-    network_json_query(omurl, "/results/0/country_code", loc->countryCode);
 
-	network_close(omurl);
+	surl_get_json(loc->lon, ".results[0].lon", "ISO646-FR1", 0, HALF_LEN);
+	surl_get_json(loc->lat, ".results[0].lat", "ISO646-FR1", 0, HALF_LEN);
+	surl_get_json(loc->countryCode, ".results[0].country_code", "ISO646-FR1", 0, QUARTER_LEN);
 
 	return(true);
 }
@@ -82,58 +81,53 @@ void get_om_info(LOCATION *loc, WEATHER *wi, FORECAST *fc) {
 
 	progress_dots(0);
 
-    network_open(omurl, OPEN_MODE_READ, OPEN_TRANS_NONE);
-    err = network_json_parse(omurl);
-    handle_err("om parse");
+	surl_start_request(NULL, 0, omurl, SURL_METHOD_GET);
+	err = !surl_response_ok();
+	handle_err("om parse");
 
 //	city name, country code
 	strcpy(wi->name, loc->city);
 	strcpy(wi->country, loc->countryCode);
 
 //  date & time
-    network_json_query(omurl, "/current/time", querybuf);
+	surl_get_json(querybuf, ".current.time", "ISO646-FR1", 0, LINE_LEN);
 	wi->td = atol(querybuf);
 //  timezone(offset) 
-    network_json_query(omurl, "/utc_offset_seconds", querybuf);
+	surl_get_json(querybuf, ".utc_offset_seconds", "ISO646-FR1", 0, LINE_LEN);
 	wi->tz = atol(querybuf);
 // timezone
-    network_json_query(omurl, "/timezone", wi->timezone);
+	surl_get_json(wi->timezone, ".timezone", "ISO646-FR1", 0, LINE_LEN);
 //  pressure
-    network_json_query(omurl, "/current/surface_pressure", wi->pressure);
+	surl_get_json(wi->pressure, ".current.surface_pressure", "ISO646-FR1", 0, QUARTER_LEN);
 //  humidity
-    network_json_query(omurl, "/current/relative_humidity_2m", wi->humidity);
+	surl_get_json(wi->humidity, ".current.relative_humidity_2m", "ISO646-FR1", 0, QUARTER_LEN);
 // weather code (icon)
-    network_json_query(omurl, "/current/weather_code", querybuf);
+	surl_get_json(querybuf, ".current.weather_code", "ISO646-FR1", 0, LINE_LEN);
 	wi->icon = atoi(querybuf);
 //  clouds
-    network_json_query(omurl, "/current/cloud_cover", wi->clouds);
-
-	network_close(omurl);	// of weather1
-
+	surl_get_json(wi->clouds, ".current.cloud_cover", "ISO646-FR1", 0, QUARTER_LEN);
 
 // weather 2 query
 	setup_omurl(loc, om_tail_weather2);
 
 	progress_dots(1);
 
-    network_open(omurl, OPEN_MODE_READ, OPEN_TRANS_NONE);
-    err = network_json_parse(omurl);
-    handle_err("omurl parse 2");
+	surl_start_request(NULL, 0, omurl, SURL_METHOD_GET);
+	err = !surl_response_ok();
+	handle_err("omurl parse 2");
 
 //  temperature
-    network_json_query(omurl, "/current/temperature_2m", wi->temp);
+	surl_get_json(wi->temp, ".current.temperature_2m", "ISO646-FR1", 0, QUARTER_LEN);
 //  feels_like
-    network_json_query(omurl, "/current/apparent_temperature", wi->feels_like);
+	surl_get_json(wi->feels_like, ".current.apparent_temperature", "ISO646-FR1", 0, QUARTER_LEN);
 //  dew_point
-    network_json_query(omurl, "/hourly/dew_point_2m/0", wi->dew_point);
+	surl_get_json(wi->dew_point, ".hourly.dew_point_2m[0]", "ISO646-FR1", 0, QUARTER_LEN);
 //  visibility
-    network_json_query(omurl, "/hourly/visibility/0", wi->visibility);
+	surl_get_json(wi->visibility, ".hourly.visibility[0]", "ISO646-FR1", 0, QUARTER_LEN);
 //  wind_speed
-    network_json_query(omurl, "/current/wind_speed_10m", wi->wind_speed);
+	surl_get_json(wi->wind_speed, ".current.wind_speed_10m", "ISO646-FR1", 0, QUARTER_LEN);
 //  wind_deg
-    err = network_json_query(omurl, "/current/wind_direction_10m", wi->wind_deg);
-
-	network_close(omurl);	// of weather2
+	surl_get_json(wi->wind_deg, ".current.wind_direction_10m", "ISO646-FR1", 0, QUARTER_LEN);
 
 //	forecast
 //  part 1
@@ -141,15 +135,14 @@ void get_om_info(LOCATION *loc, WEATHER *wi, FORECAST *fc) {
 
 	progress_dots(2);
 
-    network_open(omurl, OPEN_MODE_READ, OPEN_TRANS_NONE);
+	surl_start_request(NULL, 0, omurl, SURL_METHOD_GET);
+	err = !surl_response_ok();
 
 	progress_dots(3);
 
-    err = network_json_parse(omurl);
-    handle_err("forecast 1 parse");
+	handle_err("forecast 1 parse");
 
 	set_forecast1(fc);
-	network_close(omurl);	// of forecast part 1
 
 //  copy today's sunrise/sunset from forecat data to weather data
 	wi->sunrise = fc->day[0].sunrise; 
@@ -160,15 +153,13 @@ void get_om_info(LOCATION *loc, WEATHER *wi, FORECAST *fc) {
 
 	progress_dots(4);
 
-    network_open(omurl, OPEN_MODE_READ, OPEN_TRANS_NONE);
-    err = network_json_parse(omurl);
-    handle_err("forecast 2 parse");
+	surl_start_request(NULL, 0, omurl, SURL_METHOD_GET);
+	err = !surl_response_ok();
+	handle_err("forecast 2 parse");
 
 	progress_dots(5);
 
 	set_forecast2(fc);
-
-	network_close(omurl);	// of forecast part 2
 
 	progress_dots(6);
 }
@@ -182,26 +173,26 @@ void set_forecast1(FORECAST *fc) {
 
 	for (i=0; i<=7; i++) {
 // date & time
-		sprintf(querybuf, "/daily/time/%d", i);
-	    network_json_query(omurl, querybuf, prbuf);
+		sprintf(querybuf, ".daily.time[%d]", i);
+		surl_get_json(prbuf, querybuf, "ISO646-FR1", 0, LINE_LEN);
 		fc->day[i].td = atol(prbuf);
 // sunrise 
-		sprintf(querybuf, "/daily/sunrise/%d", i);
-	    network_json_query(omurl, querybuf, prbuf);
+		sprintf(querybuf, ".daily.sunrise[%d]", i);
+		surl_get_json(prbuf, querybuf, "ISO646-FR1", 0, LINE_LEN);
 		fc->day[i].sunrise = atol(prbuf);
 // sunset 
-		sprintf(querybuf, "/daily/sunset/%d", i);
-	    network_json_query(omurl, querybuf, prbuf);
+		sprintf(querybuf, ".daily.sunset[%d]", i);
+		surl_get_json(prbuf, querybuf, "ISO646-FR1", 0, LINE_LEN);
 		fc->day[i].sunset = atol(prbuf);
 // temp min
-		sprintf(querybuf, "/daily/temperature_2m_min/%d", i);
-	    network_json_query(omurl, querybuf, fc->day[i].temp_min);
+		sprintf(querybuf, ".daily.temperature_2m_min[%d]", i);
+		surl_get_json(fc->day[i].temp_min, querybuf, "ISO646-FR1", 0, QUARTER_LEN);
 // temp max
-		sprintf(querybuf, "/daily/temperature_2m_max/%d", i);
-	    network_json_query(omurl, querybuf, fc->day[i].temp_max);
+		sprintf(querybuf, ".daily.temperature_2m_max[%d]", i);
+		surl_get_json(fc->day[i].temp_max, querybuf, "ISO646-FR1", 0, QUARTER_LEN);
 // icon
-		sprintf(querybuf, "/daily/weather_code/%d", i);
-	    network_json_query(omurl, querybuf, prbuf);
+		sprintf(querybuf, ".daily.weather_code[%d]", i);
+		surl_get_json(prbuf, querybuf, "ISO646-FR1", 0, LINE_LEN);
 		fc->day[i].icon = atoi(prbuf);
 	}
 }
@@ -214,16 +205,16 @@ void set_forecast2(FORECAST *fc) {
 
 	for (i=0; i<=7; i++) {
 // precipitation sum
-		sprintf(querybuf, "/daily/precipitation_sum/%d", i);
-	    network_json_query(omurl, querybuf, fc->day[i].precipitation_sum);
+		sprintf(querybuf, ".daily.precipitation_sum[%d]", i);
+		surl_get_json(fc->day[i].precipitation_sum, querybuf, "ISO646-FR1", 0, QUARTER_LEN);
 // uv index  max
-		sprintf(querybuf, "/daily/uv_index_max/%d", i);
-	    network_json_query(omurl, querybuf, fc->day[i].uv_index_max);
+		sprintf(querybuf, ".daily.uv_index_max[%d]", i);
+		surl_get_json(fc->day[i].uv_index_max, querybuf, "ISO646-FR1", 0, QUARTER_LEN);
 // wind  speed
-		sprintf(querybuf, "/daily/wind_speed_10m_max/%d", i);
-	    network_json_query(omurl, querybuf, fc->day[i].wind_speed);
+		sprintf(querybuf, ".daily.wind_speed_10m_max[%d]", i);
+		surl_get_json(fc->day[i].wind_speed, querybuf, "ISO646-FR1", 0, QUARTER_LEN);
 // wind  deg
-		sprintf(querybuf, "/daily/wind_direction_10m_dominant/%d", i);
-	    network_json_query(omurl, querybuf, fc->day[i].wind_deg);
+		sprintf(querybuf, ".daily.wind_direction_10m_dominant[%d]", i);
+		surl_get_json(fc->day[i].wind_deg, querybuf, "ISO646-FR1", 0, QUARTER_LEN);
 	}
 }
