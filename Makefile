@@ -230,7 +230,8 @@ dist: all \
 	stp$(suffix).po \
 	mastodon$(suffix).po \
 	wozamp$(suffix).po \
-	woztubes$(suffix).po
+	woztubes$(suffix).po \
+	weather$(suffix).po
 
 else
 #65c02 things
@@ -246,6 +247,7 @@ dist: all \
 	quicktake$(suffix).po \
 	wozamp$(suffix).po \
 	woztubes$(suffix).po \
+	weather$(suffix).po \
 	doc-dist
 endif
 
@@ -261,5 +263,6 @@ dist: all \
 	homectrlperso$(suffix).po \
 	stpperso$(suffix).po \
 	quicktake$(suffix).po \
-	wozamp$(suffix).po
+	wozamp$(suffix).po \
+	weather$(suffix).po
 endif
