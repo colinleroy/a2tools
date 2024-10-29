@@ -5,6 +5,7 @@ iigs_suffix := -iigs
 iigs_CFLAGS := -DIIGS --asm-define IIGS
 trgt = apple2gs
 upload_subdir := /iigs
+CC65_TARGET = apple2enh
 else
 ifdef OLDII
 serial_hw := acia

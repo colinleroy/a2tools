@@ -1,0 +1,2 @@
+#!/bin/bash
+make clean all OLDII=1 SER_DEBUG=1 && cd ../.. && make weather-6502.po OLDII=1 && mame apple2e -window -flop1 weather-6502.po -resolution 560x384 -sl1 ssc -sl1:ssc:rs232 null_modem -bitb socket.localhost:2001 -sl2 ssc -sl2:ssc:rs232 null_modem -bitb2 socket.localhost:2000 -nomouse -debug; cd src/wozamp
