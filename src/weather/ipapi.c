@@ -40,7 +40,7 @@ void get_location(LOCATION *loc) {
 	handle_err("ip-api parse");
 
 	err = surl_get_json(large_buf, ".status,.city,.countryCode,.lon,.lat",
-											"ISO646-FR1", 0, sizeof(large_buf));
+											"US-ASCII", 0, sizeof(large_buf));
 	if (err > 0) {
 		err = 0;
 	}
@@ -49,7 +49,7 @@ void get_location(LOCATION *loc) {
 	n_lines = strsplit_in_place(large_buf, '\n', &lines);
 	
 	if (n_lines < 5 || strcmp(lines[0], "success") != 0) {
-		surl_get_json(buf, ".message", "ISO646-FR1", 0, LINE_LEN);
+		surl_get_json(buf, ".message", "US-ASCII", 0, LINE_LEN);
 		sprintf(message, "ip-api(%s)", buf);
 		err = 0xff;					// set unknown error 
 		handle_err(message);

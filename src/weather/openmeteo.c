@@ -51,8 +51,8 @@ bool om_geocoding(LOCATION *loc, char *city) {
 	err = !surl_response_ok();
 	handle_err("open meteo geocoding parse");
 
-	surl_get_json(large_buf, ".results[0]|(.name,.lon,.lat,.country_code)",
-								"ISO646-FR1", 0, sizeof(large_buf));
+	surl_get_json(large_buf, ".results[0]|(.name,.longitude,.latitude,.country_code)",
+								"US-ASCII", 0, sizeof(large_buf));
 	
 	n_lines = strsplit_in_place(large_buf, '\n', &lines);
 	if (n_lines != 4) {
@@ -105,7 +105,7 @@ void get_om_info(LOCATION *loc, WEATHER *wi, FORECAST *fc) {
 	surl_get_json(large_buf, ".current.time,.utc_offset_seconds,.timezone,"
 													 ".current.surface_pressure,.current.relative_humidity_2m,"
 													 ".current.weather_code,.current.cloud_cover",
-								"ISO646-FR1", 0, sizeof(large_buf));
+								NULL, 0, sizeof(large_buf));
 	
 	n_lines = strsplit_in_place(large_buf, '\n', &lines);
 	if (n_lines != 7) {
@@ -142,7 +142,7 @@ void get_om_info(LOCATION *loc, WEATHER *wi, FORECAST *fc) {
 	surl_get_json(large_buf, ".current.temperature_2m,.current.apparent_temperature,"
 													 ".hourly.dew_point_2m[0],.hourly.visibility[0],"
 													 ".current.wind_speed_10m,.current.wind_direction_10m",
-								"ISO646-FR1", 0, sizeof(large_buf));
+								NULL, 0, sizeof(large_buf));
 	
 	n_lines = strsplit_in_place(large_buf, '\n', &lines);
 	if (n_lines != 6) {
@@ -209,7 +209,7 @@ void set_forecast1(FORECAST *fc) {
 	err = surl_get_json(large_buf, ".daily.time[],.daily.sunrise[],"
 																 ".daily.sunset[],.daily.temperature_2m_min[],"
 																 ".daily.temperature_2m_max[],.daily.weather_code[]",
-											"ISO646-FR1", 0, sizeof(large_buf));
+											NULL, 0, sizeof(large_buf));
 	if (err > 0) {
 		err = 0;
 	}
@@ -245,7 +245,7 @@ void set_forecast2(FORECAST *fc) {
 
 	err = surl_get_json(large_buf, ".daily.precipitation_sum[],.daily.uv_index_max[],"
 																 ".daily.wind_speed_10m_max[],.daily.wind_direction_10m_dominant[]",
-											"ISO646-FR1", 0, sizeof(large_buf));
+											NULL, 0, sizeof(large_buf));
 	if (err > 0) {
 		err = 0;
 	}
