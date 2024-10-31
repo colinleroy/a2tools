@@ -108,8 +108,10 @@ static int printer_start_cups_job(const char *filename, cups_dest_t **dest, cups
       close(output);
     } else {
       free(final_filename);
+      close(input);
       return -1;
     }
+    close(input);
   } else {
     free(final_filename);
     return -1;
