@@ -40,6 +40,7 @@
 #include "stream.h"
 #include "printer.h"
 #include "log.h"
+#include "vsdrive.h"
 
 #define BUFSIZE 8192
 
@@ -95,6 +96,7 @@ static const char *surl_method_str(unsigned char method) {
     case SURL_METHOD_STREAM_VIDEO: return "STREAM_VIDEO";
     case SURL_METHOD_STREAM_AV:    return "STREAM_AV";
     case SURL_METHOD_DUMP:         return "DUMP";
+    case SURL_METHOD_VSDRIVE:      return "VSDRIVE";
     default:                       return "[UNKNOWN]";
   }
 }
@@ -270,8 +272,9 @@ int main(int argc, char **argv)
 
   /* Get options */
   simple_serial_read_opts();
-
+  vsdrive_read_config();
   install_printer_thread();
+
   start_printer_thread();
 
   curl_global_init(CURL_GLOBAL_ALL);
@@ -298,6 +301,10 @@ read_method:
       goto read_method;
     }
 new_req:
+    if ((unsigned char)(reqbuf[0]) == SURL_METHOD_VSDRIVE) {
+      handle_vsdrive_request();
+      goto read_method;
+    }
     if (simple_serial_gets(reqbuf + 1, BUFSIZE) != NULL) {
       int i;
 
@@ -531,7 +538,7 @@ new_req:
           translit = reqbuf;
         }
       } else {
-        /* special case for debugs in the middle of a request */
+        /* special case for things that can happen in the middle of a request */
         if (cmd == SURL_METHOD_DEBUG) {
           reqbuf[0] = cmd;
           simple_serial_gets(reqbuf + 1, BUFSIZE - 1);
@@ -540,6 +547,9 @@ new_req:
         } else if (cmd == SURL_METHOD_DUMP) {
           simple_serial_getc(); /* Eat \n */
           do_dump();
+          continue;
+        } else if (cmd == SURL_METHOD_VSDRIVE) {
+          handle_vsdrive_request();
           continue;
         }
 

@@ -14,6 +14,7 @@ SOURCES := main.c raw-session.c \
 	helpers/stream.c \
 	helpers/ffmpeg.c \
 	helpers/printer.c \
+	helpers/vsdrive.c \
 	helpers/imagewriter.cpp \
 	../lib/strtrim.c ../lib/strsplit.c \
 	../lib/serial/c/simple_serial.c \
@@ -34,6 +35,7 @@ CFLAGS= -I ../lib -I helpers $(shell sdl-config --cflags) \
 				-Wall \
 				-DCONF_FILE_PATH=\"$(etc_prefix)/a2tools/tty.conf\" \
 				-DPRINTER_CONF_FILE_PATH=\"$(etc_prefix)/a2tools/printer.conf\" \
+				-DVSDRIVE_CONF_FILE_PATH=\"$(etc_prefix)/a2tools/vsdrive.conf\" \
 				-DFONTS_DIR=\"$(FONTS_DIR)\" \
 				-DMONO_FONT=\"$(MONO_FONT)\" \
 				-DPROP_FONT=\"$(PROP_FONT)\"

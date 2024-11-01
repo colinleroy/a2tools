@@ -25,7 +25,7 @@ make
 sudo make install
 ```
 
-Start the service as root once to generate config files to /usr/local/etc/a2tools/tty.conf and /usr/local/etc/a2tools/printer.conf, and edit them if necessary. To generate the files, start the server:
+Start the service as root once to generate config files to /usr/local/etc/a2tools/tty.conf, /usr/local/etc/a2tools/printer.conf, and /usr/local/etc/a2tools/vsdrive.conf, and edit them if necessary. To generate the files, start the server:
 
 ```
 sudo /usr/local/bin/surl-server
