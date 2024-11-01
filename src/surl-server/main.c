@@ -289,10 +289,18 @@ reopen:
   while(1) {
     /* read request */
     LOG("Waiting for request\n");
-    if (simple_serial_gets(reqbuf, BUFSIZE) != NULL) {
+read_method:
+    reqbuf[0] = simple_serial_getc();
+    if (reqbuf[0] == (char)EOF && (errno == EBADF || errno == EIO)) {
+      LOG("REQ: Fatal read error: %s\n", strerror(errno));
+      goto reopen;
+    } else if (reqbuf[0] == (char)EOF) {
+      goto read_method;
+    }
+new_req:
+    if (simple_serial_gets(reqbuf + 1, BUFSIZE) != NULL) {
       int i;
 
-new_req:
       LOG("\n");
       fflush(stdout);
 
@@ -496,7 +504,7 @@ new_req:
             goto abort;
           } else {
             LOG("Unknown error\n");
-            goto new_req;
+            goto read_method;
           }
 
         } else if (cmd == SURL_CMD_HGR) {
@@ -539,7 +547,6 @@ abort:
         LOG("RESP: finished (new cmd %u: %s)\n", cmd, surl_method_str(cmd));
         /* Put that back as a REQUEST */
         reqbuf[0] = cmd;
-        simple_serial_gets(reqbuf + 1, BUFSIZE - 1);
         goto new_req;
       }
 
