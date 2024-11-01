@@ -22,10 +22,11 @@ typedef enum {
   SURL_METHOD_STREAM_AUDIO    = 0x15,
   SURL_METHOD_STREAM_AV       = 0x16,
   SURL_METHOD_DUMP            = 0x17,
+  SURL_METHOD_VSDRIVE         = 0xC5,
   SURL_METHOD_ABORT           = ('d'|0x80) // $E4
 } SurlMethod;
 
-#define SURL_IS_METHOD(x) ((x) == SURL_METHOD_ABORT || ((x) >= SURL_METHOD_RAW && (x) <= SURL_METHOD_DUMP))
+#define SURL_IS_METHOD(x) ((x) == SURL_METHOD_ABORT || (x) == SURL_METHOD_VSDRIVE || ((x) >= SURL_METHOD_RAW && (x) <= SURL_METHOD_DUMP))
 
 typedef enum {
   SURL_ANSWER_WAIT            = 0x20,
@@ -115,4 +116,5 @@ typedef enum {
   SURL_ERR_PROTOCOL_ERROR      = 508,
   SURL_ERR_PROXY_NOT_CONNECTED = 600
 } SurlHTTPCodes;
+
 #endif

@@ -156,6 +156,7 @@ const surl_response * __fastcall__ surl_start_request(char **headers, unsigned c
 #ifndef __CC65__
       case SURL_METHOD_DEBUG:
       case SURL_METHOD_DUMP:
+      case SURL_METHOD_VSDRIVE:
       case SURL_METHOD_ABORT:
         /* We're not supposed to surl_start_request with these methods,
          * rather just:
