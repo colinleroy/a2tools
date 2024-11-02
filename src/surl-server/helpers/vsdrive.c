@@ -203,7 +203,11 @@ void vsdrive_read_config(void) {
           vdrive[num] = NULL;
         }
         if (path[0]) {
-          vdrive[num] = path;
+          if (strcasecmp(path+strlen(path)-3, ".po")) {
+            printf("VSdrive: unsupported image %s, .po required.\n", path);
+          } else {
+            vdrive[num] = path;
+          }
         } else {
           free(path);
         }
