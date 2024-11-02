@@ -37,6 +37,7 @@
 #include "strsplit.h"
 #include "runtime_once_clean.h"
 #include "charsets.h"
+#include "vsdrive.h"
 
 #ifdef __APPLE2ENH__
 char center_x = 30;
@@ -147,6 +148,8 @@ int main(void) {
   stp_print_header(url, URL_SET);
 
   surl_set_time();
+
+  vsdrive_install();
 
   runtime_once_clean();
 

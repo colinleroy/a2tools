@@ -50,6 +50,7 @@ CL65SOURCES = \
 	../lib/citoa.s \
 	../lib/cutoa.s \
 	../lib/cntoabuf.s \
+	../lib/vsdrive.s \
 	#../lib/fastirq$(suffix).s \
 
 GCC_SOURCES = \
