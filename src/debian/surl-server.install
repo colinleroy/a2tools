@@ -2,3 +2,4 @@ usr/bin/surl-server
 lib/systemd/system/surl-server.service
 usr/share/fonts/truetype/Apple2/beepu.ttf
 usr/share/fonts/truetype/Apple2/beepu-mono.ttf
+debian/blank32.po /etc/a2tools/
