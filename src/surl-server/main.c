@@ -33,14 +33,14 @@
 #include "strsplit.h"
 #include "math.h"
 #include "raw-session.h"
-#include "char-convert.h"
-#include "jq-get.h"
-#include "html2txt.h"
-#include "hgr-convert.h"
-#include "stream.h"
-#include "printer.h"
+#include "helpers/char-convert.h"
+#include "helpers/jq-get.h"
+#include "helpers/html2txt.h"
+#include "helpers/hgr-convert.h"
+#include "helpers/stream.h"
+#include "helpers/printer.h"
 #include "log.h"
-#include "vsdrive.h"
+#include "helpers/vsdrive.h"
 
 #define BUFSIZE 8192
 
@@ -1191,6 +1191,7 @@ static int setup_simple_upload_request(char method, CURL *curl,
   curlbuf->cur_upload_ptr = curlbuf->upload_buffer;
 
   simple_serial_putc(SURL_UPLOAD_GO);
+  /* VSDrive problem here */
   simple_serial_read(curlbuf->upload_buffer, curlbuf->upload_size);
 
   if (mode == SURL_DATA_X_WWW_FORM_URLENCODED_HELP) {
