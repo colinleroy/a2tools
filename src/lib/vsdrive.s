@@ -1,5 +1,6 @@
 
                 .import         _serial_read_byte_no_irq
+                .import         serial_read_byte_no_irq_timeout
                 .import         _serial_putc_direct
                 .export         _vsdrive_install
                 .destructor     vsdrive_uninstall, 9
@@ -192,7 +193,8 @@ READBLK:
 ; SEND COMMAND TO PC
         jsr        COMMAND_ENVELOPE
 ; Pull and verify command envelope from host
-        jsr        _serial_read_byte_no_irq               ; Command envelope begin
+        jsr        serial_read_byte_no_irq_timeout        ; Command envelope begin
+        bcs        READFAIL
         cmp        #$C5
         bne        READFAIL
         jsr        _serial_read_byte_no_irq               ; Read command
@@ -307,7 +309,8 @@ WRLOOP:
         jsr        _serial_putc_direct
 
 ; READ ECHO'D COMMAND AND VERIFY
-        jsr        _serial_read_byte_no_irq
+        jsr        serial_read_byte_no_irq_timeout
+        bcs        WRITEFAIL
         cmp        #$C5                ; S/B Command envelope
         bne        WRITEFAIL
         jsr        _serial_read_byte_no_irq

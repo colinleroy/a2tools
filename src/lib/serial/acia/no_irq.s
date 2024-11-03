@@ -8,6 +8,7 @@
         .export         _serial_read_byte_no_irq
         .export         _serial_putc_direct
         .export         _simple_serial_setup_no_irq_regs
+        .export         serial_read_byte_no_irq_timeout
 
         .export         acia_status_reg_r, acia_data_reg_r
         .include        "apple2.inc"
@@ -38,10 +39,26 @@ _simple_serial_setup_no_irq_regs:
         rts
 
 _serial_read_byte_no_irq:
+:       jsr     serial_read_byte_no_irq_timeout
+        bcs     :-
+        rts
+
+serial_read_byte_no_irq_timeout:
+        lda     #$00
+        sta     timeout_cnt
+        sta     timeout_cnt+1
 acia_status_reg_r:
 :       lda     $FFFF           ; Do we have a character?
         and     #$08
-        beq     :-
+        bne     :+
+        inc     timeout_cnt
+        bne     :-
+        inc     timeout_cnt+1
+        bne     :-
+        sec
+        rts
+
+:       clc
 acia_data_reg_r:
         lda     $FFFF           ; We do!
         rts
@@ -56,3 +73,6 @@ acia_status_reg_w:
 acia_data_reg_w:
         sta     $FFFF
         rts
+
+        .bss
+timeout_cnt:  .res 2

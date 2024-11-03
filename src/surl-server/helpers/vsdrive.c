@@ -74,7 +74,6 @@ vsdrive_send_error:
     chksum++;
     simple_serial_write((char *)header, cmd == VSDRIVE_READ ? 8 : 4);
     simple_serial_putc(chksum);
-
     return;
   }
   
