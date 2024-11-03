@@ -11,6 +11,7 @@
 #include <string.h>
 #include <ctype.h>
 
+#include "surl.h"
 #include "weatherdefs.h"
 #include "weatherui.h"
 #include "ipapi.h"
@@ -43,6 +44,8 @@ void main(void)
 	char	forecast_page;
 	char	ch;
 	COMMAND com = COM_REFRESH;
+
+	surl_ping();
 
 	disp_message("     fetching location data...");
 	get_location(&loc);

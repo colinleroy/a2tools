@@ -39,6 +39,7 @@ weather_SOURCES := \
 	weatherdisp.c \
 	weatherui.c \
 	../lib/FVTABZ.s \
+	../lib/surl/surl_ping.c \
 	../lib/surl/asm/surl_core.s \
 	../lib/surl/asm/surl_get_json.s \
 	../lib/surl/asm/surl_read_with_barrier.s \
@@ -50,6 +51,8 @@ weather_SOURCES := \
 	../lib/asm/scrollwindow.s \
 	../lib/asm/path_helper.s \
 	../lib/asm/malloc0.s \
+	../lib/citoa.s \
+	../lib/cntoabuf.s \
 	../lib/strsplit.c
 
 
