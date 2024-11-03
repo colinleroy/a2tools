@@ -33,6 +33,7 @@
 #include "common.h"
 #include "path_helper.h"
 #include "dgets.h"
+#include "vsdrive.h"
 
 char *instance_url;
 char *oauth_token;
@@ -196,6 +197,8 @@ int main(int argc, char **argv) {
   _heapadd ((void *) 0x0C00, 0x13FF);
   screensize(&scrw, &scrh);
 #endif
+
+  vsdrive_install();
 
   surl_user_agent = "Mastodon for Apple II / "VERSION;
 

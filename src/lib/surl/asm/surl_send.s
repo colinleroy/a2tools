@@ -16,7 +16,7 @@
 ;
 
         .export   _surl_send_data_params
-        .export   _surl_send_data
+        .export   _surl_send_data_chunk
 
         .import   _serial_putc_direct
         .import   _simple_serial_getc
@@ -62,7 +62,7 @@
 :       jmp       returnFFFF
 .endproc
 
-.proc _surl_send_data: near
+.proc _surl_send_data_chunk: near
         tay
         lda       #SURL_CLIENT_READY
         jsr       _serial_putc_direct

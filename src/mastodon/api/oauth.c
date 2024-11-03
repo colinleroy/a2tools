@@ -192,7 +192,7 @@ password_again:
     surl_start_request(NULL, 0, login_url, SURL_METHOD_POST);
 
     surl_send_data_params((uint32)post_len, SURL_DATA_X_WWW_FORM_URLENCODED_HELP);
-    surl_send_data(post, post_len);
+    surl_send_data_chunk(post, post_len);
     free(post);
 
     surl_read_response_header();
@@ -237,7 +237,7 @@ otp_again:
       surl_start_request(NULL, 0, login_url, SURL_METHOD_POST);
 
       surl_send_data_params((uint32)post_len, SURL_DATA_X_WWW_FORM_URLENCODED_HELP);
-      surl_send_data(post, post_len);
+      surl_send_data_chunk(post, post_len);
       free(post);
 
       surl_read_response_header();
@@ -282,7 +282,7 @@ otp_again:
     surl_start_request(NULL, 0, oauth_url, SURL_METHOD_POST);
 
     surl_send_data_params((uint32)post_len, SURL_DATA_X_WWW_FORM_URLENCODED_HELP);
-    surl_send_data(post, post_len);
+    surl_send_data_chunk(post, post_len);
     free(post);
 
     surl_read_response_header();
@@ -354,7 +354,7 @@ int register_app(void) {
   free(reg_url);
 
   surl_send_data_params((uint32)post_len, SURL_DATA_X_WWW_FORM_URLENCODED_HELP);
-  surl_send_data(post, post_len);
+  surl_send_data_chunk(post, post_len);
   free(post);
 
   surl_read_response_header();
@@ -427,7 +427,7 @@ int get_oauth_token(void) {
   post = prepare_oauth_token_post();
   post_len = strlen(post);
   surl_send_data_params((uint32)post_len, SURL_DATA_X_WWW_FORM_URLENCODED_HELP);
-  surl_send_data(post, post_len);
+  surl_send_data_chunk(post, post_len);
   free(post);
 
   surl_read_response_header();

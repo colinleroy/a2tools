@@ -169,7 +169,7 @@ read_next_ent:
 
     total = total + r;
 
-    surl_send_data(send_data, r);
+    surl_send_data_chunk(send_data, r);
 
     progress_bar(-1, -1, NUMCOLS, total, stbuf.st_size);
   } while (total < stbuf.st_size);

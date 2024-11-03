@@ -41,7 +41,7 @@ int __fastcall__ surl_send_data_params(uint32 total, int mode) {
   return (simple_serial_getc() == SURL_UPLOAD_GO) ? 0 : -1;
 }
 
-void __fastcall__ surl_send_data(char *data, size_t chunk_size) {
+void __fastcall__ surl_send_data_chunk(char *data, size_t chunk_size) {
   size_t net_size = htons(chunk_size);
   simple_serial_putc(SURL_CLIENT_READY);
   simple_serial_write((char *)&net_size, 2);

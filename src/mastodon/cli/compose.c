@@ -22,6 +22,7 @@
 #include "dgets.h"
 #include "clrzone.h"
 #include "scrollwindow.h"
+#include "vsdrive.h"
 
 char *instance_url = NULL;
 char *oauth_token = NULL;
@@ -562,6 +563,8 @@ try_again:
 int main(int argc, char **argv) {
   char *params;
   char *text = NULL;
+
+  vsdrive_install();
 
   surl_user_agent = "Mastodon for Apple II / "VERSION;
 
