@@ -16,11 +16,13 @@
 ;
 
         .export   _surl_send_data_params
+        .export   _surl_send_data
 
         .import   _serial_putc_direct
         .import   _simple_serial_getc
+        .import   _simple_serial_write
 
-        .import   pushax, incsp6
+        .import   popax, pushax, incsp6
         .import   return0, returnFFFF
 
         .importzp sp
@@ -58,5 +60,18 @@
         bne       :+
         jmp       return0
 :       jmp       returnFFFF
+.endproc
 
+.proc _surl_send_data: near
+        tay
+        lda       #SURL_CLIENT_READY
+        jsr       _serial_putc_direct
+
+        ; Send chunk_size in network order
+        txa
+        jsr       _serial_putc_direct
+        tya
+        jsr       _serial_putc_direct
+
+        jmp       _simple_serial_write
 .endproc

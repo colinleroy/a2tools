@@ -50,7 +50,7 @@ void __fastcall__ surl_strip_html(char strip_level);
 void __fastcall__ surl_translit(char *charset);
 
 int __fastcall__ surl_send_data_params(uint32 total, int raw);
-#define surl_send_data(buffer, len) simple_serial_write(buffer, len)
+void __fastcall__ surl_send_data(char *data, size_t chunk_size);
 
 int __fastcall__ surl_find_line(char *buffer, char *search_str, size_t max_len, MatchType matchtype);
 int __fastcall__ surl_find_header(char *buffer, char *search_str, size_t max_len, MatchType matchtype);
