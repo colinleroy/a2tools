@@ -75,6 +75,9 @@ struct _curl_buffer {
   int download_cancelled;
 };
 
+unsigned char caught_cmd = 0;
+unsigned char buffered_cmd = 0;
+
 static magic_t magic_handle = NULL;
 
 static curl_buffer *surl_handle_request(char method, char *url, char **headers, int n_headers);
@@ -386,6 +389,11 @@ new_req:
     response = surl_handle_request(method, url, headers, n_headers);
     if (response == NULL) {
       LOG("REQ: %s %s - done\n", surl_method_str(method), url);
+      if (caught_cmd) {
+        caught_cmd = 0;
+        reqbuf[0] = buffered_cmd;
+        goto new_req;
+      }
       continue;
     }
 
@@ -1168,8 +1176,9 @@ static int setup_simple_upload_request(char method, CURL *curl,
                                        struct curl_slist **curl_headers,
                                        curl_buffer *curlbuf) {
   int r = 0;
-  uint32 size;
-  unsigned short mode;
+  uint32 size, received;
+  unsigned short mode, chunk_size;
+  unsigned char cmd;
 
   simple_serial_putc(SURL_ANSWER_SEND_SIZE);
   simple_serial_read((char *)&size, 4);
@@ -1189,10 +1198,35 @@ static int setup_simple_upload_request(char method, CURL *curl,
   curlbuf->orig_upload_size = size;
   curlbuf->upload_buffer = malloc(curlbuf->upload_size);
   curlbuf->cur_upload_ptr = curlbuf->upload_buffer;
+  received = 0;
 
   simple_serial_putc(SURL_UPLOAD_GO);
-  /* VSDrive problem here */
-  simple_serial_read(curlbuf->upload_buffer, curlbuf->upload_size);
+
+wait_next_chunk:
+  cmd = simple_serial_getc();
+  switch(cmd) {
+    case SURL_CLIENT_READY:
+      simple_serial_read((char *)&chunk_size, 2);
+      chunk_size = ntohs(chunk_size);
+      LOG("Receiving chunk of %u bytes\n", chunk_size);
+      simple_serial_read(curlbuf->cur_upload_ptr, chunk_size);
+      curlbuf->cur_upload_ptr += chunk_size;
+      received += chunk_size;
+      if (received < curlbuf->upload_size)
+        goto wait_next_chunk;
+      else
+        break; /* We got everything */
+    case SURL_METHOD_VSDRIVE:
+      handle_vsdrive_request();
+      goto wait_next_chunk;
+    default:
+      LOG("Got unexpected command %d (%s), aborting upload\n", cmd, surl_method_str(cmd));
+      caught_cmd = 1;
+      buffered_cmd = cmd;
+      return -1;
+  }
+
+  curlbuf->cur_upload_ptr = curlbuf->upload_buffer;
 
   if (mode == SURL_DATA_X_WWW_FORM_URLENCODED_HELP) {
     /* Massage an x-www-urlencoded form */

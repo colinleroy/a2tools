@@ -140,7 +140,7 @@ read_next_ent:
 
   progress_bar(0, start_y + 3, NUMCOLS, 0, stbuf.st_size);
 
-   surl_start_request(NULL, 0, remote_filename, SURL_METHOD_PUT);
+  surl_start_request(NULL, 0, remote_filename, SURL_METHOD_PUT);
   if (surl_response_code() != 100) {
     cprintf("Bad response.");
     cgetc();
