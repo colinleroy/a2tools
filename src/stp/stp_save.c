@@ -305,6 +305,7 @@ int stp_save(char *full_filename, char *out_dir) {
       cprintf("AppleSingle: $%04x\r\n", (data[56]<<8 | data[57]));
       _auxtype = (data[56]<<8 | data[57]);
       free(data);
+      data = NULL;
     } else {
       keep_bin_header = 1;
     }
@@ -403,6 +404,7 @@ err_out:
   }
   free(full_path);
   free(filename);
-  free(data);
+  if (data)
+    free(data);
   return had_error;
 }
