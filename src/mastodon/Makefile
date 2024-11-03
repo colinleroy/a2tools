@@ -104,6 +104,7 @@ mastoimg_CC65SOURCES := \
 	../lib/surl/surl_wait_for_stream.c \
 	../lib/dputc.s \
 	../lib/scroll.s \
+	../lib/vsdrive.s \
 	#../lib/fastirq$(suffix).s \
 
 mastocli_SOURCES := \
@@ -140,7 +141,8 @@ mastowrite_SOURCES := \
 mastowrite_CC65SOURCES := \
 	$(common_CC65SOURCES) \
 	../lib/asm/atoc.s \
-	../lib/runtime_once_clean.s
+	../lib/runtime_once_clean.s \
+	../lib/vsdrive.s
 
 GCCSOURCES := \
 	../lib/serial/c/simple_serial.c \

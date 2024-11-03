@@ -1172,13 +1172,42 @@ static void massage_upload_json(curl_buffer *curlbuf) {
   curlbuf->cur_upload_ptr = curlbuf->upload_buffer;
 }
 
+static int receive_chunked_data(char *buffer, size_t data_len) {
+  unsigned char cmd;
+  unsigned short chunk_size;
+  uint32 received = 0;
+
+wait_next_chunk:
+  cmd = simple_serial_getc();
+  switch(cmd) {
+    case SURL_CLIENT_READY:
+      simple_serial_read((char *)&chunk_size, 2);
+      chunk_size = ntohs(chunk_size);
+      LOG("Receiving chunk of %u bytes\n", chunk_size);
+      simple_serial_read(buffer, chunk_size);
+      buffer += chunk_size;
+      received += chunk_size;
+      if (received < data_len)
+        goto wait_next_chunk;
+      else
+        break; /* We got everything */
+    case SURL_METHOD_VSDRIVE:
+      handle_vsdrive_request();
+      goto wait_next_chunk;
+    default:
+      LOG("Got unexpected command %d (%s), aborting upload\n", cmd, surl_method_str(cmd));
+      caught_cmd = 1;
+      buffered_cmd = cmd;
+      return -1;
+  }
+  return 0;
+}
 static int setup_simple_upload_request(char method, CURL *curl,
                                        struct curl_slist **curl_headers,
                                        curl_buffer *curlbuf) {
   int r = 0;
-  uint32 size, received;
-  unsigned short mode, chunk_size;
-  unsigned char cmd;
+  uint32 size;
+  unsigned short mode;
 
   simple_serial_putc(SURL_ANSWER_SEND_SIZE);
   simple_serial_read((char *)&size, 4);
@@ -1198,35 +1227,12 @@ static int setup_simple_upload_request(char method, CURL *curl,
   curlbuf->orig_upload_size = size;
   curlbuf->upload_buffer = malloc(curlbuf->upload_size);
   curlbuf->cur_upload_ptr = curlbuf->upload_buffer;
-  received = 0;
 
   simple_serial_putc(SURL_UPLOAD_GO);
 
-wait_next_chunk:
-  cmd = simple_serial_getc();
-  switch(cmd) {
-    case SURL_CLIENT_READY:
-      simple_serial_read((char *)&chunk_size, 2);
-      chunk_size = ntohs(chunk_size);
-      LOG("Receiving chunk of %u bytes\n", chunk_size);
-      simple_serial_read(curlbuf->cur_upload_ptr, chunk_size);
-      curlbuf->cur_upload_ptr += chunk_size;
-      received += chunk_size;
-      if (received < curlbuf->upload_size)
-        goto wait_next_chunk;
-      else
-        break; /* We got everything */
-    case SURL_METHOD_VSDRIVE:
-      handle_vsdrive_request();
-      goto wait_next_chunk;
-    default:
-      LOG("Got unexpected command %d (%s), aborting upload\n", cmd, surl_method_str(cmd));
-      caught_cmd = 1;
-      buffered_cmd = cmd;
-      return -1;
+  if (receive_chunked_data(curlbuf->upload_buffer, curlbuf->upload_size) < 0) {
+    return -1;
   }
-
-  curlbuf->cur_upload_ptr = curlbuf->upload_buffer;
 
   if (mode == SURL_DATA_X_WWW_FORM_URLENCODED_HELP) {
     /* Massage an x-www-urlencoded form */
@@ -1301,15 +1307,12 @@ static curl_mime *setup_multipart_upload_request(char method, CURL *curl,
       simple_serial_read((char *)&h_len, 4);
       f_len = ntohl(h_len);
 
-      if (!strncasecmp(field_type, "text/", 5)) {
-        field_contents = malloc(f_len + 1);
-        simple_serial_gets(field_contents, 255);
-        if (strchr(field_contents, '\n'))
-          *strchr(field_contents, '\n') = '\0';
-      } else {
-        field_contents = malloc(f_len);
-        simple_serial_read(field_contents, f_len);
+      field_contents = malloc(f_len);
+      if (receive_chunked_data(field_contents, f_len) < 0) {
+        free(field_contents);
+        goto err_out;
       }
+
       if (!strcasecmp(field_type, "image/hgr")) {
         size_t png_len;
         char *png_data = hgr_to_png(field_contents, f_len, 1, &png_len);
@@ -1352,6 +1355,7 @@ static curl_mime *setup_multipart_upload_request(char method, CURL *curl,
     }
     if (curl_easy_setopt(curl, CURLOPT_MIMEPOST, form) != CURLE_OK) {
       LOG("REQ: POST: could not add form\n");
+err_out:
       curl_mime_free(form);
       form = NULL;
     }

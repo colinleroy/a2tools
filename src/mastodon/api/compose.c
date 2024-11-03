@@ -116,7 +116,7 @@ send_again:
     get_surl_for_endpoint(SURL_METHOD_PUT, endpoint_buf);
 
     surl_send_data_params((uint32)len, SURL_DATA_APPLICATION_JSON_HELP);
-    surl_send_data(body, len);
+    surl_send_data_chunk(body, len);
 
     free(body);
     
@@ -216,7 +216,7 @@ signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medi
   len = o - 1;
 
   surl_send_data_params((uint32)len, SURL_DATA_APPLICATION_JSON_HELP);
-  surl_send_data(body, len);
+  surl_send_data_chunk(body, len);
 
   free(body);
 

@@ -100,7 +100,7 @@ void poll_update_vote(poll *p) {
 
   i = strlen(params);
   surl_send_data_params((uint32)i, SURL_DATA_APPLICATION_JSON_HELP);
-  surl_send_data(params, i);
+  surl_send_data_chunk(params, i);
 
   surl_read_response_header();
   if (surl_response_ok()) {
