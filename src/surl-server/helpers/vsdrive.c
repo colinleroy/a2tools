@@ -28,6 +28,30 @@ static void get_datetime_bytes(VSDriveValues prodos_version, unsigned char *byte
 
 static char *vdrive[] = {NULL, NULL};
 
+static unsigned char vsdrive_prepare_header(VSDriveValues cmd, unsigned char drive, unsigned int blknum, unsigned char *header, char error) {
+  int header_len = 4, i;
+  unsigned char chksum = 0;
+
+  header[0] = SURL_METHOD_VSDRIVE;
+  header[1] = 2 + (drive << 1) + cmd;
+  header[2] = blknum & 0xff;
+  header[3] = blknum >> 8;
+
+  if (cmd == VSDRIVE_READ) {
+    get_datetime_bytes(VSDRIVE_PRODOS_24, &header[4]);
+    header_len = 8;
+  }
+
+  for (i = 0; i < header_len; i++) {
+    chksum ^= header[i];
+  }
+
+  if (error)
+    chksum++;
+
+  return chksum;
+}
+
 static void vsdrive_cmd(VSDriveValues cmd, unsigned char drive, unsigned int blknum) {
   FILE *fp;
   int i, error = 0;
@@ -35,20 +59,34 @@ static void vsdrive_cmd(VSDriveValues cmd, unsigned char drive, unsigned int blk
   unsigned char header[8];
   unsigned char data[VSDRIVE_BLOCK_SIZE];
 
+  if (cmd == VSDRIVE_WRITE) {
+    /* Read data from serial */
+    simple_serial_read((char *)data, VSDRIVE_BLOCK_SIZE);
+    rcv_chksum = simple_serial_getc();
+  }
+
+  /* Prepare response header */
+  chksum = vsdrive_prepare_header(cmd, drive, blknum, header, 0);
+
   if (drive > 1) {
     printf("VSdrive: Wrong drive number %d\n", drive+1);
+vsdrive_send_error:
+    chksum++;
+    simple_serial_write((char *)header, cmd == VSDRIVE_READ ? 8 : 4);
+    simple_serial_putc(chksum);
+
     return;
   }
   
   if (vdrive[drive] == NULL) {
     printf("VSdrive: drive %d is not configured.\n", drive+1);
-    return;
+    goto vsdrive_send_error;
   }
 
-  fp = fopen(vdrive[drive], "r+b");
+  fp = fopen(vdrive[drive], cmd == VSDRIVE_READ ? "rb" : "r+b");
   if (fp == NULL) {
     printf("VSdrive: Can not open %s: %s\n", vdrive[drive], strerror(errno));
-    return;
+    goto vsdrive_send_error;
   }
 
   if (fseek(fp, blknum * VSDRIVE_BLOCK_SIZE, SEEK_SET) < 0) {
@@ -56,19 +94,7 @@ static void vsdrive_cmd(VSDriveValues cmd, unsigned char drive, unsigned int blk
     goto vsdrive_done;
   }
 
-  /* Prepare response header */
-  header[0] = SURL_METHOD_VSDRIVE;
-  header[1] = 2 + (drive << 1) + cmd;
-  header[2] = blknum & 0xff;
-  header[3] = blknum >> 8;
-
   if (cmd == VSDRIVE_READ) {
-    /* Finish header with date */
-    get_datetime_bytes(VSDRIVE_PRODOS_24, &header[4]);
-    for (i = 0; i < 8; i++) {
-      chksum ^= header[i];
-    }
-
     /* Read data from file */
     if (fread(data, 1, VSDRIVE_BLOCK_SIZE, fp) < VSDRIVE_BLOCK_SIZE) {
       printf("VSdrive: read error %s\n", strerror(errno));
@@ -92,10 +118,6 @@ static void vsdrive_cmd(VSDriveValues cmd, unsigned char drive, unsigned int blk
     }
 
   } else if (cmd == VSDRIVE_WRITE) {
-    /* Read data from serial */
-    simple_serial_read((char *)data, VSDRIVE_BLOCK_SIZE);
-    rcv_chksum = simple_serial_getc();
-
     /* Check the checksum */
     chksum = 0;
     for (i = 0; i < VSDRIVE_BLOCK_SIZE; i++) {
