@@ -1,5 +1,5 @@
 ; Update in .h too!
-SURL_PROTOCOL_VERSION       = 21
+SURL_PROTOCOL_VERSION       = 22
 
 SURL_METHOD_ABORT           = ('d'|$80)
 SURL_METHOD_RAW             = $05

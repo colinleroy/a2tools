@@ -2,8 +2,8 @@
 #define __surl_protocol_h
 
 /* Update in .inc too! */
-#define SURL_PROTOCOL_VERSION 21
-#define VERSION "21.2.0"
+#define SURL_PROTOCOL_VERSION 22
+#define VERSION "22.0.0"
 
 #define SURL_CLIENT_READY           0x2F
 #define HGR_LEN                     8192U
