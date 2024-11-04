@@ -184,7 +184,7 @@ CALC_CHECKSUM:
 READFAIL:
         lda        SCREEN_CONTENTS        ; Restore screen contents
         sta        SCRN_THROB
-        lda        #$01
+        lda        #IOERR
         sec
         rts
 
@@ -276,7 +276,7 @@ RDLOOP:
 WRITEFAIL:
         lda        SCREEN_CONTENTS        ; Restore screen contents
         sta        SCRN_THROB
-        lda        #$01
+        lda        #IOERR
         sec
         rts
 
