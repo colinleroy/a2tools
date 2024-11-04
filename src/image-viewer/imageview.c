@@ -15,13 +15,14 @@
 #include "scrollwindow.h"
 #include "simple_serial.h"
 #include "clrzone.h"
+#include "vsdrive.h"
 
 uint8 scrw, scrh;
 #ifndef __CC65__
 char HGR_PAGE[HGR_LEN];
 #endif
 
-static uint8 serial_opened = 0;
+static uint8 serial_opened = 0, printer_opened = 0;
 
 /* Check for XON/XOFF */
 uint8 wait_imagewriter_ready(void) {
@@ -46,6 +47,61 @@ uint8 wait_imagewriter_ready(void) {
   return 0;
 }
 
+/* As long as I can't cleanly handle both ports at once, toggle the opened
+ * port depending on whether we want to print or access vsdrive. */
+static int open_port(char port_num) {
+  if (port_num == ser_params.printer_slot) {
+    if (printer_opened) {
+      return 0;
+    }
+    if (serial_opened) {
+      simple_serial_close();
+      vsdrive_uninstall();
+      serial_opened = 0;
+    }
+  } else {
+    if (serial_opened) {
+      return 0;
+    }
+    if (printer_opened) {
+      simple_serial_close();
+      printer_opened = 0;
+    }
+  }
+
+#ifdef __CC65__
+  simple_serial_set_flow_control(SER_HS_NONE);
+#endif
+
+open_again:
+  if (port_num == ser_params.printer_slot) {
+    printer_opened = (simple_serial_open_printer() == 0);
+    if (!printer_opened) {
+      goto check_configure;
+    }
+  } else {
+    serial_opened = (simple_serial_open() == 0);
+    if (!serial_opened) {
+      goto check_configure;
+    } else {
+      vsdrive_install();
+    }
+  }
+  simple_serial_setup_no_irq_regs();
+  simple_serial_set_irq(1);
+  return 0;
+
+check_configure:
+  printf("Could not open serial slot %d. Configure? (Y/n)\n", port_num);
+  if (tolower(cgetc()) != 'n') {
+    init_text();
+    clrscr();
+    simple_serial_configure();
+    goto open_again;
+  }
+  return -1;
+}
+
 void hgr_print(void) {
   uint16 x;
   uint8 y, cy, ey, bit;
@@ -65,7 +121,11 @@ void hgr_print(void) {
 
   init_hgr_base_addrs();
 
-init_again:
+  if (open_port(ser_params.printer_slot) != 0) {
+    goto out;
+  }
+
+  init_hgr(1);
   hgr_mixon();
   clrscr();
   gotoxy(0, 20);
@@ -90,25 +150,6 @@ scale_again:
           tty_speed_to_str(ser_params.printer_baudrate), ser_params.printer_slot);
   if (cgetc() == CH_ESC)
     goto out;
-
-  if (!serial_opened) {
-#ifdef __CC65__
-    simple_serial_set_flow_control(SER_HS_NONE);
-#endif
-    serial_opened = (simple_serial_open_printer() == 0);
-  }
-  if (!serial_opened) {
-    printf("Could not open serial slot %d. Configure? (Y/n)\n", ser_params.printer_slot);
-    if (tolower(cgetc()) != 'n') {
-      init_text();
-      clrscr();
-      simple_serial_configure();
-      goto init_again;
-    }
-    goto out;
-  }
-  simple_serial_setup_no_irq_regs();
-  simple_serial_set_irq(1);
 
   /* Calculate X boundaries */
   for (sx = 0; sx < 100; sx++) {
@@ -177,7 +218,8 @@ scale_again:
     simple_serial_write("\r\n", 2);
   }
 err_out:
-  clrscr(); gotoxy(0, 20);
+  clrscr();
+  gotoxy(0, 20);
   cputs("Done.\r\n"
         "Press a key to continue.\r\n");
   cgetc();
@@ -197,6 +239,8 @@ static void get_next_image(char *imgname) {
   } else {
     return;
   }
+
+  open_port(ser_params.data_slot);
 
   d = opendir(imgname);
   if (!d) {
@@ -271,6 +315,8 @@ int main(int argc, char *argv[]) {
   if (!filename) {
     char *tmp;
     cputs("Image (HGR): ");
+
+    open_port(ser_params.data_slot);
     tmp = file_select(wherex(), wherey(), scrw - wherex(), wherey() + 10, 0, "Select an HGR file");
     if (tmp == NULL)
       goto out;
@@ -281,8 +327,11 @@ int main(int argc, char *argv[]) {
   }
 
 next_image:
+  open_port(ser_params.data_slot);
+
   fp = fopen(imgname, "rb");
   if (fp == NULL) {
+    init_text();
     cprintf("Can not open image %s (%s).\r\n", imgname, strerror(errno));
     cgetc();
     goto out;

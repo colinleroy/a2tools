@@ -43,6 +43,7 @@ imgview_CC65SOURCES := \
 	../lib/FVTABZ.s \
 	../lib/extrazp.s \
 	$(serial_hw_SOURCES) \
+	../lib/vsdrive.s \
 	#../lib/fastirq$(suffix).s \
 
 imgview_GCCSOURCES := \
