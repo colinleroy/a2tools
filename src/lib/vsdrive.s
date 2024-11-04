@@ -2,8 +2,8 @@
                 .import         _serial_read_byte_no_irq
                 .import         serial_read_byte_no_irq_timeout
                 .import         _serial_putc_direct
-                .export         _vsdrive_install
-                .destructor     vsdrive_uninstall, 9
+                .export         _vsdrive_install, _vsdrive_uninstall
+                .destructor     _vsdrive_uninstall, 9
 
                 .include "apple2.inc"
 
@@ -96,7 +96,7 @@ install_done:
 
                 .segment "CODE"
 
-vsdrive_uninstall:
+_vsdrive_uninstall:
         lda       installed
         beq       uninstall_done
         lda       VS_SLOT
@@ -114,6 +114,8 @@ vsdrive_uninstall:
 
         ldy       DEVCNT
         lda       #$00
+        sta       installed
+        sta       slotcnt
         sta       DEVLST,y
         dey
         sta       DEVLST,y
@@ -182,6 +184,7 @@ CALC_CHECKSUM:
 READFAIL:
         lda        SCREEN_CONTENTS        ; Restore screen contents
         sta        SCRN_THROB
+        lda        #$01
         sec
         rts
 
@@ -192,6 +195,9 @@ READBLK:
         sta        CURCMD
 ; SEND COMMAND TO PC
         jsr        COMMAND_ENVELOPE
+; Grab the screen contents, remember it
+        lda        SCRN_THROB
+        sta        SCREEN_CONTENTS
 ; Pull and verify command envelope from host
         jsr        serial_read_byte_no_irq_timeout        ; Command envelope begin
         bcs        READFAIL
@@ -233,9 +239,6 @@ READBLK:
         sta        DATE
         lda        TEMPDT+3
         sta        DATE+1
-; Grab the screen contents, remember it
-        lda        SCRN_THROB
-        sta        SCREEN_CONTENTS
 ; READ BLOCK AND VERIFY
         ldx        #$00
         ldy        #$00
@@ -273,6 +276,7 @@ RDLOOP:
 WRITEFAIL:
         lda        SCREEN_CONTENTS        ; Restore screen contents
         sta        SCRN_THROB
+        lda        #$01
         sec
         rts
 
@@ -292,6 +296,8 @@ WRBKLOOP:
         ldy        #$00
 WRLOOP:
         lda        (BUFLO),Y
+; Write screen throbber
+        sta        SCRN_THROB
         jsr        _serial_putc_direct
         iny
         bne        WRLOOP
