@@ -1,3 +1,14 @@
+a2tools (22.0.0.1) bionic; urgency=medium
+
+  * New program: Weather, ported from Fujinet
+  * Proxy (surl-server): Implement VSDrive virtual ProDOS drive
+  * Implement VSDrive client
+  * Mastodon: add VSDrive client in image viewer and composer
+  * STP: add VSDrive client
+  * Imageviewer: add VSDrive client
+
+ -- Colin Leroy-Mira <colin@colino.net>  Tue, 05 Nov 2024 21:28:19 +0200
+
 a2tools (21.2.0.2) bionic; urgency=medium
 
   * Make it possible to use surl-server as only a printer emulator
