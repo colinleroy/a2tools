@@ -180,8 +180,8 @@ scale_again:
   if (ex == 180)
     ex = HGR_WIDTH;
 
-  cprintf("Printing region %d-%d\r\n", sx, ex);
-
+  cprintf("Printing ");
+  progress_bar(wherex(), wherey(), scrw, 0, HGR_HEIGHT);
   simple_serial_write(disable_auto_line_feed, sizeof(disable_auto_line_feed));
 
   /* Set line width */
@@ -216,6 +216,7 @@ scale_again:
         simple_serial_write((char *)&c, 1);
     }
     simple_serial_write("\r\n", 2);
+    progress_bar(-1, -1, scrw, y, HGR_HEIGHT);
   }
 err_out:
   clrscr();
