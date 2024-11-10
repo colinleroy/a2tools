@@ -69,6 +69,7 @@ slowtake_CC65SOURCES := \
 	../lib/platform_sleep.s \
 	../lib/extrazp.s \
 	../lib/runtime_once_clean.s \
+	../lib/prodos_dir_file_count.s \
 	$(serial_hw_SOURCES) \
 	../lib/fastirq$(suffix).s \
 

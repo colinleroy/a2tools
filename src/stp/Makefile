@@ -35,6 +35,7 @@ CL65SOURCES = \
 	../lib/surl/asm/surl_send.s \
 	../lib/surl/asm/surl_receive.s \
 	../lib/surl/asm/surl_read_with_barrier.s \
+	../lib/prodos_dir_file_count.s \
 	$(serial_hw_SOURCES) \
 	../lib/asm/scrollwindow.s \
 	../lib/asm/path_helper.s \
