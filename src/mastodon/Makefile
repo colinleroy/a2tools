@@ -99,6 +99,7 @@ mastoimg_CC65SOURCES := \
 	../lib/asm/clrzone.s \
 	../lib/asm/malloc0.s \
 	../lib/asm/hgr.s \
+	../lib/prodos_dir_file_count.s \
 	../lib/FVTABZ.s \
 	 ../lib/extrazp.s \
 	../lib/surl/surl_wait_for_stream.c \
@@ -142,6 +143,7 @@ mastowrite_CC65SOURCES := \
 	$(common_CC65SOURCES) \
 	../lib/asm/atoc.s \
 	../lib/runtime_once_clean.s \
+	../lib/prodos_dir_file_count.s \
 	../lib/vsdrive.s
 
 GCCSOURCES := \

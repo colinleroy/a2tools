@@ -42,6 +42,7 @@ imgview_CC65SOURCES := \
 	../lib/scroll.s \
 	../lib/FVTABZ.s \
 	../lib/extrazp.s \
+	../lib/prodos_dir_file_count.s \
 	$(serial_hw_SOURCES) \
 	../lib/vsdrive.s \
 	#../lib/fastirq$(suffix).s \

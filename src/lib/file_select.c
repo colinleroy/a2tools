@@ -32,11 +32,16 @@
 #include <dirent.h>
 #include "clrzone.h"
 #include "malloc0.h"
+#include "prodos_dir_file_count.h"
 
-static char last_dir[FILENAME_MAX] = "";
+#define PATHNAME_MAX FILENAME_MAX
+#define PRODOS_FILENAME_MAX 16
+#define PRODOS_MAX_VOLUMES 37
+
+static char last_dir[PATHNAME_MAX] = "";
 
 typedef struct _file_entry {
-  char name[FILENAME_MAX+1];
+  char name[PRODOS_FILENAME_MAX];
   char is_dir;
 } file_entry;
 
@@ -77,8 +82,8 @@ list_again:
   if (last_dir[0] == '\0') {
 #ifdef __CC65__
     dev = getfirstdevice();
+    file_entries = malloc0(sizeof(file_entry)*PRODOS_MAX_VOLUMES);
     do {
-      file_entries = realloc_safe(file_entries, sizeof(file_entry)*(n+1));
       if (getdevicedir(dev, file_entries[n].name, 17) == NULL) {
 #ifdef FILESEL_ALLOW_NONPRODOS_VOLUMES
         int blocks;
@@ -111,12 +116,12 @@ posix_use_dir:
 #endif
     DIR *d = opendir(last_dir);
     struct dirent *ent;
+    file_entries = malloc0(sizeof(file_entry)*prodos_dir_file_count(d));
     if (d) {
       while ((ent = readdir(d))) {
         if (dir && !_DE_ISDIR(ent->d_type))
           continue;
 
-        file_entries = realloc_safe(file_entries, sizeof(file_entry)*(n+1));
 
         strcpy(file_entries[n].name, ent->d_name);
         file_entries[n].is_dir = _DE_ISDIR(ent->d_type);
@@ -192,11 +197,11 @@ up:
       if (file_entries[sel].is_dir != dir) {
         goto err_bell;
       } else {
-        filename = malloc0(FILENAME_MAX+1);
+        filename = malloc0(PATHNAME_MAX+1);
         #ifndef __CC65__
         #pragma GCC diagnostic ignored "-Wformat-truncation"
         #endif
-        snprintf(filename, FILENAME_MAX, "%s%s%s", last_dir, (last_dir[0] != '\0' ? "/":""),
+        snprintf(filename, PATHNAME_MAX, "%s%s%s", last_dir, (last_dir[0] != '\0' ? "/":""),
                  file_entries[sel].name);
         goto out;
       }
