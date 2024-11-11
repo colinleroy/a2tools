@@ -39,13 +39,17 @@ ammonoid_SOURCES := \
 	../lib/asm/path_helper.s \
 	../lib/asm/malloc0.s \
 	../lib/asm/clrzone.s \
+	../lib/dgets.c \
+	../lib/dputc.s \
+	../lib/scroll.s \
+	../lib/slist.c \
 	../lib/prodos_dir_file_count.s \
 	../lib/FVTABZ.s \
 
 ammonoid_CLCFLAGS = -t $(CC65_TARGET) -I ../lib \
 	-DFILESEL_ALLOW_NONPRODOS_VOLUMES \
 	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-rtonce.cfg \
-	-vm -m ammonoid.map $(USE_LANGCARD) -O -Cl --start-addr 0xC03
+	-vm -m ammonoid.map $(USE_LANGCARD) -O -Cl --start-addr 0x1003
 
 all: \
 	ammonoid.bin
