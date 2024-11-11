@@ -1,0 +1,7 @@
+#!/bin/bash
+TYPE="full"
+if [ "$1" != "" ]; then
+  TYPE=$1
+fi
+make clean all IIGS=1 DEBUG_HD=$TYPE && \
+  cd ../.. && make imageviewer-65c02.po && mame apple2gs -window -flop1 imageviewer-65c02.po -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug -sl7 scsi -hard disks/smart0.po -sound none; cd src/image-viewer

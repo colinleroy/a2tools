@@ -34,6 +34,9 @@ endif
 weather_disk_PROGS = \
 	src/weather/weather.bin
 
+ammonoid_disk_PROGS = \
+	src/ammonoid/ammonoid.bin
+
 woztubes_disk_PROGS = \
 	src/woztubes/woztubes.bin
 
@@ -77,6 +80,16 @@ all upload:
 	for dir in $(SUBDIRS); do \
 		$(MAKE) -C $$dir -f Makefile $@ || exit; \
 	done
+
+ammonoid$(suffix).po: $(ammonoid_disk_PROGS)
+	cp $(CLEANDISK) $@; \
+	java -jar bin/ac.jar -n $@ AMMONOID
+	java -jar bin/ac.jar -p $@ AMMONOID.SYSTEM SYS < bin/loader.system; \
+	java -jar bin/ac.jar -d $@ BASIC.SYSTEM; \
+	for prog in $^; do \
+		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
+	done
+	mkdir -p dist && cp $@ dist/; \
 
 woztubes$(suffix).po: $(woztubes_disk_PROGS)
 	cp $(CLEANDISK) $@; \
@@ -227,6 +240,7 @@ ifndef IIGS
 ifdef OLDII
 #6502 things
 dist: all \
+	ammonoid$(suffix).po \
 	stp$(suffix).po \
 	mastodon$(suffix).po \
 	wozamp$(suffix).po \
@@ -236,6 +250,7 @@ dist: all \
 else
 #65c02 things
 dist: all \
+	ammonoid$(suffix).po \
 	stp$(suffix).po \
 	telnet$(suffix).po \
 	homectrl$(suffix).po \
