@@ -371,7 +371,7 @@ static char *copy_buf = NULL;
 #define COPY_BUF_SIZE 4096
 
 #pragma static-locals (push,off) /* need reentrancy */
-static int do_copy_files(unsigned char all, unsigned char move) {
+static int do_copy_files(unsigned char all, unsigned char copy, unsigned char remove) {
   int global_err = 0;
   int i, n;
   char *selection = NULL;
@@ -395,26 +395,33 @@ static int do_copy_files(unsigned char all, unsigned char move) {
     if (all || is_selected(entry)) {
       char *src = build_full_path(active_pane, entry);
       char *dest = build_full_path(!active_pane, entry);
-      if (!strncmp(dest, src, strlen(src))) {
-        printf("Can not copy %s to %s\n", src, dest);
-        global_err = 1;
-        goto next;
-      }
       if (_DE_ISDIR(entry->d_type)) {
-        printf("mkdir %s", dest);
+        int dir_err = 0;
 
-        if (mkdir(dest) == 0) {
-          int dir_err = 0;
-          printf(": OK\n");
+        if (copy) {
+          if (!strncmp(dest, src, strlen(src))) {
+            printf("Can not copy %s to %s\n", src, dest);
+            global_err = 1;
+            goto next;
+          }
+          printf("mkdir %s", dest);
+          dir_err = (mkdir(dest) != 0);
+          if (!dir_err) {
+            printf(": OK\n");
+          }
+        }
+        if (!dir_err) {
           /* Recurse */
           pane_chdir(active_pane, src);
-          pane_chdir(!active_pane, dest);
+          if (copy) {
+            pane_chdir(!active_pane, dest);
+          }
 
-          dir_err = do_copy_files(1, move);
+          dir_err = do_copy_files(1, copy, remove);
           global_err |= dir_err;
           printf("%s copied\n", src);
 
-          if (move && !dir_err) {
+          if (remove && !dir_err) {
             to_delete = slist_prepend(to_delete, strdup(src));
           }
 
@@ -422,7 +429,9 @@ static int do_copy_files(unsigned char all, unsigned char move) {
           *strrchr(dest, '/') = '\0';
 
           pane_chdir(active_pane, src);
-          pane_chdir(!active_pane, dest);
+          if (copy) {
+            pane_chdir(!active_pane, dest);
+          }
           if (!all) {
             /* Restore selection */
             for (i = 0; i < pane_num_files[active_pane]; i++) {
@@ -438,32 +447,36 @@ static int do_copy_files(unsigned char all, unsigned char move) {
         FILE *in;
         FILE *out;
         int err = 0;
-        printf("%s", src);
-        in = fopen(src, "r");
-        if (in) {
-          out = fopen(dest, "w");
-          if (out) {
-            size_t r;
-            while ((r = fread(copy_buf, 1, COPY_BUF_SIZE, in)) > 0) {
-              if (fwrite(copy_buf, 1, r, out) < r) {
-                printf(": %s\n", strerror(errno));
-                err = 1;
-                break;
+        if (copy) {
+          printf("%s", src);
+          in = fopen(src, "r");
+          if (in) {
+            out = fopen(dest, "w");
+            if (out) {
+              size_t r;
+              while ((r = fread(copy_buf, 1, COPY_BUF_SIZE, in)) > 0) {
+                if (fwrite(copy_buf, 1, r, out) < r) {
+                  printf(": %s\n", strerror(errno));
+                  err = 1;
+                  break;
+                }
               }
+              fclose(out);
+            } else {
+              printf(": %s\n", strerror(errno));
+              err = 1;
             }
-            fclose(out);
+            fclose(in);
           } else {
             printf(": %s\n", strerror(errno));
             err = 1;
           }
-          fclose(in);
-        } else {
-          printf(": %s\n", strerror(errno));
-          err = 1;
         }
         if (!err) {
-          printf(": OK\n");
-          if (move) {
+          if (copy) {
+            printf(": OK\n");
+          }
+          if (remove) {
             to_delete = slist_prepend(to_delete, strdup(src));
           }
         } else {
@@ -478,10 +491,20 @@ next:
   if (!all) {
     free(selection);
   }
-  if (move) {
+  if (remove) {
     slist *w = to_delete;
     while (w) {
-      unlink(w->data);
+      if (!copy) {
+        printf("%s", w->data);
+      }
+      if (unlink(w->data) != 0) {
+        global_err = 1;
+        if (!copy) {
+          printf(": %s\n", strerror(errno));
+        }
+      } else if (!copy) {
+        printf(": OK\n");
+      }
       free(w->data);
       to_delete = w->next;
       free(w);
@@ -493,7 +516,7 @@ next:
 
 #pragma static-locals (pop)
 
-static void copy_files(unsigned char all, unsigned char move) {
+static void copy_files(unsigned char all, unsigned char copy, unsigned char remove) {
   char *pane_orig_directory[2] = {NULL, NULL};
   set_logwindow();
 
@@ -504,7 +527,7 @@ static void copy_files(unsigned char all, unsigned char move) {
   pane_orig_directory[0] = strdup(pane_directory[0]);
   pane_orig_directory[1] = strdup(pane_directory[1]);
 
-  if (do_copy_files(all, move) != 0) {
+  if (do_copy_files(all, copy, remove) != 0) {
     printf("There have been errors.\n");
     cgetc();
   }
@@ -515,9 +538,11 @@ static void copy_files(unsigned char all, unsigned char move) {
   strcpy(pane_directory[1], pane_orig_directory[1]);
   free(pane_orig_directory[0]);
   free(pane_orig_directory[1]);
-  cleanup_pane(0);
-  cleanup_pane(1);
-  display_pane(!active_pane);
+  cleanup_pane(active_pane);
+  if (copy) {
+    cleanup_pane(!active_pane);
+    display_pane(!active_pane);
+  }
 }
 
 static void handle_input(void) {
@@ -574,11 +599,15 @@ static void handle_input(void) {
       return;
     case 'c':
     case 'C':
-      copy_files(0, 0);
+      copy_files(0, 1, 0);
       return;
     case 'm':
     case 'M':
-      copy_files(0, 1);
+      copy_files(0, 1, 1);
+      return;
+    case 'd':
+    case 'D':
+      copy_files(0, 0, 1);
       return;
   }
 }
