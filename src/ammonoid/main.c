@@ -23,13 +23,22 @@ static unsigned int pane_num_files[2] = {0, 0};
 static unsigned int pane_first_file[2] = {0, 0};
 static unsigned int pane_file_cursor[2] = {0, 0};
 
+/* Selection status, stored in dirent's d_block as we don't really
+ * care about that field. */
+#define select(entry) do { entry->d_blocks = 1; } while(0)
+#define deselect(entry) do { entry->d_blocks = 0; } while(0)
+#define toggle_select(entry) do { entry->d_blocks = !entry->d_blocks; } while(0)
+#define is_selected(entry) (entry->d_blocks)
+
 /* UI */
 static unsigned char pane_left[2] = {0, 20};
 #define pane_top 2
-#define pane_btm 8
+#define pane_btm 22
 #define pane_height (pane_btm-pane_top)
 #define pane_width 19
 #define total_width 40
+
+#define SEL ('D'|0x80)
 
 #if 0
 #define DEBUG(...) printf(__VA_ARGS__)
@@ -56,6 +65,12 @@ static void load_devices(unsigned char pane) {
 
   dev = getfirstdevice();
   do {
+    /* We're getting device name into d_name[16] but the
+     * result can be 17 bytes including NULL terminator,
+     * as cc65's runtime adds a / in front of the 15-char
+     * long device name. This will overwrite d_ino with
+     * the terminator, but we don't care.
+     */
     if (getdevicedir(dev, entry->d_name, 17) == NULL) {
 #ifdef FILESEL_ALLOW_NONPRODOS_VOLUMES
       int blocks;
@@ -77,6 +92,7 @@ static void load_devices(unsigned char pane) {
     }
     DEBUG("got device %d %s\n", n, entry->d_name);
     entry->d_type = 0x0F;
+    deselect(entry);
     n++;
     entry = &entries[n];
   } while ((dev = getnextdevice(dev)) != INVALID_DEVICE);
@@ -98,6 +114,7 @@ static void load_directory(unsigned char pane) {
       DEBUG("allocated %d entries %p\n", prodos_dir_file_count(d), entries);
       while ((ent = readdir(d))) {
         DEBUG("copying entry %d (%s)\n", n, ent->d_name);
+        deselect(ent);
         memcpy(&entries[n], ent, sizeof(struct dirent));
         n++;
       }
@@ -163,8 +180,8 @@ static void display_pane(unsigned char pane) {
 
   for (n = start; n < stop; n++) {
     entry = &entries[n];
-    cputc(n == cur ? '>':' '); /* Current cursor */
-    cputc(' '); /* Selected */
+    cputc(n == cur           ? '>' : ' '); /* Current cursor */
+    cputc(is_selected(entry) ? SEL : ' '); /* Selected */
     cputs(entry->d_name);
     if (_DE_ISDIR(entry->d_type)) {
       cputc('/');
@@ -185,7 +202,7 @@ static void display_active_pane(void) {
   clrzone(inactive_left, 0, inactive_left, pane_btm);
   /* Clear inactive pane's cursor and select indicators */
   inactive_left++;
-  clrzone(inactive_left, 2, inactive_left, pane_btm);
+  clrzone(inactive_left, 2, inactive_left + 1, pane_btm);
 
   display_pane(active_pane);
 }
@@ -247,6 +264,15 @@ static void close_directory(unsigned char pane) {
   cleanup_pane(pane);
 }
 
+static void do_select(unsigned char pane) {
+  struct dirent *entry;
+  if (pane_num_files[active_pane] == 0) {
+    return;
+  }
+  entry = &pane_entries[active_pane][pane_file_cursor[active_pane]];
+  toggle_select(entry);
+}
+
 static void handle_input(void) {
   unsigned char cmd = tolower(cgetc());
   switch(cmd) {
@@ -285,6 +311,8 @@ static void handle_input(void) {
     case CH_ESC:
       close_directory(active_pane);
       return;
+    case ' ':
+      do_select(active_pane);
   }
 }
 
