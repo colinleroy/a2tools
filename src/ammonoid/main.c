@@ -331,6 +331,13 @@ static char *prompt(const char *verb, const char *dir, const char *file, int len
   return buf;
 }
 
+static void refresh_other_pane(void) {
+  if (!strcmp(pane_directory[active_pane], pane_directory[!active_pane])) {
+    cleanup_pane(!active_pane);
+    display_pane(!active_pane);
+  }
+}
+
 /* Rename current file in pane */
 static void rename_file(void) {
   struct dirent *entry = get_current_entry();
@@ -350,15 +357,39 @@ static void rename_file(void) {
 
   new_name = prompt("New name: ", pane_directory[active_pane], entry->d_name, 16);
   if (new_name[0] == '\0' || !strcmp(new_name, entry->d_name)) {
-    free(new_name);
-    return;
+    goto out;
   }
 
   if (rename(entry->d_name, new_name) == 0) {
     strcpy(entry->d_name, new_name);
   }
+out:
   free(new_name);
   clrscr();
+  refresh_other_pane();
+}
+
+/* Create directory in pane */
+static void make_directory(void) {
+  char *new_name = malloc0(16);
+
+  if (pane_directory[active_pane][0] == '\0'
+   || chdir(pane_directory[active_pane]) != 0) {
+    return;
+  }
+
+  new_name = prompt("Directory name: ", pane_directory[active_pane], new_name, 16);
+  if (new_name[0] == '\0') {
+    goto out;
+    return;
+  }
+
+  mkdir(new_name);
+out:
+  free(new_name);
+  clrscr();
+  refresh_other_pane();
+  load_directory(active_pane);
 }
 
 static void pane_chdir(unsigned char pane, const char *dir) {
@@ -399,7 +430,8 @@ static int do_copy_files(unsigned char all, unsigned char copy, unsigned char re
         int dir_err = 0;
 
         if (copy) {
-          if (!strncmp(dest, src, strlen(src))) {
+          if (!strncmp(dest, src, strlen(src))
+            && (dest[strlen(src)] == '\0' || dest[strlen(src)] == '/')) {
             printf("Can not copy %s to %s\n", src, dest);
             global_err = 1;
             goto next;
@@ -419,7 +451,6 @@ static int do_copy_files(unsigned char all, unsigned char copy, unsigned char re
 
           dir_err = do_copy_files(1, copy, remove);
           global_err |= dir_err;
-          printf("%s copied\n", src);
 
           if (remove && !dir_err) {
             to_delete = slist_prepend(to_delete, strdup(src));
@@ -518,11 +549,12 @@ next:
 
 static void copy_files(unsigned char all, unsigned char copy, unsigned char remove) {
   char *pane_orig_directory[2] = {NULL, NULL};
-  set_logwindow();
 
-  if (!strcmp(pane_directory[0], pane_directory[1])) {
+  if (copy && !strcmp(pane_directory[0], pane_directory[1])) {
     return;
   }
+
+  set_logwindow();
 
   pane_orig_directory[0] = strdup(pane_directory[0]);
   pane_orig_directory[1] = strdup(pane_directory[1]);
@@ -542,6 +574,8 @@ static void copy_files(unsigned char all, unsigned char copy, unsigned char remo
   if (copy) {
     cleanup_pane(!active_pane);
     display_pane(!active_pane);
+  } else {
+    refresh_other_pane();
   }
 }
 
@@ -596,6 +630,10 @@ static void handle_input(void) {
     case 'r':
     case 'R':
       rename_file();
+      return;
+    case 'n':
+    case 'N':
+      make_directory();
       return;
     case 'c':
     case 'C':
