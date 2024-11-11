@@ -116,8 +116,8 @@ posix_use_dir:
 #endif
     DIR *d = opendir(last_dir);
     struct dirent *ent;
-    file_entries = malloc0(sizeof(file_entry)*prodos_dir_file_count(d));
     if (d) {
+      file_entries = malloc0(sizeof(file_entry)*prodos_dir_file_count(d));
       while ((ent = readdir(d))) {
         if (dir && !_DE_ISDIR(ent->d_type))
           continue;
