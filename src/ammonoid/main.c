@@ -14,7 +14,6 @@
 #include "prodos_dir_file_count.h"
 #include "malloc0.h"
 #include "dgets.h"
-#include "slist.h"
 
 #define PRODOS_MAX_VOLUMES 37
 
@@ -28,11 +27,11 @@ static unsigned int pane_file_cursor[2] = {0, 0};
 
 /* Selection status, stored in dirent's d_block as we don't really
  * care about that field. */
-#define set_select(entry, on) do { entry->d_blocks = on; } while(0)
-#define select(entry, on) do { entry->d_blocks = 1; } while(0)
-#define deselect(entry) do { entry->d_blocks = 0; } while(0)
-#define toggle_select(entry) do { entry->d_blocks = !entry->d_blocks; } while(0)
-#define is_selected(entry) (entry->d_blocks)
+#define set_select(entry, on) do { (entry)->d_blocks = on; } while(0)
+#define select(entry, on) do { (entry)->d_blocks = 1; } while(0)
+#define deselect(entry) do { (entry)->d_blocks = 0; } while(0)
+#define toggle_select(entry) do { (entry)->d_blocks = !(entry)->d_blocks; } while(0)
+#define is_selected(entry) ((entry)->d_blocks)
 
 /* UI */
 static unsigned char pane_left[2] = {0, 20};
@@ -152,12 +151,16 @@ static void display_pane(unsigned char pane) {
   /* Clear whole pane */
   set_scrollwindow(0, pane_btm);
   set_hscrollwindow(pane_left[pane]+1, pane_width);
-  clrscr();
+
+  gotoxy(pane_width - 1, 0);
+  cputc('C'|0x80);
 
   /* Load pane if needed */
   if (pane_entries[pane] == NULL) {
     load_directory(pane);
   }
+
+  clrscr();
 
   /* Print pane title */
   if (pane_directory[pane][0] == '\0') {
@@ -201,6 +204,7 @@ static void display_active_pane(void) {
   unsigned char inactive_left = pane_left[!active_pane];
   set_scrollwindow(0, pane_btm);
   set_hscrollwindow(0, total_width);
+  
   gotoxy(pane_left[active_pane], 0);
   cvline(pane_btm);
   /* Clear inactive pane's line */
@@ -296,14 +300,16 @@ static void select_current(unsigned char pane) {
 }
 
 /* De-select all */
-static void select_all(unsigned char pane, unsigned char on) {
+static void select_all(unsigned char pane) {
   struct dirent *entries, *entry;
+  unsigned char on;
   int n;
 
   if (pane_num_files[pane] == 0) {
     return;
   }
   entries = pane_entries[pane];
+  on = !is_selected(&entries[0]);
   for (n = 0; n < pane_num_files[pane]; n++) {
     entry = &entries[n];
     set_select(entry, on);
@@ -401,13 +407,18 @@ static void pane_chdir(unsigned char pane, const char *dir) {
 static char *copy_buf = NULL;
 #define COPY_BUF_SIZE 4096
 
+typedef struct _file_list {
+  char filename[FILENAME_MAX+1];
+} file_list;
+
 #pragma static-locals (push,off) /* need reentrancy */
 static int do_copy_files(unsigned char all, unsigned char copy, unsigned char remove) {
   int global_err = 0;
   int i, n;
   char *selection = NULL;
-  slist *to_delete = NULL;
-  
+  file_list *to_delete = NULL;
+  int n_to_delete = 0;
+
   if (copy_buf == NULL) {
     copy_buf = malloc(COPY_BUF_SIZE);
   }
@@ -419,6 +430,10 @@ static int do_copy_files(unsigned char all, unsigned char copy, unsigned char re
       struct dirent *entry = get_entry_at(i);
       selection[i] = is_selected(entry);
     }
+  }
+
+  if (remove) {
+    to_delete = malloc0(pane_num_files[active_pane]*sizeof(file_list));
   }
 
   for (n = 0; n < pane_num_files[active_pane]; n++) {
@@ -453,7 +468,8 @@ static int do_copy_files(unsigned char all, unsigned char copy, unsigned char re
           global_err |= dir_err;
 
           if (remove && !dir_err) {
-            to_delete = slist_prepend(to_delete, strdup(src));
+            strcpy(to_delete[n_to_delete].filename, src);
+            n_to_delete++;
           }
 
           *strrchr(src, '/') = '\0';
@@ -508,7 +524,8 @@ static int do_copy_files(unsigned char all, unsigned char copy, unsigned char re
             printf(": OK\n");
           }
           if (remove) {
-            to_delete = slist_prepend(to_delete, strdup(src));
+            strcpy(to_delete[n_to_delete].filename, src);
+            n_to_delete++;
           }
         } else {
           global_err = 1;
@@ -523,24 +540,22 @@ next:
     free(selection);
   }
   if (remove) {
-    slist *w = to_delete;
-    while (w) {
+    for (i = 0; i < n_to_delete; i++) {
+      char *path;
+      path = to_delete[i].filename;
+
       if (!copy) {
-        printf("%s", w->data);
+        printf("%s", path);
       }
-      if (unlink(w->data) != 0) {
-        global_err = 1;
+      if (unlink(path) == 0) {
         if (!copy) {
-          printf(": %s\n", strerror(errno));
+          printf(": OK\n");
         }
       } else if (!copy) {
-        printf(": OK\n");
+        printf(": %s\n", strerror(errno));
       }
-      free(w->data);
-      to_delete = w->next;
-      free(w);
-      w = to_delete;
     }
+    free(to_delete);
   }
   return global_err;
 }
@@ -622,10 +637,7 @@ static void handle_input(void) {
       select_current(active_pane);
       return;
     case 'a':
-      select_all(active_pane, 1);
-      return;
-    case 'A':
-      select_all(active_pane, 0);
+      select_all(active_pane);
       return;
     case 'r':
     case 'R':
