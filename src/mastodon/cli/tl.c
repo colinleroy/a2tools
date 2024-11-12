@@ -393,12 +393,6 @@ static int show_search(void) {
   return 0;
 }
 
-static void __fastcall__ load_indicator(char on) {
-#if NUMCOLS == 80
-  gotoxy(LEFT_COL_WIDTH - 4, scrh - 1);
-  dputs(on ? "...":"   ");
-#endif
-}
 /* root is either an account or status id, depending on kind.
  * leaf_root is a reblogged status id
  */
@@ -406,8 +400,6 @@ static list *build_list(char *root, char *leaf_root, char kind) {
   list *l;
   char i, found_root;
   char n_posts;
-
-  load_indicator(1);
 
   l = malloc0(sizeof(list));
 
@@ -444,8 +436,6 @@ static list *build_list(char *root, char *leaf_root, char kind) {
     l->displayed_posts[0] = item_get(l, 0, 0);
   }
   l->n_posts = n_posts;
-
-  load_indicator(0);
 
   return l;
 }
@@ -938,11 +928,7 @@ static char background_load(list *l) {
   char i;
   for (i = 0; i < l->n_posts; i++) {
     if (l->displayed_posts[i] == NULL) {
-      load_indicator(1);
-
       l->displayed_posts[i] = item_get(l, i, 0);
-
-      load_indicator(0);
       return 0; /* background load one by one to check kb */
     }
   }
@@ -1017,10 +1003,8 @@ static void show_list(list *l) {
 
     print_header(l, root_status, root_notif);
 
-    load_indicator(1);
     print_list(l, limit);
     limit = 0;
-    load_indicator(0);
 
     while (!kbhit() && background_load(l) == 0) {
       /* keep loading */
@@ -1377,6 +1361,7 @@ int main(int argc, char **argv) {
   register_start_device();
 
 #ifdef __APPLE2ENH__
+  serial_throbber_set((void *)0x07D8);
   videomode(VIDEOMODE_80COL);
 #endif
 

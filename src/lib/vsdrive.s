@@ -2,6 +2,8 @@
                 .import         _serial_read_byte_no_irq
                 .import         serial_read_byte_no_irq_timeout
                 .import         _serial_putc_direct
+                .import         throbber_on, throbber_off
+
                 .export         _vsdrive_install, _vsdrive_uninstall
                 .destructor     _vsdrive_uninstall, 9
 
@@ -29,8 +31,6 @@ WPERR        = $2B
 
 DATE         = $BF90 ; Date storage
 TIME         = $BF92 ; Time storage
-
-SCRN_THROB   = $0427
 
                 .segment "RT_ONCE"
 
@@ -182,8 +182,7 @@ CALC_CHECKSUM:
         rts
 
 READFAIL:
-        lda        SCREEN_CONTENTS        ; Restore screen contents
-        sta        SCRN_THROB
+        jsr        throbber_off
         lda        #IOERR
         sec
         rts
@@ -195,9 +194,7 @@ READBLK:
         sta        CURCMD
 ; SEND COMMAND TO PC
         jsr        COMMAND_ENVELOPE
-; Grab the screen contents, remember it
-        lda        SCRN_THROB
-        sta        SCREEN_CONTENTS
+        jsr        throbber_on
 ; Pull and verify command envelope from host
         jsr        serial_read_byte_no_irq_timeout        ; Command envelope begin
         bcs        READFAIL
@@ -242,7 +239,6 @@ READBLK:
 ; READ BLOCK AND VERIFY
         ldx        #$00
         ldy        #$00
-        stx        SCRN_THROB
 RDLOOP:
         jsr        _serial_read_byte_no_irq
         sta        (BUFLO),Y
@@ -251,16 +247,13 @@ RDLOOP:
 
         inc        BUFHI
         inx
-        stx        SCRN_THROB
         cpx        #$02
         bne        RDLOOP
 
         dec        BUFHI
         dec        BUFHI        ; Bring BUFHI back down to where it belongs
 
-        lda        SCREEN_CONTENTS        ; Restore screen contents
-        sta        SCRN_THROB
-
+        jsr        throbber_off
         jsr        _serial_read_byte_no_irq        ; Checksum
         pha                ; Push checksum for now
         ldx        #$00
@@ -274,8 +267,7 @@ RDLOOP:
         rts
 
 WRITEFAIL:
-        lda        SCREEN_CONTENTS        ; Restore screen contents
-        sta        SCRN_THROB
+        jsr        throbber_off
         lda        #IOERR
         sec
         rts
@@ -289,6 +281,8 @@ WRITEBLK:
         sta        CURCMD
         jsr        COMMAND_ENVELOPE
 
+        jsr        throbber_on
+
 ; WRITE BLOCK AND CHECKSUM
         ldx        #$00
         stx        CHECKSUM
@@ -296,8 +290,6 @@ WRBKLOOP:
         ldy        #$00
 WRLOOP:
         lda        (BUFLO),Y
-; Write screen throbber
-        sta        SCRN_THROB
         jsr        _serial_putc_direct
         iny
         bne        WRLOOP
@@ -331,6 +323,8 @@ WRLOOP:
         jsr        _serial_read_byte_no_irq                ; Checksum of block - not the command envelope
         cmp        CHECKSUM
         bne        WRITEFAIL
+
+        jsr        throbber_off
         lda        #$00
         clc
         rts
@@ -364,7 +358,6 @@ VS_SLOT_DEV1:     .byte $00
 VS_SLOT_DEV2:     .byte $00
 UNIT2:            .byte $00
 CHECKSUM:         .byte $00
-SCREEN_CONTENTS:  .byte $00
 TEMPDT:           .byte $00,$00,$00,$00
 CURCMD:           .byte  $00
 original_driver:  .byte $00,$00

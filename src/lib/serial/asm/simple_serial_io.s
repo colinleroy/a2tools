@@ -20,6 +20,7 @@
         .export         _simple_serial_write
         .export         _simple_serial_flush
         .export         simple_serial_compute_ptr_end
+        .export         throbber_on, throbber_off, _serial_throbber_set
 
         .ifdef          SIMPLE_SERIAL_DUMP
         .export         _simple_serial_dump
@@ -38,6 +39,8 @@
         .else
         .segment "LOWCODE"
         .endif
+
+SCRN_THROB   = $0427
 
 ;void __fastcall__ simple_serial_puts(const char *buf) {
 .proc _simple_serial_puts: near
@@ -96,21 +99,23 @@
 ; void __fastcall__ simple_serial_write(const char *ptr, size_t nmemb) {
 .proc _simple_serial_write: near
         jsr     simple_serial_compute_ptr_end
+        jsr     throbber_on
+        bne     write_check   ; A not 0 there (throbber)
 write_again:
         ldy     #$00
         lda     (ptr4),y
         jsr     _serial_putc_direct
-
         inc     ptr4
-        bne     :+
+        bne     write_check
         inc     ptr4+1
-:       lda     ptr4
+write_check:
+        lda     ptr4
         cmp     ptr3
         bne     write_again
         ldx     ptr4+1
         cpx     ptr3+1
         bne     write_again
-        rts
+        jmp     throbber_off
 .endproc
 
 .proc _simple_serial_flush: near
@@ -119,3 +124,30 @@ write_again:
         bne     _simple_serial_flush
         rts
 .endproc
+
+_serial_throbber_set:
+        sta     throbber_store+1
+        sta     throbber_on+1
+        stx     throbber_store+2
+        stx     throbber_on+2
+        rts
+
+        .code
+        ; Patched functions
+throbber_on:
+        lda     SCRN_THROB
+        sta     SCREEN_CONTENTS
+        .ifdef  __APPLE2ENH__
+        lda     #'C'
+        .else
+        lda     #('*'|$80)
+        .endif
+        bne     throbber_store
+throbber_off:
+        lda     SCREEN_CONTENTS
+throbber_store:
+        sta     SCRN_THROB
+        rts
+
+        .bss
+SCREEN_CONTENTS:  .byte $00

@@ -3,6 +3,7 @@
 
         .import         _serial_putc_direct
         .import         _simple_serial_set_irq
+        .import         throbber_on, throbber_off
 
         .import         popax
         .importzp       ptr3, ptr4
@@ -29,6 +30,8 @@
         sta     ptr4            ; Store buffer
         stx     ptr4+1
 
+        jsr     throbber_on
+
         ldy     #0              ; Inner loop counter
 
         lda     #0
@@ -46,6 +49,7 @@
         bne     :-              ; next byte
 
         inc     ptr4+1
+
         dex
         bne     :-              ; next page
 
@@ -64,5 +68,5 @@ done:
         jsr     _simple_serial_set_irq
 
         plp
-        rts
+        jmp     throbber_off
 .endproc

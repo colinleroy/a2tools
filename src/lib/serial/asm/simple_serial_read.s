@@ -18,6 +18,7 @@
         .export         _simple_serial_read
 
         .import         simple_serial_compute_ptr_end
+        .import         throbber_on, throbber_off
         .import         _ser_get
 
         .importzp       ptr3, ptr4
@@ -33,6 +34,7 @@
 ;void __fastcall__ simple_serial_read(char *ptr, size_t nmemb) {
 .proc _simple_serial_read: near
         jsr     simple_serial_compute_ptr_end
+        jsr     throbber_on
 
         lda     #$00
         beq     check_bound
@@ -57,5 +59,5 @@ check_bound:
         cpx     ptr3+1
         bne     read_again_axok
 
-        rts
+        jmp     throbber_off
 .endproc

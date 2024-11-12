@@ -50,15 +50,6 @@ char search_str[80] = "";
 
 #pragma code-name(push, "LC")
 
-static void load_indicator(char on) {
-#ifdef __APPLE2ENH__
-  gotoxy(76, 3);
-#else
-  gotoxy(36, 3);
-#endif
-  cputs(on ? "...":"   ");
-}
-
 #ifdef __APPLE2ENH__
 #define SEARCH_SAVE_FILE "/RAM/WTSRCH"
 #define LOGO_SAVE_FILE "/RAM/LOGO.HGR"
@@ -148,8 +139,6 @@ static void load_video(char *host, InstanceTypeId instance_type, char *id) {
   strcpy(tmp_buf, id); /* Make it safe, id points to BUF_8K */
   n_host = strdup(host); /* Same for host */
 
-  load_indicator(1);
-
   /* Build video details URL */
   sprintf((char *)BUF_1K_ADDR,
           video_provider_get_protocol_string(instance_type, VIDEO_DETAILS_ENDPOINT),
@@ -229,8 +218,6 @@ static void load_video(char *host, InstanceTypeId instance_type, char *id) {
       }
     }
 
-    load_indicator(0);
-
     /* Peertube videos streamingPlaylists files */
     if (m3u8_ptr = strstr(video_url, "-fragmented.mp4")) {
       /* Is there an m3u8 playlist? libav* opens them much quicker. */
@@ -254,7 +241,6 @@ static void load_video(char *host, InstanceTypeId instance_type, char *id) {
   }
 out:
   free(n_host);
-  load_indicator(0);
 }
 
 #pragma code-name(push, "LOWCODE")
@@ -312,7 +298,6 @@ display_result:
          (cur_line/N_VIDEO_DETAILS)+1, n_lines/N_VIDEO_DETAILS);
   print_menu();
 
-  load_indicator(1);
   init_text();
   bzero((char *)HGR_PAGE, HGR_LEN);
 
@@ -332,7 +317,6 @@ display_result:
       }
     }
   }
-  load_indicator(0);
 
 read_kbd:
   init_hgr(1);
@@ -379,13 +363,10 @@ static void search(char *host, InstanceTypeId instance_type) {
           video_provider_get_protocol_string(instance_type, VIDEO_SEARCH_ENDPOINT),
           host, search_str);
 
-  load_indicator(1);
-
   surl_start_request(NULL, 0, (char *)BUF_1K_ADDR, SURL_METHOD_GET);
   if (!surl_response_ok()) {
     clrscr();
     printf("Error %d", surl_response_code());
-    load_indicator(0);
     cgetc();
     return;
   }
@@ -395,12 +376,10 @@ static void search(char *host, InstanceTypeId instance_type) {
                     translit_charset,
                     SURL_HTMLSTRIP_NONE,
                     BUF_8K_SIZE) > 0) {
-    load_indicator(0);
     search_results(instance_type);
   } else {
     clrscr();
     printf("No results.");
-    load_indicator(0);
     cgetc();
   }
 }
@@ -514,6 +493,9 @@ int main(void) {
   videomode(VIDEOMODE_80COL);
   backup_restore_logo("w");
 #endif
+
+  serial_throbber_set((void *)0x07F7);
+
 
   screensize(&scrw, &scrh);
   surl_ping();
