@@ -129,15 +129,6 @@ void show_radio_metadata (char *data) {
   cputs(value);
 }
 
-static void load_indicator(char on) {
-#ifdef __APPLE2ENH__
-  gotoxy(77, 0);
-#else
-  gotoxy(37, 0);
-#endif
-  cputs(on ? "...":"   ");
-}
-
 static char do_server_screen = 0;
 static char cmd_cb(char c) {
   char prev_cursor = cursor(0);
@@ -300,7 +291,6 @@ display_result:
   bzero((char *)HGR_PAGE, HGR_LEN);
 
   if (lines[cur_line+IDX_FAVICON][0] != '\0') {
-    load_indicator(1);
     surl_start_request(NULL, 0, lines[cur_line+IDX_FAVICON], SURL_METHOD_GET);
     if (surl_response_ok()) {
       simple_serial_putc(SURL_CMD_HGR);
@@ -317,7 +307,6 @@ display_result:
         }
       }
     }
-    load_indicator(0);
   } else {
     backup_restore_logo("r");
   }

@@ -722,6 +722,7 @@ void main(void) {
 #ifdef __APPLE2ENH__
   videomode(VIDEOMODE_80COL);
 #endif
+  serial_throbber_set((void *)0x07F7);
 
   clrscr();
   init_hgr(1);

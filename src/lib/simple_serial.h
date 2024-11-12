@@ -63,6 +63,7 @@ void __fastcall__ simple_serial_setup_no_irq_regs(void);
 unsigned char __fastcall__ serial_read_byte_no_irq(void);
 void __fastcall__ serial_putc_direct(unsigned char c);
 void __fastcall__ simple_serial_read(char *ptr, size_t nmemb);
+void __fastcall__ serial_throbber_set(void *addr);
 
 #define tty_speed_to_str(speed)        \
   ((speed == SER_BAUD_2400) ? "2400":  \
@@ -84,6 +85,8 @@ void simple_serial_flush_fd(int fd);
 #define simple_serial_configure()
 #define simple_serial_setup_no_irq_regs()
 #define simple_serial_set_irq(i)
+#define serial_throbber_set(i)
+
 unsigned char __fastcall__ simple_serial_putc(char c);
 char *tty_speed_to_str(int speed);
 void __fastcall__ simple_serial_read(char *ptr, size_t nmemb);

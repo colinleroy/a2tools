@@ -184,7 +184,7 @@ char api_interact(char *id, char type, char *action) {
   get_surl_for_endpoint(SURL_METHOD_POST, endpoint_buf);
 
   surl_send_data_params((uint32)0, SURL_DATA_X_WWW_FORM_URLENCODED_RAW);
-  /* No need to send data */
+  surl_send_data_chunk(NULL, 0);
   surl_read_response_header();
 
   if (surl_response_ok())
