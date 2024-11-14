@@ -35,7 +35,7 @@ void __fastcall__ clrnln(void) {
   #endif
 }
 
-int print_buf(char *buffer, char hide, char allow_scroll) {
+int print_buf(register char *buffer, char hide, char allow_scroll) {
   static char x;
   register char *w;
   static char l_allow_scroll;
@@ -69,10 +69,10 @@ int print_buf(char *buffer, char hide, char allow_scroll) {
       x = 0;
     } else {
       if (x == wrap_idx) {
-        CHECK_NO_CRLF();
+        --writable_lines;
         x = 0;
         /* don't scroll last char */
-        if (writable_lines == 1 && !l_allow_scroll) {
+        if (writable_lines == 0 && !l_allow_scroll) {
           cputc(l_hide ? '.':*w);
           return -1;
         }
@@ -92,7 +92,7 @@ int print_buf(char *buffer, char hide, char allow_scroll) {
   return 0;
 }
 
-int print_status(status *s, char hide, char full) {
+int print_status(register status *s, char hide, char full) {
   poll *p = s->poll;
   account *a = s->account;
   char scrolled = 0;

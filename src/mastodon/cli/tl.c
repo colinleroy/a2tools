@@ -65,7 +65,8 @@ err_out:
 }
 
 static int print_account(account *a) {
-  char y;
+  char i, y;
+  writable_lines--;
   dputs(a->display_name); /* 0 */
   CHECK_AND_CRLF();
   dputc(arobase);         /* 1 */
@@ -111,6 +112,12 @@ static int print_account(account *a) {
     CHECK_NO_CRLF();
   }
 
+  for (i = 0; i < a->n_fields; i++) {
+    CHECK_AND_CRLF();
+    print_buf(a->fields[i], 0, 0);
+  }
+
+  CHECK_AND_CRLF();
   CHECK_AND_CRLF();
   if (print_buf(a->note, 0, 1) < 0) {
     return -1;
@@ -1127,7 +1134,7 @@ inject_cmd:
       case SHOW_HELP:
         clrscr();
         show_help(l, root_status, root_notif);
-        c = cgetc();
+        c = tolower(cgetc());
         clrscr();
         l->half_displayed_post = 0;
         if (c == HELP_KEY) {

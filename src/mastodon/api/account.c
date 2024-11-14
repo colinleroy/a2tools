@@ -7,64 +7,76 @@
 #include "simple_serial.h"
 #include "strsplit.h"
 #include "api.h"
+#include "atoc.h"
+#include "cli.h"
 
-#ifdef __CC65__
-  #ifdef SURL_TO_LANGCARD
-  #pragma code-name (push, "LC")
-  #else
-  #pragma code-name (push, "LOWCODE")
-  #endif
-#endif
+extern unsigned char scrw;
+
+static char *field_selector = ".fields[i]|(.name+\": \"+.value)";
+#define FIELD_SELECTOR_NUM 8
 
 account *account_new_from_json(void) {
-  account *a = account_new();
+  account *a = NULL;
   int r;
-  char n_lines;
+  char i, n_lines;
   char *note;
   
   if (surl_get_json(gen_buf,
-                    ".id,.username,.acct,.display_name,"
+                    ".id,.display_name,.acct,.username,"
                     ".created_at,.followers_count,"
-                    ".following_count",
+                    ".following_count,(.fields|length)",
                     translit_charset, SURL_HTMLSTRIP_NONE, BUF_SIZE) >= 0) {
-    n_lines = strnsplit_in_place(gen_buf, '\n', lines, 7);
-    if (n_lines > 5) {
-      a->id = strdup(lines[0]);
-      a->username = strdup(lines[1]);
-      a->acct = strdup(lines[2]);
-      a->display_name = strdup(lines[3]);
+    n_lines = strnsplit_in_place(gen_buf, '\n', lines, 8);
+    if (n_lines == 8) {
+      a = account_new_from_lines();
+
       a->created_at = date_format(lines[4], 0);
       a->followers_count = atol(lines[5]);
       a->following_count = atol(lines[6]);
-    }
-    if (n_lines < 6)
-      goto err_out;
+      i = atoc(lines[7]);
+      if (i > MAX_ACCT_FIELDS) {
+        i = MAX_ACCT_FIELDS;
+      }
+      a->fields = malloc0(sizeof(char *)*i);
+      a->n_fields = i;
+      do {
+        char len = scrw - RIGHT_COL_START - 1;
+        i--;
+        field_selector[FIELD_SELECTOR_NUM] = i+'0';
+        a->fields[i] = malloc0(len);
+        surl_get_json(a->fields[i], field_selector, translit_charset, SURL_HTMLSTRIP_FULL, len);
+      } while (i);
 
-    note = malloc0(2048);
-    r = surl_get_json(note, ".note", translit_charset, SURL_HTMLSTRIP_FULL, 2048);
-    if (r < 0) {
-      free(note);
-    } else {
-      a->note = realloc(note, r + 1);
+      note = malloc0(2048);
+      r = surl_get_json(note, ".note", translit_charset, SURL_HTMLSTRIP_FULL, 2048);
+      if (r < 0) {
+        free(note);
+      } else {
+        a->note = realloc(note, r + 1);
+      }
     }
-  } else {
-    goto err_out;
   }
 
   /* TODO fields */
 
   return a;
-err_out:
-  account_free(a);
-  return NULL;
+}
+
+account *account_new_from_lines(void) {
+  account *a = account_new();
+  a->id = strdup(lines[0]);
+  a->display_name = strdup(lines[1]);
+  a->acct = strdup(lines[2]);
+  a->username = strdup(lines[3]);
+
+  return a;
 }
 
 #ifdef __CC65__
-#pragma code-name (pop)
+#pragma code-name (push, "LC")
 #endif
 
 account *api_get_profile(char *id) {
-  account *a;
   char n_lines;
 
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, ACCOUNTS_ENDPOINT"/%s",
@@ -74,22 +86,14 @@ account *api_get_profile(char *id) {
   if (!surl_response_ok()) {
     return NULL;
   }
-
-  a = account_new();
-
-  if (surl_get_json(gen_buf, ".id,.display_name,.acct,.username", translit_charset, SURL_HTMLSTRIP_NONE, BUF_SIZE) >= 0) {
-    n_lines = strnsplit_in_place(gen_buf,'\n', lines, 4);
-    if (n_lines < 4) {
-      account_free(a);
-      a = NULL;
-      return NULL;
-    }
-    a->id = strdup(lines[0]);
-    a->display_name = strdup(lines[1]);
-    a->acct = strdup(lines[2]);
-    a->username = strdup(lines[3]);
+  if (surl_get_json(gen_buf, ".id,.display_name,.acct,.username", translit_charset, SURL_HTMLSTRIP_NONE, BUF_SIZE) < 0) {
+    return NULL;
   }
-  return a;
+  n_lines = strnsplit_in_place(gen_buf,'\n', lines, 4);
+  if (n_lines < 4) {
+    return NULL;
+  }
+  return account_new_from_lines();
 }
 
 void account_free(account *a) {
@@ -108,3 +112,6 @@ void account_free(account *a) {
   free(a->fields);
   free(a);
 }
+#ifdef __CC65__
+#pragma code-name (pop)
+#endif

@@ -257,22 +257,20 @@ char *compose_get_status_text(char *status_id) {
 const char compose_poll_durations_hours[] = {1, 6, 12, 24, 48, 72, 168};
 const char *compose_poll_durations_seconds[] = {"3600", "21600", "43200", "86400", "172800", "259200", "604800"};
 
+#define ORG_FRENCH_CHARS "{}@|]\\"
+#define SUB_FRENCH_CHARS "eeau@c"
+
 void compose_sanitize_str(char *s) {
   char *r;
+  unsigned char i;
   while ((r = strchr(s, '"')))
     *r = '\'';
   if(!strcmp(translit_charset, "ISO646-FR1")) {
-    while ((r = strchr(s, '{')))
-      *r = 'e';
-    while ((r = strchr(s, '}')))
-      *r = 'e';
-    while ((r = strchr(s, '\\')))
-      *r = 'c';
-    while ((r = strchr(s, '@')))
-      *r = 'a';
-    while ((r = strchr(s, '|')))
-      *r = 'u';
-    while ((r = strchr(s, ']')))
-      *r = '@';
+    i = sizeof(ORG_FRENCH_CHARS);
+    do {
+      i--;
+      while ((r = strchr(s, ORG_FRENCH_CHARS[i])))
+        *r = SUB_FRENCH_CHARS[i];
+    } while (i);
   }
 }
