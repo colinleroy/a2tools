@@ -11,6 +11,8 @@ typedef struct _account account;
 #define RSHIP_MUTING      (1<<5)
 #define RSHIP_FOLLOW_REQ  (1<<6)
 
+#define MAX_ACCT_FIELDS    4
+
 struct _account {
   signed char displayed_at;
   char *id;
@@ -30,6 +32,8 @@ struct _account {
 #define account_new() (account *)malloc0(sizeof(account))
 
 account *account_new_from_json(void);
+account *account_new_from_lines(void);
+
 void account_free(account *a);
 account *api_get_profile(char *id);
 

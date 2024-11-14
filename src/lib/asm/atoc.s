@@ -1,7 +1,7 @@
         .export       _atoc
         .import       _atoi
 
-; unsigned char __fastcall__ atoc(int x)
+; unsigned char __fastcall__ atoc(char *x)
 _atoc:
         jsr       _atoi
         cpx       #$00
