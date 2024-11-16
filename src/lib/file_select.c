@@ -23,16 +23,16 @@
 #include <dio.h>
 #include <device.h>
 #include <apple2.h>
+#include <conio.h>
 #else
 #define _DE_ISDIR(x) ((x) == DT_DIR)
 #endif
-#include "extended_conio.h"
 #include <ctype.h>
 #include <errno.h>
 #include <dirent.h>
+#include "platform.h"
 #include "clrzone.h"
 #include "malloc0.h"
-#include "prodos_dir_file_count.h"
 
 #define PATHNAME_MAX FILENAME_MAX
 #define PRODOS_FILENAME_MAX 16
@@ -117,7 +117,7 @@ posix_use_dir:
     DIR *d = opendir(last_dir);
     struct dirent *ent;
     if (d) {
-      file_entries = malloc0(sizeof(file_entry)*prodos_dir_file_count(d));
+      file_entries = malloc0(sizeof(file_entry)*dir_entry_count(d));
       while ((ent = readdir(d))) {
         if (dir && !_DE_ISDIR(ent->d_type))
           continue;
