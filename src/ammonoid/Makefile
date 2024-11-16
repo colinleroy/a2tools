@@ -42,7 +42,6 @@ ammonoid_SOURCES := \
 	../lib/dgets.c \
 	../lib/dputc.s \
 	../lib/scroll.s \
-	../lib/prodos_dir_file_count.s \
 	../lib/FVTABZ.s \
 
 ammonoid_CLCFLAGS = -t $(CC65_TARGET) -I ../lib \
