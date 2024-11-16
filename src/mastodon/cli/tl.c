@@ -932,9 +932,11 @@ static int load_state(list ***lists) {
         loaded = j;
       }
     }
-    if (i == num_lists && loaded != l->first_displayed_post
-        && l->first_displayed_post > -1) {
-      load_item_at(l, l->first_displayed_post, 1);
+    if (i == num_lists) {
+      signed char f = l->first_displayed_post;
+      if (loaded != f && f > -1) {
+        load_item_at(l, f, 1);
+      }
     }
   }
 
@@ -971,8 +973,7 @@ static void do_vote (status *status) {
     gotoxy(0, 0);
     writable_lines = 23;
     if (print_status(status, 0, 1) == 0) {
-      c = wherey();
-      c -= 2;
+      c = wherey() - 2;
     } else {
       c = scrh - 1;
     }
@@ -994,9 +995,12 @@ static void do_vote (status *status) {
       case '3':
       case '4':
         if (!status->poll->multiple) {
+          /* reset all options */
           memset(status->poll->own_votes, 0, MAX_POLL_OPTIONS);
         }
-        status->poll->own_votes[c-'1'] = !status->poll->own_votes[c-'1'];
+        /* toggle current option */
+        c -= '1';
+        status->poll->own_votes[c] = !status->poll->own_votes[c];
         break;
     }
   }
