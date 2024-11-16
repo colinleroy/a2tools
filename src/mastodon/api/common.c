@@ -38,23 +38,6 @@ char selector[SELECTOR_SIZE];
 char endpoint_buf[ENDPOINT_BUF_SIZE];
 char *lines[MAX_LINES_NUM];
 
-char *date_format(char *in, char with_time) {
-  char *out = strdup(in);
-  char *sep = strchr(out, 'T');
-  if (sep) {
-    if (!with_time) {
-      *sep = '\0';
-      return out;
-    }
-    *sep = ' ';
-  }
-  sep = strchr(out, '.');
-  if (sep) {
-    *sep = '\0';
-  }
-  return out;
-}
-
 const surl_response *get_surl_for_endpoint(char method, char *endpoint) {
   static char *hdrs[1] = {NULL};
 
