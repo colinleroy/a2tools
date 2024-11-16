@@ -318,6 +318,10 @@ static char is_root(list *l, char idx) {
   return l->root && !strcmp(l->root, l->ids[idx]);
 }
 
+static item *load_item_at(list *l, char idx, char full) {
+  return (l->displayed_posts[idx] = item_get(l, idx, full));
+}
+
 static char load_prev_posts(list *l) {
   char *first_id;
   char **new_ids;
@@ -359,7 +363,7 @@ static char load_prev_posts(list *l) {
     /* fetch last one before removing the
      * "Loading" header */
     i = loaded - 1;
-    l->displayed_posts[i] = item_get(l, i, is_root(l, i));
+    load_item_at(l, i, is_root(l, i));
 
     l->first_displayed_post += loaded;
   }
@@ -449,7 +453,7 @@ static list *build_list(char *root, char *leaf_root, char kind) {
     for (i = 0; i < n_posts; i++) {
       if (is_root(l, i)) {
           /* Load first for the header */
-          if ((l->displayed_posts[i] = item_get(l, i, 1)) != NULL) {
+          if ((load_item_at(l, i, 1)) != NULL) {
             l->first_displayed_post = i;
             found_root = 1;
           }
@@ -458,7 +462,7 @@ static list *build_list(char *root, char *leaf_root, char kind) {
     }
   }
   if (n_posts > 0 && !found_root) {
-    l->displayed_posts[0] = item_get(l, 0, 0);
+    load_item_at(l, 0, 0);
   }
   l->n_posts = n_posts;
 
@@ -566,8 +570,7 @@ update:
         gotox(0);
       }
 
-      disp = item_get(l, i, full);
-      l->displayed_posts[i] = disp;
+      disp = load_item_at(l, i, full);
 
       if (i > first && writable_lines != 0) {
         dputs(CLEAR_LOAD_MSG);
@@ -925,14 +928,13 @@ static int load_state(list ***lists) {
       l->post_height[j] = state_get_int(fp);
 
       if (i == num_lists && is_root(l, j)) {
-        l->displayed_posts[j] = item_get(l, j, 1);
+        load_item_at(l, j, 1);
         loaded = j;
       }
     }
     if (i == num_lists && loaded != l->first_displayed_post
         && l->first_displayed_post > -1) {
-      l->displayed_posts[l->first_displayed_post] =
-          item_get(l, l->first_displayed_post, 1);
+      load_item_at(l, l->first_displayed_post, 1);
     }
   }
 
@@ -953,7 +955,7 @@ static char background_load(list *l) {
   char i;
   for (i = 0; i < l->n_posts; i++) {
     if (l->displayed_posts[i] == NULL) {
-      l->displayed_posts[i] = item_get(l, i, 0);
+      load_item_at(l, i, 0);
       return 0; /* background load one by one to check kb */
     }
   }
