@@ -410,6 +410,10 @@ out:
   return r;
 }
 
+static void clear_displayed_posts(list *l) {
+  memset(l->displayed_posts, 0, N_STATUS_TO_LOAD * sizeof(item *));
+  memset(l->post_height, -1, N_STATUS_TO_LOAD);
+}
 /* root is either an account or status id, depending on kind.
  * leaf_root is a reblogged status id
  */
@@ -434,8 +438,7 @@ static list *build_list(char *root, char *leaf_root, char kind) {
 
   n_posts = load_around(l, N_STATUS_TO_LOAD, NULL, NULL, l->ids);
 
-  memset(l->displayed_posts, 0, n_posts * sizeof(item *));
-  memset(l->post_height, -1, n_posts);
+  clear_displayed_posts(l);
 
   found_root = 0;
   if (root) {
@@ -902,7 +905,7 @@ static int load_state(list ***lists) {
 
     n_posts = l->n_posts;
 
-    memset(l->displayed_posts, 0, N_STATUS_TO_LOAD * sizeof(status *));
+    clear_displayed_posts(l);
 
     /* coverity[tainted_argument] */
     fgets(gen_buf, BUF_SIZE, fp);
