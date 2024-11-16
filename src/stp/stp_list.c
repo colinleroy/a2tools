@@ -127,10 +127,11 @@ char *stp_get_start_url(char *header, char *default_url, cmd_handler_func cmd_cb
   changed |= strcmp(tmp_buf, login);
 
   cputs("Password: ");
-  echo(0);
+  dgets_echo_on = 0;
   strcpy(tmp_buf, password);
   dget_text(password, 32, cmd_cb, 0);
-  echo(1);
+  dgets_echo_on = 1;
+
   if (cmd_cb) {
     cputs("\r\n");
   }
