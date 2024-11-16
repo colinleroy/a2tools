@@ -105,6 +105,7 @@ static const char *surl_method_str(unsigned char method) {
 }
 static void handle_signal(int signal) {
   if (signal == SIGTERM) {
+    LOG("SIG: Exiting on signal %d\n", signal);
     simple_serial_close();
     exit(0);
   } else {
@@ -727,13 +728,6 @@ abort:
           secs = cur_time.tv_sec - 1;
           msecs = 1000 + (cur_time.tv_nsec / 1000000);
 
-          LOG("RESP: JSON '%s' into %zu bytes%s, translit: %s: %zu bytes %s (%lums)\n", param, bufsize,
-                  striphtml ? ", striphtml":"",
-                  translit,
-                  result != NULL ? min(strlen(result),bufsize) : 0,
-                  result != NULL ? "" :"not found",
-                  (1000*(secs - start_secs))+(msecs - start_msecs));
-
           if (result) {
             /* We have a result */
             simple_serial_putc(SURL_ERROR_OK);
@@ -771,9 +765,24 @@ abort:
 
             IO_BARRIER("JSON, pre-content");
             simple_serial_puts(result);
+
+            LOG("RESP: JSON '%s' into %zu bytes%s, translit: %s: %zu bytes (%lums)\n",
+                    param, bufsize,
+                    striphtml ? ", striphtml":"",
+                    translit,
+                    strlen(result),
+                    (1000*(secs - start_secs))+(msecs - start_msecs));
+            if (VERBOSE) {
+              LOG("----\n%s\n----\n", result);
+            }
             free(result);
           } else {
             simple_serial_putc(SURL_ERROR_NOT_FOUND);
+            LOG("RESP: JSON '%s' into %zu bytes%s, translit: %s: Not found (%lums)\n",
+                    param, bufsize,
+                    striphtml ? ", striphtml":"",
+                    translit,
+                    (1000*(secs - start_secs))+(msecs - start_msecs));
           }
         }
 
