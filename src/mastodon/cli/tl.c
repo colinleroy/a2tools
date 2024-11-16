@@ -314,6 +314,10 @@ static void set_full_hscrollwindow(void) {
   set_hscrollwindow(0, scrw);
 }
 
+static char is_root(list *l, char idx) {
+  return l->root && !strcmp(l->root, l->ids[idx]);
+}
+
 static char load_prev_posts(list *l) {
   char *first_id;
   char **new_ids;
@@ -355,7 +359,7 @@ static char load_prev_posts(list *l) {
     /* fetch last one before removing the
      * "Loading" header */
     i = loaded - 1;
-    l->displayed_posts[i] = item_get(l, i, !strcmp(l->root, l->ids[i]));
+    l->displayed_posts[i] = item_get(l, i, is_root(l, i));
 
     l->first_displayed_post += loaded;
   }
@@ -443,7 +447,7 @@ static list *build_list(char *root, char *leaf_root, char kind) {
   found_root = 0;
   if (root) {
     for (i = 0; i < n_posts; i++) {
-      if(!strcmp(l->ids[i], root)) {
+      if (is_root(l, i)) {
           /* Load first for the header */
           if ((l->displayed_posts[i] = item_get(l, i, 1)) != NULL) {
             l->first_displayed_post = i;
@@ -486,7 +490,7 @@ static void uncompact_list(list *l) {
   first = l->first_displayed_post;
   l->half_displayed_post = 0;
   if (first >= 0) {
-    full = (l->root && !strcmp(l->root, l->ids[first]));
+    full = is_root(l, first);
     l->displayed_posts[first] =
       item_get(l, first, full);
   }
@@ -554,7 +558,7 @@ update:
     if (kbhit() && limit == 0) {
       break;
     }
-    full = (l->root && !strcmp(l->root, l->ids[i]));
+    full = is_root(l, i);
     disp = (item *)l->displayed_posts[i];
     if (disp == NULL) {
       if (i > first && writable_lines != 0) {
@@ -920,7 +924,7 @@ static int load_state(list ***lists) {
       l->ids[j] = state_get_str(fp);
       l->post_height[j] = state_get_int(fp);
 
-      if (i == num_lists && l->root && !strcmp(l->root, l->ids[j])) {
+      if (i == num_lists && is_root(l, j)) {
         l->displayed_posts[j] = item_get(l, j, 1);
         loaded = j;
       }
