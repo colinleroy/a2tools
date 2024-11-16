@@ -1,3 +1,4 @@
+#include <fcntl.h>
 #include <dirent.h>
 #include <conio.h>
 #include <string.h>
@@ -11,7 +12,6 @@
 
 #include "clrzone.h"
 #include "scrollwindow.h"
-#include "prodos_dir_file_count.h"
 #include "malloc0.h"
 #include "dgets.h"
 
@@ -112,10 +112,13 @@ static void load_directory(unsigned char pane) {
     struct dirent *ent;
     struct dirent *entries = NULL;
     unsigned int n = 0;
+    
+    rewinddir(d);
+
     DEBUG("opened %s (%p)\n", pane_directory[pane], d);
     if (d) {
-      entries = allocate_entries(pane, prodos_dir_file_count(d));
-      DEBUG("allocated %d entries %p\n", prodos_dir_file_count(d), entries);
+      entries = allocate_entries(pane, dir_entry_count(d));
+      DEBUG("allocated %d entries %p\n", dir_entry_count(d), entries);
       while ((ent = readdir(d))) {
         DEBUG("copying entry %d (%s)\n", n, ent->d_name);
         deselect(ent);
@@ -344,6 +347,18 @@ static void refresh_other_pane(void) {
   }
 }
 
+static void file_info(void) {
+  struct dirent *entry = get_current_entry();
+  if (!entry) {
+    return;
+  }
+  set_logwindow();
+  printf("%s: %lub, type $%02x, access $%02x",
+         entry->d_name, entry->d_size, entry->d_type, entry->d_access);
+  cgetc();
+  clrscr();
+}
+
 /* Rename current file in pane */
 static void rename_file(void) {
   struct dirent *entry = get_current_entry();
@@ -390,7 +405,7 @@ static void make_directory(void) {
     return;
   }
 
-  mkdir(new_name);
+  mkdir(new_name, O_RDWR);
 out:
   free(new_name);
   clrscr();
@@ -411,25 +426,39 @@ typedef struct _file_list {
   char filename[FILENAME_MAX+1];
 } file_list;
 
+static char *selection = NULL;
+
+static void backup_selection(void) {
+  int i;
+  if (selection) {
+    __asm__("brk");
+  }
+  selection = malloc0(pane_num_files[active_pane]);
+  for (i = 0; i < pane_num_files[active_pane]; i++) {
+    struct dirent *entry = get_entry_at(i);
+    selection[i] = is_selected(entry);
+  }
+}
+
+static void restore_selection(void) {
+  int i;
+  for (i = 0; i < pane_num_files[active_pane]; i++) {
+    struct dirent *e = get_entry_at(i);
+    set_select(e, selection[i]);
+  }
+  free(selection);
+  selection = NULL;
+}
+
 #pragma static-locals (push,off) /* need reentrancy */
-static int do_copy_files(unsigned char all, unsigned char copy, unsigned char remove) {
+static int do_iterate_files(unsigned char all, unsigned char copy, unsigned char remove) {
   int global_err = 0;
-  int i, n;
-  char *selection = NULL;
+  int n;
   file_list *to_delete = NULL;
   int n_to_delete = 0;
 
   if (copy_buf == NULL) {
     copy_buf = malloc(COPY_BUF_SIZE);
-  }
-
-  if (!all) {
-    /* backup selection */
-    selection = malloc0(pane_num_files[active_pane]);
-    for (i = 0; i < pane_num_files[active_pane]; i++) {
-      struct dirent *entry = get_entry_at(i);
-      selection[i] = is_selected(entry);
-    }
   }
 
   if (remove) {
@@ -452,21 +481,24 @@ static int do_copy_files(unsigned char all, unsigned char copy, unsigned char re
             goto next;
           }
           printf("mkdir %s", dest);
-          dir_err = (mkdir(dest) != 0);
+          dir_err = (mkdir(dest, O_RDWR) != 0);
           if (!dir_err) {
             printf(": OK\n");
           }
         }
         if (!dir_err) {
+          if (!all) {
+            backup_selection();
+          }
+
           /* Recurse */
           pane_chdir(active_pane, src);
           if (copy) {
             pane_chdir(!active_pane, dest);
           }
 
-          dir_err = do_copy_files(1, copy, remove);
+          dir_err = do_iterate_files(1, copy, remove);
           global_err |= dir_err;
-
           if (remove && !dir_err) {
             strcpy(to_delete[n_to_delete].filename, src);
             n_to_delete++;
@@ -479,12 +511,9 @@ static int do_copy_files(unsigned char all, unsigned char copy, unsigned char re
           if (copy) {
             pane_chdir(!active_pane, dest);
           }
+
           if (!all) {
-            /* Restore selection */
-            for (i = 0; i < pane_num_files[active_pane]; i++) {
-              struct dirent *e = get_entry_at(i);
-              set_select(e, selection[i]);
-            }
+            restore_selection();
           }
         } else {
           global_err = 1;
@@ -536,13 +565,11 @@ next:
       free(dest);
     }
   }
-  if (!all) {
-    free(selection);
-  }
+
   if (remove) {
-    for (i = 0; i < n_to_delete; i++) {
+    for (n = 0; n < n_to_delete; n++) {
       char *path;
-      path = to_delete[i].filename;
+      path = to_delete[n].filename;
 
       if (!copy) {
         printf("%s", path);
@@ -562,7 +589,7 @@ next:
 
 #pragma static-locals (pop)
 
-static void copy_files(unsigned char all, unsigned char copy, unsigned char remove) {
+static void iterate_files(unsigned char all, unsigned char copy, unsigned char remove) {
   char *pane_orig_directory[2] = {NULL, NULL};
 
   if (copy && !strcmp(pane_directory[0], pane_directory[1])) {
@@ -574,7 +601,7 @@ static void copy_files(unsigned char all, unsigned char copy, unsigned char remo
   pane_orig_directory[0] = strdup(pane_directory[0]);
   pane_orig_directory[1] = strdup(pane_directory[1]);
 
-  if (do_copy_files(all, copy, remove) != 0) {
+  if (do_iterate_files(all, copy, remove) != 0) {
     printf("There have been errors.\n");
     cgetc();
   }
@@ -649,15 +676,19 @@ static void handle_input(void) {
       return;
     case 'c':
     case 'C':
-      copy_files(0, 1, 0);
+      iterate_files(0, 1, 0);
       return;
     case 'm':
     case 'M':
-      copy_files(0, 1, 1);
+      iterate_files(0, 1, 1);
       return;
     case 'd':
     case 'D':
-      copy_files(0, 0, 1);
+      iterate_files(0, 0, 1);
+      return;
+    case 'i':
+    case 'I':
+      file_info();
       return;
   }
 }
