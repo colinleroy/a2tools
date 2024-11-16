@@ -22,23 +22,18 @@ upload_subdir :=
 CPU=65c02
 endif
 endif
-common_SOURCES := \
-	api/common.c \
-	../lib/dgets.c \
-	../lib/strsplit.c
 
 common_CC65SOURCES := \
 	../lib/serial/asm/simple_serial.s \
 	../lib/serial/asm/simple_serial_io.s \
 	$(serial_hw_SOURCES) \
 	../lib/surl/asm/surl_core.s \
-	../lib/surl/asm/surl_send.s \
 	../lib/surl/asm/surl_get_json.s \
 	../lib/surl/asm/surl_read_with_barrier.s \
-	../lib/asm/scrollwindow.s \
 	../lib/asm/path_helper.s \
 	../lib/asm/clrzone.s \
 	../lib/asm/malloc0.s \
+	../lib/asm/scrollwindow.s \
 	../lib/dputs.s \
 	../lib/dputc.s \
 	../lib/scroll.s \
@@ -47,17 +42,20 @@ common_CC65SOURCES := \
 	 #../lib/fastirq$(suffix).s \
 
 mastodon_SOURCES := \
-	$(common_SOURCES) \
+	api/common.c \
 	cli/login.c \
 	cli/logo.c \
 	api/oauth.c \
 	cli/config.c \
 	cli/logo.c \
+	../lib/dgets.c \
+	../lib/strsplit.c \
 	../lib/surl/surl_ping.c \
 	../lib/charsets.c
 
 mastodon_CC65SOURCES := \
 	$(common_CC65SOURCES) \
+	../lib/surl/asm/surl_send.s \
 	../lib/surl/asm/surl_find_line.s \
 	../lib/serial/asm/simple_serial_configure.s \
 	../lib/runtime_once_clean.s \
@@ -70,8 +68,8 @@ mastoimg_SOURCES := \
 	cli/img.c \
 	api/media.c \
 	../lib/file_select.c \
-	../lib/strsplit.c \
 	../lib/realloc_safe.c \
+	../lib/strsplit.c \
 	../lib/dgets.c
 
 ifdef IIGS
@@ -88,44 +86,35 @@ endif
 
 mastoimg_CC65SOURCES := \
 	$(mastoimg_CC65SOURCES) \
-	../lib/serial/asm/simple_serial.s \
-	../lib/serial/asm/simple_serial_io.s \
-	$(serial_hw_SOURCES) \
-	../lib/surl/asm/surl_core.s \
-	../lib/surl/asm/surl_get_json.s \
-	../lib/surl/asm/surl_read_with_barrier.s \
-	../lib/asm/scrollwindow.s \
-	../lib/asm/path_helper.s \
-	../lib/asm/clrzone.s \
-	../lib/asm/malloc0.s \
+	$(common_CC65SOURCES) \
 	../lib/asm/hgr.s \
-	../lib/FVTABZ.s \
-	 ../lib/extrazp.s \
-	../lib/surl/surl_wait_for_stream.c \
-	../lib/dputc.s \
-	../lib/scroll.s \
-	../lib/vsdrive.s \
-	#../lib/fastirq$(suffix).s \
+	../lib/vsdrive.s
 
 mastocli_SOURCES := \
-	$(common_SOURCES) \
+	api/common.c \
 	cli/header.c \
 	cli/print.c \
 	cli/tl.c\
 	api/api.c \
 	api/account.c \
+	api/account_new_from_json.c \
 	api/notification.c \
 	api/status.c \
 	api/poll.c \
+	api/poll_update_vote.c \
+	api/date_format.c \
+	../lib/dgets.c \
+	../lib/strsplit.c \
 	../lib/progress_bar.c
 
 mastocli_CC65SOURCES := \
 	$(common_CC65SOURCES) \
+	../lib/surl/asm/surl_send.s \
 	../lib/asm/atoc.s \
 	../lib/runtime_once_clean.s
 
 mastowrite_SOURCES := \
-	$(common_SOURCES) \
+	api/common.c \
 	cli/compose.c \
 	cli/compose_header.c \
 	cli/print.c \
@@ -134,12 +123,16 @@ mastowrite_SOURCES := \
 	api/media.c \
 	api/status.c \
 	api/poll.c \
+	api/date_format.c \
+	../lib/dgets.c \
+	../lib/strsplit.c \
 	../lib/file_select.c \
 	../lib/progress_bar.c \
 	../lib/realloc_safe.c \
 
 mastowrite_CC65SOURCES := \
 	$(common_CC65SOURCES) \
+	../lib/surl/asm/surl_send.s \
 	../lib/asm/atoc.s \
 	../lib/runtime_once_clean.s \
 	../lib/vsdrive.s
