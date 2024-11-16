@@ -31,10 +31,7 @@
 #pragma code-name (push, "LOWCODE")
 #endif
 
-static char echo_on = 1;
-void __fastcall__ echo(char on) {
-  echo_on = on;
-}
+char dgets_echo_on = 1;
 
 static char start_x, start_y;
 static unsigned char win_width, win_height;
@@ -175,7 +172,7 @@ char * __fastcall__ dget_text(char *buf, size_t size, cmd_handler_func cmd_cb, c
     for (cur_insert = 0; cur_insert < max_insert; cur_insert++) {
       char c = text_buf[cur_insert];
       if (c != '\n') {
-        dputc(echo_on ? c : '*');
+        dputc(dgets_echo_on ? c : '*');
       } else {
         dputc('\r');
         dputc('\n');
@@ -399,7 +396,7 @@ stop_down:
         } else {
           /* advance cursor */
 #ifdef __CC65__
-          dputc(echo_on ? c : '*');
+          dputc(dgets_echo_on ? c : '*');
 #endif
         }
 
@@ -439,7 +436,7 @@ stop_down:
         c = '\n';
       } else {
 #ifdef __CC65__
-        dputc(echo_on ? c : '*');
+        dputc(dgets_echo_on ? c : '*');
 #endif
       }
       text_buf[cur_insert] = c;

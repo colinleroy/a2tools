@@ -178,10 +178,10 @@ password_again:
 
     dputs("Enter password: ");
     
-    echo(0);
+    dgets_echo_on = 0;
     password[0] = '\0';
     dget_text(password, 50, NULL, 0);
-    echo(1);
+    dgets_echo_on = 1;
 
   /* Second request to send login */
     post = prepare_login_post(login, password, token);
