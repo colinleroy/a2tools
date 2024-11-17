@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <unistd.h>
+#include <fcntl.h>
 
 #include "qtk_bithuff.h"
 #include "qt-conv.h"
@@ -21,7 +23,7 @@ uint8 __fastcall__ getbithuff (uint8 n)
   if (nbits >= vbits) {
     FAST_SHIFT_LEFT_8_LONG(bitbuf);
     if (cur_cache_ptr == cache_end) {
-      fread(cur_cache_ptr = cache, 1, CACHE_SIZE, ifp);
+      read(ifd, cur_cache_ptr = cache, CACHE_SIZE);
     }
     bitbuf |= *(cur_cache_ptr++);
     vbits += 8;

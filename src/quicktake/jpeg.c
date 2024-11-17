@@ -18,6 +18,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
 #include <arpa/inet.h>
 #include "platform.h"
 #include "progress_bar.h"
@@ -197,7 +199,7 @@ uint8 gMCUOrg[6];
 void fillInBuf(void)
 {
    // Reserve a few bytes at the beginning of the buffer for putting back ("stuffing") chars.
-  fread(cur_cache_ptr = cache_start, 1, CACHE_SIZE, ifp);
+  read(ifd, cur_cache_ptr = cache_start, CACHE_SIZE);
 }
 
 //------------------------------------------------------------------------------

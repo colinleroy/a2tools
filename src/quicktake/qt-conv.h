@@ -10,7 +10,7 @@ extern uint8 cache[];
 extern uint8 *cache_start;
 extern uint8 *cache_end;
 
-extern FILE *ifp;
+extern int ifd;
 
 #ifdef __CC65__
 /* Can't use zp* as they're used by codecs,

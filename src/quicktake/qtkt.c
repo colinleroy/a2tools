@@ -19,6 +19,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
 #include <arpa/inet.h>
 #include "progress_bar.h"
 #include "qt-conv.h"
@@ -138,7 +140,7 @@ void qt_load_raw(uint16 top)
     while (idx != idx_end) {
       uint8 high_nibble, low_nibble;
       if (cur_cache_ptr == cache_end) {
-        fread(cur_cache_ptr = cache, 1, CACHE_SIZE, ifp);
+        read(ifd, cur_cache_ptr = cache, CACHE_SIZE);
       }
 
       high_nibble = *(cur_cache_ptr++);
