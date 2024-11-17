@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <ctype.h>
 #include "malloc0.h"
 #include "extended_conio.h"
@@ -319,16 +320,16 @@ static void save_image(void) {
   _auxtype = HGR_PAGE;
 
   if (buf[0] != '\0') {
-    FILE *fp = fopen(buf, "w");
-    if (fp == NULL) {
+    int fd = open(buf, O_WRONLY|O_CREAT);
+    if (fd < 0) {
       cputs("\r\nCan not open file. ");
       goto out;
     }
-    if (fwrite((char *)HGR_PAGE, 1, HGR_LEN, fp) < HGR_LEN) {
+    if (write(fd, (char *)HGR_PAGE, HGR_LEN) < HGR_LEN) {
       cputs("Can not write to file. ");
       goto out;
     }
-    fclose(fp);
+    close(fd);
     cputs("\r\nImage saved. ");
   } else {
     goto out_no_conf;
