@@ -31,7 +31,7 @@ _hgr_mix_is_on: .byte 0
 _init_hgr:
         .ifdef IIGS
         cmp       #$00
-        bne       @color_set
+        beq       @not_monochrome
 
         lda       #$80
         sta       $C021       ; MONOCOLOR
@@ -40,14 +40,15 @@ _init_hgr:
         sta       $C029
         bne       @color_set
 
+@not_monochrome:
         lda       #$00
         sta       $C021       ; MONOCOLOR
         lda       $C029       ; NEWVIDEO
         and       #$DF        ; clear bit 5
         sta       $C029
         .endif
-@color_set:
 
+@color_set:
         lda       #$20
         sta       $E6         ; HGRPAGE
 
