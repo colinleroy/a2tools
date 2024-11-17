@@ -4,10 +4,10 @@
         .importzp        _zp2, _zp3, _zp4p, _zp6p, _zp8p, _zp10p, _zp12, _zp13
 
         .import          _memcpy, _memset, _progress_bar
-				.import          pushax, decsp6, incsp6, subysp
+				.import          pushax, decsp4, subysp
         .import          _height
         .import          _width
-        .import          _fread, _ifp, _cache_end
+        .import          _read, _ifd, _cache_end
 
         .import          floppy_motor_on
 
@@ -17,6 +17,8 @@
         .export          _qt_load_raw
         .export          _cache
         .export          _cache_start
+
+        .include         "fcntl.inc"
 
 .macro UPDATE_BRANCH from, to
         .assert (to-from-2) >= -128, error
@@ -256,39 +258,31 @@ set_cache_end:
 
 ; Cache filler
 fill_cache:
-        jsr     decsp6
+        ; Push read fd
+        jsr     decsp4
+        ldy     #$03
 
-        ; Push fread dest pointer
-        ldy     #$05
+        lda     #$00                    ; ifd is never going to be > 255
+        sta     (sp),y
+        dey
+        lda     _ifd
+        sta     (sp),y
+        dey
 
+        ; Push buffer
         lda     _cache_start+1
         sta     cur_cache_ptr+1
         sta     (sp),y
+        dey
 
         lda     _cache_start
         sta     cur_cache_ptr
-        dey
-        sta     (sp),y
-
-        ; Push size (1)
-        dey
-        lda     #0
-        sta     (sp),y
-        dey
-        inc     a
         sta     (sp),y
 
         ; Push count (CACHE_SIZE)
-        dey
-        lda     #>CACHE_SIZE
-        sta     (sp),y
-        dey
         lda     #<CACHE_SIZE
-        sta     (sp),y
-
-        lda     _ifp
-        ldx     _ifp+1
-        jmp     _fread
+        ldx     #>CACHE_SIZE
+        jmp     _read
 
 ; Main loop, decodes a band
 _qt_load_raw:
@@ -509,7 +503,7 @@ gstep_high_neg:
         adc     (idx_behind),y          ; + *(idx_behind+2)
         ror                             ; >> 1
 
-        clc
+        clc                             ; + gstep[h].
         adc     high_nibble_gstep_low,x ; Sets carry if overflow
 
         bcc     clamp_high_nibble_low   ; Clamp low as gstep is negative

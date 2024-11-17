@@ -32,6 +32,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 #include "hgr.h"
 #include "extrazp.h"
@@ -58,26 +59,26 @@ uint8 *cache_end;
  * but the cache size is set by decoders. Decoders should not have
  * access to the file pointers
  */
-FILE *ifp;
-static FILE *ofp;
+int ifd = -1;
+int ofd = -1;
 static const char *ifname;
 
 #pragma code-name (push, "LC")
 
 void __fastcall__ src_file_seek(uint32 off) {
-  fseek(ifp, off, SEEK_SET);
-  fread(cur_cache_ptr = cache_start, 1, CACHE_SIZE, ifp);
+  lseek(ifd, off, SEEK_SET);
+  read(ifd, (cur_cache_ptr = cache_start), CACHE_SIZE);
 }
 
 static uint16 __fastcall__ src_file_get_uint16(void) {
   uint16 v;
 
   if (cur_cache_ptr == cache_end) {
-    fread(cur_cache_ptr = cache_start, 1, CACHE_SIZE, ifp);
+    read(ifd, cur_cache_ptr = cache_start, CACHE_SIZE);
   }
   ((unsigned char *)&v)[1] = *(cur_cache_ptr++);
   if (cur_cache_ptr == cache_end) {
-    fread(cur_cache_ptr = cache_start, 1, CACHE_SIZE, ifp);
+    read(ifd, cur_cache_ptr = cache_start, CACHE_SIZE);
   }
   ((unsigned char *)&v)[0] = *(cur_cache_ptr++);
   return v;
@@ -105,7 +106,7 @@ static uint8 identify(const char *name)
 /* INIT */
   height = width = 0;
 
-  fread (cache_start, 1, CACHE_SIZE, ifp);
+  read(ifd, cache_start, CACHE_SIZE);
 
   printf("Decompressing ");
   if (!memcmp (cache_start, magic, 4)) {
@@ -400,7 +401,7 @@ no_crop:
   __asm__("bcc %g", next_y);
 #endif
 
-  fwrite (raw_image, 1, output_write_len, ofp);
+  write(ofd, raw_image, output_write_len);
 }
 
 #pragma code-name (push, "LC")
@@ -453,7 +454,7 @@ int main (int argc, const char **argv)
   cache_end = cache_start + CACHE_SIZE;
 
 try_again:
-  if (!(ifp = fopen (ifname, "rb"))) {
+  if ((ifd = open (ifname, O_RDONLY)) < 0) {
     printf("Please reinsert the disk containing %s,\n"
            "or press Escape to cancel.\n", ifname);
     if (cgetc() == CH_ESC)
@@ -473,9 +474,9 @@ try_again:
 
   strcpy (ofname, ifname);
 
-  ofp = fopen (TMP_NAME, "wb");
+  ofd = open (TMP_NAME, O_WRONLY|O_CREAT);
 
-  if (!ofp) {
+  if (ofd < 0) {
     printf("Can't open %s\n", TMP_NAME);
     goto out;
   }
@@ -493,19 +494,21 @@ try_again:
 
   progress_bar(-1, -1, 80*22, height, height);
 
-  fclose(ifp);
-  fclose(ofp);
+  close(ifd);
+  close(ofd);
+  ifd = ofd = -1;
 
   /* Save histogram to /RAM */
-  ofp = fopen(HIST_NAME, "w");
-  if (ofp) {
+  ofd = open(HIST_NAME, O_WRONLY|O_CREAT);
+  if (ofd > 0) {
 #ifndef __CC65__
-    fwrite(histogram, sizeof(uint16), 256, ofp);
+    write(ofd, histogram, sizeof(uint16)*256);
 #else
-    fwrite(histogram_low, sizeof(uint8), 256, ofp);
-    fwrite(histogram_high, sizeof(uint8), 256, ofp);
+    write(ofd, histogram_low, sizeof(uint8)*256);
+    write(ofd, histogram_high, sizeof(uint8)*256);
 #endif
-    fclose(ofp);
+    close(ofd);
+    ofd = -1;
   }
 
   clrscr();

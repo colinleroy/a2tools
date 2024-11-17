@@ -5,14 +5,14 @@
         .importzp       tmp1, tmp2, tmp3, tmp4, ptr1, ptr2, ptr3, sreg
         .importzp       _prev_ram_irq_vector
 
-        .import         decsp6, popptr1
-        .import         _fread
+        .import         decsp4, popptr1
+        .import         _read
         .import         _bitbuf
         .import         _bitbuf_nohuff
         .import         _vbits
         .import         _cache_start
         .import         _cache_end
-        .import         _ifp
+        .import         _ifd
         .import         _huff_ptr
         .export         _getbithuff
         .export         _cache
@@ -38,38 +38,32 @@ inc_cache_high:
         cpx     _cache_end+1
         bne     handle_byte
 
-        jsr     decsp6
 
-        ; Push fread dest pointer
-        ldy     #$05
+        ; Push read fd
+        jsr     decsp4
+        ldy     #$03
+
+        lda     #$00                    ; ifd is never going to be > 255
+        sta     (sp),y
+        dey
+        lda     _ifd
+        sta     (sp),y
+        dey
+
+        ; Push buffer
         lda     _cache_start+1
         sta     cur_cache_ptr+1
         sta     (sp),y
+        dey
 
         lda     _cache_start
         sta     cur_cache_ptr
-        dey
         sta     (sp),y
 
-        ; Push size (1)
-        dey
-        lda     #0
-        sta     (sp),y
-        dey
-        inc     a
-        sta     (sp),y
-
-        ; Push count ($1000, CACHE_SIZE)
-        dey
-        lda     #>CACHE_SIZE
-        sta     (sp),y
-        dey
+        ; Push count (CACHE_SIZE)
         lda     #<CACHE_SIZE
-        sta     (sp),y
-
-        lda     _ifp
-        ldx     _ifp+1
-        jsr     _fread
+        ldx     #>CACHE_SIZE
+        jsr     _read
         clc
         bra     handle_byte
 
