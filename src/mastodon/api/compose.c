@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include "malloc0.h"
 #include "platform.h"
 #include "math.h"
@@ -37,7 +38,7 @@ char *compose_audience_str(char compose_audience) {
 #define SEND_BUF_SIZE 1024
 
 char *api_send_hgr_image(char *filename, char *description, char **err, char x, char y, char w) {
-  FILE *fp;
+  int fd;
   char buf[SEND_BUF_SIZE];
   int r;
   int to_send;
@@ -51,8 +52,8 @@ char *api_send_hgr_image(char *filename, char *description, char **err, char x, 
   _filetype = PRODOS_T_BIN;
 #endif
 
-  fp = fopen(filename, "r");
-  if (fp == NULL) {
+  fd = open(filename, O_RDONLY);
+  if (fd < 0) {
     *err = FILE_ERROR;
     return NULL;
   }
@@ -67,7 +68,7 @@ char *api_send_hgr_image(char *filename, char *description, char **err, char x, 
   
   /* Send file */
   surl_multipart_send_field_desc("file", (uint32)to_send, "image/hgr");
-  while ((r = fread(buf, sizeof(char), sizeof(buf), fp)) > 0) {
+  while ((r = read(fd, buf, sizeof(buf))) > 0) {
 send_again:
     surl_multipart_send_field_data(buf, r);
     to_send -= r;
@@ -86,7 +87,7 @@ send_again:
     goto send_again;
   }
 
-  fclose(fp);
+  close(fd);
 
   surl_read_response_header();
 
