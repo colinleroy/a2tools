@@ -30,7 +30,7 @@
         .export         read_mode_str, write_mode_str
 
         .import         __filetype, __auxtype
-        .import         _fopen, _fread, _fwrite, _fclose
+        .import         _open, _read, _write, _close
         .import         pusha, pusha0, pushax, return0, returnFFFF
         
         .import         _reopen_start_device
@@ -51,6 +51,7 @@
         .endif
 
         .include        "../../simple_serial.inc"
+        .include        "fcntl.inc"
         .include        "apple2.inc"
         .include        "ser-kernel.inc"
         .include        "ser-error.inc"
@@ -158,8 +159,8 @@ write_mode_str: .asciiz "w"
 
 .proc simple_serial_read_from_AX: near
         jsr     pushax
-        lda     #<read_mode_str
-        ldx     #>read_mode_str
+        lda     #<(O_RDONLY)
+        ldx     #>(O_RDONLY)
         jmp     _simple_serial_settings_io
 .endproc
 
@@ -190,14 +191,9 @@ write_mode_str: .asciiz "w"
         jmp     _ser_uninstall
 .endproc
 
-;char __fastcall__ simple_serial_settings_io(const char *path, char *mode);
+;char __fastcall__ simple_serial_settings_io(const char *path, int flags);
 .proc _simple_serial_settings_io: near
-        pha
-        ; Check mode (and store temporarily in c)
-        sta     ptr1
-        stx     ptr1+1
-        ldy     #0
-        lda     (ptr1),y
+        ; Store mode temporarily in c
         sta     c
 
         ; Set filetype
@@ -206,43 +202,45 @@ write_mode_str: .asciiz "w"
         lda     #$00
         sta     __auxtype
 
-        pla
-        ; Open file (path, mode already set)
-        jsr     _fopen
-        cmp     #$00
+        lda     c
+        jsr     pushax
+        ldy     #$04          ; _open is variadic
+
+        ; Open file (path, flags already set)
+        jsr     _open
+        cmp     #$FF
         bne     @sss_open_ok
-        cpx     #$00
+        cpx     #$FF
         beq     @sss_err_open
 
 @sss_open_ok:
-        sta     settings_fp
-        stx     settings_fp+1
+        sta     settings_fd
 
         ; Prepare read/write call
+
+        ldx     #$00
+        jsr     pushax
+
         lda     #<_ser_params
         ldx     #>_ser_params
         jsr     pushax
+
         lda     #<.sizeof (SIMPLE_SERIAL_PARAMS)
         ldx     #>.sizeof (SIMPLE_SERIAL_PARAMS)
-        jsr     pushax
-        lda     #1
-        jsr     pusha0
-        lda     settings_fp
-        ldx     settings_fp+1
 
         ; Call correct function
         ldy     c
-        cpy     #'r'
+        cpy     #(O_RDONLY)
         beq     @sss_read
 
-        jsr     _fwrite
+        jsr     _write
         jmp     @sss_close
 @sss_read:
-        jsr     _fread
+        jsr     _read
 @sss_close:
-        lda     settings_fp
-        ldx     settings_fp+1
-        jsr     _fclose
+        lda     settings_fd
+        ldx     #$00
+        jsr     _close
         jmp     return0
 
 @sss_err_open:
@@ -321,7 +319,7 @@ write_mode_str: .asciiz "w"
 
 ser_timeout_cycles: .res 2
 c:                  .res 2
-settings_fp:        .res 2
+settings_fd:        .res 1
 .ifdef IIGS
 orig_speed_reg:     .res 1
 .endif
