@@ -30,6 +30,7 @@
         .import         _cputs, _cgetc, _revers, _gotoxy
 
         .include        "../../simple_serial.inc"
+        .include        "fcntl.inc"
         .include        "apple2.inc"
         .include        "ser-kernel.inc"
         .include        "ser-error.inc"
@@ -334,16 +335,16 @@ ui_base:          .byte "Serial connection",$0D,$0A,$0D,$0A
         lda     #<simple_serial_disk_settings
         ldx     #>simple_serial_disk_settings
         jsr     pushax
-        lda     #<write_mode_str
-        ldx     #>write_mode_str
+        lda     #<(O_WRONLY|O_CREAT)
+        ldx     #>(O_WRONLY|O_CREAT)
         jsr     _simple_serial_settings_io
 
         ; And in RAM
         lda     #<simple_serial_ram_settings
         ldx     #>simple_serial_ram_settings
         jsr     pushax
-        lda     #<write_mode_str
-        ldx     #>write_mode_str
+        lda     #<(O_WRONLY|O_CREAT)
+        ldx     #>(O_WRONLY|O_CREAT)
         jsr     _simple_serial_settings_io
 
 @ssc_return:
