@@ -928,6 +928,7 @@ static int load_state(list ***lists) {
       l->post_height[j] = state_get_int(fp);
 
       if (i == num_lists && is_root(l, j)) {
+        /* Load the root item */
         load_item_at(l, j, 1);
         loaded = j;
       }
@@ -935,6 +936,7 @@ static int load_state(list ***lists) {
     if (i == num_lists) {
       signed char f = l->first_displayed_post;
       if (loaded != f && f > -1) {
+        /* Load first displayed post if no root */
         load_item_at(l, f, 1);
       }
     }
@@ -1328,10 +1330,7 @@ navigate_reuse_list:
           launch_command("mastodon", "conf", NULL, NULL);
           /* we're never coming back */
       case COMPOSE:
-          if (current_list->account)
-            launch_command("mastowrite", current_list->account->acct, NULL, NULL);
-          else
-            launch_command("mastowrite", NULL, NULL, NULL);
+          launch_command("mastowrite", current_list->account ? current_list->account->acct : NULL, NULL, NULL);
           /* we're never coming back */
       case REPLY:
           if (disp_status)
