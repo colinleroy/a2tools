@@ -2,7 +2,6 @@
 ;
 
         .import         _serial_putc_direct
-        .import         _simple_serial_set_irq
         .import         throbber_on, throbber_off
 
         .import         popax
@@ -34,9 +33,6 @@
 
         ldy     #0              ; Inner loop counter
 
-        lda     #0
-        jsr     _simple_serial_set_irq
-
         lda     #$2F            ; SURL_CLIENT_READY
         jsr     _serial_putc_direct
 
@@ -64,9 +60,6 @@ last_page:
         bne     :-
 
 done:
-        lda     #1
-        jsr     _simple_serial_set_irq
-
         plp
         jmp     throbber_off
 .endproc

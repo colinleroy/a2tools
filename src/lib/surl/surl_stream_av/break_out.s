@@ -9,8 +9,6 @@ break_out:
 vcmd2:  sta     $98FF
 
         plp                     ; Reenable all interrupts
-        lda     #$01            ; Reenable serial interrupts and flush
-        jsr     _simple_serial_set_irq
         jsr     _simple_serial_flush
         lda     #$2F            ; SURL_CLIENT_READY
         jsr     _serial_putc_direct
