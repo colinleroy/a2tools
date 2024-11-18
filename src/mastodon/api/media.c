@@ -39,12 +39,11 @@ static media *media_new_from_json(char *base_selector, char *description_selecto
     n_lines = strsplit_in_place(img_buf, '\n', &lines);
     m->n_media = n_lines / 3;
     j = 0;
-    for (i = 0; i < n_lines - 1; i += 3) {
-      m->media_id[j] = strdup(lines[i]);
-      m->media_url[j] = strdup(lines[i + 1]);
-      m->media_type[j] = strdup(lines[i + 2]);
-      m->media_alt_text[j] = NULL;
-      ++j;
+    for (i = 0; i < n_lines - 1;) {
+      m->media_id[j] = strdup(lines[i++]);
+      m->media_url[j] = strdup(lines[i++]);
+      m->media_type[j] = strdup(lines[i++]);
+      j++;
     }
   }
   free(lines);

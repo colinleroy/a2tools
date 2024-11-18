@@ -90,9 +90,7 @@ err_out:
       n->type = NOTIFICATION_MENTION;
     }
     n->created_at = date_format(lines[2], 1);
-    if (lines[3][0] == '-') {
-      n->status_id = NULL;
-    } else {
+    if (lines[3][0] != '-') {
       n->status_id = strdup(lines[3]);
     }
     n->account_id = strdup(lines[4]);
@@ -106,8 +104,6 @@ err_out:
                     n->type != NOTIFICATION_FOLLOW ? ".status.content":".account.note",
                     translit_charset, SURL_HTMLSTRIP_FULL, BUF_SIZE) >= 0) {
     n->excerpt = strdup(gen_buf);
-  } else {
-    n->excerpt = NULL;
   }
 
   return n;
