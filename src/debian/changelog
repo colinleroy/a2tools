@@ -1,3 +1,9 @@
+a2tools (22.0.0.3) bionic; urgency=medium
+
+  * Rebuild for Debian bookworm
+
+ -- Colin Leroy-Mira <colin@colino.net>  Mon, 18 Nov 2024 21:28:19 +0200
+
 a2tools (22.0.0.1) bionic; urgency=medium
 
   * New program: Weather, ported from Fujinet
