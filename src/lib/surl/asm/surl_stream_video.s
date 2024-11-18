@@ -17,7 +17,6 @@
 
         .import               _serial_read_byte_no_irq
         .import               _simple_serial_setup_no_irq_regs
-        .import               _simple_serial_set_irq
         .import               _simple_serial_flush
         .import               _serial_putc_direct
         .import               _sleep
@@ -106,10 +105,6 @@ last_offset   = _zp7
         sty     page2_addr_ptr+1
         ldx     #PAGE2_HB
         jsr     calc_bases
-
-        ; Shutdown IRQs, inform server we're ready
-        lda     #$00
-        jsr     _simple_serial_set_irq
 
         lda     #$2F            ; SURL_CLIENT_READY
         jsr     _serial_putc_direct
@@ -296,8 +291,6 @@ cleanup:
 
         ; We're all done! Re-enable IRQs, and return.
         plp
-        lda     #$01
-        jsr     _simple_serial_set_irq
         jsr     _simple_serial_flush
         lda     #$00
         tax

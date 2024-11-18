@@ -1,12 +1,7 @@
 _surl_stream_audio:
         php
         sei                     ; Disable all interrupts
-        pha
 
-        lda     #$00            ; Disable serial interrupts
-        jsr     _simple_serial_set_irq
-
-        pla
         ; Setup pointers
         jsr     setup_pointers
         ; Patch serial registers

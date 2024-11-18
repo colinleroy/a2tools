@@ -2,12 +2,6 @@ _surl_start_stream_av:          ; Entry point
         php
         sei                     ; Disable all interrupts
 
-        pha
-
-        lda     #$00            ; Disable serial interrupts
-        jsr     _simple_serial_set_irq
-
-        pla
         ; Setup pointers
         jsr     setup
 

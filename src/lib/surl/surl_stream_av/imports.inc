@@ -20,7 +20,6 @@
         .import         _simple_serial_getc
         .import         _simple_serial_puts_nl
         .import         _serial_read_byte_no_irq
-        .import         _simple_serial_set_irq
         .import         _simple_serial_flush
 
         .import         _surl_start_request

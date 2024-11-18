@@ -8,7 +8,6 @@
         .import         _ser_params
 
         .import         _serial_putc_direct
-        .import         _simple_serial_set_irq
         .import         _simple_serial_flush
         .import         popa, VTABZ, putchardirect, uppercasemask
 
