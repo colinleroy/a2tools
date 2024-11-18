@@ -52,8 +52,9 @@ $(PROGRAM): $(SOURCES)
 		$(shell curl-config --cflags) \
 		$(shell cups-config --cflags) \
 		$(shell libpng-config --cflags) \
+		$(shell pkg-config --cflags libjq) \
 		$(shell pkg-config --cflags \
-						SDL_image gumbo libmagic libjq\
+						SDL_image gumbo libmagic \
 						libavfilter libavformat libavformat libavcodec \
 						libavutil libswresample freetype2) \
 		$(CUPSFILTER_CFLAGS) \
@@ -62,8 +63,9 @@ $(PROGRAM): $(SOURCES)
 		$(shell curl-config --libs) \
 		$(shell cups-config --libs) \
 		$(shell libpng-config --libs) \
+		$(shell pkg-config --libs libjq || echo "-ljq") \
 		$(shell pkg-config --libs \
-						SDL_image gumbo libmagic libjq\
+						SDL_image gumbo libmagic \
 						libavfilter libavformat libavformat libavcodec \
 						libavutil libswresample freetype2) \
 		$(CUPSFILTER_LIBS) \
