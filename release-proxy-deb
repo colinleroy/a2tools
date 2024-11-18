@@ -5,6 +5,6 @@ rm -rf a2tools && \
   cd a2tools/src && \
   dpkg-buildpackage -us -uc -rfakeroot && \
   cd .. && \
-  reprepro --basedir /home/reprepro/debian includedeb bullseye *.deb && \
-  reprepro --basedir /home/reprepro/debian includedsc bullseye *.dsc && \
+  reprepro --basedir /home/reprepro/debian includedeb bookworm *.deb && \
+  reprepro --basedir /home/reprepro/debian includedsc bookworm *.dsc && \
   reprepro-sync"

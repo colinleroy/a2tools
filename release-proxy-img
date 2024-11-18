@@ -13,7 +13,7 @@ set -e
 # - debian/patches/localedata/translit-common-emojis-to-smileys-BZ-3064.patch
 # Emoji transliteration upstreamed in glibc-2.39, local package will be dropped when available in official Raspberry images
 
-BRANCH="bullseye-surl-server"
+BRANCH="bookworm-surl-server"
 
 TMPDIR=$(mktemp -d)
 
