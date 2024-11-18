@@ -83,7 +83,7 @@ send_again:
    * indispensable. Fill up with zeroes up to to_send */
   if (to_send > 0) {
     r = min(to_send, SEND_BUF_SIZE);
-    memset(buf, 0, r);
+    bzero(buf, r);
     goto send_again;
   }
 

@@ -419,7 +419,7 @@ out:
 }
 
 static void clear_displayed_posts(list *l) {
-  memset(l->displayed_posts, 0, N_STATUS_TO_LOAD * sizeof(item *));
+  bzero(l->displayed_posts, N_STATUS_TO_LOAD * sizeof(item *));
   memset(l->post_height, -1, N_STATUS_TO_LOAD);
 }
 /* root is either an account or status id, depending on kind.
@@ -998,7 +998,7 @@ static void do_vote (status *status) {
       case '4':
         if (!status->poll->multiple) {
           /* reset all options */
-          memset(status->poll->own_votes, 0, MAX_POLL_OPTIONS);
+          bzero(status->poll->own_votes, MAX_POLL_OPTIONS);
         }
         /* toggle current option */
         c -= '1';

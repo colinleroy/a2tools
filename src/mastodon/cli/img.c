@@ -149,7 +149,7 @@ static void img_display(media *m, char idx, char num_images) {
     char *HGR_PAGE = malloc0(0x2000);
     #endif
 
-    memset((char *)HGR_PAGE, 0x00, HGR_LEN);
+    bzero((char *)HGR_PAGE, HGR_LEN);
 
     /* Go to legend while we load */
     toggle_legend(1);
