@@ -41,7 +41,6 @@ wozamp_SOURCES := \
 	config.c \
 	backup_logo.c \
 	$(EMBED_RBROWSER) \
-	../lib/surl/surl_ping.c \
 	../lib/realloc_safe.c \
 	../lib/dgets.c \
 	../lib/strsplit.c \
@@ -56,6 +55,7 @@ wozamp_CL65SOURCES = \
 	../lib/serial/$(serial_hw)/common.s \
 	../lib/serial/$(serial_hw)/no_irq.s \
 	../lib/surl/asm/surl_core.s \
+	../lib/surl/asm/surl_ping.s \
 	../lib/surl/asm/surl_receive.s \
 	../lib/surl/asm/surl_read_with_barrier.s \
 	../lib/asm/scrollwindow.s \

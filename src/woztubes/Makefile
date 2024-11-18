@@ -57,7 +57,7 @@ woztubes_SOURCES := \
 	../lib/asm/clrzone.s \
 	../lib/asm/malloc0.s \
 	../lib/asm/hgr.s \
-	../lib/surl/surl_ping.c \
+	../lib/surl/asm/surl_ping.s \
 	../lib/extrazp.s \
 	../lib/citoa.s \
 	../lib/cutoa.s \

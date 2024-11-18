@@ -20,7 +20,6 @@ homectrl_SOURCES := main.c network.c \
 	../lib/dgets.c \
 	../lib/strsplit.c \
 	../lib/strellipsis.c \
-	../lib/surl/surl_ping.c
 	
 homectrl_CL65SOURCES = \
 	../lib/serial/asm/simple_serial.s \
@@ -28,6 +27,7 @@ homectrl_CL65SOURCES = \
 	../lib/serial/asm/simple_serial_io.s \
 	$(serial_hw_SOURCES) \
 	../lib/surl/asm/surl_core.s \
+	../lib/surl/asm/surl_ping.s \
 	../lib/surl/asm/surl_receive.s \
 	../lib/surl/asm/surl_read_with_barrier.s \
 	../lib/asm/scrollwindow.s \
@@ -48,6 +48,7 @@ homectrl_GCCSOURCES = \
 	../lib/serial/c/simple_serial.c \
 	../lib/serial/c/simple_serial_io.c \
 	../lib/surl/c/surl_core.c \
+	../lib/surl/c/surl_ping.c \
 	../lib/surl/c/surl_receive.c \
 	../lib/c/scrollwindow.c \
 	../lib/c/malloc0.c \
