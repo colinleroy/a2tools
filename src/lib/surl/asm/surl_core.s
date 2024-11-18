@@ -190,7 +190,7 @@ free_content_type:
 
 @send_ua:
         ; Send User-Agent
-        bit       _surl_user_agent+1
+        lda       _surl_user_agent+1
         beq       :+
 
         lda       #<ua_hdr
@@ -212,7 +212,7 @@ free_content_type:
         ; No response?
         cmp       #<EOF
         bne       :+
-        cpx       #<EOF
+        cpx       #>EOF
         bne       :+
         lda       #<SURL_ERR_TIMEOUT
         ldx       #>SURL_ERR_TIMEOUT
@@ -220,54 +220,54 @@ free_content_type:
 
 :       ldx       method
 
-        ; SURL_METHOD_RAW => SURL_ANSWER_RAW_START 100 else 508
+        ; SURL_METHOD_RAW => SURL_ANSWER_RAW_START 100 else protocol_error
 @check_raw:
         cpx       #SURL_METHOD_RAW
         bne       @check_get_del
         cmp       #SURL_ANSWER_RAW_START
-        bne       @ret_508
+        bne       @ret_protocol_error
 @ret_100:
         lda       #<SURL_HTTP_CONTINUE
         ldx       #>SURL_HTTP_CONTINUE
         jmp       set_code_return_response
 
 @check_get_del:
-        ; GET or DELETE, OK if we got WAIT, otherwise 508
+        ; GET or DELETE, OK if we got WAIT, otherwise SURL_ERR_PROTOCOL_ERROR
         cpx       #SURL_METHOD_GET
-        beq       @check_wait_or_508
+        beq       @check_wait_or_protocol_error
         cpx       #SURL_METHOD_DELETE
         bne       @check_posts
-@check_wait_or_508:
+@check_wait_or_protocol_error:
         cmp       #SURL_ANSWER_WAIT
-        bne       @ret_508
+        bne       @ret_protocol_error
         jsr       _surl_read_response_header
         jmp       load_response_ptr
 
-@ret_508:
+@ret_protocol_error:
         lda       #<SURL_ERR_PROTOCOL_ERROR
         ldx       #>SURL_ERR_PROTOCOL_ERROR
         jmp       set_code_return_response
 
 @check_posts:
         cpx       #SURL_METHOD_POST_DATA
-        beq       @check_send_size_fields_or_508
+        beq       @check_send_size_fields_or_protocol_error
         cpx       #SURL_METHOD_POST
-        beq       @check_send_size_fields_or_508
+        beq       @check_send_size_fields_or_protocol_error
         cpx       #SURL_METHOD_PUT
         bne       @check_ping
-@check_send_size_fields_or_508:
+@check_send_size_fields_or_protocol_error:
         cmp       #SURL_ANSWER_SEND_SIZE
         beq       @ret_100
         cmp       #SURL_ANSWER_SEND_SIZE
         beq       @ret_100
-        bne       @ret_508
+        bne       @ret_protocol_error
 
         ; PING, OK if we got PONG, get protocol version into code
 @check_ping:
         cpx       #SURL_METHOD_PING
         bne       @check_streams
         cmp       #SURL_ANSWER_PONG
-        bne       @ret_508
+        bne       @ret_protocol_error
         lda       #SURL_CLIENT_READY
         jsr       _serial_putc_direct
         jsr       _simple_serial_getc
@@ -287,14 +287,14 @@ free_content_type:
 @check_wait_and_ret_100:
         cmp       #SURL_ANSWER_WAIT
         beq       @ret_100
-        bne       @ret_508
+        bne       @ret_protocol_error
 
         ; GETTIME
 @check_gettime:
         cpx       #SURL_METHOD_GETTIME
-        bne       @ret_508
+        bne       @ret_protocol_error
         cmp       #SURL_ANSWER_TIME
-        bne       @ret_508
+        bne       @ret_protocol_error
         lda       #<SURL_HTTP_OK
         ldx       #>SURL_HTTP_OK
         jmp       set_code_return_response
