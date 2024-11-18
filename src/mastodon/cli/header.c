@@ -12,6 +12,7 @@
 #include "cli.h"
 #include "api.h"
 #include "header.h"
+#include "print.h"
 #include "list.h"
 #include "math.h"
 #include "dgets.h"
@@ -50,6 +51,7 @@ char __fastcall__ print_header(list *l, status *root_status, notification *root_
 #endif
 
 void show_help (list *l, status *root_status, notification *root_notif) {
+  char flags = 0;
 
   gotoxy(0, 0);
   dputs(my_account->display_name);
@@ -92,17 +94,19 @@ void show_help (list *l, status *root_status, notification *root_notif) {
     if (root_status->poll) {
       dputs(" Vote      : V     \r\n");
     }
-    if ((root_status->flags & FAVOURITED) != 0) {
+
+    flags = root_status->flags;
+    if ((flags & FAVOURITED) != 0) {
       dputs(" Unfav.    : F     \r\n");
     } else {
       dputs(" Favourite : F     \r\n");
     }
-    if ((root_status->flags & REBLOGGED) != 0) {
+    if ((flags & REBLOGGED) != 0) {
       dputs(" Unboost   : B     \r\n");
     } else {
       dputs(" Boost     : B     \r\n");
     }
-    if ((root_status->flags & BOOKMARKED) != 0) {
+    if ((flags & BOOKMARKED) != 0) {
       dputs(" Unbookmark: M     \r\n");
     } else {
       dputs(" Bookmark  : M     \r\n");
@@ -143,7 +147,7 @@ void show_help (list *l, status *root_status, notification *root_notif) {
         " Compose   : C     \r\n");
 #ifdef __CC65__
   while (wherey() < 23) {
-    dputs("                   \r\n");
+    clrnln();
   }
 #endif
 
