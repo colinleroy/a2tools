@@ -37,7 +37,7 @@ void poll_fill(poll *p, char source) {
   else if (source == POLL_FROM_VOTE)
     n_lines = 13; /* strlen(".reblog.poll|") */
 
-  memset(p->own_votes, 0, MAX_POLL_OPTIONS);
+  bzero(p->own_votes, MAX_POLL_OPTIONS);
 
   r = surl_get_json(gen_buf, poll_selector + n_lines,
                     translit_charset,
