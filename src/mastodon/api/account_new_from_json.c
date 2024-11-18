@@ -38,13 +38,13 @@ account *account_new_from_json(void) {
       }
       a->fields = malloc0(sizeof(char *)*i);
       a->n_fields = i;
-      do {
+      while (i) {
         char len = scrw - RIGHT_COL_START - 1;
         i--;
         field_selector[FIELD_SELECTOR_NUM] = i+'0';
         a->fields[i] = malloc0(len);
         surl_get_json(a->fields[i], field_selector, translit_charset, SURL_HTMLSTRIP_FULL, len);
-      } while (i);
+      }
 
       note = malloc0(2048);
       r = surl_get_json(note, ".note", translit_charset, SURL_HTMLSTRIP_FULL, 2048);

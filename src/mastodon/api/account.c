@@ -54,8 +54,9 @@ void account_free(account *a) {
   free(a->display_name);
   free(a->created_at);
   free(a->note);
-  for (i = 0; i < a->n_fields; i++) {
-    free(a->fields[i]);
+  i = a->n_fields;
+  while (i) {
+    free(a->fields[--i]);
   }
   free(a->fields);
   free(a);
