@@ -138,7 +138,7 @@ throbber_on:
         lda     SCRN_THROB
         sta     SCREEN_CONTENTS
         .ifdef  __APPLE2ENH__
-        lda     #'C'
+        lda     #'C'          ; Mousetext Hourglass
         .else
         lda     #('*'|$80)
         .endif
