@@ -39,7 +39,7 @@ weather_SOURCES := \
 	weatherdisp.c \
 	weatherui.c \
 	../lib/FVTABZ.s \
-	../lib/surl/surl_ping.c \
+	../lib/surl/asm/surl_ping.s \
 	../lib/surl/asm/surl_core.s \
 	../lib/surl/asm/surl_get_json.s \
 	../lib/surl/asm/surl_read_with_barrier.s \
