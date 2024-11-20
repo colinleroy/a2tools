@@ -1,6 +1,5 @@
-fCC65_TARGET = apple2enh
 ifdef IIGS
-serial_hw := z8530
+serial_hw_SOURCES := ../lib/serial/z8530/common.s ../lib/serial/z8530/no_irq.s
 iigs_suffix := -iigs
 iigs_CFLAGS := -DIIGS --asm-define IIGS
 trgt = apple2gs
@@ -8,14 +7,14 @@ CC65_TARGET = apple2enh
 upload_subdir := /iigs
 else
 ifdef OLDII
-serial_hw := acia
+serial_hw_SOURCES := ../lib/serial/acia/common.s ../lib/serial/acia/no_irq.s
 iigs_FLAGS :=
 suffix :=
 upload_subdir :=
 CC65_TARGET := apple2
 STREAMER_VER := 6502
 else
-serial_hw := acia
+serial_hw_SOURCES := ../lib/serial/acia/common.s ../lib/serial/acia/no_irq.s
 iigs_suffix :=
 iigs_CFLAGS :=
 CC65_TARGET = apple2enh
@@ -43,6 +42,19 @@ ammonoid_SOURCES := \
 	../lib/dputc.s \
 	../lib/scroll.s \
 	../lib/FVTABZ.s \
+	../lib/citoa.s \
+	../lib/cutoa.s \
+	../lib/cntoabuf.s \
+	../lib/vsdrive.s \
+	../lib/serial/asm/simple_serial.s \
+	../lib/serial/asm/simple_serial_io.s \
+	../lib/serial/asm/simple_serial_configure.s \
+	../lib/surl/asm/surl_core.s \
+	../lib/surl/asm/surl_ping.s \
+	../lib/surl/asm/surl_send.s \
+	../lib/surl/asm/surl_receive.s \
+	../lib/surl/asm/surl_read_with_barrier.s \
+	$(serial_hw_SOURCES) \
 
 ammonoid_CLCFLAGS = -t $(CC65_TARGET) -I ../lib \
 	-DFILESEL_ALLOW_NONPRODOS_VOLUMES \

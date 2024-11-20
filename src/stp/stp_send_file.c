@@ -47,10 +47,10 @@ static char *stp_send_dialog(char recursive) {
   gotoxy(0, 3);
   if (recursive) {
     cprintf("Directory: ");
-    filename = file_select(wherex(), wherey(), NUMCOLS - 1, PAGE_HEIGHT, 1, "Select directory to send");
+    filename = file_select(1, "Select directory to send");
   } else {
     cprintf("File name: ");
-    filename = file_select(wherex(), wherey(), NUMCOLS - 1, PAGE_HEIGHT, 0, "Select file to send");
+    filename = file_select(0, "Select file to send");
   }
   return filename;
 }

@@ -190,9 +190,7 @@ static void add_image() {
 #if NUMCOLS == 40
   dputs("\r\n");
 #endif
-  x = wherex();
-  y = wherey();
-  media_files[n_medias] = file_select(x, y, scrw - x  - (RIGHT_COL_START+1), y + 10, 0, "Please choose an image");
+  media_files[n_medias] = file_select(0, "Please choose an image");
   if (media_files[n_medias] == NULL) {
     return;
   }
