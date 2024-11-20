@@ -74,7 +74,8 @@ mastoimg_SOURCES := \
 ifdef IIGS
 
 mastoimg_CC65SOURCES := \
-	../lib/surl/asm/surl_stream_video.s
+	../lib/surl/asm/surl_stream_video.s \
+	../lib/surl/surl_wait_for_stream.c
 
 else
 
