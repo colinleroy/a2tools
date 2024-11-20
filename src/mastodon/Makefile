@@ -67,7 +67,6 @@ mastoimg_SOURCES := \
 	api/common.c \
 	cli/img.c \
 	api/media.c \
-	../lib/file_select.c \
 	../lib/realloc_safe.c \
 	../lib/strsplit.c \
 	../lib/dgets.c
@@ -88,6 +87,7 @@ mastoimg_CC65SOURCES := \
 	$(mastoimg_CC65SOURCES) \
 	$(common_CC65SOURCES) \
 	../lib/asm/hgr.s \
+	../lib/asm/file_select.s \
 	../lib/vsdrive.s
 
 mastocli_SOURCES := \
@@ -126,7 +126,6 @@ mastowrite_SOURCES := \
 	api/date_format.c \
 	../lib/dgets.c \
 	../lib/strsplit.c \
-	../lib/file_select.c \
 	../lib/progress_bar.c \
 	../lib/realloc_safe.c \
 
@@ -134,6 +133,7 @@ mastowrite_CC65SOURCES := \
 	$(common_CC65SOURCES) \
 	../lib/surl/asm/surl_send.s \
 	../lib/asm/atoc.s \
+	../lib/asm/file_select.s \
 	../lib/runtime_once_clean.s \
 	../lib/vsdrive.s
 
@@ -151,6 +151,7 @@ GCCSOURCES := \
 	../lib/c/malloc0.c \
 	../lib/c/hgr.c \
 	../lib/c/atoc.c \
+	../lib/c/file_select.c \
 	../lib/extended_conio.c \
 	../lib/strtrim.c \
 	../lib/tgi_sdl.c \

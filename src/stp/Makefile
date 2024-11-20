@@ -23,8 +23,7 @@ SOURCES := stp_main.c stp_list.c stp_save.c stp_send_file.c stp_delete.c \
 	../lib/progress_bar.c \
 	../lib/strsplit.c \
 	../lib/dgets.c \
-	../lib/surl/surl_set_time.c \
-	../lib/file_select.c \
+	../lib/surl/surl_set_time.c
 
 CL65SOURCES = \
 	../lib/serial/asm/simple_serial.s \
@@ -40,6 +39,7 @@ CL65SOURCES = \
 	../lib/asm/path_helper.s \
 	../lib/asm/clrzone.s \
 	../lib/asm/malloc0.s \
+	../lib/asm/file_select.s \
 	../lib/dputc.s \
 	../lib/scroll.s \
 	../lib/FVTABZ.s \
@@ -63,6 +63,7 @@ GCC_SOURCES = \
 	../lib/c/scrollwindow.c \
 	../lib/c/path_helper.c \
 	../lib/c/malloc0.c \
+	../lib/c/file_select.c \
 	../lib/strtrim.c \
 	../lib/extended_conio.c \
 	../lib/c/clrzone.c
@@ -73,7 +74,7 @@ CFLAGS  = -I ../lib -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\" $(debug_CFLAGS)
 CLCFLAGS = -t $(CC65_TARGET) -g -O -Cl -Wl -D,__STACKSIZE__=0x0400 \
 	-C ../../config/apple2enh-rtonce.cfg -vm -m $(PROGRAM).map \
 	-DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD -DFILESEL_TO_LANGCARD \
-	-DFILESEL_ALLOW_NONPRODOS_VOLUMES \
+	-DFILESEL_ALLOW_NONPRODOS_VOLUMES --asm-define FILESEL_ALLOW_NONPRODOS_VOLUMES \
 	$(iigs_CFLAGS) -DSTP_DATA_SIZE=8192
 GCCCFLAGS = -g -O0 -Wall -Wno-format -Wno-unused-function -Wno-char-subscripts -Wno-unknown-pragmas -Werror -DSTP_DATA_SIZE=8192
 GCCLDFLAGS = 

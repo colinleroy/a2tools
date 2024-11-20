@@ -48,7 +48,7 @@ char *stp_confirm_save_all(void) {
   cprintf("Save all files in current directory\r\n\r\n");
 
   cprintf("Save to: ");
-  out_dir = file_select(wherex(), wherey(), NUMCOLS - 1, 17, 1, "Select destination directory");
+  out_dir = file_select(1, "Select destination directory");
   return out_dir;
 }
 
@@ -90,7 +90,7 @@ int stp_save_dialog(char *url, char *out_dir) {
           "Save to: ", filename, resp.content_type ? resp.content_type : "", resp.size);
 
   if (!out_dir) {
-    out_dir = file_select(wherex(), wherey(), NUMCOLS - 1, 17, 1, "Select destination directory");
+    out_dir = file_select(1, "Select destination directory");
 
     if (!out_dir) {
       free(filename);

@@ -14,6 +14,8 @@
 #include "scrollwindow.h"
 #include "malloc0.h"
 #include "dgets.h"
+#include "surl.h"
+#include "vsdrive.h"
 
 #define PRODOS_MAX_VOLUMES 37
 
@@ -696,7 +698,9 @@ static void handle_input(void) {
 void main(void) {
   clrscr();
   getcwd(pane_directory[1], FILENAME_MAX);
-  // strcpy(pane_directory[1], "/HD");
+
+  surl_ping();
+  vsdrive_install();
 
   display_pane(0);
   display_pane(1);

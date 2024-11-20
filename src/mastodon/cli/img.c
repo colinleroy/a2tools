@@ -304,7 +304,7 @@ static void save_image(void) {
   cputs("Save to: ");
 
   x = wherex();
-  dir = file_select(x, wherey(), scrw - x, wherey() + 10, 1, "Select directory");
+  dir = file_select(1, "Select directory");
   if (dir == NULL) {
     goto out_no_conf;
   }

@@ -84,7 +84,7 @@ void qt_convert_image_with_crop(const char *filename, uint16 sx, uint16 sy, uint
     char *tmp;
 
     cputs("Image: ");
-    tmp = file_select(wherex(), wherey(), scrw - wherex(), wherey() + 10, 0, "Select an image file");
+    tmp = file_select(0, "Select an image file");
     if (tmp == NULL)
       return;
     strcpy(imgname, tmp);

@@ -318,7 +318,7 @@ int main(int argc, char *argv[]) {
     cputs("Image (HGR): ");
 
     open_port(ser_params.data_slot);
-    tmp = file_select(wherex(), wherey(), scrw - wherex(), wherey() + 10, 0, "Select an HGR file");
+    tmp = file_select(0, "Select an HGR file");
     if (tmp == NULL)
       goto out;
     strcpy(imgname, tmp);

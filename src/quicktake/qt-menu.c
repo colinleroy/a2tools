@@ -101,7 +101,7 @@ static void save_picture(uint8 n_pic) {
       n_pic);
   cgetc();
 
-  dirname = file_select(wherex(), wherey(), scrw - wherex(), wherey() + 10, 1, "Select directory");
+  dirname = file_select(1, "Select directory");
   if (dirname == NULL) {
     return;
   }
