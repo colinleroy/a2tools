@@ -612,9 +612,9 @@ CURS_DOWN = 'j'
 CURS_UP   = 'u'
 VBAR:                         .asciiz "!"
 VBAR_STAR:                    .asciiz "! *"
-nav_str:                      .asciiz "!  U/J / Left/Right: navigate;", $0D,$0A,$00
-any_key_up_str:               .asciiz "!_ Any key to go up", $00
-enter_escape_str:             .asciiz "!_ Enter: select; Esc: cancel", $00
+nav_str:                      .byte "!  U/J / Left/Right: navigate;", $0D,$0A,$00
+any_key_up_str:               .asciiz "!_ Any key to go up"
+enter_escape_str:             .asciiz "!_ Enter: select; Esc: cancel"
         .endif
 EOL:                          .byte $0D,$0A,$00
 
