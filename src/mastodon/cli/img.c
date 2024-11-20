@@ -199,6 +199,7 @@ int main(int argc, char **argv) {
   screensize(&scrw, &scrh);
 #endif
 
+  surl_connect_proxy();
   vsdrive_install();
 
   surl_user_agent = "Mastodon for Apple II / "VERSION;

@@ -562,6 +562,7 @@ int main(int argc, char **argv) {
   char *params;
   char *text = NULL;
 
+  surl_connect_proxy();
   vsdrive_install();
 
   surl_user_agent = "Mastodon for Apple II / "VERSION;
