@@ -27,44 +27,41 @@
 
         .segment        "LOWCODE"
 
-;void __fastcall__ get_scrollwindow(unsigned char *top, unsigned char *bottom)
-_get_scrollwindow:
-        sta       ptr1
-        stx       ptr1+1
-        ldy       #0
-        lda       WNDBTM
-        sta       (ptr1),y
+pop_and_store:
+        pha
         jsr       popptr1
-        ldy       #0
-        lda       WNDTOP
+        pla
         sta       (ptr1),y
         rts
+
+;void __fastcall__ get_scrollwindow(unsigned char *top, unsigned char *bottom)
+_get_scrollwindow:
+        jsr       pushax
+        lda       WNDBTM
+        jsr       pop_and_store
+        lda       WNDTOP
+        jmp       pop_and_store
 
 ;void __fastcall__ set_scrollwindow(unsigned char top, unsigned char bottom)
 _set_scrollwindow:
         sta      WNDBTM
         jsr      popa
         sta      WNDTOP
+do_vtabz:
         lda      CV
         jmp      FVTABZ
 
 ;void __fastcall__ get_hscrollwindow(unsigned char *left, unsigned char *width)
 _get_hscrollwindow:
-        sta       ptr1
-        stx       ptr1+1
-        ldy       #0
+        jsr       pushax
         lda       WNDWDTH
-        sta       (ptr1),y
-        jsr       popptr1
-        ldy       #0
+        jsr       pop_and_store
         lda       WNDLFT
-        sta       (ptr1),y
-        rts
+        jmp       pop_and_store
 
 ;void __fastcall__ set_hscrollwindow(unsigned char left, unsigned char width) {
 _set_hscrollwindow:
         sta      WNDWDTH
         jsr      popa
         sta      WNDLFT
-        lda      CV
-        jmp      FVTABZ
+        jmp      do_vtabz
