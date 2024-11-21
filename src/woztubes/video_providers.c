@@ -1,4 +1,5 @@
 #include <string.h>
+#include "platform.h"
 #include "video_providers.h"
 
 static char *protocol_strings[N_INSTANCE_TYPES][N_PROTOCOL_STRINGS] = {
@@ -61,7 +62,7 @@ char *video_provider_get_protocol_string(InstanceTypeId instance_type, ProtocolS
   s = protocol_strings[instance_type][str_type];
 
   /* No endpoint, fallback to parent instance type */
-  if (!s) {
+  if (IS_NULL(s)) {
     switch(instance_type) {
       /* SepiaSearch fallback: Peertube */
       case SEPIASEARCH:
