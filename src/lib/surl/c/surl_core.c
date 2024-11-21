@@ -51,7 +51,6 @@ char surl_connect_proxy(void) {
   proxy_opened = (r == 0);
 
   if (r == 0) {
-    simple_serial_setup_no_irq_regs();
     /* Break previous session if needed */
     #ifdef __CC65__
     serial_putc_direct(SURL_METHOD_ABORT);

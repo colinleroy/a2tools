@@ -87,7 +87,6 @@ open_again:
       vsdrive_install();
     }
   }
-  simple_serial_setup_no_irq_regs();
   simple_serial_set_irq(1);
   return 0;
 

@@ -315,6 +315,7 @@ int simple_serial_open_file(char *tty_path, int tty_speed) {
 
   simple_serial_flush_fd(fd);
   setup_tty(fd, tty_speed, opt_tty_hw_handshake);
+  simple_serial_setup_no_irq_regs();
   printf("opened %s at %sbps\n", tty_path, tty_speed_to_str(tty_speed));
   return fd;
 }

@@ -699,8 +699,9 @@ void main(void) {
   clrscr();
   getcwd(pane_directory[1], FILENAME_MAX);
 
-  surl_ping();
-  vsdrive_install();
+  if (simple_serial_open() == 0) {
+    vsdrive_install();
+  }
 
   display_pane(0);
   display_pane(1);

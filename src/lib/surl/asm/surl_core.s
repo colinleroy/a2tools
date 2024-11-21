@@ -26,7 +26,6 @@
         .export   _resp
 
         .import   _simple_serial_open
-        .import   _simple_serial_setup_no_irq_regs
         .import   _serial_putc_direct
         .import   _simple_serial_set_irq
         .import   _simple_serial_flush
@@ -76,8 +75,7 @@ ua_hdr:           .asciiz "User-Agent: "
         ; Error opening serial
         rts
 
-:       jsr       _simple_serial_setup_no_irq_regs
-        lda       #SURL_METHOD_ABORT
+:       lda       #SURL_METHOD_ABORT
         jsr       _serial_putc_direct
 
         lda       #1

@@ -16,7 +16,6 @@
         .importzp             ptr1, _zp6, _zp7, _zp8, _zp10
 
         .import               _serial_read_byte_no_irq
-        .import               _simple_serial_setup_no_irq_regs
         .import               _simple_serial_flush
         .import               _serial_putc_direct
         .import               _sleep

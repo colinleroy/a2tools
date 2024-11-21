@@ -29,6 +29,8 @@
         .export         simple_serial_disk_settings
         .export         read_mode_str, write_mode_str
 
+        .import         _simple_serial_setup_no_irq_regs
+
         .import         __filetype, __auxtype
         .import         _open, _read, _write, _close
         .import         pusha, pusha0, pushax, return0, returnFFFF
@@ -153,6 +155,11 @@ write_mode_str: .asciiz "w"
 
         ; open port
         jsr     _ser_open
+        cmp     #$00
+        bne     @simple_serial_open_slot_err
+
+        jsr     _simple_serial_setup_no_irq_regs
+        jmp     return0
 @simple_serial_open_slot_err:
         rts
 .endproc
