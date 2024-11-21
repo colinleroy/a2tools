@@ -41,15 +41,15 @@ int api_get_posts(char *endpoint, char to_load, char *load_before, char *load_af
   int n_status = 0;
 
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s?limit=%d", endpoint, to_load);
-  if (load_before) {
+  if (IS_NOT_NULL(load_before)) {
     strcat(endpoint_buf, "&min_id=");
     strcat(endpoint_buf, load_before);
   }
-  if (load_after) {
+  if (IS_NOT_NULL(load_after)) {
     strcat(endpoint_buf, "&max_id=");
     strcat(endpoint_buf, load_after);
   }
-  if (filter) {
+  if (IS_NOT_NULL(filter)) {
     strcat(endpoint_buf, filter);
   }
 
@@ -85,7 +85,7 @@ int api_get_status_and_replies(char to_load, char *root_id, char *root_leaf_id, 
    * array, root_id as array, descendants array, and then we return the 
    * #to_load results (at max) before or after the boundary.
    */
-  if (load_after == NULL && load_before == NULL) {
+  if (IS_NULL(load_after) && IS_NULL(load_before)) {
     n_before = to_load/3;
     n_after  = (2 * to_load) / 3;
     if (n_before + n_after == to_load) {
@@ -96,7 +96,7 @@ int api_get_status_and_replies(char to_load, char *root_id, char *root_leaf_id, 
     snprintf(selector, SELECTOR_SIZE, "(.ancestors|.[-%d:]|.[].id),\"%s\","
                                       "(.descendants|.[0:%d]|.[].id)",
                                       n_before, root_id, n_after);
-  } else if (load_after != NULL){
+  } else if (IS_NOT_NULL(load_after)){
     /* flatten ancestors[],root,descendants[] :
      * [((.ancestors|map(.id)),["root_leaf_id"],(.descendants|map(.id)))|.[]]
      * get strings: |.[]
@@ -129,7 +129,7 @@ int api_get_status_and_replies(char to_load, char *root_id, char *root_leaf_id, 
                                         root_id,
                                         load_after,
                                         n_after);
-  } else if (load_before != NULL){
+  } else if (IS_NOT_NULL(load_before)) {
     /* flatten ancestors[],root,descendants[] :
      * [((.ancestors|map(.id)),["root_leaf_id"],(.descendants|map(.id)))|.[]]
      * get strings: |.[]
@@ -293,7 +293,7 @@ char api_relationship_get(account *a, char f) {
 }
 
 void account_toggle_rship(account *a, char action) {
-  if (a) {
+  if (IS_NOT_NULL(a)) {
     /* at this point we're sure to have the relationship bitfield set
      * so avoid the wrapper */
     switch(action) {

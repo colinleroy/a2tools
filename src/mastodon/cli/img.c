@@ -75,7 +75,7 @@ static void toggle_legend(char force) {
   legend = !legend || force;
 
 #ifdef __APPLE2__
-  if (legend) {
+  if (IS_NOT_NULL(legend)) {
     init_text();
   } else {
     init_hgr(monochrome);
@@ -87,7 +87,7 @@ static void set_legend(char *str, unsigned char idx, unsigned char num_images) {
   set_hscrollwindow(0, NUMCOLS);
   clrscr();
   cprintf("Image %d/%d: \r\n\r\n", idx + 1, num_images);
-  if (str && str[0])
+  if (IS_NOT_NULL(str) && str[0])
     cputs(str);
   else
     cputs("No description provided :-(");
@@ -186,6 +186,10 @@ static void img_display(media *m, char idx, char num_images) {
 
 static void save_image(void);
 
+#ifdef __CC65__
+#pragma code-name (push, "LC")
+#endif
+
 int main(int argc, char **argv) {
   media *m = NULL;
   char i, c;
@@ -226,7 +230,7 @@ int main(int argc, char **argv) {
   } else {
     m = api_get_account_media(id);
   }
-  if (m == NULL) {
+  if (IS_NULL(m)) {
     cputs("Could not load media\r\n");
     goto err_out;
   }
@@ -291,10 +295,6 @@ done:
 #endif
 }
 
-#ifdef __CC65__
-#pragma code-name (push, "LC")
-#endif
-
 static void save_image(void) {
   unsigned char prev_legend = legend;
   char buf[FILENAME_MAX + 1];
@@ -306,7 +306,7 @@ static void save_image(void) {
 
   x = wherex();
   dir = file_select(1, "Select directory");
-  if (dir == NULL) {
+  if (IS_NULL(dir)) {
     goto out_no_conf;
   }
 

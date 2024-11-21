@@ -48,7 +48,7 @@ static media *media_new_from_json(char *base_selector, char *description_selecto
   }
   free(lines);
 
-  if (description_selector == NULL) {
+  if (IS_NULL(description_selector)) {
     return m;
   }
 
@@ -81,8 +81,9 @@ static media *media_new_from_json(char *base_selector, char *description_selecto
 
 void media_free(media *m) {
   int i;
-  if (m == NULL)
+  if (IS_NULL(m)) {
     return;
+  }
   for (i = 0; i < m->n_media; i++) {
     free(m->media_id[i]);
     free(m->media_url[i]);

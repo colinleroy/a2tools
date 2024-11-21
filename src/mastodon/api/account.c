@@ -28,7 +28,7 @@ account *api_get_profile(char *id) {
   char n_lines;
 
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, ACCOUNTS_ENDPOINT"/%s",
-              id == NULL ? "verify_credentials" : id);
+              IS_NULL(id) ? "verify_credentials" : id);
   get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
 
   if (!surl_response_ok()) {
@@ -46,7 +46,7 @@ account *api_get_profile(char *id) {
 
 void account_free(account *a) {
   char i;
-  if (a == NULL)
+  if (IS_NULL(a))
     return;
   free(a->id);
   free(a->username);

@@ -138,7 +138,7 @@ static void setup_gui(void)
   clrscr();
   gotoxy(0, 0);
 
-  if (ref_status) {
+  if (IS_NOT_NULL(ref_status)) {
     if (compose_mode[0] == 'r') {
       writable_lines = scrh - COMPOSE_HEIGHT + 2;
       print_status(ref_status, 0, 0);
@@ -191,7 +191,7 @@ static void add_image() {
   dputs("\r\n");
 #endif
   media_files[n_medias] = file_select(0, "Please choose an image");
-  if (media_files[n_medias] == NULL) {
+  if (IS_NULL(media_files[n_medias])) {
     return;
   }
 
@@ -206,10 +206,10 @@ try_again:
   media_ids[n_medias] = api_send_hgr_image(media_files[n_medias],
                                            media_descriptions[n_medias],
                                            &err, x, y, scrw - x  - (RIGHT_COL_START+1));
-  if (media_ids[n_medias] == NULL) {
+  if (IS_NULL(media_ids[n_medias])) {
     char t;
     dputs("An error happened uploading the file:\r\n");
-    dputs(err != NULL ? err:"Unknown error");
+    dputs(IS_NOT_NULL(err) ? err:"Unknown error");
     dputs("\r\n\r\nTry again? (y/n)");
     t = cgetc();
     if (tolower(t) != 'n') {
@@ -246,7 +246,7 @@ image_menu:
           sensitive_medias ? "(SENSITIVE) ":"",
           n_medias, MAX_IMAGES);
 
-  if (toot_poll) {
+  if (IS_NOT_NULL(toot_poll)) {
     dputs("\r\nCan not add images to a toot with a poll.");
     cgetc();
     clrscr();
@@ -310,7 +310,7 @@ static void add_poll_option(void) {
 
   cprintf("Option %d: ", r);
   r--;
-  if (toot_poll->options[r].title == NULL) {
+  if (IS_NULL(toot_poll->options[r].title)) {
     toot_poll->options[r].title = malloc0(MAX_POLL_OPTION_LEN + 1);
   }
   dget_text(toot_poll->options[r].title, MAX_POLL_OPTION_LEN, NULL, 0);
@@ -380,7 +380,7 @@ poll_menu:
   clrscr();
   gotoxy(0, 1);
 
-  if (toot_poll == NULL) {
+  if (IS_NULL(toot_poll)) {
     toot_poll = poll_new();
     toot_poll->expires_in_hours = 24;
   }
@@ -453,7 +453,7 @@ static char *handle_compose_input(char *initial_buf) {
   char *text;
   text = malloc0(NUM_CHARS);
 
-  if (initial_buf && initial_buf[0]) {
+  if (IS_NOT_NULL(initial_buf) && initial_buf[0]) {
     int len = min(NUM_CHARS - 3, strlen(initial_buf));
 
     if (compose_mode[0] == 'r') {
@@ -478,7 +478,7 @@ static char *handle_compose_input(char *initial_buf) {
 
 resume_composing:
   setup_gui();
-  if (dget_text(text, NUM_CHARS, dgt_cmd_cb, 1) == NULL) {
+  if (IS_NULL(dget_text(text, NUM_CHARS, dgt_cmd_cb, 1))) {
     free(text);
     text = NULL;
     goto out;
@@ -515,7 +515,7 @@ reedit:
 
   set_scrollwindow(0, scrh);
 
-  if (text && !cancelled) {
+  if (IS_NOT_NULL(text) && !cancelled) {
     signed char r;
     char *err;
 
@@ -524,7 +524,7 @@ try_again:
     gotoxy(0, 1);
     dputs("Sending toot...\r\n\r\n");
     r = api_send_toot(compose_mode[0], text, cw, sensitive_medias,
-                      ref_status ? ref_status->id : NULL,
+                      IS_NOT_NULL(ref_status) ? ref_status->id : NULL,
                       media_ids, n_medias,
                       toot_poll, compose_audience,
                       &err);
@@ -533,13 +533,13 @@ try_again:
 
       dputs("\r\nAn error happened sending the toot.\r\n\r\n");
 
-      if (err) {
+      if (IS_NOT_NULL(err)) {
         dputs(err);
         free(err);
         dputs("\r\n\r\n");
       }
 
-      dputs("Try Sending again or Reedit ? (s/R)");
+      dputs("Try Sending again or Re-edit ? (s/R)");
       t = cgetc();
       if (tolower(t) == 's') {
         goto try_again;
@@ -612,9 +612,9 @@ int main(int argc, char **argv) {
     compose_mode = argv[4];
     ref_status = api_get_status(argv[5], 0);
 
-    if (ref_status) {
+    if (IS_NOT_NULL(ref_status)) {
       /* Set CW from reference status */
-      if (ref_status->spoiler_text) {
+      if (IS_NOT_NULL(ref_status->spoiler_text)) {
         strncpy(cw, ref_status->spoiler_text, sizeof(cw) - 1);
         cw[sizeof(cw) - 1] = '\0';
       }
@@ -625,7 +625,7 @@ int main(int argc, char **argv) {
       /* If editing, set medias from reference status */
       if (compose_mode[0] == 'e' && ref_status->n_medias > 0) {
         media *medias = api_get_status_media(ref_status->id);
-        if (medias) {
+        if (IS_NOT_NULL(medias)) {
           char i;
           n_medias = medias->n_media;
           for (i = 0; i < n_medias; i++) {
@@ -638,29 +638,28 @@ int main(int argc, char **argv) {
       }
     }
   } else if (argc == 5) {
-    text = malloc(strlen(argv[4])+2);
-    if (text) {
-      text[0] = arobase;
-      strcpy(text+1, argv[4]);
-      while (strchr(text, '@')) {
-        *(strchr(text, '@')) = arobase;
-      }
+    text = malloc0(strlen(argv[4])+2);
+
+    text[0] = arobase;
+    strcpy(text+1, argv[4]);
+    while (strchr(text, '@')) {
+      *(strchr(text, '@')) = arobase;
     }
     ref_status = NULL;
   }
 
   /* Auto-mention parent toot's sender, unless it's us */
-  if (ref_status && compose_mode[0] == 'r' && strcmp(ref_status->account->id, my_account->id)) {
+  if (IS_NOT_NULL(ref_status) && compose_mode[0] == 'r' && strcmp(ref_status->account->id, my_account->id)) {
     compose_toot(ref_status->account->acct);
   } else if (compose_mode[0] == 'e') {
     char *orig_status = compose_get_status_text(ref_status->id);
-    if (orig_status == NULL) {
+    if (IS_NULL(orig_status)) {
       orig_status = strdup("Can not fetch status");
     }
     compose_toot(orig_status);
     free(orig_status);
   } else {
-    if (text == NULL) {
+    if (IS_NULL(text)) {
       text = strdup("");
     }
     compose_toot(text);

@@ -25,7 +25,6 @@ imgview_SOURCES := \
 	imageview.c \
 	../lib/progress_bar.c \
 	../lib/hgr_addrs.c \
-	../lib/realloc_safe.c \
 
 imgview_CC65SOURCES := \
 	../lib/serial/asm/simple_serial.s \

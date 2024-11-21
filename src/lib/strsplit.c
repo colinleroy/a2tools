@@ -24,6 +24,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "platform.h"
 #include "malloc0.h"
 
 #ifdef __CC65__
@@ -79,7 +80,7 @@ int __fastcall__ _strsplit_int(char in_place, char *in, char split, char ***out)
   /* copy to avoid stack access */
   register char *src = in;
 
-  if (!in) {
+  if (IS_NULL(in)) {
     *out = NULL;
     return 0;
   }
@@ -92,7 +93,7 @@ int __fastcall__ _strsplit_int(char in_place, char *in, char split, char ***out)
     ++src;
   }
   *out = malloc(n_tokens * sizeof(char *));
-  if (*out == NULL) {
+  if (IS_NULL(*out)) {
     return 0;
   }
   return _strnsplit_int(in_place, in, split, *out, n_tokens);

@@ -27,11 +27,6 @@
 #pragma static-locals(push, on)
 #endif
 
-#ifdef SURL_TO_LANGCARD
-#pragma code-name (push, "LC")
-#endif
-
-
 int surl_wait_for_stream(void) {
   int r, eta;
   int x, y;
@@ -80,8 +75,4 @@ out:
 
 #ifdef __CC65__
 #pragma static-locals(pop)
-#endif
-
-#ifdef SURL_TO_LANGCARD
-#pragma code-name (pop)
 #endif

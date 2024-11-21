@@ -27,7 +27,7 @@ static int save_config(char *charset, char monochrome) {
   cputs("Saving config...\r\n");
 
   fp = fopen("clisettings", "w");
-  if (fp == NULL) {
+  if (IS_NULL(fp)) {
     cputs("Could not open settings file.\r\n");
     return -1;
   }

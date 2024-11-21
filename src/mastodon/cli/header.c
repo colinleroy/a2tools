@@ -25,11 +25,10 @@
 account *my_account = NULL;
 
 char __fastcall__ print_header(list *l, status *root_status, notification *root_notif) {
-  if (my_account == NULL) {
-    my_account = api_get_profile(NULL);
-  }
-  if (my_account == NULL) {
-    return -1;
+  if (IS_NULL(my_account)) {
+    if (IS_NULL(my_account = api_get_profile(NULL))) {
+      return -1;
+    }
   }
 
 #if NUMCOLS == 80
@@ -76,10 +75,10 @@ void show_help (list *l, status *root_status, notification *root_notif) {
         " Configure : O     \r\n"
         " Back      : Esc   \r\n");
 
-  if (root_status) {
+  if (IS_NOT_NULL(root_status)) {
     dputs("Toot:              \r\n"
           " Reply     : R     \r\n");
-    if (root_status->spoiler_text) {
+    if (IS_NOT_NULL(root_status->spoiler_text)) {
       dputs(" Toggle CW : W     \r\n");
     }
 #if !defined(IIGS)
@@ -91,7 +90,7 @@ void show_help (list *l, status *root_status, notification *root_notif) {
       dputs(" Medias    : I     \r\n");
     }
 #endif
-    if (root_status->poll) {
+    if (IS_NOT_NULL(root_status->poll)) {
       dputs(" Vote      : V     \r\n");
     }
 
@@ -111,13 +110,13 @@ void show_help (list *l, status *root_status, notification *root_notif) {
     } else {
       dputs(" Bookmark  : M     \r\n");
     }
-    if (my_account && !strcmp(root_status->account->id, my_account->id)) {
+    if (IS_NOT_NULL(my_account) && !strcmp(root_status->account->id, my_account->id)) {
       dputs(" Edit      : E     \r\n"
             " Delete    : D     \r\n");
     }
       dputs("Author:            \r\n"
             " Profile   : P     \r\n");
-  } else if (l && l->account) {
+  } else if (IS_NOT_NULL(l) && IS_NOT_NULL(l->account)) {
       dputs("Profile:           \r\n"
             " Images    : I     \r\n");
     if (api_relationship_get(l->account, RSHIP_FOLLOWING)
@@ -136,7 +135,7 @@ void show_help (list *l, status *root_status, notification *root_notif) {
     } else {
       dputs(" Mute      : M     \r\n");
     }
-  } else if (root_notif) {
+  } else if (IS_NOT_NULL(root_notif)) {
       dputs("Notifications:     \r\n"
             " All       : A     \r\n"
             " Mentions  : M     \r\n"

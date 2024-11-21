@@ -64,11 +64,11 @@ void compose_show_help(void) {
 }
 
 void compose_print_header(void) {
-  if (my_account == NULL) {
+  if (IS_NULL(my_account)) {
     my_account = api_get_profile(NULL);
   }
 #if NUMCOLS == 80
-  if (my_account != NULL) {
+  if (IS_NOT_NULL(my_account)) {
     if (strlen(my_account->display_name) > LEFT_COL_WIDTH)
       my_account->display_name[LEFT_COL_WIDTH] = '\0';
 

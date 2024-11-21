@@ -95,7 +95,7 @@ send_again:
   *err = NET_ERROR;
   if (surl_response_ok()) {
     if (surl_get_json(gen_buf, ".id", translit_charset, SURL_HTMLSTRIP_NONE, BUF_SIZE) > 0) {
-      if ((media_id = strchr(gen_buf, '\n'))) {
+      if (IS_NOT_NULL(media_id = strchr(gen_buf, '\n'))) {
         *media_id = '\0';
       }
       media_id = strdup(gen_buf);
@@ -103,7 +103,7 @@ send_again:
     }
   }
 
-  if (media_id != NULL) {
+  if (IS_NOT_NULL(media_id)) {
     /* Set description */
     int len;
     char *body = malloc0(1536);
@@ -148,7 +148,7 @@ signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medi
       strcat(extra_buf, "\"");
     }
     strcat(extra_buf, "]\n");
-  } else if (toot_poll != NULL) {
+  } else if (IS_NOT_NULL(toot_poll)) {
     char duration, n_options;
     for (duration = 0; duration < NUM_POLL_DURATIONS; duration++) {
       if (compose_poll_durations_hours[duration] == toot_poll->expires_in_hours)
@@ -190,9 +190,9 @@ signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medi
                        "B|sensitive\n%s\n"
                        "S|spoiler_text|"TRANSLITCMD"|%s\n%s\n"
                        "S|status|"TRANSLITCMD"|%s\n",
-                        (ref_toot_id && mode == 'r') ? 'S' : 'B',
-                        (ref_toot_id && mode == 'r') ? ref_toot_id : "null",
-                        extra_buf ? extra_buf : "",
+                        (IS_NOT_NULL(ref_toot_id) && mode == 'r') ? 'S' : 'B',
+                        (IS_NOT_NULL(ref_toot_id) && mode == 'r') ? ref_toot_id : "null",
+                        IS_NOT_NULL(extra_buf) ? extra_buf : "",
                         compose_audience_str(compose_audience),
                         sensitive_medias ? "true":"false",
                         translit_charset,
@@ -227,7 +227,7 @@ signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medi
     return 0;
 
   *err = malloc(NUM_CHARS);
-  if (*err) {
+  if (IS_NOT_NULL(*err)) {
     surl_get_json(*err, ".error", translit_charset, SURL_HTMLSTRIP_NONE, NUM_CHARS);
   }
   return -1;

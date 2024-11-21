@@ -18,7 +18,6 @@ endif
 
 PROGRAM=stp
 SOURCES := stp_main.c stp_list.c stp_save.c stp_send_file.c stp_delete.c \
-	../lib/realloc_safe.c \
 	../lib/get_buf_size.c \
 	../lib/progress_bar.c \
 	../lib/strsplit.c \
@@ -39,6 +38,7 @@ CL65SOURCES = \
 	../lib/asm/path_helper.s \
 	../lib/asm/clrzone.s \
 	../lib/asm/malloc0.s \
+	../lib/asm/realloc_safe.s \
 	../lib/asm/file_select.s \
 	../lib/dputc.s \
 	../lib/scroll.s \
@@ -63,6 +63,7 @@ GCC_SOURCES = \
 	../lib/c/scrollwindow.c \
 	../lib/c/path_helper.c \
 	../lib/c/malloc0.c \
+	../lib/c/realloc_safe.c \
 	../lib/c/file_select.c \
 	../lib/strtrim.c \
 	../lib/extended_conio.c \
