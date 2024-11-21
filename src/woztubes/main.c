@@ -60,7 +60,7 @@ char search_str[80] = "";
 #ifdef __APPLE2ENH__
 static void backup_restore_logo(char *op) {
   FILE *fp = fopen(LOGO_SAVE_FILE, op);
-  if (!fp) {
+  if (IS_NULL(fp)) {
     return;
   }
   if (op[0] == 'w') {
@@ -113,7 +113,7 @@ static void print_menu(void) {
 
 static void load_save_search_json(char *mode) {
   FILE *fp = fopen(SEARCH_SAVE_FILE, mode);
-  if (!fp) {
+  if (IS_NULL(fp)) {
     if (mode[0] == 'r')
       bzero((char *)BUF_8K_ADDR, BUF_8K_SIZE);
     return;
@@ -189,7 +189,7 @@ static void load_video(char *host, InstanceTypeId instance_type, char *id) {
 
         /* Update preferred subtitle language */
         lang = strstr(json_sel, "LG");
-        if (lang) {
+        if (IS_NOT_NULL(lang)) {
           memcpy(lang, sub_language, 2);
         }
 
@@ -199,7 +199,7 @@ static void load_video(char *host, InstanceTypeId instance_type, char *id) {
                           BUF_1K_SIZE - url_len) > 0) {
           char *eol = strchr((char *)BUF_1K_ADDR, '\n');
           /* Cut at end of first match */
-          if (eol) {
+          if (IS_NOT_NULL(eol)) {
             *eol = '\0';
           }
           /* If we had an absolute URL without host */
@@ -212,14 +212,14 @@ static void load_video(char *host, InstanceTypeId instance_type, char *id) {
           }
         }
         /* Put language placeholder back */
-        if (lang) {
+        if (IS_NOT_NULL(lang)) {
           memcpy(lang, "LG", 2);
         }
       }
     }
 
     /* Peertube videos streamingPlaylists files */
-    if (m3u8_ptr = strstr(video_url, "-fragmented.mp4")) {
+    if (IS_NOT_NULL(m3u8_ptr = strstr(video_url, "-fragmented.mp4"))) {
       /* Is there an m3u8 playlist? libav* opens them much quicker. */
       strcpy(m3u8_ptr, ".m3u8");
       surl_start_request(NULL, 0, video_url, SURL_METHOD_GET);
@@ -256,10 +256,8 @@ static void search_results(InstanceTypeId instance_type) {
 
   load_save_search_json("w");
 reload_search:
-  if (lines) {
-    free(lines);
-    lines = NULL;
-  }
+  free(lines);
+  lines = NULL;
   n_lines = strsplit_in_place((char *)BUF_8K_ADDR, '\n', &lines);
   if (n_lines % N_VIDEO_DETAILS != 0) {
     cputs("Search error              \n");
@@ -436,7 +434,7 @@ static int define_instance(void) {
 
 static void do_setup_url(char *op) {
   FILE *fp = fopen("STPSTARTURL", op);
-  if (!fp) {
+  if (IS_NULL(fp)) {
     return;
   }
   if (op[0] == 'w') {
@@ -459,9 +457,9 @@ static void do_setup(void) {
 
   do_setup_url("r");
 
-  if (url == NULL)
+  if (IS_NULL(url)) {
     url = strdup("https://sepiasearch.org");
-
+  }
 again:
   clrscr();
   //printf("Free memory: %zuB\n", _heapmemavail());

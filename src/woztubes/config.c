@@ -28,7 +28,7 @@ static FILE *open_config(char *mode) {
   _filetype = PRODOS_T_TXT;
   #endif
   fp = fopen("clisettings", mode);
-  if (fp == NULL && mode[0] == 'w') {
+  if (IS_NULL(fp) && mode[0] == 'w') {
     cputs("Could not open settings file.\r\n");
   }
   return fp;
@@ -41,7 +41,7 @@ static void save_config(void) {
 
   cputs("Saving config...\r\n");
   fp = open_config("w");
-  if (fp == NULL) {
+  if (IS_NULL(fp)) {
     return;
   }
 
@@ -122,13 +122,13 @@ void load_config(void) {
 
   cputs("Loading config...\r\n");
   fp = open_config("r");
-  if (fp == NULL) {
+  if (IS_NULL(fp)) {
     return;
   }
 
-  if (fp != NULL) {
+  if (IS_NOT_NULL(fp)) {
     fgets(tmp_buf, 16, fp);
-    if (strchr(tmp_buf, '\n')) {
+    if (IS_NOT_NULL(strchr(tmp_buf, '\n'))) {
       *strchr(tmp_buf, '\n') = '\0';
     }
     translit_charset = strdup(tmp_buf);
