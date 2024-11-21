@@ -95,11 +95,11 @@ void get_cover_file(char *url) {
 
   len = strlen(url) + 11; /* strlen("/cover.jpg") + 1 */
   cover_url = malloc(len);
-  if (!cover_url) {
+  if (IS_NULL(cover_url)) {
     /* No memory, well, too bad */
     return;
   }
-  if (strchr(url, '/')) {
+  if (IS_NOT_NULL(strchr(url, '/'))) {
     strcpy(cover_url, url);
     *strrchr(cover_url, '/') = 0;
     strcat(cover_url, "/cover.jpg");
@@ -154,7 +154,7 @@ void show_metadata (char *data) {
   char *value = strchr(data, '\n');
   char x, y, max_len;
 
-  if (value == NULL) {
+  if (IS_NULL(value)) {
     return;
   }
   value++;
@@ -245,7 +245,7 @@ static int open_url(char *url, char *filename) {
   clr_footer();
   gotoxy(0, 22);
 
-  if (content_type) {
+  if (IS_NOT_NULL(content_type)) {
     if (!strncmp(content_type, "image/", 6)) {
       if (in_list) {
         display_image(HGR_SCALE_FULL);
@@ -284,7 +284,7 @@ static int open_url(char *url, char *filename) {
   clrzone(0, 12, NUMCOLS - 1, 12);
   clr_footer();
 
-  strncpy(tmp_buf, filename ? filename : "Streaming...", NUMCOLS - 1);
+  strncpy(tmp_buf, IS_NOT_NULL(filename) ? filename : "Streaming...", NUMCOLS - 1);
   tmp_buf[NUMCOLS] = '\0';
   cputs(tmp_buf);
 
@@ -351,7 +351,7 @@ read_metadata_again:
 do_video:
     if (has_video && !in_list && enable_video) {
       FILE *video_url_fp = fopen(URL_PASSER_FILE, "w");
-      if (video_url_fp == NULL) {
+      if (IS_NULL(video_url_fp)) {
         print_err("VIDURL");
         cgetc();
         goto novid;
@@ -563,7 +563,7 @@ static void do_nav(char *base_url) {
   stp_print_header(url, URL_SET);
 
   while(1) {
-    if (prev_filename) {
+    if (IS_NOT_NULL(prev_filename)) {
       free(prev_filename);
     }
     prev_filename = (cur_line < num_lines ? strdup(display_lines[cur_line]) : NULL);
@@ -609,7 +609,7 @@ up_dir:
         full_update = 1;
         break;
       case CH_ENTER:
-        if (lines) {
+        if (IS_NOT_NULL(lines)) {
           navigated = 1;
           url = stp_url_enter(url, lines[cur_line]);
           stp_print_header(display_lines[cur_line], URL_ADD);
@@ -692,13 +692,13 @@ static void do_setup(void) {
 
   /* Are we back from VIDEOPLAY? */
   tmpfp = fopen(URL_PASSER_FILE, "r");
-  if (tmpfp == NULL) {
+  if (IS_NULL(tmpfp)) {
     url = start_url_ui();
   } else {
     char *lf;
     url = malloc(512);
     fgets(url, 511, tmpfp);  // URL
-    if ((lf = strchr(url, '\n')) != NULL)
+    if (IS_NOT_NULL(lf = strchr(url, '\n')))
       *lf = '\0';
 
     fclose(tmpfp);
