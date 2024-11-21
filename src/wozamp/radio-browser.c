@@ -110,7 +110,7 @@ static void station_click(char *station_uuid) {
 void show_radio_metadata (char *data) {
   char *value = strchr(data, '\n');
   char max_len;
-  if (value == NULL) {
+  if (IS_NULL(value)) {
     return;
   }
   value++;
@@ -196,7 +196,7 @@ read_metadata_again:
   } else if (r == SURL_ANSWER_STREAM_START) {
     /* Save new start url */
     FILE *tmpfp = fopen(RADIO_SEARCH_FILE, "w");
-    if (tmpfp) {
+    if (IS_NOT_NULL(tmpfp)) {
       fputc(cur_line, tmpfp);
       fputs(search_buf, tmpfp);
       fclose(tmpfp);
@@ -420,7 +420,7 @@ void radio_browser_ui(void) {
   do_server_screen = 0;
   set_scrollwindow(20, NUMROWS);
 
-  if (tmpfp) {
+  if (IS_NOT_NULL(tmpfp)) {
     cur_line = fgetc(tmpfp);
     fgets(search_buf, SEARCH_BUF_SIZE-1, tmpfp);
     fclose(tmpfp);

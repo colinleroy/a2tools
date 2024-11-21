@@ -37,11 +37,11 @@ int main(void) {
 
   surl_user_agent = "Wozamp for Apple II / "VERSION;
 
-  if (url_fp == NULL) {
+  if (IS_NULL(url_fp)) {
     goto out;
   }
   fgets(url, 511, url_fp);
-  if ((last_sep = strchr(url, '\n')) != NULL)
+  if (IS_NOT_NULL(last_sep = strchr(url, '\n')))
     *last_sep = '\0';
   enable_subtitles = fgetc(url_fp);
   video_size = fgetc(url_fp);
@@ -51,12 +51,12 @@ int main(void) {
 
   /* Remove filename from URL in advance, so we don't get stuck in
    * a loop if the player crashes for some reason */
-  if ((last_sep = strrchr(url, '/')) != NULL) {
+  if (IS_NOT_NULL(last_sep = strrchr(url, '/'))) {
     *last_sep = '\0';
 
     url_fp = fopen(URL_PASSER_FILE, "w");
 
-    if (url_fp) {
+    if (IS_NOT_NULL(url_fp)) {
       fputs(url, url_fp);
       fclose(url_fp);
     }

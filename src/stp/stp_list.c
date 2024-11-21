@@ -35,6 +35,7 @@
 #include "strsplit.h"
 #include "runtime_once_clean.h"
 #include "malloc0.h"
+#include "platform.h"
 
 static char *url_enter(char *url, char *suffix);
 
@@ -71,17 +72,17 @@ char *stp_get_start_url(char *header, char *default_url, cmd_handler_func cmd_cb
 #endif
 
   fp = fopen(STP_URL_FILE, "r");
-  if (fp != NULL) {
+  if (IS_NOT_NULL(fp)) {
     fgets(tmp_buf, BUFSIZE-1, fp);
     fgets(login, 31, fp);
     fgets(password, 31, fp);
 
     fclose(fp);
-    if ((tmp = strchr(tmp_buf,'\n')))
+    if (IS_NOT_NULL(tmp = strchr(tmp_buf,'\n')))
       *tmp = '\0';
-    if ((tmp = strchr(login,'\n')))
+    if (IS_NOT_NULL(tmp = strchr(login,'\n')))
       *tmp = '\0';
-    if ((tmp = strchr(password,'\n')))
+    if (IS_NOT_NULL(tmp = strchr(password,'\n')))
       *tmp = '\0';
 
   } else {
@@ -96,7 +97,7 @@ char *stp_get_start_url(char *header, char *default_url, cmd_handler_func cmd_cb
   cputs("URL: ");
 
   dget_text(tmp_buf, BUFSIZE, cmd_cb, 0);
-  if (cmd_cb) {
+  if (IS_NOT_NULL(cmd_cb)) {
     cputs("\r\n");
   }
 
@@ -118,7 +119,7 @@ char *stp_get_start_url(char *header, char *default_url, cmd_handler_func cmd_cb
   cputs("Login: ");
   strcpy(tmp_buf, login);
   dget_text(login, 32, cmd_cb, 0);
-  if (cmd_cb) {
+  if (IS_NOT_NULL(cmd_cb)) {
     cputs("\r\n");
   }
   if (cmd_cb_handled) {
@@ -132,7 +133,7 @@ char *stp_get_start_url(char *header, char *default_url, cmd_handler_func cmd_cb
   dget_text(password, 32, cmd_cb, 0);
   dgets_echo_on = 1;
 
-  if (cmd_cb) {
+  if (IS_NOT_NULL(cmd_cb)) {
     cputs("\r\n");
   }
   if (cmd_cb_handled) {
@@ -142,7 +143,7 @@ char *stp_get_start_url(char *header, char *default_url, cmd_handler_func cmd_cb
 
   if (changed) {
     fp = fopen(STP_URL_FILE, "w");
-    if (fp != NULL) {
+    if (IS_NOT_NULL(fp)) {
       fputs(start_url, fp);
       fputc('\n', fp);
       fputs(login, fp);
@@ -174,7 +175,7 @@ char *stp_build_login_url(char *url) {
 
   full_url = malloc(BUFSIZE);
 
-  if (host != NULL) {
+  if (IS_NOT_NULL(host)) {
     *host = '\0';
     /* url is now protocol */
     proto = url;
@@ -281,7 +282,7 @@ void stp_list_search(unsigned char new_search) {
   /* Do the actual search */
 search_from_start:
   for (i = search_from; i < num_lines; i++) {
-    if (strcasestr(display_lines[i], search_buf) != NULL) {
+    if (IS_NOT_NULL(strcasestr(display_lines[i], search_buf))) {
       unsigned char full_update = 1;
       cur_line = search_from = i;
 
@@ -380,13 +381,9 @@ void stp_update_list(char full_update) {
 }
 
 void stp_free_data(void) {
-  if (lines)
-    free(lines);
-  lines = NULL;
-  if (nat_lines)
-    free(nat_lines);
-  if (nat_data)
-    free(nat_data);
+  free(lines);
+  free(nat_lines);
+  free(nat_data);
   lines = NULL;
   nat_lines = NULL;
   nat_data = NULL;
@@ -424,7 +421,7 @@ unsigned char stp_get_data(char *url) {
 
   gotoxy(0, 2);
 
-  if (resp.content_type && strcmp(resp.content_type, "directory")) {
+  if (IS_NOT_NULL(resp.content_type) && strcmp(resp.content_type, "directory")) {
     return SAVE_DIALOG;
   } else {
     if (resp.size > STP_DATA_SIZE-1) {
@@ -437,7 +434,7 @@ unsigned char stp_get_data(char *url) {
     surl_translit(translit_charset);
     if (surl_response_ok()) {
       nat_data = malloc(resp.size + 1);
-      if (nat_data) {
+      if (IS_NOT_NULL(nat_data)) {
         char *tmp;
         surl_receive_data(nat_data, resp.size);
         while ((tmp = strchr(nat_data, '/'))) {
@@ -450,7 +447,7 @@ unsigned char stp_get_data(char *url) {
   }
 
   num_lines = strsplit_in_place(data, '\n', &lines);
-  if (nat_data && strsplit_in_place(nat_data, '\n', &nat_lines) > 0) {
+  if (IS_NOT_NULL(nat_data) && strsplit_in_place(nat_data, '\n', &nat_lines) > 0) {
     display_lines = nat_lines;
   } else {
     nat_lines = NULL;
@@ -466,7 +463,7 @@ char *stp_url_up(char *url) {
   char *last_slash;
 
   last_slash = strrchr(url, '/');
-  if (last_slash && last_slash - url > 7 /*strlen("sftp://") */) {
+  if (IS_NOT_NULL(last_slash) && last_slash - url > 7 /*strlen("sftp://") */) {
     *(last_slash) = '\0';
   }
 
@@ -481,7 +478,7 @@ char *stp_url_enter(char *url, char *suffix) {
   int url_ends_slash = url[url_len - 1] == '/';
   char *tmp = realloc(url, url_len + suffix_len + 2);
 
-  if (!tmp) {
+  if (IS_NULL(tmp)) {
     gotoxy(center_x, center_y);
     cputs("Not enough memory :-(");
     return url;
@@ -520,19 +517,19 @@ void stp_print_header(const char *url, enum HeaderUrlAction action) {
       strcat(header_url, url);
       break;
     case URL_UP:
-      if ((tmp = strrchr(header_url + 7 /*strlen("sftp://")*/, '/')))
+      if (IS_NOT_NULL(tmp = strrchr(header_url + 7 /*strlen("sftp://")*/, '/')))
         *tmp = '\0';
       break;
   }
 
   host = strstr(header_url, "://");
-  if (host) {
+  if (IS_NOT_NULL(host)) {
     char *pass_sep;
 
     host += 3;
     pass_sep = strchr(host, ':');
 
-    if (pass_sep && pass_sep < strchr(host, '@')) {
+    if (IS_NOT_NULL(pass_sep) && pass_sep < strchr(host, '@')) {
       /* Means there's a login */
       pass_sep++;
       while(*pass_sep != '@') {
