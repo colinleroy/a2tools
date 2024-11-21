@@ -183,7 +183,7 @@ status_free_field:
 
         lda       is_reblog
         bne       :+
-        ldy       #4                    ; lines[2]
+        ldy       #10                   ; lines[5]
         lda       (_zp8),y
         cmp       #'-'
         beq       :+
@@ -200,7 +200,7 @@ status_free_field:
         ldy       #STATUS::REBLOG_ID
         jsr       store_zp6_field_addr
 
-        ldy       #4                    ; s->id = strdup(lines[2]);
+        ldy       #10                   ; s->id = strdup(lines[5]);
         jsr       load_zp8_field_addr
         jsr       _strdup
         ldy       #STATUS::ID
@@ -212,11 +212,7 @@ status_free_field:
         stx       reblog_offset
         beq       @get_json             ; Load status as reblog
 
-:       jsr       _account_new
-        ldy       #STATUS::ACCOUNT
-        jsr       store_zp6_field_addr
-
-        ldy       #0                    ; s->created_at = date_format(lines[0], 1);
+        ldy       #8                    ; s->created_at = date_format(lines[4], 1);
         jsr       load_zp8_field_addr
         jsr       pushax
         lda       #1
@@ -224,12 +220,104 @@ status_free_field:
         ldy       #STATUS::CREATED_AT
         jsr       store_zp6_field_addr
 
-        ldy       #2                    ; lines[1]
-        jsr       load_zp8_field_addr   ; s->reblogged_by = strdup(lines[1]);
-        jsr       _strdup
-        ldy       #STATUS::ACCOUNT + ACCOUNT::DISPLAY_NAME
+        ldy       #12                   ; lines[6][0]?
+        jsr       load_zp8_field_addr
+        lda       (_zp8),y
+        beq       :+
+
+        ; Spoiler text
+        lda       #<TL_SPOILER_TEXT_BUF ; Alloc
+        ldx       #$00
+        jsr       _malloc0
+        ldy       #STATUS::SPOILER_TEXT
+        jsr       store_zp6_field_addr
+        
+        jsr       pushax                ; Strncpy
+        lda       _zp8
+        ldx       _zp8+1
+        jsr       pushax
+
+        lda       #<TL_SPOILER_TEXT_BUF
+        ldx       #$00
+        jsr       _strncpy
+
+        sta       ptr1                  ; Terminate
+        stx       ptr1+1
+        ldy       #TL_SPOILER_TEXT_BUF-1
+        lda       #$00
+        sta       (ptr1),y
+
+:       ldy       #14                   ; lines[7]
+        jsr       load_zp8_field_addr
+        jsr       _atoc
+        ldy       #STATUS::N_MEDIAS
+        sta       (_zp6),y
+
+        ldy       #16                   ; lines[8]
+        jsr       load_zp8_field_addr
+        ldy       #$00
+        lda       (_zp8),y
+        cmp       'g'
+        bne       :+
+        lda       #MEDIA_TYPE_GIFV
+        bne       @store_media_type
+:       cmp       'v'
+        bne       :+
+        lda       #MEDIA_TYPE_VIDEO
+        bne       @store_media_type
+:       cmp       'a'
+        bne       :+
+        lda       #MEDIA_TYPE_AUDIO
+        bne       @store_media_type
+:       cmp       'i'
+        bne       :+
+        lda       #MEDIA_TYPE_IMAGE
+@store_media_type:
+        ldy       #STATUS::MEDIA_TYPE
+        sta       (_zp6),y
+
+:       ldy       #18                   ; lines[9]
+        jsr       load_zp8_field_addr
+        jsr       _atoc
+        ldy       #STATUS::N_REPLIES
+        sta       (_zp6),y
+
+        ldy       #20                   ; lines[10]
+        jsr       load_zp8_field_addr
+        jsr       _atoc
+        ldy       #STATUS::N_REBLOGS
+        sta       (_zp6),y
+
+        ldy       #22                   ; lines[11]
+        jsr       load_zp8_field_addr
+        jsr       _atoc
+        ldy       #STATUS::N_FAVOURITES
+        sta       (_zp6),y
+
+        jsr       _account_new_from_lines
+        ldy       #STATUS::ACCOUNT
         jsr       store_zp6_field_addr
 
+        ldy       #24                   ; lines[12][1]
+        jsr       load_zp8_field_addr
+        ldy       #$01
+        lda       (_zp8),y
+        cmp       'u'
+        bne       :+
+        lda       #COMPOSE_PUBLIC
+        bne       @store_audience
+:       cmp       'n'
+        bne       :+
+        lda       #COMPOSE_UNLISTED
+        bne       @store_audience
+:       cmp       'r'
+        bne       :+
+        lda       #COMPOSE_PRIVATE
+        bne       @store_audience
+:       lda       #COMPOSE_MENTION
+@store_audience:
+        ldy       #STATUS::VISIBILITY
+        sta       (_zp6),y
 
 .endproc
 

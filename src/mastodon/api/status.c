@@ -44,14 +44,14 @@ static status *status_new(void) {
 #pragma code-name (push, "LOWCODE")
 #endif
 
-static const char *basic_selector   = ".reblog|(.account.id,.account.display_name,.account.acct,.account.username,"
+const char *basic_selector   = ".reblog|(.account.id,.account.display_name,.account.acct,.account.username,"
                                       ".created_at,.reblog.id//\"-\",.spoiler_text//\"\","
                                       "(.media_attachments|length),"
                                       ".media_attachments[0].type//\"-\","
                                       ".replies_count,.reblogs_count,.favourites_count,"
                                       ".visibility,.reblogged,.favourited,.bookmarked,.poll.id"
                                       ")";
-static const char *content_selector = ".reblog|(.content)";
+const char *content_selector = ".reblog|(.content)";
 
 #pragma register-vars(push, on)
 static __fastcall__ char status_fill_from_json(register status *s, char *id, char full) {
