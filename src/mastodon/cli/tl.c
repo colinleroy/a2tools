@@ -990,9 +990,9 @@ static void do_vote (status *status) {
     }
     clrzone(0, c, scrw - RIGHT_COL_START - 1, c);
 #if NUMCOLS == 80
-    dputs("1-4 to choose, Enter to vote, Escape to cancel");
+    dputs("1-7 to choose, Enter to vote, Escape to cancel");
 #else
-    dputs("1-4: choose, Enter: vote, Esc: cancel");
+    dputs("1-7: choose, Enter: vote, Esc: cancel");
 #endif
     c = tolower(cgetc());
 
@@ -1005,6 +1005,9 @@ static void do_vote (status *status) {
       case '2':
       case '3':
       case '4':
+      case '5':
+      case '6':
+      case '7':
         if (!status->poll->multiple) {
           /* reset all options */
           bzero(status->poll->own_votes, MAX_POLL_OPTIONS);

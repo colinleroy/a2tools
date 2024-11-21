@@ -4,7 +4,7 @@
 typedef struct _poll poll;
 typedef struct _poll_option poll_option;
 
-#define MAX_POLL_OPTIONS 4
+#define MAX_POLL_OPTIONS 7
 #define MAX_POLL_OPTION_LEN 49
 
 #define POLL_FROM_STATUS 0
