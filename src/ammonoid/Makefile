@@ -48,12 +48,6 @@ ammonoid_SOURCES := \
 	../lib/vsdrive.s \
 	../lib/serial/asm/simple_serial.s \
 	../lib/serial/asm/simple_serial_io.s \
-	../lib/serial/asm/simple_serial_configure.s \
-	../lib/surl/asm/surl_core.s \
-	../lib/surl/asm/surl_ping.s \
-	../lib/surl/asm/surl_send.s \
-	../lib/surl/asm/surl_receive.s \
-	../lib/surl/asm/surl_read_with_barrier.s \
 	$(serial_hw_SOURCES) \
 
 ammonoid_CLCFLAGS = -t $(CC65_TARGET) -I ../lib \
