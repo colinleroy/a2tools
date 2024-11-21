@@ -30,6 +30,15 @@
 
 #pragma register-vars(push, on)
 
+static char *tl_endpoints[4] = { TIMELINE_ENDPOINT "/" HOME_TIMELINE,
+                                  TIMELINE_ENDPOINT "/" PUBLIC_TIMELINE,
+                                  TIMELINE_ENDPOINT "/" PUBLIC_TIMELINE,
+                                  BOOKMARKS_ENDPOINT};
+static char *tl_filter[4] = { NULL,
+                               "&local=true",
+                               NULL,
+                               NULL};
+
 unsigned char scrw, scrh;
 
 char *instance_url = NULL;
@@ -207,7 +216,7 @@ static item *item_get(list *l, char i, char full) {
 static char load_around(list *l, char to_load, char *first, char *last, char **new_ids) {
   char loaded;
   l->half_displayed_post = 0;
-  if (l->kind == SHOW_BOOKMARKS && (first || last)) {
+  if (l->kind == SHOW_BOOKMARKS && (IS_NOT_NULL(first) || IS_NOT_NULL(last))) {
     /* Must paginate those with Link: HTTP headers :( */
     return 0;
   }
@@ -436,7 +445,7 @@ static list *build_list(char *root, char *leaf_root, char kind) {
     l->account = api_get_full_account(root);
     l->first_displayed_post = -1;
   } else {
-    if (root && *root) {
+    if (IS_NOT_NULL(root) && *root) {
       l->root = strdup(root);
       l->leaf_root = strdup(leaf_root);
     }
@@ -449,11 +458,11 @@ static list *build_list(char *root, char *leaf_root, char kind) {
   clear_displayed_posts(l);
 
   found_root = 0;
-  if (root) {
+  if (IS_NOT_NULL(root)) {
     for (i = 0; i < n_posts; i++) {
       if (is_root(l, i)) {
           /* Load first for the header */
-          if ((load_item_at(l, i, 1)) != NULL) {
+          if (IS_NOT_NULL(load_item_at(l, i, 1))) {
             l->first_displayed_post = i;
             found_root = 1;
           }
@@ -553,7 +562,7 @@ update:
 
   l->half_displayed_post = 0;
 
-  if (l->account && first == -1) {
+  if (IS_NOT_NULL(l->account) && first == -1) {
     bottom = print_account(l->account);
     l->account_height = wherey();
   }
@@ -564,7 +573,7 @@ update:
     }
     full = is_root(l, i);
     disp = (item *)l->displayed_posts[i];
-    if (disp == NULL) {
+    if (IS_NULL(disp)) {
       if (i > first && writable_lines != 0) {
         dputs(LOADING_TOOT_MSG);
         gotox(0);
@@ -577,7 +586,7 @@ update:
         gotox(0);
       }
     }
-    if (disp == NULL) {
+    if (IS_NULL(disp)) {
       dputs("Load error :(");
       if (--writable_lines != 0) {
         clrnln();
@@ -662,13 +671,13 @@ static char calc_post_height(status *s) {
   w = s->content;
 
   height = 6; /* header(username + date + display_name) + one line content + footer(\r\n + stats + line)*/
-  if (s->reblogged_by) {
+  if (IS_NOT_NULL(s->reblogged_by)) {
     ++height;
   }
-  if (s->spoiler_text) {
+  if (IS_NOT_NULL(s->spoiler_text)) {
     ++height;
   }
-  if (s->poll) {
+  if (IS_NOT_NULL(s->poll)) {
     height += 3 * s->poll->options_count;
   }
 
@@ -695,9 +704,9 @@ static int shift_posts_up(list *l) {
 
   l->half_displayed_post = 0;
   first = l->first_displayed_post;
-  if (l->account && first == -1) {
+  if (IS_NOT_NULL(l->account) && first == -1) {
       return -1;
-  } else if (!l->account && l->kind != SHOW_PROFILE && first == 0) {
+  } else if (IS_NULL(l->account) && l->kind != SHOW_PROFILE && first == 0) {
       load_prev_posts(l);
       first = l->first_displayed_post;
       if (first == 0)
@@ -711,7 +720,7 @@ static int shift_posts_up(list *l) {
   if (first == -1) {
     scroll_val = l->account_height;
   } else {
-    if (l->displayed_posts[first] == NULL) {
+    if (IS_NULL(l->displayed_posts[first])) {
       l->displayed_posts[first] =
         item_get(l, first, 0);
     }
@@ -766,7 +775,7 @@ static void save_state(void) {
   dputs("Saving state...");
 
   fp = fopen(STATE_FILE,"w");
-  if (fp == NULL) {
+  if (IS_NULL(fp)) {
     return;
   }
 
@@ -786,13 +795,13 @@ static void save_state(void) {
                     "%s\n"
                     "%d\n",
                     l->kind,
-                    l->root ? l->root : "",
-                    l->leaf_root ? l->leaf_root : "",
+                    IS_NOT_NULL(l->root) ? l->root : "",
+                    IS_NOT_NULL(l->leaf_root) ? l->leaf_root : "",
                     l->last_displayed_post,
                     l->eof,
                     l->first_displayed_post,
                     l->n_posts,
-                    l->account ? l->account->id : "",
+                    IS_NOT_NULL(l->account) ? l->account->id : "",
                     l->account_height) < 0) {
       goto err_out;
     }
@@ -874,7 +883,7 @@ static int load_state(list ***lists) {
 
   *lists = NULL;
   fp = fopen(STATE_FILE, "r");
-  if (fp == NULL) {
+  if (IS_NULL(fp)) {
     *lists = NULL;
     return -1;
   }
@@ -958,7 +967,7 @@ static int load_state(list ***lists) {
 static char background_load(list *l) {
   char i;
   for (i = 0; i < l->n_posts; i++) {
-    if (l->displayed_posts[i] == NULL) {
+    if (IS_NULL(l->displayed_posts[i])) {
       load_item_at(l, i, 0);
       return 0; /* background load one by one to check kb */
     }
@@ -1075,30 +1084,30 @@ inject_cmd:
         limit = 1; /* print the first one */
         break;
       case 'f':
-        if (root_status) {
+        if (IS_NOT_NULL(root_status)) {
           api_favourite_status(root_status);
           l->half_displayed_post = 0;
-        } else if (l->account) {
+        } else if (IS_NOT_NULL(l->account)) {
           cur_action = ACCOUNT_TOGGLE_RSHIP;
           rship_toggle_action = RSHIP_FOLLOWING;
           return;
         }
         break;
       case 'b':
-        if (root_status) {
+        if (IS_NOT_NULL(root_status)) {
           api_reblog_status(root_status);
           l->half_displayed_post = 0;
-        } else if (l->account) {
+        } else if (IS_NOT_NULL(l->account)) {
           cur_action = ACCOUNT_TOGGLE_RSHIP;
           rship_toggle_action = RSHIP_BLOCKING;
           return;
         }
         break;
       case 'm':
-        if (root_status) {
+        if (IS_NOT_NULL(root_status)) {
           api_bookmark_status(root_status);
           l->half_displayed_post = 0;
-        } else if (l->account) {
+        } else if (IS_NOT_NULL(l->account)) {
           cur_action = ACCOUNT_TOGGLE_RSHIP;
           rship_toggle_action = RSHIP_MUTING;
           return;
@@ -1109,7 +1118,7 @@ inject_cmd:
         }
         break;
       case 'd':
-        if (root_status) {
+        if (IS_NOT_NULL(root_status)) {
           if (api_delete_status(root_status) == 0) {
             cur_action = BACK;
             return;
@@ -1117,7 +1126,7 @@ inject_cmd:
         }
         break;
       case 'v':
-        if (root_status && root_status->poll) {
+        if (IS_NOT_NULL(root_status) && IS_NOT_NULL(root_status->poll)) {
           cur_action = VOTING;
           do_vote(root_status);
           l->half_displayed_post = 0;
@@ -1289,7 +1298,7 @@ static void cli(void) {
         if (current_list->kind != SHOW_NOTIFICATIONS) {
           disp_status = (status *)disp;
           if (cur_action == SHOW_FULL_STATUS) {
-            strcpy(new_root, disp_status->reblog_id ? disp_status->reblog_id : disp_status->id);
+            strcpy(new_root, IS_NOT_NULL(disp_status->reblog_id) ? disp_status->reblog_id : disp_status->id);
             strcpy(new_leaf_root, disp_status->id);
           } else if (cur_action == SHOW_PROFILE) {
             strcpy(new_root, disp_status->account->id);
@@ -1330,22 +1339,22 @@ navigate_reuse_list:
           launch_command("mastodon", "conf", NULL, NULL);
           /* we're never coming back */
       case COMPOSE:
-          launch_command("mastowrite", current_list->account ? current_list->account->acct : NULL, NULL, NULL);
+          launch_command("mastowrite", IS_NOT_NULL(current_list->account) ? current_list->account->acct : NULL, NULL, NULL);
           /* we're never coming back */
       case REPLY:
-          if (disp_status)
+          if (IS_NOT_NULL(disp_status))
             launch_command("mastowrite", "r", disp_status->id, NULL);
           cur_action = NAVIGATE;
           break;
       case EDIT:
-          if (disp_status && !strcmp(disp_status->account->id, my_account->id))
+          if (IS_NOT_NULL(disp_status) && !strcmp(disp_status->account->id, my_account->id))
             launch_command("mastowrite", "e", disp_status->id, NULL);
           cur_action = NAVIGATE;
           break;
       case IMAGES:
-          if (current_list->account && (!disp_status || disp_status->displayed_at > 0)) {
+          if (IS_NOT_NULL(current_list->account) && (!disp_status || disp_status->displayed_at > 0)) {
             launch_command("mastoimg", monochrome?"1":"0", "a", current_list->account->id);
-          } else if (disp_status && disp_status->n_medias) {
+          } else if (IS_NOT_NULL(disp_status) && disp_status->n_medias) {
             launch_command("mastoimg", monochrome?"1":"0", "s", disp_status->id);
           }
           cur_action = NAVIGATE;
@@ -1404,9 +1413,9 @@ int main(int argc, char **argv) {
   fp = fopen("clisettings", "r");
   translit_charset = US_CHARSET;
 
-  if (fp != NULL) {
+  if (IS_NOT_NULL(fp)) {
     fgets(gen_buf, 16, fp);
-    if (strchr(gen_buf, '\n')) {
+    if (IS_NOT_NULL(strchr(gen_buf, '\n'))) {
       *strchr(gen_buf, '\n') = '\0';
     }
 #ifdef __APPLE2ENH__

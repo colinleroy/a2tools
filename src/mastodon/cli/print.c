@@ -99,7 +99,7 @@ int print_status(register status *s, char hide, char full) {
 
   s->displayed_at = wherey();
   /* reblog header */
-  if (s->reblogged_by) {
+  if (IS_NOT_NULL(s->reblogged_by)) {
 #if NUMCOLS == 40
     if (strlen(s->reblogged_by) > 30) {
       s->reblogged_by[30] = '\0';
@@ -133,7 +133,7 @@ int print_status(register status *s, char hide, char full) {
 
   CHECK_AND_CRLF();
 
-  if (s->spoiler_text) {
+  if (IS_NOT_NULL(s->spoiler_text)) {
 #if NUMCOLS == 40
     if (strlen(s->spoiler_text) > 30) {
       s->spoiler_text[30] = '\0';
@@ -150,7 +150,7 @@ int print_status(register status *s, char hide, char full) {
 
   CHECK_AND_CRLF();
 
-  if (p) {
+  if (IS_NOT_NULL(p)) {
     char i;
     size_t total = p->votes_count;
 

@@ -10,7 +10,7 @@
 #include "api.h"
 
 void notification_free(notification *n) {
-  if (n == NULL) {
+  if (IS_NULL(n)) {
     return;
   }
   free(n->id);
@@ -30,11 +30,11 @@ int api_get_notifications(char to_load, char notifications_type, char *load_befo
   if (notifications_type == NOTIFICATION_FAVOURITE) {
     strcat(endpoint_buf, "&types[]=follow&types[]=favourite&types[]=reblog");
   }
-  if (load_before) {
+  if (IS_NOT_NULL(load_before)) {
     strcat(endpoint_buf, "&min_id=");
     strcat(endpoint_buf, load_before);
   }
-  if (load_after) {
+  if (IS_NOT_NULL(load_after)) {
     strcat(endpoint_buf, "&max_id=");
     strcat(endpoint_buf, load_after);
   }

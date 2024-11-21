@@ -20,14 +20,6 @@
 
 char *translit_charset = US_CHARSET;
 char arobase = '@';
-char *tl_endpoints[4] = { TIMELINE_ENDPOINT "/" HOME_TIMELINE,
-                          TIMELINE_ENDPOINT "/" PUBLIC_TIMELINE,
-                          TIMELINE_ENDPOINT "/" PUBLIC_TIMELINE,
-                          BOOKMARKS_ENDPOINT};
-char *tl_filter[4] = { NULL,
-                       "&local=true",
-                       NULL,
-                       NULL};
 
 extern char *instance_url;
 extern char *oauth_token;
@@ -41,7 +33,7 @@ char *lines[MAX_LINES_NUM];
 const surl_response *get_surl_for_endpoint(char method, char *endpoint) {
   static char *hdrs[1] = {NULL};
 
-  if (hdrs[0] == NULL) {
+  if (IS_NULL(hdrs[0])) {
     hdrs[0] = malloc0(BUF_SIZE);
     snprintf(hdrs[0], BUF_SIZE, "Authorization: Bearer %s", oauth_token);
   }

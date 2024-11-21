@@ -11,9 +11,6 @@ struct _item {
 };
 
 
-extern char *tl_endpoints[4];
-extern char *tl_filter[4];
-
 /* Shared buffers */
 #define BUF_SIZE 255
 extern char gen_buf[BUF_SIZE];

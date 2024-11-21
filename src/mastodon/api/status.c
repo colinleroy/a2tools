@@ -61,7 +61,7 @@ static __fastcall__ char status_fill_from_json(register status *s, char *id, cha
   char is_reblog = 0, reblog_offset = 8 /* strlen(".reblog|") */;
 
   s->id = strdup(id);
-  if (s->id == NULL) {
+  if (IS_NULL(s->id)) {
     return -1;
   }
 
@@ -150,7 +150,7 @@ again:
 }
 
 void status_free(register status *s) {
-  if (s == NULL)
+  if (IS_NULL(s))
     return;
   free(s->id);
   free(s->reblog_id);

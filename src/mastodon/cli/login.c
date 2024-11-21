@@ -51,7 +51,7 @@ static int save_settings(void) {
   int r;
 
   fp = fopen("mastsettings", "w");
-  if (fp == NULL) {
+  if (IS_NULL(fp)) {
     dputs("Could not open settings file.\r\n");
     return -1;
   }
@@ -93,7 +93,7 @@ static int load_settings(void) {
   oauth_code    = malloc0(50);
   oauth_token   = malloc0(50);
 
-  if (fp != NULL) {
+  if (IS_NOT_NULL(fp)) {
     if (fgets(instance_url, BUF_SIZE, fp) > 0)
       *strchr(instance_url, '\n') = '\0';
 
@@ -201,7 +201,7 @@ try_login_again:
 
   }
 
-  if (oauth_token == NULL || oauth_token[0] == '\0') {
+  if (IS_NULL(oauth_token) || oauth_token[0] == '\0') {
     dputs("Could not login :(\n");
     cgetc();
     set_scrollwindow(0, scrh);

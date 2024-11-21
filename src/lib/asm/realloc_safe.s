@@ -15,23 +15,23 @@
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 ;
 
-        .export         _malloc0
+        .export         _realloc_safe
 
-        .import         _malloc, _bzero, swapstk, pushax
+        .import         _realloc, popax, return0
 
-_malloc0:
-        cmp       #0          ; Return NULL if size == 0
+_realloc_safe:
+        cmp       #0          ; size 0 ?
         bne       :+
         cpx       #0
         bne       :+
-        rts
 
-:       jsr       pushax      ; Backup size
-        jsr       _malloc     ; Allocate
+        jsr       popax       ; Return NULL if size == 0
+        jmp       return0
 
-        cpx       #0          ; Die if failed
-        bne       :+          ; We don't check A because we're not
-        brk                   ; allocating to ZP
+:       jsr       _realloc    ; Realloc
+        cpx       #0
+        bne       :+          ; Check it worked
 
-:       jsr       swapstk     ; push pointer and get size back
-        jmp       _bzero      ; and return zeroed buffer
+        brk
+
+:       rts

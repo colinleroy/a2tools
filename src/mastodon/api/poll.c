@@ -10,7 +10,7 @@
 
 void poll_free(poll *p) {
   char i;
-  if (p == NULL)
+  if (IS_NULL(p))
     return;
 
   free(p->id);
@@ -59,7 +59,7 @@ void poll_fill(poll *p, char source) {
 
     for (r = 0; r < p->options_count; r ++) {
       char i = NUM_POLL_LINES + (r * 2);
-      if (p->options[r].title == NULL) {
+      if (IS_NULL(p->options[r].title)) {
         p->options[r].title = strdup(lines[i]);
       } /* otherwise, it's a reload from votes, and
          * titles won't have changed. */

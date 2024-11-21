@@ -43,11 +43,10 @@ common_CC65SOURCES := \
 
 mastodon_SOURCES := \
 	api/common.c \
+	api/oauth.c \
 	cli/login.c \
 	cli/logo.c \
-	api/oauth.c \
 	cli/config.c \
-	cli/logo.c \
 	../lib/dgets.c \
 	../lib/strsplit.c \
 	../lib/charsets.c
@@ -65,9 +64,8 @@ mastodon_CC65SOURCES := \
 
 mastoimg_SOURCES := \
 	api/common.c \
-	cli/img.c \
 	api/media.c \
-	../lib/realloc_safe.c \
+	cli/img.c \
 	../lib/strsplit.c \
 	../lib/dgets.c
 
@@ -93,9 +91,6 @@ mastoimg_CC65SOURCES := \
 
 mastocli_SOURCES := \
 	api/common.c \
-	cli/header.c \
-	cli/print.c \
-	cli/tl.c\
 	api/api.c \
 	api/account.c \
 	api/account_new_from_json.c \
@@ -104,6 +99,9 @@ mastocli_SOURCES := \
 	api/poll.c \
 	api/poll_update_vote.c \
 	api/date_format.c \
+	cli/header.c \
+	cli/print.c \
+	cli/tl.c\
 	../lib/dgets.c \
 	../lib/strsplit.c \
 	../lib/progress_bar.c
@@ -116,19 +114,18 @@ mastocli_CC65SOURCES := \
 
 mastowrite_SOURCES := \
 	api/common.c \
-	cli/compose.c \
-	cli/compose_header.c \
-	cli/print.c \
 	api/account.c \
 	api/compose.c \
 	api/media.c \
 	api/status.c \
 	api/poll.c \
 	api/date_format.c \
+	cli/compose.c \
+	cli/compose_header.c \
+	cli/print.c \
 	../lib/dgets.c \
 	../lib/strsplit.c \
 	../lib/progress_bar.c \
-	../lib/realloc_safe.c \
 
 mastowrite_CC65SOURCES := \
 	$(common_CC65SOURCES) \

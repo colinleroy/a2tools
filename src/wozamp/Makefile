@@ -41,7 +41,6 @@ wozamp_SOURCES := \
 	config.c \
 	backup_logo.c \
 	$(EMBED_RBROWSER) \
-	../lib/realloc_safe.c \
 	../lib/dgets.c \
 	../lib/strsplit.c \
 	../stp/stp_list.c \
@@ -61,6 +60,7 @@ wozamp_CL65SOURCES = \
 	../lib/asm/scrollwindow.s \
 	../lib/asm/path_helper.s \
 	../lib/asm/malloc0.s \
+	../lib/asm/realloc_safe.s \
 	../lib/asm/hgr.s \
 	../lib/dputc.s \
 	../lib/scroll.s \

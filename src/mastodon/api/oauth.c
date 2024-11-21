@@ -38,15 +38,15 @@ static char *get_csrf_token(char *body, size_t buf_size) {
 
   if (surl_find_line(body, CSRF_TOKEN_SCRAPE, buf_size, SURL_REGEXP_CASE_SENSITIVE) == 0) {
     w = strstr(body, CSRF_TOKEN);
-    if (w == NULL) {
+    if (IS_NULL(w)) {
       goto out;
     }
     w = strstr(w, "value=");
-    if (w == NULL) {
+    if (IS_NULL(w)) {
       goto out;
     }
     w = strchr(w, '"');
-    if (w == NULL) {
+    if (IS_NULL(w)) {
       goto out;
     }
     w++;
@@ -56,7 +56,7 @@ static char *get_csrf_token(char *body, size_t buf_size) {
     token[len] = '\0';
   }
 out:
-  if (token == NULL) {
+  if (IS_NULL(token)) {
     dputs("Error extracting CSRF token.\r\n");
   }
   return token;
@@ -71,7 +71,7 @@ static char *get_oauth_code(char *body) {
   size_t len;
   
   w = strstr(body, "code=");
-  if (w == NULL) {
+  if (IS_NULL(w)) {
     return NULL;
   }
   w+=5;
@@ -173,9 +173,9 @@ int do_login(void) {
 
 password_again:
     token = get_csrf_token(body, buf_size);
-    if (token == NULL)
+    if (IS_NULL(token)) {
       goto err_out;
-
+    }
     dputs("Enter password: ");
     
     dgets_echo_on = 0;
@@ -222,9 +222,9 @@ password_again:
 
 otp_again:
       token = get_csrf_token(body, buf_size);
-      if (token == NULL)
+      if (IS_NULL(token)) {
         goto err_out;
-
+      }
       dputs("Enter OTP code: ");
       otp[0] = '\0';
       dget_text(otp, 9, NULL, 0);
@@ -270,10 +270,10 @@ otp_again:
   if (oauth_required) {
     /* This only works because Authorize is before Deny */
     token = get_csrf_token(body, buf_size);
-    if (token == NULL)
+    if (IS_NULL(token)) {
       goto err_out;
-
-  /* Oauth request */
+    }
+    /* Oauth request */
     post = prepare_oauth_post(token);
     post_len = strlen(post);
     free(token);
@@ -374,10 +374,10 @@ int register_app(void) {
     goto err_out;
   }
 
-  if (strchr(client_id, '\n'))
-    *strchr(client_id, '\n') = '\0';
-  if (strchr(client_secret, '\n'))
-    *strchr(client_secret, '\n') = '\0';
+  if (IS_NOT_NULL(post = strchr(client_id, '\n')))
+    *post = '\0';
+  if (IS_NOT_NULL(post = strchr(client_secret, '\n')))
+    *post = '\0';
 
   dputs("Done.\r\n");
   res = 0;
@@ -413,7 +413,7 @@ int get_oauth_token(void) {
   size_t post_len;
   int ret = -1;
 
-  if (!oauth_token) {
+  if (IS_NULL(oauth_token)) {
     oauth_token = malloc(50);
   }
 
@@ -436,8 +436,8 @@ int get_oauth_token(void) {
     dputs("OAuth token not found.\r\n");
     goto err_out;
   } else {
-    if (strchr(oauth_token, '\n')) {
-      *strchr(oauth_token, '\n') = '\0';
+    if (IS_NOT_NULL(post = strchr(oauth_token, '\n'))) {
+      *post = '\0';
     }
     dputs("Got OAuth token.\r\n");
   }

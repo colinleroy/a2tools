@@ -46,7 +46,6 @@ slowtake_SOURCES := \
 	qt-state.c \
 	../lib/dgets.c \
 	../lib/strtrim.c \
-	../lib/realloc_safe.c \
 	../lib/progress_bar.c \
 	../lib/hgr_addrs.c \
 	$(debug_SOURCES)
