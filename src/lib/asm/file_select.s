@@ -506,6 +506,12 @@ gotox_sx:
         lda       #<nav_str
         ldx       #>nav_str
         jsr       _cputs
+        .ifndef __APPLE2ENH__
+        jsr       gotox_sx
+        lda       #<refresh_str
+        ldx       #>refresh_str
+        jsr       _cputs
+        .endif
         jsr       gotox_sx
         lda       #<enter_escape_str
         ldx       #>enter_escape_str
@@ -516,6 +522,10 @@ gotox_sx:
         jsr       _tolower
         sta       tmp_c
 
+@check_r:
+        cmp       #'r'
+        bne       @check_ch_curs_right
+        jmp       @list_again
 @check_ch_curs_right:
         cmp       #$15                  ; CH_CURS_RIGHT
         bne       @check_ch_curs_left
@@ -605,16 +615,17 @@ VBAR:                         .byte $DF,$00
 VBAR_STAR:                    .byte $DF," *",$00
 nav_str:                      .byte $DF,"  Up/Down / Left/Right: navigate;", $0D,$0A,$00
 any_key_up_str:               .byte $D4,$5F," Any key to go up", $00
-enter_escape_str:             .byte $D4,$5F," Enter: select; Esc: cancel", $00
+enter_escape_str:             .byte $D4,$5F," Enter: choose; Esc: cancel; R: refresh", $00
         .else
 VBAR_ASC = '!'
 CURS_DOWN = 'j'
 CURS_UP   = 'u'
 VBAR:                         .asciiz "!"
 VBAR_STAR:                    .asciiz "! *"
-nav_str:                      .byte "!  U/J / Left/Right: navigate;", $0D,$0A,$00
+nav_str:                      .byte   "!  U/J / Left/Right: navigate;", $0D,$0A,$00
+refresh_str:                  .byte   "!  R: refresh;", $0D,$0A,$00
 any_key_up_str:               .asciiz "!_ Any key to go up"
-enter_escape_str:             .asciiz "!_ Enter: select; Esc: cancel"
+enter_escape_str:             .asciiz "!_ Enter: choose; Esc: cancel"
         .endif
 EOL:                          .byte $0D,$0A,$00
 
