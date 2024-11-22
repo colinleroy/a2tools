@@ -100,12 +100,10 @@ static char __fastcall__ rewrite_end_of_buffer(char full) {
     }
 
     /* Clear start of next line if we go back to a single line */
-    if (x == win_width || k == max_insert - 1) {
-      if (y_plus1 < win_height) {
-        gotoxy(0, y_plus1);
-        clreol();
-        gotoxy(x, y);
-      }
+    if (k == max_insert - 1 && y_plus1 < win_height) {
+      gotoxy(0, y_plus1);
+      clreol();
+      gotoxy(x, y);
     }
 
     if (c == '\n') {
