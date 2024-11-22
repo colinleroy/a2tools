@@ -29,7 +29,6 @@
 #include "surl.h"
 #include "simple_serial.h"
 #include "extended_conio.h"
-#include "dgets.h"
 #include "dputc.h"
 #include "clrzone.h"
 #include "scroll.h"

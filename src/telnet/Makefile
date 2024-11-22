@@ -15,7 +15,7 @@ USE_LANGCARD := -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD
 PROGRAM=telnet
 SOURCES := \
 	telnet.c \
-	../lib/dgets.c
+	../lib/dget_text_single.c
 
 #Fastirq is needed in telnet
 

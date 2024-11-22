@@ -41,7 +41,7 @@ wozamp_SOURCES := \
 	config.c \
 	backup_logo.c \
 	$(EMBED_RBROWSER) \
-	../lib/dgets.c \
+	../lib/dget_text_single.c \
 	../lib/strsplit.c \
 	../stp/stp_list.c \
 	../lib/charsets.c
@@ -84,7 +84,7 @@ rbrowser_SOURCES := \
 	radio-browser.c \
 	config.c \
 	backup_logo.c \
-	../lib/dgets.c \
+	../lib/dget_text_single.c \
 	../lib/strsplit.c
 
 rbrowser_CL65SOURCES = \

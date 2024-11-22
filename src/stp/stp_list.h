@@ -19,7 +19,7 @@
 #define __stp_h__
 
 #include "surl.h"
-#include "dgets.h"
+#include "dget_text.h"
 
 #ifdef __APPLE2ENH__
 #define NUMCOLS 80

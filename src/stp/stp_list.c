@@ -28,7 +28,7 @@
 #include "surl.h"
 #include "simple_serial.h"
 #include "extended_conio.h"
-#include "dgets.h"
+#include "dget_text.h"
 #include "clrzone.h"
 #include "scroll.h"
 #include "scrollwindow.h"
@@ -96,7 +96,7 @@ char *stp_get_start_url(char *header, char *default_url, cmd_handler_func cmd_cb
   cputs(header);
   cputs("URL: ");
 
-  dget_text(tmp_buf, BUFSIZE, cmd_cb, 0);
+  dget_text_single(tmp_buf, BUFSIZE, cmd_cb);
   if (IS_NOT_NULL(cmd_cb)) {
     cputs("\r\n");
   }
@@ -118,7 +118,7 @@ char *stp_get_start_url(char *header, char *default_url, cmd_handler_func cmd_cb
 
   cputs("Login: ");
   strcpy(tmp_buf, login);
-  dget_text(login, 32, cmd_cb, 0);
+  dget_text_single(login, 32, cmd_cb);
   if (IS_NOT_NULL(cmd_cb)) {
     cputs("\r\n");
   }
@@ -130,7 +130,7 @@ char *stp_get_start_url(char *header, char *default_url, cmd_handler_func cmd_cb
   cputs("Password: ");
   dgets_echo_on = 0;
   strcpy(tmp_buf, password);
-  dget_text(password, 32, cmd_cb, 0);
+  dget_text_single(password, 32, cmd_cb);
   dgets_echo_on = 1;
 
   if (IS_NOT_NULL(cmd_cb)) {
@@ -268,7 +268,7 @@ void stp_list_search(unsigned char new_search) {
   if (new_search) {
     clrzone(0, 0, NUMCOLS - 1, 0);
     cputs("Search: ");
-    dget_text(search_buf, 40, NULL, 0);
+    dget_text_single(search_buf, 40, NULL);
 
     stp_print_footer();
 

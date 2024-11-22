@@ -38,7 +38,7 @@ ammonoid_SOURCES := \
 	../lib/asm/path_helper.s \
 	../lib/asm/malloc0.s \
 	../lib/asm/clrzone.s \
-	../lib/dgets.c \
+	../lib/dget_text_single.c \
 	../lib/dputc.s \
 	../lib/scroll.s \
 	../lib/FVTABZ.s \

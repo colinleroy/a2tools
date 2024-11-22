@@ -17,7 +17,7 @@ homectrl_SOURCES := main.c network.c \
 	switches.c sensors.c climate.c \
 	server_url.c \
 	../lib/extended_conio.c \
-	../lib/dgets.c \
+	../lib/dget_text_single.c \
 	../lib/strsplit.c \
 	../lib/strellipsis.c \
 	

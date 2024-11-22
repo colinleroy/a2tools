@@ -24,7 +24,7 @@
 #include "scrollwindow.h"
 #include "clrzone.h"
 #include "shift_char_trans.h"
-#include "dgets.h"
+#include "dget_text.h"
 #ifndef __CC65__
 #include <termios.h>
 #include <unistd.h>
@@ -582,7 +582,7 @@ again:
     dputs("(When done, use Open-Apple-D to close connection).");
     gotoxy(0, 0);
     dputs("Enter host:port (or Open-Apple-S for serial): ");
-    dget_text(buf, BUFSIZE, set_raw, 0);
+    dget_text_single(buf, BUFSIZE, set_raw);
     if (buf[0] == '\0' && !raw) {
       dputs("Bye.");
       exit(0);

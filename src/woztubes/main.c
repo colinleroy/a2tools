@@ -26,7 +26,7 @@
 #include "simple_serial.h"
 #include "strsplit.h"
 #include "extended_conio.h"
-#include "dgets.h"
+#include "dget_text.h"
 #include "dputc.h"
 #include "dputs.h"
 #include "clrzone.h"
@@ -396,7 +396,7 @@ new_search:
   gotoxy(0, 0);
   cputs("Search videos: ");
   did_cmd = 0;
-  dget_text(search_str, 80, cmd_cb, 0);
+  dget_text_single(search_str, 80, cmd_cb);
   if (did_cmd) {
     goto new_search;
   }
@@ -466,7 +466,7 @@ again:
   cputs("Please enter a Peertube or Invidious server URL\r\n");
   cputs("Instance URL: ");
   strcpy((char *)BUF_1K_ADDR, url);
-  dget_text((char *)BUF_1K_ADDR, 80, NULL, 0);
+  dget_text_single((char *)BUF_1K_ADDR, 80, NULL);
   modified = (strcmp((char *)BUF_1K_ADDR, url) != 0);
   free(url);
   url = strdup((char *)BUF_1K_ADDR);

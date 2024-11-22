@@ -13,7 +13,7 @@
 #include "clrzone.h"
 #include "scrollwindow.h"
 #include "malloc0.h"
-#include "dgets.h"
+#include "dget_text.h"
 #include "surl.h"
 #include "vsdrive.h"
 
@@ -337,7 +337,7 @@ static char *prompt(const char *verb, const char *dir, const char *file, int len
   cputs(verb);
   cputs(dir);
   cputc('/');
-  dget_text(buf, len, NULL, 0);
+  dget_text_single(buf, len, NULL);
 
   return buf;
 }

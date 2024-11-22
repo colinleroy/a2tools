@@ -26,7 +26,7 @@
 #include "simple_serial.h"
 #include "strsplit.h"
 #include "extended_conio.h"
-#include "dgets.h"
+#include "dget_text.h"
 #include "dputc.h"
 #include "clrzone.h"
 #include "scroll.h"
@@ -435,7 +435,7 @@ search_again:
   print_footer();
   gotoxy(0, 0);
   cputs("Station name: ");
-  dget_text(search_buf, SEARCH_BUF_SIZE, cmd_cb, 0);
+  dget_text_single(search_buf, SEARCH_BUF_SIZE, cmd_cb);
   if (do_server_screen) {
     return;
   }

@@ -20,7 +20,7 @@
 #include "api.h"
 #include "list.h"
 #include "math.h"
-#include "dgets.h"
+#include "dget_text.h"
 #include "scrollwindow.h"
 #include "runtime_once_clean.h"
 
@@ -412,7 +412,7 @@ static int show_search(void) {
   dputs("Search: ");
 
   search_buf[0] = '\0';
-  dget_text(search_buf, 49, search_footer, 0);
+  dget_text_single(search_buf, 49, search_footer);
 
   if (search_buf[0] != '\0') {
     clrscr();

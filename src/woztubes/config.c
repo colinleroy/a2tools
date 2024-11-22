@@ -10,7 +10,7 @@
 #include "charsets.h"
 #include "clrzone.h"
 #include "config.h"
-#include "dgets.h"
+#include "dget_text.h"
 #include "citoa.h"
 
 extern unsigned char scrw;
@@ -101,7 +101,7 @@ charset_again:
 
   if (enable_subtitles) {
     cputs("\r\nPreferred subtitles language code (two letters)? ");
-    dget_text(sub_language, 3, NULL, 0);
+    dget_text_single(sub_language, 3, NULL);
     if (sub_language[0] == '\0')
       strcpy(sub_language, "en");
     sub_language[0] = tolower(sub_language[0]);

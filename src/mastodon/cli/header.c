@@ -15,7 +15,6 @@
 #include "print.h"
 #include "list.h"
 #include "math.h"
-#include "dgets.h"
 #include "scrollwindow.h"
 
 #ifdef SURL_TO_LANGCARD

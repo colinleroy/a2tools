@@ -12,7 +12,6 @@
 #include "header.h"
 #include "list.h"
 #include "math.h"
-#include "dgets.h"
 #include "dputs.h"
 #include "dputc.h"
 #include "clrzone.h"

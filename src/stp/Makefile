@@ -21,7 +21,7 @@ SOURCES := stp_main.c stp_list.c stp_save.c stp_send_file.c stp_delete.c \
 	../lib/get_buf_size.c \
 	../lib/progress_bar.c \
 	../lib/strsplit.c \
-	../lib/dgets.c \
+	../lib/dget_text_single.c \
 	../lib/surl/surl_set_time.c
 
 CL65SOURCES = \
