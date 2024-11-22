@@ -413,12 +413,7 @@ no_crop:
 
 static void reload_menu(const char *filename) {
   char buffer[128];
-  while (reopen_start_device() != 0) {
-    clrscr();
-    gotoxy(13, 12);
-    printf("Please reinsert the program disk, then press any key.");
-    cgetc();
-  }
+  reopen_start_device();
 
   if (filename) {
     sprintf(buffer, "%s %d", filename, effective_width);

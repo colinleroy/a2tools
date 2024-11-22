@@ -572,12 +572,6 @@ int main(int argc, char **argv) {
 
   register_start_device();
 
-  if (surl_connect_proxy() != 0) {
-    dputs("Can not connect serial proxy.");
-    cgetc();
-    exit(1);
-  }
-
 #ifdef __APPLE2ENH__
   videomode(VIDEOMODE_80COL);
 #endif
@@ -640,8 +634,8 @@ int main(int argc, char **argv) {
 
     text[0] = arobase;
     strcpy(text+1, argv[4]);
-    while (strchr(text, '@')) {
-      *(strchr(text, '@')) = arobase;
+    while (IS_NOT_NULL(params = strchr(text, '@'))) {
+      *params = arobase;
     }
     ref_status = NULL;
   }
@@ -668,12 +662,7 @@ int main(int argc, char **argv) {
   params = malloc0(127);
   snprintf(params, 127, "%s %s", instance_url, oauth_token);
 #ifdef __CC65__
-  while (reopen_start_device() != 0) {
-    clrscr();
-    gotoxy(13, 12);
-    dputs("Please reinsert the program disk, then press any key.");
-    cgetc();
-  }
+  reopen_start_device();
 
   exec("mastocli", params);
   exit(0);
