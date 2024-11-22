@@ -91,7 +91,7 @@ monochrome_again:
 }
 
 int conf_main(int argc, char **argv) {
-  char *params = malloc0(BUF_SIZE);
+  char *params = malloc0(127);
 
   if (argc < 3) {
     cputs("Missing instance_url and/or oauth_token parameters.\n");
@@ -106,7 +106,7 @@ int conf_main(int argc, char **argv) {
   oauth_token = argv[2];
   cli();
 
-  snprintf(params, BUF_SIZE, "%s %s", instance_url, oauth_token);
+  snprintf(params, 127, "%s %s", instance_url, oauth_token);
 
 #ifdef __CC65__
   exec("mastocli", params);

@@ -86,7 +86,7 @@ static int load_settings(void) {
 
   fp = fopen("mastsettings", "r");
 
-  instance_url  = malloc0(BUF_SIZE);
+  instance_url  = malloc0(70);
   client_id     = malloc0(50);
   client_secret = malloc0(50);
   login         = malloc0(50);
@@ -94,22 +94,22 @@ static int load_settings(void) {
   oauth_token   = malloc0(50);
 
   if (IS_NOT_NULL(fp)) {
-    if (fgets(instance_url, BUF_SIZE, fp) > 0)
+    if (fgets(instance_url, 70, fp) > 0)
       *strchr(instance_url, '\n') = '\0';
 
-    if (fgets(client_id, BUF_SIZE, fp) > 0)
+    if (fgets(client_id, 50, fp) > 0)
       *strchr(client_id, '\n') = '\0';
 
-    if (fgets(client_secret, BUF_SIZE, fp) > 0)
+    if (fgets(client_secret, 50, fp) > 0)
       *strchr(client_secret, '\n') = '\0';
 
-    if (fgets(login, BUF_SIZE, fp) > 0)
+    if (fgets(login, 50, fp) > 0)
       *strchr(login, '\n') = '\0';
 
-    if (fgets(oauth_code, BUF_SIZE, fp) > 0)
+    if (fgets(oauth_code, 50, fp) > 0)
       *strchr(oauth_code, '\n') = '\0';
 
-    if (fgets(oauth_token, BUF_SIZE, fp) > 0)
+    if (fgets(oauth_token, 50, fp) > 0)
       *strchr(oauth_token, '\n') = '\0';
 
     fclose(fp);
@@ -129,13 +129,9 @@ reenter_settings:
 
     dputs("Your instance URL: ");
     strcpy(instance_url, "https://");
-    dget_text_single(instance_url, BUF_SIZE, NULL);
+    dget_text_single(instance_url, 70, NULL);
 
     if (instance_url[0] == '\0') {
-      goto reenter_settings;
-    }
-    if (strlen(instance_url) > 70) {
-      dputs("URL is too long.\r\n");
       goto reenter_settings;
     }
     if (register_app() < 0) {
@@ -145,7 +141,7 @@ reenter_settings:
     dputs("If on a non-US keyboard, use @ instead of arobase.\r\n");
     dputs("Your login: ");
     login[0] = '\0';
-    dget_text_single(login, BUF_SIZE, NULL);
+    dget_text_single(login, 50, NULL);
 
     return 0;
   }
@@ -160,7 +156,7 @@ int main(int argc, char **argv) {
     return conf_main(argc, argv);
   }
 
-  params = malloc0(BUF_SIZE);
+  params = malloc0(127);
 
 #ifdef PRODOS_T_TXT
   _filetype = PRODOS_T_TXT;
@@ -212,15 +208,15 @@ try_login_again:
   dputs("\r\nHint: Use Ctrl-Y to toggle help menu");
   dputs("\r\nfrom anywhere in the program.");
 #endif
-  snprintf(params, BUF_SIZE, "%s %s", instance_url, oauth_token);
+  snprintf(params, 127, "%s %s", instance_url, oauth_token);
 
   set_scrollwindow(0, scrh);
 #ifdef __CC65__
-  //snprintf(params, BUF_SIZE, "%s %s ISO646-FR1 e 110882478679186108", instance_url, oauth_token);
-  //snprintf(params, BUF_SIZE, "%s %s ISO646-FR1", instance_url, oauth_token);
+  //snprintf(params, 127, "%s %s ISO646-FR1 e 110882478679186108", instance_url, oauth_token);
+  //snprintf(params, 127, "%s %s ISO646-FR1", instance_url, oauth_token);
   // exec("mastowrite", params);
 
-  // snprintf(params, BUF_SIZE, "%s %s ISO646-FR1 1 s 112016758824153809", instance_url, oauth_token);
+  // snprintf(params, 127, "%s %s ISO646-FR1 1 s 112016758824153809", instance_url, oauth_token);
   // exec("mastoimg", params);
 
   exec("mastocli", params);
