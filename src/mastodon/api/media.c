@@ -121,5 +121,6 @@ media *api_get_status_media(char *id) {
 
 media *api_get_account_media(char *id) {
   return get_media(ACCOUNTS_ENDPOINT,
-                   ".id,.avatar_static,.id,.header_static", NULL, id);
+                   /* "i" for image */
+                   ".id,.avatar_static,\"i\",.id,.header_static,\"i\"", NULL, id);
 }
