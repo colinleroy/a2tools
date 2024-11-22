@@ -163,7 +163,7 @@ CFLAGS  = -I ../lib -I api -I cli -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
 CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x400 $(USE_LANGCARD) $(debug_CFLAGS)  $(iigs_CFLAGS)
 #Using start address 0x4000 is easier than HGR page 2, and also allows to use 80 columns
 
-mastodon_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-rtonce.cfg
+mastodon_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-rtonce.cfg --start-addr 0xC03 #One file buffer
 mastocli_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-rtonce.cfg
 ifdef OLDII
 mastoimg_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-mastoimg-6502.cfg \
@@ -173,7 +173,7 @@ mastoimg_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-mastoimg-65c02.cfg \
 	-DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER \
 	-DSTART_ADDR=0x5EA0 --start-addr 0x5EA0
 endif
-mastowrite_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-rtonce.cfg
+mastowrite_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-rtonce.cfg --start-addr 0xC03 #One file buffer
 
 GCCCFLAGS = -g -O0 -Wall -Wno-char-subscripts -Wno-unused-but-set-variable -Wno-unused-variable -Wno-unknown-pragmas -Werror $(shell sdl-config --cflags)
 GCCLDFLAGS = $(shell sdl-config --libs)
@@ -186,11 +186,11 @@ all: mastodon.bin mastodon.x86_64 \
 	mastoimg.bin mastoimg.x86_64
 
 mastodon.bin: $(mastodon_SOURCES) $(mastodon_CC65SOURCES)
-	cl65 --debug-info -Wl --dbgfile,"mastodon.dbg" $(CFLAGS) $(mastodon_CLCFLAGS) -vm -m mastodon.map -o $@ $^
+	cl65 --debug-info -Wl --dbgfile,"mastodon.dbg" $(CFLAGS) $(mastodon_CLCFLAGS) -vm -m mastodon.map -o $@ $^ $(CC65_TARGET)-iobuf-0800.o
 mastocli.bin: $(mastocli_SOURCES) $(mastocli_CC65SOURCES)
-	cl65 --debug-info -Wl --dbgfile,"mastocli.dbg" $(CFLAGS) $(mastocli_CLCFLAGS) -vm -m mastocli.map -o $@ $^
+	cl65 --debug-info -Wl --dbgfile,"mastocli.dbg" $(CFLAGS) $(mastocli_CLCFLAGS) -vm -m mastocli.map -o $@ $^ #no iobuf, keep the RAM available for lists
 mastowrite.bin: $(mastowrite_SOURCES) $(mastowrite_CC65SOURCES)
-	cl65 --debug-info -Wl --dbgfile,"mastowrite.dbg" $(CFLAGS) $(mastowrite_CLCFLAGS) -vm -m mastowrite.map -o $@ $^
+	cl65 --debug-info -Wl --dbgfile,"mastowrite.dbg" $(CFLAGS) $(mastowrite_CLCFLAGS) -vm -m mastowrite.map -o $@ $^ $(CC65_TARGET)-iobuf-0800.o
 mastoimg.bin: $(mastoimg_CC65SOURCES) $(mastoimg_SOURCES)
 	cl65 --debug-info -Wl --dbgfile,"mastoimg.dbg" $(CFLAGS) $(mastoimg_CLCFLAGS) -vm -m mastoimg.map -o $@ $^ $(CC65_TARGET)-iobuf-0800.o
 
