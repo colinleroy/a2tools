@@ -875,9 +875,10 @@ static char *state_get_str(FILE *fp) {
 }
 
 static int load_state(list ***lists) {
-  char i,j, loaded;
+  signed char i, j, first;
   signed char num_lists;
   FILE *fp;
+  list *l = NULL;
 
 #ifdef __APPLE2__
   _filetype = PRODOS_T_TXT;
@@ -889,8 +890,6 @@ static int load_state(list ***lists) {
     *lists = NULL;
     return -1;
   }
-
-  loaded = -1;
 
   dputs("Reloading state...");
 
@@ -907,7 +906,6 @@ static int load_state(list ***lists) {
   *lists = malloc0((num_lists + 1) * sizeof(list *));
 
   for (i = 0; i <= num_lists; i++) {
-    list *l;
     char n_posts;
 
     l = malloc0(sizeof(list));
@@ -918,7 +916,7 @@ static int load_state(list ***lists) {
     l->leaf_root = state_get_str(fp);
     l->last_displayed_post = state_get_int(fp);
     l->eof = state_get_int(fp);
-    l->first_displayed_post = state_get_int(fp);
+    l->first_displayed_post = first = state_get_int(fp);
     l->n_posts = state_get_int(fp);
 
     n_posts = l->n_posts;
@@ -937,24 +935,16 @@ static int load_state(list ***lists) {
     for (j = 0; j < n_posts; j++) {
       l->ids[j] = state_get_str(fp);
       l->post_height[j] = state_get_int(fp);
-
-      if (i == num_lists && is_root(l, j)) {
-        /* Load the root item */
-        load_item_at(l, j, 1);
-        loaded = j;
-      }
-    }
-    if (i == num_lists) {
-      signed char f = l->first_displayed_post;
-      if (loaded != f && f > -1) {
-        /* Load first displayed post if no root */
-        load_item_at(l, f, 1);
-      }
     }
   }
 
   fclose(fp);
   unlink(STATE_FILE);
+
+  if (IS_NOT_NULL(l) && first != -1) {
+    load_item_at(l, first, 1);
+  }
+
   cur_action = NAVIGATE;
 
   dputs(" Done");
