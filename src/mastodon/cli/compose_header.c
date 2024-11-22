@@ -82,7 +82,7 @@ void compose_print_header(void) {
   }
 
   compose_show_help();
-  cvlinexy(LEFT_COL_WIDTH, 0, scrh);
+  cvlinexy(LEFT_COL_WIDTH, 0, NUMLINES);
 #endif
 }
 
@@ -91,7 +91,7 @@ void print_free_ram(void) {
   unsigned char sx, wx;
 
   get_hscrollwindow(&sx, &wx);
-  set_hscrollwindow(0, scrw);
+  set_hscrollwindow(0, NUMCOLS);
 #endif
 #ifdef __CC65__
   gotoxy(0, 23);

@@ -9,8 +9,6 @@
 #include "atoc.h"
 #include "cli.h"
 
-extern unsigned char scrw;
-
 static char *field_selector = ".fields[i]|(.name+\": \"+.value)";
 #define FIELD_SELECTOR_NUM 8
 
@@ -39,7 +37,7 @@ account *account_new_from_json(void) {
       a->fields = malloc0(sizeof(char *)*i);
       a->n_fields = i;
       while (i) {
-        char len = scrw - RIGHT_COL_START - 1;
+        char len = NUMCOLS - RIGHT_COL_START - 1;
         i--;
         field_selector[FIELD_SELECTOR_NUM] = i+'0';
         a->fields[i] = malloc0(len);

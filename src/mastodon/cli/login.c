@@ -169,10 +169,10 @@ int main(int argc, char **argv) {
 
   clrscr();
 
-  print_logo(scrw);
+  print_logo();
 
   y = wherey();
-  set_scrollwindow(y, scrh);
+  set_scrollwindow(y, NUMLINES);
 
   surl_ping();
   surl_user_agent = "Mastodon for Apple II / "VERSION;

@@ -1,9 +1,10 @@
 #include <string.h>
 #include "scrollwindow.h"
+#include "cli.h"
 #include "logo.h"
 #include "extended_conio.h"
 
-void print_logo(unsigned char scrw) {
+void print_logo(void) {
 #ifdef __APPLE2ENH__
   char *logo =
     "   ***************\r\n"
@@ -17,7 +18,7 @@ void print_logo(unsigned char scrw) {
     "     *********'\r\n";
 
   /* 58 is the width of char *logo */
-  set_hscrollwindow((scrw - 58) / 2, 58);
+  set_hscrollwindow((NUMCOLS - 58) / 2, 58);
   gotoxy(0, 2);
   cputs(logo);
 #else
@@ -32,12 +33,11 @@ void print_logo(unsigned char scrw) {
     "   **           This program is GPL v3.\r\n"
     "     ****'\r\n";
 
-  /* 58 is the width of char *logo */
   gotoxy(0, 2);
   cputs(logo);
 #endif
-  set_hscrollwindow(0, scrw);
+  set_hscrollwindow(0, NUMCOLS);
   cputs("\r\n");
-  chline(scrw);
+  chline(NUMCOLS);
   cputs("\r\n");
 }

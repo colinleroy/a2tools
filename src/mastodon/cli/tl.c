@@ -39,8 +39,6 @@ static char *tl_filter[4] = { NULL,
                                NULL,
                                NULL};
 
-unsigned char scrw, scrh;
-
 char *instance_url = NULL;
 char *oauth_token = NULL;
 char monochrome = 1;
@@ -135,7 +133,7 @@ static int print_notification(notification *n) {
   char y, width;
   register char *w;
 
-  width = scrw - RIGHT_COL_START;
+  width = NUMCOLS - RIGHT_COL_START;
   n->displayed_at = wherey();
   dputs(n->display_name);
 #if NUMCOLS == 80
@@ -316,11 +314,11 @@ static char load_next_posts(list *l) {
 }
 
 static void set_list_hscrollwindow(void) {
-  set_hscrollwindow(RIGHT_COL_START, scrw - RIGHT_COL_START);
+  set_hscrollwindow(RIGHT_COL_START, NUMCOLS - RIGHT_COL_START);
 }
 
 static void set_full_hscrollwindow(void) {
-  set_hscrollwindow(0, scrw);
+  set_hscrollwindow(0, NUMCOLS);
 }
 
 static char is_root(list *l, char idx) {
@@ -343,7 +341,7 @@ static char load_prev_posts(list *l) {
   set_list_hscrollwindow();
   scrolldown_n(2);
   gotoxy(0,1);
-  chline(scrw - RIGHT_COL_START);
+  chline(NUMCOLS - RIGHT_COL_START);
   gotoxy(0, 0);
   dputs(LOADING_TOOT_MSG);
 
@@ -397,7 +395,7 @@ static char search_footer(char c) {
   cprintf("(%c) Toots (%c) Account   ("KEY_COMB" + T/A)\r\n",
           search_type == 't' ? '*':' ',
           search_type == 'a' ? '*':' ');
-  chline(scrw - RIGHT_COL_START);
+  chline(NUMCOLS - RIGHT_COL_START);
   gotoxy(0, 0);
   return 0;
 }
@@ -542,7 +540,7 @@ update:
   set_list_hscrollwindow();
   gotoxy(0, 0);
 
-  writable_lines = scrh;
+  writable_lines = NUMLINES;
 
   /* copy to temp vars to avoid pointer arithmetic */
   if (l->half_displayed_post > 0 && limit == 0) {
@@ -550,7 +548,7 @@ update:
     disp = (item *)l->displayed_posts[first];
     if (disp->displayed_at >= 0) {
       gotoxy(0, disp->displayed_at);
-      writable_lines = scrh - disp->displayed_at;
+      writable_lines = NUMLINES - disp->displayed_at;
     } else {
       first = l->first_displayed_post;
     }
@@ -590,7 +588,7 @@ update:
       if (--writable_lines != 0) {
         clrnln();
         if (--writable_lines != 0)
-          chline(scrw - RIGHT_COL_START);
+          chline(NUMCOLS - RIGHT_COL_START);
       } else {
         bottom = 1;
       }
@@ -608,7 +606,7 @@ update:
 
       if (disp->displayed_at == 0 && wherey() == 0) {
         /* Specific case of a fullscreen, but not overflowing, post */
-        l->post_height[i] = scrh;
+        l->post_height[i] = NUMLINES;
       } else {
         l->post_height[i] = wherey() - disp->displayed_at;
       }
@@ -646,9 +644,9 @@ static void shift_posts_down(list *l) {
     scroll_val = l->post_height[l->first_displayed_post];
   }
 
-  if (scroll_val == scrh - 1) {
+  if (scroll_val == NUMLINES - 1) {
     /* we may have returned before the end */
-    scroll_val = scrh;
+    scroll_val = NUMLINES;
   }
 
   /* recompute displayed_at */
@@ -690,7 +688,7 @@ static char calc_post_height(status *s) {
       ++height;
     } else {
       ++x;
-      if (x == scrw - RIGHT_COL_START) {
+      if (x == NUMCOLS - RIGHT_COL_START) {
         x = 0;
         ++height;
       }
@@ -739,11 +737,11 @@ static int shift_posts_up(list *l) {
     scroll_val = l->post_height[first];
   }
   if (scroll_val < 0) {
-    scroll_val = scrh;
+    scroll_val = NUMLINES;
   }
-  if (scroll_val == scrh - 1) {
+  if (scroll_val == NUMLINES - 1) {
     /* we may have returned before the end */
-    scroll_val = scrh;
+    scroll_val = NUMLINES;
   }
 
   set_list_hscrollwindow();
@@ -990,9 +988,9 @@ static void do_vote (status *status) {
     if (print_status(status, 0, 1) == 0) {
       c = wherey() - 2;
     } else {
-      c = scrh - 1;
+      c = NUMLINES - 1;
     }
-    clrzone(0, c, scrw - RIGHT_COL_START - 1, c);
+    clrzone(0, c, NUMCOLS - RIGHT_COL_START - 1, c);
 #if NUMCOLS == 80
     dputs("1-7 to choose, Enter to vote, Escape to cancel");
 #else
@@ -1421,8 +1419,6 @@ int main(int argc, char **argv) {
   serial_throbber_set((void *)0x07D8);
   videomode(VIDEOMODE_80COL);
 #endif
-
-  screensize(&scrw, &scrh);
 
   instance_url = argv[1];
   oauth_token = argv[2];

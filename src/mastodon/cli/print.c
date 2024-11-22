@@ -46,18 +46,18 @@ int print_buf(register char *buffer, char hide, char allow_scroll) {
   l_hide = hide;
   l_allow_scroll = allow_scroll;
 
-  wrap_idx = scrw - (RIGHT_COL_START + 1);
+  wrap_idx = NUMCOLS - (RIGHT_COL_START + 1);
   scrolled = 0;
 
   while (*w) {
     if (l_allow_scroll && writable_lines == 1) {
-      gotoxy(0, scrh-1);
+      gotoxy(0, NUMLINES-1);
       dputs("Hit a key to continue.");
       cgetc();
 
-      gotoxy(0, scrh - 1);
+      gotoxy(0, NUMLINES - 1);
       dputs("                      ");
-      gotoxy(0, scrh - 1);
+      gotoxy(0, NUMLINES - 1);
       writable_lines += 14;
       scrolled = 1;
       x = 0;

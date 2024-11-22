@@ -3,6 +3,8 @@
 
 #include "account.h"
 
+#define NUMLINES 24
+
 #ifdef __APPLE2ENH__
 #define LEFT_COL_WIDTH 19
 #define RIGHT_COL_START 20
@@ -44,7 +46,5 @@
 #define SHOW_SEARCH_RES      'R'
 #define NAVIGATE             'N'
 #define ACCOUNT_TOGGLE_RSHIP 'F'
-
-extern unsigned char scrw, scrh;
 
 #endif
