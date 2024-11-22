@@ -25,10 +25,14 @@ extern char *instance_url;
 extern char *oauth_token;
 
 /* shared */
+#ifndef __CC65__
 char gen_buf[BUF_SIZE];
 char selector[SELECTOR_SIZE];
 char endpoint_buf[ENDPOINT_BUF_SIZE];
 char *lines[MAX_LINES_NUM];
+#else
+/* Buffers in iobuf, defined in buffers.s */
+#endif
 
 const surl_response *get_surl_for_endpoint(char method, char *endpoint) {
   static char *hdrs[1] = {NULL};

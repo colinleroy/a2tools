@@ -856,18 +856,23 @@ static void launch_command(char *command, char *p1, char *p2, char *p3) {
 #pragma code-name (push, "RT_ONCE")
 #endif
 
+/* state_buf NOT with the common buffers in buffers.s,
+ * as 0x800-0xC00 will be overwritten by file I/O. */
+#define STATE_BUF_SIZE 32
+static char state_buf[STATE_BUF_SIZE];
+
 static int state_get_int(FILE *fp) {
   /* coverity[tainted_argument] */
-  fgets(gen_buf, BUF_SIZE, fp);
-  return atoi(gen_buf);
+  fgets(state_buf, STATE_BUF_SIZE, fp);
+  return atoi(state_buf);
 }
 
 static char *state_get_str(FILE *fp) {
   /* coverity[tainted_argument] */
-  fgets(gen_buf, BUF_SIZE, fp);
-  if (gen_buf[0] != '\n') {
-    *strchr(gen_buf, '\n') = '\0';
-    return strdup(gen_buf);
+  fgets(state_buf, STATE_BUF_SIZE, fp);
+  if (state_buf[0] != '\n') {
+    *strchr(state_buf, '\n') = '\0';
+    return strdup(state_buf);
   }
   return NULL;
 }
