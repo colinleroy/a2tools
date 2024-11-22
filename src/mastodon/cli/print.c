@@ -143,7 +143,7 @@ int print_status(register status *s, char hide, char full) {
     CHECK_AND_CRLF();
   }
   /* Content */
-  scrolled = print_buf(s->content, hide && s->spoiler_text != NULL, (full && s->displayed_at == 0));
+  scrolled = print_buf(s->content, hide && IS_NOT_NULL(s->spoiler_text), (full && s->displayed_at == 0));
   if (scrolled && !(full && s->displayed_at == 0))
     return -1;
 

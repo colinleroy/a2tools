@@ -44,6 +44,6 @@ void __fastcall__ platform_interruptible_msleep(uint16 ms);
 #define platform_interruptible_msleep(n) usleep(n*1000)
 #define beep()
 #define dir_entry_count(D) 10000
-#define IS_NOT_NULL(ptr) (ptr)
+#define IS_NOT_NULL(ptr) ((ptr) != NULL)
 #define IS_NULL(ptr)    (!(ptr))
 #endif
