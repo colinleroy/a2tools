@@ -285,8 +285,8 @@ done:
   media_free(m);
 
   snprintf(gen_buf, BUF_SIZE, "%s %s", instance_url, oauth_token);
-  reopen_start_device();
 #ifdef __CC65__
+  reopen_start_device();
   exec("mastocli", gen_buf);
   exit(0);
 #else

@@ -59,15 +59,6 @@ uint16 crop_start_x = 0, crop_end_x;
 uint16 crop_start_y = 0, crop_end_y;
 int8 brighten = DEFAULT_BRIGHTEN;
 
-void get_program_disk(void) {
-  while (reopen_start_device() != 0) {
-    clrscr();
-    gotoxy(13, 12);
-    cputs("Please reinsert the program disk, then press any key.");
-    cgetc();
-  }
-}
-
 static char imgname[FILENAME_MAX];
 #ifdef __CC65__
 #define FOUR_NUM_WIDTH 16
@@ -101,7 +92,7 @@ void qt_convert_image_with_crop(const char *filename, uint16 sx, uint16 sy, uint
       fclose(fp);
     }
 
-    get_program_disk();
+    reopen_start_device();
 
     snprintf(args, FILENAME_MAX + FOUR_NUM_WIDTH - 1, "%s %d %d %d %d", imgname, sx, sy, ex, ey);
 

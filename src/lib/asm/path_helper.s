@@ -18,10 +18,11 @@
         .export         _register_start_device
         .export         _reopen_start_device
 
-        .import         _chdir, _getcwd
+        .import         _chdir, _getcwd, _clrscr
+        .import         _cgetc, _cputs, _gotoxy
         .import         _strrchr, _memcpy, _strlen
 
-        .import         pushax, pushptr1, tosaddax
+        .import         pusha, pushax, pushptr1, tosaddax
         .importzp       ptr1, tmp1
 
         .include        "apple2.inc"
@@ -112,8 +113,51 @@ _register_start_device:
 _reopen_start_device:
         lda       #<start_dir
         ldx       #>start_dir
-        jmp       _chdir
+        jsr       _chdir
+        cmp       #$00
+        bne       @prompt
+        rts                             ; done!
+
+@prompt:
+        jsr       _clrscr
+.ifdef __APPLE2ENH__
+        lda       #((80-53)/2)
+        jsr       pusha
+        lda       #12
+        jsr       _gotoxy
+
+        lda      #<prompt_str
+        ldx      #>prompt_str
+        jsr      _cputs
+.else
+        lda       #((40-33)/2)
+        jsr       pusha
+        lda       #12
+        jsr       _gotoxy
+
+        lda      #<prompt_str1
+        ldx      #>prompt_str1
+        jsr      _cputs
+
+        lda      #((40-19)/2)
+        sta      CH
+        lda      #<prompt_str2
+        ldx      #>prompt_str2
+        jsr      _cputs
+
+.endif
+        jsr      _cgetc
+        jmp      _reopen_start_device
 
         .bss
 
 start_dir: .res FILENAME_MAX+1
+
+        .rodata
+
+.ifdef __APPLE2ENH__
+prompt_str: .asciiz "Please reinsert the program disk, then press any key."
+.else
+prompt_str1: .byte "Please reinsert the program disk,",$0D,$0A,$00
+prompt_str2: .asciiz "then press any key."
+.endif

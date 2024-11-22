@@ -66,13 +66,26 @@ skip_prefix:
 #endif
 }
 
-int reopen_start_device(void) {
-  return chdir(start_dir);
+void reopen_start_device(void) {
+  while (chdir(start_dir) != 0) {
+    clrscr();
+    #ifdef __APPLE2ENH__
+    gotoxy((80-53)/2, 12);
+    cputs("Please reinsert the program disk, then press any key.");
+    #else
+    gotoxy((40-33)/2, 12);
+    cputs("Please reinsert the program disk,\r\n");
+    gotox((40-19)/2);
+    cputs("then press any key.");
+    #endif
+    
+    cgetc();
+  }
 }
 
 #else
 void register_start_device(void) {}
-int reopen_start_device(void) { return 0; }
+void reopen_start_device(void) {}
 #endif
 
 #ifdef __CC65__
