@@ -52,7 +52,7 @@ void poll_fill(poll *p, char source) {
     p->votes_count = (size_t)atoi(lines[1]);
 
     for (r = 0; r < MAX_POLL_OPTIONS; r++) {
-      p->own_votes[r] = (strchr(lines[2], r + '0') != NULL);
+      p->own_votes[r] = IS_NOT_NULL(strchr(lines[2], r + '0'));
     }
 
     p->options_count = (n_lines - NUM_POLL_LINES) / 2;
