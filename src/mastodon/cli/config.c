@@ -46,7 +46,7 @@ static void put_logo (void) {
   clrscr();
   gotoxy(0, 0);
 
-  print_logo(scrw);
+  print_logo();
 }
 
 static void cli() {

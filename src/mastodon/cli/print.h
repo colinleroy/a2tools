@@ -20,7 +20,7 @@
 #define CHLINE_CHAR '-'
 #endif
 #define CHLINE_SAFE() do {            \
-  chline(scrw - RIGHT_COL_START - 1); \
+  chline(NUMCOLS - RIGHT_COL_START - 1); \
   if (writable_lines > 1)             \
     dputc(CHLINE_CHAR);               \
   else                                \

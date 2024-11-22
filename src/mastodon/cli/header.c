@@ -38,7 +38,7 @@ char __fastcall__ print_header(list *l, status *root_status, notification *root_
     my_account->username[LEFT_COL_WIDTH] = '\0';
 
   show_help(l, root_status, root_notif);
-  cvlinexy(LEFT_COL_WIDTH, 0, scrh);
+  cvlinexy(LEFT_COL_WIDTH, 0, NUMLINES);
 #endif
 
   return 0;

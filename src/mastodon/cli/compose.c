@@ -26,9 +26,8 @@
 
 char *instance_url = NULL;
 char *oauth_token = NULL;
-unsigned char scrw, scrh;
 char top = 0;
-char writable_lines = 24;
+char writable_lines = NUMLINES;
 
 char n_medias = 0;
 char sensitive_medias = 0;
@@ -76,7 +75,7 @@ static void update_compose_audience(void) {
 }
 
 static void update_cw(void) {
-  clrzone(0, top + COMPOSE_FIELD_HEIGHT + 2, scrw - (RIGHT_COL_START+1), top + COMPOSE_FIELD_HEIGHT + 2);
+  clrzone(0, top + COMPOSE_FIELD_HEIGHT + 2, NUMCOLS - (RIGHT_COL_START+1), top + COMPOSE_FIELD_HEIGHT + 2);
 #if NUMCOLS == 80
   if (cw[0] == '\0') {
     dputs("( ) Content warning not set");
@@ -116,7 +115,7 @@ static char dgt_cmd_cb(char c) {
     case 'd':    compose_audience = COMPOSE_MENTION;  break;
     case 'x':    cancelled = 1;                       return 1;
     case 'y':    should_resume_composing = 1;
-                 set_scrollwindow(0, scrh);
+                 set_scrollwindow(0, NUMLINES);
                  clrscr();
                  compose_show_help();
                  c = cgetc();
@@ -124,7 +123,7 @@ static char dgt_cmd_cb(char c) {
                  return 1;
 #endif
   }
-  set_scrollwindow(0, scrh);
+  set_scrollwindow(0, NUMLINES);
   update_compose_audience();
   update_cw();
   print_free_ram();
@@ -134,27 +133,27 @@ static char dgt_cmd_cb(char c) {
 
 static void setup_gui(void)
 {
-  set_scrollwindow(0, scrh);
+  set_scrollwindow(0, NUMLINES);
   clrscr();
   gotoxy(0, 0);
 
   if (IS_NOT_NULL(ref_status)) {
     if (compose_mode[0] == 'r') {
-      writable_lines = scrh - COMPOSE_HEIGHT + 2;
+      writable_lines = NUMLINES - COMPOSE_HEIGHT + 2;
       print_status(ref_status, 0, 0);
 
       /* we want to make sure we'll have one and
        * only one separator line */
       gotoxy(0, wherey() - 1);
-      chline(scrw - RIGHT_COL_START);
-      clrzone(wherex(), wherey(), scrw - (RIGHT_COL_START+1), wherey());
+      chline(NUMCOLS - RIGHT_COL_START);
+      clrzone(wherex(), wherey(), NUMCOLS - (RIGHT_COL_START+1), wherey());
       dputs("Your reply:\r\n");
       top = wherey();
     }
   }
-  chline(scrw - RIGHT_COL_START);
+  chline(NUMCOLS - RIGHT_COL_START);
   gotoxy(0, top + COMPOSE_FIELD_HEIGHT);
-  chline(scrw - RIGHT_COL_START);
+  chline(NUMCOLS - RIGHT_COL_START);
 
   update_compose_audience();
   update_cw();
@@ -205,7 +204,7 @@ try_again:
   y = wherey();
   media_ids[n_medias] = api_send_hgr_image(media_files[n_medias],
                                            media_descriptions[n_medias],
-                                           &err, x, y, scrw - x  - (RIGHT_COL_START+1));
+                                           &err, x, y, NUMCOLS  - (RIGHT_COL_START+1) - x);
   if (IS_NULL(media_ids[n_medias])) {
     char t;
     dputs("An error happened uploading the file:\r\n");
@@ -224,9 +223,9 @@ try_again:
 }
 
 static void open_cw_menu(void) {
-  set_scrollwindow(0, scrh);
+  set_scrollwindow(0, NUMLINES);
 
-  clrzone(0, top + COMPOSE_FIELD_HEIGHT + 2, scrw - (RIGHT_COL_START+1), top + COMPOSE_FIELD_HEIGHT + 2);
+  clrzone(0, top + COMPOSE_FIELD_HEIGHT + 2, NUMCOLS - (RIGHT_COL_START+1), top + COMPOSE_FIELD_HEIGHT + 2);
   dputs("(*) CW: ");
   dget_text_multi(cw, sizeof(cw) - 1, NULL, 0);
   update_cw();
@@ -237,7 +236,7 @@ static void open_cw_menu(void) {
 static void open_images_menu(void) {
   char c;
 
-  set_scrollwindow(0, scrh);
+  set_scrollwindow(0, NUMLINES);
 image_menu:
   clrscr();
   gotoxy(0, 1);
@@ -269,7 +268,7 @@ image_menu:
   }
 
   print_free_ram();
-  gotoxy(0, scrh - 3);
+  gotoxy(0, NUMLINES - 3);
   if (n_medias < MAX_IMAGES) {
     dputs("Enter: add image");
   }
@@ -350,7 +349,7 @@ static void print_poll_header(void) {
 static void set_poll_duration(void) {
   char c, i;
   do {
-    gotoxy(0, scrh - 1);
+    gotoxy(0, NUMLINES - 1);
 #ifdef __APPLE2ENH__
     dputs("Left/Right to change duration, Enter to validate.");
 #else
@@ -375,7 +374,7 @@ static void set_poll_duration(void) {
 static void open_poll_menu(void) {
   char c, next_option_y;
 
-  set_scrollwindow(0, scrh);
+  set_scrollwindow(0, NUMLINES);
 poll_menu:
   clrscr();
   gotoxy(0, 1);
@@ -403,7 +402,7 @@ poll_menu:
   next_option_y = wherey();
 
   print_free_ram();
-  gotoxy(0, scrh - 3);
+  gotoxy(0, NUMLINES - 3);
   if (toot_poll->options_count < MAX_POLL_OPTIONS) {
     dputs("Enter: add option");
   }
@@ -513,7 +512,7 @@ static void compose_toot(char *initial_buf) {
 reedit:
   text = handle_compose_input(initial_buf);
 
-  set_scrollwindow(0, scrh);
+  set_scrollwindow(0, NUMLINES);
 
   if (IS_NOT_NULL(text) && !cancelled) {
     signed char r;
@@ -582,7 +581,6 @@ int main(int argc, char **argv) {
 #ifdef __APPLE2ENH__
   videomode(VIDEOMODE_80COL);
 #endif
-  screensize(&scrw, &scrh);
 
   instance_url = argv[1];
   oauth_token = argv[2];
@@ -606,7 +604,7 @@ int main(int argc, char **argv) {
 
   compose_print_header();
 
-  set_hscrollwindow(RIGHT_COL_START, scrw - RIGHT_COL_START);
+  set_hscrollwindow(RIGHT_COL_START, NUMCOLS - RIGHT_COL_START);
   gotoxy(0, 0);
   if (argc == 6) {
     compose_mode = argv[4];
@@ -665,7 +663,7 @@ int main(int argc, char **argv) {
     compose_toot(text);
   }
   free(text);
-  set_hscrollwindow(0, scrw);
+  set_hscrollwindow(0, NUMCOLS);
 
   params = malloc0(127);
   snprintf(params, 127, "%s %s", instance_url, oauth_token);
