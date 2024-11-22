@@ -75,7 +75,7 @@ static void toggle_legend(char force) {
   legend = !legend || force;
 
 #ifdef __APPLE2__
-  if (IS_NOT_NULL(legend)) {
+  if (legend) {
     init_text();
   } else {
     init_hgr(monochrome);

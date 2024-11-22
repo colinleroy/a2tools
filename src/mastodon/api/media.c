@@ -6,6 +6,7 @@
 #include "malloc0.h"
 #include "surl.h"
 #include "simple_serial.h"
+#include "hyphenize.h"
 #include "strsplit.h"
 #include "api.h"
 
@@ -63,12 +64,9 @@ static media *media_new_from_json(char *base_selector, char *description_selecto
         }
         ++w;
         ++n;
-        if (n == (16*NUMCOLS) - 2) {
+        if (n == (15*NUMCOLS) - 4) {
           /* shorten description, we don't scroll them yet */
-          img_buf[n-3] =
-            img_buf[n-2] =
-            img_buf[n-1] = '.';
-          img_buf[n] = '\0';
+          hyphenize(img_buf, n);
           break;
         }
       }
