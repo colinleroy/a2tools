@@ -23,6 +23,7 @@
 #include "clrzone.h"
 #include "scrollwindow.h"
 #include "vsdrive.h"
+#include "hyphenize.h"
 
 char *instance_url = NULL;
 char *oauth_token = NULL;
@@ -253,13 +254,10 @@ image_menu:
   }
 
   for (c = 0; c < n_medias; c++) {
-    char short_desc[55];
+    char short_desc[TL_SPOILER_TEXT_BUF+1];
     strncpy(short_desc, media_descriptions[c], TL_SPOILER_TEXT_BUF);
-    if (strlen(short_desc) > TL_SPOILER_TEXT_BUF-3) {
-      short_desc[TL_SPOILER_TEXT_BUF-3] =
-        short_desc[TL_SPOILER_TEXT_BUF-2] =
-        short_desc[TL_SPOILER_TEXT_BUF-1] = '.';
-    }
+    hyphenize(short_desc, TL_SPOILER_TEXT_BUF);
+
     cprintf("\r\n- %s (%s)"
             "\r\n  %s\r\n",
       media_files[c],
