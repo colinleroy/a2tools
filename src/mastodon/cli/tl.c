@@ -58,19 +58,13 @@ static char rship_toggle_action = RSHIP_FOLLOWING;
 static char notifications_type = NOTIFICATION_FAVOURITE;
 static void print_list(list *l, signed char limit);
 
-static status *get_top_status(list *l) {
-  status *root_status;
+static item *get_top_item(list *l) {
   signed char first = l->first_displayed_post;
 
-  root_status = NULL;
-  if (l->kind == SHOW_NOTIFICATIONS)
-    goto err_out;
-
   if (first >= 0 && first < l->n_posts) {
-    root_status = (status *)l->displayed_posts[first];
+    return l->displayed_posts[first];
   }
-err_out:
-  return root_status;
+  return NULL;
 }
 
 static int print_account(account *a) {
@@ -195,11 +189,14 @@ static int print_notification(notification *n) {
 static void item_free(list *l, char i) {
   item *to_free = l->displayed_posts[i];
 
-  if (l->kind == SHOW_NOTIFICATIONS) {
-    notification_free((notification *)to_free);
-  } else {
-    status_free((status *)to_free);
+  switch(l->kind) {
+    case SHOW_NOTIFICATIONS:
+      notification_free((notification *)to_free);
+      break;
+    default:
+      status_free((status *)to_free);
   }
+  l->displayed_posts[i] = NULL;
 }
 
 #ifdef __CC65__
@@ -207,10 +204,13 @@ static void item_free(list *l, char i) {
 #endif
 
 static item *item_get(list *l, char i, char full) {
-  if (l->kind == SHOW_NOTIFICATIONS) {
-    return (item *)api_get_notification(l->ids[i]);
+  char *id = l->ids[i];
+  switch(l->kind) {
+    case SHOW_NOTIFICATIONS:
+      return (item *)api_get_notification(id);
+    default:
+      return (item *)api_get_status(id, full);
   }
-  return (item *)api_get_status(l->ids[i], full);
 }
 
 static char load_around(list *l, char to_load, char *first, char *last, char **new_ids) {
@@ -494,7 +494,6 @@ static void compact_list(list *l) {
   char i;
   for (i = 0; i < l->n_posts; i++) {
     item_free(l, i);
-    l->displayed_posts[i] = NULL;
   }
 }
 
@@ -599,11 +598,14 @@ update:
       continue;
     }
     if (bottom == 0) {
-      if (l->kind != SHOW_NOTIFICATIONS) {
-        bottom = print_status((status *)disp, hide_cw || wherey() > 0, full);
-      } else {
-        bottom = print_notification((notification *)disp);
+      switch(l->kind) {
+        case SHOW_NOTIFICATIONS:
+          bottom = print_notification((notification *)disp);
+          break;
+        default:
+          bottom = print_status((status *)disp, hide_cw || wherey() > 0, full);
       }
+
       if (disp->displayed_at == 0 && wherey() == 0) {
         /* Specific case of a fullscreen, but not overflowing, post */
         l->post_height[i] = scrh;
@@ -725,11 +727,13 @@ static int shift_posts_up(list *l) {
         item_get(l, first, 0);
     }
     if (l->post_height[first] == -1) {
-      if (l->kind != SHOW_NOTIFICATIONS) {
-        l->post_height[first] =
-          calc_post_height((status *)l->displayed_posts[first]);
-      } else {
-        l->post_height[first] = 4;
+      switch(l->kind) {
+        case SHOW_NOTIFICATIONS:
+          l->post_height[first] = 4;
+          break;
+        default:
+          l->post_height[first] =
+            calc_post_height((status *)l->displayed_posts[first]);
       }
     }
     scroll_val = l->post_height[first];
@@ -1035,15 +1039,15 @@ static void show_list(list *l) {
   char limit = 0;
 
   while (1) {
-    status *root_status;
-    notification *root_notif;
+    status *root_status = NULL;
+    notification *root_notif = NULL;
 
-    if (l->kind == SHOW_NOTIFICATIONS) {
-      root_status = NULL;
-      root_notif = (notification *)l->displayed_posts[l->first_displayed_post];
-    } else {
-      root_status = (status *)get_top_status(l);
-      root_notif = NULL;
+    switch (l->kind) {
+      case SHOW_NOTIFICATIONS:
+        root_notif = (notification *)get_top_item(l);
+        break;
+      default:
+        root_status = (status *)get_top_item(l);
     }
 
     print_header(l, root_status, root_notif);
@@ -1260,7 +1264,7 @@ static void cli(void) {
       disp_status = NULL;
     } else {
       current_list = all_lists[cur_list_idx];
-      disp_status = get_top_status(current_list);
+      disp_status = (status *)get_top_item(current_list);
     }
     switch(cur_action) {
       case SHOW_HOME_TIMELINE:
@@ -1282,10 +1286,11 @@ static void cli(void) {
         clrscrollwin();
         cur_action = NAVIGATE;
         break;
+
       case ACCOUNT_TOGGLE_RSHIP:
         account_toggle_rship(current_list->account, rship_toggle_action);
         cur_action = SHOW_PROFILE;
-        /* and fallthrough to reuse list (we're obviously already
+        /* fallthrough to reuse list (we're obviously already
          * in a SHOW_PROFILE list)*/
       case SHOW_SEARCH_RES:
       case SHOW_NOTIFICATIONS:
@@ -1298,6 +1303,16 @@ static void cli(void) {
         *new_root = '\0';
         *new_leaf_root = '\0';
         disp = current_list->displayed_posts[current_list->first_displayed_post];
+        /* Confusing case here. We're in a list that is either notifications or normal.
+         * We will display a list that could be one of:
+         * - SHOW_PROFILE
+         * - SHOW_SEARCH_RES
+         * - SHOW_NOTIFICATIONS
+         * - SHOW_FULL_STATUS
+         * We check the current list type (NOTIFICATIONS or something else) to know
+         * which kind of object we need to access; then, we check cur_action to know
+         * which ID to copy from that object. 
+         */
         if (current_list->kind != SHOW_NOTIFICATIONS) {
           disp_status = (status *)disp;
           if (cur_action == SHOW_FULL_STATUS) {
