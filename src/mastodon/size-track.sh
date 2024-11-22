@@ -17,5 +17,5 @@ for t in $tags; do
   don=$((du -b mastodon.bin || echo 0)|sed 's/\t.*$//')
   conf=$((du -b mastoconf.bin || echo 0)|sed 's/\t.*$//')
   
-  echo "$d ($t),$cli,$write,$img,$don,$conf" >> sizes.csv
+  echo "$d ($t),$cli,$write,$don,$conf,$img" >> sizes.csv
 done
