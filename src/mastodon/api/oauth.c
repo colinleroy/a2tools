@@ -5,7 +5,7 @@
 #include "malloc0.h"
 #include "surl.h"
 #include "simple_serial.h"
-#include "dgets.h"
+#include "dget_text.h"
 #include "strsplit.h"
 #include "dputs.h"
 #include "extended_conio.h"
@@ -180,7 +180,7 @@ password_again:
     
     dgets_echo_on = 0;
     password[0] = '\0';
-    dget_text(password, 50, NULL, 0);
+    dget_text_single(password, 50, NULL);
     dgets_echo_on = 1;
 
   /* Second request to send login */
@@ -227,7 +227,7 @@ otp_again:
       }
       dputs("Enter OTP code: ");
       otp[0] = '\0';
-      dget_text(otp, 9, NULL, 0);
+      dget_text_single(otp, 9, NULL);
 
       post = prepare_otp_post(otp, token);
       post_len = strlen(post);

@@ -4,7 +4,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "dgets.h"
+#include "dget_text.h"
 #include "extended_conio.h"
 #include "file_select.h"
 #include "hgr.h"
@@ -566,7 +566,7 @@ save:
     *cp = 0;
   strcat ((char *)buffer, ".hgr");
   cputs("Save to: ");
-  dget_text((char *)buffer, 63, NULL, 0);
+  dget_text_single((char *)buffer, 63, NULL);
   if (buffer[0] == '\0') {
     goto start_edit;
   }

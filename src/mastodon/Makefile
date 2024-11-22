@@ -47,7 +47,7 @@ mastodon_SOURCES := \
 	cli/login.c \
 	cli/logo.c \
 	cli/config.c \
-	../lib/dgets.c \
+	../lib/dget_text_single.c \
 	../lib/strsplit.c \
 	../lib/charsets.c
 
@@ -67,7 +67,7 @@ mastoimg_SOURCES := \
 	api/media.c \
 	cli/img.c \
 	../lib/strsplit.c \
-	../lib/dgets.c
+	../lib/dget_text_single.c
 
 ifdef IIGS
 
@@ -102,7 +102,7 @@ mastocli_SOURCES := \
 	cli/header.c \
 	cli/print.c \
 	cli/tl.c\
-	../lib/dgets.c \
+	../lib/dget_text_single.c \
 	../lib/strsplit.c \
 	../lib/progress_bar.c
 
@@ -123,7 +123,7 @@ mastowrite_SOURCES := \
 	cli/compose.c \
 	cli/compose_header.c \
 	cli/print.c \
-	../lib/dgets.c \
+	../lib/dget_text_multi.c \
 	../lib/strsplit.c \
 	../lib/progress_bar.c \
 
@@ -173,7 +173,7 @@ mastoimg_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-mastoimg-65c02.cfg \
 	-DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER \
 	-DSTART_ADDR=0x5EA0 --start-addr 0x5EA0
 endif
-mastowrite_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-rtonce.cfg -DDGETS_MULTILINE
+mastowrite_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-rtonce.cfg
 
 GCCCFLAGS = -g -O0 -Wall -Wno-char-subscripts -Wno-unused-but-set-variable -Wno-unused-variable -Wno-unknown-pragmas -Werror $(shell sdl-config --cflags)
 GCCLDFLAGS = $(shell sdl-config --libs)

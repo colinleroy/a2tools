@@ -44,7 +44,7 @@ slowtake_SOURCES := \
 	qt200-serial.c \
 	qt-edit-image.c \
 	qt-state.c \
-	../lib/dgets.c \
+	../lib/dget_text_single.c \
 	../lib/strtrim.c \
 	../lib/progress_bar.c \
 	../lib/hgr_addrs.c \

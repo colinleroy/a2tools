@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include <sys/statvfs.h>
 
-#include "dgets.h"
+#include "dget_text.h"
 #include "extended_conio.h"
 #include "file_select.h"
 #include "hgr.h"
@@ -110,7 +110,7 @@ static void save_picture(uint8 n_pic) {
   strcat(filename, "/");
   free(dirname);
 
-  dget_text(filename, 60, NULL, 0);
+  dget_text_single(filename, 60, NULL);
 #else
   if (serial_model == QT_MODEL_200)
     sprintf(filename, "image%02d.jpg", n_pic);
@@ -183,7 +183,7 @@ static void get_one_picture(uint8 num_pics) {
     if (tmp < num_pics)
       sprintf(buf, "%u", tmp + 1);
   }
-  dget_text(buf, 4, NULL, 0);
+  dget_text_single(buf, 4, NULL);
 
   if (buf[0] == '\0')
     return;
@@ -211,7 +211,7 @@ static void set_camera_name(const char *name) {
         "New camera name: ");
 
   strncpy(buf, name, 31);
-  dget_text(buf, 31, NULL, 0);
+  dget_text_single(buf, 31, NULL);
 
   qt_set_camera_name(buf);
 }
@@ -231,7 +231,7 @@ static void set_camera_time(void) {
     buf[0] = '\0';
     cputs(names[i]);
     cputs(": ");
-    dget_text(buf, 5, NULL, 0);
+    dget_text_single(buf, 5, NULL);
     vals[i] = (uint8)(atoi(buf) % 100);
   }
 

@@ -16,7 +16,6 @@
 #include "api.h"
 #include "list.h"
 #include "math.h"
-#include "dgets.h"
 #include "progress_bar.h"
 #include "scrollwindow.h"
 

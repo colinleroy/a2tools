@@ -19,7 +19,7 @@
 #include "poll.h"
 #include "list.h"
 #include "math.h"
-#include "dgets.h"
+#include "dget_text.h"
 #include "clrzone.h"
 #include "scrollwindow.h"
 #include "vsdrive.h"
@@ -197,7 +197,7 @@ static void add_image() {
 
   dputs("\r\nDescription: ");
   media_descriptions[n_medias] = malloc0(512);
-  dget_text(media_descriptions[n_medias], 512, NULL, 0);
+  dget_text_multi(media_descriptions[n_medias], 512, NULL, 0);
 
 try_again:
   dputs("\r\nUploading... ");
@@ -228,7 +228,7 @@ static void open_cw_menu(void) {
 
   clrzone(0, top + COMPOSE_FIELD_HEIGHT + 2, scrw - (RIGHT_COL_START+1), top + COMPOSE_FIELD_HEIGHT + 2);
   dputs("(*) CW: ");
-  dget_text(cw, sizeof(cw) - 1, NULL, 0);
+  dget_text_multi(cw, sizeof(cw) - 1, NULL, 0);
   update_cw();
 
   set_scrollwindow(top + 1, top + COMPOSE_FIELD_HEIGHT);
@@ -313,7 +313,7 @@ static void add_poll_option(void) {
   if (IS_NULL(toot_poll->options[r].title)) {
     toot_poll->options[r].title = malloc0(MAX_POLL_OPTION_LEN + 1);
   }
-  dget_text(toot_poll->options[r].title, MAX_POLL_OPTION_LEN, NULL, 0);
+  dget_text_multi(toot_poll->options[r].title, MAX_POLL_OPTION_LEN, NULL, 0);
   if (toot_poll->options[r].title[0] != '\0') {
     compose_sanitize_str(toot_poll->options[r].title);
     r++;
@@ -478,7 +478,7 @@ static char *handle_compose_input(char *initial_buf) {
 
 resume_composing:
   setup_gui();
-  if (IS_NULL(dget_text(text, NUM_CHARS, dgt_cmd_cb, 1))) {
+  if (IS_NULL(dget_text_multi(text, NUM_CHARS, dgt_cmd_cb, 1))) {
     free(text);
     text = NULL;
     goto out;

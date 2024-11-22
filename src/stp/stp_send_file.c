@@ -28,7 +28,6 @@
 #include "stp_cli.h"
 #include "stp_send_file.h"
 #include "simple_serial.h"
-#include "dgets.h"
 #include "clrzone.h"
 #include "extended_conio.h"
 #include "progress_bar.h"

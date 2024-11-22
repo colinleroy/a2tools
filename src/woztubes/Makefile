@@ -41,7 +41,7 @@ woztubes_SOURCES := \
 	config.c \
 	../lib/scroll.s \
 	../lib/dputc.s \
-	../lib/dgets.c \
+	../lib/dget_text_single.c \
 	../lib/FVTABZ.s \
 	../lib/strsplit.c \
 	../lib/serial/asm/simple_serial.s \

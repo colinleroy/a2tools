@@ -33,7 +33,7 @@
 #include "media.h"
 #include "common.h"
 #include "path_helper.h"
-#include "dgets.h"
+#include "dget_text.h"
 #include "vsdrive.h"
 
 char *instance_url;
@@ -314,7 +314,7 @@ static void save_image(void) {
   free(dir);
   gotox(x);
   strcat(buf, "/");
-  dget_text(buf, sizeof(buf) - 1, NULL, 0);
+  dget_text_single(buf, sizeof(buf) - 1, NULL);
 
 #ifdef __APPLE2__
   _filetype = PRODOS_T_BIN;

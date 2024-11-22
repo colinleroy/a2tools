@@ -8,7 +8,6 @@
 #include <sys/ioctl.h>
 #endif
 #include "platform.h"
-#include "dgets.h"
 #include "extended_conio.h"
 #include "progress_bar.h"
 #include "simple_serial.h"

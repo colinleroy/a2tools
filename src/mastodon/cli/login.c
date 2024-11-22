@@ -24,7 +24,7 @@
 #include "simple_serial.h"
 #include "scrollwindow.h"
 #include "strsplit.h"
-#include "dgets.h"
+#include "dget_text.h"
 #include "dputs.h"
 #include "dputc.h"
 #include "scroll.h"
@@ -129,7 +129,7 @@ reenter_settings:
 
     dputs("Your instance URL: ");
     strcpy(instance_url, "https://");
-    dget_text(instance_url, BUF_SIZE, NULL, 0);
+    dget_text_single(instance_url, BUF_SIZE, NULL);
 
     if (instance_url[0] == '\0') {
       goto reenter_settings;
@@ -145,7 +145,7 @@ reenter_settings:
     dputs("If on a non-US keyboard, use @ instead of arobase.\r\n");
     dputs("Your login: ");
     login[0] = '\0';
-    dget_text(login, BUF_SIZE, NULL, 0);
+    dget_text_single(login, BUF_SIZE, NULL);
 
     return 0;
   }
