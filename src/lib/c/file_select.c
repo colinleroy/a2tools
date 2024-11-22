@@ -41,9 +41,11 @@
 #ifdef __APPLE2ENH__
 #define VBAR "\337"
 #define LOWER_CORNER "\324\137"
+#define N_UI_HELP_LINES 3
 #else
 #define VBAR "!"
 #define LOWER_CORNER "!_"
+#define N_UI_HELP_LINES 4
 #endif
 
 typedef struct _file_entry {
@@ -190,7 +192,7 @@ char *file_select(char dir, char *prompt) {
   sx = wherex();
   sy = wherey();
   loop_count = 10;
-  ey = sy + loop_count + 3;
+  ey = sy + loop_count + N_UI_HELP_LINES;
 
   cputs("Please wait...");
   if (dir)
@@ -264,14 +266,18 @@ disp_again:
   gotox(sx);empty_line();
 #ifdef __APPLE2ENH__
   gotox(sx);cputs(VBAR"  Up/Down / Left/Right: navigate;\r\n");
+  gotox(sx);cputs(LOWER_CORNER" Enter: choose; Esc: cancel; R: refresh");
 #else
   gotox(sx);cputs(VBAR"  U/J / Left/Right: navigate;\r\n");
+  gotox(sx);cputs(VBAR"  R: refresh;\r\n");
+  gotox(sx);cputs(LOWER_CORNER" Enter: choose; Esc: cancel");
 #endif
-  gotox(sx);cputs(LOWER_CORNER" Enter: select; Esc: cancel");
 
   /* Get key */
   c = tolower(cgetc());
   switch (c) {
+    case 'r':
+      goto list_again;
     case CH_CURS_RIGHT:
       if (enter_directory(sel)) {
         goto list_again;
