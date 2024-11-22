@@ -33,29 +33,9 @@
 
 char dgets_echo_on = 1;
 
-static char start_x, start_y;
-static unsigned char win_width, win_height;
-static unsigned char win_width_min1, win_height_min1;
+static unsigned char win_width_min1;
 static size_t cur_insert, max_insert;
 static char *text_buf;
-
-static char __fastcall__ get_prev_line_len(void) {
-  int back;
-  char prev_line_len;
-
-  back = cur_insert - 1;
-
-  while (back >= 0 && text_buf[back] != '\n') {
-    --back;
-  }
-
-  ++back;
-  if (back == 0) {
-    back -= start_x;
-  }
-  prev_line_len = (cur_insert - back) % win_width;
-  return prev_line_len;
-}
 
 #ifndef __CC65__
 #pragma GCC diagnostic push
@@ -64,7 +44,7 @@ static char __fastcall__ get_prev_line_len(void) {
 
 static void __fastcall__ rewrite_end_of_buffer(void) {
   size_t k;
-  unsigned char x, y, y_plus1;
+  unsigned char x, y;
 
   if (cur_insert == max_insert) {
     /* Just clear EOL */
@@ -77,15 +57,10 @@ static void __fastcall__ rewrite_end_of_buffer(void) {
 
   while (k < max_insert) {
     char c = text_buf[k];
-    if (c == '\n' || k == max_insert - 1) {
+    if (k == max_insert - 1) {
       clreol();
-    }
-
-    /* Clear start of next line if we go back to a single line
-     * even in not MULTILINE mode, we can wrap. */
-    if (x == win_width || k == max_insert - 1) {
-      if (y_plus1 < win_height) {
-        gotoxy(0, y_plus1);
+      if (x == win_width_min1) {
+        gotoxy(0, y + 1);
         clreol();
         gotoxy(x, y);
       }
@@ -97,7 +72,6 @@ static void __fastcall__ rewrite_end_of_buffer(void) {
 initxy:
     x = wherex();
     y = wherey();
-    y_plus1 = y + 1;
   }
 }
 
@@ -112,7 +86,6 @@ char * __fastcall__ dget_text_single(char *buf, size_t size, cmd_handler_func cm
   char prev_cursor = 0;
 #endif
   unsigned char sx;
-  unsigned char sy, ey;
 #ifdef __APPLE2ENH__
   size_t k;
 #endif
@@ -121,17 +94,8 @@ char * __fastcall__ dget_text_single(char *buf, size_t size, cmd_handler_func cm
   max_insert = 0;
   text_buf = buf;
 
-  get_hscrollwindow(&sx, &win_width);
-  get_scrollwindow(&sy, &ey);
-  start_x = wherex();
-  start_y = wherey();
-
-  win_height = ey - sy;
-  win_width_min1 = win_width - 1;
-  win_height_min1 = win_height - 1;
-
-  win_height = 1;
-  win_height_min1 = 1;
+  get_hscrollwindow(&sx, &win_width_min1);
+  win_width_min1--;
 
   if (text_buf[0] != '\0') {
     max_insert = strlen(text_buf);
@@ -184,9 +148,7 @@ err_beep:
       cur_insert--;
       /* did we hit start of (soft) line ? */
       if (cur_x == 0) {
-        /* recompute x */
-        cur_x = get_prev_line_len();
-        /* do we have to scroll (we were at line 0) ? */
+        cur_x = win_width_min1;
         cur_y--;
       } else {
         cur_x--;
@@ -210,19 +172,11 @@ err_beep:
       if (cur_insert == max_insert) {
         goto err_beep;
       }
-      /* Are we at end of hard line ? */
-      if (text_buf[cur_insert] != '\n') {
-        /* We're not at end of line, go right */
-        cur_x++;
-      } else {
-        /* We are, go down and left */
-        goto down_left;
-      }
+      cur_x++;
 
-      /* Are we at end of soft line now? */
+      /* Are we at end of soft line? */
       if (cur_x > win_width_min1) {
         /* We are, go down and left */
-down_left:
         cur_y++;
         cur_x = 0;
       }
