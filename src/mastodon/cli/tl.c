@@ -426,7 +426,6 @@ out:
 }
 
 static void clear_displayed_posts(list *l) {
-  bzero(l->displayed_posts, N_STATUS_TO_LOAD * sizeof(item *));
   memset(l->post_height, -1, N_STATUS_TO_LOAD);
 }
 /* root is either an account or status id, depending on kind.
@@ -440,6 +439,7 @@ static list *build_list(char *root, char *leaf_root, char kind) {
   l = malloc0(sizeof(list));
 
   if (kind == SHOW_PROFILE) {
+    l->root = strdup(root);
     l->account = api_get_full_account(root);
     l->first_displayed_post = -1;
   } else {
@@ -794,7 +794,6 @@ static void save_state(void) {
                     "%d\n"
                     "%d\n"
                     "%d\n"
-                    "%s\n"
                     "%d\n",
                     l->kind,
                     IS_NOT_NULL(l->root) ? l->root : "",
@@ -803,7 +802,6 @@ static void save_state(void) {
                     l->eof,
                     l->first_displayed_post,
                     l->n_posts,
-                    IS_NOT_NULL(l->account) ? l->account->id : "",
                     l->account_height) < 0) {
       goto err_out;
     }
@@ -923,13 +921,6 @@ static int load_state(list ***lists) {
 
     clear_displayed_posts(l);
 
-    /* coverity[tainted_argument] */
-    fgets(gen_buf, BUF_SIZE, fp);
-    if (gen_buf[0] != '\n') {
-      *strchr(gen_buf, '\n') = '\0';
-      l->account = api_get_full_account(gen_buf);
-    }
-
     l->account_height = state_get_int(fp);
 
     for (j = 0; j < n_posts; j++) {
@@ -941,14 +932,22 @@ static int load_state(list ***lists) {
   fclose(fp);
   unlink(STATE_FILE);
 
+  /* Load the first item on the last list */
   if (IS_NOT_NULL(l) && first != -1) {
     load_item_at(l, first, 1);
+  }
+
+  /* Load the accounts in all lists */
+  for (i = 0; i <= num_lists; i++) {
+    l = (*lists)[i];
+    if (l->kind == SHOW_PROFILE) {
+      l->account = api_get_full_account(l->root);
+    }
   }
 
   cur_action = NAVIGATE;
 
   dputs(" Done");
-
   return num_lists;
 }
 
