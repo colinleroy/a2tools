@@ -11,11 +11,11 @@ struct _item {
 };
 
 
-/* Shared buffers */
-#define BUF_SIZE 255
+/* Shared buffers. Check buffers.s if modifying. */
+#define BUF_SIZE 512
 extern char gen_buf[BUF_SIZE];
 
-#define SELECTOR_SIZE 128
+#define SELECTOR_SIZE 256
 extern char selector[SELECTOR_SIZE];
 
 #define ENDPOINT_BUF_SIZE 128

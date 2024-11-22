@@ -39,6 +39,7 @@ common_CC65SOURCES := \
 	../lib/scroll.s \
 	../lib/FVTABZ.s \
 	 ../lib/extrazp.s \
+	 api/buffers.s \
 	 #../lib/fastirq$(suffix).s \
 
 mastodon_SOURCES := \
@@ -166,7 +167,7 @@ CFLAGS  = -I ../lib -I api -I cli -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
 CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x400 $(USE_LANGCARD) $(debug_CFLAGS)  $(iigs_CFLAGS)
 
 mastodon_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-rtonce.cfg --start-addr 0xC03 #One file buffer
-mastocli_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-rtonce.cfg
+mastocli_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-rtonce.cfg --start-addr 0xC03 #One file buffer
 ifdef OLDII
 mastoimg_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-mastoimg-6502.cfg \
 	-DSTART_ADDR=0x3EA0 --start-addr 0x3EA0
@@ -190,7 +191,7 @@ all: mastodon.bin mastodon.x86_64 \
 mastodon.bin: $(mastodon_SOURCES) $(mastodon_CC65SOURCES)
 	cl65 --debug-info -Wl --dbgfile,"mastodon.dbg" $(CFLAGS) $(mastodon_CLCFLAGS) -vm -m mastodon.map -o $@ $^ $(CC65_TARGET)-iobuf-0800.o
 mastocli.bin: $(mastocli_SOURCES) $(mastocli_CC65SOURCES)
-	cl65 --debug-info -Wl --dbgfile,"mastocli.dbg" $(CFLAGS) $(mastocli_CLCFLAGS) -vm -m mastocli.map -o $@ $^ #no iobuf, keep the RAM available for lists
+	cl65 --debug-info -Wl --dbgfile,"mastocli.dbg" $(CFLAGS) $(mastocli_CLCFLAGS) -vm -m mastocli.map -o $@ $^ $(CC65_TARGET)-iobuf-0800.o
 mastowrite.bin: $(mastowrite_SOURCES) $(mastowrite_CC65SOURCES)
 	cl65 --debug-info -Wl --dbgfile,"mastowrite.dbg" $(CFLAGS) $(mastowrite_CLCFLAGS) -vm -m mastowrite.map -o $@ $^ $(CC65_TARGET)-iobuf-0800.o
 mastoimg.bin: $(mastoimg_CC65SOURCES) $(mastoimg_SOURCES)
