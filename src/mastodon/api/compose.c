@@ -35,11 +35,12 @@ char *compose_audience_str(char compose_audience) {
 
 #define FILE_ERROR "Can not open file.\r\n"
 #define NET_ERROR "Network error.\r\n"
+
 #define SEND_BUF_SIZE 1024
+char send_buf[SEND_BUF_SIZE];
 
 char *api_send_hgr_image(char *filename, char *description, char **err, char x, char y, char w) {
   int fd;
-  char buf[SEND_BUF_SIZE];
   int r;
   int to_send;
   char *media_id;
@@ -68,9 +69,10 @@ char *api_send_hgr_image(char *filename, char *description, char **err, char x, 
   
   /* Send file */
   surl_multipart_send_field_desc("file", (uint32)to_send, "image/hgr");
-  while ((r = read(fd, buf, sizeof(buf))) > 0) {
+
+  while ((r = read(fd, send_buf, SEND_BUF_SIZE)) > 0) {
 send_again:
-    surl_multipart_send_field_data(buf, r);
+    surl_multipart_send_field_data(send_buf, r);
     to_send -= r;
     if (w > 0)
       progress_bar(-1, -1, w, HGR_LEN - to_send, HGR_LEN);
@@ -83,7 +85,7 @@ send_again:
    * indispensable. Fill up with zeroes up to to_send */
   if (to_send > 0) {
     r = min(to_send, SEND_BUF_SIZE);
-    bzero(buf, r);
+    bzero(send_buf, r);
     goto send_again;
   }
 
@@ -106,21 +108,18 @@ send_again:
   if (IS_NOT_NULL(media_id)) {
     /* Set description */
     int len;
-    char *body = malloc0(1536);
-    snprintf(body, 1536, "S|description|"TRANSLITCMD"|%s\n%s\n",
+    snprintf(send_buf, SEND_BUF_SIZE, "S|description|"TRANSLITCMD"|%s\n%s\n",
                           translit_charset,
                           description);
 
-    len = strlen(body);
+    len = strlen(send_buf);
 
     snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, MEDIA_ENDPOINT"/%s", media_id);
     get_surl_for_endpoint(SURL_METHOD_PUT, endpoint_buf);
 
     surl_send_data_params((uint32)len, SURL_DATA_APPLICATION_JSON_HELP);
-    surl_send_data_chunk(body, len);
+    surl_send_data_chunk(send_buf, len);
 
-    free(body);
-    
     surl_read_response_header();
   }
 
