@@ -781,35 +781,24 @@ static void save_state(void) {
     return;
   }
 
-  if (fprintf(fp, "%d\n", cur_list_idx) < 0)
+  if (fputc(cur_list_idx, fp) < 0)
     goto err_out;
 
   for (i = 0; i <= cur_list_idx; i++) {
     list *l;
     l = all_lists[i];
-    if (fprintf(fp, "%d\n"
-                    "%s\n"
-                    "%s\n"
-                    "%d\n"
-                    "%d\n"
-                    "%d\n"
-                    "%d\n"
-                    "%d\n",
-                    l->kind,
+    if (fwrite(l, 1, sizeof(list), fp) < sizeof(list)) {
+      goto err_out;
+    }
+
+    if (fprintf(fp, "%s\n"
+                    "%s\n",
                     IS_NOT_NULL(l->root) ? l->root : "",
-                    IS_NOT_NULL(l->leaf_root) ? l->leaf_root : "",
-                    l->last_displayed_post,
-                    l->eof,
-                    l->first_displayed_post,
-                    l->n_posts,
-                    l->account_height) < 0) {
+                    IS_NOT_NULL(l->leaf_root) ? l->leaf_root : "") < 0) {
       goto err_out;
     }
     for (j = 0; j < l->n_posts; j++) {
-      if (fprintf(fp, "%s\n"
-                      "%d\n",
-                      l->ids[j],
-                      l->post_height[j]) < 0) {
+      if (fprintf(fp, "%s\n", l->ids[j]) < 0) {
         goto err_out;
       }
     }
@@ -861,12 +850,6 @@ static void launch_command(char *command, char *p1, char *p2, char *p3) {
 #define STATE_BUF_SIZE 32
 static char state_buf[STATE_BUF_SIZE];
 
-static int state_get_int(FILE *fp) {
-  /* coverity[tainted_argument] */
-  fgets(state_buf, STATE_BUF_SIZE, fp);
-  return atoi(state_buf);
-}
-
 static char *state_get_str(FILE *fp) {
   /* coverity[tainted_argument] */
   fgets(state_buf, STATE_BUF_SIZE, fp);
@@ -896,7 +879,8 @@ static int load_state(list ***lists) {
 
   dputs("Reloading state...");
 
-  num_lists = state_get_int(fp);
+  num_lists = fgetc(fp);
+
   if (num_lists < 0) {
     *lists = NULL;
     cprintf("Error %d\r\n", errno);
@@ -909,40 +893,33 @@ static int load_state(list ***lists) {
   *lists = malloc0((num_lists + 1) * sizeof(list *));
 
   for (i = 0; i <= num_lists; i++) {
-    char n_posts;
-
     l = malloc0(sizeof(list));
     (*lists)[i] = l;
 
-    l->kind = state_get_int(fp);
+    fread(l, 1, sizeof(list), fp);
     l->root = state_get_str(fp);
     l->leaf_root = state_get_str(fp);
-    l->last_displayed_post = state_get_int(fp);
-    l->eof = state_get_int(fp);
-    l->first_displayed_post = first = state_get_int(fp);
-    l->n_posts = state_get_int(fp);
 
-    n_posts = l->n_posts;
+    bzero(l->displayed_posts, N_STATUS_TO_LOAD*sizeof(item *));
 
-    clear_displayed_posts(l);
-
-    l->account_height = state_get_int(fp);
-
-    for (j = 0; j < n_posts; j++) {
+    for (j = 0; j < l->n_posts; j++) {
       l->ids[j] = state_get_str(fp);
-      l->post_height[j] = state_get_int(fp);
     }
   }
 
   fclose(fp);
   unlink(STATE_FILE);
 
-  /* Load the first item on the last list */
-  if (IS_NOT_NULL(l) && first != -1) {
+  /* Load the first item on the last list, *AFTER* having closed
+   * the file - the file I/O buffer and json buffer are shared.
+ */
+  if (IS_NOT_NULL(l) && (first = l->first_displayed_post) != -1) {
     load_item_at(l, first, 1);
   }
 
-  /* Load the accounts in all lists */
+  /* Load the accounts in all lists, *AFTER* having closed
+   * the file - the file I/O buffer and json buffer are shared.
+   */
   for (i = 0; i <= num_lists; i++) {
     l = (*lists)[i];
     if (l->kind == SHOW_PROFILE) {
@@ -1303,7 +1280,7 @@ static void cli(void) {
          * - SHOW_FULL_STATUS
          * We check the current list type (NOTIFICATIONS or something else) to know
          * which kind of object we need to access; then, we check cur_action to know
-         * which ID to copy from that object. 
+         * which ID to copy from that object.
          */
         if (current_list->kind != SHOW_NOTIFICATIONS) {
           disp_status = (status *)disp;
@@ -1441,7 +1418,7 @@ int main(int argc, char **argv) {
 //  0 2    7
 // "US-ASCII"
 // "ISO646-IT"  Nothing to do, § for @ and £ for #
-// "ISO646-DK"  
+// "ISO646-DK"
 // "ISO646-UK"  Nothing to do, @ for @ and £ for #
 // "ISO646-DE"  Nothing to do, § for @ and # for #
 // "ISO646-SE2"
