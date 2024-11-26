@@ -38,12 +38,10 @@ common_CC65SOURCES := \
 	../lib/dputc.s \
 	../lib/scroll.s \
 	../lib/FVTABZ.s \
-	 ../lib/extrazp.s \
-	 api/buffers.s \
-	 #../lib/fastirq$(suffix).s \
+	../lib/extrazp.s \
+	api/asm/common.s
 
 mastodon_SOURCES := \
-	api/common.c \
 	api/oauth.c \
 	cli/login.c \
 	cli/logo.c \
@@ -64,7 +62,6 @@ mastodon_CC65SOURCES := \
 	../lib/cntoabuf.s
 
 mastoimg_SOURCES := \
-	api/common.c \
 	api/media.c \
 	cli/img.c \
 	../lib/strsplit.c \
@@ -92,7 +89,6 @@ mastoimg_CC65SOURCES := \
 	../lib/vsdrive.s
 
 mastocli_SOURCES := \
-	api/common.c \
 	api/api.c \
 	api/account.c \
 	api/account_new_from_json.c \
@@ -115,7 +111,6 @@ mastocli_CC65SOURCES := \
 	../lib/runtime_once_clean.s
 
 mastowrite_SOURCES := \
-	api/common.c \
 	api/account.c \
 	api/compose.c \
 	api/media.c \
@@ -139,6 +134,7 @@ mastowrite_CC65SOURCES := \
 	../lib/vsdrive.s
 
 GCCSOURCES := \
+	api/c/common.c \
 	../lib/serial/c/simple_serial.c \
 	../lib/serial/c/simple_serial_io.c \
 	../lib/surl/c/surl_core.c \

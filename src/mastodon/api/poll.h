@@ -1,6 +1,8 @@
 #ifndef __poll_h
 #define __poll_h
 
+#include "common.h"
+
 typedef struct _poll poll;
 typedef struct _poll_option poll_option;
 
@@ -17,7 +19,7 @@ struct _poll_option {
 };
 
 struct _poll {
-  char *id;
+  char id[SNOWFLAKE_ID_LEN];
   char multiple;
   size_t votes_count;
   char options_count;

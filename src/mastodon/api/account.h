@@ -1,6 +1,8 @@
 #ifndef __account_h
 #define __account_h
 
+#include "common.h"
+
 typedef struct _account account;
 
 #define RSHIP_SET         (1<<0)
@@ -15,7 +17,7 @@ typedef struct _account account;
 
 struct _account {
   signed char displayed_at;
-  char *id;
+  char id[SNOWFLAKE_ID_LEN];
   char *username;
   char *acct;
   char *display_name;

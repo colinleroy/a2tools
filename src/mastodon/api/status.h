@@ -1,6 +1,7 @@
 #ifndef __status_h
 #define __status_h
 
+#include "common.h"
 #include "account.h"
 #include "poll.h"
 
@@ -19,8 +20,8 @@ typedef struct _status status;
 
 struct _status {
   signed char displayed_at;
-  char *id;
-  char *reblog_id;
+  char id[SNOWFLAKE_ID_LEN];
+  char reblog_id[SNOWFLAKE_ID_LEN];
   char *created_at;
   char *spoiler_text;
   char *content;

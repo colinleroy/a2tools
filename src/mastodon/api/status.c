@@ -60,10 +60,7 @@ static __fastcall__ char status_fill_from_json(register status *s, char *id, cha
   char *content;
   char is_reblog = 0, reblog_offset = 8 /* strlen(".reblog|") */;
 
-  s->id = strdup(id);
-  if (IS_NULL(s->id)) {
-    return -1;
-  }
+  id_copy(s->id, id);
 
 again:
   r = surl_get_json(gen_buf, basic_selector + reblog_offset,
@@ -74,8 +71,8 @@ again:
   if (r >= 0 && n_lines >= 16) {
     if (!is_reblog && lines[5][0] != '-') {
       s->reblogged_by = strdup(lines[1]);
-      s->reblog_id = s->id;
-      s->id = strdup(lines[5]);
+      id_copy(s->reblog_id, s->id);
+      id_copy(s->id, lines[5]);
       is_reblog = 1;
       reblog_offset = 0;
       goto again;
@@ -125,7 +122,7 @@ again:
     /* Poll */
     if (n_lines == 17) {
       s->poll = poll_new();
-      s->poll->id = strdup(lines[16]);
+      id_copy(s->poll->id, lines[16]);
       poll_fill(s->poll, is_reblog /* POLL_FROM_REBLOG == 1, POLL_FROM_STATUS == 0 */);
     }
   } else {
@@ -152,8 +149,6 @@ again:
 void status_free(register status *s) {
   if (IS_NULL(s))
     return;
-  free(s->id);
-  free(s->reblog_id);
   free(s->created_at);
   free(s->spoiler_text);
   free(s->content);

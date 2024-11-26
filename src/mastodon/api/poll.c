@@ -13,7 +13,6 @@ void poll_free(poll *p) {
   if (IS_NULL(p))
     return;
 
-  free(p->id);
   for (i = 0; i < p->options_count; i++) {
     free(p->options[i].title);
   }
