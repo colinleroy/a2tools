@@ -325,7 +325,7 @@ static void set_full_hscrollwindow(void) {
 }
 
 static char is_root(list *l, char idx) {
-  return l->root && !strcmp(l->root, l->ids[idx]);
+  return !strcmp(l->root, l->ids[idx]);
 }
 
 static item *load_item_at(list *l, char idx, char full) {
@@ -442,13 +442,13 @@ static list *build_list(char *root, char *leaf_root, char kind) {
   l = malloc0(sizeof(list));
 
   if (kind == SHOW_PROFILE) {
-    l->root = strdup(root);
+    id_copy(l->root, root);
     l->account = api_get_full_account(root);
     l->first_displayed_post = -1;
   } else {
     if (IS_NOT_NULL(root) && *root) {
-      l->root = strdup(root);
-      l->leaf_root = strdup(leaf_root);
+      id_copy(l->root, root);
+      id_copy(l->leaf_root, leaf_root);
     }
   }
 
@@ -486,8 +486,6 @@ static void free_list(list *l) {
     item_free(l, i);
   }
   account_free(l->account);
-  free(l->root);
-  free(l->leaf_root);
   free(l);
 }
 
@@ -794,12 +792,6 @@ static void save_state(void) {
       goto err_out;
     }
 
-    if (fprintf(fp, "%s\n"
-                    "%s\n",
-                    IS_NOT_NULL(l->root) ? l->root : "",
-                    IS_NOT_NULL(l->leaf_root) ? l->leaf_root : "") < 0) {
-      goto err_out;
-    }
     for (j = 0; j < l->n_posts; j++) {
       if (fprintf(fp, "%s\n", l->ids[j]) < 0) {
         goto err_out;
@@ -900,8 +892,6 @@ static int load_state(list ***lists) {
     (*lists)[i] = l;
 
     fread(l, 1, sizeof(list), fp);
-    l->root = state_get_str(fp);  /* Returns NULL if empty */
-    l->leaf_root = state_get_str(fp);
 
     bzero(l->displayed_posts, N_STATUS_TO_LOAD*sizeof(item *));
 
