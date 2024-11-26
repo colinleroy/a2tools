@@ -12,7 +12,7 @@
 
 account *account_new_from_lines(void) {
   account *a = account_new();
-  a->id = strdup(lines[0]);
+  id_copy(a->id, lines[0]);
   a->display_name = strdup(lines[1]);
   a->acct = strdup(lines[2]);
   a->username = strdup(lines[3]);
@@ -48,7 +48,7 @@ void account_free(account *a) {
   char i;
   if (IS_NULL(a))
     return;
-  free(a->id);
+
   free(a->username);
   free(a->acct);
   free(a->display_name);

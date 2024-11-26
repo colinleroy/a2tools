@@ -41,7 +41,7 @@ static media *media_new_from_json(char *base_selector, char *description_selecto
     m->n_media = n_lines / 3;
     j = 0;
     for (i = 0; i < n_lines - 1;) {
-      m->media_id[j] = strdup(lines[i++]);
+      id_copy(m->media_id[j], lines[i++]);
       m->media_url[j] = strdup(lines[i++]);
       m->media_type[j] = strdup(lines[i++]);
       j++;
@@ -83,7 +83,6 @@ void media_free(media *m) {
     return;
   }
   for (i = 0; i < m->n_media; i++) {
-    free(m->media_id[i]);
     free(m->media_url[i]);
     free(m->media_type[i]);
     free(m->media_alt_text[i]);

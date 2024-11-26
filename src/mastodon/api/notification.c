@@ -13,10 +13,7 @@ void notification_free(notification *n) {
   if (IS_NULL(n)) {
     return;
   }
-  free(n->id);
   free(n->created_at);
-  free(n->status_id);
-  free(n->account_id);
   free(n->excerpt);
   free(n->display_name);
   free(n);
@@ -78,7 +75,7 @@ err_out:
       return NULL;
     }
 
-    n->id = strdup(lines[0]);
+    id_copy(n->id, lines[0]);
     c = lines[1][2];
     if (c == 'l' /* foLlow */) {
       n->type = NOTIFICATION_FOLLOW;
@@ -91,9 +88,9 @@ err_out:
     }
     n->created_at = date_format(lines[2], 1);
     if (lines[3][0] != '-') {
-      n->status_id = strdup(lines[3]);
+      id_copy(n->status_id, lines[3]);
     }
-    n->account_id = strdup(lines[4]);
+    id_copy(n->account_id, lines[4]);
     /* if display_name is null or non-existent, 
      * we'll use username */
     n->display_name = (lines[5][0] == '\0' && n_lines == 7) ? strdup(lines[6]) : strdup(lines[5]);

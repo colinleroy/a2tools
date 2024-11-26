@@ -11,11 +11,11 @@ typedef struct _notification notification;
 
 struct _notification {
   signed char displayed_at;
-  char *id;
+  char id[SNOWFLAKE_ID_LEN];
   char type;
   char *created_at;
-  char *status_id;
-  char *account_id;
+  char status_id[SNOWFLAKE_ID_LEN];
+  char account_id[SNOWFLAKE_ID_LEN];
   char *display_name;
   char *excerpt; /* either status or account note */
 };

@@ -56,6 +56,9 @@ static char rship_toggle_action = RSHIP_FOLLOWING;
 static char notifications_type = NOTIFICATION_FAVOURITE;
 static void print_list(list *l, signed char limit);
 
+signed char half_displayed_post;
+char last_displayed_post;
+
 static item *get_top_item(list *l) {
   signed char first = l->first_displayed_post;
 
@@ -213,7 +216,7 @@ static item *item_get(list *l, char i, char full) {
 
 static char load_around(list *l, char to_load, char *first, char *last, char **new_ids) {
   char loaded;
-  l->half_displayed_post = 0;
+  half_displayed_post = 0;
   if (l->kind == SHOW_BOOKMARKS && (IS_NOT_NULL(first) || IS_NOT_NULL(last))) {
     /* Must paginate those with Link: HTTP headers :( */
     return 0;
@@ -498,7 +501,7 @@ static void compact_list(list *l) {
 static void uncompact_list(list *l) {
   signed char first, full;
   first = l->first_displayed_post;
-  l->half_displayed_post = 0;
+  half_displayed_post = 0;
   if (first >= 0) {
     full = is_root(l, first);
     l->displayed_posts[first] =
@@ -521,7 +524,7 @@ static void shift_displayed_at(list *l, signed char val) {
   if (i < 0) {
     i = 0;
   }
-  for (; i <= l->last_displayed_post; i++) {
+  for (; i <= last_displayed_post; i++) {
     item = l->displayed_posts[i];
     item->displayed_at -= val;
   }
@@ -543,8 +546,8 @@ update:
   writable_lines = NUMLINES;
 
   /* copy to temp vars to avoid pointer arithmetic */
-  if (l->half_displayed_post > 0 && limit == 0) {
-    first = l->half_displayed_post;
+  if (half_displayed_post > 0 && limit == 0) {
+    first = half_displayed_post;
     disp = (item *)l->displayed_posts[first];
     if (disp->displayed_at >= 0) {
       gotoxy(0, disp->displayed_at);
@@ -557,7 +560,7 @@ update:
   }
   n_posts = l->n_posts;
 
-  l->half_displayed_post = 0;
+  half_displayed_post = 0;
 
   if (IS_NOT_NULL(l->account) && first == -1) {
     bottom = print_account(l->account);
@@ -610,10 +613,10 @@ update:
       } else {
         l->post_height[i] = wherey() - disp->displayed_at;
       }
-      l->last_displayed_post = i;
+      last_displayed_post = i;
     }
     if (bottom) {
-      l->half_displayed_post = i;
+      half_displayed_post = i;
       break;
     }
     /* Let's see if we reached the limit
@@ -702,7 +705,7 @@ static int shift_posts_up(list *l) {
   signed char scroll_val;
   signed char first;
 
-  l->half_displayed_post = 0;
+  half_displayed_post = 0;
   first = l->first_displayed_post;
   if (IS_NOT_NULL(l->account) && first == -1) {
       return -1;
@@ -897,7 +900,7 @@ static int load_state(list ***lists) {
     (*lists)[i] = l;
 
     fread(l, 1, sizeof(list), fp);
-    l->root = state_get_str(fp);
+    l->root = state_get_str(fp);  /* Returns NULL if empty */
     l->leaf_root = state_get_str(fp);
 
     bzero(l->displayed_posts, N_STATUS_TO_LOAD*sizeof(item *));
@@ -1062,7 +1065,7 @@ inject_cmd:
       case 'f':
         if (IS_NOT_NULL(root_status)) {
           api_favourite_status(root_status);
-          l->half_displayed_post = 0;
+          half_displayed_post = 0;
         } else if (IS_NOT_NULL(l->account)) {
           cur_action = ACCOUNT_TOGGLE_RSHIP;
           rship_toggle_action = RSHIP_FOLLOWING;
@@ -1072,7 +1075,7 @@ inject_cmd:
       case 'b':
         if (IS_NOT_NULL(root_status)) {
           api_reblog_status(root_status);
-          l->half_displayed_post = 0;
+          half_displayed_post = 0;
         } else if (IS_NOT_NULL(l->account)) {
           cur_action = ACCOUNT_TOGGLE_RSHIP;
           rship_toggle_action = RSHIP_BLOCKING;
@@ -1082,7 +1085,7 @@ inject_cmd:
       case 'm':
         if (IS_NOT_NULL(root_status)) {
           api_bookmark_status(root_status);
-          l->half_displayed_post = 0;
+          half_displayed_post = 0;
         } else if (IS_NOT_NULL(l->account)) {
           cur_action = ACCOUNT_TOGGLE_RSHIP;
           rship_toggle_action = RSHIP_MUTING;
@@ -1105,7 +1108,7 @@ inject_cmd:
         if (IS_NOT_NULL(root_status) && IS_NOT_NULL(root_status->poll)) {
           cur_action = VOTING;
           do_vote(root_status);
-          l->half_displayed_post = 0;
+          half_displayed_post = 0;
           cur_action = NAVIGATE;
           return;
         }
@@ -1147,7 +1150,7 @@ inject_cmd:
         show_help(l, root_status, root_notif);
         c = tolower(cgetc());
         clrscr();
-        l->half_displayed_post = 0;
+        half_displayed_post = 0;
         if (c == HELP_KEY) {
           cur_action = NAVIGATE;
           return;
@@ -1285,14 +1288,14 @@ static void cli(void) {
         if (current_list->kind != SHOW_NOTIFICATIONS) {
           disp_status = (status *)disp;
           if (cur_action == SHOW_FULL_STATUS) {
-            strcpy(new_root, IS_NOT_NULL(disp_status->reblog_id) ? disp_status->reblog_id : disp_status->id);
+            strcpy(new_root, disp_status->reblog_id[0] ? disp_status->reblog_id : disp_status->id);
             strcpy(new_leaf_root, disp_status->id);
           } else if (cur_action == SHOW_PROFILE) {
             strcpy(new_root, disp_status->account->id);
           }
         } else {
           disp_notif = (notification *)disp;
-          if (cur_action == SHOW_FULL_STATUS && disp_notif->status_id) {
+          if (cur_action == SHOW_FULL_STATUS && disp_notif->status_id[0]) {
             strcpy(new_root, disp_notif->status_id);
             strcpy(new_leaf_root, disp_notif->status_id);
           } else {

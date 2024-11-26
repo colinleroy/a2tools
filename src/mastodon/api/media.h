@@ -14,7 +14,7 @@ typedef struct _media media;
 
 struct _media {
   char n_media;
-  char *media_id[4];
+  char media_id[4][SNOWFLAKE_ID_LEN];
   char *media_url[4];
   char *media_type[4];
   char *media_alt_text[4];

@@ -1,17 +1,24 @@
 #ifndef __common_h
 #define __common_h
 
+#include "surl.h"
 #include "charsets.h"
+
+/* Length of IDs - see https://en.wikipedia.org/wiki/Snowflake_ID
+ * The maximal value (0xffffffffffffffff) translates to decimal
+ * 18446744073709551615 which is 20 characters long.
+ * Check common.s if modifying.
+ */
+#define SNOWFLAKE_ID_LEN 21
 
 typedef struct _item item;
 struct _item {
   /* common fields to status, account, notification */
   signed char displayed_at;
-  char *id;
+  char id[SNOWFLAKE_ID_LEN];
 };
 
-
-/* Shared buffers. Check buffers.s if modifying. */
+/* Shared buffers. Check common.s if modifying. */
 #define BUF_SIZE 512
 extern char gen_buf[BUF_SIZE];
 
@@ -47,4 +54,5 @@ extern char arobase;
 
 const surl_response *get_surl_for_endpoint(char method, char *endpoint);
 char *date_format(char *in, char with_time);
+void id_copy(char *dst, char *src);
 #endif
