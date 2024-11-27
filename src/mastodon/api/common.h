@@ -33,6 +33,8 @@ extern char *lines[MAX_LINES_NUM];
 
 extern char *instance_url;
 extern char *oauth_token;
+extern char monochrome;
+extern char *translit_charset;
 extern char arobase;
 
 #define TIMELINE_ENDPOINT       "/api/v1/timelines"

@@ -43,7 +43,6 @@ static char *tl_filter[4] = { NULL,
 char *instance_url = NULL;
 char *oauth_token = NULL;
 char writable_lines = 24;
-char monochrome = 1;
 
 extern account *my_account;
 
@@ -804,7 +803,7 @@ err_out:
   dputs("Error.\n");
 }
 
-static void launch_command(char *command, char *p1, char *p2, char *p3) {
+static void launch_command(char *command, char *p1, char *p2) {
   char *params;
 
   save_state();
@@ -812,9 +811,9 @@ static void launch_command(char *command, char *p1, char *p2, char *p3) {
   reopen_start_device();
 
   params = malloc0(127);
-  snprintf(params, 127, "%s %s %s %s %s %s",
-            instance_url, oauth_token,
-            translit_charset, p1?p1:"", p2?p2:"", p3?p3:"");
+  snprintf(params, 127, "%s %s %d %s %s %s",
+            instance_url, oauth_token, monochrome,
+            translit_charset, p1?p1:"", p2?p2:"");
 #ifdef __CC65__
   #ifdef __APPLE2__
   _filetype = PRODOS_T_TXT;
@@ -1311,26 +1310,26 @@ navigate_reuse_list:
         }
         break;
       case CONFIGURE:
-          launch_command("mastodon", "conf", NULL, NULL);
+          launch_command("mastodon", "conf", NULL);
           /* we're never coming back */
       case COMPOSE:
-          launch_command("mastowrite", IS_NOT_NULL(current_list->account) ? current_list->account->acct : NULL, NULL, NULL);
+          launch_command("mastowrite", IS_NOT_NULL(current_list->account) ? current_list->account->acct : NULL, NULL);
           /* we're never coming back */
       case REPLY:
           if (IS_NOT_NULL(disp_status))
-            launch_command("mastowrite", "r", disp_status->id, NULL);
+            launch_command("mastowrite", "r", disp_status->id);
           cur_action = NAVIGATE;
           break;
       case EDIT:
           if (IS_NOT_NULL(disp_status) && !strcmp(disp_status->account->id, my_account->id))
-            launch_command("mastowrite", "e", disp_status->id, NULL);
+            launch_command("mastowrite", "e", disp_status->id);
           cur_action = NAVIGATE;
           break;
       case IMAGES:
           if (IS_NOT_NULL(current_list->account) && (!disp_status || disp_status->displayed_at > 0)) {
-            launch_command("mastoimg", monochrome?"1":"0", "a", current_list->account->id);
+            launch_command("mastoimg", "a", current_list->account->id);
           } else if (IS_NOT_NULL(disp_status) && disp_status->n_medias) {
-            launch_command("mastoimg", monochrome?"1":"0", "s", disp_status->id);
+            launch_command("mastoimg", "s", disp_status->id);
           }
           cur_action = NAVIGATE;
           break;
@@ -1368,6 +1367,7 @@ navigate_reuse_list:
 int main(int argc, char **argv) {
   if (argc < 5) {
     dputs("Missing parameters.\r\n");
+    cgetc();
   }
 
   register_start_device();

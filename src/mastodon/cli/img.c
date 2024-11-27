@@ -40,7 +40,6 @@ char *instance_url;
 char *oauth_token;
 char *type = NULL;
 char *id = NULL;
-char monochrome = 1;
 unsigned char scrw, scrh;
 
 #ifdef __CC65__
@@ -215,8 +214,8 @@ int main(int argc, char **argv) {
 
   instance_url = argv[1];
   oauth_token = argv[2];
-  translit_charset = argv[3];
-  monochrome = (argv[4][0] == '1');
+  monochrome = (argv[3][0] == '1');
+  translit_charset = argv[4];
   type = argv[5];
   id = argv[6];
 
@@ -284,7 +283,7 @@ done:
 
   media_free(m);
 
-  snprintf(gen_buf, BUF_SIZE, "%s %s", instance_url, oauth_token);
+  snprintf(gen_buf, 127, "%s %s %d %s", instance_url, oauth_token, monochrome, translit_charset);
 #ifdef __CC65__
   reopen_start_device();
   exec("mastocli", gen_buf);
