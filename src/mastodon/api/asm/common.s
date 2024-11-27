@@ -39,7 +39,9 @@ _arobase:          .byte '@'
 
         .bss
 
+; Not initialized, but counting on zerobss to set those to zero.
 surl_hdrs:        .res 2
+n_headers:        .res 1
 
         .segment "LC"
 
@@ -57,6 +59,9 @@ surl_hdrs:        .res 2
 
         ldx       surl_hdrs+1           ; Check if headers are allocated
         bne       :+
+        ldx       _oauth_token          ; Check if OAuth token exists
+        beq       :+
+
         lda       #<ENDPOINT_BUF_SIZE
         ldx       #>ENDPOINT_BUF_SIZE
         jsr       _malloc0              ; Allocate
@@ -73,6 +78,8 @@ surl_hdrs:        .res 2
 
         sta       surl_hdrs             ; Save pointer to header
         stx       surl_hdrs+1
+        lda       #1
+        sta       n_headers
 
 :       lda       #<_gen_buf            ; Now build URL
         ldx       #>_gen_buf
@@ -94,7 +101,7 @@ surl_hdrs:        .res 2
         lda       #<surl_hdrs ; Use address instead of value
         ldx       #>surl_hdrs ; because an array is expected
         jsr       pushax
-        lda       #1
+        lda       n_headers
         jsr       pusha
         jsr       pushptr1
         lda       tmp1

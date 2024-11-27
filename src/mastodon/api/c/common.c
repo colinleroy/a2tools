@@ -26,14 +26,16 @@ void id_copy(char *dst, char *src) {
 
 const surl_response *get_surl_for_endpoint(char method, char *endpoint) {
   static char *hdrs[1] = {NULL};
+  char h_num = 0;
 
-  if (IS_NULL(hdrs[0])) {
+  if (IS_NULL(hdrs[0]) && IS_NOT_NULL(oauth_token)) {
     hdrs[0] = malloc0(ENDPOINT_BUF_SIZE);
     strcpy(hdrs[0], "Authorization: Bearer ");
     strcat(hdrs[0], oauth_token);
+    h_num = 1;
   }
 
   strcpy(gen_buf, instance_url);
   strcat(gen_buf, endpoint);
-  return surl_start_request(hdrs, 1, gen_buf, method);
+  return surl_start_request(hdrs, h_num, gen_buf, method);
 }

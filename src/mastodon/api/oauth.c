@@ -16,11 +16,13 @@
  * better.
  */
 
-#define LOGIN_URL "/auth/sign_in"
-#define LOGOUT_URL "/auth/sign_out"
-#define REGISTER_URL "/api/v1/apps"
+#define LOGIN_ENDPOINT "/auth/sign_in"
+#define LOGOUT_ENDPOINT "/auth/sign_out"
+#define REGISTER_ENDPOINT "/api/v1/apps"
+#define OAUTH_AUTH_ENDPOINT "/oauth/authorize"
+#define OAUTH_TOKEN_ENDPOINT "/oauth/token"
+
 #define REDIRECT_URI "urn:ietf:wg:oauth:2.0:oob"
-#define OAUTH_URL "/oauth/authorize"
 
 #define CSRF_TOKEN "authenticity_token"
 #define CSRF_TOKEN_SCRAPE "name=['\"]"CSRF_TOKEN
@@ -29,16 +31,23 @@ extern char *instance_url;
 extern char *client_id;
 extern char *client_secret;
 extern char *login;
-extern char *password;
 extern char *oauth_code;
 extern char *oauth_token;
 
-static char *get_csrf_token(char *body, size_t buf_size) {
+char *password = NULL;
+
+#define LOG_URL(method, url) do { \
+  dputs(method);                  \
+  dputs(url);                     \
+  dputs("... ");                   \
+} while(0)
+
+static char *get_csrf_token(void) {
   char *w, *token = NULL;
   size_t len;
 
-  if (surl_find_line(body, CSRF_TOKEN_SCRAPE, buf_size, SURL_REGEXP_CASE_SENSITIVE) == 0) {
-    w = strstr(body, CSRF_TOKEN);
+  if (surl_find_line(gen_buf, CSRF_TOKEN_SCRAPE, BUF_SIZE, SURL_REGEXP_CASE_SENSITIVE) == 0) {
+    w = strstr(gen_buf, CSRF_TOKEN);
     if (IS_NULL(w)) {
       goto out;
     }
@@ -67,11 +76,11 @@ out:
 #pragma code-name (push, "LC")
 #endif
 
-static char *get_oauth_code(char *body) {
+static char *get_oauth_code(void) {
   char *w, *token = NULL;
   size_t len;
 
-  w = strstr(body, "code=");
+  w = strstr(gen_buf, "code=");
   if (IS_NULL(w)) {
     return NULL;
   }
@@ -84,80 +93,33 @@ static char *get_oauth_code(char *body) {
   return token;
 }
 
-static char *prepare_login_post(char *login, char *password, char *token) {
-  char *data = malloc0(512);
-  snprintf(data, 511, CSRF_TOKEN"\n%s\nuser[email]\n%s\nuser[password]\n%s\nbutton\n\n",
-            token, login, password);
-  return data;
-}
-
-static char *prepare_otp_post(char *otp, char *token) {
-  char *data = malloc0(512);
-  snprintf(data, 511, CSRF_TOKEN"\n%s\nuser[otp_attempt]\n%s\nbutton\n\n",
-            token, otp);
-  return data;
-}
-
-static char *prepare_oauth_post(char *token) {
-  char *data = malloc0(512);
-  snprintf(data, 511, CSRF_TOKEN"\n%s\n"
-                      "client_id\n%s\n"
-                      "redirect_uri\n%s\n"
-                      "state\n%s\n"
-                      "response_type\n%s\n"
-                      "scope\n%s\n"
-                      "button\n\n",
-                      token,
-                      client_id,
-                      REDIRECT_URI,
-                      "",
-                      "code",
-                      "read write");
-  return data;
-}
-
 int do_login(void) {
-  char *authorize_url;
-  char *login_url;
-  char *logout_url;
-  char *oauth_url;
-  char *body;
+  char *authorize_endpoint;
   char *token;
-  char *post;
   size_t buf_size = 256;
   size_t post_len;
   int ret = -1;
   char otp_required = 0;
   char oauth_required = 0;
 
-  body = NULL;
+/* Force logout */
+  LOG_URL("DELETE ", LOGOUT_ENDPOINT);
+  get_surl_for_endpoint(SURL_METHOD_DELETE, LOGOUT_ENDPOINT);
+  dputs("OK.\r\n");
 
-  authorize_url = malloc0(BUF_SIZE);
-  snprintf(authorize_url, BUF_SIZE,
-            "%s" OAUTH_URL
+  /* Cannot use gen_buf here. */
+  authorize_endpoint = malloc0(BUF_SIZE);
+  snprintf(authorize_endpoint, BUF_SIZE,
+            OAUTH_AUTH_ENDPOINT
             "?response_type=code"
             "&client_id=%s"
             "&redirect_uri=" REDIRECT_URI
             "&scope=read+write",
-            instance_url, client_id);
-
-  login_url = malloc0(BUF_SIZE);
-  snprintf(login_url, BUF_SIZE, "%s%s", instance_url, LOGIN_URL);
-
-  logout_url = malloc0(BUF_SIZE);
-  snprintf(logout_url, BUF_SIZE, "%s%s", instance_url, LOGOUT_URL);
-
-  oauth_url = malloc0(BUF_SIZE);
-  snprintf(oauth_url, BUF_SIZE, "%s%s", instance_url, OAUTH_URL);
-
-/* Force logout */
-  surl_start_request(NULL, 0, logout_url, SURL_METHOD_DELETE);
+            client_id);
 
 /* Get authorization */
-  dputs("GET "OAUTH_URL"... ");
-  surl_start_request(NULL, 0, authorize_url, SURL_METHOD_GET);
-
-  body = malloc0(buf_size + 1);
+  LOG_URL("GET ", OAUTH_AUTH_ENDPOINT);
+  get_surl_for_endpoint(SURL_METHOD_GET, authorize_endpoint);
 
   if (surl_response_ok()) {
     dputs("OK.\r\n");
@@ -170,48 +132,53 @@ int do_login(void) {
   password = malloc0(50);
 
 password_again:
-  token = get_csrf_token(body, buf_size);
+  token = get_csrf_token();
   if (IS_NULL(token)) {
     goto err_out;
   }
-  dputs("Enter password: ");
+
+reenter_password:
+  dputs("Your password: ");
 
   dgets_echo_on = 0;
   password[0] = '\0';
   dget_text_single(password, 50, NULL);
+  if (password[0] == '\0') {
+    goto reenter_password;
+  }
+
   dgets_echo_on = 1;
 
 /* Second request to send login */
-  post = prepare_login_post(login, password, token);
-  post_len = strlen(post);
+  LOG_URL("POST ", LOGIN_ENDPOINT);
+  get_surl_for_endpoint(SURL_METHOD_POST, LOGIN_ENDPOINT);
+
+  snprintf(gen_buf, BUF_SIZE, CSRF_TOKEN"\n%s\nuser[email]\n%s\nuser[password]\n%s\nbutton\n\n",
+                              token, login, password);
+  post_len = strlen(gen_buf);
   free(token);
 
-  dputs("POST "LOGIN_URL"... ");
-  surl_start_request(NULL, 0, login_url, SURL_METHOD_POST);
-
   surl_send_data_params((uint32)post_len, SURL_DATA_X_WWW_FORM_URLENCODED_HELP);
-  surl_send_data_chunk(post, post_len);
-  free(post);
+  surl_send_data_chunk(gen_buf, post_len);
 
   surl_read_response_header();
 
   if (!surl_response_ok()) {
-    dputs("Invalid response to POST\r\n");
+    dputs("Invalid response to POST.\r\n");
     goto err_out;
-  } else {
-    dputs("OK\r\n");
   }
 
-  surl_find_line(body, "flash-message alert", buf_size, SURL_MATCH_CASE_SENSITIVE);
-  if (body[0] != '\0') {
+  surl_find_line(gen_buf, "flash-message alert", BUF_SIZE, SURL_MATCH_CASE_SENSITIVE);
+  if (gen_buf[0] != '\0') {
     dputs("Authentication error.\r\n");
     goto password_again;
   }
 
-  surl_find_line(body, "otp-authentication-form", buf_size, SURL_MATCH_CASE_SENSITIVE);
-  if (body[0] != '\0') {
+  dputs("OK.\r\n");
+
+  surl_find_line(gen_buf, "otp-authentication-form", BUF_SIZE, SURL_MATCH_CASE_SENSITIVE);
+  if (gen_buf[0] != '\0') {
     otp_required = 1;
-    dputs("OTP required.\r\n");
   }
 
 /* Third request for OTP */
@@ -219,7 +186,7 @@ password_again:
     char *otp = malloc0(10);
 
 otp_again:
-    token = get_csrf_token(body, buf_size);
+    token = get_csrf_token();
     if (IS_NULL(token)) {
       goto err_out;
     }
@@ -227,76 +194,83 @@ otp_again:
     otp[0] = '\0';
     dget_text_single(otp, 9, NULL);
 
-    post = prepare_otp_post(otp, token);
-    post_len = strlen(post);
+    LOG_URL("POST ", LOGIN_ENDPOINT);
+    get_surl_for_endpoint(SURL_METHOD_POST, LOGIN_ENDPOINT);
+
+    snprintf(gen_buf, BUF_SIZE, CSRF_TOKEN"\n%s\nuser[otp_attempt]\n%s\nbutton\n\n",
+              token, otp);
+    post_len = strlen(gen_buf);
     free(token);
 
-    dputs("POST "LOGIN_URL"... ");
-    surl_start_request(NULL, 0, login_url, SURL_METHOD_POST);
-
     surl_send_data_params((uint32)post_len, SURL_DATA_X_WWW_FORM_URLENCODED_HELP);
-    surl_send_data_chunk(post, post_len);
-    free(post);
+    surl_send_data_chunk(gen_buf, post_len);
 
     surl_read_response_header();
 
     if (!surl_response_ok()) {
-      dputs("Invalid response to POST\r\n");
+      dputs("Invalid response to POST.\r\n");
       goto err_out;
     } else {
 
-      surl_find_line(body, "flash-message alert", buf_size, SURL_MATCH_CASE_SENSITIVE);
-      if (body[0] != '\0') {
+      surl_find_line(gen_buf, "flash-message alert", BUF_SIZE, SURL_MATCH_CASE_SENSITIVE);
+      if (gen_buf[0] != '\0') {
         dputs("OTP error.\r\n");
         goto otp_again;
       }
 
-      dputs("OK\r\n");
+      dputs("OK.\r\n");
     }
     free(otp);
   }
   /* End of login */
 
-  if (surl_find_line(body, "action=['\"]"OAUTH_URL, buf_size, SURL_REGEXP_CASE_SENSITIVE) == 0) {
+  if (surl_find_line(gen_buf, "action=['\"]"OAUTH_AUTH_ENDPOINT, BUF_SIZE, SURL_REGEXP_CASE_SENSITIVE) == 0) {
     oauth_required = 1;
-    dputs("OAuth authorization required.\r\n");
-  } else {
-    dputs("OAuth authorization valid.\r\n");
   }
 
   if (oauth_required) {
     /* This only works because Authorize is before Deny */
-    token = get_csrf_token(body, buf_size);
+    token = get_csrf_token();
     if (IS_NULL(token)) {
       goto err_out;
     }
+
     /* Oauth request */
-    post = prepare_oauth_post(token);
-    post_len = strlen(post);
+    LOG_URL("POST ", OAUTH_AUTH_ENDPOINT);
+    get_surl_for_endpoint(SURL_METHOD_POST, OAUTH_AUTH_ENDPOINT);
+
+    snprintf(gen_buf, BUF_SIZE, CSRF_TOKEN"\n%s\n"
+                                "client_id\n%s\n"
+                                "redirect_uri\n%s\n"
+                                "state\n%s\n"
+                                "response_type\n%s\n"
+                                "scope\n%s\n"
+                                "button\n\n",
+                                token,
+                                client_id,
+                                REDIRECT_URI,
+                                "",
+                                "code",
+                                "read write");
+    post_len = strlen(gen_buf);
     free(token);
 
-    dputs("POST "OAUTH_URL"... ");
-    surl_start_request(NULL, 0, oauth_url, SURL_METHOD_POST);
-
     surl_send_data_params((uint32)post_len, SURL_DATA_X_WWW_FORM_URLENCODED_HELP);
-    surl_send_data_chunk(post, post_len);
-    free(post);
+    surl_send_data_chunk(gen_buf, post_len);
 
     surl_read_response_header();
 
     if (!surl_response_ok()) {
-      dputs("Invalid response to POST\r\n");
+      dputs("Invalid response to POST.\r\n");
       goto err_out;
-    } else {
-      dputs("OK.\r\n");
     }
 
-    if (surl_find_header(body, "Location: ", buf_size, SURL_MATCH_CASE_INSENSITIVE) == 0) {
+    if (surl_find_header(gen_buf, "Location: ", BUF_SIZE, SURL_MATCH_CASE_INSENSITIVE) == 0) {
       free(oauth_code);
-      oauth_code = get_oauth_code(body);
-      dputs("Got OAuth code.\r\n");
+      oauth_code = get_oauth_code();
+      dputs("OK.\r\n");
     } else {
-      dputs("Did not get oauth code.\r\n");
+      dputs("No OAuth code.\r\n");
       goto err_out;
     }
   }
@@ -304,11 +278,7 @@ otp_again:
   ret = 0;
 
 err_out:
-  free(body);
-  free(oauth_url);
-  free(login_url);
-  free(logout_url);
-  free(authorize_url);
+  free(authorize_endpoint);
   return ret;
 
 }
@@ -317,49 +287,33 @@ err_out:
 #pragma code-name (pop)
 #endif
 
-static char *prepare_app_register_post(void) {
-  char *data;
-
-  data = malloc(512);
-
-  snprintf(data, 511, "client_name\n%s\n"
-                      "redirect_uris\n%s\n"
-                      "scopes\nread write\n"
-                      "website\n%s\n",
-
-                      "Mastodon for Apple II",
-                      REDIRECT_URI,
-                      "https://www.colino.net/wordpress/en/mastodon-for-apple-II/");
-  return data;
-}
-
 int register_app(void) {
   char *post;
-  char *reg_url;
   size_t post_len;
   int res;
 
   res = -1;
 
-  post = prepare_app_register_post();
-  post_len = strlen(post);
+  LOG_URL("POST ", REGISTER_ENDPOINT);
+  get_surl_for_endpoint(SURL_METHOD_POST, REGISTER_ENDPOINT);
 
-  reg_url = malloc(strlen(instance_url) + strlen(REGISTER_URL) + 1);
-  sprintf(reg_url, "%s%s", instance_url, REGISTER_URL);
+  snprintf(gen_buf, BUF_SIZE, "client_name\n%s\n"
+                              "redirect_uris\n%s\n"
+                              "scopes\nread write\n"
+                              "website\n%s\n",
 
-  dputs("POST "REGISTER_URL"... ");
-  surl_start_request(NULL, 0, reg_url, SURL_METHOD_POST);
-  free(reg_url);
+                              "Mastodon for Apple II",
+                              REDIRECT_URI,
+                              "https://www.colino.net/wordpress/en/mastodon-for-apple-II/");
+  post_len = strlen(gen_buf);
 
   surl_send_data_params((uint32)post_len, SURL_DATA_X_WWW_FORM_URLENCODED_HELP);
-  surl_send_data_chunk(post, post_len);
-  free(post);
+  surl_send_data_chunk(gen_buf, post_len);
 
   surl_read_response_header();
 
   if (!surl_response_ok()) {
-    cprintf("Invalid response %d to POST", surl_response_code());
-    dputs("\r\n"); /* Scroll if needed */
+    dputs("Invalid response to POST.\r\n");
     goto err_out;
   }
 
@@ -377,71 +331,54 @@ int register_app(void) {
   if (IS_NOT_NULL(post = strchr(client_secret, '\n')))
     *post = '\0';
 
-  dputs("Done.\r\n");
+  dputs("OK.\r\n");
   res = 0;
 
 err_out:
   return res;
 }
 
-
-static char *prepare_oauth_token_post(void) {
-  char *data;
-
-  data = malloc(512);
-
-  snprintf(data, 511, "grant_type\n%s\n"
-                      "code\n%s\n"
-                      "client_id\n%s\n"
-                      "client_secret\n%s\n"
-                      "redirect_uri\n%s\n"
-                      "scope\nread write\n",
-
-                      "authorization_code",
-                      oauth_code,
-                      client_id,
-                      client_secret,
-                      REDIRECT_URI);
-  return data;
-}
-
 int get_oauth_token(void) {
-  char *oauth_url;
-  char *post;
   size_t post_len;
-  int ret = -1;
+
+/* First request to get authorization */
+  LOG_URL("POST ", OAUTH_TOKEN_ENDPOINT);
+  get_surl_for_endpoint(SURL_METHOD_POST, OAUTH_TOKEN_ENDPOINT);
 
   if (IS_NULL(oauth_token)) {
     oauth_token = malloc(50);
   }
 
-  oauth_url = malloc(BUF_SIZE);
-  snprintf(oauth_url, BUF_SIZE, "%s/oauth/token", instance_url);
+  snprintf(gen_buf, BUF_SIZE, "grant_type\n%s\n"
+                              "code\n%s\n"
+                              "client_id\n%s\n"
+                              "client_secret\n%s\n"
+                              "redirect_uri\n%s\n"
+                              "scope\nread write\n",
 
-/* First request to get authorization */
-  dputs("POST "OAUTH_URL"... ");
-  surl_start_request(NULL, 0, oauth_url, SURL_METHOD_POST);
+                              "authorization_code",
+                              oauth_code,
+                              client_id,
+                              client_secret,
+                              REDIRECT_URI);
+  post_len = strlen(gen_buf);
 
-  post = prepare_oauth_token_post();
-  post_len = strlen(post);
   surl_send_data_params((uint32)post_len, SURL_DATA_X_WWW_FORM_URLENCODED_HELP);
-  surl_send_data_chunk(post, post_len);
-  free(post);
+  surl_send_data_chunk(gen_buf, post_len);
 
   surl_read_response_header();
 
   if (surl_get_json(oauth_token, ".access_token", NULL, SURL_HTMLSTRIP_NONE, BUF_SIZE) < 0) {
-    dputs("OAuth token not found.\r\n");
-    goto err_out;
+    dputs("No OAuth token.\r\n");
+    free(oauth_token);
+    oauth_token = NULL;
+    return -1;
   } else {
-    if (IS_NOT_NULL(post = strchr(oauth_token, '\n'))) {
-      *post = '\0';
+    char *w;
+    if (IS_NOT_NULL(w = strchr(oauth_token, '\n'))) {
+      *w = '\0';
     }
-    dputs("Got OAuth token.\r\n");
+    dputs("OK.\r\n");
+    return 0;
   }
-  ret = 0;
-
-err_out:
-  free(oauth_url);
-  return ret;
 }

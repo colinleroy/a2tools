@@ -12,6 +12,7 @@
 #define NUMCOLS 80
 #define KEY_COMB "Open-Apple"
 #define N_STATUS_TO_LOAD 10
+#define STATE_FILE "/RAM/mastostate"
 
 #else
 #define LEFT_COL_WIDTH 39
@@ -20,6 +21,8 @@
 #define KEY_COMB "Ctrl"
 #define N_STATUS_TO_LOAD 8
 #define HELP_KEY ('Y'-'A'+1)
+#define STATE_FILE "mastostate"
+
 #endif
 
 /* actions mapped to keys */
