@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <errno.h>
+#include <fcntl.h>
 #include "malloc0.h"
 #include "platform.h"
 #include "surl.h"
@@ -41,8 +42,8 @@ static char *tl_filter[4] = { NULL,
 
 char *instance_url = NULL;
 char *oauth_token = NULL;
-char monochrome = 1;
 char writable_lines = 24;
+char monochrome = 1;
 
 extern account *my_account;
 
@@ -760,12 +761,6 @@ static int shift_posts_up(list *l) {
   return 0;
 }
 
-#ifdef __APPLE2ENH__
-#define STATE_FILE "/RAM/mastostate"
-#else
-#define STATE_FILE "mastostate"
-#endif
-
 static void save_state(void) {
   char i,j;
   FILE *fp;
@@ -1371,9 +1366,7 @@ navigate_reuse_list:
 #endif
 
 int main(int argc, char **argv) {
-  FILE *fp;
-
-  if (argc < 3) {
+  if (argc < 5) {
     dputs("Missing parameters.\r\n");
   }
 
@@ -1384,29 +1377,10 @@ int main(int argc, char **argv) {
   videomode(VIDEOMODE_80COL);
 #endif
 
-  instance_url = argv[1];
-  oauth_token = argv[2];
-
-
-  fp = fopen("clisettings", "r");
-  translit_charset = US_CHARSET;
-
-  if (IS_NOT_NULL(fp)) {
-    fgets(gen_buf, 16, fp);
-    if (IS_NOT_NULL(strchr(gen_buf, '\n'))) {
-      *strchr(gen_buf, '\n') = '\0';
-    }
-#ifdef __APPLE2ENH__
-    translit_charset = strdup(gen_buf);
-#endif
-
-    fgets(gen_buf, 16, fp);
-    if (gen_buf[0] == '0') {
-      monochrome = 0;
-    }
-
-    fclose(fp);
-  }
+  instance_url     = argv[1];
+  oauth_token      = argv[2];
+  monochrome       = (argv[3][0] == '1');
+  translit_charset = argv[4];
 
 //  0 2    7
 // "US-ASCII"

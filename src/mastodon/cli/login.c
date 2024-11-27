@@ -19,6 +19,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
+#include <ctype.h>
 #include "malloc0.h"
 #include "surl.h"
 #include "simple_serial.h"
@@ -36,125 +38,105 @@
 #include "logo.h"
 #include "runtime_once_clean.h"
 #include "config.h"
+#include "login_data.h"
 
 unsigned char scrw, scrh;
-char *instance_url = NULL;
-char *client_id = NULL;
-char *client_secret = NULL;
-char *login = NULL;
-char *password = NULL;
-char *oauth_code = NULL;
-char *oauth_token = NULL;
+
+login_data_t login_data;
+
+char *instance_url  = login_data.instance_url;
+char *client_id     = login_data.client_id;
+char *client_secret = login_data.client_secret;
+char *login         = login_data.login;
+char *oauth_code    = login_data.oauth_code;
+char *oauth_token   = login_data.oauth_token;
 
 static int save_settings(void) {
-  FILE *fp;
+  int fd;
   int r;
 
-  fp = fopen("mastsettings", "w");
-  if (IS_NULL(fp)) {
+  fd = open("mastsettings", O_WRONLY|O_CREAT);
+  if (fd < 0) {
     dputs("Could not open settings file.\r\n");
     return -1;
   }
 
-  r = fprintf(fp, "%s\n"
-                  "%s\n"
-                  "%s\n"
-                  "%s\n"
-                  "%s\n"
-                  "%s\n",
-                  instance_url,
-                  client_id,
-                  client_secret,
-                  login,
-                  oauth_code,
-                  oauth_token);
+  r = write(fd, &login_data, sizeof(login_data));
 
-  if (r < 0 || fclose(fp) != 0) {
+  if (r < 0 || close(fd) != 0) {
     dputs("Could not save settings file.\r\n");
     return -1;
   }
   return 0;
 }
 
-static int load_settings(void) {
-  FILE *fp;
-  char c;
+static char read_settings(void) {
+  int fd;
+  int r;
 
 #ifdef PRODOS_T_TXT
   _filetype = PRODOS_T_TXT;
 #endif
 
-  fp = fopen("mastsettings", "r");
+  fd = open("mastsettings", O_RDONLY);
 
-  instance_url  = malloc0(70);
-  client_id     = malloc0(50);
-  client_secret = malloc0(50);
-  login         = malloc0(50);
-  oauth_code    = malloc0(50);
-  oauth_token   = malloc0(50);
-
-  if (IS_NOT_NULL(fp)) {
-    if (fgets(instance_url, 70, fp) > 0)
-      *strchr(instance_url, '\n') = '\0';
-
-    if (fgets(client_id, 50, fp) > 0)
-      *strchr(client_id, '\n') = '\0';
-
-    if (fgets(client_secret, 50, fp) > 0)
-      *strchr(client_secret, '\n') = '\0';
-
-    if (fgets(login, 50, fp) > 0)
-      *strchr(login, '\n') = '\0';
-
-    if (fgets(oauth_code, 50, fp) > 0)
-      *strchr(oauth_code, '\n') = '\0';
-
-    if (fgets(oauth_token, 50, fp) > 0)
-      *strchr(oauth_token, '\n') = '\0';
-
-    fclose(fp);
-
-    cprintf("Login as %s on %s (Y/n)? ", login, instance_url);
-    c = cgetc();
-    dputs("\r\n");
-    if (c == 'n' || c == 'N') {
-      goto reenter_settings;
+  if (fd > 0) {
+    r = read(fd, &login_data, sizeof(login_data));
+    close(fd);
+    if (r == sizeof(login_data)) {
+      return 0;
     }
-
-    return 0;
-  } else {
-reenter_settings:
-    /* Invalidate oauth token */
-    oauth_token[0] = '\0';
-
-    dputs("Your instance URL: ");
-    strcpy(instance_url, "https://");
-    dget_text_single(instance_url, 70, NULL);
-
-    if (instance_url[0] == '\0') {
-      goto reenter_settings;
-    }
-    if (register_app() < 0) {
-      goto reenter_settings;
-    }
-
-    dputs("If on a non-US keyboard, use @ instead of arobase.\r\n");
-    dputs("Your login: ");
-    login[0] = '\0';
-    dget_text_single(login, 50, NULL);
-
-    return 0;
   }
+  bzero(&login_data, sizeof(login_data));
   return -1;
+}
+
+static void get_settings(void) {
+  char c;
+
+  /* If we could read settings, don't skip the question. */
+  if (login[0]) {
+    cprintf("Login as %s on %s (Y/n)? ", login, instance_url);
+    c = tolower(cgetc());
+    dputs("\r\n");
+    if (c != 'n') {
+      return;
+    }
+  }
+
+reenter_settings:
+  /* Invalidate oauth token */
+  oauth_token[0] = '\0';
+  /* unlink state file */
+  unlink(STATE_FILE);
+
+  dputs("Your instance URL: ");
+  strcpy(instance_url, "https://");
+  dget_text_single(instance_url, 70, NULL);
+
+  if (instance_url[0] == '\0') {
+    goto reenter_settings;
+  }
+  if (register_app() < 0) {
+    goto reenter_settings;
+  }
+
+#ifdef __APPLE2ENH__
+  dputs("If your Apple II has a non-US keyboard, use @ instead of arobase.\r\n");
+#endif
+
+reenter_login:
+  dputs("Your login: ");
+  login[0] = '\0';
+  dget_text_single(login, 50, NULL);
+  if (login[0] == '\0') {
+    goto reenter_login;
+  }
 }
 
 int main(int argc, char **argv) {
   char *params;
   char y;
-
-  if (argc > 1) {
-    return conf_main(argc, argv);
-  }
 
   params = malloc0(127);
 
@@ -179,12 +161,13 @@ int main(int argc, char **argv) {
 
   runtime_once_clean();
 
-try_login_again:
-  if (load_settings() < 0) {
-    set_scrollwindow(0, scrh);
-    cgetc();
-    exit(1);
+  /* Did we read our config file, and are we configuring? */
+  if (read_settings() == 0 && argc == 1) {
+    goto start_main_ui;
   }
+
+try_login_again:
+  get_settings();
 
   if (!strlen(oauth_token)) {
     if (do_login() < 0 || get_oauth_token() < 0) {
@@ -192,9 +175,12 @@ try_login_again:
       cgetc();
       goto try_login_again;
     }
-    save_settings();
     dputs("Saved OAuth token.\r\n");
-
+do_cli_config_anyway:
+    config_cli();
+    save_settings();
+  } else if (argc > 1) {
+    goto do_cli_config_anyway;
   }
 
   if (IS_NULL(oauth_token) || oauth_token[0] == '\0') {
@@ -208,7 +194,9 @@ try_login_again:
   dputs("\r\nHint: Use Ctrl-Y to toggle help menu");
   dputs("\r\nfrom anywhere in the program.");
 #endif
-  snprintf(params, 127, "%s %s", instance_url, oauth_token);
+
+start_main_ui:
+  snprintf(params, 127, "%s %s %d %s", instance_url, oauth_token, login_data.monochrome, login_data.charset);
 
   set_scrollwindow(0, scrh);
 #ifdef __CC65__
