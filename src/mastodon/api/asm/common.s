@@ -4,6 +4,7 @@
         .export               _endpoint_buf
         .export               _lines
         .export               _translit_charset
+        .export               _monochrome
         .export               _arobase
 
         .export               _get_surl_for_endpoint
@@ -35,6 +36,7 @@ auth_header_start: .asciiz "Authorization: Bearer "
         .data
 
 _translit_charset: .byte <US_CHARSET, >US_CHARSET
+_monochrome:       .byte 1
 _arobase:          .byte '@'
 
         .bss

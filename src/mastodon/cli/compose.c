@@ -576,7 +576,8 @@ int main(int argc, char **argv) {
 
   instance_url = argv[1];
   oauth_token = argv[2];
-  translit_charset = argv[3];
+  monochrome = (argv[3][0] == '1');
+  translit_charset = argv[4];
 
 //  0 2    7
 // "US-ASCII"
@@ -598,9 +599,9 @@ int main(int argc, char **argv) {
 
   set_hscrollwindow(RIGHT_COL_START, NUMCOLS - RIGHT_COL_START);
   gotoxy(0, 0);
-  if (argc == 6) {
-    compose_mode = argv[4];
-    ref_status = api_get_status(argv[5], 0);
+  if (argc == 7) {
+    compose_mode = argv[5];
+    ref_status = api_get_status(argv[6], 0);
 
     if (IS_NOT_NULL(ref_status)) {
       /* Set CW from reference status */
@@ -627,11 +628,11 @@ int main(int argc, char **argv) {
         }
       }
     }
-  } else if (argc == 5) {
-    text = malloc0(strlen(argv[4])+2);
+  } else if (argc == 6) {
+    text = malloc0(strlen(argv[5])+2);
 
     text[0] = arobase;
-    strcpy(text+1, argv[4]);
+    strcpy(text+1, argv[5]);
     while (IS_NOT_NULL(params = strchr(text, '@'))) {
       *params = arobase;
     }
@@ -658,7 +659,7 @@ int main(int argc, char **argv) {
   set_hscrollwindow(0, NUMCOLS);
 
   params = malloc0(127);
-  snprintf(params, 127, "%s %s", instance_url, oauth_token);
+  snprintf(params, 127, "%s %s %d %s", instance_url, oauth_token, monochrome, translit_charset);
 #ifdef __CC65__
   reopen_start_device();
 

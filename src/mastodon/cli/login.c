@@ -200,11 +200,11 @@ start_main_ui:
 
   set_scrollwindow(0, scrh);
 #ifdef __CC65__
-  //snprintf(params, 127, "%s %s ISO646-FR1 e 110882478679186108", instance_url, oauth_token);
-  //snprintf(params, 127, "%s %s ISO646-FR1", instance_url, oauth_token);
+  //snprintf(params, 127, "%s %s 1 ISO646-FR1 e 110882478679186108", instance_url, oauth_token);
+  //snprintf(params, 127, "%s %s 1 ISO646-FR1", instance_url, oauth_token);
   // exec("mastowrite", params);
 
-  // snprintf(params, 127, "%s %s ISO646-FR1 1 s 112016758824153809", instance_url, oauth_token);
+  // snprintf(params, 127, "%s %s 1 ISO646-FR1 s 112016758824153809", instance_url, oauth_token);
   // exec("mastoimg", params);
 
   exec("mastocli", params);

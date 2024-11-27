@@ -14,6 +14,7 @@ extern char *instance_url;
 extern char *oauth_token;
 
 char *translit_charset = US_CHARSET;
+char monochrome = 1;
 char arobase = '@';
 char gen_buf[BUF_SIZE];
 char selector[SELECTOR_SIZE];
