@@ -17,6 +17,7 @@
  */
 
 #define LOGIN_URL "/auth/sign_in"
+#define LOGOUT_URL "/auth/sign_out"
 #define REGISTER_URL "/api/v1/apps"
 #define REDIRECT_URI "urn:ietf:wg:oauth:2.0:oob"
 #define OAUTH_URL "/oauth/authorize"
@@ -69,7 +70,7 @@ out:
 static char *get_oauth_code(char *body) {
   char *w, *token = NULL;
   size_t len;
-  
+
   w = strstr(body, "code=");
   if (IS_NULL(w)) {
     return NULL;
@@ -118,6 +119,7 @@ static char *prepare_oauth_post(char *token) {
 int do_login(void) {
   char *authorize_url;
   char *login_url;
+  char *logout_url;
   char *oauth_url;
   char *body;
   char *token;
@@ -126,7 +128,6 @@ int do_login(void) {
   size_t post_len;
   int ret = -1;
   char otp_required = 0;
-  char login_required = 0;
   char oauth_required = 0;
 
   body = NULL;
@@ -143,10 +144,16 @@ int do_login(void) {
   login_url = malloc0(BUF_SIZE);
   snprintf(login_url, BUF_SIZE, "%s%s", instance_url, LOGIN_URL);
 
+  logout_url = malloc0(BUF_SIZE);
+  snprintf(logout_url, BUF_SIZE, "%s%s", instance_url, LOGOUT_URL);
+
   oauth_url = malloc0(BUF_SIZE);
   snprintf(oauth_url, BUF_SIZE, "%s%s", instance_url, OAUTH_URL);
 
-/* First request to get authorization */
+/* Force logout */
+  surl_start_request(NULL, 0, logout_url, SURL_METHOD_DELETE);
+
+/* Get authorization */
   dputs("GET "OAUTH_URL"... ");
   surl_start_request(NULL, 0, authorize_url, SURL_METHOD_GET);
 
@@ -159,32 +166,68 @@ int do_login(void) {
     goto err_out;
   }
 
-  if (surl_find_line(body, "action=['\"]"LOGIN_URL, buf_size, SURL_REGEXP_CASE_SENSITIVE) == 0) {
-    login_required = 1;
-    dputs("Login required.\r\n");
-  } else {
-    dputs("Login still valid.\r\n");
-  }
-
 /* Get authorization done, password if needed */
-
-  if (login_required) {
-    password = malloc0(50);
+  password = malloc0(50);
 
 password_again:
+  token = get_csrf_token(body, buf_size);
+  if (IS_NULL(token)) {
+    goto err_out;
+  }
+  dputs("Enter password: ");
+
+  dgets_echo_on = 0;
+  password[0] = '\0';
+  dget_text_single(password, 50, NULL);
+  dgets_echo_on = 1;
+
+/* Second request to send login */
+  post = prepare_login_post(login, password, token);
+  post_len = strlen(post);
+  free(token);
+
+  dputs("POST "LOGIN_URL"... ");
+  surl_start_request(NULL, 0, login_url, SURL_METHOD_POST);
+
+  surl_send_data_params((uint32)post_len, SURL_DATA_X_WWW_FORM_URLENCODED_HELP);
+  surl_send_data_chunk(post, post_len);
+  free(post);
+
+  surl_read_response_header();
+
+  if (!surl_response_ok()) {
+    dputs("Invalid response to POST\r\n");
+    goto err_out;
+  } else {
+    dputs("OK\r\n");
+  }
+
+  surl_find_line(body, "flash-message alert", buf_size, SURL_MATCH_CASE_SENSITIVE);
+  if (body[0] != '\0') {
+    dputs("Authentication error.\r\n");
+    goto password_again;
+  }
+
+  surl_find_line(body, "otp-authentication-form", buf_size, SURL_MATCH_CASE_SENSITIVE);
+  if (body[0] != '\0') {
+    otp_required = 1;
+    dputs("OTP required.\r\n");
+  }
+
+/* Third request for OTP */
+  if (otp_required) {
+    char *otp = malloc0(10);
+
+otp_again:
     token = get_csrf_token(body, buf_size);
     if (IS_NULL(token)) {
       goto err_out;
     }
-    dputs("Enter password: ");
-    
-    dgets_echo_on = 0;
-    password[0] = '\0';
-    dget_text_single(password, 50, NULL);
-    dgets_echo_on = 1;
+    dputs("Enter OTP code: ");
+    otp[0] = '\0';
+    dget_text_single(otp, 9, NULL);
 
-  /* Second request to send login */
-    post = prepare_login_post(login, password, token);
+    post = prepare_otp_post(otp, token);
     post_len = strlen(post);
     free(token);
 
@@ -201,62 +244,16 @@ password_again:
       dputs("Invalid response to POST\r\n");
       goto err_out;
     } else {
+
+      surl_find_line(body, "flash-message alert", buf_size, SURL_MATCH_CASE_SENSITIVE);
+      if (body[0] != '\0') {
+        dputs("OTP error.\r\n");
+        goto otp_again;
+      }
+
       dputs("OK\r\n");
     }
-
-    surl_find_line(body, "flash-message alert", buf_size, SURL_MATCH_CASE_SENSITIVE);
-    if (body[0] != '\0') {
-      dputs("Authentication error.\r\n");
-      goto password_again;
-    }
-
-    surl_find_line(body, "otp-authentication-form", buf_size, SURL_MATCH_CASE_SENSITIVE);
-    if (body[0] != '\0') {
-      otp_required = 1;
-      dputs("OTP required.\r\n");
-    }
-
-  /* Third request for OTP */
-    if (otp_required) {
-      char *otp = malloc0(10);
-
-otp_again:
-      token = get_csrf_token(body, buf_size);
-      if (IS_NULL(token)) {
-        goto err_out;
-      }
-      dputs("Enter OTP code: ");
-      otp[0] = '\0';
-      dget_text_single(otp, 9, NULL);
-
-      post = prepare_otp_post(otp, token);
-      post_len = strlen(post);
-      free(token);
-
-      dputs("POST "LOGIN_URL"... ");
-      surl_start_request(NULL, 0, login_url, SURL_METHOD_POST);
-
-      surl_send_data_params((uint32)post_len, SURL_DATA_X_WWW_FORM_URLENCODED_HELP);
-      surl_send_data_chunk(post, post_len);
-      free(post);
-
-      surl_read_response_header();
-
-      if (!surl_response_ok()) {
-        dputs("Invalid response to POST\r\n");
-        goto err_out;
-      } else {
-        
-        surl_find_line(body, "flash-message alert", buf_size, SURL_MATCH_CASE_SENSITIVE);
-        if (body[0] != '\0') {
-          dputs("OTP error.\r\n");
-          goto otp_again;
-        }
-
-        dputs("OK\r\n");
-      }
-      free(otp);
-    }
+    free(otp);
   }
   /* End of login */
 
@@ -310,6 +307,7 @@ err_out:
   free(body);
   free(oauth_url);
   free(login_url);
+  free(logout_url);
   free(authorize_url);
   return ret;
 
@@ -340,7 +338,7 @@ int register_app(void) {
   char *reg_url;
   size_t post_len;
   int res;
-  
+
   res = -1;
 
   post = prepare_app_register_post();
