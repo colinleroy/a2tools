@@ -1243,12 +1243,12 @@ handle_kbd:
             } else {
               cur -= SAMPLE_RATE * skip_secs(c);
             }
-            LOG("Rewind to sample %ld\n", cur);
+            LOG("Rewind to sample %zu\n", cur);
             if (cur % SAMPLE_RATE) {
               cur = cur - cur % SAMPLE_RATE;
-              LOG("Fixed to %ld\n", cur);
+              LOG("Fixed to %zu\n", cur);
             }
-            LOG("Seek video to %ld frames (%ld bytes)\n", (cur/SAMPLE_RATE)*FPS, (cur/SAMPLE_RATE)*FPS*HGR_LEN);
+            LOG("Seek video to %zu frames (%zu bytes)\n", (cur/SAMPLE_RATE)*FPS, (cur/SAMPLE_RATE)*FPS*HGR_LEN);
             lseek(vhgr_file, (cur/SAMPLE_RATE)*FPS*HGR_LEN, SEEK_SET);
             break;
           case APPLE_CH_CURS_RIGHT:
@@ -1258,19 +1258,19 @@ handle_kbd:
             } else {
               cur = audio_size;
             }
-            LOG("Forward to sample %ld\n", cur);
+            LOG("Forward to sample %zu\n", cur);
             if (cur % SAMPLE_RATE) {
               cur = cur - cur % SAMPLE_RATE;
-              LOG("Fixed to %ld\n", cur);
+              LOG("Fixed to %zu\n", cur);
             }
             pthread_mutex_lock(&video_th_data->mutex);
             if (video_th_data->max_seekable < (cur/SAMPLE_RATE)*FPS) {
               cur = (video_th_data->max_seekable / FPS) * SAMPLE_RATE;
-              LOG("Cannot skip so far, skipping to %ld samples (frame %ld)\n",
+              LOG("Cannot skip so far, skipping to %zu samples (frame %lu)\n",
                      cur, video_th_data->max_seekable);
             }
             pthread_mutex_unlock(&video_th_data->mutex);
-            LOG("Seek video to %ld frames (%ld bytes)\n", (cur/SAMPLE_RATE)*FPS, (cur/SAMPLE_RATE)*FPS*HGR_LEN);
+            LOG("Seek video to %zu frames (%zu bytes)\n", (cur/SAMPLE_RATE)*FPS, (cur/SAMPLE_RATE)*FPS*HGR_LEN);
             lseek(vhgr_file, (cur/SAMPLE_RATE)*FPS*HGR_LEN, SEEK_SET);
             break;
           case '+':

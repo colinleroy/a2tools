@@ -32,6 +32,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <inttypes.h>
 
 #include <libavutil/avutil.h>
 #include <libavcodec/avcodec.h>
@@ -681,7 +682,7 @@ int ffmpeg_video_decode_init(decode_data *data, int *video_len) {
       data->subs = new_subs;
     }
 
-    LOG("Duration %lus\n", video_fmt_ctx->duration/1000000);
+    LOG("Duration %"PRId64"s\n", video_fmt_ctx->duration/1000000);
     *video_len = video_fmt_ctx->duration/1000000;
 end:
     if (ret < 0)
@@ -754,7 +755,7 @@ unsigned char *ffmpeg_video_decode_frame(decode_data *data, int total_frames, in
                       AVRational time_base = video_fmt_ctx->streams[video_stream_index]->time_base;
                       data->pts = (float)video_filt_frame->pts * 1000.0 * av_q2d(time_base);
                       first = 0;
-                      LOG("video frame pts %ld duration %ld timebase %d/%d %f\n",
+                      LOG("video frame pts %ld duration %"PRId64" timebase %d/%d %f\n",
                       data->pts, video_filt_frame->pkt_duration, time_base.num, time_base.den, av_q2d(time_base));
                     }
 
@@ -875,7 +876,7 @@ static int init_audio_filters(const char *filters_descr, int sample_rate)
 
     /* buffer audio source: the decoded frames from the decoder will be inserted here. */
     ret = snprintf(args, sizeof(args),
-            "time_base=%d/%d:sample_rate=%d:sample_fmt=%s:channel_layout=0x%lx",
+            "time_base=%d/%d:sample_rate=%d:sample_fmt=%s:channel_layout=0x%"PRIx64,
              time_base.num, time_base.den, audio_dec_ctx->sample_rate,
              av_get_sample_fmt_name(audio_dec_ctx->sample_fmt),
              audio_dec_ctx->channel_layout);
@@ -1374,7 +1375,7 @@ int ffmpeg_audio_decode(decode_data *data) {
                           AVRational time_base = audio_fmt_ctx->streams[audio_stream_index]->time_base;
                           data->pts = (float)audio_filt_frame->pts * 1000.0 * av_q2d(time_base);
                           first = 0;
-                          LOG("audio frame pts %ld duration %ld timebase %d/%d %f\n",
+                          LOG("audio frame pts %ld duration %"PRId64" timebase %d/%d %f\n",
                           data->pts, audio_filt_frame->pkt_duration, time_base.num, time_base.den, av_q2d(time_base));
                         }
 
