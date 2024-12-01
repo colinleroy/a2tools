@@ -43,7 +43,7 @@ CFLAGS= -I ../lib -I helpers $(shell sdl-config --cflags) \
 .PHONY: all clean
 all: $(PROGRAM) hgr-convert
 
-CUPSFILTER_VERSION = $(shell pkg-config  --modversion libcupsfilters|cut -b1-1)
+CUPSFILTER_VERSION = $(shell (pkg-config  --modversion libcupsfilters || echo 0)|cut -b1-1)
 CUPSFILTER_CFLAGS  = $(shell pkg-config  --cflags libcupsfilters)
 CUPSFILTER_LIBS    = $(shell pkg-config  --libs libcupsfilters)
 
