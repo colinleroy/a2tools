@@ -1599,9 +1599,15 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
   if (c_url == NULL) {
     c_url = curl_url();
   }
+
+#if CURL_AT_LEAST_VERSION(7,78,0)
+  r |= curl_url_set(c_url, CURLUPART_URL, url, CURLU_URLENCODE|CURLU_ALLOW_SPACE);
+#else
   r |= curl_url_set(c_url, CURLUPART_URL, url, CURLU_URLENCODE);
+#endif
+
   if (r != 0) {
-    LOG("Can't set URL %s (%d)\n", url, r);
+    LOG("Can't set URL %s (%d, %s)\n", url, r, curl_easy_strerror(r));
   }
   /* Setup standards options */
   r |= curl_easy_setopt(curl, CURLOPT_CURLU, c_url);
