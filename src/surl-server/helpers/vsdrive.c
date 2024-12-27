@@ -18,7 +18,8 @@ static void get_datetime_bytes(VSDriveValues prodos_version, unsigned char *byte
     word2 = now->tm_mday + ((now->tm_mon + 1) << 5) + ((now->tm_year % 100) << 9);
   } else if (prodos_version == VSDRIVE_PRODOS_25) {
     word1 = (now->tm_mday << 11) + (now->tm_hour << 6) + (now->tm_min);
-    word2 = ((now->tm_mon + 1) << 12) + (now->tm_year + 1900);
+    /* ProDOS 2.5 tm_mon field is [2..13], https://prodos8.com/releases/prodos-25/ */
+    word2 = ((now->tm_mon + 2) << 12) + (now->tm_year + 1900);
   }
   bytes[0] = word1 & 0xff;
   bytes[1] = word1 >> 8;
