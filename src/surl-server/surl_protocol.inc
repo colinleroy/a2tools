@@ -1,5 +1,5 @@
 ; Update in .h too!
-SURL_PROTOCOL_VERSION       = 22
+SURL_PROTOCOL_VERSION       = 23
 
 SURL_METHOD_ABORT           = ('d'|$80)
 SURL_METHOD_RAW             = $05
@@ -15,6 +15,7 @@ SURL_METHOD_STREAM_VIDEO    = $14
 SURL_METHOD_STREAM_AUDIO    = $15
 SURL_METHOD_STREAM_AV       = $16
 SURL_METHOD_DUMP            = $17
+SURL_METHOD_MKDIR           = $18
 SURL_METHOD_VSDRIVE         = $C5
 
 SURL_ANSWER_WAIT            = $20

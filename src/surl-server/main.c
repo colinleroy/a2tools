@@ -99,6 +99,7 @@ static const char *surl_method_str(unsigned char method) {
     case SURL_METHOD_STREAM_VIDEO: return "STREAM_VIDEO";
     case SURL_METHOD_STREAM_AV:    return "STREAM_AV";
     case SURL_METHOD_DUMP:         return "DUMP";
+    case SURL_METHOD_MKDIR:        return "MKDIR";
     case SURL_METHOD_VSDRIVE:      return "VSDRIVE";
     default:                       return "[UNKNOWN]";
   }
@@ -1539,6 +1540,10 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
     r |= curl_easy_setopt(curl, CURLOPT_QUOTE, curl_ftp_opts);
   }
 
+  if (is_ftp && method == SURL_METHOD_MKDIR) {
+    r |= curl_easy_setopt(curl, CURLOPT_FTP_CREATE_MISSING_DIRS, 1L);
+  }
+
   if (method == SURL_METHOD_POST || method == SURL_METHOD_POST_DATA) {
       if (is_ftp) {
         LOG("REQ: Unsupported FTP method POST\n");
@@ -1580,7 +1585,7 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
       if (r) {
         LOG("CURL: Could not set DELETE option(s)\n");
       }
-  } else if (method == SURL_METHOD_GET) {
+  } else if (method == SURL_METHOD_GET || method == SURL_METHOD_MKDIR) {
     /* Don't send WAIT twice */
     if (ftp_try_dir || !ftp_is_maybe_dir) {
       simple_serial_putc(SURL_ANSWER_WAIT);

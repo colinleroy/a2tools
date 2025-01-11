@@ -118,6 +118,7 @@ const surl_response * __fastcall__ surl_start_request(char **headers, unsigned c
 
       case SURL_METHOD_GET:
       case SURL_METHOD_DELETE:
+      case SURL_METHOD_MKDIR:
         if (i == SURL_ANSWER_WAIT) {
           surl_read_response_header();
           return &resp;
