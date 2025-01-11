@@ -25,6 +25,7 @@
 #include "stp_cli.h"
 #include "stp_save.h"
 #include "stp_send_file.h"
+#include "stp_create_dir.h"
 #include "stp_delete.h"
 #include "surl.h"
 #include "simple_serial.h"
@@ -104,7 +105,9 @@ void stp_print_footer(void) {
 #ifdef __APPLE2ENH__
   cputs("Up/Down/Ret/Esc:nav, S:send (R:all), D:del, A:get all, /:Search");
   if (search_buf[0]) {
-     cputs(", N:Next");
+    cputs(", N:Next");
+  } else {
+    cputs(", M:mkdir");
   }
   cputs(", Q:Quit");
 #else
@@ -217,6 +220,10 @@ up_dir:
         break;
       case 'r':
         stp_send_file(url, 1);
+        full_update = 1;
+        break;
+      case 'm':
+        stp_create_dir(url);
         full_update = 1;
         break;
       case 'd':

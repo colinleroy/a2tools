@@ -17,7 +17,7 @@ upload_subdir :=
 endif
 
 PROGRAM=stp
-SOURCES := stp_main.c stp_list.c stp_save.c stp_send_file.c stp_delete.c \
+SOURCES := stp_main.c stp_list.c stp_save.c stp_send_file.c stp_delete.c stp_create_dir.c \
 	../lib/get_buf_size.c \
 	../lib/progress_bar.c \
 	../lib/strsplit.c \

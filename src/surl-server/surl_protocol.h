@@ -2,8 +2,8 @@
 #define __surl_protocol_h
 
 /* Update in .inc too! */
-#define SURL_PROTOCOL_VERSION 22
-#define VERSION "22.0.2"
+#define SURL_PROTOCOL_VERSION 23
+#define VERSION "23.0.1"
 
 #define SURL_CLIENT_READY           0x2F
 #define HGR_LEN                     8192U
@@ -22,11 +22,12 @@ typedef enum {
   SURL_METHOD_STREAM_AUDIO    = 0x15,
   SURL_METHOD_STREAM_AV       = 0x16,
   SURL_METHOD_DUMP            = 0x17,
+  SURL_METHOD_MKDIR           = 0x18,
   SURL_METHOD_VSDRIVE         = 0xC5,
   SURL_METHOD_ABORT           = ('d'|0x80) // $E4
 } SurlMethod;
 
-#define SURL_IS_METHOD(x) ((x) == SURL_METHOD_ABORT || (x) == SURL_METHOD_VSDRIVE || ((x) >= SURL_METHOD_RAW && (x) <= SURL_METHOD_DUMP))
+#define SURL_IS_METHOD(x) ((x) == SURL_METHOD_ABORT || (x) == SURL_METHOD_VSDRIVE || ((x) >= SURL_METHOD_RAW && (x) <= SURL_METHOD_MKDIR))
 
 typedef enum {
   SURL_ANSWER_WAIT            = 0x20,

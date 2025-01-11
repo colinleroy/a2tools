@@ -234,6 +234,8 @@ free_content_type:
         cpx       #SURL_METHOD_GET
         beq       @check_wait_or_protocol_error
         cpx       #SURL_METHOD_DELETE
+        beq       @check_wait_or_protocol_error
+        cpx       #SURL_METHOD_MKDIR
         bne       @check_posts
 @check_wait_or_protocol_error:
         cmp       #SURL_ANSWER_WAIT
