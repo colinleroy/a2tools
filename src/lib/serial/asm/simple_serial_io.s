@@ -57,15 +57,15 @@ SCRN_THROB   = $0427
 .endproc
 
 .proc simple_serial_compute_ptr_end: near
-        sta     ptr3
-        stx     ptr3+1
-        jsr     popax
-        sta     ptr4
+        sta     ptr3            ; Len
+        stx     ptr3+1          ; Len high byte
+        jsr     popax           ; Pop buffer
+        sta     ptr4            ; Buffer to ptr4
         stx     ptr4+1
         clc
-        adc     ptr3            ; set ptr3 to end
+        adc     ptr3            ; add len => set ptr3 to end
         sta     ptr3
-        lda     ptr4+1
+        lda     ptr4+1          ; add len high byte
         adc     ptr3+1
         sta     ptr3+1
         rts

@@ -173,7 +173,7 @@ signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medi
     }
     strcat(extra_buf, "]}\n");
   } else {
-    extra_buf = NULL;
+    extra_buf = strdup("");
   }
 
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, STATUS_ENDPOINT"%s%s",
@@ -191,7 +191,7 @@ signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medi
                        "S|status|"TRANSLITCMD"|%s\n",
                         (IS_NOT_NULL(ref_toot_id) && mode == 'r') ? 'S' : 'B',
                         (IS_NOT_NULL(ref_toot_id) && mode == 'r') ? ref_toot_id : "null",
-                        IS_NOT_NULL(extra_buf) ? extra_buf : "",
+                        extra_buf,
                         compose_audience_str(compose_audience),
                         sensitive_medias ? "true":"false",
                         translit_charset,
@@ -208,12 +208,13 @@ signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medi
       body[o++] = buffer[i];
     } else {
       strcpy(body + o, "\\r\\n");
-      o+=4;
+      o += 4;
     }
   }
+
   /* End of status */
-  body[o++] = '\n';
-  len = o - 1;
+  body[o] = '\n';
+  len = o;
 
   surl_send_data_params((uint32)len, SURL_DATA_APPLICATION_JSON_HELP);
   surl_send_data_chunk(body, len);
