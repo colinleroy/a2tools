@@ -1,3 +1,9 @@
+a2tools (23.0.1.1) bionic; urgency=medium
+
+  * STP: add mkdir
+
+ -- Colin Leroy-Mira <colin@colino.net>  Thu, 23 Jan 2025 21:28:19 +0200
+
 a2tools (22.0.2.4) bionic; urgency=medium
 
   * Format string fix (fixes audio playback)
