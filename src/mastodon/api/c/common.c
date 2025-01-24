@@ -27,7 +27,7 @@ void id_copy(char *dst, char *src) {
 
 const surl_response *get_surl_for_endpoint(char method, char *endpoint) {
   static char *hdrs[1] = {NULL};
-  char h_num = 0;
+  static char h_num = 0;
 
   if (IS_NULL(hdrs[0]) && IS_NOT_NULL(oauth_token)) {
     hdrs[0] = malloc0(ENDPOINT_BUF_SIZE);
