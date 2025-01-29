@@ -477,8 +477,7 @@ resume_composing:
   setup_gui();
   if (IS_NULL(dget_text_multi(text, NUM_CHARS, dgt_cmd_cb, 1))) {
     free(text);
-    text = NULL;
-    goto out;
+    return NULL;
   }
   if (should_open_menu == 'i') {
     should_open_menu = 0;
@@ -499,7 +498,7 @@ resume_composing:
     should_resume_composing = 0;
     goto resume_composing;
   }
-out:
+
   return text;
 }
 
