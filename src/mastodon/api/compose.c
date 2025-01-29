@@ -126,20 +126,21 @@ send_again:
   return media_id;
 }
 
+#define BODY_SIZE 1536
+#define EXTRA_BUF_SIZE 768
+
+static char body[BODY_SIZE];
+static char extra_buf[EXTRA_BUF_SIZE];
+
 signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medias,
                           char *ref_toot_id, char **media_ids, char n_medias,
                           poll *toot_poll, char compose_audience, char **err) {
-  char *body;
   int i, o, len;
-  char *extra_buf;
   char c;
 
   *err = NULL;
 
-  body = malloc0(1536);
-
   if (n_medias > 0) {
-    extra_buf = malloc0(768);
     snprintf(extra_buf, 768, "A|media_ids\n[\"%s\"", media_ids[0]);
     for (c = 1; c < n_medias; c++) {
       strcat(extra_buf, ",\"");
@@ -155,7 +156,6 @@ signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medi
     }
     n_options = toot_poll->options_count;
 
-    extra_buf = malloc0(768);
     /* Doing real JSON here because the object is too complicated to
      * transform. This means no translit :(
      */
@@ -173,7 +173,7 @@ signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medi
     }
     strcat(extra_buf, "]}\n");
   } else {
-    extra_buf = strdup("");
+    extra_buf[0] = '\0';
   }
 
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, STATUS_ENDPOINT"%s%s",
@@ -198,8 +198,6 @@ signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medi
                         cw,
                         translit_charset);
 
-  free(extra_buf);
-
   /* Escape buffer */
   len = strlen(buffer);
   o = strlen(body);
@@ -218,8 +216,6 @@ signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medi
 
   surl_send_data_params((uint32)len, SURL_DATA_APPLICATION_JSON_HELP);
   surl_send_data_chunk(body, len);
-
-  free(body);
 
   surl_read_response_header();
 
