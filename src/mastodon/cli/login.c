@@ -63,10 +63,18 @@ static int save_settings(void) {
 
   r = write(fd, &login_data, sizeof(login_data));
 
-  if (r < 0 || close(fd) != 0) {
+  if (r != sizeof(login_data)) {
+    close(fd);
+err_close:
+    clrscr();
     dputs("Could not save settings file.\r\n");
+    cgetc();
     return -1;
   }
+  if (close(fd) != 0) {
+    goto err_close;
+  }
+
   return 0;
 }
 
