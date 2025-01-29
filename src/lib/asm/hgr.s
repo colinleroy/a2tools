@@ -58,6 +58,7 @@ _init_hgr:
         bit       $C052       ; MIXCLR
         bit       $C057       ; HIRES
         bit       $C054       ; LOWSCR
+        bit       $C05F       ; DHIRESOFF
 
         ldx       #1
         stx       _hgr_init_done
