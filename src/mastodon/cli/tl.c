@@ -1121,13 +1121,15 @@ inject_cmd:
       case 'c':      /* COMPOSE */
       case 'o':      /* CONFIGURE */
       case 'n':      /* SHOW_NOTIFICATIONS */
-      case 's':      /* SEARCH */
+      case '/':      /* SEARCH */
       case 'p':      /* SHOW_PROFILE */
       case 'i':      /* IMAGES */
       case 'r':      /* REPLY */
       case 'e':      /* EDIT */
         cur_action = c;
         return;
+      case 'q':      /* QUIT */
+        exit(0);
 #if NUMCOLS == 40
       case SHOW_HELP:
         clrscr();

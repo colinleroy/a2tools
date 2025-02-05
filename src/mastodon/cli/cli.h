@@ -34,12 +34,13 @@
 #define COMPOSE              'c'
 #define CONFIGURE            'o'
 #define SHOW_NOTIFICATIONS   'n'
-#define SEARCH               's'
+#define SEARCH               '/'
 #define SHOW_PROFILE         'p'
 #define IMAGES               'i'
 #define REPLY                'r'
 #define EDIT                 'e'
 #define VOTING               'v'
+#define QUIT                 'q'
 
 /* special cases (extra step or mapped arrays )*/
 #define SHOW_HOME_TIMELINE   0

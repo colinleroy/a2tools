@@ -541,6 +541,7 @@ try_again:
         goto try_again;
       } else {
         initial_buf = text;
+        /* Leak here */
         goto reedit;
       }
     }
