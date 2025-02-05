@@ -60,22 +60,24 @@ void show_help (list *l, status *root_status, notification *root_notif) {
   #define BTM 2
   gotoxy(0,BTM);
 
-  dputs("Commands:          \r\n"
+  dputs("General commands:  \r\n"
         " View toot : Enter \r\n"
+        " Back      : Esc   \r\n"
 #ifdef __APPLE2ENH__
         " Scroll    : Up/dn \r\n"
 #else
         " Scroll    : U/J   \r\n"
 #endif
-        " Search    : S     \r\n"
+        " Compose   : C     \r\n"
+        " Search    : /     \r\n"
         " Notifs.   : N     \r\n"
         " Timelines : H/L/G \r\n"
         " Bookmarks : K     \r\n"
         " Configure : O     \r\n"
-        " Back      : Esc   \r\n");
+        " Quit:     : Q     \r\n");
 
   if (IS_NOT_NULL(root_status)) {
-    dputs("Toot:              \r\n"
+    dputs("Toot commands:     \r\n"
           " Reply     : R     \r\n");
     if (IS_NOT_NULL(root_status->spoiler_text)) {
       dputs(" Toggle CW : W     \r\n");
@@ -109,14 +111,13 @@ void show_help (list *l, status *root_status, notification *root_notif) {
     } else {
       dputs(" Bookmark  : M     \r\n");
     }
-    if (IS_NOT_NULL(my_account) && !strcmp(root_status->account->id, my_account->id)) {
+    if (!strcmp(root_status->account->id, my_account->id)) {
       dputs(" Edit      : E     \r\n"
             " Delete    : D     \r\n");
     }
-      dputs("Author:            \r\n"
-            " Profile   : P     \r\n");
+      dputs(" Profile   : P     \r\n");
   } else if (IS_NOT_NULL(l) && IS_NOT_NULL(l->account)) {
-      dputs("Profile:           \r\n"
+      dputs("Profile commands:  \r\n"
             " Images    : I     \r\n");
     if (api_relationship_get(l->account, RSHIP_FOLLOWING)
      || api_relationship_get(l->account, RSHIP_FOLLOW_REQ)) {
@@ -141,8 +142,6 @@ void show_help (list *l, status *root_status, notification *root_notif) {
             "Profile:           \r\n"
             " Open      : P     \r\n");
   }
-  dputs("Writing:           \r\n"
-        " Compose   : C     \r\n");
 #ifdef __CC65__
   while (wherey() < 23) {
     clrnln();
