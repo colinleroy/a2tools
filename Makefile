@@ -37,6 +37,9 @@ weather_disk_PROGS = \
 ammonoid_disk_PROGS = \
 	src/ammonoid/ammonoid.bin
 
+test_disk_PROGS = \
+	src/test/test.bin
+
 woztubes_disk_PROGS = \
 	src/woztubes/woztubes.bin
 
@@ -80,6 +83,16 @@ all upload:
 	for dir in $(SUBDIRS); do \
 		$(MAKE) -C $$dir -f Makefile $@ || exit; \
 	done
+
+test$(suffix).po: $(test_disk_PROGS)
+	cp $(CLEANDISK) $@; \
+	java -jar bin/ac.jar -n $@ TEST
+	java -jar bin/ac.jar -p $@ TEST.SYSTEM SYS < bin/loader.system; \
+	java -jar bin/ac.jar -d $@ BASIC.SYSTEM; \
+	for prog in $^; do \
+		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
+	done
+	mkdir -p dist && cp $@ dist/; \
 
 ammonoid$(suffix).po: $(ammonoid_disk_PROGS)
 	cp $(CLEANDISK) $@; \

@@ -10,7 +10,7 @@ uint8 mod7_table[HGR_WIDTH];
 void init_hgr_base_addrs (void)
 {
   static uint8 y, base_init_done = 0;
-  uint16 x;
+  static uint16 x;
 #ifndef __CC65__
   uint8 *a, *b, line_of_eight, group_of_eight, group_of_sixtyfour;
 #endif
