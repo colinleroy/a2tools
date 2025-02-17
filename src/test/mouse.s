@@ -6,7 +6,7 @@
         .import   _hgr_baseaddr, _div7_table, _mod7_table
 
         .import   _clear_and_draw_plane, _draw_plane
-        .import   _check_bottom, _check_y_direction
+        .import   _check_bounds, _check_y_direction
 
         .interruptor    mouse_irq
 
@@ -274,7 +274,7 @@ done:   rts
         adc     mouse_y
         sta     mouse_y
 
-        jsr     _check_bottom
+        jsr     _check_bounds
 
 :       and     #01
         beq     :+
