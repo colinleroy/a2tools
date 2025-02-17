@@ -264,7 +264,29 @@ done:   rts
         asl                   ; Double it for faster movement
         sta     mouse_y
 
-        jsr     _clear_and_draw_palette
+        ; Only draw palette each two interrupts
+        lda     even_counter
+        eor     #1
+        sta     even_counter
+        beq     :+
 
+        ; Draw palette
+        jsr     _clear_and_draw_palette
+        ; Draw a second sprite
+        jsr     _clear_and_draw_palette
+        jsr     _clear_and_draw_palette
         sec                     ; Interrupt handled
         rts
+
+:
+        ; Draw a third sprite
+        jsr     _clear_and_draw_palette
+        ; Draw a fourth sprite
+        jsr     _clear_and_draw_palette
+        jsr     _clear_and_draw_palette
+        sec                     ; Interrupt handled
+        rts
+
+        .bss
+
+even_counter: .res 1
