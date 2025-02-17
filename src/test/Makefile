@@ -57,7 +57,7 @@ all: \
 BG1.hgr:
 	../surl-server/hgr-convert BG1.png
 
-gen_sprite:
+gen_sprite: gen_sprite.c
 	gcc $(shell pkg-config --cflags SDL_image) gen_sprite.c $(shell pkg-config --libs SDL_image) -o $@
 
 plane.s: gen_sprite
