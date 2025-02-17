@@ -3,7 +3,7 @@
         .export _hgr_low, _hgr_hi
 
         .import _exit, _platform_msleep
-        .import _init_hgr, _init_mouse
+        .import _init_hgr, _init_mouse, _load_bg
         .import  _init_hgr_base_addrs, _hgr_baseaddr
         .import  _clreol, _cutoa, _cputc, _bzero
         .import  pusha, pushax
@@ -28,6 +28,8 @@ _main:
         jsr     _init_hgr_base_addrs
 
         jsr     _init_simple_hgr_addrs
+
+        jsr     _load_bg
 
         jsr     _init_mouse
         bcs     err

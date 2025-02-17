@@ -37,6 +37,7 @@ test_SOURCES := \
 	mouse.s \
 	palette.s \
 	draw.s \
+	load_bg.c \
 	../lib/cutoa.s \
 	../lib/cntoabuf.s \
 	../lib/platform_sleep.s \
@@ -45,15 +46,19 @@ test_SOURCES := \
 	../lib/fastirq.s \
 	../lib/extrazp.s \
 	../lib/asm/hgr.s \
-	../lib/hgr_addrs.c
+	../lib/hgr_addrs.c 
 
 test_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl -C ../../config/apple2enh-rtonce.cfg --start-addr 0x6000
 
 all: \
-	test.bin
+	test.bin \
+	BG1.hgr
+
+BG1.hgr:
+	../surl-server/hgr-convert BG1.png
 
 clean:
-	rm -f *.bin *.o *.map splash.h splash.hgr
+	rm -f *.bin *.o *.map BG1.hgr
 
 test.bin: $(test_CL65SOURCES) $(test_SOURCES)
 	cl65 -g -Wl --dbgfile,test.dbg -Ln test.lbl $(CFLAGS) $(iigs_CFLAGS) $(test_CLCFLAGS) -o $@ $^  $(CC65_TARGET)-iobuf-0800.o
