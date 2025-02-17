@@ -51,7 +51,9 @@ _draw_plane:
         ; Divide mouse_x by 8 to get the start byte on each line
         lda     mouse_x
         tax
-        lda     _div7_table,x
+        lsr
+        lsr
+        lsr
         ; Backup to previous position for next clear
         sta     mouse_prev_x
 
@@ -80,7 +82,6 @@ _draw_plane:
         ldx     #(plane_BYTES-1)
 
         clc                   ; Clear potential carry from asl
-
 next_line:
         lda     mouse_prev_x  ; Using mouse_prev_x as we just saved it
         adc     _hgr_low,y
