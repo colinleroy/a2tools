@@ -3,7 +3,7 @@
         .importzp _zp6p, _zp8, _zp9, _zp10
         .import   mouse_x, mouse_y
         .import   _hgr_hi, _hgr_low
-        .import   _palette
+        .import   _palette, _palette_mask
 
         .include "apple2.inc"
         .include "palette.inc"
@@ -68,6 +68,11 @@ _draw_palette:
         lda     _palette+1,x
         sta     p_pointer+2
 
+        lda     _palette_mask,x
+        sta     p_mask+1
+        lda     _palette_mask+1,x
+        sta     p_mask+2
+
         lda     #(PALETTE_HEIGHT-1)
         sta     n_lines
 
@@ -92,8 +97,10 @@ next_line:
 :       lda     (line),y
         sta     palette_backup,x
         ; draw palette
+p_mask:
+        and     $FFFF,x       ; Patched
 p_pointer:
-        lda     $FFFF,x       ; Patched
+        ora     $FFFF,x       ; Patched
         sta     (line),y
         dex
         dey
