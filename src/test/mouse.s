@@ -5,7 +5,7 @@
 
         .import   _hgr_baseaddr, _div7_table, _mod7_table
 
-        .import   _draw
+        .import   _clear_palette, _draw_palette
         .interruptor    mouse_irq
 
         .include "mouse-kernel.inc"
@@ -33,8 +33,8 @@ CENTER_X_OFFSET  = (280-256)/2
 
 slot:    .res    1
 mouse_b: .res    1
-mouse_x: .res    2
-mouse_y: .res    2
+mouse_x: .res    1
+mouse_y: .res    1
 
         .rodata
 
@@ -152,7 +152,6 @@ next_slot:
         sta     mouse_x
         lda     #>((PALETTE_MAX_X-PALETTE_MIN_X)/2)
         sta     pos1_hi,x
-        sta     mouse_x+1
         lda     #<PALETTE_MAX_Y
         sta     pos2_lo,x
         sta     mouse_y
@@ -160,6 +159,9 @@ next_slot:
         sta     pos2_hi,x
         ldx     #POSMOUSE
         jsr     firmware
+
+        ; Draw palette once to backup background
+        jsr     _draw_palette
 
         ; Turn VBL interrupt on
         lda     #%00001001
@@ -261,6 +263,7 @@ done:   rts
         lda     pos2_lo,y
         sta     mouse_y
 
-:       jsr    _draw
+:       jsr     _clear_palette
+        jsr    _draw_palette
         sec                     ; Interrupt handled
         rts

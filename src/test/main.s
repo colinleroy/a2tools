@@ -6,7 +6,6 @@
         .import  _clreol, _cutoa, _cputc, _bzero
         .import  pusha, pushax
         .import  FVTABZ
-        .import  _draw
         .import  mouse_x, mouse_y
         
         .include "apple2.inc"

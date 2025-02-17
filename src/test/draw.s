@@ -1,4 +1,4 @@
-        .export _draw
+        .export _draw_palette, _clear_palette
 
         .importzp _zp6p, _zp8p, _zp10, _zp11, _zp12, ptr1
         .import   mouse_x, mouse_y
@@ -15,7 +15,7 @@ n_lines    = _zp10
 sprite_num = _zp11
 cur_y      = _zp12
 
-_clear:
+_clear_palette:
         lda     #14
         sta     n_lines
 
@@ -52,7 +52,7 @@ clear_next_line:
         rts
 
 
-_draw:
+_draw_palette:
         lda     mouse_x
         and     #$07
         asl
@@ -61,9 +61,6 @@ _draw:
         sta     p_pointer+1
         lda     _palette+1,x
         sta     p_pointer+2
-
-        ; Clear previous sprite
-        jsr     _clear
 
         lda     #14
         sta     n_lines
