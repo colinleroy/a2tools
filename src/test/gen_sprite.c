@@ -20,12 +20,15 @@ static enum Pixel get_pixel(SDL_Surface *surface, int x, int y) {
     exit(1);
   }
 
-  if (x >= surface->w || y >= surface->h)
-    return 0x00;
+  if (x >= surface->w || y >= surface->h) {
+    printf("Wrong coordinates %d, %d\n", x, y);
+    exit(1);
+  }
 
   p = (Uint32 *)((Uint8 *)surface->pixels + y * surface->pitch + x * bpp);
 
   val = *p;
+
   if (val == 0x00000000) {
     return CLEAR;
   } else if (val == 0xff000000) {
@@ -107,7 +110,11 @@ int main(int argc, char *argv[]) {
     memset(mask_data, 0, sizeof(mask_data));
 
     for (y = image->h - 1, dy = 0; y >= 0; y--, dy++) {
-      for (x = 0, dx = shift; x < image->w; x++, dx++) {
+      for (dx = 0; dx < shift; dx++) {
+        /* shifted pixels are transparent */
+        mask_data[dy][dx/7] |= (1 << (dx % 7));
+      }
+      for (x = 0; x < image->w; x++, dx++) {
         pixval = get_pixel(image, x, y);
 
         if (pixval == WHITE) {
@@ -118,8 +125,8 @@ int main(int argc, char *argv[]) {
           /* black pixel */
         }
       }
-      /* Add a byte of clear */
-      for (; x < image->w + 7; x++, dx++) {
+      /* Add clear mask at the end */
+      for (; dx < image->w + 7; dx++) {
         mask_data[dy][dx/7] |= 1 << (dx % 7);
       }
     }
@@ -145,11 +152,11 @@ int main(int argc, char *argv[]) {
 
   fprintf(fp, "_%s:\n", sprite_name);
   for (shift = 0; shift < 8; shift++) {
-    fprintf(fp, "         .addr %s_x0\n", sprite_name);
+    fprintf(fp, "         .addr %s_x%d\n", sprite_name, shift);
   }
   fprintf(fp, "_%s_mask:\n", sprite_name);
   for (shift = 0; shift < 8; shift++) {
-    fprintf(fp, "         .addr %s_mask_x0\n", sprite_name);
+    fprintf(fp, "         .addr %s_mask_x%d\n", sprite_name, shift);
   }
   fclose(fp);
 }

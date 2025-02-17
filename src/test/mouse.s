@@ -255,7 +255,6 @@ done:   rts
         ; Get and set the new X position
         ; Don't bother with high byte, it's zero
         lda     pos1_lo,y
-        ;asl
         sta     mouse_x
 
         ; Get and set the new Y position
