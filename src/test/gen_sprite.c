@@ -82,10 +82,11 @@ int main(int argc, char *argv[]) {
   fprintf(fp, "%s_WIDTH  = %d\n", sprite_name, image->w);
   fprintf(fp, "%s_HEIGHT = %d\n", sprite_name, image->h);
   fprintf(fp, "%s_BYTES  = %d\n", sprite_name, image->h * ((image->w/7)+1));
-  fprintf(fp, "%s_MIN_X  = ((0+(%s_WIDTH/2))/2)\n", sprite_name, sprite_name);
-  fprintf(fp, "%s_MAX_X  = ((256-(%s_WIDTH/2))/2)\n", sprite_name, sprite_name);
+  fprintf(fp, "%s_MIN_X  = 0\n", sprite_name);
+  fprintf(fp, "%s_MAX_X  = 280-(%s_WIDTH)\n", sprite_name, sprite_name);
+  fprintf(fp, ".assert %s_MAX_X < 256, error\n", sprite_name);
   fprintf(fp, "%s_MIN_Y  = 0\n", sprite_name);
-  fprintf(fp, "%s_MAX_Y  = ((192-%s_HEIGHT)/2)\n", sprite_name, sprite_name);
+  fprintf(fp, "%s_MAX_Y  = 192-%s_HEIGHT\n", sprite_name, sprite_name);
   fclose(fp);
 
   snprintf(filename, sizeof(filename) - 1, "%s.s", sprite_name);

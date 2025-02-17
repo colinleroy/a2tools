@@ -6,6 +6,8 @@
         .import   _hgr_baseaddr, _div7_table, _mod7_table
 
         .import   _clear_and_draw_plane, _draw_plane
+        .import   _check_bottom
+
         .interruptor    mouse_irq
 
         .include "mouse-kernel.inc"
@@ -147,20 +149,18 @@ next_slot:
 
         ; Set initial mouse position
         ldx     slot
-        lda     #<((plane_MAX_X-plane_MIN_X)/2)
+        lda     #>plane_MIN_X
+        sta     pos1_hi,x
+        lda     #<plane_MIN_X
         sta     pos1_lo,x
-        asl
         sta     mouse_x
 
-        lda     #>((plane_MAX_X-plane_MIN_X)/2)
-        sta     pos1_hi,x
-        lda     #<plane_MAX_Y
+        lda     #>plane_MIN_Y
+        sta     pos2_hi,x
+        lda     #<plane_MIN_Y
         sta     pos2_lo,x
-        asl
         sta     mouse_y
 
-        lda     #>plane_MAX_Y
-        sta     pos2_hi,x
         ldx     #POSMOUSE
         jsr     firmware
 
@@ -255,19 +255,25 @@ done:   rts
         ; Get and set the new X position
         ; Don't bother with high byte, it's zero
         lda     pos1_lo,y
-        asl
+        ;asl
         sta     mouse_x
 
         ; Get and set the new Y position
         ; Don't bother with high byte, it's zero
-        lda     pos2_lo,y
-        asl                   ; Double it for faster movement
-        sta     mouse_y
+        ;lda     pos2_lo,y
+        ;asl                   ; Double it for faster movement
+        ;sta     mouse_y
 
         ; Only draw plane each two interrupts
-        lda     even_counter
-        eor     #1
-        sta     even_counter
+        inc     frame_counter
+        lda     frame_counter
+        and     #03
+        beq     :+
+        inc     mouse_y
+
+        jsr     _check_bottom
+
+:       and     #01
         beq     :+
 
         ; Draw plane
@@ -287,4 +293,4 @@ done:   rts
 
         .bss
 
-even_counter: .res 1
+frame_counter: .res 1
