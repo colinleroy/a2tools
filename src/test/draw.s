@@ -24,10 +24,10 @@ _clear_palette:
 
         ldx     #(PALETTE_BYTES-1)
 
-clear_next_line:
-        lda     mouse_prev_x
         clc
         ldy     cur_y
+clear_next_line:
+        lda     mouse_prev_x
         adc     _hgr_baseaddr+256,y
         sta     line
         lda     _hgr_baseaddr+257,y
@@ -42,10 +42,10 @@ clear_next_line:
         dey
         bpl     :-
 
-        clc
         lda     cur_y
         adc     #2
         sta     cur_y
+        tay
         dec     n_lines
         bpl     clear_next_line
 
@@ -69,6 +69,7 @@ _draw_palette:
         asl
         sta     cur_y
         sta     mouse_prev_y
+        tay                   ; Push to Y for HGR line sel
 
         ldx     #(PALETTE_BYTES-1)
 
@@ -78,8 +79,7 @@ next_line:
         lsr
         lsr
         sta     mouse_prev_x
-        clc
-        ldy     cur_y
+        clc                   ; Clear potential carry from lsr
         adc     _hgr_baseaddr+256,y
         sta     line
         lda     _hgr_baseaddr+257,y
@@ -98,11 +98,11 @@ p_pointer:
         dey
         bpl     :-
 
-        clc
+        ; Carry clear here
         lda     cur_y
         adc     #2
         sta     cur_y
-
+        tay
         dec     n_lines
         bpl     next_line
 
