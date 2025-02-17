@@ -35,7 +35,7 @@ GCCCFLAGS = -g -O0 -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\" \
 test_SOURCES := \
 	main.s \
 	mouse.s \
-	palette.s \
+	plane.s \
 	draw.s \
 	load_bg.c \
 	../lib/cutoa.s \
@@ -52,13 +52,22 @@ test_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl -C ../../config/apple2enh-rtonce
 
 all: \
 	test.bin \
-	BG1.hgr
+	BG1.hgr \
 
 BG1.hgr:
 	../surl-server/hgr-convert BG1.png
 
+gen_sprite:
+	gcc $(shell pkg-config --cflags SDL_image) gen_sprite.c $(shell pkg-config --libs SDL_image) -o $@
+
+plane.s: gen_sprite
+	./gen_sprite plane.png
+
 clean:
-	rm -f *.bin *.o *.map BG1.hgr
+	rm -f *.bin *.o *.map \
+	BG1.png.hgr \
+	gen_sprite \
+	plane.inc plane.s
 
 test.bin: $(test_CL65SOURCES) $(test_SOURCES)
 	cl65 -g -Wl --dbgfile,test.dbg -Ln test.lbl $(CFLAGS) $(iigs_CFLAGS) $(test_CLCFLAGS) -o $@ $^  $(CC65_TARGET)-iobuf-0800.o

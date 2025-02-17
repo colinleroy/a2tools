@@ -1,8 +1,6 @@
         .export _palette
         .export _palette_mask
 
-        .import   _hgr_baseaddr, _div7_table, _mod7_table
-        .import   mouse_x, mouse_y
         .include "palette.inc"
 
         .rodata
@@ -193,5 +191,3 @@ _palette_mask:
             .addr palette_mask_x5
             .addr palette_mask_x6
             .addr palette_mask_x7
-
-            .code
