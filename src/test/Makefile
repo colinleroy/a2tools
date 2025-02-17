@@ -37,6 +37,7 @@ test_SOURCES := \
 	mouse.s \
 	plane.s \
 	draw.s \
+	logic.s \
 	load_bg.c \
 	../lib/cutoa.s \
 	../lib/cntoabuf.s \
