@@ -38,6 +38,7 @@ test_SOURCES := \
 	plane.s \
 	draw.s \
 	logic.s \
+	levels.s \
 	load_bg.c \
 	../lib/cutoa.s \
 	../lib/cntoabuf.s \
