@@ -2,7 +2,7 @@
 
         .importzp _zp6p, _zp8, _zp9, _zp10
         .import   mouse_x, mouse_y
-        .import   _hgr_baseaddr
+        .import   _hgr_hi, _hgr_low
         .import   _palette
 
         .include "apple2.inc"
@@ -26,9 +26,9 @@ _clear_and_draw_palette:
         clc
 clear_next_line:
         lda     mouse_prev_x
-        adc     _hgr_baseaddr+256,y
+        adc     _hgr_low,y
         sta     line
-        lda     _hgr_baseaddr+257,y
+        lda     _hgr_hi,y
         adc     #0
         sta     line+1
 
@@ -40,17 +40,26 @@ clear_next_line:
         dey
         bpl     :-
 
-        lda     cur_y
-        adc     #2
-        sta     cur_y
-        tay
+        ldy     cur_y
+        iny
+        sty     cur_y
         dec     n_lines
         bpl     clear_next_line
 
         ; Fallback to draw_palette
 
 _draw_palette:
+        ; Divide mouse_x by 8 to get the start byte on each line
         lda     mouse_x
+        tax
+        lsr
+        lsr
+        lsr
+        ; Backup to previous position for next clear
+        sta     mouse_prev_x
+
+        ; Select correct sprite
+        txa
         and     #$07
         asl
         tax
@@ -62,24 +71,19 @@ _draw_palette:
         lda     #(PALETTE_HEIGHT-1)
         sta     n_lines
 
-        lda     mouse_y
-        asl
-        sta     cur_y
-        sta     mouse_prev_y
-        tay                   ; Push to Y for HGR line sel
+        ldy     mouse_y
+        sty     cur_y
+        sty     mouse_prev_y
 
         ldx     #(PALETTE_BYTES-1)
 
+        clc                   ; Clear potential carry from asl
+
 next_line:
-        lda     mouse_x
-        lsr
-        lsr
-        lsr
-        sta     mouse_prev_x
-        clc                   ; Clear potential carry from lsr
-        adc     _hgr_baseaddr+256,y
+        lda     mouse_prev_x  ; Using mouse_prev_x as we just saved it
+        adc     _hgr_low,y
         sta     line
-        lda     _hgr_baseaddr+257,y
+        lda     _hgr_hi,y
         adc     #0
         sta     line+1
 
@@ -95,11 +99,9 @@ p_pointer:
         dey
         bpl     :-
 
-        ; Carry clear here
-        lda     cur_y
-        adc     #2
-        sta     cur_y
-        tay
+        ldy     cur_y
+        iny
+        sty     cur_y
         dec     n_lines
         bpl     next_line
 
