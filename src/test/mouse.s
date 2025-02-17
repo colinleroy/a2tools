@@ -5,7 +5,7 @@
 
         .import   _hgr_baseaddr, _div7_table, _mod7_table
 
-        .import   _clear_palette, _draw_palette
+        .import   _clear_and_draw_palette, _draw_palette
         .interruptor    mouse_irq
 
         .include "mouse-kernel.inc"
@@ -264,8 +264,7 @@ done:   rts
         asl                   ; Double it for faster movement
         sta     mouse_y
 
-        jsr     _clear_palette
-        jsr    _draw_palette
+        jsr     _clear_and_draw_palette
 
         sec                     ; Interrupt handled
         rts
