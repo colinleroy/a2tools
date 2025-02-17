@@ -149,12 +149,16 @@ next_slot:
         ldx     slot
         lda     #<((PALETTE_MAX_X-PALETTE_MIN_X)/2)
         sta     pos1_lo,x
+        asl
         sta     mouse_x
+
         lda     #>((PALETTE_MAX_X-PALETTE_MIN_X)/2)
         sta     pos1_hi,x
         lda     #<PALETTE_MAX_Y
         sta     pos2_lo,x
+        asl
         sta     mouse_y
+
         lda     #>PALETTE_MAX_Y
         sta     pos2_hi,x
         ldx     #POSMOUSE
@@ -246,24 +250,22 @@ done:   rts
         ora     #MOUSE_BTN_LEFT
 :       sta     mouse_b
 
-        ; Check for mouse movement
-        txa                     ; Restore status
-        and     #%00100000      ; X or Y changed since last READMOUSE
-        beq     :+
-
         ldy     slot
 
         ; Get and set the new X position
         ; Don't bother with high byte, it's zero
         lda     pos1_lo,y
+        asl
         sta     mouse_x
 
         ; Get and set the new Y position
         ; Don't bother with high byte, it's zero
         lda     pos2_lo,y
+        asl                   ; Double it for faster movement
         sta     mouse_y
 
-:       jsr     _clear_palette
+        jsr     _clear_palette
         jsr    _draw_palette
+
         sec                     ; Interrupt handled
         rts
