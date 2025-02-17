@@ -274,7 +274,6 @@ done:   rts
         jsr     _clear_and_draw_palette
         ; Draw a second sprite
         jsr     _clear_and_draw_palette
-        jsr     _clear_and_draw_palette
         sec                     ; Interrupt handled
         rts
 
@@ -282,7 +281,6 @@ done:   rts
         ; Draw a third sprite
         jsr     _clear_and_draw_palette
         ; Draw a fourth sprite
-        jsr     _clear_and_draw_palette
         jsr     _clear_and_draw_palette
         sec                     ; Interrupt handled
         rts
