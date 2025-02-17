@@ -5,12 +5,12 @@
 
         .import   _hgr_baseaddr, _div7_table, _mod7_table
 
-        .import   _clear_and_draw_palette, _draw_palette
+        .import   _clear_and_draw_plane, _draw_plane
         .interruptor    mouse_irq
 
         .include "mouse-kernel.inc"
         .include "apple2.inc"
-        .include "palette.inc"
+        .include "plane.inc"
 
 SETMOUSE        = $12   ; Sets mouse mode
 SERVEMOUSE      = $13   ; Services mouse interrupt
@@ -51,10 +51,10 @@ values: .byte   $38             ; Fixed
 size    = * - values
 
 ; Box to the part where our paddle can move
-inibox: .word   PALETTE_MIN_X
-        .word   PALETTE_MIN_Y
-        .word   PALETTE_MAX_X
-        .word   PALETTE_MAX_Y
+inibox: .word   plane_MIN_X
+        .word   plane_MIN_Y
+        .word   plane_MAX_X
+        .word   plane_MAX_Y
 
         .data
 
@@ -147,25 +147,25 @@ next_slot:
 
         ; Set initial mouse position
         ldx     slot
-        lda     #<((PALETTE_MAX_X-PALETTE_MIN_X)/2)
+        lda     #<((plane_MAX_X-plane_MIN_X)/2)
         sta     pos1_lo,x
         asl
         sta     mouse_x
 
-        lda     #>((PALETTE_MAX_X-PALETTE_MIN_X)/2)
+        lda     #>((plane_MAX_X-plane_MIN_X)/2)
         sta     pos1_hi,x
-        lda     #<PALETTE_MAX_Y
+        lda     #<plane_MAX_Y
         sta     pos2_lo,x
         asl
         sta     mouse_y
 
-        lda     #>PALETTE_MAX_Y
+        lda     #>plane_MAX_Y
         sta     pos2_hi,x
         ldx     #POSMOUSE
         jsr     firmware
 
-        ; Draw palette once to backup background
-        jsr     _draw_palette
+        ; Draw plane once to backup background
+        jsr     _draw_plane
 
         ; Turn VBL interrupt on
         lda     #%00001001
@@ -264,24 +264,24 @@ done:   rts
         asl                   ; Double it for faster movement
         sta     mouse_y
 
-        ; Only draw palette each two interrupts
+        ; Only draw plane each two interrupts
         lda     even_counter
         eor     #1
         sta     even_counter
         beq     :+
 
-        ; Draw palette
-        jsr     _clear_and_draw_palette
+        ; Draw plane
+        jsr     _clear_and_draw_plane
         ; Draw a second sprite
-        jsr     _clear_and_draw_palette
+        jsr     _clear_and_draw_plane
         sec                     ; Interrupt handled
         rts
 
 :
         ; Draw a third sprite
-        jsr     _clear_and_draw_palette
+        jsr     _clear_and_draw_plane
         ; Draw a fourth sprite
-        jsr     _clear_and_draw_palette
+        jsr     _clear_and_draw_plane
         sec                     ; Interrupt handled
         rts
 
