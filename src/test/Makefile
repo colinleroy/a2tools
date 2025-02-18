@@ -50,10 +50,10 @@ test_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl -C ../../config/apple2enh-rtonce
 
 all: \
 	test.bin \
-	levela.png.hgr \
+	levela.hgr \
 
-levela.png.hgr:
-	../surl-server/hgr-convert levela.png
+levela.hgr:
+	../surl-server/hgr-convert levela.png && mv levela.png.hgr levela.hgr
 
 gen_sprite: gen_sprite.c
 	gcc $(shell pkg-config --cflags SDL_image) gen_sprite.c $(shell pkg-config --libs SDL_image) -o $@
@@ -74,4 +74,4 @@ test.bin: $(test_CL65SOURCES) $(test_SOURCES)
 upload: all
 	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/test/ || \
 	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/test/ && \
-	cp *.bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/test/
+	cp *.bin *.hgr /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/test/
