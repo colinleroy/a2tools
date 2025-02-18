@@ -32,7 +32,7 @@ GCCCFLAGS = -g -O0 -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\" \
 
 .PHONY: all clean
 
-test_SOURCES := \
+glider_SOURCES := \
 	main.s \
 	mouse.s \
 	plane.s \
@@ -45,11 +45,11 @@ test_SOURCES := \
 	../lib/asm/hgr.s \
 	../lib/hgr_addrs.c 
 
-test_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl -C ../../config/apple2enh-rtonce.cfg \
-	-vm -m test.map --start-addr 0x4000
+glider_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl -C ../../config/apple2enh-rtonce.cfg \
+	-vm -m glider.map --start-addr 0x4000
 
 all: \
-	test.bin \
+	glider.bin \
 	levela.hgr \
 
 levela.hgr:
@@ -68,10 +68,10 @@ clean:
 	plane.inc \
 	plane.s
 
-test.bin: $(test_CL65SOURCES) $(test_SOURCES)
-	cl65 -g -Wl --dbgfile,test.dbg -Ln test.lbl $(CFLAGS) $(iigs_CFLAGS) $(test_CLCFLAGS) -o $@ $^  $(CC65_TARGET)-iobuf-0800.o
+glider.bin: $(glider_CL65SOURCES) $(glider_SOURCES)
+	cl65 -g -Wl --dbgfile,glider.dbg -Ln glider.lbl $(CFLAGS) $(iigs_CFLAGS) $(glider_CLCFLAGS) -o $@ $^  $(CC65_TARGET)-iobuf-0800.o
 
 upload: all
-	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/test/ || \
-	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/test/ && \
-	cp *.bin *.hgr /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/test/
+	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/glider/ || \
+	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/glider/ && \
+	cp *.bin *.hgr /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/glider/

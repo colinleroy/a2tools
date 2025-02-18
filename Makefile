@@ -37,10 +37,10 @@ weather_disk_PROGS = \
 ammonoid_disk_PROGS = \
 	src/ammonoid/ammonoid.bin
 
-test_disk_PROGS = \
-	src/test/test.bin
-test_disk_RES = \
-	src/test/levela.hgr
+glider_disk_PROGS = \
+	src/glider/glider.bin
+glider_disk_RES = \
+	src/glider/levela.hgr
 
 woztubes_disk_PROGS = \
 	src/woztubes/woztubes.bin
@@ -86,15 +86,15 @@ all upload:
 		$(MAKE) -C $$dir -f Makefile $@ || exit; \
 	done
 
-test$(suffix).po: $(test_disk_PROGS)
+glider$(suffix).po: $(glider_disk_PROGS)
 	cp $(CLEANDISK) $@; \
-	java -jar bin/ac.jar -n $@ TEST
-	java -jar bin/ac.jar -p $@ TEST.SYSTEM SYS < bin/loader.system; \
+	java -jar bin/ac.jar -n $@ GLIDER
+	java -jar bin/ac.jar -p $@ GLIDER.SYSTEM SYS < bin/loader.system; \
 	java -jar bin/ac.jar -d $@ BASIC.SYSTEM; \
 	for prog in $^; do \
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done; \
-	for bg in $(test_disk_RES); do \
+	for bg in $(glider_disk_RES); do \
 		java -jar bin/ac.jar -p $@ $$(basename $$bg | sed "s/\.png.hgr$//.hgr/") BIN < $$bg; \
 	done;
 	mkdir -p dist && cp $@ dist/; \
