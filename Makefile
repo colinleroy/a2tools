@@ -40,7 +40,7 @@ ammonoid_disk_PROGS = \
 test_disk_PROGS = \
 	src/test/test.bin
 test_disk_RES = \
-	src/test/levela.png.hgr
+	src/test/levela.hgr
 
 woztubes_disk_PROGS = \
 	src/woztubes/woztubes.bin
