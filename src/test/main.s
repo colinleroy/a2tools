@@ -7,8 +7,9 @@
         .import  _init_hgr_base_addrs, _hgr_baseaddr
         .import  _clreol, _cutoa, _cputc, _bzero
         .import  pusha, pushax
+        .import  _mod7_table
         .import  FVTABZ
-        .import  mouse_x, mouse_y
+        .import  mouse_x, mouse_y, cur_level
         
         .include "apple2.inc"
 
@@ -18,8 +19,8 @@ _main:
         ldx     #>$2000
         jsr     pushax
 
-        lda     #<$4000
-        ldx     #>$4000
+        lda     #<$2000
+        ldx     #>$2000
         jsr     _bzero
 
         lda     #1
@@ -63,6 +64,22 @@ _init_simple_hgr_addrs:
         iny
         cpy     #192
         bne     :-
+
+        ; Rewrite the mod7_table to have actual modulo-7s
+        ; instead of a bit set, because we want to use it
+        ; to select a sprite from [0-6] instead of ORing
+        ; a bit in an HGR byte (cf ../lib/hgr_addrs.c)
+        ldx     #0
+        lda     #0
+next_mod:
+        cmp     #7
+        bne     :+
+        lda     #0
+:       sta     _mod7_table,x
+        clc
+        adc     #1
+        inx
+        bne     next_mod
 
         rts
 

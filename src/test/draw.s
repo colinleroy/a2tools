@@ -4,7 +4,8 @@
         .import   mouse_x, mouse_y
         .import   _hgr_hi, _hgr_low
         .import   _plane, _plane_mask
-        .import   _div7_table
+        .import   _div7_table, _mod7_table
+
         .include "apple2.inc"
         .include "plane.inc"
 
@@ -51,15 +52,12 @@ _draw_plane:
         ; Divide mouse_x by 8 to get the start byte on each line
         lda     mouse_x
         tax
-        lsr
-        lsr
-        lsr
+        lda     _div7_table,x
         ; Backup to previous position for next clear
         sta     mouse_prev_x
 
         ; Select correct sprite
-        txa
-        and     #$07
+        lda     _mod7_table,x
         asl
         tax
         lda     _plane,x
@@ -113,6 +111,6 @@ p_pointer:
 
         .bss
 
-plane_backup: .res plane_BYTES
+plane_backup:   .res plane_BYTES
 mouse_prev_x:   .res 1
 mouse_prev_y:   .res 1

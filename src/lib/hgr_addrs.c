@@ -29,6 +29,13 @@ void init_hgr_base_addrs (void)
   }
 
   a = div7_table + 0;
+
+  /* Watch out - this is not a modulo 7 table going:
+   * 0 1 2 3 4 5 6 0 1 2 3 4 5 6 ...
+   * but a bitfield with the relevant bit set:
+   * $01 $02 $04 $08 $10 ...
+   * for ORing the current HGR byte
+   */
   b = mod7_table + 0;
 
   for (x = 0; x < HGR_WIDTH; x++) {

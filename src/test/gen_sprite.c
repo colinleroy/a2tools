@@ -105,7 +105,7 @@ int main(int argc, char *argv[]) {
   fprintf(fp, "\n");
   fprintf(fp, "         .rodata\n");
 
-  for (shift = 0; shift < 8; shift++) {
+  for (shift = 0; shift < 7; shift++) {
     memset(sprite_data, 0, sizeof(sprite_data));
     memset(mask_data, 0, sizeof(mask_data));
 
@@ -151,11 +151,11 @@ int main(int argc, char *argv[]) {
   }
 
   fprintf(fp, "_%s:\n", sprite_name);
-  for (shift = 0; shift < 8; shift++) {
+  for (shift = 0; shift < 7; shift++) {
     fprintf(fp, "         .addr %s_x%d\n", sprite_name, shift);
   }
   fprintf(fp, "_%s_mask:\n", sprite_name);
-  for (shift = 0; shift < 8; shift++) {
+  for (shift = 0; shift < 7; shift++) {
     fprintf(fp, "         .addr %s_mask_x%d\n", sprite_name, shift);
   }
   fclose(fp);
