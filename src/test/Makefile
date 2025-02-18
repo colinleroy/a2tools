@@ -39,25 +39,21 @@ test_SOURCES := \
 	draw.s \
 	logic.s \
 	levels.s \
-	load_bg.c \
-	../lib/cutoa.s \
-	../lib/cntoabuf.s \
-	../lib/platform_sleep.s \
-	../lib/asm/clrzone.s \
-	../lib/FVTABZ.s \
+	load_bg.s \
 	../lib/fastirq.s \
 	../lib/extrazp.s \
 	../lib/asm/hgr.s \
 	../lib/hgr_addrs.c 
 
-test_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl -C ../../config/apple2enh-rtonce.cfg --start-addr 0x6000
+test_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl -C ../../config/apple2enh-rtonce.cfg \
+	-vm -m test.map --start-addr 0x4000
 
 all: \
 	test.bin \
-	BG1.hgr \
+	levela.png.hgr \
 
-BG1.hgr:
-	../surl-server/hgr-convert BG1.png
+levela.png.hgr:
+	../surl-server/hgr-convert levela.png
 
 gen_sprite: gen_sprite.c
 	gcc $(shell pkg-config --cflags SDL_image) gen_sprite.c $(shell pkg-config --libs SDL_image) -o $@
@@ -67,9 +63,10 @@ plane.s: gen_sprite
 
 clean:
 	rm -f *.bin *.o *.map \
-	BG1.png.hgr \
+	levela.png.hgr \
 	gen_sprite \
-	plane.inc plane.s
+	plane.inc \
+	plane.s
 
 test.bin: $(test_CL65SOURCES) $(test_SOURCES)
 	cl65 -g -Wl --dbgfile,test.dbg -Ln test.lbl $(CFLAGS) $(iigs_CFLAGS) $(test_CLCFLAGS) -o $@ $^  $(CC65_TARGET)-iobuf-0800.o
