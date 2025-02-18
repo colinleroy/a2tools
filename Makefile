@@ -40,7 +40,7 @@ ammonoid_disk_PROGS = \
 test_disk_PROGS = \
 	src/test/test.bin
 test_disk_RES = \
-	src/test/BG1.png.hgr
+	src/test/levela.png.hgr
 
 woztubes_disk_PROGS = \
 	src/woztubes/woztubes.bin
@@ -95,7 +95,7 @@ test$(suffix).po: $(test_disk_PROGS)
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done; \
 	for bg in $(test_disk_RES); do \
-		java -jar bin/ac.jar -p $@ $$(basename $$bg | sed "s/\.png.hgr$///") BIN < $$bg; \
+		java -jar bin/ac.jar -p $@ $$(basename $$bg | sed "s/\.png.hgr$//.hgr/") BIN < $$bg; \
 	done;
 	mkdir -p dist && cp $@ dist/; \
 
