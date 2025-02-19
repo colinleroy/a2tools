@@ -6,7 +6,8 @@
         .import   _hgr_baseaddr, _div7_table, _mod7_table
 
         .import   _clear_and_draw_plane, _draw_plane
-        .import   _check_bounds, _check_y_direction
+        .import   _check_blockers, _check_vents
+        .import   _load_bg
 
         .interruptor    mouse_irq
 
@@ -77,6 +78,36 @@ yparam: ldy     #$FF            ; Patched at runtime
 
 jump:   jmp     $FFFF           ; Patched at runtime
 
+load_level:
+        jsr     _load_bg
+        ; Draw plane once to backup background
+        ldx     mouse_x
+        ldy     mouse_y
+        jsr     _draw_plane
+
+reset_level:
+        ; Set initial mouse clamps
+        lda     #<inibox
+        ldx     #>inibox
+        jsr     SETBOX
+
+        ; Set initial mouse position
+        ldx     slot
+        lda     #>plane_MIN_X
+        sta     pos1_hi,x
+        lda     #<plane_MIN_X
+        sta     pos1_lo,x
+        sta     mouse_x
+
+        lda     #>plane_MIN_Y
+        sta     pos2_hi,x
+        lda     #<plane_MIN_Y
+        sta     pos2_lo,x
+        sta     mouse_y
+
+        ldx     #POSMOUSE
+        jmp     firmware
+
 _init_mouse:
         lda       #<$C000
         sta       ptr1
@@ -142,30 +173,7 @@ next_slot:
         ldx     #SETMOUSE
         jsr     firmware
 
-        ; Set initial mouse clamps
-        lda     #<inibox
-        ldx     #>inibox
-        jsr     SETBOX
-
-        ; Set initial mouse position
-        ldx     slot
-        lda     #>plane_MIN_X
-        sta     pos1_hi,x
-        lda     #<plane_MIN_X
-        sta     pos1_lo,x
-        sta     mouse_x
-
-        lda     #>plane_MIN_Y
-        sta     pos2_hi,x
-        lda     #<plane_MIN_Y
-        sta     pos2_lo,x
-        sta     mouse_y
-
-        ldx     #POSMOUSE
-        jsr     firmware
-
-        ; Draw plane once to backup background
-        jsr     _draw_plane
+        jsr     load_level
 
         ; Turn VBL interrupt on
         lda     #%00001001
@@ -263,32 +271,69 @@ done:   rts
         ;asl                   ; Double it for faster movement
         ;sta     mouse_y
 
-        ; Only draw plane each two interrupts
+;
+; Main game loop!
+;
         inc     frame_counter
         lda     frame_counter
-        and     #03
-        beq     :+
-        jsr     _check_y_direction
+        and     #$03
+        beq     move_checks_done
+
+        ; Check coordinates and update them depending on vents
+        jsr     _check_vents
         clc
         adc     mouse_y
-        sta     mouse_y
+        cmp     #plane_MAX_Y
+        bcc     :+
 
-        jsr     _check_bounds
+        ; We're on the floor
+        lda     #plane_MAX_Y
 
-:       and     #01
+:       sta     mouse_y
+
+        ; Check obstacles
+        jsr     _check_blockers
+        bcc     move_checks_done
+
+        ; We got in an obstacle
+        jsr     reset_level
+
+move_checks_done:
+        lda     frame_counter
+        and     #01
         beq     :+
 
         ; Draw plane
+        ldx     mouse_x
+        ldy     mouse_y
         jsr     _clear_and_draw_plane
         ; Draw a second sprite
+        ldx     mouse_x
+        ldy     mouse_y
+        jsr     _clear_and_draw_plane
+        ldx     mouse_x
+        ldy     mouse_y
+        jsr     _clear_and_draw_plane
+        ldx     mouse_x
+        ldy     mouse_y
         jsr     _clear_and_draw_plane
         sec                     ; Interrupt handled
         rts
 
 :
         ; Draw a third sprite
+        ldx     mouse_x
+        ldy     mouse_y
         jsr     _clear_and_draw_plane
         ; Draw a fourth sprite
+        ldx     mouse_x
+        ldy     mouse_y
+        jsr     _clear_and_draw_plane
+        ldx     mouse_x
+        ldy     mouse_y
+        jsr     _clear_and_draw_plane
+        ldx     mouse_x
+        ldy     mouse_y
         jsr     _clear_and_draw_plane
         sec                     ; Interrupt handled
         rts

@@ -36,7 +36,7 @@ glider_SOURCES := \
 	main.s \
 	mouse.s \
 	plane.s \
-	draw.s \
+	draw_plane.s \
 	logic.s \
 	levels.s \
 	load_bg.s \

@@ -30,8 +30,6 @@ _main:
 
         jsr     _init_simple_hgr_addrs
 
-        jsr     _load_bg
-
         jsr     _init_mouse
         bcs     err
 
