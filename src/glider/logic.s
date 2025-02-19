@@ -1,4 +1,4 @@
-        .export     _check_bounds, _check_y_direction
+        .export     _check_blockers, _check_vents
 
         .import     mouse_x, mouse_y
         .import     vents_data, blockers_data, cur_level
@@ -9,9 +9,43 @@
 
 data_ptr = _zp6
 
-; Return with carry set if in an obstacle
+; Return with carry set if mouse coords in box
+; (data_ptr),y to y+3 contains box coords (start X, end X, start Y, end Y)
+; Always return with Y at end of coords so caller knows where Y is at.
+; Trashes A, updates Y, does not touch X
+check_mouse_bounds:
+        ; Check mouse_x against first blocker X coords
+        lda       mouse_x
+        cmp       (data_ptr),y    ; lower X bound
+        iny                       ; Inc Y now so we know how much to skip
+        bcc       out_skip_y      ; if x < lb, we're out of box
 
-_check_bounds:
+        lda       (data_ptr),y    ; higher X bound
+        cmp       mouse_x
+        bcc       out_skip_y      ; if hb < x, we're out of box
+
+        ; Check mouse_y against first blocker Y coords
+        iny
+        lda       (data_ptr),y    ; lower Y bound
+        iny                       ; Inc Y now so we have nothing to skip
+        cmp       mouse_y
+        bcs       out             ; if lb > y, we're out of box
+
+        lda       (data_ptr),y    ; higher Y bound
+        cmp       mouse_y
+        bcc       out             ; if hb < y, we're out of box
+
+        rts                       ; We're in the box (return, carry already set)
+
+out_skip_y:
+        iny
+        iny
+out:
+        clc
+        rts
+
+; Return with carry set if in an obstacle
+_check_blockers:
         ; Get current level data to data_ptr
         lda       cur_level
         asl
@@ -29,50 +63,24 @@ _check_bounds:
         beq       no_blockers
 
 do_check_blocker:
-        ; Check mouse_x against first blocker X coords
         iny
-        lda       (data_ptr),y    ; lower X bound
-        iny                       ; Inc Y now so we know how much to skip
-        cmp       mouse_x
-        bcs       next_blocker_skip_y    ; if lb > x, check next
-
-        lda       (data_ptr),y    ; higher X bound
-        cmp       mouse_x
-        bcc       next_blocker_skip_y    ; if hb < x, check next
-
-        ; Check mouse_y against first blocker Y coords
-        iny
-        lda       (data_ptr),y    ; lower Y bound
-        iny                       ; Inc Y now so we know how much to skip
-        cmp       mouse_y
-        bcs       next_blocker    ; if lb > y, check next
-
-        lda       (data_ptr),y    ; higher Y bound
-        cmp       mouse_y
-        bcc       next_blocker    ; if hb < y, check next
+        jsr       check_mouse_bounds
+        bcc       next_blocker
 
         ; We're in an obstacle
         lda       $C030
-        sec
-        rts
-next_blocker:
-        dex                       ; Check next obstacle
-        bne       do_check_blocker; if < 0, return down
-        clc
-        rts
+        rts                       ; Carry already set
 
-next_blocker_skip_y:
-        iny
-        iny
-        dex
-        bne       do_check_blocker; if < 0, return down
+next_blocker:
+        dex                       ; Check next obstacle?
+        bne       do_check_blocker
 
 no_blockers:
         clc
         rts
 
-; Return with increment to use (1 or 255 aka -1)
-_check_y_direction:
+; Return with Y increment to use
+_check_vents:
         ; Get current level data to data_ptr
         lda       cur_level
         asl
@@ -87,34 +95,23 @@ _check_y_direction:
         lda       (data_ptr),y
         tax
 
-        beq       down    ; No vents in the level
+        beq       go_down
 
-do_check:
-        ; Check mouse_x against first vent X coords
+do_check_vent:
         iny
-        lda       (data_ptr),y ; lower bound
-        cmp       mouse_x
+        jsr       check_mouse_bounds
+        bcc       next_vent
+
+        ; We're in a vent tunnel, load its Y delta
         iny
-        bcs       next_vent       ; if lb > x, check next
-
-        lda       (data_ptr),y ; higher bound
-        cmp       mouse_x
-        bcc       next_vent       ; if hb < x, check next
-
-        lda       mouse_y
-        beq       zero_y_dir
-        lda       #255
+        lda       (data_ptr),y
         rts
-zero_y_dir:
-        lda       #0              ; Don't go higher than zero
-        rts                       ; or lower than max Y
 
 next_vent:
-        dex                       ; Check next vent
-        bne       do_check        ; if < 0, return down
-down:
-        lda       mouse_y
-        cmp       #plane_MAX_Y
-        beq       zero_y_dir
-        lda       #1
+        iny
+        dex                       ; Check next vent?
+        bne       do_check_vent
+
+go_down:
+        lda       #1              ; Go down normal
         rts
