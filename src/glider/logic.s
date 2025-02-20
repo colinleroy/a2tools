@@ -1,11 +1,13 @@
         .export     _check_blockers, _check_vents
 
-        .import     mouse_x, mouse_y
-        .import     vents_data, blockers_data, cur_level
+        .import     vents_data, blockers_data, plane_data
+        .import     cur_level
         
         .importzp   _zp6
 
         .include    "plane.inc"
+        .include    "sprite.inc"
+        .include    "plane_coords.inc"
 
 data_ptr = _zp6
 
@@ -14,25 +16,25 @@ data_ptr = _zp6
 ; Always return with Y at end of coords so caller knows where Y is at.
 ; Trashes A, updates Y, does not touch X
 check_mouse_bounds:
-        ; Check mouse_x against first blocker X coords
-        lda       mouse_x
+        ; Check plane_x against first blocker X coords
+        lda       plane_x
         cmp       (data_ptr),y    ; lower X bound
         iny                       ; Inc Y now so we know how much to skip
         bcc       out_skip_y      ; if x < lb, we're out of box
 
         lda       (data_ptr),y    ; higher X bound
-        cmp       mouse_x
+        cmp       plane_x
         bcc       out_skip_y      ; if hb < x, we're out of box
 
-        ; Check mouse_y against first blocker Y coords
+        ; Check plane_y against first blocker Y coords
         iny
         lda       (data_ptr),y    ; lower Y bound
         iny                       ; Inc Y now so we have nothing to skip
-        cmp       mouse_y
+        cmp       plane_y
         bcs       out             ; if lb > y, we're out of box
 
         lda       (data_ptr),y    ; higher Y bound
-        cmp       mouse_y
+        cmp       plane_y
         bcc       out             ; if hb < y, we're out of box
 
         rts                       ; We're in the box (return, carry already set)

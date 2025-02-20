@@ -1,17 +1,32 @@
         .export _main
+        .export   _hgr_low, _hgr_hi
 
-        .export _hgr_low, _hgr_hi
+        .import   _exit
+        .import   _init_hgr, _init_mouse, _load_bg
+        .import   _init_hgr_base_addrs, _hgr_baseaddr
+        .import   _bzero
+        .import   pushax
+        .import   _mod7_table
+        .import   cur_level
+        .import   _draw_sprite, _clear_and_draw_sprite
+        .import   _setup_sprite_pointer
+        .import   _check_blockers, _check_vents
 
-        .import _exit, _platform_msleep
-        .import _init_hgr, _init_mouse, _load_bg
-        .import  _init_hgr_base_addrs, _hgr_baseaddr
-        .import  _clreol, _cutoa, _cputc, _bzero
-        .import  pusha, pushax
-        .import  _mod7_table
-        .import  FVTABZ
-        .import  mouse_x, mouse_y, cur_level
-        
-        .include "apple2.inc"
+        .import   _load_bg
+
+        .import   level0_clock1_data
+
+        .import   reset_mouse
+        .import   sprite_data, plane_data
+        .import   mouse_irq_ready
+
+        .importzp ptr4
+
+        .include  "apple2.inc"
+        .include  "plane.inc"
+        .include  "sprite.inc"
+        .include  "level_data_ptr.inc"
+        .include  "plane_coords.inc"
 
 _main:
 
@@ -33,7 +48,60 @@ _main:
         jsr     _init_mouse
         bcs     err
 
+        jsr     load_level
+
 loop:
+        ; the WAI of the poor
+        ; because I don't understand how WAI works
+        ; and I want to keep things 6502-ok
+        lda     mouse_irq_ready
+        beq     loop
+        lda     #0
+        sta     mouse_irq_ready
+;
+; Main game loop!
+;
+        inc     frame_counter
+        ; Check coordinates and update them depending on vents
+        jsr     _check_vents
+        clc
+        adc     plane_y
+        cmp     #plane_MAX_Y
+        bcc     :+
+
+        ; We're on the floor
+        lda     #plane_MAX_Y
+
+:       sta     plane_y
+
+        ; Check obstacles
+        jsr     _check_blockers
+        bcc     move_checks_done
+
+        ; We got in an obstacle
+        jsr     reset_mouse
+
+move_checks_done:
+        inc     level0_clock1_data+SPRITE_DATA::X_COORD
+
+        ldx     num_sprites
+        lda     frame_counter
+        and     #01
+        beq     :+                ; Draw only half sprites
+        dex
+:
+        stx     cur_sprite
+
+:
+        dec     cur_sprite
+        lda     cur_sprite
+        bmi     loop              ; All done!
+        jsr     _setup_sprite_pointer
+        jsr     _clear_and_draw_sprite
+
+        dec     cur_sprite        ; Skip a sprite
+        bpl     :-
+
         jmp     loop
 
 err:
@@ -81,7 +149,47 @@ next_mod:
 
         rts
 
+setup_level_data:
+        lda     cur_level
+        asl
+        tax
+        lda     sprite_data,x
+        sta     level_data
+        lda     sprite_data+1,x
+        sta     level_data+1
+
+        ldy     #0
+        lda     (level_data),y
+        sta     num_sprites
+        sta     cur_sprite
+
+        ; Move pointer to actual data now we have the number
+        ; of sprites
+        inc     level_data
+        bne     :+
+        inc     level_data+1
+
+        ; Draw each sprite once
+:
+        dec     cur_sprite
+        lda     cur_sprite
+        bmi     :+
+        jsr     _setup_sprite_pointer
+        jsr     _draw_sprite
+        jmp     :-
+:
+        rts
+
+load_level:
+        jsr     _load_bg
+        ; Draw plane once to backup background
+        jsr     setup_level_data
+        jmp     reset_mouse
+
         .bss
 
-_hgr_low: .res 192
-_hgr_hi:  .res 192
+_hgr_low:      .res 192
+_hgr_hi:       .res 192
+frame_counter: .res 1
+num_sprites:   .res 1
+cur_sprite:    .res 1

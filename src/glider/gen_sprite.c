@@ -86,7 +86,11 @@ int main(int argc, char *argv[]) {
   fprintf(fp, "%s_HEIGHT = %d\n", sprite_name, image->h);
   fprintf(fp, "%s_BYTES  = %d\n", sprite_name, image->h * ((image->w/7)+1));
   fprintf(fp, "%s_MIN_X  = 0\n", sprite_name);
-  fprintf(fp, "%s_MAX_X  = 280-(%s_WIDTH)\n", sprite_name, sprite_name);
+  if (280 - image->w > 255) {
+    fprintf(fp, "%s_MAX_X  = 255\n", sprite_name);
+  } else {
+    fprintf(fp, "%s_MAX_X  = 280-(%s_WIDTH)\n", sprite_name, sprite_name);
+  }
   fprintf(fp, ".assert %s_MAX_X < 256, error\n", sprite_name);
   fprintf(fp, "%s_MIN_Y  = 0\n", sprite_name);
   fprintf(fp, "%s_MAX_Y  = 192-%s_HEIGHT\n", sprite_name, sprite_name);

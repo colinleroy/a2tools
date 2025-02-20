@@ -35,15 +35,19 @@ GCCCFLAGS = -g -O0 -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\" \
 glider_SOURCES := \
 	main.s \
 	mouse.s \
-	plane.s \
-	draw_plane.s \
+	draw_sprite.s \
 	logic.s \
 	levels.s \
+	level0.s \
+	background_buffers.s \
 	load_bg.s \
 	../lib/fastirq.s \
 	../lib/extrazp.s \
 	../lib/asm/hgr.s \
-	../lib/hgr_addrs.c 
+	../lib/hgr_addrs.c \
+	clock.s \
+	plane.s \
+
 
 glider_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl -C ../../config/apple2enh-rtonce.cfg \
 	-vm -m glider.map --start-addr 0x4000
@@ -58,6 +62,8 @@ levela.hgr:
 gen_sprite: gen_sprite.c
 	gcc $(shell pkg-config --cflags SDL_image) gen_sprite.c $(shell pkg-config --libs SDL_image) -o $@
 
+clock.s: gen_sprite
+	./gen_sprite clock.png
 plane.s: gen_sprite
 	./gen_sprite plane.png
 
@@ -65,6 +71,8 @@ clean:
 	rm -f *.bin *.o *.map \
 	levela.png.hgr \
 	gen_sprite \
+	clock.inc \
+	clock.s \
 	plane.inc \
 	plane.s
 
