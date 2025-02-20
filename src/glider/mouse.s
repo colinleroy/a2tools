@@ -1,19 +1,22 @@
-        .export   _init_mouse
-        .export   mouse_b, mouse_x, mouse_y
-        .importzp ptr1, tmp1, ptr2
-        .import   pusha
+        .export     _init_mouse
+        .export     mouse_b
 
-        .import   _hgr_baseaddr, _div7_table, _mod7_table
+        .export     reset_mouse
+        .export     mouse_irq_ready
 
-        .import   _clear_and_draw_plane, _draw_plane
-        .import   _check_blockers, _check_vents
-        .import   _load_bg
+        .importzp   ptr1
+
+        .import     _div7_table, _mod7_table
+
+        .import     plane_data
 
         .interruptor    mouse_irq
 
-        .include "mouse-kernel.inc"
-        .include "apple2.inc"
-        .include "plane.inc"
+        .include    "mouse-kernel.inc"
+        .include    "apple2.inc"
+        .include    "plane.inc"
+        .include    "sprite.inc"
+        .include    "plane_coords.inc"
 
 SETMOUSE        = $12   ; Sets mouse mode
 SERVEMOUSE      = $13   ; Services mouse interrupt
@@ -32,12 +35,11 @@ pos2_hi         := $05F8
 status          := $0778
 
 CENTER_X_OFFSET  = (280-256)/2
+
         .bss
 
 slot:    .res    1
 mouse_b: .res    1
-mouse_x: .res    1
-mouse_y: .res    1
 
         .rodata
 
@@ -56,7 +58,7 @@ size    = * - values
 ; Box to the part where our paddle can move
 inibox: .word   plane_MIN_X
         .word   plane_MIN_Y
-        .word   plane_MAX_X
+        .word   plane_MAX_X/2
         .word   plane_MAX_Y
 
         .data
@@ -78,14 +80,7 @@ yparam: ldy     #$FF            ; Patched at runtime
 
 jump:   jmp     $FFFF           ; Patched at runtime
 
-load_level:
-        jsr     _load_bg
-        ; Draw plane once to backup background
-        ldx     mouse_x
-        ldy     mouse_y
-        jsr     _draw_plane
-
-reset_level:
+reset_mouse:
         ; Set initial mouse clamps
         lda     #<inibox
         ldx     #>inibox
@@ -97,13 +92,14 @@ reset_level:
         sta     pos1_hi,x
         lda     #<plane_MIN_X
         sta     pos1_lo,x
-        sta     mouse_x
+        asl
+        sta     plane_x
 
         lda     #>plane_MIN_Y
         sta     pos2_hi,x
         lda     #<plane_MIN_Y
         sta     pos2_lo,x
-        sta     mouse_y
+        sta     plane_y
 
         ldx     #POSMOUSE
         jmp     firmware
@@ -172,8 +168,6 @@ next_slot:
         lda     #%00000001
         ldx     #SETMOUSE
         jsr     firmware
-
-        jsr     load_level
 
         ; Turn VBL interrupt on
         lda     #%00001001
@@ -258,86 +252,17 @@ done:   rts
         ora     #MOUSE_BTN_LEFT
 :       sta     mouse_b
 
-        ldy     slot
-
         ; Get and set the new X position
         ; Don't bother with high byte, it's zero
         lda     pos1_lo,y
-        sta     mouse_x
+        asl
+        sta     plane_x
 
-        ; Get and set the new Y position
-        ; Don't bother with high byte, it's zero
-        ;lda     pos2_lo,y
-        ;asl                   ; Double it for faster movement
-        ;sta     mouse_y
-
-;
-; Main game loop!
-;
-        inc     frame_counter
-        lda     frame_counter
-        and     #$03
-        beq     move_checks_done
-
-        ; Check coordinates and update them depending on vents
-        jsr     _check_vents
-        clc
-        adc     mouse_y
-        cmp     #plane_MAX_Y
-        bcc     :+
-
-        ; We're on the floor
-        lda     #plane_MAX_Y
-
-:       sta     mouse_y
-
-        ; Check obstacles
-        jsr     _check_blockers
-        bcc     move_checks_done
-
-        ; We got in an obstacle
-        jsr     reset_level
-
-move_checks_done:
-        lda     frame_counter
-        and     #01
-        beq     :+
-
-        ; Draw plane
-        ldx     mouse_x
-        ldy     mouse_y
-        jsr     _clear_and_draw_plane
-        ; Draw a second sprite
-        ldx     mouse_x
-        ldy     mouse_y
-        jsr     _clear_and_draw_plane
-        ldx     mouse_x
-        ldy     mouse_y
-        jsr     _clear_and_draw_plane
-        ldx     mouse_x
-        ldy     mouse_y
-        jsr     _clear_and_draw_plane
+        ; Signal the main loop
+        inc     mouse_irq_ready
         sec                     ; Interrupt handled
         rts
 
-:
-        ; Draw a third sprite
-        ldx     mouse_x
-        ldy     mouse_y
-        jsr     _clear_and_draw_plane
-        ; Draw a fourth sprite
-        ldx     mouse_x
-        ldy     mouse_y
-        jsr     _clear_and_draw_plane
-        ldx     mouse_x
-        ldy     mouse_y
-        jsr     _clear_and_draw_plane
-        ldx     mouse_x
-        ldy     mouse_y
-        jsr     _clear_and_draw_plane
-        sec                     ; Interrupt handled
-        rts
+       .bss
 
-        .bss
-
-frame_counter: .res 1
+mouse_irq_ready: .res 1
