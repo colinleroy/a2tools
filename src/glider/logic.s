@@ -1,21 +1,21 @@
         .export     _check_blockers, _check_vents
+        .export     _check_mouse_bounds
 
         .import     vents_data, blockers_data, plane_data
         .import     cur_level
         
-        .importzp   _zp6, tmp1, tmp2
+        .importzp   _zp6, tmp1, tmp2, ptr1, ptr4
 
         .include    "plane.inc"
         .include    "sprite.inc"
         .include    "plane_coords.inc"
-
-data_ptr = _zp6
+        .include    "level_data_ptr.inc"
 
 ; Return with carry set if mouse coords in box
-; (data_ptr),y to y+3 contains box coords (start X, end X, start Y, end Y)
+; (data_ptr),y to y+3 contains box coords (start X, width, start Y, height)
 ; Always return with Y at end of coords so caller knows where Y is at.
 ; Trashes A, updates Y, does not touch X
-check_mouse_bounds:
+_check_mouse_bounds:
         ; plane_x,plane_y is the top-left corner of the plane
         ; compute bottom-right corner
         clc
@@ -78,7 +78,7 @@ _check_blockers:
 
 do_check_blocker:
         iny
-        jsr       check_mouse_bounds
+        jsr       _check_mouse_bounds
         bcc       next_blocker
 
         ; We're in an obstacle
@@ -113,7 +113,7 @@ _check_vents:
 
 do_check_vent:
         iny
-        jsr       check_mouse_bounds
+        jsr       _check_mouse_bounds
         bcc       next_vent
 
         ; We're in a vent tunnel, load its Y delta

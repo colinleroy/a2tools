@@ -1,8 +1,8 @@
         .export _draw_sprite, _clear_and_draw_sprite
         .export _setup_sprite_pointer
 
-        .importzp _zp6p, _zp8, _zp9, _zp10, _zp11, _zp12
-        .importzp tmp1, tmp2, tmp3, tmp4, ptr1, ptr2, ptr3, ptr4
+        .importzp _zp6, _zp8, _zp9, _zp10, _zp11, _zp12
+        .importzp tmp1, tmp2, tmp3, tmp4, ptr2, ptr3, ptr4
         .import   _hgr_hi, _hgr_low
         .import   _div7_table, _mod7_table
 
@@ -13,8 +13,8 @@
         .include "sprite.inc"
         .include "level_data_ptr.inc"
 
-line       = _zp6p
-cur_y      = _zp9
+line       = _zp8
+cur_y      = _zp10
 n_bytes    = _zp11
 
 sprite_y      = tmp4
@@ -24,13 +24,13 @@ _setup_sprite_pointer:
         asl
         tay
         lda     (level_data),y
-        sta     ptr1
+        sta     cur_sprite_ptr
         iny
         lda     (level_data),y
-        sta     ptr1+1
+        sta     cur_sprite_ptr+1
 
         ldy     #SPRITE_DATA::X_COORD
-        lda     (ptr1),y
+        lda     (cur_sprite_ptr),y
         tax
 
         ; Select correct sprite for pixel-precise render
@@ -43,53 +43,53 @@ _setup_sprite_pointer:
         tax                       ; Back it up to update prev X
 
         ldy     #SPRITE_DATA::PREV_X_COORD
-        lda     (ptr1),y
+        lda     (cur_sprite_ptr),y
         sta     sprite_prev_x+1
 
         txa
-        sta     (ptr1),y          ; And save the new prev_x now
+        sta     (cur_sprite_ptr),y          ; And save the new prev_x now
 
         ldy     #SPRITE_DATA::Y_COORD
-        lda     (ptr1),y
+        lda     (cur_sprite_ptr),y
         sta     sprite_y
         tax
 
         ldy     #SPRITE_DATA::PREV_Y_COORD
-        lda     (ptr1),y          ; Get existing prev_y for clear
+        lda     (cur_sprite_ptr),y          ; Get existing prev_y for clear
         sta     cur_y
         txa
-        sta     (ptr1),y          ; Save the new prev_y
+        sta     (cur_sprite_ptr),y          ; Save the new prev_y
 
         ldy     #SPRITE_DATA::BYTES
-        lda     (ptr1),y
+        lda     (cur_sprite_ptr),y
         sta     n_bytes
 
         ldy     #SPRITE_DATA::BYTES_WIDTH
-        lda     (ptr1),y
+        lda     (cur_sprite_ptr),y
         sta     n_bytes_per_line_1+1
         sta     n_bytes_per_line_2+1
 
         ldy     #SPRITE_DATA::BACKUP_BUFFER
-        lda     (ptr1),y
+        lda     (cur_sprite_ptr),y
         sta     sprite_backup_1+1
         sta     sprite_backup_2+1
         iny
-        lda     (ptr1),y
+        lda     (cur_sprite_ptr),y
         sta     sprite_backup_1+2
         sta     sprite_backup_2+2
 
         ldy     #SPRITE_DATA::SPRITE
-        lda     (ptr1),y
+        lda     (cur_sprite_ptr),y
         sta     ptr2
         iny
-        lda     (ptr1),y
+        lda     (cur_sprite_ptr),y
         sta     ptr2+1
 
         ldy     #SPRITE_DATA::SPRITE_MASK
-        lda     (ptr1),y
+        lda     (cur_sprite_ptr),y
         sta     ptr3
         iny
-        lda     (ptr1),y
+        lda     (cur_sprite_ptr),y
         sta     ptr3+1
 
 sprite_num:

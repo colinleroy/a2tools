@@ -14,8 +14,8 @@
 ; There is always a single plane
 plane_data:
                   .byte plane_MIN_X   ; x
-                  .byte plane_MIN_Y   ; y
                   .byte plane_WIDTH
+                  .byte plane_MIN_Y   ; y
                   .byte plane_HEIGHT
                   .byte plane_MAX_X   ; prev_x
                   .byte plane_MAX_Y   ; prev_y
