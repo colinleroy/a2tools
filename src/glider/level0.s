@@ -66,13 +66,14 @@ level0_vents:     .byte   2
 level0_vents_data:
                   ; Five bytes per vent (start X, width, start Y, height, direction)
                   ; Direction = What to add to mouse_y
-                  .byte   37-plane_WIDTH,  20+plane_WIDTH,  0,   192, $FF ; Up all the way
-                  .byte   227-plane_WIDTH, 20+plane_WIDTH,  0,   192, $FF ; Up all the way
+                  ; Watch out - start Y must be >= plane_HEIGHT
+                  .byte   40,  20,  plane_HEIGHT+1,   191-plane_HEIGHT, $FF ; Up all the way
+                  .byte   227, 20,  plane_HEIGHT+1,   191-plane_HEIGHT, $FF ; Up all the way
 
 level0_blockers:  .byte   4
 level0_blockers_data:
                   ; Four bytes per blocker (start X, width, start Y, height)
-                  .byte   102-plane_WIDTH, 23+plane_WIDTH, 91-plane_HEIGHT,  31+plane_HEIGHT    ; Mac
-                  .byte   102-plane_WIDTH, 92+plane_WIDTH, 121-plane_HEIGHT, 6+plane_HEIGHT     ; Desk
-                  .byte   147-plane_WIDTH, 3+plane_WIDTH,  126-plane_HEIGHT, 64+plane_HEIGHT    ; Foot
-                  .byte   0,               255,            191-plane_HEIGHT, 1                  ; Floor
+                  .byte   102, 23,  91,  31    ; Mac
+                  .byte   102, 92,  121, 6     ; Desk
+                  .byte   147, 3,   126, 64    ; Foot
+                  .byte   0,   255, 191, 1     ; Floor

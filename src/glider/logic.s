@@ -3,7 +3,7 @@
         .import     vents_data, blockers_data, plane_data
         .import     cur_level
         
-        .importzp   _zp6
+        .importzp   _zp6, tmp1, tmp2
 
         .include    "plane.inc"
         .include    "sprite.inc"
@@ -16,23 +16,35 @@ data_ptr = _zp6
 ; Always return with Y at end of coords so caller knows where Y is at.
 ; Trashes A, updates Y, does not touch X
 check_mouse_bounds:
-        ; Check plane_x against first blocker X coords
+        ; plane_x,plane_y is the top-left corner of the plane
+        ; compute bottom-right corner
+        clc
+        lda       plane_x
+        adc       #plane_WIDTH
+        sta       tmp1
+        lda       plane_y
+        adc       #plane_HEIGHT
+        sta       tmp2
+
+        ; Check right of plane against first blocker X coords
         lda       (data_ptr),y
-        cmp       plane_x         ; lower X bound
         iny                       ; Inc Y now so we know how much to skip
+        cmp       tmp1            ; lower X bound
         bcs       out_skip_y      ; if lb > x, we're out of box
 
+        ; Check left of plane against right of box
         adc       (data_ptr),y    ; higher X bound (lower+width)
         cmp       plane_x
         bcc       out_skip_y      ; if hb < x, we're out of box
 
-        ; Check plane_y against first blocker Y coords
+        ; Check bottom of plane against first blocker Y coords
         iny
         lda       (data_ptr),y    ; lower Y bound
         iny                       ; Inc Y now so we have nothing to skip
-        cmp       plane_y
+        cmp       tmp2
         bcs       out             ; if lb > y, we're out of box
 
+        ; Check top of plane against lower bound of blocker
         adc       (data_ptr),y    ; higher Y bound (lower+height)
         cmp       plane_y
         bcc       out             ; if hb < y, we're out of box
