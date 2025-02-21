@@ -14,8 +14,10 @@
 ; There is always a single plane
 plane_data:
                   .byte 0             ; x
-                  .byte 0             ; prev_x
                   .byte 0             ; y
+                  .byte plane_WIDTH
+                  .byte plane_HEIGHT
+                  .byte 0             ; prev_x
                   .byte 0             ; prev_y
                   .byte plane_BYTES-1 ; bytes of sprite - 1
                   .byte plane_WIDTH/7 ; width of sprite in bytes

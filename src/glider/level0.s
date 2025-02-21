@@ -16,8 +16,10 @@
 
 level0_clock0_data:
                   .byte 110           ; x
-                  .byte 110           ; prev_x
                   .byte 107           ; y
+                  .byte clock_WIDTH
+                  .byte clock_HEIGHT
+                  .byte 110           ; prev_x
                   .byte 107           ; prev_y
                   .byte clock_BYTES-1 ; bytes of sprite - 1
                   .byte clock_WIDTH/7 ; width of sprite in bytes
@@ -27,8 +29,10 @@ level0_clock0_data:
 
 level0_clock1_data:
                   .byte 140           ; x
-                  .byte 140           ; prev_x
                   .byte 107           ; y
+                  .byte clock_WIDTH
+                  .byte clock_HEIGHT
+                  .byte 140           ; prev_x
                   .byte 107           ; prev_y
                   .byte clock_BYTES-1 ; bytes of sprite - 1
                   .byte clock_WIDTH/7 ; width of sprite in bytes
@@ -38,8 +42,10 @@ level0_clock1_data:
 
 level0_clock2_data:
                   .byte 240           ; x
-                  .byte 240           ; prev_x
                   .byte 177           ; y
+                  .byte clock_WIDTH
+                  .byte clock_HEIGHT
+                  .byte 240           ; prev_x
                   .byte 177           ; prev_y
                   .byte clock_BYTES-1 ; bytes of sprite - 1
                   .byte clock_WIDTH/7 ; width of sprite in bytes

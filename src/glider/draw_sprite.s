@@ -64,7 +64,7 @@ _setup_sprite_pointer:
         lda     (ptr1),y
         sta     n_bytes
 
-        ldy     #SPRITE_DATA::WIDTH
+        ldy     #SPRITE_DATA::BYTES_WIDTH
         lda     (ptr1),y
         sta     n_bytes_per_line_1+1
         sta     n_bytes_per_line_2+1
