@@ -17,12 +17,12 @@ data_ptr = _zp6
 ; Trashes A, updates Y, does not touch X
 check_mouse_bounds:
         ; Check plane_x against first blocker X coords
-        lda       plane_x
-        cmp       (data_ptr),y    ; lower X bound
+        lda       (data_ptr),y
+        cmp       plane_x         ; lower X bound
         iny                       ; Inc Y now so we know how much to skip
-        bcc       out_skip_y      ; if x < lb, we're out of box
+        bcs       out_skip_y      ; if lb > x, we're out of box
 
-        lda       (data_ptr),y    ; higher X bound
+        adc       (data_ptr),y    ; higher X bound (lower+width)
         cmp       plane_x
         bcc       out_skip_y      ; if hb < x, we're out of box
 
@@ -33,7 +33,7 @@ check_mouse_bounds:
         cmp       plane_y
         bcs       out             ; if lb > y, we're out of box
 
-        lda       (data_ptr),y    ; higher Y bound
+        adc       (data_ptr),y    ; higher Y bound (lower+height)
         cmp       plane_y
         bcc       out             ; if hb < y, we're out of box
 
