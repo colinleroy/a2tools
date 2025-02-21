@@ -1,7 +1,7 @@
 .struct SPRITE_DATA
   X_COORD         .byte
-  Y_COORD         .byte
   WIDTH           .byte
+  Y_COORD         .byte
   HEIGHT          .byte
   PREV_X_COORD    .byte
   PREV_Y_COORD    .byte

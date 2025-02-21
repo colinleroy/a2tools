@@ -63,9 +63,9 @@ gen_sprite: gen_sprite.c
 	gcc $(shell pkg-config --cflags SDL_image) gen_sprite.c $(shell pkg-config --libs SDL_image) -o $@
 
 clock.s: gen_sprite
-	./gen_sprite clock.png
+	./gen_sprite clock.png 255
 plane.s: gen_sprite
-	./gen_sprite plane.png
+	./gen_sprite plane.png 280
 
 clean:
 	rm -f *.bin *.o *.map \

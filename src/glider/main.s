@@ -11,7 +11,7 @@
         .import   _draw_sprite, _clear_and_draw_sprite
         .import   _setup_sprite_pointer
         .import   _check_blockers, _check_vents
-
+        .import   _check_mouse_bounds
         .import   _load_bg
 
         .import   level0_clock1_data
@@ -20,7 +20,7 @@
         .import   sprite_data, plane_data
         .import   mouse_irq_ready
 
-        .importzp ptr4
+        .importzp _zp6, ptr4
 
         .include  "apple2.inc"
         .include  "plane.inc"
@@ -79,24 +79,39 @@ loop:
         bcc     move_checks_done
 
         ; We got in an obstacle
+die:
+        lda     $C030
         jsr     reset_mouse
 
 move_checks_done:
         inc     level0_clock1_data+SPRITE_DATA::X_COORD
 
         ldx     num_sprites
+        dex
+        txa
+        sta     cur_sprite
+        ; Always draw the plane
+        jsr     _setup_sprite_pointer
+        jsr     _clear_and_draw_sprite
+
         lda     frame_counter
         and     #01
         beq     :+                ; Draw only half sprites
-        dex
+        dec     cur_sprite
 :
-        stx     cur_sprite
 
 :
         dec     cur_sprite
         lda     cur_sprite
         bmi     loop              ; All done!
+
         jsr     _setup_sprite_pointer
+        ; Let's check the sprite's box
+        .assert data_ptr = cur_sprite_ptr, error
+        ldy     #SPRITE_DATA::X_COORD
+        jsr     _check_mouse_bounds
+        bcs     die
+
         jsr     _clear_and_draw_sprite
 
         dec     cur_sprite        ; Skip a sprite
