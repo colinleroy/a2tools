@@ -1,4 +1,5 @@
 .struct SPRITE_DATA
+  ACTIVE          .byte
   X_COORD         .byte
   WIDTH           .byte
   Y_COORD         .byte

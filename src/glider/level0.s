@@ -17,6 +17,7 @@
 ; Do not place anything after X= 224 to avoid overflow
 ; in the hitbox
 level0_clock0_data:
+                  .byte 1             ; active
                   .byte 110           ; x
                   .byte clock_WIDTH
                   .byte 107           ; y
@@ -30,6 +31,7 @@ level0_clock0_data:
                   .addr _clock_mask   ; clock masks
 
 level0_clock1_data:
+                  .byte 1             ; active
                   .byte 140           ; x
                   .byte clock_WIDTH
                   .byte 107           ; y
@@ -43,6 +45,7 @@ level0_clock1_data:
                   .addr _clock_mask   ; clock masks
 
 level0_clock2_data:
+                  .byte 1             ; active
                   .byte 200           ; x
                   .byte clock_WIDTH
                   .byte 177           ; y

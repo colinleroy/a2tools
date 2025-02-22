@@ -1,6 +1,6 @@
         .export  _load_bg
         .import  cur_level
-        .import  _open, _read, _close
+        .import  _open, _read, _close, _memcpy
         .import  pushax, popax
         .import  __filetype, __auxtype
         
@@ -46,6 +46,18 @@ _load_bg:
 
         jsr     popax         ; Get fd back
         jsr     _close
+
+        ; Copy background to HGR page 2
+        lda     #<$4000
+        ldx     #>$4000
+        jsr     pushax
+        lda     #<$2000
+        ldx     #>$2000
+        jsr     pushax
+        lda     #<$2000
+        ldx     #>$2000
+        jsr     _memcpy
+
 load_err:
         rts
 

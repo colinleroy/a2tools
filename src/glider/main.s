@@ -34,8 +34,8 @@ _main:
         ldx     #>$2000
         jsr     pushax
 
-        lda     #<$2000
-        ldx     #>$2000
+        lda     #<$4000
+        ldx     #>$4000
         jsr     _bzero
 
         lda     #1
@@ -100,22 +100,30 @@ move_checks_done:
         dec     cur_sprite
 :
 
-:
+draw_next_sprite:
         dec     cur_sprite
         lda     cur_sprite
         bmi     loop              ; All done!
 
         jsr     _setup_sprite_pointer
+        bcs     dec_sprite
+
         ; Let's check the sprite's box
         .assert data_ptr = cur_sprite_ptr, error
         ldy     #SPRITE_DATA::X_COORD
         jsr     _check_mouse_bounds
-        bcs     die
+        bcc     :+
 
-        jsr     _clear_and_draw_sprite
+        ; We're in the sprite box, deactivate it
+        ldy     #SPRITE_DATA::ACTIVE
+        lda     #0
+        sta     (cur_sprite_ptr),y
+        
+:       jsr     _clear_and_draw_sprite
 
+dec_sprite:
         dec     cur_sprite        ; Skip a sprite
-        bpl     :-
+        bpl     draw_next_sprite
 
         jmp     loop
 

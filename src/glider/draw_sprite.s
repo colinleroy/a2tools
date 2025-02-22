@@ -2,7 +2,7 @@
         .export _setup_sprite_pointer
 
         .importzp _zp6, _zp8, _zp9, _zp10, _zp11, _zp12
-        .importzp tmp1, tmp2, tmp3, tmp4, ptr2, ptr3, ptr4
+        .importzp tmp1, tmp2, tmp3, tmp4, ptr1, ptr2, ptr3, ptr4
         .import   _hgr_hi, _hgr_low
         .import   _div7_table, _mod7_table
 
@@ -14,12 +14,14 @@
         .include "level_data_ptr.inc"
 
 line       = _zp8
+bg_line    = ptr1
 cur_y      = _zp10
 n_bytes    = _zp11
 
 sprite_y      = tmp4
 
 ; pointer to sprite data in (level_data), A is sprite number to draw
+; Return with carry set if the sprite is inactive
 _setup_sprite_pointer:
         asl
         tay
@@ -29,7 +31,13 @@ _setup_sprite_pointer:
         lda     (level_data),y
         sta     cur_sprite_ptr+1
 
-        ldy     #SPRITE_DATA::X_COORD
+        ldy     #SPRITE_DATA::ACTIVE    ; Is the sprite active?
+        lda     (cur_sprite_ptr),y
+        bne     :+
+        sec
+        rts
+
+:       ldy     #SPRITE_DATA::X_COORD
         lda     (cur_sprite_ptr),y
         tax
 
@@ -105,6 +113,7 @@ sprite_num:
         lda     (ptr3),y
         sta     sprite_mask+2
 
+        clc
         rts
 
 ; X, Y : coordinates
@@ -135,6 +144,11 @@ sprite_backup_1:
         cpx     #$FF              ; Did we do all bytes?
         bne     clear_next_line
 
+        ; Don't draw if sprite not active
+        ldy     #SPRITE_DATA::ACTIVE
+        lda     (cur_sprite_ptr),y
+        beq     draw_out
+
 _draw_sprite:
         ldy     sprite_y
         sty     cur_y
@@ -147,14 +161,17 @@ sprite_x:
         ldy     cur_y
         adc     _hgr_low,y
         sta     line
+        sta     bg_line
         lda     _hgr_hi,y
         adc     #0
         sta     line+1
+        adc     #$20
+        sta     bg_line+1
 
 n_bytes_per_line_2:
         ldy     #$FF
 
-:       lda     (line),y
+:       lda     (bg_line),y
 sprite_backup_2:
         sta     $FFFF,x
         ; draw sprite
@@ -170,5 +187,5 @@ sprite_pointer:
         inc     cur_y
         cpx     #$FF
         bne     next_line
-
+draw_out:
         rts

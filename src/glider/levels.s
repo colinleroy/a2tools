@@ -13,6 +13,7 @@
 
 ; There is always a single plane
 plane_data:
+                  .byte 1             ; active
                   .byte plane_MIN_X   ; x
                   .byte plane_WIDTH
                   .byte plane_MIN_Y   ; y

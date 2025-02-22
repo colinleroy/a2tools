@@ -50,7 +50,7 @@ glider_SOURCES := \
 
 
 glider_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl -C ../../config/apple2enh-rtonce.cfg \
-	-vm -m glider.map --start-addr 0x4000
+	-vm -m glider.map --start-addr 0x6000
 
 all: \
 	glider.bin \
