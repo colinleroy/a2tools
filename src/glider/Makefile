@@ -56,7 +56,7 @@ all: \
 	glider.bin \
 	levela.hgr \
 
-levela.hgr:
+levela.hgr: levela.png
 	../surl-server/hgr-convert levela.png && mv levela.png.hgr levela.hgr
 
 gen_sprite: gen_sprite.c
@@ -69,7 +69,7 @@ plane.s: gen_sprite
 
 clean:
 	rm -f *.bin *.o *.map \
-	levela.png.hgr \
+	levela.hgr \
 	gen_sprite \
 	clock.inc \
 	clock.s \
