@@ -1,4 +1,4 @@
-        .export  _load_bg
+        .export  _load_bg, _restore_bg
         .import  cur_level
         .import  _open, _read, _close, _memcpy
         .import  pushax, popax
@@ -57,6 +57,17 @@ _load_bg:
         lda     #<$2000
         ldx     #>$2000
         jsr     _memcpy
+
+_restore_bg:
+        lda     #<$2000
+        ldx     #>$2000
+        jsr     pushax
+        lda     #<$4000
+        ldx     #>$4000
+        jsr     pushax
+        lda     #<$2000
+        ldx     #>$2000
+        jmp     _memcpy
 
 load_err:
         rts

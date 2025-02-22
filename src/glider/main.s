@@ -12,15 +12,16 @@
         .import   _setup_sprite_pointer
         .import   _check_blockers, _check_vents
         .import   _check_mouse_bounds
-        .import   _load_bg
+        .import   _load_bg, _restore_bg
 
         .import   level0_clock1_data
+        .import   level_backup
 
         .import   reset_mouse
         .import   sprite_data, plane_data
         .import   mouse_irq_ready
 
-        .importzp _zp6, ptr4
+        .importzp _zp6, ptr2, ptr4
 
         .include  "apple2.inc"
         .include  "plane.inc"
@@ -81,7 +82,7 @@ loop:
         ; We got in an obstacle
 die:
         lda     $C030
-        jsr     reset_mouse
+        jsr     reset_level
 
 move_checks_done:
         inc     level0_clock1_data+SPRITE_DATA::X_COORD
@@ -177,6 +178,76 @@ next_mod:
 
         rts
 
+backup_sprite:
+        lda       cur_sprite
+        asl
+        tay
+        lda       (level_data),y
+        sta       ptr2
+        iny
+        lda       (level_data),y
+        sta       ptr2+1
+
+        ldy       #.sizeof(SPRITE_DATA)
+        dey
+
+:       lda       (ptr2),y
+        sta       level_backup,x
+        inx
+        dey
+        bpl       :-
+        rts
+
+backup_level_data:
+        ldx       num_sprites
+        dex
+        stx       cur_sprite
+
+        ldx       #0
+:       jsr       backup_sprite
+        dec       cur_sprite
+        bpl       :-
+
+        ldx       num_sprites
+        stx       cur_sprite
+
+        rts
+
+restore_sprite:
+        lda       cur_sprite
+        asl
+        tay
+        lda       (level_data),y
+        sta       ptr2
+        iny
+        lda       (level_data),y
+        sta       ptr2+1
+
+        ldy       #.sizeof(SPRITE_DATA)
+        dey
+
+:       lda       level_backup,x
+        sta       (ptr2),y
+        inx
+        dey
+        bpl       :-
+        rts
+
+restore_level_data:
+        ldx       num_sprites
+        dex
+        stx       cur_sprite
+
+        ldx       #0
+:       jsr       restore_sprite
+        dec       cur_sprite
+        bpl       :-
+
+        ldx       num_sprites
+        stx       cur_sprite
+
+        jmp       _restore_bg
+
 setup_level_data:
         lda     cur_level
         asl
@@ -197,16 +268,23 @@ setup_level_data:
         bne     :+
         inc     level_data+1
 
-        ; Draw each sprite once
 :
+        jsr     backup_level_data
+        ; Draw each sprite once
+first_draw:
         dec     cur_sprite
         lda     cur_sprite
         bmi     :+
         jsr     _setup_sprite_pointer
         jsr     _draw_sprite
-        jmp     :-
+        jmp     first_draw
 :
         rts
+
+reset_level:
+        jsr     restore_level_data
+        jsr     setup_level_data
+        jmp     reset_mouse
 
 load_level:
         jsr     _load_bg
