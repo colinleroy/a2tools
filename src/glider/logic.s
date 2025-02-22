@@ -4,7 +4,7 @@
         .import     vents_data, blockers_data, plane_data
         .import     cur_level
         
-        .importzp   _zp6, tmp1, tmp2, ptr1, ptr4
+        .importzp   _zp6, tmp1, tmp2, ptr4
 
         .include    "plane.inc"
         .include    "sprite.inc"
