@@ -39,6 +39,7 @@ glider_SOURCES := \
 	logic.s \
 	levels.s \
 	level0.s \
+	level1.s \
 	buffers.s \
 	load_bg.s \
 	../lib/fastirq.s \
@@ -55,9 +56,13 @@ glider_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl -C ../../config/apple2enh-rton
 all: \
 	glider.bin \
 	levela.hgr \
+	levelb.hgr
 
 levela.hgr: levela.png
 	../surl-server/hgr-convert levela.png && mv levela.png.hgr levela.hgr
+levelb.hgr: levelb.png
+	../surl-server/hgr-convert levelb.png && mv levelb.png.hgr levelb.hgr
+
 
 gen_sprite: gen_sprite.c
 	gcc $(shell pkg-config --cflags SDL_image) gen_sprite.c $(shell pkg-config --libs SDL_image) -o $@
@@ -70,6 +75,7 @@ plane.s: gen_sprite
 clean:
 	rm -f *.bin *.o *.map \
 	levela.hgr \
+	levelb.hgr \
 	gen_sprite \
 	clock.inc \
 	clock.s \

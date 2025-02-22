@@ -86,7 +86,14 @@ die:
         jsr     reset_level
 
 move_checks_done:
-        jmp     (cur_level_logic)
+        lda     plane_x
+        cmp     #(280-plane_WIDTH)
+        bne     :+
+        inc     cur_level
+        jsr     load_level
+        ; Fixme don't go after last level
+
+:       jmp     (cur_level_logic)
 
 ; The jump target back from level logic handler
 level_logic_done:
