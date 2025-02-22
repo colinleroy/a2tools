@@ -18,6 +18,7 @@
 ; in the hitbox
 level0_clock0_data:
                   .byte 1             ; active
+                  .byte 0             ; deadly
                   .byte 110           ; x
                   .byte clock_WIDTH
                   .byte 107           ; y
@@ -32,6 +33,7 @@ level0_clock0_data:
 
 level0_clock1_data:
                   .byte 1             ; active
+                  .byte 1             ; deadly
                   .byte 140           ; x
                   .byte clock_WIDTH
                   .byte 107           ; y
@@ -46,6 +48,7 @@ level0_clock1_data:
 
 level0_clock2_data:
                   .byte 1             ; active
+                  .byte 0             ; deadly
                   .byte 200           ; x
                   .byte clock_WIDTH
                   .byte 177           ; y

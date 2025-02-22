@@ -114,7 +114,12 @@ draw_next_sprite:
         jsr     _check_mouse_bounds
         bcc     :+
 
-        ; We're in the sprite box, deactivate it
+        ; We're in the sprite box, is it deadly?
+        ldy     #SPRITE_DATA::DEADLY
+        lda     (cur_sprite_ptr),y
+        bne     die
+
+        ; Deactivate it
         ldy     #SPRITE_DATA::ACTIVE
         lda     #0
         sta     (cur_sprite_ptr),y
