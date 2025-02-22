@@ -40,7 +40,8 @@ ammonoid_disk_PROGS = \
 glider_disk_PROGS = \
 	src/glider/glider.bin
 glider_disk_RES = \
-	src/glider/levela.hgr
+	src/glider/levela.hgr \
+	src/glider/levelb.hgr
 
 woztubes_disk_PROGS = \
 	src/woztubes/woztubes.bin
