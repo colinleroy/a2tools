@@ -3,6 +3,10 @@
         .import   clock0_backup
         .import   clock1_backup
         .import   clock2_backup
+        .import   clock3_backup
+        .import   clock4_backup
+        .import   clock5_backup
+        .import   clock6_backup
 
         .import   _clock, _clock_mask
 
@@ -61,13 +65,76 @@ level0_clock2_data:
                   .addr _clock        ; clock sprites
                   .addr _clock_mask   ; clock masks
 
+level0_clock3_data:
+                  .byte 1             ; active
+                  .byte 0             ; deadly
+                  .byte 100           ; x
+                  .byte clock_WIDTH
+                  .byte 50            ; y
+                  .byte clock_HEIGHT
+                  .byte 100           ; prev_x
+                  .byte 50            ; prev_y
+                  .byte clock_BYTES-1 ; bytes of sprite - 1
+                  .byte clock_WIDTH/7 ; width of sprite in bytes
+                  .addr clock3_backup ; background buffer
+                  .addr _clock        ; clock sprites
+                  .addr _clock_mask   ; clock masks
+
+level0_clock4_data:
+                  .byte 1             ; active
+                  .byte 0             ; deadly
+                  .byte 120           ; x
+                  .byte clock_WIDTH
+                  .byte 60            ; y
+                  .byte clock_HEIGHT
+                  .byte 120           ; prev_x
+                  .byte 60            ; prev_y
+                  .byte clock_BYTES-1 ; bytes of sprite - 1
+                  .byte clock_WIDTH/7 ; width of sprite in bytes
+                  .addr clock4_backup ; background buffer
+                  .addr _clock        ; clock sprites
+                  .addr _clock_mask   ; clock masks
+
+level0_clock5_data:
+                  .byte 1             ; active
+                  .byte 0             ; deadly
+                  .byte 140           ; x
+                  .byte clock_WIDTH
+                  .byte 70            ; y
+                  .byte clock_HEIGHT
+                  .byte 140           ; prev_x
+                  .byte 70            ; prev_y
+                  .byte clock_BYTES-1 ; bytes of sprite - 1
+                  .byte clock_WIDTH/7 ; width of sprite in bytes
+                  .addr clock5_backup ; background buffer
+                  .addr _clock        ; clock sprites
+                  .addr _clock_mask   ; clock masks
+
+level0_clock6_data:
+                  .byte 1             ; active
+                  .byte 0             ; deadly
+                  .byte 160           ; x
+                  .byte clock_WIDTH
+                  .byte 80            ; y
+                  .byte clock_HEIGHT
+                  .byte 160           ; prev_x
+                  .byte 80            ; prev_y
+                  .byte clock_BYTES-1 ; bytes of sprite - 1
+                  .byte clock_WIDTH/7 ; width of sprite in bytes
+                  .addr clock6_backup ; background buffer
+                  .addr _clock        ; clock sprites
+                  .addr _clock_mask   ; clock masks
+
 .rodata
 
-level0_sprites:   .byte   4
+level0_sprites:   .byte   7
 level0_sprites_data:
-                  .addr   level0_clock0_data
                   .addr   level0_clock1_data
                   .addr   level0_clock2_data
+                  .addr   level0_clock3_data
+                  .addr   level0_clock4_data
+                  .addr   level0_clock5_data
+                  .addr   level0_clock6_data
                   .addr   plane_data
 
 level0_vents:     .byte   2

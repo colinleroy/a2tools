@@ -39,7 +39,7 @@ glider_SOURCES := \
 	logic.s \
 	levels.s \
 	level0.s \
-	background_buffers.s \
+	buffers.s \
 	load_bg.s \
 	../lib/fastirq.s \
 	../lib/extrazp.s \
