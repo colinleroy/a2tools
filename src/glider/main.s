@@ -8,7 +8,7 @@
         .import   _bzero
         .import   pushax
         .import   _mod7_table
-        .import   cur_level
+        .import   cur_level, num_levels
         .import   _draw_sprite, _clear_and_draw_sprite
         .import   _setup_sprite_pointer
         .import   _check_blockers, _check_vents
@@ -48,9 +48,10 @@ _main:
         jsr     _init_simple_hgr_addrs
 
         jsr     _init_mouse
-        bcs     err
+        bcc     :+
+        jmp     _exit
 
-        jsr     load_level
+:       jsr     load_level
 
 loop:
         ; the WAI of the poor
@@ -88,12 +89,17 @@ die:
 move_checks_done:
         lda     plane_x
         cmp     #(280-plane_WIDTH)
-        bne     :+
+        bne     level_logic
         inc     cur_level
-        jsr     load_level
-        ; Fixme don't go after last level
+        lda     cur_level
+        cmp     num_levels
+        bne     :+
+        jmp     _win
 
-:       jmp     (cur_level_logic)
+:       jsr     load_level
+
+level_logic:
+        jmp     (cur_level_logic)
 
 ; The jump target back from level logic handler
 level_logic_done:
@@ -142,9 +148,6 @@ dec_sprite:
         bpl     draw_next_sprite
 
         jmp     loop
-
-err:
-        jmp     _exit
 
 ; Copy the hgr_baseaddr array of addresses
 ; to two arrays of low bytes/high bytes for simplicity
@@ -310,6 +313,8 @@ load_level:
         jsr     setup_level_data
         jmp     reset_mouse
 
+_win:
+        jmp     _exit
         .bss
 
 _hgr_low:      .res 192
