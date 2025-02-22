@@ -182,74 +182,74 @@ next_mod:
         rts
 
 backup_sprite:
-        lda       cur_sprite
+        lda     cur_sprite
         asl
         tay
-        lda       (level_data),y
-        sta       ptr2
+        lda     (level_data),y
+        sta     ptr2
         iny
-        lda       (level_data),y
-        sta       ptr2+1
+        lda     (level_data),y
+        sta     ptr2+1
 
-        ldy       #.sizeof(SPRITE_DATA)
+        ldy     #.sizeof(SPRITE_DATA)
         dey
 
-:       lda       (ptr2),y
-        sta       level_backup,x
+:       lda     (ptr2),y
+        sta     level_backup,x
         inx
         dey
-        bpl       :-
+        bpl     :-
         rts
 
 backup_level_data:
-        ldx       num_sprites
+        ldx     num_sprites
         dex
-        stx       cur_sprite
+        stx     cur_sprite
 
-        ldx       #0
-:       jsr       backup_sprite
-        dec       cur_sprite
-        bpl       :-
+        ldx     #0
+:       jsr     backup_sprite
+        dec     cur_sprite
+        bpl     :-
 
-        ldx       num_sprites
-        stx       cur_sprite
+        ldx     num_sprites
+        stx     cur_sprite
 
         rts
 
 restore_sprite:
-        lda       cur_sprite
+        lda     cur_sprite
         asl
         tay
-        lda       (level_data),y
-        sta       ptr2
+        lda     (level_data),y
+        sta     ptr2
         iny
-        lda       (level_data),y
-        sta       ptr2+1
+        lda     (level_data),y
+        sta     ptr2+1
 
-        ldy       #.sizeof(SPRITE_DATA)
+        ldy     #.sizeof(SPRITE_DATA)
         dey
 
-:       lda       level_backup,x
-        sta       (ptr2),y
+:       lda     level_backup,x
+        sta     (ptr2),y
         inx
         dey
-        bpl       :-
+        bpl     :-
         rts
 
 restore_level_data:
-        ldx       num_sprites
+        ldx     num_sprites
         dex
-        stx       cur_sprite
+        stx     cur_sprite
 
-        ldx       #0
-:       jsr       restore_sprite
-        dec       cur_sprite
-        bpl       :-
+        ldx     #0
+:       jsr     restore_sprite
+        dec     cur_sprite
+        bpl     :-
 
-        ldx       num_sprites
-        stx       cur_sprite
+        ldx     num_sprites
+        stx     cur_sprite
 
-        jmp       _restore_bg
+        jmp     _restore_bg
 
 setup_level_data:
         lda     cur_level

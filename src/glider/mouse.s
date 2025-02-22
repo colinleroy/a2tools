@@ -105,17 +105,17 @@ reset_mouse:
         jmp     firmware
 
 _init_mouse:
-        lda       #<$C000
-        sta       ptr1
-        lda       #>$C000
-        sta       ptr1+1
+        lda     #<$C000
+        sta     ptr1
+        lda     #>$C000
+        sta     ptr1+1
 
         ; Search for AppleMouse II firmware in slots 1 - 7
 next_slot:
-        inc       ptr1+1
-        lda       ptr1+1
-        cmp       #>$C800
-        bcc       :+
+        inc     ptr1+1
+        lda     ptr1+1
+        cmp     #>$C800
+        bcc     :+
 
         ; Mouse firmware not found
         sec
