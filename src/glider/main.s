@@ -1,5 +1,6 @@
-        .export _main
+        .export   _main
         .export   _hgr_low, _hgr_hi
+        .export   level_logic_done
 
         .import   _exit
         .import   _init_hgr, _init_mouse, _load_bg
@@ -14,8 +15,8 @@
         .import   _check_mouse_bounds
         .import   _load_bg, _restore_bg
 
-        .import   level0_clock1_data
         .import   level_backup
+        .import   levels_logic, cur_level_logic
 
         .import   reset_mouse
         .import   sprite_data, plane_data
@@ -85,8 +86,10 @@ die:
         jsr     reset_level
 
 move_checks_done:
-        inc     level0_clock1_data+SPRITE_DATA::X_COORD
+        jmp     (cur_level_logic)
 
+; The jump target back from level logic handler
+level_logic_done:
         ldx     num_sprites
         dex
         txa
@@ -252,6 +255,14 @@ setup_level_data:
         lda     cur_level
         asl
         tax
+
+        ; Logic
+        lda     levels_logic,x
+        sta     cur_level_logic
+        lda     levels_logic+1,x
+        sta     cur_level_logic+1
+
+        ; Sprites
         lda     sprite_data,x
         sta     level_data
         lda     sprite_data+1,x

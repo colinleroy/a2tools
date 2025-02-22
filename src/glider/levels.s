@@ -1,10 +1,12 @@
                   .export vents_data, blockers_data
                   .export num_levels, cur_level
+                  .export levels_logic, cur_level_logic
 
                   .export sprite_data, plane_data
                   .import _plane, _plane_mask, plane_backup
 
-                  .import  level0_sprites, level0_blockers, level0_vents
+                  .import  level0_sprites, level0_blockers
+                  .import  level0_vents, level0_logic
 
                   .include "clock.inc"
                   .include "plane.inc"
@@ -28,6 +30,7 @@ plane_data:
                   .addr _plane_mask   ; plane masks
 
 cur_level:        .byte   0
+cur_level_logic:  .addr   $FFFF
 
 .rodata
 
@@ -41,3 +44,6 @@ vents_data:
 
 blockers_data:
                   .addr level0_blockers
+
+levels_logic:
+                  .addr level0_logic

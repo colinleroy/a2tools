@@ -1,4 +1,5 @@
-        .export   level0_sprites, level0_blockers, level0_vents
+        .export   level0_sprites, level0_blockers
+        .export   level0_vents, level0_logic
 
         .import   clock0_backup
         .import   clock1_backup
@@ -10,11 +11,12 @@
 
         .import   _clock, _clock_mask
 
-        .export  level0_clock1_data
+        .import   level_logic_done
 
         .import   plane_data
         .include  "clock.inc"
         .include  "plane.inc"
+        .include  "sprite.inc"
 
 .data
 
@@ -152,3 +154,7 @@ level0_blockers_data:
                   .byte   102, 92,  121, 6     ; Desk
                   .byte   147, 3,   126, 64    ; Foot
                   .byte   0,   255, 191, 1     ; Floor
+
+level0_logic:
+        inc     level0_clock1_data+SPRITE_DATA::X_COORD
+        jmp       level_logic_done
