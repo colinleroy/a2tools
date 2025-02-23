@@ -1,5 +1,6 @@
         .export   _main
         .export   _hgr_low, _hgr_hi
+        .export   frame_counter
         .export   level_logic_done
 
         .import   _exit
@@ -123,7 +124,6 @@ draw_next_sprite:
         bmi     loop              ; All done!
 
         jsr     _setup_sprite_pointer
-        bcs     dec_sprite
 
         ; Let's check the sprite's box
         .assert data_ptr = cur_sprite_ptr, error
