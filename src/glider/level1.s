@@ -1,8 +1,6 @@
         .export   level1_sprites, level1_blockers
         .export   level1_vents, level1_logic
 
-        .import   clock0_backup
-
         .import   _clock, _clock_mask
 
         .import   level_logic_done
@@ -27,7 +25,6 @@ level1_clock0_data:
                   .byte 50            ; prev_y
                   .byte clock_BYTES-1 ; bytes of sprite - 1
                   .byte clock_WIDTH/7 ; width of sprite in bytes
-                  .addr clock0_backup ; background buffer
                   .addr _clock        ; clock sprites
                   .addr _clock_mask   ; clock masks
 
