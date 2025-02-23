@@ -1,6 +1,6 @@
         .export     _check_blockers, _check_vents
-        .export     _check_mouse_bounds
-        .export     _deactivate_sprite
+        .export     _check_mouse_bounds, _check_rubber_band_bounds
+        .export     _deactivate_sprite, _deactivate_current_sprite
         .export     _fire_rubber_band
         .export     _rubber_band_travel
 
@@ -141,6 +141,7 @@ _deactivate_rubber_band:
 
 _deactivate_sprite:
         jsr     _setup_sprite_pointer
+_deactivate_current_sprite:
         ldy     #SPRITE_DATA::ACTIVE
         lda     #0
         sta     (cur_sprite_ptr),y
@@ -181,4 +182,45 @@ _rubber_band_travel:
         adc     #3
         sta     rubber_band_data+SPRITE_DATA::X_COORD
 no_travel:
+        rts
+
+_check_rubber_band_bounds:
+        clc
+        lda     rubber_band_data+SPRITE_DATA::X_COORD
+        adc     #rubber_band_WIDTH
+        sta     tmp1
+        lda     rubber_band_data+SPRITE_DATA::Y_COORD
+        adc     #rubber_band_HEIGHT
+        sta     tmp2
+
+        ; Check right of plane against first blocker X coords
+        lda     (data_ptr),y
+        iny                       ; Inc Y now so we know how much to skip
+        cmp     tmp1              ; lower X bound
+        bcs     rb_out_skip_y        ; if lb > x, we're out of box
+
+        ; Check left of plane against right of box
+        adc     (data_ptr),y      ; higher X bound (lower+width)
+        cmp     plane_x
+        bcc     rb_out_skip_y        ; if hb < x, we're out of box
+
+        ; Check bottom of plane against first blocker Y coords
+        iny
+        lda     (data_ptr),y      ; lower Y bound
+        iny                       ; Inc Y now so we have nothing to skip
+        cmp     tmp2
+        bcs     rb_out               ; if lb > y, we're out of box
+
+        ; Check top of plane against lower bound of blocker
+        adc     (data_ptr),y      ; higher Y bound (lower+height)
+        cmp     plane_y
+        bcc     rb_out               ; if hb < y, we're out of box
+
+        rts                       ; We're in the box (return, carry already set)
+
+rb_out_skip_y:
+        iny
+        iny
+rb_out:
+        clc
         rts

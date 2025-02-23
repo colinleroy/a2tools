@@ -14,8 +14,9 @@
         .import   _setup_sprite_pointer
         .import   _check_blockers, _check_vents
         .import   _check_mouse_bounds
+        .import   _check_rubber_band_bounds
         .import   _load_bg, _restore_bg
-        .import   _deactivate_sprite
+        .import   _deactivate_current_sprite
 
         .import   level_backup
         .import   levels_logic, cur_level_logic
@@ -24,7 +25,7 @@
         .import   _rubber_band_travel
 
         .import   reset_mouse, mouse_b
-        .import   sprite_data, plane_data
+        .import   sprite_data, plane_data, rubber_band_data
         .import   mouse_irq_ready
 
         .importzp _zp6, ptr2, ptr4
@@ -139,7 +140,19 @@ draw_next_sprite:
         lda     (cur_sprite_ptr),y
         beq     dec_sprite
 
-        ; Let's check the sprite's box
+        ; Let's check whether a rubber band can destroy this sprite
+        lda     rubber_band_data+SPRITE_DATA::ACTIVE
+        beq     :+
+        ldy     #SPRITE_DATA::DESTROYABLE
+        lda     (cur_sprite_ptr),y
+        beq     :+
+
+        ; We have an in-flight rubber band and that sprite is destroyable
+        ldy     #SPRITE_DATA::X_COORD
+        jsr     _check_rubber_band_bounds
+        bcs     destroy_sprite
+
+:       ; Let's check the sprite's box
         .assert data_ptr = cur_sprite_ptr, error
         ldy     #SPRITE_DATA::X_COORD
         jsr     _check_mouse_bounds
@@ -156,8 +169,9 @@ draw_next_sprite:
         bne     die               ; Yes, die
 
         ; Deactivate it
+destroy_sprite:
         lda     cur_sprite
-        jsr     _deactivate_sprite
+        jsr     _deactivate_current_sprite
         jmp     dec_sprite
 
 :       jsr     _clear_and_draw_sprite

@@ -21,6 +21,7 @@
 level0_clock0_data:
                   .byte 1               ; active
                   .byte 0               ; deadly
+                  .byte 0               ; destroyable
                   .byte 181             ; x
                   .byte clock_WIDTH
                   .byte 108             ; y
@@ -35,12 +36,13 @@ level0_clock0_data:
 level0_balloon0_data:
                   .byte 0               ; active
                   .byte 1               ; deadly
+                  .byte 1               ; destroyable
                   .byte 196             ; x
                   .byte balloon_WIDTH
-                  .byte 170             ; y
+                  .byte 191-balloon_HEIGHT
                   .byte balloon_HEIGHT
                   .byte 196             ; prev_x
-                  .byte 170             ; prev_y
+                  .byte 191-balloon_HEIGHT
                   .byte balloon_BYTES-1 ; bytes of sprite - 1
                   .byte balloon_WIDTH/7 ; width of sprite in bytes
                   .addr _balloon        ; clock sprites
@@ -78,10 +80,8 @@ level0_logic:
         beq     :+
         ; If so, up it
         dec     level0_balloon0_data+SPRITE_DATA::Y_COORD
-        bne     :+
+        bne     :++
         ; If Y = 0, deactivate it
-        lda     #0
-        sta     level0_balloon0_data+SPRITE_DATA::ACTIVE
         lda     #BALLOON_SPRITE_NUM
         jsr     _deactivate_sprite
         jmp     level_logic_done

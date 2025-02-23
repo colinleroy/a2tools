@@ -23,6 +23,7 @@
 plane_data:
                   .byte 1             ; active
                   .byte 0             ; deadly
+                  .byte 1             ; destroyable
                   .byte plane_MIN_X   ; x
                   .byte plane_WIDTH
                   .byte plane_MIN_Y   ; y
@@ -38,6 +39,7 @@ plane_data:
 rubber_band_data:
                   .byte 0                   ; active
                   .byte 1                   ; deadly
+                  .byte 0                   ; destroyable
                   .byte rubber_band_MIN_X   ; x
                   .byte rubber_band_WIDTH
                   .byte rubber_band_MIN_Y   ; y
