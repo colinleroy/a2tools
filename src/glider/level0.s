@@ -7,7 +7,7 @@
         .import   frame_counter
         .import   level_logic_done
 
-        .import   _deactivate_sprite
+        .import   _fire_balloon, _balloon_travel
         .import   plane_data, rubber_band_data
         .include  "balloon.inc"
         .include  "clock.inc"
@@ -75,23 +75,12 @@ level0_blockers_data:
                   .byte   0,   255, 191, 1     ; Floor
 
 level0_logic:
-        ; Check if balloon is active
-        lda     level0_balloon0_data+SPRITE_DATA::ACTIVE
-        beq     :+
-        ; If so, up it
-        dec     level0_balloon0_data+SPRITE_DATA::Y_COORD
-        bne     :++
-        ; If Y = 0, deactivate it
+        ; Move balloon if active
         lda     #BALLOON_SPRITE_NUM
-        jsr     _deactivate_sprite
-        jmp     level_logic_done
+        jsr     _balloon_travel
 
-        ; Activate balloon at frame 0
-:       lda     frame_counter
-        cmp     #$FF
-        bne     :+
-        lda     #1
-        sta     level0_balloon0_data+SPRITE_DATA::ACTIVE
-        lda     #170
-        sta     level0_balloon0_data+SPRITE_DATA::Y_COORD
-:       jmp     level_logic_done
+        ; Activate balloon if frame = $FF
+        lda     #BALLOON_SPRITE_NUM
+        ldx     #$FF
+        jsr     _fire_balloon
+        jmp     level_logic_done

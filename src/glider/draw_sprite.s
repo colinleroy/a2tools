@@ -1,5 +1,5 @@
         .export _draw_sprite, _clear_and_draw_sprite
-        .export _setup_sprite_pointer
+        .export _load_sprite_pointer, _setup_sprite_pointer
 
         .importzp _zp6, _zp8, _zp9, _zp10, _zp11, _zp12
         .importzp tmp4, ptr1, ptr2, ptr3, ptr4
@@ -20,9 +20,7 @@ n_bytes    = _zp11
 
 sprite_y      = tmp4
 
-; pointer to sprite data in (level_data), A is sprite number to draw
-; Return with carry set if the sprite is inactive
-_setup_sprite_pointer:
+_load_sprite_pointer:
         asl
         tay
         lda     (level_data),y
@@ -30,7 +28,12 @@ _setup_sprite_pointer:
         iny
         lda     (level_data),y
         sta     cur_sprite_ptr+1
+        rts
 
+; pointer to sprite data in (level_data), A is sprite number to draw
+; Return with carry set if the sprite is inactive
+_setup_sprite_pointer:
+        jsr     _load_sprite_pointer
         ldy     #SPRITE_DATA::X_COORD
         lda     (cur_sprite_ptr),y
         tax
