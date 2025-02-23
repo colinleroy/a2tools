@@ -1,16 +1,17 @@
         .export     _check_blockers, _check_vents
         .export     _check_mouse_bounds, _check_rubber_band_bounds
         .export     _deactivate_sprite, _deactivate_current_sprite
-        .export     _fire_rubber_band
-        .export     _rubber_band_travel
+        .export     _fire_rubber_band, _fire_balloon
+        .export     _rubber_band_travel, _balloon_travel
 
         .import     vents_data, blockers_data, plane_data
         .import     rubber_band_data
-        .import     cur_level
-        .import     _setup_sprite_pointer, _clear_and_draw_sprite
+        .import     cur_level, frame_counter
+        .import     _load_sprite_pointer, _setup_sprite_pointer, _clear_and_draw_sprite
         
-        .importzp   _zp6, tmp1, tmp2, ptr4
+        .importzp   _zp6, tmp1, tmp2, tmp3, ptr4
 
+        .include    "balloon.inc"
         .include    "plane.inc"
         .include    "rubber_band.inc"
         .include    "sprite.inc"
@@ -194,3 +195,39 @@ _check_rubber_band_bounds:
         adc     #rubber_band_HEIGHT
         sta     tmp2
         jmp     check_bounds
+
+
+_fire_balloon:
+        cpx     frame_counter
+        bne     :+
+
+        jsr     _load_sprite_pointer
+        ldy     #SPRITE_DATA::ACTIVE
+        lda     (cur_sprite_ptr),y
+        bne     :+
+
+        lda     #1
+        sta     (cur_sprite_ptr),y
+        lda     #(191-balloon_HEIGHT)
+        ldy     #SPRITE_DATA::Y_COORD
+        sta     (cur_sprite_ptr),y
+
+:       rts
+
+_balloon_travel:
+        sta     tmp3
+        jsr     _load_sprite_pointer
+        ldy     #SPRITE_DATA::ACTIVE
+        lda     (cur_sprite_ptr),y
+        beq     :+
+        ; If so, up it
+        ldy     #SPRITE_DATA::Y_COORD
+        lda     (cur_sprite_ptr),y
+        sec
+        sbc     #1
+        sta     (cur_sprite_ptr),y
+        bne     :+
+        ; If Y = 0, deactivate it
+        lda     tmp3
+        jmp     _deactivate_sprite
+:       rts
