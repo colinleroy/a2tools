@@ -24,6 +24,7 @@
 level2_clock0_data:
                   .byte 1              ; active
                   .byte 0              ; deadly
+                  .byte 0              ; destroyable
                   .byte 149            ; x
                   .byte clock_WIDTH
                   .byte 68             ; y
@@ -38,6 +39,7 @@ level2_clock0_data:
 level2_socket0_data:
                   .byte 1              ; active
                   .byte 1              ; deadly
+                  .byte 0              ; destroyable
                   .byte 145            ; x
                   .byte socket_WIDTH
                   .byte 110            ; y
@@ -52,6 +54,7 @@ level2_socket0_data:
 level2_switch0_data:
                   .byte 1              ; active
                   .byte 0              ; deadly
+                  .byte 0              ; destroyable
                   .byte 84             ; x
                   .byte switch_WIDTH
                   .byte 111            ; y

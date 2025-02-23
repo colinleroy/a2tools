@@ -17,6 +17,7 @@
 level1_clock0_data:
                   .byte 1              ; active
                   .byte 0              ; deadly
+                  .byte 0              ; destroyable
                   .byte 183            ; x
                   .byte clock_WIDTH
                   .byte 50             ; y

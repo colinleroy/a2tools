@@ -1,6 +1,7 @@
 .struct SPRITE_DATA
   ACTIVE          .byte
   DEADLY          .byte
+  DESTROYABLE     .byte
   X_COORD         .byte
   WIDTH           .byte
   Y_COORD         .byte
