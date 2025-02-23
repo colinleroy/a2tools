@@ -35,11 +35,11 @@ level0_clock0_data:
 level0_balloon0_data:
                   .byte 0               ; active
                   .byte 1               ; deadly
-                  .byte 170             ; x
+                  .byte 196             ; x
                   .byte balloon_WIDTH
                   .byte 170             ; y
                   .byte balloon_HEIGHT
-                  .byte 170             ; prev_x
+                  .byte 196             ; prev_x
                   .byte 170             ; prev_y
                   .byte balloon_BYTES-1 ; bytes of sprite - 1
                   .byte balloon_WIDTH/7 ; width of sprite in bytes
