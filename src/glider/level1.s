@@ -15,18 +15,18 @@
 ; Do not place anything after X= 224 to avoid overflow
 ; in the hitbox
 level1_clock0_data:
-                  .byte 1             ; active
-                  .byte 0             ; deadly
-                  .byte 183           ; x
+                  .byte 1              ; active
+                  .byte 0              ; deadly
+                  .byte 183            ; x
                   .byte clock_WIDTH
-                  .byte 50            ; y
+                  .byte 50             ; y
                   .byte clock_HEIGHT
-                  .byte 183           ; prev_x
-                  .byte 50            ; prev_y
-                  .byte clock_BYTES-1 ; bytes of sprite - 1
-                  .byte clock_WIDTH/7 ; width of sprite in bytes
-                  .addr _clock        ; clock sprites
-                  .addr _clock_mask   ; clock masks
+                  .byte 183            ; prev_x
+                  .byte 50             ; prev_y
+                  .byte clock_BYTES-1  ; bytes of sprite - 1
+                  .byte clock_WIDTH/7  ; width of sprite in bytes
+                  .addr _clock         ; clock sprites
+                  .addr _clock_mask    ; clock masks
 
 .rodata
 
@@ -43,11 +43,12 @@ level1_vents_data:
                   .byte   35,  20,  plane_HEIGHT+1,   191-plane_HEIGHT, $FF ; Up all the way
                   .byte   217, 20,  plane_HEIGHT+1,   191-plane_HEIGHT, $FF ; Up all the way
 
-level1_blockers:  .byte   2
+level1_blockers:  .byte   3
 level1_blockers_data:
                   ; Four bytes per blocker (start X, width, start Y, height)
                   .byte   100, 67,  37,  29    ; Books
                   .byte   100, 99,  64,  3     ; Bookshelf
+                  .byte   0,   255, 191, 1     ; Floor
 
 level1_logic:
         jmp     level_logic_done

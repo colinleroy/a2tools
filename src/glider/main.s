@@ -15,6 +15,7 @@
         .import   _check_blockers, _check_vents
         .import   _check_mouse_bounds
         .import   _load_bg, _restore_bg
+        .import   _deactivate_sprite
 
         .import   level_backup
         .import   levels_logic, cur_level_logic
@@ -125,6 +126,10 @@ draw_next_sprite:
 
         jsr     _setup_sprite_pointer
 
+        ldy     #SPRITE_DATA::ACTIVE
+        lda     (cur_sprite_ptr),y
+        beq     dec_sprite
+
         ; Let's check the sprite's box
         .assert data_ptr = cur_sprite_ptr, error
         ldy     #SPRITE_DATA::X_COORD
@@ -142,10 +147,10 @@ draw_next_sprite:
         bne     die               ; Yes, die
 
         ; Deactivate it
-        ldy     #SPRITE_DATA::ACTIVE
-        lda     #0
-        sta     (cur_sprite_ptr),y
-        
+        lda     cur_sprite
+        jsr     _deactivate_sprite
+        jmp     dec_sprite
+
 :       jsr     _clear_and_draw_sprite
 
 dec_sprite:
@@ -303,6 +308,9 @@ first_draw:
         bmi     :+
         jsr     _setup_sprite_pointer
         jsr     _draw_sprite
+        lda     cur_sprite
+        jsr     _setup_sprite_pointer
+        jsr     _clear_and_draw_sprite
         jmp     first_draw
 :
         rts
