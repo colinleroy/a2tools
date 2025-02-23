@@ -1,6 +1,7 @@
                   .export vents_data, blockers_data
                   .export num_levels, cur_level
                   .export levels_logic, cur_level_logic
+                  .export num_rubber_bands
 
                   .export sprite_data, plane_data, rubber_band_data
                   .import _plane, _plane_mask
@@ -34,6 +35,7 @@ plane_data:
                   .byte plane_WIDTH/7 ; width of sprite in bytes
                   .addr _plane        ; plane sprites
                   .addr _plane_mask   ; plane masks
+                  .addr $0000
 
 ; There is always a single rubber band
 rubber_band_data:
@@ -50,8 +52,10 @@ rubber_band_data:
                   .byte rubber_band_WIDTH/7 ; width of sprite in bytes
                   .addr _rubber_band        ; band sprites
                   .addr _rubber_band_mask   ; band masks
+                  .addr $0000
 
 cur_level:        .byte   0
+num_rubber_bands: .byte   3
 cur_level_logic:  .addr   $FFFF
 
 .rodata

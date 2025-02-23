@@ -3,15 +3,18 @@
 
         .import   _balloon, _balloon_mask
         .import   _clock, _clock_mask
+        .import   _rubber_box, _rubber_box_mask
 
         .import   frame_counter
         .import   level_logic_done
 
+        .import   _grab_rubber_bands
         .import   _fire_balloon, _balloon_travel
         .import   plane_data, rubber_band_data
         .include  "balloon.inc"
         .include  "clock.inc"
         .include  "plane.inc"
+        .include  "rubber_box.inc"
         .include  "sprite.inc"
 
 .data
@@ -32,6 +35,7 @@ level0_clock0_data:
                   .byte clock_WIDTH/7   ; width of sprite in bytes
                   .addr _clock          ; clock sprites
                   .addr _clock_mask     ; clock masks
+                  .addr $0000
 
 level0_balloon0_data:
                   .byte 0               ; active
@@ -47,15 +51,33 @@ level0_balloon0_data:
                   .byte balloon_WIDTH/7 ; width of sprite in bytes
                   .addr _balloon        ; clock sprites
                   .addr _balloon_mask   ; clock masks
+                  .addr $0000
+
+level0_rubber_box0_data:
+                  .byte 1               ; active
+                  .byte 0               ; deadly
+                  .byte 0               ; destroyable
+                  .byte 109             ; x
+                  .byte rubber_box_WIDTH
+                  .byte 92-rubber_box_HEIGHT
+                  .byte rubber_box_HEIGHT
+                  .byte 109             ; prev_x
+                  .byte 92-rubber_box_HEIGHT
+                  .byte rubber_box_BYTES-1 ; bytes of sprite - 1
+                  .byte rubber_box_WIDTH/7 ; width of sprite in bytes
+                  .addr _rubber_box        ; clock sprites
+                  .addr _rubber_box_mask   ; clock masks
+                  .addr _grab_rubber_bands ; deactivation callback
 
 .rodata
 
-level0_sprites:   .byte   4
+level0_sprites:   .byte   5
 level0_sprites_data:
                   .addr   rubber_band_data    ; Must be first for easy deactivation
 BALLOON_SPRITE_NUM = (*-level0_sprites_data)/2
                   .addr   level0_balloon0_data
                   .addr   level0_clock0_data
+                  .addr   level0_rubber_box0_data
                   .addr   plane_data
 
 level0_vents:     .byte   2

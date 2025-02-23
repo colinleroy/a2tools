@@ -351,10 +351,11 @@ load_level:
 
 _win:
         jmp     _exit
+
         .bss
 
-_hgr_low:      .res 192
-_hgr_hi:       .res 192
-frame_counter: .res 1
-num_sprites:   .res 1
-cur_sprite:    .res 1
+_hgr_low:        .res 192
+_hgr_hi:         .res 192
+frame_counter:   .res 1
+num_sprites:     .res 1
+cur_sprite:      .res 1

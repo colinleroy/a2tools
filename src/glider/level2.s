@@ -35,6 +35,7 @@ level2_clock0_data:
                   .byte clock_WIDTH/7  ; width of sprite in bytes
                   .addr _clock         ; sprites
                   .addr _clock_mask    ; masks
+                  .addr $0000
 
 level2_socket0_data:
                   .byte 1              ; active
@@ -50,6 +51,7 @@ level2_socket0_data:
                   .byte socket_WIDTH/7 ; width of sprite in bytes
                   .addr _socket        ; sprites
                   .addr _socket_mask   ; masks
+                  .addr $0000
 
 level2_switch0_data:
                   .byte 1              ; active
@@ -65,6 +67,7 @@ level2_switch0_data:
                   .byte switch_WIDTH/7 ; width of sprite in bytes
                   .addr _switch        ; sprites
                   .addr _switch_mask   ; masks
+                  .addr $0000
 
 .rodata
 
