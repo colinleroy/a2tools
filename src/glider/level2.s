@@ -9,7 +9,8 @@
         .import   _deactivate_sprite
 
         .import   frame_counter
-        .import   plane_data
+        .import   plane_data, rubber_band_data
+
         .include  "clock.inc"
         .include  "plane.inc"
         .include  "socket.inc"
@@ -64,8 +65,9 @@ level2_switch0_data:
 
 .rodata
 
-level2_sprites:   .byte   4
+level2_sprites:   .byte   5
 level2_sprites_data:
+                  .addr   rubber_band_data    ; Must be first for easy deactivation
                   .addr   level2_clock0_data
                   .addr   level2_switch0_data
 SOCKET_SPRITE_NUM = (*-level2_sprites_data)/2

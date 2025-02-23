@@ -1,14 +1,18 @@
         .export     _check_blockers, _check_vents
         .export     _check_mouse_bounds
         .export     _deactivate_sprite
+        .export     _fire_rubber_band
+        .export     _rubber_band_travel
 
         .import     vents_data, blockers_data, plane_data
+        .import     rubber_band_data
         .import     cur_level
         .import     _setup_sprite_pointer, _clear_and_draw_sprite
         
         .importzp   _zp6, tmp1, tmp2, ptr4
 
         .include    "plane.inc"
+        .include    "rubber_band.inc"
         .include    "sprite.inc"
         .include    "plane_coords.inc"
         .include    "level_data_ptr.inc"
@@ -132,9 +136,49 @@ go_down:
         lda     #1              ; Go down normal
         rts
 
+_deactivate_rubber_band:
+        lda     #0
+
 _deactivate_sprite:
         jsr     _setup_sprite_pointer
         ldy     #SPRITE_DATA::ACTIVE
         lda     #0
         sta     (cur_sprite_ptr),y
         jmp     _clear_and_draw_sprite
+
+_fire_rubber_band:
+        lda     rubber_band_data+SPRITE_DATA::ACTIVE
+        bne     no_fire
+
+        lda     plane_x
+        cmp     #(250-plane_WIDTH-1)
+        bcs     no_fire
+
+        adc     #(plane_WIDTH+1)
+        sta     rubber_band_data+SPRITE_DATA::X_COORD
+        sta     rubber_band_data+SPRITE_DATA::PREV_X_COORD
+
+        lda     plane_y
+        clc
+        adc     #((plane_HEIGHT-rubber_band_HEIGHT)/2)
+        sta     rubber_band_data+SPRITE_DATA::Y_COORD
+        sta     rubber_band_data+SPRITE_DATA::PREV_Y_COORD
+
+        lda     #1
+        sta     rubber_band_data+SPRITE_DATA::ACTIVE
+
+no_fire:
+        rts
+
+_rubber_band_travel:
+        lda     rubber_band_data+SPRITE_DATA::ACTIVE
+        beq     no_travel
+
+        lda     rubber_band_data+SPRITE_DATA::X_COORD
+        cmp     #(250-plane_WIDTH-1)
+        bcs     _deactivate_rubber_band
+
+        adc     #3
+        sta     rubber_band_data+SPRITE_DATA::X_COORD
+no_travel:
+        rts

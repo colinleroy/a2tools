@@ -5,7 +5,7 @@
 
         .import   level_logic_done
 
-        .import   plane_data
+        .import   plane_data, rubber_band_data
         .include  "clock.inc"
         .include  "plane.inc"
         .include  "sprite.inc"
@@ -30,8 +30,9 @@ level1_clock0_data:
 
 .rodata
 
-level1_sprites:   .byte   2
+level1_sprites:   .byte   3
 level1_sprites_data:
+                  .addr   rubber_band_data    ; Must be first for easy deactivation
                   .addr   level1_clock0_data
                   .addr   plane_data
 

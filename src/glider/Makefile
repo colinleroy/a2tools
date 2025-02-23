@@ -50,6 +50,7 @@ glider_SOURCES := \
 	balloon.s \
 	clock.s \
 	plane.s \
+	rubber_band.s \
 	socket.s \
 	switch.s \
 
@@ -78,6 +79,8 @@ balloon.s: gen_sprite
 	./gen_sprite balloon.png 255
 clock.s: gen_sprite
 	./gen_sprite clock.png 255
+rubber_band.s: gen_sprite
+	./gen_sprite rubber_band.png 255
 socket.s: gen_sprite
 	./gen_sprite socket.png 255
 switch.s: gen_sprite
@@ -97,6 +100,8 @@ clean:
 	clock.s \
 	plane.inc \
 	plane.s \
+	rubber_band.inc \
+	rubber_band.s \
 	socket.inc \
 	socket.s \
 	switch.inc \
