@@ -2,7 +2,7 @@
         .export _setup_sprite_pointer
 
         .importzp _zp6, _zp8, _zp9, _zp10, _zp11, _zp12
-        .importzp tmp1, tmp2, tmp3, tmp4, ptr1, ptr2, ptr3, ptr4
+        .importzp tmp4, ptr1, ptr2, ptr3, ptr4
         .import   _hgr_hi, _hgr_low
         .import   _div7_table, _mod7_table
 
@@ -71,15 +71,6 @@ _setup_sprite_pointer:
         sta     n_bytes_per_line_1+1
         sta     n_bytes_per_line_2+1
 
-        ldy     #SPRITE_DATA::BACKUP_BUFFER
-        lda     (cur_sprite_ptr),y
-        sta     sprite_backup_1+1
-        sta     sprite_backup_2+1
-        iny
-        lda     (cur_sprite_ptr),y
-        sta     sprite_backup_1+2
-        sta     sprite_backup_2+2
-
         ldy     #SPRITE_DATA::SPRITE
         lda     (cur_sprite_ptr),y
         sta     ptr2
@@ -120,15 +111,17 @@ sprite_prev_x:
         ldy     cur_y
         adc     _hgr_low,y
         sta     line
+        sta     bg_line
         lda     _hgr_hi,y
         adc     #0
         sta     line+1
+        adc     #$20
+        sta     bg_line+1
 
 n_bytes_per_line_1:
         ldy     #$FF
 
-sprite_backup_1:
-:       lda     $FFFF,x
+:       lda     (bg_line),y
         sta     (line),y
         dex
         dey
@@ -155,19 +148,15 @@ sprite_x:
         ldy     cur_y
         adc     _hgr_low,y
         sta     line
-        sta     bg_line
         lda     _hgr_hi,y
         adc     #0
         sta     line+1
-        adc     #$20
-        sta     bg_line+1
 
 n_bytes_per_line_2:
         ldy     #$FF
 
-:       lda     (bg_line),y
-sprite_backup_2:
-        sta     $FFFF,x
+        ; Get what's under the sprite
+:       lda     (line),y
         ; draw sprite
 sprite_mask:
         and     $FFFF,x       ; Patched

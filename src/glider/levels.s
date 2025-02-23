@@ -3,7 +3,7 @@
                   .export levels_logic, cur_level_logic
 
                   .export sprite_data, plane_data
-                  .import _plane, _plane_mask, plane_backup
+                  .import _plane, _plane_mask
 
                   .import  level0_sprites, level0_blockers
                   .import  level0_vents, level0_logic
@@ -27,7 +27,6 @@ plane_data:
                   .byte plane_MAX_Y   ; prev_y
                   .byte plane_BYTES-1 ; bytes of sprite - 1
                   .byte plane_WIDTH/7 ; width of sprite in bytes
-                  .addr plane_backup  ; background buffer
                   .addr _plane        ; plane sprites
                   .addr _plane_mask   ; plane masks
 

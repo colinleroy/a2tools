@@ -9,7 +9,6 @@
   PREV_Y_COORD    .byte
   BYTES           .byte
   BYTES_WIDTH     .byte
-  BACKUP_BUFFER   .addr
   SPRITE          .addr
   SPRITE_MASK     .addr
 .endstruct
