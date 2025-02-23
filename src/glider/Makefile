@@ -46,6 +46,7 @@ glider_SOURCES := \
 	../lib/extrazp.s \
 	../lib/asm/hgr.s \
 	../lib/hgr_addrs.c \
+	balloon.s \
 	clock.s \
 	plane.s \
 
@@ -67,6 +68,8 @@ levelb.hgr: levelb.png
 gen_sprite: gen_sprite.c
 	gcc $(shell pkg-config --cflags SDL_image) gen_sprite.c $(shell pkg-config --libs SDL_image) -o $@
 
+balloon.s: gen_sprite
+	./gen_sprite balloon.png 255
 clock.s: gen_sprite
 	./gen_sprite clock.png 255
 plane.s: gen_sprite
@@ -77,6 +80,8 @@ clean:
 	levela.hgr \
 	levelb.hgr \
 	gen_sprite \
+	balloon.inc \
+	balloon.s \
 	clock.inc \
 	clock.s \
 	plane.inc \

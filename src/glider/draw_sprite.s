@@ -31,13 +31,7 @@ _setup_sprite_pointer:
         lda     (level_data),y
         sta     cur_sprite_ptr+1
 
-        ldy     #SPRITE_DATA::ACTIVE    ; Is the sprite active?
-        lda     (cur_sprite_ptr),y
-        bne     :+
-        sec
-        rts
-
-:       ldy     #SPRITE_DATA::X_COORD
+        ldy     #SPRITE_DATA::X_COORD
         lda     (cur_sprite_ptr),y
         tax
 
