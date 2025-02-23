@@ -7,7 +7,7 @@
         .import   frame_counter
         .import   level_logic_done
 
-        .import   _clear_and_draw_sprite
+        .import   _deactivate_sprite
         .import   plane_data
         .include  "balloon.inc"
         .include  "clock.inc"
@@ -50,6 +50,7 @@ level0_balloon0_data:
 
 level0_sprites:   .byte   3
 level0_sprites_data:
+BALLOON_SPRITE_NUM = (*-level0_sprites_data)/2
                   .addr   level0_balloon0_data
                   .addr   level0_clock0_data
                   .addr   plane_data
@@ -80,6 +81,9 @@ level0_logic:
         ; If Y = 0, deactivate it
         lda     #0
         sta     level0_balloon0_data+SPRITE_DATA::ACTIVE
+        lda     #BALLOON_SPRITE_NUM
+        jsr     _deactivate_sprite
+        jmp     level_logic_done
 
         ; Activate balloon at frame 0
 :       lda     frame_counter
