@@ -265,7 +265,8 @@ dist: all \
 	mastodon$(suffix).po \
 	wozamp$(suffix).po \
 	woztubes$(suffix).po \
-	weather$(suffix).po
+	weather$(suffix).po \
+	glider$(suffix).po
 
 else
 #65c02 things
@@ -283,6 +284,7 @@ dist: all \
 	wozamp$(suffix).po \
 	woztubes$(suffix).po \
 	weather$(suffix).po \
+	glider$(suffix).po \
 	doc-dist
 endif
 
@@ -299,5 +301,6 @@ dist: all \
 	stpperso$(suffix).po \
 	quicktake$(suffix).po \
 	wozamp$(suffix).po \
-	weather$(suffix).po
+	weather$(suffix).po \
+	glider$(suffix).po
 endif
