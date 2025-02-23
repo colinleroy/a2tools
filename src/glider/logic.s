@@ -3,12 +3,14 @@
         .export     _deactivate_sprite, _deactivate_current_sprite
         .export     _fire_rubber_band, _fire_balloon
         .export     _rubber_band_travel, _balloon_travel
+        .export     _grab_rubber_bands
 
         .import     vents_data, blockers_data, plane_data
         .import     rubber_band_data
         .import     cur_level, frame_counter
         .import     _load_sprite_pointer, _setup_sprite_pointer, _clear_and_draw_sprite
-        
+        .import     num_rubber_bands
+
         .importzp   _zp6, tmp1, tmp2, tmp3, ptr4
 
         .include    "balloon.inc"
@@ -147,11 +149,26 @@ _deactivate_current_sprite:
         ldy     #SPRITE_DATA::ACTIVE
         lda     #0
         sta     (cur_sprite_ptr),y
+        ldy     #SPRITE_DATA::DEACTIVATE_FUNC+1
+        lda     (cur_sprite_ptr),y
+        beq     deac_cb_done
+        sta     deac_cb+2
+        dey
+        lda     (cur_sprite_ptr),y
+        sta     deac_cb+1
+deac_cb:
+        jsr     $FFFF
+
+deac_cb_done:
         jmp     _clear_and_draw_sprite
 
 _fire_rubber_band:
         lda     rubber_band_data+SPRITE_DATA::ACTIVE
         bne     no_fire
+
+        lda     num_rubber_bands
+        beq     no_fire
+        dec     num_rubber_bands
 
         lda     plane_x
         cmp     #(250-plane_WIDTH-1)
@@ -230,4 +247,14 @@ _balloon_travel:
         ; If Y = 0, deactivate it
         lda     tmp3
         jmp     _deactivate_sprite
+:       rts
+
+_grab_rubber_bands:
+        lda     num_rubber_bands
+        clc
+        adc     #3
+        cmp     num_rubber_bands
+        bcc     :+
+
+        sta     num_rubber_bands
 :       rts

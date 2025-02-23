@@ -28,6 +28,7 @@ level1_clock0_data:
                   .byte clock_WIDTH/7  ; width of sprite in bytes
                   .addr _clock         ; clock sprites
                   .addr _clock_mask    ; clock masks
+                  .addr $0000
 
 .rodata
 
