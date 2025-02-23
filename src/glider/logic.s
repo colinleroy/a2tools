@@ -1,8 +1,10 @@
         .export     _check_blockers, _check_vents
         .export     _check_mouse_bounds
+        .export     _deactivate_sprite
 
         .import     vents_data, blockers_data, plane_data
         .import     cur_level
+        .import     _setup_sprite_pointer, _clear_and_draw_sprite
         
         .importzp   _zp6, tmp1, tmp2, ptr4
 
@@ -129,3 +131,10 @@ next_vent:
 go_down:
         lda     #1              ; Go down normal
         rts
+
+_deactivate_sprite:
+        jsr     _setup_sprite_pointer
+        ldy     #SPRITE_DATA::ACTIVE
+        lda     #0
+        sta     (cur_sprite_ptr),y
+        jmp     _clear_and_draw_sprite

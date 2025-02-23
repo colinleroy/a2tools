@@ -40,6 +40,7 @@ glider_SOURCES := \
 	levels.s \
 	level0.s \
 	level1.s \
+	level2.s \
 	buffers.s \
 	load_bg.s \
 	../lib/fastirq.s \
@@ -49,6 +50,8 @@ glider_SOURCES := \
 	balloon.s \
 	clock.s \
 	plane.s \
+	socket.s \
+	switch.s \
 
 
 glider_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl -C ../../config/apple2enh-rtonce.cfg \
@@ -57,12 +60,15 @@ glider_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl -C ../../config/apple2enh-rton
 all: \
 	glider.bin \
 	levela.hgr \
-	levelb.hgr
+	levelb.hgr \
+	levelc.hgr
 
 levela.hgr: levela.png
 	../surl-server/hgr-convert levela.png && mv levela.png.hgr levela.hgr
 levelb.hgr: levelb.png
 	../surl-server/hgr-convert levelb.png && mv levelb.png.hgr levelb.hgr
+levelc.hgr: levelc.png
+	../surl-server/hgr-convert levelc.png && mv levelc.png.hgr levelc.hgr
 
 
 gen_sprite: gen_sprite.c
@@ -72,6 +78,10 @@ balloon.s: gen_sprite
 	./gen_sprite balloon.png 255
 clock.s: gen_sprite
 	./gen_sprite clock.png 255
+socket.s: gen_sprite
+	./gen_sprite socket.png 255
+switch.s: gen_sprite
+	./gen_sprite switch.png 255
 plane.s: gen_sprite
 	./gen_sprite plane.png 280
 
@@ -79,13 +89,18 @@ clean:
 	rm -f *.bin *.o *.map \
 	levela.hgr \
 	levelb.hgr \
+	levelc.hgr \
 	gen_sprite \
 	balloon.inc \
 	balloon.s \
 	clock.inc \
 	clock.s \
 	plane.inc \
-	plane.s
+	plane.s \
+	socket.inc \
+	socket.s \
+	switch.inc \
+	switch.s
 
 glider.bin: $(glider_CL65SOURCES) $(glider_SOURCES)
 	cl65 -g -Wl --dbgfile,glider.dbg -Ln glider.lbl $(CFLAGS) $(iigs_CFLAGS) $(glider_CLCFLAGS) -o $@ $^  $(CC65_TARGET)-iobuf-0800.o
