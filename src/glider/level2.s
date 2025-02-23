@@ -102,6 +102,8 @@ level2_logic:
         sta     level2_socket0_data+SPRITE_DATA::ACTIVE
         jmp     level_logic_done
 
-:       lda     #SOCKET_SPRITE_NUM
+:       lda     level2_socket0_data+SPRITE_DATA::ACTIVE
+        beq     :+
+        lda     #SOCKET_SPRITE_NUM
         jsr     _deactivate_sprite
-        jmp     level_logic_done
+:       jmp     level_logic_done
