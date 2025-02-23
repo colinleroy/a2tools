@@ -8,7 +8,7 @@
         .import   level_logic_done
 
         .import   _deactivate_sprite
-        .import   plane_data
+        .import   plane_data, rubber_band_data
         .include  "balloon.inc"
         .include  "clock.inc"
         .include  "plane.inc"
@@ -48,8 +48,9 @@ level0_balloon0_data:
 
 .rodata
 
-level0_sprites:   .byte   3
+level0_sprites:   .byte   4
 level0_sprites_data:
+                  .addr   rubber_band_data    ; Must be first for easy deactivation
 BALLOON_SPRITE_NUM = (*-level0_sprites_data)/2
                   .addr   level0_balloon0_data
                   .addr   level0_clock0_data

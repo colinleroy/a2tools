@@ -2,8 +2,9 @@
                   .export num_levels, cur_level
                   .export levels_logic, cur_level_logic
 
-                  .export sprite_data, plane_data
+                  .export sprite_data, plane_data, rubber_band_data
                   .import _plane, _plane_mask
+                  .import _rubber_band, _rubber_band_mask
 
                   .import  level0_sprites, level0_blockers
                   .import  level0_vents, level0_logic
@@ -14,6 +15,7 @@
 
                   .include "clock.inc"
                   .include "plane.inc"
+                  .include "rubber_band.inc"
 
 .data
 
@@ -31,6 +33,21 @@ plane_data:
                   .byte plane_WIDTH/7 ; width of sprite in bytes
                   .addr _plane        ; plane sprites
                   .addr _plane_mask   ; plane masks
+
+; There is always a single rubber band
+rubber_band_data:
+                  .byte 0                   ; active
+                  .byte 1                   ; deadly
+                  .byte rubber_band_MIN_X   ; x
+                  .byte rubber_band_WIDTH
+                  .byte rubber_band_MIN_Y   ; y
+                  .byte rubber_band_HEIGHT
+                  .byte rubber_band_MAX_X   ; prev_x
+                  .byte rubber_band_MAX_Y   ; prev_y
+                  .byte rubber_band_BYTES-1 ; bytes of sprite - 1
+                  .byte rubber_band_WIDTH/7 ; width of sprite in bytes
+                  .addr _rubber_band        ; band sprites
+                  .addr _rubber_band_mask   ; band masks
 
 cur_level:        .byte   0
 cur_level_logic:  .addr   $FFFF

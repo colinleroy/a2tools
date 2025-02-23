@@ -20,7 +20,10 @@
         .import   level_backup
         .import   levels_logic, cur_level_logic
 
-        .import   reset_mouse
+        .import   _fire_rubber_band
+        .import   _rubber_band_travel
+
+        .import   reset_mouse, mouse_b
         .import   sprite_data, plane_data
         .import   mouse_irq_ready
 
@@ -105,6 +108,12 @@ level_logic:
 
 ; The jump target back from level logic handler
 level_logic_done:
+        ; Check if we should fire a rubber band
+        lda     mouse_b
+        beq     :+
+        jsr     _fire_rubber_band
+
+:       jsr     _rubber_band_travel
         ldx     num_sprites
         dex
         txa
