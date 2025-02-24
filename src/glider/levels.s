@@ -14,9 +14,9 @@
                   .import  level2_sprites, level2_blockers
                   .import  level2_vents, level2_logic
 
-                  .include "clock.inc"
-                  .include "plane.inc"
-                  .include "rubber_band.inc"
+                  .include "clock.gen.inc"
+                  .include "plane.gen.inc"
+                  .include "rubber_band.gen.inc"
 
 .data
 

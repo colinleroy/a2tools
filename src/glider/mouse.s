@@ -14,7 +14,7 @@
 
         .include    "mouse-kernel.inc"
         .include    "apple2.inc"
-        .include    "plane.inc"
+        .include    "plane.gen.inc"
         .include    "sprite.inc"
         .include    "plane_coords.inc"
 

@@ -23,15 +23,18 @@
 
         .import   _fire_rubber_band
         .import   _rubber_band_travel
+        .import   num_rubber_bands
 
         .import   reset_mouse, mouse_b
         .import   sprite_data, plane_data, rubber_band_data
         .import   mouse_irq_ready
 
+        .import   _print_rubber_bands, _print_char
+
         .importzp _zp6, ptr2, ptr4
 
         .include  "apple2.inc"
-        .include  "plane.inc"
+        .include  "plane.gen.inc"
         .include  "sprite.inc"
         .include  "level_data_ptr.inc"
         .include  "plane_coords.inc"
@@ -70,6 +73,10 @@ loop:
 ;
 ; Main game loop!
 ;
+        ldx     #0
+        lda     num_rubber_bands
+        jsr     _print_rubber_bands
+
         inc     frame_counter
         ; Check coordinates and update them depending on vents
         jsr     _check_vents

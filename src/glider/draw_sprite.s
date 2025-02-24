@@ -1,6 +1,10 @@
         .export _draw_sprite, _clear_and_draw_sprite
         .export _load_sprite_pointer, _setup_sprite_pointer
 
+        .export sprite_mask, sprite_pointer
+        .export n_bytes_per_line_draw, sprite_x
+        .export sprite_y, n_bytes_draw
+
         .importzp _zp6, _zp8, _zp9, _zp10, _zp11, _zp12
         .importzp tmp4, ptr1, ptr2, ptr3, ptr4
         .import   _hgr_hi, _hgr_low
@@ -9,16 +13,17 @@
         .import   sprite_data
 
         .include "apple2.inc"
-        .include "plane.inc"
+        .include "plane.gen.inc"
+        .include "rubber_band_reverted.gen.inc"
         .include "sprite.inc"
         .include "level_data_ptr.inc"
 
-line       = _zp8
-bg_line    = ptr1
-cur_y      = _zp10
-n_bytes    = _zp11
+line            = _zp8
+bg_line         = ptr1
+cur_y           = _zp10
+n_bytes_draw    = _zp11
 
-sprite_y      = tmp4
+sprite_y        = tmp4
 
 _load_sprite_pointer:
         asl
@@ -67,12 +72,12 @@ _setup_sprite_pointer:
 
         ldy     #SPRITE_DATA::BYTES
         lda     (cur_sprite_ptr),y
-        sta     n_bytes
+        sta     n_bytes_draw
 
         ldy     #SPRITE_DATA::BYTES_WIDTH
         lda     (cur_sprite_ptr),y
-        sta     n_bytes_per_line_1+1
-        sta     n_bytes_per_line_2+1
+        sta     n_bytes_per_line_clear+1
+        sta     n_bytes_per_line_draw+1
 
         ldy     #SPRITE_DATA::SPRITE
         lda     (cur_sprite_ptr),y
@@ -106,7 +111,7 @@ sprite_num:
 
 ; X, Y : coordinates
 _clear_and_draw_sprite:
-        ldx     n_bytes
+        ldx     n_bytes_draw
         clc
 clear_next_line:
 sprite_prev_x:
@@ -121,7 +126,7 @@ sprite_prev_x:
         adc     #$20
         sta     bg_line+1
 
-n_bytes_per_line_1:
+n_bytes_per_line_clear:
         ldy     #$FF
 
 :       lda     (bg_line),y
@@ -143,7 +148,7 @@ _draw_sprite:
         ldy     sprite_y
         sty     cur_y
 
-        ldx     n_bytes
+        ldx     n_bytes_draw
         clc
 next_line:
 sprite_x:
@@ -155,7 +160,7 @@ sprite_x:
         adc     #0
         sta     line+1
 
-n_bytes_per_line_2:
+n_bytes_per_line_draw:
         ldy     #$FF
 
         ; Get what's under the sprite
