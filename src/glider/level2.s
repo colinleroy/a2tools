@@ -7,6 +7,7 @@
 
         .import   level_logic_done
         .import   _deactivate_sprite
+        .import   _inc_score
 
         .import   frame_counter
         .import   plane_data, rubber_band_data
@@ -35,7 +36,8 @@ level2_clock0_data:
                   .byte clock_WIDTH/7  ; width of sprite in bytes
                   .addr _clock         ; sprites
                   .addr _clock_mask    ; masks
-                  .addr $0000
+                  .byte 5
+                  .addr _inc_score
 
 level2_socket0_data:
                   .byte 1              ; active
@@ -51,6 +53,7 @@ level2_socket0_data:
                   .byte socket_WIDTH/7 ; width of sprite in bytes
                   .addr _socket        ; sprites
                   .addr _socket_mask   ; masks
+                  .byte 0
                   .addr $0000
 
 level2_switch0_data:
@@ -67,6 +70,7 @@ level2_switch0_data:
                   .byte switch_WIDTH/7 ; width of sprite in bytes
                   .addr _switch        ; sprites
                   .addr _switch_mask   ; masks
+                  .byte 0
                   .addr $0000
 
 .rodata

@@ -1,5 +1,5 @@
         .export   do_bin2dec_16bit, do_bin2dec_8bit
-        .export   bcd_result, bcd_result_thousand
+        .export   bcd_input, bcd_result, bcd_result_thousand
 
 ; Supports binary to decimal conversion up to 8 digits.
 ; See readme.txt for documentation.
@@ -42,16 +42,17 @@ b0table: ; low bytes of one less than 400 ... 10,000,000
         .byte $8F,$BB,$E7,$CF,$B7,$6F,$0F,$1F,$3F,$6F,$9F,$3F,$DF,$BF,$3F,$7F,$FF,$BF,$7F
 
 do_bin2dec_16bit:
-        sta     binary
-        stx     binary+1
+        sta     bcd_input
+        ; We let caller set bcd_input+1
+        ;stx     bcd_input+1
         lda     #0
         jsr     bin2dec_init
         jmp     bin2dec_16bit
 
 do_bin2dec_8bit:
-        sta     binary
+        sta     bcd_input
         lda     #0
-        sta     binary+1
+        sta     bcd_input+1
         jsr     bin2dec_init
         jmp     bin2dec_8bit
 
@@ -74,17 +75,17 @@ bin2dec_16bit:
         bcc    bin2dec_16bit_custom
 
 good24:
-        sta     binary+2
-        stx     binary+1
+        sta     bcd_input+2
+        stx     bcd_input+1
 
         ldx     bdgood+8,Y
         lda     bcd_result,X
         adc     vtable,Y
         sta     bcd_result,X
 
-        lda     binary+0
+        lda     bcd_input+0
         sbc     b0table+8,Y
-        sta     binary+0
+        sta     bcd_input+0
         clc
         dey
         bmi     end24
@@ -92,12 +93,12 @@ good24:
 
 bin2dec_24bit_custom:           ; 8 digits: Y=10, 7: Y=9, 6: Y=5, 5: Y=1
 loop24:
-        lda     binary+0
+        lda     bcd_input+0
         sbc     b0table+8,Y
-        lda     binary+1
+        lda     bcd_input+1
         sbc     b1table+8,Y
         tax
-        lda     binary+2
+        lda     bcd_input+2
         beq     bin2dec_16bit       ; optimization only - can be removed
         sbc     b2table,Y
         bcs     good24
@@ -108,8 +109,8 @@ end24:
         bne     loop16              ; always branches
 
 good16:
-        stx     binary+0
-        sta     binary+1
+        stx     bcd_input+0
+        sta     bcd_input+1
         ldx     bdgood,Y
         lda     bcd_result,X
         adc     vtable,Y
@@ -120,22 +121,22 @@ good16:
 
 bin2dec_16bit_custom:           ; 5 digits: Y=8, 4: Y=5, 3: Y=1
 loop16:
-        lda     binary+0
+        lda     bcd_input+0
         sbc     b0table,Y
         tax
-        lda     binary+1
+        lda     bcd_input+1
         beq     bin2dec_8bit        ; optimization only - can be removed
         sbc     b1table,Y
         bcs     good16
         dey
         bpl     loop16
-end16:  lda     binary+0
+end16:  lda     bcd_input+0
         sbc     #199                ; +1 for clear carry
-        ldx     binary+1
+        ldx     bcd_input+1
         bne     gt200               ; high byte non-zero, so must be >= 200
 
 bin2dec_8bit:                   ; 3 digits
-        lda     binary+0
+        lda     bcd_input+0
 bin2dec_8bit_3dig:              ; A to 3 digits
 cp200:
         cmp     #200
@@ -182,6 +183,6 @@ lt10:
         rts
 
   .bss
-binary:     .res 2
+bcd_input:  .res 2
 bcd_result: .res 8
 bcd_result_thousand = bcd_result+5

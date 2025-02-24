@@ -7,6 +7,7 @@
 
         .import   frame_counter
         .import   level_logic_done
+        .import   _inc_score
 
         .import   _grab_rubber_bands
         .import   _fire_balloon, _balloon_travel
@@ -35,7 +36,8 @@ level0_clock0_data:
                   .byte clock_WIDTH/7   ; width of sprite in bytes
                   .addr _clock          ; clock sprites
                   .addr _clock_mask     ; clock masks
-                  .addr $0000
+                  .byte 5
+                  .addr _inc_score
 
 level0_balloon0_data:
                   .byte 0               ; active
@@ -51,6 +53,7 @@ level0_balloon0_data:
                   .byte balloon_WIDTH/7 ; width of sprite in bytes
                   .addr _balloon        ; clock sprites
                   .addr _balloon_mask   ; clock masks
+                  .byte 0
                   .addr $0000
 
 level0_rubber_box0_data:
@@ -67,6 +70,7 @@ level0_rubber_box0_data:
                   .byte rubber_box_WIDTH/7 ; width of sprite in bytes
                   .addr _rubber_box        ; clock sprites
                   .addr _rubber_box_mask   ; clock masks
+                  .byte 3
                   .addr _grab_rubber_bands ; deactivation callback
 
 .rodata

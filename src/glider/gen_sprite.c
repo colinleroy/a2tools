@@ -194,8 +194,6 @@ int main(int argc, char *argv[]) {
           sprite_name,
           sprite_name,
           sprite_name,
-          sprite_name,
-          sprite_name,
           sprite_name);
 
   fclose(fp);
