@@ -244,15 +244,15 @@ done:   rts
         tax                     ; Save status
         ; 
         ; Bit 7 6 5 4 3 2 1 0
-          ; | | | | | | | |
-          ; | | | | | | | \--- Previously, button 1 was up (0) or down (1)
-          ; | | | | | | \----- Movement interrupt
-          ; | | | | | \------- Button 0/1 interrupt
-          ; | | | | \--------- VBL interrupt
-          ; | | | \----------- Currently, button 1 is up (0) or down (1)
-          ; | | \------------- X/Y moved since last READMOUSE
-          ; | \--------------- Previously, button 0 was up (0) or down (1)
-          ; \----------------- Currently, button 0 is up (0) or down (1)
+              ; | | | | | | | |
+              ; | | | | | | | \--- Previously, button 1 was up (0) or down (1)
+              ; | | | | | | \----- Movement interrupt
+              ; | | | | | \------- Button 0/1 interrupt
+              ; | | | | \--------- VBL interrupt
+              ; | | | \----------- Currently, button 1 is up (0) or down (1)
+              ; | | \------------- X/Y moved since last READMOUSE
+              ; | \--------------- Previously, button 0 was up (0) or down (1)
+              ; \----------------- Currently, button 0 is up (0) or down (1)
 
         ; Extract button down values
         asl                     ;  C = Button 0 is currently down
