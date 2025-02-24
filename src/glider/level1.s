@@ -36,9 +36,11 @@ level1_clock0_data:
 
 level1_sprites:   .byte   3
 level1_sprites_data:
-                  .addr   rubber_band_data    ; Must be first for easy deactivation
-                  .addr   level1_clock0_data
-                  .addr   plane_data
+                   ; Rubber band must be first for easy deactivation
+                   ;                                ; drawn on    EVEN ODD
+                  .addr   rubber_band_data          ; small            x
+                  .addr   level1_clock0_data        ; medium      x
+                  .addr   plane_data                ; big         x    x
 
 level1_vents:     .byte   2
 level1_vents_data:

@@ -75,14 +75,23 @@ level0_rubber_box0_data:
 
 .rodata
 
+; Sprite ordering counts.
+; Plane must be last, rubber band must be first.
+; In between, order for:
+; - the biggest draw on EVEN frames as dashboard is updated on odd frames
+; - the sprites higher in the screen (Y low) have less time to draw, racing
+;   the beam: put them to be drawn first (at the end of the array, which is
+;   walked backwards)
 level0_sprites:   .byte   5
 level0_sprites_data:
-                  .addr   rubber_band_data    ; Must be first for easy deactivation
+                   ; Rubber band must be first for easy deactivation
+                   ;                                ; drawn on    EVEN ODD
+                  .addr   rubber_band_data          ; small             x
+                  .addr   level0_clock0_data        ; medium      x
+                  .addr   level0_rubber_box0_data   ; medium            x
 BALLOON_SPRITE_NUM = (*-level0_sprites_data)/2
-                  .addr   level0_balloon0_data
-                  .addr   level0_clock0_data
-                  .addr   level0_rubber_box0_data
-                  .addr   plane_data
+                  .addr   level0_balloon0_data      ; big         x
+                  .addr   plane_data                ; big         x     x
 
 level0_vents:     .byte   2
 level0_vents_data:

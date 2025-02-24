@@ -65,64 +65,17 @@ _main:
 
 :       jsr     load_level
 
-loop:
+game_loop:
         ; the WAI of the poor
         ; because I don't understand how WAI works
         ; and I want to keep things 6502-ok
         lda     mouse_irq_ready
-        beq     loop
+        beq     game_loop
         lda     #0
         sta     mouse_irq_ready
 ;
 ; Main game loop!
 ;
-        jsr     _print_dashboard
-
-        inc     frame_counter
-        ; Check coordinates and update them depending on vents
-        jsr     _check_vents
-        clc
-        adc     plane_y
-        cmp     #plane_MAX_Y
-        bcc     :+
-
-        ; We're on the floor
-        lda     #plane_MAX_Y
-
-:       sta     plane_y
-
-        ; Check obstacles
-        jsr     _check_blockers
-        bcc     move_checks_done
-
-        ; We got in an obstacle
-die:
-        lda     $C030
-        dec     num_lives
-        bne     :+
-game_over:
-        jsr     reset_game
-
-:       jsr     reset_level
-
-move_checks_done:
-        lda     plane_x
-        cmp     #(280-plane_WIDTH)
-        bne     level_logic
-        ; We finished the level!
-        jsr     next_level
-
-level_logic:
-        jmp     (cur_level_logic)
-
-; The jump target back from level logic handler
-level_logic_done:
-        ; Check if we should fire a rubber band
-        lda     mouse_b
-        beq     :+
-        jsr     _fire_rubber_band
-
-:       jsr     _rubber_band_travel
         ldx     num_sprites
         dex
         txa
@@ -131,16 +84,16 @@ level_logic_done:
         jsr     _setup_sprite_pointer
         jsr     _clear_and_draw_sprite
 
-        lda     frame_counter
+        lda     frame_counter     ; Draw only half sprites
         and     #01
-        beq     :+                ; Draw only half sprites
+        beq     :+
         dec     cur_sprite
 :
 
 draw_next_sprite:
         dec     cur_sprite
         lda     cur_sprite
-        bmi     loop              ; All done!
+        bmi     game_logic              ; All done!
 
         jsr     _setup_sprite_pointer
 
@@ -194,7 +147,62 @@ dec_sprite:
         dec     cur_sprite        ; Skip a sprite
         bpl     draw_next_sprite
 
-        jmp     loop
+game_logic:
+        lda     frame_counter     ; Draw dashboard on odd frames
+        and     #01
+        beq     :+
+        jsr     _print_dashboard
+:
+        inc     frame_counter
+        ; Check coordinates and update them depending on vents
+        jsr     _check_vents
+        clc
+        adc     plane_y
+        cmp     #plane_MAX_Y
+        bcc     :+
+
+        ; We're on the floor
+        lda     #plane_MAX_Y
+
+:       sta     plane_y
+
+        ; Check obstacles
+        jsr     _check_blockers
+        bcc     move_checks_done
+
+        ; We got in an obstacle
+die:
+        lda     $C030
+        dec     num_lives
+        bne     :+
+game_over:
+        jsr     restore_level_data
+        jsr     reset_game
+
+:       jsr     reset_level
+
+move_checks_done:
+        lda     plane_x
+        cmp     #(280-plane_WIDTH)
+        bne     level_logic
+        ; We finished the level!
+        jsr     next_level
+
+level_logic:
+        jmp     (cur_level_logic)
+
+; The jump target back from level logic handler
+level_logic_done:
+        ; Check if we should fire a rubber band
+        lda     mouse_b
+        beq     :+
+        lda     #0
+        sta     mouse_b
+        jsr     _fire_rubber_band
+
+:       jsr     _rubber_band_travel
+
+        jmp     game_loop
 
 ; Copy the hgr_baseaddr array of addresses
 ; to two arrays of low bytes/high bytes for simplicity

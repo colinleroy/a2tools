@@ -77,12 +77,14 @@ level2_switch0_data:
 
 level2_sprites:   .byte   5
 level2_sprites_data:
-                  .addr   rubber_band_data    ; Must be first for easy deactivation
-                  .addr   level2_clock0_data
-                  .addr   level2_switch0_data
+                   ; Rubber band must be first for easy deactivation
+                   ;                                ; drawn on    EVEN ODD
+                  .addr   rubber_band_data          ; small            x
+                  .addr   level2_clock0_data        ; medium      x
+                  .addr   level2_switch0_data       ; medium           x
 SOCKET_SPRITE_NUM = (*-level2_sprites_data)/2
-                  .addr   level2_socket0_data
-                  .addr   plane_data
+                  .addr   level2_socket0_data       ; medium      x
+                  .addr   plane_data                ; big         x    x
 
 level2_vents:     .byte   2
 level2_vents_data:
