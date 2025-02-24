@@ -12,5 +12,6 @@
   BYTES_WIDTH     .byte
   SPRITE          .addr
   SPRITE_MASK     .addr
+  DEACTIVATE_DATA .byte
   DEACTIVATE_FUNC .addr
 .endstruct

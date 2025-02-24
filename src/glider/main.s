@@ -17,13 +17,14 @@
         .import   _check_rubber_band_bounds
         .import   _load_bg, _restore_bg
         .import   _deactivate_current_sprite
+        .import   _inc_score
 
         .import   level_backup
         .import   levels_logic, cur_level_logic
 
         .import   _fire_rubber_band
         .import   _rubber_band_travel
-        .import   num_lives, num_rubber_bands
+        .import   num_lives, num_rubber_bands, cur_score
 
         .import   reset_mouse, mouse_b
         .import   sprite_data, plane_data, rubber_band_data
@@ -38,6 +39,8 @@
         .include  "sprite.inc"
         .include  "level_data_ptr.inc"
         .include  "plane_coords.inc"
+
+DESTROY_SCORE = 15
 
 _main:
 
@@ -155,23 +158,28 @@ draw_next_sprite:
         ; We have an in-flight rubber band and that sprite is destroyable
         ldy     #SPRITE_DATA::X_COORD
         jsr     _check_rubber_band_bounds
-        bcs     destroy_sprite
+        bcs     destroy_sprite_with_bonus
 
 :       ; Let's check the sprite's box
         .assert data_ptr = cur_sprite_ptr, error
         ldy     #SPRITE_DATA::X_COORD
         jsr     _check_mouse_bounds
-        bcc     :+
+        bcc     update_sprite
 
         ; We're in the sprite box, is it active?
         ldy     #SPRITE_DATA::ACTIVE
         lda     (cur_sprite_ptr),y
-        beq     :+                ; No, we're good
+        beq     update_sprite     ; No, we're good
 
         ; Is it deadly?
         ldy     #SPRITE_DATA::DEADLY
         lda     (cur_sprite_ptr),y
         bne     die               ; Yes, die
+        beq     destroy_sprite    ; No, grab it (but don't get score for it)
+
+destroy_sprite_with_bonus:
+        lda     #DESTROY_SCORE
+        jsr     _inc_score
 
         ; Deactivate it
 destroy_sprite:
@@ -179,7 +187,8 @@ destroy_sprite:
         jsr     _deactivate_current_sprite
         jmp     dec_sprite
 
-:       jsr     _clear_and_draw_sprite
+update_sprite:
+        jsr     _clear_and_draw_sprite
 
 dec_sprite:
         dec     cur_sprite        ; Skip a sprite
@@ -349,6 +358,8 @@ reset_game:
         lda     #0
         sta     cur_level
         sta     num_rubber_bands
+        sta     cur_score
+        sta     cur_score+1
         jmp     load_level
 
 next_level:

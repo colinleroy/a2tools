@@ -3,13 +3,13 @@
         .export     _deactivate_sprite, _deactivate_current_sprite
         .export     _fire_rubber_band, _fire_balloon
         .export     _rubber_band_travel, _balloon_travel
-        .export     _grab_rubber_bands
+        .export     _grab_rubber_bands, _inc_score
 
         .import     vents_data, blockers_data, plane_data
         .import     rubber_band_data
         .import     cur_level, frame_counter
         .import     _load_sprite_pointer, _setup_sprite_pointer, _clear_and_draw_sprite
-        .import     num_rubber_bands
+        .import     num_rubber_bands, cur_score
 
         .importzp   _zp6, tmp1, tmp2, tmp3, ptr4
 
@@ -156,6 +156,8 @@ _deactivate_current_sprite:
         dey
         lda     (cur_sprite_ptr),y
         sta     deac_cb+1
+        ldy     #SPRITE_DATA::DEACTIVATE_DATA
+        lda     (cur_sprite_ptr),y
 deac_cb:
         jsr     $FFFF
 
@@ -250,11 +252,18 @@ _balloon_travel:
 :       rts
 
 _grab_rubber_bands:
-        lda     num_rubber_bands
         clc
-        adc     #3
+        adc     num_rubber_bands
         cmp     num_rubber_bands
         bcc     :+
 
         sta     num_rubber_bands
+:       rts
+
+_inc_score:
+        clc
+        adc     cur_score
+        sta     cur_score
+        bcc     :+
+        inc     cur_score+1
 :       rts

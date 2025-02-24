@@ -1,11 +1,12 @@
         .export   _print_dashboard
 
-        .import   num_lives, num_rubber_bands
+        .import   num_lives, num_rubber_bands, cur_score
         .import   _print_char
         .import   _quick_draw_mini_plane
+        .import   _quick_draw_mini_score
         .import   _quick_draw_rubber_band_reverted
 
-        .import   do_bin2dec_8bit, bcd_result_thousand
+        .import   do_bin2dec_16bit, bcd_input, bcd_result_thousand
 
         .importzp tmp1, tmp2
         .include  "apple2.inc"
@@ -13,17 +14,21 @@
         .include  "mini_plane.gen.inc"
         .include  "rubber_band_reverted.gen.inc"
 
+SCORE_ICON_X       = 37
+SCORE_ICON_Y       = 1
+
 MINI_PLANE_ICON_X  = 37
-MINI_PLANE_ICON_Y  = 1
+MINI_PLANE_ICON_Y  = 21
 
 RUBBER_BAND_ICON_X = 37
-RUBBER_BAND_ICON_Y = 20
+RUBBER_BAND_ICON_Y = 41
 
 
 _print_number:
+        sta     bcd_input
         stx     dest_x+1
         sty     dest_y+1
-        jsr     do_bin2dec_8bit
+        jsr     do_bin2dec_16bit
 
         ldx     #2
         stx     cur_char+1
@@ -43,8 +48,11 @@ cur_char:
         rts
 
 _print_dashboard:
+        ; Lives
         ldx     #MINI_PLANE_ICON_X+2
         ldy     #MINI_PLANE_ICON_Y+mini_plane_HEIGHT+font_HEIGHT+1
+        lda     #0
+        sta     bcd_input+1
         lda     num_lives
         jsr     _print_number
 
@@ -52,8 +60,23 @@ _print_dashboard:
         ldy     #MINI_PLANE_ICON_Y
         jsr     _quick_draw_mini_plane
 
+        ; Score
+        ldx     #SCORE_ICON_X+2
+        ldy     #SCORE_ICON_Y+rubber_band_reverted_HEIGHT+font_HEIGHT+1
+        lda     cur_score+1
+        sta     bcd_input+1
+        lda     cur_score
+        jsr     _print_number
+
+        ldx     #SCORE_ICON_X
+        ldy     #SCORE_ICON_Y
+        jsr     _quick_draw_mini_score
+
+        ; Rubber bands
         ldx     #RUBBER_BAND_ICON_X+2
         ldy     #RUBBER_BAND_ICON_Y+rubber_band_reverted_HEIGHT+font_HEIGHT+1
+        lda     #0
+        sta     bcd_input+1
         lda     num_rubber_bands
         jsr     _print_number
 
