@@ -233,24 +233,40 @@ mouse_irq:
         clc                     ; Interrupt not handled
 done:   rts
 
-:       ldx     #READMOUSE
+:       php
+        sei
+        ldx     #READMOUSE
         jsr     firmware
 
         ; Get status
         ldy     slot
         lda     status,y
         tax                     ; Save status
+        ; 
+        ; Bit 7 6 5 4 3 2 1 0
+          ; | | | | | | | |
+          ; | | | | | | | \--- Previously, button 1 was up (0) or down (1)
+          ; | | | | | | \----- Movement interrupt
+          ; | | | | | \------- Button 0/1 interrupt
+          ; | | | | \--------- VBL interrupt
+          ; | | | \----------- Currently, button 1 is up (0) or down (1)
+          ; | | \------------- X/Y moved since last READMOUSE
+          ; | \--------------- Previously, button 0 was up (0) or down (1)
+          ; \----------------- Currently, button 0 is up (0) or down (1)
 
         ; Extract button down values
         asl                     ;  C = Button 0 is currently down
         and     #%00100000      ; !Z = Button 1 is currently down
 
         ; Set button mask
+        ; Update mouse_b only on click and let the logic set it
+        ; back to zero
         beq     :+
         lda     #MOUSE_BTN_RIGHT
 :       bcc     :+
         ora     #MOUSE_BTN_LEFT
-:       sta     mouse_b
+        sta     mouse_b
+:
 
         ; Get and set the new X position
         ; Don't bother with high byte, it's zero
@@ -260,6 +276,7 @@ done:   rts
 
         ; Signal the main loop
         inc     mouse_irq_ready
+        plp                     ; Reenable interrupts
         sec                     ; Interrupt handled
         rts
 
