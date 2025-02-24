@@ -48,6 +48,11 @@ sprites = \
 	socket.gen.s \
 	switch.gen.s \
 
+sounds = \
+	bubble.snd.s \
+	croutch.snd.s \
+	paper_tear.snd.s \
+
 glider_SOURCES := \
 	main.s \
 	mouse.s \
@@ -68,6 +73,8 @@ glider_SOURCES := \
 	../lib/asm/bcd.s \
 	font.gen.s \
 	plane.gen.s \
+	play_sound.gen.s \
+	$(sounds) \
 	$(sprites)
 
 all: \
@@ -78,10 +85,16 @@ glider_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl -C ../../config/apple2enh-rton
 	-vm -m glider.map --start-addr 0x6000
 
 gen_sprite: gen_sprite.c
-	gcc $(shell pkg-config --cflags SDL_image) gen_sprite.c $(shell pkg-config --libs SDL_image) -o $@
+	gcc $(shell pkg-config --cflags SDL_image) $^ $(shell pkg-config --libs SDL_image) -o $@
 
 gen_font: gen_font.c
-	gcc $(shell pkg-config --cflags SDL_image) gen_font.c $(shell pkg-config --libs SDL_image) -o $@
+	gcc $(shell pkg-config --cflags SDL_image) $^ $(shell pkg-config --libs SDL_image) -o $@
+
+gen_sound_generator: gen_sound_generator.c sound.h
+	gcc $< -o $@
+
+gen_sound_clip: gen_sound_clip.c sound.h
+	gcc $< -o $@
 
 $(levels_backgrounds): %.hgr: assets/levels/%.png
 
@@ -97,13 +110,26 @@ plane.gen.s: assets/sprites/plane.png gen_sprite
 font.gen.s: assets/fonts/font.png gen_font
 	./gen_font $< 280
 
+play_sound.gen.s: gen_sound_generator
+	./gen_sound_generator > $@
+
+$(sounds): %.snd.s: assets/sounds/%.wav
+%.snd.s: assets/sounds/%.wav gen_sound_clip
+	rm -f $<.raw
+	sox $< -b 8 -e unsigned-integer -t raw $<.raw channels 1 rate -v 8000
+	./gen_sound_clip $<.raw > $@
+	rm $<.raw
+
 clean:
 	rm -f *.bin *.o \
 	$(levels_backgrounds) \
 	gen_sprite \
 	gen_font \
+	gen_sound_clip \
+	gen_sound_generator \
 	*.gen.s \
 	*.gen.inc \
+	*.snd.s \
 	assets/*/*.hgr-preview.* \
 	*.dbg *.lbl *.map \
 
