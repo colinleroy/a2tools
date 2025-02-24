@@ -6,8 +6,8 @@
         .import   level_logic_done
 
         .import   plane_data, rubber_band_data
-        .include  "clock.inc"
-        .include  "plane.inc"
+        .include  "clock.gen.inc"
+        .include  "plane.gen.inc"
         .include  "sprite.inc"
 
 .data

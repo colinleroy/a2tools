@@ -13,9 +13,9 @@
 
         .importzp   _zp6, tmp1, tmp2, tmp3, ptr4
 
-        .include    "balloon.inc"
-        .include    "plane.inc"
-        .include    "rubber_band.inc"
+        .include    "balloon.gen.inc"
+        .include    "plane.gen.inc"
+        .include    "rubber_band.gen.inc"
         .include    "sprite.inc"
         .include    "plane_coords.inc"
         .include    "level_data_ptr.inc"

@@ -35,6 +35,7 @@ GCCCFLAGS = -g -O0 -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\" \
 glider_SOURCES := \
 	main.s \
 	mouse.s \
+	draw_text.s \
 	draw_sprite.s \
 	logic.s \
 	levels.s \
@@ -43,17 +44,21 @@ glider_SOURCES := \
 	level2.s \
 	buffers.s \
 	load_bg.s \
+	dashboard.s \
 	../lib/fastirq.s \
 	../lib/extrazp.s \
 	../lib/asm/hgr.s \
 	../lib/hgr_addrs.c \
-	balloon.s \
-	clock.s \
-	plane.s \
-	rubber_band.s \
-	rubber_box.s \
-	socket.s \
-	switch.s \
+	../lib/asm/bcd.s \
+	font.gen.s \
+	balloon.gen.s \
+	clock.gen.s \
+	plane.gen.s \
+	rubber_band.gen.s \
+	rubber_band_reverted.gen.s \
+	rubber_box.gen.s \
+	socket.gen.s \
+	switch.gen.s \
 
 
 glider_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl -C ../../config/apple2enh-rtonce.cfg \
@@ -76,41 +81,39 @@ levelc.hgr: levelc.png
 gen_sprite: gen_sprite.c
 	gcc $(shell pkg-config --cflags SDL_image) gen_sprite.c $(shell pkg-config --libs SDL_image) -o $@
 
-balloon.s: gen_sprite
+gen_font: gen_font.c
+	gcc $(shell pkg-config --cflags SDL_image) gen_font.c $(shell pkg-config --libs SDL_image) -o $@
+
+balloon.gen.s: gen_sprite
 	./gen_sprite balloon.png 255
-clock.s: gen_sprite
+clock.gen.s: gen_sprite
 	./gen_sprite clock.png 255
-rubber_band.s: gen_sprite
+rubber_band.gen.s: gen_sprite
 	./gen_sprite rubber_band.png 255
-rubber_box.s: gen_sprite
+rubber_band_reverted.gen.s: gen_sprite
+	./gen_sprite rubber_band_reverted.png 255
+rubber_box.gen.s: gen_sprite
 	./gen_sprite rubber_box.png 255
-socket.s: gen_sprite
+socket.gen.s: gen_sprite
 	./gen_sprite socket.png 255
-switch.s: gen_sprite
+switch.gen.s: gen_sprite
 	./gen_sprite switch.png 255
-plane.s: gen_sprite
+plane.gen.s: gen_sprite
 	./gen_sprite plane.png 280
+font.gen.s: gen_font
+	./gen_font font.png 280
 
 clean:
-	rm -f *.bin *.o *.map \
+	rm -f *.bin *.o \
 	levela.hgr \
 	levelb.hgr \
 	levelc.hgr \
 	gen_sprite \
-	balloon.inc \
-	balloon.s \
-	clock.inc \
-	clock.s \
-	plane.inc \
-	plane.s \
-	rubber_band.inc \
-	rubber_band.s \
-	rubber_box.inc \
-	rubber_box.s \
-	socket.inc \
-	socket.s \
-	switch.inc \
-	switch.s
+	gen_font \
+	*.gen.s \
+	*.gen.inc \
+	*.dbg *.lbl *.map \
+	*.hgr-preview.*
 
 glider.bin: $(glider_CL65SOURCES) $(glider_SOURCES)
 	cl65 -g -Wl --dbgfile,glider.dbg -Ln glider.lbl $(CFLAGS) $(iigs_CFLAGS) $(glider_CLCFLAGS) -o $@ $^  $(CC65_TARGET)-iobuf-0800.o

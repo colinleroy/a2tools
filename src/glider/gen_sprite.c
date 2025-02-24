@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
   memset(sprite_data, 0, sizeof(sprite_data));
   memset(mask_data, 0, sizeof(mask_data));
 
-  snprintf(filename, sizeof(filename) - 1, "%s.inc", sprite_name);
+  snprintf(filename, sizeof(filename) - 1, "%s.gen.inc", sprite_name);
   fp = fopen(filename, "wb");
   if (fp == NULL) {
     printf("Can not open %s\n", filename);
@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
   fprintf(fp, "%s_MAX_Y  = 192-%s_HEIGHT\n", sprite_name, sprite_name);
   fclose(fp);
 
-  snprintf(filename, sizeof(filename) - 1, "%s.s", sprite_name);
+  snprintf(filename, sizeof(filename) - 1, "%s.gen.s", sprite_name);
   fp = fopen(filename, "wb");
   if (fp == NULL) {
     printf("Can not open %s\n", filename);
@@ -101,7 +101,17 @@ int main(int argc, char *argv[]) {
 
   fprintf(fp, "         .export _%s\n", sprite_name);
   fprintf(fp, "         .export _%s_mask\n", sprite_name);
-  fprintf(fp, "         .include \"%s.inc\"\n", sprite_name);
+  for (shift = 0; shift < 7; shift++) {
+  fprintf(fp, "         .export %s_x%d\n", sprite_name, shift);
+  fprintf(fp, "         .export %s_mask_x%d\n", sprite_name, shift);
+  }
+  fprintf(fp, "         .export _quick_draw_%s\n", sprite_name);
+
+  fprintf(fp,
+          "         .import _draw_sprite, sprite_mask, sprite_pointer\n"
+          "         .import n_bytes_per_line_draw, sprite_x\n"
+          "         .importzp n_bytes_draw, sprite_y\n");
+  fprintf(fp, "         .include \"%s.gen.inc\"\n", sprite_name);
   fprintf(fp, "\n");
   fprintf(fp, "         .rodata\n");
 
@@ -158,5 +168,36 @@ int main(int argc, char *argv[]) {
   for (shift = 0; shift < 7; shift++) {
     fprintf(fp, "         .addr %s_mask_x%d\n", sprite_name, shift);
   }
+
+  fprintf(fp, "           .code\n\n");
+  fprintf(fp, 
+          "_quick_draw_%s:\n"
+          "        stx     sprite_x+1\n"
+          "        sty     sprite_y\n"
+          "\n"
+          "        lda     #(%s_BYTES-1)\n"
+          "        sta     n_bytes_draw\n"
+          "\n"
+          "        lda     #(%s_WIDTH/7)\n"
+          "        sta     n_bytes_per_line_draw+1\n"
+          "\n"
+          "        lda     #<%s_x0\n"
+          "        sta     sprite_pointer+1\n"
+          "        lda     #>%s_x0\n"
+          "        sta     sprite_pointer+2\n"
+          "\n"
+          "        lda     #<%s_mask_x0\n"
+          "        sta     sprite_mask+1\n"
+          "        lda     #>%s_mask_x0\n"
+          "        sta     sprite_mask+2\n"
+          "        jmp     _draw_sprite\n",
+          sprite_name,
+          sprite_name,
+          sprite_name,
+          sprite_name,
+          sprite_name,
+          sprite_name,
+          sprite_name);
+
   fclose(fp);
 }

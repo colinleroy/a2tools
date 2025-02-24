@@ -11,10 +11,10 @@
         .import   _grab_rubber_bands
         .import   _fire_balloon, _balloon_travel
         .import   plane_data, rubber_band_data
-        .include  "balloon.inc"
-        .include  "clock.inc"
-        .include  "plane.inc"
-        .include  "rubber_box.inc"
+        .include  "balloon.gen.inc"
+        .include  "clock.gen.inc"
+        .include  "plane.gen.inc"
+        .include  "rubber_box.gen.inc"
         .include  "sprite.inc"
 
 .data

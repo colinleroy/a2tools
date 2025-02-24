@@ -11,10 +11,10 @@
         .import   frame_counter
         .import   plane_data, rubber_band_data
 
-        .include  "clock.inc"
-        .include  "plane.inc"
-        .include  "socket.inc"
-        .include  "switch.inc"
+        .include  "clock.gen.inc"
+        .include  "plane.gen.inc"
+        .include  "socket.gen.inc"
+        .include  "switch.gen.inc"
         .include  "sprite.inc"
 
 .data

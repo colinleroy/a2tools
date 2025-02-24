@@ -1,5 +1,6 @@
-plane.s
-plane.inc
 gen_sprite
+gen_font
+*.gen.s
+*.gen.inc
 *.hgr-preview.png
 *.hgr
