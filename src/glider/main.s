@@ -29,7 +29,7 @@
         .import   sprite_data, plane_data, rubber_band_data
         .import   mouse_irq_ready
 
-        .import   _print_lives, _print_rubber_bands
+        .import   _print_dashboard
 
         .importzp _zp6, ptr2, ptr4
 
@@ -73,10 +73,7 @@ loop:
 ;
 ; Main game loop!
 ;
-        lda     num_lives
-        jsr     _print_lives
-        lda     num_rubber_bands
-        jsr     _print_rubber_bands
+        jsr     _print_dashboard
 
         inc     frame_counter
         ; Check coordinates and update them depending on vents

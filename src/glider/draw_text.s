@@ -12,7 +12,7 @@
 ; X: X coord / 7
 ; Y: bottom Y coord
 _print_char:
-        stx     tmp4
+        stx     char_x_offset+1
         asl
         tax
         lda     _font,x
@@ -24,7 +24,8 @@ _print_char:
         clc
 
 :       lda     _hgr_low,y
-        adc     tmp4
+char_x_offset:
+        adc     #$FF
         sta     scr+1
         lda     _hgr_hi,y
         adc     #0

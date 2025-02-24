@@ -1,7 +1,7 @@
-        .export   _print_lives, _print_rubber_bands
+        .export   _print_dashboard
 
+        .import   num_lives, num_rubber_bands
         .import   _print_char
-
         .import   _quick_draw_mini_plane
         .import   _quick_draw_rubber_band_reverted
 
@@ -19,51 +19,43 @@ MINI_PLANE_ICON_Y  = 1
 RUBBER_BAND_ICON_X = 37
 RUBBER_BAND_ICON_Y = 20
 
-_print_lives:
+
+_print_number:
+        stx     dest_x+1
+        sty     dest_y+1
         jsr     do_bin2dec_8bit
 
         ldx     #2
-        stx     lv_cur_char+1
-        lda     #MINI_PLANE_ICON_X+2
-        sta     lv_dest_x+1
-
-lv_char:
+        stx     cur_char+1
+char:
         lda     bcd_result_thousand,x
 
-        ldy     #MINI_PLANE_ICON_Y+mini_plane_HEIGHT+font_HEIGHT+1
-lv_dest_x:
-        ldx     #MINI_PLANE_ICON_X
-        jsr     _print_char
-        dec     lv_dest_x+1
-        dec     lv_cur_char+1
-lv_cur_char:
+dest_y:
+        ldy     #$FF
+dest_x:
         ldx     #$FF
-        bpl     lv_char
+        jsr     _print_char
+        dec     dest_x+1
+        dec     cur_char+1
+cur_char:
+        ldx     #$FF
+        bpl     char
+        rts
+
+_print_dashboard:
+        ldx     #MINI_PLANE_ICON_X+2
+        ldy     #MINI_PLANE_ICON_Y+mini_plane_HEIGHT+font_HEIGHT+1
+        lda     num_lives
+        jsr     _print_number
 
         ldx     #MINI_PLANE_ICON_X
         ldy     #MINI_PLANE_ICON_Y
-        jmp     _quick_draw_mini_plane
+        jsr     _quick_draw_mini_plane
 
-_print_rubber_bands:
-        jsr     do_bin2dec_8bit
-
-        ldx     #2
-        stx     rb_cur_char+1
-        lda     #RUBBER_BAND_ICON_X+2
-        sta     rb_dest_x+1
-
-rb_char:
-        lda     bcd_result_thousand,x
-
+        ldx     #RUBBER_BAND_ICON_X+2
         ldy     #RUBBER_BAND_ICON_Y+rubber_band_reverted_HEIGHT+font_HEIGHT+1
-rb_dest_x:
-        ldx     #RUBBER_BAND_ICON_X
-        jsr     _print_char
-        dec     rb_dest_x+1
-        dec     rb_cur_char+1
-rb_cur_char:
-        ldx     #$FF
-        bpl     rb_char
+        lda     num_rubber_bands
+        jsr     _print_number
 
         ldx     #RUBBER_BAND_ICON_X
         ldy     #RUBBER_BAND_ICON_Y

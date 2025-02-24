@@ -111,8 +111,8 @@ int main(int argc, char *argv[]) {
   fprintf(fp, "         .export _quick_draw_%s\n", sprite_name);
 
   fprintf(fp,
-          "         .import _draw_sprite, sprite_mask, sprite_pointer\n"
-          "         .import n_bytes_per_line_draw, sprite_x\n"
+          "         .import _draw_sprite_fast, fast_sprite_pointer\n"
+          "         .import fast_n_bytes_per_line_draw, fast_sprite_x\n"
           "         .importzp n_bytes_draw, sprite_y\n");
   fprintf(fp, "         .include \"%s.gen.inc\"\n", sprite_name);
   fprintf(fp, "\n");
@@ -175,25 +175,21 @@ int main(int argc, char *argv[]) {
   fprintf(fp, "           .code\n\n");
   fprintf(fp, 
           "_quick_draw_%s:\n"
-          "        stx     sprite_x+1\n"
+          "        stx     fast_sprite_x+1\n"
           "        sty     sprite_y\n"
           "\n"
           "        lda     #(%s_BYTES-1)\n"
           "        sta     n_bytes_draw\n"
           "\n"
           "        lda     #(%s_WIDTH/7)\n"
-          "        sta     n_bytes_per_line_draw+1\n"
+          "        sta     fast_n_bytes_per_line_draw+1\n"
           "\n"
           "        lda     #<%s_x0\n"
-          "        sta     sprite_pointer+1\n"
+          "        sta     fast_sprite_pointer+1\n"
           "        lda     #>%s_x0\n"
-          "        sta     sprite_pointer+2\n"
+          "        sta     fast_sprite_pointer+2\n"
           "\n"
-          "        lda     #<%s_mask_x0\n"
-          "        sta     sprite_mask+1\n"
-          "        lda     #>%s_mask_x0\n"
-          "        sta     sprite_mask+2\n"
-          "        jmp     _draw_sprite\n",
+          "        jmp     _draw_sprite_fast\n",
           sprite_name,
           sprite_name,
           sprite_name,
