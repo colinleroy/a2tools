@@ -1,7 +1,7 @@
                   .export vents_data, blockers_data
                   .export num_levels, cur_level
                   .export levels_logic, cur_level_logic
-                  .export num_rubber_bands
+                  .export num_lives, num_rubber_bands
 
                   .export sprite_data, plane_data, rubber_band_data
                   .import _plane, _plane_mask
@@ -55,7 +55,9 @@ rubber_band_data:
                   .addr $0000
 
 cur_level:        .byte   0
-num_rubber_bands: .byte   3
+num_rubber_bands: .byte   0
+num_lives:        .byte   3
+
 cur_level_logic:  .addr   $FFFF
 
 .rodata

@@ -23,13 +23,13 @@
 
         .import   _fire_rubber_band
         .import   _rubber_band_travel
-        .import   num_rubber_bands
+        .import   num_lives, num_rubber_bands
 
         .import   reset_mouse, mouse_b
         .import   sprite_data, plane_data, rubber_band_data
         .import   mouse_irq_ready
 
-        .import   _print_rubber_bands, _print_char
+        .import   _print_lives, _print_rubber_bands
 
         .importzp _zp6, ptr2, ptr4
 
@@ -73,7 +73,8 @@ loop:
 ;
 ; Main game loop!
 ;
-        ldx     #0
+        lda     num_lives
+        jsr     _print_lives
         lda     num_rubber_bands
         jsr     _print_rubber_bands
 
@@ -97,19 +98,19 @@ loop:
         ; We got in an obstacle
 die:
         lda     $C030
-        jsr     reset_level
+        dec     num_lives
+        bne     :+
+game_over:
+        jsr     reset_game
+
+:       jsr     reset_level
 
 move_checks_done:
         lda     plane_x
         cmp     #(280-plane_WIDTH)
         bne     level_logic
-        inc     cur_level
-        lda     cur_level
-        cmp     num_levels
-        bne     :+
-        jmp     _win
-
-:       jsr     load_level
+        ; We finished the level!
+        jsr     next_level
 
 level_logic:
         jmp     (cur_level_logic)
@@ -344,6 +345,25 @@ first_draw:
         jmp     first_draw
 :
         rts
+
+reset_game:
+        lda     #3
+        sta     num_lives
+        lda     #0
+        sta     cur_level
+        sta     num_rubber_bands
+        jmp     load_level
+
+next_level:
+        ; We restore level data, in case we die later
+        ; and come back to this level.
+        jsr     restore_level_data
+        inc     cur_level
+        lda     cur_level
+        cmp     num_levels
+        bne     :+
+        jmp     _win
+:       jmp     load_level
 
 reset_level:
         jsr     restore_level_data
