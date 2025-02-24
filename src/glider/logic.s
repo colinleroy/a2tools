@@ -4,12 +4,13 @@
         .export     _fire_rubber_band, _fire_balloon
         .export     _rubber_band_travel, _balloon_travel
         .export     _grab_rubber_bands, _inc_score
-
+        .export     _clock_inc_score
         .import     vents_data, blockers_data, plane_data
         .import     rubber_band_data
         .import     cur_level, frame_counter
         .import     _load_sprite_pointer, _setup_sprite_pointer, _clear_and_draw_sprite
         .import     num_rubber_bands, cur_score
+        .import     _play_croutch
 
         .importzp   _zp6, tmp1, tmp2, tmp3, ptr4
 
@@ -260,6 +261,11 @@ _grab_rubber_bands:
         sta     num_rubber_bands
 :       rts
 
+_clock_inc_score:
+        sei
+        jsr     _play_croutch
+        cli
+        lda     #5
 _inc_score:
         clc
         adc     cur_score

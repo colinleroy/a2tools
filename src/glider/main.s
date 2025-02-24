@@ -33,6 +33,8 @@
 
         .import   _print_dashboard
 
+        .import   _play_bubble, _play_paper_tear
+
         .importzp _zp6, ptr2, ptr4
 
         .include  "apple2.inc"
@@ -162,6 +164,9 @@ check_next_sprite:
         beq     destroy_sprite    ; No, grab it (but don't get score for it)
 
 destroy_sprite_with_bonus:
+        sei
+        jsr     _play_bubble
+        cli
         lda     #DESTROY_SCORE
         jsr     _inc_score
 
@@ -196,7 +201,9 @@ game_logic:
 
         ; We got in an obstacle
 die:
-        lda     $C030
+        sei
+        jsr     _play_paper_tear
+        cli
         dec     num_lives
         bne     :+
 game_over:
@@ -226,6 +233,7 @@ level_logic_done:
 
 :       jsr     _rubber_band_travel
 
+        ; Play sound effect
         jmp     game_loop
 
 ; Copy the hgr_baseaddr array of addresses

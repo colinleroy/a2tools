@@ -7,7 +7,7 @@
 
         .import   frame_counter
         .import   level_logic_done
-        .import   _inc_score
+        .import   _clock_inc_score
 
         .import   _grab_rubber_bands
         .import   _fire_balloon, _balloon_travel
@@ -37,7 +37,7 @@ level0_clock0_data:
                   .addr _clock          ; clock sprites
                   .addr _clock_mask     ; clock masks
                   .byte 5
-                  .addr _inc_score
+                  .addr _clock_inc_score
 
 level0_balloon0_data:
                   .byte 0               ; active

@@ -7,7 +7,7 @@
 
         .import   level_logic_done
         .import   _deactivate_sprite
-        .import   _inc_score
+        .import   _clock_inc_score
 
         .import   frame_counter
         .import   plane_data, rubber_band_data
@@ -37,7 +37,7 @@ level2_clock0_data:
                   .addr _clock         ; sprites
                   .addr _clock_mask    ; masks
                   .byte 5
-                  .addr _inc_score
+                  .addr _clock_inc_score
 
 level2_socket0_data:
                   .byte 1              ; active

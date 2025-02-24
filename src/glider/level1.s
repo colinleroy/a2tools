@@ -4,7 +4,7 @@
         .import   _clock, _clock_mask
 
         .import   level_logic_done
-        .import   _inc_score
+        .import   _clock_inc_score
 
         .import   plane_data, rubber_band_data
         .include  "clock.gen.inc"
@@ -30,7 +30,7 @@ level1_clock0_data:
                   .addr _clock         ; clock sprites
                   .addr _clock_mask    ; clock masks
                   .byte 5
-                  .addr _inc_score
+                  .addr _clock_inc_score
 
 .rodata
 
