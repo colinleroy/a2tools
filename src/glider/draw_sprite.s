@@ -1,8 +1,8 @@
-        .export _draw_sprite, _clear_and_draw_sprite
+        .export _draw_sprite, _clear_and_draw_sprite, _draw_sprite_fast
         .export _load_sprite_pointer, _setup_sprite_pointer
 
-        .export sprite_mask, sprite_pointer
-        .export n_bytes_per_line_draw, sprite_x
+        .export fast_sprite_pointer
+        .export fast_n_bytes_per_line_draw, fast_sprite_x
         .export sprite_y, n_bytes_draw
 
         .importzp _zp6, _zp8, _zp9, _zp10, _zp11, _zp12
@@ -179,4 +179,36 @@ sprite_pointer:
         cpx     #$FF
         bne     next_line
 draw_out:
+        rts
+
+_draw_sprite_fast:
+        ldy     sprite_y
+        sty     cur_y
+
+        ldx     n_bytes_draw
+        clc
+fast_next_line:
+fast_sprite_x:
+        lda     #$FF
+        ldy     cur_y
+        adc     _hgr_low,y
+        sta     line
+        lda     _hgr_hi,y
+        adc     #0
+        sta     line+1
+
+fast_n_bytes_per_line_draw:
+        ldy     #$FF
+
+fast_sprite_pointer:
+:       lda     $FFFF,x       ; Patched
+        sta     (line),y
+        dex
+        dey
+        bpl     :-
+
+        inc     cur_y
+        cpx     #$FF
+        bne     fast_next_line
+
         rts
