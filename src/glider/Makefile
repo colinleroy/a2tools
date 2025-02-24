@@ -32,6 +32,21 @@ GCCCFLAGS = -g -O0 -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\" \
 
 .PHONY: all clean
 
+levels_backgrounds = \
+	levela.hgr \
+	levelb.hgr \
+	levelc.hgr \
+
+sprites = \
+	balloon.gen.s \
+	clock.gen.s \
+	mini_plane.gen.s \
+	rubber_band.gen.s \
+	rubber_band_reverted.gen.s \
+	rubber_box.gen.s \
+	socket.gen.s \
+	switch.gen.s \
+
 glider_SOURCES := \
 	main.s \
 	mouse.s \
@@ -51,19 +66,8 @@ glider_SOURCES := \
 	../lib/hgr_addrs.c \
 	../lib/asm/bcd.s \
 	font.gen.s \
-	balloon.gen.s \
-	clock.gen.s \
 	plane.gen.s \
-	rubber_band.gen.s \
-	rubber_band_reverted.gen.s \
-	rubber_box.gen.s \
-	socket.gen.s \
-	switch.gen.s \
-
-levels_backgrounds = \
-	levela.hgr \
-	levelb.hgr \
-	levelc.hgr \
+	$(sprites)
 
 all: \
 	glider.bin \
@@ -82,15 +86,6 @@ $(levels_backgrounds): %.hgr: assets/levels/%.png
 
 %.hgr: assets/levels/%.png
 	../surl-server/hgr-convert $^ && mv $^.hgr $@
-
-sprites = \
-	balloon.gen.s \
-	clock.gen.s \
-	rubber_band.gen.s \
-	rubber_band_reverted.gen.s \
-	rubber_box.gen.s \
-	socket.gen.s \
-	switch.gen.s \
 
 $(sprites): %.gen.s: assets/sprites/%.png
 %.gen.s: assets/sprites/%.png gen_sprite
