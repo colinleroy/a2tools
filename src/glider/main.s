@@ -11,12 +11,13 @@
         .import   _mod7_table
         .import   cur_level, num_levels
         .import   _draw_sprite, _clear_and_draw_sprite
+        .import   _load_sprite_pointer
         .import   _setup_sprite_pointer
         .import   _check_blockers, _check_vents
         .import   _check_mouse_bounds
         .import   _check_rubber_band_bounds
         .import   _load_bg, _restore_bg
-        .import   _deactivate_current_sprite
+        .import   _deactivate_sprite
         .import   _inc_score
 
         .import   level_backup
@@ -74,7 +75,7 @@ game_loop:
         lda     #0
         sta     mouse_irq_ready
 ;
-; Main game loop!
+; DRAW SPRITES FIRST
 ;
         ldx     num_sprites
         dex
@@ -93,13 +94,43 @@ game_loop:
 draw_next_sprite:
         dec     cur_sprite
         lda     cur_sprite
-        bmi     game_logic              ; All done!
+        bmi     draw_dashboard    ; All done!
 
         jsr     _setup_sprite_pointer
 
         ldy     #SPRITE_DATA::ACTIVE
         lda     (cur_sprite_ptr),y
-        beq     dec_sprite
+        beq     dec_sprite_draw
+
+        jsr     _clear_and_draw_sprite
+
+dec_sprite_draw:
+        dec     cur_sprite        ; Skip a sprite
+        bpl     draw_next_sprite
+
+draw_dashboard:
+        lda     frame_counter     ; Draw dashboard on odd frames
+        and     #01
+        beq     collision_checks
+        jsr     _print_dashboard
+
+;
+; COLLISION CHECKS
+;
+collision_checks:
+        ldx     num_sprites
+        dex
+        stx     cur_sprite
+
+check_next_sprite:
+        dec     cur_sprite
+        lda     cur_sprite
+        bmi     game_logic
+
+        jsr     _load_sprite_pointer
+        ldy     #SPRITE_DATA::ACTIVE
+        lda     (cur_sprite_ptr),y
+        beq     check_next_sprite
 
         ; Let's check whether a rubber band can destroy this sprite
         lda     rubber_band_data+SPRITE_DATA::ACTIVE
@@ -117,12 +148,12 @@ draw_next_sprite:
         .assert data_ptr = cur_sprite_ptr, error
         ldy     #SPRITE_DATA::X_COORD
         jsr     _check_mouse_bounds
-        bcc     update_sprite
+        bcc     check_next_sprite
 
         ; We're in the sprite box, is it active?
         ldy     #SPRITE_DATA::ACTIVE
         lda     (cur_sprite_ptr),y
-        beq     update_sprite     ; No, we're good
+        beq     check_next_sprite  ; No, we're good
 
         ; Is it deadly?
         ldy     #SPRITE_DATA::DEADLY
@@ -137,22 +168,15 @@ destroy_sprite_with_bonus:
         ; Deactivate it
 destroy_sprite:
         lda     cur_sprite
-        jsr     _deactivate_current_sprite
-        jmp     dec_sprite
+        jsr     _deactivate_sprite
 
-update_sprite:
-        jsr     _clear_and_draw_sprite
+        jmp     check_next_sprite
 
-dec_sprite:
-        dec     cur_sprite        ; Skip a sprite
-        bpl     draw_next_sprite
 
+;
+; GENERAL GAME LOGIC
+;
 game_logic:
-        lda     frame_counter     ; Draw dashboard on odd frames
-        and     #01
-        beq     :+
-        jsr     _print_dashboard
-:
         inc     frame_counter
         ; Check coordinates and update them depending on vents
         jsr     _check_vents
@@ -347,6 +371,10 @@ setup_level_data:
 :
         jsr     backup_level_data
         ; Draw each sprite once
+
+        ; Deactivate interrupts for first draw
+        php
+        sei
 first_draw:
         dec     cur_sprite
         lda     cur_sprite
@@ -358,6 +386,7 @@ first_draw:
         jsr     _clear_and_draw_sprite
         jmp     first_draw
 :
+        plp
         rts
 
 reset_game:
