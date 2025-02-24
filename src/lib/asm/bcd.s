@@ -67,21 +67,21 @@ bin2dec_24bit:
         ldy    #10
         clc
         bcc    bin2dec_24bit_custom
-        
+
 bin2dec_16bit:
         ldy    #8
         clc
         bcc    bin2dec_16bit_custom
-        
-good24: 
+
+good24:
         sta     binary+2
         stx     binary+1
-        
+
         ldx     bdgood+8,Y
         lda     bcd_result,X
         adc     vtable,Y
         sta     bcd_result,X
-        
+
         lda     binary+0
         sbc     b0table+8,Y
         sta     binary+0
@@ -89,9 +89,9 @@ good24:
         dey
         bmi     end24
         beq     end24               ; was 70000 or greater, so skip 40000 check
-        
+
 bin2dec_24bit_custom:           ; 8 digits: Y=10, 7: Y=9, 6: Y=5, 5: Y=1
-loop24: 
+loop24:
         lda     binary+0
         sbc     b0table+8,Y
         lda     binary+1
@@ -106,7 +106,7 @@ loop24:
 end24:
         ldy     #7
         bne     loop16              ; always branches
-        
+
 good16:
         stx     binary+0
         sta     binary+1
@@ -133,7 +133,7 @@ end16:  lda     binary+0
         sbc     #199                ; +1 for clear carry
         ldx     binary+1
         bne     gt200               ; high byte non-zero, so must be >= 200
-        
+
 bin2dec_8bit:                   ; 3 digits
         lda     binary+0
 bin2dec_8bit_3dig:              ; A to 3 digits
