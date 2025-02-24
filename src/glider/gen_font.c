@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
   int x, y, dx, dy, c;
   enum Pixel pixval;
   char *sprite_name;
-  char filename[32];
+  char filename[256];
   FILE *fp;
 
   if (argc != 3) {
@@ -63,6 +63,9 @@ int main(int argc, char *argv[]) {
   sprite_name = argv[1];
   if (strchr(sprite_name, '.')) {
     *(strchr(sprite_name, '.')) = '\0';
+  }
+  if (strchr(sprite_name, '/')) {
+    sprite_name = strrchr(sprite_name, '/') + 1;
   }
 
   if (image->w % 7 != 0) {
