@@ -9,39 +9,29 @@ static unsigned char emit_instruction(char *instr, unsigned char cycles, unsigne
   return cycles - cost;
 }
 
+static unsigned char fast_steps[5] = {48, 24, 20, 16, 12};
+
 static unsigned char emit_wait(unsigned char l, unsigned char cycles) {
-/*
-2+N*5 cycles+2
-  ldy #XX     ; 2
-: dey         ; 4
-  bne :-      ; 7 if branch is taken
+  int i;
 
-2+N*8 cycles+2
-  ldy #XX     ; 
-: lda $00     ; 3
-  dey         ; 5
-  bne :-      ; 8 if branch is taken
-
-2+N*9 cycles+2
-  ldy #XX     ; 
-: lda $FFFF   ; 4
-  dey         ; 6
-  bne :-      ; 9 if branch is taken
-*/
   while (l > 0) {
-    if (l > 13) {
-      cycles -= 12;
-      printf("jsr waste_12      ; 12 - rem %d\n", cycles);
-      l -= 12;
-      if (l > 13) {
-        continue;
+    again:
+    for (i = 0; i < sizeof(fast_steps); i++) {
+      if (l > fast_steps[i]+1) {
+        cycles -= fast_steps[i];
+        printf("jsr waste_%d      ; %d - rem %d\n", fast_steps[i], fast_steps[i], cycles);
+        l -= fast_steps[i];
+        if (l > fast_steps[i]+1) {
+          goto again;
+        }
+      }
+      if (l == fast_steps[i]) {
+        cycles -= fast_steps[i];
+        printf("jsr waste_%d      ; %d - rem %d\n", fast_steps[i], fast_steps[i], cycles);
+        l -= fast_steps[i];
       }
     }
-    if (l == 12) {
-      cycles -= 12;
-      printf("jsr waste_12      ; 12 - rem %d\n", cycles);
-      l -= 12;
-    }
+
     if (l > 5) {
       cycles -= 4;
       printf("lda $FFFF        ; 4 - rem %d\n", cycles);
@@ -118,6 +108,12 @@ int main(int argc, char *argv[]) {
     printf(".export sound_level_%d\n", c);
   }
 
+  printf("waste_48:\n"
+         "jsr waste_24\n");
+
+  printf("waste_24: lda $FFFF\n\n");
+  printf("waste_20: lda $FFFF\n\n");
+  printf("waste_16: lda $FFFF\n\n");
   printf("waste_12: rts\n\n");
 
   for (c = 0; c < 106; c++) {
