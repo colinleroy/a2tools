@@ -60,23 +60,17 @@ glider_SOURCES := \
 	socket.gen.s \
 	switch.gen.s \
 
-
-glider_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl -C ../../config/apple2enh-rtonce.cfg \
-	-vm -m glider.map --start-addr 0x6000
+levels_backgrounds = \
+	levela.hgr \
+	levelb.hgr \
+	levelc.hgr \
 
 all: \
 	glider.bin \
-	levela.hgr \
-	levelb.hgr \
-	levelc.hgr
+	$(levels_backgrounds)
 
-levela.hgr: levela.png
-	../surl-server/hgr-convert levela.png && mv levela.png.hgr levela.hgr
-levelb.hgr: levelb.png
-	../surl-server/hgr-convert levelb.png && mv levelb.png.hgr levelb.hgr
-levelc.hgr: levelc.png
-	../surl-server/hgr-convert levelc.png && mv levelc.png.hgr levelc.hgr
-
+glider_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl -C ../../config/apple2enh-rtonce.cfg \
+	-vm -m glider.map --start-addr 0x6000
 
 gen_sprite: gen_sprite.c
 	gcc $(shell pkg-config --cflags SDL_image) gen_sprite.c $(shell pkg-config --libs SDL_image) -o $@
@@ -84,36 +78,38 @@ gen_sprite: gen_sprite.c
 gen_font: gen_font.c
 	gcc $(shell pkg-config --cflags SDL_image) gen_font.c $(shell pkg-config --libs SDL_image) -o $@
 
-balloon.gen.s: gen_sprite
-	./gen_sprite balloon.png 255
-clock.gen.s: gen_sprite
-	./gen_sprite clock.png 255
-rubber_band.gen.s: gen_sprite
-	./gen_sprite rubber_band.png 255
-rubber_band_reverted.gen.s: gen_sprite
-	./gen_sprite rubber_band_reverted.png 255
-rubber_box.gen.s: gen_sprite
-	./gen_sprite rubber_box.png 255
-socket.gen.s: gen_sprite
-	./gen_sprite socket.png 255
-switch.gen.s: gen_sprite
-	./gen_sprite switch.png 255
-plane.gen.s: gen_sprite
-	./gen_sprite plane.png 280
-font.gen.s: gen_font
-	./gen_font font.png 280
+$(levels_backgrounds): %.hgr: assets/levels/%.png
+
+%.hgr: assets/levels/%.png
+	../surl-server/hgr-convert $^ && mv $^.hgr $@
+
+sprites = \
+	balloon.gen.s \
+	clock.gen.s \
+	rubber_band.gen.s \
+	rubber_band_reverted.gen.s \
+	rubber_box.gen.s \
+	socket.gen.s \
+	switch.gen.s \
+
+$(sprites): %.gen.s: assets/sprites/%.png
+%.gen.s: assets/sprites/%.png gen_sprite
+	./gen_sprite $< 255
+
+plane.gen.s: assets/sprites/plane.png gen_sprite
+	./gen_sprite $< 280
+font.gen.s: assets/fonts/font.png gen_font
+	./gen_font $< 280
 
 clean:
 	rm -f *.bin *.o \
-	levela.hgr \
-	levelb.hgr \
-	levelc.hgr \
+	$(levels_backgrounds) \
 	gen_sprite \
 	gen_font \
 	*.gen.s \
 	*.gen.inc \
+	assets/*/*.hgr-preview.* \
 	*.dbg *.lbl *.map \
-	*.hgr-preview.*
 
 glider.bin: $(glider_CL65SOURCES) $(glider_SOURCES)
 	cl65 -g -Wl --dbgfile,glider.dbg -Ln glider.lbl $(CFLAGS) $(iigs_CFLAGS) $(glider_CLCFLAGS) -o $@ $^  $(CC65_TARGET)-iobuf-0800.o
