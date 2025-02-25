@@ -214,7 +214,8 @@ move_checks_done:
         jsr     prev_level
         jmp     level_logic
 
-:       cmp     #(280-plane_WIDTH)
+:       .assert (280-plane_WIDTH) .mod $2 = $0, error
+        cmp     #(280-plane_WIDTH)
         bne     level_logic
         ; We finished the level!
         jsr     next_level
