@@ -33,7 +33,7 @@
 
         .import   _print_dashboard
 
-        .import   _play_bubble, _play_paper_tear
+        .import   _play_bubble, _play_crash
 
         .importzp _zp6, ptr2, ptr4
 
@@ -202,7 +202,7 @@ game_logic:
         ; We got in an obstacle
 die:
         sei
-        jsr     _play_paper_tear
+        jsr     _play_crash
         cli
         dec     num_lives
         bne     :+
@@ -229,6 +229,7 @@ level_logic_done:
         beq     :+
         lda     #0
         sta     mouse_b
+
         jsr     _fire_rubber_band
 
 :       jsr     _rubber_band_travel
