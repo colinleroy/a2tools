@@ -43,7 +43,7 @@ static enum Pixel get_pixel(SDL_Surface *surface, int x, int y) {
 
 int main(int argc, char *argv[]) {
   SDL_Surface *image;
-  int x, y, dx, dy, c;
+  int x, y, c;
   enum Pixel pixval;
   char *sprite_name;
   char filename[256];
@@ -74,8 +74,8 @@ int main(int argc, char *argv[]) {
   }
 
   /* Create reference sprite */
-  Uint8 char_data[5];
-  Uint8 char_mask[5];
+  Uint8 char_data[image->h];
+  Uint8 char_mask[image->h];
 
   snprintf(filename, sizeof(filename) - 1, "%s.gen.inc", sprite_name);
   fp = fopen(filename, "wb");
@@ -107,8 +107,8 @@ int main(int argc, char *argv[]) {
   fprintf(fp, "         .rodata\n");
 
   for (c = 0; c < 36; c++) {
-    memset(char_data, 0, sizeof(char_data));
-    memset(char_mask, 0, sizeof(char_mask));
+    memset(char_data, 0, sizeof(Uint8) * image->h);
+    memset(char_mask, 0, sizeof(Uint8) * image->h);
 
     for (y = image->h - 1; y >= 0; y--) {
       for (x = 7*c; x < 7*(c+1); x++) {
@@ -117,7 +117,7 @@ int main(int argc, char *argv[]) {
         if (pixval == WHITE) {
           char_data[y] |= (1 << (x % 7));
         } else if (pixval == CLEAR) {
-          char_mask[y] |= (1 << (dx % 7));
+          char_mask[y] |= (1 << (x % 7));
         } else {
           /* black pixel */
         }

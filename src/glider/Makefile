@@ -87,16 +87,16 @@ glider_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl -C ../../config/apple2enh-rton
 	-vm -m glider.map --start-addr 0x6000
 
 gen_sprite: gen_sprite.c
-	gcc $(shell pkg-config --cflags SDL_image) $^ $(shell pkg-config --libs SDL_image) -o $@
+	gcc -g -O0 $(shell pkg-config --cflags SDL_image) $^ $(shell pkg-config --libs SDL_image) -o $@
 
 gen_font: gen_font.c
-	gcc $(shell pkg-config --cflags SDL_image) $^ $(shell pkg-config --libs SDL_image) -o $@
+	gcc -g -O0 $(shell pkg-config --cflags SDL_image) $^ $(shell pkg-config --libs SDL_image) -o $@
 
 gen_sound_generator: gen_sound_generator.c sound.h
-	gcc $< -o $@
+	gcc -g -O0 $< -o $@
 
 gen_sound_clip: gen_sound_clip.c sound.h
-	gcc $< -o $@
+	gcc -g -O0 $< -o $@
 
 $(levels_backgrounds): %.hgr: assets/levels/%.png
 
