@@ -262,9 +262,7 @@ _grab_rubber_bands:
 :       rts
 
 _clock_inc_score:
-        sei
         jsr     _play_croutch
-        cli
         lda     #5
 _inc_score:
         clc
