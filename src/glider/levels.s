@@ -37,6 +37,7 @@ plane_data:
                   .addr _plane_mask   ; plane masks
                   .byte 0             ; deactivate data
                   .addr $0000         ; deactivate cb
+                  .word $0000         ; state backup
 
 ; There is always a single rubber band
 rubber_band_data:
@@ -55,6 +56,7 @@ rubber_band_data:
                   .addr _rubber_band_mask   ; band masks
                   .byte 0
                   .addr $0000
+                  .word $0000
 
 cur_level:        .byte   0
 num_lives:        .byte   3

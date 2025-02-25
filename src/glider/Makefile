@@ -40,6 +40,7 @@ levels_backgrounds = \
 sprites = \
 	balloon.gen.s \
 	clock.gen.s \
+	knife.gen.s \
 	mini_score.gen.s \
 	mini_plane.gen.s \
 	rubber_band.gen.s \

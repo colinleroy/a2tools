@@ -41,8 +41,33 @@ static enum Pixel get_pixel(SDL_Surface *surface, int x, int y) {
   exit(1);
 }
 
+SDL_Surface *image[7] = { NULL };
+
+void open_animated_sprites(const char *sprite_name) {
+  char filename[256];
+  int i;
+
+  for (i = 1; i < 7; i++) {
+    snprintf(filename, sizeof(filename), "%s%d.png", sprite_name, i);
+    image[i] = IMG_Load(filename);
+    if (image[i] == NULL) {
+      goto bail;
+    }
+  }
+  printf("Sprite is animated.\n");
+  return;
+
+  bail:
+  printf("Sprite is not animated.\n");
+  for (i = 1; i < 7; i++) {
+    if (image[i]) {
+      SDL_FreeSurface(image[i]);
+    }
+    image[i] = image[0];
+  }
+}
+
 int main(int argc, char *argv[]) {
-  SDL_Surface *image;
   int x, y, dx, dy, shift;
   enum Pixel pixval;
   char *sprite_name;
@@ -54,28 +79,33 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  image = IMG_Load(argv[1]);
-  if (image == NULL) {
+  image[0] = IMG_Load(argv[1]);
+  if (image[0] == NULL) {
     printf("Can not open %s\n", argv[1]);
     exit(1);
   }
 
   sprite_name = argv[1];
   if (strchr(sprite_name, '.')) {
-    *(strchr(sprite_name, '.')) = '\0';
+    *(strrchr(sprite_name, '.')) = '\0';
   }
+  /* Open the possible other sprites before chopping
+   * the directory off the name.
+   */
+  open_animated_sprites(sprite_name);
+
   if (strchr(sprite_name, '/')) {
     sprite_name = strrchr(sprite_name, '/') + 1;
   }
 
-  if (image->w % 7 != 0) {
-    printf("Image width %d is not a multiple of 7\n", image->w);
+  if (image[0]->w % 7 != 0) {
+    printf("Image width %d is not a multiple of 7\n", image[0]->w);
     exit(1);
   }
 
   /* Create reference sprite */
-  Uint8 sprite_data[image->h][(image->w/7) + 1];
-  Uint8 mask_data[image->h][(image->w/7) + 1];
+  Uint8 sprite_data[image[0]->h][(image[0]->w/7) + 1];
+  Uint8 mask_data[image[0]->h][(image[0]->w/7) + 1];
   memset(sprite_data, 0, sizeof(sprite_data));
   memset(mask_data, 0, sizeof(mask_data));
 
@@ -85,9 +115,9 @@ int main(int argc, char *argv[]) {
     printf("Can not open %s\n", filename);
     exit(1);
   }
-  fprintf(fp, "%s_WIDTH  = %d\n", sprite_name, image->w);
-  fprintf(fp, "%s_HEIGHT = %d\n", sprite_name, image->h);
-  fprintf(fp, "%s_BYTES  = %d\n", sprite_name, image->h * ((image->w/7)+1));
+  fprintf(fp, "%s_WIDTH  = %d\n", sprite_name, image[0]->w);
+  fprintf(fp, "%s_HEIGHT = %d\n", sprite_name, image[0]->h);
+  fprintf(fp, "%s_BYTES  = %d\n", sprite_name, image[0]->h * ((image[0]->w/7)+1));
   fprintf(fp, "%s_MIN_X  = 1\n", sprite_name);
   fprintf(fp, "%s_MAX_X  = %s-(%s_WIDTH)\n", sprite_name, argv[2], sprite_name);
   fprintf(fp, ".assert %s_MAX_X < 256, error\n", sprite_name);
@@ -122,13 +152,13 @@ int main(int argc, char *argv[]) {
     memset(sprite_data, 0, sizeof(sprite_data));
     memset(mask_data, 0, sizeof(mask_data));
 
-    for (y = image->h - 1, dy = 0; y >= 0; y--, dy++) {
+    for (y = image[shift]->h - 1, dy = 0; y >= 0; y--, dy++) {
       for (dx = 0; dx < shift; dx++) {
         /* shifted pixels are transparent */
         mask_data[dy][dx/7] |= (1 << (dx % 7));
       }
-      for (x = 0; x < image->w; x++, dx++) {
-        pixval = get_pixel(image, x, y);
+      for (x = 0; x < image[shift]->w; x++, dx++) {
+        pixval = get_pixel(image[shift], x, y);
 
         if (pixval == WHITE) {
           sprite_data[dy][dx/7] |= (1 << (dx % 7));
@@ -139,24 +169,24 @@ int main(int argc, char *argv[]) {
         }
       }
       /* Add clear mask at the end */
-      for (; dx < image->w + 7; dx++) {
+      for (; dx < image[shift]->w + 7; dx++) {
         mask_data[dy][dx/7] |= 1 << (dx % 7);
       }
     }
 
     fprintf(fp, "%s_x%d:\n", sprite_name, shift);
-    for (y = 0; y < image->h; y++) {
+    for (y = 0; y < image[shift]->h; y++) {
       fprintf(fp, "         .byte ");
-      for (x = 0; x < (image->w)/7; x++) {
+      for (x = 0; x < (image[shift]->w)/7; x++) {
         fprintf(fp, "$%02X, ", sprite_data[y][x]);
       }
       fprintf(fp, "$%02X\n", sprite_data[y][x]);
     }
 
     fprintf(fp, "%s_mask_x%d:\n", sprite_name, shift);
-    for (y = 0; y < image->h; y++) {
+    for (y = 0; y < image[shift]->h; y++) {
       fprintf(fp, "         .byte ");
-      for (x = 0; x < (image->w)/7; x++) {
+      for (x = 0; x < (image[shift]->w)/7; x++) {
         fprintf(fp, "$%02X, ", mask_data[y][x]);
       }
       fprintf(fp, "$%02X\n", mask_data[y][x]);
@@ -195,6 +225,13 @@ int main(int argc, char *argv[]) {
           sprite_name,
           sprite_name,
           sprite_name);
+
+  for (shift = 1; shift < 7; shift++) {
+    if (image[shift] != image[0]) {
+      SDL_FreeSurface(image[shift]);
+    }
+  }
+  SDL_FreeSurface(image[0]);
 
   fclose(fp);
 }
