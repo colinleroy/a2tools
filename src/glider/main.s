@@ -210,7 +210,11 @@ game_over:
 
 move_checks_done:
         lda     plane_x
-        cmp     #(280-plane_WIDTH)
+        bne     :+
+        jsr     prev_level
+        jmp     level_logic
+
+:       cmp     #(280-plane_WIDTH)
         bne     level_logic
         ; We finished the level!
         jsr     next_level
@@ -402,6 +406,17 @@ reset_game:
         sta     num_rubber_bands
         sta     cur_score
         sta     cur_score+1
+        jmp     load_level
+
+prev_level:
+        rts ; UNSURE IF I WANT TO GO BACK IN LEVELS?
+        ; We restore level data, in case we die later
+        ; and come back to this level.
+        lda     cur_level
+        bne     :+
+        rts
+:       jsr     restore_level_data
+        dec     cur_level
         jmp     load_level
 
 next_level:

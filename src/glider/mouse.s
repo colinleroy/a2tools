@@ -56,7 +56,7 @@ values: .byte   $38             ; Fixed
 size    = * - values
 
 ; Box to the part where our paddle can move
-inibox: .word   plane_MIN_X
+inibox: .word   2
         .word   plane_MIN_Y
         .word   plane_MAX_X/2
         .word   plane_MAX_Y
@@ -88,9 +88,9 @@ reset_mouse:
 
         ; Set initial mouse position
         ldx     slot
-        lda     #>plane_MIN_X
+        lda     #2
         sta     pos1_hi,x
-        lda     #<plane_MIN_X
+        lda     #2
         sta     pos1_lo,x
         asl
         sta     plane_x
@@ -244,16 +244,38 @@ done:   rts
         tax                     ; Save status
         ; 
         ; Bit 7 6 5 4 3 2 1 0
-              ; | | | | | | | |
-              ; | | | | | | | \--- Previously, button 1 was up (0) or down (1)
-              ; | | | | | | \----- Movement interrupt
-              ; | | | | | \------- Button 0/1 interrupt
-              ; | | | | \--------- VBL interrupt
-              ; | | | \----------- Currently, button 1 is up (0) or down (1)
-              ; | | \------------- X/Y moved since last READMOUSE
-              ; | \--------------- Previously, button 0 was up (0) or down (1)
-              ; \----------------- Currently, button 0 is up (0) or down (1)
+            ; | | | | | | | |
+            ; | | | | | | | \--- Previously, button 1 was up (0) or down (1)
+            ; | | | | | | \----- Movement interrupt
+            ; | | | | | \------- Button 0/1 interrupt
+            ; | | | | \--------- VBL interrupt
+            ; | | | \----------- Currently, button 1 is up (0) or down (1)
+            ; | | \------------- X/Y moved since last READMOUSE
+            ; | \--------------- Previously, button 0 was up (0) or down (1)
+            ; \----------------- Currently, button 0 is up (0) or down (1)
 
+        and     #%00100000
+        beq     button
+        lda     $C066
+        bpl     mouse_neg
+
+mouse_pos:
+        lda     plane_x
+        clc
+        adc     #2
+        beq     button
+        sta     plane_x
+        bne     button
+
+mouse_neg:
+        lda     plane_x
+        beq     button
+        sec
+        sbc     #2
+        sta     plane_x
+
+button:
+        txa
         ; Extract button down values
         asl                     ;  C = Button 0 is currently down
         and     #%00100000      ; !Z = Button 1 is currently down
@@ -266,14 +288,8 @@ done:   rts
 :       bcc     :+
         ora     #MOUSE_BTN_LEFT
         sta     mouse_b
+
 :
-
-        ; Get and set the new X position
-        ; Don't bother with high byte, it's zero
-        lda     pos1_lo,y
-        asl
-        sta     plane_x
-
         ; Signal the main loop
         inc     mouse_irq_ready
         plp                     ; Reenable interrupts
