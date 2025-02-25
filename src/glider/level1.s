@@ -2,12 +2,16 @@
         .export   level1_vents, level1_logic
 
         .import   _clock, _clock_mask
+        .import   _knife, _knife_mask
 
         .import   level_logic_done
         .import   _clock_inc_score
 
+        .import   _fire_knife, _knife_travel
+
         .import   plane_data, rubber_band_data
         .include  "clock.gen.inc"
+        .include  "knife.gen.inc"
         .include  "plane.gen.inc"
         .include  "sprite.inc"
 
@@ -31,15 +35,56 @@ level1_clock0_data:
                   .addr _clock_mask    ; clock masks
                   .byte 5
                   .addr _clock_inc_score
+                  .word $0000
+
+level1_knife0_data:
+                  .byte 0               ; active
+                  .byte 1               ; deadly
+                  .byte 1               ; destroyable
+                  .byte 140             ; x
+                  .byte knife_WIDTH
+                  .byte 1               ; y
+                  .byte knife_HEIGHT
+                  .byte 140             ; prev_x
+                  .byte 1               ; prev_y
+                  .byte knife_BYTES-1   ; bytes of sprite - 1
+                  .byte knife_WIDTH/7   ; width of sprite in bytes
+                  .addr _knife          ; knife sprites
+                  .addr _knife_mask     ; knife masks
+                  .byte 0
+                  .addr $0000
+                  .word $0000           ; state backup
+
+level1_knife1_data:
+                  .byte 0               ; active
+                  .byte 1               ; deadly
+                  .byte 1               ; destroyable
+                  .byte 175             ; x
+                  .byte knife_WIDTH
+                  .byte 1               ; y
+                  .byte knife_HEIGHT
+                  .byte 175             ; prev_x
+                  .byte 1               ; prev_y
+                  .byte knife_BYTES-1   ; bytes of sprite - 1
+                  .byte knife_WIDTH/7   ; width of sprite in bytes
+                  .addr _knife          ; knife sprites
+                  .addr _knife_mask     ; knife masks
+                  .byte 0
+                  .addr $0000
+                  .word $0000           ; state backup
 
 .rodata
 
-level1_sprites:   .byte   3
+level1_sprites:   .byte   5
 level1_sprites_data:
                    ; Rubber band must be first for easy deactivation
                    ;                                ; drawn on    EVEN ODD
                   .addr   rubber_band_data          ; small            x
                   .addr   level1_clock0_data        ; medium      x
+KNIFE1_SPRITE_NUM = (*-level1_sprites_data)/2
+                  .addr   level1_knife1_data        ; medium           x
+KNIFE0_SPRITE_NUM = (*-level1_sprites_data)/2
+                  .addr   level1_knife0_data        ; medium      x
                   .addr   plane_data                ; big         x    x
 
 level1_vents:     .byte   2
@@ -58,4 +103,18 @@ level1_blockers_data:
                   .byte   0,   255, 191, 1     ; Floor
 
 level1_logic:
+        ; Move knives if active
+        lda     #KNIFE0_SPRITE_NUM
+        jsr     _knife_travel
+        lda     #KNIFE1_SPRITE_NUM
+        jsr     _knife_travel
+
+        ; Activate knives
+        lda     #KNIFE0_SPRITE_NUM
+        ldx     #$30
+        jsr     _fire_knife
+
+        lda     #KNIFE1_SPRITE_NUM
+        ldx     #$70
+        jsr     _fire_knife
         jmp     level_logic_done

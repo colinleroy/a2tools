@@ -1,8 +1,8 @@
         .export     _check_blockers, _check_vents
         .export     _check_mouse_bounds, _check_rubber_band_bounds
         .export     _deactivate_sprite, _deactivate_current_sprite
-        .export     _fire_rubber_band, _fire_balloon
-        .export     _rubber_band_travel, _balloon_travel
+        .export     _fire_rubber_band, _fire_balloon, _fire_knife
+        .export     _rubber_band_travel, _balloon_travel, _knife_travel
         .export     _grab_rubber_bands, _inc_score
         .export     _clock_inc_score
         .import     vents_data, blockers_data, plane_data
@@ -15,6 +15,7 @@
         .importzp   _zp6, tmp1, tmp2, tmp3, ptr4
 
         .include    "balloon.gen.inc"
+        .include    "knife.gen.inc"
         .include    "plane.gen.inc"
         .include    "rubber_band.gen.inc"
         .include    "sprite.inc"
@@ -251,6 +252,75 @@ _balloon_travel:
         lda     tmp3
         jmp     _deactivate_sprite
 :       rts
+
+
+_fire_knife:
+        cpx     frame_counter
+        bne     :+
+
+        jsr     _load_sprite_pointer
+        ldy     #SPRITE_DATA::ACTIVE
+        lda     (cur_sprite_ptr),y
+        bne     :+
+
+        lda     #1
+        sta     (cur_sprite_ptr),y
+
+        ; Store its original coords
+        ldy     #SPRITE_DATA::X_COORD
+        lda     (cur_sprite_ptr),y
+        ldy     #SPRITE_DATA::STATE_BACKUP
+        sta     (cur_sprite_ptr),y
+
+        ldy     #SPRITE_DATA::Y_COORD
+        lda     (cur_sprite_ptr),y
+        ldy     #SPRITE_DATA::STATE_BACKUP+1
+        sta     (cur_sprite_ptr),y
+
+:       rts
+
+_knife_travel:
+        sta     tmp3
+        jsr     _load_sprite_pointer
+        ldy     #SPRITE_DATA::ACTIVE
+        lda     (cur_sprite_ptr),y
+        bne     :+
+        rts                       ; It's not active
+
+:       ; If active, down it
+        ldy     #SPRITE_DATA::Y_COORD
+        lda     (cur_sprite_ptr),y
+        clc
+        adc     #1
+        sta     (cur_sprite_ptr),y
+        cmp     #190-knife_HEIGHT ; Is Y still over floor?
+        bcc     knife_left
+knife_out:
+        ; No
+        lda     tmp3
+        jsr     _deactivate_sprite
+
+        ; Restore its original coords
+        ldy     #SPRITE_DATA::STATE_BACKUP
+        lda     (cur_sprite_ptr),y
+        ldy     #SPRITE_DATA::X_COORD
+        sta     (cur_sprite_ptr),y
+
+        ldy     #SPRITE_DATA::STATE_BACKUP+1
+        lda     (cur_sprite_ptr),y
+        ldy     #SPRITE_DATA::Y_COORD
+        sta     (cur_sprite_ptr),y
+        rts
+
+knife_left:
+        ; Now left it
+        ldy     #SPRITE_DATA::X_COORD
+        lda     (cur_sprite_ptr),y
+        sec
+        sbc     #1
+        sta     (cur_sprite_ptr),y
+        beq     knife_out
+        rts
 
 _grab_rubber_bands:
         clc

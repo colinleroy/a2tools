@@ -40,6 +40,7 @@ level2_clock0_data:
                   .addr _clock_mask    ; masks
                   .byte 5
                   .addr _clock_inc_score
+                  .word $0000
 
 level2_socket0_data:
                   .byte 1              ; active
@@ -57,6 +58,7 @@ level2_socket0_data:
                   .addr _socket_mask   ; masks
                   .byte 0
                   .addr $0000
+                  .word $0000
 
 level2_switch0_data:
                   .byte 1              ; active
@@ -74,6 +76,7 @@ level2_switch0_data:
                   .addr _switch_mask   ; masks
                   .byte 0
                   .addr _play_click
+                  .word $0000
 
 .rodata
 

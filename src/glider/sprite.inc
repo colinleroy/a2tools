@@ -14,4 +14,5 @@
   SPRITE_MASK     .addr
   DEACTIVATE_DATA .byte
   DEACTIVATE_FUNC .addr
+  STATE_BACKUP    .word
 .endstruct

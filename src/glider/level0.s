@@ -38,6 +38,7 @@ level0_clock0_data:
                   .addr _clock_mask     ; clock masks
                   .byte 5
                   .addr _clock_inc_score
+                  .word $0000
 
 level0_balloon0_data:
                   .byte 0               ; active
@@ -55,6 +56,7 @@ level0_balloon0_data:
                   .addr _balloon_mask   ; clock masks
                   .byte 0
                   .addr $0000
+                  .word $0000
 
 level0_rubber_box0_data:
                   .byte 1               ; active
@@ -72,6 +74,7 @@ level0_rubber_box0_data:
                   .addr _rubber_box_mask   ; clock masks
                   .byte 3
                   .addr _grab_rubber_bands ; deactivation callback
+                  .word $0000              ; state backup
 
 .rodata
 
