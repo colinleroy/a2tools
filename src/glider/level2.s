@@ -12,6 +12,8 @@
         .import   frame_counter
         .import   plane_data, rubber_band_data
 
+        .import   _play_click
+
         .include  "clock.gen.inc"
         .include  "plane.gen.inc"
         .include  "socket.gen.inc"
@@ -71,7 +73,7 @@ level2_switch0_data:
                   .addr _switch        ; sprites
                   .addr _switch_mask   ; masks
                   .byte 0
-                  .addr $0000
+                  .addr _play_click
 
 .rodata
 

@@ -50,6 +50,7 @@ sprites = \
 
 sounds = \
 	bubble.snd.s \
+	click.snd.s \
 	croutch.snd.s \
 	crash.snd.s \
 
