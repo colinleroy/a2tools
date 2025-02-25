@@ -33,16 +33,20 @@ static unsigned char emit_wait(unsigned char l, unsigned char cycles) {
     }
 
     if (l > 5) {
-      cycles -= 4;
-      printf("lda $FFFF        ; 4 - rem %d\n", cycles);
+      cycles -= 2;
+      printf("nop              ; 2 - rem %d\n", cycles);
+      cycles -= 2;
+      printf("nop              ; 2 - rem %d\n", cycles);
       l -= 4;
       if (l > 5) {
         continue;
       }
     }
     if (l == 4) {
-      cycles -= 4;
-      printf("lda $FFFF        ; 4 - rem %d\n", cycles);
+      cycles -= 2;
+      printf("nop              ; 2 - rem %d\n", cycles);
+      cycles -= 2;
+      printf("nop              ; 2 - rem %d\n", cycles);
       l -= 4;
     }
     if (l > 3) {
@@ -60,7 +64,7 @@ static unsigned char emit_wait(unsigned char l, unsigned char cycles) {
     }
     if (l == 2) {
       cycles -= 2;
-      printf("lda #$FF          ; 2 - rem %d\n", cycles);
+      printf("nop              ; 2 - rem %d\n", cycles);
       l -= 2;
     } else if (l == 1) {
       printf("Just one cycle left :( %d\n", l);
@@ -70,11 +74,12 @@ static unsigned char emit_wait(unsigned char l, unsigned char cycles) {
   return cycles;
 }
 
-static void level(unsigned char l) {
-  unsigned char cycles = 128-6;
-  printf("; Level %d\n", l);
-  printf("sound_level_%d:\n", l);
+static void sub_level(unsigned char l) {
+  unsigned char cycles = (AVAIL_CYCLES/2)-12; /* Account for jsr/rts */
+  printf("; SubLevel %d\n", l);
+  printf("sub_sound_level_%d:\n", l);
   cycles = emit_instruction("ldx #$32     ", cycles, 2);
+  printf("toggle_on_%d:\n", l);
   cycles = emit_instruction("sta $C030    ", cycles, 4);
   
   if (l == 0) {
@@ -86,7 +91,7 @@ static void level(unsigned char l) {
     cycles = emit_instruction("sta $C030  ", cycles, 4);
   } else {
     cycles = emit_wait(l, cycles);
-    if (cycles == 6+5) {
+    if (cycles % 2) {
       cycles = emit_instruction("sta $BFFE,x", cycles, 5);
     } else {
       cycles = emit_instruction("sta $C030  ", cycles, 4);
@@ -99,6 +104,14 @@ static void level(unsigned char l) {
   }
   cycles = emit_instruction("rts  ", cycles, 6);
   printf("\n\n");
+}
+
+static void level(unsigned char l) {
+  printf("; Level %d, %d cycles\n", l, AVAIL_CYCLES);
+  printf("sound_level_%d:\n", l);
+  printf("jsr sub_sound_level_%d\n", l);
+  printf("jsr waste_12\n");
+  sub_level(l);
 }
 
 int main(int argc, char *argv[]) {
@@ -116,7 +129,7 @@ int main(int argc, char *argv[]) {
   printf("waste_16: lda $FFFF\n\n");
   printf("waste_12: rts\n\n");
 
-  for (c = 0; c < 106; c++) {
+  for (c = 0; c < NUM_LEVELS; c+=STEP) {
     level(c);
   }
 }

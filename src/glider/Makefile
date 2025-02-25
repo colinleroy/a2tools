@@ -51,7 +51,7 @@ sprites = \
 sounds = \
 	bubble.snd.s \
 	croutch.snd.s \
-	paper_tear.snd.s \
+	crash.snd.s \
 
 glider_SOURCES := \
 	main.s \
