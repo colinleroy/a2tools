@@ -164,9 +164,7 @@ check_next_sprite:
         beq     destroy_sprite    ; No, grab it (but don't get score for it)
 
 destroy_sprite_with_bonus:
-        sei
         jsr     _play_bubble
-        cli
         lda     #DESTROY_SCORE
         jsr     _inc_score
 
@@ -201,9 +199,7 @@ game_logic:
 
         ; We got in an obstacle
 die:
-        sei
         jsr     _play_crash
-        cli
         dec     num_lives
         bne     :+
 game_over:

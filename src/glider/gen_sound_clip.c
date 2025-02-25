@@ -31,14 +31,17 @@ int main(int argc, char *argv[]) {
     printf(".import sound_level_%d\n", c);
   }
   printf(".export _play_%s\n", filename);
-  printf("_play_%s:", filename);
+  printf("_play_%s:\n"
+         "php\n"
+         "sei\n", filename);
 
   while ((c = fgetc(fp)) != EOF) {
     unsigned char r = (c*(NUM_LEVELS-1))/255;
     r = (r/STEP)*STEP;
     printf("jsr sound_level_%d\n", r);
   }
-  printf("rts");
+  printf("plp\n"
+         "rts\n");
 
   fclose(fp);
 }
