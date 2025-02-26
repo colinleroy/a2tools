@@ -3,13 +3,13 @@
         .export     _deactivate_sprite, _deactivate_current_sprite
         .export     _fire_rubber_band, _fire_balloon, _fire_knife
         .export     _rubber_band_travel, _balloon_travel, _knife_travel
-        .export     _grab_rubber_bands, _inc_score
+        .export     _grab_rubber_bands, _grab_battery, _inc_score
         .export     _clock_inc_score
         .import     vents_data, blockers_data, plane_data
         .import     rubber_band_data
         .import     cur_level, frame_counter
         .import     _load_sprite_pointer, _setup_sprite_pointer, _clear_and_draw_sprite
-        .import     num_rubber_bands, cur_score
+        .import     num_rubber_bands, num_battery, cur_score
         .import     _play_croutch
 
         .importzp   _zp6, tmp1, tmp2, tmp3, ptr4
@@ -325,11 +325,12 @@ knife_left:
 _grab_rubber_bands:
         clc
         adc     num_rubber_bands
-        cmp     num_rubber_bands
-        bcc     :+
-
+        bcs     :+
         sta     num_rubber_bands
-:       rts
+        rts
+:       lda     #$FF
+        sta     num_rubber_bands
+        rts
 
 _clock_inc_score:
         jsr     _play_croutch
@@ -341,3 +342,13 @@ _inc_score:
         bcc     :+
         inc     cur_score+1
 :       rts
+
+_grab_battery:
+        clc
+        adc     num_battery
+        bcs     :+
+        sta     num_battery
+        rts
+:       lda     #$FF
+        sta     num_battery
+        rts

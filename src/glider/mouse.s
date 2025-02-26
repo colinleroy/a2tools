@@ -8,7 +8,7 @@
 
         .import     _div7_table, _mod7_table
 
-        .import     plane_data
+        .import     plane_data, num_battery
 
         .interruptor    mouse_irq
 
@@ -34,7 +34,7 @@ pos2_lo         := $04F8
 pos2_hi         := $05F8
 status          := $0778
 
-CENTER_X_OFFSET  = (280-256)/2
+PLANE_VELOCITY  = 2
 
         .bss
 
@@ -268,23 +268,36 @@ done:   rts
 
 :       ; Get and set the new X position
         ; Don't bother with high byte, it's zero
+        lda     plane_x
         ldx     pos1_lo,y
         cpx     prev_x
         beq     mouse_out         ; Mouse did not move
         bcc     mouse_neg         ; Mouse moved left
 
 mouse_pos:
-        lda     plane_x
         clc
-        adc     #2
+        adc     #PLANE_VELOCITY
         bcs     mouse_out
         sta     plane_x
+
+        ; Do we have battery?
+        ldy     num_battery
+        beq     mouse_out
+        ; Does the player want a boost?
+        ldy     KBDSTRB       ; Check keyboard
+        cpy     #($20|$80)    ; Is it Space?
         bne     mouse_out
 
+        adc     #PLANE_VELOCITY
+        bcs     mouse_out     ; Don't overflow X
+        sta     plane_x
+        sta     $C030
+        dec     num_battery   ; Decrement battery
+        jmp     mouse_out
+
 mouse_neg:
-        lda     plane_x
         sec
-        sbc     #2
+        sbc     #PLANE_VELOCITY
         bcc     mouse_out
         sta     plane_x
 
