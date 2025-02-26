@@ -224,7 +224,7 @@ int main(int argc, char *argv[]) {
     fprintf(fp, "         .addr %s_mask_x%d\n", sprite_name, shift < max_shift ? shift : 0);
   }
 
-  fprintf(fp, "           .code\n\n");
+  fprintf(fp, "\n         .code\n\n");
   fprintf(fp,
           "_quick_draw_%s:\n"
           "        stx     fast_sprite_x+1\n"
