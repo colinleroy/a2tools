@@ -37,17 +37,23 @@ levels_backgrounds = \
 	levelb.hgr \
 	levelc.hgr \
 
+sprites_pixel_perfect = \
+	knife.pixel_perfect.gen.s \
+	rubber_band.pixel_perfect.gen.s \
+
+sprites_unperfect = \
+	balloon.unperfect.gen.s \
+	clock.unperfect.gen.s \
+	mini_score.unperfect.gen.s \
+	mini_plane.unperfect.gen.s \
+	rubber_band_reverted.unperfect.gen.s \
+	rubber_box.unperfect.gen.s \
+	socket.unperfect.gen.s \
+	switch.unperfect.gen.s \
+
 sprites = \
-	balloon.gen.s \
-	clock.gen.s \
-	knife.gen.s \
-	mini_score.gen.s \
-	mini_plane.gen.s \
-	rubber_band.gen.s \
-	rubber_band_reverted.gen.s \
-	rubber_box.gen.s \
-	socket.gen.s \
-	switch.gen.s \
+	$(sprites_pixel_perfect) \
+	$(sprites_unperfect)
 
 sounds = \
 	bubble.snd.s \
@@ -74,7 +80,7 @@ glider_SOURCES := \
 	../lib/hgr_addrs.c \
 	../lib/asm/bcd.s \
 	font.gen.s \
-	plane.gen.s \
+	plane.pixel_perfect.gen.s \
 	play_sound.gen.s \
 	$(sounds) \
 	$(sprites)
@@ -103,12 +109,17 @@ $(levels_backgrounds): %.hgr: assets/levels/%.png
 %.hgr: assets/levels/%.png
 	../surl-server/hgr-convert $^ && mv $^.hgr $@
 
-$(sprites): %.gen.s: assets/sprites/%.png
-%.gen.s: assets/sprites/%.png gen_sprite
-	./gen_sprite $< 255
+$(sprites_pixel_perfect): %.pixel_perfect.gen.s: assets/sprites/%.png
+%.pixel_perfect.gen.s: assets/sprites/%.png gen_sprite
+	./gen_sprite $< 255 pixel_perfect
 
-plane.gen.s: assets/sprites/plane.png gen_sprite
-	./gen_sprite $< 280
+$(sprites_unperfect): %.unperfect.gen.s: assets/sprites/%.png
+%.unperfect.gen.s: assets/sprites/%.png gen_sprite
+	./gen_sprite $< 255 unperfect
+
+plane.pixel_perfect.gen.s: assets/sprites/plane.png gen_sprite
+	./gen_sprite $< 280 pixel_perfect
+
 font.gen.s: assets/fonts/font.png gen_font
 	./gen_font $< 280
 

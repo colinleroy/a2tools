@@ -9,6 +9,8 @@ enum Pixel {
   BLACK
 };
 
+int max_shift = 7;
+
 static enum Pixel get_pixel(SDL_Surface *surface, int x, int y) {
   int bpp = surface->format->BytesPerPixel;
   /* Here p is the address to the pixel we want to retrieve */
@@ -74,8 +76,8 @@ int main(int argc, char *argv[]) {
   char filename[256];
   FILE *fp;
 
-  if (argc != 3) {
-    printf("Usage: %s [input.png] [Max right X coord]\n", argv[0]);
+  if (argc != 4) {
+    printf("Usage: %s [input.png] [Max right X coord] [pixel_perfect|unperfect]\n", argv[0]);
     exit(1);
   }
 
@@ -98,6 +100,10 @@ int main(int argc, char *argv[]) {
     sprite_name = strrchr(sprite_name, '/') + 1;
   }
 
+  if (!strcmp(argv[3], "unperfect")) {
+    max_shift = 1;
+  }
+
   if (image[0]->w % 7 != 0) {
     printf("Image width %d is not a multiple of 7\n", image[0]->w);
     exit(1);
@@ -117,7 +123,8 @@ int main(int argc, char *argv[]) {
   }
   fprintf(fp, "%s_WIDTH  = %d\n", sprite_name, image[0]->w);
   fprintf(fp, "%s_HEIGHT = %d\n", sprite_name, image[0]->h);
-  fprintf(fp, "%s_BYTES  = %d\n", sprite_name, image[0]->h * ((image[0]->w/7)+1));
+  fprintf(fp, "%s_BYTES  = %d\n", sprite_name, image[0]->h * ((image[0]->w/7)+(max_shift/7)));
+  fprintf(fp, "%s_BPLINE = %d\n", sprite_name, (image[0]->w/7) + 1 - (max_shift == 1 ? 1 : 0));
   fprintf(fp, "%s_MIN_X  = 1\n", sprite_name);
   fprintf(fp, "%s_MAX_X  = %s-(%s_WIDTH)\n", sprite_name, argv[2], sprite_name);
   fprintf(fp, ".assert %s_MAX_X < 256, error\n", sprite_name);
@@ -125,7 +132,8 @@ int main(int argc, char *argv[]) {
   fprintf(fp, "%s_MAX_Y  = 192-%s_HEIGHT\n", sprite_name, sprite_name);
   fclose(fp);
 
-  snprintf(filename, sizeof(filename) - 1, "%s.gen.s", sprite_name);
+  snprintf(filename, sizeof(filename) - 1, "%s.%s.gen.s", sprite_name,
+           max_shift == 1 ? "unperfect":"pixel_perfect");
   fp = fopen(filename, "wb");
   if (fp == NULL) {
     printf("Can not open %s\n", filename);
@@ -134,7 +142,7 @@ int main(int argc, char *argv[]) {
 
   fprintf(fp, "         .export _%s\n", sprite_name);
   fprintf(fp, "         .export _%s_mask\n", sprite_name);
-  for (shift = 0; shift < 7; shift++) {
+  for (shift = 0; shift < max_shift; shift++) {
   fprintf(fp, "         .export %s_x%d\n", sprite_name, shift);
   fprintf(fp, "         .export %s_mask_x%d\n", sprite_name, shift);
   }
@@ -148,7 +156,7 @@ int main(int argc, char *argv[]) {
   fprintf(fp, "\n");
   fprintf(fp, "         .rodata\n");
 
-  for (shift = 0; shift < 7; shift++) {
+  for (shift = 0; shift < max_shift; shift++) {
     memset(sprite_data, 0, sizeof(sprite_data));
     memset(mask_data, 0, sizeof(mask_data));
 
@@ -178,32 +186,46 @@ int main(int argc, char *argv[]) {
     for (y = 0; y < image[shift]->h; y++) {
       fprintf(fp, "         .byte ");
       for (x = 0; x < (image[shift]->w)/7; x++) {
-        fprintf(fp, "$%02X, ", sprite_data[y][x]);
+        fprintf(fp, "$%02X", sprite_data[y][x]);
+        if (x != ((image[shift]->w)/7)-1 || max_shift > 1) {
+          fprintf(fp, ", ");
+        }
       }
-      fprintf(fp, "$%02X\n", sprite_data[y][x]);
+      if (max_shift > 1) {
+        fprintf(fp, "$%02X\n", sprite_data[y][x]);
+      } else {
+        fprintf(fp, "\n");
+      }
     }
 
     fprintf(fp, "%s_mask_x%d:\n", sprite_name, shift);
     for (y = 0; y < image[shift]->h; y++) {
       fprintf(fp, "         .byte ");
       for (x = 0; x < (image[shift]->w)/7; x++) {
-        fprintf(fp, "$%02X, ", mask_data[y][x]);
+        fprintf(fp, "$%02X", mask_data[y][x]);
+        if (x != ((image[shift]->w)/7)-1 || max_shift > 1) {
+          fprintf(fp, ", ");
+        }
       }
-      fprintf(fp, "$%02X\n", mask_data[y][x]);
+      if (max_shift > 1) {
+        fprintf(fp, "$%02X\n", mask_data[y][x]);
+      } else {
+        fprintf(fp, "\n");
+      }
     }
   }
 
   fprintf(fp, "_%s:\n", sprite_name);
-  for (shift = 0; shift < 7; shift++) {
-    fprintf(fp, "         .addr %s_x%d\n", sprite_name, shift);
+  for (shift = 0; shift < max_shift; shift++) {
+    fprintf(fp, "         .addr %s_x%d\n", sprite_name, shift < max_shift ? shift : 0);
   }
   fprintf(fp, "_%s_mask:\n", sprite_name);
-  for (shift = 0; shift < 7; shift++) {
-    fprintf(fp, "         .addr %s_mask_x%d\n", sprite_name, shift);
+  for (shift = 0; shift < max_shift; shift++) {
+    fprintf(fp, "         .addr %s_mask_x%d\n", sprite_name, shift < max_shift ? shift : 0);
   }
 
   fprintf(fp, "           .code\n\n");
-  fprintf(fp, 
+  fprintf(fp,
           "_quick_draw_%s:\n"
           "        stx     fast_sprite_x+1\n"
           "        sty     sprite_y\n"
@@ -211,7 +233,7 @@ int main(int argc, char *argv[]) {
           "        lda     #(%s_BYTES-1)\n"
           "        sta     n_bytes_draw\n"
           "\n"
-          "        lda     #(%s_WIDTH/7)\n"
+          "        lda     #(%s_BPLINE-1)\n"
           "        sta     fast_n_bytes_per_line_draw+1\n"
           "\n"
           "        lda     #<%s_x0\n"
