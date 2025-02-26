@@ -25,7 +25,7 @@
 
         .import   _fire_rubber_band
         .import   _rubber_band_travel
-        .import   num_lives, num_rubber_bands, cur_score
+        .import   num_lives, num_rubber_bands, num_battery, cur_score
 
         .import   reset_mouse, mouse_b
         .import   sprite_data, plane_data, rubber_band_data
@@ -120,6 +120,11 @@ draw_dashboard:
 ; COLLISION CHECKS
 ;
 collision_checks:
+
+        ; Performance test here. Decomment for just the draw loop
+        ; inc frame_counter
+        ; jmp game_loop
+
         ldx     num_sprites
         dex
         stx     cur_sprite
@@ -405,6 +410,7 @@ reset_game:
         lda     #0
         sta     cur_level
         sta     num_rubber_bands
+        sta     num_battery
         sta     cur_score
         sta     cur_score+1
         jmp     load_level

@@ -43,6 +43,8 @@ sprites_pixel_perfect = \
 
 sprites_unperfect = \
 	balloon.unperfect.gen.s \
+	battery.unperfect.gen.s \
+	battery_reverted.unperfect.gen.s \
 	clock.unperfect.gen.s \
 	mini_score.unperfect.gen.s \
 	mini_plane.unperfect.gen.s \

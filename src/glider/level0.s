@@ -87,6 +87,8 @@ level0_rubber_box0_data:
 ; - the sprites higher in the screen (Y low) have less time to draw, racing
 ;   the beam: put them to be drawn first (at the end of the array, which is
 ;   walked backwards)
+;
+; Performance on 2025/02/26: even frames 10366 / odd frames 10760 cycles
 level0_sprites:   .byte   5
 level0_sprites_data:
                    ; Rubber band must be first for easy deactivation
