@@ -57,9 +57,9 @@ size    = * - values
 
 ; Box to the part where our paddle can move
 inibox: .word   2
-        .word   plane_MIN_Y
-        .word   plane_MAX_X/2
-        .word   plane_MAX_Y
+        .word   0
+        .word   255
+        .word   255
 
         .data
 
@@ -94,6 +94,7 @@ reset_mouse:
         sta     pos1_lo,x
         asl
         sta     plane_x
+        sta     prev_x
 
         lda     #>plane_MIN_Y
         sta     pos2_hi,x
@@ -241,8 +242,6 @@ done:   rts
         ; Get status
         ldy     slot
         lda     status,y
-        tax                     ; Save status
-        ; 
         ; Bit 7 6 5 4 3 2 1 0
             ; | | | | | | | |
             ; | | | | | | | \--- Previously, button 1 was up (0) or down (1)
@@ -254,28 +253,6 @@ done:   rts
             ; | \--------------- Previously, button 0 was up (0) or down (1)
             ; \----------------- Currently, button 0 is up (0) or down (1)
 
-        and     #%00100000
-        beq     button
-        lda     $C066
-        bpl     mouse_neg
-
-mouse_pos:
-        lda     plane_x
-        clc
-        adc     #2
-        bcs     button
-        sta     plane_x
-        bne     button
-
-mouse_neg:
-        lda     plane_x
-        sec
-        sbc     #2
-        bcc     button
-        sta     plane_x
-
-button:
-        txa
         ; Extract button down values
         asl                     ;  C = Button 0 is currently down
         and     #%00100000      ; !Z = Button 1 is currently down
@@ -289,7 +266,31 @@ button:
         ora     #MOUSE_BTN_LEFT
         sta     mouse_b
 
-:
+:       ; Get and set the new X position
+        ; Don't bother with high byte, it's zero
+        ldx     pos1_lo,y
+        cpx     prev_x
+        beq     mouse_out         ; Mouse did not move
+        bcc     mouse_neg         ; Mouse moved left
+
+mouse_pos:
+        lda     plane_x
+        clc
+        adc     #2
+        bcs     mouse_out
+        sta     plane_x
+        bne     mouse_out
+
+mouse_neg:
+        lda     plane_x
+        sec
+        sbc     #2
+        bcc     mouse_out
+        sta     plane_x
+
+mouse_out:
+        stx     prev_x          ; Backup mouse X for next comparison
+
         ; Signal the main loop
         inc     mouse_irq_ready
         plp                     ; Reenable interrupts
@@ -299,3 +300,4 @@ button:
        .bss
 
 mouse_irq_ready: .res 1
+prev_x: .res 1
