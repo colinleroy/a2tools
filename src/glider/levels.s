@@ -32,7 +32,7 @@ plane_data:
                   .byte plane_MAX_X   ; prev_x
                   .byte plane_MAX_Y   ; prev_y
                   .byte plane_BYTES-1 ; bytes of sprite - 1
-                  .byte plane_WIDTH/7 ; width of sprite in bytes
+                  .byte plane_BPLINE-1; width of sprite in bytes
                   .addr _plane        ; plane sprites
                   .addr _plane_mask   ; plane masks
                   .byte 0             ; deactivate data
@@ -51,7 +51,7 @@ rubber_band_data:
                   .byte rubber_band_MAX_X   ; prev_x
                   .byte rubber_band_MAX_Y   ; prev_y
                   .byte rubber_band_BYTES-1 ; bytes of sprite - 1
-                  .byte rubber_band_WIDTH/7 ; width of sprite in bytes
+                  .byte rubber_band_BPLINE-1; width of sprite in bytes
                   .addr _rubber_band        ; band sprites
                   .addr _rubber_band_mask   ; band masks
                   .byte 0

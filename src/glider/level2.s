@@ -28,14 +28,14 @@ level2_clock0_data:
                   .byte 1              ; active
                   .byte 0              ; deadly
                   .byte 0              ; destroyable
-                  .byte 149            ; x
+                  .byte 147            ; x
                   .byte clock_WIDTH
                   .byte 68             ; y
                   .byte clock_HEIGHT
-                  .byte 149            ; prev_x
+                  .byte 147            ; prev_x
                   .byte 68             ; prev_y
                   .byte clock_BYTES-1  ; bytes of sprite - 1
-                  .byte clock_WIDTH/7  ; width of sprite in bytes
+                  .byte clock_BPLINE-1 ; width of sprite in bytes
                   .addr _clock         ; sprites
                   .addr _clock_mask    ; masks
                   .byte 5
@@ -46,14 +46,14 @@ level2_socket0_data:
                   .byte 1              ; active
                   .byte 1              ; deadly
                   .byte 0              ; destroyable
-                  .byte 145            ; x
+                  .byte 147            ; x
                   .byte socket_WIDTH
                   .byte 110            ; y
                   .byte socket_HEIGHT
-                  .byte 145            ; prev_x
+                  .byte 147            ; prev_x
                   .byte 110            ; prev_y
                   .byte socket_BYTES-1 ; bytes of sprite - 1
-                  .byte socket_WIDTH/7 ; width of sprite in bytes
+                  .byte socket_BPLINE-1; width of sprite in bytes
                   .addr _socket        ; sprites
                   .addr _socket_mask   ; masks
                   .byte 0
@@ -71,7 +71,7 @@ level2_switch0_data:
                   .byte 84             ; prev_x
                   .byte 111            ; prev_y
                   .byte switch_BYTES-1 ; bytes of sprite - 1
-                  .byte switch_WIDTH/7 ; width of sprite in bytes
+                  .byte switch_BPLINE-1; width of sprite in bytes
                   .addr _switch        ; sprites
                   .addr _switch_mask   ; masks
                   .byte 0

@@ -23,14 +23,14 @@ level1_clock0_data:
                   .byte 1              ; active
                   .byte 0              ; deadly
                   .byte 0              ; destroyable
-                  .byte 183            ; x
+                  .byte 182            ; x
                   .byte clock_WIDTH
                   .byte 50             ; y
                   .byte clock_HEIGHT
-                  .byte 183            ; prev_x
+                  .byte 182            ; prev_x
                   .byte 50             ; prev_y
                   .byte clock_BYTES-1  ; bytes of sprite - 1
-                  .byte clock_WIDTH/7  ; width of sprite in bytes
+                  .byte clock_BPLINE-1 ; width of sprite in bytes
                   .addr _clock         ; clock sprites
                   .addr _clock_mask    ; clock masks
                   .byte 5
@@ -48,7 +48,7 @@ level1_knife0_data:
                   .byte 140             ; prev_x
                   .byte 1               ; prev_y
                   .byte knife_BYTES-1   ; bytes of sprite - 1
-                  .byte knife_WIDTH/7   ; width of sprite in bytes
+                  .byte knife_BPLINE-1  ; width of sprite in bytes
                   .addr _knife          ; knife sprites
                   .addr _knife_mask     ; knife masks
                   .byte 0
@@ -66,7 +66,7 @@ level1_knife1_data:
                   .byte 175             ; prev_x
                   .byte 1               ; prev_y
                   .byte knife_BYTES-1   ; bytes of sprite - 1
-                  .byte knife_WIDTH/7   ; width of sprite in bytes
+                  .byte knife_BPLINE-1  ; width of sprite in bytes
                   .addr _knife          ; knife sprites
                   .addr _knife_mask     ; knife masks
                   .byte 0

@@ -21,19 +21,21 @@
 .data
 
 ; Do not place anything after X= 224 to avoid overflow
-; in the hitbox
+; in the hitbox. For "unperfect" sprites, that can't be displayed
+; at X%7 != 0, make sure x is a multiple of 7 so that the hitbox
+; is aligned with the sprite.
 level0_clock0_data:
                   .byte 1               ; active
                   .byte 0               ; deadly
                   .byte 0               ; destroyable
-                  .byte 181             ; x
+                  .byte 182             ; x
                   .byte clock_WIDTH
                   .byte 108             ; y
                   .byte clock_HEIGHT
-                  .byte 181             ; prev_x
+                  .byte 182             ; prev_x
                   .byte 108             ; prev_y
                   .byte clock_BYTES-1   ; bytes of sprite - 1
-                  .byte clock_WIDTH/7   ; width of sprite in bytes
+                  .byte clock_BPLINE-1  ; width of sprite in bytes
                   .addr _clock          ; clock sprites
                   .addr _clock_mask     ; clock masks
                   .byte 5
@@ -51,7 +53,7 @@ level0_balloon0_data:
                   .byte 196             ; prev_x
                   .byte 191-balloon_HEIGHT
                   .byte balloon_BYTES-1 ; bytes of sprite - 1
-                  .byte balloon_WIDTH/7 ; width of sprite in bytes
+                  .byte balloon_BPLINE-1; width of sprite in bytes
                   .addr _balloon        ; clock sprites
                   .addr _balloon_mask   ; clock masks
                   .byte 0
@@ -62,14 +64,14 @@ level0_rubber_box0_data:
                   .byte 1               ; active
                   .byte 0               ; deadly
                   .byte 0               ; destroyable
-                  .byte 109             ; x
+                  .byte 105             ; x
                   .byte rubber_box_WIDTH
                   .byte 92-rubber_box_HEIGHT
                   .byte rubber_box_HEIGHT
-                  .byte 109             ; prev_x
+                  .byte 105             ; prev_x
                   .byte 92-rubber_box_HEIGHT
                   .byte rubber_box_BYTES-1 ; bytes of sprite - 1
-                  .byte rubber_box_WIDTH/7 ; width of sprite in bytes
+                  .byte rubber_box_BPLINE-1; width of sprite in bytes
                   .addr _rubber_box        ; clock sprites
                   .addr _rubber_box_mask   ; clock masks
                   .byte 3
