@@ -81,12 +81,10 @@ yparam: ldy     #$FF            ; Patched at runtime
 jump:   jmp     $FFFF           ; Patched at runtime
 
 reset_mouse:
-        ; Set initial mouse clamps
-        lda     #<inibox
-        ldx     #>inibox
-        jsr     SETBOX
-
         ; Set initial mouse position
+        php
+        sei
+
         ldx     slot
         lda     #2
         sta     pos1_hi,x
@@ -103,7 +101,9 @@ reset_mouse:
         sta     plane_y
 
         ldx     #POSMOUSE
-        jmp     firmware
+        jsr     firmware
+        plp
+        rts
 
 _init_mouse:
         lda     #<$C000
