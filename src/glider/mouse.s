@@ -263,15 +263,15 @@ mouse_pos:
         lda     plane_x
         clc
         adc     #2
-        beq     button
+        bcs     button
         sta     plane_x
         bne     button
 
 mouse_neg:
         lda     plane_x
-        beq     button
         sec
         sbc     #2
+        bcc     button
         sta     plane_x
 
 button:
@@ -281,7 +281,7 @@ button:
         and     #%00100000      ; !Z = Button 1 is currently down
 
         ; Set button mask
-        ; Update mouse_b only on click and let the logic set it
+        ; Update mouse_b only on click and let the game logic set it
         ; back to zero
         beq     :+
         lda     #MOUSE_BTN_RIGHT
