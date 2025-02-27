@@ -11,6 +11,11 @@
 
         .import   _fire_knife, _knife_travel
 
+        .import   battery0_bgbackup
+        .import   clock0_bgbackup
+        .import   knife0_bgbackup
+        .import   knife1_bgbackup
+
         .import   plane_data, rubber_band_data
         .include  "battery.gen.inc"
         .include  "clock.gen.inc"
@@ -26,6 +31,7 @@ level1_battery0_data:
                   .byte 1               ; active
                   .byte 0               ; deadly
                   .byte 0               ; destroyable
+                  .byte 1               ; static
                   .byte 105             ; x
                   .byte battery_WIDTH
                   .byte 51              ; y
@@ -39,11 +45,14 @@ level1_battery0_data:
                   .byte 20
                   .addr _grab_battery
                   .word $0000           ; state backup
+                  .addr battery0_bgbackup
+                  .byte 0               ; need clear
 
 level1_clock0_data:
                   .byte 1              ; active
                   .byte 0              ; deadly
                   .byte 0              ; destroyable
+                  .byte 1               ; static
                   .byte 189            ; x
                   .byte clock_WIDTH
                   .byte 50             ; y
@@ -57,11 +66,14 @@ level1_clock0_data:
                   .byte 5
                   .addr _clock_inc_score
                   .word $0000
+                  .addr clock0_bgbackup
+                  .byte 0               ; need clear
 
 level1_knife0_data:
                   .byte 0               ; active
                   .byte 1               ; deadly
                   .byte 1               ; destroyable
+                  .byte 0               ; static
                   .byte 140             ; x
                   .byte knife_WIDTH
                   .byte 1               ; y
@@ -75,11 +87,14 @@ level1_knife0_data:
                   .byte 0
                   .addr $0000
                   .word $0000           ; state backup
+                  .addr knife0_bgbackup
+                  .byte 0               ; need clear
 
 level1_knife1_data:
                   .byte 0               ; active
                   .byte 1               ; deadly
                   .byte 1               ; destroyable
+                  .byte 0               ; static
                   .byte 175             ; x
                   .byte knife_WIDTH
                   .byte 1               ; y
@@ -93,6 +108,8 @@ level1_knife1_data:
                   .byte 0
                   .addr $0000
                   .word $0000           ; state backup
+                  .addr knife1_bgbackup
+                  .byte 0               ; need clear
 
 .rodata
 

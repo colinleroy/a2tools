@@ -56,7 +56,7 @@ _load_bg:
         jsr     pushax
         lda     #<$2000
         ldx     #>$2000
-        jsr     _memcpy
+        jmp     _memcpy
 
 _restore_bg:
         lda     #<$2000

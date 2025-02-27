@@ -83,6 +83,7 @@ game_loop:
         dex
         txa
         sta     cur_sprite
+
         ; Always draw the plane
         jsr     _setup_sprite_pointer
         jsr     _clear_and_draw_sprite
@@ -99,6 +100,7 @@ draw_next_sprite:
         bmi     draw_dashboard    ; All done!
 
         jsr     _setup_sprite_pointer
+        ;bne     dec_sprite_draw
 
         ldy     #SPRITE_DATA::ACTIVE
         lda     (cur_sprite_ptr),y
@@ -240,7 +242,6 @@ level_logic_done:
 
 :       jsr     _rubber_band_travel
 
-        ; Play sound effect
         jmp     game_loop
 
 ; Copy the hgr_baseaddr array of addresses
@@ -395,10 +396,8 @@ first_draw:
         lda     cur_sprite
         bmi     :+
         jsr     _setup_sprite_pointer
+        beq     first_draw
         jsr     _draw_sprite
-        lda     cur_sprite
-        jsr     _setup_sprite_pointer
-        jsr     _clear_and_draw_sprite
         jmp     first_draw
 :
         plp
