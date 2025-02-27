@@ -36,7 +36,7 @@ _load_sprite_pointer:
         rts
 
 ; pointer to sprite data in (level_data), A is sprite number to draw
-; Return with carry set if the sprite is inactive
+; Return with 1 in A if the sprite is static
 _setup_sprite_pointer:
         jsr     _load_sprite_pointer
         ldy     #SPRITE_DATA::X_COORD
@@ -79,6 +79,15 @@ _setup_sprite_pointer:
         sta     n_bytes_per_line_clear+1
         sta     n_bytes_per_line_draw+1
 
+        ldy     #SPRITE_DATA::BG_BACKUP
+        lda     (cur_sprite_ptr),y
+        sta     sprite_backup_1+1
+        sta     sprite_backup_2+1
+        iny
+        lda     (cur_sprite_ptr),y
+        sta     sprite_backup_1+2
+        sta     sprite_backup_2+2
+
         ldy     #SPRITE_DATA::SPRITE
         lda     (cur_sprite_ptr),y
         sta     ptr2
@@ -106,11 +115,20 @@ sprite_num:
         lda     (ptr3),y
         sta     sprite_mask+2
 
-        clc
+        ldy     #SPRITE_DATA::STATIC
+        lda     (cur_sprite_ptr),y
+
         rts
 
 ; X, Y : coordinates
 _clear_and_draw_sprite:
+        ldy     #SPRITE_DATA::NEED_CLEAR
+        lda     (cur_sprite_ptr),y
+        beq     _draw_sprite
+
+        lda     #0
+        sta     (cur_sprite_ptr),y
+
         ldx     n_bytes_draw
         clc
 clear_next_line:
@@ -119,17 +137,15 @@ sprite_prev_x:
         ldy     cur_y
         adc     _hgr_low,y
         sta     line
-        sta     bg_line
         lda     _hgr_hi,y
         adc     #0
         sta     line+1
-        adc     #$20
-        sta     bg_line+1
 
 n_bytes_per_line_clear:
         ldy     #$FF
 
-:       lda     (bg_line),y
+sprite_backup_1:
+:       lda     $FFFF,x
         sta     (line),y
         dex
         dey
@@ -145,6 +161,10 @@ n_bytes_per_line_clear:
         beq     draw_out
 
 _draw_sprite:
+        ldy     #SPRITE_DATA::NEED_CLEAR
+        lda     #1
+        sta     (cur_sprite_ptr),y
+
         ldy     sprite_y
         sty     cur_y
 
@@ -165,6 +185,9 @@ n_bytes_per_line_draw:
 
         ; Get what's under the sprite
 :       lda     (line),y
+sprite_backup_2:
+        ; Back it up
+        sta     $FFFF,x
         ; draw sprite
 sprite_mask:
         and     $FFFF,x       ; Patched

@@ -9,6 +9,10 @@
         .import   _deactivate_sprite
         .import   _clock_inc_score
 
+        .import   clock0_bgbackup
+        .import   socket0_bgbackup
+        .import   switch0_bgbackup
+
         .import   frame_counter
         .import   plane_data, rubber_band_data
 
@@ -28,6 +32,7 @@ level2_clock0_data:
                   .byte 1              ; active
                   .byte 0              ; deadly
                   .byte 0              ; destroyable
+                  .byte 1               ; static
                   .byte 147            ; x
                   .byte clock_WIDTH
                   .byte 68             ; y
@@ -41,11 +46,14 @@ level2_clock0_data:
                   .byte 5
                   .addr _clock_inc_score
                   .word $0000
+                  .addr clock0_bgbackup
+                  .byte 0               ; need clear
 
 level2_socket0_data:
                   .byte 1              ; active
                   .byte 1              ; deadly
                   .byte 0              ; destroyable
+                  .byte 1               ; static
                   .byte 147            ; x
                   .byte socket_WIDTH
                   .byte 110            ; y
@@ -59,11 +67,14 @@ level2_socket0_data:
                   .byte 0
                   .addr $0000
                   .word $0000
+                  .addr socket0_bgbackup
+                  .byte 0               ; need clear
 
 level2_switch0_data:
                   .byte 1              ; active
                   .byte 0              ; deadly
                   .byte 0              ; destroyable
+                  .byte 1               ; static
                   .byte 84             ; x
                   .byte switch_WIDTH
                   .byte 111            ; y
@@ -77,6 +88,8 @@ level2_switch0_data:
                   .byte 0
                   .addr _play_click
                   .word $0000
+                  .addr switch0_bgbackup
+                  .byte 0               ; need clear
 
 .rodata
 

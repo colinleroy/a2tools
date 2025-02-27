@@ -5,6 +5,10 @@
         .import   _clock, _clock_mask
         .import   _rubber_box, _rubber_box_mask
 
+        .import   balloon0_bgbackup
+        .import   clock0_bgbackup
+        .import   rubber_box0_bgbackup
+
         .import   frame_counter
         .import   level_logic_done
         .import   _clock_inc_score
@@ -28,6 +32,7 @@ level0_clock0_data:
                   .byte 1               ; active
                   .byte 0               ; deadly
                   .byte 0               ; destroyable
+                  .byte 1               ; static
                   .byte 182             ; x
                   .byte clock_WIDTH
                   .byte 108             ; y
@@ -38,19 +43,22 @@ level0_clock0_data:
                   .byte clock_BPLINE-1  ; width of sprite in bytes
                   .addr _clock          ; clock sprites
                   .addr _clock_mask     ; clock masks
-                  .byte 5
-                  .addr _clock_inc_score
-                  .word $0000
+                  .byte 5               ; deac cb data
+                  .addr _clock_inc_score; deac cb
+                  .word $0000           ; state backup
+                  .addr clock0_bgbackup ; bg backup
+                  .byte 0               ; need clear
 
 level0_balloon0_data:
-                  .byte 0               ; active
+                  .byte 1               ; active
                   .byte 1               ; deadly
                   .byte 1               ; destroyable
-                  .byte 196             ; x
+                  .byte 0               ; static
+                  .byte 189             ; x
                   .byte balloon_WIDTH
                   .byte 191-balloon_HEIGHT
                   .byte balloon_HEIGHT
-                  .byte 196             ; prev_x
+                  .byte 189             ; prev_x
                   .byte 191-balloon_HEIGHT
                   .byte balloon_BYTES-1 ; bytes of sprite - 1
                   .byte balloon_BPLINE-1; width of sprite in bytes
@@ -59,17 +67,20 @@ level0_balloon0_data:
                   .byte 0
                   .addr $0000
                   .word $0000
+                  .addr balloon0_bgbackup
+                  .byte 0               ; need clear
 
 level0_rubber_box0_data:
                   .byte 1               ; active
                   .byte 0               ; deadly
                   .byte 0               ; destroyable
+                  .byte 1               ; static
                   .byte 105             ; x
                   .byte rubber_box_WIDTH
-                  .byte 92-rubber_box_HEIGHT
+                  .byte 91-rubber_box_HEIGHT
                   .byte rubber_box_HEIGHT
                   .byte 105             ; prev_x
-                  .byte 92-rubber_box_HEIGHT
+                  .byte 91-rubber_box_HEIGHT
                   .byte rubber_box_BYTES-1 ; bytes of sprite - 1
                   .byte rubber_box_BPLINE-1; width of sprite in bytes
                   .addr _rubber_box        ; clock sprites
@@ -77,6 +88,8 @@ level0_rubber_box0_data:
                   .byte 3
                   .addr _grab_rubber_bands ; deactivation callback
                   .word $0000              ; state backup
+                  .addr rubber_box0_bgbackup
+                  .byte 0                  ; need clear
 
 .rodata
 
