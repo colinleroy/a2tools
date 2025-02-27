@@ -197,6 +197,9 @@ uint8 qt1x0_set_speed(uint16 speed) {
   return get_ack(5);
 }
 
+/* End of RT_ONCE segment */
+#pragma code-name(pop)
+
 /* Send a command to the camera */
 static uint8 send_command(const char *cmd, uint8 len, uint8 s_ack, uint8 wait) {
   simple_serial_write(cmd, len);
@@ -209,7 +212,6 @@ static uint8 send_command(const char *cmd, uint8 len, uint8 s_ack, uint8 wait) {
 
   return 0;
 }
-#pragma code-name(pop)
 #pragma code-name(push, "LC")
 
 /* Ping the camera */
