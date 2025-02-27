@@ -121,7 +121,7 @@ level1_blockers:  .byte   3
 level1_blockers_data:
                   ; Four bytes per blocker (start X, width, start Y, height)
                   .byte   113, 67,  37,  29    ; Books
-                  .byte   105, 99,  64,  3     ; Bookshelf
+                  .byte   105, 99,  64,  4     ; Bookshelf
                   .byte   0,   255, 191, 1     ; Floor
 
 level1_logic:

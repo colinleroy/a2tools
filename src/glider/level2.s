@@ -102,10 +102,10 @@ level2_vents_data:
 level2_blockers:  .byte   5
 level2_blockers_data:
                   ; Four bytes per blocker (start X, width, start Y, height)
-                  .byte   191, 34,  54,  28    ; Books
+                  .byte   190, 34,  54,  28    ; Books
                   .byte   148, 78,  82,  3     ; Bookshelf
                   .byte   84 , 72,  133, 16    ; Table
-                  .byte   119, 3,   139, 54    ; Table foot
+                  .byte   119, 4,   139, 53    ; Table foot
                   .byte   0,   255, 191, 1     ; Floor
 
 level2_logic:
