@@ -1,6 +1,6 @@
 #define CYCLES_PER_SEC 1023000
-#define HZ             8000
-#define AVAIL_CYCLES   (CYCLES_PER_SEC/HZ)
+/* Determine the number of available cycles according to the desired carrier */
+#define AVAIL_CYCLES   (CYCLES_PER_SEC/CARRIER_HZ)
 /* The number of levels is determined by the number of wasted cycles.
  * We have to take into account the necessary cycles and figure out
  * what's left:
@@ -10,5 +10,5 @@
  * sta / sta, the two speaker triggers: 8 cycles
  * rts:                                 6 cycles
  */
-#define NUM_LEVELS     ((AVAIL_CYCLES/2) - 6 - 6 - 2 - 8 - 6)
+#define NUM_LEVELS     (AVAIL_CYCLES - 6 - 6 - 2 - 8 - 6)
 #define STEP           1

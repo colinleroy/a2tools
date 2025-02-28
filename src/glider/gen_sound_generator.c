@@ -9,7 +9,7 @@ static unsigned char emit_instruction(char *instr, unsigned char cycles, unsigne
   return cycles - cost;
 }
 
-static unsigned char fast_steps[5] = {48, 24, 20, 16, 12};
+static unsigned char fast_steps[] = {32, 30, 28, 26, 24, 22, 20, 18, 16, 14, 12};
 
 static unsigned char emit_wait(unsigned char l, unsigned char cycles) {
   int i;
@@ -75,7 +75,7 @@ static unsigned char emit_wait(unsigned char l, unsigned char cycles) {
 }
 
 static void sub_level(unsigned char l) {
-  unsigned char cycles = (AVAIL_CYCLES/2)-12; /* Account for jsr/rts */
+  unsigned char cycles = AVAIL_CYCLES-12; /* Account for jsr/rts */
   printf("; SubLevel %d\n", l);
   printf("sub_sound_level_%d:\n", l);
   cycles = emit_instruction("ldx #$32     ", cycles, 2);
@@ -107,10 +107,31 @@ static void sub_level(unsigned char l) {
 }
 
 static void level(unsigned char l) {
-  printf("; Level %d, %d cycles\n", l, AVAIL_CYCLES);
   printf("sound_level_%d:\n", l);
-  printf("jsr sub_sound_level_%d\n", l);
-  printf("jsr waste_12\n");
+  /* Make sure we get the same number of cycles between
+   * two subloops, whatever the sampling rate */
+  if (SAMPLING_HZ == 4000) {
+    printf("jsr sub_sound_level_%d\n", l);
+    printf("jsr sub_sound_level_%d_w6\n", l);
+    printf("jsr sub_sound_level_%d_w6\n", l);
+    printf("nop\n"
+           "nop\n"
+           "nop\n");
+    printf("sub_sound_level_%d_w6:\n", l);
+    printf("nop\n"
+           "nop\n"
+           "nop\n");
+  } else if (SAMPLING_HZ == 8000) {
+    printf("jsr sub_sound_level_%d\n", l);
+    printf("jsr waste_12\n");
+  } else if (SAMPLING_HZ == 16000){
+    printf("nop\n"
+           "nop\n"
+           "nop\n");
+  } else {
+    printf("Unsupported HZ value %d (need 4000, 8000 or 16000).\n", SAMPLING_HZ);
+    exit(1);
+  }
   sub_level(l);
 }
 
@@ -120,14 +141,18 @@ int main(int argc, char *argv[]) {
   for (c = 0; c < NUM_LEVELS; c+=STEP) {
     printf(".export sound_level_%d\n", c);
   }
-
-  printf("waste_48:\n"
-         "jsr waste_24\n");
-
-  printf("waste_24: lda $FFFF\n\n");
-  printf("waste_20: lda $FFFF\n\n");
-  printf("waste_16: lda $FFFF\n\n");
-  printf("waste_12: rts\n\n");
+  printf("\n"
+         "waste_32: nop\n"
+         "waste_30: nop\n"
+         "waste_28: nop\n"
+         "waste_26: nop\n"
+         "waste_24: nop\n"
+         "waste_22: nop\n"
+         "waste_20: nop\n"
+         "waste_18: nop\n"
+         "waste_16: nop\n"
+         "waste_14: nop\n"
+         "waste_12: rts\n\n");
 
   for (c = 0; c < NUM_LEVELS; c+=STEP) {
     level(c);
