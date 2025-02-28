@@ -1,5 +1,5 @@
         .export     _init_mouse
-        .export     mouse_b
+        .export     mouse_x, mouse_b
 
         .export     reset_mouse
         .export     mouse_irq_ready
@@ -40,6 +40,7 @@ PLANE_VELOCITY  = 2
 
 slot:    .res    1
 mouse_b: .res    1
+mouse_x: .res    1
 
         .rodata
 
@@ -91,7 +92,7 @@ reset_mouse:
         lda     #2
         sta     pos1_lo,x
         asl
-        sta     plane_x
+        sta     mouse_x
         sta     prev_x
 
         lda     #>plane_MIN_Y
@@ -268,7 +269,7 @@ done:   rts
 
 :       ; Get and set the new X position
         ; Don't bother with high byte, it's zero
-        lda     plane_x
+        lda     mouse_x
         ldx     pos1_lo,y
         cpx     prev_x
         beq     mouse_out         ; Mouse did not move
@@ -278,7 +279,7 @@ mouse_pos:
         clc
         adc     #PLANE_VELOCITY
         bcs     mouse_out
-        sta     plane_x
+        sta     mouse_x
 
         ; Do we have battery?
         ldy     num_battery
@@ -290,7 +291,7 @@ mouse_pos:
 
         adc     #PLANE_VELOCITY
         bcs     mouse_out     ; Don't overflow X
-        sta     plane_x
+        sta     mouse_x
         sta     $C030
         dec     num_battery   ; Decrement battery
         jmp     mouse_out
@@ -299,7 +300,7 @@ mouse_neg:
         sec
         sbc     #PLANE_VELOCITY
         bcc     mouse_out
-        sta     plane_x
+        sta     mouse_x
 
 mouse_out:
         stx     prev_x          ; Backup mouse X for next comparison
