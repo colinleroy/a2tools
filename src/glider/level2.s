@@ -9,12 +9,10 @@
         .import   _deactivate_sprite
         .import   _clock_inc_score
 
-        .import   clock0_bgbackup
-        .import   socket0_bgbackup
-        .import   switch0_bgbackup
-
         .import   frame_counter
         .import   plane_data, rubber_band_data
+
+        .import   sprites_bgbackup
 
         .import   _play_click
 
@@ -46,14 +44,14 @@ level2_clock0_data:
                   .byte 5
                   .addr _clock_inc_score
                   .word $0000
-                  .addr clock0_bgbackup
+                  .addr sprites_bgbackup+0
                   .byte 0               ; need clear
 
 level2_socket0_data:
                   .byte 1              ; active
                   .byte 1              ; deadly
                   .byte 0              ; destroyable
-                  .byte 1               ; static
+                  .byte 0              ; static
                   .byte 147            ; x
                   .byte socket_WIDTH
                   .byte 110            ; y
@@ -67,7 +65,7 @@ level2_socket0_data:
                   .byte 0
                   .addr $0000
                   .word $0000
-                  .addr socket0_bgbackup
+                  .addr sprites_bgbackup+128
                   .byte 0               ; need clear
 
 level2_switch0_data:
@@ -88,7 +86,7 @@ level2_switch0_data:
                   .byte 0
                   .addr _play_click
                   .word $0000
-                  .addr switch0_bgbackup
+                  .addr sprites_bgbackup+256
                   .byte 0               ; need clear
 
 .rodata

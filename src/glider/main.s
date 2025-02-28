@@ -4,7 +4,7 @@
         .export   level_logic_done
 
         .import   _exit
-        .import   _init_hgr, _init_mouse, _load_bg
+        .import   _init_hgr, _init_mouse
         .import   _init_hgr_base_addrs, _hgr_baseaddr
         .import   _bzero
         .import   pushax
@@ -16,7 +16,7 @@
         .import   _check_blockers, _check_vents
         .import   _check_mouse_bounds
         .import   _check_rubber_band_bounds
-        .import   _load_bg, _restore_bg
+        .import   _load_bg
         .import   _deactivate_sprite
         .import   _inc_score
 
@@ -51,8 +51,8 @@ _main:
         ldx     #>$2000
         jsr     pushax
 
-        lda     #<$4000
-        ldx     #>$4000
+        lda     #<$2000
+        ldx     #>$2000
         jsr     _bzero
 
         lda     #1
@@ -85,6 +85,7 @@ game_loop:
         sta     cur_sprite
 
         ; Always draw the plane
+        jsr     _load_sprite_pointer
         jsr     _setup_sprite_pointer
         jsr     _clear_and_draw_sprite
 
@@ -99,13 +100,14 @@ draw_next_sprite:
         lda     cur_sprite
         bmi     draw_dashboard    ; All done!
 
-        jsr     _setup_sprite_pointer
+        jsr     _load_sprite_pointer
         bne     dec_sprite_draw   ; Only draw dynamic sprites
 
         ldy     #SPRITE_DATA::ACTIVE
         lda     (cur_sprite_ptr),y
-        beq     dec_sprite_draw
+        beq     dec_sprite_draw   ; Only draw active sprites
 
+        jsr     _setup_sprite_pointer
         jsr     _clear_and_draw_sprite
 
 dec_sprite_draw:
@@ -122,11 +124,15 @@ draw_dashboard:
 ; GENERAL GAME LOGIC
 ;
 game_logic:
+        ; Performance test here. Decomment for just the draw loop
+        ; inc frame_counter
+        ; jmp game_loop
+
         ; Check coordinates and update them depending on vents
         lda     mouse_x
         sta     plane_x
 
-        jsr     _check_vents
+        jsr     _check_vents            ; Returns with offset to add to plane_y
         clc
         adc     plane_y
         cmp     #plane_MAX_Y
@@ -149,6 +155,7 @@ die:
 game_over:
         jsr     restore_level_data
         jsr     reset_game
+        jmp     game_loop
 
 :       jsr     reset_level
 
@@ -160,7 +167,7 @@ move_checks_done:
 
 :       .assert (280-plane_WIDTH) .mod $2 = $0, error
         cmp     #(280-plane_WIDTH)
-        bne     level_logic
+        bcc     level_logic
         ; We finished the level!
         jsr     next_level
 
@@ -184,9 +191,6 @@ level_logic_done:
 ;
 collision_checks:
         inc     frame_counter
-        ; Performance test here. Decomment for just the draw loop
-        ; inc frame_counter
-        ; jmp game_loop
 
         ldx     num_sprites
         dex
@@ -229,8 +233,8 @@ check_next_sprite:
         ; Is it deadly?
         ldy     #SPRITE_DATA::DEADLY
         lda     (cur_sprite_ptr),y
-        bne     die               ; Yes, die
         beq     destroy_sprite    ; No, grab it (but don't get score for it)
+        jmp     die               ; Yes, die
 
 destroy_sprite_with_bonus:
         jsr     _play_bubble
@@ -357,7 +361,7 @@ restore_level_data:
         ldx     num_sprites
         stx     cur_sprite
 
-        jmp     _restore_bg
+        rts
 
 setup_level_data:
         lda     cur_level
@@ -398,8 +402,9 @@ first_draw:
         dec     cur_sprite
         lda     cur_sprite
         bmi     :+
+        jsr     _load_sprite_pointer
+        beq     first_draw              ; Only draw static sprites
         jsr     _setup_sprite_pointer
-        beq     first_draw
         jsr     _draw_sprite
         jmp     first_draw
 :
@@ -440,6 +445,7 @@ next_level:
 :       jmp     load_level
 
 reset_level:
+        jsr     _load_bg
         jsr     restore_level_data
         jsr     setup_level_data
         jmp     reset_mouse

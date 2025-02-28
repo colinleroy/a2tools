@@ -92,7 +92,7 @@ all: \
 	$(levels_backgrounds)
 
 glider_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl -C ../../config/apple2enh-rtonce.cfg \
-	-vm -m glider.map --start-addr 0x6000
+	-vm -m glider.map --start-addr 0x4000
 
 gen_sprite: gen_sprite.c
 	gcc -g -O0 $(shell pkg-config --cflags SDL_image) $^ $(shell pkg-config --libs SDL_image) -o $@
