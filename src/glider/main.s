@@ -14,7 +14,7 @@
         .import   _load_sprite_pointer
         .import   _setup_sprite_pointer
         .import   _check_blockers, _check_vents
-        .import   _check_mouse_bounds
+        .import   _check_plane_bounds
         .import   _check_rubber_band_bounds
         .import   _load_bg
         .import   _deactivate_sprite
@@ -217,12 +217,12 @@ check_next_sprite:
         ; We have an in-flight rubber band and that sprite is destroyable
         ldy     #SPRITE_DATA::X_COORD
         jsr     _check_rubber_band_bounds
-        bcs     destroy_sprite_with_bonus
+        bcs     destroy_sprite_with_rubber_band
 
 :       ; Let's check the sprite's box
         .assert data_ptr = cur_sprite_ptr, error
         ldy     #SPRITE_DATA::X_COORD
-        jsr     _check_mouse_bounds
+        jsr     _check_plane_bounds
         bcc     check_next_sprite
 
         ; We're in the sprite box, is it active?
@@ -236,8 +236,10 @@ check_next_sprite:
         beq     destroy_sprite    ; No, grab it (but don't get score for it)
         jmp     die               ; Yes, die
 
-destroy_sprite_with_bonus:
-        jsr     _play_bubble
+destroy_sprite_with_rubber_band:
+        lda     #0                ; Deactivate rubber band
+        jsr     _deactivate_sprite
+        jsr     _play_bubble      ; Play sound
         lda     #DESTROY_SCORE
         jsr     _inc_score
 

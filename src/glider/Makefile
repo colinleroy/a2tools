@@ -23,6 +23,10 @@ STREAMER_VER := 65c02
 endif
 endif
 
+#Sound generator sampling frequency
+SAMPLING_HZ := 4000
+CARRIER_HZ := 16000
+
 USE_LANGCARD := -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD
 
 GCCCFLAGS = -g -O0 -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\" \
@@ -101,10 +105,10 @@ gen_font: gen_font.c
 	gcc -g -O0 $(shell pkg-config --cflags SDL_image) $^ $(shell pkg-config --libs SDL_image) -o $@
 
 gen_sound_generator: gen_sound_generator.c sound.h
-	gcc -g -O0 $< -o $@
+	gcc -DSAMPLING_HZ=$(SAMPLING_HZ) -DCARRIER_HZ=$(CARRIER_HZ) -g -O0 $< -o $@
 
 gen_sound_clip: gen_sound_clip.c sound.h
-	gcc -g -O0 $< -o $@
+	gcc -DSAMPLING_HZ=$(SAMPLING_HZ) -DCARRIER_HZ=$(CARRIER_HZ) -g -O0 $< -o $@
 
 $(levels_backgrounds): %.hgr: assets/levels/%.xcf
 
@@ -133,7 +137,7 @@ play_sound.gen.s: gen_sound_generator
 $(sounds): %.snd.s: assets/sounds/%.wav
 %.snd.s: assets/sounds/%.wav gen_sound_clip
 	rm -f $<.raw
-	sox $< -b 8 -e unsigned-integer -t raw $<.raw channels 1 rate -v 8000
+	sox $< -b 8 -e unsigned-integer -t raw $<.raw channels 1 rate -v $(SAMPLING_HZ)
 	./gen_sound_clip $<.raw > $@
 	rm $<.raw
 
