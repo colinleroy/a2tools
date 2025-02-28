@@ -1,5 +1,5 @@
         .export     _check_blockers, _check_vents
-        .export     _check_mouse_bounds, _check_rubber_band_bounds
+        .export     _check_plane_bounds, _check_rubber_band_bounds
         .export     _deactivate_sprite, _deactivate_current_sprite
         .export     _fire_rubber_band, _fire_balloon, _fire_knife
         .export     _rubber_band_travel, _balloon_travel, _knife_travel
@@ -26,42 +26,60 @@
 ; (data_ptr),y to y+3 contains box coords (start X, width, start Y, height)
 ; Always return with Y at end of coords so caller knows where Y is at.
 ; Trashes A, updates Y, does not touch X
-_check_mouse_bounds:
+_check_plane_bounds:
         ; plane_x,plane_y is the top-left corner of the plane
         ; compute bottom-right corner
         clc
         lda     plane_x
+        sta     check_bounds_sx+1
         adc     #plane_WIDTH
-        sta     tmp1
+        sta     check_bounds_ex+1
         lda     plane_y
+        sta     check_bounds_sy+1
         adc     #plane_HEIGHT
-        sta     tmp2
+        sta     check_bounds_ey+1
 
 check_bounds:
         ; Check right of plane against first blocker X coords
         lda     (data_ptr),y
         iny                       ; Inc Y now so we know how much to skip
-        cmp     tmp1              ; lower X bound
+check_bounds_ex:
+        cmp     #$FF              ; lower X bound
         bcs     out_skip_y        ; if lb > x, we're out of box
 
         ; Check left of plane against right of box
         adc     (data_ptr),y      ; higher X bound (lower+width)
-        cmp     plane_x
+check_bounds_sx:
+        cmp     #$FF              ; Patched with X coordinate
         bcc     out_skip_y        ; if hb < x, we're out of box
 
         ; Check bottom of plane against first blocker Y coords
         iny
         lda     (data_ptr),y      ; lower Y bound
         iny                       ; Inc Y now so we have nothing to skip
-        cmp     tmp2
+check_bounds_ey:
+        cmp     #$FF
         bcs     out               ; if lb > y, we're out of box
 
         ; Check top of plane against lower bound of blocker
         adc     (data_ptr),y      ; higher Y bound (lower+height)
-        cmp     plane_y
+check_bounds_sy:
+        cmp     #$FF
         bcc     out               ; if hb < y, we're out of box
 
         rts                       ; We're in the box (return, carry already set)
+
+_check_rubber_band_bounds:
+        clc
+        lda     rubber_band_data+SPRITE_DATA::X_COORD
+        sta     check_bounds_sx+1
+        adc     #rubber_band_WIDTH
+        sta     check_bounds_ex+1
+        lda     rubber_band_data+SPRITE_DATA::Y_COORD
+        sta     check_bounds_sy+1
+        adc     #rubber_band_HEIGHT
+        sta     check_bounds_ey+1
+        jmp     check_bounds
 
 out_skip_y:
         iny
@@ -90,7 +108,7 @@ _check_blockers:
 
 do_check_blocker:
         iny
-        jsr     _check_mouse_bounds
+        jsr     _check_plane_bounds
         bcc     next_blocker
 
         ; We're in an obstacle
@@ -125,7 +143,7 @@ _check_vents:
 
 do_check_vent:
         iny
-        jsr     _check_mouse_bounds
+        jsr     _check_plane_bounds
         bcc     next_vent
 
         ; We're in a vent tunnel, load its Y delta
@@ -206,17 +224,6 @@ _rubber_band_travel:
         sta     rubber_band_data+SPRITE_DATA::X_COORD
 no_travel:
         rts
-
-_check_rubber_band_bounds:
-        clc
-        lda     rubber_band_data+SPRITE_DATA::X_COORD
-        adc     #rubber_band_WIDTH
-        sta     tmp1
-        lda     rubber_band_data+SPRITE_DATA::Y_COORD
-        adc     #rubber_band_HEIGHT
-        sta     tmp2
-        jmp     check_bounds
-
 
 _fire_balloon:
         cpx     frame_counter
