@@ -126,7 +126,7 @@ level2_logic:
         lda     level2_switch0_data+SPRITE_DATA::ACTIVE
         beq     :+
 
-        ; If so, activate the socket every two frames
+        ; If so, activate the socket every three frames
         lda     frame_counter
         and     #$03
         beq     :+

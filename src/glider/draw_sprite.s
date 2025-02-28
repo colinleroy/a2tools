@@ -125,7 +125,6 @@ _clear_and_draw_sprite:
         ldy     #SPRITE_DATA::NEED_CLEAR
         lda     (cur_sprite_ptr),y
         beq     _draw_sprite
-
         lda     #0
         sta     (cur_sprite_ptr),y
 

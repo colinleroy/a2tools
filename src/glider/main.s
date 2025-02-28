@@ -27,7 +27,7 @@
         .import   _rubber_band_travel
         .import   num_lives, num_rubber_bands, num_battery, cur_score
 
-        .import   reset_mouse, mouse_b
+        .import   reset_mouse, mouse_b, mouse_x
         .import   sprite_data, plane_data, rubber_band_data
         .import   mouse_irq_ready
 
@@ -100,7 +100,7 @@ draw_next_sprite:
         bmi     draw_dashboard    ; All done!
 
         jsr     _setup_sprite_pointer
-        ;bne     dec_sprite_draw
+        bne     dec_sprite_draw   ; Only draw dynamic sprites
 
         ldy     #SPRITE_DATA::ACTIVE
         lda     (cur_sprite_ptr),y
@@ -115,80 +115,17 @@ dec_sprite_draw:
 draw_dashboard:
         lda     frame_counter     ; Draw dashboard on odd frames
         and     #01
-        beq     collision_checks
+        beq     game_logic
         jsr     _print_dashboard
-
-;
-; COLLISION CHECKS
-;
-collision_checks:
-
-        ; Performance test here. Decomment for just the draw loop
-        ; inc frame_counter
-        ; jmp game_loop
-
-        ldx     num_sprites
-        dex
-        stx     cur_sprite
-
-check_next_sprite:
-        dec     cur_sprite
-        lda     cur_sprite
-        bmi     game_logic
-
-        jsr     _load_sprite_pointer
-        ldy     #SPRITE_DATA::ACTIVE
-        lda     (cur_sprite_ptr),y
-        beq     check_next_sprite
-
-        ; Let's check whether a rubber band can destroy this sprite
-        lda     rubber_band_data+SPRITE_DATA::ACTIVE
-        beq     :+
-        ldy     #SPRITE_DATA::DESTROYABLE
-        lda     (cur_sprite_ptr),y
-        beq     :+
-
-        ; We have an in-flight rubber band and that sprite is destroyable
-        ldy     #SPRITE_DATA::X_COORD
-        jsr     _check_rubber_band_bounds
-        bcs     destroy_sprite_with_bonus
-
-:       ; Let's check the sprite's box
-        .assert data_ptr = cur_sprite_ptr, error
-        ldy     #SPRITE_DATA::X_COORD
-        jsr     _check_mouse_bounds
-        bcc     check_next_sprite
-
-        ; We're in the sprite box, is it active?
-        ldy     #SPRITE_DATA::ACTIVE
-        lda     (cur_sprite_ptr),y
-        beq     check_next_sprite  ; No, we're good
-
-        ; Is it deadly?
-        ldy     #SPRITE_DATA::DEADLY
-        lda     (cur_sprite_ptr),y
-        bne     die               ; Yes, die
-        beq     destroy_sprite    ; No, grab it (but don't get score for it)
-
-destroy_sprite_with_bonus:
-        jsr     _play_bubble
-        lda     #DESTROY_SCORE
-        jsr     _inc_score
-
-        ; Deactivate it
-destroy_sprite:
-        lda     cur_sprite
-        jsr     _deactivate_sprite
-
-        jmp     check_next_sprite
-
 
 ;
 ; GENERAL GAME LOGIC
 ;
 game_logic:
-        inc     frame_counter
         ; Check coordinates and update them depending on vents
+        lda     mouse_x
+        sta     plane_x
+
         jsr     _check_vents
         clc
         adc     plane_y
@@ -242,7 +179,73 @@ level_logic_done:
 
 :       jsr     _rubber_band_travel
 
+;
+; COLLISION CHECKS
+;
+collision_checks:
+        inc     frame_counter
+        ; Performance test here. Decomment for just the draw loop
+        ; inc frame_counter
+        ; jmp game_loop
+
+        ldx     num_sprites
+        dex
+        stx     cur_sprite
+
+check_next_sprite:
+        dec     cur_sprite
+        lda     cur_sprite
+        bpl     :+                ; Are we done?
         jmp     game_loop
+
+:       jsr     _load_sprite_pointer
+        ldy     #SPRITE_DATA::ACTIVE
+        lda     (cur_sprite_ptr),y
+        beq     check_next_sprite
+
+        ; Let's check whether a rubber band can destroy this sprite
+        lda     rubber_band_data+SPRITE_DATA::ACTIVE
+        beq     :+
+        ldy     #SPRITE_DATA::DESTROYABLE
+        lda     (cur_sprite_ptr),y
+        beq     :+
+
+        ; We have an in-flight rubber band and that sprite is destroyable
+        ldy     #SPRITE_DATA::X_COORD
+        jsr     _check_rubber_band_bounds
+        bcs     destroy_sprite_with_bonus
+
+:       ; Let's check the sprite's box
+        .assert data_ptr = cur_sprite_ptr, error
+        ldy     #SPRITE_DATA::X_COORD
+        jsr     _check_mouse_bounds
+        bcc     check_next_sprite
+
+        ; We're in the sprite box, is it active?
+        ldy     #SPRITE_DATA::ACTIVE
+        lda     (cur_sprite_ptr),y
+        beq     check_next_sprite  ; No, we're good
+
+        ; Is it deadly?
+        ldy     #SPRITE_DATA::DEADLY
+        lda     (cur_sprite_ptr),y
+        bne     die               ; Yes, die
+        beq     destroy_sprite    ; No, grab it (but don't get score for it)
+
+destroy_sprite_with_bonus:
+        jsr     _play_bubble
+        lda     #DESTROY_SCORE
+        jsr     _inc_score
+
+        ; Deactivate it
+destroy_sprite:
+        lda     cur_sprite
+        jsr     _deactivate_sprite
+
+        jmp     check_next_sprite
+
+        ; Unreachable code.
+        brk
 
 ; Copy the hgr_baseaddr array of addresses
 ; to two arrays of low bytes/high bytes for simplicity
