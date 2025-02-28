@@ -4,7 +4,7 @@
         .export   level_logic_done
 
         .import   _exit
-        .import   _init_hgr, _init_mouse, _load_bg
+        .import   _init_hgr, _init_mouse
         .import   _init_hgr_base_addrs, _hgr_baseaddr
         .import   _bzero
         .import   pushax
@@ -16,7 +16,7 @@
         .import   _check_blockers, _check_vents
         .import   _check_mouse_bounds
         .import   _check_rubber_band_bounds
-        .import   _load_bg, _restore_bg
+        .import   _load_bg
         .import   _deactivate_sprite
         .import   _inc_score
 
@@ -51,8 +51,8 @@ _main:
         ldx     #>$2000
         jsr     pushax
 
-        lda     #<$4000
-        ldx     #>$4000
+        lda     #<$2000
+        ldx     #>$2000
         jsr     _bzero
 
         lda     #1
@@ -122,6 +122,10 @@ draw_dashboard:
 ; GENERAL GAME LOGIC
 ;
 game_logic:
+        ; Performance test here. Decomment for just the draw loop
+        ; inc frame_counter
+        ; jmp game_loop
+
         ; Check coordinates and update them depending on vents
         lda     mouse_x
         sta     plane_x
@@ -149,6 +153,7 @@ die:
 game_over:
         jsr     restore_level_data
         jsr     reset_game
+        jmp     game_loop
 
 :       jsr     reset_level
 
@@ -184,9 +189,6 @@ level_logic_done:
 ;
 collision_checks:
         inc     frame_counter
-        ; Performance test here. Decomment for just the draw loop
-        ; inc frame_counter
-        ; jmp game_loop
 
         ldx     num_sprites
         dex
@@ -357,7 +359,7 @@ restore_level_data:
         ldx     num_sprites
         stx     cur_sprite
 
-        jmp     _restore_bg
+        rts
 
 setup_level_data:
         lda     cur_level
@@ -440,6 +442,7 @@ next_level:
 :       jmp     load_level
 
 reset_level:
+        jsr     _load_bg
         jsr     restore_level_data
         jsr     setup_level_data
         jmp     reset_mouse

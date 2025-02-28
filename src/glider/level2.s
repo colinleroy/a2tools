@@ -53,7 +53,7 @@ level2_socket0_data:
                   .byte 1              ; active
                   .byte 1              ; deadly
                   .byte 0              ; destroyable
-                  .byte 1               ; static
+                  .byte 0               ; static
                   .byte 147            ; x
                   .byte socket_WIDTH
                   .byte 110            ; y

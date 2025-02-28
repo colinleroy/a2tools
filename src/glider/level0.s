@@ -50,7 +50,7 @@ level0_clock0_data:
                   .byte 0               ; need clear
 
 level0_balloon0_data:
-                  .byte 1               ; active
+                  .byte 0               ; active
                   .byte 1               ; deadly
                   .byte 1               ; destroyable
                   .byte 0               ; static

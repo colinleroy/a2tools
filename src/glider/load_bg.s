@@ -1,4 +1,4 @@
-        .export  _load_bg, _restore_bg
+        .export  _load_bg
         .import  cur_level
         .import  _open, _read, _close, _memcpy
         .import  pushax, popax
@@ -45,29 +45,30 @@ _load_bg:
         jsr     _read
 
         jsr     popax         ; Get fd back
-        jsr     _close
+        jmp     _close
 
-        ; Copy background to HGR page 2
-        lda     #<$4000
-        ldx     #>$4000
-        jsr     pushax
-        lda     #<$2000
-        ldx     #>$2000
-        jsr     pushax
-        lda     #<$2000
-        ldx     #>$2000
-        jmp     _memcpy
-
-_restore_bg:
-        lda     #<$2000
-        ldx     #>$2000
-        jsr     pushax
-        lda     #<$4000
-        ldx     #>$4000
-        jsr     pushax
-        lda     #<$2000
-        ldx     #>$2000
-        jmp     _memcpy
+; _backup_bg:
+;         ; Copy background to HGR page 2
+;         lda     #<$4000
+;         ldx     #>$4000
+;         jsr     pushax
+;         lda     #<$2000
+;         ldx     #>$2000
+;         jsr     pushax
+;         lda     #<$2000
+;         ldx     #>$2000
+;         jmp     _memcpy
+; 
+; _restore_bg:
+;         lda     #<$2000
+;         ldx     #>$2000
+;         jsr     pushax
+;         lda     #<$4000
+;         ldx     #>$4000
+;         jsr     pushax
+;         lda     #<$2000
+;         ldx     #>$2000
+;         jmp     _memcpy
 
 load_err:
         rts
