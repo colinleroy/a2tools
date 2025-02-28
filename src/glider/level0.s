@@ -5,10 +5,6 @@
         .import   _clock, _clock_mask
         .import   _rubber_box, _rubber_box_mask
 
-        .import   balloon0_bgbackup
-        .import   clock0_bgbackup
-        .import   rubber_box0_bgbackup
-
         .import   frame_counter
         .import   level_logic_done
         .import   _clock_inc_score
@@ -16,6 +12,9 @@
         .import   _grab_rubber_bands
         .import   _fire_balloon, _balloon_travel
         .import   plane_data, rubber_band_data
+
+        .import   sprites_bgbackup
+
         .include  "balloon.gen.inc"
         .include  "clock.gen.inc"
         .include  "plane.gen.inc"
@@ -46,11 +45,11 @@ level0_clock0_data:
                   .byte 5               ; deac cb data
                   .addr _clock_inc_score; deac cb
                   .word $0000           ; state backup
-                  .addr clock0_bgbackup ; bg backup
+                  .addr sprites_bgbackup+0 ; bg backup
                   .byte 0               ; need clear
 
 level0_balloon0_data:
-                  .byte 1               ; active
+                  .byte 0               ; active
                   .byte 1               ; deadly
                   .byte 1               ; destroyable
                   .byte 0               ; static
@@ -67,7 +66,7 @@ level0_balloon0_data:
                   .byte 0
                   .addr $0000
                   .word $0000
-                  .addr balloon0_bgbackup
+                  .addr sprites_bgbackup+128
                   .byte 0               ; need clear
 
 level0_rubber_box0_data:
@@ -88,7 +87,7 @@ level0_rubber_box0_data:
                   .byte 3
                   .addr _grab_rubber_bands ; deactivation callback
                   .word $0000              ; state backup
-                  .addr rubber_box0_bgbackup
+                  .addr sprites_bgbackup+256
                   .byte 0                  ; need clear
 
 .rodata

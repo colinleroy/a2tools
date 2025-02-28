@@ -19,12 +19,13 @@
         .include "level_data_ptr.inc"
 
 line            = _zp8
-bg_line         = ptr1
 cur_y           = _zp10
 n_bytes_draw    = _zp11
 
 sprite_y        = tmp4
 
+; pointer to sprite data in (level_data), A is sprite number to draw
+; Return with 1 in A if the sprite is static
 _load_sprite_pointer:
         asl
         tay
@@ -33,12 +34,14 @@ _load_sprite_pointer:
         iny
         lda     (level_data),y
         sta     cur_sprite_ptr+1
+
+        ldy     #SPRITE_DATA::STATIC
+        lda     (cur_sprite_ptr),y
+
         rts
 
-; pointer to sprite data in (level_data), A is sprite number to draw
-; Return with 1 in A if the sprite is static
+; Finish setting up clear/draw functions with sprite data
 _setup_sprite_pointer:
-        jsr     _load_sprite_pointer
         ldy     #SPRITE_DATA::X_COORD
         lda     (cur_sprite_ptr),y
         tax
@@ -81,12 +84,12 @@ _setup_sprite_pointer:
 
         ldy     #SPRITE_DATA::BG_BACKUP
         lda     (cur_sprite_ptr),y
-        sta     sprite_backup_1+1
-        sta     sprite_backup_2+1
+        sta     sprite_restore+1
+        sta     sprite_backup+1
         iny
         lda     (cur_sprite_ptr),y
-        sta     sprite_backup_1+2
-        sta     sprite_backup_2+2
+        sta     sprite_restore+2
+        sta     sprite_backup+2
 
         ldy     #SPRITE_DATA::SPRITE
         lda     (cur_sprite_ptr),y
@@ -114,10 +117,6 @@ sprite_num:
         sta     sprite_pointer+2
         lda     (ptr3),y
         sta     sprite_mask+2
-
-        ldy     #SPRITE_DATA::STATIC
-        lda     (cur_sprite_ptr),y
-
         rts
 
 ; X, Y : coordinates
@@ -135,17 +134,18 @@ sprite_prev_x:
         lda     #$FF
         ldy     cur_y
         adc     _hgr_low,y
-        sta     line
+        sta     sprite_store_bg+1
         lda     _hgr_hi,y
-        adc     #0
-        sta     line+1
+        ;adc     #0 - carry won't be set here
+        sta     sprite_store_bg+2
 
 n_bytes_per_line_clear:
         ldy     #$FF
 
-sprite_backup_1:
+sprite_restore:
 :       lda     $FFFF,x
-        sta     (line),y
+sprite_store_bg:
+        sta     $FFFF,y
         dex
         dey
         bpl     :-
@@ -174,17 +174,20 @@ sprite_x:
         lda     #$FF
         ldy     cur_y
         adc     _hgr_low,y
-        sta     line
+        sta     sprite_get_bg+1
+        sta     sprite_store_byte+1
         lda     _hgr_hi,y
-        adc     #0
-        sta     line+1
+        ;adc     #0 - carry won't be set here
+        sta     sprite_get_bg+2
+        sta     sprite_store_byte+2
 
 n_bytes_per_line_draw:
         ldy     #$FF
 
         ; Get what's under the sprite
-:       lda     (line),y
-sprite_backup_2:
+sprite_get_bg:
+        lda     $FFFF,y
+sprite_backup:
         ; Back it up
         sta     $FFFF,x
         ; draw sprite
@@ -192,10 +195,11 @@ sprite_mask:
         and     $FFFF,x       ; Patched
 sprite_pointer:
         ora     $FFFF,x       ; Patched
-        sta     (line),y
+sprite_store_byte:
+        sta     $FFFF,y
         dex
         dey
-        bpl     :-
+        bpl     sprite_get_bg ; Next pixel
 
         inc     cur_y
         cpx     #$FF
@@ -216,7 +220,7 @@ fast_sprite_x:
         adc     _hgr_low,y
         sta     line
         lda     _hgr_hi,y
-        adc     #0
+        ; adc     #0 - carry won't be set here
         sta     line+1
 
 fast_n_bytes_per_line_draw:
@@ -224,8 +228,8 @@ fast_n_bytes_per_line_draw:
 
 fast_sprite_pointer:
 :       lda     $FFFF,x       ; Patched
-        sta     (line),y
-        dex
+        sta     (line),y      ; Use ($nn),y here because fast-drawn sprites
+        dex                   ; are usually 1 byte large
         dey
         bpl     :-
 

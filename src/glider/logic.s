@@ -146,6 +146,7 @@ _deactivate_rubber_band:
         lda     #0
 
 _deactivate_sprite:
+        jsr     _load_sprite_pointer
         jsr     _setup_sprite_pointer
 _deactivate_current_sprite:
         ldy     #SPRITE_DATA::ACTIVE

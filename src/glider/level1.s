@@ -11,12 +11,10 @@
 
         .import   _fire_knife, _knife_travel
 
-        .import   battery0_bgbackup
-        .import   clock0_bgbackup
-        .import   knife0_bgbackup
-        .import   knife1_bgbackup
-
         .import   plane_data, rubber_band_data
+
+        .import   sprites_bgbackup
+
         .include  "battery.gen.inc"
         .include  "clock.gen.inc"
         .include  "knife.gen.inc"
@@ -45,7 +43,7 @@ level1_battery0_data:
                   .byte 20
                   .addr _grab_battery
                   .word $0000           ; state backup
-                  .addr battery0_bgbackup
+                  .addr sprites_bgbackup+0
                   .byte 0               ; need clear
 
 level1_clock0_data:
@@ -66,7 +64,7 @@ level1_clock0_data:
                   .byte 5
                   .addr _clock_inc_score
                   .word $0000
-                  .addr clock0_bgbackup
+                  .addr sprites_bgbackup+128
                   .byte 0               ; need clear
 
 level1_knife0_data:
@@ -87,7 +85,7 @@ level1_knife0_data:
                   .byte 0
                   .addr $0000
                   .word $0000           ; state backup
-                  .addr knife0_bgbackup
+                  .addr sprites_bgbackup+256
                   .byte 0               ; need clear
 
 level1_knife1_data:
@@ -108,7 +106,7 @@ level1_knife1_data:
                   .byte 0
                   .addr $0000
                   .word $0000           ; state backup
-                  .addr knife1_bgbackup
+                  .addr sprites_bgbackup+384
                   .byte 0               ; need clear
 
 .rodata

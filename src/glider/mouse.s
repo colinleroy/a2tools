@@ -93,6 +93,7 @@ reset_mouse:
         sta     pos1_lo,x
         asl
         sta     mouse_x
+        sta     plane_x
         sta     prev_x
 
         lda     #>plane_MIN_Y
