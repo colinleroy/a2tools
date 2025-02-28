@@ -106,10 +106,12 @@ gen_sound_generator: gen_sound_generator.c sound.h
 gen_sound_clip: gen_sound_clip.c sound.h
 	gcc -g -O0 $< -o $@
 
-$(levels_backgrounds): %.hgr: assets/levels/%.png
+$(levels_backgrounds): %.hgr: assets/levels/%.xcf
 
-%.hgr: assets/levels/%.png
-	../surl-server/hgr-convert $^ && mv $^.hgr $@
+%.hgr: assets/levels/%.xcf
+	convert -flatten $< $<.png
+	../surl-server/hgr-convert $<.png && mv $<.png.hgr $@
+	rm -f $<.png $<.png.hgr-preview.png
 
 $(sprites_pixel_perfect): %.pixel_perfect.gen.s: assets/sprites/%.png
 %.pixel_perfect.gen.s: assets/sprites/%.png gen_sprite
@@ -155,3 +157,6 @@ upload: all
 	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/glider/ || \
 	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/glider/ && \
 	cp *.bin *.hgr /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/glider/
+
+gimp_setup:
+	./gimp_setup.sh

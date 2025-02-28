@@ -124,9 +124,9 @@ level0_vents_data:
 level0_blockers:  .byte   4
 level0_blockers_data:
                   ; Four bytes per blocker (start X, width, start Y, height)
-                  .byte   102, 23,  91,  31    ; Mac
-                  .byte   102, 92,  121, 6     ; Desk
-                  .byte   147, 3,   126, 64    ; Foot
+                  .byte   104, 24,  91,  31    ; Mac
+                  .byte   103, 92,  121, 6     ; Table
+                  .byte   148, 4,   126, 64    ; Table foot
                   .byte   0,   255, 191, 1     ; Floor
 
 level0_logic:
