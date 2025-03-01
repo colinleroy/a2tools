@@ -83,7 +83,6 @@ glider_SOURCES := \
 	buffers.s \
 	load_bg.s \
 	dashboard.s \
-	../lib/fastirq.s \
 	../lib/extrazp.s \
 	../lib/asm/hgr.s \
 	../lib/hgr_addrs.c \
@@ -99,7 +98,7 @@ all: \
 	glider.bin \
 	$(levels_backgrounds)
 
-glider_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl -C ../../config/apple2enh-rtonce.cfg \
+glider_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl -C ../../config/apple2enh-aligndata.cfg \
 	-vm -m glider.map --start-addr 0x4000
 
 gen_sprite: gen_sprite.c

@@ -178,6 +178,8 @@ int main(int argc, char *argv[]) {
   }
 
   /* Player */
+  printf("         .data\n\n"
+         ".align $100\n");
 #ifdef CPU_65c02
   printf("_play_sample:\n"
          "         sta ptr1\n"
