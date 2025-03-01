@@ -66,6 +66,10 @@ _animate_plane_crash:
         lda     #7
         sta     tmp1
 
+        ; Disable interrupts
+        php
+        sei
+
 :       lda     tmp2
         jsr     _load_sprite_pointer
         jsr     _setup_sprite_pointer
@@ -75,6 +79,8 @@ _animate_plane_crash:
         jsr     _platform_msleep
         dec     tmp1
         bne     :-
+
+        plp
 
         ; Change sprite back
         lda     #<_plane
