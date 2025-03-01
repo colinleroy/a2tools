@@ -141,7 +141,10 @@ static void sub_level(int l, int repeat) {
       cycles = emit_pointer_increment(cycles);
       incremented_pointer = 1;
     }
-    if (incremented_pointer && !byte_loaded && cycles > BYTE_LOAD_CYCLES+6+2) {
+    /* Make sure not to load byte before the last repeat
+     * to avoid changing X and breaking STA $nnnn,x to the
+     * speaker */
+    if (i == repeat-1 && incremented_pointer && !byte_loaded && cycles > BYTE_LOAD_CYCLES+6+2) {
       cycles = emit_byte_loading(cycles);
       byte_loaded = 1;
     }
