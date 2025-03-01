@@ -5,7 +5,7 @@
 
                   .import  _clear_and_draw_sprite
                   .import  _setup_sprite_pointer, _load_sprite_pointer
-                  .import  num_sprites
+                  .import  plane_sprite_num
                   .import  _div7_table, tosumula0, pusha0, pushax, popax
                   .import  _platform_msleep
 
@@ -49,8 +49,7 @@ _animate_plane_crash:
         sta     plane_data+SPRITE_DATA::X_COORD
 
         ; Get the plane's sprite number (last in sprite table)
-        ldx     num_sprites
-        dex
+        ldx     plane_sprite_num
         stx     tmp2
 
         ; Change sprite data & mask
