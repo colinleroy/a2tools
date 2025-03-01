@@ -75,7 +75,7 @@ static unsigned char emit_wait(unsigned char l, unsigned char cycles) {
 }
 
 static void sub_level(unsigned char l, unsigned char repeat) {
-  unsigned char cycles = AVAIL_CYCLES-12; /* Account for jsr/rts */
+  unsigned char cycles = AVAIL_CYCLES;
   /* X is l*2 + 32 so compute C030 offset */
   int C030_OFFSET = 0xC030 - ((l * 2) + PAGE_CROSSER);
   char sta_C030_OFFSET[32];
@@ -110,14 +110,10 @@ static void sub_level(unsigned char l, unsigned char repeat) {
       if (cycles != 0) {
         printf("bug. Cycles left %d\n", cycles);
       }
-#ifdef CPU_65c02
-      printf("         jsr waste_22\n"); /* Overhead of the outer loop */
-#else
-      printf("         jsr waste_35\n"); /* Overhead of the outer loop */
-#endif
+      printf("         jsr waste_%d     ; Inter-duty waster equals to byte read overhead\n", READ_OVERHEAD);
     } else {
-      cycles = emit_wait(cycles-8, cycles);
-      if (cycles != 8) {
+      cycles = emit_wait(cycles, cycles);
+      if (cycles != 0) {
         printf("bug. Cycles left %d\n", cycles);
       }
     }
@@ -144,6 +140,26 @@ static void level(unsigned char l) {
 int main(int argc, char *argv[]) {
   int c;
 
+  printf("; Settings for this sound generator:\n"
+         "; CYCLES_PER_SEC = %d\n"
+         "; CARRIER_HZ = %d\n"
+         "; SAMPLING_HZ = %d\n"
+         "; READ_OVERHEAD = %d\n"
+         "; DUTY_CYCLE_LENGTH = %d\n"
+         "; AVAIL_CYCLES = %d\n"
+         "; NUM_LEVELS = %d\n"
+         "; STEP = %d\n"
+         "; PAGE_CROSSER = %d\n\n",
+         CYCLES_PER_SEC,
+         CARRIER_HZ,
+         SAMPLING_HZ,
+         READ_OVERHEAD,
+         DUTY_CYCLE_LENGTH,
+         AVAIL_CYCLES,
+         NUM_LEVELS,
+         STEP,
+         PAGE_CROSSER);
+
   printf("         .export   _play_sample\n"
          "         .importzp ptr1\n"
          "\n"
@@ -159,7 +175,11 @@ int main(int argc, char *argv[]) {
   printf("\n"
          "         .code\n"
          "\n"
-         "waste_35: bit $FF\n"
+         "waste_43: bit $FF\n"
+         "waste_40: nop\n"
+         "waste_38: nop\n"
+         "waste_36: nop\n"
+         "waste_34: nop\n"
          "waste_32: nop\n"
          "waste_30: nop\n"
          "waste_28: nop\n"
@@ -187,20 +207,21 @@ int main(int argc, char *argv[]) {
          "         php\n"
          "         sei\n"
          "         ldy #$00\n"
-         "\n"
-         ":        nop                         ; 2 Compensate when we don't inc ptr1+1\n"
+         "                                     ; Byte read loop\n"
+         "                                     ; Y=0    Y!=0\n"
+         ":        nop                         ; 2             Compensate when we don't inc ptr1+1\n"
          "         nop                         ; 4\n"
          "         bit $FF                     ; 7\n"
-         ":        lda (ptr1),y                ; 13\n"
-         "         bmi play_out                ; 15\n"
+         ":        lda (ptr1),y                ; 12     5\n"
+         "         bmi play_out                ; 14     7      Considered not taken\n"
          "\n"
-         "         tax                         ; 17\n"
-         "         jmp (sound_levels-$%02X,x)    ; 23 + Duty cycles + jmp back, overhead now 26 cycles\n"
+         "         tax                         ; 16     9\n"
+         "         jmp (sound_levels-$%02X,x)    ; 25     18      (6 + jmp back)\n"
          "play_next_sample:\n"
-         "         iny                         ; 28\n"
-         "         bne :--                     ; 31\n"
-         "         inc ptr1+1\n"
-         "         bra :-\n"
+         "         iny                         ; 27     20\n"
+         "         bne :--                     ; 30(t)  22\n"
+         "         inc ptr1+1                  ;        27\n"
+         "         bra :-                      ;        30(t)\n"
          "play_out:\n"
          "         plp\n"
          "         rts\n",
@@ -212,25 +233,26 @@ int main(int argc, char *argv[]) {
          "         php\n"
          "         sei\n"
          "         ldy #$00\n"
-         "\n"
-         ":        nop                         ; 2 Compensate when we don't inc ptr1+1\n"
+         "                                     ; Byte read loop\n"
+         "                                     ; Y=0    Y!=0\n"
+         ":        nop                         ; 2             Compensate when we don't inc ptr1+1\n"
          "         nop                         ; 4\n"
          "         bit $FF                     ; 7\n"
-         ":        lda (ptr1),y                ; 13\n"
-         "         bmi play_out                ; 15\n"
+         ":        lda (ptr1),y                ; 12     5\n"
+         "         bmi play_out                ; 14     7      Considered not taken\n"
          "\n"
-         "         tax                         ; 17\n"
-         "         lda sound_levels-$%02X,x      ; 21\n"
-         "         sta jump_target+1           ; 25\n"
-         "         lda sound_levels+1-$%02X,x    ; 27\n"
-         "         sta jump_target+2           ; 31\n"
+         "         tax                         ; 16     9\n"
+         "         lda sound_levels-$%02X,x      ; 20     13\n"
+         "         sta jump_target+1           ; 24     17\n"
+         "         lda sound_levels+1-$%02X,x    ; 28     21\n"
+         "         sta jump_target+2           ; 32     25\n"
          "jump_target:\n"
-         "         jmp $FFFF                   ; 34 + Duty cycles + jmp back, overhead now 26 cycles\n"
+         "         jmp $FFFF                   ; 38     31 (3 + jmp back)\n"
          "play_next_sample:\n"
-         "         iny                         ; 28\n"
-         "         bne :--                     ; 31\n"
-         "         inc ptr1+1\n"
-         "         jmp :-\n"
+         "         iny                         ; 40     33\n"
+         "         bne :--                     ; 43(t)  35\n"
+         "         inc ptr1+1                  ;        40\n"
+         "         jmp :-                      ;        43\n"
          "play_out:\n"
          "         plp\n"
          "         rts\n",
