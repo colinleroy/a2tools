@@ -1,6 +1,6 @@
 gen_sprite
 gen_font
-gen_sound_generator
+gen_sound_player
 gen_sound_clip
 *.gen.s
 *.gen.inc
