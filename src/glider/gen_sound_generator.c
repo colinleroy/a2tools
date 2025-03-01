@@ -110,7 +110,11 @@ static void sub_level(unsigned char l, unsigned char repeat) {
       if (cycles != 0) {
         printf("bug. Cycles left %d\n", cycles);
       }
+#ifdef CPU_65c02
       printf("         jsr waste_22\n"); /* Overhead of the outer loop */
+#else
+      printf("         jsr waste_35\n"); /* Overhead of the outer loop */
+#endif
     } else {
       cycles = emit_wait(cycles-8, cycles);
       if (cycles != 8) {
@@ -155,6 +159,7 @@ int main(int argc, char *argv[]) {
   printf("\n"
          "         .code\n"
          "\n"
+         "waste_35: bit $FF\n"
          "waste_32: nop\n"
          "waste_30: nop\n"
          "waste_28: nop\n"
@@ -173,6 +178,7 @@ int main(int argc, char *argv[]) {
   }
 
   /* Player */
+#ifdef CPU_65c02
   printf("_play_sample:\n"
          "         sta ptr1\n"
          "         stx ptr1+1\n"
@@ -197,5 +203,36 @@ int main(int argc, char *argv[]) {
          "         plp\n"
          "         rts\n",
          PAGE_CROSSER);
-
+#else
+  printf("_play_sample:\n"
+         "         sta ptr1\n"
+         "         stx ptr1+1\n"
+         "         php\n"
+         "         sei\n"
+         "         ldy #$00\n"
+         "\n"
+         ":        nop                         ; 2 Compensate when we don't inc ptr1+1\n"
+         "         nop                         ; 4\n"
+         "         bit $FF                     ; 7\n"
+         ":        lda (ptr1),y                ; 13\n"
+         "         bmi play_out                ; 15\n"
+         "\n"
+         "         tax                         ; 17\n"
+         "         lda sound_levels-$%02X,x      ; 21\n"
+         "         sta jump_target+1           ; 25\n"
+         "         lda sound_levels+1-$%02X,x    ; 27\n"
+         "         sta jump_target+2           ; 31\n"
+         "jump_target:\n"
+         "         jmp $FFFF                   ; 34 + Duty cycles + jmp back, overhead now 26 cycles\n"
+         "play_next_sample:\n"
+         "         iny                         ; 28\n"
+         "         bne :--                     ; 31\n"
+         "         inc ptr1+1\n"
+         "         jmp :-\n"
+         "play_out:\n"
+         "         plp\n"
+         "         rts\n",
+         PAGE_CROSSER,
+         PAGE_CROSSER);
+#endif
 }

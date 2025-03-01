@@ -5,6 +5,7 @@ iigs_CFLAGS := -DIIGS --asm-define IIGS
 trgt = apple2gs
 CC65_TARGET = apple2enh
 upload_subdir := /iigs
+STREAMER_VER := 65c02
 else
 ifdef OLDII
 serial_hw_SOURCES := ../lib/serial/acia/common.s ../lib/serial/acia/no_irq.s
@@ -108,10 +109,10 @@ gen_font: gen_font.c
 	gcc -g -O0 $(shell pkg-config --cflags SDL_image) $^ $(shell pkg-config --libs SDL_image) -o $@
 
 gen_sound_generator: gen_sound_generator.c sound.h
-	gcc -DSAMPLING_HZ=$(SAMPLING_HZ) -DCARRIER_HZ=$(CARRIER_HZ) -g -O0 $< -o $@
+	gcc -DCPU_$(STREAMER_VER) -DSAMPLING_HZ=$(SAMPLING_HZ) -DCARRIER_HZ=$(CARRIER_HZ) -g -O0 $< -o $@
 
 gen_sound_clip: gen_sound_clip.c sound.h
-	gcc -DSAMPLING_HZ=$(SAMPLING_HZ) -DCARRIER_HZ=$(CARRIER_HZ) -g -O0 $< -o $@
+	gcc -DCPU_$(STREAMER_VER) -DSAMPLING_HZ=$(SAMPLING_HZ) -DCARRIER_HZ=$(CARRIER_HZ) -g -O0 $< -o $@
 
 $(levels_backgrounds): %.hgr: assets/levels/%.xcf
 
