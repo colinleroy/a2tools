@@ -19,13 +19,14 @@
         .import   _load_bg
         .import   _deactivate_sprite
         .import   _inc_score
+        .import   _animate_plane_crash
 
         .import   level_backup
         .import   levels_logic, cur_level_logic
 
         .import   _fire_rubber_band
         .import   _rubber_band_travel
-        .import   num_lives, num_rubber_bands, num_battery, cur_score
+        .import   num_lives, num_rubber_bands, num_battery, num_sprites, cur_score
 
         .import   reset_mouse, mouse_b, mouse_x
         .import   sprite_data, plane_data, rubber_band_data
@@ -35,7 +36,7 @@
 
         .import   _play_bubble, _play_crash
 
-        .importzp _zp6, ptr2, ptr4
+        .importzp ptr2, ptr4
 
         .include  "apple2.inc"
         .include  "plane.gen.inc"
@@ -149,6 +150,7 @@ game_logic:
 
         ; We got in an obstacle
 die:
+        jsr     _animate_plane_crash
         jsr     _play_crash
         dec     num_lives
         bne     :+
@@ -466,5 +468,4 @@ _win:
 _hgr_low:        .res 192
 _hgr_hi:         .res 192
 frame_counter:   .res 1
-num_sprites:     .res 1
 cur_sprite:      .res 1

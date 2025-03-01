@@ -43,6 +43,7 @@ levels_backgrounds = \
 
 sprites_pixel_perfect = \
 	knife.pixel_perfect.gen.s \
+	plane_destroyed.pixel_perfect.gen.s \
 	rubber_band.pixel_perfect.gen.s \
 
 sprites_unperfect = \
@@ -65,13 +66,14 @@ sounds = \
 	bubble.snd.s \
 	click.snd.s \
 	croutch.snd.s \
-	crash.snd.s \
+	crash.snd.s
 
 glider_SOURCES := \
 	main.s \
 	mouse.s \
 	draw_text.s \
 	draw_sprite.s \
+	animate.s \
 	logic.s \
 	levels.s \
 	level0.s \
@@ -85,6 +87,7 @@ glider_SOURCES := \
 	../lib/asm/hgr.s \
 	../lib/hgr_addrs.c \
 	../lib/asm/bcd.s \
+	../lib/platform_sleep.s \
 	font.gen.s \
 	plane.pixel_perfect.gen.s \
 	play_sound.gen.s \
