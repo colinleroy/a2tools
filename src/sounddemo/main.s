@@ -1,6 +1,6 @@
          .import _cputs, _cgetc, _clrscr
          .import _play_sample
-         .import _bubble_snd
+         .import _countdown_snd
          .import  _exit
          .export _main
 
@@ -18,8 +18,8 @@ _main:
          ldx     #>playing_str
          jsr     _cputs
 
-         lda     #<_bubble_snd
-         ldx     #>_bubble_snd
+         lda     #<_countdown_snd
+         ldx     #>_countdown_snd
          jsr     _play_sample
 
          lda     #<press_key_str

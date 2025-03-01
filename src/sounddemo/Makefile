@@ -14,11 +14,10 @@ endif
 CLEANDISK = ../../disks/ProDOS_2_4_3.po
 
 #Sound generator sampling frequency
-SAMPLING_HZ := 8000
+SAMPLING_HZ := 4000
 
 sounds = \
-	bubble.snd.s \
-	#countdown.snd.s
+	countdown.snd.s
 
 sounddemo_SOURCES := \
 	main.s \
