@@ -58,6 +58,7 @@ clean:
 	*.gen.inc \
 	*.snd.s \
 	*.dbg *.lbl *.map \
+	*.po
 
 sounddemo.bin: $(sounddemo_CL65SOURCES) $(sounddemo_SOURCES)
 	cl65 -g -Wl --dbgfile,sounddemo.dbg -Ln sounddemo.lbl $(CFLAGS) $(iigs_CFLAGS) $(sounddemo_CLCFLAGS) -o $@ $^
