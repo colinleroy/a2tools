@@ -1,4 +1,4 @@
-#define CYCLES_PER_SEC 1024000
+#define CYCLES_PER_SEC 1023000
 
 /* Determine the number of available cycles according to the desired carrier */
 

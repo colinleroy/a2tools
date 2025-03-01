@@ -108,13 +108,15 @@ static void sub_level(unsigned char l, unsigned char repeat) {
     if (i < repeat - 1) {
       cycles = emit_wait(cycles, cycles);
       if (cycles != 0) {
-        printf("bug. Cycles left %d\n", cycles);
+        fprintf(stderr, "bug. Cycles left %d\n", cycles);
+        exit(1);
       }
       printf("         jsr waste_%d     ; Inter-duty waster equals to byte read overhead\n", READ_OVERHEAD);
     } else {
       cycles = emit_wait(cycles, cycles);
       if (cycles != 0) {
-        printf("bug. Cycles left %d\n", cycles);
+        fprintf(stderr, "bug. Cycles left %d\n", cycles);
+        exit(1);
       }
     }
   }
@@ -122,17 +124,11 @@ static void sub_level(unsigned char l, unsigned char repeat) {
 }
 
 static void level(unsigned char l) {
-  unsigned char repeat;
-  switch(SAMPLING_HZ) {
-    case 4000:
-      repeat = 4;
-      break;
-    case 8000:
-      repeat = 2;
-      break;
-    case 16000:
-      repeat = 1;
-      break;
+  unsigned char repeat = CARRIER_HZ/SAMPLING_HZ;
+  if (CARRIER_HZ % SAMPLING_HZ != 0) {
+    fprintf(stderr, "CARRIER_HZ %d is not a multiple of SAMPLING_HZ %d\n",
+            CARRIER_HZ, SAMPLING_HZ);
+    exit(1);
   }
   sub_level(l, repeat);
 }

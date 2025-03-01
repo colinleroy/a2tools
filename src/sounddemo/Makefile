@@ -19,7 +19,7 @@ CARRIER_HZ := 16000
 
 sounds = \
 	bubble.snd.s \
-	countdown.snd.s
+	# countdown.snd.s
 
 sounddemo_SOURCES := \
 	main.s \
