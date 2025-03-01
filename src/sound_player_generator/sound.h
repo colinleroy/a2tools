@@ -1,16 +1,19 @@
-#define CYCLES_PER_SEC 1023000
+#define CYCLES_PER_SEC 1024000
+
 /* Determine the number of available cycles according to the desired carrier */
 
 #ifdef CPU_65c02
-/* 9 is the overhead of the jmp($nnnn,x)+jmp back */
-#define AVAIL_CYCLES   ((CYCLES_PER_SEC/CARRIER_HZ)-9)
+/* 30 is the overhead of the byte reading loop */
+#define READ_OVERHEAD 30
 #else
-/* 9 is the overhead of the jmp($nnnn,x)+jmp back,
- * 13 is the overhead of the lda/sta replacing the jmp ($nnnn,x) */
-#define AVAIL_CYCLES   ((CYCLES_PER_SEC/CARRIER_HZ)-9-13)
+/* 43 is the overhead of the byte reading loop,
+ * due to the expensive lda/sta replacing the jmp ($nnnn,x) */
+#define READ_OVERHEAD 43
 #endif
 
-#define NUM_LEVELS     (AVAIL_CYCLES - 28) /* Overhead of the reading */
+#define DUTY_CYCLE_LENGTH (CYCLES_PER_SEC/CARRIER_HZ)
+#define AVAIL_CYCLES   (DUTY_CYCLE_LENGTH-READ_OVERHEAD)
+#define NUM_LEVELS     (AVAIL_CYCLES-8) /* Overhead of the double STA SPKR */
 
 #define STEP           1
 
