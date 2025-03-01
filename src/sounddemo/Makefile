@@ -14,8 +14,7 @@ endif
 CLEANDISK = ../../disks/ProDOS_2_4_3.po
 
 #Sound generator sampling frequency
-SAMPLING_HZ := 4000
-CARRIER_HZ := 16000
+SAMPLING_HZ := 8000
 
 sounds = \
 	bubble.snd.s \
@@ -34,11 +33,11 @@ sounddemo_CLCFLAGS = -t $(CC65_TARGET) -Cl -C ../../config/apple2enh-aligndata.c
 
 #Build the sound player with the correct definitions
 gen_sound_player: ../sound_player_generator/gen_sound_player.c ../sound_player_generator/sound.h
-	gcc -DCPU_$(STREAMER_VER) -DSAMPLING_HZ=$(SAMPLING_HZ) -DCARRIER_HZ=$(CARRIER_HZ) -g -O0 $< -o $@
+	gcc -DCPU_$(STREAMER_VER) -DSAMPLING_HZ=$(SAMPLING_HZ) -g -O0 $< -o $@
 
 #Build the sound clip generator with the correct definitions
 gen_sound_clip: ../sound_player_generator/gen_sound_clip.c ../sound_player_generator/sound.h
-	gcc -DCPU_$(STREAMER_VER) -DSAMPLING_HZ=$(SAMPLING_HZ) -DCARRIER_HZ=$(CARRIER_HZ) -g -O0 $< -o $@
+	gcc -DCPU_$(STREAMER_VER) -DSAMPLING_HZ=$(SAMPLING_HZ) -g -O0 $< -o $@
 
 play_sound.gen.s: gen_sound_player
 	./gen_sound_player > $@

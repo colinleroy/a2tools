@@ -1,5 +1,5 @@
 #define CYCLES_PER_SEC 1023000
-
+#define CARRIER_HZ 16000
 /* Determine the number of available cycles according to the desired carrier */
 
 #define DUTY_CYCLE_LENGTH (CYCLES_PER_SEC/CARRIER_HZ)
