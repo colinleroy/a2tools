@@ -5,6 +5,8 @@
 
 #include "sound.h"
 
+int sampling_hz = DEFAULT_SAMPLING_HZ;
+
 static int emit_instruction(char *instr, int cycles, int cost) {
   printf("%s    ; %d - rem %d\n", instr, cost, cycles - cost);
   return cycles - cost;
@@ -173,10 +175,10 @@ static void sub_level(int l, int repeat) {
 }
 
 static void level(int l) {
-  int repeat = CARRIER_HZ/SAMPLING_HZ;
-  if (CARRIER_HZ % SAMPLING_HZ != 0) {
+  int repeat = CARRIER_HZ/sampling_hz;
+  if (CARRIER_HZ % sampling_hz != 0) {
     fprintf(stderr, "CARRIER_HZ %d is not a multiple of SAMPLING_HZ %d\n",
-            CARRIER_HZ, SAMPLING_HZ);
+            CARRIER_HZ, sampling_hz);
     exit(1);
   }
   sub_level(l, repeat);
@@ -184,6 +186,13 @@ static void level(int l) {
 
 int main(int argc, char *argv[]) {
   int c;
+
+  if (argc < 2) {
+    fprintf(stderr, "Usage: %s [sampling hz]\n", argv[0]);
+    exit(1);
+  }
+
+  sampling_hz = atoi(argv[1]);
 
   printf("; Settings for this sound generator:\n"
          "; CYCLES_PER_SEC = %d\n"
@@ -196,7 +205,7 @@ int main(int argc, char *argv[]) {
          "; PAGE_CROSSER = %d\n\n",
          CYCLES_PER_SEC,
          CARRIER_HZ,
-         SAMPLING_HZ,
+         sampling_hz,
          DUTY_CYCLE_LENGTH,
          AVAIL_CYCLES,
          NUM_LEVELS,

@@ -6,7 +6,7 @@
         .export sprite_y, n_bytes_draw
 
         .importzp _zp8, _zp9, _zp10, _zp11
-        .importzp tmp4, ptr1, ptr2, ptr3, ptr4
+        .importzp tmp4, ptr2, ptr3
         .import   _hgr_hi, _hgr_low
         .import   _div7_table, _mod7_table
 
