@@ -314,7 +314,8 @@ extern int cur_65816_bank;
 int analyze_instruction(int cpu, int op_addr, const char *instr, int param_addr, char *comment) {
   static int bit_count = 0;
   static int last_bit = 0;
-  int parsed = 0, bank_switch = 0;
+  static int last_rom_bank = 0;
+  int parsed = 0, bank_switch = 0, rom_bank_switch = 0;
 
   if (cpu == CPU_65816) {
     if (cur_65816_bank == 0xFF) {
@@ -335,6 +336,26 @@ int analyze_instruction(int cpu, int op_addr, const char *instr, int param_addr,
       last_bit = param_addr;
     }
     switch(param_addr) {
+      case 0xC020:
+      case 0xC021:
+      case 0xC022:
+      case 0xC023:
+      case 0xC024:
+      case 0xC025:
+      case 0xC026:
+      case 0xC027:
+      case 0xC028:
+      case 0xC029:
+      case 0xC02A:
+      case 0xC02B:
+      case 0xC02C:
+      case 0xC02D:
+      case 0xC02E:
+      case 0xC02F:
+        rom_bank_switch = 1;
+        last_rom_bank = !last_rom_bank;
+        parsed = 1;
+        break;
       case 0xC080:
       case 0xC084:
         read_from = RAM;
@@ -434,6 +455,10 @@ int analyze_instruction(int cpu, int op_addr, const char *instr, int param_addr,
     snprintf(comment, BUF_SIZE,
             "BANK SWITCH: read from %s, write to %s, LC bank %d",
             mem_str[read_from], mem_str[write_to], lc_bank);
+  } else if (rom_bank_switch) {
+    snprintf(comment, BUF_SIZE,
+            "ROM BANK SWITCH: %s paged in",
+            last_rom_bank ? "Alt":"Main");
   }
   return parsed;
 }
