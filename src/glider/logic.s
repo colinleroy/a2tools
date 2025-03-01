@@ -12,7 +12,7 @@
         .import     num_rubber_bands, num_battery, cur_score
         .import     _play_croutch
 
-        .importzp   _zp6, tmp1, tmp2, tmp3, ptr4
+        .importzp   tmp1, tmp2, tmp3, ptr4
 
         .include    "balloon.gen.inc"
         .include    "knife.gen.inc"

@@ -5,7 +5,7 @@
         .export fast_n_bytes_per_line_draw, fast_sprite_x
         .export sprite_y, n_bytes_draw
 
-        .importzp _zp6, _zp8, _zp9, _zp10, _zp11, _zp12
+        .importzp _zp8, _zp9, _zp10, _zp11
         .importzp tmp4, ptr1, ptr2, ptr3, ptr4
         .import   _hgr_hi, _hgr_low
         .import   _div7_table, _mod7_table
