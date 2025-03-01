@@ -27,11 +27,11 @@ int main(int argc, char *argv[]) {
     filename = strrchr(filename, '/')+1;
   }
 
-  printf("         .export %s_snd, _play_%s\n\n", filename, filename);
+  printf("         .export _%s_snd, _play_%s\n\n", filename, filename);
   printf("         .import _play_sample\n\n");
 
   printf("         .rodata\n\n");
-  printf("%s_snd:\n", filename);
+  printf("_%s_snd:\n", filename);
   while ((c = fgetc(fp)) != EOF) {
     unsigned char r = (c*(NUM_LEVELS-1))/255;
     r = (r/STEP)*STEP;
@@ -41,8 +41,8 @@ int main(int argc, char *argv[]) {
 
   printf("         .code\n\n"
          "_play_%s:\n"
-         "         lda #<%s_snd\n"
-         "         ldx #>%s_snd\n"
+         "         lda #<_%s_snd\n"
+         "         ldx #>_%s_snd\n"
          "         jmp _play_sample\n",
        filename, filename, filename);
   fclose(fp);
