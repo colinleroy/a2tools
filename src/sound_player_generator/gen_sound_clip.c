@@ -30,12 +30,14 @@ int main(int argc, char *argv[]) {
   printf("         .export _%s_snd, _play_%s\n\n", filename, filename);
   printf("         .import _play_sample\n\n");
 
-  printf("         .rodata\n\n");
-  printf("_%s_snd:\n", filename);
+  printf("         .data\n\n");
+
+  printf(".align $100\n"
+         "_%s_snd:\n", filename);
   while ((c = fgetc(fp)) != EOF) {
     unsigned char r = (c*(NUM_LEVELS-1))/255;
     r = (r/STEP)*STEP;
-    printf("         .byte $%02X\n", (r*2)+PAGE_CROSSER); /* *2 to avoid ASLing, + PAGE_CROSSER to avoid adding */
+    printf("         .byte $%02X    ; %d * 2 + $%02X\n", (r*2)+PAGE_CROSSER, r, PAGE_CROSSER); /* *2 to avoid ASLing, + PAGE_CROSSER to avoid adding */
   }
   printf("         .byte $FF\n\n");
 

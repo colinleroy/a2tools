@@ -18,6 +18,7 @@ SAMPLING_HZ := 4000
 CARRIER_HZ := 16000
 
 sounds = \
+	bubble.snd.s \
 	countdown.snd.s
 
 sounddemo_SOURCES := \
@@ -28,7 +29,7 @@ sounddemo_SOURCES := \
 all: \
 	sounddemo.po
 
-sounddemo_CLCFLAGS = -t $(CC65_TARGET) -Cl -C ../../config/apple2enh-rtonce.cfg \
+sounddemo_CLCFLAGS = -t $(CC65_TARGET) -Cl -C ../../config/apple2enh-aligndata.cfg \
 	-vm -m sounddemo.map --start-addr 0x803
 
 gen_sound_generator: ../sound_player_generator/gen_sound_generator.c ../sound_player_generator/sound.h
@@ -56,7 +57,7 @@ clean:
 	*.dbg *.lbl *.map \
 
 sounddemo.bin: $(sounddemo_CL65SOURCES) $(sounddemo_SOURCES)
-	cl65 -g -Wl --dbgfile,sounddemo.dbg -Ln sounddemo.lbl $(CFLAGS) $(iigs_CFLAGS) $(sounddemo_CLCFLAGS) -o $@ $^ apple2enh-iobuf-0800.o
+	cl65 -g -Wl --dbgfile,sounddemo.dbg -Ln sounddemo.lbl $(CFLAGS) $(iigs_CFLAGS) $(sounddemo_CLCFLAGS) -o $@ $^
 
 sounddemo.po: sounddemo.bin
 	cp $(CLEANDISK) $@; \
