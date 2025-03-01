@@ -108,10 +108,10 @@ gen_sprite: gen_sprite.c
 gen_font: gen_font.c
 	gcc -g -O0 $(shell pkg-config --cflags SDL_image) $^ $(shell pkg-config --libs SDL_image) -o $@
 
-gen_sound_generator: gen_sound_generator.c sound.h
+gen_sound_generator: ../sound_player_generator/gen_sound_generator.c ../sound_player_generator/sound.h
 	gcc -DCPU_$(STREAMER_VER) -DSAMPLING_HZ=$(SAMPLING_HZ) -DCARRIER_HZ=$(CARRIER_HZ) -g -O0 $< -o $@
 
-gen_sound_clip: gen_sound_clip.c sound.h
+gen_sound_clip: ../sound_player_generator/gen_sound_clip.c ../sound_player_generator/sound.h
 	gcc -DCPU_$(STREAMER_VER) -DSAMPLING_HZ=$(SAMPLING_HZ) -DCARRIER_HZ=$(CARRIER_HZ) -g -O0 $< -o $@
 
 $(levels_backgrounds): %.hgr: assets/levels/%.xcf
