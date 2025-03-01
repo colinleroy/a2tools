@@ -24,7 +24,7 @@ endif
 endif
 
 #Sound generator sampling frequency
-SAMPLING_HZ := 4000
+SAMPLING_HZ := 8000
 CARRIER_HZ := 16000
 
 USE_LANGCARD := -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD
