@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
          "_%s_snd:\n", filename);
   while ((c = fgetc(fp)) != EOF) {
     int r = (c*(NUM_LEVELS-1))/255, byte;
-    r = (r/STEP)*STEP;
+    r = (r/STEP);
     byte = (r*2)+PAGE_CROSSER;
     if (byte > 255) {
       fprintf(stderr, "Range error - too many levels\n");
