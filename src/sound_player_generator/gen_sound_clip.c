@@ -31,6 +31,24 @@ int main(int argc, char *argv[]) {
     filename = strrchr(filename, '/')+1;
   }
 
+  printf("; Settings for this sound sample:\n"
+         "; CYCLES_PER_SEC = %d\n"
+         "; CARRIER_HZ = %d\n"
+         "; SAMPLING_HZ = %d\n"
+         "; DUTY_CYCLE_LENGTH = %d\n"
+         "; AVAIL_CYCLES = %d\n"
+         "; NUM_LEVELS = %d\n"
+         "; STEP = %d\n"
+         "; PAGE_CROSSER = %d\n\n",
+         CYCLES_PER_SEC,
+         CARRIER_HZ,
+         sampling_hz,
+         DUTY_CYCLE_LENGTH,
+         AVAIL_CYCLES,
+         NUM_LEVELS,
+         STEP,
+         PAGE_CROSSER);
+
   printf("         .export _%s_snd, _play_%s\n\n", filename, filename);
   printf("         .import _play_sample\n\n");
 
