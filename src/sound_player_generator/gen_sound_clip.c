@@ -35,16 +35,16 @@ int main(int argc, char *argv[]) {
   printf(".align $100\n"
          "_%s_snd:\n", filename);
   while ((c = fgetc(fp)) != EOF) {
-    unsigned char r = (c*(NUM_LEVELS-1))/255, byte;
+    int r = (c*(NUM_LEVELS-1))/255, byte;
     r = (r/STEP)*STEP;
     byte = (r*2)+PAGE_CROSSER;
-    if (byte > 127) {
+    if (byte > 255) {
       fprintf(stderr, "Range error - too many levels\n");
       exit(1);
     }
     printf("         .byte $%02X    ; %d * 2 + $%02X\n", byte, r, PAGE_CROSSER); /* *2 to avoid ASLing, + PAGE_CROSSER to avoid adding */
   }
-  printf("         .byte $FF\n\n");
+  printf("         .byte (%d*2 + $%02x); play_done\n\n", NUM_LEVELS, PAGE_CROSSER);
 
   printf("         .code\n\n"
          "_play_%s:\n"
