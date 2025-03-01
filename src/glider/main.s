@@ -26,7 +26,8 @@
 
         .import   _fire_rubber_band
         .import   _rubber_band_travel
-        .import   num_lives, num_rubber_bands, num_battery, num_sprites, cur_score
+        .import   num_lives, num_rubber_bands, num_battery, cur_score
+        .import   plane_sprite_num
 
         .import   reset_mouse, mouse_b, mouse_x
         .import   sprite_data, plane_data, rubber_band_data
@@ -80,9 +81,7 @@ game_loop:
 ;
 ; DRAW SPRITES FIRST
 ;
-        ldx     num_sprites
-        dex
-        txa
+        lda     plane_sprite_num
         sta     cur_sprite
 
         ; Always draw the plane
@@ -194,8 +193,7 @@ level_logic_done:
 collision_checks:
         inc     frame_counter
 
-        ldx     num_sprites
-        dex
+        ldx     plane_sprite_num
         stx     cur_sprite
 
 check_next_sprite:
@@ -318,17 +316,13 @@ backup_sprite:
         rts
 
 backup_level_data:
-        ldx     num_sprites
-        dex
+        ldx     plane_sprite_num
         stx     cur_sprite
 
         ldx     #0
 :       jsr     backup_sprite
         dec     cur_sprite
         bpl     :-
-
-        ldx     num_sprites
-        stx     cur_sprite
 
         rts
 
@@ -353,17 +347,13 @@ restore_sprite:
         rts
 
 restore_level_data:
-        ldx     num_sprites
-        dex
+        ldx     plane_sprite_num
         stx     cur_sprite
 
         ldx     #0
 :       jsr     restore_sprite
         dec     cur_sprite
         bpl     :-
-
-        ldx     num_sprites
-        stx     cur_sprite
 
         rts
 
@@ -386,8 +376,11 @@ setup_level_data:
 
         ldy     #0
         lda     (level_data),y
-        sta     num_sprites
-        sta     cur_sprite
+
+        ; Remember the plane sprite number
+        sec
+        sbc     #1
+        sta     plane_sprite_num
 
         ; Move pointer to actual data now we have the number
         ; of sprites
@@ -402,16 +395,19 @@ setup_level_data:
         ; Deactivate interrupts for first draw
         php
         sei
-first_draw:
-        dec     cur_sprite
-        lda     cur_sprite
-        bmi     :+
-        jsr     _load_sprite_pointer
-        beq     first_draw              ; Only draw static sprites
+
+        lda     plane_sprite_num
+        sta     cur_sprite
+
+:       jsr     _load_sprite_pointer
+        beq     :+                      ; Only draw static sprites
         jsr     _setup_sprite_pointer
         jsr     _draw_sprite
-        jmp     first_draw
-:
+
+:       dec     cur_sprite
+        lda     cur_sprite
+        bpl     :--
+
         plp
         rts
 
