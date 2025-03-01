@@ -32,13 +32,16 @@ all: \
 sounddemo_CLCFLAGS = -t $(CC65_TARGET) -Cl -C ../../config/apple2enh-aligndata.cfg \
 	-vm -m sounddemo.map --start-addr 0x803
 
-gen_sound_generator: ../sound_player_generator/gen_sound_generator.c ../sound_player_generator/sound.h
+#Build the sound player with the correct definitions
+gen_sound_player: ../sound_player_generator/gen_sound_player.c ../sound_player_generator/sound.h
 	gcc -DCPU_$(STREAMER_VER) -DSAMPLING_HZ=$(SAMPLING_HZ) -DCARRIER_HZ=$(CARRIER_HZ) -g -O0 $< -o $@
 
+#Build the sound clip generator with the correct definitions
 gen_sound_clip: ../sound_player_generator/gen_sound_clip.c ../sound_player_generator/sound.h
 	gcc -DCPU_$(STREAMER_VER) -DSAMPLING_HZ=$(SAMPLING_HZ) -DCARRIER_HZ=$(CARRIER_HZ) -g -O0 $< -o $@
-play_sound.gen.s: gen_sound_generator
-	./gen_sound_generator > $@
+
+play_sound.gen.s: gen_sound_player
+	./gen_sound_player > $@
 
 $(sounds): %.snd.s: %.wav
 %.snd.s: %.wav gen_sound_clip
@@ -50,7 +53,7 @@ $(sounds): %.snd.s: %.wav
 clean:
 	rm -f *.bin *.o \
 	gen_sound_clip \
-	gen_sound_generator \
+	gen_sound_player \
 	*.gen.s \
 	*.gen.inc \
 	*.snd.s \
