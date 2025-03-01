@@ -4,22 +4,26 @@
 
 #include "sound.h"
 
+int sampling_hz = DEFAULT_SAMPLING_HZ;
+
 int main(int argc, char *argv[]) {
   FILE *fp;
   char *filename;
   int c;
 
-  if (argc < 2) {
-    printf("Usage: %s [input.raw]\n", argv[0]);
+  if (argc < 3) {
+    fprintf(stderr, "Usage: %s [sampling hz][input.raw]\n", argv[0]);
     exit(1);
   }
 
-  fp = fopen(argv[1], "rb");
+  sampling_hz = atoi(argv[1]);
+
+  fp = fopen(argv[2], "rb");
   if (fp == NULL) {
-    printf("Can not open %s\n", argv[1]);
+    fprintf(stderr, "Can not open %s\n", argv[1]);
     exit(1);
   }
-  filename = argv[1];
+  filename = argv[2];
   if (strchr(filename, '.')) {
     *strchr(filename, '.') = 0;
   }

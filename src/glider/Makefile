@@ -107,10 +107,10 @@ gen_font: gen_font.c
 	gcc -g -O0 $(shell pkg-config --cflags SDL_image) $^ $(shell pkg-config --libs SDL_image) -o $@
 
 gen_sound_player: ../sound_player_generator/gen_sound_player.c ../sound_player_generator/sound.h
-	gcc -DCPU_$(STREAMER_VER) -DSAMPLING_HZ=$(SAMPLING_HZ) -g -O0 $< -o $@
+	gcc -DCPU_$(STREAMER_VER) -g -O0 $< -o $@
 
 gen_sound_clip: ../sound_player_generator/gen_sound_clip.c ../sound_player_generator/sound.h
-	gcc -DCPU_$(STREAMER_VER) -DSAMPLING_HZ=$(SAMPLING_HZ) -g -O0 $< -o $@
+	gcc -DCPU_$(STREAMER_VER) -g -O0 $< -o $@
 
 $(levels_backgrounds): %.hgr: assets/levels/%.xcf
 
@@ -134,13 +134,13 @@ font.gen.s: assets/fonts/font.png gen_font
 	./gen_font $< 280
 
 play_sound.gen.s: gen_sound_player
-	./gen_sound_player > $@
+	./gen_sound_player $(SAMPLING_HZ) > $@
 
 $(sounds): %.snd.s: assets/sounds/%.wav
 %.snd.s: assets/sounds/%.wav gen_sound_clip
 	rm -f $<.raw
 	sox $< -b 8 -e unsigned-integer -t raw $<.raw channels 1 rate -v $(SAMPLING_HZ)
-	./gen_sound_clip $<.raw > $@
+	./gen_sound_clip $(SAMPLING_HZ) $<.raw > $@
 	rm $<.raw
 
 clean:
