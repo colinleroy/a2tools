@@ -27,22 +27,23 @@ int main(int argc, char *argv[]) {
     filename = strrchr(filename, '/')+1;
   }
 
-  for (c = 0; c < NUM_LEVELS; c+=STEP) {
-    printf(".import sound_level_%d\n", c);
-  }
-  printf(".export _play_%s\n", filename);
-  printf("_play_%s:\n"
-         "php\n"
-         "sei\n"
-         "ldx #$32\n", filename);
+  printf("         .export %s_snd, _play_%s\n\n", filename, filename);
+  printf("         .import _play_sample\n\n");
 
+  printf("         .rodata\n\n");
+  printf("%s_snd:\n", filename);
   while ((c = fgetc(fp)) != EOF) {
     unsigned char r = (c*(NUM_LEVELS-1))/255;
     r = (r/STEP)*STEP;
-    printf("jsr sound_level_%d\n", r);
+    printf("         .byte $%02X\n", (r*2)+PAGE_CROSSER); /* *2 to avoid ASLing, + PAGE_CROSSER to avoid adding */
   }
-  printf("plp\n"
-         "rts\n");
+  printf("         .byte $FF\n\n");
 
+  printf("         .code\n\n"
+         "_play_%s:\n"
+         "         lda #<%s_snd\n"
+         "         ldx #>%s_snd\n"
+         "         jmp _play_sample\n",
+       filename, filename, filename);
   fclose(fp);
 }

@@ -19,7 +19,7 @@ static unsigned char emit_wait(unsigned char l, unsigned char cycles) {
     for (i = 0; i < sizeof(fast_steps); i++) {
       if (l > fast_steps[i]+1) {
         cycles -= fast_steps[i];
-        printf("jsr waste_%d      ; %d - rem %d\n", fast_steps[i], fast_steps[i], cycles);
+        printf("         jsr waste_%d     ; %d - rem %d\n", fast_steps[i], fast_steps[i], cycles);
         l -= fast_steps[i];
         if (l > fast_steps[i]+1) {
           goto again;
@@ -27,16 +27,16 @@ static unsigned char emit_wait(unsigned char l, unsigned char cycles) {
       }
       if (l == fast_steps[i]) {
         cycles -= fast_steps[i];
-        printf("jsr waste_%d      ; %d - rem %d\n", fast_steps[i], fast_steps[i], cycles);
+        printf("         jsr waste_%d     ; %d - rem %d\n", fast_steps[i], fast_steps[i], cycles);
         l -= fast_steps[i];
       }
     }
 
     if (l > 5) {
       cycles -= 2;
-      printf("nop              ; 2 - rem %d\n", cycles);
+      printf("         nop              ; 2 - rem %d\n", cycles);
       cycles -= 2;
-      printf("nop              ; 2 - rem %d\n", cycles);
+      printf("         nop              ; 2 - rem %d\n", cycles);
       l -= 4;
       if (l > 5) {
         continue;
@@ -44,14 +44,14 @@ static unsigned char emit_wait(unsigned char l, unsigned char cycles) {
     }
     if (l == 4) {
       cycles -= 2;
-      printf("nop              ; 2 - rem %d\n", cycles);
+      printf("         nop              ; 2 - rem %d\n", cycles);
       cycles -= 2;
-      printf("nop              ; 2 - rem %d\n", cycles);
+      printf("         nop              ; 2 - rem %d\n", cycles);
       l -= 4;
     }
     if (l > 3) {
       cycles -= 3;
-      printf("bit $FF          ; 3 - rem %d\n", cycles);
+      printf("         bit $FF          ; 3 - rem %d\n", cycles);
       l -= 3;
       if (l > 3) {
         continue;
@@ -59,12 +59,12 @@ static unsigned char emit_wait(unsigned char l, unsigned char cycles) {
     } 
     if (l == 3) {
       cycles -= 3;
-      printf("bit $FF          ; 3 - rem %d\n", cycles);
+      printf("         bit $FF          ; 3 - rem %d\n", cycles);
       l -= 3;
     }
     if (l == 2) {
       cycles -= 2;
-      printf("nop              ; 2 - rem %d\n", cycles);
+      printf("         nop              ; 2 - rem %d\n", cycles);
       l -= 2;
     } else if (l == 1) {
       printf("Just one cycle left :( %d\n", l);
@@ -74,73 +74,87 @@ static unsigned char emit_wait(unsigned char l, unsigned char cycles) {
   return cycles;
 }
 
-static void sub_level(unsigned char l) {
+static void sub_level(unsigned char l, unsigned char repeat) {
   unsigned char cycles = AVAIL_CYCLES-12; /* Account for jsr/rts */
-  printf("; SubLevel %d\n", l);
-  printf("sub_sound_level_%d:\n", l);
-  printf("toggle_on_%d:\n", l);
-  cycles = emit_instruction("sta $C030    ", cycles, 4);
-  
-  if (l == 0) {
-    cycles = emit_instruction("sta $C030  ", cycles, 4);
-  } else if (l == 1) {
-    cycles = emit_instruction("sta $BFFE,x", cycles, 5);
-  } else if (l == 2) {
-    cycles = emit_instruction("nop        ", cycles, 2);
-    cycles = emit_instruction("sta $C030  ", cycles, 4);
-  } else {
-    cycles = emit_wait(l, cycles);
-    if (cycles % 2) {
-      cycles = emit_instruction("sta $BFFE,x", cycles, 5);
+  /* X is l*2 + 32 so compute C030 offset */
+  int C030_OFFSET = 0xC030 - ((l * 2) + PAGE_CROSSER);
+  char sta_C030_OFFSET[32];
+  int i, orig_cycles;
+
+  snprintf(sta_C030_OFFSET, sizeof(sta_C030_OFFSET),
+           "         sta $%04X,x  ", C030_OFFSET);
+
+  orig_cycles = cycles;
+  for (i = 0; i < repeat; i++) {
+    cycles = orig_cycles;
+    printf("sound_level_%d_%d:\n", l, i);
+    cycles = emit_instruction("         sta $C030    ", cycles, 4);
+    if (l == 0) {
+      cycles = emit_instruction("         sta $C030    ", cycles, 4);
+    } else if (l == 1) {
+      cycles = emit_instruction(sta_C030_OFFSET, cycles, 5);
+    } else if (l == 2) {
+      cycles = emit_instruction("         nop          ", cycles, 2);
+      cycles = emit_instruction("         sta $C030    ", cycles, 4);
     } else {
-      cycles = emit_instruction("sta $C030  ", cycles, 4);
+      cycles = emit_wait(l, cycles);
+      if (cycles % 2) {
+        cycles = emit_instruction(sta_C030_OFFSET, cycles, 5);
+      } else {
+        cycles = emit_instruction("         sta $C030    ", cycles, 4);
+      }
+    }
+
+    if (i < repeat - 1) {
+      cycles = emit_wait(cycles, cycles);
+      if (cycles != 0) {
+        printf("bug. Cycles left %d\n", cycles);
+      }
+      printf("         jsr waste_22\n"); /* Overhead of the outer loop */
+    } else {
+      cycles = emit_wait(cycles-8, cycles);
+      if (cycles != 8) {
+        printf("bug. Cycles left %d\n", cycles);
+      }
     }
   }
-
-  cycles = emit_wait(cycles-6, cycles);
-  if (cycles != 6) {
-    printf("bug. Cycles left %d\n", cycles);
-  }
-  cycles = emit_instruction("rts  ", cycles, 6);
-  printf("\n\n");
+  printf("         jmp play_next_sample\n\n");
 }
 
 static void level(unsigned char l) {
-  printf("sound_level_%d:\n", l);
-  /* Make sure we get the same number of cycles between
-   * two subloops, whatever the sampling rate */
-  if (SAMPLING_HZ == 4000) {
-    printf("jsr sub_sound_level_%d\n", l);
-    printf("jsr sub_sound_level_%d_w6\n", l);
-    printf("jsr sub_sound_level_%d_w6\n", l);
-    printf("nop\n"
-           "nop\n"
-           "nop\n");
-    printf("sub_sound_level_%d_w6:\n", l);
-    printf("nop\n"
-           "nop\n"
-           "nop\n");
-  } else if (SAMPLING_HZ == 8000) {
-    printf("jsr sub_sound_level_%d\n", l);
-    printf("jsr waste_12\n");
-  } else if (SAMPLING_HZ == 16000){
-    printf("nop\n"
-           "nop\n"
-           "nop\n");
-  } else {
-    printf("Unsupported HZ value %d (need 4000, 8000 or 16000).\n", SAMPLING_HZ);
-    exit(1);
+  unsigned char repeat;
+  switch(SAMPLING_HZ) {
+    case 4000:
+      repeat = 4;
+      break;
+    case 8000:
+      repeat = 2;
+      break;
+    case 16000:
+      repeat = 1;
+      break;
   }
-  sub_level(l);
+  sub_level(l, repeat);
 }
 
 int main(int argc, char *argv[]) {
   int c;
 
+  printf("         .export   _play_sample\n"
+         "         .importzp ptr1\n"
+         "\n"
+         "         .rodata\n\n");
+
+  /* Jump table */
+  printf("sound_levels:\n");
   for (c = 0; c < NUM_LEVELS; c+=STEP) {
-    printf(".export sound_level_%d\n", c);
+    printf("         .addr sound_level_%d_0\n", c);
   }
+
+  /* Wasters */
   printf("\n"
+         "         .code\n"
+         "\n"
          "waste_32: nop\n"
          "waste_30: nop\n"
          "waste_28: nop\n"
@@ -153,7 +167,35 @@ int main(int argc, char *argv[]) {
          "waste_14: nop\n"
          "waste_12: rts\n\n");
 
+  /* Levels */
   for (c = 0; c < NUM_LEVELS; c+=STEP) {
     level(c);
   }
+
+  /* Player */
+  printf("_play_sample:\n"
+         "         sta ptr1\n"
+         "         stx ptr1+1\n"
+         "         php\n"
+         "         sei\n"
+         "         ldy #$00\n"
+         "\n"
+         ":        nop                         ; 2 Compensate when we don't inc ptr1+1\n"
+         "         nop                         ; 4\n"
+         "         bit $FF                     ; 7\n"
+         ":        lda (ptr1),y                ; 13\n"
+         "         bmi play_out                ; 15\n"
+         "\n"
+         "         tax                         ; 17\n"
+         "         jmp (sound_levels-$%02X,x)    ; 23 + Duty cycles + jmp back, overhead now 26 cycles\n"
+         "play_next_sample:\n"
+         "         iny                         ; 28\n"
+         "         bne :--                     ; 31\n"
+         "         inc ptr1+1\n"
+         "         bra :-\n"
+         "play_out:\n"
+         "         plp\n"
+         "         rts\n",
+         PAGE_CROSSER);
+
 }
