@@ -51,7 +51,7 @@ static unsigned char emit_wait(unsigned char l, unsigned char cycles) {
     }
     if (l > 3) {
       cycles -= 3;
-      printf("lda $FF          ; 3 - rem %d\n", cycles);
+      printf("bit $FF          ; 3 - rem %d\n", cycles);
       l -= 3;
       if (l > 3) {
         continue;
@@ -59,7 +59,7 @@ static unsigned char emit_wait(unsigned char l, unsigned char cycles) {
     } 
     if (l == 3) {
       cycles -= 3;
-      printf("lda $FF          ; 3 - rem %d\n", cycles);
+      printf("bit $FF          ; 3 - rem %d\n", cycles);
       l -= 3;
     }
     if (l == 2) {
@@ -78,7 +78,6 @@ static void sub_level(unsigned char l) {
   unsigned char cycles = AVAIL_CYCLES-12; /* Account for jsr/rts */
   printf("; SubLevel %d\n", l);
   printf("sub_sound_level_%d:\n", l);
-  cycles = emit_instruction("ldx #$32     ", cycles, 2);
   printf("toggle_on_%d:\n", l);
   cycles = emit_instruction("sta $C030    ", cycles, 4);
   

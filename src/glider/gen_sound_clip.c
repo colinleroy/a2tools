@@ -33,7 +33,8 @@ int main(int argc, char *argv[]) {
   printf(".export _play_%s\n", filename);
   printf("_play_%s:\n"
          "php\n"
-         "sei\n", filename);
+         "sei\n"
+         "ldx #$32\n", filename);
 
   while ((c = fgetc(fp)) != EOF) {
     unsigned char r = (c*(NUM_LEVELS-1))/255;
