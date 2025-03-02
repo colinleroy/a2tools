@@ -20,6 +20,7 @@
         .include  "plane.gen.inc"
         .include  "rubber_box.gen.inc"
         .include  "sprite.inc"
+        .include  "constants.inc"
 
 .data
 
@@ -42,7 +43,7 @@ level0_clock0_data:
                   .byte clock_BPLINE-1  ; width of sprite in bytes
                   .addr _clock          ; clock sprites
                   .addr _clock_mask     ; clock masks
-                  .byte 5               ; deac cb data
+                  .byte CLOCK_BONUS     ; deac cb data
                   .addr _clock_inc_score; deac cb
                   .word $0000           ; state backup
                   .addr sprites_bgbackup+0 ; bg backup

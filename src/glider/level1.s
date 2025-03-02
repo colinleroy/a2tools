@@ -20,6 +20,7 @@
         .include  "knife.gen.inc"
         .include  "plane.gen.inc"
         .include  "sprite.inc"
+        .include  "constants.inc"
 
 .data
 
@@ -40,7 +41,7 @@ level1_battery0_data:
                   .byte battery_BPLINE-1  ; width of sprite in bytes
                   .addr _battery          ; battery sprites
                   .addr _battery_mask     ; battery masks
-                  .byte 30
+                  .byte BATTERY_BONUS
                   .addr _grab_battery
                   .word $0000           ; state backup
                   .addr sprites_bgbackup+0
@@ -61,7 +62,7 @@ level1_clock0_data:
                   .byte clock_BPLINE-1 ; width of sprite in bytes
                   .addr _clock         ; clock sprites
                   .addr _clock_mask    ; clock masks
-                  .byte 5
+                  .byte CLOCK_BONUS+1
                   .addr _clock_inc_score
                   .word $0000
                   .addr sprites_bgbackup+128
