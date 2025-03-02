@@ -70,7 +70,7 @@ static int emit_wait(int l, int cycles) {
       printf("         nop              ; 2 - rem %d\n", cycles);
       l -= 2;
     } else if (l == 1) {
-      printf("Just one cycle left :( %d\n", l);
+      fprintf(stderr, "Just one cycle left :( %d\n", l);
       exit(1);
     }
   }
@@ -97,6 +97,29 @@ static int emit_pointer_increment(int cycles) {
   cycles -= POINTER_INCR_CYCLES+6;
   printf("         jsr incr_pointer ; 6+%d - rem %d\n", POINTER_INCR_CYCLES, cycles);
   return cycles;
+}
+
+static int emit_jump(int cycles) {
+#ifdef CPU_65c02
+  printf("         jmp (sound_levels-$%02X,x)\n\n", PAGE_CROSSER);  //6
+#if JUMP_OVERHEAD != 6
+#error Wrong definition of JUMP_OVERHEAD, recount cycles
+#endif
+#else
+  printf("         lda sound_levels-$%02X,x\n"    //4
+         "         sta :+ +1\n"                   //8
+         "         lda sound_levels+1-$%02X,x\n"  //12
+         "         sta :+ +2\n"                   //16
+         ":        jmp $FFFF\n",                  //19
+         PAGE_CROSSER, PAGE_CROSSER);
+#if JUMP_OVERHEAD != 19
+#error Wrong definition of JUMP_OVERHEAD, recount cycles
+#endif
+#endif
+  if (cycles != JUMP_OVERHEAD) {
+    fprintf(stderr, "Error - Remaining %d cycles instead of %d\n", cycles, JUMP_OVERHEAD);
+    exit(1);
+  }
 }
 
 static void sub_level(int l, int repeat) {
@@ -143,8 +166,8 @@ static void sub_level(int l, int repeat) {
     }
     /* Make sure not to load byte before the last repeat
      * to avoid changing X and breaking STA $nnnn,x to the
-     * speaker */
-    if (i == repeat-1 && incremented_pointer && !byte_loaded && cycles > BYTE_LOAD_CYCLES+6+2) {
+     * speaker at level 1 */
+    if ((i == repeat-1 || l > 1) && incremented_pointer && !byte_loaded && cycles > BYTE_LOAD_CYCLES+6+2) {
       cycles = emit_byte_loading(cycles);
       byte_loaded = 1;
     }
@@ -155,12 +178,9 @@ static void sub_level(int l, int repeat) {
         fprintf(stderr, "bug. Cycles left %d\n", cycles);
         exit(1);
       }
-      printf("         nop             ; Inter-duty waster equals to jmp overhead\n");
-      printf("         nop\n");
-      printf("         nop\n");
     } else {
-      cycles = emit_wait(cycles, cycles);
-      if (cycles != 0) {
+      cycles = emit_wait(cycles-JUMP_OVERHEAD, cycles);
+      if (cycles != JUMP_OVERHEAD) {
         fprintf(stderr, "bug. Cycles left %d\n", cycles);
         exit(1);
       }
@@ -174,7 +194,7 @@ static void sub_level(int l, int repeat) {
     fprintf(stderr, "Error: not enough cycles to increment pointer\n");
     exit(1);
   }
-  printf("         jmp (sound_levels-$%02X,x)\n\n", PAGE_CROSSER);
+  emit_jump(cycles);
 }
 
 static void level(int l) {
@@ -258,7 +278,7 @@ int main(int argc, char *argv[]) {
   /* Player */
   printf("         .data\n\n"
          ".align $100\n");
-#ifdef CPU_65c02
+
   printf("load_byte:\n"
          "         lda (ptr1),y                ; 5\n"
          "         tax                         ; 7\n"
@@ -286,43 +306,9 @@ int main(int argc, char *argv[]) {
          "         sei\n"
          "         ldy #$00\n"
          "         lda (ptr1),y\n"
-         "         tax\n"
-         "         jmp (sound_levels-$%02X,x)\n"
-         "play_done:\n"
+         "         tax\n");
+  emit_jump(JUMP_OVERHEAD);
+  printf("play_done:\n"
          "         plp\n"
-         "         rts\n",
-         PAGE_CROSSER);
-#else
-  printf("_play_sample:\n"
-         "         sta ptr1\n"
-         "         stx ptr1+1\n"
-         "         php\n"
-         "         sei\n"
-         "         ldy #$00\n"
-         "                                     ; Byte read loop\n"
-         "                                     ; Y=0    Y!=0\n"
-         ":        nop                         ; 2             Compensate when we don't inc ptr1+1\n"
-         "         nop                         ; 4\n"
-         "         bit $FF                     ; 7\n"
-         ":        lda (ptr1),y                ; 12     5\n"
-         "         bmi play_out                ; 14     7      Considered not taken\n"
-         "\n"
-         "         tax                         ; 16     9\n"
-         "         lda sound_levels-$%02X,x      ; 20     13\n"
-         "         sta jump_target+1           ; 24     17\n"
-         "         lda sound_levels+1-$%02X,x    ; 28     21\n"
-         "         sta jump_target+2           ; 32     25\n"
-         "jump_target:\n"
-         "         jmp $FFFF                   ; 38     31 (3 + jmp back)\n"
-         "play_next_sample:\n"
-         "         iny                         ; 40     33\n"
-         "         bne :--                     ; 43(t)  35\n"
-         "         inc ptr1+1                  ;        40\n"
-         "         jmp :-                      ;        43\n"
-         "play_out:\n"
-         "         plp\n"
-         "         rts\n",
-         PAGE_CROSSER,
-         PAGE_CROSSER);
-#endif
+         "         rts\n");
 }
