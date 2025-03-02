@@ -12,7 +12,7 @@
 
         .import   do_bin2dec_16bit, bcd_input, bcd_result_thousand
 
-        .import   _play_ding, _platform_msleep
+        .import   _play_ding, _platform_msleep, _sleep
 
         .import   _cgetc
         .import   pushax
@@ -114,6 +114,9 @@ _print_dashboard:
 _print_level_end:
         jsr     _clear_hgr_screen
 
+        lda     #$00
+        sta     displayed
+
 print_time_bonus:
         ; Time bonus
         lda     #<time_bonus_str
@@ -145,13 +148,20 @@ print_score:
         lda     cur_score
         jsr     _print_number
 
-        lda     time_counter      ; ...And still cash time bonus
+        lda     displayed
+        bne     :+
+        lda     #1              ; Initial delay before starting to count
+        ldx     #0
+        jsr     _sleep
+        inc     displayed
+
+:       lda     time_counter      ; ...And still cash time bonus
         bmi     print_level
         inc     cur_score
         bne     :+
         inc     cur_score+1
 :       jsr     _play_ding
-        lda     #50
+        lda     #40
         ldx     #0
         jsr     _platform_msleep
         jmp     print_time_bonus
@@ -189,3 +199,7 @@ _clear_hgr_screen:
 time_bonus_str:  .asciiz            "TIME BONUS:    "
 your_score_str:  .asciiz            "YOUR SCORE:    "
 press_key_str:   .asciiz "PRESS A KEY FOR LEVEL:    "
+
+        .bss
+
+displayed:        .res 1
