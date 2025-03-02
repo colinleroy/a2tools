@@ -10,7 +10,7 @@
         .import     cur_level, frame_counter
         .import     _load_sprite_pointer, _setup_sprite_pointer, _clear_and_draw_sprite
         .import     num_rubber_bands, num_battery, cur_score
-        .import     _play_croutch
+        .import     _play_croutch, _play_ding
 
         .importzp   tmp1, tmp2, tmp3, ptr4
 
@@ -335,13 +335,14 @@ _grab_rubber_bands:
         adc     num_rubber_bands
         bcs     :+
         sta     num_rubber_bands
+        jsr     _play_croutch
         rts
 :       lda     #$FF
         sta     num_rubber_bands
         rts
 
 _clock_inc_score:
-        jsr     _play_croutch
+        jsr     _play_ding
         lda     #5
 _inc_score:
         clc
@@ -356,6 +357,7 @@ _grab_battery:
         adc     num_battery
         bcs     :+
         sta     num_battery
+        jsr     _play_croutch
         rts
 :       lda     #$FF
         sta     num_battery
