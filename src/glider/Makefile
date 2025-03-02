@@ -6,6 +6,7 @@ trgt = apple2gs
 CC65_TARGET = apple2enh
 upload_subdir := /iigs
 STREAMER_VER := 65c02
+SAMPLING_HZ := 8000
 else
 ifdef OLDII
 serial_hw_SOURCES := ../lib/serial/acia/common.s ../lib/serial/acia/no_irq.s
@@ -14,6 +15,7 @@ suffix :=
 upload_subdir :=
 CC65_TARGET := apple2
 STREAMER_VER := 6502
+SAMPLING_HZ := 8000
 else
 serial_hw_SOURCES := ../lib/serial/acia/common.s ../lib/serial/acia/no_irq.s
 iigs_suffix :=
@@ -21,11 +23,9 @@ iigs_CFLAGS :=
 CC65_TARGET = apple2enh
 trgt = apple2c0
 STREAMER_VER := 65c02
-endif
-endif
-
-#Sound generator sampling frequency
 SAMPLING_HZ := 8000
+endif
+endif
 
 USE_LANGCARD := -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD
 
@@ -67,6 +67,7 @@ sounds = \
 	bubble.snd.s \
 	click.snd.s \
 	croutch.snd.s \
+	ding.snd.s \
 	crash.snd.s
 
 glider_SOURCES := \
