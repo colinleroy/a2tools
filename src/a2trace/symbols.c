@@ -73,7 +73,7 @@ static int get_int_val(const char *str) {
   return -1;
 }
 
-static int get_hex_val(const char *str) {
+static unsigned long get_hex_val(const char *str) {
   char *val = strchr(str, '=');
   if (val) {
     return strtoul(val + 1, (char**)0, 0);
@@ -174,7 +174,7 @@ static void insert_file(char **parts, int n_parts) {
 
 /* Add a (code) segment */
 static void insert_segment(char **parts, int n_parts) {
-  int id = -1;
+  unsigned long id = (unsigned long)-1;
   char *name = NULL;
   int start = -1;
   int size = -1;
@@ -193,7 +193,10 @@ static void insert_segment(char **parts, int n_parts) {
         *strchr(name, '\n') = '\0';
     }
   }
-  if (id != -1 && segs[id] == NULL && name != NULL) {
+  if (id >= STORAGE_SIZE && id != (unsigned long)-1) {
+    return;
+  }
+  if (id != (unsigned long)-1 && segs[id] == NULL && name != NULL) {
     segs[id] = malloc(sizeof(dbg_segment));
     segs[id]->name = strdup(name);
     segs[id]->start = start;
@@ -204,15 +207,16 @@ static void insert_segment(char **parts, int n_parts) {
 
 /* Add a symbol */
 static void insert_symbol(char **parts, int n_parts) {
-  int id = -1;
+  unsigned long id = (unsigned long)-1;
   char *name = NULL;
   int size = -1;
   int i;
 
   /* Parse fields */
   for (i = 0; i < n_parts; i++) {
-    if (!strncmp(parts[i], "val=", 3))
+    if (!strncmp(parts[i], "val=", 3)) {
       id = get_hex_val(parts[i]);
+    }
     if (!strncmp(parts[i], "size=", 5))
       size = get_hex_val(parts[i]);
     if (!strncmp(parts[i], "name=", 5)) {
@@ -225,9 +229,12 @@ static void insert_symbol(char **parts, int n_parts) {
   if (size <= 0)
     size = 1;
 
+  if (id >= STORAGE_SIZE && id != (unsigned long)-1) {
+    return;
+  }
   /* Insert it, and when we have a size, insert it
    * with all offsets */
-  if (id != -1 && symbols[id] == NULL && name != NULL) {
+  if (id != (unsigned long)-1 && symbols[id] == NULL && name != NULL) {
     for (i = 0; i < size; i++) {
       symbols[id + i] = malloc(sizeof(dbg_symbol));
 
