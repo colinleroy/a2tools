@@ -40,6 +40,7 @@ levels_backgrounds = \
 	levela.hgr \
 	levelb.hgr \
 	levelc.hgr \
+	leveld.hgr \
 
 sprites_pixel_perfect = \
 	knife.pixel_perfect.gen.s \
@@ -79,6 +80,7 @@ glider_SOURCES := \
 	level0.s \
 	level1.s \
 	level2.s \
+	level3.s \
 	buffers.s \
 	load_bg.s \
 	dashboard.s \

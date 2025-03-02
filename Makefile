@@ -42,7 +42,8 @@ glider_disk_PROGS = \
 glider_disk_RES = \
 	src/glider/levela.hgr \
 	src/glider/levelb.hgr \
-	src/glider/levelc.hgr
+	src/glider/levelc.hgr \
+	src/glider/leveld.hgr
 
 woztubes_disk_PROGS = \
 	src/woztubes/woztubes.bin
