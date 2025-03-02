@@ -33,7 +33,7 @@
         .import   sprite_data, plane_data, rubber_band_data
         .import   mouse_irq_ready
 
-        .import   _print_dashboard
+        .import   _print_dashboard, _print_level_end, _clear_hgr_screen
 
         .import   _play_bubble, _play_crash
 
@@ -49,13 +49,7 @@ DESTROY_SCORE = 15
 
 _main:
 
-        lda     #<$2000
-        ldx     #>$2000
-        jsr     pushax
-
-        lda     #<$2000
-        ldx     #>$2000
-        jsr     _bzero
+        jsr     _clear_hgr_screen
 
         lda     #1
         jsr     _init_hgr
@@ -450,9 +444,11 @@ prev_level:
         jmp     load_level
 
 next_level:
+        inc     cur_level
+        ; Print the time bonus
+        jsr     _print_level_end
         ; We restore level data, in case we die later
         ; and come back to this level.
-        inc     cur_level
         lda     cur_level
 go_to_level:
         sta     cur_level
