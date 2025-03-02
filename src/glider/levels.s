@@ -1,6 +1,7 @@
                   .export vents_data, blockers_data
                   .export num_levels, cur_level
                   .export levels_logic, cur_level_logic
+
                   .export num_lives, num_rubber_bands, num_battery
                   .export cur_score, plane_sprite_num
                   .export sprite_data, plane_data, rubber_band_data

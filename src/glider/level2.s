@@ -21,6 +21,7 @@
         .include  "socket.gen.inc"
         .include  "switch.gen.inc"
         .include  "sprite.inc"
+        .include  "constants.inc"
 
 .data
 
@@ -41,7 +42,7 @@ level2_clock0_data:
                   .byte clock_BPLINE-1 ; width of sprite in bytes
                   .addr _clock         ; sprites
                   .addr _clock_mask    ; masks
-                  .byte 5
+                  .byte CLOCK_BONUS+2
                   .addr _clock_inc_score
                   .word $0000
                   .addr sprites_bgbackup+0
