@@ -1,6 +1,6 @@
         .export   _main
         .export   _hgr_low, _hgr_hi
-        .export   frame_counter
+        .export   frame_counter, time_counter
         .export   level_logic_done
 
         .import   _exit
@@ -44,8 +44,7 @@
         .include  "sprite.inc"
         .include  "level_data_ptr.inc"
         .include  "plane_coords.inc"
-
-DESTROY_SCORE = 15
+        .include  "constants.inc"
 
 _main:
 
@@ -61,6 +60,30 @@ _main:
         jsr     _init_mouse
         bcc     :+
         jmp     _exit
+
+:       ; Count cycles to determine whether the mouse interrupts at 50 or 60Hz.
+        ldx     #0
+        ldy     #0
+calibrate_hz:
+        lda     mouse_irq_ready
+        beq     calibrate_hz
+        lda     #0
+        sta     mouse_irq_ready
+
+:       lda     mouse_irq_ready       ; 4
+        bne     calibrate_done        ; 6
+        inx                           ; 8
+        bne     :-                    ; 11 (11*255 + 12 = 2817)
+        iny
+        bne     :-
+
+calibrate_done:
+        lda     #(60)             ; Consider we're at 60Hz
+        sta     hz
+        cpy     #$06              ; But if Y = $06, we spent about 7*2817 cycles
+        bne     :+                ; waiting for the interrupt: ~19719 cycles, so
+        lda     #(50)             ; we're at 50Hz
+        sta     hz
 
 :       jsr     load_level
 
@@ -122,7 +145,16 @@ game_logic:
         ; inc frame_counter
         ; jmp game_loop
 
-        ; Check coordinates and update them depending on vents
+        ; Check if a second elapsed
+        dec     time_counter+1          ; Decrement time counter frames
+        bne     :+
+        lda     time_counter            ; Decrement time counter seconds if not 0
+        beq     :+
+        dec     time_counter
+        lda     hz                      ; Reset time counter frames to Hz
+        sta     time_counter+1
+
+:       ; Check coordinates and update them depending on vents
         lda     mouse_x
         sta     plane_x
 
@@ -250,7 +282,7 @@ destroy_sprite_with_rubber_band:
         lda     #0                ; Deactivate rubber band
         jsr     _deactivate_sprite
         jsr     _play_bubble      ; Play sound
-        lda     #DESTROY_SCORE
+        lda     #DESTROY_BONUS
         jsr     _inc_score
 
         ; Deactivate it
@@ -302,7 +334,6 @@ next_mod:
         adc     #1
         inx
         bne     next_mod
-
         rts
 
 backup_sprite:
@@ -377,6 +408,18 @@ setup_level_data:
         sta     cur_level_logic
         lda     levels_logic+1,x
         sta     cur_level_logic+1
+
+        ; Allocated time to time counter seconds
+        lda     #ALLOCATED_TIME
+        sta     time_counter
+
+        ; Reset frame counter
+        lda     #$00
+        sta     frame_counter
+
+        ; Set time counter frames
+        lda     hz
+        sta     time_counter+1
 
         ; Sprites
         lda     sprite_data,x
@@ -478,4 +521,6 @@ _win:
 _hgr_low:        .res 192
 _hgr_hi:         .res 192
 frame_counter:   .res 1
+time_counter:    .res 2
 cur_sprite:      .res 1
+hz:              .res 1

@@ -3,6 +3,7 @@
         .export   _clear_hgr_screen
 
         .import   num_lives, num_rubber_bands, num_battery, cur_score, cur_level
+        .import   time_counter
         .import   _print_char, _print_string
         .import   _quick_draw_mini_plane
         .import   _quick_draw_mini_score
@@ -10,6 +11,8 @@
         .import   _quick_draw_rubber_band_reverted
 
         .import   do_bin2dec_16bit, bcd_input, bcd_result_thousand
+
+        .import   _play_ding, _platform_msleep
 
         .import   _cgetc
         .import   pushax
@@ -111,6 +114,7 @@ _print_dashboard:
 _print_level_end:
         jsr     _clear_hgr_screen
 
+print_time_bonus:
         ; Time bonus
         lda     #<time_bonus_str
         ldx     #>time_bonus_str
@@ -122,8 +126,11 @@ _print_level_end:
 
         lda     #0                ; X, Y updated to end of string
         sta     bcd_input+1
+        lda     time_counter
         jsr     _print_number
+        dec     time_counter      ; Decrement here so we can print it at 0...
 
+print_score:
         ; Score
         lda     #<your_score_str
         ldx     #>your_score_str
@@ -138,6 +145,18 @@ _print_level_end:
         lda     cur_score
         jsr     _print_number
 
+        lda     time_counter      ; ...And still cash time bonus
+        bmi     print_level
+        inc     cur_score
+        bne     :+
+        inc     cur_score+1
+:       jsr     _play_ding
+        lda     #50
+        ldx     #0
+        jsr     _platform_msleep
+        jmp     print_time_bonus
+
+print_level:
         ; Level
         lda     #<press_key_str
         ldx     #>press_key_str
