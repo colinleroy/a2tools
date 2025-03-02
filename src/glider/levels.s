@@ -14,6 +14,8 @@
                   .import  level1_vents, level1_logic
                   .import  level2_sprites, level2_blockers
                   .import  level2_vents, level2_logic
+                  .import  level3_sprites, level3_blockers
+                  .import  level3_vents, level3_logic
 
                   .import  plane_bgbackup
                   .import  rubber_band_bgbackup
@@ -79,24 +81,28 @@ plane_sprite_num: .byte   0
 
 .rodata
 
-num_levels:       .byte   3
+num_levels:       .byte   4
 
 sprite_data:
                   .addr level0_sprites
                   .addr level1_sprites
                   .addr level2_sprites
+                  .addr level3_sprites
 
 vents_data:
                   .addr level0_vents
                   .addr level1_vents
                   .addr level2_vents
+                  .addr level3_vents
 
 blockers_data:
                   .addr level0_blockers
                   .addr level1_blockers
                   .addr level2_blockers
+                  .addr level3_blockers
 
 levels_logic:
                   .addr level0_logic
                   .addr level1_logic
                   .addr level2_logic
+                  .addr level3_logic
