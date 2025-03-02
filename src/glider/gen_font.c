@@ -86,11 +86,6 @@ int main(int argc, char *argv[]) {
   fprintf(fp, "%s_WIDTH  = %d\n", sprite_name, image->w);
   fprintf(fp, "%s_HEIGHT = %d\n", sprite_name, image->h);
   fprintf(fp, "%s_BYTES  = %d\n", sprite_name, image->h * ((image->w/7)+1));
-  fprintf(fp, "%s_MIN_X  = 1\n", sprite_name);
-  fprintf(fp, "%s_MAX_X  = %s-(%s_WIDTH)\n", sprite_name, argv[2], sprite_name);
-  fprintf(fp, ".assert %s_MAX_X < 256, error\n", sprite_name);
-  fprintf(fp, "%s_MIN_Y  = 0\n", sprite_name);
-  fprintf(fp, "%s_MAX_Y  = 192-%s_HEIGHT\n", sprite_name, sprite_name);
   fclose(fp);
 
   snprintf(filename, sizeof(filename) - 1, "%s.gen.s", sprite_name);
@@ -106,7 +101,7 @@ int main(int argc, char *argv[]) {
   fprintf(fp, "\n");
   fprintf(fp, "         .rodata\n");
 
-  for (c = 0; c < 36; c++) {
+  for (c = 0; c < image->w / 7; c++) {
     memset(char_data, 0, sizeof(Uint8) * image->h);
     memset(char_mask, 0, sizeof(Uint8) * image->h);
 
@@ -135,12 +130,12 @@ int main(int argc, char *argv[]) {
     }
   }
   fprintf(fp, "_%s: \n", sprite_name);
-  for (c = 0; c < 36; c++) {
+  for (c = 0; c < image->w / 7; c++) {
     fprintf(fp, "         .addr %s_c%d\n", sprite_name, c);
   }
 
   fprintf(fp, "_%s_mask: \n", sprite_name);
-  for (c = 0; c < 36; c++) {
+  for (c = 0; c < image->w / 7; c++) {
     fprintf(fp, "         .addr %s_mask_c%d\n", sprite_name, c);
   }
   fclose(fp);
