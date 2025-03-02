@@ -161,7 +161,23 @@ game_over:
 :       jsr     reset_level
 
 move_checks_done:
-        lda     plane_x
+        ; Check level change now
+        ; First by cheat-code
+        lda     KBD
+        bpl     :+
+        bit     KBDSTRB
+        bit     BUTN0
+        bpl     :+
+
+        ; Open-Apple is down. Clear high bit, substract 'a' and go to level
+        and     #$7F
+        sec
+        sbc     #'a'
+        jsr     go_to_level
+        jmp     level_logic
+
+        ; Then by plane X coord
+:       lda     plane_x
         bne     :+
         jsr     prev_level
         jmp     level_logic
@@ -436,13 +452,15 @@ prev_level:
 next_level:
         ; We restore level data, in case we die later
         ; and come back to this level.
-        jsr     restore_level_data
         inc     cur_level
         lda     cur_level
+go_to_level:
+        sta     cur_level
         cmp     num_levels
-        bne     :+
+        bcc     :+
         jmp     _win
-:       jmp     load_level
+:       jsr     restore_level_data
+        jmp     load_level
 
 reset_level:
         jsr     _load_bg

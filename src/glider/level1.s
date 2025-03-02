@@ -40,7 +40,7 @@ level1_battery0_data:
                   .byte battery_BPLINE-1  ; width of sprite in bytes
                   .addr _battery          ; battery sprites
                   .addr _battery_mask     ; battery masks
-                  .byte 20
+                  .byte 30
                   .addr _grab_battery
                   .word $0000           ; state backup
                   .addr sprites_bgbackup+0
