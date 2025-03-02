@@ -106,7 +106,7 @@ int main(int argc, char *argv[]) {
   fprintf(fp, "\n");
   fprintf(fp, "         .rodata\n");
 
-  for (c = 0; c < 36; c++) {
+  for (c = 0; c < image->w / 7; c++) {
     memset(char_data, 0, sizeof(Uint8) * image->h);
     memset(char_mask, 0, sizeof(Uint8) * image->h);
 
@@ -135,12 +135,12 @@ int main(int argc, char *argv[]) {
     }
   }
   fprintf(fp, "_%s: \n", sprite_name);
-  for (c = 0; c < 36; c++) {
+  for (c = 0; c < image->w / 7; c++) {
     fprintf(fp, "         .addr %s_c%d\n", sprite_name, c);
   }
 
   fprintf(fp, "_%s_mask: \n", sprite_name);
-  for (c = 0; c < 36; c++) {
+  for (c = 0; c < image->w / 7; c++) {
     fprintf(fp, "         .addr %s_mask_c%d\n", sprite_name, c);
   }
   fclose(fp);
