@@ -2,8 +2,6 @@
         .export   level3_vents, level3_logic
 
         .import   _clock, _clock_mask
-        .import   _switch, _switch_mask
-        .import   _socket, _socket_mask
 
         .import   level_logic_done
         .import   _deactivate_sprite

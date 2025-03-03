@@ -111,13 +111,12 @@ level2_vents_data:
                   .byte   47,  20,  plane_HEIGHT+1,   191-plane_HEIGHT, $FF ; Up all the way
                   .byte   221, 20,  plane_HEIGHT+87,  103-plane_HEIGHT, $FF ; Up all the way
 
-level2_blockers:  .byte   5
+level2_blockers:  .byte   4
 level2_blockers_data:
                   ; Four bytes per blocker (start X, width, start Y, height)
                   .byte   190, 34,  54,  28    ; Books
                   .byte   148, 78,  82,  3     ; Bookshelf
                   .byte   84 , 72,  133, 16    ; Table
-                  .byte   119, 4,   139, 53    ; Table foot
                   .byte   0,   255, 191, 1     ; Floor
 
 level2_logic:

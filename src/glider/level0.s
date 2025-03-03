@@ -10,7 +10,7 @@
         .import   _clock_inc_score
 
         .import   _grab_rubber_bands
-        .import   _fire_balloon, _balloon_travel
+        .import   _fire_sprite, _balloon_travel
         .import   plane_data, rubber_band_data
 
         .import   sprites_bgbackup
@@ -121,12 +121,11 @@ level0_vents_data:
                   .byte   40,  20,  plane_HEIGHT+1,   191-plane_HEIGHT, $FF ; Up all the way
                   .byte   227, 20,  plane_HEIGHT+1,   191-plane_HEIGHT, $FF ; Up all the way
 
-level0_blockers:  .byte   4
+level0_blockers:  .byte   3
 level0_blockers_data:
                   ; Four bytes per blocker (start X, width, start Y, height)
                   .byte   104, 24,  91,  31    ; Mac
                   .byte   103, 92,  121, 6     ; Table
-                  .byte   148, 4,   126, 64    ; Table foot
                   .byte   0,   255, 191, 1     ; Floor
 
 level0_logic:
@@ -137,5 +136,5 @@ level0_logic:
         ; Activate balloon if frame = $FF
         lda     #BALLOON_SPRITE_NUM
         ldx     #$FF
-        jsr     _fire_balloon
+        jsr     _fire_sprite
         jmp     level_logic_done

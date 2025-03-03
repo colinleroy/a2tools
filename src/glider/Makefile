@@ -41,9 +41,11 @@ levels_backgrounds = \
 	levelb.hgr \
 	levelc.hgr \
 	leveld.hgr \
+	levele.hgr \
 
 sprites_pixel_perfect = \
 	knife.pixel_perfect.gen.s \
+	toast.pixel_perfect.gen.s \
 	plane_destroyed.pixel_perfect.gen.s \
 	rubber_band.pixel_perfect.gen.s \
 
@@ -56,6 +58,7 @@ sprites_unperfect = \
 	mini_plane.unperfect.gen.s \
 	rubber_band_reverted.unperfect.gen.s \
 	rubber_box.unperfect.gen.s \
+	sheet.unperfect.gen.s \
 	socket.unperfect.gen.s \
 	switch.unperfect.gen.s \
 
@@ -83,6 +86,7 @@ glider_SOURCES := \
 	level1.s \
 	level2.s \
 	level3.s \
+	level4.s \
 	buffers.s \
 	load_bg.s \
 	dashboard.s \
@@ -102,7 +106,8 @@ all: \
 	$(levels_backgrounds)
 
 glider_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl -C ../../config/apple2enh-aligndata.cfg \
-	-vm -m glider.map --start-addr 0x4000
+	-vm -m glider.map --start-addr 0x4000 \
+#	--asm-define UNKILLABLE
 
 gen_sprite: gen_sprite.c
 	gcc -g -O0 $(shell pkg-config --cflags SDL_image) $^ $(shell pkg-config --libs SDL_image) -o $@

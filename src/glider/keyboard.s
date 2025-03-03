@@ -45,6 +45,12 @@ keyboard_update_ref_x:
         beq     kbd_pos
         cpy     #($20|$80)       ; SPACE
         beq     kbd_fire
+.ifdef UNKILLABLE
+        cpy     #($0B|$80)       ; CURS_UP
+        beq     kbd_up
+        cpy     #($0A|$80)       ; CURS_DOWN
+        beq     kbd_down
+.endif
         bit     BUTN0
         bpl     kbd_out
         ; Open-Apple is down. Clear high bit, check it's 'g'
@@ -63,6 +69,14 @@ keyboard_update_ref_x:
         sta     keyboard_level_change
         jmp     kbd_out
 
+.ifdef UNKILLABLE
+kbd_up:
+        dec     plane_y
+        jmp     kbd_out
+kbd_down:
+        inc     plane_y
+        jmp     kbd_out
+.endif
 kbd_pos:
         clc
         adc     #PLANE_VELOCITY
