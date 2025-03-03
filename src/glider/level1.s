@@ -9,7 +9,7 @@
         .import   _clock_inc_score
         .import   _grab_battery
 
-        .import   _fire_knife, _knife_travel
+        .import   _fire_sprite, _knife_travel
 
         .import   plane_data, rubber_band_data
 
@@ -150,9 +150,9 @@ level1_logic:
         ; Activate knives
         lda     #KNIFE0_SPRITE_NUM
         ldx     #$30
-        jsr     _fire_knife
+        jsr     _fire_sprite
 
         lda     #KNIFE1_SPRITE_NUM
         ldx     #$70
-        jsr     _fire_knife
+        jsr     _fire_sprite
         jmp     level_logic_done

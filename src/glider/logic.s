@@ -1,9 +1,9 @@
         .export     _check_blockers, _check_vents
         .export     _check_plane_bounds, _check_rubber_band_bounds
         .export     _deactivate_sprite, _deactivate_current_sprite
-        .export     _fire_rubber_band, _fire_balloon, _fire_knife
-        .export     _rubber_band_travel, _balloon_travel, _knife_travel
-        .export     _grab_rubber_bands, _grab_battery, _inc_score
+        .export     _fire_rubber_band, _fire_sprite
+        .export     _rubber_band_travel, _balloon_travel, _knife_travel, _toast_travel
+        .export     _grab_rubber_bands, _grab_battery, _grab_sheet, _inc_score
         .export     _clock_inc_score
         .export     _check_battery_boost
         .import     ref_x
@@ -12,8 +12,8 @@
         .import     rubber_band_data
         .import     cur_level, frame_counter
         .import     _load_sprite_pointer, _setup_sprite_pointer, _clear_and_draw_sprite
-        .import     num_rubber_bands, num_battery, cur_score
-        .import     _play_croutch, _play_ding
+        .import     num_rubber_bands, num_battery, num_lives, cur_score
+        .import     _play_bubble, _play_croutch, _play_ding
 
         .importzp   tmp1, tmp2, tmp3, ptr4
 
@@ -118,6 +118,9 @@ do_check_blocker:
 
         ; We're in an obstacle
         lda     $C030
+.ifdef UNKILLABLE
+        clc                       ; NO BLOCKER HACK
+.endif
         rts                       ; Carry already set
 
 next_blocker:
@@ -130,6 +133,10 @@ no_blockers:
 
 ; Return with Y increment to use
 _check_vents:
+.ifdef UNKILLABLE
+        lda     #0                ; NO VENT HACK
+        rts
+.endif
         ; Get current level data to data_ptr
         lda     cur_level
         asl
@@ -231,43 +238,9 @@ _rubber_band_travel:
 no_travel:
         rts
 
-_fire_balloon:
-        cpx     frame_counter
-        bne     :+
-
-        jsr     _load_sprite_pointer
-        ldy     #SPRITE_DATA::ACTIVE
-        lda     (cur_sprite_ptr),y
-        bne     :+
-
-        lda     #1
-        sta     (cur_sprite_ptr),y
-        lda     #(191-balloon_HEIGHT)
-        ldy     #SPRITE_DATA::Y_COORD
-        sta     (cur_sprite_ptr),y
-
-:       rts
-
-_balloon_travel:
-        sta     tmp3
-        jsr     _load_sprite_pointer
-        ldy     #SPRITE_DATA::ACTIVE
-        lda     (cur_sprite_ptr),y
-        beq     :+
-        ; If so, up it
-        ldy     #SPRITE_DATA::Y_COORD
-        lda     (cur_sprite_ptr),y
-        sec
-        sbc     #1
-        sta     (cur_sprite_ptr),y
-        bne     :+
-        ; If Y = 0, deactivate it
-        lda     tmp3
-        jmp     _deactivate_sprite
-:       rts
-
-
-_fire_knife:
+; X: frame number to trigger sprite
+; A: sprite number
+_fire_sprite:
         cpx     frame_counter
         bne     :+
 
@@ -292,6 +265,40 @@ _fire_knife:
 
 :       rts
 
+; A: sprite number
+_unfire_sprite:
+        jsr     _deactivate_sprite
+
+        ; Restore its original coords
+        ldy     #SPRITE_DATA::STATE_BACKUP
+        lda     (cur_sprite_ptr),y
+        ldy     #SPRITE_DATA::X_COORD
+        sta     (cur_sprite_ptr),y
+
+        ldy     #SPRITE_DATA::STATE_BACKUP+1
+        lda     (cur_sprite_ptr),y
+        ldy     #SPRITE_DATA::Y_COORD
+        sta     (cur_sprite_ptr),y
+        rts
+
+_balloon_travel:
+        sta     tmp3
+        jsr     _load_sprite_pointer
+        ldy     #SPRITE_DATA::ACTIVE
+        lda     (cur_sprite_ptr),y
+        beq     :+
+        ; If so, up it
+        ldy     #SPRITE_DATA::Y_COORD
+        lda     (cur_sprite_ptr),y
+        sec
+        sbc     #1
+        sta     (cur_sprite_ptr),y
+        bne     :+
+        ; If Y = 0, deactivate it
+        lda     tmp3
+        jmp     _unfire_sprite
+:       rts
+
 _knife_travel:
         sta     tmp3
         jsr     _load_sprite_pointer
@@ -311,19 +318,7 @@ _knife_travel:
 knife_out:
         ; No
         lda     tmp3
-        jsr     _deactivate_sprite
-
-        ; Restore its original coords
-        ldy     #SPRITE_DATA::STATE_BACKUP
-        lda     (cur_sprite_ptr),y
-        ldy     #SPRITE_DATA::X_COORD
-        sta     (cur_sprite_ptr),y
-
-        ldy     #SPRITE_DATA::STATE_BACKUP+1
-        lda     (cur_sprite_ptr),y
-        ldy     #SPRITE_DATA::Y_COORD
-        sta     (cur_sprite_ptr),y
-        rts
+        jmp     _unfire_sprite
 
 knife_left:
         ; Now left it
@@ -334,6 +329,71 @@ knife_left:
         sta     (cur_sprite_ptr),y
         beq     knife_out
         rts
+
+; Approximation of a parabolic trajectory
+toast_y_offset:
+        .byte $F7, $F8, $F8, $F9, $FA, $FB, $FB, $FC, $FC, $FD, $FD, $FE, $FE, $FE, $FF, $FF, $FF, $FF, $FF, $FF
+        .byte $00, $00, $00, $00, $00, $00, $00, $00, $00
+        .byte $01, $01, $01, $01, $01, $01, $02, $02, $02, $03, $03, $04, $04, $05, $05, $06, $07, $08, $08, $09
+NUM_TOAST_OFFSETS = * - toast_y_offset
+
+toast_x_offset:
+        .byte $00, $00, $00, $00, $00, $00, $FF, $00, $00, $00, $00, $00, $00, $FF, $00, $00, $00, $00, $00, $00
+        .byte $FF, $00, $00, $00, $00, $00, $00, $FF, $00
+        .byte $00, $00, $00, $00, $00, $FF, $00, $00, $00, $00, $00, $00, $FF, $00, $00, $00, $00, $00, $00, $07
+.assert * - toast_x_offset = NUM_TOAST_OFFSETS, error ; Both arrays should be the same size
+
+_toast_travel:
+        sta     tmp3
+        jsr     _load_sprite_pointer
+        ldy     #SPRITE_DATA::ACTIVE
+        lda     (cur_sprite_ptr),y
+        bne     :+
+        rts
+
+:       ; Figure out the travel step
+        ldy     #SPRITE_DATA::DEACTIVATE_DATA
+        lda     (cur_sprite_ptr),y
+        bne     :+
+        ; Start toast!
+        jsr     _play_croutch
+        ; Restore registers
+        ldy     #SPRITE_DATA::DEACTIVATE_DATA
+        lda     #$00
+        beq     toast_move_step
+
+:       cmp     #NUM_TOAST_OFFSETS-1
+        beq     end_toast_move
+
+toast_move_step:
+        clc
+        adc     #1
+        sta     (cur_sprite_ptr),y
+        tax
+        dex                       ; Start at 0 in the array
+
+        ldy     #SPRITE_DATA::Y_COORD
+        lda     (cur_sprite_ptr),y
+        clc
+        adc     toast_y_offset,x
+        sta     (cur_sprite_ptr),y
+
+        ; Now twiggle X for rotation
+        ldy     #SPRITE_DATA::X_COORD
+        lda     (cur_sprite_ptr),y
+        clc
+        adc     toast_x_offset,x
+        sta     (cur_sprite_ptr),y
+        rts
+
+end_toast_move:
+        ; Reset the step indicator for next time,
+        ldy     #SPRITE_DATA::DEACTIVATE_DATA
+        lda     #0
+        sta     (cur_sprite_ptr),y
+        ; and deactivate the toast
+        lda     tmp3
+        jmp     _unfire_sprite
 
 _grab_rubber_bands:
         clc
@@ -366,6 +426,17 @@ _grab_battery:
         rts
 :       lda     #$FF
         sta     num_battery
+        rts
+
+_grab_sheet:
+        clc
+        adc     num_lives
+        bcs     :+
+        sta     num_lives
+        jsr     _play_bubble
+        rts
+:       lda     #$FF
+        sta     num_lives
         rts
 
 _check_battery_boost:

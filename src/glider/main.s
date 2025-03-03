@@ -283,6 +283,12 @@ check_next_sprite:
         .assert data_ptr = cur_sprite_ptr, error
         ldy     #SPRITE_DATA::X_COORD
         jsr     _check_plane_bounds
+.ifdef UNKILLABLE
+        bcc     :+
+        clc                       ; NO COLLISION HACK
+        sta     $C030
+:
+.endif
         bcc     check_next_sprite
 
         ; We're in the sprite box, is it active?
