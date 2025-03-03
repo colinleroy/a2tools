@@ -1,16 +1,21 @@
         .export     _init_mouse
-        .export     mouse_b, hz
+        .export     hz
 
-        .export     reset_mouse, mouse_reset_ref_x
-        .export     mouse_irq_ready, mouse_update_ref_x
-        .export     mouse_wait_vbl, mouse_calibrate_hz
+        .export     mouse_reset_ref_x
+        .export     vbl_ready, mouse_update_ref_x
+        .export     mouse_wait_vbl
         .export     mouse_check_fire
+        .export     mouse_calibrate_hz
+
+        .export     prev_x, ref_x, mouse_x    ; Shared with keyboard.s
 
         .importzp   ptr1
 
         .import     _div7_table, _mod7_table
 
-        .import     plane_data, num_battery
+        .import     plane_data
+        .import     _check_battery_boost
+        .import     keyboard_reset_ref_x
 
         .interruptor    mouse_irq
 
@@ -19,6 +24,7 @@
         .include    "plane.gen.inc"
         .include    "sprite.inc"
         .include    "plane_coords.inc"
+        .include    "constants.inc"
 
 SETMOUSE        = $12   ; Sets mouse mode
 SERVEMOUSE      = $13   ; Services mouse interrupt
@@ -35,8 +41,6 @@ pos1_hi         := $0578
 pos2_lo         := $04F8
 pos2_hi         := $05F8
 status          := $0778
-
-PLANE_VELOCITY  = 2
 
         .rodata
 
@@ -78,17 +82,8 @@ yparam: ldy     #$FF            ; Patched at runtime
 jump:   jmp     $FFFF           ; Patched at runtime
 
 mouse_reset_ref_x:
-        lda     #4
-        sta     ref_x
-        sta     mouse_x
-        sta     plane_x
-        sta     prev_x
+        jsr     keyboard_reset_ref_x
 
-        lda     #0
-        sta     plane_y
-        rts
-
-reset_mouse:
         ; Set initial mouse position
         php
         sei
@@ -276,7 +271,7 @@ done:   rts
         stx     mouse_x
 
         ; Signal the main loop
-        inc     mouse_irq_ready
+        inc     vbl_ready
         plp                     ; Reenable interrupts
         sec                     ; Interrupt handled
         rts
@@ -286,68 +281,41 @@ mouse_update_ref_x:
         lda     ref_x
         ldx     mouse_x
         cpx     prev_x
-        beq     mouse_out         ; Mouse did not move
+        beq     mouse_out_not_handled         ; Mouse did not move
         bcc     mouse_neg         ; Mouse moved left
 
 mouse_pos:
         clc
         adc     #PLANE_VELOCITY
-        bcs     mouse_out
+        bcs     mouse_out_not_handled
         sta     ref_x
 
-        ; Do we have battery?
-        ldy     num_battery
-        beq     mouse_out
-        ; Does the player want a boost?
-        ldy     KBDSTRB       ; Check keyboard
-        cpy     #($20|$80)    ; Is it Space?
-        bne     mouse_out
-
-        adc     #PLANE_VELOCITY
-        bcs     mouse_out     ; Don't overflow X
-        sta     ref_x
-        sta     $C030
-        dec     num_battery   ; Decrement battery
-        jmp     mouse_out
+        jsr     _check_battery_boost
+        jmp     mouse_out_handled
 
 mouse_neg:
         sec
         sbc     #PLANE_VELOCITY
-        bcc     mouse_out
+        bcc     mouse_out_not_handled
         sta     ref_x
 
-mouse_out:
+mouse_out_handled:
         stx     prev_x          ; Backup mouse X for next comparison
+        lda     ref_x
+        sec
+        rts
+mouse_out_not_handled:
+        stx     prev_x          ; Backup mouse X for next comparison
+        lda     ref_x
+        clc
         rts
 
 mouse_wait_vbl:
-        lda     mouse_irq_ready
+        lda     vbl_ready
         beq     mouse_wait_vbl
         lda     #0
-        sta     mouse_irq_ready
+        sta     vbl_ready
         rts
-
-; Count cycles to determine whether the mouse interrupts at 50 or 60Hz.
-mouse_calibrate_hz:
-        ldx     #0
-        ldy     #0
-        jsr     mouse_wait_vbl
-
-:       lda     mouse_irq_ready       ; 4
-        bne     calibrate_done        ; 6
-        inx                           ; 8
-        bne     :-                    ; 11 (11*255 + 12 = 2817)
-        iny
-        bne     :-
-
-calibrate_done:
-        lda     #(60)             ; Consider we're at 60Hz
-        sta     hz
-        cpy     #$06              ; But if Y = $06, we spent about 7*2817 cycles
-        bne     :+                ; waiting for the interrupt: ~19719 cycles, so
-        lda     #(50)             ; we're at 50Hz
-        sta     hz
-:       rts
 
 mouse_check_fire:
         lda     mouse_b
@@ -359,12 +327,38 @@ mouse_check_fire:
 :       clc
         rts
 
+; Count cycles to determine whether the mouse interrupts at 50 or 60Hz.
+mouse_calibrate_hz:
+        ldx     #0
+        ldy     #0
+
+        jsr     mouse_wait_vbl
+
+        lda     #$00
+        sta     vbl_ready
+
+:       lda     vbl_ready             ; 4
+        bne     calibrate_done        ; 6
+        inx                           ; 8
+        bne     :-                    ; 11 (11*255 + 12 = 2817)
+        iny
+        bne     :-
+
+calibrate_done:
+        lda     #60               ; Consider we're at 60Hz
+        sta     hz
+        cpy     #$06              ; But if Y = $06, we spent about 7*2817 cycles
+        bne     :+                ; waiting for the interrupt: ~19719 cycles, so
+        lda     #50               ; we're at 50Hz
+        sta     hz
+:       rts
+
        .bss
 
 slot:            .res 1
 mouse_b:         .res 1
 ref_x:           .res 1
-mouse_irq_ready: .res 1
+vbl_ready:       .res 1
 prev_x:          .res 1
 mouse_x:         .res 1
 hz:              .res 1

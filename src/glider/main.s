@@ -29,10 +29,21 @@
         .import   num_lives, num_rubber_bands, num_battery, cur_score
         .import   plane_sprite_num
 
-        .import   reset_mouse, mouse_reset_ref_x, hz
-        .import   mouse_wait_vbl, mouse_calibrate_hz, mouse_update_ref_x
-        .import   mouse_check_fire
+        .import   hz
+        .import   mouse_wait_vbl
+        .import   mouse_reset_ref_x, mouse_update_ref_x, mouse_check_fire
+        .import   mouse_calibrate_hz
+
         .import   sprite_data, plane_data, rubber_band_data
+
+        .import   softswitch_wait_vbl
+        .import   keyboard_reset_ref_x
+        .import   keyboard_update_ref_x
+        .import   keyboard_check_fire
+        .import   keyboard_level_change
+        .import   keyboard_calibrate_hz
+
+        .import   vbl_ready
 
         .import   _print_dashboard, _print_level_end, _clear_hgr_screen
 
@@ -59,14 +70,41 @@ _main:
         jsr     _init_simple_hgr_addrs
 
         jsr     _init_mouse
-        bcc     :+                ; Calibrate HZ with mouse if possible
-        jmp     :++               ; Otherwise we'll do with VBL
+        bcc     :+                ; Do we have a mouse?
 
-:       ; Setup mouse input
-        jsr     mouse_calibrate_hz
+        ; No. Patch functions to not require it
+        lda     #<softswitch_wait_vbl
+        sta     wait_vbl_handler+1
+        lda     #>softswitch_wait_vbl
+        sta     wait_vbl_handler+2
 
+        lda     #<keyboard_calibrate_hz
+        sta     calibrate_hz_handler+1
+        lda     #>keyboard_calibrate_hz
+        sta     calibrate_hz_handler+2
 
-:       jsr     load_level
+        lda     #<keyboard_reset_ref_x
+        sta     x_coord_reset_handler+1
+        lda     #>keyboard_reset_ref_x
+        sta     x_coord_reset_handler+2
+
+        ; Deactivate mouse (X and fire) handlers
+        lda     #$18              ; CLC
+        sta     x_coord_handler
+        lda     #$EA              ; NOP
+        sta     x_coord_handler+1
+        sta     x_coord_handler+2
+
+        lda     #$18              ; CLC
+        sta     fire_handler
+        lda     #$EA              ; NOP
+        sta     fire_handler+1
+        sta     fire_handler+2
+
+calibrate_hz_handler:
+:       jsr     mouse_calibrate_hz
+
+        jsr     load_level
 
 game_loop:
         ; the WAI of the poor
@@ -77,6 +115,7 @@ wait_vbl_handler:
 ;
 ; DRAW SPRITES FIRST
 ;
+start_draw_screen:
         lda     plane_sprite_num
         sta     cur_sprite
 
@@ -136,7 +175,9 @@ game_logic:
 :       ; Check coordinates and update them depending on vents
 x_coord_handler:
         jsr     mouse_update_ref_x
-        sta     plane_x
+        bcs     :+
+        jsr     keyboard_update_ref_x
+:       sta     plane_x
 
         jsr     _check_vents            ; Returns with offset to add to plane_y
         clc
@@ -169,16 +210,12 @@ game_over:
 move_checks_done:
         ; Check level change now
         ; First by cheat-code
-        lda     KBD
-        bpl     :+
-        bit     KBDSTRB
-        bit     BUTN0
-        bpl     :+
-
-        ; Open-Apple is down. Clear high bit, substract 'a' and go to level
-        and     #$7F
-        sec
-        sbc     #'a'
+        ldx     #$FF
+        lda     keyboard_level_change
+        stx     keyboard_level_change
+        bmi     :+
+        cmp     num_levels
+        bcs     level_logic
         jsr     go_to_level
         jmp     level_logic
 
@@ -200,10 +237,13 @@ level_logic:
 ; The jump target back from level logic handler
 level_logic_done:
         ; Check if we should fire a rubber band
+        clc
 fire_handler:
         jsr     mouse_check_fire
-        bcc     :+
-        jsr     _fire_rubber_band
+        bcs     :+
+        jsr     keyboard_check_fire
+        bcc     :++
+:       jsr     _fire_rubber_band
 
 :       jsr     _rubber_band_travel
 
@@ -484,7 +524,8 @@ reset_level:
         jsr     restore_level_data
         jsr     setup_level_data
 x_coord_reset_handler:
-        jmp     mouse_reset_ref_x
+        jsr     mouse_reset_ref_x
+        jmp     keyboard_reset_ref_x
 
 load_level:
         jsr     _load_bg
