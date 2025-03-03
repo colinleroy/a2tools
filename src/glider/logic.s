@@ -5,6 +5,9 @@
         .export     _rubber_band_travel, _balloon_travel, _knife_travel
         .export     _grab_rubber_bands, _grab_battery, _inc_score
         .export     _clock_inc_score
+        .export     _check_battery_boost
+        .import     ref_x
+
         .import     vents_data, blockers_data, plane_data
         .import     rubber_band_data
         .import     cur_level, frame_counter
@@ -14,6 +17,7 @@
 
         .importzp   tmp1, tmp2, tmp3, ptr4
 
+        .include    "apple2.inc"
         .include    "balloon.gen.inc"
         .include    "knife.gen.inc"
         .include    "plane.gen.inc"
@@ -21,6 +25,7 @@
         .include    "sprite.inc"
         .include    "plane_coords.inc"
         .include    "level_data_ptr.inc"
+        .include    "constants.inc"
 
 ; Return with carry set if mouse coords in box
 ; (data_ptr),y to y+3 contains box coords (start X, width, start Y, height)
@@ -362,3 +367,18 @@ _grab_battery:
 :       lda     #$FF
         sta     num_battery
         rts
+
+_check_battery_boost:
+        ; Do we have battery?
+        ldy     num_battery
+        beq     :+
+        ; Does the player want a boost (Open-Apple key)?
+        bit     BUTN0
+        bpl     :+
+
+        adc     #PLANE_VELOCITY
+        bcs     :+            ; Don't overflow X
+        sta     ref_x
+        sta     $C030
+        dec     num_battery   ; Decrement battery
+:       rts

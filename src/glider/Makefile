@@ -15,7 +15,7 @@ suffix :=
 upload_subdir :=
 CC65_TARGET := apple2
 STREAMER_VER := 6502
-SAMPLING_HZ := 8000
+SAMPLING_HZ := 4000
 else
 serial_hw_SOURCES := ../lib/serial/acia/common.s ../lib/serial/acia/no_irq.s
 iigs_suffix :=
@@ -72,6 +72,7 @@ sounds = \
 
 glider_SOURCES := \
 	main.s \
+	keyboard.s \
 	mouse.s \
 	draw_text.s \
 	draw_sprite.s \

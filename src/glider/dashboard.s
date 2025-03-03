@@ -14,7 +14,7 @@
 
         .import   _play_ding, _platform_msleep, _sleep
 
-        .import   _cgetc
+        .import   mouse_check_fire
         .import   pushax
         .import   _bzero
         .importzp tmp1, tmp2
@@ -161,9 +161,6 @@ print_score:
         bne     :+
         inc     cur_score+1
 :       jsr     _play_ding
-        lda     #40
-        ldx     #0
-        jsr     _platform_msleep
         jmp     print_time_bonus
 
 print_level:
@@ -183,7 +180,14 @@ print_level:
         adc     #1                ; Levels are counted from zero
         jsr     _print_number
 
-        jmp     _cgetc
+        bit     KBDSTRB
+
+:       lda     KBD               ; Wait for key or click
+        bmi     :+
+        jsr     mouse_check_fire
+        bcc     :-
+:       bit     KBDSTRB
+
 
 _clear_hgr_screen:
         lda     #<$2000
