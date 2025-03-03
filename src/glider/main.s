@@ -29,9 +29,10 @@
         .import   num_lives, num_rubber_bands, num_battery, cur_score
         .import   plane_sprite_num
 
-        .import   reset_mouse, mouse_b, mouse_x
+        .import   reset_mouse, mouse_reset_ref_x, hz
+        .import   mouse_wait_vbl, mouse_calibrate_hz, mouse_update_ref_x
+        .import   mouse_check_fire
         .import   sprite_data, plane_data, rubber_band_data
-        .import   mouse_irq_ready
 
         .import   _print_dashboard, _print_level_end, _clear_hgr_screen
 
@@ -58,32 +59,12 @@ _main:
         jsr     _init_simple_hgr_addrs
 
         jsr     _init_mouse
-        bcc     :+
-        jmp     _exit
+        bcc     :+                ; Calibrate HZ with mouse if possible
+        jmp     :++               ; Otherwise we'll do with VBL
 
-:       ; Count cycles to determine whether the mouse interrupts at 50 or 60Hz.
-        ldx     #0
-        ldy     #0
-calibrate_hz:
-        lda     mouse_irq_ready
-        beq     calibrate_hz
-        lda     #0
-        sta     mouse_irq_ready
+:       ; Setup mouse input
+        jsr     mouse_calibrate_hz
 
-:       lda     mouse_irq_ready       ; 4
-        bne     calibrate_done        ; 6
-        inx                           ; 8
-        bne     :-                    ; 11 (11*255 + 12 = 2817)
-        iny
-        bne     :-
-
-calibrate_done:
-        lda     #(60)             ; Consider we're at 60Hz
-        sta     hz
-        cpy     #$06              ; But if Y = $06, we spent about 7*2817 cycles
-        bne     :+                ; waiting for the interrupt: ~19719 cycles, so
-        lda     #(50)             ; we're at 50Hz
-        sta     hz
 
 :       jsr     load_level
 
@@ -91,10 +72,8 @@ game_loop:
         ; the WAI of the poor
         ; because I don't understand how WAI works
         ; and I want to keep things 6502-ok
-        lda     mouse_irq_ready
-        beq     game_loop
-        lda     #0
-        sta     mouse_irq_ready
+wait_vbl_handler:
+        jsr     mouse_wait_vbl
 ;
 ; DRAW SPRITES FIRST
 ;
@@ -155,7 +134,8 @@ game_logic:
         sta     time_counter+1
 
 :       ; Check coordinates and update them depending on vents
-        lda     mouse_x
+x_coord_handler:
+        jsr     mouse_update_ref_x
         sta     plane_x
 
         jsr     _check_vents            ; Returns with offset to add to plane_y
@@ -220,11 +200,9 @@ level_logic:
 ; The jump target back from level logic handler
 level_logic_done:
         ; Check if we should fire a rubber band
-        lda     mouse_b
-        beq     :+
-        lda     #0
-        sta     mouse_b
-
+fire_handler:
+        jsr     mouse_check_fire
+        bcc     :+
         jsr     _fire_rubber_band
 
 :       jsr     _rubber_band_travel
@@ -505,13 +483,14 @@ reset_level:
         jsr     _load_bg
         jsr     restore_level_data
         jsr     setup_level_data
-        jmp     reset_mouse
+x_coord_reset_handler:
+        jmp     mouse_reset_ref_x
 
 load_level:
         jsr     _load_bg
         ; Draw plane once to backup background
         jsr     setup_level_data
-        jmp     reset_mouse
+        jmp     x_coord_reset_handler
 
 _win:
         jmp     _exit
@@ -523,4 +502,3 @@ _hgr_hi:         .res 192
 frame_counter:   .res 1
 time_counter:    .res 2
 cur_sprite:      .res 1
-hz:              .res 1

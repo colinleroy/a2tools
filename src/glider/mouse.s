@@ -1,8 +1,10 @@
         .export     _init_mouse
-        .export     mouse_x, mouse_b
+        .export     mouse_b, hz
 
-        .export     reset_mouse
-        .export     mouse_irq_ready
+        .export     reset_mouse, mouse_reset_ref_x
+        .export     mouse_irq_ready, mouse_update_ref_x
+        .export     mouse_wait_vbl, mouse_calibrate_hz
+        .export     mouse_check_fire
 
         .importzp   ptr1
 
@@ -35,12 +37,6 @@ pos2_hi         := $05F8
 status          := $0778
 
 PLANE_VELOCITY  = 2
-
-        .bss
-
-slot:    .res    1
-mouse_b: .res    1
-mouse_x: .res    1
 
         .rodata
 
@@ -81,6 +77,17 @@ yparam: ldy     #$FF            ; Patched at runtime
 
 jump:   jmp     $FFFF           ; Patched at runtime
 
+mouse_reset_ref_x:
+        lda     #4
+        sta     ref_x
+        sta     mouse_x
+        sta     plane_x
+        sta     prev_x
+
+        lda     #0
+        sta     plane_y
+        rts
+
 reset_mouse:
         ; Set initial mouse position
         php
@@ -91,16 +98,11 @@ reset_mouse:
         sta     pos1_hi,x
         lda     #2
         sta     pos1_lo,x
-        asl
-        sta     mouse_x
-        sta     plane_x
-        sta     prev_x
 
         lda     #>plane_MIN_Y
         sta     pos2_hi,x
         lda     #<plane_MIN_Y
         sta     pos2_lo,x
-        sta     plane_y
 
         ldx     #POSMOUSE
         jsr     firmware
@@ -270,8 +272,19 @@ done:   rts
 
 :       ; Get and set the new X position
         ; Don't bother with high byte, it's zero
-        lda     mouse_x
         ldx     pos1_lo,y
+        stx     mouse_x
+
+        ; Signal the main loop
+        inc     mouse_irq_ready
+        plp                     ; Reenable interrupts
+        sec                     ; Interrupt handled
+        rts
+
+; Return with ref_x in A
+mouse_update_ref_x:
+        lda     ref_x
+        ldx     mouse_x
         cpx     prev_x
         beq     mouse_out         ; Mouse did not move
         bcc     mouse_neg         ; Mouse moved left
@@ -280,7 +293,7 @@ mouse_pos:
         clc
         adc     #PLANE_VELOCITY
         bcs     mouse_out
-        sta     mouse_x
+        sta     ref_x
 
         ; Do we have battery?
         ldy     num_battery
@@ -292,7 +305,7 @@ mouse_pos:
 
         adc     #PLANE_VELOCITY
         bcs     mouse_out     ; Don't overflow X
-        sta     mouse_x
+        sta     ref_x
         sta     $C030
         dec     num_battery   ; Decrement battery
         jmp     mouse_out
@@ -301,18 +314,57 @@ mouse_neg:
         sec
         sbc     #PLANE_VELOCITY
         bcc     mouse_out
-        sta     mouse_x
+        sta     ref_x
 
 mouse_out:
         stx     prev_x          ; Backup mouse X for next comparison
+        rts
 
-        ; Signal the main loop
-        inc     mouse_irq_ready
-        plp                     ; Reenable interrupts
-        sec                     ; Interrupt handled
+mouse_wait_vbl:
+        lda     mouse_irq_ready
+        beq     mouse_wait_vbl
+        lda     #0
+        sta     mouse_irq_ready
+        rts
+
+; Count cycles to determine whether the mouse interrupts at 50 or 60Hz.
+mouse_calibrate_hz:
+        ldx     #0
+        ldy     #0
+        jsr     mouse_wait_vbl
+
+:       lda     mouse_irq_ready       ; 4
+        bne     calibrate_done        ; 6
+        inx                           ; 8
+        bne     :-                    ; 11 (11*255 + 12 = 2817)
+        iny
+        bne     :-
+
+calibrate_done:
+        lda     #(60)             ; Consider we're at 60Hz
+        sta     hz
+        cpy     #$06              ; But if Y = $06, we spent about 7*2817 cycles
+        bne     :+                ; waiting for the interrupt: ~19719 cycles, so
+        lda     #(50)             ; we're at 50Hz
+        sta     hz
+:       rts
+
+mouse_check_fire:
+        lda     mouse_b
+        beq     :+
+        lda     #0
+        sta     mouse_b
+        sec
+        rts
+:       clc
         rts
 
        .bss
 
+slot:            .res 1
+mouse_b:         .res 1
+ref_x:           .res 1
 mouse_irq_ready: .res 1
-prev_x: .res 1
+prev_x:          .res 1
+mouse_x:         .res 1
+hz:              .res 1
