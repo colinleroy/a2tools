@@ -1,9 +1,9 @@
-        .export     softswitch_wait_vbl
-        .export     keyboard_reset_ref_x
-        .export     keyboard_update_ref_x
-        .export     keyboard_check_fire
+        .export     _softswitch_wait_vbl
+        .export     _keyboard_reset_ref_x
+        .export     _keyboard_update_ref_x
+        .export     _keyboard_check_fire
+        .export     _keyboard_calibrate_hz
         .export     keyboard_level_change
-        .export     keyboard_calibrate_hz
 
         .import     prev_x, ref_x, mouse_x    ; Shared with mouse.s
         .import     _check_battery_boost
@@ -17,14 +17,18 @@
 
 .segment "LOWCODE"
 
-softswitch_wait_vbl:
+.proc _softswitch_wait_vbl
         bit     $C019               ; Softswitch VBL
-        bmi     softswitch_wait_vbl ; Wait for bit 7 off (VBL ended)
+        bmi     _softswitch_wait_vbl; Wait for bit 7 off (VBL ended)
 :       bit     $C019               ; Softswitch VBL
         bpl     :-                  ; Wait for bit 7 on (VBL started)
         rts
+.endproc
 
-keyboard_reset_ref_x:
+.proc _keyboard_reset_ref_x
+        lda     #$00
+        sta     kbd_should_fire
+
         lda     #PLANE_ORIG_X
         sta     ref_x
         sta     mouse_x
@@ -34,8 +38,9 @@ keyboard_reset_ref_x:
         lda     #PLANE_ORIG_Y
         sta     plane_y
         rts
+.endproc
 
-keyboard_update_ref_x:
+.proc _keyboard_update_ref_x
         lda     #$FF
         sta     keyboard_level_change
 
@@ -102,18 +107,20 @@ kbd_fire:
 kbd_out:
         lda     ref_x
         rts
+.endproc
 
-keyboard_check_fire:
+.proc _keyboard_check_fire
         lda     kbd_should_fire
         beq     :+
-        lda     #0
+        lda     #$00
         sta     kbd_should_fire
         sec
         rts
 :       clc
         rts
+.endproc
 
-keyboard_calibrate_hz:
+.proc _keyboard_calibrate_hz
         ; Wait for bit 7 to be off (no VBL)
 :       bit     $C019
         bmi     :-
@@ -145,6 +152,7 @@ calibrate_done:
         lda     #50               ; we're at 50Hz
         sta     hz
 :       rts
+.endproc
 
         .data
 

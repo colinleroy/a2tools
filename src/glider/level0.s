@@ -130,7 +130,7 @@ level0_blockers_data:
 
 .code
 
-level0_logic:
+.proc level0_logic
         ; Move balloon if active
         lda     #BALLOON_SPRITE_NUM
         jsr     _balloon_travel
@@ -138,5 +138,5 @@ level0_logic:
         ; Activate balloon if frame = $FF
         lda     #BALLOON_SPRITE_NUM
         ldx     #$FF
-        jsr     _fire_sprite
-        jmp     level_logic_done
+        jmp     _fire_sprite
+.endproc

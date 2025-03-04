@@ -825,7 +825,7 @@ jsr:
       if (!strncmp(symbol_get_name(tree_functions[tree_depth - 1]->func_symbol), "RAM.LC1.ProDOS 8: ", 18)) {
         if (mli_call_depth != -1) {
           fprintf(stderr, "Error: unhandled recursive MLI call at line %d\n", line_num);
-          exit(1);
+          //exit(1);
         }
         mli_call_depth = tree_depth - 1;
         if (verbose) {

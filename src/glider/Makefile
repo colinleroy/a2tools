@@ -81,6 +81,7 @@ glider_SOURCES := \
 	draw_text.s \
 	draw_sprite.s \
 	animate.s \
+	game_loop.s \
 	logic.s \
 	levels.s \
 	level0.s \

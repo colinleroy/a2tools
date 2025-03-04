@@ -142,7 +142,7 @@ level1_blockers_data:
 
 .code
 
-level1_logic:
+.proc level1_logic
         ; Move knives if active
         lda     #KNIFE0_SPRITE_NUM
         jsr     _knife_travel
@@ -156,5 +156,5 @@ level1_logic:
 
         lda     #KNIFE1_SPRITE_NUM
         ldx     #$70
-        jsr     _fire_sprite
-        jmp     level_logic_done
+        jmp     _fire_sprite
+.endproc

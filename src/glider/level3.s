@@ -4,7 +4,6 @@
         .import   _clock, _clock_mask
 
         .import   level_logic_done
-        .import   _deactivate_sprite
         .import   _clock_inc_score
 
         .import   frame_counter
@@ -71,5 +70,6 @@ level3_blockers_data:
 
 .code
 
-level3_logic:
-        jmp     level_logic_done
+.proc level3_logic
+        rts
+.endproc

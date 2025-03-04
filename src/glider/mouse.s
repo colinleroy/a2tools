@@ -1,11 +1,11 @@
-        .export     _init_mouse
-        .export     hz
+        .export     _init_mouse, _deinit_mouse
+        .export     vbl_ready, hz
 
-        .export     mouse_reset_ref_x
-        .export     vbl_ready, mouse_update_ref_x
-        .export     mouse_wait_vbl
-        .export     mouse_check_fire
-        .export     mouse_calibrate_hz
+        .export     _mouse_reset_ref_x
+        .export     _mouse_update_ref_x
+        .export     _mouse_wait_vbl
+        .export     _mouse_check_fire
+        .export     _mouse_calibrate_hz
 
         .export     prev_x, ref_x, mouse_x    ; Shared with keyboard.s
 
@@ -15,7 +15,7 @@
 
         .import     plane_data
         .import     _check_battery_boost
-        .import     keyboard_reset_ref_x
+        .import     _keyboard_reset_ref_x
 
         .interruptor    mouse_irq
 
@@ -82,17 +82,22 @@ yparam: ldy     #$FF            ; Patched at runtime
 
 jump:   jmp     $FFFF           ; Patched at runtime
 
-mouse_reset_ref_x:
-        jsr     keyboard_reset_ref_x
+.proc _mouse_reset_ref_x
+        jsr     _keyboard_reset_ref_x
 
         ; Set initial mouse position
         php
         sei
 
+        ; Reset fire indicator
+        lda     #$00
+        sta     mouse_b
+
+        ; Reset position
         ldx     slot
-        lda     #2
+        lda     #$02
         sta     pos1_hi,x
-        lda     #2
+        lda     #$02
         sta     pos1_lo,x
 
         lda     #>plane_MIN_Y
@@ -104,8 +109,9 @@ mouse_reset_ref_x:
         jsr     firmware
         plp
         rts
+.endproc
 
-_init_mouse:
+.proc _init_mouse
         lda     #<$C000
         sta     ptr1
         lda     #>$C000
@@ -173,14 +179,30 @@ next_slot:
         ; Turn VBL interrupt on
         lda     #%00001001
         ldx     #SETMOUSE
-common: jsr     firmware
+mouse_common:
+        jsr     firmware
 
         ; Enable interrupts and return success
         plp
         clc
         rts
+.endproc                          ; Not really endproc, but common needs to be out
 
-SETBOX:
+.proc _deinit_mouse
+        lda     slot
+        bne     :+
+        rts                       ; No mouse installed
+
+:       php
+        sei
+
+        ; Turn mouse off
+        lda     #%00000000
+        ldx     #SETMOUSE
+        bne     _init_mouse::mouse_common
+.endproc
+
+.proc mouse_setbox
         sta     ptr1
         stx     ptr1+1
 
@@ -220,9 +242,10 @@ SETBOX:
 
         txa
         ldx     #CLAMPMOUSE
-        bne     common          ; Branch always
+        bne     _init_mouse::mouse_common      ; Branch always
+.endproc
 
-mouse_irq:
+.proc mouse_irq
         ; Check for installed mouse
         lda     slot
         beq     done
@@ -231,7 +254,7 @@ mouse_irq:
         ldx     #SERVEMOUSE
         jsr     firmware
         bcc     :+
-        clc                     ; Interrupt not handled
+        clc                       ; Interrupt not handled
 done:   rts
 
 :       php
@@ -276,9 +299,10 @@ done:   rts
         plp                     ; Reenable interrupts
         sec                     ; Interrupt handled
         rts
+.endproc
 
 ; Return with ref_x in A
-mouse_update_ref_x:
+.proc _mouse_update_ref_x
         lda     ref_x
         ldx     mouse_x
         cpx     prev_x
@@ -310,15 +334,17 @@ mouse_out_not_handled:
         lda     ref_x
         clc
         rts
+.endproc
 
-mouse_wait_vbl:
+.proc _mouse_wait_vbl
         lda     vbl_ready
-        beq     mouse_wait_vbl
+        beq     _mouse_wait_vbl
         lda     #0
         sta     vbl_ready
         rts
+.endproc
 
-mouse_check_fire:
+.proc _mouse_check_fire
         lda     mouse_b
         beq     :+
         lda     #0
@@ -327,13 +353,14 @@ mouse_check_fire:
         rts
 :       clc
         rts
+.endproc
 
 ; Count cycles to determine whether the mouse interrupts at 50 or 60Hz.
-mouse_calibrate_hz:
+.proc _mouse_calibrate_hz
         ldx     #0
         ldy     #0
 
-        jsr     mouse_wait_vbl
+        jsr     _mouse_wait_vbl
 
         lda     #$00
         sta     vbl_ready
@@ -353,6 +380,7 @@ calibrate_done:
         lda     #50               ; we're at 50Hz
         sta     hz
 :       rts
+.endproc
 
        .bss
 

@@ -1,9 +1,9 @@
-        .export   _print_dashboard
-        .export   _print_level_end
+        .export   _draw_dashboard
+        .export   _draw_level_end
         .export   _clear_hgr_screen, _clear_hgr_after_input
 
         .import   num_lives, num_rubber_bands, num_battery, cur_score, cur_level
-        .import   time_counter
+        .import   time_counter, frame_counter
         .import   _print_char, _print_string
         .import   _quick_draw_mini_plane
         .import   _quick_draw_mini_score
@@ -14,7 +14,7 @@
 
         .import   _play_ding, _platform_msleep, _sleep
 
-        .import   mouse_check_fire
+        .import   _mouse_check_fire
         .import   pushax
         .import   _bzero
         .importzp tmp1, tmp2
@@ -39,7 +39,7 @@ RUBBER_BAND_ICON_Y = 41
 BATTERY_ICON_X     = 37
 BATTERY_ICON_Y     = 61
 
-_print_number:
+.proc _print_number
         sta     bcd_input
         stx     dest_x+1
         sty     dest_y+1
@@ -63,9 +63,15 @@ cur_char:
         ldx     #$FF
         bpl     char
         rts
+.endproc
 
-_print_dashboard:
-        ; Lives
+.proc _draw_dashboard
+        lda     frame_counter     ; Draw dashboard on odd frames
+        and     #01
+        bne     :+
+        rts
+
+:       ; Lives
         ldx     #MINI_PLANE_ICON_X+2
         ldy     #MINI_PLANE_ICON_Y+mini_plane_HEIGHT+font_HEIGHT+1
         lda     #0
@@ -112,8 +118,9 @@ _print_dashboard:
         ldx     #BATTERY_ICON_X
         ldy     #BATTERY_ICON_Y
         jmp     _quick_draw_battery_reverted
+.endproc
 
-_print_level_end:
+.proc _draw_level_end
         jsr     _clear_hgr_screen
 
         lda     #$00
@@ -181,16 +188,20 @@ print_level:
         clc
         adc     #1                ; Levels are counted from zero
         jsr     _print_number
+        ; Fallthrough through _clear_hgr_after_input
+.endproc
 
-_clear_hgr_after_input:
+.proc _clear_hgr_after_input
         bit     KBDSTRB
 :       lda     KBD               ; Wait for key or click
         bmi     :+
-        jsr     mouse_check_fire
+        jsr     _mouse_check_fire
         bcc     :-
 :       bit     KBDSTRB
+        ; Fallthrough through _clear_hgr_screen
+.endproc
 
-_clear_hgr_screen:
+.proc _clear_hgr_screen
         lda     #<$2000
         ldx     #>$2000
         jsr     pushax
@@ -198,6 +209,7 @@ _clear_hgr_screen:
         lda     #<$2000
         ldx     #>$2000
         jmp     _bzero
+.endproc
 
         .data
 
