@@ -37,6 +37,7 @@ GCCCFLAGS = -g -O0 -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\" \
 .PHONY: all clean
 
 levels_backgrounds = \
+	splash.hgr \
 	levela.hgr \
 	levelb.hgr \
 	levelc.hgr \
@@ -98,15 +99,18 @@ glider_SOURCES := \
 	font.gen.s \
 	plane.pixel_perfect.gen.s \
 	play_sound.gen.s \
+	splash.bg.gen.s \
 	$(sounds) \
 	$(sprites)
 
 all: \
 	glider.bin \
-	$(levels_backgrounds)
+	$(levels_backgrounds) \
 
-glider_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl -C ../../config/apple2enh-aligndata.cfg \
-	-vm -m glider.map --start-addr 0x4000 \
+#Start at 0xC00 to leave 1kB for file IO buffer
+
+glider_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl -C ../../config/apple2enh-glider.cfg \
+	-vm -m glider.map --start-addr 0xC00 \
 #	--asm-define UNKILLABLE
 
 gen_sprite: gen_sprite.c
@@ -122,6 +126,9 @@ gen_sound_clip: ../sound_player_generator/gen_sound_clip.c ../sound_player_gener
 	gcc -DCPU_$(STREAMER_VER) -g -O0 $< -o $@
 
 $(levels_backgrounds): %.hgr: assets/levels/%.xcf
+
+splash.bg.gen.s: splash.hgr
+	../../bin/make-ca65-splash.sh $< > $@
 
 %.hgr: assets/levels/%.xcf
 	convert -flatten $< $<.png

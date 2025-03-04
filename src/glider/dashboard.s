@@ -1,6 +1,6 @@
         .export   _print_dashboard
         .export   _print_level_end
-        .export   _clear_hgr_screen
+        .export   _clear_hgr_screen, _clear_hgr_after_input
 
         .import   num_lives, num_rubber_bands, num_battery, cur_score, cur_level
         .import   time_counter
@@ -24,6 +24,8 @@
         .include  "mini_plane.gen.inc"
         .include  "rubber_band_reverted.gen.inc"
         .include  "battery_reverted.gen.inc"
+
+.segment "LOWCODE"
 
 SCORE_ICON_X       = 37
 SCORE_ICON_Y       = 1
@@ -180,14 +182,13 @@ print_level:
         adc     #1                ; Levels are counted from zero
         jsr     _print_number
 
+_clear_hgr_after_input:
         bit     KBDSTRB
-
 :       lda     KBD               ; Wait for key or click
         bmi     :+
         jsr     mouse_check_fire
         bcc     :-
 :       bit     KBDSTRB
-
 
 _clear_hgr_screen:
         lda     #<$2000

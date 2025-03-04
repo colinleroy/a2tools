@@ -69,5 +69,7 @@ level3_blockers_data:
                   .byte   111, 57,  135, 36    ; Cupboard 2
                   .byte   0,   255, 191, 1     ; Floor
 
+.code
+
 level3_logic:
         jmp     level_logic_done

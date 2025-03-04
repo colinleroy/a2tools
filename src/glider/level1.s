@@ -140,6 +140,8 @@ level1_blockers_data:
                   .byte   105, 99,  64,  4     ; Bookshelf
                   .byte   0,   255, 191, 1     ; Floor
 
+.code
+
 level1_logic:
         ; Move knives if active
         lda     #KNIFE0_SPRITE_NUM

@@ -14,6 +14,8 @@
                   .include "level_data_ptr.inc"
                   .include "sprite.inc"
 
+.segment "LOWCODE"
+
 ; Sprite number in A, mask then sprite in TOS
 _replace_sprite:
         jsr     _load_sprite_pointer

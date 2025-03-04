@@ -66,7 +66,8 @@ inibox: .word   2
 
 mouse_prev_addr: .word $2000
 mouse_prev_val: .byte $00
-        .code
+
+.segment "LOWCODE"
 
 firmware:
         ; Lookup and patch firmware address lobyte

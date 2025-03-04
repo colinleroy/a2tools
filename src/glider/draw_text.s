@@ -10,6 +10,8 @@
         .include   "apple2.inc"
         .include   "font.gen.inc"
 
+.segment "LOWCODE"
+
 ; A: ASCII code of the char
 ; X: X coord / 7
 ; Y: bottom Y coord

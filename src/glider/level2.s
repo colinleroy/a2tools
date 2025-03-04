@@ -119,6 +119,8 @@ level2_blockers_data:
                   .byte   84 , 72,  133, 16    ; Table
                   .byte   0,   255, 191, 1     ; Floor
 
+.code
+
 level2_logic:
         ; Check if switch is active
         lda     level2_switch0_data+SPRITE_DATA::ACTIVE
