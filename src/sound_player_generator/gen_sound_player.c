@@ -249,7 +249,7 @@ int main(int argc, char *argv[]) {
 
   /* Wasters */
   printf("\n"
-         "         .code\n"
+         ".segment \"LOWCODE\"\n"
          "\n"
          "waste_46: nop\n"
          "waste_44: nop\n"

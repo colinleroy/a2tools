@@ -97,6 +97,8 @@ level4_blockers_data:
                   .byte   139, 72,  127, 6     ; Table
                   .byte   0,   255, 191, 1     ; Floor
 
+.code
+
 level4_logic:
         ; Move toast if active
         lda     #TOAST0_SPRITE_NUM

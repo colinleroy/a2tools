@@ -45,7 +45,7 @@
 
         .import   vbl_ready
 
-        .import   _print_dashboard, _print_level_end, _clear_hgr_screen
+        .import   _print_dashboard, _print_level_end, _clear_hgr_after_input
 
         .import   _play_bubble, _play_crash
 
@@ -58,10 +58,9 @@
         .include  "plane_coords.inc"
         .include  "constants.inc"
 
+.segment "LOWCODE"
+
 _main:
-
-        jsr     _clear_hgr_screen
-
         lda     #1
         jsr     _init_hgr
 
@@ -103,6 +102,8 @@ _main:
 
 calibrate_hz_handler:
 :       jsr     mouse_calibrate_hz
+
+        jsr     _clear_hgr_after_input
 
         jsr     load_level
 

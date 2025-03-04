@@ -7,6 +7,8 @@
         .include "apple2.inc"
         .include "fcntl.inc"
 
+.segment "LOWCODE"
+
 _load_bg:
         ; Set correct filename for level
         lda       cur_level

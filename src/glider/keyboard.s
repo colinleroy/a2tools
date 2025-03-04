@@ -15,6 +15,8 @@
         .include    "plane_coords.inc"
         .include    "constants.inc"
 
+.segment "LOWCODE"
+
 softswitch_wait_vbl:
         bit     $C019               ; Softswitch VBL
         bmi     softswitch_wait_vbl ; Wait for bit 7 off (VBL ended)
@@ -144,7 +146,10 @@ calibrate_done:
         sta     hz
 :       rts
 
+        .data
+
+keyboard_level_change: .byte $FF
+
         .bss
 
-keyboard_level_change: .res 1
 kbd_should_fire:       .res 1

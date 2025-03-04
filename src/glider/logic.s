@@ -27,6 +27,8 @@
         .include    "level_data_ptr.inc"
         .include    "constants.inc"
 
+.segment "LOWCODE"
+
 ; Return with carry set if mouse coords in box
 ; (data_ptr),y to y+3 contains box coords (start X, width, start Y, height)
 ; Always return with Y at end of coords so caller knows where Y is at.

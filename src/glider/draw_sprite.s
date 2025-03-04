@@ -18,6 +18,8 @@
         .include "sprite.inc"
         .include "level_data_ptr.inc"
 
+.segment "LOWCODE"
+
 line            = _zp8
 cur_y           = _zp10
 n_bytes_draw    = _zp11

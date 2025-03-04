@@ -128,6 +128,8 @@ level0_blockers_data:
                   .byte   103, 92,  121, 6     ; Table
                   .byte   0,   255, 191, 1     ; Floor
 
+.code
+
 level0_logic:
         ; Move balloon if active
         lda     #BALLOON_SPRITE_NUM
