@@ -15,7 +15,7 @@
 ; A: ASCII code of the char
 ; X: X coord / 7
 ; Y: bottom Y coord
-_print_char:
+.proc _print_char
         sec
         sbc     #' '              ; Space is our first character
         stx     char_x_offset+1
@@ -45,12 +45,13 @@ scr:
         dex
         bpl     :-
         rts
+.endproc
 
 ; TOS: Address of the buffer to print
 ; X: X coord / 7
 ; Y: bottom Y coord
 ; Returns with updated X
-_print_string:
+.proc _print_string
         stx     tmp1              ; Backup coordinates
         sty     tmp2
         jsr     popptr1           ; Pop pointer to string into ptr1
@@ -72,3 +73,4 @@ print_done:
         ldx     tmp1              ; Reload X coordinate
         ldy     tmp2              ; Reload Y coordinate
         rts
+.endproc

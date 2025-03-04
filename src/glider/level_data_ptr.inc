@@ -1,4 +1,4 @@
-.importzp _zp6, _zp12
+        .importzp   _zp6, _zp12
 
 level_data     = _zp12
 

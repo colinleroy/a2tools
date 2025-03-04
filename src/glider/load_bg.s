@@ -9,7 +9,7 @@
 
 .segment "LOWCODE"
 
-_load_bg:
+.proc _load_bg
         ; Set correct filename for level
         lda       cur_level
         clc
@@ -49,31 +49,9 @@ _load_bg:
         jsr     popax         ; Get fd back
         jmp     _close
 
-; _backup_bg:
-;         ; Copy background to HGR page 2
-;         lda     #<$4000
-;         ldx     #>$4000
-;         jsr     pushax
-;         lda     #<$2000
-;         ldx     #>$2000
-;         jsr     pushax
-;         lda     #<$2000
-;         ldx     #>$2000
-;         jmp     _memcpy
-; 
-; _restore_bg:
-;         lda     #<$2000
-;         ldx     #>$2000
-;         jsr     pushax
-;         lda     #<$4000
-;         ldx     #>$4000
-;         jsr     pushax
-;         lda     #<$2000
-;         ldx     #>$2000
-;         jmp     _memcpy
-
 load_err:
         rts
+.endproc
 
         .data
 

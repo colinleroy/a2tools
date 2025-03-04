@@ -6,7 +6,7 @@
         .import   _socket, _socket_mask
 
         .import   level_logic_done
-        .import   _deactivate_sprite
+        .import   _unfire_sprite
         .import   _clock_inc_score
 
         .import   frame_counter
@@ -121,7 +121,7 @@ level2_blockers_data:
 
 .code
 
-level2_logic:
+.proc level2_logic
         ; Check if switch is active
         lda     level2_switch0_data+SPRITE_DATA::ACTIVE
         beq     :+
@@ -132,10 +132,11 @@ level2_logic:
         beq     :+
         sta     $C030
         sta     level2_socket0_data+SPRITE_DATA::ACTIVE
-        jmp     level_logic_done
+        rts
 
 :       lda     level2_socket0_data+SPRITE_DATA::ACTIVE
         beq     :+
         lda     #SOCKET_SPRITE_NUM
-        jsr     _deactivate_sprite
-:       jmp     level_logic_done
+        jsr     _unfire_sprite
+:       rts
+.endproc

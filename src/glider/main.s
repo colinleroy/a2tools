@@ -1,55 +1,53 @@
         .export   _main
         .export   _hgr_low, _hgr_hi
         .export   frame_counter, time_counter
-        .export   level_logic_done
+
+        .export   _go_to_prev_level, _go_to_next_level, _go_to_level
 
         .import   _exit
-        .import   _init_hgr, _init_mouse
+        .import   _init_hgr, _init_mouse, _deinit_mouse
         .import   _init_hgr_base_addrs, _hgr_baseaddr
         .import   _bzero
         .import   pushax
         .import   _mod7_table
+
         .import   cur_level, num_levels
-        .import   _draw_sprite, _clear_and_draw_sprite
+        .import   _draw_sprite
         .import   _load_sprite_pointer
         .import   _setup_sprite_pointer
-        .import   _check_blockers, _check_vents
-        .import   _check_plane_bounds
-        .import   _check_rubber_band_bounds
+
+        .import   _check_blockers, _check_collisions
+        .import   _draw_screen, _draw_dashboard, _draw_level_end
+        .import   _move_plane
+        .import   _check_level_change
+        .import   _check_fire_button
+
         .import   _load_bg
-        .import   _deactivate_sprite
-        .import   _inc_score
         .import   _animate_plane_crash
 
         .import   level_backup
         .import   levels_logic, cur_level_logic
 
-        .import   _fire_rubber_band
-        .import   _rubber_band_travel
         .import   num_lives, num_rubber_bands, num_battery, cur_score
         .import   plane_sprite_num
 
-        .import   hz
-        .import   mouse_wait_vbl
-        .import   mouse_reset_ref_x, mouse_update_ref_x, mouse_check_fire
-        .import   mouse_calibrate_hz
+        .import   vbl_ready, hz
+
+        .import   _mouse_wait_vbl
+        .import   _mouse_reset_ref_x
+        .import   _mouse_calibrate_hz
+
+        .import   _softswitch_wait_vbl
+        .import   _keyboard_reset_ref_x
+        .import   _keyboard_calibrate_hz
 
         .import   sprite_data, plane_data, rubber_band_data
 
-        .import   softswitch_wait_vbl
-        .import   keyboard_reset_ref_x
-        .import   keyboard_update_ref_x
-        .import   keyboard_check_fire
-        .import   keyboard_level_change
-        .import   keyboard_calibrate_hz
+        .import   _clear_hgr_after_input
 
-        .import   vbl_ready
+        .import   _play_crash
 
-        .import   _print_dashboard, _print_level_end, _clear_hgr_after_input
-
-        .import   _play_bubble, _play_crash
-
-        .importzp ptr2, ptr4
+        .importzp ptr2
 
         .include  "apple2.inc"
         .include  "plane.gen.inc"
@@ -60,7 +58,55 @@
 
 .segment "LOWCODE"
 
-_main:
+.proc _go_to_prev_level
+        rts ; UNSURE IF I WANT TO GO BACK IN LEVELS?
+        ; We restore level data, in case we die later
+        ; and come back to this level.
+        lda     cur_level
+        bne     :+
+        rts
+:       jsr     restore_level_data
+        dec     cur_level
+        jmp     load_level
+.endproc
+
+.proc _go_to_next_level
+        inc     cur_level
+        ; Print the time bonus
+        jsr     _draw_level_end
+        ; We restore level data, in case we die later
+        ; and come back to this level.
+        lda     cur_level
+        ; Fallthrough to _go_to_level
+.endproc
+
+.proc _go_to_level
+        sta     cur_level
+        cmp     num_levels
+        bcc     :+
+        jmp     _win
+:       jsr     restore_level_data
+        jmp     load_level
+.endproc
+
+.proc reset_level
+        jsr     _load_bg
+        jsr     restore_level_data
+        jsr     setup_level_data
+x_coord_reset_handler:
+        jsr     _mouse_reset_ref_x
+        jmp     _keyboard_reset_ref_x
+.endproc
+
+.proc load_level
+        jsr     _load_bg
+        ; Draw plane once to backup background
+        jsr     setup_level_data
+        jmp     reset_level::x_coord_reset_handler
+.endproc
+
+; Not .proc'ed to jump back to level_logic_done
+.proc _main
         lda     #1
         jsr     _init_hgr
 
@@ -72,36 +118,36 @@ _main:
         bcc     :+                ; Do we have a mouse?
 
         ; No. Patch functions to not require it
-        lda     #<softswitch_wait_vbl
+        lda     #<_softswitch_wait_vbl
         sta     wait_vbl_handler+1
-        lda     #>softswitch_wait_vbl
+        lda     #>_softswitch_wait_vbl
         sta     wait_vbl_handler+2
 
-        lda     #<keyboard_calibrate_hz
+        lda     #<_keyboard_calibrate_hz
         sta     calibrate_hz_handler+1
-        lda     #>keyboard_calibrate_hz
+        lda     #>_keyboard_calibrate_hz
         sta     calibrate_hz_handler+2
 
-        lda     #<keyboard_reset_ref_x
-        sta     x_coord_reset_handler+1
-        lda     #>keyboard_reset_ref_x
-        sta     x_coord_reset_handler+2
+        lda     #<_keyboard_reset_ref_x
+        sta     reset_level::x_coord_reset_handler+1
+        lda     #>_keyboard_reset_ref_x
+        sta     reset_level::x_coord_reset_handler+2
 
         ; Deactivate mouse (X and fire) handlers
         lda     #$18              ; CLC
-        sta     x_coord_handler
+        sta     _move_plane
         lda     #$EA              ; NOP
-        sta     x_coord_handler+1
-        sta     x_coord_handler+2
+        sta     _move_plane+1
+        sta     _move_plane+2
 
         lda     #$18              ; CLC
-        sta     fire_handler
+        sta     _check_fire_button
         lda     #$EA              ; NOP
-        sta     fire_handler+1
-        sta     fire_handler+2
+        sta     _check_fire_button+1
+        sta     _check_fire_button+2
 
 calibrate_hz_handler:
-:       jsr     mouse_calibrate_hz
+:       jsr     _mouse_calibrate_hz
 
         jsr     _clear_hgr_after_input
 
@@ -112,53 +158,16 @@ game_loop:
         ; because I don't understand how WAI works
         ; and I want to keep things 6502-ok
 wait_vbl_handler:
-        jsr     mouse_wait_vbl
-;
+        jsr     _mouse_wait_vbl
+
+
 ; DRAW SPRITES FIRST
-;
-start_draw_screen:
-        lda     plane_sprite_num
-        sta     cur_sprite
+        jsr     _draw_screen
 
-        ; Always draw the plane
-        jsr     _load_sprite_pointer
-        jsr     _setup_sprite_pointer
-        jsr     _clear_and_draw_sprite
+; DRAW DASHBOARD
+        jsr     _draw_dashboard
 
-        lda     frame_counter     ; Draw only half sprites
-        and     #01
-        beq     :+
-        dec     cur_sprite
-:
-
-draw_next_sprite:
-        dec     cur_sprite
-        lda     cur_sprite
-        bmi     draw_dashboard    ; All done!
-
-        jsr     _load_sprite_pointer
-        bne     dec_sprite_draw   ; Only draw dynamic sprites
-
-        ldy     #SPRITE_DATA::ACTIVE
-        lda     (cur_sprite_ptr),y
-        beq     dec_sprite_draw   ; Only draw active sprites
-
-        jsr     _setup_sprite_pointer
-        jsr     _clear_and_draw_sprite
-
-dec_sprite_draw:
-        dec     cur_sprite        ; Skip a sprite
-        bpl     draw_next_sprite
-
-draw_dashboard:
-        lda     frame_counter     ; Draw dashboard on odd frames
-        and     #01
-        beq     game_logic
-        jsr     _print_dashboard
-
-;
 ; GENERAL GAME LOGIC
-;
 game_logic:
         ; Performance test here. Decomment for just the draw loop
         ; inc frame_counter
@@ -174,155 +183,58 @@ game_logic:
         sta     time_counter+1
 
 :       ; Check coordinates and update them depending on vents
-x_coord_handler:
-        jsr     mouse_update_ref_x
-        bcs     :+
-        jsr     keyboard_update_ref_x
-:       sta     plane_x
-
-        jsr     _check_vents            ; Returns with offset to add to plane_y
-        clc
-        adc     plane_y
-        cmp     #plane_MAX_Y
-        bcc     :+
-
-        ; We're on the floor
-        lda     #plane_MAX_Y
-
-:       sta     plane_y
+        jsr     _move_plane
 
         ; Check obstacles
         jsr     _check_blockers
-        bcc     move_checks_done
-
+        bcc     :+
         ; We got in an obstacle
-die:
+        jsr     die
+        jmp     game_loop
+
+:       ; Check if we're done with the level
+        jsr     _check_level_change
+
+        jsr     _current_level_logic
+
+        ; Check if we should fire a rubber band
+        jsr     _check_fire_button
+
+        inc     frame_counter
+
+;
+; COLLISION CHECKS, after updating positions and before
+; redrawing
+;
+        jsr     _check_collisions
+        bcc     :+
+        jsr     die
+
+        ; Next round!
+:       jmp     game_loop
+.endproc
+
+; The only purpose of this is to jsr here so we can jump indirect,
+; and still return correctly to caller from the callback.
+.proc _current_level_logic
+        jmp     (cur_level_logic)
+.endproc
+
+.proc die
         jsr     _animate_plane_crash
         jsr     _play_crash
         dec     num_lives
         bne     :+
 game_over:
         jsr     restore_level_data
-        jsr     reset_game
-        jmp     game_loop
+        jmp     reset_game
 
-:       jsr     reset_level
-
-move_checks_done:
-        ; Check level change now
-        ; First by cheat-code
-        ldx     #$FF
-        lda     keyboard_level_change
-        stx     keyboard_level_change
-        bmi     :+
-        cmp     num_levels
-        bcs     level_logic
-        jsr     go_to_level
-        jmp     level_logic
-
-        ; Then by plane X coord
-:       lda     plane_x
-        bne     :+
-        jsr     prev_level
-        jmp     level_logic
-
-:       .assert (280-plane_WIDTH) .mod $2 = $0, error
-        cmp     #(280-plane_WIDTH)
-        bcc     level_logic
-        ; We finished the level!
-        jsr     next_level
-
-level_logic:
-        jmp     (cur_level_logic)
-
-; The jump target back from level logic handler
-level_logic_done:
-        ; Check if we should fire a rubber band
-        clc
-fire_handler:
-        jsr     mouse_check_fire
-        bcs     :+
-        jsr     keyboard_check_fire
-        bcc     :++
-:       jsr     _fire_rubber_band
-
-:       jsr     _rubber_band_travel
-
-;
-; COLLISION CHECKS
-;
-collision_checks:
-        inc     frame_counter
-
-        ldx     plane_sprite_num
-        stx     cur_sprite
-
-check_next_sprite:
-        dec     cur_sprite
-        lda     cur_sprite
-        bpl     :+                ; Are we done?
-        jmp     game_loop
-
-:       jsr     _load_sprite_pointer
-        ldy     #SPRITE_DATA::ACTIVE
-        lda     (cur_sprite_ptr),y
-        beq     check_next_sprite
-
-        ; Let's check whether a rubber band can destroy this sprite
-        lda     rubber_band_data+SPRITE_DATA::ACTIVE
-        beq     :+
-        ldy     #SPRITE_DATA::DESTROYABLE
-        lda     (cur_sprite_ptr),y
-        beq     :+
-
-        ; We have an in-flight rubber band and that sprite is destroyable
-        ldy     #SPRITE_DATA::X_COORD
-        jsr     _check_rubber_band_bounds
-        bcs     destroy_sprite_with_rubber_band
-
-:       ; Let's check the sprite's box
-        .assert data_ptr = cur_sprite_ptr, error
-        ldy     #SPRITE_DATA::X_COORD
-        jsr     _check_plane_bounds
-.ifdef UNKILLABLE
-        bcc     :+
-        clc                       ; NO COLLISION HACK
-        sta     $C030
-:
-.endif
-        bcc     check_next_sprite
-
-        ; We're in the sprite box, is it active?
-        ldy     #SPRITE_DATA::ACTIVE
-        lda     (cur_sprite_ptr),y
-        beq     check_next_sprite  ; No, we're good
-
-        ; Is it deadly?
-        ldy     #SPRITE_DATA::DEADLY
-        lda     (cur_sprite_ptr),y
-        beq     destroy_sprite    ; No, grab it (but don't get score for it)
-        jmp     die               ; Yes, die
-
-destroy_sprite_with_rubber_band:
-        lda     #0                ; Deactivate rubber band
-        jsr     _deactivate_sprite
-        jsr     _play_bubble      ; Play sound
-        lda     #DESTROY_BONUS
-        jsr     _inc_score
-
-        ; Deactivate it
-destroy_sprite:
-        lda     cur_sprite
-        jsr     _deactivate_sprite
-
-        jmp     check_next_sprite
-
-        ; Unreachable code.
-        brk
+:       jmp     reset_level
+.endproc
 
 ; Copy the hgr_baseaddr array of addresses
 ; to two arrays of low bytes/high bytes for simplicity
-_init_simple_hgr_addrs:
+.proc _init_simple_hgr_addrs
         ldy     #0
         ldx     #0
 :       lda     _hgr_baseaddr,x
@@ -360,8 +272,9 @@ next_mod:
         inx
         bne     next_mod
         rts
+.endproc
 
-backup_sprite:
+.proc backup_sprite
         lda     cur_sprite
         asl
         tay
@@ -380,8 +293,9 @@ backup_sprite:
         dey
         bpl     :-
         rts
+.endproc
 
-backup_level_data:
+.proc backup_level_data
         ldx     plane_sprite_num
         stx     cur_sprite
 
@@ -391,8 +305,9 @@ backup_level_data:
         bpl     :-
 
         rts
+.endproc
 
-restore_sprite:
+.proc restore_sprite
         lda     cur_sprite
         asl
         tay
@@ -411,8 +326,9 @@ restore_sprite:
         dey
         bpl     :-
         rts
+.endproc
 
-restore_level_data:
+.proc restore_level_data
         ldx     plane_sprite_num
         stx     cur_sprite
 
@@ -422,8 +338,9 @@ restore_level_data:
         bpl     :-
 
         rts
+.endproc
 
-setup_level_data:
+.proc setup_level_data
         lda     cur_level
         asl
         tax
@@ -466,8 +383,7 @@ setup_level_data:
         bne     :+
         inc     level_data+1
 
-:
-        jsr     backup_level_data
+:       jsr     backup_level_data
         ; Draw each sprite once
 
         ; Deactivate interrupts for first draw
@@ -488,9 +404,10 @@ setup_level_data:
 
         plp
         rts
+.endproc
 
-reset_game:
-        lda     #3
+.proc reset_game
+        lda     #NUM_LIVES
         sta     num_lives
         lda     #0
         sta     cur_level
@@ -499,48 +416,10 @@ reset_game:
         sta     cur_score
         sta     cur_score+1
         jmp     load_level
-
-prev_level:
-        rts ; UNSURE IF I WANT TO GO BACK IN LEVELS?
-        ; We restore level data, in case we die later
-        ; and come back to this level.
-        lda     cur_level
-        bne     :+
-        rts
-:       jsr     restore_level_data
-        dec     cur_level
-        jmp     load_level
-
-next_level:
-        inc     cur_level
-        ; Print the time bonus
-        jsr     _print_level_end
-        ; We restore level data, in case we die later
-        ; and come back to this level.
-        lda     cur_level
-go_to_level:
-        sta     cur_level
-        cmp     num_levels
-        bcc     :+
-        jmp     _win
-:       jsr     restore_level_data
-        jmp     load_level
-
-reset_level:
-        jsr     _load_bg
-        jsr     restore_level_data
-        jsr     setup_level_data
-x_coord_reset_handler:
-        jsr     mouse_reset_ref_x
-        jmp     keyboard_reset_ref_x
-
-load_level:
-        jsr     _load_bg
-        ; Draw plane once to backup background
-        jsr     setup_level_data
-        jmp     x_coord_reset_handler
+.endproc
 
 _win:
+        jsr     _deinit_mouse
         jmp     _exit
 
         .bss

@@ -1,6 +1,5 @@
-        .export     _check_blockers, _check_vents
         .export     _check_plane_bounds, _check_rubber_band_bounds
-        .export     _deactivate_sprite, _deactivate_current_sprite
+        .export     _unfire_sprite
         .export     _fire_rubber_band, _fire_sprite
         .export     _rubber_band_travel, _balloon_travel, _knife_travel, _toast_travel
         .export     _grab_rubber_bands, _grab_battery, _grab_sheet, _inc_score
@@ -8,10 +7,9 @@
         .export     _check_battery_boost
         .import     ref_x
 
-        .import     vents_data, blockers_data, plane_data
         .import     rubber_band_data
         .import     cur_level, frame_counter
-        .import     _load_sprite_pointer, _setup_sprite_pointer, _clear_and_draw_sprite
+        .import     _load_sprite_pointer, _setup_sprite_pointer, _draw_sprite
         .import     num_rubber_bands, num_battery, num_lives, cur_score
         .import     _play_bubble, _play_croutch, _play_ding
 
@@ -33,30 +31,30 @@
 ; (data_ptr),y to y+3 contains box coords (start X, width, start Y, height)
 ; Always return with Y at end of coords so caller knows where Y is at.
 ; Trashes A, updates Y, does not touch X
-_check_plane_bounds:
+.proc _check_plane_bounds
         ; plane_x,plane_y is the top-left corner of the plane
         ; compute bottom-right corner
         clc
         lda     plane_x
-        sta     check_bounds_sx+1
+        sta     sx+1
         adc     #plane_WIDTH
-        sta     check_bounds_ex+1
+        sta     ex+1
         lda     plane_y
-        sta     check_bounds_sy+1
+        sta     sy+1
         adc     #plane_HEIGHT
-        sta     check_bounds_ey+1
+        sta     ey+1
 
-check_bounds:
+do_check:
         ; Check right of plane against first blocker X coords
         lda     (data_ptr),y
         iny                       ; Inc Y now so we know how much to skip
-check_bounds_ex:
+ex:
         cmp     #$FF              ; lower X bound
         bcs     out_skip_y        ; if lb > x, we're out of box
 
         ; Check left of plane against right of box
         adc     (data_ptr),y      ; higher X bound (lower+width)
-check_bounds_sx:
+sx:
         cmp     #$FF              ; Patched with X coordinate
         bcc     out_skip_y        ; if hb < x, we're out of box
 
@@ -64,29 +62,17 @@ check_bounds_sx:
         iny
         lda     (data_ptr),y      ; lower Y bound
         iny                       ; Inc Y now so we have nothing to skip
-check_bounds_ey:
+ey:
         cmp     #$FF
         bcs     out               ; if lb > y, we're out of box
 
         ; Check top of plane against lower bound of blocker
         adc     (data_ptr),y      ; higher Y bound (lower+height)
-check_bounds_sy:
+sy:
         cmp     #$FF
         bcc     out               ; if hb < y, we're out of box
 
         rts                       ; We're in the box (return, carry already set)
-
-_check_rubber_band_bounds:
-        clc
-        lda     rubber_band_data+SPRITE_DATA::X_COORD
-        sta     check_bounds_sx+1
-        adc     #rubber_band_WIDTH
-        sta     check_bounds_ex+1
-        lda     rubber_band_data+SPRITE_DATA::Y_COORD
-        sta     check_bounds_sy+1
-        adc     #rubber_band_HEIGHT
-        sta     check_bounds_ey+1
-        jmp     check_bounds
 
 out_skip_y:
         iny
@@ -94,93 +80,27 @@ out_skip_y:
 out:
         clc
         rts
+.endproc
 
-; Return with carry set if in an obstacle
-_check_blockers:
-        ; Get current level data to data_ptr
-        lda     cur_level
-        asl
-        tay
-        lda     blockers_data,y
-        sta     data_ptr
-        lda     blockers_data+1,y
-        sta     data_ptr+1
-
-        ; Get number of blockers in the level, to X
-        ldy     #0
-        lda     (data_ptr),y
-        tax
-
-        beq     no_blockers
-
-do_check_blocker:
-        iny
-        jsr     _check_plane_bounds
-        bcc     next_blocker
-
-        ; We're in an obstacle
-        lda     $C030
-.ifdef UNKILLABLE
-        clc                       ; NO BLOCKER HACK
-.endif
-        rts                       ; Carry already set
-
-next_blocker:
-        dex                       ; Check next obstacle?
-        bne     do_check_blocker
-
-no_blockers:
+.proc _check_rubber_band_bounds
         clc
-        rts
-
-; Return with Y increment to use
-_check_vents:
-.ifdef UNKILLABLE
-        lda     #0                ; NO VENT HACK
-        rts
-.endif
-        ; Get current level data to data_ptr
-        lda     cur_level
-        asl
-        tay
-        lda     vents_data,y
-        sta     data_ptr
-        lda     vents_data+1,y
-        sta     data_ptr+1
-
-        ; Get number of vents in the level, to X
-        ldy     #0
-        lda     (data_ptr),y
-        tax
-
-        beq     go_down
-
-do_check_vent:
-        iny
-        jsr     _check_plane_bounds
-        bcc     next_vent
-
-        ; We're in a vent tunnel, load its Y delta
-        iny
-        lda     (data_ptr),y
-        rts
-
-next_vent:
-        iny
-        dex                       ; Check next vent?
-        bne     do_check_vent
-
-go_down:
-        lda     #1              ; Go down normal
-        rts
+        lda     rubber_band_data+SPRITE_DATA::X_COORD
+        sta     _check_plane_bounds::sx+1
+        adc     #rubber_band_WIDTH
+        sta     _check_plane_bounds::ex+1
+        lda     rubber_band_data+SPRITE_DATA::Y_COORD
+        sta     _check_plane_bounds::sy+1
+        adc     #rubber_band_HEIGHT
+        sta     _check_plane_bounds::ey+1
+        jmp     _check_plane_bounds::do_check
+.endproc
 
 _deactivate_rubber_band:
         lda     #0
 
-_deactivate_sprite:
+.proc _deactivate_sprite
         jsr     _load_sprite_pointer
         jsr     _setup_sprite_pointer
-_deactivate_current_sprite:
         ldy     #SPRITE_DATA::ACTIVE
         lda     #0
         sta     (cur_sprite_ptr),y
@@ -197,9 +117,10 @@ deac_cb:
         jsr     $FFFF
 
 deac_cb_done:
-        jmp     _clear_and_draw_sprite
+        jmp     _draw_sprite
+.endproc
 
-_fire_rubber_band:
+.proc _fire_rubber_band
         lda     rubber_band_data+SPRITE_DATA::ACTIVE
         bne     no_fire
 
@@ -226,8 +147,9 @@ _fire_rubber_band:
 
 no_fire:
         rts
+.endproc
 
-_rubber_band_travel:
+.proc _rubber_band_travel
         lda     rubber_band_data+SPRITE_DATA::ACTIVE
         beq     no_travel
 
@@ -239,10 +161,11 @@ _rubber_band_travel:
         sta     rubber_band_data+SPRITE_DATA::X_COORD
 no_travel:
         rts
+.endproc
 
 ; X: frame number to trigger sprite
 ; A: sprite number
-_fire_sprite:
+.proc _fire_sprite
         cpx     frame_counter
         bne     :+
 
@@ -266,14 +189,21 @@ _fire_sprite:
         sta     (cur_sprite_ptr),y
 
 :       rts
+.endproc
 
 ; A: sprite number
-_unfire_sprite:
+.proc _unfire_sprite
         jsr     _deactivate_sprite
 
-        ; Restore its original coords
+        ; Restore its original coords if saved
         ldy     #SPRITE_DATA::STATE_BACKUP
         lda     (cur_sprite_ptr),y
+        tax
+        iny
+        ora     (cur_sprite_ptr),y
+        beq     :+
+
+        txa
         ldy     #SPRITE_DATA::X_COORD
         sta     (cur_sprite_ptr),y
 
@@ -281,9 +211,10 @@ _unfire_sprite:
         lda     (cur_sprite_ptr),y
         ldy     #SPRITE_DATA::Y_COORD
         sta     (cur_sprite_ptr),y
-        rts
+:       rts
+.endproc
 
-_balloon_travel:
+.proc _balloon_travel
         sta     tmp3
         jsr     _load_sprite_pointer
         ldy     #SPRITE_DATA::ACTIVE
@@ -300,8 +231,9 @@ _balloon_travel:
         lda     tmp3
         jmp     _unfire_sprite
 :       rts
+.endproc
 
-_knife_travel:
+.proc _knife_travel
         sta     tmp3
         jsr     _load_sprite_pointer
         ldy     #SPRITE_DATA::ACTIVE
@@ -331,6 +263,7 @@ knife_left:
         sta     (cur_sprite_ptr),y
         beq     knife_out
         rts
+.endproc
 
 ; Approximation of a parabolic trajectory
 toast_y_offset:
@@ -345,7 +278,7 @@ toast_x_offset:
         .byte $00, $00, $00, $00, $00, $FF, $00, $00, $00, $00, $00, $00, $FF, $00, $00, $00, $00, $00, $00, $07
 .assert * - toast_x_offset = NUM_TOAST_OFFSETS, error ; Both arrays should be the same size
 
-_toast_travel:
+.proc _toast_travel
         sta     tmp3
         jsr     _load_sprite_pointer
         ldy     #SPRITE_DATA::ACTIVE
@@ -396,8 +329,9 @@ end_toast_move:
         ; and deactivate the toast
         lda     tmp3
         jmp     _unfire_sprite
+.endproc
 
-_grab_rubber_bands:
+.proc _grab_rubber_bands
         clc
         adc     num_rubber_bands
         bcs     :+
@@ -407,19 +341,24 @@ _grab_rubber_bands:
 :       lda     #$FF
         sta     num_rubber_bands
         rts
+.endproc
 
-_clock_inc_score:
+.proc _clock_inc_score
         jsr     _play_ding
         lda     #5
-_inc_score:
+        ; Fallthrough through _inc_score
+.endproc
+
+.proc _inc_score
         clc
         adc     cur_score
         sta     cur_score
         bcc     :+
         inc     cur_score+1
 :       rts
+.endproc
 
-_grab_battery:
+.proc _grab_battery
         clc
         adc     num_battery
         bcs     :+
@@ -429,8 +368,9 @@ _grab_battery:
 :       lda     #$FF
         sta     num_battery
         rts
+.endproc
 
-_grab_sheet:
+.proc _grab_sheet
         clc
         adc     num_lives
         bcs     :+
@@ -440,8 +380,9 @@ _grab_sheet:
 :       lda     #$FF
         sta     num_lives
         rts
+.endproc
 
-_check_battery_boost:
+.proc _check_battery_boost
         ; Do we have battery?
         ldy     num_battery
         beq     :+
@@ -455,3 +396,4 @@ _check_battery_boost:
         sta     $C030
         dec     num_battery   ; Decrement battery
 :       rts
+.endproc

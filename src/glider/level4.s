@@ -5,7 +5,6 @@
         .import   _sheet, _sheet_mask
 
         .import   level_logic_done
-        .import   _deactivate_sprite
         .import   _grab_sheet
 
         .import   frame_counter
@@ -99,7 +98,7 @@ level4_blockers_data:
 
 .code
 
-level4_logic:
+.proc level4_logic
         ; Move toast if active
         lda     #TOAST0_SPRITE_NUM
         jsr     _toast_travel
@@ -107,6 +106,5 @@ level4_logic:
         ; Activate toast
         lda     #TOAST0_SPRITE_NUM
         ldx     #$30
-        jsr     _fire_sprite
-
-        jmp     level_logic_done
+        jmp     _fire_sprite
+.endproc

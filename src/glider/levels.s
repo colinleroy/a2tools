@@ -26,6 +26,7 @@
                   .include "clock.gen.inc"
                   .include "plane.gen.inc"
                   .include "rubber_band.gen.inc"
+                  .include "constants.inc"
 
 .data
 
@@ -74,7 +75,7 @@ rubber_band_data:
                   .byte 0               ; need clear
 
 cur_level:        .byte   0
-num_lives:        .byte   3
+num_lives:        .byte   NUM_LIVES
 cur_score:        .word   0
 num_rubber_bands: .byte   0
 num_battery:      .byte   0

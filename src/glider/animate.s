@@ -3,7 +3,7 @@
                   .import  _plane, _plane_mask, plane_data
                   .import  _plane_destroyed, _plane_destroyed_mask
 
-                  .import  _clear_and_draw_sprite
+                  .import  _draw_sprite
                   .import  _setup_sprite_pointer, _load_sprite_pointer
                   .import  plane_sprite_num
                   .import  _div7_table, tosumula0, pusha0, pushax, popax
@@ -17,7 +17,7 @@
 .segment "LOWCODE"
 
 ; Sprite number in A, mask then sprite in TOS
-_replace_sprite:
+.proc _replace_sprite
         jsr     _load_sprite_pointer
 
         jsr     popax
@@ -35,16 +35,18 @@ _replace_sprite:
         sta     (cur_sprite_ptr),y
 
         rts
+.endproc
 
 ; Round a number to the closest lower multiple of seven
-_round_to_seven:
+.proc _round_to_seven
         tax
         lda     _div7_table,x
         jsr     pusha0
         lda     #7
         jmp     tosumula0
+.endproc
 
-_animate_plane_crash:
+.proc _animate_plane_crash
         ; Update X coord to make sure we can play the animation in order
         lda     plane_data+SPRITE_DATA::X_COORD
         jsr     _round_to_seven
@@ -75,7 +77,7 @@ _animate_plane_crash:
 :       lda     tmp2
         jsr     _load_sprite_pointer
         jsr     _setup_sprite_pointer
-        jsr     _clear_and_draw_sprite
+        jsr     _draw_sprite
         inc     plane_data+SPRITE_DATA::X_COORD
         lda     #32
         jsr     _platform_msleep
@@ -95,3 +97,4 @@ _animate_plane_crash:
         jsr     _replace_sprite
 
         rts
+.endproc

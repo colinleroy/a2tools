@@ -1,4 +1,4 @@
-        .export _draw_sprite, _clear_and_draw_sprite, _draw_sprite_fast
+        .export _draw_sprite, _draw_sprite_fast
         .export _load_sprite_pointer, _setup_sprite_pointer
 
         .export fast_sprite_pointer
@@ -122,10 +122,10 @@ sprite_num:
         rts
 
 ; X, Y : coordinates
-_clear_and_draw_sprite:
+_draw_sprite:
         ldy     #SPRITE_DATA::NEED_CLEAR
         lda     (cur_sprite_ptr),y
-        beq     _draw_sprite
+        beq     blit_sprite
         lda     #0
         sta     (cur_sprite_ptr),y
 
@@ -161,7 +161,8 @@ sprite_store_bg:
         lda     (cur_sprite_ptr),y
         beq     draw_out
 
-_draw_sprite:
+blit_sprite:
+        ; Clear done, now draw
         ldy     #SPRITE_DATA::NEED_CLEAR
         lda     #1
         sta     (cur_sprite_ptr),y
