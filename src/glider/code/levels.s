@@ -1,24 +1,14 @@
-                  .export vents_data, blockers_data
-                  .export num_levels, cur_level
-                  .export levels_logic, cur_level_logic
+                  ; .export vents_data, blockers_data
+                  .export cur_level
+                  ; .export levels_logic
+                  .export cur_level_logic
 
                   .export num_lives, num_rubber_bands, num_battery
                   .export cur_score, plane_sprite_num
-                  .export sprite_data, plane_data, rubber_band_data
+                  .export plane_data, rubber_band_data
 
                   .import _plane, _plane_mask
                   .import _rubber_band, _rubber_band_mask
-
-                  .import  level0_sprites, level0_blockers
-                  .import  level0_vents, level0_logic
-                  .import  level1_sprites, level1_blockers
-                  .import  level1_vents, level1_logic
-                  .import  level2_sprites, level2_blockers
-                  .import  level2_vents, level2_logic
-                  .import  level3_sprites, level3_blockers
-                  .import  level3_vents, level3_logic
-                  .import  level4_sprites, level4_blockers
-                  .import  level4_vents, level4_logic
 
                   .import  plane_bgbackup
                   .import  rubber_band_bgbackup
@@ -82,35 +72,3 @@ num_battery:      .byte   0
 
 cur_level_logic:  .addr   $FFFF
 plane_sprite_num: .byte   0
-
-.rodata
-
-num_levels:       .byte   5
-
-sprite_data:
-                  .addr level0_sprites
-                  .addr level1_sprites
-                  .addr level2_sprites
-                  .addr level3_sprites
-                  .addr level4_sprites
-
-vents_data:
-                  .addr level0_vents
-                  .addr level1_vents
-                  .addr level2_vents
-                  .addr level3_vents
-                  .addr level4_vents
-
-blockers_data:
-                  .addr level0_blockers
-                  .addr level1_blockers
-                  .addr level2_blockers
-                  .addr level3_blockers
-                  .addr level4_blockers
-
-levels_logic:
-                  .addr level0_logic
-                  .addr level1_logic
-                  .addr level2_logic
-                  .addr level3_logic
-                  .addr level4_logic

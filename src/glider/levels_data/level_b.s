@@ -1,6 +1,3 @@
-        .export   level1_sprites, level1_blockers
-        .export   level1_vents, level1_logic
-
         .import   _battery, _battery_mask
         .import   _clock, _clock_mask
         .import   _knife, _knife_mask
@@ -19,14 +16,38 @@
         .include  "clock.gen.inc"
         .include  "knife.gen.inc"
         .include  "plane.gen.inc"
-        .include  "sprite.inc"
-        .include  "constants.inc"
+        .include  "level_data_struct.inc"
+        .include  "code/sprite.inc"
+        .include  "code/constants.inc"
 
-.data
+.segment "level_b"
+
+level_data:
+                  .addr sprites
+                  .addr vents
+                  .addr blockers
+
+.assert * = LEVEL_DATA_START+LEVEL_DATA::LOGIC_CB, error ; Make sure the callback is where we think
+.proc logic
+        ; Move knives if active
+        lda     #KNIFE0_SPRITE_NUM
+        jsr     _knife_travel
+        lda     #KNIFE1_SPRITE_NUM
+        jsr     _knife_travel
+
+        ; Activate knives
+        lda     #KNIFE0_SPRITE_NUM
+        ldx     #$30
+        jsr     _fire_sprite
+
+        lda     #KNIFE1_SPRITE_NUM
+        ldx     #$70
+        jmp     _fire_sprite
+.endproc
 
 ; Do not place anything after X= 224 to avoid overflow
 ; in the hitbox
-level1_battery0_data:
+battery0_data:
                   .byte 1               ; active
                   .byte 0               ; deadly
                   .byte 0               ; destroyable
@@ -47,7 +68,7 @@ level1_battery0_data:
                   .addr sprites_bgbackup+0
                   .byte 0               ; need clear
 
-level1_clock0_data:
+clock0_data:
                   .byte 1              ; active
                   .byte 0              ; deadly
                   .byte 0              ; destroyable
@@ -68,7 +89,7 @@ level1_clock0_data:
                   .addr sprites_bgbackup+128
                   .byte 0               ; need clear
 
-level1_knife0_data:
+knife0_data:
                   .byte 0               ; active
                   .byte 1               ; deadly
                   .byte 1               ; destroyable
@@ -89,7 +110,7 @@ level1_knife0_data:
                   .addr sprites_bgbackup+256
                   .byte 0               ; need clear
 
-level1_knife1_data:
+knife1_data:
                   .byte 0               ; active
                   .byte 1               ; deadly
                   .byte 1               ; destroyable
@@ -110,51 +131,30 @@ level1_knife1_data:
                   .addr sprites_bgbackup+384
                   .byte 0               ; need clear
 
-.rodata
-
-level1_sprites:   .byte   6
-level1_sprites_data:
+sprites:   .byte   6
+sprites_data:
                    ; Rubber band must be first for easy deactivation
                    ;                                ; drawn on    EVEN ODD
                   .addr   rubber_band_data          ; small       x
-                  .addr   level1_battery0_data      ; small            x
-                  .addr   level1_clock0_data        ; medium      x
-KNIFE1_SPRITE_NUM = (*-level1_sprites_data)/2
-                  .addr   level1_knife1_data        ; medium           x
-KNIFE0_SPRITE_NUM = (*-level1_sprites_data)/2
-                  .addr   level1_knife0_data        ; medium      x
+                  .addr   battery0_data      ; small            x
+                  .addr   clock0_data        ; medium      x
+KNIFE1_SPRITE_NUM = (*-sprites_data)/2
+                  .addr   knife1_data        ; medium           x
+KNIFE0_SPRITE_NUM = (*-sprites_data)/2
+                  .addr   knife0_data        ; medium      x
                   .addr   plane_data                ; big         x    x
 
-level1_vents:     .byte   2
-level1_vents_data:
+vents:     .byte   2
+vents_data:
                   ; Five bytes per vent (start X, width, start Y, height, direction)
                   ; Direction = What to add to mouse_y
                   ; Watch out - start Y must be >= plane_HEIGHT
                   .byte   35,  20,  plane_HEIGHT+1,   191-plane_HEIGHT, $FF ; Up all the way
                   .byte   217, 20,  plane_HEIGHT+1,   191-plane_HEIGHT, $FF ; Up all the way
 
-level1_blockers:  .byte   3
-level1_blockers_data:
+blockers:  .byte   3
+blockers_data:
                   ; Four bytes per blocker (start X, width, start Y, height)
                   .byte   113, 67,  37,  29    ; Books
                   .byte   105, 99,  64,  4     ; Bookshelf
                   .byte   0,   255, 191, 1     ; Floor
-
-.code
-
-.proc level1_logic
-        ; Move knives if active
-        lda     #KNIFE0_SPRITE_NUM
-        jsr     _knife_travel
-        lda     #KNIFE1_SPRITE_NUM
-        jsr     _knife_travel
-
-        ; Activate knives
-        lda     #KNIFE0_SPRITE_NUM
-        ldx     #$30
-        jsr     _fire_sprite
-
-        lda     #KNIFE1_SPRITE_NUM
-        ldx     #$70
-        jmp     _fire_sprite
-.endproc

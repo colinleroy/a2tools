@@ -40,11 +40,9 @@ ammonoid_disk_PROGS = \
 glider_disk_PROGS = \
 	src/glider/glider.bin
 glider_disk_RES = \
-	src/glider/levela.hgr \
-	src/glider/levelb.hgr \
-	src/glider/levelc.hgr \
-	src/glider/leveld.hgr \
-	src/glider/levele.hgr \
+	src/glider/lowcode.bin \
+	src/glider/splash.bin \
+	src/glider/level*.bin
 
 woztubes_disk_PROGS = \
 	src/woztubes/woztubes.bin

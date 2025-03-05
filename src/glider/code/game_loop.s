@@ -19,7 +19,7 @@
         .import     _fire_rubber_band
         .import     _rubber_band_travel
 
-        .import     cur_level, num_levels, frame_counter, plane_sprite_num
+        .import     cur_level, frame_counter, plane_sprite_num
         .import     _go_to_prev_level, _go_to_next_level, _go_to_level
         .import     keyboard_level_change
 
@@ -33,18 +33,16 @@
         .include    "sprite.inc"
         .include    "plane_coords.inc"
         .include    "constants.inc"
+        .include    "levels_data/level_data_struct.inc"
 
 .segment "LOWCODE"
 
 ; Return with carry set if in an obstacle
 .proc _check_blockers
-        ; Get current level data to data_ptr
-        lda     cur_level
-        asl
-        tay
-        lda     blockers_data,y
+        ; Get current blockers data to data_ptr
+        lda     LEVEL_DATA_START+LEVEL_DATA::BLOCKERS_DATA
         sta     data_ptr
-        lda     blockers_data+1,y
+        lda     LEVEL_DATA_START+LEVEL_DATA::BLOCKERS_DATA+1
         sta     data_ptr+1
 
         ; Get number of blockers in the level, to X
@@ -81,13 +79,10 @@ no_blockers:
         lda     #0                ; NO VENT HACK
         rts
 .endif
-        ; Get current level data to data_ptr
-        lda     cur_level
-        asl
-        tay
-        lda     vents_data,y
+        ; Get current vents data to data_ptr
+        lda     LEVEL_DATA_START+LEVEL_DATA::VENTS_DATA
         sta     data_ptr
-        lda     vents_data+1,y
+        lda     LEVEL_DATA_START+LEVEL_DATA::VENTS_DATA+1
         sta     data_ptr+1
 
         ; Get number of vents in the level, to X
@@ -248,8 +243,6 @@ grab_sprite:
         lda     keyboard_level_change
         stx     keyboard_level_change
         bmi     :+
-        cmp     num_levels
-        bcs     :+
         jmp     _go_to_level      ; End of function
 
 :       ; Then by plane X coord

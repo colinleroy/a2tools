@@ -11,7 +11,7 @@
         .import   pushax
         .import   _mod7_table
 
-        .import   cur_level, num_levels
+        .import   cur_level
         .import   _draw_sprite
         .import   _load_sprite_pointer
         .import   _setup_sprite_pointer
@@ -22,7 +22,7 @@
         .import   _check_level_change
         .import   _check_fire_button
 
-        .import   _load_bg
+        .import   _load_level_data, _load_splash_screen, _load_lowcode
         .import   _animate_plane_crash
 
         .import   level_backup
@@ -43,7 +43,7 @@
 
         .import   sprite_data, plane_data, rubber_band_data
 
-        .import   _clear_hgr_after_input
+        .import   _clear_hgr_after_input, _platform_msleep
 
         .import   _play_crash
 
@@ -55,6 +55,7 @@
         .include  "level_data_ptr.inc"
         .include  "plane_coords.inc"
         .include  "constants.inc"
+        .include  "levels_data/level_data_struct.inc"
 
 .segment "LOWCODE"
 
@@ -65,8 +66,7 @@
         lda     cur_level
         bne     :+
         rts
-:       jsr     restore_level_data
-        dec     cur_level
+:       dec     cur_level
         jmp     load_level
 .endproc
 
@@ -82,34 +82,36 @@
 
 .proc _go_to_level
         sta     cur_level
-        cmp     num_levels
+        jsr     load_level
         bcc     :+
-        jmp     _win
-:       jsr     restore_level_data
-        jmp     load_level
-.endproc
-
-.proc reset_level
-        jsr     _load_bg
-        jsr     restore_level_data
-        jsr     setup_level_data
-x_coord_reset_handler:
-        jsr     _mouse_reset_ref_x
-        jmp     _keyboard_reset_ref_x
+        jmp     _win              ; We win if we can't load another level
+:       rts
 .endproc
 
 .proc load_level
-        jsr     _load_bg
+        lda     cur_level
+        jsr     _load_level_data
+        bcc     :+
+        rts
         ; Draw plane once to backup background
-        jsr     setup_level_data
-        jmp     reset_level::x_coord_reset_handler
+:       jsr     setup_level_data
+x_coord_reset_handler:
+        jsr     _mouse_reset_ref_x
+        jsr     _keyboard_reset_ref_x
+        clc
+        rts
 .endproc
 
-; Not .proc'ed to jump back to level_logic_done
-.proc _main
-        lda     #1
-        jsr     _init_hgr
+.code
 
+.proc _main
+        jsr     _load_lowcode
+        jmp     _real_main
+.endproc
+
+.segment "LOWCODE"
+
+.proc _real_main
         jsr     _init_hgr_base_addrs
 
         jsr     _init_simple_hgr_addrs
@@ -129,9 +131,9 @@ x_coord_reset_handler:
         sta     calibrate_hz_handler+2
 
         lda     #<_keyboard_reset_ref_x
-        sta     reset_level::x_coord_reset_handler+1
+        sta     load_level::x_coord_reset_handler+1
         lda     #>_keyboard_reset_ref_x
-        sta     reset_level::x_coord_reset_handler+2
+        sta     load_level::x_coord_reset_handler+2
 
         ; Deactivate mouse (X and fire) handlers
         lda     #$18              ; CLC
@@ -148,6 +150,18 @@ x_coord_reset_handler:
 
 calibrate_hz_handler:
 :       jsr     _mouse_calibrate_hz
+
+.ifndef __APPLE2ENH__
+        ; Give the Mousecard time to settle post-init
+        lda     #$FF
+        ldx     #0
+        jsr     _platform_msleep
+.endif
+
+        jsr     _load_splash_screen
+
+        lda     #1
+        jsr     _init_hgr
 
         jsr     _clear_hgr_after_input
 
@@ -195,7 +209,8 @@ game_logic:
 :       ; Check if we're done with the level
         jsr     _check_level_change
 
-        jsr     _current_level_logic
+        ; Hook through the level's logic
+        jsr     LEVEL_DATA_START+LEVEL_DATA::LOGIC_CB
 
         ; Check if we should fire a rubber band
         jsr     _check_fire_button
@@ -214,22 +229,14 @@ game_logic:
 :       jmp     game_loop
 .endproc
 
-; The only purpose of this is to jsr here so we can jump indirect,
-; and still return correctly to caller from the callback.
-.proc _current_level_logic
-        jmp     (cur_level_logic)
-.endproc
-
 .proc die
         jsr     _animate_plane_crash
         jsr     _play_crash
         dec     num_lives
-        bne     :+
+        beq     game_over
+        jmp     load_level
 game_over:
-        jsr     restore_level_data
         jmp     reset_game
-
-:       jmp     reset_level
 .endproc
 
 ; Copy the hgr_baseaddr array of addresses
@@ -274,81 +281,11 @@ next_mod:
         rts
 .endproc
 
-.proc backup_sprite
-        lda     cur_sprite
-        asl
-        tay
-        lda     (level_data),y
-        sta     ptr2
-        iny
-        lda     (level_data),y
-        sta     ptr2+1
-
-        ldy     #.sizeof(SPRITE_DATA)
-        dey
-
-:       lda     (ptr2),y
-        sta     level_backup,x
-        inx
-        dey
-        bpl     :-
-        rts
-.endproc
-
-.proc backup_level_data
-        ldx     plane_sprite_num
-        stx     cur_sprite
-
-        ldx     #0
-:       jsr     backup_sprite
-        dec     cur_sprite
-        bpl     :-
-
-        rts
-.endproc
-
-.proc restore_sprite
-        lda     cur_sprite
-        asl
-        tay
-        lda     (level_data),y
-        sta     ptr2
-        iny
-        lda     (level_data),y
-        sta     ptr2+1
-
-        ldy     #.sizeof(SPRITE_DATA)
-        dey
-
-:       lda     level_backup,x
-        sta     (ptr2),y
-        inx
-        dey
-        bpl     :-
-        rts
-.endproc
-
-.proc restore_level_data
-        ldx     plane_sprite_num
-        stx     cur_sprite
-
-        ldx     #0
-:       jsr     restore_sprite
-        dec     cur_sprite
-        bpl     :-
-
-        rts
-.endproc
-
 .proc setup_level_data
-        lda     cur_level
-        asl
-        tax
-
         ; Logic
-        lda     levels_logic,x
+        lda     LEVEL_DATA_START+LEVEL_DATA::LOGIC_CB
         sta     cur_level_logic
-        lda     levels_logic+1,x
+        lda     LEVEL_DATA_START+LEVEL_DATA::LOGIC_CB+1
         sta     cur_level_logic+1
 
         ; Allocated time to time counter seconds
@@ -364,9 +301,9 @@ next_mod:
         sta     time_counter+1
 
         ; Sprites
-        lda     sprite_data,x
+        lda     LEVEL_DATA_START+LEVEL_DATA::SPRITES_DATA
         sta     level_data
-        lda     sprite_data+1,x
+        lda     LEVEL_DATA_START+LEVEL_DATA::SPRITES_DATA+1
         sta     level_data+1
 
         ldy     #0
@@ -383,13 +320,16 @@ next_mod:
         bne     :+
         inc     level_data+1
 
-:       jsr     backup_level_data
-        ; Draw each sprite once
+:       ; Mark plane and rubber band backgrounds clean
+        lda     #0
+        sta     plane_data+SPRITE_DATA::NEED_CLEAR
+        sta     rubber_band_data+SPRITE_DATA::NEED_CLEAR
 
         ; Deactivate interrupts for first draw
         php
         sei
 
+        ; Draw each sprite once
         lda     plane_sprite_num
         sta     cur_sprite
 
