@@ -1,6 +1,3 @@
-        .export   level3_sprites, level3_blockers
-        .export   level3_vents, level3_logic
-
         .import   _clock, _clock_mask
 
         .import   level_logic_done
@@ -13,14 +10,25 @@
 
         .include  "clock.gen.inc"
         .include  "plane.gen.inc"
-        .include  "sprite.inc"
-        .include  "constants.inc"
+        .include  "level_data_struct.inc"
+        .include  "code/sprite.inc"
+        .include  "code/constants.inc"
 
-.data
+.segment "level_d"
+
+level_data:
+                  .addr sprites
+                  .addr vents
+                  .addr blockers
+
+.assert * = LEVEL_DATA_START+LEVEL_DATA::LOGIC_CB, error ; Make sure the callback is where we think
+.proc logic
+        rts
+.endproc
 
 ; Do not place anything after X= 224 to avoid overflow
 ; in the hitbox
-level3_clock0_data:
+clock0_data:
                   .byte 1              ; active
                   .byte 0              ; deadly
                   .byte 0              ; destroyable
@@ -41,18 +49,16 @@ level3_clock0_data:
                   .addr sprites_bgbackup+0
                   .byte 0               ; need clear
 
-.rodata
-
-level3_sprites:   .byte   3
-level3_sprites_data:
+sprites:   .byte   3
+sprites_data:
                    ; Rubber band must be first for easy deactivation
                    ;                                ; drawn on    EVEN ODD
                   .addr   rubber_band_data          ; small            x
-                  .addr   level3_clock0_data        ; medium      x
+                  .addr   clock0_data        ; medium      x
                   .addr   plane_data                ; big         x    x
 
-level3_vents:     .byte   3
-level3_vents_data:
+vents:     .byte   3
+vents_data:
                   ; Five bytes per vent (start X, width, start Y, height, direction)
                   ; Direction = What to add to mouse_y
                   ; Watch out - start Y must be >= plane_HEIGHT
@@ -60,16 +66,10 @@ level3_vents_data:
                   .byte   90,  20,  plane_HEIGHT+1,  191-plane_HEIGHT, $02 ; Down all the way
                   .byte   189, 20,  plane_HEIGHT+1,  191-plane_HEIGHT, $FF ; Up all the way
 
-level3_blockers:  .byte   4
-level3_blockers_data:
+blockers:  .byte   4
+blockers_data:
                   ; Four bytes per blocker (start X, width, start Y, height)
                   .byte   52,  27,  69,  28    ; Books
                   .byte   51,  56,  97,  74    ; Cupboard 1
                   .byte   111, 57,  135, 36    ; Cupboard 2
                   .byte   0,   255, 191, 1     ; Floor
-
-.code
-
-.proc level3_logic
-        rts
-.endproc

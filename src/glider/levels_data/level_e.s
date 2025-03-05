@@ -1,6 +1,3 @@
-        .export   level4_sprites, level4_blockers
-        .export   level4_vents, level4_logic
-
         .import   _toast, _toast_mask
         .import   _sheet, _sheet_mask
 
@@ -17,14 +14,32 @@
         .include  "plane.gen.inc"
         .include  "sheet.gen.inc"
         .include  "toast.gen.inc"
-        .include  "sprite.inc"
-        .include  "constants.inc"
+        .include  "level_data_struct.inc"
+        .include  "code/sprite.inc"
+        .include  "code/constants.inc"
 
-.data
+.segment "level_e"
+
+level_data:
+                  .addr sprites
+                  .addr vents
+                  .addr blockers
+
+.assert * = LEVEL_DATA_START+LEVEL_DATA::LOGIC_CB, error ; Make sure the callback is where we think
+.proc logic
+        ; Move toast if active
+        lda     #TOAST0_SPRITE_NUM
+        jsr     _toast_travel
+
+        ; Activate toast
+        lda     #TOAST0_SPRITE_NUM
+        ldx     #$30
+        jmp     _fire_sprite
+.endproc
 
 ; Do not place anything after X= 224 to avoid overflow
 ; in the hitbox
-level4_sheet0_data:
+sheet0_data:
                   .byte 1              ; active
                   .byte 0              ; deadly
                   .byte 0              ; destroyable
@@ -45,7 +60,7 @@ level4_sheet0_data:
                   .addr sprites_bgbackup+0
                   .byte 0               ; need clear
 
-level4_toast0_data:
+toast0_data:
                   .byte 0               ; active
                   .byte 1               ; deadly
                   .byte 1               ; destroyable
@@ -66,20 +81,18 @@ level4_toast0_data:
                   .addr sprites_bgbackup+128
                   .byte 0               ; need clear
 
-.rodata
-
-level4_sprites:   .byte   4
-level4_sprites_data:
+sprites:   .byte   4
+sprites_data:
                    ; Rubber band must be first for easy deactivation
                    ;                                ; drawn on    EVEN ODD
                   .addr   rubber_band_data          ; small            x
-                  .addr   level4_sheet0_data        ; medium      x
-TOAST0_SPRITE_NUM = (*-level4_sprites_data)/2
-                  .addr   level4_toast0_data        ; medium      x
+                  .addr   sheet0_data        ; medium      x
+TOAST0_SPRITE_NUM = (*-sprites_data)/2
+                  .addr   toast0_data        ; medium      x
                   .addr   plane_data                ; big         x    x
 
-level4_vents:     .byte   4
-level4_vents_data:
+vents:     .byte   4
+vents_data:
                   ; Five bytes per vent (start X, width, start Y, height, direction)
                   ; Direction = What to add to mouse_y
                   ; Watch out - start Y must be >= plane_HEIGHT
@@ -88,23 +101,10 @@ level4_vents_data:
                   .byte   133, 20,  plane_HEIGHT+135,  57-plane_HEIGHT, $FF ; Up to the table
                   .byte   221, 20,  plane_HEIGHT+1,    191-plane_HEIGHT, $FF ; Up all the way
 
-level4_blockers:  .byte   4
-level4_blockers_data:
+blockers:  .byte   4
+blockers_data:
                   ; Four bytes per blocker (start X, width, start Y, height)
                   .byte   49,  78,  85,  4     ; Bookshelf left
                   .byte   177, 35,  63,  32    ; Bookshelf right with books
                   .byte   139, 72,  127, 6     ; Table
                   .byte   0,   255, 191, 1     ; Floor
-
-.code
-
-.proc level4_logic
-        ; Move toast if active
-        lda     #TOAST0_SPRITE_NUM
-        jsr     _toast_travel
-
-        ; Activate toast
-        lda     #TOAST0_SPRITE_NUM
-        ldx     #$30
-        jmp     _fire_sprite
-.endproc

@@ -248,9 +248,14 @@ int main(int argc, char *argv[]) {
   printf("         .addr play_done\n");
 
   /* Wasters */
+#ifdef CPU_65c02
   printf("\n"
-         ".segment \"LOWCODE\"\n"
-         "\n"
+         ".segment \"LOWCODE\"\n");
+#else
+  printf("\n"
+         ".code\n");
+#endif
+  printf("\n"
          "waste_46: nop\n"
          "waste_44: nop\n"
          "waste_42: nop\n"

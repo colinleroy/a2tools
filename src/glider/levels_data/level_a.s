@@ -1,6 +1,3 @@
-        .export   level0_sprites, level0_blockers
-        .export   level0_vents, level0_logic
-
         .import   _balloon, _balloon_mask
         .import   _clock, _clock_mask
         .import   _rubber_box, _rubber_box_mask
@@ -19,16 +16,34 @@
         .include  "clock.gen.inc"
         .include  "plane.gen.inc"
         .include  "rubber_box.gen.inc"
-        .include  "sprite.inc"
-        .include  "constants.inc"
+        .include  "level_data_struct.inc"
+        .include  "code/sprite.inc"
+        .include  "code/constants.inc"
 
-.data
+.segment "level_a"
+
+level_data:
+                  .addr sprites
+                  .addr vents
+                  .addr blockers
+
+.assert * = LEVEL_DATA_START+LEVEL_DATA::LOGIC_CB, error ; Make sure the callback is where we think
+.proc logic
+        ; Move balloon if active
+        lda     #BALLOON_SPRITE_NUM
+        jsr     _balloon_travel
+
+        ; Activate balloon if frame = $FF
+        lda     #BALLOON_SPRITE_NUM
+        ldx     #$FF
+        jmp     _fire_sprite
+.endproc
 
 ; Do not place anything after X= 224 to avoid overflow
 ; in the hitbox. For "unperfect" sprites, that can't be displayed
 ; at X%7 != 0, make sure x is a multiple of 7 so that the hitbox
 ; is aligned with the sprite.
-level0_clock0_data:
+clock0_data:
                   .byte 1               ; active
                   .byte 0               ; deadly
                   .byte 0               ; destroyable
@@ -49,7 +64,7 @@ level0_clock0_data:
                   .addr sprites_bgbackup+0 ; bg backup
                   .byte 0               ; need clear
 
-level0_balloon0_data:
+balloon0_data:
                   .byte 0               ; active
                   .byte 1               ; deadly
                   .byte 1               ; destroyable
@@ -70,7 +85,7 @@ level0_balloon0_data:
                   .addr sprites_bgbackup+128
                   .byte 0               ; need clear
 
-level0_rubber_box0_data:
+rubber_box0_data:
                   .byte 1               ; active
                   .byte 0               ; deadly
                   .byte 0               ; destroyable
@@ -91,8 +106,6 @@ level0_rubber_box0_data:
                   .addr sprites_bgbackup+256
                   .byte 0                  ; need clear
 
-.rodata
-
 ; Sprite ordering counts.
 ; Plane must be last, rubber band must be first.
 ; In between, order for:
@@ -102,41 +115,28 @@ level0_rubber_box0_data:
 ;   walked backwards)
 ;
 ; Performance on 2025/02/26: even frames 10366 / odd frames 10760 cycles
-level0_sprites:   .byte   5
-level0_sprites_data:
+sprites:   .byte   5
+sprites_data:
                    ; Rubber band must be first for easy deactivation
                    ;                                ; drawn on    EVEN ODD
                   .addr   rubber_band_data          ; small             x
-                  .addr   level0_clock0_data        ; medium      x
-                  .addr   level0_rubber_box0_data   ; medium            x
-BALLOON_SPRITE_NUM = (*-level0_sprites_data)/2
-                  .addr   level0_balloon0_data      ; big         x
+                  .addr   clock0_data        ; medium      x
+                  .addr   rubber_box0_data   ; medium            x
+BALLOON_SPRITE_NUM = (*-sprites_data)/2
+                  .addr   balloon0_data      ; big         x
                   .addr   plane_data                ; big         x     x
 
-level0_vents:     .byte   2
-level0_vents_data:
+vents:     .byte   2
+vents_data:
                   ; Five bytes per vent (start X, width, start Y, height, direction)
                   ; Direction = What to add to mouse_y
                   ; Watch out - start Y must be >= plane_HEIGHT
                   .byte   40,  20,  plane_HEIGHT+1,   191-plane_HEIGHT, $FF ; Up all the way
                   .byte   227, 20,  plane_HEIGHT+1,   191-plane_HEIGHT, $FF ; Up all the way
 
-level0_blockers:  .byte   3
-level0_blockers_data:
+blockers:  .byte   3
+blockers_data:
                   ; Four bytes per blocker (start X, width, start Y, height)
                   .byte   104, 24,  91,  31    ; Mac
                   .byte   103, 92,  121, 6     ; Table
                   .byte   0,   255, 191, 1     ; Floor
-
-.code
-
-.proc level0_logic
-        ; Move balloon if active
-        lda     #BALLOON_SPRITE_NUM
-        jsr     _balloon_travel
-
-        ; Activate balloon if frame = $FF
-        lda     #BALLOON_SPRITE_NUM
-        ldx     #$FF
-        jmp     _fire_sprite
-.endproc

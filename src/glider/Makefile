@@ -27,22 +27,18 @@ SAMPLING_HZ := 8000
 endif
 endif
 
-USE_LANGCARD := -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD
-
-GCCCFLAGS = -g -O0 -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\" \
-	-I ../lib -I ../stp -Wall -Wno-format \
-	-Wno-unused-function -Wno-char-subscripts -Wno-unknown-pragmas \
-	-Werror
+BINARY_NAME = glider.bin
 
 .PHONY: all clean
 
+# Generated things
+
 levels_backgrounds = \
-	splash.hgr \
-	levela.hgr \
-	levelb.hgr \
-	levelc.hgr \
-	leveld.hgr \
-	levele.hgr \
+	level_a.bg.gen.s \
+	level_b.bg.gen.s \
+	level_c.bg.gen.s \
+	level_d.bg.gen.s \
+	level_e.bg.gen.s \
 
 sprites_pixel_perfect = \
 	knife.pixel_perfect.gen.s \
@@ -74,50 +70,53 @@ sounds = \
 	ding.snd.s \
 	crash.snd.s
 
+# Our code
+
+levels_code = \
+	levels_data/*.s
+
 glider_SOURCES := \
-	main.s \
-	keyboard.s \
-	mouse.s \
-	draw_text.s \
-	draw_sprite.s \
-	animate.s \
-	game_loop.s \
-	logic.s \
-	levels.s \
-	level0.s \
-	level1.s \
-	level2.s \
-	level3.s \
-	level4.s \
-	buffers.s \
-	load_bg.s \
-	dashboard.s \
+	code/main.s \
+	code/keyboard.s \
+	code/mouse.s \
+	code/draw_text.s \
+	code/draw_sprite.s \
+	code/animate.s \
+	code/game_loop.s \
+	code/logic.s \
+	code/levels.s \
+	code/buffers.s \
+	code/load_data.s \
+	code/dashboard.s \
 	../lib/extrazp.s \
 	../lib/asm/hgr.s \
-	../lib/hgr_addrs.c \
 	../lib/asm/bcd.s \
+	../lib/fastirq.s \
 	../lib/platform_sleep.s \
+	../lib/hgr_addrs.c \
 	font.gen.s \
 	plane.pixel_perfect.gen.s \
 	play_sound.gen.s \
 	splash.bg.gen.s \
 	$(sounds) \
-	$(sprites)
+	$(sprites) \
+	$(levels_backgrounds) \
+	$(levels_code) \
 
 all: \
-	glider.bin \
-	$(levels_backgrounds) \
+	glider.bin
 
 #Start at 0xC00 to leave 1kB for file IO buffer
 
-glider_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl -C ../../config/apple2enh-glider.cfg \
-	-vm -m glider.map --start-addr 0xC00 \
+glider_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl -C glider.ld.cfg \
+	-vm -m glider.map \
+	--asm-include-dir $(shell pwd)
 #	--asm-define UNKILLABLE
 
-gen_sprite: gen_sprite.c
+gen_sprite: generators/gen_sprite.c
 	gcc -g -O0 $(shell pkg-config --cflags SDL_image) $^ $(shell pkg-config --libs SDL_image) -o $@
 
-gen_font: gen_font.c
+gen_font: generators/gen_font.c
 	gcc -g -O0 $(shell pkg-config --cflags SDL_image) $^ $(shell pkg-config --libs SDL_image) -o $@
 
 gen_sound_player: ../sound_player_generator/gen_sound_player.c ../sound_player_generator/sound.h
@@ -126,10 +125,13 @@ gen_sound_player: ../sound_player_generator/gen_sound_player.c ../sound_player_g
 gen_sound_clip: ../sound_player_generator/gen_sound_clip.c ../sound_player_generator/sound.h
 	gcc -DCPU_$(STREAMER_VER) -g -O0 $< -o $@
 
-$(levels_backgrounds): %.hgr: assets/levels/%.xcf
+$(levels_backgrounds): level%.bg.gen.s: level%.hgr
 
 splash.bg.gen.s: splash.hgr
-	../../bin/make-ca65-splash.sh $< > $@
+	../../bin/make-ca65-hgr.sh $< SEG > $@
+
+level%.bg.gen.s: level%.hgr
+	../../bin/make-ca65-hgr.sh $< SEG > $@
 
 %.hgr: assets/levels/%.xcf
 	convert -flatten $< $<.png
@@ -170,11 +172,13 @@ clean:
 	*.gen.s \
 	*.gen.inc \
 	*.snd.s \
+	splash.hgr \
+	level*.hgr \
 	assets/*/*.hgr-preview.* \
 	*.dbg *.lbl *.map \
 
 glider.bin: $(glider_CL65SOURCES) $(glider_SOURCES)
-	cl65 -g -Wl --dbgfile,glider.dbg -Ln glider.lbl $(CFLAGS) $(iigs_CFLAGS) $(glider_CLCFLAGS) -o $@ $^  $(CC65_TARGET)-iobuf-0800.o
+	cl65 -g -Wl --dbgfile,glider.dbg -Ln glider.lbl $(CFLAGS) $(iigs_CFLAGS) $(glider_CLCFLAGS) -o $@ $^
 
 upload: all
 	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/glider/ || \

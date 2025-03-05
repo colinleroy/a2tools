@@ -555,7 +555,7 @@ int get_cycles_for_instr(int cpu, const char *instr, int a_mode, int flags) {
   }
   if (cpu == CPU_6502) {
     fprintf(stderr, "Error, cycle count not found for %s\n", instr);
-    return -1;
+    return 0;
   } else {
     /* FIXME add 65816 instructions */
     return 0;

@@ -1,6 +1,3 @@
-        .export   level2_sprites, level2_blockers
-        .export   level2_vents, level2_logic
-
         .import   _clock, _clock_mask
         .import   _switch, _switch_mask
         .import   _socket, _socket_mask
@@ -20,14 +17,41 @@
         .include  "plane.gen.inc"
         .include  "socket.gen.inc"
         .include  "switch.gen.inc"
-        .include  "sprite.inc"
-        .include  "constants.inc"
+        .include  "level_data_struct.inc"
+        .include  "code/sprite.inc"
+        .include  "code/constants.inc"
 
-.data
+.segment "level_c"
+
+level_data:
+                  .addr sprites
+                  .addr vents
+                  .addr blockers
+
+.assert * = LEVEL_DATA_START+LEVEL_DATA::LOGIC_CB, error ; Make sure the callback is where we think
+.proc logic
+        ; Check if switch is active
+        lda     switch0_data+SPRITE_DATA::ACTIVE
+        beq     :+
+
+        ; If so, activate the socket every three frames
+        lda     frame_counter
+        and     #$03
+        beq     :+
+        sta     $C030
+        sta     socket0_data+SPRITE_DATA::ACTIVE
+        rts
+
+:       lda     socket0_data+SPRITE_DATA::ACTIVE
+        beq     :+
+        lda     #SOCKET_SPRITE_NUM
+        jsr     _unfire_sprite
+:       rts
+.endproc
 
 ; Do not place anything after X= 224 to avoid overflow
 ; in the hitbox
-level2_clock0_data:
+clock0_data:
                   .byte 1              ; active
                   .byte 0              ; deadly
                   .byte 0              ; destroyable
@@ -48,7 +72,7 @@ level2_clock0_data:
                   .addr sprites_bgbackup+0
                   .byte 0               ; need clear
 
-level2_socket0_data:
+socket0_data:
                   .byte 1              ; active
                   .byte 1              ; deadly
                   .byte 0              ; destroyable
@@ -69,7 +93,7 @@ level2_socket0_data:
                   .addr sprites_bgbackup+128
                   .byte 0               ; need clear
 
-level2_switch0_data:
+switch0_data:
                   .byte 1              ; active
                   .byte 0              ; deadly
                   .byte 0              ; destroyable
@@ -90,53 +114,29 @@ level2_switch0_data:
                   .addr sprites_bgbackup+256
                   .byte 0               ; need clear
 
-.rodata
-
-level2_sprites:   .byte   5
-level2_sprites_data:
+sprites:   .byte   5
+sprites_data:
                    ; Rubber band must be first for easy deactivation
                    ;                                ; drawn on    EVEN ODD
                   .addr   rubber_band_data          ; small            x
-                  .addr   level2_clock0_data        ; medium      x
-                  .addr   level2_switch0_data       ; medium           x
-SOCKET_SPRITE_NUM = (*-level2_sprites_data)/2
-                  .addr   level2_socket0_data       ; medium      x
+                  .addr   clock0_data        ; medium      x
+                  .addr   switch0_data       ; medium           x
+SOCKET_SPRITE_NUM = (*-sprites_data)/2
+                  .addr   socket0_data       ; medium      x
                   .addr   plane_data                ; big         x    x
 
-level2_vents:     .byte   2
-level2_vents_data:
+vents:     .byte   2
+vents_data:
                   ; Five bytes per vent (start X, width, start Y, height, direction)
                   ; Direction = What to add to mouse_y
                   ; Watch out - start Y must be >= plane_HEIGHT
                   .byte   47,  20,  plane_HEIGHT+1,   191-plane_HEIGHT, $FF ; Up all the way
                   .byte   221, 20,  plane_HEIGHT+87,  103-plane_HEIGHT, $FF ; Up all the way
 
-level2_blockers:  .byte   4
-level2_blockers_data:
+blockers:  .byte   4
+blockers_data:
                   ; Four bytes per blocker (start X, width, start Y, height)
                   .byte   190, 34,  54,  28    ; Books
                   .byte   148, 78,  82,  3     ; Bookshelf
                   .byte   84 , 72,  133, 16    ; Table
                   .byte   0,   255, 191, 1     ; Floor
-
-.code
-
-.proc level2_logic
-        ; Check if switch is active
-        lda     level2_switch0_data+SPRITE_DATA::ACTIVE
-        beq     :+
-
-        ; If so, activate the socket every three frames
-        lda     frame_counter
-        and     #$03
-        beq     :+
-        sta     $C030
-        sta     level2_socket0_data+SPRITE_DATA::ACTIVE
-        rts
-
-:       lda     level2_socket0_data+SPRITE_DATA::ACTIVE
-        beq     :+
-        lda     #SOCKET_SPRITE_NUM
-        jsr     _unfire_sprite
-:       rts
-.endproc
