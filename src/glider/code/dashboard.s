@@ -1,6 +1,6 @@
         .export   _draw_dashboard
         .export   _draw_level_end
-        .export   _clear_hgr_screen, _clear_hgr_after_input
+        .export   _clear_hgr_screen, _wait_for_input
 
         .import   num_lives, num_rubber_bands, num_battery, cur_score, cur_level
         .import   time_counter, frame_counter
@@ -120,11 +120,15 @@ cur_char:
         jmp     _quick_draw_battery_reverted
 .endproc
 
+; Enter with carry set to display game won message
 .proc _draw_level_end
-        jsr     _clear_hgr_screen
-
         lda     #$00
-        sta     displayed
+        sta     game_won
+
+        bcc     :+
+        inc     game_won
+        inc     time_counter      ; It will be $FF there.
+:       sta     displayed
 
 print_time_bonus:
         ; Time bonus
@@ -157,6 +161,9 @@ print_score:
         lda     cur_score
         jsr     _print_number
 
+        lda     game_won
+        bne     print_level     ; We don't want to recount bonus if we won
+
         lda     displayed
         bne     :+
         lda     #1              ; Initial delay before starting to count
@@ -188,17 +195,48 @@ print_level:
         clc
         adc     #1                ; Levels are counted from zero
         jsr     _print_number
-        ; Fallthrough through _clear_hgr_after_input
+
+        lda     game_won
+        beq     :+
+
+        ; Display game won message
+        lda     #<no_level_str
+        ldx     #>no_level_str
+        jsr     pushax
+
+        ldx     #6
+        ldy     #143
+        jsr     _print_string
+
+        lda     #0
+        sta     bcd_input+1
+        lda     cur_level
+        clc
+        adc     #1                ; Levels are counted from zero
+        jsr     _print_number
+
+
+        lda     #<game_won_str
+        ldx     #>game_won_str
+        jsr     pushax
+
+        ldx     #6
+        ldy     #161
+        jsr     _print_string
+
+:
+        ; Fallthrough through _wait_for_input
 .endproc
 
-.proc _clear_hgr_after_input
+.proc _wait_for_input
         bit     KBDSTRB
 :       lda     KBD               ; Wait for key or click
         bmi     :+
         jsr     _mouse_check_fire
         bcc     :-
 :       bit     KBDSTRB
-        ; Fallthrough through _clear_hgr_screen
+        rts
+
 .endproc
 
 .proc _clear_hgr_screen
@@ -213,10 +251,12 @@ print_level:
 
         .data
 
-time_bonus_str:  .asciiz            "TIME BONUS:    "
-your_score_str:  .asciiz            "YOUR SCORE:    "
-press_key_str:   .asciiz "PRESS A KEY FOR LEVEL:    "
-
+time_bonus_str:  .asciiz            "TIME BONUS:   "
+your_score_str:  .asciiz            "YOUR SCORE:   "
+press_key_str:   .asciiz "PRESS A KEY FOR LEVEL:   "
+no_level_str:    .asciiz "     THERE IS NO LEVEL   "
+game_won_str:    .asciiz "     YOU WON THE GAME!"
         .bss
 
 displayed:        .res 1
+game_won:         .res 1
