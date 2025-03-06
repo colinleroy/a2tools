@@ -34,7 +34,7 @@ SEGMENTS {
     EXEHDR:   load = HEADER,         type = ro,  optional = yes;
     STARTUP:  load = MAIN,           type = ro;
     LOWCODE:  load = LOWCODE,        type = ro;
-    CODE:     load = MAIN,           type = ro,  start = __HGR_START__+__LEVEL_SIZE__+$3A;
+    CODE:     load = MAIN,           type = ro;
     RODATA:   load = MAIN,           type = ro;
     DATA:     load = MAIN,           type = rw,  align = $100;
     INIT:     load = MAIN,           type = rw;
