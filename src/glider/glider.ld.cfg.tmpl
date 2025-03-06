@@ -25,12 +25,10 @@ MEMORY {
     #Ugly but functional
     LOWCODE: file = "lowcode.bin",     start = __LOWCODE_START__, size = __LOWCODE_SIZE__;
     splash:  file = "splash.bin",      start = __HGR_START__,     size = __LEVEL_SIZE__;
-    level_a: file = "level_a.bin",     start = __HGR_START__,     size = __LEVEL_SIZE__;
-    level_b: file = "level_b.bin",     start = __HGR_START__,     size = __LEVEL_SIZE__;
-    level_c: file = "level_c.bin",     start = __HGR_START__,     size = __LEVEL_SIZE__;
-    level_d: file = "level_d.bin",     start = __HGR_START__,     size = __LEVEL_SIZE__;
-    level_e: file = "level_e.bin",     start = __HGR_START__,     size = __LEVEL_SIZE__;
+
+### LEVEL_MEMORY_DECLARATIONS ###
 }
+
 SEGMENTS {
     ZEROPAGE: load = ZP,             type = zp;
     EXEHDR:   load = HEADER,         type = ro,  optional = yes;
@@ -46,12 +44,10 @@ SEGMENTS {
     BSS:      load = BSS,            type = bss, define   = yes;
 
     splash:    load = splash,        type = ro;
-    level_a:   load = level_a,       type = ro;
-    level_b:   load = level_b,       type = ro;
-    level_c:   load = level_c,       type = ro;
-    level_d:   load = level_d,       type = ro;
-    level_e:   load = level_e,       type = ro;
+
+### LEVEL_SEGMENTS_DECLARATIONS ###
 }
+
 FEATURES {
     CONDES: type    = constructor,
             label   = __CONSTRUCTOR_TABLE__,

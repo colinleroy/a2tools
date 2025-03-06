@@ -33,12 +33,15 @@ BINARY_NAME = glider.bin
 
 # Generated things
 
-levels_backgrounds = \
-	level_a.bg.gen.s \
-	level_b.bg.gen.s \
-	level_c.bg.gen.s \
-	level_d.bg.gen.s \
-	level_e.bg.gen.s \
+levels = \
+	level_a \
+	level_b \
+	level_c \
+	level_d \
+	level_e \
+
+levels_backgrounds = $(levels:=.bg.gen.s)
+levels_code        = $(levels:%=levels_data/%.s)
 
 sprites_pixel_perfect = \
 	knife.pixel_perfect.gen.s \
@@ -65,15 +68,13 @@ sprites = \
 
 sounds = \
 	bubble.snd.s \
+	chainsaw.snd.s \
 	click.snd.s \
+	crash.snd.s \
 	croutch.snd.s \
 	ding.snd.s \
-	crash.snd.s
 
 # Our code
-
-levels_code = \
-	levels_data/*.s
 
 glider_SOURCES := \
 	code/main.s \
@@ -108,10 +109,10 @@ all: \
 
 #Start at 0xC00 to leave 1kB for file IO buffer
 
-glider_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl -C glider.ld.cfg \
+glider_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl \
 	-vm -m glider.map \
-	--asm-include-dir $(shell pwd)
-#	--asm-define UNKILLABLE
+	--asm-include-dir $(shell pwd) \
+	#--asm-define UNKILLABLE
 
 gen_sprite: generators/gen_sprite.c
 	gcc -g -O0 $(shell pkg-config --cflags SDL_image) $^ $(shell pkg-config --libs SDL_image) -o $@
@@ -162,6 +163,9 @@ $(sounds): %.snd.s: assets/sounds/%.wav
 	./gen_sound_clip $(SAMPLING_HZ) $<.raw > $@
 	rm $<.raw
 
+glider.ld.cfg: glider.ld.cfg.tmpl
+	./generators/gen_linker_config.sh $< $(levels) > $@
+
 clean:
 	rm -f *.bin *.o \
 	$(levels_backgrounds) \
@@ -176,14 +180,17 @@ clean:
 	level*.hgr \
 	assets/*/*.hgr-preview.* \
 	*.dbg *.lbl *.map \
+	glider.ld.cfg
 
-glider.bin: $(glider_CL65SOURCES) $(glider_SOURCES)
-	cl65 -g -Wl --dbgfile,glider.dbg -Ln glider.lbl $(CFLAGS) $(iigs_CFLAGS) $(glider_CLCFLAGS) -o $@ $^
+glider.bin: glider.ld.cfg $(glider_SOURCES)
+	cl65 -g -Wl --dbgfile,glider.dbg -Ln glider.lbl $(CFLAGS) $(iigs_CFLAGS) $(glider_CLCFLAGS) \
+		-C glider.ld.cfg -o $@ $(glider_SOURCES) \
+		$(CC65_TARGET)-iobuf-0800.o $(CC65_TARGET)-integer-basic-compat.o
 
 upload: all
 	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/glider/ || \
 	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/glider/ && \
-	cp *.bin *.hgr /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/glider/
+	cp *.bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/glider/
 
 gimp_setup:
 	./gimp_setup.sh
