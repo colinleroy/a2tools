@@ -43,7 +43,8 @@
 
         .import   sprite_data, plane_data, rubber_band_data
 
-        .import   _clear_hgr_after_input, _platform_msleep
+        .import   _wait_for_input, _clear_hgr_screen
+        .import   _platform_msleep
 
         .import   _play_crash
 
@@ -72,7 +73,9 @@
 
 .proc _go_to_next_level
         inc     cur_level
-        ; Print the time bonus
+        jsr     _clear_hgr_screen
+        clc
+        ; Print the inter-level screen
         jsr     _draw_level_end
         ; We restore level data, in case we die later
         ; and come back to this level.
@@ -84,7 +87,12 @@
         sta     cur_level
         jsr     load_level
         bcc     :+
-        jmp     _win              ; We win if we can't load another level
+        ; If we couldn't load another level, we win
+        ; Refresh the end level screen with carry set
+        jsr     _draw_level_end
+        ; And set the level to -1 to signal the game loop
+        lda     #$FF
+        sta     cur_level
 :       rts
 .endproc
 
@@ -158,14 +166,16 @@ calibrate_hz_handler:
         jsr     _platform_msleep
 .endif
 
+new_game:
         jsr     _load_splash_screen
 
         lda     #1
         jsr     _init_hgr
 
-        jsr     _clear_hgr_after_input
+        jsr     _wait_for_input
+        jsr     _clear_hgr_screen
 
-        jsr     load_level
+        jsr     reset_game        ; Reset game loads current level (0)
 
 game_loop:
         ; the WAI of the poor
@@ -208,6 +218,11 @@ game_logic:
 
 :       ; Check if we're done with the level
         jsr     _check_level_change
+
+        ; Check if we finished the game, which we know because
+        ; the level will have been set to $FF
+        lda     cur_level
+        bmi     new_game
 
         ; Hook through the level's logic
         jsr     LEVEL_DATA_START+LEVEL_DATA::LOGIC_CB
