@@ -97,7 +97,7 @@ glider$(suffix).po: $(glider_disk_PROGS)
 		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
 	done; \
 	for bg in $(glider_disk_RES); do \
-		java -jar bin/ac.jar -p $@ $$(basename $$bg | sed "s/\.png.hgr$//.hgr/") BIN < $$bg; \
+		java -jar bin/ac.jar -p $@ $$(basename $$bg | sed "s/\.bin$///") BIN < $$bg; \
 	done;
 	mkdir -p dist && cp $@ dist/; \
 

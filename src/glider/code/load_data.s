@@ -1,4 +1,5 @@
         .export  _load_level_data, _load_splash_screen, _load_lowcode
+
         .import  cur_level
         .import  _open, _read, _close, _memcpy
         .import  pushax, popax
@@ -10,28 +11,41 @@
         .include "apple2.inc"
         .include "fcntl.inc"
 
-.segment "LOWCODE"
+.code
 
 ; A = number of level to load
 .proc _load_level_data
         pha
 
-        lda       #<_level_name
-        ldx       #>_level_name
-        jsr       pushax
-        lda       #<_level_name_template
-        ldx       #>_level_name_template
-        jsr       _strcpy
+        lda       #<level_name_template
+        sta       filename
+        lda       #>level_name_template
+        sta       filename+1
 
         ; Set correct filename for level
         pla
         clc
         adc       #'A'
-        sta       _level_name+6
-        ; Fallthrough to load_data_to_hgr
+        sta       level_name_template+6
+
+        ; Fallthrough to load_level_data
 .endproc
 
-.proc load_data_to_hgr
+.proc load_level_data
+        lda      #<__LEVEL_SIZE__
+        sta      size
+        lda      #>__LEVEL_SIZE__
+        sta      size+1
+
+        lda      #<__HGR_START__
+        sta      destination
+        lda      #>__HGR_START__
+        sta      destination+1
+
+        ; Fallthrough to load_data
+.endproc
+
+.proc load_data
         ; Open file
         ; Set filetype
         lda     #$06          ; PRODOS_T_BIN
@@ -39,12 +53,12 @@
         lda     #$00
         sta     __auxtype
 
-        lda       #<_level_name
-        ldx       #>_level_name
-        jsr       pushax
+        lda     filename
+        ldx     filename+1
+        jsr     pushax
 
-        lda       #<O_RDONLY
-        ldx       #>O_RDONLY
+        lda     #<O_RDONLY
+        ldx     #>O_RDONLY
         jsr     pushax  
 
         ldy     #$04          ; _open is variadic
@@ -55,13 +69,14 @@
         jsr     pushax        ; Push for read
         jsr     pushax        ; and for close
 
-        lda     #<__HGR_START__
-        ldx     #>__HGR_START__
-        jsr     pushax        ; Push destination pointer (HGR page)
+        ; Push destination pointer
+        lda     destination
+        ldx     destination+1
+        jsr     pushax
 
-        ; Size is $2100
-        lda     #<__LEVEL_SIZE__
-        ldx     #>__LEVEL_SIZE__
+        ; and size
+        lda     size
+        ldx     size+1
         jsr     _read
 
         jsr     popax         ; Get fd back
@@ -75,66 +90,40 @@ load_err:
 .endproc
 
 .proc _load_splash_screen
-        lda       #<_level_name
-        ldx       #>_level_name
-        jsr       pushax
-        lda       #<_splash_name
-        ldx       #>_splash_name
-        jsr       _strcpy
+        lda       #<splash_name
+        sta       filename
+        lda       #>splash_name
+        sta       filename+1
 
-        jmp        load_data_to_hgr
+        jmp        load_level_data
 .endproc
 
-.code
-
 .proc _load_lowcode
-        ; Open file
-        ; Set filetype
-        lda     #$06          ; PRODOS_T_BIN
-        sta     __filetype
-        lda     #$00
-        sta     __auxtype
+        lda       #<lowcode_name
+        sta       filename
+        lda       #>lowcode_name
+        sta       filename+1
 
-        lda       #<_lowcode_name
-        ldx       #>_lowcode_name
-        jsr       pushax
+        lda      #<__LOWCODE_START__
+        sta      destination
+        lda      #>__LOWCODE_START__
+        sta      destination+1
 
-        lda       #<O_RDONLY
-        ldx       #>O_RDONLY
-        jsr     pushax  
+        lda      #<__LOWCODE_SIZE__
+        sta      size
+        lda      #>__LOWCODE_SIZE__
+        sta      size+1
 
-        ldy     #$04          ; _open is variadic
-        jsr     _open
-        cmp     #$FF
-        beq     load_err
-
-        jsr     pushax        ; Push for read
-        jsr     pushax        ; and for close
-
-        lda     #<__LOWCODE_START__
-        ldx     #>__LOWCODE_START__
-        jsr     pushax        ; Push destination pointer (HGR page)
-
-        lda     #<__LOWCODE_SIZE__
-        ldx     #>__LOWCODE_SIZE__
-        jsr     _read
-
-        jsr     popax         ; Get fd back
-        jsr     _close
-        clc
-        rts
-
-load_err:
-        sec
-        rts
+        jmp      load_data
 .endproc
 
         .bss
 
-_level_name: .res 12
-
+filename:    .res 2
+destination: .res 2
+size:        .res 2
         .data
 
-_lowcode_name:        .asciiz "lowcode.bin"
-_splash_name:         .asciiz "splash.bin"
-_level_name_template: .asciiz "level.X.bin"
+lowcode_name:        .asciiz "lowcode"
+splash_name:         .asciiz "splash"
+level_name_template: .asciiz "level.X"
