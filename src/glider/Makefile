@@ -39,6 +39,7 @@ levels = \
 	level_c \
 	level_d \
 	level_e \
+	level_f \
 
 levels_backgrounds = $(levels:=.bg.gen.s)
 levels_code        = $(levels:%=levels_data/%.s)
@@ -53,6 +54,7 @@ sprites_unperfect = \
 	balloon.unperfect.gen.s \
 	battery.unperfect.gen.s \
 	battery_reverted.unperfect.gen.s \
+	chainsaw.unperfect.gen.s \
 	clock.unperfect.gen.s \
 	mini_score.unperfect.gen.s \
 	mini_plane.unperfect.gen.s \
