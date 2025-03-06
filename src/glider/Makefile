@@ -27,6 +27,12 @@ SAMPLING_HZ := 8000
 endif
 endif
 
+ifndef GAME_LANG
+GAME_LANG := en
+GAME_CHARSET := latin
+endif
+
+
 BINARY_NAME = glider.bin
 
 .PHONY: all clean
@@ -91,6 +97,7 @@ glider_SOURCES := \
 	code/buffers.s \
 	code/load_data.s \
 	code/dashboard.s \
+	code/strings-$(GAME_LANG).s \
 	../lib/extrazp.s \
 	../lib/asm/hgr.s \
 	../lib/asm/bcd.s \
@@ -136,6 +143,12 @@ splash.bg.gen.s: splash.hgr
 level%.bg.gen.s: level%.hgr
 	../../bin/make-ca65-hgr.sh $< SEG > $@
 
+splash.hgr: assets/levels/splash-$(GAME_LANG).xcf
+	cp assets/levels/splash-$(GAME_LANG).xcf splash-$(GAME_LANG).xcf
+	convert -flatten $< $<.png
+	../surl-server/hgr-convert $<.png && mv $<.png.hgr $@
+	rm -f $<.png $<.png.hgr-preview.png splash-$(GAME_LANG).xcf
+
 %.hgr: assets/levels/%.xcf
 	convert -flatten $< $<.png
 	../surl-server/hgr-convert $<.png && mv $<.png.hgr $@
@@ -152,8 +165,10 @@ $(sprites_unperfect): %.unperfect.gen.s: assets/sprites/%.png
 plane.pixel_perfect.gen.s: assets/sprites/plane.png gen_sprite
 	./gen_sprite $< 280 pixel_perfect
 
-font.gen.s: assets/fonts/font.png gen_font
-	./gen_font $< 280
+font.gen.s: assets/fonts/font-$(GAME_CHARSET).png gen_font
+	cp -f assets/fonts/font-$(GAME_CHARSET).png font.png
+	./gen_font font.png 280
+	rm font.png
 
 play_sound.gen.s: gen_sound_player
 	./gen_sound_player $(SAMPLING_HZ) > $@

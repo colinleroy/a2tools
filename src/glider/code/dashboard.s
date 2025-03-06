@@ -14,6 +14,13 @@
 
         .import   _play_ding, _platform_msleep, _sleep
 
+        .import   _time_bonus_str
+        .import   _your_score_str
+        .import   _press_key_str
+        .import   _no_level_str
+        .import   _game_won_str
+        .import   _game_lost_str
+
         .import   _mouse_check_fire
         .import   pushax
         .import   _bzero
@@ -132,8 +139,8 @@ cur_char:
 
 print_time_bonus:
         ; Time bonus
-        lda     #<time_bonus_str
-        ldx     #>time_bonus_str
+        lda     #<_time_bonus_str
+        ldx     #>_time_bonus_str
         jsr     pushax
 
         ldx     #17
@@ -148,8 +155,8 @@ print_time_bonus:
 
 print_score:
         ; Score
-        lda     #<your_score_str
-        ldx     #>your_score_str
+        lda     #<_your_score_str
+        ldx     #>_your_score_str
         jsr     pushax
 
         ldx     #17
@@ -181,8 +188,8 @@ print_score:
 
 print_level:
         ; Level
-        lda     #<press_key_str
-        ldx     #>press_key_str
+        lda     #<_press_key_str
+        ldx     #>_press_key_str
         jsr     pushax
 
         ldx     #6
@@ -200,8 +207,8 @@ print_level:
         beq     :+
 
         ; Display game won message
-        lda     #<no_level_str
-        ldx     #>no_level_str
+        lda     #<_no_level_str
+        ldx     #>_no_level_str
         jsr     pushax
 
         ldx     #6
@@ -216,8 +223,8 @@ print_level:
         jsr     _print_number
 
 
-        lda     #<game_won_str
-        ldx     #>game_won_str
+        lda     #<_game_won_str
+        ldx     #>_game_won_str
         jsr     pushax
 
         ldx     #6
@@ -249,13 +256,6 @@ print_level:
         jmp     _bzero
 .endproc
 
-        .data
-
-time_bonus_str:  .asciiz            "TIME BONUS:   "
-your_score_str:  .asciiz            "YOUR SCORE:   "
-press_key_str:   .asciiz "PRESS A KEY FOR LEVEL:   "
-no_level_str:    .asciiz "     THERE IS NO LEVEL   "
-game_won_str:    .asciiz "     YOU WON THE GAME!"
         .bss
 
 displayed:        .res 1
