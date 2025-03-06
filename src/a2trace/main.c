@@ -381,17 +381,18 @@ try_gen:
           if (!do_callgrind) {
             char count_buf[32];
             int count_buf_len = 0;
-            printf("%s", symbol_get_name(instr_symbol));
+            const char *sym_name = symbol_get_name(instr_symbol);
+            printf("%s", sym_name);
 
             /* Show cycle count between two PC matching symbol name */
-            if (count_sym_name != NULL && 
-                !strncmp(symbol_get_name(instr_symbol), count_sym_name, strlen(count_sym_name))) {
+            if (count_sym_name != NULL && strstr(sym_name, " +") == NULL &&
+                !strncmp(sym_name, count_sym_name, strlen(count_sym_name))) {
               snprintf(count_buf, 31, " (%lu cyc)", inter_cycle);
               count_buf_len = strlen(count_buf);
               printf("%s", count_buf);
               inter_cycle = 0;
             }
-            tabulate(symbol_get_name(instr_symbol), FIELD_WIDTH + backtab - count_buf_len);
+            tabulate(sym_name, FIELD_WIDTH + backtab - count_buf_len);
           }
         } else {
           tabulate(NULL, FIELD_WIDTH + backtab);
