@@ -15,7 +15,7 @@ suffix :=
 upload_subdir :=
 CC65_TARGET := apple2
 STREAMER_VER := 6502
-SAMPLING_HZ := 4000
+SAMPLING_HZ := 8000
 else
 serial_hw_SOURCES := ../lib/serial/acia/common.s ../lib/serial/acia/no_irq.s
 iigs_suffix :=
@@ -29,9 +29,11 @@ endif
 
 ifndef GAME_LANG
 GAME_LANG := en
-GAME_CHARSET := latin
 endif
 
+ifndef GAME_CHARSET
+GAME_CHARSET := latin
+endif
 
 BINARY_NAME = glider.bin
 
