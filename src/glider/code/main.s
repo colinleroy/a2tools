@@ -26,7 +26,6 @@
         .import   _load_level_data, _load_splash_screen, _load_lowcode
         .import   _animate_plane_crash
 
-        .import   level_backup
         .import   levels_logic, cur_level_logic
 
         .import   num_lives, num_rubber_bands, num_battery, cur_score
