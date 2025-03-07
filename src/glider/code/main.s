@@ -2,7 +2,8 @@
         .export   _hgr_low, _hgr_hi
         .export   frame_counter, time_counter
 
-        .export   _go_to_prev_level, _go_to_next_level, _go_to_level
+        .export   _go_to_prev_level, _go_to_next_level
+        .export   _go_to_level
 
         .import   _exit
         .import   _init_hgr, _init_mouse, _deinit_mouse
@@ -89,11 +90,24 @@
         bcc     :+
         ; If we couldn't load another level, we win
         ; Refresh the end level screen with carry set
+        jsr     _clear_hgr_screen
+        sec
+        jsr     _end_game
+:       rts
+.endproc
+
+.proc _lose_game
+        jsr     _clear_hgr_screen
+        clc
+        ; Fallthrough to _end_game
+.endproc
+
+.proc _end_game
         jsr     _draw_level_end
         ; And set the level to -1 to signal the game loop
         lda     #$FF
         sta     cur_level
-:       rts
+        rts
 .endproc
 
 .proc load_level
@@ -214,7 +228,6 @@ game_logic:
         bcc     :+
         ; We got in an obstacle
         jsr     die
-        jmp     game_loop
 
 :       ; Check if we're done with the level
         jsr     _check_level_change
@@ -251,7 +264,7 @@ game_logic:
         beq     game_over
         jmp     load_level
 game_over:
-        jmp     reset_game
+        jmp     _lose_game
 .endproc
 
 ; Copy the hgr_baseaddr array of addresses

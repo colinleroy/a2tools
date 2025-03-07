@@ -187,7 +187,9 @@ print_score:
         jmp     print_time_bonus
 
 print_level:
-        ; Level
+        ; Print "go to next level" if player still have lives
+        lda     num_lives
+        beq     print_game_over
         lda     #<_press_key_str
         ldx     #>_press_key_str
         jsr     pushax
@@ -204,7 +206,7 @@ print_level:
         jsr     _print_number
 
         lda     game_won
-        beq     :+
+        beq     print_done
 
         ; Display game won message
         lda     #<_no_level_str
@@ -231,7 +233,18 @@ print_level:
         ldy     #161
         jsr     _print_string
 
-:
+        jmp     print_done
+
+print_game_over:
+        lda     #<_game_lost_str
+        ldx     #>_game_lost_str
+        jsr     pushax
+
+        ldx     #6
+        ldy     #143
+        jsr     _print_string
+
+print_done:
         ; Fallthrough through _wait_for_input
 .endproc
 
