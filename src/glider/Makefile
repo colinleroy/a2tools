@@ -101,9 +101,9 @@ glider_SOURCES := \
 	../lib/extrazp.s \
 	../lib/asm/hgr.s \
 	../lib/asm/bcd.s \
+	../lib/asm/hgr_tables.s \
 	../lib/fastirq.s \
 	../lib/platform_sleep.s \
-	../lib/hgr_addrs.c \
 	font.gen.s \
 	plane.pixel_perfect.gen.s \
 	play_sound.gen.s \
