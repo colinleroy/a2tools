@@ -7,8 +7,8 @@
 
         .data
 
-_time_bonus_str:  .asciiz            "TIME BONUS:   "
-_your_score_str:  .asciiz            "YOUR SCORE:   "
+_time_bonus_str:  .asciiz "           TIME BONUS:   "
+_your_score_str:  .asciiz "           YOUR SCORE:   "
 _press_key_str:   .asciiz "PRESS A KEY FOR LEVEL:   "
 _no_level_str:    .asciiz "     THERE IS NO LEVEL   "
 _game_won_str:    .asciiz "     YOU WON THE GAME!"

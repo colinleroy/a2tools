@@ -16,6 +16,13 @@ cd ../..
 make clean all dist upload IIGS=1
 make clean all dist upload OLDII=1
 make clean all dist upload
+cd src/surl-server && make clean all && cd ../../
+cd src/glider && make clean all OLDII=1 GAME_LANG=en GAME_CHARSET=latin
+cd ../.. && make glider.po
+mv glider.po dist/glider-en.po
+cd src/glider && make clean all OLDII=1 GAME_LANG=bg GAME_CHARSET=cyrillic
+cd ../.. && make glider.po
+mv glider.po dist/glider-bg.po
 
 test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/disks/ || \
 	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/disks/ && \

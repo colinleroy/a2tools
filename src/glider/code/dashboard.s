@@ -143,7 +143,7 @@ print_time_bonus:
         ldx     #>_time_bonus_str
         jsr     pushax
 
-        ldx     #17
+        ldx     #6
         ldy     #80
         jsr     _print_string
 
@@ -159,7 +159,7 @@ print_score:
         ldx     #>_your_score_str
         jsr     pushax
 
-        ldx     #17
+        ldx     #6
         ldy     #89
         jsr     _print_string
 
