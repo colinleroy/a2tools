@@ -38,16 +38,14 @@ int main(int argc, char *argv[]) {
          "; DUTY_CYCLE_LENGTH = %d\n"
          "; AVAIL_CYCLES = %d\n"
          "; NUM_LEVELS = %d\n"
-         "; STEP = %d\n"
-         "; PAGE_CROSSER = %d\n\n",
+         "; STEP = %d\n\n",
          CYCLES_PER_SEC,
          CARRIER_HZ,
          sampling_hz,
          DUTY_CYCLE_LENGTH,
          AVAIL_CYCLES,
          NUM_LEVELS,
-         STEP,
-         PAGE_CROSSER);
+         STEP);
 
   printf("         .export _%s_snd, _play_%s\n\n", filename, filename);
   printf("         .import _play_sample\n\n");
@@ -59,14 +57,14 @@ int main(int argc, char *argv[]) {
   while ((c = fgetc(fp)) != EOF) {
     int r = (c*(NUM_LEVELS-1))/255, byte;
     r = (r/STEP);
-    byte = (r*2)+PAGE_CROSSER;
+    byte = (r*2);
     if (byte > 255) {
       fprintf(stderr, "Range error - too many levels\n");
       exit(1);
     }
-    printf("         .byte $%02X    ; %d * 2 + $%02X\n", byte, r, PAGE_CROSSER); /* *2 to avoid ASLing, + PAGE_CROSSER to avoid adding */
+    printf("         .byte $%02X    ; %d * 2\n", byte, r); /* *2 to avoid ASLing */
   }
-  printf("         .byte (%d*2 + $%02x); play_done\n\n", NUM_LEVELS, PAGE_CROSSER);
+  printf("         .byte (%d*2); play_done\n\n", NUM_LEVELS);
 
   printf("         .code\n\n"
          "_play_%s:\n"
