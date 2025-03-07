@@ -1,5 +1,4 @@
         .export   _main
-        .export   _hgr_low, _hgr_hi
         .export   frame_counter, time_counter
 
         .export   _go_to_prev_level, _go_to_next_level
@@ -7,9 +6,10 @@
 
         .import   _exit
         .import   _init_hgr, _init_mouse, _deinit_mouse
-        .import   _init_hgr_base_addrs, _hgr_baseaddr
         .import   _bzero
         .import   pushax
+
+        .import   _build_hgr_tables
         .import   _mod7_table
 
         .import   cur_level
@@ -133,9 +133,7 @@ x_coord_reset_handler:
 .segment "LOWCODE"
 
 .proc _real_main
-        jsr     _init_hgr_base_addrs
-
-        jsr     _init_simple_hgr_addrs
+        jsr     _build_hgr_tables
 
         jsr     _init_mouse
         bcc     :+                ; Do we have a mouse?
@@ -266,48 +264,6 @@ game_over:
         jmp     _lose_game
 .endproc
 
-; Copy the hgr_baseaddr array of addresses
-; to two arrays of low bytes/high bytes for simplicity
-.proc _init_simple_hgr_addrs
-        ldy     #0
-        ldx     #0
-:       lda     _hgr_baseaddr,x
-        sta     _hgr_low,y
-        inx
-        lda     _hgr_baseaddr,x
-        sta     _hgr_hi,y
-        iny
-        inx
-        bne     :-
-
-:       lda     _hgr_baseaddr+256,x
-        sta     _hgr_low,y
-        inx
-        lda     _hgr_baseaddr+256,x
-        sta     _hgr_hi,y
-        inx
-        iny
-        cpy     #192
-        bne     :-
-
-        ; Rewrite the mod7_table to have actual modulo-7s
-        ; instead of a bit set, because we want to use it
-        ; to select a sprite from [0-6] instead of ORing
-        ; a bit in an HGR byte (cf ../lib/hgr_addrs.c)
-        ldx     #0
-        lda     #0
-next_mod:
-        cmp     #7
-        bne     :+
-        lda     #0
-:       sta     _mod7_table,x
-        clc
-        adc     #1
-        inx
-        bne     next_mod
-        rts
-.endproc
-
 .proc setup_level_data
         ; Logic
         lda     LEVEL_DATA_START+LEVEL_DATA::LOGIC_CB
@@ -391,8 +347,6 @@ _win:
 
         .bss
 
-_hgr_low:        .res 192
-_hgr_hi:         .res 192
 frame_counter:   .res 1
 time_counter:    .res 2
 cur_sprite:      .res 1
