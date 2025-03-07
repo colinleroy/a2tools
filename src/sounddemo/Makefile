@@ -5,9 +5,11 @@ else
 ifdef OLDII
 STREAMER_VER := 6502
 CC65_TARGET := apple2
+TARGET_PLATFORM := apple2p
 else
 STREAMER_VER := 65c02
 CC65_TARGET := apple2enh
+TARGET_PLATFORM := apple2c0
 endif
 endif
 
@@ -69,7 +71,7 @@ sounddemo.po: sounddemo.bin
 	java -jar ../../bin/ac.jar -as $@ SNDDEMO < $<;
 
 test: sounddemo.po
-	mame apple2c0 -window -flop1 $<
+	mame $(TARGET_PLATFORM) -window -flop1 $<
 
 upload: sounddemo.po
 	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/snddemo/ || \
