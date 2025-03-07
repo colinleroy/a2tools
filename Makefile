@@ -88,7 +88,7 @@ all upload:
 		$(MAKE) -C $$dir -f Makefile $@ || exit; \
 	done
 
-glider$(suffix).po: $(glider_disk_PROGS)
+glider.po: $(glider_disk_PROGS)
 	cp $(CLEANDISK) $@; \
 	java -jar bin/ac.jar -n $@ GLIDER
 	java -jar bin/ac.jar -p $@ GLIDER.SYSTEM SYS < bin/loader.system; \
@@ -266,7 +266,6 @@ dist: all \
 	wozamp$(suffix).po \
 	woztubes$(suffix).po \
 	weather$(suffix).po \
-	glider$(suffix).po
 
 else
 #65c02 things
@@ -284,7 +283,6 @@ dist: all \
 	wozamp$(suffix).po \
 	woztubes$(suffix).po \
 	weather$(suffix).po \
-	glider$(suffix).po \
 	doc-dist
 endif
 
@@ -301,6 +299,5 @@ dist: all \
 	stpperso$(suffix).po \
 	quicktake$(suffix).po \
 	wozamp$(suffix).po \
-	weather$(suffix).po \
-	glider$(suffix).po
+	weather$(suffix).po
 endif
