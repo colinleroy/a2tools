@@ -17,11 +17,14 @@
 
 .segment "LOWCODE"
 
+; $C019  Bit 7 of this location will be a 0 when the
+; video beam is in the vertical retrace region.
+
 .proc _softswitch_wait_vbl
         bit     $C019               ; Softswitch VBL
-        bmi     _softswitch_wait_vbl; Wait for bit 7 off (VBL ended)
+        bpl     _softswitch_wait_vbl; Wait for bit 7 on (VBL ended)
 :       bit     $C019               ; Softswitch VBL
-        bpl     :-                  ; Wait for bit 7 on (VBL started)
+        bmi     :-                  ; Wait for bit 7 off (VBL started)
         rts
 .endproc
 
@@ -121,11 +124,11 @@ kbd_out:
 .endproc
 
 .proc _keyboard_calibrate_hz
-        ; Wait for bit 7 to be off (no VBL)
+        ; Wait for bit 7 to be off (VBL start)
 :       bit     $C019
         bmi     :-
 
-        ; Wait for bit 7 to be on (start of VBL)
+        ; Wait for bit 7 to be on (VBL end)
 :       bit     $C019
         bpl     :-
 
@@ -137,7 +140,7 @@ wait_vbl1:  ; now wait for bit 7 to be off again
         iny
 :       bit     $C019             ; 9
         bmi     wait_vbl1         ; 12 (12 cycles per loop, 3000 cycles per Y incr)
-wait_vbl2:  ; now wait for bit 7 to be on again (start of next VBL)
+wait_vbl2:  ; now wait for bit 7 to be on again (end of next VBL)
         inx                       ; 2
         bne :+                    ; 5
         iny
