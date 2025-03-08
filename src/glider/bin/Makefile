@@ -182,7 +182,6 @@ glider.bin: glider.ld.cfg $(glider_SOURCES)
 		$(CC65_TARGET)-iobuf-0800.o $(CC65_TARGET)-integer-basic-compat.o
 
 CLEANDISK = $(SRC_DIR)/../../disks/ProDOS_2_4_3.po
-
 glider-$(GAME_LANG).po: glider.bin
 	cp $(CLEANDISK) $@; \
 	java -jar $(SRC_DIR)/../../bin/ac.jar -n $@ GLIDER.$(GAME_LANG)
