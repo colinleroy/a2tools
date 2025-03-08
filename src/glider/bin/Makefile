@@ -23,6 +23,7 @@ levels = \
 	level_d \
 	level_e \
 	level_f \
+	level_g \
 
 levels_backgrounds = $(levels:=.bg.gen.s)
 levels_code        = $(levels:%=$(SRC_DIR)/levels_data/%.s)
