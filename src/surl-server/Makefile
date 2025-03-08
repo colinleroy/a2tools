@@ -98,3 +98,9 @@ install:
 	install -m 644 fonts/$(MONO_FONT) $(DESTDIR)/$(FONTS_DIR)
 	install -m 644 fonts/$(PROP_FONT) $(DESTDIR)/$(FONTS_DIR)
 	fc-cache || true
+
+upload:
+	true
+
+dist:
+	true

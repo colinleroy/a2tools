@@ -193,9 +193,14 @@ glider-$(GAME_LANG).po: glider.bin
 	done;
 
 upload: all
-	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/glider-$(GAME_LANG)/ || \
-	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/glider-$(GAME_LANG)/ && \
-	cp *.bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/glider-$(GAME_LANG)/
+	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/glider/$(GAME_LANG)/ || \
+	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/glider/$(GAME_LANG)/ && \
+	cp *.bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/glider/$(GAME_LANG)/
 
 gimp_setup:
 	./gimp_setup.sh
+
+
+dist: glider-$(GAME_LANG).po
+	mkdir -p $(SRC_DIR)../../dist/
+	cp $< $(SRC_DIR)../../dist/

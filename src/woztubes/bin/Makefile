@@ -71,14 +71,9 @@ woztubes-$(suffix).po: splash.h woztubes.bin
 		java -jar $(SRC_DIR)/../../bin/ac.jar -as $@ $$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
 	done;
 
-woztubesperso-$(suffix).po: splash.h woztubes.bin
-	cp $(CLEANDISK) $@; \
-	java -jar $(SRC_DIR)/../../bin/ac.jar -n $@ WOZTUBES
-	java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ WOZTUBES.SYSTEM SYS < $(SRC_DIR)/../../bin/loader.system; \
+woztubesperso-$(suffix).po: woztubes-$(suffix).po
+	cp $< $@; \
 	java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ STPSTARTURL TXT < $(SRC_DIR)/STPSTARTURL; \
-	for r in *.bin; do \
-		java -jar $(SRC_DIR)/../../bin/ac.jar -as $@ $$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
-	done;
 
 
 clean:
@@ -95,6 +90,10 @@ woztubes.bin: $(woztubes_CL65SOURCES) $(woztubes_SOURCES)
 	cl65 -g -Wl --dbgfile,woztubes.dbg -Ln woztubes.lbl $(CFLAGS) $(iigs_CFLAGS) $(woztubes_CLCFLAGS) -o $@ $^  $(CC65_TARGET)-iobuf-0800.o
 
 upload: all
-	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/woztubes/ || \
-	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/woztubes/ && \
-	cp *.bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/woztubes/
+	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/woztubes/$(suffix)/ || \
+	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/woztubes/$(suffix)/ && \
+	cp *.bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/woztubes/$(suffix)/
+
+dist: woztubes-$(suffix).po
+	mkdir -p $(SRC_DIR)../../dist/
+	cp $< $(SRC_DIR)../../dist/

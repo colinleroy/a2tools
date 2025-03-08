@@ -82,14 +82,9 @@ stp-$(suffix).po: $(PROGRAM).bin
 		java -jar $(SRC_DIR)/../../bin/ac.jar -as $@ $$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
 	done;
 
-stpperso-$(suffix).po: $(PROGRAM).bin
-	cp $(CLEANDISK) $@; \
-	java -jar $(SRC_DIR)/../../bin/ac.jar -n $@ STP
-	java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ STP.SYSTEM SYS < $(SRC_DIR)/../../bin/loader.system; \
+stpperso-$(suffix).po: stp-$(suffix).po
+	cp $< $@; \
 	java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ STPSTARTURL TXT < $(SRC_DIR)/STPSTARTURL; \
-	for r in *.bin; do \
-		java -jar $(SRC_DIR)/../../bin/ac.jar -as $@ $$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
-	done;
 
 $(PROGRAM).bin: $(SOURCES) $(CL65SOURCES)
 	cl65 -g --debug-info -Wl --dbgfile,"stp.dbg" $(CFLAGS) $(CLCFLAGS) -o $@ $^ -Ln stp.lbl
@@ -101,6 +96,10 @@ clean:
 	rm -f $(PROGRAM).bin $(PROGRAM).x86_64 *.o *.map *.dbg *.lbl *.po
 
 upload: all
-	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/net/ || \
-	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/net/ && \
-	cp $(PROGRAM).bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/net/
+	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/net/$(suffix)/ || \
+	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/net/$(suffix)/ && \
+	cp $(PROGRAM).bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/net/$(suffix)/
+
+dist: stp-$(suffix).po
+	mkdir -p $(SRC_DIR)../../dist/
+	cp $< $(SRC_DIR)../../dist/

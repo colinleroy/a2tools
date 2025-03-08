@@ -57,8 +57,8 @@ all: imageviewer-$(suffix).po
 CLEANDISK = $(SRC_DIR)/../../disks/ProDOS_2_4_3.po
 imageviewer-$(suffix).po: imgview.bin
 	cp $(CLEANDISK) $@; \
-	java -jar $(SRC_DIR)/../../bin/ac.jar -n $@ WOZAMP
-	java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ WOZAMP.SYSTEM SYS < $(SRC_DIR)/../../bin/loader.system; \
+	java -jar $(SRC_DIR)/../../bin/ac.jar -n $@ IMGVIEW
+	java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ IMGVIEW.SYSTEM SYS < $(SRC_DIR)/../../bin/loader.system; \
 	for r in *.bin; do \
 		java -jar $(SRC_DIR)/../../bin/ac.jar -as $@ $$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
 	done;
@@ -73,9 +73,13 @@ clean:
 	rm -f *.bin *.x86_64 *.o *.map *.dbg *.lbl *.po
 
 upload: all
-	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/imageviewer/ || \
-	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/imageviewer/ && \
-	cp *.bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/imageviewer/
-	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/quicktake/ || \
-	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/quicktake/ && \
-	cp *.bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/quicktake/
+	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/imageviewer/$(suffix)/ || \
+	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/imageviewer/$(suffix)/ && \
+	cp *.bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/imageviewer/$(suffix)/
+	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/quicktake/$(suffix)/ || \
+	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/quicktake/$(suffix)/ && \
+	cp *.bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/quicktake/$(suffix)/
+
+dist: imageviewer-$(suffix).po
+	mkdir -p $(SRC_DIR)../../dist/
+	cp $< $(SRC_DIR)../../dist/

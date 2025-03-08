@@ -25,3 +25,9 @@ test: all
 install:
 	mkdir -p $(DESTDIR)/$(prefix)/bin
 	install $(PROGRAM) $(DESTDIR)/$(prefix)/bin/$(PROGRAM)
+
+upload:
+	true
+
+dist:
+	true

@@ -166,16 +166,10 @@ mastodon-$(suffix).po: mastodon.bin mastocli.bin mastowrite.bin mastoimg.bin
 		java -jar $(SRC_DIR)/../../bin/ac.jar -as $@ $$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
 	done;
 
-mastoperso-$(suffix).po: mastodon.bin mastocli.bin mastowrite.bin mastoimg.bin
-	cp $(CLEANDISK) $@; \
-	java -jar $(SRC_DIR)/../../bin/ac.jar -n $@ MASTODON
-	java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ MASTODON.SYSTEM SYS < $(SRC_DIR)/../../bin/loader.system; \
+mastoperso-$(suffix).po: mastodon-$(suffix).po
+	cp $< $@; \
 	java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ mastsettings TXT < $(SRC_DIR)/mastsettings; \
 	java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ clisettings TXT < $(SRC_DIR)/clisettings; \
-	java -jar $(SRC_DIR)/../../bin/ac.jar -d $@ BASIC.SYSTEM; \
-	for r in *.bin; do \
-		java -jar $(SRC_DIR)/../../bin/ac.jar -as $@ $$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
-	done;
 
 mastodon.bin: $(mastodon_SOURCES) $(mastodon_CC65SOURCES)
 	cl65 --debug-info -Wl --dbgfile,"mastodon.dbg" $(CFLAGS) $(mastodon_CLCFLAGS) -vm -m mastodon.map -o $@ $^ $(CC65_TARGET)-iobuf-0800.o
@@ -199,6 +193,11 @@ clean:
 	rm -f *.bin *.x86_64 *.o *.map *.po *.dbg
 
 upload: all
-	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/mastodon/$suffix/ || \
-	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/mastodon/$suffix/ && \
-	cp masto*.bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/mastodon/$suffix/
+	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/mastodon/$(suffix)/ || \
+	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/mastodon/$(suffix)/ && \
+	cp masto*.bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/mastodon/$(suffix)/
+
+
+dist: mastodon-$(suffix).po
+	mkdir -p $(SRC_DIR)../../dist/
+	cp $< $(SRC_DIR)../../dist/
