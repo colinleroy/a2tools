@@ -9,7 +9,7 @@
 
 _time_bonus_str:  .asciiz "           BONUS WREME:   "
 _your_score_str:  .asciiz "                 TOXKI:   "
-_press_key_str:   .asciiz "NATISNI KLAVIV ZA NIVO:   "
+_press_key_str:   .asciiz "NATISNI KLAWIV ZA NIWO:   "
 _no_level_str:    .asciiz "              NQMA NIWO   "
 _game_won_str:    .asciiz "      PREWYRTQ IGRATA!"
 _game_lost_str:   .asciiz "       IGRATA SWYRVI ! :-("
