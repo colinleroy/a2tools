@@ -119,10 +119,10 @@ sprites_data:
                    ; Rubber band must be first for easy deactivation
                    ;                                ; drawn on    EVEN ODD
                   .addr   rubber_band_data          ; small            x
-                  .addr   clock0_data        ; medium      x
-                  .addr   switch0_data       ; medium           x
+                  .addr   clock0_data               ; medium      x
+                  .addr   switch0_data              ; medium           x
 SOCKET_SPRITE_NUM = (*-sprites_data)/2
-                  .addr   socket0_data       ; medium      x
+                  .addr   socket0_data              ; medium      x
                   .addr   plane_data                ; big         x    x
 
 vents:     .byte   2
