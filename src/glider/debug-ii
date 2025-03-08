@@ -1,2 +1,2 @@
 #!/bin/bash
-make clean all OLDII=1 SER_DEBUG=1 && cd ../.. && make glider.po OLDII=1 && mame apple2 -window -flop1 glider.po -resolution 560x384 -sl1 ssc -sl1:ssc:rs232 null_modem -bitb socket.localhost:2001 -sl2 ssc -sl2:ssc:rs232 null_modem -bitb2 socket.localhost:2000 -sl4 mouse -debug; cd src/glider
+make clean all && mame apple2 -window -flop1 bin/en/glider-en.po -resolution 560x384 -sl1 ssc -sl1:ssc:rs232 null_modem -bitb socket.localhost:2001 -sl2 ssc -sl2:ssc:rs232 null_modem -bitb2 socket.localhost:2000 -sl4 mouse -debug

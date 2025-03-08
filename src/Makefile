@@ -4,7 +4,7 @@ UPLOAD_SUBDIRS = homecontrol-client mastodon telnet stp quicktake image-viewer w
 
 else
 ifdef OLDII
-UPLOAD_SUBDIRS = homecontrol-client mastodon stp weather wozamp woztubes glider-bg glider-en
+UPLOAD_SUBDIRS = homecontrol-client mastodon stp weather wozamp woztubes glider/bin/en glider/bin/bg
 
 else
 UPLOAD_SUBDIRS = homecontrol-client mastodon telnet stp quicktake image-viewer weather wozamp woztubes
