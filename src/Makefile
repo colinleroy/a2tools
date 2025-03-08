@@ -1,22 +1,23 @@
-
-ifdef IIGS
-UPLOAD_SUBDIRS = homecontrol-client
-
-else
-ifdef OLDII
-UPLOAD_SUBDIRS = homecontrol-client 
-
-else
-UPLOAD_SUBDIRS = homecontrol-client 
-
-endif
-endif
-SUBDIRS = a2trace surl-server $(UPLOAD_SUBDIRS)
-INSTALL_SUBDIRS = a2trace surl-server
+SUBDIRS = a2trace \
+	surl-server \
+	glider \
+	homecontrol-client \
+	image-viewer \
+	mastodon \
+	quicktake \
+	stp \
+	telnet \
+	weather \
+	wozamp \
+	woztubes \
+	
+INSTALL_SUBDIRS = \
+	a2trace \
+	surl-server \
 
 .PHONY: all clean
 
-all clean:
+all clean dist upload:
 	for dir in $(SUBDIRS); do \
 		$(MAKE) -C $$dir -f Makefile $@ || exit; \
 	done
@@ -24,11 +25,6 @@ all clean:
 #hack for debian packaging
 install:
 	for dir in $(INSTALL_SUBDIRS); do \
-		$(MAKE) -C $$dir -f Makefile $@ || exit; \
-	done
-
-upload:
-	for dir in $(UPLOAD_SUBDIRS); do \
 		$(MAKE) -C $$dir -f Makefile $@ || exit; \
 	done
 

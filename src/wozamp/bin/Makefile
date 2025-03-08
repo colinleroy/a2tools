@@ -133,14 +133,9 @@ wozamp-$(suffix).po: $(DISK_PROGS)
 		java -jar $(SRC_DIR)/../../bin/ac.jar -as $@ $$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
 	done;
 
-wozampperso-$(suffix).po: $(DISK_PROGS)
-	cp $(CLEANDISK) $@; \
-	java -jar $(SRC_DIR)/../../bin/ac.jar -n $@ WOZAMP
-	java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ WOZAMP.SYSTEM SYS < $(SRC_DIR)/../../bin/loader.system; \
+wozampperso-$(suffix).po: wozamp-$(suffix).po
+	cp $< $@; \
 	java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ STPSTARTURL TXT < $(SRC_DIR)/STPSTARTURL; \
-	for r in *.bin; do \
-		java -jar $(SRC_DIR)/../../bin/ac.jar -as $@ $$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
-	done;
 
 clean:
 	rm -f *.bin *.o *.map splash.h splash-video.h splash.hgr splash-video.hgr *.lbl *.dbg *.po *.hgr
@@ -169,6 +164,10 @@ videoplay.bin: $(videoplay_CL65SOURCES) $(videoplay_SOURCES)
 	cl65 -g -Wl --dbgfile,videoplay.dbg -Ln videoplay.lbl $(CFLAGS) $(iigs_CFLAGS) $(videoplay_CLCFLAGS) -o $@ $^
 
 upload: all
-	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/wozamp/ || \
-	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/wozamp/ && \
-	cp *.bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/wozamp/
+	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/wozamp/$(suffix)/ || \
+	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/wozamp/$(suffix)/ && \
+	cp *.bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/wozamp/$(suffix)/
+
+dist: wozamp-$(suffix).po
+	mkdir -p $(SRC_DIR)../../dist/
+	cp $< $(SRC_DIR)../../dist/

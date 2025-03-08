@@ -140,6 +140,7 @@ quicktake-$(suffix).po: splash.h slowtake.bin qtktconv.bin qtknconv.bin jpegconv
 	java -jar $(SRC_DIR)/../../bin/ac.jar -n $@ QUICKTAKE
 	java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ SLOWTAKE.SYSTEM SYS < $(SRC_DIR)/../../bin/loader.system; \
 	java -jar $(SRC_DIR)/../../bin/ac.jar -d $@ BASIC.SYSTEM; \
+	java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ ABOUT BIN 0x2000 < $(SRC_DIR)/about; \
 	for r in *.bin $(SRC_DIR)/../image-viewer/bin/$(suffix)/imgview.bin; do \
 		java -jar $(SRC_DIR)/../../bin/ac.jar -as $@ $$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
 	done;
@@ -182,6 +183,10 @@ clean:
 	rm -f *.bin *.x86_64 *.o *.map splash.h splash.hgr *.dbg *.lbl splash.h *.hgr *.po
 
 upload: all
-	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/quicktake/ || \
-	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/quicktake/ && \
-	cp *.bin about /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/quicktake/
+	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/quicktake/$(suffix)/ || \
+	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/quicktake/$(suffix)/ && \
+	cp *.bin $(SRC_DIR)/about /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/quicktake/$(suffix)/
+
+dist: quicktake-$(suffix).po
+	mkdir -p $(SRC_DIR)../../dist/
+	cp $< $(SRC_DIR)../../dist/
