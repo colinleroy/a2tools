@@ -148,7 +148,7 @@ void surl_server_raw_session(char *remote_url) {
 
   LOG("RAW: starting raw session.\n");
 
-  serial_delay = 600;
+  serial_delay = 4800;
 
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
   if (sockfd < 0) {
