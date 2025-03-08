@@ -1,2 +1,3 @@
 #!/bin/bash
-make clean all OLDII=1 && cd ../.. && make wozampperso-6502.po OLDII=1 && mame apple2p -window -flop1 wozampperso-6502.po -resolution 560x384 -sl1 ssc -sl1:ssc:rs232 null_modem -bitb socket.localhost:2001 -sl2 ssc -sl2:ssc:rs232 null_modem -bitb2 socket.localhost:2000 -nomouse -debug; cd src/wozamp
+cd bin/6502
+make clean wozampperso-6502.po && mame apple2p -window -flop1 wozampperso-6502.po -resolution 560x384 -sl1 ssc -sl1:ssc:rs232 null_modem -bitb socket.localhost:2001 -sl2 ssc -sl2:ssc:rs232 null_modem -bitb2 socket.localhost:2000 -nomouse -debug

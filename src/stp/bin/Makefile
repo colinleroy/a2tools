@@ -71,7 +71,7 @@ GCCLDFLAGS =
 
 .PHONY: all clean
 
-all: stp-$(suffix).po
+all: stp-$(suffix).po stpperso-$(suffix).po
 
 CLEANDISK = $(SRC_DIR)/../../disks/ProDOS_2_4_3.po
 stp-$(suffix).po: $(PROGRAM).bin
@@ -98,7 +98,7 @@ $(PROGRAM).x86_64: $(SOURCES) $(GCC_SOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	
 
 clean:
-	rm -f $(PROGRAM).bin $(PROGRAM).x86_64 *.o *.map
+	rm -f $(PROGRAM).bin $(PROGRAM).x86_64 *.o *.map *.dbg *.lbl *.po
 
 upload: all
 	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/net/ || \
