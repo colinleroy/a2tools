@@ -1,13 +1,13 @@
 
 ifdef IIGS
-UPLOAD_SUBDIRS = homecontrol-client telnet image-viewer weather 
+UPLOAD_SUBDIRS = homecontrol-client telnet image-viewer 
 
 else
 ifdef OLDII
-UPLOAD_SUBDIRS = homecontrol-client weather
+UPLOAD_SUBDIRS = homecontrol-client 
 
 else
-UPLOAD_SUBDIRS = homecontrol-client telnet image-viewer weather
+UPLOAD_SUBDIRS = homecontrol-client telnet image-viewer 
 
 endif
 endif

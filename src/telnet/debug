@@ -1,2 +1,3 @@
 #!/bin/bash
-make clean all && cd ../.. && make telnet-65c02.po && mame apple2c0 -window -flop1 telnet-65c02.po -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug; cd src/telnet
+cd bin/65c02
+make clean telnet-65c02.po && mame apple2c0 -window -flop1 telnet-65c02.po -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug
