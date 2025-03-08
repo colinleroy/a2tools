@@ -135,12 +135,12 @@ GCCLDFLAGS = $(shell sdl-config --libs)
 all: quicktake-$(suffix).po
 
 CLEANDISK = $(SRC_DIR)/../../disks/ProDOS_2_4_3.po
-quicktake-$(suffix).po: splash.h slowtake.bin qtktconv.bin qtknconv.bin jpegconv.bin loader.x86_64 slowtake.x86_64 qtktconv.x86_64 qtknconv.x86_64 jpegconv.x86_64
+quicktake-$(suffix).po: splash.h slowtake.bin qtktconv.bin qtknconv.bin jpegconv.bin loader.x86_64 slowtake.x86_64 qtktconv.x86_64 qtknconv.x86_64 jpegconv.x86_64 $(SRC_DIR)/../image-viewer/bin/$(suffix)/imgview.bin
 	cp $(CLEANDISK) $@; \
 	java -jar $(SRC_DIR)/../../bin/ac.jar -n $@ QUICKTAKE
 	java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ SLOWTAKE.SYSTEM SYS < $(SRC_DIR)/../../bin/loader.system; \
 	java -jar $(SRC_DIR)/../../bin/ac.jar -d $@ BASIC.SYSTEM; \
-	for r in *.bin; do \
+	for r in *.bin $(SRC_DIR)/../image-viewer/bin/$(suffix)/imgview.bin; do \
 		java -jar $(SRC_DIR)/../../bin/ac.jar -as $@ $$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
 	done;
 
