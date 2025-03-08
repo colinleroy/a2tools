@@ -1,13 +1,13 @@
 
 ifdef IIGS
-UPLOAD_SUBDIRS = homecontrol-client mastodon telnet stp quicktake image-viewer weather wozamp
+UPLOAD_SUBDIRS = homecontrol-client telnet image-viewer weather 
 
 else
 ifdef OLDII
-UPLOAD_SUBDIRS = homecontrol-client mastodon stp weather wozamp woztubes glider/bin/en glider/bin/bg
+UPLOAD_SUBDIRS = homecontrol-client weather
 
 else
-UPLOAD_SUBDIRS = homecontrol-client mastodon telnet stp quicktake image-viewer weather wozamp woztubes
+UPLOAD_SUBDIRS = homecontrol-client telnet image-viewer weather
 
 endif
 endif

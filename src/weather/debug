@@ -1,2 +1,3 @@
 #!/bin/bash
-make clean all SER_DEBUG=1 && cd ../.. && make weather-65c02.po && mame apple2c0 -window -flop1 weather-65c02.po -flop2 disks/qt100.dsk -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug; cd src/weather
+cd bin/6502
+make clean weather.po && mame apple2c0 -window -flop1 weather.po -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug
