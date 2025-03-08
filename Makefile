@@ -77,29 +77,11 @@ CLEANDISK = disks/ProDOS_2_4_3.po
 
 .PHONY: all clean
 
-clean:
+all clean upload:
 	rm -f *$(suffix).po && \
 	for dir in $(SUBDIRS); do \
 		$(MAKE) -C $$dir -f Makefile $@ || exit; \
 	done
-
-all upload:
-	for dir in $(SUBDIRS); do \
-		$(MAKE) -C $$dir -f Makefile $@ || exit; \
-	done
-
-glider.po: $(glider_disk_PROGS)
-	cp $(CLEANDISK) $@; \
-	java -jar bin/ac.jar -n $@ GLIDER
-	java -jar bin/ac.jar -p $@ GLIDER.SYSTEM SYS < bin/loader.system; \
-	java -jar bin/ac.jar -d $@ BASIC.SYSTEM; \
-	for prog in $^; do \
-		java -jar bin/ac.jar -as $@ $$(basename $$prog | sed "s/\.bin$///") < $$prog; \
-	done; \
-	for bg in $(glider_disk_RES); do \
-		java -jar bin/ac.jar -p $@ $$(basename $$bg | sed "s/\.bin$///") BIN < $$bg; \
-	done;
-	mkdir -p dist && cp $@ dist/; \
 
 ammonoid$(suffix).po: $(ammonoid_disk_PROGS)
 	cp $(CLEANDISK) $@; \

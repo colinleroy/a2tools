@@ -1,3 +1,2 @@
 #!/bin/bash
-cp -f ~/.mame/cfg/apple2c0.cfg.115200 ~/.mame/cfg/apple2c0.cfg
-make clean all SER_DEBUG=1 GAME_LANG=bg GAME_CHARSET=cyrillic && cd ../.. && make glider.po && mame apple2c0 -window -flop1 glider.po -flop2 disks/qt100.dsk -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -mouse -debug; cd src/glider
+make clean all && mame apple2c0 -window -flop1 bin/bg/glider-bg.po -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -mouse -debug

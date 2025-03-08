@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) {
   }
   filename = argv[2];
   if (strchr(filename, '.')) {
-    *strchr(filename, '.') = 0;
+    *strrchr(filename, '.') = 0;
   }
   if (strchr(filename, '/')) {
     filename = strrchr(filename, '/')+1;

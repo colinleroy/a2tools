@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
 
   sprite_name = argv[1];
   if (strchr(sprite_name, '.')) {
-    *(strchr(sprite_name, '.')) = '\0';
+    *(strrchr(sprite_name, '.')) = '\0';
   }
   if (strchr(sprite_name, '/')) {
     sprite_name = strrchr(sprite_name, '/') + 1;
