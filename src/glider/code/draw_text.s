@@ -1,7 +1,10 @@
         .export    _print_char
+        .export    _print_number
         .export    _print_string
         .export    _read_string
         .export    _str_input
+
+        .import   do_bin2dec_16bit, bcd_input, bcd_result
 
         .import    _font, _font_mask
         .import    _hgr_hi, _hgr_low
@@ -46,6 +49,55 @@ scr:
         dey
         dex
         bpl     :-
+        rts
+.endproc
+
+; A: low byte of number, high byte in bcd_input+1
+; X: X coordinate
+; Y: Y coordinate (bottom)
+.proc _print_number
+        sta     bcd_input
+        stx     dest_x+1
+        sty     blit_digit+1
+        jsr     do_bin2dec_16bit
+
+        lda     #$00
+        sta     tmp1              ; To check whether we printed a number
+        ldx     #$00
+        stx     cur_char+1
+char:
+        lda     bcd_result,x
+        bne     blit_digit        ; It's not 0 print it
+
+        ; Is it a leading zero?
+        ldy     tmp1
+        bne     blit_digit        ; No
+
+        ; If so, skip it without advancing cursor
+        inc     cur_char+1
+        bne     cur_char
+
+blit_digit:
+        ldy     #$FF
+dest_x:
+        ldx     #$FF
+        cpx     #40               ; Don't blit out of screen
+        bcs     out
+        clc
+        adc     #'0'
+        jsr     _print_char
+        inc     tmp1              ; Note we printed a number
+        inc     dest_x+1
+        inc     cur_char+1
+cur_char:
+        ldx     #$FF
+        cpx     #8                ; .sizeof(bcd_result)
+        bcc     char
+
+        ; Did we print anything? If not it's a 0
+        lda     tmp1
+        beq     blit_digit
+out:
         rts
 .endproc
 

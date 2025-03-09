@@ -4,13 +4,13 @@
 
         .import   num_lives, num_rubber_bands, num_battery, cur_score, cur_level
         .import   time_counter, frame_counter
-        .import   _print_char, _print_string
+        .import   _print_char, _print_string, _print_number
         .import   _quick_draw_mini_plane
         .import   _quick_draw_mini_score
         .import   _quick_draw_battery_reverted
         .import   _quick_draw_rubber_band_reverted
 
-        .import   do_bin2dec_16bit, bcd_input, bcd_result_thousand
+        .import   bcd_input
 
         .import   _play_ding, _platform_msleep, _sleep
 
@@ -48,32 +48,6 @@ RUBBER_BAND_ICON_Y = 41
 BATTERY_ICON_X     = 37
 BATTERY_ICON_Y     = 61
 
-.proc _print_number
-        sta     bcd_input
-        stx     dest_x+1
-        sty     dest_y+1
-        jsr     do_bin2dec_16bit
-
-        ldx     #2
-        stx     cur_char+1
-char:
-        lda     bcd_result_thousand,x
-
-dest_y:
-        ldy     #$FF
-dest_x:
-        ldx     #$FF
-        clc
-        adc     #'0'
-        jsr     _print_char
-        dec     dest_x+1
-        dec     cur_char+1
-cur_char:
-        ldx     #$FF
-        bpl     char
-        rts
-.endproc
-
 .proc _draw_dashboard
         lda     frame_counter     ; Draw dashboard on odd frames
         and     #01
@@ -81,7 +55,7 @@ cur_char:
         rts
 
 :       ; Lives
-        ldx     #MINI_PLANE_ICON_X+2
+        ldx     #MINI_PLANE_ICON_X
         ldy     #MINI_PLANE_ICON_Y+mini_plane_HEIGHT+font_HEIGHT+1
         lda     #0
         sta     bcd_input+1
@@ -93,7 +67,7 @@ cur_char:
         jsr     _quick_draw_mini_plane
 
         ; Score
-        ldx     #SCORE_ICON_X+2
+        ldx     #SCORE_ICON_X
         ldy     #SCORE_ICON_Y+rubber_band_reverted_HEIGHT+font_HEIGHT+1
         lda     cur_score+1
         sta     bcd_input+1
@@ -105,7 +79,7 @@ cur_char:
         jsr     _quick_draw_mini_score
 
         ; Rubber bands
-        ldx     #RUBBER_BAND_ICON_X+2
+        ldx     #RUBBER_BAND_ICON_X
         ldy     #RUBBER_BAND_ICON_Y+rubber_band_reverted_HEIGHT+font_HEIGHT+1
         lda     #0
         sta     bcd_input+1
@@ -117,7 +91,7 @@ cur_char:
         jsr     _quick_draw_rubber_band_reverted
 
         ; Battery
-        ldx     #BATTERY_ICON_X+2
+        ldx     #BATTERY_ICON_X
         ldy     #BATTERY_ICON_Y+battery_reverted_HEIGHT+font_HEIGHT+1
         lda     #0
         sta     bcd_input+1
@@ -235,6 +209,8 @@ print_level:
         ldy     #161
         jsr     _print_string
 
+        jsr     _wait_for_input
+        jsr     _hi_scores_screen
         jmp     print_done
 
 print_game_over:
@@ -253,7 +229,8 @@ print_done:
         lda     num_lives
         bne     :+
 
-        jmp     _hi_scores_screen
+        jsr     _hi_scores_screen
+        jmp     _wait_for_input
 
 :       rts
 .endproc
