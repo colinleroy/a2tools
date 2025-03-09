@@ -47,6 +47,7 @@
         .import   _platform_msleep
 
         .import   _play_crash
+        .import   _load_and_show_high_scores
 
         .importzp ptr2
 
