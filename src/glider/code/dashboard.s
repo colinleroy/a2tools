@@ -4,7 +4,7 @@
 
         .import   num_lives, num_rubber_bands, num_battery, cur_score, cur_level
         .import   time_counter, frame_counter
-        .import   _print_char, _print_string, _read_string
+        .import   _print_char, _print_string
         .import   _quick_draw_mini_plane
         .import   _quick_draw_mini_score
         .import   _quick_draw_battery_reverted
@@ -20,7 +20,8 @@
         .import   _no_level_str
         .import   _game_won_str
         .import   _game_lost_str
-        .import   _your_name_str
+
+        .import   _hi_scores_screen
 
         .import   _mouse_check_fire
         .import   pushax
@@ -278,21 +279,6 @@ print_done:
         jmp     _bzero
 .endproc
 
-.proc _hi_scores_screen
-        jsr     _clear_hgr_screen
-
-        lda     #<_your_name_str
-        ldx     #>_your_name_str
-        jsr     pushax
-
-        ldx     #3
-        ldy     #30
-        jsr     _print_string
-
-        ; X and Y still valid
-        lda     #16
-        jmp     _read_string
-.endproc
         .bss
 
 displayed:        .res 1

@@ -5,6 +5,7 @@
         .export   _game_won_str
         .export   _game_lost_str
         .export   _your_name_str
+        .export   _high_scores_str
 
         .data
 
@@ -16,3 +17,4 @@ _game_won_str:    .asciiz "     YOU WON THE GAME!"
 _game_lost_str:   .asciiz "          GAME OVER ! :-("
 
 _your_name_str:   .asciiz "ENTER YOUR NAME: "
+_high_scores_str: .asciiz "HIGH SCORES"
