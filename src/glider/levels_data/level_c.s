@@ -9,6 +9,8 @@
         .import   frame_counter
         .import   plane_data, rubber_band_data
 
+        .import   _socket_toggle
+
         .import   sprites_bgbackup
 
         .import   _play_click
@@ -30,23 +32,10 @@ level_data:
 
 .assert * = LEVEL_DATA_START+LEVEL_DATA::LOGIC_CB, error ; Make sure the callback is where we think
 .proc logic
-        ; Check if switch is active
-        lda     switch0_data+SPRITE_DATA::ACTIVE
-        beq     :+
-
-        ; If so, activate the socket every three frames
-        lda     frame_counter
-        and     #$03
-        beq     :+
-        sta     $C030
-        sta     socket0_data+SPRITE_DATA::ACTIVE
-        rts
-
-:       lda     socket0_data+SPRITE_DATA::ACTIVE
-        beq     :+
+        ; Check if switch is active and toggle socket accordingly
+        ldx     switch0_data+SPRITE_DATA::ACTIVE
         lda     #SOCKET_SPRITE_NUM
-        jsr     _unfire_sprite
-:       rts
+        jmp     _socket_toggle
 .endproc
 
 ; Do not place anything after X= 224 to avoid overflow
