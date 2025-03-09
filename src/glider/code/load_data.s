@@ -1,13 +1,17 @@
-        .export  _load_level_data, _load_splash_screen, _load_lowcode
+        .export  _load_level_data, _load_splash_screen
+        .export  _load_lowcode, _high_scores_io
+
+        .export   _scores_table
 
         .import  cur_level
-        .import  _open, _read, _close, _memcpy
+        .import  _open, _read, _write, _close, _memcpy
         .import  pushax, popax
         .import  __filetype, __auxtype
         .import  _strcpy
         .import  __LOWCODE_START__, __LOWCODE_SIZE__
         .import  __HGR_START__, __LEVEL_SIZE__
 
+        .include "scores.inc"
         .include "apple2.inc"
         .include "fcntl.inc"
 
@@ -42,10 +46,25 @@
         lda      #>__HGR_START__
         sta      destination+1
 
-        ; Fallthrough to load_data
+        lda      #<O_RDONLY
+        ; Fallthrough to _data_io
 .endproc
 
-.proc load_data
+; A: data IO mode
+.proc _data_io
+        sta     data_io_mode+1
+        cmp     #<O_RDONLY
+        beq     set_read
+        lda     #<_write
+        ldx     #>_write
+        jmp     do_io
+set_read:
+        lda     #<_read
+        ldx     #>_read
+
+do_io:
+        sta     data_io_func+1
+        stx     data_io_func+2
         ; Open file
         ; Set filetype
         lda     #$06          ; PRODOS_T_BIN
@@ -57,8 +76,9 @@
         ldx     filename+1
         jsr     pushax
 
-        lda     #<O_RDONLY
-        ldx     #>O_RDONLY
+data_io_mode:
+        lda     #$FF          ; Patched with O_RDONLY or O_WRONLY
+        ldx     #0
         jsr     pushax  
 
         ldy     #$04          ; _open is variadic
@@ -77,7 +97,8 @@
         ; and size
         lda     size
         ldx     size+1
-        jsr     _read
+data_io_func:
+        jsr     $FFFF         ; Patched with _read or _write
 
         jsr     popax         ; Get fd back
         jsr     _close
@@ -114,16 +135,41 @@ load_err:
         lda      #>__LOWCODE_SIZE__
         sta      size+1
 
-        jmp      load_data
+        lda      #<O_RDONLY
+        jmp      _data_io
+.endproc
+
+.proc _high_scores_io
+        pha
+        lda       #<_scores_filename
+        sta       filename
+        lda       #>_scores_filename
+        sta       filename+1
+
+        lda      #<_scores_table
+        sta      destination
+        lda      #>_scores_table
+        sta      destination+1
+
+        lda      #<SCORE_TABLE_SIZE
+        sta      size
+        lda      #>SCORE_TABLE_SIZE
+        sta      size+1
+
+        pla
+        jmp      _data_io
 .endproc
 
         .bss
 
-filename:    .res 2
-destination: .res 2
-size:        .res 2
+filename:      .res 2
+destination:   .res 2
+size:          .res 2
+_scores_table: .res SCORE_TABLE_SIZE
+
         .data
 
 lowcode_name:        .asciiz "lowcode"
 splash_name:         .asciiz "splash"
 level_name_template: .asciiz "level.X"
+_scores_filename:    .asciiz "SCORES"

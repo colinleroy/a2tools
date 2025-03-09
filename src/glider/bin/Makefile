@@ -75,6 +75,7 @@ glider_SOURCES := \
 	$(SRC_DIR)/code/buffers.s \
 	$(SRC_DIR)/code/load_data.s \
 	$(SRC_DIR)/code/dashboard.s \
+	$(SRC_DIR)/code/scores.s \
 	$(SRC_DIR)/code/strings-$(GAME_LANG).s \
 	$(SRC_DIR)/../lib/extrazp.s \
 	$(SRC_DIR)/../lib/asm/hgr.s \
@@ -189,6 +190,9 @@ glider-$(GAME_LANG).po: glider.bin
 	java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ GLIDER.SYSTEM SYS < $(SRC_DIR)/../../bin/loader.system; \
 	java -jar $(SRC_DIR)/../../bin/ac.jar -d $@ BASIC.SYSTEM; \
 	java -jar $(SRC_DIR)/../../bin/ac.jar -as $@ GLIDER < $<; \
+	if [ -f SCORES ]; then \
+		java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ SCORES BIN < SCORES; \
+	fi
 	for r in splash.bin lowcode.bin level_*.bin; do \
 		java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ $$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
 	done;
