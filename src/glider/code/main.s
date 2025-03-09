@@ -48,6 +48,7 @@
 
         .import   _play_crash
         .import   _load_and_show_high_scores
+        .import   _init_text, _clrscr
 
         .importzp ptr2
 
@@ -74,9 +75,11 @@
 
 .proc _go_to_next_level
         inc     cur_level
-        jsr     _clear_hgr_screen
-        clc
         ; Print the inter-level screen
+        jsr     _clear_hgr_screen
+        jsr     _clrscr
+        jsr     _init_text
+        clc
         jsr     _draw_level_end
         ; We restore level data, in case we die later
         ; and come back to this level.
@@ -91,9 +94,13 @@
         ; If we couldn't load another level, we win
         ; Refresh the end level screen with carry set
         jsr     _clear_hgr_screen
+        jsr     _clrscr
+        jsr     _init_text
         sec
         jsr     _end_game
-:       rts
+:
+        lda     #1
+        jmp     _init_hgr
 .endproc
 
 .proc _lose_game

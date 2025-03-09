@@ -5,15 +5,15 @@
         .import   _your_name_str
         .import   _high_scores_str
         .import   _read_string
-        .import   _print_string, _print_number
+        .import   _cputsxy
         .import   _clear_hgr_screen, _wait_for_input
         .import   _str_input
 
-        .import   bcd_input
+        .import   bcd_input, _cutoa
 
         .import   _high_scores_io, cur_score
 
-        .import   pushax
+        .import   pushax, pusha, _gotoxy, _clrscr
 
         .include  "apple2.inc"
         .include  "fcntl.inc"
@@ -43,17 +43,15 @@
         cpy     score_spot
         bne     :-
 
-        jsr     _clear_hgr_screen
-
-        lda     #<_your_name_str
-        ldx     #>_your_name_str
-        jsr     pushax
+        jsr     _clrscr
 
         ldx     #0
-        ldy     #30
-        jsr     _print_string
+        lda     #3
+        jsr     pushax
+        lda     #<_your_name_str
+        ldx     #>_your_name_str
+        jsr     _cputsxy
 
-        ; X and Y still valid
         lda     #(MAX_NAME_LEN-1)
         jsr     _read_string
 
@@ -127,52 +125,51 @@ found:
 .endproc
 
 .proc _show_high_scores
-        jsr     _clear_hgr_screen
-
-        lda     #<_high_scores_str
-        ldx     #>_high_scores_str
-        jsr     pushax
+        jsr     _clrscr
 
         ldx     #5
-        ldy     #30
-        jsr     _print_string
+        lda     #3
+        jsr     pushax
+        lda     #<_high_scores_str
+        ldx     #>_high_scores_str
+        jsr     _cputsxy
 
-        ldy     #39
+        ldy     #5
         sty     y_coord
 
         lda     #$00
         sta     score_spot        ; Reuse for listing
 
 next_score:
-        lda     y_coord           ; Compute line coord
-        clc
-        adc     #9
-        sta     y_coord
+        inc     y_coord           ; Compute line coord
 
         ldy     score_spot
         lda     _scores_table,y
         sta     bcd_input+1
         iny
         lda     _scores_table,y
+        sta     bcd_input
         ora     bcd_input+1
         beq     out             ; Stop at 0
 
-        lda     _scores_table,y
-        ldx     #8
-        ldy     y_coord
-        jsr     _print_number
+        lda     #8
+        jsr     pusha
+        lda     y_coord
+        jsr     _gotoxy
+        lda     bcd_input
+        ldx     bcd_input+1
+        jsr     _cutoa
 
+        ldx     #15
+        lda     y_coord
+        jsr     pushax
         lda     #<(_scores_table+2)
         ldx     #>(_scores_table+2)
         clc
         adc     score_spot
         bcc     :+
         inx
-:       jsr     pushax
-
-        ldx     #15
-        ldy     y_coord
-        jsr     _print_string
+:       jsr     _cputsxy
 
         lda     score_spot
         clc
@@ -181,7 +178,7 @@ next_score:
         cmp     #(NUM_SCORES*.sizeof(SCORE_LINE))
         bne     next_score
 out:
-        rts
+        jmp     _wait_for_input
 .endproc
 
         .bss
