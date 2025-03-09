@@ -1,7 +1,9 @@
         .export     _check_plane_bounds, _check_rubber_band_bounds
         .export     _unfire_sprite
         .export     _fire_rubber_band, _fire_sprite
-        .export     _rubber_band_travel, _balloon_travel, _knife_travel, _toast_travel
+        .export     _rubber_band_travel, _balloon_travel
+        .export     _knife_travel, _toast_travel
+        .export     _socket_toggle
         .export     _grab_rubber_bands, _grab_battery, _grab_sheet, _inc_score
         .export     _clock_inc_score
         .export     _check_battery_boost
@@ -211,6 +213,31 @@ no_travel:
         lda     (cur_sprite_ptr),y
         ldy     #SPRITE_DATA::Y_COORD
         sta     (cur_sprite_ptr),y
+:       rts
+.endproc
+
+; A: sprite number
+; X: whether the socket should be on
+.proc _socket_toggle
+        stx     tmp2
+        sta     tmp3
+        jsr     _load_sprite_pointer
+        ldy     #SPRITE_DATA::ACTIVE
+
+        ldx     tmp2
+        beq     :+
+        ; Activate the socket every three frames
+        lda     frame_counter
+        and     #$03
+        beq     :+
+        sta     $C030
+        sta     (cur_sprite_ptr),y
+        rts
+
+:       lda     (cur_sprite_ptr),y
+        beq     :+
+        lda     tmp3
+        jsr     _unfire_sprite
 :       rts
 .endproc
 

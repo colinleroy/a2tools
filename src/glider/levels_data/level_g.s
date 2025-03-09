@@ -6,6 +6,8 @@
         .import   frame_counter
         .import   plane_data, rubber_band_data
 
+        .import   _socket_toggle
+
         .import   _play_click, _play_chainsaw
         .import   _grab_sheet, _unfire_sprite
 
@@ -49,48 +51,13 @@ SOCKET1_FREQ = $50
         eor     #1
         sta     socket1_on
 
-:       jsr     twiggle_socket0
-        jmp     twiggle_socket1
-.endproc
-
-.proc twiggle_socket0
-        ; Check if it is active
-        lda     socket0_on
-        beq     :+
-
-        ; If so, activate the socket every three frames
-        lda     frame_counter
-        and     #$03
-        beq     :+
-        sta     $C030
-        sta     socket0_data+SPRITE_DATA::ACTIVE
-        rts
-
-:       lda     socket0_data+SPRITE_DATA::ACTIVE
-        beq     :+
+:       ldx     socket0_on
         lda     #SOCKET0_SPRITE_NUM
-        jsr     _unfire_sprite
-:       rts
-.endproc
+        jsr     _socket_toggle
 
-.proc twiggle_socket1
-        ; Check if it is active
-        lda     socket1_on
-        beq     :+
-
-        ; If so, activate the socket every three frames
-        lda     frame_counter
-        and     #$03
-        beq     :+
-        sta     $C030
-        sta     socket1_data+SPRITE_DATA::ACTIVE
-        rts
-
-:       lda     socket1_data+SPRITE_DATA::ACTIVE
-        beq     :+
+        ldx     socket1_on
         lda     #SOCKET1_SPRITE_NUM
-        jsr     _unfire_sprite
-:       rts
+        jmp     _socket_toggle
 .endproc
 
 socket0_counter: .byte SOCKET0_FREQ
