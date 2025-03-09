@@ -81,7 +81,8 @@ glider_SOURCES := \
 	$(SRC_DIR)/../lib/asm/hgr.s \
 	$(SRC_DIR)/../lib/asm/bcd.s \
 	$(SRC_DIR)/../lib/asm/hgr_tables.s \
-	$(SRC_DIR)/../lib/fastirq.s \
+	$(SRC_DIR)/../lib/cutoa.s \
+	$(SRC_DIR)/../lib/cntoabuf.s \
 	$(SRC_DIR)/../lib/platform_sleep.s \
 	font.gen.s \
 	plane.pixel_perfect.gen.s \
@@ -146,7 +147,7 @@ $(sprites_unperfect): %.unperfect.gen.s: $(SRC_DIR)/assets/sprites/%.png
 plane.pixel_perfect.gen.s: $(SRC_DIR)/assets/sprites/plane.png gen_sprite
 	./gen_sprite $< 280 pixel_perfect
 
-font.gen.s: $(SRC_DIR)/assets/intl/$(GAME_LANG)/font.png gen_font
+font.gen.s: $(SRC_DIR)/assets/fonts/font.png gen_font
 	./gen_font $< 280
 
 play_sound.gen.s: gen_sound_player

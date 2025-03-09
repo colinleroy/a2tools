@@ -4,7 +4,7 @@
 
         .import   num_lives, num_rubber_bands, num_battery, cur_score, cur_level
         .import   time_counter, frame_counter
-        .import   _print_char, _print_string, _print_number
+        .import   _print_number
         .import   _quick_draw_mini_plane
         .import   _quick_draw_mini_score
         .import   _quick_draw_battery_reverted
@@ -22,6 +22,7 @@
         .import   _game_lost_str
 
         .import   _hi_scores_screen
+        .import   _init_text, _init_hgr, _clrscr, _cputsxy, _cutoa
 
         .import   _mouse_check_fire
         .import   pushax
@@ -115,34 +116,31 @@ BATTERY_ICON_Y     = 61
 
 print_time_bonus:
         ; Time bonus
+        ldx     #6
+        lda     #8
+        jsr     pushax
         lda     #<_time_bonus_str
         ldx     #>_time_bonus_str
-        jsr     pushax
+        jsr     _cputsxy
 
-        ldx     #6
-        ldy     #80
-        jsr     _print_string
-
-        lda     #0                ; X, Y updated to end of string
-        sta     bcd_input+1
         lda     time_counter
-        jsr     _print_number
+        ldx     #0
+        jsr     _cutoa
+
         dec     time_counter      ; Decrement here so we can print it at 0...
 
 print_score:
         ; Score
+        ldx     #6
+        lda     #9
+        jsr     pushax
         lda     #<_your_score_str
         ldx     #>_your_score_str
-        jsr     pushax
+        jsr     _cputsxy
 
-        ldx     #6
-        ldy     #89
-        jsr     _print_string
-
-        lda     cur_score+1
-        sta     bcd_input+1
         lda     cur_score
-        jsr     _print_number
+        ldx     cur_score+1
+        jsr     _cutoa
 
         lda     game_won
         bne     print_level     ; We don't want to recount bonus if we won
@@ -166,73 +164,69 @@ print_level:
         ; Print "go to next level" if player still have lives
         lda     num_lives
         beq     print_game_over
-        lda     #<_press_key_str
-        ldx     #>_press_key_str
-        jsr     pushax
 
         ldx     #6
-        ldy     #107
-        jsr     _print_string
+        lda     #12
+        jsr     pushax
+        lda     #<_press_key_str
+        ldx     #>_press_key_str
+        jsr     _cputsxy
 
-        lda     #0
-        sta     bcd_input+1
+        ldx     #0
         lda     cur_level
         clc
         adc     #1                ; Levels are counted from zero
-        jsr     _print_number
+        jsr     _cutoa
 
         lda     game_won
         beq     print_done
 
         ; Display game won message
-        lda     #<_no_level_str
-        ldx     #>_no_level_str
-        jsr     pushax
 
         ldx     #6
-        ldy     #143
-        jsr     _print_string
+        lda     #14
+        jsr     pushax
+        lda     #<_no_level_str
+        ldx     #>_no_level_str
+        jsr     _cputsxy
 
-        lda     #0
-        sta     bcd_input+1
+        ldx     #0
         lda     cur_level
         clc
         adc     #1                ; Levels are counted from zero
-        jsr     _print_number
+        jsr     _cutoa
 
-
-        lda     #<_game_won_str
-        ldx     #>_game_won_str
-        jsr     pushax
 
         ldx     #6
-        ldy     #161
-        jsr     _print_string
+        lda     #17
+        jsr     pushax
+        lda     #<_game_won_str
+        ldx     #>_game_won_str
+        jsr     _cputsxy
 
         jsr     _wait_for_input
         jsr     _hi_scores_screen
-        jmp     print_done
+        jmp     out
 
 print_game_over:
-        lda     #<_game_lost_str
-        ldx     #>_game_lost_str
-        jsr     pushax
 
         ldx     #6
-        ldy     #143
-        jsr     _print_string
+        lda     #14
+        jsr     pushax
+        lda     #<_game_lost_str
+        ldx     #>_game_lost_str
+        jsr     _cputsxy
 
 print_done:
         jsr     _wait_for_input
 
         ; If game over, send player to scores screen
         lda     num_lives
-        bne     :+
+        bne     out
 
         jsr     _hi_scores_screen
-        jmp     _wait_for_input
-
-:       rts
+out:
+        rts
 .endproc
 
 .proc _wait_for_input
