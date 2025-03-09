@@ -31,7 +31,7 @@
         lda     _font+1,x
         sta     char_data+2
 
-        ldx     #4
+        ldx     #font_HEIGHT-1
         clc
 
 :       lda     _hgr_low,y
@@ -159,14 +159,10 @@ get_key:
         beq     delete_char
         cmp     #$7F              ; Or backspace?
         beq     delete_char
-        cmp     #' '              ; We only take space to Z
+        cmp     #' '              ; We only take space to z
         bcc     get_key
 
-        cmp     #'a'              ; Check if lower-case
-        bcc     :+
-        sbc     #$20              ; In this case, upper-case it (carry is set)
-
-:       cmp     #('Z'+1)
+        cmp     #'z'+1              ; Check if lower-case
         bcs     get_key
 
         ; We can print that letter
