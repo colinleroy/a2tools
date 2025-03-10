@@ -1,2 +1,2 @@
 #!/bin/bash
-make clean all && mame apple2c0 -window -flop1 bin/bg/glider-bg.po -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -mouse -debug
+make clean all && mame prav82 -window -flop1 bin/bg/glider-bg.po -resolution 560x384 -sl4 mouse -debug

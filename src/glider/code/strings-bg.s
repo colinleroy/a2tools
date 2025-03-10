@@ -10,12 +10,12 @@
         .data
 
 ; Thanks to Milen Hristov (@circfruit@fosstodon.org)
-_time_bonus_str:  .asciiz "           BONUS WREME: "
-_your_score_str:  .asciiz "                 TOXKI: "
-_press_key_str:   .asciiz "NATISNI KLAWIV ZA NIWO: "
-_no_level_str:    .asciiz "              NQMA NIWO "
-_game_won_str:    .asciiz "      PREWYRTQ IGRATA!"
-_game_lost_str:   .asciiz "       IGRATA SWYRVI ! :-("
+_time_bonus_str:  .asciiz "           bonus wreme: "
+_your_score_str:  .asciiz "                 to~ki: "
+_press_key_str:   .asciiz "natisni klawi{ za niwo: "
+_no_level_str:    .asciiz "              nqma niwo "
+_game_won_str:    .asciiz "      prewyrtq igrata!"
+_game_lost_str:   .asciiz "       igrata swyr{i ! :-("
 
-_your_name_str:   .asciiz "   WYWEDI IMETO SI: "
-_high_scores_str: .asciiz "          RANKLISTA "
+_your_name_str:   .asciiz "   wywedi imeto si: "
+_high_scores_str: .asciiz "          ranklista "
