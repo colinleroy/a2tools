@@ -2,9 +2,11 @@ gen_sprite
 gen_font
 gen_sound_player
 gen_sound_clip
+lz4_compressor
 *.gen.s
 *.gen.inc
 *.snd.s
 *.hgr-preview.png
 *.hgr
 glider.ld.cfg
+*.lz4

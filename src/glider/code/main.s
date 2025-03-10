@@ -1,3 +1,18 @@
+; Copyright (C) 2025 Colin Leroy-Mira <colin@colino.net>
+;
+; This program is free software; you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation; either version 3 of the License, or
+; (at your option) any later version.
+;
+; This program is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+;
+; You should have received a copy of the GNU General Public License
+; along with this program. If not, see <http://www.gnu.org/licenses/>.
+
         .export   _main
         .export   frame_counter, time_counter
 
@@ -6,11 +21,6 @@
 
         .import   _exit
         .import   _init_hgr, _init_mouse, _deinit_mouse
-        .import   _bzero
-        .import   pushax
-
-        .import   _build_hgr_tables
-        .import   _mod7_table
 
         .import   cur_level
         .import   _draw_sprite
@@ -26,12 +36,12 @@
         .import   _load_level_data, _load_splash_screen, _load_lowcode
         .import   _animate_plane_crash
 
-        .import   levels_logic, cur_level_logic
+        .import   cur_level_logic
 
         .import   num_lives, num_rubber_bands, num_battery, cur_score
         .import   plane_sprite_num
 
-        .import   vbl_ready, hz
+        .import   hz
 
         .import   _mouse_wait_vbl
         .import   _mouse_reset_ref_x
@@ -41,17 +51,14 @@
         .import   _keyboard_reset_ref_x
         .import   _keyboard_calibrate_hz
 
-        .import   sprite_data, plane_data, rubber_band_data
+        .import   plane_data, rubber_band_data
 
         .import   _wait_for_input, _clear_hgr_screen
         .import   _platform_msleep
         .import   _allow_lowercase
 
         .import   _play_crash
-        .import   _load_and_show_high_scores
         .import   _init_text, _clrscr
-
-        .importzp ptr2
 
         .include  "apple2.inc"
         .include  "plane.gen.inc"
@@ -105,7 +112,8 @@
 .endproc
 
 .proc _lose_game
-        jsr     _clear_hgr_screen
+        jsr     _clrscr
+        jsr     _init_text
         clc
         ; Fallthrough to _end_game
 .endproc
@@ -142,7 +150,8 @@ x_coord_reset_handler:
 .segment "LOWCODE"
 
 .proc _real_main
-        jsr     _build_hgr_tables
+        ; Our HGR tables are already built by _data_io via _load_lowcode
+        ; jsr     _build_hgr_tables
 
         lda     #1
         jsr     _allow_lowercase  ; For Bulgarian i18n
