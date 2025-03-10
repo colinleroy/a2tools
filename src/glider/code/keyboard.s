@@ -22,7 +22,7 @@
 
         .import     prev_x, ref_x, mouse_x
         .import     _check_battery_boost
-        .import     hz
+        .import     hz, cur_level
 
         .include    "apple2.inc"
         .include    "sprite.inc"
@@ -69,6 +69,12 @@
         beq     kbd_pos
         cpy     #($20|$80)       ; SPACE
         beq     kbd_fire
+        cpy     #('p'|$80)       ; p
+        beq     kbd_pause
+        cpy     #('P'|$80)       ; P
+        beq     kbd_pause
+        cpy     #($1B|$80)       ; Escape
+        beq     kbd_escape
 .ifdef UNKILLABLE
         cpy     #($0B|$80)       ; CURS_UP
         beq     kbd_up
@@ -121,6 +127,17 @@ kbd_neg:
 kbd_fire:
         lda     #1
         sta     kbd_should_fire
+        jmp     kbd_out
+
+kbd_pause:
+:       lda     KBD               ; Just wait for another keypress
+        bpl     :-
+        bit     KBDSTRB
+        jmp     kbd_out
+
+kbd_escape:
+        lda     #$FF
+        sta     cur_level
 
 kbd_out:
         lda     ref_x
