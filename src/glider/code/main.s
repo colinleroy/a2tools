@@ -45,6 +45,7 @@
 
         .import   _wait_for_input, _clear_hgr_screen
         .import   _platform_msleep
+        .import   _allow_lowercase
 
         .import   _play_crash
         .import   _load_and_show_high_scores
@@ -142,6 +143,9 @@ x_coord_reset_handler:
 
 .proc _real_main
         jsr     _build_hgr_tables
+
+        lda     #1
+        jsr     _allow_lowercase  ; For Bulgarian i18n
 
         jsr     _init_mouse
         bcc     :+                ; Do we have a mouse?
