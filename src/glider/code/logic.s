@@ -1,3 +1,18 @@
+; Copyright (C) 2025 Colin Leroy-Mira <colin@colino.net>
+;
+; This program is free software; you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation; either version 3 of the License, or
+; (at your option) any later version.
+;
+; This program is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+;
+; You should have received a copy of the GNU General Public License
+; along with this program. If not, see <http://www.gnu.org/licenses/>.
+
         .export     _check_plane_bounds, _check_rubber_band_bounds
         .export     _unfire_sprite
         .export     _fire_rubber_band, _fire_sprite
@@ -10,12 +25,12 @@
         .import     ref_x
 
         .import     rubber_band_data
-        .import     cur_level, frame_counter
+        .import     frame_counter
         .import     _load_sprite_pointer, _setup_sprite_pointer, _draw_sprite
         .import     num_rubber_bands, num_battery, num_lives, cur_score
         .import     _play_bubble, _play_croutch, _play_ding
 
-        .importzp   tmp1, tmp2, tmp3, ptr4
+        .importzp   tmp2, tmp3
 
         .include    "apple2.inc"
         .include    "balloon.gen.inc"

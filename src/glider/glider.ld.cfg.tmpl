@@ -38,7 +38,6 @@ SEGMENTS {
     RODATA:   load = MAIN,           type = ro;
     DATA:     load = MAIN,           type = rw,  align = $100;
     INIT:     load = MAIN,           type = rw;
-    RT_ONCE:  load = MAIN,           type = ro,  define   = yes;
     ONCE:     load = MAIN,           type = ro,  define   = yes;
     LC:       load = MAIN, run = LC, type = ro,  optional = yes;
     BSS:      load = BSS,            type = bss, define   = yes;

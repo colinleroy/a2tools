@@ -1,3 +1,18 @@
+; Copyright (C) 2025 Colin Leroy-Mira <colin@colino.net>
+;
+; This program is free software; you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation; either version 3 of the License, or
+; (at your option) any later version.
+;
+; This program is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+;
+; You should have received a copy of the GNU General Public License
+; along with this program. If not, see <http://www.gnu.org/licenses/>.
+
         .export   _draw_dashboard
         .export   _draw_level_end
         .export   _clear_hgr_screen, _wait_for_input
@@ -12,7 +27,7 @@
 
         .import   bcd_input
 
-        .import   _play_ding, _platform_msleep, _sleep
+        .import   _play_ding, _sleep
 
         .import   _time_bonus_str
         .import   _your_score_str
@@ -22,12 +37,11 @@
         .import   _game_lost_str
 
         .import   _hi_scores_screen
-        .import   _init_text, _init_hgr, _clrscr, _cputsxy, _cutoa
+        .import   _cputsxy, _cutoa
 
         .import   _mouse_check_fire
         .import   pushax
         .import   _bzero
-        .importzp tmp1, tmp2
 
         .include  "apple2.inc"
         .include  "font.gen.inc"

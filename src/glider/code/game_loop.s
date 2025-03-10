@@ -1,10 +1,25 @@
+; Copyright (C) 2025 Colin Leroy-Mira <colin@colino.net>
+;
+; This program is free software; you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation; either version 3 of the License, or
+; (at your option) any later version.
+;
+; This program is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+;
+; You should have received a copy of the GNU General Public License
+; along with this program. If not, see <http://www.gnu.org/licenses/>.
+
         .export     _check_blockers, _check_vents, _check_collisions
         .export     _draw_screen
         .export     _move_plane
         .export     _check_level_change
         .export     _check_fire_button
 
-        .import     vents_data, blockers_data, plane_data, rubber_band_data
+        .import     rubber_band_data
         .import     _check_plane_bounds, _check_rubber_band_bounds
 
         .import     _keyboard_update_ref_x
@@ -19,7 +34,7 @@
         .import     _fire_rubber_band
         .import     _rubber_band_travel
 
-        .import     cur_level, frame_counter, plane_sprite_num
+        .import     frame_counter, plane_sprite_num
         .import     _go_to_prev_level, _go_to_next_level, _go_to_level
         .import     keyboard_level_change
 
