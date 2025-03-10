@@ -13,7 +13,7 @@
 ; You should have received a copy of the GNU General Public License
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-        .export     _init_mouse, _deinit_mouse
+        .export     _init_mouse
         .export     vbl_ready, hz
 
         .export     _mouse_reset_ref_x
@@ -30,6 +30,7 @@
         .import     _keyboard_reset_ref_x
 
         .interruptor    mouse_irq
+        .destructor     _deinit_mouse
 
         .include    "mouse-kernel.inc"
         .include    "apple2.inc"

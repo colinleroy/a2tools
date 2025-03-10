@@ -246,12 +246,14 @@ out:
 .proc _wait_for_input
         bit     KBDSTRB
 :       lda     KBD               ; Wait for key or click
-        bmi     :+
+        bmi     kbd_in
         jsr     _mouse_check_fire
         bcc     :-
-:       bit     KBDSTRB
+        lda     #$00
         rts
-
+kbd_in:
+        bit     KBDSTRB
+        rts
 .endproc
 
 .proc _clear_hgr_screen

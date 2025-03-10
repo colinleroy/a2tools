@@ -19,8 +19,7 @@
         .export   _go_to_prev_level, _go_to_next_level
         .export   _go_to_level
 
-        .import   _exit
-        .import   _init_hgr, _init_mouse, _deinit_mouse
+        .import   _init_hgr, _init_mouse
 
         .import   cur_level
         .import   _draw_sprite
@@ -205,7 +204,12 @@ new_game:
         jsr     _init_hgr
 
         jsr     _wait_for_input
-        jsr     _clear_hgr_screen
+        cmp     #($1B|$80)        ; Escape?
+        bne     :+
+        jsr     _init_text        ; Switch back to text mode
+        rts                       ; Final rts
+
+:       jsr     _clear_hgr_screen
 
         jsr     reset_game        ; Reset game loads current level (0)
 
@@ -361,10 +365,6 @@ game_over:
         sta     cur_score+1
         jmp     load_level
 .endproc
-
-_win:
-        jsr     _deinit_mouse
-        jmp     _exit
 
         .bss
 
