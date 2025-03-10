@@ -1,5 +1,8 @@
-        .export       _hgr_hi, _hgr_low
-        .export       _mod7_table, _div7_table
+        ; Imported so that caller programs can put the tables
+        ; wherever convenient.
+        .import       _hgr_hi, _hgr_low
+        .import       _mod7_table, _div7_table
+
         .export       _build_hgr_tables
         .importzp     tmp1, tmp2
 
@@ -67,10 +70,3 @@ build_div7_tables:
         bne     :-
 
 :       rts
-
-.bss
-
-_hgr_hi:        .res 192
-_hgr_low:       .res 192
-_div7_table:    .res 256
-_mod7_table:    .res 256

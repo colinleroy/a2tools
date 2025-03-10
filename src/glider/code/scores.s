@@ -1,12 +1,27 @@
+; Copyright (C) 2025 Colin Leroy-Mira <colin@colino.net>
+;
+; This program is free software; you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation; either version 3 of the License, or
+; (at your option) any later version.
+;
+; This program is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+;
+; You should have received a copy of the GNU General Public License
+; along with this program. If not, see <http://www.gnu.org/licenses/>.
+
         .export   _hi_scores_screen
         .export   _load_and_show_high_scores
 
-        .import   _scores_table
+        .import   large_tmp_buf
         .import   _your_name_str
         .import   _high_scores_str
         .import   _read_string
         .import   _cputsxy
-        .import   _clear_hgr_screen, _wait_for_input
+        .import   _wait_for_input
         .import   _str_input
 
         .import   bcd_input, _cutoa
@@ -38,8 +53,8 @@
 
 :       dex
         dey
-        lda     _scores_table,y
-        sta     _scores_table,x
+        lda     large_tmp_buf,y
+        sta     large_tmp_buf,x
         cpy     score_spot
         bne     :-
 
@@ -68,9 +83,9 @@
 .proc _find_score_spot
         ldy     #$00
 
-:       ldx     _scores_table,y
+:       ldx     large_tmp_buf,y
         iny
-        lda     _scores_table,y
+        lda     large_tmp_buf,y
         
         cpx     cur_score+1
         bcc     found
@@ -100,10 +115,10 @@ found:
 .proc _set_high_score
         ldy     score_spot        ; Update score at spot (Y points
         lda     cur_score+1       ; to start of line in table
-        sta     _scores_table,y
+        sta     large_tmp_buf,y
         iny
         lda     cur_score
-        sta     _scores_table,y
+        sta     large_tmp_buf,y
 
         tya                       ; Now point Y to end of line in
         clc                       ; the table
@@ -112,7 +127,7 @@ found:
 
         ldx     #.sizeof(SCORE_LINE::NAME)-1
 :       lda     _str_input,x      ; Read the full name from str input
-        sta     _scores_table,y   ; And set it in the table
+        sta     large_tmp_buf,y   ; And set it in the table
         dey
         dex
         bpl     :-
@@ -144,10 +159,10 @@ next_score:
         inc     y_coord           ; Compute line coord
 
         ldy     score_spot
-        lda     _scores_table,y
+        lda     large_tmp_buf,y
         sta     bcd_input+1
         iny
-        lda     _scores_table,y
+        lda     large_tmp_buf,y
         sta     bcd_input
         ora     bcd_input+1
         beq     out             ; Stop at 0
@@ -163,8 +178,8 @@ next_score:
         ldx     #15
         lda     y_coord
         jsr     pushax
-        lda     #<(_scores_table+2)
-        ldx     #>(_scores_table+2)
+        lda     #<(large_tmp_buf+2)
+        ldx     #>(large_tmp_buf+2)
         clc
         adc     score_spot
         bcc     :+

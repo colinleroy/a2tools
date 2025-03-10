@@ -1,19 +1,36 @@
-        .export  _load_level_data, _load_splash_screen
-        .export  _load_lowcode, _high_scores_io
+; Copyright (C) 2025 Colin Leroy-Mira <colin@colino.net>
+;
+; This program is free software; you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation; either version 3 of the License, or
+; (at your option) any later version.
+;
+; This program is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+;
+; You should have received a copy of the GNU General Public License
+; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-        .export   _scores_table
+        .export   _load_level_data, _load_splash_screen
+        .export   _load_lowcode, _high_scores_io
 
-        .import  cur_level
-        .import  _open, _read, _write, _close, _memcpy
-        .import  pushax, popax
-        .import  __filetype, __auxtype
-        .import  _strcpy
-        .import  __LOWCODE_START__, __LOWCODE_SIZE__
-        .import  __HGR_START__, __LEVEL_SIZE__
+        .import   _open, _read, _write, _close
+        .import   pushax, popax
+        .import   __filetype, __auxtype
 
-        .include "scores.inc"
-        .include "apple2.inc"
-        .include "fcntl.inc"
+        .import   large_tmp_buf
+        .import   __LOWCODE_START__, __LOWCODE_SIZE__
+        .import   __HGR_START__, __LEVEL_SIZE__
+        .import   _decompress_lz4
+        .import   _build_hgr_tables
+
+        .importzp tmp1
+
+        .include  "scores.inc"
+        .include  "apple2.inc"
+        .include  "fcntl.inc"
 
 .code
 
@@ -47,67 +64,117 @@
         sta      destination+1
 
         lda      #<O_RDONLY
+        ldx      #$01
         ; Fallthrough to _data_io
 .endproc
 
 ; A: data IO mode
+; X: Whether to uncompress data
 .proc _data_io
-        sta     data_io_mode+1
-        cmp     #<O_RDONLY
+        stx     do_uncompress     ; Save whether we need to uncompress lz4
+
+        sta     data_io_mode+1    ; Patch _open mode
+
+        cmp     #<O_RDONLY        ; Patch io function (_read or _write)
         beq     set_read
-        lda     #<_write
+        lda     #<_write          ; Patch for _write
         ldx     #>_write
-        jmp     do_io
+        jmp     setup_out_buf
 set_read:
-        lda     #<_read
+        lda     #<_read           ; Patch for _read
         ldx     #>_read
 
-do_io:
-        sta     data_io_func+1
+setup_out_buf:
+        sta     data_io_func+1    ; Store patched io function
         stx     data_io_func+2
+
+        lda     do_uncompress     ; Do we need to uncompress?
+        bne     setup_uncompress_io_buf
+
+        ldy     destination       ; No. Do our IO directly to/from the
+        sty     file_io_low+1     ; user-provided buffer
+        ldy     destination+1
+        sty     file_io_high+1
+        bne     do_io             ; Always taken
+
+setup_uncompress_io_buf:
+        ldy     #<large_tmp_buf   ; We need to uncompress. Read the data to
+        sty     file_io_low+1     ; the temporary buffer.
+        ldy     #>large_tmp_buf
+        sty     file_io_high+1
+
+do_io:
         ; Open file
-        ; Set filetype
-        lda     #$06          ; PRODOS_T_BIN
+        lda     #$06          ; Set filetype PRODOS_T_BIN
         sta     __filetype
         lda     #$00
         sta     __auxtype
 
-        lda     filename
+        lda     filename      ; Get filename and push it for _open
         ldx     filename+1
         jsr     pushax
 
 data_io_mode:
         lda     #$FF          ; Patched with O_RDONLY or O_WRONLY
         ldx     #0
-        jsr     pushax  
+        jsr     pushax        ; Push mode for _open
 
-        ldy     #$04          ; _open is variadic
-        jsr     _open
+        ldy     #$04          ; _open is variadic, tell it how many bytes it
+        jsr     _open         ; can pop
         cmp     #$FF
-        beq     load_err
+        bne     :+
+        sec                   ; Could not open file - signal error with carry
+        rts
 
-        jsr     pushax        ; Push for read
-        jsr     pushax        ; and for close
+:       jsr     pushax        ; We now have an fd. Push it for _read/_write
+        jsr     pushax        ; and a second time for _close
 
-        ; Push destination pointer
-        lda     destination
+file_io_low:
+        lda     #$FF          ; Push IO buffer to _read/_write.
+file_io_high:                 ; It is either large_tmp_buf (for read with
+        ldx     #$FF          ; uncompress) or user-supplied destination
+        jsr     pushax
+
+        lda     size          ; Set size for _read/_write
+        ldx     size+1
+data_io_func:
+        jsr     $FFFF         ; Patched. Calls _read or _write
+
+        jsr     popax         ; Get fd back from stack
+        jsr     _close        ; And close the file
+
+        ldx     do_uncompress ; Do we need to uncompress?
+        bne     uncompress
+        clc                   ; No, so we're done.
+        rts
+
+uncompress:
+        lda     large_tmp_buf ; Get uncompressed size (the first two bytes
+        sta     tmp1          ; of the compressed data we just read)
+        lda     large_tmp_buf+1
+        sta     tmp1+1
+
+        ; Skip these two header bytes
+        lda     #<(large_tmp_buf+2)
+        ldx     #>(large_tmp_buf+2)
+        jsr     pushax        ; Push that as input buffer for lz4 decompression
+
+        lda     destination   ; Push user-specified destination buffer
         ldx     destination+1
         jsr     pushax
 
-        ; and size
-        lda     size
-        ldx     size+1
-data_io_func:
-        jsr     $FFFF         ; Patched with _read or _write
+        lda     tmp1          ; Inform lz4 decompressor of the uncompressed size
+        ldx     tmp1+1        ; so it knows when to stop
 
-        jsr     popax         ; Get fd back
-        jsr     _close
-        clc
+        jsr     _decompress_lz4
+
+        ; We're done decompressing, now recompute HGR tables in the temporary
+        ; buffer
+        jsr     _build_hgr_tables
+
+        clc                   ; And we're done!
         rts
 
-load_err:
-        sec
-        rts
 .endproc
 
 .proc _load_splash_screen
@@ -136,6 +203,7 @@ load_err:
         sta      size+1
 
         lda      #<O_RDONLY
+        ldx      #$01
         jmp      _data_io
 .endproc
 
@@ -146,9 +214,12 @@ load_err:
         lda       #>_scores_filename
         sta       filename+1
 
-        lda      #<_scores_table
+        ; We store the high scores table in large_tmp_buf
+        ; because we don't need it in the same moment that
+        ; we need this buffer for.
+        lda      #<large_tmp_buf
         sta      destination
-        lda      #>_scores_table
+        lda      #>large_tmp_buf
         sta      destination+1
 
         lda      #<SCORE_TABLE_SIZE
@@ -157,6 +228,7 @@ load_err:
         sta      size+1
 
         pla
+        ldx      #$00
         jmp      _data_io
 .endproc
 
@@ -165,11 +237,11 @@ load_err:
 filename:      .res 2
 destination:   .res 2
 size:          .res 2
-_scores_table: .res SCORE_TABLE_SIZE
+do_uncompress: .res 1
 
         .data
 
-lowcode_name:        .asciiz "lowcode"
-splash_name:         .asciiz "splash"
-level_name_template: .asciiz "level.X"
+lowcode_name:        .asciiz "LOWCODE"
+splash_name:         .asciiz "SPLASH"
+level_name_template: .asciiz "LEVEL.X"
 _scores_filename:    .asciiz "SCORES"
