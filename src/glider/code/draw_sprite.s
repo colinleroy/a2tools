@@ -1,3 +1,18 @@
+; Copyright (C) 2025 Colin Leroy-Mira <colin@colino.net>
+;
+; This program is free software; you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation; either version 3 of the License, or
+; (at your option) any later version.
+;
+; This program is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+;
+; You should have received a copy of the GNU General Public License
+; along with this program. If not, see <http://www.gnu.org/licenses/>.
+
         .export _draw_sprite, _draw_sprite_fast
         .export _load_sprite_pointer, _setup_sprite_pointer
 
@@ -5,12 +20,10 @@
         .export fast_n_bytes_per_line_draw, fast_sprite_x
         .export sprite_y, n_bytes_draw
 
-        .importzp _zp8, _zp9, _zp10, _zp11
+        .importzp _zp8p, _zp10, _zp11
         .importzp tmp4, ptr2, ptr3
         .import   _hgr_hi, _hgr_low
         .import   _div7_table, _mod7_table
-
-        .import   sprite_data
 
         .include "apple2.inc"
         .include "plane.gen.inc"
@@ -20,7 +33,7 @@
 
 .segment "LOWCODE"
 
-line            = _zp8
+line            = _zp8p
 cur_y           = _zp10
 n_bytes_draw    = _zp11
 

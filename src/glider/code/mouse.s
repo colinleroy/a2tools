@@ -1,3 +1,18 @@
+; Copyright (C) 2025 Colin Leroy-Mira <colin@colino.net>
+;
+; This program is free software; you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation; either version 3 of the License, or
+; (at your option) any later version.
+;
+; This program is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+;
+; You should have received a copy of the GNU General Public License
+; along with this program. If not, see <http://www.gnu.org/licenses/>.
+
         .export     _init_mouse, _deinit_mouse
         .export     vbl_ready, hz
 
@@ -11,9 +26,6 @@
 
         .importzp   ptr1
 
-        .import     _div7_table, _mod7_table
-
-        .import     plane_data
         .import     _check_battery_boost
         .import     _keyboard_reset_ref_x
 

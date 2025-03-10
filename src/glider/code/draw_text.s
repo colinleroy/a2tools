@@ -1,14 +1,29 @@
+; Copyright (C) 2025 Colin Leroy-Mira <colin@colino.net>
+;
+; This program is free software; you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation; either version 3 of the License, or
+; (at your option) any later version.
+;
+; This program is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+;
+; You should have received a copy of the GNU General Public License
+; along with this program. If not, see <http://www.gnu.org/licenses/>.
+
         .export    _print_number
         .export    _read_string
         .export    _str_input
 
         .import   do_bin2dec_16bit, bcd_input, bcd_result
 
-        .import    _font, _font_mask
+        .import    _font
         .import    _hgr_hi, _hgr_low
 
-        .import    popptr1, _cputc, pushax
-        .importzp  ptr1, tmp1, tmp2, tmp3
+        .import    _cputc
+        .importzp  tmp1, tmp2
 
         .include   "apple2.inc"
         .include   "font.gen.inc"
@@ -19,9 +34,6 @@
 ; X: X coord / 7
 ; Y: bottom Y coord
 .proc _print_char
-        ;;;;; Commented with micro-font
-        ; sec
-        ; sbc     #' '              ; Space is our first character
         stx     char_x_offset+1
         asl
         tax
@@ -82,9 +94,7 @@ dest_x:
         ldx     #$FF
         cpx     #40               ; Don't blit out of screen
         bcs     out
-        ;;;;; Commented with micro-font
-        ; clc
-        ; adc     #'0'
+
         jsr     _print_char
         inc     tmp1              ; Note we printed a number
         inc     dest_x+1
@@ -100,35 +110,6 @@ cur_char:
 out:
         rts
 .endproc
-
-;;;;; Commented with micro-font
-; ; TOS: Address of the buffer to print
-; ; X: X coord / 7
-; ; Y: Y coord
-; ; Returns with updated X
-; .proc _print_string
-;         stx     tmp1              ; Backup coordinates
-;         sty     tmp2
-;         jsr     popptr1           ; Pop pointer to string into ptr1
-; 
-;         ldy     #0
-; :       lda     (ptr1),y
-;         beq     print_done
-; 
-;         sty     tmp3              ; Backup string walker
-;         ldx     tmp1              ; Reload X coordinate
-;         ldy     tmp2              ; Reload Y coordinate
-;         jsr     _print_char       ; Print the character
-;         inc     tmp1              ; Increment X
-;         inc     tmp3              ; Increment string walker
-;         ldy     tmp3
-;         bne     :-
-; 
-; print_done:
-;         ldx     tmp1              ; Reload X coordinate
-;         ldy     tmp2              ; Reload Y coordinate
-;         rts
-; .endproc
 
 ; X: start X coordinate
 ; Y: bottom Y coordinate

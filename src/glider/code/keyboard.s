@@ -1,3 +1,18 @@
+; Copyright (C) 2025 Colin Leroy-Mira <colin@colino.net>
+;
+; This program is free software; you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation; either version 3 of the License, or
+; (at your option) any later version.
+;
+; This program is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+;
+; You should have received a copy of the GNU General Public License
+; along with this program. If not, see <http://www.gnu.org/licenses/>.
+
         .export     _softswitch_wait_vbl
         .export     _keyboard_reset_ref_x
         .export     _keyboard_update_ref_x
@@ -5,10 +20,9 @@
         .export     _keyboard_calibrate_hz
         .export     keyboard_level_change
 
-        .import     prev_x, ref_x, mouse_x    ; Shared with mouse.s
+        .import     prev_x, ref_x, mouse_x
         .import     _check_battery_boost
-        .import     plane_data
-        .import     vbl_ready, hz
+        .import     hz
 
         .include    "apple2.inc"
         .include    "sprite.inc"
@@ -63,10 +77,10 @@
 .endif
         bit     BUTN0
         bpl     kbd_out
-        ; Open-Apple is down. Clear high bit, check it's 'g'
+        ; Open-Apple is down. Clear high bit, check the key
         tya
         and     #$7F
-        cmp     #'g'
+        cmp     #'g'              ; G to change level
         bne     kbd_out
 
         ; It is, now get key and go to level
@@ -77,6 +91,7 @@
         sec
         sbc     #'a'
         sta     keyboard_level_change
+        bit     KBDSTRB
         jmp     kbd_out
 
 .ifdef UNKILLABLE
