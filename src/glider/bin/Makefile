@@ -143,12 +143,15 @@ splash.bg.gen.s: splash.hgr
 level%.bg.gen.s: level%.hgr
 	$(SRC_DIR)/../../bin/make-ca65-hgr.sh $< SEG > $@
 
-splash.hgr: $(SRC_DIR)/assets/intl/$(GAME_LANG)/splash.xcf
+$(SRC_DIR)/../surl-server/hgr-convert:
+	$(MAKE) -C $(SRC_DIR)/../surl-server/ -f Makefile
+
+splash.hgr: $(SRC_DIR)/assets/intl/$(GAME_LANG)/splash.xcf $(SRC_DIR)/../surl-server/hgr-convert
 	convert -flatten $< $<.png
 	$(SRC_DIR)/../surl-server/hgr-convert $<.png && mv $<.png.hgr $@
 	rm -f $<.png $<.png.hgr-preview.png
 
-%.hgr: $(SRC_DIR)/assets/levels/%.xcf
+%.hgr: $(SRC_DIR)/assets/levels/%.xcf $(SRC_DIR)/../surl-server/hgr-convert
 	convert -flatten $< $<.png
 	$(SRC_DIR)/../surl-server/hgr-convert $<.png && mv $<.png.hgr $@
 	rm -f $<.png $<.png.hgr-preview.png
