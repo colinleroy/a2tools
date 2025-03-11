@@ -17,7 +17,7 @@
                   .export cur_level_logic
 
                   .export num_lives, num_rubber_bands, num_battery
-                  .export cur_score, plane_sprite_num
+                  .export cur_score, plane_sprite_num, level_done
                   .export plane_data, rubber_band_data
 
                   .import _plane, _plane_mask
@@ -77,11 +77,14 @@ rubber_band_data:
                   .addr rubber_band_bgbackup
                   .byte 0               ; need clear
 
-cur_level:        .byte   0
-num_lives:        .byte   NUM_LIVES
-cur_score:        .word   0
-num_rubber_bands: .byte   0
-num_battery:      .byte   0
+.bss
 
-cur_level_logic:  .addr   $FFFF
-plane_sprite_num: .byte   0
+cur_level:        .res 1
+num_lives:        .res 1
+cur_score:        .res 2
+num_rubber_bands: .res 1
+num_battery:      .res 1
+
+cur_level_logic:  .res 2
+plane_sprite_num: .res 1
+level_done:       .res MAX_LEVELS

@@ -7,3 +7,5 @@ NUM_LIVES      =  3
 
 PLANE_ORIG_X   =  10
 PLANE_ORIG_Y   =  0
+
+MAX_LEVELS     =  26
