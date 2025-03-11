@@ -128,7 +128,7 @@ blockers_data:
                   ; Four bytes per blocker (start X, width, start Y, height)
                   .byte   190, 34,  54,  28    ; Books
                   .byte   148, 78,  82,  3     ; Bookshelf
-                  .byte   84 , 72,  133, 16    ; Table
+                  .byte   84 , 72,  133, 6     ; Table
                   .byte   0,   255, 191, 1     ; Floor
 
 exits:     .byte  2
