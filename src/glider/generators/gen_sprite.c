@@ -158,11 +158,6 @@ int main(int argc, char *argv[]) {
   }
 
   fprintf(fp, "         .export _%s\n", sprite_name);
-  fprintf(fp, "         .export _%s_mask\n", sprite_name);
-  for (shift = 0; shift < max_shift; shift++) {
-  fprintf(fp, "         .export %s_x%d\n", sprite_name, shift);
-  fprintf(fp, "         .export %s_mask_x%d\n", sprite_name, shift);
-  }
   fprintf(fp, "         .export _quick_draw_%s\n", sprite_name);
 
   fprintf(fp,
@@ -235,9 +230,6 @@ int main(int argc, char *argv[]) {
   fprintf(fp, "_%s:\n", sprite_name);
   for (shift = 0; shift < max_shift; shift++) {
     fprintf(fp, "         .addr %s_x%d\n", sprite_name, shift < max_shift ? shift : 0);
-  }
-  fprintf(fp, "_%s_mask:\n", sprite_name);
-  for (shift = 0; shift < max_shift; shift++) {
     fprintf(fp, "         .addr %s_mask_x%d\n", sprite_name, shift < max_shift ? shift : 0);
   }
 

@@ -20,8 +20,7 @@
                   .export cur_score, plane_sprite_num, level_done
                   .export plane_data, rubber_band_data
 
-                  .import _plane, _plane_mask
-                  .import _rubber_band, _rubber_band_mask
+                  .import _plane, _rubber_band
 
                   .import  plane_bgbackup
                   .import  rubber_band_bgbackup
@@ -48,7 +47,6 @@ plane_data:
                   .byte plane_BYTES-1 ; bytes of sprite - 1
                   .byte plane_BPLINE-1; width of sprite in bytes
                   .addr _plane        ; plane sprites
-                  .addr _plane_mask   ; plane masks
                   .byte 0             ; deactivate data
                   .addr $0000         ; deactivate cb
                   .word $0000         ; state backup
@@ -70,7 +68,6 @@ rubber_band_data:
                   .byte rubber_band_BYTES-1 ; bytes of sprite - 1
                   .byte rubber_band_BPLINE-1; width of sprite in bytes
                   .addr _rubber_band        ; band sprites
-                  .addr _rubber_band_mask   ; band masks
                   .byte 0
                   .addr $0000
                   .word $0000
