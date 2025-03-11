@@ -38,7 +38,7 @@
         .import   cur_level_logic
 
         .import   num_lives, num_rubber_bands, num_battery, cur_score
-        .import   plane_sprite_num
+        .import   plane_sprite_num, level_done
 
         .import   hz
 
@@ -74,17 +74,34 @@
 ; Y contains the plane Y at start of level
 ; X or Y can be $FF for no change
 .proc _go_to_level
-        sta     cur_level
         stx     _initial_plane_x
         sty     _initial_plane_y
-        ; Print the inter-level screen
+
+        ldx     cur_level         ; Get the previous cur_level before overwriting it
+        stx     prev_level
+        ldy     level_done,x      ; Check whether we already did that level
+        sty     no_inter_screen
+
+        sta     cur_level         ; Store new current level
+
+        tax
+        lda     level_done,x      ; Are we going back to an already done level?
+        ora     no_inter_screen   ; No inter-level screen either in this case
+        sta     no_inter_screen
+
         jsr     _clear_hgr_screen
         jsr     _clrscr
         jsr     _init_text
         clc
+        lda     no_inter_screen   ; Should we show the inter level screen?
+        bne     :+
+
+        ldx     prev_level
+        lda     #1
+        sta     level_done,x      ; Mark the level we come from as done
         jsr     _draw_level_end
 
-        jsr     load_level
+:       jsr     load_level
         bcc     :+
         ; If we couldn't load another level, we win
         ; Refresh the end level screen with carry set
@@ -358,6 +375,10 @@ game_over:
         sta     num_battery
         sta     cur_score
         sta     cur_score+1
+        ldy     #MAX_LEVELS
+:       sta     level_done,y
+        dey
+        bpl     :-
         ; Go to level 0
         jmp     load_level
 .endproc
@@ -369,3 +390,5 @@ time_counter:    .res 2
 cur_sprite:      .res 1
 _initial_plane_x:.res 1
 _initial_plane_y:.res 1
+no_inter_screen: .res 1
+prev_level:      .res 1

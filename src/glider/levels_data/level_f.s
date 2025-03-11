@@ -142,9 +142,10 @@ blockers_data:
                   .byte   175, 78,  86,  4     ; Lower bookshelf
                   .byte   0,   255, 191, 1     ; Floor
 
-exits:     .byte  1
+exits:     .byte  2
 exits_data:
                   ; Seven bytes per exit (start X, width, start Y, height,
                   ; destination X, destination Y, destination level)
                   ; destination X or Y = $FF for no change
                   .byte   280-plane_WIDTH, 3,  0,  191, PLANE_ORIG_X, $FF, 'g'
+                  .byte   0, 3,  0,  191, 270-plane_WIDTH, $FF, 'e'
