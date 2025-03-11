@@ -15,8 +15,8 @@
 
                   .export  _animate_plane_crash
 
-                  .import  _plane, _plane_mask, plane_data
-                  .import  _plane_destroyed, _plane_destroyed_mask
+                  .import  _plane, plane_data
+                  .import  _plane_destroyed
 
                   .import  _draw_sprite
                   .import  _setup_sprite_pointer, _load_sprite_pointer
@@ -31,16 +31,9 @@
 
 .segment "LOWCODE"
 
-; Sprite number in A, mask then sprite in TOS
+; Sprite number in A, sprite in TOS
 .proc _replace_sprite
         jsr     _load_sprite_pointer
-
-        jsr     popax
-        ldy     #SPRITE_DATA::SPRITE_MASK
-        sta     (cur_sprite_ptr),y
-        iny
-        txa
-        sta     (cur_sprite_ptr),y
 
         jsr     popax
         ldy     #SPRITE_DATA::SPRITE
@@ -75,9 +68,6 @@
         lda     #<_plane_destroyed
         ldx     #>_plane_destroyed
         jsr     pushax
-        lda     #<_plane_destroyed_mask
-        ldx     #>_plane_destroyed_mask
-        jsr     pushax
         lda     tmp2
         jsr     _replace_sprite
 
@@ -104,9 +94,6 @@
         ; Change sprite back
         lda     #<_plane
         ldx     #>_plane
-        jsr     pushax
-        lda     #<_plane_mask
-        ldx     #>_plane_mask
         jsr     pushax
         lda     tmp2
         jsr     _replace_sprite

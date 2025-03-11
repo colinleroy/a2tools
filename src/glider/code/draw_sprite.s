@@ -21,7 +21,7 @@
         .export sprite_y, n_bytes_draw
 
         .importzp _zp8p, _zp10, _zp11
-        .importzp tmp4, ptr2, ptr3
+        .importzp tmp4, ptr2
         .import   _hgr_hi, _hgr_low
         .import   _div7_table, _mod7_table
 
@@ -63,8 +63,9 @@ _setup_sprite_pointer:
 
         ; Select correct sprite for pixel-precise render
         lda     _mod7_table,x
-        asl
-        sta     sprite_num+1      ; Patch sprite pointer
+        asl                       ; Multiply by four to account for
+        asl                       ; data and mask pointers
+        sta     sprite_num+1      ; Patch sprite pointer number
 
         lda     _div7_table,x     ; Compute divided X
         sta     sprite_x+1
@@ -113,24 +114,18 @@ _setup_sprite_pointer:
         lda     (cur_sprite_ptr),y
         sta     ptr2+1
 
-        ldy     #SPRITE_DATA::SPRITE_MASK
-        lda     (cur_sprite_ptr),y
-        sta     ptr3
-        iny
-        lda     (cur_sprite_ptr),y
-        sta     ptr3+1
-
 sprite_num:
         ldy     #$FF
         lda     (ptr2),y
         sta     sprite_pointer+1
-        lda     (ptr3),y
-        sta     sprite_mask+1
-
         iny
         lda     (ptr2),y
         sta     sprite_pointer+2
-        lda     (ptr3),y
+        iny
+        lda     (ptr2),y
+        sta     sprite_mask+1
+        iny
+        lda     (ptr2),y
         sta     sprite_mask+2
         rts
 
@@ -138,9 +133,9 @@ sprite_num:
 _draw_sprite:
         ldy     #SPRITE_DATA::NEED_CLEAR
         lda     (cur_sprite_ptr),y
-        beq     blit_sprite
+        beq     blit_sprite       ; Skip clearing if not needed
         lda     #0
-        sta     (cur_sprite_ptr),y
+        sta     (cur_sprite_ptr),y; Reset clear-needed flag
 
         ldx     n_bytes_draw
         clc
@@ -158,12 +153,12 @@ n_bytes_per_line_clear:
         ldy     #$FF
 
 sprite_restore:
-:       lda     $FFFF,x
+        lda     $FFFF,x
 sprite_store_bg:
         sta     $FFFF,y
         dex
         dey
-        bpl     :-
+        bpl     sprite_restore    ; Next byte
 
         inc     cur_y
         cpx     #$FF              ; Did we do all bytes?
@@ -215,7 +210,7 @@ sprite_store_byte:
         sta     $FFFF,y
         dex
         dey
-        bpl     sprite_get_bg ; Next pixel
+        bpl     sprite_get_bg ; Next byte
 
         inc     cur_y
         cpx     #$FF

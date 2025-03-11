@@ -14,7 +14,6 @@ MAX_SPRITES = 10
   BYTES           .byte
   BYTES_WIDTH     .byte
   SPRITE          .addr
-  SPRITE_MASK     .addr
   DEACTIVATE_DATA .byte
   DEACTIVATE_FUNC .addr
   STATE_BACKUP    .word
