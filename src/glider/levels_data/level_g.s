@@ -26,6 +26,7 @@ level_data:
                   .addr sprites
                   .addr vents
                   .addr blockers
+                  .addr exits
 
 SOCKET0_FREQ = $40
 SOCKET1_FREQ = $50
@@ -130,7 +131,7 @@ socket1_data:
                   .addr sprites_bgbackup+256
                   .byte 0               ; need clear
 
-sprites:   .byte   5
+sprites:   .byte  5
 sprites_data:
                    ; Rubber band must be first for easy deactivation
                    ;                                ; drawn on    EVEN ODD
@@ -142,16 +143,24 @@ SOCKET1_SPRITE_NUM = (*-sprites_data)/2
                   .addr   socket1_data              ; medium      x
                   .addr   plane_data                ; big         x    x
 
-vents:     .byte   1
+vents:     .byte  1
 vents_data:
                   ; Five bytes per vent (start X, width, start Y, height, direction)
                   ; Direction = What to add to mouse_y
                   ; Watch out - start Y must be >= plane_HEIGHT
                   .byte   11,   20,  plane_HEIGHT+1,    191-plane_HEIGHT, $FF ; Up all the way
 
-blockers:  .byte   3
+blockers:  .byte  3
 blockers_data:
                   ; Four bytes per blocker (start X, width, start Y, height)
                   .byte   46,  112, 114, 60    ; Desk
                   .byte   68,  24,  84,  31    ; Macintosh
                   .byte   0,   255, 191, 1     ; Floor
+
+exits:     .byte  1
+exits_data:
+                  ; Seven bytes per exit (start X, width, start Y, height,
+                  ; destination X, destination Y, destination level)
+                  ; destination X or Y = $FF for no change
+                  ; Use a non-existent level to win the game
+                  .byte   280-plane_WIDTH, 3,  0,  191, PLANE_ORIG_X, $FF, 'z'

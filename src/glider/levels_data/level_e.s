@@ -24,6 +24,7 @@ level_data:
                   .addr sprites
                   .addr vents
                   .addr blockers
+                  .addr exits
 
 .assert * = LEVEL_DATA_START+LEVEL_DATA::LOGIC_CB, error ; Make sure the callback is where we think
 .proc logic
@@ -81,17 +82,17 @@ toast0_data:
                   .addr sprites_bgbackup+128
                   .byte 0               ; need clear
 
-sprites:   .byte   4
+sprites:   .byte  4
 sprites_data:
-                   ; Rubber band must be first for easy deactivation
-                   ;                                ; drawn on    EVEN ODD
+                  ; Rubber band must be first for easy deactivation
+                  ;                                ; drawn on    EVEN ODD
                   .addr   rubber_band_data          ; small            x
                   .addr   sheet0_data        ; medium      x
 TOAST0_SPRITE_NUM = (*-sprites_data)/2
                   .addr   toast0_data        ; medium      x
                   .addr   plane_data                ; big         x    x
 
-vents:     .byte   4
+vents:     .byte  4
 vents_data:
                   ; Five bytes per vent (start X, width, start Y, height, direction)
                   ; Direction = What to add to mouse_y
@@ -101,10 +102,17 @@ vents_data:
                   .byte   133, 20,  plane_HEIGHT+135,  57-plane_HEIGHT, $FF ; Up to the table
                   .byte   221, 20,  plane_HEIGHT+1,    191-plane_HEIGHT, $FF ; Up all the way
 
-blockers:  .byte   4
+blockers:  .byte  4
 blockers_data:
                   ; Four bytes per blocker (start X, width, start Y, height)
                   .byte   49,  78,  85,  4     ; Bookshelf left
                   .byte   177, 35,  63,  32    ; Bookshelf right with books
                   .byte   139, 72,  127, 6     ; Table
                   .byte   0,   255, 191, 1     ; Floor
+
+exits:     .byte  1
+exits_data:
+                  ; Seven bytes per exit (start X, width, start Y, height,
+                  ; destination X, destination Y, destination level)
+                  ; destination X or Y = $FF for no change
+                  .byte   280-plane_WIDTH, 3,  0,  191, PLANE_ORIG_X, $FF, 'f'

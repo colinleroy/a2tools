@@ -17,7 +17,7 @@
         .export   _draw_level_end
         .export   _clear_hgr_screen, _wait_for_input
 
-        .import   num_lives, num_rubber_bands, num_battery, cur_score, cur_level
+        .import   num_lives, num_rubber_bands, num_battery, cur_score
         .import   time_counter, frame_counter
         .import   _print_number
         .import   _quick_draw_mini_plane
@@ -31,8 +31,6 @@
 
         .import   _time_bonus_str
         .import   _your_score_str
-        .import   _press_key_str
-        .import   _no_level_str
         .import   _game_won_str
         .import   _game_lost_str
 
@@ -175,43 +173,13 @@ print_score:
         jmp     print_time_bonus
 
 print_level:
-        ; Print "go to next level" if player still have lives
-        lda     num_lives
-        beq     print_game_over
+        lda     num_lives         ; Does the player still have lives?
+        beq     print_game_over   ; No, so they lost. hah.
 
-        ldx     #6
-        lda     #12
-        jsr     pushax
-        lda     #<_press_key_str
-        ldx     #>_press_key_str
-        jsr     _cputsxy
-
-        ldx     #0
-        lda     cur_level
-        clc
-        adc     #1                ; Levels are counted from zero
-        jsr     _cutoa
-
-        lda     game_won
+        lda     game_won          ; Did they win the game?
         beq     print_done
 
-        ; Display game won message
-
-        ldx     #6
-        lda     #14
-        jsr     pushax
-        lda     #<_no_level_str
-        ldx     #>_no_level_str
-        jsr     _cputsxy
-
-        ldx     #0
-        lda     cur_level
-        clc
-        adc     #1                ; Levels are counted from zero
-        jsr     _cutoa
-
-
-        ldx     #6
+        ldx     #6                ; Yes, display game won message
         lda     #17
         jsr     pushax
         lda     #<_game_won_str
@@ -230,10 +198,9 @@ print_game_over:
         lda     #<_game_lost_str
         ldx     #>_game_lost_str
         jsr     _cputsxy
-
-print_done:
         jsr     _wait_for_input
 
+print_done:
         ; If game over, send player to scores screen
         lda     num_lives
         bne     out
