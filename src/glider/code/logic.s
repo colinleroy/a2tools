@@ -13,7 +13,8 @@
 ; You should have received a copy of the GNU General Public License
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-        .export     _check_plane_bounds, _check_rubber_band_bounds
+        .export     _check_plane_bounds, _check_plane_xy
+        .export     _check_rubber_band_bounds
         .export     _unfire_sprite
         .export     _fire_rubber_band, _fire_sprite
         .export     _rubber_band_travel, _balloon_travel
@@ -108,6 +109,20 @@ out:
         lda     rubber_band_data+SPRITE_DATA::Y_COORD
         sta     _check_plane_bounds::sy+1
         adc     #rubber_band_HEIGHT
+        sta     _check_plane_bounds::ey+1
+        jmp     _check_plane_bounds::do_check
+.endproc
+
+; Same as _check_plane_bounds but with a zero width
+; and height, so we can exit levels at the screen's
+; right border
+.proc _check_plane_xy
+        clc
+        lda     plane_data+SPRITE_DATA::X_COORD
+        sta     _check_plane_bounds::sx+1
+        sta     _check_plane_bounds::ex+1
+        lda     plane_data+SPRITE_DATA::Y_COORD
+        sta     _check_plane_bounds::sy+1
         sta     _check_plane_bounds::ey+1
         jmp     _check_plane_bounds::do_check
 .endproc

@@ -23,7 +23,7 @@
         .import     prev_x, ref_x, mouse_x
         .import     _check_battery_boost
         .import     hz, cur_level
-
+        .import     _initial_plane_x, _initial_plane_y
         .include    "apple2.inc"
         .include    "sprite.inc"
         .include    "plane_coords.inc"
@@ -46,15 +46,19 @@
         lda     #$00
         sta     kbd_should_fire
 
-        lda     #PLANE_ORIG_X
+        lda     _initial_plane_x
+        cmp     #$FF
+        beq     :+
         sta     ref_x
         sta     mouse_x
         sta     plane_x
         sta     prev_x
 
-        lda     #PLANE_ORIG_Y
+:       lda     _initial_plane_y
+        cmp     #$FF
+        beq     :+
         sta     plane_y
-        rts
+:       rts
 .endproc
 
 .proc _keyboard_update_ref_x

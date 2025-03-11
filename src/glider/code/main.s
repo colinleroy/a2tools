@@ -16,8 +16,8 @@
         .export   _main
         .export   frame_counter, time_counter
 
-        .export   _go_to_prev_level, _go_to_next_level
         .export   _go_to_level
+        .export   _initial_plane_x, _initial_plane_y
 
         .import   _init_hgr, _init_mouse
 
@@ -69,40 +69,25 @@
 
 .segment "LOWCODE"
 
-.proc _go_to_prev_level
-        rts ; UNSURE IF I WANT TO GO BACK IN LEVELS?
-        ; We restore level data, in case we die later
-        ; and come back to this level.
-        lda     cur_level
-        bne     :+
-        rts
-:       dec     cur_level
-        jmp     load_level
-.endproc
-
-.proc _go_to_next_level
-        inc     cur_level
+; A contains the level to go to.
+; X contains the plane X at start of level
+; Y contains the plane Y at start of level
+; X or Y can be $FF for no change
+.proc _go_to_level
+        sta     cur_level
+        stx     _initial_plane_x
+        sty     _initial_plane_y
         ; Print the inter-level screen
         jsr     _clear_hgr_screen
         jsr     _clrscr
         jsr     _init_text
         clc
         jsr     _draw_level_end
-        ; We restore level data, in case we die later
-        ; and come back to this level.
-        lda     cur_level
-        ; Fallthrough to _go_to_level
-.endproc
 
-.proc _go_to_level
-        sta     cur_level
         jsr     load_level
         bcc     :+
         ; If we couldn't load another level, we win
         ; Refresh the end level screen with carry set
-        jsr     _clear_hgr_screen
-        jsr     _clrscr
-        jsr     _init_text
         sec
         jsr     _end_game
 :
@@ -282,6 +267,12 @@ game_logic:
 .proc die
         jsr     _animate_plane_crash
         jsr     _play_crash
+
+        lda     #PLANE_ORIG_X
+        sta     _initial_plane_x
+        lda     #PLANE_ORIG_Y
+        sta     _initial_plane_y
+
         dec     num_lives
         beq     game_over
         jmp     load_level
@@ -357,12 +348,17 @@ game_over:
 .proc reset_game
         lda     #NUM_LIVES
         sta     num_lives
+        lda     #PLANE_ORIG_X
+        sta     _initial_plane_x
+        lda     #PLANE_ORIG_Y
+        sta     _initial_plane_y
         lda     #0
         sta     cur_level
         sta     num_rubber_bands
         sta     num_battery
         sta     cur_score
         sta     cur_score+1
+        ; Go to level 0
         jmp     load_level
 .endproc
 
@@ -371,3 +367,5 @@ game_over:
 frame_counter:   .res 1
 time_counter:    .res 2
 cur_sprite:      .res 1
+_initial_plane_x:.res 1
+_initial_plane_y:.res 1

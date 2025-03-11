@@ -14,13 +14,14 @@
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
         .export     _check_blockers, _check_vents, _check_collisions
+        .import     _check_plane_bounds, _check_plane_xy
+        .import     _check_rubber_band_bounds
         .export     _draw_screen
         .export     _move_plane
         .export     _check_level_change
         .export     _check_fire_button
 
         .import     rubber_band_data
-        .import     _check_plane_bounds, _check_rubber_band_bounds
 
         .import     _keyboard_update_ref_x
         .import     _keyboard_check_fire
@@ -35,13 +36,15 @@
         .import     _rubber_band_travel
 
         .import     frame_counter, plane_sprite_num
-        .import     _go_to_prev_level, _go_to_next_level, _go_to_level
+        .import     _go_to_level
         .import     keyboard_level_change
 
         .import     _inc_score
         .import     _unfire_sprite
 
         .import     _play_bubble
+
+        .importzp   tmp1
 
         .include    "level_data_ptr.inc"
         .include    "plane.gen.inc"
@@ -84,6 +87,51 @@ next_blocker:
         bne     do_check_blocker
 
 no_blockers:
+        clc
+        rts
+.endproc
+
+; Return with carry set if in an exit
+; A will contain the level letter to go to in this case
+.proc _check_exits
+        ; Get current exits data to data_ptr
+        lda     LEVEL_DATA_START+LEVEL_DATA::EXITS_DATA
+        sta     data_ptr
+        lda     LEVEL_DATA_START+LEVEL_DATA::EXITS_DATA+1
+        sta     data_ptr+1
+
+        ; Get number of exits in the level, to X
+        ldy     #0
+        lda     (data_ptr),y
+        tax
+
+        beq     no_exits
+
+do_check_exit:
+        iny
+        jsr     _check_plane_xy
+        bcc     next_exit
+
+        iny
+        lda     (data_ptr),y      ; Get the destination X
+        tax                       ; to X
+        iny
+        lda     (data_ptr),y      ; Get the destination Y
+        sta     tmp1              ; to tmp1, we still need current Y
+        iny
+        lda     (data_ptr),y      ; Get the destination level to A
+        ldy     tmp1              ; and reload destination Y to Y
+        ; We're in an exit
+        rts                       ; Carry already set
+
+next_exit:
+        iny                       ; Skip the destination X, Y, level bytes
+        iny
+        iny
+        dex                       ; Check next exit?
+        bne     do_check_exit
+
+no_exits:
         clc
         rts
 .endproc
@@ -258,19 +306,22 @@ grab_sprite:
         lda     keyboard_level_change
         stx     keyboard_level_change
         bmi     :+
+        ldx     #PLANE_ORIG_X     ; Start at top left in case of cheat
+        ldy     #PLANE_ORIG_Y
         jmp     _go_to_level      ; End of function
 
-:       ; Then by plane X coord
-        lda     plane_x
-        bne     :+
-        jmp     _go_to_prev_level ; End of function
-
-:       .assert (280-plane_WIDTH) .mod $2 = $0, error
-        cmp     #(280-plane_WIDTH)
+:       ; Then by exits
+        jsr     _check_exits
         bcs     :+
         rts
-        ; We finished the level!
-:       jmp     _go_to_next_level
+
+:       ; We finished the level!
+        ; A contains the level (as a letter) to go to.
+        ; X contains the plane X at start of level
+        ; Y contains the plane Y at start of level
+        ; X or Y can be $FF for no change
+        sbc     #'a'              ; Carry already set
+        jmp     _go_to_level
 
 .endproc
 
