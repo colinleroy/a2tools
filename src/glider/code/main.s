@@ -52,7 +52,7 @@
 
         .import   plane_data, rubber_band_data
 
-        .import   _wait_for_input, _clear_hgr_screen
+        .import   _wait_for_input
         .import   _platform_msleep
         .import   _allow_lowercase
 
@@ -89,7 +89,6 @@
         ora     no_inter_screen   ; No inter-level screen either in this case
         sta     no_inter_screen
 
-        jsr     _clear_hgr_screen
         jsr     _clrscr
         jsr     _init_text
         clc
@@ -211,9 +210,14 @@ new_game:
         jsr     _init_text        ; Switch back to text mode
         rts                       ; Final rts
 
-:       jsr     _clear_hgr_screen
+:       jsr     _clrscr
+        jsr     _init_text
 
         jsr     reset_game        ; Reset game loads current level (0)
+
+        lda     #1
+        jsr     _init_hgr
+
 
 game_loop:
         ; the WAI of the poor

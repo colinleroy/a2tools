@@ -43,7 +43,6 @@ clock0_data:
                   .byte clock_BYTES-1  ; bytes of sprite - 1
                   .byte clock_BPLINE-1 ; width of sprite in bytes
                   .addr _clock         ; sprites
-                  .addr _clock_mask    ; masks
                   .byte CLOCK_BONUS+3
                   .addr _clock_inc_score
                   .word $0000
@@ -63,9 +62,9 @@ vents_data:
                   ; Five bytes per vent (start X, width, start Y, height, direction)
                   ; Direction = What to add to mouse_y
                   ; Watch out - start Y must be >= plane_HEIGHT
-                  .byte   12,  20,  plane_HEIGHT+1,  191-plane_HEIGHT, $FF ; Up all the way
-                  .byte   90,  20,  plane_HEIGHT+1,  191-plane_HEIGHT, $02 ; Down all the way
-                  .byte   189, 20,  plane_HEIGHT+1,  191-plane_HEIGHT, $FF ; Up all the way
+                  .byte   17,  10,  plane_HEIGHT+1,  191-plane_HEIGHT, $FF ; Up all the way
+                  .byte   95,  10,  plane_HEIGHT+1,  191-plane_HEIGHT, $02 ; Down all the way
+                  .byte   194, 10,  plane_HEIGHT+1,  191-plane_HEIGHT, $FF ; Up all the way
 
 blockers:  .byte  4
 blockers_data:
@@ -80,5 +79,5 @@ exits_data:
                   ; Seven bytes per exit (start X, width, start Y, height,
                   ; destination X, destination Y, destination level)
                   ; destination X or Y = $FF for no change
-                  .byte   280-plane_WIDTH, 3,  0,  191, PLANE_ORIG_X, $FF, 'e'
                   .byte   0, 3,  0,  191, 270-plane_WIDTH, $FF, 'c'
+                  .byte   280-plane_WIDTH, 3,  0,  191, PLANE_ORIG_X, $FF, 'e'

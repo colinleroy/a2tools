@@ -62,7 +62,6 @@ battery0_data:
                   .byte battery_BYTES-1   ; bytes of sprite - 1
                   .byte battery_BPLINE-1  ; width of sprite in bytes
                   .addr _battery          ; battery sprites
-                  .addr _battery_mask     ; battery masks
                   .byte BATTERY_BONUS
                   .addr _grab_battery
                   .word $0000           ; state backup
@@ -83,7 +82,6 @@ clock0_data:
                   .byte clock_BYTES-1  ; bytes of sprite - 1
                   .byte clock_BPLINE-1 ; width of sprite in bytes
                   .addr _clock         ; clock sprites
-                  .addr _clock_mask    ; clock masks
                   .byte CLOCK_BONUS+1
                   .addr _clock_inc_score
                   .word $0000
@@ -104,7 +102,6 @@ knife0_data:
                   .byte knife_BYTES-1   ; bytes of sprite - 1
                   .byte knife_BPLINE-1  ; width of sprite in bytes
                   .addr _knife          ; knife sprites
-                  .addr _knife_mask     ; knife masks
                   .byte 0
                   .addr $0000
                   .word $0000           ; state backup
@@ -125,7 +122,6 @@ knife1_data:
                   .byte knife_BYTES-1   ; bytes of sprite - 1
                   .byte knife_BPLINE-1  ; width of sprite in bytes
                   .addr _knife          ; knife sprites
-                  .addr _knife_mask     ; knife masks
                   .byte 0
                   .addr $0000
                   .word $0000           ; state backup
@@ -150,8 +146,8 @@ vents_data:
                   ; Five bytes per vent (start X, width, start Y, height, direction)
                   ; Direction = What to add to mouse_y
                   ; Watch out - start Y must be >= plane_HEIGHT
-                  .byte   35,  20,  plane_HEIGHT+1,   191-plane_HEIGHT, $FF ; Up all the way
-                  .byte   217, 20,  plane_HEIGHT+1,   191-plane_HEIGHT, $FF ; Up all the way
+                  .byte   40,  10,  plane_HEIGHT+1,   191-plane_HEIGHT, $FF ; Up all the way
+                  .byte   222, 10,  plane_HEIGHT+1,   191-plane_HEIGHT, $FF ; Up all the way
 
 blockers:  .byte  3
 blockers_data:
@@ -165,5 +161,5 @@ exits_data:
                   ; Seven bytes per exit (start X, width, start Y, height,
                   ; destination X, destination Y, destination level)
                   ; destination X or Y = $FF for no change
-                  .byte   280-plane_WIDTH, 3,  0,  191, PLANE_ORIG_X, $FF, 'c'
                   .byte   0, 3,  0,  191, 270-plane_WIDTH, $FF, 'a'
+                  .byte   280-plane_WIDTH, 3,  0,  191, PLANE_ORIG_X, $FF, 'c'
