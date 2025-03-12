@@ -37,10 +37,10 @@ battery0_data:
                   .byte 1               ; static
                   .byte 217             ; x
                   .byte battery_WIDTH
-                  .byte 69-battery_HEIGHT
+                  .byte 99-battery_HEIGHT
                   .byte battery_HEIGHT
                   .byte 217             ; prev_x
-                  .byte 69-battery_HEIGHT
+                  .byte 99-battery_HEIGHT
                   .byte battery_BYTES-1   ; bytes of sprite - 1
                   .byte battery_BPLINE-1  ; width of sprite in bytes
                   .addr _battery          ; battery sprites
@@ -69,7 +69,7 @@ vents_data:
 blockers:  .byte  2
 blockers_data:
                   ; Four bytes per blocker (start X, width, start Y, height)
-                  .byte   195, 30,  69,  106   ; Cupboard
+                  .byte   195, 30,  99,  76    ; Cupboard
                   .byte   0,   255, 191, 1     ; Floor
 
 exits:     .byte  3
