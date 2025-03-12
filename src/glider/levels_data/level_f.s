@@ -66,7 +66,6 @@ sheet0_data:
                   .byte sheet_BYTES-1  ; bytes of sprite - 1
                   .byte sheet_BPLINE-1 ; width of sprite in bytes
                   .addr _sheet         ; sprites
-                  .addr _sheet_mask    ; masks
                   .byte 1
                   .addr _grab_sheet
                   .word $0000
@@ -87,7 +86,6 @@ switch0_data:
                   .byte switch_BYTES-1  ; bytes of sprite - 1
                   .byte switch_BPLINE-1 ; width of sprite in bytes
                   .addr _switch         ; sprites
-                  .addr _switch_mask    ; masks
                   .byte 0
                   .addr _play_click
                   .word $0000
@@ -108,7 +106,6 @@ chainsaw0_data:
                   .byte chainsaw_BYTES-1  ; bytes of sprite - 1
                   .byte chainsaw_BPLINE-1 ; width of sprite in bytes
                   .addr _chainsaw         ; sprites
-                  .addr _chainsaw_mask    ; masks
                   .byte 0
                   .addr $0000
                   .word $0000
@@ -132,7 +129,7 @@ vents_data:
                   ; Direction = What to add to mouse_y
                   ; Watch out - start Y must be >= plane_HEIGHT
                   .byte   9,   71,  plane_HEIGHT+1,    191-plane_HEIGHT, $02 ; Down all the way
-                  .byte   148, 20,  plane_HEIGHT+1,    191-plane_HEIGHT, $FF ; Up all the way
+                  .byte   153, 10,  plane_HEIGHT+1,    191-plane_HEIGHT, $FF ; Up all the way
 
 blockers:  .byte  4
 blockers_data:
@@ -147,5 +144,5 @@ exits_data:
                   ; Seven bytes per exit (start X, width, start Y, height,
                   ; destination X, destination Y, destination level)
                   ; destination X or Y = $FF for no change
-                  .byte   280-plane_WIDTH, 3,  0,  191, PLANE_ORIG_X, $FF, 'g'
                   .byte   0, 3,  0,  191, 270-plane_WIDTH, $FF, 'e'
+                  .byte   280-plane_WIDTH, 3,  0,  191, PLANE_ORIG_X, $FF, 'g'

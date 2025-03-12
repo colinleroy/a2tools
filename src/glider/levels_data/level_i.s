@@ -16,7 +16,7 @@
         .include  "code/sprite.inc"
         .include  "code/constants.inc"
 
-.segment "level_g"
+.segment "level_i"
 
 level_data:
                   .addr sprites
@@ -29,55 +29,30 @@ level_data:
         rts
 .endproc
 
-
-battery0_data:
-                  .byte 1               ; active
-                  .byte 0               ; deadly
-                  .byte 0               ; destroyable
-                  .byte 1               ; static
-                  .byte 217             ; x
-                  .byte battery_WIDTH
-                  .byte 69-battery_HEIGHT
-                  .byte battery_HEIGHT
-                  .byte 217             ; prev_x
-                  .byte 69-battery_HEIGHT
-                  .byte battery_BYTES-1   ; bytes of sprite - 1
-                  .byte battery_BPLINE-1  ; width of sprite in bytes
-                  .addr _battery          ; battery sprites
-                  .byte BATTERY_BONUS
-                  .addr _grab_battery
-                  .word $0000           ; state backup
-                  .addr sprites_bgbackup+0
-                  .byte 0               ; need clear
-
-sprites:   .byte  3
+sprites:   .byte  2
 sprites_data:
                    ; Rubber band must be first for easy deactivation
                    ;                                ; drawn on    EVEN ODD
                   .addr   rubber_band_data          ; small            x
-                  .addr   battery0_data             ; medium      x
                   .addr   plane_data                ; big         x    x
 
-vents:     .byte  2
+vents:     .byte  1
 vents_data:
                   ; Five bytes per vent (start X, width, start Y, height, direction)
                   ; Direction = What to add to mouse_y
                   ; Watch out - start Y must be >= plane_HEIGHT
-                  .byte   23,   10,  plane_HEIGHT+1,    191-plane_HEIGHT, $FF ; Up all the way
                   .byte   152,   10,  plane_HEIGHT+1,    191-plane_HEIGHT, $FF ; Up all the way
 
 blockers:  .byte  2
 blockers_data:
                   ; Four bytes per blocker (start X, width, start Y, height)
-                  .byte   195, 30,  69,  106   ; Cupboard
+                  .byte   12,  72 , 128, 6     ; Table
                   .byte   0,   255, 191, 1     ; Floor
 
-exits:     .byte  3
+exits:     .byte  1
 exits_data:
                   ; Seven bytes per exit (start X, width, start Y, height,
                   ; destination X, destination Y, destination level)
                   ; destination X or Y = $FF for no change
                   ; Use a non-existent level to win the game
-                  .byte   0, 3,  0,  191, 270-plane_WIDTH, $FF, 'f'
-                  .byte   280-plane_WIDTH, 3,  0,  191, PLANE_ORIG_X, $FF, 'h'
-                  .byte   95, 92-plane_WIDTH, 25, 1, $FF, 163-plane_HEIGHT, 'i' ; stair exit
+                  .byte   101, 92-plane_WIDTH, 165-plane_HEIGHT, 1, $FF, 26, 'g' ; stair exit

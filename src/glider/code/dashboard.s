@@ -201,6 +201,7 @@ print_game_over:
         jsr     _wait_for_input
 
 print_done:
+        jsr     _clear_hgr_screen
         ; If game over, send player to scores screen
         lda     num_lives
         bne     out

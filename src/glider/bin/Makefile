@@ -25,6 +25,8 @@ levels = \
 	level_e \
 	level_f \
 	level_g \
+	level_h \
+	level_i \
 
 lz4_files = \
 	$(levels) \
@@ -101,14 +103,16 @@ glider_SOURCES := \
 	$(levels_backgrounds) \
 	$(levels_code)
 
-#Start at 0xC00 to leave 1kB for file IO buffer
+ifdef UNKILLABLE
+UNKILLABLE_CFLAG = --asm-define UNKILLABLE
+endif
 
 glider_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl \
 	-vm -m glider.map \
 	--asm-include-dir $(shell pwd) \
 	--asm-include-dir $(SRC_DIR) \
-	--asm-define MAX_COMPRESSED_DATA_SIZE=$(MAX_COMPRESSED_DATA_SIZE)
-	#--asm-define UNKILLABLE
+	--asm-define MAX_COMPRESSED_DATA_SIZE=$(MAX_COMPRESSED_DATA_SIZE) \
+	$(UNKILLABLE_CFLAG)
 
 # Targets
 

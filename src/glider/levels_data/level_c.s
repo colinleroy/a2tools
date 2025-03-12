@@ -55,7 +55,6 @@ clock0_data:
                   .byte clock_BYTES-1  ; bytes of sprite - 1
                   .byte clock_BPLINE-1 ; width of sprite in bytes
                   .addr _clock         ; sprites
-                  .addr _clock_mask    ; masks
                   .byte CLOCK_BONUS+2
                   .addr _clock_inc_score
                   .word $0000
@@ -76,7 +75,6 @@ socket0_data:
                   .byte socket_BYTES-1 ; bytes of sprite - 1
                   .byte socket_BPLINE-1; width of sprite in bytes
                   .addr _socket        ; sprites
-                  .addr _socket_mask   ; masks
                   .byte 0
                   .addr $0000
                   .word $0000
@@ -97,7 +95,6 @@ switch0_data:
                   .byte switch_BYTES-1 ; bytes of sprite - 1
                   .byte switch_BPLINE-1; width of sprite in bytes
                   .addr _switch        ; sprites
-                  .addr _switch_mask   ; masks
                   .byte 0
                   .addr _play_click
                   .word $0000
@@ -120,8 +117,8 @@ vents_data:
                   ; Five bytes per vent (start X, width, start Y, height, direction)
                   ; Direction = What to add to mouse_y
                   ; Watch out - start Y must be >= plane_HEIGHT
-                  .byte   47,  20,  plane_HEIGHT+1,   191-plane_HEIGHT, $FF ; Up all the way
-                  .byte   221, 20,  plane_HEIGHT+87,  103-plane_HEIGHT, $FF ; Up all the way
+                  .byte   52,  10,  plane_HEIGHT+1,   191-plane_HEIGHT, $FF ; Up all the way
+                  .byte   226, 10,  plane_HEIGHT+87,  103-plane_HEIGHT, $FF ; Up all the way
 
 blockers:  .byte  4
 blockers_data:
@@ -136,5 +133,5 @@ exits_data:
                   ; Seven bytes per exit (start X, width, start Y, height,
                   ; destination X, destination Y, destination level)
                   ; destination X or Y = $FF for no change
-                  .byte   280-plane_WIDTH, 3,  0,  191, PLANE_ORIG_X, $FF, 'd'
                   .byte   0, 3,  0,  191, 270-plane_WIDTH, $FF, 'b'
+                  .byte   280-plane_WIDTH, 3,  0,  191, PLANE_ORIG_X, $FF, 'd'

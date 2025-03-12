@@ -58,7 +58,6 @@ clock0_data:
                   .byte clock_BYTES-1   ; bytes of sprite - 1
                   .byte clock_BPLINE-1  ; width of sprite in bytes
                   .addr _clock          ; clock sprites
-                  .addr _clock_mask     ; clock masks
                   .byte CLOCK_BONUS     ; deac cb data
                   .addr _clock_inc_score; deac cb
                   .word $0000           ; state backup
@@ -78,8 +77,7 @@ balloon0_data:
                   .byte 191-balloon_HEIGHT
                   .byte balloon_BYTES-1 ; bytes of sprite - 1
                   .byte balloon_BPLINE-1; width of sprite in bytes
-                  .addr _balloon        ; clock sprites
-                  .addr _balloon_mask   ; clock masks
+                  .addr _balloon        ; sprites
                   .byte 0
                   .addr $0000
                   .word $0000
@@ -99,8 +97,7 @@ rubber_box0_data:
                   .byte 91-rubber_box_HEIGHT
                   .byte rubber_box_BYTES-1 ; bytes of sprite - 1
                   .byte rubber_box_BPLINE-1; width of sprite in bytes
-                  .addr _rubber_box        ; clock sprites
-                  .addr _rubber_box_mask   ; clock masks
+                  .addr _rubber_box        ; sprites
                   .byte 3
                   .addr _grab_rubber_bands ; deactivation callback
                   .word $0000              ; state backup
@@ -132,8 +129,8 @@ vents_data:
                   ; Five bytes per vent (start X, width, start Y, height, direction)
                   ; Direction = What to add to mouse_y
                   ; Watch out - start Y must be >= plane_HEIGHT
-                  .byte   40,  20,  plane_HEIGHT+1,   191-plane_HEIGHT, $FF ; Up all the way
-                  .byte   227, 20,  plane_HEIGHT+1,   191-plane_HEIGHT, $FF ; Up all the way
+                  .byte   45,  10,  plane_HEIGHT+1,   191-plane_HEIGHT, $FF ; Up all the way
+                  .byte   232, 10,  plane_HEIGHT+1,   191-plane_HEIGHT, $FF ; Up all the way
 
 blockers:  .byte  3
 blockers_data:
@@ -148,7 +145,3 @@ exits_data:
                   ; destination X, destination Y, destination level)
                   ; destination X or Y = $FF for no change
                   .byte   280-plane_WIDTH, 3,  0,  191, PLANE_ORIG_X, $FF, 'b'
-                  ; Horizontal exit example:
-                  ; .byte   100, 100, 191-plane_HEIGHT-1, 1, 3
-                  ; Left exit example:
-                  ; .byte   0, 3,  0,  191, 4
