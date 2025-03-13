@@ -1,8 +1,7 @@
-        .import   _battery, _battery_mask
-        .import   _clock, _clock_mask
-        .import   _knife, _knife_mask
+        .import   _battery
+        .import   _clock
+        .import   _knife
 
-        .import   level_logic_done
         .import   _clock_inc_score
         .import   _grab_battery
 

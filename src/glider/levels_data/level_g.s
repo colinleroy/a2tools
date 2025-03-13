@@ -1,12 +1,8 @@
-        .import   _battery, _battery_mask
+        .import   _battery
 
         .import   _grab_battery
 
-        .import   frame_counter
         .import   plane_data, rubber_band_data
-
-        .import   _play_click, _play_chainsaw
-        .import   _grab_sheet, _unfire_sprite
 
         .import   sprites_bgbackup
 

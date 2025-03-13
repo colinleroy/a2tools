@@ -1,9 +1,7 @@
-        .import   _clock, _clock_mask
+        .import   _clock
 
-        .import   level_logic_done
         .import   _clock_inc_score
 
-        .import   frame_counter
         .import   plane_data, rubber_band_data
 
         .import   sprites_bgbackup

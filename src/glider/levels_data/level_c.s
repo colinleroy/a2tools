@@ -1,12 +1,9 @@
-        .import   _clock, _clock_mask
-        .import   _switch, _switch_mask
-        .import   _socket, _socket_mask
+        .import   _clock
+        .import   _switch
+        .import   _socket
 
-        .import   level_logic_done
-        .import   _unfire_sprite
         .import   _clock_inc_score
 
-        .import   frame_counter
         .import   plane_data, rubber_band_data
 
         .import   _socket_toggle

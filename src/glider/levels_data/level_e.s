@@ -1,10 +1,8 @@
-        .import   _toast, _toast_mask
-        .import   _sheet, _sheet_mask
+        .import   _toast
+        .import   _sheet
 
-        .import   level_logic_done
         .import   _grab_sheet
 
-        .import   frame_counter
         .import   plane_data, rubber_band_data
 
         .import   _fire_sprite, _toast_travel
