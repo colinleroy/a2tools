@@ -234,21 +234,37 @@ static void insert_symbol(char **parts, int n_parts) {
   }
   /* Insert it, and when we have a size, insert it
    * with all offsets */
-  if (id != (unsigned long)-1 && symbols[id] == NULL && name != NULL) {
+  if (id != (unsigned long)-1 && name != NULL) {
+    dbg_symbol *existing = symbols[id];
+
     for (i = 0; i < size; i++) {
-      symbols[id + i] = malloc(sizeof(dbg_symbol));
+      dbg_symbol *new_symbol;
+      existing = symbols[id + i];
+      new_symbol = malloc(sizeof(dbg_symbol));
+
+      if (existing && i == 0 && strchr(existing->name, '+')) {
+        free(existing->name);
+        free(existing);
+        existing = NULL;
+      }
 
       if (i == 0) {
-        symbols[id + i]->name = strdup(name);
+        new_symbol->name = strdup(name);
       } else {
-        symbols[id + i]->name = malloc(128);
-        snprintf(symbols[id + i]->name, 128, "%s+%d", name, i);
+        new_symbol->name = malloc(128);
+        snprintf(new_symbol->name, 128, "%s+%d", name, i);
       }
-      symbols[id + i]->size = size;
-      symbols[id + i]->lcbank = (id + i < 0xD000 || id + i > 0xDFFF) ? 1 : 2;
-      symbols[id + i]->mem = RAM;
-      symbols[id + i]->addr = id + i;
-      symbols[id + i]->real_addr = id + i;
+      new_symbol->size = size;
+      new_symbol->lcbank = (id + i < 0xD000 || id + i > 0xDFFF) ? 1 : 2;
+      new_symbol->mem = RAM;
+      new_symbol->addr = id + i;
+      new_symbol->real_addr = id + i;
+      if (existing == NULL) {
+        symbols[id + i] = new_symbol;
+      } else {
+        free(new_symbol->name);
+        free(new_symbol);
+      }
       //printf("inserted symbol %d (name %s, size %d)\n", id + i, name, size);
     }
   }
