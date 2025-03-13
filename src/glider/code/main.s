@@ -27,7 +27,8 @@
         .import   _setup_sprite_pointer
 
         .import   _check_blockers, _check_collisions
-        .import   _draw_screen, _draw_dashboard, _draw_level_end
+        .import   _draw_screen, _draw_level_end
+        .import   _draw_dashboard, _draw_dashboard_background
         .import   _move_plane
         .import   _check_level_change
         .import   _check_fire_button
@@ -226,7 +227,7 @@ game_loop:
 wait_vbl_handler:
         jsr     _mouse_wait_vbl
 
-
+loop_start:
 ; DRAW SPRITES FIRST
         jsr     _draw_screen
 
@@ -348,6 +349,9 @@ game_over:
         ; Deactivate interrupts for first draw
         php
         sei
+
+        ; Clear the dashboard background
+        jsr     _draw_dashboard_background
 
         ; Draw each sprite once
         lda     plane_sprite_num

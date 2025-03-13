@@ -13,7 +13,7 @@
 ; You should have received a copy of the GNU General Public License
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-        .export   _draw_dashboard
+        .export   _draw_dashboard, _draw_dashboard_background
         .export   _draw_level_end
         .export   _clear_hgr_screen, _wait_for_input
 
@@ -35,7 +35,7 @@
         .import   _game_lost_str
 
         .import   _hi_scores_screen
-        .import   _cputsxy, _cutoa
+        .import   _cputsxy, _cutoa, _cputc
 
         .import   _mouse_check_fire
         .import   pushax
@@ -61,6 +61,24 @@ RUBBER_BAND_ICON_Y = 41
 BATTERY_ICON_X     = 37
 BATTERY_ICON_Y     = 61
 
+.proc _draw_dashboard_background
+        ldx     #MINI_PLANE_ICON_X
+        ldy     #MINI_PLANE_ICON_Y
+        jsr     _quick_draw_mini_plane
+
+        ldx     #SCORE_ICON_X
+        ldy     #SCORE_ICON_Y
+        jsr     _quick_draw_mini_score
+
+        ldx     #RUBBER_BAND_ICON_X
+        ldy     #RUBBER_BAND_ICON_Y
+        jsr     _quick_draw_rubber_band_reverted
+
+        ldx     #BATTERY_ICON_X
+        ldy     #BATTERY_ICON_Y
+        jmp     _quick_draw_battery_reverted
+.endproc
+
 .proc _draw_dashboard
         lda     frame_counter     ; Draw dashboard on odd frames
         and     #01
@@ -75,10 +93,6 @@ BATTERY_ICON_Y     = 61
         lda     num_lives
         jsr     _print_number
 
-        ldx     #MINI_PLANE_ICON_X
-        ldy     #MINI_PLANE_ICON_Y
-        jsr     _quick_draw_mini_plane
-
         ; Score
         ldx     #SCORE_ICON_X
         ldy     #SCORE_ICON_Y+rubber_band_reverted_HEIGHT+font_HEIGHT+1
@@ -86,10 +100,6 @@ BATTERY_ICON_Y     = 61
         sta     bcd_input+1
         lda     cur_score
         jsr     _print_number
-
-        ldx     #SCORE_ICON_X
-        ldy     #SCORE_ICON_Y
-        jsr     _quick_draw_mini_score
 
         ; Rubber bands
         ldx     #RUBBER_BAND_ICON_X
@@ -99,21 +109,13 @@ BATTERY_ICON_Y     = 61
         lda     num_rubber_bands
         jsr     _print_number
 
-        ldx     #RUBBER_BAND_ICON_X
-        ldy     #RUBBER_BAND_ICON_Y
-        jsr     _quick_draw_rubber_band_reverted
-
         ; Battery
         ldx     #BATTERY_ICON_X
         ldy     #BATTERY_ICON_Y+battery_reverted_HEIGHT+font_HEIGHT+1
         lda     #0
         sta     bcd_input+1
         lda     num_battery
-        jsr     _print_number
-
-        ldx     #BATTERY_ICON_X
-        ldy     #BATTERY_ICON_Y
-        jmp     _quick_draw_battery_reverted
+        jmp     _print_number
 .endproc
 
 ; Enter with carry set to display game won message
@@ -138,6 +140,9 @@ print_time_bonus:
         lda     time_counter
         ldx     #0
         jsr     _cutoa
+
+        lda     #' '
+        jsr     _cputc
 
         dec     time_counter      ; Decrement here so we can print it at 0...
 

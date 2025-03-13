@@ -30,7 +30,7 @@
 
 .segment "LOWCODE"
 
-; A: ASCII code of the char
+; A: number of the char
 ; X: X coord / 7
 ; Y: bottom Y coord
 .proc _print_char
@@ -107,6 +107,13 @@ cur_char:
         ; Did we print anything? If not it's a 0
         lda     tmp1
         beq     blit_digit
+
+        ; And print a space to clear potentially shorter number
+        ldx     dest_x+1
+        ldy     blit_digit+1
+        lda     #$0A
+        jsr     _print_char
+
 out:
         rts
 .endproc
