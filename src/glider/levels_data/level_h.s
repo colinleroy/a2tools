@@ -1,13 +1,11 @@
-        .import   _socket, _socket_mask
-        .import   _sheet, _sheet_mask
+        .import   _socket
+        .import   _sheet
 
-        .import   frame_counter
         .import   plane_data, rubber_band_data
 
         .import   _socket_toggle
 
-        .import   _play_click, _play_chainsaw
-        .import   _grab_sheet, _unfire_sprite
+        .import   _grab_sheet
 
         .import   sprites_bgbackup
 

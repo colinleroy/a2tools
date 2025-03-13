@@ -1,8 +1,6 @@
-        .import   _chainsaw, _chainsaw_mask
-        .import   _sheet, _sheet_mask
-        .import   _switch, _switch_mask
-
-        .import   level_logic_done
+        .import   _chainsaw
+        .import   _sheet
+        .import   _switch
 
         .import   frame_counter
         .import   plane_data, rubber_band_data

@@ -1,9 +1,7 @@
-        .import   _balloon, _balloon_mask
-        .import   _clock, _clock_mask
-        .import   _rubber_box, _rubber_box_mask
+        .import   _balloon
+        .import   _clock
+        .import   _rubber_box
 
-        .import   frame_counter
-        .import   level_logic_done
         .import   _clock_inc_score
 
         .import   _grab_rubber_bands
