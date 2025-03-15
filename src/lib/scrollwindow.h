@@ -15,6 +15,8 @@ void __fastcall__ set_hscrollwindow(unsigned char left, unsigned char width);
 #define WNDBTM  "$23"
 #define CH      "$24"
 #define CV      "$25"
+#define OURCH   "$057B"
+#define OURCV   "$05FB"
 #define BASL    "$28"
 #define BASH    "$29"
 #define RD80VID "$C01F"
