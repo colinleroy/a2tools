@@ -29,6 +29,7 @@ levels = \
 	level_i \
 	level_j \
 	level_k \
+	level_l \
 
 lz4_files = \
 	$(levels) \
