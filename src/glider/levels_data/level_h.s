@@ -155,6 +155,5 @@ exits_data:
                   ; Seven bytes per exit (start X, width, start Y, height,
                   ; destination X, destination Y, destination level)
                   ; destination X or Y = $FF for no change
-                  ; Use a non-existent level to win the game
-                  .byte   280-plane_WIDTH, 3,  0,  191, PLANE_ORIG_X, $FF, 'z'
                   .byte   0, 3,  0,  191, 270-plane_WIDTH, $FF, 'g'
+                  .byte   280-plane_WIDTH, 3,  0,  191, PLANE_ORIG_X, $FF, 'l'
