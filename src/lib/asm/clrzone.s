@@ -78,7 +78,7 @@ next_char:
         bit     RD80VID
         bpl     get40
         lda     OURCH
-        jmp     cmp_char
+        bra     cmp_char
 get40:
         lda     CH
 cmp_char:

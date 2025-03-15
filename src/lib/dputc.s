@@ -41,14 +41,14 @@ _dputc:
         bit     RD80VID
         bpl     get40
         lda     OURCH              ; Don't scroll if first line but not first char
-        beq     :+
-        rts
+        bra     check_scroll
 get40:
 .endif
         lda     CH
+check_scroll:
         bne     noscroll
 
-:       jsr     _scrollup_one
+        jsr     _scrollup_one
         lda     WNDBTM
         .ifdef __APPLE2ENH__
         dec     a
