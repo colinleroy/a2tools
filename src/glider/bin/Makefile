@@ -27,6 +27,8 @@ levels = \
 	level_g \
 	level_h \
 	level_i \
+	level_j \
+	level_k \
 
 lz4_files = \
 	$(levels) \
@@ -208,6 +210,7 @@ clean:
 check_imports.sh: $(glider_SOURCES) $(SRC_DIR)/check_imports.sh
 	cp -f $(SRC_DIR)/check_imports.sh .
 	./check_imports.sh $(SRC_DIR)/code
+	./check_imports.sh $(SRC_DIR)/levels_data
 
 $(BINARY_NAME): glider.ld.cfg $(glider_SOURCES) check_imports.sh
 	cl65 -g -Wl --dbgfile,glider.dbg -Ln glider.lbl $(CFLAGS) $(iigs_CFLAGS) $(glider_CLCFLAGS) \
