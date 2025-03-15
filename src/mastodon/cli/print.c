@@ -28,7 +28,11 @@ void __fastcall__ clrnln(void) {
   clreol();
   #ifdef __APPLE2__
     __asm__("lda #0");
+  #ifdef __APPLE2ENH__
+    __asm__("sta "OURCH);
+  #else
     __asm__("sta "CH);
+  #endif
     __asm__("lda #$0A");
     __asm__("jsr _dputc");
   #endif

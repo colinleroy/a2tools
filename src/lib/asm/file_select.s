@@ -25,7 +25,7 @@
         .import         _sprintf, _strcpy, _strcat, _cputs, _strlen, _strrchr
         .import         _malloc0, _free, _clreol, _clrzone, _revers
 
-        .import         _gotoy, _gotoxy, _wherex, _wherey
+        .import         _gotoy, _gotox, _gotoxy, _wherex, _wherey
         .import         _cgetc, _cputc, _tolower, _beep
         .import         tosumula0, tosaddax, booleq
         .import         popa, popax, pusha0, pusha, pushax, swapstk, incaxy
@@ -352,8 +352,7 @@ gotoxy_origin:
         jsr       _gotoy
 gotox_sx:
         lda       sx
-        sta       CH
-        rts
+        jmp       _gotox
 
 .proc _file_select
         sta       prompt_str            ; Save parameters

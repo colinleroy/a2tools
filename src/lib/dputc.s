@@ -9,14 +9,10 @@
         .include        "apple2.inc"
 
 bell:
-        lda     CH
-        pha
         bit     $C082
         jsr     $FF3A           ; BELL
         bit     $C080
-        pla
-        sta     CH              ; Bell scrambles CH in 80col mode on IIgs
-        rts                     ; moving it to OURCH and resetting CH to 0
+        rts
 
 .ifndef AVOID_ROM_CALLS
 
@@ -41,10 +37,18 @@ _dputc:
         cmp     CV
         bne     noscroll
 
-        lda     CH              ; Don't scroll if first line but not first char
+.ifdef __APPLE2ENH__
+        bit     RD80VID
+        bpl     get40
+        lda     OURCH              ; Don't scroll if first line but not first char
+        beq     :+
+        rts
+get40:
+.endif
+        lda     CH
         bne     noscroll
 
-        jsr     _scrollup_one
+:       jsr     _scrollup_one
         lda     WNDBTM
         .ifdef __APPLE2ENH__
         dec     a

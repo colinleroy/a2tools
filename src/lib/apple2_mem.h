@@ -12,7 +12,8 @@ extern uint8 *WNDLFT;
 #define WNDBTM  0x23
 #define CH      0x24
 #define CV      0x25
-
+#define OURCH   0x057B
+#define OURCV   0X05FB
 #endif
 
 #endif
