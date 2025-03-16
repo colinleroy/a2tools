@@ -56,6 +56,7 @@
         .import   _wait_for_input
         .import   _platform_msleep
         .import   _allow_lowercase
+        .import   _build_hgr_tables
 
         .import   _play_crash
         .import   _init_text, _clrscr
@@ -151,8 +152,7 @@ x_coord_reset_handler:
 .segment "LOWCODE"
 
 .proc _real_main
-        ; Our HGR tables are already built by _data_io via _load_lowcode
-        ; jsr     _build_hgr_tables
+        jsr     _build_hgr_tables
 
         lda     #1
         jsr     _allow_lowercase  ; For Bulgarian i18n
@@ -297,7 +297,11 @@ game_logic:
 
         dec     num_lives
         beq     game_over
-        jmp     load_level
+        jsr     _clrscr
+        jsr     _init_text
+        jsr     load_level
+        lda     #1
+        jmp     _init_hgr
 game_over:
         jmp     _lose_game
 .endproc
