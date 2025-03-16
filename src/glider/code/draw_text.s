@@ -110,6 +110,8 @@ cur_char:
 
         ; And print a space to clear potentially shorter number
         ldx     dest_x+1
+        cpx     #40               ; Don't blit out of screen
+        bcs     out
         ldy     blit_digit+1
         lda     #$0A
         jsr     _print_char
