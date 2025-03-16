@@ -4,6 +4,7 @@
         .include  "plane.gen.inc"
         .include  "level_data_struct.inc"
         .include  "code/sprite.inc"
+        .include  "code/plane_coords.inc"
         .include  "code/constants.inc"
 
 .segment "level_n"
@@ -16,8 +17,27 @@ level_data:
 
 .assert * = LEVEL_DATA_START+LEVEL_DATA::LOGIC_CB, error ; Make sure the callback is where we think
 .proc logic
+        lda       plane_y         ; Update Y ourselves to make sure the plane
+        clc                       ; floats free until player exits level
+        adc       float_direction
+        sta       plane_y
+
+        cmp       #125
+        bcs       go_up
+        cmp       #50
+        bcc       go_down
+        rts
+go_up:
+        lda       #$FF
+        sta       float_direction
+        rts
+go_down:
+        lda       #$01
+        sta       float_direction
         rts
 .endproc
+
+float_direction: .byte $01
 
 sprites:   .byte  2
 sprites_data:
@@ -26,24 +46,18 @@ sprites_data:
                   .addr   rubber_band_data          ; small       x
                   .addr   plane_data                ; big         x    x
 
-vents:     .byte  8
+vents:     .byte  1
 vents_data:
                   ; Five bytes per vent (start X, width, start Y, height, direction)
                   ; Direction = What to add to mouse_y
-                  ; Watch out - start Y must be >= plane_HEIGHT
-                  .byte   19,   20,  plane_HEIGHT+30,   192-30-plane_HEIGHT, $FF ; Up all the way
-                  .byte   49,   20,  plane_HEIGHT+70,   192-70-plane_HEIGHT, $FF ; Up all the way
-                  .byte   79,   20,  plane_HEIGHT+40,   192-40-plane_HEIGHT, $FF ; Up all the way
-                  .byte   109,  20,  plane_HEIGHT+90,   192-90-plane_HEIGHT, $FF ; Up all the way
-                  .byte   139,  20,  plane_HEIGHT+100,  192-100-plane_HEIGHT, $FF ; Up all the way
-                  .byte   169,  20,  plane_HEIGHT+50,   192-50-plane_HEIGHT, $FF ; Up all the way
-                  .byte   199,  20,  plane_HEIGHT+20,   192-20-plane_HEIGHT, $FF ; Up all the way
-                  .byte   222,  20,  plane_HEIGHT+60,   192-60-plane_HEIGHT, $FF ; Up all the way
 
-blockers:  .byte  1
+                  ; Set a level-wide vent that does not change Y so we can do
+                  ; it in logic
+                  .byte 0, 255, 0, 191, $00
+
+blockers:  .byte  0
 blockers_data:
                   ; Four bytes per blocker (start X, width, start Y, height)
-                  .byte   0,   255, 191, 1    ; Floor
 
 exits:     .byte  2
 exits_data:
