@@ -16,7 +16,7 @@
         .export   _hi_scores_screen
         .export   _load_and_show_high_scores
 
-        .import   large_tmp_buf
+        .import   __HGR_START__
         .import   _your_name_str
         .import   _high_scores_str
         .import   _read_string
@@ -53,8 +53,8 @@
 
 :       dex
         dey
-        lda     large_tmp_buf,y
-        sta     large_tmp_buf,x
+        lda     __HGR_START__,y
+        sta     __HGR_START__,x
         cpy     score_spot
         bne     :-
 
@@ -83,9 +83,9 @@
 .proc _find_score_spot
         ldy     #$00
 
-:       ldx     large_tmp_buf,y
+:       ldx     __HGR_START__,y
         iny
-        lda     large_tmp_buf,y
+        lda     __HGR_START__,y
         
         cpx     cur_score+1
         bcc     found
@@ -115,10 +115,10 @@ found:
 .proc _set_high_score
         ldy     score_spot        ; Update score at spot (Y points
         lda     cur_score+1       ; to start of line in table
-        sta     large_tmp_buf,y
+        sta     __HGR_START__,y
         iny
         lda     cur_score
-        sta     large_tmp_buf,y
+        sta     __HGR_START__,y
 
         tya                       ; Now point Y to end of line in
         clc                       ; the table
@@ -127,7 +127,7 @@ found:
 
         ldx     #.sizeof(SCORE_LINE::NAME)-1
 :       lda     _str_input,x      ; Read the full name from str input
-        sta     large_tmp_buf,y   ; And set it in the table
+        sta     __HGR_START__,y   ; And set it in the table
         dey
         dex
         bpl     :-
@@ -159,10 +159,10 @@ next_score:
         inc     y_coord           ; Compute line coord
 
         ldy     score_spot
-        lda     large_tmp_buf,y
+        lda     __HGR_START__,y
         sta     bcd_input+1
         iny
-        lda     large_tmp_buf,y
+        lda     __HGR_START__,y
         sta     bcd_input
         ora     bcd_input+1
         beq     out             ; Stop at 0
@@ -178,8 +178,8 @@ next_score:
         ldx     #15
         lda     y_coord
         jsr     pushax
-        lda     #<(large_tmp_buf+2)
-        ldx     #>(large_tmp_buf+2)
+        lda     #<(__HGR_START__+2)
+        ldx     #>(__HGR_START__+2)
         clc
         adc     score_spot
         bcc     :+

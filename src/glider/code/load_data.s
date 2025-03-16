@@ -16,15 +16,13 @@
         .export   _load_level_data, _load_splash_screen
         .export   _load_lowcode, _high_scores_io
 
-        .import   _open, _read, _write, _close
+        .import   _open, _read, _write, _close, _memcpy
         .import   pushax, popax
         .import   __filetype, __auxtype
 
-        .import   large_tmp_buf
         .import   __LOWCODE_START__, __LOWCODE_SIZE__
         .import   __HGR_START__, __LEVEL_SIZE__
         .import   _decompress_lz4
-        .import   _build_hgr_tables
 
         .importzp tmp1
 
@@ -98,9 +96,9 @@ setup_out_buf:
         bne     do_io             ; Always taken
 
 setup_uncompress_io_buf:
-        ldy     #<large_tmp_buf   ; We need to uncompress. Read the data to
-        sty     file_io_low+1     ; the temporary buffer.
-        ldy     #>large_tmp_buf
+        ldy     #<__HGR_START__   ; We need to uncompress. Read the data to
+        sty     file_io_low+1     ; the temporary buffer (the HGR page).
+        ldy     #>__HGR_START__
         sty     file_io_high+1
 
 do_io:
@@ -131,7 +129,7 @@ data_io_mode:
 
 file_io_low:
         lda     #$FF          ; Push IO buffer to _read/_write.
-file_io_high:                 ; It is either large_tmp_buf (for read with
+file_io_high:                 ; It is either __HGR_START__ (for read with
         ldx     #$FF          ; uncompress) or user-supplied destination
         jsr     pushax
 
@@ -149,29 +147,50 @@ data_io_func:
         rts
 
 uncompress:
-        lda     large_tmp_buf ; Get uncompressed size (the first two bytes
+        lda     __HGR_START__ ; Get compressed size (the first two bytes
         sta     tmp1          ; of the compressed data we just read)
-        lda     large_tmp_buf+1
-        sta     tmp1+1
+        ldx     __HGR_START__+1
+        stx     tmp1+1
 
-        ; Skip these two header bytes
-        lda     #<(large_tmp_buf+2)
-        ldx     #>(large_tmp_buf+2)
-        jsr     pushax        ; Push that as input buffer for lz4 decompression
+        ; Get uncompressed size (the next two bytes)
+        lda     __HGR_START__+2
+        ldx     __HGR_START__+3
+        sta     size
+        stx     size+1
+
+        ; Compute where to move data, we want it to be
+        ; the furthest possible in the available buffer
+        ; so that decompression doesn't overwrite the last
+        ; compressed bytes
+        lda     #<(__HGR_START__+__LEVEL_SIZE__)
+        sec
+        sbc     tmp1
+        tay
+        lda     #>(__HGR_START__+__LEVEL_SIZE__)
+        sbc     tmp1+1
+        tax
+        tya
+        jsr     pushax        ; Push it for decompressor source
+        jsr     pushax        ; and for memcpy dest
+
+        ; Where to move data from (the HGR page excluding the 4
+        ; header bytes)
+        lda     #<(__HGR_START__+4)
+        ldx     #>(__HGR_START__+4)
+        jsr     pushax        ; Push source for memcpy
+
+        lda     tmp1          ; Copy compressed size bytes
+        ldx     tmp1+1
+        jsr     _memcpy
 
         lda     destination   ; Push user-specified destination buffer
         ldx     destination+1
         jsr     pushax
 
-        lda     tmp1          ; Inform lz4 decompressor of the uncompressed size
-        ldx     tmp1+1        ; so it knows when to stop
+        lda     size          ; Inform lz4 decompressor of the uncompressed size
+        ldx     size+1        ; so it knows when to stop
 
         jsr     _decompress_lz4
-
-        ; We're done decompressing, now recompute HGR tables in the temporary
-        ; buffer
-        jsr     _build_hgr_tables
-
         clc                   ; And we're done!
         rts
 
@@ -214,12 +233,12 @@ uncompress:
         lda       #>_scores_filename
         sta       filename+1
 
-        ; We store the high scores table in large_tmp_buf
+        ; We store the high scores table in HGR page
         ; because we don't need it in the same moment that
         ; we need this buffer for.
-        lda      #<large_tmp_buf
+        lda      #<__HGR_START__
         sta      destination
-        lda      #>large_tmp_buf
+        lda      #>__HGR_START__
         sta      destination+1
 
         lda      #<SCORE_TABLE_SIZE

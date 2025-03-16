@@ -1,7 +1,9 @@
 CC65_TARGET := apple2
 STREAMER_VER := 6502
 SAMPLING_HZ := 8000
-MAX_COMPRESSED_DATA_SIZE := 0x1000
+# We have a 0x2100 buffer for uncompression,
+# and want to make sure the end is a bit further
+MAX_COMPRESSED_DATA_SIZE := 0x2040
 
 ifndef GAME_LANG
 GAME_LANG := en

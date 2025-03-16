@@ -18,7 +18,7 @@
         .export  _hgr_hi, _hgr_low
         .export  _mod7_table, _div7_table
 
-        .export  sprites_bgbackup, large_tmp_buf
+        .export  sprites_bgbackup
 
         .include "sprite.inc"
         .include  "plane.gen.inc"
@@ -26,27 +26,12 @@
 
 .bss
 
-; This is a big buffer that needs to hold compressed level data while
-; uncompressing it (in load_data.s)
-large_tmp_buf:        .res MAX_COMPRESSED_DATA_SIZE
+plane_bgbackup:        .res plane_BYTES
+rubber_band_bgbackup:  .res rubber_band_BYTES
+sprites_bgbackup:      .res MAX_SPRITES*128
 
-; However, it is useless between level loads, so we will reuse it to
-; store background saves for every sprite.
-plane_bgbackup       = large_tmp_buf        + 0
-rubber_band_bgbackup = plane_bgbackup       + plane_BYTES
-sprites_bgbackup     = rubber_band_bgbackup + rubber_band_BYTES
+_hgr_hi:                .res 192
+_hgr_low:               .res 192
 
-; We also use the same buffer to store HGR and /7 tables
-; This means HGR and division tables must be rebuilt after
-; each time the buffer is used for decompression. See
-; load_data.s.
-_hgr_hi              = sprites_bgbackup     + MAX_SPRITES*128
-_hgr_low             = _hgr_hi              + 192
-
-_div7_table          = _hgr_low             + 192
-_mod7_table          = _div7_table          + 256
-
-__end_of_buffer_share= _mod7_table          + 256
-
-; Make sure we don't overflow our large buffer
-.assert __end_of_buffer_share < large_tmp_buf+MAX_COMPRESSED_DATA_SIZE, error
+_div7_table:            .res 256
+_mod7_table:            .res 256
