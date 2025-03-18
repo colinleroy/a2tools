@@ -43,6 +43,7 @@
 .endproc
 
 .proc _keyboard_reset_ref_x
+        bit     KBDSTRB
         lda     #$00
         sta     kbd_should_fire
 
