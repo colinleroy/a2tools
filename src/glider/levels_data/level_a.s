@@ -89,10 +89,10 @@ rubber_box0_data:
                   .byte 1               ; static
                   .byte 105             ; x
                   .byte rubber_box_WIDTH
-                  .byte 91-rubber_box_HEIGHT
+                  .byte 88-rubber_box_HEIGHT
                   .byte rubber_box_HEIGHT
                   .byte 105             ; prev_x
-                  .byte 91-rubber_box_HEIGHT
+                  .byte 88-rubber_box_HEIGHT
                   .byte rubber_box_BYTES-1 ; bytes of sprite - 1
                   .byte rubber_box_BPLINE-1; width of sprite in bytes
                   .addr _rubber_box        ; sprites
@@ -130,10 +130,11 @@ vents_data:
                   .byte   45,  10,  plane_HEIGHT+1,   191-plane_HEIGHT, $FF ; Up all the way
                   .byte   232, 10,  plane_HEIGHT+1,   191-plane_HEIGHT, $FF ; Up all the way
 
-blockers:  .byte  3
+blockers:  .byte  4
 blockers_data:
                   ; Four bytes per blocker (start X, width, start Y, height)
-                  .byte   104, 24,  91,  31    ; Mac
+                  .byte   105, 33,  88,  24    ; Apple II screen
+                  .byte   101, 57,  111, 11    ; Apple II bottom
                   .byte   103, 92,  121, 6     ; Table
                   .byte   0,   255, 191, 1     ; Floor
 
