@@ -41,7 +41,7 @@ clock0_data:
                   .byte clock_BYTES-1   ; bytes of sprite - 1
                   .byte clock_BPLINE-1  ; width of sprite in bytes
                   .addr _clock          ; clock sprites
-                  .byte CLOCK_BONUS     ; deac cb data
+                  .byte CLOCK_AMOUNT    ; deac cb data
                   .addr _clock_inc_score; deac cb
                   .word $0000           ; state backup
                   .addr sprites_bgbackup+0 ; bg backup
