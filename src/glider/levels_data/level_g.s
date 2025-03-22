@@ -40,7 +40,7 @@ battery0_data:
                   .byte battery_BYTES-1   ; bytes of sprite - 1
                   .byte battery_BPLINE-1  ; width of sprite in bytes
                   .addr _battery          ; battery sprites
-                  .byte BATTERY_BONUS
+                  .byte BATTERY_AMOUNT
                   .addr _grab_battery
                   .word $0000           ; state backup
                   .addr sprites_bgbackup+0

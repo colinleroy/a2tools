@@ -269,7 +269,7 @@ destroy_sprite_with_rubber_band:
         lda     #0                ; Deactivate rubber band
         jsr     _unfire_sprite
         jsr     _play_bubble      ; Play sound
-        lda     #DESTROY_BONUS
+        lda     #DESTROY_SCORE
         jsr     _inc_score
 
         ; Unfire it

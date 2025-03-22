@@ -52,7 +52,7 @@ clock0_data:
                   .byte clock_BYTES-1  ; bytes of sprite - 1
                   .byte clock_BPLINE-1 ; width of sprite in bytes
                   .addr _clock         ; sprites
-                  .byte CLOCK_BONUS+2
+                  .byte CLOCK_AMOUNT
                   .addr _clock_inc_score
                   .word $0000
                   .addr sprites_bgbackup+0

@@ -23,7 +23,7 @@
         .export     _grab_rubber_bands, _grab_battery, _grab_sheet, _inc_score
         .export     _clock_inc_score
         .export     _check_battery_boost
-        .import     ref_x
+        .import     ref_x, cur_level, time_counter
 
         .import     rubber_band_data
         .import     frame_counter
@@ -401,11 +401,17 @@ end_toast_move:
 .endproc
 
 .proc _clock_inc_score
+        clc
+        adc     time_counter
+        sta     time_counter
         jsr     _play_ding
-        lda     #5
+        lda     #CLOCK_SCORE
+        clc
+        adc     cur_level
         ; Fallthrough through _inc_score
 .endproc
 
+; Input: A: score to add
 .proc _inc_score
         clc
         adc     cur_score

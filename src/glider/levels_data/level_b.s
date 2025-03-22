@@ -61,7 +61,7 @@ battery0_data:
                   .byte battery_BYTES-1   ; bytes of sprite - 1
                   .byte battery_BPLINE-1  ; width of sprite in bytes
                   .addr _battery          ; battery sprites
-                  .byte BATTERY_BONUS
+                  .byte BATTERY_AMOUNT
                   .addr _grab_battery
                   .word $0000           ; state backup
                   .addr sprites_bgbackup+0
@@ -81,7 +81,7 @@ clock0_data:
                   .byte clock_BYTES-1  ; bytes of sprite - 1
                   .byte clock_BPLINE-1 ; width of sprite in bytes
                   .addr _clock         ; clock sprites
-                  .byte CLOCK_BONUS+1
+                  .byte CLOCK_AMOUNT
                   .addr _clock_inc_score
                   .word $0000
                   .addr sprites_bgbackup+128
