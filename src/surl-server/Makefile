@@ -45,14 +45,15 @@ all: $(PROGRAM) hgr-convert
 
 CUPSFILTER_VERSION = $(shell (pkg-config  --modversion libcupsfilters || echo 0)|cut -b1-1)
 CUPSFILTER_CFLAGS  = $(shell pkg-config  --cflags libcupsfilters)
-CUPSFILTER_LIBS    = $(shell pkg-config  --libs libcupsfilters)
-
+CUPSFILTER_LIBS    = $(shell pkg-config  --libs   libcupsfilters)
+JQ_CFLAGS          = $(shell pkg-config  --cflags libjq 2>/dev/null || true)
+JQ_LIBS            = $(shell pkg-config  --libs   libjq 2>/dev/null || echo "-ljq")
 $(PROGRAM): $(SOURCES)
 	gcc $(CFLAGS) \
 		$(shell curl-config --cflags) \
 		$(shell cups-config --cflags) \
 		$(shell libpng-config --cflags) \
-		$(shell pkg-config --cflags libjq) \
+		$(JQ_CFLAGS) \
 		$(shell pkg-config --cflags \
 						SDL_image gumbo libmagic \
 						libavfilter libavformat libavformat libavcodec \
@@ -63,7 +64,7 @@ $(PROGRAM): $(SOURCES)
 		$(shell curl-config --libs) \
 		$(shell cups-config --libs) \
 		$(shell libpng-config --libs) \
-		$(shell pkg-config --libs libjq || echo "-ljq") \
+		$(JQ_LIBS) \
 		$(shell pkg-config --libs \
 						SDL_image gumbo libmagic \
 						libavfilter libavformat libavformat libavcodec \
