@@ -154,7 +154,9 @@ GCCLDFLAGS = $(shell sdl-config --libs)
 
 .PHONY: all clean
 
-all dist: mastodon-$(suffix).po mastoperso-$(suffix).po
+all dist: mastodon-$(suffix).po
+
+perso: all mastoperso-$(suffix).po
 
 CLEANDISK = $(SRC_DIR)/../../disks/ProDOS_2_4_3.po
 mastodon-$(suffix).po: mastodon.bin mastocli.bin mastowrite.bin mastoimg.bin

@@ -71,7 +71,9 @@ GCCLDFLAGS =
 
 .PHONY: all clean
 
-all: stp-$(suffix).po stpperso-$(suffix).po
+all dist: stp-$(suffix).po
+
+perso: all stpperso-$(suffix).po
 
 CLEANDISK = $(SRC_DIR)/../../disks/ProDOS_2_4_3.po
 stp-$(suffix).po: $(PROGRAM).bin

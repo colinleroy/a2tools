@@ -89,7 +89,8 @@ rbrowser_CLCFLAGS = -t $(CC65_TARGET) \
 #0x4000-0x6000 is ALSO used to store setup code in RT_ONCE in order to shrink
 #              the binary a bit. But DO NOT runtime_once_clean() as usual!
 
-all: wozamp-$(suffix).po wozampperso-$(suffix).po
+all dist: wozamp-$(suffix).po
+perso: all wozampperso-$(suffix).po
 
 ifdef BUILD_VIDEOPLAY
 videoplay_SOURCES := \
