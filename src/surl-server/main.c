@@ -1527,6 +1527,12 @@ static curl_buffer *surl_handle_request(char method, char *url, char **headers, 
 
   curlbuf->response_code = 500;
 
+  if (is_ftp && curl != NULL) {
+    /* https://github.com/curl/curl/issues/13731 */
+    curl_easy_cleanup(curl);
+    curl = NULL;
+  }
+
   /* Init curl */
   if (curl == NULL) {
     curl = curl_easy_init();
