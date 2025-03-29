@@ -1,0 +1,26 @@
+MIN_Y              = 0
+MAX_Y              = 191
+
+MY_PUSHER_MIN_X    = 0
+MY_PUSHER_MAX_X    = 224
+MY_PUSHER_MIN_Y    = 154
+MY_PUSHER_MAX_Y    = 191
+
+MY_PUSHER_INI_X    = 116
+MY_PUSHER_INI_Y    = 191
+
+THEIR_PUSHER_MIN_X = 0
+THEIR_PUSHER_MAX_X = 224
+THEIR_PUSHER_MIN_Y = 58
+THEIR_PUSHER_MAX_Y = 82
+
+THEIR_PUSHER_INI_X = 116
+THEIR_PUSHER_INI_Y = 160
+
+PUCK_MIN_X         = 0
+PUCK_MAX_X         = 249
+PUCK_MIN_Y         = 15
+PUCK_MAX_Y         = 195 ; A bit extra for bounce
+
+PUCK_INI_X         = 128
+PUCK_INI_Y         = 170 ;160
