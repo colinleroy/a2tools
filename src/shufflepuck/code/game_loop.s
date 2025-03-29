@@ -53,16 +53,16 @@
         and     #1
         beq     :+
         ; ~3000 cycles
-        ; jsr     _load_their_pusher_pointer
-        ; jsr     _setup_sprite_pointer
-        ; jsr     _draw_sprite
-
-        ; ~3600 cycles
-        jsr     _load_puck_pointer
+        jsr     _load_their_pusher_pointer
         jsr     _setup_sprite_pointer
         jsr     _draw_sprite
         rts
-:       ; ~8700 cycles
+
+:       ; ~3600 cycles
+        jsr     _load_puck_pointer
+        jsr     _setup_sprite_pointer
+        jsr     _draw_sprite
+       ; ~8700 cycles
         jsr     _load_my_pusher_pointer
         jsr     _setup_sprite_pointer
         jsr     _draw_sprite
@@ -163,10 +163,15 @@ out:
 ; X,Y in input
 .proc _move_their_pusher
         sty     their_pusher_y
-        ;jsr     _transform_x
         stx     their_pusher_x
-        rts
-        ;jmp     _their_pusher_select
+        jsr     _transform_xy
+        stx     their_pusher_gx
+        tya
+        sec
+        sbc     #their_pusher4_HEIGHT
+        tay
+        sty     their_pusher_gy
+        jmp     _their_pusher_select
 .endproc
 
 
@@ -262,7 +267,7 @@ currently_hitting: .byte 0
         bcs     out
 
         clc
-        adc     #my_pusher0_WIDTH
+        adc     #my_pusher0_WIDTH ; Same for their pusher, they are the same size
         bcs     :+                ; If adding our width overflowed, we're good
         cmp     puck_x            ; the pusher is on the right and the puck too
         bcc     out
