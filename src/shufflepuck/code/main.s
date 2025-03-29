@@ -21,6 +21,7 @@
 
         .import   puck_x, puck_y, puck_dx, puck_dy
         .import   my_pusher_x, my_pusher_y
+        .import   their_pusher_x, their_pusher_y
 
         .import   _puck_reinit_order
         .import   _draw_screen
@@ -107,6 +108,11 @@ reset_game:
         ldx     mouse_x
         stx     my_pusher_x
 
+        ldy     #THEIR_PUSHER_INI_Y
+        sty     their_pusher_y
+        ldx     #THEIR_PUSHER_INI_X
+        stx     their_pusher_x
+
         lda     #PUCK_INI_X
         sta     puck_x
         lda     #PUCK_INI_Y
@@ -116,6 +122,7 @@ reset_game:
         sta     puck_dx
         sta     puck_dy
         jsr     _puck_reinit_order
+
 game_loop:
         ; the WAI of the poor
         ; because I don't understand how WAI works
@@ -131,13 +138,10 @@ loop_start:
         ldx     mouse_x
         stx     my_pusher_x
         jsr     _move_my_pusher
-        ; 
-        ; lda     mouse_y
-        ; sec
-        ; sbc     #90
-        ; tay
-        ; ldx     mouse_x
-        ; jsr     _move_their_pusher
+
+        ldy     their_pusher_y
+        ldx     their_pusher_x
+        jsr     _move_their_pusher
 
         jsr     _puck_check_hit
         jsr     _move_puck
