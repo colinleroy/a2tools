@@ -13,9 +13,11 @@
 ; You should have received a copy of the GNU General Public License
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-        .export   _draw_sprite, _draw_sprite_fast
+        .export   _clear_sprite, _draw_sprite, _draw_sprite_fast
         .export   _load_puck_pointer, _load_my_pusher_pointer, _load_their_pusher_pointer
-        .export   _setup_sprite_pointer
+        .export   _setup_sprite_pointer_full
+        .export   _setup_sprite_pointer_for_clear
+        .export   _setup_sprite_pointer_for_draw
 
         .export   fast_sprite_pointer
         .export   fast_n_bytes_per_line_draw, fast_sprite_x
@@ -67,8 +69,7 @@ _load_their_pusher_pointer:
 
         rts
 
-; Finish setting up clear/draw functions with sprite data
-_setup_sprite_pointer:
+_setup_sprite_pointer_full:
         ldy     #SPRITE_DATA::X_COORD
         lda     (cur_sprite_ptr),y
         tax
@@ -110,6 +111,84 @@ _setup_sprite_pointer:
         sta     n_bytes_per_line_clear+1
         sta     n_bytes_per_line_draw+1
 
+        ldy     #SPRITE_DATA::BG_BACKUP
+        lda     (cur_sprite_ptr),y
+        sta     sprite_restore+1
+        sta     sprite_backup+1
+        iny
+        lda     (cur_sprite_ptr),y
+        sta     sprite_restore+2
+        sta     sprite_backup+2
+        jmp     select_sprite
+
+
+; Finish setting up clear/draw functions with sprite data
+_setup_sprite_pointer_for_clear:
+        ldy     #SPRITE_DATA::PREV_X_COORD
+        lda     (cur_sprite_ptr),y
+        sta     sprite_prev_x+1
+
+        ldy     #SPRITE_DATA::PREV_Y_COORD
+        lda     (cur_sprite_ptr),y          ; Get existing prev_y for clear
+        sta     cur_y
+
+        ldy     #SPRITE_DATA::BYTES
+        lda     (cur_sprite_ptr),y
+        sta     n_bytes_draw
+
+        ldy     #SPRITE_DATA::BYTES_WIDTH
+        lda     (cur_sprite_ptr),y
+        sta     n_bytes_per_line_clear+1
+
+        ldy     #SPRITE_DATA::BG_BACKUP
+        lda     (cur_sprite_ptr),y
+        sta     sprite_restore+1
+        iny
+        lda     (cur_sprite_ptr),y
+        sta     sprite_restore+2
+        rts
+
+_setup_sprite_pointer_for_draw:
+        ldy     #SPRITE_DATA::X_COORD
+        lda     (cur_sprite_ptr),y
+        tax
+
+        ; Select correct sprite for pixel-precise render
+        lda     _mod7_table,x
+        asl                       ; Multiply by four to account for
+        asl                       ; data and mask pointers
+        sta     sprite_num+1      ; Patch sprite pointer number
+
+        lda     _div7_table,x     ; Compute divided X
+        sta     sprite_x+1
+
+        ldy     #SPRITE_DATA::PREV_X_COORD
+        sta     (cur_sprite_ptr),y          ; And save the new prev_x now
+
+        ldy     #SPRITE_DATA::Y_COORD
+        lda     (cur_sprite_ptr),y
+        sta     sprite_y
+
+
+        ldy     #SPRITE_DATA::PREV_Y_COORD
+        sta     (cur_sprite_ptr),y          ; Save the new prev_y
+
+        ldy     #SPRITE_DATA::BYTES
+        lda     (cur_sprite_ptr),y
+        sta     n_bytes_draw
+
+        ldy     #SPRITE_DATA::BYTES_WIDTH
+        lda     (cur_sprite_ptr),y
+        sta     n_bytes_per_line_draw+1
+
+        ldy     #SPRITE_DATA::BG_BACKUP
+        lda     (cur_sprite_ptr),y
+        sta     sprite_backup+1
+        iny
+        lda     (cur_sprite_ptr),y
+        sta     sprite_backup+2
+
+select_sprite:
         ldy     #SPRITE_DATA::SPRITE
         lda     (cur_sprite_ptr),y
         sta     ptr2
@@ -133,11 +212,12 @@ sprite_num:
         rts
 
 ; X, Y : coordinates
-_draw_sprite:
+_clear_sprite:
         ldy     #SPRITE_DATA::NEED_CLEAR
         lda     (cur_sprite_ptr),y
-        beq     blit_sprite       ; Skip clearing if not needed
-        lda     #0
+        bne     :+                ; Skip clearing if not needed
+        rts
+:       lda     #0
         sta     (cur_sprite_ptr),y; Reset clear-needed flag
 
         ldx     n_bytes_draw
@@ -148,18 +228,15 @@ sprite_prev_x:
         ldy     cur_y
         adc     _hgr_low,y
         sta     sprite_store_bg+1
-        sta     sprite_restore+1
         lda     _hgr_hi,y
         ;adc     #0 - carry won't be set here
         sta     sprite_store_bg+2
-        adc     #$20
-        sta     sprite_restore+2
 
 n_bytes_per_line_clear:
         ldy     #$FF
 
 sprite_restore:
-        lda     $FFFF,y
+        lda     $FFFF,x
 sprite_store_bg:
         sta     $FFFF,y
         dex
@@ -169,8 +246,9 @@ sprite_store_bg:
         inc     cur_y
         cpx     #$FF              ; Did we do all bytes?
         bne     clear_next_line
+        rts
 
-blit_sprite:
+_draw_sprite:
         ; Clear done, now draw
         ldy     #SPRITE_DATA::NEED_CLEAR
         lda     #1
@@ -190,9 +268,8 @@ sprite_x:
         sta     sprite_store_byte+1
         lda     _hgr_hi,y
         ;adc     #0 - carry won't be set here
-        sta     sprite_store_byte+2
-        adc     #$20
         sta     sprite_get_bg+2
+        sta     sprite_store_byte+2
 
 n_bytes_per_line_draw:
         ldy     #$FF
@@ -200,6 +277,9 @@ n_bytes_per_line_draw:
         ; Get what's under the sprite
 sprite_get_bg:
         lda     $FFFF,y
+sprite_backup:
+        ; Back it up
+        sta     $FFFF,x
         ; draw sprite
 sprite_mask:
         and     $FFFF,x       ; Patched

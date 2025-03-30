@@ -83,16 +83,6 @@ calibrate_hz_handler:
 
         jsr     _load_table
 
-        lda     #<$4000 ; Backup table
-        ldx     #>$4000
-        jsr     pushax
-        lda     #<$2000
-        ldx     #>$2000
-        jsr     pushax
-        lda     #<$2100
-        ldx     #>$2100
-        jsr     _memcpy
-
         lda     #1
         jsr     _init_hgr
 

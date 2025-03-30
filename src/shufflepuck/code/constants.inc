@@ -23,4 +23,4 @@ PUCK_MIN_Y         = 15
 PUCK_MAX_Y         = 195 ; A bit extra for bounce
 
 PUCK_INI_X         = 128
-PUCK_INI_Y         = 170 ;160
+PUCK_INI_Y         = 160 ;160

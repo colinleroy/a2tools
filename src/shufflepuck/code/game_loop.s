@@ -19,11 +19,13 @@
         .export     puck_x, puck_y, puck_dx, puck_dy
         .export     my_pusher_x, my_pusher_y
         .export     their_pusher_x, their_pusher_y
-        
+
         .export     _puck_reinit_order
 
         .import     _load_puck_pointer, _load_my_pusher_pointer, _load_their_pusher_pointer
-        .import     _setup_sprite_pointer, _draw_sprite
+        .import     _setup_sprite_pointer_full, _draw_sprite, _clear_sprite
+        .import     _setup_sprite_pointer_for_clear
+        .import     _setup_sprite_pointer_for_draw
         .import     mouse_x, mouse_y
         .import     mouse_dx, mouse_dy
 
@@ -47,28 +49,74 @@
 
 .segment "LOWCODE"
 
-.proc _draw_screen
+.proc _draw_screen_my_side
         lda     frame_counter
         inc     frame_counter
         and     #1
         beq     :+
-        ; ~3000 cycles
+
+        ; Redraw other side
         jsr     _load_their_pusher_pointer
-        jsr     _setup_sprite_pointer
+        jsr     _setup_sprite_pointer_full
+        jsr     _clear_sprite
         jsr     _draw_sprite
         rts
 
-:       ; ~3600 cycles
-        jsr     _load_puck_pointer
-        jsr     _setup_sprite_pointer
-        jsr     _draw_sprite
-       ; ~8700 cycles
+:       ; ~ 12800 cycles
         jsr     _load_my_pusher_pointer
-        jsr     _setup_sprite_pointer
+        jsr     _setup_sprite_pointer_for_clear
+        jsr     _clear_sprite
+
+        jsr     _load_puck_pointer
+        jsr     _setup_sprite_pointer_full
+        jsr     _clear_sprite
+        jsr     _draw_sprite
+
+        jsr     _load_my_pusher_pointer
+        jsr     _setup_sprite_pointer_for_draw
         jsr     _draw_sprite
         rts
 .endproc
 
+.proc _draw_screen_their_side
+        lda     frame_counter
+        inc     frame_counter
+        and     #1
+        beq     :+
+
+        ; ~6600 cycles - Their side
+        jsr     _load_puck_pointer
+        jsr     _setup_sprite_pointer_for_clear
+        jsr     _clear_sprite
+
+        jsr     _load_their_pusher_pointer
+        jsr     _setup_sprite_pointer_full
+        jsr     _clear_sprite
+        jsr     _draw_sprite
+
+        jsr     _load_puck_pointer
+        jsr     _setup_sprite_pointer_for_draw
+        jsr     _draw_sprite
+        rts
+
+:       ; My side now
+        jsr     _load_my_pusher_pointer
+        jsr     _setup_sprite_pointer_full
+        jsr     _clear_sprite
+        jsr     _draw_sprite
+        rts
+.endproc
+
+; Draw screen, choosing which draw function to use depending
+; on the puck's side.
+.proc _draw_screen
+        lda     puck_y
+        cmp     #96                   ; Middle of HGR height
+
+        bcs     :+
+        jmp     _draw_screen_their_side
+:       jmp     _draw_screen_my_side
+.endproc
 ;X, Y input
 ;Updates X, Y, destroys A
 .proc _transform_xy
@@ -294,7 +342,7 @@ currently_hitting: .byte 0
         clc
         adc     puck_dx
         sta     puck_dx
-        
+
         ; Invert and slow puck delta-Y
         lda     puck_dy
         clc
