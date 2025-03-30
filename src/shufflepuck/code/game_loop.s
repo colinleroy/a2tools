@@ -14,14 +14,15 @@
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
         .export     _draw_screen
-        .export     _move_puck, _move_my_pusher, _move_their_pusher, _puck_check_hit
+        .export     _move_puck, _move_my_pusher, _move_their_pusher
+        .export     _puck_check_my_hit, _puck_check_their_hit
         .export     _opponent_think
 
         .export     puck_x, puck_y, puck_dx, puck_dy
         .export     my_pusher_x, my_pusher_y
         .export     their_pusher_x, their_pusher_y
 
-        .export     _puck_reinit_order
+        .export     _puck_reinit_my_order, _puck_reinit_their_order
 
         .import     _load_puck_pointer, _load_my_pusher_pointer, _load_their_pusher_pointer
         .import     _setup_sprite_pointer_full, _draw_sprite, _clear_sprite
@@ -281,37 +282,96 @@ out:
         rts
 .endproc
 
-prev_puck_diff: .byte 0
-my_pusher_mid_x: .byte 0
-currently_hitting: .byte 0
+my_prev_puck_diff: .byte 0
+their_prev_puck_diff: .byte 0
 
-.proc _puck_reinit_order
+my_pusher_mid_x: .byte 0
+my_currently_hitting: .byte 0
+their_currently_hitting: .byte 0
+
+.proc _puck_reinit_my_order
         lda     puck_y
         cmp     my_pusher_y
         lda     #0
         rol
-        sta     prev_puck_diff
+        sta     my_prev_puck_diff
         rts
 .endproc
 
-; new puck Y in Y
-.proc _puck_check_hit
+.proc _puck_reinit_their_order
+        lda     puck_y
+        cmp     their_pusher_y
+        lda     #0
+        rol
+        sta     their_prev_puck_diff
+        rts
+.endproc
+
+.proc bind_puck_speed
+        bit     puck_dy
+        bmi     puck_backwards
+puck_forwards:
+        lda     puck_dy
+        cmp     #ABS_MAX_DY
+        bcc     bind_x
+        lda     #ABS_MAX_DY
+        sta     puck_dy
+        jmp     bind_x
+puck_backwards:
+        lda     puck_dy
+        clc
+        eor     #$FF
+        adc     #1
+        cmp     #ABS_MAX_DY
+        bcc     bind_x
+        lda     #ABS_MAX_DY
+        clc
+        eor     #$FF
+        adc     #1
+        sta     puck_dy
+bind_x:
+        bit     puck_dx
+        bmi     puck_left
+puck_right:
+        lda     puck_dx
+        cmp     #ABS_MAX_DX
+        bcc     out
+        lda     #ABS_MAX_DX
+        sta     puck_dx
+        jmp     out
+puck_left:
+        lda     puck_dx
+        clc
+        eor     #$FF
+        adc     #1
+        cmp     #ABS_MAX_DX
+        bcc     out
+        lda     #ABS_MAX_DX
+        clc
+        eor     #$FF
+        adc     #1
+        sta     puck_dx
+out:    clc                       ; Caller expects carry clear
+        rts
+.endproc
+
+.proc _puck_check_my_hit
         ; Check if we already hit right before
-        lda     currently_hitting
+        lda     my_currently_hitting
         beq     :+
-        dec     currently_hitting
-        jmp     _puck_reinit_order  ; Set puck/pusher order while it goes away
+        dec     my_currently_hitting
+        jmp     _puck_reinit_my_order  ; Set puck/pusher order while it goes away
 
 :       lda     puck_y
         cmp     my_pusher_y
         lda     #0
         rol
-        cmp     prev_puck_diff
+        cmp     my_prev_puck_diff
         bne     :+
         rts
 
         ; Order changed, check X
-:       sta     prev_puck_diff
+:       sta     my_prev_puck_diff
 
         lda     my_pusher_x
         cmp     puck_right_x
@@ -325,7 +385,7 @@ currently_hitting: .byte 0
 
 :       ; Prevent multiple hits
         lda     #15
-        sta     currently_hitting
+        sta     my_currently_hitting
         sta     $C030
 
         ; update puck speed
@@ -368,7 +428,87 @@ currently_hitting: .byte 0
         adc     puck_dy
         sta     puck_dy
 
-out:    rts
+out:    jmp     bind_puck_speed
+.endproc
+
+.proc _puck_check_their_hit
+        ; Check if we already hit right before
+        lda     their_currently_hitting
+        beq     :+
+        dec     their_currently_hitting
+        jmp     _puck_reinit_their_order  ; Set puck/pusher order while it goes away
+
+:       lda     puck_y
+        cmp     their_pusher_y
+        lda     #0
+        rol
+        cmp     their_prev_puck_diff
+        bne     :+
+        rts
+
+        ; Order changed, check X
+:       sta     their_prev_puck_diff
+
+        lda     their_pusher_x
+        cmp     puck_right_x
+        bcs     out_miss
+
+        clc
+        adc     #my_pusher0_WIDTH ; Same for their pusher, they are the same size
+        bcs     :+                ; If adding our width overflowed, we're good
+        cmp     puck_x            ; the pusher is on the right and the puck too
+        bcc     out_miss
+
+:       ; Prevent multiple hits
+        lda     #15
+        sta     their_currently_hitting
+        sta     $C030
+
+        ; update puck speed
+        ; Slow puck deltaX
+        lda     puck_dx
+        cmp     #$80
+        ror
+        beq     :+
+        sta     puck_dx
+:       lda     their_pusher_dx
+        cmp     #$80
+        ror
+        cmp     #$80
+        ror
+        cmp     #$80
+        ror
+        clc
+        adc     puck_dx
+        sta     puck_dx
+
+        ; Invert and slow puck delta-Y
+        lda     puck_dy
+        clc
+        eor     #$FF
+        adc     #$01
+        sta     tmp1
+        cmp     #$80
+        ror
+        bne     :+        ; But don't zero it
+        lda     tmp1
+:       sta     puck_dy
+        lda     their_pusher_dy
+        cmp     #$80
+        ror
+        cmp     #$80
+        ror
+        cmp     #$80
+        ror
+        clc
+        adc     puck_dy
+        sta     puck_dy
+        clc
+        jmp     bind_puck_speed
+
+out_miss:
+        sec
+        rts
 .endproc
 
 .proc revert_x
@@ -380,9 +520,24 @@ out:    rts
         ; And back to move_puck
 .endproc
 .proc _move_puck
+        bit     puck_dx
+        bmi     puck_left
+
+puck_right:
         lda     puck_x
         clc
         adc     puck_dx
+        bcc     :+
+        lda     #(PUCK_MAX_X+1)
+        jmp     check_revert_x
+puck_left:
+        lda     puck_x
+        clc
+        adc     puck_dx
+        bcs     :+
+        lda     #<(PUCK_MIN_X-1)
+:
+check_revert_x:
         cmp     #(PUCK_MIN_X)
         bcc     revert_x
         cmp     #(PUCK_MAX_X)
@@ -396,13 +551,29 @@ out:    rts
 :       sta     puck_right_x
 
 update_y:
+        bit     puck_dy
+        bmi     puck_backwards
+
+puck_forwards:
         lda     puck_y
         clc
         adc     puck_dy
+        bcc     :+
+        lda     #(PUCK_MAX_Y+1)
+        jmp     check_y_bound
+
+puck_backwards:
+        lda     puck_y
+        clc
+        adc     puck_dy
+        bcs     :+
+        lda     #<(PUCK_MIN_Y-1)
+:
+check_y_bound:
         cmp     #(PUCK_MIN_Y)
-        bcc     revert_y
+        bcc     check_their_late_catch
         cmp     #(PUCK_MAX_Y)
-        bcs     crash
+        bcs     check_my_late_catch
         tay
 
         stx     puck_x
@@ -417,24 +588,28 @@ update_y:
 
         jsr     _puck_select
 
-        ; And save the mid Y
-        lda     puck_y
-        clc
-        adc     #(puck0_HEIGHT/2)
-        sta     puck_mid_y
         clc
         rts
 
 crash:  sec
         rts
-.endproc
-.proc revert_y
-        lda     puck_dy
-        clc
-        eor     #$FF
-        adc     #$01
-        sta     puck_dy
-        jmp     _move_puck::update_y
+
+check_their_late_catch:
+        lda     #PUCK_MIN_Y
+        sta     puck_y
+        jsr     _puck_check_their_hit
+        bcc     update_y
+        ; Or return with carry set to crash
+        rts
+
+check_my_late_catch:
+        lda     #PUCK_MAX_Y
+        sta     puck_y
+        jsr     _puck_check_my_hit
+        bcc     update_y
+        ; Or return with carry set to crash
+        rts
+
 .endproc
 
 .proc _opponent_think
@@ -451,7 +626,9 @@ move_right:
         bcc    :+
         lda    #THEIR_MAX_DX
         clc
-:       adc    their_pusher_x
+:
+        sta    their_pusher_dx
+        adc    their_pusher_x
         bcc    :+
         lda    #THEIR_PUSHER_MAX_X
 :       cmp    #THEIR_PUSHER_MAX_X
@@ -468,16 +645,30 @@ move_left:
         cmp    #THEIR_MAX_DX
         bcc    :+
         lda    #THEIR_MAX_DX
-        sta    tmp1
+        sta    their_pusher_dx
         clc
 
 :       lda    their_pusher_x
         sec
         sbc    tmp1
+        php
+
+        pha
+        lda    tmp1
+        clc
+        adc    #$01
+        eor    #$FF
+        sta    their_pusher_dx
+        pla
+
+        plp
         bcs    update_x
         lda    #THEIR_PUSHER_MIN_X
 update_x:
         sta    their_pusher_x
+
+        lda    #THEIR_MAX_DY
+        sta    their_pusher_dy
         rts
 .endproc
 
@@ -486,7 +677,6 @@ tmpx:         .res 1
 tmpy:         .res 1
 
 puck_right_x: .res 1
-puck_mid_y:   .res 1
 
 puck_x:       .res 1
 puck_y:       .res 1
@@ -494,6 +684,8 @@ my_pusher_x:  .res 1
 my_pusher_y:  .res 1
 their_pusher_x: .res 1
 their_pusher_y: .res 1
+their_pusher_dx: .res 1
+their_pusher_dy: .res 1
 
 puck_dx:      .res 1
 puck_dy:      .res 1
