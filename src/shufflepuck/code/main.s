@@ -23,9 +23,9 @@
         .import   my_pusher_x, my_pusher_y
         .import   their_pusher_x, their_pusher_y
 
-        .import   _puck_reinit_order
+        .import   _puck_reinit_my_order, _puck_reinit_their_order
         .import   _draw_screen
-        .import   _move_puck, _puck_check_hit
+        .import   _move_puck, _puck_check_my_hit, _puck_check_their_hit
         .import   _move_my_pusher, _move_their_pusher
         .import   _opponent_think
 
@@ -92,7 +92,7 @@ calibrate_hz_handler:
         ; Wait for first interrupt
         jsr     _mouse_wait_vbl
 
-reset_game:
+new_game:
         ; Initialize coords
         ldy     mouse_y
         sty     my_pusher_y
@@ -109,16 +109,16 @@ reset_game:
         lda     #PUCK_INI_Y
         sta     puck_y
 
-        lda     #0
+        lda     #$00
         sta     puck_dx
         sta     puck_dy
-        jsr     _puck_reinit_order
+        jsr     _puck_reinit_my_order
+        jsr     _puck_reinit_their_order
 
 game_loop:
         ; the WAI of the poor
         ; because I don't understand how WAI works
         ; and I want to keep things 6502-ok
-wait_vbl_handler:
         jsr     _mouse_wait_vbl
 
 loop_start:
@@ -136,11 +136,44 @@ loop_start:
         ldx     their_pusher_x
         jsr     _move_their_pusher
 
-        jsr     _puck_check_hit
+        jsr     _puck_check_my_hit
+        jsr     _puck_check_their_hit
+
         jsr     _move_puck
 
         bcs     reset_game
 
         ; Next round!
         jmp     game_loop
+
+reset_game:
+        lda     #$00
+        sta     puck_dx
+        sta     puck_dy
+
+        lda     puck_x
+        cmp     #PUCK_INI_X
+        beq     reset_move_y
+        bcc     :+
+        dec     puck_dx
+        jmp     reset_move_y
+:       inc     puck_dx
+
+reset_move_y:
+        lda     puck_y
+        cmp     #PUCK_INI_Y
+        beq     update_screen
+        bcc     :+
+        dec     puck_dy
+        jmp     update_screen
+:       inc     puck_dy
+
+update_screen:
+        jsr     _mouse_wait_vbl
+        jsr     _draw_screen
+        jsr     _move_puck
+        lda     puck_y
+        cmp     #PUCK_INI_Y
+        bne     reset_game
+        jmp     new_game
 .endproc
