@@ -27,6 +27,7 @@
         .import   _draw_screen
         .import   _move_puck, _puck_check_hit
         .import   _move_my_pusher, _move_their_pusher
+        .import   _opponent_think
 
         .import   _load_table, _load_lowcode
         .import   hz
@@ -128,6 +129,8 @@ loop_start:
         ldx     mouse_x
         stx     my_pusher_x
         jsr     _move_my_pusher
+
+        jsr     _opponent_think
 
         ldy     their_pusher_y
         ldx     their_pusher_x
