@@ -700,6 +700,20 @@ static void mono_dither_bayer(SDL_Surface* s) {
   }
 }
 
+static void greyscale_image(SDL_Surface *s) {
+  Uint32 x, y;
+  for(y = 0; y < s->h; ++y) {
+    for(x = 0; x < s->w; ++x) {
+      Uint8 r, g, b;
+      float in;
+      sdl_get_pixel(s, x, y, &r, &g, &b);
+
+      // Convert the pixel value to grayscale i.e. intensity
+      in = .299 * r + .587 * g + .114 * b;
+      sdl_set_pixel(s, x, y, (Uint8)in, 0, 0);
+    }
+  }
+}
 static void mono_dither_burkes(SDL_Surface* s) {
   Uint32 x, y;
   float **error_table;
@@ -711,15 +725,14 @@ static void mono_dither_burkes(SDL_Surface* s) {
     memset(error_table[y], 0x00, sizeof(float) * (s->w + 5));
   }
 
+  greyscale_image(s);
+
   for(y = 0; y < s->h; ++y) {
     for(x = 0; x < s->w; ++x) {
-      Uint8 r, g, b;
-      float in;
+      Uint8 g, b;
+      Uint8 in;
       float current_error;
-      sdl_get_pixel(s, x, y, &r, &g, &b);
-
-      // Convert the pixel value to grayscale i.e. intensity
-      in = .299 * r + .587 * g + .114 * b;
+      sdl_get_pixel(s, x, y, &in, &g, &b); /* g & b ignored */
 
       if (threshold > in + error_table[y][x + ERR_X_OFF]) {
         sdl_set_pixel(s, x, y, 0, 0, 0);
