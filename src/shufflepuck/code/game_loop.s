@@ -108,9 +108,9 @@
         rts
 .endproc
 
-.proc waste_3000
+.proc waste_3400
         ldy     #3
-:       ldx     #200
+:       ldx     #226
 :       dex                         ; 2
         bne     :-                  ; 5
         dey
@@ -121,7 +121,7 @@
 ; Draw screen, choosing which draw function to use depending
 ; on the puck's side.
 .proc _draw_screen
-        ;jsr     waste_3000
+        ;jsr     waste_3000           ; Test for 60Hz
         lda     puck_y
         cmp     #96                   ; Middle of HGR height
 
