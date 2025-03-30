@@ -15,6 +15,7 @@
 
         .export     _draw_screen
         .export     _move_puck, _move_my_pusher, _move_their_pusher, _puck_check_hit
+        .export     _opponent_think
 
         .export     puck_x, puck_y, puck_dx, puck_dy
         .export     my_pusher_x, my_pusher_y
@@ -107,9 +108,20 @@
         rts
 .endproc
 
+.proc waste_3000
+        ldy     #3
+:       ldx     #200
+:       dex                         ; 2
+        bne     :-                  ; 5
+        dey
+        bne     :--
+        rts
+.endproc
+
 ; Draw screen, choosing which draw function to use depending
 ; on the puck's side.
 .proc _draw_screen
+        ;jsr     waste_3000
         lda     puck_y
         cmp     #96                   ; Middle of HGR height
 
@@ -239,15 +251,6 @@ pucks_high:
         .byte >_puck4
         .byte >_puck5
         .byte >_puck6
-
-pucks_mid_x:
-        .byte 10
-        .byte 9
-        .byte 8
-        .byte 7
-        .byte 6
-        .byte 5
-        .byte 4
 
 ; Y input
 .proc _puck_select
@@ -432,6 +435,50 @@ crash:  sec
         adc     #$01
         sta     puck_dy
         jmp     _move_puck::update_y
+.endproc
+
+.proc _opponent_think
+        lda    their_pusher_x
+        cmp    puck_x
+        bcs    move_left
+
+move_right:
+        lda    puck_x
+        sec
+        sbc    their_pusher_x
+
+        cmp    #THEIR_MAX_DX
+        bcc    :+
+        lda    #THEIR_MAX_DX
+        clc
+:       adc    their_pusher_x
+        bcc    :+
+        lda    #THEIR_PUSHER_MAX_X
+:       cmp    #THEIR_PUSHER_MAX_X
+        bcc    update_x
+        lda    #THEIR_PUSHER_MAX_X
+        jmp    update_x
+
+move_left:
+        lda    their_pusher_x
+        sec
+        sbc    puck_x
+        sta    tmp1
+
+        cmp    #THEIR_MAX_DX
+        bcc    :+
+        lda    #THEIR_MAX_DX
+        sta    tmp1
+        clc
+
+:       lda    their_pusher_x
+        sec
+        sbc    tmp1
+        bcs    update_x
+        lda    #THEIR_PUSHER_MIN_X
+update_x:
+        sta    their_pusher_x
+        rts
 .endproc
 
 .bss
