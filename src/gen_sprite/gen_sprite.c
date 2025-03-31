@@ -27,6 +27,7 @@ enum Pixel {
 };
 
 int max_shift = 7;
+char *segment = "RODATA";
 
 static enum Pixel get_pixel(SDL_Surface *surface, int x, int y) {
   int bpp = surface->format->BytesPerPixel;
@@ -93,8 +94,8 @@ int main(int argc, char *argv[]) {
   char filename[256];
   FILE *fp;
 
-  if (argc != 4) {
-    printf("Usage: %s [input.png] [Max right X coord] [pixel_perfect|unperfect]\n", argv[0]);
+  if (argc < 4) {
+    printf("Usage: %s [input.png] [Max right X coord] [pixel_perfect|unperfect] [segment]\n", argv[0]);
     exit(1);
   }
 
@@ -119,6 +120,10 @@ int main(int argc, char *argv[]) {
 
   if (!strcmp(argv[3], "unperfect")) {
     max_shift = 1;
+  }
+
+  if (argc > 4) {
+    segment = argv[4];
   }
 
   if (image[0]->w % 7 != 0) {
@@ -166,7 +171,7 @@ int main(int argc, char *argv[]) {
           "         .importzp n_bytes_draw, sprite_y\n");
   fprintf(fp, "         .include \"%s.gen.inc\"\n", sprite_name);
   fprintf(fp, "\n");
-  fprintf(fp, "         .rodata\n");
+  fprintf(fp, "         .segment \"%s\"\n", segment);
 
   for (shift = 0; shift < max_shift; shift++) {
     memset(sprite_data, 0, sizeof(sprite_data));
