@@ -49,8 +49,6 @@
         .include  "my_pusher0.gen.inc"
         .include  "constants.inc"
 
-.segment "LOWCODE"
-
 .code
 
 .proc _main
@@ -124,10 +122,6 @@ game_loop:
 loop_start:
         jsr     _draw_screen
 
-        ldy     mouse_y
-        sty     my_pusher_y
-        ldx     mouse_x
-        stx     my_pusher_x
         jsr     _move_my_pusher
 
         jsr     _opponent_think
@@ -169,6 +163,7 @@ reset_move_y:
 update_screen:
         jsr     _mouse_wait_vbl
         jsr     _draw_screen
+        jsr     _move_my_pusher
         jsr     _move_puck
         lda     puck_y
         cmp     #PUCK_INI_Y

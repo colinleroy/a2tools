@@ -44,6 +44,10 @@ sprites_pixel_perfect = \
 sprites = \
 	$(sprites_pixel_perfect)
 
+sounds = \
+	puck_hit.snd.s \
+	crash.snd.s \
+	puck.snd.s \
 # Our code
 
 shflpuck_SOURCES := \
@@ -63,6 +67,7 @@ shflpuck_SOURCES := \
 	$(SRC_DIR)/../lib/cntoabuf.s \
 	$(SRC_DIR)/../lib/platform_sleep.s \
 	transform.s \
+	play_sound.gen.s \
 	$(sounds) \
 	$(sprites) \
 	$(assets_backgrounds) \
@@ -87,10 +92,10 @@ gen_font: $(SRC_DIR)/generators/gen_font.c
 	gcc -g -O0 $(shell pkg-config --cflags SDL_image) $^ $(shell pkg-config --libs SDL_image) -o $@
 
 gen_sound_player: $(SRC_DIR)/../sound_player_generator/gen_sound_player.c $(SRC_DIR)/../sound_player_generator/sound.h
-	gcc -DCPU_$(STREAMER_VER) -g -O0 $< -o $@
+	gcc -DCPU_$(STREAMER_VER) -DENABLE_SLOWER=1 -g -O0 $< -o $@
 
 gen_sound_clip: $(SRC_DIR)/../sound_player_generator/gen_sound_clip.c $(SRC_DIR)/../sound_player_generator/sound.h
-	gcc -DCPU_$(STREAMER_VER) -g -O0 $< -o $@
+	gcc -DCPU_$(STREAMER_VER) -DENABLE_SLOWER=1 -g -O0 $< -o $@
 
 gen_transform: $(SRC_DIR)/generators/gen_transform.c
 	gcc -g -O0 $< -o $@
@@ -120,9 +125,6 @@ $(SRC_DIR)/../surl-server/hgr-convert:
 	rm -f $<.png $<.png.hgr-preview.png
 
 $(sprites_pixel_perfect): %.pixel_perfect.gen.s: $(SRC_DIR)/assets/%.png
-their_pusher%.pixel_perfect.gen.s: $(SRC_DIR)/assets/their_pusher%.png gen_sprite
-	./gen_sprite $< 255 pixel_perfect LOWCODE
-
 %.pixel_perfect.gen.s: $(SRC_DIR)/assets/%.png gen_sprite
 	./gen_sprite $< 255 pixel_perfect
 
