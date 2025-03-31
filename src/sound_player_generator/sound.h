@@ -3,12 +3,17 @@
 #define DEFAULT_SAMPLING_HZ 4000
 
 /* Determine the number of available cycles according to the desired carrier */
+#ifdef ENABLE_SLOWER
+#define SLOWER_OVERHEAD 25
+#else
+#define SLOWER_OVERHEAD 0
+#endif
 
 #define JUMP_OVERHEAD 6
 
 #define DUTY_CYCLE_LENGTH (CYCLES_PER_SEC/CARRIER_HZ)
 #define AVAIL_CYCLES   (DUTY_CYCLE_LENGTH)
-#define NUM_LEVELS     (AVAIL_CYCLES-JUMP_OVERHEAD-8)-1 /* 8 is the overhead of the double STA SPKR */
+#define NUM_LEVELS     (AVAIL_CYCLES-JUMP_OVERHEAD-SLOWER_OVERHEAD-8)-1 /* 8 is the overhead of the double STA SPKR */
 
 #define STEP           1
 

@@ -64,6 +64,25 @@ static int emit_pointer_increment(int cycles) {
   return POINTER_INCR_CYCLES;
 }
 
+#define FAST_POINTER_INCR_CYCLES 12
+static int emit_fast_pointer_increment(int cycles) {
+  if (cycles < FAST_POINTER_INCR_CYCLES) {
+    fprintf(stderr, "Error - not enough cycles to increment pointer (fast)\n");
+    exit(1);
+  }
+  cycles -= FAST_POINTER_INCR_CYCLES;
+  printf("         iny                         ; 2\n"
+         "         bne :+                      ; 4   (5)\n"
+         "         inc ptr1+1                  ; 9\n"
+         "         bne :++                     ; 12\n"
+         ":        nop                         ; 7\n"
+         "         nop                         ; 9\n"
+         "         bit $FF                     ; 12\n"
+         ":        \n");
+  pointer_incremented = 1;
+  return FAST_POINTER_INCR_CYCLES;
+}
+
 #define HALF_TARGET_BYTE_SET 7
 static int emit_half_target_set(int offset, int cycles) {
   if (cycles < HALF_TARGET_BYTE_SET) {
@@ -120,27 +139,49 @@ static int emit_wait(int waste, int cycles_avail, int allow_half_target) {
    */
   if (!byte_loaded && (waste == BYTE_LOAD_CYCLES || waste > BYTE_LOAD_CYCLES+1)) {
     spent = emit_byte_loading(cycles_avail);
+    waste -= spent;
+    cycles_avail -= spent;
   /* After loading the sample, if we have enough cycles, increment the
    * pointer in the sample stream.
    */
-  } else if (byte_loaded && !pointer_incremented && (waste == POINTER_INCR_CYCLES || waste > POINTER_INCR_CYCLES+1)) {
+  } 
+  if (byte_loaded && !pointer_incremented && (waste == POINTER_INCR_CYCLES || waste > POINTER_INCR_CYCLES+1)) {
     spent = emit_pointer_increment(cycles_avail);
+    waste -= spent;
+    cycles_avail -= spent;
+  /* Or quickly?
+   */
+  }
+#ifdef ENABLE_SLOWER
+  else if (byte_loaded && !pointer_incremented && (waste == FAST_POINTER_INCR_CYCLES || waste > FAST_POINTER_INCR_CYCLES+1)) {
+    spent = emit_fast_pointer_increment(cycles_avail);
+    waste -= spent;
+    cycles_avail -= spent;
   /* If we have enough cycles, update both bytes of the jump target.
    * This can be done *before* incrementing the pointer.
    */
-  } else if (byte_loaded && !target_set[0] && !target_set[1]
+  }
+#endif
+  if (byte_loaded && !target_set[0] && !target_set[1]
           && (waste == FULL_TARGET_SET_CYCLES || waste > FULL_TARGET_SET_CYCLES+1)) {
     spent = emit_full_target_set(cycles_avail);
+    waste -= spent;
+    cycles_avail -= spent;
   /* Otherwise, update the other byte of the jump target. But not at first repeat,
    * as the next one(s) will have more cycles and we could do a full target set,
    * sparing code size.
    */
- } else if (byte_loaded && allow_half_target && (!target_set[0] || !target_set[1])
+  } 
+  if (byte_loaded && allow_half_target && (!target_set[0] || !target_set[1])
           && (waste == HALF_TARGET_BYTE_SET || waste > HALF_TARGET_BYTE_SET+1)) {
     if (!target_set[0]) {
       spent = emit_half_target_set(0, cycles_avail);
+      waste -= spent;
+      cycles_avail -= spent;
     } else if (!target_set[1]) {
       spent = emit_half_target_set(1, cycles_avail);
+      waste -= spent;
+      cycles_avail -= spent;
     }
   /* If we had nothing useful to do, waste the cycles.
    */
@@ -149,7 +190,7 @@ static int emit_wait(int waste, int cycles_avail, int allow_half_target) {
     printf("                                   ; Wasting %d cycles\n", waste);
     emit_wait_steps(waste, cycles_avail);
     return cycles_avail;
-  } else {
+  } else if (waste == 1){
     printf("                                   ; Nothing to waste %d cycles\n", waste);
     return cycles_avail;
   }
@@ -158,13 +199,17 @@ static int emit_wait(int waste, int cycles_avail, int allow_half_target) {
    * and re-call ourselves with the remaining cycles to be
    * wasted/invested.
    */
-  if (spent > 0) {
-    waste -= spent;
-    cycles_avail -= spent;
-  }
   if (waste > 1) {
     return emit_wait(waste, cycles_avail, allow_half_target);
   }
+  return cycles_avail;
+}
+
+static int emit_slow(int cycles_avail) {
+#ifdef ENABLE_SLOWER
+  cycles_avail -= SLOWER_OVERHEAD;
+  printf("         jsr slow_sound            ; %d cycles, remain %d\n", SLOWER_OVERHEAD, cycles_avail);
+#endif
   return cycles_avail;
 }
 
@@ -193,14 +238,16 @@ static void sub_level(int l, int repeat) {
     } else
 #endif
     {
-      cycles = emit_wait(l, cycles, 0);
+      cycles = emit_wait(l, cycles, SLOWER_OVERHEAD != 0);
       cycles = emit_instruction("         sta SPKR                  ", 4, cycles);
     }
 
     if (i != repeat - 1) {
-      cycles = emit_wait(cycles, cycles, 0);
+      cycles = emit_slow(cycles);
+      cycles = emit_wait(cycles, cycles, SLOWER_OVERHEAD != 0);
     } else {
-      cycles = emit_wait(cycles - JUMP_OVERHEAD, cycles, 1);
+      cycles = emit_wait(cycles - (JUMP_OVERHEAD + SLOWER_OVERHEAD), cycles, 1);
+      cycles = emit_slow(cycles);
       emit_jump(cycles);
     }
   }
@@ -222,7 +269,11 @@ static void level(int l) {
   sub_level(l, repeat);
   if (!target_set[0] || !target_set[1] ||
       !pointer_incremented || !byte_loaded) {
-        fprintf(stderr, "Error: not enough cycles to do everything at level %d\n", l);
+        fprintf(stderr, "Error: not enough cycles to do everything at level %d: \n%s%s%s%s\n", l,
+                !byte_loaded ? "Could not load byte\n":"",
+                !pointer_incremented ? "Could not increment pointer\n":"",
+                !target_set[0] ? "Could not set low target\n":"",
+                !target_set[1] ? "Could not set high target\n":"");
         exit(1);
   }
 }
@@ -254,11 +305,12 @@ int main(int argc, char *argv[]) {
          STEP);
 
   printf("         .export   _play_sample\n"
-         "         .importzp ptr1, ptr2, ptr3\n"
+         "         .importzp ptr1, ptr2, ptr3, tmp3, tmp4\n"
          "\n"
-         "SPKR  = $C030\n"
-         "ispkr = ptr2\n"
-         "target = ptr3\n"
+         "SPKR     = $C030\n"
+         "ispkr    = ptr2\n"
+         "target   = ptr3\n"
+         "snd_slow = tmp4\n"
          "\n\n");
 
   printf(".segment \"LOWCODE\"\n");
@@ -294,6 +346,15 @@ int main(int argc, char *argv[]) {
          "waste_15: bit $FF\n"
          "          rts\n\n");
 
+  printf("\n"
+         "slow_sound:\n"
+         "         sty tmp3                  ; 3\n"
+         "         ldy snd_slow              ; 6\n"
+         ":        dey                       ; 8\n"
+         "         bpl :-                    ; 10\n"
+         "         ldy tmp3                  ; 13\n"
+         "         rts\n\n");
+
   /* Levels */
   for (c = 0; c < NUM_LEVELS; c+=STEP) {
     level(c);
@@ -310,14 +371,14 @@ int main(int argc, char *argv[]) {
   }
   printf("         .addr play_done\n");
 
-  printf("incr_pointer:\n"
-         "         iny                         ; 2\n"
+  printf("incr_pointer:\n");
+  printf("         iny                         ; 2\n"
          "         bne :+                      ; 4   (5)\n"
          "         inc ptr1+1                  ; 9\n"
          "         rts                         ; 15\n"
          ":        nop                         ; 7\n"
-         "         nop                         ; 9\n"
-         "         rts                         ; 15\n\n");
+         "         nop                         ; 9\n");
+  printf("         rts                         ; 15\n\n");
 #if POINTER_INCR_CYCLES != 21
 #error Recount pointer increment cycles
 #endif
@@ -331,6 +392,7 @@ int main(int argc, char *argv[]) {
 #endif
 
   printf("_play_sample:\n"
+         "         sty snd_slow\n"
          "         sta ptr1\n"
          "         stx ptr1+1\n"
          "         lda #<SPKR\n"
@@ -344,7 +406,7 @@ int main(int argc, char *argv[]) {
          "         tax\n\n");
   emit_half_target_set(0, HALF_TARGET_BYTE_SET);
   emit_half_target_set(1, HALF_TARGET_BYTE_SET);
-  emit_jump(JUMP_OVERHEAD);
+  emit_jump(JUMP_OVERHEAD+SLOWER_OVERHEAD);
   printf("play_done:\n"
          "         plp\n"
          "         rts\n");
