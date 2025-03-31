@@ -16,10 +16,10 @@ endif
 CLEANDISK = ../../disks/ProDOS_2_4_3.po
 
 #Sound generator sampling frequency
-SAMPLING_HZ := 4000
+SAMPLING_HZ := 8000
 
 sounds = \
-	countdown.snd.s
+	countdown_$(SAMPLING_HZ).snd.s
 
 sounddemo_SOURCES := \
 	main.s \
@@ -34,21 +34,21 @@ sounddemo_CLCFLAGS = -t $(CC65_TARGET) -Cl -C ../../config/apple2enh-aligndata.c
 
 #Build the sound player with the correct definitions
 gen_sound_player: ../sound_player_generator/gen_sound_player.c ../sound_player_generator/sound.h
-	gcc -DCPU_$(STREAMER_VER) -g -O0 $< -o $@
+	gcc -DCPU_$(STREAMER_VER) -DENABLE_SLOWER=1 -g -O0 $< -o $@
 
 #Build the sound clip generator with the correct definitions
 gen_sound_clip: ../sound_player_generator/gen_sound_clip.c ../sound_player_generator/sound.h
-	gcc -DCPU_$(STREAMER_VER) -g -O0 $< -o $@
+	gcc -DCPU_$(STREAMER_VER) -DENABLE_SLOWER=1 -g -O0 $< -o $@
 
 play_sound.gen.s: gen_sound_player
 	./gen_sound_player $(SAMPLING_HZ) > $@
 
 $(sounds): %.snd.s: %.wav
 %.snd.s: %.wav gen_sound_clip
-	rm -f $<.raw
-	sox $< -b 8 -e unsigned-integer -t raw $<.raw channels 1 rate -v $(SAMPLING_HZ)
-	./gen_sound_clip $(SAMPLING_HZ) $<.raw > $@
-	rm $<.raw
+	rm -f $<_raw
+	sox $< -b 8 -e unsigned-integer -t raw $<_raw channels 1 rate -v $(SAMPLING_HZ)
+	./gen_sound_clip $(SAMPLING_HZ) $<_raw > $@
+	rm $<_raw
 
 clean:
 	rm -f *.bin *.o \
