@@ -54,6 +54,7 @@ shufflepuck_SOURCES := \
 	$(SRC_DIR)/code/buffers.s \
 	$(SRC_DIR)/code/load_data.s \
 	$(SRC_DIR)/code/sprites.s \
+	$(SRC_DIR)/code/opponent.s \
 	$(SRC_DIR)/../lib/asm/hgr_tables.s \
 	$(SRC_DIR)/../lib/asm/hgr.s \
 	$(SRC_DIR)/../lib/asm/bcd.s \

@@ -132,8 +132,6 @@ loop_start:
 
         jsr     _opponent_think
 
-        ldy     their_pusher_y
-        ldx     their_pusher_x
         jsr     _move_their_pusher
 
         jsr     _puck_check_my_hit
