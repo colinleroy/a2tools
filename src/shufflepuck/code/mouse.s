@@ -75,8 +75,6 @@ inibox: .word   (MY_PUSHER_MIN_X/2)
 mouse_prev_addr: .word $2000
 mouse_prev_val: .byte $00
 
-.segment "LOWCODE"
-
 firmware:
         ; Lookup and patch firmware address lobyte
 lookup: ldy     $FF00,x         ; Patched at runtime
@@ -368,10 +366,10 @@ done:   rts
 .endproc
 
 .proc _mouse_wait_vbl
-        lda     vbl_ready
-        beq     _mouse_wait_vbl
-        lda     #0
+        lda     #0              ; Skip a frame rather than flicker
         sta     vbl_ready
+:       lda     vbl_ready
+        beq     :-
         rts
 .endproc
 
