@@ -9,7 +9,7 @@ ifndef SRC_DIR
 SRC_DIR := .
 endif
 
-BINARY_NAME = shufflepuck.bin
+BINARY_NAME = shflpuck.bin
 
 .PHONY: all clean
 
@@ -46,7 +46,7 @@ sprites = \
 
 # Our code
 
-shufflepuck_SOURCES := \
+shflpuck_SOURCES := \
 	$(SRC_DIR)/code/main.s \
 	$(SRC_DIR)/code/mouse.s \
 	$(SRC_DIR)/code/draw_sprite.s \
@@ -68,8 +68,8 @@ shufflepuck_SOURCES := \
 	$(assets_backgrounds) \
 	$(levels_code)
 
-shufflepuck_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl \
-	-vm -m shufflepuck.map \
+shflpuck_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl \
+	-vm -m shflpuck.map \
 	--asm-include-dir $(shell pwd) \
 	--asm-include-dir $(SRC_DIR) \
 	--asm-define MAX_COMPRESSED_DATA_SIZE=$(MAX_COMPRESSED_DATA_SIZE) \
@@ -80,7 +80,7 @@ shufflepuck_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl \
 all dist: \
 	shufflepuck.po
 
-gen_sprite: $(SRC_DIR)/../glider/generators/gen_sprite.c
+gen_sprite: $(SRC_DIR)/../gen_sprite/gen_sprite.c
 	gcc -g -O0 $(shell pkg-config --cflags SDL_image) $^ $(shell pkg-config --libs SDL_image) -o $@
 
 gen_font: $(SRC_DIR)/generators/gen_font.c
@@ -120,6 +120,9 @@ $(SRC_DIR)/../surl-server/hgr-convert:
 	rm -f $<.png $<.png.hgr-preview.png
 
 $(sprites_pixel_perfect): %.pixel_perfect.gen.s: $(SRC_DIR)/assets/%.png
+their_pusher%.pixel_perfect.gen.s: $(SRC_DIR)/assets/their_pusher%.png gen_sprite
+	./gen_sprite $< 255 pixel_perfect LOWCODE
+
 %.pixel_perfect.gen.s: $(SRC_DIR)/assets/%.png gen_sprite
 	./gen_sprite $< 255 pixel_perfect
 
@@ -133,7 +136,7 @@ $(sounds): %.snd.s: $(SRC_DIR)/assets/sounds/%.wav
 	./gen_sound_clip $(SAMPLING_HZ) $<_raw > $@
 	rm $<_raw
 
-shufflepuck.ld.cfg: $(SRC_DIR)/shufflepuck.ld.cfg.tmpl
+shflpuck.ld.cfg: $(SRC_DIR)/shflpuck.ld.cfg.tmpl
 	$(SRC_DIR)/../glider/generators/gen_linker_config.sh $< $(assets) > $@
 
 clean:
@@ -153,23 +156,23 @@ clean:
 	level*.hgr \
 	assets/*/*.hgr-preview.* \
 	*.dbg *.lbl *.map *.lz4 \
-	shufflepuck.ld.cfg \
+	shflpuck.ld.cfg \
 	check_imports.sh
 
-check_imports.sh: $(shufflepuck_SOURCES) $(SRC_DIR)/check_imports.sh
+check_imports.sh: $(shflpuck_SOURCES) $(SRC_DIR)/check_imports.sh
 	cp -f $(SRC_DIR)/check_imports.sh .
 	./check_imports.sh $(SRC_DIR)/code
 	./check_imports.sh $(SRC_DIR)/levels_data
 
-$(BINARY_NAME): shufflepuck.ld.cfg $(shufflepuck_SOURCES)
-	cl65 -g -Wl --dbgfile,shufflepuck.dbg -Ln shufflepuck.lbl $(CFLAGS) $(iigs_CFLAGS) $(shufflepuck_CLCFLAGS) \
-		-C shufflepuck.ld.cfg -o $@ $(shufflepuck_SOURCES) \
+$(BINARY_NAME): shflpuck.ld.cfg $(shflpuck_SOURCES)
+	cl65 -g -Wl --dbgfile,shflpuck.dbg -Ln shflpuck.lbl $(CFLAGS) $(iigs_CFLAGS) $(shflpuck_CLCFLAGS) \
+		-C shflpuck.ld.cfg -o $@ $(shflpuck_SOURCES) \
 		$(CC65_TARGET)-iobuf-0800.o $(CC65_TARGET)-integer-basic-compat.o
 
 CLEANDISK = $(SRC_DIR)/../../disks/ProDOS_2_4_3.po
 shufflepuck.po: $(BINARY_NAME) $(assets_lz4)
 	cp $(CLEANDISK) $@; \
-	java -jar $(SRC_DIR)/../../bin/ac.jar -n $@ SHFLPUCK
+	java -jar $(SRC_DIR)/../../bin/ac.jar -n $@ SHUFFLEPUCK
 	java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ SHFLPUCK.SYSTEM SYS < $(SRC_DIR)/../../bin/loader.system; \
 	java -jar $(SRC_DIR)/../../bin/ac.jar -d $@ BASIC.SYSTEM; \
 	java -jar $(SRC_DIR)/../../bin/ac.jar -as $@ SHFLPUCK < $<; \
@@ -180,7 +183,7 @@ shufflepuck.po: $(BINARY_NAME) $(assets_lz4)
 upload: all
 	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/shufflepuck/$(GAME_LANG)/ || \
 	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/shufflepuck/$(GAME_LANG)/ && \
-	cp *.bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/shufflepuck/$(GAME_LANG)/
+	cp *.bin *.lz4 /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/shufflepuck/$(GAME_LANG)/
 	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/disks/ || \
 	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/disks/ && \
 	cp *.po /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/disks/
