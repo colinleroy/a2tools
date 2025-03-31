@@ -16,11 +16,11 @@
         .export     _draw_screen
         .export     _move_puck, _move_my_pusher, _move_their_pusher
         .export     _puck_check_my_hit, _puck_check_their_hit
-        .export     _opponent_think
 
         .export     puck_x, puck_y, puck_dx, puck_dy
         .export     my_pusher_x, my_pusher_y
         .export     their_pusher_x, their_pusher_y
+        .export     their_pusher_dx, their_pusher_dy
 
         .export     _puck_reinit_my_order, _puck_reinit_their_order
 
@@ -223,8 +223,55 @@ out:
 
 ; X,Y in input
 .proc _move_their_pusher
-        sty     their_pusher_y
-        stx     their_pusher_x
+        clc
+        bit     their_pusher_dx
+        bmi     move_left
+move_right:
+        lda     their_pusher_x
+        adc     their_pusher_dx
+        bcc     :+
+        lda     #THEIR_PUSHER_MAX_X
+:       cmp     #THEIR_PUSHER_MAX_X
+        bcc     store_x
+        lda     #THEIR_PUSHER_MAX_X
+        jmp     store_x
+
+move_left:
+        lda     their_pusher_x
+        adc     their_pusher_dx
+        bcs     :+
+        lda     #THEIR_PUSHER_MIN_X
+:       cmp     #THEIR_PUSHER_MIN_X
+        bcs     store_x
+        lda     #THEIR_PUSHER_MIN_X
+
+store_x:
+        sta     their_pusher_x
+        tax
+
+        ; Now update Y
+        clc
+        bit     their_pusher_dy
+        bmi     move_backwards
+
+move_forwards:
+        lda     their_pusher_y
+        adc     their_pusher_dy
+        cmp     #THEIR_PUSHER_MAX_Y
+        bcs     do_move
+        sta     their_pusher_y
+        jmp     do_move
+
+move_backwards:
+        lda     their_pusher_y
+        adc     their_pusher_dy
+        cmp     #THEIR_PUSHER_MIN_Y
+        bcc     do_move
+        sta     their_pusher_y
+
+do_move:
+        ldy     their_pusher_y
+
         jsr     _transform_xy
         stx     their_pusher_gx
         tya
@@ -610,66 +657,6 @@ check_my_late_catch:
         ; Or return with carry set to crash
         rts
 
-.endproc
-
-.proc _opponent_think
-        lda    their_pusher_x
-        cmp    puck_x
-        bcs    move_left
-
-move_right:
-        lda    puck_x
-        sec
-        sbc    their_pusher_x
-
-        cmp    #THEIR_MAX_DX
-        bcc    :+
-        lda    #THEIR_MAX_DX
-        clc
-:
-        sta    their_pusher_dx
-        adc    their_pusher_x
-        bcc    :+
-        lda    #THEIR_PUSHER_MAX_X
-:       cmp    #THEIR_PUSHER_MAX_X
-        bcc    update_x
-        lda    #THEIR_PUSHER_MAX_X
-        jmp    update_x
-
-move_left:
-        lda    their_pusher_x
-        sec
-        sbc    puck_x
-        sta    tmp1
-
-        cmp    #THEIR_MAX_DX
-        bcc    :+
-        lda    #THEIR_MAX_DX
-        sta    their_pusher_dx
-        clc
-
-:       lda    their_pusher_x
-        sec
-        sbc    tmp1
-        php
-
-        pha
-        lda    tmp1
-        clc
-        adc    #$01
-        eor    #$FF
-        sta    their_pusher_dx
-        pla
-
-        plp
-        bcs    update_x
-        lda    #THEIR_PUSHER_MIN_X
-update_x:
-        sta    their_pusher_x
-
-        lda    #THEIR_MAX_DY
-        sta    their_pusher_dy
-        rts
 .endproc
 
 .bss
