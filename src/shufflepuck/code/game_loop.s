@@ -31,14 +31,20 @@
         .import     mouse_x, mouse_y
         .import     mouse_dx, mouse_dy
 
-        .import     x_shift, x_mult, y_transform
+        .import     hz
+
+        .import     x_shift, x_factor, y_factor
 
         .import     _my_pusher0, _my_pusher1, _my_pusher2, _my_pusher3
         .import     _their_pusher4, _their_pusher5
         .import     _puck0, _puck1, _puck2, _puck3, _puck4, _puck5, _puck6
-        .import     tosumula0, pusha0
+        .import     umul8x8r16
 
-        .importzp   tmp1
+        .import     _play_puck_hit
+        .import     _play_puck
+        .import     _play_crash
+
+        .importzp   tmp1, ptr1
 
         .include    "sprite.inc"
         .include    "puck_coords.inc"
@@ -110,6 +116,11 @@
 .endproc
 
 .proc waste_3400
+        lda     hz
+        cmp     #60
+        bne     :+
+        rts
+:
         ldy     #3
 :       ldx     #226
 :       dex                         ; 2
@@ -122,7 +133,7 @@
 ; Draw screen, choosing which draw function to use depending
 ; on the puck's side.
 .proc _draw_screen
-        ;jsr     waste_3000           ; Test for 60Hz
+        jsr     waste_3400           ; Test for 60Hz
         lda     puck_y
         cmp     #96                   ; Middle of HGR height
 
@@ -134,20 +145,21 @@
 ;Updates X, Y, destroys A
 .proc _transform_xy
         sty     tmpy
-        lda     x_mult,y                ; Multiply if needed
+        lda     x_factor,y                ; Multiply if needed
         beq     :+
         stx     tmpx
-        jsr     pusha0
+
+        sta     ptr1
 
         lda     tmpx
-        jsr     tosumula0
+        jsr     umul8x8r16
 :       txa                             ; /256 if we multiplied, X coord otherwise
         clc
         ldy     tmpy
         adc     x_shift,y               ; Add shift
         tax
 
-        lda     y_transform,y           ; And transform Y
+        lda     y_factor,y           ; And transform Y
         tay
         rts
 .endproc
@@ -185,7 +197,9 @@ out:
 
 ; X,Y in input
 .proc _move_my_pusher
+        ldy     mouse_y
         sty     my_pusher_y
+        ldx     mouse_x
         stx     my_pusher_x
         jsr     _transform_xy
         stx     my_pusher_gx
@@ -433,7 +447,8 @@ out:    clc                       ; Caller expects carry clear
 :       ; Prevent multiple hits
         lda     #15
         sta     my_currently_hitting
-        sta     $C030
+        ldy     #0
+        jsr     _play_puck_hit
 
         ; update puck speed
         ; Slow puck deltaX
@@ -509,7 +524,8 @@ out:    jmp     bind_puck_speed
 :       ; Prevent multiple hits
         lda     #15
         sta     their_currently_hitting
-        sta     $C030
+        ldy     #4
+        jsr     _play_puck_hit
 
         ; update puck speed
         ; Slow puck deltaX
@@ -558,12 +574,39 @@ out_miss:
         rts
 .endproc
 
+.proc play_revert_x
+        lda     #PUCK_MAX_Y
+        sec
+        sbc     puck_y
+        lsr
+        lsr
+        lsr
+        lsr
+        lsr
+        tay
+        jmp     _play_puck
+.endproc
+
+.proc _transform_puck_coords
+        ldx     puck_x
+        ldy     puck_y
+        jsr     _transform_xy
+        stx     puck_gx
+        tya
+        sec
+        sbc     #puck0_HEIGHT
+        tay
+        sty     puck_gy
+        rts
+.endproc
+
 .proc revert_x
         lda     puck_dx
         clc
         eor     #$FF
         adc     #$01
         sta     puck_dx
+        jsr     play_revert_x
         ; And back to move_puck
 .endproc
 .proc _move_puck
@@ -589,7 +632,7 @@ check_revert_x:
         bcc     revert_x
         cmp     #(PUCK_MAX_X)
         bcs     revert_x
-        tax
+        sta     puck_x
 
         clc
         adc     #puck0_WIDTH
@@ -621,24 +664,12 @@ check_y_bound:
         bcc     check_their_late_catch
         cmp     #(PUCK_MAX_Y)
         bcs     check_my_late_catch
-        tay
+        sta     puck_y
 
-        stx     puck_x
-        sty     puck_y
-        jsr     _transform_xy
-        stx     puck_gx
-        tya
-        sec
-        sbc     #puck0_HEIGHT
-        tay
-        sty     puck_gy
-
+        jsr     _transform_puck_coords
         jsr     _puck_select
 
         clc
-        rts
-
-crash:  sec
         rts
 
 check_their_late_catch:
@@ -646,17 +677,28 @@ check_their_late_catch:
         sta     puck_y
         jsr     _puck_check_their_hit
         bcc     update_y
-        ; Or return with carry set to crash
-        rts
+        jsr     update_screen_for_crash
+        ldy     #4
+        jmp     crash_and_return
 
 check_my_late_catch:
         lda     #PUCK_MAX_Y
         sta     puck_y
         jsr     _puck_check_my_hit
         bcc     update_y
+        jsr     update_screen_for_crash
+        ldy     #0
+crash_and_return:
+        jsr     _play_crash
         ; Or return with carry set to crash
+        sec
         rts
+.endproc
 
+.proc update_screen_for_crash
+        jsr     _transform_puck_coords
+        jsr     _draw_screen
+        jmp     _draw_screen
 .endproc
 
 .bss

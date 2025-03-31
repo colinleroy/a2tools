@@ -4,7 +4,7 @@ MAX_Y              = 191
 MY_PUSHER_MIN_X    = 0
 MY_PUSHER_MAX_X    = 224
 MY_PUSHER_MIN_Y    = 154
-MY_PUSHER_MAX_Y    = 191
+MY_PUSHER_MAX_Y    = 192
 
 MY_PUSHER_INI_X    = 116
 MY_PUSHER_INI_Y    = MY_PUSHER_MAX_Y
@@ -24,9 +24,6 @@ PUCK_MAX_Y         = 192
 
 PUCK_INI_X         = 128
 PUCK_INI_Y         = 160
-
-THEIR_MAX_DX       = 4
-THEIR_MAX_DY       = 8
 
 ABS_MAX_DX         = $8
 ABS_MAX_DY         = $14

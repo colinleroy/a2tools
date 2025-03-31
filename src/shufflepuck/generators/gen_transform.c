@@ -7,7 +7,7 @@
 #define MAXY 191
 #define FOVY 78.0
 #define LEFT_BORDER 3
-#define HGR_H 192
+#define HGR_H 193
 
 int x_divisor_at_y(int y) {
   return FOVY + MAXY - y;
@@ -21,12 +21,12 @@ float x_shift_at_y(int y) {
   return (-MIDX*FOVY)/(FOVY + MAXY - y) + MIDX + LEFT_BORDER;
 }
 
-void build_x_mult_table(void) {
-  int y, x_mult;
-  printf("x_mult: .byte ");
+void build_x_factor_table(void) {
+  int y, x_factor;
+  printf("x_factor: .byte ");
   for (y = 0; y < HGR_H; y++) {
-    x_mult = (256*FOVY)/x_divisor_at_y(y);
-    printf("%d%s", x_mult < 256 ? x_mult : 0, y < HGR_H-1 ? ", ":"");
+    x_factor = (256*FOVY)/x_divisor_at_y(y);
+    printf("%d%s", x_factor < 256 ? x_factor : 0, y < HGR_H-1 ? ", ":"");
   }
   printf("\n");
 }
@@ -41,19 +41,19 @@ void build_x_shift_table(void) {
   printf("\n");
 }
 
-void build_y_table(void) {
+void build_y_factor_table(void) {
   int y, trans_y;
-  printf("y_transform: .byte ");
+  printf("y_factor: .byte ");
   for (y = 0; y < HGR_H; y++) {
     trans_y = MAXY-(((MAXY-y) * FOVY) / y_divisor_at_y(y));
-    printf("%d%s", trans_y, y < HGR_H-1 ? ", ":"");
+    printf("%d%s", trans_y < HGR_H ? trans_y : HGR_H-1, y < HGR_H-1 ? ", ":"");
   }
   printf("\n");
 }
 
 int main(int argc, char *argv[]) {
-  printf(".export x_shift, x_mult, y_transform\n");
-  build_x_mult_table();
+  printf(".export x_shift, x_factor, y_factor\n");
+  build_x_factor_table();
   build_x_shift_table();
-  build_y_table();
+  build_y_factor_table();
 }

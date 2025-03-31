@@ -26,6 +26,9 @@
         .include    "puck_coords.inc"
         .include    "constants.inc"
 
+THEIR_MAX_DX       = 4
+THEIR_MAX_DY       = 8
+
 .proc _opponent_think
         lda    their_pusher_x
         cmp    puck_x
