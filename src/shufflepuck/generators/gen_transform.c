@@ -52,7 +52,8 @@ void build_y_factor_table(void) {
 }
 
 int main(int argc, char *argv[]) {
-  printf(".export x_shift, x_factor, y_factor\n");
+  printf(".export x_shift, x_factor, y_factor\n\n");
+  printf(".segment \"LC\"\n\n");
   build_x_factor_table();
   build_x_shift_table();
   build_y_factor_table();

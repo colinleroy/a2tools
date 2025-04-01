@@ -127,7 +127,7 @@ all dist: \
 	glider-$(GAME_LANG).po
 
 gen_sprite: $(SRC_DIR)/../gen_sprite/gen_sprite.c
-	gcc -g -O0 $(shell pkg-config --cflags SDL_image) $^ $(shell pkg-config --libs SDL_image) -o $@
+	gcc -DENABLE_QUICK_DRAW=1 -g -O0 $(shell pkg-config --cflags SDL_image) $^ $(shell pkg-config --libs SDL_image) -o $@
 
 gen_font: $(SRC_DIR)/generators/gen_font.c
 	gcc -g -O0 $(shell pkg-config --cflags SDL_image) $^ $(shell pkg-config --libs SDL_image) -o $@

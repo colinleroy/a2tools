@@ -23,6 +23,8 @@
 
 int sampling_hz = DEFAULT_SAMPLING_HZ;
 
+static char *segment = "DATA";
+
 int main(int argc, char *argv[]) {
   FILE *fp;
   char *filename;
@@ -31,6 +33,10 @@ int main(int argc, char *argv[]) {
   if (argc < 3) {
     fprintf(stderr, "Usage: %s [sampling hz][input.raw]\n", argv[0]);
     exit(1);
+  }
+
+  if (argc == 4) {
+    segment = argv[3];
   }
 
   sampling_hz = atoi(argv[1]);
@@ -67,7 +73,7 @@ int main(int argc, char *argv[]) {
   printf("         .export _%s_snd, _play_%s\n\n", filename, filename);
   printf("         .import _play_sample\n\n");
 
-  printf("         .data\n\n");
+  printf("         .segment \"%s\"\n\n", segment);
 
   printf(".align $100\n"
          "_%s_snd:\n", filename);

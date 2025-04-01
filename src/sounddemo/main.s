@@ -20,6 +20,7 @@ _main:
 
          lda     #<_countdown_8000_snd
          ldx     #>_countdown_8000_snd
+         ldy     #0
          jsr     _play_sample
 
          lda     #<press_key_str
