@@ -15,7 +15,6 @@
 
         .export   _clear_sprite, _draw_sprite, _draw_sprite_fast
         .export   _load_puck_pointer, _load_my_pusher_pointer, _load_their_pusher_pointer
-        .export   _setup_sprite_pointer_full
         .export   _setup_sprite_pointer_for_clear
         .export   _setup_sprite_pointer_for_draw
 
@@ -68,59 +67,6 @@ _load_their_pusher_pointer:
         sta     cur_sprite_ptr+1
 
         rts
-
-_setup_sprite_pointer_full:
-        ldy     #SPRITE_DATA::X_COORD
-        lda     (cur_sprite_ptr),y
-        tax
-
-        ; Select correct sprite for pixel-precise render
-        lda     _mod7_table,x
-        asl                       ; Multiply by four to account for
-        asl                       ; data and mask pointers
-        sta     sprite_num+1      ; Patch sprite pointer number
-
-        lda     _div7_table,x     ; Compute divided X
-        sta     sprite_x+1
-        tax                       ; Back it up to update prev X
-
-        ldy     #SPRITE_DATA::PREV_X_COORD
-        lda     (cur_sprite_ptr),y
-        sta     sprite_prev_x+1
-
-        txa
-        sta     (cur_sprite_ptr),y          ; And save the new prev_x now
-
-        ldy     #SPRITE_DATA::Y_COORD
-        lda     (cur_sprite_ptr),y
-        sta     sprite_y
-        tax
-
-        ldy     #SPRITE_DATA::PREV_Y_COORD
-        lda     (cur_sprite_ptr),y          ; Get existing prev_y for clear
-        sta     cur_y
-        txa
-        sta     (cur_sprite_ptr),y          ; Save the new prev_y
-
-        ldy     #SPRITE_DATA::BYTES
-        lda     (cur_sprite_ptr),y
-        sta     n_bytes_draw
-
-        ldy     #SPRITE_DATA::BYTES_WIDTH
-        lda     (cur_sprite_ptr),y
-        sta     n_bytes_per_line_clear+1
-        sta     n_bytes_per_line_draw+1
-
-        ldy     #SPRITE_DATA::BG_BACKUP
-        lda     (cur_sprite_ptr),y
-        sta     sprite_restore+1
-        sta     sprite_backup+1
-        iny
-        lda     (cur_sprite_ptr),y
-        sta     sprite_restore+2
-        sta     sprite_backup+2
-        jmp     select_sprite
-
 
 ; Finish setting up clear/draw functions with sprite data
 _setup_sprite_pointer_for_clear:
