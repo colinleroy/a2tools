@@ -163,8 +163,9 @@ int main(int argc, char *argv[]) {
   }
 
   fprintf(fp, "         .export _%s\n", sprite_name);
+#ifdef ENABLE_QUICK_DRAW
   fprintf(fp, "         .export _quick_draw_%s\n", sprite_name);
-
+#endif
   fprintf(fp,
           "         .import _draw_sprite_fast, fast_sprite_pointer\n"
           "         .import fast_n_bytes_per_line_draw, fast_sprite_x\n"
@@ -238,6 +239,7 @@ int main(int argc, char *argv[]) {
     fprintf(fp, "         .addr %s_mask_x%d\n", sprite_name, shift < max_shift ? shift : 0);
   }
 
+  #ifdef ENABLE_QUICK_DRAW
   fprintf(fp, "\n         .code\n\n");
   fprintf(fp,
           "_quick_draw_%s:\n"
@@ -261,6 +263,7 @@ int main(int argc, char *argv[]) {
           sprite_name,
           sprite_name,
           sprite_name);
+  #endif
 
   for (shift = 1; shift < 7; shift++) {
     if (image[shift] != image[0]) {

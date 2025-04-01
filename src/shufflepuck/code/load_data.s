@@ -29,9 +29,11 @@
         .include  "apple2.inc"
         .include  "fcntl.inc"
 
-.code
+.segment "LC"
 
 .proc _load_table
+        bit       $C083           ; Enable writing to LC
+        bit       $C083
         lda       #<table_name
         sta       filename
         lda       #>table_name
@@ -186,6 +188,8 @@ uncompress:
 .endproc
 
 .proc _load_lowcode
+        bit       $C083           ; Enable writing to LC
+        bit       $C083
         lda       #<lowcode_name
         sta       filename
         lda       #>lowcode_name

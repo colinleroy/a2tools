@@ -32,13 +32,13 @@ SEGMENTS {
     ZEROPAGE: load = ZP,             type = zp;
     EXEHDR:   load = HEADER,         type = ro,  optional = yes;
     STARTUP:  load = MAIN,           type = ro;
-    LOWCODE:  load = LOWCODE,        type = ro;
+    LOWCODE:  load = LOWCODE,        type = ro,  align = $100;
     CODE:     load = MAIN,           type = ro;
-    RODATA:   load = MAIN,           type = ro;
-    DATA:     load = MAIN,           type = rw,  align = $100;
+    RODATA:   load = MAIN,           type = ro,  align = $100;
+    DATA:     load = MAIN,           type = rw;
     INIT:     load = MAIN,           type = rw;
     ONCE:     load = MAIN,           type = ro,  define   = yes;
-    LC:       load = MAIN, run = LC, type = ro,  optional = yes;
+    LC:       load = MAIN, run = LC, type = ro,  optional = yes,  align = $100;
     BSS:      load = BSS,            type = bss, define   = yes;
 
 ### LEVEL_SEGMENTS_DECLARATIONS ###

@@ -51,6 +51,7 @@ sounds = \
 # Our code
 
 shflpuck_SOURCES := \
+	play_sound.gen.s \
 	$(SRC_DIR)/code/main.s \
 	$(SRC_DIR)/code/mouse.s \
 	$(SRC_DIR)/code/draw_sprite.s \
@@ -66,9 +67,8 @@ shflpuck_SOURCES := \
 	$(SRC_DIR)/../lib/cutoa.s \
 	$(SRC_DIR)/../lib/cntoabuf.s \
 	$(SRC_DIR)/../lib/platform_sleep.s \
-	transform.s \
-	play_sound.gen.s \
 	$(sounds) \
+	transform.s \
 	$(sprites) \
 	$(assets_backgrounds) \
 	$(levels_code)
@@ -125,17 +125,26 @@ $(SRC_DIR)/../surl-server/hgr-convert:
 	rm -f $<.png $<.png.hgr-preview.png
 
 $(sprites_pixel_perfect): %.pixel_perfect.gen.s: $(SRC_DIR)/assets/%.png
-%.pixel_perfect.gen.s: $(SRC_DIR)/assets/%.png gen_sprite
-	./gen_sprite $< 255 pixel_perfect
+my%.pixel_perfect.gen.s: $(SRC_DIR)/assets/my%.png gen_sprite
+	./gen_sprite $< 255 pixel_perfect RODATA
+their%.pixel_perfect.gen.s: $(SRC_DIR)/assets/their%.png gen_sprite
+	./gen_sprite $< 255 pixel_perfect LC
+puck%.pixel_perfect.gen.s: $(SRC_DIR)/assets/puck%.png gen_sprite
+	./gen_sprite $< 255 pixel_perfect RODATA
 
 play_sound.gen.s: gen_sound_player
-	./gen_sound_player $(SAMPLING_HZ) > $@
+	./gen_sound_player $(SAMPLING_HZ) LOWCODE > $@
 
 $(sounds): %.snd.s: $(SRC_DIR)/assets/sounds/%.wav
-%.snd.s: $(SRC_DIR)/assets/sounds/%.wav gen_sound_clip
+crash.snd.s: $(SRC_DIR)/assets/sounds/crash.wav gen_sound_clip
 	rm -f $<_raw
 	sox $< -b 8 -e unsigned-integer -t raw $<_raw channels 1 rate -v $(SAMPLING_HZ)
-	./gen_sound_clip $(SAMPLING_HZ) $<_raw > $@
+	./gen_sound_clip $(SAMPLING_HZ) $<_raw RODATA > $@
+	rm $<_raw
+puc%.snd.s: $(SRC_DIR)/assets/sounds/puc%.wav gen_sound_clip
+	rm -f $<_raw
+	sox $< -b 8 -e unsigned-integer -t raw $<_raw channels 1 rate -v $(SAMPLING_HZ)
+	./gen_sound_clip $(SAMPLING_HZ) $<_raw LC > $@
 	rm $<_raw
 
 shflpuck.ld.cfg: $(SRC_DIR)/shflpuck.ld.cfg.tmpl

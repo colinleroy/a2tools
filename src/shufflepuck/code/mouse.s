@@ -70,10 +70,7 @@ inibox: .word   (MY_PUSHER_MIN_X/2)
         .word   (MY_PUSHER_MAX_X/2)
         .word   (MY_PUSHER_MAX_Y/2)
 
-        .data
-
-mouse_prev_addr: .word $2000
-mouse_prev_val: .byte $00
+        .code
 
 firmware:
         ; Lookup and patch firmware address lobyte

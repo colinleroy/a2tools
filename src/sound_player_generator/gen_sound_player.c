@@ -278,12 +278,18 @@ static void level(int l) {
   }
 }
 
+static char *segment = "DATA";
+
 int main(int argc, char *argv[]) {
   int c;
 
   if (argc < 2) {
     fprintf(stderr, "Usage: %s [sampling hz]\n", argv[0]);
     exit(1);
+  }
+
+  if (argc == 3) {
+    segment = argv[2];
   }
 
   sampling_hz = atoi(argv[1]);
@@ -313,7 +319,45 @@ int main(int argc, char *argv[]) {
          "snd_slow = tmp4\n"
          "\n\n");
 
-  printf(".segment \"LOWCODE\"\n");
+  printf(".segment \"%s\"\n", segment);
+  printf(".align $100\n");
+  printf("START_SOUND_PLAYER = *\n");
+
+  printf("\n"
+         "slow_sound:\n"
+         "         sty tmp3                  ; 3\n"
+         "         ldy snd_slow              ; 6\n"
+         ":        dey                       ; 8\n"
+         "         bpl :-                    ; 10\n"
+         "         ldy tmp3                  ; 13\n"
+         "         rts\n\n");
+
+  /* Jump table, aligned on a page to make sure we don't get extra cycles */
+  printf("sound_levels:\n");
+  for (c = 0; c < NUM_LEVELS; c+=STEP) {
+    printf("         .addr sound_level_%d_0\n", c);
+  }
+  printf("         .addr play_done\n");
+
+  printf("incr_pointer:\n");
+  printf("         iny                         ; 2\n"
+         "         bne :+                      ; 4   (5)\n"
+         "         inc ptr1+1                  ; 9\n"
+         "         rts                         ; 15\n"
+         ":        nop                         ; 7\n"
+         "         nop                         ; 9\n");
+  printf("         rts                         ; 15\n\n");
+#if POINTER_INCR_CYCLES != 21
+#error Recount pointer increment cycles
+#endif
+
+  printf("set_jump_target:\n");
+  emit_half_target_set(0, HALF_TARGET_BYTE_SET);
+  emit_half_target_set(1, HALF_TARGET_BYTE_SET);
+  printf("         rts\n\n");
+#if FULL_TARGET_SET_CYCLES != 26
+#error Recount target setting cycles
+#endif
 
   /* Wasters */
   printf("\n"
@@ -346,51 +390,6 @@ int main(int argc, char *argv[]) {
          "waste_15: bit $FF\n"
          "          rts\n\n");
 
-  printf("\n"
-         "slow_sound:\n"
-         "         sty tmp3                  ; 3\n"
-         "         ldy snd_slow              ; 6\n"
-         ":        dey                       ; 8\n"
-         "         bpl :-                    ; 10\n"
-         "         ldy tmp3                  ; 13\n"
-         "         rts\n\n");
-
-  /* Levels */
-  for (c = 0; c < NUM_LEVELS; c+=STEP) {
-    level(c);
-  }
-
-  /* Player */
-  printf("         .data\n\n"
-         ".align $100\n");
-
-  /* Jump table, aligned on a page to make sure we don't get extra cycles */
-  printf("sound_levels:\n");
-  for (c = 0; c < NUM_LEVELS; c+=STEP) {
-    printf("         .addr sound_level_%d_0\n", c);
-  }
-  printf("         .addr play_done\n");
-
-  printf("incr_pointer:\n");
-  printf("         iny                         ; 2\n"
-         "         bne :+                      ; 4   (5)\n"
-         "         inc ptr1+1                  ; 9\n"
-         "         rts                         ; 15\n"
-         ":        nop                         ; 7\n"
-         "         nop                         ; 9\n");
-  printf("         rts                         ; 15\n\n");
-#if POINTER_INCR_CYCLES != 21
-#error Recount pointer increment cycles
-#endif
-
-  printf("set_jump_target:\n");
-  emit_half_target_set(0, HALF_TARGET_BYTE_SET);
-  emit_half_target_set(1, HALF_TARGET_BYTE_SET);
-  printf("         rts\n\n");
-#if FULL_TARGET_SET_CYCLES != 26
-#error Recount target setting cycles
-#endif
-
   printf("_play_sample:\n"
          "         sty snd_slow\n"
          "         sta ptr1\n"
@@ -410,4 +409,20 @@ int main(int argc, char *argv[]) {
   printf("play_done:\n"
          "         plp\n"
          "         rts\n");
+
+
+  printf(".assert >START_SOUND_PLAYER = >*, error\n");
+
+  /* Levels */
+  for (c = 0; c < NUM_LEVELS; c+=STEP) {
+#ifdef ENABLE_SLOWER
+    if (c % (sampling_hz/2000) == 0) {
+      printf(".align $100\n");
+    }
+#endif
+    level(c);
+#ifdef ENABLE_SLOWER
+  printf(".assert >sound_level_%d_0 = >*, error\n\n", c);
+#endif
+  }
 }
