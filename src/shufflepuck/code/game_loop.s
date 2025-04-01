@@ -311,22 +311,22 @@ do_move:
 .proc _puck_select
         ldy     puck_y
         ldx     #0
-        cpy     #165
+        cpy     #175
         bcs     out
         inx
-        cpy     #138
+        cpy     #148
         bcs     out
         inx
-        cpy     #111
+        cpy     #121
         bcs     out
         inx
-        cpy     #84
+        cpy     #94
         bcs     out
         inx
-        cpy     #57
+        cpy     #67
         bcs     out
         inx
-        cpy     #30
+        cpy     #40
         bcs     out
         inx
 out:
