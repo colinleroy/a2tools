@@ -13,7 +13,7 @@
 ; You should have received a copy of the GNU General Public License
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-        .export     _draw_screen
+        .export     _draw_screen, _clear_screen
         .export     _move_puck, _move_my_pusher, _move_their_pusher
         .export     _puck_check_my_hit, _puck_check_their_hit
 
@@ -41,11 +41,13 @@
         .import     _play_puck
         .import     _play_crash
 
+        .import     ___randomize, _rand
+        .import     pushax, popax, pusha, popa
         .import my_pushers_low, my_pushers_high, my_pushers_width, my_pushers_height, my_pushers_bytes, my_pushers_bpline
         .import their_pushers_low, their_pushers_high, their_pushers_width, their_pushers_height, their_pushers_bytes, their_pushers_bpline
         .import pucks_low, pucks_high, pucks_width, pucks_height, pucks_bytes, pucks_bpline
 
-        .importzp   tmp1, ptr1
+        .importzp   tmp1, tmp3, tmp4, ptr1
 
         .include    "sprite.inc"
         .include    "puck_coords.inc"
@@ -56,6 +58,19 @@
         .include    "constants.inc"
 
 .segment "LOWCODE"
+
+.proc _clear_screen
+        jsr     _load_their_pusher_pointer
+        jsr     _setup_sprite_pointer_for_clear
+        jsr     _clear_sprite
+        jsr     _load_my_pusher_pointer
+        jsr     _setup_sprite_pointer_for_clear
+        jsr     _clear_sprite
+        jsr     _load_puck_pointer
+        jsr     _setup_sprite_pointer_for_clear
+        jsr     _clear_sprite
+        rts
+.endproc
 
 .proc _draw_screen_my_side
         lda     frame_counter
@@ -603,6 +618,17 @@ out_miss:
         rts
 .endproc
 
+.proc rand_crash
+        jsr     _rand
+        lsr                   ; Divide to 32
+        lsr
+        lsr
+extra_lsr:
+        lsr
+        clc
+        rts
+.endproc
+
 .proc revert_x
         lda     puck_dx
         clc
@@ -679,6 +705,8 @@ check_their_late_catch:
         sta     puck_y
         jsr     _puck_check_their_hit
         bcc     update_y
+        lda     #$4A  ; LSR
+        sta     rand_crash::extra_lsr
         jsr     update_screen_for_crash
         ldy     #4
         jmp     crash_and_return
@@ -688,19 +716,180 @@ check_my_late_catch:
         sta     puck_y
         jsr     _puck_check_my_hit
         bcc     update_y
+        lda     #$EA  ; NOP
+        sta     rand_crash::extra_lsr
         jsr     update_screen_for_crash
         ldy     #0
 crash_and_return:
         jsr     _play_crash
-        ; Or return with carry set to crash
+        ; Return with carry set to inform main
         sec
         rts
 .endproc
 
 .proc update_screen_for_crash
         jsr     _transform_puck_coords
+        jsr     _draw_screen      ; Draw twice to make sure we draw the whole board
         jsr     _draw_screen
-        jmp     _draw_screen
+
+        jsr     ___randomize
+        jsr     set_color_white
+
+        lda     #3
+        sta     crash_lines_recursion
+        lda     puck_gx
+        clc
+        adc     #10
+        bcc     :+
+        lda     #255
+:       tax
+        lda     puck_gy
+        jsr     _draw_crash_lines
+        rts
+.endproc
+
+HPOSN   :=      $F411   ; Positions the hi-res cursor to (X,Y),A
+HLIN    :=      $F53A   ; Draws a line from the cursor to:
+                        ; (A,X) = X-coordinate, and
+                        ; (Y) = Y-coordinate.
+                        ; Mind that the parameters to both are different
+SETHCOL :=      $F6EC   ; Set the hi-res color to (X), where (X)
+                        ; must be between 0 and 7.
+WHITE   :=      $3
+
+.proc set_color_white
+        bit     $C082
+        ldx     #WHITE
+        jsr     SETHCOL
+        bit     $C080
+        rts
+.endproc
+
+ox:  .byte 1
+oy:  .byte 1
+dx:  .byte 1
+dy:  .byte 1
+crash_lines_recursion: .byte 1
+
+.proc _draw_line_left
+        ; Origin in XA, save them
+        stx     ox
+        sta     oy
+        ldy     #0
+        bit     $C082
+        jsr     HPOSN
+        bit     $C080
+
+        ; Get random height
+        jsr     rand_crash
+        clc
+        adc     #10           ; Minimum 10
+        sta     tmp4
+
+        ; Go up
+        lda     oy
+        sec
+        sbc     tmp4
+        sta     dy
+        tay
+
+        ; Go left
+        jsr     rand_crash
+        sta     tmp4
+
+        lda     ox
+        sec
+        sbc     tmp4
+        bcs     :+
+        lda     #0
+
+:       sta     dx
+        ldx     #0
+        bit     $C082
+        jsr     HLIN
+        bit     $C080
+
+        rts
+.endproc
+
+.proc _draw_line_right
+        ; Origin in XA, save them
+        stx     ox
+        sta     oy
+        ldy     #0
+        bit     $C082
+        jsr     HPOSN
+        bit     $C080
+
+        ; Get random height
+        lda     puck_data+SPRITE_DATA::WIDTH
+        lsr
+        sta     tmp4
+        jsr     rand_crash
+        clc
+        adc     tmp4
+        sta     tmp4
+
+        ; Go up
+        lda     oy
+        sec
+        sbc     tmp4
+        sta     dy
+        tay
+
+        ; Go right
+        jsr     rand_crash
+        sta     tmp4
+
+        lda     ox
+        clc
+        adc     tmp4
+        bcc     :+
+        lda     #0
+
+:       sta     dx
+        ldx     #0
+        bit     $C082
+        jsr     HLIN
+        bit     $C080
+
+        rts
+.endproc
+
+; Origin in XA
+.proc _draw_crash_lines
+        ; Save origin
+        jsr     pushax
+        jsr     _draw_line_left
+        ; Destination now in dx/dy
+
+        lda     crash_lines_recursion
+        sec
+        sbc     #1
+        sta     crash_lines_recursion
+
+        beq     :+
+        jsr     pusha             ; backup recursion level
+        ldx     dx
+        lda     dy
+        jsr     _draw_crash_lines
+        jsr     popa
+        sta     crash_lines_recursion
+:
+        ; Get origin back
+        jsr     popax
+        jsr     _draw_line_right
+        lda     crash_lines_recursion
+        beq     :+
+
+        jsr     pusha             ; backup recursion level
+        ldx     dx
+        lda     dy
+        jsr     _draw_crash_lines
+        jsr     popa
+        sta     crash_lines_recursion
+:
+        rts
 .endproc
 
 .bss

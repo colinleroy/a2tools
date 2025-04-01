@@ -24,7 +24,7 @@
         .import   their_pusher_x, their_pusher_y
 
         .import   _puck_reinit_my_order, _puck_reinit_their_order
-        .import   _draw_screen
+        .import   _draw_screen, _clear_screen
         .import   _move_puck, _puck_check_my_hit, _puck_check_their_hit
         .import   _move_my_pusher, _move_their_pusher
         .import   _opponent_think
@@ -169,5 +169,7 @@ update_screen:
         lda     puck_y
         cmp     #PUCK_INI_Y
         bne     reset_game
+        jsr     _clear_screen
+        jsr     _load_table
         jmp     new_game
 .endproc
