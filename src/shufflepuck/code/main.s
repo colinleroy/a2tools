@@ -164,6 +164,7 @@ update_screen:
         jsr     _mouse_wait_vbl
         jsr     _draw_screen
         jsr     _move_my_pusher
+        jsr     _move_their_pusher
         jsr     _move_puck
         lda     puck_y
         cmp     #PUCK_INI_Y

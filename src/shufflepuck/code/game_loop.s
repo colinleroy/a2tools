@@ -35,24 +35,24 @@
 
         .import     x_shift, x_factor, y_factor
 
-        .import     _my_pusher0, _my_pusher1, _my_pusher2, _my_pusher3
-        .import     _their_pusher4, _their_pusher5
-        .import     _puck0, _puck1, _puck2, _puck3, _puck4, _puck5, _puck6
         .import     umul8x8r16
 
         .import     _play_puck_hit
         .import     _play_puck
         .import     _play_crash
 
+        .import my_pushers_low, my_pushers_high, my_pushers_width, my_pushers_height, my_pushers_bytes, my_pushers_bpline
+        .import their_pushers_low, their_pushers_high, their_pushers_width, their_pushers_height, their_pushers_bytes, their_pushers_bpline
+        .import pucks_low, pucks_high, pucks_width, pucks_height, pucks_bytes, pucks_bpline
+
         .importzp   tmp1, ptr1
 
         .include    "sprite.inc"
         .include    "puck_coords.inc"
         .include    "my_pusher_coords.inc"
-        .include    "my_pusher0.gen.inc"
         .include    "their_pusher_coords.inc"
-        .include    "their_pusher4.gen.inc"
         .include    "puck0.gen.inc"
+        .include    "my_pusher0.gen.inc"
         .include    "constants.inc"
 
 .segment "LOWCODE"
@@ -65,8 +65,11 @@
 
         ; Redraw other side
         jsr     _load_their_pusher_pointer
-        jsr     _setup_sprite_pointer_full
+        jsr     _setup_sprite_pointer_for_clear
         jsr     _clear_sprite
+
+        jsr     _their_pusher_select
+        jsr     _setup_sprite_pointer_for_draw
         jsr     _draw_sprite
         rts
 
@@ -76,10 +79,13 @@
         jsr     _clear_sprite
 
         jsr     _load_puck_pointer
-        jsr     _setup_sprite_pointer_full
+        jsr     _setup_sprite_pointer_for_clear
         jsr     _clear_sprite
+        jsr     _puck_select
+        jsr     _setup_sprite_pointer_for_draw
         jsr     _draw_sprite
 
+        jsr     _my_pusher_select
         jsr     _load_my_pusher_pointer
         jsr     _setup_sprite_pointer_for_draw
         jsr     _draw_sprite
@@ -98,19 +104,25 @@
         jsr     _clear_sprite
 
         jsr     _load_their_pusher_pointer
-        jsr     _setup_sprite_pointer_full
+        jsr     _setup_sprite_pointer_for_clear
         jsr     _clear_sprite
+        jsr     _their_pusher_select
+        jsr     _setup_sprite_pointer_for_draw
         jsr     _draw_sprite
 
         jsr     _load_puck_pointer
+        jsr     _puck_select
         jsr     _setup_sprite_pointer_for_draw
         jsr     _draw_sprite
         rts
 
 :       ; My side now
         jsr     _load_my_pusher_pointer
-        jsr     _setup_sprite_pointer_full
+        jsr     _setup_sprite_pointer_for_clear
         jsr     _clear_sprite
+
+        jsr     _my_pusher_select
+        jsr     _setup_sprite_pointer_for_draw
         jsr     _draw_sprite
         rts
 .endproc
@@ -164,27 +176,17 @@
         rts
 .endproc
 
-my_pushers_low:
-        .byte <_my_pusher0
-        .byte <_my_pusher1
-        .byte <_my_pusher2
-        .byte <_my_pusher3
-my_pushers_high:
-        .byte >_my_pusher0
-        .byte >_my_pusher1
-        .byte >_my_pusher2
-        .byte >_my_pusher3
-
 ; Y input
 .proc _my_pusher_select
+        ldy     my_pusher_y
         ldx     #0
-        cpy     #159
+        cpy     #183
         bcs     out
         inx
-        cpy     #147
+        cpy     #174
         bcs     out
         inx
-        cpy     #135
+        cpy     #165
         bcs     out
         inx
 out:
@@ -192,6 +194,19 @@ out:
         sta     my_pusher_data+SPRITE_DATA::SPRITE
         lda     my_pushers_high,x
         sta     my_pusher_data+SPRITE_DATA::SPRITE+1
+        lda     my_pushers_width,x
+        sta     my_pusher_data+SPRITE_DATA::WIDTH
+        lda     my_pushers_height,x
+        sta     my_pusher_data+SPRITE_DATA::HEIGHT
+        lda     my_pushers_bytes,x
+        sta     my_pusher_data+SPRITE_DATA::BYTES
+        lda     my_pushers_bpline,x
+        sta     my_pusher_data+SPRITE_DATA::BYTES_WIDTH
+
+        lda     my_pusher_gy
+        sec
+        sbc     my_pusher_data+SPRITE_DATA::HEIGHT
+        sta     my_pusher_gy
         rts
 .endproc
 
@@ -203,28 +218,15 @@ out:
         stx     my_pusher_x
         jsr     _transform_xy
         stx     my_pusher_gx
-        tya
-        sec
-        sbc     #my_pusher0_HEIGHT
-        tay
         sty     my_pusher_gy
-        jmp     _my_pusher_select
+        rts
 .endproc
-
-their_pushers_low:
-        .byte <_their_pusher4
-        .byte <_their_pusher5
-their_pushers_high:
-        .byte >_their_pusher4
-        .byte >_their_pusher5
 
 ; Y input
 .proc _their_pusher_select
+        ldy     their_pusher_y
         ldx     #0
-        cpy     #75
-        bcs     out
-        inx
-        cpy     #65
+        cpy     #20
         bcs     out
         inx
 out:
@@ -232,6 +234,19 @@ out:
         sta     their_pusher_data+SPRITE_DATA::SPRITE
         lda     their_pushers_high,x
         sta     their_pusher_data+SPRITE_DATA::SPRITE+1
+        lda     their_pushers_width,x
+        sta     their_pusher_data+SPRITE_DATA::WIDTH
+        lda     their_pushers_height,x
+        sta     their_pusher_data+SPRITE_DATA::HEIGHT
+        lda     their_pushers_bytes,x
+        sta     their_pusher_data+SPRITE_DATA::BYTES
+        lda     their_pushers_bpline,x
+        sta     their_pusher_data+SPRITE_DATA::BYTES_WIDTH
+
+        lda     their_pusher_gy
+        sec
+        sbc     their_pusher_data+SPRITE_DATA::HEIGHT
+        sta     their_pusher_gy
         rts
 .endproc
 
@@ -288,51 +303,30 @@ do_move:
 
         jsr     _transform_xy
         stx     their_pusher_gx
-        tya
-        sec
-        sbc     #their_pusher4_HEIGHT
-        tay
         sty     their_pusher_gy
-        jmp     _their_pusher_select
+        rts
 .endproc
-
-
-pucks_low:
-        .byte <_puck0
-        .byte <_puck1
-        .byte <_puck2
-        .byte <_puck3
-        .byte <_puck4
-        .byte <_puck5
-        .byte <_puck6
-pucks_high:
-        .byte >_puck0
-        .byte >_puck1
-        .byte >_puck2
-        .byte >_puck3
-        .byte >_puck4
-        .byte >_puck5
-        .byte >_puck6
 
 ; Y input
 .proc _puck_select
+        ldy     puck_y
         ldx     #0
-        cpy     #159
+        cpy     #165
         bcs     out
         inx
-        cpy     #141
-        bcs     out
-        inx
-        cpy     #126
+        cpy     #138
         bcs     out
         inx
         cpy     #111
         bcs     out
         inx
-        cpy     #92
+        cpy     #84
         bcs     out
         inx
-        cpy     #80
+        cpy     #57
+        bcs     out
+        inx
+        cpy     #30
         bcs     out
         inx
 out:
@@ -340,6 +334,19 @@ out:
         sta     puck_data+SPRITE_DATA::SPRITE
         lda     pucks_high,x
         sta     puck_data+SPRITE_DATA::SPRITE+1
+        lda     pucks_width,x
+        sta     puck_data+SPRITE_DATA::WIDTH
+        lda     pucks_height,x
+        sta     puck_data+SPRITE_DATA::HEIGHT
+        lda     pucks_bytes,x
+        sta     puck_data+SPRITE_DATA::BYTES
+        lda     pucks_bpline,x
+        sta     puck_data+SPRITE_DATA::BYTES_WIDTH
+
+        lda     puck_gy
+        sec
+        sbc     puck_data+SPRITE_DATA::HEIGHT
+        sta     puck_gy
         rts
 .endproc
 
@@ -592,10 +599,6 @@ out_miss:
         ldy     puck_y
         jsr     _transform_xy
         stx     puck_gx
-        tya
-        sec
-        sbc     #puck0_HEIGHT
-        tay
         sty     puck_gy
         rts
 .endproc
@@ -667,7 +670,6 @@ check_y_bound:
         sta     puck_y
 
         jsr     _transform_puck_coords
-        jsr     _puck_select
 
         clc
         rts

@@ -15,13 +15,29 @@
 
                   .export my_pusher_data, their_pusher_data, puck_data
 
-                  .import _my_pusher0, _their_pusher4, _puck0
+                  .export my_pushers_low, my_pushers_high, my_pushers_width, my_pushers_height, my_pushers_bytes, my_pushers_bpline
+                  .export their_pushers_low, their_pushers_high, their_pushers_width, their_pushers_height, their_pushers_bytes, their_pushers_bpline
+                  .export pucks_low, pucks_high, pucks_width, pucks_height, pucks_bytes, pucks_bpline
+
+                  .import _my_pusher0, _my_pusher1, _my_pusher2, _my_pusher3
+                  .import _their_pusher4, _their_pusher5
+                  .import _puck0, _puck1, _puck2, _puck3, _puck4, _puck5, _puck6
 
                   .import  my_pusher_bgbackup, their_pusher_bgbackup, puck_bgbackup
 
                   .include "my_pusher0.gen.inc"
+                  .include "my_pusher1.gen.inc"
+                  .include "my_pusher2.gen.inc"
+                  .include "my_pusher3.gen.inc"
                   .include "their_pusher4.gen.inc"
+                  .include "their_pusher5.gen.inc"
                   .include "puck0.gen.inc"
+                  .include "puck1.gen.inc"
+                  .include "puck2.gen.inc"
+                  .include "puck3.gen.inc"
+                  .include "puck4.gen.inc"
+                  .include "puck5.gen.inc"
+                  .include "puck6.gen.inc"
                   .include "constants.inc"
 
 .data
@@ -40,6 +56,38 @@ my_pusher_data:
                   .addr my_pusher_bgbackup
                   .byte 0               ; need clear
 
+; variants
+my_pushers_low:
+        .byte <_my_pusher0
+        .byte <_my_pusher1
+        .byte <_my_pusher2
+        .byte <_my_pusher3
+my_pushers_high:
+        .byte >_my_pusher0
+        .byte >_my_pusher1
+        .byte >_my_pusher2
+        .byte >_my_pusher3
+my_pushers_width:
+        .byte my_pusher0_WIDTH
+        .byte my_pusher1_WIDTH
+        .byte my_pusher2_WIDTH
+        .byte my_pusher3_WIDTH
+my_pushers_height:
+        .byte my_pusher0_HEIGHT
+        .byte my_pusher1_HEIGHT
+        .byte my_pusher2_HEIGHT
+        .byte my_pusher3_HEIGHT
+my_pushers_bytes:
+        .byte my_pusher0_BYTES-1
+        .byte my_pusher1_BYTES-1
+        .byte my_pusher2_BYTES-1
+        .byte my_pusher3_BYTES-1
+my_pushers_bpline:
+        .byte my_pusher0_BPLINE-1
+        .byte my_pusher1_BPLINE-1
+        .byte my_pusher2_BPLINE-1
+        .byte my_pusher3_BPLINE-1
+
 ; Their pusher
 their_pusher_data:
                   .byte THEIR_PUSHER_INI_X   ; x
@@ -54,6 +102,26 @@ their_pusher_data:
                   .addr their_pusher_bgbackup
                   .byte 0               ; need clear
 
+; Variants
+their_pushers_low:
+        .byte <_their_pusher4
+        .byte <_their_pusher5
+their_pushers_high:
+        .byte >_their_pusher4
+        .byte >_their_pusher5
+their_pushers_width:
+        .byte their_pusher4_WIDTH
+        .byte their_pusher5_WIDTH
+their_pushers_height:
+        .byte their_pusher4_HEIGHT
+        .byte their_pusher5_HEIGHT
+their_pushers_bytes:
+        .byte their_pusher4_BYTES-1
+        .byte their_pusher5_BYTES-1
+their_pushers_bpline:
+        .byte their_pusher4_BPLINE-1
+        .byte their_pusher5_BPLINE-1
+
 ; The puck
 puck_data:
                   .byte PUCK_INI_X   ; x
@@ -67,3 +135,53 @@ puck_data:
                   .addr _puck0        ; sprites
                   .addr puck_bgbackup
                   .byte 0               ; need clear
+
+; Variants
+pucks_low:
+        .byte <_puck0
+        .byte <_puck1
+        .byte <_puck2
+        .byte <_puck3
+        .byte <_puck4
+        .byte <_puck5
+        .byte <_puck6
+pucks_high:
+        .byte >_puck0
+        .byte >_puck1
+        .byte >_puck2
+        .byte >_puck3
+        .byte >_puck4
+        .byte >_puck5
+        .byte >_puck6
+pucks_width:
+        .byte puck0_WIDTH
+        .byte puck1_WIDTH
+        .byte puck2_WIDTH
+        .byte puck3_WIDTH
+        .byte puck4_WIDTH
+        .byte puck5_WIDTH
+        .byte puck6_WIDTH
+pucks_height:
+        .byte puck0_HEIGHT
+        .byte puck1_HEIGHT
+        .byte puck2_HEIGHT
+        .byte puck3_HEIGHT
+        .byte puck4_HEIGHT
+        .byte puck5_HEIGHT
+        .byte puck6_HEIGHT
+pucks_bytes:
+        .byte puck0_BYTES-1
+        .byte puck1_BYTES-1
+        .byte puck2_BYTES-1
+        .byte puck3_BYTES-1
+        .byte puck4_BYTES-1
+        .byte puck5_BYTES-1
+        .byte puck6_BYTES-1
+pucks_bpline:
+        .byte puck0_BPLINE-1
+        .byte puck1_BPLINE-1
+        .byte puck2_BPLINE-1
+        .byte puck3_BPLINE-1
+        .byte puck4_BPLINE-1
+        .byte puck5_BPLINE-1
+        .byte puck6_BPLINE-1
