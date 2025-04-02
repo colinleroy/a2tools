@@ -126,10 +126,10 @@ their_pushers_bpline:
 puck_data:
                   .byte PUCK_INI_X   ; x
                   .byte puck0_WIDTH
-                  .byte PUCK_INI_Y   ; y
+                  .byte MY_PUCK_INI_Y; y
                   .byte puck0_HEIGHT
                   .byte PUCK_INI_X ; prev_x
-                  .byte PUCK_INI_Y ; prev_y
+                  .byte MY_PUCK_INI_Y; prev_y
                   .byte puck0_BYTES-1 ; bytes of sprite - 1
                   .byte puck0_BPLINE-1; width of sprite in bytes
                   .addr _puck0        ; sprites

@@ -14,6 +14,7 @@
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
         .export   _main
+        .export   serving
 
         .import   _init_hgr, _init_mouse
         .import   mouse_x, mouse_y
@@ -22,6 +23,7 @@
         .import   puck_x, puck_y, puck_dx, puck_dy
         .import   my_pusher_x, my_pusher_y
         .import   their_pusher_x, their_pusher_y
+        .import   their_pusher_dx, their_pusher_dy
 
         .import   _puck_reinit_my_order, _puck_reinit_their_order
         .import   _draw_screen, _clear_screen
@@ -90,8 +92,13 @@ calibrate_hz_handler:
 
         ; Wait for first interrupt
         jsr     _mouse_wait_vbl
-
 new_game:
+        lda     #$00
+        sta     turn
+        lda     turn_puck_y
+        sta     puck_serve_y
+
+new_point:
         ; Initialize coords
         ldy     mouse_y
         sty     my_pusher_y
@@ -105,12 +112,15 @@ new_game:
 
         lda     #PUCK_INI_X
         sta     puck_x
-        lda     #PUCK_INI_Y
+        lda     puck_serve_y
         sta     puck_y
 
         lda     #$00
         sta     puck_dx
         sta     puck_dy
+        lda     #$01
+        sta     serving
+
         jsr     _puck_reinit_my_order
         jsr     _puck_reinit_their_order
 
@@ -123,10 +133,14 @@ game_loop:
 loop_start:
         jsr     _draw_screen
 
+        lda     puck_dy
+        beq     :+
+        lda     #$00
+        sta     serving
+:
         jsr     _move_my_pusher
 
         jsr     _opponent_think
-
         jsr     _move_their_pusher
 
         jsr     _puck_check_my_hit
@@ -134,12 +148,20 @@ loop_start:
 
         jsr     _move_puck
 
-        bcs     reset_game
+        bcs     reset_point
 
         ; Next round!
         jmp     game_loop
 
-reset_game:
+reset_point:
+        lda     turn
+        eor     #$01
+        sta     turn
+        tax
+        lda     turn_puck_y,x
+        sta     puck_serve_y
+
+reset_point_cont:
         lda     #$00
         sta     puck_dx
         sta     puck_dy
@@ -154,7 +176,7 @@ reset_game:
 
 reset_move_y:
         lda     puck_y
-        cmp     #PUCK_INI_Y
+        cmp     puck_serve_y
         beq     update_screen
         bcc     :+
         dec     puck_dy
@@ -168,9 +190,26 @@ update_screen:
         jsr     _move_their_pusher
         jsr     _move_puck
         lda     puck_y
-        cmp     #PUCK_INI_Y
-        bne     reset_game
+        cmp     puck_serve_y
+        bne     reset_point_cont
+
+        ; Prepare for service
+        lda    #0
+        sta    their_pusher_dx
+        sta    their_pusher_dy
         jsr     _clear_screen
         jsr     _restore_table
-        jmp     new_game
+        jmp     new_point
 .endproc
+
+.data
+
+turn_puck_y:
+        .byte   MY_PUCK_INI_Y
+        .byte   THEIR_PUCK_INI_Y
+
+.bss
+
+turn:         .res 1
+puck_serve_y: .res 1
+serving:      .res 1
