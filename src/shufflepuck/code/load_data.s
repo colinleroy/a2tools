@@ -13,7 +13,7 @@
 ; You should have received a copy of the GNU General Public License
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-        .export   _load_table
+        .export   _load_table, _backup_table, _restore_table
         .export   _load_lowcode
 
         .import   _open, _read, _write, _close, _memcpy
@@ -210,6 +210,42 @@ uncompress:
         jmp      _data_io
 .endproc
 
+.proc set_table_backup_params
+        lda     #<table_backup_name
+        sta     filename
+        lda     #>table_backup_name
+        sta     filename+1
+
+        lda      #<__HGR_START__
+        sta      destination
+        lda      #>__HGR_START__
+        sta      destination+1
+
+        lda      #<__LEVEL_SIZE__
+        sta      size
+        lda      #>__LEVEL_SIZE__
+        sta      size+1
+        rts
+.endproc
+
+.proc _backup_table
+        jsr      set_table_backup_params
+        lda      #(O_WRONLY|O_CREAT)
+        ldx      #$00
+        jmp      _data_io
+.endproc
+
+.proc _restore_table
+        jsr      set_table_backup_params
+        lda      #O_RDONLY
+        ldx      #$00
+        jsr      _data_io
+        bcs      no_cache
+        rts
+no_cache:
+        jmp      _load_table
+.endproc
+
         .bss
 
 filename:      .res 2
@@ -221,3 +257,4 @@ do_uncompress: .res 1
 
 lowcode_name:        .asciiz "LOWCODE"
 table_name:          .asciiz "TABLE"
+table_backup_name:   .asciiz "/RAM/TABLE"
