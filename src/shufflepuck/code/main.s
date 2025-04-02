@@ -29,7 +29,7 @@
         .import   _move_my_pusher, _move_their_pusher
         .import   _opponent_think
 
-        .import   _load_table, _load_lowcode
+        .import   _load_table, _backup_table, _restore_table, _load_lowcode
         .import   hz
 
         .import   _mouse_wait_vbl
@@ -81,6 +81,7 @@ calibrate_hz_handler:
 .endif
 
         jsr     _load_table
+        jsr     _backup_table
 
         lda     #1
         jsr     _init_hgr
@@ -170,6 +171,6 @@ update_screen:
         cmp     #PUCK_INI_Y
         bne     reset_game
         jsr     _clear_screen
-        jsr     _load_table
+        jsr     _restore_table
         jmp     new_game
 .endproc
