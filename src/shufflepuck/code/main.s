@@ -14,7 +14,7 @@
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
         .export   _main
-        .export   serving
+        .export   serving, my_score, their_score
 
         .import   _init_hgr, _init_mouse
         .import   mouse_x, mouse_y
@@ -26,7 +26,7 @@
         .import   their_pusher_dx, their_pusher_dy
 
         .import   _puck_reinit_my_order, _puck_reinit_their_order
-        .import   _draw_screen, _clear_screen
+        .import   _draw_screen, _clear_screen, _draw_scores
         .import   _move_puck, _puck_check_my_hit, _puck_check_their_hit
         .import   _move_my_pusher, _move_their_pusher
         .import   _opponent_think
@@ -95,10 +95,15 @@ calibrate_hz_handler:
 new_game:
         lda     #$00
         sta     turn
+        sta     my_score
+        sta     their_score
+
         lda     turn_puck_y
         sta     puck_serve_y
 
 new_point:
+        ; Draw scores
+        jsr     _draw_scores
         ; Initialize coords
         ldy     mouse_y
         sty     my_pusher_y
@@ -213,3 +218,6 @@ turn_puck_y:
 turn:         .res 1
 puck_serve_y: .res 1
 serving:      .res 1
+
+my_score:     .res 1
+their_score:  .res 1

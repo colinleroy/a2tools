@@ -31,6 +31,7 @@
         .import     mouse_x, mouse_y
         .import     mouse_dx, mouse_dy
         .import     _crash_lines_scale, _draw_crash_lines
+        .import     my_score, their_score
 
         .import     hz
 
@@ -697,7 +698,11 @@ check_their_late_catch:
         clc                       ; Little crash
         jsr     update_screen_for_crash
         ldy     #4
-        jmp     crash_and_return
+        jsr     _play_crash
+        ; Return with carry set to inform main
+        sec
+        inc     my_score
+        rts
 
 check_my_late_catch:
         lda     #PUCK_MAX_Y
@@ -707,10 +712,10 @@ check_my_late_catch:
         sec                       ; Large crash
         jsr     update_screen_for_crash
         ldy     #0
-crash_and_return:
         jsr     _play_crash
         ; Return with carry set to inform main
         sec
+        inc     their_score
         rts
 .endproc
 
