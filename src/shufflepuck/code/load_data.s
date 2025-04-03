@@ -14,43 +14,80 @@
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
         .export   _load_table, _backup_table, _restore_table
-        .export   _load_lowcode
+        .export   _load_lowcode, _load_opponent
 
         .import   _open, _read, _write, _close, _memcpy
         .import   pushax, popax
         .import   __filetype, __auxtype
 
         .import   __LOWCODE_START__, __LOWCODE_SIZE__
-        .import   __HGR_START__, __LEVEL_SIZE__
+        .import   __HGR_START__, __HGR_SIZE__
+        .import   __OPPONENT_START__, __OPPONENT_SIZE__
         .import   _decompress_lz4
 
-        .importzp tmp1
+        .importzp tmp1, ptr1
 
         .include  "apple2.inc"
         .include  "fcntl.inc"
 
 .segment "LC"
 
-.proc _load_table
+
+; A = which opponent to load
+.proc _load_opponent
+        pha
+
         bit       $C083           ; Enable writing to LC
-        bit       $C083
-        lda       #<table_name
+        bit       $C083           ; So we can patch our code
+
+        lda       #<opponent_name_tmpl
         sta       filename
-        lda       #>table_name
+        lda       #>opponent_name_tmpl
         sta       filename+1
-        ; Fallthrough to load_level_data
+
+        ; Set correct filename for level
+        pla
+        clc
+        adc       #'A'
+        sta       opponent_name_tmpl
+
+        lda      #<__OPPONENT_SIZE__
+        sta      size
+        lda      #>__OPPONENT_SIZE__
+        sta      size+1
+
+        lda      #<__OPPONENT_START__
+        sta      destination
+        lda      #>__OPPONENT_START__
+        sta      destination+1
+
+        lda      #<O_RDONLY
+        ldx      #$01
+        jmp      _data_io
 .endproc
 
-.proc load_level_data
-        lda      #<__LEVEL_SIZE__
+.proc set_hgr_destination_buffer
+        lda      #<__HGR_SIZE__
         sta      size
-        lda      #>__LEVEL_SIZE__
+        lda      #>__HGR_SIZE__
         sta      size+1
 
         lda      #<__HGR_START__
         sta      destination
         lda      #>__HGR_START__
         sta      destination+1
+        rts
+.endproc
+
+.proc _load_table
+        bit       $C083           ; Enable writing to LC
+        bit       $C083           ; So we can patch our code
+        lda       #<table_name
+        sta       filename
+        lda       #>table_name
+        sta       filename+1
+
+        jsr      set_hgr_destination_buffer
 
         lda      #<O_RDONLY
         ldx      #$01
@@ -61,7 +98,6 @@
 ; X: Whether to uncompress data
 .proc _data_io
         stx     do_uncompress     ; Save whether we need to uncompress lz4
-
         sta     data_io_mode+1    ; Patch _open mode
 
         cmp     #<O_RDONLY        ; Patch io function (_read or _write)
@@ -77,19 +113,17 @@ setup_out_buf:
         sta     data_io_func+1    ; Store patched io function
         stx     data_io_func+2
 
-        lda     do_uncompress     ; Do we need to uncompress?
-        bne     setup_uncompress_io_buf
+        lda     destination       ; Patch buffer end
+        clc
+        adc     size
+        sta     buf_end_low+1
+        lda     destination+1
+        adc     size+1
+        sta     buf_end_high+1
 
         ldy     destination       ; No. Do our IO directly to/from the
         sty     file_io_low+1     ; user-provided buffer
         ldy     destination+1
-        sty     file_io_high+1
-        bne     do_io             ; Always taken
-
-setup_uncompress_io_buf:
-        ldy     #<__HGR_START__   ; We need to uncompress. Read the data to
-        sty     file_io_low+1     ; the temporary buffer (the HGR page).
-        ldy     #>__HGR_START__
         sty     file_io_high+1
 
 do_io:
@@ -120,8 +154,8 @@ data_io_mode:
 
 file_io_low:
         lda     #$FF          ; Push IO buffer to _read/_write.
-file_io_high:                 ; It is either __HGR_START__ (for read with
-        ldx     #$FF          ; uncompress) or user-supplied destination
+file_io_high:
+        ldx     #$FF
         jsr     pushax
 
         lda     size          ; Set size for _read/_write
@@ -138,37 +172,52 @@ data_io_func:
         rts
 
 uncompress:
-        lda     __HGR_START__ ; Get compressed size (the first two bytes
+        lda     destination
+        sta     ptr1
+        lda     destination+1
+        sta     ptr1+1
+
+        ldy     #0
+        lda     (ptr1),y      ; Get compressed size (the first two bytes
         sta     tmp1          ; of the compressed data we just read)
-        ldx     __HGR_START__+1
-        stx     tmp1+1
+        iny
+        lda     (ptr1),y
+        sta     tmp1+1
 
         ; Get uncompressed size (the next two bytes)
-        lda     __HGR_START__+2
-        ldx     __HGR_START__+3
+        iny
+        lda     (ptr1),y
         sta     size
-        stx     size+1
+        iny
+        lda     (ptr1),y
+        sta     size+1
 
         ; Compute where to move data, we want it to be
         ; the furthest possible in the available buffer
         ; so that decompression doesn't overwrite the last
         ; compressed bytes
-        lda     #<(__HGR_START__+__LEVEL_SIZE__)
+buf_end_low:
+        lda     #$FF
         sec
         sbc     tmp1
         tay
-        lda     #>(__HGR_START__+__LEVEL_SIZE__)
+buf_end_high:
+        lda     #$FF
         sbc     tmp1+1
         tax
         tya
         jsr     pushax        ; Push it for decompressor source
         jsr     pushax        ; and for memcpy dest
 
-        ; Where to move data from (the HGR page excluding the 4
+        ; Where to move data from (the compressed buffer excluding the 4
         ; header bytes)
-        lda     #<(__HGR_START__+4)
-        ldx     #>(__HGR_START__+4)
-        jsr     pushax        ; Push source for memcpy
+        lda     ptr1
+        clc
+        adc     #4
+        ldx     ptr1+1
+        bcc     :+
+        inx
+:       jsr     pushax        ; Push source for memcpy
 
         lda     tmp1          ; Copy compressed size bytes
         ldx     tmp1+1
@@ -216,16 +265,7 @@ uncompress:
         lda     #>table_backup_name
         sta     filename+1
 
-        lda      #<__HGR_START__
-        sta      destination
-        lda      #>__HGR_START__
-        sta      destination+1
-
-        lda      #<__LEVEL_SIZE__
-        sta      size
-        lda      #>__LEVEL_SIZE__
-        sta      size+1
-        rts
+        jmp      set_hgr_destination_buffer
 .endproc
 
 .proc _backup_table
@@ -258,3 +298,4 @@ do_uncompress: .res 1
 lowcode_name:        .asciiz "LOWCODE"
 table_name:          .asciiz "TABLE"
 table_backup_name:   .asciiz "/RAM/TABLE"
+opponent_name_tmpl:  .asciiz "X"

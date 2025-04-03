@@ -13,14 +13,14 @@
 ; You should have received a copy of the GNU General Public License
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-        .export   _clear_sprite, _draw_sprite, _draw_sprite_fast
+        .export   _clear_sprite, _draw_sprite, _draw_sprite_big
         .export   _load_puck_pointer, _load_my_pusher_pointer, _load_their_pusher_pointer
         .export   _setup_sprite_pointer_for_clear
         .export   _setup_sprite_pointer_for_draw
 
-        .export   fast_sprite_pointer
-        .export   fast_n_bytes_per_line_draw, fast_sprite_x
-        .export   sprite_y, n_bytes_draw
+        .export   big_sprite_pointer
+        .export   big_n_bytes_per_line_draw, big_sprite_x
+        .export   sprite_y, n_bytes_draw, n_lines_draw
 
         .import   puck_data, my_pusher_data, their_pusher_data
 
@@ -41,7 +41,7 @@
 line            = _zp8p
 cur_y           = _zp10
 n_bytes_draw    = _zp11
-
+n_lines_draw    = _zp11 ; shared
 sprite_y        = tmp4
 
 _load_puck_pointer:
@@ -243,15 +243,14 @@ sprite_store_byte:
 draw_out:
         rts
 
-_draw_sprite_fast:
+_draw_sprite_big:
         ldy     sprite_y
         sty     cur_y
 
-        ldx     n_bytes_draw
-        clc
-fast_next_line:
-fast_sprite_x:
+big_next_line:
+big_sprite_x:
         lda     #$FF
+        clc
         ldy     cur_y
         adc     _hgr_low,y
         sta     line
@@ -259,18 +258,25 @@ fast_sprite_x:
         ; adc     #0 - carry won't be set here
         sta     line+1
 
-fast_n_bytes_per_line_draw:
+big_n_bytes_per_line_draw:
         ldy     #$FF
-
-fast_sprite_pointer:
-:       lda     $FFFF,x       ; Patched
-        sta     (line),y      ; Use ($nn),y here because fast-drawn sprites
-        dex                   ; are usually 1 byte large
+        dey
+big_sprite_pointer:
+:       lda     $FFFF,y       ; Patched
+        sta     (line),y      ; Use ($nn),y
         dey
         bpl     :-
 
-        inc     cur_y
-        cpx     #$FF
-        bne     fast_next_line
+        dec     cur_y
+        lda     big_sprite_pointer+1
+        clc
+        adc     big_n_bytes_per_line_draw+1
+        sta     big_sprite_pointer+1
+        lda     big_sprite_pointer+2
+        adc     #0
+        sta     big_sprite_pointer+2
+
+        dec     n_lines_draw
+        bpl     big_next_line
 
         rts

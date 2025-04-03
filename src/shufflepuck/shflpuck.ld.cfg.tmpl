@@ -8,12 +8,14 @@ SYMBOLS {
     __LCADDR__:        type = weak,   value = $D400; # Behind quit code
     __LCSIZE__:        type = weak,   value = $0C00; # Rest of bank two
     __HGR_START__:     type = export, value = $2000; # HGR page location
-    __LEVEL_SIZE__:    type = export, value = $2100; # Level data
+    __HGR_SIZE__:      type = export, value = $2000; # HGR page length
+    __OPPONENT_START__:type = export, value = $4000;
+    __OPPONENT_SIZE__ :type = export, value = $800;
     __LOWCODE_START__: type = export, value = $C00;  # Lowcode
     __LOWCODE_SIZE__:  type = export, value = __HGR_START__-__LOWCODE_START__;  # Lowcode
 }
 FEATURES {
-    STARTADDRESS: default = __HGR_START__+__LEVEL_SIZE__;
+    STARTADDRESS: default = __OPPONENT_START__+__OPPONENT_SIZE__;
 }
 MEMORY {
     ZP:     file = "", define = yes, start = $0080,        size = $001A;
@@ -24,6 +26,7 @@ MEMORY {
 
     #Ugly but functional
     LOWCODE: file = "lowcode.bin",     start = __LOWCODE_START__, size = __LOWCODE_SIZE__;
+    TABLE:   file = "table.bin",       start = __HGR_START__,     size = __HGR_SIZE__;
 
 ### LEVEL_MEMORY_DECLARATIONS ###
 }
@@ -40,6 +43,8 @@ SEGMENTS {
     ONCE:     load = MAIN,           type = ro,  define   = yes;
     LC:       load = MAIN, run = LC, type = ro,  optional = yes,  align = $100;
     BSS:      load = BSS,            type = bss, define   = yes;
+
+    table:    load = TABLE,          type = ro;
 
 ### LEVEL_SEGMENTS_DECLARATIONS ###
 }

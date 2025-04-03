@@ -29,9 +29,9 @@
 .data
 
 score_x_start:
-        .byte 53, 55, 57, 59, 52
-        .byte 65, 67, 69, 71, 64
-        .byte 77, 79, 81, 83, 76
+        .byte 56, 58, 60, 62, 55
+        .byte 68, 70, 72, 74, 67
+        .byte 80, 82, 84, 86, 79
 
 VERTICAL_LINE_LEN = 7
 DIAGONAL_LINE_LEN = 5
