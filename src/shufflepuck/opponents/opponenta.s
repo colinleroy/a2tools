@@ -18,6 +18,9 @@
         .import     puck_x, puck_y, puck_dy, serving
         .import     _big_draw_sprite_a                              ; CHANGE A
         .import     _big_draw_name_a                                ; CHANGE A
+        .import     _big_draw_normal_a                              ; CHANGE A
+        .import     _big_draw_lose_a                                ; CHANGE A
+        .import     _big_draw_win_a                                 ; CHANGE A
 
         .import     __OPPONENT_START__
         .importzp   tmp1
@@ -37,11 +40,27 @@ THEIR_MAX_DY       = 8
 
 .assert * = __OPPONENT_START__+OPPONENT::SPRITE, error ; Make sure the callback is where we think
 sprite:
-      jmp _big_draw_sprite_a                                      ; CHANGE A
+        ldx     #(98/7)
+        ldy     #76
+        jmp _big_draw_sprite_a                                      ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::NAME, error ; Make sure the callback is where we think
 name:
-      jmp _big_draw_name_a                                        ; CHANGE A
+        ldx     #(7/7)
+        ldy     #39
+        jmp _big_draw_name_a                                        ; CHANGE A
+
+.assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT, error ; Make sure the callback is where we think
+lose_animation:
+        ldx     #(119/7)
+        ldy     #55
+        jmp _big_draw_lose_a                                        ; CHANGE A
+
+.assert * = __OPPONENT_START__+OPPONENT::WIN_POINT, error ; Make sure the callback is where we think
+win_animation:
+        ldx     #(119/7)
+        ldy     #55
+        jmp _big_draw_win_a                                        ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::THINK_CB, error ; Make sure the callback is where we think
 .proc _opponent_think

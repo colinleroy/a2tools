@@ -50,7 +50,10 @@ sprites_pixel_perfect = \
 
 sprites_unperfect = \
 	sprite_a.unperfect.gen.s \
-	name_a.unperfect.gen.s
+	name_a.unperfect.gen.s \
+	lose_a.unperfect.gen.s \
+	win_a.unperfect.gen.s \
+	\
 
 sprites = \
 	$(sprites_pixel_perfect) \

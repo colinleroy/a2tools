@@ -127,19 +127,16 @@ new_game:
 
         ; Draw its sprite
         lda     #OPPONENT::SPRITE
-        ldx     #(98/7)
-        ldy     #76
         jsr     draw_opponent_part
 
         ; Draw its name
         lda     #OPPONENT::NAME
-        ldx     #(7/7)
-        ldy     #39
         jsr     draw_opponent_part
 
         jsr     _backup_table
 
 new_point:
+        jsr     _restore_table
         ; Draw scores
         jsr     _draw_scores
 
@@ -156,6 +153,7 @@ my_win:
         lda     #<1000
         ldx     #>1000
         jsr     _platform_msleep
+        jsr     _restore_table
         jmp     new_game
 
 cont_game:
@@ -264,7 +262,6 @@ update_screen:
         sta    their_pusher_dx
         sta    their_pusher_dy
         jsr     _clear_screen
-        jsr     _restore_table
         jmp     new_point
 .endproc
 

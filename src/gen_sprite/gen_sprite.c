@@ -287,9 +287,6 @@ int main(int argc, char *argv[]) {
   if (enable_big_draw) {
     fprintf(fp,
             "_big_draw_%s:\n"
-            "        stx     big_sprite_x+1\n"
-            "        sty     sprite_y\n"
-            "\n"
             "        lda     #%s_HEIGHT\n"
             "        sta     n_lines_draw\n"
             "\n"
