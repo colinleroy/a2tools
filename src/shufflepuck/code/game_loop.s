@@ -23,6 +23,7 @@
         .export     their_pusher_dx, their_pusher_dy
 
         .export     _puck_reinit_my_order, _puck_reinit_their_order
+        .export     _transform_puck_coords
 
         .import     _load_puck_pointer, _load_my_pusher_pointer, _load_their_pusher_pointer
         .import     _setup_sprite_pointer_full, _draw_sprite, _clear_sprite

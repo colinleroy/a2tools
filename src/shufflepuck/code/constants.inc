@@ -30,3 +30,5 @@ PUCK_INI_X         = 128
 
 ABS_MAX_DX         = $8
 ABS_MAX_DY         = $14
+
+MAX_SCORE          = 15

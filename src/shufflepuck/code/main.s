@@ -21,6 +21,8 @@
         .import   mouse_dx, mouse_dy
 
         .import   puck_x, puck_y, puck_dx, puck_dy
+        .import   _transform_puck_coords
+
         .import   my_pusher_x, my_pusher_y
         .import   their_pusher_x, their_pusher_y
         .import   their_pusher_dx, their_pusher_dy
@@ -92,7 +94,9 @@ calibrate_hz_handler:
 
         ; Wait for first interrupt
         jsr     _mouse_wait_vbl
+
 new_game:
+        jsr     _restore_table
         lda     #$00
         sta     turn
         sta     my_score
@@ -104,6 +108,24 @@ new_game:
 new_point:
         ; Draw scores
         jsr     _draw_scores
+
+        ; Check for end of game
+        lda     #MAX_SCORE
+        cmp     my_score
+        beq     my_win
+        cmp     their_score
+        bne     cont_game
+
+their_win:
+my_win:
+        ; Todo victory/defeat screen
+        lda     #<1000
+        ldx     #>1000
+        jsr     _platform_msleep
+        jmp     new_game
+
+cont_game:
+
         ; Initialize coords
         ldy     mouse_y
         sty     my_pusher_y
@@ -119,6 +141,8 @@ new_point:
         sta     puck_x
         lda     puck_serve_y
         sta     puck_y
+        ; Set correct graphics coords first
+        jsr     _transform_puck_coords
 
         lda     #$00
         sta     puck_dx
@@ -196,6 +220,9 @@ update_screen:
         jsr     _move_puck
         lda     puck_y
         cmp     puck_serve_y
+        bne     reset_point_cont
+        lda     puck_x
+        cmp     #PUCK_INI_X
         bne     reset_point_cont
 
         ; Prepare for service

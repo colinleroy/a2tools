@@ -44,17 +44,17 @@
 
 ; Our pusher
 my_pusher_data:
-                  .byte (MY_PUSHER_INI_X/2)   ; x
+                  .byte 0                   ; x
                   .byte my_pusher0_WIDTH
-                  .byte (MY_PUSHER_INI_Y/2)   ; y
+                  .byte 0                   ; y
                   .byte my_pusher0_HEIGHT
-                  .byte (MY_PUSHER_INI_X/2) ; prev_x
-                  .byte (MY_PUSHER_INI_Y/2) ; prev_y
-                  .byte my_pusher0_BYTES-1 ; bytes of sprite - 1
-                  .byte my_pusher0_BPLINE-1; width of sprite in bytes
-                  .addr _my_pusher0        ; sprites
+                  .byte 0                   ; prev_x
+                  .byte 0                   ; prev_y
+                  .byte my_pusher0_BYTES-1  ; bytes of sprite - 1
+                  .byte my_pusher0_BPLINE-1 ; width of sprite in bytes
+                  .addr _my_pusher0         ; sprites
                   .addr my_pusher_bgbackup
-                  .byte 0               ; need clear
+                  .byte 0                   ; need clear
 
 ; variants
 my_pushers_low:
@@ -90,12 +90,12 @@ my_pushers_bpline:
 
 ; Their pusher
 their_pusher_data:
-                  .byte THEIR_PUSHER_INI_X   ; x
+                  .byte 0                     ; x
                   .byte their_pusher4_WIDTH
-                  .byte THEIR_PUSHER_INI_Y   ; y
+                  .byte 0                     ; y
                   .byte their_pusher4_HEIGHT
-                  .byte THEIR_PUSHER_INI_X ; prev_x
-                  .byte THEIR_PUSHER_INI_Y ; prev_y
+                  .byte 0                     ; prev_x
+                  .byte 0                     ; prev_y
                   .byte their_pusher4_BYTES-1 ; bytes of sprite - 1
                   .byte their_pusher4_BPLINE-1; width of sprite in bytes
                   .addr _their_pusher4        ; sprites
@@ -124,12 +124,12 @@ their_pushers_bpline:
 
 ; The puck
 puck_data:
-                  .byte PUCK_INI_X   ; x
+                  .byte 0             ; x
                   .byte puck0_WIDTH
-                  .byte MY_PUCK_INI_Y; y
+                  .byte 0             ; y
                   .byte puck0_HEIGHT
-                  .byte PUCK_INI_X ; prev_x
-                  .byte MY_PUCK_INI_Y; prev_y
+                  .byte 0             ; prev_x
+                  .byte 0             ; prev_y
                   .byte puck0_BYTES-1 ; bytes of sprite - 1
                   .byte puck0_BPLINE-1; width of sprite in bytes
                   .addr _puck0        ; sprites
