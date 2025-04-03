@@ -15,6 +15,9 @@
 
         .export     _crash_lines_scale, _draw_crash_lines
 
+        .export     ox, oy, dx, dy ; Used by draw_score
+        .export     _set_color_white
+
         .import     ___randomize, _rand
         .import     pushax, popax, pusha, popa
 
@@ -23,6 +26,7 @@
         .include    "sprite.inc"
         .include    "puck_coords.inc"
         .include    "constants.inc"
+        .include    "hgr_applesoft.inc"
 
 .proc rand_crash
         jsr     _rand
@@ -45,7 +49,7 @@ extra_lsr:
 
 .proc _draw_crash_lines
         jsr     ___randomize
-        jsr     set_color_white
+        jsr     _set_color_white
 
         ; Set recursion level
         lda     #3
@@ -65,22 +69,13 @@ extra_lsr:
         jmp     _draw_lines_pair
 .endproc
 
-.proc set_color_white
+.proc _set_color_white
         bit     $C082
         ldx     #WHITE
         jsr     SETHCOL
         bit     $C080
         rts
 .endproc
-
-HPOSN   :=      $F411   ; Positions the hi-res cursor to (X,Y),A
-HLIN    :=      $F53A   ; Draws a line from the cursor to:
-                        ; (A,X) = X-coordinate, and
-                        ; (Y) = Y-coordinate.
-                        ; Mind that the parameters to both are different
-SETHCOL :=      $F6EC   ; Set the hi-res color to (X), where (X)
-                        ; must be between 0 and 7.
-WHITE   :=      $3
 
 ; origin coords in XA
 ; left/right in Y
