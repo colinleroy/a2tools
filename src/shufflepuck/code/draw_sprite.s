@@ -244,7 +244,8 @@ draw_out:
         rts
 
 _draw_sprite_big:
-        ldy     sprite_y
+        stx     big_sprite_x+1
+        sty     sprite_y
         sty     cur_y
 
 big_next_line:

@@ -57,7 +57,7 @@
         .include    "puck0.gen.inc"
         .include    "my_pusher0.gen.inc"
         .include    "constants.inc"
-
+        .include    "opponent_file.inc"
 .segment "LOWCODE"
 
 .proc _clear_screen
@@ -696,6 +696,7 @@ check_their_late_catch:
         sta     puck_y
         jsr     _puck_check_their_hit
         bcc     update_y
+        jsr     __OPPONENT_START__+OPPONENT::LOSE_POINT
         clc                       ; Little crash
         jsr     update_screen_for_crash
         ldy     #4
@@ -710,6 +711,7 @@ check_my_late_catch:
         sta     puck_y
         jsr     _puck_check_my_hit
         bcc     update_y
+        jsr     __OPPONENT_START__+OPPONENT::WIN_POINT
         sec                       ; Large crash
         jsr     update_screen_for_crash
         ldy     #0
