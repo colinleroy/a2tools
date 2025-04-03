@@ -13,20 +13,29 @@
 ; You should have received a copy of the GNU General Public License
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-        .export     _opponent_think
-
         .import     their_pusher_x, their_pusher_y
         .import     their_pusher_dx, their_pusher_dy
         .import     puck_x, puck_y, puck_dy, serving
+        .import     _big_draw_sprite_a
 
+        .import     __OPPONENT_START__
         .importzp   tmp1
 
-        .include    "sprite.inc"
-        .include    "their_pusher_coords.inc"
-        .include    "puck_coords.inc"
         .include    "my_pusher0.gen.inc"
         .include    "puck0.gen.inc"
-        .include    "constants.inc"
+        .include    "../code/sprite.inc"
+        .include    "../code/their_pusher_coords.inc"
+        .include    "../code/puck_coords.inc"
+        .include    "../code/constants.inc"
+
+.segment "a"
+
+.assert * = __OPPONENT_START__, error ; Make sure the callback is where we think
+
+think_cb:
+      .addr _opponent_think
+sprite:
+      .addr _big_draw_sprite_a
 
 THEIR_MAX_DX       = 4
 THEIR_MAX_DY       = 8

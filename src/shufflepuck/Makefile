@@ -18,13 +18,20 @@ BINARY_NAME = shflpuck.bin
 assets = \
 	table
 
+opponents = \
+	a
+
+opponents_code    = $(opponents:%=$(SRC_DIR)/opponents/opponent%.s)
+
 lz4_files = \
 	$(assets) \
+	$(opponents) \
 	lowcode
 
 assets_backgrounds = $(assets:=.bg.gen.s)
 assets_bin         = $(lz4_files:=.bin)
 assets_lz4         = $(lz4_files:=.lz4)
+
 
 sprites_pixel_perfect = \
 	my_pusher0.pixel_perfect.gen.s \
@@ -41,8 +48,13 @@ sprites_pixel_perfect = \
 	puck5.pixel_perfect.gen.s \
 	puck6.pixel_perfect.gen.s \
 
+sprites_unperfect = \
+	sprite_a.unperfect.gen.s \
+	name_a.unperfect.gen.s
+
 sprites = \
-	$(sprites_pixel_perfect)
+	$(sprites_pixel_perfect) \
+	$(sprites_unperfect)
 
 sounds = \
 	puck_hit.snd.s \
@@ -61,7 +73,6 @@ shflpuck_SOURCES := \
 	$(SRC_DIR)/code/buffers.s \
 	$(SRC_DIR)/code/load_data.s \
 	$(SRC_DIR)/code/sprites.s \
-	$(SRC_DIR)/code/opponent.s \
 	$(SRC_DIR)/../lib/asm/hgr_tables.s \
 	$(SRC_DIR)/../lib/asm/hgr.s \
 	$(SRC_DIR)/../lib/asm/bcd.s \
@@ -71,6 +82,7 @@ shflpuck_SOURCES := \
 	$(SRC_DIR)/../lib/platform_sleep.s \
 	$(sounds) \
 	transform.s \
+	$(opponents_code) \
 	$(sprites) \
 	$(assets_backgrounds) \
 	$(levels_code)
@@ -128,11 +140,15 @@ $(SRC_DIR)/../surl-server/hgr-convert:
 
 $(sprites_pixel_perfect): %.pixel_perfect.gen.s: $(SRC_DIR)/assets/%.png
 my%.pixel_perfect.gen.s: $(SRC_DIR)/assets/my%.png gen_sprite
-	./gen_sprite $< 255 pixel_perfect RODATA
+	./gen_sprite $< 255 pixel_perfect RODATA 0
 their%.pixel_perfect.gen.s: $(SRC_DIR)/assets/their%.png gen_sprite
-	./gen_sprite $< 255 pixel_perfect LC
+	./gen_sprite $< 255 pixel_perfect LC 0
 puck%.pixel_perfect.gen.s: $(SRC_DIR)/assets/puck%.png gen_sprite
-	./gen_sprite $< 255 pixel_perfect RODATA
+	./gen_sprite $< 255 pixel_perfect RODATA 0
+
+$(sprites_unperfect): %.unperfect.gen.s: $(SRC_DIR)/assets/opponents/%.png
+%.unperfect.gen.s: $(SRC_DIR)/assets/opponents/%.png gen_sprite
+	./gen_sprite $< 255 unperfect a 1
 
 play_sound.gen.s: gen_sound_player
 	./gen_sound_player $(SAMPLING_HZ) LOWCODE > $@
@@ -149,8 +165,8 @@ puc%.snd.s: $(SRC_DIR)/assets/sounds/puc%.wav gen_sound_clip
 	./gen_sound_clip $(SAMPLING_HZ) $<_raw LC > $@
 	rm $<_raw
 
-shflpuck.ld.cfg: $(SRC_DIR)/shflpuck.ld.cfg.tmpl
-	$(SRC_DIR)/../glider/generators/gen_linker_config.sh $< $(assets) > $@
+shflpuck.ld.cfg: $(SRC_DIR)/shflpuck.ld.cfg.tmpl $(SRC_DIR)/generators/gen_linker_config.sh
+	$(SRC_DIR)/generators/gen_linker_config.sh $< $(opponents) > $@
 
 clean:
 	rm -f *.bin *.o *.po \

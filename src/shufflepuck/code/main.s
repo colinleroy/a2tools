@@ -31,9 +31,11 @@
         .import   _draw_screen, _clear_screen, _draw_scores
         .import   _move_puck, _puck_check_my_hit, _puck_check_their_hit
         .import   _move_my_pusher, _move_their_pusher
-        .import   _opponent_think
 
-        .import   _load_table, _backup_table, _restore_table, _load_lowcode
+        .import   __OPPONENT_START__
+
+        .import   _load_table, _backup_table, _restore_table
+        .import   _load_lowcode, _load_opponent
         .import   hz
 
         .import   _mouse_wait_vbl
@@ -85,7 +87,6 @@ calibrate_hz_handler:
 .endif
 
         jsr     _load_table
-        jsr     _backup_table
 
         lda     #1
         jsr     _init_hgr
@@ -96,7 +97,6 @@ calibrate_hz_handler:
         jsr     _mouse_wait_vbl
 
 new_game:
-        jsr     _restore_table
         lda     #$00
         sta     turn
         sta     my_score
@@ -104,6 +104,26 @@ new_game:
 
         lda     turn_puck_y
         sta     puck_serve_y
+
+
+        lda     #0
+        jsr     _load_opponent
+        lda     __OPPONENT_START__
+        sta     opponent_think+1
+        lda     __OPPONENT_START__+1
+        sta     opponent_think+2
+
+        lda     __OPPONENT_START__+2
+        sta     opponent_sprite_draw+1
+        lda     __OPPONENT_START__+3
+        sta     opponent_sprite_draw+2
+
+        ldx     #(98/7)
+        ldy     #76
+opponent_sprite_draw:
+        jsr     $FFFF
+
+        jsr     _backup_table
 
 new_point:
         ; Draw scores
@@ -169,7 +189,8 @@ loop_start:
 :
         jsr     _move_my_pusher
 
-        jsr     _opponent_think
+opponent_think:
+        jsr     $FFFF
         jsr     _move_their_pusher
 
         jsr     _puck_check_my_hit

@@ -28,6 +28,7 @@ enum Pixel {
 
 int max_shift = 7;
 char *segment = "RODATA";
+int enable_big_draw = 0;
 
 static enum Pixel get_pixel(SDL_Surface *surface, int x, int y) {
   int bpp = surface->format->BytesPerPixel;
@@ -126,6 +127,10 @@ int main(int argc, char *argv[]) {
     segment = argv[4];
   }
 
+  if (argc > 5) {
+    enable_big_draw = atoi(argv[5]);
+  }
+
   if (image[0]->w % 7 != 0) {
     printf("Image width %d is not a multiple of 7\n", image[0]->w);
     exit(1);
@@ -163,13 +168,23 @@ int main(int argc, char *argv[]) {
   }
 
   fprintf(fp, "         .export _%s\n", sprite_name);
-#ifdef ENABLE_QUICK_DRAW
-  fprintf(fp, "         .export _quick_draw_%s\n", sprite_name);
-#endif
-  fprintf(fp,
-          "         .import _draw_sprite_fast, fast_sprite_pointer\n"
-          "         .import fast_n_bytes_per_line_draw, fast_sprite_x\n"
-          "         .importzp n_bytes_draw, sprite_y\n");
+
+  #ifdef ENABLE_QUICK_DRAW
+    fprintf(fp, "         .export _quick_draw_%s\n", sprite_name);
+    fprintf(fp,
+            "         .import _draw_sprite_fast, fast_sprite_pointer\n"
+            "         .import fast_n_bytes_per_line_draw, fast_sprite_x\n");
+  #endif
+  if (enable_big_draw) {
+    fprintf(fp, "         .export _big_draw_%s\n", sprite_name);
+    fprintf(fp,
+            "         .import _draw_sprite_big, big_sprite_pointer\n"
+            "         .import big_n_bytes_per_line_draw, big_sprite_x\n");
+    fprintf(fp, "     .importzp n_lines_draw\n");
+  }
+
+  
+  fprintf(fp, "         .importzp n_bytes_draw, sprite_y\n");
   fprintf(fp, "         .include \"%s.gen.inc\"\n", sprite_name);
   fprintf(fp, "\n");
   fprintf(fp, "         .segment \"%s\"\n", segment);
@@ -239,32 +254,61 @@ int main(int argc, char *argv[]) {
     fprintf(fp, "         .addr %s_mask_x%d\n", sprite_name, shift < max_shift ? shift : 0);
   }
 
+  if (enable_big_draw) {
+    if (!strcmp(segment, "RODATA")) {
+      fprintf(fp, "\n         .code\n\n");
+    }
+    /* Otherwise, put everything in the same segment if specified */
+  }
   #ifdef ENABLE_QUICK_DRAW
-  fprintf(fp, "\n         .code\n\n");
-  fprintf(fp,
-          "_quick_draw_%s:\n"
-          "        stx     fast_sprite_x+1\n"
-          "        sty     sprite_y\n"
-          "\n"
-          "        lda     #(%s_BYTES-1)\n"
-          "        sta     n_bytes_draw\n"
-          "\n"
-          "        lda     #(%s_BPLINE-1)\n"
-          "        sta     fast_n_bytes_per_line_draw+1\n"
-          "\n"
-          "        lda     #<%s_x0\n"
-          "        sta     fast_sprite_pointer+1\n"
-          "        lda     #>%s_x0\n"
-          "        sta     fast_sprite_pointer+2\n"
-          "\n"
-          "        jmp     _draw_sprite_fast\n",
-          sprite_name,
-          sprite_name,
-          sprite_name,
-          sprite_name,
-          sprite_name);
+    fprintf(fp,
+            "_quick_draw_%s:\n"
+            "        stx     fast_sprite_x+1\n"
+            "        sty     sprite_y\n"
+            "\n"
+            "        lda     #%s_BYTES-1\n"
+            "        sta     n_bytes_draw\n"
+            "\n"
+            "        lda     #(%s_BPLINE-1)\n"
+            "        sta     fast_n_bytes_per_line_draw+1\n"
+            "\n"
+            "        lda     #<%s_x0\n"
+            "        sta     fast_sprite_pointer+1\n"
+            "        lda     #>%s_x0\n"
+            "        sta     fast_sprite_pointer+2\n"
+            "\n"
+            "        jmp     _draw_sprite_fast\n",
+            sprite_name,
+            sprite_name,
+            sprite_name,
+            sprite_name,
+            sprite_name);
   #endif
+  if (enable_big_draw) {
+    fprintf(fp,
+            "_big_draw_%s:\n"
+            "        stx     big_sprite_x+1\n"
+            "        sty     sprite_y\n"
+            "\n"
+            "        lda     #%s_HEIGHT\n"
+            "        sta     n_lines_draw\n"
+            "\n"
+            "        lda     #%s_BPLINE\n"
+            "        sta     big_n_bytes_per_line_draw+1\n"
+            "\n"
+            "        lda     #<(%s_x0)    ; Account for Y offset by one\n"
+            "        sta     big_sprite_pointer+1\n"
+            "        lda     #>(%s_x0)\n"
+            "        sta     big_sprite_pointer+2\n"
+            "\n"
+            "        jmp     _draw_sprite_big\n",
+            sprite_name,
+            sprite_name,
+            sprite_name,
+            sprite_name,
+            sprite_name);
 
+  }
   for (shift = 1; shift < 7; shift++) {
     if (image[shift] != image[0]) {
       SDL_FreeSurface(image[shift]);
