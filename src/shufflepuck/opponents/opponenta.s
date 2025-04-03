@@ -16,7 +16,8 @@
         .import     their_pusher_x, their_pusher_y
         .import     their_pusher_dx, their_pusher_dy
         .import     puck_x, puck_y, puck_dy, serving
-        .import     _big_draw_sprite_a
+        .import     _big_draw_sprite_a                              ; CHANGE A
+        .import     _big_draw_name_a                                ; CHANGE A
 
         .import     __OPPONENT_START__
         .importzp   tmp1
@@ -27,28 +28,22 @@
         .include    "../code/their_pusher_coords.inc"
         .include    "../code/puck_coords.inc"
         .include    "../code/constants.inc"
-
-.segment "a"
-
-.assert * = __OPPONENT_START__, error ; Make sure the callback is where we think
-
-think_cb:
-      .addr _opponent_think
-sprite:
-      .addr _big_draw_sprite_a
+        .include    "../code/opponent_file.inc"
 
 THEIR_MAX_DX       = 4
 THEIR_MAX_DY       = 8
 
-.proc invert_pusher_dx
-        lda     their_pusher_dx
-        clc
-        eor     #$FF
-        adc     #$01
-        sta     their_pusher_dx
-        rts
-.endproc
+.segment "a"                                                        ; CHANGE A
 
+.assert * = __OPPONENT_START__+OPPONENT::SPRITE, error ; Make sure the callback is where we think
+sprite:
+      jmp _big_draw_sprite_a                                      ; CHANGE A
+
+.assert * = __OPPONENT_START__+OPPONENT::NAME, error ; Make sure the callback is where we think
+name:
+      jmp _big_draw_name_a                                        ; CHANGE A
+
+.assert * = __OPPONENT_START__+OPPONENT::THINK_CB, error ; Make sure the callback is where we think
 .proc _opponent_think
         lda     serving
         beq     serve_or_catch
@@ -167,6 +162,16 @@ move_backwards:
         sta     their_pusher_dy
         rts
 .endproc
+
+.proc invert_pusher_dx
+        lda     their_pusher_dx
+        clc
+        eor     #$FF
+        adc     #$01
+        sta     their_pusher_dx
+        rts
+.endproc
+
 
 .bss
 serve_dy:       .res 1

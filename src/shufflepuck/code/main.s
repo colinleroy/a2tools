@@ -54,6 +54,7 @@
         .include  "my_pusher_coords.inc"
         .include  "my_pusher0.gen.inc"
         .include  "constants.inc"
+        .include  "opponent_file.inc"
 
 .code
 
@@ -63,6 +64,20 @@
 .endproc
 
 .segment "LOWCODE"
+
+; A: the part (SPRITE or NAME)
+; X,Y, the lower left coordinate
+.proc draw_opponent_part
+        clc
+        adc     #<(__OPPONENT_START__)
+        sta     draw+1
+        lda     #>(__OPPONENT_START__)
+        adc     #0
+        sta     draw+2
+
+draw:
+        jmp     $FFFF
+.endproc
 
 .proc _real_main
         jsr     _build_hgr_tables
@@ -106,22 +121,21 @@ new_game:
         sta     puck_serve_y
 
 
+        ; Load the opponent file
         lda     #0
         jsr     _load_opponent
-        lda     __OPPONENT_START__
-        sta     opponent_think+1
-        lda     __OPPONENT_START__+1
-        sta     opponent_think+2
 
-        lda     __OPPONENT_START__+2
-        sta     opponent_sprite_draw+1
-        lda     __OPPONENT_START__+3
-        sta     opponent_sprite_draw+2
-
+        ; Draw its sprite
+        lda     #OPPONENT::SPRITE
         ldx     #(98/7)
         ldy     #76
-opponent_sprite_draw:
-        jsr     $FFFF
+        jsr     draw_opponent_part
+
+        ; Draw its name
+        lda     #OPPONENT::NAME
+        ldx     #(7/7)
+        ldy     #39
+        jsr     draw_opponent_part
 
         jsr     _backup_table
 
@@ -189,8 +203,7 @@ loop_start:
 :
         jsr     _move_my_pusher
 
-opponent_think:
-        jsr     $FFFF
+        jsr     __OPPONENT_START__+OPPONENT::THINK_CB
         jsr     _move_their_pusher
 
         jsr     _puck_check_my_hit
