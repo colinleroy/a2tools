@@ -145,20 +145,17 @@ store_dx:
         bcs     move_backwards
         ; Otherwise prepare to hit
 hit:
-        lda     #(ABS_MAX_DY)
+        lda     #<(ABS_MAX_DY)
         sta     their_pusher_dy
         rts
 
 move_forwards_slow:
-        lda     #(ABS_MAX_DY/8)
+        lda     #<(ABS_MAX_DY/8)
         sta     their_pusher_dy
         rts
 
 move_backwards:
-        lda     #(ABS_MAX_DY/4)
-        clc
-        eor     #$FF
-        adc     #$01
+        lda     #<(-ABS_MAX_DY/4)
         sta     their_pusher_dy
         rts
 .endproc
