@@ -19,9 +19,11 @@ assets = \
 	table
 
 # A: Skip
+# B: Visine
 # D: Lexan
 opponents = \
 	a \
+	b \
 	d \
 
 opponents_code    = $(opponents:%=$(SRC_DIR)/opponents/opponent%.s)
