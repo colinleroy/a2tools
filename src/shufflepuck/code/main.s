@@ -111,6 +111,8 @@ calibrate_hz_handler:
         ; Wait for first interrupt
         jsr     _mouse_wait_vbl
 
+        lda     #0
+        sta     opponent
 new_game:
         lda     #$00
         sta     turn

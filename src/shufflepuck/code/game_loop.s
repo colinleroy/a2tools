@@ -313,11 +313,12 @@ move_backwards:
         lda     their_pusher_y
         adc     their_pusher_dy
         cmp     #THEIR_PUSHER_MIN_Y
-        bcc     do_move
-        sta     their_pusher_y
+        bcs     :+
+        lda     #THEIR_PUSHER_MIN_Y+1
+:       sta     their_pusher_y
 
 do_move:
-        ldy     their_pusher_y
+        tay
 
         jsr     _transform_xy
         stx     their_pusher_gx

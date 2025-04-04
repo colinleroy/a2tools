@@ -14,7 +14,7 @@
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 ; ----------
-; LEXAN
+; VISINE
 ;
 
         .import     their_pusher_x, their_pusher_y
@@ -23,11 +23,11 @@
         .import     puck_x, puck_right_x, puck_y, puck_dy, serving, their_score
         .import     _rand
 
-        .import     _big_draw_sprite_d                              ; CHANGE A
-        .import     _big_draw_name_d                                ; CHANGE A
-        .import     _big_draw_normal_d                              ; CHANGE A
-        .import     _big_draw_lose_d                                ; CHANGE A
-        .import     _big_draw_win_d                                 ; CHANGE A
+        .import     _big_draw_sprite_b                              ; CHANGE A
+        .import     _big_draw_name_b                                ; CHANGE A
+        .import     _big_draw_normal_b                              ; CHANGE A
+        .import     _big_draw_lose_b                                ; CHANGE A
+        .import     _big_draw_win_b                                 ; CHANGE A
 
         .import     __OPPONENT_START__
         .importzp   tmp1
@@ -41,33 +41,33 @@
         .include    "../code/constants.inc"
         .include    "../code/opponent_file.inc"
 
-START_MAX_DX = 14
-
-.segment "d"                                                        ; CHANGE A
+THEIR_MAX_DX = 15
+THEIR_MAX_DY = 8
+.segment "b"                                                        ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::SPRITE, error ; Make sure the callback is where we think
 sprite:
         ldx     #(98/7)
         ldy     #76
-        jmp _big_draw_sprite_d                                      ; CHANGE A
+        jmp _big_draw_sprite_b                                      ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::NAME, error ; Make sure the callback is where we think
 name:
         ldx     #(7/7)
         ldy     #39
-        jmp _big_draw_name_d                                        ; CHANGE A
+        jmp _big_draw_name_b                                        ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT, error ; Make sure the callback is where we think
 lose_animation:
-        ldx     #(119/7)
-        ldy     #(54+1)
-        jmp _big_draw_lose_d                                        ; CHANGE A
+        ldx     #((21+98)/7)    ; left X of sprite change + left X of big sprite
+        ldy     #(76) ; bottom Y of sprite change + big sprite bottom Y - big sprite height
+        jmp _big_draw_lose_b                                        ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT, error ; Make sure the callback is where we think
 win_animation:
-        ldx     #(119/7)
-        ldy     #(54+1)
-        jmp _big_draw_win_d                                        ; CHANGE A
+        ldx     #((21+98)/7)    ; left X of sprite change + left X of big sprite
+        ldy     #(76) ; bottom Y of sprite change + big sprite bottom Y - big sprite height
+        jmp _big_draw_win_b                                        ; CHANGE A
 
 ; -------
 ; End of opponent letter references
@@ -81,24 +81,13 @@ init_service:
         cmp     #$01
         bne     prepare_service
 
-        ; Adapt our speed because we drank when we won points
-        lda     their_score
-        cmp     #10
-        bcc     :+
-        lda     #10
-:       sta     tmp1
-        lda     #START_MAX_DX
-        sec
-        sbc     tmp1
-        sta     their_max_dx
-
         ; Who serves?
         lda     puck_y
         cmp     #THEIR_PUCK_INI_Y
         bne     serve_or_catch    ; It's the player
 
         ; Init serve parameters
-        lda     their_max_dx
+        lda     #0
         sta     their_pusher_dx
 
         ; Shorten wait
@@ -115,11 +104,12 @@ prepare_service:
         cmp     #(THEIR_PUSHER_MIN_Y+1)
         bcs     :+
 
-        lda     #$01
+        lda     #0
+        sta     their_pusher_dx
+        lda     #THEIR_MAX_DY
         sta     their_pusher_dy
-        jsr     invert_pusher_dx
-
         rts
+
 :       cmp     #(THEIR_PUCK_INI_Y-2)
         bcs     :+
         rts
@@ -127,15 +117,16 @@ prepare_service:
 
         lda     #$FF
         sta     their_pusher_dy
-        jsr     invert_pusher_dx
         rts
 
 serve_or_catch:
         lda     puck_dy           ; Is the puck moving?
-        bne     catch
+        bne     catch_or_move
 
-        lda     #$00              ; Cancel Y speed
-        sta     their_pusher_dy
+catch_or_move:
+        lda     puck_y
+        cmp     #70
+        bcs     move_fast
 
 catch:
         lda     their_pusher_x
@@ -147,30 +138,15 @@ catch:
         bcs     move_left
 
 move_right:
-        lda     puck_x
-        sec
-        sbc     mid_pusher_x
-
-        cmp     their_max_dx
-        bcc     store_dx
-        lda     their_max_dx
-        clc
+        lda     #<(THEIR_MAX_DX)
         jmp     store_dx
 
 move_left:
-        lda     mid_pusher_x
-        sec
-        sbc     puck_x
-
-        cmp     their_max_dx
-        bcc     :+
-        lda     their_max_dx
-
-:       clc
-        eor     #$FF
-        adc     #$01
+        lda     #<(-THEIR_MAX_DX)
 store_dx:
         sta     their_pusher_dx
+
+        jsr     bind_x
 
         ; Did we just hit?
         lda     their_currently_hitting
@@ -200,30 +176,81 @@ hit:
         lsr
         lsr
         clc
-        ; And make it 10-25 (=> 1-3 puck_dy)
-        adc     #10
         sta     their_pusher_dy
         rts
 
 move_forwards_slow:
-        lda     #3
+        lda     #(THEIR_MAX_DY/2)
         sta     their_pusher_dy
         rts
 
 move_backwards:
-        lda     #<-6
+        lda     #<(-THEIR_MAX_DY/2)
+        sta     their_pusher_dy
+        rts
+
+move_fast:
+        lda     their_pusher_dx
+        beq     init_move_fast
+
+        jmp     bind_x_y
+
+init_move_fast:
+        lda     #THEIR_MAX_DX
+        sta     their_pusher_dx
+        lda     #THEIR_MAX_DY
         sta     their_pusher_dy
         rts
 .endproc
 
-.proc invert_pusher_dx
+.proc revert_x
         lda     their_pusher_dx
         clc
         eor     #$FF
-        adc     #$01
+        adc     #1
         sta     their_pusher_dx
         rts
 .endproc
 
-their_max_dx:     .byte START_MAX_DX
+.proc revert_y
+        lda     their_pusher_dy
+        clc
+        eor     #$FF
+        adc     #1
+        sta     their_pusher_dy
+        rts
+.endproc
+
+.proc bind_x
+        lda     their_pusher_x
+        cmp     #40
+        bcc     revert_right
+        cmp     #256-40-my_pusher0_WIDTH
+        bcs     revert_left
+out:    rts
+
+revert_right:
+        bit     their_pusher_dx
+        bmi     do_revert
+        rts
+
+revert_left:
+        bit     their_pusher_dx
+        bmi     out
+do_revert:
+        jmp     revert_x
+.endproc
+
+.proc bind_x_y
+        jsr     bind_x
+
+        lda     their_pusher_y
+        cmp     #THEIR_PUSHER_MIN_Y+2
+        bcs     :+
+        jsr     revert_y
+:       cmp     #THEIR_PUSHER_MAX_Y
+        bcc     :+
+        jsr     revert_y
+:       rts
+.endproc
 mid_pusher_x:     .byte 1
