@@ -33,8 +33,8 @@
         .include    "../code/constants.inc"
         .include    "../code/opponent_file.inc"
 
-THEIR_MAX_DX       = 4
-THEIR_MAX_DY       = 8
+THEIR_MAX_DX       = 16
+THEIR_MAX_DY       = 24
 
 .segment "a"                                                        ; CHANGE A
 
@@ -77,7 +77,7 @@ prepare_service:
         bne     serve_or_catch    ; It's the player
 
         ; Init serve parameters
-        lda     #(ABS_MAX_DX)
+        lda     #(THEIR_MAX_DX)
         sta     their_pusher_dx
 
 :       ; We're serving
@@ -123,7 +123,7 @@ move_right:
         sbc     their_pusher_x
 
         cmp     #THEIR_MAX_DX
-        bcc     store_dx
+        bcs     store_dx
         lda     #THEIR_MAX_DX
         clc
         jmp     store_dx
@@ -134,7 +134,7 @@ move_left:
         sbc     puck_x
 
         cmp     #THEIR_MAX_DX
-        bcc     :+
+        bcs     :+
         lda     #THEIR_MAX_DX
 
 :       clc
@@ -143,18 +143,7 @@ move_left:
 store_dx:
         sta     their_pusher_dx
 
-        ; Update DY now if we can
-        lda     puck_dy           ; Is the puck moving?
-        bne     :+
-
-        lda     puck_y            ; Is it possible to hit the puck if we move forward now?
-        sec
-        sbc     their_pusher_y
-        cmp     their_pusher_dx
-        bcs     :+
-        rts                       ; No, so return
-
-:       lda     puck_y
+        lda     puck_y
         cmp     #MY_PUSHER_MAX_Y   ; Move forward as long as puck isn't in the end of the player zone (defensive)
         ;cmp     #MY_PUSHER_MIN_Y   ; Move forward as long as puck isn't in the player zone (a bit dangerous)
         ;cmp     #MID_BOARD         ; Move forward as long as puck isn't in the player half of the board (dangerous)
@@ -162,19 +151,18 @@ store_dx:
         bcs     move_forwards_slow
         cmp     #(THEIR_PUSHER_MAX_Y)
         bcs     move_backwards
-        ; Otherwise prepare to hit
 hit:
-        lda     #<(ABS_MAX_DY)
+        lda     #<(THEIR_MAX_DY/3)
         sta     their_pusher_dy
         rts
 
 move_forwards_slow:
-        lda     #<(ABS_MAX_DY/8)
+        lda     #<(THEIR_MAX_DY/8)
         sta     their_pusher_dy
         rts
 
 move_backwards:
-        lda     #<(-ABS_MAX_DY/4)
+        lda     #<(-THEIR_MAX_DY/4)
         sta     their_pusher_dy
         rts
 .endproc
