@@ -17,10 +17,11 @@
         .export     _move_puck, _move_my_pusher, _move_their_pusher
         .export     _puck_check_my_hit, _puck_check_their_hit
 
-        .export     puck_x, puck_y, puck_dx, puck_dy
+        .export     puck_x, puck_right_x, puck_y, puck_dx, puck_dy
         .export     my_pusher_x, my_pusher_y
         .export     their_pusher_x, their_pusher_y
         .export     their_pusher_dx, their_pusher_dy
+        .export     their_currently_hitting
 
         .export     _puck_reinit_my_order, _puck_reinit_their_order
         .export     _transform_puck_coords
@@ -488,8 +489,6 @@ out:    clc                       ; Caller expects carry clear
         ror
         cmp     #$80
         ror
-        cmp     #$80
-        ror
         clc
         adc     puck_dx
         sta     puck_dx
@@ -564,8 +563,6 @@ out:    jmp     bind_puck_speed
         ror
         cmp     #$80
         ror
-        cmp     #$80
-        ror
         clc
         adc     puck_dx
         sta     puck_dx
@@ -587,7 +584,9 @@ out:    jmp     bind_puck_speed
         ror
         clc
         adc     puck_dy
-        sta     puck_dy
+        bne     :+                ; Never let dy=0
+        lda     #$01
+:       sta     puck_dy
         clc
         jmp     bind_puck_speed
 
