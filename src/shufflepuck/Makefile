@@ -18,8 +18,11 @@ BINARY_NAME = shflpuck.bin
 assets = \
 	table
 
+# A: Skip
+# D: Lexan
 opponents = \
-	a
+	a \
+	d \
 
 opponents_code    = $(opponents:%=$(SRC_DIR)/opponents/opponent%.s)
 
@@ -48,16 +51,20 @@ sprites_pixel_perfect = \
 	puck5.pixel_perfect.gen.s \
 	puck6.pixel_perfect.gen.s \
 
-sprites_unperfect = \
-	sprite_a.unperfect.gen.s \
-	name_a.unperfect.gen.s \
-	lose_a.unperfect.gen.s \
-	win_a.unperfect.gen.s \
-	\
+sprites_unperfect = $(opponents:%=sprite_%.unperfect.gen.s)
+names_unperfect   = $(opponents:%=name_%.unperfect.gen.s)
+lose_unperfect    = $(opponents:%=lose_%.unperfect.gen.s)
+win_unperfect     = $(opponents:%=win_%.unperfect.gen.s)
+
+opponents_sprites = \
+	$(sprites_unperfect) \
+	$(names_unperfect) \
+	$(lose_unperfect) \
+	$(win_unperfect) \
 
 sprites = \
 	$(sprites_pixel_perfect) \
-	$(sprites_unperfect)
+	$(opponents_sprites)
 
 sounds = \
 	puck_hit.snd.s \
@@ -149,9 +156,9 @@ their%.pixel_perfect.gen.s: $(SRC_DIR)/assets/their%.png gen_sprite
 puck%.pixel_perfect.gen.s: $(SRC_DIR)/assets/puck%.png gen_sprite
 	./gen_sprite $< 255 pixel_perfect RODATA 0
 
-$(sprites_unperfect): %.unperfect.gen.s: $(SRC_DIR)/assets/opponents/%.png
+$(opponents_sprites): %.unperfect.gen.s: $(SRC_DIR)/assets/opponents/%.png
 %.unperfect.gen.s: $(SRC_DIR)/assets/opponents/%.png gen_sprite
-	./gen_sprite $< 255 unperfect a 1
+	./gen_sprite $< 255 unperfect $(shell echo "$@"|sed 's/[a-z]*_\([a-z]\).*$$/\1/') 1
 
 play_sound.gen.s: gen_sound_player
 	./gen_sound_player $(SAMPLING_HZ) LOWCODE > $@

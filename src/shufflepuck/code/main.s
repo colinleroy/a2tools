@@ -121,7 +121,7 @@ new_game:
         sta     puck_serve_y
 
         ; Load the opponent file
-        lda     #0
+        lda     opponent
         jsr     _load_opponent
 
         ; Draw its sprite
@@ -208,8 +208,13 @@ loop_start:
 
         bcs     reset_point
 
-        ; Next round!
-        jmp     game_loop
+        jsr     check_keyboard
+        bcc     game_loop
+
+        ; Keyboard hit, change opponent
+        jsr     _clear_screen
+        jsr     _restore_table
+        jmp     new_game
 
 reset_point:
         lda     turn
@@ -262,6 +267,24 @@ update_screen:
         jmp     new_point
 .endproc
 
+.proc check_keyboard
+        lda     KBD
+        bpl     :+
+        bit     KBDSTRB
+        and     #$7F
+        cmp     #'0'
+        bcc     :+
+        cmp     #('9'+1)
+        bcs     :+
+        sec
+        sbc     #'0'
+        sta     opponent
+        sec
+        rts
+
+:       clc
+        rts
+.endproc
 .data
 
 turn_puck_y:
@@ -276,3 +299,4 @@ serving:      .res 1
 
 my_score:     .res 1
 their_score:  .res 1
+opponent:     .res 1

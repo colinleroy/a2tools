@@ -278,6 +278,6 @@ big_sprite_pointer:
         sta     big_sprite_pointer+2
 
         dec     n_lines_draw
-        bpl     big_next_line
+        bne     big_next_line
 
         rts

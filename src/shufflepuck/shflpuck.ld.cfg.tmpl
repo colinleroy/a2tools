@@ -10,7 +10,7 @@ SYMBOLS {
     __HGR_START__:     type = export, value = $2000; # HGR page location
     __HGR_SIZE__:      type = export, value = $2000; # HGR page length
     __OPPONENT_START__:type = export, value = $4000;
-    __OPPONENT_SIZE__ :type = export, value = $A00;
+    __OPPONENT_SIZE__ :type = export, value = $B00;
     __LOWCODE_START__: type = export, value = $C00;  # Lowcode
     __LOWCODE_SIZE__:  type = export, value = __HGR_START__-__LOWCODE_START__;  # Lowcode
 }
