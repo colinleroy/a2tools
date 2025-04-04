@@ -167,7 +167,9 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  fprintf(fp, "         .export _%s\n", sprite_name);
+  if (!enable_big_draw) {
+    fprintf(fp, "         .export _%s\n", sprite_name);
+  }
 
   #ifdef ENABLE_QUICK_DRAW
     fprintf(fp, "         .export _quick_draw_%s\n", sprite_name);
@@ -180,7 +182,7 @@ int main(int argc, char *argv[]) {
     fprintf(fp,
             "         .import _draw_sprite_big, big_sprite_pointer\n"
             "         .import big_n_bytes_per_line_draw, big_sprite_x\n");
-    fprintf(fp, "     .importzp n_lines_draw\n");
+    fprintf(fp, "         .importzp n_lines_draw\n");
   }
 
   
@@ -231,29 +233,32 @@ int main(int argc, char *argv[]) {
       }
     }
 
-    fprintf(fp, "%s_mask_x%d:\n", sprite_name, shift);
-    for (y = 0; y < image[shift]->h; y++) {
-      fprintf(fp, "         .byte ");
-      for (x = 0; x < (image[shift]->w)/7; x++) {
-        fprintf(fp, "$%02X", mask_data[y][x]);
-        if (x != ((image[shift]->w)/7)-1 || max_shift > 1) {
-          fprintf(fp, ", ");
+    if (!enable_big_draw) {
+      fprintf(fp, "%s_mask_x%d:\n", sprite_name, shift);
+      for (y = 0; y < image[shift]->h; y++) {
+        fprintf(fp, "         .byte ");
+        for (x = 0; x < (image[shift]->w)/7; x++) {
+          fprintf(fp, "$%02X", mask_data[y][x]);
+          if (x != ((image[shift]->w)/7)-1 || max_shift > 1) {
+            fprintf(fp, ", ");
+          }
         }
-      }
-      if (max_shift > 1) {
-        fprintf(fp, "$%02X\n", mask_data[y][x]);
-      } else {
-        fprintf(fp, "\n");
+        if (max_shift > 1) {
+          fprintf(fp, "$%02X\n", mask_data[y][x]);
+        } else {
+          fprintf(fp, "\n");
+        }
       }
     }
   }
 
-  fprintf(fp, "_%s:\n", sprite_name);
-  for (shift = 0; shift < max_shift; shift++) {
-    fprintf(fp, "         .addr %s_x%d\n", sprite_name, shift < max_shift ? shift : 0);
-    fprintf(fp, "         .addr %s_mask_x%d\n", sprite_name, shift < max_shift ? shift : 0);
+  if (!enable_big_draw) {
+    fprintf(fp, "_%s:\n", sprite_name);
+    for (shift = 0; shift < max_shift; shift++) {
+      fprintf(fp, "         .addr %s_x%d\n", sprite_name, shift < max_shift ? shift : 0);
+      fprintf(fp, "         .addr %s_mask_x%d\n", sprite_name, shift < max_shift ? shift : 0);
+    }
   }
-
   if (enable_big_draw) {
     if (!strcmp(segment, "RODATA")) {
       fprintf(fp, "\n         .code\n\n");
