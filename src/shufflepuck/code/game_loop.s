@@ -479,6 +479,8 @@ out:    clc                       ; Caller expects carry clear
         lda     puck_dx
         cmp     #$80
         ror
+        cmp     #$80
+        ror
         beq     :+
         sta     puck_dx
 :       lda     mouse_dx
@@ -497,15 +499,12 @@ out:    clc                       ; Caller expects carry clear
         clc
         eor     #$FF
         adc     #$01
-        sta     tmp1
         cmp     #$80
         ror
-        bne     :+        ; But don't zero it
-        lda     tmp1
-:       sta     puck_dy
+        cmp     #$80
+        ror
+        sta     puck_dy
         lda     mouse_dy
-        cmp     #$80
-        ror
         cmp     #$80
         ror
         cmp     #$80
@@ -556,6 +555,8 @@ out:    jmp     bind_puck_speed
         lda     puck_dx
         cmp     #$80
         ror
+        cmp     #$80
+        ror
         beq     :+
         sta     puck_dx
 :       lda     their_pusher_dx
@@ -574,15 +575,12 @@ out:    jmp     bind_puck_speed
         clc
         eor     #$FF
         adc     #$01
-        sta     tmp1
         cmp     #$80
         ror
-        bne     :+        ; But don't zero it
-        lda     tmp1
-:       sta     puck_dy
+        cmp     #$80
+        ror
+        sta     puck_dy
         lda     their_pusher_dy
-        cmp     #$80
-        ror
         cmp     #$80
         ror
         cmp     #$80
