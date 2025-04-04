@@ -120,7 +120,6 @@ new_game:
         lda     turn_puck_y
         sta     puck_serve_y
 
-
         ; Load the opponent file
         lda     #0
         jsr     _load_opponent
@@ -159,15 +158,13 @@ my_win:
 cont_game:
 
         ; Initialize coords
-        ldy     mouse_y
-        sty     my_pusher_y
-        ldx     mouse_x
-        stx     my_pusher_x
+        jsr     _move_my_pusher
 
         ldy     #THEIR_PUSHER_INI_Y
         sty     their_pusher_y
         ldx     #THEIR_PUSHER_INI_X
         stx     their_pusher_x
+        jsr     _move_their_pusher
 
         lda     #PUCK_INI_X
         sta     puck_x

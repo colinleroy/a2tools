@@ -15,7 +15,10 @@
 
         .import     their_pusher_x, their_pusher_y
         .import     their_pusher_dx, their_pusher_dy
-        .import     puck_x, puck_y, puck_dy, serving
+        .import     their_currently_hitting
+        .import     puck_x, puck_right_x, puck_y, puck_dy, serving, their_score
+        .import     _rand
+
         .import     _big_draw_sprite_a                              ; CHANGE A
         .import     _big_draw_name_a                                ; CHANGE A
         .import     _big_draw_normal_a                              ; CHANGE A
@@ -25,6 +28,7 @@
         .import     __OPPONENT_START__
         .importzp   tmp1
 
+        .include    "apple2.inc"
         .include    "my_pusher0.gen.inc"
         .include    "puck0.gen.inc"
         .include    "../code/sprite.inc"
@@ -33,8 +37,7 @@
         .include    "../code/constants.inc"
         .include    "../code/opponent_file.inc"
 
-THEIR_MAX_DX       = 16
-THEIR_MAX_DY       = 24
+START_MAX_DX = 14
 
 .segment "a"                                                        ; CHANGE A
 
@@ -67,9 +70,20 @@ win_animation:
         lda     serving
         beq     serve_or_catch
 
-prepare_service:
+init_service:
         cmp     #$01
-        bne     :+
+        bne     prepare_service
+
+        ; Adapt our speed because we drank when we won points
+        lda     their_score
+        cmp     #10
+        bcc     :+
+        lda     #10
+:       sta     tmp1
+        lda     #START_MAX_DX
+        sec
+        sbc     tmp1
+        sta     their_max_dx
 
         ; Who serves?
         lda     puck_y
@@ -77,10 +91,16 @@ prepare_service:
         bne     serve_or_catch    ; It's the player
 
         ; Init serve parameters
-        lda     #(THEIR_MAX_DX)
+        lda     their_max_dx
         sta     their_pusher_dx
 
-:       ; We're serving
+        ; Shorten wait
+        lda     RNDL
+        beq     prepare_service
+        sta     serving
+
+prepare_service:
+        ; We're serving
         inc     serving
         beq     serve_or_catch      ; After a while we got to serve
 
@@ -114,28 +134,30 @@ catch:
         lda     their_pusher_x
         clc                       ; Center puck on pusher
         adc     #((my_pusher0_WIDTH-puck0_WIDTH)/2)
+        sta     mid_pusher_x
+        sec
         cmp     puck_x
         bcs     move_left
 
 move_right:
         lda     puck_x
         sec
-        sbc     their_pusher_x
+        sbc     mid_pusher_x
 
-        cmp     #THEIR_MAX_DX
-        bcs     store_dx
-        lda     #THEIR_MAX_DX
+        cmp     their_max_dx
+        bcc     store_dx
+        lda     their_max_dx
         clc
         jmp     store_dx
 
 move_left:
-        lda     their_pusher_x
+        lda     mid_pusher_x
         sec
         sbc     puck_x
 
-        cmp     #THEIR_MAX_DX
-        bcs     :+
-        lda     #THEIR_MAX_DX
+        cmp     their_max_dx
+        bcc     :+
+        lda     their_max_dx
 
 :       clc
         eor     #$FF
@@ -143,26 +165,46 @@ move_left:
 store_dx:
         sta     their_pusher_dx
 
-        lda     puck_y
+        ; Did we just hit?
+        lda     their_currently_hitting
+        bne     move_backwards
+
+        ; Can we hit now?
+        lda     their_pusher_x
+        cmp     puck_right_x
+        bcs     move_backwards
+
+        clc
+        adc     #my_pusher0_WIDTH ; Same for their pusher, they are the same size
+        bcs     :+                ; If adding our width overflowed, we're good
+        cmp     puck_x            ; the pusher is on the right and the puck too
+        bcc     move_backwards
+
+:       lda     puck_y
         cmp     #MY_PUSHER_MAX_Y   ; Move forward as long as puck isn't in the end of the player zone (defensive)
-        ;cmp     #MY_PUSHER_MIN_Y   ; Move forward as long as puck isn't in the player zone (a bit dangerous)
-        ;cmp     #MID_BOARD         ; Move forward as long as puck isn't in the player half of the board (dangerous)
-        ;cmp     #THEIR_PUSHER_MAX_Y; Move forward as long as puck isn't in our zone (very dangerous)
         bcs     move_forwards_slow
         cmp     #(THEIR_PUSHER_MAX_Y)
         bcs     move_backwards
 hit:
-        lda     #<(THEIR_MAX_DY/3)
+        ; Get a 0-15 DY
+        jsr     _rand
+        lsr
+        lsr
+        lsr
+        lsr
+        clc
+        ; And make it 10-25 (=> 1-3 puck_dy)
+        adc     #10
         sta     their_pusher_dy
         rts
 
 move_forwards_slow:
-        lda     #<(THEIR_MAX_DY/8)
+        lda     #3
         sta     their_pusher_dy
         rts
 
 move_backwards:
-        lda     #<(-THEIR_MAX_DY/4)
+        lda     #<-6
         sta     their_pusher_dy
         rts
 .endproc
@@ -176,6 +218,6 @@ move_backwards:
         rts
 .endproc
 
-
-.bss
-serve_dy:       .res 1
+their_max_dx:     .byte START_MAX_DX
+their_max_dy:     .byte 16
+mid_pusher_x:     .byte 1
