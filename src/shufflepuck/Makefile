@@ -20,10 +20,12 @@ assets = \
 
 # A: Skip
 # B: Visine
+# C: Vinnie
 # D: Lexan
 opponents = \
 	a \
 	b \
+	c \
 	d \
 
 opponents_code    = $(opponents:%=$(SRC_DIR)/opponents/opponent%.s)
