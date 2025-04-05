@@ -58,6 +58,10 @@ names_unperfect   = $(opponents:%=name_%.unperfect.gen.s)
 lose_unperfect    = $(opponents:%=lose_%.unperfect.gen.s)
 win_unperfect     = $(opponents:%=win_%.unperfect.gen.s)
 
+serve_sounds      = $(opponents:%=serve_%.snd.s)
+win_sounds      = $(opponents:%=win_%.snd.s)
+lose_sounds      = $(opponents:%=lose_%.snd.s)
+
 opponents_sprites = \
 	$(sprites_unperfect) \
 	$(names_unperfect) \
@@ -95,6 +99,9 @@ shflpuck_SOURCES := \
 	$(sounds) \
 	transform.s \
 	$(opponents_code) \
+	$(serve_sounds) \
+	$(win_sounds) \
+	$(lose_sounds) \
 	$(sprites) \
 	$(assets_backgrounds) \
 	$(levels_code)
@@ -176,6 +183,22 @@ puc%.snd.s: $(SRC_DIR)/assets/sounds/puc%.wav gen_sound_clip
 	sox $< -b 8 -e unsigned-integer -t raw $<_raw channels 1 rate -v $(SAMPLING_HZ)
 	./gen_sound_clip $(SAMPLING_HZ) $<_raw LC > $@
 	rm $<_raw
+serve%.snd.s: $(SRC_DIR)/assets/sounds/opponents/serve%.wav gen_sound_clip
+	rm -f $<_raw
+	sox $< -b 8 -e unsigned-integer -t raw $<_raw channels 1 rate -v $(SAMPLING_HZ)
+	./gen_sound_clip $(SAMPLING_HZ) $<_raw $(shell echo "$@"|sed 's/[a-z]*_\([a-z]\).*$$/\1/') > $@
+	rm $<_raw
+win%.snd.s: $(SRC_DIR)/assets/sounds/opponents/win%.wav gen_sound_clip
+	rm -f $<_raw
+	sox $< -b 8 -e unsigned-integer -t raw $<_raw channels 1 rate -v $(SAMPLING_HZ)
+	./gen_sound_clip $(SAMPLING_HZ) $<_raw $(shell echo "$@"|sed 's/[a-z]*_\([a-z]\).*$$/\1/') > $@
+	rm $<_raw
+lose%.snd.s: $(SRC_DIR)/assets/sounds/opponents/lose%.wav gen_sound_clip
+	rm -f $<_raw
+	sox $< -b 8 -e unsigned-integer -t raw $<_raw channels 1 rate -v $(SAMPLING_HZ)
+	./gen_sound_clip $(SAMPLING_HZ) $<_raw $(shell echo "$@"|sed 's/[a-z]*_\([a-z]\).*$$/\1/') > $@
+	rm $<_raw
+
 
 shflpuck.ld.cfg: $(SRC_DIR)/shflpuck.ld.cfg.tmpl $(SRC_DIR)/generators/gen_linker_config.sh
 	$(SRC_DIR)/generators/gen_linker_config.sh $< $(opponents) > $@

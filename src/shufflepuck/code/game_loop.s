@@ -706,6 +706,7 @@ check_their_late_catch:
         jsr     update_screen_for_crash
         ldy     #4
         jsr     _play_crash
+        jsr     __OPPONENT_START__+OPPONENT::LOSE_POINT_SND
         ; Return with carry set to inform main
         sec
         inc     my_score
@@ -723,6 +724,7 @@ check_my_late_catch:
         jsr     update_screen_for_crash
         ldy     #0
         jsr     _play_crash
+        jsr     __OPPONENT_START__+OPPONENT::WIN_POINT_SND
         ; Return with carry set to inform main
         sec
         inc     their_score

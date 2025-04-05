@@ -28,6 +28,9 @@
         .import     _big_draw_normal_b                              ; CHANGE A
         .import     _big_draw_lose_b                                ; CHANGE A
         .import     _big_draw_win_b                                 ; CHANGE A
+        .import     _play_win_b                                     ; CHANGE A
+        .import     _play_lose_b                                    ; CHANGE A
+        .import     _play_serve_b                                   ; CHANGE A
 
         .import     __OPPONENT_START__
         .importzp   tmp1
@@ -49,29 +52,36 @@ THEIR_MAX_DY = 8
 sprite:
         ldx     #(98/7)
         ldy     #76
-        jmp _big_draw_sprite_b                                      ; CHANGE A
+        jmp    _big_draw_sprite_b                                      ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::NAME, error ; Make sure the callback is where we think
 name:
         ldx     #(7/7)
         ldy     #39
-        jmp _big_draw_name_b                                        ; CHANGE A
+        jmp     _big_draw_name_b                                        ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT, error ; Make sure the callback is where we think
 lose_animation:
         ldx     #((21+98)/7)    ; left X of sprite change + left X of big sprite
         ldy     #(76) ; bottom Y of sprite change + big sprite bottom Y - big sprite height
-        jmp _big_draw_lose_b                                        ; CHANGE A
+        jmp    _big_draw_lose_b                                        ; CHANGE A
+
+.assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT_SND, error ; Make sure the callback is where we think
+lose_sound:
+        ldy     #0
+        jmp     _play_lose_b                                            ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT, error ; Make sure the callback is where we think
 win_animation:
         ldx     #((21+98)/7)    ; left X of sprite change + left X of big sprite
         ldy     #(76) ; bottom Y of sprite change + big sprite bottom Y - big sprite height
-        jmp _big_draw_win_b                                        ; CHANGE A
+        jmp    _big_draw_win_b                                        ; CHANGE A
 
-; -------
-; End of opponent letter references
-; -------
+.assert * = __OPPONENT_START__+OPPONENT::WIN_POINT_SND, error ; Make sure the callback is where we think
+win_sound:
+        ldy     #0
+        jmp     _play_win_b                                            ; CHANGE A
+
 .assert * = __OPPONENT_START__+OPPONENT::THINK_CB, error ; Make sure the callback is where we think
 .proc _opponent_think
         lda     serving
@@ -85,6 +95,12 @@ init_service:
         lda     puck_y
         cmp     #THEIR_PUCK_INI_Y
         bne     serve_or_catch    ; It's the player
+
+        ldy     #0
+        jsr     _play_serve_b                                          ; CHANGE A
+; -------
+; End of opponent letter references
+; -------
 
         ; Init serve parameters
         lda     #0
