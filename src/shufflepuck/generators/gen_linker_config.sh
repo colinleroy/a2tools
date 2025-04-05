@@ -15,7 +15,7 @@ cat $TMPL | while IFS= read -r line ; do
     done
   elif [ "$line" = "### LEVEL_SEGMENTS_DECLARATIONS ###" ]; then
     for lvl in "$@"; do
-      echo "    $lvl:   load = $lvl,       type = ro;"
+      echo "    $lvl:   load = $lvl,       type = ro, align = \$100;"
     done
   else
     echo "$line"

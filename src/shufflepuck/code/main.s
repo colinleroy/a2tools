@@ -64,7 +64,6 @@
 .endproc
 
 .segment "LOWCODE"
-
 ; A: the part (SPRITE or NAME)
 ; X,Y, the lower left coordinate
 .proc draw_opponent_part

@@ -28,6 +28,9 @@
         .import     _big_draw_normal_a                              ; CHANGE A
         .import     _big_draw_lose_a                                ; CHANGE A
         .import     _big_draw_win_a                                 ; CHANGE A
+        .import     _play_win_a                                     ; CHANGE A
+        .import     _play_lose_a                                    ; CHANGE A
+        .import     _play_serve_a                                   ; CHANGE A
 
         .import     __OPPONENT_START__
         .importzp   tmp1
@@ -47,29 +50,36 @@
 sprite:
         ldx     #(98/7)
         ldy     #76
-        jmp _big_draw_sprite_a                                      ; CHANGE A
+        jmp     _big_draw_sprite_a                                      ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::NAME, error ; Make sure the callback is where we think
 name:
         ldx     #(7/7)
         ldy     #39
-        jmp _big_draw_name_a                                        ; CHANGE A
+        jmp     _big_draw_name_a                                        ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT, error ; Make sure the callback is where we think
 lose_animation:
         ldx     #((35+98)/7)    ; left X of sprite change + left X of big sprite
         ldy     #(60+1)         ; bottom Y of sprite change
-        jmp _big_draw_lose_a                                        ; CHANGE A
+        jmp     _big_draw_lose_a                                        ; CHANGE A
+
+.assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT_SND, error ; Make sure the callback is where we think
+lose_sound:
+        ldy     #0
+        jmp     _play_lose_a                                            ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT, error ; Make sure the callback is where we think
 win_animation:
         ldx     #((35+98)/7)    ; left X of sprite change + left X of big sprite
         ldy     #(60+1)         ; bottom Y of sprite change
-        jmp _big_draw_win_a                                        ; CHANGE A
+        jmp     _big_draw_win_a                                        ; CHANGE A
 
-; -------
-; End of opponent letter references
-; -------
+.assert * = __OPPONENT_START__+OPPONENT::WIN_POINT_SND, error ; Make sure the callback is where we think
+win_sound:
+        ldy     #0
+        jmp     _play_win_a                                            ; CHANGE A
+
 .assert * = __OPPONENT_START__+OPPONENT::THINK_CB, error ; Make sure the callback is where we think
 .proc _opponent_think
         lda     serving
@@ -83,6 +93,12 @@ init_service:
         lda     puck_y
         cmp     #THEIR_PUCK_INI_Y
         bne     serve_or_catch    ; It's the player
+
+        ldy     #0
+        jsr     _play_serve_a                                          ; CHANGE A
+; -------
+; End of opponent letter references
+; -------
 
         ; Init serve parameters
         lda     #0
