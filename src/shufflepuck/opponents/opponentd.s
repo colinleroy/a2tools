@@ -44,7 +44,7 @@
         .include    "../code/constants.inc"
         .include    "../code/opponent_file.inc"
 
-START_MAX_DX = 12
+START_MAX_DX = 11
 
 .segment "d"                                                        ; CHANGE A
 
@@ -93,9 +93,9 @@ init_service:
 
         ; Adapt our speed because we drank when we won points
         lda     their_score
-        cmp     #9
+        cmp     #6
         bcc     :+
-        lda     #9
+        lda     #6
 :       sta     tmp1
         lda     #START_MAX_DX
         sec
