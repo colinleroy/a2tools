@@ -18,6 +18,7 @@
         .export     _puck_check_my_hit, _puck_check_their_hit
 
         .export     puck_x, puck_right_x, puck_y, puck_dx, puck_dy
+        .export     _init_precise_y
         .export     my_pusher_x, my_pusher_y
         .export     their_pusher_x, their_pusher_y
         .export     their_pusher_dx, their_pusher_dy
@@ -507,8 +508,6 @@ out:    clc                       ; Caller expects carry clear
         lda     mouse_dy
         cmp     #$80
         ror
-        cmp     #$80
-        ror
         clc
         adc     puck_dy
         sta     puck_dy
@@ -579,8 +578,6 @@ out:    jmp     bind_puck_speed
         ror
         sta     puck_dy
         lda     their_pusher_dy
-        cmp     #$80
-        ror
         cmp     #$80
         ror
         clc
@@ -659,30 +656,37 @@ check_revert_x:
 :       sta     puck_right_x
 
 update_y:
-        bit     puck_dy
-        bmi     puck_backwards
-
-puck_forwards:
-        lda     puck_y
+        ; Extend puck_dy to 16bits
+        ldx     #$00
+        lda     puck_dy
+        bpl     :+
+        dex
+:       stx     puck_dy+1
+        ; Update precise Y coord
+        lda     puck_precise_y
         clc
         adc     puck_dy
-        bcc     :+
-        lda     #(PUCK_MAX_Y+1)
-        jmp     check_y_bound
+        sta     puck_precise_y
+        lda     puck_precise_y+1
+        adc     puck_dy+1
+        sta     puck_precise_y+1
 
-puck_backwards:
-        lda     puck_y
-        clc
-        adc     puck_dy
-        bcs     :+
-        lda     #<(PUCK_MIN_Y-1)
-:
 check_y_bound:
-        cmp     #(PUCK_MIN_Y)
-        bcc     check_their_late_catch
-        cmp     #(PUCK_MAX_Y)
-        bcs     check_my_late_catch
+        tax                       ; Save high byte to X
+        lsr                       ; Divide high byte by two
+        lda     puck_precise_y
+        ror
         sta     puck_y
+
+        ; Check opponent bound
+        cpx     #$FF
+        beq     check_their_late_catch
+        cmp     #PUCK_MIN_Y
+        bcc     check_their_late_catch
+
+        ; Check our bound
+        cmp     #PUCK_MAX_Y
+        bcs     check_my_late_catch
 
         jsr     _transform_puck_coords
 
@@ -692,6 +696,8 @@ check_y_bound:
 check_their_late_catch:
         lda     #PUCK_MIN_Y
         sta     puck_y
+        jsr     _init_precise_y
+
         jsr     _puck_check_their_hit
         bcc     update_y
         jsr     __OPPONENT_START__+OPPONENT::LOSE_POINT
@@ -707,6 +713,8 @@ check_their_late_catch:
 check_my_late_catch:
         lda     #PUCK_MAX_Y
         sta     puck_y
+        jsr     _init_precise_y
+
         jsr     _puck_check_my_hit
         bcc     update_y
         jsr     __OPPONENT_START__+OPPONENT::WIN_POINT
@@ -729,21 +737,36 @@ check_my_late_catch:
         jmp     _draw_crash_lines
 .endproc
 
+; A: standard 8-bit Y
+.proc _init_precise_y
+        ldx     #0
+        clc
+        asl
+        sta     puck_precise_y
+        bcc     :+
+        inx
+:       stx     puck_precise_y+1
+        rts
+.endproc
+
 .bss
-tmpx:         .res 1
-tmpy:         .res 1
+tmpx:            .res 1
+tmpy:            .res 1
 
-puck_right_x: .res 1
+puck_right_x:    .res 1
 
-puck_x:       .res 1
-puck_y:       .res 1
-my_pusher_x:  .res 1
-my_pusher_y:  .res 1
-their_pusher_x: .res 1
-their_pusher_y: .res 1
+puck_x:          .res 1
+puck_dx:         .res 1
+
+puck_y:          .res 1
+puck_precise_y:  .res 2
+puck_dy:         .res 2
+
+my_pusher_x:     .res 1
+my_pusher_y:     .res 1
+their_pusher_x:  .res 1
+their_pusher_y:  .res 1
 their_pusher_dx: .res 1
 their_pusher_dy: .res 1
 
-puck_dx:      .res 1
-puck_dy:      .res 1
-frame_counter:.res 1
+frame_counter:   .res 1

@@ -21,7 +21,7 @@
         .import   mouse_dx, mouse_dy
 
         .import   puck_x, puck_y, puck_dx, puck_dy
-        .import   _transform_puck_coords
+        .import   _init_precise_y, _transform_puck_coords
 
         .import   my_pusher_x, my_pusher_y
         .import   their_pusher_x, their_pusher_y
@@ -172,6 +172,10 @@ cont_game:
         sta     puck_x
         lda     puck_serve_y
         sta     puck_y
+
+        ; Init puck_precise_y (in the range 0-512 for more precision)
+        jsr     _init_precise_y
+
         ; Set correct graphics coords first
         jsr     _transform_puck_coords
 
@@ -244,9 +248,11 @@ reset_move_y:
         cmp     puck_serve_y
         beq     update_screen
         bcc     :+
-        dec     puck_dy
+        lda     #<(-2)
+        sta     puck_dy
         jmp     update_screen
-:       inc     puck_dy
+:       lda     #2
+        sta     puck_dy
 
 update_screen:
         jsr     _mouse_wait_vbl
