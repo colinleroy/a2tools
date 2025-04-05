@@ -18,7 +18,7 @@
         .export     _puck_check_my_hit, _puck_check_their_hit
 
         .export     puck_x, puck_right_x, puck_y, puck_dx, puck_dy
-        .export     _init_precise_y
+        .export     _init_precise_x, _init_precise_y
         .export     my_pusher_x, my_pusher_y
         .export     their_pusher_x, their_pusher_y
         .export     their_pusher_dx, their_pusher_dy
@@ -489,8 +489,6 @@ out:    clc                       ; Caller expects carry clear
 :       lda     mouse_dx
         cmp     #$80
         ror
-        cmp     #$80
-        ror
         clc
         adc     puck_dx
         sta     puck_dx
@@ -561,8 +559,6 @@ out:    jmp     bind_puck_speed
 :       lda     their_pusher_dx
         cmp     #$80
         ror
-        cmp     #$80
-        ror
         clc
         adc     puck_dx
         sta     puck_dx
@@ -625,27 +621,32 @@ out_miss:
         ; And back to move_puck
 .endproc
 .proc _move_puck
-        bit     puck_dx
-        bmi     puck_left
+        ; Extend puck_dx to 16bits
+        ldx     #$00
+        lda     puck_dx
+        bpl     :+
+        dex
+:       stx     puck_dx+1
+        ; Update precise X coord
+        lda     puck_precise_x
+        clc
+        adc     puck_dx
+        sta     puck_precise_x
+        lda     puck_precise_x+1
+        adc     puck_dx+1
+        sta     puck_precise_x+1
 
-puck_right:
-        lda     puck_x
-        clc
-        adc     puck_dx
-        bcc     :+
-        lda     #(PUCK_MAX_X+1)
-        jmp     check_revert_x
-puck_left:
-        lda     puck_x
-        clc
-        adc     puck_dx
-        bcs     :+
-        lda     #<(PUCK_MIN_X-1)
-:
-check_revert_x:
-        cmp     #(PUCK_MIN_X)
-        bcc     revert_x
-        cmp     #(PUCK_MAX_X)
+        tax                       ; Save high byte to X
+        lsr                       ; Divide high byte by two
+        lda     puck_precise_x
+        ror
+
+        ; Check X bound
+        cpx     #$FF
+        beq     revert_x
+        cpx     #$02
+        bcs     revert_x
+        cmp     #PUCK_MAX_X
         bcs     revert_x
         sta     puck_x
 
@@ -738,6 +739,17 @@ check_my_late_catch:
 .endproc
 
 ; A: standard 8-bit Y
+.proc _init_precise_x
+        ldx     #0
+        clc
+        asl
+        sta     puck_precise_x
+        bcc     :+
+        inx
+:       stx     puck_precise_x+1
+        rts
+.endproc
+; A: standard 8-bit Y
 .proc _init_precise_y
         ldx     #0
         clc
@@ -756,7 +768,8 @@ tmpy:            .res 1
 puck_right_x:    .res 1
 
 puck_x:          .res 1
-puck_dx:         .res 1
+puck_precise_x:  .res 2
+puck_dx:         .res 2
 
 puck_y:          .res 1
 puck_precise_y:  .res 2
