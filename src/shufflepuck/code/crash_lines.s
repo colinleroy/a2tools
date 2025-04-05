@@ -18,7 +18,7 @@
         .export     ox, oy, dx, dy ; Used by draw_score
         .export     _set_color_white
 
-        .import     ___randomize, _rand
+        .import     _rand
         .import     pushax, popax, pusha, popa
 
         .importzp   tmp3, tmp4
@@ -48,7 +48,6 @@ extra_lsr:
 .endproc
 
 .proc _draw_crash_lines
-        jsr     ___randomize
         jsr     _set_color_white
 
         ; Set recursion level

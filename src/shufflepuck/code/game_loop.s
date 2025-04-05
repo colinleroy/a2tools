@@ -40,7 +40,7 @@
 
         .import     x_shift, x_factor, y_factor
 
-        .import     umul8x8r16
+        .import     umul8x8r16, _platform_msleep
 
         .import     _play_puck_hit
         .import     _play_puck
@@ -446,11 +446,12 @@ out:    clc                       ; Caller expects carry clear
 .proc _puck_check_my_hit
         ; Check if we already hit right before
         lda     my_currently_hitting
-        beq     :+
+        beq     check
         dec     my_currently_hitting
         jmp     _puck_reinit_my_order  ; Set puck/pusher order while it goes away
 
-:       lda     puck_y
+check:
+        lda     puck_y
         cmp     my_pusher_y
         lda     #0
         rol
@@ -472,10 +473,8 @@ out:    clc                       ; Caller expects carry clear
         bcc     out
 
 :       ; Prevent multiple hits
-        lda     #15
+        lda     #1
         sta     my_currently_hitting
-        ldy     #0
-        jsr     _play_puck_hit
 
         ; update puck speed
         ; Slow puck deltaX
@@ -493,8 +492,9 @@ out:    clc                       ; Caller expects carry clear
         adc     puck_dx
         sta     puck_dx
 
-        ; Invert and slow puck delta-Y
+        ; Invert and slow puck delta-Y if incoming
         lda     puck_dy
+        bmi     :+
         clc
         eor     #$FF
         adc     #$01
@@ -502,13 +502,23 @@ out:    clc                       ; Caller expects carry clear
         ror
         cmp     #$80
         ror
+        cmp     #$80
+        ror
         sta     puck_dy
-        lda     mouse_dy
+
+        ; And play sound
+        ldy     #0
+        jsr     _play_puck_hit
+
+        ; Add our delta-Y to the puck
+:       lda     mouse_dy
         cmp     #$80
         ror
         clc
         adc     puck_dy
-        sta     puck_dy
+        bne     :+
+        lda     #$FF
+:       sta     puck_dy
 
 out:    jmp     bind_puck_speed
 .endproc
@@ -568,6 +578,8 @@ out:    jmp     bind_puck_speed
         clc
         eor     #$FF
         adc     #$01
+        cmp     #$80
+        ror
         cmp     #$80
         ror
         cmp     #$80
@@ -706,6 +718,9 @@ check_their_late_catch:
         jsr     update_screen_for_crash
         ldy     #4
         jsr     _play_crash
+        lda     #200
+        ldx     #0
+        jsr     _platform_msleep
         jsr     __OPPONENT_START__+OPPONENT::LOSE_POINT_SND
         ; Return with carry set to inform main
         sec
@@ -724,6 +739,9 @@ check_my_late_catch:
         jsr     update_screen_for_crash
         ldy     #0
         jsr     _play_crash
+        lda     #200
+        ldx     #0
+        jsr     _platform_msleep
         jsr     __OPPONENT_START__+OPPONENT::WIN_POINT_SND
         ; Return with carry set to inform main
         sec
