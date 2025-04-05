@@ -47,6 +47,7 @@
         .import   _build_hgr_tables
 
         .import   _init_text, _clrscr, _memcpy, pushax
+        .import   ___randomize
 
         .include  "apple2.inc"
         .include  "sprite.inc"
@@ -60,6 +61,7 @@
 
 .proc _main
         jsr     _load_lowcode
+        jsr     ___randomize
         jmp     _real_main
 .endproc
 

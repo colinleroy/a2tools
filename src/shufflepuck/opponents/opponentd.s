@@ -44,7 +44,7 @@
         .include    "../code/constants.inc"
         .include    "../code/opponent_file.inc"
 
-START_MAX_DX = 14
+START_MAX_DX = 12
 
 .segment "d"                                                        ; CHANGE A
 
@@ -80,7 +80,7 @@ win_animation:
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT_SND, error ; Make sure the callback is where we think
 win_sound:
         ldy     #0
-        jmp     _play_lose_d                                            ; CHANGE A
+        jmp     _play_win_d                                            ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::THINK_CB, error ; Make sure the callback is where we think
 .proc _opponent_think
@@ -93,9 +93,9 @@ init_service:
 
         ; Adapt our speed because we drank when we won points
         lda     their_score
-        cmp     #10
+        cmp     #9
         bcc     :+
-        lda     #10
+        lda     #9
 :       sta     tmp1
         lda     #START_MAX_DX
         sec
@@ -108,7 +108,7 @@ init_service:
         bne     serve_or_catch    ; It's the player
 
         ldy     #0
-        jmp     _play_serve_d                                          ; CHANGE A
+        jsr     _play_serve_d                                          ; CHANGE A
 ; -------
 ; End of opponent letter references
 ; -------
