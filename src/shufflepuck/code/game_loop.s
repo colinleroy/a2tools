@@ -22,10 +22,12 @@
         .export     my_pusher_x, my_pusher_y
         .export     their_pusher_x, their_pusher_y
         .export     their_pusher_dx, their_pusher_dy
-        .export     their_currently_hitting
+        .export     their_currently_hitting, my_currently_hitting
 
         .export     _puck_reinit_my_order, _puck_reinit_their_order
         .export     _transform_puck_coords
+
+        .export     _guess_puck_x_at_y
 
         .import     _load_puck_pointer, _load_my_pusher_pointer, _load_their_pusher_pointer
         .import     _setup_sprite_pointer_full, _draw_sprite, _clear_sprite
@@ -60,6 +62,8 @@
         .include    "my_pusher0.gen.inc"
         .include    "constants.inc"
         .include    "opponent_file.inc"
+        .include     "hgr_applesoft.inc"
+
 .segment "LOWCODE"
 
 .proc _clear_screen
@@ -623,13 +627,62 @@ out_miss:
         rts
 .endproc
 
+.assert puck_precise_x = puck_x + 1, error
+.assert puck_dx = puck_precise_x + 2, error
+.assert puck_y = puck_dx + 2, error
+.assert puck_precise_y = puck_y + 1, error
+.assert puck_dy = puck_precise_y + 2, error
+
+; Desired Y in A, result in A
+.proc _guess_puck_x_at_y
+        sta     tmp1
+
+        ; Backup variables
+        ldy     #9
+:       lda     puck_x,y
+        sta     puck_backup,y
+        dey
+        bpl     :-
+
+        lda     #0
+        sta     check_hits
+
+:       lda     puck_y
+        cmp     tmp1
+        bcc     out
+
+        jsr     _move_puck
+        jmp     :-
+
+out:
+        lda     #1
+        sta     check_hits
+
+
+        ldx     puck_x
+        ; Restore variables
+        ldy     #9
+:       lda     puck_backup,y
+        sta     puck_x,y
+        dey
+        bpl     :-
+
+        txa
+        rts
+.endproc
+
+check_hits: .byte 1
+
 .proc revert_x
         lda     puck_dx
         clc
         eor     #$FF
         adc     #$01
         sta     puck_dx
+        lda     check_hits
+        beq     :+
         jsr     play_revert_x
+:
         ; And back to move_puck
 .endproc
 .proc _move_puck
@@ -691,7 +744,11 @@ check_y_bound:
         ror
         sta     puck_y
 
-        ; Check opponent bound
+        ldy     check_hits        ; Are we simulating?
+        bne     :+
+        rts
+
+:       ; Check opponent bound
         cpx     #$FF
         beq     check_their_late_catch
         cmp     #PUCK_MIN_Y
@@ -700,7 +757,6 @@ check_y_bound:
         ; Check our bound
         cmp     #PUCK_MAX_Y
         bcs     check_my_late_catch
-
         jsr     _transform_puck_coords
 
         clc
@@ -803,3 +859,5 @@ their_pusher_dx: .res 1
 their_pusher_dy: .res 1
 
 frame_counter:   .res 1
+
+puck_backup:     .res 10
