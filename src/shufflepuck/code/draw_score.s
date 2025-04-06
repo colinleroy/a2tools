@@ -40,7 +40,7 @@ DIAGONAL_X_OFFSET = 2
 VERTICAL_START_Y  = 23
 DIAGONAL_START_Y  = 22
 
-.code
+.segment "LOWCODE"
 
 ; We use plot instead of HLINE because it
 ; renders more cleanly

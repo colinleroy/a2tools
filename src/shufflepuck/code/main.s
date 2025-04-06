@@ -35,7 +35,7 @@
         .import   __OPPONENT_START__
 
         .import   _load_table, _backup_table, _restore_table
-        .import   _load_lowcode, _load_opponent
+        .import   _load_lowcode, _load_lc, _load_opponent
         .import   hz
 
         .import   _mouse_wait_vbl
@@ -61,11 +61,13 @@
 
 .proc _main
         jsr     _load_lowcode
+        jsr     _load_lc
         jsr     ___randomize
         jmp     _real_main
 .endproc
 
 .segment "LOWCODE"
+
 ; A: the part (SPRITE or NAME)
 ; X,Y, the lower left coordinate
 .proc draw_opponent_part

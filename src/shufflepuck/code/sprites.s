@@ -40,7 +40,7 @@
                   .include "puck6.gen.inc"
                   .include "constants.inc"
 
-.data
+.segment "LOWCODE"
 
 ; Our pusher
 my_pusher_data:

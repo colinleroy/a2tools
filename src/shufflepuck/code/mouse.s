@@ -70,7 +70,7 @@ inibox: .word   (MY_PUSHER_MIN_X/2)
         .word   (MY_PUSHER_MAX_X/2)
         .word   (MY_PUSHER_MAX_Y/2)
 
-        .code
+.segment "LOWCODE"
 
 firmware:
         ; Lookup and patch firmware address lobyte
