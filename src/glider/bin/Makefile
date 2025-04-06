@@ -138,7 +138,7 @@ gen_sound_player: $(SRC_DIR)/../sound_player_generator/gen_sound_player.c $(SRC_
 gen_sound_clip: $(SRC_DIR)/../sound_player_generator/gen_sound_clip.c $(SRC_DIR)/../sound_player_generator/sound.h
 	gcc -DCPU_$(STREAMER_VER) -g -O0 $< -o $@
 
-lz4_compressor: $(SRC_DIR)/generators/lz4_compressor.c
+lz4_compressor: $(SRC_DIR)/../lz4_compressor/lz4_compressor.c
 	gcc -g -O0 -DMAX_COMPRESSED_DATA_SIZE=$(MAX_COMPRESSED_DATA_SIZE) $^ -llz4 -o $@
 
 $(assets_bin): $(BINARY_NAME)

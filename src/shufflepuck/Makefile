@@ -1,9 +1,7 @@
 CC65_TARGET := apple2
 STREAMER_VER := 6502
 SAMPLING_HZ := 8000
-# We have a 0x2100 buffer for uncompression,
-# and want to make sure the end is a bit further
-MAX_COMPRESSED_DATA_SIZE := 0x2040
+MAX_COMPRESSED_DATA_SIZE := 0x4E00
 
 ifndef SRC_DIR
 SRC_DIR := .
@@ -16,7 +14,8 @@ BINARY_NAME = shflpuck.bin
 # Generated things
 
 assets = \
-	table
+	table \
+	bar
 
 # A: Skip
 # B: Visine
@@ -107,7 +106,9 @@ shflpuck_SOURCES := \
 	$(lose_sounds) \
 	$(sprites) \
 	$(assets_backgrounds) \
-	$(levels_code)
+	$(levels_code) \
+	bar.snd.s \
+	$(SRC_DIR)/code/bar.s
 
 shflpuck_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl \
 	-vm -m shflpuck.map \
@@ -139,7 +140,7 @@ gen_transform: $(SRC_DIR)/generators/gen_transform.c
 transform.s: gen_transform
 	./$< > $@
 
-lz4_compressor: $(SRC_DIR)/../glider/generators/lz4_compressor.c
+lz4_compressor: $(SRC_DIR)/../lz4_compressor/lz4_compressor.c
 	gcc -g -O0 -DMAX_COMPRESSED_DATA_SIZE=$(MAX_COMPRESSED_DATA_SIZE) $^ -llz4 -o $@
 
 $(assets_bin): $(BINARY_NAME)
@@ -197,6 +198,11 @@ puc%.snd.s: $(SRC_DIR)/assets/sounds/puc%.wav gen_sound_clip
 	rm -f $<_raw
 	sox $< -b 8 -e unsigned-integer -t raw $<_raw channels 1 rate -v $(SAMPLING_HZ)
 	./gen_sound_clip $(SAMPLING_HZ) $<_raw SPLC > $@
+	rm $<_raw
+bar.snd.s: $(SRC_DIR)/assets/sounds/bar.wav gen_sound_clip
+	rm -f $<_raw
+	sox $< -b 8 -e unsigned-integer -t raw $<_raw channels 1 rate -v $(SAMPLING_HZ)
+	./gen_sound_clip $(SAMPLING_HZ) $<_raw bar > $@
 	rm $<_raw
 serve%.snd.s: $(SRC_DIR)/assets/sounds/opponents/serve%.wav gen_sound_clip
 	rm -f $<_raw

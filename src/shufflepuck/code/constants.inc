@@ -32,3 +32,5 @@ ABS_MAX_DX         = $10
 ABS_MAX_DY         = $18
 
 MAX_SCORE          = 15
+
+CH_ESC             = $1B
