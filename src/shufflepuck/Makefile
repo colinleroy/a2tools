@@ -33,7 +33,8 @@ opponents_code    = $(opponents:%=$(SRC_DIR)/opponents/opponent%.s)
 lz4_files = \
 	$(assets) \
 	$(opponents) \
-	lowcode
+	lowcode \
+	splc
 
 assets_backgrounds = $(assets:=.bg.gen.s)
 assets_bin         = $(lz4_files:=.bin)
@@ -163,8 +164,20 @@ $(sprites_pixel_perfect): %.pixel_perfect.gen.s: $(SRC_DIR)/assets/%.png
 my%.pixel_perfect.gen.s: $(SRC_DIR)/assets/my%.png gen_sprite
 	./gen_sprite $< 255 pixel_perfect RODATA 0
 their%.pixel_perfect.gen.s: $(SRC_DIR)/assets/their%.png gen_sprite
-	./gen_sprite $< 255 pixel_perfect LC 0
-puck%.pixel_perfect.gen.s: $(SRC_DIR)/assets/puck%.png gen_sprite
+	./gen_sprite $< 255 pixel_perfect SPLC 0
+puck0.pixel_perfect.gen.s: $(SRC_DIR)/assets/puck0.png gen_sprite
+	./gen_sprite $< 255 pixel_perfect SPLC 0
+puck1.pixel_perfect.gen.s: $(SRC_DIR)/assets/puck1.png gen_sprite
+	./gen_sprite $< 255 pixel_perfect RODATA 0
+puck2.pixel_perfect.gen.s: $(SRC_DIR)/assets/puck2.png gen_sprite
+	./gen_sprite $< 255 pixel_perfect RODATA 0
+puck3.pixel_perfect.gen.s: $(SRC_DIR)/assets/puck3.png gen_sprite
+	./gen_sprite $< 255 pixel_perfect SPLC 0
+puck4.pixel_perfect.gen.s: $(SRC_DIR)/assets/puck4.png gen_sprite
+	./gen_sprite $< 255 pixel_perfect RODATA 0
+puck5.pixel_perfect.gen.s: $(SRC_DIR)/assets/puck5.png gen_sprite
+	./gen_sprite $< 255 pixel_perfect RODATA 0
+puck6.pixel_perfect.gen.s: $(SRC_DIR)/assets/puck6.png gen_sprite
 	./gen_sprite $< 255 pixel_perfect RODATA 0
 
 $(opponents_sprites): %.unperfect.gen.s: $(SRC_DIR)/assets/opponents/%.png
@@ -183,7 +196,7 @@ crash.snd.s: $(SRC_DIR)/assets/sounds/crash.wav gen_sound_clip
 puc%.snd.s: $(SRC_DIR)/assets/sounds/puc%.wav gen_sound_clip
 	rm -f $<_raw
 	sox $< -b 8 -e unsigned-integer -t raw $<_raw channels 1 rate -v $(SAMPLING_HZ)
-	./gen_sound_clip $(SAMPLING_HZ) $<_raw LC > $@
+	./gen_sound_clip $(SAMPLING_HZ) $<_raw SPLC > $@
 	rm $<_raw
 serve%.snd.s: $(SRC_DIR)/assets/sounds/opponents/serve%.wav gen_sound_clip
 	rm -f $<_raw
@@ -242,6 +255,8 @@ shufflepuck.po: $(BINARY_NAME) $(assets_lz4)
 	java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ SHFLPUCK.SYSTEM SYS < $(SRC_DIR)/../../bin/loader.system; \
 	java -jar $(SRC_DIR)/../../bin/ac.jar -d $@ BASIC.SYSTEM; \
 	java -jar $(SRC_DIR)/../../bin/ac.jar -as $@ SHFLPUCK < $<; \
+	# java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ LOWCODE BIN < lowcode.bin; \
+	# java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ SPLC BIN < splc.bin; \
 	for r in $(assets_lz4); do \
 		java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ $$(basename $$r | sed "s/\.lz4$///") BIN < $$r; \
 	done;

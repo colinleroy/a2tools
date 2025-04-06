@@ -14,13 +14,14 @@
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
         .export   _load_table, _backup_table, _restore_table
-        .export   _load_lowcode, _load_opponent
+        .export   _load_lowcode, _load_opponent, _load_lc
 
         .import   _open, _read, _write, _close, _memcpy
         .import   pushax, popax
         .import   __filetype, __auxtype
 
         .import   __LOWCODE_START__, __LOWCODE_SIZE__
+        .import   __SPLC_START__, __SPLC_SIZE__
         .import   __HGR_START__, __HGR_SIZE__
         .import   __OPPONENT_START__, __OPPONENT_SIZE__
         .import   _decompress_lz4
@@ -30,15 +31,13 @@
         .include  "apple2.inc"
         .include  "fcntl.inc"
 
-.segment "LC"
+.code
 
+.segment "LOWCODE"
 
 ; A = which opponent to load
 .proc _load_opponent
         pha
-
-        bit       $C083           ; Enable writing to LC
-        bit       $C083           ; So we can patch our code
 
         lda       #<opponent_name_tmpl
         sta       filename
@@ -58,8 +57,10 @@
 
         lda      #<__OPPONENT_START__
         sta      destination
+        sta      tmp_destination
         lda      #>__OPPONENT_START__
         sta      destination+1
+        sta      tmp_destination+1
 
         lda      #<O_RDONLY
         ldx      #$01
@@ -74,14 +75,14 @@
 
         lda      #<__HGR_START__
         sta      destination
+        sta      tmp_destination
         lda      #>__HGR_START__
         sta      destination+1
+        sta      tmp_destination+1
         rts
 .endproc
 
 .proc _load_table
-        bit       $C083           ; Enable writing to LC
-        bit       $C083           ; So we can patch our code
         lda       #<table_name
         sta       filename
         lda       #>table_name
@@ -91,8 +92,10 @@
 
         lda      #<O_RDONLY
         ldx      #$01
-        ; Fallthrough to _data_io
+        jmp      _data_io
 .endproc
+
+.segment "CODE"
 
 ; A: data IO mode
 ; X: Whether to uncompress data
@@ -121,9 +124,9 @@ setup_out_buf:
         adc     size+1
         sta     buf_end_high+1
 
-        ldy     destination       ; No. Do our IO directly to/from the
+        ldy     tmp_destination   ; No. Do our IO directly to/from the
         sty     file_io_low+1     ; user-provided buffer
-        ldy     destination+1
+        ldy     tmp_destination+1
         sty     file_io_high+1
 
 do_io:
@@ -172,9 +175,9 @@ data_io_func:
         rts
 
 uncompress:
-        lda     destination
+        lda     tmp_destination
         sta     ptr1
-        lda     destination+1
+        lda     tmp_destination+1
         sta     ptr1+1
 
         ldy     #0
@@ -191,6 +194,13 @@ uncompress:
         iny
         lda     (ptr1),y
         sta     size+1
+
+        lda     destination
+        cmp     tmp_destination
+        bne     copy_simple
+        lda     destination+1
+        cmp     tmp_destination+1
+        bne     copy_simple
 
         ; Compute where to move data, we want it to be
         ; the furthest possible in the available buffer
@@ -222,13 +232,28 @@ buf_end_high:
         lda     tmp1          ; Copy compressed size bytes
         ldx     tmp1+1
         jsr     _memcpy
+        jmp     finish_decompress
 
+copy_simple:
+        lda     tmp_destination
+        clc                   ; Skip the 4-byte header
+        adc     #4
+        ldx     tmp_destination+1
+        bcc     :+
+        inx
+:       jsr     pushax
+
+finish_decompress:
         lda     destination   ; Push user-specified destination buffer
         ldx     destination+1
         jsr     pushax
 
         lda     size          ; Inform lz4 decompressor of the uncompressed size
         ldx     size+1        ; so it knows when to stop
+
+
+        bit       $C083           ; Enable writing to LC
+        bit       $C083           ; In case we're writing to it
 
         jsr     _decompress_lz4
         clc                   ; And we're done!
@@ -237,12 +262,16 @@ buf_end_high:
 .endproc
 
 .proc _load_lowcode
-        bit       $C083           ; Enable writing to LC
-        bit       $C083
         lda       #<lowcode_name
         sta       filename
         lda       #>lowcode_name
         sta       filename+1
+
+        ; Load compressed data here
+        lda      #<__HGR_START__
+        sta      tmp_destination
+        lda      #>__HGR_START__
+        sta      tmp_destination+1
 
         lda      #<__LOWCODE_START__
         sta      destination
@@ -252,6 +281,35 @@ buf_end_high:
         lda      #<__LOWCODE_SIZE__
         sta      size
         lda      #>__LOWCODE_SIZE__
+        sta      size+1
+
+        lda      #<O_RDONLY
+        ldx      #$01
+        jmp      _data_io
+.endproc
+
+.segment "LOWCODE"
+
+.proc _load_lc
+        lda       #<lc_name
+        sta       filename
+        lda       #>lc_name
+        sta       filename+1
+
+        ; Load compressed data here
+        lda      #<__HGR_START__
+        sta      tmp_destination
+        lda      #>__HGR_START__
+        sta      tmp_destination+1
+
+        lda      #<__SPLC_START__
+        sta      destination
+        lda      #>__SPLC_START__
+        sta      destination+1
+
+        lda      #<__SPLC_SIZE__
+        sta      size
+        lda      #>__SPLC_SIZE__
         sta      size+1
 
         lda      #<O_RDONLY
@@ -288,14 +346,16 @@ no_cache:
 
         .bss
 
-filename:      .res 2
-destination:   .res 2
-size:          .res 2
-do_uncompress: .res 1
+filename:        .res 2
+destination:     .res 2
+tmp_destination: .res 2
+size:            .res 2
+do_uncompress:   .res 1
 
         .data
 
 lowcode_name:        .asciiz "LOWCODE"
+lc_name:             .asciiz "SPLC"
 table_name:          .asciiz "TABLE"
 table_backup_name:   .asciiz "/RAM/TABLE"
 opponent_name_tmpl:  .asciiz "X"
