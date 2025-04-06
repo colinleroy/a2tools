@@ -16,13 +16,14 @@
         .export     _init_mouse
         .export     vbl_ready, hz
 
-        .export     _mouse_reset
         .export     _mouse_wait_vbl
         .export     _mouse_calibrate_hz
+        .export     _mouse_check_button
         .export     mouse_x, mouse_y
         .export     mouse_dx, mouse_dy
 
-        .importzp   ptr1
+        .export     _mouse_setbarbox, _mouse_setplaybox
+        .importzp   ptr1, tmp1, tmp2
 
         .interruptor    mouse_irq
         .destructor     _deinit_mouse
@@ -65,10 +66,14 @@ values: .byte   $38             ; Fixed
 size    = * - values
 
 ; Box to the part where our paddle can move
-inibox: .word   (MY_PUSHER_MIN_X/2)
+playbox:.word   (MY_PUSHER_MIN_X/2)
         .word   (MY_PUSHER_MIN_Y/2)
         .word   (MY_PUSHER_MAX_X/2)
         .word   (MY_PUSHER_MAX_Y/2)
+barbox: .word   0
+        .word   0
+        .word   255/2
+        .word   191/2
 
 .segment "LOWCODE"
 
@@ -84,37 +89,6 @@ xparam: ldx     #$FF            ; Patched at runtime
 yparam: ldy     #$FF            ; Patched at runtime
 
 jump:   jmp     $FFFF           ; Patched at runtime
-
-.proc _mouse_reset
-        ; Set initial mouse position
-        php
-        sei
-
-        ; Reset fire indicator
-        lda     #$00
-        sta     mouse_b
-
-        ; Reset position
-        ldx     slot
-        lda     #$00
-        sta     pos1_hi,x
-        lda     #(MY_PUSHER_INI_X/2)
-        sta     pos1_lo,x
-        sta     mouse_x
-        sta     prev_x
-
-        lda     #$00
-        sta     pos2_hi,x
-        lda     #(MY_PUSHER_INI_Y/2)
-        sta     pos2_lo,x
-        sta     mouse_y
-        sta     prev_y
-
-        ldx     #POSMOUSE
-        jsr     firmware
-        plp
-        rts
-.endproc
 
 .proc _init_mouse
         lda     #<$C000
@@ -182,9 +156,7 @@ next_slot:
         jsr     firmware
 
         ; Set box
-        lda     #<inibox
-        ldx     #>inibox
-        jsr     mouse_setbox
+        jsr     _mouse_setbarbox
 
         ; Turn VBL interrupt on
         lda     #%00001001
@@ -197,6 +169,55 @@ mouse_common:
         clc
         rts
 .endproc                          ; Not really endproc, but common needs to be out
+
+.proc mouse_setpos
+        stx     tmp1
+        sty     tmp2
+
+        lda     #0
+        sta     mouse_b
+
+        ; Reset position
+        ldx     slot
+        lda     #0
+        sta     pos1_hi,x
+        lda     tmp1
+        sta     pos1_lo,x
+
+        lda     #0
+        sta     pos2_hi,x
+        lda     tmp2
+        sta     pos2_lo,x
+
+        ldx     #POSMOUSE
+        jmp     firmware
+.endproc
+
+.proc _mouse_setbarbox
+        php
+        sei
+        lda     #<barbox
+        ldx     #>barbox
+        jsr     mouse_setbox
+        ldx     #10
+        ldy     #10
+        jsr     mouse_setpos
+        plp
+        rts
+.endproc
+
+.proc _mouse_setplaybox
+        php
+        sei
+        lda     #<playbox
+        ldx     #>playbox
+        jsr     mouse_setbox
+        ldx     #(MY_PUSHER_INI_X/2)
+        ldy     #(MY_PUSHER_INI_Y/2)
+        jsr     mouse_setpos
+        plp
+        rts
+.endproc
 
 .proc _deinit_mouse
         lda     slot
@@ -252,7 +273,7 @@ mouse_common:
 
         txa
         ldx     #CLAMPMOUSE
-        bne     _init_mouse::mouse_common      ; Branch always
+        jmp     _init_mouse::mouse_common      ; Branch always
 .endproc
 
 .proc mouse_irq
@@ -370,7 +391,7 @@ done:   rts
         rts
 .endproc
 
-.proc _mouse_check_fire
+.proc _mouse_check_button
         lda     mouse_b
         beq     :+
         lda     #0

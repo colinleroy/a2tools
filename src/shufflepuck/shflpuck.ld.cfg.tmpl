@@ -31,8 +31,9 @@ MEMORY {
 
     #Ugly but functional
     LOWCODE: file = "lowcode.bin",     start = __LOWCODE_START__, size = __LOWCODE_SIZE__;
-    SPLC:   file = "splc.bin",         start = __LCADDR__,   size = __LCSIZE__;
+    SPLC:    file = "splc.bin",        start = __LCADDR__,   size = __LCSIZE__;
     TABLE:   file = "table.bin",       start = __HGR_START__,     size = __HGR_SIZE__;
+    BAR:     file = "bar.bin",         start = __HGR_START__,     size = __HGR_SIZE__+__OPPONENT_SIZE__;
 
 ### LEVEL_MEMORY_DECLARATIONS ###
 }
@@ -51,6 +52,7 @@ SEGMENTS {
     BSS:      load = BSS,            type = bss, define   = yes;
 
     table:    load = TABLE,          type = ro;
+    bar:      load = BAR,            type = ro, align = $100;
 
 ### LEVEL_SEGMENTS_DECLARATIONS ###
 }

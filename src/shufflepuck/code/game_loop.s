@@ -16,6 +16,7 @@
         .export     _draw_screen, _clear_screen
         .export     _move_puck, _move_my_pusher, _move_their_pusher
         .export     _puck_check_my_hit, _puck_check_their_hit
+        .export     _puck_select
 
         .export     puck_x, puck_right_x, puck_y, puck_dx, puck_dy
         .export     _init_precise_x, _init_precise_y

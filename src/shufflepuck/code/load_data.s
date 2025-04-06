@@ -14,7 +14,8 @@
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
         .export   _load_table, _backup_table, _restore_table
-        .export   _load_lowcode, _load_opponent, _load_lc
+        .export   _load_lowcode, _load_lc, _load_opponent
+        .export   _load_bar, _backup_bar, _restore_bar
 
         .import   _open, _read, _write, _close, _memcpy
         .import   pushax, popax
@@ -68,10 +69,8 @@
 .endproc
 
 .proc set_hgr_destination_buffer
-        lda      #<__HGR_SIZE__
         sta      size
-        lda      #>__HGR_SIZE__
-        sta      size+1
+        stx      size+1
 
         lda      #<__HGR_START__
         sta      destination
@@ -88,6 +87,8 @@
         lda       #>table_name
         sta       filename+1
 
+        lda      #<__HGR_SIZE__
+        ldx      #>__HGR_SIZE__
         jsr      set_hgr_destination_buffer
 
         lda      #<O_RDONLY
@@ -317,31 +318,81 @@ finish_decompress:
         jmp      _data_io
 .endproc
 
+.proc _load_bar
+        lda       #<bar_name
+        sta       filename
+        lda       #>bar_name
+        sta       filename+1
+
+        lda      #<(__HGR_SIZE__+__OPPONENT_SIZE__)
+        ldx      #>(__HGR_SIZE__+__OPPONENT_SIZE__)
+        jsr      set_hgr_destination_buffer
+
+        lda      #<O_RDONLY
+        ldx      #$01
+        jmp      _data_io
+.endproc
+
 .proc set_table_backup_params
+        lda      #<__HGR_SIZE__
+        ldx      #>__HGR_SIZE__
+        jsr      set_hgr_destination_buffer
         lda     #<table_backup_name
         sta     filename
         lda     #>table_backup_name
         sta     filename+1
-
-        jmp      set_hgr_destination_buffer
+        rts
 .endproc
 
-.proc _backup_table
-        jsr      set_table_backup_params
+.proc set_bar_backup_params
+        lda      #<(__HGR_SIZE__+__OPPONENT_SIZE__)
+        ldx      #>(__HGR_SIZE__+__OPPONENT_SIZE__)
+        jsr      set_hgr_destination_buffer
+        lda     #<bar_backup_name
+        sta     filename
+        lda     #>bar_backup_name
+        sta     filename+1
+        rts
+.endproc
+
+.proc backup
         lda      #(O_WRONLY|O_CREAT)
         ldx      #$00
         jmp      _data_io
 .endproc
 
-.proc _restore_table
-        jsr      set_table_backup_params
+.proc restore
         lda      #O_RDONLY
         ldx      #$00
-        jsr      _data_io
+        jmp      _data_io
+.endproc
+
+.proc _backup_table
+        jsr      set_table_backup_params
+        jmp      backup
+.endproc
+
+.proc _restore_table
+        jsr      set_table_backup_params
+        jsr      restore
         bcs      no_cache
         rts
 no_cache:
         jmp      _load_table
+.endproc
+
+.proc _backup_bar
+        jsr      set_bar_backup_params
+        jmp      backup
+.endproc
+
+.proc _restore_bar
+        jsr      set_bar_backup_params
+        jsr      restore
+        bcs      no_cache
+        rts
+no_cache:
+        jmp      _load_bar
 .endproc
 
         .bss
@@ -357,5 +408,7 @@ do_uncompress:   .res 1
 lowcode_name:        .asciiz "LOWCODE"
 lc_name:             .asciiz "SPLC"
 table_name:          .asciiz "TABLE"
+bar_name:            .asciiz "BAR"
 table_backup_name:   .asciiz "/RAM/TABLE"
+bar_backup_name:     .asciiz "/RAM/BAR"
 opponent_name_tmpl:  .asciiz "X"

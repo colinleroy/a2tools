@@ -15,10 +15,14 @@
 
         .export   _main
         .export   serving, my_score, their_score
+        .export   _check_keyboard
 
         .import   _init_hgr, _init_mouse
         .import   mouse_x, mouse_y
         .import   mouse_dx, mouse_dy
+        .import   _mouse_setbarbox, _mouse_setplaybox
+
+        .import   _choose_opponent
 
         .import   puck_x, puck_y, puck_dx, puck_dy
         .import   _init_precise_x, _init_precise_y, _transform_puck_coords
@@ -36,10 +40,11 @@
 
         .import   _load_table, _backup_table, _restore_table
         .import   _load_lowcode, _load_lc, _load_opponent
+        .import   _load_bar, _backup_bar, _restore_bar
+
         .import   hz
 
         .import   _mouse_wait_vbl
-        .import   _mouse_reset
         .import   _mouse_calibrate_hz
 
         .import   _platform_msleep
@@ -105,18 +110,26 @@ calibrate_hz_handler:
 .endif
 
         jsr     _load_table
-
-        lda     #1
-        jsr     _init_hgr
-
-        jsr     _mouse_reset
+        jsr     _backup_table
 
         ; Wait for first interrupt
         jsr     _mouse_wait_vbl
 
-        lda     #0
+        jsr     _load_bar
+        jsr     _backup_bar
+
+        lda     #1
+        jsr     _init_hgr
+
+new_opponent:
+        jsr     _restore_bar
+        jsr     _mouse_setbarbox
+        jsr     _choose_opponent
         sta     opponent
+
 new_game:
+        jsr     _restore_table
+        jsr     _mouse_setplaybox
         lda     #$00
         sta     turn
         sta     my_score
@@ -157,8 +170,10 @@ my_win:
         lda     #<1000
         ldx     #>1000
         jsr     _platform_msleep
+clear_and_new_opponent:
+        jsr     _clear_screen
         jsr     _restore_table
-        jmp     new_game
+        jmp     new_opponent
 
 cont_game:
 
@@ -216,13 +231,13 @@ loop_start:
 
         bcs     reset_point
 
-        jsr     check_keyboard
+        jsr     _check_keyboard
         bcc     game_loop
 
-        ; Keyboard hit, change opponent
-        jsr     _clear_screen
-        jsr     _restore_table
-        jmp     new_game
+        ; Keyboard hit, is it escape?
+        cmp     #CH_ESC
+        beq     clear_and_new_opponent
+        bne     game_loop
 
 reset_point:
         lda     turn
@@ -279,22 +294,27 @@ update_screen:
         jmp     new_point
 .endproc
 
-.proc check_keyboard
+.proc _check_keyboard
         lda     KBD
-        bpl     :+
+        bpl     no_kbd
         bit     KBDSTRB
         and     #$7F
+        cmp     #CH_ESC
+        beq     out_kbd
+        
         cmp     #'0'
-        bcc     :+
+        bcc     no_kbd
         cmp     #('9'+1)
-        bcs     :+
+        bcs     no_kbd
         sec
         sbc     #'0'
         sta     opponent
+out_kbd:
         sec
         rts
 
-:       clc
+no_kbd:
+        clc
         rts
 .endproc
 .data
