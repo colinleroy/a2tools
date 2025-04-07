@@ -217,7 +217,7 @@ int main(int argc, char *argv[]) {
       }
     }
 
-    fprintf(fp, "%s_x%d:\n", sprite_name, shift);
+    fprintf(fp, ".proc %s_x%d\n", sprite_name, shift);
     for (y = 0; y < image[shift]->h; y++) {
       fprintf(fp, "         .byte ");
       for (x = 0; x < (image[shift]->w)/7; x++) {
@@ -232,9 +232,10 @@ int main(int argc, char *argv[]) {
         fprintf(fp, "\n");
       }
     }
+    fprintf(fp, ".endproc\n");
 
     if (!enable_big_draw) {
-      fprintf(fp, "%s_mask_x%d:\n", sprite_name, shift);
+      fprintf(fp, ".proc %s_mask_x%d\n", sprite_name, shift);
       for (y = 0; y < image[shift]->h; y++) {
         fprintf(fp, "         .byte ");
         for (x = 0; x < (image[shift]->w)/7; x++) {
@@ -249,15 +250,17 @@ int main(int argc, char *argv[]) {
           fprintf(fp, "\n");
         }
       }
+      fprintf(fp, ".endproc\n");
     }
   }
 
   if (!enable_big_draw) {
-    fprintf(fp, "_%s:\n", sprite_name);
+    fprintf(fp, ".proc _%s\n", sprite_name);
     for (shift = 0; shift < max_shift; shift++) {
       fprintf(fp, "         .addr %s_x%d\n", sprite_name, shift < max_shift ? shift : 0);
       fprintf(fp, "         .addr %s_mask_x%d\n", sprite_name, shift < max_shift ? shift : 0);
     }
+    fprintf(fp, ".endproc\n");
   }
   if (enable_big_draw) {
     if (!strcmp(segment, "RODATA")) {
@@ -267,7 +270,7 @@ int main(int argc, char *argv[]) {
   }
   #ifdef ENABLE_QUICK_DRAW
     fprintf(fp,
-            "_quick_draw_%s:\n"
+            ".proc _quick_draw_%s\n"
             "        stx     fast_sprite_x+1\n"
             "        sty     sprite_y\n"
             "\n"
@@ -282,7 +285,8 @@ int main(int argc, char *argv[]) {
             "        lda     #>%s_x0\n"
             "        sta     fast_sprite_pointer+2\n"
             "\n"
-            "        jmp     _draw_sprite_fast\n",
+            "        jmp     _draw_sprite_fast\n"
+            ".endproc",
             sprite_name,
             sprite_name,
             sprite_name,
@@ -291,7 +295,7 @@ int main(int argc, char *argv[]) {
   #endif
   if (enable_big_draw) {
     fprintf(fp,
-            "_big_draw_%s:\n"
+            ".proc _big_draw_%s\n"
             "        lda     #%s_HEIGHT\n"
             "        sta     n_lines_draw\n"
             "\n"
@@ -303,7 +307,8 @@ int main(int argc, char *argv[]) {
             "        lda     #>(%s_x0)\n"
             "        sta     big_sprite_pointer+2\n"
             "\n"
-            "        jmp     _draw_sprite_big\n",
+            "        jmp     _draw_sprite_big\n"
+            ".endproc\n",
             sprite_name,
             sprite_name,
             sprite_name,

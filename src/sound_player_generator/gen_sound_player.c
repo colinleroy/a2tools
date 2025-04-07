@@ -229,7 +229,7 @@ static void sub_level(int l, int repeat) {
   orig_cycles = cycles;
   for (i = 0; i < repeat; i++) {
     cycles = orig_cycles;
-    printf("sound_level_%d_%d:\n", l, i);
+    printf(".proc sound_level_%d_%d\n", l, i);
     cycles = emit_instruction("         sta SPKR                  ", 4, cycles);
 
 #ifdef CPU_65c02
@@ -250,6 +250,7 @@ static void sub_level(int l, int repeat) {
       cycles = emit_slow(cycles);
       emit_jump(cycles);
     }
+    printf(".endproc\n");
   }
 
   printf("\n\n");
@@ -324,22 +325,24 @@ int main(int argc, char *argv[]) {
   printf("START_SOUND_PLAYER = *\n");
 
   printf("\n"
-         "slow_sound:\n"
+         ".proc slow_sound\n"
          "         sty tmp3                  ; 3\n"
          "         ldy snd_slow              ; 6\n"
          ":        dey                       ; 8\n"
          "         bpl :-                    ; 10\n"
          "         ldy tmp3                  ; 13\n"
-         "         rts\n\n");
+         "         rts\n"
+         ".endproc\n\n");
 
   /* Jump table, aligned on a page to make sure we don't get extra cycles */
-  printf("sound_levels:\n");
+  printf(".proc sound_levels\n");
   for (c = 0; c < NUM_LEVELS; c+=STEP) {
     printf("         .addr sound_level_%d_0\n", c);
   }
   printf("         .addr play_done\n");
+  printf(".endproc\n\n");
 
-  printf("incr_pointer:\n");
+  printf(".proc incr_pointer\n");
   printf("         iny                         ; 2\n"
          "         bne :+                      ; 4   (5)\n"
          "         inc ptr1+1                  ; 9\n"
@@ -347,14 +350,16 @@ int main(int argc, char *argv[]) {
          ":        nop                         ; 7\n"
          "         nop                         ; 9\n");
   printf("         rts                         ; 15\n\n");
+  printf(".endproc\n\n");
 #if POINTER_INCR_CYCLES != 21
 #error Recount pointer increment cycles
 #endif
 
-  printf("set_jump_target:\n");
+  printf(".proc set_jump_target\n");
   emit_half_target_set(0, HALF_TARGET_BYTE_SET);
   emit_half_target_set(1, HALF_TARGET_BYTE_SET);
-  printf("         rts\n\n");
+  printf("         rts\n");
+  printf(".endproc\n\n");
 #if FULL_TARGET_SET_CYCLES != 26
 #error Recount target setting cycles
 #endif
@@ -390,7 +395,7 @@ int main(int argc, char *argv[]) {
          "waste_15: bit $FF\n"
          "          rts\n\n");
 
-  printf("_play_sample:\n"
+  printf(".proc _play_sample\n"
          "         sty snd_slow\n"
          "         sta ptr1\n"
          "         stx ptr1+1\n"
@@ -406,9 +411,11 @@ int main(int argc, char *argv[]) {
   emit_half_target_set(0, HALF_TARGET_BYTE_SET);
   emit_half_target_set(1, HALF_TARGET_BYTE_SET);
   emit_jump(JUMP_OVERHEAD+SLOWER_OVERHEAD);
-  printf("play_done:\n"
-         "         plp\n"
-         "         rts\n");
+  printf(".endproc\n\n");
+  printf(".proc play_done\n"
+  "         plp\n"
+  "         rts\n");
+  printf(".endproc\n\n");
 
 
   printf(".assert >START_SOUND_PLAYER = >*, error\n");
