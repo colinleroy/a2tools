@@ -22,21 +22,26 @@
 #include "sound.h"
 
 int sampling_hz = DEFAULT_SAMPLING_HZ;
+int downsample = 1;
 
 static char *segment = "DATA";
 
 int main(int argc, char *argv[]) {
   FILE *fp;
   char *filename;
-  int c;
+  int c, count = 0;
 
   if (argc < 3) {
     fprintf(stderr, "Usage: %s [sampling hz][input.raw]\n", argv[0]);
     exit(1);
   }
 
-  if (argc == 4) {
+  if (argc >= 4) {
     segment = argv[3];
+  }
+
+  if (argc >= 5) {
+    downsample = atoi(argv[4]);
   }
 
   sampling_hz = atoi(argv[1]);
@@ -76,7 +81,7 @@ int main(int argc, char *argv[]) {
   printf("         .segment \"%s\"\n\n", segment);
 
   printf(".align $100\n"
-         "_%s_snd:\n", filename);
+         ".proc _%s_snd\n", filename);
   while ((c = fgetc(fp)) != EOF) {
     int r = (c*(NUM_LEVELS-1))/255, byte;
     r = (r/STEP);
@@ -85,15 +90,19 @@ int main(int argc, char *argv[]) {
       fprintf(stderr, "Range error - too many levels\n");
       exit(1);
     }
-    printf("         .byte $%02X    ; %d * 2\n", byte, r); /* *2 to avoid ASLing */
+    if (++count % downsample == 0) {
+      printf("         .byte $%02X    ; %d * 2\n", byte, r); /* *2 to avoid ASLing */
+    }
   }
-  printf("         .byte (%d*2); play_done\n\n", NUM_LEVELS);
+  printf("         .byte (%d*2); play_done\n\n"
+         ".endproc\n", NUM_LEVELS);
 
   printf("         .code\n\n"
-         "_play_%s:\n"
+         ".proc _play_%s\n"
          "         lda #<_%s_snd\n"
          "         ldx #>_%s_snd\n"
-         "         jmp _play_sample\n",
+         "         jmp _play_sample\n"
+         ".endproc\n",
        filename, filename, filename);
   fclose(fp);
 }

@@ -23,32 +23,35 @@ float x_shift_at_y(int y) {
 
 void build_x_factor_table(void) {
   int y, x_factor;
-  printf("x_factor: .byte ");
+  printf(".proc x_factor\n"
+         "        .byte ");
   for (y = 0; y < HGR_H; y++) {
     x_factor = (256*FOVY)/x_divisor_at_y(y);
     printf("%d%s", x_factor < 256 ? x_factor : 0, y < HGR_H-1 ? ", ":"");
   }
-  printf("\n");
+  printf("\n.endproc\n");
 }
 
 void build_x_shift_table(void) {
   int y, x_shift;
-  printf("x_shift: .byte ");
+  printf(".proc x_shift\n"
+         "        .byte ");
   for (y = 0; y < HGR_H; y++) {
     x_shift = x_shift_at_y(y);
     printf("%d%s", x_shift, y < HGR_H-1 ? ", ":"");
   }
-  printf("\n");
+  printf("\n.endproc\n");
 }
 
 void build_y_factor_table(void) {
   int y, trans_y;
-  printf("y_factor: .byte ");
+  printf(".proc y_factor\n"
+         "        .byte ");
   for (y = 0; y < HGR_H; y++) {
     trans_y = MAXY-(((MAXY-y) * FOVY) / y_divisor_at_y(y));
     printf("%d%s", trans_y < HGR_H ? trans_y : HGR_H-1, y < HGR_H-1 ? ", ":"");
   }
-  printf("\n");
+  printf("\n.endproc\n");
 }
 
 int main(int argc, char *argv[]) {
