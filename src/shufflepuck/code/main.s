@@ -41,6 +41,8 @@
         .import   _load_table, _backup_table, _restore_table
         .import   _load_lowcode, _load_lc, _load_opponent
         .import   _load_bar, _backup_bar, _restore_bar
+        .import   _load_barsnd, _backup_barsnd, _restore_barsnd
+        .import   _play_bar
 
         .import   hz
 
@@ -51,7 +53,7 @@
         .import   _allow_lowercase
         .import   _build_hgr_tables
 
-        .import   _init_text, _clrscr, _memcpy, pushax
+        .import   _init_text, _memcpy, _clrscr, _cputs, pushax
         .import   ___randomize
 
         .include  "apple2.inc"
@@ -66,7 +68,16 @@
 
 .proc _main
         jsr     _load_lowcode
+
+        lda     #1
+        jsr     _allow_lowercase
+
+        jsr     _clrscr
+        lda     #<load_splc_str
+        ldx     #>load_splc_str
+        jsr     _cputs
         jsr     _load_lc
+
         jsr     ___randomize
         jmp     _real_main
 .endproc
@@ -87,11 +98,17 @@ draw:
         jmp     $FFFF
 .endproc
 
+.proc draw_opponent_parts
+        ; Draw its sprite
+        lda     #OPPONENT::SPRITE
+        jsr     draw_opponent_part
+        ; Draw its name
+        lda     #OPPONENT::NAME
+        jmp     draw_opponent_part
+.endproc
+
 .proc _real_main
         jsr     _build_hgr_tables
-
-        lda     #1
-        jsr     _allow_lowercase  ; For Bulgarian i18n
 
         jsr     _init_mouse
         bcc     :+                ; Do we have a mouse?
@@ -109,20 +126,38 @@ calibrate_hz_handler:
         jsr     _platform_msleep
 .endif
 
+        lda     #<load_table_str
+        ldx     #>load_table_str
+        jsr     _cputs
         jsr     _load_table
         jsr     _backup_table
 
         ; Wait for first interrupt
         jsr     _mouse_wait_vbl
 
+        lda     #<load_barsnd_str
+        ldx     #>load_barsnd_str
+        jsr     _cputs
+        jsr     _load_barsnd
+        jsr     _backup_barsnd
+
+        lda     #<load_bar_str
+        ldx     #>load_bar_str
+        jsr     _cputs
         jsr     _load_bar
         jsr     _backup_bar
+
+new_opponent:
+        jsr     _clrscr
+        jsr     _init_text
+        jsr     _restore_barsnd
+        ldy     #0
+        jsr     _play_bar
+        jsr     _restore_bar
 
         lda     #1
         jsr     _init_hgr
 
-new_opponent:
-        jsr     _restore_bar
         jsr     _mouse_setbarbox
         jsr     _choose_opponent
         sta     opponent
@@ -142,19 +177,15 @@ new_game:
         lda     opponent
         jsr     _load_opponent
 
-        ; Draw its sprite
-        lda     #OPPONENT::SPRITE
-        jsr     draw_opponent_part
-
-        ; Draw its name
-        lda     #OPPONENT::NAME
-        jsr     draw_opponent_part
-
+        jsr     draw_opponent_parts
         jsr     _backup_table
 
 new_point:
         jsr     _restore_table
-        ; Draw scores
+        bcc     :+
+        jsr     draw_opponent_parts
+
+:       ; Draw scores
         jsr     _draw_scores
 
         ; Check for end of game
@@ -317,11 +348,17 @@ no_kbd:
         clc
         rts
 .endproc
+
 .data
 
 turn_puck_y:
         .byte   MY_PUCK_INI_Y
         .byte   THEIR_PUCK_INI_Y
+
+load_splc_str:    .byte "LOADING CODE..."          ,$0D,$0A,$00
+load_table_str:   .byte "LOADING ASSETS..."        ,$0D,$0A,$00
+load_barsnd_str:  .byte "DISMANTLING CAPITALISM...",$0D,$0A,$00
+load_bar_str:     .byte "ANY MINUTE NOW..."        ,$0D,$0A,$00
 
 .bss
 

@@ -2,7 +2,7 @@
 
         .import     _mouse_wait_vbl, _mouse_check_button
         .import     _clear_sprite, _draw_sprite
-        .import     _load_puck_pointer
+        .import     _load_pointer_pointer
         .import     _setup_sprite_pointer_for_clear
         .import     _setup_sprite_pointer_for_draw
         
@@ -10,7 +10,6 @@
         .import     puck_y, mouse_y
         .import     _puck_select
         .import     _check_keyboard
-        .import     _play_bar
 
         .import     _exit
 
@@ -18,8 +17,8 @@
 
         .include    "apple2.inc"
         .include    "sprite.inc"
-        .include    "puck6.gen.inc"
-        .include    "puck_coords.inc"
+        .include    "pointer.gen.inc"
+        .include    "pointer_coords.inc"
         .include    "constants.inc"
 
 .data
@@ -36,18 +35,13 @@ NUM_OPPONENTS = (* - BOXES_START)/5
 .segment "bar"
 
 .proc _choose_opponent
-        ldy     #0
-        sty     puck_y
-        jsr     _play_bar
-        jsr     _puck_select
-
 wait_input:
         jsr     _mouse_wait_vbl
 
         lda     mouse_x
-        sta     puck_gx
+        sta     pointer_x
         lda     mouse_y
-        sta     puck_gy
+        sta     pointer_y
         jsr     clear_pointer
         jsr     draw_pointer
         jsr     _check_keyboard
@@ -106,13 +100,13 @@ skip_num_opponent:
 .endproc
 
 .proc draw_pointer
-        jsr     _load_puck_pointer
+        jsr     _load_pointer_pointer
         jsr     _setup_sprite_pointer_for_draw
         jmp     _draw_sprite
 .endproc
 
 .proc clear_pointer
-        jsr     _load_puck_pointer
+        jsr     _load_pointer_pointer
         jsr     _setup_sprite_pointer_for_clear
         jmp     _clear_sprite
 .endproc

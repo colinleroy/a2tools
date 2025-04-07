@@ -16,8 +16,9 @@
         .export   _load_table, _backup_table, _restore_table
         .export   _load_lowcode, _load_lc, _load_opponent
         .export   _load_bar, _backup_bar, _restore_bar
+        .export   _load_barsnd, _backup_barsnd, _restore_barsnd
 
-        .import   _open, _read, _write, _close, _memcpy
+        .import   _open, _read, _write, _close, _memmove
         .import   pushax, popax
         .import   __filetype, __auxtype
 
@@ -81,22 +82,26 @@
         rts
 .endproc
 
+.proc set_small_destination_buffer
+        lda      #<__HGR_SIZE__
+        ldx      #>__HGR_SIZE__
+        jmp      set_hgr_destination_buffer
+.endproc
+
+.segment "CODE"
+
 .proc _load_table
         lda       #<table_name
         sta       filename
         lda       #>table_name
         sta       filename+1
 
-        lda      #<__HGR_SIZE__
-        ldx      #>__HGR_SIZE__
-        jsr      set_hgr_destination_buffer
+        jsr      set_small_destination_buffer
 
         lda      #<O_RDONLY
         ldx      #$01
         jmp      _data_io
 .endproc
-
-.segment "CODE"
 
 ; A: data IO mode
 ; X: Whether to uncompress data
@@ -218,7 +223,7 @@ buf_end_high:
         tax
         tya
         jsr     pushax        ; Push it for decompressor source
-        jsr     pushax        ; and for memcpy dest
+        jsr     pushax        ; and for memmove dest
 
         ; Where to move data from (the compressed buffer excluding the 4
         ; header bytes)
@@ -228,11 +233,11 @@ buf_end_high:
         ldx     ptr1+1
         bcc     :+
         inx
-:       jsr     pushax        ; Push source for memcpy
+:       jsr     pushax        ; Push source for memmove
 
         lda     tmp1          ; Copy compressed size bytes
         ldx     tmp1+1
-        jsr     _memcpy
+        jsr     _memmove
         jmp     finish_decompress
 
 copy_simple:
@@ -262,6 +267,14 @@ finish_decompress:
 
 .endproc
 
+.proc set_hgr_tmp_destination
+        lda      #<__HGR_START__
+        sta      tmp_destination
+        lda      #>__HGR_START__
+        sta      tmp_destination+1
+        rts
+.endproc
+
 .proc _load_lowcode
         lda       #<lowcode_name
         sta       filename
@@ -269,10 +282,7 @@ finish_decompress:
         sta       filename+1
 
         ; Load compressed data here
-        lda      #<__HGR_START__
-        sta      tmp_destination
-        lda      #>__HGR_START__
-        sta      tmp_destination+1
+        jsr      set_hgr_tmp_destination
 
         lda      #<__LOWCODE_START__
         sta      destination
@@ -298,10 +308,7 @@ finish_decompress:
         sta       filename+1
 
         ; Load compressed data here
-        lda      #<__HGR_START__
-        sta      tmp_destination
-        lda      #>__HGR_START__
-        sta      tmp_destination+1
+        jsr      set_hgr_tmp_destination
 
         lda      #<__SPLC_START__
         sta      destination
@@ -318,15 +325,46 @@ finish_decompress:
         jmp      _data_io
 .endproc
 
+
+.proc set_bar_backup_params
+        lda     #<bar_backup_name
+        sta     filename
+        lda     #>bar_backup_name
+        sta     filename+1
+set_buf:
+        lda      #<(__HGR_SIZE__+__OPPONENT_SIZE__)
+        ldx      #>(__HGR_SIZE__+__OPPONENT_SIZE__)
+        jmp      set_hgr_destination_buffer
+.endproc
+
+.proc set_barsnd_backup_params
+        lda     #<barsnd_backup_name
+        sta     filename
+        lda     #>barsnd_backup_name
+        sta     filename+1
+        jmp     set_bar_backup_params::set_buf
+.endproc
+
 .proc _load_bar
         lda       #<bar_name
         sta       filename
         lda       #>bar_name
         sta       filename+1
 
-        lda      #<(__HGR_SIZE__+__OPPONENT_SIZE__)
-        ldx      #>(__HGR_SIZE__+__OPPONENT_SIZE__)
-        jsr      set_hgr_destination_buffer
+        jsr      set_bar_backup_params::set_buf
+
+        lda      #<O_RDONLY
+        ldx      #$01
+        jmp      _data_io
+.endproc
+
+.proc _load_barsnd
+        lda       #<barsnd_name
+        sta       filename
+        lda       #>barsnd_name
+        sta       filename+1
+
+        jsr      set_bar_backup_params::set_buf
 
         lda      #<O_RDONLY
         ldx      #$01
@@ -334,23 +372,10 @@ finish_decompress:
 .endproc
 
 .proc set_table_backup_params
-        lda      #<__HGR_SIZE__
-        ldx      #>__HGR_SIZE__
-        jsr      set_hgr_destination_buffer
+        jsr     set_small_destination_buffer
         lda     #<table_backup_name
         sta     filename
         lda     #>table_backup_name
-        sta     filename+1
-        rts
-.endproc
-
-.proc set_bar_backup_params
-        lda      #<(__HGR_SIZE__+__OPPONENT_SIZE__)
-        ldx      #>(__HGR_SIZE__+__OPPONENT_SIZE__)
-        jsr      set_hgr_destination_buffer
-        lda     #<bar_backup_name
-        sta     filename
-        lda     #>bar_backup_name
         sta     filename+1
         rts
 .endproc
@@ -378,7 +403,9 @@ finish_decompress:
         bcs      no_cache
         rts
 no_cache:
-        jmp      _load_table
+        jsr      _load_table
+        sec
+        rts
 .endproc
 
 .proc _backup_bar
@@ -395,6 +422,21 @@ no_cache:
         jmp      _load_bar
 .endproc
 
+
+.proc _backup_barsnd
+        jsr      set_barsnd_backup_params
+        jmp      backup
+.endproc
+
+.proc _restore_barsnd
+        jsr      set_barsnd_backup_params
+        jsr      restore
+        bcs      no_cache
+        rts
+no_cache:
+        jmp      _load_barsnd
+.endproc
+
         .bss
 
 filename:        .res 2
@@ -409,6 +451,8 @@ lowcode_name:        .asciiz "LOWCODE"
 lc_name:             .asciiz "SPLC"
 table_name:          .asciiz "TABLE"
 bar_name:            .asciiz "BAR"
+barsnd_name:         .asciiz "BARSND"
 table_backup_name:   .asciiz "/RAM/TABLE"
 bar_backup_name:     .asciiz "/RAM/BAR"
+barsnd_backup_name:  .asciiz "/RAM/BARSND"
 opponent_name_tmpl:  .asciiz "X"

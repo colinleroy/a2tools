@@ -3,14 +3,14 @@
 SYMBOLS {
     __EXEHDR__:        type = import;
     __FILETYPE__:      type = weak,   value = $0006; # ProDOS file type
-    __STACKSIZE__:     type = weak,   value = $0400; # 1kB stack
+    __STACKSIZE__:     type = weak,   value = $0200; # 512b stack
     __HIMEM__:         type = weak,   value = $BEFF; # Presumed RAM end
     __LCADDR__:        type = weak,   value = $D400; # Behind quit code
     __LCSIZE__:        type = weak,   value = $0C00; # Rest of bank two
     __HGR_START__:     type = export, value = $2000; # HGR page location
     __HGR_SIZE__:      type = export, value = $2000; # HGR page length
     __OPPONENT_START__:type = export, value = $4000;
-    __OPPONENT_SIZE__ :type = export, value = $2E00;
+    __OPPONENT_SIZE__ :type = export, value = $2D00;
     __LOWCODE_START__: type = export, value = $C00;  # Lowcode
     __LOWCODE_SIZE__:  type = export, value = __HGR_START__-__LOWCODE_START__;  # Lowcode
     __SPLC_START__:    type = export, value = __LCADDR__;
@@ -34,6 +34,7 @@ MEMORY {
     SPLC:    file = "splc.bin",        start = __LCADDR__,   size = __LCSIZE__;
     TABLE:   file = "table.bin",       start = __HGR_START__,     size = __HGR_SIZE__;
     BAR:     file = "bar.bin",         start = __HGR_START__,     size = __HGR_SIZE__+__OPPONENT_SIZE__;
+    BARSND:  file = "barsnd.bin",      start = __HGR_START__,     size = __HGR_SIZE__+__OPPONENT_SIZE__;
 
 ### LEVEL_MEMORY_DECLARATIONS ###
 }
@@ -53,6 +54,7 @@ SEGMENTS {
 
     table:    load = TABLE,          type = ro;
     bar:      load = BAR,            type = ro, align = $100;
+    barsnd:   load = BARSND,         type = ro, align = $100;
 
 ### LEVEL_SEGMENTS_DECLARATIONS ###
 }

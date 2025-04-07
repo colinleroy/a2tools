@@ -14,7 +14,8 @@
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
         .export   _clear_sprite, _draw_sprite, _draw_sprite_big
-        .export   _load_puck_pointer, _load_my_pusher_pointer, _load_their_pusher_pointer
+        .export   _load_puck_pointer, _load_pointer_pointer
+        .export   _load_my_pusher_pointer, _load_their_pusher_pointer
         .export   _setup_sprite_pointer_for_clear
         .export   _setup_sprite_pointer_for_draw
 
@@ -22,7 +23,7 @@
         .export   big_n_bytes_per_line_draw, big_sprite_x
         .export   sprite_y, n_bytes_draw, n_lines_draw
 
-        .import   puck_data, my_pusher_data, their_pusher_data
+        .import   puck_data, my_pusher_data, their_pusher_data, pointer_data
 
         .importzp _zp8p, _zp10, _zp11
         .importzp tmp4, ptr2
@@ -43,6 +44,14 @@ cur_y           = _zp10
 n_bytes_draw    = _zp11
 n_lines_draw    = _zp11 ; shared
 sprite_y        = tmp4
+
+_load_pointer_pointer:
+        lda     #<pointer_data
+        sta     cur_sprite_ptr
+        lda     #>pointer_data
+        sta     cur_sprite_ptr+1
+
+        rts
 
 _load_puck_pointer:
         lda     #<puck_data
