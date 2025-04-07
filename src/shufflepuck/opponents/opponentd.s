@@ -62,8 +62,8 @@ name:
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT, error ; Make sure the callback is where we think
 lose_animation:
-        ldx     #(119/7)
-        ldy     #(54+1)
+        ldx     #((98+21)/7)
+        ldy     #(76)
         jmp    _big_draw_lose_d                                        ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT_SND, error ; Make sure the callback is where we think
@@ -73,8 +73,8 @@ lose_sound:
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT, error ; Make sure the callback is where we think
 win_animation:
-        ldx     #(119/7)
-        ldy     #(54+1)
+        ldx     #((98+21)/7)
+        ldy     #(76)
         jmp    _big_draw_win_d                                        ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT_SND, error ; Make sure the callback is where we think
