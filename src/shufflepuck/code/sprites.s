@@ -13,7 +13,7 @@
 ; You should have received a copy of the GNU General Public License
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-                  .export my_pusher_data, their_pusher_data, puck_data
+                  .export my_pusher_data, their_pusher_data, puck_data, pointer_data
 
                   .export my_pushers_low, my_pushers_high, my_pushers_width, my_pushers_height, my_pushers_bytes, my_pushers_bpline
                   .export their_pushers_low, their_pushers_high, their_pushers_width, their_pushers_height, their_pushers_bytes, their_pushers_bpline
@@ -22,6 +22,7 @@
                   .import _my_pusher0, _my_pusher1, _my_pusher2, _my_pusher3
                   .import _their_pusher4, _their_pusher5
                   .import _puck0, _puck1, _puck2, _puck3, _puck4, _puck5, _puck6
+                  .import _pointer
 
                   .import  my_pusher_bgbackup, their_pusher_bgbackup, puck_bgbackup
 
@@ -38,6 +39,7 @@
                   .include "puck4.gen.inc"
                   .include "puck5.gen.inc"
                   .include "puck6.gen.inc"
+                  .include "pointer.gen.inc"
                   .include "constants.inc"
 
 .segment "LOWCODE"
@@ -185,3 +187,17 @@ pucks_bpline:
         .byte puck4_BPLINE-1
         .byte puck5_BPLINE-1
         .byte puck6_BPLINE-1
+
+; Pointer
+pointer_data:
+                  .byte 0                   ; x
+                  .byte pointer_WIDTH
+                  .byte 0                   ; y
+                  .byte pointer_HEIGHT
+                  .byte 0                   ; prev_x
+                  .byte 0                   ; prev_y
+                  .byte pointer_BYTES-1     ; bytes of sprite - 1
+                  .byte pointer_BPLINE-1    ; width of sprite in bytes
+                  .addr _pointer            ; sprites
+                  .addr my_pusher_bgbackup  ; Spare some memory there
+                  .byte 0                   ; need clear

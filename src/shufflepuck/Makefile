@@ -33,7 +33,8 @@ lz4_files = \
 	$(assets) \
 	$(opponents) \
 	lowcode \
-	splc
+	splc \
+	barsnd
 
 assets_backgrounds = $(assets:=.bg.gen.s)
 assets_bin         = $(lz4_files:=.bin)
@@ -79,7 +80,8 @@ sounds = \
 	crash.snd.s \
 	puck.snd.s \
 # Our code
-
+# Order is important so that things are linked in the expected order
+# in the various segments
 shflpuck_SOURCES := \
 	play_sound.gen.s \
 	$(SRC_DIR)/code/main.s \
@@ -108,7 +110,8 @@ shflpuck_SOURCES := \
 	$(assets_backgrounds) \
 	$(levels_code) \
 	bar.snd.s \
-	$(SRC_DIR)/code/bar.s
+	$(SRC_DIR)/code/bar.s \
+	pointer.pixel_perfect.gen.s
 
 shflpuck_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl \
 	-vm -m shflpuck.map \
@@ -180,6 +183,8 @@ puck5.pixel_perfect.gen.s: $(SRC_DIR)/assets/puck5.png gen_sprite
 	./gen_sprite $< 255 pixel_perfect RODATA 0
 puck6.pixel_perfect.gen.s: $(SRC_DIR)/assets/puck6.png gen_sprite
 	./gen_sprite $< 255 pixel_perfect RODATA 0
+pointer.pixel_perfect.gen.s: $(SRC_DIR)/assets/pointer.png gen_sprite
+	./gen_sprite $< 255 pixel_perfect bar 0
 
 $(opponents_sprites): %.unperfect.gen.s: $(SRC_DIR)/assets/opponents/%.png
 %.unperfect.gen.s: $(SRC_DIR)/assets/opponents/%.png gen_sprite
@@ -202,7 +207,7 @@ puc%.snd.s: $(SRC_DIR)/assets/sounds/puc%.wav gen_sound_clip
 bar.snd.s: $(SRC_DIR)/assets/sounds/bar.wav gen_sound_clip
 	rm -f $<_raw
 	sox $< -b 8 -e unsigned-integer -t raw $<_raw channels 1 rate -v $(SAMPLING_HZ)
-	./gen_sound_clip $(SAMPLING_HZ) $<_raw bar > $@
+	./gen_sound_clip $(SAMPLING_HZ) $<_raw barsnd > $@
 	rm $<_raw
 serve%.snd.s: $(SRC_DIR)/assets/sounds/opponents/serve%.wav gen_sound_clip
 	rm -f $<_raw
@@ -261,11 +266,9 @@ shufflepuck.po: $(BINARY_NAME) $(assets_lz4)
 	java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ SHFLPUCK.SYSTEM SYS < $(SRC_DIR)/../../bin/loader.system; \
 	java -jar $(SRC_DIR)/../../bin/ac.jar -d $@ BASIC.SYSTEM; \
 	java -jar $(SRC_DIR)/../../bin/ac.jar -as $@ SHFLPUCK < $<; \
-	# java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ LOWCODE BIN < lowcode.bin; \
-	# java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ SPLC BIN < splc.bin; \
 	for r in $(assets_lz4); do \
 		java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ $$(basename $$r | sed "s/\.lz4$///") BIN < $$r; \
-	done;
+	done; \
 
 upload: all
 	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/shufflepuck/$(GAME_LANG)/ || \
