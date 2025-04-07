@@ -12,12 +12,15 @@
         .import     _check_keyboard
         .import     _play_bar
 
+        .import     _exit
+
         .import     __OPPONENT_START__
 
         .include    "apple2.inc"
         .include    "sprite.inc"
         .include    "puck6.gen.inc"
         .include    "puck_coords.inc"
+        .include    "constants.inc"
 
 .data
 BOXES_START = *
@@ -26,6 +29,8 @@ opponents_boxes:                      ; X, W, Y, H, opponent number
         .byte 196, 52, 172, 18, 1     ; Visine
         .byte 181, 54, 97,  48, 2     ; Vinnie
         .byte 15,  32, 68,  32, 3     ; Lexan
+
+        .byte 231, 21, 13,  21, CH_ESC; Exit
 NUM_OPPONENTS = (* - BOXES_START)/5
 
 .segment "bar"
@@ -54,7 +59,11 @@ wait_input:
         bcc     wait_input
 
 out:
-        pha
+        cmp     #CH_ESC
+        bne     :+
+        jmp     _exit
+
+:       pha
         jsr     clear_pointer
         pla
         rts
