@@ -26,6 +26,7 @@ opponents = \
 	b \
 	c \
 	d \
+	e \
 
 opponents_code    = $(opponents:%=$(SRC_DIR)/opponents/opponent%.s)
 

@@ -28,7 +28,7 @@ opponents_boxes:                      ; X, W, Y, H, opponent number
         .byte 196, 52, 172, 18, 1     ; Visine
         .byte 181, 54, 97,  48, 2     ; Vinnie
         .byte 15,  32, 68,  32, 3     ; Lexan
-
+        .byte 73,  38, 94,  36, 4     ; Eneg
         .byte 231, 21, 13,  21, CH_ESC; Exit
 NUM_OPPONENTS = (* - BOXES_START)/5
 
