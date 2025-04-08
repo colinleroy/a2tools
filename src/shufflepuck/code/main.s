@@ -52,7 +52,6 @@
         .import   _mouse_calibrate_hz
 
         .import   _platform_msleep
-        .import   _allow_lowercase
         .import   _build_hgr_tables
 
         .import   _init_text, _memcpy, _clrscr, _cputs, pushax
@@ -70,9 +69,6 @@
 
 .proc _main
         jsr     _load_lowcode
-
-        lda     #1
-        jsr     _allow_lowercase
 
         jsr     _clrscr
         lda     #<load_splc_str
@@ -150,6 +146,16 @@ calibrate_hz_handler:
         jsr     _backup_bar
 
 new_opponent:
+        lda     in_tournament     ; Are we in a tournament?
+        beq     to_bar
+
+        inc     opponent          ; Yes, go directly to the next one
+        lda     opponent
+        cmp     #NUM_OPPONENTS
+        beq     win_tournament    ; We won the tournament
+        bne     new_game          ; Continue tournament
+
+to_bar:
         jsr     _clrscr
         jsr     _init_text
         jsr     _restore_barsnd
@@ -162,7 +168,11 @@ new_opponent:
 
         jsr     _mouse_setbarbox
         jsr     _choose_opponent
-        sta     opponent
+        bpl     :+
+        lda     #1                ; Start a tournament
+        sta     in_tournament
+        lda     #0                ; Start with opponent 0
+:       sta     opponent
 
 new_game:
         jsr     _restore_table
@@ -198,15 +208,24 @@ new_point:
         bne     cont_game
 
 their_win:
+        lda     #0                ; We lost the tournament
+        sta     in_tournament
 my_win:
         ; Todo victory/defeat screen
         lda     #<1000
         ldx     #>1000
         jsr     _platform_msleep
-clear_and_new_opponent:
+next_or_new_opponent:
         jsr     _clear_screen
         jsr     _restore_table
         jmp     new_opponent
+
+win_tournament:
+        ; todo end of tournament
+clear_and_go_bar:
+        lda     #0
+        sta     in_tournament
+        beq     next_or_new_opponent    ; Always branch
 
 cont_game:
 
@@ -273,7 +292,7 @@ loop_start:
 
         ; Keyboard hit, is it escape?
         cmp     #CH_ESC
-        beq     clear_and_new_opponent
+        beq     clear_and_go_bar
         bne     game_loop
 
 reset_point:
@@ -375,3 +394,4 @@ serving:      .res 1
 my_score:     .res 1
 their_score:  .res 1
 opponent:     .res 1
+in_tournament:.res 1

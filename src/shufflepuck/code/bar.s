@@ -11,7 +11,9 @@
         .import     _puck_select
         .import     _check_keyboard
 
-        .import     _exit
+        .import     _print_string
+
+        .import     _exit, pushax
 
         .import     __OPPONENT_START__
 
@@ -29,14 +31,29 @@ opponents_boxes:                      ; X, W, Y, H, opponent number
         .byte 181, 54, 97,  48, 2     ; Vinnie
         .byte 15,  32, 68,  32, 3     ; Lexan
         .byte 73,  38, 94,  36, 4     ; Eneg
+
+        .byte 83,  87, 12,  34, $FF   ; Tournament
         .byte 231, 21, 13,  21, CH_ESC; Exit
-NUM_OPPONENTS = (* - BOXES_START)/5
+NUM_BOXES = (* - BOXES_START)/5
 
 .segment "bar"
+
+champion_str: .asciiz "123456789012"
+
+.proc print_champion
+        lda     #<champion_str
+        ldx     #>champion_str
+        jsr     pushax
+        ldx     #(88/7)
+        ldy     #34
+        jmp     _print_string
+.endproc
 
 .proc _choose_opponent
 wait_input:
         jsr     _mouse_wait_vbl
+
+        ; jsr     print_champion
 
         lda     mouse_x
         sta     pointer_x
@@ -93,7 +110,7 @@ skip_y: iny
 skip_num_opponent:
         iny
         iny
-        cpy     #((NUM_OPPONENTS*5))
+        cpy     #((NUM_BOXES*5))
         bne     check_next_opponent
         clc
         rts

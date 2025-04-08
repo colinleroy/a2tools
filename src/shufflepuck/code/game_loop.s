@@ -68,7 +68,7 @@
         .include    "opponent_file.inc"
         .include     "hgr_applesoft.inc"
 
-.segment "LOWCODE"
+.segment "CODE"
 
 .proc _clear_screen
         jsr     clear_their_pusher
@@ -114,6 +114,8 @@
         jsr     _setup_sprite_pointer_for_draw
         jmp     _draw_sprite
 .endproc
+
+.segment "LOWCODE"
 
 .proc _draw_screen_my_side
         lda     frame_counter
