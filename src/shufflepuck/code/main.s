@@ -32,6 +32,8 @@
         .import   their_pusher_dx, their_pusher_dy
 
         .import   _puck_reinit_my_order, _puck_reinit_their_order
+        .import   puck_in_front_of_me, prev_puck_in_front_of_me
+        .import   puck_in_front_of_them, prev_puck_in_front_of_them
         .import   _draw_screen, _clear_screen, _draw_scores
         .import   _move_puck, _puck_check_my_hit, _puck_check_their_hit
         .import   _move_my_pusher, _move_their_pusher
@@ -234,7 +236,11 @@ cont_game:
         sta     serving
 
         jsr     _puck_reinit_my_order
+        lda     puck_in_front_of_me
+        sta     prev_puck_in_front_of_me
         jsr     _puck_reinit_their_order
+        lda     puck_in_front_of_them
+        sta     prev_puck_in_front_of_them
 
 game_loop:
         ; the WAI of the poor

@@ -43,7 +43,7 @@ HOMEMOUSE       = $18   ; Sets mouse to upper-left corner of clamp win
 INITMOUSE       = $19   ; Resets mouse clamps to default values and
                         ; sets mouse position to 0,0
 
-RINGBUF_SIZE    = 8
+RINGBUF_SIZE    = 4
 
 pos1_lo         := $0478
 pos1_hi         := $0578

@@ -26,6 +26,9 @@
         .export     their_currently_hitting, my_currently_hitting
 
         .export     _puck_reinit_my_order, _puck_reinit_their_order
+        .export      puck_in_front_of_me, puck_in_front_of_them
+        .export      prev_puck_in_front_of_me, prev_puck_in_front_of_them
+
         .export     _transform_puck_coords
 
         .export     _guess_puck_x_at_y
@@ -68,16 +71,48 @@
 .segment "LOWCODE"
 
 .proc _clear_screen
-        jsr     _load_their_pusher_pointer
-        jsr     _setup_sprite_pointer_for_clear
-        jsr     _clear_sprite
-        jsr     _load_my_pusher_pointer
-        jsr     _setup_sprite_pointer_for_clear
-        jsr     _clear_sprite
+        jsr     clear_their_pusher
+        jsr     clear_my_pusher
+        jsr     clear_puck
+        rts
+.endproc
+
+.proc clear_puck
         jsr     _load_puck_pointer
         jsr     _setup_sprite_pointer_for_clear
-        jsr     _clear_sprite
-        rts
+        jmp     _clear_sprite
+.endproc
+.proc draw_puck
+        jsr     _load_puck_pointer
+        jsr     _puck_select
+        jsr     _setup_sprite_pointer_for_draw
+        jmp     _draw_sprite
+.endproc
+
+.proc clear_my_pusher
+        jsr     _load_my_pusher_pointer
+        jsr     _setup_sprite_pointer_for_clear
+        jmp     _clear_sprite
+.endproc
+
+.proc draw_my_pusher
+        jsr     _my_pusher_select
+        jsr     _load_my_pusher_pointer
+        jsr     _setup_sprite_pointer_for_draw
+        jmp     _draw_sprite
+.endproc
+
+.proc clear_their_pusher
+        jsr     _load_their_pusher_pointer
+        jsr     _setup_sprite_pointer_for_clear
+        jmp     _clear_sprite
+.endproc
+
+.proc draw_their_pusher
+        jsr     _their_pusher_select
+        jsr     _load_their_pusher_pointer
+        jsr     _setup_sprite_pointer_for_draw
+        jmp     _draw_sprite
 .endproc
 
 .proc _draw_screen_my_side
@@ -87,31 +122,34 @@
         beq     :+
 
         ; Redraw other side
-        jsr     _load_their_pusher_pointer
-        jsr     _setup_sprite_pointer_for_clear
-        jsr     _clear_sprite
-
-        jsr     _their_pusher_select
-        jsr     _setup_sprite_pointer_for_draw
-        jsr     _draw_sprite
+        jsr     clear_their_pusher
+        jsr     draw_their_pusher
         rts
 
 :       ; ~ 12800 cycles
-        jsr     _load_my_pusher_pointer
-        jsr     _setup_sprite_pointer_for_clear
-        jsr     _clear_sprite
+        lda     prev_puck_in_front_of_me
+        beq     :+
 
-        jsr     _load_puck_pointer
-        jsr     _setup_sprite_pointer_for_clear
-        jsr     _clear_sprite
-        jsr     _puck_select
-        jsr     _setup_sprite_pointer_for_draw
-        jsr     _draw_sprite
+        jsr     clear_puck
+        jsr     clear_my_pusher
+        jmp     draw
 
-        jsr     _my_pusher_select
-        jsr     _load_my_pusher_pointer
-        jsr     _setup_sprite_pointer_for_draw
-        jsr     _draw_sprite
+:       jsr     clear_my_pusher
+        jsr     clear_puck
+
+draw:
+        lda     puck_in_front_of_me
+        sta     prev_puck_in_front_of_me
+        bne     :+
+
+        jsr     draw_puck
+        jsr     draw_my_pusher
+        jmp     out
+
+:       jsr     draw_my_pusher
+        jsr     draw_puck
+
+out:
         rts
 .endproc
 
@@ -122,31 +160,16 @@
         beq     :+
 
         ; ~6600 cycles - Their side
-        jsr     _load_puck_pointer
-        jsr     _setup_sprite_pointer_for_clear
-        jsr     _clear_sprite
-
-        jsr     _load_their_pusher_pointer
-        jsr     _setup_sprite_pointer_for_clear
-        jsr     _clear_sprite
-        jsr     _their_pusher_select
-        jsr     _setup_sprite_pointer_for_draw
-        jsr     _draw_sprite
-
-        jsr     _load_puck_pointer
-        jsr     _puck_select
-        jsr     _setup_sprite_pointer_for_draw
-        jsr     _draw_sprite
+        ; Don't care about the order, it's far enough
+        jsr     clear_puck
+        jsr     clear_their_pusher
+        jsr     draw_their_pusher
+        jsr     draw_puck
         rts
 
 :       ; My side now
-        jsr     _load_my_pusher_pointer
-        jsr     _setup_sprite_pointer_for_clear
-        jsr     _clear_sprite
-
-        jsr     _my_pusher_select
-        jsr     _setup_sprite_pointer_for_draw
-        jsr     _draw_sprite
+        jsr     clear_my_pusher
+        jsr     draw_my_pusher
         rts
 .endproc
 
@@ -170,7 +193,8 @@
 .proc _draw_screen
         jsr     waste_3400           ; Test for 60Hz
         lda     puck_y
-        cmp     #96                   ; Middle of HGR height
+
+        cmp     #MID_BOARD           ; Middle of HGR height
 
         bcs     :+
         jmp     _draw_screen_their_side
@@ -375,8 +399,11 @@ out:
         rts
 .endproc
 
-my_prev_puck_diff: .byte 0
-their_prev_puck_diff: .byte 0
+puck_in_front_of_me: .byte 0
+puck_in_front_of_them: .byte 0
+
+prev_puck_in_front_of_me: .byte 0
+prev_puck_in_front_of_them: .byte 0
 
 my_pusher_mid_x: .byte 0
 my_currently_hitting: .byte 0
@@ -387,7 +414,7 @@ their_currently_hitting: .byte 0
         cmp     my_pusher_y
         lda     #0
         rol
-        sta     my_prev_puck_diff
+        sta     puck_in_front_of_me
         rts
 .endproc
 
@@ -396,7 +423,7 @@ their_currently_hitting: .byte 0
         cmp     their_pusher_y
         lda     #0
         rol
-        sta     their_prev_puck_diff
+        sta     puck_in_front_of_them
         rts
 .endproc
 
@@ -453,19 +480,18 @@ out:    clc                       ; Caller expects carry clear
         lda     my_currently_hitting
         beq     check
         dec     my_currently_hitting
-        jmp     _puck_reinit_my_order  ; Set puck/pusher order while it goes away
 
 check:
         lda     puck_y
         cmp     my_pusher_y
         lda     #0
         rol
-        cmp     my_prev_puck_diff
+        cmp     puck_in_front_of_me
         bne     :+
         rts
 
         ; Order changed, check X
-:       sta     my_prev_puck_diff
+:       sta     puck_in_front_of_me
 
         lda     my_pusher_x
         cmp     puck_right_x
@@ -481,6 +507,12 @@ check:
         lda     #1
         sta     my_currently_hitting
 
+        ; Make sure puck doesn't go behind pusher
+        ldy     my_pusher_y
+        dey
+        sty     puck_y
+
+        jsr     _puck_reinit_my_order  ; Set puck/pusher order while it goes away
         ; update puck speed
         ; Slow puck deltaX
         lda     puck_dx
@@ -491,25 +523,13 @@ check:
         beq     :+
         sta     puck_dx
 :       lda     mouse_dx
-        cmp     #$80
-        ror
-        clc
         adc     puck_dx
         sta     puck_dx
 
         ; Invert and slow puck delta-Y if incoming
         lda     puck_dy
         bmi     :+
-        clc
-        eor     #$FF
-        adc     #$01
-        cmp     #$80
-        ror
-        cmp     #$80
-        ror
-        cmp     #$80
-        ror
-        sta     puck_dy
+        jsr     revert_y
 
         ; And play sound
         ldy     #0
@@ -517,11 +537,8 @@ check:
 
         ; Add our delta-Y to the puck
 :       lda     mouse_dy
-        cmp     #$80
-        ror
-        clc
         adc     puck_dy
-        bne     :+
+        bmi     :+                ; Don't let DY still be positive or zero
         lda     #$FF
 :       sta     puck_dy
 
@@ -539,12 +556,12 @@ out:    jmp     bind_puck_speed
         cmp     their_pusher_y
         lda     #0
         rol
-        cmp     their_prev_puck_diff
+        cmp     puck_in_front_of_them
         bne     :+
         rts
 
         ; Order changed, check X
-:       sta     their_prev_puck_diff
+:       sta     puck_in_front_of_them
 
         lda     their_pusher_x
         cmp     puck_right_x
@@ -579,17 +596,7 @@ out:    jmp     bind_puck_speed
         sta     puck_dx
 
         ; Invert and slow puck delta-Y
-        lda     puck_dy
-        clc
-        eor     #$FF
-        adc     #$01
-        cmp     #$80
-        ror
-        cmp     #$80
-        ror
-        cmp     #$80
-        ror
-        sta     puck_dy
+        jsr     revert_y
         lda     their_pusher_dy
         cmp     #$80
         ror
@@ -673,6 +680,21 @@ out:
 .endproc
 
 check_hits: .byte 1
+
+.proc revert_y
+        lda     puck_dy
+        clc
+        eor     #$FF
+        adc     #$01
+        cmp     #$80
+        ror
+        cmp     #$80
+        ror
+        cmp     #$80
+        ror
+        sta     puck_dy
+        rts
+.endproc
 
 .proc revert_x
         lda     puck_dx
