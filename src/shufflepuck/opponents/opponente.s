@@ -15,7 +15,7 @@
 
 ; ----------
 ; ENEG
-;
+; How to beat: wear him down and aim for the corners
 
         .import     their_pusher_x, their_pusher_y
         .import     their_pusher_dx, their_pusher_dy
