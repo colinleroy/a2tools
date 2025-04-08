@@ -14,24 +14,23 @@
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 ; ----------
-; SKIP
+; ENEG
 ;
 
         .import     their_pusher_x, their_pusher_y
         .import     their_pusher_dx, their_pusher_dy
-        .import     their_currently_hitting, my_currently_hitting
-        .import     puck_x, puck_right_x, puck_y, puck_dx, puck_dy, serving, their_score
-        .import     _guess_puck_x_at_y
+        .import     their_currently_hitting
+        .import     puck_x, puck_right_x, puck_y, puck_dy, serving, their_score
         .import     _rand
 
-        .import     _big_draw_sprite_c                              ; CHANGE A
-        .import     _big_draw_name_c                                ; CHANGE A
-        .import     _big_draw_normal_c                              ; CHANGE A
-        .import     _big_draw_lose_c                                ; CHANGE A
-        .import     _big_draw_win_c                                 ; CHANGE A
-        .import     _play_win_c                                     ; CHANGE A
-        .import     _play_lose_c                                    ; CHANGE A
-        .import     _play_serve_c                                   ; CHANGE A
+        .import     _big_draw_sprite_e                              ; CHANGE A
+        .import     _big_draw_name_e                                ; CHANGE A
+        .import     _big_draw_normal_e                              ; CHANGE A
+        .import     _big_draw_lose_e                                ; CHANGE A
+        .import     _big_draw_win_e                                 ; CHANGE A
+        .import     _play_win_e                                     ; CHANGE A
+        .import     _play_lose_e                                    ; CHANGE A
+        .import     _play_serve_e                                   ; CHANGE A
 
         .import     __OPPONENT_START__
         .importzp   tmp1
@@ -45,41 +44,43 @@
         .include    "../code/constants.inc"
         .include    "../code/opponent_file.inc"
 
-.segment "c"                                                        ; CHANGE A
+THEIR_MAX_DX = 16
+
+.segment "e"                                                        ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::SPRITE, error ; Make sure the callback is where we think
 sprite:
         ldx     #(98/7)
         ldy     #76
-        jmp     _big_draw_sprite_c                                      ; CHANGE A
+        jmp    _big_draw_sprite_e                                      ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::NAME, error ; Make sure the callback is where we think
 name:
         ldx     #(7/7)
         ldy     #39
-        jmp     _big_draw_name_c                                        ; CHANGE A
+        jmp    _big_draw_name_e                                        ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT, error ; Make sure the callback is where we think
 lose_animation:
-        ldx     #((35+98)/7)    ; left X of sprite change + left X of big sprite
-        ldy     #(76)           ; bottom Y of sprite change
-        jmp     _big_draw_lose_c                                        ; CHANGE A
+        ldx     #((98+21)/7)
+        ldy     #(64+1)
+        jmp    _big_draw_lose_e                                        ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT_SND, error ; Make sure the callback is where we think
 lose_sound:
         ldy     #0
-        jmp     _play_lose_c                                            ; CHANGE A
+        jmp     _play_lose_e                                            ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT, error ; Make sure the callback is where we think
 win_animation:
-        ldx     #((35+98)/7)    ; left X of sprite change + left X of big sprite
-        ldy     #(76)           ; bottom Y of sprite change
-        jmp     _big_draw_win_c                                        ; CHANGE A
+        ldx     #((98+21)/7)
+        ldy     #(64+1)
+        jmp    _big_draw_win_e                                        ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT_SND, error ; Make sure the callback is where we think
 win_sound:
         ldy     #0
-        jmp     _play_win_c                                            ; CHANGE A
+        jmp     _play_win_e                                            ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::THINK_CB, error ; Make sure the callback is where we think
 .proc _opponent_think
@@ -90,23 +91,18 @@ init_service:
         cmp     #$01
         bne     prepare_service
 
-        lda     #$00
-        sta     found_x
-        sta     no_fast
-
         ; Who serves?
         lda     puck_y
         cmp     #THEIR_PUCK_INI_Y
         bne     serve_or_catch    ; It's the player
 
         ldy     #0
-        jsr     _play_serve_c                                          ; CHANGE A
+        jsr     _play_serve_e                                          ; CHANGE A
 ; -------
 ; End of opponent letter references
 ; -------
-
         ; Init serve parameters
-        lda     #0
+        lda     #THEIR_MAX_DX
         sta     their_pusher_dx
 
         ; Shorten wait
@@ -125,6 +121,7 @@ prepare_service:
 
         lda     #$01
         sta     their_pusher_dy
+        jsr     invert_pusher_dx
 
         rts
 :       cmp     #(THEIR_PUCK_INI_Y-2)
@@ -134,6 +131,7 @@ prepare_service:
 
         lda     #$FF
         sta     their_pusher_dy
+        jsr     invert_pusher_dx
         rts
 
 serve_or_catch:
@@ -144,72 +142,6 @@ serve_or_catch:
         sta     their_pusher_dy
 
 catch:
-
-        ; Is it time to figure out destination X?
-        lda     puck_dy
-        bpl     move
-        lda     puck_y
-        cmp     #MID_BOARD
-        bcs     move
-
-        ; Figure X
-        lda     #25
-        jsr     _guess_puck_x_at_y
-
-        ; And store it (but not 0, so we know we found it)
-        tax
-        bne     :+
-        inx
-:       stx     found_x
-
-move:   
-        lda     found_x
-        beq     follow_puck
-
-        ; Is the puck destination too far ?
-        lda     their_pusher_x
-        sec
-        sbc     found_x
-        bmi     puck_right_of_pusher
-puck_left_of_pusher:
-        cmp     #70+puck0_WIDTH
-        bcc     close_enough
-        bcs     do_no_fast
-puck_right_of_pusher:
-        clc
-        eor     #$FF
-        adc     #1
-        cmp     #70+my_pusher0_WIDTH
-        bcc     close_enough
-
-do_no_fast:
-        lda     #1
-        sta     no_fast
-        jmp     follow_puck
-
-close_enough:
-        lda     no_fast
-        bne     follow_puck
-        ; Go directly where the puck will be when hittable
-        lda     found_x
-        cmp     #puck0_WIDTH
-        bcs     :+
-        lda     #0
-        beq     store_x
-:       cmp     #(PUCK_MAX_X-puck0_WIDTH)
-        bcc     store_x
-        lda     #THEIR_PUSHER_MAX_X-1
-        bne     store_x
-
-        sec
-        sbc     #((my_pusher0_WIDTH-puck0_WIDTH)/2)
-store_x:
-        sta     their_pusher_x
-        
-        lda     #$00
-        jmp     store_dx
-
-follow_puck:
         lda     their_pusher_x
         clc                       ; Center puck on pusher
         adc     #((my_pusher0_WIDTH-puck0_WIDTH)/2)
@@ -223,9 +155,9 @@ move_right:
         sec
         sbc     mid_pusher_x
 
-        cmp     their_max_dx
+        cmp     #THEIR_MAX_DX
         bcc     store_dx
-        lda     their_max_dx
+        lda     #THEIR_MAX_DX
         clc
         jmp     store_dx
 
@@ -234,9 +166,9 @@ move_left:
         sec
         sbc     puck_x
 
-        cmp     their_max_dx
+        cmp     #THEIR_MAX_DX
         bcc     :+
-        lda     their_max_dx
+        lda     #THEIR_MAX_DX
 
 :       clc
         eor     #$FF
@@ -265,20 +197,15 @@ store_dx:
         cmp     #(THEIR_PUSHER_MAX_Y)
         bcs     move_backwards
 hit:
-        ; Forget found X
-        lda     #0
-        sta     found_x
-        sta     no_fast
-
-        ; Get a 4-11 DY
+        ; Get a 0-15 DY
         jsr     _rand
         lsr
         lsr
         lsr
         lsr
-        lsr
         clc
-        adc     #4
+        ; And make it 16-31
+        adc     #16
         sta     their_pusher_dy
         rts
 
@@ -302,8 +229,4 @@ move_backwards:
         rts
 .endproc
 
-their_max_dx:     .byte 2
-their_max_dy:     .byte 10
 mid_pusher_x:     .byte 1
-found_x:          .byte 0
-no_fast:          .byte 0
