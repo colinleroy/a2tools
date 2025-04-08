@@ -129,7 +129,7 @@ all dist: \
 gen_sprite: $(SRC_DIR)/../gen_sprite/gen_sprite.c
 	gcc -DENABLE_QUICK_DRAW=1 -g -O0 $(shell pkg-config --cflags SDL_image) $^ $(shell pkg-config --libs SDL_image) -o $@
 
-gen_font: $(SRC_DIR)/generators/gen_font.c
+gen_font: $(SRC_DIR)/../gen_font/gen_font.c
 	gcc -g -O0 $(shell pkg-config --cflags SDL_image) $^ $(shell pkg-config --libs SDL_image) -o $@
 
 gen_sound_player: $(SRC_DIR)/../sound_player_generator/gen_sound_player.c $(SRC_DIR)/../sound_player_generator/sound.h

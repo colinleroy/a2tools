@@ -26,6 +26,8 @@ enum Pixel {
   BLACK
 };
 
+char *segment = "RODATA";
+
 static enum Pixel get_pixel(SDL_Surface *surface, int x, int y) {
   int bpp = surface->format->BytesPerPixel;
   /* Here p is the address to the pixel we want to retrieve */
@@ -66,8 +68,8 @@ int main(int argc, char *argv[]) {
   char filename[256];
   FILE *fp;
 
-  if (argc != 3) {
-    printf("Usage: %s [input.png] [Max right X coord]\n", argv[0]);
+  if (argc < 3) {
+    printf("Usage: %s [input.png] [Max right X coord] [segment]\n", argv[0]);
     exit(1);
   }
 
@@ -85,6 +87,9 @@ int main(int argc, char *argv[]) {
     sprite_name = strrchr(sprite_name, '/') + 1;
   }
 
+  if (argc > 3) {
+    segment = argv[3];
+  }
   if (image->w % 7 != 0) {
     printf("Image width %d is not a multiple of 7\n", image->w);
     exit(1);
@@ -113,10 +118,12 @@ int main(int argc, char *argv[]) {
   }
 
   fprintf(fp, "         .export _%s\n", sprite_name);
+#ifdef ENABLE_MASK
   fprintf(fp, "         .export _%s_mask\n", sprite_name);
+#endif
   fprintf(fp, "         .include \"%s.gen.inc\"\n", sprite_name);
   fprintf(fp, "\n");
-  fprintf(fp, "         .rodata\n");
+  fprintf(fp, "         .segment \"%s\"\n", segment);
 
   for (c = 0; c < image->w / 7; c++) {
     memset(char_data, 0, sizeof(Uint8) * image->h);
@@ -141,19 +148,23 @@ int main(int argc, char *argv[]) {
       fprintf(fp, "         .byte %d\n", char_data[y]);
     }
 
+#ifdef ENABLE_MASK
     fprintf(fp, "%s_mask_c%d:\n", sprite_name, c);
     for (y = 0; y < image->h; y++) {
       fprintf(fp, "         .byte %d\n", char_mask[y]);
     }
+#endif
   }
   fprintf(fp, "_%s: \n", sprite_name);
   for (c = 0; c < image->w / 7; c++) {
     fprintf(fp, "         .addr %s_c%d\n", sprite_name, c);
   }
 
+#ifdef ENABLE_MASK
   fprintf(fp, "_%s_mask: \n", sprite_name);
   for (c = 0; c < image->w / 7; c++) {
     fprintf(fp, "         .addr %s_mask_c%d\n", sprite_name, c);
   }
+#endif
   fclose(fp);
 }

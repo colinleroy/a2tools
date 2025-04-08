@@ -111,7 +111,9 @@ shflpuck_SOURCES := \
 	$(assets_backgrounds) \
 	$(levels_code) \
 	bar.snd.s \
+	font.gen.s \
 	$(SRC_DIR)/code/bar.s \
+	$(SRC_DIR)/code/draw_text.s \
 	pointer.pixel_perfect.gen.s
 
 shflpuck_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl \
@@ -129,7 +131,7 @@ all dist: \
 gen_sprite: $(SRC_DIR)/../gen_sprite/gen_sprite.c
 	gcc -g -O0 $(shell pkg-config --cflags SDL_image) $^ $(shell pkg-config --libs SDL_image) -o $@
 
-gen_font: $(SRC_DIR)/generators/gen_font.c
+gen_font: $(SRC_DIR)/../gen_font/gen_font.c
 	gcc -g -O0 $(shell pkg-config --cflags SDL_image) $^ $(shell pkg-config --libs SDL_image) -o $@
 
 gen_sound_player: $(SRC_DIR)/../sound_player_generator/gen_sound_player.c $(SRC_DIR)/../sound_player_generator/sound.h
@@ -226,6 +228,8 @@ lose%.snd.s: $(SRC_DIR)/assets/sounds/opponents/lose%.wav gen_sound_clip
 	./gen_sound_clip $(SAMPLING_HZ) $<_raw $(shell echo "$@"|sed 's/[a-z]*_\([a-z]\).*$$/\1/') > $@
 	rm $<_raw
 
+font.gen.s: $(SRC_DIR)/assets/fonts/font.png gen_font
+	./gen_font $< 280 bar
 
 shflpuck.ld.cfg: $(SRC_DIR)/shflpuck.ld.cfg.tmpl $(SRC_DIR)/generators/gen_linker_config.sh
 	$(SRC_DIR)/generators/gen_linker_config.sh $< $(opponents) > $@
