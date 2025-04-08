@@ -19,7 +19,7 @@
 
         .import     their_pusher_x, their_pusher_y
         .import     their_pusher_dx, their_pusher_dy
-        .import     their_currently_hitting
+        .import     my_currently_hitting, their_currently_hitting
         .import     puck_x, puck_right_x, puck_y, puck_dy, serving, their_score
         .import     _rand
 
@@ -45,6 +45,10 @@
         .include    "../code/opponent_file.inc"
 
 THEIR_MAX_DX = 16
+START_MIN_X = THEIR_PUSHER_MIN_X
+START_MAX_X = THEIR_PUSHER_MAX_X
+TOO_FAST_DY = -10
+MAX_NUM_CATCH = 18
 
 .segment "e"                                                        ; CHANGE A
 
@@ -90,6 +94,10 @@ win_sound:
 init_service:
         cmp     #$01
         bne     prepare_service
+
+        ; Reset exchange
+        lda     #0
+        sta     num_catch
 
         ; Who serves?
         lda     puck_y
@@ -142,6 +150,40 @@ serve_or_catch:
         sta     their_pusher_dy
 
 catch:
+        ; How many times did the player catch the puck?
+        lda     my_currently_hitting
+        beq     :+
+
+        lda     num_catch       ; Stop incrementing num_catch at MAX_NUM_CATCH
+        cmp     #MAX_NUM_CATCH  ; So that it doesn't get too easy
+        bcs     :+
+        inc     num_catch
+
+:       ; Is the puck's DY fast enough to miss?
+        lda     puck_dy
+        cmp     #<(TOO_FAST_DY)
+        bcs     not_fast_enough
+
+        lda     num_catch         ; Lose 2 pixels per exchange
+        asl
+        sta     tmp1
+        lda     #START_MAX_X      ; Decrement on the right
+        sec
+        sbc     tmp1
+        sta     max_x
+        lda     #START_MIN_X      ; Increment on the left
+        clc
+        adc     tmp1
+        sta     min_x
+        bne     do_catch
+
+not_fast_enough:
+        lda     #START_MAX_X
+        sta     max_x
+        lda     #START_MIN_X
+        sta     min_x
+
+do_catch:
         lda     their_pusher_x
         clc                       ; Center puck on pusher
         adc     #((my_pusher0_WIDTH-puck0_WIDTH)/2)
@@ -156,9 +198,20 @@ move_right:
         sbc     mid_pusher_x
 
         cmp     #THEIR_MAX_DX
-        bcc     store_dx
+        bcc     :+
         lda     #THEIR_MAX_DX
         clc
+
+:       ; Check if we would go to far
+        sta     tmp1
+        clc
+        adc     their_pusher_x
+        bcc     :+
+        lda     max_x
+:       cmp     max_x
+        bcc     store_dx
+        lda     #0
+        sta     tmp1
         jmp     store_dx
 
 move_left:
@@ -173,7 +226,20 @@ move_left:
 :       clc
         eor     #$FF
         adc     #$01
+
+        ; Check if we would go to far
+        sta     tmp1
+        clc
+        adc     their_pusher_x
+        bcs     :+
+        lda     min_x
+:       cmp     min_x
+        bcs     store_dx
+        lda     #0
+        sta     tmp1
+
 store_dx:
+        lda     tmp1
         sta     their_pusher_dx
 
         ; Did we just hit?
@@ -229,4 +295,7 @@ move_backwards:
         rts
 .endproc
 
+min_x:            .byte 1
+max_x:            .byte 1
+num_catch:        .byte 1
 mid_pusher_x:     .byte 1
