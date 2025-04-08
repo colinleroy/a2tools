@@ -15,7 +15,7 @@
 
 ; ----------
 ; SKIP
-;
+; How to beat: Just send the puck in his general direction
 
         .import     their_pusher_x, their_pusher_y
         .import     their_pusher_dx, their_pusher_dy

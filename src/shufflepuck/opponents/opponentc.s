@@ -14,8 +14,8 @@
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 ; ----------
-; SKIP
-;
+; Vinnie
+; How to beat: Aim for the other side of the table
 
         .import     their_pusher_x, their_pusher_y
         .import     their_pusher_dx, their_pusher_dy

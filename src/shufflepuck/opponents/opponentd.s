@@ -15,7 +15,7 @@
 
 ; ----------
 ; LEXAN
-;
+; How to beat: wait until he drank enough
 
         .import     their_pusher_x, their_pusher_y
         .import     their_pusher_dx, their_pusher_dy

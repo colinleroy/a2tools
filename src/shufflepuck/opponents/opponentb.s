@@ -15,7 +15,7 @@
 
 ; ----------
 ; VISINE
-;
+; How to beat: Aim for corners hard enough
 
         .import     their_pusher_x, their_pusher_y
         .import     their_pusher_dx, their_pusher_dy
