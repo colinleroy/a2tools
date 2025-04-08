@@ -238,6 +238,10 @@ init_move_fast:
 .endproc
 
 .proc bind_x
+        lda     puck_dy           ; Don't bind for slow hits
+        cmp     #<-8
+        bcs     out
+
         lda     their_pusher_x
         cmp     #40
         bcc     revert_right
