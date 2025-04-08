@@ -224,6 +224,6 @@ move_backwards:
         rts
 .endproc
 
-their_max_dx:     .byte 4
+their_max_dx:     .byte 5
 their_max_dy:     .byte 16
 mid_pusher_x:     .byte 1
