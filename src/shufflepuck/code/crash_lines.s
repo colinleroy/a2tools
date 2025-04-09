@@ -24,6 +24,8 @@
         .importzp   tmp3, tmp4
 
         .include    "sprite.inc"
+        .include    "puck0.gen.inc"
+        .include    "puck6.gen.inc"
         .include    "puck_coords.inc"
         .include    "constants.inc"
         .include    "hgr_applesoft.inc"
@@ -41,14 +43,6 @@ extra_lsr:
         rts
 .endproc
 
-.proc _crash_lines_scale
-        ldx     #$4A  ; LSR
-        bcc     :+
-        ldx     #$EA  ; NOP
-:       stx     rand_crash::extra_lsr
-        rts
-.endproc
-
 .proc _draw_crash_lines
         jsr     _set_color_white
 
@@ -57,8 +51,8 @@ extra_lsr:
         sta     crash_lines_recursion
 
         ; Set origin
-        lda     puck_data+SPRITE_DATA::WIDTH
-        lsr
+orig_x:
+        lda     #$FF
         sta     tmp4
         lda     puck_gx
         clc
@@ -68,6 +62,17 @@ extra_lsr:
 :       tax
         lda     puck_gy
         jmp     _draw_lines_pair
+.endproc
+
+.proc _crash_lines_scale
+        ldy     #(puck6_WIDTH/2)  ; X origin of lines
+        ldx     #$4A              ; LSR for lines length
+        bcc     :+
+        ldy     #(puck0_WIDTH/2)  ; X origin of lines
+        ldx     #$EA              ; NOP for lines length
+:       sty     _draw_crash_lines::orig_x
+        stx     rand_crash::extra_lsr
+        rts
 .endproc
 
 .proc _set_color_white

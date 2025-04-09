@@ -52,9 +52,9 @@
         .import     _play_puck
         .import     _play_crash
 
-        .import my_pushers_low, my_pushers_high, my_pushers_width, my_pushers_height, my_pushers_bytes, my_pushers_bpline
-        .import their_pushers_low, their_pushers_high, their_pushers_width, their_pushers_height, their_pushers_bytes, their_pushers_bpline
-        .import pucks_low, pucks_high, pucks_width, pucks_height, pucks_bytes, pucks_bpline
+        .import     my_pushers_low, my_pushers_high, my_pushers_width, my_pushers_height, my_pushers_bytes, my_pushers_bpline
+        .import     their_pushers_low, their_pushers_high, their_pushers_width, their_pushers_height, their_pushers_bytes, their_pushers_bpline
+        .import     pucks_low, pucks_high, pucks_width, pucks_height, pucks_bytes, pucks_bpline
 
         .importzp   tmp1, tmp3, ptr1
 
@@ -66,7 +66,7 @@
         .include    "my_pusher0.gen.inc"
         .include    "constants.inc"
         .include    "opponent_file.inc"
-        .include     "hgr_applesoft.inc"
+        .include    "hgr_applesoft.inc"
 
 .segment "CODE"
 
@@ -125,17 +125,11 @@
 .segment "LOWCODE"
 
 .proc _draw_screen_my_side
-        lda     frame_counter
-        inc     frame_counter
-        and     #1
-        ; jmp     :+
-
-        ; Redraw other side
+        ; Redraw their side first (it's higher on the screen)
         jsr     clear_their_pusher
         jsr     draw_their_pusher
-        ;rts
 
-        ; ~ 12800 cycles
+        ; Redraw my side, taking care of the puck/pusher order
         lda     prev_puck_in_front_of_me
         beq     :+
 
@@ -163,19 +157,30 @@ out:
 .endproc
 
 .proc _draw_screen_their_side
-        lda     frame_counter
-        inc     frame_counter
-        and     #1
-        ; beq     :+
+        ; Redraw their side first (it's higher on the screen)
+        lda     prev_puck_in_front_of_them
+        beq     :+
 
-        ; ~6600 cycles - Their side
-        ; Don't care about the order, it's far enough
         jsr     clear_puck
         jsr     clear_their_pusher
-        jsr     draw_their_pusher
-        jsr     draw_puck
-        ;rts
+        jmp     draw
 
+:       jsr     clear_their_pusher
+        jsr     clear_puck
+
+draw:
+        lda     puck_in_front_of_them
+        sta     prev_puck_in_front_of_them
+        bne     :+
+
+        jsr     draw_puck
+        jsr     draw_their_pusher
+        jmp     my_side
+
+:       jsr     draw_their_pusher
+        jsr     draw_puck
+
+my_side:
         ; My side now
         jsr     clear_my_pusher
         jsr     draw_my_pusher
@@ -199,6 +204,7 @@ out:
 
 ; Draw screen, choosing which draw function to use depending
 ; on the puck's side.
+; ~ 12400 cycles
 .proc _draw_screen
         jsr     waste_3400           ; Test for 60Hz
         lda     puck_y
@@ -209,6 +215,7 @@ out:
         jmp     _draw_screen_their_side
 :       jmp     _draw_screen_my_side
 .endproc
+
 ;X, Y input
 ;Updates X, Y, destroys A
 .proc _transform_xy
@@ -250,10 +257,6 @@ out:
         sta     my_pusher_data+SPRITE_DATA::SPRITE
         lda     my_pushers_high,x
         sta     my_pusher_data+SPRITE_DATA::SPRITE+1
-        lda     my_pushers_width,x
-        sta     my_pusher_data+SPRITE_DATA::WIDTH
-        lda     my_pushers_height,x
-        sta     my_pusher_data+SPRITE_DATA::HEIGHT
         lda     my_pushers_bytes,x
         sta     my_pusher_data+SPRITE_DATA::BYTES
         lda     my_pushers_bpline,x
@@ -261,7 +264,7 @@ out:
 
         lda     my_pusher_gy
         sec
-        sbc     my_pusher_data+SPRITE_DATA::HEIGHT
+        sbc     my_pushers_height,x
         sta     my_pusher_gy
         rts
 .endproc
@@ -290,10 +293,6 @@ out:
         sta     their_pusher_data+SPRITE_DATA::SPRITE
         lda     their_pushers_high,x
         sta     their_pusher_data+SPRITE_DATA::SPRITE+1
-        lda     their_pushers_width,x
-        sta     their_pusher_data+SPRITE_DATA::WIDTH
-        lda     their_pushers_height,x
-        sta     their_pusher_data+SPRITE_DATA::HEIGHT
         lda     their_pushers_bytes,x
         sta     their_pusher_data+SPRITE_DATA::BYTES
         lda     their_pushers_bpline,x
@@ -301,7 +300,7 @@ out:
 
         lda     their_pusher_gy
         sec
-        sbc     their_pusher_data+SPRITE_DATA::HEIGHT
+        sbc     their_pushers_height,x
         sta     their_pusher_gy
         rts
 .endproc
@@ -392,10 +391,6 @@ out:
         sta     puck_data+SPRITE_DATA::SPRITE
         lda     pucks_high,x
         sta     puck_data+SPRITE_DATA::SPRITE+1
-        lda     pucks_width,x
-        sta     puck_data+SPRITE_DATA::WIDTH
-        lda     pucks_height,x
-        sta     puck_data+SPRITE_DATA::HEIGHT
         lda     pucks_bytes,x
         sta     puck_data+SPRITE_DATA::BYTES
         lda     pucks_bpline,x
@@ -403,7 +398,7 @@ out:
 
         lda     puck_gy
         sec
-        sbc     puck_data+SPRITE_DATA::HEIGHT
+        sbc     pucks_height,x
         sta     puck_gy
         rts
 .endproc
@@ -499,9 +494,10 @@ check:
         bne     :+
         rts
 
-        ; Order changed, check X
+        ; Order changed, store it
 :       sta     puck_in_front_of_me
 
+        ; Compare X
         lda     my_pusher_x
         cmp     puck_right_x
         bcs     out
@@ -734,7 +730,7 @@ check_hits: .byte 1
         sta     puck_precise_x+1
 
         tax                       ; Save high byte to X
-        lsr                       ; Divide high byte by two
+        lsr                       ; Divide by two
         lda     puck_precise_x
         ror
 
@@ -771,16 +767,15 @@ update_y:
 
 check_y_bound:
         tax                       ; Save high byte to X
-        lsr                       ; Divide high byte by two
+        lsr                       ; Divide by two
         lda     puck_precise_y
         ror
         sta     puck_y
 
         ldy     check_hits        ; Are we simulating?
-        bne     :+
-        rts
+        beq     out
 
-:       ; Check opponent bound
+        ; Check opponent bound
         cpx     #$FF
         beq     check_their_late_catch
         cmp     #PUCK_MIN_Y
@@ -789,10 +784,11 @@ check_y_bound:
         ; Check our bound
         cmp     #PUCK_MAX_Y
         bcs     check_my_late_catch
+
         jsr     _transform_puck_coords
 
         clc
-        rts
+out:    rts
 
 check_their_late_catch:
         lda     #PUCK_MIN_Y
@@ -888,7 +884,5 @@ their_pusher_x:  .res 1
 their_pusher_y:  .res 1
 their_pusher_dx: .res 1
 their_pusher_dy: .res 1
-
-frame_counter:   .res 1
 
 puck_backup:     .res 10

@@ -93,6 +93,8 @@ next_line:
 x_coord:
         lda     #$FF
         ldy     cur_y
+        cpy     #192
+        bcs     out
         adc     _hgr_low,y
         sta     sprite_get_bg+1
         sta     sprite_store_byte+1
@@ -124,8 +126,8 @@ sprite_store_byte:
         inc     cur_y
         cpx     #$FF
         bne     next_line
-draw_out:
-        rts
+
+out:    rts
 .endproc
 
 ; Finish setting up clear/draw functions with sprite data
@@ -164,19 +166,18 @@ draw_out:
         lda     (cur_sprite_ptr),y
         tax
 
-        lda     _div7_table,x     ; Compute divided X
-        sta     _draw_sprite::x_coord+1
-
-        ldy     #SPRITE_DATA::PREV_X_COORD
-        sta     (cur_sprite_ptr),y          ; And save the new prev_x now
-
         ldy     #SPRITE_DATA::Y_COORD
         lda     (cur_sprite_ptr),y
         sta     cur_y
 
-
         ldy     #SPRITE_DATA::PREV_Y_COORD
         sta     (cur_sprite_ptr),y          ; Save the new prev_y
+
+        lda     _div7_table,x               ; Compute divided X
+        sta     _draw_sprite::x_coord+1
+
+        ldy     #SPRITE_DATA::PREV_X_COORD
+        sta     (cur_sprite_ptr),y          ; And save the new prev_x now
 
         ldy     #SPRITE_DATA::BYTES
         lda     (cur_sprite_ptr),y
@@ -267,7 +268,8 @@ sprite_pointer:
         rts
 .endproc
 
-.code
+.segment "CODE"
+
 .proc _draw_eor
         ldy     #SPRITE_DATA::NEED_CLEAR
         lda     #1
@@ -352,7 +354,7 @@ store_byte:
         ldy     #SPRITE_DATA::PREV_Y_COORD
         sta     (cur_sprite_ptr),y          ; Save the new prev_y
 
-        lda     _div7_table,x     ; Compute divided X
+        lda     _div7_table,x               ; Compute divided X
         sta     _draw_eor::x_coord+1
 
         ldy     #SPRITE_DATA::PREV_X_COORD

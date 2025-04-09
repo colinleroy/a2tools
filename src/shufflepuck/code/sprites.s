@@ -15,9 +15,9 @@
 
                   .export my_pusher_data, their_pusher_data, puck_data, pointer_data
 
-                  .export my_pushers_low, my_pushers_high, my_pushers_width, my_pushers_height, my_pushers_bytes, my_pushers_bpline
-                  .export their_pushers_low, their_pushers_high, their_pushers_width, their_pushers_height, their_pushers_bytes, their_pushers_bpline
-                  .export pucks_low, pucks_high, pucks_width, pucks_height, pucks_bytes, pucks_bpline
+                  .export my_pushers_low, my_pushers_high, my_pushers_height, my_pushers_bytes, my_pushers_bpline
+                  .export their_pushers_low, their_pushers_high, their_pushers_height, their_pushers_bytes, their_pushers_bpline
+                  .export pucks_low, pucks_high, pucks_height, pucks_bytes, pucks_bpline
 
                   .import _my_pusher0, _my_pusher1, _my_pusher2, _my_pusher3
                   .import _their_pusher4, _their_pusher5
@@ -69,11 +69,6 @@ my_pushers_high:
         .byte >_my_pusher1
         .byte >_my_pusher2
         .byte >_my_pusher3
-my_pushers_width:
-        .byte my_pusher0_WIDTH
-        .byte my_pusher1_WIDTH
-        .byte my_pusher2_WIDTH
-        .byte my_pusher3_WIDTH
 my_pushers_height:
         .byte my_pusher0_HEIGHT
         .byte my_pusher1_HEIGHT
@@ -111,9 +106,6 @@ their_pushers_low:
 their_pushers_high:
         .byte >_their_pusher4
         .byte >_their_pusher5
-their_pushers_width:
-        .byte their_pusher4_WIDTH
-        .byte their_pusher5_WIDTH
 their_pushers_height:
         .byte their_pusher4_HEIGHT
         .byte their_pusher5_HEIGHT
@@ -155,14 +147,6 @@ pucks_high:
         .byte >_puck4
         .byte >_puck5
         .byte >_puck6
-pucks_width:
-        .byte puck0_WIDTH
-        .byte puck1_WIDTH
-        .byte puck2_WIDTH
-        .byte puck3_WIDTH
-        .byte puck4_WIDTH
-        .byte puck5_WIDTH
-        .byte puck6_WIDTH
 pucks_height:
         .byte puck0_HEIGHT
         .byte puck1_HEIGHT

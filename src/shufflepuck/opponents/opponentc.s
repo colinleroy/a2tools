@@ -152,7 +152,9 @@ catch:
         cmp     #MID_BOARD
         bcs     move
 
-        ; Figure X
+        ; Figure X if not already done
+        lda     found_x
+        bne     move
         lda     #25
         jsr     _guess_puck_x_at_y
 
