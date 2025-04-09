@@ -37,6 +37,7 @@
         .import     _setup_sprite_pointer_full, _draw_sprite, _clear_sprite
         .import     _setup_sprite_pointer_for_clear
         .import     _setup_sprite_pointer_for_draw
+        .import     _setup_eor_draw, _setup_eor_clear, _draw_eor, _clear_eor
         .import     mouse_x, mouse_y
         .import     mouse_dx, mouse_dy
         .import     _crash_lines_scale, _draw_crash_lines
@@ -91,28 +92,28 @@
 
 .proc clear_my_pusher
         jsr     _load_my_pusher_pointer
-        jsr     _setup_sprite_pointer_for_clear
-        jmp     _clear_sprite
+        jsr     _setup_eor_clear
+        jmp     _clear_eor
 .endproc
 
 .proc draw_my_pusher
         jsr     _my_pusher_select
         jsr     _load_my_pusher_pointer
-        jsr     _setup_sprite_pointer_for_draw
-        jmp     _draw_sprite
+        jsr     _setup_eor_draw
+        jmp     _draw_eor
 .endproc
 
 .proc clear_their_pusher
         jsr     _load_their_pusher_pointer
-        jsr     _setup_sprite_pointer_for_clear
-        jmp     _clear_sprite
+        jsr     _setup_eor_clear
+        jmp     _clear_eor
 .endproc
 
 .proc draw_their_pusher
         jsr     _their_pusher_select
         jsr     _load_their_pusher_pointer
-        jsr     _setup_sprite_pointer_for_draw
-        jmp     _draw_sprite
+        jsr     _setup_eor_draw
+        jmp     _draw_eor
 .endproc
 
 .segment "LOWCODE"
@@ -121,14 +122,14 @@
         lda     frame_counter
         inc     frame_counter
         and     #1
-        beq     :+
+        ; jmp     :+
 
         ; Redraw other side
         jsr     clear_their_pusher
         jsr     draw_their_pusher
-        rts
+        ;rts
 
-:       ; ~ 12800 cycles
+        ; ~ 12800 cycles
         lda     prev_puck_in_front_of_me
         beq     :+
 
@@ -159,7 +160,7 @@ out:
         lda     frame_counter
         inc     frame_counter
         and     #1
-        beq     :+
+        ; beq     :+
 
         ; ~6600 cycles - Their side
         ; Don't care about the order, it's far enough
@@ -167,9 +168,9 @@ out:
         jsr     clear_their_pusher
         jsr     draw_their_pusher
         jsr     draw_puck
-        rts
+        ;rts
 
-:       ; My side now
+        ; My side now
         jsr     clear_my_pusher
         jsr     draw_my_pusher
         rts
@@ -833,7 +834,6 @@ check_my_late_catch:
 .proc update_screen_for_crash
         jsr     _crash_lines_scale
         jsr     _transform_puck_coords
-        jsr     _draw_screen      ; Draw twice to make sure we draw the whole board
         jsr     _draw_screen
 
         jmp     _draw_crash_lines
