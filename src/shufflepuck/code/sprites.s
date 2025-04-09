@@ -24,7 +24,7 @@
                   .import _puck0, _puck1, _puck2, _puck3, _puck4, _puck5, _puck6
                   .import _pointer
 
-                  .import  my_pusher_bgbackup, their_pusher_bgbackup, puck_bgbackup
+                  .import  their_pusher_bgbackup, puck_bgbackup
 
                   .include "my_pusher0.gen.inc"
                   .include "my_pusher1.gen.inc"
@@ -55,7 +55,7 @@ my_pusher_data:
                   .byte my_pusher0_BYTES-1  ; bytes of sprite - 1
                   .byte my_pusher0_BPLINE-1 ; width of sprite in bytes
                   .addr _my_pusher0         ; sprites
-                  .addr my_pusher_bgbackup
+                  .addr $0000               ; pointer to previous sprite to clear
                   .byte 0                   ; need clear
 
 ; variants
@@ -101,8 +101,8 @@ their_pusher_data:
                   .byte their_pusher4_BYTES-1 ; bytes of sprite - 1
                   .byte their_pusher4_BPLINE-1; width of sprite in bytes
                   .addr _their_pusher4        ; sprites
-                  .addr their_pusher_bgbackup
-                  .byte 0               ; need clear
+                  .addr their_pusher_bgbackup ; background backup buffer
+                  .byte 0                     ; need clear
 
 ; Variants
 their_pushers_low:
@@ -126,16 +126,16 @@ their_pushers_bpline:
 
 ; The puck
 puck_data:
-                  .byte 0             ; x
+                  .byte 0               ; x
                   .byte puck0_WIDTH
-                  .byte 0             ; y
+                  .byte 0               ; y
                   .byte puck0_HEIGHT
-                  .byte 0             ; prev_x
-                  .byte 0             ; prev_y
-                  .byte puck0_BYTES-1 ; bytes of sprite - 1
-                  .byte puck0_BPLINE-1; width of sprite in bytes
-                  .addr _puck0        ; sprites
-                  .addr puck_bgbackup
+                  .byte 0               ; prev_x
+                  .byte 0               ; prev_y
+                  .byte puck0_BYTES-1   ; bytes of sprite - 1
+                  .byte puck0_BPLINE-1  ; width of sprite in bytes
+                  .addr _puck0          ; sprites
+                  .addr puck_bgbackup   ; background backup buffer
                   .byte 0               ; need clear
 
 ; Variants
@@ -199,5 +199,6 @@ pointer_data:
                   .byte pointer_BYTES-1     ; bytes of sprite - 1
                   .byte pointer_BPLINE-1    ; width of sprite in bytes
                   .addr _pointer            ; sprites
-                  .addr my_pusher_bgbackup  ; Spare some memory there
+                  .assert puck0_BYTES > pointer_BYTES, error
+                  .addr puck_bgbackup       ; Spare some memory there
                   .byte 0                   ; need clear

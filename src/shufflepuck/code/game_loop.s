@@ -33,7 +33,6 @@
 
         .export     _guess_puck_x_at_y
 
-        .import     _load_puck_pointer, _load_my_pusher_pointer, _load_their_pusher_pointer
         .import     _setup_sprite_pointer_full, _draw_sprite, _clear_sprite
         .import     _setup_sprite_pointer_for_clear
         .import     _setup_sprite_pointer_for_draw
@@ -79,41 +78,48 @@
 .endproc
 
 .proc clear_puck
-        jsr     _load_puck_pointer
+        lda     #<puck_data
+        ldx     #>puck_data
         jsr     _setup_sprite_pointer_for_clear
         jmp     _clear_sprite
 .endproc
+
 .proc draw_puck
-        jsr     _load_puck_pointer
         jsr     _puck_select
+        lda     #<puck_data
+        ldx     #>puck_data
         jsr     _setup_sprite_pointer_for_draw
         jmp     _draw_sprite
 .endproc
 
 .proc clear_my_pusher
-        jsr     _load_my_pusher_pointer
+        lda     #<my_pusher_data
+        ldx     #>my_pusher_data
         jsr     _setup_eor_clear
         jmp     _clear_eor
 .endproc
 
 .proc draw_my_pusher
         jsr     _my_pusher_select
-        jsr     _load_my_pusher_pointer
+        lda     #<my_pusher_data
+        ldx     #>my_pusher_data
         jsr     _setup_eor_draw
         jmp     _draw_eor
 .endproc
 
 .proc clear_their_pusher
-        jsr     _load_their_pusher_pointer
-        jsr     _setup_eor_clear
-        jmp     _clear_eor
+        lda     #<their_pusher_data
+        ldx     #>their_pusher_data
+        jsr     _setup_sprite_pointer_for_clear
+        jmp     _clear_sprite
 .endproc
 
 .proc draw_their_pusher
         jsr     _their_pusher_select
-        jsr     _load_their_pusher_pointer
-        jsr     _setup_eor_draw
-        jmp     _draw_eor
+        lda     #<their_pusher_data
+        ldx     #>their_pusher_data
+        jsr     _setup_sprite_pointer_for_draw
+        jmp     _draw_sprite
 .endproc
 
 .segment "LOWCODE"

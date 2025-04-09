@@ -169,29 +169,29 @@ $(SRC_DIR)/../surl-server/hgr-convert:
 
 $(sprites_pixel_perfect): %.pixel_perfect.gen.s: $(SRC_DIR)/assets/%.png
 my%.pixel_perfect.gen.s: $(SRC_DIR)/assets/my%.png gen_sprite
-	./gen_sprite $< 255 pixel_perfect RODATA 0
+	./gen_sprite $< 255 pixel_perfect RODATA nomask
 their%.pixel_perfect.gen.s: $(SRC_DIR)/assets/their%.png gen_sprite
-	./gen_sprite $< 255 pixel_perfect SPLC 0
+	./gen_sprite $< 255 pixel_perfect RODATA
 puck0.pixel_perfect.gen.s: $(SRC_DIR)/assets/puck0.png gen_sprite
-	./gen_sprite $< 255 pixel_perfect SPLC 0
+	./gen_sprite $< 255 pixel_perfect SPLC
 puck1.pixel_perfect.gen.s: $(SRC_DIR)/assets/puck1.png gen_sprite
-	./gen_sprite $< 255 pixel_perfect RODATA 0
+	./gen_sprite $< 255 pixel_perfect SPLC
 puck2.pixel_perfect.gen.s: $(SRC_DIR)/assets/puck2.png gen_sprite
-	./gen_sprite $< 255 pixel_perfect RODATA 0
+	./gen_sprite $< 255 pixel_perfect RODATA
 puck3.pixel_perfect.gen.s: $(SRC_DIR)/assets/puck3.png gen_sprite
-	./gen_sprite $< 255 pixel_perfect SPLC 0
+	./gen_sprite $< 255 pixel_perfect RODATA
 puck4.pixel_perfect.gen.s: $(SRC_DIR)/assets/puck4.png gen_sprite
-	./gen_sprite $< 255 pixel_perfect RODATA 0
+	./gen_sprite $< 255 pixel_perfect SPLC
 puck5.pixel_perfect.gen.s: $(SRC_DIR)/assets/puck5.png gen_sprite
-	./gen_sprite $< 255 pixel_perfect RODATA 0
+	./gen_sprite $< 255 pixel_perfect RODATA
 puck6.pixel_perfect.gen.s: $(SRC_DIR)/assets/puck6.png gen_sprite
-	./gen_sprite $< 255 pixel_perfect RODATA 0
+	./gen_sprite $< 255 pixel_perfect RODATA
 pointer.pixel_perfect.gen.s: $(SRC_DIR)/assets/pointer.png gen_sprite
-	./gen_sprite $< 255 pixel_perfect bar 0
+	./gen_sprite $< 255 pixel_perfect bar
 
 $(opponents_sprites): %.unperfect.gen.s: $(SRC_DIR)/assets/opponents/%.png
 %.unperfect.gen.s: $(SRC_DIR)/assets/opponents/%.png gen_sprite
-	./gen_sprite $< 255 unperfect $(shell echo "$@"|sed 's/[a-z]*_\([a-z]\).*$$/\1/') 1
+	./gen_sprite $< 255 unperfect $(shell echo "$@"|sed 's/[a-z]*_\([a-z]\).*$$/\1/') big
 
 play_sound.gen.s: gen_sound_player
 	./gen_sound_player $(SAMPLING_HZ) LOWCODE > $@

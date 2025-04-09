@@ -29,6 +29,7 @@ enum Pixel {
 int max_shift = 7;
 char *segment = "RODATA";
 int enable_big_draw = 0;
+int enable_mask = 1;
 
 static enum Pixel get_pixel(SDL_Surface *surface, int x, int y) {
   int bpp = surface->format->BytesPerPixel;
@@ -128,7 +129,15 @@ int main(int argc, char *argv[]) {
   }
 
   if (argc > 5) {
-    enable_big_draw = atoi(argv[5]);
+    int i;
+    for (i = 5; i < argc; i++) {
+      if (!strcmp(argv[i], "big")) {
+        enable_big_draw = 1;
+      }
+      if (!strcmp(argv[i], "nomask")) {
+        enable_mask = 0;
+      }
+    }
   }
 
   if (image[0]->w % 7 != 0) {
@@ -180,9 +189,8 @@ int main(int argc, char *argv[]) {
   if (enable_big_draw) {
     fprintf(fp, "         .export _big_draw_%s\n", sprite_name);
     fprintf(fp,
-            "         .import _draw_sprite_big, big_sprite_pointer\n"
-            "         .import big_n_bytes_per_line_draw, big_sprite_x\n");
-    fprintf(fp, "         .importzp n_lines_draw\n");
+            "         .import _draw_sprite_big, pushax\n");
+    fprintf(fp, "         .importzp n_lines_draw, tmp3, tmp4\n");
   }
 
   
@@ -234,7 +242,7 @@ int main(int argc, char *argv[]) {
     }
     fprintf(fp, ".endproc\n");
 
-    if (!enable_big_draw) {
+    if (!enable_big_draw && enable_mask) {
       fprintf(fp, ".proc %s_mask_x%d\n", sprite_name, shift);
       for (y = 0; y < image[shift]->h; y++) {
         fprintf(fp, "         .byte ");
@@ -258,7 +266,9 @@ int main(int argc, char *argv[]) {
     fprintf(fp, ".proc _%s\n", sprite_name);
     for (shift = 0; shift < max_shift; shift++) {
       fprintf(fp, "         .addr %s_x%d\n", sprite_name, shift < max_shift ? shift : 0);
-      fprintf(fp, "         .addr %s_mask_x%d\n", sprite_name, shift < max_shift ? shift : 0);
+      if (enable_mask) {
+        fprintf(fp, "         .addr %s_mask_x%d\n", sprite_name, shift < max_shift ? shift : 0);
+      }
     }
     fprintf(fp, ".endproc\n");
   }
@@ -298,14 +308,16 @@ int main(int argc, char *argv[]) {
             ".proc _big_draw_%s\n"
             "        lda     #%s_HEIGHT\n"
             "        sta     n_lines_draw\n"
-            "\n"
-            "        lda     #%s_BPLINE\n"
-            "        sta     big_n_bytes_per_line_draw+1\n"
+            "        stx     tmp3         ; Backup XY before pushax\n"
+            "        sty     tmp4\n"
             "\n"
             "        lda     #<(%s_x0)    ; Account for Y offset by one\n"
-            "        sta     big_sprite_pointer+1\n"
-            "        lda     #>(%s_x0)\n"
-            "        sta     big_sprite_pointer+2\n"
+            "        ldx     #>(%s_x0)\n"
+            "        jsr     pushax\n"
+            "\n"
+            "        ldx     tmp3\n"
+            "        ldy     tmp4\n"
+            "        lda     #%s_BPLINE\n"
             "\n"
             "        jmp     _draw_sprite_big\n"
             ".endproc\n",

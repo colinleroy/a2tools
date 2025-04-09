@@ -14,29 +14,27 @@
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
         .export   _clear_sprite, _draw_sprite, _draw_sprite_big
-        .export   _load_puck_pointer, _load_pointer_pointer
-        .export   _load_my_pusher_pointer, _load_their_pusher_pointer
         .export   _setup_sprite_pointer_for_clear
         .export   _setup_sprite_pointer_for_draw
 
-        .export   big_sprite_pointer
-        .export   big_n_bytes_per_line_draw, big_sprite_x
-        .export   sprite_y, n_bytes_draw, n_lines_draw
-        .export     _setup_eor_draw, _setup_eor_clear, _draw_eor, _clear_eor
+        .export   n_bytes_draw, n_lines_draw
+        .export   _setup_eor_draw, _setup_eor_clear, _draw_eor, _clear_eor
         
         .import   puck_data, my_pusher_data, their_pusher_data, pointer_data
 
-        .importzp _zp8p, _zp10, _zp11
-        .importzp tmp4, ptr2
         .import   _hgr_hi, _hgr_low
         .import   _div7_table, _mod7_table
 
-        .include "apple2.inc"
-        .include "puck0.gen.inc"
-        .include "my_pusher0.gen.inc"
-        .include "their_pusher4.gen.inc"
-        .include "sprite.inc"
-        .include "zp_vars.inc"
+        .import   popax
+        .importzp tmp4, ptr2
+        .importzp _zp8p, _zp10, _zp11
+
+        .include  "apple2.inc"
+        .include  "puck0.gen.inc"
+        .include  "my_pusher0.gen.inc"
+        .include  "their_pusher4.gen.inc"
+        .include  "sprite.inc"
+        .include  "zp_vars.inc"
 
 .segment "LOWCODE"
 
@@ -44,131 +42,9 @@ line            = _zp8p
 cur_y           = _zp10
 n_bytes_draw    = _zp11
 n_lines_draw    = _zp11 ; shared
-sprite_y        = tmp4
-
-_load_pointer_pointer:
-        lda     #<pointer_data
-        sta     cur_sprite_ptr
-        lda     #>pointer_data
-        sta     cur_sprite_ptr+1
-
-        rts
-
-_load_puck_pointer:
-        lda     #<puck_data
-        sta     cur_sprite_ptr
-        lda     #>puck_data
-        sta     cur_sprite_ptr+1
-
-        rts
-
-_load_my_pusher_pointer:
-        lda     #<my_pusher_data
-        sta     cur_sprite_ptr
-        lda     #>my_pusher_data
-        sta     cur_sprite_ptr+1
-
-        rts
-
-_load_their_pusher_pointer:
-        lda     #<their_pusher_data
-        sta     cur_sprite_ptr
-        lda     #>their_pusher_data
-        sta     cur_sprite_ptr+1
-
-        rts
-
-; Finish setting up clear/draw functions with sprite data
-_setup_sprite_pointer_for_clear:
-        ldy     #SPRITE_DATA::PREV_X_COORD
-        lda     (cur_sprite_ptr),y
-        sta     sprite_prev_x+1
-
-        ldy     #SPRITE_DATA::PREV_Y_COORD
-        lda     (cur_sprite_ptr),y          ; Get existing prev_y for clear
-        sta     cur_y
-
-        ldy     #SPRITE_DATA::BYTES
-        lda     (cur_sprite_ptr),y
-        sta     n_bytes_draw
-
-        ldy     #SPRITE_DATA::BYTES_WIDTH
-        lda     (cur_sprite_ptr),y
-        sta     n_bytes_per_line_clear+1
-
-        ldy     #SPRITE_DATA::BG_BACKUP
-        lda     (cur_sprite_ptr),y
-        sta     sprite_restore+1
-        iny
-        lda     (cur_sprite_ptr),y
-        sta     sprite_restore+2
-        rts
-
-_setup_sprite_pointer_for_draw:
-        ldy     #SPRITE_DATA::X_COORD
-        lda     (cur_sprite_ptr),y
-        tax
-
-        ; Select correct sprite for pixel-precise render
-        lda     _mod7_table,x
-        asl                       ; Multiply by four to account for
-        asl                       ; data and mask pointers
-        sta     sprite_num+1      ; Patch sprite pointer number
-
-        lda     _div7_table,x     ; Compute divided X
-        sta     sprite_x+1
-
-        ldy     #SPRITE_DATA::PREV_X_COORD
-        sta     (cur_sprite_ptr),y          ; And save the new prev_x now
-
-        ldy     #SPRITE_DATA::Y_COORD
-        lda     (cur_sprite_ptr),y
-        sta     sprite_y
-
-
-        ldy     #SPRITE_DATA::PREV_Y_COORD
-        sta     (cur_sprite_ptr),y          ; Save the new prev_y
-
-        ldy     #SPRITE_DATA::BYTES
-        lda     (cur_sprite_ptr),y
-        sta     n_bytes_draw
-
-        ldy     #SPRITE_DATA::BYTES_WIDTH
-        lda     (cur_sprite_ptr),y
-        sta     n_bytes_per_line_draw+1
-
-        ldy     #SPRITE_DATA::BG_BACKUP
-        lda     (cur_sprite_ptr),y
-        sta     sprite_backup+1
-        iny
-        lda     (cur_sprite_ptr),y
-        sta     sprite_backup+2
-
-select_sprite:
-        ldy     #SPRITE_DATA::SPRITE
-        lda     (cur_sprite_ptr),y
-        sta     ptr2
-        iny
-        lda     (cur_sprite_ptr),y
-        sta     ptr2+1
-
-sprite_num:
-        ldy     #$FF
-        lda     (ptr2),y
-        sta     sprite_pointer+1
-        iny
-        lda     (ptr2),y
-        sta     sprite_pointer+2
-        iny
-        lda     (ptr2),y
-        sta     sprite_mask+1
-        iny
-        lda     (ptr2),y
-        sta     sprite_mask+2
-        rts
 
 ; X, Y : coordinates
-_clear_sprite:
+.proc _clear_sprite
         ldy     #SPRITE_DATA::NEED_CLEAR
         lda     (cur_sprite_ptr),y
         bne     :+                ; Skip clearing if not needed
@@ -179,7 +55,7 @@ _clear_sprite:
         ldx     n_bytes_draw
         clc
 clear_next_line:
-sprite_prev_x:
+x_coord:
         lda     #$FF
         ldy     cur_y
         adc     _hgr_low,y
@@ -188,7 +64,7 @@ sprite_prev_x:
         ;adc     #0 - carry won't be set here
         sta     sprite_store_bg+2
 
-n_bytes_per_line_clear:
+bytes_per_line:
         ldy     #$FF
 
 sprite_restore:
@@ -203,20 +79,18 @@ sprite_store_bg:
         cpx     #$FF              ; Did we do all bytes?
         bne     clear_next_line
         rts
+.endproc
 
-_draw_sprite:
+.proc _draw_sprite
         ; Clear done, now draw
         ldy     #SPRITE_DATA::NEED_CLEAR
         lda     #1
         sta     (cur_sprite_ptr),y
 
-        ldy     sprite_y
-        sty     cur_y
-
         ldx     n_bytes_draw
         clc
 next_line:
-sprite_x:
+x_coord:
         lda     #$FF
         ldy     cur_y
         adc     _hgr_low,y
@@ -227,7 +101,7 @@ sprite_x:
         sta     sprite_get_bg+2
         sta     sprite_store_byte+2
 
-n_bytes_per_line_draw:
+bytes_per_line:
         ldy     #$FF
 
         ; Get what's under the sprite
@@ -252,14 +126,114 @@ sprite_store_byte:
         bne     next_line
 draw_out:
         rts
+.endproc
 
-_draw_sprite_big:
-        stx     big_sprite_x+1
-        sty     sprite_y
+; Finish setting up clear/draw functions with sprite data
+.proc _setup_sprite_pointer_for_clear
+        sta     cur_sprite_ptr
+        stx     cur_sprite_ptr+1
+        ldy     #SPRITE_DATA::PREV_X_COORD
+        lda     (cur_sprite_ptr),y
+        sta     _clear_sprite::x_coord+1
+
+        ldy     #SPRITE_DATA::PREV_Y_COORD
+        lda     (cur_sprite_ptr),y          ; Get existing prev_y for clear
+        sta     cur_y
+
+        ldy     #SPRITE_DATA::BYTES
+        lda     (cur_sprite_ptr),y
+        sta     n_bytes_draw
+
+        ldy     #SPRITE_DATA::BYTES_WIDTH
+        lda     (cur_sprite_ptr),y
+        sta     _clear_sprite::bytes_per_line+1
+
+        ldy     #SPRITE_DATA::BG_BACKUP
+        lda     (cur_sprite_ptr),y
+        sta     _clear_sprite::sprite_restore+1
+        iny
+        lda     (cur_sprite_ptr),y
+        sta     _clear_sprite::sprite_restore+2
+        rts
+.endproc
+
+.proc _setup_sprite_pointer_for_draw
+        sta     cur_sprite_ptr
+        stx     cur_sprite_ptr+1
+        ldy     #SPRITE_DATA::X_COORD
+        lda     (cur_sprite_ptr),y
+        tax
+
+        lda     _div7_table,x     ; Compute divided X
+        sta     _draw_sprite::x_coord+1
+
+        ldy     #SPRITE_DATA::PREV_X_COORD
+        sta     (cur_sprite_ptr),y          ; And save the new prev_x now
+
+        ldy     #SPRITE_DATA::Y_COORD
+        lda     (cur_sprite_ptr),y
+        sta     cur_y
+
+
+        ldy     #SPRITE_DATA::PREV_Y_COORD
+        sta     (cur_sprite_ptr),y          ; Save the new prev_y
+
+        ldy     #SPRITE_DATA::BYTES
+        lda     (cur_sprite_ptr),y
+        sta     n_bytes_draw
+
+        ldy     #SPRITE_DATA::BYTES_WIDTH
+        lda     (cur_sprite_ptr),y
+        sta     _draw_sprite::bytes_per_line+1
+
+        ldy     #SPRITE_DATA::BG_BACKUP
+        lda     (cur_sprite_ptr),y
+        sta     _draw_sprite::sprite_backup+1
+        iny
+        lda     (cur_sprite_ptr),y
+        sta     _draw_sprite::sprite_backup+2
+
+select_sprite:
+        ldy     #SPRITE_DATA::SPRITE
+        lda     (cur_sprite_ptr),y
+        sta     ptr2
+        iny
+        lda     (cur_sprite_ptr),y
+        sta     ptr2+1
+
+        ; Select correct sprite for pixel-precise render
+        lda     _mod7_table,x
+        asl                       ; Multiply by four to account for
+        asl                       ; data and mask pointers
+        tay
+
+        lda     (ptr2),y
+        sta     _draw_sprite::sprite_pointer+1
+        iny
+        lda     (ptr2),y
+        sta     _draw_sprite::sprite_pointer+2
+        iny
+        lda     (ptr2),y
+        sta     _draw_sprite::sprite_mask+1
+        iny
+        lda     (ptr2),y
+        sta     _draw_sprite::sprite_mask+2
+        rts
+.endproc
+
+; X, Y: coords
+; A: bytes per line
+; TOS: sprite pointer
+.proc _draw_sprite_big
+        stx     x_coord+1
         sty     cur_y
+        sta     bytes_per_line+1
+        jsr     popax
+        sta     sprite_pointer+1
+        stx     sprite_pointer+2
 
-big_next_line:
-big_sprite_x:
+next_line:
+x_coord:
         lda     #$FF
         clc
         ldy     cur_y
@@ -269,46 +243,107 @@ big_sprite_x:
         ; adc     #0 - carry won't be set here
         sta     line+1
 
-big_n_bytes_per_line_draw:
+bytes_per_line:
         ldy     #$FF
         dey
-big_sprite_pointer:
+sprite_pointer:
 :       lda     $FFFF,y       ; Patched
         sta     (line),y      ; Use ($nn),y
         dey
         bpl     :-
 
         dec     cur_y
-        lda     big_sprite_pointer+1
+        lda     sprite_pointer+1
         clc
-        adc     big_n_bytes_per_line_draw+1
-        sta     big_sprite_pointer+1
-        lda     big_sprite_pointer+2
+        adc     bytes_per_line+1
+        sta     sprite_pointer+1
+        lda     sprite_pointer+2
         adc     #0
-        sta     big_sprite_pointer+2
+        sta     sprite_pointer+2
 
         dec     n_lines_draw
-        bne     big_next_line
+        bne     next_line
 
         rts
+.endproc
 
 .code
-_setup_eor_clear:
+.proc _draw_eor
+        ldy     #SPRITE_DATA::NEED_CLEAR
+        lda     #1
+        sta     (cur_sprite_ptr),y
+
+draw:
+        ldx     n_bytes_draw
+        clc
+next_line:
+x_coord:
+        lda     #$FF
+        ldy     cur_y
+        adc     _hgr_low,y
+        sta     load_background+1
+        sta     store_byte+1
+        lda     _hgr_hi,y
+        ;adc     #0 - carry won't be set here
+        sta     load_background+2
+        sta     store_byte+2
+
+bytes_per_line:
+        ldy     #$FF
+
+        ; Get what's under the sprite
+load_background:
+        lda     $FFFF,y
+sprite_pointer:
+        eor     $FFFF,x       ; Patched
+store_byte:
+        sta     $FFFF,y
+        dex
+        dey
+        bpl     load_background ; Next byte
+
+        inc     cur_y
+        cpx     #$FF
+        bne     next_line
+        rts
+.endproc
+
+.proc _clear_eor
+        ldy     #SPRITE_DATA::NEED_CLEAR
+        lda     (cur_sprite_ptr),y
+        bne     :+                ; Skip clearing if not needed
+        rts
+:       lda     #0
+        sta     (cur_sprite_ptr),y; Reset clear-needed flag
+        jmp     _draw_eor::draw
+.endproc
+
+.proc _setup_eor_clear
+        sta     cur_sprite_ptr
+        stx     cur_sprite_ptr+1
         ldy     #SPRITE_DATA::PREV_Y_COORD
         lda     (cur_sprite_ptr),y          ; Get existing prev_y for clear
         sta     cur_y
 
         ldy     #SPRITE_DATA::PREV_X_COORD
         lda     (cur_sprite_ptr),y
-        tax
-        jmp     _setup_eor_common
+        sta     _draw_eor::x_coord+1
 
-_setup_eor_draw:
+        ldy     #SPRITE_DATA::BG_BACKUP     ; Restore the sprite we need to clear
+        lda     (cur_sprite_ptr),y
+        sta     _draw_eor::sprite_pointer+1
+        iny
+        lda     (cur_sprite_ptr),y
+        sta     _draw_eor::sprite_pointer+2
+        jmp     _setup_eor_common
+.endproc
+
+.proc _setup_eor_draw
+        sta     cur_sprite_ptr
+        stx     cur_sprite_ptr+1
         ldy     #SPRITE_DATA::X_COORD
         lda     (cur_sprite_ptr),y
         tax
-        ldy     #SPRITE_DATA::PREV_X_COORD
-        sta     (cur_sprite_ptr),y          ; And save the new prev_x now
 
         ldy     #SPRITE_DATA::Y_COORD
         lda     (cur_sprite_ptr),y
@@ -317,25 +352,12 @@ _setup_eor_draw:
         ldy     #SPRITE_DATA::PREV_Y_COORD
         sta     (cur_sprite_ptr),y          ; Save the new prev_y
 
-_setup_eor_common:
-        ; Select correct sprite for pixel-precise render
-        lda     _mod7_table,x
-        asl                       ; Multiply by four to account for
-        asl                       ; data and mask pointers
-        sta     eor_sprite_num+1  ; Patch sprite pointer number
-
         lda     _div7_table,x     ; Compute divided X
-        sta     eor_sprite_x+1
+        sta     _draw_eor::x_coord+1
 
-        ldy     #SPRITE_DATA::BYTES
-        lda     (cur_sprite_ptr),y
-        sta     n_bytes_draw
+        ldy     #SPRITE_DATA::PREV_X_COORD
+        sta     (cur_sprite_ptr),y          ; And save the new prev_x, divided by 7, now
 
-        ldy     #SPRITE_DATA::BYTES_WIDTH
-        lda     (cur_sprite_ptr),y
-        sta     eor_n_bytes_per_line_draw+1
-
-eor_select_sprite:
         ldy     #SPRITE_DATA::SPRITE
         lda     (cur_sprite_ptr),y
         sta     ptr2
@@ -343,59 +365,32 @@ eor_select_sprite:
         lda     (cur_sprite_ptr),y
         sta     ptr2+1
 
-eor_sprite_num:
-        ldy     #$FF
+        ; Select correct sprite for pixel-precise render
+        lda     _mod7_table,x
+        asl                       ; Multiply by two because pointer
+        tay
         lda     (ptr2),y
-        sta     eor_sprite_pointer+1
+        sta     _draw_eor::sprite_pointer+1
+        tax
         iny
         lda     (ptr2),y
-        sta     eor_sprite_pointer+2
-        rts
+        sta     _draw_eor::sprite_pointer+2
 
-_clear_eor:
-        ldy     #SPRITE_DATA::NEED_CLEAR
-        lda     (cur_sprite_ptr),y
-        bne     :+                ; Skip clearing if not needed
-        rts
-:       lda     #0
-        sta     (cur_sprite_ptr),y; Reset clear-needed flag
-        jmp     eor_do_draw
-
-_draw_eor:
-        ldy     #SPRITE_DATA::NEED_CLEAR
-        lda     #1
-        sta     (cur_sprite_ptr),y
-
-eor_do_draw:
-        ldx     n_bytes_draw
-        clc
-eor_next_line:
-eor_sprite_x:
-        lda     #$FF
-        ldy     cur_y
-        adc     _hgr_low,y
-        sta     eor_sprite_get_bg+1
-        sta     eor_sprite_store_byte+1
-        lda     _hgr_hi,y
-        ;adc     #0 - carry won't be set here
-        sta     eor_sprite_get_bg+2
-        sta     eor_sprite_store_byte+2
-
-eor_n_bytes_per_line_draw:
-        ldy     #$FF
-
-        ; Get what's under the sprite
-eor_sprite_get_bg:
-        lda     $FFFF,y
-eor_sprite_pointer:
-        eor     $FFFF,x       ; Patched
-eor_sprite_store_byte:
-        sta     $FFFF,y
-        dex
+        ldy     #SPRITE_DATA::BG_BACKUP+1
+        sta     (cur_sprite_ptr),y          ; And save the sprite to clear
         dey
-        bpl     eor_sprite_get_bg ; Next byte
+        txa
+        sta     (cur_sprite_ptr),y
+        ; Fallthrough to setup_eor_common
+.endproc
 
-        inc     cur_y
-        cpx     #$FF
-        bne     eor_next_line
+.proc _setup_eor_common
+        ldy     #SPRITE_DATA::BYTES
+        lda     (cur_sprite_ptr),y
+        sta     n_bytes_draw
+
+        ldy     #SPRITE_DATA::BYTES_WIDTH
+        lda     (cur_sprite_ptr),y
+        sta     _draw_eor::bytes_per_line+1
         rts
+.endproc
