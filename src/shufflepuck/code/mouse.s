@@ -31,6 +31,7 @@
         .include    "mouse-kernel.inc"
         .include    "apple2.inc"
         .include    "my_pusher0.gen.inc"
+        .include    "pointer.gen.inc"
         .include    "constants.inc"
 
 SETMOUSE        = $12   ; Sets mouse mode
@@ -73,7 +74,7 @@ playbox:.word   (MY_PUSHER_MIN_X/2)
 barbox: .word   0
         .word   0
         .word   255/2
-        .word   191/2
+        .word   HGR_HEIGHT/2
 
 .segment "LOWCODE"
 

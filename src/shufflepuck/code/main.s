@@ -136,7 +136,8 @@ calibrate_hz_handler:
         ; Debug - start game at first opponent:
         ; lda     #1
         ; jsr     _init_hgr
-        ; jmp     first_opponent
+        ; lda     #2
+        ; jmp     store_opponent
         ; End of debug
 
         lda     #<load_barsnd_str
@@ -177,12 +178,11 @@ to_bar:
         bpl     :+
         lda     #1                ; Start a tournament
         sta     in_tournament
-first_opponent:
         lda     #0                ; Start with opponent 0
+store_opponent:
 :       sta     opponent
 
 new_game:
-        jsr     _restore_table
         jsr     _mouse_setplaybox
         lda     #$00
         sta     turn
@@ -196,6 +196,7 @@ new_game:
         lda     opponent
         jsr     _load_opponent
 
+        jsr     _restore_table
         jsr     draw_opponent_parts
         jsr     _backup_table
 
@@ -291,8 +292,10 @@ loop_start:
         jsr     _puck_check_their_hit
 
         jsr     _move_puck
-
         bcs     reset_point
+
+        ; Check again after moving puck
+        jsr     _puck_check_my_hit
 
         jsr     _check_keyboard
         bcc     game_loop
@@ -311,6 +314,9 @@ reset_point:
         sta     puck_serve_y
 
 reset_point_cont:
+        jsr     _puck_reinit_my_order
+        jsr     _puck_reinit_their_order
+
         lda     #$00
         sta     puck_dx
         sta     puck_dy
