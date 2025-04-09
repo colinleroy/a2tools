@@ -133,6 +133,12 @@ calibrate_hz_handler:
         ; Wait for first interrupt
         jsr     _mouse_wait_vbl
 
+        ; Debug - start game at first opponent:
+        ; lda     #1
+        ; jsr     _init_hgr
+        ; jmp     first_opponent
+        ; End of debug
+
         lda     #<load_barsnd_str
         ldx     #>load_barsnd_str
         jsr     _cputs
@@ -171,6 +177,7 @@ to_bar:
         bpl     :+
         lda     #1                ; Start a tournament
         sta     in_tournament
+first_opponent:
         lda     #0                ; Start with opponent 0
 :       sta     opponent
 
