@@ -19,7 +19,7 @@
 
         .import     their_pusher_x, their_pusher_y
         .import     their_pusher_dx, their_pusher_dy
-        .import     their_currently_hitting, my_currently_hitting
+        .import     their_currently_hitting
         .import     puck_x, puck_right_x, puck_y, puck_dx, puck_dy, serving, their_score
         .import     _guess_puck_x_at_y
         .import     _rand

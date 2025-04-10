@@ -134,10 +134,12 @@ calibrate_hz_handler:
         jsr     _mouse_wait_vbl
 
         ; Debug - start game at first opponent:
-        ; lda     #1
-        ; jsr     _init_hgr
-        ; lda     #2
-        ; jmp     store_opponent
+.ifdef DEBUG_OPPONENT
+        lda     #1
+        jsr     _init_hgr
+        lda     #DEBUG_OPPONENT
+        jmp     store_opponent
+.endif
         ; End of debug
 
         lda     #<load_barsnd_str

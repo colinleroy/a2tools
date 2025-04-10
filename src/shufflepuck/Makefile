@@ -3,8 +3,34 @@ STREAMER_VER := 6502
 SAMPLING_HZ := 8000
 MAX_COMPRESSED_DATA_SIZE := 0x4E00
 
+DEBUG_OPPONENT_CFLAG :=
+
 ifndef SRC_DIR
 SRC_DIR := .
+endif
+
+ifdef DEBUG_OPPONENT
+	opponents = $(DEBUG_OPPONENT)
+else
+
+# A: Skip
+# B: Visine
+# C: Vinnie
+# D: Lexan
+opponents = \
+	a \
+	b \
+	c \
+	d \
+	e \
+	f \
+
+endif
+
+ifdef DEBUG_OPPONENT
+	DEBUG_OPPONENT_NUM := $(shell printf "%d" "'$(DEBUG_OPPONENT)'")
+	DEBUG_OPPONENT_NUM := $(shell echo $$(($(DEBUG_OPPONENT_NUM) - 97)))
+	DEBUG_OPPONENT_CFLAG := --asm-define DEBUG_OPPONENT=$(DEBUG_OPPONENT_NUM)
 endif
 
 BINARY_NAME = shflpuck.bin
@@ -17,16 +43,6 @@ assets = \
 	table \
 	bar
 
-# A: Skip
-# B: Visine
-# C: Vinnie
-# D: Lexan
-opponents = \
-	a \
-	b \
-	c \
-	d \
-	e \
 
 opponents_code    = $(opponents:%=$(SRC_DIR)/opponents/opponent%.s)
 
@@ -121,7 +137,8 @@ shflpuck_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl \
 	--asm-include-dir $(shell pwd) \
 	--asm-include-dir $(SRC_DIR) \
 	--asm-define MAX_COMPRESSED_DATA_SIZE=$(MAX_COMPRESSED_DATA_SIZE) \
-	$(UNKILLABLE_CFLAG)
+	$(UNKILLABLE_CFLAG) \
+	$(DEBUG_OPPONENT_CFLAG)
 
 # Targets
 
