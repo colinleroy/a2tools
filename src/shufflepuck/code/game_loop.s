@@ -23,7 +23,7 @@
         .export     my_pusher_x, my_pusher_y
         .export     their_pusher_x, their_pusher_y
         .export     their_pusher_dx, their_pusher_dy
-        .export     their_currently_hitting, my_currently_hitting
+        .export     their_currently_hitting, player_caught
 
         .export     _puck_reinit_my_order, _puck_reinit_their_order
         .export      puck_in_front_of_me, puck_in_front_of_them
@@ -515,7 +515,9 @@ check:
         ; Make sure puck doesn't go behind pusher
         ldy     my_pusher_y
         dey
+        tya
         sty     puck_y
+        jsr     _init_precise_y
 
         jsr     _puck_reinit_my_order  ; Set puck/pusher order while it goes away
         ; update puck speed
@@ -535,6 +537,11 @@ check:
         lda     puck_dy
         bmi     :+
         jsr     revert_y
+
+        lda     #1
+        sta     player_caught     ; Used to inform opponents about the fact we caught the puck
+                                  ; It's the opponent's responsability to zero it once they
+                                  ; know
 
         ; And play sound
         ldy     #0
@@ -584,6 +591,15 @@ out:    jmp     bind_puck_speed
         ldy     #4
         jsr     _play_puck_hit
 
+        ; Make sure puck doesn't go behind pusher
+        ldy     their_pusher_y
+        iny
+        tya
+        sty     puck_y
+        jsr     _init_precise_y
+
+
+
         ; update puck speed
         ; Slow puck deltaX
         lda     puck_dx
@@ -607,7 +623,8 @@ out:    jmp     bind_puck_speed
         ror
         clc
         adc     puck_dy
-        bne     :+                ; Never let dy=0
+        cmp     #$01
+        bcs     :+
         lda     #$01
 :       sta     puck_dy
         clc
@@ -662,6 +679,7 @@ out_miss:
 
 :       lda     puck_y
         cmp     tmp1
+        beq     out
         bcc     out
 
         jsr     _move_puck
@@ -886,3 +904,5 @@ their_pusher_dx: .res 1
 their_pusher_dy: .res 1
 
 puck_backup:     .res 10
+
+player_caught:   .res 1

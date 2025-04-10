@@ -19,7 +19,7 @@
 
         .import     their_pusher_x, their_pusher_y
         .import     their_pusher_dx, their_pusher_dy
-        .import     my_currently_hitting, their_currently_hitting
+        .import     player_caught, their_currently_hitting
         .import     puck_x, puck_right_x, puck_y, puck_dy, serving, their_score
         .import     _rand
 
@@ -151,8 +151,11 @@ serve_or_catch:
 
 catch:
         ; How many times did the player catch the puck?
-        lda     my_currently_hitting
+        lda     player_caught
         beq     :+
+
+        lda     #0              ; Reset indicator
+        sta     player_caught
 
         lda     num_catch       ; Stop incrementing num_catch at MAX_NUM_CATCH
         cmp     #MAX_NUM_CATCH  ; So that it doesn't get too easy
