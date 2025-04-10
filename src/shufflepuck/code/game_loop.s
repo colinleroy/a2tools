@@ -403,16 +403,6 @@ out:
         rts
 .endproc
 
-puck_in_front_of_me: .byte 0
-puck_in_front_of_them: .byte 0
-
-prev_puck_in_front_of_me: .byte 0
-prev_puck_in_front_of_them: .byte 0
-
-my_pusher_mid_x: .byte 0
-my_currently_hitting: .byte 0
-their_currently_hitting: .byte 0
-
 .proc _puck_reinit_my_order
         lda     puck_y
         cmp     my_pusher_y
@@ -518,8 +508,8 @@ check:
         tya
         sty     puck_y
         jsr     _init_precise_y
-
         jsr     _puck_reinit_my_order  ; Set puck/pusher order while it goes away
+
         ; update puck speed
         ; Slow puck deltaX
         lda     puck_dx
@@ -551,7 +541,7 @@ check:
 :       lda     mouse_dy
         adc     puck_dy
         bmi     :+                ; Don't let DY still be positive or zero
-        lda     #$FF
+        lda     #$FF              ; And make sure it goes away by one pixel
 :       sta     puck_dy
 
 out:    jmp     bind_puck_speed
@@ -586,7 +576,7 @@ out:    jmp     bind_puck_speed
         bcc     out_miss
 
 :       ; Prevent multiple hits
-        lda     #15
+        lda     #5
         sta     their_currently_hitting
         ldy     #4
         jsr     _play_puck_hit
@@ -597,8 +587,6 @@ out:    jmp     bind_puck_speed
         tya
         sty     puck_y
         jsr     _init_precise_y
-
-
 
         ; update puck speed
         ; Slow puck deltaX
@@ -906,3 +894,13 @@ their_pusher_dy: .res 1
 puck_backup:     .res 10
 
 player_caught:   .res 1
+
+puck_in_front_of_me: .res 1
+puck_in_front_of_them: .res 1
+
+prev_puck_in_front_of_me: .res 1
+prev_puck_in_front_of_them: .res 1
+
+my_pusher_mid_x: .res 1
+my_currently_hitting: .res 1
+their_currently_hitting: .res 1
