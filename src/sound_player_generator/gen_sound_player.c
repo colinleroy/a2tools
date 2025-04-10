@@ -312,13 +312,19 @@ int main(int argc, char *argv[]) {
          STEP);
 
   printf("         .export   _play_sample\n"
+         "         .import   _set_iigs_speed, _get_iigs_speed\n"
          "         .importzp ptr1, ptr2, ptr3, tmp3, tmp4\n"
+         "\n"
+         "         .include  \"accelerator.inc\"\n"
          "\n"
          "SPKR     = $C030\n"
          "ispkr    = ptr2\n"
          "target   = ptr3\n"
          "snd_slow = tmp4\n"
          "\n\n");
+
+  printf(".bss\n"
+         "prevspd:      .res 1\n\n");
 
   printf(".segment \"%s\"\n", segment);
   printf(".align $100\n");
@@ -399,6 +405,10 @@ int main(int argc, char *argv[]) {
          "         sty snd_slow\n"
          "         sta ptr1\n"
          "         stx ptr1+1\n"
+         "         jsr _get_iigs_speed\n"
+         "         sta prevspd\n"
+         "         lda #SPEED_SLOW\n"
+         "         jsr _set_iigs_speed\n"
          "         lda #<SPKR\n"
          "         sta ispkr\n"
          "         lda #>SPKR\n"
@@ -413,8 +423,9 @@ int main(int argc, char *argv[]) {
   emit_jump(JUMP_OVERHEAD+SLOWER_OVERHEAD);
   printf(".endproc\n\n");
   printf(".proc play_done\n"
-  "         plp\n"
-  "         rts\n");
+         "         plp\n"
+         "         lda prevspd\n"
+         "         jmp _set_iigs_speed\n");
   printf(".endproc\n\n");
 
 
