@@ -93,6 +93,14 @@ init_service:
         lda     #$00
         sta     found_x
 
+        jsr     _rand
+        lsr
+        lsr
+        lsr
+        lsr
+        lsr
+        sta     magic_band_rnd
+
         inc     serving           ; init service only once
 
         lda     puck_y            ; Who serves?
@@ -127,7 +135,9 @@ catch:
         bpl     move
 
         lda     puck_y
-        ; Magic band where guessing X is allowed
+        clc
+        adc     magic_band_rnd
+        ; Magic band where guessing X is allowed, 130-122 with a random 8 offset
         cmp     #129
         bcs     move
         cmp     #121
@@ -145,7 +155,7 @@ catch:
         inx
 :       stx     found_x
 
-move:   
+move:
         ; If we just hit, patch puck_dx/dy
         lda     their_currently_hitting
         beq     :+
@@ -457,17 +467,18 @@ go_backwards:
         bmi     preparation_done
         cmp     #THEIR_PUSHER_MIN_Y
         bcc     preparation_done
-        sta     their_pusher_y
+        tay     ; Don't store yet, must check X isn't out of bounds
 
         lda     their_pusher_x
         clc
         adc     req_puck_dx
         cmp     #THEIR_PUSHER_MAX_X
-        bcs     :+
+        bcs     preparation_done
         cmp     #THEIR_PUSHER_MIN_X
-        bcc     :+
+        bcc     preparation_done
         sta     their_pusher_x
-:       rts
+        sty     their_pusher_y
+        rts
 
 prepare_to_hit:
         lda     req_puck_dx
@@ -506,3 +517,4 @@ req_puck_dx:      .byte 0
 req_puck_dy:      .byte 0
 req_pusher_y:     .byte 0
 preparing_service:.byte 0
+magic_band_rnd:   .byte 0
