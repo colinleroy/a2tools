@@ -31,6 +31,7 @@ opponents_boxes:                      ; X, W, Y, H, opponent number
         .byte 15,  32, 68,  32, 3     ; Lexan
         .byte 73,  38, 94,  36, 4     ; Eneg
         .byte 7,   28, 21,  39, 5     ; Nerual
+        .byte 129, 24, 58,  41, 6     ; Bejin
         .byte 83,  87, 12,  34, $FF   ; Tournament
         .byte 231, 21, 13,  21, CH_ESC; Exit
 NUM_BOXES = (* - BOXES_START)/5
