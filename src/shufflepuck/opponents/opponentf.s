@@ -31,7 +31,6 @@
         .import     _big_draw_win_f                                 ; CHANGE A
         .import     _play_win_f                                     ; CHANGE A
         .import     _play_lose_f                                    ; CHANGE A
-        .import     _play_serve_f                                   ; CHANGE A
 
         .import     __OPPONENT_START__
         .importzp   tmp1
@@ -424,11 +423,6 @@ invert_x:
 .endproc
 
 .proc init_nerual_service
-        jsr     _play_serve_f                                          ; CHANGE A
-; -------
-; End of opponent letter references
-; -------
-
         ; Init serve parameters
         ldy     #0
         sty     remember_service

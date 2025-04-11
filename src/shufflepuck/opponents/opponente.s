@@ -30,7 +30,6 @@
         .import     _big_draw_win_e                                 ; CHANGE A
         .import     _play_win_e                                     ; CHANGE A
         .import     _play_lose_e                                    ; CHANGE A
-        .import     _play_serve_e                                   ; CHANGE A
 
         .import     __OPPONENT_START__
         .importzp   tmp1
@@ -104,11 +103,6 @@ init_service:
         cmp     #THEIR_PUCK_INI_Y
         bne     serve_or_catch    ; It's the player
 
-        ldy     #0
-        jsr     _play_serve_e                                          ; CHANGE A
-; -------
-; End of opponent letter references
-; -------
         ; Init serve parameters
         lda     #THEIR_MAX_DX
         sta     their_pusher_dx
@@ -273,8 +267,8 @@ hit:
         lsr
         lsr
         clc
-        ; And make it 16-31
-        adc     #16
+        ; And make it 9-24
+        adc     #9
         sta     their_pusher_dy
         rts
 
