@@ -528,7 +528,12 @@ check:
         ; Invert and slow puck delta-Y if incoming
         lda     puck_dy
         bmi     :+
-        jsr     revert_y
+        clc
+        eor     #$FF
+        adc     #$01
+        cmp     #$80
+        ror
+        sta     puck_dy
 
         lda     #1
         sta     player_caught     ; Used to inform opponents about the fact we caught the puck
@@ -610,7 +615,17 @@ out:    jmp     bind_puck_speed
         sta     puck_dx
 
         ; Invert and slow puck delta-Y
-        jsr     revert_y
+        lda     puck_dy
+        clc
+        eor     #$FF
+        adc     #$01
+        cmp     #$80
+        ror
+        cmp     #$80
+        ror
+        cmp     #$80
+        ror
+        sta     puck_dy
         lda     their_pusher_dy
         cmp     #$80
         ror
@@ -696,21 +711,6 @@ out:
 .endproc
 
 check_hits: .byte 1
-
-.proc revert_y
-        lda     puck_dy
-        clc
-        eor     #$FF
-        adc     #$01
-        cmp     #$80
-        ror
-        cmp     #$80
-        ror
-        cmp     #$80
-        ror
-        sta     puck_dy
-        rts
-.endproc
 
 .proc revert_x
         lda     puck_dx
