@@ -22,7 +22,7 @@
         .import   mouse_dx, mouse_dy
         .import   _mouse_setbarbox, _mouse_setplaybox
 
-        .import   _choose_opponent
+        .import   _choose_opponent, bounces
 
         .import   puck_x, puck_y, puck_dx, puck_dy
         .import   _init_precise_x, _init_precise_y, _transform_puck_coords
@@ -322,6 +322,7 @@ reset_point_cont:
         lda     #$00
         sta     puck_dx
         sta     puck_dy
+        sta     bounces
 
         lda     puck_x
         cmp     #PUCK_INI_X

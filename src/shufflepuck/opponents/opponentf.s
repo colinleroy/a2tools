@@ -21,7 +21,7 @@
         .import     their_pusher_dx, their_pusher_dy
         .import     their_currently_hitting, player_caught
         .import     puck_x, puck_right_x, puck_y, puck_dx, puck_dy, serving, their_score
-        .import     _guess_puck_x_at_y
+        .import     _guess_puck_x_at_y, bounces
         .import     _rand, _platform_msleep
 
         .import     _big_draw_sprite_f                              ; CHANGE A
@@ -158,15 +158,21 @@ catch:
 move:
         ; If we just hit, patch puck_dx/dy
         lda     their_currently_hitting
-        beq     :+
+        beq     no_hit
         lda     req_puck_dy
-        beq     :+
+        beq     no_hit
 
-        lda     req_puck_dx
+        ldx     req_puck_dx
+        lda     bounces
+        and     #1
+        beq     :+
+        txa
         clc
         eor     #$FF
         adc     #1
-        sta     puck_dx
+        tax
+:       stx     puck_dx
+
         lda     req_puck_dy
         clc
         eor     #$FF
@@ -180,7 +186,7 @@ move:
 
         ; And reinit patrol
         jsr     init_patrol_delta
-:
+no_hit:
         ; If the player just hit, remember the parameters
         lda     player_caught
         beq     :+
@@ -486,6 +492,10 @@ prepare_to_hit:
         eor     #$FF
         adc     #1
         sta     their_pusher_dx
+
+        lda     #1                ; Make sure we don't re-invert when hitting
+        sta     bounces
+
         lda     req_puck_dy
         bpl     :+
         clc
