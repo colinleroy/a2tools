@@ -100,7 +100,7 @@
 .endproc
 
 .proc draw_my_pusher
-        jsr     _my_pusher_select
+        jsr     my_pusher_select
         lda     #<my_pusher_data
         ldx     #>my_pusher_data
         jsr     _setup_eor_draw
@@ -115,7 +115,7 @@
 .endproc
 
 .proc draw_their_pusher
-        jsr     _their_pusher_select
+        jsr     their_pusher_select
         lda     #<their_pusher_data
         ldx     #>their_pusher_data
         jsr     _setup_sprite_pointer_for_draw
@@ -124,7 +124,7 @@
 
 .segment "LOWCODE"
 
-.proc _draw_screen_my_side
+.proc render_screen_my_side
         ; Redraw their side first (it's higher on the screen)
         jsr     clear_their_pusher
         jsr     draw_their_pusher
@@ -156,30 +156,36 @@ out:
         rts
 .endproc
 
-.proc _draw_screen_their_side
-        ; Redraw their side first (it's higher on the screen)
+.proc clear_screen_their_side
         lda     prev_puck_in_front_of_them
         beq     :+
 
         jsr     clear_puck
         jsr     clear_their_pusher
-        jmp     draw
+        rts
 
 :       jsr     clear_their_pusher
         jsr     clear_puck
+        rts
+.endproc
 
-draw:
+.proc draw_screen_their_side
         lda     puck_in_front_of_them
         sta     prev_puck_in_front_of_them
         bne     :+
 
         jsr     draw_puck
         jsr     draw_their_pusher
-        jmp     my_side
+        rts
 
 :       jsr     draw_their_pusher
         jsr     draw_puck
+        rts
+.endproc
 
+.proc render_screen_their_side
+        jsr     clear_screen_their_side
+        jsr     draw_screen_their_side
 my_side:
         ; My side now
         jsr     clear_my_pusher
@@ -212,8 +218,8 @@ my_side:
         cmp     #MID_BOARD           ; Middle of HGR height
 
         bcs     :+
-        jmp     _draw_screen_their_side
-:       jmp     _draw_screen_my_side
+        jmp     render_screen_their_side
+:       jmp     render_screen_my_side
 .endproc
 
 ;X, Y input
@@ -239,8 +245,7 @@ my_side:
         rts
 .endproc
 
-; Y input
-.proc _my_pusher_select
+.proc my_pusher_select
         ldy     my_pusher_y
         ldx     #0
         cpy     #183
@@ -269,7 +274,6 @@ out:
         rts
 .endproc
 
-; X,Y in input
 .proc _move_my_pusher
         ldy     mouse_y
         sty     my_pusher_y
@@ -281,8 +285,7 @@ out:
         rts
 .endproc
 
-; Y input
-.proc _their_pusher_select
+.proc their_pusher_select
         ldy     their_pusher_y
         ldx     #0
         cpy     #20
@@ -305,7 +308,6 @@ out:
         rts
 .endproc
 
-; X,Y in input
 .proc _move_their_pusher
         clc
         bit     their_pusher_dx
@@ -807,7 +809,30 @@ check_their_late_catch:
 
         jsr     _puck_check_their_hit
         bcc     update_y
+
+        lda     #0
+        jmp     round_end
+
+check_my_late_catch:
+        lda     #PUCK_MAX_Y
+        sta     puck_y
+        jsr     _init_precise_y
+
+        jsr     _puck_check_my_hit
+        bcc     update_y
+
+        lda     #1
+        jmp     round_end
+.endproc
+
+; A: 0 if we lose
+.proc round_end
+        bne     :+
+
+        ; Clear their side to load their sprite cleanly
+        jsr     clear_screen_their_side
         jsr     __OPPONENT_START__+OPPONENT::LOSE_POINT
+        ; Their side will be redrawn by update_screen_for_crash
         clc                       ; Little crash
         jsr     update_screen_for_crash
         ldy     #4
@@ -821,14 +846,7 @@ check_their_late_catch:
         inc     my_score
         rts
 
-check_my_late_catch:
-        lda     #PUCK_MAX_Y
-        sta     puck_y
-        jsr     _init_precise_y
-
-        jsr     _puck_check_my_hit
-        bcc     update_y
-        jsr     __OPPONENT_START__+OPPONENT::WIN_POINT
+:       jsr     __OPPONENT_START__+OPPONENT::WIN_POINT
         sec                       ; Large crash
         jsr     update_screen_for_crash
         ldy     #0
