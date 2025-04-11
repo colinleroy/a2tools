@@ -26,9 +26,9 @@
         .export     their_currently_hitting, player_caught
 
         .export     _puck_reinit_my_order, _puck_reinit_their_order
-        .export      puck_in_front_of_me, puck_in_front_of_them
-        .export      prev_puck_in_front_of_me, prev_puck_in_front_of_them
-
+        .export     puck_in_front_of_me, puck_in_front_of_them
+        .export     prev_puck_in_front_of_me, prev_puck_in_front_of_them
+        .export     bounces
         .export     _transform_puck_coords
 
         .export     _guess_puck_x_at_y
@@ -533,8 +533,11 @@ check:
                                   ; It's the opponent's responsability to zero it once they
                                   ; know
 
+        ldy     #0                ; No sound slowing
+        sty     their_currently_hitting ; Reset opponent hit (for Nerual who'd patch dy multiple times)
+        sty     bounces                 ; Reset X bounces counter
+
         ; And play sound
-        ldy     #0
         jsr     _play_puck_hit
 
         ; Add our delta-Y to the puck
@@ -576,7 +579,7 @@ out:    jmp     bind_puck_speed
         bcc     out_miss
 
 :       ; Prevent multiple hits
-        lda     #5
+        lda     #15
         sta     their_currently_hitting
         ldy     #4
         jsr     _play_puck_hit
@@ -716,6 +719,7 @@ check_hits: .byte 1
         lda     check_hits
         beq     :+
         jsr     play_revert_x
+        inc     bounces
 :
         ; And back to move_puck
 .endproc
@@ -904,3 +908,4 @@ prev_puck_in_front_of_them: .res 1
 my_pusher_mid_x: .res 1
 my_currently_hitting: .res 1
 their_currently_hitting: .res 1
+bounces:                 .res 1
