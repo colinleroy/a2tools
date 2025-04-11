@@ -17,6 +17,12 @@ else
 # B: Visine
 # C: Vinnie
 # D: Lexan
+# E: Eneg
+# F: Nerual
+# G: Bejin
+# H: Biff
+# I: DC3
+
 opponents = \
 	a \
 	b \
@@ -24,6 +30,7 @@ opponents = \
 	d \
 	e \
 	f \
+	g \
 
 endif
 
@@ -78,9 +85,20 @@ names_unperfect   = $(opponents:%=name_%.unperfect.gen.s)
 lose_unperfect    = $(opponents:%=lose_%.unperfect.gen.s)
 win_unperfect     = $(opponents:%=win_%.unperfect.gen.s)
 
-serve_sounds      = $(opponents:%=serve_%.snd.s)
-win_sounds      = $(opponents:%=win_%.snd.s)
-lose_sounds      = $(opponents:%=lose_%.snd.s)
+serve_sounds = \
+	serve_g_left.snd.s \
+	serve_g_right.snd.s \
+
+win_sounds = \
+	win_e.snd.s \
+	win_f.snd.s \
+
+lose_sounds = \
+	lose_a.snd.s \
+	lose_c.snd.s \
+	lose_d.snd.s \
+	lose_e.snd.s \
+	lose_f.snd.s \
 
 opponents_sprites = \
 	$(sprites_unperfect) \

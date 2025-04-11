@@ -28,9 +28,7 @@
         .import     _big_draw_normal_d                              ; CHANGE A
         .import     _big_draw_lose_d                                ; CHANGE A
         .import     _big_draw_win_d                                 ; CHANGE A
-        .import     _play_win_d                                     ; CHANGE A
         .import     _play_lose_d                                    ; CHANGE A
-        .import     _play_serve_d                                   ; CHANGE A
 
         .import     __OPPONENT_START__
         .importzp   tmp1
@@ -79,8 +77,8 @@ win_animation:
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT_SND, error ; Make sure the callback is where we think
 win_sound:
-        ldy     #0
-        jmp     _play_win_d                                            ; CHANGE A
+        rts
+        .res 4
 
 .assert * = __OPPONENT_START__+OPPONENT::THINK_CB, error ; Make sure the callback is where we think
 .proc _opponent_think
@@ -107,11 +105,6 @@ init_service:
         cmp     #THEIR_PUCK_INI_Y
         bne     serve_or_catch    ; It's the player
 
-        ldy     #0
-        jsr     _play_serve_d                                          ; CHANGE A
-; -------
-; End of opponent letter references
-; -------
         ; Init serve parameters
         lda     their_max_dx
         sta     their_pusher_dx
