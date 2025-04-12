@@ -271,11 +271,25 @@ cont_game:
         lda     puck_in_front_of_them
         sta     prev_puck_in_front_of_them
 
+        lda     #6
+        sta     frame_counter
+
 game_loop:
         ; the WAI of the poor
         ; because I don't understand how WAI works
         ; and I want to keep things 6502-ok
         jsr     _mouse_wait_vbl
+
+        ; Drop 1 frame out of 6 at 60Hz
+        ; otherwise the game is harder
+        lda     hz
+        cmp     #60
+        bne     loop_start
+        dec     frame_counter
+        bne     loop_start
+        lda     #6
+        sta     frame_counter
+        bne     game_loop
 
 loop_start:
         jsr     _draw_screen
@@ -304,8 +318,8 @@ loop_start:
 
         ; Keyboard hit, is it escape?
         cmp     #CH_ESC
-        beq     clear_and_go_bar
         bne     game_loop
+        jmp     clear_and_go_bar
 
 reset_point:
         lda     turn
@@ -315,7 +329,8 @@ reset_point:
         lda     turn_puck_y,x
         sta     puck_serve_y
 
-        ; Fix double-substraction of opponent's pusher height
+        ; Fix double-substraction of pushers height
+        jsr     _move_my_pusher
         jsr     _move_their_pusher
 
 reset_point_cont:
@@ -414,3 +429,4 @@ my_score:     .res 1
 their_score:  .res 1
 opponent:     .res 1
 in_tournament:.res 1
+frame_counter:.res 1
