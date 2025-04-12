@@ -27,7 +27,6 @@
         .import     _big_draw_sprite_g                              ; CHANGE A
         .import     _big_draw_name_g                                ; CHANGE A
         .import     _big_draw_normal_g                              ; CHANGE A
-        .import     _big_draw_lose_g                                ; CHANGE A
         .import     _big_draw_win_g                                 ; CHANGE A
         .import     _play_serve_g_left                              ; CHANGE A
         .import     _play_serve_g_right
@@ -68,9 +67,9 @@ name:
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT, error ; Make sure the callback is where we think
 lose_animation:
-        ldx     #((00+98)/7)    ; left X of sprite change + left X of big sprite
+        ldx     #(98/7)         ; left X of sprite change + left X of big sprite
         ldy     #(76)           ; bottom Y of sprite change
-        jmp     _big_draw_lose_g                                        ; CHANGE A
+        jmp     _big_draw_sprite_g                                        ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT_SND, error ; Make sure the callback is where we think
 lose_sound:
@@ -79,8 +78,8 @@ lose_sound:
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT, error ; Make sure the callback is where we think
 win_animation:
-        ldx     #((00+98)/7)    ; left X of sprite change + left X of big sprite
-        ldy     #(76)           ; bottom Y of sprite change
+        ldx     #((35+98)/7)    ; left X of sprite change + left X of big sprite
+        ldy     #(38)           ; bottom Y of sprite change
         jmp     _big_draw_win_g                                        ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT_SND, error ; Make sure the callback is where we think
