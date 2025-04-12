@@ -23,6 +23,9 @@
         .export     mouse_dx, mouse_dy
 
         .export     _mouse_setbarbox, _mouse_setplaybox
+
+        .import     ostype
+
         .importzp   ptr1, tmp1, tmp2
 
         .interruptor    mouse_irq
@@ -96,6 +99,32 @@ jump:   jmp     $FFFF           ; Patched at runtime
         sta     ptr1
         lda     #>$C000
         sta     ptr1+1
+
+        bit     ostype
+        bvc     next_slot
+
+        ; This is a IIc, make window smaller because the mouse is real slow
+        ldx     #15
+:       lda     playbox,x
+        lsr
+        sta     playbox,x
+        dex
+        lda     playbox,x
+        ror
+        sta     playbox,x
+        dex
+        bpl     :-
+
+        lda     #$0A
+        sta     x_double
+        sta     y_double
+
+        lda     ini_x+1
+        lsr
+        sta     ini_x+1
+        lda     ini_y+1
+        lsr
+        sta     ini_y+1
 
         ; Search for AppleMouse II firmware in slots 1 - 7
 next_slot:
@@ -200,25 +229,26 @@ mouse_common:
         lda     #<barbox
         ldx     #>barbox
         jsr     mouse_setbox
-        ldx     #10
-        ldy     #10
+        ldx     #2
+        ldy     #2
         jsr     mouse_setpos
         plp
         rts
 .endproc
 
-.proc _mouse_setplaybox
+_mouse_setplaybox:
         php
         sei
         lda     #<playbox
         ldx     #>playbox
         jsr     mouse_setbox
+ini_x:
         ldx     #(MY_PUSHER_INI_X/2)
+ini_y:
         ldy     #(MY_PUSHER_INI_Y/2)
         jsr     mouse_setpos
         plp
         rts
-.endproc
 
 .proc _deinit_mouse
         lda     slot
@@ -277,7 +307,7 @@ mouse_common:
         jmp     _init_mouse::mouse_common      ; Branch always
 .endproc
 
-.proc mouse_irq
+mouse_irq:
         ; Check for installed mouse
         lda     slot
         beq     done
@@ -329,6 +359,8 @@ done:   rts
         clc
         lda     pos1_lo,y
         asl
+x_double:
+        nop
         sta     mouse_x
 
         sec                       ; Compute current delta
@@ -344,6 +376,8 @@ done:   rts
 
         lda     pos2_lo,y
         asl
+y_double:
+        nop
         sta     mouse_y
 
         sec                       ; Compute current delta
@@ -382,9 +416,19 @@ done:   rts
         plp                     ; Reenable interrupts
         sec                     ; Interrupt handled
         rts
-.endproc
 
 .proc _mouse_wait_vbl
+        bit     ostype
+        bmi     iigs            ; $8x
+        bvs     iic             ; $4x
+
+:       bit     $C019           ; Softswitch VBL
+        bpl     :-
+:       bit     $C019           ; Softswitch VBL
+        bmi     :-
+        rts
+iigs:
+iic:
         lda     #0              ; Skip a frame rather than flicker
         sta     vbl_ready
 :       lda     vbl_ready

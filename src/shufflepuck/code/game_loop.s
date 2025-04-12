@@ -123,8 +123,6 @@
         jmp     _draw_sprite
 .endproc
 
-.segment "LOWCODE"
-
 .proc render_screen_my_side
         ; Redraw their side first (it's higher on the screen)
         jsr     clear_their_pusher
@@ -156,6 +154,8 @@ draw:
 out:
         rts
 .endproc
+
+.segment "LOWCODE"
 
 .proc clear_screen_their_side
         lda     prev_puck_in_front_of_them
@@ -213,7 +213,7 @@ my_side:
 ; on the puck's side.
 ; ~ 12400 cycles
 .proc _draw_screen
-        jsr     waste_3400           ; Test for 60Hz
+        ;jsr     waste_3400           ; Test for 60Hz
         lda     puck_y
 
         cmp     #MID_BOARD           ; Middle of HGR height
