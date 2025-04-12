@@ -25,7 +25,6 @@
 
         .import     _big_draw_sprite_a                              ; CHANGE A
         .import     _big_draw_name_a                                ; CHANGE A
-        .import     _big_draw_normal_a                              ; CHANGE A
         .import     _big_draw_lose_a                                ; CHANGE A
         .import     _big_draw_win_a                                 ; CHANGE A
 

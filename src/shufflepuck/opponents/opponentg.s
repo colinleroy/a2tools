@@ -26,7 +26,7 @@
 
         .import     _big_draw_sprite_g                              ; CHANGE A
         .import     _big_draw_name_g                                ; CHANGE A
-        .import     _big_draw_normal_g                              ; CHANGE A
+        .import     _big_draw_serve_g                               ; CHANGE A
         .import     _big_draw_win_g                                 ; CHANGE A
         .import     _play_serve_g_left                              ; CHANGE A
         .import     _play_serve_g_right
@@ -341,9 +341,16 @@ go_front:
         bcs     choose_direction
         inc     their_pusher_y
         rts
+
 choose_direction:
+        ; Raise hand
+        ldx     #((7+98)/7)
+        ldy     #76
+        jsr     _big_draw_serve_g                                      ; CHANGE A
+
         lda     #END_SERVICE_RIGHT_DX
         sta     serve_direction
+
         ; Randomize left/right
         jsr     _rand
         and     #1
@@ -360,12 +367,12 @@ choose_direction:
         jsr     _play_serve_g_right                                  ; CHANGE A
         ldy     #0
         jsr     _play_serve_g_right                                  ; CHANGE A
-; -------
-; End of opponent letter references
-; -------
         jmp     preparation_done
 
 prepare_to_hit:
+        ; Back to normal sprite
+        jsr     __OPPONENT_START__+OPPONENT::SPRITE
+
         lda     #$00
         sta     their_pusher_dx
         sta     their_pusher_dy
