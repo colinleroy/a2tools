@@ -44,6 +44,7 @@
         .include    "../code/constants.inc"
         .include    "../code/opponent_file.inc"
 
+THEIR_MAX_DX = 2
 .segment "c"                                                        ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::SPRITE, error ; Make sure the callback is where we think
@@ -167,12 +168,12 @@ move:
         sbc     found_x
         bmi     puck_right_of_pusher
 puck_left_of_pusher:
-        cmp     #70+puck0_WIDTH
+        cmp     #82+puck0_WIDTH
         bcc     close_enough
         bcs     do_no_fast
 puck_right_of_pusher:
         NEG_A
-        cmp     #70+my_pusher0_WIDTH
+        cmp     #82+my_pusher0_WIDTH
         bcc     close_enough
 
 do_no_fast:
@@ -207,31 +208,14 @@ follow_puck:
         clc                       ; Center puck on pusher
         adc     #((my_pusher0_WIDTH-puck0_WIDTH)/2)
         sta     mid_pusher_x
-        sec
-        cmp     puck_x
-        bcs     move_left
 
-move_right:
+        ; Get the difference between puck and pusher
         lda     puck_x
         sec
         sbc     mid_pusher_x
 
-        cmp     their_max_dx
-        bcc     store_dx
-        lda     their_max_dx
-        clc
-        jmp     store_dx
-
-move_left:
-        lda     mid_pusher_x
-        sec
-        sbc     puck_x
-
-        cmp     their_max_dx
-        bcc     :+
-        lda     their_max_dx
-
-:       NEG_A
+        ; Bind to max dx
+        BIND_SIGNED #THEIR_MAX_DX
 store_dx:
         sta     their_pusher_dx
 
@@ -291,8 +275,6 @@ move_backwards:
         rts
 .endproc
 
-their_max_dx:     .byte 2
-their_max_dy:     .byte 10
 mid_pusher_x:     .byte 1
 found_x:          .byte 0
 no_fast:          .byte 0
