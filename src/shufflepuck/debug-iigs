@@ -1,0 +1,2 @@
+#!/bin/bash
+make clean all $1 && mame apple2gs -window -flop1 shufflepuck.po -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -mouse -debug
