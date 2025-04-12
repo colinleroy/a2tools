@@ -35,7 +35,8 @@
         .import     __OPPONENT_START__
         .importzp   tmp1
 
-        .include    "helpers.inc"
+        .include    "code/helpers.inc"
+        .include    "opponent_helpers.inc"
         .include    "apple2.inc"
         .include    "my_pusher0.gen.inc"
         .include    "puck0.gen.inc"
@@ -232,35 +233,9 @@ follow_puck_or_patrol:
         jmp     patrol
 
 follow_puck:
-        lda     their_pusher_x
-        clc                       ; Center puck on pusher
-        adc     #((my_pusher0_WIDTH-puck0_WIDTH)/2)
-        sta     mid_pusher_x
-        sec
-        cmp     puck_x
-        bcs     move_left
-
-move_right:
-        lda     puck_x
-        sec
-        sbc     mid_pusher_x
-
-        cmp     their_max_dx
-        bcc     store_dx
-        lda     their_max_dx
-        clc
-        jmp     store_dx
-
-move_left:
-        lda     mid_pusher_x
-        sec
-        sbc     puck_x
-
-        cmp     their_max_dx
-        bcc     :+
-        lda     their_max_dx
-
-:       NEG_A
+        GET_DELTA_TO_PUCK
+        ; Bind to max dx
+        BIND_SIGNED their_max_dx
 store_dx:
         sta     their_pusher_dx
 
@@ -497,7 +472,6 @@ preparation_done:
 
 their_max_dx:     .byte 8
 their_max_dy:     .byte 4
-mid_pusher_x:     .byte 1
 found_x:          .byte 0
 player_service_dx:.byte 0
 player_service_dy:.byte 0
