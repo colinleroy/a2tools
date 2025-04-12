@@ -34,7 +34,8 @@
         .import     __OPPONENT_START__
         .importzp   tmp1
 
-        .include    "helpers.inc"
+        .include    "code/helpers.inc"
+        .include    "opponent_helpers.inc"
         .include    "apple2.inc"
         .include    "my_pusher0.gen.inc"
         .include    "puck0.gen.inc"

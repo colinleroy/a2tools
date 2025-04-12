@@ -32,7 +32,8 @@
         .import     __OPPONENT_START__
         .importzp   tmp1
 
-        .include    "helpers.inc"
+        .include    "code/helpers.inc"
+        .include    "opponent_helpers.inc"
         .include    "apple2.inc"
         .include    "my_pusher0.gen.inc"
         .include    "puck0.gen.inc"
@@ -137,21 +138,9 @@ catch_or_move:
         bcs     move_fast
 
 catch:
-        lda     their_pusher_x
-        clc                       ; Center puck on pusher
-        adc     #((my_pusher0_WIDTH-puck0_WIDTH)/2)
-        sta     mid_pusher_x
-        sec
-        cmp     puck_x
-        bcs     move_left
-
-move_right:
-        lda     #<(THEIR_MAX_DX)
-        jmp     store_dx
-
-move_left:
-        lda     #<(-THEIR_MAX_DX)
-store_dx:
+        GET_DELTA_TO_PUCK
+        ; Bind to max dx
+        BIND_SIGNED #THEIR_MAX_DX
         sta     their_pusher_dx
 
         jsr     bind_x
@@ -261,4 +250,3 @@ do_revert:
         jsr     revert_y
 :       rts
 .endproc
-mid_pusher_x:     .byte 1

@@ -34,7 +34,8 @@
         .import     __OPPONENT_START__
         .importzp   tmp1
 
-        .include    "helpers.inc"
+        .include    "code/helpers.inc"
+        .include    "opponent_helpers.inc"
         .include    "apple2.inc"
         .include    "my_pusher0.gen.inc"
         .include    "puck0.gen.inc"
@@ -204,16 +205,7 @@ store_x:
         jmp     store_dx
 
 follow_puck:
-        lda     their_pusher_x
-        clc                       ; Center puck on pusher
-        adc     #((my_pusher0_WIDTH-puck0_WIDTH)/2)
-        sta     mid_pusher_x
-
-        ; Get the difference between puck and pusher
-        lda     puck_x
-        sec
-        sbc     mid_pusher_x
-
+        GET_DELTA_TO_PUCK
         ; Bind to max dx
         BIND_SIGNED #THEIR_MAX_DX
 store_dx:
@@ -275,6 +267,5 @@ move_backwards:
         rts
 .endproc
 
-mid_pusher_x:     .byte 1
 found_x:          .byte 0
 no_fast:          .byte 0
