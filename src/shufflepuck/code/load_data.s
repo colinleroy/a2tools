@@ -18,7 +18,7 @@
         .export   _load_bar, _backup_bar, _restore_bar
         .export   _load_barsnd, _backup_barsnd, _restore_barsnd
 
-        .import   _open, _read, _write, _close, _memmove
+        .import   _open, _read, _write, _close, _memmove, _unlink
         .import   pushax, popax
         .import   __filetype, __auxtype
 
@@ -29,6 +29,8 @@
         .import   _decompress_lz4
 
         .importzp tmp1, ptr1
+
+        .destructor unlink_cached_files
 
         .include  "apple2.inc"
         .include  "fcntl.inc"
@@ -435,6 +437,20 @@ no_cache:
         rts
 no_cache:
         jmp      _load_barsnd
+.endproc
+
+.segment "CODE"
+
+.proc unlink_cached_files
+        lda       #<table_backup_name
+        ldx       #>table_backup_name
+        jsr       _unlink
+        lda       #<bar_backup_name
+        ldx       #>bar_backup_name
+        jsr       _unlink
+        lda       #<barsnd_backup_name
+        ldx       #>barsnd_backup_name
+        jmp       _unlink
 .endproc
 
         .bss
