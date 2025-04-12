@@ -27,6 +27,7 @@ opponents = \
 	e \
 	f \
 	g \
+	h \
 
 ifdef DEBUG_OPPONENT
 	DEBUG_OPPONENT_NUM := $(shell printf "%d" "'$(DEBUG_OPPONENT)'")
@@ -84,11 +85,15 @@ lose_unperfect = \
 	lose_d.unperfect.gen.s \
 	lose_e.unperfect.gen.s \
 	lose_f.unperfect.gen.s \
+	lose_h.unperfect.gen.s \
 
 win_unperfect     = $(opponents:%=win_%.unperfect.gen.s)
 
 serve_unperfect   = \
 	serve_g.unperfect.gen.s \
+
+clear_unperfect   = \
+	normal_h.unperfect.gen.s \
 
 serve_sounds = \
 	serve_g_left.snd.s \
@@ -97,6 +102,7 @@ serve_sounds = \
 win_sounds = \
 	win_e.snd.s \
 	win_f.snd.s \
+	win_h.snd.s \
 
 lose_sounds = \
 	lose_a.snd.s \
@@ -104,6 +110,7 @@ lose_sounds = \
 	lose_d.snd.s \
 	lose_e.snd.s \
 	lose_f.snd.s \
+	lose_h.snd.s \
 
 opponents_sprites = \
 	$(sprites_unperfect) \
@@ -111,6 +118,7 @@ opponents_sprites = \
 	$(serve_unperfect) \
 	$(lose_unperfect) \
 	$(win_unperfect) \
+	$(clear_unperfect) \
 
 sprites = \
 	$(sprites_pixel_perfect) \
