@@ -295,13 +295,6 @@ move_backwards:
         rts
 .endproc
 
-.proc invert_pusher_dx
-        lda     their_pusher_dx
-        NEG_A
-        sta     their_pusher_dx
-        rts
-.endproc
-
 .proc patrol
         lda     their_pusher_y
         cmp     #(THEIR_PUSHER_MIN_Y+2)

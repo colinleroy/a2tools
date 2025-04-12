@@ -260,12 +260,5 @@ move_backwards:
         rts
 .endproc
 
-.proc invert_pusher_dx
-        lda     their_pusher_dx
-        NEG_A
-        sta     their_pusher_dx
-        rts
-.endproc
-
 found_x:          .byte 0
 no_fast:          .byte 0
