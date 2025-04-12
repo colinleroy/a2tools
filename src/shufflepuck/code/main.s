@@ -315,6 +315,9 @@ reset_point:
         lda     turn_puck_y,x
         sta     puck_serve_y
 
+        ; Fix double-substraction of opponent's pusher height
+        jsr     _move_their_pusher
+
 reset_point_cont:
         jsr     _puck_reinit_my_order
         jsr     _puck_reinit_their_order
