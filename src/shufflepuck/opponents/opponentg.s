@@ -47,6 +47,10 @@
         .include    "../code/opponent_file.inc"
 
 HIT_Y = 25
+START_SERVICE_DELTA = <8
+END_SERVICE_DY = <20
+END_SERVICE_LEFT_DX = <-40
+END_SERVICE_RIGHT_DX = <12
 
 .segment "g"                                                            ; CHANGE A
 
@@ -110,7 +114,9 @@ init_service:
         cmp     #THEIR_PUCK_INI_Y
         bne     :+
         jmp     init_opponent_service
-:       jmp     init_patrol_delta  ; Patrol
+:       lda     #1
+        sta     service_finished   ; Don't hack the puck on player service
+        jmp     init_patrol_delta  ; Patrol
 
 
 prepare_service:
@@ -121,7 +127,11 @@ prepare_service:
 :       jmp     prepare_opponent_service
 
 catch:
-        ; Is it time to figure out destination X?
+        lda     service_finished
+        bne     :+
+        jsr     hack_service
+
+:       ; Is it time to figure out destination X?
         lda     puck_dy
         bpl     move
 
@@ -181,35 +191,9 @@ follow_puck_or_patrol:
         jmp     patrol
 
 follow_puck:
-        lda     their_pusher_x
-        clc                       ; Center puck on pusher
-        adc     #((my_pusher0_WIDTH-puck0_WIDTH)/2)
-        sta     mid_pusher_x
-        sec
-        cmp     puck_x
-        bcs     move_left
-
-move_right:
-        lda     puck_x
-        sec
-        sbc     mid_pusher_x
-
-        cmp     their_max_dx
-        bcc     store_dx
-        lda     their_max_dx
-        clc
-        jmp     store_dx
-
-move_left:
-        lda     mid_pusher_x
-        sec
-        sbc     puck_x
-
-        cmp     their_max_dx
-        bcc     :+
-        lda     their_max_dx
-
-:       NEG_A
+       GET_DELTA_TO_PUCK
+       ; Bind to max dx
+        BIND_SIGNED their_max_dx
 store_dx:
         sta     their_pusher_dx
 
@@ -260,13 +244,6 @@ move_forwards_slow:
 move_backwards:
         lda     #<-6
         sta     their_pusher_dy
-        rts
-.endproc
-
-.proc invert_pusher_dx
-        lda     their_pusher_dx
-        NEG_A
-        sta     their_pusher_dx
         rts
 .endproc
 
@@ -331,38 +308,20 @@ invert_x:
 .endproc
 
 .proc init_opponent_service
-        ldy     #0
-        jsr     _play_serve_g_left                                   ; CHANGE A
-        ldy     #0
-        jsr     _play_serve_g_right                                  ; CHANGE A
-        ldy     #0
-        jsr     _play_serve_g_right                                  ; CHANGE A
-; -------
-; End of opponent letter references
-; -------
-
-        ; Init serve parameters
-        ldy     #0
-        sty     their_pusher_dx
-        sty     their_pusher_dy
-
         lda     #0
-        sta     req_puck_dx
-        lda     #<10
-        sta     req_puck_dy
+        sta     their_pusher_dx
+        sta     their_pusher_dy
 
         lda     #(PUCK_INI_X-(my_pusher0_WIDTH/2)+(puck0_WIDTH/2))
         sta     their_pusher_x
-        lda     #(THEIR_PUCK_INI_Y-2)
+        lda     #THEIR_PUSHER_MIN_Y+1
         sta     their_pusher_y
 
-        ; Shorten wait
-        jsr     _rand
-        cmp     #2
-        bcc     :+
+        ; Shorten wait and make it predictible
+        lda     #150
         sta     serving
 
-:       lda     #1
+        lda     #1
         sta     preparing_service
         rts
 .endproc
@@ -370,39 +329,51 @@ invert_x:
 .proc prepare_opponent_service
         lda     preparing_service
         cmp     #1
-        beq     go_backwards
+        beq     go_front
         cmp     #2
         beq     suspense
         cmp     #3
         beq     prepare_to_hit
         rts                       ; All's ready
 
-go_backwards:
+go_front:
         lda     their_pusher_y
-        sec
-        sbc     req_puck_dy
-        bmi     preparation_done
-        cmp     #THEIR_PUSHER_MIN_Y
-        bcc     preparation_done
-        tay     ; Don't store yet, must check X isn't out of bounds
-
-        lda     their_pusher_x
-        clc
-        adc     req_puck_dx
-        cmp     #THEIR_PUSHER_MAX_X
-        bcs     preparation_done
-        cmp     #THEIR_PUSHER_MIN_X
-        bcc     preparation_done
-        sta     their_pusher_x
-        sty     their_pusher_y
+        cmp     #THEIR_PUCK_INI_Y-3
+        bcs     choose_direction
+        inc     their_pusher_y
         rts
+choose_direction:
+        lda     #END_SERVICE_RIGHT_DX
+        sta     serve_direction
+        ; Randomize left/right
+        jsr     _rand
+        and     #1
+        beq     :+
+
+        ; Serve left
+        lda     #END_SERVICE_LEFT_DX
+        sta     serve_direction
+
+        ldy     #0
+        jsr     _play_serve_g_left                                   ; CHANGE A
+
+:       ldy     #0
+        jsr     _play_serve_g_right                                  ; CHANGE A
+        ldy     #0
+        jsr     _play_serve_g_right                                  ; CHANGE A
+; -------
+; End of opponent letter references
+; -------
+        jmp     preparation_done
 
 prepare_to_hit:
-        lda     req_puck_dx
+        lda     #$00
         sta     their_pusher_dx
-
-        lda     req_puck_dy
         sta     their_pusher_dy
+        sta     service_finished
+        sta     service_hack_phase
+        lda     #START_SERVICE_DELTA
+        sta     puck_dy
         jmp     preparation_done
 
 suspense:
@@ -417,11 +388,57 @@ preparation_done:
         rts
 .endproc
 
-their_max_dx:     .byte 8
-their_max_dy:     .byte 4
-mid_pusher_x:     .byte 1
-found_x:          .byte 0
-req_puck_dx:      .byte 0
-req_puck_dy:      .byte 0
-preparing_service:.byte 0
-magic_band_rnd:   .byte 0
+.proc hack_service
+        lda     service_hack_phase
+        cmp     #0
+        beq     go_mid_board_y
+        cmp     #1
+        beq     go_right
+        cmp     #2
+        beq     launch
+        rts
+
+go_mid_board_y:
+        lda     #0
+        sta     puck_dx
+        lda     #START_SERVICE_DELTA
+        sta     puck_dy
+
+        lda     puck_y
+        cmp     #MID_BOARD
+        bcs     inc_hack
+        rts
+
+go_right:                           ; Move puck to 3/4 X
+        lda     #0
+        sta     puck_dy
+        lda     #START_SERVICE_DELTA
+        sta     puck_dx
+
+        lda     puck_x
+        cmp     #((PUCK_MAX_X*3)/4)
+        bcs     inc_hack
+        rts
+
+launch:                           ; Let's go!
+        lda     #END_SERVICE_DY
+        sta     puck_dy
+        sta     service_finished
+
+        lda     serve_direction
+        sta     puck_dx
+        
+inc_hack:
+        inc     service_hack_phase
+        rts
+.endproc
+
+their_max_dx:      .byte 10
+their_max_dy:      .byte 4
+mid_pusher_x:      .byte 1
+found_x:           .byte 0
+preparing_service: .byte 0
+magic_band_rnd:    .byte 0
+serve_direction:   .byte 0
+service_finished:  .byte 0
+service_hack_phase:.byte 0
