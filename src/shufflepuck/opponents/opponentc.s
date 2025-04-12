@@ -26,7 +26,6 @@
 
         .import     _big_draw_sprite_c                              ; CHANGE A
         .import     _big_draw_name_c                                ; CHANGE A
-        .import     _big_draw_normal_c                              ; CHANGE A
         .import     _big_draw_lose_c                                ; CHANGE A
         .import     _big_draw_win_c                                 ; CHANGE A
         .import     _play_lose_c                                    ; CHANGE A

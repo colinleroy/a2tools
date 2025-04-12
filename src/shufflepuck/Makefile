@@ -76,8 +76,19 @@ sprites_pixel_perfect = \
 
 sprites_unperfect = $(opponents:%=sprite_%.unperfect.gen.s)
 names_unperfect   = $(opponents:%=name_%.unperfect.gen.s)
-lose_unperfect    = $(opponents:%=lose_%.unperfect.gen.s)
+
+lose_unperfect = \
+	lose_a.unperfect.gen.s \
+	lose_b.unperfect.gen.s \
+	lose_c.unperfect.gen.s \
+	lose_d.unperfect.gen.s \
+	lose_e.unperfect.gen.s \
+	lose_f.unperfect.gen.s \
+
 win_unperfect     = $(opponents:%=win_%.unperfect.gen.s)
+
+serve_unperfect   = \
+	serve_g.unperfect.gen.s \
 
 serve_sounds = \
 	serve_g_left.snd.s \
@@ -97,6 +108,7 @@ lose_sounds = \
 opponents_sprites = \
 	$(sprites_unperfect) \
 	$(names_unperfect) \
+	$(serve_unperfect) \
 	$(lose_unperfect) \
 	$(win_unperfect) \
 
