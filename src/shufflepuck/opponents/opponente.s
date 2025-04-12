@@ -48,7 +48,7 @@ THEIR_MAX_DX = 16
 START_MIN_X = THEIR_PUSHER_MIN_X
 START_MAX_X = THEIR_PUSHER_MAX_X
 TOO_FAST_DY = -10
-MAX_NUM_CATCH = 18
+MAX_NUM_CATCH = 10
 
 .segment "e"                                                        ; CHANGE A
 
@@ -162,7 +162,8 @@ catch:
         cmp     #<(TOO_FAST_DY)
         bcs     not_fast_enough
 
-        lda     num_catch         ; Lose 2 pixels per exchange
+        lda     num_catch         ; Lose 4 pixels per exchange
+        asl
         asl
         sta     tmp1
         lda     #START_MAX_X      ; Decrement on the right
@@ -269,6 +270,18 @@ hit:
         ; And make it 9-24
         adc     #9
         sta     their_pusher_dy
+
+        ; Get a 0-7 DX
+        jsr     _rand
+        lsr
+        lsr
+        lsr
+        lsr
+        lsr
+        ; And make it -4/3
+        sec
+        sbc     #4
+        sta     their_pusher_dx
         rts
 
 move_forwards_slow:
