@@ -115,14 +115,14 @@ init_service:
         jmp     init_opponent_service
 :       lda     #1
         sta     service_finished   ; Don't hack the puck on player service
-        jmp     init_patrol_delta  ; Patrol
+        rts
 
 
 prepare_service:
         lda     puck_y            ; Who serves?
         cmp     #THEIR_PUCK_INI_Y
         beq     :+
-        jmp     patrol            ; Wait for player to serve
+        rts
 :       jmp     prepare_opponent_service
 
 catch:
@@ -156,11 +156,8 @@ catch:
 :       stx     found_x
 
 move:
-        ; Reinit patrol
-        jsr     init_patrol_delta
-
         lda     found_x
-        beq     follow_puck_or_patrol
+        beq     follow_puck_or_wait
 
         ; Go directly where the puck will be when hittable
         lda     found_x
@@ -184,14 +181,14 @@ store_x:
         lda     #$00
         jmp     store_dx
 
-follow_puck_or_patrol:
+follow_puck_or_wait:
         lda     puck_dy
         bmi     follow_puck
-        jmp     patrol
+        rts
 
 follow_puck:
-       GET_DELTA_TO_PUCK
-       ; Bind to max dx
+        GET_DELTA_TO_PUCK
+        ; Bind to max dx
         BIND_SIGNED their_max_dx
 store_dx:
         sta     their_pusher_dx
@@ -243,66 +240,6 @@ move_forwards_slow:
 move_backwards:
         lda     #<-6
         sta     their_pusher_dy
-        rts
-.endproc
-
-.proc patrol
-        lda     their_pusher_y
-        cmp     #(THEIR_PUSHER_MIN_Y+2)
-        bcc     invert_y
-        cmp     #(THEIR_PUSHER_MAX_Y-2)
-        bcs     invert_y
-        jmp     check_dx
-
-invert_y:
-        ; Invert X
-        lda     their_pusher_dy
-        NEG_A
-        sta     their_pusher_dy
-
-check_dx:
-        lda     their_pusher_x
-        cmp     #(THEIR_PUSHER_MIN_X+2)
-        bcc     invert_x
-        cmp     #(THEIR_PUSHER_MAX_X-2)
-        bcs     invert_x
-        rts
-
-invert_x:
-        ; Invert X
-        lda     their_pusher_dx
-        NEG_A
-        sta     their_pusher_dx
-        rts
-.endproc
-
-.proc init_patrol_delta
-        lda     #1
-        sta     their_pusher_dx
-        sta     their_pusher_dy
-
-        lda     their_pusher_x
-        cmp     #(THEIR_PUSHER_MIN_X+2)
-        bcs     :+
-        lda     #(THEIR_PUSHER_MIN_X+4)
-        sta     their_pusher_x
-:       cmp     #(THEIR_PUSHER_MAX_X-4)
-        bcc     :+
-        lda     #(THEIR_PUSHER_MAX_X-2)
-        sta     their_pusher_x
-
-:
-        lda     their_pusher_y
-        cmp     #(THEIR_PUSHER_MIN_Y+12)
-        bcs     :+
-        lda     #(THEIR_PUSHER_MIN_Y+14)
-        sta     their_pusher_y
-:       cmp     #(THEIR_PUSHER_MAX_Y-14)
-        bcc     :+
-        lda     #(THEIR_PUSHER_MAX_Y-12)
-        sta     their_pusher_y
-
-:
         rts
 .endproc
 
