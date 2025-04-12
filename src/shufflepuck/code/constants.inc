@@ -33,4 +33,4 @@ ABS_MAX_DY         = $18
 MAX_SCORE          = 15
 
 CH_ESC             = $1B
-NUM_OPPONENTS      = 5
+NUM_OPPONENTS      = 8      ; DC3 doesn't tournament
