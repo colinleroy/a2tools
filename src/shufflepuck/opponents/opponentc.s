@@ -62,8 +62,8 @@ name:
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT, error ; Make sure the callback is where we think
 lose_animation:
-        ldx     #((35+98)/7)    ; left X of sprite change + left X of big sprite
-        ldy     #(76)           ; bottom Y of sprite change
+        ldx     #((42+98)/7)    ; left X of sprite change + left X of big sprite
+        ldy     #(52)           ; bottom Y of sprite change
         jmp     _big_draw_lose_c                                        ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT_SND, error ; Make sure the callback is where we think
