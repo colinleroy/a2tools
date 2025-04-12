@@ -85,6 +85,9 @@ names_unperfect   = $(opponents:%=name_%.unperfect.gen.s)
 lose_unperfect    = $(opponents:%=lose_%.unperfect.gen.s)
 win_unperfect     = $(opponents:%=win_%.unperfect.gen.s)
 
+# Don't include sounds if DEBUG_OPPONENT
+# Otherwise segment will be missing
+ifndef DEBUG_OPPONENT
 serve_sounds = \
 	serve_g_left.snd.s \
 	serve_g_right.snd.s \
@@ -99,6 +102,8 @@ lose_sounds = \
 	lose_d.snd.s \
 	lose_e.snd.s \
 	lose_f.snd.s \
+
+endif
 
 opponents_sprites = \
 	$(sprites_unperfect) \
@@ -128,6 +133,7 @@ shflpuck_SOURCES := \
 	$(SRC_DIR)/code/buffers.s \
 	$(SRC_DIR)/code/load_data.s \
 	$(SRC_DIR)/code/sprites.s \
+	$(SRC_DIR)/code/helpers.s \
 	$(SRC_DIR)/../lib/asm/hgr_tables.s \
 	$(SRC_DIR)/../lib/asm/hgr.s \
 	$(SRC_DIR)/../lib/asm/bcd.s \
