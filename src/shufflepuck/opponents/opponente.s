@@ -67,8 +67,8 @@ name:
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT, error ; Make sure the callback is where we think
 lose_animation:
-        ldx     #((98+21)/7)
-        ldy     #(64+1)
+        ldx     #((28+98)/7)
+        ldy     #(65)
         jmp    _big_draw_lose_e                                        ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT_SND, error ; Make sure the callback is where we think
