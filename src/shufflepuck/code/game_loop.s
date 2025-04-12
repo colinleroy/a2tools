@@ -58,6 +58,7 @@
 
         .importzp   tmp1, tmp3, ptr1
 
+        .include    "helpers.inc"
         .include    "sprite.inc"
         .include    "puck_coords.inc"
         .include    "my_pusher_coords.inc"
@@ -435,15 +436,11 @@ puck_forwards:
         jmp     bind_x
 puck_backwards:
         lda     puck_dy
-        clc
-        eor     #$FF
-        adc     #1
+        NEG_A
         cmp     #ABS_MAX_DY
         bcc     bind_x
         lda     #ABS_MAX_DY
-        clc
-        eor     #$FF
-        adc     #1
+        NEG_A
         sta     puck_dy
 bind_x:
         bit     puck_dx
@@ -457,15 +454,11 @@ puck_right:
         jmp     out
 puck_left:
         lda     puck_dx
-        clc
-        eor     #$FF
-        adc     #1
+        NEG_A
         cmp     #ABS_MAX_DX
         bcc     out
         lda     #ABS_MAX_DX
-        clc
-        eor     #$FF
-        adc     #1
+        NEG_A
         sta     puck_dx
 out:    clc                       ; Caller expects carry clear
         rts
@@ -528,9 +521,7 @@ check:
         ; Invert and slow puck delta-Y if incoming
         lda     puck_dy
         bmi     :+
-        clc
-        eor     #$FF
-        adc     #$01
+        NEG_A
         cmp     #$80
         ror
         sta     puck_dy
@@ -616,9 +607,7 @@ out:    jmp     bind_puck_speed
 
         ; Invert and slow puck delta-Y
         lda     puck_dy
-        clc
-        eor     #$FF
-        adc     #$01
+        NEG_A
         cmp     #$80
         ror
         cmp     #$80
@@ -714,9 +703,7 @@ check_hits: .byte 1
 
 .proc revert_x
         lda     puck_dx
-        clc
-        eor     #$FF
-        adc     #$01
+        NEG_A
         sta     puck_dx
         lda     check_hits
         beq     :+

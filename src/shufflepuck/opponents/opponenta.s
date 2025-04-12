@@ -32,6 +32,7 @@
         .import     __OPPONENT_START__
         .importzp   tmp1
 
+        .include    "helpers.inc"
         .include    "apple2.inc"
         .include    "my_pusher0.gen.inc"
         .include    "puck0.gen.inc"
@@ -159,9 +160,7 @@ move_left:
         bcc     :+
         lda     their_max_dx
 
-:       clc
-        eor     #$FF
-        adc     #$01
+:       NEG_A
 store_dx:
         sta     their_pusher_dx
 
@@ -209,9 +208,7 @@ move_backwards:
 
 .proc invert_pusher_dx
         lda     their_pusher_dx
-        clc
-        eor     #$FF
-        adc     #$01
+        NEG_A
         sta     their_pusher_dx
         rts
 .endproc

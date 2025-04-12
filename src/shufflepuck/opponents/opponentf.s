@@ -35,6 +35,7 @@
         .import     __OPPONENT_START__
         .importzp   tmp1
 
+        .include    "helpers.inc"
         .include    "apple2.inc"
         .include    "my_pusher0.gen.inc"
         .include    "puck0.gen.inc"
@@ -166,16 +167,12 @@ move:
         and     #1
         beq     :+
         txa
-        clc
-        eor     #$FF
-        adc     #1
+        NEG_A
         tax
 :       stx     puck_dx
 
         lda     req_puck_dy
-        clc
-        eor     #$FF
-        adc     #1
+        NEG_A
         sta     puck_dy
 
         ; And reinit to do it only once
@@ -263,9 +260,7 @@ move_left:
         bcc     :+
         lda     their_max_dx
 
-:       clc
-        eor     #$FF
-        adc     #$01
+:       NEG_A
 store_dx:
         sta     their_pusher_dx
 
@@ -327,9 +322,7 @@ move_backwards:
 
 .proc invert_pusher_dx
         lda     their_pusher_dx
-        clc
-        eor     #$FF
-        adc     #$01
+        NEG_A
         sta     their_pusher_dx
         rts
 .endproc
@@ -345,9 +338,7 @@ move_backwards:
 invert_y:
         ; Invert X
         lda     their_pusher_dy
-        clc
-        eor     #$FF
-        adc     #1
+        NEG_A
         sta     their_pusher_dy
 
 check_dx:
@@ -361,9 +352,7 @@ check_dx:
 invert_x:
         ; Invert X
         lda     their_pusher_dx
-        clc
-        eor     #$FF
-        adc     #1
+        NEG_A
         sta     their_pusher_dx
         rts
 .endproc
@@ -482,9 +471,7 @@ go_backwards:
 
 prepare_to_hit:
         lda     req_puck_dx
-        clc
-        eor     #$FF
-        adc     #1
+        NEG_A
         sta     their_pusher_dx
 
         lda     #1                ; Make sure we don't re-invert when hitting
@@ -492,9 +479,7 @@ prepare_to_hit:
 
         lda     req_puck_dy
         bpl     :+
-        clc
-        eor     #$FF
-        adc     #1
+        NEG_A
 :       sta     their_pusher_dy
         jmp     preparation_done
 
