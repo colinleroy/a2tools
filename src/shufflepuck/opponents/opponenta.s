@@ -42,6 +42,8 @@
         .include    "../code/constants.inc"
         .include    "../code/opponent_file.inc"
 
+THEIR_MAX_DX = 5
+
 .segment "a"                                                        ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::SPRITE, error ; Make sure the callback is where we think
@@ -136,32 +138,14 @@ catch:
         clc                       ; Center puck on pusher
         adc     #((my_pusher0_WIDTH-puck0_WIDTH)/2)
         sta     mid_pusher_x
-        sec
-        cmp     puck_x
-        bcs     move_left
 
-move_right:
+        ; Get the difference between puck and pusher
         lda     puck_x
         sec
         sbc     mid_pusher_x
 
-        cmp     their_max_dx
-        bcc     store_dx
-        lda     their_max_dx
-        clc
-        jmp     store_dx
-
-move_left:
-        lda     mid_pusher_x
-        sec
-        sbc     puck_x
-
-        cmp     their_max_dx
-        bcc     :+
-        lda     their_max_dx
-
-:       NEG_A
-store_dx:
+        ; Bind to max dx
+        BIND_SIGNED #THEIR_MAX_DX
         sta     their_pusher_dx
 
         ; Did we just hit?
@@ -203,13 +187,6 @@ move_forwards_slow:
 move_backwards:
         lda     #<-6
         sta     their_pusher_dy
-        rts
-.endproc
-
-.proc invert_pusher_dx
-        lda     their_pusher_dx
-        NEG_A
-        sta     their_pusher_dx
         rts
 .endproc
 

@@ -151,33 +151,14 @@ catch:
         clc                       ; Center puck on pusher
         adc     #((my_pusher0_WIDTH-puck0_WIDTH)/2)
         sta     mid_pusher_x
-        sec
-        cmp     puck_x
-        bcs     move_left
-
-move_right:
+        ; Get the difference between puck and pusher
         lda     puck_x
         sec
         sbc     mid_pusher_x
 
-        cmp     their_max_dx
-        bcc     store_dx
-        lda     their_max_dx
-        clc
-        jmp     store_dx
+        ; Bind to max dx
+        BIND_SIGNED their_max_dx
 
-move_left:
-        lda     mid_pusher_x
-        sec
-        sbc     puck_x
-
-        cmp     their_max_dx
-        bcc     :+
-        lda     their_max_dx
-
-:       NEG_A
-
-store_dx:
         sta     their_pusher_dx
 
         ; Did we just hit?

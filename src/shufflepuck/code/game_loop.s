@@ -311,56 +311,18 @@ out:
 
 .proc _move_their_pusher
         clc
-        bit     their_pusher_dx
-        bmi     move_left
-move_right:
         lda     their_pusher_x
-        adc     their_pusher_dx
-        bcc     :+
-        lda     #THEIR_PUSHER_MAX_X
-:       cmp     #THEIR_PUSHER_MAX_X
-        bcc     store_x
-        lda     #THEIR_PUSHER_MAX_X
-        jmp     store_x
-
-move_left:
-        lda     their_pusher_x
-        adc     their_pusher_dx
-        bcs     :+
-        lda     #THEIR_PUSHER_MIN_X
-:       cmp     #THEIR_PUSHER_MIN_X
-        bcs     store_x
-        lda     #THEIR_PUSHER_MIN_X
-
-store_x:
+        ADD_SIGNED_BOUNDS their_pusher_dx, #THEIR_PUSHER_MIN_X, #THEIR_PUSHER_MAX_X
         sta     their_pusher_x
         tax
 
         ; Now update Y
         clc
-        bit     their_pusher_dy
-        bmi     move_backwards
-
-move_forwards:
         lda     their_pusher_y
-        adc     their_pusher_dy
-        cmp     #THEIR_PUSHER_MAX_Y
-        bcc     :+
-        lda     #THEIR_PUSHER_MAX_Y
-:       sta     their_pusher_y
-        jmp     do_move
+        ADD_SIGNED_BOUNDS their_pusher_dy, #THEIR_PUSHER_MIN_Y, #THEIR_PUSHER_MAX_Y
+        sta     their_pusher_y
 
-move_backwards:
-        lda     their_pusher_y
-        adc     their_pusher_dy
-        cmp     #THEIR_PUSHER_MIN_Y
-        bcs     :+
-        lda     #THEIR_PUSHER_MIN_Y+1
-:       sta     their_pusher_y
-
-do_move:
         tay
-
         jsr     _transform_xy
         stx     their_pusher_gx
         sty     their_pusher_gy
@@ -425,42 +387,14 @@ out:
 .endproc
 
 .proc bind_puck_speed
-        bit     puck_dy
-        bmi     puck_backwards
-puck_forwards:
         lda     puck_dy
-        cmp     #ABS_MAX_DY
-        bcc     bind_x
-        lda     #ABS_MAX_DY
+        BIND_SIGNED #ABS_MAX_DY
         sta     puck_dy
-        jmp     bind_x
-puck_backwards:
-        lda     puck_dy
-        NEG_A
-        cmp     #ABS_MAX_DY
-        bcc     bind_x
-        lda     #ABS_MAX_DY
-        NEG_A
-        sta     puck_dy
-bind_x:
-        bit     puck_dx
-        bmi     puck_left
-puck_right:
+
         lda     puck_dx
-        cmp     #ABS_MAX_DX
-        bcc     out
-        lda     #ABS_MAX_DX
+        BIND_SIGNED #ABS_MAX_DX
         sta     puck_dx
-        jmp     out
-puck_left:
-        lda     puck_dx
-        NEG_A
-        cmp     #ABS_MAX_DX
-        bcc     out
-        lda     #ABS_MAX_DX
-        NEG_A
-        sta     puck_dx
-out:    clc                       ; Caller expects carry clear
+        clc                       ; Caller expects carry clear
         rts
 .endproc
 
@@ -705,7 +639,7 @@ check_hits: .byte 1
         lda     puck_dx
         NEG_A
         sta     puck_dx
-        lda     check_hits
+        lda     check_hits    ; Are we simulating?
         beq     :+
         jsr     play_revert_x
         inc     bounces

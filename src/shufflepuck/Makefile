@@ -9,10 +9,6 @@ ifndef SRC_DIR
 SRC_DIR := .
 endif
 
-ifdef DEBUG_OPPONENT
-	opponents = $(DEBUG_OPPONENT)
-else
-
 # A: Skip
 # B: Visine
 # C: Vinnie
@@ -31,8 +27,6 @@ opponents = \
 	e \
 	f \
 	g \
-
-endif
 
 ifdef DEBUG_OPPONENT
 	DEBUG_OPPONENT_NUM := $(shell printf "%d" "'$(DEBUG_OPPONENT)'")
@@ -85,9 +79,6 @@ names_unperfect   = $(opponents:%=name_%.unperfect.gen.s)
 lose_unperfect    = $(opponents:%=lose_%.unperfect.gen.s)
 win_unperfect     = $(opponents:%=win_%.unperfect.gen.s)
 
-# Don't include sounds if DEBUG_OPPONENT
-# Otherwise segment will be missing
-ifndef DEBUG_OPPONENT
 serve_sounds = \
 	serve_g_left.snd.s \
 	serve_g_right.snd.s \
@@ -102,8 +93,6 @@ lose_sounds = \
 	lose_d.snd.s \
 	lose_e.snd.s \
 	lose_f.snd.s \
-
-endif
 
 opponents_sprites = \
 	$(sprites_unperfect) \
