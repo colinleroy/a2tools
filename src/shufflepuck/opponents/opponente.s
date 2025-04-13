@@ -26,9 +26,15 @@
         .import     _big_draw_sprite_e                              ; CHANGE A
         .import     _big_draw_name_e                                ; CHANGE A
         .import     _big_draw_lose_e                                ; CHANGE A
-        .import     _big_draw_win_e                                 ; CHANGE A
+        .import     _big_draw_win_e_1                               ; CHANGE A
+        .import     _big_draw_win_e_2                               ; CHANGE A
+        .import     _big_draw_win_e_3                               ; CHANGE A
+        .import     _big_draw_win_e_4                               ; CHANGE A
+        .import     _big_draw_win_e_5                               ; CHANGE A
         .import     _play_win_e                                     ; CHANGE A
         .import     _play_lose_e                                    ; CHANGE A
+
+        .import     _platform_msleep
 
         .import     __OPPONENT_START__
         .importzp   tmp1
@@ -77,14 +83,13 @@ lose_sound:
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT, error ; Make sure the callback is where we think
 win_animation:
-        ldx     #((98+21)/7)
-        ldy     #(64+1)
-        jmp    _big_draw_win_e                                        ; CHANGE A
+        rts
+        .res    6                                            ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT_SND, error ; Make sure the callback is where we think
 win_sound:
-        ldy     #0
-        jmp     _play_win_e                                            ; CHANGE A
+        jmp     animate_win
+        .res    2
 
 .assert * = __OPPONENT_START__+OPPONENT::THINK_CB, error ; Make sure the callback is where we think
 .proc _opponent_think
@@ -300,6 +305,28 @@ move_backwards:
         NEG_A
         sta     their_pusher_dx
         rts
+.endproc
+
+.proc load_win_sprite_coords
+        ldy     #0
+        jsr     _play_win_e
+
+        ldx     #((98+21)/7)
+        ldy     #(64+1)
+        rts
+.endproc
+
+.proc animate_win
+        jsr     load_win_sprite_coords
+        jsr     _big_draw_win_e_1
+        jsr     load_win_sprite_coords
+        jsr     _big_draw_win_e_2
+        jsr     load_win_sprite_coords
+        jsr     _big_draw_win_e_3
+        jsr     load_win_sprite_coords
+        jmp     _big_draw_win_e_4
+        jsr     load_win_sprite_coords
+        jsr     _big_draw_win_e_5
 .endproc
 
 min_x:            .byte 1

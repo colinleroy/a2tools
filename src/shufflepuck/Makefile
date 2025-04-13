@@ -96,7 +96,11 @@ win_unperfect = \
 	win_d_2.unperfect.gen.s \
 	win_d_3.unperfect.gen.s \
 	win_d_4.unperfect.gen.s \
-	win_e.unperfect.gen.s \
+	win_e_1.unperfect.gen.s \
+	win_e_2.unperfect.gen.s \
+	win_e_3.unperfect.gen.s \
+	win_e_4.unperfect.gen.s \
+	win_e_5.unperfect.gen.s \
 	win_f.unperfect.gen.s \
 	win_g.unperfect.gen.s \
 	win_h.unperfect.gen.s \
