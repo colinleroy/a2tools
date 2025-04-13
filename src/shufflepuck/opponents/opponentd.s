@@ -26,8 +26,13 @@
         .import     _big_draw_sprite_d                              ; CHANGE A
         .import     _big_draw_name_d                                ; CHANGE A
         .import     _big_draw_lose_d                                ; CHANGE A
-        .import     _big_draw_win_d                                 ; CHANGE A
+        .import     _big_draw_win_d_1                               ; CHANGE A
+        .import     _big_draw_win_d_2                               ; CHANGE A
+        .import     _big_draw_win_d_3                               ; CHANGE A
+        .import     _big_draw_win_d_4                               ; CHANGE A
         .import     _play_lose_d                                    ; CHANGE A
+
+        .import     _platform_msleep
 
         .import     __OPPONENT_START__
         .importzp   tmp1
@@ -72,9 +77,8 @@ lose_sound:
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT, error ; Make sure the callback is where we think
 win_animation:
-        ldx     #((21+98)/7)
-        ldy     #(76)
-        jmp    _big_draw_win_d                                        ; CHANGE A
+        jmp     animate_win
+        .res    4
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT_SND, error ; Make sure the callback is where we think
 win_sound:
@@ -202,6 +206,27 @@ move_backwards:
         NEG_A
         sta     their_pusher_dx
         rts
+.endproc
+
+.proc load_win_sprite_coords
+        lda     #50
+        ldx     #0
+
+        jsr     _platform_msleep
+        ldx     #((21+98)/7)
+        ldy     #(76)
+        rts
+.endproc
+
+.proc animate_win
+        jsr     load_win_sprite_coords
+        jsr     _big_draw_win_d_1
+        jsr     load_win_sprite_coords
+        jsr     _big_draw_win_d_2
+        jsr     load_win_sprite_coords
+        jsr     _big_draw_win_d_3
+        jsr     load_win_sprite_coords
+        jmp     _big_draw_win_d_4
 .endproc
 
 their_max_dx:     .byte START_MAX_DX
