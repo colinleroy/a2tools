@@ -34,6 +34,8 @@
 
         .import     _platform_msleep
 
+        .import     return0
+
         .import     __OPPONENT_START__
         .importzp   tmp1
 
@@ -53,22 +55,13 @@ START_MAX_DX = 11
 .segment "d"                                                        ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::SPRITE, error ; Make sure the callback is where we think
-sprite:
-        ldx     #(98/7)
-        ldy     #76
         jmp    _big_draw_sprite_d                                      ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::NAME, error ; Make sure the callback is where we think
-name:
-        ldx     #(7/7)
-        ldy     #39
         jmp    _big_draw_name_d                                        ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT, error ; Make sure the callback is where we think
-lose_animation:
-        ldx     #((21+98)/7)
-        ldy     #(57)
-        jmp    _big_draw_lose_d                                        ; CHANGE A
+        jmp     animate_lose
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT_SND, error ; Make sure the callback is where we think
 lose_sound:
@@ -76,9 +69,7 @@ lose_sound:
         jmp     _play_lose_d                                            ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT, error ; Make sure the callback is where we think
-win_animation:
-        rts
-        .res 6
+        jmp     return0
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT_SND, error ; Make sure the callback is where we think
 win_sound:
@@ -227,6 +218,12 @@ move_backwards:
         jsr     _big_draw_win_d_3
         jsr     load_win_sprite_coords
         jmp     _big_draw_win_d_4
+.endproc
+
+.proc animate_lose
+        ldx     #((21+98)/7)
+        ldy     #(57)
+        jmp     _big_draw_lose_d                                        ; CHANGE A
 .endproc
 
 their_max_dx:     .byte START_MAX_DX

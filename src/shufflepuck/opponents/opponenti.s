@@ -39,6 +39,8 @@
         .import     _play_serve_i
         .import     _platform_msleep
 
+        .import     return0
+
         .import     __OPPONENT_START__
 
         .import     pusha, pushax, popax
@@ -58,35 +60,25 @@
 .segment "i"                                                        ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::SPRITE, error ; Make sure the callback is where we think
-sprite:
-        ldx     #(98/7)
-        ldy     #76
         jmp     _big_draw_sprite_i                                      ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::NAME, error ; Make sure the callback is where we think
-name:
-        ldx     #(7/7)
-        ldy     #39
         jmp     _big_draw_name_i                                        ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT, error ; Make sure the callback is where we think
-lose_animation:
-        rts
-        .res    6
+        jmp     return0
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT_SND, error ; Make sure the callback is where we think
 lose_sound:
-        jmp     lose_snd
+        jmp     animate_lose
         .res 2
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT, error ; Make sure the callback is where we think
-win_animation:
-        rts
-        .res    6
+        jmp     return0
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT_SND, error ; Make sure the callback is where we think
 win_sound:
-        jmp     win_snd
+        jmp     animate_win
         .res 2
 
 .assert * = __OPPONENT_START__+OPPONENT::THINK_CB, error ; Make sure the callback is where we think
@@ -321,7 +313,7 @@ done:
         jmp     _big_draw_normal_i                                      ; CHANGE A
 .endproc
 
-.proc win_snd
+.proc animate_win
         jsr     animate_a
         ldy     #0
         jsr     _play_win_i_1
@@ -345,7 +337,7 @@ done:
         jmp     _play_win_i_4
 .endproc
 
-.proc lose_snd
+.proc animate_lose
         jsr     animate_a
         ldy     #0
         jsr     _play_lose_i_1

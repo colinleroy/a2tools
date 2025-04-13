@@ -23,6 +23,7 @@
         .import     puck_x, puck_right_x, puck_y, puck_dx, puck_dy, serving, their_score
         .import     _guess_puck_x_at_y, bounces
         .import     _rand, _platform_msleep
+        .import     _draw_opponent
 
         .import     _big_draw_sprite_g                              ; CHANGE A
         .import     _big_draw_name_g                                ; CHANGE A
@@ -33,6 +34,8 @@
         .import     _big_draw_win_g                                 ; CHANGE A
         .import     _play_serve_g_left                              ; CHANGE A
         .import     _play_serve_g_right
+
+        .import     return0
 
         .import     __OPPONENT_START__
         .importzp   tmp1
@@ -57,22 +60,13 @@ END_SERVICE_RIGHT_DX = <12
 .segment "g"                                                            ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::SPRITE, error ; Make sure the callback is where we think
-sprite:
-        ldx     #(98/7)
-        ldy     #76
         jmp     _big_draw_sprite_g                                      ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::NAME, error ; Make sure the callback is where we think
-name:
-        ldx     #(7/7)
-        ldy     #39
         jmp     _big_draw_name_g                                        ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT, error ; Make sure the callback is where we think
-lose_animation:
-        ldx     #(98/7)         ; left X of sprite change + left X of big sprite
-        ldy     #(76)           ; bottom Y of sprite change
-        jmp     _big_draw_sprite_g                                        ; CHANGE A
+        jmp     return0
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT_SND, error ; Make sure the callback is where we think
 lose_sound:
@@ -80,10 +74,7 @@ lose_sound:
         .res 4
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT, error ; Make sure the callback is where we think
-win_animation:
-        ldx     #((35+98)/7)    ; left X of sprite change + left X of big sprite
-        ldy     #(38)           ; bottom Y of sprite change
-        jmp     _big_draw_win_g                                        ; CHANGE A
+        jmp     win_animation
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT_SND, error ; Make sure the callback is where we think
 win_sound:
@@ -318,7 +309,7 @@ choose_direction:
 
 prepare_to_hit:
         ; Back to normal sprite
-        jsr     __OPPONENT_START__+OPPONENT::SPRITE
+        jsr     _draw_opponent
 
         lda     #$00
         sta     their_pusher_dx
@@ -413,6 +404,12 @@ serve_hand_3:
         jmp     _big_draw_serve_g_3                                   ; CHANGE A
 serve_hand_4:
         jmp     _big_draw_serve_g_4                                   ; CHANGE A
+.endproc
+
+.proc win_animation
+        ldx     #((35+98)/7)    ; left X of sprite change + left X of big sprite
+        ldy     #(38)           ; bottom Y of sprite change
+        jmp     _big_draw_win_g                                        ; CHANGE A
 .endproc
 
 their_max_dx:      .byte 10
