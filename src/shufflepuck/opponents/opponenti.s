@@ -22,6 +22,11 @@
         .import     their_currently_hitting
         .import     puck_x, puck_right_x, puck_y, puck_dy, serving, their_score
         .import     _rand
+        .import     _last_key
+
+        .import     _init_text, _init_hgr
+
+        .import     _cputc, _cputs, _revers, _gotoxy, _gotox, _gotoy, _clrscr, _cutoa
 
         .import     _big_draw_sprite_i                              ; CHANGE A
         .import     _big_draw_name_i                                ; CHANGE A
@@ -29,6 +34,8 @@
         .import     _big_draw_win_i                                 ; CHANGE A
 
         .import     __OPPONENT_START__
+
+        .import     pusha, pushax, popax
         .importzp   tmp1
 
         .include    "code/helpers.inc"
@@ -81,7 +88,12 @@ win_sound:
 
 .assert * = __OPPONENT_START__+OPPONENT::THINK_CB, error ; Make sure the callback is where we think
 .proc _opponent_think
-        lda     serving
+        lda     _last_key
+        cmp     #' '
+        bne     :+
+        jmp     configure_dc3
+
+:       lda     serving
         beq     serve_or_catch
 
 init_service:
@@ -158,14 +170,7 @@ catch:
         cmp     #(THEIR_PUSHER_MAX_Y)
         bcs     move_backwards
 hit:
-        ; Get a 0-15 DY
-        jsr     _rand
-        lsr
-        lsr
-        lsr
-        lsr
-        clc
-        adc     their_max_hit_dy
+        lda     their_max_hit_dy
         sta     their_pusher_dy
 
         ; Get a 0-15 DX
@@ -174,8 +179,9 @@ hit:
         lsr
         lsr
         lsr
-        clc
-        adc     their_max_hit_dx
+        sec
+        ; Make it -8/7
+        sbc     #8
         sta     their_pusher_dx
         rts
 
@@ -190,7 +196,129 @@ move_backwards:
         rts
 .endproc
 
+.proc configure_parameter
+        sta     str_low+1
+        stx     str_high+1
+        ; parameter
+        jsr     popax
+        sta     get_parameter+1
+        sta     update_parameter+1
+        stx     get_parameter+2
+        stx     update_parameter+2
+        ; lower bound
+        jsr     popax
+        sta     dec_param+1
+        stx     inc_param+1
+
+print:
+        lda     #0
+        jsr     _gotox
+
+str_low:
+        lda     #$FF
+str_high:
+        ldx     #$FF
+        jsr     _cputs
+
+get_parameter:
+        lda     $FFFF
+        sta     tmp_param
+        ldx     #0
+        jsr     _cutoa
+
+        lda     #' '
+        jsr     _cputc
+
+        ldx     tmp_param
+:       lda     KBD
+        bpl     :-
+        bit     KBDSTRB
+        and     #$7F
+        cmp     #$08
+        beq     dec_param
+        cmp     #$15
+        beq     inc_param
+        cmp     #$0D
+        beq     done
+        bne     print
+dec_param:
+        cpx     #$00
+        bcc     print
+        dex
+        jmp     update_parameter
+inc_param:
+        cpx     #$FF
+        bcs     print
+        inx
+update_parameter:
+        stx     $FFFF
+        jmp     print
+done:
+        rts
+.endproc
+
+.proc configure_dc3
+        jsr     _clrscr
+        jsr     _init_text
+
+        lda     #13
+        jsr     pusha
+        lda     #0
+        jsr     _gotoxy
+        lda     #<configure_str
+        ldx     #>configure_str
+        jsr     _cputs
+
+        lda     #0
+        jsr     pusha
+        lda     #23
+        jsr     _gotoxy
+        lda     #<help_str
+        ldx     #>help_str
+        jsr     _cputs
+
+        lda     #3
+        jsr     _gotoy
+
+        lda     #5
+        ldx     #ABS_MAX_DX
+        jsr     pushax
+        lda     #<their_max_dx
+        ldx     #>their_max_dx
+        jsr     pushax
+        lda     #<max_delta_str
+        ldx     #>max_delta_str
+        jsr     configure_parameter
+
+        lda     their_max_dx
+        sta     their_max_dy
+
+        lda     #5
+        jsr     _gotoy
+
+        lda     #5
+        ldx     #ABS_MAX_DX
+        jsr     pushax
+        lda     #<their_max_hit_dy
+        ldx     #>their_max_hit_dy
+        jsr     pushax
+        lda     #<max_hit_str
+        ldx     #>max_hit_str
+        jsr     configure_parameter
+
+        jsr     _clrscr
+        lda     #1
+        jmp     _init_hgr
+.endproc
+
 their_max_dx:     .byte 10
 their_max_dy:     .byte 10
-their_max_hit_dx: .byte 0
-their_max_hit_dy: .byte 0
+their_max_hit_dy: .byte 10
+tmp_param:        .byte 0
+
+configure_str:    .asciiz "CONFIGURE DC3"
+
+max_delta_str:    .asciiz "MAX MOVE SPEED: "
+max_hit_str:      .asciiz "HIT FORCE:      "
+
+help_str:         .asciiz "ARROW KEYS TO CHANGE, ENTER TO VALIDATE"
