@@ -308,9 +308,11 @@ loop_start:
 
         ; Keyboard hit, is it escape?
         cmp     #CH_ESC
-        bne     game_loop
+        bne     :+
         jmp     clear_and_go_bar
-
+:       cmp     #'w'
+        bne     game_loop
+        jmp     my_win
 reset_point:
         lda     turn
         eor     #$01
@@ -379,18 +381,13 @@ update_screen:
         bpl     no_kbd
         bit     KBDSTRB
         and     #$7F
-        cmp     #CH_ESC
-        beq     out_kbd
         sta     _last_key
-        clc
+        sec
         rts
 no_kbd:
         lda     #$00
         sta     _last_key
         clc
-        rts
-out_kbd:
-        sec
         rts
 
 .endproc
