@@ -99,11 +99,16 @@ clear_unperfect   = \
 serve_sounds = \
 	serve_g_left.snd.s \
 	serve_g_right.snd.s \
+	serve_i.snd.s \
 
 win_sounds = \
 	win_e.snd.s \
 	win_f.snd.s \
 	win_h.snd.s \
+	win_i_1.snd.s \
+	win_i_2.snd.s \
+	win_i_3.snd.s \
+	win_i_4.snd.s \
 
 lose_sounds = \
 	lose_a.snd.s \
@@ -112,6 +117,8 @@ lose_sounds = \
 	lose_e.snd.s \
 	lose_f.snd.s \
 	lose_h.snd.s \
+	lose_i_1.snd.s \
+	lose_i_2.snd.s \
 
 opponents_sprites = \
 	$(sprites_unperfect) \
