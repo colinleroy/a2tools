@@ -35,74 +35,19 @@
         .include  "apple2.inc"
         .include  "fcntl.inc"
 
-.code
-
-.segment "LOWCODE"
-
-; A = which opponent to load
-.proc _load_opponent
-        pha
-
-        lda       #<opponent_name_tmpl
-        sta       filename
-        lda       #>opponent_name_tmpl
-        sta       filename+1
-
-        ; Set correct filename for level
-        pla
-        clc
-        adc       #'A'
-        sta       opponent_name_tmpl
-
-        lda      #<__OPPONENT_SIZE__
-        sta      size
-        lda      #>__OPPONENT_SIZE__
-        sta      size+1
-
-        lda      #<__OPPONENT_START__
-        sta      destination
-        sta      tmp_destination
-        lda      #>__OPPONENT_START__
-        sta      destination+1
-        sta      tmp_destination+1
-
-        lda      #<O_RDONLY
-        ldx      #$01
-        jmp      _data_io
-.endproc
-
-.proc set_hgr_destination_buffer
-        sta      size
-        stx      size+1
-
-        lda      #<__HGR_START__
-        sta      destination
-        sta      tmp_destination
-        lda      #>__HGR_START__
-        sta      destination+1
-        sta      tmp_destination+1
-        rts
-.endproc
-
-.proc set_small_destination_buffer
-        lda      #<__HGR_SIZE__
-        ldx      #>__HGR_SIZE__
-        jmp      set_hgr_destination_buffer
-.endproc
-
 .segment "CODE"
 
-.proc _load_table
-        lda       #<table_name
-        sta       filename
-        lda       #>table_name
-        sta       filename+1
+; The minimum to load lowcode
 
-        jsr      set_small_destination_buffer
+.proc set_code_segment_destination
+        sta     destination
+        stx     destination+1
 
-        lda      #<O_RDONLY
-        ldx      #$01
-        jmp      _data_io
+        lda     #<__OPPONENT_START__
+        sta     tmp_destination
+        lda     #>__OPPONENT_START__
+        sta     tmp_destination+1
+        rts
 .endproc
 
 ; A: data IO mode
@@ -203,13 +148,6 @@ uncompress:
         lda     (ptr1),y
         sta     size+1
 
-        lda     destination
-        cmp     tmp_destination
-        bne     copy_simple
-        lda     destination+1
-        cmp     tmp_destination+1
-        bne     copy_simple
-
         ; Compute where to move data, we want it to be
         ; the furthest possible in the available buffer
         ; so that decompression doesn't overwrite the last
@@ -240,16 +178,6 @@ buf_end_high:
         lda     tmp1          ; Copy compressed size bytes
         ldx     tmp1+1
         jsr     _memmove
-        jmp     finish_decompress
-
-copy_simple:
-        lda     tmp_destination
-        clc                   ; Skip the 4-byte header
-        adc     #4
-        ldx     tmp_destination+1
-        bcc     :+
-        inx
-:       jsr     pushax
 
 finish_decompress:
         lda     destination   ; Push user-specified destination buffer
@@ -266,15 +194,6 @@ finish_decompress:
         jsr     _decompress_lz4
         clc                   ; And we're done!
         rts
-
-.endproc
-
-.proc set_hgr_tmp_destination
-        lda      #<__HGR_START__
-        sta      tmp_destination
-        lda      #>__HGR_START__
-        sta      tmp_destination+1
-        rts
 .endproc
 
 .proc _load_lowcode
@@ -284,12 +203,9 @@ finish_decompress:
         sta       filename+1
 
         ; Load compressed data here
-        jsr      set_hgr_tmp_destination
-
-        lda      #<__LOWCODE_START__
-        sta      destination
-        lda      #>__LOWCODE_START__
-        sta      destination+1
+        lda     #<__LOWCODE_START__
+        ldx     #>__LOWCODE_START__
+        jsr     set_code_segment_destination
 
         lda      #<__LOWCODE_SIZE__
         sta      size
@@ -301,42 +217,105 @@ finish_decompress:
         jmp      _data_io
 .endproc
 
-.segment "LOWCODE"
+.segment "CODE"
 
-.proc _load_lc
-        lda       #<lc_name
-        sta       filename
-        lda       #>lc_name
-        sta       filename+1
+; A = which opponent to load
+.proc _load_opponent
+        pha
 
-        ; Load compressed data here
-        jsr      set_hgr_tmp_destination
+        lda     #<opponent_name_tmpl
+        sta     filename
+        lda     #>opponent_name_tmpl
+        sta     filename+1
 
-        lda      #<__SPLC_START__
-        sta      destination
-        lda      #>__SPLC_START__
-        sta      destination+1
+        ; Set correct filename for level
+        pla
+        clc
+        adc     #'A'
+        sta     opponent_name_tmpl
 
-        lda      #<__SPLC_SIZE__
-        sta      size
-        lda      #>__SPLC_SIZE__
-        sta      size+1
+        lda     #<__OPPONENT_START__
+        ldx     #>__OPPONENT_START__
+        jsr     set_code_segment_destination
+
+        lda     #<__OPPONENT_SIZE__
+        sta     size
+        lda     #>__OPPONENT_SIZE__
+        sta     size+1
+
+        lda     #<O_RDONLY
+        ldx     #$01
+        jmp     _data_io
+.endproc
+
+.proc set_hgr_buf
+        sta     size
+        stx     size+1
+
+        lda     #<__HGR_START__
+        sta     tmp_destination
+        sta     destination
+        lda     #>__HGR_START__
+        sta     tmp_destination+1
+        sta     destination+1
+        rts
+.endproc
+
+.proc set_uncompress_hgr_in_place
+        lda     #<__HGR_SIZE__
+        ldx     #>__HGR_SIZE__
+
+        jmp     set_hgr_buf
+.endproc
+
+.proc _load_table
+        lda      #<table_name
+        sta      filename
+        lda      #>table_name
+        sta      filename+1
+
+        jsr      set_uncompress_hgr_in_place
 
         lda      #<O_RDONLY
         ldx      #$01
         jmp      _data_io
 .endproc
 
+.proc _load_lc
+        lda     #<lc_name
+        sta     filename
+        lda     #>lc_name
+        sta     filename+1
+
+        ; Load compressed data here
+        lda     #<__SPLC_START__
+        ldx     #>__SPLC_START__
+        jsr     set_code_segment_destination
+
+        lda     #<__SPLC_SIZE__
+        sta     size
+        lda     #>__SPLC_SIZE__
+        sta     size+1
+
+        lda     #<O_RDONLY
+        ldx     #$01
+        jmp     _data_io
+.endproc
+
+.proc set_uncompress_large_in_place
+        lda     #<(__HGR_SIZE__+__OPPONENT_SIZE__)
+        ldx     #>(__HGR_SIZE__+__OPPONENT_SIZE__)
+
+        jmp     set_hgr_buf
+.endproc
 
 .proc set_bar_backup_params
         lda     #<bar_backup_name
         sta     filename
         lda     #>bar_backup_name
         sta     filename+1
-set_buf:
-        lda      #<(__HGR_SIZE__+__OPPONENT_SIZE__)
-        ldx      #>(__HGR_SIZE__+__OPPONENT_SIZE__)
-        jmp      set_hgr_destination_buffer
+
+        jmp     set_uncompress_large_in_place
 .endproc
 
 .proc set_barsnd_backup_params
@@ -344,7 +323,8 @@ set_buf:
         sta     filename
         lda     #>barsnd_backup_name
         sta     filename+1
-        jmp     set_bar_backup_params::set_buf
+
+        jmp     set_uncompress_large_in_place
 .endproc
 
 .proc _load_bar
@@ -353,7 +333,7 @@ set_buf:
         lda       #>bar_name
         sta       filename+1
 
-        jsr      set_bar_backup_params::set_buf
+        jsr      set_uncompress_large_in_place
 
         lda      #<O_RDONLY
         ldx      #$01
@@ -366,7 +346,7 @@ set_buf:
         lda       #>barsnd_name
         sta       filename+1
 
-        jsr      set_bar_backup_params::set_buf
+        jsr      set_uncompress_large_in_place
 
         lda      #<O_RDONLY
         ldx      #$01
@@ -374,12 +354,12 @@ set_buf:
 .endproc
 
 .proc set_table_backup_params
-        jsr     set_small_destination_buffer
         lda     #<table_backup_name
         sta     filename
         lda     #>table_backup_name
         sta     filename+1
-        rts
+
+        jmp     set_uncompress_hgr_in_place
 .endproc
 
 .proc backup
@@ -438,8 +418,6 @@ no_cache:
 no_cache:
         jmp      _load_barsnd
 .endproc
-
-.segment "CODE"
 
 .proc unlink_cached_files
         lda       #<table_backup_name

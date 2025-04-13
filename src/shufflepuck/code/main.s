@@ -15,7 +15,7 @@
 
         .export   _main
         .export   serving, my_score, their_score
-        .export   _check_keyboard
+        .export   _check_keyboard, _last_key
 
         .import   _init_hgr, _init_mouse
         .import   mouse_x, mouse_y
@@ -142,17 +142,17 @@ calibrate_hz_handler:
 .endif
         ; End of debug
 
-        lda     #<load_barsnd_str
-        ldx     #>load_barsnd_str
-        jsr     _cputs
-        jsr     _load_barsnd
-        jsr     _backup_barsnd
-
         lda     #<load_bar_str
         ldx     #>load_bar_str
         jsr     _cputs
         jsr     _load_bar
         jsr     _backup_bar
+
+        lda     #<load_barsnd_str
+        ldx     #>load_barsnd_str
+        jsr     _cputs
+        jsr     _load_barsnd
+        jsr     _backup_barsnd
 
 new_opponent:
         lda     in_tournament     ; Are we in a tournament?
@@ -391,21 +391,18 @@ update_screen:
         and     #$7F
         cmp     #CH_ESC
         beq     out_kbd
-        
-        cmp     #'0'
-        bcc     no_kbd
-        cmp     #('9'+1)
-        bcs     no_kbd
-        sec
-        sbc     #'0'
-        sta     opponent
+        sta     _last_key
+        clc
+        rts
+no_kbd:
+        lda     #$00
+        sta     _last_key
+        clc
+        rts
 out_kbd:
         sec
         rts
 
-no_kbd:
-        clc
-        rts
 .endproc
 
 .data
@@ -416,8 +413,8 @@ turn_puck_y:
 
 load_splc_str:    .byte "LOADING CODE..."          ,$0D,$0A,$00
 load_table_str:   .byte "LOADING ASSETS..."        ,$0D,$0A,$00
-load_barsnd_str:  .byte "DISMANTLING CAPITALISM...",$0D,$0A,$00
-load_bar_str:     .byte "ANY MINUTE NOW..."        ,$0D,$0A,$00
+load_bar_str:     .byte "DISMANTLING CAPITALISM...",$0D,$0A,$00
+load_barsnd_str:  .byte "ANY MINUTE NOW..."        ,$0D,$0A,$00
 
 .bss
 
@@ -430,3 +427,4 @@ their_score:  .res 1
 opponent:     .res 1
 in_tournament:.res 1
 frame_counter:.res 1
+_last_key:    .res 1
