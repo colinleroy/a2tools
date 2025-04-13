@@ -69,17 +69,13 @@
         jmp     return0
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT_SND, error ; Make sure the callback is where we think
-lose_sound:
         jmp     animate_lose
-        .res 2
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT, error ; Make sure the callback is where we think
         jmp     return0
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT_SND, error ; Make sure the callback is where we think
-win_sound:
         jmp     animate_win
-        .res 2
 
 .assert * = __OPPONENT_START__+OPPONENT::THINK_CB, error ; Make sure the callback is where we think
 .proc _opponent_think

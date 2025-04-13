@@ -65,17 +65,13 @@ MAX_NUM_CATCH = 4
         jmp     animate_lose
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT_SND, error ; Make sure the callback is where we think
-lose_sound:
-        ldy     #0
-        jmp     _play_lose_h                                            ; CHANGE A
+        jmp     sound_lose
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT, error ; Make sure the callback is where we think
         jmp     return0
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT_SND, error ; Make sure the callback is where we think
-win_sound:
-        jmp     quad_play_win_h                                            ; CHANGE A
-        .res    2
+        jmp     sound_win
 
 .assert * = __OPPONENT_START__+OPPONENT::THINK_CB, error ; Make sure the callback is where we think
 .proc _opponent_think
@@ -291,18 +287,30 @@ move_backwards:
         rts
 .endproc
 
+.proc animate_lose
+        ldx     #((28+98)/7)
+        ldy     #(43)
+        jmp     _big_draw_lose_h                                        ; CHANGE A
+.endproc
+
+.proc sound_lose
+        ldy     #0
+        jmp     _play_lose_h                                            ; CHANGE A
+.endproc
+
 .proc win_animation
         ldx     #((28+98)/7)
         ldy     #(53+1)
         jmp    _big_draw_win_h                                        ; CHANGE A
 .endproc
+
 .proc normal_animation
         ldx     #((28+98)/7)
         ldy     #(53+1)
         jmp    _big_draw_normal_h                                        ; CHANGE A
 .endproc
 
-.proc quad_play_win_h
+.proc sound_win
         jsr     win_animation
         ldy     #0
         jsr     _play_win_h
@@ -317,11 +325,6 @@ move_backwards:
         jmp     _play_win_h
 .endproc
 
-.proc animate_lose
-        ldx     #((28+98)/7)
-        ldy     #(43)
-        jmp     _big_draw_lose_h                                        ; CHANGE A
-.endproc
 
 min_x:            .byte 1
 max_x:            .byte 1
