@@ -213,7 +213,16 @@ move_backwards:
         jsr     load_win_sprite_coords
         jsr     _big_draw_win_d_3
         jsr     load_win_sprite_coords
-        jmp     _big_draw_win_d_4
+        jsr     _big_draw_win_d_4
+        lda     #<700
+        ldx     #>700
+        jsr     _platform_msleep
+        jsr     load_win_sprite_coords
+        jsr     _big_draw_win_d_3
+        jsr     load_win_sprite_coords
+        jsr     _big_draw_win_d_2
+        jsr     load_win_sprite_coords
+        jmp     _big_draw_win_d_1
 .endproc
 
 .proc animate_lose
