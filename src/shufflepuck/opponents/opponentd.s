@@ -77,13 +77,13 @@ lose_sound:
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT, error ; Make sure the callback is where we think
 win_animation:
-        jmp     animate_win
-        .res    4
+        rts
+        .res 6
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT_SND, error ; Make sure the callback is where we think
 win_sound:
-        rts
-        .res 4
+        jmp     animate_win
+        .res    2
 
 .assert * = __OPPONENT_START__+OPPONENT::THINK_CB, error ; Make sure the callback is where we think
 .proc _opponent_think
