@@ -16,6 +16,7 @@
         .export   _main
         .export   serving, my_score, their_score
         .export   _check_keyboard, _last_key
+        .export   _draw_opponent
 
         .import   _init_hgr, _init_mouse
         .import   mouse_x, mouse_y
@@ -81,27 +82,17 @@
 
 .segment "LOWCODE"
 
-; A: the part (SPRITE or NAME)
-; X,Y, the lower left coordinate
-.proc draw_opponent_part
-        clc
-        adc     #<(__OPPONENT_START__)
-        sta     draw+1
-        lda     #>(__OPPONENT_START__)
-        adc     #0
-        sta     draw+2
-
-draw:
-        jmp     $FFFF
+.proc _draw_opponent_parts
+        ldx     #(7/7)
+        ldy     #39
+        jsr     __OPPONENT_START__+OPPONENT::NAME
+        ; Fallthrough
 .endproc
-
-.proc draw_opponent_parts
+.proc _draw_opponent
         ; Draw its sprite
-        lda     #OPPONENT::SPRITE
-        jsr     draw_opponent_part
-        ; Draw its name
-        lda     #OPPONENT::NAME
-        jmp     draw_opponent_part
+        ldx     #(98/7)
+        ldy     #76
+        jmp     __OPPONENT_START__+OPPONENT::SPRITE
 .endproc
 
 .proc _real_main
@@ -198,13 +189,13 @@ new_game:
         jsr     _load_opponent
 
         jsr     _restore_table
-        jsr     draw_opponent_parts
+        jsr     _draw_opponent_parts
         jsr     _backup_table
 
 new_point:
         jsr     _restore_table
         bcc     :+
-        jsr     draw_opponent_parts
+        jsr     _draw_opponent_parts
 
 :       ; Draw scores
         jsr     _draw_scores

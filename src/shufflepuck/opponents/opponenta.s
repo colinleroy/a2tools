@@ -27,6 +27,8 @@
         .import     _big_draw_name_a                                ; CHANGE A
         .import     _big_draw_lose_a                                ; CHANGE A
         .import     _big_draw_win_a                                 ; CHANGE A
+        .import     _play_lose_a
+        .import     return0
 
         .import     __OPPONENT_START__
         .importzp   tmp1
@@ -47,34 +49,21 @@ THEIR_MAX_DX = 5
 .segment "a"                                                        ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::SPRITE, error ; Make sure the callback is where we think
-sprite:
-        ldx     #(98/7)
-        ldy     #76
         jmp     _big_draw_sprite_a                                      ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::NAME, error ; Make sure the callback is where we think
-name:
-        ldx     #(7/7)
-        ldy     #39
         jmp     _big_draw_name_a                                        ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT, error ; Make sure the callback is where we think
-lose_animation:
-        ldx     #((35+98)/7)    ; left X of sprite change + left X of big sprite
-        ldy     #(60+1)         ; bottom Y of sprite change
-        jmp     _big_draw_lose_a                                        ; CHANGE A
+        jmp     animate_lose
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT_SND, error ; Make sure the callback is where we think
 lose_sound:
-        rts
-        .res 4
-
+        ldy     #0
+        jmp     _play_lose_a
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT, error ; Make sure the callback is where we think
-win_animation:
-        ldx     #((35+98)/7)    ; left X of sprite change + left X of big sprite
-        ldy     #(60+1)         ; bottom Y of sprite change
-        jmp     _big_draw_win_a                                        ; CHANGE A
+        jmp     animate_win
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT_SND, error ; Make sure the callback is where we think
 win_sound:
@@ -181,4 +170,19 @@ move_backwards:
         rts
 .endproc
 
+.proc load_simple_animation_coords
+        ldx     #((35+98)/7)    ; left X of sprite change + left X of big sprite
+        ldy     #(60+1)         ; bottom Y of sprite change
+        rts
+.endproc
+
+.proc animate_lose
+        jsr     load_simple_animation_coords
+        jmp     _big_draw_lose_a                                        ; CHANGE A
+.endproc
+
+.proc animate_win
+        jsr     load_simple_animation_coords
+        jmp     _big_draw_win_a                                        ; CHANGE A
+.endproc
 their_max_dx:     .byte 5

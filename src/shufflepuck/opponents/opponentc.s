@@ -30,6 +30,8 @@
         .import     _big_draw_win_c                                 ; CHANGE A
         .import     _play_lose_c                                    ; CHANGE A
 
+        .import     return0
+
         .import     __OPPONENT_START__
         .importzp   tmp1
 
@@ -48,22 +50,13 @@ THEIR_MAX_DX = 2
 .segment "c"                                                        ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::SPRITE, error ; Make sure the callback is where we think
-sprite:
-        ldx     #(98/7)
-        ldy     #76
         jmp     _big_draw_sprite_c                                      ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::NAME, error ; Make sure the callback is where we think
-name:
-        ldx     #(7/7)
-        ldy     #39
         jmp     _big_draw_name_c                                        ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT, error ; Make sure the callback is where we think
-lose_animation:
-        ldx     #((42+98)/7)    ; left X of sprite change + left X of big sprite
-        ldy     #(52)           ; bottom Y of sprite change
-        jmp     _big_draw_lose_c                                        ; CHANGE A
+        jmp     animate_lose
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT_SND, error ; Make sure the callback is where we think
 lose_sound:
@@ -71,10 +64,7 @@ lose_sound:
         jmp     _play_lose_c                                            ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT, error ; Make sure the callback is where we think
-win_animation:
-        ldx     #((35+98)/7)    ; left X of sprite change + left X of big sprite
-        ldy     #(76)           ; bottom Y of sprite change
-        jmp     _big_draw_win_c                                        ; CHANGE A
+        jmp     animate_win
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT_SND, error ; Make sure the callback is where we think
 win_sound:
@@ -257,6 +247,18 @@ move_backwards:
         lda     #<-6
         sta     their_pusher_dy
         rts
+.endproc
+
+.proc animate_lose
+        ldx     #((42+98)/7)    ; left X of sprite change + left X of big sprite
+        ldy     #(52)           ; bottom Y of sprite change
+        jmp     _big_draw_lose_c                                        ; CHANGE A
+.endproc
+
+.proc animate_win
+        ldx     #((35+98)/7)    ; left X of sprite change + left X of big sprite
+        ldy     #(76)           ; bottom Y of sprite change
+        jmp     _big_draw_win_c                                        ; CHANGE A
 .endproc
 
 found_x:          .byte 0

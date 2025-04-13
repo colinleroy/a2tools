@@ -31,6 +31,8 @@
         .import     _play_win_h                                     ; CHANGE A
         .import     _play_lose_h                                    ; CHANGE A
 
+        .import     return0
+
         .import     __OPPONENT_START__
         .importzp   tmp1
 
@@ -54,22 +56,13 @@ MAX_NUM_CATCH = 4
 .segment "h"                                                        ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::SPRITE, error ; Make sure the callback is where we think
-sprite:
-        ldx     #(98/7)
-        ldy     #76
         jmp    _big_draw_sprite_h                                      ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::NAME, error ; Make sure the callback is where we think
-name:
-        ldx     #(7/7)
-        ldy     #39
         jmp    _big_draw_name_h                                        ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT, error ; Make sure the callback is where we think
-lose_animation:
-        ldx     #((28+98)/7)
-        ldy     #(43)
-        jmp    _big_draw_lose_h                                        ; CHANGE A
+        jmp     animate_lose
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT_SND, error ; Make sure the callback is where we think
 lose_sound:
@@ -77,9 +70,7 @@ lose_sound:
         jmp     _play_lose_h                                            ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT, error ; Make sure the callback is where we think
-        ldx     #(98/7)
-        ldy     #76
-        jmp    _big_draw_sprite_h                                      ; CHANGE A
+        jmp     return0
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT_SND, error ; Make sure the callback is where we think
 win_sound:
@@ -324,6 +315,12 @@ move_backwards:
         jsr     normal_animation
         ldy     #1
         jmp     _play_win_h
+.endproc
+
+.proc animate_lose
+        ldx     #((28+98)/7)
+        ldy     #(43)
+        jmp     _big_draw_lose_h                                        ; CHANGE A
 .endproc
 
 min_x:            .byte 1

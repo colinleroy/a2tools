@@ -31,6 +31,8 @@
         .import     _play_win_f                                     ; CHANGE A
         .import     _play_lose_f                                    ; CHANGE A
 
+        .import     return0
+
         .import     __OPPONENT_START__
         .importzp   tmp1
 
@@ -48,22 +50,13 @@
 .segment "f"                                                            ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::SPRITE, error ; Make sure the callback is where we think
-sprite:
-        ldx     #(98/7)
-        ldy     #76
         jmp     _big_draw_sprite_f                                      ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::NAME, error ; Make sure the callback is where we think
-name:
-        ldx     #(7/7)
-        ldy     #39
         jmp     _big_draw_name_f                                        ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT, error ; Make sure the callback is where we think
-lose_animation:
-        ldx     #((21+98)/7)    ; left X of sprite change + left X of big sprite
-        ldy     #(76)           ; bottom Y of sprite change
-        jmp     _big_draw_lose_f                                        ; CHANGE A
+        jmp     animate_lose
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT_SND, error ; Make sure the callback is where we think
 lose_sound:
@@ -71,10 +64,7 @@ lose_sound:
         jmp     _play_lose_f                                            ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT, error ; Make sure the callback is where we think
-win_animation:
-        ldx     #((21+98)/7)    ; left X of sprite change + left X of big sprite
-        ldy     #(76)           ; bottom Y of sprite change
-        jmp     _big_draw_win_f                                        ; CHANGE A
+        jmp     animate_win
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT_SND, error ; Make sure the callback is where we think
 win_sound:
@@ -460,6 +450,22 @@ suspense:
 preparation_done:
         inc     preparing_service
         rts
+.endproc
+
+.proc load_simple_animation_coords
+        ldx     #((21+98)/7)    ; left X of sprite change + left X of big sprite
+        ldy     #(76)           ; bottom Y of sprite change
+        rts
+.endproc
+
+.proc animate_lose
+        jsr     load_simple_animation_coords
+        jmp     _big_draw_lose_f                                        ; CHANGE A
+.endproc
+
+.proc animate_win
+        jsr     load_simple_animation_coords
+        jmp     _big_draw_win_f                                        ; CHANGE A
 .endproc
 
 their_max_dx:     .byte 8
