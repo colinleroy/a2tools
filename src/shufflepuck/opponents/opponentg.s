@@ -26,7 +26,10 @@
 
         .import     _big_draw_sprite_g                              ; CHANGE A
         .import     _big_draw_name_g                                ; CHANGE A
-        .import     _big_draw_serve_g                               ; CHANGE A
+        .import     _big_draw_serve_g_1                             ; CHANGE A
+        .import     _big_draw_serve_g_2                             ; CHANGE A
+        .import     _big_draw_serve_g_3                             ; CHANGE A
+        .import     _big_draw_serve_g_4                             ; CHANGE A
         .import     _big_draw_win_g                                 ; CHANGE A
         .import     _play_serve_g_left                              ; CHANGE A
         .import     _play_serve_g_right
@@ -259,6 +262,8 @@ move_backwards:
 
         lda     #1
         sta     preparing_service
+        lda     #0
+        sta     serve_hand_phase
         rts
 .endproc
 
@@ -267,24 +272,29 @@ move_backwards:
         cmp     #1
         beq     go_front
         cmp     #2
-        beq     suspense
+        beq     raise_hand
         cmp     #3
+        beq     choose_direction
+        cmp     #4
+        beq     suspense
+        cmp     #5
         beq     prepare_to_hit
         rts                       ; All's ready
 
 go_front:
         lda     their_pusher_y
         cmp     #THEIR_PUCK_INI_Y-3
-        bcs     choose_direction
+        bcs     preparation_done
         inc     their_pusher_y
         rts
 
-choose_direction:
-        ; Raise hand
-        ldx     #((7+98)/7)
-        ldy     #76
-        jsr     _big_draw_serve_g                                      ; CHANGE A
+raise_hand:
+        lda     serve_hand_phase
+        cmp     #4
+        beq     preparation_done
+        jmp     update_hand_sprite
 
+choose_direction:
         lda     #END_SERVICE_RIGHT_DX
         sta     serve_direction
 
@@ -376,6 +386,35 @@ inc_hack:
         rts
 .endproc
 
+.proc update_hand_sprite
+        inc     serve_hand_phase
+        lda     #50
+        ldx     #0
+        jsr     _platform_msleep
+
+        ldx     #((7+98)/7)
+        ldy     #76
+
+        lda     serve_hand_phase
+        cmp     #1
+        beq     serve_hand_1
+        cmp     #2
+        beq     serve_hand_2
+        cmp     #3
+        beq     serve_hand_3
+        cmp     #4
+        beq     serve_hand_4
+        rts
+serve_hand_1:
+        jmp     _big_draw_serve_g_1                                   ; CHANGE A
+serve_hand_2:
+        jmp     _big_draw_serve_g_2                                   ; CHANGE A
+serve_hand_3:
+        jmp     _big_draw_serve_g_3                                   ; CHANGE A
+serve_hand_4:
+        jmp     _big_draw_serve_g_4                                   ; CHANGE A
+.endproc
+
 their_max_dx:      .byte 10
 their_max_dy:      .byte 4
 mid_pusher_x:      .byte 1
@@ -385,3 +424,4 @@ magic_band_rnd:    .byte 0
 serve_direction:   .byte 0
 service_finished:  .byte 0
 service_hack_phase:.byte 0
+serve_hand_phase:  .byte 0
