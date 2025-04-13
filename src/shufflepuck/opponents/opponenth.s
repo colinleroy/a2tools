@@ -248,13 +248,14 @@ store_dx:
         cmp     #(THEIR_PUSHER_MAX_Y)
         bcs     move_backwards
 hit:
-        ; Get a 0-7 DY
+        ; Get a 0-15 DY
         jsr     _rand
         lsr
         lsr
         lsr
+        lsr
         clc
-        ; And make it 16-23
+        ; And make it 16-30
         adc     #16
         sta     their_pusher_dy
 
@@ -263,9 +264,10 @@ hit:
         lsr
         lsr
         lsr
-        ; And make it -16/15
+        lsr
+        ; And make it -8/7
         sec
-        sbc     #16
+        sbc     #8
         sta     their_pusher_dx
         rts
 
