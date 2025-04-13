@@ -33,6 +33,11 @@
         .import     _big_draw_lose_i                                ; CHANGE A
         .import     _big_draw_win_i                                 ; CHANGE A
 
+        .import     _play_lose_i_1, _play_lose_i_2
+        .import     _play_win_i_1, _play_win_i_2, _play_win_i_3, _play_win_i_4
+        .import     _play_serve_i
+        .import     _platform_msleep
+
         .import     __OPPONENT_START__
 
         .import     pusha, pushax, popax
@@ -71,9 +76,8 @@ lose_animation:
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT_SND, error ; Make sure the callback is where we think
 lose_sound:
-        rts
-        .res 4
-
+        jmp     lose_snd
+        .res 2
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT, error ; Make sure the callback is where we think
 win_animation:
@@ -83,8 +87,8 @@ win_animation:
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT_SND, error ; Make sure the callback is where we think
 win_sound:
-        rts
-        .res 4
+        jmp     win_snd
+        .res 2
 
 .assert * = __OPPONENT_START__+OPPONENT::THINK_CB, error ; Make sure the callback is where we think
 .proc _opponent_think
@@ -94,7 +98,7 @@ win_sound:
         jmp     configure_dc3
 
 :       lda     serving
-        beq     serve_or_catch
+        beq     catch
 
 init_service:
         cmp     #$01
@@ -103,48 +107,36 @@ init_service:
         ; Who serves?
         lda     puck_y
         cmp     #THEIR_PUCK_INI_Y
-        bne     serve_or_catch    ; It's the player
+        bne     catch    ; It's the player
 
         ; Init serve parameters
         lda     #0
         sta     their_pusher_dx
 
         ; Shorten wait
-        jsr     _rand
-        beq     prepare_service
+        lda     #246
         sta     serving
 
 prepare_service:
         ; We're serving
         inc     serving
-        beq     serve_or_catch      ; After a while we got to serve
-
-        lda     their_pusher_y
-        cmp     #(THEIR_PUSHER_MIN_Y+1)
-        bcs     :+
+        beq     serve       ; After a while we got to serve
 
         lda     #$01
         sta     their_pusher_dy
-
-        rts
-:       cmp     #(THEIR_PUCK_INI_Y-2)
-        bcs     :+
-        rts
-:
-
-        lda     #$FF
-        sta     their_pusher_dy
+        ldy     #0
+        jsr     _play_serve_i
         rts
 
-serve_or_catch:
+serve:
+catch:
         lda     puck_dy           ; Is the puck moving?
-        bne     catch
+        bne     :+
 
         lda     #$00              ; Cancel Y speed
         sta     their_pusher_dy
 
-catch:
-        GET_DELTA_TO_PUCK
+:       GET_DELTA_TO_PUCK
         ; Bind to max dx
         BIND_SIGNED their_max_dx
         sta     their_pusher_dx
@@ -311,8 +303,37 @@ done:
         jmp     _init_hgr
 .endproc
 
-their_max_dx:     .byte 10
-their_max_dy:     .byte 10
+.proc win_snd
+        ldy     #0
+        jsr     _play_win_i_1
+        lda     #50
+        ldx     #0
+        jsr     _platform_msleep
+        ldy     #0
+        jsr     _play_win_i_2
+        lda     #50
+        ldx     #0
+        jsr     _platform_msleep
+        ldy     #0
+        jsr     _play_win_i_3
+        lda     #5
+        ldx     #0
+        jsr     _platform_msleep
+        ldy     #0
+        jmp     _play_win_i_4
+.endproc
+
+.proc lose_snd
+        ldy     #0
+        jsr     _play_lose_i_1
+        ldy     #0
+        jsr     _play_lose_i_2
+        ldy     #0
+        jmp     _play_lose_i_2
+.endproc
+
+their_max_dx:     .byte 8
+their_max_dy:     .byte 8
 their_max_hit_dy: .byte 10
 tmp_param:        .byte 0
 
