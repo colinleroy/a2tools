@@ -99,7 +99,10 @@ win_unperfect = \
 	win_h.unperfect.gen.s \
 
 serve_unperfect   = \
-	serve_g.unperfect.gen.s \
+	serve_g_1.unperfect.gen.s \
+	serve_g_2.unperfect.gen.s \
+	serve_g_3.unperfect.gen.s \
+	serve_g_4.unperfect.gen.s \
 
 special_unperfect   = \
 	normal_h.unperfect.gen.s \
