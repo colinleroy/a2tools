@@ -749,6 +749,12 @@ check_my_late_catch:
 ; A: 0 if we lose
 .proc round_end
         pha
+
+        ; Stop their pusher
+        lda     #0
+        sta     their_pusher_dx
+        sta     their_pusher_dy
+
         ; Clear their side to load their sprite cleanly
         jsr     clear_screen_their_side
         pla
@@ -763,6 +769,7 @@ check_my_late_catch:
         lda     #200
         ldx     #0
         jsr     _platform_msleep
+        jsr     clear_screen_their_side
         jsr     __OPPONENT_START__+OPPONENT::LOSE_POINT_SND
         ; Return with carry set to inform main
         sec
@@ -777,6 +784,8 @@ check_my_late_catch:
         lda     #200
         ldx     #0
         jsr     _platform_msleep
+
+        jsr     clear_screen_their_side
         jsr     __OPPONENT_START__+OPPONENT::WIN_POINT_SND
         ; Return with carry set to inform main
         sec
