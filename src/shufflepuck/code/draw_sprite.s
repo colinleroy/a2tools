@@ -58,6 +58,8 @@ clear_next_line:
 x_coord:
         lda     #$FF
         ldy     cur_y
+        cpy     #192
+        bcs     out
         adc     _hgr_low,y
         sta     sprite_store_bg+1
         lda     _hgr_hi,y
@@ -78,6 +80,7 @@ sprite_store_bg:
         inc     cur_y
         cpx     #$FF              ; Did we do all bytes?
         bne     clear_next_line
+out:
         rts
 .endproc
 
