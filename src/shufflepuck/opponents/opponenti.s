@@ -30,8 +30,9 @@
 
         .import     _big_draw_sprite_i                              ; CHANGE A
         .import     _big_draw_name_i                                ; CHANGE A
-        .import     _big_draw_lose_i                                ; CHANGE A
-        .import     _big_draw_win_i                                 ; CHANGE A
+        .import     _big_draw_normal_i                              ; CHANGE A
+        .import     _big_draw_moving_i_1                            ; CHANGE A
+        .import     _big_draw_moving_i_2                            ; CHANGE A
 
         .import     _play_lose_i_1, _play_lose_i_2
         .import     _play_win_i_1, _play_win_i_2, _play_win_i_3, _play_win_i_4
@@ -70,9 +71,8 @@ name:
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT, error ; Make sure the callback is where we think
 lose_animation:
-        ldx     #(98/7)
-        ldy     #76
-        jmp     _big_draw_sprite_i                                      ; CHANGE A
+        rts
+        .res    6
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT_SND, error ; Make sure the callback is where we think
 lose_sound:
@@ -81,9 +81,8 @@ lose_sound:
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT, error ; Make sure the callback is where we think
 win_animation:
-        ldx     #(98/7)
-        ldy     #76
-        jmp     _big_draw_sprite_i                                      ; CHANGE A
+        rts
+        .res    6
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT_SND, error ; Make sure the callback is where we think
 win_sound:
@@ -303,33 +302,60 @@ done:
         jmp     _init_hgr
 .endproc
 
+; Sequence is A/B/A/normal
+.proc animate_a
+        ldx     #((35+98)/7)
+        ldy     #25
+        jmp     _big_draw_moving_i_1                                    ; CHANGE A
+.endproc
+
+.proc animate_b
+        ldx     #((35+98)/7)
+        ldy     #25
+        jmp     _big_draw_moving_i_2                                    ; CHANGE A
+.endproc
+
+.proc animate_normal
+        ldx     #((35+98)/7)
+        ldy     #25
+        jmp     _big_draw_normal_i                                      ; CHANGE A
+.endproc
+
 .proc win_snd
+        jsr     animate_a
         ldy     #0
         jsr     _play_win_i_1
         lda     #50
         ldx     #0
         jsr     _platform_msleep
+        jsr     animate_b
         ldy     #0
         jsr     _play_win_i_2
         lda     #50
         ldx     #0
         jsr     _platform_msleep
+        jsr     animate_a
         ldy     #0
         jsr     _play_win_i_3
         lda     #5
         ldx     #0
         jsr     _platform_msleep
+        jsr     animate_normal
         ldy     #0
         jmp     _play_win_i_4
 .endproc
 
 .proc lose_snd
+        jsr     animate_a
         ldy     #0
         jsr     _play_lose_i_1
+        jsr     animate_b
         ldy     #0
         jsr     _play_lose_i_2
+        jsr     animate_a
         ldy     #0
-        jmp     _play_lose_i_2
+        jsr     _play_lose_i_2
+        jmp     animate_normal
 .endproc
 
 their_max_dx:     .byte 8
