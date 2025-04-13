@@ -1,4 +1,4 @@
-        .export     _choose_opponent
+        .export     _choose_opponent, _show_hall_of_fame
 
         .import     _mouse_wait_vbl, _mouse_check_button
         .import     _clear_sprite, _draw_sprite
@@ -12,6 +12,8 @@
 
         .import     _print_string
 
+        .import     _init_text, _init_hgr
+        .import     _cputs, _cgetc, _clrscr
         .import     _exit, pushax
 
         .import     __OPPONENT_START__
@@ -41,6 +43,7 @@ NUM_BOXES = (* - BOXES_START)/5
 .segment "bar"
 
 champion_str: .asciiz "123456789012"
+congrats_str: .asciiz "CONGRATS"
 
 .proc print_champion
         lda     #<champion_str
@@ -130,4 +133,15 @@ skip_num_opponent:
         ldx     #>pointer_data
         jsr     _setup_sprite_pointer_for_clear
         jmp     _clear_sprite
+.endproc
+
+.proc _show_hall_of_fame
+        jsr     _init_text
+        jsr     _clrscr
+        lda     #<congrats_str
+        ldx     #>congrats_str
+        jsr     _cputs
+        jsr     _cgetc
+        lda     #1
+        jmp     _init_hgr
 .endproc

@@ -17,15 +17,16 @@
         .export   serving, my_score, their_score
         .export   _check_keyboard, _last_key
         .export   _draw_opponent
+        .export   won_tournament
 
         .import   _init_hgr, _init_mouse
         .import   mouse_x, mouse_y
         .import   mouse_dx, mouse_dy
         .import   _mouse_setbarbox, _mouse_setplaybox
 
-        .import   _choose_opponent, bounces
+        .import   _choose_opponent, _show_hall_of_fame
 
-        .import   puck_x, puck_y, puck_dx, puck_dy
+        .import   puck_x, puck_y, puck_dx, puck_dy, bounces
         .import   _init_precise_x, _init_precise_y, _transform_puck_coords
 
         .import   my_pusher_x, my_pusher_y
@@ -151,9 +152,12 @@ new_opponent:
         inc     opponent          ; Yes, go directly to the next one
         lda     opponent
         cmp     #NUM_OPPONENTS
-        beq     win_tournament    ; We won the tournament
         bne     new_game          ; Continue tournament
 
+        lda     #1                ; We won the tournament
+        sta     won_tournament
+        lda     #0
+        sta     in_tournament
 to_bar:
         jsr     _clrscr
         jsr     _init_text
@@ -166,11 +170,19 @@ to_bar:
         jsr     _init_hgr
 
         jsr     _mouse_setbarbox
-        jsr     _choose_opponent
+        lda     won_tournament
+        beq     :+
+
+        jsr     _show_hall_of_fame
+
+        lda     #0
+        sta     won_tournament
+
+:       jsr     _choose_opponent
         bpl     :+
         lda     #1                ; Start a tournament
         sta     in_tournament
-        lda     #0                ; Start with opponent 0
+        lda     #7                ; Start with opponent 0 FIXME
 store_opponent:
 :       sta     opponent
 
@@ -220,11 +232,10 @@ next_or_new_opponent:
         jsr     _restore_table
         jmp     new_opponent
 
-win_tournament:
-        ; todo end of tournament
 clear_and_go_bar:
         lda     #0
         sta     in_tournament
+        sta     won_tournament
         beq     next_or_new_opponent    ; Always branch
 
 cont_game:
@@ -405,13 +416,14 @@ load_bar_str:     .byte "ANY MINUTE NOW..."        ,$0D,$0A,$00
 
 .bss
 
-turn:         .res 1
-puck_serve_y: .res 1
-serving:      .res 1
+turn:           .res 1
+puck_serve_y:   .res 1
+serving:        .res 1
 
-my_score:     .res 1
-their_score:  .res 1
-opponent:     .res 1
-in_tournament:.res 1
-frame_counter:.res 1
-_last_key:    .res 1
+my_score:       .res 1
+their_score:    .res 1
+opponent:       .res 1
+in_tournament:  .res 1
+won_tournament: .res 1
+frame_counter:  .res 1
+_last_key:      .res 1
