@@ -748,10 +748,12 @@ check_my_late_catch:
 
 ; A: 0 if we lose
 .proc round_end
-        bne     :+
-
+        pha
         ; Clear their side to load their sprite cleanly
         jsr     clear_screen_their_side
+        pla
+        bne     :+
+
         jsr     __OPPONENT_START__+OPPONENT::LOSE_POINT
         ; Their side will be redrawn by update_screen_for_crash
         clc                       ; Little crash
