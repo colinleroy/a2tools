@@ -59,17 +59,13 @@ THEIR_MAX_DX = 2
         jmp     animate_lose
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT_SND, error ; Make sure the callback is where we think
-lose_sound:
-        ldy     #0
-        jmp     _play_lose_c                                            ; CHANGE A
+        jmp     sound_lose
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT, error ; Make sure the callback is where we think
         jmp     animate_win
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT_SND, error ; Make sure the callback is where we think
-win_sound:
-        rts
-        .res 4
+        jmp     return0
 
 .assert * = __OPPONENT_START__+OPPONENT::THINK_CB, error ; Make sure the callback is where we think
 .proc _opponent_think
@@ -259,6 +255,11 @@ move_backwards:
         ldx     #((35+98)/7)    ; left X of sprite change + left X of big sprite
         ldy     #(76)           ; bottom Y of sprite change
         jmp     _big_draw_win_c                                        ; CHANGE A
+.endproc
+
+.proc sound_lose
+        ldy     #0
+        jmp     _play_lose_c                                            ; CHANGE A
 .endproc
 
 found_x:          .byte 0

@@ -70,17 +70,13 @@ MAX_NUM_CATCH = 10
         jmp     animate_lose
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT_SND, error ; Make sure the callback is where we think
-lose_sound:
-        ldy     #0
-        jmp     _play_lose_e                                            ; CHANGE A
+        jmp     sound_lose
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT, error ; Make sure the callback is where we think
         jmp     return0
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT_SND, error ; Make sure the callback is where we think
-win_sound:
         jmp     animate_win
-        .res    2
 
 .assert * = __OPPONENT_START__+OPPONENT::THINK_CB, error ; Make sure the callback is where we think
 .proc _opponent_think
@@ -328,6 +324,12 @@ move_backwards:
         ldy     #(65)
         jmp     _big_draw_lose_e                                        ; CHANGE A
 .endproc
+
+.proc sound_lose
+        ldy     #0
+        jmp     _play_lose_e                                            ; CHANGE A
+.endproc
+
 
 min_x:            .byte 1
 max_x:            .byte 1

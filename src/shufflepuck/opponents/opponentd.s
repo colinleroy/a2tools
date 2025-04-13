@@ -64,17 +64,13 @@ START_MAX_DX = 11
         jmp     animate_lose
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT_SND, error ; Make sure the callback is where we think
-lose_sound:
-        ldy     #0
-        jmp     _play_lose_d                                            ; CHANGE A
+        jmp     sound_lose
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT, error ; Make sure the callback is where we think
         jmp     return0
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT_SND, error ; Make sure the callback is where we think
-win_sound:
         jmp     animate_win
-        .res    2
 
 .assert * = __OPPONENT_START__+OPPONENT::THINK_CB, error ; Make sure the callback is where we think
 .proc _opponent_think
@@ -224,6 +220,11 @@ move_backwards:
         ldx     #((21+98)/7)
         ldy     #(57)
         jmp     _big_draw_lose_d                                        ; CHANGE A
+.endproc
+
+.proc sound_lose
+        ldy     #0
+        jmp     _play_lose_d                                            ; CHANGE A
 .endproc
 
 their_max_dx:     .byte START_MAX_DX
