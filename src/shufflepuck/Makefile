@@ -1,7 +1,7 @@
 CC65_TARGET := apple2
 STREAMER_VER := 6502
 SAMPLING_HZ := 8000
-MAX_COMPRESSED_DATA_SIZE := 0x4E00
+MAX_COMPRESSED_DATA_SIZE := 0x2D00
 
 DEBUG_OPPONENT_CFLAG :=
 
@@ -43,18 +43,21 @@ BINARY_NAME = shflpuck.bin
 # Generated things
 
 assets = \
+	bar \
 	table \
-	bar
 
+assets_files = $(assets:%=%_img)
 
 opponents_code    = $(opponents:%=$(SRC_DIR)/opponents/opponent%.s)
+opponents_files   = $(opponents:%=opponent_%)
 
 lz4_files = \
-	$(assets) \
-	$(opponents) \
-	lowcode \
-	splc \
-	barsnd
+	$(assets_files) \
+	$(opponents_files) \
+	low_code \
+	lc_code \
+	bar_snd \
+	bar_code \
 
 assets_backgrounds = $(assets:=.bg.gen.s)
 assets_bin         = $(lz4_files:=.bin)
@@ -188,6 +191,7 @@ shflpuck_SOURCES := \
 	$(sprites) \
 	$(assets_backgrounds) \
 	$(levels_code) \
+	splash.bg.gen.s \
 	bar.snd.s \
 	font.gen.s \
 	$(SRC_DIR)/code/bar.s \
@@ -266,7 +270,7 @@ puck5.pixel_perfect.gen.s: $(SRC_DIR)/assets/puck5.png gen_sprite
 puck6.pixel_perfect.gen.s: $(SRC_DIR)/assets/puck6.png gen_sprite
 	./gen_sprite $< 255 pixel_perfect RODATA
 pointer.pixel_perfect.gen.s: $(SRC_DIR)/assets/pointer.png gen_sprite
-	./gen_sprite $< 255 pixel_perfect bar
+	./gen_sprite $< 255 pixel_perfect bar_code
 
 $(opponents_sprites): %.unperfect.gen.s: $(SRC_DIR)/assets/opponents/%.png
 %.unperfect.gen.s: $(SRC_DIR)/assets/opponents/%.png gen_sprite
@@ -308,7 +312,7 @@ lose%.snd.s: $(SRC_DIR)/assets/sounds/opponents/lose%.wav gen_sound_clip
 	rm $<_raw
 
 font.gen.s: $(SRC_DIR)/assets/fonts/font.png gen_font
-	./gen_font $< 280 bar
+	./gen_font $< 280 bar_code
 
 shflpuck.ld.cfg: $(SRC_DIR)/shflpuck.ld.cfg.tmpl $(SRC_DIR)/generators/gen_linker_config.sh
 	$(SRC_DIR)/generators/gen_linker_config.sh $< $(opponents) > $@
@@ -326,6 +330,7 @@ clean:
 	*.gen.inc \
 	*.snd.s \
 	transform.s \
+	splash.hgr \
 	table.hgr \
 	level*.hgr \
 	assets/*/*.hgr-preview.* \

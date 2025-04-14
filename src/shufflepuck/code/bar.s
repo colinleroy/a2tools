@@ -24,7 +24,8 @@
         .include    "pointer_coords.inc"
         .include    "constants.inc"
 
-.data
+.segment "bar_code"
+
 BOXES_START = *
 opponents_boxes:                      ; X, W, Y, H, opponent number
         .byte 39,  17, 104, 26, 0     ; Skip
@@ -40,7 +41,6 @@ opponents_boxes:                      ; X, W, Y, H, opponent number
         .byte 231, 21, 13,  21, CH_ESC; Exit
 NUM_BOXES = (* - BOXES_START)/5
 
-.segment "bar"
 
 champion_str: .asciiz "123456789012"
 congrats_str: .asciiz "CONGRATS"

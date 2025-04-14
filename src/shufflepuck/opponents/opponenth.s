@@ -248,6 +248,9 @@ store_dx:
         cmp     #(THEIR_PUSHER_MAX_Y)
         bcs     move_backwards
 hit:
+        lda     #0
+        sta     potato
+
         ; Get a 0-15 DY
         jsr     _rand
         lsr
@@ -259,7 +262,16 @@ hit:
         adc     #16
         sta     their_pusher_dy
 
-        ; Get a 0-15 DX
+        ; Get a 1/16th chance of a huge hit
+        jsr     _rand
+        cmp     #16
+        bcs     :+
+        lda     their_pusher_dy
+        adc     #20
+        sta     their_pusher_dy
+        sta     potato
+
+:       ; Get a 0-15 DX
         jsr     _rand
         lsr
         lsr
@@ -268,7 +280,12 @@ hit:
         ; And make it -8/7
         sec
         sbc     #8
-        sta     their_pusher_dx
+
+        ; Double it if smashing
+        ldx     potato
+        beq     :+
+        asl
+:       sta     their_pusher_dx
         rts
 
 move_forwards_slow:
@@ -327,8 +344,8 @@ move_backwards:
         jmp     _play_win_h
 .endproc
 
-
 min_x:            .byte 1
 max_x:            .byte 1
 num_catch:        .byte 1
 mid_pusher_x:     .byte 1
+potato:           .byte 0

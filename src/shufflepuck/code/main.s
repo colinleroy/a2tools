@@ -42,10 +42,12 @@
 
         .import   __OPPONENT_START__
 
-        .import   _load_table, _backup_table, _restore_table
+        .import   _load_table_high, _backup_table_high, _backup_table, _restore_table
         .import   _load_lowcode, _load_lc, _load_opponent
-        .import   _load_bar, _backup_bar, _restore_bar
+        .import   _load_bar_high, _backup_bar_high, _restore_bar
+        .import   _load_bar_code, _backup_bar_code, _restore_bar_code
         .import   _load_barsnd, _backup_barsnd, _restore_barsnd
+        .import   _init_text_before_decompress, _cache_working
         .import   _play_bar
 
         .import   hz
@@ -56,7 +58,7 @@
         .import   _platform_msleep
         .import   _build_hgr_tables
 
-        .import   _init_text, _memcpy, _clrscr, _cputs, pushax
+        .import   _init_text, _memcpy, _clrscr, _cputs, pushax, ___errno, _strerror
         .import   ___randomize
 
         .include  "apple2.inc"
@@ -71,13 +73,21 @@
 
 .proc _main
         jsr     _load_lowcode
-        jsr     _clrscr
+        bcc     :+
+        brk
+:       jsr     _clrscr
+
+        lda     #1
+        jsr     _init_hgr
+
         lda     #<load_splc_str
         ldx     #>load_splc_str
         jsr     _cputs
         jsr     _load_lc
+        bcc     :+
+        jmp     load_error
 
-        jsr     ___randomize
+:       jsr     ___randomize
         jmp     _real_main
 .endproc
 
@@ -115,12 +125,6 @@ calibrate_hz_handler:
         jsr     _platform_msleep
 .endif
 
-        lda     #<load_table_str
-        ldx     #>load_table_str
-        jsr     _cputs
-        jsr     _load_table
-        jsr     _backup_table
-
         ; Wait for first interrupt
         jsr     _mouse_wait_vbl
 
@@ -133,17 +137,57 @@ calibrate_hz_handler:
 .endif
         ; End of debug
 
-        lda     #<load_barsnd_str
-        ldx     #>load_barsnd_str
-        jsr     _cputs
-        jsr     _load_barsnd
-        jsr     _backup_barsnd
-
+        ; Preload assets at $4000 and back them up
+        ; while we have the splash screen at $2000
         lda     #<load_bar_str
         ldx     #>load_bar_str
         jsr     _cputs
-        jsr     _load_bar
-        jsr     _backup_bar
+        jsr     _load_bar_high
+        bcc     :+
+        jmp     load_error
+
+:       jsr     _backup_bar_high
+
+        ; Don't bother preloading the rest if /RAM is unavailable
+        lda     _cache_working
+        beq     new_opponent
+
+        lda     #<load_bar_code_str
+        ldx     #>load_bar_code_str
+        jsr     _cputs
+        jsr     _load_bar_code
+        bcc     :+
+        jmp     load_error
+
+:       jsr     _backup_bar_code
+
+        lda     #<load_table_str
+        ldx     #>load_table_str
+        jsr     _cputs
+        jsr     _load_table_high
+        bcc     :+
+        jmp     load_error
+
+:       jsr     _backup_table_high
+
+        lda     #<load_barsnd_str
+        ldx     #>load_barsnd_str
+        jsr     _cputs
+
+        jsr     _clrscr
+
+        ; Remove splashscreen as the intro sound
+        ; overwrites it
+        ; Ask data loader do it as late as possible
+        lda     #1
+        sta     _init_text_before_decompress
+        jsr     _load_barsnd
+        bcc     :+
+        jmp     load_error
+
+:       jsr     _backup_barsnd
+        lda     #0
+        sta     _init_text_before_decompress
 
 new_opponent:
         lda     in_tournament     ; Are we in a tournament?
@@ -165,6 +209,7 @@ to_bar:
         ldy     #0
         jsr     _play_bar
         jsr     _restore_bar
+        jsr     _restore_bar_code
 
         lda     #1
         jsr     _init_hgr
@@ -203,13 +248,15 @@ new_game:
         jsr     _restore_table
         jsr     _draw_opponent_parts
         jsr     _backup_table
+        bcs     draw_scores
 
 new_point:
         jsr     _restore_table
-        bcc     :+
+        bcc     draw_scores
         jsr     _draw_opponent_parts
 
-:       ; Draw scores
+draw_scores:
+        ; Draw scores
         jsr     _draw_scores
 
         ; Check for end of game
@@ -400,7 +447,15 @@ no_kbd:
         sta     _last_key
         clc
         rts
+.endproc
 
+.proc load_error
+        lda     ___errno
+        ldx     #$00
+        jsr     _strerror
+        jsr     _cputs
+        jsr     _init_text
+        brk
 .endproc
 
 .data
@@ -409,10 +464,12 @@ turn_puck_y:
         .byte   MY_PUCK_INI_Y
         .byte   THEIR_PUCK_INI_Y
 
-load_splc_str:    .byte "LOADING CODE..."          ,$0D,$0A,$00
-load_table_str:   .byte "LOADING ASSETS..."        ,$0D,$0A,$00
-load_barsnd_str:  .byte "DISMANTLING CAPITALISM...",$0D,$0A,$00
-load_bar_str:     .byte "ANY MINUTE NOW..."        ,$0D,$0A,$00
+load_splc_str:    .byte "LOADING LC CODE..."       ,$0D,$0A,$00
+load_table_str:   .byte "LOADING TABLE IMAGE..."   ,$0D,$0A,$00
+load_barsnd_str:  .byte "LOADING INTRO SOUND..."   ,$0D,$0A,$00
+load_bar_str:     .byte "LOADING BAR IMAGE..."     ,$0D,$0A,$00
+load_bar_code_str:.byte "LOADING BAR CODE..."      ,$0D,$0A,$00
+load_err_str:     .byte "COULD NOT LOAD FILE: "    ,$0D,$0A,$00
 
 .bss
 
