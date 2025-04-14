@@ -13,13 +13,15 @@
 ; You should have received a copy of the GNU General Public License
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-        .export   _load_table, _backup_table, _restore_table
+        .export   _load_table_high, _backup_table, _backup_table_high, _restore_table
         .export   _load_lowcode, _load_lc, _load_opponent
-        .export   _load_bar, _backup_bar, _restore_bar
+        .export   _load_bar_high, _backup_bar_high, _restore_bar
+        .export   _load_bar_code, _backup_bar_code, _restore_bar_code
         .export   _load_barsnd, _backup_barsnd, _restore_barsnd
+        .export   _init_text_before_decompress, _cache_working
 
         .import   _open, _read, _write, _close, _memmove, _unlink
-        .import   pushax, popax
+        .import   pushax, popax, _init_text
         .import   __filetype, __auxtype
 
         .import   __LOWCODE_START__, __LOWCODE_SIZE__
@@ -39,48 +41,81 @@
 
 ; The minimum to load lowcode
 
-.proc set_code_segment_destination
-        sta     destination
-        stx     destination+1
-
-        lda     #<__OPPONENT_START__
-        sta     tmp_destination
-        lda     #>__OPPONENT_START__
-        sta     tmp_destination+1
+.proc set_compressed_buf_hgr
+        lda     #<__HGR_START__
+        ldx     #>__HGR_START__
+        sta     compressed_buf_start
+        stx     compressed_buf_start+1
+        lda     #<(__HGR_START__+__HGR_SIZE__)
+        ldx     #>(__HGR_START__+__HGR_SIZE__)
+        sta     compressed_buf_end
+        stx     compressed_buf_end+1
         rts
+.endproc
+
+.proc set_compressed_buf_dynseg
+        lda     #<__OPPONENT_START__
+        ldx     #>__OPPONENT_START__
+        sta     compressed_buf_start
+        stx     compressed_buf_start+1
+        lda     #<(__OPPONENT_START__+__OPPONENT_SIZE__)
+        ldx     #>(__OPPONENT_START__+__OPPONENT_SIZE__)
+        sta     compressed_buf_end
+        stx     compressed_buf_end+1
+        rts
+.endproc
+
+.proc push_hgr_page_buf
+        lda     #<__HGR_START__
+        ldx     #>__HGR_START__
+        jsr     pushax
+        lda     #<__HGR_SIZE__
+        ldx     #>__HGR_SIZE__
+        jmp     pushax
+.endproc
+
+.proc push_high_hgr_page_buf
+        lda     #<__OPPONENT_START__
+        ldx     #>__OPPONENT_START__
+        jsr     pushax
+        lda     #<__HGR_SIZE__
+        ldx     #>__HGR_SIZE__
+        jmp     pushax
+.endproc
+
+.proc push_dynseg_page_buf
+        lda     #<__OPPONENT_START__
+        ldx     #>__OPPONENT_START__
+        jsr     pushax
+        lda     #<__OPPONENT_SIZE__
+        ldx     #>__OPPONENT_SIZE__
+        jmp     pushax
+.endproc
+
+.proc push_extra_large_page_buf
+        lda     #<__HGR_START__
+        ldx     #>__HGR_START__
+        jsr     pushax
+        lda     #<(__HGR_SIZE__+__OPPONENT_SIZE__)
+        ldx     #>(__HGR_SIZE__+__OPPONENT_SIZE__)
+        jmp     pushax
 .endproc
 
 ; A: data IO mode
 ; X: Whether to uncompress data
 .proc _data_io
-        stx     do_uncompress     ; Save whether we need to uncompress lz4
-        sta     data_io_mode+1    ; Patch _open mode
-
+        lda     io_mode
         cmp     #<O_RDONLY        ; Patch io function (_read or _write)
         beq     set_read
         lda     #<_write          ; Patch for _write
         ldx     #>_write
-        jmp     setup_out_buf
+        jmp     :+
 set_read:
         lda     #<_read           ; Patch for _read
         ldx     #>_read
 
-setup_out_buf:
-        sta     data_io_func+1    ; Store patched io function
+:       sta     data_io_func+1    ; Store patched io function
         stx     data_io_func+2
-
-        lda     destination       ; Patch buffer end
-        clc
-        adc     size
-        sta     buf_end_low+1
-        lda     destination+1
-        adc     size+1
-        sta     buf_end_high+1
-
-        ldy     tmp_destination   ; No. Do our IO directly to/from the
-        sty     file_io_low+1     ; user-provided buffer
-        ldy     tmp_destination+1
-        sty     file_io_high+1
 
 do_io:
         ; Open file
@@ -93,8 +128,7 @@ do_io:
         ldx     filename+1
         jsr     pushax
 
-data_io_mode:
-        lda     #$FF          ; Patched with O_RDONLY or O_WRONLY
+        lda     io_mode
         ldx     #0
         jsr     pushax        ; Push mode for _open
 
@@ -108,13 +142,18 @@ data_io_mode:
 :       jsr     pushax        ; We now have an fd. Push it for _read/_write
         jsr     pushax        ; and a second time for _close
 
-file_io_low:
-        lda     #$FF          ; Push IO buffer to _read/_write.
-file_io_high:
-        ldx     #$FF
+        ldx     do_uncompress ; Do we need to uncompress?
+        bne     :+
+        lda     destination   ; No, so read directly where we want it
+        ldx     destination+1
+        bne     push_dest     ; (Always branch)
+:
+        lda     compressed_buf_start
+        ldx     compressed_buf_start+1
+push_dest:
         jsr     pushax
 
-        lda     size          ; Set size for _read/_write
+        lda     size
         ldx     size+1
 data_io_func:
         jsr     $FFFF         ; Patched. Calls _read or _write
@@ -128,9 +167,9 @@ data_io_func:
         rts
 
 uncompress:
-        lda     tmp_destination
+        lda     compressed_buf_start
         sta     ptr1
-        lda     tmp_destination+1
+        lda     compressed_buf_start+1
         sta     ptr1+1
 
         ldy     #0
@@ -152,13 +191,12 @@ uncompress:
         ; the furthest possible in the available buffer
         ; so that decompression doesn't overwrite the last
         ; compressed bytes
-buf_end_low:
-        lda     #$FF
+        lda     compressed_buf_end
         sec
         sbc     tmp1
         tay
-buf_end_high:
-        lda     #$FF
+
+        lda     compressed_buf_end+1
         sbc     tmp1+1
         tax
         tya
@@ -167,10 +205,10 @@ buf_end_high:
 
         ; Where to move data from (the compressed buffer excluding the 4
         ; header bytes)
-        lda     ptr1
+        lda     compressed_buf_start
         clc
         adc     #4
-        ldx     ptr1+1
+        ldx     compressed_buf_start+1
         bcc     :+
         inx
 :       jsr     pushax        ; Push source for memmove
@@ -180,7 +218,11 @@ buf_end_high:
         jsr     _memmove
 
 finish_decompress:
-        lda     destination   ; Push user-specified destination buffer
+        lda     _init_text_before_decompress
+        beq     :+
+        jsr     _init_text
+
+:       lda     destination   ; Push user-specified destination buffer
         ldx     destination+1
         jsr     pushax
 
@@ -196,227 +238,276 @@ finish_decompress:
         rts
 .endproc
 
-.proc _load_lowcode
-        lda       #<lowcode_name
-        sta       filename
-        lda       #>lowcode_name
-        sta       filename+1
+; Filename in AX, R/W in Y. destination in TOS.
+; set do_uncompress before.
 
-        ; Load compressed data here
+.proc file_io_at
+        sta     filename
+        stx     filename+1
+        sty     io_mode
+
+        jsr     popax
+        sta     size
+        stx     size+1
+
+        jsr     popax
+        sta     destination
+        stx     destination+1
+
+        jmp     _data_io
+.endproc
+
+.proc _load_lowcode
+        jsr     set_compressed_buf_dynseg
         lda     #<__LOWCODE_START__
         ldx     #>__LOWCODE_START__
-        jsr     set_code_segment_destination
+        jsr     pushax
+        lda     #<__LOWCODE_SIZE__
+        ldx     #>__LOWCODE_SIZE__
+        jsr     pushax
+        lda     #<lowcode_name
+        ldx     #>lowcode_name
+        ldy     #$01              ; O_RDONLY
+        sty     do_uncompress
 
-        lda      #<__LOWCODE_SIZE__
-        sta      size
-        lda      #>__LOWCODE_SIZE__
-        sta      size+1
-
-        lda      #<O_RDONLY
-        ldx      #$01
-        jmp      _data_io
+        jmp      file_io_at
 .endproc
 
 .segment "CODE"
 
 ; A = which opponent to load
 .proc _load_opponent
-        pha
-
-        lda     #<opponent_name_tmpl
-        sta     filename
-        lda     #>opponent_name_tmpl
-        sta     filename+1
-
         ; Set correct filename for level
-        pla
         clc
         adc     #'A'
-        sta     opponent_name_tmpl
+        sta     opponent_name_tmpl+9
 
-        lda     #<__OPPONENT_START__
-        ldx     #>__OPPONENT_START__
-        jsr     set_code_segment_destination
+        jsr     set_compressed_buf_dynseg
+        jsr     push_dynseg_page_buf
+        lda     #<opponent_name_tmpl
+        ldx     #>opponent_name_tmpl
+        ldy     #$01              ; O_RDONLY
+        sty     do_uncompress
 
-        lda     #<__OPPONENT_SIZE__
-        sta     size
-        lda     #>__OPPONENT_SIZE__
-        sta     size+1
-
-        lda     #<O_RDONLY
-        ldx     #$01
-        jmp     _data_io
+        jmp      file_io_at
 .endproc
 
-.proc set_hgr_buf
-        sta     size
-        stx     size+1
-
-        lda     #<__HGR_START__
-        sta     tmp_destination
-        sta     destination
-        lda     #>__HGR_START__
-        sta     tmp_destination+1
-        sta     destination+1
-        rts
+.proc _load_table_high
+        jsr     set_compressed_buf_dynseg
+        jsr     push_dynseg_page_buf
+        jmp     load_table_at
 .endproc
-
-.proc set_uncompress_hgr_in_place
-        lda     #<__HGR_SIZE__
-        ldx     #>__HGR_SIZE__
-
-        jmp     set_hgr_buf
+.proc load_table_hgr
+        jsr     set_compressed_buf_hgr
+        jsr     push_hgr_page_buf
 .endproc
+.proc load_table_at
+        lda     #<table_name
+        ldx     #>table_name
+        ldy     #$01              ; O_RDONLY
+        sty     do_uncompress
 
-.proc _load_table
-        lda      #<table_name
-        sta      filename
-        lda      #>table_name
-        sta      filename+1
-
-        jsr      set_uncompress_hgr_in_place
-
-        lda      #<O_RDONLY
-        ldx      #$01
-        jmp      _data_io
+        jmp      file_io_at
 .endproc
 
 .proc _load_lc
-        lda     #<lc_name
-        sta     filename
-        lda     #>lc_name
-        sta     filename+1
+        jsr     set_compressed_buf_dynseg
 
-        ; Load compressed data here
         lda     #<__SPLC_START__
         ldx     #>__SPLC_START__
-        jsr     set_code_segment_destination
-
+        jsr     pushax
         lda     #<__SPLC_SIZE__
-        sta     size
-        lda     #>__SPLC_SIZE__
-        sta     size+1
+        ldx     #>__SPLC_SIZE__
+        jsr     pushax
+        lda     #<lc_name
+        ldx     #>lc_name
+        ldy     #$01              ; O_RDONLY
+        sty     do_uncompress
 
-        lda     #<O_RDONLY
-        ldx     #$01
-        jmp     _data_io
+        jmp      file_io_at
 .endproc
 
-.proc set_uncompress_large_in_place
-        lda     #<(__HGR_SIZE__+__OPPONENT_SIZE__)
-        ldx     #>(__HGR_SIZE__+__OPPONENT_SIZE__)
+.proc _load_bar_high
+        jsr     set_compressed_buf_dynseg
+        jsr     push_dynseg_page_buf
+        jmp     load_bar_at
+.endproc
+.proc load_bar_hgr
+        jsr     set_compressed_buf_hgr
+        jsr     push_hgr_page_buf
+.endproc
+.proc load_bar_at
+        lda     #<bar_name
+        ldx     #>bar_name
+        ldy     #$01              ; O_RDONLY
+        sty     do_uncompress
 
-        jmp     set_hgr_buf
+        jmp      file_io_at
 .endproc
 
-.proc set_bar_backup_params
-        lda     #<bar_backup_name
-        sta     filename
-        lda     #>bar_backup_name
-        sta     filename+1
+.proc _load_bar_code
+        jsr     set_compressed_buf_dynseg
+        jsr     push_dynseg_page_buf
+        lda     #<bar_code_name
+        ldx     #>bar_code_name
+        ldy     #$01              ; O_RDONLY
+        sty     do_uncompress
 
-        jmp     set_uncompress_large_in_place
-.endproc
-
-.proc set_barsnd_backup_params
-        lda     #<barsnd_backup_name
-        sta     filename
-        lda     #>barsnd_backup_name
-        sta     filename+1
-
-        jmp     set_uncompress_large_in_place
-.endproc
-
-.proc _load_bar
-        lda       #<bar_name
-        sta       filename
-        lda       #>bar_name
-        sta       filename+1
-
-        jsr      set_uncompress_large_in_place
-
-        lda      #<O_RDONLY
-        ldx      #$01
-        jmp      _data_io
+        jmp      file_io_at
 .endproc
 
 .proc _load_barsnd
-        lda       #<barsnd_name
-        sta       filename
-        lda       #>barsnd_name
-        sta       filename+1
+        jsr     set_compressed_buf_dynseg
+        jsr     push_extra_large_page_buf
+        lda     #<barsnd_name
+        ldx     #>barsnd_name
+        ldy     #$01              ; O_RDONLY
+        sty     do_uncompress
 
-        jsr      set_uncompress_large_in_place
-
-        lda      #<O_RDONLY
-        ldx      #$01
-        jmp      _data_io
+        jmp      file_io_at
 .endproc
 
 .proc set_table_backup_params
+        jsr     push_hgr_page_buf
         lda     #<table_backup_name
-        sta     filename
-        lda     #>table_backup_name
-        sta     filename+1
-
-        jmp     set_uncompress_hgr_in_place
+        ldx     #>table_backup_name
+        ldy     #$00
+        sty     do_uncompress
+        rts
 .endproc
 
-.proc backup
-        lda      #(O_WRONLY|O_CREAT)
-        ldx      #$00
-        jmp      _data_io
-.endproc
-
-.proc restore
-        lda      #O_RDONLY
-        ldx      #$00
-        jmp      _data_io
+.proc backup_io
+        jsr      file_io_at
+        bcc      :+
+        lda      #0
+        sta      _cache_working
+:       rts
 .endproc
 
 .proc _backup_table
+        lda      _cache_working
+        beq      :+
         jsr      set_table_backup_params
-        jmp      backup
+        ldy      #(O_WRONLY|O_CREAT)
+        jmp      backup_io
+
+:       sec
+        rts
+.endproc
+
+.proc _backup_table_high
+        jsr     push_high_hgr_page_buf
+        lda     #<table_backup_name
+        ldx     #>table_backup_name
+        ldy     #$00
+        sty     do_uncompress
+        ldy      #(O_WRONLY|O_CREAT)
+        jmp      backup_io
 .endproc
 
 .proc _restore_table
-        jsr      set_table_backup_params
-        jsr      restore
-        bcs      no_cache
+        lda     _cache_working
+        beq     no_cache
+        jsr     set_table_backup_params
+        ldy     #O_RDONLY
+        jsr     file_io_at
+        bcs     no_cache
         rts
 no_cache:
-        jsr      _load_table
+        jsr     load_table_hgr
         sec
         rts
 .endproc
 
-.proc _backup_bar
-        jsr      set_bar_backup_params
-        jmp      backup
+.proc set_bar_backup_params
+        jsr     push_hgr_page_buf
+        lda     #<bar_backup_name
+        ldx     #>bar_backup_name
+        ldy     #$00
+        sty     do_uncompress
+        rts
+.endproc
+
+.proc _backup_bar_high
+        jsr     push_high_hgr_page_buf
+        lda     #<bar_backup_name
+        ldx     #>bar_backup_name
+        ldy     #$00
+        sty     do_uncompress
+        ldy      #(O_WRONLY|O_CREAT)
+        jmp      backup_io
 .endproc
 
 .proc _restore_bar
-        jsr      set_bar_backup_params
-        jsr      restore
-        bcs      no_cache
+        lda     _cache_working
+        beq     no_cache
+        jsr     set_bar_backup_params
+        ldy     #O_RDONLY
+        jsr     file_io_at
+        bcs     no_cache
         rts
 no_cache:
-        jmp      _load_bar
+        jsr     load_bar_hgr
+        sec
+        rts
 .endproc
 
+.proc set_bar_code_backup_params
+        jsr     push_dynseg_page_buf
+        lda     #<bar_code_backup_name
+        ldx     #>bar_code_backup_name
+        ldy     #$00
+        sty     do_uncompress
+        rts
+.endproc
+
+.proc _backup_bar_code
+        jsr      set_bar_code_backup_params
+        ldy      #(O_WRONLY|O_CREAT)
+        jmp      backup_io
+.endproc
+
+.proc _restore_bar_code
+        lda     _cache_working
+        beq     no_cache
+        jsr     set_bar_code_backup_params
+        ldy     #O_RDONLY
+        jsr     file_io_at
+        bcs     no_cache
+        rts
+no_cache:
+        jsr     _load_bar_code
+        sec
+        rts
+.endproc
+
+.proc set_barsnd_backup_params
+        jsr     push_extra_large_page_buf
+        lda     #<barsnd_backup_name
+        ldx     #>barsnd_backup_name
+        ldy     #$00
+        sty     do_uncompress
+        rts
+.endproc
 
 .proc _backup_barsnd
         jsr      set_barsnd_backup_params
-        jmp      backup
+        ldy      #(O_WRONLY|O_CREAT)
+        jmp      backup_io
 .endproc
 
 .proc _restore_barsnd
-        jsr      set_barsnd_backup_params
-        jsr      restore
-        bcs      no_cache
+        lda     _cache_working
+        beq     no_cache
+        jsr     set_barsnd_backup_params
+        ldy     #O_RDONLY
+        jsr     file_io_at
+        bcs     no_cache
         rts
 no_cache:
-        jmp      _load_barsnd
+        jsr     _load_barsnd
+        sec
+        rts
 .endproc
 
 .proc unlink_cached_files
@@ -426,6 +517,9 @@ no_cache:
         lda       #<bar_backup_name
         ldx       #>bar_backup_name
         jsr       _unlink
+        lda       #<bar_code_backup_name
+        ldx       #>bar_code_backup_name
+        jsr       _unlink
         lda       #<barsnd_backup_name
         ldx       #>barsnd_backup_name
         jmp       _unlink
@@ -433,20 +527,26 @@ no_cache:
 
         .bss
 
-filename:        .res 2
-destination:     .res 2
-tmp_destination: .res 2
-size:            .res 2
-do_uncompress:   .res 1
+filename:             .res 2
+destination:          .res 2
+tmp_destination:      .res 2
+size:                 .res 2
+do_uncompress:        .res 1
+io_mode:              .res 1
+compressed_buf_start: .res 2
+compressed_buf_end:   .res 2
+_init_text_before_decompress: .res 1
 
         .data
-
-lowcode_name:        .asciiz "LOWCODE"
-lc_name:             .asciiz "SPLC"
-table_name:          .asciiz "TABLE"
-bar_name:            .asciiz "BAR"
-barsnd_name:         .asciiz "BARSND"
-table_backup_name:   .asciiz "/RAM/TABLE"
-bar_backup_name:     .asciiz "/RAM/BAR"
-barsnd_backup_name:  .asciiz "/RAM/BARSND"
-opponent_name_tmpl:  .asciiz "X"
+_cache_working:      .byte 1
+lowcode_name:        .asciiz "LOW.CODE"
+lc_name:             .asciiz "LC.CODE"
+table_name:          .asciiz "TABLE.IMG"
+bar_name:            .asciiz "BAR.IMG"
+bar_code_name:       .asciiz "BAR.CODE"
+barsnd_name:         .asciiz "BAR.SND"
+table_backup_name:   .asciiz "/RAM/TABLE.IMG"
+bar_backup_name:     .asciiz "/RAM/BAR.IMG"
+bar_code_backup_name:.asciiz "/RAM/BAR.CODE"
+barsnd_backup_name:  .asciiz "/RAM/BAR.SND"
+opponent_name_tmpl:  .asciiz "OPPONENT.X"
