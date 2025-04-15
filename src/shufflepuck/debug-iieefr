@@ -1,0 +1,2 @@
+#!/bin/bash
+make clean all && mame apple2eefr -window -flop1 shufflepuck.po -resolution 560x384 -sl1 ssc -sl1:ssc:rs232 null_modem -bitb socket.localhost:2001 -sl2 ssc -sl2:ssc:rs232 null_modem -bitb2 socket.localhost:2000 -sl4 mouse -debug
