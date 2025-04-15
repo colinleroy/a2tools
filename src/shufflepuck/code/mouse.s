@@ -79,7 +79,7 @@ barbox: .word   0
         .word   255/2
         .word   HGR_HEIGHT/2
 
-.segment "LOWCODE"
+.segment "CODE"
 
 firmware:
         ; Lookup and patch firmware address lobyte
@@ -418,21 +418,24 @@ y_double:
         rts
 
 .proc _mouse_wait_vbl
-        bit     ostype
-        bmi     iigs            ; $8x
-        bvs     iic             ; $4x
-
-:       bit     $C019           ; Softswitch VBL
-        bpl     :-
-:       bit     $C019           ; Softswitch VBL
-        bmi     :-
-        rts
+        lda     ostype
+        and     #$20
+        bne     iie
+        ; We want to use the mousecard everywhere but on IIe.
 iigs:
 iic:
+iip:
         lda     #0              ; Skip a frame rather than flicker
         sta     vbl_ready
 :       lda     vbl_ready
         beq     :-
+        rts
+
+iie:
+:       bit     $C019           ; Softswitch VBL
+        bpl     :-
+:       bit     $C019           ; Softswitch VBL
+        bmi     :-
         rts
 .endproc
 
@@ -447,31 +450,82 @@ iic:
         rts
 .endproc
 
+.proc waste_189
+                                  ; +6 for jsr
+        lda     #21               ; +2
+        sta     tmp1              ; +3
+:       dec     tmp1              ;  16 | 8 cycles * 21
+        bne     :-                ;  19 |
+        inc     tmp1              ; +4 (5-1 for untaken bne)
+        rts                       ; +6
+.endproc
+
 ; Count cycles to determine whether the mouse interrupts at 50 or 60Hz.
 .proc _mouse_calibrate_hz
-        ldx     #0
-        ldy     #0
+        lda     ostype
+        and     #$20
+        bne     iie
+
+iic:
+iigs:
+iip:
+        ldx     #5               ; Account for the fact that the mouse IRQ
+                                 ; is expensive (1000 cycles !?) so add 5*200
 
         jsr     _mouse_wait_vbl
 
         lda     #$00
         sta     vbl_ready
 
-:       lda     vbl_ready             ; 4
-        bne     calibrate_done        ; 6
-        inx                           ; 8
-        bne     :-                    ; 11 (11*255 + 12 = 2817)
-        iny
-        bne     :-
+:       nop                       ; 2
+        inx                       ; 4
+        jsr     waste_189         ; 193
+        lda     vbl_ready         ; 197
+        beq     :-                ; 200
 
 calibrate_done:
         lda     #60               ; Consider we're at 60Hz
         sta     hz
-        cpy     #$06              ; But if Y = $06, we spent about 7*2817 cycles
-        bne     :+                ; waiting for the interrupt: ~19719 cycles, so
+        ; we'll now have X ~= 86 at 60Hz, ~= 102 at 50Hz:
+        ; 86*200 = 17200, 102*200 = 20400.
+        ; Consider any X >= 92 means 50Hz
+        cpx     #92
+        bcc     :+
         lda     #50               ; we're at 50Hz
         sta     hz
 :       rts
+
+iie:    ; We can't count on the mouse interrupts to give us the VBL freq, so
+        ; Wait for bit 7 to be off (VBL start)
+        php
+        sei
+
+        ldx     #0
+
+:       bit     $C019
+        bmi     :-
+
+        ; Wait for bit 7 to be on (VBL end)
+:       bit     $C019
+        bpl     :-
+
+wait_vbl1:  ; now wait for bit 7 to be off again
+        nop                       ; 2
+        inx                       ; 4
+        jsr     waste_189         ; 193
+        bit     $C019             ; 197
+        bmi     wait_vbl1         ; 200
+
+wait_vbl2:  ; now wait for bit 7 to be on again (end of next VBL)
+        nop                       ; 2
+        inx                       ; 4
+        jsr     waste_189         ; 193
+        bit     $C019             ; 197
+        bpl     wait_vbl2         ; 200
+
+        plp
+        ; done!
+        jmp     calibrate_done
 .endproc
 
        .bss

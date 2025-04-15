@@ -271,8 +271,6 @@ sprite_pointer:
         rts
 .endproc
 
-.segment "CODE"
-
 .proc _draw_eor
         ldy     #SPRITE_DATA::NEED_CLEAR
         lda     #1

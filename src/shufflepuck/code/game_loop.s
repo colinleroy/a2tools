@@ -69,7 +69,7 @@
         .include    "opponent_file.inc"
         .include    "hgr_applesoft.inc"
 
-.segment "CODE"
+.segment "LOWCODE"
 
 .proc _clear_screen
         jsr     clear_their_pusher
@@ -154,8 +154,6 @@ draw:
 out:
         rts
 .endproc
-
-.segment "LOWCODE"
 
 .proc clear_screen_their_side
         lda     prev_puck_in_front_of_them

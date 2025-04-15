@@ -273,8 +273,6 @@ finish_decompress:
         jmp      file_io_at
 .endproc
 
-.segment "CODE"
-
 ; A = which opponent to load
 .proc _load_opponent
         ; Set correct filename for level
@@ -291,6 +289,8 @@ finish_decompress:
 
         jmp      file_io_at
 .endproc
+
+.segment "LOWCODE"
 
 .proc _load_table_high
         jsr     set_compressed_buf_dynseg

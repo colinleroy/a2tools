@@ -72,22 +72,36 @@
 .code
 
 .proc _main
-        jsr     _load_lowcode
+        ; Init mouse first thing (it flickers HGR on IIplus)
+        ; But disable IRQs as cc65's handler is in LOWCODE,
+        ; which is not yet loaded
+        php
+        sei
+        jsr     _init_mouse
+        bcc     :+                ; Do we have a mouse?
+
+        ; No. That won't work. We need one.
+        brk
+
+        ; Load LOWCODE (and splash screen)
+:       jsr     _load_lowcode
         bcc     :+
         brk
-:       jsr     _clrscr
+
+:       ; We can now enable IRQs, the handler is loaded
+        plp
+
+        ; Calibrate to get Hz
+        jsr     _mouse_calibrate_hz
+
+        ; Wait for first interrupt
+        jsr     _mouse_wait_vbl
+
+        jsr     _clrscr
 
         lda     #1
         jsr     _init_hgr
 
-        lda     #<load_splc_str
-        ldx     #>load_splc_str
-        jsr     _cputs
-        jsr     _load_lc
-        bcc     :+
-        jmp     load_error
-
-:       jsr     ___randomize
         jmp     _real_main
 .endproc
 
@@ -107,26 +121,16 @@
 .endproc
 
 .proc _real_main
+        lda     #<load_splc_str
+        ldx     #>load_splc_str
+        jsr     _cputs
+        jsr     _load_lc
+        bcc     :+
+        jmp     load_error
+
+:       jsr     ___randomize
+
         jsr     _build_hgr_tables
-
-        jsr     _init_mouse
-        bcc     :+                ; Do we have a mouse?
-
-        ; No. That won't work.
-        brk
-
-calibrate_hz_handler:
-:       jsr     _mouse_calibrate_hz
-
-.ifndef __APPLE2ENH__
-        ; Give the Mousecard time to settle post-init
-        lda     #$FF
-        ldx     #0
-        jsr     _platform_msleep
-.endif
-
-        ; Wait for first interrupt
-        jsr     _mouse_wait_vbl
 
         ; Debug - start game at first opponent:
 .ifdef DEBUG_OPPONENT
@@ -330,6 +334,7 @@ game_loop:
 
         ; Drop 1 frame out of 6 at 60Hz
         ; otherwise the game is harder
+check_hz:
         lda     hz
         cmp     #60
         bne     loop_start
