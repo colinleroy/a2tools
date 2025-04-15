@@ -67,22 +67,22 @@ wait_input:
         jsr     clear_pointer
         jsr     draw_pointer
         jsr     _check_keyboard
-        bcs     out
+        bcs     kbd
         jsr     _mouse_check_button
         bcc     wait_input
 
         jsr     find_opponent
         bcc     wait_input
 
-out:
-        cmp     #CH_ESC
-        bne     :+
-        jmp     _exit
-
-:       pha
+        pha
         jsr     clear_pointer
         pla
         rts
+
+kbd:
+        cmp     #CH_ESC
+        bne     wait_input
+        jmp     _exit
 .endproc
 
 .proc find_opponent
