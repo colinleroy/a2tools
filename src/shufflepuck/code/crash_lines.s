@@ -70,7 +70,7 @@ orig_x:
         bcc     :+
         ldy     #(puck0_WIDTH/2)  ; X origin of lines
         ldx     #$EA              ; NOP for lines length
-:       sty     _draw_crash_lines::orig_x
+:       sty     _draw_crash_lines::orig_x+1
         stx     rand_crash::extra_lsr
         rts
 .endproc
