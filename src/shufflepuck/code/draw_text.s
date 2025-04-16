@@ -20,7 +20,9 @@
 ; A: ASCII code of the char
 ; X: X coord / 7
 ; Y: bottom Y coord
+; Return with updated X
 .proc _print_char
+        sty     backup_y
         sec
         sbc     #' '              ; Space is our first character
         stx     char_x_offset+1
@@ -49,12 +51,16 @@ scr:
         dey
         dex
         bpl     :-
+        inc     char_x_offset+1
+        ldx     char_x_offset+1
+        ldy     backup_y
         rts
 .endproc
 
 ; A: low byte of number, high byte in bcd_input+1
 ; X: X coordinate
 ; Y: Y coordinate (bottom)
+; Return with updated X
 .proc _print_number
         sta     bcd_input
         stx     dest_x+1
@@ -129,7 +135,7 @@ print_done:
         rts
 .endproc
 
-; X: start X coordinate
+; X: start X coordinate/7
 ; Y: bottom Y coordinate
 ; A: Maximum string length
 .proc _read_string
@@ -162,10 +168,14 @@ get_key:
         cmp     #' '              ; We only take space to z
         bcc     get_key
 
-        cmp     #'z'+1              ; Check if lower-case
+        cmp     #'z'+1            ; Check if out of bounds
         bcs     get_key
 
-        ; We can print that letter
+        cmp     #'a'
+        bcc     :+
+        and     #$DF              ; Make it lower-case (~$20)
+
+:       ; We can print that letter
         ldx     tmp2
 max_str_len:
         cpx     #$FF               ; Only N chars max, otherwise wait for Enter
@@ -202,9 +212,14 @@ delete_char:
         jmp     put_char
 
 validate:
-        rts
+        ; Remove underscore
+        ldx     tmp1
+        ldy     put_char+1
+        lda     #' '
+        jmp     _print_char
 .endproc
 
         .bss
 
 _str_input: .res 32
+backup_y:   .res 1

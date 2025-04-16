@@ -45,6 +45,7 @@ BINARY_NAME = shflpuck.bin
 assets = \
 	bar \
 	table \
+	hallfame \
 
 assets_files = $(assets:%=%_img)
 
@@ -166,6 +167,7 @@ sounds = \
 shflpuck_SOURCES := \
 	play_sound.gen.s \
 	$(SRC_DIR)/code/main.s \
+	$(SRC_DIR)/code/hz.s \
 	$(SRC_DIR)/code/mouse.s \
 	$(SRC_DIR)/code/crash_lines.s \
 	$(SRC_DIR)/code/draw_sprite.s \
