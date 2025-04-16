@@ -18,11 +18,14 @@
         .export   _load_bar_high, _backup_bar_high, _restore_bar
         .export   _load_bar_code, _backup_bar_code, _restore_bar_code
         .export   _load_barsnd, _backup_barsnd, _restore_barsnd
+        .export   _load_hall_of_fame, _load_scores, _save_scores
         .export   _init_text_before_decompress, _cache_working
 
         .import   _open, _read, _write, _close, _memmove, _unlink
         .import   pushax, popax, _init_text
         .import   __filetype, __auxtype
+
+        .import   ostype
 
         .import   __LOWCODE_START__, __LOWCODE_SIZE__
         .import   __SPLC_START__, __SPLC_SIZE__
@@ -36,11 +39,12 @@
 
         .include  "apple2.inc"
         .include  "fcntl.inc"
+        .include  "constants.inc"
+        .include  "scores.inc"
 
 .segment "CODE"
 
 ; The minimum to load lowcode
-
 .proc set_compressed_buf_hgr
         lda     #<__HGR_START__
         ldx     #>__HGR_START__
@@ -234,6 +238,9 @@ finish_decompress:
         bit       $C083           ; In case we're writing to it
 
         jsr     _decompress_lz4
+
+        bit     $C080
+
         clc                   ; And we're done!
         rts
 .endproc
@@ -270,7 +277,8 @@ finish_decompress:
         ldy     #$01              ; O_RDONLY
         sty     do_uncompress
 
-        jmp      file_io_at
+        jsr     file_io_at
+        jmp     iip_patch_last_scanline
 .endproc
 
 ; A = which opponent to load
@@ -287,28 +295,31 @@ finish_decompress:
         ldy     #$01              ; O_RDONLY
         sty     do_uncompress
 
-        jmp      file_io_at
+        jmp     file_io_at
 .endproc
 
-.segment "LOWCODE"
 
 .proc _load_table_high
         jsr     set_compressed_buf_dynseg
         jsr     push_dynseg_page_buf
         jmp     load_table_at
 .endproc
+
 .proc load_table_hgr
         jsr     set_compressed_buf_hgr
         jsr     push_hgr_page_buf
 .endproc
+
 .proc load_table_at
         lda     #<table_name
         ldx     #>table_name
         ldy     #$01              ; O_RDONLY
         sty     do_uncompress
 
-        jmp      file_io_at
+        jmp     file_io_at
 .endproc
+
+.segment "LOWCODE"
 
 .proc _load_lc
         jsr     set_compressed_buf_dynseg
@@ -324,7 +335,7 @@ finish_decompress:
         ldy     #$01              ; O_RDONLY
         sty     do_uncompress
 
-        jmp      file_io_at
+        jmp     file_io_at
 .endproc
 
 .proc _load_bar_high
@@ -342,7 +353,7 @@ finish_decompress:
         ldy     #$01              ; O_RDONLY
         sty     do_uncompress
 
-        jmp      file_io_at
+        jmp     file_io_at
 .endproc
 
 .proc _load_bar_code
@@ -353,7 +364,7 @@ finish_decompress:
         ldy     #$01              ; O_RDONLY
         sty     do_uncompress
 
-        jmp      file_io_at
+        jmp     file_io_at
 .endproc
 
 .proc _load_barsnd
@@ -365,6 +376,17 @@ finish_decompress:
         sty     do_uncompress
 
         jmp      file_io_at
+.endproc
+
+.proc _load_hall_of_fame
+        jsr     set_compressed_buf_hgr
+        jsr     push_hgr_page_buf
+        lda     #<hallfame_name
+        ldx     #>hallfame_name
+        ldy     #$01              ; O_RDONLY
+        sty     do_uncompress
+
+        jmp     file_io_at
 .endproc
 
 .proc set_table_backup_params
@@ -412,11 +434,11 @@ finish_decompress:
         ldy     #O_RDONLY
         jsr     file_io_at
         bcs     no_cache
-        rts
+        jmp     iip_patch_last_scanline
 no_cache:
         jsr     load_table_hgr
         sec
-        rts
+        jmp     iip_patch_last_scanline
 .endproc
 
 .proc set_bar_backup_params
@@ -445,11 +467,11 @@ no_cache:
         ldy     #O_RDONLY
         jsr     file_io_at
         bcs     no_cache
-        rts
+        jmp     iip_patch_last_scanline
 no_cache:
         jsr     load_bar_hgr
         sec
-        rts
+        jmp     iip_patch_last_scanline
 .endproc
 
 .proc set_bar_code_backup_params
@@ -525,6 +547,44 @@ no_cache:
         jmp       _unlink
 .endproc
 
+.proc set_scores_params
+        jsr     pushax            ; Push buffer address
+        lda     #<SCORE_TABLE_SIZE
+        ldx     #>SCORE_TABLE_SIZE
+        jsr     pushax
+        ldy     #$00
+        sty     do_uncompress
+        lda     #<scores_name
+        ldx     #>scores_name
+        rts
+.endproc
+
+.proc _load_scores
+        jsr      set_scores_params
+        ldy      #(O_RDONLY)
+        jmp      file_io_at
+.endproc
+
+.proc _save_scores
+        jsr      set_scores_params
+        ldy      #(O_WRONLY|O_CREAT)
+        jmp      file_io_at
+.endproc
+
+.proc iip_patch_last_scanline
+.ifdef VAPOR_LOCK
+        php
+        lda       #$AA
+        ldy       #47
+:       sta       $3FD0,y
+        dey
+        bpl       :-
+
+        plp
+.endif
+        rts
+.endproc
+
         .bss
 
 filename:             .res 2
@@ -543,6 +603,8 @@ lowcode_name:        .asciiz "LOW.CODE"
 lc_name:             .asciiz "LC.CODE"
 table_name:          .asciiz "TABLE.IMG"
 bar_name:            .asciiz "BAR.IMG"
+hallfame_name:       .asciiz "HALLFAME.IMG"
+scores_name:         .asciiz "SCORES"
 bar_code_name:       .asciiz "BAR.CODE"
 barsnd_name:         .asciiz "BAR.SND"
 table_backup_name:   .asciiz "/RAM/TABLE.IMG"

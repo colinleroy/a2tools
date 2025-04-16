@@ -18,13 +18,14 @@
         .export   _check_keyboard, _last_key
         .export   _draw_opponent
         .export   won_tournament
+        .export   _scores_buffer
 
         .import   _init_hgr, _init_mouse
         .import   mouse_x, mouse_y
         .import   mouse_dx, mouse_dy
         .import   _mouse_setbarbox, _mouse_setplaybox
 
-        .import   _choose_opponent, _show_hall_of_fame
+        .import   _choose_opponent, _add_hall_of_fame
 
         .import   puck_x, puck_y, puck_dx, puck_dy, bounces
         .import   _init_precise_x, _init_precise_y, _transform_puck_coords
@@ -47,18 +48,22 @@
         .import   _load_bar_high, _backup_bar_high, _restore_bar
         .import   _load_bar_code, _backup_bar_code, _restore_bar_code
         .import   _load_barsnd, _backup_barsnd, _restore_barsnd
+        .import   _load_scores, _print_champion, _set_champion
         .import   _init_text_before_decompress, _cache_working
         .import   _play_bar
 
+        .import   _calibrate_hz
         .import   hz
 
         .import   _mouse_wait_vbl
-        .import   _mouse_calibrate_hz
 
         .import   _platform_msleep
         .import   _build_hgr_tables
 
         .import   _init_text, _memcpy, _clrscr, _cputs, pushax, ___errno, _strerror
+
+        .import   _cutoa, _cgetc
+
         .import   ___randomize
 
         .include  "apple2.inc"
@@ -67,16 +72,21 @@
         .include  "my_pusher_coords.inc"
         .include  "my_pusher0.gen.inc"
         .include  "constants.inc"
+        .include  "scores.inc"
         .include  "opponent_file.inc"
 
 .code
 
 .proc _main
+        ; Calibrate to get Hz
+        jsr     _calibrate_hz
+
         ; Init mouse first thing (it flickers HGR on IIplus)
         ; But disable IRQs as cc65's handler is in LOWCODE,
         ; which is not yet loaded
         php
         sei
+
         jsr     _init_mouse
         bcc     :+                ; Do we have a mouse?
 
@@ -91,11 +101,19 @@
 :       ; We can now enable IRQs, the handler is loaded
         plp
 
-        ; Calibrate to get Hz
-        jsr     _mouse_calibrate_hz
-
-        ; Wait for first interrupt
-        jsr     _mouse_wait_vbl
+        ; jsr      _init_text
+        ; lda      #<hz_str_1
+        ; ldx      #>hz_str_1
+        ; jsr      _cputs
+        ; 
+        ; lda      hz
+        ; ldx      #$00
+        ; jsr      _cutoa
+        ; 
+        ; lda      #<hz_str_2
+        ; ldx      #>hz_str_2
+        ; jsr      _cputs
+        ; jsr      _cgetc
 
         jsr     _clrscr
 
@@ -140,6 +158,16 @@
         jmp     store_opponent
 .endif
         ; End of debug
+
+        lda     _scores_loaded
+        bne     :+
+        lda     #<_scores_buffer
+        ldx     #>_scores_buffer
+        jsr     _load_scores
+        bcs     :+
+        lda     #1
+        sta     _scores_loaded
+:
 
         ; Preload assets at $4000 and back them up
         ; while we have the splash screen at $2000
@@ -214,7 +242,11 @@ to_bar:
         jsr     _play_bar
         jsr     _restore_bar
         jsr     _restore_bar_code
+        lda     _scores_loaded
+        beq     :+
+        jsr     _set_champion
 
+:       jsr     _print_champion
         lda     #1
         jsr     _init_hgr
 
@@ -222,7 +254,7 @@ to_bar:
         lda     won_tournament
         beq     :+
 
-        jsr     _show_hall_of_fame
+        jsr     _add_hall_of_fame
 
         lda     #0
         sta     won_tournament
@@ -231,7 +263,7 @@ to_bar:
         bpl     :+
         lda     #1                ; Start a tournament
         sta     in_tournament
-        lda     #7                ; Start with opponent 0 FIXME
+        lda     #0                ; Start with opponent 0
 store_opponent:
 :       sta     opponent
 
@@ -373,9 +405,16 @@ loop_start:
         cmp     #CH_ESC
         bne     :+
         jmp     clear_and_go_bar
-:       cmp     #'w'
+:
+.ifdef CHEAT 
+        cmp     #'w'
         bne     game_loop
+        lda     #15
+        sta     my_score
         jmp     my_win
+.else
+        jmp     game_loop
+.endif
 reset_point:
         lda     turn
         eor     #$01
@@ -475,7 +514,8 @@ load_barsnd_str:  .byte "LOADING INTRO SOUND..."   ,$0D,$0A,$00
 load_bar_str:     .byte "LOADING BAR IMAGE..."     ,$0D,$0A,$00
 load_bar_code_str:.byte "LOADING BAR CODE..."      ,$0D,$0A,$00
 load_err_str:     .byte "COULD NOT LOAD FILE: "    ,$0D,$0A,$00
-
+hz_str_1:         .byte "MACHINE IS AT "           ,$00
+hz_str_2:         .byte "HZ. HIT ANY KEY"          ,$0D,$0A,$00
 .bss
 
 turn:           .res 1
@@ -489,3 +529,5 @@ in_tournament:  .res 1
 won_tournament: .res 1
 frame_counter:  .res 1
 _last_key:      .res 1
+_scores_loaded: .res 1
+_scores_buffer: .res SCORE_TABLE_SIZE

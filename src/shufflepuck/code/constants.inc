@@ -34,3 +34,8 @@ MAX_SCORE          = 15
 
 CH_ESC             = $1B
 NUM_OPPONENTS      = 8      ; DC3 doesn't tournament
+
+; Number of people in the roster
+MAX_WINNERS = 32
+; 12 chars for the name (incl. terminator)
+MAX_WINNER_LEN = 12

@@ -14,17 +14,16 @@
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
         .export     _init_mouse
-        .export     vbl_ready, hz
+        .export     vbl_ready
 
         .export     _mouse_wait_vbl
-        .export     _mouse_calibrate_hz
         .export     _mouse_check_button
         .export     mouse_x, mouse_y
         .export     mouse_dx, mouse_dy
 
         .export     _mouse_setbarbox, _mouse_setplaybox
 
-        .import     ostype
+        .import     ostype, hz
 
         .importzp   ptr1, tmp1, tmp2
 
@@ -46,6 +45,7 @@ CLAMPMOUSE      = $17   ; Sets mouse bounds in a window
 HOMEMOUSE       = $18   ; Sets mouse to upper-left corner of clamp win
 INITMOUSE       = $19   ; Resets mouse clamps to default values and
                         ; sets mouse position to 0,0
+TIMEDATA        = $1C   ; Set mouse interrupt rate
 
 RINGBUF_SIZE    = 4
 
@@ -70,6 +70,16 @@ values: .byte   $38             ; Fixed
 size    = * - values
 
 ; Box to the part where our paddle can move
+.ifdef VAPOR_LOCK
+playbox:.word   (MY_PUSHER_MIN_X/2)
+        .word   (MY_PUSHER_MIN_Y/2)
+        .word   (MY_PUSHER_MAX_X/2)
+        .word   (190/2)
+barbox: .word   0
+        .word   0
+        .word   255/2
+        .word   190/2
+.else
 playbox:.word   (MY_PUSHER_MIN_X/2)
         .word   (MY_PUSHER_MIN_Y/2)
         .word   (MY_PUSHER_MAX_X/2)
@@ -78,7 +88,7 @@ barbox: .word   0
         .word   0
         .word   255/2
         .word   HGR_HEIGHT/2
-
+.endif
 .segment "CODE"
 
 firmware:
@@ -93,6 +103,24 @@ xparam: ldx     #$FF            ; Patched at runtime
 yparam: ldy     #$FF            ; Patched at runtime
 
 jump:   jmp     $FFFF           ; Patched at runtime
+
+;Apple II Mouse Technical Notes #2: Varying VBL Interrupt Rate
+.proc set_mouse_hz
+        ldy     #0                ; 0 for 60Hz, 1 for 50Hz
+        cmp     #60
+        beq     :+
+        iny
+:       tya
+
+        ldx     ostype
+        cpx     #$40
+        bcs     out               ; Don't do that on IIc/gs
+
+        ldx     #TIMEDATA
+        jsr     firmware
+
+out:    rts
+.endproc
 
 .proc _init_mouse
         lda     #<$C000
@@ -168,6 +196,10 @@ next_slot:
         asl
         asl
         sta     yparam+1
+
+        ; Set VBL rate
+        lda     hz
+        jsr     set_mouse_hz
 
         ; The AppleMouse II Card needs the ROM switched in
         ; to be able to detect an Apple //e and use RDVBL
@@ -343,15 +375,13 @@ done:   rts
         and     #%00100000      ; !Z = Button 1 is currently down
 
         ; Set button mask
-        ; Update mouse_b only on click and let the game logic set it
-        ; back to zero
         beq     :+
         lda     #MOUSE_BTN_RIGHT
 :       bcc     :+
         ora     #MOUSE_BTN_LEFT
-        sta     mouse_b
 
-:       ; Get and set the new X position
+:       sta     mouse_b
+        ; Get and set the new X position
         ; Don't bother with high byte, it's zero
         ; And update the ringbuffer
         ldx     ringbuf_idx
@@ -419,6 +449,11 @@ y_double:
 
 .proc _mouse_wait_vbl
         lda     ostype
+.ifdef VAPOR_LOCK
+        ; Use vapor lock to sync on II+
+        cmp     #$20
+        bcc     vapor_lock
+.endif
         and     #$20
         bne     iie
         ; We want to use the mousecard everywhere but on IIe.
@@ -437,95 +472,28 @@ iie:
 :       bit     $C019           ; Softswitch VBL
         bmi     :-
         rts
+
+.ifdef VAPOR_LOCK
+vapor_lock:
+        lda     #$AA
+again:
+        ldx     #3
+:       cmp     $C050
+        bne     again
+        dex
+        bne     :-
+        rts
+.endif
+
 .endproc
 
 .proc _mouse_check_button
         lda     mouse_b
         beq     :+
-        lda     #0
-        sta     mouse_b
         sec
         rts
 :       clc
         rts
-.endproc
-
-.proc waste_189
-                                  ; +6 for jsr
-        lda     #21               ; +2
-        sta     tmp1              ; +3
-:       dec     tmp1              ;  16 | 8 cycles * 21
-        bne     :-                ;  19 |
-        inc     tmp1              ; +4 (5-1 for untaken bne)
-        rts                       ; +6
-.endproc
-
-; Count cycles to determine whether the mouse interrupts at 50 or 60Hz.
-.proc _mouse_calibrate_hz
-        lda     ostype
-        and     #$20
-        bne     iie
-
-iic:
-iigs:
-iip:
-        ldx     #5               ; Account for the fact that the mouse IRQ
-                                 ; is expensive (1000 cycles !?) so add 5*200
-
-        jsr     _mouse_wait_vbl
-
-        lda     #$00
-        sta     vbl_ready
-
-:       nop                       ; 2
-        inx                       ; 4
-        jsr     waste_189         ; 193
-        lda     vbl_ready         ; 197
-        beq     :-                ; 200
-
-calibrate_done:
-        lda     #60               ; Consider we're at 60Hz
-        sta     hz
-        ; we'll now have X ~= 86 at 60Hz, ~= 102 at 50Hz:
-        ; 86*200 = 17200, 102*200 = 20400.
-        ; Consider any X >= 92 means 50Hz
-        cpx     #92
-        bcc     :+
-        lda     #50               ; we're at 50Hz
-        sta     hz
-:       rts
-
-iie:    ; We can't count on the mouse interrupts to give us the VBL freq, so
-        ; Wait for bit 7 to be off (VBL start)
-        php
-        sei
-
-        ldx     #0
-
-:       bit     $C019
-        bmi     :-
-
-        ; Wait for bit 7 to be on (VBL end)
-:       bit     $C019
-        bpl     :-
-
-wait_vbl1:  ; now wait for bit 7 to be off again
-        nop                       ; 2
-        inx                       ; 4
-        jsr     waste_189         ; 193
-        bit     $C019             ; 197
-        bmi     wait_vbl1         ; 200
-
-wait_vbl2:  ; now wait for bit 7 to be on again (end of next VBL)
-        nop                       ; 2
-        inx                       ; 4
-        jsr     waste_189         ; 193
-        bit     $C019             ; 197
-        bpl     wait_vbl2         ; 200
-
-        plp
-        ; done!
-        jmp     calibrate_done
 .endproc
 
        .bss
@@ -542,4 +510,3 @@ y_ring_buf:      .res RINGBUF_SIZE
 ringbuf_idx:     .res 1
 mouse_dx:        .res 1
 mouse_dy:        .res 1
-hz:              .res 1

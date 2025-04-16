@@ -34,6 +34,7 @@ MEMORY {
     SPLC:    file = "lc_code.bin",     start = __LCADDR__,   size = __LCSIZE__;
     TABLE:   file = "table_img.bin",   start = __HGR_START__,     size = __HGR_SIZE__;
     BAR:     file = "bar_img.bin",     start = __HGR_START__,     size = __HGR_SIZE__;
+    HALLFAME:file = "hallfame_img.bin",start = __HGR_START__,     size = __HGR_SIZE__;
     BAR_CODE:file = "bar_code.bin",    start = __OPPONENT_START__,size = __OPPONENT_SIZE__;
     BARSND:  file = "bar_snd.bin",     start = __HGR_START__,     size = __HGR_SIZE__+__OPPONENT_SIZE__;
 
@@ -54,9 +55,15 @@ SEGMENTS {
     BSS:      load = BSS,            type = bss, define   = yes;
 
     splash:   load = LOWCODE,        type = ro, start = $2000;
+    #IMAGES
     table:    load = TABLE,          type = ro;
     bar:      load = BAR,            type = ro, align = $100;
+    hallfame: load = HALLFAME,       type = ro, align = $100;
+
+    #BAR/HALL OF FAME CODE
     bar_code: load = BAR_CODE,       type = ro, align = $100;
+
+    #BAR INTRO SOUND
     barsnd:   load = BARSND,         type = ro, align = $100;
 
 ### LEVEL_SEGMENTS_DECLARATIONS ###
