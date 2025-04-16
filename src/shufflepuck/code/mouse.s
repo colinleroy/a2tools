@@ -449,14 +449,10 @@ y_double:
 
 .proc _mouse_wait_vbl
         lda     ostype
-.ifdef VAPOR_LOCK
-        ; Use vapor lock to sync on II+
-        cmp     #$20
-        bcc     vapor_lock
-.endif
         and     #$20
         bne     iie
-        ; We want to use the mousecard everywhere but on IIe.
+        ; We want to use the mousecard everywhere but on IIe. Actually we want
+        ; to use it everywhere but MAME chokes on it and it's unpractical.
 iigs:
 iic:
 iip:
@@ -472,19 +468,6 @@ iie:
 :       bit     $C019           ; Softswitch VBL
         bmi     :-
         rts
-
-.ifdef VAPOR_LOCK
-vapor_lock:
-        lda     #$AA
-again:
-        ldx     #3
-:       cmp     $C050
-        bne     again
-        dex
-        bne     :-
-        rts
-.endif
-
 .endproc
 
 .proc _mouse_check_button

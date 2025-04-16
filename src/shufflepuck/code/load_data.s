@@ -278,7 +278,7 @@ finish_decompress:
         sty     do_uncompress
 
         jsr     file_io_at
-        jmp     iip_patch_last_scanline
+        rts
 .endproc
 
 ; A = which opponent to load
@@ -434,11 +434,11 @@ finish_decompress:
         ldy     #O_RDONLY
         jsr     file_io_at
         bcs     no_cache
-        jmp     iip_patch_last_scanline
+        rts
 no_cache:
         jsr     load_table_hgr
         sec
-        jmp     iip_patch_last_scanline
+        rts
 .endproc
 
 .proc set_bar_backup_params
@@ -467,11 +467,11 @@ no_cache:
         ldy     #O_RDONLY
         jsr     file_io_at
         bcs     no_cache
-        jmp     iip_patch_last_scanline
+        rts
 no_cache:
         jsr     load_bar_hgr
         sec
-        jmp     iip_patch_last_scanline
+        rts
 .endproc
 
 .proc set_bar_code_backup_params
@@ -569,20 +569,6 @@ no_cache:
         jsr      set_scores_params
         ldy      #(O_WRONLY|O_CREAT)
         jmp      file_io_at
-.endproc
-
-.proc iip_patch_last_scanline
-.ifdef VAPOR_LOCK
-        php
-        lda       #$AA
-        ldy       #47
-:       sta       $3FD0,y
-        dey
-        bpl       :-
-
-        plp
-.endif
-        rts
 .endproc
 
         .bss
