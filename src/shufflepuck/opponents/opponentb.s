@@ -28,6 +28,8 @@
         .import     _big_draw_lose_b                                ; CHANGE A
         .import     _big_draw_win_b                                 ; CHANGE A
 
+        .import     _play_losegame_b, _platform_msleep
+
         .import     return0
 
         .import     __OPPONENT_START__
@@ -65,6 +67,9 @@ THEIR_MAX_DY = 8
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT_SND, error ; Make sure the callback is where we think
         jmp     return0
+
+.assert * = __OPPONENT_START__+OPPONENT::END_GAME, error ; Make sure the callback is where we think
+        jmp     end_game
 
 .assert * = __OPPONENT_START__+OPPONENT::THINK_CB, error ; Make sure the callback is where we think
 .proc _opponent_think
@@ -250,4 +255,18 @@ do_revert:
 .proc animate_win
         jsr     load_simple_animation_coords
         jmp     _big_draw_win_b                                        ; CHANGE A
+.endproc
+
+.proc end_game
+        lda     their_score ; Did we lose?
+        cmp     #15
+        bne     :+
+        rts
+:       ldy     #0
+        jsr     _play_losegame_b
+        lda     #100
+        ldx     #0
+        jsr     _platform_msleep
+        ldy     #0
+        jmp     _play_losegame_b
 .endproc

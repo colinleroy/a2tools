@@ -144,6 +144,7 @@ lose_sounds = \
 	lose_h.snd.s \
 	lose_i_1.snd.s \
 	lose_i_2.snd.s \
+	losegame_b.snd.s \
 
 opponents_sprites = \
 	$(sprites_unperfect) \

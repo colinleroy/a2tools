@@ -306,10 +306,10 @@ their_win:
         lda     #0                ; We lost the tournament
         sta     in_tournament
 my_win:
-        ; Todo victory/defeat screen
-        lda     #<1000
-        ldx     #>1000
+        lda     #<500
+        ldx     #>500
         jsr     _platform_msleep
+        jsr     __OPPONENT_START__+OPPONENT::END_GAME
 next_or_new_opponent:
         jsr     _clear_screen
         jsr     _restore_table
