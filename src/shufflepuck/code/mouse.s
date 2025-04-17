@@ -69,26 +69,35 @@ values: .byte   $38             ; Fixed
 
 size    = * - values
 
+SMALL_INI_X         = MY_PUSHER_INI_X/4
+SMALL_INI_Y         = MY_PUSHER_INI_Y/4
+SMALL_PLAYBOX_MIN_X = MY_PUSHER_MIN_X/4
+SMALL_PLAYBOX_MAX_X = MY_PUSHER_MAX_X/4
+SMALL_PLAYBOX_MIN_Y = MY_PUSHER_MIN_Y/4
+SMALL_PLAYBOX_MAX_Y = MY_PUSHER_MAX_Y/4
+
+NORMAL_INI_X        = MY_PUSHER_INI_X/2
+NORMAL_INI_Y        = MY_PUSHER_INI_Y/2
+NORMAL_PLAYBOX_MIN_X = MY_PUSHER_MIN_X/2
+NORMAL_PLAYBOX_MAX_X = MY_PUSHER_MAX_X/2
+NORMAL_PLAYBOX_MIN_Y = MY_PUSHER_MIN_Y/2
+NORMAL_PLAYBOX_MAX_Y = MY_PUSHER_MAX_Y/2
+normal_playbox:
+        .word   NORMAL_PLAYBOX_MIN_X
+        .word   NORMAL_PLAYBOX_MIN_Y
+        .word   NORMAL_PLAYBOX_MAX_X
+        .word   NORMAL_PLAYBOX_MAX_Y
+small_playbox:
+        .word   SMALL_PLAYBOX_MIN_X
+        .word   SMALL_PLAYBOX_MIN_Y
+        .word   SMALL_PLAYBOX_MAX_X
+        .word   SMALL_PLAYBOX_MAX_Y
+
 ; Box to the part where our paddle can move
-.ifdef VAPOR_LOCK
-playbox:.word   (MY_PUSHER_MIN_X/2)
-        .word   (MY_PUSHER_MIN_Y/2)
-        .word   (MY_PUSHER_MAX_X/2)
-        .word   (190/2)
-barbox: .word   0
-        .word   0
-        .word   255/2
-        .word   190/2
-.else
-playbox:.word   (MY_PUSHER_MIN_X/2)
-        .word   (MY_PUSHER_MIN_Y/2)
-        .word   (MY_PUSHER_MAX_X/2)
-        .word   (MY_PUSHER_MAX_Y/2)
 barbox: .word   0
         .word   0
         .word   255/2
         .word   HGR_HEIGHT/2
-.endif
 .segment "CODE"
 
 firmware:
@@ -122,37 +131,58 @@ jump:   jmp     $FFFF           ; Patched at runtime
 out:    rts
 .endproc
 
+; A=0 => doubled speed
+; A=1 => quad speed on everything but IIgs
+.proc set_mouse_speed
+        bit     ostype
+        bpl     update_speed         ; Are we on a IIgs?
+        lda     #0
+
+update_speed:
+        cmp     #0
+        beq     set_double
+set_quad:
+        ldy     #7
+:       lda     small_playbox,y
+        sta     playbox,y
+        dey
+        bpl     :-
+
+        lda     #SMALL_INI_X
+        sta     ini_x+1
+        lda     #SMALL_INI_Y
+        sta     ini_y+1
+
+        lda     #$0A              ; ASL
+        sta     x_double
+        sta     y_double
+        rts
+set_double:
+        ldy     #7
+:       lda     normal_playbox,y
+        sta     playbox,y
+        dey
+        bpl     :-
+
+        lda     #NORMAL_INI_X
+        sta     ini_x+1
+        lda     #NORMAL_INI_Y
+        sta     ini_y+1
+
+        lda     #$EA              ; NOP
+        sta     x_double
+        sta     y_double
+        rts
+.endproc
+
 .proc _init_mouse
         lda     #<$C000
         sta     ptr1
         lda     #>$C000
         sta     ptr1+1
 
-        bit     ostype
-        bvc     next_slot
-
-        ; This is a IIc, make window smaller because the mouse is real slow
-        ldx     #15
-:       lda     playbox,x
-        lsr
-        sta     playbox,x
-        dex
-        lda     playbox,x
-        ror
-        sta     playbox,x
-        dex
-        bpl     :-
-
-        lda     #$0A
-        sta     x_double
-        sta     y_double
-
-        lda     ini_x+1
-        lsr
-        sta     ini_x+1
-        lda     ini_y+1
-        lsr
-        sta     ini_y+1
+        lda     #0
+        jsr     set_mouse_speed
 
         ; Search for AppleMouse II firmware in slots 1 - 7
 next_slot:
@@ -258,6 +288,9 @@ mouse_common:
 .proc _mouse_setbarbox
         php
         sei
+        lda     #0
+        jsr     set_mouse_speed
+
         lda     #<barbox
         ldx     #>barbox
         jsr     mouse_setbox
@@ -271,6 +304,10 @@ mouse_common:
 _mouse_setplaybox:
         php
         sei
+
+        lda     #1
+        jsr     set_mouse_speed
+
         lda     #<playbox
         ldx     #>playbox
         jsr     mouse_setbox
@@ -450,7 +487,7 @@ y_double:
 .proc _mouse_wait_vbl
         lda     ostype
         and     #$20
-        bne     iie
+        ;bne     iie
         ; We want to use the mousecard everywhere but on IIe. Actually we want
         ; to use it everywhere but MAME chokes on it and it's unpractical.
 iigs:
@@ -493,3 +530,5 @@ y_ring_buf:      .res RINGBUF_SIZE
 ringbuf_idx:     .res 1
 mouse_dx:        .res 1
 mouse_dy:        .res 1
+
+playbox:         .res 4*2
