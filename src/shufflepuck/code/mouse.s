@@ -485,25 +485,12 @@ y_double:
         rts
 
 .proc _mouse_wait_vbl
-        lda     ostype
-        and     #$20
-        ;bne     iie
-        ; We want to use the mousecard everywhere but on IIe. Actually we want
-        ; to use it everywhere but MAME chokes on it and it's unpractical.
-iigs:
-iic:
-iip:
+        ; MAME chokes on Mousecard-based VBL detection, but it works
+        ; fine on real hardware from IIp to IIgs.
         lda     #0              ; Skip a frame rather than flicker
         sta     vbl_ready
 :       lda     vbl_ready
         beq     :-
-        rts
-
-iie:
-:       bit     $C019           ; Softswitch VBL
-        bpl     :-
-:       bit     $C019           ; Softswitch VBL
-        bmi     :-
         rts
 .endproc
 

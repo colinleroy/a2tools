@@ -77,6 +77,9 @@
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT_SND, error ; Make sure the callback is where we think
         jmp     animate_win
 
+.assert * = __OPPONENT_START__+OPPONENT::END_GAME, error ; Make sure the callback is where we think
+        jmp     return0
+
 .assert * = __OPPONENT_START__+OPPONENT::THINK_CB, error ; Make sure the callback is where we think
 .proc _opponent_think
         lda     _last_key

@@ -764,7 +764,7 @@ check_my_late_catch:
         ; Their side will be redrawn by update_screen_for_crash
         clc                       ; Little crash
         jsr     update_screen_for_crash
-        ldy     #4
+        ldy     #2
         jsr     _play_crash
         lda     #200
         ldx     #0
