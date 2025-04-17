@@ -22,12 +22,12 @@
         .import     _print_char, _print_number, bcd_input
 
         .import     _init_text, _init_hgr
-        .import     _cputs, _cgetc, _clrscr
+        .import     _cputs, _cgetc, _clrscr, _strlen
         .import     _exit, pushax, _memmove, _strcpy, _bzero
 
         .import     __OPPONENT_START__
 
-        .importzp   ptr2
+        .importzp   ptr2, tmp1
 
         .include    "apple2.inc"
         .include    "sprite.inc"
@@ -58,7 +58,7 @@ CHAMPION_LEN    = 12
 CHAMPION_LEFT   = 88
 CHAMPION_BOTTOM = 34
 
-MENU_BOTTOM    = CHAMPION_BOTTOM + 2 + 5
+MENU_BOTTOM    = CHAMPION_BOTTOM + 3 + 5
 MENU_TOP       = CHAMPION_BOTTOM - 5
 
 empty_str:    .asciiz "            "
@@ -80,8 +80,17 @@ view_str:     .asciiz "VIEW ROSTER"
         jsr     clear_champion
         lda     #<champion_str
         ldx     #>champion_str
-        jsr     pushax
-        ldx     #(CHAMPION_LEFT/7)
+        jsr     pushax            ; Push for print_string
+
+        jsr     _strlen           ; Center string
+        sta     tmp1
+        lda     #CHAMPION_LEN
+        sec
+        sbc     tmp1
+        lsr
+        clc
+        adc     #(CHAMPION_LEFT/7)
+        tax
         ldy     #CHAMPION_BOTTOM
         jmp     _print_string
 .endproc
