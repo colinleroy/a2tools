@@ -46,7 +46,7 @@
 
         .import     x_shift, x_factor, y_factor
 
-        .import     umul8x8r16, _platform_msleep
+        .import     umul8x8r16, _platform_msleep, _rand
 
         .import     _play_puck_hit
         .import     _play_puck
@@ -758,7 +758,7 @@ check_my_late_catch:
         ; Clear their side to load their sprite cleanly
         jsr     clear_screen_their_side
         pla
-        bne     :+
+        bne     they_win
 
         jsr     __OPPONENT_START__+OPPONENT::LOSE_POINT
         ; Their side will be redrawn by update_screen_for_crash
@@ -770,13 +770,17 @@ check_my_late_catch:
         ldx     #0
         jsr     _platform_msleep
         jsr     clear_screen_their_side
+        jsr     _rand
+        cmp     #<(255*2/3)       ; 2/3 chances to play the sound
+        bcs     :+
         jsr     __OPPONENT_START__+OPPONENT::LOSE_POINT_SND
         ; Return with carry set to inform main
-        sec
+:       sec
         inc     my_score
         rts
 
-:       jsr     __OPPONENT_START__+OPPONENT::WIN_POINT
+they_win:
+        jsr     __OPPONENT_START__+OPPONENT::WIN_POINT
         sec                       ; Large crash
         jsr     update_screen_for_crash
         ldy     #0
@@ -786,8 +790,11 @@ check_my_late_catch:
         jsr     _platform_msleep
 
         jsr     clear_screen_their_side
+        jsr     _rand
+        cmp     #<(255*2/3)       ; 2/3 chances to play the sound
+        bcs     :+
         jsr     __OPPONENT_START__+OPPONENT::WIN_POINT_SND
-        ; Return with carry set to inform main
+:       ; Return with carry set to inform main
         sec
         inc     their_score
         rts
