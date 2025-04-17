@@ -20,7 +20,7 @@
         .import     their_pusher_x, their_pusher_y
         .import     their_pusher_dx, their_pusher_dy
         .import     their_currently_hitting
-        .import     puck_x, puck_right_x, puck_y, puck_dy, serving, their_score
+        .import     puck_x, puck_right_x, puck_y, puck_dy, serving
         .import     _rand
 
         .import     _big_draw_sprite_d                              ; CHANGE A
@@ -82,7 +82,7 @@ init_service:
         bne     prepare_service
 
         ; Adapt our speed because we drank when we won points
-        lda     their_score
+        lda     drink
         cmp     #6
         bcc     :+
         lda     #6
@@ -206,6 +206,7 @@ move_backwards:
 .endproc
 
 .proc animate_win
+        inc     drink
         jsr     load_win_sprite_coords
         jsr     _big_draw_win_d_1
         jsr     load_win_sprite_coords
@@ -237,3 +238,4 @@ move_backwards:
 .endproc
 
 their_max_dx:     .byte START_MAX_DX
+drink:            .byte 0
