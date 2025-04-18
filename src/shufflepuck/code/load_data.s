@@ -378,17 +378,6 @@ finish_decompress:
         jmp      file_io_at
 .endproc
 
-.proc _load_hall_of_fame
-        jsr     set_compressed_buf_hgr
-        jsr     push_hgr_page_buf
-        lda     #<hallfame_name
-        ldx     #>hallfame_name
-        ldy     #$01              ; O_RDONLY
-        sty     do_uncompress
-
-        jmp     file_io_at
-.endproc
-
 .proc set_table_backup_params
         jsr     push_hgr_page_buf
         lda     #<table_backup_name
@@ -547,6 +536,36 @@ no_cache:
         jmp       _unlink
 .endproc
 
+        .bss
+
+filename:             .res 2
+destination:          .res 2
+tmp_destination:      .res 2
+size:                 .res 2
+do_uncompress:        .res 1
+io_mode:              .res 1
+compressed_buf_start: .res 2
+compressed_buf_end:   .res 2
+_init_text_before_decompress: .res 1
+
+        .data
+
+_cache_working:      .byte 1
+lowcode_name:        .asciiz "LOW.CODE"
+lc_name:             .asciiz "LC.CODE"
+table_name:          .asciiz "TABLE.IMG"
+bar_name:            .asciiz "BAR.IMG"
+bar_code_name:       .asciiz "BAR.CODE"
+barsnd_name:         .asciiz "BAR.SND"
+table_backup_name:   .asciiz "/RAM/TABLE.IMG"
+bar_backup_name:     .asciiz "/RAM/BAR.IMG"
+bar_code_backup_name:.asciiz "/RAM/BAR.CODE"
+barsnd_backup_name:  .asciiz "/RAM/BAR.SND"
+opponent_name_tmpl:  .asciiz "OPPONENT.X"
+
+.segment "bar_code"
+; --- only accessible from the bar code segment
+
 .proc set_scores_params
         jsr     pushax            ; Push buffer address
         lda     #<SCORE_TABLE_SIZE
@@ -571,30 +590,16 @@ no_cache:
         jmp      file_io_at
 .endproc
 
-        .bss
+.proc _load_hall_of_fame
+        jsr     set_compressed_buf_hgr
+        jsr     push_hgr_page_buf
+        lda     #<hallfame_name
+        ldx     #>hallfame_name
+        ldy     #$01              ; O_RDONLY
+        sty     do_uncompress
 
-filename:             .res 2
-destination:          .res 2
-tmp_destination:      .res 2
-size:                 .res 2
-do_uncompress:        .res 1
-io_mode:              .res 1
-compressed_buf_start: .res 2
-compressed_buf_end:   .res 2
-_init_text_before_decompress: .res 1
+        jmp     file_io_at
+.endproc
 
-        .data
-_cache_working:      .byte 1
-lowcode_name:        .asciiz "LOW.CODE"
-lc_name:             .asciiz "LC.CODE"
-table_name:          .asciiz "TABLE.IMG"
-bar_name:            .asciiz "BAR.IMG"
-hallfame_name:       .asciiz "HALLFAME.IMG"
 scores_name:         .asciiz "SCORES"
-bar_code_name:       .asciiz "BAR.CODE"
-barsnd_name:         .asciiz "BAR.SND"
-table_backup_name:   .asciiz "/RAM/TABLE.IMG"
-bar_backup_name:     .asciiz "/RAM/BAR.IMG"
-bar_code_backup_name:.asciiz "/RAM/BAR.CODE"
-barsnd_backup_name:  .asciiz "/RAM/BAR.SND"
-opponent_name_tmpl:  .asciiz "OPPONENT.X"
+hallfame_name:       .asciiz "HALLFAME.IMG"
