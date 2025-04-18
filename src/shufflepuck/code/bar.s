@@ -1,7 +1,5 @@
         .export     _choose_opponent, _add_hall_of_fame
-        .export     _print_champion, _set_champion
-
-        .import     _scores_buffer
+        .export     _bar_load_scores, _bar_update_champion
 
         .import     _mouse_wait_vbl, _mouse_check_button
         .import     _clear_sprite, _draw_sprite
@@ -10,6 +8,7 @@
 
         .import     _load_hall_of_fame, _restore_bar
         .import     _load_scores, _save_scores
+        .import     _backup_bar_code
 
         .import     my_score, their_score
 
@@ -67,7 +66,7 @@ congrats_str: .asciiz "CONGRATS! PLEASE ENTER YOUR NAME:"
 fight_str:    .asciiz "TOURNAMENT"
 view_str:     .asciiz "VIEW ROSTER"
 
-.proc _set_champion
+.proc set_champion
         lda     #<champion_str
         ldx     #>champion_str
         jsr     pushax
@@ -76,7 +75,7 @@ view_str:     .asciiz "VIEW ROSTER"
         jmp     _strcpy
 .endproc
 
-.proc _print_champion
+.proc print_champion
         jsr     clear_champion
         lda     #<champion_str
         ldx     #>champion_str
@@ -132,7 +131,7 @@ view_str:     .asciiz "VIEW ROSTER"
         jsr     print_menu
         jmp     wait_input
 show_champion:
-        jsr     _print_champion
+        jsr     print_champion
 
 wait_input:
         jsr     _mouse_wait_vbl
@@ -299,7 +298,10 @@ view_roster:
         lda     #<_scores_buffer
         ldx     #>_scores_buffer
         jsr     _save_scores
-        jsr     _set_champion
+        jsr     set_champion
+        ; Re-backup our code so that the scores array
+        ; is updated
+        jsr     _backup_bar_code
         jmp     _restore_bar
 
 :       jsr     display_scores
@@ -445,8 +447,31 @@ print_one_score:
 out:    rts
 .endproc
 
+.proc _bar_load_scores
+        lda     _scores_loaded
+        bne     :+
+        lda     #<_scores_buffer
+        ldx     #>_scores_buffer
+        jsr     _load_scores
+        bcs     :+
+        lda     #1
+        sta     _scores_loaded
+:       rts
+.endproc
+
+.proc _bar_update_champion
+        jsr     _bar_load_scores
+        lda     _scores_loaded
+        beq     :+
+        jsr     set_champion
+
+:       jmp     print_champion
+.endproc
+
 in_menu:    .byte 0
 cur_print:  .byte 0
 cur_x:      .byte 0
 cur_x_score:.byte 0
 cur_y:      .byte 0
+_scores_loaded: .res 1
+_scores_buffer: .res SCORE_TABLE_SIZE

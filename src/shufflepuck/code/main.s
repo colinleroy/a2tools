@@ -18,7 +18,6 @@
         .export   _check_keyboard, _last_key
         .export   _draw_opponent
         .export   won_tournament
-        .export   _scores_buffer
 
         .import   _init_hgr, _init_mouse
         .import   mouse_x, mouse_y
@@ -48,9 +47,9 @@
         .import   _load_bar_high, _backup_bar_high, _restore_bar
         .import   _load_bar_code, _backup_bar_code, _restore_bar_code
         .import   _load_barsnd, _backup_barsnd, _restore_barsnd
-        .import   _load_scores, _print_champion, _set_champion
         .import   _init_text_before_decompress, _cache_working
         .import   _play_bar
+        .import   _bar_load_scores, _bar_update_champion
 
         .import   _calibrate_hz
         .import   hz
@@ -159,16 +158,6 @@
 .endif
         ; End of debug
 
-        lda     _scores_loaded
-        bne     :+
-        lda     #<_scores_buffer
-        ldx     #>_scores_buffer
-        jsr     _load_scores
-        bcs     :+
-        lda     #1
-        sta     _scores_loaded
-:
-
         ; Preload assets at $4000 and back them up
         ; while we have the splash screen at $2000
         lda     #<load_bar_str
@@ -191,7 +180,8 @@
         bcc     :+
         jmp     load_error
 
-:       jsr     _backup_bar_code
+:       jsr     _bar_load_scores
+        jsr     _backup_bar_code
 
         lda     #<load_table_str
         ldx     #>load_table_str
@@ -242,11 +232,8 @@ to_bar:
         jsr     _play_bar
         jsr     _restore_bar
         jsr     _restore_bar_code
-        lda     _scores_loaded
-        beq     :+
-        jsr     _set_champion
+        jsr     _bar_update_champion
 
-:       jsr     _print_champion
         lda     #1
         jsr     _init_hgr
 
@@ -406,7 +393,7 @@ loop_start:
         bne     :+
         jmp     clear_and_go_bar
 :
-.ifdef CHEAT 
+.ifdef CHEAT
         cmp     #'w'
         bne     game_loop
         lda     #15
@@ -529,5 +516,3 @@ in_tournament:  .res 1
 won_tournament: .res 1
 frame_counter:  .res 1
 _last_key:      .res 1
-_scores_loaded: .res 1
-_scores_buffer: .res SCORE_TABLE_SIZE
