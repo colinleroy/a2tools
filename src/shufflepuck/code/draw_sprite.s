@@ -16,17 +16,16 @@
         .export   _clear_sprite, _draw_sprite, _draw_sprite_big
         .export   _setup_sprite_pointer_for_clear
         .export   _setup_sprite_pointer_for_draw
+        .export   _skip_top_lines
 
         .export   n_bytes_draw, n_lines_draw
         .export   _setup_eor_draw, _setup_eor_clear, _draw_eor, _clear_eor
         
-        .import   puck_data, my_pusher_data, their_pusher_data, pointer_data
-
         .import   _hgr_hi, _hgr_low
         .import   _div7_table, _mod7_table
 
-        .import   popax
-        .importzp tmp4, ptr2
+        .import   popax, umul8x8r16
+        .importzp ptr2, ptr1
         .importzp _zp8p, _zp10, _zp11
 
         .include  "apple2.inc"
@@ -222,6 +221,37 @@ select_sprite:
         iny
         lda     (ptr2),y
         sta     _draw_sprite::sprite_mask+2
+        rts
+.endproc
+
+; A: how many lines to skip at the top of the sprite
+; returns previous number of bytes in A so caller can
+; fix sprite struct afterwards, for clearing
+;
+; Make sure that sprite pointer is setup for draw
+; before calling
+.proc _skip_top_lines
+        ; Compute bytes to skip
+        sta     ptr1
+        ; bytes_per_lines is offset by -1 there
+        ldx     _draw_sprite::bytes_per_line+1
+        ; so inx it.
+        inx
+        txa
+        jsr     umul8x8r16
+        sta     ptr1
+        lda     n_bytes_draw
+        sta     ptr1+1
+        sec
+        sbc     ptr1
+
+        ; update sprite data for clear later
+        ldy     #SPRITE_DATA::BYTES
+        sta     (cur_sprite_ptr),y
+        sta     n_bytes_draw
+
+        ; no need to offset sprite data or mask
+        ; as they're reversed.
         rts
 .endproc
 

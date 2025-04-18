@@ -19,9 +19,7 @@
         .export   _draw_opponent
         .export   won_tournament
 
-        .import   _init_hgr, _init_mouse
-        .import   mouse_x, mouse_y
-        .import   mouse_dx, mouse_dy
+        .import   _init_hgr
         .import   _mouse_setbarbox, _mouse_setplaybox
 
         .import   _choose_opponent, _add_hall_of_fame
@@ -29,7 +27,6 @@
         .import   puck_x, puck_y, puck_dx, puck_dy, bounces
         .import   _init_precise_x, _init_precise_y, _transform_puck_coords
 
-        .import   my_pusher_x, my_pusher_y
         .import   their_pusher_x, their_pusher_y
         .import   their_pusher_dx, their_pusher_dy
 
@@ -42,16 +39,14 @@
 
         .import   __OPPONENT_START__
 
-        .import   _load_table_high, _backup_table_high, _backup_table, _restore_table
-        .import   _load_lowcode, _load_lc, _load_opponent
-        .import   _load_bar_high, _backup_bar_high, _restore_bar
-        .import   _load_bar_code, _backup_bar_code, _restore_bar_code
-        .import   _load_barsnd, _backup_barsnd, _restore_barsnd
-        .import   _init_text_before_decompress, _cache_working
+        .import   _backup_table, _restore_table
+        .import   _load_opponent
+        .import   _restore_bar
+        .import   _restore_bar_code
+        .import   _restore_barsnd
         .import   _play_bar
-        .import   _bar_load_scores, _bar_update_champion
+        .import   _bar_update_champion
 
-        .import   _calibrate_hz
         .import   hz
 
         .import   _mouse_wait_vbl
@@ -59,9 +54,7 @@
         .import   _platform_msleep
         .import   _build_hgr_tables
 
-        .import   _init_text, _memcpy, _clrscr, _cputs, pushax, ___errno, _strerror
-
-        .import   _cutoa, _cgetc
+        .import   _init_text, _clrscr
 
         .import   ___randomize
 
@@ -74,50 +67,14 @@
         .include  "scores.inc"
         .include  "opponent_file.inc"
 
-.code
+.segment "CODE"
+
+; How much do we have left?
+; .res 1000
 
 .proc _main
-        ; Calibrate to get Hz
-        jsr     _calibrate_hz
-
-        ; Init mouse first thing (it flickers HGR on IIplus)
-        ; But disable IRQs as cc65's handler is in LOWCODE,
-        ; which is not yet loaded
-        php
-        sei
-
-        jsr     _init_mouse
-        bcc     :+                ; Do we have a mouse?
-
-        ; No. That won't work. We need one.
-        brk
-
-        ; Load LOWCODE (and splash screen)
-:       jsr     _load_lowcode
-        bcc     :+
-        brk
-
-:       ; We can now enable IRQs, the handler is loaded
-        plp
-
-        ; jsr      _init_text
-        ; lda      #<hz_str_1
-        ; ldx      #>hz_str_1
-        ; jsr      _cputs
-        ; 
-        ; lda      hz
-        ; ldx      #$00
-        ; jsr      _cutoa
-        ; 
-        ; lda      #<hz_str_2
-        ; ldx      #>hz_str_2
-        ; jsr      _cputs
-        ; jsr      _cgetc
-
-        jsr     _clrscr
-
-        lda     #1
-        jsr     _init_hgr
+        jsr     ___randomize
+        jsr     _build_hgr_tables
 
         jmp     _real_main
 .endproc
@@ -138,79 +95,6 @@
 .endproc
 
 .proc _real_main
-        lda     #<load_splc_str
-        ldx     #>load_splc_str
-        jsr     _cputs
-        jsr     _load_lc
-        bcc     :+
-        jmp     load_error
-
-:       jsr     ___randomize
-
-        jsr     _build_hgr_tables
-
-        ; Debug - start game at first opponent:
-.ifdef DEBUG_OPPONENT
-        lda     #1
-        jsr     _init_hgr
-        lda     #DEBUG_OPPONENT
-        jmp     store_opponent
-.endif
-        ; End of debug
-
-        ; Preload assets at $4000 and back them up
-        ; while we have the splash screen at $2000
-        lda     #<load_bar_str
-        ldx     #>load_bar_str
-        jsr     _cputs
-        jsr     _load_bar_high
-        bcc     :+
-        jmp     load_error
-
-:       jsr     _backup_bar_high
-
-        ; Don't bother preloading the rest if /RAM is unavailable
-        lda     _cache_working
-        beq     new_opponent
-
-        lda     #<load_bar_code_str
-        ldx     #>load_bar_code_str
-        jsr     _cputs
-        jsr     _load_bar_code
-        bcc     :+
-        jmp     load_error
-
-:       jsr     _bar_load_scores
-        jsr     _backup_bar_code
-
-        lda     #<load_table_str
-        ldx     #>load_table_str
-        jsr     _cputs
-        jsr     _load_table_high
-        bcc     :+
-        jmp     load_error
-
-:       jsr     _backup_table_high
-
-        lda     #<load_barsnd_str
-        ldx     #>load_barsnd_str
-        jsr     _cputs
-
-        jsr     _clrscr
-
-        ; Remove splashscreen as the intro sound
-        ; overwrites it
-        ; Ask data loader do it as late as possible
-        lda     #1
-        sta     _init_text_before_decompress
-        jsr     _load_barsnd
-        bcc     :+
-        jmp     load_error
-
-:       jsr     _backup_barsnd
-        lda     #0
-        sta     _init_text_before_decompress
-
 new_opponent:
         lda     in_tournament     ; Are we in a tournament?
         beq     to_bar
@@ -224,6 +108,7 @@ new_opponent:
         sta     won_tournament
         lda     #0
         sta     in_tournament
+
 to_bar:
         jsr     _clrscr
         jsr     _init_text
@@ -274,14 +159,6 @@ new_game:
         bcs     draw_scores
 
 new_point:
-        jsr     _restore_table
-        bcc     draw_scores
-        jsr     _draw_opponent_parts
-
-draw_scores:
-        ; Draw scores
-        jsr     _draw_scores
-
         ; Check for end of game
         lda     #MAX_SCORE
         cmp     my_score
@@ -297,6 +174,7 @@ my_win:
         ldx     #>500
         jsr     _platform_msleep
         jsr     __OPPONENT_START__+OPPONENT::END_GAME
+
 next_or_new_opponent:
         jsr     _clear_screen
         jsr     _restore_table
@@ -309,6 +187,13 @@ clear_and_go_bar:
         beq     next_or_new_opponent    ; Always branch
 
 cont_game:
+        jsr     _restore_table
+        bcc     draw_scores
+        jsr     _draw_opponent_parts
+
+draw_scores:
+        ; Draw scores
+        jsr     _draw_scores
 
         ; Initialize coords
         jsr     _move_my_pusher
@@ -370,8 +255,8 @@ loop_start:
         beq     :+
         lda     #$00
         sta     serving
-:
-        jsr     _move_my_pusher
+
+:       jsr     _move_my_pusher
 
         jsr     __OPPONENT_START__+OPPONENT::THINK_CB
         jsr     _move_their_pusher
@@ -393,7 +278,7 @@ loop_start:
         bne     :+
         jmp     clear_and_go_bar
 :
-.ifdef CHEAT
+.ifdef CHEAT 
         cmp     #'w'
         bne     game_loop
         lda     #15
@@ -480,29 +365,12 @@ no_kbd:
         rts
 .endproc
 
-.proc load_error
-        lda     ___errno
-        ldx     #$00
-        jsr     _strerror
-        jsr     _cputs
-        jsr     _init_text
-        brk
-.endproc
-
 .data
 
 turn_puck_y:
         .byte   MY_PUCK_INI_Y
         .byte   THEIR_PUCK_INI_Y
 
-load_splc_str:    .byte "LOADING LC CODE..."       ,$0D,$0A,$00
-load_table_str:   .byte "LOADING TABLE IMAGE..."   ,$0D,$0A,$00
-load_barsnd_str:  .byte "LOADING INTRO SOUND..."   ,$0D,$0A,$00
-load_bar_str:     .byte "LOADING BAR IMAGE..."     ,$0D,$0A,$00
-load_bar_code_str:.byte "LOADING BAR CODE..."      ,$0D,$0A,$00
-load_err_str:     .byte "COULD NOT LOAD FILE: "    ,$0D,$0A,$00
-hz_str_1:         .byte "MACHINE IS AT "           ,$00
-hz_str_2:         .byte "HZ. HIT ANY KEY"          ,$0D,$0A,$00
 .bss
 
 turn:           .res 1

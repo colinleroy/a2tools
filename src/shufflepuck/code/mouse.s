@@ -98,82 +98,8 @@ barbox: .word   0
         .word   0
         .word   255/2
         .word   HGR_HEIGHT/2
-.segment "CODE"
 
-firmware:
-        ; Lookup and patch firmware address lobyte
-lookup: ldy     $FF00,x         ; Patched at runtime
-        sty     jump+1          ; Modify code below
-
-        ; Apple II Mouse TechNote #1, Interrupt Environment with the Mouse:
-        ; "Enter all mouse routines (...) with the X register set to $Cn
-        ;  and Y register set to $n0, where n = the slot number."
-xparam: ldx     #$FF            ; Patched at runtime
-yparam: ldy     #$FF            ; Patched at runtime
-
-jump:   jmp     $FFFF           ; Patched at runtime
-
-;Apple II Mouse Technical Notes #2: Varying VBL Interrupt Rate
-.proc set_mouse_hz
-        ldy     #0                ; 0 for 60Hz, 1 for 50Hz
-        cmp     #60
-        beq     :+
-        iny
-:       tya
-
-        ldx     ostype
-        cpx     #$40
-        bcs     out               ; Don't do that on IIc/gs
-
-        ldx     #TIMEDATA
-        jsr     firmware
-
-out:    rts
-.endproc
-
-; A=0 => doubled speed
-; A=1 => quad speed on everything but IIgs
-.proc set_mouse_speed
-        bit     ostype
-        bpl     update_speed         ; Are we on a IIgs?
-        lda     #0
-
-update_speed:
-        cmp     #0
-        beq     set_double
-set_quad:
-        ldy     #7
-:       lda     small_playbox,y
-        sta     playbox,y
-        dey
-        bpl     :-
-
-        lda     #SMALL_INI_X
-        sta     ini_x+1
-        lda     #SMALL_INI_Y
-        sta     ini_y+1
-
-        lda     #$0A              ; ASL
-        sta     x_double
-        sta     y_double
-        rts
-set_double:
-        ldy     #7
-:       lda     normal_playbox,y
-        sta     playbox,y
-        dey
-        bpl     :-
-
-        lda     #NORMAL_INI_X
-        sta     ini_x+1
-        lda     #NORMAL_INI_Y
-        sta     ini_y+1
-
-        lda     #$EA              ; NOP
-        sta     x_double
-        sta     y_double
-        rts
-.endproc
+.segment "ONCE"
 
 .proc _init_mouse
         lda     #<$C000
@@ -253,14 +179,95 @@ next_slot:
         ; Turn VBL interrupt on
         lda     #%00001001
         ldx     #SETMOUSE
-mouse_common:
+
+        jmp     call_firmware_and_cli
+.endproc
+
+.segment "CODE"
+
+.proc call_firmware_and_cli
         jsr     firmware
 
         ; Enable interrupts and return success
         plp
         clc
         rts
-.endproc                          ; Not really endproc, but common needs to be out
+.endproc
+
+firmware:
+        ; Lookup and patch firmware address lobyte
+lookup: ldy     $FF00,x         ; Patched at runtime
+        sty     jump+1          ; Modify code below
+
+        ; Apple II Mouse TechNote #1, Interrupt Environment with the Mouse:
+        ; "Enter all mouse routines (...) with the X register set to $Cn
+        ;  and Y register set to $n0, where n = the slot number."
+xparam: ldx     #$FF            ; Patched at runtime
+yparam: ldy     #$FF            ; Patched at runtime
+
+jump:   jmp     $FFFF           ; Patched at runtime
+
+;Apple II Mouse Technical Notes #2: Varying VBL Interrupt Rate
+.proc set_mouse_hz
+        ldy     #0                ; 0 for 60Hz, 1 for 50Hz
+        cmp     #60
+        beq     :+
+        iny
+:       tya
+
+        ldx     ostype
+        cpx     #$40
+        bcs     out               ; Don't do that on IIc/gs
+
+        ldx     #TIMEDATA
+        jsr     firmware
+
+out:    rts
+.endproc
+
+; A=0 => doubled speed
+; A=1 => quad speed on everything but IIgs
+.proc set_mouse_speed
+        bit     ostype
+        bpl     update_speed         ; Are we on a IIgs?
+        lda     #0
+
+update_speed:
+        cmp     #0
+        beq     set_double
+set_quad:
+        ldy     #7
+:       lda     small_playbox,y
+        sta     playbox,y
+        dey
+        bpl     :-
+
+        lda     #SMALL_INI_X
+        sta     ini_x+1
+        lda     #SMALL_INI_Y
+        sta     ini_y+1
+
+        lda     #$0A              ; ASL
+        sta     x_double
+        sta     y_double
+        rts
+set_double:
+        ldy     #7
+:       lda     normal_playbox,y
+        sta     playbox,y
+        dey
+        bpl     :-
+
+        lda     #NORMAL_INI_X
+        sta     ini_x+1
+        lda     #NORMAL_INI_Y
+        sta     ini_y+1
+
+        lda     #$EA              ; NOP
+        sta     x_double
+        sta     y_double
+        rts
+.endproc
 
 .proc mouse_setpos
         stx     tmp1
@@ -330,7 +337,7 @@ ini_y:
         ; Turn mouse off
         lda     #%00000000
         ldx     #SETMOUSE
-        bne     _init_mouse::mouse_common
+        jmp     call_firmware_and_cli
 .endproc
 
 .proc mouse_setbox
@@ -373,7 +380,7 @@ ini_y:
 
         txa
         ldx     #CLAMPMOUSE
-        jmp     _init_mouse::mouse_common      ; Branch always
+        jmp     call_firmware_and_cli
 .endproc
 
 mouse_irq:
@@ -485,8 +492,6 @@ y_double:
         rts
 
 .proc _mouse_wait_vbl
-        ; MAME chokes on Mousecard-based VBL detection, but it works
-        ; fine on real hardware from IIp to IIgs.
         lda     #0              ; Skip a frame rather than flicker
         sta     vbl_ready
 :       lda     vbl_ready
@@ -503,9 +508,10 @@ y_double:
         rts
 .endproc
 
-       .bss
-
-slot:            .res 1
+.segment "DATA"
+; Put every var in DATA because mouse IRQs will start
+; before we're done with the ONCE segment, and will
+; poke stuff in BSS which still contains ONCE code
 mouse_b:         .res 1
 vbl_ready:       .res 1
 mouse_x:         .res 1
@@ -517,5 +523,5 @@ y_ring_buf:      .res RINGBUF_SIZE
 ringbuf_idx:     .res 1
 mouse_dx:        .res 1
 mouse_dy:        .res 1
-
 playbox:         .res 4*2
+slot:            .res 1

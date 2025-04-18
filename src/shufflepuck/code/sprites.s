@@ -13,7 +13,7 @@
 ; You should have received a copy of the GNU General Public License
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-                  .export my_pusher_data, their_pusher_data, puck_data, pointer_data
+                  .export my_pusher_data, their_pusher_data, puck_data, pointer_data, hand_data
 
                   .export my_pushers_low, my_pushers_high, my_pushers_height, my_pushers_bytes, my_pushers_bpline
                   .export their_pushers_low, their_pushers_high, their_pushers_height, their_pushers_bytes, their_pushers_bpline
@@ -22,9 +22,9 @@
                   .import _my_pusher0, _my_pusher1, _my_pusher2, _my_pusher3
                   .import _their_pusher4, _their_pusher5
                   .import _puck0, _puck1, _puck2, _puck3, _puck4, _puck5, _puck6
-                  .import _pointer
+                  .import _pointer, _hand
 
-                  .import  their_pusher_bgbackup, puck_bgbackup
+                  .import  their_pusher_bgbackup, puck_bgbackup, hand_bgbackup
 
                   .include "my_pusher0.gen.inc"
                   .include "my_pusher1.gen.inc"
@@ -40,6 +40,7 @@
                   .include "puck5.gen.inc"
                   .include "puck6.gen.inc"
                   .include "pointer.gen.inc"
+                  .include "hand.gen.inc"
                   .include "constants.inc"
 
 .segment "LOWCODE"
@@ -185,4 +186,19 @@ pointer_data:
                   .addr _pointer            ; sprites
                   .assert puck0_BYTES > pointer_BYTES, error
                   .addr puck_bgbackup       ; Spare some memory there
+                  .byte 0                   ; need clear
+
+
+; Hand for scores
+hand_data:
+                  .byte 0                   ; x
+                  .byte hand_WIDTH
+                  .byte 0                   ; y
+                  .byte hand_HEIGHT
+                  .byte 0                   ; prev_x
+                  .byte 0                   ; prev_y
+                  .byte hand_BYTES-1        ; bytes of sprite - 1
+                  .byte hand_BPLINE-1       ; width of sprite in bytes
+                  .addr _hand               ; sprites
+                  .addr hand_bgbackup
                   .byte 0                   ; need clear
