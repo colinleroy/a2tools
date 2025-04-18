@@ -33,7 +33,7 @@
 
         .export     _guess_puck_x_at_y
 
-        .import     _setup_sprite_pointer_full, _draw_sprite, _clear_sprite
+        .import     _draw_sprite, _clear_sprite
         .import     _setup_sprite_pointer_for_clear
         .import     _setup_sprite_pointer_for_draw
         .import     _setup_eor_draw, _setup_eor_clear, _draw_eor, _clear_eor
@@ -41,6 +41,8 @@
         .import     mouse_dx, mouse_dy
         .import     _crash_lines_scale, _draw_crash_lines
         .import     my_score, their_score
+        .import     _draw_score_update
+        .import     _skip_top_lines
 
         .import     hz
 
@@ -52,11 +54,11 @@
         .import     _play_puck
         .import     _play_crash
 
-        .import     my_pushers_low, my_pushers_high, my_pushers_width, my_pushers_height, my_pushers_bytes, my_pushers_bpline
-        .import     their_pushers_low, their_pushers_high, their_pushers_width, their_pushers_height, their_pushers_bytes, their_pushers_bpline
-        .import     pucks_low, pucks_high, pucks_width, pucks_height, pucks_bytes, pucks_bpline
+        .import     my_pushers_low, my_pushers_high, my_pushers_height, my_pushers_bytes, my_pushers_bpline
+        .import     their_pushers_low, their_pushers_high, their_pushers_height, their_pushers_bytes, their_pushers_bpline
+        .import     pucks_low, pucks_high, pucks_height, pucks_bytes, pucks_bpline
 
-        .importzp   tmp1, tmp3, ptr1
+        .importzp   tmp1, ptr1
 
         .include    "helpers.inc"
         .include    "sprite.inc"
@@ -194,26 +196,10 @@ my_side:
         rts
 .endproc
 
-.proc waste_3400
-        lda     hz
-        cmp     #60
-        bne     :+
-        rts
-:
-        ldy     #3
-:       ldx     #226
-:       dex                         ; 2
-        bne     :-                  ; 5
-        dey
-        bne     :--
-        rts
-.endproc
-
 ; Draw screen, choosing which draw function to use depending
 ; on the puck's side.
 ; ~ 12400 cycles
 .proc _draw_screen
-        ;jsr     waste_3400           ; Test for 60Hz
         lda     puck_y
 
         cmp     #MID_BOARD           ; Middle of HGR height
@@ -540,8 +526,11 @@ out:    jmp     bind_puck_speed
         sta     puck_dx
 
         ; Invert and slow puck delta-Y
+        ; if not already done
         lda     puck_dy
-        NEG_A
+        beq     :+
+        bpl     store_dy
+:       NEG_A
         cmp     #$80
         ror
         cmp     #$80
@@ -555,9 +544,10 @@ out:    jmp     bind_puck_speed
         clc
         adc     puck_dy
         cmp     #$01
-        bcs     :+
+        bcs     store_dy
         lda     #$01
-:       sta     puck_dy
+store_dy:
+        sta     puck_dy
         clc
         jmp     bind_puck_speed
 
@@ -774,9 +764,11 @@ check_my_late_catch:
         cmp     #<(255*2/3)       ; 2/3 chances to play the sound
         bcs     :+
         jsr     __OPPONENT_START__+OPPONENT::LOSE_POINT_SND
+:       inc     my_score
+        clc
+        jsr     _draw_score_update
         ; Return with carry set to inform main
-:       sec
-        inc     my_score
+        sec
         rts
 
 they_win:
@@ -794,9 +786,11 @@ they_win:
         cmp     #<(255*2/3)       ; 2/3 chances to play the sound
         bcs     :+
         jsr     __OPPONENT_START__+OPPONENT::WIN_POINT_SND
-:       ; Return with carry set to inform main
+:       inc     their_score
         sec
-        inc     their_score
+        jsr     _draw_score_update
+        ; Return with carry set to inform main
+        sec
         rts
 .endproc
 

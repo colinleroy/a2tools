@@ -13,8 +13,9 @@
 ; You should have received a copy of the GNU General Public License
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+        .export   _load_lowcode, _load_lc
         .export   _load_table_high, _backup_table, _backup_table_high, _restore_table
-        .export   _load_lowcode, _load_lc, _load_opponent
+        .export   _load_opponent
         .export   _load_bar_high, _backup_bar_high, _restore_bar
         .export   _load_bar_code, _backup_bar_code, _restore_bar_code
         .export   _load_barsnd, _backup_barsnd, _restore_barsnd
@@ -24,8 +25,6 @@
         .import   _open, _read, _write, _close, _memmove, _unlink
         .import   pushax, popax, _init_text
         .import   __filetype, __auxtype
-
-        .import   ostype
 
         .import   __LOWCODE_START__, __LOWCODE_SIZE__
         .import   __SPLC_START__, __SPLC_SIZE__
@@ -41,6 +40,41 @@
         .include  "fcntl.inc"
         .include  "constants.inc"
         .include  "scores.inc"
+
+.segment "ONCE"
+
+.proc _load_lowcode
+        jsr     set_compressed_buf_dynseg
+        lda     #<__LOWCODE_START__
+        ldx     #>__LOWCODE_START__
+        jsr     pushax
+        lda     #<__LOWCODE_SIZE__
+        ldx     #>__LOWCODE_SIZE__
+        jsr     pushax
+        lda     #<lowcode_name
+        ldx     #>lowcode_name
+        ldy     #$01              ; O_RDONLY
+        sty     do_uncompress
+
+        jmp     file_io_at
+.endproc
+
+.proc _load_lc
+        jsr     set_compressed_buf_dynseg
+
+        lda     #<__SPLC_START__
+        ldx     #>__SPLC_START__
+        jsr     pushax
+        lda     #<__SPLC_SIZE__
+        ldx     #>__SPLC_SIZE__
+        jsr     pushax
+        lda     #<lc_name
+        ldx     #>lc_name
+        ldy     #$01              ; O_RDONLY
+        sty     do_uncompress
+
+        jmp     file_io_at
+.endproc
 
 .segment "CODE"
 
@@ -264,22 +298,7 @@ finish_decompress:
         jmp     _data_io
 .endproc
 
-.proc _load_lowcode
-        jsr     set_compressed_buf_dynseg
-        lda     #<__LOWCODE_START__
-        ldx     #>__LOWCODE_START__
-        jsr     pushax
-        lda     #<__LOWCODE_SIZE__
-        ldx     #>__LOWCODE_SIZE__
-        jsr     pushax
-        lda     #<lowcode_name
-        ldx     #>lowcode_name
-        ldy     #$01              ; O_RDONLY
-        sty     do_uncompress
-
-        jsr     file_io_at
-        rts
-.endproc
+.segment "LOWCODE"
 
 ; A = which opponent to load
 .proc _load_opponent
@@ -298,7 +317,6 @@ finish_decompress:
         jmp     file_io_at
 .endproc
 
-
 .proc _load_table_high
         jsr     set_compressed_buf_dynseg
         jsr     push_dynseg_page_buf
@@ -313,25 +331,6 @@ finish_decompress:
 .proc load_table_at
         lda     #<table_name
         ldx     #>table_name
-        ldy     #$01              ; O_RDONLY
-        sty     do_uncompress
-
-        jmp     file_io_at
-.endproc
-
-.segment "LOWCODE"
-
-.proc _load_lc
-        jsr     set_compressed_buf_dynseg
-
-        lda     #<__SPLC_START__
-        ldx     #>__SPLC_START__
-        jsr     pushax
-        lda     #<__SPLC_SIZE__
-        ldx     #>__SPLC_SIZE__
-        jsr     pushax
-        lda     #<lc_name
-        ldx     #>lc_name
         ldy     #$01              ; O_RDONLY
         sty     do_uncompress
 
@@ -546,10 +545,10 @@ do_uncompress:        .res 1
 io_mode:              .res 1
 compressed_buf_start: .res 2
 compressed_buf_end:   .res 2
-_init_text_before_decompress: .res 1
 
         .data
 
+_init_text_before_decompress: .byte 0
 _cache_working:      .byte 1
 lowcode_name:        .asciiz "LOW.CODE"
 lc_name:             .asciiz "LC.CODE"
@@ -565,7 +564,7 @@ opponent_name_tmpl:  .asciiz "OPPONENT.X"
 
 .segment "bar_code"
 ; --- only accessible from the bar code segment
-
+; --- don't use it from elsewhere
 .proc set_scores_params
         jsr     pushax            ; Push buffer address
         lda     #<SCORE_TABLE_SIZE

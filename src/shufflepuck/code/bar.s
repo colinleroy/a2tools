@@ -12,19 +12,14 @@
 
         .import     my_score, their_score
 
-        .import     puck_x, mouse_x
-        .import     puck_y, mouse_y
-        .import     _puck_select
+        .import     mouse_x, mouse_y
         .import     _check_keyboard
 
         .import     _print_string, _read_string, _str_input
         .import     _print_char, _print_number, bcd_input
 
-        .import     _init_text, _init_hgr
-        .import     _cputs, _cgetc, _clrscr, _strlen
+        .import     _strlen
         .import     _exit, pushax, _memmove, _strcpy, _bzero
-
-        .import     __OPPONENT_START__
 
         .importzp   ptr2, tmp1
 
@@ -61,7 +56,7 @@ MENU_BOTTOM    = CHAMPION_BOTTOM + 3 + 5
 MENU_TOP       = CHAMPION_BOTTOM - 5
 
 empty_str:    .asciiz "            "
-champion_str: .asciiz "      ?     "
+champion_str: .asciiz "    BIFF    "
 congrats_str: .asciiz "CONGRATS! PLEASE ENTER YOUR NAME:"
 fight_str:    .asciiz "TOURNAMENT"
 view_str:     .asciiz "VIEW ROSTER"

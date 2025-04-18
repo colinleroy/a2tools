@@ -79,6 +79,7 @@ sprites_pixel_perfect = \
 	puck4.pixel_perfect.gen.s \
 	puck5.pixel_perfect.gen.s \
 	puck6.pixel_perfect.gen.s \
+	hand.pixel_perfect.gen.s \
 
 sprites_unperfect = $(opponents:%=sprite_%.unperfect.gen.s)
 names_unperfect   = $(opponents:%=name_%.unperfect.gen.s)
@@ -167,6 +168,7 @@ sounds = \
 # in the various segments
 shflpuck_SOURCES := \
 	play_sound.gen.s \
+	$(SRC_DIR)/code/init.s \
 	$(SRC_DIR)/code/main.s \
 	$(SRC_DIR)/code/hz.s \
 	$(SRC_DIR)/code/mouse.s \
@@ -199,7 +201,7 @@ shflpuck_SOURCES := \
 	font.gen.s \
 	$(SRC_DIR)/code/bar.s \
 	$(SRC_DIR)/code/draw_text.s \
-	pointer.pixel_perfect.gen.s
+	pointer.pixel_perfect.gen.s \
 
 shflpuck_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl \
 	-vm -m shflpuck.map \
@@ -274,6 +276,8 @@ puck6.pixel_perfect.gen.s: $(SRC_DIR)/assets/puck6.png gen_sprite
 	./gen_sprite $< 255 pixel_perfect RODATA
 pointer.pixel_perfect.gen.s: $(SRC_DIR)/assets/pointer.png gen_sprite
 	./gen_sprite $< 255 pixel_perfect bar_code
+hand.pixel_perfect.gen.s: $(SRC_DIR)/assets/hand.png gen_sprite
+	./gen_sprite $< 255 pixel_perfect RODATA
 
 $(opponents_sprites): %.unperfect.gen.s: $(SRC_DIR)/assets/opponents/%.png
 %.unperfect.gen.s: $(SRC_DIR)/assets/opponents/%.png gen_sprite

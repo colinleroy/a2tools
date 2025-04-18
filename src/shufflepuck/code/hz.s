@@ -2,15 +2,14 @@
         
         .import     _set_iigs_speed, _get_iigs_speed
 
-        .import     vbl_ready, ostype
+        .import     ostype
 
-        .import     pushax, _bzero
         .importzp   tmp1, ptr1
 
         .include    "apple2.inc"
         .include    "accelerator.inc"
 
-.code
+.segment "ONCE"
 
 MAGIC_VAL = 21
 .proc waste_189
@@ -47,7 +46,7 @@ iip:    jmp     calibrate_iip
         lda     RDVBLMSK
         bit     ENVBL
         bit     PTRIG           ; Reset VBL interrupt flag
-        :       bit     RDVBLBAR        ; Wait for one VBL
+:       bit     RDVBLBAR        ; Wait for one VBL
         bpl     :-
         bit     PTRIG           ; Reset VBL interrupt flag
 
@@ -176,10 +175,9 @@ set60:  stx     hz
 :       rts
 .endproc
 
-.data
 iip_str:        .asciiz "HIT 1 FOR US (60HZ), 2 FOR EURO (50HZ)"
-
-.bss
-
 prevspd:        .res 1
+
+.segment "DATA"
+; The only thing remaining from that code after init
 hz:             .res 1

@@ -17,17 +17,19 @@
         .export   _hgr_hi, _hgr_low
         .export   _mod7_table, _div7_table
 
-        .export   their_pusher_bgbackup, puck_bgbackup
+        .export   their_pusher_bgbackup, puck_bgbackup, hand_bgbackup
 
         .include  "sprite.inc"
         .include  "my_pusher0.gen.inc"
         .include  "their_pusher4.gen.inc"
         .include  "puck0.gen.inc"
+        .include  "hand.gen.inc"
 
 .bss
 
 their_pusher_bgbackup:  .res their_pusher4_BYTES
 puck_bgbackup:          .res puck0_BYTES
+hand_bgbackup:          .res hand_BYTES
 
 _hgr_hi:                .res 192
 _hgr_low:               .res 192
