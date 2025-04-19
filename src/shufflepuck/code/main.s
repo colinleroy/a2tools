@@ -54,7 +54,7 @@
         .import   _platform_msleep
         .import   _build_hgr_tables
 
-        .import   _init_text, _clrscr
+        .import   _init_text, _clrscr, _exit
 
         .import   ___randomize
 
@@ -138,7 +138,9 @@ to_bar:
         lda     #0                ; Start with opponent 0
 store_opponent:
 :       sta     opponent
-
+        cmp     #CH_ESC
+        bne     new_game
+        jmp     _exit
 new_game:
         jsr     _mouse_setplaybox
         lda     #$00
