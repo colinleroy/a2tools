@@ -171,7 +171,10 @@ return_opponent:                  ; Return the opponent number
         pha                       ; or $FF to start tournament
         jsr     clear_pointer
         pla
-        rts
+        cmp     #CH_ESC           ; or ESC to exit
+        bne     :+
+        jmp     _exit
+:       rts
 
 kbd:
         cmp     #CH_ESC
