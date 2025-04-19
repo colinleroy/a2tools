@@ -128,6 +128,7 @@ serve_sounds = \
 	serve_i.snd.s \
 
 win_sounds = \
+	win_b.snd.s \
 	win_e.snd.s \
 	win_f.snd.s \
 	win_h.snd.s \
