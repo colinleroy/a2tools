@@ -28,7 +28,7 @@
         .import     _big_draw_lose_b                                ; CHANGE A
         .import     _big_draw_win_b                                 ; CHANGE A
 
-        .import     _play_losegame_b, _platform_msleep
+        .import     _play_win_b, _play_losegame_b, _platform_msleep
 
         .import     return0
 
@@ -66,7 +66,7 @@ THEIR_MAX_DY = 8
         jmp     animate_win
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT_SND, error ; Make sure the callback is where we think
-        jmp     return0
+        jmp     sound_win
 
 .assert * = __OPPONENT_START__+OPPONENT::END_GAME, error ; Make sure the callback is where we think
         jmp     end_game
@@ -269,4 +269,9 @@ do_revert:
         jsr     _platform_msleep
         ldy     #0
         jmp     _play_losegame_b
+.endproc
+
+.proc sound_win
+        ldy     #0
+        jmp     _play_win_b
 .endproc
