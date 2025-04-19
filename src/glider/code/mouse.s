@@ -30,7 +30,7 @@
         .import     _keyboard_reset_ref_x
 
         .interruptor    mouse_irq
-        .destructor     _deinit_mouse
+        .destructor     _deinit_mouse, 17
 
         .include    "mouse-kernel.inc"
         .include    "apple2.inc"

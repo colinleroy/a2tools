@@ -28,7 +28,7 @@
         .importzp   ptr1, tmp1, tmp2
 
         .interruptor    mouse_irq
-        .destructor     _deinit_mouse
+        .destructor     _deinit_mouse, 17 ; Stop mouse before irq handler
 
         .include    "mouse-kernel.inc"
         .include    "apple2.inc"
