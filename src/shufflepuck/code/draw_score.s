@@ -26,6 +26,8 @@
         .import     _clear_sprite, _draw_sprite, _skip_top_lines
         .import     _platform_msleep
 
+        .importzp   tmp1
+
         .include    "sprite.inc"
         .include    "puck_coords.inc"
         .include    "constants.inc"
@@ -178,6 +180,16 @@ out:    rts
         lda     #hand_HEIGHT-1
         sta     cur_score_draw_lines_skip
 
+        ; Move start_x to the left so the hand moves diagonally
+        sec
+        sbc     end_score_draw_lines_skip
+        sta     tmp1
+
+        lda     start_x
+        sec
+        sbc     tmp1
+        sta     start_x
+
         ; Get hand down
         lda     #10
         sta     animate_hand::sleep_delay+1
@@ -185,6 +197,7 @@ out:    rts
         ldy     #$FF              ; Go down
         ldx     #0
         stx     hand_pen_down
+        inx
         jsr     animate_hand
 
         ; ; Draw current point
@@ -217,6 +230,7 @@ out:    rts
         ldy     #$01
         ldx     #0
         stx     hand_pen_down
+        dex
         jsr     animate_hand
 
         ; Final clear
