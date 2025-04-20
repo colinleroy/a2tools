@@ -263,7 +263,13 @@ loop_start:
         jsr     __OPPONENT_START__+OPPONENT::THINK_CB
         jsr     _move_their_pusher
 
-        jsr     _puck_check_my_hit
+        ; Check for pause (after THINK_CB so opponents can hook into keyboard)
+        lda     _last_key
+        cmp     #' '
+        bne     :+
+        jsr     pause
+
+:       jsr     _puck_check_my_hit
         jsr     _puck_check_their_hit
 
         jsr     _move_puck
@@ -312,23 +318,21 @@ reset_point_cont:
 
         lda     puck_x
         cmp     #PUCK_INI_X
-        beq     reset_move_y
         bcc     :+
-        lda     #<(-2)
+        lda     #<(-5)
         sta     puck_dx
         jmp     reset_move_y
-:       lda     #2
+:       lda     #5
         sta     puck_dx
 
 reset_move_y:
         lda     puck_y
         cmp     puck_serve_y
-        beq     update_screen
         bcc     :+
-        lda     #<(-2)
+        lda     #<(-5)
         sta     puck_dy
         jmp     update_screen
-:       lda     #2
+:       lda     #5
         sta     puck_dy
 
 update_screen:
@@ -337,17 +341,33 @@ update_screen:
         jsr     _move_my_pusher
         jsr     _move_their_pusher
         jsr     _move_puck
-        lda     puck_y
-        cmp     puck_serve_y
-        bne     reset_point_cont
-        lda     puck_x
-        cmp     #PUCK_INI_X
-        bne     reset_point_cont
+
+        ldx     puck_y
+        lda     puck_serve_y          ; puck_serve_y - 3 >= puck_y => continue
+        sec
+        sbc     #4
+        cmp     puck_y
+        bcs     reset_point_cont
+
+        clc                           ; puck_serve_y + 3 < puck_y => continue
+        adc     #8
+        cmp     puck_y
+        bcc     reset_point_cont
+
+        ldx     puck_x
+        lda     #(PUCK_INI_X-4)       ; puck_ini_x - 3 >= puck_x => continue
+        cmp     puck_x
+        bcs     reset_point_cont
+        lda     #(PUCK_INI_X+4)       ; puck_ini_x + 3 < puck_x => continue
+        cmp     puck_x
+        bcc     reset_point_cont
 
         ; Prepare for service
-        lda    #0
-        sta    their_pusher_dx
-        sta    their_pusher_dy
+        lda     #0
+        sta     their_pusher_dx
+        sta     their_pusher_dy
+        sta     puck_dx
+        sta     puck_dy
         jsr     _clear_screen
         jmp     new_point
 .endproc
@@ -364,6 +384,14 @@ no_kbd:
         lda     #$00
         sta     _last_key
         clc
+        rts
+.endproc
+
+.proc pause
+:       jsr     _check_keyboard
+        bcc     :-
+        lda     #$00
+        sta     _last_key
         rts
 .endproc
 

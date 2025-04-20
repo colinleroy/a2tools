@@ -14,8 +14,8 @@
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 ; ----------
-; SKIP
-; How to beat: Just send the puck in his general direction
+; DC3
+; Trainer bot
 
         .import     their_pusher_x, their_pusher_y
         .import     their_pusher_dx, their_pusher_dy
@@ -220,7 +220,7 @@ get_parameter:
         beq     dec_param
         cmp     #$15
         beq     inc_param
-        cmp     #$0D
+        cmp     #' '
         beq     done
         bne     print
 dec_param:
@@ -246,6 +246,7 @@ done:
         lda     #13
         jsr     pusha
         lda     #0
+        sta     _last_key         ; Reset last key to avoid pausing on config exit
         jsr     _gotoxy
         lda     #<configure_str
         ldx     #>configure_str
@@ -359,4 +360,4 @@ configure_str:    .asciiz "CONFIGURE DC3"
 max_delta_str:    .asciiz "MAX MOVE SPEED: "
 max_hit_str:      .asciiz "HIT FORCE:      "
 
-help_str:         .asciiz "ARROW KEYS TO CHANGE, ENTER TO VALIDATE"
+help_str:         .asciiz "ARROW KEYS TO CHANGE, SPACE TO VALIDATE"
