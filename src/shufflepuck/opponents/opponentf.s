@@ -126,8 +126,8 @@ catch:
         lda     puck_y
         clc
         adc     magic_band_rnd
-        ; Magic band where guessing X is allowed, 130-122 with a random 8 offset
-        cmp     #129
+        ; Magic band where guessing X is allowed, 128-121 with a random 8 offset
+        cmp     #128
         bcs     move
         cmp     #121
         bcc     move
