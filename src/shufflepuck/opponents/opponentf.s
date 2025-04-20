@@ -371,8 +371,12 @@ invert_x:
         sta     req_puck_dy
 
         lda     #(PUCK_INI_X-(my_pusher0_WIDTH/2)+(puck0_WIDTH/2))
+        clc
+        adc     req_puck_dx
         sta     their_pusher_x
-        lda     #(THEIR_PUCK_INI_Y-2)
+        lda     #(THEIR_PUCK_INI_Y)
+        clc
+        adc     req_puck_dy
         sta     their_pusher_y
 
         ; Shorten wait
