@@ -303,6 +303,9 @@ reset_point:
         lda     turn_puck_y,x
         sta     puck_serve_y
 
+        lda     #$00
+        sta     bounces
+
         ; Fix double-substraction of pushers height
         jsr     _move_my_pusher
         jsr     _move_their_pusher
@@ -311,28 +314,9 @@ reset_point_cont:
         jsr     _puck_reinit_my_order
         jsr     _puck_reinit_their_order
 
-        lda     #$00
+        jsr     get_puck_return_x_speed
         sta     puck_dx
-        sta     puck_dy
-        sta     bounces
-
-        lda     puck_x
-        cmp     #PUCK_INI_X
-        bcc     :+
-        lda     #<(-5)
-        sta     puck_dx
-        jmp     reset_move_y
-:       lda     #5
-        sta     puck_dx
-
-reset_move_y:
-        lda     puck_y
-        cmp     puck_serve_y
-        bcc     :+
-        lda     #<(-5)
-        sta     puck_dy
-        jmp     update_screen
-:       lda     #5
+        jsr     get_puck_return_y_speed
         sta     puck_dy
 
 update_screen:
@@ -342,25 +326,12 @@ update_screen:
         jsr     _move_their_pusher
         jsr     _move_puck
 
-        ldx     puck_y
-        lda     puck_serve_y          ; puck_serve_y - 3 >= puck_y => continue
-        sec
-        sbc     #4
-        cmp     puck_y
-        bcs     reset_point_cont
 
-        clc                           ; puck_serve_y + 3 < puck_y => continue
-        adc     #8
-        cmp     puck_y
-        bcc     reset_point_cont
+        jsr     get_puck_return_y_speed
+        bne     reset_point_cont
 
-        ldx     puck_x
-        lda     #(PUCK_INI_X-4)       ; puck_ini_x - 3 >= puck_x => continue
-        cmp     puck_x
-        bcs     reset_point_cont
-        lda     #(PUCK_INI_X+4)       ; puck_ini_x + 3 < puck_x => continue
-        cmp     puck_x
-        bcc     reset_point_cont
+        jsr     get_puck_return_x_speed
+        bne     reset_point_cont
 
         ; Prepare for service
         lda     #0
@@ -370,6 +341,44 @@ update_screen:
         sta     puck_dy
         jsr     _clear_screen
         jmp     new_point
+.endproc
+
+.proc get_puck_return_y_speed
+        lda     puck_serve_y          ; puck_serve_y - 3 >= puck_y => continue
+        sec
+        sbc     #3
+        cmp     puck_y
+        bcs     fast_forward
+
+        clc                           ; puck_serve_y + 3 < puck_y => continue
+        adc     #6
+        cmp     puck_y
+        bcc     fast_backwards
+        lda     #0
+        jmp     out
+fast_forward:
+        lda     #4
+        jmp     out
+fast_backwards:
+        lda     #<-4
+out:    rts
+.endproc
+
+.proc get_puck_return_x_speed
+        lda     #(PUCK_INI_X-4)       ; puck_ini_x - 3 >= puck_x => continue
+        cmp     puck_x
+        bcs     fast_right
+        lda     #(PUCK_INI_X+4)       ; puck_ini_x + 3 < puck_x => continue
+        cmp     puck_x
+        bcc     fast_left
+        lda     #0
+        jmp     out
+fast_right:
+        lda     #4
+        jmp     out
+fast_left:
+        lda     #<-4
+out:    rts
 .endproc
 
 .proc _check_keyboard
