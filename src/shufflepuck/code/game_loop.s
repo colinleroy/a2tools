@@ -89,8 +89,10 @@
 .endproc
 
 .proc draw_puck
+        ; Get the correct puck sprite
         jsr     _puck_select
 
+        ; Substract its height to draw it "on" the table
         lda     puck_real_gy
         sec
         sbc     puck_h
@@ -163,10 +165,12 @@
         jsr     clear_puck
 
 draw:
+        ; Update previous stack flag for the next clear
         lda     puck_in_front_of_me
         sta     prev_puck_in_front_of_me
         bne     :+
 
+        ; And draw in the correct order
         jsr     draw_puck
         jsr     draw_my_pusher
         jmp     out
@@ -206,9 +210,11 @@ out:
 .endproc
 
 .proc render_screen_their_side
+        ; Start with far side as it's higher on the screen,
+        ; so we have less cycles to do it
         jsr     _clear_screen_their_side
         jsr     _draw_screen_their_side
-my_side:
+
         ; My side now
         jsr     clear_my_pusher
         jsr     draw_my_pusher
@@ -216,7 +222,8 @@ my_side:
 .endproc
 
 ; Draw screen, choosing which draw function to use depending
-; on the puck's side.
+; on the puck's side - knowing in which half of the table the puck
+; is helps simplifying the draw order calculation
 ; ~ 12400 cycles
 .proc _draw_screen
         lda     puck_y
@@ -251,6 +258,7 @@ my_side:
         rts
 .endproc
 
+; Offsets (graphical, not theorical) at which we change the sprite size
 my_pusher_offsets:
         .byte   192
         .byte   183
@@ -260,12 +268,19 @@ NUM_MY_PUSHER_OFFSETS = *-my_pusher_offsets
 
 .proc my_pusher_select
         lda     my_pusher_y
+        ; Choose the smallest sprite
         ldx     #NUM_MY_PUSHER_OFFSETS-1
 :       cmp     my_pusher_offsets,x
+        ; Use it if the pusher is further away that the current offset
         bcc     out
+        ; Else check the next bigger size
         dex
+        ; Until we have the biggest sprite
         bne     :-
+
 out:
+        ; Update the sprite data fields (sprite and mask pointer,
+        ; number of bytes and width)
         lda     my_pushers_low,x
         sta     my_pusher_data+SPRITE_DATA::SPRITE
         lda     my_pushers_high,x
@@ -275,6 +290,7 @@ out:
         lda     my_pushers_bpline,x
         sta     my_pusher_data+SPRITE_DATA::BYTES_WIDTH
 
+        ; And store its height so we can offset the drawing correctly
         lda     my_pushers_height,x
         sta     my_pusher_h
 
@@ -282,12 +298,21 @@ out:
 .endproc
 
 .proc _move_my_pusher
+        ; Directly translate mouse coordinates to pusher coordinates
         ldy     mouse_y
         sty     my_pusher_y
         ldx     mouse_x
         stx     my_pusher_x
+
+        ; Apply the "3D" transformation
         jsr     _transform_xy
+
+        ; And store the graphical X directly in the sprite data,
         stx     my_pusher_gx
+
+        ; And graphical Y in its dedicated variable that will be used
+        ; to compute the Y offset in order to draw at the correct height
+        ; (on the table rather than under)
         sty     my_pusher_real_gy
         rts
 .endproc
@@ -373,6 +398,7 @@ out:
         rts
 .endproc
 
+; Update the sprite stack flag for our pusher / the puck
 .proc _puck_reinit_my_order
         lda     puck_y
         cmp     my_pusher_y
@@ -382,6 +408,7 @@ out:
         rts
 .endproc
 
+; Update the sprite stack flag for the opponent's pusher / the puck
 .proc _puck_reinit_their_order
         lda     puck_y
         cmp     their_pusher_y
@@ -391,6 +418,7 @@ out:
         rts
 .endproc
 
+; Make sure we don't go completely overboard with the puck's deltas
 .proc bind_puck_speed
         lda     puck_dy
         BIND_SIGNED #ABS_MAX_DY
@@ -403,13 +431,16 @@ out:
         rts
 .endproc
 
+; Collision check between player pusher and puck
 .proc _puck_check_my_hit
-        ; Check if we already hit right before
+        ; Check if we already hit right before, we don't need to do it
+        ; twice in a row
         lda     my_currently_hitting
         beq     check
         dec     my_currently_hitting
 
 check:
+        ; Y is checked by checking whether the stack order changed
         lda     puck_y
         cmp     my_pusher_y
         lda     #0
@@ -418,17 +449,17 @@ check:
         bne     :+
         rts
 
-        ; Order changed, store it
+        ; Stack order changed, store it
 :       sta     puck_in_front_of_me
 
-        ; Compare X
-        lda     my_pusher_x
+        ; Compare X to see if the pusher is in front of the puck, or missed it
+        lda     my_pusher_x       ; Compare left,
         cmp     puck_right_x
         bcs     out
 
         clc
-        adc     #my_pusher0_WIDTH ; Same for their pusher, they are the same size
-        bcs     :+                ; If adding our width overflowed, we're good
+        adc     #my_pusher0_WIDTH ; and add width for right bound
+        bcs     :+                ; If adding our width overflowed, we're good:
         cmp     puck_x            ; the pusher is on the right and the puck too
         bcc     out
 
@@ -436,49 +467,51 @@ check:
         lda     #1
         sta     my_currently_hitting
 
-        ; Make sure puck doesn't go behind pusher
+        ; Make sure puck doesn't go behind pusher so force its position one point
+        ; in front of the pusher
         ldy     my_pusher_y
         dey
         tya
         sty     puck_y
-        jsr     _init_precise_y
-        jsr     _puck_reinit_my_order  ; Set puck/pusher order while it goes away
+        jsr     _init_precise_y        ; Reinit the precise Y coord of the puck
+        jsr     _puck_reinit_my_order  ; And set puck/pusher order while it goes away
 
-        ; update puck speed
-        ; Slow puck deltaX
-        lda     puck_dx
+        ; Ypdate puck speed
+        lda     puck_dx           ; Slow puck's existing deltaX
         cmp     #$80
         ror
         cmp     #$80
         ror
-        beq     :+
+        beq     :+                ; Unless it would stop it
         sta     puck_dx
-:       lda     mouse_dx
+:       lda     mouse_dx          ; And add our own delta x
+        clc
         adc     puck_dx
         sta     puck_dx
 
-        ; Invert and slow puck delta-Y if incoming
+        ; Invert and slow puck delta-Y (if incoming!)
         lda     puck_dy
-        bmi     :+
-        NEG_A
+        bmi     :+                ; If the puck is already leaving, we just re-hit it
+        NEG_A                     ; In which case we skip the slowing down and flag reset
         cmp     #$80
         ror
         sta     puck_dy
 
         lda     #1
         sta     player_caught     ; Used to inform opponents about the fact we caught the puck
-                                  ; It's the opponent's responsability to zero it once they
+                                  ; It's the opponent's responsability to zero the flag once they
                                   ; know
 
         ldy     #0                ; No sound slowing
-        sty     their_currently_hitting ; Reset opponent hit (for Nerual who'd patch dy multiple times)
-        sty     bounces                 ; Reset X bounces counter
+        sty     their_currently_hitting ; Reset opponent hit (for Nerual who would patch dy multiple times)
+        sty     bounces                 ; Reset X bounces counter (for Nerual)
 
         ; And play sound
         jsr     _play_puck_hit
 
         ; Add our delta-Y to the puck
 :       lda     mouse_dy
+        clc
         adc     puck_dy
         bmi     :+                ; Don't let DY still be positive or zero
         lda     #$FF              ; And make sure it goes away by one pixel
@@ -494,7 +527,8 @@ out:    jmp     bind_puck_speed
         dec     their_currently_hitting
         jmp     _puck_reinit_their_order  ; Set puck/pusher order while it goes away
 
-:       lda     puck_y
+:       ; Check Y by checking whether the stack order changed
+        lda     puck_y
         cmp     their_pusher_y
         lda     #0
         rol
@@ -510,10 +544,11 @@ out:    jmp     bind_puck_speed
         bcs     out_miss
 
         clc
-        adc     #my_pusher0_WIDTH ; Same for their pusher, they are the same size
+        adc     #my_pusher0_WIDTH ; We use the standard width
         bcs     :+                ; If adding our width overflowed, we're good
         cmp     puck_x            ; the pusher is on the right and the puck too
-        bcc     out_miss
+
+        bcc     out_miss          ; Miss!
 
 :       ; Prevent multiple hits
         lda     #15
@@ -526,18 +561,17 @@ out:    jmp     bind_puck_speed
         iny
         tya
         sty     puck_y
-        jsr     _init_precise_y
+        jsr     _init_precise_y   ; Reinit precise Y coordinate
 
-        ; update puck speed
-        ; Slow puck deltaX
-        lda     puck_dx
+        ; Update puck speed
+        lda     puck_dx           ; Slow puck deltaX
         cmp     #$80
         ror
         cmp     #$80
         ror
-        beq     :+
+        beq     :+                ; Unless it would make it zero
         sta     puck_dx
-:       lda     their_pusher_dx
+:       lda     their_pusher_dx   ; And add opponent's delta x
         cmp     #$80
         ror
         clc
@@ -545,7 +579,6 @@ out:    jmp     bind_puck_speed
         sta     puck_dx
 
         ; Invert and slow puck delta-Y
-        ; if not already done
         lda     puck_dy
         beq     :+
         bpl     store_dy
@@ -562,7 +595,7 @@ out:    jmp     bind_puck_speed
         ror
         clc
         adc     puck_dy
-        cmp     #$01
+        cmp     #$01              ; Make sure the puck wouldn't stop
         bcs     store_dy
         lda     #$01
 store_dy:
@@ -571,19 +604,24 @@ store_dy:
         jmp     bind_puck_speed
 
 out_miss:
-        sec
+        sec                       ; Inform main that the opponent missed
         rts
 .endproc
 
 .proc play_revert_x
+        ; Load the puck Y coordinate from the front
         lda     #PUCK_MAX_Y
         sec
         sbc     puck_y
+
+        ; Divide it by 32 to get a 0-6 factor
         lsr
         lsr
         lsr
         lsr
         lsr
+
+        ; And slow the sound sample accordingly
         tay
         jmp     _play_puck
 .endproc
@@ -597,26 +635,30 @@ out_miss:
         rts
 .endproc
 
+; Make sure variables are where we think, for arrival X guessing backup/restore
 .assert puck_precise_x = puck_x + 1, error
 .assert puck_dx = puck_precise_x + 2, error
 .assert puck_y = puck_dx + 2, error
 .assert puck_precise_y = puck_y + 1, error
 .assert puck_dy = puck_precise_y + 2, error
 
-; Desired Y in A, result in A
+; Compute the puck's X coordinate at desired Y (in A register).
+; Returns with result in A
 .proc _guess_puck_x_at_y
         sta     tmp1
 
-        ; Backup variables
+        ; Backup the curent puck X/Y, precise X/Y, DX and DY variables
         ldy     #9
 :       lda     puck_x,y
         sta     puck_backup,y
         dey
         bpl     :-
 
+        ; Disable collision checks
         lda     #0
         sta     check_hits
 
+        ; And simulate the puck move until we reach the desired Y
 :       lda     puck_y
         cmp     tmp1
         beq     out
@@ -626,37 +668,42 @@ out_miss:
         jmp     :-
 
 out:
+        ; Re-enable the collision checks
         lda     #1
         sta     check_hits
 
-
+        ; Get the result X
         ldx     puck_x
-        ; Restore variables
+
+        ; Restore the current variables
         ldy     #9
 :       lda     puck_backup,y
         sta     puck_x,y
         dey
         bpl     :-
 
+        ; And return the value
         txa
         rts
 .endproc
 
 check_hits: .byte 1
 
+; Bounce puck on the table sides
 .proc revert_x
         lda     puck_dx
         NEG_A
         sta     puck_dx
         lda     check_hits    ; Are we simulating?
         beq     :+
-        jsr     play_revert_x
-        inc     bounces
+        jsr     play_revert_x ; If so, don't play the sound
+        inc     bounces       ; and don't increase the bounces counter
 :
-        ; And back to move_puck
+        ; And go back to moving puck (fallthrough)
 .endproc
+
 .proc _move_puck
-        ; Extend puck_dx to 16bits
+        ; Extend puck_dx to 16bits for a more precise movement
         ldx     #$00
         lda     puck_dx
         bpl     :+
@@ -676,18 +723,18 @@ check_hits: .byte 1
         lda     puck_precise_x
         ror
 
-        ; Check X bound
+        ; Check X bound and bounce on the table side if necessary
         cpx     #$FF
         beq     revert_x
         cpx     #$02
         bcs     revert_x
         cmp     #PUCK_MAX_X
         bcs     revert_x
-        sta     puck_x
+        sta     puck_x            ; Update puck_x
 
         clc
-        adc     #puck0_WIDTH
-        bcc     :+                ; Don't let puck_right_x overflow
+        adc     #puck0_WIDTH      ; and puck_right_x while we're at it
+        bcc     :+                ; Don't let it overflow.
         lda     #$FF
 :       sta     puck_right_x
 
@@ -717,16 +764,19 @@ check_y_bound:
         ldy     check_hits        ; Are we simulating?
         beq     out
 
-        ; Check opponent bound
+        ; Check opponent catch, their pusher might be at the table's border
+        ; In this case the Y checking via stack order wouldn't have worked
         cpx     #$FF
         beq     check_their_late_catch
         cmp     #PUCK_MIN_Y
         bcc     check_their_late_catch
 
-        ; Check our bound
+        ; Check our catch, our pusher might be at the table's border
+        ; In this case the Y checking via stack order wouldn't have worked
         cmp     #PUCK_MAX_Y
         bcs     check_my_late_catch
 
+        ; Set the graphical coords according to the theorical ones
         jsr     _transform_puck_coords
 
         clc
@@ -755,7 +805,7 @@ check_my_late_catch:
         jmp     round_end
 .endproc
 
-; A: 0 if we lose
+; A: 0 if we lose, 1 if we win
 .proc round_end
         pha
 
@@ -766,52 +816,79 @@ check_my_late_catch:
 
         ; Clear their side to load their sprite cleanly
         jsr     _clear_screen_their_side
+
         pla
         bne     they_win
 
+we_win:
+        ; Put up their "lose" sprite
         jsr     __OPPONENT_START__+OPPONENT::LOSE_POINT
-        ; Their side will be redrawn by update_screen_for_crash
+
+        ; Their side's sprites will be redrawn by update_screen_for_crash
+        ; so don't bother with it here
+
+        ; Set crash lines parameters
         clc                       ; Little crash
         jsr     update_screen_for_crash
+
+        ; Play crash sound, a bit slowed
         ldy     #2
         jsr     _play_crash
+
+        ; Wait 200ms
         lda     #200
         ldx     #0
         jsr     _platform_msleep
 
+        ; Play their lose sound (and/or animation)
         jsr     _rand
         cmp     #<(255*2/3)       ; 2/3 chances to play the sound
         bcs     :+
         jsr     __OPPONENT_START__+OPPONENT::LOSE_POINT_SND
-:       inc     my_score
+
+:       ; Increment our score,
+        inc     my_score
+
+        ; And call the hand drawing with carry clear so it updates our line
         clc
         jsr     _draw_score_update
-        ; Return with carry set to inform main
+
+        ; Return with carry set to inform main that the round is over
         sec
         rts
 
 they_win:
         jsr     __OPPONENT_START__+OPPONENT::WIN_POINT
-        sec                       ; Large crash
+
+        ; Set crash lines parameters
+        sec                       ; Large crash, on our side
         jsr     update_screen_for_crash
+
+        ; Play crash sound, a bit slowed
         ldy     #0
         jsr     _play_crash
+
         lda     #200
         ldx     #0
         jsr     _platform_msleep
 
+        ; Play their win sound (and/or animation)
         jsr     _rand
         cmp     #<(255*2/3)       ; 2/3 chances to play the sound
         bcs     :+
         jsr     __OPPONENT_START__+OPPONENT::WIN_POINT_SND
 :       inc     their_score
+
+        ; And call the hand drawing with carry clear so it updates their line
         sec
         jsr     _draw_score_update
-        ; Return with carry set to inform main
+
+        ; Return with carry set to inform main that the round is over
         sec
         rts
 .endproc
 
+; Draw the crash lines on the screen
 .proc update_screen_for_crash
         jsr     _crash_lines_scale
         jsr     _transform_puck_coords
@@ -820,7 +897,7 @@ they_win:
         jmp     _draw_crash_lines
 .endproc
 
-; A: standard 8-bit Y
+; A: standard 8-bit X
 .proc _init_precise_x
         ldx     #0
         clc
@@ -831,6 +908,7 @@ they_win:
 :       stx     puck_precise_x+1
         rts
 .endproc
+
 ; A: standard 8-bit Y
 .proc _init_precise_y
         ldx     #0
