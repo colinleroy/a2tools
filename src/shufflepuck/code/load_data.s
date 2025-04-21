@@ -53,10 +53,8 @@
         jsr     pushax
         lda     #<lowcode_name
         ldx     #>lowcode_name
-        ldy     #$01              ; O_RDONLY
-        sty     do_uncompress
 
-        jmp     file_io_at
+        jmp     read_compressed
 .endproc
 
 .proc _load_lc
@@ -70,13 +68,18 @@
         jsr     pushax
         lda     #<lc_name
         ldx     #>lc_name
+
+        jmp     read_compressed
+.endproc
+
+.segment "CODE"
+
+.proc read_compressed
         ldy     #$01              ; O_RDONLY
         sty     do_uncompress
 
         jmp     file_io_at
 .endproc
-
-.segment "CODE"
 
 ; The minimum to load lowcode
 .proc set_compressed_buf_hgr
@@ -311,10 +314,8 @@ finish_decompress:
         jsr     push_dynseg_page_buf
         lda     #<opponent_name_tmpl
         ldx     #>opponent_name_tmpl
-        ldy     #$01              ; O_RDONLY
-        sty     do_uncompress
 
-        jmp     file_io_at
+        jmp     read_compressed
 .endproc
 
 .proc _load_table_high
@@ -331,10 +332,8 @@ finish_decompress:
 .proc load_table_at
         lda     #<table_name
         ldx     #>table_name
-        ldy     #$01              ; O_RDONLY
-        sty     do_uncompress
 
-        jmp     file_io_at
+        jmp     read_compressed
 .endproc
 
 .proc _load_bar_high
@@ -349,10 +348,8 @@ finish_decompress:
 .proc load_bar_at
         lda     #<bar_name
         ldx     #>bar_name
-        ldy     #$01              ; O_RDONLY
-        sty     do_uncompress
 
-        jmp     file_io_at
+        jmp     read_compressed
 .endproc
 
 .proc _load_bar_code
@@ -360,10 +357,8 @@ finish_decompress:
         jsr     push_dynseg_page_buf
         lda     #<bar_code_name
         ldx     #>bar_code_name
-        ldy     #$01              ; O_RDONLY
-        sty     do_uncompress
 
-        jmp     file_io_at
+        jmp     read_compressed
 .endproc
 
 .proc _load_barsnd
@@ -371,10 +366,8 @@ finish_decompress:
         jsr     push_extra_large_page_buf
         lda     #<barsnd_name
         ldx     #>barsnd_name
-        ldy     #$01              ; O_RDONLY
-        sty     do_uncompress
 
-        jmp      file_io_at
+        jmp     read_compressed
 .endproc
 
 .proc set_table_backup_params
@@ -594,10 +587,7 @@ opponent_name_tmpl:  .asciiz "OPPONENT.X"
         jsr     push_hgr_page_buf
         lda     #<hallfame_name
         ldx     #>hallfame_name
-        ldy     #$01              ; O_RDONLY
-        sty     do_uncompress
-
-        jmp     file_io_at
+        jmp     read_compressed
 .endproc
 
 scores_name:         .asciiz "SCORES"
