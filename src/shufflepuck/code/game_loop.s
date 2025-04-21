@@ -14,6 +14,7 @@
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
         .export     _draw_screen, _clear_screen
+        .export     _clear_screen_their_side, _draw_screen_their_side
         .export     _move_puck, _move_my_pusher, _move_their_pusher
         .export     _puck_check_my_hit, _puck_check_their_hit
         .export     _puck_select
@@ -89,6 +90,12 @@
 
 .proc draw_puck
         jsr     _puck_select
+
+        lda     puck_real_gy
+        sec
+        sbc     puck_h
+        sta     puck_gy
+
         lda     #<puck_data
         ldx     #>puck_data
         jsr     _setup_sprite_pointer_for_draw
@@ -104,6 +111,12 @@
 
 .proc draw_my_pusher
         jsr     my_pusher_select
+
+        lda     my_pusher_real_gy
+        sec
+        sbc     my_pusher_h
+        sta     my_pusher_gy
+
         lda     #<my_pusher_data
         ldx     #>my_pusher_data
         jsr     _setup_eor_draw
@@ -119,6 +132,12 @@
 
 .proc draw_their_pusher
         jsr     their_pusher_select
+
+        lda     their_pusher_real_gy
+        sec
+        sbc     their_pusher_h
+        sta     their_pusher_gy
+
         lda     #<their_pusher_data
         ldx     #>their_pusher_data
         jsr     _setup_sprite_pointer_for_draw
@@ -159,7 +178,7 @@ out:
         rts
 .endproc
 
-.proc clear_screen_their_side
+.proc _clear_screen_their_side
         lda     prev_puck_in_front_of_them
         beq     :+
 
@@ -172,7 +191,7 @@ out:
         rts
 .endproc
 
-.proc draw_screen_their_side
+.proc _draw_screen_their_side
         lda     puck_in_front_of_them
         sta     prev_puck_in_front_of_them
         bne     :+
@@ -187,8 +206,8 @@ out:
 .endproc
 
 .proc render_screen_their_side
-        jsr     clear_screen_their_side
-        jsr     draw_screen_their_side
+        jsr     _clear_screen_their_side
+        jsr     _draw_screen_their_side
 my_side:
         ; My side now
         jsr     clear_my_pusher
@@ -254,10 +273,9 @@ out:
         lda     my_pushers_bpline,x
         sta     my_pusher_data+SPRITE_DATA::BYTES_WIDTH
 
-        lda     my_pusher_gy
-        sec
-        sbc     my_pushers_height,x
-        sta     my_pusher_gy
+        lda     my_pushers_height,x
+        sta     my_pusher_h
+
         rts
 .endproc
 
@@ -268,7 +286,7 @@ out:
         stx     my_pusher_x
         jsr     _transform_xy
         stx     my_pusher_gx
-        sty     my_pusher_gy
+        sty     my_pusher_real_gy
         rts
 .endproc
 
@@ -288,10 +306,9 @@ out:
         lda     their_pushers_bpline,x
         sta     their_pusher_data+SPRITE_DATA::BYTES_WIDTH
 
-        lda     their_pusher_gy
-        sec
-        sbc     their_pushers_height,x
-        sta     their_pusher_gy
+        lda     their_pushers_height,x
+        sta     their_pusher_h
+
         rts
 .endproc
 
@@ -311,7 +328,7 @@ out:
         tay
         jsr     _transform_xy
         stx     their_pusher_gx
-        sty     their_pusher_gy
+        sty     their_pusher_real_gy
         rts
 .endproc
 
@@ -347,10 +364,9 @@ out:
         lda     pucks_bpline,x
         sta     puck_data+SPRITE_DATA::BYTES_WIDTH
 
-        lda     puck_gy
-        sec
-        sbc     pucks_height,x
-        sta     puck_gy
+        lda     pucks_height,x
+        sta     puck_h
+
         rts
 .endproc
 
@@ -574,7 +590,7 @@ out_miss:
         ldy     puck_y
         jsr     _transform_xy
         stx     puck_gx
-        sty     puck_gy
+        sty     puck_real_gy
         rts
 .endproc
 
@@ -746,7 +762,7 @@ check_my_late_catch:
         sta     their_pusher_dy
 
         ; Clear their side to load their sprite cleanly
-        jsr     clear_screen_their_side
+        jsr     _clear_screen_their_side
         pla
         bne     they_win
 
@@ -759,7 +775,7 @@ check_my_late_catch:
         lda     #200
         ldx     #0
         jsr     _platform_msleep
-        jsr     clear_screen_their_side
+
         jsr     _rand
         cmp     #<(255*2/3)       ; 2/3 chances to play the sound
         bcs     :+
@@ -781,7 +797,6 @@ they_win:
         ldx     #0
         jsr     _platform_msleep
 
-        jsr     clear_screen_their_side
         jsr     _rand
         cmp     #<(255*2/3)       ; 2/3 chances to play the sound
         bcs     :+
@@ -846,7 +861,14 @@ their_pusher_y:  .res 1
 their_pusher_dx: .res 1
 their_pusher_dy: .res 1
 
-puck_backup:     .res 10
+my_pusher_real_gy:    .res 1
+their_pusher_real_gy: .res 1
+puck_real_gy:         .res 1
+my_pusher_h:          .res 1
+their_pusher_h:       .res 1
+puck_h:               .res 1
+
+puck_backup: .res 10
 
 player_caught:   .res 1
 

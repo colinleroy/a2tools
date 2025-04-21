@@ -306,10 +306,6 @@ reset_point:
         lda     #$00
         sta     bounces
 
-        ; Fix double-substraction of pushers height
-        jsr     _move_my_pusher
-        jsr     _move_their_pusher
-
 reset_point_cont:
         jsr     _puck_reinit_my_order
         jsr     _puck_reinit_their_order

@@ -23,6 +23,8 @@
         .import     puck_x, puck_right_x, puck_y, puck_dy, serving
         .import     _rand
 
+        .import     _clear_screen_their_side, _draw_screen_their_side
+
         .import     _big_draw_sprite_d                              ; CHANGE A
         .import     _big_draw_name_d                                ; CHANGE A
         .import     _big_draw_lose_d                                ; CHANGE A
@@ -61,7 +63,7 @@ START_MAX_DX = 11
         jmp    _big_draw_name_d                                        ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT, error ; Make sure the callback is where we think
-        jmp     animate_lose
+        jmp     show_lose
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT_SND, error ; Make sure the callback is where we think
         jmp     sound_lose
@@ -201,8 +203,9 @@ move_backwards:
 .proc load_win_sprite_coords
         lda     #50
         ldx     #0
-
         jsr     _platform_msleep
+        jsr     _clear_screen_their_side
+
         ldx     #((21+98)/7)
         ldy     #(76)
         rts
@@ -212,24 +215,37 @@ move_backwards:
         inc     drink
         jsr     load_win_sprite_coords
         jsr     _big_draw_win_d_1
+        jsr     _draw_screen_their_side
+
         jsr     load_win_sprite_coords
         jsr     _big_draw_win_d_2
+        jsr     _draw_screen_their_side
+
         jsr     load_win_sprite_coords
         jsr     _big_draw_win_d_3
+        jsr     _draw_screen_their_side
+
         jsr     load_win_sprite_coords
         jsr     _big_draw_win_d_4
+        jsr     _draw_screen_their_side
         lda     #<700
         ldx     #>700
         jsr     _platform_msleep
+
         jsr     load_win_sprite_coords
         jsr     _big_draw_win_d_3
+        jsr     _draw_screen_their_side
+
         jsr     load_win_sprite_coords
         jsr     _big_draw_win_d_2
+        jsr     _draw_screen_their_side
+
         jsr     load_win_sprite_coords
-        jmp     _big_draw_win_d_1
+        jsr     _big_draw_win_d_1
+        jmp     _draw_screen_their_side
 .endproc
 
-.proc animate_lose
+.proc show_lose
         ldx     #((21+98)/7)
         ldy     #(57)
         jmp     _big_draw_lose_d                                        ; CHANGE A
