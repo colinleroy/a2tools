@@ -322,13 +322,13 @@ move_backwards:
 
 .proc win_animation
         ldx     #((28+98)/7)
-        ldy     #(53+1)
+        ldy     #(52+1)
         jmp    _big_draw_win_h                                        ; CHANGE A
 .endproc
 
 .proc normal_animation
         ldx     #((28+98)/7)
-        ldy     #(53+1)
+        ldy     #(52+1)
         jmp    _big_draw_normal_h                                        ; CHANGE A
 .endproc
 
