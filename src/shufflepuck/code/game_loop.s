@@ -251,18 +251,20 @@ my_side:
         rts
 .endproc
 
+my_pusher_offsets:
+        .byte   192
+        .byte   183
+        .byte   174
+        .byte   165
+NUM_MY_PUSHER_OFFSETS = *-my_pusher_offsets
+
 .proc my_pusher_select
-        ldy     my_pusher_y
-        ldx     #0
-        cpy     #183
-        bcs     out
-        inx
-        cpy     #174
-        bcs     out
-        inx
-        cpy     #165
-        bcs     out
-        inx
+        lda     my_pusher_y
+        ldx     #NUM_MY_PUSHER_OFFSETS-1
+:       cmp     my_pusher_offsets,x
+        bcc     out
+        dex
+        bne     :-
 out:
         lda     my_pushers_low,x
         sta     my_pusher_data+SPRITE_DATA::SPRITE
@@ -290,12 +292,18 @@ out:
         rts
 .endproc
 
+their_pusher_offsets:
+        .byte   50
+        .byte   20
+NUM_THEIR_PUSHER_OFFSETS = *-their_pusher_offsets
+
 .proc their_pusher_select
-        ldy     their_pusher_y
-        ldx     #0
-        cpy     #20
-        bcs     out
-        inx
+        lda     their_pusher_y
+        ldx     #NUM_THEIR_PUSHER_OFFSETS-1
+:       cmp     their_pusher_offsets,x
+        bcc     out
+        dex
+        bne     :-
 out:
         lda     their_pushers_low,x
         sta     their_pusher_data+SPRITE_DATA::SPRITE
@@ -332,28 +340,23 @@ out:
         rts
 .endproc
 
-; Y input
+puck_offsets:
+        .byte   192
+        .byte   175
+        .byte   148
+        .byte   121
+        .byte   94
+        .byte   67
+        .byte   40
+NUM_PUCK_OFFSETS = *-puck_offsets
+
 .proc _puck_select
-        ldy     puck_y
-        ldx     #0
-        cpy     #175
-        bcs     out
-        inx
-        cpy     #148
-        bcs     out
-        inx
-        cpy     #121
-        bcs     out
-        inx
-        cpy     #94
-        bcs     out
-        inx
-        cpy     #67
-        bcs     out
-        inx
-        cpy     #40
-        bcs     out
-        inx
+        lda     puck_y
+        ldx     #NUM_PUCK_OFFSETS-1
+:       cmp     puck_offsets,x
+        bcc     out
+        dex
+        bne     :-
 out:
         lda     pucks_low,x
         sta     puck_data+SPRITE_DATA::SPRITE
