@@ -22,13 +22,20 @@
         .import     their_currently_hitting
         .import     puck_x, puck_right_x, puck_y, puck_dx, puck_dy, serving, their_score
         .import     _guess_puck_x_at_y
-        .import     _rand
+        .import     _rand, _mouse_wait_vbl, _platform_msleep
 
         .import     _big_draw_sprite_c                              ; CHANGE A
         .import     _big_draw_name_c                                ; CHANGE A
         .import     _big_draw_lose_c                                ; CHANGE A
         .import     _big_draw_win_c                                 ; CHANGE A
         .import     _play_lose_c                                    ; CHANGE A
+        .import     _play_losegame_c                                ; CHANGE A
+
+        .import     _draw_opponent, _draw_screen_their_side
+        .import     _big_draw_losegame_c_1
+        .import     _big_draw_losegame_c_2
+        .import     _big_draw_losegame_c_3
+        .import     _big_draw_losegame_c_4
 
         .import     return0
 
@@ -68,7 +75,7 @@ THEIR_MAX_DX = 2
         jmp     return0
 
 .assert * = __OPPONENT_START__+OPPONENT::END_GAME, error ; Make sure the callback is where we think
-        jmp     return0
+        jmp     end_game
 
 .assert * = __OPPONENT_START__+OPPONENT::THINK_CB, error ; Make sure the callback is where we think
 .proc _opponent_think
@@ -265,5 +272,58 @@ move_backwards:
         jmp     _play_lose_c                                            ; CHANGE A
 .endproc
 
+.proc prepare_animate_losegame
+        lda     #50
+        ldx     #0
+        jsr     _platform_msleep
+        jsr     _mouse_wait_vbl
+        ldx     #((28+98)/7)    ; left X of sprite change + left X of big sprite
+        ldy     #55             ; bottom Y of sprite change
+        rts
+.endproc
+
+.proc end_game
+        lda     their_score ; Did we lose?
+        cmp     #15
+        bne     :+
+        rts
+
+:       jsr     _draw_opponent
+        jsr     _draw_screen_their_side
+
+        lda     #3
+        sta     num_tongue
+        jsr     prepare_animate_losegame
+        jsr     _big_draw_losegame_c_1
+
+:       jsr     prepare_animate_losegame
+        jsr     _big_draw_losegame_c_2
+        jsr     prepare_animate_losegame
+        jsr     _big_draw_losegame_c_3
+        jsr     prepare_animate_losegame
+        jsr     _big_draw_losegame_c_2
+        jsr     prepare_animate_losegame
+        jsr     _big_draw_losegame_c_4
+        dec     num_tongue
+        bne     :-
+
+        jsr     prepare_animate_losegame
+        jsr     _big_draw_losegame_c_2
+
+        ldy     #0
+        jsr     _play_losegame_c
+
+        jsr     prepare_animate_losegame
+        jsr     _big_draw_losegame_c_1
+
+        jsr     prepare_animate_losegame
+        ; No need to clear, bottom of sprite doesn't change
+        jsr     _draw_opponent
+        jmp     _draw_screen_their_side
+
+.endproc
+
+
 found_x:          .byte 0
 no_fast:          .byte 0
+num_tongue:       .byte 0

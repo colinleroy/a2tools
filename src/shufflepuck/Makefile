@@ -92,6 +92,10 @@ lose_unperfect = \
 	lose_e.unperfect.gen.s \
 	lose_f.unperfect.gen.s \
 	lose_h.unperfect.gen.s \
+	losegame_c_1.unperfect.gen.s \
+	losegame_c_2.unperfect.gen.s \
+	losegame_c_3.unperfect.gen.s \
+	losegame_c_4.unperfect.gen.s \
 
 win_unperfect = \
 	win_a.unperfect.gen.s \
@@ -147,6 +151,7 @@ lose_sounds = \
 	lose_i_1.snd.s \
 	lose_i_2.snd.s \
 	losegame_b.snd.s \
+	losegame_c.snd.s \
 
 opponents_sprites = \
 	$(sprites_unperfect) \
