@@ -110,39 +110,57 @@ new_opponent:
         sta     in_tournament
 
 to_bar:
+
+        ; Entering the bar, clear screen, reload the intro sound, play it
         jsr     _clrscr
         jsr     _init_text
         jsr     _restore_barsnd
         ldy     #0
         jsr     _play_bar
+
+        ; Reload the bar image and code
         jsr     _restore_bar
         jsr     _restore_bar_code
+
+        ; Display the current champion
         jsr     _bar_update_champion
 
+        ; Reinit HGR
         lda     #1
         jsr     _init_hgr
 
+        ; Update mouse boundaries for bar
         jsr     _mouse_setbarbox
+
+        ; Did we win the tournament?
         lda     won_tournament
         beq     :+
 
+        ; Yes, so go add player name's to hall of fame
         jsr     _add_hall_of_fame
 
+        ; And reset the flag
         lda     #0
         sta     won_tournament
 
+        ; Wait for player to choose an opponent
 :       jsr     _choose_opponent
-        bpl     :+
-        lda     #1                ; Start a tournament
+        bpl     store_opponent    ; > 0 = opponent number or ESC,
+        lda     #1                ; < 0 = Start a tournament
         sta     in_tournament
         lda     #0                ; Start with opponent 0
+
 store_opponent:
-:       sta     opponent
+        sta     opponent
         cmp     #CH_ESC
         bne     new_game
         jmp     _exit
+
 new_game:
+        ; Bind mouse to table
         jsr     _mouse_setplaybox
+
+        ; Reset variables
         lda     #$00
         sta     turn
         sta     my_score
@@ -154,10 +172,15 @@ new_game:
         ; Load the opponent file
         lda     opponent
         jsr     _load_opponent
+        bcs     to_bar            ; Don't crash if we can't load the opponent
 
+        ; Restore the table image,
         jsr     _restore_table
+        ; Draw the new opponent on it,
         jsr     _draw_opponent_parts
+        ; And backup that.
         jsr     _backup_table
+        ; If we can't back it up, update scores
         bcs     draw_scores
 
 new_point:
@@ -169,7 +192,7 @@ new_point:
         bne     cont_game
 
 their_win:
-        lda     #0                ; We lost the tournament
+        lda     #0                ; We lost so we also lost the tournament
         sta     in_tournament
 my_win:
         lda     #<500
@@ -179,7 +202,6 @@ my_win:
 
 next_or_new_opponent:
         jsr     _clear_screen
-        jsr     _restore_table
         jmp     new_opponent
 
 clear_and_go_bar:
@@ -189,8 +211,10 @@ clear_and_go_bar:
         beq     next_or_new_opponent    ; Always branch
 
 cont_game:
+        ; Restore table from the backup
         jsr     _restore_table
         bcc     draw_scores
+        ; But if we can't, redraw the opponent
         jsr     _draw_opponent_parts
 
 draw_scores:
@@ -216,12 +240,14 @@ draw_scores:
         ; Set correct graphics coords first
         jsr     _transform_puck_coords
 
-        lda     #$00
-        sta     puck_dx
-        sta     puck_dy
-        lda     #$01
-        sta     serving
+        ; Stop the puck, set serving flag
+        ldx     #$00
+        stx     puck_dx
+        stx     puck_dy
+        inx
+        stx     serving
 
+        ; Reset sprite stack
         jsr     _puck_reinit_my_order
         lda     puck_in_front_of_me
         sta     prev_puck_in_front_of_me
@@ -229,6 +255,7 @@ draw_scores:
         lda     puck_in_front_of_them
         sta     prev_puck_in_front_of_them
 
+        ; Prepare the frame dropped for 60Hz machines
         lda     #6
         sta     frame_counter
 
@@ -251,16 +278,21 @@ check_hz:
         bne     game_loop
 
 loop_start:
+        ; First thing is drawing the screen so we don't flicker
         jsr     _draw_screen
 
+        ; If the puck is moving, service is done
         lda     puck_dy
         beq     :+
         lda     #$00
         sta     serving
 
-:       jsr     _move_my_pusher
+:       ; Update our pusher position,
+        jsr     _move_my_pusher
 
+        ; Let the opponent think about what to do,
         jsr     __OPPONENT_START__+OPPONENT::THINK_CB
+        ; And move their pusher accordingly
         jsr     _move_their_pusher
 
         ; Check for pause (after THINK_CB so opponents can hook into keyboard)
@@ -269,15 +301,19 @@ loop_start:
         bne     :+
         jsr     pause
 
-:       jsr     _puck_check_my_hit
+:       ; Check collision
+        jsr     _puck_check_my_hit
         jsr     _puck_check_their_hit
 
+        ; Update the puck's position,
         jsr     _move_puck
+        ; and if carry is set, it reached the end of the table.
         bcs     reset_point
 
-        ; Check again after moving puck
+        ; Check for collision again after moving puck
         jsr     _puck_check_my_hit
 
+        ; Check for keyboard input
         jsr     _check_keyboard
         bcc     game_loop
 
@@ -295,41 +331,47 @@ loop_start:
 .else
         jmp     game_loop
 .endif
+
 reset_point:
+        ; The point has been scored. Update the serving turn
         lda     turn
         eor     #$01
         sta     turn
         tax
+        ; And get where we should position the puck for service
         lda     turn_puck_y,x
         sta     puck_serve_y
 
+        ; Reset bounces counter (for Nerual's DX calculation)
         lda     #$00
         sta     bounces
 
 reset_point_cont:
+        ; Move the puck to the serving point
         jsr     _puck_reinit_my_order
         jsr     _puck_reinit_their_order
 
         jsr     get_puck_return_x_speed
-        sta     puck_dx
+        stx     puck_dx
         jsr     get_puck_return_y_speed
-        sta     puck_dy
+        stx     puck_dy
 
 update_screen:
+        ; Redraw the full screen, without checking for collisions
         jsr     _mouse_wait_vbl
         jsr     _draw_screen
         jsr     _move_my_pusher
         jsr     _move_their_pusher
         jsr     _move_puck
 
-
+        ; Update the puck's required DX/DY to reach the serving point
         jsr     get_puck_return_y_speed
         bne     reset_point_cont
 
         jsr     get_puck_return_x_speed
         bne     reset_point_cont
 
-        ; Prepare for service
+        ; It's in place! Prepare for service
         lda     #0
         sta     their_pusher_dx
         sta     their_pusher_dy
@@ -339,41 +381,36 @@ update_screen:
         jmp     new_point
 .endproc
 
+; Return with required delta in X
 .proc get_puck_return_y_speed
+        ldx     #4                    ; DY required to move forward
         lda     puck_serve_y          ; puck_serve_y - 3 >= puck_y => continue
         sec
         sbc     #3
         cmp     puck_y
-        bcs     fast_forward
+        bcs     out
 
+        ldx     #<-4                  ; DY required to move backwards
         clc                           ; puck_serve_y + 3 < puck_y => continue
         adc     #6
         cmp     puck_y
-        bcc     fast_backwards
-        lda     #0
-        jmp     out
-fast_forward:
-        lda     #4
-        jmp     out
-fast_backwards:
-        lda     #<-4
+        bcc     out
+        ldx     #0                    ; Puck's Y is good, stop moving it
 out:    rts
 .endproc
 
+; Return with required delta in X
 .proc get_puck_return_x_speed
+        ldx     #4
         lda     #(PUCK_INI_X-4)       ; puck_ini_x - 3 >= puck_x => continue
         cmp     puck_x
-        bcs     fast_right
+        bcs     out
+
+        ldx     #<-4
         lda     #(PUCK_INI_X+4)       ; puck_ini_x + 3 < puck_x => continue
         cmp     puck_x
-        bcc     fast_left
-        lda     #0
-        jmp     out
-fast_right:
-        lda     #4
-        jmp     out
-fast_left:
-        lda     #<-4
+        bcc     out
+        ldx     #0
 out:    rts
 .endproc
 
