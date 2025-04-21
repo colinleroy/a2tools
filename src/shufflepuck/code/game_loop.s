@@ -455,13 +455,13 @@ check:
         ; Compare X to see if the pusher is in front of the puck, or missed it
         lda     my_pusher_x       ; Compare left,
         cmp     puck_right_x
-        bcs     out
+        bcs     out_miss
 
         clc
         adc     #my_pusher0_WIDTH ; and add width for right bound
         bcs     :+                ; If adding our width overflowed, we're good:
         cmp     puck_x            ; the pusher is on the right and the puck too
-        bcc     out
+        bcc     out_miss
 
 :       ; Prevent multiple hits
         lda     #1
@@ -517,7 +517,10 @@ check:
         lda     #$FF              ; And make sure it goes away by one pixel
 :       sta     puck_dy
 
-out:    jmp     bind_puck_speed
+        jmp     bind_puck_speed
+out_miss:
+        sec
+        rts
 .endproc
 
 .proc _puck_check_their_hit
