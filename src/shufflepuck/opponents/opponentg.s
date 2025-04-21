@@ -25,6 +25,8 @@
         .import     _rand, _platform_msleep
         .import     _draw_opponent
 
+        .import     _mouse_wait_vbl
+
         .import     _big_draw_sprite_g                              ; CHANGE A
         .import     _big_draw_name_g                                ; CHANGE A
         .import     _big_draw_serve_g_1                             ; CHANGE A
@@ -381,6 +383,8 @@ inc_hack:
         lda     #50
         ldx     #0
         jsr     _platform_msleep
+
+        jsr     _mouse_wait_vbl
 
         ldx     #((7+98)/7)
         ldy     #76

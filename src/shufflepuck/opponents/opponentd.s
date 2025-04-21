@@ -24,6 +24,7 @@
         .import     _rand
 
         .import     _clear_screen_their_side, _draw_screen_their_side
+        .import     _mouse_wait_vbl
 
         .import     _big_draw_sprite_d                              ; CHANGE A
         .import     _big_draw_name_d                                ; CHANGE A
@@ -200,12 +201,11 @@ move_backwards:
         rts
 .endproc
 
-.proc load_win_sprite_coords
-        lda     #50
-        ldx     #0
-        jsr     _platform_msleep
+.proc prepare_animation
+        jsr     _mouse_wait_vbl   ; ~45ms
+        jsr     _mouse_wait_vbl
+        jsr     _mouse_wait_vbl
         jsr     _clear_screen_their_side
-
         ldx     #((21+98)/7)
         ldy     #(76)
         rts
@@ -213,34 +213,34 @@ move_backwards:
 
 .proc animate_win
         inc     drink
-        jsr     load_win_sprite_coords
+        jsr     prepare_animation
         jsr     _big_draw_win_d_1
         jsr     _draw_screen_their_side
 
-        jsr     load_win_sprite_coords
+        jsr     prepare_animation
         jsr     _big_draw_win_d_2
         jsr     _draw_screen_their_side
 
-        jsr     load_win_sprite_coords
+        jsr     prepare_animation
         jsr     _big_draw_win_d_3
         jsr     _draw_screen_their_side
 
-        jsr     load_win_sprite_coords
+        jsr     prepare_animation
         jsr     _big_draw_win_d_4
         jsr     _draw_screen_their_side
         lda     #<700
         ldx     #>700
         jsr     _platform_msleep
 
-        jsr     load_win_sprite_coords
+        jsr     prepare_animation
         jsr     _big_draw_win_d_3
         jsr     _draw_screen_their_side
 
-        jsr     load_win_sprite_coords
+        jsr     prepare_animation
         jsr     _big_draw_win_d_2
         jsr     _draw_screen_their_side
 
-        jsr     load_win_sprite_coords
+        jsr     prepare_animation
         jsr     _big_draw_win_d_1
         jmp     _draw_screen_their_side
 .endproc
