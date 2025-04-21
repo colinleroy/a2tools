@@ -242,7 +242,7 @@ do_revert:
 .endproc
 
 .proc load_simple_animation_coords
-        ldx     #((21+98)/7)    ; left X of sprite change + left X of big sprite
+        ldx     #((7+98)/7)    ; left X of sprite change + left X of big sprite
         ldy     #(76) ; bottom Y of sprite change + big sprite bottom Y - big sprite height
         rts
 .endproc
