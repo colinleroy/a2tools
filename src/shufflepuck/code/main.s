@@ -35,7 +35,7 @@
         .import   puck_in_front_of_them, prev_puck_in_front_of_them
         .import   _draw_screen, _clear_screen, _draw_scores
         .import   _move_puck, _puck_check_my_hit, _puck_check_their_hit
-        .import   _move_my_pusher, _move_their_pusher
+        .import   _move_my_pusher, _move_their_pusher, _round_end
 
         .import   __OPPONENT_START__
 
@@ -333,6 +333,7 @@ loop_start:
 .endif
 
 reset_point:
+        jsr     _round_end
         ; The point has been scored. Update the serving turn
         lda     turn
         eor     #$01

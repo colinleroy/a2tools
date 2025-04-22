@@ -17,7 +17,7 @@
         .export     _clear_screen_their_side, _draw_screen_their_side
         .export     _move_puck, _move_my_pusher, _move_their_pusher
         .export     _puck_check_my_hit, _puck_check_their_hit
-        .export     _puck_select
+        .export     _round_end
 
         .export     puck_x, puck_right_x, puck_y, puck_dx, puck_dy
         .export     _init_precise_x, _init_precise_y
@@ -793,8 +793,8 @@ check_their_late_catch:
         jsr     _puck_check_their_hit
         bcc     update_y
 
-        lda     #0
-        jmp     round_end
+        sec
+        rts
 
 check_my_late_catch:
         lda     #PUCK_MAX_Y
@@ -804,14 +804,11 @@ check_my_late_catch:
         jsr     _puck_check_my_hit
         bcc     update_y
 
-        lda     #1
-        jmp     round_end
+        sec
+        rts
 .endproc
 
-; A: 0 if we lose, 1 if we win
-.proc round_end
-        pha
-
+.proc _round_end
         ; Stop their pusher
         lda     #0
         sta     their_pusher_dx
@@ -820,8 +817,10 @@ check_my_late_catch:
         ; Clear their side to load their sprite cleanly
         jsr     _clear_screen_their_side
 
-        pla
-        bne     they_win
+        ; Where is the puck?
+        lda     puck_y
+        cmp     #PUCK_MAX_Y
+        beq     they_win
 
 we_win:
         ; Put up their "lose" sprite
