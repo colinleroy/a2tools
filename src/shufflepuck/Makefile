@@ -171,9 +171,14 @@ sounds = \
 	puck.snd.s \
 # Our code
 # Order is important so that things are linked in the expected order
-# in the various segments
+# in the various segments, and things needing to be aligned are aligned
 shflpuck_SOURCES := \
 	play_sound.gen.s \
+	$(opponents_code) \
+	$(serve_sounds) \
+	$(win_sounds) \
+	$(lose_sounds) \
+	$(sprites) \
 	$(SRC_DIR)/code/init.s \
 	$(SRC_DIR)/code/main.s \
 	$(SRC_DIR)/code/hz.s \
@@ -195,11 +200,6 @@ shflpuck_SOURCES := \
 	$(SRC_DIR)/../lib/platform_sleep.s \
 	$(sounds) \
 	transform.s \
-	$(opponents_code) \
-	$(serve_sounds) \
-	$(win_sounds) \
-	$(lose_sounds) \
-	$(sprites) \
 	$(assets_backgrounds) \
 	$(levels_code) \
 	splash.bg.gen.s \

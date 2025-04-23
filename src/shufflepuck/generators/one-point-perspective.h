@@ -5,22 +5,22 @@
 #define MX   3
 #define HGR_H 193
 
-int x_divisor_at_y(int y) {
+int depth(int y) {
   return FY + MY - y;
 }
 
-float y_divisor_at_y(int y) {
-  return (FY + MY - y)/((MY-VY)/FY);
-}
-
-float x_shift(int y) {
-  return (-VX*FY)/(FY + MY - y) + VX + MX;
+float y_divisor(int y) {
+  return depth(y)/((MY-VY)/FY);
 }
 
 float x_factor(int y) {
-  return (256*FY)/x_divisor_at_y(y);
+  return (256*FY)/depth(y);
+}
+
+float x_shift(int y) {
+  return (-VX*FY)/depth(y) + VX + MX;
 }
 
 float y_factor(int y) {
-  return MY-(((MY-y) * FY) / y_divisor_at_y(y));
+  return MY-(((MY-y) * FY) / y_divisor(y));
 }
