@@ -234,7 +234,7 @@ gen_sound_player: $(SRC_DIR)/../sound_player_generator/gen_sound_player.c $(SRC_
 gen_sound_clip: $(SRC_DIR)/../sound_player_generator/gen_sound_clip.c $(SRC_DIR)/../sound_player_generator/sound.h
 	gcc -DCPU_$(STREAMER_VER) -DENABLE_SLOWER=1 -g -O0 $< -o $@
 
-gen_transform: $(SRC_DIR)/generators/gen_transform.c
+gen_transform: $(SRC_DIR)/generators/gen_transform.c $(SRC_DIR)/generators/one-point-perspective.h
 	gcc -g -O0 $< -o $@
 
 transform.s: gen_transform

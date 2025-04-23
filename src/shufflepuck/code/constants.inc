@@ -21,11 +21,11 @@ THEIR_PUSHER_INI_X = 116
 THEIR_PUSHER_INI_Y = THEIR_PUSHER_MIN_Y
 
 PUCK_MIN_X         = 0
-PUCK_MAX_X         = 249
+PUCK_MAX_X         = 254
 PUCK_MIN_Y         = 1
 PUCK_MAX_Y         = 192
 
-PUCK_INI_X         = 124
+PUCK_INI_X         = 126
 
 ABS_MAX_DX         = $18
 ABS_MAX_DY         = $18
