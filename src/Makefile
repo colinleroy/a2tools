@@ -1,6 +1,7 @@
 SUBDIRS = a2trace \
 	surl-server \
 	glider \
+	shufflepuck \
 	homecontrol-client \
 	image-viewer \
 	mastodon \

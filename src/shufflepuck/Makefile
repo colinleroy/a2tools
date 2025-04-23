@@ -383,5 +383,5 @@ gimp_setup:
 	./gimp_setup.sh
 
 dist: shufflepuck.po
-	mkdir -p $(SRC_DIR)../../dist/
-	cp $< $(SRC_DIR)../../dist/
+	mkdir -p $(SRC_DIR)/../../dist/
+	cp $< $(SRC_DIR)/../../dist/
