@@ -3,7 +3,7 @@
 
 /* Update in .inc too! */
 #define SURL_PROTOCOL_VERSION 23
-#define VERSION "23.0.3"
+#define VERSION "23.0.4"
 
 #define SURL_CLIENT_READY           0x2F
 #define HGR_LEN                     8192U
