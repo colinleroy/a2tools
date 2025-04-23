@@ -17,16 +17,16 @@
 ; DC3
 ; Trainer bot
 
-        .import     their_pusher_x, their_pusher_y
+        .import     their_pusher_x
         .import     their_pusher_dx, their_pusher_dy
         .import     their_currently_hitting
-        .import     puck_x, puck_right_x, puck_y, puck_dy, serving, their_score
+        .import     puck_x, puck_right_x, puck_y, puck_dy, serving
         .import     _rand
         .import     _last_key
 
         .import     _init_text, _init_hgr
 
-        .import     _cputc, _cputs, _revers, _gotoxy, _gotox, _gotoy, _clrscr, _cutoa
+        .import     _cputc, _cputs, _gotoxy, _gotox, _gotoy, _clrscr, _cutoa
 
         .import     _big_draw_sprite_i                              ; CHANGE A
         .import     _big_draw_name_i                                ; CHANGE A
@@ -44,7 +44,6 @@
         .import     __OPPONENT_START__
 
         .import     pusha, pushax, popax
-        .importzp   tmp1
 
         .include    "code/helpers.inc"
         .include    "opponent_helpers.inc"

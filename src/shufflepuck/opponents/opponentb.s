@@ -33,7 +33,6 @@
         .import     return0
 
         .import     __OPPONENT_START__
-        .importzp   tmp1
 
         .include    "code/helpers.inc"
         .include    "opponent_helpers.inc"

@@ -348,8 +348,7 @@ clean:
 	level*.hgr \
 	assets/*/*.hgr-preview.* \
 	*.dbg *.lbl *.map *.lz4 \
-	shflpuck.ld.cfg \
-	check_imports.sh
+	shflpuck.ld.cfg
 
 check_imports.sh: $(shflpuck_SOURCES) $(SRC_DIR)/check_imports.sh
 	cp -f $(SRC_DIR)/check_imports.sh .

@@ -43,9 +43,6 @@
         .import     _crash_lines_scale, _draw_crash_lines
         .import     my_score, their_score
         .import     _draw_score_update
-        .import     _skip_top_lines
-
-        .import     hz
 
         .import     x_shift, x_factor, y_factor
 

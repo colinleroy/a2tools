@@ -20,7 +20,7 @@
         .import     their_pusher_x, their_pusher_y
         .import     their_pusher_dx, their_pusher_dy
         .import     their_currently_hitting
-        .import     puck_x, puck_right_x, puck_y, puck_dy, serving, their_score
+        .import     puck_x, puck_right_x, puck_y, puck_dy, serving
         .import     _rand
 
         .import     _big_draw_sprite_a                              ; CHANGE A
@@ -31,7 +31,6 @@
         .import     return0
 
         .import     __OPPONENT_START__
-        .importzp   tmp1
 
         .include    "code/helpers.inc"
         .include    "opponent_helpers.inc"

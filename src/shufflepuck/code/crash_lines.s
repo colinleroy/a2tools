@@ -15,7 +15,7 @@
 
         .export     _crash_lines_scale, _draw_crash_lines
 
-        .export     ox, oy, dx, dy ; Used by draw_score
+        .export     ox, oy, dx, dy
         .export     _set_color_white
 
         .import     _rand

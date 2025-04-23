@@ -17,11 +17,11 @@
 ; BEJIN
 ; How to beat: Listen to her serve
 
-        .import     their_pusher_x, their_pusher_y, my_pusher_y
+        .import     their_pusher_x, their_pusher_y
         .import     their_pusher_dx, their_pusher_dy
-        .import     their_currently_hitting, player_caught
-        .import     puck_x, puck_right_x, puck_y, puck_dx, puck_dy, serving, their_score
-        .import     _guess_puck_x_at_y, bounces
+        .import     their_currently_hitting
+        .import     puck_x, puck_right_x, puck_y, puck_dx, puck_dy, serving
+        .import     _guess_puck_x_at_y
         .import     _rand, _platform_msleep
         .import     _draw_opponent
 
@@ -40,7 +40,6 @@
         .import     return0
 
         .import     __OPPONENT_START__
-        .importzp   tmp1
 
         .include    "code/helpers.inc"
         .include    "opponent_helpers.inc"

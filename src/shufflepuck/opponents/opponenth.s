@@ -20,7 +20,7 @@
         .import     their_pusher_x, their_pusher_y
         .import     their_pusher_dx, their_pusher_dy
         .import     player_caught, their_currently_hitting
-        .import     puck_x, puck_right_x, puck_y, puck_dy, serving, their_score
+        .import     puck_x, puck_right_x, puck_y, puck_dy, serving
         .import     _rand
 
         .import     _big_draw_sprite_h                              ; CHANGE A
