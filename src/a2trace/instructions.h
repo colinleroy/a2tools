@@ -42,6 +42,7 @@ void start_tracing(int cpu);
 int update_call_counters(int cpu, int op_addr, const char *instr, int param_addr, int cycle_count, int line_num);
 
 int is_instruction_write(const char *instr);
+int is_instruction_condbranch(const char *instr);
 int analyze_instruction(int cpu, int op_addr, const char *instr, int param_addr, char *comment);
 
 int instruction_get_addressing_mode(int cpu, const char *instr, const char *arg);

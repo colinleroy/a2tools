@@ -7,15 +7,23 @@ typedef struct _file dbg_file;
 typedef struct _segment dbg_segment;
 typedef struct _symbol dbg_symbol;
 typedef struct _slocdef dbg_slocdef;
+typedef struct _mod dbg_mod;
+typedef struct _scope dbg_scope;
 
 #define STORAGE_SIZE 16777215
 
-void load_syms(const char *file);
+typedef enum _sym_type {
+  EQUATES,
+  NORMAL
+} sym_type;
+
+
+void load_syms(const char *file, char **excluded_files, char **excluded_segments);
 void load_lbls(const char *file);
-void map_slocs_to_adresses(void);
+void map_slocs_to_adresses(char **excluded_segments);
 
 dbg_symbol *symbol_get_by_addr(int cpu, int addr, int main, int lc);
-dbg_symbol *symbol_get_by_name(const char *name);
+dbg_symbol *symbol_get_by_name(const char *name, sym_type type);
 int symbol_get_addr(dbg_symbol *symbol);
 const char *symbol_get_name(dbg_symbol *symbol);
 dbg_symbol *generate_symbol(const char *param_name, int param_addr, int main, int lc, const char *extra);

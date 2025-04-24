@@ -34,6 +34,13 @@ char *write_instructions[] = {
   NULL
 };
 
+char *condbranch_instructions[] = {
+  "bcc", "bcs", "beq",
+  "bmi", "bne", "bpl",
+  "bvc", "bvs",
+  NULL
+};
+
 struct _instr_cycles {
   char *instruction;
   int cost[NUM_ADDR_MODES];
@@ -474,6 +481,16 @@ int is_instruction_write(const char *instr) {
   return 0;
 }
 
+int is_instruction_condbranch(const char *instr) {
+  int i;
+  for (i = 0; condbranch_instructions[i] != NULL; i++) {
+    if (!strcmp(condbranch_instructions[i], instr)) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
 /* Alloc a stat struct */
 static function_calls *function_calls_new(int addr) {
     function_calls *counter = malloc(sizeof(function_calls));
@@ -794,7 +811,7 @@ int update_call_counters(int cpu, int op_addr, const char *instr, int param_addr
           while (tree_depth > mli_call_depth)
             end_call_info(op_addr, line_num, "mli rts");
         }
-	if (verbose) {
+        if (verbose) {
           tabulate_stack();
           fprintf(stderr, "(Returned from MLI call at depth %d)\n", tree_depth);
         }
@@ -932,7 +949,7 @@ void finalize_call_counters(void) {
   dump_function(root_call);
 
   /* And then all the rest. */
-  for (i = 0; i < STORAGE_SIZE; i++) {
+  for (i = 0; i < 2*STORAGE_SIZE; i++) {
     if (functions[i]) {
       dump_function(functions[i]);
     }
@@ -972,10 +989,10 @@ void allocate_trace_counters(void) {
 
   /* register _main's address for later - crt0 will
    * jmp to it and we'll still want to record it. */
-  _main_addr = symbol_get_addr(symbol_get_by_name("_main"));
+  _main_addr = symbol_get_addr(symbol_get_by_name("_main", NORMAL));
 
-  if (symbol_get_by_name("handle_rom_irq"))
-    handle_rom_irq_addr = symbol_get_addr(symbol_get_by_name("handle_rom_irq"));
-  if (symbol_get_by_name("handle_ram_irq"))
-    handle_ram_irq_addr = symbol_get_addr(symbol_get_by_name("handle_ram_irq"));
+  if (symbol_get_by_name("handle_rom_irq", NORMAL))
+    handle_rom_irq_addr = symbol_get_addr(symbol_get_by_name("handle_rom_irq", NORMAL));
+  if (symbol_get_by_name("handle_ram_irq", NORMAL))
+    handle_ram_irq_addr = symbol_get_addr(symbol_get_by_name("handle_ram_irq", NORMAL));
 }

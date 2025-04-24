@@ -27,6 +27,8 @@ long inter_cycle = 0;
 
 const char *count_sym_name = NULL;
 
+unsigned char memory_contents[65536] = {0};
+
 extern int read_from;
 extern int write_to;
 extern int lc_bank;
@@ -97,17 +99,32 @@ static int detect_tracelog(char *first_part, char *second_part) {
   exit(1);
 }
 
-static void update_regs(const char *buf, int *a, int *x, int *y, int *p) {
+static void update_regs(const char *buf, unsigned char *a, unsigned char *x, unsigned char *y, unsigned char *p) {
   *a = *x = *y = 0;
   if (strstr(buf, "A="))
-    *a = hex2int(strstr(buf, "A=") + 2);
+    *a = (unsigned char)hex2int(strstr(buf, "A=") + 2);
   if (strstr(buf, "X="))
-    *x = hex2int(strstr(buf, "X=") + 2);
+    *x = (unsigned char)hex2int(strstr(buf, "X=") + 2);
   if (strstr(buf, "Y="))
-    *y = hex2int(strstr(buf, "Y=") + 2);
+    *y = (unsigned char)hex2int(strstr(buf, "Y=") + 2);
   if (strstr(buf, "P="))
-    *p = hex2int(strstr(buf, "P=") + 2);
+    *p = (unsigned char)hex2int(strstr(buf, "P=") + 2);
 }
+
+static int skipped_file(dbg_slocdef *sloc, char **exclude_list) {
+  if (sloc != NULL) {
+    char **excluded_pattern = exclude_list;
+    const char *file = sloc_get_filename(sloc);
+    while (excluded_pattern && *excluded_pattern) {
+      if (strstr(file, *excluded_pattern)) {
+        return 1;
+      }
+      excluded_pattern++;
+    }
+  }
+  return 0;
+}
+
 
 static const char *print_flags(int flags) {
   static char *flagstr = NULL;
@@ -125,12 +142,14 @@ static const char *print_flags(int flags) {
   return flagstr;
 }
 
-static void annotate_run(const char *file) {
+static void annotate_run(const char *file, char **skipped_files) {
   FILE *fp = fopen(file, "r");
   char buf[BUF_SIZE];
   char line_buf[BUF_SIZE];
   int cur_line = 0;
   int op_idx = -1;
+  int print = 1;
+  int skipped_lines = 0;
 
   if (fp == NULL) {
     fprintf(stderr, "Can not open file %s: %s\n", file, strerror(errno));
@@ -148,7 +167,7 @@ skip_to_start:
 
   while (fgets(buf, BUF_SIZE, fp) || tail) {
     char **parts = NULL;
-    char *line;
+    char *line, *tmp;
     int n_parts;
     int is_line;
     int buf_len;
@@ -182,6 +201,9 @@ skip_to_start:
     /* we're going to poke holes in the string */
     line = strdup(line_buf);
 
+    if ((tmp = strstr(line, "F8ROM:")) != NULL) {
+      tmp[5] = '_'; /* Working around MAME here... */
+    }
     n_parts = strsplit_in_place(line, ':', &parts);
 
     if (op_idx == -1 && n_parts >= 2) {
@@ -191,7 +213,7 @@ skip_to_start:
     /* We want at least an "ADDR: op" */
     if ((cpu == CPU_6502 && n_parts >= 2) || (cpu == CPU_65816 && n_parts >= 3)) {
       int op_addr = 0;
-      int param_addr = 0;
+      int param_addr = 0, orig_param_addr = 0;
       dbg_slocdef *sloc = NULL;
       dbg_symbol *instr_symbol = NULL;
       dbg_symbol *param_symbol = NULL;
@@ -199,8 +221,8 @@ skip_to_start:
       char comment[BUF_SIZE];
       char * cur_lineaddress;
       int addr_field;
-      int a, x, y, p;
-
+      unsigned char a, x, y, p;
+      int instruction_is_write = 0;
       cur_line++;
 
       /* get the op's address */
@@ -213,7 +235,7 @@ skip_to_start:
         op_idx = strchr(parts[0], ' ') + 1 - parts[0];
         cur_65816_bank = hex2int(parts[0] + op_idx);
         cur_lineaddress = parts[1];
-        op_addr = hex2int(cur_lineaddress);        
+        op_addr = hex2int(cur_lineaddress);
       }
       /* If we've not yet seen the start address,
        * skip line
@@ -269,8 +291,22 @@ skip_to_start:
         }
       }
 
+      if (sloc && skipped_file(sloc, skipped_files)) {
+        print = 0;
+        skipped_lines++;
+      } else {
+        if (print == 0 && skipped_lines > 0) {
+          printf("[... skipped %d lines ...]\n", skipped_lines);
+        }
+        print = 1;
+        skipped_lines = 0;
+      }
+
       /* Figure out A X Y and P */
       update_regs(parts[0], &a, &x, &y, &p);
+
+      /* cache that, strcmps are expensive */
+      instruction_is_write = is_instruction_write(instr);
 
       /* get addressing mode and cycles count.
        * Done here instead of in instructions.c to be
@@ -289,7 +325,18 @@ skip_to_start:
         }
       }
 
-      if (arg && arg[0] == '$') {
+      if (arg && arg[0] == '(' && arg[1] == '$') {
+        int zpaddr = hex2int(arg + 2);
+        int dest;
+        param_addr = orig_param_addr = memory_contents[zpaddr] + (memory_contents[zpaddr+1] << 8);
+        if (a_mode == ADDR_MODE_ZINDY) {
+          param_addr = orig_param_addr + y;
+        }
+
+        dest = instruction_is_write ? write_to : read_from;
+        param_symbol = symbol_get_by_addr(cpu, param_addr, dest, lc_bank);
+
+      } else if (arg && arg[0] == '$') {
         if (strchr(arg, '\n'))
           *strchr(arg, '\n') = '\0';
 
@@ -310,9 +357,26 @@ skip_to_start:
         }
 
         if (cpu == CPU_6502 || strlen(arg + 1) <= 4) {
-          param_addr += hex2int(arg + 1); /* skip $ */
+          orig_param_addr = hex2int(arg + 1); /* skip $ */
+          param_addr += orig_param_addr;
         } else {
           sscanf(arg + 1, "%2X%4X", &dst_65816_bank, &param_addr);
+          orig_param_addr = param_addr;
+        }
+
+        /* page cross penalty for read instruction */
+        if (cpu == CPU_6502 && param_addr >= 0) {
+          if ((param_addr & 0xff00) != (orig_param_addr & 0xff00)
+            && !instruction_is_write) {
+            if (a_mode == ADDR_MODE_ABSXY) {
+              /* cost for $nnnn, X or $nnnn, Y with page crossing */
+              cycles += 1;
+            }
+          } else if ((op_addr & 0xff00) != (param_addr & 0xff00)
+                   && is_instruction_condbranch(instr)) {
+              /* cost for conditional branches with page crossing */
+              cycles += 1;
+          }
         }
 
 addr_without_dollar:
@@ -324,12 +388,12 @@ addr_without_dollar:
             write_to = dst_65816_bank >= 0xF0 ? ROM:RAM;
           }
 
-          dest = is_instruction_write(instr) ? write_to : read_from;
+          dest = instruction_is_write ? write_to : read_from;
           param_symbol = symbol_get_by_addr(cpu, param_addr, dest, lc_bank);
 
           /* If we don't have a symbol, generate a dummy one */
           if (param_symbol == NULL) {
-            int dest = is_instruction_write(instr) ? write_to : read_from;
+            int dest = instruction_is_write ? write_to : read_from;
             char new_str_addr[10];
             snprintf(new_str_addr, 10, "%04X", param_addr);
             param_symbol = generate_symbol(new_str_addr, param_addr, dest, lc_bank, n_parts > addr_field + 2 ? parts[addr_field + 2] : NULL);
@@ -342,16 +406,48 @@ addr_without_dollar:
         int dest;
 try_gen:
         /* Generate a dummy symbol. Its name will reference its address,
-         * and where it will hit depending on current memory banking 
+         * and where it will hit depending on current memory banking
          */
-        dest = is_instruction_write(instr) ? write_to : read_from;
+        dest = instruction_is_write ? write_to : read_from;
         param_symbol = generate_symbol(arg, param_addr, dest, lc_bank, n_parts > addr_field + 2 ? parts[addr_field + 2] : NULL);
         param_addr = symbol_get_addr(param_symbol);
       }
 
+      /* Update memory content if needed */
+      if (instruction_is_write
+       && a_mode != ADDR_MODE_ACC && a_mode != ADDR_MODE_IMMEDIATE) {
+        if (param_addr > 65535) {
+          fprintf(stderr, "ignoring %s write to address 0x%04x mode %d at line %d\n", instr, param_addr, a_mode, cur_line);
+        } else if (!strcmp(instr, "dec")) {
+          memory_contents[param_addr]--;
+        } else if (!strcmp(instr, "inc")) {
+          memory_contents[param_addr]++;
+        } else if (!strcmp(instr, "asl")) {
+          memory_contents[param_addr] <<= 1;
+        } else if (!strcmp(instr, "lsr")) {
+          memory_contents[param_addr] >>= 1;
+        } else if (!strcmp(instr, "rol")) {
+          memory_contents[param_addr] <<= 1;
+        } else if (!strcmp(instr, "ror")) {
+          memory_contents[param_addr] >>= 1;
+        } else if (!strcmp(instr, "sta")) {
+          memory_contents[param_addr] = a;
+        } else if (!strcmp(instr, "stx")) {
+          memory_contents[param_addr] = x;
+        } else if (!strcmp(instr, "sty")) {
+          memory_contents[param_addr] = y;
+        } else if (!strcmp(instr, "stz")) {
+          memory_contents[param_addr] = 0;
+        } else if (!strcmp(instr, "trb")) {
+          memory_contents[param_addr] = ~a & memory_contents[param_addr];
+        } else if (!strcmp(instr, "tsb")) {
+          memory_contents[param_addr] = a | memory_contents[param_addr];
+        }
+      }
+
       int backtab = 0;
       /* Print the line as-is */
-      if (!do_callgrind) {
+      if (print && !do_callgrind) {
         printf("%08d; A=%02X X=%02X Y=%02X; %s; %s", cur_line, a, x, y, print_flags(p), line_buf + op_idx);
         if (strlen(line_buf) > op_idx + 28) {
           backtab = op_idx + 29 - strlen(line_buf);
@@ -367,18 +463,18 @@ try_gen:
       if (analyze_instruction(cpu, op_addr, instr, param_addr, comment)
        || (!sloc && !instr_symbol && !param_symbol)) {
         /* print either banking comment or finish the line if we have zero data about it */
-        if (!do_callgrind) {
+        if (print && !do_callgrind) {
           tabulate(line_buf, op_idx + 28);
           printf("; *%s*\n", comment);
         }
       } else {
-        if (!do_callgrind) {
+        if (print && !do_callgrind) {
           tabulate(line_buf, op_idx + 28);
           printf("; adr: ");
         }
         /* Display the instruction's symbol */
         if (instr_symbol) {
-          if (!do_callgrind) {
+          if (print && !do_callgrind) {
             char count_buf[32];
             int count_buf_len = 0;
             const char *sym_name = symbol_get_name(instr_symbol);
@@ -394,43 +490,43 @@ try_gen:
             }
             tabulate(sym_name, FIELD_WIDTH + backtab - count_buf_len);
           }
-        } else {
+        } else if (print) {
           tabulate(NULL, FIELD_WIDTH + backtab);
         }
 
         /* Print the argument's symbol */
-        if (!do_callgrind)
+        if (print && !do_callgrind)
           printf("%s ", instr);
         if (param_symbol) {
-          if (!do_callgrind) {
+          if (print && !do_callgrind) {
             printf("%s", symbol_get_name(param_symbol));
             tabulate(symbol_get_name(param_symbol), FIELD_WIDTH);
           }
         } else if (arg) {
-          if (!do_callgrind) {
+          if (print && !do_callgrind) {
             printf("%s", arg);
             tabulate(arg, FIELD_WIDTH);
           }
-        } else {
+        } else if (print) {
           tabulate(NULL, FIELD_WIDTH);
         }
 
-        if (!do_callgrind) {
+        if (print && !do_callgrind) {
           printf("%d ", cycles);
           inter_cycle += cycles;
         }
         /* Print the source location */
-        if (sloc && !do_callgrind) {
+        if (print && sloc && !do_callgrind) {
           printf("(%s:%d)", sloc_get_filename(sloc), sloc_get_line(sloc));
         }
-        if (!do_callgrind) 
+        if (print && !do_callgrind)
           printf("\n");
       }
     } else {
       /* Very probably a "(Loop for n instructions)" message from MAME */
-      if (!do_callgrind) 
+      if (!do_callgrind)
         printf("%s\n", line_buf);
-      if (do_callgrind) {
+      if (do_callgrind && !strstr(line_buf, "interrupted at") && line_buf[0] != '\0') {
         fprintf(stderr, "Error: unexpected line at line %d :\n'%s'\n", cur_line, line_buf);
         fprintf(stderr, "Profiles must be generated from MAME with full traces:\n"
                "trace log.run,maincpu,noloop'\n");
@@ -453,9 +549,21 @@ all_done:
     finalize_call_counters();
 }
 
+static char **parse_list(char *list) {
+  char **files = NULL;
+  int n_files = strsplit_in_place(list, ',', &files);
+  files = realloc(files, (n_files + 1) * sizeof(char *));
+  files[n_files] = NULL;
+
+  return files;
+}
+
 int main(int argc, char *argv[]) {
   int i;
   char *trace_file = NULL;
+  char **excluded_files = NULL;
+  char **excluded_segments = NULL;
+  char **skip_files = NULL;
   int loaded_something = 0;
 
   if (argc < 5) {
@@ -469,6 +577,12 @@ err_usage:
            "\n"
            "Usage: %s -d cc65_dbg_file -l cc65_lbl_file -t mame_trace_file [-f]\n"
            "\n"
+           "--exclude-files lst: exclude symbols from files matching lst (lst: pattern1,pattern2,...,patternN);\n"
+           "                     Use before -d\n"
+           "--exclude-segs  lst: exclude symbols from segments in lst (lst: CODE,RODATA,...);\n"
+           "                     Use before -d\n"
+           "--skip-over     lst: skip tracking inside files matching lst (lst: pattern1,pattern2,...,patternN);\n"
+           "                     Use before -d\n"
            "-d  file.dbg       : point to a cc65-generated .dbg file (best)\n"
            "-l  file.lbl       : or point to a cc65-generated .lbl file (inferior)\n"
            "-t  file.tr        : point to a MAME debugger generated trace file\n"
@@ -489,7 +603,7 @@ err_usage:
   for (i = 1; i < argc; i++) {
     if (!strcmp(argv[i], "-d") && i < argc - 1) {
       i++;
-      load_syms(argv[i]);
+      load_syms(argv[i], excluded_files, excluded_segments);
       loaded_something = 1;
     } else if (!strcmp(argv[i], "-l") && i < argc - 1) {
       i++;
@@ -498,6 +612,15 @@ err_usage:
     } else if (!strcmp(argv[i], "-t") && i < argc - 1) {
       i++;
       trace_file = argv[i];
+    } else if (!strcmp(argv[i], "--exclude-files") && i < argc - 1) {
+      i++;
+      excluded_files = parse_list(argv[i]);
+    } else if (!strcmp(argv[i], "--exclude-segs") && i < argc - 1) {
+      i++;
+      excluded_segments = parse_list(argv[i]);
+    } else if (!strcmp(argv[i], "--skip-over") && i < argc - 1) {
+      i++;
+      skip_files = parse_list(argv[i]);
     }  else if (!strcmp(argv[i], "-x") && i < argc - 1) {
       i++;
       start_addr = hex2int(argv[i]);
@@ -528,7 +651,7 @@ err_usage:
   }
 
   /* Prepare everything */
-  map_slocs_to_adresses();
+  map_slocs_to_adresses(excluded_segments);
   allocate_trace_counters();
 
   if (found_start_addr) {
@@ -536,7 +659,7 @@ err_usage:
   }
   /* Do the thing */
   if (trace_file) {
-    annotate_run(trace_file);
+    annotate_run(trace_file, skip_files);
   } else {
     goto err_usage;
   }

@@ -33,6 +33,16 @@ struct _segment {
   int size;
 };
 
+struct _scope {
+  char *name;
+  int mod;
+};
+
+struct _mod {
+  char *name;
+  int file;
+};
+
 struct _symbol {
   int addr;
   int real_addr;
@@ -41,6 +51,8 @@ struct _symbol {
   int segment;
   int mem;
   int lcbank;
+  int type;
+  int scope;
 };
 
 struct _slocdef {
@@ -54,8 +66,11 @@ extern int start_addr;
 static dbg_line **lines = NULL;
 static dbg_span **spans = NULL;
 static dbg_file **files = NULL;
+static dbg_scope **scopes = NULL;
+static dbg_mod **mods = NULL;
 static dbg_segment **segs = NULL;
 static dbg_symbol **symbols = NULL;
+static dbg_symbol **equ_symbols = NULL;
 static dbg_slocdef **slocs = NULL;
 
 static dbg_symbol **gen_symbols = NULL;
@@ -89,8 +104,36 @@ static char *get_str_val(const char *str) {
   return NULL;
 }
 
+static int excluded_file(int fno, char **exclude_list) {
+  if (fno != -1) {
+    char **excluded_pattern = exclude_list;
+    char *file = files[fno]->name;
+    while (excluded_pattern && *excluded_pattern) {
+      if (strstr(file, *excluded_pattern)) {
+        return 1;
+      }
+      excluded_pattern++;
+    }
+  }
+  return 0;
+}
+
+static int excluded_segment(int sno, char **exclude_list) {
+  if (sno != -1) {
+    char **excluded_pattern = exclude_list;
+    char *seg = segs[sno]->name;
+    while (excluded_pattern && *excluded_pattern) {
+      if (!strcmp(seg, *excluded_pattern)) {
+        return 1;
+      }
+      excluded_pattern++;
+    }
+  }
+  return 0;
+}
+
 /* Add a line (as in line number in a source file) to data */
-static void insert_line(char **parts, int n_parts) {
+static void insert_line(char **parts, int n_parts, char **excluded_files, char **excluded_segments) {
   int id = -1;
   int file = -1;
   int line_number = -1;
@@ -110,7 +153,11 @@ static void insert_line(char **parts, int n_parts) {
         *strchr(span, '\n') = '\0';
     }
   }
-  if (id != -1 && lines[id] == NULL && span != NULL) {
+
+  if (excluded_file(file, excluded_files))
+    return;
+
+  if (id != -1 && lines[id] == NULL && span != NULL && files[file] != NULL) {
     lines[id] = malloc(sizeof(dbg_line));
     lines[id]->file = file;
     lines[id]->line_number = line_number;
@@ -168,7 +215,58 @@ static void insert_file(char **parts, int n_parts) {
     files[id] = malloc(sizeof(dbg_file));
     files[id]->name = strdup(name);
     files[id]->size = size;
-    //printf("inserted file %d (name %s)\n", id, name);
+    // printf("inserted file %d (name %s)\n", id, name);
+  }
+}
+
+/* Add a scope */
+static void insert_scope(char **parts, int n_parts) {
+  int id = -1, mod = -1;
+  char *name = NULL;
+  int i;
+
+  for (i = 0; i < n_parts; i++) {
+    if (!strncmp(parts[i], "id=", 3))
+      id = get_int_val(parts[i]);
+    if (!strncmp(parts[i], "name=", 5)) {
+      name = get_str_val(parts[i]);
+      if (name && strchr(name, '\n'))
+        *strchr(name, '\n') = '\0';
+    }
+    if (!strncmp(parts[i], "mod=", 4))
+      mod = get_int_val(parts[i]);
+  }
+  if (id != -1 && scopes[id] == NULL && mod != -1 && name != NULL) {
+    scopes[id] = malloc(sizeof(dbg_scope));
+    scopes[id]->name = strdup(name);
+    scopes[id]->mod = mod;
+    // printf("inserted scope %d (mod %d name %s)\n", id, mod, name);
+  }
+}
+
+/* Add a module */
+static void insert_mod(char **parts, int n_parts) {
+  int id = -1, file = -1;
+  char *name = NULL;
+  int i;
+
+  for (i = 0; i < n_parts; i++) {
+    if (!strncmp(parts[i], "id=", 3))
+      id = get_int_val(parts[i]);
+    if (!strncmp(parts[i], "name=", 5)) {
+      name = get_str_val(parts[i]);
+      if (name && strchr(name, '\n'))
+        *strchr(name, '\n') = '\0';
+    }
+    if (!strncmp(parts[i], "file=", 5))
+      file = get_int_val(parts[i]);
+  }
+
+  if (id != -1 && mods[id] == NULL && file != -1 && name != NULL) {
+    mods[id] = malloc(sizeof(dbg_mod));
+    mods[id]->name = strdup(name);
+    mods[id]->file = file;
+    // printf("inserted mod %d (%s, file %d)\n", id, name, file);
   }
 }
 
@@ -206,10 +304,11 @@ static void insert_segment(char **parts, int n_parts) {
 }
 
 /* Add a symbol */
-static void insert_symbol(char **parts, int n_parts) {
+static void insert_symbol(char **parts, int n_parts, char **excluded_files, char **excluded_segments) {
   unsigned long id = (unsigned long)-1;
+  dbg_symbol **sym_table = symbols;
   char *name = NULL;
-  int size = -1;
+  int size = -1, type = NORMAL, scope = -1, seg = -1;
   int i;
 
   /* Parse fields */
@@ -219,12 +318,27 @@ static void insert_symbol(char **parts, int n_parts) {
     }
     if (!strncmp(parts[i], "size=", 5))
       size = get_hex_val(parts[i]);
+    if (!strncmp(parts[i], "scope=", 6))
+      scope = get_int_val(parts[i]);
+    if (!strncmp(parts[i], "seg=", 4))
+      seg = get_int_val(parts[i]);
     if (!strncmp(parts[i], "name=", 5)) {
       name = get_str_val(parts[i]);
       if (name && strchr(name, '\n'))
         *strchr(name, '\n') = '\0';
     }
+    if (!strncmp(parts[i], "type=", 5)) {
+      if (!strncmp("equ", get_str_val(parts[i]), 3)) {
+        type = EQUATES;
+        sym_table = equ_symbols;
+      }
+    }
   }
+
+  if(scope != -1 && excluded_file(mods[scopes[scope]->mod]->file, excluded_files))
+    return;
+  if(seg != -1 && excluded_segment(seg, excluded_segments))
+    return;
 
   if (size <= 0)
     size = 1;
@@ -235,11 +349,11 @@ static void insert_symbol(char **parts, int n_parts) {
   /* Insert it, and when we have a size, insert it
    * with all offsets */
   if (id != (unsigned long)-1 && name != NULL) {
-    dbg_symbol *existing = symbols[id];
+    dbg_symbol *existing = sym_table[id];
 
     for (i = 0; i < size; i++) {
       dbg_symbol *new_symbol;
-      existing = symbols[id + i];
+      existing = sym_table[id + i];
       new_symbol = malloc(sizeof(dbg_symbol));
 
       if (existing && i == 0 && strchr(existing->name, '+')) {
@@ -256,16 +370,20 @@ static void insert_symbol(char **parts, int n_parts) {
       }
       new_symbol->size = size;
       new_symbol->lcbank = (id + i < 0xD000 || id + i > 0xDFFF) ? 1 : 2;
+      new_symbol->scope = scope;
       new_symbol->mem = RAM;
       new_symbol->addr = id + i;
       new_symbol->real_addr = id + i;
+      new_symbol->type = type;
       if (existing == NULL) {
-        symbols[id + i] = new_symbol;
+        sym_table[id + i] = new_symbol;
       } else {
         free(new_symbol->name);
         free(new_symbol);
       }
-      //printf("inserted symbol %d (name %s, size %d)\n", id + i, name, size);
+      // printf("inserted symbol %lu (name %s, size %d, type %d, file %s)\n",
+      //        id + i, name, size, type,
+      //        scope != -1 ? files[mods[scopes[scope]->mod]->file]->name : "??");
     }
   }
 }
@@ -277,6 +395,7 @@ static void cleanup_data(void) {
   for (i = 0; i < STORAGE_SIZE; i++) {
     dbg_symbol *symbol = symbols[i];
     dbg_file *file = files[i];
+    dbg_segment *seg = segs[i];
 
     char *tmp, *quote;
 
@@ -300,7 +419,7 @@ static void cleanup_data(void) {
 
 cleanup_file:
     if (!file || file->name[0] != '"')
-      continue;
+      goto cleanup_seg;
 
     /* strip first quote */
     tmp = strdup(file->name + 1);
@@ -316,6 +435,26 @@ cleanup_file:
       char_after++;
       if (*char_after == '\0')
         *strchr(file->name, ' ') = '\0';
+    }
+
+cleanup_seg:
+    if (!seg || seg->name[0] != '"')
+      continue;
+
+    /* strip first quote */
+    tmp = strdup(seg->name + 1);
+    /* strip the other ones */
+    while ((quote = strchr(tmp, '"')) != NULL)
+      *quote = ' ';
+
+    free(seg->name);
+    seg->name = tmp;
+
+    if (strchr(seg->name, ' ')) {
+      char *char_after = strchr(seg->name, ' ');
+      char_after++;
+      if (*char_after == '\0')
+        *strchr(seg->name, ' ') = '\0';
     }
   }
 }
@@ -333,17 +472,22 @@ static void allocate_data(void) {
   files      = malloc(sizeof(dbg_file *) * STORAGE_SIZE);
   segs       = malloc(sizeof(dbg_segment *) * STORAGE_SIZE);
   symbols    = malloc(sizeof(dbg_symbol *) * STORAGE_SIZE);
+  equ_symbols= malloc(sizeof(dbg_symbol *) * STORAGE_SIZE);
   gen_symbols= malloc(sizeof(dbg_symbol *) * STORAGE_SIZE);
   slocs      = malloc(sizeof(dbg_slocdef *) * STORAGE_SIZE);
-  
+  mods       = malloc(sizeof(dbg_mod *) * STORAGE_SIZE);
+  scopes     = malloc(sizeof(dbg_scope *) * STORAGE_SIZE);
   /* Zero all */
   memset(lines,       0, sizeof(dbg_line *) * STORAGE_SIZE);
   memset(spans,       0, sizeof(dbg_span *) * STORAGE_SIZE);
   memset(files,       0, sizeof(dbg_file *) * STORAGE_SIZE);
   memset(segs,        0, sizeof(dbg_segment *) * STORAGE_SIZE);
   memset(symbols,     0, sizeof(dbg_symbol *) * STORAGE_SIZE);
+  memset(equ_symbols, 0, sizeof(dbg_symbol *) * STORAGE_SIZE);
   memset(gen_symbols, 0, sizeof(dbg_symbol *) * STORAGE_SIZE);
   memset(slocs,       0, sizeof(dbg_slocdef *) * STORAGE_SIZE);
+  memset(mods,        0, sizeof(dbg_mod *) * STORAGE_SIZE);
+  memset(scopes,      0, sizeof(dbg_scope *) * STORAGE_SIZE);
 
   /* Prepare generate symbols cache */
   gen_sym_cache = malloc(sizeof(dbg_symbol *) * STORAGE_SIZE);
@@ -360,9 +504,10 @@ static void allocate_data(void) {
   }
 }
 
-void load_syms(const char *file) {
+void load_syms(const char *file, char **excluded_files, char **excluded_segments) {
   FILE *fp = fopen(file, "r");
   char buf[BUF_SIZE];
+  int got_symbols = 0;
 
   if (fp == NULL) {
     fprintf(stderr, "Can not open file %s: %s\n", file, strerror(errno));
@@ -383,7 +528,7 @@ void load_syms(const char *file) {
       n_subparts = strsplit_in_place(parts[1], ',', &subparts);
 
       if (!strcmp(parts[0], "line")) {
-        insert_line(subparts, n_subparts);
+        insert_line(subparts, n_subparts, excluded_files, excluded_segments);
       }
       if (!strcmp(parts[0], "span")) {
         insert_span(subparts, n_subparts);
@@ -391,14 +536,25 @@ void load_syms(const char *file) {
       if (!strcmp(parts[0], "file")) {
         insert_file(subparts, n_subparts);
       }
+      if (!strcmp(parts[0], "scope")) {
+        insert_scope(subparts, n_subparts);
+      }
+      if (!strcmp(parts[0], "mod")) {
+        insert_mod(subparts, n_subparts);
+      }
       if (!strcmp(parts[0], "seg")) {
         insert_segment(subparts, n_subparts);
       }
+
       if (!strcmp(parts[0], "sym")) {
-        insert_symbol(subparts, n_subparts);
+        if (!got_symbols) {
+          cleanup_data(); /* Cleanup files */
+          got_symbols = 1;
+        }
+        insert_symbol(subparts, n_subparts, excluded_files, excluded_segments);
       }
       if (!strcmp(parts[0], "exp")) {
-        insert_symbol(subparts, n_subparts);
+        insert_symbol(subparts, n_subparts, excluded_files, excluded_segments);
       }
       free(subparts);
     }
@@ -451,7 +607,7 @@ void load_lbls(const char *file) {
           symbols[addr]->size = 0;
           symbols[addr]->mem = RAM;
           symbols[addr]->lcbank = (addr < 0xD000 || addr > 0xDFFF) ? 1 : 2;
-          
+
           //printf("Added %s at %04X\n", name, addr);
         }
       }
@@ -463,7 +619,7 @@ void load_lbls(const char *file) {
 }
 
 /* Map symbols and their source locations */
-void map_slocs_to_adresses(void) {
+void map_slocs_to_adresses(char **excluded_segments) {
   int l;
   for (l = 0; l < STORAGE_SIZE; l++) {
     dbg_line *line = lines[l];
@@ -488,10 +644,10 @@ void map_slocs_to_adresses(void) {
         continue;
       }
 
-      seg = segs[span->segment];
-      if (!seg) {
+      if (excluded_segment(span->segment, excluded_segments)) {
         continue;
       }
+      seg = segs[span->segment];
 
       addr = seg->start + span->start;
 
@@ -527,9 +683,9 @@ dbg_symbol *symbol_get_by_addr(int cpu, int addr, int mem, int lc) {
   /* If not offset by STORAGE_SIZE, it's either
    * in the main map of symbols, */
   else if (addr < STORAGE_SIZE &&
-           symbols[addr] && 
-           symbols[addr]->real_addr == addr && 
-           symbols[addr]->mem == mem && 
+           symbols[addr] &&
+           symbols[addr]->real_addr == addr &&
+           symbols[addr]->mem == mem &&
            symbols[addr]->lcbank == lc) {
     return symbols[addr];
 
@@ -551,8 +707,13 @@ dbg_symbol *symbol_get_by_addr(int cpu, int addr, int mem, int lc) {
 }
 
 /* Get symbol by name */
-dbg_symbol *symbol_get_by_name(const char *name) {
+dbg_symbol *symbol_get_by_name(const char *name, sym_type type) {
   int i;
+  dbg_symbol **sym_table = symbols;
+
+  if (type == EQUATES) {
+    sym_table = equ_symbols;
+  }
 
   /* Either a generated one - doing this one
    * first for speed, there are less of them */
@@ -565,7 +726,7 @@ dbg_symbol *symbol_get_by_name(const char *name) {
 
   /* Or from the dbg file */
   for (i = 0; i < STORAGE_SIZE; i++) {
-    dbg_symbol *symbol = symbols[i];
+    dbg_symbol *symbol = sym_table[i];
 
     if (symbol && !strcmp(name, symbol->name))
       return symbol;
@@ -575,7 +736,7 @@ dbg_symbol *symbol_get_by_name(const char *name) {
 }
 
 /* Generate a fake symbol. Rather than a raw address,
- * it helps to remind us what the current banking 
+ * it helps to remind us what the current banking
  * configuration is */
 dbg_symbol *generate_symbol(const char *param_name, int param_addr, int mem, int lc, const char *extra) {
   dbg_symbol *s;
@@ -597,7 +758,7 @@ dbg_symbol *generate_symbol(const char *param_name, int param_addr, int mem, int
   if (param_addr > 0 && gen_sym_cache[param_addr][mem][lc]) {
     return gen_sym_cache[param_addr][mem][lc];
   } else if (param_addr == 0) {
-    s = symbol_get_by_name(full_name);
+    s = symbol_get_by_name(full_name, NORMAL);
     if (s) {
       return s;
     }
@@ -634,7 +795,7 @@ const char *symbol_get_name(dbg_symbol *symbol) {
 
 /* Address getter */
 int symbol_get_addr(dbg_symbol *symbol) {
-  return symbol ? 
+  return symbol ?
     (symbol->real_addr > 0 ? symbol->real_addr : symbol->addr)
       : 0;
 }
@@ -649,16 +810,16 @@ dbg_slocdef *sloc_get_for_addr(int addr) {
 
 /* SLOC filename getter */
 const char *sloc_get_filename(dbg_slocdef *sloc) {
-  return sloc ? 
-          sloc->file ? sloc->file->name 
+  return sloc ?
+          sloc->file ? sloc->file->name
             : NULL
               : NULL;
 }
 
 /* SLOC line number getter */
 int sloc_get_line(dbg_slocdef *sloc) {
-  return sloc ? 
-          sloc->line ? sloc->line->line_number 
+  return sloc ?
+          sloc->line ? sloc->line->line_number
             : -1
               : -1;
 }
