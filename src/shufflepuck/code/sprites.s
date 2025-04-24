@@ -46,7 +46,7 @@
 .segment "LOWCODE"
 
 ; Our pusher
-my_pusher_data:
+.proc my_pusher_data
                   .byte 0                   ; x
                   .byte my_pusher0_WIDTH
                   .byte 0                   ; y
@@ -58,36 +58,42 @@ my_pusher_data:
                   .addr _my_pusher0         ; sprites
                   .addr $0000               ; pointer to previous sprite to clear
                   .byte 0                   ; need clear
+.endproc
 
 ; variants
-my_pushers_low:
+.proc my_pushers_low
         .byte <_my_pusher0
         .byte <_my_pusher1
         .byte <_my_pusher2
         .byte <_my_pusher3
-my_pushers_high:
+.endproc
+.proc my_pushers_high
         .byte >_my_pusher0
         .byte >_my_pusher1
         .byte >_my_pusher2
         .byte >_my_pusher3
-my_pushers_height:
+.endproc
+.proc my_pushers_height
         .byte my_pusher0_HEIGHT
         .byte my_pusher1_HEIGHT
         .byte my_pusher2_HEIGHT
         .byte my_pusher3_HEIGHT
-my_pushers_bytes:
+.endproc
+.proc my_pushers_bytes
         .byte my_pusher0_BYTES-1
         .byte my_pusher1_BYTES-1
         .byte my_pusher2_BYTES-1
         .byte my_pusher3_BYTES-1
-my_pushers_bpline:
+.endproc
+.proc my_pushers_bpline
         .byte my_pusher0_BPLINE-1
         .byte my_pusher1_BPLINE-1
         .byte my_pusher2_BPLINE-1
         .byte my_pusher3_BPLINE-1
+.endproc
 
 ; Their pusher
-their_pusher_data:
+.proc their_pusher_data
                   .byte 0                     ; x
                   .byte their_pusher4_WIDTH
                   .byte 0                     ; y
@@ -99,26 +105,32 @@ their_pusher_data:
                   .addr _their_pusher4        ; sprites
                   .addr their_pusher_bgbackup ; background backup buffer
                   .byte 0                     ; need clear
+.endproc
 
 ; Variants
-their_pushers_low:
+.proc their_pushers_low
         .byte <_their_pusher4
         .byte <_their_pusher5
-their_pushers_high:
+.endproc
+.proc their_pushers_high
         .byte >_their_pusher4
         .byte >_their_pusher5
-their_pushers_height:
+.endproc
+.proc their_pushers_height
         .byte their_pusher4_HEIGHT
         .byte their_pusher5_HEIGHT
-their_pushers_bytes:
+.endproc
+.proc their_pushers_bytes
         .byte their_pusher4_BYTES-1
         .byte their_pusher5_BYTES-1
-their_pushers_bpline:
+.endproc
+.proc their_pushers_bpline
         .byte their_pusher4_BPLINE-1
         .byte their_pusher5_BPLINE-1
+.endproc
 
 ; The puck
-puck_data:
+.proc puck_data
                   .byte 0               ; x
                   .byte puck0_WIDTH
                   .byte 0               ; y
@@ -130,9 +142,10 @@ puck_data:
                   .addr _puck0          ; sprites
                   .addr puck_bgbackup   ; background backup buffer
                   .byte 0               ; need clear
+.endproc
 
 ; Variants
-pucks_low:
+.proc pucks_low
         .byte <_puck0
         .byte <_puck1
         .byte <_puck2
@@ -140,7 +153,8 @@ pucks_low:
         .byte <_puck4
         .byte <_puck5
         .byte <_puck6
-pucks_high:
+.endproc
+.proc pucks_high
         .byte >_puck0
         .byte >_puck1
         .byte >_puck2
@@ -148,7 +162,8 @@ pucks_high:
         .byte >_puck4
         .byte >_puck5
         .byte >_puck6
-pucks_height:
+.endproc
+.proc pucks_height
         .byte puck0_HEIGHT
         .byte puck1_HEIGHT
         .byte puck2_HEIGHT
@@ -156,7 +171,8 @@ pucks_height:
         .byte puck4_HEIGHT
         .byte puck5_HEIGHT
         .byte puck6_HEIGHT
-pucks_bytes:
+.endproc
+.proc pucks_bytes
         .byte puck0_BYTES-1
         .byte puck1_BYTES-1
         .byte puck2_BYTES-1
@@ -164,7 +180,8 @@ pucks_bytes:
         .byte puck4_BYTES-1
         .byte puck5_BYTES-1
         .byte puck6_BYTES-1
-pucks_bpline:
+.endproc
+.proc pucks_bpline
         .byte puck0_BPLINE-1
         .byte puck1_BPLINE-1
         .byte puck2_BPLINE-1
@@ -172,9 +189,10 @@ pucks_bpline:
         .byte puck4_BPLINE-1
         .byte puck5_BPLINE-1
         .byte puck6_BPLINE-1
+.endproc
 
 ; Pointer
-pointer_data:
+.proc pointer_data
                   .byte 0                   ; x
                   .byte pointer_WIDTH
                   .byte 0                   ; y
@@ -187,10 +205,10 @@ pointer_data:
                   .assert puck0_BYTES > pointer_BYTES, error
                   .addr puck_bgbackup       ; Spare some memory there
                   .byte 0                   ; need clear
-
+.endproc
 
 ; Hand for scores
-hand_data:
+.proc hand_data
                   .byte 0                   ; x
                   .byte hand_WIDTH
                   .byte 0                   ; y
@@ -202,3 +220,4 @@ hand_data:
                   .addr _hand               ; sprites
                   .addr hand_bgbackup
                   .byte 0                   ; need clear
+.endproc
