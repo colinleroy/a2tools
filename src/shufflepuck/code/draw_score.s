@@ -93,14 +93,14 @@ HAND_TOP = 8
 ; Y= Y direction (FF or 01)
 ; A= end of animation
 .proc animate_hand
+        ; Store parameters
         sta     stop_at+1
         sty     update_y+1
         stx     delta_x+1
 
         ; Prepare unchanged variables before clearing
-
-        lda     #HAND_TOP+1                ; Bottom of lamp
-        sta     hand_data+SPRITE_DATA::Y_COORD
+        lda     #HAND_TOP+1                     ; Bottom of lamp
+        sta     hand_data+SPRITE_DATA::Y_COORD  ; is top of sprite
 
 next_frame:
         ; Precompute vars before VBL
@@ -110,16 +110,16 @@ next_frame:
         sbc     #hand_WIDTH
         sta     tmp_start_x
 
-        ; The new number of bytes to skip
+        ; The previous number of bytes drawn, for clearing previous draw
+        lda     bytes_to_draw
+        sta     hand_data+SPRITE_DATA::BYTES
+
+        ; The new number of bytes to draw
         lda     cur_score_draw_lines_skip
         ldx     #hand_BPLINE
         ldy     #hand_BYTES
         jsr     _skip_top_lines
-        sta     new_drawn_bytes
-
-        ; The previous number of bytes, for clearing previous draw
-        lda     prev_drawn_bytes
-        sta     hand_data+SPRITE_DATA::BYTES
+        sta     bytes_to_draw
 
         ; Top départ!
         jsr     _mouse_wait_vbl
@@ -131,14 +131,14 @@ update_hand_start:
         sta     hand_data+SPRITE_DATA::X_COORD
 
         ; Load new number of bytes
-        lda     new_drawn_bytes
+        lda     bytes_to_draw
         sta     hand_data+SPRITE_DATA::BYTES
-        sta     prev_drawn_bytes
 
         lda     #<hand_data
         ldx     #>hand_data
         jsr     _setup_sprite_pointer_for_draw
         jsr     _draw_sprite
+
 update_hand_end:
         ; Should we plot a dot?
         lda     hand_pen_down
@@ -171,9 +171,7 @@ update_y:
 
 stop_at:
         cmp     #$FF
-        beq     out
-
-        jmp     next_frame
+        bne     next_frame
 out:    rts
 
 .endproc
@@ -207,9 +205,9 @@ out:    rts
         sbc     tmp1
         sta     start_x
 
-        ; Init skip bytes
-        lda     #hand_BYTES
-        sta     prev_drawn_bytes
+        ; Init bytes to draw
+        lda     #0
+        sta     bytes_to_draw
 
         ; Get hand down
         lda     #10
@@ -350,6 +348,5 @@ cur_score_draw_lines_skip: .res 1
 start_x:  .res 1
 hand_y_offset: .res 1
 hand_pen_down: .res 1
-prev_drawn_bytes: .res 1
-new_drawn_bytes: .res 1
 tmp_start_x:    .res 1
+bytes_to_draw:  .res 1

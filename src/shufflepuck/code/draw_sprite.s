@@ -225,26 +225,19 @@ select_sprite:
 .endproc
 
 ; A: how many lines to skip at the top of the sprite
-; returns previous number of bytes in A so caller can
-; fix sprite struct afterwards, for clearing
 ; X: Sprite bytes per line
-; Y; Total bytes
+; Y: Total bytes
 ; Return new number of bytes in A
 .proc _skip_top_lines
         dey
         sty     total_bytes+1
-        sta     ptr1
-        txa
+        stx     ptr1
         jsr     umul8x8r16
         sta     ptr1
 total_bytes:
         lda     #$FF
-        sta     ptr1+1
         sec
         sbc     ptr1
-
-        ; no need to offset sprite data or mask
-        ; as they're reversed.
         rts
 .endproc
 
