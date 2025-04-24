@@ -227,28 +227,21 @@ select_sprite:
 ; A: how many lines to skip at the top of the sprite
 ; returns previous number of bytes in A so caller can
 ; fix sprite struct afterwards, for clearing
-;
-; Make sure that sprite pointer is setup for draw
-; before calling
+; X: Sprite bytes per line
+; Y; Total bytes
+; Return new number of bytes in A
 .proc _skip_top_lines
-        ; Compute bytes to skip
+        dey
+        sty     total_bytes+1
         sta     ptr1
-        ; bytes_per_lines is offset by -1 there
-        ldx     _draw_sprite::bytes_per_line+1
-        ; so inx it.
-        inx
         txa
         jsr     umul8x8r16
         sta     ptr1
-        lda     n_bytes_draw
+total_bytes:
+        lda     #$FF
         sta     ptr1+1
         sec
         sbc     ptr1
-
-        ; update sprite data for clear later
-        ldy     #SPRITE_DATA::BYTES
-        sta     (cur_sprite_ptr),y
-        sta     n_bytes_draw
 
         ; no need to offset sprite data or mask
         ; as they're reversed.

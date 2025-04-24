@@ -78,12 +78,12 @@ THEIR_SCORE_Y_OFFSET = 14
 HAND_TOP = 8
 
 .proc get_hand_y
-        lda     #(HAND_TOP+hand_HEIGHT-SCORE_VERTICAL_START_Y)
+        lda     #(HAND_TOP+hand_HEIGHT-SCORE_VERTICAL_START_Y+1)
         ldy     cur_score_draw
         dey
         jsr     is_point_diagonal
         bcs     :+
-        lda     #(HAND_TOP+hand_HEIGHT-SCORE_DIAGONAL_START_Y)
+        lda     #(HAND_TOP+hand_HEIGHT-SCORE_DIAGONAL_START_Y+1)
         sec
 :       sbc     hand_y_offset
         rts
@@ -97,43 +97,60 @@ HAND_TOP = 8
         sty     update_y+1
         stx     delta_x+1
 
-next_frame:
-        jsr     _mouse_wait_vbl
-        jsr     clear_hand
-        lda     cur_score_draw_lines_skip
+        ; Prepare unchanged variables before clearing
 
-        lda     start_x
-        sec
-        sbc     #hand_WIDTH
-        sta     hand_data+SPRITE_DATA::X_COORD
         lda     #HAND_TOP+1                ; Bottom of lamp
         sta     hand_data+SPRITE_DATA::Y_COORD
 
-        ; Should we plot a dot?
-        lda     hand_pen_down
-        beq     :+
-
-draw_point:
-        jsr     _set_color_white
-        ldx     start_x
-        lda     #(HAND_TOP+hand_HEIGHT)
+next_frame:
+        ; Precompute vars before VBL
+        ; the new X
+        lda     start_x
         sec
-        sbc     cur_score_draw_lines_skip
-        jsr     plot_dot
+        sbc     #hand_WIDTH
+        sta     tmp_start_x
 
-:       ; reset total number of bytes
-        lda     #hand_BYTES-1
+        ; The new number of bytes to skip
+        lda     cur_score_draw_lines_skip
+        ldx     #hand_BPLINE
+        ldy     #hand_BYTES
+        jsr     _skip_top_lines
+        sta     new_drawn_bytes
+
+        ; The previous number of bytes, for clearing previous draw
+        lda     prev_drawn_bytes
         sta     hand_data+SPRITE_DATA::BYTES
+
+        ; Top départ!
+        jsr     _mouse_wait_vbl
+update_hand_start:
+        jsr     clear_hand
+
+        ; Load new X
+        lda     tmp_start_x
+        sta     hand_data+SPRITE_DATA::X_COORD
+
+        ; Load new number of bytes
+        lda     new_drawn_bytes
+        sta     hand_data+SPRITE_DATA::BYTES
+        sta     prev_drawn_bytes
 
         lda     #<hand_data
         ldx     #>hand_data
         jsr     _setup_sprite_pointer_for_draw
-
-        lda     cur_score_draw_lines_skip
-        jsr     _skip_top_lines
-
-tmp_draw_hand:
         jsr     _draw_sprite
+update_hand_end:
+        ; Should we plot a dot?
+        lda     hand_pen_down
+        beq     sleep_delay
+
+        ; plot a dot just under the hand
+        jsr     _set_color_white
+        ldx     start_x
+        lda     #(HAND_TOP+hand_HEIGHT+1)
+        sec
+        sbc     cur_score_draw_lines_skip
+        jsr     plot_dot
 
 sleep_delay:
         lda     #$FF
@@ -189,6 +206,10 @@ out:    rts
         sec
         sbc     tmp1
         sta     start_x
+
+        ; Init skip bytes
+        lda     #hand_BYTES
+        sta     prev_drawn_bytes
 
         ; Get hand down
         lda     #10
@@ -329,3 +350,6 @@ cur_score_draw_lines_skip: .res 1
 start_x:  .res 1
 hand_y_offset: .res 1
 hand_pen_down: .res 1
+prev_drawn_bytes: .res 1
+new_drawn_bytes: .res 1
+tmp_start_x:    .res 1
