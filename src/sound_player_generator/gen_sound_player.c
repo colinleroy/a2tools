@@ -90,7 +90,7 @@ static int emit_half_target_set(int offset, int cycles) {
     exit(1);
   }
   printf("         lda sound_levels+%d,x      ; 4 cycles, %d remain\n"
-         "         sta target+%d              ; 3 cycles, %d remain\n",
+         "         sta target+1+%d            ; 3 cycles, %d remain\n",
          offset, cycles-4, offset, cycles-HALF_TARGET_BYTE_SET);
   target_set[offset] = 1;
   return HALF_TARGET_BYTE_SET;
@@ -215,7 +215,7 @@ static int emit_slow(int cycles_avail) {
 
 static int emit_jump(int cycles_avail) {
   cycles_avail -= JUMP_OVERHEAD;
-  printf("         jmp (target)              ; %d cycles, remain %d\n", JUMP_OVERHEAD, cycles_avail);
+  printf("         jmp target                ; %d cycles, remain %d\n", JUMP_OVERHEAD, cycles_avail);
   return cycles_avail;
 }
 
@@ -318,8 +318,9 @@ int main(int argc, char *argv[]) {
          "         .include  \"accelerator.inc\"\n"
          "\n"
          "SPKR     = $C030\n"
-         "ispkr    = ptr2\n"
-         "target   = ptr3\n"
+         "ispkr    = ptr2  ; two bytes\n"
+         "target   = ptr3  ; three bytes, first being a JMP because we want our\n"
+         "                 ; indirect jumps 6 cycles long both on 6502 and 65c02.\n"
          "snd_slow = tmp4\n"
          "\n\n");
 
@@ -405,6 +406,8 @@ int main(int argc, char *argv[]) {
          "         sty snd_slow\n"
          "         sta ptr1\n"
          "         stx ptr1+1\n"
+         "         lda #$4C               ; JMP\n"
+         "         sta target\n"
          "         jsr _get_iigs_speed\n"
          "         sta prevspd\n"
          "         lda #SPEED_SLOW\n"
