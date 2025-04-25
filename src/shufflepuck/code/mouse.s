@@ -489,13 +489,32 @@ y_double:
         inc     vbl_ready
         plp                     ; Reenable interrupts
         sec                     ; Interrupt handled
+mouse_irq_done:
         rts
+
+
+.proc waste_3400
+        lda     hz              ; Shorten window at 50Hz to catch
+        cmp     #60             ; sync bugs on my own hardware
+        bne     :+
+        rts
+:
+        ldy     #3
+:       ldx     #226
+:       dex                         ; 2
+        bne     :-                  ; 5
+        dey
+        bne     :--
+        rts
+.endproc
 
 .proc _mouse_wait_vbl
         lda     #0              ; Skip a frame rather than flicker
         sta     vbl_ready
 :       lda     vbl_ready
         beq     :-
+
+        jsr     waste_3400
         rts
 .endproc
 

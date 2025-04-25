@@ -89,6 +89,8 @@ HAND_TOP = 8
         rts
 .endproc
 
+BEAM_PASS = 8 ;ms
+
 ; X= X direction (00 or 02)
 ; Y= Y direction (FF or 01)
 ; A= end of animation
@@ -123,6 +125,11 @@ next_frame:
 
         ; Top départ!
         jsr     _mouse_wait_vbl
+
+        lda     #BEAM_PASS        ; Give 8ms to the beam to pass over the region, because that
+        ldx     #0                ; flickers on real hardware. We should win the beam race but
+        jsr     _platform_msleep  ; the IRQ handling adds a 1.1ms delay that makes us lose.
+
 update_hand_start:
         jsr     clear_hand
 
@@ -171,7 +178,8 @@ update_y:
 
 stop_at:
         cmp     #$FF
-        bne     next_frame
+        beq     out
+        jmp     next_frame
 out:    rts
 
 .endproc
@@ -210,7 +218,7 @@ out:    rts
         sta     bytes_to_draw
 
         ; Get hand down
-        lda     #10
+        lda     #10-BEAM_PASS
         sta     animate_hand::sleep_delay+1
         lda     end_score_draw_lines_skip
         ldy     #$FF              ; Go down
@@ -220,7 +228,7 @@ out:    rts
         jsr     animate_hand
 
         ; ; Draw current point
-        lda     #(25*7/5)
+        lda     #(25*7/5)-BEAM_PASS
         sta     animate_hand::sleep_delay+1
         ldy     cur_score_draw
         dey
@@ -231,7 +239,7 @@ out:    rts
 
         jsr     is_point_diagonal
         bcc     :+
-        lda     #(25*7/7)
+        lda     #(25*7/7)-BEAM_PASS
         sta     animate_hand::sleep_delay+1
         ldx     #0                ; DX for vertical
         lda     cur_score_draw_lines_skip
@@ -243,7 +251,7 @@ out:    rts
         jsr     animate_hand
 
         ; Get hand up
-        lda     #10
+        lda     #10-BEAM_PASS
         sta     animate_hand::sleep_delay+1
         lda     #hand_HEIGHT
         ldy     #$01

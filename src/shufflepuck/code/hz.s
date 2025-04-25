@@ -1,10 +1,11 @@
-        .export     _calibrate_hz, hz
+        .export     hz
         
         .import     _set_iigs_speed, _get_iigs_speed
-
         .import     ostype
 
         .importzp   tmp1, ptr1
+
+        .constructor calibrate_hz, 2
 
         .include    "apple2.inc"
         .include    "accelerator.inc"
@@ -22,7 +23,7 @@ MAGIC_VAL = 21
         rts                       ; +6
 .endproc
 
-.proc _calibrate_hz
+.proc calibrate_hz
         lda     ostype
         cmp     #$20
         bcc     iip
@@ -129,6 +130,10 @@ iip:    jmp     calibrate_iip
         jmp     _set_iigs_speed
 .endproc
 
+; Only way to do it safely is to ask the user.
+; Do it with no dependancy to cc65's runtime so
+; we don't pull in _cputs, _cgetc or anything the
+; user may not be interested in.
 .proc calibrate_iip
         bit     $C082
         jsr     $FC58
@@ -175,9 +180,11 @@ set60:  stx     hz
 :       rts
 .endproc
 
+; in ONCE segment on purpose
 iip_str:        .asciiz "HIT 1 FOR US (60HZ), 2 FOR EURO (50HZ)"
 prevspd:        .res 1
 
 .segment "DATA"
+
 ; The only thing remaining from that code after init
 hz:             .res 1

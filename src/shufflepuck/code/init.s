@@ -17,10 +17,9 @@
         .import   _load_lc
         .import   _load_lowcode
         .import   _init_mouse
-        .import   _calibrate_hz
         .import   _strerror, ___errno
 
-        .constructor init
+        .constructor init, 1
 
 .segment "ONCE"
 
@@ -35,9 +34,6 @@ no_mouse_str:     .byte "NO MOUSE DETECTED. PRESS A KEY TO EXIT."  ,$00
 mouse_init_err:   .byte 0
 
 .proc init
-        ; Calibrate to get Hz
-        jsr     _calibrate_hz
-
         ; Init mouse first thing (it flickers HGR on IIplus)
         ; But disable IRQs as cc65's handler is in LOWCODE,
         ; which is not yet loaded. We will enable IRQs once we
