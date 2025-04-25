@@ -121,6 +121,8 @@ static void emit_wait_steps(int cycles, int avail) {
   while (cycles > 0) {
     if (cycles % 2 != 0) {
       cycles = emit_instruction("         bit $FF                   ", 3, cycles);
+    } else if (cycles == 4) {
+      cycles = emit_instruction("         bit $C070  ; PTRIG (accl) ", 4, cycles);
     } else {
       cycles = emit_instruction("         nop                       ", 2, cycles);
     }
