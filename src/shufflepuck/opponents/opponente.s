@@ -22,7 +22,7 @@
         .import     player_caught, their_currently_hitting
         .import     puck_x, puck_right_x, puck_y, puck_dy, serving
         .import     _mouse_wait_vbl
-        .import     _draw_screen_their_side
+        .import     _draw_screen
 
         .import     _rand
         .import     _draw_opponent
@@ -324,7 +324,7 @@ move_backwards:
         jsr     _play_win_e
         ; No need to clear, bottom of sprite doesn't change
         jsr     _draw_opponent
-        jmp     _draw_screen_their_side
+        jmp     _draw_screen
 .endproc
 
 .proc animate_lose
