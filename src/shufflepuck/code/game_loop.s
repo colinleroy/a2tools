@@ -581,9 +581,9 @@ out_miss:
         ; Invert and slow puck delta-Y
         lda     puck_dy
         beq     :+
-        bpl     store_dy
-:       NEG_A
-        cmp     #$80
+        bpl     :+
+        NEG_A
+:       cmp     #$80
         ror
         cmp     #$80
         ror
@@ -593,7 +593,9 @@ out_miss:
         lda     their_pusher_dy
         cmp     #$80
         ror
-        clc
+        bpl     :+
+        NEG_A
+:       clc
         adc     puck_dy
         cmp     #$01              ; Make sure the puck wouldn't stop
         bcs     store_dy
