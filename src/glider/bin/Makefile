@@ -81,6 +81,7 @@ sounds = \
 
 glider_SOURCES := \
 	$(SRC_DIR)/code/main.s \
+	$(SRC_DIR)/code/hz.s \
 	$(SRC_DIR)/code/keyboard.s \
 	$(SRC_DIR)/code/mouse.s \
 	$(SRC_DIR)/code/draw_text.s \

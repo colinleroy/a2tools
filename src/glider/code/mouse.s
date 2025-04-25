@@ -14,13 +14,14 @@
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
         .export     _init_mouse
-        .export     vbl_ready, hz
+        .export     vbl_ready
+
+        .import     ostype, hz
 
         .export     _mouse_reset_ref_x
         .export     _mouse_update_ref_x
         .export     _mouse_wait_vbl
         .export     _mouse_check_fire
-        .export     _mouse_calibrate_hz
 
         .export     prev_x, ref_x, mouse_x    ; Shared with keyboard.s
 
@@ -48,6 +49,7 @@ CLAMPMOUSE      = $17   ; Sets mouse bounds in a window
 HOMEMOUSE       = $18   ; Sets mouse to upper-left corner of clamp win
 INITMOUSE       = $19   ; Resets mouse clamps to default values and
                         ; sets mouse position to 0,0
+TIMEDATA        = $1C   ; Set mouse interrupt rate
 
 pos1_lo         := $0478
 pos1_hi         := $0578
@@ -172,6 +174,10 @@ next_slot:
         asl
         asl
         sta     yparam+1
+
+        ; Set VBL rate
+        lda     hz
+        jsr     set_mouse_hz
 
         ; The AppleMouse II Card needs the ROM switched in
         ; to be able to detect an Apple //e and use RDVBL
@@ -349,11 +355,28 @@ mouse_out_not_handled:
         rts
 .endproc
 
+.proc waste_3400
+        lda     hz              ; Shorten window at 50Hz to catch
+        cmp     #60             ; sync bugs on my own hardware
+        bne     :+
+        rts
+:
+        ldy     #3
+:       ldx     #226
+:       dex                         ; 2
+        bne     :-                  ; 5
+        dey
+        bne     :--
+        rts
+.endproc
+
 .proc _mouse_wait_vbl
         lda     vbl_ready
         beq     _mouse_wait_vbl
         lda     #0
         sta     vbl_ready
+
+        ;jsr     waste_3400
         rts
 .endproc
 
@@ -368,31 +391,22 @@ mouse_out_not_handled:
         rts
 .endproc
 
-; Count cycles to determine whether the mouse interrupts at 50 or 60Hz.
-.proc _mouse_calibrate_hz
-        ldx     #0
-        ldy     #0
-
-        jsr     _mouse_wait_vbl
-
-        lda     #$00
-        sta     vbl_ready
-
-:       lda     vbl_ready             ; 4
-        bne     calibrate_done        ; 6
-        inx                           ; 8
-        bne     :-                    ; 11 (11*255 + 12 = 2817)
+;Apple II Mouse Technical Notes #2: Varying VBL Interrupt Rate
+.proc set_mouse_hz
+        ldy     #0                ; 0 for 60Hz, 1 for 50Hz
+        cmp     #60
+        beq     :+
         iny
-        bne     :-
+:       tya
 
-calibrate_done:
-        lda     #60               ; Consider we're at 60Hz
-        sta     hz
-        cpy     #$06              ; But if Y = $06, we spent about 7*2817 cycles
-        bne     :+                ; waiting for the interrupt: ~19719 cycles, so
-        lda     #50               ; we're at 50Hz
-        sta     hz
-:       rts
+        ldx     ostype
+        cpx     #$40
+        bcs     out               ; Don't do that on IIc/gs
+
+        ldx     #TIMEDATA
+        jsr     firmware
+
+out:    rts
 .endproc
 
        .bss
@@ -403,4 +417,3 @@ ref_x:           .res 1
 vbl_ready:       .res 1
 prev_x:          .res 1
 mouse_x:         .res 1
-hz:              .res 1

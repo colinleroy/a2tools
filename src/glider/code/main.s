@@ -45,11 +45,9 @@
 
         .import   _mouse_wait_vbl
         .import   _mouse_reset_ref_x
-        .import   _mouse_calibrate_hz
 
         .import   _softswitch_wait_vbl
         .import   _keyboard_reset_ref_x
-        .import   _keyboard_calibrate_hz
 
         .import   plane_data, rubber_band_data
 
@@ -166,11 +164,6 @@ x_coord_reset_handler:
         lda     #>_softswitch_wait_vbl
         sta     wait_vbl_handler+2
 
-        lda     #<_keyboard_calibrate_hz
-        sta     calibrate_hz_handler+1
-        lda     #>_keyboard_calibrate_hz
-        sta     calibrate_hz_handler+2
-
         lda     #<_keyboard_reset_ref_x
         sta     load_level::x_coord_reset_handler+1
         lda     #>_keyboard_reset_ref_x
@@ -189,8 +182,7 @@ x_coord_reset_handler:
         sta     _check_fire_button+1
         sta     _check_fire_button+2
 
-calibrate_hz_handler:
-:       jsr     _mouse_calibrate_hz
+:
 
 .ifndef __APPLE2ENH__
         ; Give the Mousecard time to settle post-init

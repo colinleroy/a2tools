@@ -114,13 +114,13 @@ rubber_box0_data:
 sprites:   .byte  5
 sprites_data:
                   ; Rubber band must be first for easy deactivation
-                  ;                                ; drawn on    EVEN ODD
-                  .addr   rubber_band_data          ; small             x
+                  ;                          ; drawn on    EVEN ODD
+                  .addr   rubber_band_data   ; small             x
                   .addr   clock0_data        ; medium      x
                   .addr   rubber_box0_data   ; medium            x
 BALLOON_SPRITE_NUM = (*-sprites_data)/2
                   .addr   balloon0_data      ; big         x
-                  .addr   plane_data                ; big         x     x
+                  .addr   plane_data         ; big         x     x
 
 vents:     .byte  2
 vents_data:
