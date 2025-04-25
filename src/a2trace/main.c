@@ -333,6 +333,15 @@ skip_to_start:
           param_addr = orig_param_addr + y;
         }
 
+        if (cpu == CPU_6502 && param_addr >= 0) {
+          if ((param_addr & 0xff00) != (orig_param_addr & 0xff00)
+            && !instruction_is_write) {
+            if (a_mode == ADDR_MODE_ZINDY) {
+              /* cost for $nnnn, X ; $nnnn, Y with page crossing */
+              cycles += 1;
+            }
+          }
+        }
         dest = instruction_is_write ? write_to : read_from;
         param_symbol = symbol_get_by_addr(cpu, param_addr, dest, lc_bank);
 
@@ -369,7 +378,7 @@ skip_to_start:
           if ((param_addr & 0xff00) != (orig_param_addr & 0xff00)
             && !instruction_is_write) {
             if (a_mode == ADDR_MODE_ABSXY) {
-              /* cost for $nnnn, X or $nnnn, Y with page crossing */
+              /* cost for $nnnn, X ; $nnnn, Y with page crossing */
               cycles += 1;
             }
           } else if ((op_addr & 0xff00) != (param_addr & 0xff00)
