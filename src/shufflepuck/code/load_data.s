@@ -551,6 +551,9 @@ no_cache:
         lda       #<bar_code_backup_name
         ldx       #>bar_code_backup_name
         jsr       _unlink
+        lda       #<hgr_fgbg
+        ldx       #>hgr_fgbg
+        jsr       _unlink
         lda       #<barsnd_backup_name
         ldx       #>barsnd_backup_name
         jmp       _unlink
