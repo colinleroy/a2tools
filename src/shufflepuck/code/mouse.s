@@ -99,7 +99,7 @@ barbox: .word   0
         .word   255/2
         .word   HGR_HEIGHT/2
 
-.segment "ONCE"
+.segment "CODE"
 
 .proc _init_mouse
         lda     #<$C000

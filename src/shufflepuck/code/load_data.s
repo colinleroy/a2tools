@@ -21,9 +21,10 @@
         .export   _load_barsnd, _backup_barsnd, _restore_barsnd
         .export   _load_hall_of_fame, _load_scores, _save_scores
         .export   _init_text_before_decompress, _cache_working
+        .export   _load_hgr_mono_file, hgr_mono_file
 
         .import   _open, _read, _write, _close, _memmove, _unlink
-        .import   pushax, popax, _init_text
+        .import   pushax, popax, _text_mono40, _memset
         .import   __filetype, __auxtype
 
         .import   __LOWCODE_START__, __LOWCODE_SIZE__
@@ -41,7 +42,7 @@
         .include  "constants.inc"
         .include  "scores.inc"
 
-.segment "ONCE"
+.segment "CODE"
 
 .proc _load_lowcode
         jsr     set_compressed_buf_dynseg
@@ -72,7 +73,34 @@
         jmp     read_compressed
 .endproc
 
-.segment "CODE"
+.proc _load_hgr_mono_file
+        lda     hgr_mono_file
+        beq     :+
+        rts
+
+:       lda     #<$2000
+        ldx     #>$2000
+        jsr     pushax        ; Push once for file_io_at size
+        jsr     pushax        ; Once for file_io_at buffer
+        jsr     pushax        ; Once for memset
+        lda     #$F0
+        ldx     #$00
+        jsr     pushax
+        lda     #<$2000
+        ldx     #>$2000
+        jsr     _memset
+
+        lda     #<hgr_fgbg
+        ldx     #>hgr_fgbg
+        ldy     #$00
+        sty     do_uncompress
+        ldy     #(O_WRONLY|O_CREAT)
+        jsr     file_io_at
+        bcs     :+
+        lda     #1
+        sta     hgr_mono_file
+:       rts
+.endproc
 
 .proc read_compressed
         ldy     #$01              ; O_RDONLY
@@ -261,7 +289,7 @@ uncompress:
 finish_decompress:
         lda     _init_text_before_decompress
         beq     :+
-        jsr     _init_text
+        jsr     _text_mono40
 
 :       lda     destination   ; Push user-specified destination buffer
         ldx     destination+1
@@ -554,6 +582,8 @@ bar_backup_name:     .asciiz "/RAM/BAR.IMG"
 bar_code_backup_name:.asciiz "/RAM/BAR.CODE"
 barsnd_backup_name:  .asciiz "/RAM/BAR.SND"
 opponent_name_tmpl:  .asciiz "OPPONENT.X"
+hgr_fgbg:            .asciiz "/RAM/FGBG"
+hgr_mono_file:        .byte 0
 
 .segment "bar_code"
 ; --- only accessible from the bar code segment

@@ -1,3 +1,4 @@
+        .export   _init_caches
         .import   _backup_barsnd
         .import   _load_barsnd
         .import   _init_text_before_decompress
@@ -10,18 +11,17 @@
         .import   _backup_bar_high
         .import   _load_bar_high
         .import   _cputs
-        .import   _init_text, _init_hgr
+        .import   _text_mono40, _hgr_force_mono40
         .import   _clrscr
         .import   _cgetc
         .import   _exit
         .import   _load_lc
         .import   _load_lowcode
         .import   _init_mouse
+        .import   _load_hgr_mono_file
         .import   _strerror, ___errno
 
-        .constructor init, 1
-
-.segment "ONCE"
+.segment "CODE"
 
 load_splc_str:    .byte "LOADING LC CODE..."       ,$0D,$0A,$00
 load_table_str:   .byte "LOADING TABLE IMAGE..."   ,$0D,$0A,$00
@@ -33,7 +33,7 @@ no_mouse_str:     .byte "NO MOUSE DETECTED. PRESS A KEY TO EXIT."  ,$00
 
 mouse_init_err:   .byte 0
 
-.proc init
+.proc _init_caches
         ; Init mouse first thing (it flickers HGR on IIplus)
         ; But disable IRQs as cc65's handler is in LOWCODE,
         ; which is not yet loaded. We will enable IRQs once we
@@ -47,8 +47,10 @@ mouse_init_err:   .byte 0
         inc     mouse_init_err    ; No, we'll crash once we have lowcode
                                   ; (for cputs)
 
-        ; Load LOWCODE (and splash screen)
-:       jsr     _load_lowcode
+:       ; Load LOWCODE (and splash screen)
+        jsr     _load_hgr_mono_file
+
+        jsr     _load_lowcode
         bcc     :+
         brk                       ; I can't be bothered to COUT manually
 
@@ -64,8 +66,7 @@ mouse_init_err:   .byte 0
         ldx     #>no_mouse_str
         jmp     print_error
 
-:       lda     #1
-        jsr     _init_hgr
+:       jsr     _hgr_force_mono40
 
         lda     #<load_splc_str
         ldx     #>load_splc_str
@@ -137,7 +138,7 @@ out:    rts
 .endproc
 .proc print_error
         jsr     _cputs
-        jsr     _init_text
+        jsr     _text_mono40
         jsr     _cgetc
         jmp     _exit
 .endproc

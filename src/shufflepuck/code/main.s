@@ -19,7 +19,7 @@
         .export   _draw_opponent
         .export   won_tournament
 
-        .import   _init_hgr
+        .import   _hgr_force_mono40
         .import   _mouse_setbarbox, _mouse_setplaybox
 
         .import   _choose_opponent, _add_hall_of_fame
@@ -53,8 +53,9 @@
 
         .import   _platform_msleep
         .import   _build_hgr_tables
+        .import   _init_caches
 
-        .import   _init_text, _clrscr, _exit
+        .import   _text_mono40, _clrscr, _exit
 
         .import   ___randomize
 
@@ -70,9 +71,10 @@
 .segment "CODE"
 
 ; How much do we have left?
-; .res 1000
+ .res 550
 
 .proc _main
+        jsr     _init_caches
         jsr     ___randomize
         jsr     _build_hgr_tables
 
@@ -113,7 +115,7 @@ to_bar:
 
         ; Entering the bar, clear screen, reload the intro sound, play it
         jsr     _clrscr
-        jsr     _init_text
+        jsr     _text_mono40
         jsr     _restore_barsnd
         ldy     #0
         jsr     _play_bar
@@ -126,8 +128,7 @@ to_bar:
         jsr     _bar_update_champion
 
         ; Reinit HGR
-        lda     #1
-        jsr     _init_hgr
+        jsr     _hgr_force_mono40
 
         ; Update mouse boundaries for bar
         jsr     _mouse_setbarbox

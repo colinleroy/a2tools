@@ -24,7 +24,7 @@
         .import     _rand
         .import     _last_key
 
-        .import     _init_text, _init_hgr
+        .import     _text_mono40, _hgr_force_mono40
 
         .import     _cputc, _cputs, _gotoxy, _gotox, _gotoy, _clrscr, _cutoa
 
@@ -240,7 +240,7 @@ done:
 
 .proc configure_dc3
         jsr     _clrscr
-        jsr     _init_text
+        jsr     _text_mono40
 
         lda     #13
         jsr     pusha
@@ -289,8 +289,7 @@ done:
         jsr     configure_parameter
 
         jsr     _clrscr
-        lda     #1
-        jmp     _init_hgr
+        jmp     _hgr_force_mono40
 .endproc
 
 ; Sequence is A/B/A/normal
