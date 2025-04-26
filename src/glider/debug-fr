@@ -1,0 +1,3 @@
+#!/bin/bash
+cd bin/en
+make clean all $1 && mame apple2cfr -window -flop1 glider-en.po -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -mouse -debug

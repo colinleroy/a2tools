@@ -185,7 +185,8 @@ clean:
 upload: all
 	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/quicktake/$(suffix)/ || \
 	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/quicktake/$(suffix)/ && \
-	cp *.bin $(SRC_DIR)/about /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/quicktake/$(suffix)/
+	cp *.bin $(SRC_DIR)/about /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/quicktake/$(suffix)/ && \
+	cp *.po $(SRC_DIR)/about /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/disks/
 
 dist: quicktake-$(suffix).po
 	mkdir -p $(SRC_DIR)../../dist/
