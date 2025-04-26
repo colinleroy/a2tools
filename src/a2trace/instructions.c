@@ -221,8 +221,7 @@ static function_calls *root_call = NULL;
 
 /* Helper for mapping addresses and symbols */
 int is_addr_in_cc65_user_bank (int op_addr) {
-  return (read_from == RAM && (op_addr < 0xD000 || op_addr > 0xDFFF))
-   || (read_from == RAM && op_addr >= 0xD000 && op_addr < 0xDFFF && lc_bank == 2);
+  return op_addr < 0xD000 || op_addr > 0xDFFF || (read_from == RAM && lc_bank == 2);
 }
 
 /* Figure out the addressing mode for the instruction */

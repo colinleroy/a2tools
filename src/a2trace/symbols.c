@@ -655,7 +655,6 @@ void map_slocs_to_adresses(char **excluded_segments) {
         slocs[addr] = malloc(sizeof (dbg_slocdef));
         slocs[addr]->file = file;
         slocs[addr]->line = line;
-        //printf("Mapped 0x%04X => %s:%d\n", addr, file->name, line->line_number);
       }
       free(c_spans[i]);
     }

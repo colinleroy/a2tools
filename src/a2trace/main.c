@@ -117,6 +117,7 @@ static int skipped_file(dbg_slocdef *sloc, char **exclude_list) {
     const char *file = sloc_get_filename(sloc);
     while (excluded_pattern && *excluded_pattern) {
       if (strstr(file, *excluded_pattern)) {
+        printf("file %s excluded\n", file);
         return 1;
       }
       excluded_pattern++;
@@ -282,9 +283,9 @@ skip_to_start:
           if (read_from == RAM)
             sloc = sloc_get_for_addr(op_addr);
         }
-        if (is_addr_in_cc65_user_bank(op_addr)) {
+        //if (is_addr_in_cc65_user_bank(op_addr)) {
           sloc = sloc_get_for_addr(op_addr);
-        }
+        //}
         instr_symbol = symbol_get_by_addr(cpu, op_addr, read_from, lc_bank);
         if (!instr_symbol) {
           instr_symbol = generate_symbol(cur_lineaddress, op_addr, read_from, lc_bank, NULL);
@@ -527,6 +528,8 @@ try_gen:
         /* Print the source location */
         if (print && sloc && !do_callgrind) {
           printf("(%s:%d)", sloc_get_filename(sloc), sloc_get_line(sloc));
+        } else if (print && !do_callgrind) {
+          printf(" ?");
         }
         if (print && !do_callgrind)
           printf("\n");
