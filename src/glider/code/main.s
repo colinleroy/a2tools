@@ -19,7 +19,7 @@
         .export   _go_to_level
         .export   _initial_plane_x, _initial_plane_y
 
-        .import   _init_hgr, _init_mouse
+        .import   _init_mouse
 
         .import   cur_level
         .import   _draw_sprite
@@ -57,7 +57,7 @@
         .import   _build_hgr_tables
 
         .import   _play_crash
-        .import   _init_text, _clrscr
+        .import   _text_mono40, _hgr_force_mono40, _load_hgr_mono_file, _clrscr
 
         .include  "apple2.inc"
         .include  "plane.gen.inc"
@@ -90,7 +90,7 @@
         sta     no_inter_screen
 
         jsr     _clrscr
-        jsr     _init_text
+        jsr     _text_mono40
         clc
         lda     no_inter_screen   ; Should we show the inter level screen?
         bne     :+
@@ -107,13 +107,12 @@
         sec
         jsr     _end_game
 :
-        lda     #1
-        jmp     _init_hgr
+        jmp     _hgr_force_mono40
 .endproc
 
 .proc _lose_game
         jsr     _clrscr
-        jsr     _init_text
+        jsr     _text_mono40
         clc
         ; Fallthrough to _end_game
 .endproc
@@ -143,6 +142,7 @@ x_coord_reset_handler:
 .code
 
 .proc _main
+        jsr     _load_hgr_mono_file
         jsr     _load_lowcode
         jmp     _real_main
 .endproc
@@ -194,22 +194,20 @@ x_coord_reset_handler:
 new_game:
         jsr     _load_splash_screen
 
-        lda     #1
-        jsr     _init_hgr
+        jsr     _hgr_force_mono40
 
         jsr     _wait_for_input
         cmp     #($1B|$80)        ; Escape?
         bne     :+
-        jsr     _init_text        ; Switch back to text mode
+        jsr     _text_mono40      ; Switch back to text mode
         rts                       ; Final rts
 
 :       jsr     _clrscr
-        jsr     _init_text
+        jsr     _text_mono40
 
         jsr     reset_game        ; Reset game loads current level (0)
 
-        lda     #1
-        jsr     _init_hgr
+        jsr     _hgr_force_mono40
 
 
 game_loop:
@@ -290,10 +288,10 @@ game_logic:
         dec     num_lives
         beq     game_over
         jsr     _clrscr
-        jsr     _init_text
+        jsr     _text_mono40
         jsr     load_level
         lda     #1
-        jmp     _init_hgr
+        jmp     _hgr_force_mono40
 game_over:
         jmp     _lose_game
 .endproc
