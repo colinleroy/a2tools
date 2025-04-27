@@ -283,9 +283,9 @@ skip_to_start:
           if (read_from == RAM)
             sloc = sloc_get_for_addr(op_addr);
         }
-        //if (is_addr_in_cc65_user_bank(op_addr)) {
+        if (is_addr_in_cc65_user_bank(op_addr)) {
           sloc = sloc_get_for_addr(op_addr);
-        //}
+        }
         instr_symbol = symbol_get_by_addr(cpu, op_addr, read_from, lc_bank);
         if (!instr_symbol) {
           instr_symbol = generate_symbol(cur_lineaddress, op_addr, read_from, lc_bank, NULL);
