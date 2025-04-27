@@ -58,31 +58,14 @@
         jmp     read_compressed
 .endproc
 
-.proc _load_lc
-        jsr     set_compressed_buf_dynseg
-
-        lda     #<__SPLC_START__
-        ldx     #>__SPLC_START__
-        jsr     pushax
-        lda     #<__SPLC_SIZE__
-        ldx     #>__SPLC_SIZE__
-        jsr     pushax
-        lda     #<lc_name
-        ldx     #>lc_name
-
-        jmp     read_compressed
-.endproc
-
 .proc _load_hgr_mono_file
         lda     hgr_mono_file
         beq     :+
         rts
 
-:       lda     #<$2000
-        ldx     #>$2000
-        jsr     pushax        ; Push once for file_io_at size
-        jsr     pushax        ; Once for file_io_at buffer
-        jsr     pushax        ; Once for memset
+:       jsr     push_hgr_start        ; Push once for file_io_at size
+        jsr     push_hgr_start        ; Once for file_io_at buffer
+        jsr     push_hgr_start        ; Once for memset
         lda     #$F0
         ldx     #$00
         jsr     pushax
@@ -134,37 +117,43 @@
         rts
 .endproc
 
-.proc push_hgr_page_buf
+.proc push_hgr_start
         lda     #<__HGR_START__
         ldx     #>__HGR_START__
-        jsr     pushax
+        jmp     pushax
+.endproc
+
+.proc push_opponent_start
+        lda     #<__OPPONENT_START__
+        ldx     #>__OPPONENT_START__
+        jmp     pushax
+.endproc
+
+.proc push_hgr_size
         lda     #<__HGR_SIZE__
         ldx     #>__HGR_SIZE__
         jmp     pushax
+.endproc
+
+.proc push_hgr_page_buf
+        jsr     push_hgr_start
+        jmp     push_hgr_size
 .endproc
 
 .proc push_high_hgr_page_buf
-        lda     #<__OPPONENT_START__
-        ldx     #>__OPPONENT_START__
-        jsr     pushax
-        lda     #<__HGR_SIZE__
-        ldx     #>__HGR_SIZE__
-        jmp     pushax
+        jsr     push_opponent_start
+        jmp     push_hgr_size
 .endproc
 
 .proc push_dynseg_page_buf
-        lda     #<__OPPONENT_START__
-        ldx     #>__OPPONENT_START__
-        jsr     pushax
+        jsr     push_opponent_start
         lda     #<__OPPONENT_SIZE__
         ldx     #>__OPPONENT_SIZE__
         jmp     pushax
 .endproc
 
 .proc push_extra_large_page_buf
-        lda     #<__HGR_START__
-        ldx     #>__HGR_START__
-        jsr     pushax
+        jsr     push_hgr_start
         lda     #<(__HGR_SIZE__+__OPPONENT_SIZE__)
         ldx     #>(__HGR_SIZE__+__OPPONENT_SIZE__)
         jmp     pushax
@@ -178,7 +167,7 @@
         beq     set_read
         lda     #<_write          ; Patch for _write
         ldx     #>_write
-        jmp     :+
+        bne     :+                ; BRA
 set_read:
         lda     #<_read           ; Patch for _read
         ldx     #>_read
@@ -331,6 +320,21 @@ finish_decompress:
 
 .segment "LOWCODE"
 
+.proc _load_lc
+        jsr     set_compressed_buf_dynseg
+
+        lda     #<__SPLC_START__
+        ldx     #>__SPLC_START__
+        jsr     pushax
+        lda     #<__SPLC_SIZE__
+        ldx     #>__SPLC_SIZE__
+        jsr     pushax
+        lda     #<lc_name
+        ldx     #>lc_name
+
+        jmp     read_compressed
+.endproc
+
 ; A = which opponent to load
 .proc _load_opponent
         ; Set correct filename for level
@@ -369,10 +373,12 @@ finish_decompress:
         jsr     push_dynseg_page_buf
         jmp     load_bar_at
 .endproc
+
 .proc load_bar_hgr
         jsr     set_compressed_buf_hgr
         jsr     push_hgr_page_buf
 .endproc
+
 .proc load_bar_at
         lda     #<bar_name
         ldx     #>bar_name
@@ -398,13 +404,26 @@ finish_decompress:
         jmp     read_compressed
 .endproc
 
-.proc set_table_backup_params
-        jsr     push_hgr_page_buf
+.proc set_table_backup_file
         lda     #<table_backup_name
         ldx     #>table_backup_name
         ldy     #$00
         sty     do_uncompress
         rts
+.endproc
+
+.proc set_bar_backup_file
+        lda     #<bar_backup_name
+        ldx     #>bar_backup_name
+        ldy     #$00
+        sty     do_uncompress
+        rts
+.endproc
+
+
+.proc set_table_backup_params
+        jsr     push_hgr_page_buf
+        jmp     set_table_backup_file
 .endproc
 
 .proc backup_io
@@ -428,12 +447,9 @@ finish_decompress:
 
 .proc _backup_table_high
         jsr     push_high_hgr_page_buf
-        lda     #<table_backup_name
-        ldx     #>table_backup_name
-        ldy     #$00
-        sty     do_uncompress
-        ldy      #(O_WRONLY|O_CREAT)
-        jmp      backup_io
+        jsr     set_table_backup_file
+        ldy     #(O_WRONLY|O_CREAT)
+        jmp     backup_io
 .endproc
 
 .proc _restore_table
@@ -452,21 +468,14 @@ no_cache:
 
 .proc set_bar_backup_params
         jsr     push_hgr_page_buf
-        lda     #<bar_backup_name
-        ldx     #>bar_backup_name
-        ldy     #$00
-        sty     do_uncompress
-        rts
+        jmp     set_bar_backup_file
 .endproc
 
 .proc _backup_bar_high
         jsr     push_high_hgr_page_buf
-        lda     #<bar_backup_name
-        ldx     #>bar_backup_name
-        ldy     #$00
-        sty     do_uncompress
-        ldy      #(O_WRONLY|O_CREAT)
-        jmp      backup_io
+        jsr     set_bar_backup_file
+        ldy     #(O_WRONLY|O_CREAT)
+        jmp     backup_io
 .endproc
 
 .proc _restore_bar
@@ -542,21 +551,19 @@ no_cache:
 .endproc
 
 .proc unlink_cached_files
-        lda       #<table_backup_name
-        ldx       #>table_backup_name
-        jsr       _unlink
-        lda       #<bar_backup_name
-        ldx       #>bar_backup_name
-        jsr       _unlink
-        lda       #<bar_code_backup_name
-        ldx       #>bar_code_backup_name
-        jsr       _unlink
-        lda       #<hgr_fgbg
-        ldx       #>hgr_fgbg
-        jsr       _unlink
-        lda       #<barsnd_backup_name
-        ldx       #>barsnd_backup_name
-        jmp       _unlink
+        jsr     set_table_backup_file
+        jsr     _unlink
+        jsr     set_bar_backup_file
+        jsr     _unlink
+        lda     #<bar_code_backup_name
+        ldx     #>bar_code_backup_name
+        jsr     _unlink
+        lda     #<hgr_fgbg
+        ldx     #>hgr_fgbg
+        jsr     _unlink
+        lda     #<barsnd_backup_name
+        ldx     #>barsnd_backup_name
+        jmp     _unlink
 .endproc
 
         .bss
