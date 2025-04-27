@@ -22,7 +22,7 @@
         .import     their_currently_hitting
         .import     puck_x, puck_right_x, puck_y, puck_dy, serving
         .import     _rand
-        .import     _last_key
+        .import     _last_key, _read_key
 
         .import     _text_mono40, _hgr_force_mono40
 
@@ -211,10 +211,7 @@ get_parameter:
         jsr     _cputc
 
         ldx     tmp_param
-:       lda     KBD
-        bpl     :-
-        bit     KBDSTRB
-        and     #$7F
+        jsr     _read_key
         cmp     #$08
         beq     dec_param
         cmp     #$15

@@ -191,6 +191,7 @@ shflpuck_SOURCES := \
 	$(SRC_DIR)/code/load_data.s \
 	$(SRC_DIR)/code/sprites.s \
 	$(SRC_DIR)/code/helpers.s \
+	$(SRC_DIR)/code/keyboard.s \
 	$(SRC_DIR)/code/hgr_mono40.s \
 	$(SRC_DIR)/../lib/asm/hgr_tables.s \
 	$(SRC_DIR)/../lib/asm/hgr.s \

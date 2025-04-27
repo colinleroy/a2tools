@@ -6,7 +6,7 @@
 
         .import   do_bin2dec_16bit, bcd_input, bcd_result
 
-        .import    _font
+        .import    _font, _read_key
         .import    _hgr_hi, _hgr_low
 
         .import    popptr1
@@ -148,17 +148,13 @@ print_done:
         lda     #$00
         sta     _str_input,x      ; Terminate the string
 
-        bit     KBDSTRB
 get_key:
         ldx     tmp1
         ldy     put_char+1
         lda     #'_'
         jsr     _print_char
-        lda     KBD
-        bpl     get_key
-        bit     KBDSTRB
+        jsr     _read_key
 
-        and     #$7F
         cmp     #$0D              ; Is it enter?
         beq     validate
         cmp     #$08              ; Is it left arrow?
