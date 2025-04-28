@@ -296,7 +296,7 @@ uncompress:
 .proc unlink_cached_files
         lda       #<hgr_fgbg
         ldx       #>hgr_fgbg
-        jsr       _unlink
+        jmp       _unlink
 .endproc
 
         .bss
