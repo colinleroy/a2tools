@@ -30,6 +30,7 @@ int max_shift = 7;
 char *segment = "RODATA";
 int enable_big_draw = 0;
 int enable_mask = 1;
+int align = 0;
 
 static enum Pixel get_pixel(SDL_Surface *surface, int x, int y) {
   int bpp = surface->format->BytesPerPixel;
@@ -89,15 +90,30 @@ void open_animated_sprites(const char *sprite_name) {
   }
 }
 
+void emit_align(FILE *fp, int image_bytes) {
+  static int bytes_in_page = 0;
+
+  if (align) {
+    if (bytes_in_page + image_bytes > 256) {
+      bytes_in_page = 0;
+    }
+    if (bytes_in_page == 0) {
+      fprintf(fp, ".align $100\n");
+    }
+  }
+  bytes_in_page += image_bytes;
+}
+
 int main(int argc, char *argv[]) {
   int x, y, dx, dy, shift;
   enum Pixel pixval;
   char *sprite_name;
   char filename[256];
   FILE *fp;
+  int image_bytes;
 
   if (argc < 4) {
-    printf("Usage: %s [input.png] [Max right X coord] [pixel_perfect|unperfect] [segment]\n", argv[0]);
+    printf("Usage: %s [input.png] [Max right X coord] [pixel_perfect|unperfect] [segment] [big|nomask|align]\n", argv[0]);
     exit(1);
   }
 
@@ -127,7 +143,7 @@ int main(int argc, char *argv[]) {
   if (argc > 4) {
     segment = argv[4];
   }
-
+  
   if (argc > 5) {
     int i;
     for (i = 5; i < argc; i++) {
@@ -137,8 +153,13 @@ int main(int argc, char *argv[]) {
       if (!strcmp(argv[i], "nomask")) {
         enable_mask = 0;
       }
+      if (!strcmp(argv[i], "align")) {
+        align = 1;
+      }
     }
   }
+
+  image_bytes = image[0]->h * ((image[0]->w/7)+(max_shift/7));
 
   if (image[0]->w % 7 != 0) {
     printf("Image width %d is not a multiple of 7\n", image[0]->w);
@@ -159,7 +180,7 @@ int main(int argc, char *argv[]) {
   }
   fprintf(fp, "%s_WIDTH  = %d\n", sprite_name, image[0]->w);
   fprintf(fp, "%s_HEIGHT = %d\n", sprite_name, image[0]->h);
-  fprintf(fp, "%s_BYTES  = %d\n", sprite_name, image[0]->h * ((image[0]->w/7)+(max_shift/7)));
+  fprintf(fp, "%s_BYTES  = %d\n", sprite_name, image_bytes);
   fprintf(fp, "%s_BPLINE = %d\n", sprite_name, (image[0]->w/7) + 1 - (max_shift == 1 ? 1 : 0));
   fprintf(fp, "%s_MIN_X  = 1\n", sprite_name);
   fprintf(fp, "%s_MAX_X  = %s-(%s_WIDTH)\n", sprite_name, argv[2], sprite_name);
@@ -225,6 +246,7 @@ int main(int argc, char *argv[]) {
       }
     }
 
+    emit_align(fp, image_bytes);
     fprintf(fp, ".proc %s_x%d\n", sprite_name, shift);
     for (y = 0; y < image[shift]->h; y++) {
       fprintf(fp, "         .byte ");
@@ -243,6 +265,7 @@ int main(int argc, char *argv[]) {
     fprintf(fp, ".endproc\n");
 
     if (!enable_big_draw && enable_mask) {
+      emit_align(fp, image_bytes);
       fprintf(fp, ".proc %s_mask_x%d\n", sprite_name, shift);
       for (y = 0; y < image[shift]->h; y++) {
         fprintf(fp, "         .byte ");

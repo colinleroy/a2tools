@@ -13,7 +13,7 @@
 ; You should have received a copy of the GNU General Public License
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-        .export     _init_mouse
+        .export     _init_mouse, _read_mouse
         .export     vbl_ready
 
         .export     _mouse_wait_vbl
@@ -395,14 +395,25 @@ mouse_irq:
         clc                       ; Interrupt not handled
 done:   rts
 
-:       php
+:       ; Signal the main loop
+        inc     vbl_ready
+        ; And mouse_read
+        inc     readable
+        sec                     ; Interrupt handled
+        rts
+
+_read_mouse:
+        lda     readable
+        bne     :+
+        rts
+
+:       lda     #0
+        sta     readable
+        php
         sei
         ldx     #READMOUSE
         jsr     firmware
 
-        ; Get status
-        ldy     slot
-        lda     status,y
         ; Bit 7 6 5 4 3 2 1 0
             ; | | | | | | | |
             ; | | | | | | | \--- Previously, button 1 was up (0) or down (1)
@@ -415,6 +426,8 @@ done:   rts
             ; \----------------- Currently, button 0 is up (0) or down (1)
 
         ; Extract button down values
+        ldy     slot
+        lda     status,y
         asl                     ;  C = Button 0 is currently down
         and     #%00100000      ; !Z = Button 1 is currently down
 
@@ -465,8 +478,6 @@ y_double:
         lda     mouse_y           ; Update prev_y
         sta     prev_y
 
-
-
         ; Update the ringbuf index
         inx
         cpx     #RINGBUF_SIZE
@@ -485,26 +496,18 @@ y_double:
         sbc     y_ring_buf,x
         sta     mouse_dy
 
-        ; Signal the main loop
-        inc     vbl_ready
         plp                     ; Reenable interrupts
-        sec                     ; Interrupt handled
-mouse_irq_done:
         rts
 
 
-.proc waste_3400
-        lda     hz              ; Shorten window at 50Hz to catch
-        cmp     #60             ; sync bugs on my own hardware
-        bne     :+
-        rts
-:
-        ldy     #3
-:       ldx     #226
+.proc waste_3250
+        ldy     #4
+:       ldx     #161
 :       dex                         ; 2
         bne     :-                  ; 5
         dey
         bne     :--
+waste_end:
         rts
 .endproc
 
@@ -514,11 +517,15 @@ mouse_irq_done:
 :       lda     vbl_ready
         beq     :-
 
-        jsr     waste_3400
+        lda     hz              ; Shorten window at 50Hz to catch
+        cmp     #60             ; sync bugs on my own hardware
+        bne     :+
         rts
+:       jmp     waste_3250
 .endproc
 
 .proc _mouse_check_button
+        jsr     _read_mouse
         lda     mouse_b
         beq     :+
         sec
@@ -544,3 +551,4 @@ mouse_dx:        .res 1
 mouse_dy:        .res 1
 playbox:         .res 4*2
 slot:            .res 1
+readable:        .res 1

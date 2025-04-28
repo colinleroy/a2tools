@@ -13,7 +13,7 @@
         .import     my_score, their_score
 
         .import     mouse_x, mouse_y
-        .import     _check_keyboard
+        .import     _check_keyboard, _read_mouse
 
         .import     _print_string, _read_string, _str_input
         .import     _print_char, _print_number, bcd_input
@@ -137,12 +137,14 @@ show_champion:
 ; Loop waiting for input
 wait_input:
         jsr     _mouse_wait_vbl   ; Avoid flickering
+        jsr     clear_pointer
+        jsr     draw_pointer
+
+        jsr     _read_mouse
         lda     mouse_x
         sta     pointer_x
         lda     mouse_y
         sta     pointer_y
-        jsr     clear_pointer
-        jsr     draw_pointer
    
         ; Check for key
         jsr     _check_keyboard

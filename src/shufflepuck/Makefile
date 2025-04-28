@@ -173,6 +173,7 @@ sounds = \
 # Order is important so that things are linked in the expected order
 # in the various segments, and things needing to be aligned are aligned
 shflpuck_SOURCES := \
+	$(SRC_DIR)/code/buffers.s \
 	play_sound.gen.s \
 	$(opponents_code) \
 	$(serve_sounds) \
@@ -187,7 +188,6 @@ shflpuck_SOURCES := \
 	$(SRC_DIR)/code/draw_sprite.s \
 	$(SRC_DIR)/code/draw_score.s \
 	$(SRC_DIR)/code/game_loop.s \
-	$(SRC_DIR)/code/buffers.s \
 	$(SRC_DIR)/code/load_data.s \
 	$(SRC_DIR)/code/sprites.s \
 	$(SRC_DIR)/code/helpers.s \

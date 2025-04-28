@@ -44,6 +44,8 @@
         .import     my_score, their_score
         .import     _draw_score_update
 
+        .import     _read_mouse
+
         .import     x_shift, x_factor, y_factor
 
         .import     umul8x8r16, _platform_msleep, _rand
@@ -170,12 +172,10 @@ draw:
         ; And draw in the correct order
         jsr     draw_puck
         jsr     draw_my_pusher
-        jmp     out
+        rts
 
 :       jsr     draw_my_pusher
         jsr     draw_puck
-
-out:
         rts
 .endproc
 
@@ -296,6 +296,7 @@ out:
 
 .proc _move_my_pusher
         ; Directly translate mouse coordinates to pusher coordinates
+        jsr     _read_mouse
         ldy     mouse_y
         sty     my_pusher_y
         ldx     mouse_x

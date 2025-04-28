@@ -27,12 +27,17 @@
 
 .bss
 
-their_pusher_bgbackup:  .res their_pusher4_BYTES
-puck_bgbackup:          .res puck0_BYTES
-hand_bgbackup:          .res hand_BYTES
-
+.align $100
 _hgr_hi:                .res 192
-_hgr_low:               .res 192
+puck_bgbackup:          .res puck0_BYTES
 
+.align $100
+_hgr_low:               .res 192
+their_pusher_bgbackup:  .res their_pusher4_BYTES
+
+.align $100
 _div7_table:            .res 256
 _mod7_table:            .res 256
+
+.align $100
+hand_bgbackup:          .res hand_BYTES

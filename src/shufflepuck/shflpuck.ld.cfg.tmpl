@@ -52,7 +52,7 @@ SEGMENTS {
     INIT:     load = MAIN,           type = rw;
     ONCE:     load = MAIN,           type = ro,  define   = yes;
     SPLC:     load = SPLC,           type = ro,  align = $100;
-    BSS:      load = BSS,            type = bss, define   = yes;
+    BSS:      load = BSS,            type = bss, align = $100, define   = yes;
 
     splash:   load = LOWCODE,        type = ro, start = $2000;
     #IMAGES
