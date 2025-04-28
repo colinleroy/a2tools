@@ -502,7 +502,7 @@ y_double:
 
 .proc waste_3250
         ldy     #4
-:       ldx     #161
+:       ldx     #161                ; 812 cycles per Y
 :       dex                         ; 2
         bne     :-                  ; 5
         dey
@@ -519,9 +519,10 @@ waste_end:
 
         lda     hz              ; Shorten window at 50Hz to catch
         cmp     #60             ; sync bugs on my own hardware
-        bne     :+
+        bne     :+              ; According to testing, we have
+        rts                     ; ~1600 extra cycles before it starts
+:       jsr     waste_3250      ; flickering on real hardware.
         rts
-:       jmp     waste_3250
 .endproc
 
 .proc _mouse_check_button
