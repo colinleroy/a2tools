@@ -18,6 +18,7 @@
         .export     _keyboard_update_ref_x
         .export     _keyboard_check_fire
         .export     _keyboard_calibrate_hz
+        .export     _read_key
         .export     keyboard_level_change
 
         .import     prev_x, ref_x, mouse_x
@@ -28,6 +29,16 @@
         .include    "sprite.inc"
         .include    "plane_coords.inc"
         .include    "constants.inc"
+
+.segment "CODE"
+
+.proc _read_key
+        lda     KBD
+        bpl     _read_key
+        bit     KBDSTRB
+        and     #$7F
+        rts
+.endproc
 
 .segment "LOWCODE"
 
@@ -96,13 +107,10 @@
 
         ; It is, now get key and go to level
         bit     KBDSTRB
-:       lda     KBD
-        bpl     :-
-        and     #$7F
+        jsr     _read_key
         sec
         sbc     #'a'
         sta     keyboard_level_change
-        bit     KBDSTRB
         jmp     kbd_out
 
 .ifdef UNKILLABLE
