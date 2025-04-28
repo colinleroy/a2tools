@@ -37,7 +37,7 @@
         .import   _hi_scores_screen
         .import   _cputsxy, _cutoa, _cputc
 
-        .import   _mouse_check_fire
+        .import   _mouse_check_fire, _read_mouse
         .import   pushax
         .import   _bzero
 
@@ -220,6 +220,7 @@ out:
         bit     KBDSTRB
 :       lda     KBD               ; Wait for key or click
         bmi     kbd_in
+        jsr     _read_mouse
         jsr     _mouse_check_fire
         bcc     :-
         lda     #$00

@@ -175,10 +175,10 @@ $(sprites_pixel_perfect): %.pixel_perfect.gen.s: $(SRC_DIR)/assets/sprites/%.png
 
 $(sprites_unperfect): %.unperfect.gen.s: $(SRC_DIR)/assets/sprites/%.png
 %.unperfect.gen.s: $(SRC_DIR)/assets/sprites/%.png gen_sprite
-	./gen_sprite $< 255 unperfect
+	./gen_sprite $< 255 unperfect DATA align
 
 plane.pixel_perfect.gen.s: $(SRC_DIR)/assets/sprites/plane.png gen_sprite
-	./gen_sprite $< 280 pixel_perfect
+	./gen_sprite $< 280 pixel_perfect DATA align
 
 font.gen.s: $(SRC_DIR)/assets/fonts/font.png gen_font
 	./gen_font $< 280

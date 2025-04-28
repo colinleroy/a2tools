@@ -40,7 +40,7 @@ SEGMENTS {
     INIT:     load = MAIN,           type = rw;
     ONCE:     load = MAIN,           type = ro,  define   = yes;
     LC:       load = MAIN, run = LC, type = ro,  optional = yes;
-    BSS:      load = BSS,            type = bss, define   = yes;
+    BSS:      load = BSS,            type = bss, align = $100, define   = yes;
 
     splash:    load = splash,        type = ro;
 
