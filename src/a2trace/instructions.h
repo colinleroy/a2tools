@@ -37,6 +37,8 @@ extern int PRODOS_IRQ_ADDR;
 #define FLAG_Z 0b00000010
 #define FLAG_C 0b00000001
 
+extern int log_stack_to_stdout;
+
 void allocate_trace_counters(void);
 void start_tracing(int cpu);
 int update_call_counters(int cpu, int op_addr, const char *instr, int param_addr, int cycle_count, int line_num);

@@ -8,6 +8,8 @@
 int ROM_IRQ_ADDR[] = {0xC803, 0xC074 };
 int PRODOS_IRQ_ADDR = 0xBFEB;
 
+int log_stack_to_stdout = 0;
+
 char *mem_str[3] = {
   "RAM",
   "ROM",
@@ -713,6 +715,8 @@ static void end_call_info(int op_addr, int line_num, const char *from) {
     if (verbose) {
       tabulate_stack();
       fprintf(stderr, "warning - stack imbalance (%d)\n", my_info->stack_bytes_pushed);
+    } else if (log_stack_to_stdout) {
+      printf("                                                                 ; *WARNING - stack imbalance (%d)\n", my_info->stack_bytes_pushed);
     }
   }
 

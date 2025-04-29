@@ -177,6 +177,10 @@ skip_to_start:
 
     buf_len = strlen(buf);
 
+    if (!do_callgrind) {
+      log_stack_to_stdout = 1;
+    }
+
     if (buf_len == 0) {
       /* Wait for new data if tailing */
       if (tail) {
@@ -243,8 +247,9 @@ skip_to_start:
        */
       if (!found_start_addr) {
         if (start_addr == 0) {
+          dbg_symbol *sym = symbol_get_by_addr(cpu, op_addr, read_from, lc_bank);
           /* Autodetect */
-          if (op_addr == 0x803 || op_addr == 0x2000 || op_addr == 0x4000) {
+          if (sym && !strcmp(symbol_get_name(sym), "ID01")) {
             start_addr = op_addr;
             found_start_addr = 1;
             cur_line = 1;
@@ -456,17 +461,21 @@ try_gen:
       }
 
       int backtab = 0;
+
+      /* Profile if needed */
+      if (start_addr && found_start_addr &&
+          update_call_counters(cpu, op_addr, instr, param_addr, cycles, cur_line) < 0) {
+        if (do_callgrind) {
+          fprintf(stderr, "; Error popping call tree at trace line %d\n %s\n", cur_line, line_buf);
+        }
+      }
+
       /* Print the line as-is */
       if (print && !do_callgrind) {
         printf("%08d; A=%02X X=%02X Y=%02X; %s; %s", cur_line, a, x, y, print_flags(p), line_buf + op_idx);
         if (strlen(line_buf) > op_idx + 28) {
           backtab = op_idx + 29 - strlen(line_buf);
         }
-      }
-
-      /* Profile if needed */
-      if (do_callgrind && update_call_counters(cpu, op_addr, instr, param_addr, cycles, cur_line) < 0) {
-        fprintf(stderr, "; Error popping call tree at trace line %d\n %s\n", cur_line, line_buf);
       }
 
       /* Analyse instruction to follow memory banking */
