@@ -36,6 +36,9 @@
 #include "scroll.h"
 #include "math.h"
 
+#define DEBUG_PRINTF(...) do {} while (0)
+//#define DEBUG_PRINTF printf
+
 #define BUFSIZE 255
 static char *buf;
 static char translate_ln = 0;
@@ -136,6 +139,7 @@ static void do_vt100_ctrl(unsigned char way, char abs, char stkx, char stky) {
     case TERMTYPE:
       simple_serial_printf("\33[?1;0c"); /* VT100 */
       break;
+#ifdef __CC65__
     case CH_CURS_LEFT:
       cur_x = wherex();
       gotox(max(0, cur_x - x));
@@ -149,15 +153,14 @@ static void do_vt100_ctrl(unsigned char way, char abs, char stkx, char stky) {
       if (cur_y - x >= top_line) {
         gotoy(max(top_line, cur_y - x));
       } else {
-#ifdef __CC65__
         scrolldown_n(x);
-#endif
       }
       break;
     case CH_CURS_DOWN:
       cur_y = wherey();
       gotoy(min(btm_line - 1, cur_y + x));
       break;
+#endif
     case SCROLL_WINDOW:
       top_line = x - 1;
       btm_line = y;
@@ -349,6 +352,7 @@ curs_down:
 #define TELNET_OPT_RFLOW  '\41' /* 33 */
 #define TELNET_OPT_LMODE  '\42' /* 34 */
 #define TELNET_OPT_ENVVAR '\44' /* 36 */
+#define TELNET_OPT_AUTH   '\45' /* 37 */
 
 #define TELNET_SEND '\1'
 #define TELNET_IS '\0'
@@ -360,9 +364,11 @@ static void telnet_reply(char resp_code, char opt) {
 }
 
 static void telnet_subneg(char opt) {
-  /* unsigned char one = */ simple_serial_getc();
-  /* unsigned char iac = */ simple_serial_getc();
-  /* unsigned char sne = */ simple_serial_getc();
+   /* unsigned char one = */ simple_serial_getc();
+   /* unsigned char iac = */ simple_serial_getc();
+   /* unsigned char sne = */ simple_serial_getc();
+
+  DEBUG_PRINTF("subneg %d, %d %d\n", one, iac, sne);
 
   switch(opt) {
     case TELNET_OPT_TERMT:
@@ -409,27 +415,38 @@ static int handle_telnet_command(void) {
   type = simple_serial_getc();
   opt = simple_serial_getc();
 
+  DEBUG_PRINTF("telnet command %u opt %u\n", (unsigned char)type, (unsigned char)opt);
+
   if (type == TELNET_DO) {
     if (opt == TELNET_OPT_TERMT
      || opt == TELNET_OPT_WSIZE
      || opt == TELNET_OPT_TSPEED) {
+      DEBUG_PRINTF("telnet DO opt %d\n", opt);
       telnet_reply(TELNET_WILL, opt);
     } else {
+      DEBUG_PRINTF("telnet DO opt %d, WONT\n", opt);
       telnet_reply(TELNET_WONT, opt);
     }
-  } else if (type == TELNET_SB) {
-    telnet_subneg(opt);
-
-    /* we can turn echo off and ask remote
-     * to turn echo on */
-    do_echo = 0;
+  } else if (type == TELNET_WILL) {
+      if (opt == TELNET_OPT_ECHO) {
+        DEBUG_PRINTF("telnet WILL opt ECHO, DO\n");
+        /* we can turn echo off and ask remote
+         * to turn echo on */
+        telnet_reply(TELNET_DO, opt);
+        do_echo = 0;
 #ifndef __CC65__
-    static struct termios ttyf;
-    tcgetattr( STDIN_FILENO, &ttyf);
-    ttyf.c_lflag &= ~(ECHO);
-    tcsetattr( STDIN_FILENO, TCSANOW, &ttyf);
+        static struct termios ttyf;
+        tcgetattr( STDIN_FILENO, &ttyf);
+        ttyf.c_lflag &= ~(ECHO);
+        tcsetattr( STDIN_FILENO, TCSANOW, &ttyf);
 #endif
-
+      } else {
+        DEBUG_PRINTF("telnet WILL opt %d, DONT\n", opt);
+        telnet_reply(TELNET_DONT, opt);
+      }
+  } else if (type == TELNET_SB) {
+    DEBUG_PRINTF("telnet SB opt %d\n", opt);
+    telnet_subneg(opt);
   }
 
   return 0;
@@ -469,7 +486,11 @@ static void set_cursor(void) {
   if (curs_x == 255) {
     // curs_x = wherex();
     // curs_y = wherey();
+#ifdef __APPLE2ENH__
+    __asm__("lda "OURCH);
+#else
     __asm__("lda "CH);
+#endif
     __asm__("sta %v", curs_x);
     __asm__("lda "CV);
     __asm__("sta %v", curs_y);
@@ -482,7 +503,11 @@ static void set_cursor(void) {
      * cursor to trigger scrolling */
     // cputcxy(curs_x, curs_y, 0x7F);
     __asm__("lda %v", curs_x);
+#ifdef __APPLE2ENH__
+    __asm__("sta "OURCH);
+#else
     __asm__("sta "CH);
+#endif
     __asm__("lda %v", curs_y);
     __asm__("sta "CV);
     __asm__("jsr FVTABZ");
@@ -491,7 +516,11 @@ static void set_cursor(void) {
   } else if (cursor_blinker == 1501){
     // cputcxy(curs_x, curs_y, ch_at_curs);
     __asm__("lda %v", curs_x);
+#ifdef __APPLE2ENH__
+    __asm__("sta "OURCH);
+#else
     __asm__("sta "CH);
+#endif
     __asm__("lda %v", curs_y);
     __asm__("sta "CV);
     __asm__("jsr FVTABZ");
@@ -509,7 +538,7 @@ static void rm_cursor(void) {
     // cputcxy(curs_x, curs_y, ch_at_curs);
     // gotoxy(curs_x, curs_y);
     __asm__("lda %v", curs_x);
-    __asm__("sta "CH);
+    __asm__("sta "OURCH);
     __asm__("lda %v", curs_y);
     __asm__("sta "CV);
     __asm__("jsr FVTABZ");

@@ -28,6 +28,7 @@ CC65SOURCES := \
 GCCSOURCES := \
 	$(SRC_DIR)/../lib/serial/c/simple_serial.c \
 	$(SRC_DIR)/../lib/serial/c/simple_serial_io.c \
+	$(SRC_DIR)/../lib/serial/c/simple_serial_printf.c \
 	$(SRC_DIR)/../lib/surl/c/surl_core.c \
 	$(SRC_DIR)/../lib/c/scrollwindow.c \
 	$(SRC_DIR)/../lib/c/path_helper.c \

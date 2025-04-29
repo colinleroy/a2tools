@@ -110,36 +110,74 @@ dputdirect:
         .else
         jsr     putchardirect
         .endif
+
+        .ifdef __APPLE2ENH__
+        bit     RD80VID
+        bpl     inc40
+        inc     OURCH
+        lda     OURCH
+        bra     cmpw
+        .endif
+inc40:
         inc     CH              ; Bump to next column
         lda     CH
+cmpw:
         cmp     WNDWDTH
         bcs     :+
         rts
 
 :       jsr     dnewline
 left:
-        .ifdef  __APPLE2ENH__
-        stz     CH              ; Goto left edge of screen
-        .else
         lda     #$00
-        sta     CH
+        .ifdef  __APPLE2ENH__
+        bit     RD80VID
+        bpl     zero40
+        sta     OURCH
+        bra     out
         .endif
+zero40:
+        sta     CH
+out:
         rts
 
 backspace:
+        .ifdef  __APPLE2ENH__
+        bit     RD80VID
+        bpl     ld40
+        lda     OURCH
+        bra     chk
+        .endif
+ld40:
         lda     CH              ; are we at col 0
+chk:
         bne     decrh           ; no, we can decrement 
         ldy     CV              ; yes,
         cpy     WNDTOP          ; so are we at row 0
-        beq     :+              ; yes, do nothing
+        beq     bout            ; yes, do nothing
         dey                     ; no, decr row
         sty     CV              ; store it
         ldy     WNDWDTH         ; prepare CH for decr
-        sty     CH
-        lda     CV
+
+        .ifdef  __APPLE2ENH__
+        bit     RD80VID
+        bpl     stch
+        sty     OURCH
+        bra     upcv
+        .endif
+stch:   sty     CH
+upcv:   lda     CV
         jsr     FVTABZ
-decrh:  dec     CH
-:       rts
+
+decrh:
+        .ifdef  __APPLE2ENH__
+        bit     RD80VID
+        bpl     decch
+        dec     OURCH
+        rts
+        .endif
+decch:
+        dec     CH
+bout:   rts
 
 dnewline:
         inc     CV              ; Bump to next line
