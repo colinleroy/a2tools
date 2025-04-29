@@ -185,6 +185,9 @@ struct _function_calls {
   function_calls **callees;
   /* Number of functions called by this one */
   int n_callees;
+
+  /* Stack state */
+  int stack_bytes_pushed;
 };
 
 /* The current call tree */
@@ -661,6 +664,9 @@ static void start_call_info(int cpu, int addr, int mem, int lc, int line_num) {
   my_info = get_function_calls_for_addr(addr);
   /* FIXME shouldn't the stats structs be indexed by addr / mem / lc... */
   my_info->func_symbol = symbol_get_by_addr(cpu, addr, mem, lc);
+
+  my_info->stack_bytes_pushed = 2; /* return address */
+
   if (my_info->func_symbol == NULL) {
     fprintf(stderr, "No symbol found for 0x%04X, %d, %d\n", addr, mem, lc);
     exit(1);
@@ -699,11 +705,19 @@ static void end_call_info(int op_addr, int line_num, const char *from) {
     exit(1);
   }
 
+  /* Get stats */
+  my_info = tree_functions[tree_depth-1];
+
+  my_info->stack_bytes_pushed -= 2; /* pop return address */
+  if (my_info->stack_bytes_pushed > 0) {
+    if (verbose) {
+      tabulate_stack();
+      fprintf(stderr, "warning - stack imbalance (%d)\n", my_info->stack_bytes_pushed);
+    }
+  }
+
   /* Go back up */
   tree_depth--;
-
-  /* Get stats */
-  my_info = tree_functions[tree_depth];
 
   /* Log */
   if (verbose) {
@@ -731,6 +745,8 @@ static void end_call_info(int op_addr, int line_num, const char *from) {
 int update_call_counters(int cpu, int op_addr, const char *instr, int param_addr, int cycle_count, int line_num) {
   int dest = RAM, lc = 0;
 
+  function_calls *my_info = tree_functions[tree_depth - 1];
+
   if (cpu == CPU_6502) {
     /* Set memory and LC bank according to the address */
     if (param_addr < 0xD000 || param_addr > 0xDFFF) {
@@ -745,6 +761,12 @@ int update_call_counters(int cpu, int op_addr, const char *instr, int param_addr
   /* Count the instruction */
   if (count_instruction(instr, cycle_count) != 0) {
     return -1;
+  }
+
+  if (!strncmp(instr, "ph", 2)) {
+    my_info->stack_bytes_pushed++;
+  } else if (!strncmp(instr, "pl", 2)) {
+    my_info->stack_bytes_pushed--;
   }
 
   /* Are we entering an IRQ handler ? */

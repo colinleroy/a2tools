@@ -466,7 +466,7 @@ try_gen:
 
       /* Profile if needed */
       if (do_callgrind && update_call_counters(cpu, op_addr, instr, param_addr, cycles, cur_line) < 0) {
-        fprintf(stderr, "; Error popping call tree at trace line %d\n", cur_line);
+        fprintf(stderr, "; Error popping call tree at trace line %d\n %s\n", cur_line, line_buf);
       }
 
       /* Analyse instruction to follow memory banking */
