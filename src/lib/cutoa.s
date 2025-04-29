@@ -17,6 +17,4 @@ _cutoa:
 
         lda     #<ntoabuf
         ldx     #>ntoabuf
-        jsr     _cputs
-out:
-        rts
+        jmp     _cputs

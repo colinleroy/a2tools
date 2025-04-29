@@ -22,10 +22,15 @@
         .export   _load_hall_of_fame, _load_scores, _save_scores
         .export   _init_text_before_decompress, _cache_working
         .export   _load_hgr_mono_file, hgr_mono_file
+        .export   _print_error, _print_load_error
 
         .import   _open, _read, _write, _close, _memmove, _unlink
         .import   pushax, popax, _text_mono40, _memset
         .import   __filetype, __auxtype
+
+        .import   _strout
+        .import   _read_key
+        .import   _exit
 
         .import   __LOWCODE_START__, __LOWCODE_SIZE__
         .import   __SPLC_START__, __SPLC_SIZE__
@@ -44,6 +49,26 @@
 
 .segment "CODE"
 
+.proc _print_load_error
+        lda     #<load_err_str
+        ldx     #>load_err_str
+        jsr     _strout
+
+        lda     filename
+        ldx     filename+1
+        ; Fallthrough to _print_error
+.endproc
+
+.proc _print_error
+        jsr     _strout
+
+        lda     lowcode_ok
+        beq     :+
+        jsr     _text_mono40
+:       jsr     _read_key
+        jmp     _exit
+.endproc
+
 .proc _load_lowcode
         jsr     set_compressed_buf_dynseg
         lda     #<__LOWCODE_START__
@@ -55,7 +80,10 @@
         lda     #<lowcode_name
         ldx     #>lowcode_name
 
-        jmp     read_compressed
+        jsr     read_compressed
+        bcs     :+
+        inc     lowcode_ok
+:       rts
 .endproc
 
 .proc _load_hgr_mono_file
@@ -461,9 +489,7 @@ finish_decompress:
         bcs     no_cache
         rts
 no_cache:
-        jsr     load_table_hgr
-        sec
-        rts
+        jmp     load_table_hgr
 .endproc
 
 .proc set_bar_backup_params
@@ -487,9 +513,7 @@ no_cache:
         bcs     no_cache
         rts
 no_cache:
-        jsr     load_bar_hgr
-        sec
-        rts
+        jmp     load_bar_hgr
 .endproc
 
 .proc set_bar_code_backup_params
@@ -516,9 +540,7 @@ no_cache:
         bcs     no_cache
         rts
 no_cache:
-        jsr     _load_bar_code
-        sec
-        rts
+        jmp     _load_bar_code
 .endproc
 
 .proc set_barsnd_backup_params
@@ -545,9 +567,7 @@ no_cache:
         bcs     no_cache
         rts
 no_cache:
-        jsr     _load_barsnd
-        sec
-        rts
+        jmp     _load_barsnd
 .endproc
 
 .proc unlink_cached_files
@@ -576,6 +596,7 @@ do_uncompress:        .res 1
 io_mode:              .res 1
 compressed_buf_start: .res 2
 compressed_buf_end:   .res 2
+lowcode_ok:           .res 0
 
         .data
 
@@ -593,7 +614,8 @@ bar_code_backup_name:.asciiz "/RAM/BAR.CODE"
 barsnd_backup_name:  .asciiz "/RAM/BAR.SND"
 opponent_name_tmpl:  .asciiz "OPPONENT.X"
 hgr_fgbg:            .asciiz "/RAM/FGBG"
-hgr_mono_file:        .byte 0
+load_err_str:        .asciiz "COULD NOT LOAD "
+hgr_mono_file:       .byte 0
 
 .segment "bar_code"
 ; --- only accessible from the bar code segment

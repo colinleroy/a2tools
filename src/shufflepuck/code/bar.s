@@ -16,12 +16,12 @@
         .import     _check_keyboard, _read_mouse
 
         .import     _print_string, _read_string, _str_input
-        .import     _print_char, _print_number, bcd_input
+        .import     _print_char, _print_number
 
         .import     _strlen
         .import     _exit, pushax, _memmove, _strcpy, _bzero
 
-        .importzp   ptr2, tmp1
+        .importzp   tmp1, _zp6
 
         .include    "apple2.inc"
         .include    "sprite.inc"
@@ -63,7 +63,11 @@ view_str:     .asciiz "VIEW ROSTER"
 
 ; Copy first string from scores buffer to the champion string
 .proc set_champion
-        lda     #<champion_str
+        lda     _scores_buffer+2  ; Don't copy if empty
+        bne     :+
+        rts
+
+:       lda     #<champion_str
         ldx     #>champion_str
         jsr     pushax
         lda     #<(_scores_buffer+2)
@@ -384,8 +388,8 @@ SCORE_LINE_Y_TOP   = 48-(font_HEIGHT+2)
 
         lda     #<_scores_buffer    ; Set the buffer walker
         ldx     #>_scores_buffer
-        sta     ptr2
-        stx     ptr2+1
+        sta     _zp6
+        stx     _zp6+1
 
         lda     #$00                ; Store the current index
         sta     cur_print
@@ -416,26 +420,25 @@ next_score:
 print_one_score:
         ; My score
         ldy     #$00
-        sty     bcd_input+1
-        lda     (ptr2),y
+        sty     tmp1
+        lda     (_zp6),y
         beq     out               ; If winner score is 0, we're done
         ldx     cur_x_score
         ldy     cur_y
         jsr     _print_number     ; Print it
 
         lda     #'/'              ; Separator
-        ldx     cur_x_score
-        inx
-        inx
         jsr     _print_char
 
-        ldy     #$01              ; Biff's score
-        lda     (ptr2),y
+        ldy     #$00
+        sty     tmp1
+        iny                       ; Biff's score
+        lda     (_zp6),y
         ldy     cur_y
         jsr     _print_number
 
-        lda     ptr2              ; Player name
-        ldx     ptr2+1
+        lda     _zp6              ; Player name
+        ldx     _zp6+1
         clc
         adc     #2                ; Skip the two score bytes
         bcc     :+
@@ -445,12 +448,12 @@ print_one_score:
         ldy     cur_y
         jsr     _print_string     ; Print the name
 
-        lda     ptr2              ; Push walker to next line
+        lda     _zp6              ; Push walker to next line
         clc
         adc     #<.sizeof(SCORE_LINE)
         bcc     :+
-        inc     ptr2+1
-:       sta     ptr2
+        inc     _zp6+1
+:       sta     _zp6
 
         inc     cur_print         ; Increment index
         lda     cur_print
@@ -462,14 +465,21 @@ out:    rts
 ; Load the scores array from disk if not already done
 .proc _bar_load_scores
         lda     _scores_loaded
-        bne     :+
+        bne     out_done
         lda     #<_scores_buffer
         ldx     #>_scores_buffer
         jsr     _load_scores
-        bcs     :+
-        lda     #1
+        bcs     init_scores
+out_done:
+        lda     #1                ; Scores loaded
         sta     _scores_loaded
-:       rts
+        rts
+init_scores:
+        lda     #<_scores_buffer  ; Save an empty file
+        ldx     #>_scores_buffer
+        jsr     _save_scores
+        bcc     out_done
+        rts
 .endproc
 
 ; Load scores if needed, and print Champion's name

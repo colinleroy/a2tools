@@ -4,12 +4,12 @@
         .export    _read_string
         .export    _str_input
 
-        .import   do_bin2dec_16bit, bcd_input, bcd_result
+        .import    _num_to_buf
 
         .import    _font, _read_key
         .import    _hgr_hi, _hgr_low
 
-        .import    popptr1
+        .import    popptr1, pushax
         .importzp  ptr1, tmp1, tmp2, tmp3
 
         .include   "apple2.inc"
@@ -57,54 +57,23 @@ scr:
         rts
 .endproc
 
-; A: low byte of number, high byte in bcd_input+1
+; tmp1: number's high byte
+; A: number's low byte
 ; X: X coordinate
 ; Y: Y coordinate (bottom)
-; Return with updated X
+; Returns with updated X
 .proc _print_number
-        sta     bcd_input
-        stx     dest_x+1
-        sty     blit_digit+1
-        jsr     do_bin2dec_16bit
+        stx     x_coord+1
+        sty     y_coord+1
 
-        lda     #$00
-        sta     tmp1              ; To check whether we printed a number
-        ldx     #$00
-        stx     cur_char+1
-char:
-        lda     bcd_result,x
-        bne     blit_digit        ; It's not 0 print it
-
-        ; Is it a leading zero?
-        ldy     tmp1
-        bne     blit_digit        ; No
-
-        ; If so, skip it without advancing cursor
-        inc     cur_char+1
-        bne     cur_char
-
-blit_digit:
+        ldx     tmp1
+        jsr     _num_to_buf
+        jsr     pushax
+x_coord:
+        ldx     #$FF
+y_coord:
         ldy     #$FF
-dest_x:
-        ldx     #$FF
-        cpx     #40               ; Don't blit out of screen
-        bcs     out
-        clc
-        adc     #'0'
-        jsr     _print_char
-        inc     tmp1              ; Note we printed a number
-        inc     dest_x+1
-        inc     cur_char+1
-cur_char:
-        ldx     #$FF
-        cpx     #8                ; .sizeof(bcd_result)
-        bcc     char
-
-        ; Did we print anything? If not it's a 0
-        lda     tmp1
-        beq     blit_digit
-out:
-        rts
+        jmp     _print_string
 .endproc
 
 ; TOS: Address of the buffer to print

@@ -26,7 +26,7 @@
 
         .import     _text_mono40, _hgr_force_mono40
 
-        .import     _cputc, _cputs, _gotoxy, _gotox, _gotoy, _clrscr, _cutoa
+        .import     _cout, _strout, _gotoxy, _gotox, _gotoy, _home, _numout
 
         .import     _big_draw_sprite_i                              ; CHANGE A
         .import     _big_draw_name_i                                ; CHANGE A
@@ -199,16 +199,16 @@ str_low:
         lda     #$FF
 str_high:
         ldx     #$FF
-        jsr     _cputs
+        jsr     _strout
 
 get_parameter:
         lda     $FFFF
         sta     tmp_param
         ldx     #0
-        jsr     _cutoa
+        jsr     _numout
 
         lda     #' '
-        jsr     _cputc
+        jsr     _cout
 
         ldx     tmp_param
         jsr     _read_key
@@ -236,7 +236,7 @@ done:
 .endproc
 
 .proc configure_dc3
-        jsr     _clrscr
+        jsr     _home
         jsr     _text_mono40
 
         lda     #13
@@ -246,7 +246,7 @@ done:
         jsr     _gotoxy
         lda     #<configure_str
         ldx     #>configure_str
-        jsr     _cputs
+        jsr     _strout
 
         lda     #0
         jsr     pusha
@@ -254,7 +254,7 @@ done:
         jsr     _gotoxy
         lda     #<help_str
         ldx     #>help_str
-        jsr     _cputs
+        jsr     _strout
 
         lda     #3
         jsr     _gotoy
@@ -285,7 +285,7 @@ done:
         ldx     #>max_hit_str
         jsr     configure_parameter
 
-        jsr     _clrscr
+        jsr     _home
         jmp     _hgr_force_mono40
 .endproc
 

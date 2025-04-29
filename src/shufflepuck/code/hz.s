@@ -1,5 +1,20 @@
+; Copyright (C) 2025 Colin Leroy-Mira <colin@colino.net>
+;
+; This program is free software; you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation; either version 3 of the License, or
+; (at your option) any later version.
+;
+; This program is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+;
+; You should have received a copy of the GNU General Public License
+; along with this program. If not, see <http://www.gnu.org/licenses/>.
+
         .export     hz
-        .import     _get_tv, _read_key
+        .import     _get_tv, _home, _strout, _read_key
 
         .importzp   ptr1
 
@@ -23,36 +38,25 @@ hz_vals:
         rts
 
         ; We don't know. Let's ask.
-:       bit     $C082
-        jsr     $FC58
+:       jsr     _home
         lda     #<iip_str
         ldx     #>iip_str
-        sta     ptr1
-        stx     ptr1+1
+        jsr     _strout
 
-        ldy     #$00
-:       lda     (ptr1),y
-        beq     read_kbd
-        ora     #$80
-        jsr     $FDED
-        iny
-        bne     :-
-
-read_kbd:
-        jsr     _read_key
+:       jsr     _read_key
         ldx     #60
 
         cmp     #'1'
         beq     set60
         cmp     #'2'
-        bne     read_kbd
+        bne     :-
         ldx     #50
 set60:  stx     hz
         bit     $C080
         rts
 .endproc
 
-iip_str:        .asciiz "HIT 1 FOR US (60HZ), 2 FOR EURO (50HZ)"
+iip_str:        .byte "HIT 1 FOR US (60HZ), 2 FOR EURO (50HZ)", $0D, $00
 
 .segment "DATA"
 ; The only thing remaining from that code after init

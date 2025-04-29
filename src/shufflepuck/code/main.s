@@ -39,11 +39,13 @@
 
         .import   __OPPONENT_START__
 
+        .import   _print_load_error
         .import   _backup_table, _restore_table
         .import   _load_opponent
         .import   _restore_bar
         .import   _restore_bar_code
         .import   _restore_barsnd
+        .import   _cache_working
         .import   _play_bar
         .import   _bar_update_champion
 
@@ -55,7 +57,7 @@
         .import   _build_hgr_tables
         .import   _init_caches
 
-        .import   _text_mono40, _clrscr, _exit
+        .import   _text_mono40, _home, _exit
 
         .import   ___randomize
 
@@ -97,6 +99,10 @@
 .endproc
 
 .proc _real_main
+        lda     _cache_working
+        bne     play_barsnd       ; First arrival in _real_main,
+                                  ; no need to restore sound, it's the
+                                  ; last loaded thing.
 new_opponent:
         lda     in_tournament     ; Are we in a tournament?
         beq     to_bar
@@ -112,19 +118,26 @@ new_opponent:
         sta     in_tournament
 
 to_bar:
-
         ; Entering the bar, clear screen, reload the intro sound, play it
-        jsr     _clrscr
+        jsr     _home
         jsr     _text_mono40
         jsr     _restore_barsnd
+        bcs     :+
+
+play_barsnd:
         ldy     #0
         jsr     _play_bar
 
         ; Reload the bar image and code
-        jsr     _restore_bar
-        jsr     _restore_bar_code
+:       jsr     _restore_bar
+        bcc     :+
+        jmp     _print_load_error
 
-        ; Display the current champion
+:       jsr     _restore_bar_code
+        bcc     :+
+        jmp     _print_load_error
+
+:       ; Display the current champion
         jsr     _bar_update_champion
 
         ; Reinit HGR
@@ -177,7 +190,10 @@ new_game:
 
         ; Restore the table image,
         jsr     _restore_table
-        ; Draw the new opponent on it,
+        bcc     :+
+        jmp     _print_load_error
+
+:       ; Draw the new opponent on it,
         jsr     _draw_opponent_parts
         ; And backup that.
         jsr     _backup_table

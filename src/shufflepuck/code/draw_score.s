@@ -41,52 +41,80 @@ _score_x_start:
         .byte 68, 70, 72, 74, 67
         .byte 80, 82, 84, 86, 79
 
-.segment "CODE"
-
-.proc clear_hand
-        lda     #<hand_data
-        ldx     #>hand_data
-        jsr     _setup_sprite_pointer_for_clear
-        jmp     _clear_sprite
-.endproc
-
-.proc get_hand_x
-        ldy     cur_score_draw
-        dey
-        lda     _score_x_start,y
-        rts
-.endproc
-
-; Y: the current point
-; Return with carry clear if diagonal
-.proc is_point_diagonal
-        cpy     #4
-        beq     diagonal
-        cpy     #9
-        beq     diagonal
-        cpy     #14
-        beq     diagonal
-
-        sec
-        rts
-diagonal:
-        clc
-        rts
-.endproc
+.segment "LOWCODE"
 
 THEIR_SCORE_Y_OFFSET = 14
 HAND_TOP = 8
 
-.proc get_hand_y
-        lda     #(HAND_TOP+hand_HEIGHT-SCORE_VERTICAL_START_Y+1)
-        ldy     cur_score_draw
-        dey
-        jsr     is_point_diagonal
-        bcs     :+
-        lda     #(HAND_TOP+hand_HEIGHT-SCORE_DIAGONAL_START_Y+1)
-        sec
-:       sbc     hand_y_offset
+; We use plot instead of HLINE because it
+; renders more cleanly
+.proc draw_score_line
+:       ldx     ox
+        lda     oy
+        jsr     plot_dot
+
+        dec     oy
+        lda     ox
+        clc
+        adc     x_offset
+        sta     ox
+
+        dec     len
+        bne     :-
         rts
+.endproc
+
+.proc draw_one_player_scores
+        sta     next_line+1
+        stx     y_offset+1
+
+        lda     #0
+        sta     cur_line
+
+next_line:
+        lda     #$FF
+        cmp     cur_line
+        beq     out
+
+        ldy     cur_line
+        lda     _score_x_start,y
+        sta     ox
+
+        jsr     is_point_diagonal
+        bcc     diagonal
+vertical:
+        ldx     #SCORE_VERTICAL_LINE_LEN
+        ldy     #SCORE_VERTICAL_X_OFFSET
+        lda     #SCORE_VERTICAL_START_Y
+        clc
+        jmp     y_offset
+diagonal:
+        ldx     #SCORE_DIAGONAL_LINE_LEN
+        ldy     #SCORE_DIAGONAL_X_OFFSET
+        lda     #SCORE_DIAGONAL_START_Y
+
+y_offset:
+        adc     #$FF
+        sta     oy
+        stx     len
+        sty     x_offset
+
+        jsr     draw_score_line
+        inc     cur_line
+        bne     next_line
+
+out:    rts
+.endproc
+
+.proc _draw_scores
+        jsr     _set_color_white
+        ldx     #0
+        lda     my_score
+        jsr     draw_one_player_scores
+
+        ldx     #THEIR_SCORE_Y_OFFSET
+        lda     their_score
+        jmp     draw_one_player_scores
 .endproc
 
 BEAM_PASS = 8 ;ms
@@ -181,7 +209,60 @@ stop_at:
         beq     out
         jmp     next_frame
 out:    rts
+.endproc
 
+.segment "CODE"
+
+.proc get_hand_y
+        lda     #(HAND_TOP+hand_HEIGHT-SCORE_VERTICAL_START_Y+1)
+        ldy     cur_score_draw
+        dey
+        jsr     is_point_diagonal
+        bcs     :+
+        lda     #(HAND_TOP+hand_HEIGHT-SCORE_DIAGONAL_START_Y+1)
+        sec
+:       sbc     hand_y_offset
+        rts
+.endproc
+
+.proc clear_hand
+        lda     #<hand_data
+        ldx     #>hand_data
+        jsr     _setup_sprite_pointer_for_clear
+        jmp     _clear_sprite
+.endproc
+
+.proc get_hand_x
+        ldy     cur_score_draw
+        dey
+        lda     _score_x_start,y
+        rts
+.endproc
+
+; Y: the current point
+; Return with carry clear if diagonal
+.proc is_point_diagonal
+        cpy     #4
+        beq     diagonal
+        cpy     #9
+        beq     diagonal
+        cpy     #14
+        beq     diagonal
+
+        sec
+        rts
+diagonal:
+        clc
+        rts
+.endproc
+
+; X,A: x-y coordinates
+.proc plot_dot
+        ldy     #0
+        bit     $C082
+        jsr     HPLOT
+        bit     $C080
+        rts
 .endproc
 
 .proc _draw_score_update
@@ -262,88 +343,6 @@ out:    rts
 
         ; Final clear
         jmp     clear_hand
-.endproc
-
-.segment "LOWCODE"
-
-; X,A: x-y coordinates
-.proc plot_dot
-        ldy     #0
-        bit     $C082
-        jsr     HPLOT
-        bit     $C080
-        rts
-.endproc
-
-; We use plot instead of HLINE because it
-; renders more cleanly
-.proc draw_score_line
-:       ldx     ox
-        lda     oy
-        jsr     plot_dot
-
-        dec     oy
-        lda     ox
-        clc
-        adc     x_offset
-        sta     ox
-
-        dec     len
-        bne     :-
-        rts
-.endproc
-
-.proc draw_one_player_scores
-        sta     next_line+1
-        stx     y_offset+1
-
-        lda     #0
-        sta     cur_line
-
-next_line:
-        lda     #$FF
-        cmp     cur_line
-        beq     out
-
-        ldy     cur_line
-        lda     _score_x_start,y
-        sta     ox
-
-        jsr     is_point_diagonal
-        bcc     diagonal
-vertical:
-        ldx     #SCORE_VERTICAL_LINE_LEN
-        ldy     #SCORE_VERTICAL_X_OFFSET
-        lda     #SCORE_VERTICAL_START_Y
-        clc
-        jmp     y_offset
-diagonal:
-        ldx     #SCORE_DIAGONAL_LINE_LEN
-        ldy     #SCORE_DIAGONAL_X_OFFSET
-        lda     #SCORE_DIAGONAL_START_Y
-
-y_offset:
-        adc     #$FF
-        sta     oy
-        stx     len
-        sty     x_offset
-
-        jsr     draw_score_line
-        inc     cur_line
-        bne     next_line
-
-out:    rts
-.endproc
-
-.proc _draw_scores
-        jsr     _set_color_white
-        ldx     #0
-        lda     my_score
-        jsr     draw_one_player_scores
-
-        ldx     #THEIR_SCORE_Y_OFFSET
-        lda     their_score
-        jmp     draw_one_player_scores
 .endproc
 
 .bss
