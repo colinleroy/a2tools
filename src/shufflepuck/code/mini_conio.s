@@ -27,6 +27,7 @@
 
         .include  "apple2.inc"
 
+; Clears screen
 .proc _home
         bit     $C082
         jsr     $FC58
@@ -37,6 +38,7 @@
         rts
 .endproc
 
+; Write a character to current CH,CV coordinates
 .proc _cout
         bit     $C082
         ora     #$80
@@ -44,6 +46,8 @@
         jmp     bank_lc_out
 .endproc
 
+; Write a string to screen. Limited to 255 chars.
+; A, X: address of the string.
 .proc _strout
         sta     ptr1
         stx     ptr1+1
@@ -57,6 +61,9 @@
 out:    rts
 .endproc
 
+; Converts a number to decimal string
+; A, X: the number.
+; Returns the string address in A, X
 .proc _num_to_buf
         jsr     pushax        ; Push number
         lda     #<ntoabuf
@@ -66,18 +73,17 @@ out:    rts
         lda     #10
         ldx     #0
 
-        jsr     _utoa
-
-        lda     #<ntoabuf
-        ldx     #>ntoabuf
-        rts
+        jmp     _utoa         ; Returns the buffer address
 .endproc
 
+; Convert a number to string and print it to screen
+; A, X: the number.
 .proc _numout
         jsr     _num_to_buf
         jmp     _strout
 .endproc
 
+; Read a new key (discards a pending one)
 .proc _read_key
         bit     KBDSTRB
 :       lda     KBD

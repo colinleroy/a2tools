@@ -284,7 +284,6 @@ game_loop:
 
         ; Drop 1 frame out of 6 at 60Hz
         ; otherwise the game is harder
-check_hz:
         lda     hz
         cmp     #60
         bne     loop_start
