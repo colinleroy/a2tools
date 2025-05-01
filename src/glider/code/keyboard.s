@@ -17,13 +17,12 @@
         .export     _keyboard_reset_ref_x
         .export     _keyboard_update_ref_x
         .export     _keyboard_check_fire
-        .export     _keyboard_calibrate_hz
         .export     _read_key
         .export     keyboard_level_change
 
         .import     prev_x, ref_x, mouse_x
         .import     _check_battery_boost
-        .import     hz, cur_level
+        .import     cur_level
         .import     _initial_plane_x, _initial_plane_y
         .include    "apple2.inc"
         .include    "sprite.inc"
@@ -166,40 +165,6 @@ kbd_out:
         rts
 :       clc
         rts
-.endproc
-
-.proc _keyboard_calibrate_hz
-        ; Wait for bit 7 to be off (VBL start)
-:       bit     $C019
-        bmi     :-
-
-        ; Wait for bit 7 to be on (VBL end)
-:       bit     $C019
-        bpl     :-
-
-        ldx     #0
-        ldy     #0
-wait_vbl1:  ; now wait for bit 7 to be off again
-        inx                       ; 2
-        bne :+                    ; 5
-        iny
-:       bit     $C019             ; 9
-        bmi     wait_vbl1         ; 12 (12 cycles per loop, 3000 cycles per Y incr)
-wait_vbl2:  ; now wait for bit 7 to be on again (end of next VBL)
-        inx                       ; 2
-        bne :+                    ; 5
-        iny
-:       bit     $C019             ; 9
-        bpl     wait_vbl2         ; 12 (12 cycles per loop, 3000 cycles per Y incr)
-
-calibrate_done:
-        lda     #60               ; Consider we're at 60Hz
-        sta     hz
-        cpy     #$06              ; But if Y = $06, we spent about 7*3000 cycles
-        bne     :+                ; waiting for the interrupt: ~21000 cycles, so
-        lda     #50               ; we're at 50Hz
-        sta     hz
-:       rts
 .endproc
 
         .data
