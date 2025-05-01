@@ -18,6 +18,8 @@
 
         .import  _init_hgr, _init_text, hgr_mono_file
 
+        .destructor _text_mono40
+
         .include "apple2.inc"
         .include "fcntl.inc"
 

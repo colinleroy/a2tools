@@ -40,7 +40,7 @@
 
         .importzp tmp1, ptr1
 
-        .destructor unlink_cached_files
+        .destructor unlink_cached_files, 20
 
         .include  "apple2.inc"
         .include  "fcntl.inc"

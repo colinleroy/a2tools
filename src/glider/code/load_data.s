@@ -25,7 +25,7 @@
         .import   __HGR_START__, __LEVEL_SIZE__
         .import   _decompress_lz4, _memset, _unlink
 
-        .destructor unlink_cached_files
+        .destructor unlink_cached_files, 20
 
         .importzp tmp1
 
