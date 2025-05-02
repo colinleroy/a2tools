@@ -93,8 +93,8 @@
 
 :       jsr     push_hgr_start        ; Push once for file_io_at size
         jsr     push_hgr_start        ; Once for file_io_at buffer
-        jsr     push_hgr_start        ; Once for memset
-        lda     #$F0
+        jsr     push_hgr_start        ; Once for memset dest
+        lda     #$F0                  ; FG white, BG black
         ldx     #$00
         jsr     pushax
         lda     #<$2000
@@ -103,8 +103,7 @@
 
         lda     #<hgr_fgbg
         ldx     #>hgr_fgbg
-        ldy     #$00
-        sty     do_uncompress
+        jsr     set_noncompressed
         ldy     #(O_WRONLY|O_CREAT)
         jsr     file_io_at
         bcs     :+
@@ -118,6 +117,12 @@
         sty     do_uncompress
 
         jmp     file_io_at
+.endproc
+
+.proc set_noncompressed
+        ldy     #$00
+        sty     do_uncompress
+        rts
 .endproc
 
 ; The minimum to load lowcode
@@ -435,17 +440,13 @@ finish_decompress:
 .proc set_table_backup_file
         lda     #<table_backup_name
         ldx     #>table_backup_name
-        ldy     #$00
-        sty     do_uncompress
-        rts
+        jmp     set_noncompressed
 .endproc
 
 .proc set_bar_backup_file
         lda     #<bar_backup_name
         ldx     #>bar_backup_name
-        ldy     #$00
-        sty     do_uncompress
-        rts
+        jmp     set_noncompressed
 .endproc
 
 
@@ -520,9 +521,7 @@ no_cache:
         jsr     push_dynseg_page_buf
         lda     #<bar_code_backup_name
         ldx     #>bar_code_backup_name
-        ldy     #$00
-        sty     do_uncompress
-        rts
+        jmp     set_noncompressed
 .endproc
 
 .proc _backup_bar_code
@@ -547,9 +546,7 @@ no_cache:
         jsr     push_extra_large_page_buf
         lda     #<barsnd_backup_name
         ldx     #>barsnd_backup_name
-        ldy     #$00
-        sty     do_uncompress
-        rts
+        jmp     set_noncompressed
 .endproc
 
 .proc _backup_barsnd
@@ -625,8 +622,7 @@ hgr_mono_file:       .byte 0
         lda     #<SCORE_TABLE_SIZE
         ldx     #>SCORE_TABLE_SIZE
         jsr     pushax
-        ldy     #$00
-        sty     do_uncompress
+        jsr     set_noncompressed
         lda     #<scores_name
         ldx     #>scores_name
         rts

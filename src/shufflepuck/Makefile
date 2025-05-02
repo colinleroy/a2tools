@@ -195,7 +195,6 @@ shflpuck_SOURCES := \
 	$(SRC_DIR)/code/hgr_mono40.s \
 	$(SRC_DIR)/../lib/asm/hgr_tables.s \
 	$(SRC_DIR)/../lib/asm/hgr.s \
-	$(SRC_DIR)/../lib/asm/bcd.s \
 	$(SRC_DIR)/../lib/extrazp.s \
 	$(SRC_DIR)/../lib/cntoabuf.s \
 	$(SRC_DIR)/../lib/platform_sleep.s \
