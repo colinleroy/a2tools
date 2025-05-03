@@ -29,6 +29,7 @@
         .import     _big_draw_sprite_d                              ; CHANGE A
         .import     _big_draw_name_d                                ; CHANGE A
         .import     _big_draw_lose_d                                ; CHANGE A
+        .import     _big_draw_win_d_0                               ; CHANGE A
         .import     _big_draw_win_d_1                               ; CHANGE A
         .import     _big_draw_win_d_2                               ; CHANGE A
         .import     _big_draw_win_d_3                               ; CHANGE A
@@ -242,7 +243,10 @@ move_backwards:
         jsr     _big_draw_win_d_2
 
         jsr     prepare_animation
-        jmp     _big_draw_win_d_1
+        jsr     _big_draw_win_d_1
+
+        jsr     prepare_animation
+        jmp     _big_draw_win_d_0
 .endproc
 
 .proc show_lose

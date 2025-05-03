@@ -101,6 +101,7 @@ win_unperfect = \
 	win_a.unperfect.gen.s \
 	win_b.unperfect.gen.s \
 	win_c.unperfect.gen.s \
+	win_d_0.unperfect.gen.s \
 	win_d_1.unperfect.gen.s \
 	win_d_2.unperfect.gen.s \
 	win_d_3.unperfect.gen.s \
@@ -129,6 +130,9 @@ special_unperfect   = \
 	moving_barcode_dc31.unperfect.gen.s \
 	moving_barcode_dc32.unperfect.gen.s \
 	moving_barcode_dc33.unperfect.gen.s \
+	moving_barcode_lexan1.unperfect.gen.s \
+	moving_barcode_lexan2.unperfect.gen.s \
+	moving_barcode_lexan3.unperfect.gen.s \
 	moving_barcode_nerual1.unperfect.gen.s \
 	moving_barcode_nerual2.unperfect.gen.s \
 

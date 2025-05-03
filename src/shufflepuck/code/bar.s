@@ -20,6 +20,7 @@
 
         .import     _big_draw_moving_barcode_dc31, _big_draw_moving_barcode_dc32, _big_draw_moving_barcode_dc33
         .import     _big_draw_moving_barcode_nerual1, _big_draw_moving_barcode_nerual2
+        .import     _big_draw_moving_barcode_lexan1, _big_draw_moving_barcode_lexan2, _big_draw_moving_barcode_lexan3
 
         .import     _strlen, _rand, ___randomize
         .import     _exit, pushax, _memmove, _strcpy, _bzero
@@ -147,6 +148,7 @@ wait_input:
         jsr     clear_pointer
         jsr     animate_dc3
         jsr     animate_nerual
+        jsr     animate_lexan
         jsr     draw_pointer
 
         ; Move around random while we wait for click
@@ -552,7 +554,46 @@ close_eyes:
         jmp     _big_draw_moving_barcode_nerual2
 .endproc
 
+.proc animate_lexan
+        ldx     #((21)/7)
+        ldy     #74
+        lda     lex_animate
+        beq     maybe_animate_lexan
+        cmp     #9
+        beq     lexan_animate_1
+        cmp     #19
+        beq     lexan_animate_2
+        cmp     #29
+        beq     lexan_animate_3
+        cmp     #39
+        beq     lexan_animate_4
+        jmp     lexan_inc_animate
+lexan_animate_1:
+        jsr     _big_draw_moving_barcode_lexan1
+        jmp     lexan_inc_animate
+lexan_animate_2:
+        jsr     _big_draw_moving_barcode_lexan2
+        jmp     lexan_inc_animate
+lexan_animate_3:
+        jsr     _big_draw_moving_barcode_lexan1
+        jmp     lexan_inc_animate
+lexan_animate_4:
+        jsr     _big_draw_moving_barcode_lexan3
+        lda     #0
+        sta     lex_animate
+        rts
+maybe_animate_lexan:
+        jsr     _rand
+        cmp     #2
+        bcc     lexan_inc_animate
+        rts
+lexan_inc_animate:
+        inc     lex_animate
+        rts
+.endproc
+
 dc3_animate:.byte 0
+lex_animate:.byte 0
 in_menu:    .byte 0
 cur_print:  .byte 0
 cur_x:      .byte 0
