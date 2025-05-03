@@ -23,13 +23,36 @@
 
 int sampling_hz = DEFAULT_SAMPLING_HZ;
 int downsample = 1;
+int fade_in = 0;
+int sample_count = 0;
 
 static char *segment = "DATA";
+
+static int get_byte_from_level(int c) {
+  int r = (c*(NUM_LEVELS-1))/255;
+  r = (r/STEP);
+  return (r*2)+PAGE_CROSSER;
+}
+
+static void do_fade(int start, int end) {
+  int step = start < end ? (256/NUM_LEVELS) : -(256/NUM_LEVELS);
+  int c;
+  c = start;
+  step *= 2;
+
+  printf("         ; Fade from %d to %d, step %d\n", start, end, step);
+  while ((step > 0 && c >= start && c < end) || (step < 0 && c <= start && c > end)) {
+    int byte = get_byte_from_level(c);
+    printf("         .byte $%02X    ; fading\n", byte); /* *2 to avoid ASLing */
+    sample_count++;
+    c += step;
+  }
+}
 
 int main(int argc, char *argv[]) {
   FILE *fp;
   char *filename;
-  int c, count = 0;
+  int c, prev, count = 0;
 
   if (argc < 3) {
     fprintf(stderr, "Usage: %s [sampling hz][input.raw]\n", argv[0]);
@@ -83,17 +106,25 @@ int main(int argc, char *argv[]) {
   printf(".align $100\n"
          ".proc _%s_snd\n", filename);
   while ((c = fgetc(fp)) != EOF) {
-    int r = (c*(NUM_LEVELS-1))/255, byte;
-    r = (r/STEP);
-    byte = (r*2)+PAGE_CROSSER;
+    int byte = get_byte_from_level(c);
     if (byte > 255) {
       fprintf(stderr, "Range error - too many levels\n");
       exit(1);
     }
-    if (++count % downsample == 0) {
-      printf("         .byte $%02X    ; %d + %d * 2\n", byte, PAGE_CROSSER, r); /* *2 to avoid ASLing */
+    if (!fade_in) {
+      do_fade(0, c);
+      fade_in = 1;
     }
+    if (++count % downsample == 0) {
+      printf("         .byte $%02X    ; %d + %d * 2\n", byte, PAGE_CROSSER, c); /* *2 to avoid ASLing */
+      sample_count++;
+    }
+    prev = c;
   }
+  do_fade(prev, 0);
+
+  fprintf(stderr, "Sample count: %d\n", sample_count);
+
   printf("         .byte $%02x    ; %d + %d * 2, play_done\n\n"
          ".endproc\n", (NUM_LEVELS*2)+PAGE_CROSSER, PAGE_CROSSER, NUM_LEVELS);
 
