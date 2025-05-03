@@ -230,8 +230,10 @@ clear_and_go_bar:
 cont_game:
         ; Restore table from the backup
         jsr     _restore_table
-        bcc     draw_scores
+
         ; But if we can't, redraw the opponent
+        lda     _cache_working
+        bne     draw_scores
         jsr     _draw_opponent_parts
 
 draw_scores:
