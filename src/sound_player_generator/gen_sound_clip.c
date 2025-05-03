@@ -85,17 +85,17 @@ int main(int argc, char *argv[]) {
   while ((c = fgetc(fp)) != EOF) {
     int r = (c*(NUM_LEVELS-1))/255, byte;
     r = (r/STEP);
-    byte = (r*2);
+    byte = (r*2)+PAGE_CROSSER;
     if (byte > 255) {
       fprintf(stderr, "Range error - too many levels\n");
       exit(1);
     }
     if (++count % downsample == 0) {
-      printf("         .byte $%02X    ; %d * 2\n", byte, r); /* *2 to avoid ASLing */
+      printf("         .byte $%02X    ; %d + %d * 2\n", byte, PAGE_CROSSER, r); /* *2 to avoid ASLing */
     }
   }
-  printf("         .byte (%d*2); play_done\n\n"
-         ".endproc\n", NUM_LEVELS);
+  printf("         .byte $%02x    ; %d + %d * 2, play_done\n\n"
+         ".endproc\n", (NUM_LEVELS*2)+PAGE_CROSSER, PAGE_CROSSER, NUM_LEVELS);
 
   printf("         .code\n\n"
          ".proc _play_%s\n"

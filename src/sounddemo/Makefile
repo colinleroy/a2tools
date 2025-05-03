@@ -34,11 +34,11 @@ sounddemo_CLCFLAGS = -t $(CC65_TARGET) -Cl -C ../../config/apple2enh-aligndata.c
 
 #Build the sound player with the correct definitions
 gen_sound_player: ../sound_player_generator/gen_sound_player.c ../sound_player_generator/sound.h
-	gcc -DCPU_$(STREAMER_VER) -DENABLE_SLOWER=1 -g -O0 $< -o $@
+	gcc -DCPU_$(STREAMER_VER) -DENABLE_SLOWER -g -O0 $< -o $@
 
 #Build the sound clip generator with the correct definitions
 gen_sound_clip: ../sound_player_generator/gen_sound_clip.c ../sound_player_generator/sound.h
-	gcc -DCPU_$(STREAMER_VER) -DENABLE_SLOWER=1 -g -O0 $< -o $@
+	gcc -DCPU_$(STREAMER_VER) -DENABLE_SLOWER -g -O0 $< -o $@
 
 play_sound.gen.s: gen_sound_player
 	./gen_sound_player $(SAMPLING_HZ) > $@

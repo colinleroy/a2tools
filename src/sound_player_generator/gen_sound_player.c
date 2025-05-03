@@ -24,235 +24,283 @@
 
 int sampling_hz = DEFAULT_SAMPLING_HZ;
 
-static unsigned char fast_steps[] = {37, 36, 35, 34, 33, 32, 31, 30, 29, 28, 27, 26, 25, 24, 23,
+static unsigned char fast_steps[] = {43, 42, 41, 40, 39, 38, 37, 36, 35, 34, 33, 32, 31, 30, 29, 28, 27, 26, 25, 24, 23,
                                      22, 21, 20, 19, 18, 17, 16, 15, 14, 12};
 
-static int emit_instruction(const char *instr, int cycles, int cycles_avail) {
+int allow_inline = 0;
+int do_ptrig = 1;
+
+#define BYTE_LOAD_CYCLES 7
+#define BACKUP_X_CYCLES 5
+#define RESTORE_X_CYCLES 3
+#define INLINE_TARGET_SET_CYCLES 7
+#define SLOW_SOUND_CYCLES 23
+#define SLOW_SOUND_AND_JUMP_CYCLES 20
+#define SET_TARGET_CYCLES 26
+#define SET_TARGET_AND_JUMP_CYCLES 22
+#define SET_TARGET_AND_INCR_POINTER_CYCLES 35
+#define SLOW_SOUND_SET_TARGET_AND_JUMP_CYCLES 33
+#define INCR_POINTER_CYCLES 22
+#define INCR_POINTER_AND_JUMP_CYCLES 18
+#define SLOW_SOUND_AND_INCR_POINTER_CYCLES 32
+#define SLOW_SOUND_AND_SET_TARGET_CYCLES 37
+#define JUMP_CYCLES 6
+
+typedef struct _Action {
+  const char *instruction;
+  const int doable_between_speaker_access;
+  const int only_if_allow_inline;
+  const int cycles;
+  const int actions[8];
+} Action;
+
+/* Different combinations of what we have to do, sorted by order of priority,
+ * with optionals limits so some don't get picked up when they shouldn't.
+ * Those which are commented out are never needed by the algorithm, so they
+ * don't need to be shipped in the assembly.
+ */
+Action actions[] = {
+  {"         lda (ptr1),y\n"
+   "         tax                                ", 1, 0, BYTE_LOAD_CYCLES,                      {1, 0, 0, 0, 0, 0, 0, 0}},
+  {"         stx tmp3\n"
+   "         ldx #"PAGE_CROSS_STR"+2                         "
+                                                 , 0, 0, BACKUP_X_CYCLES,                       {0, 0, 0, 0, 0, 0, 1, 0}},
+  {"         ldx tmp3                           ", 0, 0, RESTORE_X_CYCLES,                      {0, 0, 0, 0, 0, 0, 0, 1}},
+  {"         lda sound_levels+0,x\n"
+   "         sta target+1+0                     ", 1, 1, INLINE_TARGET_SET_CYCLES,              {0, 0, 1, 0, 0, 0, 0, 0}},
+  {"         lda sound_levels+1,x\n"
+   "         sta target+1+1                     ", 1, 1, INLINE_TARGET_SET_CYCLES,              {0, 0, 0, 1, 0, 0, 0, 0}},
+#ifdef ENABLE_SLOWER
+  {"         jsr slow_sound_and_incr_pointer    ", 0, 0, SLOW_SOUND_AND_INCR_POINTER_CYCLES,    {0, 1, 0, 0, 1, 0, 0, 0}},
+//{"         jsr set_target_and_incr_pointer    ", 1, 0, SET_TARGET_AND_INCR_POINTER_CYCLES,    {0, 1, 1, 1, 0, 0, 0}},
+  {"         jmp slow_sound_set_target_and_jump ", 0, 0, SLOW_SOUND_SET_TARGET_AND_JUMP_CYCLES, {0, 0, 1, 1, 1, 1, 0, 0}},
+  {"         jmp set_target_and_jump            ", 0, 0, SET_TARGET_AND_JUMP_CYCLES,            {0, 0, 1, 1, 0, 1, 0, 0}},
+//{"         jmp slow_sound_and_set_target      ", 0, 0, SLOW_SOUND_AND_SET_TARGET_CYCLES,      {0, 0, 1, 1, 1, 0}},
+  {"         jmp slow_sound_and_jump            ", 0, 0, SLOW_SOUND_AND_JUMP_CYCLES,            {0, 0, 0, 0, 1, 1, 0, 0}},
+//{"         jmp incr_pointer_and_jump          ", 0, 0, INCR_POINTER_AND_JUMP_CYCLES,          {0, 1, 0, 0, 0, 1}},
+#endif
+  {"         jsr slow_sound                     ", 0, 0, SLOW_SOUND_CYCLES,                     {0, 0, 0, 0, 1, 0, 0, 0}},
+  {"         jsr set_target                     ", 1, 0, SET_TARGET_CYCLES,                     {0, 0, 1, 1, 0, 0, 0, 0}},
+  {"         jsr incr_pointer                   ", 1, 0, INCR_POINTER_CYCLES,                   {0, 1, 0, 0, 0, 0, 0, 0}},
+  {"         jmp target                         ", 0, 0, JUMP_CYCLES,                           {0, 0, 0, 0, 0, 1, 0, 0}},
+};
+#define NUM_ACTIONS (sizeof(actions)/sizeof(Action))
+
+enum {
+  LOAD_BYTE,
+  INCR_POINTER,
+  SET_TARGET_LOW,
+  SET_TARGET_HIGH,
+  SLOW_SOUND,
+  JUMP,
+  BACKUP_X,
+  RESTORE_X,
+  NUM_TASKS
+};
+
+int actions_done[] = {0, 0, 0, 0, 0};
+
+static int emit_instruction(const char *instruction, int cycles, int cycles_avail) {
   cycles_avail -= cycles;
-  printf("%s; %d cycles, %d remain\n", instr, cycles, cycles_avail);
+  printf("%s; %d cycles, %d remain\n", instruction, cycles, cycles_avail);
   return cycles_avail;
 }
 
-static int byte_loaded = 0;
-static int pointer_incremented = 0;
-static int target_set[2] = {0, 0};
-
-#define BYTE_LOAD_CYCLES 7
-static int emit_byte_loading(int cycles) {
-  if (cycles < BYTE_LOAD_CYCLES) {
-    fprintf(stderr, "Error - not enough cycles to load byte\n");
-    exit(1);
+static int emit_wait(int cycles, int avail, int between, int can_jump) {
+  int i, j;
+  if (avail == 0) {
+    return 0;
   }
-  cycles -= 5;
-  printf("         lda (ptr1),y              ; %d cycles, %d remain\n", 5, cycles);
-  cycles -= 2;
-  printf("         tax                       ; %d cycles, %d remain\n", 2, cycles);
-
-  byte_loaded = 1;
-  return BYTE_LOAD_CYCLES;
-}
-
-#define POINTER_INCR_CYCLES 21
-static int emit_pointer_increment(int cycles) {
-  if (cycles < POINTER_INCR_CYCLES) {
-    fprintf(stderr, "Error - not enough cycles to increment pointer\n");
-    exit(1);
+  if (cycles == 1) {
+    printf("                                   ; Nothing to waste 1 cycle\n");
+    return avail;
   }
-  cycles -= POINTER_INCR_CYCLES;
-  printf("         jsr incr_pointer          ; %d cycles, %d remain\n", POINTER_INCR_CYCLES, cycles);
-  pointer_incremented = 1;
-  return POINTER_INCR_CYCLES;
-}
 
-#define FAST_POINTER_INCR_CYCLES 12
-static int emit_fast_pointer_increment(int cycles) {
-  if (cycles < FAST_POINTER_INCR_CYCLES) {
-    fprintf(stderr, "Error - not enough cycles to increment pointer (fast)\n");
-    exit(1);
+  /* See if we can fit something useful according to the cycles and rules */
+  for (i = 0; i < NUM_ACTIONS; i++) {
+    int already_done = 0;
+    if (between && !actions[i].doable_between_speaker_access) {
+      continue;
+    }
+    if (!can_jump && actions[i].actions[JUMP]) {
+      continue;
+    }
+    if (!allow_inline && actions[i].only_if_allow_inline) {
+      continue;
+    }
+    for (j = 0; j < NUM_TASKS; j++) {
+      if (actions[i].actions[j] == 1 && actions_done[j] > 0) {
+        already_done = 1;
+        break;
+      }
+    }
+    if (already_done) {
+      continue;
+    }
+
+    /* It fits the bill! */
+    if (cycles == actions[i].cycles || cycles > actions[i].cycles + 1) {
+      if (actions[i].actions[JUMP] == 1) {
+        /* If we're goint to jump, emit final wait before
+         * but mark actions done. */
+        for (j = 0; j < NUM_TASKS; j++) {
+          if (actions[i].actions[j]) {
+            actions_done[j]++;
+          }
+        }
+        cycles -= actions[i].cycles;
+        avail = emit_wait(cycles, avail, 0, 0);
+
+        emit_instruction(actions[i].instruction, actions[i].cycles, avail);
+        cycles -= actions[i].cycles;
+        avail -= actions[i].cycles;
+
+      } else {
+        emit_instruction(actions[i].instruction, actions[i].cycles, avail);
+        cycles -= actions[i].cycles;
+        avail -= actions[i].cycles;
+        for (j = 0; j < NUM_TASKS; j++) {
+          if (actions[i].actions[j]) {
+            actions_done[j]++;
+          }
+        }
+      }
+      /* We did fit something, so call ourselves back for the remainder
+       * of the cycles to be wasted.
+       */
+      return emit_wait(cycles, avail, between, can_jump);
+    }
   }
-  cycles -= FAST_POINTER_INCR_CYCLES;
-  printf("         iny                         ; 2\n"
-         "         bne :+                      ; 4   (5)\n"
-         "         inc ptr1+1                  ; 9\n"
-         "         bne :++                     ; 12\n"
-         ":        nop                         ; 7\n"
-         "         nop                         ; 9\n"
-         "         bit $FF                     ; 12\n"
-         ":        \n");
-  pointer_incremented = 1;
-  return FAST_POINTER_INCR_CYCLES;
-}
 
-#define HALF_TARGET_BYTE_SET 7
-static int emit_half_target_set(int offset, int cycles) {
-  if (cycles < HALF_TARGET_BYTE_SET) {
-    fprintf(stderr, "Error - not enough cycles to set target low\n");
-    exit(1);
+  if (do_ptrig && cycles > 7) {
+add_ptrig:
+      cycles -= 4;
+      avail -= 4;
+      printf("         bit $C070  ; PTRIG (accl)          ; %d cycles, %d remain\n", 4, avail);
+      do_ptrig = 0;
   }
-  printf("         lda sound_levels+%d,x      ; 4 cycles, %d remain\n"
-         "         sta target+1+%d            ; 3 cycles, %d remain\n",
-         offset, cycles-4, offset, cycles-HALF_TARGET_BYTE_SET);
-  target_set[offset] = 1;
-  return HALF_TARGET_BYTE_SET;
-}
-
-#define FULL_TARGET_SET_CYCLES 26
-static int emit_full_target_set(int cycles) {
-  cycles -= FULL_TARGET_SET_CYCLES;
-  target_set[0] = 1;
-  target_set[1] = 1;
-  printf("         jsr set_jump_target       ; %d cycles, %d remain\n",
-    FULL_TARGET_SET_CYCLES, cycles);
-  return FULL_TARGET_SET_CYCLES;
-}
-
-
-static void emit_wait_steps(int cycles, int avail) {
-  int i;
-
+  /* Nothing useful did fit. Just waste the cycles. */
   for (i = 0; i < sizeof(fast_steps); i++) {
     if (cycles > fast_steps[i]+1 || cycles == fast_steps[i]) {
       cycles -= fast_steps[i];
-      printf("         jsr waste_%d              ; %d cycles, %d remain\n", fast_steps[i], fast_steps[i], avail - cycles);
-      return emit_wait_steps(cycles, avail);
+      avail -= fast_steps[i];
+      printf("         jsr waste_%d                       ; %d cycles, %d remain\n", fast_steps[i], fast_steps[i], avail);
+      return emit_wait(cycles, avail, between, can_jump);
     }
   }
 
   while (cycles > 0) {
     if (cycles % 2 != 0) {
-      cycles = emit_instruction("         bit $FF                   ", 3, cycles);
-    } else if (cycles == 4) {
-      cycles = emit_instruction("         bit $C070  ; PTRIG (accl) ", 4, cycles);
+      cycles -= 3;
+      avail -= 3;
+      printf("         bit $FF                            ; %d cycles, %d remain\n", 3, avail);
+    } else if (cycles == 4 && do_ptrig) {
+      goto add_ptrig;
     } else {
-      cycles = emit_instruction("         nop                       ", 2, cycles);
+      cycles -= 2;
+      avail -= 2;
+      printf("         nop                                ; %d cycles, %d remain\n", 2, avail);
     }
   }
-
-  if (cycles) {
-    fprintf(stderr, "Error - still %d cycles to waste\n", cycles);
-    exit(1);
-  }
-}
-
-static int emit_wait(int waste, int cycles_avail, int allow_half_target) {
-  int spent = 0;
-  /* While wasting cycles, try to do what we need to.
-   * First useful thing to do is to load the next sample.
-   */
-  if (!byte_loaded && (waste == BYTE_LOAD_CYCLES || waste > BYTE_LOAD_CYCLES+1)) {
-    spent = emit_byte_loading(cycles_avail);
-    waste -= spent;
-    cycles_avail -= spent;
-  /* After loading the sample, if we have enough cycles, increment the
-   * pointer in the sample stream.
-   */
-  } 
-  if (byte_loaded && !pointer_incremented && (waste == POINTER_INCR_CYCLES || waste > POINTER_INCR_CYCLES+1)) {
-    spent = emit_pointer_increment(cycles_avail);
-    waste -= spent;
-    cycles_avail -= spent;
-  /* Or quickly?
-   */
-  }
-#ifdef ENABLE_SLOWER
-  else if (byte_loaded && !pointer_incremented && (waste == FAST_POINTER_INCR_CYCLES || waste > FAST_POINTER_INCR_CYCLES+1)) {
-    spent = emit_fast_pointer_increment(cycles_avail);
-    waste -= spent;
-    cycles_avail -= spent;
-  /* If we have enough cycles, update both bytes of the jump target.
-   * This can be done *before* incrementing the pointer.
-   */
-  }
-#endif
-  if (byte_loaded && !target_set[0] && !target_set[1]
-          && (waste == FULL_TARGET_SET_CYCLES || waste > FULL_TARGET_SET_CYCLES+1)) {
-    spent = emit_full_target_set(cycles_avail);
-    waste -= spent;
-    cycles_avail -= spent;
-  /* Otherwise, update the other byte of the jump target. But not at first repeat,
-   * as the next one(s) will have more cycles and we could do a full target set,
-   * sparing code size.
-   */
-  } 
-  if (byte_loaded && allow_half_target && (!target_set[0] || !target_set[1])
-          && (waste == HALF_TARGET_BYTE_SET || waste > HALF_TARGET_BYTE_SET+1)) {
-    if (!target_set[0]) {
-      spent = emit_half_target_set(0, cycles_avail);
-      waste -= spent;
-      cycles_avail -= spent;
-    } else if (!target_set[1]) {
-      spent = emit_half_target_set(1, cycles_avail);
-      waste -= spent;
-      cycles_avail -= spent;
-    }
-  /* If we had nothing useful to do, waste the cycles.
-   */
-  } else if (waste > 1) {
-    cycles_avail -= waste;
-    printf("                                   ; Wasting %d cycles\n", waste);
-    emit_wait_steps(waste, cycles_avail);
-    return cycles_avail;
-  } else if (waste == 1){
-    printf("                                   ; Nothing to waste %d cycles\n", waste);
-    return cycles_avail;
-  }
-
-  /* If we did something useful, count those cycles as wasted,
-   * and re-call ourselves with the remaining cycles to be
-   * wasted/invested.
-   */
-  if (waste > 1) {
-    return emit_wait(waste, cycles_avail, allow_half_target);
-  }
-  return cycles_avail;
-}
-
-static int emit_slow(int cycles_avail) {
-#ifdef ENABLE_SLOWER
-  cycles_avail -= SLOWER_OVERHEAD;
-  printf("         jsr slow_sound            ; %d cycles, remain %d\n", SLOWER_OVERHEAD, cycles_avail);
-#endif
-  return cycles_avail;
-}
-
-static int emit_jump(int cycles_avail) {
-  cycles_avail -= JUMP_OVERHEAD;
-  printf("         jmp target                ; %d cycles, remain %d\n", JUMP_OVERHEAD, cycles_avail);
-  return cycles_avail;
+  return avail;
 }
 
 static void sub_level(int l, int repeat) {
   int cycles = AVAIL_CYCLES;
-  /* X is l*2 + 32 so compute C030 offset */
-  char sta_C030_OFFSET[32];
   int i, orig_cycles;
-  int byte_loaded = 0, incremented_pointer = 0;
-
+  int cycles_available_between_skpr = l;
+  int cycles_available_after_spkr   = cycles              /* what we have */
+                                      - l                 /* minus between the two STA $C030 */
+                                      - 8;                /* minus the two STA */
+  int x_backedup = 0;
   orig_cycles = cycles;
+
+  printf("; %d cycles available between speaker access,\n"
+         "; %d cycles available after speaker access.\n",
+         cycles_available_between_skpr,
+         cycles_available_after_spkr);
+
+  actions_done[LOAD_BYTE] = 0;
+  actions_done[INCR_POINTER] = 0;
+  actions_done[SET_TARGET_LOW] = 0;
+  actions_done[SET_TARGET_HIGH] = 0;
+  actions_done[JUMP] = 0;
+  /* Only to be done at level 1 */
+  actions_done[BACKUP_X] = 1;
+  actions_done[RESTORE_X] = 1;
+
+  do_ptrig = 1;
+  allow_inline = 0;
+#ifdef ENABLE_SLOWER
+  if (cycles_available_after_spkr < 35) {
+    allow_inline = 1;
+  }
+#else
+#endif
+
   for (i = 0; i < repeat; i++) {
     cycles = orig_cycles;
-    printf(".proc sound_level_%d_%d\n", l, i);
-    cycles = emit_instruction("         sta SPKR                  ", 4, cycles);
-
-#ifdef CPU_65c02
-    if (l == 1) {
-      cycles = emit_instruction("         sta (ispkr)               ", 5, cycles);
-    } else
+#ifdef ENABLE_SLOWER
+    /* This must be done in each repeat */
+    actions_done[SLOW_SOUND] = 0;
+#else
+    actions_done[SLOW_SOUND] = 1;
 #endif
-    {
-      cycles = emit_wait(l, cycles, SLOWER_OVERHEAD != 0);
-      cycles = emit_instruction("         sta SPKR                  ", 4, cycles);
+
+    if (l == 1) {
+      /* At level 1, we will use sta SPRK_OFF,x to have an extra cycle.
+       * But X will change as soon as we LOAD_BYTE, which will make the
+       * second (/third/fourth) repeats wrong. Add BACKUP_X to the things
+       * to do on first repeat, right after BYTE_LOAD. Mark target updated
+       * on first repeats, even if it's false, to avoid setting it with X at
+       * level 1. Unmark it done on last repeat. */
+      actions_done[SET_TARGET_LOW] = 1;
+      actions_done[SET_TARGET_HIGH] = 1;
+      if (i == 0) {
+        actions_done[BACKUP_X] = 0;
+      } else if (i == repeat -1) {
+        actions_done[RESTORE_X] = 0;
+        actions_done[SET_TARGET_LOW] = 0;
+        actions_done[SET_TARGET_HIGH] = 0;
+      }
     }
 
-    if (i != repeat - 1) {
-      cycles = emit_slow(cycles);
-      cycles = emit_wait(cycles, cycles, SLOWER_OVERHEAD != 0);
+    printf(".proc sound_level_%d_%d\n", l, i);
+    cycles = emit_instruction("         sta SPKR                           ", 4, cycles);
+    if (l == 1) {
+      cycles = emit_instruction("         sta SPKR_OFF,x                     ", 5, cycles);
     } else {
-      cycles = emit_wait(cycles - (JUMP_OVERHEAD + SLOWER_OVERHEAD), cycles, 1);
-      cycles = emit_slow(cycles);
-      emit_jump(cycles);
+      cycles = emit_wait(l, cycles, 1, 0);
+      cycles = emit_instruction("         sta SPKR                           ", 4, cycles);
+    }
+
+    cycles = emit_wait(cycles, cycles, 0, i == repeat - 1);
+
+    if (actions_done[SLOW_SOUND] != 1) {
+      fprintf(stderr, "%d SLOW_SOUND on level %d step %d\n", actions_done[SLOW_SOUND], l, i);
+      exit(1);
     }
     printf(".endproc\n");
+  }
+  if (actions_done[LOAD_BYTE] != 1) {
+    fprintf(stderr, "Missing LOAD_BYTE on level %d\n", l);
+    exit(1);
+  }
+  if (actions_done[SET_TARGET_LOW] != 1) {
+    fprintf(stderr, "Missing SET_TARGET_LOW on level %d\n", l);
+    exit(1);
+  }
+  if (actions_done[SET_TARGET_HIGH] != 1) {
+    fprintf(stderr, "Missing SET_TARGET_HIGH on level %d\n", l);
+    exit(1);
+  }
+  if (actions_done[INCR_POINTER] != 1) {
+    fprintf(stderr, "Missing INCR_POINTER on level %d\n", l);
+    exit(1);
+  }
+  if (actions_done[JUMP] != 1) {
+    fprintf(stderr, "Missing JUMP on level %d\n", l);
+    exit(1);
   }
 
   printf("\n\n");
@@ -265,20 +313,16 @@ static void level(int l) {
             CARRIER_HZ, sampling_hz);
     exit(1);
   }
-  byte_loaded = 0;
-  pointer_incremented = 0;
-  target_set[0] = 0;
-  target_set[1] = 0;
   sub_level(l, repeat);
-  if (!target_set[0] || !target_set[1] ||
-      !pointer_incremented || !byte_loaded) {
-        fprintf(stderr, "Error: not enough cycles to do everything at level %d: \n%s%s%s%s\n", l,
-                !byte_loaded ? "Could not load byte\n":"",
-                !pointer_incremented ? "Could not increment pointer\n":"",
-                !target_set[0] ? "Could not set low target\n":"",
-                !target_set[1] ? "Could not set high target\n":"");
-        exit(1);
-  }
+  // if (!target_set[0] || !target_set[1] ||
+  //     !pointer_incremented || !byte_loaded) {
+  //       fprintf(stderr, "Error: not enough cycles to do everything at level %d: \n%s%s%s%s\n", l,
+  //               !byte_loaded ? "Could not load byte\n":"",
+  //               !pointer_incremented ? "Could not increment pointer\n":"",
+  //               !target_set[0] ? "Could not set low target\n":"",
+  //               !target_set[1] ? "Could not set high target\n":"");
+  //       exit(1);
+  // }
 }
 
 static char *segment = "DATA";
@@ -320,7 +364,6 @@ int main(int argc, char *argv[]) {
          "         .include  \"accelerator.inc\"\n"
          "\n"
          "SPKR     = $C030\n"
-         "ispkr    = ptr2  ; two bytes\n"
          "target   = ptr3  ; three bytes, first being a JMP because we want our\n"
          "                 ; indirect jumps 6 cycles long both on 6502 and 65c02.\n"
          "snd_slow = tmp4\n"
@@ -333,48 +376,140 @@ int main(int argc, char *argv[]) {
   printf(".align $100\n");
   printf("START_SOUND_PLAYER = *\n");
 
-  printf("\n"
-         ".proc slow_sound\n"
-         "         sty tmp3                  ; 3\n"
-         "         ldy snd_slow              ; 6\n"
-         ":        dey                       ; 8\n"
-         "         bpl :-                    ; 10\n"
-         "         ldy tmp3                  ; 13\n"
-         "         rts\n"
-         ".endproc\n\n");
-
-  /* Jump table, aligned on a page to make sure we don't get extra cycles */
-  printf(".proc sound_levels\n");
-  for (c = 0; c < NUM_LEVELS; c+=STEP) {
-    printf("         .addr sound_level_%d_0\n", c);
-  }
-  printf("         .addr play_done\n");
-  printf(".endproc\n\n");
-
-  printf(".proc incr_pointer\n");
-  printf("         iny                         ; 2\n"
+  printf(
+         "; Total cost 22 cycles\n"
+         "; Could be 21 but we need to fit between SPKR access at level 22\n"
+         "; if slower is enabled, so we waste one cycle with INC absolute.\n"
+         ".proc incr_pointer\n"
+         "         iny                         ; 2\n"
          "         bne :+                      ; 4   (5)\n"
-         "         inc ptr1+1                  ; 9\n"
-         "         rts                         ; 15\n"
+         "         .byte $EE                   ; INC abs\n"
+         "         .byte ptr1+1                ; 10\n"
+         "         .byte $00\n"
+         "         rts                         ; 16\n"
          ":        nop                         ; 7\n"
-         "         nop                         ; 9\n");
-  printf("         rts                         ; 15\n\n");
-  printf(".endproc\n\n");
-#if POINTER_INCR_CYCLES != 21
-#error Recount pointer increment cycles
+         "         bit $FF                     ; 10\n"
+         "         rts                         ; 16\n"
+         ".endproc\n"
+         "\n"
+         "; Total cost 26 cycles\n"
+         ".proc set_target\n"
+         "         lda sound_levels+0,x        ; 4\n"
+         "         sta target+1+0              ; 7\n"
+         "         lda sound_levels+1,x        ; 11\n"
+         "         sta target+1+1              ; 14\n"
+         "         rts                         ; 20\n"
+         ".endproc\n"
+#ifdef ENABLE_SLOWER
+         "; Total cost 23 cycles (arriving via jsr)\n"
+         ".proc slow_sound\n"
+         "         tya                         ; 2\n"
+         "         ldy snd_slow                ; 5\n"
+         ":        dey                         ; 7\n"
+         "         bpl :-                      ; 9\n"
+         "         tay                         ; 11\n"
+         "         rts                         ; 17\n"
+         ".endproc\n"
+         "\n"
+         "; Total cost 20 cycles (arriving via jmp, double jmp out)\n"
+         ".proc slow_sound_and_jump\n"
+         "         tya                         ; 2\n"
+         "         ldy snd_slow                ; 5\n"
+         ":        dey                         ; 7\n"
+         "         bpl :-                      ; 9\n"
+         "         tay                         ; 11\n"
+         "         jmp target                  ; 14\n"
+         ".endproc\n"
+         "\n"
+         "; Total cost 22 cycles (arriving via jmp, single jmp out)\n"
+         ".proc set_target_and_jump\n"
+         "         lda sound_levels+0,x        ; 4 cycles\n"
+         "         sta local_target+1+0        ; 8 cycles\n"
+         "         lda sound_levels+1,x        ; 12 cycles\n"
+         "         sta local_target+1+1        ; 16 cycles\n"
+         "local_target:\n"
+         "         jmp $FFFF                   ; 19 cycles\n"
+         ".endproc\n"
+         "\n"
+         "; Total cost 33 cycles (arriving via jmp, single jmp out)\n"
+         ".proc slow_sound_set_target_and_jump\n"
+         "         tya                         ; 2\n"
+         "         ldy snd_slow                ; 5\n"
+         ":        dey                         ; 7\n"
+         "         bpl :-                      ; 9\n"
+         "         tay                         ; 11\n"
+         "         lda sound_levels+0,x        ; 15\n"
+         "         sta local_target+1+0        ; 19\n"
+         "         lda sound_levels+1,x        ; 23\n"
+         "         sta local_target+1+1        ; 27\n"
+         "local_target:\n"
+         "         jmp $FFFF                   ; 30\n"
+         ".endproc\n"
+         "\n"
+         // "; Total cost 35 cycles\n"
+         // ".proc set_target_and_incr_pointer\n"
+         // "         lda sound_levels+0,x        ; 4\n"
+         // "         sta target+1+0              ; 7\n"
+         // "         lda sound_levels+1,x        ; 11\n"
+         // "         sta target+1+1              ; 14\n"
+         // "         iny                         ; 16\n"
+         // "         bne :+                      ; 18  (19)\n"
+         // "         inc ptr1+1                  ; 23\n"
+         // "         rts                         ; 29\n"
+         // ":        nop                         ; 21\n"
+         // "         nop                         ; 23\n"
+         // "         rts                         ; 29\n"
+         // ".endproc\n"
+         // "\n"
+         // "; Total cost 18 cycles\n"
+         // ".proc incr_pointer_and_jump\n"
+         // "         iny                         ; 2\n"
+         // "         bne :+                      ; 4   (5)\n"
+         // "         inc ptr1+1                  ; 9\n"
+         // "         jmp target                  ; 12\n"
+         // ":        nop                         ; 7\n"
+         // "         nop                         ; 9\n"
+         // "         jmp target                  ; 12\n"
+         // ".endproc\n"
+         // "\n"
+         "; Total cost 32 cycles\n"
+         ".proc slow_sound_and_incr_pointer\n"
+         "         tya                         ; 2\n"
+         "         ldy snd_slow                ; 5\n"
+         ":        dey                         ; 7\n"
+         "         bpl :-                      ; 9\n"
+         "         tay                         ; 11\n"
+         "         \n"
+         "         iny                         ; 13\n"
+         "         bne :+                      ; 15  (16)\n"
+         "         inc ptr1+1                  ; 20\n"
+         "         rts                         ; 26\n"
+         ":        nop                         ; 18\n"
+         "         nop                         ; 20\n"
+         "         rts                         ; 26\n"
+         ".endproc\n"
+         "\n"
+         // "; Total cost 37 cycles\n"
+         // ".proc slow_sound_and_set_target\n"
+         // "         tya                         ; 2\n"
+         // "         ldy snd_slow                ; 5\n"
+         // ":        dey                         ; 7\n"
+         // "         bpl :-                      ; 9\n"
+         // "         tay                         ; 11\n"
+         // "         lda sound_levels+0,x        ; 15\n"
+         // "         sta target+1+0              ; 18\n"
+         // "         lda sound_levels+1,x        ; 22\n"
+         // "         sta target+1+1              ; 25\n"
+         // "         rts                         ; 31\n"
+         // ".endproc\n"
 #endif
-
-  printf(".proc set_jump_target\n");
-  emit_half_target_set(0, HALF_TARGET_BYTE_SET);
-  emit_half_target_set(1, HALF_TARGET_BYTE_SET);
-  printf("         rts\n");
-  printf(".endproc\n\n");
-#if FULL_TARGET_SET_CYCLES != 26
-#error Recount target setting cycles
-#endif
+       );
 
   /* Wasters */
   printf("\n"
+         "waste_42: nop\n"
+         "waste_40: nop\n"
+         "waste_38: nop\n"
          "waste_36: nop\n"
          "waste_34: nop\n"
          "waste_32: nop\n"
@@ -390,6 +525,9 @@ int main(int argc, char *argv[]) {
          "waste_12: rts\n\n");
 
   printf("\n"
+         "waste_43: nop\n"
+         "waste_41: nop\n"
+         "waste_39: nop\n"
          "waste_37: nop\n"
          "waste_35: nop\n"
          "waste_33: nop\n"
@@ -414,38 +552,37 @@ int main(int argc, char *argv[]) {
          "         sta prevspd\n"
          "         lda #SPEED_SLOW\n"
          "         jsr _set_iigs_speed\n"
-         "         lda #<SPKR\n"
-         "         sta ispkr\n"
-         "         lda #>SPKR\n"
-         "         sta ispkr+1\n"
          "         php\n"
          "         sei\n"
          "         ldy #$00\n"
          "         lda (ptr1),y\n"
-         "         tax\n\n");
-  emit_half_target_set(0, HALF_TARGET_BYTE_SET);
-  emit_half_target_set(1, HALF_TARGET_BYTE_SET);
-  emit_jump(JUMP_OVERHEAD+SLOWER_OVERHEAD);
-  printf(".endproc\n\n");
-  printf(".proc play_done\n"
+         "         tax\n\n"
+         "         jsr set_target\n"
+         "         jmp target\n"
+         ".endproc\n\n"
+         ".proc play_done\n"
          "         plp\n"
          "         lda prevspd\n"
-         "         jmp _set_iigs_speed\n");
+         "         jmp _set_iigs_speed\n"
+         ".endproc\n\n");
+
+
+  /* Jump table, aligned on a page to make sure we don't get extra cycles */
+  printf(".assert <* > $%02X, error ; for the page crosser\n", PAGE_CROSSER);
+  printf(".proc sound_levels_off\n");
+  for (c = 0; c < NUM_LEVELS; c+=STEP) {
+    printf("         .addr sound_level_%d_0\n", c);
+  }
+  printf("         .addr play_done\n");
   printf(".endproc\n\n");
-
-
+  printf("sound_levels = sound_levels_off - $%02X\n", PAGE_CROSSER);
+  printf("SPKR_OFF = SPKR - $%02X\n", PAGE_CROSSER);
+  /* Assert we're still on the same page. */
+  printf("sound_player_end_header = *\n");
   printf(".assert >START_SOUND_PLAYER = >*, error\n");
 
   /* Levels */
   for (c = 0; c < NUM_LEVELS; c+=STEP) {
-#ifdef ENABLE_SLOWER
-    if (c % (sampling_hz/2000) == 0) {
-      printf(".align $100\n");
-    }
-#endif
     level(c);
-#ifdef ENABLE_SLOWER
-  printf(".assert >sound_level_%d_0 = >*, error\n\n", c);
-#endif
   }
 }

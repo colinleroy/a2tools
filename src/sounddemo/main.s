@@ -1,6 +1,6 @@
          .import _cputs, _cgetc, _clrscr
          .import _play_sample
-         .import _countdown_8000_snd
+         .import _countdown_8000_snd, _countdown_4000_snd
          .import  _exit
          .export _main
 
