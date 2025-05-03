@@ -274,14 +274,14 @@ hit:
         sta     their_pusher_dy
         sta     potato
 
-:       ; Get a 0-15 DX
-        jsr     _rand
+:       jsr     _rand             ; Get a 0-15 DX
         lsr
         lsr
         lsr
         lsr
-        ; And make it -8/7
-        sec
+        bne     :+                ; Make it 1-15
+        lda     #1
+:       sec                       ; And make it -7/7
         sbc     #8
 
         ; Double it if smashing

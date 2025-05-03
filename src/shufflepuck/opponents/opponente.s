@@ -267,15 +267,15 @@ hit:
         adc     #9
         sta     their_pusher_dy
 
-        ; Get a 0-7 DX
-        jsr     _rand
+        jsr     _rand             ; Get a 0-7 DX
         lsr
         lsr
         lsr
         lsr
         lsr
-        ; And make it -4/3
-        sec
+        bne     :+                ; Make it 1-7
+        lda     #1
+:       sec                       ; And make it -3/3
         sbc     #4
         sta     their_pusher_dx
         rts
