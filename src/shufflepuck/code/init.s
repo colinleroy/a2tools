@@ -38,32 +38,14 @@
 no_mouse_str:     .byte "NO MOUSE DETECTED. PRESS A KEY TO EXIT."  ,$00
 
 .proc _init_caches
-        ; Init mouse first thing (it flickers HGR on IIplus)
-        ; But disable IRQs as cc65's handler is in LOWCODE,
-        ; which is not yet loaded. We will enable IRQs once we
-        ; reach main, so that the mouse interrupts don't start to
-        ; poke stuff in BSS still containing ONCE code.
-        php
-        sei
-
-        jsr     _init_mouse
-        bcc     :+                ; Do we have a mouse?
-
-        lda     #<no_mouse_str
-        ldx     #>no_mouse_str
-        jmp     _print_error
-
-:       ; Load LOWCODE (and splash screen)
+        ; Load LOWCODE (and splash screen)
         jsr     _load_hgr_mono_file
 
         jsr     _load_lowcode
         bcc     :+
         jmp     _print_load_error
 
-:       ; We can now enable IRQs, the handler is loaded
-        plp
-
-        jsr     _home
+:       jsr     _home
 
         jsr     _hgr_force_mono40
 
@@ -110,5 +92,14 @@ no_mouse_str:     .byte "NO MOUSE DETECTED. PRESS A KEY TO EXIT."  ,$00
 :       jsr     _backup_barsnd
         lda     #0
         sta     _init_text_before_decompress
-out:    rts
+
+out:    ; Init mouse now (it flickers HGR on IIplus)
+        jsr     _init_mouse
+        bcc     :+                ; Do we have a mouse?
+
+        lda     #<no_mouse_str
+        ldx     #>no_mouse_str
+        jmp     _print_error
+
+:       rts
 .endproc
