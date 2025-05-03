@@ -41,7 +41,7 @@ _score_x_start:
         .byte 68, 70, 72, 74, 67
         .byte 80, 82, 84, 86, 79
 
-.segment "LOWCODE"
+.segment "CODE"
 
 THEIR_SCORE_Y_OFFSET = 14
 HAND_TOP = 8
@@ -105,6 +105,8 @@ y_offset:
 
 out:    rts
 .endproc
+
+.segment "LOWCODE"
 
 .proc _draw_scores
         jsr     _set_color_white
@@ -210,8 +212,6 @@ stop_at:
         jmp     next_frame
 out:    rts
 .endproc
-
-.segment "CODE"
 
 .proc get_hand_y
         lda     #(HAND_TOP+hand_HEIGHT-SCORE_VERTICAL_START_Y+1)

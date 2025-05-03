@@ -18,7 +18,10 @@
         .import     _print_string, _read_string, _str_input
         .import     _print_char, _print_number
 
-        .import     _strlen
+        .import     _big_draw_moving_barcode_dc31, _big_draw_moving_barcode_dc32, _big_draw_moving_barcode_dc33
+        .import     _big_draw_moving_barcode_nerual1, _big_draw_moving_barcode_nerual2
+
+        .import     _strlen, _rand, ___randomize
         .import     _exit, pushax, _memmove, _strcpy, _bzero
 
         .importzp   tmp1, _zp6
@@ -31,7 +34,7 @@
         .include    "constants.inc"
         .include    "scores.inc"
 
-.segment "bar_code"
+.segment "barcode"
 
 BOXES_START = *
 opponents_boxes:                      ; X, W, Y, H, opponent number
@@ -142,9 +145,16 @@ show_champion:
 wait_input:
         jsr     _mouse_wait_vbl   ; Avoid flickering
         jsr     clear_pointer
+        jsr     animate_dc3
+        jsr     animate_nerual
         jsr     draw_pointer
 
-        jsr     _read_mouse
+        ; Move around random while we wait for click
+        inc     RNDL
+        bne     :+
+        inc     RNDH
+
+:       jsr     _read_mouse
         lda     mouse_x
         sta     pointer_x
         lda     mouse_y
@@ -161,6 +171,9 @@ wait_input:
         ; Wait for button to be up (otherwise the Champion sign flickers)
 :       jsr     _mouse_check_button
         bcs     :-
+
+        ; Reinit randomizer each click
+        jsr     ___randomize
 
         ; Is the champion menu open?
         lda     in_menu
@@ -492,6 +505,54 @@ init_scores:
 :       jmp     print_champion
 .endproc
 
+.proc animate_dc3
+        ldx     #((63)/7)
+        ldy     #28
+        lda     dc3_animate
+        cmp     #15
+        beq     dc3_animate_1
+        cmp     #31
+        beq     dc3_animate_2
+        cmp     #47
+        beq     dc3_animate_3
+        cmp     #63
+        beq     dc3_animate_4
+        jmp     dc3_inc_animate
+dc3_animate_1:
+        jsr     _big_draw_moving_barcode_dc31
+        jmp     dc3_inc_animate
+dc3_animate_2:
+        jsr     _big_draw_moving_barcode_dc32
+        jmp     dc3_inc_animate
+dc3_animate_3:
+        jsr     _big_draw_moving_barcode_dc31
+        jmp     dc3_inc_animate
+dc3_animate_4:
+        jsr     _big_draw_moving_barcode_dc33
+        lda     #0
+        sta     dc3_animate
+        rts
+dc3_inc_animate:
+        inc     dc3_animate
+        rts
+.endproc
+
+.proc animate_nerual
+        jsr     _rand
+        ldx     #((21)/7)
+        ldy     #32
+        cmp     #2
+        bcc     open_eyes
+        cmp     #6
+        bcc     close_eyes
+        rts
+open_eyes:
+        jmp     _big_draw_moving_barcode_nerual1
+close_eyes:
+        jmp     _big_draw_moving_barcode_nerual2
+.endproc
+
+dc3_animate:.byte 0
 in_menu:    .byte 0
 cur_print:  .byte 0
 cur_x:      .byte 0

@@ -71,7 +71,7 @@
         .include    "opponent_file.inc"
         .include    "hgr_applesoft.inc"
 
-.segment "CODE"
+.segment "LOWCODE"
 
 .proc _clear_screen
         jsr     clear_their_pusher
@@ -145,8 +145,7 @@
         jmp     _draw_sprite
 .endproc
 
-.segment "LOWCODE"
-
+; Render function when the puck is on the player's side
 .proc render_screen_my_side
         ; Redraw their side first (it's higher on the screen)
         jsr     clear_their_pusher
@@ -206,6 +205,7 @@ draw:
         rts
 .endproc
 
+; Render function when the puck is on the opponent's side
 .proc render_screen_their_side
         ; Start with far side as it's higher on the screen,
         ; so we have less cycles to do it
@@ -218,7 +218,7 @@ draw:
         rts
 .endproc
 
-; Draw screen, choosing which draw function to use depending
+; Draw screen, choosing which render function to use depending
 ; on the puck's side - knowing in which half of the table the puck
 ; is helps simplifying the draw order calculation
 ; ~ 12400 cycles
@@ -255,7 +255,7 @@ draw:
         rts
 .endproc
 
-; Offsets (graphical, not theorical) at which we change the sprite size
+; Offsets (theorical, not graphical) at which we change the sprite size
 my_pusher_offsets:
         .byte   192
         .byte   183
@@ -459,7 +459,7 @@ check:
         adc     #my_pusher0_WIDTH ; and add width for right bound
         bcs     :+                ; If adding our width overflowed, we're good:
         cmp     puck_x            ; the pusher is on the right and the puck too
-        bcc     out_miss
+        bcc     out_miss          ; as we checked left bound already
 
 :       ; Prevent multiple hits
         lda     #1
@@ -469,12 +469,12 @@ check:
         ; in front of the pusher
         ldy     my_pusher_y
         dey
-        tya
         sty     puck_y
+        tya
         jsr     _init_precise_y        ; Reinit the precise Y coord of the puck
         jsr     _puck_reinit_my_order  ; And set puck/pusher order while it goes away
 
-        ; Ypdate puck speed
+        ; Update puck speed
         lda     puck_dx           ; Slow puck's existing deltaX
         cmp     #$80
         ror

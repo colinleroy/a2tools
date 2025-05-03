@@ -614,7 +614,7 @@ hgr_fgbg:            .asciiz "/RAM/FGBG"
 load_err_str:        .asciiz "COULD NOT LOAD "
 hgr_mono_file:       .byte 0
 
-.segment "bar_code"
+.segment "barcode"
 ; --- only accessible from the bar code segment
 ; --- don't use it from elsewhere
 .proc set_scores_params

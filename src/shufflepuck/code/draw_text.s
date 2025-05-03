@@ -15,7 +15,7 @@
         .include   "apple2.inc"
         .include   "font.gen.inc"
 
-.segment "bar_code"
+.segment "barcode"
 
 ; A: ASCII code of the char
 ; X: X coord / 7

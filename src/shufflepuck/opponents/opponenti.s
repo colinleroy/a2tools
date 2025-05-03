@@ -33,6 +33,7 @@
         .import     _big_draw_normal_i                              ; CHANGE A
         .import     _big_draw_moving_i_1                            ; CHANGE A
         .import     _big_draw_moving_i_2                            ; CHANGE A
+        .import     _big_draw_moving_i_3                            ; CHANGE A
 
         .import     _play_lose_i_1, _play_lose_i_2
         .import     _play_win_i_1, _play_win_i_2, _play_win_i_3, _play_win_i_4
@@ -305,7 +306,7 @@ done:
 .proc animate_normal
         ldx     #((35+98)/7)
         ldy     #25
-        jmp     _big_draw_normal_i                                      ; CHANGE A
+        jmp     _big_draw_moving_i_3                                    ; CHANGE A
 .endproc
 
 .proc animate_win
@@ -324,7 +325,7 @@ done:
         jsr     animate_a
         ldy     #0
         jsr     _play_win_i_3
-        lda     #5
+        lda     #50
         ldx     #0
         jsr     _platform_msleep
         jsr     animate_normal

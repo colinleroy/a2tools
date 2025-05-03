@@ -125,6 +125,12 @@ special_unperfect   = \
 	normal_i.unperfect.gen.s \
 	moving_i_1.unperfect.gen.s \
 	moving_i_2.unperfect.gen.s \
+	moving_i_3.unperfect.gen.s \
+	moving_barcode_dc31.unperfect.gen.s \
+	moving_barcode_dc32.unperfect.gen.s \
+	moving_barcode_dc33.unperfect.gen.s \
+	moving_barcode_nerual1.unperfect.gen.s \
+	moving_barcode_nerual2.unperfect.gen.s \
 
 serve_sounds = \
 	serve_g_left.snd.s \
@@ -281,13 +287,13 @@ puck5.pixel_perfect.gen.s: $(SRC_DIR)/assets/puck5.png gen_sprite
 puck6.pixel_perfect.gen.s: $(SRC_DIR)/assets/puck6.png gen_sprite
 	./gen_sprite $< 255 pixel_perfect RODATA
 pointer.pixel_perfect.gen.s: $(SRC_DIR)/assets/pointer.png gen_sprite
-	./gen_sprite $< 255 pixel_perfect bar_code
+	./gen_sprite $< 255 pixel_perfect barcode
 hand.pixel_perfect.gen.s: $(SRC_DIR)/assets/hand.png gen_sprite
 	./gen_sprite $< 255 pixel_perfect RODATA
 
 $(opponents_sprites): %.unperfect.gen.s: $(SRC_DIR)/assets/opponents/%.png
 %.unperfect.gen.s: $(SRC_DIR)/assets/opponents/%.png gen_sprite
-	./gen_sprite $< 255 unperfect $(shell echo "$@"|sed 's/[a-z]*_\([a-z]\).*$$/\1/') big
+	./gen_sprite $< 255 unperfect $(shell echo "$@"|sed 's/[a-z]*_\([a-z]\+\).*$$/\1/') big
 
 play_sound.gen.s: gen_sound_player
 	./gen_sound_player $(SAMPLING_HZ) LOWCODE > $@
@@ -325,7 +331,7 @@ lose%.snd.s: $(SRC_DIR)/assets/sounds/opponents/lose%.wav gen_sound_clip
 	rm $<_raw
 
 font.gen.s: $(SRC_DIR)/assets/fonts/font.png gen_font
-	./gen_font $< 280 bar_code
+	./gen_font $< 280 barcode
 
 shflpuck.ld.cfg: $(SRC_DIR)/shflpuck.ld.cfg.tmpl $(SRC_DIR)/generators/gen_linker_config.sh
 	$(SRC_DIR)/generators/gen_linker_config.sh $< $(opponents) > $@
