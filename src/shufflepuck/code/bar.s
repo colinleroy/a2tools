@@ -484,27 +484,17 @@ out:    rts
         lda     #<_scores_buffer
         ldx     #>_scores_buffer
         jsr     _load_scores
-        bcs     init_scores
 out_done:
         lda     #1                ; Scores loaded
         sta     _scores_loaded
-        rts
-init_scores:
-        lda     #<_scores_buffer  ; Save an empty file
-        ldx     #>_scores_buffer
-        jsr     _save_scores
-        bcc     out_done
         rts
 .endproc
 
 ; Load scores if needed, and print Champion's name
 .proc _bar_update_champion
         jsr     _bar_load_scores
-        lda     _scores_loaded
-        beq     :+
         jsr     set_champion
-
-:       jmp     print_champion
+        jmp     print_champion
 .endproc
 
 .proc animate_dc3
