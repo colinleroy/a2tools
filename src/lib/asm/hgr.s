@@ -23,7 +23,7 @@
 
         .import  ostype
 
-        .constructor DetectLeChatMauveEve, 25
+        .constructor DetectLeChatMauveEve, 7
 
         .include "apple2.inc"
         .data
