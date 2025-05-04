@@ -52,14 +52,13 @@ n_lines_draw    = _zp11 ; shared
         sta     (cur_sprite_ptr),y; Reset clear-needed flag
 
         ldx     n_bytes_draw
-        clc
 clear_next_line:
 x_coord:
         lda     #$FF
         ldy     cur_y
         cpy     #192
         bcs     out
-        adc     _hgr_low,y
+        adc     _hgr_low,y        ; No need to clc, we just tested it
         sta     sprite_store_bg+1
         lda     _hgr_hi,y
         ;adc     #0 - carry won't be set here
@@ -90,7 +89,6 @@ out:
         sta     (cur_sprite_ptr),y
 
         ldx     n_bytes_draw      ; Get total number of bytes to draw
-        clc
 next_line:
 x_coord:
         lda     #$FF              ; Patched by setup with top-left X coord
