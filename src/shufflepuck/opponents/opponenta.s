@@ -28,6 +28,7 @@
         .import     _big_draw_lose_a                                ; CHANGE A
         .import     _big_draw_win_a                                 ; CHANGE A
         .import     _play_lose_a
+        .import     _play_endgame_a
         .import     return0
 
         .import     __OPPONENT_START__
@@ -66,7 +67,7 @@ THEIR_MAX_DX = 5
         jmp     return0
 
 .assert * = __OPPONENT_START__+OPPONENT::END_GAME, error ; Make sure the callback is where we think
-        jmp     return0
+        jmp     sound_endgame
 
 .assert * = __OPPONENT_START__+OPPONENT::THINK_CB, error ; Make sure the callback is where we think
 .proc _opponent_think
@@ -187,6 +188,11 @@ move_backwards:
 .proc sound_lose
         ldy     #0
         jmp     _play_lose_a
+.endproc
+
+.proc sound_endgame
+        ldy     #0
+        jmp     _play_endgame_a
 .endproc
 
 their_max_dx:     .byte 5

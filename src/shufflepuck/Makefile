@@ -106,6 +106,8 @@ win_unperfect = \
 	win_d_2.unperfect.gen.s \
 	win_d_3.unperfect.gen.s \
 	win_d_4.unperfect.gen.s \
+	wingame_e_1.unperfect.gen.s \
+	wingame_e_2.unperfect.gen.s \
 	win_e_1.unperfect.gen.s \
 	win_e_2.unperfect.gen.s \
 	win_e_3.unperfect.gen.s \
@@ -160,7 +162,9 @@ lose_sounds = \
 	lose_h.snd.s \
 	lose_i_1.snd.s \
 	lose_i_2.snd.s \
+	endgame_a.snd.s \
 	losegame_b.snd.s \
+	wingame_e.snd.s \
 	losegame_c.snd.s \
 
 opponents_sprites = \
@@ -329,6 +333,11 @@ win%.snd.s: $(SRC_DIR)/assets/sounds/opponents/win%.wav gen_sound_clip
 	./gen_sound_clip $(SAMPLING_HZ) $<_raw $(shell echo "$@"|sed 's/[a-z]*_\([a-z]\).*$$/\1/') > $@
 	rm $<_raw
 lose%.snd.s: $(SRC_DIR)/assets/sounds/opponents/lose%.wav gen_sound_clip
+	rm -f $<_raw
+	sox $< -b 8 -e unsigned-integer -t raw $<_raw channels 1 rate -v $(SAMPLING_HZ)
+	./gen_sound_clip $(SAMPLING_HZ) $<_raw $(shell echo "$@"|sed 's/[a-z]*_\([a-z]\).*$$/\1/') > $@
+	rm $<_raw
+end%.snd.s: $(SRC_DIR)/assets/sounds/opponents/end%.wav gen_sound_clip
 	rm -f $<_raw
 	sox $< -b 8 -e unsigned-integer -t raw $<_raw channels 1 rate -v $(SAMPLING_HZ)
 	./gen_sound_clip $(SAMPLING_HZ) $<_raw $(shell echo "$@"|sed 's/[a-z]*_\([a-z]\).*$$/\1/') > $@

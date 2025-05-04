@@ -34,8 +34,11 @@
         .import     _big_draw_win_e_3                               ; CHANGE A
         .import     _big_draw_win_e_4                               ; CHANGE A
         .import     _big_draw_win_e_5                               ; CHANGE A
+        .import     _big_draw_wingame_e_1                           ; CHANGE A
+        .import     _big_draw_wingame_e_2                           ; CHANGE A
         .import     _play_win_e                                     ; CHANGE A
         .import     _play_lose_e                                    ; CHANGE A
+        .import     _play_wingame_e                                 ; CHANGE A
 
         .import     return0
 
@@ -80,7 +83,7 @@ MAX_NUM_CATCH = 10
         jmp     animate_win
 
 .assert * = __OPPONENT_START__+OPPONENT::END_GAME, error ; Make sure the callback is where we think
-        jmp     return0
+        jmp     sound_endgame
 
 .assert * = __OPPONENT_START__+OPPONENT::THINK_CB, error ; Make sure the callback is where we think
 .proc _opponent_think
@@ -338,6 +341,34 @@ move_backwards:
         jmp     _play_lose_e                                            ; CHANGE A
 .endproc
 
+.proc prepare_animate_wingame
+        ldx     #((28+98)/7)
+        ldy     #(65)
+        jsr     _mouse_wait_vbl
+        jsr     _mouse_wait_vbl
+        jmp     _mouse_wait_vbl
+.endproc
+
+.proc sound_endgame
+        jsr     prepare_animate_wingame
+        jsr     _big_draw_wingame_e_1
+        ldy     #0
+        jsr     _play_wingame_e
+        jsr     prepare_animate_wingame
+        jsr     _big_draw_wingame_e_2
+        ldy     #1
+        jsr     _play_wingame_e
+        jsr     prepare_animate_wingame
+        jsr     _big_draw_wingame_e_1
+        ldy     #1
+        jsr     _play_wingame_e
+        jsr     prepare_animate_wingame
+        jsr     _big_draw_wingame_e_2
+        ldy     #2
+        jsr     _play_wingame_e
+        jsr     prepare_animate_wingame
+        jmp     _big_draw_wingame_e_1
+.endproc
 
 min_x:            .byte 1
 max_x:            .byte 1
