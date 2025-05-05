@@ -156,15 +156,7 @@ hit:
         sta     their_pusher_dy
 
         ; Get a 0-15 DX
-        jsr     _rand             ; Get a 0-15 DX
-        lsr
-        lsr
-        lsr
-        lsr
-        bne     :+                ; Make it 1-15
-        lda     #1
-:       sec                       ; And make it -7/7
-        sbc     #8
+        SIGNED_RAND_0_7_A
         sta     their_pusher_dx
         rts
 

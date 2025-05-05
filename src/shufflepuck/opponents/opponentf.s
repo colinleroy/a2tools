@@ -81,12 +81,7 @@ init_service:
         lda     #$00
         sta     found_x
 
-        jsr     _rand
-        lsr
-        lsr
-        lsr
-        lsr
-        lsr
+        UNSIGNED_RAND_0_7_A
         sta     magic_band_rnd
 
         inc     serving           ; init service only once
@@ -253,12 +248,7 @@ hit:
         lda     found_x
         bne     :+
         ; Get a 0-15 DY if we didn't find X
-        jsr     _rand
-        lsr
-        lsr
-        lsr
-        lsr
-        clc
+        UNSIGNED_RAND_0_15_A
         ; And make it 10-25 (=> 1-3 puck_dy)
         adc     #10
         jmp     set_dx

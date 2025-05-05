@@ -149,12 +149,7 @@ catch:
         bcs     move_backwards
 hit:
         ; Get a 0-15 DY
-        jsr     _rand
-        lsr
-        lsr
-        lsr
-        lsr
-        clc
+        UNSIGNED_RAND_0_15_A
         sta     their_pusher_dy
         rts
 

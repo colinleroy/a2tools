@@ -173,12 +173,7 @@ catch:
         bcs     move_backwards
 hit:
         ; Get a 0-15 DY
-        jsr     _rand
-        lsr
-        lsr
-        lsr
-        lsr
-        clc
+        UNSIGNED_RAND_0_15_A
         ; And make it 10-25 (=> 1-3 puck_dy)
         adc     #10
         sta     their_pusher_dy

@@ -20,7 +20,7 @@
         .import     their_pusher_x, their_pusher_y
         .import     their_pusher_dx, their_pusher_dy
         .import     their_currently_hitting
-        .import     puck_x, puck_right_x, puck_y, puck_dy, serving, their_score
+        .import     puck_x, puck_right_x, puck_y, puck_dx, puck_dy, serving, their_score
         .import     _rand
 
         .import     _big_draw_sprite_b                              ; CHANGE A
@@ -124,7 +124,8 @@ serve_or_catch:
 catch_or_move:
         lda     puck_y
         cmp     #70
-        bcs     move_fast
+        bcc     catch
+        jmp     move_fast
 
 catch:
         GET_DELTA_TO_PUCK
@@ -136,7 +137,7 @@ catch:
 
         ; Did we just hit?
         lda     their_currently_hitting
-        bne     move_backwards
+        bne     add_dx
 
         ; Can we hit now?
         lda     their_pusher_x
@@ -156,12 +157,7 @@ catch:
         bcs     move_backwards
 hit:
         ; Get a 0-15 DY
-        jsr     _rand
-        lsr
-        lsr
-        lsr
-        lsr
-        clc
+        UNSIGNED_RAND_0_15_A
         sta     their_pusher_dy
         rts
 
@@ -170,7 +166,14 @@ move_forwards_slow:
         sta     their_pusher_dy
         rts
 
+add_dx:
+        cmp     #14               ; Did we just really hit on previous loop?
+        bne     move_backwards
+        ; Add dx
+        SIGNED_RAND_0_15_A
+        sta     puck_dx
 move_backwards:
+        ; And go backwards
         lda     #<(-THEIR_MAX_DY/2)
         sta     their_pusher_dy
         rts

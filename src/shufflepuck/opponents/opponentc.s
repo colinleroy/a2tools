@@ -232,13 +232,7 @@ hit:
         sta     no_fast
 
         ; Get a 4-11 DY
-        jsr     _rand
-        lsr
-        lsr
-        lsr
-        lsr
-        lsr
-        clc
+        UNSIGNED_RAND_0_7_A
         adc     #4
         sta     their_pusher_dy
         rts

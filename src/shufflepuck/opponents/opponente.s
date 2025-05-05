@@ -260,26 +260,12 @@ store_dx:
         bcs     move_backwards
 hit:
         ; Get a 0-15 DY
-        jsr     _rand
-        lsr
-        lsr
-        lsr
-        lsr
-        clc
+        UNSIGNED_RAND_0_15_A
         ; And make it 9-24
         adc     #9
         sta     their_pusher_dy
 
-        jsr     _rand             ; Get a 0-7 DX
-        lsr
-        lsr
-        lsr
-        lsr
-        lsr
-        bne     :+                ; Make it 1-7
-        lda     #1
-:       sec                       ; And make it -3/3
-        sbc     #4
+        SIGNED_RAND_0_3_A
         sta     their_pusher_dx
         rts
 
