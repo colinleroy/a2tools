@@ -521,9 +521,8 @@ dc3_animate_3:
         jmp     dc3_inc_animate
 dc3_animate_4:
         jsr     _big_draw_moving_barcode_dc33
-        lda     #0
+        lda     #$FF              ; Will go to 0
         sta     dc3_animate
-        rts
 dc3_inc_animate:
         inc     dc3_animate
         rts
@@ -575,11 +574,10 @@ lexan_animate_4:
 maybe_animate_lexan:
         jsr     _rand
         cmp     #2
-        bcc     lexan_inc_animate
-        rts
+        bcs     out
 lexan_inc_animate:
         inc     lex_animate
-        rts
+out:    rts
 .endproc
 
 dc3_animate:.byte 0
