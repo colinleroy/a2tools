@@ -32,6 +32,7 @@ woztubes_SOURCES := \
 	$(SRC_DIR)/../lib/asm/clrzone.s \
 	$(SRC_DIR)/../lib/asm/malloc0.s \
 	$(SRC_DIR)/../lib/asm/hgr.s \
+	$(SRC_DIR)/../lib/asm/backup_hgrpage.s \
 	$(SRC_DIR)/../lib/surl/asm/surl_ping.s \
 	$(SRC_DIR)/../lib/extrazp.s \
 	$(SRC_DIR)/../lib/citoa.s \

@@ -37,7 +37,7 @@
 #include "path_helper.h"
 #include "platform.h"
 #include "malloc0.h"
-#include "backup_logo.h"
+#include "backup_hgrpage.h"
 #include "citoa.h"
 
 #ifndef __APPLE2ENH__
@@ -308,7 +308,7 @@ display_result:
       }
     }
   } else {
-    backup_restore_logo("r");
+    backup_restore_hgrpage("r");
   }
 
   init_hgr(1);
@@ -444,7 +444,7 @@ search_again:
     cur_line = 0;
     search_stations(search_buf);
   }
-  backup_restore_logo("r");
+  backup_restore_hgrpage("r");
   if (!do_server_screen) {
     goto search_again;
   }

@@ -41,6 +41,7 @@
 #include "malloc0.h"
 #include "citoa.h"
 #include "video_providers.h"
+#include "backup_hgrpage.h"
 
 char *url = NULL;
 
@@ -55,21 +56,6 @@ char search_str[80] = "";
 #define LOGO_SAVE_FILE "/RAM/LOGO.HGR"
 #else
 #define SEARCH_SAVE_FILE "WTSRCH"
-#endif
-
-#ifdef __APPLE2ENH__
-static void backup_restore_logo(char *op) {
-  FILE *fp = fopen(LOGO_SAVE_FILE, op);
-  if (IS_NULL(fp)) {
-    return;
-  }
-  if (op[0] == 'w') {
-    fwrite((char *)HGR_PAGE, 1, HGR_LEN, fp);
-  } else {
-    fread((char *)HGR_PAGE, 1, HGR_LEN, fp);
-  }
-  fclose(fp);
-}
 #endif
 
 static char did_cmd = 0;
@@ -233,7 +219,7 @@ static void load_video(char *host, InstanceTypeId instance_type, char *id) {
     set_scrollwindow(20, scrh);
 
 #ifdef __APPLE2ENH__
-    backup_restore_logo("r");
+    backup_restore_hgrpage("r");
 #endif
     init_hgr(1);
     hgr_mixon();
@@ -403,7 +389,7 @@ new_search:
   cur_line = 0;
   search(url, global_instance_type);
 #ifdef __APPLE2ENH__
-  backup_restore_logo("r");
+  backup_restore_hgrpage("r");
 #endif
   goto new_search;
 }
@@ -489,7 +475,7 @@ again:
 int main(void) {
 #ifdef __APPLE2ENH__
   videomode(VIDEOMODE_80COL);
-  backup_restore_logo("w");
+  backup_restore_hgrpage("w");
 #endif
 
   serial_throbber_set((void *)0x07F7);

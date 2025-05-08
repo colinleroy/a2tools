@@ -39,7 +39,7 @@
 #include "platform.h"
 #include "splash.h"
 #include "citoa.h"
-#include "backup_logo.h"
+#include "backup_hgrpage.h"
 #include "radio-browser.h"
 
 char *data = (char *)splash_hgr;
@@ -289,7 +289,7 @@ static int open_url(char *url, char *filename) {
 
   if (!got_cover) {
 #ifdef __APPLE2ENH__
-    backup_restore_logo("r");
+    backup_restore_hgrpage("r");
     init_hgr(1);
     hgr_mixon();
 #elif defined(__APPLE2__)
@@ -664,7 +664,7 @@ up_dir:
 restart_ui:
         free(url);
         stp_free_data();
-        backup_restore_logo("r");
+        backup_restore_hgrpage("r");
         url = start_url_ui();
         break;
 #ifdef __APPLE2ENH__
@@ -728,7 +728,7 @@ void main(void) {
   hgr_mixon();
   set_scrollwindow(20, NUMROWS);
 
-  backup_restore_logo("w");
+  backup_restore_hgrpage("w");
   surl_ping();
   surl_user_agent = "Wozamp "VERSION"/Apple II";
 

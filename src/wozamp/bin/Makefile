@@ -3,7 +3,6 @@ USE_LANGCARD := -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD
 wozamp_SOURCES := \
 	$(SRC_DIR)/main.c \
 	$(SRC_DIR)/config.c \
-	$(SRC_DIR)/backup_logo.c \
 	$(EMBED_RBROWSER) \
 	$(SRC_DIR)/../lib/dget_text_single.c \
 	$(SRC_DIR)/../lib/strsplit.c \
@@ -26,6 +25,7 @@ wozamp_CL65SOURCES = \
 	$(SRC_DIR)/../lib/asm/malloc0.s \
 	$(SRC_DIR)/../lib/asm/realloc_safe.s \
 	$(SRC_DIR)/../lib/asm/hgr.s \
+	$(SRC_DIR)/../lib/asm/backup_hgrpage.s \
 	$(SRC_DIR)/../lib/dputc.s \
 	$(SRC_DIR)/../lib/scroll.s \
 	$(SRC_DIR)/../lib/FVTABZ.s \
@@ -46,7 +46,6 @@ wozamp_CLCFLAGS = -t $(CC65_TARGET) -DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER \
 rbrowser_SOURCES := \
 	$(SRC_DIR)/radio-browser.c \
 	$(SRC_DIR)/config.c \
-	$(SRC_DIR)/backup_logo.c \
 	$(SRC_DIR)/../lib/dget_text_single.c \
 	$(SRC_DIR)/../lib/strsplit.c
 
@@ -64,6 +63,7 @@ rbrowser_CL65SOURCES = \
 	$(SRC_DIR)/../lib/asm/path_helper.s \
 	$(SRC_DIR)/../lib/asm/malloc0.s \
 	$(SRC_DIR)/../lib/asm/hgr.s \
+	$(SRC_DIR)/../lib/asm/backup_hgrpage.s \
 	$(SRC_DIR)/../lib/dputc.s \
 	$(SRC_DIR)/../lib/dputs.s \
 	$(SRC_DIR)/../lib/scroll.s \
