@@ -93,9 +93,9 @@ woztubes.bin: $(woztubes_CL65SOURCES) $(woztubes_SOURCES)
 	cl65 -g -Wl --dbgfile,woztubes.dbg -Ln woztubes.lbl $(CFLAGS) $(iigs_CFLAGS) $(woztubes_CLCFLAGS) -o $@ $^  $(CC65_TARGET)-iobuf-0800.o
 
 upload: all
-	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/woztubes/$(suffix)/ || \
-	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/woztubes/$(suffix)/ && \
-	cp *.bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/woztubes/$(suffix)/
+	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/woztubes/$(suffix)/ || \
+	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/woztubes/$(suffix)/ && \
+	cp *.bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/woztubes/$(suffix)/
 
 dist: woztubes-$(suffix).po
 	mkdir -p $(SRC_DIR)../../dist/

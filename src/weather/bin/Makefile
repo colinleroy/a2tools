@@ -54,9 +54,9 @@ weather.bin: $(weather_CL65SOURCES) $(weather_SOURCES)
 	cl65 -g -Wl --dbgfile,weather.dbg -Ln weather.lbl $(CFLAGS) $(iigs_CFLAGS) $(weather_CLCFLAGS) -o $@ $^  $(CC65_TARGET)-iobuf-0800.o
 
 upload: all
-	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/weather/$(suffix)/ || \
-	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/weather/$(suffix)/ && \
-	cp *.bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/weather/$(suffix)/
+	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/weather/$(suffix)/ || \
+	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/weather/$(suffix)/ && \
+	cp *.bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/weather/$(suffix)/
 
 dist: weather$(iigs_suffix).po
 	mkdir -p $(SRC_DIR)../../dist/
