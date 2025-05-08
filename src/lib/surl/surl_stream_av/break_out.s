@@ -1,6 +1,6 @@
 break_out:
         jsr     _clrscr
-        jsr     _init_text
+        jsr     _text_mono40
         lda     #$01
         ldx     #$00
         jsr     _sleep

@@ -9,6 +9,8 @@
 
 void __fastcall__ init_hgr(uint8 mono);
 void __fastcall__ init_text(void);
+void __fastcall__ load_hgr_mono_file(unsigned char pages);
+
 extern char hgr_mix_is_on;
 extern char hgr_init_done;
 
@@ -22,6 +24,7 @@ void __fastcall__ hgr_mixoff(void);
 extern char HGR_PAGE[HGR_LEN];
 #define hgr_mixon()
 #define hgr_mixoff()
+#define load_hgr_mono_file()
 #endif
 
 #endif

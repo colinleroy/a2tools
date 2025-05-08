@@ -4,7 +4,7 @@ calc_bases:
         ; contains the base page address's high byte on entry ($20 for
         ; page 0, $40 for page 1)
         ldy     #0              ; Y is the index - Start at base 0
-        lda     #$00            ; A is the address's low byte
+        tya                     ; A is the address's low byte
                                 ; (and X the address's high byte)
 
         clc

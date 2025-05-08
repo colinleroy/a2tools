@@ -108,6 +108,8 @@ videoplay_SOURCES := \
 	$(SRC_DIR)/../lib/asm/path_helper.s \
 	$(SRC_DIR)/../lib/asm/malloc0.s \
 	$(SRC_DIR)/../lib/asm/hgr.s \
+	$(SRC_DIR)/../lib/asm/hgr_setup_mono40.s \
+	$(SRC_DIR)/../lib/asm/hgr_mono40.s \
 	$(SRC_DIR)/../lib/fastirq$(iigs_suffix).s \
 	$(SRC_DIR)/../lib/extrazp.s
 

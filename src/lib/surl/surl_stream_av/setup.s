@@ -49,10 +49,13 @@ setup:
         lda     #SAMPLE_MULT    ; Inform server about sample multiplier
         jsr     _serial_putc_direct
 
+        ; Get whether we have subtitles from the server
         jsr     _serial_read_byte_no_irq
+        tay
+        ; And invert it as we need it the other way later
+        eor     #$01
         sta     cur_mix
 
-        tay
         lda     $C052,y
 
         lda     #<(page0_addrs_arr_high)
@@ -66,7 +69,6 @@ setup:
         lda     #$00
         sta     cur_base
         sta     kbd_cmd
-        sta     cur_mix
         sta     next_offset
         sta     cancelled
 

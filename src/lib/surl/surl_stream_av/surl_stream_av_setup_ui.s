@@ -11,16 +11,14 @@
         jsr       _hgr_mixon
         jsr       _clrscr
 
-        ; Clear text page 2
-        lda       #<$0800
+        lda       #<$0800     ; Clear text page 2
         ldx       #>$0800
         jsr       pushax
 
         lda       #($20|$80)  ; with non-inverse spaces
         jsr       pusha0
 
-        ; 1kB
-        lda       #<$400
+        lda       #<$400      ; 1kB
         ldx       #>$400
         jsr       _memset
 

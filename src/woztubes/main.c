@@ -473,6 +473,8 @@ again:
 }
 
 int main(void) {
+
+  load_hgr_mono_file(2);
 #ifdef __APPLE2ENH__
   videomode(VIDEOMODE_80COL);
   backup_restore_hgrpage("w");

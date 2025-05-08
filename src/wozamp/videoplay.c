@@ -49,8 +49,13 @@ int main(void) {
   fgets(translit_charset, 31, url_fp);
   fclose(url_fp);
 
+  /* Now unlink this and setup the HGR mono buffers */
+  unlink(URL_PASSER_FILE);
+  load_hgr_mono_file(2);
+
   /* Remove filename from URL in advance, so we don't get stuck in
-   * a loop if the player crashes for some reason */
+   * a loop if the player crashes for some reason, and put the
+   * passer file back */
   if (IS_NOT_NULL(last_sep = strrchr(url, '/'))) {
     *last_sep = '\0';
 

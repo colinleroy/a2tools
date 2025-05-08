@@ -15,6 +15,7 @@
         .import         _scrh
         .import         _hgr_mixon, _hgr_mixoff
         .import         _hgr_mix_is_on
+        .import         _hgr_force_mono40, _text_mono40, hgr_mono_file
 
         .import         _serial_putc_direct
         .import         _simple_serial_getc

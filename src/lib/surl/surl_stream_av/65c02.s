@@ -155,7 +155,6 @@ _SAMPLES_BASE = *
 .include "duty-cycles/13.s"
 .include "duty-cycles/14.s"
 .include "duty-cycles/17.s"
-.include "break_out.s"
 
 .align $100
 .assert * = _SAMPLES_BASE + $400, error
@@ -193,6 +192,7 @@ _SAMPLES_BASE = *
 
 ; The rest of the functions don't need to be aligned.
 
+.include "break_out.s"
 .include "surl_start_stream_av.s"
 .include "../surl_stream_common/patch_addresses.s"
 .include "../surl_stream_common/patch_audio_registers.s"
