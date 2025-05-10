@@ -18,16 +18,11 @@
   #define __fastcall__
 #endif
 
-#ifdef __APPLE2ENH__
-#include <apple2enh.h>
-#include "extrazp.h"
+#ifdef __APPLE2__
+  #include <apple2.h>
+  #include "extrazp.h"
 #else
-  #ifdef __APPLE2__
-    #include <apple2.h>
-    #include "extrazp.h"
-  #else
-    #include "extended_conio.h"
-  #endif
+  #include "extended_conio.h"
 #endif
 #endif
 

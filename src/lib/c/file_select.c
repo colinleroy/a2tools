@@ -19,14 +19,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#ifdef __CC65__
-#include <dio.h>
-#include <device.h>
-#include <apple2.h>
-#include <conio.h>
-#else
 #define _DE_ISDIR(x) ((x) == DT_DIR)
-#endif
 #include <ctype.h>
 #include <errno.h>
 #include <dirent.h>
@@ -38,15 +31,9 @@
 #define PRODOS_FILENAME_MAX 17
 #define PRODOS_MAX_VOLUMES 37
 
-#ifdef __APPLE2ENH__
-#define VBAR "\337"
-#define LOWER_CORNER "\324\137"
-#define N_UI_HELP_LINES 3
-#else
 #define VBAR "!"
 #define LOWER_CORNER "!_"
 #define N_UI_HELP_LINES 4
-#endif
 
 typedef struct _file_entry {
   char name[PRODOS_FILENAME_MAX];
@@ -264,14 +251,9 @@ disp_again:
   /* Print footer */
   revers(0);
   gotox(sx);empty_line();
-#ifdef __APPLE2ENH__
-  gotox(sx);cputs(VBAR"  Up/Down / Left/Right: navigate;\r\n");
-  gotox(sx);cputs(LOWER_CORNER" Enter: choose; Esc: cancel; R: refresh");
-#else
   gotox(sx);cputs(VBAR"  U/J / Left/Right: navigate;\r\n");
   gotox(sx);cputs(VBAR"  R: refresh;\r\n");
   gotox(sx);cputs(LOWER_CORNER" Enter: choose; Esc: cancel");
-#endif
 
   /* Get key */
   c = tolower(cgetc());
@@ -304,22 +286,16 @@ up:
       }
       goto err_bell;
 
-#ifdef __APPLE2ENH__
     case CH_CURS_DOWN:
-#else
     case 'j':
-#endif
       sel++;
       if (sel == n) {
         sel = 0;
       }
       goto disp_again;
 
-#ifdef __APPLE2ENH__
     case CH_CURS_UP:
-#else
     case 'u':
-#endif
       if (sel > 0) {
         sel--;
       } else {

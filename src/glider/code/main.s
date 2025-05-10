@@ -184,12 +184,10 @@ x_coord_reset_handler:
 
 :
 
-.ifndef __APPLE2ENH__
         ; Give the Mousecard time to settle post-init
         lda     #$FF
         ldx     #0
         jsr     _platform_msleep
-.endif
 
 new_game:
         jsr     _load_splash_screen
