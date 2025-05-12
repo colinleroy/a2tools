@@ -73,7 +73,7 @@
 .segment "CODE"
 
 ; How much do we have left?
-; .res 550
+; .res 1650
 
 .proc _main
         jsr     _init_caches
