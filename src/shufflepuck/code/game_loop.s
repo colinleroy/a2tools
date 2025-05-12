@@ -465,6 +465,9 @@ check:
         lda     #1
         sta     my_currently_hitting
 
+        lda     puck_x
+        jsr     _init_precise_x
+
         ; Make sure puck doesn't go behind pusher so force its position one point
         ; in front of the pusher
         ldy     my_pusher_y

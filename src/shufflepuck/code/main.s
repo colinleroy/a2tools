@@ -330,9 +330,6 @@ loop_start:
         ; and if carry is set, it reached the end of the table.
         bcs     reset_point
 
-        ; Check for collision again after moving puck
-        jsr     _puck_check_my_hit
-
         ; Check for keyboard input
         jsr     _check_keyboard
         bcc     game_loop
