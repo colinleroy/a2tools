@@ -323,6 +323,8 @@ loop_start:
         jsr     _puck_check_my_hit
         jsr     _puck_check_their_hit
 
+        jsr     __OPPONENT_START__+OPPONENT::HIT_CB
+
         ; Update the puck's position,
         jsr     _move_puck
         ; and if carry is set, it reached the end of the table.

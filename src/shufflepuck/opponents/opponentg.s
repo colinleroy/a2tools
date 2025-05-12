@@ -81,6 +81,9 @@ END_SERVICE_RIGHT_DX = <12
 .assert * = __OPPONENT_START__+OPPONENT::END_GAME, error ; Make sure the callback is where we think
         jmp     return0
 
+.assert * = __OPPONENT_START__+OPPONENT::HIT_CB, error
+        jmp     return0
+
 .assert * = __OPPONENT_START__+OPPONENT::THINK_CB, error ; Make sure the callback is where we think
 .proc _opponent_think
         lda     serving

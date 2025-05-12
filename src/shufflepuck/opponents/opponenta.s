@@ -69,6 +69,9 @@ THEIR_MAX_DX = 5
 .assert * = __OPPONENT_START__+OPPONENT::END_GAME, error ; Make sure the callback is where we think
         jmp     sound_endgame
 
+.assert * = __OPPONENT_START__+OPPONENT::HIT_CB, error
+        jmp     return0
+
 .assert * = __OPPONENT_START__+OPPONENT::THINK_CB, error ; Make sure the callback is where we think
 .proc _opponent_think
         lda     serving
