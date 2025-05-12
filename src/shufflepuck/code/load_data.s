@@ -248,6 +248,8 @@ push_dest:
         ldx     size+1
 data_io_func:
         jsr     $FFFF         ; Patched. Calls _read or _write
+        sta     tmp1          ; Remember size for uncompress
+        stx     tmp1+1
 
         jsr     popax         ; Get fd back from stack
         jsr     _close        ; And close the file
@@ -263,15 +265,8 @@ uncompress:
         lda     compressed_buf_start+1
         sta     ptr1+1
 
+        ; Get uncompressed size (the first two bytes of the data we just read)
         ldy     #0
-        lda     (ptr1),y      ; Get compressed size (the first two bytes
-        sta     tmp1          ; of the compressed data we just read)
-        iny
-        lda     (ptr1),y
-        sta     tmp1+1
-
-        ; Get uncompressed size (the next two bytes)
-        iny
         lda     (ptr1),y
         sta     size
         iny
@@ -294,11 +289,11 @@ uncompress:
         jsr     pushax        ; Push it for decompressor source
         jsr     pushax        ; and for memmove dest
 
-        ; Where to move data from (the compressed buffer excluding the 4
+        ; Where to move data from (the compressed buffer excluding the 2
         ; header bytes)
         lda     compressed_buf_start
         clc
-        adc     #4
+        adc     #2
         ldx     compressed_buf_start+1
         bcc     :+
         inx
@@ -319,7 +314,6 @@ finish_decompress:
 
         lda     size          ; Inform lz4 decompressor of the uncompressed size
         ldx     size+1        ; so it knows when to stop
-
 
         bit       $C083           ; Enable writing to LC
         bit       $C083           ; In case we're writing to it

@@ -140,6 +140,8 @@ file_io_high:                 ; It is either __HGR_START__ (for read with
         ldx     size+1
 data_io_func:
         jsr     $FFFF         ; Patched. Calls _read or _write
+        sta     tmp1          ; Remember size for uncompress
+        stx     tmp1+1
 
         jsr     popax         ; Get fd back from stack
         jsr     _close        ; And close the file
@@ -150,14 +152,9 @@ data_io_func:
         rts
 
 uncompress:
-        lda     __HGR_START__ ; Get compressed size (the first two bytes
-        sta     tmp1          ; of the compressed data we just read)
+        ; Get uncompressed size (the first two bytes of the data we just read)
+        lda     __HGR_START__
         ldx     __HGR_START__+1
-        stx     tmp1+1
-
-        ; Get uncompressed size (the next two bytes)
-        lda     __HGR_START__+2
-        ldx     __HGR_START__+3
         sta     size
         stx     size+1
 
@@ -176,10 +173,10 @@ uncompress:
         jsr     pushax        ; Push it for decompressor source
         jsr     pushax        ; and for memcpy dest
 
-        ; Where to move data from (the HGR page excluding the 4
+        ; Where to move data from (the HGR page excluding the 2
         ; header bytes)
-        lda     #<(__HGR_START__+4)
-        ldx     #>(__HGR_START__+4)
+        lda     #<(__HGR_START__+2)
+        ldx     #>(__HGR_START__+2)
         jsr     pushax        ; Push source for memcpy
 
         lda     tmp1          ; Copy compressed size bytes

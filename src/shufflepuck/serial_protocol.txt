@@ -1,0 +1,16 @@
+opponent think_cb:
+  Send and receive pusher coords:
+    me: send S | $80, wait to receive S | $80
+    me: send my_pusher_x (inverted), wait to receive their_pusher_x
+    me: send my_pusher_y (inverted), wait to receive their_pusher_y
+
+opponent_hit_cb:
+  if player_caught:
+    Send puck coords and DX/DY:
+    me: send P | $80, wait to receive P | $80
+    me: send puck_x (inverted), wait to receive ack
+    me: send puck_y (inverted), wait to receive ack
+    me: send puck_dx (inverted), wait to receive ack
+    me: send puck_dy (inverted), wait_to_receive ack
+  otherwise:
+    Send N | $80, wait to receive N | $80

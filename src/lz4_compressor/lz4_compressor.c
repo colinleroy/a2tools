@@ -31,7 +31,7 @@ static char out_buf[MAX_COMPRESSED_DATA_SIZE*16];
 int main(int argc, char *argv[]) {
   FILE *fp;
   size_t read_bytes, wrote_bytes;
-  char header[4];
+  char header[2];
 
   if (argc < 2) {
     fprintf(stderr, "Usage: %s [input_file]", argv[0]);
@@ -68,13 +68,11 @@ int main(int argc, char *argv[]) {
           read_bytes, wrote_bytes,
           ((read_bytes - wrote_bytes)*100)/read_bytes);
 
-  /* Write compressed and uncompressed size as header in little-endian format
+  /* Write uncompressed size as header in little-endian format
    * to help decompressor
    */
-  header[0] = (wrote_bytes & 0xFF);
-  header[1] = (wrote_bytes & 0xFFFF) >> 8;
-  header[2] = (read_bytes & 0xFF);
-  header[3] = (read_bytes & 0xFFFF) >> 8;
+  header[0] = (read_bytes & 0xFF);
+  header[1] = (read_bytes & 0xFFFF) >> 8;
   fwrite(header, 1, sizeof(header), stdout);
   fwrite(out_buf, 1, wrote_bytes, stdout);
 }
