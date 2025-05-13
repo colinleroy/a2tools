@@ -36,7 +36,7 @@
         .import   __SPLC_START__, __SPLC_SIZE__
         .import   __HGR_START__, __HGR_SIZE__
         .import   __OPPONENT_START__, __OPPONENT_SIZE__
-        .import   _decompress_lz4
+        .import   _decompress_zx02
 
         .importzp tmp1, ptr1
 
@@ -260,18 +260,18 @@ data_io_func:
         rts
 
 uncompress:
-        lda     compressed_buf_start
-        sta     ptr1
-        lda     compressed_buf_start+1
-        sta     ptr1+1
+        ; lda     compressed_buf_start
+        ; sta     ptr1
+        ; lda     compressed_buf_start+1
+        ; sta     ptr1+1
 
         ; Get uncompressed size (the first two bytes of the data we just read)
-        ldy     #0
-        lda     (ptr1),y
-        sta     size
-        iny
-        lda     (ptr1),y
-        sta     size+1
+        ; ldy     #0
+        ; lda     (ptr1),y
+        ; sta     size
+        ; iny
+        ; lda     (ptr1),y
+        ; sta     size+1
 
         ; Compute where to move data, we want it to be
         ; the furthest possible in the available buffer
@@ -292,12 +292,12 @@ uncompress:
         ; Where to move data from (the compressed buffer excluding the 2
         ; header bytes)
         lda     compressed_buf_start
-        clc
-        adc     #2
+        ; clc
+        ; adc     #2
         ldx     compressed_buf_start+1
-        bcc     :+
-        inx
-:       jsr     pushax        ; Push source for memmove
+        ; bcc     :+
+        ; inx
+        jsr     pushax        ; Push source for memmove
 
         lda     tmp1          ; Copy compressed size bytes
         ldx     tmp1+1
@@ -310,15 +310,15 @@ finish_decompress:
 
 :       lda     destination   ; Push user-specified destination buffer
         ldx     destination+1
-        jsr     pushax
-
-        lda     size          ; Inform lz4 decompressor of the uncompressed size
-        ldx     size+1        ; so it knows when to stop
+        ; jsr     pushax
+        ; 
+        ; lda     size          ; Inform lz4 decompressor of the uncompressed size
+        ; ldx     size+1        ; so it knows when to stop
 
         bit       $C083           ; Enable writing to LC
         bit       $C083           ; In case we're writing to it
 
-        jsr     _decompress_lz4
+        jsr     _decompress_zx02
 
         bit     $C080
 
