@@ -711,13 +711,23 @@ static void end_call_info(int op_addr, int line_num, const char *from) {
   my_info = tree_functions[tree_depth-1];
 
   my_info->stack_bytes_pushed -= 2; /* pop return address */
-  if (my_info->stack_bytes_pushed > 0) {
+  if (my_info->stack_bytes_pushed != 0) {
     if (verbose) {
       tabulate_stack();
       fprintf(stderr, "warning - stack imbalance (%d)\n", my_info->stack_bytes_pushed);
     } else if (log_stack_to_stdout) {
       printf("                                                                 ; *WARNING - stack imbalance (%d)\n", my_info->stack_bytes_pushed);
     }
+  }
+  while (my_info->stack_bytes_pushed < 0 && my_info->stack_bytes_pushed % 2 == 0) {
+    if (verbose) {
+      tabulate_stack();
+      fprintf(stderr, "returning one extra level\n");
+    } else if (log_stack_to_stdout) {
+      printf("                                                                 ; *RETURNING one extra level\n");
+    }
+    tree_depth--;
+    my_info->stack_bytes_pushed += 2;
   }
 
   /* Go back up */
