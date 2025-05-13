@@ -52,7 +52,7 @@ assets_files = $(assets:%=%_img)
 opponents_code    = $(opponents:%=$(SRC_DIR)/opponents/opponent%.s)
 opponents_files   = $(opponents:%=opponent_%)
 
-lz4_files = \
+lzsa_files = \
 	$(assets_files) \
 	$(opponents_files) \
 	low_code \
@@ -61,8 +61,8 @@ lz4_files = \
 	bar_code \
 
 assets_backgrounds = $(assets:=.bg.gen.s)
-assets_bin         = $(lz4_files:=.bin)
-assets_lz4         = $(lz4_files:=.lz4)
+assets_bin         = $(lzsa_files:=.bin)
+assets_lzsa         = $(lzsa_files:=.lzsa)
 
 
 sprites_pixel_perfect = \
@@ -261,8 +261,8 @@ lz4_compressor: $(SRC_DIR)/../lz4_compressor/lz4_compressor.c
 
 $(assets_bin): $(BINARY_NAME)
 
-%.lz4: %.bin lz4_compressor
-	./lz4_compressor $< > $@
+%.lzsa: %.bin
+	lzsa -f 1 -r -m 3 $< $@
 
 $(assets_backgrounds): %.bg.gen.s: %.hgr
 
@@ -368,7 +368,7 @@ clean:
 	table.hgr \
 	level*.hgr \
 	assets/*/*.hgr-preview.* \
-	*.dbg *.lbl *.map *.lz4 \
+	*.dbg *.lbl *.map *.lz4 *.lzsa \
 	shflpuck.ld.cfg
 
 check_imports.sh: $(shflpuck_SOURCES) $(SRC_DIR)/check_imports.sh
@@ -382,20 +382,20 @@ $(BINARY_NAME): shflpuck.ld.cfg $(shflpuck_SOURCES)
 		$(CC65_TARGET)-iobuf-0800.o $(CC65_TARGET)-integer-basic-compat.o
 
 CLEANDISK = $(SRC_DIR)/../../disks/ProDOS_2_4_3.po
-shufflepuck.po: $(BINARY_NAME) $(assets_lz4)
+shufflepuck.po: $(BINARY_NAME) $(assets_lzsa)
 	cp $(CLEANDISK) $@; \
 	java -jar $(SRC_DIR)/../../bin/ac.jar -n $@ SHUFFLEPUCK
 	java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ SHFLPUCK.SYSTEM SYS < $(SRC_DIR)/../../bin/loader.system; \
 	java -jar $(SRC_DIR)/../../bin/ac.jar -d $@ BASIC.SYSTEM; \
 	java -jar $(SRC_DIR)/../../bin/ac.jar -as $@ SHFLPUCK < $<; \
-	for r in $(assets_lz4); do \
-		java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ $$(basename $$r | sed "s/\.lz4$///") BIN < $$r; \
+	for r in $(assets_lzsa); do \
+		java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ $$(basename $$r | sed "s/\.lzsa$///") BIN < $$r; \
 	done; \
 
 upload: all
 	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/shufflepuck/$(GAME_LANG)/ || \
 	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/shufflepuck/$(GAME_LANG)/ && \
-	cp *.bin *.lz4 /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/shufflepuck/$(GAME_LANG)/
+	cp *.bin *.lzsa /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/shufflepuck/$(GAME_LANG)/
 	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/disks/ || \
 	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/disks/ && \
 	cp *.po /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/disks/
