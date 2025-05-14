@@ -14,10 +14,12 @@
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
         .export   _main
-        .export   serving, my_score, their_score
+        .export   serving, my_score, their_score, turn
         .export   _check_keyboard, _last_key
         .export   _draw_opponent
         .export   won_tournament
+        .export   game_cancelled
+        .export   _init_puck_position
 
         .import   _hgr_force_mono40
         .import   _mouse_setbarbox, _mouse_setplaybox
@@ -179,9 +181,7 @@ new_game:
         sta     turn
         sta     my_score
         sta     their_score
-
-        lda     turn_puck_y
-        sta     puck_serve_y
+        sta     game_cancelled
 
         ; Load the opponent file
         lda     opponent
@@ -249,15 +249,7 @@ draw_scores:
         stx     their_pusher_x
         jsr     _move_their_pusher
 
-        lda     #PUCK_INI_X
-        sta     puck_x
-        jsr     _init_precise_x
-        lda     puck_serve_y
-        sta     puck_y
-        jsr     _init_precise_y
-
-        ; Set correct graphics coords first
-        jsr     _transform_puck_coords
+        jsr     _init_puck_position
 
         ; Stop the puck, set serving flag
         ldx     #$00
@@ -310,6 +302,7 @@ loop_start:
 
         ; Let the opponent think about what to do,
         jsr     __OPPONENT_START__+OPPONENT::THINK_CB
+
         ; And move their pusher accordingly
         jsr     _move_their_pusher
 
@@ -330,6 +323,9 @@ loop_start:
         ; and if carry is set, it reached the end of the table.
         bcs     reset_point
 
+        lda     game_cancelled
+        bne     abort_game
+
         ; Check for keyboard input
         jsr     _check_keyboard
         bcc     game_loop
@@ -337,6 +333,7 @@ loop_start:
         ; Keyboard hit, is it escape?
         cmp     #CH_ESC
         bne     :+
+abort_game:
         jmp     clear_and_go_bar
 :
 .ifdef CHEAT 
@@ -355,10 +352,6 @@ reset_point:
         lda     turn
         eor     #$01
         sta     turn
-        tax
-        ; And get where we should position the puck for service
-        lda     turn_puck_y,x
-        sta     puck_serve_y
 
         ; Reset bounces counter (for Nerual's DX calculation)
         lda     #$00
@@ -399,8 +392,25 @@ update_screen:
         jmp     new_point
 .endproc
 
+.proc _init_puck_position
+        lda     #PUCK_INI_X
+        sta     puck_x
+        jsr     _init_precise_x
+        ldx     turn
+        lda     turn_puck_y,x
+        sta     puck_y
+        jsr     _init_precise_y
+
+        ; Set correct graphics coords first
+        jmp     _transform_puck_coords
+.endproc
+
 ; Return with required delta in X
 .proc get_puck_return_y_speed
+        ldx     turn
+        lda     turn_puck_y,x
+        sta     puck_serve_y
+
         ldx     #4                    ; DY required to move forward
         lda     puck_serve_y          ; puck_serve_y - 3 >= puck_y => continue
         sec
@@ -474,3 +484,4 @@ in_tournament:  .res 1
 won_tournament: .res 1
 frame_counter:  .res 1
 _last_key:      .res 1
+game_cancelled: .res 1
