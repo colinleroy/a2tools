@@ -21,6 +21,9 @@
 ; interrupt handling assumes that the 65816 is in 6502-emulation mode.
 ;
 
+        .export         _acia_open, _acia_close
+        .export         _acia_put, _acia_get
+
         .include        "zeropage.inc"
         .include        "ser-kernel.inc"
         .include        "ser-error.inc"
@@ -38,13 +41,11 @@ SLTROMSEL      := $C02D         ; For Apple IIgs slot verification
 ;----------------------------------------------------------------------------
 ; Global variables
 
-        .bss
+.segment "s"
 
 Index:          .res    1       ; I/O register index
 Slot:           .res    1
 Speed:          .res    1
-
-        .rodata
 
 BaudTable:                      ; Table used to translate RS232 baudrate param
                                 ; into control register value
@@ -107,8 +108,6 @@ IdValTable:                     ; Table of expected values for the four checked
                                 ; parallel I/O card type 1)
 
 IdTableLen      = * - IdValTable
-
-        .code
 
 ;----------------------------------------------------------------------------
 ; SER_INSTALL: Is called after the driver is loaded into memory. If possible,

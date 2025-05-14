@@ -10,6 +10,9 @@
 ; referred to where applicable)
 ; and https://gswv.apple2.org.za/a2zine/Utils/Z8530_SCCsamples_info.txt
 
+        .export         _z8530_open, _z8530_close
+        .export         _z8530_put, _z8530_get
+
         .setcpu         "65816"
 
         .include        "zeropage.inc"
@@ -17,13 +20,11 @@
         .include        "ser-error.inc"
 
 
-        .bss
+.segment "s"
 
 CurClockSource: .res    1               ; Whether to use BRG or RTxC for clock
 Slot:           .res    1
 Speed:          .res    1
-
-        .data
 
 Opened:         .byte   $00             ; 1 when opened
 Channel:        .byte   $00             ; Channel B by default
@@ -40,8 +41,6 @@ TxBitTable:     .byte   %00000000       ; SER_BITS_5, in WR_TX_CTRL (WR5)
                 .byte   %01000000       ; SER_BITS_6  (Ref page 5-9)
                 .byte   %00100000       ; SER_BITS_7
                 .byte   %01100000       ; SER_BITS_8
-
-        .rodata
 
 ClockMultiplier:.byte   %01000000       ; Clock x16 (300-57600bps, WR4, ref page 5-8)
                 .byte   %10000000       ; Clock x32 (115200bps, ref page 5-8)
@@ -190,8 +189,6 @@ IRQ_SPECIAL            = %01100000
 
 RR_INTR_PENDING_STATUS = 3              ; (Ref page 5-25)
 INTR_IS_RX             = %00100100      ; ANDed (RX IRQ, channel A or B)
-
-        .code
 
 ; Read register value to A.
 ; Input:  X as channel

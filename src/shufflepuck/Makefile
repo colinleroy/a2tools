@@ -29,6 +29,7 @@ opponents = \
 	g \
 	h \
 	i \
+	s \
 
 ifdef DEBUG_OPPONENT
 	DEBUG_OPPONENT_NUM := $(shell printf "%d" "'$(DEBUG_OPPONENT)'")

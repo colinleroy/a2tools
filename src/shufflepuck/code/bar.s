@@ -38,17 +38,18 @@
 .segment "barcode"
 
 BOXES_START = *
-opponents_boxes:                      ; X, W, Y, H, opponent number
-        .byte 39,  17, 104, 26, 0     ; Skip
-        .byte 196, 52, 172, 18, 1     ; Visine
-        .byte 181, 54, 97,  48, 2     ; Vinnie
-        .byte 15,  32, 68,  32, 3     ; Lexan
-        .byte 73,  38, 94,  36, 4     ; Eneg
-        .byte 7,   28, 21,  39, 5     ; Nerual
-        .byte 129, 24, 58,  41, 6     ; Bejin
-        .byte 245, 10, 77,  51, 7     ; Biff
-        .byte 58 , 26, 23,  32, 8     ; DC3 (not in tournament)
-        .byte 83,  87, 12,  34, $FF   ; Tournament
+opponents_boxes:                        ; X, W, Y, H, opponent number
+        .byte 39,  17, 104, 26, 0       ; Skip
+        .byte 196, 52, 172, 18, 1       ; Visine
+        .byte 181, 54, 97,  48, 2       ; Vinnie
+        .byte 15,  32, 68,  32, 3       ; Lexan
+        .byte 73,  38, 94,  36, 4       ; Eneg
+        .byte 7,   28, 21,  39, 5       ; Nerual
+        .byte 129, 24, 58,  41, 6       ; Bejin
+        .byte 245, 10, 77,  51, 7       ; Biff
+        .byte 58 , 26, 23,  32, 8       ; DC3 (not in tournament)
+        .byte 36 , 20, 18,  24, 'S'-'A' ; Serial
+        .byte 83,  87, 12,  34, $FF     ; Tournament
         .byte 231, 21, 13,  21, CH_ESC; Exit
 NUM_BOXES = (* - BOXES_START)/5
 
