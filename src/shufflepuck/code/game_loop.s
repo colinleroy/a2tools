@@ -25,6 +25,7 @@
         .export     their_pusher_x, their_pusher_y
         .export     their_pusher_dx, their_pusher_dy
         .export     their_currently_hitting, player_caught
+        .export     skip_their_hit_check
 
         .export     _puck_reinit_my_order, _puck_reinit_their_order
         .export     puck_in_front_of_me, puck_in_front_of_them
@@ -34,6 +35,7 @@
 
         .export     _guess_puck_x_at_y
 
+        .import     _set_puck_position
         .import     _draw_sprite, _clear_sprite
         .import     _setup_sprite_pointer_for_clear
         .import     _setup_sprite_pointer_for_draw
@@ -465,16 +467,12 @@ check:
         lda     #1
         sta     my_currently_hitting
 
-        lda     puck_x
-        jsr     _init_precise_x
-
         ; Make sure puck doesn't go behind pusher so force its position one point
         ; in front of the pusher
+        ldx     puck_x
         ldy     my_pusher_y
         dey
-        sty     puck_y
-        tya
-        jsr     _init_precise_y        ; Reinit the precise Y coord of the puck
+        jsr     _set_puck_position     ; Reinit the precise coords of the puck
         jsr     _puck_reinit_my_order  ; And set puck/pusher order while it goes away
 
         ; Update puck speed
@@ -525,7 +523,12 @@ out_miss:
 .endproc
 
 .proc _puck_check_their_hit
-        ; Check if we already hit right before
+        lda     skip_their_hit_check     ; In serial mode, each player checks only their own pushers
+        beq     :+
+        clc
+        jmp     _puck_reinit_their_order
+
+:       ; Check if we already hit right before
         lda     their_currently_hitting
         beq     :+
         dec     their_currently_hitting
@@ -561,11 +564,10 @@ out_miss:
         jsr     _play_puck_hit
 
         ; Make sure puck doesn't go behind pusher
+        ldx     puck_x
         ldy     their_pusher_y
         iny
-        tya
-        sty     puck_y
-        jsr     _init_precise_y   ; Reinit precise Y coordinate
+        jsr     _set_puck_position; Reinit precise coordinates
 
         ; Update puck speed
         lda     puck_dx           ; Slow puck deltaX
@@ -789,9 +791,15 @@ check_y_bound:
 out:    rts
 
 check_their_late_catch:
-        lda     #PUCK_MIN_Y
-        sta     puck_y
-        jsr     _init_precise_y
+        lda     skip_their_hit_check
+        beq     :+
+
+        clc
+        rts
+
+:       ldx     puck_x
+        ldy     #PUCK_MIN_Y
+        jsr     _set_puck_position; Reinit precise coordinates
 
         jsr     _puck_check_their_hit
         bcc     update_y
@@ -800,9 +808,9 @@ check_their_late_catch:
         rts
 
 check_my_late_catch:
-        lda     #PUCK_MAX_Y
-        sta     puck_y
-        jsr     _init_precise_y
+        ldx     puck_x
+        ldy     #PUCK_MAX_Y
+        jsr     _set_puck_position; Reinit precise coordinates
 
         jsr     _puck_check_my_hit
         bcc     update_y
@@ -828,6 +836,11 @@ check_my_late_catch:
 we_win:
         ; Put up their "lose" sprite
         jsr     __OPPONENT_START__+OPPONENT::LOSE_POINT
+
+        ; Make sure puck_y didn't underflow
+        ldx     puck_x
+        ldy     #PUCK_MIN_Y
+        jsr     _set_puck_position
 
         ; Their side's sprites will be redrawn by update_screen_for_crash
         ; so don't bother with it here
@@ -956,15 +969,17 @@ puck_h:               .res 1
 
 puck_backup: .res 10
 
-player_caught:   .res 1
+player_caught:              .res 1
+puck_in_front_of_me:        .res 1
+puck_in_front_of_them:      .res 1
 
-puck_in_front_of_me: .res 1
-puck_in_front_of_them: .res 1
-
-prev_puck_in_front_of_me: .res 1
+prev_puck_in_front_of_me:   .res 1
 prev_puck_in_front_of_them: .res 1
 
-my_pusher_mid_x: .res 1
-my_currently_hitting: .res 1
-their_currently_hitting: .res 1
-bounces:                 .res 1
+my_pusher_mid_x:            .res 1
+my_currently_hitting:       .res 1
+their_currently_hitting:    .res 1
+bounces:                    .res 1
+
+; For serial
+skip_their_hit_check:       .res 1

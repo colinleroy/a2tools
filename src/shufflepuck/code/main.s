@@ -19,9 +19,9 @@
         .export   _draw_opponent
         .export   won_tournament
         .export   game_cancelled
-        .export   _init_puck_position
+        .export   _init_puck_position, _set_puck_position
 
-        .import   _hgr_force_mono40
+        .import   _hgr_force_mono40, vbl_ready
         .import   _mouse_setbarbox, _mouse_setplaybox
 
         .import   _choose_opponent, _add_hall_of_fame
@@ -38,6 +38,7 @@
         .import   _draw_screen, _clear_screen, _draw_scores
         .import   _move_puck, _puck_check_my_hit, _puck_check_their_hit
         .import   _move_my_pusher, _move_their_pusher, _round_end
+        .import   skip_their_hit_check
 
         .import   __OPPONENT_START__
 
@@ -85,8 +86,6 @@
         jmp     _real_main
 .endproc
 
-.segment "LOWCODE"
-
 .proc _draw_opponent_parts
         ldx     #(7/7)
         ldy     #39
@@ -99,6 +98,8 @@
         ldy     #76
         jmp     __OPPONENT_START__+OPPONENT::SPRITE
 .endproc
+
+.segment "LOWCODE"
 
 .proc _real_main
         lda     _cache_working
@@ -182,6 +183,7 @@ new_game:
         sta     my_score
         sta     their_score
         sta     game_cancelled
+        sta     skip_their_hit_check
 
         ; Load the opponent file
         lda     opponent
@@ -276,21 +278,23 @@ game_loop:
         ; and I want to keep things 6502-ok
         jsr     _mouse_wait_vbl
 
+loop_start:
         ; Drop 1 frame out of 6 at 60Hz
         ; otherwise the game is harder
         lda     hz
         cmp     #60
-        bne     loop_start
+        bne     draw_start
         dec     frame_counter
-        bne     loop_start
+        bne     draw_start
         lda     #6
         sta     frame_counter
         bne     game_loop
 
-loop_start:
+draw_start:
         ; First thing is drawing the screen so we don't flicker
         jsr     _draw_screen
 
+draw_done:
         ; If the puck is moving, service is done
         lda     puck_dy
         beq     :+
@@ -316,10 +320,9 @@ loop_start:
         jsr     _puck_check_my_hit
         jsr     _puck_check_their_hit
 
-        jsr     __OPPONENT_START__+OPPONENT::HIT_CB
-
         ; Update the puck's position,
         jsr     _move_puck
+        jsr     __OPPONENT_START__+OPPONENT::HIT_CB
         ; and if carry is set, it reached the end of the table.
         bcs     reset_point
 
@@ -393,12 +396,19 @@ update_screen:
 .endproc
 
 .proc _init_puck_position
-        lda     #PUCK_INI_X
-        sta     puck_x
+        ldx     #PUCK_INI_X
+        ldy     turn
+        lda     turn_puck_y,y
+        tay
+        ; Fallthrough to _set_puck_position
+.endproc
+
+.proc _set_puck_position
+        stx     puck_x
+        sty     puck_y
+        txa
         jsr     _init_precise_x
-        ldx     turn
-        lda     turn_puck_y,x
-        sta     puck_y
+        tya
         jsr     _init_precise_y
 
         ; Set correct graphics coords first

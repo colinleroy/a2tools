@@ -24,8 +24,8 @@
         .import     game_cancelled
         .import     _rand
         .import     _last_key, _read_key
-        .import     _init_puck_position
-        .import     player_caught
+        .import     _init_puck_position, _set_puck_position
+        .import     skip_their_hit_check
 
         .import     _acia_open, _acia_close
         .import     _acia_get, _acia_put
@@ -39,6 +39,7 @@
 
         .import     _big_draw_sprite_s                              ; CHANGE A
         .import     _big_draw_name_s                                ; CHANGE A
+        .import     _play_puck_hit
 
         .import     ostype, _platform_msleep
 
@@ -99,6 +100,8 @@
 :       lda     game_cancelled
         bne     error
 
+        php                         ; Timing sensitive, no pesky mouse interrupts
+        sei
         ; Exchange pusher coords
         lda     #'C'
         jsr     exchange_char
@@ -106,14 +109,17 @@
         bne     error
 
         lda     my_pusher_x
-        jsr     mirror_x
+        jsr     mirror_pusher_x
         jsr     exchange_char
         sta     their_pusher_x
 
         lda     my_pusher_y
-        jsr     mirror_y
+        jsr     mirror_pusher_y
         jsr     exchange_char
         sta     their_pusher_y
+
+        plp
+
         rts
 
 error:
@@ -121,7 +127,7 @@ error:
         rts
 .endproc
 
-.proc mirror_x
+.proc mirror_pusher_x
         sta     tmp1
         lda     #MY_PUSHER_MAX_X
         sec
@@ -129,7 +135,25 @@ error:
         rts
 .endproc
 
-.proc mirror_y
+.proc mirror_pusher_y
+        sta     tmp1
+        lda     #MY_PUSHER_MAX_Y
+        sec
+        sbc     tmp1
+        clc
+        adc     #THEIR_PUSHER_MIN_Y
+        rts
+.endproc
+
+.proc mirror_puck_x
+        sta     tmp1
+        lda     #PUCK_MAX_X
+        sec
+        sbc     tmp1
+        rts
+.endproc
+
+.proc mirror_puck_y
         sta     tmp1
         lda     #MY_PUSHER_MAX_Y
         sec
@@ -140,11 +164,31 @@ error:
 .endproc
 
 .proc hit_cb
-        lda     player_caught
+        lda     game_cancelled
+        beq     :+
+        rts
+
+:       bcc     :+                ; carry clear => normal, set => we missed
+
+        lda     #'M'              ; Tell we did miss
+        jmp     exchange_char
+
+:
+        lda     prev_puck_dx
+        cmp     puck_dx
+        bne     update
+        lda     prev_puck_dy
+        cmp     puck_dy
         beq     no_hit
 
-        lda     #$00
-        sta     player_caught     ; Reset flag
+update:
+        lda     puck_dx
+        sta     prev_puck_dx
+        lda     puck_dy
+        sta     prev_puck_dy
+
+        php                       ; Timing sensitive, no pesky mouse interrupts
+        sei
 
         lda     #'H'              ; Tell we did hit
         jsr     exchange_char
@@ -158,21 +202,67 @@ send_puck_params:
         NEG_A
         jsr     exchange_char
         ; Ignore the reply
+
+        lda     puck_x          ; Send mirrored puck_x
+        jsr     mirror_puck_x
+        jsr     exchange_char
+        ; Ignore the reply
+
+        lda     puck_y          ; Send mirrored puck_y
+        jsr     mirror_puck_y
+        jsr     exchange_char
+        ; Ignore the reply
+
+        plp
+
+        ; Set our precise pos from what we sent
+        ldx     puck_x
+        ldy     puck_y
+        jsr     _set_puck_position
+        clc
         rts
 no_hit:
+
+        php                       ; Timing sensitive, no pesky mouse interrupts
+        sei
+
         lda     #'N'              ; Tell we didn't hit
         jsr     exchange_char
+        cmp     #'M'
+        beq     missed            ; They missed
         cmp     #'N'
-        beq     out               ; They didn't either
+        beq     out               ; They didn't hit either
 get_puck_params:
         ; They hit, get params
         lda     #'?'              ; Get puck_dx
         jsr     exchange_char
         sta     puck_dx
+        sta     prev_puck_dx
         lda     #'?'              ; Get puck_dy
         jsr     exchange_char
         sta     puck_dy
-out:    rts
+        sta     prev_puck_dy
+
+        lda     #'?'              ; Get puck_x
+        jsr     exchange_char
+        sta     puck_x
+        lda     #'?'              ; Get puck_y
+        jsr     exchange_char
+        tay
+        ldx     puck_x
+        jsr     _set_puck_position
+
+        ldy     #4                ; Play their hit sound
+        jsr     _play_puck_hit
+
+out:    plp
+        clc
+        rts
+
+missed:
+        plp
+        sec
+        rts
 .endproc
 
 .proc configure_parameter
@@ -356,6 +446,9 @@ next_char:
         bne     next_char
 
 out_done:
+        lda     #1
+        sta     skip_their_hit_check
+
         jsr     setup_players
         inc     connected
         rts
@@ -481,6 +574,8 @@ out_esc:
 .endproc
 
 .proc serial_force_get
+        lda     game_cancelled
+        bne     out
         jsr     check_escape
         bcs     out
         jsr     serial_get_char
@@ -497,6 +592,9 @@ their_max_dx:     .byte 8
 their_max_dy:     .byte 8
 their_max_hit_dy: .byte 10
 tmp_param:        .byte 0
+
+prev_puck_dx:     .byte 0
+prev_puck_dy:     .byte 0
 
 ident_str:        .asciiz "SHFL1"
 
