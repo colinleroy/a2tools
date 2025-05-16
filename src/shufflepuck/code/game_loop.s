@@ -762,6 +762,12 @@ update_y:
         adc     puck_dy+1
         sta     puck_precise_y+1
 
+        cmp     #$FF              ; Do not allow puck Y to go negative
+        bne     check_y_bound
+        lda     #$00
+        sta     puck_precise_y
+        sta     puck_precise_y+1
+
 check_y_bound:
         tax                       ; Save high byte to X
         lsr                       ; Divide by two
