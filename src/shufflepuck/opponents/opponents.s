@@ -100,30 +100,35 @@
 :       lda     game_cancelled
         bne     error
 
-        php                         ; Timing sensitive, no pesky mouse interrupts
-        sei
-        ; Exchange pusher coords
-        lda     #'C'
-        jsr     exchange_char
-        cmp     #'C'
-        bne     error
-
-        lda     my_pusher_x
-        jsr     mirror_pusher_x
-        jsr     exchange_char
-        sta     their_pusher_x
-
-        lda     my_pusher_y
-        jsr     mirror_pusher_y
-        jsr     exchange_char
-        sta     their_pusher_y
-
-        plp
-
+        jsr     exchange_pusher_coords
         rts
 
 error:
         inc     game_cancelled
+        rts
+.endproc
+
+.proc pack_pusher_coords
+        txa                       ; Keep only 4 most significant bits for X
+        and     #%11110000
+        sta     tmp1
+        tya                       ; Divide Y to fit in 3 bits
+        lsr                       ; Only 2 shifts needed because
+        lsr                       ; of Y range
+        and     #%00001110        ; Mask out lsb
+        ora     tmp1
+        rts
+.endproc
+
+.proc unpack_pusher_coords
+        tay                       ; Backup for Y
+        and     #%11110000        ; Get X
+        tax
+        tya
+        and     #%00001110        ; Get Y
+        asl                       ; Shift it back into place
+        asl
+        tay
         rts
 .endproc
 
@@ -163,25 +168,26 @@ error:
         rts
 .endproc
 
-.proc hit_cb
-        lda     game_cancelled
-        beq     :+
+.proc exchange_pusher_coords
+        ; Pusher coords: XXXXYYYk
+        ; 4 most-significant bits for X (range 0-224) are kept
+        ; 3 bits for Y (range 6-46)
+        ; One bit for control
+        lda     my_pusher_x
+        jsr     mirror_pusher_x
+        tax
+        lda     my_pusher_y
+        jsr     mirror_pusher_y
+        tay
+        jsr     pack_pusher_coords
+        jsr     exchange_char
+        jsr     unpack_pusher_coords
+        stx     their_pusher_x
+        sty     their_pusher_y
         rts
+.endproc
 
-:       bcc     :+                ; carry clear => normal, set => we missed
-
-        lda     #'M'              ; Tell we did miss
-        jmp     exchange_char
-
-:
-        lda     prev_puck_dx
-        cmp     puck_dx
-        bne     update
-        lda     prev_puck_dy
-        cmp     puck_dy
-        beq     no_hit
-
-update:
+.proc send_puck_params
         lda     puck_dx
         sta     prev_puck_dx
         lda     puck_dy
@@ -221,18 +227,9 @@ send_puck_params:
         jsr     _set_puck_position
         clc
         rts
-no_hit:
+.endproc
 
-        php                       ; Timing sensitive, no pesky mouse interrupts
-        sei
-
-        lda     #'N'              ; Tell we didn't hit
-        jsr     exchange_char
-        cmp     #'M'
-        beq     missed            ; They missed
-        cmp     #'N'
-        beq     out               ; They didn't hit either
-get_puck_params:
+.proc get_puck_params
         ; They hit, get params
         lda     #'?'              ; Get puck_dx
         jsr     exchange_char
@@ -253,13 +250,54 @@ get_puck_params:
         jsr     _set_puck_position
 
         ldy     #4                ; Play their hit sound
-        jsr     _play_puck_hit
+        jmp     _play_puck_hit
+.endproc
+
+.proc hit_cb
+        lda     game_cancelled
+        beq     check_miss
+        rts
+
+check_miss:
+        bcc     check_puck_params ; carry clear => normal, set => we missed
+
+        lda     #'M'              ; Tell we did miss
+        jmp     exchange_char
+
+check_puck_params:
+        lda     prev_puck_dx
+        cmp     puck_dx
+        bne     update_my_puck_params
+        lda     prev_puck_dy
+        cmp     puck_dy
+        beq     no_puck_params_change
+
+update_my_puck_params:
+        jsr     send_puck_params
+        rts
+
+no_puck_params_change:
+
+        php                       ; Timing sensitive, no pesky mouse interrupts
+        sei
+
+        lda     #'N'              ; Tell we didn't hit
+        jsr     exchange_char
+        cmp     #'M'
+        beq     they_missed       ; They missed
+        cmp     #'H'
+        beq     update_their_puck_params
+        cmp     #'N'
+        beq     out               ; They didn't hit either
+
+update_their_puck_params:
+        jsr     get_puck_params
 
 out:    plp
         clc
         rts
 
-missed:
+they_missed:
         plp
         sec
         rts
