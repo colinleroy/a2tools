@@ -65,6 +65,8 @@
         .include    "ser-kernel.inc"
         .include    "ser-error.inc"
 
+IO_BARRIER = $FF
+
 .segment "s"                                                        ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::SPRITE, error ; Make sure the callback is where we think
@@ -116,11 +118,6 @@ error:
 .endproc
 
 .proc pack_pusher_coords
-        lda     to_send
-        beq     pack
-        lda     #$FF              ; "Send more" marker (X max is 224 so bit 4 is never on)
-        rts
-pack:
         txa                       ; Keep only 5 most significant bits for X
         and     #%11111000
         sta     tmp1
@@ -133,11 +130,6 @@ pack:
 .endproc
 
 .proc unpack_pusher_coords
-        cmp     #$FF              ; Did we get a "more to read"?
-        bne     unpack
-        sta     read_again
-        rts
-unpack:
         tay                       ; Backup for Y
         and     #%11111000        ; Get X
         tax
@@ -186,13 +178,7 @@ unpack:
         rts
 .endproc
 
-.proc exchange_pusher_coords
-        ; Pusher coords: XXXXXYYY
-        ; 5 most-significant bits for X (range 0-224) are kept
-        ; 3 bits for Y (range 6-46)
-        ; This can never equal $FF as 0-224 always have at
-        ; least one of the 5 msb off
-        ; So $FF means "send/read more"
+.proc send_pusher_coords
         lda     my_pusher_x
         jsr     mirror_pusher_x
         tax
@@ -200,13 +186,54 @@ unpack:
         jsr     mirror_pusher_y
         tay
         jsr     pack_pusher_coords
-        jsr     exchange_char
-        jsr     unpack_pusher_coords
-        cmp     #$FF
+        jsr     serial_put
+        rts
+.endproc
+
+.proc io_barrier
+        lda     #IO_BARRIER
+        jsr     serial_put
+:       jsr     serial_wait_and_get
+        bcs     :-
+        cmp     #IO_BARRIER
+        bne     :-
+        rts
+.endproc
+
+.proc exchange_sync_byte
+        ; Pusher coords: XXXXXYYY
+        ; 5 most-significant bits for X (range 0-224) are kept
+        ; 3 bits for Y (range 6-46)
+        ; This can never equal $FF, our IO barrier value, as 0-224
+        ; always have at least one of the 5 msb off
+
+        ; Should we start a barrier?
+        lda     to_send
         beq     :+
+
+        ; Setup IO barrier & wait for ack
+        jsr     io_barrier
+        rts                       ; Nothing more to do here
+
+:       ; We have only coords to send, so check first what we got
+        jsr     serial_wait_and_get
+        bcs     send_coords       ; Got nothing
+        cmp     #IO_BARRIER
+        beq     reply_barrier     ; Got a barrier!
+
+        ; We received coords, unpack them
+        jsr     unpack_pusher_coords
         stx     their_pusher_x
         sty     their_pusher_y
-:       rts
+
+        ; And send ours
+send_coords:
+        jmp     send_pusher_coords
+
+reply_barrier:
+        sta     read_again        ; Flag we need to read more
+        jsr     serial_put        ; Send the $FF back as barrier ack
+        rts
 .endproc
 
 .proc send_puck_params
@@ -284,8 +311,10 @@ prepare_exchange:
 
         bcs     must_send_miss    ; If carry set, we missed, we must tell
 
-        lda     prev_puck_dy      ; If we hit the puck (different dy), we must tell
-        cmp     puck_dy
+        lda     puck_dy           ; If we hit the puck (different dy), we must tell
+        bpl     send_pusher_coords; Don't send a hit message if they hit, not us
+
+        cmp     prev_puck_dy
         bne     must_send_puck_params
 
         beq     send_pusher_coords; Otherwise we have nothing special to say
@@ -304,12 +333,12 @@ send_pusher_coords:
         php
         sei
 
-        ; Send our pusher coordinates and receive theirs, including control
-        ; bit so we know if they want to talk to us more.
+        ; Send our pusher coordinates and receive theirs
+        ; (Or an IO barrier)
+        jsr     exchange_sync_byte
+
         lda     to_send         ; Did we want to send more?
         beq     check_if_read   ; No. Check if they do.
-
-        jsr     exchange_pusher_coords
 
         lda     to_send
         cmp     #'H'            ; We hit, send them the puck's data
@@ -332,7 +361,6 @@ send_miss:
         jmp     sec_out           ; Caller expects carry set when we missed
 
 check_if_read:
-        jsr     exchange_pusher_coords
         lda     read_again
         beq     clc_out
 
@@ -530,6 +558,8 @@ open_error:
         ldy     #$00
         clc
 
+        php
+        sei
 next_char:
         lda     ident_str,y
         beq     out_done            ; All chars sent/received
@@ -545,6 +575,7 @@ next_char:
         bne     next_char
 
 out_done:
+        plp
         lda     #1
         sta     skip_their_hit_check
 
@@ -553,6 +584,7 @@ out_done:
         rts
 
 out_err:
+        plp
         inc     game_cancelled
         rts
 .endproc
@@ -620,14 +652,16 @@ out_err:
 ; Send character in A over serial. Destroys X.
 ; Does not touch Y.
 .proc serial_put_char
-        jmp     _acia_put
+        jsr     _acia_put
+        rts
 .endproc
 
 ; Returns with char in A and carry clear if
 ; character available. Destroys X.
 ; Does not touch Y.
 .proc serial_get_char
-        jmp     _acia_get
+        jsr     _acia_get
+        rts
 .endproc
 
 ; Try 10 times to get a char over serial.
