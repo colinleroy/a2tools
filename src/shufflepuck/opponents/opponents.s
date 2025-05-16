@@ -100,8 +100,15 @@
 :       lda     game_cancelled
         bne     error
 
-        jsr     exchange_pusher_coords
-        rts
+        lda     serving
+        beq     out
+
+        ; At service, both players agree on everything, make sure we don't
+        ; send a useless HIT message.
+        lda     puck_dy
+        sta     prev_puck_dy
+
+out:    rts
 
 error:
         inc     game_cancelled
@@ -109,24 +116,35 @@ error:
 .endproc
 
 .proc pack_pusher_coords
-        txa                       ; Keep only 4 most significant bits for X
-        and     #%11110000
+        lda     to_send
+        beq     pack
+        lda     #$FF              ; "Send more" marker (X max is 224 so bit 4 is never on)
+        rts
+pack:
+        txa                       ; Keep only 5 most significant bits for X
+        and     #%11111000
         sta     tmp1
         tya                       ; Divide Y to fit in 3 bits
-        lsr                       ; Only 2 shifts needed because
+        lsr                       ; Only 3 shifts needed because
         lsr                       ; of Y range
-        and     #%00001110        ; Mask out lsb
+        lsr
         ora     tmp1
         rts
 .endproc
 
 .proc unpack_pusher_coords
+        cmp     #$FF              ; Did we get a "more to read"?
+        bne     unpack
+        sta     read_again
+        rts
+unpack:
         tay                       ; Backup for Y
-        and     #%11110000        ; Get X
+        and     #%11111000        ; Get X
         tax
-        tya
-        and     #%00001110        ; Get Y
+        tya                       ; Restore for Y
+        and     #%00000111        ; Get Y
         asl                       ; Shift it back into place
+        asl
         asl
         tay
         rts
@@ -169,10 +187,12 @@ error:
 .endproc
 
 .proc exchange_pusher_coords
-        ; Pusher coords: XXXXYYYk
-        ; 4 most-significant bits for X (range 0-224) are kept
+        ; Pusher coords: XXXXXYYY
+        ; 5 most-significant bits for X (range 0-224) are kept
         ; 3 bits for Y (range 6-46)
-        ; One bit for control
+        ; This can never equal $FF as 0-224 always have at
+        ; least one of the 5 msb off
+        ; So $FF means "send/read more"
         lda     my_pusher_x
         jsr     mirror_pusher_x
         tax
@@ -182,23 +202,25 @@ error:
         jsr     pack_pusher_coords
         jsr     exchange_char
         jsr     unpack_pusher_coords
+        cmp     #$FF
+        beq     :+
         stx     their_pusher_x
         sty     their_pusher_y
-        rts
+:       rts
 .endproc
 
 .proc send_puck_params
-        lda     puck_dx
-        sta     prev_puck_dx
         lda     puck_dy
         sta     prev_puck_dy
 
-        php                       ; Timing sensitive, no pesky mouse interrupts
-        sei
-
-        lda     #'H'              ; Tell we did hit
+        lda     #'H'             ; Tell we did hit
         jsr     exchange_char
-        ; We don't care the reply, it can't be 'H'
+        cmp     #'?'
+        beq     send_puck_params
+
+        inc     game_cancelled   ; We should not be there!
+        rts
+
 send_puck_params:
         lda     puck_dx          ; Send reverted puck_dx
         NEG_A
@@ -219,8 +241,6 @@ send_puck_params:
         jsr     exchange_char
         ; Ignore the reply
 
-        plp
-
         ; Set our precise pos from what we sent
         ldx     puck_x
         ldy     puck_y
@@ -234,11 +254,10 @@ send_puck_params:
         lda     #'?'              ; Get puck_dx
         jsr     exchange_char
         sta     puck_dx
-        sta     prev_puck_dx
         lda     #'?'              ; Get puck_dy
         jsr     exchange_char
         sta     puck_dy
-        sta     prev_puck_dy
+        sta     prev_puck_dy      ; Save it to prev to avoid re-sending-it
 
         lda     #'?'              ; Get puck_x
         jsr     exchange_char
@@ -255,51 +274,92 @@ send_puck_params:
 
 .proc hit_cb
         lda     game_cancelled
-        beq     check_miss
+        beq     prepare_exchange
         rts
 
-check_miss:
-        bcc     check_puck_params ; carry clear => normal, set => we missed
+prepare_exchange:
+        lda     #$00
+        sta     to_send           ; Consider we have nothing to send
+        sta     read_again        ; And nothing to read
 
-        lda     #'M'              ; Tell we did miss
-        jmp     exchange_char
+        bcs     must_send_miss    ; If carry set, we missed, we must tell
 
-check_puck_params:
-        lda     prev_puck_dx
-        cmp     puck_dx
-        bne     update_my_puck_params
-        lda     prev_puck_dy
+        lda     prev_puck_dy      ; If we hit the puck (different dy), we must tell
         cmp     puck_dy
-        beq     no_puck_params_change
+        bne     must_send_puck_params
+
+        beq     send_pusher_coords; Otherwise we have nothing special to say
+
+must_send_miss:
+        lda     #'M'
+        sta     to_send
+        bne     send_pusher_coords
+
+must_send_puck_params:
+        lda     #'H'
+        sta     to_send
+        bne     send_pusher_coords
+
+send_pusher_coords:
+        php
+        sei
+
+        ; Send our pusher coordinates and receive theirs, including control
+        ; bit so we know if they want to talk to us more.
+        lda     to_send         ; Did we want to send more?
+        beq     check_if_read   ; No. Check if they do.
+
+        jsr     exchange_pusher_coords
+
+        lda     to_send
+        cmp     #'H'            ; We hit, send them the puck's data
+        beq     update_my_puck_params
+        cmp     #'M'            ; We missed, tell them
+        beq     send_miss
+
+        inc     game_cancelled  ; We should not be there!
+        bne     clc_out
 
 update_my_puck_params:
         jsr     send_puck_params
-        rts
+        jmp     clc_out
 
-no_puck_params_change:
+send_miss:
+        jsr     exchange_char     ; A = 'M'
+        lda     puck_dy           ; Save puck data to avoid re-sending-it
+        sta     prev_puck_dy
 
-        php                       ; Timing sensitive, no pesky mouse interrupts
-        sei
+        jmp     sec_out           ; Caller expects carry set when we missed
 
-        lda     #'N'              ; Tell we didn't hit
+check_if_read:
+        jsr     exchange_pusher_coords
+        lda     read_again
+        beq     clc_out
+
+do_read:
+        lda     #'?'              ; Wait for their message
         jsr     exchange_char
         cmp     #'M'
         beq     they_missed       ; They missed
         cmp     #'H'
         beq     update_their_puck_params
-        cmp     #'N'
-        beq     out               ; They didn't hit either
+
+        inc     game_cancelled    ; We should never be there so bail
+        bne     clc_out
 
 update_their_puck_params:
         jsr     get_puck_params
 
-out:    plp
+clc_out:plp
         clc
         rts
 
 they_missed:
-        plp
-        sec
+        lda     puck_dy           ; Save puck data to avoid re-sending-it
+        sta     prev_puck_dy
+
+sec_out:plp
+        sec                       ; Caller expects carry set when they missed
         rts
 .endproc
 
@@ -469,6 +529,7 @@ open_error:
 
         ldy     #$00
         clc
+
 next_char:
         lda     ident_str,y
         beq     out_done            ; All chars sent/received
@@ -497,14 +558,16 @@ out_err:
 .endproc
 
 .proc setup_players
-        jsr     _rand
-        and     #1
-        sta     player
-        jsr     exchange_char
-        cmp     player
-        beq     setup_players
-        lda     player
-        sta     turn
+        jsr     _rand             ; Choose a random player number
+        and     #1                ; between 0 and 1
+        sta     player            ; Store it.
+
+        jsr     exchange_char     ; Send my number, get theirs
+        cmp     player            ; Did they chose the same?
+        beq     setup_players     ; Yes, so try again.
+
+        lda     player            ; We agree!
+        sta     turn              ; Store whose turn it is.
         jmp     _init_puck_position
 .endproc
 
@@ -588,7 +651,7 @@ out:    rts
 
 ; Sends A over serial, receives A over serial
 .proc exchange_char
-        php                         ; Timing sensitive, no pesky mouse interrupts
+        php
         sei
         jsr     serial_put          ; Send char
         jsr     serial_force_get    ; Get remote char (or escape)
@@ -626,12 +689,13 @@ serial_slot:      .byte 2
 connected:        .byte 0
 player:           .byte 0
 
+to_send:          .byte 0
+read_again:       .byte 0
 their_max_dx:     .byte 8
 their_max_dy:     .byte 8
 their_max_hit_dy: .byte 10
 tmp_param:        .byte 0
 
-prev_puck_dx:     .byte 0
 prev_puck_dy:     .byte 0
 
 ident_str:        .asciiz "SHFL1"
