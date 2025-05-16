@@ -129,7 +129,7 @@ to_bar:
 
 play_barsnd:
         ldy     #0
-        ;jsr     _play_bar
+        jsr     _play_bar
 
         ; Reload the bar image and code
 :       jsr     _restore_bar
