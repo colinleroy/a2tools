@@ -38,33 +38,50 @@
 .segment "barcode"
 
 BOXES_START = *
-opponents_boxes:                        ; X, W, Y, H, opponent number
-        .byte 39,  17, 104, 26, 0       ; Skip
-        .byte 196, 52, 172, 18, 1       ; Visine
-        .byte 181, 54, 97,  48, 2       ; Vinnie
-        .byte 15,  32, 68,  32, 3       ; Lexan
-        .byte 73,  38, 94,  36, 4       ; Eneg
-        .byte 7,   28, 21,  39, 5       ; Nerual
-        .byte 129, 24, 58,  41, 6       ; Bejin
-        .byte 245, 10, 77,  51, 7       ; Biff
-        .byte 58 , 26, 23,  32, 8       ; DC3 (not in tournament)
-        .byte 36 , 20, 18,  24, 'S'-'A' ; Serial
-        .byte 83,  87, 12,  34, $FF     ; Tournament
-        .byte 231, 21, 13,  21, CH_ESC; Exit
-NUM_BOXES = (* - BOXES_START)/5
+opponents_boxes:                        ; X, W, Y, H, opponent number, name pointer
+        .byte 39,  17, 104, 26, 0      ,>name_a, <name_a       ; Skip
+        .byte 196, 52, 172, 18, 1      ,>name_b, <name_b       ; Visine
+        .byte 181, 54, 97,  48, 2      ,>name_c, <name_c       ; Vinnie
+        .byte 15,  32, 68,  32, 3      ,>name_d, <name_d       ; Lexan
+        .byte 73,  38, 94,  36, 4      ,>name_e, <name_e       ; Eneg
+        .byte 7,   28, 21,  39, 5      ,>name_f, <name_f       ; Nerual
+        .byte 129, 24, 58,  41, 6      ,>name_g, <name_g       ; Bejin
+        .byte 245, 10, 77,  51, 7      ,>name_h, <name_h       ; Biff
+        .byte 58 , 26, 23,  32, 8      ,>name_i, <name_i       ; DC3 (not in tournament)
+        .byte 35 , 21, 11,  29, 'S'-'A',>name_s, <name_s       ; Serial
+        .byte 83,  87, 12,  34, $FF    ,>name_t, <name_t       ; Tournament
+        .byte 231, 21, 13,  21, CH_ESC ,>name_q, <name_q       ; Exit
+NUM_BOXES = (* - BOXES_START)/7
+
+name_a:         .asciiz "      SKIP      "
+name_b:         .asciiz "     VISINE     "
+name_c:         .asciiz "     VINNIE     "
+name_d:         .asciiz "     LEXAN      "
+name_e:         .asciiz "      ENEG      "
+name_f:         .asciiz "     NERUAL     "
+name_g:         .asciiz "     BEJIN      "
+name_h:         .asciiz "      BIFF      "
+name_i:         .asciiz "      DC3       "
+name_s:         .asciiz "PLAY OVER SERIAL"
+name_t:         .asciiz "   TOURNAMENT   "
+name_q:         .asciiz "   QUIT GAME    "
+name_blank:     .asciiz "                "
 
 CHAMPION_LEN    = 12
 CHAMPION_LEFT   = 88
 CHAMPION_BOTTOM = 34
 
-MENU_BOTTOM    = CHAMPION_BOTTOM + 3 + 5
-MENU_TOP       = CHAMPION_BOTTOM - 5
+MENU_BOTTOM     = CHAMPION_BOTTOM + 3 + 5
+MENU_TOP        = CHAMPION_BOTTOM - 5
 
-empty_str:    .asciiz "            "
-champion_str: .asciiz "    BIFF    "
-congrats_str: .asciiz "CONGRATS! PLEASE ENTER YOUR NAME:"
-fight_str:    .asciiz "TOURNAMENT"
-view_str:     .asciiz "VIEW ROSTER"
+HOVER_X         = 35/7
+HOVER_Y         = 191
+
+empty_str:      .asciiz "            "
+champion_str:   .asciiz "    BIFF    "
+congrats_str:   .asciiz "CONGRATS! PLEASE ENTER YOUR NAME:"
+fight_str:      .asciiz "TOURNAMENT"
+view_str:       .asciiz "VIEW ROSTER"
 
 ; Copy first string from scores buffer to the champion string
 .proc set_champion
@@ -162,7 +179,9 @@ wait_input:
         sta     pointer_x
         lda     mouse_y
         sta     pointer_y
-   
+
+        jsr     do_hover
+
         ; Check for key
         jsr     _check_keyboard
         bcs     kbd
@@ -250,9 +269,11 @@ skip_y_check:                     ; X didn't match so skip Y,H
 
 skip_num_opponent:                ; Y didn't match so skip opponent
         iny
+        iny                       ; and name pointer
+        iny
         iny                       ; and advance to next hitbox
 
-        cpy     #((NUM_BOXES*5))
+        cpy     #((NUM_BOXES*7))
         bne     check_next_opponent
         clc                       ; All hitboxes checked, none matched
         rts
@@ -579,6 +600,27 @@ maybe_animate_lexan:
 lexan_inc_animate:
         inc     lex_animate
 out:    rts
+.endproc
+
+.proc   do_hover
+        jsr     find_opponent
+        bcc     clear
+
+        iny
+        lda     opponents_boxes,y
+        tax
+        iny
+        lda     opponents_boxes,y
+        jmp     print_hover
+
+clear:  lda     #<name_blank
+        ldx     #>name_blank
+
+print_hover:
+        jsr     pushax            ; Push for print_string
+        ldx     #HOVER_X
+        ldy     #HOVER_Y
+        jmp     _print_string
 .endproc
 
 dc3_animate:.byte 0
