@@ -396,7 +396,7 @@ sec_out:plp
         rts
 .endproc
 
-.proc configure_parameter
+.proc configure_slot
         sta     str_low+1
         stx     str_high+1
         ; parameter
@@ -424,11 +424,26 @@ get_parameter:
         lda     $FFFF
         sta     tmp_param
         ldx     #0
+
+        bit     ostype
+        bmi     print_port_name
+print_slot_number:
         jsr     _numout
 
         lda     #' '
         jsr     _cout
+        jmp     update
 
+print_port_name:
+        lda     #<modem_str
+        ldx     #>modem_str
+        ldy     tmp_param
+        beq     :+
+        lda     #<printer_str
+        ldx     #>printer_str
+:       jsr     _strout
+
+update:
         ldx     tmp_param
         jsr     _read_key
         cmp     #$08
@@ -486,15 +501,21 @@ ask_slot:
         lda     #3
         jsr     _gotoy
 
+        bit     ostype
+        bmi     iigs
         lda     #1+1
         ldx     #7
-        jsr     pushax
+        jmp     :+
+iigs:
+        lda     #0+1
+        ldx     #1
+:       jsr     pushax
         lda     #<serial_slot
         ldx     #>serial_slot
         jsr     pushax
         lda     #<slot_str
         ldx     #>slot_str
-        jsr     configure_parameter
+        jsr     configure_slot
 
         lda     game_cancelled
         bne     finish_game
@@ -742,3 +763,6 @@ slot_str:         .asciiz "SLOT: "
 open_error_str:   .asciiz "SERIAL OPEN ERROR"
 
 help_str:         .asciiz "ARROW KEYS TO CHANGE, ENTER TO VALIDATE"
+
+modem_str:        .asciiz "MODEM  "
+printer_str:      .asciiz "PRINTER"
