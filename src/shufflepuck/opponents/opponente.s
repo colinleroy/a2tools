@@ -19,6 +19,7 @@
 
         .import     their_pusher_x, their_pusher_y
         .import     their_pusher_dx, their_pusher_dy
+        .import     their_score
         .import     player_caught, their_currently_hitting
         .import     puck_x, puck_right_x, puck_y, puck_dy, serving
         .import     _mouse_wait_vbl
@@ -294,8 +295,6 @@ move_backwards:
         ldy     #0
         jsr     _play_win_e
 
-        jsr     _mouse_wait_vbl
-
         ldx     #((98+21)/7)
         ldy     #(64+1)
         rts
@@ -331,15 +330,20 @@ move_backwards:
 .endproc
 
 .proc prepare_animate_wingame
+        jsr     _mouse_wait_vbl
+        jsr     _mouse_wait_vbl
+        jsr     _mouse_wait_vbl
         ldx     #((28+98)/7)
         ldy     #(65)
-        jsr     _mouse_wait_vbl
-        jsr     _mouse_wait_vbl
-        jmp     _mouse_wait_vbl
+        rts
 .endproc
 
 .proc sound_endgame
-        jsr     prepare_animate_wingame
+        lda     their_score
+        cmp     #15
+        beq     :+
+        rts
+:       jsr     prepare_animate_wingame
         jsr     _big_draw_wingame_e_1
         ldy     #0
         jsr     _play_wingame_e
