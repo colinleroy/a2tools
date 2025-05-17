@@ -25,7 +25,7 @@
         .export     their_pusher_x, their_pusher_y
         .export     their_pusher_dx, their_pusher_dy
         .export     their_currently_hitting, player_caught
-        .export     skip_their_hit_check
+        .export     their_hit_check_via_serial
 
         .export     _puck_reinit_my_order, _puck_reinit_their_order
         .export     puck_in_front_of_me, puck_in_front_of_them
@@ -523,11 +523,6 @@ out_miss:
 .endproc
 
 .proc _puck_check_their_hit
-        lda     skip_their_hit_check     ; In serial mode, each player checks only their own pushers
-        beq     :+
-        clc
-        jmp     _puck_reinit_their_order
-
 :       ; Check if we already hit right before
         lda     their_currently_hitting
         beq     :+
@@ -797,19 +792,27 @@ check_y_bound:
 out:    rts
 
 check_their_late_catch:
-        lda     skip_their_hit_check
-        beq     :+
-
-        clc
-        rts
-
-:       ldx     puck_x
+        ldx     puck_x
         ldy     #PUCK_MIN_Y
         jsr     _set_puck_position; Reinit precise coordinates
 
         jsr     _puck_check_their_hit
         bcc     update_y
 
+        ; Serial hook - the oppponent missed, but we don't want
+        ; to inform our game engine via carry as usual - otherwise
+        ; we'll start resetting the point maybe before the other
+        ; player send the "I missed" message. So just stop the puck
+        ; and wait for them to tell us.
+        lda     their_hit_check_via_serial
+        beq     set_carry
+        lda     #$00
+        sta     puck_dx
+        sta     puck_dy
+        clc
+        rts
+
+set_carry:
         sec
         rts
 
@@ -988,4 +991,4 @@ their_currently_hitting:    .res 1
 bounces:                    .res 1
 
 ; For serial
-skip_their_hit_check:       .res 1
+their_hit_check_via_serial: .res 1

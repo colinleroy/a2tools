@@ -38,7 +38,7 @@
         .import   _draw_screen, _clear_screen, _draw_scores
         .import   _move_puck, _puck_check_my_hit, _puck_check_their_hit
         .import   _move_my_pusher, _move_their_pusher, _round_end
-        .import   skip_their_hit_check
+        .import   their_hit_check_via_serial
 
         .import   __OPPONENT_START__
 
@@ -183,7 +183,7 @@ new_game:
         sta     my_score
         sta     their_score
         sta     game_cancelled
-        sta     skip_their_hit_check
+        sta     their_hit_check_via_serial
 
         ; Load the opponent file
         lda     opponent

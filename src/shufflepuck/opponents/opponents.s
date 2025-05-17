@@ -25,7 +25,7 @@
         .import     _rand
         .import     _last_key, _read_key
         .import     _init_puck_position, _set_puck_position
-        .import     skip_their_hit_check
+        .import     their_hit_check_via_serial
 
         .import     _acia_open, _acia_close
         .import     _acia_get, _acia_put
@@ -196,7 +196,7 @@ error:
 :       jsr     serial_wait_and_get
         bcs     :-
         cmp     #IO_BARRIER
-        bne     :-
+        bne     io_barrier
         rts
 .endproc
 
@@ -366,7 +366,12 @@ check_if_read:
 
 do_read:
         lda     #'?'              ; Wait for their message
-        jsr     exchange_char
+
+        jsr     serial_put
+:       jsr     serial_force_get
+        cmp     #IO_BARRIER
+        beq     :-
+
         cmp     #'M'
         beq     they_missed       ; They missed
         cmp     #'H'
@@ -577,7 +582,7 @@ next_char:
 out_done:
         plp
         lda     #1
-        sta     skip_their_hit_check
+        sta     their_hit_check_via_serial
 
         jsr     setup_players
         inc     connected
@@ -624,13 +629,13 @@ out_err:
 
         lda     #<_z8530_put
         ldx     #>_z8530_put
-        sta     serial_put_char+1
-        stx     serial_put_char+2
+        sta     serial_put+1
+        stx     serial_put+2
 
         lda     #<_z8530_get
         ldx     #>_z8530_get
-        sta     serial_get_char+1
-        stx     serial_get_char+2
+        sta     serial_get+1
+        stx     serial_get+2
 
 :       rts
 .endproc
@@ -643,15 +648,9 @@ out_err:
         jmp     _acia_close
 .endproc
 
-; Wait a bit and send char.
-.proc serial_put
-        ldx     #25
-:       dex
-        bne     :-
-.endproc
 ; Send character in A over serial. Destroys X.
 ; Does not touch Y.
-.proc serial_put_char
+.proc serial_put
         jsr     _acia_put
         rts
 .endproc
@@ -659,7 +658,7 @@ out_err:
 ; Returns with char in A and carry clear if
 ; character available. Destroys X.
 ; Does not touch Y.
-.proc serial_get_char
+.proc serial_get
         jsr     _acia_get
         rts
 .endproc
@@ -670,7 +669,7 @@ out_err:
         lda     #10
         sta     ser_timer
 
-try:    jsr     serial_get_char
+try:    jsr     serial_get
         bcc     out
 
         jsr     check_escape
@@ -713,7 +712,7 @@ out_esc:
         bne     out
         jsr     check_escape
         bcs     out
-        jsr     serial_get_char
+        jsr     serial_get
         bcs     serial_force_get
 out:    rts
 .endproc
