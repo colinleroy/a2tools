@@ -99,6 +99,14 @@
         jmp     __OPPONENT_START__+OPPONENT::SPRITE
 .endproc
 
+.proc pause
+:       jsr     _check_keyboard
+        bcc     :-
+        lda     #$00
+        sta     _last_key
+        rts
+.endproc
+
 .segment "LOWCODE"
 
 .proc _real_main
@@ -464,14 +472,6 @@ no_kbd:
         lda     #$00
         sta     _last_key
         clc
-        rts
-.endproc
-
-.proc pause
-:       jsr     _check_keyboard
-        bcc     :-
-        lda     #$00
-        sta     _last_key
         rts
 .endproc
 

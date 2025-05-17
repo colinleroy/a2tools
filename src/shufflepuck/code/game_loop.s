@@ -26,6 +26,7 @@
         .export     their_pusher_dx, their_pusher_dy
         .export     their_currently_hitting, player_caught
         .export     their_hit_check_via_serial
+        .export     _update_opponent
 
         .export     _puck_reinit_my_order, _puck_reinit_their_order
         .export     puck_in_front_of_me, puck_in_front_of_them
@@ -45,6 +46,7 @@
         .import     _crash_lines_scale, _draw_crash_lines
         .import     my_score, their_score
         .import     _draw_score_update
+        .import     _draw_opponent, _backup_table
 
         .import     _read_mouse
 
@@ -178,6 +180,15 @@ draw:
 :       jsr     draw_my_pusher
         jsr     draw_puck
         rts
+.endproc
+
+.proc _update_opponent
+        jsr     _clear_screen_their_side
+        jsr     clear_my_pusher
+        jsr     _draw_opponent
+        jsr     _backup_table
+        jsr     _draw_screen_their_side
+        jmp     draw_my_pusher
 .endproc
 
 .proc _clear_screen_their_side

@@ -40,7 +40,7 @@
         .import     _big_draw_sprite_s_1
         .import     _big_draw_sprite_s_2
         .import     _big_draw_name_s                                ; CHANGE A
-        .import     _draw_opponent
+        .import     _update_opponent
         .import     _play_puck_hit
 
         .import     ostype, _platform_msleep
@@ -476,6 +476,17 @@ done:
         rts
 .endproc
 
+.proc update_avatar
+        asl
+        tay
+        lda     avatar_sprites,y
+        iny
+        ldx     avatar_sprites,y
+        sta     __OPPONENT_START__+OPPONENT::SPRITE+1
+        stx     __OPPONENT_START__+OPPONENT::SPRITE+2
+        jmp     _update_opponent
+.endproc
+
 .proc configure_avatar
         lda     #0
         jsr     _gotox
@@ -484,17 +495,10 @@ done:
         ldx     #>avatar_str
         jsr     _strout
 
-        lda     avatar_num
-        asl
-        tay
-        lda     avatar_sprites,y
-        iny
-        ldx     avatar_sprites,y
-        sta     __OPPONENT_START__+OPPONENT::SPRITE+1
-        stx     __OPPONENT_START__+OPPONENT::SPRITE+2
-        jsr     _draw_opponent
+        lda     my_avatar_num
+        jsr     update_avatar
 
-        lda     avatar_num
+        lda     my_avatar_num
         asl
         tay
         lda     avatar_names,y
@@ -515,16 +519,16 @@ update:
         beq     cancel
         bne     configure_avatar
 dec_param:
-        lda     avatar_num
+        lda     my_avatar_num
         beq     configure_avatar
-        dec     avatar_num
+        dec     my_avatar_num
         jmp     configure_avatar
 inc_param:
-        ldx     avatar_num
+        ldx     my_avatar_num
         inx
         cpx     #NUM_AVATARS
         beq     configure_avatar
-        inc     avatar_num
+        inc     my_avatar_num
         jmp     configure_avatar
 
 cancel:
@@ -651,10 +655,6 @@ open_error:
         lda     #<ready_str
         ldx     #>ready_str
         jsr     _strout
-; 
-; :       lda     KBD
-;         bpl     :-
-;         bit     KBDSTRB
 
         ldy     #$00
         clc
@@ -678,6 +678,11 @@ next_char:
         bne     next_char
 
 out_done:
+        lda     my_avatar_num       ; Exchange avatars
+        jsr     exchange_char
+        sta     their_avatar_num
+        jsr     update_avatar
+
         plp
         lda     #1
         sta     their_hit_check_via_serial
@@ -829,7 +834,8 @@ their_max_dx:     .byte   8
 their_max_dy:     .byte   8
 their_max_hit_dy: .byte   10
 tmp_param:        .byte   0
-avatar_num:       .byte   0
+my_avatar_num:    .byte   0
+their_avatar_num: .byte   0
 prev_puck_dy:     .byte   0
 
 ident_str:        .asciiz "SHFL1"
