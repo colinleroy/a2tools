@@ -415,6 +415,7 @@ SetupOut:
         sta     data_reg_r+1
 
         plp                             ; Reenable interrupts if needed
+        lda     #<$0000
         ldx     #>$0000
         sty     Opened
         rts
