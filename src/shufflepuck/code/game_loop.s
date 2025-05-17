@@ -523,7 +523,7 @@ out_miss:
 .endproc
 
 .proc _puck_check_their_hit
-:       ; Check if we already hit right before
+        ; Check if we already hit right before
         lda     their_currently_hitting
         beq     :+
         dec     their_currently_hitting
