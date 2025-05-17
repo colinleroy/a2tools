@@ -33,12 +33,14 @@
         .import     _z8530_open, _z8530_close
         .import     _z8530_get, _z8530_put
 
-        .import     _text_mono40, _hgr_force_mono40
+        .import     _text_mono40, _hgr_mixon, _hgr_mixoff, _hgr_force_mono40
 
         .import     _cout, _strout, _gotoxy, _gotox, _gotoy, _home, _numout
 
-        .import     _big_draw_sprite_s                              ; CHANGE A
+        .import     _big_draw_sprite_s_1
+        .import     _big_draw_sprite_s_2
         .import     _big_draw_name_s                                ; CHANGE A
+        .import     _draw_opponent
         .import     _play_puck_hit
 
         .import     ostype, _platform_msleep
@@ -70,7 +72,7 @@ IO_BARRIER = $FF
 .segment "s"                                                        ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::SPRITE, error ; Make sure the callback is where we think
-        jmp     _big_draw_sprite_s                                      ; CHANGE A
+        jmp     _big_draw_sprite_s_1                                    ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::NAME, error ; Make sure the callback is where we think
         jmp     _big_draw_name_s                                        ; CHANGE A
@@ -474,21 +476,72 @@ done:
         rts
 .endproc
 
+.proc configure_avatar
+        lda     #0
+        jsr     _gotox
+
+        lda     #<avatar_str
+        ldx     #>avatar_str
+        jsr     _strout
+
+        lda     avatar_num
+        asl
+        tay
+        lda     avatar_sprites,y
+        iny
+        ldx     avatar_sprites,y
+        sta     __OPPONENT_START__+OPPONENT::SPRITE+1
+        stx     __OPPONENT_START__+OPPONENT::SPRITE+2
+        jsr     _draw_opponent
+
+        lda     avatar_num
+        asl
+        tay
+        lda     avatar_names,y
+        iny
+        ldx     avatar_names,y
+        jsr     _strout
+
+update:
+        ldx     tmp_param
+        jsr     _read_key
+        cmp     #$08
+        beq     dec_param
+        cmp     #$15
+        beq     inc_param
+        cmp     #$0D              ; Enter
+        beq     done
+        cmp     #CH_ESC
+        beq     cancel
+        bne     configure_avatar
+dec_param:
+        lda     avatar_num
+        beq     configure_avatar
+        dec     avatar_num
+        jmp     configure_avatar
+inc_param:
+        ldx     avatar_num
+        inx
+        cpx     #NUM_AVATARS
+        beq     configure_avatar
+        inc     avatar_num
+        jmp     configure_avatar
+
+cancel:
+        inc     game_cancelled
+done:
+        rts
+.endproc
+
 .proc configure_serial
         jsr     _home
-        jsr     _text_mono40
+        jsr     _hgr_mixon
 
         jsr     setup_defaults
 
 ask_slot:
-        lda     #13
-        jsr     pusha
         lda     #0
         sta     _last_key         ; Reset last key to avoid pausing on config exit
-        jsr     _gotoxy
-        lda     #<configure_str
-        ldx     #>configure_str
-        jsr     _strout
 
         lda     #0
         jsr     pusha
@@ -498,7 +551,7 @@ ask_slot:
         ldx     #>help_str
         jsr     _strout
 
-        lda     #3
+        lda     #20
         jsr     _gotoy
 
         bit     ostype
@@ -526,13 +579,20 @@ iigs:
         cmp     #SER_ERR_OK
         bne     open_error
 
-        lda     #12
+        jsr     configure_avatar
+
+        jsr     _hgr_mixoff
+        jsr     _home
+
+        lda     #10
         jsr     pusha
-        lda     #15
+        lda     #12
         jsr     _gotoxy
         lda     #<wait_str
         ldx     #>wait_str
         jsr     _strout
+
+        jsr     _text_mono40
 
         ; Wait for other player
         jsr     wait_connection
@@ -545,7 +605,7 @@ iigs:
 open_error:
         lda     #12
         jsr     pusha
-        lda     #15
+        lda     #22
         jsr     _gotoxy
         lda     #<open_error_str
         ldx     #>open_error_str
@@ -560,6 +620,7 @@ open_error:
 .proc finish_game
         jsr     close_serial_slot
         jsr     _home
+        jsr     _hgr_mixoff
         jmp     _hgr_force_mono40
 .endproc
 
@@ -569,9 +630,9 @@ open_error:
 :       jsr     serial_wait_and_get
         bcc     :-
 
-        lda     #10
+        lda     #0
         jsr     pusha
-        lda     #16
+        lda     #13
         jsr     _gotoxy
         lda     #<enter_str
         ldx     #>enter_str
@@ -738,31 +799,43 @@ out_esc:
 out:    rts
 .endproc
 
-ser_timer:        .word 0
-serial_slot:      .byte 2
-connected:        .byte 0
-player:           .byte 0
+ser_timer:        .word   0
+serial_slot:      .byte   2
+connected:        .byte   0
+player:           .byte   0
 
-to_send:          .byte 0
-read_again:       .byte 0
-their_max_dx:     .byte 8
-their_max_dy:     .byte 8
-their_max_hit_dy: .byte 10
-tmp_param:        .byte 0
-
-prev_puck_dy:     .byte 0
+to_send:          .byte   0
+read_again:       .byte   0
+their_max_dx:     .byte   8
+their_max_dy:     .byte   8
+their_max_hit_dy: .byte   10
+tmp_param:        .byte   0
+avatar_num:       .byte   0
+prev_puck_dy:     .byte   0
 
 ident_str:        .asciiz "SHFL1"
 
 wait_str:         .asciiz "WAITING FOR PLAYER"
-enter_str:        .asciiz "PRESS ENTER WHEN READY"
 configure_str:    .asciiz "CONFIGURE SERIAL"
 
-slot_str:         .asciiz "SLOT: "
+slot_str:         .asciiz "SERIAL SLOT: "
 
 open_error_str:   .asciiz "SERIAL OPEN ERROR"
 
 help_str:         .asciiz "ARROW KEYS TO CHANGE, ENTER TO VALIDATE"
+enter_str:        .asciiz "        PRESS ENTER WHEN READY         "
 
 modem_str:        .asciiz "MODEM  "
 printer_str:      .asciiz "PRINTER"
+
+avatar_str:       .asciiz "YOUR AVATAR: "
+
+NUM_AVATARS     = 2
+susan_str:        .asciiz "SUSAN     "
+steve_str:        .asciiz "STEVE     "
+
+avatar_names:     .addr   susan_str
+                  .addr   steve_str
+
+avatar_sprites:   .addr   _big_draw_sprite_s_1
+                  .addr   _big_draw_sprite_s_2

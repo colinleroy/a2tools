@@ -138,6 +138,8 @@ special_unperfect   = \
 	moving_barcode_lexan3.unperfect.gen.s \
 	moving_barcode_nerual1.unperfect.gen.s \
 	moving_barcode_nerual2.unperfect.gen.s \
+	sprite_s_1.unperfect.gen.s \
+	sprite_s_2.unperfect.gen.s \
 
 serve_sounds = \
 	serve_g_left.snd.s \
