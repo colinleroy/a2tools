@@ -626,32 +626,48 @@ open_error:
 
 ; Returns with carry set if connection failed.
 .proc wait_connection
-        ; Flush
-:       jsr     serial_wait_and_get
-        bcc     :-
+        php
+        sei
 
+        ; Ping regularly
+:       lda     #100
+        ldx     #0
+        jsr     _platform_msleep
+        jsr     serial_put
+        jsr     serial_wait_and_get
+        bcs     :-
+
+        ; We got a reply. Stop sending and flush
+:       lda     #$FF
+        jsr     exchange_char
+        cmp     #$FF
+        bne     :-
+
+        ; Identify
         lda     #0
         jsr     pusha
         lda     #13
         jsr     _gotoxy
-        lda     #<enter_str
-        ldx     #>enter_str
+        lda     #<ready_str
+        ldx     #>ready_str
         jsr     _strout
-
-:       lda     KBD
-        bpl     :-
-        bit     KBDSTRB
+; 
+; :       lda     KBD
+;         bpl     :-
+;         bit     KBDSTRB
 
         ldy     #$00
         clc
 
-        php
-        sei
 next_char:
         lda     ident_str,y
         beq     out_done            ; All chars sent/received
 
-        jsr     exchange_char
+        jsr     serial_put
+:       jsr     serial_force_get
+        bcs     out_err
+        cmp     #$FF
+        beq     :-
         cmp     ident_str,y         ; Is it the same char?
         bne     out_err             ; No, try again
 
@@ -823,7 +839,7 @@ slot_str:         .asciiz "SERIAL SLOT: "
 open_error_str:   .asciiz "SERIAL OPEN ERROR"
 
 help_str:         .asciiz "ARROW KEYS TO CHANGE, ENTER TO VALIDATE"
-enter_str:        .asciiz "        PRESS ENTER WHEN READY         "
+ready_str:        .asciiz "                 READY!                "
 
 modem_str:        .asciiz "MODEM  "
 printer_str:      .asciiz "PRINTER"
