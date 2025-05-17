@@ -90,7 +90,7 @@ IO_BARRIER = $FF
         jmp     return0
 
 .assert * = __OPPONENT_START__+OPPONENT::END_GAME, error ; Make sure the callback is where we think
-        jmp     return0
+        jmp     close_serial_slot
 
 .assert * = __OPPONENT_START__+OPPONENT::HIT_CB, error
         jmp     hit_cb
@@ -771,13 +771,16 @@ try:    jsr     serial_get
         bcc     out
 
         jsr     check_escape
-        bcs     out
+        bcs     out_abort
 
         dec     ser_timer
         bne     try
         sec
 
 out:    rts
+out_abort:
+        inc     game_cancelled
+        rts
 .endproc
 
 ; Sends A over serial, receives A over serial
