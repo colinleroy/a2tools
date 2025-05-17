@@ -276,7 +276,9 @@ $(SRC_DIR)/../surl-server/hgr-convert:
 
 %.hgr: $(SRC_DIR)/assets/%.xcf $(SRC_DIR)/../surl-server/hgr-convert
 	convert -flatten $< $<.png
-	$(SRC_DIR)/../surl-server/hgr-convert $<.png && mv $<.png.hgr $@
+	#Use -short to have 8 less bytes at the end so lzsa can uncompress
+	#in-place
+	$(SRC_DIR)/../surl-server/hgr-convert -short $<.png && mv $<.png.hgr $@
 	rm -f $<.png $<.png.hgr-preview.png
 
 $(sprites_pixel_perfect): %.pixel_perfect.gen.s: $(SRC_DIR)/assets/%.png
