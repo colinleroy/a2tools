@@ -133,9 +133,9 @@ static int stp_write_disk(char *out_dir, char prodos_order) {
   char dev;
   dhandle_t dev_handle;
   size_t r = 0;
-  uint16 cur_block = 0;
+  uint16 cur_block = 0, verif_cur_block = 0;
   uint8 cur_sector, i;
-  char *data = NULL, *cur_data;
+  char *data = NULL, *cur_data, *verif_data = NULL;
   extern surl_response resp;
   uint16 num_blocks = (resp.size / PRODOS_BLOCK_SIZE);
   char dos_sector_map[16] = {0x0, 0xE, 0xD, 0xC, 0xB, 0xA, 0x9, 0x8,
@@ -152,6 +152,10 @@ static int stp_write_disk(char *out_dir, char prodos_order) {
   data = malloc(TRACK_SIZE);
   if (!data) {
     goto err_out_no_free_data;
+  }
+  verif_data = malloc(TRACK_SIZE);
+  if (!verif_data) {
+    goto err_out_no_free_verif_data;
   }
 
   /* Open device */
@@ -170,6 +174,8 @@ static int stp_write_disk(char *out_dir, char prodos_order) {
   progress_bar(0, 15, NUMCOLS - 1, 0, num_blocks);
 
   do {
+    gotoxy(0, 14);
+    cprintf("Receiving block %d/%d...   ", cur_block, num_blocks);
     if (prodos_order) {
       /* ProDOS-ordered images are easy, 1:1 mapping */
       /* Get one track from network */
@@ -201,15 +207,27 @@ static int stp_write_disk(char *out_dir, char prodos_order) {
     }
 
     /* Write track */
+    gotoxy(0, 14);
+    cprintf("Writing block %d/%d...     ", cur_block, num_blocks);
     for (i = BLOCKS_PER_TRACK, cur_data = data; i ; i--, cur_data += PRODOS_BLOCK_SIZE) {
       if (dio_write(dev_handle, cur_block, cur_data) != 0) {
         goto err_out;
       }
       cur_block++;
     }
-
     gotoxy(0, 14);
-    cprintf("Block %d/%d...", cur_block, num_blocks);
+    cprintf("Verifying block %d/%d...    ", verif_cur_block, num_blocks);
+    for (i = BLOCKS_PER_TRACK, cur_data = verif_data; i ; i--, cur_data += PRODOS_BLOCK_SIZE) {
+      if (dio_read(dev_handle, verif_cur_block, cur_data) != 0) {
+        goto err_out;
+      }
+      verif_cur_block++;
+    }
+    if (memcmp(data, verif_data, PRODOS_BLOCK_SIZE*BLOCKS_PER_TRACK)) {
+      cprintf("Data does not match!");
+      goto err_out;
+    }
+
     progress_bar(0, 15, NUMCOLS - 1, cur_block, num_blocks);
 
     /* Check for user cancel */
@@ -222,10 +240,13 @@ out:
   /* All done */
   dio_close(dev_handle);
   free(data);
+  free(verif_data);
   return 0;
 
   /* Error path */
 err_out:
+  free(verif_data);
+err_out_no_free_verif_data:
   free(data);
 err_out_no_free_data:
   dio_close(dev_handle);
