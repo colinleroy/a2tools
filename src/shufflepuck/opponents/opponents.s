@@ -26,6 +26,7 @@
         .import     _last_key, _read_key
         .import     _init_puck_position, _set_puck_position
         .import     their_hit_check_via_serial
+        .import     _set_max_puck_delta
 
         .import     _acia_open, _acia_close
         .import     _acia_get, _acia_put
@@ -100,6 +101,11 @@ IO_BARRIER = $FF
         lda     connected
         bne     :+
         jsr     configure_serial
+
+        ; The usual dy limit requires super-human reflexes
+        ldx     #ABS_MAX_DX
+        ldy     #ABS_MAX_DY/2
+        jsr     _set_max_puck_delta
 
 :       lda     game_cancelled
         bne     error

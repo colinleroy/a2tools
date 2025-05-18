@@ -21,6 +21,8 @@
         .export   game_cancelled
         .export   _init_puck_position, _set_puck_position
 
+        .export   _abs_max_dx, _abs_max_dy, _set_max_puck_delta
+
         .import   _hgr_force_mono40, vbl_ready
         .import   _mouse_setbarbox, _mouse_setplaybox
 
@@ -104,6 +106,28 @@
         bcc     :-
         lda     #$00
         sta     _last_key
+        rts
+.endproc
+
+
+.proc _check_keyboard
+        lda     KBD
+        bpl     no_kbd
+        bit     KBDSTRB
+        and     #$7F
+        sta     _last_key
+        sec
+        rts
+no_kbd:
+        lda     #$00
+        sta     _last_key
+        clc
+        rts
+.endproc
+
+.proc _set_max_puck_delta
+        stx     _abs_max_dx
+        sty     _abs_max_dy
         rts
 .endproc
 
@@ -192,6 +216,10 @@ new_game:
         sta     their_score
         sta     game_cancelled
         sta     their_hit_check_via_serial
+
+        ldx     #ABS_MAX_DX
+        ldy     #ABS_MAX_DY
+        jsr     _set_max_puck_delta
 
         ; Load the opponent file
         lda     opponent
@@ -460,26 +488,10 @@ out:    rts
 out:    rts
 .endproc
 
-.proc _check_keyboard
-        lda     KBD
-        bpl     no_kbd
-        bit     KBDSTRB
-        and     #$7F
-        sta     _last_key
-        sec
-        rts
-no_kbd:
-        lda     #$00
-        sta     _last_key
-        clc
-        rts
-.endproc
-
 .data
 
-turn_puck_y:
-        .byte   MY_PUCK_INI_Y
-        .byte   THEIR_PUCK_INI_Y
+turn_puck_y:    .byte   MY_PUCK_INI_Y
+                .byte   THEIR_PUCK_INI_Y
 
 .bss
 
@@ -495,3 +507,5 @@ won_tournament: .res 1
 frame_counter:  .res 1
 _last_key:      .res 1
 game_cancelled: .res 1
+_abs_max_dx:    .res 1
+_abs_max_dy:    .res 1

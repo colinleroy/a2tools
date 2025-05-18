@@ -47,7 +47,7 @@
         .import     my_score, their_score
         .import     _draw_score_update
         .import     _draw_opponent, _backup_table
-
+        .import     _abs_max_dx, _abs_max_dy
         .import     _read_mouse
 
         .import     x_shift, x_factor, y_factor
@@ -432,11 +432,11 @@ out:
 ; Make sure we don't go completely overboard with the puck's deltas
 .proc bind_puck_speed
         lda     puck_dy
-        BIND_SIGNED #ABS_MAX_DY
+        BIND_SIGNED _abs_max_dy
         sta     puck_dy
 
         lda     puck_dx
-        BIND_SIGNED #ABS_MAX_DX
+        BIND_SIGNED _abs_max_dx
         sta     puck_dx
         clc                       ; Caller expects carry clear
         rts
