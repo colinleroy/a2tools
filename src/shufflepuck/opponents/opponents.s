@@ -28,13 +28,15 @@
         .import     their_hit_check_via_serial
         .import     _set_max_puck_delta
 
+        .import     _puck_reinit_my_order, _puck_reinit_their_order
         .import     _acia_open, _acia_close
         .import     _acia_get, _acia_put
 
         .import     _z8530_open, _z8530_close
         .import     _z8530_get, _z8530_put
 
-        .import     _text_mono40, _hgr_mixon, _hgr_mixoff, _hgr_force_mono40
+        .import     _text_mono40, _hgr_mixon, _hgr_mixoff
+        .import     _hgr_unset_mono40, _hgr_force_mono40
 
         .import     _cout, _strout, _gotoxy, _gotox, _gotoy, _home, _numout
 
@@ -170,7 +172,7 @@ error:
 
 .proc mirror_puck_x
         sta     tmp1
-        lda     #PUCK_MAX_X
+        lda     #PUCK_MAX_X-1
         sec
         sbc     tmp1
         rts
@@ -299,10 +301,18 @@ send_puck_params:
         sta     puck_x
         lda     #'?'              ; Get puck_y
         jsr     exchange_char
-        tay
+        sta     puck_y
         ldx     puck_x
+        ldy     puck_y
         jsr     _set_puck_position
+        jsr     _puck_reinit_their_order
 
+        lda     their_currently_hitting
+        beq     :+
+        rts
+
+:       lda     #15
+        sta     their_currently_hitting
         ldy     #4                ; Play their hit sound
         jmp     _play_puck_hit
 .endproc
@@ -482,7 +492,9 @@ done:
         rts
 .endproc
 
+; Call with carry set to update the table background
 .proc update_avatar
+        php
         asl
         tay
         lda     avatar_sprites,y
@@ -490,6 +502,7 @@ done:
         ldx     avatar_sprites,y
         sta     __OPPONENT_START__+OPPONENT::SPRITE+1
         stx     __OPPONENT_START__+OPPONENT::SPRITE+2
+        plp
         jmp     _update_opponent
 .endproc
 
@@ -502,6 +515,7 @@ done:
         jsr     _strout
 
         lda     my_avatar_num
+        clc                       ; No need to backup table
         jsr     update_avatar
 
         lda     my_avatar_num
@@ -546,6 +560,7 @@ done:
 .proc configure_serial
         jsr     _home
         jsr     _hgr_mixon
+        jsr     _hgr_unset_mono40
 
         jsr     setup_defaults
 
@@ -589,12 +604,19 @@ iigs:
         cmp     #SER_ERR_OK
         bne     open_error
 
-        jsr     configure_avatar
+        php                       ; Disable interrupts until connection ready
+        sei                       ; The other player's DTR/DSR toggles at init
+                                  ; will trigger interrupts even if our ACIA
+                                  ; has them disabled, which is Not Good(tm)
+                                  ; for ProDOS
 
-        jsr     _hgr_mixoff
+        jsr     configure_avatar  ; Let player choose their avatar
+
+        jsr     _hgr_mixoff       ; Turnoff HGR mix, set text,
+        jsr     _hgr_force_mono40
         jsr     _home
 
-        lda     #10
+        lda     #10               ; print WAITING string
         jsr     pusha
         lda     #12
         jsr     _gotoxy
@@ -602,11 +624,13 @@ iigs:
         ldx     #>wait_str
         jsr     _strout
 
-        jsr     _text_mono40
+        jsr     _text_mono40      ; and show it
 
-        ; Wait for other player
-        jsr     wait_connection
-        lda     game_cancelled
+        jsr     wait_connection   ; Wait for other player
+
+        plp                       ; We can now re-enable interrupts.
+
+        lda     game_cancelled    ; Did we cancel at some point?
         bne     finish_game
 
         jsr     _home
@@ -636,13 +660,14 @@ open_error:
 
 ; Returns with carry set if connection failed.
 .proc wait_connection
-        php
-        sei
-
         ; Ping regularly
 :       lda     #100
         ldx     #0
         jsr     _platform_msleep
+
+        lda     game_cancelled
+        bne     out_err
+
         jsr     serial_put
         jsr     serial_wait_and_get
         bcs     :-
@@ -687,9 +712,9 @@ out_done:
         lda     my_avatar_num       ; Exchange avatars
         jsr     exchange_char
         sta     their_avatar_num
+        sec                         ; Update avatar AND backup table
         jsr     update_avatar
 
-        plp
         lda     #1
         sta     their_hit_check_via_serial
 
@@ -698,7 +723,6 @@ out_done:
         rts
 
 out_err:
-        plp
         inc     game_cancelled
         rts
 .endproc

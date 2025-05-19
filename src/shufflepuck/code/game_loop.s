@@ -182,12 +182,16 @@ draw:
         rts
 .endproc
 
+; Call with carry set to re-backup table
 .proc _update_opponent
+        php
         jsr     _clear_screen_their_side
         jsr     clear_my_pusher
         jsr     _draw_opponent
+        plp
+        bcc     :+
         jsr     _backup_table
-        jsr     _draw_screen_their_side
+:       jsr     _draw_screen_their_side
         jmp     draw_my_pusher
 .endproc
 

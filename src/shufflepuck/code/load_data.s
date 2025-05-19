@@ -21,9 +21,10 @@
         .export   _load_barsnd, _backup_barsnd, _restore_barsnd
         .export   _load_hall_of_fame, _load_scores, _save_scores
         .export   _init_text_before_decompress, _cache_working
-        .export   _load_hgr_mono_file, hgr_mono_file
+        .export   _load_hgr_mono_file
         .export   _print_error, _print_load_error
 
+        .import   hgr_mono_file
         .import   _open, _read, _write, _close, _memmove, _unlink
         .import   pushax, popax, _text_mono40, _memset
         .import   __filetype, __auxtype
@@ -584,7 +585,6 @@ barsnd_backup_name:  .asciiz "/RAM/BAR.SND"
 opponent_name_tmpl:  .asciiz "OPPONENT.X"
 hgr_fgbg:            .asciiz "/RAM/FGBG"
 load_err_str:        .asciiz "COULD NOT LOAD "
-hgr_mono_file:       .byte 0
 
 .segment "barcode"
 ; --- only accessible from the bar code segment

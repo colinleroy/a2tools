@@ -196,7 +196,7 @@ NotIIgs:ldx     #<$C000
         sta     ACIA_CMD,x
         cmp     ACIA_CMD,x      ; Verify what we stored is there
         bne     NotAcia
-        iny                     ; Enable TX/RX, disable IRQ
+        iny                     ; Enable TX/RX, disable IRQ with ...11
         cpy     #%00000100
         bne     :-
         sta     ACIA_STATUS,x   ; Reset ACIA
