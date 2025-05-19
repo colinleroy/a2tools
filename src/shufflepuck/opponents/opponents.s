@@ -42,6 +42,7 @@
 
         .import     _big_draw_sprite_s_1
         .import     _big_draw_sprite_s_2
+        .import     _big_draw_sprite_s_3
         .import     _big_draw_name_s                                ; CHANGE A
         .import     _update_opponent
         .import     _play_puck_hit
@@ -885,12 +886,14 @@ printer_str:      .asciiz "PRINTER"
 
 avatar_str:       .asciiz "YOUR AVATAR: "
 
-NUM_AVATARS     = 2
+NUM_AVATARS     = 3
 susan_str:        .asciiz "SUSAN     "
 steve_str:        .asciiz "STEVE     "
-
+raccoon_str:      .asciiz "MX RACCOON"
 avatar_names:     .addr   susan_str
                   .addr   steve_str
+                  .addr   raccoon_str
 
 avatar_sprites:   .addr   _big_draw_sprite_s_1
                   .addr   _big_draw_sprite_s_2
+                  .addr   _big_draw_sprite_s_3
