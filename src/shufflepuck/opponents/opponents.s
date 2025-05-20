@@ -40,10 +40,12 @@
 
         .import     _cout, _strout, _gotoxy, _gotox, _gotoy, _home, _numout
 
-        .import     _big_draw_sprite_s_1
-        .import     _big_draw_sprite_s_2
-        .import     _big_draw_sprite_s_3
-        .import     _big_draw_name_s                                ; CHANGE A
+        .import     _big_draw_sprite_s_1    ; Susan
+        .import     _big_draw_sprite_s_2    ; Steve
+        .import     _big_draw_sprite_s_3    ; Mx Raccoon
+        .import     _big_draw_sprite_s_4    ; Calvin
+        .import     _big_draw_sprite_s_5    ; Mafalda
+        .import     _big_draw_name_s
         .import     _update_opponent
         .import     _play_puck_hit
 
@@ -886,14 +888,24 @@ printer_str:      .asciiz "PRINTER"
 
 avatar_str:       .asciiz "YOUR AVATAR: "
 
-NUM_AVATARS     = 3
 susan_str:        .asciiz "SUSAN     "
 steve_str:        .asciiz "STEVE     "
 raccoon_str:      .asciiz "MX RACCOON"
+calvin_str:       .asciiz "CALVIN    "
+mafalda_str:      .asciiz "MAFALDA   "
+
 avatar_names:     .addr   susan_str
                   .addr   steve_str
                   .addr   raccoon_str
+                  .addr   calvin_str
+                  .addr   mafalda_str
+NUM_AVATARS = (* - avatar_names)/2
 
 avatar_sprites:   .addr   _big_draw_sprite_s_1
                   .addr   _big_draw_sprite_s_2
                   .addr   _big_draw_sprite_s_3
+                  .addr   _big_draw_sprite_s_4
+                  .addr   _big_draw_sprite_s_5
+NUM_SPRITES = (* - avatar_sprites)/2
+
+.assert NUM_AVATARS = NUM_SPRITES, error

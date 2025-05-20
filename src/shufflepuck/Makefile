@@ -141,6 +141,8 @@ special_unperfect   = \
 	sprite_s_1.unperfect.gen.s \
 	sprite_s_2.unperfect.gen.s \
 	sprite_s_3.unperfect.gen.s \
+	sprite_s_4.unperfect.gen.s \
+	sprite_s_5.unperfect.gen.s \
 
 serve_sounds = \
 	serve_g_left.snd.s \
