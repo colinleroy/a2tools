@@ -93,6 +93,8 @@ lose_unperfect = \
 	lose_e.unperfect.gen.s \
 	lose_f.unperfect.gen.s \
 	lose_h.unperfect.gen.s \
+	lose_s_4.unperfect.gen.s \
+	lose_s_5.unperfect.gen.s \
 	losegame_c_1.unperfect.gen.s \
 	losegame_c_2.unperfect.gen.s \
 	losegame_c_3.unperfect.gen.s \
@@ -117,6 +119,8 @@ win_unperfect = \
 	win_f.unperfect.gen.s \
 	win_g.unperfect.gen.s \
 	win_h.unperfect.gen.s \
+	win_s_4.unperfect.gen.s \
+	win_s_5.unperfect.gen.s \
 
 serve_unperfect   = \
 	serve_g_1.unperfect.gen.s \
@@ -125,6 +129,11 @@ serve_unperfect   = \
 	serve_g_4.unperfect.gen.s \
 
 special_unperfect   = \
+	sprite_s_1.unperfect.gen.s \
+	sprite_s_2.unperfect.gen.s \
+	sprite_s_3.unperfect.gen.s \
+	sprite_s_4.unperfect.gen.s \
+	sprite_s_5.unperfect.gen.s \
 	normal_h.unperfect.gen.s \
 	normal_i.unperfect.gen.s \
 	moving_i_1.unperfect.gen.s \
@@ -138,11 +147,6 @@ special_unperfect   = \
 	moving_barcode_lexan3.unperfect.gen.s \
 	moving_barcode_nerual1.unperfect.gen.s \
 	moving_barcode_nerual2.unperfect.gen.s \
-	sprite_s_1.unperfect.gen.s \
-	sprite_s_2.unperfect.gen.s \
-	sprite_s_3.unperfect.gen.s \
-	sprite_s_4.unperfect.gen.s \
-	sprite_s_5.unperfect.gen.s \
 
 serve_sounds = \
 	serve_g_left.snd.s \

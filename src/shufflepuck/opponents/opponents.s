@@ -43,8 +43,8 @@
         .import     _big_draw_sprite_s_1    ; Susan
         .import     _big_draw_sprite_s_2    ; Steve
         .import     _big_draw_sprite_s_3    ; Mx Raccoon
-        .import     _big_draw_sprite_s_4    ; Calvin
-        .import     _big_draw_sprite_s_5    ; Mafalda
+        .import     _big_draw_sprite_s_4, _big_draw_lose_s_4, _big_draw_win_s_4    ; Calvin
+        .import     _big_draw_sprite_s_5, _big_draw_lose_s_5, _big_draw_win_s_5    ; Mafalda
         .import     _big_draw_name_s
         .import     _update_opponent
         .import     _play_puck_hit
@@ -84,13 +84,13 @@ IO_BARRIER = $FF
         jmp     _big_draw_name_s                                        ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT, error ; Make sure the callback is where we think
-        jmp     return0
+        jmp     avatar_set_lose_sprite
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT_SND, error ; Make sure the callback is where we think
         jmp     return0
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT, error ; Make sure the callback is where we think
-        jmp     return0
+        jmp     avatar_set_win_sprite
 
 .assert * = __OPPONENT_START__+OPPONENT::WIN_POINT_SND, error ; Make sure the callback is where we think
         jmp     return0
@@ -495,6 +495,19 @@ done:
         rts
 .endproc
 
+.proc avatar_set_win_sprite
+cx:     ldx     #0
+cy:     ldy     #0
+sprite: jmp     return0
+.endproc
+
+
+.proc avatar_set_lose_sprite
+cx:     ldx     #0
+cy:     ldy     #0
+sprite: jmp     return0
+.endproc
+
 ; Call with carry set to update the table background
 .proc update_avatar
         php
@@ -505,7 +518,34 @@ done:
         ldx     avatar_sprites,y
         sta     __OPPONENT_START__+OPPONENT::SPRITE+1
         stx     __OPPONENT_START__+OPPONENT::SPRITE+2
-        plp
+
+        dey                       ; coords pointer
+        tya
+        asl
+        tax                       ; sprite pointer
+
+        lda     avatar_an_coords, y
+        beq     :+
+        sta     avatar_set_win_sprite::cx+1
+        sta     avatar_set_lose_sprite::cx+1
+        iny
+        lda     avatar_an_coords, y
+        sta     avatar_set_win_sprite::cy+1
+        sta     avatar_set_lose_sprite::cy+1
+
+        lda     avatar_animations,x
+        sta     avatar_set_win_sprite::sprite+1
+        inx
+        lda     avatar_animations,x
+        sta     avatar_set_win_sprite::sprite+2
+        inx
+        lda     avatar_animations,x
+        sta     avatar_set_lose_sprite::sprite+1
+        inx
+        lda     avatar_animations,x
+        sta     avatar_set_lose_sprite::sprite+2
+
+:       plp
         jmp     _update_opponent
 .endproc
 
@@ -888,24 +928,43 @@ printer_str:      .asciiz "PRINTER"
 
 avatar_str:       .asciiz "YOUR AVATAR: "
 
-susan_str:        .asciiz "SUSAN     "
-steve_str:        .asciiz "STEVE     "
 raccoon_str:      .asciiz "MX RACCOON"
 calvin_str:       .asciiz "CALVIN    "
 mafalda_str:      .asciiz "MAFALDA   "
+susan_str:        .asciiz "SUSAN     "
+steve_str:        .asciiz "STEVE     "
 
-avatar_names:     .addr   susan_str
-                  .addr   steve_str
-                  .addr   raccoon_str
+avatar_names:     .addr   raccoon_str
                   .addr   calvin_str
                   .addr   mafalda_str
+                  .addr   susan_str
+                  .addr   steve_str
+
 NUM_AVATARS = (* - avatar_names)/2
 
-avatar_sprites:   .addr   _big_draw_sprite_s_1
-                  .addr   _big_draw_sprite_s_2
-                  .addr   _big_draw_sprite_s_3
+avatar_sprites:   .addr   _big_draw_sprite_s_3
                   .addr   _big_draw_sprite_s_4
                   .addr   _big_draw_sprite_s_5
-NUM_SPRITES = (* - avatar_sprites)/2
+                  .addr   _big_draw_sprite_s_1
+                  .addr   _big_draw_sprite_s_2
 
+NUM_SPRITES = (* - avatar_sprites)/2
 .assert NUM_AVATARS = NUM_SPRITES, error
+
+avatar_animations:.addr    return0, return0
+                  .addr    _big_draw_win_s_4, _big_draw_lose_s_4
+                  .addr    _big_draw_win_s_5, _big_draw_lose_s_5
+                  .addr    return0, return0
+                  .addr    return0, return0
+
+NUM_ANIMATIONS = (* - avatar_animations)/4
+.assert NUM_ANIMATIONS = NUM_SPRITES, error
+
+avatar_an_coords: .byte    0, 0
+                  .byte    (14+OPPONENT_SPRITE_X)/7, OPPONENT_SPRITE_Y-OPPONENT_SPRITE_H+63
+                  .byte    (28+OPPONENT_SPRITE_X)/7, OPPONENT_SPRITE_Y-OPPONENT_SPRITE_H+52
+                  .byte    0, 0
+                  .byte    0, 0
+
+NUM_ANIM_COORDS = (* - avatar_an_coords)/2
+.assert NUM_ANIM_COORDS = NUM_SPRITES, error
