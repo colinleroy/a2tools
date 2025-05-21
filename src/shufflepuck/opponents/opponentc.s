@@ -252,14 +252,14 @@ move_backwards:
 .endproc
 
 .proc animate_lose
-        ldx     #((42+98)/7)    ; left X of sprite change + left X of big sprite
-        ldy     #(52)           ; bottom Y of sprite change
+        ldx     #((42+OPPONENT_SPRITE_X)/7)    ; left X of sprite change + left X of big sprite
+        ldy     #OPPONENT_SPRITE_Y-OPPONENT_SPRITE_H+39             ; bottom Y of sprite change
         jmp     _big_draw_lose_c                                        ; CHANGE A
 .endproc
 
 .proc animate_win
-        ldx     #((35+98)/7)    ; left X of sprite change + left X of big sprite
-        ldy     #(76)           ; bottom Y of sprite change
+        ldx     #((35+OPPONENT_SPRITE_X)/7)    ; left X of sprite change + left X of big sprite
+        ldy     #OPPONENT_SPRITE_Y-OPPONENT_SPRITE_H+63             ; bottom Y of sprite change
         jmp     _big_draw_win_c                                        ; CHANGE A
 .endproc
 
@@ -273,8 +273,8 @@ move_backwards:
         ldx     #0
         jsr     _platform_msleep
         jsr     _mouse_wait_vbl
-        ldx     #((28+98)/7)    ; left X of sprite change + left X of big sprite
-        ldy     #55             ; bottom Y of sprite change
+        ldx     #((28+OPPONENT_SPRITE_X)/7)    ; left X of sprite change + left X of big sprite
+        ldy     #OPPONENT_SPRITE_Y-OPPONENT_SPRITE_H+42             ; bottom Y of sprite change
         rts
 .endproc
 

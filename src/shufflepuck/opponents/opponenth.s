@@ -299,8 +299,8 @@ move_backwards:
 .endproc
 
 .proc animate_lose
-        ldx     #((28+98)/7)
-        ldy     #(43)
+        ldx     #((28+OPPONENT_SPRITE_X)/7)
+        ldy     #OPPONENT_SPRITE_Y-OPPONENT_SPRITE_H+30
         jmp     _big_draw_lose_h                                        ; CHANGE A
 .endproc
 
@@ -310,14 +310,14 @@ move_backwards:
 .endproc
 
 .proc win_animation
-        ldx     #((28+98)/7)
-        ldy     #(52+1)
+        ldx     #((28+OPPONENT_SPRITE_X)/7)
+        ldy     #OPPONENT_SPRITE_Y-OPPONENT_SPRITE_H+40
         jmp    _big_draw_win_h                                        ; CHANGE A
 .endproc
 
 .proc normal_animation
-        ldx     #((28+98)/7)
-        ldy     #(52+1)
+        ldx     #((28+OPPONENT_SPRITE_X)/7)
+        ldy     #OPPONENT_SPRITE_Y-OPPONENT_SPRITE_H+40
         jmp    _big_draw_normal_h                                        ; CHANGE A
 .endproc
 

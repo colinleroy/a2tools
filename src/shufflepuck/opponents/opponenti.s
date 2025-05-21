@@ -288,20 +288,20 @@ done:
 
 ; Sequence is A/B/A/normal
 .proc animate_a
-        ldx     #((35+98)/7)
-        ldy     #25
+        ldx     #((35+OPPONENT_SPRITE_X)/7)
+        ldy     #OPPONENT_SPRITE_Y-OPPONENT_SPRITE_H+12
         jmp     _big_draw_moving_i_1                                    ; CHANGE A
 .endproc
 
 .proc animate_b
-        ldx     #((35+98)/7)
-        ldy     #25
+        ldx     #((35+OPPONENT_SPRITE_X)/7)
+        ldy     #OPPONENT_SPRITE_Y-OPPONENT_SPRITE_H+12
         jmp     _big_draw_moving_i_2                                    ; CHANGE A
 .endproc
 
 .proc animate_normal
-        ldx     #((35+98)/7)
-        ldy     #25
+        ldx     #((35+OPPONENT_SPRITE_X)/7)
+        ldy     #OPPONENT_SPRITE_Y-OPPONENT_SPRITE_H+12
         jmp     _big_draw_moving_i_3                                    ; CHANGE A
 .endproc
 

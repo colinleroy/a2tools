@@ -295,8 +295,8 @@ move_backwards:
         ldy     #0
         jsr     _play_win_e
 
-        ldx     #((98+21)/7)
-        ldy     #(64+1)
+        ldx     #((OPPONENT_SPRITE_X+21)/7)
+        ldy     #OPPONENT_SPRITE_Y-OPPONENT_SPRITE_H+52
         rts
 .endproc
 
@@ -319,8 +319,8 @@ move_backwards:
 .endproc
 
 .proc animate_lose
-        ldx     #((28+98)/7)
-        ldy     #(65)
+        ldx     #((28+OPPONENT_SPRITE_X)/7)
+        ldy     #OPPONENT_SPRITE_Y-OPPONENT_SPRITE_H+52             ; bottom Y of sprite change
         jmp     _big_draw_lose_e                                        ; CHANGE A
 .endproc
 
@@ -333,8 +333,8 @@ move_backwards:
         jsr     _mouse_wait_vbl
         jsr     _mouse_wait_vbl
         jsr     _mouse_wait_vbl
-        ldx     #((28+98)/7)
-        ldy     #(65)
+        ldx     #((28+OPPONENT_SPRITE_X)/7)
+        ldy     #OPPONENT_SPRITE_Y-OPPONENT_SPRITE_H+52             ; bottom Y of sprite change
         rts
 .endproc
 

@@ -378,8 +378,8 @@ inc_hack:
 
         jsr     _mouse_wait_vbl
 
-        ldx     #((7+98)/7)
-        ldy     #76
+        ldx     #((7+OPPONENT_SPRITE_X)/7)
+        ldy     #OPPONENT_SPRITE_Y-OPPONENT_SPRITE_H+63
 
         lda     serve_hand_phase
         cmp     #1
@@ -402,8 +402,8 @@ serve_hand_4:
 .endproc
 
 .proc win_animation
-        ldx     #((35+98)/7)    ; left X of sprite change + left X of big sprite
-        ldy     #(38)           ; bottom Y of sprite change
+        ldx     #((35+OPPONENT_SPRITE_X)/7)    ; left X of sprite change + left X of big sprite
+        ldy     #OPPONENT_SPRITE_Y-OPPONENT_SPRITE_H+25             ; bottom Y of sprite change
         jmp     _big_draw_win_g                                        ; CHANGE A
 .endproc
 

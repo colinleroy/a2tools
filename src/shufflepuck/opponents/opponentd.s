@@ -204,8 +204,8 @@ move_backwards:
         jsr     _mouse_wait_vbl   ; ~45ms
         jsr     _mouse_wait_vbl
         jsr     _mouse_wait_vbl
-        ldx     #((21+98)/7)
-        ldy     #(76)
+        ldx     #((21+OPPONENT_SPRITE_X)/7)
+        ldy     #OPPONENT_SPRITE_Y-OPPONENT_SPRITE_H+63
         rts
 .endproc
 
@@ -248,8 +248,8 @@ move_backwards:
 .endproc
 
 .proc show_lose
-        ldx     #((21+98)/7)
-        ldy     #(57)
+        ldx     #((21+OPPONENT_SPRITE_X)/7)
+        ldy     #OPPONENT_SPRITE_Y-OPPONENT_SPRITE_H+44
         jmp     _big_draw_lose_d                                        ; CHANGE A
 .endproc
 

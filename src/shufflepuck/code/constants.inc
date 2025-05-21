@@ -35,6 +35,10 @@ MAX_SCORE          = 15
 CH_ESC             = $1B
 NUM_OPPONENTS      = 8      ; DC3 doesn't tournament
 
+OPPONENT_SPRITE_X  = 98
+OPPONENT_SPRITE_Y  = 76
+OPPONENT_SPRITE_W  = 84
+OPPONENT_SPRITE_H  = 63
 ; scores drawing
 
 SCORE_VERTICAL_LINE_LEN = 7

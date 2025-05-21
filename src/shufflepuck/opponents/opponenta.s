@@ -168,8 +168,8 @@ move_backwards:
 .endproc
 
 .proc load_simple_animation_coords
-        ldx     #((35+98)/7)    ; left X of sprite change + left X of big sprite
-        ldy     #(60+1)         ; bottom Y of sprite change
+        ldx     #((35+OPPONENT_SPRITE_X)/7)    ; left X of sprite change + left X of big sprite
+        ldy     #OPPONENT_SPRITE_Y-OPPONENT_SPRITE_H+48
         rts
 .endproc
 
