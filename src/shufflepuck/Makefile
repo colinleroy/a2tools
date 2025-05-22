@@ -95,6 +95,7 @@ lose_unperfect = \
 	lose_h.unperfect.gen.s \
 	lose_s_4.unperfect.gen.s \
 	lose_s_5.unperfect.gen.s \
+	lose_s_6.unperfect.gen.s \
 	losegame_c_1.unperfect.gen.s \
 	losegame_c_2.unperfect.gen.s \
 	losegame_c_3.unperfect.gen.s \
@@ -121,6 +122,7 @@ win_unperfect = \
 	win_h.unperfect.gen.s \
 	win_s_4.unperfect.gen.s \
 	win_s_5.unperfect.gen.s \
+	win_s_6.unperfect.gen.s \
 
 serve_unperfect   = \
 	serve_g_1.unperfect.gen.s \
@@ -134,6 +136,7 @@ special_unperfect   = \
 	sprite_s_3.unperfect.gen.s \
 	sprite_s_4.unperfect.gen.s \
 	sprite_s_5.unperfect.gen.s \
+	sprite_s_6.unperfect.gen.s \
 	normal_h.unperfect.gen.s \
 	normal_i.unperfect.gen.s \
 	moving_i_1.unperfect.gen.s \
