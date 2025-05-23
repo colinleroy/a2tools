@@ -7,7 +7,7 @@
         .import         get_acia_reg_idx
 
         .export         _simple_serial_set_speed
-        .export         _simple_serial_acia_onoff
+        .export         _simple_serial_slot_dtr_onoff
         .export         _simple_serial_dtr_onoff
         .export         _simple_serial_set_parity
         .export         _simple_serial_set_flow_control
@@ -38,7 +38,7 @@ _simple_serial_set_speed:
 set_speed_done:
         rts
 
-_simple_serial_acia_onoff:
+_simple_serial_slot_dtr_onoff:
         tay
         jsr     popa
         jsr     get_acia_reg_idx
@@ -56,7 +56,7 @@ _simple_serial_dtr_onoff:
         lda     _open_slot
         jsr     pusha
         tya
-        jmp     _simple_serial_acia_onoff
+        jmp     _simple_serial_slot_dtr_onoff
 
 _simple_serial_set_parity:
         tay

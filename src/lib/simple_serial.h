@@ -43,14 +43,14 @@ typedef struct {
 
 extern SimpleSerialParams ser_params;
 
+
 char __fastcall__ simple_serial_settings_io(const char *path, char *mode);
 
 void __fastcall__ simple_serial_set_speed(int b);
 void __fastcall__ simple_serial_set_flow_control(unsigned char fc);
-
 void __fastcall__ simple_serial_set_parity(unsigned int p);
 void __fastcall__ simple_serial_dtr_onoff(unsigned char on);
-void __fastcall__ simple_serial_acia_onoff(unsigned char slot_num, unsigned char on);
+void __fastcall__ simple_serial_slot_dtr_onoff(unsigned char slot_num, unsigned char on);
 
 #ifdef __CC65__
 char __fastcall__ simple_serial_open(void);
@@ -61,7 +61,10 @@ void __fastcall__ simple_serial_set_irq(unsigned char on);
 void __fastcall__ simple_serial_configure(void);
 void __fastcall__ simple_serial_setup_no_irq_regs(void);
 unsigned char __fastcall__ serial_read_byte_no_irq(void);
+
+#define simple_serial_putc serial_putc_direct
 void __fastcall__ serial_putc_direct(unsigned char c);
+
 void __fastcall__ simple_serial_read(char *ptr, size_t nmemb);
 void __fastcall__ serial_throbber_set(void *addr);
 
@@ -71,8 +74,6 @@ void __fastcall__ serial_throbber_set(void *addr);
    (speed == SER_BAUD_9600) ? "9600":  \
    (speed == SER_BAUD_19200)? "19200": \
    (speed == SER_BAUD_57600)? "57600":"115200")
-
-#define simple_serial_putc serial_putc_direct
 
 #else
 int simple_serial_open(void);
