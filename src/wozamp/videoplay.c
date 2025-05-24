@@ -18,6 +18,7 @@
 char *translit_charset;
 char monochrome = 1;
 unsigned char scrw = 255, scrh = 255;
+char *url_passer_file;
 
 static char url[512];
 char video_size;
@@ -31,7 +32,14 @@ int main(void) {
 
   try_videomode(VIDEOMODE_80COL);
 
-  url_fp = fopen(URL_PASSER_FILE, "r");
+  if (has_80cols) {
+    /* Assume it's a 64kB card... */
+    url_passer_file = RAM_URL_PASSER_FILE;
+  } else {
+    url_passer_file = URL_PASSER_FILE;
+  }
+
+  url_fp = fopen(url_passer_file, "r");
   surl_connect_proxy();
 
   surl_user_agent = "Wozamp for Apple II / "VERSION;
@@ -49,7 +57,7 @@ int main(void) {
   fclose(url_fp);
 
   /* Now unlink this and setup the HGR mono buffers */
-  unlink(URL_PASSER_FILE);
+  unlink(url_passer_file);
   load_hgr_mono_file(2);
 
   /* Remove filename from URL in advance, so we don't get stuck in
@@ -58,7 +66,7 @@ int main(void) {
   if (IS_NOT_NULL(last_sep = strrchr(url, '/'))) {
     *last_sep = '\0';
 
-    url_fp = fopen(URL_PASSER_FILE, "w");
+    url_fp = fopen(url_passer_file, "w");
 
     if (IS_NOT_NULL(url_fp)) {
       fputs(url, url_fp);

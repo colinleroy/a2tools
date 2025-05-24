@@ -45,6 +45,7 @@
 
 char *data = (char *)splash_hgr;
 char *nat_data = NULL;
+char *url_passer_file;
 
 char **lines = NULL;
 char **nat_lines = NULL;
@@ -436,7 +437,7 @@ read_metadata_again:
   } else if (r == SURL_ANSWER_STREAM_START) {
 do_video:
     if (has_video && !in_list && enable_video) {
-      FILE *video_url_fp = fopen(URL_PASSER_FILE, "w");
+      FILE *video_url_fp = fopen(url_passer_file, "w");
       if (IS_NULL(video_url_fp)) {
         print_err("VIDURL");
         cgetc();
@@ -666,7 +667,7 @@ static void do_setup(void) {
   char *url = NULL;
 
   /* Are we back from VIDEOPLAY? */
-  tmpfp = fopen(URL_PASSER_FILE, "r");
+  tmpfp = fopen(url_passer_file, "r");
   if (IS_NULL(tmpfp)) {
     url = start_url_ui();
   } else {
@@ -677,7 +678,7 @@ static void do_setup(void) {
       *lf = '\0';
 
     fclose(tmpfp);
-    unlink(URL_PASSER_FILE);
+    unlink(url_passer_file);
     reopen_start_device();
     set_scrollwindow(0, NUMROWS);
     clrscr();
@@ -687,13 +688,19 @@ static void do_setup(void) {
   do_nav(url);
 }
 
-static void init_ui_width(void) {
+static void init_features(void) {
     if (has_80cols) {
       center_x = CENTERX_80COLS;
       NUMCOLS = 80;
     } else {
       center_x = CENTERX_40COLS;
       NUMCOLS = 40;
+    }
+    if (has_80cols) {
+      /* Assume it's a 64kB card... */
+      url_passer_file = RAM_URL_PASSER_FILE;
+    } else {
+      url_passer_file = URL_PASSER_FILE;
     }
 }
 
@@ -706,7 +713,7 @@ void main(void) {
 
   try_videomode(VIDEOMODE_80COL);
 
-  init_ui_width();
+  init_features();
   serial_throbber_set((void *)0x07F7);
 
   clrscr();
