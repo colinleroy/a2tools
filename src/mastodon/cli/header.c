@@ -31,16 +31,16 @@ char __fastcall__ print_header(list *l, status *root_status, notification *root_
     }
   }
 
-#if NUMCOLS == 80
-  if (strlen(my_account->display_name) > LEFT_COL_WIDTH)
-    my_account->display_name[LEFT_COL_WIDTH] = '\0';
+  if (has_80cols) {
+    if (strlen(my_account->display_name) > LEFT_COL_WIDTH)
+      my_account->display_name[LEFT_COL_WIDTH] = '\0';
 
-  if (strlen(my_account->username) > LEFT_COL_WIDTH)
-    my_account->username[LEFT_COL_WIDTH] = '\0';
+    if (strlen(my_account->username) > LEFT_COL_WIDTH)
+      my_account->username[LEFT_COL_WIDTH] = '\0';
 
-  show_help(l, root_status, root_notif);
-  cvlinexy(LEFT_COL_WIDTH, 0, NUMLINES);
-#endif
+    show_help(l, root_status, root_notif);
+    cvlinexy(LEFT_COL_WIDTH, 0, NUMLINES);
+  }
 
   return 0;
 }

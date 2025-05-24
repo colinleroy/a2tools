@@ -18,46 +18,34 @@
 #include "scrollwindow.h"
 
 account *my_account = NULL;
+char *key_combo = "Ctrl";
 
 void compose_show_help(void) {
   #define BTM 4
   clrzone(0, BTM, LEFT_COL_WIDTH, 23);
 
-#if NUMCOLS == 80
-  dputs("Commands:\r\n"
-        " "KEY_COMB" +...\r\n"
-        " Send     : S\r\n"
-        " Images   : I\r\n"
-        " CW       : C\r\n"
-        " Poll     : V\r\n"
-        " Cancel   : Escape\r\n"
-        "\r\n"
-        "Set Audience:\r\n"
-        " "KEY_COMB" +...\r\n"
-        " Public   : P\r\n"
-        " Unlisted : U\r\n"
-        " Private  : R\r\n"
-        " Mention  : M\r\n"
-        "\r\n"
-      );
-#else
-  dputs("Commands:\r\n"
-        " "KEY_COMB" +...\r\n"
+  if (is_iie) {
+    key_combo = "Open-Apple";
+  }
+
+  dputs("Commands:\r\n");
+  dputs(key_combo);
+  dputs(" +...\r\n"
         " Send     : S\r\n"
         " Images   : I\r\n"
         " CW       : C\r\n"
         " Poll     : V\r\n"
         " Cancel   : X\r\n"
         "\r\n"
-        "Set Audience:\r\n"
-        " "KEY_COMB" +...\r\n"
+        "Set Audience:\r\n");
+  dputs(key_combo);
+  dputs(" +...\r\n"
         " Public   : P\r\n"
         " Unlisted : N\r\n"
         " Private  : R\r\n"
         " Mention  : D\r\n"
         "\r\n"
       );
-#endif
 
   print_free_ram();
 }
@@ -66,39 +54,41 @@ void compose_print_header(void) {
   if (IS_NULL(my_account)) {
     my_account = api_get_profile(NULL);
   }
-#if NUMCOLS == 80
-  if (IS_NOT_NULL(my_account)) {
-    if (strlen(my_account->display_name) > LEFT_COL_WIDTH)
-      my_account->display_name[LEFT_COL_WIDTH] = '\0';
 
-    if (strlen(my_account->username) > LEFT_COL_WIDTH)
-      my_account->username[LEFT_COL_WIDTH] = '\0';
+  if (has_80cols) {
+    if (IS_NOT_NULL(my_account)) {
+      if (strlen(my_account->display_name) > LEFT_COL_WIDTH)
+        my_account->display_name[LEFT_COL_WIDTH] = '\0';
 
-    gotoxy(0, 0);
-    dputs(my_account->display_name);
-    gotoxy(0, 1);
-    dputc(arobase);
-    dputs(my_account->username);
+      if (strlen(my_account->username) > LEFT_COL_WIDTH)
+        my_account->username[LEFT_COL_WIDTH] = '\0';
+
+      gotoxy(0, 0);
+      dputs(my_account->display_name);
+      gotoxy(0, 1);
+      dputc(arobase);
+      dputs(my_account->username);
+    }
+
+    compose_show_help();
+    cvlinexy(LEFT_COL_WIDTH, 0, NUMLINES);
   }
-
-  compose_show_help();
-  cvlinexy(LEFT_COL_WIDTH, 0, NUMLINES);
-#endif
 }
 
 void print_free_ram(void) {
-#if NUMCOLS == 80
   unsigned char sx, wx;
 
-  get_hscrollwindow(&sx, &wx);
-  set_hscrollwindow(0, NUMCOLS);
-#endif
+  if (has_80cols) {
+    get_hscrollwindow(&sx, &wx);
+    set_hscrollwindow(0, NUMCOLS);
+  }
 #ifdef __CC65__
   gotoxy(0, 23);
   cprintf("%zuB free     ",
           _heapmemavail());
 #endif
-#if NUMCOLS == 80
-  set_hscrollwindow(sx, wx);
-#endif
+
+  if (has_80cols) {
+    set_hscrollwindow(sx, wx);
+  }
 }

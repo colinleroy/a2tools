@@ -41,7 +41,7 @@
 #include "login_data.h"
 #include "a2_features.h"
 
-unsigned char scrw, scrh;
+unsigned char NUMCOLS = 40;
 
 login_data_t login_data;
 
@@ -154,7 +154,9 @@ int main(int argc, char **argv) {
 #endif
 
   try_videomode(VIDEOMODE_80COL);
-  screensize(&scrw, &scrh);
+  if (has_80cols) {
+    NUMCOLS = 80;
+  }
 
   clrscr();
 
@@ -193,19 +195,23 @@ do_cli_config_anyway:
   if (IS_NULL(oauth_token) || oauth_token[0] == '\0') {
     dputs("Could not login :(\n");
     cgetc();
-    set_scrollwindow(0, scrh);
+    set_scrollwindow(0, NUMLINES);
     exit(1);
   }
 
-#if NUMCOLS == 40
-  dputs("\r\nHint: Use Ctrl-Y to toggle help menu");
-  dputs("\r\nfrom anywhere in the program.");
-#endif
-
 start_main_ui:
+  if (!has_80cols) {
+    if (is_iie) {
+      dputs("\r\nHint: Use Open-Apple-Y for command help");
+    } else {
+      dputs("\r\nHint: Use Ctrl-Y for command help");
+    }
+    dputs("\r\nfrom anywhere in the program.");
+  }
+
   snprintf(params, 127, "%s %s %d %s", instance_url, oauth_token, login_data.monochrome, login_data.charset);
 
-  set_scrollwindow(0, scrh);
+  set_scrollwindow(0, NUMLINES);
 #ifdef __CC65__
   //snprintf(params, 127, "%s %s 1 ISO646-FR1 e 110882478679186108", instance_url, oauth_token);
   //snprintf(params, 127, "%s %s 1 ISO646-FR1", instance_url, oauth_token);

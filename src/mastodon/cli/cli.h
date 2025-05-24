@@ -1,34 +1,30 @@
 #ifndef __cli_h
 #define __cli_h
 
+#include "a2_features.h"
 #include "account.h"
 
 #define NUMLINES 24
+extern unsigned char NUMCOLS;
+#define TIME_COLUMN 41
 
 #ifdef __APPLE2ENH__
 #define LEFT_COL_WIDTH 19
 #define RIGHT_COL_START 20
-#define TIME_COLUMN 41
-#define NUMCOLS 80
-#define KEY_COMB "Open-Apple"
 #define N_STATUS_TO_LOAD 10
 #define STATE_FILE "/RAM/mastostate"
 
 #else
 #define LEFT_COL_WIDTH 39
 #define RIGHT_COL_START 0
-#define NUMCOLS 40
-#define KEY_COMB "Ctrl"
 #define N_STATUS_TO_LOAD 8
-#define HELP_KEY ('Y'-'A'+1)
 #define STATE_FILE "mastostate"
-
+#define CH_CURS_UP 0x0B
+#define CH_CURS_DOWN 0x0A
 #endif
 
 /* actions mapped to keys */
-#if NUMCOLS == 40
-#define SHOW_HELP            HELP_KEY
-#endif
+#define SHOW_HELP            'y'|0x80
 #define SHOW_FULL_STATUS     CH_ENTER
 #define BACK                 CH_ESC
 #define COMPOSE              'c'

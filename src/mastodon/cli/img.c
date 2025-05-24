@@ -41,7 +41,7 @@ char *instance_url;
 char *oauth_token;
 char *type = NULL;
 char *id = NULL;
-unsigned char scrw, scrh;
+unsigned char NUMCOLS = 40;
 
 #ifdef __CC65__
   #pragma rodata-name (push, "HGR")
@@ -158,11 +158,13 @@ int main(int argc, char **argv) {
   char i, c;
 
   try_videomode(VIDEOMODE_80COL);
+  if (has_80cols) {
+    NUMCOLS = 80;
+  }
 
 #ifdef __CC65__
   /* Leave 0x800-0xC00 for iobuf */
   _heapadd ((void *) 0x0C00, 0x13FF);
-  screensize(&scrw, &scrh);
 #endif
 
   surl_connect_proxy();

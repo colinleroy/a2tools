@@ -40,7 +40,7 @@
 @stream_url_done:
         lda       #$00
         jsr       pusha
-        lda       _scrh
+        lda       #24
         jsr       _set_scrollwindow
         lda       #$00
         tax

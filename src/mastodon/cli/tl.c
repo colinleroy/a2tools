@@ -32,6 +32,9 @@
 
 #pragma register-vars(push, on)
 
+unsigned char NUMCOLS = 40;
+char *key_combo = "Ctrl";
+
 static char *tl_endpoints[4] = { TIMELINE_ENDPOINT "/" HOME_TIMELINE,
                                   TIMELINE_ENDPOINT "/" PUBLIC_TIMELINE,
                                   TIMELINE_ENDPOINT "/" PUBLIC_TIMELINE,
@@ -85,32 +88,25 @@ static int print_account(account *a) {
 
   api_relationship_get(a, 0);
 
-#if NUMCOLS == 80
   y = 0;
+
   if (api_relationship_get(a, RSHIP_FOLLOWING)) {
-    gotoxy(32, y);
+    if (has_80cols) {
+      gotoxy(32, y);
+    }
     dputs("             You follow them\r\n");
   } else if (api_relationship_get(a, RSHIP_FOLLOW_REQ)) {
-    gotoxy(32, ++y);
+    if (has_80cols) {
+      gotoxy(32, ++y);
+    }
     dputs("You requested to follow them\r\n");
   }
   if (api_relationship_get(a, RSHIP_FOLLOWED_BY)) {
-    gotoxy(32, ++y);
+    if (has_80cols) {
+      gotoxy(32, ++y);
+    }
     dputs("             They follow you\r\n");
   }
-#else
-  if (api_relationship_get(a, RSHIP_FOLLOWING)) {
-    dputs("You follow them\r\n");
-    CHECK_AND_CRLF();
-  } else if (api_relationship_get(a, RSHIP_FOLLOW_REQ)) {
-    dputs("You requested to follow them\r\n");
-    CHECK_AND_CRLF();
-  }
-  if (api_relationship_get(a, RSHIP_FOLLOWED_BY)) {
-    dputs("They follow you\r\n");
-    CHECK_AND_CRLF();
-  }
-#endif
 
   if (wherey() < 4) {
     gotoy(4);
@@ -140,16 +136,16 @@ static int print_notification(notification *n) {
   width = NUMCOLS - RIGHT_COL_START;
   n->displayed_at = wherey();
   dputs(n->display_name);
-#if NUMCOLS == 80
-  gotox(TIME_COLUMN);
-  if (writable_lines != 1)
-    dputs(n->created_at);
-  else
-    cputs(n->created_at); /* no scrolling please */
-  CHECK_NO_CRLF();
-#else
-  CHECK_AND_CRLF();
-#endif
+  if (has_80cols) {
+    gotox(TIME_COLUMN);
+    if (writable_lines != 1)
+      dputs(n->created_at);
+    else
+      cputs(n->created_at); /* no scrolling please */
+    CHECK_NO_CRLF();
+  } else {
+    CHECK_AND_CRLF();
+  }
 
   w = notification_verb[n->type];
   y = wherey();
@@ -188,6 +184,10 @@ static int print_notification(notification *n) {
 #define NOTHING_TO_LOAD_MSG "Nothing more to load!"
 #define CLEAR_LOAD_MSG      "                     "
 
+#ifdef __CC65__
+#pragma code-name (pop)
+#endif
+
 static void item_free(list *l, char i) {
   item *to_free = l->displayed_posts[i];
 
@@ -200,10 +200,6 @@ static void item_free(list *l, char i) {
   }
   l->displayed_posts[i] = NULL;
 }
-
-#ifdef __CC65__
-#pragma code-name (pop)
-#endif
 
 static item *item_get(list *l, char i, char full) {
   char *id = l->ids[i];
@@ -396,9 +392,10 @@ static char search_footer(char c) {
       break;
   }
   gotoxy(0,1);
-  cprintf("(%c) Toots (%c) Account   ("KEY_COMB" + T/A)\r\n",
+  cprintf("(%c) Toots (%c) Account   (%s + T/A)\r\n",
           search_type == 't' ? '*':' ',
-          search_type == 'a' ? '*':' ');
+          search_type == 'a' ? '*':' ',
+          key_combo);
   chline(NUMCOLS - RIGHT_COL_START);
   gotoxy(0, 0);
   return 0;
@@ -950,11 +947,8 @@ static void do_vote (status *status) {
       c = NUMLINES - 1;
     }
     clrzone(0, c, NUMCOLS - RIGHT_COL_START - 1, c);
-#if NUMCOLS == 80
-    dputs("1-7 to choose, Enter to vote, Escape to cancel");
-#else
     dputs("1-7: choose, Enter: vote, Esc: cancel");
-#endif
+
     c = tolower(cgetc());
 
     switch(c) {
@@ -1015,30 +1009,26 @@ static void show_list(list *l) {
     while (!kbhit() && background_load(l) == 0) {
       /* keep loading */
     }
-#if NUMCOLS == 80
-    print_free_ram();
-#endif
+
+    if (has_80cols) {
+      print_free_ram();
+    }
 
     c = tolower(cgetc());
-
-#if NUMCOLS == 40
+    if (is_iie) { /* FIXME this should be in cc65 */
+      __asm__("bit $C061"); /* Open-Apple */
+      __asm__("bpl %g", inject_cmd);
+      c |= 0x80;
+    }
 inject_cmd:
-#endif
-
     switch(c) {
-#ifdef __APPLE2ENH__
       case CH_CURS_DOWN:
-#else
       case 'j':
-#endif
         hide_cw = 1;
         shift_posts_down(l);
         break;
-#ifdef __APPLE2ENH__
       case CH_CURS_UP:
-#else
       case 'u':
-#endif
         hide_cw = 1;
         shift_posts_up(l);
         limit = 1; /* only print one */
@@ -1131,20 +1121,25 @@ inject_cmd:
         return;
       case 'q':      /* QUIT */
         exit(0);
-#if NUMCOLS == 40
       case SHOW_HELP:
-        clrscr();
-        show_help(l, root_status, root_notif);
-        c = tolower(cgetc());
-        clrscr();
-        half_displayed_post = 0;
-        if (c == HELP_KEY) {
-          cur_action = NAVIGATE;
-          return;
-        } else {
-          goto inject_cmd;
+        if (!has_80cols) {
+          clrscr();
+          show_help(l, root_status, root_notif);
+          c = tolower(cgetc());
+          if (is_iie) { /* FIXME this should be in cc65 */
+            __asm__("bit $C061"); /* Open-Apple */
+            __asm__("bpl %g", inject_cmd);
+            c |= 0x80;
+          }
+          clrscr();
+          half_displayed_post = 0;
+          if (c == SHOW_HELP) {
+            cur_action = NAVIGATE;
+            return;
+          } else {
+            goto inject_cmd;
+          }
         }
-#endif
     }
   }
 }
@@ -1377,7 +1372,11 @@ int main(int argc, char **argv) {
 
   try_videomode(VIDEOMODE_80COL);
   if (has_80cols) {
+    NUMCOLS = 80;
     serial_throbber_set((void *)0x07D8);
+  }
+  if (is_iie) {
+    key_combo = "Open-Apple";
   }
 
   instance_url     = argv[1];

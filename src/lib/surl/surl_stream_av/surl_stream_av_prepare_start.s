@@ -29,7 +29,7 @@
         jsr       _hgr_mixoff
         lda       #$00
         jsr       pusha
-        lda       _scrh
+        lda       #24
         jsr       _set_scrollwindow
         jsr       _clrscr
         jsr       _surl_start_stream_av

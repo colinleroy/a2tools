@@ -30,6 +30,7 @@ char *instance_url = NULL;
 char *oauth_token = NULL;
 char top = 0;
 char writable_lines = NUMLINES;
+unsigned char NUMCOLS = 40;
 
 char n_medias = 0;
 char sensitive_medias = 0;
@@ -56,43 +57,41 @@ static char *compose_mode = "c";
 
 static void update_compose_audience(void) {
   gotoxy(0, top + COMPOSE_FIELD_HEIGHT + 1);
-#if NUMCOLS == 80
-  cprintf("Audience: (%c) Public  (%c) Unlisted  (%c) Private  (%c) Mention",
-        compose_audience == COMPOSE_PUBLIC ? '*':' ',
-        compose_audience == COMPOSE_UNLISTED ? '*':' ',
-        compose_audience == COMPOSE_PRIVATE ? '*':' ',
-        compose_audience == COMPOSE_MENTION ? '*':' ');
 
-  gotoxy(0, top + COMPOSE_FIELD_HEIGHT + 3);
-  dputs(translit_charset);
-  if(translit_charset[0] != 'U') {
-    dputs(": Use ");
-    cputc(arobase);
-    dputs(" to mention, and # for hashtags.");
+  if (has_80cols) {
+    cprintf("Audience: (%c) Public  (%c) Unlisted  (%c) Private  (%c) Mention",
+          compose_audience == COMPOSE_PUBLIC ? '*':' ',
+          compose_audience == COMPOSE_UNLISTED ? '*':' ',
+          compose_audience == COMPOSE_PRIVATE ? '*':' ',
+          compose_audience == COMPOSE_MENTION ? '*':' ');
+
+    gotoxy(0, top + COMPOSE_FIELD_HEIGHT + 3);
+    dputs(translit_charset);
+    if(translit_charset[0] != 'U') {
+      dputs(": Use ");
+      cputc(arobase);
+      dputs(" to mention, and # for hashtags.");
+    }
+  } else {
+    cprintf("Audience: %s     ",
+            compose_audience_str(compose_audience));
   }
-#else
-  cprintf("Audience: %s     ",
-        compose_audience_str(compose_audience));
-#endif
 }
 
 static void update_cw(void) {
   clrzone(0, top + COMPOSE_FIELD_HEIGHT + 2, NUMCOLS - (RIGHT_COL_START+1), top + COMPOSE_FIELD_HEIGHT + 2);
-#if NUMCOLS == 80
-  if (cw[0] == '\0') {
-    dputs("( ) Content warning not set");
-  } else {
-    dputs("(*) CW: ");
-    dputs(cw);
+  if (has_80cols) {
+    if (cw[0] == '\0') {
+      dputs("( ) ");
+    } else {
+      dputs("(*) CW: ");
+    }
   }
-#else
   if (cw[0] == '\0') {
     dputs("Content warning not set");
   } else {
-    dputs("CW: ");
     dputs(cw);
   }
-#endif
 }
 static char dgt_cmd_cb(char c) {
   c = tolower(c);
@@ -108,22 +107,20 @@ static char dgt_cmd_cb(char c) {
 
     case 'p':    compose_audience = COMPOSE_PUBLIC;   break;
     case 'r':    compose_audience = COMPOSE_PRIVATE;  break;
-#if NUMCOLS == 80
     case 'u':    compose_audience = COMPOSE_UNLISTED; break;
     case 'm':    compose_audience = COMPOSE_MENTION;  break;
-    case CH_ESC: cancelled = 1;                       return 1;
-#else
     case 'n':    compose_audience = COMPOSE_UNLISTED; break;
     case 'd':    compose_audience = COMPOSE_MENTION;  break;
     case 'x':    cancelled = 1;                       return 1;
-    case 'y':    should_resume_composing = 1;
-                 set_scrollwindow(0, NUMLINES);
-                 clrscr();
-                 compose_show_help();
-                 c = cgetc();
-                 clrscr();
-                 return 1;
-#endif
+    case 'y':    if (!has_80cols) {
+                   should_resume_composing = 1;
+                   set_scrollwindow(0, NUMLINES);
+                   clrscr();
+                   compose_show_help();
+                   c = cgetc();
+                   clrscr();
+                   return 1;
+                 }
   }
   set_scrollwindow(0, NUMLINES);
   update_compose_audience();
@@ -188,9 +185,10 @@ static void add_image() {
   }
 
   dputs("File name: ");
-#if NUMCOLS == 40
-  dputs("\r\n");
-#endif
+  if (!has_80cols) {
+    dputs("\r\n");
+  }
+
   media_files[n_medias] = file_select(0, "Please choose an image");
   if (IS_NULL(media_files[n_medias])) {
     return;
@@ -572,6 +570,9 @@ int main(int argc, char **argv) {
   register_start_device();
 
   try_videomode(VIDEOMODE_80COL);
+  if (has_80cols) {
+    NUMCOLS = 80;
+  }
 
   instance_url = argv[1];
   oauth_token = argv[2];

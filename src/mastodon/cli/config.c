@@ -17,7 +17,6 @@
 void config_cli(void) {
   char c;
 
-#ifdef __APPLE2ENH__
   clrscr();
   cputs("Please choose your keyboard layout:");
   for (c = 0; c < N_CHARSETS; c++) {
@@ -32,9 +31,7 @@ charset_again:
   } else {
     goto charset_again;
   }
-#else
   strcpy(login_data.charset, US_CHARSET);
-#endif
 
   clrscr();
   cputs("Is your monitor monochrome? (y/n)\r\n");

@@ -3,7 +3,7 @@
         jsr       _clrscr
         lda       #20
         jsr       pusha
-        lda       _scrh
+        lda       #24
         jsr       _set_scrollwindow
 
         lda       #1

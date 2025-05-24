@@ -106,11 +106,9 @@ int print_status(register status *s, char hide, char full) {
   s->displayed_at = wherey();
   /* reblog header */
   if (IS_NOT_NULL(s->reblogged_by)) {
-#if NUMCOLS == 40
-    if (strlen(s->reblogged_by) > 30) {
+    if (!has_80cols && strlen(s->reblogged_by) > 30) {
       s->reblogged_by[30] = '\0';
     }
-#endif
     dputs(s->reblogged_by);
     dputs(" boosted");
     CHECK_AND_CRLF();
@@ -121,17 +119,18 @@ int print_status(register status *s, char hide, char full) {
     a->display_name[30] = '\0';
   }
   dputs(a->display_name);
-#if NUMCOLS == 80
-  clreol();
-  gotox(TIME_COLUMN);
-  if (writable_lines != 1)
-    dputs(s->created_at);
-  else
-    cputs(s->created_at); /* no scrolling please */
-  CHECK_NO_CRLF();
-#else
-  CHECK_AND_CRLF();
-#endif
+
+  if (has_80cols) {
+    clreol();
+    gotox(TIME_COLUMN);
+    if (writable_lines != 1)
+      dputs(s->created_at);
+    else
+      cputs(s->created_at); /* no scrolling please */
+    CHECK_NO_CRLF();
+  } else {
+    CHECK_AND_CRLF();
+  }
 
   /* username (30 chars max)*/
   dputc(arobase);
@@ -140,11 +139,9 @@ int print_status(register status *s, char hide, char full) {
   CHECK_AND_CRLF();
 
   if (IS_NOT_NULL(s->spoiler_text)) {
-#if NUMCOLS == 40
-    if (strlen(s->spoiler_text) > 30) {
+    if (!has_80cols && strlen(s->spoiler_text) > 30) {
       s->spoiler_text[30] = '\0';
     }
-#endif
     dputs("CW: ");
     dputs(s->spoiler_text);
     CHECK_AND_CRLF();
@@ -180,21 +177,22 @@ int print_status(register status *s, char hide, char full) {
   /* stats */
   CHECK_AND_CRLF();
 
-#if NUMCOLS == 40
-  cprintf("%d rep, %s%d boost, %s%d fav, %1d %s %s",
-#else
-  cprintf("%d replies, %s%d boosts, %s%d favs, %1d %s%s %s",
-#endif
+  if (!has_80cols) {
+    cprintf("%d rep, %s%d boost, %s%d fav, %1d %s %s",
         s->n_replies,
         (s->flags & REBLOGGED) ? "*":"", s->n_reblogs,
         (s->flags & FAVOURITED) ? "*":"", s->n_favourites,
         s->n_medias, media_type_str[s->media_type],
-#if NUMCOLS == 40
         (s->flags & BOOKMARKED) ? " - bkm":"      ");
-#else
+  } else {
+    cprintf("%d replies, %s%d boosts, %s%d favs, %1d %s%s %s",
+        s->n_replies,
+        (s->flags & REBLOGGED) ? "*":"", s->n_reblogs,
+        (s->flags & FAVOURITED) ? "*":"", s->n_favourites,
+        s->n_medias, media_type_str[s->media_type],
         s->n_medias > 1 ? "s":"",
         (s->flags & BOOKMARKED) ? " - bookmarked":"             ");
-#endif
+  }
   CHECK_AND_CRLF();
 
   CHLINE_SAFE();
