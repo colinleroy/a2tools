@@ -154,9 +154,6 @@ static int stp_write_disk(char *out_dir, char prodos_order) {
     goto err_out_no_free_data;
   }
   verif_data = malloc(TRACK_SIZE);
-  if (!verif_data) {
-    goto err_out_no_free_verif_data;
-  }
 
   /* Open device */
   dev_handle = dio_open(dev);
@@ -215,17 +212,19 @@ static int stp_write_disk(char *out_dir, char prodos_order) {
       }
       cur_block++;
     }
-    gotoxy(0, 14);
-    cprintf("Verifying block %d/%d...    ", verif_cur_block, num_blocks);
-    for (i = BLOCKS_PER_TRACK, cur_data = verif_data; i ; i--, cur_data += PRODOS_BLOCK_SIZE) {
-      if (dio_read(dev_handle, verif_cur_block, cur_data) != 0) {
+    if (IS_NOT_NULL(verif_data)) {
+      gotoxy(0, 14);
+      cprintf("Verifying block %d/%d...    ", verif_cur_block, num_blocks);
+      for (i = BLOCKS_PER_TRACK, cur_data = verif_data; i ; i--, cur_data += PRODOS_BLOCK_SIZE) {
+        if (dio_read(dev_handle, verif_cur_block, cur_data) != 0) {
+          goto err_out;
+        }
+        verif_cur_block++;
+      }
+      if (memcmp(data, verif_data, PRODOS_BLOCK_SIZE*BLOCKS_PER_TRACK)) {
+        cprintf("Data does not match!");
         goto err_out;
       }
-      verif_cur_block++;
-    }
-    if (memcmp(data, verif_data, PRODOS_BLOCK_SIZE*BLOCKS_PER_TRACK)) {
-      cprintf("Data does not match!");
-      goto err_out;
     }
 
     progress_bar(0, 15, NUMCOLS - 1, cur_block, num_blocks);
@@ -240,13 +239,16 @@ out:
   /* All done */
   dio_close(dev_handle);
   free(data);
-  free(verif_data);
+  if (IS_NOT_NULL(verif_data)) {
+    free(verif_data);
+  }
   return 0;
 
   /* Error path */
 err_out:
-  free(verif_data);
-err_out_no_free_verif_data:
+  if (IS_NOT_NULL(verif_data)) {
+    free(verif_data);
+  }
   free(data);
 err_out_no_free_data:
   dio_close(dev_handle);
