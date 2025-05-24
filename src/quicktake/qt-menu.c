@@ -362,13 +362,8 @@ static uint8 setup(int argc, char *argv[]) {
 #ifndef __CC65__
   uint16 target_speed = 57600U;
   scrw = 80; scrh = 24;
-
 #else
-#ifndef IIGS
   uint16 target_speed = 19200U;
-#else
-  uint16 target_speed = 57600U;
-#endif
 #endif
   register_start_device();
 
