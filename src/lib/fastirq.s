@@ -5,7 +5,6 @@
 ; IRQ handling (Apple2 version)
 ;
 
-        .export         _init_fast_irq
         .import         callirq, ostype
         .importzp       _a_backup, _prev_ram_irq_vector, _prev_rom_irq_vector
         .constructor    _init_fast_irq, 8
@@ -20,7 +19,7 @@
 ROMIRQVEC:= $03fe
 RAMIRQVEC:= $fffe
 
-        .segment        "RT_ONCE"
+        .segment        "ONCE"
 
 _init_fast_irq:
         bit     ostype

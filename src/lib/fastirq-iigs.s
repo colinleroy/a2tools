@@ -7,7 +7,6 @@
 
         .setcpu         "65816"
 
-        .export         _init_fast_irq_iigs
         .import         callirq, ostype
         .constructor    _init_fast_irq_iigs, 8
         .destructor     _done_fast_irq_iigs, 9
@@ -22,7 +21,7 @@
 Emulate:       .res 1
 OrgMgr:        .res 4
 
-        .segment        "RT_ONCE"
+        .segment        "ONCE"
 
 _init_fast_irq_iigs:
         bit     ostype
