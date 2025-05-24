@@ -1,3 +1,3 @@
 #!/bin/bash
-cd bin/iigs
-make clean homecontrolperso-iigs.po && mame apple2gs -window -flop1 homecontrolperso-iigs.po -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug -sound none
+cd bin/65c02
+make clean homecontrolperso-65c02.po && mame apple2gs -window -flop1 homecontrolperso-65c02.po -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug
