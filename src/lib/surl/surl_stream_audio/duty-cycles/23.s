@@ -5,19 +5,19 @@ duty_cycle23:
 v23a:   sta     txt_level       ; 10
 
 s23:    lda     ser_status      ; 14    Check serial
-        and     #HAS_BYTE       ; 16
-        beq     :+              ; 18/19
-d23:    ldx     ser_data        ; 22    Load serial
+        and     has_byte        ; 17
+        beq     :+              ; 19/20
+d23:    ldx     ser_data        ; 23    Load serial
 
-        lda     #SPC            ; 24    Unset VU meter
-        WASTE_3                 ; 27
+        lda     #SPC            ; 25    Unset VU meter
+        WASTE_2                 ; 27
 
         ____SPKR_DUTY____4      ; 31    Toggle speaker
-        WASTE_4                 ; 35
+        STORE_TARGET_4          ; 35
 v23b:   sta     txt_level       ; 39
         JMP_NEXT_6              ; 45
 :
-        WASTE_8                 ;    27
+        WASTE_7                 ;    27
         ____SPKR_DUTY____4      ;    31 Toggle speaker
         WASTE_4                 ;    35
         KBD_LOAD_7              ;    42

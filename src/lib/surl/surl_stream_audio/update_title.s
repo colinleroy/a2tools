@@ -12,7 +12,7 @@ update_title:
         ldx     numcols         ; Reset char counter
 
 st:     lda     ser_status      ; 21    Check serial
-        and     #HAS_BYTE       ; 23
+        and     has_byte        ; 24
         beq     st
 
                                 ; 6502  65C02 (cycles since fetch, worst case,
@@ -56,7 +56,7 @@ put:    tay                     ;       28
         tay                     ; 42    54
 
 st2:    lda     ser_status      ; 21    Check serial
-        and     #HAS_BYTE       ; 23
+        and     has_byte        ; 24
         beq     st2
 dt2:    ldx     ser_data
 desttitle:

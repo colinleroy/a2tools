@@ -4,20 +4,20 @@ duty_cycle15:
         lda     #INV_SPC        ; 6    Set VU meter
 v15a:   sta     txt_level       ; 10
 
-s15:    lda     ser_status      ; 14    Check serial
-        and     #HAS_BYTE       ; 16
-        beq     :+              ; 18/19
+        ldy     #SPC            ; 12    Unset VU meter
 
-        ____SPKR_DUTY____5 15   ; 23    Toggle speaker
-d15:    ldx     ser_data        ; 27    Load serial
+s15:    lda     ser_status      ; 16    Check serial
+        and     has_byte        ; 19
+        ____SPKR_DUTY____4      ; 23    Toggle speaker
+        beq     :+              ; 25/26
 
-        lda     #SPC            ; 29    Unset VU meter
-        WASTE_6                 ; 35
+d15:    ldx     ser_data        ; 29    Load serial
+        STORE_TARGET_3          ; 32
+        WASTE_3                 ; 35
 
-v15b:   sta     txt_level       ; 39
+v15b:   sty     txt_level       ; 39
         JMP_NEXT_6              ; 45
 :
-        ____SPKR_DUTY____4      ;    23 Toggle speaker
-        WASTE_12                ;    35
+        WASTE_9                 ;    35
         KBD_LOAD_7              ;    42
         jmp     duty_cycle15    ;    45

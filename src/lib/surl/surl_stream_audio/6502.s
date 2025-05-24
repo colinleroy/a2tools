@@ -28,9 +28,18 @@
           sta     SPKR-(SAMPLE_OFFSET+DC),x     ; 5
 .endmacro
 
-.macro JMP_NEXT_6
-        stx     *+5
-        jmp     $0000
+.macro STORE_TARGET_3           ; 3
+          stx   zp_jmp+2
+.endmacro
+
+.macro STORE_TARGET_4           ; 4
+          .byte $8E             ; stx abs
+          .byte zp_jmp+2
+          .byte $00
+.endmacro
+
+.macro JMP_NEXT_6               ; 6 because we jump to there
+        jmp     zp_jmp
 .endmacro
 
         .code
@@ -45,7 +54,6 @@ SAMPLE_MULT   = 1
 
 .include "duty-cycles/0.s"
 .include "vars.s"
-.include "kbd_send.s"
 .include "silence.s"
 .include "../surl_stream_common/patch_addresses.s"
 .include "../surl_stream_common/patch_audio_registers.s"
@@ -56,6 +64,7 @@ SAMPLE_MULT   = 1
 .include "duty-cycles/1.s"
 .include "setup_pointers.s"
 .include "vu_patches_a.s"
+.include "kbd_send.s"
 
 .align 256
 .assert * = _SAMPLES_BASE+$200, error

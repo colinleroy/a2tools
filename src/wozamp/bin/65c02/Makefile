@@ -1,6 +1,5 @@
 SRC_DIR=../../
 CC65_TARGET = apple2enh
-serial_hw := acia
 suffix := 65c02
 iigs_suffix :=
 iigs_CFLAGS :=

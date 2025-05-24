@@ -8,10 +8,13 @@ SOURCES := \
 #Fastirq is needed in telnet
 
 CC65SOURCES := \
+	$(SRC_DIR)/../lib/serial/asm/driver.s \
+	$(SRC_DIR)/../lib/serial/asm/acia.s \
+	$(SRC_DIR)/../lib/serial/asm/z8530.s \
 	$(SRC_DIR)/../lib/serial/asm/simple_serial.s \
+	$(SRC_DIR)/../lib/serial/asm/simple_serial_getc_immediate.s \
 	$(SRC_DIR)/../lib/serial/asm/simple_serial_io.s \
 	$(SRC_DIR)/../lib/serial/c/simple_serial_printf.c \
-	$(serial_hw_SOURCES) \
 	$(SRC_DIR)/../lib/surl/asm/surl_core.s \
 	$(SRC_DIR)/../lib/surl/asm/surl_read_with_barrier.s \
 	$(SRC_DIR)/../lib/asm/scrollwindow.s \
@@ -41,7 +44,9 @@ DEPS :=
 
 CC65_TARGET = apple2enh
 CFLAGS  = -I $(SRC_DIR)/../lib -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
-CLCFLAGS = -t $(CC65_TARGET) -Osir -Cl $(iigs_CFLAGS) -C $(SRC_DIR)/../../config/apple2enh-rtonce.cfg $(USE_LANGCARD) -DAVOID_ROM_CALLS --asm-define AVOID_ROM_CALLS
+CLCFLAGS = -t $(CC65_TARGET) -Osir -Cl $(iigs_CFLAGS) -C $(SRC_DIR)/../../config/apple2enh-rtonce.cfg \
+	$(USE_LANGCARD) -DAVOID_ROM_CALLS --asm-define AVOID_ROM_CALLS \
+	--asm-define SERIAL_ENABLE_IRQ
 GCCCFLAGS = -g -O0 -Wall -Wno-char-subscripts -Wno-unused-function -Wno-unknown-pragmas -Werror
 GCCLDFLAGS = 
 

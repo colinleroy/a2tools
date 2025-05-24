@@ -5,18 +5,20 @@ duty_cycle18:
 v18a:   sta     txt_level       ; 10
 
 s18:    lda     ser_status      ; 14    Check serial
-        and     #HAS_BYTE       ; 16
-        beq     :+              ; 18/19
-d18:    ldx     ser_data        ; 22    Load serial
-
+        and     has_byte        ; 17
+        beq     :+              ; 19/20
+        WASTE_3                 ; 22
         ____SPKR_DUTY____4      ; 26    Toggle speaker
-        lda     #SPC            ; 28    Unset VU meter
-        WASTE_7                 ; 35
+
+d18:    ldx     ser_data        ; 30    Load serial
+
+        lda     #SPC            ; 32    Unset VU meter
+        STORE_TARGET_3          ; 35
 
 v18b:   sta     txt_level       ; 39
         JMP_NEXT_6              ; 45
 :
-        WASTE_3                 ;    22
+        WASTE_2                 ;    22
         ____SPKR_DUTY____4      ;    26 Toggle speaker
         WASTE_9                 ;    35
         KBD_LOAD_7              ;    42

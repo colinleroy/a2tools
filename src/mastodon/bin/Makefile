@@ -1,7 +1,9 @@
 common_CC65SOURCES := \
+	$(SRC_DIR)/../lib/serial/asm/driver.s \
+	$(SRC_DIR)/../lib/serial/asm/acia.s \
+	$(SRC_DIR)/../lib/serial/asm/z8530.s \
 	$(SRC_DIR)/../lib/serial/asm/simple_serial.s \
 	$(SRC_DIR)/../lib/serial/asm/simple_serial_io.s \
-	$(serial_hw_SOURCES) \
 	$(SRC_DIR)/../lib/surl/asm/surl_core.s \
 	$(SRC_DIR)/../lib/surl/asm/surl_get_json.s \
 	$(SRC_DIR)/../lib/surl/asm/surl_read_with_barrier.s \
@@ -42,19 +44,9 @@ mastoimg_SOURCES := \
 	$(SRC_DIR)/../lib/strsplit.c \
 	$(SRC_DIR)/../lib/dget_text_single.c
 
-ifeq ($(suffix), iigs)
-
-mastoimg_CC65SOURCES := \
-	$(SRC_DIR)/../lib/surl/asm/surl_stream_video.s \
-	$(SRC_DIR)/../lib/surl/surl_wait_for_stream.c
-
-else
-
 mastoimg_CC65SOURCES := \
 	$(SRC_DIR)/../lib/surl/surl_stream_av/$(CPU).s \
 	$(SRC_DIR)/../lib/asm/hgr_mono40.s
-
-endif
 
 mastoimg_CC65SOURCES := \
 	$(mastoimg_CC65SOURCES) \
@@ -136,7 +128,8 @@ DEPS :=
 CC65_TARGET = $(TARGET)
 CFLAGS  = -I $(SRC_DIR)/../lib -I $(SRC_DIR)/api -I $(SRC_DIR)/cli -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
 
-CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x400 $(USE_LANGCARD) $(debug_CFLAGS)  $(iigs_CFLAGS)
+CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x400 $(USE_LANGCARD) $(debug_CFLAGS)  $(iigs_CFLAGS) \
+	--asm-define SERIAL_ENABLE_IRQ
 
 mastodon_CLCFLAGS = $(CLCFLAGS) -C $(SRC_DIR)/../../config/apple2enh-rtonce.cfg --start-addr 0xC03 #One file buffer
 mastocli_CLCFLAGS = $(CLCFLAGS) -C $(SRC_DIR)/../../config/apple2enh-rtonce.cfg --start-addr 0xC03 #One file buffer

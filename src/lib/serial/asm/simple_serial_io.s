@@ -28,7 +28,7 @@
         .endif
 
         .import         _simple_serial_getc_with_timeout
-        .import         _ser_get, _serial_putc_direct, _strlen
+        .import         _serial_putc_direct, _strlen
         .import         pushax, popax
         .importzp       tmp2, ptr3, ptr4
         .include        "apple2.inc"

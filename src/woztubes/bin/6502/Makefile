@@ -1,5 +1,4 @@
 SRC_DIR=../../
-serial_hw := acia
 iigs_FLAGS :=
 suffix := 6502
 upload_subdir :=

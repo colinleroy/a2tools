@@ -111,13 +111,20 @@ next       = _zp10            ; word - next cycle
 .endmacro
 
 .macro JUMP_NEXT_DUTY
-        jmp     (next)  
+        jmp     (next)
 .endmacro
 
 .macro PREPARE_VIDEO_7
+        PREPARE_VIDEO_S3
+        PREPARE_VIDEO_E4
+.endmacro
+
+.macro PREPARE_VIDEO_S3
         stx     next+1          ; 3
-        tya                     ; 5      Get video byte in A
-        cpy     #PAGE_TOGGLE    ; 7      Check for page toggle
+.endmacro
+.macro PREPARE_VIDEO_E4
+        tya                     ; 2      Get video byte in A
+        cpy     #PAGE_TOGGLE    ; 5      Check for page toggle
 .endmacro
 
 .macro JUMP_NEXT_9

@@ -1,20 +1,13 @@
 ; --------------------------------------
 silence:
-.ifdef IIGS
-        jsr     slow_iigs
-.endif
-ssil:   lda     ser_status
-        and     #HAS_BYTE
-        beq     silence
-dsil:   ldx     ser_data
-start_duty:
-        JMP_NEXT_6
-
-.ifdef IIGS
-slow_iigs:
-        ; Slow down IIgs
         jsr     _get_iigs_speed
         sta     prevspd
         lda     #SPEED_SLOW
-        jmp    _set_iigs_speed
-.endif
+        jsr    _set_iigs_speed
+ssil:   lda     ser_status
+        and     has_byte
+        beq     silence
+dsil:   ldx     ser_data
+        STORE_TARGET_3
+start_duty:
+        JMP_NEXT_6

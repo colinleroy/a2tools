@@ -7,18 +7,18 @@ v27a:   sta     txt_level       ; 10
         WASTE_3                 ; 13    Wait...
 
 s27:    lda     ser_status      ; 17    Check serial
-        and     #HAS_BYTE       ; 19
-        beq     :+              ; 21/22
-d27:    ldx     ser_data        ; 25    Load serial
+        and     has_byte        ; 20
+        beq     :+              ; 22/23
+d27:    ldx     ser_data        ; 26    Load serial
 
-        lda     #SPC            ; 27    Unset VU meter
-        WASTE_4                 ; 31
+        lda     #SPC            ; 28    Unset VU meter
+        STORE_TARGET_3          ; 31
 
         ____SPKR_DUTY____4      ; 35    Toggle speaker
 v27b:   sta     txt_level       ; 39
         JMP_NEXT_6              ; 45
 :
-        WASTE_9                 ;    31
+        WASTE_8                 ;    31
         ____SPKR_DUTY____4      ;    35 Toggle speaker
         KBD_LOAD_7              ;    42
         jmp     duty_cycle27    ;    45

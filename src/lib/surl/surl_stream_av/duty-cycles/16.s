@@ -2,16 +2,17 @@ duty_cycle16:                    ; end spkr at 24
         ____SPKR_DUTY____4      ; 4
 ad16:   ldx     $A8FF           ; 8
 vs16:   lda     $99FF           ; 12
-        and     #HAS_BYTE       ; 14
-        beq     no_vid16        ; 16/17
-vd16:   ldy     $98FF           ; 20
+        and     has_byte        ; 15
+        beq     no_vid16        ; 17/18
+        WASTE_3                 ; 20
         ____SPKR_DUTY____4      ; 24
-        WASTE_8                 ; 32
+vd16:   ldy     $98FF           ; 28
+        WASTE_4                 ; 32
         PREPARE_VIDEO_7         ; 39
         jmp     video_sub       ; 42=>68
 
 no_vid16:
-        WASTE_3                 ; 20
+        WASTE_2                 ; 20
         ____SPKR_DUTY____4      ; 24
 asp:    lda     $FFFF           ; 28     check serial tx empty
         and     #$10            ; 30

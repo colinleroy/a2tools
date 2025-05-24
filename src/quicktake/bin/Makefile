@@ -22,10 +22,15 @@ slowtake_SOURCES := \
 	$(SRC_DIR)/../lib/hgr_addrs.c
 
 slowtake_CC65SOURCES := \
+	$(SRC_DIR)/../lib/serial/asm/driver.s \
+	$(SRC_DIR)/../lib/serial/asm/acia.s \
+	$(SRC_DIR)/../lib/serial/asm/z8530.s \
 	$(SRC_DIR)/../lib/serial/asm/simple_serial.s \
 	$(SRC_DIR)/../lib/serial/asm/simple_serial_io.s \
 	$(SRC_DIR)/../lib/serial/asm/simple_serial_read.s \
 	$(SRC_DIR)/../lib/serial/asm/simple_serial_configure.s \
+	$(SRC_DIR)/../lib/fastirq.s \
+	$(SRC_DIR)/../lib/fastirq-iigs.s \
 	$(SRC_DIR)/../lib/asm/scrollwindow.s \
 	$(SRC_DIR)/../lib/asm/path_helper.s \
 	$(SRC_DIR)/../lib/asm/malloc0.s \
@@ -38,7 +43,6 @@ slowtake_CC65SOURCES := \
 	$(SRC_DIR)/../lib/platform_sleep.s \
 	$(SRC_DIR)/../lib/extrazp.s \
 	$(SRC_DIR)/../lib/runtime_once_clean.s \
-	$(serial_hw_SOURCES)
 
 slowtake_GCCSOURCES := \
 	$(SRC_DIR)/../lib/serial/c/simple_serial.c \
@@ -105,7 +109,9 @@ DEPS :=
 CC65_TARGET = $(TARGET)
 CFLAGS  = -I $(SRC_DIR)/../lib -I . -DCONF_FILE_PATH=\"/etc/a2tools/quicktake.conf\"
 
-CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x200 $(USE_LANGCARD) $(debug_CFLAGS) $(iigs_CFLAGS)
+CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x200 $(USE_LANGCARD) $(debug_CFLAGS) $(iigs_CFLAGS) \
+	--asm-define SERIAL_ENABLE_IRQ \
+	--asm-define SERIAL_LOW_LEVEL_CONTROL
 
 slowtake_CLCFLAGS = $(CLCFLAGS) -C $(SRC_DIR)/../../config/apple2enh-hgr.cfg $(CC65_TARGET)-iobuf-0800.o --start-addr 0xC00 #One file buffer
 
@@ -135,7 +141,7 @@ GCCLDFLAGS = $(shell sdl-config --libs)
 all: quicktake-$(suffix).po
 
 CLEANDISK = $(SRC_DIR)/../../disks/ProDOS_2_4_3.po
-quicktake-$(suffix).po: splash.h slowtake.bin qtktconv.bin qtknconv.bin jpegconv.bin loader.x86_64 slowtake.x86_64 qtktconv.x86_64 qtknconv.x86_64 jpegconv.x86_64 $(SRC_DIR)/../image-viewer/bin/$(suffix)/imgview.bin
+quicktake-$(suffix).po: splash.h slowtake.bin qtktconv.bin qtknconv.bin jpegconv.bin loader.x86_64 qtktconv.x86_64 qtknconv.x86_64 jpegconv.x86_64 $(SRC_DIR)/../image-viewer/bin/$(suffix)/imgview.bin
 	cp $(CLEANDISK) $@; \
 	java -jar $(SRC_DIR)/../../bin/ac.jar -n $@ QUICKTAKE
 	java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ SLOWTAKE.SYSTEM SYS < $(SRC_DIR)/../../bin/loader.system; \

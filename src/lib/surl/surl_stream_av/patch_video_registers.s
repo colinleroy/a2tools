@@ -1,49 +1,32 @@
 patch_video_registers:
-        .ifdef IIGS
-        brk                     ; Todo
-        .else
+        ; Open aux port
+        lda     _ser_params + SIMPLE_SERIAL_PARAMS::PRINTER_SLOT
+        ldx     #SER_BAUD_115200
+        jsr     _serial_open
+
         lda     #<(video_status_patches)
         sta     ptr1
         lda     #>(video_status_patches)
         sta     ptr1+1
-        lda     _ser_params + SIMPLE_SERIAL_PARAMS::PRINTER_SLOT
-        jsr     _simple_serial_get_status_reg
+        lda     _ser_status_reg
+        ldx     _ser_status_reg+1
         jsr     patch_addresses
 
         lda     #<(video_data_patches)
         sta     ptr1
         lda     #>(video_data_patches)
         sta     ptr1+1
-        lda     _ser_params + SIMPLE_SERIAL_PARAMS::PRINTER_SLOT
-        jsr     _simple_serial_get_data_reg
+        lda     _ser_data_reg
+        ldx     _ser_data_reg+1
         jsr     patch_addresses
 
-        lda     _ser_params + SIMPLE_SERIAL_PARAMS::PRINTER_SLOT
-        jsr     _simple_serial_get_cmd_reg
-        sta     vcmd+1
-        sta     vcmd2+1
-        stx     vcmd+2
-        stx     vcmd2+2
 
-        lda     _ser_params + SIMPLE_SERIAL_PARAMS::PRINTER_SLOT
-        jsr     _simple_serial_get_ctrl_reg
-        sta     vctrl+1
-        stx     vctrl+2
-
+        ; Reopen data port
         lda     _ser_params + SIMPLE_SERIAL_PARAMS::DATA_SLOT
-        jsr     _simple_serial_get_cmd_reg
-        sta     acmd+1
-        stx     acmd+2
-
-        lda     _ser_params + SIMPLE_SERIAL_PARAMS::DATA_SLOT
-        jsr     _simple_serial_get_ctrl_reg
-        sta     actrl+1
-        stx     actrl+2
-
-acmd:   lda     $A8FF           ; Copy command and control registers from
-vcmd:   sta     $98FF           ; the main serial port to the second serial
-actrl:  lda     $A8FF           ; port, it's easier than setting it up from
-vctrl:  sta     $98FF           ; scratch
+        ldx     #SER_BAUD_115200
+        jsr     _serial_open
+        ; And re-enable IRQs
+        lda       #1
+        jsr       _simple_serial_set_irq
 
         rts
-        .endif

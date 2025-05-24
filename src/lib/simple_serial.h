@@ -16,13 +16,6 @@
 
 #define SIMPLE_SERIAL_BUF_SIZE 512
 
-#ifdef IIGS
-#define PRINTER_SER_SLOT 1
-#define MODEM_SER_SLOT 0
-#else
-#define PRINTER_SER_SLOT 1
-#define MODEM_SER_SLOT 2
-#endif
 /* Setup */
 
 #ifdef __CC65__

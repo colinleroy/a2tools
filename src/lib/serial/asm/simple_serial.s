@@ -38,19 +38,15 @@
         .import         _reopen_start_device
         .import         _register_start_device
 
+        .import         _serial_open, _serial_close
+        .import         _serial_get_async
+
         .importzp       ptr1
 
-        .ifdef IIGS
-        .import         _a2e_gs_ser
         .import         _get_iigs_speed
-        .import         _set_iigs_speed
-        .else
-        .ifdef __APPLE2ENH__
-        .import         _a2e_ssc_ser
-        .else
-        .import         _a2_ssc_ser
-        .endif
-        .endif
+        .import         _set_iigs_speed, ostype
+
+        .constructor    setup_serial_defaults
 
         .include        "../../simple_serial.inc"
         .include        "fcntl.inc"
@@ -58,6 +54,17 @@
         .include        "ser-kernel.inc"
         .include        "ser-error.inc"
         .include        "accelerator.inc"
+
+        .segment "ONCE"
+
+setup_serial_defaults:
+        bit     ostype
+        bpl     :+
+        lda     #0
+        sta     _ser_params+SIMPLE_SERIAL_PARAMS::DATA_SLOT
+        lda     #1
+        sta     _ser_params+SIMPLE_SERIAL_PARAMS::PRINTER_SLOT
+:       rts
 
         .data
 
@@ -67,9 +74,9 @@ _open_slot:     .byte 0
 
 ; Our own serial parameters
 _ser_params:    .byte SER_BAUD_115200
-                .byte MODEM_SER_SLOT
+                .byte 2
                 .byte SER_BAUD_9600
-                .byte PRINTER_SER_SLOT
+                .byte 1
 
 ; CC65's serial parameters
 default_params: .byte SER_BAUD_115200
@@ -116,49 +123,14 @@ write_mode_str: .asciiz "w"
         lda     _ser_params,y
         sta     _open_slot
 
-        ; get driver address
-        .ifdef IIGS
-        lda     #<_a2e_gs_ser
-        ldx     #>_a2e_gs_ser
-        .else
-        .ifdef __APPLE2ENH__
-        lda     #<_a2e_ssc_ser
-        ldx     #>_a2e_ssc_ser
-        .else
-        lda     #<_a2_ssc_ser
-        ldx     #>_a2_ssc_ser
-        .endif
-        .endif
-
-        ; install driver
-        jsr     _ser_install
-        cmp     #$00
-        bne     @simple_serial_open_slot_err
-
-        ; call _ser_apple2_slot(n), which is
-        ; _ser_ioctl(0, (void *)n)
-        jsr     pusha
-        tax
         lda     _open_slot
-        jsr     _ser_ioctl
-        cmp     #$00
-        bne     @simple_serial_open_slot_err
-
-        ; set params
-        lda     _baudrate
-        sta     default_params + SER_PARAMS::BAUDRATE
-        lda     _flow_control
-        sta     default_params + SER_PARAMS::HANDSHAKE
-
-        lda     #<default_params
-        ldx     #>default_params
+        ldx     _baudrate
 
         ; open port
-        jsr     _ser_open
+        jsr     _serial_open
         cmp     #$00
         bne     @simple_serial_open_slot_err
 
-        jsr     _simple_serial_setup_no_irq_regs
         jmp     return0
 @simple_serial_open_slot_err:
         rts
@@ -194,8 +166,7 @@ write_mode_str: .asciiz "w"
         lda     #$00
         sta     _baudrate
         sta     _open_slot
-        jsr     _ser_close
-        jmp     _ser_uninstall
+        jmp     _serial_close
 .endproc
 
 ;char __fastcall__ simple_serial_settings_io(const char *path, int flags);
@@ -280,21 +251,18 @@ write_mode_str: .asciiz "w"
         sta     c
         sta     c+1
 
-        .ifdef IIGS
         ; Slow down IIgs
         jsr     _get_iigs_speed
         sta     orig_speed_reg
         lda     #SPEED_SLOW
         jsr     _set_iigs_speed
-        .endif
 
 @getc_try:
+        lda     #$00
+        sta     c+1
         ; Try to get char (into c)
-        lda     #<c
-        ldx     #>c
-        jsr     _ser_get
-        cmp     #SER_ERR_NO_DATA
-        bne     @getc_out
+        jsr     _serial_get_async
+        bcc     @getc_out
 
         ; Decrement timeout counter
         lda     ser_timeout_cycles
@@ -307,15 +275,13 @@ write_mode_str: .asciiz "w"
 
         ; We got no data
         lda     #$FF
-        sta     c
         sta     c+1
 
         ; Done
 @getc_out:
-        .ifdef IIGS
+        sta     c
         lda     orig_speed_reg
         jsr     _set_iigs_speed
-        .endif
 
         lda     c
         ldx     c+1
@@ -327,6 +293,4 @@ write_mode_str: .asciiz "w"
 ser_timeout_cycles: .res 2
 c:                  .res 2
 settings_fd:        .res 1
-.ifdef IIGS
 orig_speed_reg:     .res 1
-.endif

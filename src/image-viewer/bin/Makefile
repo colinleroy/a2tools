@@ -4,6 +4,9 @@ imgview_SOURCES := \
 	$(SRC_DIR)/../lib/hgr_addrs.c \
 
 imgview_CC65SOURCES := \
+	$(SRC_DIR)/../lib/serial/asm/driver.s \
+	$(SRC_DIR)/../lib/serial/asm/acia.s \
+	$(SRC_DIR)/../lib/serial/asm/z8530.s \
 	$(SRC_DIR)/../lib/serial/asm/simple_serial.s \
 	$(SRC_DIR)/../lib/serial/asm/simple_serial_io.s \
 	$(SRC_DIR)/../lib/serial/asm/simple_serial_configure.s \
@@ -18,7 +21,6 @@ imgview_CC65SOURCES := \
 	$(SRC_DIR)/../lib/scroll.s \
 	$(SRC_DIR)/../lib/FVTABZ.s \
 	$(SRC_DIR)/../lib/extrazp.s \
-	$(serial_hw_SOURCES) \
 	$(SRC_DIR)/../lib/vsdrive.s \
 
 imgview_GCCSOURCES := \
@@ -43,7 +45,8 @@ DEPS :=
 
 CFLAGS  = -I $(SRC_DIR)/../lib -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
 
-CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x200 $(USE_LANGCARD) $(iigs_CFLAGS)
+CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x200 $(USE_LANGCARD) $(iigs_CFLAGS) \
+	--asm-define SERIAL_ENABLE_IRQ
 
 imgview_CLCFLAGS = $(CLCFLAGS) -C $(SRC_DIR)/../../config/apple2enh-rtonce.cfg $(CC65_TARGET)-iobuf-0800.o --start-addr 0x4000
 

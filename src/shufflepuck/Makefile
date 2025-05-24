@@ -220,8 +220,9 @@ shflpuck_SOURCES := \
 	$(SRC_DIR)/code/helpers.s \
 	$(SRC_DIR)/code/mini_conio.s \
 	$(SRC_DIR)/code/lzsa1.s \
-	$(SRC_DIR)/code/acia.s \
-	$(SRC_DIR)/code/z8530.s \
+	$(SRC_DIR)/../lib/serial/asm/driver.s \
+	$(SRC_DIR)/../lib/serial/asm/acia.s \
+	$(SRC_DIR)/../lib/serial/asm/z8530.s \
 	$(SRC_DIR)/../lib/asm/hgr_tables.s \
 	$(SRC_DIR)/../lib/asm/hgr.s \
 	$(SRC_DIR)/../lib/asm/hgr_mono40.s \

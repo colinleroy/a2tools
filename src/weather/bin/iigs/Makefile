@@ -1,5 +1,4 @@
 SRC_DIR=../../
-serial_hw := z8530
 iigs_suffix := -iigs
 iigs_CFLAGS := -DIIGS --asm-define IIGS
 trgt = apple2gs

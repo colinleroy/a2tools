@@ -4,10 +4,9 @@
 
         .importzp       _zp6, _zp8, _zp9, _zp10, _zp12, _zp13, tmp1, tmp2, tmp3, ptr1, ptr2, ptr3, ptr4
 
-        .import         _simple_serial_get_data_reg
-        .import         _simple_serial_get_status_reg
-        .import         _simple_serial_get_cmd_reg
-        .import         _simple_serial_get_ctrl_reg
+        .import         _ser_data_reg
+        .import         _ser_status_reg
+        .import         _serial_open
 
         .import         _enable_subtitles
         .import         _video_size
@@ -22,6 +21,7 @@
         .import         _simple_serial_puts_nl
         .import         _serial_read_byte_no_irq
         .import         _simple_serial_flush
+        .import         _simple_serial_set_irq
 
         .import         _surl_start_request
         .import         _surl_read_with_barrier
@@ -35,10 +35,12 @@
         .import         _bzero, _memset, _sleep, _cputs
         .import         pusha, pusha0, push0, pushax, shlax3, popptr1
 
-        .importzp       ptr1
+        .import         ostype
+        .importzp       ptr1, tmp3
 
         .include        "apple2.inc"
         .include        "../../simple_serial.inc"
         .include        "../../../surl-server/surl_protocol.inc"
         .include        "../../surl.inc"
         .include        "stdio.inc"
+        .include        "ser-kernel.inc"

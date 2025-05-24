@@ -19,7 +19,7 @@
 
         .import         simple_serial_compute_ptr_end
         .import         throbber_on, throbber_off
-        .import         _ser_get
+        .import         _serial_get_async
 
         .importzp       ptr3, ptr4
         .include        "apple2.inc"
@@ -37,16 +37,17 @@
         jsr     throbber_on
 
         lda     #$00
+        tay
+
         beq     check_bound
 read_again:
         lda     ptr4
 read_again_aok:
         ldx     ptr4+1
 read_again_axok:
-        jsr     _ser_get
-        cmp     #SER_ERR_NO_DATA
-        beq     read_again
-
+        jsr     _serial_get_async
+        bcs     read_again_axok
+        sta     (ptr4),y
         inc     ptr4
         bne     check_bound
         inc     ptr4+1

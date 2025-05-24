@@ -20,7 +20,7 @@ _surl_start_stream_av:          ; Entry point
         clv                     ; clear offset-received flag
 
 ass:    lda     $A9FF           ; Wait for an audio byte
-        and     #HAS_BYTE
+        and     has_byte
         beq     ass
 ads:    ldx     $A8FF
         JUMP_NEXT_9

@@ -17,7 +17,7 @@
 
         .export         _simple_serial_getc_immediate
 
-        .import         _ser_get
+        .import         _serial_get_async
 
         .importzp       tmp2
 
@@ -32,12 +32,8 @@
 
 ;int __fastcall__ simple_serial_getc_immediate(void) {
 .proc _simple_serial_getc_immediate: near
-        lda     #<tmp2
-        ldx     #>tmp2
-        jsr     _ser_get
-        cmp     #SER_ERR_NO_DATA
-        beq     no_char
-        lda     tmp2
+        jsr     _serial_get_async
+        bcs     no_char
         ldx     #$00
         rts
 no_char:

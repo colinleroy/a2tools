@@ -29,6 +29,8 @@
         .import         _clrscr, pusha, pushax, booleq
         .import         _cputs, _cgetc, _revers, _gotoxy
 
+        .import         ostype
+
         .include        "../../simple_serial.inc"
         .include        "fcntl.inc"
         .include        "apple2.inc"
@@ -37,48 +39,6 @@
         .include        "accelerator.inc"
 
         .segment "RT_ONCE"
-
-.ifdef IIGS
-baud_str_2400:   .asciiz "2400   "
-baud_str_4800:   .asciiz "4800   "
-baud_str_9600:   .asciiz "9600   "
-baud_str_19200:  .asciiz "19200  "
-baud_str_57600:  .asciiz "57600  "
-baud_str_115200: .asciiz "115200 "
-slot_str_0:      .asciiz "MODEM  "
-slot_str_1:      .asciiz "PRINTER"
-
-baud_rates:      .byte SER_BAUD_2400
-                 .byte SER_BAUD_4800
-                 .byte SER_BAUD_9600
-                 .byte SER_BAUD_19200
-                 .byte SER_BAUD_57600
-                 .byte SER_BAUD_115200
-
-baud_strs_low:   .byte <baud_str_2400
-                 .byte <baud_str_4800
-                 .byte <baud_str_9600
-                 .byte <baud_str_19200
-                 .byte <baud_str_57600
-                 .byte <baud_str_115200
-
-slots_strs_low:  .byte <slot_str_0
-                 .byte <slot_str_1
-
-baud_strs_high:  .byte >baud_str_2400
-                 .byte >baud_str_4800
-                 .byte >baud_str_9600
-                 .byte >baud_str_19200
-                 .byte >baud_str_57600
-                 .byte >baud_str_115200
-
-slots_strs_high: .byte >slot_str_0
-                 .byte >slot_str_1
-
-MAX_SLOT_IDX     := 1
-MAX_SPEED_IDX    := 5
-
-.else
 
 baud_str_2400:   .asciiz "2400  "
 baud_str_4800:   .asciiz "4800  "
@@ -93,6 +53,8 @@ slot_str_4:      .asciiz "4"
 slot_str_5:      .asciiz "5"
 slot_str_6:      .asciiz "6"
 slot_str_7:      .asciiz "7"
+printer_str:     .asciiz "PRINTER"
+modem_str:       .asciiz "MODEM  "
 
 baud_rates:      .byte SER_BAUD_2400
                  .byte SER_BAUD_4800
@@ -130,10 +92,10 @@ slots_strs_high: .byte >slot_str_0
                  .byte >slot_str_6
                  .byte >slot_str_7
 
-MAX_SLOT_IDX     := 7
 MAX_SPEED_IDX    := 4
 
-.endif
+min_slot_idx:     .byte 1
+max_slot_idx:     .byte 8
 
 slot_idx:         .byte 0
 speed_idx:        .byte 0
@@ -180,8 +142,27 @@ ui_base:          .byte "Serial connection",$0D,$0A,$0D,$0A
         lda     _ser_params + SIMPLE_SERIAL_PARAMS::PRINTER_SLOT
         sta     printer_slot_idx
 
+        ; Adapt for iigs
+        bit     ostype
+        bpl     :+
+        ldx     #0
+        stx     min_slot_idx
+        stx     slot_idx
+        inx
+        stx     printer_slot_idx
+        inx
+        stx     max_slot_idx
 
-        ; Figure out current speeds
+        lda     #<modem_str
+        sta     slots_strs_low
+        lda     #>modem_str
+        sta     slots_strs_high
+
+        lda     #<printer_str
+        sta     slots_strs_low+1
+        lda     #>printer_str
+        sta     slots_strs_high+1
+:       ; Figure out current speeds
         ldx     #0
 @next_x:
         lda     _ser_params + SIMPLE_SERIAL_PARAMS::DATA_BAUDRATE
@@ -367,12 +348,15 @@ ui_base:          .byte "Serial connection",$0D,$0A,$0D,$0A
         lda     slot_idx
         clc
         adc     setting_offset
+        cmp     min_slot_idx
         bmi     :+
-        cmp     #(MAX_SLOT_IDX+1)
-        bmi     :++
-        lda     #0
-        beq     :++
-:       lda     #MAX_SLOT_IDX
+        cmp     max_slot_idx
+        bcc     :++
+        lda     min_slot_idx
+        jmp     :++
+:       lda     max_slot_idx
+        sec
+        sbc     #1
 :       sta     slot_idx
         jmp     @update_ui
 
@@ -393,12 +377,15 @@ ui_base:          .byte "Serial connection",$0D,$0A,$0D,$0A
         lda     printer_slot_idx
         clc
         adc     setting_offset
+        cmp     min_slot_idx
         bmi     :+
-        cmp     #(MAX_SLOT_IDX+1)
-        bmi     :++
-        lda     #0
-        beq     :++
-:       lda     #MAX_SLOT_IDX
+        cmp     max_slot_idx
+        bcc     :++
+        lda     min_slot_idx
+        jmp     :++
+:       lda     max_slot_idx
+        sec
+        sbc     #1
 :       sta     printer_slot_idx
         jmp     @update_ui
 

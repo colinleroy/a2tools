@@ -1,8 +1,6 @@
 break_out:
-.ifdef IIGS
         lda     prevspd
         jsr     _set_iigs_speed
-.endif
         plp
 
         jsr     _simple_serial_flush

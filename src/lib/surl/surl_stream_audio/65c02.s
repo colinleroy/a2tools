@@ -28,6 +28,14 @@
           sta     (spkr_ptr)    ; 5
 .endmacro
 
+.macro STORE_TARGET_3           ; Useless here
+          WASTE_3
+.endmacro
+
+.macro STORE_TARGET_4           ; Useless here
+          WASTE_4
+.endmacro
+
 .macro JMP_NEXT_6
         jmp     (next,x)        ; 45    Done
 .endmacro
@@ -57,7 +65,6 @@ SAMPLE_MULT   = 2
 .include "duty-cycles/2.s"
 
 .include "setup_pointers.s"
-.include "vu_patches_a.s"
 
 ; ------------------------------------------------------------------------
 .align 256
@@ -74,7 +81,7 @@ SAMPLE_MULT   = 2
 .include "duty-cycles/5.s"
 .include "duty-cycles/6.s"
 
-.include "data_patches.s"
+.include "vu_patches_a.s"
 
 ; --------------------------------------
 ; 65c02-specific data
@@ -169,6 +176,8 @@ next:
 
 ; Make sure we didn't cross page in duty cycle handlers
 .assert * < _SAMPLES_BASE+$A00, error
+
+.include "data_patches.s"
 
 ; We don't really care about crossing pages now.
 

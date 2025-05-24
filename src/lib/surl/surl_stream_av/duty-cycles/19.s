@@ -2,18 +2,18 @@ duty_cycle19:                    ; end spkr at 27
         ____SPKR_DUTY____4      ; 4
 ad19:   ldx     $A8FF           ; 8
 vs19:   lda     $99FF           ; 12
-        and     #HAS_BYTE       ; 14
-        beq     no_vid19        ; 16/17
-vd19:   ldy     $98FF           ; 20
-        WASTE_3                 ; 23
+        and     has_byte        ; 15
+        beq     no_vid19        ; 17/18
+vd19:   ldy     $98FF           ; 21
+        WASTE_2                 ; 23
         ____SPKR_DUTY____4      ; 27
         WASTE_5                 ; 32
         PREPARE_VIDEO_7         ; 39
         jmp     video_sub       ; 42=>68
 
 no_vid19:
-ad19b:  ldx     $A8FF           ; 21
-        WASTE_2                 ; 23
+        WASTE_5                 ; 23
         ____SPKR_DUTY____4      ; 27
-        WASTE_32                ; 59
+ad19b:  ldx     $A8FF           ; 31
+        WASTE_28                ; 59
         JUMP_NEXT_9             ; 68

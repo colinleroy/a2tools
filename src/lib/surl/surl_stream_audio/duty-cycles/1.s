@@ -5,18 +5,19 @@ duty_cycle1:
 v1a:    sta     txt_level       ; 15
         
 s1:     lda     ser_status      ; 19    Check serial
-        and     #HAS_BYTE       ; 21
+        and     has_byte        ; 22
 
-        beq     :+              ; 23/24
+        beq     :+              ; 24/25
 
-d1:     ldx     ser_data        ; 27    Load serial
+d1:     ldx     ser_data        ; 28    Load serial
 
-        lda     #SPC            ; 29    Unset VU meter
-        WASTE_6                 ; 35
+        lda     #SPC            ; 30    Unset VU meter
+        STORE_TARGET_3          ; 33
+        WASTE_2                 ; 35
 
 v1b:    sta     txt_level       ; 39
         JMP_NEXT_6              ; 45
 :
-        WASTE_11                ;    35
+        WASTE_10                ;    35
         KBD_LOAD_7              ;    42
         jmp     duty_cycle1     ;    45

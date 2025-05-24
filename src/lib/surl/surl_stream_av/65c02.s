@@ -101,9 +101,16 @@ SAMPLE_MULT       = 2
 .endmacro
 
 .macro PREPARE_VIDEO_7
-        WASTE_3                 ; 3
-        tya                     ; 5      Get video byte in A
-        cpy     #PAGE_TOGGLE    ; 7      Check for page toggle
+        PREPARE_VIDEO_S3
+        PREPARE_VIDEO_E4
+.endmacro
+
+.macro PREPARE_VIDEO_S3
+        WASTE_3          ; 3
+.endmacro
+.macro PREPARE_VIDEO_E4
+        tya                     ; 2      Get video byte in A
+        cpy     #PAGE_TOGGLE    ; 5      Check for page toggle
 .endmacro
 
 .macro JUMP_NEXT_9

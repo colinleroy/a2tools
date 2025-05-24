@@ -29,14 +29,12 @@
         .import     _set_max_puck_delta
 
         .import     _puck_reinit_my_order, _puck_reinit_their_order
-        .import     _acia_open, _acia_close
-        .import     _acia_get, _acia_put
-
-        .import     _z8530_open, _z8530_close
-        .import     _z8530_get, _z8530_put
 
         .import     _text_mono40, _hgr_mixon, _hgr_mixoff
         .import     _hgr_unset_mono40, _hgr_force_mono40
+
+        .import     _serial_open, _serial_close
+        .import     _serial_putc_direct, _serial_read_byte_direct
 
         .import     _cout, _strout, _gotoxy, _gotox, _gotoy, _home, _numout
 
@@ -79,7 +77,7 @@ IO_BARRIER = $FF
 .segment "s"                                                        ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::SPRITE, error ; Make sure the callback is where we think
-        jmp     _big_draw_sprite_s_1                                    ; CHANGE A
+        jmp     _big_draw_sprite_s_3                                    ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::NAME, error ; Make sure the callback is where we think
         jmp     _big_draw_name_s                                        ; CHANGE A
@@ -97,7 +95,7 @@ IO_BARRIER = $FF
         jmp     return0
 
 .assert * = __OPPONENT_START__+OPPONENT::END_GAME, error ; Make sure the callback is where we think
-        jmp     close_serial_slot
+        jmp     _serial_close
 
 .assert * = __OPPONENT_START__+OPPONENT::HIT_CB, error
         jmp     hit_cb
@@ -200,13 +198,13 @@ error:
         jsr     mirror_pusher_y
         tay
         jsr     pack_pusher_coords
-        jsr     serial_put
+        jsr     _serial_putc_direct
         rts
 .endproc
 
 .proc io_barrier
         lda     #IO_BARRIER
-        jsr     serial_put
+        jsr     _serial_putc_direct
 :       jsr     serial_wait_and_get
         bcs     :-
         cmp     #IO_BARRIER
@@ -245,8 +243,8 @@ send_coords:
         jmp     send_pusher_coords
 
 reply_barrier:
-        sta     read_again        ; Flag we need to read more
-        jsr     serial_put        ; Send the $FF back as barrier ack
+        sta     read_again          ; Flag we need to read more
+        jsr     _serial_putc_direct ; Send the $FF back as barrier ack
         rts
 .endproc
 
@@ -389,7 +387,7 @@ check_if_read:
 do_read:
         lda     #'?'              ; Wait for their message
 
-        jsr     serial_put
+        jsr     _serial_putc_direct
 :       jsr     serial_force_get
         cmp     #IO_BARRIER
         beq     :-
@@ -644,7 +642,7 @@ iigs:
 
         lda     serial_slot
         ldx     #SER_BAUD_115200
-        jsr     open_serial_slot
+        jsr     _serial_open
         cmp     #SER_ERR_OK
         bne     open_error
 
@@ -696,7 +694,7 @@ open_error:
 .endproc
 
 .proc finish_game
-        jsr     close_serial_slot
+        jsr     _serial_close
         jsr     _home
         jsr     _hgr_mixoff
         jmp     _hgr_force_mono40
@@ -712,7 +710,7 @@ open_error:
         lda     game_cancelled
         bne     out_err
 
-        jsr     serial_put
+        jsr     _serial_putc_direct
         jsr     serial_wait_and_get
         bcs     :-
 
@@ -738,7 +736,7 @@ next_char:
         lda     ident_str,y
         beq     out_done            ; All chars sent/received
 
-        jsr     serial_put
+        jsr     _serial_putc_direct
 :       jsr     serial_force_get
         bcs     out_err
         cmp     #$FF
@@ -794,50 +792,7 @@ out_err:
         lda     #0
         sta     serial_slot
 
-        lda     #<_z8530_open
-        ldx     #>_z8530_open
-        sta     open_serial_slot+1
-        stx     open_serial_slot+2
-
-        lda     #<_z8530_close
-        ldx     #>_z8530_close
-        sta     close_serial_slot+1
-        stx     close_serial_slot+2
-
-        lda     #<_z8530_put
-        ldx     #>_z8530_put
-        sta     serial_put+1
-        stx     serial_put+2
-
-        lda     #<_z8530_get
-        ldx     #>_z8530_get
-        sta     serial_get+1
-        stx     serial_get+2
-
 :       rts
-.endproc
-
-.proc open_serial_slot
-        jmp     _acia_open
-.endproc
-
-.proc close_serial_slot
-        jmp     _acia_close
-.endproc
-
-; Send character in A over serial. Destroys X.
-; Does not touch Y.
-.proc serial_put
-        jsr     _acia_put
-        rts
-.endproc
-
-; Returns with char in A and carry clear if
-; character available. Destroys X.
-; Does not touch Y.
-.proc serial_get
-        jsr     _acia_get
-        rts
 .endproc
 
 ; Try 10 times to get a char over serial.
@@ -846,7 +801,7 @@ out_err:
         lda     #10
         sta     ser_timer
 
-try:    jsr     serial_get
+try:    jsr     _serial_read_byte_direct
         bcc     out
 
         jsr     check_escape
@@ -866,7 +821,7 @@ out_abort:
 .proc exchange_char
         php
         sei
-        jsr     serial_put          ; Send char
+        jsr     _serial_putc_direct ; Send char
         jsr     serial_force_get    ; Get remote char (or escape)
         bcc     :+                  ; Escape?
         inc     game_cancelled      ; We're done
@@ -892,7 +847,7 @@ out_esc:
         bne     out
         jsr     check_escape
         bcs     out
-        jsr     serial_get
+        jsr     _serial_read_byte_direct
         bcs     serial_force_get
 out:    rts
 .endproc

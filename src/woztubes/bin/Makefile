@@ -1,4 +1,4 @@
-USE_LANGCARD := -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD
+USE_LANGCARD := -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD --asm-define SERIAL_ENABLE_IRQ
 
 START_ADDR := 0x113A
 
@@ -19,11 +19,12 @@ woztubes_SOURCES := \
 	$(SRC_DIR)/../lib/dget_text_single.c \
 	$(SRC_DIR)/../lib/FVTABZ.s \
 	$(SRC_DIR)/../lib/strsplit.c \
+	$(SRC_DIR)/../lib/serial/asm/driver.s \
+	$(SRC_DIR)/../lib/serial/asm/acia.s \
+	$(SRC_DIR)/../lib/serial/asm/z8530.s \
 	$(SRC_DIR)/../lib/serial/asm/simple_serial.s \
 	$(SRC_DIR)/../lib/serial/asm/simple_serial_io.s \
 	$(SRC_DIR)/../lib/serial/asm/simple_serial_configure.s \
-	$(SRC_DIR)/../lib/serial/$(serial_hw)/common.s \
-	$(SRC_DIR)/../lib/serial/$(serial_hw)/no_irq.s \
 	$(SRC_DIR)/../lib/surl/asm/surl_core.s \
 	$(SRC_DIR)/../lib/surl/asm/surl_get_json.s \
 	$(SRC_DIR)/../lib/surl/asm/surl_read_with_barrier.s \

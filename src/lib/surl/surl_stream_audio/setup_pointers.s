@@ -50,4 +50,12 @@ setup_pointers:
 
         lda     #0
         sta     cancelled
+
+        ; Setup zero-page jump
+        lda     #$4C            ; JMP
+        sta     zp_jmp
+        lda     #$00
+        sta     zp_jmp+1
+        lda     #$00
+        sta     zp_jmp+2
         rts

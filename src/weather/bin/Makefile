@@ -1,4 +1,4 @@
-USE_LANGCARD := -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD
+USE_LANGCARD := -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD --asm-define SERIAL_ENABLE_IRQ
 
 GCCCFLAGS = -g -O0 -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\" \
 	-I $(SRC_DIR)/../lib -I $(SRC_DIR)/../stp -Wall -Wno-format \
@@ -19,11 +19,12 @@ weather_SOURCES := \
 	$(SRC_DIR)/../lib/surl/asm/surl_core.s \
 	$(SRC_DIR)/../lib/surl/asm/surl_get_json.s \
 	$(SRC_DIR)/../lib/surl/asm/surl_read_with_barrier.s \
+	$(SRC_DIR)/../lib/serial/asm/driver.s \
+	$(SRC_DIR)/../lib/serial/asm/acia.s \
+	$(SRC_DIR)/../lib/serial/asm/z8530.s \
 	$(SRC_DIR)/../lib/serial/asm/simple_serial.s \
 	$(SRC_DIR)/../lib/serial/asm/simple_serial_io.s \
 	$(SRC_DIR)/../lib/serial/asm/simple_serial_configure.s \
-	$(SRC_DIR)/../lib/serial/$(serial_hw)/common.s \
-	$(SRC_DIR)/../lib/serial/$(serial_hw)/no_irq.s \
 	$(SRC_DIR)/../lib/asm/scrollwindow.s \
 	$(SRC_DIR)/../lib/asm/path_helper.s \
 	$(SRC_DIR)/../lib/asm/malloc0.s \

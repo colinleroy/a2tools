@@ -1,4 +1,4 @@
-USE_LANGCARD := -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD
+USE_LANGCARD := -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD --asm-define SERIAL_ENABLE_IRQ
 
 PROGRAM=homectrl grphview
 homectrl_SOURCES := \
@@ -14,10 +14,12 @@ homectrl_SOURCES := \
 	$(SRC_DIR)/../lib/strellipsis.c \
 	
 homectrl_CL65SOURCES = \
+	$(SRC_DIR)/../lib/serial/asm/driver.s \
+	$(SRC_DIR)/../lib/serial/asm/acia.s \
+	$(SRC_DIR)/../lib/serial/asm/z8530.s \
 	$(SRC_DIR)/../lib/serial/asm/simple_serial.s \
 	$(SRC_DIR)/../lib/serial/asm/simple_serial_configure.s \
 	$(SRC_DIR)/../lib/serial/asm/simple_serial_io.s \
-	$(serial_hw_SOURCES) \
 	$(SRC_DIR)/../lib/surl/asm/surl_core.s \
 	$(SRC_DIR)/../lib/surl/asm/surl_ping.s \
 	$(SRC_DIR)/../lib/surl/asm/surl_receive.s \
@@ -52,9 +54,11 @@ grphview_SOURCES := \
 	$(SRC_DIR)/../lib/surl/surl_receive_lines.c
 	
 grphview_CL65SOURCES = \
+	$(SRC_DIR)/../lib/serial/asm/driver.s \
+	$(SRC_DIR)/../lib/serial/asm/acia.s \
+	$(SRC_DIR)/../lib/serial/asm/z8530.s \
 	$(SRC_DIR)/../lib/serial/asm/simple_serial.s \
 	$(SRC_DIR)/../lib/serial/asm/simple_serial_io.s \
-	$(serial_hw_SOURCES) \
 	$(SRC_DIR)/../lib/surl/asm/surl_core.s \
 	$(SRC_DIR)/../lib/surl/asm/surl_read_with_barrier.s \
 	$(SRC_DIR)/../lib/asm/path_helper.s \

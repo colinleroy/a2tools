@@ -1,10 +1,8 @@
 MAX_LEVEL         = 31
 
-.ifdef IIGS                   ; Todo
-HAS_BYTE          = $01
-.else
-HAS_BYTE          = $08
-.endif
+has_byte      = tmp3
+
+zp_jmp        = $00 ; Unused
 
 MAX_OFFSET    = 126
 N_BASES       = (8192/MAX_OFFSET)+1

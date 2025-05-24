@@ -2,8 +2,8 @@ duty_cycle13:                    ; end spkr at 21
         ____SPKR_DUTY____4      ; 4
 ad13:   ldx     $A8FF           ; 8
 vs13:   lda     $99FF           ; 12
-        and     #HAS_BYTE       ; 14
-        WASTE_3                 ; 17
+        and     has_byte        ; 15
+        WASTE_2                 ; 17
         ____SPKR_DUTY____4      ; 21
         beq     no_vid13        ; 23/24
 vd13:   ldy     $98FF           ; 27

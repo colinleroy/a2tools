@@ -13,6 +13,9 @@ SOURCES := \
 	$(SRC_DIR)/../lib/surl/surl_set_time.c
 
 CL65SOURCES = \
+	$(SRC_DIR)/../lib/serial/asm/driver.s \
+	$(SRC_DIR)/../lib/serial/asm/acia.s \
+	$(SRC_DIR)/../lib/serial/asm/z8530.s \
 	$(SRC_DIR)/../lib/serial/asm/simple_serial.s \
 	$(SRC_DIR)/../lib/serial/asm/simple_serial_io.s \
 	$(SRC_DIR)/../lib/serial/asm/simple_serial_configure.s \
@@ -21,7 +24,6 @@ CL65SOURCES = \
 	$(SRC_DIR)/../lib/surl/asm/surl_send.s \
 	$(SRC_DIR)/../lib/surl/asm/surl_receive.s \
 	$(SRC_DIR)/../lib/surl/asm/surl_read_with_barrier.s \
-	$(serial_hw_SOURCES) \
 	$(SRC_DIR)/../lib/asm/scrollwindow.s \
 	$(SRC_DIR)/../lib/asm/path_helper.s \
 	$(SRC_DIR)/../lib/asm/clrzone.s \
@@ -65,6 +67,7 @@ CLCFLAGS = -t $(CC65_TARGET) -g -O -Cl -Wl -D,__STACKSIZE__=0x0400 \
 	-C $(SRC_DIR)/../../config/apple2enh-rtonce.cfg -vm -m $(PROGRAM).map \
 	-DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD -DFILESEL_TO_LANGCARD \
 	-DFILESEL_ALLOW_NONPRODOS_VOLUMES --asm-define FILESEL_ALLOW_NONPRODOS_VOLUMES \
+	--asm-define SERIAL_ENABLE_IRQ \
 	$(iigs_CFLAGS) -DSTP_DATA_SIZE=8192
 GCCCFLAGS = -g -O0 -Wall -Wno-format -Wno-unused-function -Wno-char-subscripts -Wno-unknown-pragmas -Werror -DSTP_DATA_SIZE=8192
 GCCLDFLAGS = 

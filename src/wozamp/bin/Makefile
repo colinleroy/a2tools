@@ -1,4 +1,4 @@
-USE_LANGCARD := -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD
+USE_LANGCARD := -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD --asm-define SERIAL_ENABLE_IRQ
 
 wozamp_SOURCES := \
 	$(SRC_DIR)/main.c \
@@ -11,11 +11,12 @@ wozamp_SOURCES := \
 
 wozamp_CL65SOURCES = \
 	$(SRC_DIR)/../lib/surl/surl_stream_audio/$(STREAMER_VER).s \
+	$(SRC_DIR)/../lib/serial/asm/driver.s \
+	$(SRC_DIR)/../lib/serial/asm/acia.s \
+	$(SRC_DIR)/../lib/serial/asm/z8530.s \
 	$(SRC_DIR)/../lib/serial/asm/simple_serial.s \
 	$(SRC_DIR)/../lib/serial/asm/simple_serial_io.s \
 	$(SRC_DIR)/../lib/serial/asm/simple_serial_configure.s \
-	$(SRC_DIR)/../lib/serial/$(serial_hw)/common.s \
-	$(SRC_DIR)/../lib/serial/$(serial_hw)/no_irq.s \
 	$(SRC_DIR)/../lib/surl/asm/surl_core.s \
 	$(SRC_DIR)/../lib/surl/asm/surl_ping.s \
 	$(SRC_DIR)/../lib/surl/asm/surl_receive.s \
@@ -51,11 +52,11 @@ rbrowser_SOURCES := \
 
 rbrowser_CL65SOURCES = \
 	$(SRC_DIR)/../lib/surl/surl_stream_audio/$(STREAMER_VER).s \
+	$(SRC_DIR)/../lib/serial/asm/driver.s \
+	$(SRC_DIR)/../lib/serial/asm/acia.s \
+	$(SRC_DIR)/../lib/serial/asm/z8530.s \
 	$(SRC_DIR)/../lib/serial/asm/simple_serial.s \
 	$(SRC_DIR)/../lib/serial/asm/simple_serial_io.s \
-	$(SRC_DIR)/../lib/serial/$(serial_hw)/common.s \
-	$(SRC_DIR)/../lib/serial/$(serial_hw)/control.s \
-	$(SRC_DIR)/../lib/serial/$(serial_hw)/no_irq.s \
 	$(SRC_DIR)/../lib/surl/asm/surl_core.s \
 	$(SRC_DIR)/../lib/surl/asm/surl_get_json.s \
 	$(SRC_DIR)/../lib/surl/asm/surl_read_with_barrier.s \
@@ -97,11 +98,11 @@ videoplay_SOURCES := \
 	$(SRC_DIR)/../lib/surl/surl_stream_av/$(STREAMER_VER).s \
 	$(SRC_DIR)/videoplay.c \
 	$(SRC_DIR)/../lib/FVTABZ.s \
+	$(SRC_DIR)/../lib/serial/asm/driver.s \
+	$(SRC_DIR)/../lib/serial/asm/acia.s \
+	$(SRC_DIR)/../lib/serial/asm/z8530.s \
 	$(SRC_DIR)/../lib/serial/asm/simple_serial.s \
 	$(SRC_DIR)/../lib/serial/asm/simple_serial_io.s \
-	$(SRC_DIR)/../lib/serial/$(serial_hw)/common.s \
-	$(SRC_DIR)/../lib/serial/$(serial_hw)/control.s \
-	$(SRC_DIR)/../lib/serial/$(serial_hw)/no_irq.s \
 	$(SRC_DIR)/../lib/surl/asm/surl_core.s \
 	$(SRC_DIR)/../lib/surl/asm/surl_read_with_barrier.s \
 	$(SRC_DIR)/../lib/asm/scrollwindow.s \
@@ -110,7 +111,6 @@ videoplay_SOURCES := \
 	$(SRC_DIR)/../lib/asm/hgr.s \
 	$(SRC_DIR)/../lib/asm/hgr_setup_mono40.s \
 	$(SRC_DIR)/../lib/asm/hgr_mono40.s \
-	$(SRC_DIR)/../lib/fastirq$(iigs_suffix).s \
 	$(SRC_DIR)/../lib/extrazp.s
 
 videoplay_CLCFLAGS = -t $(CC65_TARGET) \
@@ -170,6 +170,7 @@ upload: all
 	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/wozamp/$(suffix)/ || \
 	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/wozamp/$(suffix)/ && \
 	cp *.bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/wozamp/$(suffix)/
+	cp *.po /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/disks/
 
 dist: wozamp-$(suffix).po
 	mkdir -p $(SRC_DIR)../../dist/

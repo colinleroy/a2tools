@@ -1,10 +1,8 @@
 MAX_LEVEL         = 31
 
-.ifdef IIGS
-HAS_BYTE          = $01
-.else
-HAS_BYTE          = $08
-.endif
+has_byte      = tmp3
+
+zp_jmp        = _zp10
 
 INV_SPC      := ' '
 SPC          := ' '|$80
