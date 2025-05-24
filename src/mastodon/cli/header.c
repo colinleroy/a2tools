@@ -16,6 +16,7 @@
 #include "list.h"
 #include "math.h"
 #include "scrollwindow.h"
+#include "clrzone.h"
 
 #ifdef SURL_TO_LANGCARD
 #pragma code-name (push, "LC")
@@ -137,9 +138,7 @@ void show_help (list *l, status *root_status, notification *root_notif) {
             " Open      : P     \r\n");
   }
 #ifdef __CC65__
-  while (wherey() < 23) {
-    clrnln();
-  }
+  clrzone(0, wherey(), RIGHT_COL_START-1, 23);
 #endif
 
   print_free_ram();
