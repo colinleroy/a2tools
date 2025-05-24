@@ -35,7 +35,7 @@
         .import         _bzero, _memset, _sleep, _cputs
         .import         pusha, pusha0, push0, pushax, shlax3, popptr1
 
-        .import         ostype
+        .import         ostype, _has_80cols
         .importzp       ptr1, tmp3
 
         .include        "apple2.inc"

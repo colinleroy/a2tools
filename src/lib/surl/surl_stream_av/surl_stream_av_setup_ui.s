@@ -23,7 +23,11 @@
         jsr       _memset
 
         ; Show controls
-        lda       #<controls_str
-        ldx       #>controls_str
-        jmp       _cputs
+        lda       #<controls_80str
+        ldx       #>controls_80str
+        bit       _has_80cols
+        bmi       :+
+        lda       #<controls_40str
+        ldx       #>controls_40str
+:       jmp       _cputs
 .endproc

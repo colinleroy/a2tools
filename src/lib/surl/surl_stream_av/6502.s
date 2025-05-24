@@ -173,7 +173,7 @@ SAMPLE_MULT       = 1
 .assert * = _SAMPLES_BASE + $400, error
 .include "duty-cycles/4.s"
 ; Add some strings to fill in the gaps
-.include "strings-b.inc"
+.include "strings-b40.inc"
 
 .align $100
 .assert * = _SAMPLES_BASE + $500, error
@@ -320,5 +320,6 @@ SAMPLE_MULT       = 1
 .include "break_out.s"
 
 .assert * < _SAMPLES_BASE + $2100, error
+.include "strings-b80.inc"
 
 av_streamer_end = *
