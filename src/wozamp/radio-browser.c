@@ -39,6 +39,7 @@
 #include "malloc0.h"
 #include "backup_hgrpage.h"
 #include "citoa.h"
+#include "a2_features.h"
 
 #ifndef __APPLE2ENH__
 
@@ -47,7 +48,7 @@
 #define tmp_buf ((char *)0x300)
 #define search_buf ((char *)0x200)
 
-#define NUMCOLS 40
+unsigned char NUMCOLS;
 #define NUMROWS 24
 
 char **lines = NULL;
@@ -82,22 +83,27 @@ enum JsonFieldIdx {
 #pragma code-name(push, "LC")
 
 static void print_footer(void) {
-#ifdef __APPLE2ENH__
-  if (n_lines > 0) {
-    gotoxy(80-37, 2);
-    cputs("Enter: Stream radio, Esc: Edit search");
+  if (has_80cols) {
+    if (n_lines > 0) {
+      gotoxy(80-37, 2);
+      cputs("Enter: Stream radio, Esc: Edit search");
+    }
+    if (is_iieenh) {
+      gotoxy(80-45, 3);
+      cputc('A'|0x80);
+      cputs("-C: Configure, ");
+      cputc('A'|0x80);
+      cputs("-S: Change server, ");
+      cputc('A'|0x80);
+      cputs("-Q: Quit");
+    } else {
+      gotoxy(80-69, 3);
+      cputs("Open-Apple-C: Configure, Open-Apple-S: new Server, Open-Apple-Q: Quit");
+    }
+  } else {
+    gotoxy(40-32, 3);
+    cputs("Ctrl-S: new Server, Ctrl-Q: Quit");
   }
-  gotoxy(80-45, 3);
-  cputc('A'|0x80);
-  cputs("-C: Configure, ");
-  cputc('A'|0x80);
-  cputs("-S: Change server, ");
-  cputc('A'|0x80);
-  cputs("-Q: Quit");
-#else
-  gotoxy(40-32, 3);
-  cputs("Ctrl-S: new Server, Ctrl-Q: Quit");
-#endif
 }
 
 static void station_click(char *station_uuid) {
@@ -231,59 +237,57 @@ display_result:
    n_res = (cur_line/IDX_MAX)+1;
    total_res = n_lines/IDX_MAX;
 
-#ifdef __APPLE2ENH__
-  tmp = lines[cur_line+IDX_NAME];
-  if (strlen(tmp) > 78)
-    tmp[78] = '\0';
+  if (has_80cols) {
+    tmp = lines[cur_line+IDX_NAME];
+    if (strlen(tmp) > 78)
+      tmp[78] = '\0';
 
-  cputs(tmp);
-  cputs("\r\n");
+    cputs(tmp);
+    cputs("\r\n");
 
-  tmp = lines[cur_line+IDX_COUNTRY];
-  if (strlen(tmp) > 20)
-    tmp[20] = '\0';
+    tmp = lines[cur_line+IDX_COUNTRY];
+    if (strlen(tmp) > 20)
+      tmp[20] = '\0';
 
-  cputs(tmp);
-  cputs(" - ");
+    cputs(tmp);
+    cputs(" - ");
 
-  tmp = lines[cur_line+IDX_HOMEPAGE];
-  if (strlen(tmp) > 55)
-    tmp[55] = '\0';
+    tmp = lines[cur_line+IDX_HOMEPAGE];
+    if (strlen(tmp) > 55)
+      tmp[55] = '\0';
 
-  cputs(tmp);
-  cputs("\r\n\r\n");
-  cputc(n_res == 1 ? ' ':('H'|0x80));
-  cutoa(n_res);
-  cputc('/');
-  cutoa(total_res);
-  cputc(n_res == total_res ? ' ':('U'|0x80));
+    cputs(tmp);
+    cputs("\r\n\r\n");
+    cputc(!is_iieenh || n_res == 1 ? ' ':('H'|0x80));
+    cutoa(n_res);
+    cputc('/');
+    cutoa(total_res);
+    cputc(!is_iieenh || n_res == total_res ? ' ':('U'|0x80));
+  } else {
+    tmp = lines[cur_line+IDX_NAME];
+    if (strlen(tmp) > 38)
+      tmp[38] = '\0';
 
-#else
-  tmp = lines[cur_line+IDX_NAME];
-  if (strlen(tmp) > 38)
-    tmp[38] = '\0';
+    cputs(tmp);
+    cputs("\r\n");
 
-  cputs(tmp);
-  cputs("\r\n");
+    tmp = lines[cur_line+IDX_COUNTRY];
+    if (strlen(tmp) > 13)
+      tmp[13] = '\0';
 
-  tmp = lines[cur_line+IDX_COUNTRY];
-  if (strlen(tmp) > 13)
-    tmp[13] = '\0';
+    cputs(tmp);
+    cputs(" - ");
 
-  cputs(tmp);
-  cputs(" - ");
+    tmp = lines[cur_line+IDX_HOMEPAGE];
+    if (strlen(tmp) > 24)
+      tmp[24] = '\0';
 
-  tmp = lines[cur_line+IDX_HOMEPAGE];
-  if (strlen(tmp) > 24)
-    tmp[24] = '\0';
-
-  cputs(tmp);
-  cputs("\r\n\r\n");
-  cutoa(n_res);
-  cputc('/');
-  cutoa(total_res);
-
-#endif
+    cputs(tmp);
+    cputs("\r\n\r\n");
+    cutoa(n_res);
+    cputc('/');
+    cutoa(total_res);
+  }
 
   print_footer();
 
@@ -457,8 +461,14 @@ void main(void) {
   load_config();
   surl_connect_proxy();
 
-  surl_user_agent = "Wozamp for Apple II / "VERSION;
+  if (has_80cols) {
+    NUMCOLS = 80;
+  } else {
+    NUMCOLS = 40;
+  }
 
+  surl_user_agent = "Wozamp for Apple II / "VERSION;
+  search_buf[0] = '\0';
   radio_browser_ui();
 }
 #endif

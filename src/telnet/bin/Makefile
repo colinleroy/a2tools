@@ -28,6 +28,7 @@ CC65SOURCES := \
 	$(SRC_DIR)/../lib/extrazp.s \
 	$(SRC_DIR)/../lib/fastirq.s \
 	$(SRC_DIR)/../lib/fastirq-iigs.s \
+	$(SRC_DIR)/../lib/a2_features.s \
 
 GCCSOURCES := \
 	$(SRC_DIR)/../lib/serial/c/simple_serial.c \

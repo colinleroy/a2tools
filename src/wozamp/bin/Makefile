@@ -48,6 +48,7 @@ wozamp_CLCFLAGS = -t $(CC65_TARGET) -DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER \
 rbrowser_SOURCES := \
 	$(SRC_DIR)/radio-browser.c \
 	$(SRC_DIR)/config.c \
+	$(SRC_DIR)/../lib/charsets.c \
 	$(SRC_DIR)/../lib/dget_text_single.c \
 	$(SRC_DIR)/../lib/strsplit.c
 
@@ -112,6 +113,7 @@ videoplay_SOURCES := \
 	$(SRC_DIR)/../lib/asm/hgr.s \
 	$(SRC_DIR)/../lib/asm/hgr_setup_mono40.s \
 	$(SRC_DIR)/../lib/asm/hgr_mono40.s \
+	$(SRC_DIR)/../lib/a2_features.s \
 	$(SRC_DIR)/../lib/extrazp.s
 
 videoplay_CLCFLAGS = -t $(CC65_TARGET) \

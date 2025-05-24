@@ -21,11 +21,7 @@
 #include "surl.h"
 #include "dget_text.h"
 
-#ifdef __APPLE2ENH__
-#define NUMCOLS 80
-#else
-#define NUMCOLS 40
-#endif
+extern unsigned char NUMCOLS;
 #define NUMROWS 24
 
 #define STP_URL_FILE "STPSTARTURL"

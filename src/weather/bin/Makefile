@@ -30,6 +30,7 @@ weather_SOURCES := \
 	$(SRC_DIR)/../lib/asm/malloc0.s \
 	$(SRC_DIR)/../lib/citoa.s \
 	$(SRC_DIR)/../lib/cntoabuf.s \
+	$(SRC_DIR)/../lib/a2_features.s \
 	$(SRC_DIR)/../lib/strsplit.c
 
 

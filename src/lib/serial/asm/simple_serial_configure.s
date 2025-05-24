@@ -112,11 +112,7 @@ ui_base:          .byte "Serial connection",$0D,$0A,$0D,$0A
                   .byte "Printer slot:   ",$0D,$0A
                   .byte "Baud rate:      ",$0D,$0A
                   .byte $0D,$0A
-                  .ifdef __APPLE2ENH__
                   .byte "Up/down/left/right to configure,",$0D,$0A
-                  .else
-                  .byte "U/J/left/right to configure,",$0D,$0A
-                  .endif
                   .asciiz "Enter to validate."
 
 ;Fixme put that where it belongs

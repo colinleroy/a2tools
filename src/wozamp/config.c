@@ -20,6 +20,7 @@ char monochrome;
 char enable_video;
 char enable_subtitles;
 char video_size;
+extern unsigned char NUMCOLS;
 
 static FILE *open_config(char *mode) {
   FILE *fp;
@@ -78,7 +79,6 @@ void config(void) {
 
   clrzone(0, PAGE_BEGIN, NUMCOLS - 1, PAGE_BEGIN + PAGE_HEIGHT);
 
-#ifdef __APPLE2ENH__
   cputs("Please choose your keyboard layout:");
   for (c = 0; c < N_CHARSETS; c++) {
     cputs("\r\n"); cutoa(c); cputs(". ");cputs(charsets[c]);
@@ -92,9 +92,6 @@ charset_again:
   } else {
     goto charset_again;
   }
-#else
-  translit_charset = US_CHARSET;
-#endif
 
   cputs("\r\nIs your monitor monochrome? (y/n)\r\n");
   monochrome = get_bool('y', 'n');
@@ -153,9 +150,7 @@ void load_config(void) {
     if (strchr(tmp_buf, '\n')) {
       *strchr(tmp_buf, '\n') = '\0';
     }
-#ifdef __APPLE2ENH__
     translit_charset = strdup(tmp_buf);
-#endif
 
     fgets(tmp_buf, 16, fp);
     monochrome = (tmp_buf[0] != '0');

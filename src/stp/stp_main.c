@@ -38,12 +38,13 @@
 #include "runtime_once_clean.h"
 #include "charsets.h"
 #include "vsdrive.h"
+#include "a2_features.h"
 
-#ifdef __APPLE2ENH__
-char center_x = 30;
-#else
-char center_x = 12;
-#endif
+#define CENTERX_40COLS 12
+#define CENTERX_80COLS 30
+
+unsigned char center_x;
+unsigned char NUMCOLS;
 
 char *translit_charset = US_CHARSET;
 
@@ -102,17 +103,18 @@ void stp_print_footer(void) {
   chline(NUMCOLS);
   clrzone(0, 23, NUMCOLS - 1, 23);
   gotoxy(0, 23);
-#ifdef __APPLE2ENH__
-  cputs("Up/Down/Ret/Esc:nav, S:send (R:all), D:del, A:get all, /:Search");
-  if (search_buf[0]) {
-    cputs(", N:Next");
+
+  if(has_80cols) {
+    cputs("Up/Down/Ret/Esc:nav, S:send (R:all), D:del, A:get all, /:Search");
+    if (search_buf[0]) {
+      cputs(", N:Next");
+    } else {
+      cputs(", M:mkdir");
+    }
+    cputs(", Q:Quit");
   } else {
-    cputs(", M:mkdir");
+    cputs("U/J/Ret/Esc:nav, S:send, Q:quit");
   }
-  cputs(", Q:Quit");
-#else
-  cputs("U/J/Ret/Esc:nav, S:send, Q:quit");
-#endif
 }
 
 void stp_print_result(void) {
@@ -122,6 +124,16 @@ void stp_print_result(void) {
   cprintf("Response code %d - %lu bytes",
           surl_response_code(),
           resp.size);
+}
+
+static void init_ui_width(void) {
+    if (has_80cols) {
+      center_x = CENTERX_80COLS;
+      NUMCOLS = 80;
+    } else {
+      center_x = CENTERX_40COLS;
+      NUMCOLS = 40;
+    }
 }
 
 int main(void) {
@@ -135,7 +147,10 @@ int main(void) {
 
 #ifdef __APPLE2ENH__
   videomode(VIDEOMODE_80COL);
+  has_80cols = 1;
 #endif
+
+  init_ui_width();
 
   clrscr();
 
@@ -198,19 +213,13 @@ up_dir:
         get_all(url, lines, num_lines);
         full_update = 1;
         break;
-#ifdef __APPLE2ENH__
       case CH_CURS_UP:
-#else
       case 'u':
-#endif
         while (l--)
           full_update |= stp_list_scroll(-1);
         goto update_list;
-#ifdef __APPLE2ENH__
       case CH_CURS_DOWN:
-#else
       case 'j':
-#endif
         while (l--)
           full_update |= stp_list_scroll(+1);
         goto update_list;

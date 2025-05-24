@@ -30,9 +30,27 @@
         .import         _simple_serial_getc_with_timeout
         .import         _serial_putc_direct, _strlen
         .import         pushax, popax
+        .import         _is_iieenh
+
+        .constructor    throbber_setup
+
         .importzp       tmp2, ptr3, ptr4
         .include        "apple2.inc"
         .include        "ser-error.inc"
+
+        .segment "DATA"
+
+throbber_char: .byte ('*'|$80)
+
+        .segment "ONCE"
+
+.proc throbber_setup
+        bit     _is_iieenh
+        bpl     :+
+        lda     #'C'
+        sta     throbber_char
+:       rts
+.endproc
 
         .ifdef SURL_TO_LANGCARD
         .segment "LC"
@@ -137,11 +155,7 @@ _serial_throbber_set:
 throbber_on:
         lda     SCRN_THROB
         sta     SCREEN_CONTENTS
-        .ifdef  __APPLE2ENH__
-        lda     #'C'          ; Mousetext Hourglass
-        .else
-        lda     #('*'|$80)
-        .endif
+        lda     throbber_char
         bne     throbber_store
 throbber_off:
         lda     SCREEN_CONTENTS
@@ -150,4 +164,5 @@ throbber_store:
         rts
 
         .bss
+
 SCREEN_CONTENTS:  .byte $00

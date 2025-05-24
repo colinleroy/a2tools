@@ -22,6 +22,7 @@ imgview_CC65SOURCES := \
 	$(SRC_DIR)/../lib/FVTABZ.s \
 	$(SRC_DIR)/../lib/extrazp.s \
 	$(SRC_DIR)/../lib/vsdrive.s \
+	$(SRC_DIR)/../lib/a2_features.s \
 
 imgview_GCCSOURCES := \
 	$(SRC_DIR)/../lib/serial/c/simple_serial.c \

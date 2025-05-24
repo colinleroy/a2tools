@@ -41,6 +41,7 @@
 #include "citoa.h"
 #include "backup_hgrpage.h"
 #include "radio-browser.h"
+#include "a2_features.h"
 
 char *data = (char *)splash_hgr;
 char *nat_data = NULL;
@@ -48,11 +49,11 @@ char *nat_data = NULL;
 char **lines = NULL;
 char **nat_lines = NULL;
 
-#ifdef __APPLE2ENH__
-char center_x = 30;
-#else
-char center_x = 14;
-#endif
+#define CENTERX_40COLS 12
+#define CENTERX_80COLS 30
+
+unsigned char center_x;
+unsigned char NUMCOLS;
 
 extern char **display_lines;
 
@@ -115,34 +116,34 @@ void stp_print_footer(void) {
   clr_footer();
 
   gotoxy(0, 22);
-#ifdef __APPLE2ENH__
-//      "Up,Down,Enter,Esc: Navigate   /: Search                 .-C: Configure");
-//      "A:Play all    R:Random        N: Next     .-S: Server   .-Q: Quit  (12345B free)");
-  cputs("Up,Down,Enter,Esc: Navigate   /: Search                 ");
-  cputc('A'|0x80);                                         cputs("-C: Configure\r\n"
-        "A:Play all    R:Random");
-  if (search_buf[0]) {
-    gotox(30);
-    cputs("N: Next");
+  if (has_80cols) {
+  //      "Up,Down,Enter,Esc: Navigate   /: Search                 .-C: Configure");
+  //      "A:Play all    R:Random        N: Next     .-S: Server   .-Q: Quit  (12345B free)");
+    cputs("Up,Down,Enter,Esc: Navigate   /: Search                 ");
+    cputc('A'|0x80);                                         cputs("-C: Configure\r\n"
+          "A:Play all    R:Random");
+    if (search_buf[0]) {
+      gotox(30);
+      cputs("N: Next");
+    }
+    gotox(42);
+    cputc('A'|0x80);
+    cputs("-S: Server   ");
+    cputc('A'|0x80);
+    cputs("-Q: Quit  (");
+    cutoa(_heapmemavail());
+    cputs("B free)");
+  } else {
+  //      "U,J,Enter,Esc:nav;   /:search;  C:config"
+  //      "A:all; R:rnd; S:srv; N:next;    Q: quit"
+    cputs("U,J,Enter,Esc:nav;   /:search;  C:config"
+          "A:all; R:rnd; S:srv; ");
+    if (search_buf[0]) {
+      cputs(" N:next;");
+    }
+    gotox(32);
+    cputs("Q: quit");
   }
-  gotox(42);
-  cputc('A'|0x80);
-  cputs("-S: Server   ");
-  cputc('A'|0x80);
-  cputs("-Q: Quit  (");
-  cutoa(_heapmemavail());
-  cputs("B free)");
-#else
-//      "U,J,Enter,Esc:nav;   /:search;  C:config"
-//      "A:all; R:rnd; S:srv; N:next;    Q: quit"
-  cputs("U,J,Enter,Esc:nav;   /:search;  C:config"
-        "A:all; R:rnd; S:srv; ");
-  if (search_buf[0]) {
-    cputs(" N:next;");
-  }
-  gotox(32);
-  cputs("Q: quit");
-#endif
 }
 
 #ifdef __CC65__
@@ -283,13 +284,13 @@ static int open_url(char *url, char *filename) {
   cputs(tmp_buf);
 
   if (!got_cover) {
-#ifdef __APPLE2ENH__
-    backup_restore_hgrpage("r");
-    init_hgr(1);
-    hgr_mixon();
-#elif defined(__APPLE2__)
-    init_text();
-#endif
+    if (has_80cols) {
+      backup_restore_hgrpage("r");
+      init_hgr(1);
+      hgr_mixon();
+    } else {
+      init_text();
+    }
   }
 
   //cputs("Spc:pause, Esc:stop, Left/Right:fwd/rew");
@@ -501,31 +502,41 @@ start_again:
   set_scrollwindow(20, NUMROWS);
 
   stp_list_scroll_after_url = 1;
+
+  if (has_80cols) {
+    if (is_iieenh) {
+      gotoxy(80-16-17, 3);
+      cputc('A'|0x80);
+      cputs("-C: Configure, ");
+      cputc('A'|0x80);
+      cputs("-R: RadioBrowser");
+    } else {
+      gotoxy(80-51, 3);
+      cputs("Open-Apple-C: Configure, Open-Apple-R: RadioBrowser");
+    }
+    gotoxy(0, 0);
+    cmd_cb_handled = 0;
 #ifdef __APPLE2ENH__
-  gotoxy(80-16-17, 3);
-  cputc('A'|0x80);
-  cputs("-C: Configure, ");
-  cputc('A'|0x80);
-  cputs("-R: RadioBrowser");
-  gotoxy(0, 0);
-  cmd_cb_handled = 0;
-  do_radio_browser = 0;
-  url = stp_get_start_url("Please enter an FTP server or internet stream URL.\r\n",
-                        "http://relay.radiofreefedi.net/listen/rff/rff.mp3",
-                        cmd_cb);
-  if (do_radio_browser) {
-    search_buf[0] = '\0';
-    radio_browser_ui();
-    goto start_again;
-  }
-#else
-  gotoxy(40-39, 3);
-  cputs("Ctrl-C: Configure, Ctrl-R: RadioBrowser");
-  gotoxy(0, 0);
-  url = stp_get_start_url("Please enter an FTP or internet stream\r\n",
-                        "http://relay.radiofreefedi.net/listen/rff/rff.mp3",
-                        cmd_cb);
+    do_radio_browser = 0;
 #endif
+    url = stp_get_start_url("Please enter an FTP server or internet stream URL.\r\n",
+                          "http://relay.radiofreefedi.net/listen/rff/rff.mp3",
+                          cmd_cb);
+#ifdef __APPLE2ENH__
+    if (do_radio_browser) {
+      search_buf[0] = '\0';
+      radio_browser_ui();
+      goto start_again;
+    }
+#endif
+  } else {
+    gotoxy(40-39, 3);
+    cputs("Ctrl-C: Configure, Ctrl-R: RadioBrowser");
+    gotoxy(0, 0);
+    url = stp_get_start_url("Please enter an FTP or internet stream\r\n",
+                          "http://relay.radiofreefedi.net/listen/rff/rff.mp3",
+                          cmd_cb);
+  }
 
   set_scrollwindow(0, NUMROWS);
   clrscr();
@@ -615,23 +626,17 @@ up_dir:
         rec_level = 0;
         url = play_directory(PLAY_RANDOM, url);
         break;
-#ifdef __APPLE2ENH__
       case CH_CURS_UP:
       case CH_CURS_UP|0x80:
-#else
       case 'u':
       case 'u'|0x80:
-#endif
         while (l--)
           full_update |= stp_list_scroll(-1);
         goto update_list;
-#ifdef __APPLE2ENH__
       case CH_CURS_DOWN:
       case CH_CURS_DOWN|0x80:
-#else
       case 'j':
       case 'j'|0x80:
-#endif
         while (l--)
           full_update |= stp_list_scroll(+1);
         goto update_list;
@@ -639,32 +644,23 @@ up_dir:
         stp_list_search(1);
         stp_print_header(NULL, URL_RESTORE);
         goto keyb_input;
-#ifdef __APPLE2ENH__
       case 'c'|0x80:
-#else
       case 'c':
-#endif
         config();
         break;
       case 'n':
         stp_list_search(0);
         goto keyb_input;
-#ifdef __APPLE2ENH__
       case 's'|0x80:
-#else
       case 's':
-#endif
 restart_ui:
         free(url);
         stp_free_data();
         backup_restore_hgrpage("r");
         url = start_url_ui();
         break;
-#ifdef __APPLE2ENH__
       case 'q'|0x80:
-#else
       case 'q':
-#endif
         exit(0);
       default:
         goto keyb_input;
@@ -704,6 +700,16 @@ static void do_setup(void) {
   do_nav(url);
 }
 
+static void init_ui_width(void) {
+    if (has_80cols) {
+      center_x = CENTERX_80COLS;
+      NUMCOLS = 80;
+    } else {
+      center_x = CENTERX_40COLS;
+      NUMCOLS = 40;
+    }
+}
+
 void main(void) {
   char *url = NULL;
 
@@ -713,7 +719,10 @@ void main(void) {
 
 #ifdef __APPLE2ENH__
   videomode(VIDEOMODE_80COL);
+  has_80cols = 1;
 #endif
+
+  init_ui_width();
   serial_throbber_set((void *)0x07F7);
 
   clrscr();

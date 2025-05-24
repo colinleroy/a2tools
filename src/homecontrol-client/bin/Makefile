@@ -36,6 +36,7 @@ homectrl_CL65SOURCES = \
 	$(SRC_DIR)/../lib/citoa.s \
 	$(SRC_DIR)/../lib/cutoa.s \
 	$(SRC_DIR)/../lib/cntoabuf.s \
+	$(SRC_DIR)/../lib/a2_features.s
 
 homectrl_GCCSOURCES = \
 	$(SRC_DIR)/../lib/serial/c/simple_serial.c \
@@ -65,6 +66,7 @@ grphview_CL65SOURCES = \
 	$(SRC_DIR)/../lib/asm/clrzone.s \
 	$(SRC_DIR)/../lib/asm/malloc0.s \
 	$(SRC_DIR)/../lib/extrazp.s \
+	$(SRC_DIR)/../lib/a2_features.s \
 	$(SRC_DIR)/../lib/FVTABZ.s
 
 grphview_GCCSOURCES := \
