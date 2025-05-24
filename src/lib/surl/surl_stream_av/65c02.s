@@ -81,6 +81,8 @@
 .include "constants.inc"
 .include "zp-variables.inc"
 .include "cycle-wasters.inc"
+
+.define STREAMER_65C02
 ; -----------------------------------------------------------------------------
 ; CPU-specific constant and macros
 

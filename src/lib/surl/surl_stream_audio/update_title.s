@@ -7,7 +7,7 @@ update_title:
         lda     title_addr+1
         sta     BASH
         lda     #0
-:       sta     CH              ; Ignore OURCH here, it's not a problem.
+        sta     CH              ; Ignore OURCH here, it's not a problem.
 
         ldx     numcols         ; Reset char counter
 

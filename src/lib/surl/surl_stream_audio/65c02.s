@@ -18,6 +18,7 @@
 .include "zp-variables.inc"
 .include "cycle-wasters.inc"
 
+.define STREAMER_65C02
 ; -----------------------------------------------------------------------------
 ; CPU-specific constant and macros
 .macro ____SPKR_DUTY____4       ; Toggle speaker

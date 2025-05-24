@@ -72,7 +72,7 @@ setup:
         sta     next_offset
         sta     cancelled
 
-        .ifndef __APPLE2ENH__
+        .ifndef STREAMER_65C02
         sta     next            ; Clear low byte of next pointer
         .endif
 

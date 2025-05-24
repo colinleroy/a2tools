@@ -6,7 +6,7 @@ s30:    lda     ser_status      ; 8     Check serial
         beq     :+              ; 13/14
 d30:    ldx     ser_data        ; 17    Load serial
 
-.ifdef __APPLE2ENH__
+.ifdef STREAMER_65C02
         lda     next,x          ; 21    Update target
         sta     dest30+1        ; 25
         inx                     ; 27

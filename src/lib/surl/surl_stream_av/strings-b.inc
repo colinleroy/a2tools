@@ -1,4 +1,4 @@
-.ifdef __APPLE2ENH__
+.ifdef STREAMER_65C02
 controls_str:     .byte "Loading...",$0D,$0A
                   .byte "Controls: Space:      Play/Pause,             Esc:     Quit player,",$0D,$0A
                   .byte "          Left/Right: Rewind/Forward 10s,     Up/Down: Rewind/Forward 1m",$0D,$0A
