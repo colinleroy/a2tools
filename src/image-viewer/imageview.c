@@ -69,10 +69,6 @@ static int open_port(char port_num) {
     }
   }
 
-#ifdef __CC65__
-  simple_serial_set_flow_control(SER_HS_NONE);
-#endif
-
 open_again:
   if (port_num == ser_params.printer_slot) {
     printer_opened = (simple_serial_open_printer() == 0);
