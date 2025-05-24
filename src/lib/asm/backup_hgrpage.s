@@ -15,7 +15,8 @@
         stx     ptr1+1
         ldy     #$00
         lda     (ptr1),y
-.ifdef __APPLE2ENH__
+
+        pha                       ; Backup for later
         cmp     #'w'
         beq     set_write
 set_read:
@@ -44,6 +45,9 @@ io_mode:
         jsr     _open
         cmp     #$FF
         bne     :+
+        pla                       ; Open failed, pop
+        cmp     #'r'              ; Fallback to clear page if read
+        beq     no_ramcard_fallback
         rts
 
 :
@@ -55,9 +59,11 @@ io_mode:
 io_func:
         jsr     $FFFF             ; Patched with _read or _write
 
+        pla                       ; Pop mode backup
         jsr     popax
         jmp     _close
-.else
+
+no_ramcard_fallback:
         cmp     #'r'
         beq     :+
         rts
@@ -65,7 +71,6 @@ io_func:
         ldx     #>$2000
         jsr     pushax
         jmp     _bzero
-.endif
 .endproc
 
 .proc unlink_backup_hgrpage
