@@ -492,11 +492,11 @@ static void set_cursor(void) {
   if (curs_x == 255) {
     // curs_x = wherex();
     // curs_y = wherey();
-#ifdef __APPLE2ENH__
-    __asm__("lda "OURCH);
-#else
     __asm__("lda "CH);
-#endif
+    __asm__("bit %v", has_80cols);
+    __asm__("bpl %g", set40a);
+    __asm__("lda "OURCH);
+    set40a:
     __asm__("sta %v", curs_x);
     __asm__("lda "CV);
     __asm__("sta %v", curs_y);
@@ -509,11 +509,11 @@ static void set_cursor(void) {
      * cursor to trigger scrolling */
     // cputcxy(curs_x, curs_y, 0x7F);
     __asm__("lda %v", curs_x);
-#ifdef __APPLE2ENH__
-    __asm__("sta "OURCH);
-#else
     __asm__("sta "CH);
-#endif
+    __asm__("bit %v", has_80cols);
+    __asm__("bpl %g", set40b);
+    __asm__("sta "OURCH);
+    set40b:
     __asm__("lda %v", curs_y);
     __asm__("sta "CV);
     __asm__("jsr FVTABZ");
@@ -522,11 +522,11 @@ static void set_cursor(void) {
   } else if (cursor_blinker == 1501){
     // cputcxy(curs_x, curs_y, ch_at_curs);
     __asm__("lda %v", curs_x);
-#ifdef __APPLE2ENH__
-    __asm__("sta "OURCH);
-#else
     __asm__("sta "CH);
-#endif
+    __asm__("bit %v", has_80cols);
+    __asm__("bpl %g", set40c);
+    __asm__("sta "OURCH);
+    set40c:
     __asm__("lda %v", curs_y);
     __asm__("sta "CV);
     __asm__("jsr FVTABZ");
