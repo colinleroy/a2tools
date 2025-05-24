@@ -19,8 +19,8 @@
 #include "qt-edit-image.h"
 #include "qt-serial.h"
 #include "qt-state.h"
-
 #include "runtime_once_clean.h"
+#include "a2_features.h"
 
 uint8 scrw, scrh;
 uint8 camera_connected;
@@ -367,9 +367,7 @@ static uint8 setup(int argc, char *argv[]) {
 #endif
   register_start_device();
 
-#ifdef __APPLE2ENH__
-  videomode(VIDEOMODE_80COL);
-#endif
+  try_videomode(VIDEOMODE_80COL);
 
 // Start decoding right away when debugging decoders
 #ifdef DEBUG_HD

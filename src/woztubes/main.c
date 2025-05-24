@@ -42,6 +42,7 @@
 #include "citoa.h"
 #include "video_providers.h"
 #include "backup_hgrpage.h"
+#include "a2_features.h"
 
 char *url = NULL;
 
@@ -475,10 +476,9 @@ again:
 int main(void) {
 
   load_hgr_mono_file(2);
-#ifdef __APPLE2ENH__
-  videomode(VIDEOMODE_80COL);
+
+  try_videomode(VIDEOMODE_80COL);
   backup_restore_hgrpage("w");
-#endif
 
   serial_throbber_set((void *)0x07F7);
 

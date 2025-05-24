@@ -24,6 +24,7 @@
 #include "scrollwindow.h"
 #include "vsdrive.h"
 #include "hyphenize.h"
+#include "a2_features.h"
 
 char *instance_url = NULL;
 char *oauth_token = NULL;
@@ -570,9 +571,7 @@ int main(int argc, char **argv) {
 
   register_start_device();
 
-#ifdef __APPLE2ENH__
-  videomode(VIDEOMODE_80COL);
-#endif
+  try_videomode(VIDEOMODE_80COL);
 
   instance_url = argv[1];
   oauth_token = argv[2];

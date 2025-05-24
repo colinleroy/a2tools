@@ -22,6 +22,8 @@
         .import         _cgetc, _cputs, _gotoxy
         .import         _strrchr, _memcpy, _strlen
 
+        .import         _has_80cols
+
         .import         pusha, pushax, pushptr1, tosaddax
         .importzp       ptr1, tmp1
 
@@ -120,18 +122,11 @@ _reopen_start_device:
 
 @prompt:
         jsr       _clrscr
-.ifdef __APPLE2ENH__
-        lda       #((80-53)/2)
-        jsr       pusha
-        lda       #12
-        jsr       _gotoxy
-
-        lda      #<prompt_str
-        ldx      #>prompt_str
-        jsr      _cputs
-.else
         lda       #((40-33)/2)
-        jsr       pusha
+        bit       _has_80cols
+        bpl       :+
+        lda       #((80-33)/2)
+:       jsr       pusha
         lda       #12
         jsr       _gotoxy
 
@@ -140,12 +135,14 @@ _reopen_start_device:
         jsr      _cputs
 
         lda      #((40-19)/2)
-        sta      CH
+        bit       _has_80cols
+        bpl       :+
+        lda      #((80-19)/2)
+:       sta      CH
         lda      #<prompt_str2
         ldx      #>prompt_str2
         jsr      _cputs
 
-.endif
         jsr      _cgetc
         jmp      _reopen_start_device
 
@@ -155,9 +152,5 @@ start_dir: .res FILENAME_MAX+1
 
         .rodata
 
-.ifdef __APPLE2ENH__
-prompt_str: .asciiz "Please reinsert the program disk, then press any key."
-.else
 prompt_str1: .byte "Please reinsert the program disk,",$0D,$0A,$00
 prompt_str2: .asciiz "then press any key."
-.endif

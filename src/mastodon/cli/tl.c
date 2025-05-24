@@ -24,6 +24,7 @@
 #include "dget_text.h"
 #include "scrollwindow.h"
 #include "runtime_once_clean.h"
+#include "a2_features.h"
 
 #ifdef __CC65__
 #pragma code-name (push, "LC")
@@ -1374,10 +1375,10 @@ int main(int argc, char **argv) {
 
   register_start_device();
 
-#ifdef __APPLE2ENH__
-  serial_throbber_set((void *)0x07D8);
-  videomode(VIDEOMODE_80COL);
-#endif
+  try_videomode(VIDEOMODE_80COL);
+  if (has_80cols) {
+    serial_throbber_set((void *)0x07D8);
+  }
 
   instance_url     = argv[1];
   oauth_token      = argv[2];

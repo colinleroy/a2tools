@@ -35,6 +35,7 @@
 #include "dputc.h"
 #include "scroll.h"
 #include "math.h"
+#include "a2_features.h"
 
 #define DEBUG_PRINTF(...) do {} while (0)
 //#define DEBUG_PRINTF printf
@@ -582,9 +583,7 @@ int main(int argc, char **argv) {
   int r;
   //DEBUG int loop_wait = 0;
 
-#ifdef __APPLE2ENH__
-  videomode(VIDEOMODE_80COL);
-#endif
+  try_videomode(VIDEOMODE_80COL);
   screensize(&scrw, &scrh);
   get_scrollwindow(&top_line, &btm_line);
 

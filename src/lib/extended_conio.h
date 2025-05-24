@@ -31,9 +31,6 @@
   #define cvline(a) do {} while(0)
   #define cprintf printf
   #define revers(x) do {} while(0)
-  #define videomode(x) do {} while(0)
-  #define VIDEOMODE_40COL 1
-  #define VIDEOMODE_80COL 1
 
   void clrscr(void);
   void gotoxy(int x, int y);

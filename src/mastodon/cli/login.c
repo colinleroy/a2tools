@@ -39,6 +39,7 @@
 #include "runtime_once_clean.h"
 #include "config.h"
 #include "login_data.h"
+#include "a2_features.h"
 
 unsigned char scrw, scrh;
 
@@ -152,9 +153,7 @@ int main(int argc, char **argv) {
   _filetype = PRODOS_T_TXT;
 #endif
 
-#ifdef __APPLE2ENH__
-  videomode(VIDEOMODE_80COL);
-#endif
+  try_videomode(VIDEOMODE_80COL);
   screensize(&scrw, &scrh);
 
   clrscr();

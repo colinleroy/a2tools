@@ -145,10 +145,7 @@ int main(void) {
   search_buf[0] = '\0';
   tmp_buf[0] = '\0';
 
-#ifdef __APPLE2ENH__
-  videomode(VIDEOMODE_80COL);
-  has_80cols = 1;
-#endif
+  try_videomode(VIDEOMODE_80COL);
 
   init_ui_width();
 

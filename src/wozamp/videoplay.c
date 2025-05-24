@@ -13,6 +13,7 @@
 #include "config.h"
 #include "splash-video.h"
 #include "scrollwindow.h"
+#include "a2_features.h"
 
 char *translit_charset;
 char monochrome = 1;
@@ -28,9 +29,7 @@ int main(void) {
 
   screensize(&scrw, &scrh);
 
-#ifdef __APPLE2ENH__
-  videomode(VIDEOMODE_80COL);
-#endif
+  try_videomode(VIDEOMODE_80COL);
 
   url_fp = fopen(URL_PASSER_FILE, "r");
   surl_connect_proxy();

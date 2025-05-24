@@ -44,6 +44,7 @@ slowtake_CC65SOURCES := \
 	$(SRC_DIR)/../lib/platform_sleep.s \
 	$(SRC_DIR)/../lib/extrazp.s \
 	$(SRC_DIR)/../lib/runtime_once_clean.s \
+	$(SRC_DIR)/../lib/a2_features.s \
 
 slowtake_GCCSOURCES := \
 	$(SRC_DIR)/../lib/serial/c/simple_serial.c \
@@ -64,6 +65,7 @@ qtktconv_CC65SOURCES := \
 	$(SRC_DIR)/qtkt.s \
 	$(SRC_DIR)/../lib/asm/path_helper.s \
 	$(SRC_DIR)/../lib/extrazp.s \
+	$(SRC_DIR)/../lib/a2_features.s \
 	$(SRC_DIR)/../lib/check_floppy.s
 
 qtktconv_GCCSOURCES := \
@@ -81,6 +83,7 @@ qtknconv_CC65SOURCES := \
 	$(SRC_DIR)/../lib/mult16x16x32.s \
 	$(SRC_DIR)/../lib/approxdiv16x8.s \
 	$(SRC_DIR)/../lib/square_table.s \
+	$(SRC_DIR)/../lib/a2_features.s \
 	$(SRC_DIR)/../lib/check_floppy.s
 	
 qtknconv_GCCSOURCES := \
@@ -95,6 +98,7 @@ jpegconv_CC65SOURCES := \
 	$(SRC_DIR)/jpeg_platform.s \
 	$(SRC_DIR)/../lib/asm/path_helper.s \
 	$(SRC_DIR)/../lib/extrazp.s \
+	$(SRC_DIR)/../lib/a2_features.s \
 	$(SRC_DIR)/../lib/check_floppy.s
 
 jpegconv_GCCSOURCES := \

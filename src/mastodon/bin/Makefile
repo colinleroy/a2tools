@@ -46,8 +46,8 @@ mastoimg_SOURCES := \
 	$(SRC_DIR)/../lib/dget_text_single.c
 
 mastoimg_CC65SOURCES := \
-	$(SRC_DIR)/../lib/a2_features.s \
 	$(SRC_DIR)/../lib/surl/surl_stream_av/$(CPU).s \
+	$(SRC_DIR)/../lib/a2_features.s \
 	$(SRC_DIR)/../lib/asm/hgr_mono40.s
 
 mastoimg_CC65SOURCES := \

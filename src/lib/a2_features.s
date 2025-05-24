@@ -5,8 +5,12 @@
 ;
 
         .export         _is_iigs, _is_iieenh, _has_80cols
+        .export         _try_videomode
 
-        .import         ostype
+        .export         machinetype ; FIXME remove once in cc65
+        .export         CH_VLINE    ; FIXME id
+
+        .import         ostype, _videomode
         .constructor    _init_features, 8
 
         .include        "apple2.inc"
@@ -17,15 +21,24 @@
 
 _is_iigs:     .byte $00
 _is_iieenh:   .byte $00
+_has_80cols:  .byte $00
 
 ; FIXME: Update once cc65 gets dynamic 80cols feature
 .ifdef __APPLE2ENH__
-_has_80cols: .byte $80
+
+; bit 7: Machine is a //e or newer
+; bit 6: Machine is a //e enhanced or newer
+machinetype: .byte %11000000
+CH_VLINE:    .byte $DF
+
 .else
-_has_80cols: .byte $00
+
+machinetype: .byte $00
+CH_VLINE:    .byte '!'
+
 .endif
 
-        .segment        "ONCE"
+        .segment "ONCE"
 
 _init_features:
         lda     ostype
@@ -38,3 +51,24 @@ _init_features:
         rol                   ; High bit to carry
         ror     _is_iigs      ; carry to flag high bit
         rts
+
+        .segment "CODE"
+
+.proc _try_videomode
+        ldy     #$00
+        cmp     #$15
+        beq     :+
+        ldy     #$FF
+:       sty     _has_80cols
+
+.ifdef __APPLE2ENH__
+        jsr     _videomode
+.else
+        lda     #$FF            ; FIXME pretend we failed
+.endif
+        cmp     #$FF
+        bne     :+
+        eor     _has_80cols
+        sta     _has_80cols
+:       rts
+.endproc

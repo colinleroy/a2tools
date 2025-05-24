@@ -157,9 +157,8 @@ int main(int argc, char **argv) {
   media *m = NULL;
   char i, c;
 
-#ifdef __APPLE2ENH__
-  videomode(VIDEOMODE_80COL);
-#endif
+  try_videomode(VIDEOMODE_80COL);
+
 #ifdef __CC65__
   /* Leave 0x800-0xC00 for iobuf */
   _heapadd ((void *) 0x0C00, 0x13FF);

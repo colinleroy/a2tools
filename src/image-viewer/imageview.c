@@ -16,6 +16,7 @@
 #include "simple_serial.h"
 #include "clrzone.h"
 #include "vsdrive.h"
+#include "a2_features.h"
 
 uint8 scrw, scrh;
 #ifndef __CC65__
@@ -293,7 +294,7 @@ int main(int argc, char *argv[]) {
   const char *filename = NULL;
   register_start_device();
 
-  videomode(VIDEOMODE_80COL);
+  try_videomode(VIDEOMODE_80COL);
   screensize(&scrw, &scrh);
 #ifndef __CC65__
   scrw = 80; scrh = 24;

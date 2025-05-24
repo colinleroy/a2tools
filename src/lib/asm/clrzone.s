@@ -1,6 +1,6 @@
 
                 .export _clreol, _clrzone
-                .import FVTABZ, cputdirect
+                .import FVTABZ, cputdirect, machinetype
                 .import incsp3
                 .importzp sp
                 .include "apple2.inc"
@@ -9,12 +9,14 @@
 
 _clreol:
         lda     CH
-.ifdef __APPLE2ENH__
+
+        bit     machinetype
+        bpl     :+
         bit     RD80VID
         bpl     :+
         lda     OURCH
 :
-.endif
+
         sta     clr_lxs
         pha                     ; Backup start X
         lda     CV
@@ -62,10 +64,10 @@ update_screen:
 next_line:
         jsr     FVTABZ
         lda     clr_lxs
-.ifdef __APPLE2ENH__
+        bit     machinetype
+        bpl     :+
         sta     OURCH
-.endif
-        sta     CH
+:       sta     CH
 
         ; (backup CV in case it's last column of scrollwindow)
         lda     CV
@@ -74,29 +76,24 @@ next_line:
 next_char:
         lda     #' '|$80
         jsr     cputdirect
-.ifdef __APPLE2ENH__
+
+        bit     machinetype
+        bpl     get40
         bit     RD80VID
         bpl     get40
         lda     OURCH
-        bra     cmp_char
+        jmp     cmp_char
 get40:
         lda     CH
 cmp_char:
-.else
-        lda     CH
-.endif
         beq     :+            ; If 0, we wrapped. Go check if last line.
         cmp     clr_lxe
         bcc     next_char     ; last X?
         beq     next_char
 
 :       pla
-        .ifdef __APPLE2ENH__
-        inc     a
-        .else
         clc
         adc     #1
-        .endif
         sta     CV
         cmp     clr_lye
         bcc     next_line
@@ -106,10 +103,10 @@ cmp_char:
         sta     CV
         jsr     FVTABZ
         pla
-.ifdef __APPLE2ENH__
+        bit     machinetype
+        bpl     :+
         sta     OURCH
-.endif
-        sta     CH
+:       sta     CH
         rts
         .bss
 

@@ -29,7 +29,9 @@
         .import         _cgetc, _cputc, _tolower, _beep
         .import         tosumula0, tosaddax, booleq
         .import         popa, popax, pusha0, pusha, pushax, swapstk, incaxy
-        .import         return0
+        .import         return0, machinetype
+
+        .import         CH_VLINE
 
         .importzp       _zp6, _zp8
         .include        "apple2.inc"
@@ -240,9 +242,8 @@ _zp8_is_dir:
 .endproc
 
 .proc _start_line
-        lda       #<VBAR
-        ldx       #>VBAR
-        jmp       _cputs
+        lda       CH_VLINE
+        jmp       _cputc
 .endproc
 
 .proc _end_line
@@ -410,10 +411,12 @@ gotox_sx:
 
         ; Nothing to display
         jsr       gotox_sx
-        lda       #<VBAR_STAR
-        ldx       #>VBAR_STAR
+        jsr       _start_line
+        lda       #<star_str
+        ldx       #>star_str
         jsr       _cputs
 
+        jsr       _start_line
         lda       dir_only
         beq       :+
         lda       #<no_dir_str
@@ -427,6 +430,7 @@ gotox_sx:
         jsr       gotox_sx
         jsr       _empty_line
         jsr       gotox_sx
+        jsr       _start_line
         lda       #<any_key_up_str
         ldx       #>any_key_up_str
         jsr       _cputs
@@ -469,8 +473,7 @@ gotox_sx:
         jsr       _revers
 
         jsr       gotox_sx              ; Put vbar
-        lda       #VBAR_ASC
-        jsr       _cputc
+        jsr       _start_line
         lda       #' '
         jsr       _cputc
 
@@ -502,16 +505,12 @@ gotox_sx:
         jsr       gotox_sx
         jsr       _empty_line
         jsr       gotox_sx
+        jsr       _start_line
         lda       #<nav_str
         ldx       #>nav_str
         jsr       _cputs
-        .ifndef __APPLE2ENH__
         jsr       gotox_sx
-        lda       #<refresh_str
-        ldx       #>refresh_str
-        jsr       _cputs
-        .endif
-        jsr       gotox_sx
+        jsr       _start_line
         lda       #<enter_escape_str
         ldx       #>enter_escape_str
         jsr       _cputs
@@ -561,9 +560,13 @@ gotox_sx:
         jmp       @out
 
 @check_ch_curs_down:
-        cmp       #CURS_DOWN
+        cmp       #$0A
+        beq       :+
+        cmp       #'j'
+        beq       :+
+        cmp       #'J'
         bne       @check_ch_curs_up
-        inc       cur_sel
+:       inc       cur_sel
         lda       cur_sel
         cmp       num_entries
         bne       :+
@@ -572,9 +575,13 @@ gotox_sx:
 :       jmp       @disp_again
 
 @check_ch_curs_up:
-        cmp       #CURS_UP
+        cmp       #$0B
+        beq       :+
+        cmp       #'u'
+        beq       :+
+        cmp       #'U'
         bne       @no_match
-        lda       cur_sel
+:       lda       cur_sel
         bne       :+
 
         ldy       num_entries
@@ -606,26 +613,10 @@ please_wait_str:              .asciiz "Please wait..."
 no_dir_str:                   .asciiz "No directory*"
 empty_str:                    .asciiz "Empty*"
 
-        .ifdef __APPLE2ENH__
-VBAR_ASC = $DF
-CURS_DOWN = $0A
-CURS_UP   = $0B
-VBAR:                         .byte $DF,$00
-VBAR_STAR:                    .byte $DF," *",$00
-nav_str:                      .byte $DF,"  Up/Down / Left/Right: navigate;", $0D,$0A,$00
-any_key_up_str:               .byte $D4,$5F," Any key to go up", $00
-enter_escape_str:             .byte $D4,$5F," Enter: choose; Esc: cancel; R: refresh", $00
-        .else
-VBAR_ASC = '!'
-CURS_DOWN = 'j'
-CURS_UP   = 'u'
-VBAR:                         .asciiz "!"
-VBAR_STAR:                    .asciiz "! *"
-nav_str:                      .byte   "!  U/J / Left/Right: navigate;", $0D,$0A,$00
-refresh_str:                  .byte   "!  R: refresh;", $0D,$0A,$00
-any_key_up_str:               .asciiz "!_ Any key to go up"
-enter_escape_str:             .asciiz "!_ Enter: choose; Esc: cancel"
-        .endif
+star_str:                     .asciiz " *"
+nav_str:                      .byte   "Arrows: nav; R: refresh", $0D,$0A,$00
+any_key_up_str:               .asciiz "Any key to go up"
+enter_escape_str:             .asciiz "Enter: choose; Esc: cancel"
 EOL:                          .byte $0D,$0A,$00
 
         .bss

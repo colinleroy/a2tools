@@ -42,6 +42,7 @@
 #include "path_helper.h"
 #include "progress_bar.h"
 #include "check_floppy.h"
+#include "a2_features.h"
 
 #ifdef __CC65__
   #pragma static-locals(push, on)
@@ -431,7 +432,7 @@ int main (int argc, const char **argv)
   register_start_device();
 
 #ifdef __CC65__
-  videomode(VIDEOMODE_80COL);
+  try_videomode(VIDEOMODE_80COL);
   printf("Free memory: %zu/%zuB\n", _heapmaxavail(), _heapmemavail());
 #endif
 
