@@ -122,12 +122,8 @@ void init_hgr_base_addrs (void)
     __asm__("sta ptr1+1");
     __asm__("lda #7");
     __asm__("sta ptr4");
-#ifdef __APPLE2ENH__
-    __asm__("stz ptr4+1");
-#else
     __asm__("lda #0");
     __asm__("sta ptr4+1");
-#endif
     __asm__("jsr udiv16");
     __asm__("lda ptr1");
 

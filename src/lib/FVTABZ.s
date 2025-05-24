@@ -9,6 +9,8 @@
         .include        "apple2.inc"
 .ifndef AVOID_ROM_CALLS
         .import         VTABZ
+.else
+        .import         machinetype
 .endif
 
         .data
@@ -74,11 +76,7 @@ NLINES: .res 1
         .code
 
 FVTABZ:
-        .ifdef __APPLE2ENH__
-        phx
-        .else
         stx     tmp1
-        .endif
 
         cmp     #24
         bcc     :+
@@ -88,6 +86,8 @@ FVTABZ:
         lda     FBASH,x
         sta     BASH
         lda     WNDLFT
+        bit     machinetype
+        bpl     colforty
         bit     RD80VID
         bpl     colforty
         lsr     a
@@ -95,11 +95,7 @@ FVTABZ:
 colforty:
         adc     FBASL,x
         sta     BASL
-       .ifdef __APPLE2ENH__
-        plx
-        .else
         ldx     tmp1
-        .endif
         rts
 
 .else
