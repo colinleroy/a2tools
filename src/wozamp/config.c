@@ -19,6 +19,7 @@ char monochrome;
 char enable_video;
 char enable_subtitles;
 char video_size;
+char is_iigs = 0;
 
 static FILE *open_config(char *mode) {
   FILE *fp;
@@ -98,20 +99,20 @@ charset_again:
   cputs("\r\nIs your monitor monochrome? (y/n)\r\n");
   monochrome = get_bool('y', 'n');
 
-#ifndef IIGS
-  cputs("\r\nEnable video playback? (y/n)\r\n");
-  enable_video = get_bool('y', 'n');
+  if (!is_iigs) {
+    cputs("\r\nEnable video playback? (y/n)\r\n");
+    enable_video = get_bool('y', 'n');
 
-  cputs("\r\nVideo size (Small - more FPS / Large - less FPS)? (s/l)\r\n");
-  video_size = get_bool('s' /* HGR_SCALE_HALF */, 'l' /* HGR_SCALE_FULL */);
+    cputs("\r\nVideo size (Small - more FPS / Large - less FPS)? (s/l)\r\n");
+    video_size = get_bool('s' /* HGR_SCALE_HALF */, 'l' /* HGR_SCALE_FULL */);
 
-  cputs("\r\nEnable subtitles? (y/n)\r\n");
-  enable_subtitles = get_bool('y', 'n');
-#else
-  enable_video = 0;
-  video_size = 0;
-  enable_subtitles = 0;
-#endif
+    cputs("\r\nEnable subtitles? (y/n)\r\n");
+    enable_subtitles = get_bool('y', 'n');
+  } else {
+    enable_video = 0;
+    video_size = 0;
+    enable_subtitles = 0;
+  }
 
   save_config();
 }
@@ -135,13 +136,12 @@ void load_config(void) {
 
   translit_charset = US_CHARSET;
   monochrome = 0;
-  video_size = HGR_SCALE_HALF;
-#ifndef IIGS
-  enable_video = 1;
-#else
-  enable_video = 0;
-#endif
+
+  is_iigs = (get_ostype() >= APPLE_IIGS);
+
+  enable_video = !is_iigs;
   enable_subtitles = SUBTITLES_AUTO;
+  video_size = HGR_SCALE_HALF;
 
   cputs("Loading config...\r\n");
   fp = open_config("r");
@@ -163,18 +163,17 @@ void load_config(void) {
     monochrome = (tmp_buf[0] != '0');
 
     fgets(tmp_buf, 16, fp);
-#ifndef IIGS
     enable_video = (tmp_buf[0] != '0');
-#endif
 
     fgets(tmp_buf, 16, fp);
-#ifndef IIGS
     enable_subtitles = (tmp_buf[0] != '0');
-#endif
+
     fgets(tmp_buf, 16, fp);
-#ifndef IIGS
     video_size = (tmp_buf[0]-'0');
-#endif
+
+    if (is_iigs) {
+      enable_video = 0;
+    }
 
     fclose(fp);
   }

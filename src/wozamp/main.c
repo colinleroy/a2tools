@@ -224,7 +224,6 @@ static char cmd_cb(char c) {
   return 0;
 }
 
-#ifndef IIGS
 static void print_err(const char *file) {
   init_text();
   clrscr();
@@ -233,7 +232,6 @@ static void print_err(const char *file) {
   cputs(": ");
   citoa(errno);
 }
-#endif
 
 static int open_url(char *url, char *filename) {
   char r;
@@ -257,14 +255,11 @@ static int open_url(char *url, char *filename) {
       }
       goto out;
     } else if (!strncmp(content_type, "video/", 6)) {
-#ifndef IIGS
       if (!in_list && enable_video) {
         has_video = 1;
         goto do_video;
       }
-#else
       /* Fallthrough to audio */
-#endif
     } else if (!strncmp(content_type, "audio/", 6)) {
       /* fallthrough to audio */
     } else if (!strcmp(content_type, "application/octet-stream")) {
@@ -346,7 +341,6 @@ read_metadata_again:
     goto read_metadata_again;
 
   } else if (r == SURL_ANSWER_STREAM_START) {
-#ifndef IIGS
 do_video:
     if (has_video && !in_list && enable_video) {
       FILE *video_url_fp = fopen(URL_PASSER_FILE, "w");
@@ -371,7 +365,6 @@ do_video:
       return 0;
     }
 novid:
-#endif
 #ifdef __APPLE2__
     cancelled = surl_stream_audio(NUMCOLS, 20, 2, 23);
     init_text();
