@@ -94,45 +94,8 @@ static void set_legend(char *str, unsigned char idx, unsigned char num_images) {
   show_help();
 }
 
-#if defined(__CC65__) && defined(IIGS)
-static void stream_msg(char *msg) {
-  hgr_mixon();
-  clrscr();
-  gotoxy(0, 21);
-  cputs(msg);
-}
-
-int __fastcall__ surl_stream_av(char *unused, char *url) {
-#ifdef __APPLE2ENH__
-  videomode(VIDEOMODE_40COL);
-#endif
-  toggle_legend(0);
-  stream_msg("Play/Pause : Space\r\n"
-             "Quit viewer: Esc\r\n"
-             "Loading...   ");
-  init_hgr(1);
-  hgr_mixon();
-
-  surl_start_request(NULL, 0, url, SURL_METHOD_STREAM_VIDEO);
-
-  if (surl_wait_for_stream() != 0 || surl_stream_video() != 0) {
-#ifdef __APPLE2ENH__
-    videomode(VIDEOMODE_80COL);
-#endif
-    stream_msg("\r\n\r\nRequest failed. Press Esc to exit or another key to restart.");
-    hgr_mixon();
-  } else {
-#ifdef __APPLE2ENH__
-    videomode(VIDEOMODE_80COL);
-#endif
-    stream_msg("\r\n\r\nStream done. Press Esc to exit or another key to restart.");
-  }
-  return 0;
-}
-#else
 char enable_subtitles = SUBTITLES_AUTO;
 char video_size = HGR_SCALE_HALF;
-#endif
 
 static void img_display(media *m, char idx, char num_images) {
   size_t len;
@@ -243,6 +206,10 @@ int main(int argc, char **argv) {
 #ifdef __CC65__
     bzero((char *)HGR_PAGE, HGR_LEN);
     clrscr();
+    if (get_ostype() >= APPLE_IIGS) {
+      cputs("Audio/Video unsupported on IIgs :-(\r\n");
+      goto err_out;
+    }
     surl_stream_av(NULL, m->media_url[0]);
     clrscr();
     init_text();
