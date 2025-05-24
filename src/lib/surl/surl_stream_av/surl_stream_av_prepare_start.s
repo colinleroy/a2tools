@@ -24,21 +24,15 @@
         jsr       _bzero
 
 @hgr_is_set:
-        .ifdef    __APPLE2ENH__
         lda       #VIDEOMODE_40COL
-        jsr       _videomode
-        .endif
+        jsr       _try_videomode
         jsr       _hgr_mixoff
         lda       #$00
         jsr       pusha
         lda       _scrh
         jsr       _set_scrollwindow
         jsr       _clrscr
-        .ifdef    __APPLE2ENH__
         jsr       _surl_start_stream_av
         lda       #VIDEOMODE_80COL
-        jmp       _videomode
-        .else
-        jmp       _surl_start_stream_av
-        .endif
+        jmp       _try_videomode
 .endproc

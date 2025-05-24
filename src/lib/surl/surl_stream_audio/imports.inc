@@ -12,6 +12,7 @@
         .import         popa, VTABZ, putchardirect, uppercasemask
 
         .import         _get_iigs_speed, _set_iigs_speed, ostype
+        .import         _is_iie
 
         .include        "apple2.inc"
         .include        "accelerator.inc"

@@ -31,7 +31,7 @@
         .import         acia_status_reg_r, acia_data_reg_r
 
         .import         _init_text, _init_hgr, _set_scrollwindow
-        .import         _gotoxy, _cprintf, _videomode, _clrscr
+        .import         _gotoxy, _cprintf, _try_videomode, _clrscr
         .import         _bzero, _memset, _sleep, _cputs
         .import         pusha, pusha0, push0, pushax, shlax3, popptr1
 
