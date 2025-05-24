@@ -7,10 +7,10 @@
 
         .setcpu         "65816"
 
-        .export         _init_fast_irq, _done_fast_irq
-        .import         callirq
-        .constructor    _init_fast_irq, 9
-        .destructor     _done_fast_irq, 9
+        .export         _init_fast_irq_iigs
+        .import         callirq, ostype
+        .constructor    _init_fast_irq_iigs, 8
+        .destructor     _done_fast_irq_iigs, 9
 
         .include        "apple2.inc"
 
@@ -24,9 +24,15 @@ OrgMgr:        .res 4
 
         .segment        "RT_ONCE"
 
-_init_fast_irq:
+_init_fast_irq_iigs:
+        bit     ostype
+        bmi     :+
+        rts
+:
+        php
         sei
         clc
+
         xce
         rep     #$30              ; 16 bits registers
         .i16
@@ -50,17 +56,23 @@ _init_fast_irq:
         jsl     $E10000
 
         sec
+
         xce
         sep     #$30
         .i8
-        cli
+
+        plp
         rts
 
 ; ------------------------------------------------------------------------
 
         .segment        "LOWCODE"
 
-_done_fast_irq:
+_done_fast_irq_iigs:
+        bit     ostype
+        bmi     :+
+        rts
+:
         sei
         clc
         xce

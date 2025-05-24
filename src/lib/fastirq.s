@@ -5,10 +5,10 @@
 ; IRQ handling (Apple2 version)
 ;
 
-        .export         _init_fast_irq, _done_fast_irq
-        .import         callirq
+        .export         _init_fast_irq
+        .import         callirq, ostype
         .importzp       _a_backup, _prev_ram_irq_vector, _prev_rom_irq_vector
-        .constructor    _init_fast_irq, 9
+        .constructor    _init_fast_irq, 8
         .destructor     _done_fast_irq, 9
 
         .include        "apple2.inc"
@@ -23,7 +23,12 @@ RAMIRQVEC:= $fffe
         .segment        "RT_ONCE"
 
 _init_fast_irq:
+        bit     ostype
+        bpl     :+
+        rts
+:
         ; Disable IRQs
+        php
         sei
 
         ; Save previous ROM IRQ vector
@@ -55,7 +60,7 @@ _init_fast_irq:
         stx     RAMIRQVEC+1
 
         ; Enable IRQs
-        cli
+        plp
         rts
 
 ; ------------------------------------------------------------------------
@@ -63,6 +68,10 @@ _init_fast_irq:
         .segment        "LOWCODE"
 
 _done_fast_irq:
+        bit     ostype
+        bpl     :+
+        rts
+:
         ; Restore ROM IRQ vector
         lda     _prev_rom_irq_vector
         ldx     _prev_rom_irq_vector+1
