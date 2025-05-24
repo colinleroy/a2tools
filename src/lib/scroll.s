@@ -6,9 +6,7 @@
 
         .export         _scrolldown_one, _scrollup_one, _scrolldown_n, _scrollup_n
         .import         FVTABZ
-        .ifndef AVOID_ROM_CALLS
-        .import         COUT
-        .endif
+        .import         COUT, machinetype
         .include        "apple2.inc"
 
 BAS2L  := $2A
@@ -36,25 +34,6 @@ upagain:
         bne     upagain
         rts
 
-.ifdef __APPLE2ENH__
-
-.ifndef AVOID_ROM_CALLS
-
-_scrolldown_one:
-        lda     RD80VID         ;in 40 or 80 columns?
-        bpl     :+
-        lda     #($16|$80)      ; 80col firmware's Ctrl-V
-        jmp     COUT
-:       rts
-
-_scrollup_one:
-        bit     $C082
-        jsr     $FC70           ; SCROLL
-        bit     $C080
-        rts
-
-.else
-
 _scrolldown_one:
         ldy     #0              ;direction = down
         beq     scrollit        ;go do scroll
@@ -68,6 +47,8 @@ scrollit:
         sty     TEMP1           ;save direction
         lda     WNDWDTH         ;get width of screen window
         pha                     ;save original width
+        bit     machinetype
+        bpl     getstl
         bit     RD80VID         ;in 40 or 80 columns?
         bpl     getstl          ;=>40, determine starting line
         sta     SET80COL        ;make sure this is enabled
@@ -161,6 +142,8 @@ xgseolz:
         lda     INVFLG          ;mask blank
         and     #$80            ;with high bit
         ora     #$20            ;make it a blank
+        bit     machinetype
+        bpl     clr40
         bit     RD80VID         ;is it 80 columns?
         bmi     clr80           ;yes, do quick clear
 clr40:
@@ -213,75 +196,6 @@ clr3:
         ldx     BAS2L
         sec
         rts
-
-.endif  ; AVOID_ROM_CALLS
-
-.else   ; __APPLE2__
-
-_scrolldown_one:
-        ldy     #0              ;direction = down
-        beq     scrollit        ;go do scroll
-
-_scrollup_one:
-        ldy     #1              ;direction = up
-
-scrollit:
-        sty     TEMP1           ;save direction
-        cpy     #1
-        beq     initup
-        lda     WNDBTM
-        sec
-        sbc     #1
-        jmp     start
-
-initup:
-        lda     WNDTOP
-start:
-        pha
-        jsr     FVTABZ
-        
-scrl1:  lda     BASL
-        sta     BAS2L
-        lda     BASH
-        sta     BAS2H
-
-        lda     TEMP1           ;remember direction
-        bne     contup
-        
-        pla
-        sec
-        sbc     #1              ;down
-        cmp     WNDTOP
-        bmi     scrl3
-        bpl     cont
-
-contup:
-        pla
-        adc     #1
-        cmp     WNDBTM
-        bcs     scrl3
-cont:
-        pha
-        jsr     FVTABZ
-
-        ldy     WNDWDTH
-        dey
-scrl2:  lda     (BASL),y
-        sta     (BAS2L),y
-        dey
-        bpl     scrl2
-
-        bmi     scrl1
-
-scrl3:  ldy     #0
-        lda     #' '|$80
-cleol2: sta     (BASL),y
-        iny
-        cpy     WNDWDTH
-        bcc     cleol2
-        rts
-
-.endif
 
         .bss
 
