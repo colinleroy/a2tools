@@ -23,6 +23,7 @@
 
   #define try_videomode()
   #define is_iigs 0
+  #define is_iie 0
   #define is_iieenh 0
   #define has_80cols 1
 

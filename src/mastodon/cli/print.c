@@ -18,21 +18,24 @@
 #include "math.h"
 #include "progress_bar.h"
 #include "scrollwindow.h"
+#include "a2_features.h"
 
 extern char writable_lines;
 static char wrap_idx;
 
 #pragma register-vars(push, on)
 
+#define CH      "$24"
+#define OURCH   "$057B"
 void __fastcall__ clrnln(void) {
   clreol();
   #ifdef __APPLE2__
     __asm__("lda #0");
-  #ifdef __APPLE2ENH__
+    __asm__("bit %v", has_80cols);
+    __asm__("bpl %g", set40);
     __asm__("sta "OURCH);
-  #else
+    set40:
     __asm__("sta "CH);
-  #endif
     __asm__("lda #$0A");
     __asm__("jsr _dputc");
   #endif

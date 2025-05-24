@@ -482,6 +482,11 @@ static char ch_at_curs = 0;
 static int cursor_blinker = 0;
 #endif
 
+
+#define CH      "$24"
+#define CV      "$25"
+#define OURCH   "$057B"
+
 static void set_cursor(void) {
 #ifdef __CC65__
   if (curs_x == 255) {
