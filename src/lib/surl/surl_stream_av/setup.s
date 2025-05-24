@@ -72,8 +72,6 @@ setup:
         sta     next_offset
         sta     cancelled
 
-        .ifndef STREAMER_65C02
-        sta     next            ; Clear low byte of next pointer
-        .endif
+        INIT_NEXT
 
         rts

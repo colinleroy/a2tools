@@ -71,11 +71,8 @@ again:
 }
 
 void config(void) {
-#ifdef __APPLE2ENH__
   char c;
-#endif
 
-#ifdef __APPLE2ENH__
   cputs("Please choose your keyboard layout:");
   for (c = 0; c < N_CHARSETS; c++) {
     cputs("\r\n"); cutoa(c); cputs(". ");cputs(charsets[c]);
@@ -89,9 +86,6 @@ charset_again:
   } else {
     goto charset_again;
   }
-#else
-  translit_charset = US_CHARSET;
-#endif
 
   cputs("\r\nVideo size (Small - more FPS / Large - less FPS)? (s/l)\r\n");
   video_size = get_bool('s' /* HGR_SCALE_HALF */, 'l' /* HGR_SCALE_FULL */);

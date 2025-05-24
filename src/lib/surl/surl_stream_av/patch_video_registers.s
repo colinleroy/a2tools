@@ -20,8 +20,9 @@ patch_video_registers:
         ldx     _ser_data_reg+1
         jsr     patch_addresses
 
+        ; Fallthrough to reopen data port
 
-        ; Reopen data port
+reopen_main_serial:
         lda     _ser_params + SIMPLE_SERIAL_PARAMS::DATA_SLOT
         ldx     #SER_BAUD_115200
         jsr     _serial_open

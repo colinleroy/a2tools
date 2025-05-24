@@ -102,6 +102,10 @@
 
 next       = _zp10            ; word - next cycle
 
+.macro INIT_NEXT
+        lda     #$00
+        sta     next
+.endmacro
 .macro ____SPKR_DUTY____4       ; Toggle speaker
         sta     SPKR            ; 4
 .endmacro

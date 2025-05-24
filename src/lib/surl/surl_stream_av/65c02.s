@@ -82,13 +82,15 @@
 .include "zp-variables.inc"
 .include "cycle-wasters.inc"
 
-.define STREAMER_65C02
 ; -----------------------------------------------------------------------------
 ; CPU-specific constant and macros
 
 ; Ask proxy to send levels from 0-31, multiplied by 2. (no time for us to do it)
 SAMPLE_OFFSET     = 0
 SAMPLE_MULT       = 2
+
+.macro INIT_NEXT
+.endmacro
 
 .macro ____SPKR_DUTY____4       ; Toggle speaker
         sta     SPKR            ; 4

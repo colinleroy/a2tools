@@ -52,12 +52,10 @@ char search_str[80] = "";
 
 #pragma code-name(push, "LC")
 
-#ifdef __APPLE2ENH__
-#define SEARCH_SAVE_FILE "/RAM/WTSRCH"
-#define LOGO_SAVE_FILE "/RAM/LOGO.HGR"
-#else
-#define SEARCH_SAVE_FILE "WTSRCH"
-#endif
+char *search_save_file;
+
+#define RAM_SEARCH_SAVE_FILE "/RAM/WTSRCH"
+#define SEARCH_SAVE_FILE RAM_SEARCH_SAVE_FILE+5
 
 static char did_cmd = 0;
 static char cmd_cb(char c) {
@@ -73,12 +71,7 @@ static char cmd_cb(char c) {
       did_cmd = 1;
       break;
     case 'q':
-#ifdef SEARCH_SAVE_FILE
-      unlink(SEARCH_SAVE_FILE);
-#endif
-#ifdef LOGO_SAVE_FILE
-      unlink(LOGO_SAVE_FILE);
-#endif
+      unlink(search_save_file);
       exit(0);
   }
   cursor(prev_cursor);
@@ -101,7 +94,7 @@ static void print_menu(void) {
 }
 
 static void load_save_search_json(char *mode) {
-  FILE *fp = fopen(SEARCH_SAVE_FILE, mode);
+  FILE *fp = fopen(search_save_file, mode);
   if (IS_NULL(fp)) {
     if (mode[0] == 'r')
       bzero((char *)BUF_8K_ADDR, BUF_8K_SIZE);
@@ -221,9 +214,7 @@ static void load_video(char *host, InstanceTypeId instance_type, char *id) {
     surl_stream_av(captions_url, video_url);
     set_scrollwindow(20, scrh);
 
-#ifdef __APPLE2ENH__
     backup_restore_hgrpage("r");
-#endif
     init_hgr(1);
     hgr_mixon();
     clrscr();
@@ -257,19 +248,20 @@ reload_search:
 display_result:
   clrscr();
   len = atoi(lines[cur_line+VIDEO_LENGTH]);
-#ifdef __APPLE2ENH__
-  if (strlen(lines[cur_line+VIDEO_NAME]) > 78)
-    lines[cur_line+VIDEO_NAME][78] = '\0';
 
-  if (strlen(lines[cur_line+VIDEO_AUTHOR]) > 64)
-    lines[cur_line+VIDEO_AUTHOR][64] = '\0';
-#else
-  if (strlen(lines[cur_line+VIDEO_NAME]) > 38)
-    lines[cur_line+VIDEO_NAME][38] = '\0';
+  if (has_80cols) {
+    if (strlen(lines[cur_line+VIDEO_NAME]) > 78)
+      lines[cur_line+VIDEO_NAME][78] = '\0';
 
-  if (strlen(lines[cur_line+VIDEO_AUTHOR]) > 17)
-    lines[cur_line+VIDEO_AUTHOR][17] = '\0';
-#endif
+    if (strlen(lines[cur_line+VIDEO_AUTHOR]) > 64)
+      lines[cur_line+VIDEO_AUTHOR][64] = '\0';
+  } else {
+    if (strlen(lines[cur_line+VIDEO_NAME]) > 38)
+      lines[cur_line+VIDEO_NAME][38] = '\0';
+
+    if (strlen(lines[cur_line+VIDEO_AUTHOR]) > 17)
+      lines[cur_line+VIDEO_AUTHOR][17] = '\0';
+  }
 
   video_host = lines[cur_line+VIDEO_HOST];
   if (video_host[0] == '-') {
@@ -309,19 +301,11 @@ read_kbd:
   init_hgr(1);
   hgr_mixon();
   c = tolower(cgetc());
-#ifdef __APPLE2ENH__
   if (c & 0x80) {
     cmd_cb(c & ~0x80);
     goto read_kbd;
   }
-#endif
   switch (c) {
-#ifndef __APPLE2ENH__
-    case 'C' - 'A' + 1:
-    case 'Q' - 'A' + 1:
-      cmd_cb(c + 'A' - 1);
-      goto read_kbd;
-#endif
     case CH_ENTER:
       load_video(video_host, instance_type, lines[cur_line+VIDEO_ID]);
       /* relaunch search */
@@ -391,9 +375,7 @@ new_search:
   }
   cur_line = 0;
   search(url, global_instance_type);
-#ifdef __APPLE2ENH__
   backup_restore_hgrpage("r");
-#endif
   goto new_search;
 }
 
@@ -481,6 +463,12 @@ int main(void) {
 
   try_videomode(VIDEOMODE_80COL);
   backup_restore_hgrpage("w");
+
+  if (has_128k) {
+    search_save_file = RAM_SEARCH_SAVE_FILE;
+  } else {
+    search_save_file = SEARCH_SAVE_FILE;
+  }
 
   serial_throbber_set((void *)0x07F7);
 

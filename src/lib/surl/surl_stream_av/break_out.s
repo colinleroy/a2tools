@@ -5,8 +5,14 @@ break_out:
         ldx     #$00
         jsr     _sleep
 
-        lda     #$02            ; Disable second port
-vcmd2:  sta     $98FF
+        ; Close second port. Limitations of the driver requires
+        ; us to "open" it, close it, and reopen the data port
+        lda     _ser_params + SIMPLE_SERIAL_PARAMS::PRINTER_SLOT
+        ldx     #SER_BAUD_115200
+        jsr     _serial_open
+        jsr     _serial_close
+
+        jsr     reopen_main_serial
 
         plp                     ; Reenable all interrupts
         jsr     _simple_serial_flush

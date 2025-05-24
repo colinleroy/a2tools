@@ -6,7 +6,7 @@
 
         .import         _ser_data_reg
         .import         _ser_status_reg
-        .import         _serial_open
+        .import         _serial_open, _serial_close
 
         .import         _enable_subtitles
         .import         _video_size
