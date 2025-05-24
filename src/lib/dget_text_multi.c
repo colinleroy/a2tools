@@ -24,6 +24,7 @@
 #include "scrollwindow.h"
 #include "scroll.h"
 #include "surl.h"
+#include "a2_features.h"
 
 #ifdef __CC65__
 #pragma optimize(push, on)
@@ -144,10 +145,8 @@ char * __fastcall__ dget_text_multi(char *buf, size_t size, cmd_handler_func cmd
 #endif
   unsigned char sx;
   unsigned char sy, ey;
-#ifdef __APPLE2ENH__
   size_t k;
   unsigned char tmp;
-#endif
   char overflowed = 0;
 
   cur_insert = 0;
@@ -189,22 +188,27 @@ char * __fastcall__ dget_text_multi(char *buf, size_t size, cmd_handler_func cmd
     cur_y = wherey();
 
     c = cgetc();
+#ifdef __CC65__
+    if (is_iie) { /* FIXME this should be in cc65 */
+      __asm__("bit $C061"); /* Open-Apple */
+      __asm__("bpl %g", no_oa);
+      c |= 0x80;
+    }
+    no_oa:
+#endif
 
-#ifdef __APPLE2ENH__
-    if (cmd_cb && (c & 0x80) != 0) {
+    if (is_iie && cmd_cb && (c & 0x80) != 0) {
       if (cmd_cb((c & ~0x80))) {
         goto out;
       }
       gotoxy(cur_x, cur_y);
-#else
-    /* No Open-Apple there, let's do it with Ctrl */
-    if (cmd_cb && c < 27 &&
+    } else if (!is_iie && cmd_cb && c < 27 &&
         c != CH_ENTER && c != CH_CURS_LEFT && c != CH_CURS_RIGHT) {
+      /* No Open-Apple there, let's do it with Ctrl */
       if (cmd_cb(c + 'A' - 1)) {
         goto out;
       }
       gotoxy(cur_x, cur_y);
-#endif
     } else if (c == CH_ESC) {
       if (cmd_cb && enter_accepted)
         continue;
@@ -215,9 +219,7 @@ char * __fastcall__ dget_text_multi(char *buf, size_t size, cmd_handler_func cmd
     } else if (c == CH_ENTER && (!cmd_cb || !enter_accepted)) {
       goto out;
     } else if (c == CH_CURS_LEFT
-#ifdef __APPLE2ENH__
        || c == CH_DEL
-#endif
      ) {
       if (cur_insert == 0) {
 err_beep:
@@ -240,7 +242,6 @@ err_beep:
       } else {
         cur_x--;
       }
-#ifdef __APPLE2ENH__
       if (c == CH_DEL) {
         char deleted = text_buf[cur_insert];
 
@@ -254,7 +255,6 @@ err_beep:
         gotoxy(cur_x, cur_y);
         rewrite_end_of_buffer(deleted == '\n');
       }
-#endif
       gotoxy(cur_x, cur_y);
     } else if (c == CH_CURS_RIGHT) {
       /* are we at buffer end? */
@@ -288,7 +288,6 @@ down_left:
         rewrite_end_of_buffer(0);
       }
       gotoxy(cur_x, cur_y);
-#ifdef __APPLE2ENH__
     } else if (c == CH_CURS_UP) {
       if (!cmd_cb || !enter_accepted || cur_insert == 0) {
         /* No up/down in standard line edit */
@@ -364,7 +363,6 @@ down_left:
       }
 stop_down:
       gotoxy(cur_x, cur_y);
-#endif
     } else if (c == 0x09) {
       /* Tab */
       goto err_beep;
@@ -395,23 +393,26 @@ stop_down:
 #endif
         }
 
-#ifdef __APPLE2ENH__ /* No insertion on non-enhanced Apple 2 */
-        /* shift end of buffer */
-        k = max_insert;
-        max_insert++;
-        while (k != cur_insert) {
-          k--;
-          text_buf[k + 1] = text_buf[k];
+        if (is_iie) { /* No insertion on Apple II+ */
+          /* shift end of buffer */
+          k = max_insert;
+          max_insert++;
+          while (k != cur_insert) {
+            k--;
+            text_buf[k + 1] = text_buf[k];
+          }
         }
-#endif
 
         /* rewrite buffer after inserted char */
         cur_insert++;
-#ifdef __APPLE2ENH__
-        overflowed = rewrite_end_of_buffer(c == CH_ENTER);
-#else /* No insertion on non-enhanced Apple 2 so rewrite everything */
-        overflowed = rewrite_end_of_buffer(1);
-#endif
+
+        if (is_iie) {
+          overflowed = rewrite_end_of_buffer(c == CH_ENTER);
+        } else {
+          /* No insertion on non-enhanced Apple 2 so rewrite everything */
+          overflowed = rewrite_end_of_buffer(1);
+        }
+
         cur_insert--;
 
         if (cur_y == win_height_min1 && overflowed) {
@@ -445,11 +446,12 @@ stop_down:
   }
 out:
 
-#ifndef __APPLE2ENH__
-  /* No deletion on non-enhanced Apple 2 so remove everything
-   * after the cursor */
-  max_insert = cur_insert;
-#endif
+  if (!is_iie) {
+    /* No deletion on non-enhanced Apple 2 so remove everything
+     * after the cursor */
+    max_insert = cur_insert;
+  }
+
   cursor(prev_cursor);
   text_buf[max_insert] = '\0';
 
