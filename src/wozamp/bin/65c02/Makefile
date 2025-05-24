@@ -6,7 +6,7 @@ iigs_CFLAGS :=
 CC65_TARGET = apple2enh
 trgt = apple2c0
 BUILD_VIDEOPLAY := 1
-STREAMER_VER := 65c02
+STREAMER_VER := 6502
 VIDEOPLAY_START_ADDR := 0x1D00
 EMBED_RBROWSER := \
 	$(SRC_DIR)/radio-browser.c \

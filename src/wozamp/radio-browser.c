@@ -41,22 +41,7 @@
 #include "citoa.h"
 #include "a2_features.h"
 
-#ifndef __APPLE2ENH__
-
-#define SEARCH_BUF_SIZE 128
-#define BUFSIZE 255
-#define tmp_buf ((char *)0x300)
-#define search_buf ((char *)0x200)
-
-unsigned char NUMCOLS;
-#define NUMROWS 24
-
-char **lines = NULL;
-int cur_line;
-
-#else
 #include "stp_list.h"
-#endif
 
 char n_lines = 0;
 
@@ -145,17 +130,12 @@ static char cmd_cb(char c) {
   switch (tolower(c)) {
     case 'q':
       exit(0);
-#ifdef __APPLE2ENH__
     case 's':
       do_server_screen = 1;
       return 1;
     case 'c':
       text_config();
       break;
-#else
-    case 's':
-      exec("WOZAMP", NULL);
-#endif
   }
   cursor(prev_cursor);
   return 0;
@@ -323,7 +303,6 @@ display_result:
   hgr_mixon();
 read_kbd:
   c = tolower(cgetc());
-#ifdef __APPLE2ENH__
   if (c & 0x80) {
     cmd_cb(c & ~0x80);
     if (do_server_screen) {
@@ -335,14 +314,7 @@ exit_results:
     }
     goto read_kbd;
   }
-#endif
   switch (c) {
-#ifndef __APPLE2ENH__
-    case 'S' - 'A' + 1:
-    case 'Q' - 'A' + 1:
-      cmd_cb(c + 'A' - 1);
-      goto read_kbd;
-#endif
     case CH_ENTER:
       /* Be a good netizen and register click */
       station_click(lines[cur_line+IDX_STATION_UUID]);
@@ -350,14 +322,7 @@ exit_results:
       play_url(lines[cur_line+IDX_URL_RESOLVED]);
       goto display_result;
     case CH_ESC:
-#ifdef __APPLE2ENH__
       goto exit_results;
-#else
-      free(lines);
-      lines = NULL;
-      n_lines = 0;
-      return;
-#endif
     case CH_CURS_LEFT:
       if (cur_line > IDX_MAX-1) {
         cur_line -= IDX_MAX;
@@ -420,10 +385,8 @@ out:
 void radio_browser_ui(void) {
   FILE *tmpfp = fopen(RADIO_SEARCH_FILE, "r");
 
-#ifdef __APPLE2ENH__
   init_hgr(1);
   hgr_mixon();
-#endif
 
   do_server_screen = 0;
   set_scrollwindow(20, NUMROWS);
@@ -459,20 +422,3 @@ search_again:
 out:
   search_buf[0] = '\0';
 }
-
-#ifndef __APPLE2ENH__
-void main(void) {
-  load_config();
-  surl_connect_proxy();
-
-  if (has_80cols) {
-    NUMCOLS = 80;
-  } else {
-    NUMCOLS = 40;
-  }
-
-  surl_user_agent = "Wozamp for Apple II / "VERSION;
-  search_buf[0] = '\0';
-  radio_browser_ui();
-}
-#endif

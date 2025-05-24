@@ -195,9 +195,7 @@ void stp_print_result() {
   }
 }
 
-#ifdef __APPLE2ENH__
 char do_radio_browser = 0;
-#endif
 
 extern char cmd_cb_handled;
 
@@ -209,14 +207,9 @@ static char cmd_cb(char c) {
   char prev_cursor = cursor(0);
   switch (tolower(c)) {
     case 'r':
-#ifdef __APPLE2ENH__
       do_radio_browser = 1;
       cmd_cb_handled = 1;
       return 1;
-#else
-      clrscr();
-      exec("RBROWSER", NULL);
-#endif
     case 'c':
       text_config();
       break;
@@ -503,6 +496,8 @@ start_again:
 
   stp_list_scroll_after_url = 1;
 
+  cmd_cb_handled = 0;
+  do_radio_browser = 0;
   if (has_80cols) {
     if (is_iieenh) {
       gotoxy(80-16-17, 3);
@@ -515,20 +510,9 @@ start_again:
       cputs("Open-Apple-C: Configure, Open-Apple-R: RadioBrowser");
     }
     gotoxy(0, 0);
-    cmd_cb_handled = 0;
-#ifdef __APPLE2ENH__
-    do_radio_browser = 0;
-#endif
     url = stp_get_start_url("Please enter an FTP server or internet stream URL.\r\n",
                           "http://relay.radiofreefedi.net/listen/rff/rff.mp3",
                           cmd_cb);
-#ifdef __APPLE2ENH__
-    if (do_radio_browser) {
-      search_buf[0] = '\0';
-      radio_browser_ui();
-      goto start_again;
-    }
-#endif
   } else {
     gotoxy(40-39, 3);
     if (is_iie) {
@@ -540,6 +524,11 @@ start_again:
     url = stp_get_start_url("Please enter an FTP or internet stream\r\n",
                           "http://relay.radiofreefedi.net/listen/rff/rff.mp3",
                           cmd_cb);
+  }
+  if (do_radio_browser) {
+    search_buf[0] = '\0';
+    radio_browser_ui();
+    goto start_again;
   }
 
   set_scrollwindow(0, NUMROWS);
