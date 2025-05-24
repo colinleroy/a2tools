@@ -61,7 +61,7 @@ n_headers:        .res 1
 
         ldx       surl_hdrs+1           ; Check if headers are allocated
         bne       :+
-        ldx       _oauth_token          ; Check if OAuth token exists
+        ldx       _oauth_token+1        ; Check if OAuth token exists
         beq       :+
 
         lda       #<ENDPOINT_BUF_SIZE
