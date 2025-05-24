@@ -69,7 +69,6 @@ rbrowser_CL65SOURCES = \
 	$(SRC_DIR)/../lib/dputs.s \
 	$(SRC_DIR)/../lib/scroll.s \
 	$(SRC_DIR)/../lib/FVTABZ.s \
-	$(SRC_DIR)/../lib/fastirq$(iigs_suffix).s \
 	$(SRC_DIR)/../lib/runtime_once_clean.s \
 	$(SRC_DIR)/../lib/extrazp.s \
 	$(SRC_DIR)/../lib/asm/clrzone.s \

@@ -64,7 +64,6 @@ grphview_CL65SOURCES = \
 	$(SRC_DIR)/../lib/asm/path_helper.s \
 	$(SRC_DIR)/../lib/asm/clrzone.s \
 	$(SRC_DIR)/../lib/asm/malloc0.s \
-	$(SRC_DIR)/../lib/fastirq$(iigs_suffix).s \
 	$(SRC_DIR)/../lib/extrazp.s \
 	$(SRC_DIR)/../lib/FVTABZ.s
 
