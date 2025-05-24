@@ -579,6 +579,7 @@ int main(int argc, char **argv) {
   const surl_response *response = NULL;
   char i, o;
   char got_input;
+  int r;
   //DEBUG int loop_wait = 0;
 
 #ifdef __APPLE2ENH__
@@ -635,7 +636,6 @@ again:
   tcsetattr( STDOUT_FILENO, TCSANOW, &ttyf);
 #endif
   if (raw) {
-    char r;
     r = simple_serial_open();
 
     if (r != 0) {
@@ -670,11 +670,7 @@ input:
         }
       } else if (i != '\0') {
         if (!handle_special_char(i)) {
-#ifdef __CC65__
-          ser_put(i);
-#else
           simple_serial_putc(i);
-#endif
         }
       }
 #ifdef __CC65__
@@ -698,14 +694,8 @@ input:
 
 got_input = 0;
 
-
-#ifdef __CC65__
-    while (ser_get(&o) != SER_ERR_NO_DATA) {
-#else
-    int r;
     while ((r = simple_serial_getc_immediate()) != EOF) {
       o = (char)r;
-#endif
       if (!got_input) {
         got_input = 1;
         rm_cursor();
