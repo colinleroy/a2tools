@@ -394,7 +394,7 @@ check_imports.sh: $(shflpuck_SOURCES) $(SRC_DIR)/check_imports.sh
 	./check_imports.sh $(SRC_DIR)/levels_data
 
 $(BINARY_NAME): shflpuck.ld.cfg $(shflpuck_SOURCES)
-	cl65 -g -Wl --dbgfile,shflpuck.dbg -Ln shflpuck.lbl $(CFLAGS) $(iigs_CFLAGS) $(shflpuck_CLCFLAGS) \
+	cl65 -g -Wl --dbgfile,shflpuck.dbg -Ln shflpuck.lbl $(CFLAGS) $(shflpuck_CLCFLAGS) \
 		-C shflpuck.ld.cfg -o $@ $(shflpuck_SOURCES) \
 		$(CC65_TARGET)-iobuf-0800.o $(CC65_TARGET)-integer-basic-compat.o
 

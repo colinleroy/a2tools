@@ -1,26 +1,14 @@
-ifdef IIGS
-serial_hw_SOURCES := ../lib/serial/z8530/common.s ../lib/serial/z8530/no_irq.s
-iigs_suffix := -iigs
-iigs_CFLAGS := -DIIGS --asm-define IIGS
-trgt = apple2gs
-CC65_TARGET = apple2enh
-upload_subdir := /iigs
-else
 ifdef OLDII
 serial_hw_SOURCES := ../lib/serial/acia/common.s ../lib/serial/acia/no_irq.s
-iigs_FLAGS :=
 suffix :=
 upload_subdir :=
 CC65_TARGET := apple2
 STREAMER_VER := 6502
 else
 serial_hw_SOURCES := ../lib/serial/acia/common.s ../lib/serial/acia/no_irq.s
-iigs_suffix :=
-iigs_CFLAGS :=
 CC65_TARGET = apple2enh
 trgt = apple2c0
 STREAMER_VER := 65c02
-endif
 endif
 
 USE_LANGCARD := -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD
@@ -62,7 +50,7 @@ clean:
 	rm -f *.bin *.o *.map splash.h splash.hgr
 
 ammonoid.bin: $(ammonoid_CL65SOURCES) $(ammonoid_SOURCES)
-	cl65 -g -Wl --dbgfile,ammonoid.dbg -Ln ammonoid.lbl $(CFLAGS) $(iigs_CFLAGS) $(ammonoid_CLCFLAGS) -o $@ $^  $(CC65_TARGET)-iobuf-0800.o
+	cl65 -g -Wl --dbgfile,ammonoid.dbg -Ln ammonoid.lbl $(CFLAGS) $(ammonoid_CLCFLAGS) -o $@ $^  $(CC65_TARGET)-iobuf-0800.o
 
 upload: all
 	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/ammonoid/ || \

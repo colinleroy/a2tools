@@ -1,7 +1,3 @@
-ifdef IIGS
-STREAMER_VER := 65c02
-CC65_TARGET := apple2enh
-else
 ifdef OLDII
 STREAMER_VER := 6502
 CC65_TARGET := apple2
@@ -10,7 +6,6 @@ else
 STREAMER_VER := 65c02
 CC65_TARGET := apple2enh
 TARGET_PLATFORM := apple2c0
-endif
 endif
 
 CLEANDISK = ../../disks/ProDOS_2_4_3.po
@@ -61,7 +56,7 @@ clean:
 	*.po
 
 sounddemo.bin: $(sounddemo_CL65SOURCES) $(sounddemo_SOURCES)
-	cl65 -g -Wl --dbgfile,sounddemo.dbg -Ln sounddemo.lbl $(CFLAGS) $(iigs_CFLAGS) $(sounddemo_CLCFLAGS) -o $@ $^
+	cl65 -g -Wl --dbgfile,sounddemo.dbg -Ln sounddemo.lbl $(CFLAGS) $(sounddemo_CLCFLAGS) -o $@ $^
 
 sounddemo.po: sounddemo.bin
 	cp $(CLEANDISK) $@; \
