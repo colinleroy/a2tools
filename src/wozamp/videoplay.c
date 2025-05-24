@@ -32,8 +32,7 @@ int main(void) {
 
   try_videomode(VIDEOMODE_80COL);
 
-  if (has_80cols) {
-    /* Assume it's a 64kB card... */
+  if (has_128k) {
     url_passer_file = RAM_URL_PASSER_FILE;
   } else {
     url_passer_file = URL_PASSER_FILE;

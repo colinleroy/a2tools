@@ -12,6 +12,7 @@
   extern unsigned char is_iie;
   extern unsigned char is_iieenh;
   extern unsigned char has_80cols;
+  extern unsigned char has_128k;
 
   #ifndef CH_CURS_UP
     #define CH_CURS_UP   0x0B
@@ -26,6 +27,7 @@
   #define is_iie 0
   #define is_iieenh 0
   #define has_80cols 1
+  #define has_128k 1
 
 #endif
 

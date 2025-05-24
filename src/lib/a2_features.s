@@ -4,7 +4,8 @@
 ; Easy-to-test (from C) feature flags
 ;
 
-        .export         _is_iigs, _is_iie, _is_iieenh, _has_80cols
+        .export         _is_iigs, _is_iie, _is_iieenh
+        .export         _has_80cols, _has_128k
         .export         _try_videomode
 
         .export         machinetype ; FIXME remove once in cc65
@@ -15,6 +16,7 @@
 
         .include        "apple2.inc"
 
+MACHID := $BF98
 ; ------------------------------------------------------------------------
 
         .segment        "DATA"
@@ -23,6 +25,7 @@ _is_iigs:     .byte $00
 _is_iie:      .byte $00
 _is_iieenh:   .byte $00
 _has_80cols:  .byte $00
+_has_128k:    .byte $00
 
 ; FIXME: Update once cc65 gets dynamic 80cols feature
 .ifdef __APPLE2ENH__
@@ -55,7 +58,17 @@ _init_features:
         ; IIgs ?
         rol                   ; High bit to carry
         ror     _is_iigs      ; carry to flag high bit
-        rts
+
+
+        lda     MACHID        ; 128k?
+        and     #$30
+        cmp     #$30
+        bne     :+
+
+        lda     #$FF
+        sta     _has_128k
+
+:       rts
 
         .segment "CODE"
 

@@ -696,8 +696,7 @@ static void init_features(void) {
       center_x = CENTERX_40COLS;
       NUMCOLS = 40;
     }
-    if (has_80cols) {
-      /* Assume it's a 64kB card... */
+    if (has_128k) {
       url_passer_file = RAM_URL_PASSER_FILE;
     } else {
       url_passer_file = URL_PASSER_FILE;
