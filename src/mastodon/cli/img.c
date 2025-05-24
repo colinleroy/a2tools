@@ -35,6 +35,7 @@
 #include "path_helper.h"
 #include "dget_text.h"
 #include "vsdrive.h"
+#include "a2_features.h"
 
 char *instance_url;
 char *oauth_token;
@@ -206,7 +207,7 @@ int main(int argc, char **argv) {
 #ifdef __CC65__
     bzero((char *)HGR_PAGE, HGR_LEN);
     clrscr();
-    if (get_ostype() >= APPLE_IIGS) {
+    if (is_iigs) {
       cputs("Audio/Video unsupported on IIgs :-(\r\n");
       goto err_out;
     }

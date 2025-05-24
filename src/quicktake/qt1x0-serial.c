@@ -14,6 +14,7 @@
 #include "simple_serial.h"
 #include "qt-serial.h"
 #include "qt-conv.h"
+#include "a2_features.h"
 
 extern uint8 scrw, scrh;
 
@@ -121,7 +122,7 @@ uint8 qt1x0_wakeup(uint16 speed) {
   /* The Apple II printer port being closed right now,
    * we have to set DTR before clearing it.
    */
-  if (get_ostype() < APPLE_IIGS) {
+  if (!is_iigs) {
     simple_serial_slot_dtr_onoff(ser_params.printer_slot, 1);
     sleep(1);
     simple_serial_slot_dtr_onoff(ser_params.printer_slot, 0);
@@ -132,7 +133,7 @@ uint8 qt1x0_wakeup(uint16 speed) {
   if ((model = get_hello()) == QT_MODEL_UNKNOWN) {
     cputs("Timeout. ");
     /* Re-up current port */
-    if (get_ostype() >= APPLE_IIGS) {
+    if (is_iigs) {
       simple_serial_dtr_onoff(1);
     }
     return QT_MODEL_UNKNOWN;

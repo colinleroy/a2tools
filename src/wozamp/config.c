@@ -13,13 +13,13 @@
 #include "hgr.h"
 #include "scrollwindow.h"
 #include "citoa.h"
+#include "a2_features.h"
 
 char *translit_charset;
 char monochrome;
 char enable_video;
 char enable_subtitles;
 char video_size;
-char is_iigs = 0;
 
 static FILE *open_config(char *mode) {
   FILE *fp;
@@ -136,8 +136,6 @@ void load_config(void) {
 
   translit_charset = US_CHARSET;
   monochrome = 0;
-
-  is_iigs = (get_ostype() >= APPLE_IIGS);
 
   enable_video = !is_iigs;
   enable_subtitles = SUBTITLES_AUTO;

@@ -31,6 +31,7 @@ slowtake_CC65SOURCES := \
 	$(SRC_DIR)/../lib/serial/asm/simple_serial_configure.s \
 	$(SRC_DIR)/../lib/fastirq.s \
 	$(SRC_DIR)/../lib/fastirq-iigs.s \
+	$(SRC_DIR)/../lib/a2_features.s \
 	$(SRC_DIR)/../lib/asm/scrollwindow.s \
 	$(SRC_DIR)/../lib/asm/path_helper.s \
 	$(SRC_DIR)/../lib/asm/malloc0.s \
