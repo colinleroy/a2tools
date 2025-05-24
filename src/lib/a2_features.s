@@ -4,7 +4,7 @@
 ; Easy-to-test (from C) feature flags
 ;
 
-        .export         _is_iigs, _is_iieenh, _has_80cols
+        .export         _is_iigs, _is_iie, _is_iieenh, _has_80cols
         .export         _try_videomode
 
         .export         machinetype ; FIXME remove once in cc65
@@ -20,6 +20,7 @@
         .segment        "DATA"
 
 _is_iigs:     .byte $00
+_is_iie:      .byte $00
 _is_iieenh:   .byte $00
 _has_80cols:  .byte $00
 
@@ -42,6 +43,10 @@ CH_VLINE:    .byte '!'
 
 _init_features:
         lda     ostype
+
+        ; IIe? (means 80cols can be there, and Apple keys)
+        cmp     #$30
+        ror     _is_iie       ; Carry to flag high bit
 
         ; IIe Enhanced? (means MouseText is there)
         cmp     #$31

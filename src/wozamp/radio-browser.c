@@ -102,7 +102,11 @@ static void print_footer(void) {
     }
   } else {
     gotoxy(40-32, 3);
-    cputs("Ctrl-S: new Server, Ctrl-Q: Quit");
+    if (is_iie) {
+      cputs("App-S: new Server, App-Q: Quit");
+    } else {
+      cputs("Ctrl-S: new Server, Ctrl-Q: Quit");
+    }
   }
 }
 

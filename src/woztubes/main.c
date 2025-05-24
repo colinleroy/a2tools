@@ -86,16 +86,18 @@ static char cmd_cb(char c) {
 }
 
 static void print_menu(void) {
-#ifdef __APPLE2ENH__
-  cputc('A'|0x80);
-  cputs("-C: Configure ; ");
-  cputc('A'|0x80);
-  cputs("-Q: Quit - ");
-  cutoa(_heapmemavail());
-  cputs("B free");
-#else
-  cputs("Ctrl-C: Configure; Ctrl-Q: Quit");
-#endif
+  if (is_iieenh) {
+    cputc('A'|0x80);
+    cputs("-C: Configure ; ");
+    cputc('A'|0x80);
+    cputs("-Q: Quit - ");
+    cutoa(_heapmemavail());
+    cputs("B free");
+  } else if (is_iie) {
+    cputs("App-C: Configure; App-Q: Quit");
+  } else {
+    cputs("Ctrl-C: Configure; Ctrl-Q: Quit");
+  }
 }
 
 static void load_save_search_json(char *mode) {

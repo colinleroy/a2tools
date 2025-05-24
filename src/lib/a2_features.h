@@ -9,12 +9,14 @@
   #define VIDEOMODE_80COL 0x00
   #endif
   extern unsigned char is_iigs;
+  extern unsigned char is_iie;
   extern unsigned char is_iieenh;
   extern unsigned char has_80cols;
 
   #ifndef CH_CURS_UP
     #define CH_CURS_UP   0x0B
     #define CH_CURS_DOWN 0x0A
+    #define CH_DEL       0x7F
   #endif
 
 #else

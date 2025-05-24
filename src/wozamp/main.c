@@ -531,7 +531,11 @@ start_again:
 #endif
   } else {
     gotoxy(40-39, 3);
-    cputs("Ctrl-C: Configure, Ctrl-R: RadioBrowser");
+    if (is_iie) {
+      cputs("App-C: Configure, App-R: RadioBrowser");
+    } else {
+      cputs("Ctrl-C: Configure, Ctrl-R: RadioBrowser");
+    }
     gotoxy(0, 0);
     url = stp_get_start_url("Please enter an FTP or internet stream\r\n",
                           "http://relay.radiofreefedi.net/listen/rff/rff.mp3",
