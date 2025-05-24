@@ -219,7 +219,6 @@ shflpuck_SOURCES := \
 	$(SRC_DIR)/code/sprites.s \
 	$(SRC_DIR)/code/helpers.s \
 	$(SRC_DIR)/code/mini_conio.s \
-	$(SRC_DIR)/code/lzsa1.s \
 	$(SRC_DIR)/../lib/serial/asm/driver.s \
 	$(SRC_DIR)/../lib/serial/asm/acia.s \
 	$(SRC_DIR)/../lib/serial/asm/z8530.s \
