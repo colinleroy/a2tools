@@ -59,6 +59,12 @@ extern char **display_lines;
 
 static char in_list = 0;
 
+static int open_url(char *url, char *filename);
+
+#ifdef __CC65__
+#pragma code-name (push, "LC")
+#endif
+
 static void clr_footer(void) {
   clrzone(0, 22, NUMCOLS - 1, 23);
 }
@@ -146,10 +152,6 @@ void stp_print_footer(void) {
   }
 }
 
-#ifdef __CC65__
-#pragma code-name (push, "LOWCODE")
-#endif
-
 void show_metadata (char *data) {
   char *value = strchr(data, '\n');
   char x, y, max_len;
@@ -199,10 +201,6 @@ char do_radio_browser = 0;
 
 extern char cmd_cb_handled;
 
-#ifdef __CC65__
-#pragma code-name (pop)
-#endif
-
 static char cmd_cb(char c) {
   char prev_cursor = cursor(0);
   switch (tolower(c)) {
@@ -226,6 +224,107 @@ static void print_err(const char *file) {
   cputs(": ");
   citoa(errno);
 }
+
+static int is_streamable(void) {
+  const char *content_type;
+  content_type = surl_content_type();
+  return (!strncmp(content_type, "image/", 6) ||
+          !strncmp(content_type, "audio/", 6) ||
+          !strncmp(content_type, "video/", 6) ||
+          /* Fallback for libmagic failures */
+          !strcmp(content_type, "application/octet-stream"));
+}
+
+static unsigned char rec_level = 0;
+static unsigned char cancelled = 0;
+static unsigned char rand_init = 0;
+
+typedef enum {
+  PLAY_ALL,
+  PLAY_RANDOM
+} RecursivePlayMode;
+
+static char *play_directory(RecursivePlayMode mode, char *url);
+
+static char *play_directory_at_index(RecursivePlayMode mode, char *url, unsigned int dir_index) {
+  unsigned char r;
+  char *prev_filename = strdup(display_lines[dir_index]);
+
+  url = stp_url_enter(url, lines[dir_index]);
+  stp_print_header(prev_filename, URL_ADD);
+
+  r = stp_get_data(url);
+
+  if (surl_response_ok()) {
+    if (r == SAVE_DIALOG && is_streamable()) {
+      /* Play - warning ! trashes data with HGR page */
+      cancelled = open_url(url, prev_filename);
+      stp_clr_page();
+    } else if (r == UPDATE_LIST && rec_level < 4) {
+      /* That's a directory */
+      rec_level++;
+      url = play_directory(mode, url);
+      rec_level--;
+    }
+  }
+
+  free(prev_filename);
+
+  /* Fetch original list back */
+  url = stp_url_up(url);
+  stp_get_data(url);
+
+  if (surl_response_ok()) {
+    stp_print_header(NULL, URL_UP);
+  } else {
+    cancelled = 1;
+  }
+
+  return url;
+}
+
+
+static char *play_directory(RecursivePlayMode mode, char *url) {
+  unsigned int dir_index;
+
+  cancelled = 0;
+
+  if (mode == PLAY_ALL) {
+    for (dir_index = cur_line; dir_index < num_lines; dir_index++) {
+      in_list = 1;
+      url = play_directory_at_index(PLAY_ALL, url, dir_index);
+      if (cancelled) {
+        break;
+      }
+    }
+  } else if (mode == PLAY_RANDOM) {
+    if (!rand_init) {
+      _randomize();
+      rand_init = 1;
+    }
+    while (!cancelled) {
+      /*
+       * 0          0
+       * rand()     dir_index
+       * RAND_MAX   num_lines-1
+       */
+      dir_index = (uint16)((((uint32)rand() * (num_lines-1)))/RAND_MAX);
+      /* Set in_list each time (going back up all the way resets it) */
+      in_list = 1;
+      url = play_directory_at_index(PLAY_RANDOM, url, dir_index);
+      if (rec_level > 0) {
+        /* go up all the way if we entered subdirectories */
+        break;
+      }
+    }
+  }
+  in_list = 0;
+  return url;
+}
+
+#ifdef __CC65__
+#pragma code-name (pop)
+#endif
 
 static int open_url(char *url, char *filename) {
   char r;
@@ -382,107 +481,6 @@ out:
   return cancelled;
 }
 
-#ifdef __CC65__
-#pragma code-name (push, "LC")
-#endif
-
-
-static int is_streamable(void) {
-  const char *content_type;
-  content_type = surl_content_type();
-  return (!strncmp(content_type, "image/", 6) ||
-          !strncmp(content_type, "audio/", 6) ||
-          !strncmp(content_type, "video/", 6) ||
-          /* Fallback for libmagic failures */
-          !strcmp(content_type, "application/octet-stream"));
-}
-
-static unsigned char rec_level = 0;
-static unsigned char cancelled = 0;
-static unsigned char rand_init = 0;
-
-typedef enum {
-  PLAY_ALL,
-  PLAY_RANDOM
-} RecursivePlayMode;
-
-static char *play_directory(RecursivePlayMode mode, char *url);
-
-static char *play_directory_at_index(RecursivePlayMode mode, char *url, unsigned int dir_index) {
-  unsigned char r;
-  char *prev_filename = strdup(display_lines[dir_index]);
-
-  url = stp_url_enter(url, lines[dir_index]);
-  stp_print_header(prev_filename, URL_ADD);
-
-  r = stp_get_data(url);
-
-  if (surl_response_ok()) {
-    if (r == SAVE_DIALOG && is_streamable()) {
-      /* Play - warning ! trashes data with HGR page */
-      cancelled = open_url(url, prev_filename);
-      stp_clr_page();
-    } else if (r == UPDATE_LIST && rec_level < 4) {
-      /* That's a directory */
-      rec_level++;
-      url = play_directory(mode, url);
-      rec_level--;
-    }
-  }
-
-  free(prev_filename);
-
-  /* Fetch original list back */
-  url = stp_url_up(url);
-  stp_get_data(url);
-
-  if (surl_response_ok()) {
-    stp_print_header(NULL, URL_UP);
-  } else {
-    cancelled = 1;
-  }
-
-  return url;
-}
-
-static char *play_directory(RecursivePlayMode mode, char *url) {
-  unsigned int dir_index;
-
-  cancelled = 0;
-
-  if (mode == PLAY_ALL) {
-    for (dir_index = cur_line; dir_index < num_lines; dir_index++) {
-      in_list = 1;
-      url = play_directory_at_index(PLAY_ALL, url, dir_index);
-      if (cancelled) {
-        break;
-      }
-    }
-  } else if (mode == PLAY_RANDOM) {
-    if (!rand_init) {
-      _randomize();
-      rand_init = 1;
-    }
-    while (!cancelled) {
-      /*
-       * 0          0
-       * rand()     dir_index
-       * RAND_MAX   num_lines-1
-       */
-      dir_index = (uint16)((((uint32)rand() * (num_lines-1)))/RAND_MAX);
-      /* Set in_list each time (going back up all the way resets it) */
-      in_list = 1;
-      url = play_directory_at_index(PLAY_RANDOM, url, dir_index);
-      if (rec_level > 0) {
-        /* go up all the way if we entered subdirectories */
-        break;
-      }
-    }
-  }
-  in_list = 0;
-  return url;
-}
-
 extern char stp_list_scroll_after_url;
 
 char *start_url_ui(void) {
@@ -539,10 +537,6 @@ start_again:
   stp_print_header(url, URL_SET);
   return url;
 }
-
-#ifdef __CC65__
-#pragma code-name (pop)
-#endif
 
 char navigated = 0;
 

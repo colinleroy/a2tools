@@ -22,6 +22,8 @@ char enable_subtitles;
 char video_size;
 extern unsigned char NUMCOLS;
 
+#pragma code-name(push, "LOWCODE")
+
 static FILE *open_config(char *mode) {
   FILE *fp;
   #ifdef PRODOS_T_TXT
@@ -60,8 +62,6 @@ static int save_config(void) {
   }
   return 0;
 }
-
-#pragma code-name(push, "LOWCODE")
 
 static char get_bool(char one, char zero) {
   char c;
@@ -116,6 +116,8 @@ charset_again:
 
 #pragma code-name(pop)
 
+#pragma code-name(push, "LC")
+
 void text_config(void) {
   set_scrollwindow(0, NUMROWS);
   init_text();
@@ -125,6 +127,8 @@ void text_config(void) {
   clrzone(0, 0, NUMCOLS, 19);
   set_scrollwindow(20, NUMROWS);
 }
+
+#pragma code-name(pop)
 
 #pragma code-name(push, "RT_ONCE")
 

@@ -65,7 +65,7 @@ enum JsonFieldIdx {
   IDX_MAX
 };
 
-#pragma code-name(push, "LC")
+#pragma code-name(push, "LOWCODE")
 
 static void print_footer(void) {
   if (has_80cols) {
@@ -101,6 +101,8 @@ static void station_click(char *station_uuid) {
     strcat(tmp_buf, station_uuid);
     surl_start_request(NULL, 0, tmp_buf, SURL_METHOD_GET);
 }
+
+#pragma code-name(pop)
 
 void show_radio_metadata (char *data) {
   char *value = strchr(data, '\n');
@@ -140,8 +142,6 @@ static char cmd_cb(char c) {
   cursor(prev_cursor);
   return 0;
 }
-
-#pragma code-name(pop)
 
 static void play_url(char *url) {
   char r;
@@ -338,6 +338,8 @@ exit_results:
   }
 }
 
+#pragma code-name(push, "LC")
+
 static void search_stations(char *search_str) {
   char *w;
 
@@ -381,6 +383,8 @@ err_out:
 out:
   free(json_buf);
 }
+
+#pragma code-name(pop)
 
 void radio_browser_ui(void) {
   FILE *tmpfp = fopen(RADIO_SEARCH_FILE, "r");
