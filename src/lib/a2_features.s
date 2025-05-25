@@ -11,7 +11,7 @@
         .export         machinetype ; FIXME remove once in cc65
         .export         CH_VLINE    ; FIXME id
 
-        .import         ostype, _videomode
+        .import         ostype, _videomode, _allow_lowercase
         .constructor    _init_features, 8
 
         .include        "apple2.inc"
@@ -49,9 +49,14 @@ _init_features:
 
         ; IIe? (means 80cols can be there, and Apple keys)
         cmp     #$30
+        bcc     :+
         ror     _is_iie       ; Carry to flag high bit
+        pha
+        lda     #1
+        jsr     _allow_lowercase
+        pla
 
-        ; IIe Enhanced? (means MouseText is there)
+:       ; IIe Enhanced? (means MouseText is there)
         cmp     #$31
         ror     _is_iieenh    ; Carry to flag high bit
 

@@ -35,6 +35,7 @@
 #include "scrollwindow.h"
 #include "dputc.h"
 #include "dputs.h"
+#include "a2_features.h"
 #include <time.h>
 
 static unsigned char scrw, scrh;

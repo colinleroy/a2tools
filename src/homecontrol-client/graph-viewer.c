@@ -29,6 +29,7 @@
 #include "extended_conio.h"
 #include "surl.h"
 #include "clrzone.h"
+#include "a2_features.h"
 
 #ifdef __CC65__
 #pragma code-name (push, "LOWCODE")
@@ -86,7 +87,7 @@ int main(int argc, char **argv) {
   _heapadd ((void *) 0x0803, 0x17FD);
 #endif
 
-  tgi_install(a2e_hi_tgi);
+  tgi_install(a2_hi_tgi);
 
   clrscr();
 

@@ -26,6 +26,7 @@
 #include "network.h"
 #include "climate.h"
 #include "server_url.h"
+#include "a2_features.h"
 
 static hc_climate_zone **climate_zones = NULL;
 static char *climate_zones_data = NULL;

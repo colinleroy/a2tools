@@ -1,3 +1,2 @@
 #!/bin/bash
-cd bin/6502
-make clean homecontrolperso-6502.po && mame apple2p -window -flop1 homecontrolperso-6502.po -resolution 560x384 -sl1 ssc -sl1:ssc:rs232 null_modem -bitb socket.localhost:2001 -sl2 ssc -sl2:ssc:rs232 null_modem -bitb2 socket.localhost:2000 -nomouse -debug
+make clean homecontrolperso.po && mame apple2p -window -flop1 homecontrolperso.po -resolution 560x384 -sl1 ssc -sl1:ssc:rs232 null_modem -bitb socket.localhost:2001 -sl2 ssc -sl2:ssc:rs232 null_modem -bitb2 socket.localhost:2000 -nomouse -debug
