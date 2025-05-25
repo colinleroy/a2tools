@@ -4,6 +4,8 @@
 #ifdef __CC65__
 
   signed char try_videomode(unsigned mode);
+  char oa_cgetc(void);
+
   #ifndef __APPLE2ENH__
   #define VIDEOMODE_40COL 0x15
   #define VIDEOMODE_80COL 0x00
@@ -23,6 +25,7 @@
 #else
 
   #define try_videomode()
+  #define oa_cgetc() cgetc()
   #define is_iigs 0
   #define is_iie 0
   #define is_iieenh 0

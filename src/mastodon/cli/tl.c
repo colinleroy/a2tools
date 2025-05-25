@@ -391,7 +391,7 @@ static char search_footer(char c) {
       break;
   }
   gotoxy(0,1);
-  cprintf("(%c) Toots (%c) Account   (%s + T/A)\r\n",
+  cprintf("(%c) Toots (%c) Account (%s + T/A)\r\n",
           search_type == 't' ? '*':' ',
           search_type == 'a' ? '*':' ',
           key_combo);
@@ -1013,12 +1013,7 @@ static void show_list(list *l) {
       print_free_ram();
     }
 
-    c = tolower(cgetc());
-    if (is_iie) { /* FIXME this should be in cc65 */
-      __asm__("bit $C061"); /* Open-Apple */
-      __asm__("bpl %g", inject_cmd);
-      c |= 0x80;
-    }
+    c = tolower(oa_cgetc());
 inject_cmd:
     switch(c) {
       case CH_CURS_DOWN:
@@ -1124,12 +1119,7 @@ inject_cmd:
         if (!has_80cols && c == SHOW_HELP) {
           clrscr();
           show_help(l, root_status, root_notif);
-          c = tolower(cgetc());
-          if (is_iie) { /* FIXME this should be in cc65 */
-            __asm__("bit $C061"); /* Open-Apple */
-            __asm__("bpl %g", inject_cmd);
-            c |= 0x80;
-          }
+          c = tolower(oa_cgetc());
           clrscr();
           half_displayed_post = 0;
           if (c == SHOW_HELP) {

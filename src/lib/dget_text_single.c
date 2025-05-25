@@ -111,15 +111,7 @@ char * __fastcall__ dget_text_single(char *buf, size_t size, cmd_handler_func cm
     cur_x = wherex();
     cur_y = wherey();
 
-    c = cgetc();
-#ifdef __CC65__
-    if (is_iie) { /* FIXME this should be in cc65 */
-      __asm__("bit $C061"); /* Open-Apple */
-      __asm__("bpl %g", no_oa);
-      c |= 0x80;
-    }
-    no_oa:
-#endif
+    c = oa_cgetc();
     if (is_iie && cmd_cb && (c & 0x80) != 0) {
       if (cmd_cb((c & ~0x80))) {
         goto out;

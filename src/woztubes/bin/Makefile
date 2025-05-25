@@ -42,7 +42,8 @@ woztubes_SOURCES := \
 	$(SRC_DIR)/../lib/cutoa.s \
 	$(SRC_DIR)/../lib/cntoabuf.s \
 	$(SRC_DIR)/../lib/a2_features.s \
-	$(SRC_DIR)/../lib/charsets.c
+	$(SRC_DIR)/../lib/oa_cgetc.s \
+	$(SRC_DIR)/../lib/charsets.c \
 
 ### Warning! some memory tricks happen.
 

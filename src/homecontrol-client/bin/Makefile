@@ -36,7 +36,8 @@ homectrl_CL65SOURCES = \
 	$(SRC_DIR)/../lib/citoa.s \
 	$(SRC_DIR)/../lib/cutoa.s \
 	$(SRC_DIR)/../lib/cntoabuf.s \
-	$(SRC_DIR)/../lib/a2_features.s
+	$(SRC_DIR)/../lib/a2_features.s \
+	$(SRC_DIR)/../lib/oa_cgetc.s \
 
 homectrl_GCCSOURCES = \
 	$(SRC_DIR)/../lib/serial/c/simple_serial.c \

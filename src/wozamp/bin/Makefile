@@ -22,6 +22,7 @@ wozamp_CL65SOURCES = \
 	$(SRC_DIR)/../lib/surl/asm/surl_receive.s \
 	$(SRC_DIR)/../lib/surl/asm/surl_read_with_barrier.s \
 	$(SRC_DIR)/../lib/a2_features.s \
+	$(SRC_DIR)/../lib/oa_cgetc.s \
 	$(SRC_DIR)/../lib/asm/scrollwindow.s \
 	$(SRC_DIR)/../lib/asm/path_helper.s \
 	$(SRC_DIR)/../lib/asm/malloc0.s \
