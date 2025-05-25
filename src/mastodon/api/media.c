@@ -11,7 +11,7 @@
 #include "api.h"
 
 #ifdef __CC65__
-#pragma code-name (push, "LC")
+#pragma code-name (push, "LOWCODE")
 #endif
 
 #define IMG_BUF_SIZE 2048

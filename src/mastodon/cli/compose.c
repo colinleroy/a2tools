@@ -544,10 +544,13 @@ try_again:
   free(text);
 }
 
+void initconst(void);
+
 int main(int argc, char **argv) {
   char *params;
   char *text = NULL;
 
+  initconst();
   surl_connect_proxy();
   vsdrive_install();
 

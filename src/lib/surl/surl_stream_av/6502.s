@@ -148,6 +148,7 @@ _SAMPLES_BASE     = *
 SAMPLE_OFFSET     = >_SAMPLES_BASE
 SAMPLE_MULT       = 1
 .assert SAMPLE_OFFSET .mod $20 = $0, error ; Cf $6000 to $7F00 comment at top of file
+.assert SAMPLE_OFFSET = $60, error
 .include "duty-cycles/0.s"
 
 .align $100

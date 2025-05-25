@@ -49,12 +49,9 @@ mastoimg_SOURCES := \
 
 mastoimg_CC65SOURCES := \
 	$(SRC_DIR)/../lib/surl/surl_stream_av/$(CPU).s \
-	$(SRC_DIR)/../lib/a2_features.s \
-	$(SRC_DIR)/../lib/asm/hgr_mono40.s
-
-mastoimg_CC65SOURCES := \
-	$(mastoimg_CC65SOURCES) \
 	$(common_CC65SOURCES) \
+	$(SRC_DIR)/../lib/a2_features.s \
+	$(SRC_DIR)/../lib/asm/hgr_mono40.s \
 	$(SRC_DIR)/../lib/asm/hgr.s \
 	$(SRC_DIR)/../lib/asm/file_select.s \
 	$(SRC_DIR)/../lib/asm/hyphenize.s \
@@ -137,14 +134,9 @@ CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x400 $(USE_LANGCARD) $
 
 mastodon_CLCFLAGS = $(CLCFLAGS) -C $(SRC_DIR)/../../config/apple2enh-rtonce.cfg --start-addr 0xC03 #One file buffer
 mastocli_CLCFLAGS = $(CLCFLAGS) -C $(SRC_DIR)/../../config/apple2enh-rtonce.cfg --start-addr 0xC03 #One file buffer
-ifeq ($(suffix), 6502)
 mastoimg_CLCFLAGS = $(CLCFLAGS) -C $(SRC_DIR)/../../config/apple2enh-mastoimg-6502.cfg \
-	-DSTART_ADDR=0x3EA0 --start-addr 0x3EA0
-else
-mastoimg_CLCFLAGS = $(CLCFLAGS) -C $(SRC_DIR)/../../config/apple2enh-mastoimg-65c02.cfg \
 	-DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER \
-	-DSTART_ADDR=0x5EA0 --start-addr 0x5EA0
-endif
+	-DSTART_ADDR=0x5DA0 --start-addr 0x5DA0
 mastowrite_CLCFLAGS = $(CLCFLAGS) -C $(SRC_DIR)/../../config/apple2enh-rtonce.cfg --start-addr 0xC03 #One file buffer
 
 GCCCFLAGS = -g -O0 -Wall -Wno-char-subscripts -Wno-unused-but-set-variable -Wno-unused-variable -Wno-unknown-pragmas -Werror $(shell sdl-config --cflags)
@@ -162,6 +154,7 @@ mastodon-$(suffix).po: mastodon.bin mastocli.bin mastowrite.bin mastoimg.bin
 	java -jar $(SRC_DIR)/../../bin/ac.jar -n $@ MASTODON
 	java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ MASTODON.SYSTEM SYS < $(SRC_DIR)/../../bin/loader.system; \
 	java -jar $(SRC_DIR)/../../bin/ac.jar -d $@ BASIC.SYSTEM; \
+	java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ IMGLOW BIN < IMGLOW; \
 	for r in *.bin; do \
 		java -jar $(SRC_DIR)/../../bin/ac.jar -as $@ $$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
 	done;

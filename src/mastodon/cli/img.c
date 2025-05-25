@@ -57,6 +57,10 @@ char *id = NULL;
 #pragma GCC diagnostic pop
 #endif
 
+#ifdef __CC65__
+#pragma code-name (push, "LOWCODE")
+#endif
+
 static void show_help(void) {
   clrzone(0, 17, NUMCOLS-1, 23);
   cputs("Toggle legend: L\r\n"
@@ -148,18 +152,13 @@ static void img_display(media *m, char idx, char num_images) {
 
 static void save_image(void);
 
-#ifdef __CC65__
-#pragma code-name (push, "LC")
-#endif
+void initconst(void);
 
-int main(int argc, char **argv) {
+int real_main(int argc, char **argv) {
   media *m = NULL;
   char i, c;
 
-#ifdef __CC65__
-  /* Leave 0x800-0xC00 for iobuf */
-  _heapadd ((void *) 0x0C00, 0x13FF);
-#endif
+  initconst();
 
   surl_connect_proxy();
   vsdrive_install();
@@ -310,4 +309,19 @@ out_no_conf:
 }
 #ifdef __CC65__
 #pragma code-name (pop)
+#pragma code-name (push, "LC")
 #endif
+void initconst(void);
+
+int main(int argc, char **argv) {
+  int fd;
+
+#ifdef __CC65__
+  /* Leave 0x800-0xC00 for iobuf, and
+   * load our LOWCODE */
+  fd = open("IMGLOW", O_RDONLY);
+  read(fd, (void *)0xC00, 0x2000-0xC00);
+  close(fd);
+#endif
+  real_main(argc, argv);
+}

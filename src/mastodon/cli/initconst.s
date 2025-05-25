@@ -8,13 +8,13 @@
         .export         _SHOW_HELP
         .export         _MEDIA_STR, _IMAGE_STR, _VIDEO_STR, _AUDIO_STR, _GIF_STR
 
+        .export         _initconst
+
         .import         _has_80cols, _has_128k, _is_iie
 
         .import         _try_videomode
         
         .import         pushax, _strcpy
-
-        .constructor    initconst, 6
 
         .segment "DATA"
 
@@ -34,7 +34,7 @@ _VIDEO_STR:           .asciiz "video"
 _AUDIO_STR:           .asciiz "audio"
 _GIF_STR:             .asciiz "gif"
 
-        .segment "ONCE"
+        .segment "RT_ONCE"
 
 ; Strings that will get discarded if unused
 DISK_STATE_FILE  = _STATE_FILE+5
@@ -53,7 +53,7 @@ SHORT_AUDIO_STR:    .asciiz "snd"
         jsr     _strcpy
 .endmacro
 
-.proc initconst
+.proc _initconst
         lda     _has_128k         ; Do we have 128k
         bne     :+
 

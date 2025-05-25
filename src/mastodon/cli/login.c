@@ -139,10 +139,13 @@ reenter_login:
   }
 }
 
+void initconst(void);
+
 int main(int argc, char **argv) {
   char *params;
   char y;
 
+  initconst();
   params = malloc0(127);
 
 #ifdef PRODOS_T_TXT

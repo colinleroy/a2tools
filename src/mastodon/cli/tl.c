@@ -1351,12 +1351,15 @@ navigate_reuse_list:
 #pragma code-name (push, "RT_ONCE")
 #endif
 
+void initconst(void);
+
 int main(int argc, char **argv) {
   if (argc < 5) {
     dputs("Missing parameters.\r\n");
     cgetc();
   }
 
+  initconst();
   register_start_device();
 
   if (has_80cols) {
