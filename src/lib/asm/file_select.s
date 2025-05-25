@@ -29,7 +29,7 @@
         .import         _cgetc, _cputc, _tolower, _beep
         .import         tosumula0, tosaddax, booleq
         .import         popa, popax, pusha0, pusha, pushax, swapstk, incaxy
-        .import         return0, machinetype
+        .import         return0
 
         .import         CH_VLINE
 

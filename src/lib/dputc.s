@@ -18,7 +18,9 @@ bell:
 
         .export         _dputcxy, _dputc
         .import         _scrollup_one, gotoxy, FVTABZ, _cputc
+        .ifndef __APPLE2ENH__
         .import         uppercasemask, machinetype
+        .endif
 
 _dputcxy:
         pha                     ; Save C
@@ -38,8 +40,10 @@ _dputc:
         cmp     CV
         bne     noscroll
 
+        .ifndef __APPLE2ENH__
         bit     machinetype
         bpl     get40
+        .endif
         bit     RD80VID
         bpl     get40
         lda     OURCH              ; Don't scroll if first line but not first char
@@ -65,7 +69,9 @@ noscroll:
         .import         gotoxy, FVTABZ
         .import         putchar, uppercasemask
         .import         _scrollup_one
+        .ifndef __APPLE2ENH__
         .import         machinetype
+        .endif
 
         .code
 
@@ -102,17 +108,21 @@ _dputc:
         bcc     special_chars   ; Skip other tests if possible
 invert: eor     #$80            ; Invert high bit
 
+        .ifndef __APPLE2ENH__
         bit     machinetype
         bmi     dputdirect
         cmp     #$E0            ; Test for lowercase
         bcc     dputdirect
         and     uppercasemask
+        .endif
 
 dputdirect:
         jsr     putchar
 
+        .ifndef __APPLE2ENH__
         bit     machinetype
         bpl     inc40
+        .endif
         bit     RD80VID
         bpl     inc40
         inc     OURCH
@@ -129,8 +139,10 @@ cmpw:
 :       jsr     dnewline
 left:
         lda     #$00
+        .ifndef __APPLE2ENH__
         bit     machinetype
         bpl     zero40
+        .endif
         bit     RD80VID
         bpl     zero40
         sta     OURCH
@@ -141,8 +153,10 @@ out:
         rts
 
 backspace:
+        .ifndef __APPLE2ENH__
         bit     machinetype
         bpl     ld40
+        .endif
         bit     RD80VID
         bpl     ld40
         lda     OURCH
@@ -158,8 +172,10 @@ chk:
         sty     CV              ; store it
         ldy     WNDWDTH         ; prepare CH for decr
 
+        .ifndef __APPLE2ENH__
         bit     machinetype
         bpl     stch
+        .endif
         bit     RD80VID
         bpl     stch
         sty     OURCH
@@ -169,8 +185,10 @@ upcv:   lda     CV
         jsr     FVTABZ
 
 decrh:
+        .ifndef __APPLE2ENH__
         bit     machinetype
         bpl     decch
+        .endif
         bit     RD80VID
         bpl     decch
         dec     OURCH

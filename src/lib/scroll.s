@@ -6,7 +6,12 @@
 
         .export         _scrolldown_one, _scrollup_one, _scrolldown_n, _scrollup_n
         .import         FVTABZ
-        .import         COUT, machinetype
+        .import         COUT
+
+        .ifndef __APPLE2ENH__
+        .import         machinetype
+        .endif
+
         .include        "apple2.inc"
 
 BAS2L  := $2A
@@ -47,8 +52,10 @@ scrollit:
         sty     TEMP1           ;save direction
         lda     WNDWDTH         ;get width of screen window
         pha                     ;save original width
+        .ifndef __APPLE2ENH__
         bit     machinetype
         bpl     getstl
+        .endif
         bit     RD80VID         ;in 40 or 80 columns?
         bpl     getstl          ;=>40, determine starting line
         sta     SET80COL        ;make sure this is enabled
@@ -142,8 +149,10 @@ xgseolz:
         lda     INVFLG          ;mask blank
         and     #$80            ;with high bit
         ora     #$20            ;make it a blank
+        .ifndef __APPLE2ENH__
         bit     machinetype
         bpl     clr40
+        .endif
         bit     RD80VID         ;is it 80 columns?
         bmi     clr80           ;yes, do quick clear
 clr40:

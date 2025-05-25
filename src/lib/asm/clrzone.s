@@ -1,6 +1,9 @@
 
                 .export _clreol, _clrzone
-                .import FVTABZ, cputdirect, machinetype
+                .import FVTABZ, cputdirect
+                .ifndef __APPLE2ENH__
+                .import machinetype
+                .endif
                 .import incsp3
                 .importzp sp
                 .include "apple2.inc"
@@ -10,8 +13,10 @@
 _clreol:
         lda     CH
 
+        .ifndef __APPLE2ENH__
         bit     machinetype
         bpl     :+
+        .endif
         bit     RD80VID
         bpl     :+
         lda     OURCH
@@ -64,10 +69,12 @@ update_screen:
 next_line:
         jsr     FVTABZ
         lda     clr_lxs
+        .ifndef __APPLE2ENH__
         bit     machinetype
-        bpl     :+
+        bpl     st40
+        .endif
         sta     OURCH
-:       sta     CH
+st40:   sta     CH
 
         ; (backup CV in case it's last column of scrollwindow)
         lda     CV
@@ -77,8 +84,10 @@ next_char:
         lda     #' '|$80
         jsr     cputdirect
 
+        .ifndef __APPLE2ENH__
         bit     machinetype
         bpl     get40
+        .endif
         bit     RD80VID
         bpl     get40
         lda     OURCH
@@ -103,10 +112,12 @@ cmp_char:
         sta     CV
         jsr     FVTABZ
         pla
+        .ifndef __APPLE2ENH__
         bit     machinetype
-        bpl     :+
+        bpl     st40b
+        .endif
         sta     OURCH
-:       sta     CH
+st40b:  sta     CH
         rts
         .bss
 

@@ -6,8 +6,10 @@
         jsr     _cgetc
 
         ; FIXME this should be in cc65
+        .ifndef __APPLE2ENH__
         bit     machinetype
         bmi     :+
+        .endif
         bit     $C061             ; Open-Apple?
         bpl     :+
         ora     #$80

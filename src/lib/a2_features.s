@@ -8,7 +8,9 @@
         .export         _has_80cols, _has_128k
         .export         _try_videomode
 
+        .ifndef __APPLE2ENH__
         .export         machinetype ; FIXME remove once in cc65
+        .endif
         .export         CH_VLINE    ; FIXME id
 
         .import         ostype, _videomode, _allow_lowercase
@@ -30,9 +32,6 @@ _has_128k:    .byte $00
 ; FIXME: Update once cc65 gets dynamic 80cols feature
 .ifdef __APPLE2ENH__
 
-; bit 7: Machine is a //e or newer
-; bit 6: Machine is a //e enhanced or newer
-machinetype: .byte %11000000
 CH_VLINE:    .byte $DF
 
 .else

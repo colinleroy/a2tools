@@ -1,7 +1,8 @@
 GENERAL_CFLAGS := \
 	-DSURL_TO_LANGCARD \
 	--asm-define SURL_TO_LANGCARD \
-	--asm-define SERIAL_ENABLE_IRQ
+	--asm-define SERIAL_ENABLE_IRQ \
+	-DDYN_BOX_DRAW
 
 common_CC65SOURCES := \
 	$(SRC_DIR)/../lib/serial/asm/driver.s \
