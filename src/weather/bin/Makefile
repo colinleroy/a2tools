@@ -1,4 +1,7 @@
-USE_LANGCARD := -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD --asm-define SERIAL_ENABLE_IRQ
+GENERAL_CFLAGS := \
+	-DSURL_TO_LANGCARD \
+	--asm-define SURL_TO_LANGCARD \
+	--asm-define SERIAL_ENABLE_IRQ \
 
 GCCCFLAGS = -g -O0 -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\" \
 	-I $(SRC_DIR)/../lib -I $(SRC_DIR)/../stp -Wall -Wno-format \
@@ -36,7 +39,7 @@ weather_SOURCES := \
 
 weather_CLCFLAGS = -t $(CC65_TARGET) -I $(SRC_DIR)/../lib \
 	-Wl -D,__STACKSIZE__=0x0400 -C $(SRC_DIR)/../../config/apple2enh-rtonce.cfg \
-	-vm -m weather.map $(USE_LANGCARD) -O --start-addr 0x4000
+	-vm -m weather.map $(GENERAL_CFLAGS) -O --start-addr 0x4000
 
 all: weather$(iigs_suffix).po
 
@@ -53,7 +56,7 @@ clean:
 	rm -f *.bin *.o *.map *.dbg *.lbl *.po
 
 weather.bin: $(weather_CL65SOURCES) $(weather_SOURCES)
-	cl65 -g -Wl --dbgfile,weather.dbg -Ln weather.lbl $(CFLAGS) $(iigs_CFLAGS) $(weather_CLCFLAGS) -o $@ $^  $(CC65_TARGET)-iobuf-0800.o
+	cl65 -g -Wl --dbgfile,weather.dbg -Ln weather.lbl $(CFLAGS) $(weather_CLCFLAGS) -o $@ $^  $(CC65_TARGET)-iobuf-0800.o
 
 upload: all
 	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/weather/$(suffix)/ || \

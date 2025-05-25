@@ -1,17 +1,15 @@
 ifdef OLDII
-serial_hw_SOURCES := ../lib/serial/acia/common.s ../lib/serial/acia/no_irq.s
 suffix :=
 upload_subdir :=
 CC65_TARGET := apple2
 STREAMER_VER := 6502
 else
-serial_hw_SOURCES := ../lib/serial/acia/common.s ../lib/serial/acia/no_irq.s
 CC65_TARGET = apple2enh
 trgt = apple2c0
 STREAMER_VER := 65c02
 endif
 
-USE_LANGCARD := -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD
+GENERAL_CFLAGS := -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD
 
 GCCCFLAGS = -g -O0 -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\" \
 	-I ../lib -I ../stp -Wall -Wno-format \
@@ -36,12 +34,11 @@ ammonoid_SOURCES := \
 	../lib/vsdrive.s \
 	../lib/serial/asm/simple_serial.s \
 	../lib/serial/asm/simple_serial_io.s \
-	$(serial_hw_SOURCES) \
 
 ammonoid_CLCFLAGS = -t $(CC65_TARGET) -I ../lib \
 	-DFILESEL_ALLOW_NONPRODOS_VOLUMES \
 	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-rtonce.cfg \
-	-vm -m ammonoid.map $(USE_LANGCARD) -O -Cl --start-addr 0x1003
+	-vm -m ammonoid.map $(GENERAL_CFLAGS) -O -Cl --start-addr 0x1003
 
 all: \
 	ammonoid.bin

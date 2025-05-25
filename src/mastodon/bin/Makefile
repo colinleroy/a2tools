@@ -1,3 +1,8 @@
+GENERAL_CFLAGS := \
+	-DSURL_TO_LANGCARD \
+	--asm-define SURL_TO_LANGCARD \
+	--asm-define SERIAL_ENABLE_IRQ
+
 common_CC65SOURCES := \
 	$(SRC_DIR)/../lib/serial/asm/driver.s \
 	$(SRC_DIR)/../lib/serial/asm/acia.s \
@@ -129,8 +134,7 @@ DEPS :=
 CC65_TARGET = $(TARGET)
 CFLAGS  = -I $(SRC_DIR)/../lib -I $(SRC_DIR)/api -I $(SRC_DIR)/cli -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
 
-CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x400 $(USE_LANGCARD) $(debug_CFLAGS)  $(iigs_CFLAGS) \
-	--asm-define SERIAL_ENABLE_IRQ
+CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x400 $(GENERAL_CFLAGS) $(debug_CFLAGS) \
 
 mastodon_CLCFLAGS = $(CLCFLAGS) -C $(SRC_DIR)/../../config/apple2enh-rtonce.cfg --start-addr 0xC03 #One file buffer
 mastocli_CLCFLAGS = $(CLCFLAGS) -C $(SRC_DIR)/../../config/apple2enh-rtonce.cfg --start-addr 0xC03 #One file buffer

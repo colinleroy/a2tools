@@ -220,7 +220,7 @@ check_imports.sh: $(glider_SOURCES) $(SRC_DIR)/check_imports.sh
 	./check_imports.sh $(SRC_DIR)/levels_data
 
 $(BINARY_NAME): glider.ld.cfg $(glider_SOURCES) check_imports.sh
-	cl65 -g -Wl --dbgfile,glider.dbg -Ln glider.lbl $(CFLAGS) $(iigs_CFLAGS) $(glider_CLCFLAGS) \
+	cl65 -g -Wl --dbgfile,glider.dbg -Ln glider.lbl $(CFLAGS) $(glider_CLCFLAGS) \
 		-C glider.ld.cfg -o $@ $(glider_SOURCES) \
 		$(CC65_TARGET)-iobuf-0800.o $(CC65_TARGET)-integer-basic-compat.o
 

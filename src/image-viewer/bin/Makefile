@@ -1,3 +1,7 @@
+GENERAL_CFLAGS := -DSURL_TO_LANGCARD \
+	--asm-define SURL_TO_LANGCARD \
+	--asm-define SERIAL_ENABLE_IRQ
+
 imgview_SOURCES := \
 	$(SRC_DIR)/imageview.c \
 	$(SRC_DIR)/../lib/progress_bar.c \
@@ -46,8 +50,7 @@ DEPS :=
 
 CFLAGS  = -I $(SRC_DIR)/../lib -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
 
-CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x200 $(USE_LANGCARD) $(iigs_CFLAGS) \
-	--asm-define SERIAL_ENABLE_IRQ
+CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x200 $(GENERAL_CFLAGS)
 
 imgview_CLCFLAGS = $(CLCFLAGS) -C $(SRC_DIR)/../../config/apple2enh-rtonce.cfg $(CC65_TARGET)-iobuf-0800.o --start-addr 0x4000
 

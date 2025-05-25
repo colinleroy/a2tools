@@ -1,4 +1,6 @@
-USE_LANGCARD := -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD --asm-define SERIAL_ENABLE_IRQ
+GENERAL_CFLAGS := -DSURL_TO_LANGCARD \
+	--asm-define SURL_TO_LANGCARD \
+	--asm-define SERIAL_ENABLE_IRQ \
 
 wozamp_SOURCES := \
 	$(SRC_DIR)/main.c \
@@ -44,7 +46,7 @@ wozamp_CLCFLAGS = -t $(CC65_TARGET) -DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER \
 	-DSTP_DATA_SIZE=8192 \
 	-I $(SRC_DIR)/../lib -I $(SRC_DIR)/../stp -I . \
 	-Wl -D,__STACKSIZE__=0x0400 -C $(SRC_DIR)/../../config/apple2enh-pwmstreamer.cfg \
-	-vm -m wozamp.map $(USE_LANGCARD) -O
+	-vm -m wozamp.map $(GENERAL_CFLAGS) -O
 
 rbrowser_SOURCES := \
 	$(SRC_DIR)/radio-browser.c \
@@ -82,7 +84,7 @@ rbrowser_CL65SOURCES = \
 rbrowser_CLCFLAGS = -t $(CC65_TARGET) \
 	-I $(SRC_DIR)/../lib -I $(SRC_DIR)/../stp -I . \
 	-Wl -D,__STACKSIZE__=0x0400 -C $(SRC_DIR)/../../config/apple2enh-rbrowser.cfg \
-	-vm -m rbrowser.map $(USE_LANGCARD) -O --start-addr 0x4000
+	-vm -m rbrowser.map $(GENERAL_CFLAGS) -O --start-addr 0x4000
 
 
 .PHONY: all clean
@@ -121,7 +123,7 @@ videoplay_CLCFLAGS = -t $(CC65_TARGET) \
 	-DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER \
 	-I $(SRC_DIR)/../lib -I . \
 	-Wl -D,__STACKSIZE__=0x0400 -C $(SRC_DIR)/../../config/apple2enh-wozamp-videoplay.cfg \
-	-vm -m videoplay.map $(USE_LANGCARD) -O --start-addr $(VIDEOPLAY_START_ADDR)
+	-vm -m videoplay.map $(GENERAL_CFLAGS) -O --start-addr $(VIDEOPLAY_START_ADDR)
 
 DISK_PROGS = splash.h splash-video.h wozamp.bin $(EXTERNAL_RBROWSER) videoplay.bin
 
@@ -162,13 +164,13 @@ splash-video.h: wozamp-video.hgr
 	$(SRC_DIR)/../../bin/make-splash.sh wozamp-video.png splash-video.h
 
 wozamp.bin: $(wozamp_CL65SOURCES) $(wozamp_SOURCES)
-	cl65 -g -Wl --dbgfile,wozamp.dbg -Ln wozamp.lbl $(CFLAGS) $(iigs_CFLAGS) $(wozamp_CLCFLAGS) -o $@ $^
+	cl65 -g -Wl --dbgfile,wozamp.dbg -Ln wozamp.lbl $(CFLAGS) $(wozamp_CLCFLAGS) -o $@ $^
 
 rbrowser.bin: $(rbrowser_CL65SOURCES) $(rbrowser_SOURCES)
-	cl65 -g -Wl --dbgfile,rbrowser.dbg -Ln rbrowser.lbl $(CFLAGS) $(iigs_CFLAGS) $(rbrowser_CLCFLAGS) -o $@ $^
+	cl65 -g -Wl --dbgfile,rbrowser.dbg -Ln rbrowser.lbl $(CFLAGS) $(rbrowser_CLCFLAGS) -o $@ $^
 
 videoplay.bin: $(videoplay_CL65SOURCES) $(videoplay_SOURCES)
-	cl65 -g -Wl --dbgfile,videoplay.dbg -Ln videoplay.lbl $(CFLAGS) $(iigs_CFLAGS) $(videoplay_CLCFLAGS) -o $@ $^
+	cl65 -g -Wl --dbgfile,videoplay.dbg -Ln videoplay.lbl $(CFLAGS) $(videoplay_CLCFLAGS) -o $@ $^
 
 upload: all
 	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/wozamp/$(suffix)/ || \

@@ -1,5 +1,7 @@
 SRC_DIR := .
-USE_LANGCARD := -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD --asm-define SERIAL_ENABLE_IRQ
+GENERAL_CFLAGS := -DSURL_TO_LANGCARD \
+	--asm-define SURL_TO_LANGCARD \
+	--asm-define SERIAL_ENABLE_IRQ
 
 PROGRAM=homectrl grphview
 homectrl_SOURCES := \
@@ -87,7 +89,7 @@ DEPS :=
 
 CC65_TARGET = apple2
 CFLAGS  = -I $(SRC_DIR)/../lib -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
-homectrl_CLCFLAGS = -t $(CC65_TARGET) -O -Wl -D,__STACKSIZE__=0x0400 -C $(SRC_DIR)/../../config/apple2enh-rtonce.cfg $(USE_LANGCARD) $(iigs_CFLAGS)
+homectrl_CLCFLAGS = -t $(CC65_TARGET) -O -Wl -D,__STACKSIZE__=0x0400 -C $(SRC_DIR)/../../config/apple2enh-rtonce.cfg $(GENERAL_CFLAGS)
 grphview_CLCFLAGS = $(homectrl_CLCFLAGS) --start-addr 0x4000
 GCCCFLAGS = -g -O0 -Wall  -Wno-unknown-pragmas -Wno-unused-function -Wno-char-subscripts -Werror $(shell sdl-config --cflags)
 GCCLDFLAGS = $(shell sdl-config --libs)

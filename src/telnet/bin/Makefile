@@ -1,4 +1,9 @@
-USE_LANGCARD := -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD
+GENERAL_CFLAGS := \
+	-DSURL_TO_LANGCARD \
+	--asm-define SURL_TO_LANGCARD \
+	-DAVOID_ROM_CALLS \
+	--asm-define AVOID_ROM_CALLS \
+	--asm-define SERIAL_ENABLE_IRQ \
 
 PROGRAM=telnet
 SOURCES := \
@@ -47,9 +52,8 @@ DEPS :=
 
 CC65_TARGET = apple2enh
 CFLAGS  = -I $(SRC_DIR)/../lib -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
-CLCFLAGS = -t $(CC65_TARGET) -Osir -Cl $(iigs_CFLAGS) -C $(SRC_DIR)/../../config/apple2enh-rtonce.cfg \
-	$(USE_LANGCARD) -DAVOID_ROM_CALLS --asm-define AVOID_ROM_CALLS \
-	--asm-define SERIAL_ENABLE_IRQ
+CLCFLAGS = -t $(CC65_TARGET) -Osir -Cl -C $(SRC_DIR)/../../config/apple2enh-rtonce.cfg \
+	$(GENERAL_CFLAGS)
 GCCCFLAGS = -g -O0 -Wall -Wno-char-subscripts -Wno-unused-function -Wno-unknown-pragmas -Werror
 GCCLDFLAGS = 
 

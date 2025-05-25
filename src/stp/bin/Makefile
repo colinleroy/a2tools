@@ -1,3 +1,12 @@
+GENERAL_CFLAGS := \
+	-DSURL_TO_LANGCARD \
+	--asm-define SURL_TO_LANGCARD \
+	-DFILESEL_TO_LANGCARD \
+	-DFILESEL_ALLOW_NONPRODOS_VOLUMES \
+	--asm-define FILESEL_ALLOW_NONPRODOS_VOLUMES \
+	--asm-define SERIAL_ENABLE_IRQ \
+	-DSTP_DATA_SIZE=8192
+
 PROGRAM=stp
 SOURCES := \
 	$(SRC_DIR)/stp_main.c \
@@ -66,10 +75,8 @@ CC65_TARGET = $(TARGET)
 CFLAGS  = -I $(SRC_DIR)/../lib -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\" $(debug_CFLAGS)
 CLCFLAGS = -t $(CC65_TARGET) -g -O -Cl -Wl -D,__STACKSIZE__=0x0400 \
 	-C $(SRC_DIR)/../../config/apple2enh-rtonce.cfg -vm -m $(PROGRAM).map \
-	-DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD -DFILESEL_TO_LANGCARD \
-	-DFILESEL_ALLOW_NONPRODOS_VOLUMES --asm-define FILESEL_ALLOW_NONPRODOS_VOLUMES \
-	--asm-define SERIAL_ENABLE_IRQ \
-	$(iigs_CFLAGS) -DSTP_DATA_SIZE=8192
+	$(GENERAL_CFLAGS) \
+
 GCCCFLAGS = -g -O0 -Wall -Wno-format -Wno-unused-function -Wno-char-subscripts -Wno-unknown-pragmas -Werror -DSTP_DATA_SIZE=8192
 GCCLDFLAGS = 
 

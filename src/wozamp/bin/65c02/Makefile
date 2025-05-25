@@ -1,8 +1,5 @@
 SRC_DIR=../../
-CC65_TARGET = apple2enh
 suffix := 65c02
-iigs_suffix :=
-iigs_CFLAGS :=
 CC65_TARGET = apple2enh
 trgt = apple2c0
 BUILD_VIDEOPLAY := 1

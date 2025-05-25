@@ -1,5 +1,9 @@
 TARGET := apple2enh
-USE_LANGCARD := -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD
+GENERAL_CFLAGS := \
+	-DSURL_TO_LANGCARD \
+	--asm-define SURL_TO_LANGCARD \
+	--asm-define SERIAL_ENABLE_IRQ \
+	--asm-define SERIAL_LOW_LEVEL_CONTROL
 
 ifdef DEBUG_HD
 debug_CFLAGS := $(debug_CFLAGS) -DDEBUG_HD=$(DEBUG_HD)
@@ -115,9 +119,7 @@ DEPS :=
 CC65_TARGET = $(TARGET)
 CFLAGS  = -I $(SRC_DIR)/../lib -I . -DCONF_FILE_PATH=\"/etc/a2tools/quicktake.conf\"
 
-CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x200 $(USE_LANGCARD) $(debug_CFLAGS) $(iigs_CFLAGS) \
-	--asm-define SERIAL_ENABLE_IRQ \
-	--asm-define SERIAL_LOW_LEVEL_CONTROL
+CLCFLAGS = -t $(CC65_TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x200 $(GENERAL_CFLAGS) $(debug_CFLAGS) \
 
 slowtake_CLCFLAGS = $(CLCFLAGS) -C $(SRC_DIR)/../../config/apple2enh-hgr.cfg $(CC65_TARGET)-iobuf-0800.o --start-addr 0xC00 #One file buffer
 

@@ -1,4 +1,10 @@
-USE_LANGCARD := -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD --asm-define SERIAL_ENABLE_IRQ
+GENERAL_CFLAGS := \
+	-DSURL_TO_LANGCARD \
+	--asm-define SURL_TO_LANGCARD \
+	--asm-define SERIAL_ENABLE_IRQ \
+	-DBUF_1K_ADDR=0x800 -DBUF_1K_SIZE=0x3FF \
+	-DBUF_8K_ADDR=0x4000 -DBUF_8K_SIZE=0x1FFF \
+	-DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER \
 
 START_ADDR := 0x113A
 
@@ -60,11 +66,8 @@ woztubes_SOURCES := \
 #              the binary a bit. But DO NOT runtime_once_clean() as usual!
 
 woztubes_CLCFLAGS = -t $(CC65_TARGET) -I $(SRC_DIR)/../lib -I . \
-	-DBUF_1K_ADDR=0x800 -DBUF_1K_SIZE=0x3FF \
-	-DBUF_8K_ADDR=0x4000 -DBUF_8K_SIZE=0x1FFF \
-	-DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER \
 	-Wl -D,__STACKSIZE__=0x0400 -C $(SRC_DIR)/../../config/apple2enh-woztubes.cfg \
-	-vm -m woztubes.map $(USE_LANGCARD) -O --start-addr $(START_ADDR)
+	-vm -m woztubes.map $(GENERAL_CFLAGS) -O --start-addr $(START_ADDR)
 
 all: woztubes-$(suffix).po
 
@@ -93,7 +96,7 @@ splash.h: woztubes.hgr
 	$(SRC_DIR)../../bin/make-splash.sh woztubes.png splash.h
 
 woztubes.bin: $(woztubes_CL65SOURCES) $(woztubes_SOURCES)
-	cl65 -g -Wl --dbgfile,woztubes.dbg -Ln woztubes.lbl $(CFLAGS) $(iigs_CFLAGS) $(woztubes_CLCFLAGS) -o $@ $^  $(CC65_TARGET)-iobuf-0800.o
+	cl65 -g -Wl --dbgfile,woztubes.dbg -Ln woztubes.lbl $(CFLAGS) $(woztubes_CLCFLAGS) -o $@ $^  $(CC65_TARGET)-iobuf-0800.o
 
 upload: all
 	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/woztubes/$(suffix)/ || \
