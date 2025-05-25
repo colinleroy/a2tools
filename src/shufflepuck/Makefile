@@ -327,37 +327,37 @@ play_sound.gen.s: gen_sound_player
 $(sounds): %.snd.s: $(SRC_DIR)/assets/sounds/%.wav
 crash.snd.s: $(SRC_DIR)/assets/sounds/crash.wav gen_sound_clip
 	rm -f $<_raw
-	sox $< -b 8 -e unsigned-integer -t raw $<_raw channels 1 rate -v $(SAMPLING_HZ)
+	sox $< -R -b 8 -e unsigned-integer -t raw $<_raw channels 1 rate -v $(SAMPLING_HZ)
 	./gen_sound_clip $(SAMPLING_HZ) $<_raw RODATA > $@
 	rm $<_raw
 puc%.snd.s: $(SRC_DIR)/assets/sounds/puc%.wav gen_sound_clip
 	rm -f $<_raw
-	sox $< -b 8 -e unsigned-integer -t raw $<_raw channels 1 rate -v $(SAMPLING_HZ)
+	sox $< -R -b 8 -e unsigned-integer -t raw $<_raw channels 1 rate -v $(SAMPLING_HZ)
 	./gen_sound_clip $(SAMPLING_HZ) $<_raw SPLC > $@
 	rm $<_raw
 bar.snd.s: $(SRC_DIR)/assets/sounds/bar.wav gen_sound_clip
 	rm -f $<_raw
-	sox $< -b 8 -e unsigned-integer -t raw $<_raw channels 1 rate -v $(SAMPLING_HZ)
+	sox $< -R -b 8 -e unsigned-integer -t raw $<_raw channels 1 rate -v $(SAMPLING_HZ)
 	./gen_sound_clip $(SAMPLING_HZ) $<_raw barsnd > $@
 	rm $<_raw
 serve%.snd.s: $(SRC_DIR)/assets/sounds/opponents/serve%.wav gen_sound_clip
 	rm -f $<_raw
-	sox $< -b 8 -e unsigned-integer -t raw $<_raw channels 1 rate -v $(SAMPLING_HZ)
+	sox $< -R -b 8 -e unsigned-integer -t raw $<_raw channels 1 rate -v $(SAMPLING_HZ)
 	./gen_sound_clip $(SAMPLING_HZ) $<_raw $(shell echo "$@"|sed 's/[a-z]*_\([a-z]\).*$$/\1/') > $@
 	rm $<_raw
 win%.snd.s: $(SRC_DIR)/assets/sounds/opponents/win%.wav gen_sound_clip
 	rm -f $<_raw
-	sox $< -b 8 -e unsigned-integer -t raw $<_raw channels 1 rate -v $(SAMPLING_HZ)
+	sox $< -R -b 8 -e unsigned-integer -t raw $<_raw channels 1 rate -v $(SAMPLING_HZ)
 	./gen_sound_clip $(SAMPLING_HZ) $<_raw $(shell echo "$@"|sed 's/[a-z]*_\([a-z]\).*$$/\1/') > $@
 	rm $<_raw
 lose%.snd.s: $(SRC_DIR)/assets/sounds/opponents/lose%.wav gen_sound_clip
 	rm -f $<_raw
-	sox $< -b 8 -e unsigned-integer -t raw $<_raw channels 1 rate -v $(SAMPLING_HZ)
+	sox $< -R -b 8 -e unsigned-integer -t raw $<_raw channels 1 rate -v $(SAMPLING_HZ)
 	./gen_sound_clip $(SAMPLING_HZ) $<_raw $(shell echo "$@"|sed 's/[a-z]*_\([a-z]\).*$$/\1/') > $@
 	rm $<_raw
 end%.snd.s: $(SRC_DIR)/assets/sounds/opponents/end%.wav gen_sound_clip
 	rm -f $<_raw
-	sox $< -b 8 -e unsigned-integer -t raw $<_raw channels 1 rate -v $(SAMPLING_HZ)
+	sox $< -R -b 8 -e unsigned-integer -t raw $<_raw channels 1 rate -v $(SAMPLING_HZ)
 	./gen_sound_clip $(SAMPLING_HZ) $<_raw $(shell echo "$@"|sed 's/[a-z]*_\([a-z]\).*$$/\1/') > $@
 	rm $<_raw
 

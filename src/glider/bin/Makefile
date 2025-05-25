@@ -189,7 +189,7 @@ play_sound.gen.s: gen_sound_player
 $(sounds): %.snd.s: $(SRC_DIR)/assets/sounds/%.wav
 %.snd.s: $(SRC_DIR)/assets/sounds/%.wav gen_sound_clip
 	rm -f $<_raw
-	sox $< -b 8 -e unsigned-integer -t raw $<_raw channels 1 rate -v $(SAMPLING_HZ)
+	sox $< -R -b 8 -e unsigned-integer -t raw $<_raw channels 1 rate -v $(SAMPLING_HZ)
 	./gen_sound_clip $(SAMPLING_HZ) $<_raw > $@
 	rm $<_raw
 
