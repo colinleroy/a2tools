@@ -5,6 +5,7 @@
         .export         _SCROLL_KEYS
         .export         _TRANSLITCMD
         .export         _TL_SPOILER_TEXT_BUF
+        .export         _SHOW_HELP
         .export         _MEDIA_STR, _IMAGE_STR, _VIDEO_STR, _AUDIO_STR, _GIF_STR
 
         .import         _has_80cols, _has_128k, _is_iie
@@ -21,6 +22,7 @@ _LEFT_COL_WIDTH:      .byte 19
 _RIGHT_COL_START:     .byte 20
 _NUMCOLS:             .byte 80
 _TL_SPOILER_TEXT_BUF: .byte 54
+_SHOW_HELP:           .byte 'y'|$80
 
 _STATE_FILE:          .asciiz "/RAM/mastostate"
 _SCROLL_KEYS:         .asciiz "Up/Dn"
@@ -67,6 +69,9 @@ SHORT_AUDIO_STR:    .asciiz "snd"
 
         ; No, set scroll keys
         COPY_STR _SCROLL_KEYS, UJ_STR
+
+        lda     #'Y'-'A'+1
+        sta     _SHOW_HELP
 
         lda     #'L'              ; Fix Translit command for
         sta     _TRANSLITCMD+8    ; auto lower-casing

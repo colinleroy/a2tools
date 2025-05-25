@@ -19,7 +19,7 @@ extern char STATE_FILE[];
 #endif
 
 /* actions mapped to keys */
-#define SHOW_HELP            'y'|0x80
+extern unsigned char SHOW_HELP;
 #define SHOW_FULL_STATUS     CH_ENTER
 #define BACK                 CH_ESC
 #define COMPOSE              'c'

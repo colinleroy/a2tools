@@ -1120,8 +1120,8 @@ inject_cmd:
         return;
       case 'q':      /* QUIT */
         exit(0);
-      case SHOW_HELP:
-        if (!has_80cols) {
+      default:
+        if (!has_80cols && c == SHOW_HELP) {
           clrscr();
           show_help(l, root_status, root_notif);
           c = tolower(cgetc());
