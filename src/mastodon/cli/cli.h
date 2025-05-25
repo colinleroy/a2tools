@@ -5,20 +5,15 @@
 #include "account.h"
 
 #define NUMLINES 24
-extern unsigned char NUMCOLS;
 #define TIME_COLUMN 41
-
-#ifdef __APPLE2ENH__
-#define LEFT_COL_WIDTH 19
-#define RIGHT_COL_START 20
 #define N_STATUS_TO_LOAD 10
-#define STATE_FILE "/RAM/mastostate"
 
-#else
-#define LEFT_COL_WIDTH 39
-#define RIGHT_COL_START 0
-#define N_STATUS_TO_LOAD 8
-#define STATE_FILE "mastostate"
+extern unsigned char NUMCOLS;
+extern unsigned char LEFT_COL_WIDTH;
+extern unsigned char RIGHT_COL_START;
+extern char STATE_FILE[];
+
+#ifndef __APPLE2ENH__
 #define CH_CURS_UP 0x0B
 #define CH_CURS_DOWN 0x0A
 #endif

@@ -30,7 +30,6 @@ char *instance_url = NULL;
 char *oauth_token = NULL;
 char top = 0;
 char writable_lines = NUMLINES;
-unsigned char NUMCOLS = 40;
 
 char n_medias = 0;
 char sensitive_medias = 0;
@@ -253,7 +252,7 @@ image_menu:
   }
 
   for (c = 0; c < n_medias; c++) {
-    char short_desc[TL_SPOILER_TEXT_BUF+1];
+    char short_desc[55];
     strncpy(short_desc, media_descriptions[c], TL_SPOILER_TEXT_BUF);
     hyphenize(short_desc, TL_SPOILER_TEXT_BUF);
 
@@ -347,11 +346,7 @@ static void set_poll_duration(void) {
   char c, i;
   do {
     gotoxy(0, NUMLINES - 1);
-#ifdef __APPLE2ENH__
-    dputs("Left/Right to change duration, Enter to validate.");
-#else
     dputs("Left/Right:set duration, Enter:validate");
-#endif
     for (i = 0; i < NUM_POLL_DURATIONS; i++) {
       if (toot_poll->expires_in_hours == compose_poll_durations_hours[i]) {
         break;
@@ -410,13 +405,8 @@ poll_menu:
     cprintf("R: remove option %d", toot_poll->options_count);
   }
 
-#ifdef __APPLE2ENH__
-  cprintf("\r\nT: Set to %s choice; E: set duration"
-          "\r\nD: delete poll; Escape: back to editing",
-#else
   cprintf("\r\nT: set %s choice; E: set duration"
           "\r\nD: delete poll; Escape: back to editing",
-#endif
           toot_poll->multiple ? "single":"multiple");
 
   c = cgetc();
@@ -568,11 +558,6 @@ int main(int argc, char **argv) {
   }
 
   register_start_device();
-
-  try_videomode(VIDEOMODE_80COL);
-  if (has_80cols) {
-    NUMCOLS = 80;
-  }
 
   instance_url = argv[1];
   oauth_token = argv[2];

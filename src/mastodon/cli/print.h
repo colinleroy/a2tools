@@ -14,17 +14,8 @@
     return -1;                \
 } while (0)
 
-#ifdef __APPLE2ENH__
-#define CHLINE_CHAR '_'
-#else
-#define CHLINE_CHAR '-'
-#endif
 #define CHLINE_SAFE() do {            \
-  chline(NUMCOLS - RIGHT_COL_START - 1); \
-  if (writable_lines > 1)             \
-    dputc(CHLINE_CHAR);               \
-  else                                \
-    cputc(CHLINE_CHAR);               \
+  chline(NUMCOLS - RIGHT_COL_START); \
   CHECK_NO_CRLF();                    \
 } while (0)
 

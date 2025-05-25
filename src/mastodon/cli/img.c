@@ -41,7 +41,6 @@ char *instance_url;
 char *oauth_token;
 char *type = NULL;
 char *id = NULL;
-unsigned char NUMCOLS = 40;
 
 #ifdef __CC65__
   #pragma rodata-name (push, "HGR")
@@ -156,11 +155,6 @@ static void save_image(void);
 int main(int argc, char **argv) {
   media *m = NULL;
   char i, c;
-
-  try_videomode(VIDEOMODE_80COL);
-  if (has_80cols) {
-    NUMCOLS = 80;
-  }
 
 #ifdef __CC65__
   /* Leave 0x800-0xC00 for iobuf */

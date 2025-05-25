@@ -17,11 +17,7 @@
 #pragma code-name (push, "LOWCODE")
 #endif
 
-#ifdef __APPLE2ENH__
-#define TRANSLITCMD "TRANSLIT"
-#else
-#define TRANSLITCMD "TRANSLITLC"
-#endif
+extern char TRANSLITCMD[];
 
 char *compose_audience_str(char compose_audience) {
   switch(compose_audience) {
@@ -108,7 +104,8 @@ send_again:
   if (IS_NOT_NULL(media_id)) {
     /* Set description */
     int len;
-    snprintf(send_buf, SEND_BUF_SIZE, "S|description|"TRANSLITCMD"|%s\n%s\n",
+    snprintf(send_buf, SEND_BUF_SIZE, "S|description|%s|%s\n%s\n",
+                          TRANSLITCMD,
                           translit_charset,
                           description);
 
@@ -187,16 +184,15 @@ signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medi
                        "%s"
                        "S|visibility\n%s\n"
                        "B|sensitive\n%s\n"
-                       "S|spoiler_text|"TRANSLITCMD"|%s\n%s\n"
-                       "S|status|"TRANSLITCMD"|%s\n",
+                       "S|spoiler_text|%s|%s\n%s\n"
+                       "S|status|%s|%s\n",
                         (IS_NOT_NULL(ref_toot_id) && mode == 'r') ? 'S' : 'B',
                         (IS_NOT_NULL(ref_toot_id) && mode == 'r') ? ref_toot_id : "null",
                         extra_buf,
                         compose_audience_str(compose_audience),
                         sensitive_medias ? "true":"false",
-                        translit_charset,
-                        cw,
-                        translit_charset);
+                        TRANSLITCMD, translit_charset, cw,
+                        TRANSLITCMD, translit_charset);
 
   /* Escape buffer */
   len = strlen(buffer);

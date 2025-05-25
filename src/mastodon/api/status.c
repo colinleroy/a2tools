@@ -16,21 +16,19 @@
 #define TL_STATUS_SHORT_BUF 512
 #define TL_STATUS_LARGE_BUF 4096
 
+extern char MEDIA_STR[];
+extern char IMAGE_STR[];
+extern char VIDEO_STR[];
+extern char AUDIO_STR[];
+extern char GIF_STR[];
+
 /* Not in media.c because we in fact need that to display statuses */
 char *media_type_str[N_MEDIA_TYPE] = {
-#ifdef __APPLE2ENH__
-  "media",
-  "image",
-  "video",
-  "audio",
-  "gif"
-#else
-  "img",
-  "img",
-  "vid",
-  "snd",
-  "gif"
-#endif
+  MEDIA_STR,
+  IMAGE_STR,
+  VIDEO_STR,
+  AUDIO_STR,
+  GIF_STR
 };
 
 static status *status_new(void) {

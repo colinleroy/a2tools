@@ -41,8 +41,6 @@
 #include "login_data.h"
 #include "a2_features.h"
 
-unsigned char NUMCOLS = 40;
-
 login_data_t login_data;
 
 char *instance_url  = login_data.instance_url;
@@ -130,9 +128,7 @@ reenter_settings:
     goto reenter_settings;
   }
 
-#ifdef __APPLE2ENH__
   dputs("If your Apple II has a non-US keyboard, use @ instead of arobase.\r\n");
-#endif
 
 reenter_login:
   dputs("Your login: ");
@@ -152,11 +148,6 @@ int main(int argc, char **argv) {
 #ifdef PRODOS_T_TXT
   _filetype = PRODOS_T_TXT;
 #endif
-
-  try_videomode(VIDEOMODE_80COL);
-  if (has_80cols) {
-    NUMCOLS = 80;
-  }
 
   clrscr();
 

@@ -5,11 +5,7 @@
 #include "account.h"
 #include "poll.h"
 
-#ifdef __APPLE2ENH__
-#define TL_SPOILER_TEXT_BUF 54
-#else
-#define TL_SPOILER_TEXT_BUF 34
-#endif
+extern unsigned char TL_SPOILER_TEXT_BUF;
 
 typedef struct _status status;
 

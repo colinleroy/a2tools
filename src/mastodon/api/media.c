@@ -17,11 +17,7 @@
 #define IMG_BUF_SIZE 2048
 static char img_buf[IMG_BUF_SIZE];
 
-#ifdef __APPLE2ENH__
-#define NUMCOLS 80
-#else
-#define NUMCOLS 40
-#endif
+extern unsigned char NUMCOLS;
 
 static media *media_new_from_json(char *base_selector, char *description_selector) {
   media *m;

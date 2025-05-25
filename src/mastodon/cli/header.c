@@ -22,6 +22,8 @@
 #pragma code-name (push, "LC")
 #endif
 
+extern char SCROLL_KEYS[];
+
 account *my_account = NULL;
 
 char __fastcall__ print_header(list *l, status *root_status, notification *root_notif) {
@@ -64,11 +66,9 @@ void show_help (list *l, status *root_status, notification *root_notif) {
   dputs("General commands:  \r\n"
         " View toot : Enter \r\n"
         " Back      : Esc   \r\n"
-#ifdef __APPLE2ENH__
-        " Scroll    : Up/dn \r\n"
-#else
-        " Scroll    : U/J   \r\n"
-#endif
+        " Scroll    : ");
+  dputs(               SCROLL_KEYS);
+  dputs(                  " \r\n"
         " Compose   : C     \r\n"
         " Search    : /     \r\n"
         " Notifs.   : N     \r\n"

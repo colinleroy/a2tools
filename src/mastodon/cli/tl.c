@@ -32,7 +32,6 @@
 
 #pragma register-vars(push, on)
 
-unsigned char NUMCOLS = 40;
 char *key_combo = "Ctrl";
 
 static char *tl_endpoints[4] = { TIMELINE_ENDPOINT "/" HOME_TIMELINE,
@@ -1370,11 +1369,10 @@ int main(int argc, char **argv) {
 
   register_start_device();
 
-  try_videomode(VIDEOMODE_80COL);
   if (has_80cols) {
-    NUMCOLS = 80;
     serial_throbber_set((void *)0x07D8);
   }
+
   if (is_iie) {
     key_combo = "Open-Apple";
   }
