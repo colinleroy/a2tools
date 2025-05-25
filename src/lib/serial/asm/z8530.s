@@ -300,7 +300,14 @@ getClockSource:
 ; A: slot (channel)
 ; X: speed
 _z8530_open:
-        php                             ; Deactivate interrupts
+        cmp     #2                      ; Check port validity (0 or 1)
+        bcc     :+
+
+        lda     #$FF
+        tax
+        rts
+
+:       php                             ; Deactivate interrupts
         sei                             ; if enabled
 
         sta     Channel
