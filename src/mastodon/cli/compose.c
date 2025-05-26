@@ -75,6 +75,7 @@ static void update_compose_audience(void) {
     cprintf("Audience: %s     ",
             compose_audience_str(compose_audience));
   }
+  cprintf("\r\nCharacter limit: %d characters.", NUM_CHARS);
 }
 
 static void update_cw(void) {
@@ -137,7 +138,7 @@ static void setup_gui(void)
 
   if (IS_NOT_NULL(ref_status)) {
     if (compose_mode[0] == 'r') {
-      writable_lines = NUMLINES - COMPOSE_HEIGHT + 2;
+      writable_lines = NUMLINES - COMPOSE_HEIGHT;
       print_status(ref_status, 0, 0);
 
       /* we want to make sure we'll have one and
@@ -584,6 +585,8 @@ int main(int argc, char **argv) {
   }
 
   compose_print_header();
+
+  compose_set_num_chars();
 
   set_hscrollwindow(RIGHT_COL_START, NUMCOLS - RIGHT_COL_START);
   gotoxy(0, 0);

@@ -4,11 +4,13 @@
 #include "common.h"
 #include "poll.h"
 
-#define NUM_CHARS 501
+extern unsigned int NUM_CHARS;
 
 #define NUM_POLL_DURATIONS 6
 extern const char compose_poll_durations_hours[];
 extern const char *compose_poll_durations_seconds[];
+
+void compose_set_num_chars(void);
 
 char *compose_audience_str(char compose_audience);
 

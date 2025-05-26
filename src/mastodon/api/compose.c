@@ -17,6 +17,8 @@
 #pragma code-name (push, "LOWCODE")
 #endif
 
+unsigned int NUM_CHARS = 501;
+
 extern char TRANSLITCMD[];
 
 char *compose_audience_str(char compose_audience) {
@@ -34,6 +36,22 @@ char *compose_audience_str(char compose_audience) {
 
 #define SEND_BUF_SIZE 1024
 char send_buf[SEND_BUF_SIZE];
+
+void compose_set_num_chars(void) {
+  strcpy(endpoint_buf, "/api/v2/instance");
+  get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
+
+  if (!surl_response_ok()) {
+    return;
+  }
+  if (surl_get_json(gen_buf, ".configuration.statuses.max_characters", translit_charset, SURL_HTMLSTRIP_NONE, BUF_SIZE) < 0) {
+    return;
+  }
+  NUM_CHARS = atoi(gen_buf);
+  if (NUM_CHARS > 5000) {
+    NUM_CHARS = 5000;
+  }
+}
 
 char *api_send_hgr_image(char *filename, char *description, char **err, char x, char y, char w) {
   int fd;
