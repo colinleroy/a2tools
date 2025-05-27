@@ -6,10 +6,6 @@
   signed char try_videomode(unsigned mode);
   char oa_cgetc(void);
 
-  #ifndef __APPLE2ENH__
-  #define VIDEOMODE_40COL 0x15
-  #define VIDEOMODE_80COL 0x00
-  #endif
   extern unsigned char is_iigs;
   extern unsigned char is_iie;
   extern unsigned char is_iieenh;

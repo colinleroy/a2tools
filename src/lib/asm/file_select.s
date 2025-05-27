@@ -31,7 +31,7 @@
         .import         popa, popax, pusha0, pusha, pushax, swapstk, incaxy
         .import         return0
 
-        .import         CH_VLINE
+        .import         _CH_VLINE
 
         .importzp       _zp6, _zp8
         .include        "apple2.inc"
@@ -242,7 +242,7 @@ _zp8_is_dir:
 .endproc
 
 .proc _start_line
-        lda       CH_VLINE
+        lda       _CH_VLINE
         jmp       _cputc
 .endproc
 

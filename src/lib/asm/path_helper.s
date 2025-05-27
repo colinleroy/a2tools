@@ -138,6 +138,7 @@ _reopen_start_device:
         bit       _has_80cols
         bpl       :+
         lda      #((80-19)/2)
+        sta      OURCH
 :       sta      CH
         lda      #<prompt_str2
         ldx      #>prompt_str2

@@ -36,8 +36,6 @@
 
         .import         _ser_status_reg, _ser_data_reg
 
-        .import         _ser_irq_buf, _ser_irq_widx
-
         .import         pusha, popa, _baudrate
 
         .include        "zeropage.inc"
@@ -52,12 +50,8 @@ ACIA_STATUS    := ACIA+1        ; Status register
 ACIA_CMD       := ACIA+2        ; Command register
 ACIA_CTRL      := ACIA+3        ; Control register
 
-SLTROMSEL      := $C02D         ; For Apple IIgs slot verification
-
 ;----------------------------------------------------------------------------
 ; Global variables
-
-.segment "CODE"
 
 Index:          .res    1       ; I/O register index
 Slot:           .res    1
@@ -158,27 +152,7 @@ _acia_open:
         sta     Slot
         stx     Speed
 
-        ; Check if this is a IIgs (Apple II Miscellaneous TechNote #7,
-        ; Apple II Family Identification)
-        sec
-        bit     $C082
-        jsr     $FE1F
-        bit     $C080
-
-        bcs     NotIIgs
-
-        ; We're on a IIgs. For every slot N, either bit N of $C02D is
-        ; 0 for the internal ROM, or 1 for "Your Card". Let's make sure
-        ; that slot N's bit is set to 1, otherwise, that can't be an SSC.
-
-        ldy     Slot
-        lda     SLTROMSEL
-:       lsr
-        dey
-        bpl     :-              ; Shift until slot's bit ends in carry
-        bcc     NoDev
-
-NotIIgs:ldx     #<$C000
+        ldx     #<$C000
         stx     ptr2
         lda     #>$C000
         ora     Slot
@@ -327,10 +301,6 @@ _acia_irq:
         beq     Done            ; Jump if no ACIA interrupt
         lda     ACIA_DATA,x     ; Get byte from ACIA
 
-        ldx     _ser_irq_widx
-        sta     _ser_irq_buf,x
-        inc     _ser_irq_widx
-
 IRQDone:sec                     ; Interrupt handled
 Done:   rts
 
@@ -387,4 +357,5 @@ _acia_set_parity:
         ora     ParityTable,y
         sta     ACIA_CMD,x
         rts
+
 .endif ;.ifdef SERIAL_LOW_LEVEL_CONTROL

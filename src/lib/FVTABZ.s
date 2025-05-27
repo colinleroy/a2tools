@@ -10,7 +10,9 @@
 .ifndef AVOID_ROM_CALLS
         .import         VTABZ
 .else
+        .ifndef __APPLE2ENH__
         .import         machinetype
+        .endif
 .endif
 
         .data
@@ -86,8 +88,10 @@ FVTABZ:
         lda     FBASH,x
         sta     BASH
         lda     WNDLFT
+        .ifndef __APPLE2ENH__
         bit     machinetype
         bpl     colforty
+        .endif
         bit     RD80VID
         bpl     colforty
         lsr     a

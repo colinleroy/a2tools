@@ -65,6 +65,117 @@
         .include    "ser-kernel.inc"
         .include    "ser-error.inc"
 
+.proc _serial_open
+        jsr     _acia_open
+        cmp     #SER_ERR_OK
+        bne     :+
+        ldy     #$01
+        sty     connected
+:       rts
+.endproc
+
+.proc _serial_close
+        jmp     _acia_close
+.endproc
+
+; Send character in A over serial. Destroys X.
+; Does not touch Y.
+.proc _serial_putc_direct
+        jmp     _acia_put
+.endproc
+
+; Returns with char in A and carry clear if
+; character available. Destroys X.
+; Does not touch Y.
+.proc _serial_read_byte_direct
+        jmp     _acia_read_byte_sync
+.endproc
+
+
+.ifdef SERIAL_ENABLE_IRQ
+
+.proc serial_handle_irq
+        jmp     _acia_irq
+.endproc
+
+.proc _simple_serial_set_irq
+        jmp     _acia_set_irq
+.endproc
+
+.proc serial_irq
+        clc
+        lda     connected
+        beq     :+
+        jsr     serial_handle_irq
+        bcc     :+
+
+        ldx     _ser_irq_widx
+        sta     _ser_irq_buf,x
+        inc     _ser_irq_widx
+
+:       rts
+.endproc
+
+.proc _serial_get_async
+        ldx     _ser_irq_ridx
+        cpx     _ser_irq_widx
+        beq     no
+        lda     _ser_irq_buf,x
+        inc     _ser_irq_ridx
+        clc
+        rts
+
+no:     sec
+        rts
+.endproc
+.endif ;.ifdef SERIAL_ENABLE_IRQ
+
+.proc _serial_read_byte_no_irq
+:       jsr     _serial_read_byte_direct
+        bcs     :-
+        rts
+.endproc
+
+.proc serial_read_byte_no_irq_timeout
+        lda     #$00
+        sta     timeout_cnt
+        sta     timeout_cnt+1
+        jsr     _serial_read_byte_direct
+        bcc     out
+
+        inc     timeout_cnt
+        bne     :-
+        inc     timeout_cnt+1
+        bne     :-
+
+out:    rts
+.endproc
+
+.ifdef SERIAL_LOW_LEVEL_CONTROL
+
+.proc _simple_serial_dtr_onoff
+        tay
+        lda     _open_slot
+        jsr     pusha
+        tya
+        ; Fallthrough
+.endproc
+.proc _simple_serial_slot_dtr_onoff
+        jmp     _acia_slot_dtr_onoff
+.endproc
+
+.proc _simple_serial_set_speed
+        jmp     _acia_set_speed
+.endproc
+
+.proc _simple_serial_set_parity
+        jmp     _acia_set_parity
+.endproc
+
+.endif ;.ifdef SERIAL_LOW_LEVEL_CONTROL
+
+serial_slot:      .byte   2
+
 .segment "ONCE"
 
 .proc setup_defaults
@@ -128,114 +239,16 @@
 :       rts
 .endproc
 
-.segment "CODE"
-
-.proc _serial_open
-        jsr     _acia_open
-        cmp     #SER_ERR_OK
-        bne     :+
-        ldy     #$01
-        sty     connected
-:       rts
-.endproc
-
-.proc _serial_close
-        jmp     _acia_close
-.endproc
-
-; Send character in A over serial. Destroys X.
-; Does not touch Y.
-.proc _serial_putc_direct
-        jmp     _acia_put
-.endproc
-
-; Returns with char in A and carry clear if
-; character available. Destroys X.
-; Does not touch Y.
-.proc _serial_read_byte_direct
-        jmp     _acia_read_byte_sync
-.endproc
-
-
-.ifdef SERIAL_ENABLE_IRQ
-
-.proc serial_handle_irq
-        jmp     _acia_irq
-.endproc
-
-.proc _simple_serial_set_irq
-        jmp     _acia_set_irq
-.endproc
-
-.proc serial_irq
-        lda     connected
-        beq     :+
-
-        jmp     serial_handle_irq
-:       clc
-        rts
-.endproc
-
-.proc _serial_get_async
-        ldx     _ser_irq_ridx
-        cpx     _ser_irq_widx
-        beq     no
-        lda     _ser_irq_buf,x
-        inc     _ser_irq_ridx
-        clc
-        rts
-
-no:     sec
-        rts
-.endproc
-.endif ;.ifdef SERIAL_ENABLE_IRQ
-
-_serial_read_byte_no_irq:
-:       jsr     _serial_read_byte_direct
-        bcs     :-
-        rts
-
-serial_read_byte_no_irq_timeout:
-        lda     #$00
-        sta     timeout_cnt
-        sta     timeout_cnt+1
-        jsr     _serial_read_byte_direct
-        bcc     out
-
-        inc     timeout_cnt
-        bne     :-
-        inc     timeout_cnt+1
-        bne     :-
-
-out:    rts
-
-.ifdef SERIAL_LOW_LEVEL_CONTROL
-_simple_serial_dtr_onoff:
-        tay
-        lda     _open_slot
-        jsr     pusha
-        tya
-_simple_serial_slot_dtr_onoff:
-        jmp     _acia_slot_dtr_onoff
-
-_simple_serial_set_speed:
-        jmp     _acia_set_speed
-
-_simple_serial_set_parity:
-        jmp     _acia_set_parity
-.endif ;.ifdef SERIAL_LOW_LEVEL_CONTROL
-
-timeout_cnt:      .byte   2
-serial_slot:      .byte   2
-connected:        .byte   0
-
-.bss
+.segment "BSS"
 
 .ifdef SERIAL_ENABLE_IRQ
 _ser_irq_buf:     .res    256
-_ser_irq_widx:    .byte   0
-_ser_irq_ridx:    .byte   0
+_ser_irq_widx:    .res    1
+_ser_irq_ridx:    .res    1
 .endif
 
-_ser_data_reg:    .word   0
-_ser_status_reg:  .word   0
+timeout_cnt:      .res    2
+connected:        .res    1
+
+_ser_data_reg:    .res    2
+_ser_status_reg:  .res    2

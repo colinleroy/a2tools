@@ -25,8 +25,6 @@
 
         .import         _ser_status_reg, _ser_data_reg
 
-        .import         _ser_irq_buf, _ser_irq_widx
-
         .import         pusha, popa, _baudrate
 
         .setcpu         "65816"
@@ -34,9 +32,6 @@
         .include        "zeropage.inc"
         .include        "ser-kernel.inc"
         .include        "ser-error.inc"
-
-
-.segment "CODE"
 
 CurClockSource: .res    1               ; Whether to use BRG or RTxC for clock
 Slot:           .res    1
@@ -236,17 +231,6 @@ WriteAreg:
       rts
 
 _z8530_close:
-        ; Check if this is a IIgs (Apple II Miscellaneous TechNote #7,
-        ; Apple II Family Identification)
-        sec
-        bit     $C082
-        jsr     $FE1F
-        bit     $C080
-
-        bcc     IIgs
-        rts
-
-IIgs:
         ldx     Opened                  ; Check for open port
         beq     :+
 
@@ -352,7 +336,7 @@ SetClock:
         sta     CurChanIrqFlags
 
 SetBaud:
-        lda     #SER_BAUD_115200
+        lda     Speed
         asl
         tay
 
@@ -362,7 +346,7 @@ SetBaud:
 InvParam:
         lda     #SER_ERR_INIT_FAILED
         ldy     #$00                    ; Mark port closed
-        bra     SetupOut
+        jmp     SetupOut
 
 BaudOK:
         phy                             ; WR12 setup: BRG time constant, low byte
@@ -421,10 +405,6 @@ BaudOK:
         ora     ChanIrqMask,x           ; Tell firmware which channel IRQs we want
         sta     SER_FLAG
 
-        ldy     #$01                    ; Mark port opened
-        lda     #SER_ERR_OK
-
-SetupOut:
         clc
         lda     Channel
         adc     #<$C038
@@ -443,8 +423,11 @@ SetupOut:
         sta     _ser_status_reg+1
         sta     _ser_data_reg+1
 
+        ldy     #$01                    ; Mark port opened
+        lda     #SER_ERR_OK
+
+SetupOut:
         plp                             ; Reenable interrupts if needed
-        lda     #<$0000
         ldx     #>$0000
         sty     Opened
         rts
@@ -499,9 +482,6 @@ _z8530_irq:
 ReadBdata:
         lda     SCCBDATA                ; Get byte
 ReadDone:
-        ldx     _ser_irq_widx
-        sta     _ser_irq_buf,x
-        inc     _ser_irq_widx
         jmp     IRQDone
 
 CheckSpecial:

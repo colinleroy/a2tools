@@ -38,13 +38,12 @@ char *compose_audience_str(char compose_audience) {
 char send_buf[SEND_BUF_SIZE];
 
 void compose_set_num_chars(void) {
-  strcpy(endpoint_buf, "/api/v2/instance");
-  get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
+  get_surl_for_endpoint(SURL_METHOD_GET, "/api/v2/instance");
 
   if (!surl_response_ok()) {
     return;
   }
-  if (surl_get_json(gen_buf, ".configuration.statuses.max_characters", translit_charset, SURL_HTMLSTRIP_NONE, BUF_SIZE) < 0) {
+  if (surl_get_json(gen_buf, ".configuration.statuses.max_characters", NULL, SURL_HTMLSTRIP_NONE, BUF_SIZE) < 0) {
     return;
   }
   NUM_CHARS = atoi(gen_buf);
