@@ -21,6 +21,7 @@
         .export         _set_hscrollwindow
 
         .import         popptr1, popa, pushax, FVTABZ
+        .import         machinetype
         .importzp       ptr1
 
         .include        "apple2.inc"
@@ -29,39 +30,66 @@
 
 pop_and_store:
         pha
-        jsr       popptr1
+        jsr     popptr1
         pla
-        sta       (ptr1),y
+        sta     (ptr1),y
         rts
 
 ;void __fastcall__ get_scrollwindow(unsigned char *top, unsigned char *bottom)
 _get_scrollwindow:
-        jsr       pushax
-        lda       WNDBTM
-        jsr       pop_and_store
-        lda       WNDTOP
-        jmp       pop_and_store
+        jsr     pushax
+        lda     WNDBTM
+        jsr     pop_and_store
+        lda     WNDTOP
+        jmp     pop_and_store
 
 ;void __fastcall__ set_scrollwindow(unsigned char top, unsigned char bottom)
 _set_scrollwindow:
-        sta      WNDBTM
-        jsr      popa
-        sta      WNDTOP
+        sta     WNDBTM
+        jsr     popa
+        sta     WNDTOP
 do_vtabz:
-        lda      CV
-        jmp      FVTABZ
+        lda     CV
+        jmp     FVTABZ
 
+        .ifndef __APPLE2ENH__
+
+; The non-enhanced //e ROM doesn't divide WNDLFT when in 80-cols
+; mode, so it needs fixing to reflect the actual left boundary.
+; Return with carry set if this is needed.
+wndlft_needs_fixing:
+        clc
+        bit     machinetype
+        bpl     :+             ; Is it a ][+?
+        bvs     :+             ; //e. Enhanced?
+        bit     RD80VID
+        bpl     :+             ; Non-enhanced //e needs WNDLFT*2
+        sec
+:       rts
+
+        .endif
 ;void __fastcall__ get_hscrollwindow(unsigned char *left, unsigned char *width)
 _get_hscrollwindow:
-        jsr       pushax
-        lda       WNDWDTH
-        jsr       pop_and_store
-        lda       WNDLFT
-        jmp       pop_and_store
+        jsr     pushax
+        lda     WNDWDTH
+        jsr     pop_and_store
+        lda     WNDLFT
+
+        .ifndef __APPLE2ENH__
+        jsr     wndlft_needs_fixing
+        bcc     :+
+        asl
+:       .endif
+        jmp     pop_and_store
 
 ;void __fastcall__ set_hscrollwindow(unsigned char left, unsigned char width) {
 _set_hscrollwindow:
-        sta      WNDWDTH
-        jsr      popa
-        sta      WNDLFT
-        jmp      do_vtabz
+        sta     WNDWDTH
+        jsr     popa
+        .ifndef __APPLE2ENH__
+        jsr     wndlft_needs_fixing
+        bcc     :+
+        lsr
+:       .endif
+        sta     WNDLFT
+        jmp     do_vtabz
