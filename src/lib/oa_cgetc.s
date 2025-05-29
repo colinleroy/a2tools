@@ -8,7 +8,7 @@
         ; FIXME this should be in cc65
         .ifndef __APPLE2ENH__
         bit     machinetype
-        bmi     :+
+        bpl     :+
         .endif
         bit     $C061             ; Open-Apple?
         bpl     :+

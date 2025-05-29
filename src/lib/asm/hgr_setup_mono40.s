@@ -76,7 +76,7 @@ push:
         ldy      #$04
         jsr      _open
         cmp      #$FF
-        beq      :+
+        beq      out
 
         sta     fd
 
@@ -95,12 +95,12 @@ push:
         lda     fd
         ldx     #$00
         jsr     _close
-        bcs     :+
+        bcs     out
         dec     npages
         bne     nextfile
         lda     #1
         sta     hgr_mono_file
-:       rts
+out:    rts
 .endproc
 
 .proc unlink_cached_files

@@ -300,9 +300,12 @@ display_result:
 read_kbd:
   init_hgr(1);
   hgr_mixon();
-  c = tolower(cgetc());
-  if (c & 0x80) {
+  c = tolower(oa_cgetc());
+  if (is_iie && c & 0x80) {
     cmd_cb(c & ~0x80);
+    goto read_kbd;
+  } else if (!is_iie && c < 27 && c != CH_ENTER && c != CH_CURS_LEFT && c != CH_CURS_RIGHT) {
+    cmd_cb(c + 'A' - 1);
     goto read_kbd;
   }
   switch (c) {

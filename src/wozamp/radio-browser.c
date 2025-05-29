@@ -218,8 +218,8 @@ static void show_results(void) {
 display_result:
   clrscr();
 
-   n_res = (cur_line/IDX_MAX)+1;
-   total_res = n_lines/IDX_MAX;
+  n_res = (cur_line/IDX_MAX)+1;
+  total_res = n_lines/IDX_MAX;
 
   if (has_80cols) {
     tmp = lines[cur_line+IDX_NAME];
@@ -263,8 +263,8 @@ display_result:
     cputs(" - ");
 
     tmp = lines[cur_line+IDX_HOMEPAGE];
-    if (strlen(tmp) > 24)
-      tmp[24] = '\0';
+    if (strlen(tmp) > 23)
+      tmp[23] = '\0';
 
     cputs(tmp);
     cputs("\r\n\r\n");
@@ -302,9 +302,10 @@ display_result:
   init_hgr(1);
   hgr_mixon();
 read_kbd:
-  c = tolower(cgetc());
-  if (c & 0x80) {
+  c = tolower(oa_cgetc());
+  if (is_iie && c & 0x80) {
     cmd_cb(c & ~0x80);
+check_cmd:
     if (do_server_screen) {
 exit_results:
       free(lines);
@@ -313,6 +314,9 @@ exit_results:
       return;
     }
     goto read_kbd;
+  } else if (!is_iie && c < 27 && c != CH_ENTER && c != CH_CURS_LEFT && c != CH_CURS_RIGHT) {
+    cmd_cb(c + 'A' - 1);
+    goto check_cmd;
   }
   switch (c) {
     case CH_ENTER:
