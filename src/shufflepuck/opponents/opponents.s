@@ -524,7 +524,7 @@ sprite: jmp     return0
         tax                       ; sprite pointer
 
         lda     avatar_an_coords, y
-        beq     :+
+
         sta     avatar_set_win_sprite::cx+1
         sta     avatar_set_lose_sprite::cx+1
         iny
@@ -544,7 +544,7 @@ sprite: jmp     return0
         lda     avatar_animations,x
         sta     avatar_set_lose_sprite::sprite+2
 
-:       plp
+        plp
         jmp     _update_opponent
 .endproc
 
@@ -925,7 +925,7 @@ avatar_an_coords: .byte    0, 0
                   .byte    (28+OPPONENT_SPRITE_X)/7, OPPONENT_SPRITE_Y-OPPONENT_SPRITE_H+52
                   .byte    0, 0
                   .byte    0, 0
-                  .byte    (34+OPPONENT_SPRITE_X)/7, OPPONENT_SPRITE_Y-OPPONENT_SPRITE_H+35
+                  .byte    (35+OPPONENT_SPRITE_X)/7, OPPONENT_SPRITE_Y-OPPONENT_SPRITE_H+35
 
 NUM_ANIM_COORDS = (* - avatar_an_coords)/2
 .assert NUM_ANIM_COORDS = NUM_SPRITES, error
