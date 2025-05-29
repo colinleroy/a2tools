@@ -163,10 +163,6 @@ char *stp_get_start_url(char *header, char *default_url, cmd_handler_func cmd_cb
   return start_url;
 }
 
-#ifdef __CC65__
-#pragma code-name (push, "LOWCODE")
-#endif
-
 char *stp_build_login_url(char *url) {
   char *host = strstr(url, "://");
   char *proto;
@@ -203,6 +199,10 @@ char *stp_build_login_url(char *url) {
   free(url);
   return full_url;
 }
+
+#ifdef __CC65__
+#pragma code-name (push, "LOWCODE")
+#endif
 
 int num_lines = 0;
 int cur_line = 0;

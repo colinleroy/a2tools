@@ -1,5 +1,6 @@
 TARGET := apple2
 CPU := 6502
+WOZAMP_START_ADDR := 0xC03
 VIDEOPLAY_START_ADDR := 0x1D00
 
 GENERAL_CFLAGS := -DSURL_TO_LANGCARD \
@@ -52,7 +53,7 @@ wozamp_CLCFLAGS = -t $(TARGET) -DDOUBLE_BUFFER --asm-define DOUBLE_BUFFER \
 	-DSTP_DATA_SIZE=8192 \
 	-I ../lib -I ../stp -I . \
 	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-pwmstreamer.cfg \
-	-vm -m wozamp.map $(GENERAL_CFLAGS) -O
+	-vm -m wozamp.map $(GENERAL_CFLAGS) --start-addr $(WOZAMP_START_ADDR) -O
 
 .PHONY: all clean
 
@@ -122,7 +123,7 @@ splash-video.h: wozamp-video.hgr
 	../../bin/make-splash.sh wozamp-video.png splash-video.h
 
 wozamp.bin: $(wozamp_CL65SOURCES) $(wozamp_SOURCES)
-	cl65 -g -Wl --dbgfile,wozamp.dbg -Ln wozamp.lbl $(CFLAGS) $(wozamp_CLCFLAGS) -o $@ $^
+	cl65 -g -Wl --dbgfile,wozamp.dbg -Ln wozamp.lbl $(CFLAGS) $(wozamp_CLCFLAGS) -o $@ $^ $(TARGET)-iobuf-0800.o
 
 videoplay.bin: $(videoplay_CL65SOURCES) $(videoplay_SOURCES)
 	cl65 -g -Wl --dbgfile,videoplay.dbg -Ln videoplay.lbl $(CFLAGS) $(videoplay_CLCFLAGS) -o $@ $^

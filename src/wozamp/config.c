@@ -22,8 +22,6 @@ char enable_subtitles;
 char video_size;
 extern unsigned char NUMCOLS;
 
-#pragma code-name(push, "LOWCODE")
-
 static FILE *open_config(char *mode) {
   FILE *fp;
   #ifdef PRODOS_T_TXT
@@ -114,7 +112,6 @@ charset_again:
   save_config();
 }
 
-#pragma code-name(pop)
 
 #pragma code-name(push, "LC")
 

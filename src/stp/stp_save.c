@@ -52,8 +52,6 @@ char *stp_confirm_save_all(void) {
   return out_dir;
 }
 
-#pragma code-name(pop)
-
 char *cleanup_filename(char *in) {
   int len = strlen(in), i;
   if (len > 15) {
@@ -107,6 +105,9 @@ int stp_save_dialog(char *url, char *out_dir) {
     free(out_dir);
   return r;
 }
+
+#pragma code-name(pop)
+#pragma code-name(push, "LOWCODE")
 
 static char cancel_transfer(void) {
   if (kbhit()) {
@@ -261,6 +262,8 @@ err_out_no_close:
   return -1;
 #endif
 }
+
+#pragma code-name(pop)
 
 int stp_save(char *full_filename, char *out_dir) {
   extern surl_response resp;

@@ -587,7 +587,7 @@ keyb_input:
     while (!kbhit()) {
       stp_animate_list(0);
     }
-    c = tolower(cgetc());
+    c = tolower(oa_cgetc());
     l = (c & 0x80) ? PAGE_HEIGHT : 1;
     full_update = 0;
 
@@ -634,6 +634,7 @@ up_dir:
         goto keyb_input;
       case 'c'|0x80:
       case 'c':
+      case 'C'-'A'+1:
         config();
         break;
       case 'n':
@@ -641,6 +642,7 @@ up_dir:
         goto keyb_input;
       case 's'|0x80:
       case 's':
+      case 'S'-'A'+1:
 restart_ui:
         free(url);
         stp_free_data();
@@ -649,6 +651,7 @@ restart_ui:
         break;
       case 'q'|0x80:
       case 'q':
+      case 'Q'-'A'+1:
         exit(0);
       default:
         goto keyb_input;

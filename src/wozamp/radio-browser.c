@@ -65,8 +65,6 @@ enum JsonFieldIdx {
   IDX_MAX
 };
 
-#pragma code-name(push, "LOWCODE")
-
 static void print_footer(void) {
   if (has_80cols) {
     if (n_lines > 0) {
@@ -101,8 +99,6 @@ static void station_click(char *station_uuid) {
     strcat(tmp_buf, station_uuid);
     surl_start_request(NULL, 0, tmp_buf, SURL_METHOD_GET);
 }
-
-#pragma code-name(pop)
 
 void show_radio_metadata (char *data) {
   char *value = strchr(data, '\n');
