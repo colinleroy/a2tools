@@ -4,36 +4,35 @@ if [ "$1" != "" ]; then
   TYPE=$1
 fi
 
-cd bin/65c02
 make clean all DEBUG_HD=$TYPE && \
-  mame apple2gs -window -flop1 quicktake-65c02.po -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug -sl7 scsi -hard ../../../../disks/smart0.po -sound none
+  mame apple2gs -window -flop1 quicktake-65c02.po -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug -sl7 scsi -hard ../../disks/smart0.po
 
 read A
 
 if [ "$1" != "" ]; then
   #get image from HD
   if [ "$1" = "100" ]; then
-    java -jar ../../../../bin/ac.jar -g ../../../../disks/smart0.po TEST$1.QTK > /tmp/TEST$1.QTK
+    java -jar ../../bin/ac.jar -g ../../disks/smart0.po TEST$1.QTK > /tmp/TEST$1.QTK
     ./qtktconv.x86_64 /tmp/TEST$1.QTK 0 0 640 480
   elif [ "$1" = "150" ]; then
-    java -jar ../../../../bin/ac.jar -g ../../../../disks/smart0.po TEST$1.QTK > /tmp/TEST$1.QTK
+    java -jar ../../bin/ac.jar -g ../../disks/smart0.po TEST$1.QTK > /tmp/TEST$1.QTK
     ./qtknconv.x86_64 /tmp/TEST$1.QTK 0 0 640 480
   elif [ "$1" = "200" ]; then
-    java -jar ../../../../bin/ac.jar -g ../../disks/../../smart0.po TEST$1.JPG > /tmp/TEST$1.JPG
+    java -jar ../../bin/ac.jar -g ../../disks/smart0.po TEST$1.JPG > /tmp/TEST$1.JPG
     ./jpegconv.x86_64 /tmp/TEST$1.JPG 0 0 640 480
   fi
   chmod 644 GREY HIST
   #get result from HD
-  java -jar ../../../../bin/ac.jar -g ../../../../disks/smart0.po GREY > GREY.A2
+  java -jar ../../bin/ac.jar -g ../../disks/smart0.po GREY > GREY.A2
   echo Files sha1sum:
   expected_sha1sum=$(sha1sum GREY|cut -d' ' -f1)
   if [ "$1" = "150" ]; then
     # The approximated division changes the output file in an acceptable way
-    expected_sha1sum="4115e8df9e8ffd1d77998c50fea71a160b9e51f2"
+    expected_sha1sum="5e6f3f1e2bf9d598e488ef292ac76d6c118049a8"
   fi
   if [ "$1" = "200" ]; then
     # The approximated division changes the output file in an acceptable way
-    expected_sha1sum="16f2ba61c94d857c73db5dbb3f386b859446d23a"
+    expected_sha1sum="ea80b6284ffaccfb5c86f0b263e0732160cedf95"
   fi
 
   final_sha1sum=$(sha1sum GREY.A2|cut -d' ' -f1)

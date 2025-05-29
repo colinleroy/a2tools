@@ -330,7 +330,7 @@ static void write_raw(uint16 h)
   __asm__("lda %v+1", output_write_len);
   __asm__("sbc tmp1");
   __asm__("sta %v+1", output_write_len);
-  __asm__("bra %g", no_crop);
+  __asm__("jmp %g", no_crop);
 
 full_band:
   __asm__("lda %v", scaled_band_height);
@@ -338,46 +338,46 @@ full_band:
   __asm__("sta %g+1", y_end);
 
 no_crop:
-  __asm__("lda #>(%v)", raw_image);
+  __asm__("lda #>%v", raw_image);
   __asm__("sta %g+2", dst_ptr);
 
   __asm__("clc");
-  __asm__("lda #<(%v)", orig_y_table);
+  __asm__("lda #<%v", orig_y_table);
   __asm__("sta %v", cur_orig_y);
-  __asm__("lda #>(%v)", orig_y_table);
+  __asm__("lda #>%v", orig_y_table);
   __asm__("sta %v+1", cur_orig_y);
 
-  __asm__("lda #<(%v)", orig_x_offset);
+  __asm__("lda #<%v", orig_x_offset);
   __asm__("sta %v", cur_orig_x);
-  __asm__("lda #>(%v)", orig_x_offset);
+  __asm__("lda #>%v", orig_x_offset);
   __asm__("sta %v+1", cur_orig_x);
 
   __asm__("ldy #0");
   __asm__("sty %v", y_ptr);
   next_y:
     __asm__("lda (%v),y", cur_orig_y);
-    __asm__("sta %v", cur);
+    __asm__("sta %g+1", cur_orig_y_addr);
     __asm__("iny");
     __asm__("lda (%v),y", cur_orig_y);
     __asm__("iny");
     __asm__("sty %v", y_ptr);
 
-    __asm__("sta %v+1", cur);
+    __asm__("sta %g+2", cur_orig_y_addr);
 
     __asm__("ldy #0");
 
     next_x:
     /* cur += *cur_orig_x; */
     __asm__("lda (%v),y", cur_orig_x);
-    __asm__("adc %v", cur);
-    __asm__("sta %v", cur);
+    __asm__("adc %g+1", cur_orig_y_addr);
+    __asm__("sta %g+1", cur_orig_y_addr);
     __asm__("bcc %g", cur_orig_y_addr);
-    __asm__("inc %v+1", cur);
+    __asm__("inc %g+2", cur_orig_y_addr);
     __asm__("clc");
 
     cur_orig_y_addr:
     /* *dst_ptr = *(cur); */
-    __asm__("lda (%v)", cur);
+    __asm__("lda $FFFF");   /* Patched */
     dst_ptr:
     __asm__("sta %v,y", raw_image);
 

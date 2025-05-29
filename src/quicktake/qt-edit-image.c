@@ -18,6 +18,7 @@
 #include "qt-edit-image.h"
 #include "qt-serial.h"
 #include "qt-state.h"
+#include "a2_features.h"
 
 #ifndef __CC65__
 #include "tgi_compat.h"
@@ -191,11 +192,11 @@ static void histogram_equalize(void) {
     __asm__("ldx sreg");
 
     /* / 192 */
-    __asm__("phy");
+    __asm__("sty tmp1");
     __asm__("jsr pushax");
     __asm__("lda #<%w", HGR_HEIGHT);
     __asm__("jsr tosudiva0");
-    __asm__("ply");
+    __asm__("ldy tmp1");
 
     __asm__("sta %v,y", opt_histogram);
 
@@ -729,11 +730,12 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
       __asm__("adc %v+1", shifted_div7_table);
       __asm__("sta ptr1+1");
 
-      __asm__("lda (ptr1)");
+      __asm__("ldy #0");
+      __asm__("lda (ptr1),y");
       __asm__("sta %v", d7);
-      __asm__("adc (%v)", cur_hgr_baseaddr_ptr);
+      __asm__("adc (%v),y", cur_hgr_baseaddr_ptr);
       __asm__("sta %v", ptr);
-      __asm__("ldy #1");
+      __asm__("iny");
       __asm__("lda (%v),y", cur_hgr_baseaddr_ptr);
       __asm__("adc #0");
       __asm__("sta %v+1", ptr);
@@ -884,11 +886,12 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
       __asm__("adc %v+1", shifted_div7_table);
       __asm__("sta ptr1+1");
 
-      __asm__("lda (ptr1)");
+      __asm__("ldy #0");
+      __asm__("lda (ptr1),y");
       __asm__("sta %v", d7);
-      __asm__("adc (%v)", cur_hgr_baseaddr_ptr);
+      __asm__("adc (%v),y", cur_hgr_baseaddr_ptr);
       __asm__("sta %v", ptr);
-      __asm__("ldy #1");
+      __asm__("iny");
       __asm__("lda (%v),y", cur_hgr_baseaddr_ptr);
       __asm__("adc #0");
       __asm__("sta %v+1", ptr);
@@ -960,7 +963,7 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
 
   __asm__("lda #<(%g)", dither_bayer);
   __asm__("ldx #>(%g)", dither_bayer);
-  __asm__("bra %g", dither_is_set);
+  __asm__("jmp %g", dither_is_set);
   set_dither_none:
   __asm__("lda #<(%g)", prepare_dither_none);
   __asm__("ldx #>(%g)", prepare_dither_none);
@@ -969,7 +972,7 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
 
   __asm__("lda #<(%g)", dither_none);
   __asm__("ldx #>(%g)", dither_none);
-  __asm__("bra %g", dither_is_set);
+  __asm__("jmp %g", dither_is_set);
   set_dither_sierra:
   __asm__("lda #<(%g)", prepare_dither_sierra);
   __asm__("ldx #>(%g)", prepare_dither_sierra);
@@ -1088,7 +1091,7 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
           __asm__("tax");      /* Store high nibble */
 
           __asm__("tya");      /* *4 offset */
-          __asm__("phy");
+          __asm__("sty tmp2"); /* Backup index */
 
           __asm__("asl");
           __asm__("asl");
@@ -1105,7 +1108,7 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
           __asm__("iny");
           __asm__("sta (%v),y", thumb_buf_ptr);
 
-          __asm__("ply");     /* Restore index */
+          __asm__("ldy tmp2");  /* Restore index */
           __asm__("dey");
           __asm__("bpl %g", next_thumb_x);
 #endif
@@ -1245,7 +1248,7 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
     __asm__("sta %v", prev_scaled_dy);
 
     __asm__("tay"); /* scaled_dy not > 255 here */
-    __asm__("bra %g", set_inv_hgr_ptrs);
+    __asm__("jmp %g", set_inv_hgr_ptrs);
 
     no_resize:
     __asm__("ldy %v", dy); /* dy not > 255 here */
@@ -1300,7 +1303,8 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
 
     prepare_dither_sierra:
       /* reset err2 */
-      __asm__("stz %v", err2);
+      __asm__("lda #$00");
+      __asm__("sta %v", err2);
 #endif
 
     prepare_dither_none:
@@ -1335,8 +1339,9 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
       __asm__("beq %g", no_resize_pixel);
 
       //scaled_dx = (dx + (dx << 1)) >> 2;  /* *3/4 */
+      __asm__("lda #$00");
+      __asm__("sta tmp1");
       __asm__("lda %v", dx);
-      __asm__("stz tmp1");
       __asm__("asl a");
       __asm__("rol tmp1");
 
@@ -1358,7 +1363,7 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
 
       __asm__("sta %v", prev_scaled_dx);
 
-      __asm__("bra %g", inv_pixel_coords);
+      __asm__("jmp %g", inv_pixel_coords);
 
       no_resize_pixel:
       __asm__("lda %v", dx);
@@ -1482,7 +1487,7 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
       __asm__("beq %g", store_opt);
       __asm__("bpl %g", pos_opt);
       __asm__("lda #0");
-      __asm__("bra %g", store_opt);
+      __asm__("jmp %g", store_opt);
       pos_opt:
       __asm__("lda #$FF");
       store_opt:
@@ -1492,53 +1497,55 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
       __asm__("jmp $FFFF"); /* PATCHED, will go to dither_{bayer,sierra,none} */
 
       dither_bayer:
-      __asm__("ldx #$00");
-      __asm__("lda (%v)", bayer_map_x);
+      __asm__("ldy #$00");
+      __asm__("lda (%v),y", bayer_map_x);
       __asm__("bpl %g", positive_b);
-      __asm__("dex");
+      __asm__("dey");
       positive_b:
       __asm__("adc %v", opt_val);
-      __asm__("tay"); /* Backup low byte */
-      __asm__("txa");
+      __asm__("tax"); /* Backup low byte */
+      __asm__("tya");
       __asm__("adc #0");
 
       __asm__("bmi %g", black_pix_bayer);
       __asm__("bne %g", white_pix_bayer);
-      __asm__("cpy #<(%b)", DITHER_THRESHOLD);
+      __asm__("cpx #<(%b)", DITHER_THRESHOLD);
       __asm__("bcc %g", black_pix_bayer);
       white_pix_bayer:
-      __asm__("lda (%v)", ptr);
+      __asm__("ldy #$00");  /* Reload Y, may have been changed if b < 0 */
+      __asm__("lda (%v),y", ptr);
       __asm__("ora %v", pixel);
-      __asm__("sta (%v)", ptr);
+      __asm__("sta (%v),y", ptr);
 
       black_pix_bayer:
       /* Advance Bayer X */
-      __asm__("lda %v", bayer_map_x);
-      __asm__("inc a");
+      __asm__("ldx %v", bayer_map_x);
+      __asm__("inx");
       __asm__("bne %g", noof5);
       __asm__("inc %v+1", bayer_map_x);
       noof5:
-      __asm__("cmp %v", end_bayer_map_x);
+      __asm__("cpx %v", end_bayer_map_x);
       __asm__("bne %g", bayer_map_x_done); /* No need to check high byte */
 
-      __asm__("lda %v", bayer_map_y);
-      __asm__("ldx %v+1", bayer_map_y);
-      __asm__("stx %v+1", bayer_map_x);
+      __asm__("ldx %v", bayer_map_y);
+      __asm__("ldy %v+1", bayer_map_y);
+      __asm__("sty %v+1", bayer_map_x);
       bayer_map_x_done:
-      __asm__("sta %v", bayer_map_x);
+      __asm__("stx %v", bayer_map_x);
 
-      __asm__("bra %g", next_pixel);
+      __asm__("jmp %g", next_pixel);
 
       dither_none:
       __asm__("lda %v", opt_val);
       __asm__("cmp #<(%b)", DITHER_THRESHOLD);
       __asm__("bcc %g", next_pixel);
 
-      __asm__("lda (%v)", ptr);
+      __asm__("ldy #$00");
+      __asm__("lda (%v),y", ptr);
       __asm__("ora %v", pixel);
-      __asm__("sta (%v)", ptr);
+      __asm__("sta (%v),y", ptr);
 
-      __asm__("bra %g", next_pixel);
+      __asm__("jmp %g", next_pixel);
 
       dither_sierra:
       /* Add the two errors (the one from previous pixel and the one
@@ -1555,7 +1562,7 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
       /* Add current pixel value */
       __asm__("clc");
       __asm__("adc %v", opt_val);
-      __asm__("tay"); /* Backup low byte */
+      __asm__("sta tmp1"); /* Backup low byte */
       __asm__("bcc %g", noof20);
       __asm__("inx");
       /* High byte not zero? - don't check for neg here, can't happen, it's either 0 or 1 */
@@ -1570,12 +1577,13 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
       __asm__("cmp #<(%b)", DITHER_THRESHOLD);
       __asm__("bcc %g", forward_err_direct);
       white_pix:
-      __asm__("lda (%v)", ptr);
+      __asm__("ldy #$00");
+      __asm__("lda (%v),y", ptr);
       __asm__("ora %v", pixel);
-      __asm__("sta (%v)", ptr);
+      __asm__("sta (%v),y", ptr);
 
       forward_err:
-      __asm__("tya");       /* Restore low byte */
+      __asm__("lda tmp1");       /* Restore low byte */
       __asm__("cmp #$80");  /* Keep sign for >> (no need to do it where coming from low byte check path, DITHER_THRESHOLD is $80)*/
       forward_err_direct:
       __asm__("ror a");
@@ -1645,7 +1653,8 @@ next_pixel:
       dec_xcounters:
       // if (--dx = end_dx)
       //   goto line_done;
-      __asm__("dec a");
+      __asm__("sec");
+      __asm__("sbc #1");
       x_loop_bound_a:
       __asm__("cmp #$FF"); /* PATCHED with end_dx */
       __asm__("beq %g", line_done);
@@ -1661,12 +1670,13 @@ next_pixel:
       __asm__("dec %v+1", ptr);
       dec_base:
       __asm__("dec %v", ptr);
-      __asm__("bra %g", inc_buf_ptr);
+      __asm__("jmp %g", inc_buf_ptr);
 
       inc_xcounters:
       // if (++dx = end_dx)
       //   goto line_done;
-      __asm__("inc a");
+      __asm__("clc");
+      __asm__("adc #1");
       x_loop_bound_b:
       __asm__("cmp #$FF"); /* PATCHED with end_dx */
       __asm__("beq %g", line_done);
@@ -1758,7 +1768,7 @@ next_line:
       __asm__("dec %v+1", cur_hgr_baseaddr_ptr);
       nouf1:
       dy--;
-      __asm__("bra %g", finish_inc);
+      __asm__("jmp %g", finish_inc);
 
     inc_ycounters:
       __asm__("clc");
@@ -1770,11 +1780,12 @@ next_line:
       dy++;
 
     finish_inc:
-    __asm__("lda (%v)", cur_hgr_baseaddr_ptr);
+    __asm__("ldy #0");
+    __asm__("lda (%v),y", cur_hgr_baseaddr_ptr);
     __asm__("clc");
     __asm__("adc %v", d7);
     __asm__("sta %v", ptr);
-    __asm__("ldy #1");
+    __asm__("iny");
     __asm__("lda (%v),y", cur_hgr_baseaddr_ptr);
     __asm__("adc #0");
     __asm__("sta %v+1", ptr);

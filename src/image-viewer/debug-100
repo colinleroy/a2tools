@@ -1,3 +1,3 @@
 #!/bin/bash
 FLOP2="-flop2 disks/qt100.dsk"
-make clean all && cd ../.. && make imageviewer-65c02.po && mame apple2gs -window -flop1 imageviewer-65c02.po $FLOP2 -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug; cd src/image-viewer
+make clean all && make imageviewer.po && mame apple2gs -window -flop1 imageviewer.po $FLOP2 -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug; cd src/image-viewer

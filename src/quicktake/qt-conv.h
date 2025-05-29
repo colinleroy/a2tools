@@ -88,22 +88,25 @@ void qt_load_raw(uint16 top);
     __asm__("stx %v+2", value);    \
     __asm__("ldx %v", value);      \
     __asm__("stx %v+1", value);    \
-    __asm__("stz %v", value);      \
+    __asm__("ldx #$00");           \
+    __asm__("stx %v", value);      \
 } while (0)
 #define FAST_SHIFT_LEFT_16_LONG(value) do {\
     __asm__("ldx %v+1", value);    \
     __asm__("stx %v+3", value);    \
     __asm__("ldx %v", value);      \
     __asm__("stx %v+2", value);    \
-    __asm__("stz %v+1", value);    \
-    __asm__("stz %v", value);      \
+    __asm__("ldx #$00");           \
+    __asm__("stx %v+1", value);    \
+    __asm__("stx %v", value);      \
 } while(0)
 #define FAST_SHIFT_LEFT_24_LONG(value) do {\
     __asm__("ldx %v", value);      \
     __asm__("stx %v+3", value);    \
-    __asm__("stz %v+2", value);    \
-    __asm__("stz %v+1", value);    \
-    __asm__("stz %v", value);      \
+    __asm__("ldx #$00");           \
+    __asm__("stx %v+2", value);    \
+    __asm__("stx %v+1", value);    \
+    __asm__("stx %v", value);      \
 } while(0)
 
 #define FAST_SHIFT_RIGHT_8_LONG(value) do { \
@@ -113,22 +116,25 @@ void qt_load_raw(uint16 top);
     __asm__("stx %v+1", value);    \
     __asm__("ldx %v+3", value);    \
     __asm__("stx %v+2", value);    \
-    __asm__("stz %v+3", value);    \
+    __asm__("ldx #$00");           \
+    __asm__("stx %v+3", value);    \
 } while(0)
 #define FAST_SHIFT_RIGHT_16_LONG(value) do { \
     __asm__("ldx %v+2", value);    \
     __asm__("stx %v", value);      \
     __asm__("ldx %v+3", value);    \
     __asm__("stx %v+1", value);    \
-    __asm__("stz %v+2", value);    \
-    __asm__("stz %v+3", value);    \
+    __asm__("ldx #$00");           \
+    __asm__("stx %v+2", value);    \
+    __asm__("stx %v+3", value);    \
 } while(0)
 #define FAST_SHIFT_RIGHT_24_LONG(value) do { \
     __asm__("ldx %v+3", value);    \
     __asm__("stx %v", value);      \
-    __asm__("stz %v+1", value);    \
-    __asm__("stz %v+2", value);    \
-    __asm__("stz %v+3", value);    \
+    __asm__("ldx #$00");           \
+    __asm__("stx %v+1", value);    \
+    __asm__("stx %v+2", value);    \
+    __asm__("stx %v+3", value);    \
 } while(0)
 
 #define FAST_SHIFT_RIGHT_8_LONG_SHORT_ONLY(value) do { \
@@ -146,7 +152,8 @@ void qt_load_raw(uint16 top);
 #define FAST_SHIFT_RIGHT_24_LONG_SHORT_ONLY(value) do { \
     __asm__("lda %v+3", value);    \
     __asm__("sta %v", value);      \
-    __asm__("stz %v+1", value);    \
+    __asm__("lda #$00");           \
+    __asm__("lda %v+1", value);    \
 } while(0)
 
 #define FAST_SHIFT_RIGHT_8_LONG_CHAR_ONLY(value) do { \
@@ -163,62 +170,69 @@ void qt_load_raw(uint16 top);
 } while(0)
 
 #define FAST_SHIFT_LEFT_8_INT_TO_LONG(value, to) do { \
-    __asm__("stz %v+3", to);      \
+    __asm__("lda #$00");           \
+    __asm__("sta %v+3", to);       \
     __asm__("ldx %v+1", value);    \
-    __asm__("stx %v+2", to);    \
+    __asm__("stx %v+2", to);       \
     __asm__("ldx %v", value);      \
-    __asm__("stx %v+1", to);    \
-    __asm__("stz %v", to);      \
+    __asm__("stx %v+1", to);       \
+    __asm__("sta %v", to);         \
 } while (0)
 
 #define FAST_SHIFT_LEFT_8_LONG_TO(value, to) do { \
-    __asm__("ldx %v+2", value);    \
+    __asm__("ldx %v+2", value); \
     __asm__("stx %v+3", to);    \
-    __asm__("ldx %v+1", value);    \
+    __asm__("ldx %v+1", value); \
     __asm__("stx %v+2", to);    \
-    __asm__("ldx %v", value);      \
+    __asm__("ldx %v", value);   \
     __asm__("stx %v+1", to);    \
-    __asm__("stz %v", to);      \
+    __asm__("lda #$00");        \
+    __asm__("sta %v", to);      \
 } while (0)
 #define FAST_SHIFT_LEFT_16_LONG_TO(value, to) do {\
-    __asm__("ldx %v+1", value);    \
+    __asm__("ldx %v+1", value); \
     __asm__("stx %v+3", to);    \
-    __asm__("ldx %v", value);      \
+    __asm__("ldx %v", value);   \
     __asm__("stx %v+2", to);    \
-    __asm__("stz %v+1", to);    \
-    __asm__("stz %v", to);      \
+    __asm__("lda #$00");        \
+    __asm__("sta %v+1", to);    \
+    __asm__("sta %v", to);      \
 } while(0)
 #define FAST_SHIFT_LEFT_24_LONG_TO(value, to) do {\
-    __asm__("ldx %v", value);      \
+    __asm__("ldx %v", value);   \
     __asm__("stx %v+3", to);    \
-    __asm__("stz %v+2", to);    \
-    __asm__("stz %v+1", to);    \
-    __asm__("stz %v", to);      \
+    __asm__("lda #$00");        \
+    __asm__("sta %v+2", to);    \
+    __asm__("sta %v+1", to);    \
+    __asm__("sta %v", to);      \
 } while(0)
 
 #define FAST_SHIFT_RIGHT_8_LONG_TO(value, to) do { \
-    __asm__("ldx %v+1", value);    \
+    __asm__("ldx %v+1", value); \
     __asm__("stx %v", to);      \
-    __asm__("ldx %v+2", value);    \
+    __asm__("ldx %v+2", value); \
     __asm__("stx %v+1", to);    \
-    __asm__("ldx %v+3", value);    \
+    __asm__("ldx %v+3", value); \
     __asm__("stx %v+2", to);    \
-    __asm__("stz %v+3", to);    \
+    __asm__("lda #$00");        \
+    __asm__("sta %v+3", to);    \
 } while(0)
 #define FAST_SHIFT_RIGHT_16_LONG_TO(value, to) do { \
-    __asm__("ldx %v+2", value);    \
+    __asm__("ldx %v+2", value); \
     __asm__("stx %v", to);      \
-    __asm__("ldx %v+3", value);    \
+    __asm__("ldx %v+3", value); \
     __asm__("stx %v+1", to);    \
-    __asm__("stz %v+2", to);    \
-    __asm__("stz %v+3", to);    \
+    __asm__("lda #$00");        \
+    __asm__("sta %v+2", to);    \
+    __asm__("sta %v+3", to);    \
 } while(0)
 #define FAST_SHIFT_RIGHT_24_LONG_TO(value, to) do { \
-    __asm__("ldx %v+3", value);    \
+    __asm__("ldx %v+3", value); \
     __asm__("stx %v", to);      \
-    __asm__("stz %v+1", to);    \
-    __asm__("stz %v+2", to);    \
-    __asm__("stz %v+3", to);    \
+    __asm__("lda #$00");        \
+    __asm__("sta %v+1", to);    \
+    __asm__("sta %v+2", to);    \
+    __asm__("sta %v+3", to);    \
 } while(0)
 
 #else

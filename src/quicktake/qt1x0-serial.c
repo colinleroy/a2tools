@@ -213,7 +213,6 @@ static uint8 send_command(const char *cmd, uint8 len, uint8 s_ack, uint8 wait) {
 
   return 0;
 }
-#pragma code-name(push, "LC")
 
 /* Ping the camera */
 static uint8 qt1x0_send_ping(void) {
@@ -242,6 +241,8 @@ static uint8 send_photo_thumbnail_command(uint8 pnum) {
 
   return send_command(str, sizeof str, 1, 5);
 }
+
+#pragma code-name(push, "LC")
 
 /* Gets photo header */
 static uint8 send_photo_header_command(uint8 pnum) {

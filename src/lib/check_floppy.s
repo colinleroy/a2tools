@@ -9,7 +9,8 @@
         .importzp             tmp1, ptr1
 
 _check_floppy:
-        stz     floppy_motor_on
+        ldx     #$00
+        stx     floppy_motor_on
 
         lda     $BF30           ; Get last accessed device
         and     #$7F            ; Clear drive number and keep slot
@@ -22,7 +23,7 @@ _check_floppy:
 
         adc     #$C0            ; Build slot ROM pointer
         sta     ptr1+1
-        stz     ptr1
+        stx     ptr1            ; X=0
 
         ldy     #$01            ; Check for DiskII/IWM in slot
         lda     (ptr1),y

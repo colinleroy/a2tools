@@ -1,5 +1,5 @@
 
-        .importzp   tmp1, tmp2, ptr1, ptr2, _prev_ram_irq_vector, _prev_rom_irq_vector, sp, regbank, ptr4
+        .importzp   tmp1, tmp2, tmp3, ptr1, ptr2, _prev_ram_irq_vector, _prev_rom_irq_vector, sp, regbank, ptr4
         .importzp   _zp6sip, _zp8sip, _zp10sip, _zp12sip, _zp6ip, _zp6p
         .import     popptr1
         .import     _extendTests, _extendOffsets, _gBitsLeft, _gBitBuf
@@ -113,12 +113,12 @@ n_min_eight:   .byte 0
                .byte 8
 
 _getBits1:
-        stz     ff
-        bra     getBits
+        ldx     #0
+        beq     getBits
 _getBits2:
-        ldx     #1
-        stx     ff
+        ldx     #$FF
 getBits:
+        stx     ff
         sta     n
         tay
         lda     sixteen_min_n,y
@@ -161,8 +161,9 @@ no_lshift:
 
         lda     _gBitBuf
         sta     _gBitBuf+1
-        stz     _gBitBuf
-        bra     no_lshift2
+        lda     #$00
+        sta     _gBitBuf
+        beq     no_lshift2
 
 :       lda     _gBitBuf
 :       asl     a
@@ -210,8 +211,9 @@ no_lshift3:
 
         lda     _gBitBuf
         sta     _gBitBuf+1
-        stz     _gBitBuf
-        bra     no_lshift4
+        lda     #$00
+        sta     _gBitBuf
+        beq     no_lshift4
 
 :       lda     _gBitBuf
 :       asl     a
@@ -224,7 +226,7 @@ no_lshift4:
         ldy     tmp1
         lda     eight_min_n,y
         sta     _gBitsLeft
-        bra     no_lshift5
+        jmp     no_lshift5
 
 enoughBits:
         lda     _gBitsLeft
@@ -238,8 +240,9 @@ enoughBits:
         bne     :+
         lda     _gBitBuf
         sta     _gBitBuf+1
-        stz     _gBitBuf
-        bra     no_lshift5
+        lda     #$00
+        sta     _gBitBuf
+        beq     no_lshift5
 
 :       lda     _gBitBuf
 :       asl     a
@@ -277,35 +280,39 @@ check_cache_high1:
         lda     _cur_cache_ptr+1
         cmp     _cache_end+1
         bne     continue1
-        phy
+        sty     tmp1
         jsr     _fillInBuf
-        ply
-        bra     continue1
+        ldy     tmp1
+        jmp     continue1
 
 check_cache_high2:
         lda     _cur_cache_ptr+1
         cmp     _cache_end+1
         bne     continue3
+        sty     tmp1
         jsr     _fillInBuf
-        bra     continue3
+        ldy     tmp1
+        jmp     continue3
 
 inc_cache_high1:
         inc     _cur_cache_ptr+1
-        bra     continue2
+        jmp     continue2
 
 inc_cache_high2:
         inc     _cur_cache_ptr+1
-        bra     continue4
+        jmp     continue4
 
 
 getOctet:
+        sty     ffcheck         ; Backup param
+        ldy     #$00
         lda     _cur_cache_ptr
         cmp     _cache_end
         beq     check_cache_high1
 
 continue1:
         ; Load char from buffer
-        lda     (_cur_cache_ptr)
+        lda     (_cur_cache_ptr),y
         tax                     ; Result in X
         ; Increment buffer pointer
         inc     _cur_cache_ptr
@@ -313,8 +320,8 @@ continue1:
 
 continue2:
         ; Should we check for $FF?
-        cpy     #0
-        beq     out
+        bit     ffcheck
+        bpl     out
         cpx     #$FF
         bne     out
 
@@ -324,7 +331,7 @@ continue2:
         beq     check_cache_high2
 
 continue3:
-        lda     (_cur_cache_ptr)
+        lda     (_cur_cache_ptr),y
         inc     _cur_cache_ptr
         beq     inc_cache_high2
 
@@ -333,14 +340,14 @@ continue4:
         beq     out
 
         ; Stuff back chars
-        sta     (_cur_cache_ptr)
+        sta     (_cur_cache_ptr),y
         lda     _cur_cache_ptr
         sec
         sbc     #2
         bcs     :+
         dec     _cur_cache_ptr+1
-        
-:       ldy     #1
+
+:       iny
         lda     #$FF
         sta     (_cur_cache_ptr),y
 
@@ -363,7 +370,7 @@ _getBit:
         rts
 
 :
-        ldy     #1
+        ldy     #$FF
         jsr     getOctet
         asl     a
         sta     _gBitBuf
@@ -380,7 +387,8 @@ _getBit:
 ; uint16 __fastcall__ imul_b1_b3(int16 w)
 
 _imul_b1_b3:
-        stz     neg
+        ldy     #$00
+        sty     neg
 
         cpx     #$80
         bcc     :+
@@ -445,7 +453,8 @@ _imul_b1_b3:
         ; dw++;
         inc    dw
         bne    :+
-        inc    a
+        clc
+        adc    #1
         bne    :+
         inx
 :       rts
@@ -453,7 +462,8 @@ _imul_b1_b3:
 ; uint16 __fastcall__ imul_b2(int16 w)
 
 _imul_b2:
-        stz     neg
+        ldy     #$00
+        sty     neg
 
         cpx     #$80
         bcc     :+
@@ -518,7 +528,8 @@ _imul_b2:
         ; dw++;
         inc    dw
         bne    :+
-        inc    a
+        clc
+        adc    #1
         bne    :+
         inx
 :       rts
@@ -526,7 +537,8 @@ _imul_b2:
 ; uint16 __fastcall__ imul_b4(int16 w)
 
 _imul_b4:
-        stz     neg
+        ldy     #$00
+        sty     neg
 
         cpx     #$80
         bcc     :+
@@ -591,7 +603,8 @@ _imul_b4:
         ; dw++;
         inc    dw
         bne    :+
-        inc    a
+        clc
+        adc    #1
         bne    :+
         inx
 :       rts
@@ -599,7 +612,8 @@ _imul_b4:
 ; uint16 __fastcall__ imul_b5(int16 w)
 
 _imul_b5:
-        stz     neg
+        ldy     #$00
+        sty     neg
 
         cpx     #$80
         bcc     :+
@@ -664,7 +678,8 @@ _imul_b5:
         ; dw++;
         inc    dw
         bne    :+
-        inc    a
+        clc
+        adc    #1
         bne    :+
         inx
 :       rts
@@ -673,7 +688,8 @@ _imul_b5:
 _huffDecode0:
         jsr     _getBit
         sta     code
-        stz     code+1
+        lda     #$00
+        sta     code+1
 
         lda     #16
         sta     huffC
@@ -698,9 +714,9 @@ noTest0:
 
         asl     code
         rol     code+1
-        phy
+        sty     tmp3
         jsr     _getBit
-        ply
+        ldy     tmp3
         ora     code
         sta     code
         dec     huffC
@@ -724,7 +740,8 @@ huffDecodeDone0:
 _huffDecode1:
         jsr     _getBit
         sta     code
-        stz     code+1
+        lda     #$00
+        sta     code+1
 
         lda     #16
         sta     huffC
@@ -749,9 +766,9 @@ noTest1:
 
         asl     code
         rol     code+1
-        phy
+        sty     tmp3
         jsr     _getBit
-        ply
+        ldy     tmp3
         ora     code
         sta     code
         dec     huffC
@@ -775,7 +792,8 @@ huffDecodeDone1:
 _huffDecode2:
         jsr     _getBit
         sta     code
-        stz     code+1
+        lda     #$00
+        sta     code+1
 
         lda     #16
         sta     huffC
@@ -800,9 +818,9 @@ noTest2:
 
         asl     code
         rol     code+1
-        phy
+        sty     tmp3
         jsr     _getBit
-        ply
+        ldy     tmp3
         ora     code
         sta     code
         dec     huffC
@@ -826,7 +844,8 @@ huffDecodeDone2:
 _huffDecode3:
         jsr     _getBit
         sta     code
-        stz     code+1
+        lda     #$00
+        sta     code+1
 
         lda     #16
         sta     huffC
@@ -851,9 +870,9 @@ noTest3:
 
         asl     code
         rol     code+1
-        phy
+        sty     tmp3
         jsr     _getBit
-        ply
+        ldy     tmp3
         ora     code
         sta     code
         dec     huffC
@@ -998,9 +1017,9 @@ full_idct_rows:
 
         tax
         pla
-        phy
+        sty     tmp3
         jsr    _imul_b1_b3
-        ply
+        ldy     tmp3
         sec
         sbc    x13
         sta    x32
@@ -1042,7 +1061,7 @@ full_idct_rows:
         adc    x30+1
         sta    _gCoeffBuf+1,y
 
-        phy
+        sty     tmp3
 
         lda    x4
         sec
@@ -1109,13 +1128,13 @@ full_idct_rows:
         tya
         sec
         sbc    x32
-        ply
+        ldy     tmp3
         sta    _gCoeffBuf+4,y
         txa
         sbc    x32+1
         sta    _gCoeffBuf+5,y
 
-        phy
+        sty     tmp3
         lda    x30
         clc
         adc    res3
@@ -1132,13 +1151,13 @@ full_idct_rows:
         tya
         sec
         sbc    x13
-        ply
+        ldy     tmp3
         sta    _gCoeffBuf+8,y
         txa
         sbc    x13+1
         sta    _gCoeffBuf+9,y
 
-        phy
+        sty     tmp3
         lda    x31
         clc
         adc    x32
@@ -1149,7 +1168,7 @@ full_idct_rows:
         tya
         sec
         sbc    res2
-        ply
+        ldy     tmp3
         sta    _gCoeffBuf+12,y
         txa
         sbc    res2+1
@@ -1200,7 +1219,7 @@ nextCol:
 :       cpx     #$80
         bcc     :+
         lda     #0
-        bra     clampDone1
+        beq     clampDone1
 :       cpx     #0
         beq     clampDone1
         lda     #$FF
@@ -1270,7 +1289,7 @@ full_idct_cols:
         adc     x7+1
         sta     x17+1
 
-        phy
+        sty     tmp3
 
         ;res1 = imul_b5(x4 - x6
         sec
@@ -1341,7 +1360,7 @@ full_idct_cols:
         adc     x24+1
         sta     x44+1
 
-        ply
+        ldy     tmp3
         sec
         lda     _gCoeffBuf,y
         sbc     _gCoeffBuf+64,y
@@ -1376,7 +1395,7 @@ full_idct_cols:
         adc     _gCoeffBuf+97,y
         sta     x13+1
 
-        phy
+        sty     tmp3
         ;x32 = imul_b1_b3(x12) - x13;
         lda     x12
         ldx     x12+1
@@ -1453,12 +1472,12 @@ full_idct_cols:
 :       cpx     #$80
         bcc     :+
         lda     #0
-        bra     clampDone2
+        beq     clampDone2
 :       cpx     #0
         beq     clampDone2
         lda     #$FF
 clampDone2:
-        ply
+        ldy     tmp3
         sta     _gCoeffBuf,y
 
         ; t = ((x42 + res3) >> PJPG_DCT_SCALE_BITS) +128;
@@ -1485,7 +1504,7 @@ clampDone2:
 :       cpx     #$80
         bcc     :+
         lda     #0
-        bra     clampDone3
+        beq     clampDone3
 :       cpx     #0
         beq     clampDone3
         lda     #$FF
@@ -1509,7 +1528,7 @@ clampDone3:
 :       cpx     #$80
         bcc     :+
         lda     #0
-        bra     clampDone4
+        beq     clampDone4
 :       cpx     #0
         beq     clampDone4
         lda     #$FF
@@ -1533,7 +1552,7 @@ clampDone4:
 :       cpx     #$80
         bcc     :+
         lda     #0
-        bra     clampDone5
+        beq     clampDone5
 :       cpx     #0
         beq     clampDone5
         lda     #$FF
@@ -1595,40 +1614,42 @@ decRestarts:
 :       dec     _gRestartsLeft
 
 noRestart:
-        lda     #<(_gMCUOrg)
+        lda     #<_gMCUOrg
         sta     cur_gMCUOrg
-        lda     #>(_gMCUOrg)
+        lda     #>_gMCUOrg
         sta     cur_gMCUOrg+1
 
-        stz     mcuBlock
+        lda     #$00
+        sta     mcuBlock
 nextMcuBlock:
         ; for (mcuBlock = 0; mcuBlock < 2; mcuBlock++) {
-        lda     (cur_gMCUOrg)
+        ldy     #$00
+        lda     (cur_gMCUOrg),y
         sta     componentID
         tay
 
         lda     _gCompQuant,y
         beq     :+
 
-        lda     #<(_gQuant1)
+        lda     #<_gQuant1
         sta     load_pq0+1
         sta     load_pq0b+1
         sta     load_pq1+1
         sta     load_pq2+1
-        lda     #>(_gQuant1)
+        lda     #>_gQuant1
         sta     load_pq0+2
         sta     load_pq0b+2
         sta     load_pq1+2
         sta     load_pq2+2
 
-        bra     loadDCTab
+        jmp     loadDCTab
 
-:       lda     #<(_gQuant0)
+:       lda     #<_gQuant0
         sta     load_pq0+1
         sta     load_pq0b+1
         sta     load_pq1+1
         sta     load_pq2+1
-        lda     #>(_gQuant0)
+        lda     #>_gQuant0
         sta     load_pq0+2
         sta     load_pq0b+2
         sta     load_pq1+2
@@ -1639,7 +1660,7 @@ loadDCTab:
         beq     :+
 
         jsr     _huffDecode1
-        bra     doDec
+        jmp     doDec
 
 :       jsr     _huffDecode0
 
@@ -1653,7 +1674,7 @@ doDec:
 :       and     #$0F
         beq     :+
         jsr     _getBits2
-        bra     doExtend
+        jmp     doExtend
 :       tax
 
 doExtend:
@@ -1679,7 +1700,7 @@ doExtend:
 
         clc
         ldy     #0
-        lda     (ptr1)
+        lda     (ptr1),y
         adc     tmp1
         pha
         iny
@@ -1688,7 +1709,8 @@ doExtend:
         sta     (ptr1),y
         tax
         pla
-        sta     (ptr1)
+        dey
+        sta     (ptr1),y
 
         ;gCoeffBuf[0] = dc * pQ[0];
         jsr     pushax
@@ -1728,7 +1750,7 @@ doZAGLoop:
         beq     :+
 
         jsr     _huffDecode3
-        bra     doDec2
+        jmp     doDec2
 
 :       jsr     _huffDecode2
 
@@ -1737,7 +1759,7 @@ doDec2:
         and     #$0F
         beq     :+
         jsr     _getBits2
-        bra     storeExtraBits
+        jmp     storeExtraBits
 :       tax
 
 storeExtraBits:
@@ -1750,7 +1772,8 @@ storeExtraBits:
         lsr     a
         lsr     a
         sta     rDMCU
-        stz     rDMCU+1
+        lda     #$00
+        sta     rDMCU+1
 
         lda     sDMCU
         and     #$0F
@@ -1804,7 +1827,7 @@ load_pq2:
         iny
         txa
         sta     _gCoeffBuf,y
-        bra     sNotZero
+        jmp     sNotZero
 
 sZero:
         lda     rDMCU
@@ -1845,7 +1868,7 @@ finishZAG:
         sta     _gCoeffBuf,y
 
         inc     cur_ZAG_coeff
-        bra     finishZAG
+        jmp     finishZAG
 
 ZAG_finished:
         lda     mcuBlock
@@ -1865,7 +1888,8 @@ firstMCUBlocksDone:
         jmp     uselessBlocksDone
 
 nextUselessBlock:
-        lda     (cur_gMCUOrg)
+        ldy     #$00
+        lda     (cur_gMCUOrg),y
         sta     componentID
         tay
 
@@ -1873,7 +1897,7 @@ nextUselessBlock:
         beq     :+
 
         jsr     _huffDecode1
-        bra     doDecb
+        jmp     doDecb
 
 :       jsr     _huffDecode0
 
@@ -1888,7 +1912,7 @@ doDecb:
         and     #$0F
         beq     :+
         jsr     _getBits2
-        bra     doExtend2
+        jmp     doExtend2
 :       tax
 
 doExtend2:
@@ -1905,7 +1929,7 @@ i64loop:
         beq     :+
 
         jsr     _huffDecode3
-        bra     doDec2b
+        jmp     doDec2b
 
 :       jsr     _huffDecode2
 
@@ -1915,7 +1939,7 @@ doDec2b:
         pha
         beq     :+
         jsr     _getBits2
-        bra     storeExtraBits2
+        jmp     storeExtraBits2
 :       tax
 
 storeExtraBits2:
@@ -1940,7 +1964,7 @@ storeExtraBits2:
         stx     extendX+1
         lda     sDMCU
         jsr     _huffExtend
-        bra     sZeroDone2
+        jmp     sZeroDone2
 
 :       lda     rDMCU
         cmp     #$0F
@@ -1989,37 +2013,29 @@ _transformBlock:
 
         lda     #<(_gMCUBufG+64)
         ldx     #>(_gMCUBufG+64)
-        bra     dstSet
+        jmp     dstSet
 mCZero:
-        lda     #<(_gMCUBufG)
-        ldx     #>(_gMCUBufG)
+        lda     #<_gMCUBufG
+        ldx     #>_gMCUBufG
 dstSet:
         sta     pGDst
         stx     pGDst+1
-        lda     #<(_gCoeffBuf)
+        lda     #<_gCoeffBuf
         sta     pSrc
-        lda     #>(_gCoeffBuf)
+        lda     #>_gCoeffBuf
         sta     pSrc+1
 
-        ldy     #64
-        clc
-
+        ldy     #$00
 tbCopy:
-        lda     (pSrc)
-        sta     (pGDst)
+        lda     (pSrc),y
+        sta     (pGDst),y
 
-        inc     pGDst
-        bne     :+
-        inc     pGDst+1
-
-:       lda     pSrc
-        adc     #2
-        sta     pSrc
-        bcc     :+
+        inc     pSrc          ; pSrc is incremented twice (via Y and base)
+        bne     :+            ; because it's 16-bits
         inc     pSrc+1
-        clc
 
-:       dey
+:       iny
+        cpy     #64
         bne     tbCopy
 
         rts
@@ -2032,6 +2048,7 @@ shit:   .res 32 ; Fix to shit in _decodeNextMCU apparently (_ZAG_Coeff page cros
 ;getBit/octet
 n:      .res 1
 ff:     .res 1
+ffcheck:.res 1
 final_shift:
         .res 1
 ret:    .res 2

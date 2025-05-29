@@ -828,6 +828,7 @@ uint8 processRestart(void)
         fillInBuf();
       c = *(cur_cache_ptr++);
 #else
+      __asm__("ldy #0");
       __asm__("lda %v+1", cur_cache_ptr);
       __asm__("cmp %v+1", cache_end);
       __asm__("bcc %g", buf_ok3);
@@ -835,8 +836,9 @@ uint8 processRestart(void)
       __asm__("cmp %v", cache_end);
       __asm__("bcc %g", buf_ok3);
       fillInBuf();
+      __asm__("ldy #0");
       buf_ok3:
-      __asm__("lda (%v)", cur_cache_ptr);
+      __asm__("lda (%v),y", cur_cache_ptr);
       __asm__("sta %v", c);
       __asm__("inc %v", cur_cache_ptr);
       __asm__("bne %g", cur_buf_inc_done3);
@@ -855,6 +857,7 @@ uint8 processRestart(void)
         fillInBuf();
       c = *(cur_cache_ptr++);
 #else
+      __asm__("ldy #0");
       __asm__("lda %v+1", cur_cache_ptr);
       __asm__("cmp %v+1", cache_end);
       __asm__("bcc %g", buf_ok4);
@@ -862,8 +865,9 @@ uint8 processRestart(void)
       __asm__("cmp %v", cache_end);
       __asm__("bcc %g", buf_ok4);
       fillInBuf();
+      __asm__("ldy #0");
       buf_ok4:
-      __asm__("lda (%v)", cur_cache_ptr);
+      __asm__("lda (%v),y", cur_cache_ptr);
       __asm__("sta %v", c);
       __asm__("inc %v", cur_cache_ptr);
       __asm__("bne %g", cur_buf_inc_done4);

@@ -65,7 +65,7 @@ inc_cache_high:
         ldx     #>CACHE_SIZE
         jsr     _read
         clc
-        bra     handle_byte
+        jmp     handle_byte
 
 _getbithuff:
         sta     nbits
@@ -79,7 +79,8 @@ _getbithuff:
         stx     _bitbuf+1
         ; _bitbuf low byte will be set below
 
-        lda     (cur_cache_ptr)
+        ldy     #$00
+        lda     (cur_cache_ptr),y
         sta     _bitbuf
 
         inc     cur_cache_ptr
@@ -160,7 +161,8 @@ do_huff_h:
         adc     _vbits
         sta     _vbits
         ldx     #$00
-        lda     (ptr1)
+        dey
+        lda     (ptr1),y
         rts
 no_huff:
         lda     _vbits
