@@ -9,7 +9,7 @@
         .export         _try_videomode
 
         .ifdef __APPLE2ENH__
-        .export         _CH_VLINE
+        .export         _CH_VLINE ; Need that for file_select
         .endif
 
         .import         ostype, _videomode, _allow_lowercase
@@ -54,7 +54,6 @@ _init_features:
         rol                   ; High bit to carry
         ror     _is_iigs      ; carry to flag high bit
 
-
         lda     MACHID        ; 128k?
         and     #$30
         cmp     #$30
@@ -68,12 +67,12 @@ _init_features:
         .segment "CODE"
 
 .proc _try_videomode
-        ldy     #$FF
+        ldy     #$FF          ; Consider we succeed
         sty     _has_80cols
-; .ifdef __APPLE2ENH__
+
         jsr     _videomode
         cmp     #$FF
         bne     :+
-        inc     _has_80cols
+        inc     _has_80cols   ; We did not succeed.
 :       rts
 .endproc

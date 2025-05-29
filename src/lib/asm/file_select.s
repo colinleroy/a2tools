@@ -31,7 +31,7 @@
         .import         popa, popax, pusha0, pusha, pushax, swapstk, incaxy
         .import         return0
 
-        .import         _CH_VLINE
+        .import         _CH_VLINE ; Symbol not resolved? Did you build with DYN_BOX_DRAW?
 
         .importzp       _zp6, _zp8
         .include        "apple2.inc"

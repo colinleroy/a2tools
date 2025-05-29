@@ -21,7 +21,9 @@
         .export         _set_hscrollwindow
 
         .import         popptr1, popa, pushax, FVTABZ
+	.ifndef         __APPLE2ENH__
         .import         machinetype
+	.endif
         .importzp       ptr1
 
         .include        "apple2.inc"
