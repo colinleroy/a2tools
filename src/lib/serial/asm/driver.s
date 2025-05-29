@@ -59,7 +59,7 @@
         .import     ostype, _open_slot, pusha
 
         .constructor setup_defaults
-        .destructor  _serial_close
+        .destructor  _serial_close_if_open
 
         .include    "apple2.inc"
         .include    "ser-kernel.inc"
@@ -75,7 +75,10 @@
 .endproc
 
 .proc _serial_close
-        jmp     _acia_close
+        jsr     _acia_close
+        ldy     #$00
+        sty     connected
+        rts
 .endproc
 
 ; Send character in A over serial. Destroys X.
@@ -236,6 +239,16 @@ serial_slot:      .byte   2
         stx     _simple_serial_set_parity+2
 .endif
 
+:       rts
+.endproc
+
+.segment "CODE"
+
+; Make sure the destructor doesn't get paged out
+.proc _serial_close_if_open
+        ldy     connected
+        beq     :+
+        jmp     _serial_close
 :       rts
 .endproc
 
