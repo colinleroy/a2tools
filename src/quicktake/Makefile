@@ -1,4 +1,4 @@
-TARGET := apple2enh
+TARGET := apple2
 
 GENERAL_CFLAGS := \
 	-DSURL_TO_LANGCARD \

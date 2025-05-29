@@ -449,6 +449,12 @@ int main(int argc, char *argv[])
 {
   uint8 choice;
 
+  if (!has_128k) {
+    cputs("This program requires 128kB of memory.");
+    cgetc();
+    exit(1);
+  }
+
   camera_connected = setup(argc, argv);
 menu:
   init_text();
