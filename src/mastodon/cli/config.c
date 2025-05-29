@@ -31,7 +31,6 @@ charset_again:
   } else {
     goto charset_again;
   }
-  strcpy(login_data.charset, US_CHARSET);
 
   clrscr();
   cputs("Is your monitor monochrome? (y/n)\r\n");
