@@ -91,5 +91,5 @@ upload: all
 	cp *.bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/quicktake/
 
 dist: imageviewer.po
-	mkdir -p $(SRC_DIR)../../dist/
-	cp $< $(SRC_DIR)../../dist/
+	mkdir -p ../../dist/
+	cp $< ../../dist/

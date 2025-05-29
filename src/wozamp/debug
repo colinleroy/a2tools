@@ -1,3 +1,2 @@
 #!/bin/bash
-cd bin/65c02
-make clean wozampperso-65c02.po && mame apple2c0 -window -flop1 wozampperso-65c02.po -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug
+make clean wozampperso.po && mame apple2c0 -window -flop1 wozampperso.po -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug

@@ -50,7 +50,7 @@ assets = \
 
 assets_files = $(assets:%=%_img)
 
-opponents_code    = $(opponents:%=$(SRC_DIR)/opponents/opponent%.s)
+opponents_code    = $(opponents:%=opponents/opponent%.s)
 opponents_files   = $(opponents:%=opponent_%)
 
 lzsa_files = \
@@ -200,34 +200,34 @@ sounds = \
 # Order is important so that things are linked in the expected order
 # in the various segments, and things needing to be aligned are aligned
 shflpuck_SOURCES := \
-	$(SRC_DIR)/code/buffers.s \
+	code/buffers.s \
 	play_sound.gen.s \
 	$(opponents_code) \
 	$(serve_sounds) \
 	$(win_sounds) \
 	$(lose_sounds) \
 	$(sprites) \
-	$(SRC_DIR)/code/init.s \
-	$(SRC_DIR)/code/main.s \
-	$(SRC_DIR)/code/hz.s \
-	$(SRC_DIR)/code/mouse.s \
-	$(SRC_DIR)/code/crash_lines.s \
-	$(SRC_DIR)/code/draw_sprite.s \
-	$(SRC_DIR)/code/draw_score.s \
-	$(SRC_DIR)/code/game_loop.s \
-	$(SRC_DIR)/code/load_data.s \
-	$(SRC_DIR)/code/sprites.s \
-	$(SRC_DIR)/code/helpers.s \
-	$(SRC_DIR)/code/mini_conio.s \
-	$(SRC_DIR)/code/driver_s.s \
-	$(SRC_DIR)/code/acia_s.s \
-	$(SRC_DIR)/code/z8530_s.s \
-	$(SRC_DIR)/../lib/asm/hgr_tables.s \
-	$(SRC_DIR)/../lib/asm/hgr.s \
-	$(SRC_DIR)/../lib/asm/hgr_mono40.s \
-	$(SRC_DIR)/../lib/extrazp.s \
-	$(SRC_DIR)/../lib/cntoabuf.s \
-	$(SRC_DIR)/../lib/platform_sleep.s \
+	code/init.s \
+	code/main.s \
+	code/hz.s \
+	code/mouse.s \
+	code/crash_lines.s \
+	code/draw_sprite.s \
+	code/draw_score.s \
+	code/game_loop.s \
+	code/load_data.s \
+	code/sprites.s \
+	code/helpers.s \
+	code/mini_conio.s \
+	code/driver_s.s \
+	code/acia_s.s \
+	code/z8530_s.s \
+	../lib/asm/hgr_tables.s \
+	../lib/asm/hgr.s \
+	../lib/asm/hgr_mono40.s \
+	../lib/extrazp.s \
+	../lib/cntoabuf.s \
+	../lib/platform_sleep.s \
 	$(sounds) \
 	transform.s \
 	$(assets_backgrounds) \
@@ -235,14 +235,13 @@ shflpuck_SOURCES := \
 	splash.bg.gen.s \
 	bar.snd.s \
 	font.gen.s \
-	$(SRC_DIR)/code/bar.s \
-	$(SRC_DIR)/code/draw_text.s \
+	code/bar.s \
+	code/draw_text.s \
 	pointer.pixel_perfect.gen.s \
 
 shflpuck_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl \
 	-vm -m shflpuck.map \
 	--asm-include-dir $(shell pwd) \
-	--asm-include-dir $(SRC_DIR) \
 	--asm-define MAX_COMPRESSED_DATA_SIZE=$(MAX_COMPRESSED_DATA_SIZE) \
 	$(UNKILLABLE_CFLAG) \
 	$(DEBUG_OPPONENT_CFLAG)
@@ -252,25 +251,25 @@ shflpuck_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl \
 all dist: \
 	shufflepuck.po
 
-gen_sprite: $(SRC_DIR)/../gen_sprite/gen_sprite.c
+gen_sprite: ../gen_sprite/gen_sprite.c
 	gcc -g -O0 $(shell pkg-config --cflags SDL_image) $^ $(shell pkg-config --libs SDL_image) -o $@
 
-gen_font: $(SRC_DIR)/../gen_font/gen_font.c
+gen_font: ../gen_font/gen_font.c
 	gcc -g -O0 $(shell pkg-config --cflags SDL_image) $^ $(shell pkg-config --libs SDL_image) -o $@
 
-gen_sound_player: $(SRC_DIR)/../sound_player_generator/gen_sound_player.c $(SRC_DIR)/../sound_player_generator/sound.h
+gen_sound_player: ../sound_player_generator/gen_sound_player.c ../sound_player_generator/sound.h
 	gcc -DCPU_$(STREAMER_VER) -DENABLE_SLOWER=1 -g -O0 $< -o $@
 
-gen_sound_clip: $(SRC_DIR)/../sound_player_generator/gen_sound_clip.c $(SRC_DIR)/../sound_player_generator/sound.h
+gen_sound_clip: ../sound_player_generator/gen_sound_clip.c ../sound_player_generator/sound.h
 	gcc -DCPU_$(STREAMER_VER) -DENABLE_SLOWER=1 -g -O0 $< -o $@
 
-gen_transform: $(SRC_DIR)/generators/gen_transform.c $(SRC_DIR)/generators/one-point-perspective.h
+gen_transform: generators/gen_transform.c generators/one-point-perspective.h
 	gcc -g -O0 $< -o $@
 
 transform.s: gen_transform
 	./$< > $@
 
-lz4_compressor: $(SRC_DIR)/../lz4_compressor/lz4_compressor.c
+lz4_compressor: ../lz4_compressor/lz4_compressor.c
 	gcc -g -O0 -DMAX_COMPRESSED_DATA_SIZE=$(MAX_COMPRESSED_DATA_SIZE) $^ -llz4 -o $@
 
 $(assets_bin): $(BINARY_NAME)
@@ -281,91 +280,91 @@ $(assets_bin): $(BINARY_NAME)
 $(assets_backgrounds): %.bg.gen.s: %.hgr
 
 %.bg.gen.s: %.hgr
-	$(SRC_DIR)/../../bin/make-ca65-hgr.sh $< SEG > $@
+	../../bin/make-ca65-hgr.sh $< SEG > $@
 
-$(SRC_DIR)/../surl-server/hgr-convert:
-	$(MAKE) -C $(SRC_DIR)/../surl-server/ -f Makefile
+../surl-server/hgr-convert:
+	$(MAKE) -C ../surl-server/ -f Makefile
 
-%.hgr: $(SRC_DIR)/assets/%.xcf $(SRC_DIR)/../surl-server/hgr-convert
+%.hgr: assets/%.xcf ../surl-server/hgr-convert
 	convert -flatten $< $<.png
 	#Use -short to have 8 less bytes at the end so lzsa can uncompress
 	#in-place
-	$(SRC_DIR)/../surl-server/hgr-convert -short $<.png && mv $<.png.hgr $@
+	../surl-server/hgr-convert -short $<.png && mv $<.png.hgr $@
 	rm -f $<.png $<.png.hgr-preview.png
 
-$(sprites_pixel_perfect): %.pixel_perfect.gen.s: $(SRC_DIR)/assets/%.png
-my%.pixel_perfect.gen.s: $(SRC_DIR)/assets/my%.png gen_sprite
+$(sprites_pixel_perfect): %.pixel_perfect.gen.s: assets/%.png
+my%.pixel_perfect.gen.s: assets/my%.png gen_sprite
 	./gen_sprite $< 255 pixel_perfect RODATA nomask
-their%.pixel_perfect.gen.s: $(SRC_DIR)/assets/their%.png gen_sprite
+their%.pixel_perfect.gen.s: assets/their%.png gen_sprite
 	./gen_sprite $< 255 pixel_perfect RODATA
-puck0.pixel_perfect.gen.s: $(SRC_DIR)/assets/puck0.png gen_sprite
+puck0.pixel_perfect.gen.s: assets/puck0.png gen_sprite
 	./gen_sprite $< 255 pixel_perfect SPLC
-puck1.pixel_perfect.gen.s: $(SRC_DIR)/assets/puck1.png gen_sprite
+puck1.pixel_perfect.gen.s: assets/puck1.png gen_sprite
 	./gen_sprite $< 255 pixel_perfect SPLC
-puck2.pixel_perfect.gen.s: $(SRC_DIR)/assets/puck2.png gen_sprite
+puck2.pixel_perfect.gen.s: assets/puck2.png gen_sprite
 	./gen_sprite $< 255 pixel_perfect RODATA
-puck3.pixel_perfect.gen.s: $(SRC_DIR)/assets/puck3.png gen_sprite
+puck3.pixel_perfect.gen.s: assets/puck3.png gen_sprite
 	./gen_sprite $< 255 pixel_perfect RODATA
-puck4.pixel_perfect.gen.s: $(SRC_DIR)/assets/puck4.png gen_sprite
+puck4.pixel_perfect.gen.s: assets/puck4.png gen_sprite
 	./gen_sprite $< 255 pixel_perfect SPLC
-puck5.pixel_perfect.gen.s: $(SRC_DIR)/assets/puck5.png gen_sprite
+puck5.pixel_perfect.gen.s: assets/puck5.png gen_sprite
 	./gen_sprite $< 255 pixel_perfect RODATA
-puck6.pixel_perfect.gen.s: $(SRC_DIR)/assets/puck6.png gen_sprite
+puck6.pixel_perfect.gen.s: assets/puck6.png gen_sprite
 	./gen_sprite $< 255 pixel_perfect RODATA
-pointer.pixel_perfect.gen.s: $(SRC_DIR)/assets/pointer.png gen_sprite
+pointer.pixel_perfect.gen.s: assets/pointer.png gen_sprite
 	./gen_sprite $< 255 pixel_perfect barcode
-hand.pixel_perfect.gen.s: $(SRC_DIR)/assets/hand.png gen_sprite
+hand.pixel_perfect.gen.s: assets/hand.png gen_sprite
 	./gen_sprite $< 255 pixel_perfect RODATA
 
-$(opponents_sprites): %.unperfect.gen.s: $(SRC_DIR)/assets/opponents/%.png
-%.unperfect.gen.s: $(SRC_DIR)/assets/opponents/%.png gen_sprite
+$(opponents_sprites): %.unperfect.gen.s: assets/opponents/%.png
+%.unperfect.gen.s: assets/opponents/%.png gen_sprite
 	./gen_sprite $< 255 unperfect $(shell echo "$@"|sed 's/[a-z]*_\([a-z]\+\).*$$/\1/') big
 
 play_sound.gen.s: gen_sound_player
 	./gen_sound_player $(SAMPLING_HZ) LOWCODE > $@
 
-$(sounds): %.snd.s: $(SRC_DIR)/assets/sounds/%.wav
-crash.snd.s: $(SRC_DIR)/assets/sounds/crash.wav gen_sound_clip
+$(sounds): %.snd.s: assets/sounds/%.wav
+crash.snd.s: assets/sounds/crash.wav gen_sound_clip
 	rm -f $<_raw
 	sox $< -R -b 8 -e unsigned-integer -t raw $<_raw channels 1 rate -v $(SAMPLING_HZ)
 	./gen_sound_clip $(SAMPLING_HZ) $<_raw RODATA > $@
 	rm $<_raw
-puc%.snd.s: $(SRC_DIR)/assets/sounds/puc%.wav gen_sound_clip
+puc%.snd.s: assets/sounds/puc%.wav gen_sound_clip
 	rm -f $<_raw
 	sox $< -R -b 8 -e unsigned-integer -t raw $<_raw channels 1 rate -v $(SAMPLING_HZ)
 	./gen_sound_clip $(SAMPLING_HZ) $<_raw SPLC > $@
 	rm $<_raw
-bar.snd.s: $(SRC_DIR)/assets/sounds/bar.wav gen_sound_clip
+bar.snd.s: assets/sounds/bar.wav gen_sound_clip
 	rm -f $<_raw
 	sox $< -R -b 8 -e unsigned-integer -t raw $<_raw channels 1 rate -v $(SAMPLING_HZ)
 	./gen_sound_clip $(SAMPLING_HZ) $<_raw barsnd > $@
 	rm $<_raw
-serve%.snd.s: $(SRC_DIR)/assets/sounds/opponents/serve%.wav gen_sound_clip
+serve%.snd.s: assets/sounds/opponents/serve%.wav gen_sound_clip
 	rm -f $<_raw
 	sox $< -R -b 8 -e unsigned-integer -t raw $<_raw channels 1 rate -v $(SAMPLING_HZ)
 	./gen_sound_clip $(SAMPLING_HZ) $<_raw $(shell echo "$@"|sed 's/[a-z]*_\([a-z]\).*$$/\1/') > $@
 	rm $<_raw
-win%.snd.s: $(SRC_DIR)/assets/sounds/opponents/win%.wav gen_sound_clip
+win%.snd.s: assets/sounds/opponents/win%.wav gen_sound_clip
 	rm -f $<_raw
 	sox $< -R -b 8 -e unsigned-integer -t raw $<_raw channels 1 rate -v $(SAMPLING_HZ)
 	./gen_sound_clip $(SAMPLING_HZ) $<_raw $(shell echo "$@"|sed 's/[a-z]*_\([a-z]\).*$$/\1/') > $@
 	rm $<_raw
-lose%.snd.s: $(SRC_DIR)/assets/sounds/opponents/lose%.wav gen_sound_clip
+lose%.snd.s: assets/sounds/opponents/lose%.wav gen_sound_clip
 	rm -f $<_raw
 	sox $< -R -b 8 -e unsigned-integer -t raw $<_raw channels 1 rate -v $(SAMPLING_HZ)
 	./gen_sound_clip $(SAMPLING_HZ) $<_raw $(shell echo "$@"|sed 's/[a-z]*_\([a-z]\).*$$/\1/') > $@
 	rm $<_raw
-end%.snd.s: $(SRC_DIR)/assets/sounds/opponents/end%.wav gen_sound_clip
+end%.snd.s: assets/sounds/opponents/end%.wav gen_sound_clip
 	rm -f $<_raw
 	sox $< -R -b 8 -e unsigned-integer -t raw $<_raw channels 1 rate -v $(SAMPLING_HZ)
 	./gen_sound_clip $(SAMPLING_HZ) $<_raw $(shell echo "$@"|sed 's/[a-z]*_\([a-z]\).*$$/\1/') > $@
 	rm $<_raw
 
-font.gen.s: $(SRC_DIR)/assets/fonts/font.png gen_font
+font.gen.s: assets/fonts/font.png gen_font
 	./gen_font $< 280 barcode
 
-shflpuck.ld.cfg: $(SRC_DIR)/shflpuck.ld.cfg.tmpl $(SRC_DIR)/generators/gen_linker_config.sh
-	$(SRC_DIR)/generators/gen_linker_config.sh $< $(opponents) > $@
+shflpuck.ld.cfg: shflpuck.ld.cfg.tmpl generators/gen_linker_config.sh
+	generators/gen_linker_config.sh $< $(opponents) > $@
 
 clean:
 	rm -f *.bin *.o *.po \
@@ -387,25 +386,25 @@ clean:
 	*.dbg *.lbl *.map *.lz4 *.lzsa \
 	shflpuck.ld.cfg
 
-check_imports.sh: $(shflpuck_SOURCES) $(SRC_DIR)/check_imports.sh
-	cp -f $(SRC_DIR)/check_imports.sh .
-	./check_imports.sh $(SRC_DIR)/code
-	./check_imports.sh $(SRC_DIR)/levels_data
+check_imports.sh: $(shflpuck_SOURCES) check_imports.sh
+	cp -f check_imports.sh .
+	./check_imports.sh code
+	./check_imports.sh levels_data
 
 $(BINARY_NAME): shflpuck.ld.cfg $(shflpuck_SOURCES)
 	cl65 -g -Wl --dbgfile,shflpuck.dbg -Ln shflpuck.lbl $(CFLAGS) $(shflpuck_CLCFLAGS) \
 		-C shflpuck.ld.cfg -o $@ $(shflpuck_SOURCES) \
 		$(CC65_TARGET)-iobuf-0800.o $(CC65_TARGET)-integer-basic-compat.o
 
-CLEANDISK = $(SRC_DIR)/../../disks/ProDOS_2_4_3.po
+CLEANDISK = ../../disks/ProDOS_2_4_3.po
 shufflepuck.po: $(BINARY_NAME) $(assets_lzsa)
 	cp $(CLEANDISK) $@; \
-	java -jar $(SRC_DIR)/../../bin/ac.jar -n $@ SHUFFLEPUCK
-	java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ SHFLPUCK.SYSTEM SYS < $(SRC_DIR)/../../bin/loader.system; \
-	java -jar $(SRC_DIR)/../../bin/ac.jar -d $@ BASIC.SYSTEM; \
-	java -jar $(SRC_DIR)/../../bin/ac.jar -as $@ SHFLPUCK < $<; \
+	java -jar ../../bin/ac.jar -n $@ SHUFFLEPUCK
+	java -jar ../../bin/ac.jar -p $@ SHFLPUCK.SYSTEM SYS < ../../bin/loader.system; \
+	java -jar ../../bin/ac.jar -d $@ BASIC.SYSTEM; \
+	java -jar ../../bin/ac.jar -as $@ SHFLPUCK < $<; \
 	for r in $(assets_lzsa); do \
-		java -jar $(SRC_DIR)/../../bin/ac.jar -p $@ $$(basename $$r | sed "s/\.lzsa$///") BIN < $$r; \
+		java -jar ../../bin/ac.jar -p $@ $$(basename $$r | sed "s/\.lzsa$///") BIN < $$r; \
 	done; \
 
 upload: all
@@ -420,5 +419,5 @@ gimp_setup:
 	./gimp_setup.sh
 
 dist: shufflepuck.po
-	mkdir -p $(SRC_DIR)/../../dist/
-	cp $< $(SRC_DIR)/../../dist/
+	mkdir -p ../../dist/
+	cp $< ../../dist/

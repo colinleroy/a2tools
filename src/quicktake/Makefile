@@ -1,5 +1,4 @@
 TARGET := apple2enh
-suffix := 65c02
 
 GENERAL_CFLAGS := \
 	-DSURL_TO_LANGCARD \
@@ -148,10 +147,10 @@ GCCLDFLAGS = $(shell sdl-config --libs)
 
 .PHONY: all clean
 
-all: quicktake-$(suffix).po
+all: quicktake.po
 
 CLEANDISK = ../../disks/ProDOS_2_4_3.po
-quicktake-$(suffix).po: splash.h slowtake.bin qtktconv.bin qtknconv.bin jpegconv.bin loader.x86_64 qtktconv.x86_64 qtknconv.x86_64 jpegconv.x86_64 ../image-viewer/imgview.bin
+quicktake.po: splash.h slowtake.bin qtktconv.bin qtknconv.bin jpegconv.bin loader.x86_64 qtktconv.x86_64 qtknconv.x86_64 jpegconv.x86_64 ../image-viewer/imgview.bin
 	cp $(CLEANDISK) $@; \
 	java -jar ../../bin/ac.jar -n $@ QUICKTAKE
 	java -jar ../../bin/ac.jar -p $@ SLOWTAKE.SYSTEM SYS < ../../bin/loader.system; \
@@ -203,6 +202,6 @@ upload: all
 	cp *.bin about /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/quicktake/ && \
 	cp *.po about /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/disks/
 
-dist: quicktake-$(suffix).po
-	mkdir -p $(SRC_DIR)../../dist/
-	cp $< $(SRC_DIR)../../dist/
+dist: quicktake.po
+	mkdir -p ../../dist/
+	cp $< ../../dist/

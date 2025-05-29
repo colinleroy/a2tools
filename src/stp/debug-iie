@@ -1,3 +1,2 @@
 #!/bin/bash
-cd bin/6502
-make clean stpperso-6502.po && mame apple2e -window -flop1 stpperso-6502.po -resolution 560x384 -sl1 ssc -sl1:ssc:rs232 null_modem -bitb socket.localhost:2001 -sl2 ssc -sl2:ssc:rs232 null_modem -bitb2 socket.localhost:2000 -nomouse -debug
+make clean stpperso.po && mame apple2e -window -flop1 stpperso.po -resolution 560x384 -sl1 ssc -sl1:ssc:rs232 null_modem -bitb socket.localhost:2001 -sl2 ssc -sl2:ssc:rs232 null_modem -bitb2 socket.localhost:2000 -nomouse -debug

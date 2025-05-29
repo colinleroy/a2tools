@@ -1,3 +1,2 @@
 #!/bin/bash
-cd bin/65c02
-make clean weather-65c02.po && mame apple2gs -window -flop1 weather-65c02.po -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug
+make clean weather.po && mame apple2gs -window -flop1 weather.po -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug

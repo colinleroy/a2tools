@@ -1,3 +1,2 @@
 #!/bin/bash
-cd bin/65c02
-make clean stpperso-65c02.po && mame apple2gs -window -flop1 stpperso-65c02.po -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug
+make clean stpperso.po && mame apple2gs -window -flop1 stpperso.po -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug

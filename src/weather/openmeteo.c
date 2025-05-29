@@ -87,8 +87,6 @@ void setup_omurl(LOCATION *loc, char *param) {
 //
 //
 void get_om_info(LOCATION *loc, WEATHER *wi, FORECAST *fc) {
-	char querybuf[LINE_LEN];
-
 // weather 1 query
 	setup_omurl(loc, om_tail_weather1);
 

@@ -7,4 +7,4 @@ else
 	FLOP2="-flop2 ../../disks/qt100.dsk"
 fi
 
-make clean quicktake-65c02.po DEBUG_FLOPPY=$TYPE && mame apple2e -window -flop1 quicktake-65c02.po $FLOP2 -resolution 560x384 -sl1 ssc -sl1:ssc:rs232 null_modem -bitb socket.localhost:2001 -sl2 ssc -sl2:ssc:rs232 null_modem -bitb2 socket.localhost:2000 -nomouse -debug
+make clean quicktake.po DEBUG_FLOPPY=$TYPE && mame apple2e -window -flop1 quicktake.po $FLOP2 -resolution 560x384 -sl1 ssc -sl1:ssc:rs232 null_modem -bitb socket.localhost:2001 -sl2 ssc -sl2:ssc:rs232 null_modem -bitb2 socket.localhost:2000 -nomouse -debug

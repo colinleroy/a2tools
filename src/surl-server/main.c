@@ -224,18 +224,6 @@ static void send_response_headers(curl_buffer *response) {
 
 char reqbuf[BUFSIZE];
 
-static void dump_url(char *url) {
-  if (url == NULL) {
-    LOG("URL NULL\n");
-    return;
-  }
-  LOG("URL: ");
-  for (int i = 0; i < strlen(url); i++) {
-    LOG("%02x ", url[i]);
-  }
-  LOG("\n");
-}
-
 extern int ttyfd;
 extern char *opt_tty_path;
 
@@ -304,6 +292,9 @@ read_method:
       goto reopen;
     } else if (reqbuf[0] == (char)EOF) {
       goto read_method;
+    } else  if (reqbuf[0] == '\0') {
+      LOG("REQ: discarding raw 0x00\n");
+      goto read_method;
     }
 new_req:
     if ((unsigned char)(reqbuf[0]) == SURL_METHOD_VSDRIVE) {
@@ -350,9 +341,8 @@ new_req:
         continue;
       }
       if (method == SURL_METHOD_ABORT) {
-        LOG("REQ: method abort - continue\n");
+        LOG("REQ: method abort\n");
         url[0] = '\0';
-        dump_url(url);
         continue;
       } else if (url[0] == '\0') {
         LOG("REQ: Could not parse request (method 0x%02x).\n", method);
