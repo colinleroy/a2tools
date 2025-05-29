@@ -140,7 +140,7 @@ no:     sec
         lda     #$00
         sta     timeout_cnt
         sta     timeout_cnt+1
-        jsr     _serial_read_byte_direct
+:       jsr     _serial_read_byte_direct
         bcc     out
 
         inc     timeout_cnt
