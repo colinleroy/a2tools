@@ -112,6 +112,8 @@ void stp_print_footer(void) {
       cputs(", M:mkdir");
     }
     cputs(", Q:Quit");
+  } else if (is_iie) {
+    cputs("Up/Down/Ret/Esc:nav, S:send, Q:quit");
   } else {
     cputs("U/J/Ret/Esc:nav, S:send, Q:quit");
   }
