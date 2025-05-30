@@ -65,45 +65,7 @@
         .include    "ser-kernel.inc"
         .include    "ser-error.inc"
 
-.proc _serial_open
-        jsr     _acia_open
-        cmp     #SER_ERR_OK
-        bne     :+
-        ldy     #$01
-        sty     connected
-:       rts
-.endproc
-
-.proc _serial_close
-        jsr     _acia_close
-        ldy     #$00
-        sty     connected
-        rts
-.endproc
-
-; Send character in A over serial. Destroys X.
-; Does not touch Y.
-.proc _serial_putc_direct
-        jmp     _acia_put
-.endproc
-
-; Returns with char in A and carry clear if
-; character available. Destroys X.
-; Does not touch Y.
-.proc _serial_read_byte_direct
-        jmp     _acia_read_byte_sync
-.endproc
-
-
 .ifdef SERIAL_ENABLE_IRQ
-
-.proc serial_handle_irq
-        jmp     _acia_irq
-.endproc
-
-.proc _simple_serial_set_irq
-        jmp     _acia_set_irq
-.endproc
 
 .proc serial_irq
         clc
@@ -153,29 +115,6 @@ no:     sec
 
 out:    rts
 .endproc
-
-.ifdef SERIAL_LOW_LEVEL_CONTROL
-
-.proc _simple_serial_dtr_onoff
-        tay
-        lda     _open_slot
-        jsr     pusha
-        tya
-        ; Fallthrough
-.endproc
-.proc _simple_serial_slot_dtr_onoff
-        jmp     _acia_slot_dtr_onoff
-.endproc
-
-.proc _simple_serial_set_speed
-        jmp     _acia_set_speed
-.endproc
-
-.proc _simple_serial_set_parity
-        jmp     _acia_set_parity
-.endproc
-
-.endif ;.ifdef SERIAL_LOW_LEVEL_CONTROL
 
 serial_slot:      .byte   2
 
@@ -243,6 +182,72 @@ serial_slot:      .byte   2
 .endproc
 
 .segment "CODE"
+
+
+.proc _serial_open
+        jsr     _acia_open
+        cmp     #SER_ERR_OK
+        bne     :+
+        ldy     #$01
+        sty     connected
+:       rts
+.endproc
+
+.proc _serial_close
+        jsr     _acia_close
+        ldy     #$00
+        sty     connected
+        rts
+.endproc
+
+; Send character in A over serial. Destroys X.
+; Does not touch Y.
+.proc _serial_putc_direct
+        jmp     _acia_put
+.endproc
+
+; Returns with char in A and carry clear if
+; character available. Destroys X.
+; Does not touch Y.
+.proc _serial_read_byte_direct
+        jmp     _acia_read_byte_sync
+.endproc
+
+
+.ifdef SERIAL_ENABLE_IRQ
+
+.proc serial_handle_irq
+        jmp     _acia_irq
+.endproc
+
+.proc _simple_serial_set_irq
+        jmp     _acia_set_irq
+.endproc
+
+.endif
+
+.ifdef SERIAL_LOW_LEVEL_CONTROL
+
+.proc _simple_serial_dtr_onoff
+        tay
+        lda     _open_slot
+        jsr     pusha
+        tya
+        ; Fallthrough
+.endproc
+.proc _simple_serial_slot_dtr_onoff
+        jmp     _acia_slot_dtr_onoff
+.endproc
+
+.proc _simple_serial_set_speed
+        jmp     _acia_set_speed
+.endproc
+
+.proc _simple_serial_set_parity
+        jmp     _acia_set_parity
+.endproc
+
+.endif ;.ifdef SERIAL_LOW_LEVEL_CONTROL
 
 ; Make sure the destructor doesn't get paged out
 .proc _serial_close_if_open
