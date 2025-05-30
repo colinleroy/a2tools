@@ -21,6 +21,7 @@
         .import     their_pusher_dx, their_pusher_dy
         .import     their_currently_hitting, turn
         .import     puck_x, puck_right_x, puck_y, puck_dx, puck_dy, serving
+        .import     player_puck_delta_change
         .import     game_cancelled
         .import     _rand
         .import     _last_key, _read_key
@@ -32,6 +33,7 @@
 
         .import     _text_mono40, _hgr_mixon, _hgr_mixoff
         .import     _hgr_unset_mono40, _hgr_force_mono40
+        .import     _get_iigs_speed, _set_iigs_speed
 
         .import     _serial_open, _serial_close
         .import     _serial_putc_direct, _serial_read_byte_direct
@@ -71,6 +73,7 @@
 
         .include    "ser-kernel.inc"
         .include    "ser-error.inc"
+        .include    "accelerator.inc"
 
 IO_BARRIER = $FF
 
@@ -95,7 +98,7 @@ IO_BARRIER = $FF
         jmp     return0
 
 .assert * = __OPPONENT_START__+OPPONENT::END_GAME, error ; Make sure the callback is where we think
-        jmp     _serial_close
+        jmp     finish_game
 
 .assert * = __OPPONENT_START__+OPPONENT::HIT_CB, error
         jmp     hit_cb
@@ -119,8 +122,8 @@ IO_BARRIER = $FF
 
         ; At service, both players agree on everything, make sure we don't
         ; send a useless HIT message.
-        lda     puck_dy
-        sta     prev_puck_dy
+        lda     #$00
+        sta     player_puck_delta_change
 
 out:    rts
 
@@ -205,11 +208,19 @@ error:
 .proc io_barrier
         lda     #IO_BARRIER
         jsr     _serial_putc_direct
-:       jsr     serial_wait_and_get
+:       lda     game_cancelled
+        bne     out
+.if 0
+        sta     $C030         ; Barrier debug
+.else
+        nop
+        nop
+.endif
+        jsr     serial_wait_and_get
         bcs     :-
         cmp     #IO_BARRIER
         bne     io_barrier
-        rts
+out:    rts
 .endproc
 
 .proc exchange_sync_byte
@@ -249,18 +260,18 @@ reply_barrier:
 .endproc
 
 .proc send_puck_params
-        lda     puck_dy
-        sta     prev_puck_dy
+        lda     #$00             ; Reset hit indicator
+        sta     player_puck_delta_change
 
         lda     #'H'             ; Tell we did hit
         jsr     exchange_char
         cmp     #'?'
-        beq     send_puck_params
+        beq     send
 
         inc     game_cancelled   ; We should not be there!
         rts
 
-send_puck_params:
+send:
         lda     puck_dx          ; Send reverted puck_dx
         NEG_A
         jsr     exchange_char
@@ -296,7 +307,6 @@ send_puck_params:
         lda     #'?'              ; Get puck_dy
         jsr     exchange_char
         sta     puck_dy
-        sta     prev_puck_dy      ; Save it to prev to avoid re-sending-it
 
         lda     #'?'              ; Get puck_x
         jsr     exchange_char
@@ -331,34 +341,34 @@ prepare_exchange:
 
         bcs     must_send_miss    ; If carry set, we missed, we must tell
 
-        lda     puck_dy           ; If we hit the puck (different dy), we must tell
-        bpl     send_pusher_coords; Don't send a hit message if they hit, not us
+        ; If we hit the puck, we must send new params
+        bit     player_puck_delta_change
+        bmi     must_send_puck_params
 
-        cmp     prev_puck_dy
-        bne     must_send_puck_params
-
-        beq     send_pusher_coords; Otherwise we have nothing special to say
+        beq     send_byte         ; Otherwise we have nothing special to say
 
 must_send_miss:
         lda     #'M'
         sta     to_send
-        bne     send_pusher_coords
+        bne     send_byte
 
 must_send_puck_params:
         lda     #'H'
         sta     to_send
-        bne     send_pusher_coords
+        ; Fallthrough (exchange_sync_byte will send a barrier)
 
-send_pusher_coords:
+send_byte:
         php
         sei
 
-        ; Send our pusher coordinates and receive theirs
-        ; (Or an IO barrier)
+        ; Send our pusher coordinates and receive their message,
+        ; or send an IO barrier if to_send is not zero.
+        ; Their message will either be pusher coords, or an IO barrier
+        ; request if they hit or missed.
         jsr     exchange_sync_byte
 
         lda     to_send         ; Did we want to send more?
-        beq     check_if_read   ; No. Check if they do.
+        beq     check_if_read   ; No. Check if they do. (Both can't be true at once)
 
         lda     to_send
         cmp     #'H'            ; We hit, send them the puck's data
@@ -375,13 +385,11 @@ update_my_puck_params:
 
 send_miss:
         jsr     exchange_char     ; A = 'M'
-        lda     puck_dy           ; Save puck data to avoid re-sending-it
-        sta     prev_puck_dy
 
-        jmp     sec_out           ; Caller expects carry set when we missed
+        jmp     puck_crashed      ; Caller expects carry set when we missed
 
 check_if_read:
-        lda     read_again
+        lda     read_again        ; They want us to read something more!
         beq     clc_out
 
 do_read:
@@ -389,30 +397,27 @@ do_read:
 
         jsr     _serial_putc_direct
 :       jsr     serial_force_get
-        cmp     #IO_BARRIER
-        beq     :-
+        cmp     #IO_BARRIER       ; Discard any stray IO barrier request
+        beq     :-                ; that we would have already answered
 
         cmp     #'M'
-        beq     they_missed       ; They missed
+        beq     puck_crashed      ; They missed
         cmp     #'H'
-        beq     update_their_puck_params
+        beq     they_hit          ; They hit the puck
 
-        inc     game_cancelled    ; We should never be there so bail
+        inc     game_cancelled    ; We should never be there, so bail
         bne     clc_out
 
-update_their_puck_params:
-        jsr     get_puck_params
+they_hit:
+        jsr     get_puck_params   ; Get new puck parameters from opponent
 
-clc_out:plp
+clc_out:plp                       ; All good, continue to play
         clc
         rts
 
-they_missed:
-        lda     puck_dy           ; Save puck data to avoid re-sending-it
-        sta     prev_puck_dy
-
-sec_out:plp
-        sec                       ; Caller expects carry set when they missed
+puck_crashed:
+        plp
+        sec                       ; Caller expects carry set when puck crashed
         rts
 .endproc
 
@@ -675,6 +680,11 @@ iigs:
         lda     game_cancelled    ; Did we cancel at some point?
         bne     finish_game
 
+        jsr     _get_iigs_speed   ; Slow down IIgs
+        sta     iigs_spd
+        lda     #SPEED_SLOW
+        jsr     _set_iigs_speed
+
         jsr     _home
         jmp     _hgr_force_mono40
 
@@ -695,6 +705,10 @@ open_error:
 
 .proc finish_game
         jsr     _serial_close
+
+        lda     iigs_spd
+        jsr     _set_iigs_speed
+
         jsr     _home
         jsr     _hgr_mixoff
         jmp     _hgr_force_mono40
@@ -795,10 +809,11 @@ out_err:
 :       rts
 .endproc
 
-; Try 10 times to get a char over serial.
+; Try 20 times to get a char over serial.
+; (20 times to make sure the other side has time to send)
 ; Destroys X, does not touch Y.
 .proc serial_wait_and_get
-        lda     #10
+        lda     #20
         sta     ser_timer
 
 try:    jsr     _serial_read_byte_direct
@@ -865,7 +880,7 @@ their_max_hit_dy: .byte   10
 tmp_param:        .byte   0
 my_avatar_num:    .byte   0
 their_avatar_num: .byte   0
-prev_puck_dy:     .byte   0
+iigs_spd:         .byte   0
 
 ident_str:        .asciiz "SHFL1"
 

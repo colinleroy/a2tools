@@ -25,6 +25,7 @@
         .export     their_pusher_x, their_pusher_y
         .export     their_pusher_dx, their_pusher_dy
         .export     their_currently_hitting, player_caught
+        .export     player_puck_delta_change
         .export     their_hit_check_via_serial
         .export     _update_opponent
 
@@ -514,7 +515,8 @@ check:
         lda     #1
         sta     player_caught     ; Used to inform opponents about the fact we caught the puck
                                   ; It's the opponent's responsability to zero the flag once they
-                                  ; know
+                                  ; know. Contrary to player_puck_delta_change this is set only at
+                                  ; first hit (so one can trick Nerual).
 
         ldy     #0                ; No sound slowing
         sty     their_currently_hitting ; Reset opponent hit (for Nerual who would patch dy multiple times)
@@ -530,6 +532,11 @@ check:
         bmi     :+                ; Don't let DY still be positive or zero
         lda     #$FF              ; And make sure it goes away by one pixel
 :       sta     puck_dy
+
+        ; For serial - contrary to player_caught we want all updates not
+        ; just the first one
+        lda     #$FF
+        sta     player_puck_delta_change
 
         jmp     bind_puck_speed
 out_miss:
@@ -996,6 +1003,7 @@ puck_backup: .res 10
 player_caught:              .res 1
 puck_in_front_of_me:        .res 1
 puck_in_front_of_them:      .res 1
+player_puck_delta_change:   .res 1
 
 prev_puck_in_front_of_me:   .res 1
 prev_puck_in_front_of_them: .res 1

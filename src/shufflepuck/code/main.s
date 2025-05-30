@@ -373,7 +373,7 @@ draw_done:
         cmp     #CH_ESC
         bne     :+
 abort_game:
-        jmp     clear_and_go_bar
+        jmp     their_win
 :
 .ifdef CHEAT 
         cmp     #'w'
