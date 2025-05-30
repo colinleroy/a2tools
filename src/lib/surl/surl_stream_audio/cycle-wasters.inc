@@ -50,11 +50,6 @@
         WASTE_5
 .endmacro
 
-.macro WASTE_12
-        jsr     waste
-.endmacro
-waste:          rts
-
 .macro KBD_LOAD_7               ; Check keyboard and jsr if key pressed (trashes A)
         lda     KBD             ; 4
         bpl     :+              ; 7

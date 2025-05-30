@@ -20,6 +20,7 @@ wozamp_SOURCES := \
 
 wozamp_CL65SOURCES = \
 	../lib/surl/surl_stream_audio/$(CPU).s \
+	../lib/surl/surl_stream_audio/backup_audiocode.s \
 	../lib/serial/asm/driver.s \
 	../lib/serial/asm/acia.s \
 	../lib/serial/asm/z8530.s \

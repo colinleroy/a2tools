@@ -45,7 +45,8 @@
 
 ; ------------------------------------------------------------------------
 .align 256                      ; Make sure we don't cross page in the middle
-_SAMPLES_BASE = *               ; of duty cycle handlers.
+_AUDIO_CODE_START = *           ; of duty cycle handlers.
+_SAMPLES_BASE = *
 
 ; Ask proxy to send levels from 0-31, multiplied by 2. (no time for us to do it)
 SAMPLE_OFFSET = 0
@@ -182,4 +183,4 @@ next:
 
 ; We don't really care about crossing pages now.
 
-end_audio_streamer = *
+_AUDIO_CODE_SIZE = * - _AUDIO_CODE_START

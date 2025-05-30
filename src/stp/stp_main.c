@@ -52,6 +52,8 @@ char large_buf[STP_DATA_SIZE];
 char *data = (char *)large_buf;
 char **lines = NULL;
 char *nat_data = NULL;
+unsigned int max_nat_data_size = 0;
+unsigned char nat_data_static = 0;
 char **nat_lines = NULL;
 extern char **display_lines;
 

@@ -45,6 +45,12 @@
 
 char *data = (char *)splash_hgr;
 char *nat_data = NULL;
+unsigned int max_nat_data_size = 0;
+unsigned char nat_data_static = 0;
+
+extern void AUDIO_CODE_START;
+extern unsigned int AUDIO_CODE_SIZE;
+
 char *url_passer_file;
 
 char **lines = NULL;
@@ -460,6 +466,7 @@ do_video:
     }
 novid:
 #ifdef __APPLE2__
+    backup_restore_audiocode("r");
     cancelled = surl_stream_audio(NUMCOLS, 20, 2, 23);
     init_text();
 #endif
@@ -723,7 +730,16 @@ void main(void) {
   hgr_mixon();
   set_scrollwindow(20, NUMROWS);
 
+  register_start_device();
+
   backup_restore_hgrpage("w");
+  if (backup_restore_audiocode("w") == 0) {
+    nat_data = &AUDIO_CODE_START;
+    max_nat_data_size = (unsigned int)&AUDIO_CODE_SIZE;
+    nat_data_static = 1;
+  }
+  reopen_start_device();
+
   surl_ping();
   surl_user_agent = "Wozamp "VERSION"/Apple II";
 

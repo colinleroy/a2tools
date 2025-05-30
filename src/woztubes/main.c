@@ -467,6 +467,8 @@ int main(void) {
     cgetc();
     exit(1);
   }
+  register_start_device();
+
   load_hgr_mono_file(2);
 
   try_videomode(VIDEOMODE_80COL);

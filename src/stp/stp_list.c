@@ -382,11 +382,13 @@ void stp_update_list(char full_update) {
 
 void stp_free_data(void) {
   free(lines);
-  free(nat_lines);
-  free(nat_data);
   lines = NULL;
+  free(nat_lines);
   nat_lines = NULL;
-  nat_data = NULL;
+  if (!nat_data_static) {
+    free(nat_data);
+    nat_data = NULL;
+  }
 }
 
 extern char center_x;
@@ -432,13 +434,19 @@ unsigned char stp_get_data(char *url) {
     surl_receive_data(data, resp.size);
     num_lines = strsplit_in_place(data, '\n', &lines);
 
-    if (resp.size < _heapmaxavail() - 4096) {
+    if (nat_data_static || resp.size < _heapmaxavail() - 1024) {
+      char *tmp;
       surl_translit(translit_charset);
       if (surl_response_ok()) {
-        nat_data = malloc(resp.size + 1);
-        if (IS_NOT_NULL(nat_data)) {
-          char *tmp;
+        if (nat_data_static && resp.size < max_nat_data_size) {
           surl_receive_data(nat_data, resp.size);
+        } else if (!nat_data_static) {
+          nat_data = malloc(resp.size + 1);
+          if (IS_NOT_NULL(nat_data)) {
+            surl_receive_data(nat_data, resp.size);
+          }
+        }
+        if (IS_NOT_NULL(nat_data)) {
           while ((tmp = strchr(nat_data, '/'))) {
             /* we're not supposed to have slashes in filenames, but transliteration
              * can put some. Change them. */
@@ -496,6 +504,8 @@ char *stp_url_enter(char *url, char *suffix) {
 
   return url;
 }
+
+#pragma code-name(pop)
 
 static char *header_url = NULL;
 void stp_print_header(const char *url, enum HeaderUrlAction action) {

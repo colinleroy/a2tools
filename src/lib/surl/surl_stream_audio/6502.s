@@ -46,7 +46,8 @@
 
 ; ------------------------------------------------------------------------
 .align 256                      ; Make sure we don't cross page in the middle
-_SAMPLES_BASE = *               ; of duty cycle handlers.
+_AUDIO_CODE_START = *           ; of duty cycle handlers.
+_SAMPLES_BASE = *
 
 ; Ask proxy to send levels from this page, multiplied by 1. (no time for us to do it)
 SAMPLE_OFFSET = >_SAMPLES_BASE
@@ -198,4 +199,4 @@ SAMPLE_MULT   = 1
 .assert * = _SAMPLES_BASE+$2100, error
 .include "break_out.s"
 
-end_audio_streamer = *
+_AUDIO_CODE_SIZE = * - _AUDIO_CODE_START

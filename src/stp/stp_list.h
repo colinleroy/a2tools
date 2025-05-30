@@ -45,6 +45,8 @@ enum HeaderUrlAction {
 
 extern char **lines;
 extern char **nat_lines;
+extern unsigned int max_nat_data_size;
+extern unsigned char nat_data_static;
 
 #define BUFSIZE 255
 #define SEARCH_BUF_SIZE 128

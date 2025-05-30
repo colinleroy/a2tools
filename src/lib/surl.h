@@ -61,6 +61,10 @@ int __fastcall__ surl_get_json(char *buffer, const char *selector, const char *t
 int surl_wait_for_stream(void);
 int __fastcall__ surl_stream_video(void);
 int __fastcall__ surl_stream_audio(char numcols, char title_y, char vu_x, char vu_y);
+int __fastcall__ backup_restore_audiocode(char *mode);
+extern void AUDIO_CODE_START;
+extern unsigned int AUDIO_CODE_SIZE;
+
 int __fastcall__ surl_stream_av(char *subtitles_url, char *url);
 
 void __fastcall__ simple_serial_dump(char id, char *ptr, int nmemb);
