@@ -510,7 +510,7 @@ start_again:
     }
     gotoxy(0, 0);
     url = stp_get_start_url("Please enter an FTP server or internet stream URL.\r\n",
-                          "http://relay.radiofreefedi.net/listen/rff/rff.mp3",
+                          "https://punkirratia.net:8443/punk",
                           cmd_cb);
   } else {
     gotoxy(40-39, 3);
