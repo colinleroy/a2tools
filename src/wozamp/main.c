@@ -510,7 +510,7 @@ start_again:
     }
     gotoxy(0, 0);
     url = stp_get_start_url("Please enter an FTP server or internet stream URL.\r\n",
-                          "https://punkirratia.net:8443/punk",
+                          "http://stream.radioparadise.com/rock-320",
                           cmd_cb);
   } else {
     gotoxy(40-39, 3);
