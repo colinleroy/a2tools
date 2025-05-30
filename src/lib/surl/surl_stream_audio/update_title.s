@@ -45,7 +45,7 @@ put:    tay                     ; 48
 
         inc     CH              ; 65           Can't wrap line!
 
-        dex                     ; 67
+        dex                     ; 67           More chars?
         bne     st              ; 69
 
         pla                     ; 72           Restore Y
@@ -55,5 +55,5 @@ st2:    lda     ser_status      ;              Wait for next audio byte
         and     has_byte
         beq     st2
 dt2:    ldx     ser_data
-desttitle:
+        STORE_TARGET_3
         JMP_NEXT_6
