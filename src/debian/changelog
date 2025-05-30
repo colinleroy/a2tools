@@ -1,3 +1,9 @@
+a2tools (23.1.0.1) bionic; urgency=medium
+
+  * Simplify null request handling
+
+ -- Colin Leroy-Mira <colin@colino.net>  Fri, 30 May 2025 21:28:19 +0200
+
 a2tools (23.0.1.1) bionic; urgency=medium
 
   * STP: add mkdir
