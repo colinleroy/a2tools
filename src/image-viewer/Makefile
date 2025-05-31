@@ -3,7 +3,7 @@ TARGET := apple2
 GENERAL_CFLAGS := -DSURL_TO_LANGCARD \
 	--asm-define SURL_TO_LANGCARD \
 	--asm-define SERIAL_ENABLE_IRQ \
-	-DDYN_BOX_DRAW \
+	-DDYN_BOX_DRAW -DAPPLE2_INCLUDE_IIE_CHARS \
 
 imgview_SOURCES := \
 	imageview.c \

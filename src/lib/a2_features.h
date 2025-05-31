@@ -12,12 +12,6 @@
   extern unsigned char has_80cols;
   extern unsigned char has_128k;
 
-  #ifndef CH_CURS_UP
-    #define CH_CURS_UP   0x0B
-    #define CH_CURS_DOWN 0x0A
-    #define CH_DEL       0x7F
-  #endif
-
 #else
 
   #define try_videomode()
