@@ -1799,7 +1799,8 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, Subtitle
   }
 
   LOG("Final wait for client\n");
-  if (simple_serial_getc() != SURL_CLIENT_READY) {
+  if ((c = simple_serial_getc()) != SURL_CLIENT_READY) {
+    LOG("Received unexpected 0x%02x\n", c);
     pthread_mutex_lock(&audio_th_data->mutex);
     audio_th_data->stop = 1;
     LOG("audio stop\n");
