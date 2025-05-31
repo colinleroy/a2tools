@@ -20,12 +20,13 @@ st:     lda     ser_status      ; 21    Check serial
 dt:     lda     ser_data        ; 4
         ora     #$80            ; 6
 
+        .ifndef __APPLE2ENH__
         bit     _is_iie         ; 10
         bmi     :+              ; 12
         cmp     #$E0            ; 14            Should we uppercase?
         bcc     :+              ; 16
         and     uppercasemask   ; 20
-:
+:       .endif
 
         pha                     ; 23            Local, stripped-down version of putchardirect
         lda     CH              ; 26
