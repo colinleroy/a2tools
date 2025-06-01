@@ -76,6 +76,9 @@
         .include    "opponent_file.inc"
         .include    "hgr_applesoft.inc"
 
+my_pusher_y = mouse_y
+my_pusher_x = mouse_x
+
 .segment "LOWCODE"
 
 .proc _clear_screen
@@ -315,11 +318,9 @@ out:
 .proc _move_my_pusher
         ; Directly translate mouse coordinates to pusher coordinates
         jsr     _read_mouse
-        ldy     mouse_y
-        sty     my_pusher_y
-        ldx     mouse_x
-        stx     my_pusher_x
 
+        ldx     my_pusher_x
+        ldy     my_pusher_y
         ; Apply the "3D" transformation
         jsr     _transform_xy
 
@@ -984,8 +985,6 @@ puck_y:          .res 1
 puck_precise_y:  .res 2
 puck_dy:         .res 2
 
-my_pusher_x:     .res 1
-my_pusher_y:     .res 1
 their_pusher_x:  .res 1
 their_pusher_y:  .res 1
 their_pusher_dx: .res 1

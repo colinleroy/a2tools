@@ -10,20 +10,21 @@
         bmi     bind_min
 bind_max:
         adc     signed_add
-        bcc     :+
-        lda     max
-:       cmp     max
+        bcs     ret_max
+        cmp     max
         bcc     out
+ret_max:
         lda     max
         jmp     out
 
 bind_min:
         adc     signed_add
-        bcs     :+
-        lda     min
-:       cmp     min
+        bcc     ret_min
+        cmp     min
         bcs     out
+ret_min:
         lda     min
+
 out:
 .endscope
 .endmacro
