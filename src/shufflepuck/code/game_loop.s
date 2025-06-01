@@ -39,8 +39,6 @@
 
         .import     _set_puck_position
         .import     _draw_sprite, _clear_sprite
-        .import     _setup_sprite_pointer_for_clear
-        .import     _setup_sprite_pointer_for_draw
         .import     _setup_eor_draw, _setup_eor_clear, _draw_eor, _clear_eor
         .import     mouse_x, mouse_y
         .import     mouse_dx, mouse_dy
@@ -84,14 +82,12 @@ my_pusher_x = mouse_x
 .proc _clear_screen
         jsr     clear_their_pusher
         jsr     clear_my_pusher
-        jsr     clear_puck
-        rts
+        jmp     clear_puck
 .endproc
 
 .proc clear_puck
         lda     #<puck_data
         ldx     #>puck_data
-        jsr     _setup_sprite_pointer_for_clear
         jmp     _clear_sprite
 .endproc
 
@@ -107,7 +103,6 @@ my_pusher_x = mouse_x
 
         lda     #<puck_data
         ldx     #>puck_data
-        jsr     _setup_sprite_pointer_for_draw
         jmp     _draw_sprite
 .endproc
 
@@ -135,7 +130,6 @@ my_pusher_x = mouse_x
 .proc clear_their_pusher
         lda     #<their_pusher_data
         ldx     #>their_pusher_data
-        jsr     _setup_sprite_pointer_for_clear
         jmp     _clear_sprite
 .endproc
 
@@ -149,7 +143,6 @@ my_pusher_x = mouse_x
 
         lda     #<their_pusher_data
         ldx     #>their_pusher_data
-        jsr     _setup_sprite_pointer_for_draw
         jmp     _draw_sprite
 .endproc
 
@@ -182,8 +175,7 @@ draw:
         rts
 
 :       jsr     draw_my_pusher
-        jsr     draw_puck
-        rts
+        jmp     draw_puck
 .endproc
 
 ; Call with carry set to re-backup table
@@ -204,12 +196,10 @@ draw:
         beq     :+
 
         jsr     clear_puck
-        jsr     clear_their_pusher
-        rts
+        jmp     clear_their_pusher
 
 :       jsr     clear_their_pusher
-        jsr     clear_puck
-        rts
+        jmp     clear_puck
 .endproc
 
 .proc _draw_screen_their_side
@@ -218,12 +208,10 @@ draw:
         bne     :+
 
         jsr     draw_puck
-        jsr     draw_their_pusher
-        rts
+        jmp     draw_their_pusher
 
 :       jsr     draw_their_pusher
-        jsr     draw_puck
-        rts
+        jmp     draw_puck
 .endproc
 
 ; Render function when the puck is on the opponent's side
@@ -235,8 +223,7 @@ draw:
 
         ; My side now
         jsr     clear_my_pusher
-        jsr     draw_my_pusher
-        rts
+        jmp     draw_my_pusher
 .endproc
 
 ; Draw screen, choosing which render function to use depending
@@ -263,7 +250,7 @@ draw:
 
         sta     ptr1
 
-        lda     tmpx
+        txa                             ; ptr1*tmpx
         jsr     umul8x8r16
 :       txa                             ; /256 if we multiplied, X coord otherwise
         clc

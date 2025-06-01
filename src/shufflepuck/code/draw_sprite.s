@@ -14,8 +14,6 @@
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
         .export   _clear_sprite, _draw_sprite, _draw_sprite_big
-        .export   _setup_sprite_pointer_for_clear
-        .export   _setup_sprite_pointer_for_draw
         .export   _skip_top_lines
 
         .export   n_bytes_draw, n_lines_draw
@@ -44,6 +42,30 @@ n_lines_draw    = _zp11 ; shared
 
 ; X, Y : coordinates
 .proc _clear_sprite
+        sta     cur_sprite_ptr
+        stx     cur_sprite_ptr+1
+        ldy     #SPRITE_DATA::PREV_X_COORD
+        lda     (cur_sprite_ptr),y
+        sta     _clear_sprite::x_coord+1
+
+        ldy     #SPRITE_DATA::PREV_Y_COORD
+        lda     (cur_sprite_ptr),y          ; Get existing prev_y for clear
+        sta     cur_y
+
+        ldy     #SPRITE_DATA::BYTES
+        lda     (cur_sprite_ptr),y
+        sta     n_bytes_draw
+
+        ldy     #SPRITE_DATA::BYTES_WIDTH
+        lda     (cur_sprite_ptr),y
+        sta     _clear_sprite::bytes_per_line+1
+
+        ldy     #SPRITE_DATA::BG_BACKUP+1   ; Only update high byte as backups
+        lda     (cur_sprite_ptr),y          ; are aligned
+        sta     _clear_sprite::sprite_restore+2
+
+        ; Now, clear
+
         ldy     #SPRITE_DATA::NEED_CLEAR
         lda     (cur_sprite_ptr),y
         beq     out               ; Skip clearing if not needed
@@ -68,7 +90,7 @@ bytes_per_line:
         ldy     #$FF
 
 sprite_restore:
-        lda     $FFFF,x
+        lda     $FF00,x
 sprite_store_bg:
         sta     $FFFF,y
         dex
@@ -83,80 +105,6 @@ out:
 .endproc
 
 .proc _draw_sprite
-        ; Flag for subsequent clear
-        ldy     #SPRITE_DATA::NEED_CLEAR
-        lda     #1
-        sta     (cur_sprite_ptr),y
-
-        ldx     n_bytes_draw      ; Get total number of bytes to draw
-next_line:
-x_coord:
-        lda     #$FF              ; Patched by setup with top-left X coord
-        ldy     cur_y
-        cpy     #192              ; Avoid going out of screen
-        bcs     out
-        adc     _hgr_low,y        ; Get line address + X coord
-        sta     sprite_get_bg+1
-        sta     sprite_store_byte+1
-        lda     _hgr_hi,y
-;       adc     #0                ; Carry won't be set here, HGR lines don't cross
-        sta     sprite_get_bg+2
-        sta     sprite_store_byte+2
-
-bytes_per_line:
-        ldy     #$FF              ; Get bytes to draw per line (patched by setup)
-
-sprite_get_bg:
-        lda     $FFFF,y           ; Get the background under the sprite
-sprite_backup:
-        sta     $FFFF,x           ; Back it up for next clear
-sprite_mask:
-        and     $FFFF,x           ; AND background and sprite mask
-sprite_pointer:
-        ora     $FFFF,x           ; OR resulting with sprite data
-sprite_store_byte:
-        sta     $FFFF,y           ; Store on screen
-        dex
-        dey
-        bpl     sprite_get_bg     ; Next byte
-
-        inc     cur_y
-        cpx     #$FF
-        bne     next_line
-
-out:    rts
-.endproc
-
-; Finish setting up clear/draw functions with sprite data
-.proc _setup_sprite_pointer_for_clear
-        sta     cur_sprite_ptr
-        stx     cur_sprite_ptr+1
-        ldy     #SPRITE_DATA::PREV_X_COORD
-        lda     (cur_sprite_ptr),y
-        sta     _clear_sprite::x_coord+1
-
-        ldy     #SPRITE_DATA::PREV_Y_COORD
-        lda     (cur_sprite_ptr),y          ; Get existing prev_y for clear
-        sta     cur_y
-
-        ldy     #SPRITE_DATA::BYTES
-        lda     (cur_sprite_ptr),y
-        sta     n_bytes_draw
-
-        ldy     #SPRITE_DATA::BYTES_WIDTH
-        lda     (cur_sprite_ptr),y
-        sta     _clear_sprite::bytes_per_line+1
-
-        ldy     #SPRITE_DATA::BG_BACKUP
-        lda     (cur_sprite_ptr),y
-        sta     _clear_sprite::sprite_restore+1
-        iny
-        lda     (cur_sprite_ptr),y
-        sta     _clear_sprite::sprite_restore+2
-        rts
-.endproc
-
-.proc _setup_sprite_pointer_for_draw
         sta     cur_sprite_ptr
         stx     cur_sprite_ptr+1
         ldy     #SPRITE_DATA::X_COORD
@@ -184,10 +132,7 @@ out:    rts
         lda     (cur_sprite_ptr),y
         sta     _draw_sprite::bytes_per_line+1
 
-        ldy     #SPRITE_DATA::BG_BACKUP
-        lda     (cur_sprite_ptr),y
-        sta     _draw_sprite::sprite_backup+1
-        iny
+        ldy     #SPRITE_DATA::BG_BACKUP+1
         lda     (cur_sprite_ptr),y
         sta     _draw_sprite::sprite_backup+2
 
@@ -216,7 +161,49 @@ select_sprite:
         iny
         lda     (ptr2),y
         sta     _draw_sprite::sprite_mask+2
-        rts
+
+        ; Flag for subsequent clear
+        ldy     #SPRITE_DATA::NEED_CLEAR
+        lda     #1
+        sta     (cur_sprite_ptr),y
+
+        ldx     n_bytes_draw      ; Get total number of bytes to draw
+next_line:
+x_coord:
+        lda     #$FF              ; Patched by setup with top-left X coord
+        ldy     cur_y
+        cpy     #192              ; Avoid going out of screen
+        bcs     out
+        adc     _hgr_low,y        ; Get line address + X coord
+        sta     sprite_get_bg+1
+        sta     sprite_store_byte+1
+        lda     _hgr_hi,y
+;       adc     #0                ; Carry won't be set here, HGR lines don't cross
+        sta     sprite_get_bg+2
+        sta     sprite_store_byte+2
+
+bytes_per_line:
+        ldy     #$FF              ; Get bytes to draw per line (patched by setup)
+
+sprite_get_bg:
+        lda     $FFFF,y           ; Get the background under the sprite
+sprite_backup:
+        sta     $FF00,x           ; Back it up for next clear
+sprite_mask:
+        and     $FFFF,x           ; AND background and sprite mask
+sprite_pointer:
+        ora     $FFFF,x           ; OR resulting with sprite data
+sprite_store_byte:
+        sta     $FFFF,y           ; Store on screen
+        dex
+        dey
+        bpl     sprite_get_bg     ; Next byte
+
+        inc     cur_y
+        cpx     #$FF
+        bne     next_line
+
+out:    rts
 .endproc
 
 ; A: how many lines to skip at the top of the sprite

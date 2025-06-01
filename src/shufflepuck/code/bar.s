@@ -3,8 +3,6 @@
 
         .import     _mouse_wait_vbl, _mouse_check_button
         .import     _clear_sprite, _draw_sprite
-        .import     _setup_sprite_pointer_for_clear
-        .import     _setup_sprite_pointer_for_draw
 
         .import     _load_hall_of_fame, _restore_bar
         .import     _load_scores, _save_scores
@@ -282,14 +280,12 @@ skip_num_opponent:                ; Y didn't match so skip opponent
 .proc draw_pointer
         lda     #<pointer_data
         ldx     #>pointer_data
-        jsr     _setup_sprite_pointer_for_draw
         jmp     _draw_sprite
 .endproc
 
 .proc clear_pointer
         lda     #<pointer_data
         ldx     #>pointer_data
-        jsr     _setup_sprite_pointer_for_clear
         jmp     _clear_sprite
 .endproc
 

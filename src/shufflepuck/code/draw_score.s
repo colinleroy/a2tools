@@ -22,7 +22,6 @@
         .import     _mouse_wait_vbl
 
         .import     hand_data
-        .import     _setup_sprite_pointer_for_clear, _setup_sprite_pointer_for_draw
         .import     _clear_sprite, _draw_sprite, _skip_top_lines
         .import     _platform_msleep
 
@@ -173,7 +172,6 @@ update_hand_start:
 
         lda     #<hand_data
         ldx     #>hand_data
-        jsr     _setup_sprite_pointer_for_draw
         jsr     _draw_sprite
 
 update_hand_end:
@@ -228,7 +226,6 @@ out:    rts
 .proc clear_hand
         lda     #<hand_data
         ldx     #>hand_data
-        jsr     _setup_sprite_pointer_for_clear
         jmp     _clear_sprite
 .endproc
 
