@@ -819,11 +819,11 @@ out_err:
 try:    jsr     _serial_read_byte_direct
         bcc     out
 
-        jsr     check_escape
-        bcs     out_abort
-
         dec     ser_timer
         bne     try
+
+        jsr     check_escape
+        bcs     out_abort
         sec
 
 out:    rts
@@ -860,10 +860,10 @@ out_esc:
 .proc serial_force_get
         lda     game_cancelled
         bne     out
+:       jsr     _serial_read_byte_direct
+        bcc     out
         jsr     check_escape
-        bcs     out
-        jsr     _serial_read_byte_direct
-        bcs     serial_force_get
+        bcc     :-
 out:    rts
 .endproc
 
