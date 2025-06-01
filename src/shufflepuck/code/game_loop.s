@@ -275,10 +275,10 @@ draw:
 
 ; Offsets (theorical, not graphical) at which we change the sprite size
 my_pusher_offsets:
-        .byte   192
-        .byte   183
-        .byte   174
+        .byte   128
         .byte   165
+        .byte   174
+        .byte   183
 NUM_MY_PUSHER_OFFSETS = *-my_pusher_offsets
 
 .proc my_pusher_select
@@ -286,11 +286,11 @@ NUM_MY_PUSHER_OFFSETS = *-my_pusher_offsets
         ; Choose the smallest sprite
         ldx     #NUM_MY_PUSHER_OFFSETS-1
 :       cmp     my_pusher_offsets,x
-        ; Use it if the pusher is further away that the current offset
-        bcc     out
-        ; Else check the next bigger size
+        ; Use it if the pusher is closer that the current offset
+        bcs     out
+        ; Else check the next smaller size
         dex
-        ; Until we have the biggest sprite
+        ; Until we have the smallest sprite
         bne     :-
 
 out:
@@ -334,7 +334,7 @@ out:
 .endproc
 
 their_pusher_offsets:
-        .byte   50
+        .byte    0
         .byte   20
 NUM_THEIR_PUSHER_OFFSETS = *-their_pusher_offsets
 
@@ -342,7 +342,7 @@ NUM_THEIR_PUSHER_OFFSETS = *-their_pusher_offsets
         lda     their_pusher_y
         ldx     #NUM_THEIR_PUSHER_OFFSETS-1
 :       cmp     their_pusher_offsets,x
-        bcc     out
+        bcs     out
         dex
         bne     :-
 out:
@@ -382,20 +382,20 @@ out:
 .endproc
 
 puck_offsets:
-        .byte   192
-        .byte   175
-        .byte   148
-        .byte   121
-        .byte   94
-        .byte   67
+        .byte   0
         .byte   40
+        .byte   67
+        .byte   94
+        .byte   121
+        .byte   148
+        .byte   175
 NUM_PUCK_OFFSETS = *-puck_offsets
 
 .proc _puck_select
         lda     puck_y
         ldx     #NUM_PUCK_OFFSETS-1
 :       cmp     puck_offsets,x
-        bcc     out
+        bcs     out
         dex
         bne     :-
 out:
