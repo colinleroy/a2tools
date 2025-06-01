@@ -491,8 +491,17 @@ out:
 
 extern char stp_list_scroll_after_url;
 
+#define MOUSETEXT_OPEN_APPLE "\301"
+#define FULL_LEN_OPEN_APPLE  "Open-Apple"
+#define SHORT_LEN_OPEN_APPLE "App"
+#define CONTROL              "Ctrl"
+#define FULL_LEN_PROMPT      "Please enter an FTP server or internet stream URL.\r\n"
+#define SHORT_LEN_PROMPT     "FTP server or internet stream URL:\r\n"
+
 char *start_url_ui(void) {
   char *url = NULL;
+  unsigned char x = 40 - 39;
+  char *control_key = CONTROL, *prompt = SHORT_LEN_PROMPT;
 
 start_again:
   clrscr();
@@ -505,32 +514,35 @@ start_again:
   cmd_cb_handled = 0;
   do_radio_browser = 0;
   if (has_80cols) {
+    prompt = FULL_LEN_PROMPT;
     if (is_iieenh) {
-      gotoxy(80-16-17, 3);
-      cputc('A'|0x80);
-      cputs("-C: Configure, ");
-      cputc('A'|0x80);
-      cputs("-R: RadioBrowser");
-    } else {
-      gotoxy(80-51, 3);
-      cputs("Open-Apple-C: Configure, Open-Apple-R: RadioBrowser");
+      x = 80-16-17;
+      control_key = MOUSETEXT_OPEN_APPLE;
+    } else { /* consider is_iie true as II+ has no 80 column card */
+      x = 80-51;
+      control_key = FULL_LEN_OPEN_APPLE;
     }
-    gotoxy(0, 0);
-    url = stp_get_start_url("Please enter an FTP server or internet stream URL.\r\n",
-                          "http://stream.radioparadise.com/rock-320",
-                          cmd_cb);
   } else {
-    gotoxy(40-39, 3);
-    if (is_iie) {
-      cputs("App-C: Configure, App-R: RadioBrowser");
-    } else {
-      cputs("Ctrl-C: Configure, Ctrl-R: RadioBrowser");
-    }
-    gotoxy(0, 0);
-    url = stp_get_start_url("Please enter an FTP or internet stream\r\n",
-                          "http://relay.radiofreefedi.net/listen/rff/rff.mp3",
-                          cmd_cb);
+    prompt = SHORT_LEN_PROMPT;
+    if (is_iieenh) {
+      x = 40-33;
+      control_key = MOUSETEXT_OPEN_APPLE;
+    } else if (is_iie) {
+      x = 40-37;
+      control_key = SHORT_LEN_OPEN_APPLE;
+    } /* else, see initial values */
   }
+  gotoxy(x, 3);
+  cputs(control_key);
+  cputs("-C: Configure, ");
+  cputs(control_key);
+  cputs("-R: RadioBrowser");
+
+  gotoxy(0, 0);
+  url = stp_get_start_url(prompt,
+                        "http://stream.radioparadise.com/rock-320",
+                        cmd_cb);
+
   if (do_radio_browser) {
     search_buf[0] = '\0';
     radio_browser_ui();
