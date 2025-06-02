@@ -54,7 +54,6 @@ CL65SOURCES = \
 	../lib/cntoabuf.s \
 	../lib/vsdrive.s \
 	../lib/a2_features.s \
-	../lib/oa_cgetc.s \
 
 GCC_SOURCES = \
 	../lib/serial/c/simple_serial.c \

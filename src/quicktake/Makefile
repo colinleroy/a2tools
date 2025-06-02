@@ -51,7 +51,6 @@ slowtake_CC65SOURCES := \
 	../lib/extrazp.s \
 	../lib/runtime_once_clean.s \
 	../lib/a2_features.s \
-	../lib/oa_cgetc.s \
 
 slowtake_GCCSOURCES := \
 	../lib/serial/c/simple_serial.c \

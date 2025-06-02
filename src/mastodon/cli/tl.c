@@ -1013,7 +1013,7 @@ static void show_list(list *l) {
       print_free_ram();
     }
 
-    c = tolower(oa_cgetc());
+    c = tolower(cgetc());
 inject_cmd:
     switch(c) {
       case CH_CURS_DOWN:
@@ -1119,7 +1119,7 @@ inject_cmd:
         if (!has_80cols && c == SHOW_HELP) {
           clrscr();
           show_help(l, root_status, root_notif);
-          c = tolower(oa_cgetc());
+          c = tolower(cgetc());
           clrscr();
           half_displayed_post = 0;
           if (c == SHOW_HELP) {

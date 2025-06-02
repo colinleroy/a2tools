@@ -298,7 +298,7 @@ display_result:
   init_hgr(1);
   hgr_mixon();
 read_kbd:
-  c = tolower(oa_cgetc());
+  c = tolower(cgetc());
   if (is_iie && c & 0x80) {
     cmd_cb(c & ~0x80);
 check_cmd:

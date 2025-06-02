@@ -300,7 +300,7 @@ display_result:
 read_kbd:
   init_hgr(1);
   hgr_mixon();
-  c = tolower(oa_cgetc());
+  c = tolower(cgetc());
   if (is_iie && c & 0x80) {
     cmd_cb(c & ~0x80);
     goto read_kbd;

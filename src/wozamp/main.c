@@ -606,7 +606,7 @@ keyb_input:
     while (!kbhit()) {
       stp_animate_list(0);
     }
-    c = tolower(oa_cgetc());
+    c = tolower(cgetc());
     l = (c & 0x80) ? PAGE_HEIGHT : 1;
     full_update = 0;
 

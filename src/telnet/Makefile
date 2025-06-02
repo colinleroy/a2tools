@@ -1,4 +1,4 @@
-TARGET := apple2enh
+TARGET := apple2
 
 GENERAL_CFLAGS := \
 	-DSURL_TO_LANGCARD \
@@ -6,6 +6,7 @@ GENERAL_CFLAGS := \
 	-DAVOID_ROM_CALLS \
 	--asm-define AVOID_ROM_CALLS \
 	--asm-define SERIAL_ENABLE_IRQ \
+	-DDYN_BOX_DRAW -DAPPLE2_INCLUDE_IIE_CHARS \
 
 PROGRAM=telnet
 SOURCES := \
@@ -36,7 +37,6 @@ CC65SOURCES := \
 	../lib/fastirq.s \
 	../lib/fastirq-iigs.s \
 	../lib/a2_features.s \
-	../lib/oa_cgetc.s \
 
 GCCSOURCES := \
 	../lib/serial/c/simple_serial.c \

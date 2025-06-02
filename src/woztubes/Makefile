@@ -52,7 +52,6 @@ woztubes_SOURCES := \
 	../lib/cutoa.s \
 	../lib/cntoabuf.s \
 	../lib/a2_features.s \
-	../lib/oa_cgetc.s \
 	../lib/charsets.c \
 
 ### Warning! some memory tricks happen.

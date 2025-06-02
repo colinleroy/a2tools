@@ -4,7 +4,6 @@
 #ifdef __CC65__
 
   signed char try_videomode(unsigned mode);
-  char oa_cgetc(void);
 
   extern unsigned char is_iigs;
   extern unsigned char is_iie;
@@ -15,7 +14,6 @@
 #else
 
   #define try_videomode()
-  #define oa_cgetc() cgetc()
   #define is_iigs 0
   #define is_iie 0
   #define is_iieenh 0

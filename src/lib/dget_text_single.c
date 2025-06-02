@@ -111,7 +111,7 @@ char * __fastcall__ dget_text_single(char *buf, size_t size, cmd_handler_func cm
     cur_x = wherex();
     cur_y = wherey();
 
-    c = oa_cgetc();
+    c = cgetc();
     if (is_iie && cmd_cb && (c & 0x80) != 0) {
       if (cmd_cb((c & ~0x80))) {
         goto out;

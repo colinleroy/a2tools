@@ -41,7 +41,6 @@ homectrl_CL65SOURCES = \
 	../lib/cutoa.s \
 	../lib/cntoabuf.s \
 	../lib/a2_features.s \
-	../lib/oa_cgetc.s \
 
 homectrl_GCCSOURCES = \
 	../lib/serial/c/simple_serial.c \

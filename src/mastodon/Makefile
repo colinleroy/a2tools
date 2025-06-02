@@ -26,7 +26,6 @@ common_CC65SOURCES := \
 	../lib/FVTABZ.s \
 	../lib/extrazp.s \
 	../lib/a2_features.s \
-	../lib/oa_cgetc.s \
 	cli/initconst.s \
 	api/asm/common.s
 
