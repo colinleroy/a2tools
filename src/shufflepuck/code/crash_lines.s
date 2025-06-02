@@ -30,8 +30,6 @@
         .include    "constants.inc"
         .include    "hgr_applesoft.inc"
 
-.segment "LOWCODE"
-
 .proc rand_crash
         jsr     _rand
         lsr                   ; Divide to 32

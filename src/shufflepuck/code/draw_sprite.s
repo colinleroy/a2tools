@@ -17,7 +17,7 @@
         .export   _skip_top_lines
 
         .export   n_bytes_draw, n_lines_draw
-        .export   _setup_eor_draw, _setup_eor_clear, _draw_eor, _clear_eor
+        .export   _draw_eor, _clear_eor
         
         .import   _hgr_hi, _hgr_low
         .import   _div7_table, _mod7_table
@@ -44,6 +44,12 @@ n_lines_draw    = _zp11 ; shared
 .proc _clear_sprite
         sta     cur_sprite_ptr
         stx     cur_sprite_ptr+1
+
+        ldy     #SPRITE_DATA::NEED_CLEAR
+        lda     (cur_sprite_ptr),y
+        beq     out               ; Skip clearing if not needed
+        eor     (cur_sprite_ptr),y; Reset clear-needed flag
+
         ldy     #SPRITE_DATA::PREV_X_COORD
         lda     (cur_sprite_ptr),y
         sta     _clear_sprite::x_coord+1
@@ -65,13 +71,6 @@ n_lines_draw    = _zp11 ; shared
         sta     _clear_sprite::sprite_restore+2
 
         ; Now, clear
-
-        ldy     #SPRITE_DATA::NEED_CLEAR
-        lda     (cur_sprite_ptr),y
-        beq     out               ; Skip clearing if not needed
-
-        lda     #0
-        sta     (cur_sprite_ptr),y; Reset clear-needed flag
 
         ldx     n_bytes_draw
 clear_next_line:
@@ -269,79 +268,8 @@ sprite_pointer:
         rts
 .endproc
 
-; This both draws and clears given how EOR works.
 .proc _draw_eor
-        ; Set clear-needed flag
-        ldy     #SPRITE_DATA::NEED_CLEAR
-        lda     #1
-        sta     (cur_sprite_ptr),y
-
-draw:
-        ldx     n_bytes_draw      ; Total number of bytes to draw
-        clc
-next_line:
-x_coord:
-        lda     #$FF              ; Patched by setup with top-left X coord (in bytes)
-        ldy     cur_y
-        adc     _hgr_low,y        ; Get HGR line Y address plus X bytes
-        sta     load_background+1 ; Patch loop
-        sta     store_byte+1
-
-        lda     _hgr_hi,y         ; Same for high byte
-;       adc     #0                ; Carry won't be set here
-        sta     load_background+2
-        sta     store_byte+2
-
-bytes_per_line:
-        ldy     #$FF
-
-load_background:
-        lda     $FFFF,y       ; Get what's under the sprite
-sprite_pointer:
-        eor     $FFFF,x       ; Patched by setup
-store_byte:
-        sta     $FFFF,y       ; Store on-screen
-        dex
-        dey
-        bpl     load_background ; Next byte
-
-        inc     cur_y
-        cpx     #$FF
-        bne     next_line
-        rts
-.endproc
-
-.proc _clear_eor
-        ldy     #SPRITE_DATA::NEED_CLEAR
-        lda     (cur_sprite_ptr),y
-        beq     out               ; Skip clearing if not needed
-        lda     #0
-        sta     (cur_sprite_ptr),y; Reset clear-needed flag
-        jmp     _draw_eor::draw
-out:    rts
-.endproc
-
-.proc _setup_eor_clear
-        sta     cur_sprite_ptr
-        stx     cur_sprite_ptr+1
-        ldy     #SPRITE_DATA::PREV_Y_COORD
-        lda     (cur_sprite_ptr),y          ; Get existing prev_y for clear
-        sta     cur_y
-
-        ldy     #SPRITE_DATA::PREV_X_COORD
-        lda     (cur_sprite_ptr),y
-        sta     _draw_eor::x_coord+1
-
-        ldy     #SPRITE_DATA::BG_BACKUP     ; Restore the sprite we need to clear
-        lda     (cur_sprite_ptr),y          ; It may have been a different sized one
-        sta     _draw_eor::sprite_pointer+1
-        iny
-        lda     (cur_sprite_ptr),y
-        sta     _draw_eor::sprite_pointer+2
-        jmp     _setup_eor_common
-.endproc
-
-.proc _setup_eor_draw
+        ; Draw setup
         sta     cur_sprite_ptr
         stx     cur_sprite_ptr+1
         ldy     #SPRITE_DATA::X_COORD
@@ -384,16 +312,78 @@ out:    rts
         dey
         txa
         sta     (cur_sprite_ptr),y
-        ; Fallthrough to setup_eor_common
-.endproc
 
-.proc _setup_eor_common
+        ; We're going to draw, set clear-needed flag
+        ldy     #SPRITE_DATA::NEED_CLEAR
+        lda     #1
+        sta     (cur_sprite_ptr),y
+
+draw:                             ; Also used for clearing
         ldy     #SPRITE_DATA::BYTES
         lda     (cur_sprite_ptr),y
-        sta     n_bytes_draw
+        tax                       ; Total number of bytes to draw
 
         ldy     #SPRITE_DATA::BYTES_WIDTH
         lda     (cur_sprite_ptr),y
         sta     _draw_eor::bytes_per_line+1
+
+        clc
+next_line:
+x_coord:
+        lda     #$FF              ; Patched by setup with top-left X coord (in bytes)
+        ldy     cur_y
+        adc     _hgr_low,y        ; Get HGR line Y address plus X bytes
+        sta     load_background+1 ; Patch loop
+        sta     store_byte+1
+
+        lda     _hgr_hi,y         ; Same for high byte
+;       adc     #0                ; Carry won't be set here
+        sta     load_background+2
+        sta     store_byte+2
+
+bytes_per_line:
+        ldy     #$FF
+
+load_background:
+        lda     $FFFF,y       ; Get what's under the sprite
+sprite_pointer:
+        eor     $FFFF,x       ; Patched by setup
+store_byte:
+        sta     $FFFF,y       ; Store on-screen
+        dex
+        dey
+        bpl     load_background ; Next byte
+
+        inc     cur_y
+        cpx     #$FF
+        bne     next_line
         rts
+.endproc
+
+.proc _clear_eor
+        sta     cur_sprite_ptr
+        stx     cur_sprite_ptr+1
+
+        ldy     #SPRITE_DATA::NEED_CLEAR
+        lda     (cur_sprite_ptr),y
+        beq     out               ; Skip clearing if not needed
+        eor     (cur_sprite_ptr),y; Reset clear-needed flag
+
+        ldy     #SPRITE_DATA::PREV_Y_COORD
+        lda     (cur_sprite_ptr),y          ; Get existing prev_y for clear
+        sta     cur_y
+
+        ldy     #SPRITE_DATA::PREV_X_COORD
+        lda     (cur_sprite_ptr),y
+        sta     _draw_eor::x_coord+1
+
+        ldy     #SPRITE_DATA::BG_BACKUP     ; Restore the sprite we need to clear
+        lda     (cur_sprite_ptr),y          ; It may have been a different sized one
+        sta     _draw_eor::sprite_pointer+1
+        iny
+        lda     (cur_sprite_ptr),y
+        sta     _draw_eor::sprite_pointer+2
+
+        jmp     _draw_eor::draw
+out:    rts
 .endproc

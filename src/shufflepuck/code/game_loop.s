@@ -39,7 +39,7 @@
 
         .import     _set_puck_position
         .import     _draw_sprite, _clear_sprite
-        .import     _setup_eor_draw, _setup_eor_clear, _draw_eor, _clear_eor
+        .import     _draw_eor, _clear_eor
         .import     mouse_x, mouse_y
         .import     mouse_dx, mouse_dy
         .import     _crash_lines_scale, _draw_crash_lines
@@ -109,7 +109,6 @@ my_pusher_x = mouse_x
 .proc clear_my_pusher
         lda     #<my_pusher_data
         ldx     #>my_pusher_data
-        jsr     _setup_eor_clear
         jmp     _clear_eor
 .endproc
 
@@ -123,7 +122,6 @@ my_pusher_x = mouse_x
 
         lda     #<my_pusher_data
         ldx     #>my_pusher_data
-        jsr     _setup_eor_draw
         jmp     _draw_eor
 .endproc
 

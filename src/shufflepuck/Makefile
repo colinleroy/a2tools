@@ -217,11 +217,11 @@ shflpuck_SOURCES := \
 	code/game_loop.s \
 	code/load_data.s \
 	code/sprites.s \
-	code/helpers.s \
 	code/mini_conio.s \
 	code/driver_s.s \
 	code/acia_s.s \
 	code/z8530_s.s \
+	../lib/fastirq.s \
 	../lib/asm/hgr_tables.s \
 	../lib/asm/hgr.s \
 	../lib/asm/hgr_mono40.s \
