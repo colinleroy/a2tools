@@ -5,10 +5,12 @@
 ; IRQ handling (Apple2 version)
 ;
 
-        .import         callirq, ostype
-        .importzp       _a_backup, _prev_ram_irq_vector, _prev_rom_irq_vector
+        .import         callirq, ostype, machinetype
+
         .constructor    _init_fast_irq, 8
         .destructor     _done_fast_irq, 9
+
+        .importzp       _prev_ram_irq_vector, _prev_rom_irq_vector
 
         .include        "apple2.inc"
 
@@ -94,7 +96,7 @@ _done_fast_irq:
 ; ------------------------------------------------------------------------
 
 handle_ram_irq:
-        sta     _a_backup       ; Save A
+        sta     a_bck           ; Save A
         pla                     ; Check for BRK
         pha
         and     #%00010000       ; Check bit 4 (BRK flag)
@@ -102,33 +104,53 @@ handle_ram_irq:
 
         ; It's an IRQ
 
-        txa                     ; Save X,Y
-        pha
-        tya
-        pha
+        stx     x_bck            ; Save X,Y
+        sty     y_bck
         jsr     callirq
         bcc     give_back_irq
-        pla                     ; Restore Y,X,A
-        tay
-        pla
-        tax
-        lda     _a_backup
+        ldx     x_bck
+        ldy     y_bck
+        lda     a_bck
         rti
 give_back_irq:
-        pla                     ; Restore Y,X,A
-        tay
-        pla
-        tax
-        lda     _a_backup
+        ldx     x_bck
+        ldy     y_bck
+        lda     a_bck
         jmp     (_prev_ram_irq_vector)
 
 do_brk:
         ; Give BRK to the standard handler
         jmp     (_prev_ram_irq_vector)
 
-handle_rom_irq:                 ; ROM saves things for us
-        jsr     callirq
+handle_rom_irq:                 ; ROM saves things for us (apart from A on IIe)
+        .ifndef __APPLE2ENH__
+        bit     machinetype
+        bvs     c
+        lda     $45             ; Backup A to a safe place
+        sta     a_bck
+        stx     x_bck
+        sty     y_bck
+        tsx
+        stx     s_bck
+        .endif
+c:      jsr     callirq
         bcs     handled
         jmp     (_prev_rom_irq_vector)
 handled:
+        .ifndef __APPLE2ENH__
+        bit     machinetype
+        bvs     :+
+        ldx     s_bck
+        txs
+        lda     a_bck
+        ldx     x_bck
+        ldy     y_bck
+:       .endif
         rti
+
+        .segment "BSS"
+
+a_bck: .res 1
+x_bck: .res 1
+y_bck: .res 1
+s_bck: .res 1
