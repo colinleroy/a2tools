@@ -138,8 +138,9 @@ _draw_sprite:
         sta     (cur_sprite_ptr),y; Reset clear-needed flag
 
         ldx     n_bytes_draw
+
+clear_init_line:
         clc
-clear_next_line:
 sprite_prev_x:
         lda     #$FF
         ldy     cur_y
@@ -147,6 +148,8 @@ sprite_prev_x:
         sta     sprite_store_bg+1
         lda     _hgr_hi,y
         ;adc     #0 - carry won't be set here
+
+clear_next_line:
         sta     sprite_store_bg+2
 
 n_bytes_per_line_clear:
@@ -162,12 +165,19 @@ sprite_store_bg:
 
         inc     cur_y
         cpx     #$FF              ; Did we do all bytes?
-        bne     clear_next_line
+        beq     maybe_blit        ; Yes
 
+        lda     sprite_store_bg+2 ; Consider easy case where the next HGR line
+        adc     #$04              ; is 4 pages after this one, which is true
+        cmp     #$40              ; until we reached the bottom of the screen
+        bcc     clear_next_line   
+        bcs     clear_init_line
+
+maybe_blit:
         ; Don't draw if sprite not active
         ldy     #SPRITE_DATA::ACTIVE
         lda     (cur_sprite_ptr),y
-        beq     draw_out
+        beq     out
 
 blit_sprite:
         ; Clear done, now draw
@@ -179,44 +189,50 @@ blit_sprite:
         sty     cur_y
 
         ldx     n_bytes_draw
+
+init_line:
         clc
-next_line:
 sprite_x:
-        lda     #$FF
+        lda     #$FF              ; Patched by setup with top-left X coord
         ldy     cur_y
-        adc     _hgr_low,y
+        adc     _hgr_low,y        ; Get line address + X coord
         sta     sprite_get_bg+1
         sta     sprite_store_byte+1
         lda     _hgr_hi,y
-        ;adc     #0 - carry won't be set here
+;       adc     #0                ; Carry won't be set here, HGR lines don't cross
+
+do_next_line:
         sta     sprite_get_bg+2
         sta     sprite_store_byte+2
 
 n_bytes_per_line_draw:
-        ldy     #$FF
+        ldy     #$FF              ; Get bytes to draw per line (patched by setup)
 
-        ; Get what's under the sprite
 sprite_get_bg:
-        lda     $FFFF,y
+        lda     $FFFF,y           ; Get the background under the sprite
 sprite_backup:
-        ; Back it up
-        sta     $FFFF,x
-        ; draw sprite
+        sta     $FFFF,x           ; Back it up for next clear
 sprite_mask:
-        and     $FFFF,x       ; Patched
+        and     $FFFF,x           ; AND background and sprite mask
 sprite_pointer:
-        ora     $FFFF,x       ; Patched
+        ora     $FFFF,x           ; OR resulting with sprite data
 sprite_store_byte:
-        sta     $FFFF,y
+        sta     $FFFF,y           ; Store on screen
         dex
         dey
-        bpl     sprite_get_bg ; Next byte
+        bpl     sprite_get_bg     ; Next byte
 
         inc     cur_y
         cpx     #$FF
-        bne     next_line
-draw_out:
-        rts
+        beq     out
+
+        lda     sprite_get_bg+2
+        adc     #$04
+        cmp     #$40
+        bcc     do_next_line
+        bcs     init_line
+
+out:    rts
 
 _draw_sprite_fast:
         ldy     sprite_y

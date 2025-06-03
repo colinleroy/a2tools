@@ -73,7 +73,8 @@ n_lines_draw    = _zp11 ; shared
         ; Now, clear
 
         ldx     n_bytes_draw
-clear_next_line:
+init_line:
+        clc
 x_coord:
         lda     #$FF
         ldy     cur_y
@@ -83,6 +84,8 @@ x_coord:
         sta     sprite_store_bg+1
         lda     _hgr_hi,y
         ;adc     #0 - carry won't be set here
+
+clear_next_line:
         sta     sprite_store_bg+2
 
 bytes_per_line:
@@ -98,7 +101,14 @@ sprite_store_bg:
 
         inc     cur_y
         cpx     #$FF              ; Did we do all bytes?
-        bne     clear_next_line
+        beq     out
+
+        lda     sprite_store_bg+2 ; Compute pointer to next line. It's 4 pages
+        adc     #$04              ; down unless we're at the end of the range.
+        cmp     #$40
+        bcc     clear_next_line
+        bcs     init_line         ; In which case reinit the full pointer.
+
 out:
         rts
 .endproc
@@ -167,7 +177,8 @@ select_sprite:
         sta     (cur_sprite_ptr),y
 
         ldx     n_bytes_draw      ; Get total number of bytes to draw
-next_line:
+init_line:
+        clc
 x_coord:
         lda     #$FF              ; Patched by setup with top-left X coord
         ldy     cur_y
@@ -178,6 +189,8 @@ x_coord:
         sta     sprite_store_byte+1
         lda     _hgr_hi,y
 ;       adc     #0                ; Carry won't be set here, HGR lines don't cross
+
+do_next_line:
         sta     sprite_get_bg+2
         sta     sprite_store_byte+2
 
@@ -200,7 +213,13 @@ sprite_store_byte:
 
         inc     cur_y
         cpx     #$FF
-        bne     next_line
+        beq     out
+
+        lda     sprite_get_bg+2
+        adc     #$04
+        cmp     #$40
+        bcc     do_next_line
+        bcs     init_line
 
 out:    rts
 .endproc
@@ -327,8 +346,8 @@ draw:                             ; Also used for clearing
         lda     (cur_sprite_ptr),y
         sta     _draw_eor::bytes_per_line+1
 
+init_line:
         clc
-next_line:
 x_coord:
         lda     #$FF              ; Patched by setup with top-left X coord (in bytes)
         ldy     cur_y
@@ -338,6 +357,8 @@ x_coord:
 
         lda     _hgr_hi,y         ; Same for high byte
 ;       adc     #0                ; Carry won't be set here
+
+do_next_line:
         sta     load_background+2
         sta     store_byte+2
 
@@ -356,8 +377,15 @@ store_byte:
 
         inc     cur_y
         cpx     #$FF
-        bne     next_line
-        rts
+        beq     out
+
+        lda     load_background+2
+        adc     #$04
+        cmp     #$40
+        bcc     do_next_line
+        bcs     init_line
+
+out:    rts
 .endproc
 
 .proc _clear_eor
