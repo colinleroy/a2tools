@@ -1259,6 +1259,8 @@ int ffmpeg_audio_decode(decode_data *data) {
         data->title = strdup(tag->value);
       } else if (!strcmp(tag->key, "track")) {
         data->track = strdup(tag->value);
+      } else {
+        LOG("extra metadata key '%s': '%s'\n", tag->key, tag->value);
       }
     }
 
