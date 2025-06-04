@@ -163,9 +163,10 @@ sprite_store_bg:
         dey
         bpl     sprite_restore    ; Next byte
 
-        inc     cur_y
         cpx     #$FF              ; Did we do all bytes?
         beq     maybe_blit        ; Yes
+
+        inc     cur_y             ; Prepare next line
 
         lda     sprite_store_bg+2 ; Consider easy case where the next HGR line
         adc     #$04              ; is 4 pages after this one, which is true

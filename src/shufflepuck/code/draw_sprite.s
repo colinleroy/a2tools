@@ -99,9 +99,10 @@ sprite_store_bg:
         dey
         bpl     sprite_restore    ; Next byte
 
-        inc     cur_y
         cpx     #$FF              ; Did we do all bytes?
         beq     out
+
+        inc     cur_y             ; Prepare next line
 
         lda     sprite_store_bg+2 ; Compute pointer to next line. It's 4 pages
         adc     #$04              ; down unless we're at the end of the range.
@@ -211,9 +212,10 @@ sprite_store_byte:
         dey
         bpl     sprite_get_bg     ; Next byte
 
-        inc     cur_y
         cpx     #$FF
         beq     out
+
+        inc     cur_y
 
         lda     sprite_get_bg+2
         adc     #$04
@@ -375,9 +377,10 @@ store_byte:
         dey
         bpl     load_background ; Next byte
 
-        inc     cur_y
         cpx     #$FF
         beq     out
+
+        inc     cur_y
 
         lda     load_background+2
         adc     #$04
