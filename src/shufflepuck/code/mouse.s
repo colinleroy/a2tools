@@ -384,23 +384,23 @@ ini_y:
 .endproc
 
 mouse_irq:
-        ; Check for installed mouse
-        lda     slot
-        beq     done
+        lda     slot            ; Check for installed mouse
+        beq     done            ; Nope! must return with carry clear.
 
-        ; Check for mouse interrupt
-        ldx     #SERVEMOUSE
-        jsr     firmware
-        bcc     :+
-        clc                       ; Interrupt not handled
-done:   rts
+        ; We have a mouse.
 
-:       ; Signal the main loop
-        inc     vbl_ready
-        ; And mouse_read
-        inc     readable
-        sec                     ; Interrupt handled
-        rts
+        ldx     #SERVEMOUSE     ; Check for mouse interrupt by calling firmware.
+        jsr     firmware        ; It returns with carry clear if our IRQ (thanks!)
+
+        lda     #$00
+        rol                     ; Set bit 1 to carry
+        eor     #$01            ; Invert it
+
+        sta     vbl_ready       ; Update flags
+        sta     readable
+
+done:   lsr                     ; Set carry to new bit 1 (or clear if coming from slot == 0)
+        rts                     ; Return with carry set if our IRQ.
 
 _read_mouse:
         lda     readable
