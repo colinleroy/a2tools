@@ -46,6 +46,7 @@
         .import     _big_draw_sprite_s_4, _big_draw_lose_s_4, _big_draw_win_s_4    ; Calvin
         .import     _big_draw_sprite_s_5, _big_draw_lose_s_5, _big_draw_win_s_5    ; Mafalda
         .import     _big_draw_sprite_s_6, _big_draw_lose_s_6, _big_draw_win_s_6    ; Luigi
+        .import     _big_draw_sprite_s_7    ; Smudge
         .import     _big_draw_name_s
         .import     _update_opponent
         .import     _play_puck_hit
@@ -905,6 +906,7 @@ mafalda_str:      .asciiz "MAFALDA   "
 susan_str:        .asciiz "SUSAN     "
 steve_str:        .asciiz "STEVE     "
 luigi_str:        .asciiz "LUIGI     "
+smudge_str:       .asciiz "SMUDGE    "
 
 avatar_names:     .addr   raccoon_str
                   .addr   calvin_str
@@ -912,6 +914,7 @@ avatar_names:     .addr   raccoon_str
                   .addr   susan_str
                   .addr   steve_str
                   .addr   luigi_str
+                  .addr   smudge_str
 
 NUM_AVATARS = (* - avatar_names)/2
 
@@ -921,6 +924,7 @@ avatar_sprites:   .addr   _big_draw_sprite_s_3
                   .addr   _big_draw_sprite_s_1
                   .addr   _big_draw_sprite_s_2
                   .addr   _big_draw_sprite_s_6
+                  .addr   _big_draw_sprite_s_7
 
 NUM_SPRITES = (* - avatar_sprites)/2
 .assert NUM_AVATARS = NUM_SPRITES, error
@@ -931,6 +935,7 @@ avatar_animations:.addr    return0, return0
                   .addr    return0, return0
                   .addr    return0, return0
                   .addr    _big_draw_win_s_6, _big_draw_lose_s_6
+                  .addr    return0, return0
 
 NUM_ANIMATIONS = (* - avatar_animations)/4
 .assert NUM_ANIMATIONS = NUM_SPRITES, error
@@ -941,6 +946,7 @@ avatar_an_coords: .byte    0, 0
                   .byte    0, 0
                   .byte    0, 0
                   .byte    (35+OPPONENT_SPRITE_X)/7, OPPONENT_SPRITE_Y-OPPONENT_SPRITE_H+35
+                  .byte    0, 0
 
 NUM_ANIM_COORDS = (* - avatar_an_coords)/2
 .assert NUM_ANIM_COORDS = NUM_SPRITES, error

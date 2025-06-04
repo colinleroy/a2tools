@@ -137,6 +137,7 @@ special_unperfect   = \
 	sprite_s_4.unperfect.gen.s \
 	sprite_s_5.unperfect.gen.s \
 	sprite_s_6.unperfect.gen.s \
+	sprite_s_7.unperfect.gen.s \
 	normal_h.unperfect.gen.s \
 	normal_i.unperfect.gen.s \
 	moving_i_1.unperfect.gen.s \
