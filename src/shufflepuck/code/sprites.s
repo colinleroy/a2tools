@@ -53,7 +53,7 @@
                   .byte my_pusher0_HEIGHT
                   .byte 0                   ; prev_x
                   .byte 0                   ; prev_y
-                  .byte my_pusher0_BYTES-1  ; bytes of sprite - 1
+                  .byte my_pusher0_BYTES    ; bytes of sprite
                   .byte my_pusher0_BPLINE-1 ; width of sprite in bytes
                   .addr _my_pusher0         ; sprites
                   .addr $0000               ; pointer to previous sprite to clear
@@ -80,10 +80,10 @@
         .byte my_pusher0_HEIGHT
 .endproc
 .proc my_pushers_bytes
-        .byte my_pusher3_BYTES-1
-        .byte my_pusher2_BYTES-1
-        .byte my_pusher1_BYTES-1
-        .byte my_pusher0_BYTES-1
+        .byte my_pusher3_BYTES
+        .byte my_pusher2_BYTES
+        .byte my_pusher1_BYTES
+        .byte my_pusher0_BYTES
 .endproc
 .proc my_pushers_bpline
         .byte my_pusher3_BPLINE-1
@@ -100,10 +100,11 @@
                   .byte their_pusher4_HEIGHT
                   .byte 0                     ; prev_x
                   .byte 0                     ; prev_y
-                  .byte their_pusher4_BYTES-1 ; bytes of sprite - 1
+                  .byte their_pusher4_BYTES   ; bytes of sprite
                   .byte their_pusher4_BPLINE-1; width of sprite in bytes
                   .addr _their_pusher4        ; sprites
                   .addr their_pusher_bgbackup ; background backup buffer
+                  .assert <their_pusher_bgbackup = $00, error ; Make sure it's aligned
                   .byte 0                     ; need clear
 .endproc
 
@@ -121,8 +122,8 @@
         .byte their_pusher4_HEIGHT
 .endproc
 .proc their_pushers_bytes
-        .byte their_pusher5_BYTES-1
-        .byte their_pusher4_BYTES-1
+        .byte their_pusher5_BYTES
+        .byte their_pusher4_BYTES
 .endproc
 .proc their_pushers_bpline
         .byte their_pusher5_BPLINE-1
@@ -137,10 +138,11 @@
                   .byte puck0_HEIGHT
                   .byte 0               ; prev_x
                   .byte 0               ; prev_y
-                  .byte puck0_BYTES-1   ; bytes of sprite - 1
+                  .byte puck0_BYTES     ; bytes of sprite
                   .byte puck0_BPLINE-1  ; width of sprite in bytes
                   .addr _puck0          ; sprites
                   .addr puck_bgbackup   ; background backup buffer
+                  .assert <puck_bgbackup = $00, error ; Make sure it's aligned
                   .byte 0               ; need clear
 .endproc
 
@@ -173,13 +175,13 @@
         .byte puck0_HEIGHT
 .endproc
 .proc pucks_bytes
-        .byte puck6_BYTES-1
-        .byte puck5_BYTES-1
-        .byte puck4_BYTES-1
-        .byte puck3_BYTES-1
-        .byte puck2_BYTES-1
-        .byte puck1_BYTES-1
-        .byte puck0_BYTES-1
+        .byte puck6_BYTES
+        .byte puck5_BYTES
+        .byte puck4_BYTES
+        .byte puck3_BYTES
+        .byte puck2_BYTES
+        .byte puck1_BYTES
+        .byte puck0_BYTES
 .endproc
 .proc pucks_bpline
         .byte puck6_BPLINE-1
@@ -199,11 +201,12 @@
                   .byte pointer_HEIGHT
                   .byte 0                   ; prev_x
                   .byte 0                   ; prev_y
-                  .byte pointer_BYTES-1     ; bytes of sprite - 1
+                  .byte pointer_BYTES       ; bytes of sprite
                   .byte pointer_BPLINE-1    ; width of sprite in bytes
                   .addr _pointer            ; sprites
                   .assert puck0_BYTES > pointer_BYTES, error
                   .addr puck_bgbackup       ; Spare some memory there
+                  .assert <puck_bgbackup = $00, error ; Make sure it's aligned
                   .byte 0                   ; need clear
 .endproc
 
@@ -215,9 +218,10 @@
                   .byte hand_HEIGHT
                   .byte 0                   ; prev_x
                   .byte 0                   ; prev_y
-                  .byte hand_BYTES-1        ; bytes of sprite - 1
+                  .byte hand_BYTES          ; bytes of sprite
                   .byte hand_BPLINE-1       ; width of sprite in bytes
                   .addr _hand               ; sprites
                   .addr hand_bgbackup
+                  .assert <hand_bgbackup = $00, error ; Make sure it's aligned
                   .byte 0                   ; need clear
 .endproc

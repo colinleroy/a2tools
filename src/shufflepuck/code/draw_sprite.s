@@ -81,7 +81,7 @@ x_coord:
         ldy     cur_y
         cpy     #192
         bcs     out
-        adc     _hgr_low,y        ; No need to clc, we just tested it
+        adc     _hgr_low,y        ; No need to clc, we just did
         sta     sprite_store_bg+1
         lda     _hgr_hi,y
         ;adc     #0 - carry won't be set here
@@ -92,22 +92,23 @@ clear_next_line:
 bytes_per_line:
         ldy     #$FF
 
+next_byte:
+        dex
 sprite_restore:
         lda     $FF00,x
 sprite_store_bg:
         sta     $FFFF,y
-        dex
         dey
-        bpl     sprite_restore    ; Next byte
+        bpl     next_byte
 
-        cpx     #$FF              ; Did we do all bytes?
+        cpx     #$00              ; Did we do all bytes? - sets carry
         beq     out
 
         inc     cur_y             ; Prepare next line
 
         lda     sprite_store_bg+2 ; Compute pointer to next line. It's 4 pages
-        adc     #$04              ; down unless we're at the end of the range.
-        cmp     #$40
+        adc     #$04-1            ; down unless we're at the end of the range.
+        cmp     #$40              ; Mind that carry was set so add 3.
         bcc     clear_next_line
         bcs     init_line         ; In which case reinit the full pointer.
 
@@ -199,6 +200,8 @@ do_next_line:
 bytes_per_line:
         ldy     #$FF              ; Get bytes to draw per line (patched by setup)
 
+next_byte:
+        dex
 sprite_get_bg:
         lda     $FFFF,y           ; Get the background under the sprite
 sprite_backup:
@@ -209,17 +212,16 @@ sprite_pointer:
         ora     $FFFF,x           ; OR resulting with sprite data
 sprite_store_byte:
         sta     $FFFF,y           ; Store on screen
-        dex
         dey
-        bpl     sprite_get_bg     ; Next byte
+        bpl     next_byte
 
-        cpx     #$FF
+        cpx     #$00              ; This sets carry!
         beq     out
 
         inc     cur_y
 
         lda     sprite_get_bg+2
-        adc     #$04
+        adc     #$04-1            ; carry is set
         cmp     #$40
         bcc     do_next_line
         bcs     init_line
@@ -232,7 +234,6 @@ out:    rts
 ; Y: Total bytes
 ; Return new number of bytes in A
 .proc _skip_top_lines
-        dey
         sty     total_bytes+1
         stx     ptr1
         jsr     umul8x8r16
@@ -368,23 +369,24 @@ do_next_line:
 bytes_per_line:
         ldy     #$FF
 
+next_byte:
+        dex
 load_background:
         lda     $FFFF,y       ; Get what's under the sprite
 sprite_pointer:
         eor     $FFFF,x       ; Patched by setup
 store_byte:
         sta     $FFFF,y       ; Store on-screen
-        dex
         dey
-        bpl     load_background ; Next byte
+        bpl     next_byte
 
-        cpx     #$FF
+        cpx     #$00              ; This sets carry!
         beq     out
 
         inc     cur_y
 
         lda     load_background+2
-        adc     #$04
+        adc     #$04-1            ; Carry is set
         cmp     #$40
         bcc     do_next_line
         bcs     init_line

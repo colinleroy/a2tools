@@ -169,8 +169,7 @@ draw:
 
         ; And draw in the correct order
         jsr     draw_puck
-        jsr     draw_my_pusher
-        rts
+        jmp     draw_my_pusher
 
 :       jsr     draw_my_pusher
         jmp     draw_puck
@@ -233,9 +232,9 @@ draw:
 
         cmp     #MID_BOARD           ; Middle of HGR height
 
-        bcs     :+
-        jmp     render_screen_their_side
-:       jmp     render_screen_my_side
+        bcc     :+
+        jmp     render_screen_my_side
+:       jmp     render_screen_their_side
 .endproc
 
 ;X, Y input
@@ -271,7 +270,7 @@ NUM_MY_PUSHER_OFFSETS = *-my_pusher_offsets
 
 .proc my_pusher_select
         lda     my_pusher_y
-        ; Choose the smallest sprite
+        ; Choose the biggest sprite
         ldx     #NUM_MY_PUSHER_OFFSETS-1
 :       cmp     my_pusher_offsets,x
         ; Use it if the pusher is closer that the current offset
@@ -670,10 +669,9 @@ out_miss:
         sta     check_hits
 
         ; And simulate the puck move until we reach the desired Y
-:       lda     puck_y
-        cmp     tmp1
-        beq     out
-        bcc     out
+:       lda     tmp1
+        cmp     puck_y
+        bcs     out
 
         jsr     _move_puck
         jmp     :-
@@ -832,8 +830,7 @@ check_my_late_catch:
         jsr     _puck_check_my_hit
         bcc     update_y
 
-        sec
-        rts
+        rts                       ; Miss: return with carry set
 .endproc
 
 .proc _round_end
@@ -914,7 +911,7 @@ they_win:
         jsr     __OPPONENT_START__+OPPONENT::WIN_POINT_SND
 :       inc     their_score
 
-        ; And call the hand drawing with carry clear so it updates their line
+        ; And call the hand drawing with carry set so it updates their line
         sec
         jsr     _draw_score_update
 
