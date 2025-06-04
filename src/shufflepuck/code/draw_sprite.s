@@ -48,7 +48,8 @@ n_lines_draw    = _zp11 ; shared
         ldy     #SPRITE_DATA::NEED_CLEAR
         lda     (cur_sprite_ptr),y
         beq     out               ; Skip clearing if not needed
-        eor     (cur_sprite_ptr),y; Reset clear-needed flag
+        lda     #$00
+        sta     (cur_sprite_ptr),y; Reset clear-needed flag
 
         ldy     #SPRITE_DATA::PREV_X_COORD
         lda     (cur_sprite_ptr),y
@@ -398,7 +399,8 @@ out:    rts
         ldy     #SPRITE_DATA::NEED_CLEAR
         lda     (cur_sprite_ptr),y
         beq     out               ; Skip clearing if not needed
-        eor     (cur_sprite_ptr),y; Reset clear-needed flag
+        lda     #$00
+        sta     (cur_sprite_ptr),y; Reset clear-needed flag
 
         ldy     #SPRITE_DATA::PREV_Y_COORD
         lda     (cur_sprite_ptr),y          ; Get existing prev_y for clear
