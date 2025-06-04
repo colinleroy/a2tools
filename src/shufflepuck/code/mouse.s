@@ -393,13 +393,13 @@ mouse_irq:
         jsr     firmware        ; It returns with carry clear if our IRQ (thanks!)
 
         lda     #$00
-        rol                     ; Set bit 1 to carry
-        eor     #$01            ; Invert it
+        sbc     #$00            ; Now A = $00 if carry set (not our interrupt) or $FF
+                                ; if it is our interrupt.
 
         sta     vbl_ready       ; Update flags
         sta     readable
 
-done:   lsr                     ; Set carry to new bit 1 (or clear if coming from slot == 0)
+done:   lsr                     ; Set carry accordingly to flag (or clear if coming from slot == 0)
         rts                     ; Return with carry set if our IRQ.
 
 _read_mouse:
