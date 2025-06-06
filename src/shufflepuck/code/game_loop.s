@@ -72,7 +72,6 @@
         .include    "my_pusher0.gen.inc"
         .include    "constants.inc"
         .include    "opponent_file.inc"
-        .include    "hgr_applesoft.inc"
 
 my_pusher_y = mouse_y
 my_pusher_x = mouse_x

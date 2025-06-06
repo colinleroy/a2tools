@@ -17,7 +17,6 @@
         .export     _score_x_start
 
         .import     my_score, their_score
-        .import     _set_color_white
         .import     ox, oy
         .import     _mouse_wait_vbl
 
@@ -25,13 +24,14 @@
         .import     _clear_sprite, _draw_sprite, _skip_top_lines
         .import     _platform_msleep
 
+        .import     _plot_dot
+
         .importzp   tmp1
 
         .include    "sprite.inc"
         .include    "puck_coords.inc"
         .include    "constants.inc"
         .include    "hand.gen.inc"
-        .include    "hgr_applesoft.inc"
 
 .data
 
@@ -47,10 +47,11 @@ HAND_TOP = 8
 
 ; We use plot instead of HLINE because it
 ; renders more cleanly
+
 .proc draw_score_line
 :       ldx     ox
-        lda     oy
-        jsr     plot_dot
+        ldy     oy
+        jsr     _plot_dot
 
         dec     oy
         lda     ox
@@ -108,7 +109,6 @@ out:    rts
 .segment "LOWCODE"
 
 .proc _draw_scores
-        jsr     _set_color_white
         ldx     #0
         lda     my_score
         jsr     draw_one_player_scores
@@ -180,12 +180,12 @@ update_hand_end:
         beq     sleep_delay
 
         ; plot a dot just under the hand
-        jsr     _set_color_white
         ldx     start_x
         lda     #(HAND_TOP+hand_HEIGHT+1)
         sec
         sbc     cur_score_draw_lines_skip
-        jsr     plot_dot
+        tay
+        jsr     _plot_dot
 
 sleep_delay:
         lda     #$FF
@@ -250,15 +250,6 @@ out:    rts
         rts
 diagonal:
         clc
-        rts
-.endproc
-
-; X,A: x-y coordinates
-.proc plot_dot
-        ldy     #0
-        bit     $C082
-        jsr     HPLOT
-        bit     $C080
         rts
 .endproc
 

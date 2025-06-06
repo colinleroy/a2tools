@@ -13,32 +13,29 @@
 ; You should have received a copy of the GNU General Public License
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+        .export   _plot_dot
 
-        .export   _hgr_hi, _hgr_low, _hgr_bit
-        .export   _mod7_table, _div7_table
+        .import   _hgr_hi, _hgr_low, _hgr_bit
+        .import   _mod7_table, _div7_table
+        .import   ox, oy, dx, dy
 
-        .export   their_pusher_bgbackup, puck_bgbackup, hand_bgbackup
+        .importzp ptr1
 
-        .include  "sprite.inc"
-        .include  "my_pusher0.gen.inc"
-        .include  "their_pusher4.gen.inc"
-        .include  "puck0.gen.inc"
-        .include  "hand.gen.inc"
+        .include  "helpers.inc"
 
-.bss
-
-.align $100
-puck_bgbackup:          .res puck0_BYTES
-_hgr_hi:                .res 192
-
-.align $100
-their_pusher_bgbackup:  .res their_pusher4_BYTES
-_hgr_low:               .res 192
-_hgr_bit:               .res 7
-
-.align $100
-_div7_table:            .res 256
-_mod7_table:            .res 256
-
-.align $100
-hand_bgbackup:          .res hand_BYTES
+; X,Y: x-y coordinates
+.proc _plot_dot
+        lda     _hgr_low,y
+        clc
+        adc     _div7_table,x
+        sta     ptr1
+        lda     _hgr_hi,y
+        sta     ptr1+1
+        ldy     #$00
+        lda     _mod7_table,x
+        tax
+        lda     _hgr_bit,x
+        ora     (ptr1),y
+        sta     (ptr1),y
+        rts
+.endproc

@@ -1,6 +1,6 @@
         ; Imported so that caller programs can put the tables
         ; wherever convenient.
-        .import       _hgr_hi, _hgr_low
+        .import       _hgr_hi, _hgr_low, _hgr_bit
         .import       _mod7_table, _div7_table
 
         .export       _build_hgr_tables
@@ -47,6 +47,14 @@ next_y:
         iny
         cpy     #HGR_HEIGHT
         bne     next_y
+
+build_hgr_bit_table:
+        lda     #$80
+        ldx     #7-1
+:       lsr
+        sta     _hgr_bit,x
+        dex
+        bpl     :-
 
 build_div7_tables:
         ldx     #0

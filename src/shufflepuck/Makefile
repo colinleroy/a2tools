@@ -215,6 +215,7 @@ shflpuck_SOURCES := \
 	code/crash_lines.s \
 	code/draw_sprite.s \
 	code/draw_score.s \
+	code/plot.s \
 	code/game_loop.s \
 	code/load_data.s \
 	code/sprites.s \

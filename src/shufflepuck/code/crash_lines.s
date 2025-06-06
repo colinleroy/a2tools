@@ -18,7 +18,8 @@
         .export     ox, oy, dx, dy
         .export     _set_color_white
 
-        .import     _rand
+        .import     _plot_line
+        .import     _rand, ostype
         .import     pushax, popax, pusha, popa
 
         .importzp   tmp3, tmp4
@@ -74,11 +75,34 @@ orig_x:
 .endproc
 
 .proc _set_color_white
+        lda     ostype        ; Integer-ROM Apple II can't.
+        cmp     #$11
+        bcc     out
+
         bit     $C082
         ldx     #WHITE
         jsr     SETHCOL
         bit     $C080
-        rts
+out:    rts
+.endproc
+
+.proc applesoft_line
+        lda     ostype        ; Integer-ROM Apple II can't.
+        cmp     #$11
+        bcc     out
+
+        bit     $C082
+        ldx     ox
+        lda     oy
+        ldy     #0
+        jsr     HPOSN
+
+        lda     dx
+        ldy     dy
+        ldx     #0
+        jsr     HLIN
+        bit     $C080
+out:    rts
 .endproc
 
 ; origin coords in XA
@@ -88,10 +112,6 @@ orig_x:
         ; Origin in XA, save them
         stx     ox
         sta     oy
-        ldy     #0
-        bit     $C082
-        jsr     HPOSN
-        bit     $C080
 
         ; Get random height
         jsr     rand_crash
@@ -106,7 +126,6 @@ orig_x:
         bcs     :+
         lda     #0
 :       sta     dy
-        tay
 
         ; Get random X delta
         jsr     rand_crash
@@ -131,12 +150,7 @@ do_left:
 
 :       sta     dx
 
-        ldx     #0
-        bit     $C082
-        jsr     HLIN
-        bit     $C080
-
-        rts
+        jmp     applesoft_line
 .endproc
 
 ; Origin in XA
