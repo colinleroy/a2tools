@@ -319,14 +319,14 @@ loop_start:
         ; otherwise the game is harder
         lda     hz
         cmp     #60
-        bne     draw_start
+        bne     frame_start
         dec     frame_counter
-        bne     draw_start
+        bne     frame_start
         lda     #6
         sta     frame_counter
         bne     game_loop
 
-draw_start:
+frame_start:
         ; First thing is drawing the screen so we don't flicker
         jsr     _draw_screen
 
@@ -367,6 +367,7 @@ draw_done:
 
         ; Check for keyboard input
         jsr     _check_keyboard
+frame_done_a:
         bcc     game_loop
 
         ; Keyboard hit, is it escape?
@@ -382,6 +383,7 @@ abort_game:
         sta     my_score
         jmp     my_win
 .else
+frame_done_b:
         jmp     game_loop
 .endif
 
