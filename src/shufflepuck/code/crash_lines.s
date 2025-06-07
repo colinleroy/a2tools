@@ -16,11 +16,9 @@
         .export     _crash_lines_scale, _draw_crash_lines
 
         .export     ox, oy, dx, dy
-        .export     _set_color_white
 
         .import     _plot_line
         .import     _rand, ostype
-        .import     pushax, popax, pusha, popa
 
         .importzp   tmp3, tmp4
 
@@ -43,8 +41,6 @@ extra_lsr:
 .endproc
 
 .proc _draw_crash_lines
-        jsr     _set_color_white
-
         ; Set recursion level
         lda     #3
         sta     crash_lines_recursion
@@ -72,37 +68,6 @@ orig_x:
 :       sty     _draw_crash_lines::orig_x+1
         stx     rand_crash::extra_lsr
         rts
-.endproc
-
-.proc _set_color_white
-        lda     ostype        ; Integer-ROM Apple II can't.
-        cmp     #$11
-        bcc     out
-
-        bit     $C082
-        ldx     #WHITE
-        jsr     SETHCOL
-        bit     $C080
-out:    rts
-.endproc
-
-.proc applesoft_line
-        lda     ostype        ; Integer-ROM Apple II can't.
-        cmp     #$11
-        bcc     out
-
-        bit     $C082
-        ldx     ox
-        lda     oy
-        ldy     #0
-        jsr     HPOSN
-
-        lda     dx
-        ldy     dy
-        ldx     #0
-        jsr     HLIN
-        bit     $C080
-out:    rts
 .endproc
 
 ; origin coords in XA
@@ -150,13 +115,17 @@ do_left:
 
 :       sta     dx
 
-        jmp     applesoft_line
+        jmp     _plot_line
 .endproc
 
 ; Origin in XA
 .proc _draw_lines_pair
-        ; Save origin
-        jsr     pushax
+        ; Save origin (without destroying A)
+        tay
+        pha
+        txa
+        pha
+        tya
 
         ; Draw to the left
         ldy     #$FF
@@ -170,17 +139,19 @@ do_left:
         sta     crash_lines_recursion
 
         beq     :+
-        jsr     pusha             ; backup recursion level
+        pha                   ; backup recursion level
 
         ; Draw a pair of lines at the end of our left line
         ldx     dx
         lda     dy
         jsr     _draw_lines_pair
-        jsr     popa
+        pla                   ; restore recursion level
         sta     crash_lines_recursion
 :
         ; Get origin back
-        jsr     popax
+        pla
+        tax
+        pla
 
         ; Draw line to the right
         ldy     #$01
@@ -188,13 +159,13 @@ do_left:
         lda     crash_lines_recursion
         beq     :+
 
-        jsr     pusha             ; backup recursion level
+        pha                   ; backup recursion level
 
         ; Draw a pair of lines at the end of our right line
         ldx     dx
         lda     dy
         jsr     _draw_lines_pair
-        jsr     popa
+        pla                   ; restore recursion level
         sta     crash_lines_recursion
 :
         rts
