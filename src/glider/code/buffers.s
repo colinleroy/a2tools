@@ -15,7 +15,7 @@
 
         .export  plane_bgbackup
         .export  rubber_band_bgbackup
-        .export  _hgr_hi, _hgr_low
+        .export  _hgr_hi, _hgr_low, _hgr_bit
         .export  _mod7_table, _div7_table
 
         .export  sprites_bgbackup
