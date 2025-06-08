@@ -78,6 +78,10 @@
 
 IO_BARRIER = $FF
 
+.macro DBG arg
+        ;sta     arg
+.endmacro
+
 .segment "s"                                                        ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::SPRITE, error ; Make sure the callback is where we think
@@ -206,109 +210,62 @@ error:
         rts
 .endproc
 
-.proc io_barrier
-        lda     #$0F
-        sta     $2027
-        lda     #IO_BARRIER
-        sta     $2026
-        jsr     _serial_putc_direct
-:       lda     game_cancelled
-        bne     out
-        jsr     serial_wait_and_get
-        bcs     :-
-        sta     $2027
-        cmp     #IO_BARRIER
-        bne     io_barrier
-        lda     #$00
-        sta     $2026
-out:    rts
-.endproc
-
-.proc exchange_sync_byte
-        ; Pusher coords: XXXXXYYY
-        ; 5 most-significant bits for X (range 0-224) are kept
-        ; 3 bits for Y (range 6-46)
-        ; This can never equal $FF, our IO barrier value, as 0-224
-        ; always have at least one of the 5 msb off
-
-        lda     #$00
-        sta     $2826
-        sta     $2027
-
-        ; Should we start a barrier?
-        lda     to_send
-        beq     :+
-
-        ; Setup IO barrier & wait for ack
-        jmp     io_barrier
-
-:       ; We have only coords to send, so check first what we got
-        jsr     serial_wait_and_get
-        bcs     send_coords       ; Got nothing
-        sta     $2827
-        cmp     #IO_BARRIER
-        beq     reply_barrier     ; Got a barrier!
-
-        ; We received coords, unpack them
-        jsr     unpack_pusher_coords
-        stx     their_pusher_x
-        sty     their_pusher_y
-
-        ; And send ours
-send_coords:
-        jmp     send_pusher_coords
-
-reply_barrier:
-        sta     $2826
-        sta     read_again          ; Flag we need to read more
-        jmp     _serial_putc_direct ; Send the $FF back as barrier ack
-.endproc
-
 .proc send_puck_params
         lda     #$00             ; Reset hit indicator
         sta     player_puck_delta_change
 
         lda     #'H'             ; Tell we did hit
-        sta     $3022
-        jsr     exchange_char
-        sta     $3023
+        DBG     $3022
+        jsr     _serial_putc_direct
+        jsr     serial_force_get
+        bcs     cancel
+        DBG     $3023
         cmp     #'?'
         beq     send
 
+cancel:
         inc     game_cancelled   ; We should not be there!
         rts
 
 send:
         lda     puck_dx          ; Send reverted puck_dx
         NEG_A
-        sta     $3024
-        jsr     exchange_char
+        DBG     $3024
+        jsr     _serial_putc_direct
+        jsr     serial_force_get
+        bcs     cancel
         ; Ignore the reply
         lda     puck_dy          ; Send reverted puck_dy
         NEG_A
-        sta     $3025
-        jsr     exchange_char
+        DBG     $3025
+        jsr     _serial_putc_direct
+        jsr     serial_force_get
+        bcs     cancel
         ; Ignore the reply
 
         lda     puck_x          ; Send mirrored puck_x
         jsr     mirror_puck_x
-        sta     $3026
-        jsr     exchange_char
+        DBG     $3026
+        jsr     _serial_putc_direct
+        jsr     serial_force_get
+        bcs     cancel
         ; Ignore the reply
 
         lda     puck_y          ; Send mirrored puck_y
         jsr     mirror_puck_y
-        sta     $3027
-        jsr     exchange_char
+        DBG     $3027
+        jsr     _serial_putc_direct
+        jsr     serial_force_get
+        bcs     cancel
         ; Ignore the reply
 
         lda     #$00
-        sta     $3022
-        sta     $3023
-        sta     $3024
-        sta     $3025
-        sta     $3026
-        sta     $3027
+        DBG     $3022
+        DBG     $3023
+        DBG     $3024
+        DBG     $3025
+        DBG     $3026
+        DBG     $3027
         ; Set our precise pos from what we sent
         ldx     puck_x
         ldy     puck_y
@@ -320,22 +277,30 @@ send:
 .proc get_puck_params
         ; They hit, get params
         lda     #'?'              ; Get puck_dx
-        sta     $3023
-        jsr     exchange_char
-        sta     $3024
+        jsr     _serial_putc_direct
+        DBG     $3023
+        jsr     serial_force_get
+        bcs     cancel
+        DBG     $3024
         sta     puck_dx
         lda     #'?'              ; Get puck_dy
-        jsr     exchange_char
-        sta     $3025
+        jsr     _serial_putc_direct
+        jsr     serial_force_get
+        bcs     cancel
+        DBG     $3025
         sta     puck_dy
 
         lda     #'?'              ; Get puck_x
-        jsr     exchange_char
-        sta     $3026
+        jsr     _serial_putc_direct
+        jsr     serial_force_get
+        bcs     cancel
+        DBG     $3026
         sta     puck_x
         lda     #'?'              ; Get puck_y
-        jsr     exchange_char
-        sta     $3027
+        jsr     _serial_putc_direct
+        jsr     serial_force_get
+        bcs     cancel
+        DBG     $3027
         sta     puck_y
         ldx     puck_x
         ldy     puck_y
@@ -343,11 +308,11 @@ send:
         jsr     _puck_reinit_their_order
 
         lda     #$00
-        sta     $3023
-        sta     $3024
-        sta     $3025
-        sta     $3026
-        sta     $3027
+        DBG     $3023
+        DBG     $3024
+        DBG     $3025
+        DBG     $3026
+        DBG     $3027
 
         lda     their_currently_hitting
         beq     :+
@@ -357,6 +322,9 @@ send:
         sta     their_currently_hitting
         ldy     #4                ; Play their hit sound
         jmp     _play_puck_hit
+
+cancel: inc     game_cancelled
+        rts
 .endproc
 
 .proc hit_cb
@@ -365,9 +333,8 @@ send:
         rts
 
 prepare_exchange:
-        lda     #$00
-        sta     to_send           ; Consider we have nothing to send
-        sta     read_again        ; And nothing to read
+        php                       ; Shut down IRQs
+        sei
 
         bcs     must_send_miss    ; If carry set, we missed, we must tell
 
@@ -378,76 +345,87 @@ prepare_exchange:
         beq     send_byte         ; Otherwise we have nothing special to say
 
 must_send_miss:
-        lda     #'M'
-        sta     to_send
-        bne     send_byte
+:       lda     #IO_BARRIER         ; This needs sync, send a barrier
+        DBG     $2023
+        jsr     _serial_putc_direct
+        jsr     serial_force_get    ; And wait for its ack
+        bcs     cancel
+        cmp     #IO_BARRIER
+        bne     :-
+        DBG     $2024
+
+        lda     #'M'                ; Send Miss
+        jsr     _serial_putc_direct
+        DBG     $2025
+        jsr     serial_force_get    ; Get ack
+        DBG     $2026
+        bcs     cancel
+        jmp     puck_crashed        ; And get out
 
 must_send_puck_params:
-        lda     #'H'
-        sta     to_send
-        ; Fallthrough (exchange_sync_byte will send a barrier)
+:       lda     #IO_BARRIER         ; This needs sync, send a barrier
+        DBG     $2023
+        jsr     _serial_putc_direct
+        jsr     serial_force_get    ; And wait for its ack
+        bcs     cancel
+        cmp     #IO_BARRIER
+        bne     :-
+        DBG     $2024
+        jsr     send_puck_params    ; Send puck params
+        jmp     clc_out             ; And get out
 
 send_byte:
-        php
-        sei
+        jsr     serial_wait_and_get ; Do we have a message,
+        bcs     send_coords         ; No, send our coordinates
+        DBG     $2023
+        cmp     #IO_BARRIER         ; Yes, is it a barrier?
+        bne     :+
+        jsr     _serial_putc_direct ; Yes, ack it
+        DBG     $2024
+        jmp     do_read             ; And go read the message
 
-        ; Send our pusher coordinates and receive their message,
-        ; or send an IO barrier if to_send is not zero.
-        ; Their message will either be pusher coords, or an IO barrier
-        ; request if they hit or missed.
-        jsr     exchange_sync_byte
+:       jsr     unpack_pusher_coords; We only got coords,
+        stx     their_pusher_x      ; Update them
+        sty     their_pusher_y
 
-        lda     to_send         ; Did we want to send more?
-        beq     check_if_read   ; No. Check if they do. (Both can't be true at once)
-
-        lda     to_send
-        cmp     #'H'            ; We hit, send them the puck's data
-        beq     update_my_puck_params
-        cmp     #'M'            ; We missed, tell them
-        beq     send_miss
-
-        inc     game_cancelled  ; We should not be there!
-        bne     clc_out
-
-update_my_puck_params:
-        jsr     send_puck_params
-        jmp     clc_out
-
-send_miss:
-        jsr     exchange_char     ; A = 'M'
-
-        jmp     puck_crashed      ; Caller expects carry set when we missed
-
-check_if_read:
-        lda     read_again        ; They want us to read something more!
-        beq     clc_out
+send_coords:
+        jsr     send_pusher_coords  ; And send our own coordinates
+        plp
+        rts
 
 do_read:
-        lda     #'?'              ; Wait for their message
-
-        jsr     _serial_putc_direct
-:       jsr     serial_force_get
-        cmp     #IO_BARRIER       ; Discard any stray IO barrier request
-        beq     :-                ; that we would have already answered
+        jsr     serial_force_get    ; Get the message
+        DBG     $2025
+        bcs     cancel
+        cmp     #IO_BARRIER         ; We got an extra barrier byte,
+        beq     do_read             ; Discard it
 
         cmp     #'M'
-        beq     puck_crashed      ; They missed
+        beq     they_crashed        ; They missed, handle that
         cmp     #'H'
-        beq     they_hit          ; They hit the puck
+        beq     they_hit            ; They hit the puck, handle it
 
-        inc     game_cancelled    ; We should never be there, so bail
+cancel:
+        inc     game_cancelled      ; We should never be there, so bail
         bne     clc_out
 
 they_hit:
-        jsr     get_puck_params   ; Get new puck parameters from opponent
+        jsr     get_puck_params     ; Get new puck parameters from opponent
 
-clc_out:plp                       ; All good, continue to play
+clc_out:plp                         ; All good, continue to play
         clc
-        rts
+        bcc     out
 
+they_crashed:
+        jsr     _serial_putc_direct ; Send ack
 puck_crashed:
         plp
-        sec                       ; Caller expects carry set when puck crashed
+        sec                         ; Caller expects carry set when puck crashed
+
+out:    lda     #$00
+        DBG     $2023
+        DBG     $2024
+        DBG     $2025
         rts
 .endproc
 
@@ -902,15 +880,11 @@ serial_slot:      .byte   2
 connected:        .byte   0
 player:           .byte   0
 
-to_send:          .byte   0
-read_again:       .byte   0
-their_max_dx:     .byte   8
-their_max_dy:     .byte   8
-their_max_hit_dy: .byte   10
 tmp_param:        .byte   0
 my_avatar_num:    .byte   0
 their_avatar_num: .byte   0
 iigs_spd:         .byte   0
+barrier_tries:    .byte   0
 
 ident_str:        .asciiz "SHFL1"
 
