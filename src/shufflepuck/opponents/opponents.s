@@ -207,20 +207,20 @@ error:
 .endproc
 
 .proc io_barrier
+        lda     #$0F
+        sta     $2027
         lda     #IO_BARRIER
+        sta     $2026
         jsr     _serial_putc_direct
 :       lda     game_cancelled
         bne     out
-.if 0
-        sta     $C030         ; Barrier debug
-.else
-        nop
-        nop
-.endif
         jsr     serial_wait_and_get
         bcs     :-
+        sta     $2027
         cmp     #IO_BARRIER
         bne     io_barrier
+        lda     #$00
+        sta     $2026
 out:    rts
 .endproc
 
@@ -231,17 +231,21 @@ out:    rts
         ; This can never equal $FF, our IO barrier value, as 0-224
         ; always have at least one of the 5 msb off
 
+        lda     #$00
+        sta     $2826
+        sta     $2027
+
         ; Should we start a barrier?
         lda     to_send
         beq     :+
 
         ; Setup IO barrier & wait for ack
-        jsr     io_barrier
-        rts                       ; Nothing more to do here
+        jmp     io_barrier
 
 :       ; We have only coords to send, so check first what we got
         jsr     serial_wait_and_get
         bcs     send_coords       ; Got nothing
+        sta     $2827
         cmp     #IO_BARRIER
         beq     reply_barrier     ; Got a barrier!
 
@@ -255,9 +259,9 @@ send_coords:
         jmp     send_pusher_coords
 
 reply_barrier:
+        sta     $2826
         sta     read_again          ; Flag we need to read more
-        jsr     _serial_putc_direct ; Send the $FF back as barrier ack
-        rts
+        jmp     _serial_putc_direct ; Send the $FF back as barrier ack
 .endproc
 
 .proc send_puck_params
@@ -265,7 +269,9 @@ reply_barrier:
         sta     player_puck_delta_change
 
         lda     #'H'             ; Tell we did hit
+        sta     $3022
         jsr     exchange_char
+        sta     $3023
         cmp     #'?'
         beq     send
 
@@ -275,23 +281,34 @@ reply_barrier:
 send:
         lda     puck_dx          ; Send reverted puck_dx
         NEG_A
+        sta     $3024
         jsr     exchange_char
         ; Ignore the reply
         lda     puck_dy          ; Send reverted puck_dy
         NEG_A
+        sta     $3025
         jsr     exchange_char
         ; Ignore the reply
 
         lda     puck_x          ; Send mirrored puck_x
         jsr     mirror_puck_x
+        sta     $3026
         jsr     exchange_char
         ; Ignore the reply
 
         lda     puck_y          ; Send mirrored puck_y
         jsr     mirror_puck_y
+        sta     $3027
         jsr     exchange_char
         ; Ignore the reply
 
+        lda     #$00
+        sta     $3022
+        sta     $3023
+        sta     $3024
+        sta     $3025
+        sta     $3026
+        sta     $3027
         ; Set our precise pos from what we sent
         ldx     puck_x
         ldy     puck_y
@@ -303,22 +320,34 @@ send:
 .proc get_puck_params
         ; They hit, get params
         lda     #'?'              ; Get puck_dx
+        sta     $3023
         jsr     exchange_char
+        sta     $3024
         sta     puck_dx
         lda     #'?'              ; Get puck_dy
         jsr     exchange_char
+        sta     $3025
         sta     puck_dy
 
         lda     #'?'              ; Get puck_x
         jsr     exchange_char
+        sta     $3026
         sta     puck_x
         lda     #'?'              ; Get puck_y
         jsr     exchange_char
+        sta     $3027
         sta     puck_y
         ldx     puck_x
         ldy     puck_y
         jsr     _set_puck_position
         jsr     _puck_reinit_their_order
+
+        lda     #$00
+        sta     $3023
+        sta     $3024
+        sta     $3025
+        sta     $3026
+        sta     $3027
 
         lda     their_currently_hitting
         beq     :+
