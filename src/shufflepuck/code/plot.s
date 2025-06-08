@@ -142,42 +142,38 @@ set_x_params:
 posdx:  lda     _x1
         sec
         sbc     _x0
-        sta     _deltax
-        lda     #$EE          ; INC $nnnn
-        jmp     set_y_params
-negdx:  lda     _x0
-        ;sec - carry already set
+        ldy     #$EE          ; INC $nnnn
+        jmp     finish_x_params
+negdx:  ; carry already set, _x0 already in A
         sbc     _x1
-        sta     _deltax
-        lda     #$CE          ; DEC $nnnn
+        ldy     #$CE          ; DEC $nnnn
 
-set_y_params:
-        sta     stepx         ; Setup deltay and stepy
-        lda     _y0
+finish_x_params:
+        sta     _deltax
+        sty     stepx
+
+        lda     _y0           ; Setup deltay and stepy
         cmp     _y1
         bcs     negdy
+posdy:
         sec
         sbc     _y1
-        ldx     #$00
-        bcs     :+
-        dex
-:       sta     _deltay
-        stx     _deltay+1
-        lda     #$EE          ; INC $nnnn
-        bne     set_err
+        ldy     #$EE          ; INC $nnnn
+        bne     finish_y_params
 negdy:  lda     _y1
         ; sec - carry already set
         sbc     _y0
+        ldy     #$CE          ; DEC $nnnn
+
+finish_y_params:
         ldx     #$00
         bcs     :+
         dex
 :       sta     _deltay
         stx     _deltay+1
-        lda     #$CE          ; DEC $nnnn
+        sty     stepy
 
-set_err:
-        sta     stepy         ; Setup error counter
-        lda     _deltax
+        lda     _deltax       ; Setup error counter
         clc
         adc     _deltay
         sta     _b_err
@@ -197,9 +193,9 @@ next_dot:
         cmp     _y1
         beq     out           ; We're done!
 
-:       lda     _b_err        ; Update err2 = err<<1
-        ldx     _b_err+1
-        stx     _b_err2+1
+:       lda     _b_err+1
+        sta     _b_err2+1
+        lda     _b_err        ; Update err2 = err<<1
         asl
         sta     _b_err2
         rol     _b_err2+1
@@ -255,6 +251,6 @@ _x1:            .res 1
 _y0:            .res 1
 _y1:            .res 1
 _deltax:        .res 1
-_deltay:        .res 2
-_b_err:         .res 2
+_deltay:        .res 2        ; Those must be 16 bits otherwise
+_b_err:         .res 2        ; they overflow all the way
 _b_err2:        .res 2
