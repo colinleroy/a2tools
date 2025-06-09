@@ -390,8 +390,7 @@ send_byte:
 
 send_coords:
         jsr     send_pusher_coords  ; And send our own coordinates
-        plp
-        rts
+        jmp     clc_out
 
 do_read:
         jsr     serial_force_get    ; Get the message
