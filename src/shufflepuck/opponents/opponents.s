@@ -76,14 +76,22 @@
         .include    "ser-error.inc"
         .include    "accelerator.inc"
 
-; Transport abstraction
+; ====== Transport abstraction ============================
 
 ; maybe_get_byte must load the read byte in A or return with carry set
 ; if no byte is available on the transport layer.
-maybe_get_byte = _serial_read_byte_direct
+maybe_get_byte      = _serial_read_byte_direct
 
 ; send_byte must send the byte in A.
-send_byte      = _serial_putc_direct
+send_byte           = _serial_putc_direct
+
+; Setup the transport layer (serial slot)
+configure_transport = configure_serial
+
+; Cleanup the transport layer
+teardown_transport  = _serial_close
+
+; ====== End transport abstraction ========================
 
 IO_BARRIER = $FF
 
@@ -121,7 +129,7 @@ IO_BARRIER = $FF
 .proc _opponent_think
         lda     connected
         bne     :+
-        jsr     configure_serial
+        jsr     configure_network
 
         ; The usual dy limit requires super-human reflexes
         ldx     #ABS_MAX_DX
@@ -620,52 +628,13 @@ done:
         rts
 .endproc
 
-.proc configure_serial
+.proc configure_network
         jsr     _home
         jsr     _hgr_mixon
         jsr     _hgr_unset_mono40
 
-        jsr     setup_defaults
-
-ask_slot:
-        lda     #0
-        sta     _last_key         ; Reset last key to avoid pausing on config exit
-
-        lda     #0
-        jsr     pusha
-        lda     #23
-        jsr     _gotoxy
-        lda     #<help_str
-        ldx     #>help_str
-        jsr     _strout
-
-        lda     #20
-        jsr     _gotoy
-
-        bit     ostype
-        bmi     iigs
-        lda     #1+1
-        ldx     #7
-        jmp     :+
-iigs:
-        lda     #0+1
-        ldx     #1
-:       jsr     pushax
-        lda     #<serial_slot
-        ldx     #>serial_slot
-        jsr     pushax
-        lda     #<slot_str
-        ldx     #>slot_str
-        jsr     configure_slot
-
-        lda     game_cancelled
-        bne     finish_game
-
-        lda     serial_slot
-        ldx     #SER_BAUD_115200
-        jsr     _serial_open
-        cmp     #SER_ERR_OK
-        bne     open_error
+        jsr     configure_transport
+        bcs     finish_game
 
         php                       ; Disable interrupts until connection ready
         sei                       ; The other player's DTR/DSR toggles at init
@@ -703,24 +672,10 @@ iigs:
 
         jsr     _home
         jmp     _hgr_force_mono40
-
-open_error:
-        lda     #12
-        jsr     pusha
-        lda     #22
-        jsr     _gotoxy
-        lda     #<open_error_str
-        ldx     #>open_error_str
-        jsr     _strout
-        lda     #<1000
-        ldx     #>1000
-        jsr     _platform_msleep
-        jsr     _home
-        jmp     ask_slot
 .endproc
 
 .proc finish_game
-        jsr     _serial_close
+        jsr     teardown_transport
 
         lda     iigs_spd
         jsr     _set_iigs_speed
@@ -813,18 +768,6 @@ out_err:
         jmp     _init_puck_position
 .endproc
 
-.proc setup_defaults
-        bit     ostype
-        bpl     :+
-
-        ; Patch defaults and callbacks for
-        ; IIgs z8530 integrated serial ports
-        lda     #0
-        sta     serial_slot
-
-:       rts
-.endproc
-
 ; Sends A over serial, receives A over serial
 .proc exchange_char
         php
@@ -889,6 +832,79 @@ out_abort:
 out:    rts
 .endproc
 
+.proc configure_serial
+        bit     ostype
+        bpl     ask_slot
+
+        ; Patch defaults and callbacks for
+        ; IIgs z8530 integrated serial ports
+        lda     #0
+        sta     serial_slot
+
+ask_slot:
+        lda     #0
+        sta     _last_key         ; Reset last key to avoid pausing on config exit
+
+        lda     #0
+        jsr     pusha
+        lda     #23
+        jsr     _gotoxy
+        lda     #<help_str
+        ldx     #>help_str
+        jsr     _strout
+
+        lda     #20
+        jsr     _gotoy
+
+        bit     ostype
+        bmi     iigs
+        lda     #1+1
+        ldx     #7
+        jmp     :+
+iigs:
+        lda     #0+1
+        ldx     #1
+:       jsr     pushax
+        lda     #<serial_slot
+        ldx     #>serial_slot
+        jsr     pushax
+        lda     #<slot_str
+        ldx     #>slot_str
+        jsr     configure_slot
+
+        lda     game_cancelled
+        bne     cancel
+
+        lda     serial_slot
+        ldx     #SER_BAUD_115200
+        jsr     _serial_open
+        cmp     #SER_ERR_OK
+        bne     open_error
+        clc
+        rts
+
+open_error:
+        lda     game_cancelled    ; Did we cancel at some point?
+        bne     cancel
+
+        lda     #12
+        jsr     pusha
+        lda     #22
+        jsr     _gotoxy
+        lda     #<open_error_str
+        ldx     #>open_error_str
+        jsr     _strout
+        lda     #<1000
+        ldx     #>1000
+        jsr     _platform_msleep
+        jsr     _home
+        jmp     ask_slot
+
+cancel:
+        sec
+        rts
+.endproc
+
 ser_timer:        .word   0
 serial_slot:      .byte   2
 connected:        .byte   0
@@ -903,10 +919,8 @@ barrier_tries:    .byte   0
 ident_str:        .asciiz "SHFL1"
 
 wait_str:         .asciiz "WAITING FOR PLAYER"
-configure_str:    .asciiz "CONFIGURE SERIAL"
 
 slot_str:         .asciiz "SERIAL SLOT: "
-
 open_error_str:   .asciiz "SERIAL OPEN ERROR"
 
 help_str:         .asciiz "ARROW KEYS TO CHANGE, ENTER TO VALIDATE"
