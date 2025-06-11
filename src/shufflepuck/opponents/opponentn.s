@@ -809,7 +809,7 @@ out:    rts
         lda     conn_send_cbs,y
         sta     send_byte+1
         lda     conn_get_cbs,y
-        sta     send_byte+1
+        sta     maybe_get_byte+1
 
         iny
         ldx     conn_configure_cbs,y
@@ -820,32 +820,32 @@ out:    rts
         lda     conn_send_cbs,y
         sta     send_byte+2
         lda     conn_get_cbs,y
-        sta     send_byte+2
+        sta     maybe_get_byte+2
 
         rts
 .endproc
 
-; ========= Transport-specific functions ======
+; ========= Transport-specific functions, patched with callbacks ======
 
 ; maybe_get_byte must load the read byte in A or return with carry set
 ; if no byte is available on the transport layer.
 .proc maybe_get_byte
-        jmp     _send_byte_serial
+        jmp     $FFFF
 .endproc
 
 ; send_byte must send the byte in A.
 .proc send_byte
-        jmp     _get_byte_serial
+        jmp     $FFFF
 .endproc
 
 ; Setup the transport layer (serial slot)
 .proc configure_transport
-        jmp     _configure_serial
+        jmp     $FFFF
 .endproc
 
 ; Cleanup the transport layer
 .proc teardown_transport
-        jmp     _teardown_serial
+        jmp     $FFFF
 .endproc
 
 ; ========= End of transport-specific functions ======
@@ -877,7 +877,7 @@ connection_type:  .byte   0
 ; - your callbacks (configure, teardown, send, get)
 ;   in the relevant arrays.
 serial_conn_str:  .asciiz "SERIAL"
-dummy_conn_str:   .asciiz "DUMMY"
+;dummy_conn_str:   .asciiz "DUMMY"
 
 connection_types: .addr   serial_conn_str
 ;                  .addr   dummy_conn_str

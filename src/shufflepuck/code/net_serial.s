@@ -1,3 +1,4 @@
+        ; Callback exports
         .export     _configure_serial, _teardown_serial
         .export     _send_byte_serial, _get_byte_serial
 
@@ -13,13 +14,19 @@
 
         .include    "../code/constants.inc"
 
-; Aliases for naming convention
-_send_byte_serial = _serial_read_byte_direct
-_get_byte_serial  = _serial_putc_direct
+; This goes in the n(etwork) segment
+.segment "n"
+
+; send, get and teardown do not require any extra
+; code for serial so just alias them to the serial
+; functions.
+_send_byte_serial = _serial_putc_direct
+_get_byte_serial  = _serial_read_byte_direct
 _teardown_serial  = _serial_close
 
 ; Configuration code
-
+; Present an UI on lines 20-23 with the configuration
+; options, in this case the serial slot.
 .proc _configure_serial
         bit     ostype
         bpl     ask_slot
@@ -94,6 +101,7 @@ cancel:
         rts
 .endproc
 
+; Internal, used by _configure_serial
 .proc configure_slot
         sta     str_low+1
         stx     str_high+1
@@ -172,13 +180,8 @@ done:
         rts
 .endproc
 
-; This goes in the n(etwork) segment
-.segment "n"
-
-; And include the low-level serial code
 .segment "n"
 .include "../lib/serial/asm/driver.s"
-
 
 .segment "RODATA"
 
