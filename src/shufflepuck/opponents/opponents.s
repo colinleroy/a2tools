@@ -76,6 +76,15 @@
         .include    "ser-error.inc"
         .include    "accelerator.inc"
 
+; Transport abstraction
+
+; maybe_get_byte must load the read byte in A or return with carry set
+; if no byte is available on the transport layer.
+maybe_get_byte = _serial_read_byte_direct
+
+; send_byte must send the byte in A.
+send_byte      = _serial_putc_direct
+
 IO_BARRIER = $FF
 
 .macro DBG arg
@@ -206,7 +215,7 @@ error:
         jsr     mirror_pusher_y
         tay
         jsr     pack_pusher_coords
-        jsr     _serial_putc_direct
+        jsr     send_byte
         rts
 .endproc
 
@@ -216,8 +225,8 @@ error:
 
         lda     #'H'             ; Tell we did hit
         DBG     $3022
-        jsr     _serial_putc_direct
-        jsr     serial_force_get
+        jsr     send_byte
+        jsr     get_byte
         bcs     cancel
         DBG     $3023
         cmp     #'?'
@@ -231,31 +240,31 @@ send:
         lda     puck_dx          ; Send reverted puck_dx
         NEG_A
         DBG     $3024
-        jsr     _serial_putc_direct
-        jsr     serial_force_get
+        jsr     send_byte
+        jsr     get_byte
         bcs     cancel
         ; Ignore the reply
         lda     puck_dy          ; Send reverted puck_dy
         NEG_A
         DBG     $3025
-        jsr     _serial_putc_direct
-        jsr     serial_force_get
+        jsr     send_byte
+        jsr     get_byte
         bcs     cancel
         ; Ignore the reply
 
         lda     puck_x          ; Send mirrored puck_x
         jsr     mirror_puck_x
         DBG     $3026
-        jsr     _serial_putc_direct
-        jsr     serial_force_get
+        jsr     send_byte
+        jsr     get_byte
         bcs     cancel
         ; Ignore the reply
 
         lda     puck_y          ; Send mirrored puck_y
         jsr     mirror_puck_y
         DBG     $3027
-        jsr     _serial_putc_direct
-        jsr     serial_force_get
+        jsr     send_byte
+        jsr     get_byte
         bcs     cancel
         ; Ignore the reply
 
@@ -277,28 +286,28 @@ send:
 .proc get_puck_params
         ; They hit, get params
         lda     #'?'              ; Get puck_dx
-        jsr     _serial_putc_direct
+        jsr     send_byte
         DBG     $3023
-        jsr     serial_force_get
+        jsr     get_byte
         bcs     cancel
         DBG     $3024
         sta     puck_dx
         lda     #'?'              ; Get puck_dy
-        jsr     _serial_putc_direct
-        jsr     serial_force_get
+        jsr     send_byte
+        jsr     get_byte
         bcs     cancel
         DBG     $3025
         sta     puck_dy
 
         lda     #'?'              ; Get puck_x
-        jsr     _serial_putc_direct
-        jsr     serial_force_get
+        jsr     send_byte
+        jsr     get_byte
         bcs     cancel
         DBG     $3026
         sta     puck_x
         lda     #'?'              ; Get puck_y
-        jsr     _serial_putc_direct
-        jsr     serial_force_get
+        jsr     send_byte
+        jsr     get_byte
         bcs     cancel
         DBG     $3027
         sta     puck_y
@@ -342,22 +351,22 @@ prepare_exchange:
         bit     player_puck_delta_change
         bmi     must_send_puck_params
 
-        beq     send_byte         ; Otherwise we have nothing special to say
+        beq     get_and_send_data   ; Otherwise we have nothing special to say
 
 must_send_miss:
 :       lda     #IO_BARRIER         ; This needs sync, send a barrier
         DBG     $2023
-        jsr     _serial_putc_direct
-        jsr     serial_force_get    ; And wait for its ack
+        jsr     send_byte
+        jsr     get_byte            ; And wait for its ack
         bcs     cancel
         cmp     #IO_BARRIER
         bne     :-
         DBG     $2024
 
         lda     #'M'                ; Send Miss
-        jsr     _serial_putc_direct
+        jsr     send_byte
         DBG     $2025
-        jsr     serial_force_get    ; Get ack
+        jsr     get_byte            ; Get ack
         DBG     $2026
         bcs     cancel
         jmp     puck_crashed        ; And get out
@@ -365,8 +374,8 @@ must_send_miss:
 must_send_puck_params:
 :       lda     #IO_BARRIER         ; This needs sync, send a barrier
         DBG     $2023
-        jsr     _serial_putc_direct
-        jsr     serial_force_get    ; And wait for its ack
+        jsr     send_byte
+        jsr     get_byte            ; And wait for its ack
         bcs     cancel
         cmp     #IO_BARRIER
         bne     :-
@@ -374,13 +383,13 @@ must_send_puck_params:
         jsr     send_puck_params    ; Send puck params
         jmp     clc_out             ; And get out
 
-send_byte:
-        jsr     serial_wait_and_get ; Do we have a message,
+get_and_send_data:
+        jsr     try_to_get_byte     ; Do we have a message,
         bcs     send_coords         ; No, send our coordinates
         DBG     $2023
         cmp     #IO_BARRIER         ; Yes, is it a barrier?
         bne     :+
-        jsr     _serial_putc_direct ; Yes, ack it
+        jsr     send_byte           ; Yes, ack it
         DBG     $2024
         jmp     do_read             ; And go read the message
 
@@ -393,7 +402,7 @@ send_coords:
         jmp     clc_out
 
 do_read:
-        jsr     serial_force_get    ; Get the message
+        jsr     get_byte            ; Get the message
         DBG     $2025
         bcs     cancel
         cmp     #IO_BARRIER         ; We got an extra barrier byte,
@@ -416,7 +425,7 @@ clc_out:plp                         ; All good, continue to play
         bcc     out
 
 they_crashed:
-        jsr     _serial_putc_direct ; Send ack
+        jsr     send_byte           ; Send ack
 puck_crashed:
         plp
         sec                         ; Caller expects carry set when puck crashed
@@ -731,8 +740,8 @@ open_error:
         lda     game_cancelled
         bne     out_err
 
-        jsr     _serial_putc_direct
-        jsr     serial_wait_and_get
+        jsr     send_byte
+        jsr     try_to_get_byte
         bcs     :-
 
         ; We got a reply. Stop sending and flush
@@ -757,8 +766,8 @@ next_char:
         lda     ident_str,y
         beq     out_done            ; All chars sent/received
 
-        jsr     _serial_putc_direct
-:       jsr     serial_force_get
+        jsr     send_byte
+:       jsr     get_byte
         bcs     out_err
         cmp     #$FF
         beq     :-
@@ -816,35 +825,12 @@ out_err:
 :       rts
 .endproc
 
-; Try 20 times to get a char over serial.
-; (20 times to make sure the other side has time to send)
-; Destroys X, does not touch Y.
-.proc serial_wait_and_get
-        lda     #20
-        sta     ser_timer
-
-try:    jsr     _serial_read_byte_direct
-        bcc     out
-
-        dec     ser_timer
-        bne     try
-
-        jsr     check_escape
-        bcs     out_abort
-        sec
-
-out:    rts
-out_abort:
-        inc     game_cancelled
-        rts
-.endproc
-
 ; Sends A over serial, receives A over serial
 .proc exchange_char
         php
         sei
-        jsr     _serial_putc_direct ; Send char
-        jsr     serial_force_get    ; Get remote char (or escape)
+        jsr     send_byte           ; Send char
+        jsr     get_byte            ; Get remote char (or escape)
         bcc     :+                  ; Escape?
         inc     game_cancelled      ; We're done
 :       plp
@@ -864,10 +850,39 @@ out_esc:
         rts
 .endproc
 
-.proc serial_force_get
+; Try 20 times to get a char.
+; (20 times to make sure the other side has time to send)
+; Destroys X, does not touch Y.
+; Returns with carry set if no byte is available or the
+; player pressed escape, or with the read byte in A and
+; carry clear.
+.proc try_to_get_byte
+        lda     #20
+        sta     ser_timer
+
+try:    jsr     maybe_get_byte
+        bcc     out
+
+        dec     ser_timer
+        bne     try
+
+        jsr     check_escape
+        bcs     out_abort
+        sec
+
+out:    rts
+out_abort:
+        inc     game_cancelled
+        rts
+.endproc
+
+; Do get a byte from the transport layer, waiting
+; infinitely if necessary; but exits with carry
+; set if the player pressed escape.
+.proc get_byte
         lda     game_cancelled
         bne     out
-:       jsr     _serial_read_byte_direct
+:       jsr     maybe_get_byte
         bcc     out
         jsr     check_escape
         bcc     :-
