@@ -542,6 +542,63 @@ done:
         jsr     _hgr_mixon
         jsr     _hgr_unset_mono40
 
+        ; Hide the connection type chooser as long as there
+        ; is only one
+        lda     #NUM_CONNECTION_TYPES
+        cmp     #1
+        beq     configuration_done
+
+choose_connection:
+        jsr     _home
+        lda     #0
+        jsr     pusha
+        lda     #20
+        jsr     _gotoxy
+
+        lda     #<conn_type_str
+        ldx     #>conn_type_str
+        jsr     _strout
+
+        lda     connection_type
+        asl
+        tay
+        lda     connection_types,y
+        iny
+        ldx     connection_types,y
+        jsr     _strout
+
+update:
+        ldx     tmp_param
+        jsr     _read_key
+        cmp     #$08
+        beq     dec_param
+        cmp     #$15
+        beq     inc_param
+        cmp     #$0D              ; Enter
+        beq     configuration_done
+        cmp     #CH_ESC
+        beq     cancel
+        bne     choose_connection
+dec_param:
+        lda     connection_type
+        beq     choose_connection
+        dec     connection_type
+        jmp     choose_connection
+inc_param:
+        ldx     connection_type
+        inx
+        cpx     #NUM_CONNECTION_TYPES
+        beq     choose_connection
+        inc     connection_type
+        jmp     choose_connection
+
+cancel:
+        inc     game_cancelled
+        rts
+
+configuration_done:
+        jsr     patch_transport_endpoints
+
         jsr     configure_transport
         bcs     finish_game
 
@@ -710,12 +767,12 @@ out_esc:
 ; carry clear.
 .proc try_to_get_byte
         lda     #20
-        sta     ser_timer
+        sta     net_timer
 
 try:    jsr     maybe_get_byte
         bcc     out
 
-        dec     ser_timer
+        dec     net_timer
         bne     try
 
         jsr     check_escape
@@ -739,6 +796,33 @@ out_abort:
         jsr     check_escape
         bcc     :-
 out:    rts
+.endproc
+
+.proc patch_transport_endpoints
+        lda     connection_type
+        asl
+        tay
+        lda     conn_configure_cbs,y
+        sta     configure_transport+1
+        lda     conn_teardown_cbs,y
+        sta     teardown_transport+1
+        lda     conn_send_cbs,y
+        sta     send_byte+1
+        lda     conn_get_cbs,y
+        sta     send_byte+1
+
+        iny
+        ldx     conn_configure_cbs,y
+        lda     conn_configure_cbs,y
+        sta     configure_transport+2
+        lda     conn_teardown_cbs,y
+        sta     teardown_transport+2
+        lda     conn_send_cbs,y
+        sta     send_byte+2
+        lda     conn_get_cbs,y
+        sta     send_byte+2
+
+        rts
 .endproc
 
 ; ========= Transport-specific functions ======
@@ -766,8 +850,7 @@ out:    rts
 
 ; ========= End of transport-specific functions ======
 
-ser_timer:        .word   0
-serial_slot:      .byte   2
+net_timer:        .word   0
 connected:        .byte   0
 player:           .byte   0
 
@@ -784,8 +867,33 @@ wait_str:         .asciiz "WAITING FOR PLAYER"
 _conf_help_str:   .asciiz "ARROW KEYS TO CHANGE, ENTER TO VALIDATE"
 ready_str:        .asciiz "                 READY!                "
 
-avatar_str:       .asciiz "YOUR AVATAR: "
+; Transport-related options
+conn_type_str:    .asciiz "CONNECTION TYPE: "
+connection_type:  .byte   0
 
+; Add different transport layers by adding
+; - one connection type string
+; - that string in the connection_types array
+; - your callbacks (configure, teardown, send, get)
+;   in the relevant arrays.
+serial_conn_str:  .asciiz "SERIAL"
+dummy_conn_str:   .asciiz "DUMMY"
+
+connection_types: .addr   serial_conn_str
+;                  .addr   dummy_conn_str
+NUM_CONNECTION_TYPES = (* - connection_types)/2
+conn_configure_cbs:
+                  .addr   _configure_serial
+;                  .addr   $0000
+conn_teardown_cbs:.addr   _teardown_serial
+;                  .addr   $0000
+conn_send_cbs:    .addr   _send_byte_serial
+;                  .addr   $0000
+conn_get_cbs:     .addr   _get_byte_serial
+;                  .addr   $0000
+
+; Avatar options
+avatar_str:       .asciiz "YOUR AVATAR: "
 raccoon_str:      .asciiz "MX RACCOON"
 calvin_str:       .asciiz "CALVIN    "
 mafalda_str:      .asciiz "MAFALDA   "

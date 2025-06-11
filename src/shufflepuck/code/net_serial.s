@@ -29,7 +29,9 @@ _teardown_serial  = _serial_close
         lda     #0
         sta     serial_slot
 
+
 ask_slot:
+        jsr     _home
         lda     #0
         sta     _last_key         ; Reset last key to avoid pausing on config exit
 
@@ -85,7 +87,6 @@ open_error:
         lda     #<1000
         ldx     #>1000
         jsr     _platform_msleep
-        jsr     _home
         jmp     ask_slot
 
 cancel:

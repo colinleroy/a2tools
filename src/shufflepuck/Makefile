@@ -369,7 +369,7 @@ shflpuck.ld.cfg: shflpuck.ld.cfg.tmpl generators/gen_linker_config.sh
 	generators/gen_linker_config.sh $< $(opponents) > $@
 
 clean:
-	rm -f *.bin *.o *.po \
+	rm -f *.bin */*.o *.o *.po \
 	$(assets_backgrounds) \
 	gen_sprite \
 	gen_font \
