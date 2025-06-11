@@ -46,7 +46,7 @@ opponents_boxes:                        ; X, W, Y, H, opponent number, name poin
         .byte 129, 24, 58,  41, 6      ,>name_g, <name_g       ; Bejin
         .byte 245, 10, 77,  51, 7      ,>name_h, <name_h       ; Biff
         .byte 58 , 26, 23,  32, 8      ,>name_i, <name_i       ; DC3 (not in tournament)
-        .byte 35 , 21, 11,  29, 'S'-'A',>name_s, <name_s       ; Serial
+        .byte 35 , 21, 11,  29, 'N'-'A',>name_n, <name_n       ; Network
         .byte 83,  87, 12,  34, $FF    ,>name_t, <name_t       ; Tournament
         .byte 231, 21, 13,  21, CH_ESC ,>name_q, <name_q       ; Exit
 NUM_BOXES = (* - BOXES_START)/7
@@ -60,7 +60,7 @@ name_f:         .asciiz "     NERUAL     "
 name_g:         .asciiz "     BEJIN      "
 name_h:         .asciiz "      BIFF      "
 name_i:         .asciiz "      DC3       "
-name_s:         .asciiz "PLAY OVER SERIAL"
+name_n:         .asciiz "  TWO PLAYERS   "
 name_t:         .asciiz "   TOURNAMENT   "
 name_q:         .asciiz "   QUIT GAME    "
 name_blank:     .asciiz "                "

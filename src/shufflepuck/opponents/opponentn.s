@@ -14,7 +14,7 @@
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 ; ----------
-; Serial - play with a friend
+; Two-players code - play with a friend
 
         .import     my_pusher_x, my_pusher_y
         .import     their_pusher_x, their_pusher_y
@@ -35,19 +35,16 @@
         .import     _hgr_unset_mono40, _hgr_force_mono40
         .import     _get_iigs_speed, _set_iigs_speed
 
-        .import     _serial_open, _serial_close
-        .import     _serial_putc_direct, _serial_read_byte_direct
-
         .import     _cout, _strout, _gotoxy, _gotox, _gotoy, _home, _numout
 
-        .import     _big_draw_sprite_s_1    ; Susan
-        .import     _big_draw_sprite_s_2    ; Steve
-        .import     _big_draw_sprite_s_3    ; Mx Raccoon
-        .import     _big_draw_sprite_s_4, _big_draw_lose_s_4, _big_draw_win_s_4    ; Calvin
-        .import     _big_draw_sprite_s_5, _big_draw_lose_s_5, _big_draw_win_s_5    ; Mafalda
-        .import     _big_draw_sprite_s_6, _big_draw_lose_s_6, _big_draw_win_s_6    ; Luigi
-        .import     _big_draw_sprite_s_7    ; Smudge
-        .import     _big_draw_name_s
+        .import     _big_draw_sprite_n_1    ; Susan
+        .import     _big_draw_sprite_n_2    ; Steve
+        .import     _big_draw_sprite_n_3    ; Mx Raccoon
+        .import     _big_draw_sprite_n_4, _big_draw_lose_n_4, _big_draw_win_n_4    ; Calvin
+        .import     _big_draw_sprite_n_5, _big_draw_lose_n_5, _big_draw_win_n_5    ; Mafalda
+        .import     _big_draw_sprite_n_6, _big_draw_lose_n_6, _big_draw_win_n_6    ; Luigi
+        .import     _big_draw_sprite_n_7    ; Smudge
+        .import     _big_draw_name_n
         .import     _update_opponent
         .import     _play_puck_hit
 
@@ -58,6 +55,13 @@
         .import     __OPPONENT_START__
 
         .import     pusha, pushax, popax
+
+        ; transport-specific calls
+        .export     _conf_help_str
+
+        .import     _configure_serial, _teardown_serial
+        .import     _send_byte_serial, _get_byte_serial
+        ; end of transport-specific calls
 
         .importzp   tmp1
 
@@ -82,13 +86,13 @@ IO_BARRIER = $FF
         ;sta     arg
 .endmacro
 
-.segment "s"                                                        ; CHANGE A
+.segment "n"                                                        ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::SPRITE, error ; Make sure the callback is where we think
-        jmp     _big_draw_sprite_s_3                                    ; CHANGE A
+        jmp     _big_draw_sprite_n_3                                    ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::NAME, error ; Make sure the callback is where we think
-        jmp     _big_draw_name_s                                        ; CHANGE A
+        jmp     _big_draw_name_n                                        ; CHANGE A
 
 .assert * = __OPPONENT_START__+OPPONENT::LOSE_POINT, error ; Make sure the callback is where we think
         jmp     avatar_set_lose_sprite
@@ -428,84 +432,6 @@ out:    lda     #$00
         rts
 .endproc
 
-.proc configure_slot
-        sta     str_low+1
-        stx     str_high+1
-        ; parameter
-        jsr     popax
-        sta     get_parameter+1
-        sta     update_parameter+1
-        stx     get_parameter+2
-        stx     update_parameter+2
-        ; lower bound
-        jsr     popax
-        sta     dec_param+1
-        stx     inc_param+1
-
-print:
-        lda     #0
-        jsr     _gotox
-
-str_low:
-        lda     #$FF
-str_high:
-        ldx     #$FF
-        jsr     _strout
-
-get_parameter:
-        lda     $FFFF
-        sta     tmp_param
-        ldx     #0
-
-        bit     ostype
-        bmi     print_port_name
-print_slot_number:
-        jsr     _numout
-
-        lda     #' '
-        jsr     _cout
-        jmp     update
-
-print_port_name:
-        lda     #<modem_str
-        ldx     #>modem_str
-        ldy     tmp_param
-        beq     :+
-        lda     #<printer_str
-        ldx     #>printer_str
-:       jsr     _strout
-
-update:
-        ldx     tmp_param
-        jsr     _read_key
-        cmp     #$08
-        beq     dec_param
-        cmp     #$15
-        beq     inc_param
-        cmp     #$0D              ; Enter
-        beq     done
-        cmp     #CH_ESC
-        beq     cancel
-        bne     print
-dec_param:
-        cpx     #$00
-        bcc     print
-        dex
-        jmp     update_parameter
-inc_param:
-        cpx     #$FF
-        bcs     print
-        inx
-update_parameter:
-        stx     $FFFF
-        jmp     print
-
-cancel:
-        inc     game_cancelled
-done:
-        rts
-.endproc
-
 .proc avatar_set_win_sprite
 cx:     ldx     #0
 cy:     ldy     #0
@@ -751,7 +677,7 @@ out_err:
         jmp     _init_puck_position
 .endproc
 
-; Sends A over serial, receives A over serial
+; Sends A over transport, receives A over transport
 .proc exchange_char
         php
         sei
@@ -820,98 +746,25 @@ out:    rts
 ; maybe_get_byte must load the read byte in A or return with carry set
 ; if no byte is available on the transport layer.
 .proc maybe_get_byte
-        jmp     _serial_read_byte_direct
+        jmp     _send_byte_serial
 .endproc
 
 ; send_byte must send the byte in A.
 .proc send_byte
-        jmp     _serial_putc_direct
+        jmp     _get_byte_serial
 .endproc
 
 ; Setup the transport layer (serial slot)
 .proc configure_transport
-        jmp     configure_serial
+        jmp     _configure_serial
 .endproc
 
 ; Cleanup the transport layer
 .proc teardown_transport
-        jmp     _serial_close
+        jmp     _teardown_serial
 .endproc
 
 ; ========= End of transport-specific functions ======
-
-.proc configure_serial
-        bit     ostype
-        bpl     ask_slot
-
-        ; Patch defaults and callbacks for
-        ; IIgs z8530 integrated serial ports
-        lda     #0
-        sta     serial_slot
-
-ask_slot:
-        lda     #0
-        sta     _last_key         ; Reset last key to avoid pausing on config exit
-
-        lda     #0
-        jsr     pusha
-        lda     #23
-        jsr     _gotoxy
-        lda     #<help_str
-        ldx     #>help_str
-        jsr     _strout
-
-        lda     #20
-        jsr     _gotoy
-
-        bit     ostype
-        bmi     iigs
-        lda     #1+1
-        ldx     #7
-        jmp     :+
-iigs:
-        lda     #0+1
-        ldx     #1
-:       jsr     pushax
-        lda     #<serial_slot
-        ldx     #>serial_slot
-        jsr     pushax
-        lda     #<slot_str
-        ldx     #>slot_str
-        jsr     configure_slot
-
-        lda     game_cancelled
-        bne     cancel
-
-        lda     serial_slot
-        ldx     #SER_BAUD_115200
-        jsr     _serial_open
-        cmp     #SER_ERR_OK
-        bne     open_error
-        clc
-        rts
-
-open_error:
-        lda     game_cancelled    ; Did we cancel at some point?
-        bne     cancel
-
-        lda     #12
-        jsr     pusha
-        lda     #22
-        jsr     _gotoxy
-        lda     #<open_error_str
-        ldx     #>open_error_str
-        jsr     _strout
-        lda     #<1000
-        ldx     #>1000
-        jsr     _platform_msleep
-        jsr     _home
-        jmp     ask_slot
-
-cancel:
-        sec
-        rts
-.endproc
 
 ser_timer:        .word   0
 serial_slot:      .byte   2
@@ -928,14 +781,8 @@ ident_str:        .asciiz "SHFL1"
 
 wait_str:         .asciiz "WAITING FOR PLAYER"
 
-slot_str:         .asciiz "SERIAL SLOT: "
-open_error_str:   .asciiz "SERIAL OPEN ERROR"
-
-help_str:         .asciiz "ARROW KEYS TO CHANGE, ENTER TO VALIDATE"
+_conf_help_str:   .asciiz "ARROW KEYS TO CHANGE, ENTER TO VALIDATE"
 ready_str:        .asciiz "                 READY!                "
-
-modem_str:        .asciiz "MODEM  "
-printer_str:      .asciiz "PRINTER"
 
 avatar_str:       .asciiz "YOUR AVATAR: "
 
@@ -957,23 +804,23 @@ avatar_names:     .addr   raccoon_str
 
 NUM_AVATARS = (* - avatar_names)/2
 
-avatar_sprites:   .addr   _big_draw_sprite_s_3
-                  .addr   _big_draw_sprite_s_4
-                  .addr   _big_draw_sprite_s_5
-                  .addr   _big_draw_sprite_s_1
-                  .addr   _big_draw_sprite_s_2
-                  .addr   _big_draw_sprite_s_6
-                  .addr   _big_draw_sprite_s_7
+avatar_sprites:   .addr   _big_draw_sprite_n_3
+                  .addr   _big_draw_sprite_n_4
+                  .addr   _big_draw_sprite_n_5
+                  .addr   _big_draw_sprite_n_1
+                  .addr   _big_draw_sprite_n_2
+                  .addr   _big_draw_sprite_n_6
+                  .addr   _big_draw_sprite_n_7
 
 NUM_SPRITES = (* - avatar_sprites)/2
 .assert NUM_AVATARS = NUM_SPRITES, error
 
 avatar_animations:.addr    return0, return0
-                  .addr    _big_draw_win_s_4, _big_draw_lose_s_4
-                  .addr    _big_draw_win_s_5, _big_draw_lose_s_5
+                  .addr    _big_draw_win_n_4, _big_draw_lose_n_4
+                  .addr    _big_draw_win_n_5, _big_draw_lose_n_5
                   .addr    return0, return0
                   .addr    return0, return0
-                  .addr    _big_draw_win_s_6, _big_draw_lose_s_6
+                  .addr    _big_draw_win_n_6, _big_draw_lose_n_6
                   .addr    return0, return0
 
 NUM_ANIMATIONS = (* - avatar_animations)/4

@@ -29,7 +29,7 @@ opponents = \
 	g \
 	h \
 	i \
-	s \
+	n \
 
 ifdef DEBUG_OPPONENT
 	DEBUG_OPPONENT_NUM := $(shell printf "%d" "'$(DEBUG_OPPONENT)'")
@@ -93,9 +93,9 @@ lose_unperfect = \
 	lose_e.unperfect.gen.s \
 	lose_f.unperfect.gen.s \
 	lose_h.unperfect.gen.s \
-	lose_s_4.unperfect.gen.s \
-	lose_s_5.unperfect.gen.s \
-	lose_s_6.unperfect.gen.s \
+	lose_n_4.unperfect.gen.s \
+	lose_n_5.unperfect.gen.s \
+	lose_n_6.unperfect.gen.s \
 	losegame_c_1.unperfect.gen.s \
 	losegame_c_2.unperfect.gen.s \
 	losegame_c_3.unperfect.gen.s \
@@ -120,9 +120,9 @@ win_unperfect = \
 	win_f.unperfect.gen.s \
 	win_g.unperfect.gen.s \
 	win_h.unperfect.gen.s \
-	win_s_4.unperfect.gen.s \
-	win_s_5.unperfect.gen.s \
-	win_s_6.unperfect.gen.s \
+	win_n_4.unperfect.gen.s \
+	win_n_5.unperfect.gen.s \
+	win_n_6.unperfect.gen.s \
 
 serve_unperfect   = \
 	serve_g_1.unperfect.gen.s \
@@ -131,13 +131,13 @@ serve_unperfect   = \
 	serve_g_4.unperfect.gen.s \
 
 special_unperfect   = \
-	sprite_s_1.unperfect.gen.s \
-	sprite_s_2.unperfect.gen.s \
-	sprite_s_3.unperfect.gen.s \
-	sprite_s_4.unperfect.gen.s \
-	sprite_s_5.unperfect.gen.s \
-	sprite_s_6.unperfect.gen.s \
-	sprite_s_7.unperfect.gen.s \
+	sprite_n_1.unperfect.gen.s \
+	sprite_n_2.unperfect.gen.s \
+	sprite_n_3.unperfect.gen.s \
+	sprite_n_4.unperfect.gen.s \
+	sprite_n_5.unperfect.gen.s \
+	sprite_n_6.unperfect.gen.s \
+	sprite_n_7.unperfect.gen.s \
 	normal_h.unperfect.gen.s \
 	normal_i.unperfect.gen.s \
 	moving_i_1.unperfect.gen.s \
@@ -220,9 +220,9 @@ shflpuck_SOURCES := \
 	code/load_data.s \
 	code/sprites.s \
 	code/mini_conio.s \
-	code/driver_s.s \
-	code/acia_s.s \
-	code/z8530_s.s \
+	code/net_serial.s \
+	code/net_acia.s \
+	code/net_z8530.s \
 	../lib/fastirq.s \
 	../lib/asm/hgr_tables.s \
 	../lib/asm/hgr.s \
