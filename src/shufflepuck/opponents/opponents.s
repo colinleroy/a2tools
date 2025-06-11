@@ -76,23 +76,6 @@
         .include    "ser-error.inc"
         .include    "accelerator.inc"
 
-; ====== Transport abstraction ============================
-
-; maybe_get_byte must load the read byte in A or return with carry set
-; if no byte is available on the transport layer.
-maybe_get_byte      = _serial_read_byte_direct
-
-; send_byte must send the byte in A.
-send_byte           = _serial_putc_direct
-
-; Setup the transport layer (serial slot)
-configure_transport = configure_serial
-
-; Cleanup the transport layer
-teardown_transport  = _serial_close
-
-; ====== End transport abstraction ========================
-
 IO_BARRIER = $FF
 
 .macro DBG arg
@@ -831,6 +814,31 @@ out_abort:
         bcc     :-
 out:    rts
 .endproc
+
+; ========= Transport-specific functions ======
+
+; maybe_get_byte must load the read byte in A or return with carry set
+; if no byte is available on the transport layer.
+.proc maybe_get_byte
+        jmp     _serial_read_byte_direct
+.endproc
+
+; send_byte must send the byte in A.
+.proc send_byte
+        jmp     _serial_putc_direct
+.endproc
+
+; Setup the transport layer (serial slot)
+.proc configure_transport
+        jmp     configure_serial
+.endproc
+
+; Cleanup the transport layer
+.proc teardown_transport
+        jmp     _serial_close
+.endproc
+
+; ========= End of transport-specific functions ======
 
 .proc configure_serial
         bit     ostype
