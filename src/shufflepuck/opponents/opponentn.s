@@ -214,7 +214,35 @@ error:
         rts
 .endproc
 
-.proc send_puck_params
+.proc send_miss_packet
+:       lda     #IO_BARRIER         ; This needs sync, send a barrier
+        DBG     $2023
+        jsr     send_byte
+        jsr     get_byte            ; And wait for its ack
+        bcs     cancel
+        cmp     #IO_BARRIER
+        bne     :-
+        DBG     $2024
+
+        lda     #'M'                ; Send Miss
+        jsr     send_byte
+        DBG     $2025
+        jsr     get_byte            ; Get ack
+        DBG     $2026
+cancel:
+        rts
+.endproc
+
+.proc send_puck_packet
+:       lda     #IO_BARRIER         ; This needs sync, send a barrier
+        DBG     $2023
+        jsr     send_byte
+        jsr     get_byte            ; And wait for its ack
+        bcs     cancel
+        cmp     #IO_BARRIER
+        bne     :-
+        DBG     $2024
+
         lda     #$00             ; Reset hit indicator
         sta     player_puck_delta_change
 
@@ -349,33 +377,12 @@ prepare_exchange:
         beq     get_and_send_data   ; Otherwise we have nothing special to say
 
 must_send_miss:
-:       lda     #IO_BARRIER         ; This needs sync, send a barrier
-        DBG     $2023
-        jsr     send_byte
-        jsr     get_byte            ; And wait for its ack
-        bcs     cancel
-        cmp     #IO_BARRIER
-        bne     :-
-        DBG     $2024
-
-        lda     #'M'                ; Send Miss
-        jsr     send_byte
-        DBG     $2025
-        jsr     get_byte            ; Get ack
-        DBG     $2026
+        jsr     send_miss_packet
         bcs     cancel
         jmp     puck_crashed        ; And get out
 
 must_send_puck_params:
-:       lda     #IO_BARRIER         ; This needs sync, send a barrier
-        DBG     $2023
-        jsr     send_byte
-        jsr     get_byte            ; And wait for its ack
-        bcs     cancel
-        cmp     #IO_BARRIER
-        bne     :-
-        DBG     $2024
-        jsr     send_puck_params    ; Send puck params
+        jsr     send_puck_packet    ; Send puck params
         jmp     clc_out             ; And get out
 
 get_and_send_data:
