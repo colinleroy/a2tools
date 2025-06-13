@@ -324,7 +324,7 @@ loop_start:
         bne     frame_start
         lda     #6
         sta     frame_counter
-        bne     game_loop
+        sta     skip_move
 
 frame_start:
         ; First thing is drawing the screen so we don't flicker
@@ -337,7 +337,11 @@ draw_done:
         lda     #$00
         sta     serving
 
-:       ; Update our pusher position,
+:       clc
+        lda     skip_move
+        bne     moves_done
+
+        ; Update our pusher position,
         jsr     _move_my_pusher
 
         ; Let the opponent think about what to do,
@@ -358,6 +362,10 @@ draw_done:
 
         ; Update the puck's position,
         jsr     _move_puck
+        ; Carry now set if puck crashed, don't clear it until after HIT_CB
+moves_done:
+        lda     #$00
+        sta     skip_move
         jsr     __OPPONENT_START__+OPPONENT::HIT_CB
         ; and if carry is set, it reached the end of the table.
         bcs     reset_point
@@ -507,6 +515,7 @@ opponent:       .res 1
 in_tournament:  .res 1
 won_tournament: .res 1
 frame_counter:  .res 1
+skip_move:      .res 1
 _last_key:      .res 1
 game_cancelled: .res 1
 _abs_max_dx:    .res 1
