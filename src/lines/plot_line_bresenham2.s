@@ -24,7 +24,7 @@
 
         .import   dx, dy, ox, oy
         
-        .importzp ptr1, tmp1, tmp2, ptr2, ptr3, ptr4
+        .importzp ptr1, tmp1, ptr2, ptr3, ptr4
 
 _x0       = ptr2
 _x1       = ptr2+1
@@ -36,7 +36,7 @@ slope_err = ptr4+1
 .proc get_slope_err
         stx     tmp1
         ldx     #1
-        stx     tmp2
+        stx     slope_err
 
 shift:
         asl
@@ -49,10 +49,9 @@ sub:
         sec
 
 check:
-        rol     tmp2
+        rol     slope_err
         bcc     shift
 
-        lda     tmp2
         rts
 .endproc
 
@@ -133,10 +132,8 @@ slope_x:
         lda     _deltay           ; Compute slope_err
         ldx     _deltax
         jsr     get_slope_err
-        sta     slope_err
 
         clc                       ; For later error += slope_err
-
         ldx     _x0
 next_x:
         stx     _x0
@@ -186,11 +183,10 @@ slope_y:
         lda     _deltax           ; Compute slope err
         ldx     _deltay
         jsr     get_slope_err
-        sta     slope_err
 
 next_y:
 .ifdef INLINE_PLOT
-xdiv7b:
+xdiv7b:                           ; Plot the dot
         ldy     #$FF
 xbitb:
         lda     #$FF
@@ -232,11 +228,5 @@ move_y2:
 .endproc
 
 .bss
-; _x0: .res 1
-; _x1: .res 1
-; _y0: .res 1
-; _y1: .res 1
-; error: .res 1
-; slope_err: .res 1
 _deltax: .res 1
 _deltay: .res 1
