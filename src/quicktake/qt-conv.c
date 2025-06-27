@@ -250,12 +250,12 @@ static void build_scale_table(const char *ofname) {
     col++;
   } while (col); /* FILE_WIDTH == 256 */
 
-  row = 0;
+  row = scaled_band_height;
   do {
     /* Y cropping is handled in main decode/save loop */
+    row--;
     orig_y_table[row] = raw_image + FILE_IDX((row) * 10 / scaling_factor, 0) + RAW_Y_OFFSET*RAW_WIDTH + orig_x0_offset;
-    row++;
-  } while (row < scaled_band_height);
+  } while (row);
 
 }
 
@@ -308,11 +308,11 @@ static void write_raw(uint16 h)
   __asm__("lda %v", last_band_crop);
   __asm__("beq %g", full_band);
   __asm__("ldy %o", h);
-  __asm__("lda (sp),y");
+  __asm__("lda (c_sp),y");
   __asm__("cmp %v", last_band);
   __asm__("bne %g", full_band);
   __asm__("iny");
-  __asm__("lda (sp),y");
+  __asm__("lda (c_sp),y");
   __asm__("cmp %v+1", last_band);
   __asm__("bne %g", full_band);
 

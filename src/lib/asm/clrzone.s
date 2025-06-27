@@ -5,7 +5,7 @@
                 .import machinetype
                 .endif
                 .import incsp3
-                .importzp sp
+                .importzp c_sp
                 .include "apple2.inc"
 
         .segment "LOWCODE"
@@ -40,19 +40,19 @@ _clrzone:
         sta     clr_lye
 
         ldy     #$02
-        lda     (sp),y
+        lda     (c_sp),y
         sta     clr_lxs
         pha                     ; backup start X
 
         dey
-        lda     (sp),y
+        lda     (c_sp),y
         clc
         adc     WNDTOP
         sta     clr_lys
         pha                     ; backup start Y
 
         dey
-        lda     (sp),y
+        lda     (c_sp),y
         cmp     WNDWDTH         ; Make sure end bound is sane
         bcc     :+
         ldy     WNDWDTH

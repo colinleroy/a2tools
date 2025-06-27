@@ -1,5 +1,5 @@
 
-        .importzp   tmp1, tmp2, tmp3, ptr1, ptr2, _prev_ram_irq_vector, _prev_rom_irq_vector, sp, regbank, ptr4
+        .importzp   tmp1, tmp2, tmp3, ptr1, ptr2, _prev_ram_irq_vector, _prev_rom_irq_vector, c_sp, regbank, ptr4
         .importzp   _zp6sip, _zp8sip, _zp10sip, _zp12sip, _zp6ip, _zp6p
         .import     popptr1
         .import     _extendTests, _extendOffsets, _gBitsLeft, _gBitBuf
@@ -1579,7 +1579,7 @@ _decodeNextMCU:
         jsr     decsp6          ; Backup regbank
         ldy     #5
 :       lda     regbank+0,y
-        sta     (sp),y
+        sta     (c_sp),y
         dey
         bpl     :-
 
@@ -1597,7 +1597,7 @@ _decodeNextMCU:
         pha
 
         ldy     #0              ; Restore regbank
-:       lda     (sp),y
+:       lda     (c_sp),y
         sta     regbank+0,y
         iny
         cpy     #6
@@ -1990,7 +1990,7 @@ ZAG2_Done:
 
 uselessBlocksDone:
         ldy     #0              ; Restore regbank
-:       lda     (sp),y
+:       lda     (c_sp),y
         sta     regbank+0,y
         iny
         cpy     #6

@@ -25,7 +25,7 @@
         .import   popax, pushax, incsp6
         .import   return0, returnFFFF
 
-        .importzp sp
+        .importzp c_sp
 
         .include  "../../../surl-server/surl_protocol.inc"
         .include  "../../surl.inc"
@@ -46,7 +46,7 @@
         jsr       pushax
         ; then walk the stack in reverse order
         ldy       #5
-:       lda       (sp),y
+:       lda       (c_sp),y
         jsr       _serial_putc_direct
         dey
         bpl       :-

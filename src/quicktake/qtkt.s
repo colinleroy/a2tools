@@ -1,4 +1,4 @@
-        .importzp        sp, sreg
+        .importzp        c_sp, sreg
         .importzp        tmp1, tmp2, tmp3, tmp4, ptr1, ptr2, ptr3, ptr4
         .importzp        _prev_rom_irq_vector, _prev_ram_irq_vector
         .importzp        _zp2, _zp3, _zp4p, _zp6p, _zp8p, _zp10p, _zp12, _zp13
@@ -263,21 +263,21 @@ fill_cache:
         ldy     #$03
 
         lda     #$00                    ; ifd is never going to be > 255
-        sta     (sp),y
+        sta     (c_sp),y
         dey
         lda     _ifd
-        sta     (sp),y
+        sta     (c_sp),y
         dey
 
         ; Push buffer
         lda     _cache_start+1
         sta     cur_cache_ptr+1
-        sta     (sp),y
+        sta     (c_sp),y
         dey
 
         lda     _cache_start
         sta     cur_cache_ptr
-        sta     (sp),y
+        sta     (c_sp),y
 
         ; Push count (CACHE_SIZE)
         lda     #<CACHE_SIZE
@@ -684,33 +684,33 @@ band_done:
         lda     #$FF
 
         dey                              ; -1,
-        sta     (sp),y
+        sta     (c_sp),y
         dey
-        sta     (sp),y
+        sta     (c_sp),y
 
         dey                              ; -1,
-        sta     (sp),y
+        sta     (c_sp),y
         dey
-        sta     (sp),y
+        sta     (c_sp),y
 
         dey                              ; 80*22,
         lda     #>(80*22)
-        sta     (sp),y
+        sta     (c_sp),y
         dey
         lda     #<(80*22)
-        sta     (sp),y
+        sta     (c_sp),y
 
         dey                              ; pgbar_state (long)
         lda     #0
-        sta     (sp),y
+        sta     (c_sp),y
         dey
-        sta     (sp),y
+        sta     (c_sp),y
         dey
         lda     pgbar_state+1
-        sta     (sp),y
+        sta     (c_sp),y
         dey
         lda     pgbar_state
-        sta     (sp),y
+        sta     (c_sp),y
 
         lda     #$00
         sta     sreg+1                   ; height (long)

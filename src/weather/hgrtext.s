@@ -3,7 +3,7 @@
 .export		Tile
 .import		popa
 
-.importzp   sp, sreg, regsave, regbank
+.importzp   sreg, regsave, regbank
 ;------------------------------------------------
 ; Constants
 ;------------------------------------------------
