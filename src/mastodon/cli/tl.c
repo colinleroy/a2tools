@@ -1101,6 +1101,11 @@ inject_cmd:
       case 'k':
         cur_action = SHOW_BOOKMARKS;
         return;
+      case 't':      /* SHOW_QUOTE */
+        if (IS_NULL(root_status) || IS_NULL(root_status->quote)) {
+          cur_action = NAVIGATE;
+          return;
+        } /* else fallthrough */
       case CH_ENTER: /* SHOW_FULL_STATUS */
       case CH_ESC:   /* BACK */
       case 'c':      /* COMPOSE */
@@ -1243,6 +1248,7 @@ static void cli(void) {
         }
       case SHOW_PROFILE:
       case SHOW_FULL_STATUS:
+      case SHOW_QUOTE:
         *new_root = '\0';
         *new_leaf_root = '\0';
         disp = current_list->displayed_posts[current_list->first_displayed_post];
@@ -1258,6 +1264,10 @@ static void cli(void) {
          */
         if (current_list->kind != SHOW_NOTIFICATIONS) {
           disp_status = (status *)disp;
+          if (cur_action == SHOW_QUOTE && IS_NOT_NULL(disp_status->quote)) {
+            disp_status = disp_status->quote;
+            cur_action = SHOW_FULL_STATUS;
+          }
           if (cur_action == SHOW_FULL_STATUS) {
             strcpy(new_root, disp_status->reblog_id[0] ? disp_status->reblog_id : disp_status->id);
             strcpy(new_leaf_root, disp_status->id);

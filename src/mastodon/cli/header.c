@@ -83,11 +83,14 @@ void show_help (list *l, status *root_status, notification *root_notif) {
     if (IS_NOT_NULL(root_status->spoiler_text)) {
       dputs(" Toggle CW : W     \r\n");
     }
-    if (root_status->n_medias > 0) {
+    if (root_status->n_medias) {
       dputs(" Medias    : I     \r\n");
     }
     if (IS_NOT_NULL(root_status->poll)) {
       dputs(" Vote      : V     \r\n");
+    }
+    if (IS_NOT_NULL(root_status->quote)) {
+      dputs(" View quote: T     \r\n");
     }
 
     flags = root_status->flags;

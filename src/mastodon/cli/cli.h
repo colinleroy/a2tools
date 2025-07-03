@@ -32,6 +32,7 @@ extern unsigned char SHOW_HELP;
 #define EDIT                 'e'
 #define VOTING               'v'
 #define QUIT                 'q'
+#define SHOW_QUOTE           't'
 
 /* special cases (extra step or mapped arrays )*/
 #define SHOW_HOME_TIMELINE   0
