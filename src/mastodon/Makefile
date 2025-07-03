@@ -58,7 +58,6 @@ mastoimg_SOURCES := \
 mastoimg_CC65SOURCES := \
 	../lib/surl/surl_stream_av/$(CPU).s \
 	$(common_CC65SOURCES) \
-	../lib/a2_features.s \
 	../lib/asm/hgr_mono40.s \
 	../lib/asm/hgr.s \
 	../lib/asm/file_select.s \

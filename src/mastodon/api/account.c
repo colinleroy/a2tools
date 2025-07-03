@@ -14,6 +14,9 @@ account *account_new_from_lines(void) {
   account *a = account_new();
   id_copy(a->id, lines[0]);
   a->display_name = strdup(lines[1]);
+  if (strlen(a->display_name) > 30) {
+    a->display_name[30] = '\0';
+  }
   a->acct = strdup(lines[2]);
   a->username = strdup(lines[3]);
 

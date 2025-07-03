@@ -1,2 +1,5 @@
 #!/bin/bash
+if [ "$1" != "" ]; then
+  cp creds/mastsettings.$1 mastsettings
+fi
 make clean mastoperso.po && mame apple2c0 -window -flop1 mastoperso.po -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug

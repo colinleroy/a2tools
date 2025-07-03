@@ -2,6 +2,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <conio.h>
 #include "malloc0.h"
 #include "atoc.h"
 #include "surl.h"
@@ -42,17 +43,19 @@ static status *status_new(void) {
 #pragma code-name (push, "LOWCODE")
 #endif
 
-const char *basic_selector   = ".reblog|(.account.id,.account.display_name,.account.acct,.account.username,"
+const char *basic_selector = ".reblog|(.account.id,.account.display_name,.account.acct,.account.username,"
                                       ".created_at,.reblog.id//\"-\",.spoiler_text//\"\","
                                       "(.media_attachments|length),"
                                       ".media_attachments[0].type//\"-\","
                                       ".replies_count,.reblogs_count,.favourites_count,"
-                                      ".visibility,.reblogged,.favourited,.bookmarked,.poll.id"
+                                      ".visibility,.reblogged,.favourited,.bookmarked,.poll.id//\"-\","
+                                      ".quote.status.id//.quote.quoted_status.id//\"-\""
                                       ")";
-const char *content_selector = ".reblog|(.content)";
+#define BASIC_SELECTOR_NLINES 18
 
-#pragma register-vars(push, on)
-static __fastcall__ char status_fill_from_json(register status *s, char *id, char full) {
+const char *content_selector       = ".reblog|(.content| sub(\"<span class=.quote-inline.*\";\"\";\"i\"))";
+
+static __fastcall__ char status_fill_from_json(status *s, char *id, char full) {
   char c, n_lines;
   int r;
   char *content;
@@ -65,10 +68,10 @@ again:
                     translit_charset, SURL_HTMLSTRIP_NONE,
                     BUF_SIZE);
 
-  n_lines = strnsplit_in_place(gen_buf, '\n', lines, 17);
-  if (r >= 0 && n_lines >= 16) {
+  n_lines = strnsplit_in_place(gen_buf, '\n', lines, BASIC_SELECTOR_NLINES);
+  if (r >= 0 && n_lines == BASIC_SELECTOR_NLINES) {
     if (!is_reblog && lines[5][0] != '-') {
-      s->reblogged_by = strdup(lines[1]);
+      s->reblogged_by = strdup(lines[1][0] ? lines[1]:lines[2]);
       id_copy(s->reblog_id, s->id);
       id_copy(s->id, lines[5]);
       is_reblog = 1;
@@ -118,10 +121,15 @@ again:
       s->flags |= BOOKMARKED;
 
     /* Poll */
-    if (n_lines == 17) {
+    if (lines[16][0] != '-') {
       s->poll = poll_new();
       id_copy(s->poll->id, lines[16]);
       poll_fill(s->poll, is_reblog /* POLL_FROM_REBLOG == 1, POLL_FROM_STATUS == 0 */);
+    }
+
+    /* Quote */
+    if (lines[17][0] != '-') {
+      id_copy(s->quote_id, lines[17]);
     }
   } else {
     return -1;
@@ -153,24 +161,31 @@ void status_free(register status *s) {
   free(s->reblogged_by);
   account_free(s->account);
   poll_free(s->poll);
+  status_free(s->quote);
   free(s);
 }
-#pragma register-vars(pop)
 
+/* Function is recursive */
+#pragma static-locals(push, off)
 status *api_get_status(char *status_id, char full) {
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, STATUS_ENDPOINT"/%s", status_id);
   get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
-  
+
   if (surl_response_ok()) {
     status *s = status_new();
-    if (status_fill_from_json(s, status_id, full) == 0)
+    if (status_fill_from_json(s, status_id, full) == 0) {
+      if (s->quote_id[0] && strcmp(s->quote_id, s->id)) {
+        s->quote = api_get_status(s->quote_id, full);
+      }
       return s;
-    else
+    }
+    else {
       status_free(s);
+    }
   }
-
   return NULL;
 }
+#pragma static-locals(pop)
 
 #ifdef __CC65__
 #pragma code-name (pop)

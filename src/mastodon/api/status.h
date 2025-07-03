@@ -18,6 +18,7 @@ struct _status {
   signed char displayed_at;
   char id[SNOWFLAKE_ID_LEN];
   char reblog_id[SNOWFLAKE_ID_LEN];
+  char quote_id[SNOWFLAKE_ID_LEN];
   char *created_at;
   char *spoiler_text;
   char *content;
@@ -31,6 +32,7 @@ struct _status {
   char flags;
   char visibility;
   poll *poll;
+  status *quote;
 };
 
 void status_free(status *s);

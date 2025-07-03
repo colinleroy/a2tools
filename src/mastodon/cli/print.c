@@ -77,6 +77,7 @@ int print_buf(register char *buffer, char hide, char allow_scroll) {
       if (x == wrap_idx) {
         --writable_lines;
         x = 0;
+
         /* don't scroll last char */
         if (writable_lines == 0 && !l_allow_scroll) {
           cputc(l_hide ? '.':*w);
@@ -85,12 +86,17 @@ int print_buf(register char *buffer, char hide, char allow_scroll) {
       } else {
         x++;
       }
-      if (!l_hide || *w == ' ' || *w == '\r')
+      if (!l_hide || *w == ' ' || *w == '\r') {
         dputc(*w);
-      else
+      } else {
         dputc('.');
+      }
     }
     ++w;
+    /* Skip start of line spaces */
+    while (!x && *w == ' ') {
+      w++;
+    }
   }
   if (scrolled) {
     return -1;
@@ -115,9 +121,6 @@ int print_status(register status *s, char hide, char full) {
   }
 
   /* Display name + date */
-  if (strlen(a->display_name) > 30) {
-    a->display_name[30] = '\0';
-  }
   dputs(a->display_name);
 
   if (has_80cols) {
@@ -150,7 +153,23 @@ int print_status(register status *s, char hide, char full) {
   scrolled = print_buf(s->content, hide && IS_NOT_NULL(s->spoiler_text), (full && s->displayed_at == 0));
   if (scrolled && !(full && s->displayed_at == 0))
     return -1;
+  if (IS_NOT_NULL(s->quote)) {
+      status *q = s->quote;
 
+      CHECK_AND_CRLF();
+      dputs("_Quote: ");
+      dputs(q->account->display_name ? q->account->display_name : q->account->acct);
+      dputs("___");
+      CHECK_AND_CRLF();
+      dputc(CH_VLINE);
+      scrolled = print_buf(q->content, hide && IS_NOT_NULL(q->spoiler_text), (full && s->displayed_at == 0));
+      if (wherex() < NUMCOLS - RIGHT_COL_START - 3) {
+        dputc('_');
+        dputc(CH_VLINE);
+      }
+      if (scrolled && !(full && s->displayed_at == 0))
+        return -1;
+  }
   CHECK_AND_CRLF();
 
   if (IS_NOT_NULL(p)) {
