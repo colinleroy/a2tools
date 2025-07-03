@@ -1031,7 +1031,7 @@ inject_cmd:
         hide_cw = !hide_cw;
         limit = 1; /* print the first one */
         break;
-      case 'f':
+      case FAV: /* Or FOLLOW, depends */
         if (IS_NOT_NULL(root_status)) {
           api_favourite_status(root_status);
           half_displayed_post = 0;
@@ -1041,7 +1041,7 @@ inject_cmd:
           return;
         }
         break;
-      case 'b':
+      case BOOST: /* Or BLOCK, depends */
         if (IS_NOT_NULL(root_status)) {
           api_reblog_status(root_status);
           half_displayed_post = 0;
@@ -1051,7 +1051,7 @@ inject_cmd:
           return;
         }
         break;
-      case 'm':
+      case BOOKMARK:
         if (IS_NOT_NULL(root_status)) {
           api_bookmark_status(root_status);
           half_displayed_post = 0;
@@ -1065,7 +1065,7 @@ inject_cmd:
           return;
         }
         break;
-      case 'd':
+      case DELETE:
         if (IS_NOT_NULL(root_status)) {
           if (api_delete_status(root_status) == 0) {
             cur_action = BACK;
@@ -1073,7 +1073,7 @@ inject_cmd:
           }
         }
         break;
-      case 'v':
+      case VOTING:
         if (IS_NOT_NULL(root_status) && IS_NOT_NULL(root_status->poll)) {
           cur_action = VOTING;
           do_vote(root_status);
@@ -1089,6 +1089,7 @@ inject_cmd:
           return;
         }
         break;
+      /* Special cases with mapped arrays */
       case 'h':
         cur_action = SHOW_HOME_TIMELINE;
         return;
@@ -1101,21 +1102,22 @@ inject_cmd:
       case 'k':
         cur_action = SHOW_BOOKMARKS;
         return;
-      case 't':      /* SHOW_QUOTE */
+      case SHOW_QUOTE:
         if (IS_NULL(root_status) || IS_NULL(root_status->quote)) {
           cur_action = NAVIGATE;
           return;
         } /* else fallthrough */
-      case CH_ENTER: /* SHOW_FULL_STATUS */
-      case CH_ESC:   /* BACK */
-      case 'c':      /* COMPOSE */
-      case 'o':      /* CONFIGURE */
-      case 'n':      /* SHOW_NOTIFICATIONS */
-      case '/':      /* SEARCH */
-      case 'p':      /* SHOW_PROFILE */
-      case 'i':      /* IMAGES */
-      case 'r':      /* REPLY */
-      case 'e':      /* EDIT */
+      /* Simple cases: */
+      case CH_ENTER:
+      case CH_ESC:
+      case COMPOSE:
+      case CONFIGURE:
+      case SHOW_NOTIFICATIONS:
+      case SEARCH:
+      case SHOW_PROFILE:
+      case IMAGES:
+      case REPLY:
+      case EDIT:
         cur_action = c;
         return;
       case 'q':      /* QUIT */

@@ -33,6 +33,13 @@ extern unsigned char SHOW_HELP;
 #define VOTING               'v'
 #define QUIT                 'q'
 #define SHOW_QUOTE           't'
+#define DELETE               'd'
+#define BOOKMARK             'm'
+#define BOOST                'b'
+#define BLOCK                'b'
+#define FAV                  'f'
+#define FOLLOW               'f'
+#define TOGGLE_CW            'w'
 
 /* special cases (extra step or mapped arrays )*/
 #define SHOW_HOME_TIMELINE   0
