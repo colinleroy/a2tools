@@ -188,7 +188,7 @@ mastoimg.x86_64: $(mastoimg_SOURCES) $(GCCSOURCES)
 	gcc $(CFLAGS) $(GCCCFLAGS) $^ $(GCCLDFLAGS) -o $@	
 
 clean:
-	rm -f *.bin *.x86_64 *.o *.map *.po *.dbg
+	rm -f *.bin *.x86_64 */*.o *.map *.po *.dbg
 
 upload: all
 	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/mastodon/ || \
