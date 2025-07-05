@@ -165,17 +165,23 @@ void status_free(register status *s) {
   free(s);
 }
 
+static char rec_full;
+static char rec_level;
+
 /* Function is recursive */
 #pragma static-locals(push, off)
-status *api_get_status(char *status_id, char full) {
+static status *api_get_status_rec(char *status_id) {
+  if (--rec_level == 0)
+    return NULL;
+
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, STATUS_ENDPOINT"/%s", status_id);
   get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
 
   if (surl_response_ok()) {
     status *s = status_new();
-    if (status_fill_from_json(s, status_id, full) == 0) {
+    if (status_fill_from_json(s, status_id, rec_full) == 0) {
       if (s->quote_id[0] && strcmp(s->quote_id, s->id)) {
-        s->quote = api_get_status(s->quote_id, full);
+        s->quote = api_get_status_rec(s->quote_id);
       }
       return s;
     }
@@ -186,6 +192,12 @@ status *api_get_status(char *status_id, char full) {
   return NULL;
 }
 #pragma static-locals(pop)
+
+status *api_get_status(char *status_id, char full) {
+  rec_level = 3;
+  rec_full  = full;
+  return api_get_status_rec(status_id);
+}
 
 #ifdef __CC65__
 #pragma code-name (pop)
