@@ -13,8 +13,6 @@
         .include        "ser-kernel.inc"
         .include        "ser-error.inc"
 
-        .macpack        cpu
-
         .ifdef SURL_TO_LANGCARD
         .segment "LOWCODE"
         .endif
