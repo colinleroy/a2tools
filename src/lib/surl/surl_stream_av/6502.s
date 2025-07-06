@@ -118,7 +118,7 @@
           sta     SPKR-(SAMPLE_OFFSET+DC),x     ; 5
 .endmacro
 
-.macro JUMP_NEXT_DUTY
+.macro JUMP_NEXT_6
         jmp     zp_jmp
 .endmacro
 
@@ -130,14 +130,16 @@
 .macro STORE_JUMP_TGT_3
         stx     zp_jmp+2
 .endmacro
+
+.macro STORE_JUMP_TGT_4
+          .byte $8E             ; stx abs
+          .byte zp_jmp+2
+          .byte $00
+.endmacro
+
 .macro PREPARE_VIDEO_E4
         tya                     ; 2      Get video byte in A
         cpy     #PAGE_TOGGLE    ; 5      Check for page toggle
-.endmacro
-
-.macro JUMP_NEXT_9
-        STORE_JUMP_TGT_3        ; 3
-        JUMP_NEXT_DUTY          ; 9      jump to next duty cycle
 .endmacro
 
         .bss
@@ -162,7 +164,6 @@ SAMPLE_MULT       = 1
 .include "update_load_progress.s"
 .include "surl_stream_av_send_request.s"
 .include "surl_stream_av_setup_ui.s"
-.include "surl_stream_av_get_art.s"
 
 .align $100
 .assert * = _SAMPLES_BASE + $200, error
@@ -171,6 +172,7 @@ SAMPLE_MULT       = 1
 .include "surl_stream_av_prepare_start.s"
 .include "surl_stream_av_handle_preload.s"
 .include "surl_stream_av.s"
+.include "surl_stream_av_get_art.s"
 
 .align $100
 .assert * = _SAMPLES_BASE + $300, error
@@ -317,18 +319,18 @@ SAMPLE_MULT       = 1
 .align $100
 .assert * = _SAMPLES_BASE + $1E00, error
 .include "duty-cycles/30.s"
+.include "strings-b80a.inc"
 
 .align $100
 .assert * = _SAMPLES_BASE + $1F00, error
 
 .include "duty-cycles/31.s"
+.include "strings-b80b.inc"
 
 ; Last function needing to be aligned (the exit function)
 .align $100
 .assert * = _SAMPLES_BASE + $2000, error
 .include "break_out.s"
-
 .assert * < _SAMPLES_BASE + $2100, error
-.include "strings-b80.inc"
 
 av_streamer_end = *

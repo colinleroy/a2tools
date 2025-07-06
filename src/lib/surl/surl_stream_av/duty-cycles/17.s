@@ -24,7 +24,8 @@ out_sub2:
         WASTE_2                 ; 43
 out_bw:
         WASTE_16                ; 59
-        JUMP_NEXT_9             ; 68
+        STORE_JUMP_TGT_3        ; 62
+        JUMP_NEXT_6             ; 68
 
 vid17:
         WASTE_3                 ; 21

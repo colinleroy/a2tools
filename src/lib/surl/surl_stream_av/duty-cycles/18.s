@@ -16,4 +16,5 @@ no_vid18:
         ____SPKR_DUTY____4      ; 26
 ad18b:  ldx     $A8FF           ; 30
         WASTE_29                ; 59
-        JUMP_NEXT_9             ; 68
+        STORE_JUMP_TGT_3        ; 62
+        JUMP_NEXT_6             ; 68

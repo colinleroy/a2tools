@@ -24,8 +24,10 @@ ad15b:  ldx     $A8FF           ; 32
         sta     cur_mix         ; 53
         lda     #$00            ; 55     clear kbd_cmd
         sta     kbd_cmd         ; 59
-        JUMP_NEXT_9             ; 68
+        STORE_JUMP_TGT_3        ; 62
+        JUMP_NEXT_6             ; 68
 
 not_tab:
         WASTE_16                ; 59
-        JUMP_NEXT_9             ; 68
+        STORE_JUMP_TGT_3        ; 62
+        JUMP_NEXT_6             ; 68

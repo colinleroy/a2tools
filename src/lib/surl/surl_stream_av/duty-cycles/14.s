@@ -14,4 +14,5 @@ vd14:   ldy     $98FF           ; 28
 no_vid14:
 ad14b:  ldx     $A8FF           ; 29
         WASTE_30                ; 59
-        JUMP_NEXT_9             ; 68
+        STORE_JUMP_TGT_3        ; 62
+        JUMP_NEXT_6             ; 68

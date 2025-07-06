@@ -16,4 +16,5 @@ ad26b:  ldx     $A8FF           ; 22
         WASTE_8                 ; 30
         ____SPKR_DUTY____4      ; 34
         WASTE_25                ; 59
-        JUMP_NEXT_9             ; 68
+        STORE_JUMP_TGT_3        ; 62
+        JUMP_NEXT_6             ; 68

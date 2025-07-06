@@ -15,4 +15,5 @@ ad31b:  ldx     $A8FF           ; 22
         WASTE_13                ; 35
         ____SPKR_DUTY____4      ; 39
         WASTE_20                ; 59
-        JUMP_NEXT_9             ; 68
+        STORE_JUMP_TGT_3        ; 62
+        JUMP_NEXT_6             ; 68

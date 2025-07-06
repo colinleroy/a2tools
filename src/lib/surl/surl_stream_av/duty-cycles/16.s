@@ -27,15 +27,19 @@ adp:    sta     $FFFF           ; 48     send cmd
         beq     out             ; 52/53  if escape, exit forcefully
         sta kbd_cmd             ; 55
         WASTE_4                 ; 59
-        JUMP_NEXT_9             ; 68     jump to next duty cycle
+        STORE_JUMP_TGT_3        ; 62
+        JUMP_NEXT_6             ; 68     jump to next duty cycle
 nokbd:
 ad16b:  ldx     $A8FF           ; 43
         WASTE_16                ; 59
-        JUMP_NEXT_9             ; 68
+        STORE_JUMP_TGT_3        ; 62
+        JUMP_NEXT_6             ; 68
 noser:  
         WASTE_26                ; 59
-        JUMP_NEXT_9             ; 68
+        STORE_JUMP_TGT_3        ; 62
+        JUMP_NEXT_6             ; 68
 
 out:    lda     #1              ; 55
         sta     cancelled       ; 59
-        JUMP_NEXT_9             ; 68
+        STORE_JUMP_TGT_3        ; 62
+        JUMP_NEXT_6             ; 68

@@ -14,4 +14,5 @@ vd10:   ldy     $98FF           ; 27
 no_vid10:
 ad10b:  ldx     $A8FF           ; 28
         WASTE_31                ; 59
-        JUMP_NEXT_9             ; 68
+        STORE_JUMP_TGT_3        ; 62
+        JUMP_NEXT_6             ; 68

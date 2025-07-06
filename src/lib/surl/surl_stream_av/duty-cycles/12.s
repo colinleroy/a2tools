@@ -14,4 +14,5 @@ vd12:   ldy     $98FF           ; 29
 no_vid12:
 ad12b:  ldx     $A8FF           ; 30
         WASTE_29                ; 59
-        JUMP_NEXT_9             ; 68
+        STORE_JUMP_TGT_3        ; 62
+        JUMP_NEXT_6             ; 68

@@ -23,4 +23,5 @@ ass:    lda     $A9FF           ; Wait for an audio byte
         and     has_byte
         beq     ass
 ads:    ldx     $A8FF
-        JUMP_NEXT_9
+        STORE_JUMP_TGT_3
+        JUMP_NEXT_6

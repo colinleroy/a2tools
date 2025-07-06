@@ -13,4 +13,5 @@ vd0:    ldy     $98FF           ; 25     load video data
 no_vid0:                        ;        we had no video byte
 ad0b:   ldx     $A8FF           ; 26     load audio data register again
         WASTE_33                ; 59
-        JUMP_NEXT_9             ; 68
+        STORE_JUMP_TGT_3        ; 62
+        JUMP_NEXT_6             ; 68

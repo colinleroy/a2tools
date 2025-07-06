@@ -17,7 +17,7 @@ video_sub:
         sta     (cur_base),y            ; 13    Store data byte
         inc     next_offset             ; 18    and increment offset.
         clv                             ; 20    Reset the offset-received flag.
-        JUMP_NEXT_DUTY                  ; 26    Done, go to next duty cycle
+        JUMP_NEXT_6                     ; 26    Done, go to next duty cycle
 
 @maybe_control:
         bvc     @set_offset             ; 5/6   If V flag is set, this one is a base byte
@@ -27,7 +27,7 @@ video_sub:
         sta     cur_base                ; 12    Store it to destination pointer low byte
         lda     (page_ptr_high),y       ; 17    Load base pointer high byte from base array
         sta     cur_base+1              ; 20    Store it to destination pointer high byte
-        JUMP_NEXT_DUTY                  ; 26    Done, go to next duty cycle
+        JUMP_NEXT_6                     ; 26    Done, go to next duty cycle
 
 @set_offset:                            ;       This is an offset byte
         sty     next_offset             ; 9     Store offset
@@ -41,7 +41,7 @@ video_sub:
         WASTE_4                         ; 18
         .endif
         adc     #$30                    ; 20    $54/$55 + $30 => sets V flag
-        JUMP_NEXT_DUTY                  ; 26    Done, go to next duty cycle
+        JUMP_NEXT_6                     ; 26    Done, go to next duty cycle
 
 @toggle_page:                           ;       Page toggling
         .ifdef DOUBLE_BUFFER
@@ -51,8 +51,8 @@ video_sub:
                                         ; 14    The other array is right in the next/prev page
         sta     page_ptr_high+1         ; 17    No time to update page flag,
         WASTE_3                         ; 20
-        JUMP_NEXT_DUTY                  ; 26    We'll do it in @set_offset
+        JUMP_NEXT_6                     ; 26    We'll do it in @set_offset
         .else
         WASTE_15                        ; 20
-        JUMP_NEXT_DUTY                  ; 26
+        JUMP_NEXT_6                     ; 26
         .endif

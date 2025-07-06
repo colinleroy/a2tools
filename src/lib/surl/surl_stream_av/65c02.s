@@ -112,6 +112,11 @@ SAMPLE_MULT       = 2
 .macro STORE_JUMP_TGT_3
         WASTE_3          ; 3
 .endmacro
+
+.macro STORE_JUMP_TGT_4
+        WASTE_4          ; 4
+.endmacro
+
 .macro PREPARE_VIDEO_E4
         tya                     ; 2      Get video byte in A
         cpy     #PAGE_TOGGLE    ; 5      Check for page toggle
