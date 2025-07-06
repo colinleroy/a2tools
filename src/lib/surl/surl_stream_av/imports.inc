@@ -2,7 +2,7 @@
         .export         _surl_stream_av
         .export         _SAMPLES_BASE
 
-        .importzp       _zp6, _zp8, _zp9, _zp10, _zp12, _zp13, tmp1, tmp2, tmp3, ptr1, ptr2, ptr3, ptr4
+        .importzp       _zp6, _zp8, _zp9, _zp10, tmp1, tmp2, tmp3, ptr1, ptr2, ptr3, ptr4
 
         .import         _ser_data_reg
         .import         _ser_status_reg

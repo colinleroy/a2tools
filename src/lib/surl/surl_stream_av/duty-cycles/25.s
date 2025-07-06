@@ -8,7 +8,7 @@ vd25:   ldy     $98FF           ; 21
         PREPARE_VIDEO_E4        ; 25
         WASTE_4                 ; 29
         ____SPKR_DUTY____4      ; 33
-        PREPARE_VIDEO_S3        ; 36
+        STORE_JUMP_TGT_3        ; 36
         WASTE_3                 ; 39
         jmp     video_sub       ; 42=>68
 

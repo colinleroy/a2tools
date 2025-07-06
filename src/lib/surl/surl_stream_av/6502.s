@@ -100,12 +100,16 @@
 ; -----------------------------------------------------------------------------
 ; CPU-specific constant and macros
 
-next       = _zp10            ; word - next cycle
-
 .macro INIT_NEXT
+        ; Setup zero-page jump
+        lda     #$4C            ; JMP
+        sta     zp_jmp
         lda     #$00
-        sta     next
+        sta     zp_jmp+1
+        lda     #$00
+        sta     zp_jmp+2
 .endmacro
+
 .macro ____SPKR_DUTY____4       ; Toggle speaker
         sta     SPKR            ; 4
 .endmacro
@@ -115,16 +119,16 @@ next       = _zp10            ; word - next cycle
 .endmacro
 
 .macro JUMP_NEXT_DUTY
-        jmp     (next)
+        jmp     zp_jmp
 .endmacro
 
 .macro PREPARE_VIDEO_7
-        PREPARE_VIDEO_S3
+        STORE_JUMP_TGT_3
         PREPARE_VIDEO_E4
 .endmacro
 
-.macro PREPARE_VIDEO_S3
-        stx     next+1          ; 3
+.macro STORE_JUMP_TGT_3
+        stx     zp_jmp+2
 .endmacro
 .macro PREPARE_VIDEO_E4
         tya                     ; 2      Get video byte in A
@@ -132,7 +136,7 @@ next       = _zp10            ; word - next cycle
 .endmacro
 
 .macro JUMP_NEXT_9
-        stx     next+1          ; 3
+        STORE_JUMP_TGT_3        ; 3
         JUMP_NEXT_DUTY          ; 9      jump to next duty cycle
 .endmacro
 

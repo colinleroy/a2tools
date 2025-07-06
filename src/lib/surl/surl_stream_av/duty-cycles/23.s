@@ -5,7 +5,7 @@ vs23:   lda     $99FF           ; 12
         and     has_byte        ; 15
         beq     no_vid23        ; 17/18
 vd23:   ldy     $98FF           ; 21
-        PREPARE_VIDEO_S3        ; 24
+        STORE_JUMP_TGT_3        ; 24
         WASTE_3                 ; 27
         ____SPKR_DUTY____4      ; 31
         PREPARE_VIDEO_E4        ; 35

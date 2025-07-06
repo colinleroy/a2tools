@@ -105,11 +105,11 @@ SAMPLE_MULT       = 2
 .endmacro
 
 .macro PREPARE_VIDEO_7
-        PREPARE_VIDEO_S3
+        STORE_JUMP_TGT_3
         PREPARE_VIDEO_E4
 .endmacro
 
-.macro PREPARE_VIDEO_S3
+.macro STORE_JUMP_TGT_3
         WASTE_3          ; 3
 .endmacro
 .macro PREPARE_VIDEO_E4
@@ -118,7 +118,7 @@ SAMPLE_MULT       = 2
 .endmacro
 
 .macro JUMP_NEXT_9
-        WASTE_3                 ; 3
+        STORE_JUMP_TGT_3        ; 3
         JUMP_NEXT_DUTY          ; 9      jump to next duty cycle
 .endmacro
 

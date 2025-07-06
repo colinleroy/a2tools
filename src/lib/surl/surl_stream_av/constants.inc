@@ -2,7 +2,7 @@ MAX_LEVEL         = 31
 
 has_byte      = tmp3
 
-zp_jmp        = $00 ; Unused
+zp_jmp        = _zp10
 
 MAX_OFFSET    = 126
 N_BASES       = (8192/MAX_OFFSET)+1
