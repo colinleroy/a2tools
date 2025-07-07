@@ -26,10 +26,13 @@
 #include "imagewriter.h"
 #include "charsets.h"
 
-#if defined(CUPSFILTER_VERSION) && CUPSFILTER_VERSION > 2
+#if defined(CUPSFILTER_VERSION) && CUPSFILTER_VERSION >= 2
 #include <cupsfilters/ipp.h>
 #include <cupsfilters/filter.h>
-#define FILTER_TO_PDF 1
+#define CONVERT_TO_PDF 1
+#define PRINT_FORMAT CUPS_FORMAT_PDF
+#else
+#define PRINT_FORMAT CUPS_FORMAT_POSTSCRIPT
 #endif
 
 #include "simple_serial.h"
@@ -67,33 +70,22 @@ static const char* papers[N_PAPER_SIZES] = {
   "ISO_A3_297x420mm"
 };
 
-static char *printer_start_cups_job(const char *filename, cups_dest_t **dest, cups_dinfo_t **info) {
-  int status, job_id;
-  const char *printer_name = NULL;
-#if FILTER_TO_PDF
+#ifdef CONVERT_TO_PDF
+static char *printer_convert_to_pdf(const char *filename) {
+  int status;
   cf_filter_data_t filter_data;
   cf_filter_universal_parameter_t filter_params;
   int input, output;
-#endif
-  const char *job_format = CUPS_FORMAT_POSTSCRIPT;
   char *final_filename;
 
-  *dest = NULL;
-  *info = NULL;
-
-  if (!printer_default_dest) {
-    /* Print to file only */
-    return NULL;
-  } else if (strcmp(printer_default_dest, "default")) {
-    printer_name = printer_default_dest;
-  }
-
-#if FILTER_TO_PDF
   final_filename = malloc(strlen(filename) + 2);
+  if (final_filename == NULL) {
+    return NULL;
+  }
   strcpy(final_filename, filename);
   strcpy(strrchr(final_filename, '.'), ".pdf");
 
-  printf("Printer: converting to pdf.\n");
+  LOG("Printer: converting to pdf.\n");
   input = open(filename, O_RDONLY);
   if (input > 0) {
     output = open (final_filename, O_CREAT|O_WRONLY, S_IRUSR|S_IWUSR);
@@ -106,11 +98,9 @@ static char *printer_start_cups_job(const char *filename, cups_dest_t **dest, cu
       filter_data.final_content_type = strdup("application/pdf");
       filter_data.copies = 1;
       status = cfFilterUniversal(input, output, 1, &filter_data, &filter_params);
-      printf("Printer: Filter status %d, converted from %s to %s\n", status, filename, final_filename);
+      LOG("Printer: Filter status %d, converted from %s to %s\n", status, filename, final_filename);
       close(output);
-      if (status == 0) {
-        job_format = CUPS_FORMAT_PDF;
-      } else {
+      if (status != 0) {
         free(final_filename);
         close(input);
         return NULL;
@@ -125,9 +115,24 @@ static char *printer_start_cups_job(const char *filename, cups_dest_t **dest, cu
     free(final_filename);
     return NULL;
   }
-#else
-  final_filename = strdup(filename);
+
+  return final_filename;
+}
 #endif
+
+static int printer_start_cups_job(const char *filename, cups_dest_t **dest, cups_dinfo_t **info) {
+  int status, job_id;
+  const char *printer_name = NULL;
+
+  *dest = NULL;
+  *info = NULL;
+
+  if (!printer_default_dest) {
+    /* Print to file only */
+    return -1;
+  } else if (strcmp(printer_default_dest, "default")) {
+    printer_name = printer_default_dest;
+  }
 
   LOG("Printer: Getting %s printer...\n", printer_name ? printer_name:"default");
   *dest = cupsGetNamedDest(CUPS_HTTP_DEFAULT, printer_name, NULL);
@@ -137,15 +142,15 @@ static char *printer_start_cups_job(const char *filename, cups_dest_t **dest, cu
     if (*info) {
       LOG("Printer: Got printer info\n");
       status = cupsCreateDestJob(CUPS_HTTP_DEFAULT, *dest, *info,
-                                 &job_id, final_filename, 0, NULL);
+                                 &job_id, filename, 0, NULL);
 
       LOG("Printer: Job %d created with status %d\n", job_id, status);
       if (status == IPP_STATUS_OK) {
         status = cupsStartDestDocument(CUPS_HTTP_DEFAULT, *dest, *info, job_id,
-                                       final_filename, job_format, 0, NULL, 1);
+                                       filename, PRINT_FORMAT, 0, NULL, 1);
         if (status == HTTP_STATUS_CONTINUE) {
           /* We're good! */
-          return final_filename;
+          return 0;
         } else {
           LOG("Printer: Start document: wrong status %d (%s)\n", status,
                  cupsLastErrorString());
@@ -172,12 +177,7 @@ static char *printer_start_cups_job(const char *filename, cups_dest_t **dest, cu
     }
   }
 
-#if FILTER_TO_PDF
-  LOG("Printer: Removing converted file %s\n", final_filename);
-  unlink(final_filename);
-#endif
-  free(final_filename);
-  return NULL;
+  return -1;
 }
 
 static int printer_finish_cups_job(cups_dest_t *dest, cups_dinfo_t *info) {
@@ -239,8 +239,16 @@ static void handle_document(unsigned char first_byte) {
     return;
   }
 
-  final_filename = printer_start_cups_job(filename, &dest, &info);
+#ifdef CONVERT_TO_PDF
+  final_filename = printer_convert_to_pdf(filename);
   if (final_filename != NULL) {
+    LOG("Printer: PDF conversion successful, removing %s\n", filename);
+    unlink(filename);
+  }
+#else
+  final_filename = strdup(filename);
+#endif
+  if (final_filename != NULL && printer_start_cups_job(final_filename, &dest, &info) == 0) {
     fp = fopen(final_filename, "rb");
     if (fp) {
       while ((r = fread(buffer, 1, SIMPLE_SERIAL_BUF_SIZE, fp)) > 0) {
@@ -258,19 +266,14 @@ static void handle_document(unsigned char first_byte) {
       /* We now expect cups_status to be IPP_STATUS_OK for printing to have
        * succeeded */
       if (cups_status == IPP_STATUS_OK) {
-        LOG("Printer: Removing file %s after successful printing\n", filename);
-        unlink(filename);
+        LOG("Printer: Print job successful.\n");
       }
     } else {
       LOG("Printer: can't reopen %s (%s)\n", final_filename, strerror(errno));
     }
-    /* Remove PDF even if print failed */
-    if (strcmp(final_filename, filename)) {
-      LOG("Printer: Removing converted file %s\n", final_filename);
-      unlink(final_filename);
-    }
-    free(final_filename);
   }
+  free(final_filename);
+  LOG("Printer: done.\n");
 }
 
 static void *printer_thread_listener(void *arg) {
