@@ -42,13 +42,6 @@ _init_features:
         bcc     :+
         ror     _is_iie       ; Carry to flag high bit
 
-        .ifndef __APPLE2ENH__
-        pha
-        lda     #1
-        jsr     _allow_lowercase
-        pla
-        .endif
-
 :       ; IIe Enhanced? (means MouseText is there)
         cmp     #$31
         ror     _is_iieenh    ; Carry to flag high bit
