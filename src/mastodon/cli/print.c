@@ -58,7 +58,7 @@ int print_buf(register char *buffer, char hide, char allow_scroll) {
 
   while (*w) {
     if (l_allow_scroll && writable_lines == 1) {
-      gotoxy(0, NUMLINES-1);
+      gotoxy(0, NUMLINES - 1);
       dputs("Hit a key to continue.");
       cgetc();
 
@@ -103,6 +103,8 @@ int print_buf(register char *buffer, char hide, char allow_scroll) {
   }
   return 0;
 }
+
+const char *stats_str = "%d replies, %s%d boosts, %s%d favs, %1d %ss %s";
 
 int print_status(register status *s, char hide, char full) {
   poll *p = s->poll;
@@ -197,21 +199,14 @@ int print_status(register status *s, char hide, char full) {
   CHECK_AND_CRLF();
 
   if (!has_80cols) {
-    cprintf("%d rep, %s%d boost, %s%d fav, %1d %s %s",
-        s->n_replies,
-        (s->flags & REBLOGGED) ? "*":"", s->n_reblogs,
-        (s->flags & FAVOURITED) ? "*":"", s->n_favourites,
-        s->n_medias, media_type_str[s->media_type],
-        (s->flags & BOOKMARKED) ? " - bkm":"      ");
-  } else {
-    cprintf("%d replies, %s%d boosts, %s%d favs, %1d %s%s %s",
-        s->n_replies,
-        (s->flags & REBLOGGED) ? "*":"", s->n_reblogs,
-        (s->flags & FAVOURITED) ? "*":"", s->n_favourites,
-        s->n_medias, media_type_str[s->media_type],
-        s->n_medias > 1 ? "s":"",
-        (s->flags & BOOKMARKED) ? " - bookmarked":"             ");
+    stats_str = "%d rep, %s%d boost, %s%d fav, %1d %s %s";
   }
+  cprintf(stats_str,
+      s->n_replies,
+      (s->flags & REBLOGGED) ? "*":"", s->n_reblogs,
+      (s->flags & FAVOURITED) ? "*":"", s->n_favourites,
+      s->n_medias, media_type_str[s->media_type],
+      (s->flags & BOOKMARKED) ? " - bookmarked":"             ");
   CHECK_AND_CRLF();
 
   CHLINE_SAFE();
