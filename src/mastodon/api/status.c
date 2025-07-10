@@ -53,7 +53,7 @@ const char *basic_selector = ".reblog|(.account.id,.account.display_name,.accoun
                                       ")";
 #define BASIC_SELECTOR_NLINES 18
 
-const char *content_selector       = ".reblog|(.content| sub(\"<span class=.quote-inline.*\";\"\";\"i\"))";
+const char *content_selector       = ".reblog|(.content)";
 
 static __fastcall__ char status_fill_from_json(status *s, char *id, char full) {
   char c, n_lines;
@@ -182,6 +182,12 @@ static status *api_get_status_rec(char *status_id) {
     if (status_fill_from_json(s, status_id, rec_full) == 0) {
       if (s->quote_id[0] && strcmp(s->quote_id, s->id)) {
         s->quote = api_get_status_rec(s->quote_id);
+        if (IS_NOT_NULL(s->quote)) {
+          char *re = strstr(s->content, "\nRE: https://");
+          if (IS_NOT_NULL(re)) {
+            re[0] = '\0';
+          }
+        }
       }
       return s;
     }
