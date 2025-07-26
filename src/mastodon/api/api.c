@@ -163,6 +163,7 @@ int api_get_status_and_replies(char to_load, char *root_id, char *root_leaf_id, 
                                         load_before,
                                         n_before);
   }
+
   if (surl_get_json(gen_buf, selector, NULL, SURL_HTMLSTRIP_NONE, BUF_SIZE) >= 0) {
     char **tmp;
     int i;
