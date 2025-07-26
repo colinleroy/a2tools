@@ -228,7 +228,6 @@ getc_again:
         save_image();
         set_legend(m->media_alt_text[i], i, m->n_media);
         goto getc_again;
-        break;
       default:
         break;
     }
