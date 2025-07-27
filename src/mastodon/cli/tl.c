@@ -132,7 +132,7 @@ static int print_notification(notification *n) {
   char y, width;
   register char *w;
 
-  width = NUMCOLS - RIGHT_COL_START;
+  width = RIGHT_COL_WIDTH;
   n->displayed_at = wherey();
   dputs(n->display_name);
   if (has_80cols) {
@@ -313,7 +313,7 @@ static char load_next_posts(list *l) {
 }
 
 static void set_list_hscrollwindow(void) {
-  set_hscrollwindow(RIGHT_COL_START, NUMCOLS - RIGHT_COL_START);
+  set_hscrollwindow(RIGHT_COL_START, RIGHT_COL_WIDTH);
 }
 
 static void set_full_hscrollwindow(void) {
@@ -340,7 +340,7 @@ static char load_prev_posts(list *l) {
   set_list_hscrollwindow();
   scrolldown_n(2);
   gotoxy(0,1);
-  chline(NUMCOLS - RIGHT_COL_START);
+  chline(RIGHT_COL_WIDTH);
   gotoxy(0, 0);
   dputs(LOADING_TOOT_MSG);
 
@@ -395,7 +395,7 @@ static char search_footer(char c) {
           search_type == 't' ? '*':' ',
           search_type == 'a' ? '*':' ',
           key_combo);
-  chline(NUMCOLS - RIGHT_COL_START);
+  chline(RIGHT_COL_WIDTH);
   gotoxy(0, 0);
   return 0;
 }
@@ -586,7 +586,7 @@ update:
       if (--writable_lines != 0) {
         clrnln();
         if (--writable_lines != 0)
-          chline(NUMCOLS - RIGHT_COL_START);
+          chline(RIGHT_COL_WIDTH);
       } else {
         bottom = 1;
       }
@@ -686,7 +686,7 @@ static char calc_post_height(status *s) {
       ++height;
     } else {
       ++x;
-      if (x == NUMCOLS - RIGHT_COL_START) {
+      if (x == RIGHT_COL_WIDTH) {
         x = 0;
         ++height;
       }
@@ -945,7 +945,7 @@ static void do_vote (status *status) {
     } else {
       c = NUMLINES - 1;
     }
-    clrzone(0, c, NUMCOLS - RIGHT_COL_START - 1, c);
+    clrzone(0, c, RIGHT_COL_AWIDTH, c);
     dputs("1-7: choose, Enter: vote, Esc: cancel");
 
     c = tolower(cgetc());

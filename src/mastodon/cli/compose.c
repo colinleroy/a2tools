@@ -79,7 +79,7 @@ static void update_compose_audience(void) {
 }
 
 static void update_cw(void) {
-  clrzone(0, top + COMPOSE_FIELD_HEIGHT + 2, NUMCOLS - (RIGHT_COL_START+1), top + COMPOSE_FIELD_HEIGHT + 2);
+  clrzone(0, top + COMPOSE_FIELD_HEIGHT + 2, RIGHT_COL_AWIDTH, top + COMPOSE_FIELD_HEIGHT + 2);
   if (has_80cols) {
     if (cw[0] == '\0') {
       dputs("( ) ");
@@ -144,15 +144,15 @@ static void setup_gui(void)
       /* we want to make sure we'll have one and
        * only one separator line */
       gotoxy(0, wherey() - 1);
-      chline(NUMCOLS - RIGHT_COL_START);
-      clrzone(wherex(), wherey(), NUMCOLS - (RIGHT_COL_START+1), wherey());
+      chline(RIGHT_COL_WIDTH);
+      clrzone(wherex(), wherey(), RIGHT_COL_AWIDTH, wherey());
       dputs("Your reply:\r\n");
       top = wherey();
     }
   }
-  chline(NUMCOLS - RIGHT_COL_START);
+  chline(RIGHT_COL_WIDTH);
   gotoxy(0, top + COMPOSE_FIELD_HEIGHT);
-  chline(NUMCOLS - RIGHT_COL_START);
+  chline(RIGHT_COL_WIDTH);
 
   update_compose_audience();
   update_cw();
@@ -204,7 +204,7 @@ try_again:
   y = wherey();
   media_ids[n_medias] = api_send_hgr_image(media_files[n_medias],
                                            media_descriptions[n_medias],
-                                           &err, x, y, NUMCOLS  - (RIGHT_COL_START+1) - x);
+                                           &err, x, y, RIGHT_COL_AWIDTH - x);
   if (IS_NULL(media_ids[n_medias])) {
     char t;
     dputs("An error happened uploading the file:\r\n");
@@ -225,7 +225,7 @@ try_again:
 static void open_cw_menu(void) {
   set_scrollwindow(0, NUMLINES);
 
-  clrzone(0, top + COMPOSE_FIELD_HEIGHT + 2, NUMCOLS - (RIGHT_COL_START+1), top + COMPOSE_FIELD_HEIGHT + 2);
+  clrzone(0, top + COMPOSE_FIELD_HEIGHT + 2, RIGHT_COL_AWIDTH, top + COMPOSE_FIELD_HEIGHT + 2);
   dputs("(*) CW: ");
   dget_text_multi(cw, sizeof(cw) - 1, NULL, 0);
   update_cw();
@@ -588,7 +588,7 @@ int main(int argc, char **argv) {
 
   compose_set_num_chars();
 
-  set_hscrollwindow(RIGHT_COL_START, NUMCOLS - RIGHT_COL_START);
+  set_hscrollwindow(RIGHT_COL_START, RIGHT_COL_WIDTH);
   gotoxy(0, 0);
   if (argc == 7) {
     compose_mode = argv[5];

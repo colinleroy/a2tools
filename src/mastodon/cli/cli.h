@@ -11,6 +11,9 @@
 extern unsigned char NUMCOLS;
 extern unsigned char LEFT_COL_WIDTH;
 extern unsigned char RIGHT_COL_START;
+extern unsigned char RIGHT_COL_WIDTH;
+extern unsigned char RIGHT_COL_AWIDTH;
+
 extern char STATE_FILE[];
 
 #ifndef __APPLE2ENH__

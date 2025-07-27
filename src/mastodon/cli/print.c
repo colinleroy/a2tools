@@ -53,7 +53,7 @@ int print_buf(register char *buffer, char hide, char allow_scroll) {
   l_hide = hide;
   l_allow_scroll = allow_scroll;
 
-  wrap_idx = NUMCOLS - (RIGHT_COL_START + 1);
+  wrap_idx = RIGHT_COL_AWIDTH;
   scrolled = 0;
 
   while (*w) {
@@ -165,7 +165,7 @@ int print_status(register status *s, char hide, char full) {
       CHECK_AND_CRLF();
       dputc(CH_VLINE);
       scrolled = print_buf(q->content, hide && IS_NOT_NULL(q->spoiler_text), (full && s->displayed_at == 0));
-      if (wherex() < NUMCOLS - RIGHT_COL_START - 3) {
+      if (wherex() < RIGHT_COL_WIDTH - 3) {
         dputc('_');
         dputc(CH_VLINE);
       }

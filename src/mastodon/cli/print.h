@@ -14,9 +14,9 @@
     return -1;                \
 } while (0)
 
-#define CHLINE_SAFE() do {            \
-  chline(NUMCOLS - RIGHT_COL_START); \
-  CHECK_NO_CRLF();                    \
+#define CHLINE_SAFE() do {    \
+  chline(RIGHT_COL_WIDTH);    \
+  CHECK_NO_CRLF();            \
 } while (0)
 
 void __fastcall__ clrnln(void);

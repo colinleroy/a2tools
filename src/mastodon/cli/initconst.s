@@ -1,5 +1,6 @@
         .export         _LEFT_COL_WIDTH
         .export         _RIGHT_COL_START
+        .export         _RIGHT_COL_WIDTH, _RIGHT_COL_AWIDTH
         .export         _NUMCOLS
         .export         _STATE_FILE
         .export         _SCROLL_KEYS
@@ -13,7 +14,7 @@
         .import         _has_80cols, _has_128k, _is_iie
 
         .import         _try_videomode
-        
+
         .import         pushax, _strcpy
 
         .segment "DATA"
@@ -21,6 +22,8 @@
 _LEFT_COL_WIDTH:      .byte 19
 _RIGHT_COL_START:     .byte 20
 _NUMCOLS:             .byte 80
+_RIGHT_COL_WIDTH:     .byte 60
+_RIGHT_COL_AWIDTH:    .byte 59
 _TL_SPOILER_TEXT_BUF: .byte 54
 _SHOW_HELP:           .byte 'y'|$80
 
@@ -88,9 +91,11 @@ SHORT_AUDIO_STR:    .asciiz "snd"
 set40:
         lda     #40
         sta     _NUMCOLS
+        sta     _RIGHT_COL_WIDTH
 
         lda     #39
         sta     _LEFT_COL_WIDTH
+        sta     _RIGHT_COL_AWIDTH
 
         lda     #0
         sta     _RIGHT_COL_START
