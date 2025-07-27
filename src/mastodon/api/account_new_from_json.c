@@ -12,11 +12,12 @@
 static char *field_selector = ".fields[i]|(.name+\": \"+.value)";
 #define FIELD_SELECTOR_NUM 8
 
+#pragma static-locals(push, off)
 account *account_new_from_json(void) {
   account *a = NULL;
-  int r;
-  char i, n_lines;
-  char *note;
+  static int r;
+  static char i, n_lines;
+  static char *note;
   
   if (surl_get_json(gen_buf,
                     ".id,.display_name,.acct,.username,"
@@ -56,3 +57,4 @@ account *account_new_from_json(void) {
 
   return a;
 }
+#pragma static-locals(pop)
