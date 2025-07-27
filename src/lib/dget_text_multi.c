@@ -92,10 +92,14 @@ static char __fastcall__ rewrite_end_of_buffer(char full) {
   }
 
   k = cur_insert;
-  goto initxy;
 
   while (k < max_insert) {
     char c = text_buf[k];
+
+    x = wherex();
+    y = wherey();
+    y_plus1 = y + 1;
+
     if (c == '\n' || k == max_insert - 1) {
       clreol();
     }
@@ -125,11 +129,8 @@ static char __fastcall__ rewrite_end_of_buffer(char full) {
     }
 
     k++;
-initxy:
-    x = wherex();
-    y = wherey();
-    y_plus1 = y + 1;
   }
+
   return overflowed;
 }
 

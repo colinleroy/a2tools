@@ -54,10 +54,13 @@ static void __fastcall__ rewrite_end_of_buffer(void) {
   }
 
   k = cur_insert;
-  goto initxy;
 
   while (k < max_insert) {
     char c = text_buf[k];
+
+    x = wherex();
+    y = wherey();
+
     if (k == max_insert - 1) {
       clreol();
       if (x == win_width_min1) {
@@ -70,9 +73,6 @@ static void __fastcall__ rewrite_end_of_buffer(void) {
     cputc(c);
 
     k++;
-initxy:
-    x = wherex();
-    y = wherey();
   }
 }
 

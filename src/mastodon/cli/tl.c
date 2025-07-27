@@ -1354,9 +1354,7 @@ navigate_reuse_list:
           break;
     }
   }
-  /* we can't return to main(), it has been
-   * garbage-collected */
-  exit(0);
+  /* unreachable */
 }
 
 #ifdef __CC65__
