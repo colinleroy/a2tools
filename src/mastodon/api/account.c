@@ -10,8 +10,10 @@
 #include "atoc.h"
 #include "cli.h"
 
+#pragma static-locals(push, off)
 account *account_new_from_lines(void) {
   account *a = account_new();
+
   id_copy(a->id, lines[0]);
   a->display_name = strdup(lines[1]);
   if (strlen(a->display_name) > 30) {
@@ -22,6 +24,7 @@ account *account_new_from_lines(void) {
 
   return a;
 }
+#pragma static-locals(pop)
 
 #ifdef __CC65__
 #pragma code-name (push, "LC")

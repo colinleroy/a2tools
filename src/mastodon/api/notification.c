@@ -48,9 +48,10 @@ int api_get_notifications(char to_load, char notifications_type, char *load_befo
   return n_notifications;
 }
 
+#pragma static-locals(push, off)
 notification *api_get_notification(char *id) {
   notification *n = NULL;
-  char c;
+  static char c;
 
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, NOTIFICATION_ENDPOINT"/%s", id);
   get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
@@ -105,6 +106,7 @@ err_out:
 
   return n;
 }
+#pragma static-locals(pop)
 
 char *notification_verb[N_NOTIFICATIONS_TYPE] = {
   "mentioned you",

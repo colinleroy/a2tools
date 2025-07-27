@@ -90,10 +90,6 @@ static media *get_media(char *api_endpoint,
                         char *base_selector,
                         char *description_selector,
                         char *id) {
-  media *m;
-
-  m = NULL;
-
   snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, "%s/%s", api_endpoint, id);
   get_surl_for_endpoint(SURL_METHOD_GET, endpoint_buf);
 

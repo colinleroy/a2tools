@@ -32,11 +32,13 @@ char *media_type_str[N_MEDIA_TYPE] = {
   GIF_STR
 };
 
+#pragma static-locals(push, off)
 static status *status_new(void) {
   status *s = malloc0(sizeof(status));
   s->displayed_at = -1;
   return s;
 }
+#pragma static-locals(pop)
 
 #ifdef __CC65__
 #pragma code-name (pop)
