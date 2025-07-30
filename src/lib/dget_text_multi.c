@@ -189,12 +189,12 @@ char * __fastcall__ dget_text_multi(char *buf, size_t size, cmd_handler_func cmd
     cur_y = wherey();
 
     c = cgetc();
-    if (is_iie && cmd_cb && (c & 0x80) != 0) {
+    if (is_iie && IS_NOT_NULL(cmd_cb) && (c & 0x80) != 0) {
       if (cmd_cb((c & ~0x80))) {
         goto out;
       }
       gotoxy(cur_x, cur_y);
-    } else if (!is_iie && cmd_cb && c < 27 &&
+    } else if (!is_iie && IS_NOT_NULL(cmd_cb) && c < 27 &&
         c != CH_ENTER && c != CH_CURS_LEFT && c != CH_CURS_RIGHT) {
       /* No Open-Apple there, let's do it with Ctrl */
       if (cmd_cb(c + 'A' - 1)) {
@@ -208,7 +208,7 @@ char * __fastcall__ dget_text_multi(char *buf, size_t size, cmd_handler_func cmd
         max_insert = 0;
         goto out;
       }
-    } else if (c == CH_ENTER && (!cmd_cb || !enter_accepted)) {
+    } else if (c == CH_ENTER && (IS_NULL(cmd_cb) || !enter_accepted)) {
       goto out;
     } else if (c == CH_CURS_LEFT
        || c == CH_DEL
@@ -281,7 +281,7 @@ down_left:
       }
       gotoxy(cur_x, cur_y);
     } else if (c == CH_CURS_UP) {
-      if (!cmd_cb || !enter_accepted || cur_insert == 0) {
+      if (IS_NULL(cmd_cb) || !enter_accepted || cur_insert == 0) {
         /* No up/down in standard line edit */
         goto err_beep;
       }
@@ -318,7 +318,7 @@ down_left:
       }
       gotoxy(cur_x, cur_y);
     } else if (c == CH_CURS_DOWN) {
-      if (!cmd_cb || !enter_accepted || cur_insert == max_insert) {
+      if (IS_NULL(cmd_cb) || !enter_accepted || cur_insert == max_insert) {
         /* No down in standard editor mode */
         goto err_beep;
       }
@@ -447,7 +447,7 @@ out:
   cursor(prev_cursor);
   text_buf[max_insert] = '\0';
 
-  if (!cmd_cb) {
+  if (IS_NULL(cmd_cb)) {
     dputc('\r');
     dputc('\n');
   }
