@@ -362,8 +362,10 @@ _getBit:
         rts
 
 :
+        sty     tmp3          ; Backup Y
         ldy     #$FF
         jsr     getOctet
+        ldy     tmp3
         asl     a
         sta     _gBitBuf
         
@@ -685,9 +687,7 @@ noTest0:
 
         asl     code
         rol     code+1
-        sty     tmp3
         jsr     _getBit
-        ldy     tmp3
         ora     code
         sta     code
         dec     huffC
@@ -737,9 +737,7 @@ noTest1:
 
         asl     code
         rol     code+1
-        sty     tmp3
         jsr     _getBit
-        ldy     tmp3
         ora     code
         sta     code
         dec     huffC
@@ -789,9 +787,7 @@ noTest2:
 
         asl     code
         rol     code+1
-        sty     tmp3
         jsr     _getBit
-        ldy     tmp3
         ora     code
         sta     code
         dec     huffC
@@ -841,9 +837,7 @@ noTest3:
 
         asl     code
         rol     code+1
-        sty     tmp3
         jsr     _getBit
-        ldy     tmp3
         ora     code
         sta     code
         dec     huffC
