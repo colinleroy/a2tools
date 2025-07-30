@@ -6,13 +6,12 @@
 
 int16 __fastcall__ huffExtend(uint16 x, uint8 s)
 {
-  uint16 t = 0;
-
-  if (s < 16)
-    t = extendTests[s];
-
-  if (t > x)
-    return (int16)x + getExtendOffset(s);
+  if (s < 16) {
+    uint16 t = extendTests[s];
+    if (t > x) {
+      return (int16)x + getExtendOffset(s);
+    }
+  }
 
   return (int16)x;
 }

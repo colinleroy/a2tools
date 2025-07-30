@@ -1,5 +1,5 @@
 
-        .importzp   tmp1, tmp2, tmp3, ptr1, ptr2, _prev_ram_irq_vector, _prev_rom_irq_vector, c_sp, regbank, ptr4
+        .importzp   tmp1, tmp2, tmp3, tmp4, ptr1, ptr2, _prev_ram_irq_vector, _prev_rom_irq_vector, c_sp, regbank, ptr4
         .importzp   _zp6sip, _zp8sip, _zp10sip, _zp12sip, _zp6ip, _zp6p
         .import     popptr1
         .import     _extendTests, _extendOffsets, _gBitsLeft, _gBitBuf
@@ -30,46 +30,38 @@ _cur_cache_ptr = _prev_ram_irq_vector
 ; PJPG_INLINE int16 __fastcall__ huffExtend(uint16 x, uint8 sDMCU)
 
 _huffExtend:
-        sta     tmp1
-
-        ldy     #0
-        ldx     #0
         cmp     #16
-        bcs     :+
+        bcc     :+
 
-        asl     a
-        tax
-        ldy     _extendTests,x
-        lda     _extendTests+1,x
-        tax
+retNormal:
+        lda     extendX
+        ldx     extendX+1
+        rts
 
-:       cpx     extendX+1
+:       asl     a
+        sta     tmp1
+        tay
+        lda     _extendTests,y
+        ldx     _extendTests+1,y
+
+        cpx     extendX+1
         bcc     retNormal
         bne     retExtend
 
-        cpy     extendX
+        cmp     extendX
         bcc     retNormal
         beq     retNormal
 
 retExtend:
-        lda     tmp1
-        cmp     #16
-        bcs     retNormal
-
-        asl     a
-        tax
+        ldx     tmp1
         lda     _extendOffsets,x
+        clc
         adc     extendX
         tay
         lda     _extendOffsets+1,x
         adc     extendX+1
         tax
         tya
-        rts
-
-retNormal:
-        lda     extendX
-        ldx     extendX+1
         rts
 
 ; #define getBits1(n) getBits(n, 0)
@@ -389,6 +381,7 @@ _getBit:
 _imul_b1_b3:
         ldy     #$00
         sty     neg
+        tay                   ; val low byte in Y
 
         cpx     #$80
         bcc     :+
@@ -403,37 +396,34 @@ _imul_b1_b3:
         eor    #$FF
         adc    #0
         tax
-        tya
 
 :
-        sta     val
-        stx     val+1
+        stx     tmp4
         ; dw = mul362_l[l] | mul362_m[l] <<8 | mul362_h[l] <<16;
-        ldy    val
         lda    _mul362_l,y
         sta    dw
         ; lda    _mul362_m,y - shortcut right below
-        ; sta    dw+1
-        lda    _mul362_h,y
-        sta    dw+2
+        ; sta    tmp1
+        ; lda    _mul362_h,y
+        ; sta    tmp2
 
         ; dw += (mul362_l[h]) << 8;
         clc
-        lda    _mul362_m,y    ; dw+1
-        ldy    val+1
-        adc    _mul362_l,y
-        sta    dw+1
+        lda    _mul362_m,y    ; tmp1
+        ldx    tmp4
+        adc    _mul362_l,x
+        sta    tmp1
 
         ; dw += (mul362_m[h]) << 16;
-        lda    dw+2
-        adc    _mul362_m,y
-        sta    dw+2
+        lda    _mul362_h,y
+        adc    _mul362_m,x
+        sta    tmp2
 
         ; Was val negative?
         ldy    neg
         bne    :+
         tax
-        lda    dw+1
+        lda    tmp1
         rts
 :
         ; dw ^= 0xffffffff
@@ -441,14 +431,10 @@ _imul_b1_b3:
         eor    dw
         sta    dw
         lda    #$FF
-        eor    dw+1
-        sta    dw+1
+        eor    tmp2
+        tax
         lda    #$FF
-        eor    dw+2
-        sta    dw+2
-
-        lda    dw+1
-        ldx    dw+2
+        eor    tmp1
 
         ; dw++;
         inc    dw
@@ -465,6 +451,8 @@ _imul_b2:
         ldy     #$00
         sty     neg
 
+        tay                   ; val low byte in Y
+
         cpx     #$80
         bcc     :+
         stx     neg
@@ -478,37 +466,34 @@ _imul_b2:
         eor    #$FF
         adc    #0
         tax
-        tya
 
 :
-        sta     val
-        stx     val+1
+        stx     tmp4
         ; dw = mul669_l[l] | mul669_m[l] <<8 | mul669_h[l] <<16;
-        ldy    val
         lda    _mul669_l,y
         sta    dw
         ; lda    _mul669_m,y - shortcut right below
-        ; sta    dw+1
-        lda    _mul669_h,y
-        sta    dw+2
+        ; sta    tmp1
+        ; lda    _mul669_h,y
+        ; sta    tmp2
 
         ; dw += (mul669_l[h]) << 8;
         clc
-        lda    _mul669_m,y    ; dw+1
-        ldy    val+1
-        adc    _mul669_l,y
-        sta    dw+1
+        lda    _mul669_m,y    ; tmp1
+        ldx    tmp4
+        adc    _mul669_l,x
+        sta    tmp1
 
         ; dw += (mul669_m[h]) << 16;
-        lda    dw+2
-        adc    _mul669_m,y
-        sta    dw+2
+        lda    _mul669_h,y
+        adc    _mul669_m,x
+        sta    tmp2
 
         ; Was val negative?
         ldy    neg
         bne    :+
         tax
-        lda    dw+1
+        lda    tmp1
         rts
 :
         ; dw ^= 0xffffffff
@@ -516,14 +501,10 @@ _imul_b2:
         eor    dw
         sta    dw
         lda    #$FF
-        eor    dw+1
-        sta    dw+1
+        eor    tmp2
+        tax
         lda    #$FF
-        eor    dw+2
-        sta    dw+2
-
-        lda    dw+1
-        ldx    dw+2
+        eor    tmp1
 
         ; dw++;
         inc    dw
@@ -539,6 +520,7 @@ _imul_b2:
 _imul_b4:
         ldy     #$00
         sty     neg
+        tay                   ; val low byte in Y
 
         cpx     #$80
         bcc     :+
@@ -553,37 +535,34 @@ _imul_b4:
         eor    #$FF
         adc    #0
         tax
-        tya
 
 :
-        sta     val
-        stx     val+1
+        stx     tmp4
         ; dw = mul277_l[l] | mul277_m[l] <<8 | mul277_h[l] <<16;
-        ldy    val
         lda    _mul277_l,y
         sta    dw
         ; lda    _mul277_m,y - shortcut right below
-        ; sta    dw+1
-        lda    _mul277_h,y
-        sta    dw+2
+        ; sta    tmp1
+        ; lda    _mul277_h,y
+        ; sta    tmp2
 
         ; dw += (mul277_l[h]) << 8;
         clc
-        lda    _mul277_m,y    ; dw+1
-        ldy    val+1
-        adc    _mul277_l,y
-        sta    dw+1
+        lda    _mul277_m,y    ; tmp1
+        ldx    tmp4
+        adc    _mul277_l,x
+        sta    tmp1
 
         ; dw += (mul277_m[h]) << 16;
-        lda    dw+2
-        adc    _mul277_m,y
-        sta    dw+2
+        lda    _mul277_h,y
+        adc    _mul277_m,x
+        sta    tmp2
 
         ; Was val negative?
         ldy    neg
         bne    :+
         tax
-        lda    dw+1
+        lda    tmp1
         rts
 :
         ; dw ^= 0xffffffff
@@ -591,14 +570,10 @@ _imul_b4:
         eor    dw
         sta    dw
         lda    #$FF
-        eor    dw+1
-        sta    dw+1
+        eor    tmp2
+        tax
         lda    #$FF
-        eor    dw+2
-        sta    dw+2
-
-        lda    dw+1
-        ldx    dw+2
+        eor    tmp1
 
         ; dw++;
         inc    dw
@@ -614,6 +589,7 @@ _imul_b4:
 _imul_b5:
         ldy     #$00
         sty     neg
+        tay             ; val low byte in Y
 
         cpx     #$80
         bcc     :+
@@ -628,37 +604,36 @@ _imul_b5:
         eor    #$FF
         adc    #0
         tax
-        tya
 
 :
-        sta     val
-        stx     val+1
+        stx     tmp4
         ; dw = mul196_l[l] | mul196_m[l] <<8 | mul196_h[l] <<16;
-        ldy    val
         lda    _mul196_l,y
         sta    dw
         ; lda    _mul196_m,y - shortcut right below
-        ; sta    dw+1
-        lda    _mul196_h,y
-        sta    dw+2
+        ; sta    tmp1
+
+        ; Useless (0)
+        ; lda    _mul196_h,y
+        ; sta    tmp2
 
         ; dw += (mul196_l[h]) << 8;
         clc
-        lda    _mul196_m,y    ; dw+1
-        ldy    val+1
-        adc    _mul196_l,y
-        sta    dw+1
+        lda    _mul196_m,y    ; tmp1
+        ldx    tmp4
+        adc    _mul196_l,x
+        sta    tmp1
 
         ; dw += (mul196_m[h]) << 16;
-        lda    dw+2
-        adc    _mul196_m,y
-        sta    dw+2
+        lda    #0
+        adc    _mul196_m,x
+        sta    tmp2
 
         ; Was val negative?
         ldy    neg
         bne    :+
         tax
-        lda    dw+1
+        lda    tmp1
         rts
 :
         ; dw ^= 0xffffffff
@@ -666,14 +641,10 @@ _imul_b5:
         eor    dw
         sta    dw
         lda    #$FF
-        eor    dw+1
-        sta    dw+1
+        eor    tmp2
+        tax
         lda    #$FF
-        eor    dw+2
-        sta    dw+2
-
-        lda    dw+1
-        ldx    dw+2
+        eor    tmp1
 
         ; dw++;
         inc    dw
