@@ -20,7 +20,6 @@
 
 #ifdef __APPLE2__
   #include <apple2.h>
-  #include "extrazp.h"
 #else
   #include "extended_conio.h"
 #endif

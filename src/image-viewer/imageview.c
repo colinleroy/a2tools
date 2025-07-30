@@ -17,6 +17,7 @@
 #include "clrzone.h"
 #include "vsdrive.h"
 #include "a2_features.h"
+#include "extrazp.h"
 
 uint8 scrw, scrh;
 #ifndef __CC65__
