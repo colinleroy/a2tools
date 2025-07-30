@@ -212,12 +212,13 @@ model_str:
 ; Disk cache
 _cache:
         .res        CACHE_SIZE,$00
-.align 256
 
+.align 256
 ; Destination buffer for the band (8bpp grayscale)
 _raw_image:
         .res        RAW_IMAGE_SIZE,$00
-.align 256
+
+; No need to align anymore
 
 ; Status bar state, kept between bands
 pgbar_state:
@@ -247,8 +248,13 @@ LAST_TWO_LINES = _raw_image + (BAND_HEIGHT * SCRATCH_WIDTH)
 
 .segment        "CODE"
 
-; Patcher for end-of-cache high byte check.
-set_cache_end:
+; Patcher for direct load, and end-of-cache high byte check.
+set_cache_data:
+        lda     cur_cache_ptr
+        sta     cache_read
+        lda     cur_cache_ptr+1
+        sta     cache_read+1
+
         lda     _cache_end
         beq     :+
         brk                             ; Make sure cache end is aligned
@@ -271,12 +277,12 @@ fill_cache:
 
         ; Push buffer
         lda     _cache_start+1
-        sta     cur_cache_ptr+1
+        sta     cache_read+1
         sta     (c_sp),y
         dey
 
         lda     _cache_start
-        sta     cur_cache_ptr
+        sta     cache_read
         sta     (c_sp),y
 
         ; Push count (CACHE_SIZE)
@@ -293,7 +299,7 @@ _qt_load_raw:
 
 top:
         sta     pgbar_state             ; Zero progress bar (A=0 here)
-        jsr     set_cache_end           ; Initialize things
+        jsr     set_cache_data          ; Initialize cache things
 
 
         lda     #(640/INNER_X_LOOP_LEN) ; How many outer loops per row ?
@@ -389,17 +395,19 @@ set_row_loops:
 
 ; Increment cache pointer page
 inc_cache_high:
-        inc     cur_cache_ptr+1
+        inc     cache_read+1
 keep_motor_on_beg:
         sta     motor_on                ; Keep drive motor running
 ; Check for cache end and refill cache
 cache_check_high_byte:
         ldx     #0                      ; Patched when resetting (_cache_end+1)
-        cpx     cur_cache_ptr+1
+        cpx     cache_read+1
         clc
         bne     handle_byte
         pha
+        sty     tmp1                    ; Backup index
         jsr     fill_cache
+        ldy     tmp1                    ; Restore index
         pla
 keep_motor_on:
         sta     motor_on                ; Keep drive motor running
@@ -470,14 +478,12 @@ col_outer_loop:                         ; Outer column loop, iterating 2 or 4 ti
         ldy    #0
 
 col_inner_loop:                         ; Inner column loop, iterating over Y
-        sty     tmp1                    ; Backup index
-        ldy     #$00
-        lda     (cur_cache_ptr),y
-        inc     cur_cache_ptr
+cache_read = *+1
+        lda     $FFFF
+        inc     cache_read
         beq     inc_cache_high          ; Increment cache ptr page and refill if needed
 
 handle_byte:
-        ldy     tmp1                    ; Restore it
         tax                             ; Get gstep vals to X (keep it in X!)
 
         ; HIGH NIBBLE
@@ -507,7 +513,7 @@ gstep_high_neg:
         bcc     clamp_high_nibble_low   ; Clamp low as gstep is negative
         clc
 high_nibble_special_neg:
-        bcc     handle_first_pixel      ; Patched for special cases (first_pixel, then first_row, then first_col or high_nibble_end)
+        bcc     handle_first_pixel      ; (bra) Patched for special cases (first_pixel, then first_row, then first_col or high_nibble_end)
 
 gstep_high_pos:
         lda     (idx_behind),y          ; (*idx_behind)
