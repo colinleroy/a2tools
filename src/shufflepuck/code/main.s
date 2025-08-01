@@ -361,7 +361,7 @@ draw_done:
 
         ; Are we playing serial?
         lda     their_hit_check_via_serial
-        beq     :+
+        bne     :+
         ; If not, check if opponent caught (if serial, opponent will do the hit check)
         jsr     _puck_check_their_hit
 
