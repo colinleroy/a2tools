@@ -265,18 +265,18 @@ no_lshift5:
         ldx     ret+1
         jmp     shraxy
 
-:       lda     n_min_eight,y
-        tay
+:       ldx     n_min_eight,y
         beq     :++
         lda     ret+1
 :       lsr     a
-        dey
+        dex
         bne     :-
-        ldx     #0
+        ; Now X is 0
+        ; ldx   #0
         rts
 :
         lda     ret+1
-        ldx     #0
+        ; ldx   #0
         rts
 
 ;uint8 getOctet(uint8 FFCheck)
@@ -713,7 +713,6 @@ loopDone0:
         sbc     _gHuffTab0,y
         tay                     ; Backup index
 
-        clc
         lda     _gHuffVal0,y
 
 huffDecodeDone0:
@@ -762,7 +761,6 @@ loopDone1:
         sbc     _gHuffTab1,y
         tay                     ; Backup index
 
-        clc
         lda     _gHuffVal1,y
 
 huffDecodeDone1:
@@ -811,7 +809,6 @@ loopDone2:
         sbc     _gHuffTab2,y
         tay                     ; Backup index
 
-        clc
         lda     _gHuffVal2,y
 
 huffDecodeDone2:
@@ -860,7 +857,6 @@ loopDone3:
         sbc     _gHuffTab3,y
         tay                     ; Backup index
 
-        clc
         lda     _gHuffVal3,y
 
 huffDecodeDone3:
@@ -1711,8 +1707,7 @@ setDec:
 checkZAGLoop:
         lda     cur_ZAG_coeff
         cmp     #64             ; end_ZAG_coeff
-        bne     doZAGLoop       ; No need to check high byte
-        jmp     ZAG_Done
+        beq     ZAG_Done
 
 doZAGLoop:
 huffDec:
@@ -1797,6 +1792,23 @@ load_pq2:
         sta     _gCoeffBuf,y
         jmp     sNotZero
 
+; Inserted here, in an otherwise unreachable place,
+; to be more easily reachable from everywhere we need it
+ZAG_Done:
+finishZAG:
+        ldx     cur_ZAG_coeff
+        cpx     #64             ; end_ZAG_coeff
+        beq     ZAG_finished  ; No need to check high byte
+
+        ldy     _ZAG_Coeff,x
+        lda     #0
+        sta     _gCoeffBuf,y
+        iny
+        sta     _gCoeffBuf,y
+
+        inc     cur_ZAG_coeff
+        jmp     finishZAG
+
 sZero:
         lda     rDMCU
         cmp     #15
@@ -1822,21 +1834,6 @@ sNotZero:
         inc     cur_ZAG_coeff
         jmp     checkZAGLoop
 
-ZAG_Done:
-finishZAG:
-        ldx     cur_ZAG_coeff
-        cpx     #64             ; end_ZAG_coeff
-        beq     ZAG_finished  ; No need to check high byte
-
-        ldy     _ZAG_Coeff,x
-        lda     #0
-        sta     _gCoeffBuf,y
-        iny
-        sta     _gCoeffBuf,y
-
-        inc     cur_ZAG_coeff
-        jmp     finishZAG
-
 ZAG_finished:
         lda     mcuBlock
         jsr     _transformBlock
@@ -1851,8 +1848,7 @@ firstMCUBlocksDone:
         ; Skip the other blocks, do the minimal work
         lda     mcuBlock
         cmp     _gMaxBlocksPerMCU
-        bcc     nextUselessBlock
-        jmp     uselessBlocksDone
+        bcs     uselessBlocksDone
 
 nextUselessBlock:
         ldy     #$00
@@ -1917,8 +1913,7 @@ ZAG2_Done:
         inc     mcuBlock
         lda     mcuBlock
         cmp     _gMaxBlocksPerMCU
-        bcs     uselessBlocksDone
-        jmp     nextUselessBlock
+        bcc     nextUselessBlock
 
 uselessBlocksDone:
         ldy     #0              ; Restore regbank
