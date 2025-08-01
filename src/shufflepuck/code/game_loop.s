@@ -795,24 +795,22 @@ check_their_late_catch:
         ldy     #PUCK_MIN_Y
         jsr     _set_puck_position; Reinit precise coordinates
 
-        jsr     _puck_check_their_hit
-        bcc     update_y
-
+        lda     their_hit_check_via_serial
+        beq     do_check
         ; Serial hook - the oppponent missed, but we don't want
         ; to inform our game engine via carry as usual - otherwise
         ; we'll start resetting the point maybe before the other
         ; player send the "I missed" message. So just stop the puck
         ; and wait for them to tell us.
-        lda     their_hit_check_via_serial
-        beq     set_carry
         lda     #$00
         sta     puck_dx
         sta     puck_dy
         clc
         rts
 
-set_carry:
-        sec
+do_check:
+        jsr     _puck_check_their_hit
+        bcc     update_y
         rts
 
 check_my_late_catch:

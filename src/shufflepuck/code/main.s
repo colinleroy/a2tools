@@ -356,11 +356,16 @@ draw_done:
         bne     :+
         jsr     pause
 
-:       ; Check collision
+:       ; Check my catch
         jsr     _puck_check_my_hit
+
+        ; Are we playing serial?
+        lda     their_hit_check_via_serial
+        beq     :+
+        ; If not, check if opponent caught (if serial, opponent will do the hit check)
         jsr     _puck_check_their_hit
 
-        ; Update the puck's position,
+:       ; Update the puck's position,
         jsr     _move_puck
         ; Carry now set if puck crashed, don't clear it until after HIT_CB
 moves_done:
