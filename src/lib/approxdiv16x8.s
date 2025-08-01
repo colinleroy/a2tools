@@ -14,7 +14,7 @@ _approx_div16x8:
         pla
         tay
 
-; Expects low byte of first operand (ptr2) in X, divisor in A
+; Expects low byte of first operand (ptr2) in X, divisor in Y
 approx_div16x8_direct:
         lda     invHigh,y
         sta     ptr1+1

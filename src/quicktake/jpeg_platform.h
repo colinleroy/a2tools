@@ -49,7 +49,7 @@ extern uint8 gHuffVal2[256];
 extern HuffTable gHuffTab3;
 extern uint8 gHuffVal3[256];
 
-extern uint8 gMCUBufG[256];
+extern uint8 gMCUBufG[128];
 // 256 bytes
 extern uint16 gQuant0[8*8];
 extern uint16 gQuant1[8*8];

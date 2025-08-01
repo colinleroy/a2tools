@@ -142,8 +142,7 @@ uint8 ZAG_Coeff[] =
 };
 #endif
 
-// 8*8*4 bytes * 3 = 768
-uint8 gMCUBufG[256];
+uint8 gMCUBufG[128];
 // 256 bytes
 uint16 gQuant0[8*8];
 uint16 gQuant1[8*8];
@@ -170,8 +169,13 @@ static uint8 gValidQuantTables;
 
 static uint8 gTemFlag;
 
+#ifndef __CC65__
 uint16 gBitBuf;
 uint8 gBitsLeft;
+#else
+#define gBitBuf zp6i
+#define gBitsLeft zp8
+#endif
 //------------------------------------------------------------------------------
 uint8 gCompsInFrame;
 uint8 gCompIdent[3];
@@ -1386,10 +1390,10 @@ void qt_load_raw(uint16 top)
 
       for (bx = 4; bx; bx--) {
         *pDst++ = *pSrcG;
-        pSrcG+=2;
+        pSrcG++;
       }
 
-      pSrcG += 8;
+      pSrcG += 4;
       if (!by)
         break;
       pDst_block += row_pitch;
@@ -1402,10 +1406,10 @@ void qt_load_raw(uint16 top)
 
       for (bx = 4; bx; bx--) {
         *pDst++ = *pSrcG;
-        pSrcG+=2;
+        pSrcG++;
       }
 
-      pSrcG += 8;
+      pSrcG += 4;
       if (!by)
         break;
       pDst_block += row_pitch;

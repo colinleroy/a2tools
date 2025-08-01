@@ -507,7 +507,9 @@ try_again:
     ofd = -1;
   }
 
+#ifdef __CC65__
   clrscr();
+#endif
   printf("Done.");
 
   reload_menu(ofname);

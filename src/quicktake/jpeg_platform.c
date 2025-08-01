@@ -45,7 +45,6 @@ uint16 __fastcall__ getBits(uint8 numBits, uint8 FFCheck)
     gBitsLeft = gBitsLeft - n;
     gBitBuf <<= n;
   }
-  printf("- res %016b\n", ret>>final_shift);
   return ret >> final_shift;
 }
 
@@ -485,7 +484,10 @@ uint8 decodeNextMCU(void)
 
     transformBlock(mcuBlock);
   }
-   /* Skip the other blocks, do the minimal work */
+
+   /* Skip the other blocks, do the minimal work, only consuming
+    * input bits
+    */
   for (mcuBlock = 2; mcuBlock < gMaxBlocksPerMCU; mcuBlock++) {
     componentID = *cur_gMCUOrg;
 
@@ -496,11 +498,8 @@ uint8 decodeNextMCU(void)
 
     compACTab = gCompACTab[componentID];
 
-    r = 0;
     if (s & 0xF)
-      r = getBits2(s & 0xF);
-
-    huffExtend(r, s);
+      getBits2(s & 0xF);
 
     for (i = 1; i != 64; i++) {
       if (compACTab)
@@ -508,22 +507,16 @@ uint8 decodeNextMCU(void)
       else
         s = huffDecode(&gHuffTab2, gHuffVal2);
 
-      extraBits = 0;
       numExtraBits = s & 0xF;
       if (numExtraBits)
-        extraBits = getBits2(numExtraBits);
+        getBits2(numExtraBits);
 
       r = s >> 4;
-      s = numExtraBits;
 
       if (s) {
         i += r;
-        huffExtend(extraBits, s);
       } else {
-        if (r == 15) {
-          i+=15;
-        } else
-          break;
+        break;
       }
    }
   }
@@ -543,11 +536,12 @@ void transformBlock(uint8 mcuBlock)
   if (mB == 0) {
     pGDst = gMCUBufG;
   } else {
-    pGDst = gMCUBufG + 64;
+    pGDst = gMCUBufG + 32;
   }
 
   pSrc = gCoeffBuf;
-  for (iTB = 64; iTB; iTB--) {
-    *pGDst++ = (uint8)*pSrc++;
+  for (iTB = 32; iTB; iTB--) {
+    *pGDst++ = (uint8)*pSrc;
+    pSrc += 2;
   }
 }

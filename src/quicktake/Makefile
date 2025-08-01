@@ -102,6 +102,8 @@ jpegconv_SOURCES := \
 
 jpegconv_CC65SOURCES := \
 	jpeg_platform.s \
+	../lib/mult16x16x16.s \
+	../lib/square_table.s \
 	../lib/asm/path_helper.s \
 	../lib/extrazp.s \
 	../lib/a2_features.s \
@@ -133,7 +135,7 @@ qtknconv_CLCFLAGS = -D_CACHE_SIZE=4096 --asm-define CACHE_SIZE=4096 \
 
 jpegconv_CLCFLAGS = -D_CACHE_SIZE=4096 --asm-define CACHE_SIZE=4096 \
 	-DRAW_X_OFFSET=0 -DRAW_Y_OFFSET=0 -DRAW_WIDTH=width \
-	$(CLCFLAGS) -C ../../config/apple2enh.cfg $(TARGET)-iobuf-0800.o --start-addr 0x1000
+	$(CLCFLAGS) -C ../../config/apple2enh-aligndata.cfg $(TARGET)-iobuf-0800.o --start-addr 0x1000
 
 GCCCFLAGS = -D_CACHE_SIZE=4096 -g -O0 -Wall -Wno-pointer-sign -Wno-char-subscripts -Wno-unused-but-set-variable -Wno-unused-variable -Wno-unknown-pragmas $(shell sdl-config --cflags)
 qtktconv_GCCCFLAGS = -DRAW_X_OFFSET=2 -DRAW_Y_OFFSET=2 -DRAW_WIDTH=645
