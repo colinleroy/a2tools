@@ -38,9 +38,6 @@ uint8 cache[CACHE_SIZE + N_STUFF_CHARS];
 uint8 *cache_start = cache + N_STUFF_CHARS;
 uint8 raw_image[RAW_IMAGE_SIZE];
 
-#define QT200_WIDTH 640
-#define QT200_HEIGHT 480
-
 #pragma inline-stdfuncs(push, on)
 #pragma allow-eager-inline(push, on)
 #pragma codesize(push, 600)
@@ -194,7 +191,7 @@ uint8 gCompACTab[3]; // 0,1
 
 uint8 gMaxBlocksPerMCU;
 
-uint16 gNumMCUSRemainingX, gNumMCUSRemainingY;
+uint8 gNumMCUSRemainingX, gNumMCUSRemainingY;
 
 uint8 gMCUOrg[6];
 
@@ -1243,12 +1240,6 @@ static uint8 initFrame(void)
    gMCUOrg[2] = 1;
    gMCUOrg[3] = 2;
 
-   #define gMaxMCUXSize 16
-   #define gMaxMCUYSize 8
-
-   #define gMaxMCUSPerRow ((QT200_WIDTH + (gMaxMCUXSize - 1)) >> 4)
-   #define gMaxMCUSPerCol ((QT200_HEIGHT + (gMaxMCUYSize - 1)) >> 3)
-
    gNumMCUSRemainingX = gMaxMCUSPerRow;
    gNumMCUSRemainingY = gMaxMCUSPerCol;
 
@@ -1293,28 +1284,6 @@ static void createWinogradQuant(uint16* pQuant)
 /*----------------------------------------------------------------------------*/
 
 //------------------------------------------------------------------------------
-unsigned char pjpeg_decode_mcu(void)
-{
-   uint8 status;
-
-   if ((!gNumMCUSRemainingX) && (!gNumMCUSRemainingY))
-      return PJPG_NO_MORE_BLOCKS;
-
-   status = decodeNextMCU();
-   if (status)
-      return status;
-
-   gNumMCUSRemainingX--;
-   if (!gNumMCUSRemainingX)
-   {
-      gNumMCUSRemainingY--;
-	  if (gNumMCUSRemainingY > 0)
-		  gNumMCUSRemainingX = gMaxMCUSPerRow;
-   }
-
-   return 0;
-}
-//------------------------------------------------------------------------------
 unsigned char pjpeg_decode_init(void)
 {
    uint8 status;
@@ -1343,16 +1312,10 @@ unsigned char pjpeg_decode_init(void)
 static uint8 mcu_x = 0;
 static uint8 status;
 static uint16 dst_y;
-static uint8 *pDst_row;
-
-#define DECODED_WIDTH (QT200_WIDTH>>1)
-#define DECODED_HEIGHT (QT200_HEIGHT>>1)
 
 void qt_load_raw(uint16 top)
 {
-  uint8 *pDst_block;
-  register uint8 *pDst;
-  register uint8 *pSrcG;
+  static uint8 *pDst_row;
 
   if (top == 0) {
     status = pjpeg_decode_init();
@@ -1365,12 +1328,10 @@ void qt_load_raw(uint16 top)
       return;
     }
     dst_y = 0;
-    #define row_pitch DECODED_WIDTH
   }
   pDst_row = raw_image;
 
   for ( ; ; ) {
-    uint8 bx, by;
     status = pjpeg_decode_mcu();
 
     if (status) {
@@ -1381,39 +1342,9 @@ void qt_load_raw(uint16 top)
        break;
     }
 
-    pSrcG = gMCUBufG;
+    //pDst_block = pDst_row;
 
-    pDst_block = pDst_row;
-
-    for (by = 3; ; by--) {
-      pDst = pDst_block;
-
-      for (bx = 4; bx; bx--) {
-        *pDst++ = *pSrcG;
-        pSrcG++;
-      }
-
-      pSrcG += 4;
-      if (!by)
-        break;
-      pDst_block += row_pitch;
-    }
-
-    pDst_block = pDst_row + (8>>1);
-
-    for (by = 3; ; by--) {
-      pDst = pDst_block;
-
-      for (bx = 4; bx; bx--) {
-        *pDst++ = *pSrcG;
-        pSrcG++;
-      }
-
-      pSrcG += 4;
-      if (!by)
-        break;
-      pDst_block += row_pitch;
-    }
+    copy_decoded_to(pDst_row);
 
     mcu_x++;
     pDst_row += 8;
@@ -1427,6 +1358,51 @@ void qt_load_raw(uint16 top)
         break;
       }
     }
+  }
+}
+
+
+void copy_decoded_to(uint8 *pDst_row)
+{
+  uint8 by;
+  uint8 *pDst_block;
+  register uint8 *pSrcG, *pDst;
+
+  pDst_block = pDst_row;
+  pSrcG = gMCUBufG;
+
+  by = 3;
+  while (1) {
+    pDst = pDst_block;
+
+    *pDst++ = *pSrcG++;
+    *pDst++ = *pSrcG++;
+    *pDst++ = *pSrcG++;
+    *pDst++ = *pSrcG++;
+
+    pSrcG += 4;
+    if (!by)
+      break;
+    pDst_block += DECODED_WIDTH;
+    by--;
+  }
+
+  pDst_block = pDst_row + (8>>1);
+
+  by = 3;
+  while (1) {
+    pDst = pDst_block;
+
+    *pDst++ = *pSrcG++;
+    *pDst++ = *pSrcG++;
+    *pDst++ = *pSrcG++;
+    *pDst++ = *pSrcG++;
+
+    pSrcG += 4;
+    if (!by)
+      break;
+    pDst_block += DECODED_WIDTH;
+    by--;
   }
 }
 

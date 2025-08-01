@@ -4,6 +4,9 @@
 #include "platform.h"
 #include "picojpeg.h"
 
+#define QT200_WIDTH 640
+#define QT200_HEIGHT 480
+
 typedef struct HuffTableT
 {
    uint16 mMinCode[16];
@@ -57,7 +60,7 @@ extern uint16 gQuant1[8*8];
 // 6 bytes
 extern uint16 gLastDC[3];
 
-extern uint16 gNumMCUSRemainingX, gNumMCUSRemainingY;
+extern uint8 gNumMCUSRemainingX, gNumMCUSRemainingY;
 extern uint8 gMCUOrg[6];
 
 int16 __fastcall__ huffExtend(uint16 x, uint8 s);
@@ -80,5 +83,16 @@ void idctCols(void);
 uint8 processRestart(void);
 
 uint8 skipVariableMarker(void);
+
+#define gMaxMCUXSize 16
+#define gMaxMCUYSize 8
+
+#define gMaxMCUSPerRow ((QT200_WIDTH + (gMaxMCUXSize - 1)) >> 4)
+#define gMaxMCUSPerCol ((QT200_HEIGHT + (gMaxMCUYSize - 1)) >> 3)
+#define DECODED_WIDTH (QT200_WIDTH>>1)
+#define DECODED_HEIGHT (QT200_HEIGHT>>1)
+
+unsigned char pjpeg_decode_mcu(void);
+void copy_decoded_to(uint8 *pDst_row);
 
 #endif

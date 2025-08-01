@@ -545,3 +545,26 @@ void transformBlock(uint8 mcuBlock)
     pSrc += 2;
   }
 }
+
+//------------------------------------------------------------------------------
+unsigned char pjpeg_decode_mcu(void)
+{
+   uint8 status;
+
+   if ((!gNumMCUSRemainingX) && (!gNumMCUSRemainingY))
+      return PJPG_NO_MORE_BLOCKS;
+
+   status = decodeNextMCU();
+   if (status)
+      return status;
+
+   gNumMCUSRemainingX--;
+   if (!gNumMCUSRemainingX)
+   {
+      gNumMCUSRemainingY--;
+	  if (gNumMCUSRemainingY > 0)
+		  gNumMCUSRemainingX = gMaxMCUSPerRow;
+   }
+
+   return 0;
+}

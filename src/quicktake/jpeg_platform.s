@@ -1,5 +1,5 @@
 
-        .importzp   tmp1, tmp2, tmp3, tmp4, ptr1, ptr2, _prev_ram_irq_vector, _prev_rom_irq_vector, c_sp, regbank, ptr4
+        .importzp   tmp1, tmp2, tmp3, tmp4, ptr1, ptr2, ptr3, _prev_ram_irq_vector, _prev_rom_irq_vector, c_sp, regbank, ptr4
         .importzp   _zp6, _zp8, _zp10, _zp12, _zp13
         .import     popptr1
         .import     _extendTests, _extendOffsets
@@ -13,10 +13,12 @@
         .import     _gQuant0, _gQuant1, _gCompDCTab, _gMCUOrg, _gLastDC, _gCoeffBuf, _ZAG_Coeff
         .import     _gHuffTab0, _gHuffVal0, _gHuffTab1, _gHuffVal1, _gHuffTab2, _gHuffVal2, _gHuffTab3, _gHuffVal3
         .import     _gMCUBufG
+        .import     _gNumMCUSRemainingX, _gNumMCUSRemainingY
         .import     shraxy, decsp6, popax, addysp, mult16x16x16_direct
         .export     _huffExtend, _getBits1, _getBits2, _getBit
         .export     _imul_b1_b3, _imul_b2, _imul_b4, _imul_b5
         .export     _idctRows, _idctCols, _decodeNextMCU, _transformBlock
+        .export     _pjpeg_decode_mcu 
 
 _gBitBuf   = _zp6
 _gBitsLeft = _zp8
@@ -1959,6 +1961,36 @@ copyDest:
         dey
         bpl     tbCopy
 
+        rts
+
+_pjpeg_decode_mcu:
+        lda    _gNumMCUSRemainingX
+        ora    _gNumMCUSRemainingY
+        beq    noMoreBlocks
+
+        jsr    _decodeNextMCU
+        bne    retErr
+
+        dec    _gNumMCUSRemainingX
+        beq    noMoreX
+retOk:
+        lda    #0
+        ldx    #0
+        rts
+
+noMoreX:
+        dec    _gNumMCUSRemainingY
+        beq    :+
+        lda    #((640 + (16 - 1)) >> 4) ; gMaxMCUSPerRow
+        sta    _gNumMCUSRemainingX
+:       lda    #0
+        ldx    #0
+        rts
+
+noMoreBlocks:
+        lda    #1       ; PJPG_NO_MORE_BLOCKS
+retErr:
+        ldx    #0
         rts
 
         .rodata
