@@ -1366,50 +1366,6 @@ void qt_load_raw(uint16 top)
 }
 
 
-void copy_decoded_to(uint8 *pDst_row)
-{
-  uint8 by;
-  uint8 *pDst_block;
-  register uint8 *pSrcG, *pDst;
-
-  pDst_block = pDst_row;
-  pSrcG = gMCUBufG;
-
-  by = 3;
-  while (1) {
-    pDst = pDst_block;
-
-    *pDst++ = *pSrcG++;
-    *pDst++ = *pSrcG++;
-    *pDst++ = *pSrcG++;
-    *pDst++ = *pSrcG++;
-
-    pSrcG += 4;
-    if (!by)
-      break;
-    pDst_block += DECODED_WIDTH;
-    by--;
-  }
-
-  pDst_block = pDst_row + (8>>1);
-
-  by = 3;
-  while (1) {
-    pDst = pDst_block;
-
-    *pDst++ = *pSrcG++;
-    *pDst++ = *pSrcG++;
-    *pDst++ = *pSrcG++;
-    *pDst++ = *pSrcG++;
-
-    pSrcG += 4;
-    if (!by)
-      break;
-    pDst_block += DECODED_WIDTH;
-    by--;
-  }
-}
-
 #pragma register-vars(pop)
 #pragma codesize(pop)
 #pragma allow-eager-inline(pop)

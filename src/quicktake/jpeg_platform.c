@@ -593,3 +593,34 @@ unsigned char pjpeg_decode_mcu(void)
 
    return 0;
 }
+
+void copy_decoded_to(uint8 *pDst_row)
+{
+  uint8 by;
+  register uint8 *pDst1, *pDst2;
+  register uint8 s = 0;
+
+  pDst1 = pDst_row;
+  pDst2 = pDst1 + (8>>1);
+
+  by = 4;
+  while (1) {
+    *(pDst1+s) = gMCUBufG[s];
+    *(pDst2+s) = (gMCUBufG+32)[s];
+    s++;
+    *(pDst1+s) = gMCUBufG[s];
+    *(pDst2+s) = (gMCUBufG+32)[s];
+    s++;
+    *(pDst1+s) = gMCUBufG[s];
+    *(pDst2+s) = (gMCUBufG+32)[s];
+    s++;
+    *(pDst1+s) = gMCUBufG[s];
+    *(pDst2+s) = (gMCUBufG+32)[s];
+
+    if (!--by)
+      break;
+    pDst1 += (DECODED_WIDTH-8);
+    pDst2 += (DECODED_WIDTH-8);
+    s += (4+1);
+  }
+}

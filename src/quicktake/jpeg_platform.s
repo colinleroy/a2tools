@@ -20,6 +20,7 @@
         .export     _imul_b1_b3, _imul_b2, _imul_b4, _imul_b5
         .export     _idctRows, _idctCols, _decodeNextMCU, _transformBlock
         .export     _pjpeg_decode_mcu, _skipVariableMarker
+        .export     _copy_decoded_to
 
 ; ZP vars. Mind that qt-conv uses some too
 _gBitBuf       = _zp2       ; word, used everywhere
@@ -1755,6 +1756,66 @@ outOk:
 outErr:
         lda   #14       ; PJPG_BAD_VARIABLE_MARKER
         ; X already 0
+        rts
+
+_copy_decoded_to:
+        sta    ptr1     ; pDst1 = pDst_row
+        stx    ptr1+1
+        stx    ptr2+1
+        clc
+        adc    #(8>>1)  ; pDst2 = pDst_row + 8>>1
+        sta    ptr2
+        bcc    :+
+        inc    ptr2+1
+        clc             ; Make sure to clear carry
+
+:       ldx    #4       ; by = 4
+        ldy    #0       ; s = 0
+
+copy_cont:
+        lda    _gMCUBufG,y
+        sta    (ptr1),y
+        lda    _gMCUBufG+32,y
+        sta    (ptr2),y
+        iny
+        lda    _gMCUBufG,y
+        sta    (ptr1),y
+        lda    _gMCUBufG+32,y
+        sta    (ptr2),y
+        iny
+        lda    _gMCUBufG,y
+        sta    (ptr1),y
+        lda    _gMCUBufG+32,y
+        sta    (ptr2),y
+        iny
+        lda    _gMCUBufG,y
+        sta    (ptr1),y
+        lda    _gMCUBufG+32,y
+        sta    (ptr2),y
+
+        dex
+        beq    copy_out
+
+        lda    ptr1    ; pDst1 += (DECODED_WIDTH);
+        adc    #<(320-8) ; Carry sure to be clear
+        sta    ptr1
+        lda    ptr1+1
+        adc    #>(320-8)
+        sta    ptr1+1
+
+        lda    ptr2   ; pDst2 += (DECODED_WIDTH);
+        adc    #<(320-8)
+        sta    ptr2
+        lda    ptr2+1
+        adc    #>(320-8)
+        sta    ptr2+1
+
+        tya           ; s += 4+1
+        adc    #5
+        tay
+
+        jmp    copy_cont
+copy_out:
         rts
 
         .rodata
