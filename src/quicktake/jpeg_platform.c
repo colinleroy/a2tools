@@ -81,7 +81,7 @@ out:
   return c;
 }
 
-uint8 getBit(void)
+static inline uint8 getBit(void)
 {
   uint8 ret = 0;
 

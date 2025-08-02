@@ -16,25 +16,27 @@
         .import     _gMCUBufG
         .import     _gNumMCUSRemainingX, _gNumMCUSRemainingY
         .import     shraxy, decsp4, popax, addysp, mult16x16x16_direct
-        .export     _huffExtend, _getBits1, _getBits2, _getBit
+        .export     _huffExtend, _getBits1, _getBits2
         .export     _imul_b1_b3, _imul_b2, _imul_b4, _imul_b5
         .export     _idctRows, _idctCols, _decodeNextMCU, _transformBlock
         .export     _pjpeg_decode_mcu, _skipVariableMarker
 
 ; ZP vars. Mind that qt-conv uses some too
-_gBitBuf      = _zp2       ; word, used everywhere
-code          = _zp4       ; word, used in huffDecode
-cur_gMCUOrg   = _zp6       ; word, used in _decodeNextMCU
-_gBitsLeft    = _zp8       ; byte, used everywhere
+_gBitBuf       = _zp2       ; word, used everywhere
+code           = _zp4       ; word, used in huffDecode
+cur_gMCUOrg    = _zp6       ; word, used in _decodeNextMCU
+_gBitsLeft     = _zp8       ; byte, used everywhere
 
-cur_pQ        = _zp9       ; byte, used in _decodeNextMCU
-cur_ZAG_coeff = _zp10      ; byte, used in _decodeNextMCU
-rDMCU         = _zp11      ; byte, used in _decodeNextMCU
-sDMCU         = _zp12      ; byte, used in _decodeNextMCU
-iDMCU         = _zp13      ; byte, used in _decodeNextMCU
+cur_pQ         = _zp9       ; byte, used in _decodeNextMCU
+cur_ZAG_coeff  = _zp10      ; byte, used in _decodeNextMCU
+rDMCU          = _zp11      ; byte, used in _decodeNextMCU
+sDMCU          = _zp12      ; byte, used in _decodeNextMCU
+iDMCU          = _zp13      ; byte, used in _decodeNextMCU
 
-dw            = _zp9       ; byte, used in imul (IDCT)
-neg           = _zp10      ; byte, used in imul (IDCT)
+dw             = _zp9       ; byte, used in imul (IDCT)
+neg            = _zp10      ; byte, used in imul (IDCT)
+
+_cur_cache_ptr = _prev_ram_irq_vector
 
 .struct hufftable_t
    mMinCode .res 32
@@ -54,7 +56,32 @@ neg           = _zp10      ; byte, used in imul (IDCT)
 .endscope
 .endmacro
 
-_cur_cache_ptr = _prev_ram_irq_vector
+; uint8 getBit(void)
+
+.macro INLINE_GETBIT
+.scope
+        dec     _gBitsLeft
+        bpl     haveBit
+
+        sty     tmp3          ; Backup Y
+        ldy     #$FF
+        jsr     getOctet
+        ldy     tmp3
+        asl     a
+        sta     _gBitBuf
+
+        lda     #7
+        sta     _gBitsLeft
+        jmp     done
+
+haveBit:
+        asl     _gBitBuf
+done:
+        rol     _gBitBuf+1    ; Sets carry
+        lda     #0
+        adc     #0
+.endscope
+.endmacro
 
 ; PJPG_INLINE int16 __fastcall__ huffExtend(uint16 x, uint8 sDMCU)
 
@@ -70,13 +97,13 @@ retNormal:
 :       asl     a
         sta     tmp1
         tay
-        lda     _extendTests,y
         ldx     _extendTests+1,y
 
         cpx     extendX+1
         bcc     retNormal
         bne     retExtend
 
+        lda     _extendTests,y
         cmp     extendX
         bcc     retNormal
         beq     retNormal
@@ -377,35 +404,6 @@ out:
         pla
         rts
 
-; uint8 getBit(void)
-
-_getBit:
-        dec     _gBitsLeft
-        bmi     :+
-
-        asl     _gBitBuf
-        rol     _gBitBuf+1    ; Sets carry
-
-        lda     #0
-        adc     #0
-        rts
-
-:       sty     tmp3          ; Backup Y
-        ldy     #$FF
-        jsr     getOctet
-        ldy     tmp3
-        asl     a
-        sta     _gBitBuf
-        
-        lda     #7
-        sta     _gBitsLeft
-        
-        rol     _gBitBuf+1    ; Sets carry
-
-        lda     #0
-        adc     #0
-        rts
-
 .macro imul TABL, TABM, TABH
 .scope
         ldy     #$00
@@ -566,7 +564,7 @@ _imul_b5:
 ; uint8 __fastcall__ huffDecode(const uint8* pHuffVal)
 .macro huffDecode TABLE, VAL
 .scope
-        jsr     _getBit
+        INLINE_GETBIT
         sta     code
         lda     #$00
         sta     code+1
@@ -595,7 +593,7 @@ checkLow:
 noTest:
         asl     code
         rol     code+1
-        jsr     _getBit
+        INLINE_GETBIT
         ora     code
         sta     code
         dex
