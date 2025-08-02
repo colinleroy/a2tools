@@ -389,7 +389,7 @@ uint8 decodeNextMCU(void)
   */
   register uint8 *cur_gMCUOrg;
   uint8 componentID;
-  uint16* pQ;
+  uint8 *pQ_l, *pQ_h;
   uint8 compACTab;
   uint16 r;
   uint8 s, i;
@@ -399,7 +399,7 @@ uint8 decodeNextMCU(void)
   uint8 numExtraBits;
   uint16 dc;
   uint16 ac;
-  uint16 *cur_pQ;
+  uint8 *cur_pQ_l, *cur_pQ_h;
   uint8 *cur_ZAG_coeff;
   uint8 *end_ZAG_coeff;
 
@@ -416,8 +416,15 @@ uint8 decodeNextMCU(void)
   cur_gMCUOrg = gMCUOrg + 0;
   for (mcuBlock = 0; mcuBlock < 2; mcuBlock++) {
     componentID = *cur_gMCUOrg;
-    compQuant = gCompQuant[componentID];	
-    pQ = compQuant ? gQuant1 : gQuant0;
+    compQuant = gCompQuant[componentID];
+    if (compQuant) {
+      pQ_l = gQuant1_l;
+      pQ_h = gQuant1_h;
+    } else {
+      pQ_l = gQuant0_l;
+      pQ_h = gQuant0_h;
+    }
+
     compDCTab = gCompDCTab[componentID];
     if (compDCTab)
       s = huffDecode(&gHuffTab1, gHuffVal1);
@@ -435,15 +442,16 @@ uint8 decodeNextMCU(void)
 
     dc = dc + gLastDC[componentID];
     gLastDC[componentID] = dc;
-    gCoeffBuf[0] = dc * pQ[0];
+    gCoeffBuf[0] = dc * (pQ_l[0]|(pQ_h[0]<<8));
 
     cur_ZAG_coeff = ZAG_Coeff + 1;
     end_ZAG_coeff = ZAG_Coeff + 64;
 
     compACTab = gCompACTab[componentID];
-    cur_pQ = pQ + 1;
+    cur_pQ_l = pQ_l + 1;
+    cur_pQ_h = pQ_h + 1;
 
-    for (; cur_ZAG_coeff != end_ZAG_coeff; cur_ZAG_coeff++, cur_pQ++) {
+    for (; cur_ZAG_coeff != end_ZAG_coeff; cur_ZAG_coeff++, cur_pQ_l++, cur_pQ_h++) {
       if (compACTab)
         s = huffDecode(&gHuffTab3, gHuffVal3);
       else
@@ -462,16 +470,17 @@ uint8 decodeNextMCU(void)
           gCoeffBuf[*cur_ZAG_coeff] = 0;
 
           cur_ZAG_coeff++;
-          cur_pQ++;
+          cur_pQ_l++;
+          cur_pQ_h++;
           r--;
         }
 
         ac = huffExtend(extraBits, s);
-        gCoeffBuf[*cur_ZAG_coeff] =  ac * *cur_pQ;
+        gCoeffBuf[*cur_ZAG_coeff] =  ac * (*cur_pQ_l|(*cur_pQ_h << 8));
       } else {
         if (r == 15) {
-          cur_ZAG_coeff+=15;
-          cur_pQ+=15;
+          cur_pQ_l+=15;
+          cur_pQ_h+=15;
         } else {
           break;
         }

@@ -54,8 +54,10 @@ extern uint8 gHuffVal3[256];
 
 extern uint8 gMCUBufG[128];
 // 256 bytes
-extern uint16 gQuant0[8*8];
-extern uint16 gQuant1[8*8];
+extern uint8 gQuant0_l[8*8];
+extern uint8 gQuant0_h[8*8];
+extern uint8 gQuant1_l[8*8];
+extern uint8 gQuant1_h[8*8];
 
 // 6 bytes
 extern uint16 gLastDC[3];

@@ -10,7 +10,8 @@
         .import     _mul196_l, _mul196_m, _mul196_h
         .import     _gCoeffBuf, _gRestartInterval, _gRestartsLeft
         .import     _gMaxBlocksPerMCU, _processRestart, _gCompACTab, _gCompQuant
-        .import     _gQuant0, _gQuant1, _gCompDCTab, _gMCUOrg, _gLastDC, _gCoeffBuf, _ZAG_Coeff
+        .import     _gQuant0_l, _gQuant1_l, _gQuant0_h, _gQuant1_h
+        .import     _gCompDCTab, _gMCUOrg, _gLastDC, _gCoeffBuf, _ZAG_Coeff
         .import     _gHuffTab0, _gHuffVal0, _gHuffTab1, _gHuffVal1, _gHuffTab2, _gHuffVal2, _gHuffTab3, _gHuffVal3
         .import     _gMCUBufG
         .import     _gNumMCUSRemainingX, _gNumMCUSRemainingY
@@ -1599,29 +1600,35 @@ nextMcuBlock:
         lda     _gCompQuant,y
         beq     :+
 
-        ldx     #<_gQuant1
-        stx     load_pq0+1
-        stx     load_pq0b+1
-        stx     load_pq1+1
-        stx     load_pq2+1
-        ldx     #>_gQuant1
-        stx     load_pq0+2
-        stx     load_pq0b+2
-        stx     load_pq1+2
-        stx     load_pq2+2
+        ldx     #<_gQuant1_l
+        stx     load_pq0l+1
+        stx     load_pq1l+1
+        ldx     #>_gQuant1_l
+        stx     load_pq0l+2
+        stx     load_pq1l+2
+
+        ldx     #<_gQuant1_h
+        stx     load_pq0h+1
+        stx     load_pq1h+1
+        ldx     #>_gQuant1_h
+        stx     load_pq0h+2
+        stx     load_pq1h+2
 
         jmp     loadDCTab
 
-:       ldx     #<_gQuant0
-        stx     load_pq0+1
-        stx     load_pq0b+1
-        stx     load_pq1+1
-        stx     load_pq2+1
-        ldx     #>_gQuant0
-        stx     load_pq0+2
-        stx     load_pq0b+2
-        stx     load_pq1+2
-        stx     load_pq2+2
+:       ldx     #<_gQuant0_l
+        stx     load_pq0l+1
+        stx     load_pq1l+1
+        ldx     #>_gQuant0_l
+        stx     load_pq0l+2
+        stx     load_pq1l+2
+
+        ldx     #<_gQuant0_h
+        stx     load_pq0h+1
+        stx     load_pq1h+1
+        ldx     #>_gQuant0_h
+        stx     load_pq0h+2
+        stx     load_pq1h+2
 
 loadDCTab:
         lda     _gCompDCTab,y
@@ -1673,11 +1680,10 @@ doExtend:
         stx     ptr2
         sta     ptr2+1
 
-        ldy     #1
-load_pq0:
-        lda     $FFFF,y
+load_pq0h:
+        lda     $FFFF
         sta     ptr1+1
-load_pq0b:
+load_pq0l:
         lda     $FFFF
         sta     ptr1
         jsr     mult16x16x16_direct
@@ -1703,7 +1709,7 @@ setDec:
         stx     huffDec+2
 
         ;cur_pQ = pQ + 1;
-        lda     #2
+        lda     #1
         sta     cur_pQ
 
 checkZAGLoop:
@@ -1752,10 +1758,7 @@ zeroZAG:
 
         inc     cur_ZAG_coeff
 
-        lda     cur_pQ
-        clc
-        adc     #2
-        sta     cur_pQ
+        inc     cur_pQ
 
         dec     rDMCU
         bne     zeroZAG
@@ -1772,11 +1775,10 @@ zeroZAGDone:
         tax
 
         ldy     cur_pQ
-load_pq1:
+load_pq1l:
         lda     $FFFF,y
         sta     ptr1
-        iny
-load_pq2:
+load_pq1h:
         lda     $FFFF,y
         sta     ptr1+1
 
@@ -1817,22 +1819,14 @@ sZero:
         bne     ZAG_Done
 
         ; Advance 15
-decS:
-        lda     cur_ZAG_coeff
-        adc     #14             ; Carry set here (we want to add #15)
- 
         lda     cur_pQ
-        adc     #(15*2)
+        adc     #14           ; 15 with carry set by previous cmp
         sta     cur_pQ
 
         jmp     checkZAGLoop
 
 sNotZero:
-        clc
-        lda     cur_pQ
-        adc     #2
-        sta     cur_pQ
-
+        inc     cur_pQ
         inc     cur_ZAG_coeff
         jmp     checkZAGLoop
 

@@ -141,8 +141,10 @@ uint8 ZAG_Coeff[] =
 
 uint8 gMCUBufG[128];
 // 256 bytes
-uint16 gQuant0[8*8];
-uint16 gQuant1[8*8];
+uint8 gQuant0_l[8*8];
+uint8 gQuant0_h[8*8];
+uint8 gQuant1_l[8*8];
+uint8 gQuant1_h[8*8];
 
 // 6 bytes
 uint16 gLastDC[3];
@@ -356,12 +358,12 @@ static uint8 readDHTMarker(void)
    return 0;
 }
 //------------------------------------------------------------------------------
-static void createWinogradQuant(uint16* pQuant);
+static void createWinogradQuant0(void);
+static void createWinogradQuant1(void);
 
 static uint8 readDQTMarker(void)
 {
    uint16 left = getBits1(16);
-   register uint16 *ptr_quant1, *ptr_quant0;
    if (left < 2)
       return PJPG_BAD_DQT_MARKER;
 
@@ -382,8 +384,6 @@ static uint8 readDQTMarker(void)
       gValidQuantTables |= (n ? 2 : 1);
 
       // read quantization entries, in zag order
-      ptr_quant0 = gQuant0;
-      ptr_quant1 = gQuant1;
       for (i = 0; i < 64; i++)
       {
          uint16 temp = getBits1(8);
@@ -391,16 +391,21 @@ static uint8 readDQTMarker(void)
          if (prec)
             temp = (temp << 8) + getBits1(8);
 
-         if (n)
-            *ptr_quant1 = (int16)temp;
-         else
-            *ptr_quant0 = (int16)temp;
-        
-         ptr_quant0++;
-         ptr_quant1++;
+         if (n) {
+           gQuant1_h[i] = (int8)(temp>>8);
+           gQuant1_l[i] = (int8)(temp);
+         }
+         else {
+           gQuant0_h[i] = (int8)(temp>>8);
+           gQuant0_l[i] = (int8)(temp);
+         }
       }
 
-      createWinogradQuant(n ? gQuant1 : gQuant0);
+      if (n) {
+        createWinogradQuant1();
+      } else {
+        createWinogradQuant0();
+      }
 
       totalRead = 64 + 1;
 
@@ -1267,17 +1272,34 @@ uint8 gWinogradQuant[] =
 };
 
 // Multiply quantization matrix by the Winograd IDCT scale factors
-static void createWinogradQuant(uint16* pQuant)
+static void createWinogradQuant0(void)
 {
    uint8 i;
-   register uint16 *ptr_quant = pQuant;
    register uint8 *ptr_winograd = gWinogradQuant;
 
    for (i = 0; i < 64; i++)
    {
-      long x = *ptr_quant;
+      long x = (long)(gQuant0_l[i] | (gQuant0_h[i]<<8));
+      int16 r;
       x *= *(ptr_winograd++);
-      *(ptr_quant++) = (int16)((x + (1 << (PJPG_WINOGRAD_QUANT_SCALE_BITS - PJPG_DCT_SCALE_BITS - 1))) >> (PJPG_WINOGRAD_QUANT_SCALE_BITS - PJPG_DCT_SCALE_BITS));
+      r = (int16)((x + (1 << (PJPG_WINOGRAD_QUANT_SCALE_BITS - PJPG_DCT_SCALE_BITS - 1))) >> (PJPG_WINOGRAD_QUANT_SCALE_BITS - PJPG_DCT_SCALE_BITS));
+      gQuant0_l[i] = (uint8)(r);
+      gQuant0_h[i] = (uint8)(r >> 8);
+   }
+}
+static void createWinogradQuant1(void)
+{
+   uint8 i;
+   register uint8 *ptr_winograd = gWinogradQuant;
+
+   for (i = 0; i < 64; i++)
+   {
+      long x = (long)(gQuant1_l[i] | (gQuant1_h[i]<<8));
+      int16 r;
+      x *= *(ptr_winograd++);
+      r = (int16)((x + (1 << (PJPG_WINOGRAD_QUANT_SCALE_BITS - PJPG_DCT_SCALE_BITS - 1))) >> (PJPG_WINOGRAD_QUANT_SCALE_BITS - PJPG_DCT_SCALE_BITS));
+      gQuant1_l[i] = (uint8)(r);
+      gQuant1_h[i] = (uint8)(r >> 8);
    }
 }
 
