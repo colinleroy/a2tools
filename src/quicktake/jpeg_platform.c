@@ -245,11 +245,10 @@ nextIdctRowsLoop:
        x31 = *(rowSrc) - *(rowSrc_4);
 
        x13 = *(rowSrc_2) + *(rowSrc_6);
-       x12 = *(rowSrc_2) - *(rowSrc_6);
 
+       x12 = *(rowSrc_2) - *(rowSrc_6);
        x32 = imul_b1_b3(x12) - x13;
 
-       x15 = x5 - x7;
        x17 = x5 + x7;
 
        *(rowSrc) = x30 + x13 + x17;
@@ -257,6 +256,8 @@ nextIdctRowsLoop:
        res1 = imul_b5(x4 - x6);
        stg26 = imul_b4(x6) - res1;
        res2 = stg26 - x17;
+
+       x15 = x5 - x7;
        res3 = imul_b1_b3(x15) - res2;
 
        x24 = res1 - imul_b2(x4);
@@ -330,7 +331,6 @@ void idctCols(void)
        x6  = *(pSrc_1_8) - *(pSrc_7_8);
        x5  = *(pSrc_1_8) + *(pSrc_7_8);
 
-       x15 = x5 - x7;
        x17 = x5 + x7;
 
        res1 = imul_b5(x4 - x6);
@@ -339,23 +339,16 @@ void idctCols(void)
        stg26 = imul_b4(x6) - res1;
        res2 = stg26 - x17;
 
+       x15 = x5 - x7;
        res3 = imul_b1_b3(x15) - res2;
-       x44 = res3 + x24;
 
        x31 = *(pSrc_0_8) - *(pSrc_4_8);
        x30 = *(pSrc_0_8) + *(pSrc_4_8);
        x12 = *(pSrc_2_8) - *(pSrc_6_8);
        x13 = *(pSrc_2_8) + *(pSrc_6_8);
 
-       x32 = imul_b1_b3(x12) - x13;
-
-       x41 = x31 + x32;
-       x42 = x31 - x32;
-
-       x40 = x30 + x13;
-       x43 = x30 - x13;
-
        // descale, convert to unsigned and clamp to 8-bit
+       x40 = x30 + x13;
        t = ((x40 + x17) >> PJPG_DCT_SCALE_BITS) +128;
        if (t < 0)
          *pSrc_0_8 = 0; 
@@ -364,6 +357,8 @@ void idctCols(void)
        else 
          *pSrc_0_8 = (uint8)t;
 
+       x32 = imul_b1_b3(x12) - x13;
+       x42 = x31 - x32;
        t = ((x42 + res3) >> PJPG_DCT_SCALE_BITS) +128;
        if (t < 0)
          *pSrc_2_8 = 0; 
@@ -372,7 +367,7 @@ void idctCols(void)
        else 
          *pSrc_2_8 = (uint8)t;
 
-       t = ((x43 + x44) >> PJPG_DCT_SCALE_BITS) +128;
+       t = ((x30 - x13 + res3 + x24) >> PJPG_DCT_SCALE_BITS) +128;
        if (t < 0)
          *pSrc_4_8 = 0; 
        else if (t & 0xFF00)
@@ -380,6 +375,7 @@ void idctCols(void)
        else 
          *pSrc_4_8 = (uint8)t;
 
+       x41 = x31 + x32;
        t = ((x41 - res2) >> PJPG_DCT_SCALE_BITS) +128;
        if (t < 0)
          *pSrc_6_8 = 0; 

@@ -182,8 +182,8 @@ no_lshift:
 
         lda     _gBitBuf
         sta     _gBitBuf+1
-        lda     #$00
-        sta     _gBitBuf
+        ; lda     #$00      - no need to store, getOctet'd later
+        ; sta     _gBitBuf
         beq     no_lshift2
 
 :       lda     _gBitBuf
@@ -192,18 +192,16 @@ no_lshift:
         dey
         bne     :-
         sta     _gBitBuf
+        lda     _gBitBuf+1
 
 no_lshift2:
-        lda     _gBitBuf+1
         sta     ret
 
 n_lt8:
-        lda     _gBitsLeft
-        cmp     n
-        bcs     enoughBits
-
         ldy     _gBitsLeft
         beq     no_lshift3
+        cpy     n
+        bcs     enoughBits
 
         ; no need to check for << 8, that can't be
         lda     _gBitBuf
@@ -211,40 +209,37 @@ n_lt8:
         rol     _gBitBuf+1
         dey
         bne     :-
-        sta     _gBitBuf
+        ;sta     _gBitBuf - will get overwritten by getOctet
 
 no_lshift3:
         ldy     ff
         jsr     getOctet
-        ora     _gBitBuf
         sta     _gBitBuf
 
         lda     n
         sec
         sbc     _gBitsLeft
-        sta     tmp1
-
         tay
         beq     no_lshift4
 
-        cpy     #8
+        cmp     #8
         bne     :+
 
         lda     _gBitBuf
         sta     _gBitBuf+1
-        lda     #$00
-        sta     _gBitBuf
-        beq     no_lshift4
+        ; lda     #$00         - no need to store, will be getOctet'd
+        ; sta     _gBitBuf
+        jmp     no_lshift4
 
-:       lda     _gBitBuf
+:       tax
+        lda     _gBitBuf
 :       asl     a
         rol     _gBitBuf+1
-        dey
+        dex
         bne     :-
         sta     _gBitBuf
 
 no_lshift4:
-        ldy     tmp1
         lda     eight_min_n,y
         sta     _gBitsLeft
         jmp     no_lshift5
@@ -261,9 +256,9 @@ enoughBits:
         bne     :+
         lda     _gBitBuf
         sta     _gBitBuf+1
-        lda     #$00
-        sta     _gBitBuf
-        beq     no_lshift5
+        ; lda     #$00      - no need to store, will be getOctet'd
+        ; sta     _gBitBuf
+        jmp     no_lshift5
 
 :       lda     _gBitBuf
 :       asl     a
@@ -389,7 +384,7 @@ _getBit:
         bmi     :+
 
         asl     _gBitBuf
-        rol     _gBitBuf+1
+        rol     _gBitBuf+1    ; Sets carry
 
         lda     #0
         adc     #0
@@ -405,7 +400,7 @@ _getBit:
         lda     #7
         sta     _gBitsLeft
         
-        rol     _gBitBuf+1
+        rol     _gBitBuf+1    ; Sets carry
 
         lda     #0
         adc     #0
@@ -745,6 +740,7 @@ full_idct_rows:
         adc    _gCoeffBuf+13,y
         sta    x13+1
 
+        ; x12 = *(rowSrc_2) - *(rowSrc_6);
         sec
         lda    _gCoeffBuf+4,y
         sbc    _gCoeffBuf+12,y
@@ -752,6 +748,7 @@ full_idct_rows:
         txa
         sbc    _gCoeffBuf+13,y
 
+        ; x32 = imul_b1_b3(x12) - x13;
         tax
         pla
         sty     tmp3
@@ -763,14 +760,6 @@ full_idct_rows:
         txa
         sbc    x13+1
         sta    x32+1
-
-        sec
-        lda    x5
-        sbc    x7
-        sta    x15
-        lda    x5+1
-        sbc    x7+1
-        sta    x15+1
 
         clc
         lda    x5
@@ -843,8 +832,17 @@ full_idct_rows:
         sbc    x17+1
         sta    res2+1
 
-        lda    x15
-        ldx    x15+1
+        ; x15 = x5 - x7;
+        sec
+        lda    x5
+        sbc    x7
+        pha
+        lda    x5+1
+        sbc    x7+1
+        tax
+
+        ; res3 = imul_b1_b3(x15) - res2;
+        pla
         jsr    _imul_b1_b3
         sec
         sbc    res2
@@ -855,6 +853,7 @@ full_idct_rows:
         sta    res3+1
         tax
 
+        ; *(rowSrc_2) = x31 - x32 + res3;
         tya
         clc
         adc    x31
@@ -871,6 +870,7 @@ full_idct_rows:
         sbc    x32+1
         sta    _gCoeffBuf+5,y
 
+        ; *(rowSrc_4) = x30 + res3 + x24 - x13;
         sty     tmp3
         lda    x30
         clc
@@ -894,6 +894,7 @@ full_idct_rows:
         sbc    x13+1
         sta    _gCoeffBuf+9,y
 
+        ; *(rowSrc_6) = x31 + x32 - res2;
         sty     tmp3
         lda    x31
         clc
@@ -1008,15 +1009,6 @@ full_idct_cols:
         adc     _gCoeffBuf+113,y
         sta     x5+1
 
-        ;x15 = x5 - x7;
-        sec
-        lda     x5
-        sbc     x7
-        sta     x15
-        lda     x5+1
-        sbc     x7+1
-        sta     x15+1
-
         ;x17 = x5 + x7;
         clc
         lda     x5
@@ -1028,7 +1020,7 @@ full_idct_cols:
 
         sty     tmp3
 
-        ;res1 = imul_b5(x4 - x6
+        ;res1 = imul_b5(x4 - x6)
         sec
         lda     x4
         sbc     x6
@@ -1051,10 +1043,10 @@ full_idct_cols:
         sec
         lda     res1
         sbc     ptr1
-        sta     x24
+        sta     x24l+1
         lda     res1+1
         sbc     ptr1+1
-        sta     x24+1
+        sta     x24h+1
 
         ;stg26 = imul_b4(x6) - res1;
         ;res2 = stg26 - x17;
@@ -1077,9 +1069,16 @@ full_idct_cols:
         sbc     x17+1
         sta     res2+1
 
+        ;x15 = x5 - x7;
         ;res3 = imul_b1_b3(x15) - res2;
-        lda     x15
-        ldx     x15+1
+        sec
+        lda     x5
+        sbc     x7
+        pha
+        lda     x5+1
+        sbc     x7+1
+        tax
+        pla
         jsr     _imul_b1_b3
         sec
         sbc     res2
@@ -1087,15 +1086,6 @@ full_idct_cols:
         txa
         sbc     res2+1
         sta     res3+1
-
-        ;x44 = res3 + x24;
-        clc
-        lda     res3
-        adc     x24
-        sta     x44
-        lda     res3+1
-        adc     x24+1
-        sta     x44+1
 
         ldy     tmp3
         sec
@@ -1118,11 +1108,11 @@ full_idct_cols:
         sec
         lda     _gCoeffBuf+32,y
         sbc     _gCoeffBuf+96,y
-        sta     x12
+        sta     x12l+1
         lda     _gCoeffBuf+33,y
         tax
         sbc     _gCoeffBuf+97,y
-        sta     x12+1
+        sta     x12h+1
 
         clc
         lda     _gCoeffBuf+32,y
@@ -1134,8 +1124,10 @@ full_idct_cols:
 
         sty     tmp3
         ;x32 = imul_b1_b3(x12) - x13;
-        lda     x12
-        ldx     x12+1
+x12l:
+        lda     #$FF
+x12h:
+        ldx     #$FF
         jsr     _imul_b1_b3
         sec
         sbc     x13
@@ -1144,43 +1136,14 @@ full_idct_cols:
         sbc     x13+1
         sta     x32+1
 
-        ;x41 = x31 + x32;
-        tax
-        lda     x32
-        clc
-        adc     x31
-        sta     x41
-        txa
-        adc     x31+1
-        sta     x41+1
-
-        ;x42 = x31 - x32;
-        sec
-        lda     x31
-        sbc     x32
-        sta     x42
-        lda     x31+1
-        sbc     x32+1
-        sta     x42+1
-
         ;x40 = x30 + x13;
         clc
         lda     x30
         adc     x13
-        sta     x40
+        pha
         lda     x30+1
         adc     x13+1
-        sta     x40+1
-
-        ;x43 = x30 - x13;
-        sec
-        lda     x30
-        sbc     x13
-        sta     x43
-        lda     x30+1
-        sbc     x13+1
-        sta     x43+1
-
+        tax
         ; t = ((x40 + x17) >> PJPG_DCT_SCALE_BITS) +128;
         ; if (t < 0)
         ;   *pSrc_0_8 = 0;
@@ -1188,13 +1151,12 @@ full_idct_cols:
         ;    *pSrc_0_8 = 255;
         ; else
         ;   *pSrc_0_8 = (uint8)t;
-        lda     x40
+        pla
         clc
         adc     x17
         pha
-        lda     x40+1
+        txa
         adc     x17+1
-
         tax
         pla
 
@@ -1216,6 +1178,15 @@ clampDone2:
         ldy     tmp3
         sta     _gCoeffBuf,y
 
+        ;x42 = x31 - x32;
+        sec
+        lda     x31
+        sbc     x32
+        pha
+        lda     x31+1
+        sbc     x32+1
+        tax
+
         ; t = ((x42 + res3) >> PJPG_DCT_SCALE_BITS) +128;
         ; if (t < 0)
         ;   *pSrc_2_8 = 0;
@@ -1223,11 +1194,11 @@ clampDone2:
         ;    *pSrc_2_8 = 255;
         ; else
         ;   *pSrc_2_8 = (uint8)t;
-        lda     x42
         clc
+        pla
         adc     res3
         pha
-        lda     x42+1
+        txa
         adc     res3+1
         tax
         pla
@@ -1245,12 +1216,36 @@ clampDone2:
 clampDone3:
         sta     _gCoeffBuf+32,y
 
-        lda     x43
+
+        ;x43 = x30 - x13;
+        sec
+        lda     x30
+        sbc     x13
+        sta     x43l+1
+        lda     x30+1
+        sbc     x13+1
+        sta     x43h+1
+
+        ;x44 = res3 + x24;
         clc
-        adc     x44
+        lda     res3
+x24l:
+        adc     #$FF
         pha
-        lda     x43+1
-        adc     x44+1
+        lda     res3+1
+x24h:
+        adc     #$FF
+        tax
+
+        ; t = ((x43 + x44) >> PJPG_DCT_SCALE_BITS) +128;
+        pla
+        clc
+x43l:
+        adc     #$FF
+        pha
+        txa
+x43h:
+        adc     #$FF
         tax
         pla
         INLINE_ASRAX7
@@ -1267,11 +1262,21 @@ clampDone3:
 clampDone4:
         sta     _gCoeffBuf+64,y
 
-        lda     x41
+        ;x41 = x31 + x32;
+        lda     x32
+        clc
+        adc     x31
+        pha
+        lda     x32+1
+        adc     x31+1
+        tax
+
+        ; t = ((x41 - res2) >> PJPG_DCT_SCALE_BITS) +128;
+        pla
         sec
         sbc     res2
         pha
-        lda     x41+1
+        txa
         sbc     res2+1
         tax
         pla
@@ -1295,7 +1300,6 @@ cont_idct_cols:
         clc
         iny
         iny
-
         jmp     nextCol
 
 idctColDone:
