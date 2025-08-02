@@ -1365,6 +1365,55 @@ void qt_load_raw(uint16 top)
   }
 }
 
+//------------------------------------------------------------------------------
+// Used to skip unrecognized markers.
+uint8 skipVariableMarker(void)
+{
+   uint16 left = getBits1(16);
+   uint16 safeSkip;
+   uint16 avail = cache_end - cur_cache_ptr;
+
+   if (left < 2)
+      return PJPG_BAD_VARIABLE_MARKER;
+
+   left -= 2;
+   if (left == 0) {
+     return 0;
+   }
+   if (left == 1) {
+     getBits1(8);
+     return 0;
+   }
+   safeSkip = left - 2;
+   if (safeSkip == 0) {
+     return 0;
+   }
+
+   /* Skip faster than consuming every bit */
+skip_again:
+   if (avail > safeSkip) {
+     cur_cache_ptr += safeSkip;
+     left -= safeSkip;
+   } else {
+     safeSkip -= avail;
+     left -= avail;
+     while (safeSkip > CACHE_SIZE) {
+       /* A full page discardable */
+       lseek(ifd, CACHE_SIZE, SEEK_CUR);
+       safeSkip -= CACHE_SIZE;
+       left -= CACHE_SIZE;
+     }
+     fillInBuf();
+     avail = CACHE_SIZE;
+     goto skip_again;
+   }
+
+   while(left--) {
+     getBits1(8);
+   }
+
+   return 0;
+}
 
 #pragma register-vars(pop)
 #pragma codesize(pop)
