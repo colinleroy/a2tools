@@ -707,7 +707,7 @@ noTest0:
         sta     code
         dec     huffC
         bne     nextLoop0
-        jmp     huffDecodeDone0
+        rts
 loopDone0:
         clc
         lda     _gHuffTab0+64,y
@@ -717,8 +717,6 @@ loopDone0:
         tay                     ; Backup index
 
         lda     _gHuffVal0,y
-
-huffDecodeDone0:
         rts
 
 _huffDecode1:
@@ -755,7 +753,7 @@ noTest1:
         sta     code
         dec     huffC
         bne     nextLoop1
-        jmp     huffDecodeDone1
+        rts
 loopDone1:
         clc
         lda     _gHuffTab1+64,y
@@ -765,8 +763,6 @@ loopDone1:
         tay                     ; Backup index
 
         lda     _gHuffVal1,y
-
-huffDecodeDone1:
         rts
 
 _huffDecode2:
@@ -803,7 +799,7 @@ noTest2:
         sta     code
         dec     huffC
         bne     nextLoop2
-        jmp     huffDecodeDone2
+        rts
 loopDone2:
         clc
         lda     _gHuffTab2+64,y
@@ -813,8 +809,6 @@ loopDone2:
         tay                     ; Backup index
 
         lda     _gHuffVal2,y
-
-huffDecodeDone2:
         rts
 
 _huffDecode3:
@@ -851,7 +845,7 @@ noTest3:
         sta     code
         dec     huffC
         bne     nextLoop3
-        jmp     huffDecodeDone3
+        rts
 loopDone3:
         clc
         lda     _gHuffTab3+64,y
@@ -861,8 +855,6 @@ loopDone3:
         tay                     ; Backup index
 
         lda     _gHuffVal3,y
-
-huffDecodeDone3:
         rts
 
 
