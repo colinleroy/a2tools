@@ -133,7 +133,7 @@ qtknconv_CLCFLAGS = -D_CACHE_SIZE=4096 --asm-define CACHE_SIZE=4096 \
 	-DRAW_X_OFFSET=0 -DRAW_Y_OFFSET=0 -DRAW_WIDTH=width \
 	$(CLCFLAGS) -C ../../config/apple2enh-alignbssdata.cfg $(TARGET)-iobuf-0800.o --start-addr 0x1000
 
-jpegconv_CLCFLAGS = -D_CACHE_SIZE=4096 --asm-define CACHE_SIZE=4096 \
+jpegconv_CLCFLAGS = -D_CACHE_SIZE=8192 --asm-define CACHE_SIZE=8192 \
 	-DRAW_X_OFFSET=0 -DRAW_Y_OFFSET=0 -DRAW_WIDTH=width \
 	$(CLCFLAGS) -C ../../config/apple2enh-aligndata.cfg $(TARGET)-iobuf-0800.o --start-addr 0x1000
 
