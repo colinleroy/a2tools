@@ -57,7 +57,7 @@ _cur_cache_ptr = _prev_ram_irq_vector
 .endmacro
 
 ; uint8 getBit(void)
-
+; Returns with A = 0 and carry set if bit 1
 .macro INLINE_GETBIT
 .scope
         dec     _gBitsLeft
@@ -79,7 +79,6 @@ haveBit:
 done:
         rol     _gBitBuf+1    ; Sets carry
         lda     #0
-        adc     #0
 .endscope
 .endmacro
 
@@ -194,7 +193,7 @@ getBits:
         rol     _gBitBuf+1
         dey
         bne     :-
-        ;sta     _gBitBuf
+        ;sta     _gBitBuf - will be overwritten
 
 no_lshift:
         ldy     ff
@@ -565,9 +564,9 @@ _imul_b5:
 .macro huffDecode TABLE, VAL
 .scope
         INLINE_GETBIT
+        sta     code+1  ; A = 0 here
+        rol             ; Now A = 0 or 1 depending on bit
         sta     code
-        lda     #$00
-        sta     code+1
 
         ldx     #16
         ldy     #$FE
@@ -591,11 +590,9 @@ checkLow:
         cmp code                ; ; curMaxCode < code ? lobyte
         bcs loopDone
 noTest:
-        asl     code
-        rol     code+1
         INLINE_GETBIT
-        ora     code
-        sta     code
+        rol     code
+        rol     code+1
         dex
         bne     nextLoop
         rts
@@ -1542,7 +1539,7 @@ ZAG_Done:
 finishZAG:
         ldx     cur_ZAG_coeff
         cpx     #64             ; end_ZAG_coeff
-        beq     ZAG_finished  ; No need to check high byte
+        beq     ZAG_finished
 
         ldy     _ZAG_Coeff,x
         lda     #0
