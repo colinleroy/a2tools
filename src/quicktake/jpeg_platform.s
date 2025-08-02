@@ -19,7 +19,7 @@
         .export     _huffExtend, _getBits1, _getBits2, _getBit
         .export     _imul_b1_b3, _imul_b2, _imul_b4, _imul_b5
         .export     _idctRows, _idctCols, _decodeNextMCU, _transformBlock
-        .export     _pjpeg_decode_mcu 
+        .export     _pjpeg_decode_mcu, _skipVariableMarker
 
 ; ZP vars. Mind that qt-conv uses some too
 _gBitBuf      = _zp2       ; word, used everywhere
@@ -338,7 +338,6 @@ getOctet:
 continue1:
         ; Load char from buffer
         lda     (_cur_cache_ptr),y
-        pha                     ; Remember result
         ; Increment buffer pointer
         inc     _cur_cache_ptr
         beq     inc_cache_high1
@@ -346,10 +345,12 @@ continue1:
 continue2:
         ; Should we check for $FF?
         bit     ffcheck
-        bpl     out
-        cmp     #$FF          ; Is result FF?
-        bne     out
-
+        bmi     :+
+        rts
+:       cmp     #$FF          ; Is result FF?
+        beq     :+
+        rts
+:       pha                     ; Remember result
         ; Yes. Read again.
         lda     _cur_cache_ptr
         cmp     _cache_end
@@ -1716,6 +1717,45 @@ noMoreBlocks:
         lda    #1       ; PJPG_NO_MORE_BLOCKS
 retErr:
         ldx    #0
+        rts
+
+left: .res 2
+
+_skipVariableMarker:
+        lda    #16
+        jsr    _getBits1
+        cpx    #$00
+        bne    :+
+        cmp    #$02
+        bcc    outErr
+
+        sec
+        sbc    #2
+        bcs    :+
+        dex
+
+:       sta    left
+        stx    left+1
+
+contDec:
+        lda    #8
+        jsr    _getBits1
+        lda    left
+        bne    :+
+        ldx    left+1
+        dex
+        cpx    #$FF
+        beq    outOk
+:       dec    left
+        bne    contDec
+
+outOk:
+        lda    #0
+        tax
+        rts
+outErr:
+        lda   #14       ; PJPG_BAD_VARIABLE_MARKER
+        ; X already 0
         rts
 
         .rodata

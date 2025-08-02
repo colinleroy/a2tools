@@ -468,25 +468,6 @@ static uint8 readSOFMarker(void)
    return 0;
 }
 //------------------------------------------------------------------------------
-// Used to skip unrecognized markers.
-uint8 skipVariableMarker(void)
-{
-   uint16 left = getBits1(16);
-
-   if (left < 2)
-      return PJPG_BAD_VARIABLE_MARKER;
-
-   left -= 2;
-
-   while (left)
-   {
-      getBits1(8);
-      left--;
-   }
-
-   return 0;
-}
-//------------------------------------------------------------------------------
 // Read a define restart interval (DRI) marker.
 static uint8 readDRIMarker(void)
 {

@@ -148,6 +148,26 @@ uint16 __fastcall__ imul_b5(int16 w)
   return (uint16)x;
 }
 
+//------------------------------------------------------------------------------
+// Used to skip unrecognized markers.
+uint8 skipVariableMarker(void)
+{
+   uint16 left = getBits1(16);
+
+   if (left < 2)
+      return PJPG_BAD_VARIABLE_MARKER;
+
+   left -= 2;
+
+   while (left)
+   {
+      getBits1(8);
+      left--;
+   }
+
+   return 0;
+}
+
 uint8 huffDecode(HuffTable* pHuffTable, const uint8* pHuffVal)
 {
   uint8 i = 0;
