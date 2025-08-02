@@ -25,14 +25,16 @@
 _gBitBuf      = _zp2       ; word, used everywhere
 code          = _zp4       ; word, used in huffDecode
 cur_gMCUOrg   = _zp6       ; word, used in _decodeNextMCU
-
 _gBitsLeft    = _zp8       ; byte, used everywhere
+
 cur_pQ        = _zp9       ; byte, used in _decodeNextMCU
 cur_ZAG_coeff = _zp10      ; byte, used in _decodeNextMCU
 rDMCU         = _zp11      ; byte, used in _decodeNextMCU
 sDMCU         = _zp12      ; byte, used in _decodeNextMCU
 iDMCU         = _zp13      ; byte, used in _decodeNextMCU
 
+dw            = _zp9       ; byte, used in imul (IDCT)
+neg           = _zp10      ; byte, used in imul (IDCT)
 
 .struct hufftable_t
    mMinCode .res 32
@@ -408,9 +410,8 @@ _getBit:
         adc     #0
         rts
 
-; uint16 __fastcall__ imul_b1_b3(int16 w)
-
-_imul_b1_b3:
+.macro imul TABL, TABM, TABH
+.scope
         ldy     #$00
         sty     neg
         tay                   ; val low byte in Y
@@ -431,7 +432,7 @@ _imul_b1_b3:
 
 :       stx    tmp4
         ; dw = mul362_l[l] | mul362_m[l] <<8 | mul362_h[l] <<16;
-        lda    _mul362_l,y
+        lda    TABL,y
         sta    dw
         ; lda    _mul362_m,y - shortcut right below
         ; sta    tmp1
@@ -440,14 +441,18 @@ _imul_b1_b3:
 
         ; dw += (mul362_l[h]) << 8;
         clc
-        lda    _mul362_m,y    ; tmp1
+        lda    TABM,y    ; tmp1
         ldx    tmp4
-        adc    _mul362_l,x
+        adc    TABL,x
         sta    tmp1
 
         ; dw += (mul362_m[h]) << 16;
-        lda    _mul362_h,y
-        adc    _mul362_m,x
+        .if .paramcount = 3
+        lda    TABH,y
+        .else
+        lda    #$00
+        .endif
+        adc    TABM,x
         sta    tmp2
 
         ; Was val negative?
@@ -475,149 +480,25 @@ _imul_b1_b3:
         bne    :+
         inx
 :       rts
+.endscope
+.endmacro
+
+; uint16 __fastcall__ imul_b1_b3(int16 w)
+_imul_b1_b3:
+        imul    _mul362_l, _mul362_m, _mul362_h
 
 ; uint16 __fastcall__ imul_b2(int16 w)
 
 _imul_b2:
-        ldy     #$00
-        sty     neg
-
-        tay                   ; val low byte in Y
-
-        cpx     #$80
-        bcc     :+
-        stx     neg
-
-        ; val = -val;
-        clc
-        eor     #$FF
-        adc     #1
-        tay
-        txa
-        eor    #$FF 
-        adc    #0
-        tax
-
-:
-        stx     tmp4
-        ; dw = mul669_l[l] | mul669_m[l] <<8 | mul669_h[l] <<16;
-        lda    _mul669_l,y
-        sta    dw
-        ; lda    _mul669_m,y - shortcut right below
-        ; sta    tmp1
-        ; lda    _mul669_h,y
-        ; sta    tmp2
-
-        ; dw += (mul669_l[h]) << 8;
-        clc
-        lda    _mul669_m,y    ; tmp1
-        ldx    tmp4
-        adc    _mul669_l,x
-        sta    tmp1
-
-        ; dw += (mul669_m[h]) << 16;
-        lda    _mul669_h,y
-        adc    _mul669_m,x
-        sta    tmp2
-
-        ; Was val negative?
-        ldy    neg
-        bne    :+
-        tax
-        lda    tmp1
-        rts
-:
-        ; dw ^= 0xffffffff
-        lda    #$FF
-        eor    dw
-        sta    dw
-        lda    #$FF
-        eor    tmp2
-        tax
-        lda    #$FF
-        eor    tmp1
-
-        ; dw++;
-        inc    dw
-        bne    :+
-        clc
-        adc    #1
-        bne    :+
-        inx
-:       rts
+        imul    _mul669_l, _mul669_m, _mul669_h
 
 ; uint16 __fastcall__ imul_b4(int16 w)
-
 _imul_b4:
-        ldy     #$00
-        sty     neg
-        tay                   ; val low byte in Y
-
-        cpx     #$80
-        bcc     :+
-        stx     neg
-
-        ; val = -val;
-        clc
-        eor     #$FF
-        adc     #1
-        tay
-        txa
-        eor    #$FF
-        adc    #0
-        tax
-
-:
-        stx     tmp4
-        ; dw = mul277_l[l] | mul277_m[l] <<8 | mul277_h[l] <<16;
-        lda    _mul277_l,y
-        sta    dw
-        ; lda    _mul277_m,y - shortcut right below
-        ; sta    tmp1
-        ; lda    _mul277_h,y
-        ; sta    tmp2
-
-        ; dw += (mul277_l[h]) << 8;
-        clc
-        lda    _mul277_m,y    ; tmp1
-        ldx    tmp4
-        adc    _mul277_l,x
-        sta    tmp1
-
-        ; dw += (mul277_m[h]) << 16;
-        lda    _mul277_h,y
-        adc    _mul277_m,x
-        sta    tmp2
-
-        ; Was val negative?
-        ldy    neg
-        bne    :+
-        tax
-        lda    tmp1
-        rts
-:
-        ; dw ^= 0xffffffff
-        lda    #$FF
-        eor    dw
-        sta    dw
-        lda    #$FF
-        eor    tmp2
-        tax
-        lda    #$FF
-        eor    tmp1
-
-        ; dw++;
-        inc    dw
-        bne    :+
-        clc
-        adc    #1
-        bne    :+
-        inx
-:       rts
+        imul    _mul277_l, _mul277_m, _mul277_h
 
 ; uint16 __fastcall__ imul_b5(int16 w)
-
 _imul_b5:
+        imul    _mul196_l, _mul196_m
         ldy     #$00
         sty     neg
         tay             ; val low byte in Y
@@ -1849,10 +1730,6 @@ ffcheck:.res 1
 final_shift:
         .res 1
 ret:    .res 2
-
-;imul
-dw:     .res 4
-neg:    .res 1
 
 ;huffExtend
 extendX:.res 2
