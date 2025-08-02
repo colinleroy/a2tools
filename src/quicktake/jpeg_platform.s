@@ -1818,9 +1818,6 @@ copy_cont:
 copy_out:
         rts
 
-        .rodata
-shit:   .res 32 ; Fix to shit in _decodeNextMCU apparently (_ZAG_Coeff page cross?)
-
         .bss
 
 ;getBit/octet
