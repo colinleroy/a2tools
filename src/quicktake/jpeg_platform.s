@@ -302,18 +302,15 @@ no_lshift5:
         ldx     ret+1
         jmp     shraxy
 
-:       ldx     n_min_eight,y
-        beq     :++
-        lda     ret+1
+:       lda     ret+1
+        ldx     n_min_eight,y
+        beq     no_final_rshift
 :       lsr     a
         dex
         bne     :-
         ; Now X is 0
         ; ldx   #0
-        rts
-:
-        lda     ret+1
-        ; ldx   #0
+no_final_rshift:
         rts
 
 ;uint8 getOctet(uint8 FFCheck)
