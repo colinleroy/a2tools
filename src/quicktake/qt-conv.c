@@ -301,7 +301,6 @@ static void write_raw(uint16 h)
 
 #else
   #define y_ptr      zp4
-  #define cur        zp8p
   #define cur_orig_x zp10p
   #define cur_orig_y zp12p
 

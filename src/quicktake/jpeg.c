@@ -172,7 +172,7 @@ static uint8 gTemFlag;
 uint16 gBitBuf;
 uint8 gBitsLeft;
 #else
-#define gBitBuf zp6i
+#define gBitBuf zp2i
 #define gBitsLeft zp8
 #endif
 //------------------------------------------------------------------------------
@@ -1351,6 +1351,7 @@ void qt_load_raw(uint16 top)
     }
     dst_y = 0;
   }
+
   pDst_row = raw_image;
 
   for ( ; ; ) {

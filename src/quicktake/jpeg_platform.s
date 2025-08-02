@@ -1,6 +1,6 @@
 
-        .importzp   tmp1, tmp2, tmp3, tmp4, ptr1, ptr2, ptr3, _prev_ram_irq_vector, _prev_rom_irq_vector, c_sp, regbank, ptr4
-        .importzp   _zp6, _zp8, _zp10, _zp12, _zp13
+        .importzp   tmp1, tmp2, tmp3, tmp4, ptr1, ptr2, ptr3, _prev_ram_irq_vector, _prev_rom_irq_vector, c_sp, ptr4
+        .importzp   _zp2, _zp4, _zp6, _zp8, _zp9, _zp10, _zp11, _zp12, _zp13
         .import     popptr1
         .import     _extendTests, _extendOffsets
         .import     _cache_end, _fillInBuf
@@ -15,14 +15,24 @@
         .import     _gHuffTab0, _gHuffVal0, _gHuffTab1, _gHuffVal1, _gHuffTab2, _gHuffVal2, _gHuffTab3, _gHuffVal3
         .import     _gMCUBufG
         .import     _gNumMCUSRemainingX, _gNumMCUSRemainingY
-        .import     shraxy, decsp6, popax, addysp, mult16x16x16_direct
+        .import     shraxy, decsp4, popax, addysp, mult16x16x16_direct
         .export     _huffExtend, _getBits1, _getBits2, _getBit
         .export     _imul_b1_b3, _imul_b2, _imul_b4, _imul_b5
         .export     _idctRows, _idctCols, _decodeNextMCU, _transformBlock
         .export     _pjpeg_decode_mcu 
 
-_gBitBuf   = _zp6
-_gBitsLeft = _zp8
+; ZP vars. Mind that qt-conv uses some too
+_gBitBuf      = _zp2       ; word, used everywhere
+code          = _zp4       ; word, used in huffDecode
+cur_gMCUOrg   = _zp6       ; word, used in _decodeNextMCU
+
+_gBitsLeft    = _zp8       ; byte, used everywhere
+cur_pQ        = _zp9       ; byte, used in _decodeNextMCU
+cur_ZAG_coeff = _zp10      ; byte, used in _decodeNextMCU
+rDMCU         = _zp11      ; byte, used in _decodeNextMCU
+sDMCU         = _zp12      ; byte, used in _decodeNextMCU
+iDMCU         = _zp13      ; byte, used in _decodeNextMCU
+
 
 .struct hufftable_t
    mMinCode .res 32
@@ -290,8 +300,10 @@ check_cache_high1:
         cmp     _cache_end+1
         bne     continue1
         sty     tmp1
+        stx     tmp4
         jsr     _fillInBuf
         ldy     tmp1
+        ldx     tmp4
         jmp     continue1
 
 check_cache_high2:
@@ -299,8 +311,10 @@ check_cache_high2:
         cmp     _cache_end+1
         bne     continue3
         sty     tmp1
+        stx     tmp4
         jsr     _fillInBuf
         ldy     tmp1
+        ldx     tmp4
         jmp     continue3
 
 inc_cache_high1:
@@ -322,7 +336,7 @@ getOctet:
 continue1:
         ; Load char from buffer
         lda     (_cur_cache_ptr),y
-        tax                     ; Result in X
+        pha                     ; Remember result
         ; Increment buffer pointer
         inc     _cur_cache_ptr
         beq     inc_cache_high1
@@ -331,7 +345,7 @@ continue2:
         ; Should we check for $FF?
         bit     ffcheck
         bpl     out
-        cpx     #$FF
+        cmp     #$FF          ; Is result FF?
         bne     out
 
         ; Yes. Read again.
@@ -362,7 +376,7 @@ continue4:
 
 out:
         ; Return result
-        txa
+        pla
         rts
 
 ; uint8 getBit(void)
@@ -673,190 +687,67 @@ _imul_b5:
 :       rts
 
 ; uint8 __fastcall__ huffDecode(const uint8* pHuffVal)
-_huffDecode0:
+.macro huffDecode TABLE, VAL
+.scope
         jsr     _getBit
         sta     code
         lda     #$00
         sta     code+1
 
-        lda     #16
-        sta     huffC
-
+        ldx     #16
         ldy     #$FE
-nextLoop0:
+nextLoop:
         ; *curMaxCode != 0xFFFF?
         iny                     ; FF - 1 - 3 ...
         iny                     ; 0  - 2 - 4 ...
-        ldx     _gHuffTab0+1+32,y
-        lda     _gHuffTab0+32,y
-        cpx     #$FF
-        bne     :+
-        cmp     #$FF
-        beq     noTest0
-:       cpx     code+1
-        bcc     noTest0          ; high byte <, don't break
-        bne     loopDone0        ; high byte >, do break
-        cmp     code            ; test low     byte
-        bcs     loopDone0        ; low byte >, do break
-noTest0:
 
+        lda TABLE+1+32,y        ; curMaxCode == 0xFFFF? hibyte
+        cmp #$FF
+        beq checkLow
+
+        cmp code+1              ; curMaxCode < code ? hibyte
+        bcc noTest
+        bne loopDone
+
+checkLow:
+        lda TABLE+32,y
+        cmp #$FF                ; curMaxCode == 0xFFFF? lobyte
+        beq noTest
+        cmp code                ; ; curMaxCode < code ? lobyte
+        bcs loopDone
+noTest:
         asl     code
         rol     code+1
         jsr     _getBit
         ora     code
         sta     code
-        dec     huffC
-        bne     nextLoop0
+        dex
+        bne     nextLoop
         rts
-loopDone0:
+loopDone:
         clc
-        lda     _gHuffTab0+64,y
+        lda     TABLE+64,y
         adc     code
         sec
-        sbc     _gHuffTab0,y
-        tay                     ; Backup index
+        sbc     TABLE,y
+        tay                     ; Get index
 
-        lda     _gHuffVal0,y
+        lda     VAL,y
         rts
+.endscope
+.endmacro
+
+_huffDecode0:
+        huffDecode _gHuffTab0, _gHuffVal0
 
 _huffDecode1:
-        jsr     _getBit
-        sta     code
-        lda     #$00
-        sta     code+1
-
-        lda     #16
-        sta     huffC
-
-        ldy     #$FE
-nextLoop1:
-        ; *curMaxCode != 0xFFFF?
-        iny                     ; FF - 1 - 3 ...
-        iny                     ; 0  - 2 - 4 ...
-        ldx     _gHuffTab1+1+32,y
-        lda     _gHuffTab1+32,y
-        cpx     #$FF
-        bne     :+
-        cmp     #$FF
-        beq     noTest1
-:       cpx     code+1
-        bcc     noTest1          ; high byte <, don't break
-        bne     loopDone1        ; high byte >, do break
-        cmp     code            ; test low     byte
-        bcs     loopDone1        ; low byte >, do break
-noTest1:
-
-        asl     code
-        rol     code+1
-        jsr     _getBit
-        ora     code
-        sta     code
-        dec     huffC
-        bne     nextLoop1
-        rts
-loopDone1:
-        clc
-        lda     _gHuffTab1+64,y
-        adc     code
-        sec
-        sbc     _gHuffTab1,y
-        tay                     ; Backup index
-
-        lda     _gHuffVal1,y
-        rts
+        huffDecode _gHuffTab1, _gHuffVal1
 
 _huffDecode2:
-        jsr     _getBit
-        sta     code
-        lda     #$00
-        sta     code+1
-
-        lda     #16
-        sta     huffC
-
-        ldy     #$FE
-nextLoop2:
-        ; *curMaxCode != 0xFFFF?
-        iny                     ; FF - 1 - 3 ...
-        iny                     ; 0  - 2 - 4 ...
-        ldx     _gHuffTab2+1+32,y
-        lda     _gHuffTab2+32,y
-        cpx     #$FF
-        bne     :+
-        cmp     #$FF
-        beq     noTest2
-:       cpx     code+1
-        bcc     noTest2          ; high byte <, don't break
-        bne     loopDone2        ; high byte >, do break
-        cmp     code            ; test low     byte
-        bcs     loopDone2        ; low byte >, do break
-noTest2:
-
-        asl     code
-        rol     code+1
-        jsr     _getBit
-        ora     code
-        sta     code
-        dec     huffC
-        bne     nextLoop2
-        rts
-loopDone2:
-        clc
-        lda     _gHuffTab2+64,y
-        adc     code
-        sec
-        sbc     _gHuffTab2,y
-        tay                     ; Backup index
-
-        lda     _gHuffVal2,y
-        rts
+        huffDecode _gHuffTab2, _gHuffVal2
 
 _huffDecode3:
-        jsr     _getBit
-        sta     code
-        lda     #$00
-        sta     code+1
-
-        lda     #16
-        sta     huffC
-
-        ldy     #$FE
-nextLoop3:
-        ; *curMaxCode != 0xFFFF?
-        iny                     ; FF - 1 - 3 ...
-        iny                     ; 0  - 2 - 4 ...
-        ldx     _gHuffTab3+1+32,y
-        lda     _gHuffTab3+32,y
-        cpx     #$FF
-        bne     :+
-        cmp     #$FF
-        beq     noTest3
-:       cpx     code+1
-        bcc     noTest3          ; high byte <, don't break
-        bne     loopDone3        ; high byte >, do break
-        cmp     code             ; test low     byte
-        bcs     loopDone3        ; low byte >=, do break
-noTest3:
-
-        asl     code
-        rol     code+1
-        jsr     _getBit
-        ora     code
-        sta     code
-        dec     huffC
-        bne     nextLoop3
-        rts
-loopDone3:
-        clc
-        lda     _gHuffTab3+64,y
-        adc     code
-        sec
-        sbc     _gHuffTab3,y
-        tay                     ; Backup index
-
-        lda     _gHuffVal3,y
-        rts
-
+        huffDecode _gHuffTab3, _gHuffVal3
 
 ; void idctRows(void
 
@@ -1528,22 +1419,7 @@ cont_idct_cols:
 idctColDone:
         rts
 
-cur_gMCUOrg   = regbank+0
-cur_pQ        = regbank+2
-cur_ZAG_coeff = regbank+4
-
-rDMCU         = _zp10
-sDMCU         = _zp12
-iDMCU         = _zp13
-
 _decodeNextMCU:
-        jsr     decsp6          ; Backup regbank
-        ldy     #5
-:       lda     regbank+0,y
-        sta     (c_sp),y
-        dey
-        bpl     :-
-
         lda     _gRestartInterval
         ora     _gRestartInterval+1
         beq     noRestart
@@ -1555,18 +1431,8 @@ _decodeNextMCU:
         jsr     _processRestart
         cmp     #0
         beq     decRestarts
-        pha
-
-        ldy     #0              ; Restore regbank
-:       lda     (c_sp),y
-        sta     regbank+0,y
-        iny
-        cpy     #6
-        bne     :-
-
-        pla
-        ldx     #0
-        jmp     addysp
+        ldx     #0            ; Return status
+        rts
 
 decRestarts:
         lda     _gRestartsLeft
@@ -1729,8 +1595,6 @@ storeExtraBits:
         lsr     a
         lsr     a
         sta     rDMCU
-        lda     #$00
-        sta     rDMCU+1
 
         lda     sDMCU
         and     #$0F
@@ -1904,15 +1768,9 @@ ZAG2_Done:
         bcc     nextUselessBlock
 
 uselessBlocksDone:
-        ldy     #0              ; Restore regbank
-:       lda     (c_sp),y
-        sta     regbank+0,y
-        iny
-        cpy     #6
-        bne     :-
         lda     #$00
         tax
-        jmp     addysp
+        rts
 
 _transformBlock:
         pha
@@ -1994,14 +1852,7 @@ ret:    .res 2
 
 ;imul
 dw:     .res 4
-val:    .res 2
 neg:    .res 1
-
-;huffDecode
-huffTab:.res 2
-huffVal:.res 2
-huffC:  .res 1
-code:   .res 2
 
 ;huffExtend
 extendX:.res 2
@@ -2033,6 +1884,5 @@ x41:    .res 2
 x42:    .res 2
 
 ;decodeNextMCU
-status:     .res 1
 mcuBlock:   .res 1
 componentID:.res 1
