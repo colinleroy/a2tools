@@ -460,9 +460,9 @@ try_again:
 
 #ifdef __CC65__
   check_floppy();
+  clrscr();
 #endif
 
-  clrscr();
   if (identify(ifname) != 0) {
     goto out;
   }

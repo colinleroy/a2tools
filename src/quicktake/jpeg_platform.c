@@ -472,13 +472,13 @@ uint8 decodeNextMCU(void)
           cur_pQ_l+=15;
           cur_pQ_h+=15;
         } else {
+          while (cur_ZAG_coeff != end_ZAG_coeff) {
+            gCoeffBuf[*cur_ZAG_coeff] = 0;
+            cur_ZAG_coeff++;
+          }
           break;
         }
       }
-    }
-    while (cur_ZAG_coeff != end_ZAG_coeff) {
-      gCoeffBuf[*cur_ZAG_coeff] = 0;
-      cur_ZAG_coeff++;
     }
 
     transformBlock(mcuBlock);
