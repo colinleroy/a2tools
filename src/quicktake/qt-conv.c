@@ -151,7 +151,12 @@ static uint8 histogram_low[256];
 static uint8 histogram_high[256];
 #endif
 
+#ifndef __CC65__
 static uint8 *orig_y_table[BAND_HEIGHT];
+#else
+static uint8 orig_y_table_l[BAND_HEIGHT];
+static uint8 orig_y_table_h[BAND_HEIGHT];
+#endif
 static uint16 orig_x0_offset;
 static uint8 orig_x_offset[256];
 static uint8 scaled_band_height;
@@ -254,7 +259,15 @@ static void build_scale_table(const char *ofname) {
   do {
     /* Y cropping is handled in main decode/save loop */
     row--;
+    #ifdef __CC65__
+    __AX__ = (uint16)(raw_image + FILE_IDX((row) * 10 / scaling_factor, 0) + RAW_Y_OFFSET*RAW_WIDTH + orig_x0_offset);
+    __asm__("ldy %v", row);
+    __asm__("sta %v,y", orig_y_table_l);
+    __asm__("txa");
+    __asm__("sta %v,y", orig_y_table_h);
+    #else
     orig_y_table[row] = raw_image + FILE_IDX((row) * 10 / scaling_factor, 0) + RAW_Y_OFFSET*RAW_WIDTH + orig_x0_offset;
+    #endif
   } while (row);
 
 }
@@ -301,8 +314,6 @@ static void write_raw(uint16 h)
 
 #else
   #define y_ptr      zp4
-  #define cur_orig_x zp10p
-  #define cur_orig_y zp12p
 
   __asm__("lda %v", last_band_crop);
   __asm__("beq %g", full_band);
@@ -316,7 +327,6 @@ static void write_raw(uint16 h)
   __asm__("bne %g", full_band);
 
   __asm__("lda %v", last_band_crop);
-  __asm__("asl");
   __asm__("sta %g+1", y_end);
 
   /* output_write_len -= (scaled_band_height - last_band_crop) * FILE_WIDTH; */
@@ -333,7 +343,6 @@ static void write_raw(uint16 h)
 
 full_band:
   __asm__("lda %v", scaled_band_height);
-  __asm__("asl");
   __asm__("sta %g+1", y_end);
 
 no_crop:
@@ -341,33 +350,21 @@ no_crop:
   __asm__("sta %g+2", dst_ptr);
 
   __asm__("clc");
-  __asm__("lda #<%v", orig_y_table);
-  __asm__("sta %v", cur_orig_y);
-  __asm__("lda #>%v", orig_y_table);
-  __asm__("sta %v+1", cur_orig_y);
-
-  __asm__("lda #<%v", orig_x_offset);
-  __asm__("sta %v", cur_orig_x);
-  __asm__("lda #>%v", orig_x_offset);
-  __asm__("sta %v+1", cur_orig_x);
 
   __asm__("ldy #0");
-  __asm__("sty %v", y_ptr);
   next_y:
-    __asm__("lda (%v),y", cur_orig_y);
+    __asm__("lda %v,y", orig_y_table_l);
     __asm__("sta %g+1", cur_orig_y_addr);
-    __asm__("iny");
-    __asm__("lda (%v),y", cur_orig_y);
+    __asm__("lda %v,y", orig_y_table_h);
+    __asm__("sta %g+2", cur_orig_y_addr);
+
     __asm__("iny");
     __asm__("sty %v", y_ptr);
 
-    __asm__("sta %g+2", cur_orig_y_addr);
-
     __asm__("ldy #0");
-
     next_x:
     /* cur += *cur_orig_x; */
-    __asm__("lda (%v),y", cur_orig_x);
+    __asm__("lda %v,y", orig_x_offset);
     __asm__("adc %g+1", cur_orig_y_addr);
     __asm__("sta %g+1", cur_orig_y_addr);
     __asm__("bcc %g", cur_orig_y_addr);
