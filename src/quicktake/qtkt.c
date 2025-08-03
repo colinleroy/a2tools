@@ -35,7 +35,6 @@ uint8 cache[CACHE_SIZE];
 uint8 *cache_start = cache;
 
 /* Pointer arithmetic helpers */
-static uint16 width_plus2;
 static uint16 pgbar_state;
 static uint8 *last_two_lines;
 static uint8 at_very_first_row;
@@ -57,7 +56,6 @@ uint8 *idx_forward;
 uint8 *idx_behind;
 uint8 *idx_end;
 uint8 *idx_behind_plus2;
-uint16 *idx_pix_rows;
 
 
 /* Internal data buffer
@@ -88,7 +86,6 @@ void qt_load_raw(uint16 top)
     reset_bitbuff();
 
     at_very_first_row = 1;
-    width_plus2 = width + 2;
     pgbar_state = 0;
 
     /* calculate offsets to shift the last two lines + 2px
@@ -97,12 +94,12 @@ void qt_load_raw(uint16 top)
      */
     last_two_lines = raw_image + (BAND_HEIGHT * SCRATCH_WIDTH);
 
-    /* Init the second line + 2 bytes of buffer with grey. */
-    memset (raw_image+SCRATCH_WIDTH, 0x80, SCRATCH_WIDTH + 2);
+    /* Init the second line + 1 bytes of buffer with grey. */
+    memset (raw_image+SCRATCH_WIDTH, 0x80, SCRATCH_WIDTH + 1);
   } else {
-    /* Shift the last band's last line, plus 2 pixels,
+    /* Shift the last band's last line, plus 1 pixels,
      * to second line of the new band. */
-    memcpy(raw_image+SCRATCH_WIDTH, last_two_lines+SCRATCH_WIDTH, SCRATCH_WIDTH + 2);
+    memcpy(raw_image+SCRATCH_WIDTH, last_two_lines+SCRATCH_WIDTH, SCRATCH_WIDTH + 1);
   }
 
   /* We start at line 2. */

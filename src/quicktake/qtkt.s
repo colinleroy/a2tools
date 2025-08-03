@@ -301,7 +301,6 @@ top:
         sta     pgbar_state             ; Zero progress bar (A=0 here)
         jsr     set_cache_data          ; Initialize cache things
 
-
         lda     #(640/INNER_X_LOOP_LEN) ; How many outer loops per row ?
         ldx     _width
         cpx     #<(320)
@@ -398,6 +397,7 @@ inc_cache_high:
         inc     cache_read+1
 keep_motor_on_beg:
         sta     motor_on                ; Keep drive motor running
+
 ; Check for cache end and refill cache
 cache_check_high_byte:
         ldx     #0                      ; Patched when resetting (_cache_end+1)
