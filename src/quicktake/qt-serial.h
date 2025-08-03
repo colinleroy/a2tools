@@ -44,7 +44,7 @@ typedef struct _thumb_info {
 
 /* Communication buffer */
 #define BLOCK_SIZE 512
-#define BUFFER_BLOCKS 2
+#define BUFFER_BLOCKS 4
 #define BUFFER_SIZE (BLOCK_SIZE*BUFFER_BLOCKS)
 extern unsigned char buffer[BUFFER_SIZE];
 extern uint8 serial_model;

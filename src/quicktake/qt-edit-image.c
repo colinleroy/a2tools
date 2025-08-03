@@ -1028,25 +1028,25 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
     /* Load data from file */
     if (!is_thumb) {
 
-#if (BLOCK_SIZE*2 != 1024)
-#error Wrong BLOCK_SIZE, has to be 2*256
+#if (BUFFER_SIZE != 2048)
+#error Wrong BUFFER_SIZE, has to be 2048
 #endif
 
 #ifndef __CC65__
-      if (y % 4) {
+      if (y % 8) {
         cur_buf_page += FILE_WIDTH;
       } else {
-        fread(buffer, 1, BLOCK_SIZE*2, ifp);
+        fread(buffer, 1, BUFFER_SIZE, ifp);
         cur_buf_page = buffer;
       }
 #else
       __asm__("lda %v", y);
-      __asm__("and #3");
+      __asm__("and #7");
       __asm__("beq %g", read_buf);
       __asm__("inc %v+1", cur_buf_page);
       __asm__("jmp %g", prepare_line);
       read_buf:
-      fread(buffer, 1, BLOCK_SIZE*2, ifp);
+      fread(buffer, 1, BUFFER_SIZE, ifp);
       __asm__("lda #>(%v)", buffer);
       __asm__("sta %v+1", cur_buf_page);
 #endif
@@ -1557,7 +1557,6 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
       /* Add current pixel value */
       __asm__("clc");
       __asm__("adc %v", opt_val);
-      __asm__("sta tmp1"); /* Backup low byte */
       __asm__("bcc %g", noof20);
       __asm__("inx");
       /* High byte not zero? - don't check for neg here, can't happen, it's either 0 or 1 */
@@ -1572,14 +1571,15 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
       __asm__("cmp #<(%b)", DITHER_THRESHOLD);
       __asm__("bcc %g", forward_err_direct);
       white_pix:
+      __asm__("tax");      /* Backup low byte */
       __asm__("ldy #$00");
       __asm__("lda (%v),y", ptr);
       __asm__("ora %v", pixel);
       __asm__("sta (%v),y", ptr);
+      __asm__("txa");       /* Restore low byte */
 
       forward_err:
-      __asm__("lda tmp1");       /* Restore low byte */
-      __asm__("cmp #$80");  /* Keep sign for >> (no need to do it where coming from low byte check path, DITHER_THRESHOLD is $80)*/
+      __asm__("cmp #$80");  /* Keep low byte sign for >> (no need to do it where coming from low byte check path, DITHER_THRESHOLD is $80)*/
       forward_err_direct:
       __asm__("ror a");
       __asm__("sta %v", err2);
