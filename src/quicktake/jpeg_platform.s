@@ -109,8 +109,7 @@ retNormal:
 
 retExtend:
         ldx     tmp1
-        lda     _extendOffsets,x
-        clc
+        lda     _extendOffsets,x    ; Carry set here
         adc     extendX
         tay
         lda     _extendOffsets+1,x
@@ -176,7 +175,6 @@ getBits:
         lda     _gBitBuf+1
         sta     ret+1
 
-        ldy     n
         cpy     #9
         bcc     n_lt8
 
@@ -202,7 +200,6 @@ no_lshift:
         jsr     getOctet
         sta     _gBitBuf
 
-
         ; gBitBuf <<= (8 - gBitsLeft);
         ldx     _gBitsLeft
         ldy     eight_min_n,x
@@ -210,14 +207,14 @@ no_lshift:
         cpy     #8
         bne     :+
 
-        lda     _gBitBuf
+        ; lda     _gBitBuf  - already contains gBitBuf
         sta     _gBitBuf+1
         ; lda     #$00      - no need to store, getOctet'd later
         ; sta     _gBitBuf
         jmp     no_lshift2
 
-:       lda     _gBitBuf
-:       asl     a
+:       ; lda     _gBitBuf  - already contains gBitBuf
+        asl     a
         rol     _gBitBuf+1
         dey
         bne     :-
@@ -283,7 +280,7 @@ no_lshift4:
 
 enoughBits:
         ; gBitsLeft = gBitsLeft - n;
-        lda     _gBitsLeft
+        tya                   ; - contains gBitsLeft
         sec
         sbc     n
         sta     _gBitsLeft
@@ -957,9 +954,8 @@ nextCol:
 
         INLINE_ASRAX7
 
-        clc
-        adc     #$80
-        bcc     :+
+        eor     #$80
+        bmi     :+
         inx
 :       cpx     #$80
         bcc     :+
@@ -1169,10 +1165,8 @@ x12h:
 
         INLINE_ASRAX7
 
-        clc
-
-        adc     #$80
-        bcc     :+
+        eor     #$80
+        bmi     :+
         inx
 
 :       cpx     #$00
@@ -1210,9 +1204,8 @@ clampDone2:
         tax
         pla
         INLINE_ASRAX7
-        clc
-        adc     #$80
-        bcc     :+
+        eor     #$80
+        bmi     :+
         inx
 :       cpx     #$00
         beq     clampDone3
@@ -1256,9 +1249,8 @@ x43h:
         tax
         pla
         INLINE_ASRAX7
-        clc
-        adc     #$80
-        bcc     :+
+        eor     #$80
+        bmi     :+
         inx
 :       cpx     #$00
         beq     clampDone4
@@ -1288,9 +1280,8 @@ clampDone4:
         tax
         pla
         INLINE_ASRAX7
-        clc
-        adc     #$80
-        bcc     :+
+        eor     #$80
+        bmi     :+
         inx
 :       cpx     #$00
         beq     clampDone5
