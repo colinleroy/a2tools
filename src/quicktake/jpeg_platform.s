@@ -25,7 +25,6 @@
 ; ZP vars. Mind that qt-conv uses some too
 _gBitBuf       = _zp2       ; word, used everywhere
 code           = _zp4       ; word, used in huffDecode
-cur_gMCUOrg    = _zp6       ; word, used in _decodeNextMCU
 _gBitsLeft     = _zp8       ; byte, used everywhere
 
 cur_pQ         = _zp9       ; byte, used in _decodeNextMCU
@@ -1320,17 +1319,11 @@ decRestarts:
 :       dec     _gRestartsLeft
 
 noRestart:
-        lda     #<_gMCUOrg
-        sta     cur_gMCUOrg
-        lda     #>_gMCUOrg
-        sta     cur_gMCUOrg+1
-
-        lda     #$00
-        sta     mcuBlock
+        ldx     #$00
+        stx     mcuBlock
 nextMcuBlock:
         ; for (mcuBlock = 0; mcuBlock < 2; mcuBlock++) {
-        ldy     #$00
-        lda     (cur_gMCUOrg),y
+        lda     _gMCUOrg,x
         sta     componentID
         tay
 
@@ -1379,11 +1372,7 @@ loadDCTab:
 doDec:
         sta     sDMCU
 
-        inc     cur_gMCUOrg
-        bne     :+
-        inc     cur_gMCUOrg+1
-
-:       and     #$0F
+        and     #$0F
         beq     :+
         jsr     _getBits2
         jmp     doExtend
@@ -1570,20 +1559,19 @@ ZAG_finished:
         jsr     _transformBlock
 
         inc     mcuBlock
-        lda     mcuBlock
-        cmp     #2
+        ldx     mcuBlock
+        cpx     #2
         bcs     firstMCUBlocksDone
         jmp     nextMcuBlock
 
 firstMCUBlocksDone:
         ; Skip the other blocks, do the minimal work
-        lda     mcuBlock
-        cmp     _gMaxBlocksPerMCU
+        ldx     mcuBlock
+        cpx     _gMaxBlocksPerMCU
         bcs     uselessBlocksDone
 
 nextUselessBlock:
-        ldy     #$00
-        lda     (cur_gMCUOrg),y
+        lda     _gMCUOrg,x
         sta     componentID
         tay
 
@@ -1642,8 +1630,8 @@ uselessDec:
 
 ZAG2_Done:
         inc     mcuBlock
-        lda     mcuBlock
-        cmp     _gMaxBlocksPerMCU
+        ldx     mcuBlock
+        cpx     _gMaxBlocksPerMCU
         bcc     nextUselessBlock
 
 uselessBlocksDone:

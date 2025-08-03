@@ -383,7 +383,6 @@ uint8 decodeNextMCU(void)
   /* Do not use zp vars here, it'll be destroyed by transformBlock
   * and idct*
   */
-  register uint8 *cur_gMCUOrg;
   uint8 componentID;
   uint8 *pQ_l, *pQ_h;
   uint8 compACTab;
@@ -409,9 +408,8 @@ uint8 decodeNextMCU(void)
     gRestartsLeft--;
   }
 
-  cur_gMCUOrg = gMCUOrg + 0;
   for (mcuBlock = 0; mcuBlock < 2; mcuBlock++) {
-    componentID = *cur_gMCUOrg;
+    componentID = gMCUOrg[mcuBlock];
     compQuant = gCompQuant[componentID];
     if (compQuant) {
       pQ_l = gQuant1_l;
@@ -426,8 +424,6 @@ uint8 decodeNextMCU(void)
       s = huffDecode(&gHuffTab1, gHuffVal1);
     else
       s = huffDecode(&gHuffTab0, gHuffVal0);
-
-    cur_gMCUOrg++;
 
     r = 0;
     numExtraBits = s & 0xF;
@@ -494,7 +490,7 @@ uint8 decodeNextMCU(void)
     * input bits
     */
   for (mcuBlock = 2; mcuBlock < gMaxBlocksPerMCU; mcuBlock++) {
-    componentID = *cur_gMCUOrg;
+    componentID = gMCUOrg[mcuBlock];
 
     if (gCompDCTab[componentID])
       s = huffDecode(&gHuffTab1, gHuffVal1);
