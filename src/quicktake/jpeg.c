@@ -256,13 +256,12 @@ static void huffCreate(uint8* pBits, HuffTable* pHuffTable)
       __asm__("rol %v+1", code);
 #endif
 
-      i++;
+      if (++i > 15)
+         break;
       curMaxCode++;
       curMinCode++;
       curValPtr++;
       l_pBits++;
-      if (i > 15)
-         break;
    }
 }
 //------------------------------------------------------------------------------
@@ -652,7 +651,7 @@ static uint8 locateSOIMarker(void)
       {
          if (thischar == M_SOI)
             break;
-         else if (thischar == M_EOI)	//getBits1 will keep returning M_EOI if we read past the end
+         if (thischar == M_EOI)	//getBits1 will keep returning M_EOI if we read past the end
             return PJPG_NOT_JPEG;
       }
    }
@@ -729,7 +728,7 @@ static uint8 locateSOSMarker(uint8* pFoundEOI)
       *pFoundEOI = 1;
       return 0;
    }
-   else if (c != M_SOS)
+   if (c != M_SOS)
       return PJPG_UNEXPECTED_MARKER;
 
    return readSOSMarker();
