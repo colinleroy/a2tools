@@ -651,9 +651,6 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
   /* Used for both Sierra and Bayer */
   register int8 *regptr1, *regptr2, *regptr3;
 
-  /* Sierra variables */
-  #define sierra_err regptr1
-
   /* Bayer variables */
   #define bayer_map_x regptr1
   #define bayer_map_y regptr2
@@ -670,8 +667,6 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
 
   file_width = p_width;
   file_height = p_height;
-
-  sierra_err = err_buf;
 
   init_data();
 
@@ -1443,7 +1438,7 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
 
       dither_sierra:
         buf_plus_err = opt_val + err2;
-        buf_plus_err += *(sierra_err+dx);
+        buf_plus_err += err_buf[dx];
         if (buf_plus_err < DITHER_THRESHOLD) {
           /* pixel's already black */
           x86_64_tgi_set(dx, y, TGI_COLOR_BLACK);
@@ -1454,9 +1449,9 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
         err2 = ((int8)buf_plus_err) >> 1; /* cur_err * 2 / 4 */
         err1 = err2 >> 1;    /* cur_err * 1 / 4 */
 
-        *(sierra_err+dx)   = err1;
+        err_buf[dx]   = err1;
         if (dx > 0) {
-          *(sierra_err+dx-1)    += err1;
+          err_buf[dx-1]    += err1;
         }
 
 #else
@@ -1553,7 +1548,7 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
         about overflows. */
       __asm__("ldx #$00");
       __asm__("ldy %v", dx);
-      __asm__("lda (%v),y", sierra_err);
+      __asm__("lda %v,y", err_buf);
       __asm__("adc %v", err2);
       __asm__("bpl %g", err_pos);
       __asm__("dex");
@@ -1593,7 +1588,7 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
 
       // *(cur_err_x_yplus1+dx)   = err1;
       __asm__("ldy %v", dx);
-      __asm__("sta (%v),y", sierra_err);
+      __asm__("sta %v,y", err_buf);
 
       // if (dx > 0) {
       //   *(cur_err_x_yplus1+dx-1)    += err1;
@@ -1603,8 +1598,8 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
       sierra_err_forward:
       __asm__("dey"); /* Patched with iny at setup, if xdir < 0 */
       __asm__("clc"); /* May be set by ror */
-      __asm__("adc (%v),y", sierra_err);
-      __asm__("sta (%v),y", sierra_err);
+      __asm__("adc %v,y", err_buf);
+      __asm__("sta %v,y", err_buf);
 #endif
 
 next_pixel:
