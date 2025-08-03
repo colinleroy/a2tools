@@ -19,8 +19,8 @@ inputB = ptr2
 ; 16 bit x 16 bit unsigned multiply, 16 bit result
 ;
 ; On Entry:
-;   inputA: multiplier   (2 bytes)
-;   inputB: multiplicand (2 bytes)
+;   inputA (ptr1): multiplier   (2 bytes)
+;   inputB (ptr2): multiplicand (2 bytes)
 ;
 ; On Exit:
 ;   result: product (2 bytes in AX)

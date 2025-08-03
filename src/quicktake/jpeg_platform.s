@@ -1387,12 +1387,27 @@ doExtend:
         stx     tmp2
         sta     tmp1
 
-        ; dc = dc + gLastDC[componentID];
-        ; gLastDC[componentID] = dc;
         lda     componentID
         asl     a
 
         tay
+
+        ;compACTab = gCompACTab[componentID];
+        lda     _gCompACTab,y
+        beq     setDec2
+setDec3:
+        lda     #<_huffDecode3
+        ldx     #>_huffDecode3
+        jmp     setDec
+setDec2:
+        lda     #<_huffDecode2
+        ldx     #>_huffDecode2
+setDec:
+        sta     huffDec+1
+        stx     huffDec+2
+
+        ; dc = dc + gLastDC[componentID];
+        ; gLastDC[componentID] = dc;
         lda     _gLastDC,y
         adc     tmp1
         sta     _gLastDC,y
@@ -1419,21 +1434,6 @@ load_pq0l:
         lda     #1
         sta     cur_ZAG_coeff
 
-        ;compACTab = gCompACTab[componentID];
-        ldy     componentID
-        lda     _gCompACTab,y
-        beq     setDec2
-setDec3:
-        lda     #<_huffDecode3
-        ldx     #>_huffDecode3
-        jmp     setDec
-setDec2:
-        lda     #<_huffDecode2
-        ldx     #>_huffDecode2
-setDec:
-        sta     huffDec+1
-        stx     huffDec+2
-
         ;cur_pQ = pQ + 1;
         lda     #1
         sta     cur_pQ
@@ -1448,23 +1448,23 @@ huffDec:
         jsr     $FFFF           ; Patched with huffDecode2/3
         sta     sDMCU
         and     #$0F
-        beq     :+
+        beq     :+              ; if numExtraBits (s & 0x0F)
         jsr     _getBits2
         jmp     storeExtraBits
-:       tax
+:       tax                     ; extraBits = 0
 
 storeExtraBits:
-        sta     extendX
+        sta     extendX         ; Store for later huffExtending
         stx     extendX+1
 
-        lda     sDMCU
+        lda     sDMCU           ; r = s >> 4
         lsr     a
         lsr     a
         lsr     a
         lsr     a
         sta     rDMCU
 
-        lda     sDMCU
+        lda     sDMCU           ; s = numExtraBits
         and     #$0F
         sta     sDMCU
 
@@ -1472,28 +1472,29 @@ storeExtraBits:
 
         lda     rDMCU
         beq     zeroZAGDone
-zeroZAG:
+
+        ; while (r) { gCoeffBuf[*cur_ZAG_coeff] = 0; ...}
         ldx     cur_ZAG_coeff
-        ldy     _ZAG_Coeff,x
         lda     #0
+zeroZAG:
+        ldy     _ZAG_Coeff,x
         sta     _gCoeffBuf,y
-        iny
-        sta     _gCoeffBuf,y
+        sta     _gCoeffBuf+1,y
 
-        inc     cur_ZAG_coeff
-
+        inx
         inc     cur_pQ
 
         dec     rDMCU
         bne     zeroZAG
+        stx     cur_ZAG_coeff
 
 zeroZAGDone:
-        ;ac = huffExtend(sDMCU
+        ;ac = huffExtend(sDMCU)
         ; extendX already set
         lda     sDMCU
         jsr     _huffExtend
 
-        ;**cur_ZAG_coeff = ac * *cur_pQ;
+        ;gCoeffBuf[*cur_ZAG_coeff] = ac * *cur_pQ;
         sta     ptr2
         stx     ptr2+1
         tax
@@ -1515,26 +1516,24 @@ load_pq1h:
         tay
         pla
         sta     _gCoeffBuf,y
-        iny
         txa
-        sta     _gCoeffBuf,y
+        sta     _gCoeffBuf+1,y
         jmp     sNotZero
 
 ; Inserted here, in an otherwise unreachable place,
 ; to be more easily reachable from everywhere we need it
 ZAG_Done:
-finishZAG:
         ldx     cur_ZAG_coeff
+        lda     #0
+finishZAG:
         cpx     #64             ; end_ZAG_coeff
         beq     ZAG_finished
 
         ldy     _ZAG_Coeff,x
-        lda     #0
         sta     _gCoeffBuf,y
-        iny
-        sta     _gCoeffBuf,y
+        sta     _gCoeffBuf+1,y
 
-        inc     cur_ZAG_coeff
+        inx
         jmp     finishZAG
 
 sZero:
@@ -1555,6 +1554,7 @@ sNotZero:
         jmp     checkZAGLoop
 
 ZAG_finished:
+        stx     cur_ZAG_coeff ; Store cur_ZAG_Coeff after looping in finishZAG
         lda     mcuBlock
         jsr     _transformBlock
 
@@ -1575,18 +1575,6 @@ nextUselessBlock:
         sta     componentID
         tay
 
-        lda     _gCompDCTab,y
-        beq     :+
-
-        jsr     _huffDecode1
-        jmp     doDecb
-
-:       jsr     _huffDecode0
-
-doDecb:
-        sta     sDMCU
-
-        ldy     componentID
         lda     _gCompACTab,y
         beq     setUDec2
 setUDec3:
@@ -1599,7 +1587,16 @@ setUDec2:
 setUDec:
         sta     uselessDec+1
         stx     uselessDec+2
-        lda     sDMCU
+
+        lda     _gCompDCTab,y
+        beq     :+
+
+        jsr     _huffDecode1
+        jmp     doDecb
+
+:       jsr     _huffDecode0
+
+doDecb:
         and     #$0F
         beq     :+
         jsr     _getBits2
@@ -1645,31 +1642,22 @@ _transformBlock:
         jsr     _idctRows
         jsr     _idctCols
 
-        pla
-        beq     mCZero
-
-        lda     #<(_gMCUBufG+32)
-        ldx     #>(_gMCUBufG+32)
-        jmp     dstSet
-mCZero:
-        lda     #<_gMCUBufG
-        ldx     #>_gMCUBufG
-dstSet:
-        sta     copyDest+1
-        stx     copyDest+2
-
         ldy     #31
-        ldx     #(31*4)
+
+        pla
+        beq     :+
+        ldy     #(32+31)
+
+:       ldx     #(31*4)
         sec
 tbCopy:
         lda     _gCoeffBuf,x
-copyDest:
-        sta     $FFFF,y
+        sta     _gMCUBufG,y
 
+        dey
         txa
         sbc     #4
         tax
-        dey
         bpl     tbCopy
 
         rts

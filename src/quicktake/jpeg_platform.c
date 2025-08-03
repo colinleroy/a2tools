@@ -389,7 +389,6 @@ uint8 decodeNextMCU(void)
   uint16 r;
   uint8 s, i;
   uint16 extraBits;
-  uint8 compQuant;	
   uint8 compDCTab;
   uint8 numExtraBits;
   uint16 dc;
@@ -410,8 +409,7 @@ uint8 decodeNextMCU(void)
 
   for (mcuBlock = 0; mcuBlock < 2; mcuBlock++) {
     componentID = gMCUOrg[mcuBlock];
-    compQuant = gCompQuant[componentID];
-    if (compQuant) {
+    if (gCompQuant[componentID]) {
       pQ_l = gQuant1_l;
       pQ_h = gQuant1_h;
     } else {
@@ -512,10 +510,8 @@ uint8 decodeNextMCU(void)
       if (numExtraBits)
         getBits2(numExtraBits);
 
-      r = s >> 4;
-
       if (s) {
-        i += r;
+        i += s >> 4;
       } else {
         break;
       }
@@ -529,16 +525,15 @@ void transformBlock(uint8 mcuBlock)
   uint8* pGDst;
   int16* pSrc;
   uint8 iTB;
-  uint8 mB = mcuBlock;
 
-  idctRows();
-  idctCols();
-
-  if (mB == 0) {
+  if (mcuBlock == 0) {
     pGDst = gMCUBufG;
   } else {
     pGDst = gMCUBufG + 32;
   }
+
+  idctRows();
+  idctCols();
 
   pSrc = gCoeffBuf;
   for (iTB = 32; iTB; iTB--) {
