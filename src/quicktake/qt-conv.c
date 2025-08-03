@@ -512,6 +512,9 @@ try_again:
   printf("Done.");
 
   reload_menu(ofname);
+#ifndef __CC65__
+  return 0;
+#endif
 out:
   cgetc();
   reload_menu(NULL);

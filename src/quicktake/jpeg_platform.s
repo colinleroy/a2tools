@@ -186,6 +186,7 @@ getBits:
         ldy     _gBitsLeft
         beq     no_lshift
 
+        ; gBitBuf <<= gBitsLeft;
         ; no need to check for << 8, that can't be, as _gBitsLeft maximum is 7
         lda     _gBitBuf
 
@@ -196,10 +197,13 @@ getBits:
         ;sta     _gBitBuf - will be overwritten
 
 no_lshift:
+        ; gBitBuf |= getOctet(ff);
         ldy     ff
         jsr     getOctet
         sta     _gBitBuf
 
+
+        ; gBitBuf <<= (8 - gBitsLeft);
         ldx     _gBitsLeft
         ldy     eight_min_n,x
         beq     no_lshift2
@@ -210,7 +214,7 @@ no_lshift:
         sta     _gBitBuf+1
         ; lda     #$00      - no need to store, getOctet'd later
         ; sta     _gBitBuf
-        beq     no_lshift2
+        jmp     no_lshift2
 
 :       lda     _gBitBuf
 :       asl     a
@@ -221,14 +225,17 @@ no_lshift:
         lda     _gBitBuf+1
 
 no_lshift2:
+        ; ret = (ret & 0xFF00) | (gBitBuf >> 8);
         sta     ret
 
 n_lt8:
+        ; if (gBitsLeft < n) {
         ldy     _gBitsLeft
         beq     no_lshift3
         cpy     n
         bcs     enoughBits
 
+        ; gBitBuf <<= gBitsLeft;
         ; no need to check for << 8, that can't be
         lda     _gBitBuf
 :       asl     a
@@ -238,16 +245,19 @@ n_lt8:
         ;sta     _gBitBuf - will get overwritten by getOctet
 
 no_lshift3:
+        ; gBitBuf |= getOctet(ff);
         ldy     ff
         jsr     getOctet
         sta     _gBitBuf
 
+        ; tmp = n - gBitsLeft;
         lda     n
         sec
         sbc     _gBitsLeft
         tay
         beq     no_lshift4
 
+        ; gBitBuf <<= tmp;
         cmp     #8
         bne     :+
 
@@ -257,7 +267,7 @@ no_lshift3:
         ; sta     _gBitBuf
         jmp     no_lshift4
 
-:       tax
+:       tax                   ; Keep Y = tmp
         lda     _gBitBuf
 :       asl     a
         rol     _gBitBuf+1
@@ -266,11 +276,13 @@ no_lshift3:
         sta     _gBitBuf
 
 no_lshift4:
+        ; gBitsLeft = 8 - tmp;
         lda     eight_min_n,y
         sta     _gBitsLeft
         jmp     no_lshift5
 
 enoughBits:
+        ; gBitsLeft = gBitsLeft - n;
         lda     _gBitsLeft
         sec
         sbc     n
@@ -286,6 +298,7 @@ enoughBits:
         ; sta     _gBitBuf
         jmp     no_lshift5
 
+        ; gBitBuf <<= n;
 :       lda     _gBitBuf
 :       asl     a
         rol     _gBitBuf+1
@@ -294,14 +307,16 @@ enoughBits:
         sta     _gBitBuf
 
 no_lshift5:
+        ; return ret >> final_shift
         ldy     final_shift
         cpy     #8
         bcs     :+
-        lda     ret
+
+        lda     ret             ; << less than 8, long way
         ldx     ret+1
         jmp     shraxy
 
-:       lda     ret+1
+:       lda     ret+1           ; << 8 or more, fast way
         ldx     n_min_eight,y
         beq     no_final_rshift
 :       lsr     a

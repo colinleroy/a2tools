@@ -7,8 +7,6 @@ fi
 make clean all DEBUG_HD=$TYPE && \
   mame apple2gs -window -flop1 quicktake.po -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug -sl7 scsi -hard ../../disks/smart0.po
 
-read A
-
 if [ "$1" != "" ]; then
   #get image from HD
   if [ "$1" = "100" ]; then

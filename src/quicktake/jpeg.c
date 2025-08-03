@@ -1098,8 +1098,7 @@ static void fixInBuffer(void)
    *(cur_cache_ptr--) = (uint8)(gBitBuf >> 8);
 
    gBitsLeft = 8;
-   getBits2(8);
-   getBits2(8);
+   getBits2(16);
 }
 //------------------------------------------------------------------------------
 // Restart interval processing.
