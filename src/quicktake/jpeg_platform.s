@@ -170,24 +170,24 @@ getBits:
         lda     sixteen_min_n,y
         sta     final_shift
 
-        lda     _gBitBuf
-        sta     ret
         lda     _gBitBuf+1
         sta     ret+1
+        lda     _gBitBuf
+        sta     ret
 
         cpy     #9
         bcc     n_lt8
 
-        lda     n_min_eight,y
-        sta     n
+        ldx     n_min_eight,y
+        stx     n
 
         ldy     _gBitsLeft
         beq     no_lshift
 
         ; gBitBuf <<= gBitsLeft;
         ; no need to check for << 8, that can't be, as _gBitsLeft maximum is 7
-        lda     _gBitBuf
 
+        ; lda     _gBitBuf - A already contains _gBitBuf
 :       asl     a
         rol     _gBitBuf+1
         dey
