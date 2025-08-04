@@ -38,12 +38,6 @@ neg            = _zp10      ; byte, used in imul (IDCT)
 
 _cur_cache_ptr = _prev_ram_irq_vector
 
-.struct hufftable_t
-   mMinCode .res 32
-   mMaxCode .res 32
-   mValPtr  .res 32
-.endstruct
-
 .macro INLINE_ASRAX7
 .scope
         asl                     ;          AAAAAAA0, h->C
