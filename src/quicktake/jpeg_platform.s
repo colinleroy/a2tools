@@ -287,16 +287,15 @@ enoughBits:
 
         ldy     n
         beq     no_lshift5
+        lda     _gBitBuf
         cpy     #8
         bne     :+
-        lda     _gBitBuf
         sta     _gBitBuf+1
         ; lda     #$00      - no need to store, will be getOctet'd
         ; sta     _gBitBuf
         jmp     no_lshift5
 
         ; gBitBuf <<= n;
-:       lda     _gBitBuf
 :       asl     a
         rol     _gBitBuf+1
         dey
@@ -357,6 +356,9 @@ inc_cache_high2:
         inc     _cur_cache_ptr+1
         jmp     continue4
 
+dec_cache_high:
+        dec     _cur_cache_ptr+1
+        jmp     continue5
 
 getOctet:
         sty     ffcheck         ; Backup param
@@ -400,10 +402,10 @@ continue4:
         lda     _cur_cache_ptr
         sec
         sbc     #2
-        bcs     :+
-        dec     _cur_cache_ptr+1
+        bcc     dec_cache_high
 
-:       iny
+continue5:
+        iny
         lda     #$FF
         sta     (_cur_cache_ptr),y
 
@@ -423,9 +425,11 @@ out:
         stx     neg
 
         ; val = -val;
-        clc
+        ; clc                 ; carry is set
         eor     #$FF
-        adc     #1
+        ; adc     #1
+        adc    #0
+
         tay
         txa
         eor    #$FF
@@ -442,7 +446,7 @@ out:
         ; sta    tmp2
 
         ; dw += (mul362_l[h]) << 8;
-        clc
+        ; clc            - carry is clear
         lda    TABM,y    ; tmp1
         ldx    tmp4
         adc    TABL,x
@@ -464,24 +468,22 @@ out:
         lda    tmp1
         rts
 :
-        ; dw ^= 0xffffffff
+        ; dw ^= 0xffffffff, dw++
+        ; clc             - carry is clear
         lda    #$FF
         eor    dw
+        adc    #1
         sta    dw
         lda    #$FF
-        eor    tmp2
-        tax
-        lda    #$FF
         eor    tmp1
-
-        ; dw++;
-        inc    dw
-        bne    :+
-        clc
-        adc    #1
-        bne    :+
-        inx
-:       rts
+        adc    #0
+        tay
+        lda    #$FF
+        eor    tmp2
+        adc    #0
+        tax
+        tya
+        rts
 .endscope
 .endmacro
 
@@ -532,7 +534,7 @@ _imul_b5:
         ; sta    tmp2
 
         ; dw += (mul196_l[h]) << 8;
-        clc
+        ; clc         - carry is clear
         lda    _mul196_m,y    ; tmp1
         ldx    tmp4
         adc    _mul196_l,x
@@ -957,14 +959,12 @@ nextCol:
         eor     #$80
         bmi     :+
         inx
-:       cpx     #$80
-        bcc     :+
-        lda     #0
+:       cpx     #$00
         beq     clampDone1
-:       cpx     #0
-        beq     clampDone1
-        lda     #$FF
-
+        bmi     :+
+        clc
+:       lda     #$FF
+        adc     #0
 clampDone1:
         sta     _gCoeffBuf,y
         sta     _gCoeffBuf+32,y
