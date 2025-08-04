@@ -8,6 +8,9 @@
 static uint32 tmp;
 static uint8 shift;
 uint8 cache[CACHE_SIZE];
+uint32 bitbuf=0;
+uint8 vbits=0;
+
 
 uint8 __fastcall__ getbithuff (uint8 n)
 {
@@ -20,7 +23,7 @@ uint8 __fastcall__ getbithuff (uint8 n)
     vbits = 0;
     return 0;
   }
-  if (nbits >= vbits) {
+  if (vbits < nbits) {
     FAST_SHIFT_LEFT_8_LONG(bitbuf);
     if (cur_cache_ptr == cache_end) {
       read(ifd, cur_cache_ptr = cache, CACHE_SIZE);
@@ -29,6 +32,7 @@ uint8 __fastcall__ getbithuff (uint8 n)
     vbits += 8;
   }
   shift = 32-vbits;
+  tmp = bitbuf << shift;
   if (shift >= 24) {
     FAST_SHIFT_LEFT_24_LONG_TO(bitbuf, tmp);
   } else if (shift >= 16) {

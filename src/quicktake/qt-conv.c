@@ -90,11 +90,6 @@ static uint16 __fastcall__ src_file_get_uint16(void) {
 #pragma codesize(push, 200)
 #pragma register-vars(push, on)
 
-/* bithuff state */
-uint8 bitbuf_nohuff=0;
-uint32 bitbuf=0;
-uint8 vbits=0;
-
 #define HDR_LEN 32
 #define WH_OFFSET 544
 
@@ -466,11 +461,11 @@ try_again:
 
   strcpy (ofname, ifname);
 
-  ofd = open (TMP_NAME, O_WRONLY|O_CREAT);
+  ofd = open (TMP_NAME, O_RDWR|O_CREAT, 00600);
 
   if (ofd < 0) {
     printf("Can't open %s\n", TMP_NAME);
-    goto out;
+    exit(0);
   }
 
   bzero(raw_image, RAW_IMAGE_SIZE);
@@ -491,7 +486,7 @@ try_again:
   ifd = ofd = -1;
 
   /* Save histogram to /RAM */
-  ofd = open(HIST_NAME, O_WRONLY|O_CREAT);
+  ofd = open(HIST_NAME, O_RDWR|O_CREAT, 00600);
   if (ofd > 0) {
 #ifndef __CC65__
     write(ofd, histogram, sizeof(uint16)*256);

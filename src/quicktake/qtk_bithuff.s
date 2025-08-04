@@ -3,26 +3,24 @@
 ;
         .importzp       c_sp
         .importzp       tmp1, tmp2, tmp3, tmp4, ptr1, ptr2, ptr3, sreg
-        .importzp       _prev_ram_irq_vector
+        .importzp       _prev_ram_irq_vector, _zp4ip
 
         .import         decsp4, popptr1
         .import         _read
-        .import         _bitbuf
-        .import         _bitbuf_nohuff
-        .import         _vbits
         .import         _cache_start
         .import         _cache_end
         .import         _ifd
-        .import         _huff_ptr
         .export         _getbithuff
         .export         _cache
 
 cur_cache_ptr = _prev_ram_irq_vector
+_huff_ptr     = _zp4ip
 
 .segment        "BSS"
 .align 256
 _cache: .res        CACHE_SIZE,$00
-
+_bitbuf: .res 4
+_vbits: .res 1
 nbits:
         .res        1,$00
 
@@ -88,8 +86,9 @@ _getbithuff:
         beq     inc_cache_high
 
 handle_byte:
-        ldy     _vbits
-        lda     plus8,y
+        lda     _vbits
+        clc
+        adc     #8
         sta     _vbits
 
 have_enough_vbits_h:
@@ -97,19 +96,19 @@ have_enough_vbits_h:
         lda     min32,x
         cmp     #24
         bcc     maybe_shift_16_h
-        ldy     _bitbuf         ; take low byte to high
+        ldy     _bitbuf         ; shift 24, take low byte to high
         ldx     #0
         jmp     finish_lshift_h
 maybe_shift_16_h:
         cmp     #16
         bcc     maybe_shift_8_h
-        ldy     _bitbuf+1       ; two low bytes to high
+        ldy     _bitbuf+1       ; shift 16, two low bytes to high
         ldx     _bitbuf
         jmp     finish_lshift_h
 maybe_shift_8_h:
         cmp     #8
         bcc     finish_lshift_h
-        ldy     _bitbuf+2       ; mid bytes to high
+        ldy     _bitbuf+2       ; shift 8, mid bytes to high
         ldx     _bitbuf+1
         ; Don't care about the two low bytes
 finish_lshift_h:
@@ -127,19 +126,14 @@ finish_lshift_h:
 
 lshift_done_h:
         ldx     nbits           ; Now we shift right
-        lda     min8,x
-        beq     no_final_shift_h
-        tay
         lda     tmp4
+        ldy     min8,x
+        beq     do_huff_h
 
 :       lsr     a
         dey
         bne     :-
-        jmp     do_huff_h
-no_final_shift_h:
-        lda     tmp4
 do_huff_h:
-        tax                     ; backup for no_huff case
         ldy     _huff_ptr+1
         beq     no_huff
 
@@ -165,6 +159,7 @@ do_huff_h:
         lda     (ptr1),y
         rts
 no_huff:
+        tax                     ; backup result
         lda     _vbits
         sec
         sbc     nbits
@@ -207,37 +202,3 @@ min8:   .byte 8
         .byte 2
         .byte 1
         .byte 0
-
-plus8:  .byte 8
-        .byte 9
-        .byte 10
-        .byte 11
-        .byte 12
-        .byte 13
-        .byte 14
-        .byte 15
-        .byte 16
-        .byte 17
-        .byte 18
-        .byte 19
-        .byte 20
-        .byte 21
-        .byte 22
-        .byte 23
-        .byte 24
-        .byte 25
-        .byte 26
-        .byte 27
-        .byte 28
-        .byte 29
-        .byte 30
-        .byte 31
-        .byte 32
-        .byte 33
-        .byte 34
-        .byte 35
-        .byte 36
-        .byte 37
-        .byte 38
-        .byte 39
-        .byte 40

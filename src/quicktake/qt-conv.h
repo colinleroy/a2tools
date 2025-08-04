@@ -60,10 +60,6 @@ extern uint16 raw_width, raw_image_size;
 extern char magic[5];
 extern char *model;
 
-extern uint8 bitbuf_nohuff;
-extern uint32 bitbuf;
-extern uint8 vbits;
-
 void __fastcall__ src_file_seek(uint32 off);
 
 extern uint16 *huff_ptr;
