@@ -281,13 +281,16 @@ void qt_load_raw(uint16 top)
             cur_buf_x = cur_buf_1 + col;
 
             huff_ptr = huff_18;
-            for (y=2; y; y--) {
-              tmp8 = (uint8) getbithuff(8);
-              *(cur_buf_x+1) = tmp8 * t;
-              tmp8 = (uint8) getbithuff(8);
-              *cur_buf_x = tmp8 * t;
-              cur_buf_x += DATABUF_SIZE;
-            }
+            tmp8 = (uint8) getbithuff(8);
+            *(cur_buf_x+1) = tmp8 * t;
+            tmp8 = (uint8) getbithuff(8);
+            *cur_buf_x = tmp8 * t;
+            cur_buf_x += DATABUF_SIZE;
+            tmp8 = (uint8) getbithuff(8);
+            *(cur_buf_x+1) = tmp8 * t;
+            tmp8 = (uint8) getbithuff(8);
+            *cur_buf_x = tmp8 * t;
+
           } else {
             cur_buf_prevy = cur_buf[0] + col;
             cur_buf_x = cur_buf_prevy + DATABUF_SIZE;
@@ -503,42 +506,60 @@ void qt_load_raw(uint16 top)
           __asm__("lda %v+1", huff_18);
           __asm__("sta %v+1", huff_ptr);
 
-            y_loop1:
-            __asm__("lda #8");
-            __asm__("jsr %v", getbithuff);
-            __asm__("ldx #0");
-            __asm__("jsr pushax");
-            __asm__("lda %v", t);
-            __asm__("jsr tosumula0");
-            __asm__("ldy #2");
-            __asm__("sta (%v),y", cur_buf_x);
-            __asm__("txa");
-            __asm__("ldy #3");
-            __asm__("sta (%v),y", cur_buf_x);
+          __asm__("lda #8");
+          __asm__("jsr %v", getbithuff);
+          __asm__("sta ptr1");
+          __asm__("lda %v", t);
+          __asm__("jsr umul8x8r16");
+          __asm__("ldy #2");
+          __asm__("sta (%v),y", cur_buf_x);
+          __asm__("txa");
+          __asm__("iny");
+          __asm__("sta (%v),y", cur_buf_x);
 
-            __asm__("lda #8");
-            __asm__("jsr %v", getbithuff);
-            __asm__("ldx #0");
-            __asm__("jsr pushax");
-            __asm__("lda %v", t);
-            __asm__("jsr tosumula0");
-            __asm__("ldy #0");
-            __asm__("sta (%v),y", cur_buf_x);
-            __asm__("txa");
-            __asm__("iny");
-            __asm__("sta (%v),y", cur_buf_x);
+          __asm__("lda #8");
+          __asm__("jsr %v", getbithuff);
+          __asm__("sta ptr1");
+          __asm__("lda %v", t);
+          __asm__("jsr umul8x8r16");
+          __asm__("ldy #0");
+          __asm__("sta (%v),y", cur_buf_x);
+          __asm__("txa");
+          __asm__("iny");
+          __asm__("sta (%v),y", cur_buf_x);
 
-            __asm__("clc");
-            __asm__("lda %v", cur_buf_x);
-            __asm__("adc #<%w", 2*(DATABUF_SIZE));
-            __asm__("sta %v", cur_buf_x);
-            __asm__("lda %v+1", cur_buf_x);
-            __asm__("adc #>%w", 2*(DATABUF_SIZE));
-            __asm__("sta %v+1", cur_buf_x);
-            
-            __asm__("dec %v", y);
-            __asm__("bne %g", y_loop1);
-            __asm__("jmp %g", tree_done);
+          __asm__("clc");
+          __asm__("lda %v", cur_buf_x);
+          __asm__("adc #<%w", 2*(DATABUF_SIZE));
+          __asm__("sta %v", cur_buf_x);
+          __asm__("lda %v+1", cur_buf_x);
+          __asm__("adc #>%w", 2*(DATABUF_SIZE));
+          __asm__("sta %v+1", cur_buf_x);
+          
+          __asm__("lda #8");
+          __asm__("jsr %v", getbithuff);
+          __asm__("sta ptr1");
+          __asm__("lda %v", t);
+          __asm__("jsr umul8x8r16");
+          __asm__("ldy #2");
+          __asm__("sta (%v),y", cur_buf_x);
+          __asm__("txa");
+          __asm__("iny");
+          __asm__("sta (%v),y", cur_buf_x);
+
+          __asm__("lda #8");
+          __asm__("jsr %v", getbithuff);
+          __asm__("sta ptr1");
+          __asm__("lda %v", t);
+          __asm__("jsr umul8x8r16");
+          __asm__("ldy #0");
+          __asm__("sta (%v),y", cur_buf_x);
+          __asm__("txa");
+          __asm__("iny");
+          __asm__("sta (%v),y", cur_buf_x);
+
+          __asm__("jmp %g", tree_done);
+
           tree_not_eight:
             __asm__("ldx %v+1", col);
             __asm__("lda %v", col);
