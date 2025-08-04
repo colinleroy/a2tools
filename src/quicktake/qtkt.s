@@ -417,7 +417,7 @@ keep_motor_on:
 ; Clamp value to 8bits
 clamp_high_nibble_low:
         lda     #$00
-        beq     high_nibble_special_pos    ; Back to main loop
+        beq     high_nibble_special_neg    ; Back to main loop
 
 ; ------
 ; Handle first pixel special case
