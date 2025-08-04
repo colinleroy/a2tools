@@ -64,6 +64,7 @@ extern uint16 gLastDC[3];
 
 extern uint8 gNumMCUSRemainingX, gNumMCUSRemainingY;
 extern uint8 gMCUOrg[6];
+extern uint8 gWinogradQuant[];
 
 int16 __fastcall__ huffExtend(uint16 x, uint8 s);
 uint16 __fastcall__ getBits1(uint8 numBits);
@@ -96,4 +97,6 @@ uint8 skipVariableMarker(void);
 unsigned char pjpeg_decode_mcu(void);
 void copy_decoded_to(uint8 *pDst_row);
 
+void createWinogradQuant0(void);
+void createWinogradQuant1(void);
 #endif

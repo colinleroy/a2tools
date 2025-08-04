@@ -198,17 +198,16 @@ void qt_load_raw(uint16 top)
     __asm__("beq %g", null_buf);
     not_null_buf:
 
-    __asm__("ldy %v+1", val);
-    __asm__("sty ptr2+1");
-    __asm__("ldx %v", val);
-    __asm__("stx ptr2");
+    __asm__("ldx %v+1", val);
+    __asm__("stx ptr2+1");
+    __asm__("lda %v", val);
+    __asm__("sta ptr2");
 
     __asm__("ldy #$01");
     __asm__("lda (%v),y", cur_buf_y);
-    __asm__("sta ptr1+1");
+    __asm__("tax");
     __asm__("dey");
     __asm__("lda (%v),y", cur_buf_y);
-    __asm__("sta ptr1");
 
     /* multiply */
     __asm__("jsr mult16x16x32_direct");
@@ -1008,11 +1007,9 @@ void qt_load_raw(uint16 top)
 #else
           __asm__("iny");
           __asm__("lda (%v),y", cur_buf_x);
-          __asm__("sta ptr2+1");
+          __asm__("tax");
           __asm__("dey");
           __asm__("lda (%v),y", cur_buf_x);
-          __asm__("sta ptr2");
-          __asm__("tax");
           __asm__("sty tmp1");
           __asm__("ldy %v", t);
           __asm__("jsr approx_div16x8_direct");

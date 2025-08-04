@@ -15,12 +15,15 @@
         .import     _gHuffTab0, _gHuffVal0, _gHuffTab1, _gHuffVal1, _gHuffTab2, _gHuffVal2, _gHuffTab3, _gHuffVal3
         .import     _gMCUBufG
         .import     _gNumMCUSRemainingX, _gNumMCUSRemainingY
+        .import     _gWinogradQuant
+        .import     asreax3, inceaxy, tosmul0ax, push0ax
         .import     shraxy, decsp4, popax, addysp, mult16x16x16_direct
         .export     _huffExtend, _getBits1, _getBits2
         .export     _imul_b1_b3, _imul_b2, _imul_b4, _imul_b5
         .export     _idctRows, _idctCols, _decodeNextMCU, _transformBlock
         .export     _pjpeg_decode_mcu
         .export     _copy_decoded_to
+        .export     _createWinogradQuant0, _createWinogradQuant1
 
 ; ZP vars. Mind that qt-conv uses some too
 _gBitBuf       = _zp2       ; word, used everywhere
@@ -614,6 +617,41 @@ loopDone:
 .endscope
 .endmacro
 
+.macro CREATE_WINO TABL, TABH
+.scope
+        ldy     #63
+nextQ:
+        sty     _zp13
+        ; x *= gWinogradQuant[i];
+        lda     _gWinogradQuant,y
+        ldx     #$00
+        jsr     push0ax
+        ldy     _zp13
+        lda     TABL,y
+        ldx     TABH,y
+        jsr     tosmul0ax
+
+        ; r = (int16)((x + 4) >> (3));
+        ldy     #4
+        jsr     inceaxy
+        jsr     asreax3
+
+        ldy     _zp13
+        sta     TABL,y
+        txa
+        sta     TABH,y
+        dey
+        bpl     nextQ
+        rts
+.endscope
+.endmacro
+
+_createWinogradQuant0:
+        CREATE_WINO _gQuant0_l, _gQuant0_h
+
+_createWinogradQuant1:
+        CREATE_WINO _gQuant1_l, _gQuant1_h
+
 _huffDecode0:
         huffDecode _gHuffTab0, _gHuffVal0
 
@@ -955,9 +993,9 @@ nextCol:
         inx
 :       cpx     #$00
         beq     clampDone1
-        bmi     :+
-        clc
-:       lda     #$FF
+        txa                     ; Clamp:
+        asl                     ; get sign to carry
+        lda     #$FF            ; $FF+C = 0 if neg, $FF+c = $FF if pos
         adc     #0
 clampDone1:
         sta     _gCoeffBuf,y
@@ -1422,11 +1460,9 @@ setDec:
         sta     ptr2+1
 
 load_pq0h:
-        lda     $FFFF
-        sta     ptr1+1
+        ldx     $FFFF
 load_pq0l:
         lda     $FFFF
-        sta     ptr1
         jsr     mult16x16x16_direct
         sta     _gCoeffBuf
         stx     _gCoeffBuf+1
@@ -1497,17 +1533,12 @@ zeroZAGDone:
         ;gCoeffBuf[*cur_ZAG_coeff] = ac * *cur_pQ;
         sta     ptr2
         stx     ptr2+1
-        tax
 
         ldy     cur_pQ
 load_pq1l:
         lda     $FFFF,y
-        sta     ptr1
 load_pq1h:
-        lda     $FFFF,y
-        sta     ptr1+1
-
-        lda     ptr1
+        ldx     $FFFF,y
         jsr     mult16x16x16_direct
         pha
 

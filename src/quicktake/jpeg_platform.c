@@ -595,3 +595,43 @@ void copy_decoded_to(uint8 *pDst_row)
     s += (4+1);
   }
 }
+
+//----------------------------------------------------------------------------
+// Winograd IDCT: 5 multiplies per row/col, up to 80 muls for the 2D IDCT
+
+#define PJPG_DCT_SCALE_BITS 7
+#define PJPG_WINOGRAD_QUANT_SCALE_BITS 10
+
+// Multiply quantization matrix by the Winograd IDCT scale factors
+void createWinogradQuant0(void)
+{
+   uint8 i;
+   register uint8 *ptr_winograd = gWinogradQuant;
+
+   for (i = 0; i < 64; i++)
+   {
+      long x = (long)(gQuant0_l[i] | (gQuant0_h[i]<<8));
+      int16 r;
+      x *= gWinogradQuant[i];
+      // r = (int16)((x + (1 << (PJPG_WINOGRAD_QUANT_SCALE_BITS - PJPG_DCT_SCALE_BITS - 1))) >> (PJPG_WINOGRAD_QUANT_SCALE_BITS - PJPG_DCT_SCALE_BITS));
+      //r = (int16)((x + (1 << (2))) >> (3));
+      r = (int16)((x + 4) >> (3));
+      gQuant0_l[i] = (uint8)(r);
+      gQuant0_h[i] = (uint8)(r >> 8);
+   }
+}
+void createWinogradQuant1(void)
+{
+   uint8 i;
+   register uint8 *ptr_winograd = gWinogradQuant;
+
+   for (i = 0; i < 64; i++)
+   {
+      long x = (long)(gQuant1_l[i] | (gQuant1_h[i]<<8));
+      int16 r;
+      x *= *(ptr_winograd++);
+      r = (int16)((x + (1 << (PJPG_WINOGRAD_QUANT_SCALE_BITS - PJPG_DCT_SCALE_BITS - 1))) >> (PJPG_WINOGRAD_QUANT_SCALE_BITS - PJPG_DCT_SCALE_BITS));
+      gQuant1_l[i] = (uint8)(r);
+      gQuant1_h[i] = (uint8)(r >> 8);
+   }
+}

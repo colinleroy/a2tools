@@ -9,17 +9,15 @@
 ; (https://github.com/TobyLobster/multiply_test/blob/main/tests/mult56.a)
 ;
 ; 16 bit x 16 bit unsigned multiply, 16 bit result
-; Average cycles: 167
-; 1210 bytes
+; Average cycles: 174
 
-inputA = ptr1
 inputB = ptr2
 
 ; ***************************************************************************************
 ; 16 bit x 16 bit unsigned multiply, 16 bit result
 ;
 ; On Entry:
-;   inputA (ptr1): multiplier   (2 bytes)
+;   inputA (AX): multiplier   (2 bytes)
 ;   inputB (ptr2): multiplicand (2 bytes)
 ;
 ; On Exit:
@@ -29,15 +27,15 @@ _mult16x16x16:
         sta     inputB
         stx     inputB+1
         jsr     popax
-        sta     inputA
-        stx     inputA+1
 
-        ldx     inputB          ; (a0*b0)
-
-; Expects low byte of ptr2 in X, low byte of ptr1 in A
 mult16x16x16_direct:
+        sta     inputA_l+1
         sta     getLow1+1
         sta     getHigh1+1
+
+        stx     inputA_h+1
+        ldx     inputB          ; (a0*b0)
+
         sec
         sbc     inputB
         bcs     :+
@@ -54,7 +52,8 @@ getHigh1:
         sbc     sqrHigh,y
         sta     sta_tmp_result_1a+1        ; high byte
 
-        lda     inputA+1        ; (a1*b0)
+inputA_h:
+        lda     #0        ; (a1*b0)
         ldx     inputB
         sta     getLow2+1
         sta     getHigh2+1
@@ -81,7 +80,8 @@ sta_tmp_result_1a:
         adc     #$FF
         sta     sta_tmp_result_1b+1
 
-        lda     inputA          ;(a0*b1)
+inputA_l:
+        lda     #0             ;patched (a0*b1)
         ldx     inputB+1
         sta     getLow3+1
         sta     getHigh3+1
@@ -99,7 +99,6 @@ getLow3:
 getHigh3:
         lda     sqrHigh,x       ; Patched
         sbc     sqrHigh,y
-        tax
 temp2:
         lda     #0              ; Patched
 

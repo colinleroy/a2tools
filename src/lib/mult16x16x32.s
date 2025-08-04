@@ -9,7 +9,7 @@
 ; (https://github.com/TobyLobster/multiply_test/blob/main/tests/mult56.a)
 ;
 ; 16 bit x 16 bit unsigned multiply, 32 bit result
-; Average cycles: 259.96
+; Average cycles: 267
 ; 1210 bytes
 
 inputA = ptr1
@@ -29,15 +29,15 @@ _mult16x16x32:
         sta     inputB
         stx     inputB+1
         jsr     popax
-        sta     inputA
-        stx     inputA+1
 
-        ldx     inputB          ; (a0*b0)
-
-; Expects low byte of ptr2 in X, low byte of ptr1 in A
+; Expects high byte of inputA in X, low byte of inputA in A
 mult16x16x32_direct:
         sta     getLow1+1
         sta     getHigh1+1
+        sta     inputA
+        stx     inputA+1
+        ldx     inputB          ; (a0*b0)
+
         sec
         sbc     inputB
         bcs     :+
