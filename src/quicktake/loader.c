@@ -57,6 +57,11 @@ void main(int argc, char *argv[]) {
     return;
   }
 
+display:
+  rewind(fp);
+  if (fp2) {
+    rewind(fp2);
+  }
   SDL_LockSurface(screen);
   unsigned char c, c2;
   int x, y;
@@ -77,12 +82,14 @@ void main(int argc, char *argv[]) {
           sdl_set_pixel(screen, x*2+1, y*2+1, c, c, c);
         } else {
           off_t offset = y*w + x;
-
+          static int blink = 0;
+          int color = (blink ? c : c2);
+          blink = !blink;
           printf("0x%04lX: Pixel differ at %d,%d: %u vs %u\n", offset, x, y, c, c2);
-          sdl_set_pixel(screen, x*2, y*2, 255, 0, 0);
-          sdl_set_pixel(screen, x*2+1, y*2, 255, 0, 0);
-          sdl_set_pixel(screen, x*2, y*2+1, 255, 0, 0);
-          sdl_set_pixel(screen, x*2+1, y*2+1, 255, 0, 0);
+          sdl_set_pixel(screen, x*2, y*2, color, color, color);
+          sdl_set_pixel(screen, x*2+1, y*2, color, color, color);
+          sdl_set_pixel(screen, x*2, y*2+1, color, color, color);
+          sdl_set_pixel(screen, x*2+1, y*2+1, color, color, color);
         }
       }
     }
@@ -159,6 +166,12 @@ void main(int argc, char *argv[]) {
   while(1) {
     SDL_Event e;
     SDL_WaitEvent(&e);
+    if (e.type == SDL_KEYUP) {
+      if (e.key.keysym.sym == SDLK_ESCAPE) {
+        exit(0);
+      }
+      goto display;
+    }
     if (e.type == SDL_MOUSEMOTION) {
       off_t offset;
       SDL_GetMouseState(&x, &y);
