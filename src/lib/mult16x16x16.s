@@ -1,111 +1,65 @@
 
         .importzp       tmp1, tmp2, ptr1, ptr2
 
-        .import         popax, sqrLow, sqrHigh, invLow, invHigh, popptr1
+        .import         popax
         .export         _mult16x16x16, mult16x16x16_direct
 
-; based on the 8 bit multiply of mult57.a (https://sites.google.com/site/h2obsession/programming/6502)
-; then adjusted for 16 bit multiplication by TobyLobster 
-; (https://github.com/TobyLobster/multiply_test/blob/main/tests/mult56.a)
+        .include        "mult8x8x16_macro.inc"
 ;
-; 16 bit x 16 bit unsigned multiply, 16 bit result
-; Average cycles: 174
+; 16 bit x 16 bit unsigned multiply, 16 bit result, no overflow indication
+; Average cycles: 114
 
+inputA = ptr1
 inputB = ptr2
+resL   = tmp1
+resH   = tmp2
+;  inputA+1          inputA
+;* inputB+1          inputB
+;______
+;   inputB*inputA
+; + inputB*(inputA+1) << 8
+; + (inputB+1)*inputA << 8
+ _mult16x16x16:
+         sta     inputB
+         stx     inputB+1
+         jsr     popax
 
-; ***************************************************************************************
-; 16 bit x 16 bit unsigned multiply, 16 bit result
-;
-; On Entry:
-;   inputA (AX): multiplier   (2 bytes)
-;   inputB (ptr2): multiplicand (2 bytes)
-;
-; On Exit:
-;   result: product (2 bytes in AX)
-
-_mult16x16x16:
-        sta     inputB
-        stx     inputB+1
-        jsr     popax
-
+; Multiply inputB(ptr2) by AX (X:h, A:L), result in AX (X:h, A:L)
 mult16x16x16_direct:
-        sta     inputA_l+1
-        sta     getLow1+1
-        sta     getHigh1+1
+         ldy     #$00         ; init result to zero
+         sty     resH         ; costs 8 cycles but the shortcuts
+         sty     resL         ; are worth it
 
-        stx     inputA_h+1
-        ldx     inputB          ; (a0*b0)
+         stx     inputA+1
+         sta     inputA
 
-        sec
-        sbc     inputB
-        bcs     :+
-        sbc     #0
-        eor     #255
+AlBl:
+         ldx     inputB
+         beq     BhAl        ; Skip both 8x8 mult with inputB low if 0
+         MULT_AX_STORE_LOW resL
+         sta     resH
 
-:       tay
-getLow1:
-        lda     sqrLow,x        ; Patched
-        sbc     sqrLow,y
-        sta     sta_result+1    ; low byte
-getHigh1:
-        lda     sqrHigh,x       ; Patched
-        sbc     sqrHigh,y
-        sta     sta_tmp_result_1a+1        ; high byte
+         ; X is still inputB
+AhBl:
+         lda     inputA+1
+         beq     BhAl         ; Skip if inputA low is 0
+         MULT_AX_NO_HIGH
+         clc
+         adc     resH
+         sta     resH
 
-inputA_h:
-        lda     #0        ; (a1*b0)
-        ldx     inputB
-        sta     getLow2+1
-        sta     getHigh2+1
-        sec
-        sbc     inputB
-        bcs     :+
-        sbc     #0
-        eor     #255
-
-:       tay
-getLow2:
-        lda     sqrLow,x        ; Patched
-        sbc     sqrLow,y
-        sta     temp1+1
-getHigh2:
-        lda     sqrHigh,x       ; Patched
-        sbc     sqrHigh,y
-        tax
-temp1:
-        lda     #0              ; Patched
-
-        clc
-sta_tmp_result_1a:
-        adc     #$FF
-        sta     sta_tmp_result_1b+1
-
-inputA_l:
-        lda     #0             ;patched (a0*b1)
-        ldx     inputB+1
-        sta     getLow3+1
-        sta     getHigh3+1
-        sec
-        sbc     inputB+1
-        bcs     :+
-        sbc     #0
-        eor     #255
-
-:       tay
-getLow3:
-        lda     sqrLow,x        ; Patched
-        sbc     sqrLow,y
-        sta     temp2+1
-getHigh3:
-        lda     sqrHigh,x       ; Patched
-        sbc     sqrHigh,y
-temp2:
-        lda     #0              ; Patched
-
-        clc
-sta_tmp_result_1b:
-        adc     #$FF
-        tax
-sta_result:
-        lda     #$FF
-        rts
+BhAl:
+         lda     inputA
+         beq     skipLast
+         ldx     inputB+1
+         beq     skipLast
+         MULT_AX_NO_HIGH
+         clc
+         adc     resH
+         tax
+         lda     resL
+         rts
+skipLast:
+         ldx     resH
+         lda     resL
+         rts

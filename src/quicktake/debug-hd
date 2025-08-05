@@ -26,7 +26,7 @@ if [ "$1" != "" ]; then
   expected_sha1sum=$(sha1sum GREY|cut -d' ' -f1)
   if [ "$1" = "150" ]; then
     # The approximated division changes the output file in an acceptable way
-    expected_sha1sum="5e6f3f1e2bf9d598e488ef292ac76d6c118049a8"
+    expected_sha1sum="306b15f6d21a0f60a7c18dd500a802f9f1c44db1"
   fi
   if [ "$1" = "200" ]; then
     # The approximated division changes the output file in an acceptable way

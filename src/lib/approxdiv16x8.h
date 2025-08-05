@@ -5,8 +5,10 @@
 
 #ifdef __CC65__
 unsigned int __fastcall__ approx_div16x8(unsigned int a, unsigned char b);
+unsigned int __fastcall__ mult8x8r16(unsigned char a, unsigned char b);
 #else
 #define approx_div16x8(a,b) (a)/(b)
+#define mult8x8r16(a,b) (a)*(b)
 #endif
 
 #endif
