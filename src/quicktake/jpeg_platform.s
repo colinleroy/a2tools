@@ -183,8 +183,7 @@ getBitsDirect:
 
         lda     _gBitBuf+1
         sta     ret+1
-        lda     _gBitBuf
-        sta     ret
+        lda     _gBitBuf      ; Will be stored later
 
         cpy     #9
         bcc     n_lt8
@@ -229,13 +228,12 @@ no_lshift:
         dey
         bne     :-
         sta     _gBitBuf
-        lda     _gBitBuf+1
+        lda     _gBitBuf+1  ; ret = (ret & 0xFF00) | (gBitBuf >> 8);
 
 no_lshift2:
-        ; ret = (ret & 0xFF00) | (gBitBuf >> 8);
+n_lt8:
         sta     ret
 
-n_lt8:
         ; if (gBitsLeft < n) {
         ldy     _gBitsLeft
         beq     no_lshift3
