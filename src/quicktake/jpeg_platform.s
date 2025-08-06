@@ -278,13 +278,11 @@ no_lshift4:
 enoughBits:
         ; gBitsLeft = gBitsLeft - n;
         tya                   ; - contains gBitsLeft
-        sec
         sbc     n
         sta     _gBitsLeft
 
-        ldy     n
-        beq     no_lshift5
         lda     _gBitBuf
+        ldy     n
         cpy     #8
         bne     :+
         sta     _gBitBuf+1
@@ -302,12 +300,17 @@ enoughBits:
 no_lshift5:
         ; return ret >> final_shift
         ldy     final_shift
+        beq     load_res
         cpy     #8
-        bcs     :+
+        bcs     :++
 
         lda     ret             ; << less than 8, long way
+:       lsr     ret+1
+        ror     a
+        dey
+        bne     :-
         ldx     ret+1
-        jmp     shraxy
+        rts
 
 :       lda     ret+1           ; << 8 or more, fast way
         ldx     n_min_eight,y
@@ -319,7 +322,10 @@ no_lshift5:
         ; ldx   #0
 no_final_rshift:
         rts
-
+load_res:
+        lda     ret
+        ldx     ret+1
+        rts
 ;uint8 getOctet(uint8 FFCheck)
 ;warning: param in Y
 
@@ -456,16 +462,15 @@ out:
         lda    #$00
         .endif
         adc    TABM,x
-        sta    tmp2
+        tax             ; remember for return or sign reversal
 
         ; Was val negative?
         ldy    neg
         bne    :+
-        tax
         lda    tmp1
         rts
-:
-        ; dw ^= 0xffffffff, dw++
+
+:       ; dw ^= 0xffffffff, dw++
         ; clc             - carry is clear
         lda    #$FF
         eor    dw
@@ -475,8 +480,8 @@ out:
         eor    tmp1
         adc    #0
         tay
-        lda    #$FF
-        eor    tmp2
+        txa
+        eor    #$FF
         adc    #0
         tax
         tya
@@ -500,73 +505,6 @@ _imul_b4:
 ; uint16 __fastcall__ imul_b5(int16 w)
 _imul_b5:
         imul    _mul196_l, _mul196_m
-        ldy     #$00
-        sty     neg
-        tay             ; val low byte in Y
-
-        cpx     #$80
-        bcc     :+
-        stx     neg
-
-        ; val = -val;
-        clc
-        eor     #$FF
-        adc     #1
-        tay
-        txa
-        eor    #$FF
-        adc    #0
-        tax
-
-:
-        stx     tmp4
-        ; dw = mul196_l[l] | mul196_m[l] <<8 | mul196_h[l] <<16;
-        lda    _mul196_l,y
-        sta    dw
-        ; lda    _mul196_m,y - shortcut right below
-        ; sta    tmp1
-
-        ; Useless (0)
-        ; lda    _mul196_h,y
-        ; sta    tmp2
-
-        ; dw += (mul196_l[h]) << 8;
-        ; clc         - carry is clear
-        lda    _mul196_m,y    ; tmp1
-        ldx    tmp4
-        adc    _mul196_l,x
-        sta    tmp1
-
-        ; dw += (mul196_m[h]) << 16;
-        lda    #0
-        adc    _mul196_m,x
-        sta    tmp2
-
-        ; Was val negative?
-        ldy    neg
-        bne    :+
-        tax
-        lda    tmp1
-        rts
-:
-        ; dw ^= 0xffffffff
-        lda    #$FF
-        eor    dw
-        sta    dw
-        lda    #$FF
-        eor    tmp2
-        tax
-        lda    #$FF
-        eor    tmp1
-
-        ; dw++;
-        inc    dw
-        bne    :+
-        clc
-        adc    #1
-        bne    :+
-        inx
-:       rts
 
 ; uint8 __fastcall__ huffDecode(const uint8* pHuffVal)
 .macro huffDecode TABLE, VAL
@@ -605,7 +543,6 @@ noTest:
         bne     nextLoop
         rts
 loopDone:
-        clc
         lda     TABLE+64,y
         adc     code
         sec
@@ -825,7 +762,7 @@ full_idct_rows:
         adc    x30+1
         sta    _gCoeffBuf+1,y
 
-        sty     tmp3
+        sty     tmp3  ; Backup before b5/b2/b4/b1_b3 mults
 
         lda    x4
         sec
@@ -902,49 +839,45 @@ full_idct_rows:
         tya
         sec
         sbc    x32
-        ldy     tmp3
+        ldy     tmp3          ; and restore
         sta    _gCoeffBuf+4,y
         txa
         sbc    x32+1
         sta    _gCoeffBuf+5,y
 
         ; *(rowSrc_4) = x30 + res3 + x24 - x13;
-        sty     tmp3
         lda    x30
         clc
         adc    res3
-        tay
+        pha
         lda    x30+1
         adc    res3+1
         tax
-        tya
+        pla
         adc    x24
-        tay
+        pha
         txa
         adc    x24+1
         tax
-        tya
+        pla
         sec
         sbc    x13
-        ldy     tmp3
         sta    _gCoeffBuf+8,y
         txa
         sbc    x13+1
         sta    _gCoeffBuf+9,y
 
         ; *(rowSrc_6) = x31 + x32 - res2;
-        sty     tmp3
         lda    x31
         clc
         adc    x32
-        tay
+        pha
         lda    x31+1
         adc    x32+1
         tax
-        tya
+        pla
         sec
         sbc    res2
-        ldy     tmp3
         sta    _gCoeffBuf+12,y
         txa
         sbc    res2+1
@@ -1053,7 +986,7 @@ full_idct_cols:
         adc     x7+1
         sta     x17+1
 
-        sty     tmp3
+        sty     tmp3          ; Backup before b5/b2/b4/b1_b3 mults
 
         ;res1 = imul_b5(x4 - x6)
         sec
@@ -1109,11 +1042,11 @@ full_idct_cols:
         sec
         lda     x5
         sbc     x7
-        pha
+        tay
         lda     x5+1
         sbc     x7+1
         tax
-        pla
+        tya
         jsr     _imul_b1_b3
         sec
         sbc     res2
@@ -1122,7 +1055,7 @@ full_idct_cols:
         sbc     res2+1
         sta     res3+1
 
-        ldy     tmp3
+        ldy     tmp3          ; And restore
         sec
         lda     _gCoeffBuf,y
         sbc     _gCoeffBuf+64,y
@@ -1157,12 +1090,12 @@ full_idct_cols:
         adc     _gCoeffBuf+97,y
         sta     x13+1
 
-        sty     tmp3
         ;x32 = imul_b1_b3(x12) - x13;
 x12l:
         lda     #$FF
 x12h:
         ldx     #$FF
+        sty     tmp3          ; Backup before mult
         jsr     _imul_b1_b3
         sec
         sbc     x13
@@ -1175,7 +1108,7 @@ x12h:
         clc
         lda     x30
         adc     x13
-        pha
+        tay
         lda     x30+1
         adc     x13+1
         tax
@@ -1186,14 +1119,14 @@ x12h:
         ;    *pSrc_0_8 = 255;
         ; else
         ;   *pSrc_0_8 = (uint8)t;
-        pla
+        tya
         clc
         adc     x17
-        pha
+        tay
         txa
         adc     x17+1
         tax
-        pla
+        tya
 
         INLINE_ASRAX7
 
@@ -1203,12 +1136,12 @@ x12h:
 
 :       cpx     #$00
         beq     clampDone2
-        bmi     :+
-        lda     #$FF
-        bne     clampDone2
-:       lda     #$00
+        txa                     ; Clamp:
+        asl                     ; get sign to carry
+        lda     #$FF            ; $FF+C = 0 if neg, $FF+c = $FF if pos
+        adc     #0
 clampDone2:
-        ldy     tmp3
+        ldy     tmp3            ; And restore
         sta     _gCoeffBuf,y
 
         ;x42 = x31 - x32;
@@ -1241,10 +1174,10 @@ clampDone2:
         inx
 :       cpx     #$00
         beq     clampDone3
-        bmi     :+
-        lda     #$FF
-        bne     clampDone3
-:       lda     #$00
+        txa                     ; Clamp:
+        asl                     ; get sign to carry
+        lda     #$FF            ; $FF+C = 0 if neg, $FF+c = $FF if pos
+        adc     #0
 clampDone3:
         sta     _gCoeffBuf+32,y
 
@@ -1286,10 +1219,10 @@ x43h:
         inx
 :       cpx     #$00
         beq     clampDone4
-        bmi     :+
-        lda     #$FF
-        bne     clampDone4
-:       lda     #$00
+        txa                     ; Clamp:
+        asl                     ; get sign to carry
+        lda     #$FF            ; $FF+C = 0 if neg, $FF+c = $FF if pos
+        adc     #0
 clampDone4:
         sta     _gCoeffBuf+64,y
 
@@ -1317,17 +1250,16 @@ clampDone4:
         inx
 :       cpx     #$00
         beq     clampDone5
-        bmi     :+
-        lda     #$FF
-        bne     clampDone5
-:       lda     #$00
+        txa                     ; Clamp:
+        asl                     ; get sign to carry
+        lda     #$FF            ; $FF+C = 0 if neg, $FF+c = $FF if pos
+        adc     #0
 clampDone5:
         sta     _gCoeffBuf+96,y
 
 cont_idct_cols:
         dec     idctCC
         beq     idctColDone
-        clc
         iny
         iny
         jmp     nextCol
@@ -1361,9 +1293,8 @@ noRestart:
         stx     mcuBlock
 nextMcuBlock:
         ; for (mcuBlock = 0; mcuBlock < 2; mcuBlock++) {
-        lda     _gMCUOrg,x
-        sta     componentID
-        tay
+        ldy     _gMCUOrg,x
+        sty     componentID
 
         lda     _gCompQuant,y
         beq     :+
@@ -1469,9 +1400,6 @@ load_pq0l:
 
         lda     #1
         sta     cur_ZAG_coeff
-
-        ;cur_pQ = pQ + 1;
-        lda     #1
         sta     cur_pQ
 
 checkZAGLoop:
@@ -1602,9 +1530,8 @@ firstMCUBlocksDone:
         bcs     uselessBlocksDone
 
 nextUselessBlock:
-        lda     _gMCUOrg,x
-        sta     componentID
-        tay
+        ldy     _gMCUOrg,x
+        sty     componentID
 
         lda     _gCompACTab,y
         beq     setUDec2

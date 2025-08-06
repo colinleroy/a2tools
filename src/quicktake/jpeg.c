@@ -274,7 +274,11 @@ static void huffCreate(uint8* pBits, HuffTable* pHuffTable)
       {
          *curMinCode = code;
          *curMaxCode = code + num - 1;
+         #ifdef __CC65__ // spare a clc
+         *curValPtr = j-1;
+         #else
          *curValPtr = j;
+         #endif
 
          j = (uint8)(j + num);
 
