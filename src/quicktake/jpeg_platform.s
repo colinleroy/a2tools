@@ -116,11 +116,11 @@ retNormalX:
 retExtend:
         lda     _extendOffsets_l,y    ; Carry set here
         adc     extendX
-        pha
+        sta    tmp1
         lda     _extendOffsets_h,y
         adc     extendX+1
         tax
-        pla
+        lda    tmp1
         rts
 
 ; #define getBitsNoFF(n) getBits(n, 0)
@@ -384,7 +384,7 @@ ffcheck:rts                   ; Should we check for $FF? patched.
         cmp     #$FF          ; Is result FF?
         beq     :+
         rts
-:       pha                     ; Remember result
+:       sta     tmp1          ; Remember result
 
         ; Yes. Read again.
         ldy     #$00
@@ -410,7 +410,7 @@ continue5:
 
 out:
         ; Return result
-        pla
+        lda     tmp1
         rts
 
 .macro imul TABL, TABM, TABH
@@ -714,13 +714,13 @@ full_idct_rows:
         sec
         lda    _gCoeffBuf+4,y
         sbc    _gCoeffBuf+12,y
-        pha
+        sta    tmp1
         txa
         sbc    _gCoeffBuf+13,y
 
         ; x32 = imul_b1_b3(x12) - x13;
         tax
-        pla
+        lda     tmp1
         sty     tmp3
         jsr    _imul_b1_b3
         ldy     tmp3
@@ -735,7 +735,7 @@ full_idct_rows:
         lda    x5
         adc    x7
         sta    x17
-        pha
+        sta    tmp1
         lda    x5+1
         adc    x7+1
         sta    x17+1
@@ -743,13 +743,13 @@ full_idct_rows:
 
         ;*(rowSrc) = x30 + x13 + x17;
         clc
-        pla                     ; x17
+        lda    tmp1
         adc    x13
-        pha
+        sta    tmp1
         txa
         adc    x13+1
         tax
-        pla
+        lda    tmp1
         clc
         adc    x30
         sta    _gCoeffBuf,y
@@ -806,13 +806,13 @@ full_idct_rows:
         sec
         lda    x5
         sbc    x7
-        pha
+        sta    tmp1
         lda    x5+1
         sbc    x7+1
         tax
 
         ; res3 = imul_b1_b3(x15) - res2;
-        pla
+        lda    tmp1
         jsr    _imul_b1_b3
         sec
         sbc    res2
@@ -844,17 +844,17 @@ full_idct_rows:
         lda    x30
         clc
         adc    res3
-        pha
+        sta    tmp1
         lda    x30+1
         adc    res3+1
         tax
-        pla
+        lda    tmp1
         adc    x24
-        pha
+        sta    tmp1
         txa
         adc    x24+1
         tax
-        pla
+        lda    tmp1
         sec
         sbc    x13
         sta    _gCoeffBuf+8,y
@@ -866,11 +866,11 @@ full_idct_rows:
         lda    x31
         clc
         adc    x32
-        pha
+        sta    tmp1
         lda    x31+1
         adc    x32+1
         tax
-        pla
+        lda    tmp1
         sec
         sbc    res2
         sta    _gCoeffBuf+12,y
@@ -1143,7 +1143,7 @@ clampDone2:
         sec
         lda     x31
         sbc     x32
-        pha
+        sta    tmp1
         lda     x31+1
         sbc     x32+1
         tax
@@ -1156,13 +1156,13 @@ clampDone2:
         ; else
         ;   *pSrc_2_8 = (uint8)t;
         clc
-        pla
+        lda    tmp1
         adc     res3
-        pha
+        sta    tmp1
         txa
         adc     res3+1
         tax
-        pla
+        lda    tmp1
         INLINE_ASRAX7
         eor     #$80
         bmi     :+
@@ -1191,23 +1191,23 @@ clampDone3:
         lda     res3
 x24l:
         adc     #$FF
-        pha
+        sta    tmp1
         lda     res3+1
 x24h:
         adc     #$FF
         tax
 
         ; t = ((x43 + x44) >> PJPG_DCT_SCALE_BITS) +128;
-        pla
+        lda    tmp1
         clc
 x43l:
         adc     #$FF
-        pha
+        sta    tmp1
         txa
 x43h:
         adc     #$FF
         tax
-        pla
+        lda    tmp1
         INLINE_ASRAX7
         eor     #$80
         bmi     :+
@@ -1225,20 +1225,20 @@ clampDone4:
         lda     x32
         clc
         adc     x31
-        pha
+        sta    tmp1
         lda     x32+1
         adc     x31+1
         tax
 
         ; t = ((x41 - res2) >> PJPG_DCT_SCALE_BITS) +128;
-        pla
+        lda    tmp1
         sec
         sbc     res2
-        pha
+        sta    tmp1
         txa
         sbc     res2+1
         tax
-        pla
+        lda    tmp1
         INLINE_ASRAX7
         eor     #$80
         bmi     :+
@@ -1463,13 +1463,13 @@ load_pq1h:
         ldx     $FFFF,y
         jsr     mult16x16x16_direct
 
-        pha
+        sta    tmp1
 
         txa
         ldx     cur_ZAG_coeff
         ldy     _ZAG_Coeff,x
         sta     _gCoeffBuf+1,y
-        pla
+        lda    tmp1
         sta     _gCoeffBuf,y
         jmp     sNotZero
 
@@ -1563,9 +1563,9 @@ uselessDec:
         sta     sDMCU
         and     #$0F
         beq     ZAG2_Done
-        pha
+        sta    tmp1
         jsr     getBitsDirect
-        pla
+        lda    tmp1
 
         lsr     a
         lsr     a
