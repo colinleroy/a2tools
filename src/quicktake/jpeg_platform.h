@@ -9,9 +9,11 @@
 
 typedef struct HuffTableT
 {
-   uint16 mMinCode[16];
-   uint16 mMaxCode[16];
-   uint16 mValPtr[16]; // actually uint8 but it's easier to have Y the same on Codes and Val
+   uint8 mMinCode_l[16];
+   uint8 mMinCode_h[16];
+   uint8 mMaxCode_l[16];
+   uint8 mMaxCode_h[16];
+   uint8 mValPtr[16]; // actually uint8 but it's easier to have Y the same on Codes and Val
 } HuffTable;
 
 
@@ -60,15 +62,16 @@ extern uint8 gQuant1_l[8*8];
 extern uint8 gQuant1_h[8*8];
 
 // 6 bytes
-extern uint16 gLastDC[3];
+extern uint8 gLastDC_l[3];
+extern uint8 gLastDC_h[3];
 
 extern uint8 gNumMCUSRemainingX, gNumMCUSRemainingY;
 extern uint8 gMCUOrg[6];
 extern uint8 gWinogradQuant[];
 
 int16 __fastcall__ huffExtend(uint16 x, uint8 s);
-uint16 __fastcall__ getBits1(uint8 numBits);
-uint16 __fastcall__ getBits2(uint8 numBits);
+uint16 __fastcall__ getBitsNoFF(uint8 numBits);
+uint16 __fastcall__ getBitsFF(uint8 numBits);
 uint8 __fastcall__ getOctet(uint8 FFCheck);
 void fillInBuf(void);
 

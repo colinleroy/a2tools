@@ -48,10 +48,10 @@ uint16 __fastcall__ getBits(uint8 numBits, uint8 FFCheck)
   return ret >> final_shift;
 }
 
-uint16 __fastcall__ getBits1(uint8 numBits) {
+uint16 __fastcall__ getBitsNoFF(uint8 numBits) {
   return getBits(numBits, 0);
 }
-uint16 __fastcall__ getBits2(uint8 numBits) {
+uint16 __fastcall__ getBitsFF(uint8 numBits) {
   return getBits(numBits, 1);
 }
 
@@ -62,20 +62,35 @@ uint8 getOctet(uint8 FFCheck)
 {
   uint8 c, n;
   if (cur_cache_ptr == cache_end) {
+    printf("WARNING\n");
+  }
+  c = *(cur_cache_ptr);
+  cur_cache_ptr++;
+  if (cur_cache_ptr == cache_end) {
+    printf("FILL 1\n");
     fillInBuf();
   }
-  c = *(cur_cache_ptr++);
   if (!FFCheck)
     goto out;
   if (c != 0xFF)
     goto out;
-  if (cur_cache_ptr == cache_end)
+  if (cur_cache_ptr == cache_end) {
+    printf("WARN 2\n");
+  }
+  n = *(cur_cache_ptr);
+  cur_cache_ptr++;
+  if (cur_cache_ptr == cache_end) {
+    printf("FILL 2\n");
     fillInBuf();
-  n = *(cur_cache_ptr++);
+  }
   if (n)
   {
      *(cur_cache_ptr--) = n;
      *(cur_cache_ptr--) = 0xFF;
+  } else {
+    // cur_cache_ptr++;
+    if (cur_cache_ptr == cache_end)
+      fillInBuf();
   }
 out:
   return c;
@@ -154,32 +169,38 @@ uint8 huffDecode(HuffTable* pHuffTable, const uint8* pHuffVal)
   uint8 j;
   uint16 code = getBit();
   HuffTable *curTable = pHuffTable;
-  register uint16 *curMaxCode = curTable->mMaxCode;
-  register uint16 *curMinCode = curTable->mMinCode;
-  register uint16 *curValPtr = curTable->mValPtr;
+  register uint8 *curMaxCode_l = pHuffTable->mMaxCode_l;
+  register uint8 *curMaxCode_h = pHuffTable->mMaxCode_h;
+  register uint8 *curMinCode_l = pHuffTable->mMinCode_l;
+  register uint8 *curMinCode_h = pHuffTable->mMinCode_h;
+  register uint8 *curValPtr = pHuffTable->mValPtr;
 
   for ( ; ; ) {
     if (i == 16)
       return 0;
 
-    if (*curMaxCode == 0xFFFF) {
-      goto noTest;
+    if (*curMaxCode_l == 0xFF && *curMaxCode_h == 0xFF) {
+      goto increment;
     }
-    if (*curMaxCode < code) {
-      goto noTest;
+    if (*curMaxCode_l + (*curMaxCode_h<<8) < code) {
+      goto increment;
     }
-    break;
-    noTest:
+
+    goto loopDone;
+
+increment:
     i++;
-    curMaxCode++;
-    curMinCode++;
+    curMaxCode_l++;
+    curMaxCode_h++;
+    curMinCode_l++;
+    curMinCode_h++;
     curValPtr++;
 
     code <<= 1;
     code |= getBit();
   }
-
-  j = (uint8)*curValPtr + (uint8)code - (uint8)*curMinCode;
+loopDone:
+  j = (uint8)*curValPtr + (uint8)code - (uint8)*curMinCode_l;
   return pHuffVal[j];
 }
 
@@ -426,12 +447,13 @@ uint8 decodeNextMCU(void)
     r = 0;
     numExtraBits = s & 0xF;
     if (numExtraBits)
-       r = getBits2(numExtraBits);
+       r = getBitsFF(numExtraBits);
 
     dc = huffExtend(r, s);
 
-    dc = dc + gLastDC[componentID];
-    gLastDC[componentID] = dc;
+    dc = dc + gLastDC_l[componentID] + (gLastDC_h[componentID]<<8);
+    gLastDC_l[componentID] = dc & 0xFF;
+    gLastDC_h[componentID] = (dc & 0xFF00) >> 8;
     gCoeffBuf[0] = dc * (pQ_l[0]|(pQ_h[0]<<8));
 
     cur_ZAG_coeff = ZAG_Coeff + 1;
@@ -450,7 +472,7 @@ uint8 decodeNextMCU(void)
       extraBits = 0;
       numExtraBits = s & 0xF;
       if (numExtraBits)
-        extraBits = getBits2(numExtraBits);
+        extraBits = getBitsFF(numExtraBits);
 
       r = s >> 4;
       s = numExtraBits;
@@ -498,7 +520,7 @@ uint8 decodeNextMCU(void)
     compACTab = gCompACTab[componentID];
 
     if (s & 0xF)
-      getBits2(s & 0xF);
+      getBitsFF(s & 0xF);
 
     for (i = 1; i != 64; i++) {
       if (compACTab)
@@ -508,7 +530,7 @@ uint8 decodeNextMCU(void)
 
       numExtraBits = s & 0xF;
       if (numExtraBits)
-        getBits2(numExtraBits);
+        getBitsFF(numExtraBits);
 
       if (s) {
         i += s >> 4;

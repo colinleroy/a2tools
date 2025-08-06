@@ -2,8 +2,8 @@
         .importzp   tmp1, tmp2, tmp3, tmp4, ptr1, ptr2, ptr3, _prev_ram_irq_vector, _prev_rom_irq_vector, c_sp, ptr4
         .importzp   _zp2, _zp4, _zp6, _zp8, _zp9, _zp10, _zp11, _zp12, _zp13
         .import     popptr1
-        .import     _extendTests, _extendOffsets
-        .import     _cache_end, _fillInBuf
+        .import     _extendTests_l, _extendTests_h, _extendOffsets_l, _extendOffsets_h
+        .import     _fillInBuf, _cache
         .import     _mul669_l, _mul669_m, _mul669_h
         .import     _mul362_l, _mul362_m, _mul362_h
         .import     _mul277_l, _mul277_m, _mul277_h
@@ -11,14 +11,14 @@
         .import     _gCoeffBuf, _gRestartInterval, _gRestartsLeft
         .import     _gMaxBlocksPerMCU, _processRestart, _gCompACTab, _gCompQuant
         .import     _gQuant0_l, _gQuant1_l, _gQuant0_h, _gQuant1_h
-        .import     _gCompDCTab, _gMCUOrg, _gLastDC, _gCoeffBuf, _ZAG_Coeff
+        .import     _gCompDCTab, _gMCUOrg, _gLastDC_l, _gLastDC_h, _gCoeffBuf, _ZAG_Coeff
         .import     _gHuffTab0, _gHuffVal0, _gHuffTab1, _gHuffVal1, _gHuffTab2, _gHuffVal2, _gHuffTab3, _gHuffVal3
         .import     _gMCUBufG
         .import     _gNumMCUSRemainingX, _gNumMCUSRemainingY
         .import     _gWinogradQuant
         .import     asreax3, inceaxy, tosmul0ax, push0ax
         .import     shraxy, decsp4, popax, addysp, mult16x16x16_direct
-        .export     _huffExtend, _getBits1, _getBits2
+        .export     _huffExtend, _getBitsNoFF, _getBitsFF
         .export     _imul_b1_b3, _imul_b2, _imul_b4, _imul_b5
         .export     _idctRows, _idctCols, _decodeNextMCU, _transformBlock
         .export     _pjpeg_decode_mcu
@@ -38,6 +38,20 @@ iDMCU          = _zp13      ; byte, used in _decodeNextMCU
 
 dw             = _zp9       ; byte, used in imul (IDCT)
 neg            = _zp10      ; byte, used in imul (IDCT)
+
+NO_FF_CHECK = $60
+FF_CHECK_ON = $EA
+
+CACHE_END = _cache + CACHE_SIZE + 4
+.assert <CACHE_END = 0, error
+
+.struct hufftable_t
+   mMinCode_l .res 16
+   mMinCode_h .res 16
+   mMaxCode_l .res 16
+   mMaxCode_h .res 16
+   mValPtr    .res 16
+.endstruct
 
 _cur_cache_ptr = _prev_ram_irq_vector
 
@@ -60,10 +74,7 @@ _cur_cache_ptr = _prev_ram_irq_vector
         dec     _gBitsLeft
         bpl     haveBit
 
-        sty     tmp3          ; Backup Y
-        ldy     #$FF
         jsr     getOctet
-        ldy     tmp3
         asl     a
         sta     _gBitBuf
 
@@ -87,35 +98,32 @@ _huffExtend:
 
 retNormal:
         lda     extendX
+retNormalX:
         ldx     extendX+1
         rts
 
-:       asl     a
-        sta     tmp1
-        tay
-        ldx     _extendTests+1,y
+:       tay
+        ldx     _extendTests_h,y
 
         cpx     extendX+1
         bcc     retNormal
         bne     retExtend
 
-        lda     _extendTests,y
-        cmp     extendX
-        bcc     retNormal
-        beq     retNormal
-
+        lda     extendX
+        cmp     _extendTests_l,y
+        bcs     retNormalX
+        sec
 retExtend:
-        ldx     tmp1
-        lda     _extendOffsets,x    ; Carry set here
+        lda     _extendOffsets_l,y    ; Carry set here
         adc     extendX
-        tay
-        lda     _extendOffsets+1,x
+        pha
+        lda     _extendOffsets_h,y
         adc     extendX+1
         tax
-        tya
+        pla
         rts
 
-; #define getBits1(n) getBits(n, 0)
+; #define getBitsNoFF(n) getBits(n, 0)
 ; #define getBits2(n) getBits(n, 1)
 
 sixteen_min_n: .byte 16
@@ -155,13 +163,19 @@ n_min_eight:   .byte 0
                .byte 7
                .byte 8
 
-_getBits1:
-        ldx     #0
-        beq     getBits
-_getBits2:
-        ldx     #$FF
+.macro GET_BITS_SET_FF_ON
+        ldx     #FF_CHECK_ON
+        stx     ffcheck
+.endmacro
+
+_getBitsNoFF:
+        ldx     #NO_FF_CHECK
+        jmp     getBits
+_getBitsFF:
+        ldx     #FF_CHECK_ON
 getBits:
-        stx     ff
+        stx     ffcheck
+getBitsDirect:
         sta     n
         tay
         lda     sixteen_min_n,y
@@ -193,7 +207,6 @@ getBits:
 
 no_lshift:
         ; gBitBuf |= getOctet(ff);
-        ldy     ff
         jsr     getOctet
         sta     _gBitBuf
 
@@ -240,7 +253,6 @@ n_lt8:
 
 no_lshift3:
         ; gBitBuf |= getOctet(ff);
-        ldy     ff
         jsr     getOctet
         sta     _gBitBuf
 
@@ -326,72 +338,56 @@ load_res:
         lda     ret
         ldx     ret+1
         rts
-;uint8 getOctet(uint8 FFCheck)
-;warning: param in Y
 
-check_cache_high1:
-        lda     _cur_cache_ptr+1
-        cmp     _cache_end+1
-        bne     continue1
-        sty     tmp1
-        stx     tmp4
-        jsr     _fillInBuf
-        ldy     tmp1
-        ldx     tmp4
-        jmp     continue1
-
-check_cache_high2:
-        lda     _cur_cache_ptr+1
-        cmp     _cache_end+1
-        bne     continue3
-        sty     tmp1
-        stx     tmp4
-        jsr     _fillInBuf
-        ldy     tmp1
-        ldx     tmp4
-        jmp     continue3
-
+AXBCK: .res 2
 inc_cache_high1:
         inc     _cur_cache_ptr+1
+        ldy     _cur_cache_ptr+1
+        cpy     #>CACHE_END
+        bne     continue2
+        sta     AXBCK
+        stx     AXBCK+1          ; Backup Y for caller
+        jsr     _fillInBuf
+        ldx     AXBCK+1
+        lda     AXBCK
         jmp     continue2
 
 inc_cache_high2:
         inc     _cur_cache_ptr+1
+        ldy     _cur_cache_ptr+1
+        cpy     #>CACHE_END
+        bne     continue4
+        sta     AXBCK
+        stx     AXBCK+1          ; Backup Y for caller
+        jsr     _fillInBuf
+        ldx     AXBCK+1
+        lda     AXBCK
+        ldy     #$00
         jmp     continue4
 
 dec_cache_high:
         dec     _cur_cache_ptr+1
         jmp     continue5
 
+;uint8 getOctet(uint8 FFCheck)
+; Destroys A and Y, saves X
 getOctet:
-        sty     ffcheck         ; Backup param
-        ldy     #$00
-        lda     _cur_cache_ptr
-        cmp     _cache_end
-        beq     check_cache_high1
-
-continue1:
         ; Load char from buffer
+        ldy     #$00
         lda     (_cur_cache_ptr),y
         ; Increment buffer pointer
         inc     _cur_cache_ptr
         beq     inc_cache_high1
 
 continue2:
-        ; Should we check for $FF?
-        bit     ffcheck
-        bmi     :+
-        rts
-:       cmp     #$FF          ; Is result FF?
+ffcheck:rts                   ; Should we check for $FF? patched.
+        cmp     #$FF          ; Is result FF?
         beq     :+
         rts
 :       pha                     ; Remember result
-        ; Yes. Read again.
-        lda     _cur_cache_ptr
-        cmp     _cache_end
-        beq     check_cache_high2
 
-continue3:
+        ; Yes. Read again.
+        ldy     #$00
         lda     (_cur_cache_ptr),y
         inc     _cur_cache_ptr
         beq     inc_cache_high2
@@ -401,7 +397,7 @@ continue4:
         beq     out
 
         ; Stuff back chars
-        sta     (_cur_cache_ptr),y
+        lda     (_cur_cache_ptr),y
         lda     _cur_cache_ptr
         sec
         sbc     #2
@@ -515,41 +511,40 @@ _imul_b5:
         sta     code
 
         ldx     #16
-        ldy     #$FE
+        stx     tmp1
+        ldx     #$00
 nextLoop:
         ; *curMaxCode != 0xFFFF?
-        iny                     ; FF - 1 - 3 ...
-        iny                     ; 0  - 2 - 4 ...
-
-        lda TABLE+1+32,y        ; curMaxCode == 0xFFFF? hibyte
+        lda TABLE+hufftable_t::mMaxCode_h,x        ; curMaxCode == 0xFFFF? hibyte
         cmp #$FF
         beq checkLow
 
         cmp code+1              ; curMaxCode < code ? hibyte
-        bcc noTest
+        bcc increment
         bne loopDone
 
 checkLow:
-        lda TABLE+32,y
+        lda TABLE+hufftable_t::mMaxCode_l,x
         cmp #$FF                ; curMaxCode == 0xFFFF? lobyte
-        beq noTest
+        beq increment
         cmp code                ; ; curMaxCode < code ? lobyte
         bcs loopDone
-noTest:
+increment:
         INLINE_GETBIT
         rol     code
         rol     code+1
-        dex
+        inx
+        dec     tmp1
         bne     nextLoop
         rts
 loopDone:
-        lda     TABLE+64,y
+        lda     TABLE+hufftable_t::mValPtr,x
         adc     code
         sec
-        sbc     TABLE,y
-        tay                     ; Get index
+        sbc     TABLE+hufftable_t::mMinCode_l,x
+        tax                     ; Get index
 
-        lda     VAL,y
+        lda     VAL,x
         rts
 .endscope
 .endmacro
@@ -1095,7 +1090,7 @@ x12l:
         lda     #$FF
 x12h:
         ldx     #$FF
-        sty     tmp3          ; Backup before mult
+        ; sty     tmp3          ; Backup before mult
         jsr     _imul_b1_b3
         sec
         sbc     x13
@@ -1268,6 +1263,8 @@ idctColDone:
         rts
 
 _decodeNextMCU:
+        GET_BITS_SET_FF_ON
+
         lda     _gRestartInterval
         ora     _gRestartInterval+1
         beq     noRestart
@@ -1343,7 +1340,7 @@ doDec:
 
         and     #$0F
         beq     :+
-        jsr     _getBits2
+        jsr     getBitsDirect
         jmp     doExtend
 :       tax
 
@@ -1356,10 +1353,7 @@ doExtend:
         stx     tmp2
         sta     tmp1
 
-        lda     componentID
-        asl     a
-
-        tay
+        ldy     componentID
 
         ;compACTab = gCompACTab[componentID];
         lda     _gCompACTab,y
@@ -1377,17 +1371,17 @@ setDec:
 
         ; dc = dc + gLastDC[componentID];
         ; gLastDC[componentID] = dc;
-        lda     _gLastDC,y
+        clc
+        lda     _gLastDC_l,y
         adc     tmp1
-        sta     _gLastDC,y
-        tax
+        sta     _gLastDC_l,y
+        sta     ptr2
 
-        lda     _gLastDC+1,y
+        lda     _gLastDC_h,y
         adc     tmp2
-        sta     _gLastDC+1,y
+        sta     _gLastDC_h,y
 
         ;gCoeffBuf[0] = dc * pQ[0];
-        stx     ptr2
         sta     ptr2+1
 
 load_pq0h:
@@ -1413,7 +1407,7 @@ huffDec:
         sta     sDMCU
         and     #$0F
         beq     :+              ; if numExtraBits (s & 0x0F)
-        jsr     _getBits2
+        jsr     getBitsDirect
         jmp     storeExtraBits
 :       tax                     ; extraBits = 0
 
@@ -1468,15 +1462,15 @@ load_pq1l:
 load_pq1h:
         ldx     $FFFF,y
         jsr     mult16x16x16_direct
+
         pha
 
-        ldy     cur_ZAG_coeff
-        lda     _ZAG_Coeff,y
-        tay
+        txa
+        ldx     cur_ZAG_coeff
+        ldy     _ZAG_Coeff,x
+        sta     _gCoeffBuf+1,y
         pla
         sta     _gCoeffBuf,y
-        txa
-        sta     _gCoeffBuf+1,y
         jmp     sNotZero
 
 ; Inserted here, in an otherwise unreachable place,
@@ -1557,7 +1551,7 @@ setUDec:
 doDecb:
         and     #$0F
         beq     :+
-        jsr     _getBits2
+        jsr     getBitsDirect
 
 :       lda     #1
         sta     iDMCU
@@ -1570,7 +1564,7 @@ uselessDec:
         and     #$0F
         beq     ZAG2_Done
         pha
-        jsr     _getBits2
+        jsr     getBitsDirect
         pla
 
         lsr     a
@@ -1714,8 +1708,6 @@ copy_out:
 
 ;getBit/octet
 n:      .res 1
-ff:     .res 1
-ffcheck:.res 1
 final_shift:
         .res 1
 ret:    .res 2

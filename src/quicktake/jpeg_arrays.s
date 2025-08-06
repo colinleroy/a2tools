@@ -1,5 +1,6 @@
 ; Too bad there's no #pragma align in cc65
-        .export _ZAG_Coeff, _extendTests, _extendOffsets
+        .export _ZAG_Coeff, _extendTests_l, _extendTests_h
+        .export _extendOffsets_l, _extendOffsets_h
         .export _mul669_h, _mul669_m, _mul669_l
         .export _mul362_h, _mul362_m, _mul362_l
         .export _mul277_h, _mul277_m, _mul277_l
@@ -8,12 +9,14 @@
         .export _gQuant0_l, _gQuant0_h, _gQuant1_l, _gQuant1_h
         .export _gHuffVal0, _gHuffVal1, _gHuffVal2, _gHuffVal3
         .export _gHuffTab0, _gHuffTab1, _gHuffTab2, _gHuffTab3
-        .export _gMCUBufG
+        .export _gMCUBufG, _cache
 
 .struct hufftable_t
-   mMinCode .res 32
-   mMaxCode .res 32
-   mValPtr  .res 32
+   mMinCode_l .res 16
+   mMinCode_h .res 16
+   mMaxCode_l .res 16
+   mMaxCode_h .res 16
+   mValPtr    .res 16
 .endstruct
 
         .segment "BSS"
@@ -33,6 +36,10 @@ _gMCUBufG:        .res 128
 _gHuffTab0:       .res .sizeof(hufftable_t)
 _gHuffVal0:       .res 16
 _gHuffVal1:       .res 16
+
+filler:           .res 12   ; Align the cache with its backbuffer
+.assert <* = 256-4, error
+_cache:           .res CACHE_SIZE+4
 
 .assert <* = 0, error
 _gHuffTab1:       .res .sizeof(hufftable_t)
@@ -107,40 +114,74 @@ _ZAG_Coeff:
   .byte  $6E
   .byte  $7C
   .byte  $7E
-_extendTests:
-  .word  $0000
-  .word  $0001
-  .word  $0002
-  .word  $0004
-  .word  $0008
-  .word  $0010
-  .word  $0020
-  .word  $0040
-  .word  $0080
-  .word  $0100
-  .word  $0200
-  .word  $0400
-  .word  $0800
-  .word  $1000
-  .word  $2000
-  .word  $4000
-_extendOffsets:
-  .word  $FFFF
-  .word  $FFFE
-  .word  $FFFC
-  .word  $FFF8
-  .word  $FFF0
-  .word  $FFE0
-  .word  $FFC0
-  .word  $FF80
-  .word  $FF00
-  .word  $FE00
-  .word  $FC00
-  .word  $F800
-  .word  $F000
-  .word  $E000
-  .word  $C000
-  .word  $8000
+_extendTests_l:
+  .byte  <$0000
+  .byte  <$0001
+  .byte  <$0002
+  .byte  <$0004
+  .byte  <$0008
+  .byte  <$0010
+  .byte  <$0020
+  .byte  <$0040
+  .byte  <$0080
+  .byte  <$0100
+  .byte  <$0200
+  .byte  <$0400
+  .byte  <$0800
+  .byte  <$1000
+  .byte  <$2000
+  .byte  <$4000
+_extendTests_h:
+  .byte  >$0000
+  .byte  >$0001
+  .byte  >$0002
+  .byte  >$0004
+  .byte  >$0008
+  .byte  >$0010
+  .byte  >$0020
+  .byte  >$0040
+  .byte  >$0080
+  .byte  >$0100
+  .byte  >$0200
+  .byte  >$0400
+  .byte  >$0800
+  .byte  >$1000
+  .byte  >$2000
+  .byte  >$4000
+_extendOffsets_l:
+  .byte  <$FFFF
+  .byte  <$FFFE
+  .byte  <$FFFC
+  .byte  <$FFF8
+  .byte  <$FFF0
+  .byte  <$FFE0
+  .byte  <$FFC0
+  .byte  <$FF80
+  .byte  <$FF00
+  .byte  <$FE00
+  .byte  <$FC00
+  .byte  <$F800
+  .byte  <$F000
+  .byte  <$E000
+  .byte  <$C000
+  .byte  <$8000
+_extendOffsets_h:
+  .byte  >$FFFF
+  .byte  >$FFFE
+  .byte  >$FFFC
+  .byte  >$FFF8
+  .byte  >$FFF0
+  .byte  >$FFE0
+  .byte  >$FFC0
+  .byte  >$FF80
+  .byte  >$FF00
+  .byte  >$FE00
+  .byte  >$FC00
+  .byte  >$F800
+  .byte  >$F000
+  .byte  >$E000
+  .byte  >$C000
+  .byte  >$8000
 _mul669_l:
   .byte  $00
   .byte  $9D
