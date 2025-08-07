@@ -89,10 +89,6 @@ start_floppy_motor:
         jmp     inc_vbits
 
 initbithuff:
-        ldx     _bitbuf+2
-        stx     _bitbuf+3
-        ldx     _bitbuf+1
-        stx     _bitbuf+2
         ldx     _bitbuf
         stx     _bitbuf+1
         ; _bitbuf low byte will be set below
@@ -109,7 +105,7 @@ inc_vbits:
         ldy     _vbits
         ldx     plus8,y
         stx     _vbits
-retinc: cpx     #25           ; will be patched with jmp got_vbits
+retinc: cpx     #9           ; will be patched with jmp got_vbits
         bcc     initbithuff
         ; Now we're there for the first time, we won't refill more
         ; than one byte at a time. Patch the previous code for
@@ -125,13 +121,13 @@ retinc: cpx     #25           ; will be patched with jmp got_vbits
 _getbithuff:
         sta     nbits
         ldx     _vbits
-        cpx     #25
+        cpx     #9
         bcc     initbithuff
 
 got_vbits:
-        ldy     min32,x
-        lda     _bitbuf+3
-        ldx     _bitbuf+2
+        ldy     min16,x
+        lda     _bitbuf+1
+        ldx     _bitbuf+0
 finish_lshift_h:
         stx     tmp4
         cpy     #$00
@@ -186,12 +182,12 @@ no_huff:
         rts
 
 .segment        "DATA"
-min32:  .repeat 33, I
-        .byte 32-(I)
+min16:  .repeat 17, I
+        .byte 16-(I)
         .endrepeat
 min8:   .repeat 9, I
         .byte 8-(I)
         .endrepeat
-plus8:  .repeat 33, I
+plus8:  .repeat 17, I
         .byte 8+(I)
         .endrepeat
