@@ -24,28 +24,22 @@ uint8 __fastcall__ getbithuff (uint8 n)
     return 0;
   }
   if (vbits < nbits) {
-    FAST_SHIFT_LEFT_8_LONG(bitbuf);
+    bitbuf <<= 8;
     if (cur_cache_ptr == cache_end) {
       read(ifd, cur_cache_ptr = cache, CACHE_SIZE);
     }
     bitbuf |= *(cur_cache_ptr++);
+    printf("not enough vbits (%d)\n", vbits);
     vbits += 8;
+  } else {
+    printf("got enough vbits (%d) to load %d\n", vbits, n);
   }
   shift = 32-vbits;
   tmp = bitbuf << shift;
-  if (shift >= 24) {
-    FAST_SHIFT_LEFT_24_LONG_TO(bitbuf, tmp);
-  } else if (shift >= 16) {
-    FAST_SHIFT_LEFT_16_LONG_TO(bitbuf, tmp);
-  } else if (shift >= 8) {
-    FAST_SHIFT_LEFT_8_LONG_TO(bitbuf, tmp);
-  }
-  shift %= 8;
-  if (shift)
-    tmp <<= shift;
+
+  tmp >>= 24;
 
   shift = 8-nbits; /* nbits max is 8 so we'll shift at least 24 */
-  FAST_SHIFT_RIGHT_24_LONG(tmp);
   if (shift)
     c = (uint8)(tmp >> shift);
   else
