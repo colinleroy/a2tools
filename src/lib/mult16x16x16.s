@@ -26,7 +26,7 @@ resH   = tmp2
 ; Multiply inputB(ptr2) by AX (X:h, A:L), result in AX (X:h, A:L)
 mult16x16x16_direct:
          stx     AhBl+1
-         sta     BhAl+1
+         tay                  ; Get back at BhAl
 
 AlBl:
          ldx     inputB
@@ -46,7 +46,7 @@ AhBl:
          sta     resH
 
 BhAl:
-         lda     #$FF         ; Patched with A low byte
+         tya                  ; Get back inputA low byte
          beq     skipLast
          ldx     inputB+1
          beq     skipLast
