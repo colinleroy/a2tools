@@ -10,11 +10,9 @@ ac_h = tmp3
 ad_h = tmp4
 
 shortcut_first_mults:
-        ldx     #$00          ; We need to init the result to zero.
-        stx     ac_l
+        stx     ac_l          ; We need to init the result to zero.
         stx     ac_h
         stx     ad_h
-        ldx     invHigh,y     ; And load X as expected for B*C
         jmp     last_mult
 
 out:    rts
@@ -28,30 +26,28 @@ _approx_div16x8:
 approx_div16x8_direct:
         cpy     #2            ; Do nothing if divisor is 0(!!) or 1
         bcc     out
+        cpx     #0
         beq     shortcut_first_mults ; if dividend high byte if 0 skip A*C
         sta     B+1
         txa                          ; we need dividend low byte in A
         sta     A2+1
-        ldx     invHigh,y
-        stx     C2+1
 
 A1:     ; A already good
-C1:     ; X already invHigh,y
+C1:     ldx     invHigh,y
         MULT_AX_STORE_LOW ac_l
         sta     ac_h
 
 A2:     lda     #$FF
-D:      ldx     invLow,y
+        ldx     invLow,y
         MULT_AX_STORE_LOW ; No dest for low, we don't care
         sta     ad_h
 
 B:      lda     #$FF      ; Compute BC
-C2:     ldx     #$FF
 
 ; --- back from first mults shortcuts ---
 last_mult:
+        ldx     invHigh,y
         MULT_AX_STORE_LOW ; No dest for low, we don't care
-                          ; High result byte now in A
 
         ; bc_sum = ad(high only)+bc (in A)
         clc
