@@ -13,7 +13,6 @@
 
 .struct hufftable_t
    mMinCode_l .res 16
-   mMinCode_h .res 16
    mMaxCode_l .res 16
    mMaxCode_h .res 16
    mValPtr    .res 16
@@ -37,7 +36,7 @@ _gHuffTab0:       .res .sizeof(hufftable_t)
 _gHuffVal0:       .res 16
 _gHuffVal1:       .res 16
 
-filler:           .res 12   ; Align the cache with its backbuffer
+filler:           .res 28   ; Align the cache with its backbuffer
 .assert <* = 256-4, error
 _cache:           .res CACHE_SIZE+4
 

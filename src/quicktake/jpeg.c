@@ -262,7 +262,6 @@ static void huffCreate(uint8* pBits, HuffTable* pHuffTable)
   register uint8 *curMaxCode_l = pHuffTable->mMaxCode_l;
   register uint8 *curMaxCode_h = pHuffTable->mMaxCode_h;
   register uint8 *curMinCode_l = pHuffTable->mMinCode_l;
-  register uint8 *curMinCode_h = pHuffTable->mMinCode_h;
   register uint8 *curValPtr = pHuffTable->mValPtr;
 
    for ( ; ; )
@@ -271,14 +270,13 @@ static void huffCreate(uint8* pBits, HuffTable* pHuffTable)
 
       if (!num)
       {
-         *curMinCode_l = *curMinCode_h = 0x00;
+         *curMinCode_l = 0x00;
          *curMaxCode_l = *curMaxCode_h = 0xFF;
          *curValPtr = 0;
       }
       else
       {
          *curMinCode_l = code & 0xFF;
-         *curMinCode_h = (code & 0xFF00) >> 8;
          *curMaxCode_l = (code + num - 1) & 0xFF;
          *curMaxCode_h = ((code + num - 1) & 0xFF00) >> 8;
          #ifdef __CC65__ // spare a clc
@@ -304,7 +302,6 @@ static void huffCreate(uint8* pBits, HuffTable* pHuffTable)
       curMaxCode_l++;
       curMaxCode_h++;
       curMinCode_l++;
-      curMinCode_h++;
       curValPtr++;
       l_pBits++;
    }
@@ -367,6 +364,7 @@ static uint8 readDHTMarker(void)
          return PJPG_BAD_DHT_INDEX;
 
       tableIndex = ((index >> 3) & 2) + (index & 1);
+
 
       pHuffTable = getHuffTable(tableIndex);
       pHuffVal = getHuffVal(tableIndex);

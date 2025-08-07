@@ -172,7 +172,6 @@ uint8 huffDecode(HuffTable* pHuffTable, const uint8* pHuffVal)
   register uint8 *curMaxCode_l = pHuffTable->mMaxCode_l;
   register uint8 *curMaxCode_h = pHuffTable->mMaxCode_h;
   register uint8 *curMinCode_l = pHuffTable->mMinCode_l;
-  register uint8 *curMinCode_h = pHuffTable->mMinCode_h;
   register uint8 *curValPtr = pHuffTable->mValPtr;
 
   for ( ; ; ) {
@@ -193,7 +192,6 @@ increment:
     curMaxCode_l++;
     curMaxCode_h++;
     curMinCode_l++;
-    curMinCode_h++;
     curValPtr++;
 
     code <<= 1;
