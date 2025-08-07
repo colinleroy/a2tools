@@ -9,7 +9,6 @@
 ; 16 bit x 16 bit unsigned multiply, 16 bit result, no overflow indication
 ; Average cycles: 114
 
-inputA = ptr1
 inputB = ptr2
 resL   = tmp1
 resH   = tmp2
@@ -26,30 +25,28 @@ resH   = tmp2
 
 ; Multiply inputB(ptr2) by AX (X:h, A:L), result in AX (X:h, A:L)
 mult16x16x16_direct:
-         ldy     #$00         ; init result to zero
-         sty     resH         ; costs 8 cycles but the shortcuts
-         sty     resL         ; are worth it
-
-         stx     inputA+1
-         sta     inputA
+         stx     AhBl+1
+         sta     BhAl+1
 
 AlBl:
          ldx     inputB
-         beq     BhAl        ; Skip both 8x8 mult with inputB low if 0
+         stx     resH         ; init result. If inputB is zero we need to
+         stx     resL         ; do it before skipping. Otherwise they'll
+         beq     BhAl         ; be overwritten by this first multiplication.
          MULT_AX_STORE_LOW resL
          sta     resH
 
          ; X is still inputB
 AhBl:
-         lda     inputA+1
-         beq     BhAl         ; Skip if inputA low is 0
+         lda     #$FF         ; Patched with A high byte
+         beq     BhAl         ; Skip if inputA high is 0
          MULT_AX_NO_HIGH
          clc
          adc     resH
          sta     resH
 
 BhAl:
-         lda     inputA
+         lda     #$FF         ; Patched with A low byte
          beq     skipLast
          ldx     inputB+1
          beq     skipLast
