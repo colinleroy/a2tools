@@ -404,9 +404,17 @@ static void decode_row(void) {
     __asm__("sta %v", r);
     r_loop:
     // for (r=0; r != 2; r++) {
-      __asm__("ldx #0");
+
+      // __asm__("ldx #0");
+      // __asm__("lda %v", t);
+      // __asm__("jsr aslax7");
+      /* aslax7 inlined */
       __asm__("lda %v", t);
-      __asm__("jsr aslax7");
+      __asm__("lsr a");
+      __asm__("tax");
+      __asm__("lda #0");
+      __asm__("ror");
+
       /* Update buf1/2[WIDTH/2] */
       __asm__("stx %v+%w+1", buf_1, WIDTH);
       __asm__("stx %v+%w+1", buf_2, WIDTH);
@@ -567,9 +575,14 @@ static void decode_row(void) {
             __asm__("bpl %g", pos1);
             __asm__("dex");
             pos1:
-            __asm__("jsr aslax4");
-            __asm__("sta tmp3");
+            __asm__("ldy #4");
             __asm__("stx tmp4");
+            aslax_tk1:
+            __asm__("asl a");
+            __asm__("rol tmp4");
+            __asm__("dey");
+            __asm__("bne %g", aslax_tk1);
+            __asm__("sta tmp3");
 
             __asm__("clc");
             __asm__("ldy #4");
@@ -616,9 +629,14 @@ static void decode_row(void) {
             __asm__("bpl %g", pos2);
             __asm__("dex");
             pos2:
-            __asm__("jsr aslax4");
-            __asm__("sta tmp3");
+            __asm__("ldy #4");
             __asm__("stx tmp4");
+            aslax_tk2:
+            __asm__("asl a");
+            __asm__("rol tmp4");
+            __asm__("dey");
+            __asm__("bne %g", aslax_tk2);
+            __asm__("sta tmp3");
 
             __asm__("clc");
             __asm__("ldy #2");
@@ -818,9 +836,14 @@ static void decode_row(void) {
               __asm__("bpl %g", pos3);
               __asm__("dex");
               pos3:
-              __asm__("jsr aslax4");
-              __asm__("sta tmp3");
+              __asm__("ldy #4");
               __asm__("stx tmp4");
+              aslax_tk3:
+              __asm__("asl a");
+              __asm__("rol tmp4");
+              __asm__("dey");
+              __asm__("bne %g", aslax_tk3);
+              __asm__("sta tmp3");
 
               // cur_buf_x = cur_buf_prevy;
               // __asm__("lda %v", cur_buf_prevy); - aligned so no need
@@ -831,7 +854,7 @@ static void decode_row(void) {
               // *cur_buf_x += tk << 4;
               __asm__("clc");
               __asm__("lda tmp3");
-              __asm__("ldy #0");
+              //__asm__("ldy #0"); Y already zero via aslax_tk
               __asm__("adc (%v),y", cur_buf_x);
               __asm__("sta (%v),y", cur_buf_x);
               __asm__("lda tmp4");
