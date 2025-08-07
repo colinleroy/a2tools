@@ -11,7 +11,19 @@ uint8 cache[CACHE_SIZE];
 uint32 bitbuf=0;
 uint8 vbits=0;
 
-
+void initbithuff(void) {
+  /* Refill as soon as possible
+   * On the 6502 implementation, this
+   * greatly simplifies shifting. */
+  while (vbits <= 24) {
+    bitbuf <<= 8;
+    if (cur_cache_ptr == cache_end) {
+      read(ifd, cur_cache_ptr = cache, CACHE_SIZE);
+    }
+    bitbuf |= *(cur_cache_ptr++);
+    vbits += 8;
+  }
+}
 uint8 __fastcall__ getbithuff (uint8 n)
 {
   uint16 h;
@@ -23,18 +35,13 @@ uint8 __fastcall__ getbithuff (uint8 n)
     vbits = 0;
     return 0;
   }
-  if (vbits < nbits) {
-    bitbuf <<= 8;
-    if (cur_cache_ptr == cache_end) {
-      read(ifd, cur_cache_ptr = cache, CACHE_SIZE);
-    }
-    bitbuf |= *(cur_cache_ptr++);
-    printf("not enough vbits (%d)\n", vbits);
-    vbits += 8;
+  if (vbits <= 24) {
+    initbithuff();
   } else {
     printf("got enough vbits (%d) to load %d\n", vbits, n);
   }
   shift = 32-vbits;
+  printf("shift %d (%d vbits)\n", shift, vbits);
   tmp = bitbuf << shift;
 
   tmp >>= 24;

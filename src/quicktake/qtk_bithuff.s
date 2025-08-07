@@ -57,7 +57,7 @@ start_floppy_motor:
         sta     motor_on                 ; Patched if on floppy
 
 :       cpx     #(>CACHE_END)
-        bne     handle_byte
+        bne     inc_vbits
 
 
         ; Push read fd
@@ -86,12 +86,9 @@ start_floppy_motor:
         ldx     #>CACHE_SIZE
         jsr     _read
         clc
-        jmp     handle_byte
+        jmp     inc_vbits
 
-_getbithuff:
-        sta     nbits
-        cmp     _vbits
-        bcc     have_enough_vbits_h
+initbithuff:
         ldx     _bitbuf+2
         stx     _bitbuf+3
         ldx     _bitbuf+1
@@ -108,48 +105,45 @@ _getbithuff:
         lda     cur_cache_ptr
         beq     inc_cache_high
 
-handle_byte:
-        lda     _vbits
-        clc
-        adc     #8
-        sta     _vbits
+inc_vbits:
+        ldy     _vbits
+        ldx     plus8,y
+        stx     _vbits
+retinc: cpx     #25           ; will be patched with jmp got_vbits
+        bcc     initbithuff
+        ; Now we're there for the first time, we won't refill more
+        ; than one byte at a time. Patch the previous code for
+        ; faster return.
+        lda     #$4C          ; JMP
+        sta     retinc
+        lda     #<got_vbits
+        sta     retinc+1
+        lda     #>got_vbits
+        sta     retinc+2
+        jmp     got_vbits
 
-have_enough_vbits_h:
+_getbithuff:
+        sta     nbits
         ldx     _vbits
-        lda     min32,x
-        cmp     #24
-        bcc     maybe_shift_16_h
-        ldy     _bitbuf         ; shift 24, take low byte to high
-        ldx     #0
-        jmp     finish_lshift_h
-maybe_shift_16_h:
-        cmp     #16
-        bcc     maybe_shift_8_h
-        ldy     _bitbuf+1       ; shift 16, two low bytes to high
-        ldx     _bitbuf
-        jmp     finish_lshift_h
-maybe_shift_8_h:
-        cmp     #8
-        bcc     finish_lshift_h
-        ldy     _bitbuf+2       ; shift 8, mid bytes to high
-        ldx     _bitbuf+1
-        ; Don't care about the two low bytes
+        cpx     #25
+        bcc     initbithuff
+
+got_vbits:
+        ldy     min32,x
+        lda     _bitbuf+3
+        ldx     _bitbuf+2
 finish_lshift_h:
-        sty     tmp4
-        and     #$07
+        stx     tmp4
+        cpy     #$00
         beq     lshift_done_h
-        tay
-        txa
-        ; We can shift only the two high bytes, they'll be the only ones counting later
-:       asl     a
-        rol     tmp4
+
+:       asl     tmp4
+        rol     a
         dey
         bne     :-
-        ; And we don't care saving tmp3
 
 lshift_done_h:
         ldx     nbits           ; Now we shift right
-        lda     tmp4
         ldy     min8,x
         beq     do_huff_h
 
@@ -192,36 +186,12 @@ no_huff:
         rts
 
 .segment        "DATA"
-min32:  .byte 32
-        .byte 31
-        .byte 30
-        .byte 29
-        .byte 28
-        .byte 27
-        .byte 26
-        .byte 25
-        .byte 24
-        .byte 23
-        .byte 22
-        .byte 21
-        .byte 20
-        .byte 19
-        .byte 18
-        .byte 17
-        .byte 16
-        .byte 15
-        .byte 14
-        .byte 13
-        .byte 12
-        .byte 11
-        .byte 10
-        .byte 9
-min8:   .byte 8
-        .byte 7
-        .byte 6
-        .byte 5
-        .byte 4
-        .byte 3
-        .byte 2
-        .byte 1
-        .byte 0
+min32:  .repeat 33, I
+        .byte 32-(I)
+        .endrepeat
+min8:   .repeat 9, I
+        .byte 8-(I)
+        .endrepeat
+plus8:  .repeat 33, I
+        .byte 8+(I)
+        .endrepeat
