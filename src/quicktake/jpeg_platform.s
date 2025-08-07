@@ -366,13 +366,13 @@ inc_cache_high1:
 start_floppy_motor_a:
         sta     motor_on         ; Start drive motor in advance (patched if on floppy)
 :       cpy     #>CACHE_END
-        bne     continue2
+        bne     ffcheck
         sta     AXBCK
         stx     AXBCK+1          ; Backup Y for caller
         jsr     _fillInBuf
         ldx     AXBCK+1
         lda     AXBCK
-        jmp     continue2
+        jmp     ffcheck
 
 inc_cache_high2:
         inc     _cur_cache_ptr+1
@@ -382,18 +382,18 @@ inc_cache_high2:
 start_floppy_motor_b:
         sta     motor_on         ; Start drive motor in advance
 :       cpy     #>CACHE_END
-        bne     continue4
+        bne     getOctet_done
         sta     AXBCK
         stx     AXBCK+1          ; Backup Y for caller
         jsr     _fillInBuf
         ldx     AXBCK+1
         lda     AXBCK
         ldy     #$00
-        jmp     continue4
+        jmp     getOctet_done
 
 dec_cache_high:
         dec     _cur_cache_ptr+1
-        jmp     continue5
+        jmp     stuff_back
 
 ;uint8 getOctet(uint8 FFCheck)
 ; Destroys A and Y, saves X
@@ -405,7 +405,6 @@ getOctet:
         inc     _cur_cache_ptr
         beq     inc_cache_high1
 
-continue2:
 ffcheck:rts                   ; Should we check for $FF? patched.
         cmp     #$FF          ; Is result FF?
         beq     :+
@@ -415,27 +414,26 @@ ffcheck:rts                   ; Should we check for $FF? patched.
         ; Yes. Read again.
         ldy     #$00
         lda     (_cur_cache_ptr),y
-        inc     _cur_cache_ptr
-        beq     inc_cache_high2
 
-continue4:
-        cmp     #$00
+        cmp     #$00          ; is it 0 ?
         beq     out
 
-        ; Stuff back chars
-        lda     (_cur_cache_ptr),y
+        ; No, stuff back char
         lda     _cur_cache_ptr
-        sec
-        sbc     #2
-        bcc     dec_cache_high
+        beq     dec_cache_high
+        dec     _cur_cache_ptr
 
-continue5:
-        iny
+stuff_back:
+        ldy     #$00
         lda     #$FF
         sta     (_cur_cache_ptr),y
-
-out:
+        lda     tmp1
+        rts
+out:                          ; We read 0 so increment pointer
+        inc     _cur_cache_ptr
+        beq     inc_cache_high2
         ; Return result
+getOctet_done:
         lda     tmp1
         rts
 

@@ -10,30 +10,53 @@
         .import         _cache_start
         .import         _cache_end
         .import         _ifd
+        .import         floppy_motor_on
         .export         _getbithuff
         .export         _cache
+        .export         _init_floppy_starter
 
 cur_cache_ptr = _prev_ram_irq_vector
 _huff_ptr     = _zp4ip
 
 .segment        "BSS"
 .align 256
-_cache: .res        CACHE_SIZE,$00
+_cache:  .res        CACHE_SIZE,$00
+
+CACHE_END = _cache + CACHE_SIZE
+.assert <CACHE_END = 0, error
+
 _bitbuf: .res 4
-_vbits: .res 1
-nbits:
-        .res        1,$00
+_vbits:  .res 1
+nbits:   .res 1,$00
+motor_on:.res 1
 
 ; ---------------------------------------------------------------
 ; unsigned char __near__ __fastcall__ getbithuff (unsigned char n)
 ; ---------------------------------------------------------------
 
-.segment        "LC"
+.segment        "CODE"
+
+_init_floppy_starter:
+        lda     floppy_motor_on         ; Patch motor_on if we use a floppy
+        beq     :+
+        sta     start_floppy_motor+1
+        lda     #$C0                    ; Firmware access space
+        sta     start_floppy_motor+2
+:       rts
 
 inc_cache_high:
         inc     cur_cache_ptr+1
         ldx     cur_cache_ptr+1
-        cpx     _cache_end+1
+
+        ; Check for cache almost-end and restart floppy
+        ; Consider we have time to handle 256b while the
+        ; drive restarts
+        cpx     #(>CACHE_END)-1
+        bne     :+
+start_floppy_motor:
+        sta     motor_on                 ; Patched if on floppy
+
+:       cpx     #(>CACHE_END)
         bne     handle_byte
 
 

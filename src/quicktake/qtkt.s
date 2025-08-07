@@ -248,18 +248,15 @@ LAST_TWO_LINES = _raw_image + (BAND_HEIGHT * SCRATCH_WIDTH)
 
 .segment        "CODE"
 
+CACHE_END = _cache + CACHE_SIZE
+.assert <CACHE_END = 0, error
+
 ; Patcher for direct load, and end-of-cache high byte check.
 set_cache_data:
         lda     cur_cache_ptr
         sta     cache_read
         lda     cur_cache_ptr+1
         sta     cache_read+1
-
-        lda     _cache_end
-        beq     :+
-        brk                             ; Make sure cache end is aligned
-:       lda     _cache_end+1            ; Patch end-of-cache comparison
-        sta     cache_check_high_byte+1
         rts
 
 ; Cache filler
@@ -334,11 +331,9 @@ top:
 
         lda     floppy_motor_on         ; Patch motor_on if we use a floppy
         beq     row_loop
-        sta     keep_motor_on+1
-        sta     keep_motor_on_beg+1
+        sta     start_floppy_motor+1
         lda     #$C0                    ; Firmware access space
-        sta     keep_motor_on+2
-        sta     keep_motor_on_beg+2
+        sta     start_floppy_motor+2
 
         jmp     row_loop
 
@@ -395,22 +390,24 @@ set_row_loops:
 ; Increment cache pointer page
 inc_cache_high:
         inc     cache_read+1
-keep_motor_on_beg:
-        sta     motor_on                ; Keep drive motor running
 
-; Check for cache end and refill cache
-cache_check_high_byte:
-        ldx     #0                      ; Patched when resetting (_cache_end+1)
-        cpx     cache_read+1
-        clc
+        ; Check for cache almost-end and restart floppy
+        ; Consider we have time to handle 1kB while the
+        ; drive restarts
+        ldx     cache_read+1
+        cpx     #(>CACHE_END)-4
+        bmi     :+
+start_floppy_motor:
+        sta     motor_on                ; Patched if on floppy
+
+:       ; Check for cache end and refill cache
+        cpx     #>CACHE_END
         bne     handle_byte
         pha
         sty     tmp1                    ; Backup index
         jsr     fill_cache
         ldy     tmp1                    ; Restore index
         pla
-keep_motor_on:
-        sta     motor_on                ; Keep drive motor running
         jmp     handle_byte
 
 ; ------

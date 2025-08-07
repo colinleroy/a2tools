@@ -58,34 +58,23 @@ extern uint8 *cache_end;
 uint8 getOctet(uint8 FFCheck)
 {
   uint8 c, n;
-  if (cur_cache_ptr == cache_end) {
-    printf("WARNING\n");
-  }
+
   c = *(cur_cache_ptr);
   cur_cache_ptr++;
   if (cur_cache_ptr == cache_end) {
-    printf("FILL 1\n");
     fillInBuf();
   }
   if (!FFCheck)
     goto out;
   if (c != 0xFF)
     goto out;
-  if (cur_cache_ptr == cache_end) {
-    printf("WARN 2\n");
-  }
+
   n = *(cur_cache_ptr);
-  cur_cache_ptr++;
-  if (cur_cache_ptr == cache_end) {
-    printf("FILL 2\n");
-    fillInBuf();
-  }
   if (n)
   {
-     *(cur_cache_ptr--) = n;
-     *(cur_cache_ptr--) = 0xFF;
+     *(--cur_cache_ptr) = 0xFF;
   } else {
-    // cur_cache_ptr++;
+    cur_cache_ptr++;
     if (cur_cache_ptr == cache_end)
       fillInBuf();
   }
