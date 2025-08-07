@@ -16,6 +16,8 @@
         .import     _gMCUBufG
         .import     _gNumMCUSRemainingX, _gNumMCUSRemainingY
         .import     _gWinogradQuant
+        .import     floppy_motor_on
+
         .import     asreax3, inceaxy, tosmul0ax, push0ax
         .import     shraxy, decsp4, popax, addysp, mult16x16x16_direct
         .export     _huffExtend, _getBitsNoFF, _getBitsFF
@@ -24,6 +26,7 @@
         .export     _pjpeg_decode_mcu
         .export     _copy_decoded_to
         .export     _createWinogradQuant0, _createWinogradQuant1
+        .export     _initFloppyStarter
 
 ; ZP vars. Mind that qt-conv uses some too
 _gBitBuf       = _zp2       ; word, used everywhere
@@ -53,6 +56,7 @@ CACHE_END = _cache + CACHE_SIZE + 4
    mMaxCode_l .res 16
    mMaxCode_h .res 16
    mValPtr    .res 16
+   mGetMore   .res 16
 .endstruct
 
 _cur_cache_ptr = _prev_ram_irq_vector
@@ -69,6 +73,19 @@ _cur_cache_ptr = _prev_ram_irq_vector
 .endscope
 .endmacro
 
+; Whether to start floppy motor early (patched to softswitch in the code)
+motor_on:
+        .res        2,$00
+
+_initFloppyStarter:
+        lda     floppy_motor_on         ; Patch motor_on if we use a floppy
+        beq     :+
+        sta     start_floppy_motor_a+1
+        sta     start_floppy_motor_b+1
+        lda     #$C0                    ; Firmware access space
+        sta     start_floppy_motor_a+2
+        sta     start_floppy_motor_b+2
+:       rts
 
 ; uint8 getBit(void)
 ; Returns with A = 0 and carry set if bit 1
@@ -344,7 +361,11 @@ AXBCK: .res 2
 inc_cache_high1:
         inc     _cur_cache_ptr+1
         ldy     _cur_cache_ptr+1
-        cpy     #>CACHE_END
+        cpy     #(>CACHE_END)-1
+        bne     :+
+start_floppy_motor_a:
+        sta     motor_on         ; Start drive motor in advance (patched if on floppy)
+:       cpy     #>CACHE_END
         bne     continue2
         sta     AXBCK
         stx     AXBCK+1          ; Backup Y for caller
@@ -356,7 +377,11 @@ inc_cache_high1:
 inc_cache_high2:
         inc     _cur_cache_ptr+1
         ldy     _cur_cache_ptr+1
-        cpy     #>CACHE_END
+        cpy     #(>CACHE_END)-1
+        bne     :+
+start_floppy_motor_b:
+        sta     motor_on         ; Start drive motor in advance
+:       cpy     #>CACHE_END
         bne     continue4
         sta     AXBCK
         stx     AXBCK+1          ; Backup Y for caller
@@ -512,19 +537,16 @@ _imul_b5:
         stx     tmp1
         ldx     #$00
 nextLoop:
-        ; *curMaxCode != 0xFFFF?
-        lda TABLE+hufftable_t::mMaxCode_h,x        ; curMaxCode == 0xFFFF? hibyte
-        cmp #$FF
-        beq checkLow
+        lda TABLE+hufftable_t::mGetMore,x
+        bne increment
 
+        lda TABLE+hufftable_t::mMaxCode_h,x
         cmp code+1              ; curMaxCode < code ? hibyte
         bcc increment
         bne loopDone
 
 checkLow:
         lda TABLE+hufftable_t::mMaxCode_l,x
-        cmp #$FF                ; curMaxCode == 0xFFFF? lobyte
-        beq increment
         cmp code                ; ; curMaxCode < code ? lobyte
         bcs loopDone
 increment:
@@ -534,7 +556,11 @@ increment:
         inx
         dec     tmp1
         bne     nextLoop
+
+        lda     #$00          ; if i == 16 return 0
+        tax
         rts
+
 loopDone:
         lda     TABLE+hufftable_t::mValPtr,x
         adc     code

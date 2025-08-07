@@ -1,15 +1,12 @@
 #include "jpeg_platform.h"
 #include "qt-conv.h"
 
-#define getExtendTest(i) ((i > 15) ? 0 : extendTests[i])
-#define getExtendOffset(i) ((i > 15) ? 0 : extendOffsets[i])
-
 int16 __fastcall__ huffExtend(uint16 x, uint8 s)
 {
   if (s < 16) {
     uint16 t = extendTests[s];
     if (t > x) {
-      return (int16)x + getExtendOffset(s);
+      return (int16)x + extendOffsets[s];
     }
   }
 
@@ -173,12 +170,13 @@ uint8 huffDecode(HuffTable* pHuffTable, const uint8* pHuffVal)
   register uint8 *curMaxCode_h = pHuffTable->mMaxCode_h;
   register uint8 *curMinCode_l = pHuffTable->mMinCode_l;
   register uint8 *curValPtr = pHuffTable->mValPtr;
+  register uint8 *curGetMore = pHuffTable->mGetMore;
 
   for ( ; ; ) {
     if (i == 16)
       return 0;
 
-    if (*curMaxCode_l == 0xFF && *curMaxCode_h == 0xFF) {
+    if (*curGetMore) {
       goto increment;
     }
     if (*curMaxCode_l + (*curMaxCode_h<<8) < code) {
@@ -193,7 +191,7 @@ increment:
     curMaxCode_h++;
     curMinCode_l++;
     curValPtr++;
-
+    curGetMore++;
     code <<= 1;
     code |= getBit();
   }

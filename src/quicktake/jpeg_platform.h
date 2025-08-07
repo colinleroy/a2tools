@@ -13,6 +13,7 @@ typedef struct HuffTableT
    uint8 mMaxCode_l[16];
    uint8 mMaxCode_h[16];
    uint8 mValPtr[16]; // actually uint8 but it's easier to have Y the same on Codes and Val
+   uint8 mGetMore[16];
 } HuffTable;
 
 
@@ -67,6 +68,10 @@ extern uint8 gLastDC_h[3];
 extern uint8 gNumMCUSRemainingX, gNumMCUSRemainingY;
 extern uint8 gMCUOrg[6];
 extern uint8 gWinogradQuant[];
+
+#ifdef __CC65__
+void initFloppyStarter(void);
+#endif
 
 int16 __fastcall__ huffExtend(uint16 x, uint8 s);
 uint16 __fastcall__ getBitsNoFF(uint8 numBits);

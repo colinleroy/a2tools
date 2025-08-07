@@ -239,14 +239,15 @@ void fillInBuf(void)
 
 #ifndef __CC65__
 uint16 extendTests[] = {
-  0, 0x1, 0x2, 0x4, 0x8, 0x10, 0x20, 0x40, 0x80,
-  0x100, 0x200, 0x400, 0x800, 0x1000, 0x2000, 0x4000
+  0,     0x1,   0x2,   0x4,   0x8,   0x10,   0x20,   0x40,
+  0x80,  0x100, 0x200, 0x400, 0x800, 0x1000, 0x2000, 0x4000
 };
 
 uint16 extendOffsets[] = {
-  0, ((-1)<<1) + 1, ((-1)<<2) + 1, ((-1)<<3) + 1, ((-1)<<4) + 1, ((-1)<<5) + 1,
-  ((-1)<<6) + 1, ((-1)<<7) + 1, ((-1)<<8) + 1, ((-1)<<9) + 1, ((-1)<<10) + 1,
-  ((-1)<<11) + 1, ((-1)<<12) + 1, ((-1)<<13) + 1, ((-1)<<14) + 1, ((-1)<<15) + 1
+  ((-1)<<0) + 1,  ((-1)<<1) + 1,  ((-1)<<2) + 1,  ((-1)<<3) + 1,  ((-1)<<4) + 1,
+  ((-1)<<5) + 1,  ((-1)<<6) + 1,  ((-1)<<7) + 1,  ((-1)<<8) + 1,  ((-1)<<9) + 1,
+  ((-1)<<10) + 1, ((-1)<<11) + 1, ((-1)<<12) + 1, ((-1)<<13) + 1, ((-1)<<14) + 1,
+  ((-1)<<15) + 1
 };
 #else
 // see jpeg_arrays.s
@@ -263,6 +264,7 @@ static void huffCreate(uint8* pBits, HuffTable* pHuffTable)
   register uint8 *curMaxCode_h = pHuffTable->mMaxCode_h;
   register uint8 *curMinCode_l = pHuffTable->mMinCode_l;
   register uint8 *curValPtr = pHuffTable->mValPtr;
+  register uint8 *curGetMore = pHuffTable->mGetMore;
 
    for ( ; ; )
    {
@@ -270,15 +272,14 @@ static void huffCreate(uint8* pBits, HuffTable* pHuffTable)
 
       if (!num)
       {
-         *curMinCode_l = 0x00;
-         *curMaxCode_l = *curMaxCode_h = 0xFF;
-         *curValPtr = 0;
+         *curGetMore = 1;
       }
       else
       {
+         uint16 max = (code + num - 1);
          *curMinCode_l = code & 0xFF;
-         *curMaxCode_l = (code + num - 1) & 0xFF;
-         *curMaxCode_h = ((code + num - 1) & 0xFF00) >> 8;
+         *curMaxCode_l = max & 0xFF;
+         *curMaxCode_h = (max & 0xFF00) >> 8;
          #ifdef __CC65__ // spare a clc
          *curValPtr = j-1;
          #else
@@ -303,6 +304,7 @@ static void huffCreate(uint8* pBits, HuffTable* pHuffTable)
       curMaxCode_h++;
       curMinCode_l++;
       curValPtr++;
+      curGetMore++;
       l_pBits++;
    }
 }
@@ -339,6 +341,23 @@ static uint16 getMaxHuffCodes(uint8 index)
 {
    return (index < 2) ? 12 : 255;
 }
+
+// static void dumpTables(void) {
+//   int h, i;
+//   for (h = 0; h < 4; h++) {
+//     HuffTable* pHuffTable = getHuffTable(h);
+//     printf("huffTable[%d]:\n", h);
+//     for (i = 0; i < 16; i++) {
+//       printf("  %04X - %04X = %d %s\n", 
+//         pHuffTable->mMinCode_l[i],
+//         pHuffTable->mMaxCode_l[i]+(pHuffTable->mMaxCode_h[i]<<8),
+//         pHuffTable->mValPtr[i],
+//         pHuffTable->mGetMore[i] ? "(skip)":"");
+//     }
+//     cgetc();
+//   }
+// }
+
 //------------------------------------------------------------------------------
 static uint8 readDHTMarker(void)
 {
@@ -395,6 +414,7 @@ static uint8 readDHTMarker(void)
       huffCreate(bits, pHuffTable);
    }
 
+   // dumpTables();
    return 0;
 }
 //------------------------------------------------------------------------------
@@ -1087,6 +1107,10 @@ void qt_load_raw(uint16 top)
   static uint8 *pDst_row;
 
   if (top == 0) {
+#ifdef __CC65__
+    initFloppyStarter();
+#endif
+
     status = pjpeg_decode_init();
 
     if (status) {
@@ -1151,9 +1175,6 @@ uint8 skipVariableMarker(void)
      return 0;
    }
    safeSkip = left - 2;
-   if (safeSkip == 0) {
-     return 0;
-   }
 
    /* Skip faster than consuming every bit */
 skip_again:
