@@ -155,36 +155,55 @@ uint8 huffDecode(HuffTable* pHuffTable, const uint8* pHuffVal)
   uint8 j;
   uint16 code = getBit();
   HuffTable *curTable = pHuffTable;
-  register uint8 *curMaxCode_l = pHuffTable->mMaxCode_l;
-  register uint8 *curMaxCode_h = pHuffTable->mMaxCode_h;
-  register uint8 *curMinCode_l = pHuffTable->mMinCode_l;
-  register uint8 *curValPtr = pHuffTable->mValPtr;
-  register uint8 *curGetMore = pHuffTable->mGetMore;
 
+  pHuffTable->totalCalls++;
+  pHuffTable->totalGetBit++;
+
+  /* First loop only checking low bytes as long
+   * as code < 0x100 */
   for ( ; ; ) {
-    if (i == 16)
-      return 0;
+    if (pHuffTable->mGetMore[i])
+      goto incrementS;
+
+    if (pHuffTable->mMaxCode_l[i] >= code)
+      goto loopDone;
+incrementS:
+    code <<= 1;
+    code |= getBit();
+    pHuffTable->totalGetBit++;
+    i++;
+    if (i == 7)
+      goto long_search;
+  }
+loopDone:
+  j = pHuffTable->mValPtr[i] + (uint8)code - pHuffTable->mMinCode_l[i];
+  return pHuffVal[j];
+
+/* No find, keep going with 16bits */
+long_search:
+  for ( ; ; ) {
 
     if (pHuffTable->mGetMore[i])
-      goto increment;
+      goto incrementL;
 
     if (pHuffTable->mMaxCode_h[i] < (code>>8))
-      goto increment;
+      goto incrementL;
     else if (pHuffTable->mMaxCode_h[i] > (code>>8))
       goto loopDone;
 
     if (pHuffTable->mMaxCode_l[i] >= (code&0xFF))
       goto loopDone;
 
-increment:
+incrementL:
     i++;
+    if (i == 16)
+      return 0;
     code <<= 1;
     code |= getBit();
+    pHuffTable->totalGetBit++;
   }
-loopDone:
-  j = pHuffTable->mValPtr[i] + (uint8)code - pHuffTable->mMinCode_l[i];
-  return pHuffVal[j];
 }
+
 
 void idctRows(void)
 {

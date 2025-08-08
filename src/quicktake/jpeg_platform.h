@@ -14,6 +14,8 @@ typedef struct HuffTableT
    uint8 mMaxCode_h[16];
    uint8 mValPtr[16]; // actually uint8 but it's easier to have Y the same on Codes and Val
    uint8 mGetMore[16];
+   uint32 totalCalls;
+   uint32 totalGetBit;
 } HuffTable;
 
 

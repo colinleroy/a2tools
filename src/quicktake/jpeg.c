@@ -347,14 +347,17 @@ static uint16 getMaxHuffCodes(uint8 index)
 //   for (h = 0; h < 4; h++) {
 //     HuffTable* pHuffTable = getHuffTable(h);
 //     printf("huffTable[%d]:\n", h);
+//     printf(" total calls %d\n", pHuffTable->totalCalls);
+//     printf(" total bits %d\n", pHuffTable->totalGetBit);
+//     printf(" avg bitlen %d\n", pHuffTable->totalGetBit/pHuffTable->totalCalls);
 //     for (i = 0; i < 16; i++) {
-//       printf("  %04X - %04X = %d %s\n", 
+//       printf("  %04X - %04X [%16B] = %d %s\n", 
 //         pHuffTable->mMinCode_l[i],
+//         pHuffTable->mMaxCode_l[i]+(pHuffTable->mMaxCode_h[i]<<8),
 //         pHuffTable->mMaxCode_l[i]+(pHuffTable->mMaxCode_h[i]<<8),
 //         pHuffTable->mValPtr[i],
 //         pHuffTable->mGetMore[i] ? "(skip)":"");
 //     }
-//     cgetc();
 //   }
 // }
 
@@ -414,7 +417,6 @@ static uint8 readDHTMarker(void)
       huffCreate(bits, pHuffTable);
    }
 
-   // dumpTables();
    return 0;
 }
 //------------------------------------------------------------------------------
@@ -1155,6 +1157,9 @@ void qt_load_raw(uint16 top)
       }
     }
   }
+  // if (top == 220) {
+  //   dumpTables();
+  // }
 }
 
 //------------------------------------------------------------------------------

@@ -88,7 +88,7 @@ _initFloppyStarter:
 :       rts
 
 ; uint8 getBit(void)
-; Returns with A = 0 and carry set if bit 1
+; Returns with carry set if bit 1
 .macro INLINE_GETBIT
 .scope
         dec     _gBitsLeft
@@ -106,7 +106,6 @@ haveBit:
         asl     _gBitBuf
 done:
         rol     _gBitBuf+1    ; Sets carry
-        lda     #0
 .endscope
 .endmacro
 
@@ -531,39 +530,29 @@ _imul_b5:
 .macro huffDecode TABLE, VAL
 .scope
         INLINE_GETBIT
-        sta     code+1  ; A = 0 here
+        lda     #0
+        sta     code+1  ; init code+1 for long search
         rol             ; Now A = 0 or 1 depending on bit
         sta     code
 
-        ldx     #16
-        stx     tmp1
         ldx     #$00
-nextLoop:
-        lda TABLE+hufftable_t::mGetMore,x
-        bne increment
+nextLoopS:
+        ldy     TABLE+hufftable_t::mGetMore,x
+        bne     incrementS
 
-        lda TABLE+hufftable_t::mMaxCode_h,x
-        cmp code+1              ; curMaxCode < code ? hibyte
-        bcc increment
-        bne loopDone
-
-checkLow:
-        lda TABLE+hufftable_t::mMaxCode_l,x
-        cmp code                ; ; curMaxCode < code ? lobyte
-        bcs loopDone
-increment:
+        lda     TABLE+hufftable_t::mMaxCode_l,x
+        cmp     code
+        bcs     loopDone
+incrementS:
         INLINE_GETBIT
         rol     code
-        rol     code+1
         inx
-        dec     tmp1
-        bne     nextLoop
-
-        lda     #$00          ; if i == 16 return 0
-        tax
-        rts
-
+        cpx     #7
+        bne     nextLoopS
+        jmp     decodeLong
 loopDone:
+        ; carry set, ValPtr values decremented by 1
+        ; to spare two cycles
         lda     TABLE+hufftable_t::mValPtr,x
         adc     code
         sec
@@ -571,6 +560,31 @@ loopDone:
         tax                     ; Get index
 
         lda     VAL,x
+        rts
+
+decodeLong:
+nextLoopL:
+        lda     TABLE+hufftable_t::mGetMore,x
+        bne     incrementL
+
+        lda     TABLE+hufftable_t::mMaxCode_h,x
+        cmp     code+1              ; curMaxCode < code ? hibyte
+        bcc     incrementL
+        bne     loopDone
+
+        lda     TABLE+hufftable_t::mMaxCode_l,x
+        cmp     code
+        bcs     loopDone
+incrementL:
+        INLINE_GETBIT
+        rol     code
+        rol     code+1
+        inx
+        cpx     #16
+        bne     nextLoopL
+
+        lda     #$00          ; if i == 16 return 0
+        tax
         rts
 .endscope
 .endmacro
