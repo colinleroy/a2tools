@@ -9,7 +9,6 @@
 
 typedef struct HuffTableT
 {
-   uint8 mMinCode_l[16];
    uint8 mMaxCode_l[16];
    uint8 mMaxCode_h[16];
    uint8 mValPtr[16]; // actually uint8 but it's easier to have Y the same on Codes and Val

@@ -262,7 +262,6 @@ static void huffCreate(uint8* pBits, HuffTable* pHuffTable)
   uint8 *l_pBits = pBits;
   register uint8 *curMaxCode_l = pHuffTable->mMaxCode_l;
   register uint8 *curMaxCode_h = pHuffTable->mMaxCode_h;
-  register uint8 *curMinCode_l = pHuffTable->mMinCode_l;
   register uint8 *curValPtr = pHuffTable->mValPtr;
   register uint8 *curGetMore = pHuffTable->mGetMore;
 
@@ -277,13 +276,12 @@ static void huffCreate(uint8* pBits, HuffTable* pHuffTable)
       else
       {
          uint16 max = (code + num - 1);
-         *curMinCode_l = code & 0xFF;
          *curMaxCode_l = max & 0xFF;
          *curMaxCode_h = (max & 0xFF00) >> 8;
          #ifdef __CC65__ // spare a clc
-         *curValPtr = j-1;
+         *curValPtr = (j-1)-(code & 0xFF);
          #else
-         *curValPtr = j;
+         *curValPtr = j-(code & 0xFF);
          #endif
 
          j = (uint8)(j + num);
@@ -302,7 +300,6 @@ static void huffCreate(uint8* pBits, HuffTable* pHuffTable)
          break;
       curMaxCode_l++;
       curMaxCode_h++;
-      curMinCode_l++;
       curValPtr++;
       curGetMore++;
       l_pBits++;
@@ -341,25 +338,6 @@ static uint16 getMaxHuffCodes(uint8 index)
 {
    return (index < 2) ? 12 : 255;
 }
-
-// static void dumpTables(void) {
-//   int h, i;
-//   for (h = 0; h < 4; h++) {
-//     HuffTable* pHuffTable = getHuffTable(h);
-//     printf("huffTable[%d]:\n", h);
-//     printf(" total calls %d\n", pHuffTable->totalCalls);
-//     printf(" total bits %d\n", pHuffTable->totalGetBit);
-//     printf(" avg bitlen %d\n", pHuffTable->totalGetBit/pHuffTable->totalCalls);
-//     for (i = 0; i < 16; i++) {
-//       printf("  %04X - %04X [%16B] = %d %s\n", 
-//         pHuffTable->mMinCode_l[i],
-//         pHuffTable->mMaxCode_l[i]+(pHuffTable->mMaxCode_h[i]<<8),
-//         pHuffTable->mMaxCode_l[i]+(pHuffTable->mMaxCode_h[i]<<8),
-//         pHuffTable->mValPtr[i],
-//         pHuffTable->mGetMore[i] ? "(skip)":"");
-//     }
-//   }
-// }
 
 //------------------------------------------------------------------------------
 static uint8 readDHTMarker(void)
@@ -1157,9 +1135,6 @@ void qt_load_raw(uint16 top)
       }
     }
   }
-  // if (top == 220) {
-  //   dumpTables();
-  // }
 }
 
 //------------------------------------------------------------------------------

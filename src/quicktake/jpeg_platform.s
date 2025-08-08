@@ -52,7 +52,6 @@ CACHE_END = _cache + CACHE_SIZE + 4
 .assert <CACHE_END = 0, error
 
 .struct hufftable_t
-   mMinCode_l .res 16
    mMaxCode_l .res 16
    mMaxCode_h .res 16
    mValPtr    .res 16
@@ -582,8 +581,6 @@ loopDone:
         ; to spare two cycles
         lda     TABLE+hufftable_t::mValPtr,x
         adc     code
-        sec
-        sbc     TABLE+hufftable_t::mMinCode_l,x
         tax                     ; Get index
 
         lda     VAL,x

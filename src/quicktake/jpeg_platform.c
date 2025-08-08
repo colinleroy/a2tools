@@ -176,7 +176,7 @@ incrementS:
       goto long_search;
   }
 loopDone:
-  j = pHuffTable->mValPtr[i] + (uint8)code - pHuffTable->mMinCode_l[i];
+  j = pHuffTable->mValPtr[i] + (uint8)code ;
   return pHuffVal[j];
 
 /* No find, keep going with 16bits */
