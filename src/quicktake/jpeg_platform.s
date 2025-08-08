@@ -78,7 +78,7 @@ _cur_cache_ptr = _prev_ram_irq_vector
 .scope                          ; HXXXXXXL hAAAAAAl
         cpx     #$80            ; HXXXXXXL hAAAAAAl,  h->C
         rol                     ; XXXXXXLh no_care , H->C
-        ldx     #$00            ; XXXXXXLh no_care
+        ldx     #$00            ; XXXXXXLh 00000000
         bcc     @done
                                 ; X reg    A reg
         dex                     ; 11111111 XXXXXXLh if C
