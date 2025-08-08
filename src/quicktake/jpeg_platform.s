@@ -61,13 +61,40 @@ CACHE_END = _cache + CACHE_SIZE + 4
 
 _cur_cache_ptr = _prev_ram_irq_vector
 
-.macro INLINE_ASRAX7
-.scope
+; high in X low in A
+.macro INLINE_ASRAX7            ; X reg.   A reg.
+.scope                          ; HXXXXXXL hAAAAAAl
         asl                     ;          AAAAAAA0, h->C
         txa
         rol                     ;          XXXXXXLh, H->C
         ldx     #$00            ; 00000000 XXXXXXLh
         bcc     @done
+        dex                     ; 11111111 XXXXXXLh if C
+@done:
+.endscope
+.endmacro
+
+; high in A low in X
+.macro INLINE_ASRXA7            ; A reg    X reg
+.scope                          ; HXXXXXXL hAAAAAAl
+        cpx     #$80            ; HXXXXXXL hAAAAAAl,  h->C
+        rol                     ; XXXXXXLh no_care , H->C
+        ldx     #$00            ; XXXXXXLh no_care
+        bcc     @done
+                                ; X reg    A reg
+        dex                     ; 11111111 XXXXXXLh if C
+@done:
+.endscope
+.endmacro
+
+; high in A low in Y
+.macro INLINE_ASRYA7            ; A reg    Y reg
+.scope                          ; HXXXXXXL hAAAAAAl
+        cpy     #$80            ; HXXXXXXL hAAAAAAl,  h->C
+        rol                     ; XXXXXXLh no_care , H->C
+        ldx     #$00            ; XXXXXXLh no_care
+        bcc     @done
+                                ; X reg    A reg
         dex                     ; 11111111 XXXXXXLh if C
 @done:
 .endscope
@@ -950,10 +977,10 @@ nextCol:
         bne     full_idct_cols
 
         ; Short circuit the 1D IDCT if only the DC component is non-zero
-        ldx     _gCoeffBuf+1,y
-        lda     _gCoeffBuf,y
+        lda     _gCoeffBuf+1,y
+        ldx     _gCoeffBuf,y
 
-        INLINE_ASRAX7
+        INLINE_ASRXA7
 
         eor     #$80
         bmi     :+
@@ -1160,9 +1187,7 @@ x12h:
         txa
         adc     x17+1
 
-        tax
-        tya
-        INLINE_ASRAX7
+        INLINE_ASRYA7
 
         eor     #$80
         bmi     :+
@@ -1201,9 +1226,7 @@ clampDone2:
         txa
         adc     res3+1
 
-        tax
-        tya
-        INLINE_ASRAX7
+        INLINE_ASRYA7
 
         eor     #$80
         bmi     :+
@@ -1249,9 +1272,7 @@ x43l:
 x43h:
         adc     #$FF
 
-        tax
-        tya
-        INLINE_ASRAX7
+        INLINE_ASRYA7
 
         eor     #$80
         bmi     :+
@@ -1283,9 +1304,7 @@ clampDone4:
         txa
         sbc     res2+1
 
-        tax
-        tya
-        INLINE_ASRAX7
+        INLINE_ASRYA7
 
         eor     #$80
         bmi     :+

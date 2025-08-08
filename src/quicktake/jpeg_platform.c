@@ -253,8 +253,6 @@ nextIdctRowsLoop:
 
        x17 = x5 + x7;
 
-       *(rowSrc) = x30 + x13 + x17;
-
        res1 = imul_b5(x4 - x6);
        stg26 = imul_b4(x6) - res1;
        res2 = stg26 - x17;
@@ -264,6 +262,7 @@ nextIdctRowsLoop:
 
        x24 = res1 - imul_b2(x4);
 
+       *(rowSrc) = x30 + x13 + x17;
        *(rowSrc_2) = x31 - x32 + res3;
        *(rowSrc_4) = x30 + res3 + x24 - x13;
        *(rowSrc_6) = x31 + x32 - res2;
@@ -313,7 +312,7 @@ void idctCols(void)
         goto full_idct_cols;
 
        // Short circuit the 1D IDCT if only the DC component is non-zero
-       t = (*pSrc_0_8 >> PJPG_DCT_SCALE_BITS)+128;
+       t = (*pSrc_0_8 >> PJPG_DCT_SCALE_BITS) + 128;
        if (t < 0)
          c = 0; 
        else if (t & 0xFF00)
@@ -351,7 +350,7 @@ void idctCols(void)
 
        // descale, convert to unsigned and clamp to 8-bit
        x40 = x30 + x13;
-       t = ((x40 + x17) >> PJPG_DCT_SCALE_BITS) +128;
+       t = ((x40 + x17) >> PJPG_DCT_SCALE_BITS) + 128;
        if (t < 0)
          *pSrc_0_8 = 0; 
        else if (t & 0xFF00)
@@ -361,7 +360,7 @@ void idctCols(void)
 
        x32 = imul_b1_b3(x12) - x13;
        x42 = x31 - x32;
-       t = ((x42 + res3) >> PJPG_DCT_SCALE_BITS) +128;
+       t = ((x42 + res3) >> PJPG_DCT_SCALE_BITS) + 128;
        if (t < 0)
          *pSrc_2_8 = 0; 
        else if (t & 0xFF00)
@@ -369,7 +368,7 @@ void idctCols(void)
        else 
          *pSrc_2_8 = (uint8)t;
 
-       t = ((x30 - x13 + res3 + x24) >> PJPG_DCT_SCALE_BITS) +128;
+       t = ((x30 - x13 + res3 + x24) >> PJPG_DCT_SCALE_BITS) + 128;
        if (t < 0)
          *pSrc_4_8 = 0; 
        else if (t & 0xFF00)
@@ -378,7 +377,7 @@ void idctCols(void)
          *pSrc_4_8 = (uint8)t;
 
        x41 = x31 + x32;
-       t = ((x41 - res2) >> PJPG_DCT_SCALE_BITS) +128;
+       t = ((x41 - res2) >> PJPG_DCT_SCALE_BITS) + 128;
        if (t < 0)
          *pSrc_6_8 = 0; 
        else if (t & 0xFF00)
