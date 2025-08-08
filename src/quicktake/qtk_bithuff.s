@@ -125,10 +125,10 @@ _getbithuff:
         bcc     initbithuff
 
 got_vbits:
-        ldy     min16,x
-        lda     _bitbuf+1
-        ldx     _bitbuf+0
-finish_lshift_h:
+        ldy     min16,x       ; shift = 16-vbits
+        lda     _bitbuf+1     ; Load the uint16 bitbuf
+        ldx     _bitbuf+0     ; (high byte in A because that's the one we keep)
+
         stx     tmp4
         cpy     #$00
         beq     lshift_done_h
@@ -136,38 +136,35 @@ finish_lshift_h:
 :       asl     tmp4
         rol     a
         dey
-        bne     :-
+        bne     :-              ; Now we have 0x000AABB0
 
 lshift_done_h:
-        ldx     nbits           ; Now we shift right
-        ldy     min8,x
+        ldx     nbits           ; Now we keep the high byte
+        ldy     min8,x          ; and do the final shift
         beq     do_huff_h
 
 :       lsr     a
         dey
-        bne     :-
+        bne     :-              ; Final shift done!
 do_huff_h:
-        ldy     _huff_ptr+1
+        ldx     _huff_ptr+1
         beq     no_huff
 
-        ldx     #$00
         asl     a
         bcc     :+
         inx
         clc
 
-:       adc     _huff_ptr
-        sta     ptr1
-        txa
-        adc     _huff_ptr+1
-        sta     ptr1+1
-        ldy     #$01
-        lda     (ptr1),y
-        eor     #$FF
+:       stx     ptr1+1
+        ldx     _huff_ptr
+        stx     ptr1
+
+        tay
+        iny
+        lda     _vbits
         sec
-        adc     _vbits
+        sbc     (ptr1),y
         sta     _vbits
-        ldx     #$00
         dey
         lda     (ptr1),y
         rts
@@ -178,7 +175,6 @@ no_huff:
         sbc     nbits
         sta     _vbits
         txa
-        ldx     #$00
         rts
 
 .segment        "DATA"

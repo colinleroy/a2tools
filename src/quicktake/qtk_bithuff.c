@@ -37,22 +37,29 @@ uint8 __fastcall__ getbithuff (uint8 n)
   }
   if (vbits < 9) {
     initbithuff();
-  } else {
-    printf("got enough vbits (%d) to load %d\n", vbits, n);
   }
   shift = 16-vbits;
-  printf("shift %d (%d vbits)\n", shift, vbits);
-  /* bitbuf is now 0xAABB and we want to keep AA */
-  tmp = (((uint32)(bitbuf << 8))) << shift;
-  /* tmp is now 0x00AABB00 */
-  tmp = (tmp & 0x00FF0000) >> 16;
-  /* tmp is now 0xAA */
 
+  /* bitbuf is now 0xAABB and we want to get n bits from
+   * the left. The following is decomposed in steps to make
+   * it clearer what the asm implementation does with
+   * shortcuts */
+
+  tmp = (((uint32)(bitbuf)));
+  /* tmp is now 0x0000AABB */
+
+  tmp <<= shift;
+  /* tmp is now 0x000AABB0 */
+
+  tmp = (tmp & 0x0000FF00);
+  /* tmp is now 0x0000AB00 */
+
+  tmp >>= 8;
+  /* tmp is now 0x000000AB */
+
+  /* Final shift */
   shift = 8-nbits;
-  if (shift)
-    c = (uint8)(tmp >> shift);
-  else
-    c = (uint8)tmp;
+  c = (uint8)(tmp >> shift);
 
   if (huff_ptr) {
     h = huff_ptr[c];

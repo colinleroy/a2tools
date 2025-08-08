@@ -25,8 +25,6 @@
 #include "qtk_bithuff.h"
 #include "approxdiv16x8.h"
 
-#define radc_token(r, t) do { r = (t) getbithuff(8); } while(0)
-#define skip_radc_token() do { getbithuff(8); } while(0)
 
 /* Shared with qt-conv.c */
 char magic[5] = QTKN_MAGIC;
@@ -62,8 +60,8 @@ static uint16 val_from_last[256] = {
 static uint16 huff[19][256];
 static uint16 *huff_9 = huff[9], *huff_10 = huff[10], *huff_18 = huff[18];
 static int16 x, s, i;
-static uint16 c, col, tree;
-static uint8 r, nreps, rep, row, y, t, rep_loop;
+static uint16 c, col;
+static uint8 r, nreps, rep, row, y, t, rep_loop, tree;
 
 /* Wastes bytes, but simplifies adds */
 #define USEFUL_DATABUF_SIZE 386
@@ -285,13 +283,13 @@ static void decode_row(void) {
 
             y = 2;
             loop2:
-            radc_token(tk, int8);
+            tk = getbithuff(8);
             *(cur_buf_x+1) = ((((*(cur_buf_prevy+2) + *(cur_buf_x+2)) >> 1)
                               + *(cur_buf_prevy+1)) >> 1)
                              + (tk << 4);
 
             /* Second with col - 1*/
-            radc_token(tk, int8);
+            tk = getbithuff(8);
 
             *(cur_buf_x) = ((((*(cur_buf_prevy+1) + *(cur_buf_x+1)) >> 1)
                               + *(cur_buf_prevy)) >> 1)
@@ -309,7 +307,7 @@ static void decode_row(void) {
           do {
             if (col > 2) {
               huff_ptr = huff_9;
-              radc_token(nreps, int8);
+              nreps = getbithuff(8);
               nreps++;
             } else {
               nreps = 1;
@@ -320,6 +318,7 @@ static void decode_row(void) {
               rep_loop = nreps;
             }
             rep = 0;
+            huff_ptr = huff_10;
             do_rep_loop:
               col -= 2;
               cur_buf_prevy = buf_0 + col;
@@ -343,8 +342,7 @@ static void decode_row(void) {
                 cur_buf_prevy += DATABUF_SIZE;
               }
               if (rep & 1) {
-                huff_ptr = huff_10;
-                radc_token(tk, int8);
+                tk = getbithuff(8);
 
                 cur_buf_x = cur_buf_prevy; /* Previously correctly set */
 
@@ -554,11 +552,8 @@ static void decode_row(void) {
 
             //huff_ptr = huff[tree + 10];
             __asm__("lda %v", tree);
-            __asm__("clc");
-            __asm__("adc #10");
             __asm__("asl a");
-            __asm__("clc");
-            __asm__("adc #>%v", huff); /* adding to high byte because bidimensional */
+            __asm__("adc %v+1", huff_10); /* adding to high byte because bidimensional */
             __asm__("sta %v+1", huff_ptr);
             // __asm__("lda #<%v", huff);
             // __asm__("sta %v", huff_ptr);
@@ -718,6 +713,11 @@ static void decode_row(void) {
 
             __asm__("ldy #$00");
             __asm__("sty %v", rep);
+
+            // __asm__("lda %v", huff_10);
+            // __asm__("sta %v", huff_ptr);
+            __asm__("lda %v+1", huff_10);
+            __asm__("sta %v+1", huff_ptr);
             do_rep_loop:
               __asm__("ldx %v+1", col);
               __asm__("lda %v", col);
@@ -823,10 +823,6 @@ static void decode_row(void) {
               __asm__("lda %v", rep);
               __asm__("and #1");
               __asm__("beq %g", rep_even);
-              // __asm__("lda %v", huff_10);
-              // __asm__("sta %v", huff_ptr);
-              __asm__("lda %v+1", huff_10);
-              __asm__("sta %v+1", huff_ptr);
               __asm__("lda #8");
               __asm__("jsr %v", getbithuff);
               __asm__("sta %v", tk);
@@ -1057,19 +1053,19 @@ static void consume_extra(void) {
     for (c=1; c != 3; c++) {
       for (tree = 1, col = WIDTH/2; col; ) {
         huff_ptr = huff[tree];
-        radc_token(tree, uint8);
+        tree = getbithuff(8);
         if (tree) {
           col -= 2;
           huff_ptr = huff[tree + 10];
-          skip_radc_token();
-          skip_radc_token();
-          skip_radc_token();
-          skip_radc_token();
+          getbithuff(8);
+          getbithuff(8);
+          getbithuff(8);
+          getbithuff(8);
         } else {
           do {
             if (col > 2) {
               huff_ptr = huff_9;
-              radc_token(nreps, int8);
+              nreps = getbithuff(8);
               nreps++;
             } else {
               nreps = 1;
@@ -1079,11 +1075,11 @@ static void consume_extra(void) {
             } else {
               rep_loop = nreps;
             }
+            huff_ptr = huff_10;
             for (rep=0; rep != rep_loop && col; rep++) {
               col -= 2;
               if (rep & 1) {
-                huff_ptr = huff_10;
-                skip_radc_token();
+                getbithuff(8);
               }
             }
           } while (nreps == 9);
@@ -1116,10 +1112,7 @@ static void consume_extra(void) {
         __asm__("lda #8");
         __asm__("jsr %v", getbithuff);
         __asm__("sta %v", tree);
-        __asm__("stx %v+1", tree);
 
-        __asm__("bne %g", tree_not_zero_2);
-        __asm__("cpx #0");
         __asm__("beq %g", tree_zero_2);
         tree_not_zero_2:
           __asm__("lda %v", col);
