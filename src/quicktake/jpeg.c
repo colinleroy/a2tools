@@ -439,29 +439,31 @@ static uint8 readDQTMarker(void)
       if (n > 1)
          return PJPG_BAD_DQT_TABLE;
 
-      gValidQuantTables |= (n ? 2 : 1);
-
-      // read quantization entries, in zag order
-      for (i = 0; i < 64; i++)
-      {
-         uint16 temp = getBitsNoFF(8);
-
-         if (prec)
-            temp = (temp << 8) + getBitsNoFF(8);
-
-         if (n) {
-           gQuant1_h[i] = (int8)(temp>>8);
-           gQuant1_l[i] = (int8)(temp);
-         }
-         else {
-           gQuant0_h[i] = (int8)(temp>>8);
-           gQuant0_l[i] = (int8)(temp);
-         }
-      }
-
       if (n) {
+        gValidQuantTables |= 2;
+        for (i = 0; i < 64; i++)
+        {
+           if (prec) {
+             gQuant1_h[i] = getBitsNoFF(8);
+             gQuant1_l[i] = getBitsNoFF(8);
+           } else {
+             gQuant1_h[i] = 0;
+             gQuant1_l[i] = getBitsNoFF(8);
+           }
+        }
         createWinogradQuant1();
       } else {
+        gValidQuantTables |= 1;
+        for (i = 0; i < 64; i++)
+        {
+           if (prec) {
+             gQuant0_h[i] = getBitsNoFF(8);
+             gQuant0_l[i] = getBitsNoFF(8);
+           } else {
+             gQuant0_h[i] = 0;
+             gQuant0_l[i] = getBitsNoFF(8);
+           }
+        }
         createWinogradQuant0();
       }
 

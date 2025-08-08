@@ -165,27 +165,24 @@ uint8 huffDecode(HuffTable* pHuffTable, const uint8* pHuffVal)
     if (i == 16)
       return 0;
 
-    if (*curGetMore) {
+    if (pHuffTable->mGetMore[i])
       goto increment;
-    }
-    if (*curMaxCode_l + (*curMaxCode_h<<8) < code) {
-      goto increment;
-    }
 
-    goto loopDone;
+    if (pHuffTable->mMaxCode_h[i] < (code>>8))
+      goto increment;
+    else if (pHuffTable->mMaxCode_h[i] > (code>>8))
+      goto loopDone;
+
+    if (pHuffTable->mMaxCode_l[i] >= (code&0xFF))
+      goto loopDone;
 
 increment:
     i++;
-    curMaxCode_l++;
-    curMaxCode_h++;
-    curMinCode_l++;
-    curValPtr++;
-    curGetMore++;
     code <<= 1;
     code |= getBit();
   }
 loopDone:
-  j = (uint8)*curValPtr + (uint8)code - (uint8)*curMinCode_l;
+  j = pHuffTable->mValPtr[i] + (uint8)code - pHuffTable->mMinCode_l[i];
   return pHuffVal[j];
 }
 

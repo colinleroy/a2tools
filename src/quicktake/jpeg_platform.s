@@ -188,6 +188,55 @@ n_min_eight:   .byte 0
         stx     ffcheck
 .endmacro
 
+; ===== Rare case when we need more than 8 bits,
+; ===== Moved out of the main codepath
+need_more_than_eight:
+        ldx     n_min_eight,y
+        stx     n
+
+        ; gBitBuf <<= gBitsLeft;
+        ldy     _gBitsLeft
+        beq     no_lshift
+
+        cpy     #8
+        bcc     :+
+        sta     _gBitBuf+1
+        jmp     no_lshift
+
+        ; lda     _gBitBuf - A already contains _gBitBuf
+:       asl     a
+        rol     _gBitBuf+1
+        dey
+        bne     :-
+        ;sta     _gBitBuf - will be overwritten
+no_lshift:
+
+        ; gBitBuf |= getOctet(ff);
+        jsr     getOctet
+        sta     _gBitBuf
+
+        ; gBitBuf <<= (8 - gBitsLeft);
+        ldx     _gBitsLeft
+        ldy     eight_min_n,x
+        beq     n_lt8         ; Back to main codepath
+        cpy     #8
+        bne     :+
+        ; lda     _gBitBuf  - already contains gBitBuf
+        sta     _gBitBuf+1
+        ; lda     #$00      - no need to store, getOctet'd later
+        ; sta     _gBitBuf
+        jmp     n_lt8         ; Back to main codepath
+
+:       ; lda     _gBitBuf  - already contains gBitBuf
+        asl     a
+        rol     _gBitBuf+1
+        dey
+        bne     :-
+        sta     _gBitBuf
+        lda     _gBitBuf+1  ; ret = (ret & 0xFF00) | (gBitBuf >> 8);
+        jmp     n_lt8
+; =====================================
+
 _getBitsNoFF:
         ldx     #NO_FF_CHECK
         jmp     getBits
@@ -206,51 +255,8 @@ getBitsDirect:
         lda     _gBitBuf      ; Will be stored later
 
         cpy     #9
-        bcc     n_lt8
+        bcs     need_more_than_eight
 
-        ldx     n_min_eight,y
-        stx     n
-
-        ldy     _gBitsLeft
-        beq     no_lshift
-
-        ; gBitBuf <<= gBitsLeft;
-        ; no need to check for << 8, that can't be, as _gBitsLeft maximum is 7
-
-        ; lda     _gBitBuf - A already contains _gBitBuf
-:       asl     a
-        rol     _gBitBuf+1
-        dey
-        bne     :-
-        ;sta     _gBitBuf - will be overwritten
-
-no_lshift:
-        ; gBitBuf |= getOctet(ff);
-        jsr     getOctet
-        sta     _gBitBuf
-
-        ; gBitBuf <<= (8 - gBitsLeft);
-        ldx     _gBitsLeft
-        ldy     eight_min_n,x
-        beq     no_lshift2
-        cpy     #8
-        bne     :+
-
-        ; lda     _gBitBuf  - already contains gBitBuf
-        sta     _gBitBuf+1
-        ; lda     #$00      - no need to store, getOctet'd later
-        ; sta     _gBitBuf
-        jmp     no_lshift2
-
-:       ; lda     _gBitBuf  - already contains gBitBuf
-        asl     a
-        rol     _gBitBuf+1
-        dey
-        bne     :-
-        sta     _gBitBuf
-        lda     _gBitBuf+1  ; ret = (ret & 0xFF00) | (gBitBuf >> 8);
-
-no_lshift2:
 n_lt8:
         sta     ret
 
@@ -261,15 +267,18 @@ n_lt8:
         bcs     enoughBits
 
         ; gBitBuf <<= gBitsLeft;
-        ; no need to check for << 8, that can't be
         lda     _gBitBuf
+        cpy     #8
+        bne     :+
+        sta     _gBitBuf+1
+        jmp     no_lshift3
 :       asl     a
         rol     _gBitBuf+1
         dey
         bne     :-
         ;sta     _gBitBuf - will get overwritten by getOctet
-
 no_lshift3:
+
         ; gBitBuf |= getOctet(ff);
         jsr     getOctet
         sta     _gBitBuf
@@ -284,11 +293,8 @@ no_lshift3:
         ; gBitBuf <<= tmp;
         cmp     #8
         bne     :+
-
         lda     _gBitBuf
         sta     _gBitBuf+1
-        ; lda     #$00         - no need to store, will be getOctet'd
-        ; sta     _gBitBuf
         jmp     no_lshift4
 
 :       tax                   ; Keep Y = tmp
@@ -303,7 +309,7 @@ no_lshift4:
         ; gBitsLeft = 8 - tmp;
         lda     eight_min_n,y
         sta     _gBitsLeft
-        jmp     no_lshift5
+        jmp     left_shifts_done
 
 enoughBits:
         ; gBitsLeft = gBitsLeft - n;
@@ -316,9 +322,7 @@ enoughBits:
         cpy     #8
         bne     :+
         sta     _gBitBuf+1
-        ; lda     #$00      - no need to store, will be getOctet'd
-        ; sta     _gBitBuf
-        jmp     no_lshift5
+        jmp     left_shifts_done
 
         ; gBitBuf <<= n;
 :       asl     a
@@ -327,7 +331,7 @@ enoughBits:
         bne     :-
         sta     _gBitBuf
 
-no_lshift5:
+left_shifts_done:
         ; return ret >> final_shift
         ldy     final_shift
         beq     load_res
