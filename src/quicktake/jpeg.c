@@ -804,6 +804,7 @@ static uint8 init(void)
      gValidQuantTables = 
      gTemFlag = 
      gBitBuf = 0;
+
    gBitsLeft = 8;
 
    // Multiplication tables are pre-built using:

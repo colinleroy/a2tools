@@ -122,17 +122,14 @@ _initFloppyStarter:
         bpl     haveBit
 
         jsr     getOctet
-        asl     a
         sta     _gBitBuf
 
         lda     #7
         sta     _gBitsLeft
-        jmp     done
-
 haveBit:
-        asl     _gBitBuf
+        asl     _gBitBuf    ; Sets carry
 done:
-        rol     _gBitBuf+1    ; Sets carry
+        rol     _gBitBuf+1
 .endscope
 .endmacro
 
@@ -214,55 +211,6 @@ n_min_eight:   .byte 0
         stx     ffcheck
 .endmacro
 
-; ===== Rare case when we need more than 8 bits,
-; ===== Moved out of the main codepath
-need_more_than_eight:
-        ldx     n_min_eight,y
-        stx     n
-
-        ; gBitBuf <<= gBitsLeft;
-        ldy     _gBitsLeft
-        beq     no_lshift
-
-        cpy     #8
-        bcc     :+
-        sta     _gBitBuf+1
-        jmp     no_lshift
-
-        ; lda     _gBitBuf - A already contains _gBitBuf
-:       asl     a
-        rol     _gBitBuf+1
-        dey
-        bne     :-
-        ;sta     _gBitBuf - will be overwritten
-no_lshift:
-
-        ; gBitBuf |= getOctet(ff);
-        jsr     getOctet
-        sta     _gBitBuf
-
-        ; gBitBuf <<= (8 - gBitsLeft);
-        ldx     _gBitsLeft
-        ldy     eight_min_n,x
-        beq     n_lt8         ; Back to main codepath
-        cpy     #8
-        bne     :+
-        ; lda     _gBitBuf  - already contains gBitBuf
-        sta     _gBitBuf+1
-        ; lda     #$00      - no need to store, getOctet'd later
-        ; sta     _gBitBuf
-        jmp     n_lt8         ; Back to main codepath
-
-:       ; lda     _gBitBuf  - already contains gBitBuf
-        asl     a
-        rol     _gBitBuf+1
-        dey
-        bne     :-
-        sta     _gBitBuf
-        lda     _gBitBuf+1  ; ret = (ret & 0xFF00) | (gBitBuf >> 8);
-        jmp     n_lt8
-; =====================================
-
 _getBitsNoFF:
         ldx     #NO_FF_CHECK
         jmp     getBits
@@ -271,121 +219,45 @@ _getBitsFF:
 getBits:
         stx     ffcheck
 getBitsDirect:
+        tax
+        cpx     #9
+        bcs     large_n
+small_n:
+        lda     #0
         sta     n
-        tay
-        lda     sixteen_min_n,y
-        sta     final_shift
+:       INLINE_GETBIT
+        rol     n
+        dex
+        bne     :-
+        lda     n
+        ; X is zero
+        rts
 
-        lda     _gBitBuf+1
-        sta     ret+1
-        lda     _gBitBuf      ; Will be stored later
+large_n:
+        ldy     n_min_eight,x ; How much more than 8?
+        sty     ret+1
 
-        cpy     #9
-        bcs     need_more_than_eight
-
-n_lt8:
+        lda     #0            ; Init result
+        sta     n
         sta     ret
 
-        ; if (gBitsLeft < n) {
-        ldy     _gBitsLeft
-        beq     no_lshift3
-        cpy     n
-        bcs     enoughBits
-
-        ; gBitBuf <<= gBitsLeft;
-        lda     _gBitBuf
-        cpy     #8
-        bne     :+
-        sta     _gBitBuf+1
-        jmp     no_lshift3
-:       asl     a
-        rol     _gBitBuf+1
-        dey
+        ldx     #8            ; Get the first eight
+:       INLINE_GETBIT
+        rol     n
+        dex
         bne     :-
-        ;sta     _gBitBuf - will get overwritten by getOctet
-no_lshift3:
 
-        ; gBitBuf |= getOctet(ff);
-        jsr     getOctet
-        sta     _gBitBuf
+        ldx     ret+1         ; Get the last (n-8)
+:       INLINE_GETBIT
+        rol     n
+        rol     ret
+        dex
+        bne     :-
 
-        ; tmp = n - gBitsLeft;
         lda     n
-        sec
-        sbc     _gBitsLeft
-        tay
-        beq     no_lshift4
-
-        ; gBitBuf <<= tmp;
-        cmp     #8
-        bne     :+
-        lda     _gBitBuf
-        sta     _gBitBuf+1
-        jmp     no_lshift4
-
-:       tax                   ; Keep Y = tmp
-        lda     _gBitBuf
-:       asl     a
-        rol     _gBitBuf+1
-        dex
-        bne     :-
-        sta     _gBitBuf
-
-no_lshift4:
-        ; gBitsLeft = 8 - tmp;
-        lda     eight_min_n,y
-        sta     _gBitsLeft
-        jmp     left_shifts_done
-
-enoughBits:
-        ; gBitsLeft = gBitsLeft - n;
-        tya                   ; - contains gBitsLeft
-        sbc     n
-        sta     _gBitsLeft
-
-        lda     _gBitBuf
-        ldy     n
-        cpy     #8
-        bne     :+
-        sta     _gBitBuf+1
-        jmp     left_shifts_done
-
-        ; gBitBuf <<= n;
-:       asl     a
-        rol     _gBitBuf+1
-        dey
-        bne     :-
-        sta     _gBitBuf
-
-left_shifts_done:
-        ; return ret >> final_shift
-        ldy     final_shift
-        beq     load_res
-        cpy     #8
-        bcs     :++
-
-        lda     ret             ; << less than 8, long way
-:       lsr     ret+1
-        ror     a
-        dey
-        bne     :-
-        ldx     ret+1
+        ldx     ret
         rts
 
-:       lda     ret+1           ; << 8 or more, fast way
-        ldx     n_min_eight,y
-        beq     no_final_rshift
-:       lsr     a
-        dex
-        bne     :-
-        ; Now X is 0
-        ; ldx   #0
-no_final_rshift:
-        rts
-load_res:
-        lda     ret
-        ldx     ret+1
-        rts
 
 AXBCK: .res 2
 inc_cache_high1:
@@ -1353,8 +1225,8 @@ cont_idct_cols:
 idctColDone:
         rts
 
-_decodeNextMCU:
         GET_BITS_SET_FF_ON
+_decodeNextMCU:
 
         lda     _gRestartInterval
         ora     _gRestartInterval+1
