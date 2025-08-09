@@ -717,7 +717,6 @@ full_idct_rows:
         adc    _gCoeffBuf+6,y
         sta    x7l
         lda    _gCoeffBuf+11,y
-        tax
         adc    _gCoeffBuf+7,y
         sta    x7h
 
@@ -725,7 +724,7 @@ full_idct_rows:
         lda    _gCoeffBuf+10,y
         sbc    _gCoeffBuf+6,y
         sta    x4l
-        txa
+        lda    _gCoeffBuf+11,y
         sbc    _gCoeffBuf+7,y
         sta    x4h
 
@@ -734,7 +733,6 @@ full_idct_rows:
         adc    _gCoeffBuf+14,y
         sta    x5l
         lda    _gCoeffBuf+3,y
-        tax
         adc    _gCoeffBuf+15,y
         sta    x5h
 
@@ -742,7 +740,7 @@ full_idct_rows:
         lda    _gCoeffBuf+2,y
         sbc    _gCoeffBuf+14,y
         sta    x6l
-        txa
+        lda    _gCoeffBuf+3,y
         sbc    _gCoeffBuf+15,y
         sta    x6h
 
@@ -751,7 +749,6 @@ full_idct_rows:
         adc    _gCoeffBuf+8,y
         sta    x30l
         lda    _gCoeffBuf+1,y
-        tax
         adc    _gCoeffBuf+9,y
         sta    x30h
 
@@ -759,7 +756,7 @@ full_idct_rows:
         lda    _gCoeffBuf,y
         sbc    _gCoeffBuf+8,y
         sta    x31l
-        txa
+        lda    _gCoeffBuf+1,y
         sbc    _gCoeffBuf+9,y
         sta    x31h
 
@@ -768,7 +765,6 @@ full_idct_rows:
         adc    _gCoeffBuf+12,y
         sta    x13l
         lda    _gCoeffBuf+5,y
-        tax
         adc    _gCoeffBuf+13,y
         sta    x13h
 
@@ -777,8 +773,8 @@ full_idct_rows:
         lda    _gCoeffBuf+4,y
         sbc    _gCoeffBuf+12,y
         tay
-        txa
         ldx    tmp3           ; loading index in X to preserve Y for mult
+        lda    _gCoeffBuf+5,x
         sbc    _gCoeffBuf+13,x
         tax
         jsr    _imul_b1_b3
@@ -1035,7 +1031,6 @@ full_idct_cols:
         sbc     _gCoeffBuf+48,y
         sta     cx4l
         lda     _gCoeffBuf+81,y
-        tax
         sbc     _gCoeffBuf+49,y
         sta     cx4h
 
@@ -1043,7 +1038,7 @@ full_idct_cols:
         lda     _gCoeffBuf+80,y
         adc     _gCoeffBuf+48,y
         sta     cx7l
-        txa
+        lda     _gCoeffBuf+81,y
         adc     _gCoeffBuf+49,y
         sta     cx7h
 
@@ -1052,7 +1047,6 @@ full_idct_cols:
         sbc     _gCoeffBuf+112,y
         sta     cx6l
         lda     _gCoeffBuf+17,y
-        tax
         sbc     _gCoeffBuf+113,y
         sta     cx6h
 
@@ -1060,7 +1054,7 @@ full_idct_cols:
         lda     _gCoeffBuf+16,y
         adc     _gCoeffBuf+112,y
         sta     cx5l
-        txa
+        lda     _gCoeffBuf+17,y
         adc     _gCoeffBuf+113,y
         sta     cx5h
 
@@ -1141,7 +1135,6 @@ cres2h = *+1
         sbc     _gCoeffBuf+64,y
         sta     cx31l
         lda     _gCoeffBuf+1,y
-        tax
         sbc     _gCoeffBuf+65,y
         sta     cx31h
 
@@ -1149,7 +1142,7 @@ cres2h = *+1
         lda     _gCoeffBuf,y
         adc     _gCoeffBuf+64,y
         sta     cx30l
-        txa
+        lda     _gCoeffBuf+1,y
         adc     _gCoeffBuf+65,y
         sta     cx30h
 
@@ -1158,7 +1151,6 @@ cres2h = *+1
         adc     _gCoeffBuf+96,y
         sta     cx13l
         lda     _gCoeffBuf+33,y
-        tax
         adc     _gCoeffBuf+97,y
         sta     cx13h
 
@@ -1166,8 +1158,8 @@ cres2h = *+1
         lda     _gCoeffBuf+32,y
         sbc     _gCoeffBuf+96,y
         tay
-        txa
         ldx     tmp3              ; preserve Y for mult
+        lda     _gCoeffBuf+33,x
         sbc     _gCoeffBuf+97,x
         tax
         jsr     _imul_b1_b3
@@ -1814,7 +1806,6 @@ extendX:.res 2
 
 ;idctRows
 idctRC: .res 1
-
 ;idctCols
 idctCC: .res 1
 

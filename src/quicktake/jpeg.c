@@ -116,13 +116,13 @@ typedef enum
 
 //------------------------------------------------------------------------------
 // 128 bytes
-int16 gCoeffBuf[8*8];
-
 // 6 bytes
 uint8 gLastDC_l[3];
 uint8 gLastDC_h[3];
 
 #ifndef __CC65__
+int16 gCoeffBuf[8*8];
+
 uint8 ZAG_Coeff[] =
 {
    0,  1,  8, 16,  9,  2,  3, 10,
@@ -189,6 +189,7 @@ extern HuffTable gHuffTab2;
 
 // 96 bytes
 extern HuffTable gHuffTab3;
+extern int16 gCoeffBuf[8*8];
 
 #endif
 
