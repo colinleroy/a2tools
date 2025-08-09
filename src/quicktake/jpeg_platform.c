@@ -237,34 +237,35 @@ nextIdctRowsLoop:
       goto cont_idct_rows;
 
       full_idct_rows:
+      printf(" vals %04X %04X %04X %04X %04X %04X %04X %04X\n",
+        (uint16)*rowSrc, (uint16)*rowSrc_1, (uint16)*rowSrc_2, (uint16)*rowSrc_3,
+        (uint16)*rowSrc_4, (uint16)*rowSrc_5, (uint16)*rowSrc_6, (uint16)*rowSrc_7);
+
        x7  = *(rowSrc_5) + *(rowSrc_3);
        x4  = *(rowSrc_5) - *(rowSrc_3);
-
        x5  = *(rowSrc_1) + *(rowSrc_7);
        x6  = *(rowSrc_1) - *(rowSrc_7);
-
-       x30 = *(rowSrc) + *(rowSrc_4);
        x31 = *(rowSrc) - *(rowSrc_4);
-
+       x30 = *(rowSrc) + *(rowSrc_4);
        x13 = *(rowSrc_2) + *(rowSrc_6);
 
-       x12 = *(rowSrc_2) - *(rowSrc_6);
-       x32 = imul_b1_b3(x12) - x13;
-
+       /* update rowSrc */
        x17 = x5 + x7;
-
-       res1 = imul_b5(x4 - x6);
-       stg26 = imul_b4(x6) - res1;
-       res2 = stg26 - x17;
-
-       x15 = x5 - x7;
-       res3 = imul_b1_b3(x15) - res2;
-
-       x24 = res1 - imul_b2(x4);
-
        *(rowSrc) = x30 + x13 + x17;
+
+       x32 = imul_b1_b3(*(rowSrc_2) - *(rowSrc_6)) - x13;
+       res1 = imul_b5(x4 - x6);
+       res2 = imul_b4(x6) - res1 - x17;
+       res3 = imul_b1_b3(x5 - x7) - res2;
+
+       /* Update rowSrc_2 */
        *(rowSrc_2) = x31 - x32 + res3;
-       *(rowSrc_4) = x30 + res3 + x24 - x13;
+
+       /* update rowSrc_4 */
+       x24 = res1 - imul_b2(x4);
+       *(rowSrc_4) = x24 + x30 + res3 - x13;
+
+       /* update rowSrc_6 */
        *(rowSrc_6) = x31 + x32 - res2;
 
       cont_idct_rows:

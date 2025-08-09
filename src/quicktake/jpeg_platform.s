@@ -713,232 +713,262 @@ nextIdctRowsLoop:
         jmp    cont_idct_rows
 
 full_idct_rows:
+        sty     tmp3
 
         clc
         lda    _gCoeffBuf+10,y
         adc    _gCoeffBuf+6,y
-        sta    x7
+        sta    x7l
         lda    _gCoeffBuf+11,y
         tax
         adc    _gCoeffBuf+7,y
-        sta    x7+1
+        sta    x7h
 
         sec
         lda    _gCoeffBuf+10,y
         sbc    _gCoeffBuf+6,y
-        sta    x4
+        sta    x4l
         txa
         sbc    _gCoeffBuf+7,y
-        sta    x4+1
+        sta    x4h
 
         clc
         lda    _gCoeffBuf+2,y
         adc    _gCoeffBuf+14,y
-        sta    x5
+        sta    x5l
         lda    _gCoeffBuf+3,y
         tax
         adc    _gCoeffBuf+15,y
-        sta    x5+1
+        sta    x5h
 
         sec
         lda    _gCoeffBuf+2,y
         sbc    _gCoeffBuf+14,y
-        sta    x6
+        sta    x6l
         txa
         sbc    _gCoeffBuf+15,y
-        sta    x6+1
+        sta    x6h
 
         clc
         lda    _gCoeffBuf,y
         adc    _gCoeffBuf+8,y
-        sta    x30
+        sta    x30l
         lda    _gCoeffBuf+1,y
         tax
         adc    _gCoeffBuf+9,y
-        sta    x30+1
+        sta    x30h
 
         sec
         lda    _gCoeffBuf,y
         sbc    _gCoeffBuf+8,y
-        sta    x31
+        sta    x31l
         txa
         sbc    _gCoeffBuf+9,y
-        sta    x31+1
+        sta    x31h
 
         clc
         lda    _gCoeffBuf+4,y
         adc    _gCoeffBuf+12,y
-        sta    x13
+        sta    x13l
         lda    _gCoeffBuf+5,y
         tax
         adc    _gCoeffBuf+13,y
-        sta    x13+1
+        sta    x13h
 
-        ; x12 = *(rowSrc_2) - *(rowSrc_6);
+        ; x32 = imul_b1_b3(*(rowSrc_2) - *(rowSrc_6)) - x13;
         sec
         lda    _gCoeffBuf+4,y
         sbc    _gCoeffBuf+12,y
         sta    tmp1
         txa
         sbc    _gCoeffBuf+13,y
-
-        ; x32 = imul_b1_b3(x12) - x13;
         tax
         lda     tmp1
-        sty     tmp3
         jsr    _imul_b1_b3
-        sec
-        sbc    x13
-        sta    x32
-        txa
-        sbc    x13+1
-        sta    x32+1
 
+        sec
+x13l = *+1
+        sbc    #$FF
+        sta    x32l
+        txa
+x13h = *+1
+        sbc    #$FF
+        sta    x32h
+
+        ; x17 = x5+x7
         clc
-        lda    x5
-        adc    x7
-        sta    x17
+x5l = *+1
+        lda    #$FF
+x7l = *+1
+        adc    #$FF
+        sta    x17l
         tay
-        lda    x5+1
-        adc    x7+1
-        sta    x17+1
+x5h = *+1
+        lda    #$FF
+x7h = *+1
+        adc    #$FF
+        sta    x17h
         tax
 
         ;*(rowSrc) = x30 + x13 + x17;
         clc
         tya
-        adc    x13
+        adc    x13l
         tay
         txa
-        adc    x13+1
+        adc    x13h
         tax
         tya
+
         clc
-        adc    x30
+x30l = *+1
+        adc    #$FF
         ldy    tmp3
         sta    _gCoeffBuf,y
         txa
-        adc    x30+1
+x30h = *+1
+        adc    #$FF
         sta    _gCoeffBuf+1,y
 
-        lda    x4
+        ; res1 = imul_b5(x4 - x6);
+x4l = *+1
+        lda    #$FF
         sec
-        sbc    x6
+x6l = *+1
+        sbc    #$FF
         tay
-        lda    x4+1
-        sbc    x6+1
+x4h = *+1
+        lda    #$FF
+x6h = *+1
+        sbc    #$FF
         tax
         tya
         jsr    _imul_b5
-        sta    res1
-        stx    res1+1
+        sta    res1l
+        stx    res1h
 
-        lda    x4
-        ldx    x4+1
-        jsr    _imul_b2
-        sta    tmp1
-        stx    tmp2
-        lda    res1
-        sec
-        sbc    tmp1
-        sta    x24
-        lda    res1+1
-        sbc    tmp2
-        sta    x24+1
-
-        lda    x6
-        ldx    x6+1
+        lda    x6l
+        ldx    x6h
         jsr    _imul_b4
         sec
-        sbc    res1
+        sbc    res1l
         tay                     ; stg26
         txa
-        sbc    res1+1
+        sbc    res1h
         tax
 
         tya                     ; stg26
         sec
-        sbc    x17
-        sta    res2
+x17l = *+1
+        sbc    #$FF
+        sta    rres2l
         txa                     ; stg26+1
-        sbc    x17+1
-        sta    res2+1
+x17h = *+1
+        sbc    #$FF
+        sta    rres2h
 
         ; x15 = x5 - x7;
         sec
-        lda    x5
-        sbc    x7
+        lda    x5l
+        sbc    x7l
         tay
-        lda    x5+1
-        sbc    x7+1
+        lda    x5h
+        sbc    x7h
         tax
 
         ; res3 = imul_b1_b3(x15) - res2;
         tya
         jsr    _imul_b1_b3
         sec
-        sbc    res2
-        sta    res3
+rres2l = *+1
+        sbc    #$FF
+        sta    rres3l
         tay
         txa
-        sbc    res2+1
-        sta    res3+1
+rres2h = *+1
+        sbc    #$FF
+        sta    rres3h
         tax
 
         ; *(rowSrc_2) = x31 - x32 + res3;
         tya
         clc
-        adc    x31
+x31l = *+1
+        adc    #$FF
         tay
         txa
-        adc    x31+1
+x31h = *+1
+        adc    #$FF
         tax
         tya
+
         sec
-        sbc    x32
+x32l = *+1
+        sbc    #$FF
         ldy     tmp3          ; and restore
         sta    _gCoeffBuf+4,y
         txa
-        sbc    x32+1
+x32h = *+1
+        sbc    #$FF
         sta    _gCoeffBuf+5,y
 
-        ; *(rowSrc_4) = x30 + res3 + x24 - x13;
-        lda    x30
-        clc
-        adc    res3
+        ; x24 = res1 - imul_b2(x4);
+        lda    x4l
+        ldx    x4h
+        jsr    _imul_b2
+        sta    tmp1
+        stx    tmp2
+res1l = *+1
+        lda    #$FF
+        sec
+        sbc    tmp1
         tay
-        lda    x30+1
-        adc    res3+1
+res1h = *+1
+        lda    #$FF
+        sbc    tmp2
         tax
+        ; *(rowSrc_4) = x24 + x30 + res3 - x13;
+        clc
         tya
-        adc    x24
+        adc    x30l
         tay
         txa
-        adc    x24+1
+        adc    x30h
         tax
         tya
+        
+        clc
+rres3l = *+1
+        adc    #$FF
+        tay
+        txa
+rres3h = *+1
+        adc    #$FF
+        tax
+        tya
+
         sec
-        sbc    x13
+        sbc    x13l
         ldy    tmp3
         sta    _gCoeffBuf+8,y
         txa
-        sbc    x13+1
+        sbc    x13h
         sta    _gCoeffBuf+9,y
 
         ; *(rowSrc_6) = x31 + x32 - res2;
-        lda    x31
+        lda    x31l
         clc
-        adc    x32
+        adc    x32l
         sta    tmp1
-        lda    x31+1
-        adc    x32+1
+        lda    x31h
+        adc    x32h
         tax
         lda    tmp1
         sec
-        sbc    res2
+        sbc    rres2l
         sta    _gCoeffBuf+12,y
         txa
-        sbc    res2+1
+        sbc    rres2h
         sta    _gCoeffBuf+13,y
 
 cont_idct_rows:
