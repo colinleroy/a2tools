@@ -675,8 +675,9 @@ static uint8 locateSOIMarker(void)
 
    /* ok if it's a normal JPEG file without a special header */
 
-   if ((lastchar == 0xFF) && (thischar == M_SOI))
-      return 0;
+   if ((lastchar == 0xFF) && (thischar == M_SOI)) {
+     return 0;
+   }
 
    bytesleft = 4096; //512;
 
@@ -701,7 +702,7 @@ static uint8 locateSOIMarker(void)
    /* Check the next character after marker: if it's not 0xFF, it can't
    be the start of the next marker, so the file is bad */
 
-   thischar = (uint8)((gBitBuf >> 8) & 0xFF);
+   thischar = gBitBuf;
 
    if (thischar != 0xFF)
       return PJPG_NOT_JPEG;
@@ -805,136 +806,7 @@ static uint8 init(void)
      gTemFlag = 
      gBitBuf = 0;
 
-   gBitsLeft = 8;
-
-   // Multiplication tables are pre-built using:
-   // i = 0;
-   // do {
-   //   r = (uint32)i * 669U;
-   //   mul669_l[i] = (r & (0x000000ff));
-   //   mul669_m[i] = (r & (0x0000ff00)) >> 8;
-   //   mul669_h[i] = (r & (0x00ff0000)) >> 16;
-   // 
-   //   r = (uint32)i * 362U;
-   //   mul362_l[i] = (r & (0x000000ff));
-   //   mul362_m[i] = (r & (0x0000ff00)) >> 8;
-   //   mul362_h[i] = (r & (0x00ff0000)) >> 16;
-   // 
-   //   r = (uint32)i * 277U;
-   //   mul277_l[i] = (r & (0x000000ff));
-   //   mul277_m[i] = (r & (0x0000ff00)) >> 8;
-   //   mul277_h[i] = (r & (0x00ff0000)) >> 16;
-   // 
-   //   r = (uint32)i * 196U;
-   //   mul196_l[i] = (r & (0x000000ff));
-   //   mul196_m[i] = (r & (0x0000ff00)) >> 8;
-   //   mul196_h[i] = (r & (0x00ff0000)) >> 16;
-   // } while(++i < 256);
-   // 
-   // printf("uint8 mul669_l[256] = {\n");
-   // for (i = 0; i < 256; i++) {
-   //   printf("%d%s ", mul669_l[i], i < 255 ? ",":"");
-   //   if (i && i%16 == 0) {
-   //     printf("\n");
-   //   }
-   // }
-   // printf("};\n");
-   // printf("uint8 mul669_m[256] = {\n");
-   // for (i = 0; i < 256; i++) {
-   //   printf("%d%s ", mul669_m[i], i < 255 ? ",":"");
-   //   if (i && i%16 == 0) {
-   //     printf("\n");
-   //   }
-   // }
-   // printf("};\n");
-   // printf("uint8 mul669_h[256] = {\n");
-   // for (i = 0; i < 256; i++) {
-   //   printf("%d%s ", mul669_h[i], i < 255 ? ",":"");
-   //   if (i && i%16 == 0) {
-   //     printf("\n");
-   //   }
-   // }
-   // printf("};\n");
-   // 
-   // printf("uint8 mul362_l[256] = {\n");
-   // for (i = 0; i < 256; i++) {
-   //   printf("%d%s ", mul362_l[i], i < 255 ? ",":"");
-   //   if (i && i%16 == 0) {
-   //     printf("\n");
-   //   }
-   // }
-   // printf("};\n");
-   // printf("uint8 mul362_m[256] = {\n");
-   // for (i = 0; i < 256; i++) {
-   //   printf("%d%s ", mul362_m[i], i < 255 ? ",":"");
-   //   if (i && i%16 == 0) {
-   //     printf("\n");
-   //   }
-   // }
-   // printf("};\n");
-   // printf("uint8 mul362_h[256] = {\n");
-   // for (i = 0; i < 256; i++) {
-   //   printf("%d%s ", mul362_h[i], i < 255 ? ",":"");
-   //   if (i && i%16 == 0) {
-   //     printf("\n");
-   //   }
-   // }
-   // printf("};\n");
-   // 
-   // printf("uint8 mul277_l[256] = {\n");
-   // for (i = 0; i < 256; i++) {
-   //   printf("%d%s ", mul277_l[i], i < 255 ? ",":"");
-   //   if (i && i%16 == 0) {
-   //     printf("\n");
-   //   }
-   // }
-   // printf("};\n");
-   // printf("uint8 mul277_m[256] = {\n");
-   // for (i = 0; i < 256; i++) {
-   //   printf("%d%s ", mul277_m[i], i < 255 ? ",":"");
-   //   if (i && i%16 == 0) {
-   //     printf("\n");
-   //   }
-   // }
-   // printf("};\n");
-   // printf("uint8 mul277_h[256] = {\n");
-   // for (i = 0; i < 256; i++) {
-   //   printf("%d%s ", mul277_h[i], i < 255 ? ",":"");
-   //   if (i && i%16 == 0) {
-   //     printf("\n");
-   //   }
-   // }
-   // printf("};\n");
-   // 
-   // printf("uint8 mul196_l[256] = {\n");
-   // for (i = 0; i < 256; i++) {
-   //   printf("%d%s ", mul196_l[i], i < 255 ? ",":"");
-   //   if (i && i%16 == 0) {
-   //     printf("\n");
-   //   }
-   // }
-   // printf("};\n");
-   // printf("uint8 mul196_m[256] = {\n");
-   // for (i = 0; i < 256; i++) {
-   //   printf("%d%s ", mul196_m[i], i < 255 ? ",":"");
-   //   if (i && i%16 == 0) {
-   //     printf("\n");
-   //   }
-   // }
-   // printf("};\n");
-   // printf("uint8 mul196_h[256] = {\n");
-   // for (i = 0; i < 256; i++) {
-   //   printf("%d%s ", mul196_h[i], i < 255 ? ",":"");
-   //   if (i && i%16 == 0) {
-   //     printf("\n");
-   //   }
-   // }
-   // printf("};\n");
-
-   /* Buf pre-filled by qt-conv.c::identify */
-   //fillInBuf();
-
-   getBitsNoFF(8);
+   gBitsLeft = 0;
    getBitsNoFF(8);
 
    return 0;
@@ -945,14 +817,10 @@ static uint8 init(void)
 static void fixInBuffer(void)
 {
    /* In case any 0xFF's where pulled into the buffer during marker scanning */
-
-   if (gBitsLeft > 0)
-      *(cur_cache_ptr--) = (uint8)gBitBuf;
-
-   *(cur_cache_ptr--) = (uint8)(gBitBuf >> 8);
-
-   gBitsLeft = 8;
-   getBitsFF(16);
+   if (gBitsLeft != 0) {
+     printf("error - can't fix unaligned buffer\n");
+     exit(1);
+   }
 }
 //------------------------------------------------------------------------------
 // Restart interval processing.
@@ -1004,8 +872,7 @@ uint8 processRestart(void)
 
    // Get the bit buffer going again
 
-   gBitsLeft = 8;
-   getBitsFF(8);
+   gBitsLeft = 0;
    getBitsFF(8);
 
    return 0;

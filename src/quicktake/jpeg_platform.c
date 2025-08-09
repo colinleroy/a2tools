@@ -15,47 +15,54 @@ int16 __fastcall__ huffExtend(uint16 x, uint8 s)
 
 extern uint16 gBitBuf;
 extern uint8 gBitsLeft;
+static uint8 FFCheck;
 
-uint16 __fastcall__ getBits(uint8 numBits, uint8 FFCheck)
+static inline uint8 getBit(void)
 {
-  uint8 n = numBits, tmp;
-  uint8 ff = FFCheck;
-  uint8 final_shift = 16 - n;
-  uint16 ret = gBitBuf;
+  uint8 ret = 0;
 
-  if (n > 8) {
-    n -= 8;
+  if (gBitBuf & 0x8000)
+      ret = 1;
 
-    gBitBuf <<= gBitsLeft;
-    gBitBuf |= getOctet(ff);
-    gBitBuf <<= (8 - gBitsLeft);
-    ret = (ret & 0xFF00) | (gBitBuf >> 8);
+  if (!gBitsLeft)
+  {
+      gBitBuf |= getOctet();
+      gBitsLeft = 7;
+      gBitBuf <<= 1;
+      return ret;
   }
 
-  if (gBitsLeft < n) {
-    gBitBuf <<= gBitsLeft;
-    gBitBuf |= getOctet(ff);
-    tmp = n - gBitsLeft;
-    gBitBuf <<= tmp;
-    gBitsLeft = 8 - tmp;
-  } else {
-    gBitsLeft = gBitsLeft - n;
-    gBitBuf <<= n;
+  gBitsLeft--;
+  gBitBuf <<= 1;
+
+  return ret;
+}
+
+
+uint16 __fastcall__ getBits(uint8 numBits)
+{
+  uint16 r = 0;
+  
+  while (numBits--) {
+    r <<= 1;
+    r |= getBit();
   }
-  return ret >> final_shift;
+  return r;
 }
 
 uint16 __fastcall__ getBitsNoFF(uint8 numBits) {
-  return getBits(numBits, 0);
+  FFCheck = 0;
+  return getBits(numBits);
 }
 uint16 __fastcall__ getBitsFF(uint8 numBits) {
-  return getBits(numBits, 1);
+  FFCheck = 1;
+  return getBits(numBits);
 }
 
 extern uint8 *cur_cache_ptr;
 extern uint8 *cache_end;
 
-uint8 getOctet(uint8 FFCheck)
+uint8 getOctet(void)
 {
   uint8 c, n;
 
@@ -80,27 +87,6 @@ uint8 getOctet(uint8 FFCheck)
   }
 out:
   return c;
-}
-
-static inline uint8 getBit(void)
-{
-  uint8 ret = 0;
-
-  if (gBitBuf & 0x8000)
-      ret = 1;
-
-  if (!gBitsLeft)
-  {
-      gBitBuf |= getOctet(1);
-      gBitsLeft = 7;
-      gBitBuf <<= 1;
-      return ret;
-  }
-
-  gBitsLeft--;
-  gBitBuf <<= 1;
-
-  return ret;
 }
 
 // 1/cos(4*pi/16)
@@ -153,9 +139,11 @@ uint8 huffDecode(HuffTable* pHuffTable, const uint8* pHuffVal)
 {
   uint8 i = 0;
   uint8 j;
-  uint16 code = getBit();
+  uint16 code;
   HuffTable *curTable = pHuffTable;
 
+  FFCheck = 1;
+  code = getBit();
   pHuffTable->totalCalls++;
   pHuffTable->totalGetBit++;
 

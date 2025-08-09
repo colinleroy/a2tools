@@ -77,7 +77,7 @@ void initFloppyStarter(void);
 int16 __fastcall__ huffExtend(uint16 x, uint8 s);
 uint16 __fastcall__ getBitsNoFF(uint8 numBits);
 uint16 __fastcall__ getBitsFF(uint8 numBits);
-uint8 __fastcall__ getOctet(uint8 FFCheck);
+uint8 __fastcall__ getOctet(void);
 void fillInBuf(void);
 
 uint16 __fastcall__ imul_b1_b3(int16 w);
