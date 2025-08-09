@@ -1,5 +1,5 @@
 
-        .importzp   tmp1, tmp2, tmp3, tmp4, ptr1, ptr2, ptr3, _prev_ram_irq_vector, _prev_rom_irq_vector, c_sp, ptr4
+        .importzp   tmp1, tmp2, tmp3, tmp4, ptr1, ptr2, ptr3, ptr4, _prev_ram_irq_vector, _prev_rom_irq_vector, c_sp
         .importzp   _zp2, _zp4, _zp6, _zp8, _zp7, _zp9, _zp10, _zp11, _zp12, _zp13
         .import     popptr1
         .import     _extendTests_l, _extendTests_h, _extendOffsets_l, _extendOffsets_h
@@ -33,6 +33,7 @@ _gBitBuf       = _zp2       ; word, used everywhere
 code           = _zp4       ; word, used in huffDecode
 
 ; zp6-7 USED in qt-conv so only use it temporarily
+n              = _zp6       ; Used in getBits
 mcuBlock       = _zp7       ; byte, used in _decodeNextMCU
 
 _gBitsLeft     = _zp8       ; byte, used everywhere
@@ -715,58 +716,67 @@ full_idct_rows:
         clc
         lda    _gCoeffBuf+10,y
         adc    _gCoeffBuf+6,y
-        sta    x7l
+        sta    rx7l
         lda    _gCoeffBuf+11,y
         adc    _gCoeffBuf+7,y
-        sta    x7h
+        sta    rx7h
 
         sec
         lda    _gCoeffBuf+10,y
         sbc    _gCoeffBuf+6,y
-        sta    x4l
+        sta    rx4l
         lda    _gCoeffBuf+11,y
         sbc    _gCoeffBuf+7,y
-        sta    x4h
+        sta    rx4h
 
         clc
         lda    _gCoeffBuf+2,y
         adc    _gCoeffBuf+14,y
-        sta    x5l
+        sta    rx5l
         lda    _gCoeffBuf+3,y
         adc    _gCoeffBuf+15,y
-        sta    x5h
+        sta    rx5h
+
+rx6l  = ptr1
+rx6h  = ptr1+1
+rx30l = ptr2
+rx30h = ptr2+1
+rx31l = ptr3
+rx31h = ptr3+1
+rx13l = ptr4
+rx13h = ptr4+1
 
         sec
         lda    _gCoeffBuf+2,y
         sbc    _gCoeffBuf+14,y
-        sta    x6l
+        sta    rx6l
         lda    _gCoeffBuf+3,y
         sbc    _gCoeffBuf+15,y
-        sta    x6h
+        sta    rx6h
 
         clc
         lda    _gCoeffBuf,y
         adc    _gCoeffBuf+8,y
-        sta    x30l
+        sta    rx30l
         lda    _gCoeffBuf+1,y
         adc    _gCoeffBuf+9,y
-        sta    x30h
+        sta    rx30h
 
         sec
         lda    _gCoeffBuf,y
         sbc    _gCoeffBuf+8,y
-        sta    x31l
+        sta    rx31l
         lda    _gCoeffBuf+1,y
         sbc    _gCoeffBuf+9,y
-        sta    x31h
+        sta    rx31h
 
         clc
         lda    _gCoeffBuf+4,y
         adc    _gCoeffBuf+12,y
-        sta    x13l
+        sta    rx13l
         lda    _gCoeffBuf+5,y
         adc    _gCoeffBuf+13,y
-        sta    x13h
+        sta    rx13h
 
         ; x32 = imul_b1_b3(*(rowSrc_2) - *(rowSrc_6)) - x13;
         sec
@@ -780,93 +790,87 @@ full_idct_rows:
         jsr    _imul_b1_b3
 
         sec
-x13l = *+1
-        sbc    #$FF
-        sta    x32l
+        sbc    rx13l
+        sta    rx32l
         txa
-x13h = *+1
-        sbc    #$FF
-        sta    x32h
+        sbc    rx13h
+        sta    rx32h
 
         ; x17 = x5+x7
         clc
-x5l = *+1
+rx5l = *+1
         lda    #$FF
-x7l = *+1
+rx7l = *+1
         adc    #$FF
-        sta    x17l
+        sta    rx17l
         tay
-x5h = *+1
+rx5h = *+1
         lda    #$FF
-x7h = *+1
+rx7h = *+1
         adc    #$FF
-        sta    x17h
+        sta    rx17h
         tax
 
         ;*(rowSrc) = x30 + x13 + x17;
         clc
         tya
-        adc    x13l
+        adc    rx13l
         tay
         txa
-        adc    x13h
+        adc    rx13h
         tax
         tya
 
         clc
-x30l = *+1
-        adc    #$FF
+        adc    rx30l
         ldy    tmp3
         sta    _gCoeffBuf,y
         txa
-x30h = *+1
-        adc    #$FF
+        adc    rx30h
         sta    _gCoeffBuf+1,y
 
         ; res1 = imul_b5(x4 - x6);
-x4l = *+1
+rx4l = *+1
         lda    #$FF
         sec
-x6l = *+1
-        sbc    #$FF
+        sbc    rx6l
         tay
-x4h = *+1
+rx4h = *+1
         lda    #$FF
-x6h = *+1
-        sbc    #$FF
+        sbc    rx6h
         tax
         jsr    _imul_b5
-        sta    res1l
-        stx    res1h
+        sta    rres1l
+        stx    rres1h
 
-        ldy    x6l
-        ldx    x6h
+        ldy    rx6l
+        ldx    rx6h
         jsr    _imul_b4
 
         sec                     ; -res1
-        sbc    res1l
+        sbc    rres1l
         tay
         txa
-        sbc    res1h
+        sbc    rres1h
         tax
 
         tya
         sec                     ; -x17
-x17l = *+1
+rx17l = *+1
         sbc    #$FF
         sta    rres2l
         txa
-x17h = *+1
+rx17h = *+1
         sbc    #$FF
         sta    rres2h
 
         ; x15 = x5 - x7;
         sec
-        lda    x5l
-        sbc    x7l
+        lda    rx5l
+        sbc    rx7l
         tay
-        lda    x5h
-        sbc    x7h
+        lda    rx5h
+        sbc    rx7h
         ; res3 = imul_b1_b3(x15) - res2;
         tax
         jsr    _imul_b1_b3
@@ -884,38 +888,36 @@ rres2h = *+1
         ; *(rowSrc_2) = res3 + x31 - x32;
         tya
         clc
-x31l = *+1
-        adc    #$FF
+        adc    rx31l
         tay
         txa
-x31h = *+1
-        adc    #$FF
+        adc    rx31h
         tax
         tya
 
         sec
-x32l = *+1
+rx32l = *+1
         sbc    #$FF
         ldy     tmp3          ; and restore
         sta    _gCoeffBuf+4,y
         txa
-x32h = *+1
+rx32h = *+1
         sbc    #$FF
         sta    _gCoeffBuf+5,y
 
         ; x24 = res1 - imul_b2(x4);
-        ldy    x4l
-        ldx    x4h
+        ldy    rx4l
+        ldx    rx4h
         jsr    _imul_b2
         sta    tmp1
         stx    tmp2
-res1l = *+1
+rres1l = *+1
         lda    #$FF
 
         sec
         sbc    tmp1
         tay
-res1h = *+1
+rres1h = *+1
         lda    #$FF
         sbc    tmp2
         tax
@@ -923,10 +925,10 @@ res1h = *+1
         ; *(rowSrc_4) = x24 + x30 + res3 - x13;
         clc
         tya
-        adc    x30l
+        adc    rx30l
         tay
         txa
-        adc    x30h
+        adc    rx30h
         tax
         tya
         
@@ -941,20 +943,20 @@ rres3h = *+1
         tya
 
         sec
-        sbc    x13l
+        sbc    rx13l
         ldy    tmp3
         sta    _gCoeffBuf+8,y
         txa
-        sbc    x13h
+        sbc    rx13h
         sta    _gCoeffBuf+9,y
 
         ; *(rowSrc_6) = x31 + x32 - res2;
         clc
-        lda    x31l
-        adc    x32l
+        lda    rx31l
+        adc    rx32l
         sta    tmp1
-        lda    x31h
-        adc    x32h
+        lda    rx31h
+        adc    rx32h
         tax
         lda    tmp1
         sec
@@ -1129,6 +1131,15 @@ cres2h = *+1
         sbc     #$FF
         sta     cres3h
 
+cx31l = ptr1
+cx31h = ptr1+1
+cx30l = ptr2
+cx30h = ptr2+1
+cx13l = ptr3
+cx13h = ptr3+1
+cx32l = ptr4
+cx32h = ptr4+1
+
         ldy     tmp3          ; And restore
         sec
         lda     _gCoeffBuf,y
@@ -1149,7 +1160,7 @@ cres2h = *+1
         clc
         lda     _gCoeffBuf+32,y
         adc     _gCoeffBuf+96,y
-        sta     cx13l
+        sta     cx13l             ; used 4 times
         lda     _gCoeffBuf+33,y
         adc     _gCoeffBuf+97,y
         sta     cx13h
@@ -1164,22 +1175,18 @@ cres2h = *+1
         tax
         jsr     _imul_b1_b3
         sec
-cx13l = *+1
-        sbc     #$FF
+        sbc     cx13l
         sta     cx32l
         txa
-cx13h = *+1
-        sbc     #$FF
+        sbc     cx13h
         sta     cx32h
 
         ; t = ((x30 + x13 + x17) >> PJPG_DCT_SCALE_BITS) +128;
         clc
-cx30l = *+1
-        lda     #$FF
+        lda     cx30l
         adc     cx13l
         tay
-cx30h = *+1
-        lda     #$FF
+        lda     cx30h
         adc     cx13h
         tax
         tya
@@ -1208,15 +1215,11 @@ clampDone2:
 
         ;x42 = x31 - x32;
         sec
-cx31l = *+1
-        lda     #$FF
-cx32l = *+1
-        sbc     #$FF
+        lda     cx31l
+        sbc     cx32l
         tay
-cx31h = *+1
-        lda     #$FF
-cx32h = *+1
-        sbc     #$FF
+        lda     cx31h
+        sbc     cx32h
         tax
 
         ; t = ((x42 + res3) >> PJPG_DCT_SCALE_BITS) +128;
@@ -1255,17 +1258,17 @@ clampDone3:
         ldy     cx4l
         ldx     cx4h
         jsr     _imul_b2
-        sta     ptr1
-        stx     ptr1+1
+        sta     tmp1
+        stx     tmp2
 
         sec
 cres1l = *+1
         lda     #$FF
-        sbc     ptr1
+        sbc     tmp1
         tay
 cres1h = *+1
         lda     #$FF
-        sbc     ptr1+1
+        sbc     tmp2
         tax
 
         ;x44 = res3 + x24;
@@ -1796,7 +1799,6 @@ copy_out:
         .bss
 
 ;getBit/octet
-n:      .res 1
 final_shift:
         .res 1
 ret:    .res 2
