@@ -466,27 +466,26 @@ getOctet_done:
         lda     tmp1
         rts
 
+; Low byte in Y, high in X, high loaded last !
 .macro imul TABL, TABM, TABH
 .scope
-        tay                   ; val low byte in Y
+        clc
 
+        ; Check if positive
         stx     neg
-        cpx     #$80
-        bcc     :+
-
+        bpl     :+
+        tya
         ; val = -val;
-        ; clc                 ; carry is set
         eor     #$FF
-        ; adc     #1
-        adc    #0
+        adc     #1
 
-        tay
-        txa
+        tay                   ; Set our pos low byte
+        txa                   ; Get high byte
         eor    #$FF
         adc    #0
         tax
-
-:       stx    tmp4
+:
+        ; We now have high byte in X, low in Y
         ; dw = mul362_l[l] | mul362_m[l] <<8 | mul362_h[l] <<16;
         ; lda    TABL,y
         ; sta    dw
@@ -496,9 +495,7 @@ getOctet_done:
         ; sta    tmp2
 
         ; dw += (mul362_l[h]) << 8;
-        ; clc            - carry is clear
         lda    TABM,y    ; tmp1
-        ldx    tmp4
         adc    TABL,x
         sta    tmp1
 
@@ -517,14 +514,14 @@ getOctet_done:
         lda    tmp1
         rts
 
-:       ; dw ^= 0xffffffff, dw++
-        ; clc             - carry is clear
+:       ; dw ^= 0xffffff, dw++
         lda    #$FF
         eor    TABL,y
         adc    #1
         lda    #$FF
         eor    tmp1
         adc    #0
+
         tay
         txa
         eor    #$FF
@@ -779,11 +776,11 @@ full_idct_rows:
         sec
         lda    _gCoeffBuf+4,y
         sbc    _gCoeffBuf+12,y
-        sta    tmp1
+        tay
         txa
-        sbc    _gCoeffBuf+13,y
+        ldx    tmp3           ; loading index in X to preserve Y for mult
+        sbc    _gCoeffBuf+13,x
         tax
-        lda     tmp1
         jsr    _imul_b1_b3
 
         sec
@@ -842,12 +839,11 @@ x4h = *+1
 x6h = *+1
         sbc    #$FF
         tax
-        tya
         jsr    _imul_b5
         sta    res1l
         stx    res1h
 
-        lda    x6l
+        ldy    x6l
         ldx    x6h
         jsr    _imul_b4
         sec
@@ -874,10 +870,8 @@ x17h = *+1
         tay
         lda    x5h
         sbc    x7h
-        tax
-
         ; res3 = imul_b1_b3(x15) - res2;
-        tya
+        tax
         jsr    _imul_b1_b3
         sec
 rres2l = *+1
@@ -913,7 +907,7 @@ x32h = *+1
         sta    _gCoeffBuf+5,y
 
         ; x24 = res1 - imul_b2(x4);
-        lda    x4l
+        ldy    x4l
         ldx    x4h
         jsr    _imul_b2
         sta    tmp1
@@ -1084,13 +1078,12 @@ full_idct_cols:
         lda     x4+1
         sbc     x6+1
         tax
-        tya
         jsr     _imul_b5
         sta     res1
         stx     res1+1
 
         ;x24 = res1 - imul_b2(x4
-        lda     x4
+        ldy     x4
         ldx     x4+1
         jsr     _imul_b2
         sta     ptr1
@@ -1106,7 +1099,7 @@ full_idct_cols:
 
         ;stg26 = imul_b4(x6) - res1;
         ;res2 = stg26 - x17;
-        lda     x6
+        ldy     x6
         ldx     x6+1
         jsr     _imul_b4
 
@@ -1134,7 +1127,6 @@ full_idct_cols:
         lda     x5+1
         sbc     x7+1
         tax
-        tya
         jsr     _imul_b1_b3
         sec
         sbc     res2
@@ -1180,10 +1172,9 @@ full_idct_cols:
 
         ;x32 = imul_b1_b3(x12) - x13;
 x12l:
-        lda     #$FF
+        ldy     #$FF
 x12h:
         ldx     #$FF
-        ; sty     tmp3          ; Backup before mult
         jsr     _imul_b1_b3
         sec
         sbc     x13
