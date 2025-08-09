@@ -675,9 +675,8 @@ static uint8 locateSOIMarker(void)
 
    /* ok if it's a normal JPEG file without a special header */
 
-   if ((lastchar == 0xFF) && (thischar == M_SOI)) {
-     return 0;
-   }
+   if ((lastchar == 0xFF) && (thischar == M_SOI))
+      return 0;
 
    bytesleft = 4096; //512;
 
@@ -777,25 +776,6 @@ static uint8 locateSOSMarker(uint8* pFoundEOI)
    return readSOSMarker();
 }
 
-// useless, all zeroes
-// uint8 mul196_h[256] = {
-// 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-// 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-// 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-// 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-// 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-// 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-// 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-// 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-// 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-// 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-// 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-// 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-// 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-// 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-// 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
-// 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-
 //------------------------------------------------------------------------------
 static uint8 init(void)
 {
@@ -817,11 +797,16 @@ static uint8 init(void)
 static void fixInBuffer(void)
 {
    /* In case any 0xFF's where pulled into the buffer during marker scanning */
+
+   *(cur_cache_ptr--) = (uint8)(gBitBuf >> 8);
+   
    if (gBitsLeft != 0) {
      printf("error - can't fix unaligned buffer\n");
      exit(1);
    }
-}
+   gBitsLeft = 8;
+   getBitsFF(16);
+ }
 //------------------------------------------------------------------------------
 // Restart interval processing.
 uint8 processRestart(void)
@@ -872,7 +857,8 @@ uint8 processRestart(void)
 
    // Get the bit buffer going again
 
-   gBitsLeft = 0;
+   gBitsLeft = 8;
+   getBitsFF(8);
    getBitsFF(8);
 
    return 0;

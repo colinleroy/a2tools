@@ -15,53 +15,7 @@ int16 __fastcall__ huffExtend(uint16 x, uint8 s)
 
 extern uint16 gBitBuf;
 extern uint8 gBitsLeft;
-static uint8 FFCheck;
-
-static inline uint8 getBit(void)
-{
-  uint8 ret = 0;
-
-  if (gBitBuf & 0x8000)
-      ret = 1;
-
-  if (!gBitsLeft)
-  {
-      gBitBuf |= getOctet();
-      gBitsLeft = 7;
-      gBitBuf <<= 1;
-      return ret;
-  }
-
-  gBitsLeft--;
-  gBitBuf <<= 1;
-
-  return ret;
-}
-
-
-uint16 __fastcall__ getBits(uint8 numBits)
-{
-  uint16 r = 0;
-  
-  while (numBits--) {
-    r <<= 1;
-    r |= getBit();
-  }
-  return r;
-}
-
-uint16 __fastcall__ getBitsNoFF(uint8 numBits) {
-  FFCheck = 0;
-  return getBits(numBits);
-}
-uint16 __fastcall__ getBitsFF(uint8 numBits) {
-  FFCheck = 1;
-  return getBits(numBits);
-}
-
-extern uint8 *cur_cache_ptr;
-extern uint8 *cache_end;
-
+uint8 FFCheck;
 uint8 getOctet(void)
 {
   uint8 c, n;
@@ -86,8 +40,50 @@ uint8 getOctet(void)
       fillInBuf();
   }
 out:
+  printf("got octet %02X (FFcheck %d)\n", c, FFCheck);
   return c;
 }
+
+static inline uint8 getBit(void)
+{
+  uint8 ret = 0;
+
+  if (!gBitsLeft)
+  {
+      gBitBuf |= getOctet();
+      gBitsLeft = 8;
+  }
+
+  gBitsLeft--;
+  if (gBitBuf & 0x8000)
+    ret = 1;
+  gBitBuf <<= 1;
+  printf("getBit %d (%04X)\n", ret, gBitBuf);
+  return ret;
+}
+
+uint8 FFCheck;
+uint16 __fastcall__ getBits(uint8 numBits)
+{
+  uint16 r = 0;
+  while (numBits--) {
+    r <<= 1;
+    r |= getBit();
+  }
+  return r;
+}
+ 
+uint16 __fastcall__ getBitsNoFF(uint8 numBits) {
+  FFCheck = 0;
+  return getBits(numBits);
+}
+uint16 __fastcall__ getBitsFF(uint8 numBits) {
+  FFCheck = 1;
+  return getBits(numBits);
+}
+
+extern uint8 *cur_cache_ptr;
+extern uint8 *cache_end;
 
 // 1/cos(4*pi/16)
 // 362, 256+106
@@ -144,6 +140,7 @@ uint8 huffDecode(HuffTable* pHuffTable, const uint8* pHuffVal)
 
   FFCheck = 1;
   code = getBit();
+
   pHuffTable->totalCalls++;
   pHuffTable->totalGetBit++;
 
