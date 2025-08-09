@@ -85,11 +85,15 @@ display:
           static int blink = 0;
           int color = (blink ? c : c2);
           blink = !blink;
-          printf("0x%04lX: Pixel differ at %d,%d: %u vs %u\n", offset, x, y, c, c2);
-          sdl_set_pixel(screen, x*2, y*2, color, color, color);
-          sdl_set_pixel(screen, x*2+1, y*2, color, color, color);
-          sdl_set_pixel(screen, x*2, y*2+1, color, color, color);
-          sdl_set_pixel(screen, x*2+1, y*2+1, color, color, color);
+          printf("0x%04lX: Pixel differ at %d,%d: %u vs %u  ", offset, x, y, c, c2);
+          for (int k = abs(c-c2); k; k--) {
+            printf("*");
+          }
+          printf("\n");
+          sdl_set_pixel(screen, x*2, y*2, color, 0, color);
+          sdl_set_pixel(screen, x*2+1, y*2, color, 0, color);
+          sdl_set_pixel(screen, x*2, y*2+1, color, 0, color);
+          sdl_set_pixel(screen, x*2+1, y*2+1, color, 0, color);
         }
       }
     }

@@ -846,19 +846,20 @@ x6h = *+1
         ldy    x6l
         ldx    x6h
         jsr    _imul_b4
-        sec
+
+        sec                     ; -res1
         sbc    res1l
-        tay                     ; stg26
+        tay
         txa
         sbc    res1h
         tax
 
-        tya                     ; stg26
-        sec
+        tya
+        sec                     ; -x17
 x17l = *+1
         sbc    #$FF
         sta    rres2l
-        txa                     ; stg26+1
+        txa
 x17h = *+1
         sbc    #$FF
         sta    rres2h
@@ -884,7 +885,7 @@ rres2h = *+1
         sta    rres3h
         tax
 
-        ; *(rowSrc_2) = x31 - x32 + res3;
+        ; *(rowSrc_2) = res3 + x31 - x32;
         tya
         clc
 x31l = *+1
@@ -914,6 +915,7 @@ x32h = *+1
         stx    tmp2
 res1l = *+1
         lda    #$FF
+
         sec
         sbc    tmp1
         tay
@@ -921,6 +923,7 @@ res1h = *+1
         lda    #$FF
         sbc    tmp2
         tax
+
         ; *(rowSrc_4) = x24 + x30 + res3 - x13;
         clc
         tya
@@ -950,8 +953,8 @@ rres3h = *+1
         sta    _gCoeffBuf+9,y
 
         ; *(rowSrc_6) = x31 + x32 - res2;
-        lda    x31l
         clc
+        lda    x31l
         adc    x32l
         sta    tmp1
         lda    x31h
@@ -1025,185 +1028,175 @@ clampDone1:
         jmp     cont_idct_cols
 
 full_idct_cols:
+        sty     tmp3          ; Backup before b5/b2/b4/b1_b3 mults
+
         sec
         lda     _gCoeffBuf+80,y
         sbc     _gCoeffBuf+48,y
-        sta     x4
+        sta     cx4l
         lda     _gCoeffBuf+81,y
         tax
         sbc     _gCoeffBuf+49,y
-        sta     x4+1
+        sta     cx4h
 
         clc
         lda     _gCoeffBuf+80,y
         adc     _gCoeffBuf+48,y
-        sta     x7
+        sta     cx7l
         txa
         adc     _gCoeffBuf+49,y
-        sta     x7+1
+        sta     cx7h
 
         sec
         lda     _gCoeffBuf+16,y
         sbc     _gCoeffBuf+112,y
-        sta     x6
+        sta     cx6l
         lda     _gCoeffBuf+17,y
         tax
         sbc     _gCoeffBuf+113,y
-        sta     x6+1
+        sta     cx6h
 
         clc
         lda     _gCoeffBuf+16,y
         adc     _gCoeffBuf+112,y
-        sta     x5
+        sta     cx5l
         txa
         adc     _gCoeffBuf+113,y
-        sta     x5+1
+        sta     cx5h
 
         ;x17 = x5 + x7;
         clc
-        lda     x5
-        adc     x7
-        sta     x17
-        lda     x5+1
-        adc     x7+1
-        sta     x17+1
-
-        sty     tmp3          ; Backup before b5/b2/b4/b1_b3 mults
+cx5l = *+1
+        lda     #$FF
+cx7l = *+1
+        adc     #$FF
+        sta     cx17l
+cx5h = *+1
+        lda     #$FF
+cx7h = *+1
+        adc     #$FF
+        sta     cx17h
 
         ;res1 = imul_b5(x4 - x6)
         sec
-        lda     x4
-        sbc     x6
+cx4l = *+1
+        lda     #$FF
+cx6l = *+1
+        sbc     #$FF
         tay
-        lda     x4+1
-        sbc     x6+1
+cx4h = *+1
+        lda     #$FF
+cx6h = *+1
+        sbc     #$FF
         tax
         jsr     _imul_b5
-        sta     res1
-        stx     res1+1
-
-        ;x24 = res1 - imul_b2(x4
-        ldy     x4
-        ldx     x4+1
-        jsr     _imul_b2
-        sta     ptr1
-        stx     ptr1+1
-
-        sec
-        lda     res1
-        sbc     ptr1
-        sta     x24l+1
-        lda     res1+1
-        sbc     ptr1+1
-        sta     x24h+1
+        sta     cres1l
+        stx     cres1h
 
         ;stg26 = imul_b4(x6) - res1;
         ;res2 = stg26 - x17;
-        ldy     x6
-        ldx     x6+1
+        ldy     cx6l
+        ldx     cx6h
         jsr     _imul_b4
 
         sec
-        sbc     res1
+        sbc     cres1l
         tay
         txa
-        sbc     res1+1
+        sbc     cres1h
         tax
         tya
 
         sec
-        sbc     x17
-        sta     res2
+cx17l = *+1
+        sbc     #$FF
+        sta     cres2l
         txa
-        sbc     x17+1
-        sta     res2+1
+cx17h = *+1
+        sbc     #$FF
+        sta     cres2h
 
         ;x15 = x5 - x7;
         ;res3 = imul_b1_b3(x15) - res2;
         sec
-        lda     x5
-        sbc     x7
+        lda     cx5l
+        sbc     cx7l
         tay
-        lda     x5+1
-        sbc     x7+1
+        lda     cx5h
+        sbc     cx7h
         tax
         jsr     _imul_b1_b3
         sec
-        sbc     res2
-        sta     res3
+cres2l = *+1
+        sbc     #$FF
+        sta     cres3l
         txa
-        sbc     res2+1
-        sta     res3+1
+cres2h = *+1
+        sbc     #$FF
+        sta     cres3h
 
         ldy     tmp3          ; And restore
         sec
         lda     _gCoeffBuf,y
         sbc     _gCoeffBuf+64,y
-        sta     x31
+        sta     cx31l
         lda     _gCoeffBuf+1,y
         tax
         sbc     _gCoeffBuf+65,y
-        sta     x31+1
+        sta     cx31h
 
         clc
         lda     _gCoeffBuf,y
         adc     _gCoeffBuf+64,y
-        sta     x30
+        sta     cx30l
         txa
         adc     _gCoeffBuf+65,y
-        sta     x30+1
-
-        sec
-        lda     _gCoeffBuf+32,y
-        sbc     _gCoeffBuf+96,y
-        sta     x12l+1
-        lda     _gCoeffBuf+33,y
-        tax
-        sbc     _gCoeffBuf+97,y
-        sta     x12h+1
+        sta     cx30h
 
         clc
         lda     _gCoeffBuf+32,y
         adc     _gCoeffBuf+96,y
-        sta     x13
-        txa
+        sta     cx13l
+        lda     _gCoeffBuf+33,y
+        tax
         adc     _gCoeffBuf+97,y
-        sta     x13+1
+        sta     cx13h
 
-        ;x32 = imul_b1_b3(x12) - x13;
-x12l:
-        ldy     #$FF
-x12h:
-        ldx     #$FF
+        sec
+        lda     _gCoeffBuf+32,y
+        sbc     _gCoeffBuf+96,y
+        tay
+        txa
+        ldx     tmp3              ; preserve Y for mult
+        sbc     _gCoeffBuf+97,x
+        tax
         jsr     _imul_b1_b3
         sec
-        sbc     x13
-        sta     x32
+cx13l = *+1
+        sbc     #$FF
+        sta     cx32l
         txa
-        sbc     x13+1
-        sta     x32+1
+cx13h = *+1
+        sbc     #$FF
+        sta     cx32h
 
-        ;x40 = x30 + x13;
+        ; t = ((x30 + x13 + x17) >> PJPG_DCT_SCALE_BITS) +128;
         clc
-        lda     x30
-        adc     x13
+cx30l = *+1
+        lda     #$FF
+        adc     cx13l
         tay
-        lda     x30+1
-        adc     x13+1
+cx30h = *+1
+        lda     #$FF
+        adc     cx13h
         tax
-        ; t = ((x40 + x17) >> PJPG_DCT_SCALE_BITS) +128;
-        ; if (t < 0)
-        ;   *pSrc_0_8 = 0;
-        ; else if (t & 0xFF00)
-        ;    *pSrc_0_8 = 255;
-        ; else
-        ;   *pSrc_0_8 = (uint8)t;
         tya
+
         clc
-        adc     x17
+        adc     cx17l
         tay
         txa
-        adc     x17+1
+        adc     cx17h
 
         INLINE_ASRYA7
 
@@ -1223,11 +1216,15 @@ clampDone2:
 
         ;x42 = x31 - x32;
         sec
-        lda     x31
-        sbc     x32
+cx31l = *+1
+        lda     #$FF
+cx32l = *+1
+        sbc     #$FF
         tay
-        lda     x31+1
-        sbc     x32+1
+cx31h = *+1
+        lda     #$FF
+cx32h = *+1
+        sbc     #$FF
         tax
 
         ; t = ((x42 + res3) >> PJPG_DCT_SCALE_BITS) +128;
@@ -1239,10 +1236,12 @@ clampDone2:
         ;   *pSrc_2_8 = (uint8)t;
         clc
         tya
-        adc     res3
+cres3l = *+1
+        adc     #$FF
         tay
         txa
-        adc     res3+1
+cres3h = *+1
+        adc     #$FF
 
         INLINE_ASRYA7
 
@@ -1260,35 +1259,47 @@ clampDone3:
         sta     _gCoeffBuf+32,y
 
 
-        ;x43 = x30 - x13;
+        ;x24 = res1 - imul_b2(x4
+        ldy     cx4l
+        ldx     cx4h
+        jsr     _imul_b2
+        sta     ptr1
+        stx     ptr1+1
+
         sec
-        lda     x30
-        sbc     x13
-        sta     x43l+1
-        lda     x30+1
-        sbc     x13+1
-        sta     x43h+1
+cres1l = *+1
+        lda     #$FF
+        sbc     ptr1
+        tay
+cres1h = *+1
+        lda     #$FF
+        sbc     ptr1+1
+        tax
 
         ;x44 = res3 + x24;
         clc
-        lda     res3
-x24l:
-        adc     #$FF
-        tay
-        lda     res3+1
-x24h:
-        adc     #$FF
-        tax
-
-        ; t = ((x43 + x44) >> PJPG_DCT_SCALE_BITS) +128;
         tya
-        clc
-x43l:
-        adc     #$FF
+        adc     cres3l
         tay
         txa
-x43h:
-        adc     #$FF
+        adc     cres3h
+        tax
+
+        ; + x30
+        clc
+        tya
+        adc     cx30l
+        tya
+        txa
+        adc     cx30h
+        tax
+        ; -x13
+        sec
+        tya
+        sbc     cx13l
+        tay
+        txa
+        sbc     cx13h
 
         INLINE_ASRYA7
 
@@ -1306,21 +1317,21 @@ clampDone4:
         sta     _gCoeffBuf+64,y
 
         ;x41 = x31 + x32;
-        lda     x32
         clc
-        adc     x31
+        lda     cx32l
+        adc     cx31l
         tay
-        lda     x32+1
-        adc     x31+1
+        lda     cx32h
+        adc     cx31h
         tax
 
         ; t = ((x41 - res2) >> PJPG_DCT_SCALE_BITS) +128;
         tya
         sec
-        sbc     res2
+        sbc     cres2l
         tay
         txa
-        sbc     res2+1
+        sbc     cres2h
 
         INLINE_ASRYA7
 
@@ -1803,29 +1814,9 @@ extendX:.res 2
 
 ;idctRows
 idctRC: .res 1
-x7:     .res 2
-x5:     .res 2
-x15:    .res 2
-x17:    .res 2
-x6:     .res 2
-x4:     .res 2
-res1:   .res 2
-x24:    .res 2
-res2:   .res 2
-res3:   .res 2
-x30:    .res 2
-x31:    .res 2
-x13:    .res 2
-x32:    .res 2
 
 ;idctCols
 idctCC: .res 1
-x44:    .res 2
-x12:    .res 2
-x40:    .res 2
-x43:    .res 2
-x41:    .res 2
-x42:    .res 2
 
 ;decodeNextMCU
 componentID:.res 1
