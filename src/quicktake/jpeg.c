@@ -200,7 +200,7 @@ static uint8 gValidQuantTables;
 static uint8 gTemFlag;
 
 #ifndef __CC65__
-uint16 gBitBuf;
+uint8 gBitBuf;
 uint8 gBitsLeft;
 #else
 #define gBitBuf zp2i
@@ -787,7 +787,7 @@ static uint8 init(void)
      gBitBuf = 0;
 
    gBitsLeft = 0;
-   getBitsNoFF(8);
+   //getBitsNoFF(8);
 
    return 0;
 }
@@ -798,14 +798,13 @@ static void fixInBuffer(void)
 {
    /* In case any 0xFF's where pulled into the buffer during marker scanning */
 
-   *(cur_cache_ptr--) = (uint8)(gBitBuf >> 8);
-   
+   *(--cur_cache_ptr) = (uint8)(gBitBuf);
    if (gBitsLeft != 0) {
      printf("error - can't fix unaligned buffer\n");
      exit(1);
    }
-   gBitsLeft = 8;
-   getBitsFF(16);
+   gBitsLeft = 0;
+   getBitsFF(8);
  }
 //------------------------------------------------------------------------------
 // Restart interval processing.
@@ -857,9 +856,9 @@ uint8 processRestart(void)
 
    // Get the bit buffer going again
 
-   gBitsLeft = 8;
+   gBitsLeft = 0;
    getBitsFF(8);
-   getBitsFF(8);
+   //getBitsFF(8);
 
    return 0;
 }

@@ -1,6 +1,6 @@
 
         .importzp   tmp1, tmp2, tmp3, tmp4, ptr1, ptr2, ptr3, ptr4, _prev_ram_irq_vector, _prev_rom_irq_vector, c_sp
-        .importzp   _zp2, _zp4, _zp6, _zp8, _zp7, _zp9, _zp10, _zp11, _zp12, _zp13
+        .importzp   _zp2, _zp3, _zp4, _zp6, _zp8, _zp7, _zp9, _zp10, _zp11, _zp12, _zp13
         .import     popptr1
         .import     _extendTests_l, _extendTests_h, _extendOffsets_l, _extendOffsets_h
         .import     _fillInBuf, _cache
@@ -29,11 +29,10 @@
         .export     _initFloppyStarter
 
 ; ZP vars. Mind that qt-conv uses some too
-_gBitBuf       = _zp2       ; word, used everywhere
-code           = _zp4       ; word, used in huffDecode
-
+_gBitBuf       = _zp2       ; byte, used everywhere
+n              = _zp3       ; byte, used in getBits
+code           = _zp4       ; word, used in huffDecode and getBits
 ; zp6-7 USED in qt-conv so only use it temporarily
-n              = _zp6       ; Used in getBits
 mcuBlock       = _zp7       ; byte, used in _decodeNextMCU
 
 _gBitsLeft     = _zp8       ; byte, used everywhere
@@ -129,7 +128,6 @@ _initFloppyStarter:
 haveBit:
         asl     _gBitBuf    ; Sets carry
 done:
-        rol     _gBitBuf+1
 .endscope
 .endmacro
 
@@ -224,40 +222,40 @@ getBitsDirect:
         bcs     large_n
 small_n:
         lda     #0
-        sta     n
+        sta     code
 :       INLINE_GETBIT
-        rol     n
+        rol     code
         dex
         bne     :-
-        lda     n
+        lda     code
         ; X is zero
         rts
 
 large_n:
         ldy     n_min_eight,x ; How much more than 8?
-        sty     ret+1
+        sty     last_few+1
 
         lda     #0            ; Init result
-        sta     n
-        sta     ret
+        sta     code
+        sta     code+1
 
         ldx     #8            ; Get the first eight
 :       INLINE_GETBIT
-        rol     n
+        rol     code
         dex
         bne     :-
 
-        ldx     ret+1         ; Get the last (n-8)
+last_few:
+        ldx     #$FF          ; Get the last (n-8)
 :       INLINE_GETBIT
-        rol     n
-        rol     ret
+        rol     code
+        rol     code+1
         dex
         bne     :-
 
-        lda     n
-        ldx     ret
+        lda     code
+        ldx     code+1
         rts
-
 
 AXBCK: .res 2
 inc_cache_high1:
@@ -270,7 +268,7 @@ start_floppy_motor_a:
 :       cpy     #>CACHE_END
         bne     ffcheck
         sta     AXBCK
-        stx     AXBCK+1          ; Backup Y for caller
+        stx     AXBCK+1          ; Backup X for caller
         jsr     _fillInBuf
         ldx     AXBCK+1
         lda     AXBCK

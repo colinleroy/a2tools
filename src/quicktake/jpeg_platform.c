@@ -13,7 +13,7 @@ int16 __fastcall__ huffExtend(uint16 x, uint8 s)
   return (int16)x;
 }
 
-extern uint16 gBitBuf;
+extern uint8 gBitBuf;
 extern uint8 gBitsLeft;
 uint8 FFCheck;
 uint8 getOctet(void)
@@ -40,7 +40,6 @@ uint8 getOctet(void)
       fillInBuf();
   }
 out:
-  printf("got octet %02X (FFcheck %d)\n", c, FFCheck);
   return c;
 }
 
@@ -50,19 +49,18 @@ static inline uint8 getBit(void)
 
   if (!gBitsLeft)
   {
-      gBitBuf |= getOctet();
+      gBitBuf = getOctet();
       gBitsLeft = 8;
   }
 
   gBitsLeft--;
-  if (gBitBuf & 0x8000)
+  if (gBitBuf & 0x80)
     ret = 1;
   gBitBuf <<= 1;
-  printf("getBit %d (%04X)\n", ret, gBitBuf);
   return ret;
 }
 
-uint8 FFCheck;
+uint8 FFCheck = 0;
 uint16 __fastcall__ getBits(uint8 numBits)
 {
   uint16 r = 0;
