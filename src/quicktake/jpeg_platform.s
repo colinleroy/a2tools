@@ -31,6 +31,7 @@
 ; ZP vars. Mind that qt-conv uses some too
 _gBitBuf       = _zp2       ; byte, used everywhere
 n              = _zp3       ; byte, used in getBits
+rowMCUflags    = _zp4       ; used in _decodeNextMCU
 bbHigh         = _zp5       ; byte, used in huffDecode and getBits
 ; zp6-7 USED in qt-conv so only use it temporarily
 mcuBlock       = _zp7       ; byte, used in _decodeNextMCU
@@ -577,47 +578,36 @@ nextIdctRowsLoop:
 full_idct_rows:
         sty     tmp3
 
-        clc
-        lda    _gCoeffBuf+10,y
-        adc    _gCoeffBuf+6,y
-        sta    rx7l
-        lda    _gCoeffBuf+11,y
-        adc    _gCoeffBuf+7,y
-        sta    rx7h
-
-        sec
-        lda    _gCoeffBuf+10,y
-        sbc    _gCoeffBuf+6,y
-        sta    rx4l
-        lda    _gCoeffBuf+11,y
-        sbc    _gCoeffBuf+7,y
-        sta    rx4h
-
-        clc
-        lda    _gCoeffBuf+2,y
-        adc    _gCoeffBuf+14,y
-        sta    rx5l
-        lda    _gCoeffBuf+3,y
-        adc    _gCoeffBuf+15,y
-        sta    rx5h
-
-rx6l  = ptr1
-rx6h  = ptr1+1
-rx30l = ptr2
-rx30h = ptr2+1
-rx31l = ptr3
-rx31h = ptr3+1
+rx5l  = ptr1
+rx5h  = ptr1+1
+rx7l = ptr2
+rx7h = ptr2+1
+rx4l = ptr3
+rx4h = ptr3+1
 rx13l = ptr4
 rx13h = ptr4+1
 
-        sec
-        lda    _gCoeffBuf+2,y
-        sbc    _gCoeffBuf+14,y
-        sta    rx6l
-        lda    _gCoeffBuf+3,y
-        sbc    _gCoeffBuf+15,y
-        sta    rx6h
+        ; x7 and x4
+        clc
+        lda    _gCoeffBuf+6,y
+        sta    rx7l
+        eor    #$FF
+        adc    #1
+        sta    rx4l
+        lda    _gCoeffBuf+7,y
+        sta    rx7h
+        eor    #$FF
+        adc    #0
+        sta    rx4h
 
+        ; x5
+        clc
+        lda    _gCoeffBuf+2,y
+        sta    rx5l
+        lda    _gCoeffBuf+3,y
+        sta    rx5h
+
+        ; x30
         clc
         lda    _gCoeffBuf,y
         adc    _gCoeffBuf+8,y
@@ -626,6 +616,7 @@ rx13h = ptr4+1
         adc    _gCoeffBuf+9,y
         sta    rx30h
 
+        ; x31
         sec
         lda    _gCoeffBuf,y
         sbc    _gCoeffBuf+8,y
@@ -634,44 +625,20 @@ rx13h = ptr4+1
         sbc    _gCoeffBuf+9,y
         sta    rx31h
 
-        clc
+        ; x13
         lda    _gCoeffBuf+4,y
-        adc    _gCoeffBuf+12,y
         sta    rx13l
         lda    _gCoeffBuf+5,y
-        adc    _gCoeffBuf+13,y
         sta    rx13h
-
-        ; x32 = imul_b1_b3(*(rowSrc_2) - *(rowSrc_6)) - x13;
-        sec
-        lda    _gCoeffBuf+4,y
-        sbc    _gCoeffBuf+12,y
-        tay
-        ldx    tmp3           ; loading index in X to preserve Y for mult
-        lda    _gCoeffBuf+5,x
-        sbc    _gCoeffBuf+13,x
-        tax
-        jsr    _imul_b1_b3
-
-        sec
-        sbc    rx13l
-        sta    rx32l
-        txa
-        sbc    rx13h
-        sta    rx32h
 
         ; x17 = x5+x7
         clc
-rx5l = *+1
-        lda    #$FF
-rx7l = *+1
-        adc    #$FF
+        lda    rx5l
+        adc    rx7l
         sta    rx17l
         tay
-rx5h = *+1
-        lda    #$FF
-rx7h = *+1
-        adc    #$FF
+        lda    rx5h
+        adc    rx7h
         sta    rx17h
         tax
 
@@ -693,24 +660,33 @@ rx7h = *+1
         adc    rx30h
         sta    _gCoeffBuf+1,y
 
-        ; res1 = imul_b5(x4 - x6);
-rx4l = *+1
-        lda    #$FF
+        ; x32 = imul_b1_b3(x13) - x13;
+        ldy    rx13l
+        ldx    rx13h
+        jsr    _imul_b1_b3
         sec
-        sbc    rx6l
+        sbc    rx13l
+        sta    rx32l
+        txa
+        sbc    rx13h
+        sta    rx32h
+
+        ; res1 = imul_b5(x4 - x5);
+        sec
+        lda    rx4l
+        sbc    rx5l
         tay
-rx4h = *+1
-        lda    #$FF
-        sbc    rx6h
+        lda    rx4h
+        sbc    rx5h
         tax
         jsr    _imul_b5
         sta    rres1l
         stx    rres1h
 
-        ldy    rx6l
-        ldx    rx6h
+        ; res2 = imul_b4(x5) - res1 - x17;
+        ldy    rx5l
+        ldx    rx5h
         jsr    _imul_b4
-
         sec                     ; -res1
         sbc    rres1l
         tay
@@ -752,13 +728,15 @@ rres2h = *+1
         ; *(rowSrc_2) = res3 + x31 - x32;
         tya
         clc
-        adc    rx31l
+rx31l = *+1
+        adc    #$FF
         tay
         txa
-        adc    rx31h
+rx31h = *+1
+        adc    #$FF
         tax
-        tya
 
+        tya
         sec
 rx32l = *+1
         sbc    #$FF
@@ -775,10 +753,10 @@ rx32h = *+1
         jsr    _imul_b2
         sta    tmp1
         stx    tmp2
-rres1l = *+1
-        lda    #$FF
 
         sec
+rres1l = *+1
+        lda    #$FF
         sbc    tmp1
         tay
 rres1h = *+1
@@ -789,13 +767,15 @@ rres1h = *+1
         ; *(rowSrc_4) = x24 + x30 + res3 - x13;
         clc
         tya
-        adc    rx30l
+rx30l = *+1
+        adc    #$FF
         tay
         txa
-        adc    rx30h
+rx30h = *+1
+        adc    #$FF
         tax
+
         tya
-        
         clc
 rres3l = *+1
         adc    #$FF
@@ -1351,6 +1331,8 @@ load_pq0l:
         sta     cur_ZAG_coeff
         sta     cur_pQ
 
+        lda     #0
+        sta     rowMCUflags
 checkZAGLoop:
         lda     cur_ZAG_coeff
         cmp     #64             ; end_ZAG_coeff
@@ -1464,7 +1446,7 @@ jmp_nextMcuBlock:
         jmp     nextMcuBlock
 
 ZAG_finished:
-        stx     cur_ZAG_coeff ; Store cur_ZAG_Coeff after looping in finishZAG
+        stx     cur_ZAG_coeff ; Store cur_ZAG_coeff after looping in finishZAG
         lda     mcuBlock
         jsr     _transformBlock
 

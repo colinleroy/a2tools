@@ -200,7 +200,8 @@ incrementL:
   }
 }
 
-
+uint8 rowMCUflags;
+uint8 colMCUflags;
 void idctRows(void)
 {
    uint8 i;
@@ -211,14 +212,18 @@ void idctRows(void)
    int16* rowSrc_4;
    int16* rowSrc_5;
    int16* rowSrc_6;
-   int16 stg26, x12;
    int16* rowSrc_7;
-   int16 x7, x5, x15, x17, x6, x4, res1, x24, res2, res3, x30, x31, x13, x32;
 
 
    rowSrc = gCoeffBuf;
    i = 8;
 nextIdctRowsLoop:
+       for (int k = 0; k < 8; k++) {
+         printf("Have coeff %04X at %02X, flag %08B\n",
+                (uint16)*(rowSrc+k), rowSrc+k-gCoeffBuf,
+                colMCUflags);
+       }
+
        rowSrc_1 = rowSrc + 1;
        rowSrc_2 = rowSrc + 2;
        rowSrc_3 = rowSrc + 3;
@@ -233,32 +238,35 @@ nextIdctRowsLoop:
       goto cont_idct_rows;
 
       full_idct_rows:
-       x7  = *(rowSrc_5) + *(rowSrc_3);
-       x4  = *(rowSrc_5) - *(rowSrc_3);
-       x5  = *(rowSrc_1) + *(rowSrc_7);
-       x6  = *(rowSrc_1) - *(rowSrc_7);
-       x31 = *(rowSrc) - *(rowSrc_4);
-       x30 = *(rowSrc) + *(rowSrc_4);
-       x13 = *(rowSrc_2) + *(rowSrc_6);
+         int16 x24, res1, res2, res3;
+         int16 x30, x31, x13, x4, x5, x7;
+         int16 x15, x17, x32;
 
-       /* update rowSrc */
-       x17 = x5 + x7;
-       *(rowSrc) = x30 + x13 + x17;
+         x7  = *(rowSrc_3);               /* two uses */
+         x4  = -*(rowSrc_3);              /* two uses */
+         x5  = *(rowSrc_1);               /* 4 */
+         x30 = *(rowSrc) + *(rowSrc_4);   /* 2 */
+         x31 = *(rowSrc) - *(rowSrc_4);   /* 2 */
+         x13 = *(rowSrc_2);               /* 4 */
 
-       x32 = imul_b1_b3(*(rowSrc_2) - *(rowSrc_6)) - x13;
-       res1 = imul_b5(x4 - x6);
-       res2 = imul_b4(x6) - res1 - x17;
-       res3 = imul_b1_b3(x5 - x7) - res2;
+         x17 = x5 + x7;
+         *(rowSrc) = x30 + x13;
+         *(rowSrc) += x17;
+         x32 = imul_b1_b3(x13) - x13;
+         res1 = imul_b5(x4 - x5);
+         res2 = imul_b4(x5) - res1;
+         res2 = res2 - x17;
+         x15 = x5 - x7;
+         res3 = imul_b1_b3(x15) - res2;
+         *(rowSrc_2) = (res3 + x31);
+         *(rowSrc_2) -= x32;
 
-       /* Update rowSrc_2 */
-       *(rowSrc_2) = (res3 + x31) - x32;
-
-       /* update rowSrc_4 */
-       x24 = res1 - imul_b2(x4);
-       *(rowSrc_4) = x24 + x30 + res3 - x13;
-
-       /* update rowSrc_6 */
-       *(rowSrc_6) = x31 + x32 - res2;
+         x24 = res1 - imul_b2(x4);
+         *(rowSrc_4) = x24 + x30;
+         *(rowSrc_4) += res3;
+         *(rowSrc_4) -= x13;
+         *(rowSrc_6) = x31 + x32;
+         *(rowSrc_6) -= res2;
 
       cont_idct_rows:
       rowSrc += 8;
@@ -451,6 +459,8 @@ uint8 decodeNextMCU(void)
     cur_pQ_l = pQ_l + 1;
     cur_pQ_h = pQ_h + 1;
 
+    rowMCUflags = 0;
+    colMCUflags = 0;
     for (; cur_ZAG_coeff != end_ZAG_coeff; cur_ZAG_coeff++, cur_pQ_l++, cur_pQ_h++) {
       if (compACTab)
         s = huffDecode(&gHuffTab3, gHuffVal3);
@@ -467,6 +477,8 @@ uint8 decodeNextMCU(void)
 
       if (s) {
         while (r) {
+            printf("coeff 0 for ZAG %02X\n",
+              *cur_ZAG_coeff);
           gCoeffBuf[*cur_ZAG_coeff] = 0;
 
           cur_ZAG_coeff++;
@@ -476,13 +488,21 @@ uint8 decodeNextMCU(void)
         }
 
         ac = huffExtend(extraBits, s);
-        gCoeffBuf[*cur_ZAG_coeff] =  ac * (*cur_pQ_l|(*cur_pQ_h << 8));
+        gCoeffBuf[*cur_ZAG_coeff] = ac * (*cur_pQ_l|(*cur_pQ_h << 8));
+            printf("coeff %04X for ZAG %02X\n",
+            (uint16)gCoeffBuf[*cur_ZAG_coeff],
+              *cur_ZAG_coeff);
+        colMCUflags |= *cur_ZAG_coeff;
+        rowMCUflags |= 1<<(*cur_ZAG_coeff & 7);
+
       } else {
         if (r == 15) {
           cur_pQ_l+=15;
           cur_pQ_h+=15;
         } else {
           while (cur_ZAG_coeff != end_ZAG_coeff) {
+            printf("coeff 0 for ZAG %02X\n",
+              *cur_ZAG_coeff);
             gCoeffBuf[*cur_ZAG_coeff] = 0;
             cur_ZAG_coeff++;
           }
