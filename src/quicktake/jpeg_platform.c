@@ -158,7 +158,7 @@ uint8 huffDecode(HuffTable* pHuffTable, const uint8* pHuffVal)
     if (pHuffTable->mGetMore[i])
       goto incrementS;
 
-    if (pHuffTable->mMaxCode_l[i] >= code)
+    if (code < pHuffTable->mMaxCode_l[i])
       goto loopDone;
 incrementS:
     code <<= 1;
@@ -179,12 +179,12 @@ long_search:
     if (pHuffTable->mGetMore[i])
       goto incrementL;
 
+    if (pHuffTable->mMaxCode_h[i] == (code>>8))
+      goto checkLow;
     if (pHuffTable->mMaxCode_h[i] < (code>>8))
       goto incrementL;
-    else if (pHuffTable->mMaxCode_h[i] > (code>>8))
-      goto loopDone;
-
-    if (pHuffTable->mMaxCode_l[i] >= (code&0xFF))
+checkLow:
+    if ((code&0xFF) < pHuffTable->mMaxCode_l[i])
       goto loopDone;
 
 incrementL:

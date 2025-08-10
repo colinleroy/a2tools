@@ -276,11 +276,17 @@ static void huffCreate(uint8* pBits, HuffTable* pHuffTable)
       }
       else
       {
-         uint16 max = (code + num - 1);
+         /* JPEG Huffman tables never use bitstrings
+            which are composed of only 1’s. "111" is
+            out. "1111" is forbidden. And you can just
+            forget about "111111".
+            -- https://alexdowad.github.io/huffman-coding/
+         */
+         uint16 max = (code + num);
          *curMaxCode_l = max & 0xFF;
          *curMaxCode_h = (max & 0xFF00) >> 8;
          #ifdef __CC65__ // spare a clc
-         *curValPtr = (j-1)-(code & 0xFF);
+         *curValPtr = (j)-(code & 0xFF);
          #else
          *curValPtr = j-(code & 0xFF);
          #endif

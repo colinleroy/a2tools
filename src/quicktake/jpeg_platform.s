@@ -444,51 +444,48 @@ _imul_b5:
 .scope
         INLINE_GETBIT
         lda     #0
-        sta     code+1  ; init code+1 for long search
         rol             ; Now A = 0 or 1 depending on bit
-        sta     code
 
         ldx     #$00
 nextLoopS:
         ldy     TABLE+hufftable_t::mGetMore,x
         bne     incrementS
 
-        lda     TABLE+hufftable_t::mMaxCode_l,x
-        cmp     code
-        bcs     loopDone
+        cmp     TABLE+hufftable_t::mMaxCode_l,x
+        bcc     loopDone
 incrementS:
-        INLINE_GETBIT
-        rol     code
+        INLINE_GETBIT 1
+        rol     a
         inx
         cpx     #7
         bne     nextLoopS
         jmp     decodeLong
+
 loopDone:
-        ; carry set, ValPtr values decremented by 1
-        ; to spare two cycles
-        lda     TABLE+hufftable_t::mValPtr,x
-        adc     code
+        adc     TABLE+hufftable_t::mValPtr,x
         tax                     ; Get index
 
         lda     VAL,x
         rts
 
 decodeLong:
+        ldy     #$00
+        sty     code+1
 nextLoopL:
-        lda     TABLE+hufftable_t::mGetMore,x
+        ldy     TABLE+hufftable_t::mGetMore,x
         bne     incrementL
 
-        lda     TABLE+hufftable_t::mMaxCode_h,x
-        cmp     code+1              ; curMaxCode < code ? hibyte
+        ldy     TABLE+hufftable_t::mMaxCode_h,x
+        cpy     code+1
+        beq     :+
         bcc     incrementL
-        bne     loopDone
+:
 
-        lda     TABLE+hufftable_t::mMaxCode_l,x
-        cmp     code
-        bcs     loopDone
+        cmp     TABLE+hufftable_t::mMaxCode_l,x
+        bcc     loopDone
 incrementL:
-        INLINE_GETBIT
-        rol     code
+        INLINE_GETBIT 1
+        rol     a
         rol     code+1
         inx
         cpx     #16
