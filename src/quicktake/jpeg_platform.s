@@ -550,14 +550,14 @@ nextIdctRowsLoop:
 
         ; Short circuit the 1D IDCT if only the DC component is non-zero
         lda    _gCoeffBuf,y
+        sta    _gCoeffBuf+2,y
         sta    _gCoeffBuf+4,y
-        sta    _gCoeffBuf+8,y
-        sta    _gCoeffBuf+12,y
+        sta    _gCoeffBuf+6,y
 
         lda    _gCoeffBuf+1,y
+        sta    _gCoeffBuf+3,y
         sta    _gCoeffBuf+5,y
-        sta    _gCoeffBuf+9,y
-        sta    _gCoeffBuf+13,y
+        sta    _gCoeffBuf+7,y
 
         jmp    cont_idct_rows
 
@@ -711,7 +711,7 @@ rres2h = *+1
         sta    rres3h
         tax
 
-        ; *(rowSrc_2) = res3 + x31 - x32;
+        ; *(rowSrc_1) = res3 + x31 - x32;
         tya
         clc
 rx31l = *+1
@@ -727,11 +727,11 @@ rx31h = *+1
 rx32l = *+1
         sbc    #$FF
         ldy     tmp3          ; and restore
-        sta    _gCoeffBuf+4,y
+        sta    _gCoeffBuf+2,y
         txa
 rx32h = *+1
         sbc    #$FF
-        sta    _gCoeffBuf+5,y
+        sta    _gCoeffBuf+3,y
 
         ; x24 = res1 - imul_b2(x4);
         ldy    rx4l
@@ -750,7 +750,7 @@ rres1h = *+1
         sbc    tmp2
         tax
 
-        ; *(rowSrc_4) = x24 + x30 + res3 - x13;
+        ; *(rowSrc_2) = x24 + x30 + res3 - x13;
         clc
         tya
 rx30l = *+1
@@ -775,12 +775,12 @@ rres3h = *+1
         sec
         sbc    rx13l
         ldy    tmp3
-        sta    _gCoeffBuf+8,y
+        sta    _gCoeffBuf+4,y
         txa
         sbc    rx13h
-        sta    _gCoeffBuf+9,y
+        sta    _gCoeffBuf+5,y
 
-        ; *(rowSrc_6) = x31 + x32 - res2;
+        ; *(rowSrc_3) = x31 + x32 - res2;
         clc
         lda    rx31l
         adc    rx32l
@@ -791,10 +791,10 @@ rres3h = *+1
         lda    tmp1
         sec
         sbc    rres2l
-        sta    _gCoeffBuf+12,y
+        sta    _gCoeffBuf+6,y
         txa
         sbc    rres2h
-        sta    _gCoeffBuf+13,y
+        sta    _gCoeffBuf+7,y
 
 cont_idct_rows:
         dec    idctRC
@@ -845,14 +845,14 @@ nextCol:
         adc     #0
 clampDone1:
         sta     _gCoeffBuf,y
+        sta     _gCoeffBuf+16,y
         sta     _gCoeffBuf+32,y
-        sta     _gCoeffBuf+64,y
-        sta     _gCoeffBuf+96,y
+        sta     _gCoeffBuf+48,y
         lda     #$00
         sta     _gCoeffBuf+1,y
+        sta     _gCoeffBuf+17,y
         sta     _gCoeffBuf+33,y
-        sta     _gCoeffBuf+65,y
-        sta     _gCoeffBuf+97,y
+        sta     _gCoeffBuf+49,y
         jmp     cont_idct_cols
 
 full_idct_cols:
@@ -1036,7 +1036,7 @@ clampDone2:
         adc     #0
 clampDone5:
         ldy     tmp3            ; And restore
-        sta     _gCoeffBuf+96,y
+        sta     _gCoeffBuf+48,y
 
         ;x42 = x30 - x32;
         sec
@@ -1078,7 +1078,7 @@ cres3h = *+1
         adc     #0
 clampDone3:
         ldy     tmp3            ; And restore
-        sta     _gCoeffBuf+32,y
+        sta     _gCoeffBuf+16,y
 
         ;x24 = res1 - imul_b2(x4)
         ldy     cx4l
@@ -1135,7 +1135,7 @@ cres1h = *+1
         adc     #0
 clampDone4:
         ldy     tmp3            ; And restore
-        sta     _gCoeffBuf+64,y
+        sta     _gCoeffBuf+32,y
 
 cont_idct_cols:
         dec     idctCC
@@ -1466,16 +1466,15 @@ _transformBlock:
         beq     :+
         ldy     #(32+31)
 
-:       ldx     #(31*4)
+:       ldx     #(31*2)
         sec
 tbCopy:
         lda     _gCoeffBuf,x
         sta     _gMCUBufG,y
 
         dey
-        txa
-        sbc     #4
-        tax
+        dex
+        dex
         bpl     tbCopy
 
         rts

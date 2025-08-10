@@ -223,7 +223,7 @@ nextIdctRowsLoop:
       if (*rowSrc_1 != 0 || *rowSrc_2 != 0 || *rowSrc_3 != 0)
         goto full_idct_rows;
        // Short circuit the 1D IDCT if only the DC component is non-zero
-     *(rowSrc_2) = *(rowSrc_4) = *(rowSrc_6) = *rowSrc;
+     *(rowSrc_1) = *(rowSrc_2) = *(rowSrc_3) = *rowSrc;
       goto cont_idct_rows;
 
       full_idct_rows:
@@ -239,23 +239,18 @@ nextIdctRowsLoop:
          x13 = *(rowSrc_2);               /* 4 */
 
          x17 = x5 + x7;
-         *(rowSrc) = x30 + x13;
-         *(rowSrc) += x17;
          x32 = imul_b1_b3(x13) - x13;
          res1 = imul_b5(x4 - x5);
          res2 = imul_b4(x5) - res1;
          res2 = res2 - x17;
          x15 = x5 - x7;
          res3 = imul_b1_b3(x15) - res2;
-         *(rowSrc_2) = (res3 + x31);
-         *(rowSrc_2) -= x32;
 
          x24 = res1 - imul_b2(x4);
-         *(rowSrc_4) = x24 + x30;
-         *(rowSrc_4) += res3;
-         *(rowSrc_4) -= x13;
-         *(rowSrc_6) = x31 + x32;
-         *(rowSrc_6) -= res2;
+         *(rowSrc) = x30 + x13 + x17;
+         *(rowSrc_1) = (res3 + x31) - x32;
+         *(rowSrc_2) = x24 + x30 + res3 - x13;
+         *(rowSrc_3) = x31 + x32 - res2;
 
       cont_idct_rows:
       rowSrc += 8;
@@ -310,9 +305,9 @@ void idctCols(void)
          c = (uint8)t;
 
        *(pSrc_0_8) =
+         *(pSrc_1_8) =
          *(pSrc_2_8) =
-         *(pSrc_4_8) =
-         *(pSrc_6_8) = c;
+         *(pSrc_3_8) = c;
       goto cont_idct_cols;
       full_idct_cols:
        int16 cx4, cx7, cx5, cx30, cx12, cx17;
@@ -345,27 +340,27 @@ void idctCols(void)
        if (t < 0)
          *pSrc_6_8 = 0;
        else if (t & 0xFF00)
-          *pSrc_6_8 = 255;
+          *pSrc_3_8 = 255;
        else
-         *pSrc_6_8 = (uint8)t;
+         *pSrc_3_8 = (uint8)t;
 
        cx42 = cx30 - cx32;
        t = ((int16)(cx42 + cres3) >> PJPG_DCT_SCALE_BITS) + 128;
        if (t < 0)
          *pSrc_2_8 = 0;
        else if (t & 0xFF00)
-          *pSrc_2_8 = 255;
+          *pSrc_1_8 = 255;
        else
-         *pSrc_2_8 = (uint8)t;
+         *pSrc_1_8 = (uint8)t;
 
        cx24 = (cres1 - imul_b2(cx4)); // only one
        t = ((int16)(cx30 + cres3 + cx24 - cx12) >> PJPG_DCT_SCALE_BITS) + 128;
        if (t < 0)
          *pSrc_4_8 = 0; 
        else if (t & 0xFF00)
-          *pSrc_4_8 = 255;
+          *pSrc_2_8 = 255;
        else 
-         *pSrc_4_8 = (uint8)t;
+         *pSrc_2_8 = (uint8)t;
 
       cont_idct_cols:
       pSrc_0_8++;
@@ -524,7 +519,7 @@ uint8 decodeNextMCU(void)
 void transformBlock(uint8 mcuBlock)
 {
   uint8* pGDst;
-  int16* pSrc;
+  uint8* pSrc;
   uint8 iTB;
 
   if (mcuBlock == 0) {
@@ -536,10 +531,10 @@ void transformBlock(uint8 mcuBlock)
   idctRows();
   idctCols();
 
-  pSrc = gCoeffBuf;
+  pSrc = (uint8 *)gCoeffBuf;
   for (iTB = 32; iTB; iTB--) {
     *pGDst++ = (uint8)*pSrc;
-    pSrc += 2;
+    pSrc +=2;
   }
 }
 

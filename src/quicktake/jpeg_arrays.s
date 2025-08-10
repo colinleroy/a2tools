@@ -10,6 +10,8 @@
         .export _gHuffVal0, _gHuffVal1, _gHuffVal2, _gHuffVal3
         .export _gHuffTab0, _gHuffTab1, _gHuffTab2, _gHuffTab3
         .export _gMCUBufG, _cache, _gCoeffBuf
+        .export right_shift_4
+
 
 .struct hufftable_t
    mMaxCode_l .res 16
