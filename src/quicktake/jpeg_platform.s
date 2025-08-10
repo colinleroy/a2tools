@@ -1267,6 +1267,13 @@ setDec:
         ;gCoeffBuf[0] = dc * pQ[0];
         sta     ptr2+1
 
+        ; Zero the rest of gCoeffBuf
+        ldx     #(62*2)
+        lda     #0
+:       sta     _gCoeffBuf+2,x
+        dex
+        bpl    :-
+
 load_pq0h:
         ldx     $FFFF
 load_pq0l:
@@ -1274,6 +1281,8 @@ load_pq0l:
         jsr     mult16x16x16_direct
         sta     _gCoeffBuf
         stx     _gCoeffBuf+1
+
+        
 
         lda     #1
         sta     cur_ZAG_coeff
@@ -1284,7 +1293,7 @@ load_pq0l:
 checkZAGLoop:
         lda     cur_ZAG_coeff
         cmp     #64             ; end_ZAG_coeff
-        beq     ZAG_Done
+        beq     ZAG_finished
 
 doZAGLoop:
 huffDec:
@@ -1310,10 +1319,21 @@ storeExtraBits:
 
         lda     sDMCU           ; s = numExtraBits
 
-        beq     sZero
-
+        bne     sNotZero
+sZero:
         lda     rDMCU
-        beq     zeroZAGDone
+        cmp     #15
+        bne     ZAG_finished
+
+        ; Advance 15
+        lda     cur_pQ
+        adc     #14           ; 15 with carry set by previous cmp
+        sta     cur_pQ
+        jmp     checkZAGLoop
+
+sNotZero:
+        lda     rDMCU
+        beq     storeGCoeff
 
         ; while (r) { gCoeffBuf[*cur_ZAG_coeff] = 0; ...}
         ldx     cur_ZAG_coeff
@@ -1330,7 +1350,7 @@ zeroZAG:
         bne     zeroZAG
         stx     cur_ZAG_coeff
 
-zeroZAGDone:
+storeGCoeff:
         ;ac = huffExtend(sDMCU)
         ; extendX already set
         lda     sDMCU
@@ -1355,43 +1375,10 @@ load_pq1h:
         sta     _gCoeffBuf+1,y
         lda    tmp1
         sta     _gCoeffBuf,y
-        jmp     sNotZero
 
-; Inserted here, in an otherwise unreachable place,
-; to be more easily reachable from everywhere we need it
-ZAG_Done:
-        ldx     cur_ZAG_coeff
-        lda     #0
-finishZAG:
-        cpx     #64             ; end_ZAG_coeff
-        beq     ZAG_finished
-
-        ldy     _ZAG_Coeff,x
-        sta     _gCoeffBuf,y
-        sta     _gCoeffBuf+1,y
-
-        inx
-        jmp     finishZAG
-
-sZero:
-        lda     rDMCU
-        cmp     #15
-        bne     ZAG_Done
-
-        ; Advance 15
-        lda     cur_pQ
-        adc     #14           ; 15 with carry set by previous cmp
-        sta     cur_pQ
-
-        jmp     checkZAGLoop
-
-sNotZero:
         inc     cur_pQ
         inc     cur_ZAG_coeff
         jmp     checkZAGLoop
-
-jmp_nextMcuBlock:
-        jmp     nextMcuBlock
 
 ZAG_finished:
         stx     cur_ZAG_coeff ; Store cur_ZAG_coeff after looping in finishZAG
@@ -1401,7 +1388,8 @@ ZAG_finished:
         inc     mcuBlock
         ldx     mcuBlock
         cpx     #2
-        bcc     jmp_nextMcuBlock
+        bcs     firstMCUBlocksDone
+        jmp     nextMcuBlock
 
 firstMCUBlocksDone:
         ; Skip the other blocks, do the minimal work

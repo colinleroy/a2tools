@@ -436,7 +436,12 @@ uint8 decodeNextMCU(void)
     dc = dc + gLastDC_l[componentID] + (gLastDC_h[componentID]<<8);
     gLastDC_l[componentID] = dc & 0xFF;
     gLastDC_h[componentID] = (dc & 0xFF00) >> 8;
+
     gCoeffBuf[0] = dc * (pQ_l[0]|(pQ_h[0]<<8));
+    /* Pre-zero coeffs apart for the first one */
+    for (i = 1; i < 64; i++) {
+      gCoeffBuf[i] = 0;
+    }
 
     cur_ZAG_coeff = ZAG_Coeff + 1;
     end_ZAG_coeff = ZAG_Coeff + 64;
@@ -461,8 +466,6 @@ uint8 decodeNextMCU(void)
 
       if (s) {
         while (r) {
-          gCoeffBuf[*cur_ZAG_coeff] = 0;
-
           cur_ZAG_coeff++;
           cur_pQ_l++;
           cur_pQ_h++;
@@ -471,24 +474,17 @@ uint8 decodeNextMCU(void)
 
         ac = huffExtend(extraBits, s);
         gCoeffBuf[*cur_ZAG_coeff] = ac * (*cur_pQ_l|(*cur_pQ_h << 8));
-
       } else {
         if (r == 15) {
           cur_pQ_l+=15;
           cur_pQ_h+=15;
         } else {
-          while (cur_ZAG_coeff != end_ZAG_coeff) {
-            gCoeffBuf[*cur_ZAG_coeff] = 0;
-            cur_ZAG_coeff++;
-          }
           break;
         }
       }
     }
-
     transformBlock(mcuBlock);
   }
-
    /* Skip the other blocks, do the minimal work, only consuming
     * input bits
     */
