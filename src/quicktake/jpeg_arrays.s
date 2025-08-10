@@ -115,6 +115,13 @@ _cache:           .res CACHE_SIZE+4
 .endproc
 
 .assert <* = 0, error
+.proc right_shift_4
+  .repeat 256, I
+    .byte I .SHR 4
+  .endrepeat
+.endproc
+
+.assert <* = 0, error
 START_LAST_ARRAYS = *
 .proc _ZAG_Coeff
   .byte  $00

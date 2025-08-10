@@ -17,10 +17,11 @@
         .import     _gNumMCUSRemainingX, _gNumMCUSRemainingY
         .import     _gWinogradQuant
         .import     floppy_motor_on
+        .import     right_shift_4
 
         .import     asreax3, inceaxy, tosmul0ax, push0ax
         .import     shraxy, decsp4, popax, addysp, mult16x16x16_direct
-        .export     _huffExtend, _getBitsNoFF, _getBitsFF
+        .export     _getBitsNoFF, _getBitsFF
         .export     _imul_b1_b3, _imul_b2, _imul_b4, _imul_b5
         .export     _idctRows, _idctCols, _decodeNextMCU, _transformBlock
         .export     _pjpeg_decode_mcu
@@ -31,7 +32,6 @@
 ; ZP vars. Mind that qt-conv uses some too
 _gBitBuf       = _zp2       ; byte, used everywhere
 n              = _zp3       ; byte, used in getBits
-rowMCUflags    = _zp4       ; used in _decodeNextMCU
 bbHigh         = _zp5       ; byte, used in huffDecode and getBits
 ; zp6-7 USED in qt-conv so only use it temporarily
 mcuBlock       = _zp7       ; byte, used in _decodeNextMCU
@@ -141,17 +141,12 @@ done:
 
 ; PJPG_INLINE int16 __fastcall__ huffExtend(uint16 x, uint8 sDMCU)
 
-_huffExtend:
+.macro HUFFEXTEND
+.scope
         cmp     #16
-        bcc     :+
+        bcs     retNormal
 
-retNormal:
-        lda     extendX
-retNormalX:
-        ldx     extendX+1
-        rts
-
-:       tax
+        tax
         ldy     _extendTests_h,x
 
         cpy     extendX+1
@@ -170,8 +165,15 @@ retExtend:
         adc     extendX+1
         tax
         tya
-        rts
+        jmp     done
 
+retNormal:
+        lda     extendX
+retNormalX:
+        ldx     extendX+1
+done:
+.endscope
+.endmacro
 ; #define getBitsNoFF(n) getBits(n, 0)
 ; #define getBits2(n) getBits(n, 1)
 
@@ -1232,7 +1234,7 @@ doExtend:
         sta     extendX
         stx     extendX+1
         lda     sDMCU
-        jsr     _huffExtend
+        HUFFEXTEND
         stx     tmp2
         sta     tmp1
 
@@ -1252,6 +1254,13 @@ setDec:
         sta     huffDec+1
         stx     huffDec+2
 
+        ; Zero the rest (not [0]!) of gCoeffBuf
+        ldx     #(62*2)
+        lda     #0
+:       sta     _gCoeffBuf+2,x
+        dex
+        bpl    :-
+
         ; dc = dc + gLastDC[componentID];
         ; gLastDC[componentID] = dc;
         clc
@@ -1263,17 +1272,9 @@ setDec:
         lda     _gLastDC_h,y
         adc     tmp2
         sta     _gLastDC_h,y
-
-        ;gCoeffBuf[0] = dc * pQ[0];
         sta     ptr2+1
 
-        ; Zero the rest of gCoeffBuf
-        ldx     #(62*2)
-        lda     #0
-:       sta     _gCoeffBuf+2,x
-        dex
-        bpl    :-
-
+        ;gCoeffBuf[0] = dc * pQ[0];
 load_pq0h:
         ldx     $FFFF
 load_pq0l:
@@ -1288,21 +1289,11 @@ load_pq0l:
         sta     cur_ZAG_coeff
         sta     cur_pQ
 
-        lda     #0
-        sta     rowMCUflags
-checkZAGLoop:
-        lda     cur_ZAG_coeff
-        cmp     #64             ; end_ZAG_coeff
-        beq     ZAG_finished
-
 doZAGLoop:
 huffDec:
         jsr     $FFFF           ; Patched with huffDecode2/3
         tay
-        lsr     a
-        lsr     a
-        lsr     a
-        lsr     a
+        lda     right_shift_4,y
         sta     rDMCU
         tya
         and     #$0F
@@ -1323,9 +1314,10 @@ storeExtraBits:
 sZero:
         lda     rDMCU
         cmp     #15
-        bne     ZAG_finished
+        beq     :+
+        jmp     ZAG_finished
 
-        ; Advance 15
+:       ; Advance 15
         lda     cur_pQ
         adc     #14           ; 15 with carry set by previous cmp
         sta     cur_pQ
@@ -1354,12 +1346,11 @@ storeGCoeff:
         ;ac = huffExtend(sDMCU)
         ; extendX already set
         lda     sDMCU
-        jsr     _huffExtend
+        HUFFEXTEND
 
         ;gCoeffBuf[*cur_ZAG_coeff] = ac * *cur_pQ;
         sta     ptr2
         stx     ptr2+1
-
         ldy     cur_pQ
 load_pq1l:
         lda     $FFFF,y
@@ -1378,7 +1369,11 @@ load_pq1h:
 
         inc     cur_pQ
         inc     cur_ZAG_coeff
-        jmp     checkZAGLoop
+checkZAGLoop:
+         lda     cur_ZAG_coeff
+         cmp     #64             ; end_ZAG_coeff
+         beq     ZAG_finished
+         jmp     doZAGLoop
 
 ZAG_finished:
         stx     cur_ZAG_coeff ; Store cur_ZAG_coeff after looping in finishZAG
@@ -1439,12 +1434,9 @@ uselessDec:
         beq     ZAG2_Done
         sta    tmp1
         jsr     getBitsDirect
-        lda    tmp1
+        ldx    tmp1
+        lda    right_shift_4,x
 
-        lsr     a
-        lsr     a
-        lsr     a
-        lsr     a
         sec             ; Set carry for for loop inc
         adc     iDMCU
         sta     iDMCU
