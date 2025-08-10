@@ -16,6 +16,7 @@ int16 __fastcall__ huffExtend(uint16 x, uint8 s)
 extern uint8 gBitBuf;
 extern uint8 gBitsLeft;
 uint8 FFCheck;
+
 uint8 getOctet(void)
 {
   uint8 c, n;
@@ -41,6 +42,15 @@ uint8 getOctet(void)
   }
 out:
   return c;
+}
+
+void setFFCheck(uint8 on) {
+  FFCheck = on;
+}
+
+uint8 getByteNoFF(void) {
+  FFCheck = 0;
+  return getOctet();
 }
 
 static inline uint8 getBit(void)

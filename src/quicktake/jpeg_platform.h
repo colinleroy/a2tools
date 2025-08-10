@@ -17,7 +17,8 @@ typedef struct HuffTableT
    uint32 totalGetBit;
 } HuffTable;
 
-
+uint8 getByteNoFF(void);
+void setFFCheck(uint8 on);
 extern uint16 extendTests[];
 extern uint16 extendOffsets[];
 extern uint8 mul669_l[256], mul669_m[256], mul669_h[256];

@@ -340,11 +340,13 @@ static uint16 getMaxHuffCodes(uint8 index)
    return (index < 2) ? 12 : 255;
 }
 
+#define getLong() (getByteNoFF()<<8|getByteNoFF())
+
 //------------------------------------------------------------------------------
 static uint8 readDHTMarker(void)
 {
    uint8 bits[16];
-   uint16 left = getBitsNoFF(16);
+   uint16 left = getLong();
    register uint8 *ptr;
 
    if (left < 2)
@@ -359,7 +361,7 @@ static uint8 readDHTMarker(void)
       HuffTable* pHuffTable;
       uint16 count, totalRead;
 
-      index = (uint8)getBitsNoFF(8);
+      index = (uint8)getByteNoFF();
 
       if ( ((index & 0xF) > 1) || ((index & 0xF0) > 0x10) )
          return PJPG_BAD_DHT_INDEX;
@@ -374,7 +376,7 @@ static uint8 readDHTMarker(void)
       ptr = bits;
       for (i = 0; i <= 15; i++)
       {
-         uint8 n = (uint8)getBitsNoFF(8);
+         uint8 n = (uint8)getByteNoFF();
          *(ptr++) = n;
          count = (uint16)(count + n);
       }
@@ -384,7 +386,7 @@ static uint8 readDHTMarker(void)
 
       ptr = pHuffVal;
       for (i = 0; i < count; i++)
-         *(ptr++) = (uint8)getBitsNoFF(8);
+         *(ptr++) = (uint8)getByteNoFF();
 
       totalRead = count + (1+16);
 
@@ -402,7 +404,7 @@ static uint8 readDHTMarker(void)
 
 static uint8 readDQTMarker(void)
 {
-   uint16 left = getBitsNoFF(16);
+   uint16 left = getLong();
    if (left < 2)
       return PJPG_BAD_DQT_MARKER;
 
@@ -411,7 +413,7 @@ static uint8 readDQTMarker(void)
    while (left)
    {
       uint8 i;
-      uint8 n = (uint8)getBitsNoFF(8);
+      uint8 n = (uint8)getByteNoFF();
       uint8 prec = n >> 4;
       uint16 totalRead;
 
@@ -425,11 +427,11 @@ static uint8 readDQTMarker(void)
         for (i = 0; i < 64; i++)
         {
            if (prec) {
-             gQuant1_h[i] = getBitsNoFF(8);
-             gQuant1_l[i] = getBitsNoFF(8);
+             gQuant1_h[i] = getByteNoFF();
+             gQuant1_l[i] = getByteNoFF();
            } else {
              gQuant1_h[i] = 0;
-             gQuant1_l[i] = getBitsNoFF(8);
+             gQuant1_l[i] = getByteNoFF();
            }
         }
         createWinogradQuant1();
@@ -438,11 +440,11 @@ static uint8 readDQTMarker(void)
         for (i = 0; i < 64; i++)
         {
            if (prec) {
-             gQuant0_h[i] = getBitsNoFF(8);
-             gQuant0_l[i] = getBitsNoFF(8);
+             gQuant0_h[i] = getByteNoFF();
+             gQuant0_l[i] = getByteNoFF();
            } else {
              gQuant0_h[i] = 0;
-             gQuant0_l[i] = getBitsNoFF(8);
+             gQuant0_l[i] = getByteNoFF();
            }
         }
         createWinogradQuant0();
@@ -465,25 +467,25 @@ static uint8 readDQTMarker(void)
 static uint8 readSOFMarker(void)
 {
   uint8 i;
-  uint16 left = getBitsNoFF(16);
+  uint16 left = getLong();
   uint16 gImageXSize;
   uint16 gImageYSize;
   register uint8 *ptr_ident, *ptr_quant, *ptr_hsamp;
 
-   if (getBitsNoFF(8) != 8)
+   if (getByteNoFF() != 8)
       return PJPG_BAD_PRECISION;
 
-   gImageYSize = getBitsNoFF(16);
+   gImageYSize = getLong();
 
    if (gImageYSize != QT200_HEIGHT)
       return PJPG_BAD_HEIGHT;
 
-   gImageXSize = getBitsNoFF(16);
+   gImageXSize = getLong();
 
    if (gImageXSize  != QT200_WIDTH)
       return PJPG_BAD_WIDTH;
 
-   gCompsInFrame = (uint8)getBitsNoFF(8);
+   gCompsInFrame = (uint8)getByteNoFF();
 
    if (gCompsInFrame > 3)
       return PJPG_TOO_MANY_COMPONENTS;
@@ -496,10 +498,12 @@ static uint8 readSOFMarker(void)
    ptr_hsamp = gCompHSamp;
    for (i = 0; i < gCompsInFrame; i++)
    {
-      *(ptr_ident++) = (uint8)getBitsNoFF(8);
-      *(ptr_hsamp++) = (uint8)getBitsNoFF(4);
-      gCompVSamp[i] = (uint8)getBitsNoFF(4);
-      *(ptr_quant) = (uint8)getBitsNoFF(8);
+      uint8 tmp;
+      *(ptr_ident++) = (uint8)getByteNoFF();
+      tmp = getByteNoFF();
+      *(ptr_hsamp++) = tmp>>4;
+      gCompVSamp[i] = tmp&0x0F;
+      *(ptr_quant) = getByteNoFF();
 
       if (*ptr_quant > 1)
          return PJPG_UNSUPPORTED_QUANT_TABLE;
@@ -512,10 +516,11 @@ static uint8 readSOFMarker(void)
 // Read a define restart interval (DRI) marker.
 static uint8 readDRIMarker(void)
 {
-   if (getBitsNoFF(16) != 4)
+    uint16 tmp = getLong();
+   if (tmp != 4)
       return PJPG_BAD_DRI_LENGTH;
 
-   gRestartInterval = getBitsNoFF(16);
+   gRestartInterval = getLong();
 
    return 0;
 }
@@ -524,10 +529,10 @@ static uint8 readDRIMarker(void)
 static uint8 readSOSMarker(void)
 {
    uint8 i;
-   uint16 left = getBitsNoFF(16);
+   uint16 left = getLong();
    uint8 spectral_start, spectral_end, successive_high, successive_low;
 
-   gCompsInScan = (uint8)getBitsNoFF(8);
+   gCompsInScan = (uint8)getByteNoFF();
 
    left -= 3;
 
@@ -536,8 +541,8 @@ static uint8 readSOSMarker(void)
 
    for (i = 0; i < gCompsInScan; i++)
    {
-      uint8 cc = (uint8)getBitsNoFF(8);
-      uint8 c = (uint8)getBitsNoFF(8);
+      uint8 cc = (uint8)getByteNoFF();
+      uint8 c = (uint8)getByteNoFF();
       uint8 ci;
 
       left -= 2;
@@ -554,16 +559,17 @@ static uint8 readSOSMarker(void)
       gCompACTab[ci] = (c & 15);
    }
 
-   spectral_start  = (uint8)getBitsNoFF(8);
-   spectral_end    = (uint8)getBitsNoFF(8);
-   successive_high = (uint8)getBitsNoFF(4);
-   successive_low  = (uint8)getBitsNoFF(4);
+   spectral_start  = (uint8)getByteNoFF();
+   spectral_end    = (uint8)getByteNoFF();
+   i = getByteNoFF();
+   successive_high = i>>4;
+   successive_low  = i&0x0F;
 
    left -= 3;
 
    while (left)
    {
-      getBitsNoFF(8);
+      getByteNoFF();
       left--;
    }
 
@@ -576,11 +582,11 @@ static uint8 nextMarker(void)
 
    do {
       do {
-         c = (uint8)getBitsNoFF(8);
+         c = (uint8)getByteNoFF();
       } while (c != 0xFF);
 
       do {
-         c = (uint8)getBitsNoFF(8);
+         c = (uint8)getByteNoFF();
       } while (c == 0xFF);
    } while (c == 0);
 
@@ -669,9 +675,9 @@ static uint8 locateSOIMarker(void)
 {
    uint16 bytesleft;
 
-   uint8 lastchar = (uint8)getBitsNoFF(8);
+   uint8 lastchar = (uint8)getByteNoFF();
 
-   uint8 thischar = (uint8)getBitsNoFF(8);
+   uint8 thischar = (uint8)getByteNoFF();
 
    /* ok if it's a normal JPEG file without a special header */
 
@@ -687,13 +693,13 @@ static uint8 locateSOIMarker(void)
 
       lastchar = thischar;
 
-      thischar = (uint8)getBitsNoFF(8);
+      thischar = (uint8)getByteNoFF();
 
       if (lastchar == 0xFF)
       {
          if (thischar == M_SOI)
             break;
-         if (thischar == M_EOI)	//getBitsNoFF will keep returning M_EOI if we read past the end
+         if (thischar == M_EOI)
             return PJPG_NOT_JPEG;
       }
    }
@@ -787,25 +793,10 @@ static uint8 init(void)
      gBitBuf = 0;
 
    gBitsLeft = 0;
-   //getBitsNoFF(8);
 
    return 0;
 }
-//------------------------------------------------------------------------------
-// This method throws back into the stream any bytes that where read
-// into the bit buffer during initial marker scanning.
-static void fixInBuffer(void)
-{
-   /* In case any 0xFF's where pulled into the buffer during marker scanning */
 
-   *(--cur_cache_ptr) = (uint8)(gBitBuf);
-   if (gBitsLeft != 0) {
-     printf("error - can't fix unaligned buffer\n");
-     exit(1);
-   }
-   gBitsLeft = 0;
-   getBitsFF(8);
- }
 //------------------------------------------------------------------------------
 // Restart interval processing.
 uint8 processRestart(void)
@@ -853,12 +844,7 @@ uint8 processRestart(void)
    gRestartsLeft = gRestartInterval;
 
    gNextRestartNum = (gNextRestartNum + 1) & 7;
-
-   // Get the bit buffer going again
-
-   gBitsLeft = 0;
-   getBitsFF(8);
-   //getBitsFF(8);
+   setFFCheck(1);
 
    return 0;
 }
@@ -886,9 +872,9 @@ static uint8 initScan(void)
       gNextRestartNum = 0;
    }
 
-   fixInBuffer();
+  setFFCheck(1);
 
-   return 0;
+  return 0;
 }
 
 //------------------------------------------------------------------------------
@@ -995,7 +981,7 @@ void qt_load_raw(uint16 top)
 // Used to skip unrecognized markers.
 uint8 skipVariableMarker(void)
 {
-   uint16 left = getBitsNoFF(16);
+   uint16 left = getLong();
    uint16 safeSkip;
    uint16 avail = cache_end - cur_cache_ptr;
 
@@ -1007,7 +993,7 @@ uint8 skipVariableMarker(void)
      return 0;
    }
    if (left == 1) {
-     getBitsNoFF(8);
+     getByteNoFF();
      return 0;
    }
    safeSkip = left - 2;
@@ -1032,7 +1018,7 @@ skip_again:
    }
 
    while(left--) {
-     getBitsNoFF(8);
+     getByteNoFF();
    }
 
    return 0;

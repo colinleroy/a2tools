@@ -27,7 +27,7 @@
         .export     _copy_decoded_to
         .export     _createWinogradQuant0, _createWinogradQuant1
         .export     _initFloppyStarter
-
+        .export     _getByteNoFF, _setFFCheck
 ; ZP vars. Mind that qt-conv uses some too
 _gBitBuf       = _zp2       ; byte, used everywhere
 n              = _zp3       ; byte, used in getBits
@@ -294,6 +294,19 @@ start_floppy_motor_b:
 dec_cache_high:
         dec     _cur_cache_ptr+1
         jmp     stuff_back
+
+_setFFCheck:
+        ldy     #NO_FF_CHECK
+        cmp     #0
+        beq     :+
+        ldy     #FF_CHECK_ON
+:       sty     ffcheck
+        rts
+
+_getByteNoFF:
+        ldy     #NO_FF_CHECK
+        sty     ffcheck
+        ldx     #0
 
 ;uint8 getOctet(uint8 FFCheck)
 ; Destroys A and Y, saves X
