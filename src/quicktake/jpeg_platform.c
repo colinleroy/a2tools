@@ -161,14 +161,16 @@ uint8 huffDecode(HuffTable* pHuffTable, const uint8* pHuffVal)
     if (code < pHuffTable->mMaxCode_l[i])
       goto loopDone;
 incrementS:
+    // printf("S code >= max (%04X >= %04X) i %d\n", code, pHuffTable->mMaxCode_l[i]|(pHuffTable->mMaxCode_h[i]<<8), i);
     code <<= 1;
     code |= getBit();
     pHuffTable->totalGetBit++;
     i++;
-    if (i == 7)
+    if (i == 8)
       goto long_search;
   }
 loopDone:
+  // printf("code %04X is %d (%04X)\n", code, i, pHuffTable->mMaxCode_l[i]|(pHuffTable->mMaxCode_h[i]<<8));
   j = pHuffTable->mValPtr[i] + (uint8)code ;
   return pHuffVal[j];
 
@@ -188,6 +190,7 @@ checkLow:
       goto loopDone;
 
 incrementL:
+    // printf("L code >= max (%04X >= %04X) i %d\n", code, pHuffTable->mMaxCode_l[i]|(pHuffTable->mMaxCode_h[i]<<8), i);
     i++;
     if (i == 16)
       return 0;

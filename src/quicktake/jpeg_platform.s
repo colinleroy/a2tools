@@ -1,6 +1,6 @@
 
         .importzp   tmp1, tmp2, tmp3, tmp4, ptr1, ptr2, ptr3, ptr4, _prev_ram_irq_vector, _prev_rom_irq_vector, c_sp
-        .importzp   _zp2, _zp3, _zp4, _zp6, _zp8, _zp7, _zp9, _zp10, _zp11, _zp12, _zp13
+        .importzp   _zp2, _zp3, _zp4, _zp5, _zp6, _zp8, _zp7, _zp9, _zp10, _zp11, _zp12, _zp13
         .import     popptr1
         .import     _extendTests_l, _extendTests_h, _extendOffsets_l, _extendOffsets_h
         .import     _fillInBuf, _cache
@@ -31,7 +31,7 @@
 ; ZP vars. Mind that qt-conv uses some too
 _gBitBuf       = _zp2       ; byte, used everywhere
 n              = _zp3       ; byte, used in getBits
-code           = _zp4       ; word, used in huffDecode and getBits
+bbHigh         = _zp5       ; byte, used in huffDecode and getBits
 ; zp6-7 USED in qt-conv so only use it temporarily
 mcuBlock       = _zp7       ; byte, used in _decodeNextMCU
 
@@ -174,25 +174,6 @@ retExtend:
 ; #define getBitsNoFF(n) getBits(n, 0)
 ; #define getBits2(n) getBits(n, 1)
 
-sixteen_min_n: .byte 16
-               .byte 15
-               .byte 14
-               .byte 13
-               .byte 12
-               .byte 11
-               .byte 10
-               .byte 9
-eight_min_n:
-               .byte 8
-               .byte 7
-               .byte 6
-               .byte 5
-               .byte 4
-               .byte 3
-               .byte 2
-               .byte 1
-               .byte 0
-
 n_min_eight:   .byte 0
                .byte 0
                .byte 0
@@ -241,7 +222,7 @@ large_n:
         sty     last_few+1
 
         lda     #0            ; Init result
-        sta     code+1
+        sta     bbHigh
 
         ldx     #8            ; Get the first eight
 :       INLINE_GETBIT 1
@@ -249,18 +230,15 @@ large_n:
         dex
         bne     :-
 
-        sta     code
-        txa                   ; Reset A to 0
 last_few:
         ldx     #$FF          ; Get the last (n-8)
 :       INLINE_GETBIT 1
-        rol     code
         rol     a
+        rol     bbHigh
         dex
         bne     :-
 
-        tax
-        lda     code
+        ldx     bbHigh
         rts
 
 AXBCK: .res 2
@@ -457,7 +435,7 @@ incrementS:
         INLINE_GETBIT 1
         rol     a
         inx
-        cpx     #7
+        cpx     #8
         bne     nextLoopS
         jmp     decodeLong
 
@@ -470,13 +448,13 @@ loopDone:
 
 decodeLong:
         ldy     #$00
-        sty     code+1
+        sty     bbHigh
 nextLoopL:
         ldy     TABLE+hufftable_t::mGetMore,x
         bne     incrementL
 
         ldy     TABLE+hufftable_t::mMaxCode_h,x
-        cpy     code+1
+        cpy     bbHigh
         beq     :+
         bcc     incrementL
 :
@@ -486,7 +464,7 @@ nextLoopL:
 incrementL:
         INLINE_GETBIT 1
         rol     a
-        rol     code+1
+        rol     bbHigh
         inx
         cpx     #16
         bne     nextLoopL
