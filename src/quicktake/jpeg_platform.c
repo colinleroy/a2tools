@@ -161,7 +161,6 @@ uint8 huffDecode(HuffTable* pHuffTable, const uint8* pHuffVal)
     if (code < pHuffTable->mMaxCode_l[i])
       goto loopDone;
 incrementS:
-    // printf("S code >= max (%04X >= %04X) i %d\n", code, pHuffTable->mMaxCode_l[i]|(pHuffTable->mMaxCode_h[i]<<8), i);
     code <<= 1;
     code |= getBit();
     pHuffTable->totalGetBit++;
@@ -170,7 +169,6 @@ incrementS:
       goto long_search;
   }
 loopDone:
-  // printf("code %04X is %d (%04X)\n", code, i, pHuffTable->mMaxCode_l[i]|(pHuffTable->mMaxCode_h[i]<<8));
   j = pHuffTable->mValPtr[i] + (uint8)code ;
   return pHuffVal[j];
 
@@ -190,7 +188,6 @@ checkLow:
       goto loopDone;
 
 incrementL:
-    // printf("L code >= max (%04X >= %04X) i %d\n", code, pHuffTable->mMaxCode_l[i]|(pHuffTable->mMaxCode_h[i]<<8), i);
     i++;
     if (i == 16)
       return 0;
@@ -200,8 +197,6 @@ incrementL:
   }
 }
 
-uint8 rowMCUflags;
-uint8 colMCUflags;
 void idctRows(void)
 {
    uint8 i;
@@ -218,12 +213,6 @@ void idctRows(void)
    rowSrc = gCoeffBuf;
    i = 8;
 nextIdctRowsLoop:
-       for (int k = 0; k < 8; k++) {
-         printf("Have coeff %04X at %02X, flag %08B\n",
-                (uint16)*(rowSrc+k), rowSrc+k-gCoeffBuf,
-                colMCUflags);
-       }
-
        rowSrc_1 = rowSrc + 1;
        rowSrc_2 = rowSrc + 2;
        rowSrc_3 = rowSrc + 3;
@@ -231,7 +220,7 @@ nextIdctRowsLoop:
        rowSrc_5 = rowSrc + 5;
        rowSrc_6 = rowSrc + 6;
        rowSrc_7 = rowSrc + 7;
-      if (*rowSrc_1 != 0 || *rowSrc_2 != 0 || *rowSrc_3 != 0 || *rowSrc_4 != 0 || *rowSrc_5 != 0 || *rowSrc_6 != 0 || *rowSrc_7 != 0)
+      if (*rowSrc_1 != 0 || *rowSrc_2 != 0 || *rowSrc_3 != 0)
         goto full_idct_rows;
        // Short circuit the 1D IDCT if only the DC component is non-zero
      *(rowSrc_2) = *(rowSrc_4) = *(rowSrc_6) = *rowSrc;
@@ -290,7 +279,6 @@ void idctCols(void)
    int16 *pSrc_1_8;
    int16 stg26;
    int16 *pSrc_7_8;
-   int16 x4, x7, x5, x6, res1, x24, x15, x17, res2, res3, x44, x30, x31, x12, x13, x32, x43, x41, x42;
    uint8 c;
    int16 t;
 
@@ -305,11 +293,11 @@ void idctCols(void)
 
    for (idctCC = 0; idctCC < 8; idctCC++)
    {
+      if (*pSrc_1_8 != 0)
+        goto full_idct_cols;
       if (*pSrc_2_8 != 0)
         goto full_idct_cols;
-      if (*pSrc_4_8 != 0)
-        goto full_idct_cols;
-      if (*pSrc_6_8 != 0)
+      if (*pSrc_3_8 != 0)
         goto full_idct_cols;
 
        // Short circuit the 1D IDCT if only the DC component is non-zero
@@ -327,59 +315,57 @@ void idctCols(void)
          *(pSrc_6_8) = c;
       goto cont_idct_cols;
       full_idct_cols:
+       int16 cx4, cx7, cx5, cx30, cx12, cx17;
+       int16 cres1, cres2, cres3;
+       int16 cx24, cx32, cx42;
 
-       x4  = *(pSrc_5_8) - *(pSrc_3_8);
-       x7  = *(pSrc_5_8) + *(pSrc_3_8);
-       x6  = *(pSrc_1_8) - *(pSrc_7_8);
-       x5  = *(pSrc_1_8) + *(pSrc_7_8);
+       cx30 = *(pSrc_0_8);    //6
+       cx5  = *(pSrc_1_8);    //6
+       cx12 = *(pSrc_2_8);    //6
+       cx7  = *(pSrc_3_8);    //4
+       cx4  = - *(pSrc_3_8);  //7
 
-       x17 = x5 + x7;
+       cx17 = cx5 + cx7;      //4
 
-       res1 = imul_b5(x4 - x6);
-       res2 = imul_b4(x6) - res1 - x17;
-       res3 = imul_b1_b3(x5 - x7) - res2;
-
-       x31 = *(pSrc_0_8) - *(pSrc_4_8);
-       x30 = *(pSrc_0_8) + *(pSrc_4_8);
-       x12 = *(pSrc_2_8) - *(pSrc_6_8); // only one
-       x13 = *(pSrc_2_8) + *(pSrc_6_8);
+       cres1 = imul_b5(cx4 - cx5);
+       cres2 = imul_b4(cx5) - cres1 - cx17;
+       cres3 = imul_b1_b3(cx5 - cx7) - cres2;
 
        // descale, convert to unsigned and clamp to 8-bit
-       t = ((x30 + x13 + x17) >> PJPG_DCT_SCALE_BITS) + 128;
+       t = ((int16)(cx30 + cx12 + cx17) >> PJPG_DCT_SCALE_BITS) + 128;
        if (t < 0)
-         *pSrc_0_8 = 0; 
+         *pSrc_0_8 = 0;
        else if (t & 0xFF00)
           *pSrc_0_8 = 255;
-       else 
+       else
          *pSrc_0_8 = (uint8)t;
 
-       x32 = imul_b1_b3(*(pSrc_2_8) - *(pSrc_6_8)) - x13;
-       x42 = x31 - x32;
-       t = ((x42 + res3) >> PJPG_DCT_SCALE_BITS) + 128;
+       cx32 = imul_b1_b3(cx12) - cx12;
+       t = ((int16)(cx30 + cx32 - cres2) >> PJPG_DCT_SCALE_BITS) + 128;
        if (t < 0)
-         *pSrc_2_8 = 0; 
+         *pSrc_6_8 = 0;
+       else if (t & 0xFF00)
+          *pSrc_6_8 = 255;
+       else
+         *pSrc_6_8 = (uint8)t;
+
+       cx42 = cx30 - cx32;
+       t = ((int16)(cx42 + cres3) >> PJPG_DCT_SCALE_BITS) + 128;
+       if (t < 0)
+         *pSrc_2_8 = 0;
        else if (t & 0xFF00)
           *pSrc_2_8 = 255;
-       else 
+       else
          *pSrc_2_8 = (uint8)t;
 
-       x24 = res1 - imul_b2(x4); // only one
-       t = ((x30 - x13 + res3 + x24) >> PJPG_DCT_SCALE_BITS) + 128;
+       cx24 = (cres1 - imul_b2(cx4)); // only one
+       t = ((int16)(cx30 + cres3 + cx24 - cx12) >> PJPG_DCT_SCALE_BITS) + 128;
        if (t < 0)
          *pSrc_4_8 = 0; 
        else if (t & 0xFF00)
           *pSrc_4_8 = 255;
        else 
          *pSrc_4_8 = (uint8)t;
-
-       x41 = x31 + x32;
-       t = ((x41 - res2) >> PJPG_DCT_SCALE_BITS) + 128;
-       if (t < 0)
-         *pSrc_6_8 = 0; 
-       else if (t & 0xFF00)
-          *pSrc_6_8 = 255;
-       else 
-         *pSrc_6_8 = (uint8)t;
 
       cont_idct_cols:
       pSrc_0_8++;
@@ -459,8 +445,6 @@ uint8 decodeNextMCU(void)
     cur_pQ_l = pQ_l + 1;
     cur_pQ_h = pQ_h + 1;
 
-    rowMCUflags = 0;
-    colMCUflags = 0;
     for (; cur_ZAG_coeff != end_ZAG_coeff; cur_ZAG_coeff++, cur_pQ_l++, cur_pQ_h++) {
       if (compACTab)
         s = huffDecode(&gHuffTab3, gHuffVal3);
@@ -477,8 +461,6 @@ uint8 decodeNextMCU(void)
 
       if (s) {
         while (r) {
-            printf("coeff 0 for ZAG %02X\n",
-              *cur_ZAG_coeff);
           gCoeffBuf[*cur_ZAG_coeff] = 0;
 
           cur_ZAG_coeff++;
@@ -489,11 +471,6 @@ uint8 decodeNextMCU(void)
 
         ac = huffExtend(extraBits, s);
         gCoeffBuf[*cur_ZAG_coeff] = ac * (*cur_pQ_l|(*cur_pQ_h << 8));
-            printf("coeff %04X for ZAG %02X\n",
-            (uint16)gCoeffBuf[*cur_ZAG_coeff],
-              *cur_ZAG_coeff);
-        colMCUflags |= *cur_ZAG_coeff;
-        rowMCUflags |= 1<<(*cur_ZAG_coeff & 7);
 
       } else {
         if (r == 15) {
@@ -501,8 +478,6 @@ uint8 decodeNextMCU(void)
           cur_pQ_h+=15;
         } else {
           while (cur_ZAG_coeff != end_ZAG_coeff) {
-            printf("coeff 0 for ZAG %02X\n",
-              *cur_ZAG_coeff);
             gCoeffBuf[*cur_ZAG_coeff] = 0;
             cur_ZAG_coeff++;
           }

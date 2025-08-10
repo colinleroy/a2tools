@@ -538,28 +538,12 @@ nextIdctRowsLoop:
         bne    full_idct_rows
         lda    _gCoeffBuf+6,y
         bne    full_idct_rows
-        lda    _gCoeffBuf+8,y
-        bne    full_idct_rows
-        lda    _gCoeffBuf+10,y
-        bne    full_idct_rows
-        lda    _gCoeffBuf+12,y
-        bne    full_idct_rows
-        lda    _gCoeffBuf+14,y
-        bne    full_idct_rows
 
         lda    _gCoeffBuf+3,y
         bne    full_idct_rows
         lda    _gCoeffBuf+5,y
         bne    full_idct_rows
         lda    _gCoeffBuf+7,y
-        bne    full_idct_rows
-        lda    _gCoeffBuf+9,y
-        bne    full_idct_rows
-        lda    _gCoeffBuf+11,y
-        bne    full_idct_rows
-        lda    _gCoeffBuf+13,y
-        bne    full_idct_rows
-        lda    _gCoeffBuf+15,y
         bne    full_idct_rows
 
         ; Short circuit the 1D IDCT if only the DC component is non-zero
@@ -829,17 +813,17 @@ _idctCols:
 
         ldy     #0
 nextCol:
+        lda     _gCoeffBuf+16,y
+        bne     full_idct_cols
         lda     _gCoeffBuf+32,y
         bne     full_idct_cols
-        lda     _gCoeffBuf+64,y
+        lda     _gCoeffBuf+48,y
         bne     full_idct_cols
-        lda     _gCoeffBuf+96,y
+        lda     _gCoeffBuf+17,y
         bne     full_idct_cols
         lda     _gCoeffBuf+33,y
         bne     full_idct_cols
-        lda     _gCoeffBuf+65,y
-        bne     full_idct_cols
-        lda     _gCoeffBuf+97,y
+        lda     _gCoeffBuf+49,y
         bne     full_idct_cols
 
         ; Short circuit the 1D IDCT if only the DC component is non-zero
@@ -870,73 +854,75 @@ clampDone1:
         jmp     cont_idct_cols
 
 full_idct_cols:
+
+cx4l  = ptr1
+cx4h  = ptr1+1
+cx30l = ptr2
+cx30h = ptr2+1
+cx5l  = ptr3
+cx5h  = ptr3+1
+cx12l = ptr4
+cx12h = ptr4+1
+
         sty     tmp3          ; Backup before b5/b2/b4/b1_b3 mults
 
-        sec
-        lda     _gCoeffBuf+80,y
-        sbc     _gCoeffBuf+48,y
-        sta     cx4l
-        lda     _gCoeffBuf+81,y
-        sbc     _gCoeffBuf+49,y
-        sta     cx4h
+        ; cx30
+        lda     _gCoeffBuf,y
+        sta     cx30l
+        lda     _gCoeffBuf+1,y
+        sta     cx30h
 
-        clc
-        lda     _gCoeffBuf+80,y
-        adc     _gCoeffBuf+48,y
-        sta     cx7l
-        lda     _gCoeffBuf+81,y
-        adc     _gCoeffBuf+49,y
-        sta     cx7h
-
-        sec
+        ; cx5
         lda     _gCoeffBuf+16,y
-        sbc     _gCoeffBuf+112,y
-        sta     cx6l
-        lda     _gCoeffBuf+17,y
-        sbc     _gCoeffBuf+113,y
-        sta     cx6h
-
-        clc
-        lda     _gCoeffBuf+16,y
-        adc     _gCoeffBuf+112,y
         sta     cx5l
         lda     _gCoeffBuf+17,y
-        adc     _gCoeffBuf+113,y
         sta     cx5h
+
+        ; cx12
+        lda     _gCoeffBuf+32,y
+        sta     cx12l             ; used 4 times
+        lda     _gCoeffBuf+33,y
+        sta     cx12h
+
+        ; cx4 and cx7
+        lda     _gCoeffBuf+48,y
+        sta     cx7l
+        clc
+        eor     #$FF
+        adc     #1
+        sta     cx4l
+        lda     _gCoeffBuf+49,y
+        sta     cx7h
+        eor     #$FF
+        adc     #0
+        sta     cx4h
 
         ;x17 = x5 + x7;
         clc
-cx5l = *+1
-        lda     #$FF
+        lda     cx5l
 cx7l = *+1
         adc     #$FF
         sta     cx17l
-cx5h = *+1
-        lda     #$FF
+        lda     cx5h
 cx7h = *+1
         adc     #$FF
         sta     cx17h
 
-        ;res1 = imul_b5(x4 - x6)
+        ;res1 = imul_b5(x4 - x5)
         sec
-cx4l = *+1
-        lda     #$FF
-cx6l = *+1
-        sbc     #$FF
+        lda     cx4l
+        sbc     cx5l
         tay
-cx4h = *+1
-        lda     #$FF
-cx6h = *+1
-        sbc     #$FF
+        lda     cx4h
+        sbc     cx5h
         tax
         jsr     _imul_b5
         sta     cres1l
         stx     cres1h
 
-        ;stg26 = imul_b4(x6) - res1;
-        ;res2 = stg26 - x17;
-        ldy     cx6l
-        ldx     cx6h
+        ;res2 = imul_b4(x5) - res1 - x17;
+        ldy     cx5l
+        ldx     cx5h
         jsr     _imul_b4
 
         sec
@@ -945,9 +931,9 @@ cx6h = *+1
         txa
         sbc     cres1h
         tax
-        tya
 
         sec
+        tya
 cx17l = *+1
         sbc     #$FF
         sta     cres2l
@@ -956,8 +942,7 @@ cx17h = *+1
         sbc     #$FF
         sta     cres2h
 
-        ;x15 = x5 - x7;
-        ;res3 = imul_b1_b3(x15) - res2;
+        ;res3 = imul_b1_b3(x5 - x7) - res2;
         sec
         lda     cx5l
         sbc     cx7l
@@ -975,67 +960,17 @@ cres2h = *+1
         sbc     #$FF
         sta     cres3h
 
-cx31l = ptr1
-cx31h = ptr1+1
-cx30l = ptr2
-cx30h = ptr2+1
-cx13l = ptr3
-cx13h = ptr3+1
-cx32l = ptr4
-cx32h = ptr4+1
-
-        ldy     tmp3          ; And restore
-        sec
-        lda     _gCoeffBuf,y
-        sbc     _gCoeffBuf+64,y
-        sta     cx31l
-        lda     _gCoeffBuf+1,y
-        sbc     _gCoeffBuf+65,y
-        sta     cx31h
-
-        clc
-        lda     _gCoeffBuf,y
-        adc     _gCoeffBuf+64,y
-        sta     cx30l
-        lda     _gCoeffBuf+1,y
-        adc     _gCoeffBuf+65,y
-        sta     cx30h
-
-        clc
-        lda     _gCoeffBuf+32,y
-        adc     _gCoeffBuf+96,y
-        sta     cx13l             ; used 4 times
-        lda     _gCoeffBuf+33,y
-        adc     _gCoeffBuf+97,y
-        sta     cx13h
-
-        sec
-        lda     _gCoeffBuf+32,y
-        sbc     _gCoeffBuf+96,y
-        tay
-        ldx     tmp3              ; preserve Y for mult
-        lda     _gCoeffBuf+33,x
-        sbc     _gCoeffBuf+97,x
-        tax
-        jsr     _imul_b1_b3
-        sec
-        sbc     cx13l
-        sta     cx32l
-        txa
-        sbc     cx13h
-        sta     cx32h
-
-        ; t = ((x30 + x13 + x17) >> PJPG_DCT_SCALE_BITS) +128;
+        ; t = ((x30 + x12 + x17) >> PJPG_DCT_SCALE_BITS) +128;
         clc
         lda     cx30l
-        adc     cx13l
+        adc     cx12l
         tay
         lda     cx30h
-        adc     cx13h
+        adc     cx12h
         tax
-        tya
 
         clc
+        tya
         adc     cx17l
         tay
         txa
@@ -1057,13 +992,59 @@ clampDone2:
         ldy     tmp3            ; And restore
         sta     _gCoeffBuf,y
 
-        ;x42 = x31 - x32;
+        ; cx32 = imul_b1_b3(cx12) - cx12;
+        ldy     cx12l
+        ldx     cx12h
+        jsr     _imul_b1_b3
         sec
-        lda     cx31l
-        sbc     cx32l
+        sbc     cx12l
+        sta     cx32l
         tay
-        lda     cx31h
-        sbc     cx32h
+        txa
+        sbc     cx12h
+        sta     cx32h
+        tax
+
+        ; t = ((x30 + x32 - res2) >> PJPG_DCT_SCALE_BITS) +128;
+        clc
+        tya
+        adc     cx30l
+        tay
+        txa
+        adc     cx30h
+        tax
+        tya
+
+        sec
+        sbc     cres2l
+        tay
+        txa
+        sbc     cres2h
+
+        INLINE_ASRYA7
+
+        eor     #$80
+        bmi     :+
+        inx
+:       cpx     #$00
+        beq     clampDone5
+        txa                     ; Clamp:
+        asl                     ; get sign to carry
+        lda     #$FF            ; $FF+C = 0 if neg, $FF+c = $FF if pos
+        adc     #0
+clampDone5:
+        ldy     tmp3            ; And restore
+        sta     _gCoeffBuf+96,y
+
+        ;x42 = x30 - x32;
+        sec
+        lda     cx30l
+cx32l = *+1
+        sbc     #$FF
+        tay
+        lda     cx30h
+cx32h = *+1
+        sbc     #$FF
         tax
 
         ; t = ((x42 + res3) >> PJPG_DCT_SCALE_BITS) +128;
@@ -1097,8 +1078,7 @@ clampDone3:
         ldy     tmp3            ; And restore
         sta     _gCoeffBuf+32,y
 
-
-        ;x24 = res1 - imul_b2(x4
+        ;x24 = res1 - imul_b2(x4)
         ldy     cx4l
         ldx     cx4h
         jsr     _imul_b2
@@ -1115,7 +1095,7 @@ cres1h = *+1
         sbc     tmp2
         tax
 
-        ;x44 = res3 + x24;
+        ;+ res3
         clc
         tya
         adc     cres3l
@@ -1132,13 +1112,13 @@ cres1h = *+1
         txa
         adc     cx30h
         tax
-        ; -x13
+        ; -x12
         sec
         tya
-        sbc     cx13l
+        sbc     cx12l
         tay
         txa
-        sbc     cx13h
+        sbc     cx12h
 
         INLINE_ASRYA7
 
@@ -1154,38 +1134,6 @@ cres1h = *+1
 clampDone4:
         ldy     tmp3            ; And restore
         sta     _gCoeffBuf+64,y
-
-        ;x41 = x31 + x32;
-        clc
-        lda     cx32l
-        adc     cx31l
-        tay
-        lda     cx32h
-        adc     cx31h
-        tax
-
-        ; t = ((x41 - res2) >> PJPG_DCT_SCALE_BITS) +128;
-        tya
-        sec
-        sbc     cres2l
-        tay
-        txa
-        sbc     cres2h
-
-        INLINE_ASRYA7
-
-        eor     #$80
-        bmi     :+
-        inx
-:       cpx     #$00
-        beq     clampDone5
-        txa                     ; Clamp:
-        asl                     ; get sign to carry
-        lda     #$FF            ; $FF+C = 0 if neg, $FF+c = $FF if pos
-        adc     #0
-clampDone5:
-        ldy     tmp3            ; And restore
-        sta     _gCoeffBuf+96,y
 
 cont_idct_cols:
         dec     idctCC
