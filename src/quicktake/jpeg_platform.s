@@ -810,7 +810,7 @@ cont_idct_rows:
 ; void idctCols(void
 
 _idctCols:
-        lda     #8
+        lda     #4
         sta     idctCC
 
         ldy     #0
