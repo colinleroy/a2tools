@@ -247,6 +247,7 @@ nextIdctRowsLoop:
          res3 = imul_b1_b3(x15) - res2;
 
          x24 = res1 - imul_b2(x4);
+
          *(rowSrc) = x30 + x13 + x17;
          *(rowSrc_1) = (res3 + x31) - x32;
          *(rowSrc_2) = x24 + x30 + res3 - x13;
@@ -261,7 +262,7 @@ nextIdctRowsLoop:
 
 #define PJPG_DCT_SCALE_BITS 7
 
-void idctCols(uint8 mcublock)
+void idctCols(uint8 mcuoffset)
 {
    uint8 idctCC;
 
@@ -276,8 +277,8 @@ void idctCols(uint8 mcublock)
    int16 *pSrc_7_8;
    uint8 c;
    int16 t;
-   uint8 *output = gMCUBufG+(mcublock?32:0);
-   uint8 *orig_output = output;
+   uint8 *output = (uint8*)gMCUBufG;
+
    pSrc_0_8 = gCoeffBuf+0*8;
    pSrc_1_8 = gCoeffBuf+1*8;
    pSrc_2_8 = gCoeffBuf+2*8;
@@ -289,17 +290,6 @@ void idctCols(uint8 mcublock)
 
    for (idctCC = 0; idctCC < 4; idctCC++)
    {
-
-printf("c %d from reading %p (%d) writing %p (%d)\n",
-        idctCC, pSrc_0_8, 
-        (uint16)(pSrc_0_8 - gCoeffBuf),
-        output, (output-orig_output));
-
-printf("c %d to reading %p (%d) writing %p (%d)\n",
-        idctCC, pSrc_7_8, 
-        (uint16)(pSrc_7_8 - gCoeffBuf),
-        output, ((output+3*4)-orig_output));
-
       if (*pSrc_1_8 != 0)
         goto full_idct_cols;
       if (*pSrc_2_8 != 0)
@@ -316,14 +306,10 @@ printf("c %d to reading %p (%d) writing %p (%d)\n",
        else 
          c = (uint8)t;
 
-       *(pSrc_0_8) =
-         *(pSrc_1_8) =
-         *(pSrc_2_8) =
-         *(pSrc_3_8) = c;
-       output[0*4] = 
-        output[1*4] = 
-        output[2*4] = 
-        output[3*4] = c;
+       output[mcuoffset + 0*4] = 
+        output[mcuoffset + 1*4] = 
+        output[mcuoffset + 2*4] = 
+        output[mcuoffset + 3*4] = c;
       goto cont_idct_cols;
       full_idct_cols:
        int16 cx4, cx7, cx5, cx30, cx12, cx17;
@@ -342,43 +328,43 @@ printf("c %d to reading %p (%d) writing %p (%d)\n",
        cres2 = imul_b4(cx5) - cres1 - cx17;
        cres3 = imul_b1_b3(cx5 - cx7) - cres2;
 
+       /* same index as before */
        // descale, convert to unsigned and clamp to 8-bit
        t = ((int16)(cx30 + cx12 + cx17) >> PJPG_DCT_SCALE_BITS) + 128;
        if (t < 0)
-         *pSrc_0_8 = 0;
+         output[mcuoffset + 0*4] = 0;
        else if (t & 0xFF00)
-          *pSrc_0_8 = 255;
+          output[mcuoffset + 0*4] = 255;
        else
-         *pSrc_0_8 = (uint8)t;
-output[0*4] = *pSrc_0_8;
+         output[mcuoffset + 0*4] = (uint8)t;
+
        cx32 = imul_b1_b3(cx12) - cx12;
        t = ((int16)(cx30 + cx32 - cres2) >> PJPG_DCT_SCALE_BITS) + 128;
        if (t < 0)
-         *pSrc_6_8 = 0;
+         output[mcuoffset + 3*4] = 0;
        else if (t & 0xFF00)
-          *pSrc_3_8 = 255;
+          output[mcuoffset + 3*4] = 255;
        else
-         *pSrc_3_8 = (uint8)t;
-output[3*4] = *pSrc_3_8;
+         output[mcuoffset + 3*4] = (uint8)t;
+
        cx42 = cx30 - cx32;
        t = ((int16)(cx42 + cres3) >> PJPG_DCT_SCALE_BITS) + 128;
        if (t < 0)
-         *pSrc_2_8 = 0;
+         output[mcuoffset + 1*4] = 0;
        else if (t & 0xFF00)
-          *pSrc_1_8 = 255;
+          output[mcuoffset + 1*4] = 255;
        else
-         *pSrc_1_8 = (uint8)t;
-output[1*4] = *pSrc_1_8;
+         output[mcuoffset + 1*4] = (uint8)t;
 
        cx24 = (cres1 - imul_b2(cx4)); // only one
        t = ((int16)(cx30 + cres3 + cx24 - cx12) >> PJPG_DCT_SCALE_BITS) + 128;
        if (t < 0)
-         *pSrc_4_8 = 0; 
+         output[mcuoffset + 2*4] = 0; 
        else if (t & 0xFF00)
-          *pSrc_2_8 = 255;
+          output[mcuoffset + 2*4] = 255;
        else 
-         *pSrc_2_8 = (uint8)t;
-output[2*4] = *pSrc_2_8;
+         output[mcuoffset + 2*4] = (uint8)t;
+
 
       cont_idct_cols:
       pSrc_0_8++;
@@ -389,7 +375,7 @@ output[2*4] = *pSrc_2_8;
       pSrc_3_8++;
       pSrc_5_8++;
       pSrc_7_8++;
-      output++;
+      mcuoffset++;
    }
 }
 
@@ -471,27 +457,28 @@ uint8 decodeNextMCU(void)
         s = huffDecode(&gHuffTab2, gHuffVal2);
 
       extraBits = 0;
+      r = s >> 4;
+
       numExtraBits = s & 0xF;
       if (numExtraBits)
         extraBits = getBitsFF(numExtraBits);
 
-      r = s >> 4;
       s = numExtraBits;
 
       if (s) {
-        while (r) {
-          cur_ZAG_coeff++;
-          cur_pQ_l++;
-          cur_pQ_h++;
-          r--;
+        if (r) {
+          cur_ZAG_coeff += r;
+          cur_pQ_l += r;
+          cur_pQ_h += r;
         }
 
         if (ZAG_Coeff_work[*cur_ZAG_coeff] > 0) {
           ac = huffExtend(extraBits, s);
           gCoeffBuf[*cur_ZAG_coeff] = ac * (*cur_pQ_l|(*cur_pQ_h << 8));
-        } else printf("zkip\n");
+        }
       } else {
         if (r == 15) {
+          cur_ZAG_coeff+=15;
           cur_pQ_l+=15;
           cur_pQ_h+=15;
         } else {
@@ -501,6 +488,7 @@ uint8 decodeNextMCU(void)
     }
     transformBlock(mcuBlock);
   }
+
    /* Skip the other blocks, do the minimal work, only consuming
     * input bits
     */
@@ -543,25 +531,8 @@ void transformBlock(uint8 mcuBlock)
   uint8* pSrc;
   uint8 iTB;
 
-  if (mcuBlock == 0) {
-    pGDst = gMCUBufG;
-  } else {
-    pGDst = gMCUBufG + 32;
-  }
-
   idctRows();
-  idctCols(mcuBlock == 0 ? 0 : 32);
-
-  pSrc = (uint8 *)gCoeffBuf;
-  for (iTB = 32; iTB; iTB--) {
-    if (*pGDst == *pSrc) {
-      printf("congrats\n");
-    } else {
-      printf("expected %02X got %02X\n", *pSrc, *pGDst);
-    }
-    *pGDst++ = (uint8)*pSrc;
-    pSrc +=2;
-  }
+  idctCols(mcuBlock == 0 ? 0 : 16);
 }
 
 //------------------------------------------------------------------------------
@@ -599,22 +570,22 @@ void copy_decoded_to(uint8 *pDst_row)
   by = 4;
   while (1) {
     *(pDst1+s) = gMCUBufG[s];
-    *(pDst2+s) = (gMCUBufG+32)[s];
+    *(pDst2+s) = (gMCUBufG+16)[s];
     s++;
     *(pDst1+s) = gMCUBufG[s];
-    *(pDst2+s) = (gMCUBufG+32)[s];
+    *(pDst2+s) = (gMCUBufG+16)[s];
     s++;
     *(pDst1+s) = gMCUBufG[s];
-    *(pDst2+s) = (gMCUBufG+32)[s];
+    *(pDst2+s) = (gMCUBufG+16)[s];
     s++;
     *(pDst1+s) = gMCUBufG[s];
-    *(pDst2+s) = (gMCUBufG+32)[s];
+    *(pDst2+s) = (gMCUBufG+16)[s];
+    s++;
 
     if (!--by)
       break;
-    pDst1 += (DECODED_WIDTH-8);
-    pDst2 += (DECODED_WIDTH-8);
-    s += (4+1);
+    pDst1 += (DECODED_WIDTH-4);
+    pDst2 += (DECODED_WIDTH-4);
   }
 }
 

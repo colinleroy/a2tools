@@ -38,12 +38,12 @@ bbHigh         = _zp5       ; byte, used in huffDecode and getBits
 mcuBlock       = _zp7       ; byte, used in _decodeNextMCU
 
 _gBitsLeft     = _zp8       ; byte, used everywhere
-cur_pQ         = _zp9       ; byte, used in _decodeNextMCU
 cur_ZAG_coeff  = _zp10      ; byte, used in _decodeNextMCU
 rDMCU          = _zp11      ; byte, used in _decodeNextMCU
 sDMCU          = _zp12      ; byte, used in _decodeNextMCU
 iDMCU          = _zp13      ; byte, used in _decodeNextMCU
-
+inputIdx       = _zp11      ; byte, used in idctRows and idctCols
+outputIdx      = _zp12      ; byte, used in idctCols
 dw             = _zp9       ; byte, used in imul (IDCT)
 neg            = _zp10      ; byte, used in imul (IDCT)
 
@@ -98,6 +98,22 @@ _cur_cache_ptr = _prev_ram_irq_vector
                                 ; X reg    A reg
         dex                     ; 11111111 XXXXXXLh if C
 @done:
+.endscope
+.endmacro
+
+; clamp uint16 in AX to uint8 in A
+.macro ADD_128_AND_CLAMP
+.scope
+        eor     #$80
+        bmi     :+
+        inx
+:       cpx     #$00
+        beq     clampDone
+        txa                     ; Clamp:
+        asl                     ; get sign to carry
+        lda     #$FF            ; $FF+C = 0 if neg, $FF+c = $FF if pos
+        adc     #0
+clampDone:
 .endscope
 .endmacro
 
@@ -563,7 +579,7 @@ nextIdctRowsLoop:
         jmp    cont_idct_rows
 
 full_idct_rows:
-        sty     tmp3
+        sty     inputIdx
 
 rx5l  = ptr1
 rx5h  = ptr1+1
@@ -641,7 +657,8 @@ rx13h = ptr4+1
 
         clc
         adc    rx30l
-        ldy    tmp3
+
+        ldy    inputIdx
         sta    _gCoeffBuf,y
         txa
         adc    rx30h
@@ -727,7 +744,8 @@ rx31h = *+1
         sec
 rx32l = *+1
         sbc    #$FF
-        ldy     tmp3          ; and restore
+
+        ldy     inputIdx
         sta    _gCoeffBuf+2,y
         txa
 rx32h = *+1
@@ -775,7 +793,8 @@ rres3h = *+1
 
         sec
         sbc    rx13l
-        ldy    tmp3
+
+        ldy    inputIdx
         sta    _gCoeffBuf+4,y
         txa
         sbc    rx13h
@@ -811,10 +830,12 @@ cont_idct_rows:
 ; void idctCols(void
 
 _idctCols:
+        sta     outputIdx
         lda     #4
         sta     idctCC
 
         ldy     #0
+        sty     inputIdx
 nextCol:
         lda     _gCoeffBuf+16,y
         bne     full_idct_cols
@@ -822,6 +843,7 @@ nextCol:
         bne     full_idct_cols
         lda     _gCoeffBuf+48,y
         bne     full_idct_cols
+
         lda     _gCoeffBuf+17,y
         bne     full_idct_cols
         lda     _gCoeffBuf+33,y
@@ -835,25 +857,15 @@ nextCol:
 
         INLINE_ASRXA7
 
-        eor     #$80
-        bmi     :+
-        inx
-:       cpx     #$00
-        beq     clampDone1
-        txa                     ; Clamp:
-        asl                     ; get sign to carry
-        lda     #$FF            ; $FF+C = 0 if neg, $FF+c = $FF if pos
-        adc     #0
-clampDone1:
-        sta     _gCoeffBuf,y
-        sta     _gCoeffBuf+16,y
-        sta     _gCoeffBuf+32,y
-        sta     _gCoeffBuf+48,y
-        lda     #$00
-        sta     _gCoeffBuf+1,y
-        sta     _gCoeffBuf+17,y
-        sta     _gCoeffBuf+33,y
-        sta     _gCoeffBuf+49,y
+        ADD_128_AND_CLAMP
+        ldy     outputIdx
+        sta     _gMCUBufG,y
+        sta     _gMCUBufG+4,y
+        sta     _gMCUBufG+8,y
+        sta     _gMCUBufG+12,y
+        iny
+        sty     outputIdx
+
         jmp     cont_idct_cols
 
 full_idct_cols:
@@ -867,7 +879,7 @@ cx5h  = ptr3+1
 cx12l = ptr4
 cx12h = ptr4+1
 
-        sty     tmp3          ; Backup before b5/b2/b4/b1_b3 mults
+        sty     inputIdx          ; Backup before b5/b2/b4/b1_b3 mults
 
         ; cx30
         lda     _gCoeffBuf,y
@@ -963,7 +975,7 @@ cres2h = *+1
         sbc     #$FF
         sta     cres3h
 
-        ; t = ((x30 + x12 + x17) >> PJPG_DCT_SCALE_BITS) +128;
+        ; val0 = ((x30 + x12 + x17) >> PJPG_DCT_SCALE_BITS) +128;
         clc
         lda     cx30l
         adc     cx12l
@@ -980,20 +992,8 @@ cres2h = *+1
         adc     cx17h
 
         INLINE_ASRYA7
-
-        eor     #$80
-        bmi     :+
-        inx
-
-:       cpx     #$00
-        beq     clampDone2
-        txa                     ; Clamp:
-        asl                     ; get sign to carry
-        lda     #$FF            ; $FF+C = 0 if neg, $FF+c = $FF if pos
-        adc     #0
-clampDone2:
-        ldy     tmp3            ; And restore
-        sta     _gCoeffBuf,y
+        ADD_128_AND_CLAMP
+        sta     val0
 
         ; cx32 = imul_b1_b3(cx12) - cx12;
         ldy     cx12l
@@ -1008,7 +1008,7 @@ clampDone2:
         sta     cx32h
         tax
 
-        ; t = ((x30 + x32 - res2) >> PJPG_DCT_SCALE_BITS) +128;
+        ; val3 = ((x30 + x32 - res2) >> PJPG_DCT_SCALE_BITS) +128;
         clc
         tya
         adc     cx30l
@@ -1025,19 +1025,8 @@ clampDone2:
         sbc     cres2h
 
         INLINE_ASRYA7
-
-        eor     #$80
-        bmi     :+
-        inx
-:       cpx     #$00
-        beq     clampDone5
-        txa                     ; Clamp:
-        asl                     ; get sign to carry
-        lda     #$FF            ; $FF+C = 0 if neg, $FF+c = $FF if pos
-        adc     #0
-clampDone5:
-        ldy     tmp3            ; And restore
-        sta     _gCoeffBuf+48,y
+        ADD_128_AND_CLAMP
+        sta     val3
 
         ;x42 = x30 - x32;
         sec
@@ -1050,13 +1039,7 @@ cx32h = *+1
         sbc     #$FF
         tax
 
-        ; t = ((x42 + res3) >> PJPG_DCT_SCALE_BITS) +128;
-        ; if (t < 0)
-        ;   *pSrc_2_8 = 0;
-        ; else if (t & 0xFF00)
-        ;    *pSrc_2_8 = 255;
-        ; else
-        ;   *pSrc_2_8 = (uint8)t;
+        ; val1 = ((x42 + res3) >> PJPG_DCT_SCALE_BITS) +128;
         clc
         tya
 cres3l = *+1
@@ -1067,19 +1050,8 @@ cres3h = *+1
         adc     #$FF
 
         INLINE_ASRYA7
-
-        eor     #$80
-        bmi     :+
-        inx
-:       cpx     #$00
-        beq     clampDone3
-        txa                     ; Clamp:
-        asl                     ; get sign to carry
-        lda     #$FF            ; $FF+C = 0 if neg, $FF+c = $FF if pos
-        adc     #0
-clampDone3:
-        ldy     tmp3            ; And restore
-        sta     _gCoeffBuf+16,y
+        ADD_128_AND_CLAMP
+        sta     val1
 
         ;x24 = res1 - imul_b2(x4)
         ldy     cx4l
@@ -1124,25 +1096,31 @@ cres1h = *+1
         sbc     cx12h
 
         INLINE_ASRYA7
+        ADD_128_AND_CLAMP
 
-        eor     #$80
-        bmi     :+
-        inx
-:       cpx     #$00
-        beq     clampDone4
-        txa                     ; Clamp:
-        asl                     ; get sign to carry
-        lda     #$FF            ; $FF+C = 0 if neg, $FF+c = $FF if pos
-        adc     #0
-clampDone4:
-        ldy     tmp3            ; And restore
-        sta     _gCoeffBuf+32,y
+        ldy     outputIdx
+; val2 which we just computed
+        sta     _gMCUBufG+8,y
+val0 = *+1
+        lda     #$FF
+        sta     _gMCUBufG,y
+val1 = *+1
+        lda     #$FF
+        sta     _gMCUBufG+4,y
+val3 = *+1
+        lda     #$FF
+        sta     _gMCUBufG+12,y
+
+        iny
+        sty     outputIdx
 
 cont_idct_cols:
         dec     idctCC
         beq     idctColDone
+        ldy     inputIdx
         iny
         iny
+        ; inc     outputIdx - already inc'd while loaded
         jmp     nextCol
 
 idctColDone:
@@ -1174,6 +1152,7 @@ decRestarts:
 noRestart:
         ldx     #$00
         stx     mcuBlock
+
 nextMcuBlock:
         ; for (mcuBlock = 0; mcuBlock < 2; mcuBlock++) {
         ldy     _gMCUOrg,x
@@ -1224,24 +1203,24 @@ loadDCTab:
 doDec:
         sta     sDMCU
 
-        and     #$0F
+        and     #$0F          ; numExtraBits
         beq     :+
-        jsr     getBitsDirect
+        jsr     getBitsDirect ; r = getBitsFF(numExtraBits);
         jmp     doExtend
-:       tax
+:       tax                   ; otherwise set r to uint16 0 (A is 0)
 
 doExtend:
-        ; dc = huffExtend(r, s);
-        sta     extendX
+        sta     extendX       ; dc = huffExtend(r, s);
         stx     extendX+1
         lda     sDMCU
         HUFFEXTEND
-        stx     tmp2
+        stx     tmp2          ; store dc in tmp1/2
         sta     tmp1
 
         ldy     componentID
 
-        ;compACTab = gCompACTab[componentID];
+        ; compACTab = gCompACTab[componentID];
+        ; set pointers to huffDecode2/3 *before* cur_ZAG_coeff loop
         lda     _gCompACTab,y
         beq     setDec2
 setDec3:
@@ -1268,7 +1247,7 @@ setDec:
         lda     _gLastDC_l,y
         adc     tmp1
         sta     _gLastDC_l,y
-        sta     ptr2
+        sta     ptr2          ; Store dc to ptr2 as it's where mult expects it
 
         lda     _gLastDC_h,y
         adc     tmp2
@@ -1281,27 +1260,26 @@ load_pq0h:
 load_pq0l:
         lda     $FFFF
         jsr     mult16x16x16_direct
-        sta     _gCoeffBuf
+        sta     _gCoeffBuf    ; and store gCoeffBuf[0]
         stx     _gCoeffBuf+1
 
-        
-
-        lda     #1
+        lda     #1            ; start the ZAG_coeff loop
         sta     cur_ZAG_coeff
-        sta     cur_pQ
 
 doZAGLoop:
 huffDec:
-        jsr     $FFFF           ; Patched with huffDecode2/3
-        tay
+        jsr     $FFFF           ; Patched with huffDecode2 or 3
+
+        tay                     ; r = s >> 4;
         lda     right_shift_4,y
         sta     rDMCU
-        tya
+
+        tya                     ; numExtraBits = s & 0xF
         and     #$0F
         sta     sDMCU
 
         beq     :+              ; if numExtraBits (s & 0x0F)
-        jsr     getBitsDirect
+        jsr     getBitsDirect   ;   extraBits = getBitsFF(numExtraBits);
         .byte   $A0             ; LDY imm opcode, skips tax, = jmp     storeExtraBits
 :       tax                     ; extraBits = 0
 
@@ -1309,8 +1287,7 @@ storeExtraBits:
         sta     extendX         ; Store for later huffExtending
         stx     extendX+1
 
-        lda     sDMCU           ; s = numExtraBits
-
+        ldy     sDMCU           ; s = numExtraBits
         bne     sNotZero
 sZero:
         lda     rDMCU
@@ -1319,43 +1296,35 @@ sZero:
         jmp     ZAG_finished
 
 :       ; Advance 15
-        lda     cur_pQ
+        lda     cur_ZAG_coeff
         adc     #14           ; 15 with carry set by previous cmp
-        sta     cur_pQ
+        tax                   ; checkZAGLoop expects cur_ZAG_coeff in X
+                              ; and will save it.
         jmp     checkZAGLoop
 
 sNotZero:
+        ldx     cur_ZAG_coeff
         lda     rDMCU
         beq     storeGCoeff
 
-        ; while (r) { gCoeffBuf[*cur_ZAG_coeff] = 0; ...}
-        ldx     cur_ZAG_coeff
-        lda     #0
-zeroZAG:
-        ldy     _ZAG_Coeff,x
-        sta     _gCoeffBuf,y
-        sta     _gCoeffBuf+1,y
-
-        inx
-        inc     cur_pQ
-
-        dec     rDMCU
-        bne     zeroZAG
-        stx     cur_ZAG_coeff
+        ; cur_ZAG_coeff += r;
+        clc
+        adc     cur_ZAG_coeff
+        sta     cur_ZAG_coeff
+        tax
 
 storeGCoeff:
-        ldx     cur_ZAG_coeff ; Not always preloaded
         lda     _ZAG_Coeff_work,x
         beq     end_of_coeff_cal
         ;ac = huffExtend(sDMCU)
         ; extendX already set
-        lda     sDMCU
+        tya                   ; Y still contains sDMCU
         HUFFEXTEND
 
         ;gCoeffBuf[*cur_ZAG_coeff] = ac * *cur_pQ;
         sta     ptr2
         stx     ptr2+1
-        ldy     cur_pQ
+        ldy     cur_ZAG_coeff
 load_pq1l:
         lda     $FFFF,y
 load_pq1h:
@@ -1371,17 +1340,14 @@ load_pq1h:
         lda    tmp1
         sta     _gCoeffBuf,y
 end_of_coeff_cal:
-        inc     cur_pQ
-        inc     cur_ZAG_coeff
+        inx                     ; cur_ZAG_coeff
 checkZAGLoop:
-         lda     cur_ZAG_coeff
-         cmp     #64             ; end_ZAG_coeff
-         beq     ZAG_finished
-         jmp     doZAGLoop
+        cpx     #64             ; end_ZAG_coeff
+        beq     ZAG_finished
+        stx     cur_ZAG_coeff
+        jmp     doZAGLoop
 
 ZAG_finished:
-        stx     cur_ZAG_coeff ; Store cur_ZAG_coeff after looping in finishZAG
-        lda     mcuBlock
         jsr     _transformBlock
 
         inc     mcuBlock
@@ -1392,7 +1358,6 @@ ZAG_finished:
 
 firstMCUBlocksDone:
         ; Skip the other blocks, do the minimal work
-        ldx     mcuBlock
         cpx     _gMaxBlocksPerMCU
         bcs     uselessBlocksDone
 
@@ -1433,13 +1398,13 @@ i64loop:
 uselessDec:
         jsr     $FFFF   ; Patched with huffDecode2/3
 
+        beq     ZAG2_Done
         sta     sDMCU
         and     #$0F
-        beq     ZAG2_Done
-        sta    tmp1
+        sta     tmp1
         jsr     getBitsDirect
-        ldx    tmp1
-        lda    right_shift_4,x
+        ldx     tmp1
+        lda     right_shift_4,x
 
         sec             ; Set carry for for loop inc
         adc     iDMCU
@@ -1459,29 +1424,15 @@ uselessBlocksDone:
         rts
 
 _transformBlock:
-        pha
-
         jsr     _idctRows
-        jsr     _idctCols
 
-        ldy     #31
-
-        pla
+        lda     #0
+        ldy     mcuBlock
         beq     :+
-        ldy     #(32+31)
-
-:       ldx     #(31*2)
-        sec
-tbCopy:
-        lda     _gCoeffBuf,x
-        sta     _gMCUBufG,y
-
-        dey
-        dex
-        dex
-        bpl     tbCopy
-
-        rts
+        lda     #16
+:
+        jsr     _idctCols     ; Keeping a jsr/rts here for profiling
+        rts                   ; Penalty is small, 4800*(12-3)
 
 _pjpeg_decode_mcu:
         lda    _gNumMCUSRemainingX
@@ -1530,55 +1481,47 @@ _copy_decoded_to:
 copy_cont:
         lda    _gMCUBufG,y
         sta    (ptr1),y
-        lda    _gMCUBufG+32,y
+        lda    _gMCUBufG+16,y
         sta    (ptr2),y
         iny
         lda    _gMCUBufG,y
         sta    (ptr1),y
-        lda    _gMCUBufG+32,y
+        lda    _gMCUBufG+16,y
         sta    (ptr2),y
         iny
         lda    _gMCUBufG,y
         sta    (ptr1),y
-        lda    _gMCUBufG+32,y
+        lda    _gMCUBufG+16,y
         sta    (ptr2),y
         iny
         lda    _gMCUBufG,y
         sta    (ptr1),y
-        lda    _gMCUBufG+32,y
+        lda    _gMCUBufG+16,y
         sta    (ptr2),y
+        iny
 
         dex
         beq    copy_out
 
         lda    ptr1    ; pDst1 += (DECODED_WIDTH);
-        adc    #<(320-8) ; Carry sure to be clear
+        adc    #<(320-4) ; Carry sure to be clear
         sta    ptr1
         lda    ptr1+1
-        adc    #>(320-8)
+        adc    #>(320-4)
         sta    ptr1+1
 
         lda    ptr2   ; pDst2 += (DECODED_WIDTH);
-        adc    #<(320-8)
+        adc    #<(320-4)
         sta    ptr2
         lda    ptr2+1
-        adc    #>(320-8)
+        adc    #>(320-4)
         sta    ptr2+1
-
-        tya           ; s += 4+1
-        adc    #5
-        tay
 
         jmp    copy_cont
 copy_out:
         rts
 
         .bss
-
-;getBit/octet
-final_shift:
-        .res 1
-ret:    .res 2
 
 ;huffExtend
 extendX:.res 2
