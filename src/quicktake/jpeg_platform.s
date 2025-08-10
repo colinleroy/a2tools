@@ -115,16 +115,23 @@ _initFloppyStarter:
 
 ; uint8 getBit(void)
 ; Returns with carry set if bit 1
-.macro INLINE_GETBIT
+; Saves A if param given
+.macro INLINE_GETBIT SAVE_A
 .scope
         dec     _gBitsLeft
         bpl     haveBit
-
+        .if .paramcount = 1
+        sta     reloadA+1
+        .endif
         jsr     getOctet
         sta     _gBitBuf
 
         lda     #7
         sta     _gBitsLeft
+        .if .paramcount = 1
+reloadA:
+        lda     #$FF
+        .endif
 haveBit:
         asl     _gBitBuf    ; Sets carry
 done:
@@ -222,12 +229,10 @@ getBitsDirect:
         bcs     large_n
 small_n:
         lda     #0
-        sta     code
-:       INLINE_GETBIT
-        rol     code
+:       INLINE_GETBIT 1
+        rol     a
         dex
         bne     :-
-        lda     code
         ; X is zero
         rts
 
@@ -236,25 +241,26 @@ large_n:
         sty     last_few+1
 
         lda     #0            ; Init result
-        sta     code
         sta     code+1
 
         ldx     #8            ; Get the first eight
-:       INLINE_GETBIT
-        rol     code
+:       INLINE_GETBIT 1
+        rol     a
         dex
         bne     :-
 
+        sta     code
+        txa                   ; Reset A to 0
 last_few:
         ldx     #$FF          ; Get the last (n-8)
-:       INLINE_GETBIT
+:       INLINE_GETBIT 1
         rol     code
-        rol     code+1
+        rol     a
         dex
         bne     :-
 
+        tax
         lda     code
-        ldx     code+1
         rts
 
 AXBCK: .res 2
