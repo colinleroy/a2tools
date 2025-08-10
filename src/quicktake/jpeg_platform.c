@@ -211,7 +211,7 @@ void idctRows(void)
 
 
    rowSrc = gCoeffBuf;
-   i = 8;
+   i = 4;
 nextIdctRowsLoop:
        rowSrc_1 = rowSrc + 1;
        rowSrc_2 = rowSrc + 2;
@@ -261,7 +261,7 @@ nextIdctRowsLoop:
 
 #define PJPG_DCT_SCALE_BITS 7
 
-void idctCols(void)
+void idctCols(uint8 mcublock)
 {
    uint8 idctCC;
 
@@ -276,7 +276,8 @@ void idctCols(void)
    int16 *pSrc_7_8;
    uint8 c;
    int16 t;
-
+   uint8 *output = gMCUBufG+(mcublock?32:0);
+   uint8 *orig_output = output;
    pSrc_0_8 = gCoeffBuf+0*8;
    pSrc_1_8 = gCoeffBuf+1*8;
    pSrc_2_8 = gCoeffBuf+2*8;
@@ -286,8 +287,19 @@ void idctCols(void)
    pSrc_6_8 = gCoeffBuf+6*8;
    pSrc_7_8 = gCoeffBuf+7*8;
 
-   for (idctCC = 0; idctCC < 8; idctCC++)
+   for (idctCC = 0; idctCC < 4; idctCC++)
    {
+
+printf("c %d from reading %p (%d) writing %p (%d)\n",
+        idctCC, pSrc_0_8, 
+        (uint16)(pSrc_0_8 - gCoeffBuf),
+        output, (output-orig_output));
+
+printf("c %d to reading %p (%d) writing %p (%d)\n",
+        idctCC, pSrc_7_8, 
+        (uint16)(pSrc_7_8 - gCoeffBuf),
+        output, ((output+3*4)-orig_output));
+
       if (*pSrc_1_8 != 0)
         goto full_idct_cols;
       if (*pSrc_2_8 != 0)
@@ -308,6 +320,10 @@ void idctCols(void)
          *(pSrc_1_8) =
          *(pSrc_2_8) =
          *(pSrc_3_8) = c;
+       output[0*4] = 
+        output[1*4] = 
+        output[2*4] = 
+        output[3*4] = c;
       goto cont_idct_cols;
       full_idct_cols:
        int16 cx4, cx7, cx5, cx30, cx12, cx17;
@@ -334,7 +350,7 @@ void idctCols(void)
           *pSrc_0_8 = 255;
        else
          *pSrc_0_8 = (uint8)t;
-
+output[0*4] = *pSrc_0_8;
        cx32 = imul_b1_b3(cx12) - cx12;
        t = ((int16)(cx30 + cx32 - cres2) >> PJPG_DCT_SCALE_BITS) + 128;
        if (t < 0)
@@ -343,7 +359,7 @@ void idctCols(void)
           *pSrc_3_8 = 255;
        else
          *pSrc_3_8 = (uint8)t;
-
+output[3*4] = *pSrc_3_8;
        cx42 = cx30 - cx32;
        t = ((int16)(cx42 + cres3) >> PJPG_DCT_SCALE_BITS) + 128;
        if (t < 0)
@@ -352,6 +368,7 @@ void idctCols(void)
           *pSrc_1_8 = 255;
        else
          *pSrc_1_8 = (uint8)t;
+output[1*4] = *pSrc_1_8;
 
        cx24 = (cres1 - imul_b2(cx4)); // only one
        t = ((int16)(cx30 + cres3 + cx24 - cx12) >> PJPG_DCT_SCALE_BITS) + 128;
@@ -361,6 +378,7 @@ void idctCols(void)
           *pSrc_2_8 = 255;
        else 
          *pSrc_2_8 = (uint8)t;
+output[2*4] = *pSrc_2_8;
 
       cont_idct_cols:
       pSrc_0_8++;
@@ -371,6 +389,7 @@ void idctCols(void)
       pSrc_3_8++;
       pSrc_5_8++;
       pSrc_7_8++;
+      output++;
    }
 }
 
@@ -467,8 +486,10 @@ uint8 decodeNextMCU(void)
           r--;
         }
 
-        ac = huffExtend(extraBits, s);
-        gCoeffBuf[*cur_ZAG_coeff] = ac * (*cur_pQ_l|(*cur_pQ_h << 8));
+        if (ZAG_Coeff_work[*cur_ZAG_coeff] > 0) {
+          ac = huffExtend(extraBits, s);
+          gCoeffBuf[*cur_ZAG_coeff] = ac * (*cur_pQ_l|(*cur_pQ_h << 8));
+        } else printf("zkip\n");
       } else {
         if (r == 15) {
           cur_pQ_l+=15;
@@ -529,10 +550,15 @@ void transformBlock(uint8 mcuBlock)
   }
 
   idctRows();
-  idctCols();
+  idctCols(mcuBlock == 0 ? 0 : 32);
 
   pSrc = (uint8 *)gCoeffBuf;
   for (iTB = 32; iTB; iTB--) {
+    if (*pGDst == *pSrc) {
+      printf("congrats\n");
+    } else {
+      printf("expected %02X got %02X\n", *pSrc, *pGDst);
+    }
     *pGDst++ = (uint8)*pSrc;
     pSrc +=2;
   }

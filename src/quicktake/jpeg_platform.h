@@ -29,6 +29,7 @@ extern int16 gCoeffBuf[8*8];
 extern uint16 gRestartInterval;
 extern uint16 gRestartsLeft;
 extern uint8 ZAG_Coeff[];
+extern int8 ZAG_Coeff_work[];
 extern uint8 gMaxBlocksPerMCU;
 extern uint8 gCompsInFrame;
 extern uint8 gCompIdent[3];
@@ -89,7 +90,7 @@ uint8 __fastcall__ huffDecode(HuffTable* pHuffTable, const uint8* pHuffVal);
 uint8 decodeNextMCU(void);
 void transformBlock(uint8 mcuBlock);
 void idctRows(void);
-void idctCols(void);
+void idctCols(uint8 mcublock);
 uint8 processRestart(void);
 
 uint8 skipVariableMarker(void);

@@ -11,7 +11,8 @@
         .import     _gCoeffBuf, _gRestartInterval, _gRestartsLeft
         .import     _gMaxBlocksPerMCU, _processRestart, _gCompACTab, _gCompQuant
         .import     _gQuant0_l, _gQuant1_l, _gQuant0_h, _gQuant1_h
-        .import     _gCompDCTab, _gMCUOrg, _gLastDC_l, _gLastDC_h, _gCoeffBuf, _ZAG_Coeff
+        .import     _gCompDCTab, _gMCUOrg, _gLastDC_l, _gLastDC_h, _gCoeffBuf
+        .import     _ZAG_Coeff, _ZAG_Coeff_work
         .import     _gHuffTab0, _gHuffVal0, _gHuffTab1, _gHuffVal1, _gHuffTab2, _gHuffVal2, _gHuffTab3, _gHuffVal3
         .import     _gMCUBufG
         .import     _gNumMCUSRemainingX, _gNumMCUSRemainingY
@@ -528,7 +529,7 @@ _huffDecode3:
 ; void idctRows(void
 
 _idctRows:
-        lda    #8
+        lda    #4
         sta    idctRC
 
         ldy    #0
@@ -1343,6 +1344,9 @@ zeroZAG:
         stx     cur_ZAG_coeff
 
 storeGCoeff:
+        ldx     cur_ZAG_coeff ; Not always preloaded
+        lda     _ZAG_Coeff_work,x
+        beq     end_of_coeff_cal
         ;ac = huffExtend(sDMCU)
         ; extendX already set
         lda     sDMCU
@@ -1366,7 +1370,7 @@ load_pq1h:
         sta     _gCoeffBuf+1,y
         lda    tmp1
         sta     _gCoeffBuf,y
-
+end_of_coeff_cal:
         inc     cur_pQ
         inc     cur_ZAG_coeff
 checkZAGLoop:
