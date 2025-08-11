@@ -5,6 +5,7 @@
 *.ppm
 *.jpg
 *.dump
+*.log
 loader
 GREY*
 HIST

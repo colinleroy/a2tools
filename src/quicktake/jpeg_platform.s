@@ -1126,8 +1126,8 @@ cont_idct_cols:
 idctColDone:
         rts
 
-        GET_BITS_SET_FF_ON
 _decodeNextMCU:
+        GET_BITS_SET_FF_ON
 
         lda     _gRestartInterval
         ora     _gRestartInterval+1
