@@ -141,7 +141,7 @@ uint16 __fastcall__ imul_b5(int16 w)
 
 uint8 huffDecode(HuffTable* pHuffTable, const uint8* pHuffVal)
 {
-  uint8 i = 0;
+  int8 i = 7;
   uint8 j;
   uint16 code;
   HuffTable *curTable = pHuffTable;
@@ -155,25 +155,24 @@ uint8 huffDecode(HuffTable* pHuffTable, const uint8* pHuffVal)
   /* First loop only checking low bytes as long
    * as code < 0x100 */
   for ( ; ; ) {
-    if (pHuffTable->mGetMore[i])
+    if (pHuffTable->mGetMore[i+8])
       goto incrementS;
 
-    if (code < pHuffTable->mMaxCode_l[i])
-      goto loopDone;
+    if (code < pHuffTable->mMaxCode_l[i+8]) {
+      j = pHuffTable->mValPtr[i+8] + (uint8)code ;
+      return pHuffVal[j];
+    }
 incrementS:
     code <<= 1;
     code |= getBit();
-    pHuffTable->totalGetBit++;
-    i++;
-    if (i == 8)
+    i--;
+    if (i < 0)
       goto long_search;
   }
-loopDone:
-  j = pHuffTable->mValPtr[i] + (uint8)code ;
-  return pHuffVal[j];
 
 /* No find, keep going with 16bits */
 long_search:
+  i = 7;
   for ( ; ; ) {
 
     if (pHuffTable->mGetMore[i])
@@ -184,12 +183,14 @@ long_search:
     if (pHuffTable->mMaxCode_h[i] < (code>>8))
       goto incrementL;
 checkLow:
-    if ((code&0xFF) < pHuffTable->mMaxCode_l[i])
-      goto loopDone;
+    if ((code&0xFF) < pHuffTable->mMaxCode_l[i]) {
+      j = pHuffTable->mValPtr[i] + (uint8)code ;
+      return pHuffVal[j];
+    }
 
 incrementL:
-    i++;
-    if (i == 16)
+    i--;
+    if (i < 0)
       return 0;
     code <<= 1;
     code |= getBit();

@@ -444,29 +444,29 @@ _imul_b5:
         lda     #0
         rol             ; Now A = 0 or 1 depending on bit
 
-        ldx     #$00
+        ldx     #7
 nextLoopS:
-        ldy     TABLE+hufftable_t::mGetMore,x
+        ldy     TABLE+hufftable_t::mGetMore+8,x
         bne     incrementS
 
-        cmp     TABLE+hufftable_t::mMaxCode_l,x
-        bcc     loopDone
+        cmp     TABLE+hufftable_t::mMaxCode_l+8,x
+        bcc     loopDoneS
 incrementS:
         INLINE_GETBIT 1
         rol     a
-        inx
-        cpx     #8
-        bne     nextLoopS
+        dex
+        bpl     nextLoopS
         jmp     decodeLong
 
-loopDone:
-        adc     TABLE+hufftable_t::mValPtr,x
+loopDoneS:
+        adc     TABLE+hufftable_t::mValPtr+8,x
         tax                     ; Get index
 
         lda     VAL,x
         rts
 
 decodeLong:
+        ldx     #7
         ldy     #$00
         sty     bbHigh
 nextLoopL:
@@ -480,17 +480,22 @@ nextLoopL:
 :
 
         cmp     TABLE+hufftable_t::mMaxCode_l,x
-        bcc     loopDone
+        bcc     loopDoneL
 incrementL:
         INLINE_GETBIT 1
         rol     a
         rol     bbHigh
-        inx
-        cpx     #16
-        bne     nextLoopL
+        dex
+        bpl     nextLoopL
 
         lda     #$00          ; if i == 16 return 0
         tax
+        rts
+loopDoneL:
+        adc     TABLE+hufftable_t::mValPtr,x
+        tax                     ; Get index
+
+        lda     VAL,x
         rts
 .endscope
 .endmacro

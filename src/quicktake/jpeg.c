@@ -270,7 +270,7 @@ uint16 extendOffsets[] = {
 //------------------------------------------------------------------------------
 static void huffCreate(uint8* pBits, HuffTable* pHuffTable)
 {
-  uint8 i = 0;
+  int8 i = 15;
   uint8 j = 0;
   uint16 code = 0;
   uint8 *l_pBits = pBits;
@@ -281,11 +281,13 @@ static void huffCreate(uint8* pBits, HuffTable* pHuffTable)
 
    for ( ; ; )
    {
-      uint8 num = *l_pBits;
+      uint8 num;
+
+      num = *l_pBits;
 
       if (!num)
       {
-         *curGetMore = 1;
+         pHuffTable->mGetMore[i] = 1;
       }
       else
       {
@@ -296,17 +298,13 @@ static void huffCreate(uint8* pBits, HuffTable* pHuffTable)
             -- https://alexdowad.github.io/huffman-coding/
          */
          uint16 max = (code + num);
-         *curMaxCode_l = max & 0xFF;
-         *curMaxCode_h = (max & 0xFF00) >> 8;
-         #ifdef __CC65__ // spare a clc
-         *curValPtr = (j)-(code & 0xFF);
-         #else
-         *curValPtr = j-(code & 0xFF);
-         #endif
-
-         j = (uint8)(j + num);
+         pHuffTable->mMaxCode_l[i] = max & 0xFF;
+         pHuffTable->mMaxCode_h[i] = (max & 0xFF00) >> 8;
+         pHuffTable->mValPtr[i] = j-(code & 0xFF);
 
          code += num;
+
+         j = (uint8)(j + num);
       }
 
 #ifndef __CC65__
@@ -316,12 +314,8 @@ static void huffCreate(uint8* pBits, HuffTable* pHuffTable)
       __asm__("rol %v+1", code);
 #endif
 
-      if (++i > 15)
+      if (--i < 0)
          break;
-      curMaxCode_l++;
-      curMaxCode_h++;
-      curValPtr++;
-      curGetMore++;
       l_pBits++;
    }
 }
