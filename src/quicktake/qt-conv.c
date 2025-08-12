@@ -244,7 +244,11 @@ static void build_scale_table(const char *ofname) {
       orig_x0_offset = xoff;  /* Hack to keep x offsets uint8 */
       orig_x_offset[col] = 0;
     } else {
-      orig_x_offset[col] = (uint8)((uint16)xoff - (uint16)prev_xoff);
+      if ((prev_xoff >> 8) != (xoff >> 8)) {
+        orig_x_offset[col] = 0;
+      } else {
+        orig_x_offset[col] = (uint8)xoff;
+      }
     }
     prev_xoff = xoff;
     col++;
@@ -292,14 +296,18 @@ static void write_raw(uint16 h)
   /* Scale (nearest neighbor)*/
   dst_ptr = raw_image;
 
-  cur_orig_y = orig_y_table + 0;
+  cur_orig_y = orig_y_table;
   do {
     cur_orig_x = orig_x_offset + 0;
     cur = *cur_orig_y;
     x_len = FILE_WIDTH;
+    goto first_col;
     do {
-      cur += *cur_orig_x;
-      *dst_ptr = *(cur);
+      if (*cur_orig_x == 0) {
+        cur += 256;
+      }
+first_col:
+      *dst_ptr = *(cur + *cur_orig_x);
       histogram[*dst_ptr]++;
       cur_orig_x++;
       dst_ptr ++;
@@ -342,6 +350,7 @@ full_band:
 
 no_crop:
   __asm__("lda #>%v", raw_image);
+  /* decrement as the first 0 offset will re-increment */
   __asm__("sta %g+2", dst_ptr);
 
   __asm__("clc");
@@ -350,25 +359,23 @@ no_crop:
   next_y:
     __asm__("lda %v,y", orig_y_table_l);
     __asm__("sta %g+1", cur_orig_y_addr);
-    __asm__("lda %v,y", orig_y_table_h);
-    __asm__("sta %g+2", cur_orig_y_addr);
+    __asm__("ldx %v,y", orig_y_table_h);
+    __asm__("dex"); /* Decrement as first 0 offset will increment */
+    __asm__("stx %g+2", cur_orig_y_addr);
 
     __asm__("iny");
     __asm__("sty %v", y_ptr);
 
     __asm__("ldy #0");
     next_x:
-    /* cur += *cur_orig_x; */
-    __asm__("lda %v,y", orig_x_offset);
-    __asm__("adc %g+1", cur_orig_y_addr);
-    __asm__("sta %g+1", cur_orig_y_addr);
-    __asm__("bcc %g", cur_orig_y_addr);
+    /* if (*cur_orig_x == 0) cur+=256 */
+    __asm__("ldx %v,y", orig_x_offset);
+    __asm__("bne %g", cur_orig_y_addr);
     __asm__("inc %g+2", cur_orig_y_addr);
-    __asm__("clc");
 
     cur_orig_y_addr:
-    /* *dst_ptr = *(cur); */
-    __asm__("lda $FFFF");   /* Patched */
+    /* *dst_ptr = *(cur + *cur_orig_x); */
+    __asm__("lda $FFFF,x");   /* Patched */
     dst_ptr:
     __asm__("sta %v,y", raw_image);
 
