@@ -153,6 +153,7 @@ static uint8 orig_y_table_l[BAND_HEIGHT];
 static uint8 orig_y_table_h[BAND_HEIGHT];
 #endif
 static uint8 orig_x_offset[256];
+static uint8 special_x_orig_offset[256];
 static uint8 scaled_band_height;
 static uint16 output_write_len;
 static uint8 scaling_factor = 4;
@@ -248,6 +249,7 @@ unsup_width:
     xoff = ((col) * 10 / scaling_factor) + RAW_X_OFFSET;
     if ((prev_xoff >> 8) != (xoff >> 8)) {
       orig_x_offset[col] = 0;
+      special_x_orig_offset[col] = (uint8)xoff;
     } else {
       orig_x_offset[col] = (uint8)xoff;
     }
@@ -299,6 +301,7 @@ static void write_raw(uint16 h)
 
   cur_orig_y = orig_y_table;
   do {
+    uint8 xoff;
     cur_orig_x = orig_x_offset + 0;
     cur = *cur_orig_y;
     x_len = FILE_WIDTH;
@@ -306,9 +309,12 @@ static void write_raw(uint16 h)
     do {
       if (*cur_orig_x == 0) {
         cur += 256;
-      }
+        xoff = special_x_orig_offset[256-x_len];
+      } else {
 first_col:
-      *dst_ptr = *(cur + *cur_orig_x);
+        xoff = *cur_orig_x;
+      }
+      *dst_ptr = *(cur + xoff);
       histogram[*dst_ptr]++;
       cur_orig_x++;
       dst_ptr ++;
@@ -366,12 +372,14 @@ no_crop:
     __asm__("sty %v", y_ptr);
 
     __asm__("ldy #0");
-    __asm__("jmp %g", cur_orig_y_addr); /* Skip the first increment */
+    __asm__("ldx %v,y", orig_x_offset); /* Preload the first X offset */
+    __asm__("jmp %g", cur_orig_y_addr); /* Skip the first potential page increment */
     next_x:
     /* if (*cur_orig_x == 0) cur+=256 
      * (otherwise load offset into X)*/
     __asm__("ldx %v,y", orig_x_offset);
     __asm__("bne %g", cur_orig_y_addr);
+    __asm__("ldx %v,y", special_x_orig_offset);
     __asm__("inc %g+2", cur_orig_y_addr);
 
     cur_orig_y_addr:

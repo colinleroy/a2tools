@@ -122,11 +122,14 @@ uint8 qt1x0_wakeup(uint16 speed) {
   /* The Apple II printer port being closed right now,
    * we have to set DTR before clearing it.
    */
+#ifdef __CC65__
   if (!is_iigs) {
     simple_serial_slot_dtr_onoff(ser_params.printer_slot, 1);
     sleep(1);
     simple_serial_slot_dtr_onoff(ser_params.printer_slot, 0);
-  } else {
+  } else
+#endif
+  {
     simple_serial_dtr_onoff(0);
   }
 

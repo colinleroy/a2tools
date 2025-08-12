@@ -367,7 +367,9 @@ static uint8 setup(int argc, char *argv[]) {
 #endif
   register_start_device();
 
+#ifdef __CC65__
   try_videomode(VIDEOMODE_80COL);
+#endif
 
 // Start decoding right away when debugging decoders
 #ifdef DEBUG_HD
