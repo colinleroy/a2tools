@@ -152,7 +152,6 @@ static uint8 *orig_y_table[BAND_HEIGHT];
 static uint8 orig_y_table_l[BAND_HEIGHT];
 static uint8 orig_y_table_h[BAND_HEIGHT];
 #endif
-static uint16 orig_x0_offset;
 static uint8 orig_x_offset[256];
 static uint8 scaled_band_height;
 static uint16 output_write_len;
@@ -203,6 +202,8 @@ static void build_scale_table(const char *ofname) {
         last_band = crop_start_y + 180;
         last_band_crop = 12;
         break;
+      default:
+        goto unsup_width;
     }
   } else if (width == 320) {
     /* Crop boundaries are 640x480 bound, divide them */
@@ -227,28 +228,28 @@ static void build_scale_table(const char *ofname) {
       case 128:
         printf("Can not reframe 128x96 zone of 320x240 image.\n"
                "Please try again with less zoom.\n");
-        cgetc();
         /* Reset effective width to go back where we were */
         effective_width = 320;
+reload:
+        cgetc();
         reload_menu(ofname);
         break;
+      default:
+unsup_width:
+        printf("Unsupported width %d\n", effective_width);
+        goto reload;
     }
   }
 
   col = 0;
   prev_xoff = 0;
   do {
-    /* X cropping is handled here in lookup table */
-    xoff = ((col) * 10 / scaling_factor) + crop_start_x + RAW_X_OFFSET;
-    if (col == 0) {
-      orig_x0_offset = xoff;  /* Hack to keep x offsets uint8 */
+    /* X cropping is handled in orig_y table */
+    xoff = ((col) * 10 / scaling_factor) + RAW_X_OFFSET;
+    if ((prev_xoff >> 8) != (xoff >> 8)) {
       orig_x_offset[col] = 0;
     } else {
-      if ((prev_xoff >> 8) != (xoff >> 8)) {
-        orig_x_offset[col] = 0;
-      } else {
-        orig_x_offset[col] = (uint8)xoff;
-      }
+      orig_x_offset[col] = (uint8)xoff;
     }
     prev_xoff = xoff;
     col++;
@@ -259,13 +260,13 @@ static void build_scale_table(const char *ofname) {
     /* Y cropping is handled in main decode/save loop */
     row--;
     #ifdef __CC65__
-    __AX__ = (uint16)(raw_image + FILE_IDX((row) * 10 / scaling_factor, 0) + RAW_Y_OFFSET*RAW_WIDTH + orig_x0_offset);
+    __AX__ = (uint16)(raw_image + FILE_IDX((row) * 10 / scaling_factor, 0) + crop_start_x + RAW_Y_OFFSET*RAW_WIDTH);
     __asm__("ldy %v", row);
     __asm__("sta %v,y", orig_y_table_l);
     __asm__("txa");
     __asm__("sta %v,y", orig_y_table_h);
     #else
-    orig_y_table[row] = raw_image + FILE_IDX((row) * 10 / scaling_factor, 0) + RAW_Y_OFFSET*RAW_WIDTH + orig_x0_offset;
+    orig_y_table[row] = raw_image + FILE_IDX((row) * 10 / scaling_factor, 0) + crop_start_x + RAW_Y_OFFSET*RAW_WIDTH;
     #endif
   } while (row);
 
@@ -350,7 +351,6 @@ full_band:
 
 no_crop:
   __asm__("lda #>%v", raw_image);
-  /* decrement as the first 0 offset will re-increment */
   __asm__("sta %g+2", dst_ptr);
 
   __asm__("clc");
@@ -360,15 +360,16 @@ no_crop:
     __asm__("lda %v,y", orig_y_table_l);
     __asm__("sta %g+1", cur_orig_y_addr);
     __asm__("ldx %v,y", orig_y_table_h);
-    __asm__("dex"); /* Decrement as first 0 offset will increment */
     __asm__("stx %g+2", cur_orig_y_addr);
 
     __asm__("iny");
     __asm__("sty %v", y_ptr);
 
     __asm__("ldy #0");
+    __asm__("jmp %g", cur_orig_y_addr); /* Skip the first increment */
     next_x:
-    /* if (*cur_orig_x == 0) cur+=256 */
+    /* if (*cur_orig_x == 0) cur+=256 
+     * (otherwise load offset into X)*/
     __asm__("ldx %v,y", orig_x_offset);
     __asm__("bne %g", cur_orig_y_addr);
     __asm__("inc %g+2", cur_orig_y_addr);

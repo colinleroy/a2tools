@@ -708,7 +708,7 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
       shifted_mod7_table = mod7_table + X_OFFSET;
 #ifndef __CC65__
       cur_hgr_baseaddr_ptr = (hgr_baseaddr + off_y);
-      d7 = *(shifted_div7_table + off_x);
+      d7 = *(shifted_div7_table);
       ptr = *cur_hgr_baseaddr_ptr + d7;
       cur_hgr_baseaddr_val = *cur_hgr_baseaddr_ptr + d7;
 
@@ -718,11 +718,9 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
 #else
       cur_hgr_baseaddr_ptr = (uint16 *)(hgr_baseaddr + off_y);
       __asm__("clc");
-      __asm__("lda %v", off_x);
-      __asm__("adc %v", shifted_div7_table);
+      __asm__("lda %v", shifted_div7_table);
       __asm__("sta ptr1");
-      __asm__("lda #0");
-      __asm__("adc %v+1", shifted_div7_table);
+      __asm__("lda %v+1", shifted_div7_table);
       __asm__("sta ptr1+1");
 
       __asm__("ldy #0");
@@ -1641,19 +1639,18 @@ next_pixel:
     }
 
 #else
-      __asm__("lda %v", dx); /* Between next pixel and xcounters_dir to avoid optimizer optimizing branches */
+      __asm__("ldx %v", dx); /* Between next pixel and xcounters_dir to avoid optimizer optimizing branches */
       xcounters_dir:
       __asm__("jmp $FFFF"); /* PATCHED, to {dec,inc}_xcounters */
 
       dec_xcounters:
       // if (--dx = end_dx)
       //   goto line_done;
-      __asm__("sec");
-      __asm__("sbc #1");
+      __asm__("dex");
       x_loop_bound_a:
-      __asm__("cmp #$FF"); /* PATCHED with end_dx */
+      __asm__("cpx #$AB"); /* PATCHED with end_dx - using AB to avoid optimizer thinking it stays FF*/
       __asm__("beq %g", line_done);
-      __asm__("sta %v", dx);
+      __asm__("stx %v", dx);
 
       __asm__("lsr %v", pixel); /* Update pixel mask */
       __asm__("bne %g", inc_buf_ptr);
@@ -1670,12 +1667,11 @@ next_pixel:
       inc_xcounters:
       // if (++dx = end_dx)
       //   goto line_done;
-      __asm__("clc");
-      __asm__("adc #1");
+      __asm__("inx");
       x_loop_bound_b:
-      __asm__("cmp #$FF"); /* PATCHED with end_dx */
+      __asm__("cpx #$AB"); /* PATCHED with end_dx */
       __asm__("beq %g", line_done);
-      __asm__("sta %v", dx);
+      __asm__("stx %v", dx);
 
       __asm__("asl %v", pixel);
       __asm__("bpl %g", inc_buf_ptr); /* Are we on bit eight ? */
