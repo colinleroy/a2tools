@@ -331,7 +331,7 @@ _acia_set_speed:
         rts
 
 _acia_slot_dtr_onoff:
-        tay
+        sta     tmp1
         jsr     popa          ; Slot to index
         asl
         asl
@@ -342,7 +342,7 @@ _acia_slot_dtr_onoff:
         tax
         lda     ACIA_CMD,x
         and     #%11110000
-        cpy     #0
+        ldy     tmp1
         beq     :+
         ora     #%00001011
 :       sta     ACIA_CMD,x

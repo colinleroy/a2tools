@@ -567,8 +567,9 @@ _z8530_set_speed:
 ; this is sufficient for surl-based uses. Slot ignored.
 
 _z8530_slot_dtr_onoff:
-        tay
+        sty     tmp1
         jsr     popa
+        ldy     tmp1
         cpy     #0
         beq     :+
 
