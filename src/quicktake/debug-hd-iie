@@ -1,0 +1,63 @@
+#!/bin/bash
+TYPE="full"
+if [ "$1" != "" ]; then
+  TYPE=$1
+fi
+
+if [ "$1" = "200" ]; then
+  EXT=JPG
+else
+  EXT=QTK
+fi
+TESTFILE=TEST$1.$EXT
+if [ "$2" != "" ]; then
+  TESTFILE=$2
+  java -jar ../../bin/ac.jar -d ../../disks/smart0.po TEST$1.$EXT
+  
+  echo "Putting $TESTFILE as TEST$1.$EXT"
+  java -jar ../../bin/ac.jar -p ../../disks/smart0.po \
+    TEST$1.$EXT BIN '$2000' < "$TESTFILE"
+fi
+
+make clean all DEBUG_HD=$TYPE && \
+  mame apple2ee -window -flop1 quicktake.po -resolution 560x384 -sl1 ssc -sl1:ssc:rs232 null_modem -bitb socket.localhost:2001 -sl2 ssc -sl2:ssc:rs232 null_modem -bitb2 socket.localhost:2000 -nomouse -debug -sl4 scsi -hard ../../disks/smart0.po
+
+if [ "$1" != "" ]; then
+  #get image from HD
+  if [ "$1" = "100" ]; then
+    java -jar ../../bin/ac.jar -g ../../disks/smart0.po TEST$1.QTK > /tmp/TEST$1.QTK
+    ./qtktconv.x86_64 /tmp/TEST$1.QTK 0 0 640 480
+  elif [ "$1" = "150" ]; then
+    java -jar ../../bin/ac.jar -g ../../disks/smart0.po TEST$1.QTK > /tmp/TEST$1.QTK
+    ./qtknconv.x86_64 /tmp/TEST$1.QTK 0 0 640 480
+  elif [ "$1" = "200" ]; then
+    java -jar ../../bin/ac.jar -g ../../disks/smart0.po TEST$1.JPG > /tmp/TEST$1.JPG
+    ./jpegconv.x86_64 /tmp/TEST$1.JPG 0 0 640 480
+  fi
+  chmod 644 GREY HIST
+  #get result from HD
+  java -jar ../../bin/ac.jar -g ../../disks/smart0.po GREY > GREY.A2
+  echo Files sha1sum:
+  expected_sha1sum=$(sha1sum GREY|cut -d' ' -f1)
+  if [ "$2" = "" ]; then
+    if [ "$1" = "150" ]; then
+      # The approximated division changes the output file in an acceptable way
+      expected_sha1sum="306b15f6d21a0f60a7c18dd500a802f9f1c44db1"
+    fi
+    if [ "$1" = "200" ]; then
+      # The approximated division changes the output file in an acceptable way
+      expected_sha1sum="ea80b6284ffaccfb5c86f0b263e0732160cedf95"
+    fi
+  fi
+
+  final_sha1sum=$(sha1sum GREY.A2|cut -d' ' -f1)
+  echo "Ref:      $(sha1sum GREY|cut -d' ' -f1)"
+  echo "Expected: $expected_sha1sum"
+  echo "Got:      $final_sha1sum"
+
+  if [ "$final_sha1sum" != "$expected_sha1sum" ]; then
+    echo UNEXPECTED SHA1SUM
+  else
+    echo sha1sum is OK
+  fi
+fi

@@ -9,9 +9,9 @@
 
         .import         _progress_bar, _scrw
         .import         _file_height, _file_width, _off_y, _off_x
-        .import         _div7_table, _shifted_div7_table
-        .import         _mod7_table, _shifted_mod7_table
-        .import         _hgr_baseaddr
+        .import         _centered_div7_table, _div7_table
+        .import         _centered_mod7_table, _mod7_table
+        .import         _hgr_baseaddr_l, _hgr_baseaddr_h
         .import         _first_byte_idx, _ptr, _resize, _end_dx, _y, _dy
         .import         _x_offset
 
@@ -19,7 +19,7 @@
         .import         _end_bayer_map_x, _end_bayer_map_y
         .import         _err_buf
         .import         _opt_histogram
-        .import         _cur_hgr_mod, _cur_hgr_row
+        .import         _cur_hgr_row
         .import         _is_thumb, _load_thumbnail_data
         .import         _prev_scaled_dx, _prev_scaled_dy, _angle
         .import         _brighten, _dither_alg
@@ -33,9 +33,8 @@
 
         .include "apple2.inc"
 
-cur_hgr_baseaddr_ptr  = _zp2ip
 thumb_buf_ptr         = _zp4p
-pixel                 = _zp6s
+pixel_mask            = _zp6s
 opt_val               = _zp7
 dx                    = _zp8
 err2                  = _zp9
@@ -48,19 +47,13 @@ DITHER_SIERRA     = 0
 DITHER_THRESHOLD  = $80
 DEFAULT_BRIGHTEN  = 0
 
-.macro ADD_UINT16_OFFSET_TO_UINT16_PTR BASE, OFF, RESULT
-      lda OFF
-      ldx OFF+1
-      stx tmp1
-      asl a
-      rol tmp1
-      clc
-      adc #<(BASE)
-      sta RESULT
-      lda tmp1
-      adc #>(BASE)
-      sta RESULT+1
-.endmacro
+CENTER_OFFSET       = 0
+CENTER_OFFSET_THUMB = 60-12
+
+sierra_safe_err_buf = _err_buf+1
+
+.assert <_centered_div7_table = $00, error ; We count on the table being aligned with idx 12 on a page border
+.assert <_centered_mod7_table = $00, error ; We count on the table being aligned with idx 12 on a page border
 
 _setup_angle_0:
         ; off_y = (HGR_HEIGHT - file_height) / 2;
@@ -75,37 +68,15 @@ _setup_angle_0:
         ; off_x = 0
         sta     _off_x
 
-        clc
-        lda     #<(_div7_table)
-        adc     _x_offset
-        sta     _shifted_div7_table
-        lda     #>(_div7_table)
-        adc     #0
-        sta     _shifted_div7_table+1
-
-        lda     #<(_mod7_table)
-        adc     _x_offset
-        sta     _shifted_mod7_table
-        lda     #>(_mod7_table)
-        adc     #0
-        sta     _shifted_mod7_table+1
-
-        ADD_UINT16_OFFSET_TO_UINT16_PTR _hgr_baseaddr, _off_y, cur_hgr_baseaddr_ptr
-
-        lda     _shifted_div7_table
-        sta     ptr1
-        lda     _shifted_div7_table+1
-        sta     ptr1+1
-
-        ldy     #0
-        lda     (ptr1),y
+shifted_div7_load_a:
+        lda     _centered_div7_table+CENTER_OFFSET
         sta     _first_byte_idx
         sta     hgr_byte
 
-        lda     (cur_hgr_baseaddr_ptr),y
+        ldy     _off_y
+        lda     _hgr_baseaddr_l,y
         sta     hgr_line
-        iny
-        lda     (cur_hgr_baseaddr_ptr),y
+        lda     _hgr_baseaddr_h,y
         sta     hgr_line+1
         rts
 
@@ -144,44 +115,20 @@ _setup_angle_180:
         ldx     _file_height
         dex
         stx     _off_y
-        lda #0
+        lda     #0
         sta     _end_dx
         sta     _off_y+1
 
-        clc
-        lda     #<(_div7_table)
-        adc     _x_offset
-        sta     _shifted_div7_table
-        lda     #>(_div7_table)
-        adc     #0
-        sta     _shifted_div7_table+1
-
-        lda     #<(_mod7_table)
-        adc     _x_offset
-        sta     _shifted_mod7_table
-        lda     #>(_mod7_table)
-        adc     #0
-        sta     _shifted_mod7_table+1
-
-        ADD_UINT16_OFFSET_TO_UINT16_PTR _hgr_baseaddr, _off_y, cur_hgr_baseaddr_ptr
-
-        clc
-        lda     _shifted_div7_table
-        adc     _off_x
-        sta     ptr1
-        lda     _shifted_div7_table+1
-        adc     #0
-        sta     ptr1+1
-
-        ldy     #0
-        lda     (ptr1),y
+        ldy     _off_x
+shifted_div7_load_b:
+        lda     _centered_div7_table+CENTER_OFFSET,y
         sta     _first_byte_idx
         sta     hgr_byte
-        
-        lda     (cur_hgr_baseaddr_ptr),y
+
+        ldy     _off_y
+        lda     _hgr_baseaddr_l,y
         sta     hgr_line
-        iny
-        lda     (cur_hgr_baseaddr_ptr),y
+        lda     _hgr_baseaddr_h,y
         sta     hgr_line+1
         rts
 
@@ -285,7 +232,19 @@ _do_dither:
         sta     _prev_scaled_dx
         sta     _prev_scaled_dy
 
+        lda     #16
+        sta     pgbar_update
+
 dither_setup_start:
+        ldx     #CENTER_OFFSET
+        lda     _is_thumb
+        beq     center_done
+        ldx     #CENTER_OFFSET_THUMB
+
+center_done:
+        stx     shifted_mod7_load+1
+        stx     shifted_div7_load_a+1
+        stx     shifted_div7_load_b+1
 
         lda     _angle+1
         beq     :+
@@ -300,11 +259,13 @@ angle0:
         jsr     _setup_angle_0
 
         ; Patch Sierra error forwarding
-        lda     #$88          ; dey
+        lda     #$88          ; DEY
         sta     sierra_err_forward
+        lda     #$C8          ; INY
+        sta     sierra_err_forward_done
 
         ; Patch xcounters direction
-        lda     #$E8          ; INX
+        lda     #$C8          ; INY
         sta     dx_incdec
         lda     #$06          ; ASL ZP
         sta     pixel_mask_update
@@ -339,13 +300,15 @@ angle90:
         jsr     _setup_angle_90
 
         ; Patch Sierra error forwarding
-        lda     #$88          ;dey
+        lda     #$88          ; DEY
         sta     sierra_err_forward
+        lda     #$C8          ; INY
+        sta     sierra_err_forward_done
 
         ; Patch xcounters direction
-        lda     #$E8          ; INX
+        lda     #$C8          ; INY
         sta     dx_incdec
-        lda     #$06          ; ASL ZP
+        lda     #$24          ; BIT ZP - deactivated when coords are reversed
         sta     pixel_mask_update
         lda     #$10          ; BPL
         sta     pixel_mask_check
@@ -376,11 +339,13 @@ angle90:
 angle180:
         jsr     _setup_angle_180
         ; Patch Sierra error forwarding
-        lda     #$C8          ; iny
+        lda     #$C8          ; INY
         sta     sierra_err_forward
+        lda     #$88          ; DEY
+        sta     sierra_err_forward_done
 
         ; Patch xcounters direction
-        lda     #$CA          ; DEX
+        lda     #$88          ; DEY
         sta     dx_incdec
         lda     #$46          ; LSR ZP
         sta     pixel_mask_update
@@ -414,15 +379,17 @@ angle270:
         jsr     _setup_angle_270
 
         ; Patch Sierra error forwarding
-        lda     #$C8          ; iny
+        lda     #$C8          ; INY
         sta     sierra_err_forward
+        lda     #$88          ; DEY
+        sta     sierra_err_forward_done
 
         ; Patch xcounters direction
-        lda     #$CA          ; DEX
+        lda     #$88          ; DEY
         sta     dx_incdec
-        lda     #$46          ; LSR ZP
+        lda     #$24          ; BIT ZP - deactivated when coords are reversed
         sta     pixel_mask_update
-        lda     #$D0          ; BNE
+        lda     #$10          ; BPL
         sta     pixel_mask_check
         lda     #$40
         sta     pixel_mask_inival+1
@@ -516,12 +483,6 @@ update_pixel_branching:
         sta     pixel_branching+1       ; Update the pixel_branching to either
         stx     pixel_branching+2       ; the brightener or the ditherer
 
-        ; Patch shifted mod7 table
-        lda     _shifted_mod7_table
-        sta     shifted_mod7_load+1
-        lda     _shifted_mod7_table+1
-        sta     shifted_mod7_load+2
-
         ; Patch Y loop bound
         lda     _file_height
         sta     y_loop_bound+1
@@ -553,16 +514,10 @@ dither_setup_line_start:
         lda     _is_thumb
         beq     load_normal
         jsr     _load_thumbnail_data
-        jmp     prepare_line
+        jmp     compute_line_coords
 
 load_normal:
-        jsr _load_normal_data
-
-prepare_line:
-        ldx _cur_buf_page+1
-        stx buf_ptr_load+2
-        lda _cur_buf_page
-        sta buf_ptr_load+1
+        jsr     _load_normal_data
 
 compute_line_coords:
         jmp     $FFFF         ; PATCHED, will either go to invert_line_coords or dither_line_start
@@ -606,17 +561,24 @@ no_resize:
 set_inv_hgr_ptrs:
         lda     _div7_table,y ; Not shifted, there*
         sta     _cur_hgr_row
-        lda     _mod7_table,y
-dither_setup_line_end:
-        sta     _cur_hgr_mod
+        lda     _mod7_table,y ; Not shifted either
+        sta     pixel_mask
+        ldy     _off_x        ; set_buffer needs off_x in Y
+        jmp     set_buffer
 
 dither_line_start:
         ldy     _off_x
-        sty     dx
 
 shifted_mod7_load:
-        lda     $FFFF,y       ; Patched at start with *(shifted_mod7_table)
-        sta     pixel
+        lda     _centered_mod7_table+CENTER_OFFSET,y
+        sta     pixel_mask
+
+set_buffer:
+        sty     dx
+        ldx     _cur_buf_page+1
+        stx     buf_ptr_load+2
+        lda     _cur_buf_page
+        sta     buf_ptr_load+1
 
 prepare_dither:
         jmp     $FFFF         ; PATCHED to prepare_dither_{bayer,sierra,none}
@@ -669,6 +631,7 @@ invert_pixel_coords:
 
         cmp     _prev_scaled_dx
         bne     :+
+        ldy     dx
         jmp     next_pixel
 :       sta     _prev_scaled_dx
 
@@ -679,30 +642,17 @@ no_resize_pixel:
 
 inv_pixel_coords:
         ; hgr_line = hgr_baseaddr[scaled_dx] + cur_hgr_row;
-        ldx     #>(_hgr_baseaddr)
-        asl     a
         tay
-        bcc     :+
-        inx
         clc
-:       lda     #<(_hgr_baseaddr)
-        stx     ptr1+1
-        sta     ptr1
-
-        lda     (ptr1),y
+        lda     _hgr_baseaddr_l,y
         adc     _cur_hgr_row
         sta     hgr_line
-        iny
-        lda     (ptr1),y
+        lda     _hgr_baseaddr_h,y
         adc     #0
         sta     hgr_line+1
 
         lda     #0
         sta     hgr_byte
-
-        ;pixel = cur_hgr_mod;
-        lda     _cur_hgr_mod
-        sta     pixel
 
 dither_pixel_start:
 buf_ptr_load:
@@ -734,7 +684,7 @@ positive_b:
 white_pix_bayer:
         ldy     hgr_byte
         lda     (hgr_line),y
-        ora     pixel
+        ora     pixel_mask
         sta     (hgr_line),y
 
 black_pix_bayer:
@@ -744,23 +694,26 @@ black_pix_bayer:
         cpx     _end_bayer_map_x
         beq     reset_bayer_x
         stx     _bayer_map_x
+        ldy     dx
         jmp     next_pixel
 
 reset_bayer_x:
         ldx     _bayer_map_y
         stx     _bayer_map_x
+        ldy     dx
         jmp     next_pixel
 
 dither_none:
+        ldy     dx            ; Needed if < DITHER_THRESHOLD
         lda     opt_val
         cmp     #<DITHER_THRESHOLD
         bcc     next_pixel
 
         ldy     hgr_byte
         lda     (hgr_line),y
-        ora     pixel
+        ora     pixel_mask
         sta     (hgr_line),y
-
+        ldy     dx
         jmp     next_pixel
 
 dither_sierra:
@@ -769,7 +722,7 @@ dither_sierra:
         ; about overflows.
         ldx     #$00
         ldy     dx
-        lda     _err_buf,y
+        lda     sierra_safe_err_buf,y
         adc     err2
         bpl     err_pos
         dex
@@ -779,26 +732,26 @@ err_pos:
         clc
         adc     opt_val
         bcc     :+
-        inx
-        bne     white_pix     ; High byte not zero? - don't check for neg here, can't happen, it's either 0 or 1
-
-:       cpx     #0            ; is high byte negative? (don't check for positive here, can't happen, it's either $FF or 0)
-        bmi     forward_err
+        cpx     #$00
+        bpl     white_pix     ; High byte not zero? - don't check for neg here, can't happen, it's either 0 or 1
+        jmp     check_low
+:       cpx     #$80          ; is high byte negative? (don't check for positive here, can't happen, it's either $FF or 0)
+        bcs     forward_err
 
 ; Must check low byte
+check_low:
         cmp     #<DITHER_THRESHOLD
-        bcc     forward_err_direct
+        bcc     forward_err
 white_pix:
         tax                   ; Backup low byte
         ldy     hgr_byte
         lda     (hgr_line),y
-        ora     pixel
+        ora     pixel_mask
         sta     (hgr_line),y
         txa                   ; Restore low byte
 
-forward_err:
         cmp     #$80          ; Keep low byte sign for >> (no need to do it where coming from low byte check path, DITHER_THRESHOLD is $80)
-forward_err_direct:
+forward_err:
         ror     a
         sta     err2
         cmp     #$80
@@ -806,51 +759,56 @@ forward_err_direct:
 
         ; *(cur_err_x_yplus1+dx)   = err1;
         ldy     dx
-        sta     _err_buf,y
+        sta     sierra_safe_err_buf,y
 
         ; if (dx > 0) {
         ;   *(cur_err_x_yplus1+dx-1)    += err1;
         ; }
-        beq     next_pixel    ; Is dx == 0
+        ; commented out because it's OK to write this table at
+        ; dx = $FF. We'll overwrite it before using it.
+        ; beq     next_pixel    ; Is dx == 0
 
 sierra_err_forward:
         dey                   ; Patched with iny at setup, if xdir < 0
         clc                   ; May be set by ror
-        adc     _err_buf,y
-        sta     _err_buf,y
+        adc     sierra_safe_err_buf,y
+        sta     sierra_safe_err_buf,y
+
+sierra_err_forward_done:      ; Set Y back to what next_pixel expects
+        iny
 
 next_pixel:
-        ldx     dx
+        ; ldy     dx          ; Next pixel expects dx loaded in Y
 
 ; The following is heavily patched at startup:
 ; dec:
-;   dx_incdec+1         = DEX
+;   dx_incdec+1         = DEY
 ;   pixel_mask_update   = LSR
 ;   pixel_mask_check    = BNE
 ;   pixel_mask_inival+1 = $40
 ;   hgr_byte_incdec     = DEC
 ; 
 ; inc:
-;   dx_incdec+1         = INC
+;   dx_incdec+1         = INY
 ;   pixel_mask_update   = ASL
 ;   pixel_mask_check    = BPL
 ;   pixel_mask_inival+1 = $1
 ;   hgr_byte_incdec     = INC
 
 dx_incdec:
-        dex
+        dey
 x_loop_bound:
-        cpx     #$AB          ; PATCHED with end_dx - using AB to avoid optimizer thinking it stays FF
+        cpy     #$AB          ; PATCHED with end_dx - using AB to avoid optimizer thinking it stays FF
         beq     line_done
-        stx     dx
+        sty     dx
 
 pixel_mask_update:
-        lsr     pixel         ; Update pixel mask  (lsr or asl)
+        lsr     pixel_mask    ; Update pixel mask  (lsr or asl, or bit if inverted coords)
 pixel_mask_check:
         bne     inc_buf_ptr   ; Check if byte done (bne or bpl)
 pixel_mask_inival:
         lda     #$40          ; Set init value     ($40 or $01)
-        sta     pixel
+        sta     pixel_mask
 hgr_byte_incdec:
         dec     hgr_byte      ; Update hgr byte idx(dec or inc)
 
@@ -868,10 +826,12 @@ compute_pixel_coords_d:
         jmp     $FFFF
 
 line_done:
-        lda     _y
-        and     #15
+        dec     pgbar_update
 
         bne     line_wrapup
+
+        lda     #16
+        sta     pgbar_update
 
         jsr     _update_progress_bar
         jsr     _kbhit
@@ -897,39 +857,26 @@ store_bayer_y:
         sta     _bayer_map_y
 
 next_line:
-        lda     cur_hgr_baseaddr_ptr
-
 ycounters_dir:
         jmp     $FFFF         ; PATCHED, to {dec,inc}_ycounters
 
 dec_ycounters:
-        sec
-        sbc     #2
-        sta     cur_hgr_baseaddr_ptr
-        bcs     :+
-        dec     cur_hgr_baseaddr_ptr+1
-:       lda     _dy
+        lda     _dy
         bne     :+
         dec     _dy+1
 :       dec     _dy
         jmp     finish_inc
 
 inc_ycounters:
-        clc
-        adc     #2
-        sta     cur_hgr_baseaddr_ptr
-        bcc     :+
-        inc     cur_hgr_baseaddr_ptr+1
-:       inc     _dy
+        inc     _dy
         bne     finish_inc
         inc     _dy+1
 
 finish_inc:
-        ldy     #0
-        lda     (cur_hgr_baseaddr_ptr),y
+        ldy     _dy
+        lda     _hgr_baseaddr_l,y
         sta     hgr_line
-        iny
-        lda     (cur_hgr_baseaddr_ptr),y
+        lda     _hgr_baseaddr_h,y
         sta     hgr_line+1
 
         lda     _first_byte_idx
@@ -955,7 +902,6 @@ brighten_pos:
         adc     opt_val
         bcc     :+
         inx
-        clc
 :       cpx     #0
         beq     store_opt
         bpl     pos_opt
@@ -968,3 +914,7 @@ store_opt:
         sta     opt_val
 dither_after_brighten:
         jmp     $FFFF
+
+        .bss
+
+pgbar_update: .res 1

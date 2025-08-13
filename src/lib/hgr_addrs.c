@@ -3,9 +3,13 @@
 #include "hgr.h"
 #include "hgr_addrs.h"
 
+#ifndef __CC65__
 uint8 *hgr_baseaddr[HGR_HEIGHT];
-uint8 div7_table[HGR_WIDTH];
-uint8 mod7_table[HGR_WIDTH];
+uint8 hgr_baseaddr_l[HGR_HEIGHT];
+uint8 hgr_baseaddr_h[HGR_HEIGHT];
+uint8 div7_table[256];
+uint8 mod7_table[256];
+#endif
 
 void init_hgr_base_addrs (void)
 {
@@ -38,28 +42,22 @@ void init_hgr_base_addrs (void)
    */
   b = mod7_table + 0;
 
-  for (x = 0; x < HGR_WIDTH; x++) {
+  for (x = 0; x < 256; x++) {
     *a = x / 7;
     *b = 1 << (x % 7);
     a++;
     b++;
   }
 #else
-  __asm__("lda #<(%v)", hgr_baseaddr);
-  __asm__("sta ptr2");
-  __asm__("lda #>(%v)", hgr_baseaddr);
-  __asm__("sta ptr2+1");
   __asm__("ldy #0");
   __asm__("sty %v", y);
-  // for (y = 0; y < HGR_HEIGHT; ++y)
-  // {
-  __asm__("ldx #0"); /* Iterating over y with x, because we'll need ,y */
+
   __asm__("ldy #0");
   next_y:
     /* ABCDEFGH -> pppFGHCD EABAB000 */
 
     /* CD(E) */
-    __asm__("txa");
+    __asm__("tya");
     __asm__("and #$38");
     __asm__("lsr");
     __asm__("lsr");
@@ -68,7 +66,7 @@ void init_hgr_base_addrs (void)
     __asm__("sta tmp2");
 
     /* EABAB */
-    __asm__("txa");
+    __asm__("tya");
     __asm__("and #$C0");
     __asm__("ror"); /* E */
     __asm__("sta tmp1");
@@ -76,10 +74,10 @@ void init_hgr_base_addrs (void)
     __asm__("lsr");
     __asm__("lsr");
     __asm__("ora tmp1");
-    __asm__("sta (ptr2),y");
+    __asm__("sta %v,y", hgr_baseaddr_l);
 
     /* FGH */
-    __asm__("txa");
+    __asm__("tya");
     __asm__("and #$7");
     __asm__("asl");
     __asm__("asl");
@@ -87,17 +85,10 @@ void init_hgr_base_addrs (void)
 
     /* ppp */
     __asm__("ora #$20"); /* first page */
-    __asm__("iny");
-    __asm__("sta (ptr2),y");
-
-    __asm__("iny");
-    __asm__("bne %g", noof6);
-    __asm__("inc ptr2+1");
-    noof6:
-    __asm__("clc");
+    __asm__("sta %v,y", hgr_baseaddr_h);
   //}
-  __asm__("inx");
-  __asm__("cpx #%b", HGR_HEIGHT);
+  __asm__("iny");
+  __asm__("cpy #%b", HGR_HEIGHT);
   __asm__("bne %g", next_y);
 
 

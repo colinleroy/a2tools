@@ -109,9 +109,10 @@ void hgr_print(void) {
   char send_chars_cmd[8]; // = {CH_ESC, 'G', '0', '0', '0', '0'};
   #define cur_d7 zp6p
   #define cur_m7 zp8p
+  #define line   zp10p
 #else
   char send_chars_cmd[16];
-  uint8 *cur_d7, *cur_m7;
+  uint8 *cur_d7, *cur_m7, *line;
 #endif
   uint16 sx, ex;
   uint8 scale = 1;
@@ -154,7 +155,8 @@ scale_again:
     cur_m7 = mod7_table + sx;
     for (y = 0; y < HGR_HEIGHT; y++) {
       /* Do we have a white pixel? */
-      if ((*(hgr_baseaddr[y] + *cur_d7) & *cur_m7) != 0)
+      line = (uint8 *)(hgr_baseaddr_l[y]|(hgr_baseaddr_h[y]<<8));
+      if ((*(line + *cur_d7) & *cur_m7) != 0)
         goto found_start;
 
     }
@@ -168,7 +170,8 @@ scale_again:
     cur_m7 = mod7_table + ex;
     for (y = 0; y < HGR_HEIGHT; y++) {
       /* Do we have a white pixel? */
-      if ((*(hgr_baseaddr[y] + *cur_d7) & *cur_m7) != 0)
+      line = (uint8 *)(hgr_baseaddr_l[y]|(hgr_baseaddr_h[y]<<8));
+      if ((*(line + *cur_d7) & *cur_m7) != 0)
         goto found_end;
 
     }
@@ -179,11 +182,22 @@ scale_again:
 
   cprintf("Printing ");
   progress_bar(wherex(), wherey(), scrw, 0, HGR_HEIGHT);
+
+  if (wait_imagewriter_ready() != 0) {
+    goto err_out;
+  }
+
   simple_serial_write(disable_auto_line_feed, sizeof(disable_auto_line_feed));
+
+  /* Send blank lines as margin, because I'm tired of
+   * waiting for https://github.com/OpenPrinting/libcupsfilters/pull/69 to
+   * land in Raspbian. */
+  simple_serial_write("\r\n\r\n\r\n", 6);
 
   /* Set line width */
   sprintf(send_chars_cmd, "%cG%04d", CH_ESC, (ex-sx) * scale);
 
+  /* Send data */
   for (y = 0; y < HGR_HEIGHT; y += (8/scale)) {
     cur_d7 = div7_table + sx;
     cur_m7 = mod7_table + sx;
@@ -195,7 +209,8 @@ scale_again:
       c = 0;
       bit = (scale == 1) ? 0x1 : 0x3;
       for (cy = y; cy < ey; cy++) {
-        if ((*(hgr_baseaddr[cy] + *cur_d7) & *cur_m7) == 0) {
+        line = (uint8 *)(hgr_baseaddr_l[cy]|(hgr_baseaddr_h[cy]<<8));
+        if ((*(line + *cur_d7) & *cur_m7) == 0) {
           c |= bit;
         }
         bit <<= scale;

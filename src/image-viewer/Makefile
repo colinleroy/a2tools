@@ -11,6 +11,7 @@ imgview_SOURCES := \
 	../lib/hgr_addrs.c \
 
 imgview_CC65SOURCES := \
+	../lib/hgr_addrs.s \
 	../lib/serial/asm/driver.s \
 	../lib/serial/asm/acia.s \
 	../lib/serial/asm/z8530.s \
@@ -55,7 +56,7 @@ CFLAGS  = -I ../lib -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
 
 CLCFLAGS = -t $(TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x200 $(GENERAL_CFLAGS)
 
-imgview_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-rtonce.cfg $(TARGET)-iobuf-0800.o --start-addr 0x4000
+imgview_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-rtonce-alignbss.cfg $(TARGET)-iobuf-0800.o --start-addr 0x4000
 
 GCCCFLAGS = -g -O0 -Wall -Wno-pointer-sign -Wno-char-subscripts -Wno-unused-but-set-variable -Wno-unused-variable -Wno-unknown-pragmas $(shell sdl-config --cflags)
 GCCLDFLAGS = $(shell sdl-config --libs)

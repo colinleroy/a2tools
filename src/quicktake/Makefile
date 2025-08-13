@@ -28,6 +28,7 @@ slowtake_SOURCES := \
 	../lib/hgr_addrs.c
 
 slowtake_CC65SOURCES := \
+	../lib/hgr_addrs.s \
 	qt-dither.s \
 	../lib/serial/asm/driver.s \
 	../lib/serial/asm/acia.s \
@@ -125,7 +126,7 @@ CFLAGS  = -I ../lib -I . -DCONF_FILE_PATH=\"/etc/a2tools/quicktake.conf\"
 
 CLCFLAGS = -t $(TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x200 $(GENERAL_CFLAGS) $(debug_CFLAGS) \
 
-slowtake_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-hgr.cfg $(TARGET)-iobuf-0800.o --start-addr 0xC00 #One file buffer
+slowtake_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-hgr-alignbss.cfg $(TARGET)-iobuf-0800.o --start-addr 0xC00 #One file buffer
 
 qtktconv_CLCFLAGS = -D_CACHE_SIZE=16384 --asm-define CACHE_SIZE=16384 \
 	-DRAW_X_OFFSET=2 -DRAW_Y_OFFSET=2 -DRAW_WIDTH=645 \

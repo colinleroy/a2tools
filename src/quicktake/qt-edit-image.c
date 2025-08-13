@@ -44,7 +44,7 @@ extern uint8 scrw, scrh;
 #define DITHER_THRESHOLD 128U /* Must be 128 for sierra dithering sign check */
 #define DEFAULT_BRIGHTEN 0
 
-int8 err_buf[FILE_WIDTH * 2];
+int8 err_buf[(FILE_WIDTH) * 2];
 
 FILE *ifp, *ofp;
 
@@ -366,14 +366,12 @@ static void invert_selection(void) {
   uint16 dsy = crop_start_y * 4 / 10;
   uint16 dey = crop_end_y * 4 / 10;
 
-  #define START_OFFSET ((HGR_WIDTH - FILE_WIDTH) / 2)
-
-  lx = div7_table[dsx + START_OFFSET];
-  rx = div7_table[dex + START_OFFSET];
+  lx = centered_div7_table[dsx];
+  rx = centered_div7_table[dex];
 
   /* Invert horizontal lines */
-  a = hgr_baseaddr[dsy] + lx;
-  b = hgr_baseaddr[dey] + lx;
+  a = (uint8 *)(hgr_baseaddr_l[dsy]|(hgr_baseaddr_h[dsy]<<8)) + lx;
+  b = (uint8 *)(hgr_baseaddr_l[dey]|(hgr_baseaddr_h[dey]<<8)) + lx;
   for (x = dsx; x < dex; x+=7) {
     *a = ~(*a);
     *b = ~(*b);
@@ -382,7 +380,7 @@ static void invert_selection(void) {
   }
   /* Invert vertical lines */
   for (y = dsy + 1; y < dey - 1; y++) {
-    uint8 *by = hgr_baseaddr[y];
+    uint8 *by = (uint8 *)(hgr_baseaddr_l[y]|(hgr_baseaddr_h[y]<<8));
     a = by + lx;
     b = by + rx;
     *a = ~(*a);
@@ -1004,7 +1002,7 @@ void do_dither(void) {
 
       dither_sierra:
         buf_plus_err = opt_val + err2;
-        buf_plus_err += err_buf[dx];
+        buf_plus_err += sierra_safe_err_buf[dx];
         if (buf_plus_err < DITHER_THRESHOLD) {
           /* pixel's already black */
           x86_64_tgi_set(dx, y, TGI_COLOR_BLACK);
@@ -1015,9 +1013,9 @@ void do_dither(void) {
         err2 = ((int8)buf_plus_err) >> 1; /* cur_err * 2 / 4 */
         err1 = err2 >> 1;    /* cur_err * 1 / 4 */
 
-        err_buf[dx]   = err1;
+        sierra_safe_err_buf[dx]   = err1;
         if (dx > 0) {
-          err_buf[dx-1]    += err1;
+          sierra_safe_err_buf[dx-1]    += err1;
         }
 
 
