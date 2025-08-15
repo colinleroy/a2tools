@@ -416,13 +416,7 @@ start_edit:
            "S: Save - Escape: Exit - Any other key: Hide help",
            dither_alg == DITHER_BAYER ? "Bayer"
             : dither_alg == DITHER_SIERRA ? "Sierra Lite" : "None");
-  c = tolower(cgetc());
-#ifdef __CC65__
-    if (!hgr_mix_is_on) {
-      hgr_mixon();
-    } else
-#endif
-    {
+    c = tolower(cgetc());
       if (!cropping) {
         switch(c) {
           case CH_ESC:
@@ -472,7 +466,10 @@ start_edit:
             brighten -= 16;
             return 1;
           default:
-            hgr_mixoff();
+            if (hgr_mix_is_on)
+              hgr_mixoff();
+            else
+              hgr_mixon();
         }
       } else {
         /* will be divided by 2 if 320x240, we want it
@@ -556,7 +553,6 @@ zoom_level_2:
         c = cgetc();
         goto crop_again;
       }
-    }
   } while (1);
 
 save:
@@ -634,8 +630,7 @@ uint8 cur_hgr_mod;
 
 
 #ifdef __CC65__
-  #define cur_hgr_baseaddr_ptr zp2ip
-  #define thumb_buf_ptr zp4p /* Used for thumbnail decoding */
+  #define thumb_buf_ptr zp2p /* Used for thumbnail decoding */
 #endif
 
 #if (BUFFER_SIZE != 2048)
@@ -1104,14 +1099,16 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
     dither_alg = DITHER_BAYER;
   }
 
-  cputs("Dithering...\r\n");
+  hgr_mixon();
+  cputs("Rendering... (Press space to toggle menu once done.)\r\n");
   bzero((char *)HGR_PAGE, HGR_LEN);
 
   progress_bar(wherex(), wherey(), scrw, 0, file_height);
 
   do_dither();
-
   progress_bar(-1, -1, scrw, file_height, file_height);
+  hgr_mixoff();
+
   fclose(ifp);
 #ifndef __CC65__
   ifp = fopen("HGR","wb");
