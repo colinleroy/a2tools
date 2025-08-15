@@ -58,6 +58,7 @@ uint16 crop_start_x = 0, crop_end_x;
 uint16 crop_start_y = 0, crop_end_y;
 int8 brighten = DEFAULT_BRIGHTEN;
 uint8 x_offset;
+uint8 crop_pos = 1;
 
 static char imgname[FILENAME_MAX];
 #ifdef __CC65__
@@ -404,7 +405,7 @@ start_edit:
       if (resize)
         cputs("; C: Crop");
       else
-        cputs("; C: Fit");
+        cputs("; C: Fit - Up/down: Adjust crop");
     } else if (angle == 0 && !(src_width % 320)) {
       cputs("; C: Reframe");
     }
@@ -465,6 +466,18 @@ start_edit:
           case 'd':
             brighten -= 16;
             return 1;
+          case CH_CURS_UP:
+            if (crop_pos > 0) {
+              crop_pos--;
+              return 1;
+            }
+            break;
+          case CH_CURS_DOWN:
+            if (crop_pos < 2) {
+              crop_pos++;
+              return 1;
+            }
+            break;
           default:
             if (hgr_mix_is_on)
               hgr_mixoff();

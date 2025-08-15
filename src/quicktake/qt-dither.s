@@ -13,7 +13,7 @@
         .import         _centered_mod7_table, _mod7_table
         .import         _hgr_baseaddr_l, _hgr_baseaddr_h
         .import         _first_byte_idx, _resize
-        .import         _x_offset
+        .import         _x_offset, _crop_pos
 
         .import         _bayer_map, _bayer_map_x, _bayer_map_y
         .import         _end_bayer_map_x, _end_bayer_map_y
@@ -638,10 +638,12 @@ no_resize_90_coords:
         lda     #>invert_rotated_line
         sta     pixel_handler_first_step+2
 
-        lda     #32           ; TODO: we could change those to crop in not the middle
+        ldx     _crop_pos
+        lda     crop_shift_90,x
         sta     x_shifter
+        lda     crop_low_90,x
         sta     x_invert_low_bound
-        lda     #(192+32)
+        lda     crop_high_90,x
         sta     x_invert_high_bound
 
         lda     #((280-192)/2)
@@ -770,10 +772,12 @@ no_resize_270_coords:
         lda     #>invert_rotated_line
         sta     pixel_handler_first_step+2
 
-        lda     #32           ; TODO: we could change those to crop in not the middle
+        ldx     _crop_pos
+        lda     crop_shift_270,x
         sta     x_shifter
+        lda     crop_low_270,x
         sta     x_invert_low_bound
-        lda     #(192+32)
+        lda     crop_high_270,x
         sta     x_invert_high_bound
 
         lda     #17
@@ -879,10 +883,10 @@ invert_rotated_line:
         lda     img_x         ; Is it a new line? If yes, compute inverted Y
         beq     compute_inverted_y
 x_invert_low_bound = *+1
-        cmp     #32           ; TODO: we could change those to crop in not the middle
+        cmp     #32
         bcc     skip_inverted_x
 x_invert_high_bound = *+1
-        cmp     #(192+32)     ; TODO: we could change those to crop in not the middle
+        cmp     #(192+32)
         bcs     skip_inverted_x
         eor     x_inverter
         sec
@@ -1004,6 +1008,16 @@ update_pixel_branching:
         stx     pixel_handler_first_step+2       ; the brightener or the ditherer
 
         rts
+
+        .data
+
+crop_shift_90:   .byte 0,        32,       64
+crop_low_90:     .byte 63,       32,       0
+crop_high_90:    .byte (192+63), (192+32), 192
+
+crop_shift_270:  .byte 0,        32,       63
+crop_low_270:    .byte 0,        32,       63
+crop_high_270:  .byte 192,      (192+32), (192+63)
 
         .bss
 
