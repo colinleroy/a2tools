@@ -385,6 +385,7 @@ static void decode_row(void) {
             if (val > 255)
               val = 255;
             *(raw_ptr1+(x)) = val;
+            *(raw_ptr1+(x+1)) = val;
           }
           cur_buf_x+=QUARTER_WIDTH/2;
           raw_ptr1 += QUARTER_WIDTH;

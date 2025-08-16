@@ -7,7 +7,7 @@
 *.dump
 *.log
 loader
-GREY*
+*GREY*
 HIST
 THUMBNAIL
 HGR

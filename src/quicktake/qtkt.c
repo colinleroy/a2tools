@@ -111,9 +111,9 @@ void qt_load_raw(uint16 top)
   for (row = BAND_HEIGHT; row != 0; row--) {
     /* Adapt indexes depending on the row's oddity */
     if (row & 1) {
-      idx_forward = src + SCRATCH_WIDTH;
       idx = src + 1;
       idx_end = src + width + 1;
+      idx_forward = src + SCRATCH_WIDTH;
       pgbar_state+=2;
       progress_bar(-1, -1, 80*22, pgbar_state, height);
     } else {

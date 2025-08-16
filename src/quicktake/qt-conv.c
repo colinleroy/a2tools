@@ -62,6 +62,11 @@ uint8 *cache_end;
  */
 int ifd = -1;
 int ofd = -1;
+
+#ifndef __CC65__
+int fullsize_fd = -1;
+#endif
+
 static const char *ifname;
 
 #pragma code-name (push, "LC")
@@ -299,6 +304,15 @@ static void write_raw(uint16 h)
   /* Scale (nearest neighbor)*/
   dst_ptr = raw_image;
 
+  #ifndef __CC65__
+    for (y_len = 0; y_len < BAND_HEIGHT; y_len++) {
+      write(fullsize_fd, dst_ptr+RAW_X_OFFSET+((y_len+RAW_Y_OFFSET)*RAW_WIDTH), FINAL_WIDTH);
+    }
+  y_len = 0;
+  dst_ptr = raw_image;
+
+  #endif
+
   cur_orig_y = orig_y_table;
   do {
     uint8 xoff;
@@ -479,6 +493,10 @@ try_again:
 
   ofd = open (TMP_NAME, O_RDWR|O_CREAT, 00600);
 
+  #ifndef __CC65__
+  fullsize_fd = open ("LARGE_"TMP_NAME, O_RDWR|O_CREAT, 00600);
+  #endif
+
   if (ofd < 0) {
     printf("Can't open %s\n", TMP_NAME);
     exit(0);
@@ -499,6 +517,9 @@ try_again:
 
   close(ifd);
   close(ofd);
+  #ifndef __CC65__
+  close(fullsize_fd);
+  #endif
   ifd = ofd = -1;
 
   /* Save histogram to /RAM */
