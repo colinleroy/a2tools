@@ -265,6 +265,7 @@ store_bayer_y:
 .macro LOAD_DATA
         lda     _is_thumb
         beq     load_normal
+        lda     img_y
         jsr     _load_thumbnail_data
         jmp     :+
 
@@ -333,13 +334,20 @@ _do_dither:
         sta     rotated_y_hgr_column
 
 dither_setup_start:
-        ldx     #CENTER_OFFSET
-        lda     _is_thumb
+        lda     #CENTER_OFFSET
+        ldy     #<dither_setup_line_start_landscape
+        ldx     #>dither_setup_line_start_landscape
+
+        ora     _is_thumb
         beq     center_done
-        ldx     #CENTER_OFFSET_THUMB
+        lda     #CENTER_OFFSET_THUMB
+        ldy     #<dither_reset_img_x
+        ldx     #>dither_reset_img_x
 
 center_done:
-        stx     x_center_offset
+        sta     x_center_offset
+        sty     next_line_setup+1
+        stx     next_line_setup+2
 
         jsr     patch_dither_branches
 
@@ -372,6 +380,10 @@ finish_patches:
         ; Line loop setup
         BUFFER_INIT
         BAYER_INIT
+
+dither_reset_img_x:                 ; Needed for thumbnails
+        ldy     _file_width
+        sty     img_x
 
 dither_setup_line_start_landscape:
         ldy     cur_hgr_line
@@ -438,6 +450,7 @@ img_y_to_hgr:
         iny
         HGR_SET_LINE_POINTER
 
+next_line_setup:
         jmp     dither_setup_line_start_landscape
 all_done:
         rts

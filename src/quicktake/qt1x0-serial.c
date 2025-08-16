@@ -155,6 +155,7 @@ uint8 qt1x0_set_speed(uint16 speed) {
   char str_speed[] = {0x16,0x2A,0x00,0x03,0x00,0x00,0x00,0x00,0x00,0x05,0x00,0x03,0x03,0x08,0x04,0x00};
   int spd_code;
 
+  /* Seems useless but needed for IIc+ */
   sleep(1);
 
   switch(speed) {
@@ -410,9 +411,11 @@ uint8 qt1x0_get_picture(uint8 n_pic, FILE *picture, off_t avail) {
   uint16 width, height;
   unsigned char pic_size_str[3];
   unsigned long pic_size_int;
+  uint8 status_line;
   const char *format;
   char hdr[] = {0x00,0x00,0x00,0x04,0x00,0x00,0x73,0xE4,0x00,0x01};
 
+  /* Seems useless but needed for IIc+ */
   sleep(1);
 
   if (qt1x0_send_ping() != 0) {
@@ -421,6 +424,7 @@ uint8 qt1x0_get_picture(uint8 n_pic, FILE *picture, off_t avail) {
 
   bzero(buffer, BLOCK_SIZE);
 
+  status_line = wherey();
   cputs("  Getting header...\r\n");
 
   DUMP_START("header");
@@ -478,6 +482,10 @@ uint8 qt1x0_get_picture(uint8 n_pic, FILE *picture, off_t avail) {
   printf("  Width %u, height %u, %lu bytes (%s)\n",
          ntohs(width), ntohs(height), pic_size_int, format);
 
+  gotoxy(0, status_line);
+  cputs("  Getting picture...\r\n");
+  gotoy(status_line+2);
+
   send_photo_data_command(n_pic, pic_size_str);
 
   return receive_data(pic_size_int, picture);
@@ -488,6 +496,9 @@ uint8 qt1x0_get_picture(uint8 n_pic, FILE *picture, off_t avail) {
 
 /* Get a thumnail from the camera to /RAM/THUMBNAIL */
 uint8 qt1x0_get_thumbnail(uint8 n_pic, FILE *picture, thumb_info *info) {
+  uint8 status_line;
+
+  /* Seems useless but needed for IIc+ */
   sleep(1);
 
   if (qt1x0_send_ping() != 0) {
@@ -496,6 +507,7 @@ uint8 qt1x0_get_thumbnail(uint8 n_pic, FILE *picture, thumb_info *info) {
 
   bzero(buffer, BLOCK_SIZE);
 
+  status_line = wherey();
   cputs("  Getting header...\r\n");
 
   DUMP_START("header");
@@ -521,6 +533,9 @@ uint8 qt1x0_get_thumbnail(uint8 n_pic, FILE *picture, thumb_info *info) {
   printf("  Width %u, height %u, %lu bytes (%s)\n",
          THUMB_WIDTH, THUMB_HEIGHT, THUMBNAIL_SIZE, "thumbnail");
 
+  gotoxy(0, status_line);
+  cputs("  Getting thumbnail...\r\n");
+  gotoy(status_line+2);
   send_photo_thumbnail_command(n_pic);
 
   return receive_data(THUMBNAIL_SIZE, picture);

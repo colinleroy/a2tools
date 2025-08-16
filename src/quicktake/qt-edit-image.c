@@ -422,6 +422,7 @@ start_edit:
         switch(c) {
           case CH_ESC:
             clrscr();
+            hgr_mixon();
             cputs("Exit without saving? (y/N)");
             c = tolower(cgetc());
             if (c == 'y')
@@ -561,6 +562,8 @@ zoom_level_2:
               crop_end_y -= move_offset;
             }
             break;
+          default:
+            hgr_mixon();
         }
         invert_selection();
         c = cgetc();
@@ -573,6 +576,7 @@ save:
   if ((cp = strrchr ((char *)buffer, '.')))
     *cp = 0;
   strcat ((char *)buffer, ".hgr");
+  hgr_mixon();
   cputs("Save to: ");
   dget_text_single((char *)buffer, 63, NULL);
   if (buffer[0] == '\0') {
@@ -664,11 +668,11 @@ void load_normal_data(void) {
 void load_normal_data(void);
 #endif
 
-void load_thumbnail_data(void) {
+void load_thumbnail_data(uint8 line) {
   uint8 a, b, c, d, dx, i;
   /* assume thumbnail at 4bpp and zoom it */
   if (is_qt100) {
-    if (!(y & 1)) {
+    if (!(line & 1)) {
       fread(buffer, 1, THUMB_WIDTH / 2, ifp);
       /* Unpack */
 #ifndef __CC65__
@@ -726,7 +730,7 @@ void load_thumbnail_data(void) {
     unsigned char *cur_in, *cur_out;
     unsigned char *orig_in, *orig_out;
     /* Whyyyyyy do they do that */
-    if (!(y % 4)) {
+    if (!(line % 4)) {
       /* Expand the next two lines from 4bpp thumb_buf to 8bpp buffer */
       fread(thumb_buf, 1, THUMB_WIDTH, ifp);
       orig_in = cur_in = thumb_buf;
@@ -773,7 +777,7 @@ void load_thumbnail_data(void) {
         cur_out++;
         cur_in++;
       }
-    } else if (!(y % 2)) {
+    } else if (!(line % 2)) {
       /* Copy the second line of thumb_buf to buffer for display,
        * upscaling horizontally */
       orig_in = cur_in = thumb_buf + THUMB_WIDTH;
@@ -905,7 +909,7 @@ void do_dither(void) {
     if (!is_thumb) {
       load_normal_data();
     } else {
-      load_thumbnail_data();
+      load_thumbnail_data(y);
     }
     /* Calculate hgr base coordinates for the line */
     if (invert_coords) {
@@ -1120,7 +1124,9 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
 
   do_dither();
   progress_bar(-1, -1, scrw, file_height, file_height);
-  hgr_mixoff();
+  if (!is_thumb) {
+    hgr_mixoff();
+  }
 
   fclose(ifp);
 #ifndef __CC65__

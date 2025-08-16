@@ -179,6 +179,9 @@ static uint8 qt200_send_ping(void) {
     c = simple_serial_getc_with_timeout();
     if (c != EOF)
       break;
+    if (kbhit() && cgetc() == CH_ESC) {
+      break;
+    }
   }
   if (c != ACK) {
 #ifdef DEBUG_PROTO
