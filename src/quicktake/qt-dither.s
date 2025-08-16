@@ -333,6 +333,9 @@ _do_dither:
         sta     rotated_x_hgr_line
         sta     rotated_y_hgr_column
 
+        lda     #0
+        sta     pixel_val
+
 dither_setup_start:
         lda     #CENTER_OFFSET
         ldy     #<dither_setup_line_start_landscape
