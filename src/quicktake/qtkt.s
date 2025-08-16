@@ -163,6 +163,7 @@ low_nibble_gstep_high:
 ; in the main loop so no array.
 
 .align 256
+START_INDEXES = *
 ; Index offsets for start of each row (low byte)
 idx_low:
         .repeat BAND_HEIGHT+1,row
@@ -171,37 +172,42 @@ idx_low:
         .assert (_raw_image + (22-row)*SCRATCH_WIDTH + (row .mod 2)) .mod $100 <> $00,error
         .endrep
 
+.assert >* = >START_INDEXES, error ; we switched a page
 ; Index offsets for start of each row (high byte)
 idx_high:
         .repeat BAND_HEIGHT+1,row
         .byte >(_raw_image + (22-row)*SCRATCH_WIDTH + (row .mod 2))
         .endrep
 
-.align 256
+.assert >* = >START_INDEXES, error ; we switched a page
 ; Forward index offsets for start of each row (low byte)
 idx_forward_low:
         .repeat BAND_HEIGHT+1,row
         .byte <(_raw_image + (23-row)*SCRATCH_WIDTH - (row .mod 2) + 1)
         .endrep
 
+.assert >* = >START_INDEXES, error ; we switched a page
 ; Forward index offsets for start of each row (high byte)
 idx_forward_high:
         .repeat BAND_HEIGHT+1,row
         .byte >(_raw_image + (23-row)*SCRATCH_WIDTH - (row .mod 2) + 1)
         .endrep
 
-.align 256
+.assert >* = >START_INDEXES, error ; we switched a page
 ; Backward index offsets for start of each row (low byte)
 idx_behind_low:
         .repeat BAND_HEIGHT+1,row
         .byte <(_raw_image + (21-row)*SCRATCH_WIDTH + (row .mod 2) + 1)
         .endrep
 
+.assert >* = >START_INDEXES, error ; we switched a page
 ; Backward index offsets for start of each row (high byte)
 idx_behind_high:
         .repeat BAND_HEIGHT+1,row
         .byte >(_raw_image + (21-row)*SCRATCH_WIDTH + (row .mod 2) + 1)
         .endrep
+END_INDEXES = *
+.assert >END_INDEXES = >START_INDEXES, error ; we switched a page
 
 ; QTKT file magic
 model_str:
