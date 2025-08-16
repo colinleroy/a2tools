@@ -231,8 +231,14 @@ uint8 *cur_thumb_data;
 
 static void thumb_histogram(FILE *ifp) {
   uint8 x = 0, read;
-  uint16 *histogram = (uint16 *)err_buf;
   uint16 curr_hist = 0;
+
+#ifndef __CC65__
+  bzero(histogram, sizeof(histogram));
+#else
+  bzero(histogram_low, sizeof(histogram_low));
+  bzero(histogram_high, sizeof(histogram_high));
+#endif
 
   while ((read = fread(buffer, 1, 255, ifp)) != 0) {
     cur_thumb_data = buffer;
@@ -245,53 +251,29 @@ static void thumb_histogram(FILE *ifp) {
       x++;
     } while (x != read);
 #else
-    __asm__("lda %v", histogram);
-    __asm__("sta ptr1");
-    __asm__("sta ptr2");
     __asm__("ldy #0");
     next_byte:
-    __asm__("ldx %v+1", histogram);
-    __asm__("stx ptr1+1");
-    __asm__("stx ptr2+1");
-
     __asm__("sty %v", x);
     __asm__("lda (%v),y", cur_thumb_data); /* read byte */
-    __asm__("tax"); /* backup it */
+    __asm__("tay"); /* backup it */
     __asm__("asl"); /* << 4 low nibble */
     __asm__("asl");
     __asm__("asl");
     __asm__("asl");
 
-    __asm__("asl"); /* shift left for array access */
-    __asm__("tay");
-    __asm__("bcc %g", noof22);
-    __asm__("inc ptr1+1");
-    __asm__("clc");
+    __asm__("tax");
+    __asm__("inc %v,x", histogram_low);
+    __asm__("bne %g", noof22);
+    __asm__("inc %v,x", histogram_high);
     noof22:
-    __asm__("lda (ptr1),y");
-    __asm__("adc #1");
-    __asm__("sta (ptr1),y");
-    __asm__("iny");
-    __asm__("lda (ptr1),y");
-    __asm__("adc #0");
-    __asm__("sta (ptr1),y");
 
-    __asm__("txa");
+    __asm__("tya");
     __asm__("and #$F0");
-
-    __asm__("asl");
-    __asm__("tay");
-    __asm__("bcc %g", noof23);
-    __asm__("inc ptr2+1");
-    __asm__("clc");
+    __asm__("tax");
+    __asm__("inc %v,x", histogram_low);
+    __asm__("bne %g", noof23);
+    __asm__("inc %v,x", histogram_high);
     noof23:
-    __asm__("lda (ptr2),y");
-    __asm__("adc #1");
-    __asm__("sta (ptr2),y");
-    __asm__("iny");
-    __asm__("lda (ptr2),y");
-    __asm__("adc #0");
-    __asm__("sta (ptr2),y");
 
     __asm__("ldy %v", x);
     __asm__("iny");
@@ -300,19 +282,34 @@ static void thumb_histogram(FILE *ifp) {
 #endif
   }
   x = 0;
-  cur_histogram = histogram;
-  cur_opt_histogram = opt_histogram;
 
   do {
     uint32 tmp_large;
     uint16 tmp;
-    curr_hist += *(cur_histogram++);
+#ifndef __CC65__
+    curr_hist += histogram[x];
     tmp_large = ((uint32)curr_hist * 0xF0);
     tmp = tmp_large >> 6; /* /64 */
     tmp /= 75;            /* /64/75 = /80/60 */
-    *(cur_opt_histogram++) = tmp;
+    opt_histogram[x] = tmp;
+#else
+    // curr_hist += histogram_low[x]|(histogram_high[x]<<8);
+    __asm__("ldx %v", x);
+    __asm__("clc");
+    __asm__("lda %v,x", histogram_low);
+    __asm__("adc %v", curr_hist);
+    __asm__("sta %v", curr_hist);
+    __asm__("lda %v,x", histogram_high);
+    __asm__("adc %v+1", curr_hist);
+    __asm__("sta %v+1", curr_hist);
+    tmp_large = ((uint32)curr_hist * 0xF0);
+    tmp = tmp_large >> 6; /* /64 */
+    __A__ = tmp / 75;            /* /64/75 = /80/60 */
+    // opt_histogram[x] = tmp;
+    __asm__("ldx %v", x);
+    __asm__("sta %v,x", opt_histogram);
+#endif
   } while (x++ < 0xF0);
-
 
   return;
 }
@@ -801,7 +798,7 @@ void setup_angle_0(void) {
         off_y = (HGR_HEIGHT - file_height) / 2;
         shifted_div7_table = div7_table + x_offset;
         shifted_mod7_table = mod7_table + x_offset;
-        cur_hgr_baseaddr_ptr = (hgr_baseaddr + off_y);
+        cur_hgr_baseaddr_ptr = (hgr_baseaddr_l[off_y]|(hgr_baseaddr_h[off_y]<<8));
         first_byte_idx = *(shifted_div7_table);
         hgr_byte = *cur_hgr_baseaddr_ptr + first_byte_idx;
 
@@ -831,7 +828,7 @@ void setup_angle_180(void) {
       shifted_div7_table = div7_table + x_offset;
       shifted_mod7_table = mod7_table + x_offset;
 
-      cur_hgr_baseaddr_ptr = (uint16 *)(hgr_baseaddr + off_y);
+      cur_hgr_baseaddr_ptr = (uint16 *)(hgr_baseaddr_l[off_y]|(hgr_baseaddr_h[off_y]<<8));
       first_byte_idx = *(shifted_div7_table + off_x);
       hgr_byte = *cur_hgr_baseaddr_ptr + first_byte_idx;
       xdir = -1;
@@ -965,7 +962,7 @@ void do_dither(void) {
         } else {
           scaled_dx = dx;
         }
-        hgr_byte = hgr_baseaddr[scaled_dx] + cur_hgr_row;
+        hgr_byte = (hgr_baseaddr_l[scaled_dx]|(hgr_baseaddr_h[scaled_dx]<<8)) + cur_hgr_row;
         pixel = cur_hgr_mod;
       }
 
