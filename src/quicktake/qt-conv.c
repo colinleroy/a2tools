@@ -306,7 +306,7 @@ static void write_raw(uint16 h)
 
   #ifndef __CC65__
     for (y_len = 0; y_len < BAND_HEIGHT; y_len++) {
-      write(fullsize_fd, dst_ptr+RAW_X_OFFSET+((y_len+RAW_Y_OFFSET)*RAW_WIDTH), FINAL_WIDTH);
+      write(fullsize_fd, dst_ptr+RAW_X_OFFSET+((y_len+RAW_Y_OFFSET)*RAW_WIDTH), width);
     }
   y_len = 0;
   dst_ptr = raw_image;
