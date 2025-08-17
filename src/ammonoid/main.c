@@ -12,6 +12,7 @@
 
 #include "clrzone.h"
 #include "scrollwindow.h"
+#include "scroll.h"
 #include "malloc0.h"
 #include "dget_text.h"
 #include "surl.h"
@@ -27,7 +28,9 @@ static char pane_directory[2][FILENAME_MAX+1] = {"", ""};
 static unsigned int pane_num_files[2] = {0, 0};
 static unsigned int pane_first_file[2] = {0, 0};
 static unsigned int pane_file_cursor[2] = {0, 0};
-
+static uint8 must_clear[2] = {1, 1};
+static uint8 print_first[2] = {1, 1};
+static uint8 print_last[2] = {1, 1};
 static char *filetype[256] = { NULL };
 static char *short_filetype[256] = { NULL };
 
@@ -61,6 +64,7 @@ unsigned char LOAD = ('C'|0x80);
 
 static void info_message(const char *msg, unsigned char valid);
 
+#pragma code-name (push, "LC")
 
 static struct dirent *allocate_entries(unsigned char pane, unsigned int n_entries) {
   unsigned long alloc_size = (unsigned long)n_entries * sizeof(struct dirent);
@@ -74,6 +78,7 @@ static struct dirent *allocate_entries(unsigned char pane, unsigned int n_entrie
   pane_entries[pane] = buffer;
   if (n_entries > 0 && IS_NULL(buffer)) {
     info_message("Not enough memory.", 1);
+    must_clear[pane] = 1;
   }
   return pane_entries[pane];
 }
@@ -181,9 +186,11 @@ static void print_date(struct dirent *entry) {
            entry->d_mtime.date.mon,
            entry->d_mtime.date.day);
   } else {
-    cputs("[no date]");
+    cputs("(no date)");
   }
 }
+
+static void help_message(void);
 
 /* Display a pane */
 static void display_pane(unsigned char pane) {
@@ -191,7 +198,6 @@ static void display_pane(unsigned char pane) {
   struct dirent *entry = NULL;
   unsigned int n, start, stop, cur;
 
-  /* Clear whole pane */
   set_scrollwindow(0, pane_btm);
   set_hscrollwindow(pane_left[pane]+pane_offset, pane_width);
 
@@ -203,11 +209,19 @@ static void display_pane(unsigned char pane) {
     load_directory(pane);
   }
 
-  /* Clear whole pane */
+  /* May have been unset by directory load, in case of error */
   set_scrollwindow(0, pane_btm);
   set_hscrollwindow(pane_left[pane]+pane_offset, pane_width);
 
-  clrscr();
+  gotoxy(pane_width - 1, 0);
+  cputc(' ');
+
+  /* Clear whole pane */
+  if (must_clear[pane]) {
+    clrscr();
+  } else {
+    gotoxy(0, 0);
+  }
 
   /* Print pane title */
   if (pane_directory[pane][0] == '\0') {
@@ -237,19 +251,29 @@ static void display_pane(unsigned char pane) {
     entry = &entries[n];
     cputc(n == cur           ? '>' : ' '); /* Current cursor */
     cputc(is_selected(entry) ? SEL : ' '); /* Selected */
-    cputs(entry->d_name);
-    if (_DE_ISDIR(entry->d_type)) {
-      cputc('/');
+    if (must_clear[pane]
+        || (n == start && print_first[pane])
+        || (n == stop-1 && print_last[pane])) {
+      cputs(entry->d_name);
+      if (_DE_ISDIR(entry->d_type)) {
+        cputc('/');
+      }
+      if (has_80cols) {
+        gotox(22);
+        cputs(short_filetype[entry->d_type]);
+        cputs("  ");
+        print_date(entry);
+      }
+      clreol();
     }
-    if (has_80cols) {
-      gotox(22);
-      cputs(short_filetype[entry->d_type]);
-      cputs("  ");
-      print_date(entry);
-    }
-    clreol();
     cputs("\r\n");
   }
+  if (must_clear[pane]) {
+    help_message();
+  }
+  print_first[pane] = 
+    print_last[pane] =
+    must_clear[pane] = 0;
 }
 
 /* Display line on active pane, clear cursor/selection on inactive */
@@ -271,11 +295,18 @@ static void display_active_pane(void) {
 
 /* Make sure the cursor is in the displayed window */
 static void fixup_start(unsigned char pane) {
+  set_scrollwindow(pane_top, pane_btm);
+  set_hscrollwindow(pane_left[pane]+pane_offset, pane_width);
+
   if (pane_first_file[pane] + pane_height <= pane_file_cursor[pane]) {
     pane_first_file[pane] = pane_file_cursor[pane] - pane_height + 1;
+    print_last[pane] = 1;
+    scrollup_one();
   }
   if (pane_file_cursor[pane] < pane_first_file[pane]) {
     pane_first_file[pane] = pane_file_cursor[pane];
+    print_first[pane] = 1;
+    scrolldown_one();
   }
 }
 
@@ -286,6 +317,7 @@ static void cleanup_pane(unsigned char pane) {
   pane_num_files[pane] = 0;
   pane_first_file[pane] = 0;
   pane_file_cursor[pane] = 0;
+  must_clear[pane] = 1;
 }
 
 static char *build_full_path(unsigned char pane, const struct dirent *entry) {
@@ -342,6 +374,8 @@ static void close_directory(unsigned char pane) {
   cleanup_pane(pane);
 }
 
+#pragma code-name (pop)
+
 /* Toggle an element's selection */
 static void select_current(unsigned char pane) {
   struct dirent *entry;
@@ -376,14 +410,21 @@ void set_logwindow(void) {
   chline(total_width);
 }
 
+static void help_message(void) {
+    set_logwindow();
+    cprintf("Ammonoid - An Apple II file manager.\r\n"
+            "Press H for help - %zuB RAM free",
+            _heapmemavail());
+
+}
+
 static void info_message(const char *msg, unsigned char valid) {
   set_logwindow();
   cputs(msg);
   if (valid) {
     cputs("\r\nPress a key to continue.");
     cgetc();
-    set_logwindow();
-    cputs("Press H for help.");
+    help_message();
   }
 }
 
@@ -505,8 +546,8 @@ static void pane_chdir(unsigned char pane, const char *dir) {
   load_directory(pane);
 }
 
-static char *copy_buf = NULL;
-#define COPY_BUF_SIZE 4096
+#define COPY_BUF_SIZE 1024
+static char copy_buf[COPY_BUF_SIZE];
 
 typedef struct _file_list {
   char filename[FILENAME_MAX+1];
@@ -542,10 +583,6 @@ static int do_iterate_files(unsigned char all, unsigned char copy, unsigned char
   int n;
   file_list *to_delete = NULL;
   int n_to_delete = 0;
-
-  if (copy_buf == NULL) {
-    copy_buf = malloc(COPY_BUF_SIZE);
-  }
 
   if (remove) {
     to_delete = malloc0(pane_num_files[active_pane]*sizeof(file_list));
@@ -755,18 +792,22 @@ static void handle_input(void) {
       return;
     /* Scrollup in current pane */
     case CH_CURS_UP:
-      if (pane_file_cursor[active_pane] > 0)
+      if (pane_file_cursor[active_pane] > 0) {
         pane_file_cursor[active_pane]--;
-      else 
+      } else {
         pane_file_cursor[active_pane] = pane_num_files[active_pane] - 1;
+        must_clear[active_pane] = 1;
+      }
       fixup_start(active_pane);
       return;
     /* Scrolldown in current pane */
     case CH_CURS_DOWN:
-      if (pane_file_cursor[active_pane] < pane_num_files[active_pane] - 1)
+      if (pane_file_cursor[active_pane] < pane_num_files[active_pane] - 1) {
         pane_file_cursor[active_pane]++;
-      else 
+      } else {
         pane_file_cursor[active_pane] = 0;
+        must_clear[active_pane] = 1;
+      }
       fixup_start(active_pane);
       return;
     /* Open directory on current pane */
@@ -958,10 +999,11 @@ void main(void) {
     vsdrive_install();
   }
 
+  help_message();
+
   display_pane(0);
   display_pane(1);
   while (1) {
-    info_message("Press H for help.", 0);
     display_active_pane();
     handle_input();
   }
