@@ -153,6 +153,9 @@ GCCLDFLAGS = $(shell sdl-config --libs)
 
 all: quicktake.po
 
+../image-viewer/imgview.bin:
+	make -C ../image-viewer/ clean all
+
 CLEANDISK = ../../disks/ProDOS_2_4_3.po
 quicktake.po: splash.h slowtake.bin qtktconv.bin qtknconv.bin jpegconv.bin loader.x86_64 qtktconv.x86_64 qtknconv.x86_64 jpegconv.x86_64 ../image-viewer/imgview.bin
 	cp $(CLEANDISK) $@; \

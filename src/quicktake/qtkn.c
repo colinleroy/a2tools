@@ -19,7 +19,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <arpa/inet.h>
 #include "progress_bar.h"
 #include "qt-conv.h"
 #include "qtk_bithuff.h"
@@ -129,7 +128,10 @@ static void init_row(void) {
         tmp32--;
         *((uint16 *)cur_buf_y) = tmp32 >> 12;
       } else {
-        *((uint16 *)cur_buf_y) = 0xFFFF;
+        // tmp32 *= 0  == 0
+        // tmp32--     == 0xFFFF
+        // tmp32 >> 12 == 0x0F
+        *((uint16 *)cur_buf_y) = 0x0F;
       }
       cur_buf_y++;
     }
@@ -144,10 +146,10 @@ static void init_row(void) {
     setup_curbuf_y:
     __asm__("dec %v", i);
     /* load */
-    __asm__("ldy #$00");
+    __asm__("ldy #$01");
     __asm__("lda (%v),y", cur_buf_y);
     __asm__("bne %g", not_null_buf);
-    __asm__("iny");
+    __asm__("dey");
     __asm__("lda (%v),y", cur_buf_y);
     __asm__("beq %g", null_buf);
     not_null_buf:
@@ -200,8 +202,8 @@ static void init_row(void) {
     __asm__("jmp %g", store_buf);
 
     null_buf:
-    __asm__("lda #$FF");
-    __asm__("tax");
+    __asm__("lda #$0F");
+    __asm__("ldx #$00");
 
     store_buf:
     __asm__("ldy #$00");
@@ -573,7 +575,6 @@ static void decode_row(void) {
             __asm__("rol tmp4");
             __asm__("asl a");
             __asm__("rol tmp4");
-
             __asm__("sta tmp3");
 
             __asm__("clc");

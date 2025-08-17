@@ -581,6 +581,10 @@ save:
   }
 
 open_again:
+#ifdef __CC65__
+  _filetype = PRODOS_T_BIN;
+  _auxtype = HGR_PAGE;
+#endif
   ofp = fopen((char *)buffer, "w");
   if (ofp == NULL) {
     printf("Please insert image floppy for %s, or Escape to return\n", (char *)buffer);
@@ -589,6 +593,7 @@ open_again:
     goto start_edit;
   }
   printf("Saving...\n");
+
   if (fwrite((char *)HGR_PAGE, 1, HGR_LEN, ofp) < HGR_LEN) {
     printf("Error. Press a key to continue...\n");
     fclose(ofp);
