@@ -370,20 +370,22 @@ static void open_directory(unsigned char target_pane) {
 
   new_path = build_full_path(active_pane, entry);
 
-  if (entry->d_type == PRODOS_T_SYS || entry->d_type == PRODOS_T_BIN) {
-    if (entry->d_auxtype == 0x2000 && entry->d_type == PRODOS_T_BIN) {
-      reopen_start_device();
-      if (exec("IMGVIEW", new_path) != 0) {
-        info_message("Can not open image.", 1);
-      }
+  if (((entry->d_type == PRODOS_T_BIN && (entry->d_auxtype == 0x2000 || entry->d_auxtype == 0x0))
+          || (entry->d_type == PRODOS_T_FOT && entry->d_auxtype < 0x4000))
+        && entry->d_size <= 8192UL && entry->d_size >= 8184UL) {
+    reopen_start_device();
+    if (exec("IMGVIEW", new_path) != 0) {
+      info_message("Can not open image.", 1);
     }
-    else if (entry->d_auxtype && exec(new_path, NULL) != 0) {
+  } else if (entry->d_type == PRODOS_T_BIN || entry->d_type == PRODOS_T_SYS) {
+    if (entry->d_auxtype && exec(new_path, NULL) != 0) {
       info_message("Can not exec file.", 1);
     }
   }
 
   if (!_DE_ISDIR(entry->d_type)) {
     free(new_path);
+    info_message("Don't know how to open.", 1);
     return;
   }
 

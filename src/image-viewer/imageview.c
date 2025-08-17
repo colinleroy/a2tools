@@ -268,9 +268,9 @@ start_from_first:
       continue;
     }
     if (found == 1) {
-      if (ent->d_type == PRODOS_T_BIN
-       && (ent->d_auxtype == 0x2000 || ent->d_auxtype == 0x0)
-       && (ent->d_size == 8192UL || ent->d_size == 8184UL)) {
+      if (((ent->d_type == PRODOS_T_BIN && (ent->d_auxtype == 0x2000 || ent->d_auxtype == 0x0))
+            || (ent->d_type == PRODOS_T_FOT && ent->d_auxtype < 0x4000))
+        && ent->d_size <= 8192UL && ent->d_size >= 8184UL) {
          /* this is, quite probably, an image */
          sprintf(filename, "/%s", ent->d_name);
          found = 2;

@@ -582,8 +582,10 @@ save:
 
 open_again:
 #ifdef __CC65__
-  _filetype = PRODOS_T_BIN;
+  _filetype = PRODOS_T_FOT;
   _auxtype = HGR_PAGE;
+  // https://prodos8.com/docs/technote/ftn/08/
+  HGR_PAGE[0x78] = 0; // Black and white, 280x192
 #endif
   ofp = fopen((char *)buffer, "w");
   if (ofp == NULL) {
