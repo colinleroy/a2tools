@@ -22,6 +22,12 @@
 
 #define PRODOS_MAX_VOLUMES 37
 
+int __fastcall__ file_set_type(const char *pathname, unsigned char type);
+/* Sets the ProDOS type for the file, returns 0 on success, sets errno on failure */
+int __fastcall__ file_set_auxtype(const char *pathname, unsigned int auxtype);
+/* Sets the ProDOS auxtype for the file, returns 0 on success, sets errno on failure */
+
+
 /* State */
 static unsigned char active_pane = 0;
 static struct dirent *pane_entries[2] = {NULL, NULL};
@@ -34,6 +40,9 @@ static uint8 print_first[2] = {1, 1};
 static uint8 print_last[2] = {1, 1};
 static char *filetype[256] = { NULL };
 static char *short_filetype[256] = { NULL };
+
+#define COPY_BUF_SIZE 1024
+static char copy_buf[COPY_BUF_SIZE];
 
 /* Selection status, stored in dirent's d_block as we don't really
  * care about that field. */
@@ -455,8 +464,10 @@ static char *prompt(const char *verb, const char *dir, const char *file, int len
 
   strcpy(buf, file);
   cputs(verb);
-  cputs(dir);
-  cputc('/');
+  if (IS_NOT_NULL(dir)) {
+    cputs(dir);
+    cputc('/');
+  }
   dget_text_single(buf, len, NULL);
 
   return buf;
@@ -505,6 +516,55 @@ static void file_info(void) {
   cputs("\r\nPress a key to continue.");
   cgetc();
   clrscr();
+}
+
+static void edit_file(void) {
+  struct dirent *entry = get_current_entry();
+  char *new_type_str, *dummy;
+  unsigned int new_type;
+
+  if (entry == NULL) {
+    return;
+  }
+
+  if (entry->d_name[0] == '/') {
+    return;
+  }
+
+  if (chdir(pane_directory[active_pane]) != 0) {
+    return;
+  }
+
+  sprintf(copy_buf, "%02X", entry->d_type);
+  new_type_str = prompt("New type: $", NULL, copy_buf, 3);
+  new_type = strtoul(new_type_str, &dummy, 16);
+  if (new_type_str[0] == '\0' || new_type == entry->d_type) {
+    goto subtype;
+  }
+
+  if (file_set_type(entry->d_name, (unsigned char)new_type) == 0) {
+    entry->d_type = new_type;
+    must_clear[active_pane] = 1;
+  }
+
+subtype:
+  free(new_type_str);
+  sprintf(copy_buf, "%04X", entry->d_auxtype);
+  new_type_str = prompt("New auxiliary type: $", NULL, copy_buf, 5);
+  new_type = strtoul(new_type_str, &dummy, 16);
+  if (new_type_str[0] == '\0' || new_type == entry->d_auxtype) {
+    goto subtype;
+  }
+
+  if (file_set_auxtype(entry->d_name, new_type) == 0) {
+    entry->d_auxtype = new_type;
+    must_clear[active_pane] = 1;
+  }
+
+out:
+  free(new_type_str);
+  clrscr();
+  refresh_other_pane();
 }
 
 /* Rename current file in pane */
@@ -568,9 +628,6 @@ static void pane_chdir(unsigned char pane, const char *dir) {
   strcpy(pane_directory[pane], dir);
   load_directory(pane);
 }
-
-#define COPY_BUF_SIZE 1024
-static char copy_buf[COPY_BUF_SIZE];
 
 typedef struct _file_list {
   char filename[FILENAME_MAX+1];
@@ -789,6 +846,7 @@ void help(void) {
         "C: Copy selected to other pane\r\n"
         "M: Move selected to other pane\r\n"
         "I: File information\r\n"
+        "T: Change file type or aux type\r\n"
         "\r\n\r\n"
         "(c) Colin Leroy-Mira, 2025\r\n"
         "https://colino.net/\r\n"
@@ -870,6 +928,9 @@ static void handle_input(void) {
       return;
     case 'i':
       file_info();
+      return;
+    case 't':
+      edit_file();
       return;
     case 'h':
       help();
