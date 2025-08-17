@@ -553,7 +553,7 @@ subtype:
   new_type_str = prompt("New auxiliary type: $", NULL, copy_buf, 5);
   new_type = strtoul(new_type_str, &dummy, 16);
   if (new_type_str[0] == '\0' || new_type == entry->d_auxtype) {
-    goto subtype;
+    goto out;
   }
 
   if (file_set_auxtype(entry->d_name, new_type) == 0) {
@@ -734,6 +734,8 @@ static int do_iterate_files(unsigned char all, unsigned char copy, unsigned char
           }
           in = fopen(src, "r");
           if (in) {
+            _filetype = entry->d_type;
+            _auxtype  = entry->d_auxtype;
             out = fopen(dest, "w");
             if (out) {
               size_t r;
