@@ -52,9 +52,22 @@ static unsigned char pane_left[2] = {0, 20};
 #define DEBUG(...)
 #endif
 
+static void info_message(const char *msg, unsigned char valid);
+
+
 static struct dirent *allocate_entries(unsigned char pane, unsigned int n_entries) {
+  unsigned long alloc_size = (unsigned long)n_entries * sizeof(struct dirent);
+  void *buffer = NULL;
+
   free(pane_entries[pane]);
-  pane_entries[pane] = malloc0(sizeof(struct dirent)*n_entries);
+
+  if (!(alloc_size >> 16)) {
+    buffer = malloc(alloc_size);
+  }
+  pane_entries[pane] = buffer;
+  if (IS_NULL(buffer)) {
+    info_message("Not enough memory.", 1);
+  }
   return pane_entries[pane];
 }
 
@@ -114,12 +127,15 @@ static void load_directory(unsigned char pane) {
     struct dirent *ent;
     struct dirent *entries = NULL;
     unsigned int n = 0;
-    
-    rewinddir(d);
 
     DEBUG("opened %s (%p)\n", pane_directory[pane], d);
     if (d) {
+      rewinddir(d);
       entries = allocate_entries(pane, dir_entry_count(d));
+      if (entries == NULL) {
+        n = 0;
+        goto done;
+      }
       DEBUG("allocated %d entries %p\n", dir_entry_count(d), entries);
       while ((ent = readdir(d))) {
         DEBUG("copying entry %d (%s)\n", n, ent->d_name);
@@ -127,11 +143,13 @@ static void load_directory(unsigned char pane) {
         memcpy(&entries[n], ent, sizeof(struct dirent));
         n++;
       }
+done:
       DEBUG("closing directory\n");
       closedir(d);
     }
     pane_num_files[pane] = n;
   }
+  return;
 }
 
 /* Display pane's title */
@@ -164,6 +182,10 @@ static void display_pane(unsigned char pane) {
   if (pane_entries[pane] == NULL) {
     load_directory(pane);
   }
+
+  /* Clear whole pane */
+  set_scrollwindow(0, pane_btm);
+  set_hscrollwindow(pane_left[pane]+1, pane_width);
 
   clrscr();
 
@@ -213,10 +235,10 @@ static void display_active_pane(void) {
   gotoxy(pane_left[active_pane], 0);
   cvline(pane_btm);
   /* Clear inactive pane's line */
-  clrzone(inactive_left, 0, inactive_left, pane_btm);
+  clrzone(inactive_left, 0, inactive_left, pane_btm-1);
   /* Clear inactive pane's cursor and select indicators */
   inactive_left++;
-  clrzone(inactive_left, 2, inactive_left + 1, pane_btm);
+  clrzone(inactive_left, 2, inactive_left + 1, pane_btm-1);
 
   display_pane(active_pane);
 }
@@ -328,6 +350,17 @@ void set_logwindow(void) {
   chline(total_width);
 }
 
+static void info_message(const char *msg, unsigned char valid) {
+  set_logwindow();
+  cputs(msg);
+  if (valid) {
+    cputs("\r\nPress a key to continue.");
+    cgetc();
+    set_logwindow();
+    cputs("Press H for help.");
+  }
+}
+
 static char *prompt(const char *verb, const char *dir, const char *file, int len) {
   char *buf = malloc(len);
 
@@ -357,6 +390,7 @@ static void file_info(void) {
   set_logwindow();
   printf("%s: %lub, type $%02x, access $%02x",
          entry->d_name, entry->d_size, entry->d_type, entry->d_access);
+  cputs("\r\nPress a key to continue.");
   cgetc();
   clrscr();
 }
@@ -404,7 +438,6 @@ static void make_directory(void) {
   new_name = prompt("Directory name: ", pane_directory[active_pane], new_name, 16);
   if (new_name[0] == '\0') {
     goto out;
-    return;
   }
 
   mkdir(new_name, O_RDWR);
@@ -623,8 +656,39 @@ static void iterate_files(unsigned char all, unsigned char copy, unsigned char r
   }
 }
 
+void help(void) {
+  set_scrollwindow(0, 24);
+  set_hscrollwindow(0, total_width);
+  clrscr();
+
+  cputs("Left/right: switch active pane\r\n"
+        "Up/Down: scroll in active pane\r\n"
+        "Enter: open in active pane\r\n"
+        "Esc: close directory in active pane\r\n"
+        "Space: select in active pane\r\n"
+        "A: select all in active pane\r\n"
+        "O: open in other pane\r\n"
+        "R: Rename file\r\n"
+        "D: Delete selected\r\n"
+        "N: Create directory in active pane\r\n"
+        "C: Copy selected to other pane\r\n"
+        "M: Move selected to other pane\r\n"
+        "I: File information\r\n"
+        "\r\n\r\n"
+        "(c) Colin Leroy-Mira, 2025\r\n"
+        "https://colino.net/\r\n"
+        "\r\n\r\n"
+        "Press a key to go back."
+      );
+
+  cgetc();
+  clrscr();
+  display_pane(0);
+  display_pane(1);
+}
+
 static void handle_input(void) {
-  unsigned char cmd = cgetc();
+  unsigned char cmd = tolower(cgetc());
   switch(cmd) {
     /* Switch to right pane */
     case CH_CURS_LEFT:
@@ -656,7 +720,6 @@ static void handle_input(void) {
       return;
     /* Open directory on other pane */
     case 'o':
-    case 'O':
       open_directory(!active_pane);
       return;
     case CH_ESC:
@@ -669,28 +732,25 @@ static void handle_input(void) {
       select_all(active_pane);
       return;
     case 'r':
-    case 'R':
       rename_file();
       return;
     case 'n':
-    case 'N':
       make_directory();
       return;
     case 'c':
-    case 'C':
       iterate_files(0, 1, 0);
       return;
     case 'm':
-    case 'M':
       iterate_files(0, 1, 1);
       return;
     case 'd':
-    case 'D':
       iterate_files(0, 0, 1);
       return;
     case 'i':
-    case 'I':
       file_info();
+      return;
+    case 'h':
+      help();
       return;
   }
 }
@@ -706,6 +766,7 @@ void main(void) {
   display_pane(0);
   display_pane(1);
   while (1) {
+    info_message("Press H for help.", 0);
     display_active_pane();
     handle_input();
   }

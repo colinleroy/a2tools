@@ -1,15 +1,10 @@
-ifdef OLDII
-suffix :=
-upload_subdir :=
-CC65_TARGET := apple2
-STREAMER_VER := 6502
-else
-CC65_TARGET = apple2enh
-trgt = apple2c0
-STREAMER_VER := 65c02
-endif
+TARGET := apple2
+CPU := 6502
 
-GENERAL_CFLAGS := -DSURL_TO_LANGCARD --asm-define SURL_TO_LANGCARD
+GENERAL_CFLAGS := -DSURL_TO_LANGCARD \
+	--asm-define SURL_TO_LANGCARD \
+	--asm-define SERIAL_ENABLE_IRQ \
+	-DDYN_BOX_DRAW -DAPPLE2_INCLUDE_IIE_CHARS \
 
 GCCCFLAGS = -g -O0 -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\" \
 	-I ../lib -I ../stp -Wall -Wno-format \
@@ -32,24 +27,38 @@ ammonoid_SOURCES := \
 	../lib/cutoa.s \
 	../lib/cntoabuf.s \
 	../lib/vsdrive.s \
+	../lib/serial/asm/driver.s \
+	../lib/serial/asm/acia.s \
+	../lib/serial/asm/z8530.s \
 	../lib/serial/asm/simple_serial.s \
 	../lib/serial/asm/simple_serial_io.s \
+	../lib/a2_features.s \
 
-ammonoid_CLCFLAGS = -t $(CC65_TARGET) -I ../lib \
+ammonoid_CLCFLAGS = -t $(TARGET) -I ../lib \
 	-DFILESEL_ALLOW_NONPRODOS_VOLUMES \
 	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-rtonce.cfg \
 	-vm -m ammonoid.map $(GENERAL_CFLAGS) -O -Cl --start-addr 0x1003
 
-all: \
-	ammonoid.bin
+all dist: \
+	ammonoid.po
 
 clean:
 	rm -f *.bin *.o *.map splash.h splash.hgr
 
 ammonoid.bin: $(ammonoid_CL65SOURCES) $(ammonoid_SOURCES)
-	cl65 -g -Wl --dbgfile,ammonoid.dbg -Ln ammonoid.lbl $(CFLAGS) $(ammonoid_CLCFLAGS) -o $@ $^  $(CC65_TARGET)-iobuf-0800.o
+	cl65 -g -Wl --dbgfile,ammonoid.dbg -Ln ammonoid.lbl $(CFLAGS) $(ammonoid_CLCFLAGS) -o $@ $^  $(TARGET)-iobuf-0800.o
+
+CLEANDISK = ../../disks/ProDOS_2_4_3.po
+ammonoid.po: ammonoid.bin
+	cp $(CLEANDISK) $@; \
+	java -jar ../../bin/ac.jar -n $@ AMMONOID
+	java -jar ../../bin/ac.jar -p $@ AMMONOID.SYSTEM SYS < ../../bin/loader.system; \
+	java -jar ../../bin/ac.jar -d $@ BASIC.SYSTEM; \
+	for r in *.bin; do \
+		java -jar ../../bin/ac.jar -as $@ $$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
+	done;
 
 upload: all
-	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/ammonoid/ || \
-	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/ammonoid/ && \
-	cp *.bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2$(upload_subdir)/ammonoid/
+	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/ammonoid/ || \
+	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/ammonoid/ && \
+	cp *.bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/ammonoid/
