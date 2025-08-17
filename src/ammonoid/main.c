@@ -345,6 +345,8 @@ static struct dirent *get_current_entry(void) {
   return get_entry_at(pane_file_cursor[active_pane]);
 }
 
+#pragma code-name (pop)
+
 /* Open directory selected in active pane, in target pane */
 static void open_directory(unsigned char target_pane) {
   struct dirent *entry;
@@ -352,11 +354,23 @@ static void open_directory(unsigned char target_pane) {
 
   entry = get_current_entry();
 
-  if (entry == NULL || !_DE_ISDIR(entry->d_type)) {
+  if (entry == NULL) {
     return;
   }
-  
+
   new_dir = build_full_path(active_pane, entry);
+
+  if (entry->d_type == PRODOS_T_SYS || entry->d_type == PRODOS_T_BIN) {
+    if (exec(new_dir, NULL) != 0) {
+      info_message("Can not exec file.", 1);
+    }
+  }
+
+  if (!_DE_ISDIR(entry->d_type)) {
+    free(new_dir);
+    return;
+  }
+
   strcpy(pane_directory[target_pane], new_dir);
   free(new_dir);
 
@@ -373,8 +387,6 @@ static void close_directory(unsigned char pane) {
   *last_slash = '\0';
   cleanup_pane(pane);
 }
-
-#pragma code-name (pop)
 
 /* Toggle an element's selection */
 static void select_current(unsigned char pane) {
@@ -408,6 +420,7 @@ void set_logwindow(void) {
   set_hscrollwindow(0, total_width);
   clrscr();
   chline(total_width);
+  set_scrollwindow(pane_btm+1, total_height);
 }
 
 static void help_message(void) {
@@ -511,6 +524,7 @@ static void rename_file(void) {
 
   if (rename(entry->d_name, new_name) == 0) {
     strcpy(entry->d_name, new_name);
+    must_clear[active_pane] = 1;
   }
 out:
   free(new_name);
@@ -533,6 +547,8 @@ static void make_directory(void) {
   }
 
   mkdir(new_name, O_RDWR);
+  must_clear[active_pane] = 1;
+
 out:
   free(new_name);
   clrscr();
@@ -599,14 +615,14 @@ static int do_iterate_files(unsigned char all, unsigned char copy, unsigned char
         if (copy) {
           if (!strncmp(dest, src, strlen(src))
             && (dest[strlen(src)] == '\0' || dest[strlen(src)] == '/')) {
-            cprintf("Can not copy %s to %s\r\n", src, dest);
+            printf("Can not copy %s to %s\n", src, dest);
             global_err = 1;
             goto next;
           }
-          cprintf("mkdir %s", dest);
+          printf("mkdir %s", dest);
           dir_err = (mkdir(dest, O_RDWR) != 0);
           if (!dir_err) {
-            cprintf(": OK\r\n");
+            printf(": OK\n");
           }
         }
         if (!dir_err) {
@@ -640,7 +656,7 @@ static int do_iterate_files(unsigned char all, unsigned char copy, unsigned char
           }
         } else {
           global_err = 1;
-          cprintf(": %s\r\n", strerror(errno));
+          printf(": %s\n", strerror(errno));
         }
       } else {
         FILE *in;
@@ -648,9 +664,9 @@ static int do_iterate_files(unsigned char all, unsigned char copy, unsigned char
         int err = 0;
         if (copy) {
           if (has_80cols) {
-            cprintf("%s %s %s", remove ? "mv":"cp", src, dest);
+            printf("%s %s %s", remove ? "mv":"cp", src, dest);
           } else {
-            cprintf("%s %s", remove ? "mv":"cp", src);
+            printf("%s %s", remove ? "mv":"cp", src);
           }
           in = fopen(src, "r");
           if (in) {
@@ -659,25 +675,25 @@ static int do_iterate_files(unsigned char all, unsigned char copy, unsigned char
               size_t r;
               while ((r = fread(copy_buf, 1, COPY_BUF_SIZE, in)) > 0) {
                 if (fwrite(copy_buf, 1, r, out) < r) {
-                  cprintf(": %s\r\n", strerror(errno));
+                  printf(": %s\n", strerror(errno));
                   err = 1;
                   break;
                 }
               }
               fclose(out);
             } else {
-              cprintf(": %s\r\n", strerror(errno));
+              printf(": %s\n", strerror(errno));
               err = 1;
             }
             fclose(in);
           } else {
-            cprintf(": %s\r\n", strerror(errno));
+            printf(": %s\n", strerror(errno));
             err = 1;
           }
         }
         if (!err) {
           if (copy) {
-            cprintf(": OK\r\n");
+            printf(": OK\n");
           }
           if (remove) {
             strcpy(to_delete[n_to_delete].filename, src);
@@ -699,14 +715,14 @@ next:
       path = to_delete[n].filename;
 
       if (!copy) {
-        cprintf("rm %s", path);
+        printf("rm %s", path);
       }
       if (unlink(path) == 0) {
         if (!copy) {
-          cprintf(": OK\r\n");
+          printf(": OK\n");
         }
       } else if (!copy) {
-        cprintf(": %s\r\n", strerror(errno));
+        printf(": %s\n", strerror(errno));
       }
     }
     free(to_delete);
@@ -775,6 +791,9 @@ void help(void) {
 
   cgetc();
   clrscr();
+
+  must_clear[0] = must_clear[1] = 1;
+  help_message();
   display_pane(0);
   display_pane(1);
 }
@@ -986,7 +1005,7 @@ void main(void) {
   if (has_80cols) {
     pane_left[1] = 40;
     pane_width = 38;
-    total_width = 79;
+    total_width = 80;
     pane_offset = 2;
   }
   if (!is_iieenh) {
