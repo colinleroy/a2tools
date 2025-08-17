@@ -29,6 +29,7 @@ static unsigned int pane_first_file[2] = {0, 0};
 static unsigned int pane_file_cursor[2] = {0, 0};
 
 static char *filetype[256] = { NULL };
+static char *short_filetype[256] = { NULL };
 
 /* Selection status, stored in dirent's d_block as we don't really
  * care about that field. */
@@ -40,18 +41,20 @@ static char *filetype[256] = { NULL };
 
 /* UI */
 static unsigned char pane_left[2] = {0, 20};
+static unsigned char pane_width = 19;
+static unsigned char total_width = 40;
+static unsigned char pane_offset = 1;
+
 #define pane_top 2
 #define pane_btm 20
 #define pane_height (pane_btm-pane_top)
-#define pane_width 19
 #define total_height 24
-#define total_width 40
 
 unsigned char SEL =  ('D'|0x80);
 unsigned char LOAD = ('C'|0x80);
 
 #if 0
-#define DEBUG(...) printf(__VA_ARGS__)
+#define DEBUG(...) cprintf(__VA_ARGS__)
 #else
 #define DEBUG(...)
 #endif
@@ -115,6 +118,7 @@ static void load_devices(unsigned char pane) {
     }
     DEBUG("got device %d %s\n", n, entry->d_name);
     entry->d_type = 0x0F;
+    entry->d_mtime.date.year = 0;
     deselect(entry);
     n++;
     entry = &entries[n];
@@ -169,6 +173,18 @@ static void display_title(const char *title) {
   chline(pane_width);
 }
 
+static void print_date(struct dirent *entry) {
+  if (entry->d_mtime.date.year) {
+    uint16 offset = entry->d_mtime.date.year > 70 ? 1900:2000;
+    cprintf("%04d-%02d-%02d",
+           entry->d_mtime.date.year + offset,
+           entry->d_mtime.date.mon,
+           entry->d_mtime.date.day);
+  } else {
+    cputs("[no date]");
+  }
+}
+
 /* Display a pane */
 static void display_pane(unsigned char pane) {
   struct dirent *entries = NULL;
@@ -177,7 +193,7 @@ static void display_pane(unsigned char pane) {
 
   /* Clear whole pane */
   set_scrollwindow(0, pane_btm);
-  set_hscrollwindow(pane_left[pane]+1, pane_width);
+  set_hscrollwindow(pane_left[pane]+pane_offset, pane_width);
 
   gotoxy(pane_width - 1, 0);
   cputc(LOAD);
@@ -189,7 +205,7 @@ static void display_pane(unsigned char pane) {
 
   /* Clear whole pane */
   set_scrollwindow(0, pane_btm);
-  set_hscrollwindow(pane_left[pane]+1, pane_width);
+  set_hscrollwindow(pane_left[pane]+pane_offset, pane_width);
 
   clrscr();
 
@@ -224,6 +240,12 @@ static void display_pane(unsigned char pane) {
     cputs(entry->d_name);
     if (_DE_ISDIR(entry->d_type)) {
       cputc('/');
+    }
+    if (has_80cols) {
+      gotox(22);
+      cputs(short_filetype[entry->d_type]);
+      cputs("  ");
+      print_date(entry);
     }
     clreol();
     cputs("\r\n");
@@ -402,7 +424,7 @@ static void file_info(void) {
   }
 
   set_logwindow();
-  printf("%s: %luB, ",
+  cprintf("%s: %luB, ",
          entry->d_name, entry->d_size);
   if (access & 0x01) {
     cputs("RD, ");
@@ -416,8 +438,9 @@ static void file_info(void) {
   if (access & 0x40) {
     cputs("DSTR, ");
   }
-  printf("type $%02X (%s)",
+  cprintf("type $%02X (%s), ",
          type, type_str);
+  print_date(entry);
   cputs("\r\nPress a key to continue.");
   cgetc();
   clrscr();
@@ -539,14 +562,14 @@ static int do_iterate_files(unsigned char all, unsigned char copy, unsigned char
         if (copy) {
           if (!strncmp(dest, src, strlen(src))
             && (dest[strlen(src)] == '\0' || dest[strlen(src)] == '/')) {
-            printf("Can not copy %s to %s\n", src, dest);
+            cprintf("Can not copy %s to %s\r\n", src, dest);
             global_err = 1;
             goto next;
           }
-          printf("mkdir %s", dest);
+          cprintf("mkdir %s", dest);
           dir_err = (mkdir(dest, O_RDWR) != 0);
           if (!dir_err) {
-            printf(": OK\n");
+            cprintf(": OK\r\n");
           }
         }
         if (!dir_err) {
@@ -580,14 +603,18 @@ static int do_iterate_files(unsigned char all, unsigned char copy, unsigned char
           }
         } else {
           global_err = 1;
-          printf(": %s\n", strerror(errno));
+          cprintf(": %s\r\n", strerror(errno));
         }
       } else {
         FILE *in;
         FILE *out;
         int err = 0;
         if (copy) {
-          printf("%s", src);
+          if (has_80cols) {
+            cprintf("%s %s %s", remove ? "mv":"cp", src, dest);
+          } else {
+            cprintf("%s %s", remove ? "mv":"cp", src);
+          }
           in = fopen(src, "r");
           if (in) {
             out = fopen(dest, "w");
@@ -595,25 +622,25 @@ static int do_iterate_files(unsigned char all, unsigned char copy, unsigned char
               size_t r;
               while ((r = fread(copy_buf, 1, COPY_BUF_SIZE, in)) > 0) {
                 if (fwrite(copy_buf, 1, r, out) < r) {
-                  printf(": %s\n", strerror(errno));
+                  cprintf(": %s\r\n", strerror(errno));
                   err = 1;
                   break;
                 }
               }
               fclose(out);
             } else {
-              printf(": %s\n", strerror(errno));
+              cprintf(": %s\r\n", strerror(errno));
               err = 1;
             }
             fclose(in);
           } else {
-            printf(": %s\n", strerror(errno));
+            cprintf(": %s\r\n", strerror(errno));
             err = 1;
           }
         }
         if (!err) {
           if (copy) {
-            printf(": OK\n");
+            cprintf(": OK\r\n");
           }
           if (remove) {
             strcpy(to_delete[n_to_delete].filename, src);
@@ -635,14 +662,14 @@ next:
       path = to_delete[n].filename;
 
       if (!copy) {
-        printf("%s", path);
+        cprintf("rm %s", path);
       }
       if (unlink(path) == 0) {
         if (!copy) {
-          printf(": OK\n");
+          cprintf(": OK\r\n");
         }
       } else if (!copy) {
-        printf(": %s\n", strerror(errno));
+        cprintf(": %s\r\n", strerror(errno));
       }
     }
     free(to_delete);
@@ -665,7 +692,7 @@ static void iterate_files(unsigned char all, unsigned char copy, unsigned char r
   pane_orig_directory[1] = strdup(pane_directory[1]);
 
   if (do_iterate_files(all, copy, remove) != 0) {
-    printf("There have been errors.\n");
+    cprintf("There have been errors.\r\n");
     cgetc();
   }
 
@@ -784,139 +811,148 @@ static void handle_input(void) {
 }
 
 void init_filetypes(void) {
-  #define SET_FILETYPE(ID, STR) { filetype[(ID)] = STR; }
-  SET_FILETYPE(0x00, "Unknown");
-  SET_FILETYPE(0x01, "Bad blocks");
-  SET_FILETYPE(0x02, "Pascal code");
-  SET_FILETYPE(0x03, "Pascal text");
-  SET_FILETYPE(0x04, "ASCII text");
-  SET_FILETYPE(0x05, "Pascal data");
-  SET_FILETYPE(0x06, "Binary");
-  SET_FILETYPE(0x07, "Apple III font");
-  SET_FILETYPE(0x08, "Hi-res, dbl hi-res graphics");
-  SET_FILETYPE(0x09, "Apple III BASIC");
-  SET_FILETYPE(0x0A, "Generic word processing");
-  SET_FILETYPE(0x0B, "SOS system");
-  SET_FILETYPE(0x0F, "ProDOS directory");
-  SET_FILETYPE(0x10, "RPS data");
-  SET_FILETYPE(0x11, "RPS index");
-  SET_FILETYPE(0x12, "AppleFile discard");
-  SET_FILETYPE(0x13, "AppleFile model");
-  SET_FILETYPE(0x14, "AppleFile report");
-  SET_FILETYPE(0x15, "Screen library");
-  SET_FILETYPE(0x16, "PFS document");
-  SET_FILETYPE(0x19, "AppleWorks database");
-  SET_FILETYPE(0x1A, "AppleWorks word processing");
-  SET_FILETYPE(0x1B, "AppleWorks spreadsheet");
-  SET_FILETYPE(0x20, "Desktop Manager");
-  SET_FILETYPE(0x21, "Instant Pascal source");
-  SET_FILETYPE(0x22, "USCD Pascal volume");
-  SET_FILETYPE(0x29, "SOS directory");
-  SET_FILETYPE(0x2A, "Source code");
-  SET_FILETYPE(0x2B, "Object code");
-  SET_FILETYPE(0x2C, "Interpreted code");
-  SET_FILETYPE(0x2D, "Language data");
-  SET_FILETYPE(0x2E, "ProDOS 8 code module");
-  SET_FILETYPE(0x41, "Optical char recognition");
-  SET_FILETYPE(0x42, "File type definitions");
-  SET_FILETYPE(0x50, "Apple IIgs word processing ");
-  SET_FILETYPE(0x51, "Apple IIgs spreadsheet");
-  SET_FILETYPE(0x52, "Apple IIgs database");
-  SET_FILETYPE(0x53, "Object oriented graphics");
-  SET_FILETYPE(0x54, "Apple IIgs desktop publish ");
-  SET_FILETYPE(0x55, "HyperMedia");
-  SET_FILETYPE(0x56, "Educational program data");
-  SET_FILETYPE(0x57, "Stationary");
-  SET_FILETYPE(0x58, "Help");
-  SET_FILETYPE(0x59, "Communications");
-  SET_FILETYPE(0x5A, "Configuration");
-  SET_FILETYPE(0x5B, "Animation");
-  SET_FILETYPE(0x5C, "Multimedia");
-  SET_FILETYPE(0x5D, "Entertainment");
-  SET_FILETYPE(0x5E, "Development utility");
-  SET_FILETYPE(0x60, "PC pre-boot");
-  SET_FILETYPE(0x6B, "PC BIOS");
-  SET_FILETYPE(0x66, "ProDOS File Nav command file");
-  SET_FILETYPE(0x6D, "PC driver");
-  SET_FILETYPE(0x6E, "PC pre-boot");
-  SET_FILETYPE(0x6F, "PC hard disk image");
-  SET_FILETYPE(0x70, "Sabine's Notebook 2.0");
-  SET_FILETYPE(0x7D, "Mika City");
-  SET_FILETYPE(0x80, "GEOS system file");
-  SET_FILETYPE(0x81, "GEOS desk accessory");
-  SET_FILETYPE(0x82, "GEOS application");
-  SET_FILETYPE(0x83, "GEOS document");
-  SET_FILETYPE(0x84, "GEOS font");
-  SET_FILETYPE(0x85, "GEOS printer driver");
-  SET_FILETYPE(0x86, "GEOS input driver");
-  SET_FILETYPE(0x87, "GEOS auxiliary driver");
-  SET_FILETYPE(0x89, "GEOS swap file");
-  SET_FILETYPE(0x8B, "GEOS clock driver");
-  SET_FILETYPE(0x8C, "GEOS interface card driver ");
-  SET_FILETYPE(0x8D, "GEOS formatting data");
-  SET_FILETYPE(0xA0, "WordPerfect");
-  SET_FILETYPE(0xAB, "Apple IIgs BASIC");
-  SET_FILETYPE(0xB0, "Apple IIgs source code");
-  SET_FILETYPE(0xB1, "Apple IIgs object code");
-  SET_FILETYPE(0xB2, "Apple IIgs library");
-  SET_FILETYPE(0xB3, "Apple IIgs application pgm ");
-  SET_FILETYPE(0xB4, "Apple IIgs runtime library ");
-  SET_FILETYPE(0xB5, "Apple IIgs shell script");
-  SET_FILETYPE(0xB6, "Apple IIgs permanent init");
-  SET_FILETYPE(0xB7, "Apple IIgs temporary init");
-  SET_FILETYPE(0xB8, "Apple IIgs new desk accessory");
-  SET_FILETYPE(0xB9, "Apple IIgs classic desk accessory");
-  SET_FILETYPE(0xBA, "Apple IIgs tool");
-  SET_FILETYPE(0xBB, "Apple IIgs device driver");
-  SET_FILETYPE(0xBC, "Apple IIgs generic load file");
-  SET_FILETYPE(0xBD, "Apple IIgs file sys translat");
-  SET_FILETYPE(0xBF, "Apple IIgs document");
-  SET_FILETYPE(0xC0, "Apple IIgs packed super hi-res");
-  SET_FILETYPE(0xC1, "Apple IIgs super hi-res");
-  SET_FILETYPE(0xC2, "PaintWorks animation");
-  SET_FILETYPE(0xC3, "PaintWorks palette");
-  SET_FILETYPE(0xC5, "Object-oriented graphics");
-  SET_FILETYPE(0xC6, "Script");
-  SET_FILETYPE(0xC7, "Apple IIgs control panel");
-  SET_FILETYPE(0xC8, "Apple IIgs font");
-  SET_FILETYPE(0xC9, "Apple IIgs Finder data");
-  SET_FILETYPE(0xCA, "Apple IIgs icon");
-  SET_FILETYPE(0xD5, "Music");
-  SET_FILETYPE(0xD6, "Instrument");
-  SET_FILETYPE(0xD7, "MIDI");
-  SET_FILETYPE(0xD8, "Apple IIgs audio");
-  SET_FILETYPE(0xDB, "DB master document");
-  SET_FILETYPE(0xE0, "Archive");
-  SET_FILETYPE(0xE2, "AppleTalk data");
-  SET_FILETYPE(0xEE, "EDASM 816 relocatable code");
-  SET_FILETYPE(0xEF, "Pascal area");
-  SET_FILETYPE(0xF0, "ProDOS command file");
-  SET_FILETYPE(0xF1, "User defined 1");
-  SET_FILETYPE(0xF2, "User defined 2");
-  SET_FILETYPE(0xF3, "User defined 3");
-  SET_FILETYPE(0xF4, "User defined 4");
-  SET_FILETYPE(0xF5, "User defined 5");
-  SET_FILETYPE(0xF6, "User defined 6");
-  SET_FILETYPE(0xF7, "User defined 7");
-  SET_FILETYPE(0xF8, "User defined 8");
-  SET_FILETYPE(0xF9, "ProDOS-16 system file");
-  SET_FILETYPE(0xFA, "Integer BASIC program");
-  SET_FILETYPE(0xFB, "Integer BASIC variables");
-  SET_FILETYPE(0xFC, "Applesoft BASIC program");
-  SET_FILETYPE(0xFD, "Applesoft BASIC variables");
-  SET_FILETYPE(0xFE, "EDASM relocatable code");
-  SET_FILETYPE(0xFF, "ProDOS-8 system file");
+  #define SET_FILETYPE(ID, SHORT_STR, STR) { short_filetype[(ID)] = SHORT_STR; filetype[(ID)] = STR; }
+  SET_FILETYPE(0x00, "UNK", "Unknown");
+  SET_FILETYPE(0x01, "BAD", "Bad blocks");
+  SET_FILETYPE(0x02, "PCD", "Pascal code");
+  SET_FILETYPE(0x03, "PTX", "Pascal text");
+  SET_FILETYPE(0x04, "TXT", "ASCII text");
+  SET_FILETYPE(0x05, "PDA", "Pascal data");
+  SET_FILETYPE(0x06, "BIN", "Binary");
+  SET_FILETYPE(0x07, "FNT", "Apple III font");
+  SET_FILETYPE(0x08, "FOT", "Hi-res, dbl hi-res graphics");
+  SET_FILETYPE(0x09, "BA3", "Apple III BASIC");
+  SET_FILETYPE(0x0A, "WPF", "Generic word processing");
+  SET_FILETYPE(0x0B, "SOS", "SOS system");
+  SET_FILETYPE(0x0F, "DIR", "ProDOS directory");
+  SET_FILETYPE(0x10, "RPD", "RPS data");
+  SET_FILETYPE(0x11, "RPI", "RPS index");
+  SET_FILETYPE(0x12, "AFD", "AppleFile discard");
+  SET_FILETYPE(0x13, "AFM", "AppleFile model");
+  SET_FILETYPE(0x14, "AFR", "AppleFile report");
+  SET_FILETYPE(0x15, "SCL", "Screen library");
+  SET_FILETYPE(0x16, "PFS", "PFS document");
+  SET_FILETYPE(0x19, "ADB", "AppleWorks database");
+  SET_FILETYPE(0x1A, "AWP", "AppleWorks word processing");
+  SET_FILETYPE(0x1B, "ASP", "AppleWorks spreadsheet");
+  SET_FILETYPE(0x20, "TDM", "Desktop Manager");
+  SET_FILETYPE(0x21, "IPM", "Instant Pascal source");
+  SET_FILETYPE(0x22, "UPV", "USCD Pascal volume");
+  SET_FILETYPE(0x29, "3SD", "SOS directory");
+  SET_FILETYPE(0x2A, "8SC", "Source code");
+  SET_FILETYPE(0x2B, "8OB", "Object code");
+  SET_FILETYPE(0x2C, "8IC", "Interpreted code");
+  SET_FILETYPE(0x2D, "8LD", "Language data");
+  SET_FILETYPE(0x2E, "P8C", "ProDOS 8 code module");
+  SET_FILETYPE(0x41, "OCR", "Optical char recognition");
+  SET_FILETYPE(0x42, "FTD", "File type definitions");
+  SET_FILETYPE(0x50, "GWP", "Apple IIgs word processing ");
+  SET_FILETYPE(0x51, "GSS", "Apple IIgs spreadsheet");
+  SET_FILETYPE(0x52, "GDB", "Apple IIgs database");
+  SET_FILETYPE(0x53, "DRW", "Object oriented graphics");
+  SET_FILETYPE(0x54, "GDP", "Apple IIgs desktop publish ");
+  SET_FILETYPE(0x55, "HMD", "HyperMedia");
+  SET_FILETYPE(0x56, "EDU", "Educational program data");
+  SET_FILETYPE(0x57, "STN", "Stationary");
+  SET_FILETYPE(0x58, "HLP", "Help");
+  SET_FILETYPE(0x59, "COM", "Communications");
+  SET_FILETYPE(0x5A, "CFG", "Configuration");
+  SET_FILETYPE(0x5B, "ANM", "Animation");
+  SET_FILETYPE(0x5C, "MUM", "Multimedia");
+  SET_FILETYPE(0x5D, "ENT", "Entertainment");
+  SET_FILETYPE(0x5E, "DVU", "Development utility");
+  SET_FILETYPE(0x60, "PRE", "PC pre-boot");
+  SET_FILETYPE(0x6B, "BIO", "PC BIOS");
+  SET_FILETYPE(0x66, "NCF", "ProDOS File Nav command file");
+  SET_FILETYPE(0x6D, "DVR", "PC driver");
+  SET_FILETYPE(0x6E, "PR2", "PC pre-boot");
+  SET_FILETYPE(0x6F, "HDV", "PC hard disk image");
+  SET_FILETYPE(0x70, "SN2", "Sabine's Notebook 2.0");
+  SET_FILETYPE(0x7D, "MLR", "Mika City");
+  SET_FILETYPE(0x80, "GES", "GEOS system file");
+  SET_FILETYPE(0x81, "GEA", "GEOS desk accessory");
+  SET_FILETYPE(0x82, "GEO", "GEOS application");
+  SET_FILETYPE(0x83, "GED", "GEOS document");
+  SET_FILETYPE(0x84, "GEF", "GEOS font");
+  SET_FILETYPE(0x85, "GEP", "GEOS printer driver");
+  SET_FILETYPE(0x86, "GEI", "GEOS input driver");
+  SET_FILETYPE(0x87, "GEX", "GEOS auxiliary driver");
+  SET_FILETYPE(0x89, "GEV", "GEOS swap file");
+  SET_FILETYPE(0x8B, "GEC", "GEOS clock driver");
+  SET_FILETYPE(0x8C, "GEK", "GEOS interface card driver ");
+  SET_FILETYPE(0x8D, "GEW", "GEOS formatting data");
+  SET_FILETYPE(0xA0, "WP ", "WordPerfect");
+  SET_FILETYPE(0xAB, "GSB", "Apple IIgs BASIC");
+  SET_FILETYPE(0xB0, "SRC", "Apple IIgs source code");
+  SET_FILETYPE(0xB1, "OBJ", "Apple IIgs object code");
+  SET_FILETYPE(0xB2, "LIB", "Apple IIgs library");
+  SET_FILETYPE(0xB3, "S16", "Apple IIgs application program");
+  SET_FILETYPE(0xB4, "RTL", "Apple IIgs runtime library");
+  SET_FILETYPE(0xB5, "EXE", "Apple IIgs shell script");
+  SET_FILETYPE(0xB6, "PIF", "Apple IIgs permanent init");
+  SET_FILETYPE(0xB7, "TIF", "Apple IIgs temporary init");
+  SET_FILETYPE(0xB8, "NDA", "Apple IIgs new desk accessory");
+  SET_FILETYPE(0xB9, "CDA", "Apple IIgs classic desk accessory");
+  SET_FILETYPE(0xBA, "TOL", "Apple IIgs tool");
+  SET_FILETYPE(0xBB, "DRV", "Apple IIgs device driver");
+  SET_FILETYPE(0xBC, "LDF", "Apple IIgs generic load file");
+  SET_FILETYPE(0xBD, "FST", "Apple IIgs file sys translat");
+  SET_FILETYPE(0xBF, "DOC", "Apple IIgs document");
+  SET_FILETYPE(0xC0, "PNT", "Apple IIgs packed super hi-res");
+  SET_FILETYPE(0xC1, "PIC", "Apple IIgs super hi-res");
+  SET_FILETYPE(0xC2, "ANI", "PaintWorks animation");
+  SET_FILETYPE(0xC3, "PAL", "PaintWorks palette");
+  SET_FILETYPE(0xC5, "OOG", "Object-oriented graphics");
+  SET_FILETYPE(0xC6, "SCR", "Script");
+  SET_FILETYPE(0xC7, "CDV", "Apple IIgs control panel");
+  SET_FILETYPE(0xC8, "FON", "Apple IIgs font");
+  SET_FILETYPE(0xC9, "FND", "Apple IIgs Finder data");
+  SET_FILETYPE(0xCA, "ICN", "Apple IIgs icon");
+  SET_FILETYPE(0xD5, "MUS", "Music");
+  SET_FILETYPE(0xD6, "INS", "Instrument");
+  SET_FILETYPE(0xD7, "MID", "MIDI");
+  SET_FILETYPE(0xD8, "SND", "Apple IIgs audio");
+  SET_FILETYPE(0xDB, "DBM", "DB master document");
+  SET_FILETYPE(0xE0, "LBR", "Archive");
+  SET_FILETYPE(0xE2, "ATK", "AppleTalk data");
+  SET_FILETYPE(0xEE, "R16", "EDASM 816 relocatable code");
+  SET_FILETYPE(0xEF, "PAR", "Pascal area");
+  SET_FILETYPE(0xF0, "CMD", "ProDOS command file");
+  SET_FILETYPE(0xF1, "OVL", "User defined 1");
+  SET_FILETYPE(0xF2, "UD2", "User defined 2");
+  SET_FILETYPE(0xF3, "UD3", "User defined 3");
+  SET_FILETYPE(0xF4, "UD4", "User defined 4");
+  SET_FILETYPE(0xF5, "BAT", "User defined 5");
+  SET_FILETYPE(0xF6, "UD6", "User defined 6");
+  SET_FILETYPE(0xF7, "UD7", "User defined 7");
+  SET_FILETYPE(0xF8, "PRG", "User defined 8");
+  SET_FILETYPE(0xF9, "P16", "ProDOS-16 system file");
+  SET_FILETYPE(0xFA, "INT", "Integer BASIC program");
+  SET_FILETYPE(0xFB, "IVR", "Integer BASIC variables");
+  SET_FILETYPE(0xFC, "BAS", "Applesoft BASIC program");
+  SET_FILETYPE(0xFD, "VAR", "Applesoft BASIC variables");
+  SET_FILETYPE(0xFE, "REL", "EDASM relocatable code");
+  SET_FILETYPE(0xFF, "SYS", "ProDOS-8 system file");
 }
 
 void main(void) {
   clrscr();
+
+  try_videomode(VIDEOMODE_80COL);
+
   init_filetypes();
 
-  getcwd(pane_directory[1], FILENAME_MAX);
-
+  if (has_80cols) {
+    pane_left[1] = 40;
+    pane_width = 38;
+    total_width = 79;
+    pane_offset = 2;
+  }
   if (!is_iieenh) {
     SEL = LOAD = '*';
   }
+
+  getcwd(pane_directory[1], FILENAME_MAX);
 
   if (simple_serial_open() == 0) {
     vsdrive_install();
