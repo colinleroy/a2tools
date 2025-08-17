@@ -48,13 +48,16 @@ clean:
 ammonoid.bin: $(ammonoid_CL65SOURCES) $(ammonoid_SOURCES)
 	cl65 -g -Wl --dbgfile,ammonoid.dbg -Ln ammonoid.lbl $(CFLAGS) $(ammonoid_CLCFLAGS) -o $@ $^  $(TARGET)-iobuf-0800.o
 
+../image-viewer/imgview.bin:
+	make -C ../image-viewer/ clean all
+
 CLEANDISK = ../../disks/ProDOS_2_4_3.po
-ammonoid.po: ammonoid.bin
+ammonoid.po: ammonoid.bin ../image-viewer/imgview.bin
 	cp $(CLEANDISK) $@; \
 	java -jar ../../bin/ac.jar -n $@ AMMONOID
 	java -jar ../../bin/ac.jar -p $@ AMMONOID.SYSTEM SYS < ../../bin/loader.system; \
 	java -jar ../../bin/ac.jar -d $@ BASIC.SYSTEM; \
-	for r in *.bin; do \
+	for r in *.bin ../image-viewer/imgview.bin; do \
 		java -jar ../../bin/ac.jar -as $@ $$(basename $$r | sed "s/\.bin$///") BIN < $$r; \
 	done;
 

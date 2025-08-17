@@ -11,6 +11,7 @@
 #include <errno.h>
 
 #include "clrzone.h"
+#include "path_helper.h"
 #include "scrollwindow.h"
 #include "scroll.h"
 #include "malloc0.h"
@@ -350,7 +351,7 @@ static struct dirent *get_current_entry(void) {
 /* Open directory selected in active pane, in target pane */
 static void open_directory(unsigned char target_pane) {
   struct dirent *entry;
-  char *new_dir;
+  char *new_path;
 
   entry = get_current_entry();
 
@@ -358,21 +359,27 @@ static void open_directory(unsigned char target_pane) {
     return;
   }
 
-  new_dir = build_full_path(active_pane, entry);
+  new_path = build_full_path(active_pane, entry);
 
   if (entry->d_type == PRODOS_T_SYS || entry->d_type == PRODOS_T_BIN) {
-    if (exec(new_dir, NULL) != 0) {
+    if (entry->d_auxtype == 0x2000 && entry->d_type == PRODOS_T_BIN) {
+      reopen_start_device();
+      if (exec("IMGVIEW", new_path) != 0) {
+        info_message("Can not open image.", 1);
+      }
+    }
+    else if (entry->d_auxtype && exec(new_path, NULL) != 0) {
       info_message("Can not exec file.", 1);
     }
   }
 
   if (!_DE_ISDIR(entry->d_type)) {
-    free(new_dir);
+    free(new_path);
     return;
   }
 
-  strcpy(pane_directory[target_pane], new_dir);
-  free(new_dir);
+  strcpy(pane_directory[target_pane], new_path);
+  free(new_path);
 
   cleanup_pane(target_pane);
   active_pane = target_pane;
@@ -492,8 +499,8 @@ static void file_info(void) {
   if (access & 0x40) {
     cputs("DSTR, ");
   }
-  cprintf("type $%02X (%s), ",
-         type, type_str);
+  cprintf("type $%02X/$%04X (%s), ",
+         type, entry->d_auxtype, type_str);
   print_date(entry);
   cputs("\r\nPress a key to continue.");
   cgetc();
@@ -996,6 +1003,7 @@ void init_filetypes(void) {
 }
 
 void main(void) {
+  register_start_device();
   clrscr();
 
   try_videomode(VIDEOMODE_80COL);
