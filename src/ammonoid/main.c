@@ -28,6 +28,8 @@ static unsigned int pane_num_files[2] = {0, 0};
 static unsigned int pane_first_file[2] = {0, 0};
 static unsigned int pane_file_cursor[2] = {0, 0};
 
+static char *filetype[256] = { NULL };
+
 /* Selection status, stored in dirent's d_block as we don't really
  * care about that field. */
 #define set_select(entry, on) do { (entry)->d_blocks = on; } while(0)
@@ -386,12 +388,36 @@ static void refresh_other_pane(void) {
 
 static void file_info(void) {
   struct dirent *entry = get_current_entry();
+  const char *type_str = "Unknown";
+  unsigned char access, type;
   if (!entry) {
     return;
   }
+
+  access = entry->d_access;
+  type = entry->d_type;
+
+  if (filetype[type]) {
+    type_str = filetype[type];
+  }
+
   set_logwindow();
-  printf("%s: %lub, type $%02x, access $%02x",
-         entry->d_name, entry->d_size, entry->d_type, entry->d_access);
+  printf("%s: %luB, ",
+         entry->d_name, entry->d_size);
+  if (access & 0x01) {
+    cputs("RD, ");
+  }
+  if (access & 0x02) {
+    cputs("WR, ");
+  }
+  if (access & 0x40) {
+    cputs("REN, ");
+  }
+  if (access & 0x40) {
+    cputs("DSTR, ");
+  }
+  printf("type $%02X (%s)",
+         type, type_str);
   cputs("\r\nPress a key to continue.");
   cgetc();
   clrscr();
@@ -663,7 +689,7 @@ void help(void) {
   set_hscrollwindow(0, total_width);
   clrscr();
 
-  cputs("Left/right: switch active pane\r\n"
+  cputs("Left/Right: switch active pane\r\n"
         "Up/Down: scroll in active pane\r\n"
         "Enter: open in active pane\r\n"
         "Esc: close directory in active pane\r\n"
@@ -757,8 +783,135 @@ static void handle_input(void) {
   }
 }
 
+void init_filetypes(void) {
+  #define SET_FILETYPE(ID, STR) { filetype[(ID)] = STR; }
+  SET_FILETYPE(0x00, "Unknown");
+  SET_FILETYPE(0x01, "Bad blocks");
+  SET_FILETYPE(0x02, "Pascal code");
+  SET_FILETYPE(0x03, "Pascal text");
+  SET_FILETYPE(0x04, "ASCII text");
+  SET_FILETYPE(0x05, "Pascal data");
+  SET_FILETYPE(0x06, "Binary");
+  SET_FILETYPE(0x07, "Apple III font");
+  SET_FILETYPE(0x08, "Hi-res, dbl hi-res graphics");
+  SET_FILETYPE(0x09, "Apple III BASIC");
+  SET_FILETYPE(0x0A, "Generic word processing");
+  SET_FILETYPE(0x0B, "SOS system");
+  SET_FILETYPE(0x0F, "ProDOS directory");
+  SET_FILETYPE(0x10, "RPS data");
+  SET_FILETYPE(0x11, "RPS index");
+  SET_FILETYPE(0x12, "AppleFile discard");
+  SET_FILETYPE(0x13, "AppleFile model");
+  SET_FILETYPE(0x14, "AppleFile report");
+  SET_FILETYPE(0x15, "Screen library");
+  SET_FILETYPE(0x16, "PFS document");
+  SET_FILETYPE(0x19, "AppleWorks database");
+  SET_FILETYPE(0x1A, "AppleWorks word processing");
+  SET_FILETYPE(0x1B, "AppleWorks spreadsheet");
+  SET_FILETYPE(0x20, "Desktop Manager");
+  SET_FILETYPE(0x21, "Instant Pascal source");
+  SET_FILETYPE(0x22, "USCD Pascal volume");
+  SET_FILETYPE(0x29, "SOS directory");
+  SET_FILETYPE(0x2A, "Source code");
+  SET_FILETYPE(0x2B, "Object code");
+  SET_FILETYPE(0x2C, "Interpreted code");
+  SET_FILETYPE(0x2D, "Language data");
+  SET_FILETYPE(0x2E, "ProDOS 8 code module");
+  SET_FILETYPE(0x41, "Optical char recognition");
+  SET_FILETYPE(0x42, "File type definitions");
+  SET_FILETYPE(0x50, "Apple IIgs word processing ");
+  SET_FILETYPE(0x51, "Apple IIgs spreadsheet");
+  SET_FILETYPE(0x52, "Apple IIgs database");
+  SET_FILETYPE(0x53, "Object oriented graphics");
+  SET_FILETYPE(0x54, "Apple IIgs desktop publish ");
+  SET_FILETYPE(0x55, "HyperMedia");
+  SET_FILETYPE(0x56, "Educational program data");
+  SET_FILETYPE(0x57, "Stationary");
+  SET_FILETYPE(0x58, "Help");
+  SET_FILETYPE(0x59, "Communications");
+  SET_FILETYPE(0x5A, "Configuration");
+  SET_FILETYPE(0x5B, "Animation");
+  SET_FILETYPE(0x5C, "Multimedia");
+  SET_FILETYPE(0x5D, "Entertainment");
+  SET_FILETYPE(0x5E, "Development utility");
+  SET_FILETYPE(0x60, "PC pre-boot");
+  SET_FILETYPE(0x6B, "PC BIOS");
+  SET_FILETYPE(0x66, "ProDOS File Nav command file");
+  SET_FILETYPE(0x6D, "PC driver");
+  SET_FILETYPE(0x6E, "PC pre-boot");
+  SET_FILETYPE(0x6F, "PC hard disk image");
+  SET_FILETYPE(0x70, "Sabine's Notebook 2.0");
+  SET_FILETYPE(0x7D, "Mika City");
+  SET_FILETYPE(0x80, "GEOS system file");
+  SET_FILETYPE(0x81, "GEOS desk accessory");
+  SET_FILETYPE(0x82, "GEOS application");
+  SET_FILETYPE(0x83, "GEOS document");
+  SET_FILETYPE(0x84, "GEOS font");
+  SET_FILETYPE(0x85, "GEOS printer driver");
+  SET_FILETYPE(0x86, "GEOS input driver");
+  SET_FILETYPE(0x87, "GEOS auxiliary driver");
+  SET_FILETYPE(0x89, "GEOS swap file");
+  SET_FILETYPE(0x8B, "GEOS clock driver");
+  SET_FILETYPE(0x8C, "GEOS interface card driver ");
+  SET_FILETYPE(0x8D, "GEOS formatting data");
+  SET_FILETYPE(0xA0, "WordPerfect");
+  SET_FILETYPE(0xAB, "Apple IIgs BASIC");
+  SET_FILETYPE(0xB0, "Apple IIgs source code");
+  SET_FILETYPE(0xB1, "Apple IIgs object code");
+  SET_FILETYPE(0xB2, "Apple IIgs library");
+  SET_FILETYPE(0xB3, "Apple IIgs application pgm ");
+  SET_FILETYPE(0xB4, "Apple IIgs runtime library ");
+  SET_FILETYPE(0xB5, "Apple IIgs shell script");
+  SET_FILETYPE(0xB6, "Apple IIgs permanent init");
+  SET_FILETYPE(0xB7, "Apple IIgs temporary init");
+  SET_FILETYPE(0xB8, "Apple IIgs new desk accessory");
+  SET_FILETYPE(0xB9, "Apple IIgs classic desk accessory");
+  SET_FILETYPE(0xBA, "Apple IIgs tool");
+  SET_FILETYPE(0xBB, "Apple IIgs device driver");
+  SET_FILETYPE(0xBC, "Apple IIgs generic load file");
+  SET_FILETYPE(0xBD, "Apple IIgs file sys translat");
+  SET_FILETYPE(0xBF, "Apple IIgs document");
+  SET_FILETYPE(0xC0, "Apple IIgs packed super hi-res");
+  SET_FILETYPE(0xC1, "Apple IIgs super hi-res");
+  SET_FILETYPE(0xC2, "PaintWorks animation");
+  SET_FILETYPE(0xC3, "PaintWorks palette");
+  SET_FILETYPE(0xC5, "Object-oriented graphics");
+  SET_FILETYPE(0xC6, "Script");
+  SET_FILETYPE(0xC7, "Apple IIgs control panel");
+  SET_FILETYPE(0xC8, "Apple IIgs font");
+  SET_FILETYPE(0xC9, "Apple IIgs Finder data");
+  SET_FILETYPE(0xCA, "Apple IIgs icon");
+  SET_FILETYPE(0xD5, "Music");
+  SET_FILETYPE(0xD6, "Instrument");
+  SET_FILETYPE(0xD7, "MIDI");
+  SET_FILETYPE(0xD8, "Apple IIgs audio");
+  SET_FILETYPE(0xDB, "DB master document");
+  SET_FILETYPE(0xE0, "Archive");
+  SET_FILETYPE(0xE2, "AppleTalk data");
+  SET_FILETYPE(0xEE, "EDASM 816 relocatable code");
+  SET_FILETYPE(0xEF, "Pascal area");
+  SET_FILETYPE(0xF0, "ProDOS command file");
+  SET_FILETYPE(0xF1, "User defined 1");
+  SET_FILETYPE(0xF2, "User defined 2");
+  SET_FILETYPE(0xF3, "User defined 3");
+  SET_FILETYPE(0xF4, "User defined 4");
+  SET_FILETYPE(0xF5, "User defined 5");
+  SET_FILETYPE(0xF6, "User defined 6");
+  SET_FILETYPE(0xF7, "User defined 7");
+  SET_FILETYPE(0xF8, "User defined 8");
+  SET_FILETYPE(0xF9, "ProDOS-16 system file");
+  SET_FILETYPE(0xFA, "Integer BASIC program");
+  SET_FILETYPE(0xFB, "Integer BASIC variables");
+  SET_FILETYPE(0xFC, "Applesoft BASIC program");
+  SET_FILETYPE(0xFD, "Applesoft BASIC variables");
+  SET_FILETYPE(0xFE, "EDASM relocatable code");
+  SET_FILETYPE(0xFF, "ProDOS-8 system file");
+}
+
 void main(void) {
   clrscr();
+  init_filetypes();
+
   getcwd(pane_directory[1], FILENAME_MAX);
 
   if (!is_iieenh) {
