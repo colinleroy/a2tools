@@ -16,6 +16,7 @@
 #include "dget_text.h"
 #include "surl.h"
 #include "vsdrive.h"
+#include "a2_features.h"
 
 #define PRODOS_MAX_VOLUMES 37
 
@@ -44,7 +45,8 @@ static unsigned char pane_left[2] = {0, 20};
 #define total_height 24
 #define total_width 40
 
-#define SEL ('D'|0x80)
+unsigned char SEL =  ('D'|0x80);
+unsigned char LOAD = ('C'|0x80);
 
 #if 0
 #define DEBUG(...) printf(__VA_ARGS__)
@@ -65,7 +67,7 @@ static struct dirent *allocate_entries(unsigned char pane, unsigned int n_entrie
     buffer = malloc(alloc_size);
   }
   pane_entries[pane] = buffer;
-  if (IS_NULL(buffer)) {
+  if (n_entries > 0 && IS_NULL(buffer)) {
     info_message("Not enough memory.", 1);
   }
   return pane_entries[pane];
@@ -176,7 +178,7 @@ static void display_pane(unsigned char pane) {
   set_hscrollwindow(pane_left[pane]+1, pane_width);
 
   gotoxy(pane_width - 1, 0);
-  cputc('C'|0x80);
+  cputc(LOAD);
 
   /* Load pane if needed */
   if (pane_entries[pane] == NULL) {
@@ -758,6 +760,10 @@ static void handle_input(void) {
 void main(void) {
   clrscr();
   getcwd(pane_directory[1], FILENAME_MAX);
+
+  if (!is_iieenh) {
+    SEL = LOAD = '*';
+  }
 
   if (simple_serial_open() == 0) {
     vsdrive_install();
