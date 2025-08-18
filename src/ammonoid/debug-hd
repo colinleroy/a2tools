@@ -4,4 +4,4 @@ if [ "$1" != "" ]; then
   TYPE=$1
 fi
 make clean all DEBUG_HD=$TYPE && \
-  make ammonoid-65c02.po && mame apple2gs -window -flop1 ammonoid-65c02.po -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug -sl7 scsi -hard disks/smart0.po; cd src/ammonoid
+  make ammonoid.po && mame apple2gs -window -flop1 ammonoid.po -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug -sl7 scsi -hard ../../disks/smart0.po; cd src/ammonoid
