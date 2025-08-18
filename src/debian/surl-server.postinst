@@ -4,7 +4,7 @@ if ! getent passwd surl-server >/dev/null 2>&1; then
     adduser --system --no-create-home surl-server
     adduser surl-server dialout
 fi
-chown surl-server:nogroup /etc/a2tools/blank32.po
+chown -f surl-server:nogroup /etc/a2tools/blank32.po
 systemctl daemon-reload
 systemctl enable surl-server.service
 systemctl start surl-server.service
