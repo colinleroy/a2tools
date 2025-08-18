@@ -27,6 +27,7 @@ int __fastcall__ file_set_type(const char *pathname, unsigned char type);
 int __fastcall__ file_set_auxtype(const char *pathname, unsigned int auxtype);
 /* Sets the ProDOS auxtype for the file, returns 0 on success, sets errno on failure */
 
+static unsigned char confirm(const char *msg, unsigned char def_answer);
 
 /* State */
 static unsigned char active_pane = 0;
@@ -378,8 +379,8 @@ static void open_directory(unsigned char target_pane) {
       info_message("Can not open image.", 1);
     }
   } else if (entry->d_type == PRODOS_T_BIN || entry->d_type == PRODOS_T_SYS) {
-    if (entry->d_auxtype && exec(new_path, NULL) != 0) {
-      info_message("Can not exec file.", 1);
+    if (entry->d_auxtype != 0 && confirm("Execute binary file? (y/N)", 0)) {
+      exec(new_path, NULL);
     }
   }
 
@@ -399,10 +400,9 @@ static void open_directory(unsigned char target_pane) {
 /* Go up in the hierarchy */
 static void close_directory(unsigned char pane) {
   char *last_slash = strrchr(pane_directory[pane], '/');
-  if (!last_slash) {
-    return;
+  if (last_slash) {
+    *last_slash = '\0';
   }
-  *last_slash = '\0';
   cleanup_pane(pane);
 }
 
@@ -456,6 +456,21 @@ static void info_message(const char *msg, unsigned char valid) {
     cputs("\r\nPress a key to continue.");
     cgetc();
     help_message();
+  }
+}
+
+static unsigned char confirm(const char *msg, unsigned char def_answer) {
+  unsigned char answer;
+  set_logwindow();
+
+  cputs(msg);
+ask_again:
+  answer = tolower(cgetc());
+  switch (answer) {
+    case 'y':       return 1;
+    case 'n':       return 0;
+    case CH_ENTER:  return def_answer;
+    default:        goto ask_again;
   }
 }
 
@@ -851,6 +866,8 @@ void help(void) {
         "M: Move selected to other pane\r\n"
         "I: File information\r\n"
         "T: Change file type or aux type\r\n"
+        "\r\n"
+        "Q: Quit to ProDOS\r\n"
         "\r\n\r\n"
         "(c) Colin Leroy-Mira, 2025\r\n"
         "https://colino.net/\r\n"
@@ -939,6 +956,8 @@ static void handle_input(void) {
     case 'h':
       help();
       return;
+    case 'q':
+      exit(0);
   }
 }
 
