@@ -36,7 +36,7 @@
 
         .import         _ser_status_reg, _ser_data_reg
 
-        .import         pusha, popa, _baudrate
+        .import         popa, _baudrate
 
         .include        "zeropage.inc"
         .include        "ser-kernel.inc"

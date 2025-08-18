@@ -25,7 +25,7 @@
 
         .import         _ser_status_reg, _ser_data_reg
 
-        .import         pusha, popa, _baudrate
+        .import         popa, _baudrate
 
         .setcpu         "65816"
 

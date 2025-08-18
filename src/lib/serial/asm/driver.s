@@ -229,10 +229,10 @@ serial_slot:      .byte   2
 .ifdef SERIAL_LOW_LEVEL_CONTROL
 
 .proc _simple_serial_dtr_onoff
-        tay
+        sta     tmp1
         lda     _open_slot
         jsr     pusha
-        tya
+        lda     tmp1
         ; Fallthrough
 .endproc
 .proc _simple_serial_slot_dtr_onoff
