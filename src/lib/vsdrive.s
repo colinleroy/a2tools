@@ -10,27 +10,38 @@
                 .include "apple2.inc"
 
 ; PRODOS DEVICE DRIVERS ADDRESSES
-DEVADR01        = $BF10
-DEVADR02        = $BF20
+DEVADR01            = $BF10
+DEVADR02            = $BF20
+
 ; PRODOS DEVICE COUNT/LIST
-DEVCNT    = $BF31
-DEVLST    = $BF32
+DEVCNT              = $BF31
+DEVLST              = $BF32
+; PRODOS DATE/TIME STORAGE
+DATE                = $BF90
+TIME                = $BF92
 
 ; PRODOS ZERO PAGE VALUES
-COMMAND   = $42 ; PRODOS COMMAND
-UNIT      = $43 ; PRODOS SLOT/DRIVE
-BUFLO     = $44 ; LOW BUFFER
-BUFHI     = $45 ; HI BUFFER
-BLKLO     = $46 ; LOW REQUESTED BLOCK
-BLKHI     = $47 ; HI REQUESTED BLOCK
+COMMAND             = $42 ; PRODOS COMMAND
+UNIT                = $43 ; PRODOS SLOT/DRIVE
+BUFLO               = $44 ; LOW BUFFER
+BUFHI               = $45 ; HI BUFFER
+BLKLO               = $46 ; LOW REQUESTED BLOCK
+BLKHI               = $47 ; HI REQUESTED BLOCK
 
 ; PRODOS ERROR CODES
-IOERR        = $27
-NODEV        = $28
-WPERR        = $2B
+IOERR               = $27
+NODEV               = $28
+SUCCESS             = $00
 
-DATE         = $BF90 ; Date storage
-TIME         = $BF92 ; Time storage
+; PRODOS IO COMMANDS
+PRODOS_GETSTAT_CMD  = $00
+PRODOS_READBLK_CMD  = $01
+PRODOS_WRITEBLK_CMD = $02
+
+; VSDrive command/control codes
+VD_ENVELOPE_CMD     = $C5
+VD_WRITEBLK_CMD     = $02
+VD_READBLK_CMD      = $03
 
                 .segment "RT_ONCE"
 
@@ -55,13 +66,13 @@ scanslots:
         sta       VS_SLOT_DEV2
         ldx       DEVCNT
 checkdev:
-        lda       DEVLST,X ; Grab an active device number
-        cmp       VS_SLOT_DEV1 ; Slot x, drive 1?
-        beq       scanslots ; Yes, someone already home - go to next slot
-        cmp       VS_SLOT_DEV2 ; Slot x, drive 2?
-        beq       scanslots ; Yes, someone already home - go to next slot
+        lda       DEVLST,X                    ; Grab an active device number
+        cmp       VS_SLOT_DEV1                ; Slot x, drive 1?
+        beq       scanslots                   ; Yes, someone already home - go to next slot
+        cmp       VS_SLOT_DEV2                ; Slot x, drive 2?
+        beq       scanslots                   ; Yes, someone already home - go to next slot
         dex
-        bpl       checkdev ; Swing around until no more in list
+        bpl       checkdev                    ; Swing around until no more in list
 
         ; We have a slot!
         lda       VS_SLOT
@@ -83,11 +94,11 @@ checkdev:
         ; Add to device list
         inc       DEVCNT
         ldy       DEVCNT
-        lda       VS_SLOT_DEV1 ; Slot x, drive 1
+        lda       VS_SLOT_DEV1                ; Slot x, drive 1
         sta       DEVLST,Y
         inc       DEVCNT
         iny
-        lda       VS_SLOT_DEV2 ; Slot x, drive 2
+        lda       VS_SLOT_DEV2                ; Slot x, drive 2
         sta       DEVLST,Y
         lda       #1
         sta       installed
@@ -126,28 +137,25 @@ uninstall_done:
 
 vsdrive_driver:
         cld
-        lda       UNIT
-        cmp       VS_SLOT_DEV1
-        beq       do_drive1
-        cmp       VS_SLOT_DEV2
+        lda       #$00                        ; Unit number (0 or 2)
+        ldx       UNIT
+        cpx       VS_SLOT_DEV1
+        beq       do_command
+        cpx       VS_SLOT_DEV2
         beq       do_drive2
-        lda       #NODEV
-vsdrive_driver_fail:
+
+        lda       #NODEV                      ; Fail, not a command for our drives
         sec
         rts
-do_drive1:
-        lda       #$00
-        sta       UNIT2
-        beq       do_command
+
 do_drive2:
-        lda       #$02
-        sta       UNIT2
+        lda       #$02                        ; Unit number 2
 do_command:
-        lda       COMMAND
+        ldx       COMMAND
         beq       GETSTAT
-        cmp       #$01
+        cpx       #PRODOS_READBLK_CMD
         beq       READBLK
-        cmp       #$02
+        cpx       #PRODOS_WRITEBLK_CMD
         bne       :+
         jmp       WRITEBLK
 :       lda       #$00
@@ -162,30 +170,29 @@ GETSTAT:
         rts
 
 READBLK:
-        lda        #$03               ; Read command w/time request - command will be either 3 or 5
         clc
-        adc        UNIT2                                  ; Command will be #$05 for unit 2
+        adc        #VD_READBLK_CMD            ; Command will be 3 for unit 0, 5 for unit 2
         sta        CURCMD
-; SEND COMMAND TO PC
+        ; SEND COMMAND TO PC
         jsr        COMMAND_ENVELOPE
-        jsr        throbber_on
-; Pull and verify command envelope from host
-        jsr        serial_read_byte_no_irq_timeout        ; Command envelope begin
+
+        ; Pull and verify command envelope from host
+        jsr        serial_read_byte_no_irq_timeout
         bcs        IOFAIL
-        cmp        #$C5
+        cmp        #VD_ENVELOPE_CMD
         bne        IOFAIL
-        jsr        _serial_read_byte_no_irq               ; Read command
+        jsr        _serial_read_byte_no_irq   ; Read command
         cmp        CURCMD
         bne        IOFAIL
-        jsr        _serial_read_byte_no_irq               ; LSB of requested block
+        jsr        _serial_read_byte_no_irq   ; LSB of requested block
         cmp        BLKLO
         bne        IOFAIL
-        jsr        _serial_read_byte_no_irq               ; MSB of requested block
+        jsr        _serial_read_byte_no_irq   ; MSB of requested block
         cmp        BLKHI
         bne        IOFAIL
 
         ldx        #$00
-:       jsr        _serial_read_byte_no_irq               ; Four bytes of time/date
+:       jsr        _serial_read_byte_no_irq   ; Four bytes of time/date
         sta        TEMPDT,x
         eor        CHECKSUM
         sta        CHECKSUM
@@ -193,7 +200,7 @@ READBLK:
         cpx        #$04
         bcc        :-
 
-        jsr        _serial_read_byte_no_irq               ; Checksum of command envelope
+        jsr        _serial_read_byte_no_irq   ; Checksum of command envelope
         cmp        CHECKSUM
         bne        IOFAIL
 
@@ -207,7 +214,7 @@ READBLK:
         sta        DATE+1
 
         ; READ BLOCK AND VERIFY
-        ldx        #$00
+        ldx        #$02
         ldy        #$00
         sty        CHECKSUM
 RDLOOP:
@@ -219,21 +226,15 @@ RDLOOP:
         bne        RDLOOP
 
         inc        BUFHI
-        inx
-        cpx        #$02
+        dex
         bne        RDLOOP
 
         dec        BUFHI
-        dec        BUFHI        ; Bring BUFHI back down to where it belongs
+        dec        BUFHI                      ; Bring BUFHI back down to where it belongs
 
-        jsr        throbber_off
-        jsr        _serial_read_byte_no_irq        ; Block checksum
+        jsr        _serial_read_byte_no_irq   ; Block checksum
         cmp        CHECKSUM
-        bne        IOFAIL        ; Just need a failure exit nearby
-
-        lda        #$00
-        clc
-        rts
+        beq        IOSUCCESS
 
 IOFAIL:
         jsr        throbber_off
@@ -241,85 +242,79 @@ IOFAIL:
         sec
         rts
 
-; WRITE
 WRITEBLK:
-; SEND COMMAND TO PC
-        lda        #$02                ; Write command - command will be either 2 or 4
+        ; SEND COMMAND TO PC
         clc
-        adc        UNIT2                ; Command will be #$05 for unit 2
+        adc        #VD_WRITEBLK_CMD           ; Command will be 2 for unit 0 or 4 for unit 2
         sta        CURCMD
         jsr        COMMAND_ENVELOPE
 
-        jsr        throbber_on
-
-; WRITE BLOCK AND CHECKSUM
-        ldx        #$00
-        stx        CHECKSUM
-WRBKLOOP:
+        ; WRITE BLOCK AND CHECKSUM
+        ldx        #$02
         ldy        #$00
+        sty        CHECKSUM
 WRLOOP:
         lda        (BUFLO),Y
-        jsr        _serial_putc_direct
-        eor        CHECKSUM
-        sta        CHECKSUM
+        jsr        SEND_AND_CHECKSUM
         iny
         bne        WRLOOP
 
         inc        BUFHI
-        inx
-        cpx        #$02
-        bne        WRBKLOOP
+        dex
+        bne        WRLOOP
 
         dec        BUFHI
         dec        BUFHI
 
-        lda        CHECKSUM        ; Checksum
+        lda        CHECKSUM                   ; Send checksum
         jsr        _serial_putc_direct
 
 ; READ ECHO'D COMMAND AND VERIFY
         jsr        serial_read_byte_no_irq_timeout
         bcs        IOFAIL
-        cmp        #$C5                ; S/B Command envelope
+        cmp        #VD_ENVELOPE_CMD           ; S/B Command envelope
         bne        IOFAIL
         jsr        _serial_read_byte_no_irq
-        cmp        CURCMD                ; S/B Write
+        cmp        CURCMD                     ; S/B Write
         bne        IOFAIL
-        jsr        _serial_read_byte_no_irq                ; Read LSB of requested block
+        jsr        _serial_read_byte_no_irq   ; Read LSB of requested block
         cmp        BLKLO
         bne        IOFAIL
-        jsr        _serial_read_byte_no_irq                ; Read MSB of requested block
+        jsr        _serial_read_byte_no_irq   ; Read MSB of requested block
         cmp        BLKHI
         bne        IOFAIL
-        jsr        _serial_read_byte_no_irq                ; Checksum of block - not the command envelope
+        jsr        _serial_read_byte_no_irq   ; Checksum of block - not the command envelope
         cmp        CHECKSUM
         bne        IOFAIL
-
+IOSUCCESS:
         jsr        throbber_off
-        lda        #$00
+        lda        #SUCCESS
         clc
         rts
 
-COMMAND_ENVELOPE:
-                ; Send a command envelope (read/write) with the command in the accumulator
-        pha                        ; Hang on to the command for a sec...
-        lda        #$C5
-        jsr        _serial_putc_direct                ; Envelope
-        sta        CHECKSUM
-        pla                        ; Pull the command back off the stack
-        jsr        _serial_putc_direct                ; Send command
-        eor        CHECKSUM
-        sta        CHECKSUM
-        lda        BLKLO
-        jsr        _serial_putc_direct                ; Send LSB of requested block
-        eor        CHECKSUM
-        sta        CHECKSUM
-        lda        BLKHI
-        jsr        _serial_putc_direct                ; Send MSB of requested block
-        eor        CHECKSUM
-        sta        CHECKSUM
-        jsr        _serial_putc_direct                ; Send envelope checksum
-        rts
+        ; And done!
 
+COMMAND_ENVELOPE:
+        ; Send a command envelope (read/write) with the command in the accumulator
+        pha                                   ; Hang on to the command for a sec...
+        lda        #$00
+        sta        CHECKSUM
+        lda        #VD_ENVELOPE_CMD
+        jsr        SEND_AND_CHECKSUM          ; Envelope
+        pla                                   ; Pull the command back off the stack
+        jsr        SEND_AND_CHECKSUM          ; Send command
+        lda        BLKLO
+        jsr        SEND_AND_CHECKSUM          ; Send LSB of requested block
+        lda        BLKHI
+        jsr        SEND_AND_CHECKSUM          ; Send MSB of requested block
+        jsr        _serial_putc_direct        ; Send envelope checksum (already in A after SEND_AND_CHECKSUM)
+        jmp        throbber_on                ; Turn indicator on
+
+SEND_AND_CHECKSUM:
+        jsr        _serial_putc_direct        ; Send command
+        eor        CHECKSUM
+        sta        CHECKSUM
+        rts
 
                   .data
 
