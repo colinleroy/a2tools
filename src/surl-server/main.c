@@ -287,16 +287,16 @@ reopen:
     LOG("Waiting for request\n");
 read_method:
     reqbuf[0] = simple_serial_getc();
+new_req:
     if (reqbuf[0] == (char)EOF && (errno == EBADF || errno == EIO)) {
       LOG("REQ: Fatal read error: %s\n", strerror(errno));
       goto reopen;
     } else if (reqbuf[0] == (char)EOF) {
       goto read_method;
-    } else  if (reqbuf[0] == '\0') {
+    } else if (reqbuf[0] == '\0') {
       LOG("REQ: discarding raw 0x00\n");
       goto read_method;
     }
-new_req:
     if ((unsigned char)(reqbuf[0]) == SURL_METHOD_VSDRIVE) {
       handle_vsdrive_request();
       goto read_method;
