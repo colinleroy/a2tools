@@ -395,6 +395,7 @@ again:
 out:
   init_text();
 
+  /* Pass back extra arguments received at startup */
   if (argc > 2) {
     cmdline[0] = '\0';
     for (i = 3; i < argc; i++) {

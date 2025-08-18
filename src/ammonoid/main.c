@@ -375,7 +375,14 @@ static void open_directory(unsigned char target_pane) {
           || (entry->d_type == PRODOS_T_FOT && entry->d_auxtype < 0x4000))
         && entry->d_size <= 8192UL && entry->d_size >= 8184UL) {
     reopen_start_device();
-    if (exec("IMGVIEW", new_path) != 0) {
+    /* Setup command args to come back to where we were */
+    sprintf(copy_buf, "%s "PROGRAM_NAME" \"%s\" \"%s\"", new_path,
+            pane_directory[0][0] ? pane_directory[0]:"/",
+            pane_directory[1][0] ? pane_directory[1]:"/");
+    if (strlen(copy_buf) > 127) {
+      sprintf(copy_buf, "%s "PROGRAM_NAME, new_path);
+    }
+    if (exec("IMGVIEW", copy_buf) != 0) {
       info_message("Can not open image.", 1);
     }
   } else if (entry->d_type == PRODOS_T_BIN || entry->d_type == PRODOS_T_SYS) {
@@ -1086,7 +1093,7 @@ void init_filetypes(void) {
   SET_FILETYPE(0xFF, "SYS", "ProDOS-8 system file");
 }
 
-void main(void) {
+void main(int argc, char **argv) {
   register_start_device();
   clrscr();
 
@@ -1104,7 +1111,17 @@ void main(void) {
     SEL = LOAD = '*';
   }
 
-  getcwd(pane_directory[1], FILENAME_MAX);
+  /* Get pane directories from argv */
+  if (argc == 3) {
+    if (strcmp(argv[1], "/")) {
+      strcpy(pane_directory[0], argv[1]);
+    }
+    if (strcmp(argv[2], "/")) {
+      strcpy(pane_directory[1], argv[2]);
+    }
+  } else {
+    getcwd(pane_directory[1], FILENAME_MAX);
+  }
 
   if (simple_serial_open() == 0) {
     vsdrive_install();

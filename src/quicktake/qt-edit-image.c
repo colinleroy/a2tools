@@ -1158,9 +1158,9 @@ void qt_edit_image(const char *ofname, uint16 src_width) {
 
 uint8 qt_view_image(const char *filename) {
   if (filename)
-    snprintf((char *)args, sizeof(args) - 1, "%s SLOWTAKE", filename);
+    snprintf((char *)args, sizeof(args) - 1, "%s "PROGRAM_NAME, filename);
   else
-    snprintf((char *)args, sizeof(args) - 1, "___SEL___ SLOWTAKE");
+    snprintf((char *)args, sizeof(args) - 1, "___SEL___ "PROGRAM_NAME);
 
   init_text();
   return exec("imgview", (char *)args);

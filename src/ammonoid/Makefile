@@ -5,6 +5,7 @@ GENERAL_CFLAGS := -DSURL_TO_LANGCARD \
 	--asm-define SURL_TO_LANGCARD \
 	--asm-define SERIAL_ENABLE_IRQ \
 	-DDYN_BOX_DRAW -DAPPLE2_INCLUDE_IIE_CHARS \
+	-DPROGRAM_NAME='"AMMONOID"' \
 
 GCCCFLAGS = -g -O0 -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\" \
 	-I ../lib -I ../stp -Wall -Wno-format \

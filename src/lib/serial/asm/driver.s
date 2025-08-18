@@ -26,6 +26,8 @@
         .import     _z8530_open, _z8530_close
         .import     _z8530_read_byte_sync, _z8530_put
 
+        .importzp   tmp1
+
 ; IRQ functions
 .ifdef SERIAL_ENABLE_IRQ
         .export     _serial_get_async
