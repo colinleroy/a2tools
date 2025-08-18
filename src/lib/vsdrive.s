@@ -146,9 +146,8 @@ do_command:
         lda       COMMAND
         beq       GETSTAT
         cmp       #$01
-        bne       :+
-        jmp       READBLK
-:       cmp       #$02
+        beq       READBLK
+        cmp       #$02
         bne       :+
         jmp       WRITEBLK
 :       lda       #$00
@@ -162,72 +161,42 @@ GETSTAT:
         clc
         rts
 
-; Calculate the checksum of the block at BUFLO/BUFHI
-CALC_CHECKSUM:
-        lda       #$00        ; Clean everyone out
-        tax
-        tay
-        CC_LOOP:
-        eor       (BUFLO),Y   ; Exclusive-or accumulator with what's at (BUFLO),Y
-        sta       CHECKSUM    ; Save that tally in CHECKSUM as we go
-        iny
-        bne       CC_LOOP
-        inc       BUFHI       ; Y just turned over to zero; bump MSB of buffer
-        inx                   ; Keep track of trips through the loop - we need two of them
-        cpx       #$02        ; The second time X is incremented, this will signfiy twice through the loop
-        bne       CC_LOOP
-
-        dec        BUFHI             ; BUFHI got bumped twice, so back it back down
-        dec        BUFHI
-        rts
-
-READFAIL:
-        jsr        throbber_off
-        lda        #IOERR
-        sec
-        rts
-
 READBLK:
         lda        #$03               ; Read command w/time request - command will be either 3 or 5
         clc
-        adc        UNIT2              ; Command will be #$05 for unit 2
+        adc        UNIT2                                  ; Command will be #$05 for unit 2
         sta        CURCMD
 ; SEND COMMAND TO PC
         jsr        COMMAND_ENVELOPE
         jsr        throbber_on
 ; Pull and verify command envelope from host
         jsr        serial_read_byte_no_irq_timeout        ; Command envelope begin
-        bcs        READFAIL
+        bcs        IOFAIL
         cmp        #$C5
-        bne        READFAIL
+        bne        IOFAIL
         jsr        _serial_read_byte_no_irq               ; Read command
         cmp        CURCMD
-        bne        READFAIL
+        bne        IOFAIL
         jsr        _serial_read_byte_no_irq               ; LSB of requested block
         cmp        BLKLO
-        bne        READFAIL
+        bne        IOFAIL
         jsr        _serial_read_byte_no_irq               ; MSB of requested block
         cmp        BLKHI
-        bne        READFAIL
-        jsr        _serial_read_byte_no_irq               ; LSB of time
-        sta        TEMPDT
+        bne        IOFAIL
+
+        ldx        #$00
+:       jsr        _serial_read_byte_no_irq               ; Four bytes of time/date
+        sta        TEMPDT,x
         eor        CHECKSUM
         sta        CHECKSUM
-        jsr        _serial_read_byte_no_irq               ; MSB of time
-        sta        TEMPDT+1
-        eor        CHECKSUM
-        sta        CHECKSUM
-        jsr        _serial_read_byte_no_irq               ; LSB of date
-        sta        TEMPDT+2
-        eor        CHECKSUM
-        sta        CHECKSUM
-        jsr        _serial_read_byte_no_irq               ; MSB of date
-        sta        TEMPDT+3
-        eor        CHECKSUM
-        sta        CHECKSUM
+        inx
+        cpx        #$04
+        bcc        :-
+
         jsr        _serial_read_byte_no_irq               ; Checksum of command envelope
         cmp        CHECKSUM
-        bne        WRITEFAIL          ; Just need a nearby failure
+        bne        IOFAIL
+
         lda        TEMPDT
         sta        TIME
         lda        TEMPDT+1
@@ -236,12 +205,16 @@ READBLK:
         sta        DATE
         lda        TEMPDT+3
         sta        DATE+1
-; READ BLOCK AND VERIFY
+
+        ; READ BLOCK AND VERIFY
         ldx        #$00
         ldy        #$00
+        sty        CHECKSUM
 RDLOOP:
         jsr        _serial_read_byte_no_irq
         sta        (BUFLO),Y
+        eor        CHECKSUM
+        sta        CHECKSUM
         iny
         bne        RDLOOP
 
@@ -254,19 +227,15 @@ RDLOOP:
         dec        BUFHI        ; Bring BUFHI back down to where it belongs
 
         jsr        throbber_off
-        jsr        _serial_read_byte_no_irq        ; Checksum
-        pha                ; Push checksum for now
-        ldx        #$00
-        jsr        CALC_CHECKSUM
-        pla        
+        jsr        _serial_read_byte_no_irq        ; Block checksum
         cmp        CHECKSUM
-        bne        WRITEFAIL        ; Just need a failure exit nearby
+        bne        IOFAIL        ; Just need a failure exit nearby
 
         lda        #$00
         clc
         rts
 
-WRITEFAIL:
+IOFAIL:
         jsr        throbber_off
         lda        #IOERR
         sec
@@ -291,6 +260,8 @@ WRBKLOOP:
 WRLOOP:
         lda        (BUFLO),Y
         jsr        _serial_putc_direct
+        eor        CHECKSUM
+        sta        CHECKSUM
         iny
         bne        WRLOOP
 
@@ -302,27 +273,26 @@ WRLOOP:
         dec        BUFHI
         dec        BUFHI
 
-        jsr        CALC_CHECKSUM
         lda        CHECKSUM        ; Checksum
         jsr        _serial_putc_direct
 
 ; READ ECHO'D COMMAND AND VERIFY
         jsr        serial_read_byte_no_irq_timeout
-        bcs        WRITEFAIL
+        bcs        IOFAIL
         cmp        #$C5                ; S/B Command envelope
-        bne        WRITEFAIL
+        bne        IOFAIL
         jsr        _serial_read_byte_no_irq
         cmp        CURCMD                ; S/B Write
-        bne        WRITEFAIL
+        bne        IOFAIL
         jsr        _serial_read_byte_no_irq                ; Read LSB of requested block
         cmp        BLKLO
-        bne        WRITEFAIL
+        bne        IOFAIL
         jsr        _serial_read_byte_no_irq                ; Read MSB of requested block
         cmp        BLKHI
-        bne        WRITEFAIL
+        bne        IOFAIL
         jsr        _serial_read_byte_no_irq                ; Checksum of block - not the command envelope
         cmp        CHECKSUM
-        bne        WRITEFAIL
+        bne        IOFAIL
 
         jsr        throbber_off
         lda        #$00
