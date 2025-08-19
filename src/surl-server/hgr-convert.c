@@ -131,7 +131,7 @@ again:
       char *hgr_buf = read_hgr(argv[i], &len);
 
       if (hgr_buf) {
-        out_buf = hgr_to_png(hgr_buf, len, 1, &out_len);
+        out_buf = hgr_to_png(hgr_buf, len, mono, &out_len);
         snprintf(out_file, sizeof(out_file), "%s.png", argv[i]);
         write_file(out_file, out_buf, out_len);
         LOG("Converted to png: %s\n", out_file);

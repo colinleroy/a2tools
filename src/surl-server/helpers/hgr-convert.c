@@ -682,7 +682,7 @@ char *hgr_to_png(char *hgr_buf, size_t hgr_len, char monochrome, size_t *len)
 
   row = (png_bytep) malloc(3 * width);
 
-  if (!monochrome) {
+  if (!monochrome && !is_dhgr) {
     for (y=0; y < height; y++){
       char *ord_hgr = hgr_buf + baseaddr[y];
       x = 0;

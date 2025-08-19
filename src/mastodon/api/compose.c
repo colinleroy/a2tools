@@ -56,11 +56,11 @@ char *api_send_hgr_image(char *filename, char *description, char **err, char x, 
   int fd;
   int r;
   int to_send;
+  int file_size;
   char *media_id;
 
   *err = NULL;
   r = 0;
-  to_send = HGR_LEN;
 
 #ifdef __APPLE2__
   _filetype = PRODOS_T_BIN;
@@ -72,8 +72,11 @@ char *api_send_hgr_image(char *filename, char *description, char **err, char x, 
     return NULL;
   }
 
+  file_size = to_send = lseek(fd, 0, SEEK_END);
+  lseek(fd, 0, SEEK_SET);
+
   if (w > 0)
-    progress_bar(x, y, w, 0, HGR_LEN);
+    progress_bar(x, y, w, 0, file_size);
 
   get_surl_for_endpoint(SURL_METHOD_POST_DATA, "/api/v2/media");
 
@@ -88,7 +91,7 @@ send_again:
     surl_multipart_send_field_data(send_buf, r);
     to_send -= r;
     if (w > 0)
-      progress_bar(-1, -1, w, HGR_LEN - to_send, HGR_LEN);
+      progress_bar(-1, -1, w, file_size - to_send, file_size);
     if (to_send == 0) {
       break;
     }
