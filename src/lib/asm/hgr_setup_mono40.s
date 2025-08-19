@@ -44,11 +44,10 @@ TEXT16_ON       := $C0B9
 ; Up to the caller to make sure /RAM is empty at the time of the call.
 .proc _load_hgr_mono_file
         sta     npages
-        lda     hgr_mono_file
-        beq     :+
-        rts
+        lda     #0
+        sta     hgr_mono_file
 
-:       lda     #<hgr_data_buffer
+        lda     #<hgr_data_buffer
         ldx     #>hgr_data_buffer
         jsr     pushax        ; Once for memset
         lda     #$F0
@@ -60,7 +59,7 @@ TEXT16_ON       := $C0B9
 
 nextfile:
         lda     npages
-        cmp     #1
+        cmp     #2
         bne     secpage
         lda     #<hgr_fgbg
         ldx     #>hgr_fgbg
@@ -95,7 +94,7 @@ push:
         lda     fd
         ldx     #$00
         jsr     _close
-        bcs     out
+        bne     out
         dec     npages
         bne     nextfile
         lda     #1
@@ -114,7 +113,7 @@ out:    rts
 
         .data
 
-hgr_fgbg: .asciiz "/RAM/FGBG"
+hgr_fgbg: .asciiz "/RAM/AUXHGR"
 hgr_fgbg2: .asciiz "/RAM/FGBG2"
 
         .bss

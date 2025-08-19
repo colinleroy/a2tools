@@ -7,6 +7,8 @@
 #define HGR_WIDTH 280U
 #define HGR_HEIGHT 192U
 
+#define AUX_PAGE_FILE "/RAM/AUXHGR"
+
 void __fastcall__ init_hgr(uint8 mono);
 void __fastcall__ init_text(void);
 void __fastcall__ load_hgr_mono_file(unsigned char pages);

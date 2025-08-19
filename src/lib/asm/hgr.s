@@ -101,6 +101,12 @@ _init_text:
         bit       LOWSCR
         bit       TXTSET
         bit       LORES
+        bit       DHIRESON    ; Get Video-7 out of weird mode, possibly.
+        bit       DHIRESOFF
+        bit       DHIRESON
+        bit       DHIRESOFF
+        bit       DHIRESON
+        bit       DHIRESOFF
         lda       #0
         sta       _hgr_init_done
         rts
