@@ -416,7 +416,6 @@ gotox_sx:
         ldx       #>star_str
         jsr       _cputs
 
-        jsr       _start_line
         lda       dir_only
         beq       :+
         lda       #<no_dir_str
