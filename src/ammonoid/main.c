@@ -282,7 +282,7 @@ static void display_pane(unsigned char pane) {
   if (must_clear[pane]) {
     help_message();
   }
-  print_first[pane] = 
+  print_first[pane] =
     print_last[pane] =
     must_clear[pane] = 0;
 }
@@ -292,7 +292,7 @@ static void display_active_pane(void) {
   unsigned char inactive_left = pane_left[!active_pane];
   set_scrollwindow(0, pane_btm);
   set_hscrollwindow(0, total_width);
-  
+
   gotoxy(pane_left[active_pane], 0);
   cvline(pane_btm);
   /* Clear inactive pane's line */
@@ -373,7 +373,8 @@ static void open_directory(unsigned char target_pane) {
 
   if (((entry->d_type == PRODOS_T_BIN && (entry->d_auxtype == 0x2000 || entry->d_auxtype == 0x0))
           || (entry->d_type == PRODOS_T_FOT && entry->d_auxtype < 0x4000))
-        && entry->d_size <= 8192UL && entry->d_size >= 8184UL) {
+        && ((entry->d_size <= 8192UL && entry->d_size >= 8184UL)
+            || (entry->d_size <= 2*8192UL && entry->d_size >= 2*8184UL))) {
     reopen_start_device();
     /* Setup command args to come back to where we were */
     sprintf(copy_buf, "%s "PROGRAM_NAME" \"%s\" \"%s\"", new_path,

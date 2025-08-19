@@ -270,7 +270,8 @@ start_from_first:
     if (found == 1) {
       if (((ent->d_type == PRODOS_T_BIN && (ent->d_auxtype == 0x2000 || ent->d_auxtype == 0x0))
             || (ent->d_type == PRODOS_T_FOT && ent->d_auxtype < 0x4000))
-        && ent->d_size <= 8192UL && ent->d_size >= 8184UL) {
+        && ((ent->d_size <= 8192UL && ent->d_size >= 8184UL)
+            || (ent->d_size <= 2*8192UL && ent->d_size >= 2*8184UL))) {
          /* this is, quite probably, an image */
          sprintf(filename, "/%s", ent->d_name);
          found = 2;
@@ -301,13 +302,14 @@ static void print_help(void) {
 }
 
 int main(int argc, char *argv[]) {
-  FILE *fp = NULL;
+  FILE *fp = NULL, *ramfp = NULL;
   static char imgname[FILENAME_MAX];
   uint16 len;
-  uint8 i;
+  uint8 i, has_dhgr = 0, tries = 0;
   static char cmdline[127];
   #define BLOCK_SIZE 512
   const char *filename = NULL;
+  static char *rambuf[BLOCK_SIZE];
   register_start_device();
 
   try_videomode(VIDEOMODE_80COL);
@@ -358,15 +360,36 @@ next_image:
   progress_bar(0, 18, scrw, 0, HGR_LEN);
 
   len = 0;
-  while (len < HGR_LEN) {
-#ifdef __CC65__
-    fread((char *)(HGR_PAGE + len), 1, BLOCK_SIZE, fp);
-#endif
-    len += BLOCK_SIZE;
-    progress_bar(-1, -1, scrw, len, HGR_LEN);
+
+  if (has_128k) {
+    fseek(fp, 0, SEEK_END);
+    has_dhgr = (ftell(fp) == 2*HGR_LEN);
+    rewind(fp);
+    if (has_dhgr && (ramfp = fopen("/RAM/PAGE2","w")) != NULL) {
+      while (len < HGR_LEN) {
+        fread(rambuf, 1, BLOCK_SIZE, fp);
+        fwrite(rambuf, 1, BLOCK_SIZE, ramfp);
+
+        len += BLOCK_SIZE;
+        progress_bar(-1, -1, scrw, len, HGR_LEN*2);
+      }
+      fclose(ramfp);
+    }
   }
 
+  len = 0;
+  while (len < HGR_LEN) {
+    fread((char *)(HGR_PAGE + len), 1, BLOCK_SIZE, fp);
+    len += BLOCK_SIZE;
+    progress_bar(-1, -1, scrw, len+HGR_LEN, HGR_LEN*2);
+  }
+
+  #ifdef __CC65__
   init_hgr(1);
+  if (has_dhgr) {
+    __asm__("sta $C05E"); //DHIRESON
+  }
+#endif
 
   fclose(fp);
 
