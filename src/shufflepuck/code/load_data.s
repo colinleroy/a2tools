@@ -583,7 +583,7 @@ bar_backup_name:     .asciiz "/RAM/BAR.IMG"
 bar_code_backup_name:.asciiz "/RAM/BAR.CODE"
 barsnd_backup_name:  .asciiz "/RAM/BAR.SND"
 opponent_name_tmpl:  .asciiz "OPPONENT.X"
-hgr_fgbg:            .asciiz "/RAM/FGBG"
+hgr_fgbg:            .asciiz "/RAM/AUXHGR"
 load_err_str:        .asciiz "COULD NOT LOAD "
 
 .segment "barcode"
