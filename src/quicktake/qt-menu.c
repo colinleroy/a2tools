@@ -540,6 +540,7 @@ menu:
 out:
   free(cam_info.name);
   cam_info.name = NULL;
+  state_unlink();
   return 0;
 }
 

@@ -11,5 +11,6 @@ typedef enum _qt_state_kind {
 
 uint8 state_load(uint8 state_num, uint16 *num, char **edit_name);
 uint8 state_set(uint8 state_num, uint16 num, const char *edit_name);
+void state_unlink(void);
 
 #endif

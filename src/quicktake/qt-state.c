@@ -1,6 +1,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 #include "qt-state.h"
 #include "extended_conio.h"
 #include "platform.h"
@@ -69,5 +70,9 @@ uint8 state_set(uint8 state_num, uint16 num, const char *edit_name) {
     strcpy(state.edit_name, edit_name);
   }
   return state_io("w");
+}
+
+void state_unlink(void) {
+  unlink(STATE_FILE);
 }
 #pragma code-name(pop)
