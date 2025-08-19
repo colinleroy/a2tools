@@ -615,6 +615,7 @@ char *hgr_to_png(char *hgr_buf, size_t hgr_len, char monochrome, size_t *len)
   int oc1, oc2;
   char solid = 1;
   char *out_buf = NULL;
+  char is_dhgr = 0;
 
   int hgr_col[8] = {
     0x000000,
@@ -629,10 +630,16 @@ char *hgr_to_png(char *hgr_buf, size_t hgr_len, char monochrome, size_t *len)
 
   init_base_addrs();
 
-  if (hgr_len != 8192) {
+  if (hgr_len != 8192 && hgr_len != 16384) {
     LOG("HGR: Wrong HGR size %zd\n", hgr_len);
     return NULL;
   }
+  is_dhgr = hgr_len == 16384;
+  if (is_dhgr) {
+    width = 560;
+    height = 384;
+  }
+ 
   /* create file */
   /* coverity[secure_temp] */
   tmpfp = tmpfile();
@@ -716,17 +723,31 @@ char *hgr_to_png(char *hgr_buf, size_t hgr_len, char monochrome, size_t *len)
     for (y=0; y < height; y++){
       char *ord_hgr = hgr_buf + baseaddr[y];
       char sx;
-
+      int pass = 0;
       x = 0;
-      for (sx = 0; sx < width / 7; sx++) {
+      ord_hgr = hgr_buf + baseaddr[y];
+
+row_pass:
+      for (sx = 0; sx < width / (is_dhgr?14:7); sx++) {
         v1 = *(ord_hgr++);
 
         for (ox = 0; ox < 7; ox++) {
           setRGB(&(row[(x++)*3]), (v1 & 1) ? 0xffffff : 0);
+          printf("wrote pixel at %d,%d\n", x, y);
           v1 = v1 >> 1;
         }
+        if (is_dhgr)
+          x+=7;
+      }
+      if (is_dhgr && pass == 0) {
+        x = 7;
+        ord_hgr = hgr_buf + baseaddr[y]+0x2000;
+        pass = 1;
+        goto row_pass;
       }
       png_write_row(png_ptr, row);
+      if (is_dhgr)
+        png_write_row(png_ptr, row);
     }
   }
 
