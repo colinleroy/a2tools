@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <errno.h>
 #include <ctype.h>
 #include "config.h"
@@ -52,10 +53,15 @@ char search_str[80] = "";
 
 #pragma code-name(push, "LC")
 
-char *search_save_file;
 
 #define RAM_SEARCH_SAVE_FILE "/RAM/WTSRCH"
 #define SEARCH_SAVE_FILE RAM_SEARCH_SAVE_FILE+5
+
+char *search_save_file = RAM_SEARCH_SAVE_FILE;
+
+void unlink_tmp(void) {
+  unlink(search_save_file);
+}
 
 static char did_cmd = 0;
 static char cmd_cb(char c) {
@@ -211,11 +217,16 @@ static void load_video(char *host, InstanceTypeId instance_type, char *id) {
       }
     }
 
+    /* Reload to overwrite DHGR data */
+    init_text();
+    backup_restore_hgrpage("r");
+    init_hgr(0);
+    load_hgr_mono_file(2);
     surl_stream_av(captions_url, video_url);
     set_scrollwindow(20, scrh);
 
+    init_text();
     backup_restore_hgrpage("r");
-    init_hgr(1);
     hgr_mixon();
     clrscr();
   }
@@ -223,16 +234,23 @@ out:
   free(n_host);
 }
 
+void maybe_dhgr(uint8 is_dhgr) {
+  init_hgr(0);
+  if (is_dhgr) {
+    __asm__("sta $C05E");
+  }
+}
+
 #pragma code-name(push, "LOWCODE")
 
 char **lines = NULL;
 char n_lines;
 char cur_line = 0;
-
 static void search_results(InstanceTypeId instance_type) {
   static char *video_host;
   int len;
   char c;
+  char is_dhgr = 0;
 
   load_save_search_json("w");
 reload_search:
@@ -280,10 +298,11 @@ display_result:
   init_text();
   bzero((char *)HGR_PAGE, HGR_LEN);
 
+  is_dhgr = 0;
   surl_start_request(NULL, 0, lines[cur_line+VIDEO_THUMB], SURL_METHOD_GET);
   if (surl_response_ok()) {
-    simple_serial_putc(SURL_CMD_HGR);
-    simple_serial_putc(0); /* monochrome */
+    simple_serial_putc(has_128k ? SURL_CMD_DHGR:SURL_CMD_HGR);
+    simple_serial_putc(1); /* monochrome */
     simple_serial_putc(HGR_SCALE_MIXHGR);
 
     if (simple_serial_getc() == SURL_ERROR_OK) {
@@ -291,14 +310,27 @@ display_result:
       surl_read_with_barrier((char *)&len, 2);
       len = ntohs(len);
 
+      if (len == HGR_LEN*2) {
+        int fd;
+        _filetype = PRODOS_T_BIN;
+        fd = open(AUX_PAGE_FILE, O_WRONLY|O_CREAT);
+        surl_read_with_barrier((char *)HGR_PAGE, HGR_LEN);
+        if (fd > 0) {
+          write(fd, (char *)HGR_PAGE, HGR_LEN);
+          close(fd);
+          is_dhgr = 1;
+        }
+        len = HGR_LEN;
+      }
       if (len == HGR_LEN) {
         surl_read_with_barrier((char *)HGR_PAGE, HGR_LEN);
       }
     }
   }
 
+  maybe_dhgr(is_dhgr);
+
 read_kbd:
-  init_hgr(1);
   hgr_mixon();
   c = tolower(cgetc());
   if (is_iie && c & 0x80) {
@@ -306,13 +338,14 @@ read_kbd:
     goto read_kbd;
   } else if (!is_iie && c < 27 && c != CH_ENTER && c != CH_CURS_LEFT && c != CH_CURS_RIGHT) {
     cmd_cb(c + 'A' - 1);
-    goto read_kbd;
+    goto display_result;
   }
   switch (c) {
     case CH_ENTER:
       load_video(video_host, instance_type, lines[cur_line+VIDEO_ID]);
       /* relaunch search */
       load_save_search_json("r");
+      backup_restore_hgrpage("r");
       goto reload_search;
     case CH_ESC:
       return;
@@ -470,13 +503,12 @@ int main(void) {
   register_start_device();
 
   load_hgr_mono_file(2);
+  atexit(&unlink_tmp);
 
   try_videomode(VIDEOMODE_80COL);
   backup_restore_hgrpage("w");
 
-  if (has_128k) {
-    search_save_file = RAM_SEARCH_SAVE_FILE;
-  } else {
+  if (!has_128k) {
     search_save_file = SEARCH_SAVE_FILE;
   }
 
@@ -488,7 +520,7 @@ int main(void) {
   surl_user_agent = "WozTubes "VERSION"/Apple II";
 
 #ifdef __APPLE2__
-  init_hgr(1);
+  init_hgr(0);
   hgr_mixon();
   set_scrollwindow(20, scrh);
   clrscr();
