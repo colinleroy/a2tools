@@ -75,7 +75,7 @@ mastocli_SOURCES := \
 	api/date_format.c \
 	cli/header.c \
 	cli/print.c \
-	cli/tl.c\
+	cli/tl.c \
 	../lib/dget_text_single.c \
 	../lib/strsplit.c \
 	../lib/progress_bar.c

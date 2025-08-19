@@ -41,7 +41,7 @@ char *instance_url;
 char *oauth_token;
 char *type = NULL;
 char *id = NULL;
-
+static unsigned char is_dhgr = 0;
 #ifdef __CC65__
   #pragma rodata-name (push, "HGR")
   char *hgr_page;
@@ -82,6 +82,9 @@ static void toggle_legend(char force) {
     init_text();
   } else {
     init_hgr(monochrome);
+    if (is_dhgr) {
+      __asm__("sta $C05E"); //DHIRESON
+    }
   }
 #endif
 }
@@ -100,6 +103,10 @@ static void set_legend(char *str, unsigned char idx, unsigned char num_images) {
 
 char enable_subtitles = SUBTITLES_AUTO;
 char video_size = HGR_SCALE_HALF;
+
+void unlink_page2(void) {
+  unlink(AUX_PAGE_FILE);
+}
 
 static void img_display(media *m, char idx, char num_images) {
   size_t len;
@@ -122,7 +129,7 @@ static void img_display(media *m, char idx, char num_images) {
     gotoxy(0, 22);
     cputs("Loading image...");
 
-    simple_serial_putc(SURL_CMD_HGR);
+    simple_serial_putc(has_128k ? SURL_CMD_DHGR : SURL_CMD_HGR);
     simple_serial_putc(monochrome);
     simple_serial_putc(HGR_SCALE_FULL);
 
@@ -130,10 +137,26 @@ static void img_display(media *m, char idx, char num_images) {
 
       surl_read_with_barrier((char *)&len, 2);
       len = ntohs(len);
-
-      if (len == HGR_LEN) {
-        toggle_legend(0);
+      if (len == HGR_LEN*2) {
+        int fd;
+#ifdef __APPLE2__
+        _filetype = PRODOS_T_BIN;
+#endif
+        fd = open(AUX_PAGE_FILE, O_WRONLY|O_CREAT);
         surl_read_with_barrier((char *)HGR_PAGE, HGR_LEN);
+        if (fd > 0) {
+          atexit(&unlink_page2);
+          write(fd, (char *)HGR_PAGE, HGR_LEN);
+          close(fd);
+          is_dhgr = 1;
+        }
+        len = HGR_LEN;
+      } else {
+        is_dhgr = 0;
+      }
+      if (len == HGR_LEN) {
+        surl_read_with_barrier((char *)HGR_PAGE, HGR_LEN);
+        toggle_legend(0);
 
         clrzone(0, 22, NUMCOLS-1, 23);
       } else {

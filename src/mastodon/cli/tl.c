@@ -24,6 +24,7 @@
 #include "dget_text.h"
 #include "scrollwindow.h"
 #include "runtime_once_clean.h"
+#include "hgr.h"
 #include "a2_features.h"
 
 #ifdef __CC65__
@@ -92,19 +93,19 @@ static int print_account(account *a) {
   if (api_relationship_get(a, RSHIP_FOLLOWING)) {
     if (has_80cols) {
       gotoxy(32, y);
+      dputs("             You follow them");
     }
-    dputs("             You follow them\r\n");
   } else if (api_relationship_get(a, RSHIP_FOLLOW_REQ)) {
     if (has_80cols) {
       gotoxy(32, ++y);
+      dputs("You requested to follow them");
     }
-    dputs("You requested to follow them\r\n");
   }
   if (api_relationship_get(a, RSHIP_FOLLOWED_BY)) {
     if (has_80cols) {
       gotoxy(32, ++y);
+      dputs("             They follow you");
     }
-    dputs("             They follow you\r\n");
   }
 
   if (wherey() < 4) {
@@ -768,6 +769,13 @@ static void save_state(void) {
   clrscr();
   dputs("Saving state...");
 
+  if (has_128k) {
+    /* Reserve room for AUX HGR, write anything 8kB */
+    fp = fopen(AUX_PAGE_FILE, "w");
+    fwrite((char *)0x2000, 1, HGR_LEN, fp);
+    fclose(fp);
+  }
+
   fp = fopen(STATE_FILE,"w");
   if (IS_NULL(fp)) {
     return;
@@ -791,12 +799,14 @@ static void save_state(void) {
   }
 
   fclose(fp);
+  unlink(AUX_PAGE_FILE);
   dputs(" Done.");
   return;
 
 err_out:
   fclose(fp);
   unlink(STATE_FILE);
+  unlink(AUX_PAGE_FILE);
   dputs("Error.\n");
 }
 
@@ -893,6 +903,9 @@ static int load_state(list ***lists) {
 
   fclose(fp);
   unlink(STATE_FILE);
+  if (has_128k) {
+    unlink(AUX_PAGE_FILE);
+  }
 
   /* Load the first item on the last list, *AFTER* having closed
    * the file - the file I/O buffer and json buffer are shared.
