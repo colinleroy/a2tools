@@ -2,8 +2,8 @@
 #define __surl_protocol_h
 
 /* Update in .inc too! */
-#define SURL_PROTOCOL_VERSION 23
-#define VERSION "23.0.4"
+#define SURL_PROTOCOL_VERSION 24
+#define VERSION "24.0.1"
 
 #define SURL_CLIENT_READY           0x2F
 #define HGR_LEN                     8192U
@@ -57,9 +57,10 @@ typedef enum {
   SURL_CMD_TRANSLIT    = 0x36,
   SURL_CMD_SKIP        = 0x37,
   SURL_CMD_FIND_HEADER = 0x38,
+  SURL_CMD_DHGR        = 0x39,
 } SurlCommand;
 
-#define SURL_IS_CMD(x) ((x) >= SURL_CMD_SEND && (x) <= SURL_CMD_FIND_HEADER)
+#define SURL_IS_CMD(x) ((x) >= SURL_CMD_SEND && (x) <= SURL_CMD_DHGR)
 
 typedef enum {
   SURL_ERROR_OK           = 0x40,

@@ -1,5 +1,5 @@
 ; Update in .h too!
-SURL_PROTOCOL_VERSION       = 23
+SURL_PROTOCOL_VERSION       = 24
 
 SURL_METHOD_ABORT           = ('d'|$80)
 SURL_METHOD_RAW             = $05
@@ -42,6 +42,7 @@ SURL_CMD_STRIPHTML          = $35
 SURL_CMD_TRANSLIT           = $36
 SURL_CMD_SKIP               = $37
 SURL_CMD_FIND_HEADER        = $38
+SURL_CMD_DHGR               = $39
 
 SURL_ERROR_OK               = $40
 SURL_ERROR_NOT_FOUND        = $41

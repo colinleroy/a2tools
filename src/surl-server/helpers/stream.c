@@ -81,11 +81,11 @@ unsigned int vol_mult = 10;
 
 #define IO_BARRIER(msg) do {                            \
     int r;                                              \
-    LOG("IO Barrier (%s)\n", msg);                   \
+    LOG("IO Barrier (%s)\n", msg);                      \
     do {                                                \
       r = simple_serial_getc();                         \
     } while (r != SURL_CLIENT_READY                     \
-          && r != SURL_METHOD_ABORT);                   \
+          && r != SURL_METHOD_ABORT && r != 0x00);      \
 } while (0)
 
 static int update_eta(int eta) {
@@ -813,6 +813,7 @@ handle_kbd:
             LOG("Stop\n");
             goto done;
           case SURL_METHOD_ABORT:
+          case 0x00:
             LOG("Connection reset\n");
             goto cleanup_thread;
         }
@@ -833,6 +834,7 @@ done:
     LOG("got %02X\n", c);
   } while (c != SURL_CLIENT_READY
         && c != SURL_METHOD_ABORT
+        && c != 0x00
         && c != (unsigned char)EOF);
 
 cleanup_thread:
@@ -999,12 +1001,13 @@ send:
   switch (command) {
     case CH_ESC:
     case SURL_METHOD_ABORT:
+    case 0x00:
       LOG("Abort, exiting.\n");
       goto close_last;
     case ' ':
       LOG("Pause.\n");
       command = simple_serial_getc();
-      if (command == SURL_METHOD_ABORT)
+      if (command == SURL_METHOD_ABORT || command == 0x00)
         goto close_last;
       LOG("Play.\n");
       lateness = 0;
@@ -1234,6 +1237,7 @@ handle_kbd:
             LOG("Stop\n");
             goto abort;
           case SURL_METHOD_ABORT:
+          case 0x00:
             LOG("Connection reset\n");
             goto abort;
           case APPLE_CH_CURS_LEFT:
@@ -1914,6 +1918,7 @@ read_and_cleanup_thread:
     LOG("got %02X\n", c);
   } while (c != SURL_CLIENT_READY
         && c != SURL_METHOD_ABORT
+        && c != 0x00
         && c != (unsigned char)EOF);
 
 cleanup_thread:

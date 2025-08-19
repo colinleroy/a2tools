@@ -322,7 +322,7 @@ static void sdl_hgr_bytes (SDL_Surface *src, int startx, int starty, unsigned ch
   }
 }
 
-static void color_dither (SDL_Surface *src)
+static void hgr_color_dither (SDL_Surface *src)
 {
   static Uint32 pal1[4];
   static Uint32 pal2[4];
@@ -362,8 +362,108 @@ static void color_dither (SDL_Surface *src)
   }
 }
 
+static void dhgr_color_dither (SDL_Surface *src)
+{
+  static Uint32 pal1[16];
+  Uint32 *p;
+  enum DitherType alg = EDIFF;
+  int y,x,d,i,bd,bi,dr,dg,db;
+  Uint8 pr,pg,pb,r,g,b;
 
-static void sdl_image_scale (SDL_Surface *src, SDL_Surface *dst, int w, int h, float asprat, int resizeto)
+  static int pal_init = 0;
+  if (!pal_init) {
+    pal1[0] = SDL_MapRGB(src->format, 1, 4, 8);
+    pal1[1] = SDL_MapRGB(src->format, 32, 54, 212);
+    pal1[2] = SDL_MapRGB(src->format, 51, 111,   0);
+    pal1[3] = SDL_MapRGB(src->format, 7, 168, 225);
+    pal1[4] = SDL_MapRGB(src->format, 99,  77,   0);
+    pal1[5] = SDL_MapRGB(src->format, 126, 126, 126);
+    pal1[6] = SDL_MapRGB(src->format, 67, 200,   0);
+    pal1[7] = SDL_MapRGB(src->format, 93, 248, 133);
+    pal1[8] = SDL_MapRGB(src->format, 148,  12, 125);
+    pal1[9] = SDL_MapRGB(src->format, 188,  55, 255);
+    pal1[10] = SDL_MapRGB(src->format, 126, 126, 126);
+    pal1[11] = SDL_MapRGB(src->format, 158, 172, 255);
+    pal1[12] = SDL_MapRGB(src->format, 249,  86,  29);
+    pal1[13] = SDL_MapRGB(src->format, 255, 129, 236);
+    pal1[14] = SDL_MapRGB(src->format, 221, 206,  23);
+    pal1[15] = SDL_MapRGB(src->format, 248, 250, 244);
+
+    pal_init = 1;
+  }
+  for (y = 0; y < src->h; y += 1) {
+    for (x = 0; x < src->w; x += 1) {
+      bd = bi = 0x7fffffff;
+      p = sdl_get_pixel32_ref(src, x, y);
+
+      for (i = 0; i < 16; ++i) {
+        d = sdl_pixel_dist(src, *p, pal1[i]);
+        if (d < bd) {
+          bd = d;
+          bi = i;
+        }
+      }
+
+      /* pixel val */
+      SDL_GetRGB(*p, src->format, &r, &g, &b);
+      /* palette val */
+      SDL_GetRGB(pal1[bi], src->format, &pr, &pg, &pb);
+      /* distance */
+      dr = (int)r - (int)pr;
+      dg = (int)g - (int)pg;
+      db = (int)b - (int)pb;
+
+      sdl_set_pixel(src, x, y, pr, pg, pb);
+      if (alg == ATKIN)
+      {
+        sdl_get_pixel(src, x+1, y, &r, &g, &b);
+        sdl_alter_pixel(&r, &g, &b, dr/8, dg/8, db/8);
+        sdl_set_pixel(src, x+1, y, r, g, b);
+
+        sdl_get_pixel(src, x+2, y, &r, &g, &b);
+        sdl_alter_pixel(&r, &g, &b, dr/8, dg/8, db/8);
+        sdl_set_pixel(src, x+2, y, r, g, b);
+
+        sdl_get_pixel(src, x-1, y+1, &r, &g, &b);
+        sdl_alter_pixel(&r, &g, &b, dr/8, dg/8, db/8);
+        sdl_set_pixel(src, x-1, y+1, r, g, b);
+
+        sdl_get_pixel(src, x, y+1, &r, &g, &b);
+        sdl_alter_pixel(&r, &g, &b, dr/8, dg/8, db/8);
+        sdl_set_pixel(src, x, y+1, r, g, b);
+
+        sdl_get_pixel(src, x+1, y+1, &r, &g, &b);
+        sdl_alter_pixel(&r, &g, &b, dr/8, dg/8, db/8);
+        sdl_set_pixel(src, x+1, y+1, r, g, b);
+
+        sdl_get_pixel(src, x, y+2, &r, &g, &b);
+        sdl_alter_pixel(&r, &g, &b, dr/8, dg/8, db/8);
+        sdl_set_pixel(src, x, y+2, r, g, b);
+      }
+      else
+      {
+        sdl_get_pixel(src, x+1, y, &r, &g, &b);
+        sdl_alter_pixel(&r, &g, &b, dr*7/16, dg*7/16, db*7/16);
+        sdl_set_pixel(src, x+1, y, r, g, b);
+
+        sdl_get_pixel(src, x-1, y+1, &r, &g, &b);
+        sdl_alter_pixel(&r, &g, &b, dr*3/16, dg*3/16, db*3/16);
+        sdl_set_pixel(src, x-1, y+1, r, g, b);
+
+        sdl_get_pixel(src, x, y+1, &r, &g, &b);
+        sdl_alter_pixel(&r, &g, &b, dr*5/16, dg*5/16, db*5/16);
+        sdl_set_pixel(src, x, y+1, r, g, b);
+
+        sdl_get_pixel(src, x+1, y+1, &r, &g, &b);
+        sdl_alter_pixel(&r, &g, &b, dr/16, dg/16, db/16);
+        sdl_set_pixel(src, x+1, y+1, r, g, b);
+      }
+    }
+  }
+}
+
+
+static void sdl_image_scale (SDL_Surface *src, SDL_Surface *dst, int w, int h, int dhgr, float asprat, int resizeto)
 {
   int sw, sh, bx, sx, sy;
   Uint8 red, green, blue;
@@ -376,14 +476,14 @@ static void sdl_image_scale (SDL_Surface *src, SDL_Surface *dst, int w, int h, f
   dsth = (float)h;
 
 
-  if (srcw == dstw && srch < dsth) {
+  if (srcw == dstw && srch < dsth && !dhgr) {
     SDL_Rect outrect;
     outrect.x = 0;
     outrect.y = (dsth - srch) / 2;
     outrect.w = dstw;
     outrect.h = dsth;
     SDL_BlitSurface(src, NULL, dst, &outrect);
-  } else if (srcw < dstw && srch == dsth) {
+  } else if (srcw < dstw && srch == dsth && !dhgr) {
     SDL_Rect outrect;
     outrect.x = (dstw - srcw) / 2;
     outrect.y = 0;
@@ -774,6 +874,63 @@ static int sdl_color_hgr(SDL_Surface *src, unsigned char *hgr) {
   return 0x2000;
 }
 
+static int sdl_color_dhgr(SDL_Surface *src, unsigned char *hgr) {
+  int x, y;
+  unsigned int ad, i, d;
+  Uint8 r,g,b;
+
+	for (y = 0; y < src->h; y += 1) {
+		ad = baseaddr[y];
+		for (x = 0; x < src->w; x += 7) {
+			d = 0;
+			for (i = 0; i < 7; i += 1) {
+        sdl_get_pixel(src, x + i, y, &r, &g, &b);
+				switch (r) {
+					/**/
+				case   1: d = (d >> 4) | (0x00 << 24); break;
+				case  32: d = (d >> 4) | (0x01 << 24); break;
+				case  51: d = (d >> 4) | (0x02 << 24); break;
+				case   7: d = (d >> 4) | (0x03 << 24); break;
+				case  99: d = (d >> 4) | (0x04 << 24); break;
+
+				case  67: d = (d >> 4) | (0x06 << 24); break;
+				case  93: d = (d >> 4) | (0x07 << 24); break;
+				case 148: d = (d >> 4) | (0x08 << 24); break;
+				case 188: d = (d >> 4) | (0x09 << 24); break;
+
+				case 158: d = (d >> 4) | (0x0b << 24); break;
+				case 249: d = (d >> 4) | (0x0c << 24); break;
+				case 255: d = (d >> 4) | (0x0d << 24); break;
+				case 221: d = (d >> 4) | (0x0e << 24); break;
+				case 248: d = (d >> 4) | (0x0f << 24); break;
+
+				case 126: d = (d >> 4) | ((d & (1 << 23)) ? (0x0a << 24) : (0x05 << 24)); break;
+					/**/
+				default: if (r) printf("Unknown pixel (%2.2x)\n", r); d = d >> 4; break;
+				}
+			}
+			
+			for (i = 0; i < 4; ++i) {
+				unsigned char bits;
+				unsigned int  addr;
+				addr = ad + i/2;
+				bits = (unsigned char)(d & 0x7f);
+				if (i & 1) {
+					hgr[0x2000+addr] = bits;
+				}
+				else {
+					hgr[addr] = bits;
+				}
+				d = d >> 7;
+			}
+			
+			ad += 2;
+		}
+	}
+
+  return 0x4000;
+}
+
 static int sdl_mono_hgr(SDL_Surface *src, unsigned char *hgr) {
   int x, y, base, xoff, pixel;
   Uint32 color;
@@ -799,6 +956,34 @@ static int sdl_mono_hgr(SDL_Surface *src, unsigned char *hgr) {
   }
 
   return 0x2000;
+}
+
+static int sdl_mono_dhgr(SDL_Surface *src, unsigned char *hgr) {
+  int x, y, base, xoff, pixel;
+  Uint32 color;
+  unsigned char *ptr;
+  unsigned char dhbmono[] = {0x7e,0x7d,0x7b,0x77,0x6f,0x5f,0x3f};
+  unsigned char dhwmono[] = {0x1,0x2,0x4,0x8,0x10,0x20,0x40};
+
+  memset(hgr, 0x00, 0x4000);
+  printf("DHGR source %dx%d\n", src->w, src->h);
+  for (y = 0; y < src->h; y++) {
+    base = baseaddr[y];
+    for (x = 0; x < src->w; x++) {
+      xoff = base + ((x/7)/2);
+      pixel = (x % 280)%7;
+      ptr = hgr + xoff + (((x/7)%2)*0x2000);
+
+      color = sdl_get_pixel32(src, x, y);
+      if (color != 0x00) {
+        ptr[0] |= dhwmono[pixel];
+      } else {
+        ptr[0] &= dhbmono[pixel];
+      }
+    }
+  }
+
+  return 0x4000;
 }
 
 unsigned char *sdl_to_hgr(const char *filename, char monochrome, char save_preview, size_t *len, char bayer_dither, HGRScale size) {
@@ -828,10 +1013,9 @@ unsigned char *sdl_to_hgr(const char *filename, char monochrome, char save_previ
     dst_w /= 2;
     dst_h /= 2;
   } else if (size == HGR_SCALE_MIXHGR) {
-    dst_w = 234;
     dst_h = 160;
   }
-  sdl_image_scale(image, resized, dst_w, dst_h, monochrome ? 0.952381 : 1.904762, size);
+  sdl_image_scale(image, resized, dst_w, dst_h, 0, monochrome ? 0.952381 : 1.904762, size);
   if (monochrome) {
 
     if (bayer_dither)
@@ -841,8 +1025,70 @@ unsigned char *sdl_to_hgr(const char *filename, char monochrome, char save_previ
 
     *len = sdl_mono_hgr(resized, grbuf);
   } else {
-    color_dither(resized);
+    hgr_color_dither(resized);
     *len = sdl_color_hgr(resized, grbuf);
+  }
+
+  if (save_preview) {
+    char preview_file[255];
+    snprintf(preview_file, sizeof(preview_file), "%s.hgr-preview.png", filename);
+    SDL_SaveBMP(resized, preview_file);
+    LOG("Saved preview: %s\n", preview_file);
+  }
+
+  SDL_FreeSurface(resized);
+  SDL_FreeSurface(image);
+
+  // https://prodos8.com/docs/technote/ftn/08/
+  if (monochrome) {
+    grbuf[0x78] = 0;
+  } else {
+    grbuf[0x78] = 1;
+  }
+  return grbuf;
+}
+
+unsigned char *sdl_to_dhgr(const char *filename, char monochrome, char save_preview, size_t *len, char bayer_dither, HGRScale size) {
+  SDL_Surface *image, *resized;
+  int dst_w, dst_h;
+  init_base_addrs();
+
+  if (filename == NULL) {
+    return NULL;
+  }
+
+  /* Open the image file */
+  image = IMG_Load(filename);
+  if ( image == NULL) {
+    if (!save_preview) {
+      LOG("Couldn't load image %s: %s\n", filename, SDL_GetError());
+    }
+    *len = 0;
+    return NULL;
+  }
+
+  dst_w = monochrome ? 560 : 140;
+  dst_h = 192;
+  resized = SDL_CreateRGBSurface (0, dst_w, dst_h, 32, 0, 0, 0, 0);
+
+  if (size == HGR_SCALE_HALF) {
+    dst_w /= 2;
+    dst_h /= 2;
+  } else if (size == HGR_SCALE_MIXHGR) {
+    dst_h = 160;
+  }
+  sdl_image_scale(image, resized, dst_w, dst_h, 1, monochrome ? 0.952381/2 : 1.904762, size);
+  if (monochrome) {
+
+    if (bayer_dither)
+      mono_dither_bayer(resized);
+    else
+      mono_dither_burkes(resized);
+
+    *len = sdl_mono_dhgr(resized, grbuf);
+  } else {
+    dhgr_color_dither(resized);
+    *len = sdl_color_dhgr(resized, grbuf);
   }
 
   if (save_preview) {

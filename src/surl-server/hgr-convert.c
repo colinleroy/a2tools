@@ -35,9 +35,9 @@ static char *read_hgr(char *filename, size_t *len) {
    * lack the last 8 bytes (which are invisible on
    * screen) so tolerate 8192 or 8184.
    */
-  buf = malloc(10000);
-  *len = fread(buf, 1, 10000, in);
-  if (*len != 8192 && *len != 8184) {
+  buf = malloc(20000);
+  *len = fread(buf, 1, 20000, in);
+  if (*len != 8192 && *len != 8184 && *len != 16384) {
     free(buf);
     buf = NULL;
     *len = 0;
@@ -70,29 +70,39 @@ int main(int argc, char **argv) {
   size_t out_len;
   char *out_buf;
   char out_file[255];
-  char bayer = 0, small = 0, mono = 1, short_buf = 0;
+  char bayer = 0, small = 0, mono = 1, short_buf = 0, dhgr = 0;
 
   if (argc < 2) {
-    LOG("Usage: %s [-bayer] [-small] [-color] [-short] [list of files]\n", argv[0]);
+    LOG("Usage: %s [-bayer] [-small] [-color] [-short] [-dhgr] [list of files]\n", argv[0]);
     exit(1);
   }
 
   i = 1;
+again:
   if (argc > i && !strcmp(argv[i], "-bayer")) {
     bayer = 1;
     i++;
+    goto again;
   }
   if (argc > i && !strcmp(argv[i], "-small")) {
     small = 1;
     i++;
+    goto again;
   }
   if (argc > i && !strcmp(argv[i], "-color")) {
     mono = 0;
     i++;
+    goto again;
   }
   if (argc > i && !strcmp(argv[i], "-short")) {
     short_buf = 1;
     i++;
+    goto again;
+  }
+  if (argc > i && !strcmp(argv[i], "-dhgr")) {
+    dhgr = 1;
+    i++;
+    goto again;
   }
   for (; i < argc; i++) {
     LOG("Converting %s...\n", argv[i]);
@@ -100,7 +110,13 @@ int main(int argc, char **argv) {
     /* Try to convert an image to HGR. It will fail if
      * it's not an SDLimage-supported format.
      */
-    if ((out_buf = (char *)sdl_to_hgr(argv[i], mono, 1, &len, bayer, small)) != NULL && len > 0) {
+    if (dhgr) {
+      out_buf = (char *)sdl_to_dhgr(argv[i], mono, 1, &len, bayer, small);
+    } else {
+      out_buf = (char *)sdl_to_hgr(argv[i], mono, 1, &len, bayer, small);
+    }
+
+    if (out_buf != NULL && len > 0) {
       snprintf(out_file, sizeof(out_file), "%s.hgr", argv[i]);
       if (short_buf && len == 8192) {
         len = 8192 - 8; /* Don't write the last 8 invisible bytes */
@@ -114,7 +130,7 @@ int main(int argc, char **argv) {
        */
       char *hgr_buf = read_hgr(argv[i], &len);
 
-      if (hgr_buf && len == 8192) {
+      if (hgr_buf && (len == 8192)) {
         out_buf = hgr_to_png(hgr_buf, len, 1, &out_len);
         snprintf(out_file, sizeof(out_file), "%s.png", argv[i]);
         write_file(out_file, out_buf, out_len);

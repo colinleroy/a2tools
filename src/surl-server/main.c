@@ -525,6 +525,17 @@ new_req:
           response->hgr_buf = sdl_to_hgr(
               dump_response_to_file(response->buffer, response->size),
               monochrome, 0, &(response->hgr_len), 0, scale);
+        } else if (cmd == SURL_CMD_DHGR) {
+          /* Client wants an image
+           * Input: char: Monochrome (\1) or color (\0)
+           *        char: scale (full / small / mixhgr)
+           */
+          char monochrome = simple_serial_getc();
+          HGRScale scale = simple_serial_getc();
+          LOG("RESP: converting to %s DHGR (%d)\n", monochrome?"monochrome":"color", scale);
+          response->hgr_buf = sdl_to_dhgr(
+              dump_response_to_file(response->buffer, response->size),
+              monochrome, 0, &(response->hgr_len), 0, scale);
         } else if (cmd == SURL_CMD_STRIPHTML) {
           /* Strip the HTML in a response, and update size
            * Input: char: Strip level
@@ -777,7 +788,7 @@ abort:
           }
         }
 
-      } else if (cmd == SURL_CMD_HGR) {
+      } else if (cmd == SURL_CMD_HGR || cmd == SURL_CMD_DHGR) {
         /* HGR response format:
          * char:           status (SURL_ERROR_OK or SURL_ERROR_CONV_FAILED)
          * 16-bit word:    length of the result
@@ -792,8 +803,15 @@ abort:
             IO_BARRIER("HGR, pre-len");
             simple_serial_write_fast((char *)&l, 2);
 
-            IO_BARRIER("HGR, pre-content");
-            simple_serial_write_fast((char *)response->hgr_buf, response->hgr_len);
+            if (response->hgr_len == 2*HGR_LEN) {
+              IO_BARRIER("DHGR, pre-1st-half-content");
+              simple_serial_write_fast((char *)response->hgr_buf, HGR_LEN);
+              IO_BARRIER("DHGR, pre-2nd-half-content");
+              simple_serial_write_fast((char *)(response->hgr_buf + HGR_LEN), HGR_LEN);
+            } else {
+              IO_BARRIER("HGR, pre-content");
+              simple_serial_write_fast((char *)(response->hgr_buf), response->hgr_len);
+            }
         } else {
           LOG("RESP: HGR: No HGR data\n");
           simple_serial_putc(SURL_ERROR_CONV_FAILED);
