@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <errno.h>
 #include <ctype.h>
 #include "config.h"
@@ -200,6 +201,7 @@ static void show_results(void) {
   int len;
   char c, n_res, total_res;
   char *tmp;
+  uint8 is_dhgr = 0;
 
   n_lines = strsplit_in_place(json_buf, '\n', &lines);
   if (n_lines % IDX_MAX != 0) {
@@ -274,10 +276,11 @@ display_result:
   init_text();
   bzero((char *)HGR_PAGE, HGR_LEN);
 
+  is_dhgr = 0;
   if (lines[cur_line+IDX_FAVICON][0] != '\0') {
     surl_start_request(NULL, 0, lines[cur_line+IDX_FAVICON], SURL_METHOD_GET);
     if (surl_response_ok()) {
-      simple_serial_putc(SURL_CMD_HGR);
+      simple_serial_putc(has_128k ? SURL_CMD_DHGR:SURL_CMD_HGR);
       simple_serial_putc(monochrome);
       simple_serial_putc(HGR_SCALE_MIXHGR);
 
@@ -285,6 +288,19 @@ display_result:
 
         surl_read_with_barrier((char *)&len, 2);
         len = ntohs(len);
+
+        if (len == HGR_LEN*2) {
+          int fd;
+          _filetype = PRODOS_T_BIN;
+          fd = open(AUX_PAGE_FILE, O_WRONLY|O_CREAT);
+          surl_read_with_barrier((char *)HGR_PAGE, HGR_LEN);
+          if (fd > 0) {
+            write(fd, (char *)HGR_PAGE, HGR_LEN);
+            close(fd);
+            is_dhgr = 1;
+          }
+          len = HGR_LEN;
+        }
 
         if (len == HGR_LEN) {
           surl_read_with_barrier((char *)HGR_PAGE, HGR_LEN);
@@ -296,6 +312,9 @@ display_result:
   }
 
   init_hgr(1);
+  if (is_dhgr) {
+    __asm__("sta $C05E"); //DHIRESON
+  }
   hgr_mixon();
 read_kbd:
   c = tolower(cgetc());
@@ -390,6 +409,7 @@ void radio_browser_ui(void) {
   FILE *tmpfp = fopen(RADIO_SEARCH_FILE, "r");
 
   init_hgr(1);
+  __asm__("sta $C05F"); //DHIRESOFF
   hgr_mixon();
 
   do_server_screen = 0;

@@ -15,11 +15,12 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <errno.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <errno.h>
 #include <ctype.h>
 #include "config.h"
 #include "surl.h"
@@ -76,10 +77,23 @@ static void clr_footer(void) {
   clrzone(0, 22, NUMCOLS - 1, 23);
 }
 
+void unlink_page2(void) {
+  unlink(AUX_PAGE_FILE);
+}
+
+static void reserve_auxhgr(void) {
+  int fd = open(AUX_PAGE_FILE, O_WRONLY|O_CREAT);
+  if (fd > 0) {
+    write(fd, (char *)HGR_PAGE, HGR_LEN);
+    close(fd);
+  }
+}
 static unsigned char got_cover = 0;
 static void display_image(HGRScale scale) {
   size_t len;
-  simple_serial_putc(SURL_CMD_HGR);
+  uint8 is_dhgr = 0;
+
+  simple_serial_putc(has_128k ? SURL_CMD_DHGR:SURL_CMD_HGR);
   simple_serial_putc(monochrome);
   simple_serial_putc(scale);
   if (simple_serial_getc() == SURL_ERROR_OK) {
@@ -88,10 +102,25 @@ static void display_image(HGRScale scale) {
     len = ntohs(len);
 
 #ifdef __APPLE2__
+    if (len == HGR_LEN*2) {
+      int fd;
+      _filetype = PRODOS_T_BIN;
+      fd = open(AUX_PAGE_FILE, O_WRONLY|O_CREAT);
+      surl_read_with_barrier((char *)HGR_PAGE, HGR_LEN);
+      if (fd > 0) {
+        write(fd, (char *)HGR_PAGE, HGR_LEN);
+        close(fd);
+        is_dhgr = 1;
+      }
+      len = HGR_LEN;
+    }
     if (len == HGR_LEN) {
       surl_read_with_barrier((char *)HGR_PAGE, HGR_LEN);
       got_cover = 1;
-      init_hgr(1);
+      init_hgr(monochrome);
+      if (is_dhgr) {
+        __asm__("sta $C05E"); //DHIRESON
+      }
       if (scale == HGR_SCALE_MIXHGR) {
         hgr_mixon();
       }
@@ -385,7 +414,7 @@ static int open_url(char *url, char *filename) {
   if (!got_cover) {
     if (has_80cols) {
       backup_restore_hgrpage("r");
-      init_hgr(1);
+      init_hgr(monochrome);
       hgr_mixon();
     } else {
       init_text();
@@ -433,7 +462,7 @@ read_metadata_again:
     } else {
 #ifdef __APPLE2__
       surl_read_with_barrier((char *)HGR_PAGE, HGR_LEN);
-      init_hgr(1);
+      init_hgr(monochrome);
       hgr_mixon();
 #endif
       simple_serial_putc(SURL_CLIENT_READY);
@@ -505,7 +534,7 @@ char *start_url_ui(void) {
 
 start_again:
   clrscr();
-  init_hgr(1);
+  init_hgr(monochrome);
   hgr_mixon();
   set_scrollwindow(20, NUMROWS);
 
@@ -738,11 +767,16 @@ void main(void) {
   serial_throbber_set((void *)0x07F7);
 
   clrscr();
-  init_hgr(1);
+  init_hgr(monochrome);
   hgr_mixon();
   set_scrollwindow(20, NUMROWS);
 
   register_start_device();
+
+  if (has_128k) {
+    reserve_auxhgr();
+    atexit(&unlink_page2);
+  }
 
   backup_restore_hgrpage("w");
   if (backup_restore_audiocode("w") == 0) {
