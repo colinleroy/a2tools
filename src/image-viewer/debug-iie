@@ -1,0 +1,10 @@
+#!/bin/bash
+TYPE="full"
+if [ "$1" != "" ]; then
+  TYPE=$1
+	FLOP2="-flop2 ../../disks/qt$1.dsk"
+else
+	FLOP2="-flop2 ../../disks/qt100.dsk"
+fi
+
+make clean all && mame apple2e -window -flop1 imageviewer.po $FLOP2 -resolution 560x384 -sl1 ssc -sl1:ssc:rs232 null_modem -bitb socket.localhost:2001 -sl2 ssc -sl2:ssc:rs232 null_modem -bitb2 socket.localhost:2000 -nomouse -debug -sl7 scsi -hard ../../disks/smart0.po

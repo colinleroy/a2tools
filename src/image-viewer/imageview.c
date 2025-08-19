@@ -99,6 +99,8 @@ check_configure:
   return -1;
 }
 
+uint8 is_dhgr = 0;
+
 void hgr_print(void) {
   uint16 x;
   uint8 y, cy, ey, bit;
@@ -127,6 +129,12 @@ void hgr_print(void) {
   hgr_mixon();
   clrscr();
   gotoxy(0, 20);
+
+  if (is_dhgr) {
+    cputs("Can not print DHGR pictures.");
+    cgetc();
+    goto out;
+  }
 
   cputs("Printout scale: \r\n"
         "1. 72dpi (9x6.7cm)\r\n"
@@ -301,11 +309,15 @@ static void print_help(void) {
         "Escape: exit - Any other key: toggle help.");
 }
 
+void unlink_page2(void) {
+  unlink(AUX_PAGE_FILE);
+}
+
 int main(int argc, char *argv[]) {
   FILE *fp = NULL, *ramfp = NULL;
   static char imgname[FILENAME_MAX];
   uint16 len;
-  uint8 i, has_dhgr = 0, tries = 0;
+  uint8 i, tries = 0;
   static char cmdline[127];
   #define BLOCK_SIZE 512
   const char *filename = NULL;
@@ -363,9 +375,10 @@ next_image:
 
   if (has_128k) {
     fseek(fp, 0, SEEK_END);
-    has_dhgr = (ftell(fp) == 2*HGR_LEN);
+    is_dhgr = (ftell(fp) == 2*HGR_LEN);
     rewind(fp);
-    if (has_dhgr && (ramfp = fopen("/RAM/PAGE2","w")) != NULL) {
+    if (is_dhgr && (ramfp = fopen(AUX_PAGE_FILE,"w")) != NULL) {
+      atexit(&unlink_page2);
       while (len < HGR_LEN) {
         fread(rambuf, 1, BLOCK_SIZE, fp);
         fwrite(rambuf, 1, BLOCK_SIZE, ramfp);
@@ -386,7 +399,7 @@ next_image:
 
   #ifdef __CC65__
   init_hgr(1);
-  if (has_dhgr) {
+  if (is_dhgr) {
     __asm__("sta $C05E"); //DHIRESON
   }
 #endif
