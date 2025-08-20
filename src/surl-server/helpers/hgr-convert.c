@@ -630,9 +630,9 @@ char *hgr_to_png(char *hgr_buf, size_t hgr_len, char monochrome, size_t *len)
 
   init_base_addrs();
 
-  LOG("HGR: Converting %d bytes\n", hgr_len);
+  LOG("HGR: Converting %zu bytes\n", hgr_len);
   if (hgr_len != 8192 && hgr_len != 16384) {
-    LOG("HGR: Wrong HGR size %zd\n", hgr_len);
+    LOG("HGR: Wrong HGR size %zu\n", hgr_len);
     return NULL;
   }
   is_dhgr = hgr_len == 16384;
@@ -734,7 +734,6 @@ row_pass:
 
         for (ox = 0; ox < 7; ox++) {
           setRGB(&(row[(x++)*3]), (v1 & 1) ? 0xffffff : 0);
-          printf("wrote pixel at %d,%d\n", x, y);
           v1 = v1 >> 1;
         }
         if (is_dhgr)
