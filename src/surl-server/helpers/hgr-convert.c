@@ -630,6 +630,7 @@ char *hgr_to_png(char *hgr_buf, size_t hgr_len, char monochrome, size_t *len)
 
   init_base_addrs();
 
+  LOG("HGR: Converting %d bytes\n", hgr_len);
   if (hgr_len != 8192 && hgr_len != 16384) {
     LOG("HGR: Wrong HGR size %zd\n", hgr_len);
     return NULL;

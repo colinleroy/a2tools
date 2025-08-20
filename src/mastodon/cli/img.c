@@ -177,6 +177,9 @@ static void save_image(void);
 
 void initconst(void);
 
+#pragma code-name (pop)
+#pragma code-name (push, "LC")
+
 int real_main(int argc, char **argv) {
   media *m = NULL;
   char i, c;
@@ -305,16 +308,28 @@ static void save_image(void) {
 
   if (buf[0] != '\0') {
     int fd = open(buf, O_WRONLY|O_CREAT);
+    int total = 0;
     if (fd < 0) {
       cputs("\r\nCan not open file. ");
       goto out;
     }
-    if (write(fd, (char *)HGR_PAGE, HGR_LEN) < HGR_LEN) {
+    if (is_dhgr) {
+      int ramfd = open(AUX_PAGE_FILE, O_RDONLY);
+      if (ramfd > 0) {
+        int r;
+        while ((r = read(ramfd, (char *)0x4000, 0x1000)) > 0) {
+          write(fd, (char *)0x4000, r);
+        }
+        close(ramfd);
+      }
+    }
+    if (write(fd, (char *)HGR_PAGE, HGR_LEN) == HGR_LEN) {
+      cputs("\r\nImage saved. ");
+    } else {
       cputs("Can not write to file. ");
-      goto out;
     }
     close(fd);
-    cputs("\r\nImage saved. ");
+    goto out;
   } else {
     goto out_no_conf;
   }
@@ -329,20 +344,15 @@ out_no_conf:
   if (!prev_legend)
     toggle_legend(0);
 }
-#ifdef __CC65__
-#pragma code-name (pop)
-#pragma code-name (push, "LC")
-#endif
+
 void initconst(void);
 
 int main(int argc, char **argv) {
-  int fd;
-
 #ifdef __CC65__
-  /* Leave 0x800-0xC00 for iobuf, and
+  /* Leave 0x800-0x1000 for iobuf, and
    * load our LOWCODE */
-  fd = open("IMGLOW", O_RDONLY);
-  read(fd, (void *)0xC00, 0x2000-0xC00);
+  int fd = open("IMGLOW", O_RDONLY);
+  read(fd, (void *)0x1000, 0x2000-0x1000);
   close(fd);
 #endif
   real_main(argc, argv);
