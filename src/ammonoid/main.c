@@ -179,14 +179,13 @@ done:
 /* Display pane's title */
 static void display_title(const char *title) {
   int len = strlen(title);
-  if (len < pane_width) {
+  if (len < pane_width - 1) {
     cputs(title);
   } else {
     cputs("...");
-    cputs(title + len + 3 - pane_width);
+    cputs(title + len + 5 - pane_width);
   }
-  gotoxy(0, 1);
-  chline(pane_width);
+  clreol();
 }
 
 static void print_date(struct dirent *entry) {
@@ -212,7 +211,7 @@ static void display_pane(unsigned char pane) {
   set_scrollwindow(0, pane_btm);
   set_hscrollwindow(pane_left[pane]+pane_offset, pane_width);
 
-  gotoxy(pane_width - 1, 0);
+  gotoxy(pane_width - pane_offset, 0);
   cputc(LOAD);
 
   /* Load pane if needed */
@@ -224,15 +223,14 @@ static void display_pane(unsigned char pane) {
   set_scrollwindow(0, pane_btm);
   set_hscrollwindow(pane_left[pane]+pane_offset, pane_width);
 
-  gotoxy(pane_width - 1, 0);
+  gotoxy(pane_width - pane_offset, 0);
   cputc(' ');
 
   /* Clear whole pane */
   if (must_clear[pane]) {
-    clrscr();
-  } else {
-    gotoxy(0, 0);
+    clrzone(0, pane_top, pane_width, pane_btm-1);
   }
+  gotoxy(0, 0);
 
   /* Print pane title */
   if (pane_directory[pane][0] == '\0') {
@@ -290,8 +288,16 @@ static void display_pane(unsigned char pane) {
 /* Display line on active pane, clear cursor/selection on inactive */
 static void display_active_pane(void) {
   unsigned char inactive_left = pane_left[!active_pane];
+
+  display_pane(active_pane);
+
   set_scrollwindow(0, pane_btm);
   set_hscrollwindow(0, total_width);
+
+  gotoxy(1, 1);
+  chline(pane_width-1);
+  gotoxy(pane_left[1]+1, 1);
+  chline(pane_width-1);
 
   gotoxy(pane_left[active_pane], 0);
   cvline(pane_btm);
@@ -300,8 +306,6 @@ static void display_active_pane(void) {
   /* Clear inactive pane's cursor and select indicators */
   inactive_left++;
   clrzone(inactive_left, 2, inactive_left + 1, pane_btm-1);
-
-  display_pane(active_pane);
 }
 
 /* Make sure the cursor is in the displayed window */
@@ -1104,7 +1108,7 @@ void main(int argc, char **argv) {
 
   if (has_80cols) {
     pane_left[1] = 40;
-    pane_width = 38;
+    pane_width = 39;
     total_width = 80;
     pane_offset = 2;
   }
@@ -1130,8 +1134,9 @@ void main(int argc, char **argv) {
 
   help_message();
 
-  display_pane(0);
-  display_pane(1);
+  must_clear[0] = must_clear[1] = 1;
+  display_active_pane();
+  display_pane(!active_pane);
   while (1) {
     display_active_pane();
     handle_input();
