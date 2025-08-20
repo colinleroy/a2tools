@@ -38,12 +38,16 @@ woztubes_SOURCES := \
 	../lib/surl/asm/surl_core.s \
 	../lib/surl/asm/surl_get_json.s \
 	../lib/surl/asm/surl_read_with_barrier.s \
+	../lib/surl/asm/surl_read_image.s \
 	../lib/asm/scrollwindow.s \
 	../lib/asm/path_helper.s \
 	../lib/asm/clrzone.s \
 	../lib/asm/malloc0.s \
 	../lib/asm/hgr.s \
 	../lib/asm/backup_hgrpage.s \
+	../lib/asm/reserve_auxhgr.s \
+	../lib/asm/unlink_auxhgr.s \
+	../lib/asm/auxhgr_file.s \
 	../lib/asm/hgr_setup_mono40.s \
 	../lib/asm/hgr_mono40.s \
 	../lib/surl/asm/surl_ping.s \

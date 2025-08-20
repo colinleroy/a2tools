@@ -24,6 +24,7 @@ imgview_CC65SOURCES := \
 	../lib/asm/clrzone.s \
 	../lib/asm/malloc0.s \
 	../lib/asm/hgr.s \
+	../lib/asm/auxhgr_file.s \
 	../lib/asm/file_select.s \
 	../lib/dputc.s \
 	../lib/scroll.s \
@@ -56,7 +57,8 @@ CFLAGS  = -I ../lib -DCONF_FILE_PATH=\"/etc/a2tools/tty.conf\"
 
 CLCFLAGS = -t $(TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x200 $(GENERAL_CFLAGS)
 
-imgview_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-rtonce-alignbss.cfg $(TARGET)-iobuf-0800.o --start-addr 0x4000
+# Warning - imgview uses 0x4000-0x5FFF to mirror DHGR AUX page
+imgview_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-rtonce-alignbss.cfg $(TARGET)-iobuf-0800.o --start-addr 0x6000
 
 GCCCFLAGS = -g -O0 -Wall -Wno-pointer-sign -Wno-char-subscripts -Wno-unused-but-set-variable -Wno-unused-variable -Wno-unknown-pragmas $(shell sdl-config --cflags)
 GCCLDFLAGS = $(shell sdl-config --libs)

@@ -15,7 +15,7 @@
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 ;
         .export  _load_hgr_mono_file
-        .import  hgr_mono_file
+        .import  hgr_mono_file, _hgr_auxfile
 
         .import  _unlink, _close, popax, _write, _open, _memset, pushax, pusha0
 
@@ -61,8 +61,8 @@ nextfile:
         lda     npages
         cmp     #2
         bne     secpage
-        lda     #<hgr_fgbg
-        ldx     #>hgr_fgbg
+        lda     #<_hgr_auxfile
+        ldx     #>_hgr_auxfile
         bne     push
 secpage:
         lda     #<hgr_fgbg2
@@ -103,8 +103,8 @@ out:    rts
 .endproc
 
 .proc unlink_cached_files
-        lda       #<hgr_fgbg
-        ldx       #>hgr_fgbg
+        lda       #<_hgr_auxfile
+        ldx       #>_hgr_auxfile
         jsr       _unlink
         lda       #<hgr_fgbg2
         ldx       #>hgr_fgbg2
@@ -113,7 +113,6 @@ out:    rts
 
         .data
 
-hgr_fgbg: .asciiz "/RAM/AUXHGR"
 hgr_fgbg2: .asciiz "/RAM/FGBG2"
 
         .bss

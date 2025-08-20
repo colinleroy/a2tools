@@ -24,7 +24,7 @@
         .export   _load_hgr_mono_file
         .export   _print_error, _print_load_error
 
-        .import   hgr_mono_file
+        .import   hgr_mono_file, _hgr_auxfile
         .import   _open, _read, _write, _close, _memmove, _unlink
         .import   pushax, popax, _text_mono40, _memset
         .import   __filetype, __auxtype
@@ -102,8 +102,8 @@
         ldx     #>$2000
         jsr     _memset
 
-        lda     #<hgr_fgbg
-        ldx     #>hgr_fgbg
+        lda     #<_hgr_auxfile
+        ldx     #>_hgr_auxfile
         jsr     set_noncompressed
         ldy     #(O_WRONLY|O_CREAT)
         jsr     file_io_at
@@ -548,8 +548,8 @@ no_cache:
         lda     #<bar_code_backup_name
         ldx     #>bar_code_backup_name
         jsr     _unlink
-        lda     #<hgr_fgbg
-        ldx     #>hgr_fgbg
+        lda     #<_hgr_auxfile
+        ldx     #>_hgr_auxfile
         jsr     _unlink
         lda     #<barsnd_backup_name
         ldx     #>barsnd_backup_name
@@ -583,7 +583,6 @@ bar_backup_name:     .asciiz "/RAM/BAR.IMG"
 bar_code_backup_name:.asciiz "/RAM/BAR.CODE"
 barsnd_backup_name:  .asciiz "/RAM/BAR.SND"
 opponent_name_tmpl:  .asciiz "OPPONENT.X"
-hgr_fgbg:            .asciiz "/RAM/AUXHGR"
 load_err_str:        .asciiz "COULD NOT LOAD "
 
 .segment "barcode"

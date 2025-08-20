@@ -552,7 +552,7 @@ static void send_metadata(char *key, char *value, char *translit) {
   free(buf);
 }
 
-static unsigned char *audio_get_stream_art(decode_data *audio_data, int monochrome, int scale) {
+static unsigned char *audio_get_stream_art(decode_data *audio_data, int monochrome, int scale, int dhgr) {
   unsigned char *img_data = NULL;
   size_t img_size = 0;
   unsigned char *buffer = NULL;
@@ -567,8 +567,13 @@ static unsigned char *audio_get_stream_art(decode_data *audio_data, int monochro
     if (fp) {
       if (fwrite(img_data, 1, img_size, fp) == img_size) {
         fclose(fp);
-        buffer = sdl_to_hgr("/tmp/imgdata", monochrome, 0, &img_size, 0, scale);
-        if (img_size != HGR_LEN) {
+        if (dhgr) {
+          buffer = sdl_to_dhgr("/tmp/imgdata", monochrome, 0, &img_size, 0, scale);
+        } else {
+          buffer = sdl_to_hgr("/tmp/imgdata", monochrome, 0, &img_size, 0, scale);
+        }
+
+        if (img_size != HGR_LEN && img_size != HGR_LEN*2) {
           buffer = NULL;
         }
       } else {
@@ -641,7 +646,7 @@ int surl_stream_audio(char *url, char *translit, char monochrome, HGRScale scale
     simple_serial_putc(SURL_ANSWER_STREAM_ERROR);
     goto cleanup_thread;
   } else {
-    hgr_buf = audio_get_stream_art(th_data, monochrome, scale);
+    hgr_buf = audio_get_stream_art(th_data, monochrome, scale, 0);
 
     pthread_mutex_lock(&th_data->mutex);
     send_metadata("has_video", th_data->has_video ? "1":"0", translit);
@@ -654,10 +659,19 @@ int surl_stream_audio(char *url, char *translit, char monochrome, HGRScale scale
 
     LOG("Client ready\n");
     if (hgr_buf) {
+      unsigned char dhgr;
       simple_serial_putc(SURL_ANSWER_STREAM_ART);
+      dhgr = simple_serial_getc() == 'D';
       if (simple_serial_getc() == SURL_CLIENT_READY) {
-        LOG("Sending image\n");
-        simple_serial_write_fast((char *)hgr_buf, HGR_LEN);
+        LOG("Sending %s image\n", dhgr ? "DHGR":"HGR");
+        if (dhgr) {
+          hgr_buf = audio_get_stream_art(th_data, monochrome, scale, 1);
+          simple_serial_write_fast((char *)hgr_buf, HGR_LEN);
+          simple_serial_getc();
+          simple_serial_write_fast((char *)hgr_buf+HGR_LEN, HGR_LEN);
+        } else {
+          simple_serial_write_fast((char *)hgr_buf, HGR_LEN);
+        }
         if (simple_serial_getc() != SURL_CLIENT_READY) {
           return -1;
         }
@@ -1769,18 +1783,27 @@ int surl_stream_audio_video(char *url, char *translit, char monochrome, Subtitle
   pthread_mutex_lock(&video_th_data->mutex);
   if (video_th_data->total_frames == 0) {
     /* No video ? send embedded art if there is any */
-    hgr_buf = audio_get_stream_art(audio_th_data, monochrome, HGR_SCALE_FULL);
+    hgr_buf = audio_get_stream_art(audio_th_data, monochrome, HGR_SCALE_FULL, 0);
   }
   pthread_mutex_unlock(&video_th_data->mutex);
 
   if (hgr_buf) {
+    unsigned char dhgr;
     /* If we got an image from audio stream, and no frames from video stream,
      * send it.
      */
     simple_serial_putc(SURL_ANSWER_STREAM_ART);
+    dhgr = simple_serial_getc() == 'D';
     if (simple_serial_getc() == SURL_CLIENT_READY) {
-      LOG("Sending image\n");
-      simple_serial_write_fast((char *)hgr_buf, HGR_LEN);
+        LOG("Sending %s image\n", dhgr ? "DHGR":"HGR");
+        if (dhgr) {
+          hgr_buf = audio_get_stream_art(audio_th_data, monochrome, HGR_SCALE_FULL, 1);
+          simple_serial_write_fast((char *)hgr_buf, HGR_LEN);
+          simple_serial_getc();
+          simple_serial_write_fast((char *)hgr_buf+HGR_LEN, HGR_LEN);
+        } else {
+          simple_serial_write_fast((char *)hgr_buf, HGR_LEN);
+        }
       if (simple_serial_getc() != SURL_CLIENT_READY) {
         LOG("client error\n");
       }

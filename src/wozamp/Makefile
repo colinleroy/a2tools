@@ -31,6 +31,7 @@ wozamp_CL65SOURCES = \
 	../lib/surl/asm/surl_ping.s \
 	../lib/surl/asm/surl_receive.s \
 	../lib/surl/asm/surl_read_with_barrier.s \
+	../lib/surl/asm/surl_read_image.s \
 	../lib/a2_features.s \
 	../lib/asm/scrollwindow.s \
 	../lib/asm/path_helper.s \
@@ -38,6 +39,9 @@ wozamp_CL65SOURCES = \
 	../lib/asm/realloc_safe.s \
 	../lib/asm/hgr.s \
 	../lib/asm/backup_hgrpage.s \
+	../lib/asm/reserve_auxhgr.s \
+	../lib/asm/unlink_auxhgr.s \
+	../lib/asm/auxhgr_file.s \
 	../lib/dputc.s \
 	../lib/scroll.s \
 	../lib/FVTABZ.s \
@@ -82,6 +86,7 @@ videoplay_SOURCES := \
 	../lib/asm/malloc0.s \
 	../lib/asm/hgr.s \
 	../lib/asm/hgr_setup_mono40.s \
+	../lib/asm/auxhgr_file.s \
 	../lib/asm/hgr_mono40.s \
 	../lib/a2_features.s \
 	../lib/extrazp.s

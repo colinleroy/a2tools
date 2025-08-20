@@ -176,7 +176,8 @@ read_metadata_again:
     goto read_metadata_again;
 
   } else if (r == SURL_ANSWER_STREAM_ART) {
-    surl_read_with_barrier((char *)HGR_PAGE, HGR_LEN);
+    simple_serial_putc('D');
+    surl_read_image_to_screen(HGR_LEN*2);
     simple_serial_putc(SURL_CLIENT_READY);
     goto read_metadata_again;
 
@@ -288,23 +289,7 @@ display_result:
 
         surl_read_with_barrier((char *)&len, 2);
         len = ntohs(len);
-
-        if (len == HGR_LEN*2) {
-          int fd;
-          _filetype = PRODOS_T_BIN;
-          fd = open(AUX_PAGE_FILE, O_WRONLY|O_CREAT);
-          surl_read_with_barrier((char *)HGR_PAGE, HGR_LEN);
-          if (fd > 0) {
-            write(fd, (char *)HGR_PAGE, HGR_LEN);
-            close(fd);
-            is_dhgr = 1;
-          }
-          len = HGR_LEN;
-        }
-
-        if (len == HGR_LEN) {
-          surl_read_with_barrier((char *)HGR_PAGE, HGR_LEN);
-        }
+        is_dhgr = surl_read_image_to_screen(len);
       }
     }
   } else {

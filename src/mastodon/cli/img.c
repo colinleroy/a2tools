@@ -104,10 +104,6 @@ static void set_legend(char *str, unsigned char idx, unsigned char num_images) {
 char enable_subtitles = SUBTITLES_AUTO;
 char video_size = HGR_SCALE_HALF;
 
-void unlink_page2(void) {
-  unlink(AUX_PAGE_FILE);
-}
-
 static void img_display(media *m, char idx, char num_images) {
   size_t len;
 
@@ -137,32 +133,10 @@ static void img_display(media *m, char idx, char num_images) {
 
       surl_read_with_barrier((char *)&len, 2);
       len = ntohs(len);
-      if (len == HGR_LEN*2) {
-        int fd;
-#ifdef __APPLE2__
-        _filetype = PRODOS_T_BIN;
-#endif
-        fd = open(AUX_PAGE_FILE, O_WRONLY|O_CREAT);
-        surl_read_with_barrier((char *)HGR_PAGE, HGR_LEN);
-        if (fd > 0) {
-          atexit(&unlink_page2);
-          write(fd, (char *)HGR_PAGE, HGR_LEN);
-          close(fd);
-          is_dhgr = 1;
-        }
-        len = HGR_LEN;
-      } else {
-        is_dhgr = 0;
-      }
-      if (len == HGR_LEN) {
-        surl_read_with_barrier((char *)HGR_PAGE, HGR_LEN);
-        toggle_legend(0);
+      is_dhgr = surl_read_image_to_screen(len);
+      toggle_legend(0);
 
-        clrzone(0, 22, NUMCOLS-1, 23);
-      } else {
-        set_legend("Bad response, not an HGR file.", idx, num_images);
-        toggle_legend(1);
-      }
+      clrzone(0, 22, NUMCOLS-1, 23);
     } else {
       set_legend("Request error.", idx, num_images);
       toggle_legend(1);
@@ -313,12 +287,13 @@ static void save_image(void) {
       cputs("\r\nCan not open file. ");
       goto out;
     }
+
     if (is_dhgr) {
-      int ramfd = open(AUX_PAGE_FILE, O_RDONLY);
+      int ramfd = open(hgr_auxfile, O_RDONLY);
       if (ramfd > 0) {
-        int r;
-        while ((r = read(ramfd, (char *)0x4000, 0x1000)) > 0) {
-          write(fd, (char *)0x4000, r);
+        /* Use second main HGR page as temp buf. */
+        if (read(ramfd, (char *)0x4000, HGR_LEN) == HGR_LEN) {
+          write(fd, (char *)0x4000, HGR_LEN);
         }
         close(ramfd);
       }

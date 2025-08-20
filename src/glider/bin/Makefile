@@ -99,6 +99,7 @@ glider_SOURCES := \
 	$(SRC_DIR)/../lib/fastirq.s \
 	$(SRC_DIR)/../lib/asm/hgr_tables.s \
 	$(SRC_DIR)/../lib/asm/hgr.s \
+	$(SRC_DIR)/../lib/asm/auxhgr_file.s \
 	$(SRC_DIR)/../lib/asm/bcd.s \
 	$(SRC_DIR)/../lib/extrazp.s \
 	$(SRC_DIR)/../lib/cutoa.s \

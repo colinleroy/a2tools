@@ -62,7 +62,11 @@ mastoimg_CC65SOURCES := \
 	../lib/asm/hgr.s \
 	../lib/asm/file_select.s \
 	../lib/asm/hyphenize.s \
-	../lib/vsdrive.s
+	../lib/vsdrive.s \
+	../lib/surl/asm/surl_read_image.s \
+	../lib/asm/reserve_auxhgr.s \
+	../lib/asm/unlink_auxhgr.s \
+	../lib/asm/auxhgr_file.s \
 
 mastocli_SOURCES := \
 	api/api.c \
@@ -84,7 +88,10 @@ mastocli_CC65SOURCES := \
 	$(common_CC65SOURCES) \
 	../lib/surl/asm/surl_send.s \
 	../lib/asm/atoc.s \
-	../lib/runtime_once_clean.s
+	../lib/runtime_once_clean.s \
+	../lib/asm/reserve_auxhgr.s \
+	../lib/asm/unlink_auxhgr.s \
+	../lib/asm/auxhgr_file.s \
 
 mastowrite_SOURCES := \
 	api/account.c \

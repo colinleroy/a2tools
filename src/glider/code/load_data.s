@@ -19,7 +19,7 @@
 
         .import   _open, _read, _write, _close, _memcpy
         .import   pushax, popax
-        .import   __filetype, __auxtype
+        .import   __filetype, __auxtype, _hgr_auxfile
 
         .import   __LOWCODE_START__, __LOWCODE_SIZE__
         .import   __HGR_START__, __LEVEL_SIZE__
@@ -266,9 +266,9 @@ uncompress:
         ldx     #>$2000
         jsr     _memset
 
-        lda       #<hgr_fgbg
+        lda       #<_hgr_auxfile
         sta       filename
-        lda       #>hgr_fgbg
+        lda       #>_hgr_auxfile
         sta       filename+1
 
         lda      #<$2000
@@ -291,8 +291,8 @@ uncompress:
 .endproc
 
 .proc unlink_cached_files
-        lda       #<hgr_fgbg
-        ldx       #>hgr_fgbg
+        lda       #<_hgr_auxfile
+        ldx       #>_hgr_auxfile
         jmp       _unlink
 .endproc
 
@@ -310,4 +310,3 @@ lowcode_name:        .asciiz "LOWCODE"
 splash_name:         .asciiz "SPLASH"
 level_name_template: .asciiz "LEVEL.X"
 _scores_filename:    .asciiz "SCORES"
-hgr_fgbg:            .asciiz "/RAM/AUXHGR"

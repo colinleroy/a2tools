@@ -73,7 +73,8 @@ char *api_send_hgr_image(char *filename, char *description, char **err, char x, 
   }
 
   file_size = to_send = lseek(fd, 0, SEEK_END);
-  lseek(fd, 0, SEEK_SET);
+  /* Will need to reopen, as io buf is shared with surl endpoint buf */
+  close(fd);
 
   if (w > 0)
     progress_bar(x, y, w, 0, file_size);
@@ -86,6 +87,7 @@ char *api_send_hgr_image(char *filename, char *description, char **err, char x, 
   /* Send file */
   surl_multipart_send_field_desc("file", (uint32)to_send, "image/hgr");
 
+  fd = open(filename, O_RDONLY); /* Assume it worked. */
   while ((r = read(fd, send_buf, SEND_BUF_SIZE)) > 0) {
 send_again:
     surl_multipart_send_field_data(send_buf, r);

@@ -226,6 +226,7 @@ shflpuck_SOURCES := \
 	../lib/fastirq.s \
 	../lib/asm/hgr_tables.s \
 	../lib/asm/hgr.s \
+	../lib/asm/auxhgr_file.s \
 	../lib/asm/hgr_mono40.s \
 	../lib/extrazp.s \
 	../lib/cntoabuf.s \

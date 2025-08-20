@@ -77,17 +77,6 @@ static void clr_footer(void) {
   clrzone(0, 22, NUMCOLS - 1, 23);
 }
 
-void unlink_page2(void) {
-  unlink(AUX_PAGE_FILE);
-}
-
-static void reserve_auxhgr(void) {
-  int fd = open(AUX_PAGE_FILE, O_WRONLY|O_CREAT);
-  if (fd > 0) {
-    write(fd, (char *)HGR_PAGE, HGR_LEN);
-    close(fd);
-  }
-}
 static unsigned char got_cover = 0;
 static void display_image(HGRScale scale) {
   size_t len;
@@ -102,28 +91,14 @@ static void display_image(HGRScale scale) {
     len = ntohs(len);
 
 #ifdef __APPLE2__
-    if (len == HGR_LEN*2) {
-      int fd;
-      _filetype = PRODOS_T_BIN;
-      fd = open(AUX_PAGE_FILE, O_WRONLY|O_CREAT);
-      surl_read_with_barrier((char *)HGR_PAGE, HGR_LEN);
-      if (fd > 0) {
-        write(fd, (char *)HGR_PAGE, HGR_LEN);
-        close(fd);
-        is_dhgr = 1;
-      }
-      len = HGR_LEN;
+    is_dhgr = surl_read_image_to_screen(len);
+    got_cover = 1;
+    init_hgr(monochrome);
+    if (is_dhgr) {
+      __asm__("sta $C05E"); //DHIRESON
     }
-    if (len == HGR_LEN) {
-      surl_read_with_barrier((char *)HGR_PAGE, HGR_LEN);
-      got_cover = 1;
-      init_hgr(monochrome);
-      if (is_dhgr) {
-        __asm__("sta $C05E"); //DHIRESON
-      }
-      if (scale == HGR_SCALE_MIXHGR) {
-        hgr_mixon();
-      }
+    if (scale == HGR_SCALE_MIXHGR) {
+      hgr_mixon();
     }
 #endif
   }
@@ -458,11 +433,14 @@ read_metadata_again:
 
   } else if (r == SURL_ANSWER_STREAM_ART) {
     if (got_cover) {
+      simple_serial_putc('H');
       simple_serial_putc(SURL_CMD_SKIP);
     } else {
 #ifdef __APPLE2__
-      surl_read_with_barrier((char *)HGR_PAGE, HGR_LEN);
+      simple_serial_putc('D');
+      surl_read_image_to_screen(HGR_LEN*2);
       init_hgr(monochrome);
+      __asm__("sta $C05E");
       hgr_mixon();
 #endif
       simple_serial_putc(SURL_CLIENT_READY);
@@ -773,10 +751,7 @@ void main(void) {
 
   register_start_device();
 
-  if (has_128k) {
-    reserve_auxhgr();
-    atexit(&unlink_page2);
-  }
+  reserve_auxhgr_file();
 
   backup_restore_hgrpage("w");
   if (backup_restore_audiocode("w") == 0) {
