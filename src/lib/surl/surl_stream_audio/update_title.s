@@ -1,6 +1,5 @@
 update_title:
-        tya                     ; Backup Y
-        pha
+        sty     tmp1            ; Backup Y
 
         lda     title_addr      ; gotoxy
         sta     BASL
@@ -11,48 +10,53 @@ update_title:
 
         ldx     numcols         ; Reset char counter
 
-st:     lda     ser_status      ; 21    Check serial
-        and     has_byte        ; 24
+st:     lda     ser_status      ;               Check serial
+        and     has_byte        ;
         beq     st
+dt:     lda     ser_data        ;
+        ora     #$80            ;
 
                                 ; cycles since fetch, worst case,
                                 ; must be under 85 for serial access
-dt:     lda     ser_data        ; 4
-        ora     #$80            ; 6
 
         .ifndef __APPLE2ENH__
-        bit     _is_iie         ; 10
-        bmi     :+              ; 12
-        cmp     #$E0            ; 14            Should we uppercase?
-        bcc     :+              ; 16
-        and     uppercasemask   ; 20
+        bit     _is_iie         ;
+        bmi     :+              ;
+        cmp     #$E0            ; Should we uppercase?
+        bcc     :+              ;
+        and     uppercasemask   ;
 :       .endif
+        sta     tmp2
 
-        pha                     ; 23            Local, stripped-down version of putchardirect
-        lda     CH              ; 26
-        bit     _is_iie         ; 30
-        bpl     put             ; 32
-        bit     RD80VID         ; 36           In 80 column mode?
-        bpl     put             ; 38           No, just go ahead
-        lsr                     ; 40           Div by 2
-        bcs     put             ; 42           Odd cols go in main memory
-        bit     HISCR           ; 46           Assume SET80COL
-put:    tay                     ; 48
+        ldy     CH              ;
 
-        pla                     ; 51
-        sta     (BASL),Y        ; 56
+        sec                     ; Assume main memory
+        bit     _is_iie         ;
+        bpl     put             ;
+        bit     RD80VID         ; In 80 column mode?
+        bpl     put             ; No, just go ahead
+        tya                     ;
+        lsr                     ;
+        tay                     ;
+        bcs     put             ; Odd cols go in main memory
+        php                     ;
+        sei                     ; No interrupts while writing AUX
+        bit     HISCR           ; Assume SET80COL
+put:
+        lda     tmp2
+        sta     (BASL),Y        ;
+        bcs     :+              ;
+        bit     LOWSCR          ; Doesn't hurt in 40 column mode
+        plp                     ;
 
-        bit     LOWSCR          ; 60           Doesn't hurt in 40 column mode
+:       inc     CH              ; Can't wrap line!
 
-        inc     CH              ; 65           Can't wrap line!
+        dex                     ; More chars?
+        bne     st              ;
 
-        dex                     ; 67           More chars?
-        bne     st              ; 69
+        ldy     tmp1            ; Restore Y
 
-        pla                     ; 72           Restore Y
-        tay                     ; 74
-
-st2:    lda     ser_status      ;              Wait for next audio byte
+st2:    lda     ser_status      ; Wait for next audio byte
         and     has_byte
         beq     st2
 dt2:    ldx     ser_data
