@@ -296,10 +296,7 @@ display_result:
     backup_restore_hgrpage("r");
   }
 
-  init_hgr(1);
-  if (is_dhgr) {
-    __asm__("sta $C05E"); //DHIRESON
-  }
+  init_graphics(monochrome, is_dhgr);
   hgr_mixon();
 read_kbd:
   c = tolower(cgetc());
@@ -393,8 +390,7 @@ out:
 void radio_browser_ui(void) {
   FILE *tmpfp = fopen(RADIO_SEARCH_FILE, "r");
 
-  init_hgr(1);
-  __asm__("sta $C05F"); //DHIRESOFF
+  init_graphics(monochrome, 0);
   hgr_mixon();
 
   do_server_screen = 0;

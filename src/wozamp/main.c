@@ -93,10 +93,7 @@ static void display_image(HGRScale scale) {
 #ifdef __APPLE2__
     is_dhgr = surl_read_image_to_screen(len);
     got_cover = 1;
-    init_hgr(monochrome);
-    if (is_dhgr) {
-      __asm__("sta $C05E"); //DHIRESON
-    }
+    init_graphics(monochrome, is_dhgr);
     if (scale == HGR_SCALE_MIXHGR) {
       hgr_mixon();
     }
@@ -389,7 +386,7 @@ static int open_url(char *url, char *filename) {
   if (!got_cover) {
     if (has_80cols) {
       backup_restore_hgrpage("r");
-      init_hgr(monochrome);
+      init_graphics(monochrome, 0);
       hgr_mixon();
     } else {
       init_text();
@@ -439,8 +436,7 @@ read_metadata_again:
 #ifdef __APPLE2__
       simple_serial_putc('D');
       surl_read_image_to_screen(HGR_LEN*2);
-      init_hgr(monochrome);
-      __asm__("sta $C05E");
+      init_graphics(monochrome, 1);
       hgr_mixon();
 #endif
       simple_serial_putc(SURL_CLIENT_READY);
@@ -512,7 +508,7 @@ char *start_url_ui(void) {
 
 start_again:
   clrscr();
-  init_hgr(monochrome);
+  init_graphics(monochrome, 0);
   hgr_mixon();
   set_scrollwindow(20, NUMROWS);
 
@@ -745,7 +741,7 @@ void main(void) {
   serial_throbber_set((void *)0x07F7);
 
   clrscr();
-  init_hgr(monochrome);
+  init_graphics(monochrome, 0);
   hgr_mixon();
   set_scrollwindow(20, NUMROWS);
 

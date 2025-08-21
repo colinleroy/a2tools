@@ -16,14 +16,15 @@
 ;
         .export  _hgr_force_mono40, _text_mono40, _hgr_unset_mono40
         .export  hgr_mono_file
-        .import  _init_hgr, _init_text
+        .import  init_graphics, _init_text
 
         .include "apple2.inc"
         .include "fcntl.inc"
 
 .proc _hgr_force_mono40
         lda     #1
-        jsr     _init_hgr
+        ldx     #0
+        jsr     init_graphics
         lda     hgr_mono_file
         beq     :+
         bit     DHIRESON

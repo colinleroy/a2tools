@@ -220,7 +220,7 @@ static void load_video(char *host, InstanceTypeId instance_type, char *id) {
     /* Reload to overwrite DHGR data */
     init_text();
     backup_restore_hgrpage("r");
-    init_hgr(0);
+    init_graphics(0, 0);
     load_hgr_mono_file(2);
     surl_stream_av(captions_url, video_url);
     set_scrollwindow(20, scrh);
@@ -234,23 +234,17 @@ out:
   free(n_host);
 }
 
-void maybe_dhgr(uint8 is_dhgr) {
-  init_hgr(0);
-  if (is_dhgr) {
-    __asm__("sta $C05E");
-  }
-}
-
 #pragma code-name(push, "LOWCODE")
 
 char **lines = NULL;
 char n_lines;
 char cur_line = 0;
+
 static void search_results(InstanceTypeId instance_type) {
   static char *video_host;
   int len;
   char c;
-  char is_dhgr = 0;
+  char is_dhgr = 0, monochrome = 1;
 
   load_save_search_json("w");
 reload_search:
@@ -298,11 +292,14 @@ display_result:
   init_text();
   bzero((char *)HGR_PAGE, HGR_LEN);
 
+reinit_graphics:
   is_dhgr = 0;
+  init_text();
+
   surl_start_request(NULL, 0, lines[cur_line+VIDEO_THUMB], SURL_METHOD_GET);
   if (surl_response_ok()) {
     simple_serial_putc(has_128k ? SURL_CMD_DHGR:SURL_CMD_HGR);
-    simple_serial_putc(1); /* monochrome */
+    simple_serial_putc(monochrome); /* monochrome */
     simple_serial_putc(HGR_SCALE_MIXHGR);
 
     if (simple_serial_getc() == SURL_ERROR_OK) {
@@ -313,19 +310,23 @@ display_result:
     }
   }
 
-  maybe_dhgr(is_dhgr);
+  init_graphics(monochrome, is_dhgr);
 
 read_kbd:
   hgr_mixon();
   c = tolower(cgetc());
   if (is_iie && c & 0x80) {
     cmd_cb(c & ~0x80);
-    goto read_kbd;
+    goto reinit_graphics;
   } else if (!is_iie && c < 27 && c != CH_ENTER && c != CH_CURS_LEFT && c != CH_CURS_RIGHT) {
     cmd_cb(c + 'A' - 1);
-    goto display_result;
+    goto reinit_graphics;
   }
   switch (c) {
+    case 'c':
+      monochrome = !monochrome;
+      goto reinit_graphics;
+
     case CH_ENTER:
       load_video(video_host, instance_type, lines[cur_line+VIDEO_ID]);
       /* relaunch search */
@@ -506,7 +507,7 @@ int main(void) {
   surl_user_agent = "WozTubes "VERSION"/Apple II";
 
 #ifdef __APPLE2__
-  init_hgr(0);
+  init_graphics(0, 0);
   hgr_mixon();
   set_scrollwindow(20, scrh);
   clrscr();

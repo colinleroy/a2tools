@@ -7,7 +7,8 @@
         jsr       _set_scrollwindow
 
         lda       #1
-        jsr       _init_hgr
+        ldx       #0
+        jsr       init_graphics
         jsr       _hgr_mixon
         jsr       _clrscr
 

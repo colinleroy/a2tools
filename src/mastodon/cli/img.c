@@ -81,10 +81,7 @@ static void toggle_legend(char force) {
   if (legend) {
     init_text();
   } else {
-    init_hgr(monochrome);
-    if (is_dhgr) {
-      __asm__("sta $C05E"); //DHIRESON
-    }
+    init_graphics(monochrome, is_dhgr);
   }
 #endif
 }

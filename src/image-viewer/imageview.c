@@ -17,6 +17,7 @@
 #include "vsdrive.h"
 #include "a2_features.h"
 #include "extrazp.h"
+#include "iw_print.h"
 
 uint8 scrw, scrh;
 #ifndef __CC65__
@@ -25,32 +26,10 @@ char HGR_PAGE[HGR_LEN];
 
 static uint8 serial_opened = 0, printer_opened = 0;
 
-/* Check for XON/XOFF */
-uint8 wait_imagewriter_ready(void) {
-#ifdef __CC65__
-  #define XOFF 0x13
-  #define XON  0x11
-  int c;
-
-  if ((c = simple_serial_getc_immediate()) != EOF) {
-    if (c == XOFF) {
-      uint8 tries = 5;
-      /* Wait for XON */
-      while (tries && (c = simple_serial_getc_with_timeout()) == EOF)
-        tries--;
-      if (c == XON) {
-        return 0;
-      }
-      return -1;
-    }
-  }
-#endif
-  return 0;
-}
-
 /* As long as I can't cleanly handle both ports at once, toggle the opened
  * port depending on whether we want to print or access vsdrive. */
 static int open_port(char port_num) {
+  static uint8 already_asked = 0;
   if (port_num == ser_params.printer_slot) {
     if (printer_opened) {
       return 0;
@@ -78,7 +57,7 @@ open_again:
     }
   } else {
     serial_opened = (simple_serial_open() == 0);
-    if (!serial_opened) {
+    if (!serial_opened && !already_asked) {
       goto check_configure;
     } else {
       vsdrive_install();
@@ -95,27 +74,29 @@ check_configure:
     simple_serial_configure();
     goto open_again;
   }
+  already_asked = 1;
   return -1;
 }
 
 uint8 is_dhgr = 0;
 
+unsigned char print_setup_msg(void) {
+  clrscr(); gotoxy(0, 20);
+  cprintf("Please set your printer to %sbps, XON/XOFF, connect it to the\r\n"
+          "printer port (slot %u) and turn it on.\r\n"
+          "Press a key when ready (Esc to cancel)\r\n",
+          tty_speed_to_str(ser_params.printer_baudrate), ser_params.printer_slot);
+  if (cgetc() == CH_ESC)
+    return -1;
+
+  clrscr(); gotoxy(0, 20);
+  cprintf("Printing ");
+  progress_bar(wherex(), wherey(), scrw, 0, HGR_HEIGHT);
+
+  return 0;
+}
+
 void hgr_print(void) {
-  uint16 x;
-  uint8 y, cy, ey, bit;
-  uint8 c;
-  char setup_binary_print_cmd[] = {CH_ESC, 'n', CH_ESC, 'T', '1', '6'};
-  char disable_auto_line_feed[] = {CH_ESC, 'Z', 0x80, 0x00};
-#ifdef __CC65__
-  char send_chars_cmd[8]; // = {CH_ESC, 'G', '0', '0', '0', '0'};
-  #define cur_d7 zp6p
-  #define cur_m7 zp8p
-  #define line   zp10p
-#else
-  char send_chars_cmd[16];
-  uint8 *cur_d7, *cur_m7, *line;
-#endif
-  uint16 sx, ex;
   uint8 scale = 1;
 
   init_hgr_base_addrs();
@@ -141,105 +122,13 @@ scale_again:
   if (scale != 1 && scale != 2) {
     goto scale_again;
   }
-  clrscr(); gotoxy(0, 20);
-  cprintf("Please set your ImageWriter II to %sbps, XON/XOFF, connect it to the \r\n"
-          "printer port (slot %u) and turn it on.\r\n"
-          "Press a key when ready or Escape to cancel...\r\n",
-          tty_speed_to_str(ser_params.printer_baudrate), ser_params.printer_slot);
-  if (cgetc() == CH_ESC)
+
+  if (print_setup_msg() != 0)
     goto out;
 
-  /* Calculate X boundaries */
-  for (sx = 0; sx < 100; sx++) {
-    cur_d7 = div7_table + sx;
-    cur_m7 = mod7_table + sx;
-    for (y = 0; y < HGR_HEIGHT; y++) {
-      /* Do we have a white pixel? */
-      line = (uint8 *)(hgr_baseaddr_l[y]|(hgr_baseaddr_h[y]<<8));
-      if ((*(line + *cur_d7) & *cur_m7) != 0)
-        goto found_start;
+  hgr_to_iw(scale);
 
-    }
-  }
-  found_start:
-  if (sx == 100)
-    sx = 0;
-
-  for (ex = HGR_WIDTH-1; ex > 180; ex--) {
-    cur_d7 = div7_table + ex;
-    cur_m7 = mod7_table + ex;
-    for (y = 0; y < HGR_HEIGHT; y++) {
-      /* Do we have a white pixel? */
-      line = (uint8 *)(hgr_baseaddr_l[y]|(hgr_baseaddr_h[y]<<8));
-      if ((*(line + *cur_d7) & *cur_m7) != 0)
-        goto found_end;
-
-    }
-  }
-  found_end:
-  if (ex == 180)
-    ex = HGR_WIDTH;
-
-  cprintf("Printing ");
-  progress_bar(wherex(), wherey(), scrw, 0, HGR_HEIGHT);
-
-  if (wait_imagewriter_ready() != 0) {
-    goto err_out;
-  }
-
-  simple_serial_write(disable_auto_line_feed, sizeof(disable_auto_line_feed));
-
-  /* Send blank lines as margin, because I'm tired of
-   * waiting for https://github.com/OpenPrinting/libcupsfilters/pull/69 to
-   * land in Raspbian. */
-  simple_serial_write("\r\n\r\n\r\n", 6);
-
-  /* Set line width; we'll send one byte per block of 1x8 pixels */
-  sprintf(send_chars_cmd, "%cG%04d", CH_ESC, (ex-sx) * scale);
-
-  /* Iterate on Y step 8, or 4 if we scale double */
-
-  for (y = 0; y < HGR_HEIGHT; y += (8/scale)) {
-    cur_d7 = div7_table + sx;
-    cur_m7 = mod7_table + sx;
-    ey = y + (8/scale);
-    /* Set printer to binary mode */
-    simple_serial_write(setup_binary_print_cmd, sizeof(setup_binary_print_cmd));
-    simple_serial_write(send_chars_cmd, 6);
-
-    /* Iterate on every X pixel (not HGR byte!) */
-    for (x = sx; x < ex; x++) {
-      c = 0;
-      bit = (scale == 1) ? 0x1 : 0x3;
-      /* Build the "vertical byte" from Y to Y+7 */
-      for (cy = y; cy < ey; cy++) {
-        line = (uint8 *)(hgr_baseaddr_l[cy]|(hgr_baseaddr_h[cy]<<8));
-        if ((*(line + *cur_d7) & *cur_m7) == 0) {
-          c |= bit;
-        }
-        bit <<= scale;
-      }
-      cur_d7++;
-      cur_m7++;
-      /* We only check if the printer is ready inside the main loop,
-       * because we can send the few setup extra bytes in any case.
-       */
-      if (wait_imagewriter_ready() != 0) {
-        goto err_out;
-      }
-
-      /* Send the vertical 1x8 block to IW */
-      simple_serial_write((char *)&c, 1);
-      /* If scaling double, send it twice */
-      if (scale == 2)
-        simple_serial_write((char *)&c, 1);
-    }
-    simple_serial_write("\r\n", 2);
-    progress_bar(-1, -1, scrw, y, HGR_HEIGHT);
-  }
-err_out:
-  clrscr();
-  gotoxy(0, 20);
+  clrscr(); gotoxy(0, 20);
   cputs("Done.\r\n"
         "Press a key to continue.\r\n");
   cgetc();
@@ -248,34 +137,6 @@ out:
 }
 
 void dhgr_print(void) {
-  uint16 x;
-  uint8 y, cy, ey, bit;
-  char setup_binary_print_cmd[] = {CH_ESC, 'n', CH_ESC, 'T', '1', '6'};
-  char disable_auto_line_feed[] = {CH_ESC, 'Z', 0x80, 0x00};
-#ifdef __CC65__
-  char send_chars_cmd[8]; // = {CH_ESC, 'G', '0', '0', '0', '0'};
-  #define cur_d7 zp6p
-  #define cur_m7 zp8p
-  #define line   zp10p
-#else
-  char send_chars_cmd[16];
-  uint8 *cur_d7, *cur_m7, *line;
-#endif
-  uint16 sx, ex;
-  int fd;
-
-  /* Copy back AUX DHGR page to main RAM for less awfulness
-   * Drawback: requires 8kB RAM. */
-  fd = open(hgr_auxfile, O_RDONLY);
-  if (fd) {
-    read(fd, (char *)0x4000, 0x2000);
-    close(fd);
-  } else {
-    cputs("Error copying DHGR data.");
-    cgetc();
-    goto out;
-  }
-
   init_hgr_base_addrs();
 
   if (open_port(ser_params.printer_slot) != 0) {
@@ -283,84 +144,14 @@ void dhgr_print(void) {
   }
 
   hgr_mixon();
-  clrscr();
-  gotoxy(0, 20);
-  cprintf("Please set your ImageWriter II to %sbps, XON/XOFF, connect it to the \r\n"
-          "printer port (slot %u) and turn it on.\r\n"
-          "Press a key when ready or Escape to cancel...\r\n",
-          tty_speed_to_str(ser_params.printer_baudrate), ser_params.printer_slot);
-  if (cgetc() == CH_ESC)
+
+  if (print_setup_msg() != 0)
     goto out;
 
-  sx = 0;
-  ex = HGR_WIDTH-1;
-
-  cprintf("Printing ");
-  progress_bar(wherex(), wherey(), scrw, 0, HGR_HEIGHT);
-
-  if (wait_imagewriter_ready() != 0) {
-    goto err_out;
-  }
-
-  simple_serial_write(disable_auto_line_feed, sizeof(disable_auto_line_feed));
-
-  /* Send blank lines as margin, because I'm tired of
-   * waiting for https://github.com/OpenPrinting/libcupsfilters/pull/69 to
-   * land in Raspbian. */
-  simple_serial_write("\r\n\r\n\r\n", 6);
-
-  /* Set line width. We'll send 560 chars per line. */
-  sprintf(send_chars_cmd, "%cG%04d", CH_ESC, 560);
-
   /* Send data */
-  for (y = 0; y < HGR_HEIGHT; y += 4) {
-    ey = y + 4;
-    /* Set printer to binary mode */
-    simple_serial_write(setup_binary_print_cmd, sizeof(setup_binary_print_cmd));
-    simple_serial_write(send_chars_cmd, 6);
-    cur_d7 = div7_table + sx;
-    cur_m7 = mod7_table + sx;
-    /* Here we iterate on blocks of 7x4 pixels, so that we
-     * can fetch the pixel in main and aux a bit more easily */
-    for (x = 0; x < 280; x+=7) {
-      char main_block[7], aux_block[7];
-      uint8 sub_byte;
+  dhgr_to_iw();
 
-      /* And get each HGR bit for this block */
-      for (sub_byte = 0; sub_byte < 7; sub_byte++) {
-        main_block[sub_byte] = aux_block[sub_byte] = 0;
-        bit = 0x3; /* Make every pixel double height like on screen */
-        for (cy = y; cy < ey; cy++) {
-          /* Both in main */
-          line = (uint8 *)(hgr_baseaddr_l[cy]|(hgr_baseaddr_h[cy]<<8));
-          if ((*(line + *cur_d7) & *cur_m7) == 0) {
-             main_block[sub_byte] |= bit;
-          }
-          /* And in aux */
-          line += 0x2000;
-          if ((*(line + *cur_d7) & *cur_m7) == 0) {
-             aux_block[sub_byte] |= bit;
-          }
-          bit <<= 2;
-        }
-        cur_d7++;
-        cur_m7++;
-      }
-      /* We only check if the printer is ready inside the main loop,
-       * because we can send the few setup extra bytes in any case.
-       */
-      if (wait_imagewriter_ready() != 0) {
-        goto err_out;
-      }
-      simple_serial_write(aux_block, 7);
-      simple_serial_write(main_block, 7);
-    }
-    simple_serial_write("\r\n", 2);
-    progress_bar(-1, -1, scrw, y, HGR_HEIGHT);
-  }
-err_out:
-  clrscr();
-  gotoxy(0, 20);
+  clrscr(); gotoxy(0, 20);
   cputs("Done.\r\n"
         "Press a key to continue.\r\n");
   cgetc();
@@ -425,8 +216,8 @@ start_from_first:
 
 static void print_help(void) {
   gotoxy(0, 20);
-  cputs("P: Print to ImageWriter II - Space: view next image in directory\r\n"
-        "Escape: exit - Any other key: toggle help.");
+  cputs("P: Print to IW II - Space: view next\r\n"
+        "Esc: exit - Any other key: toggle help.");
 }
 
 void unlink_page2(void) {
@@ -442,6 +233,8 @@ int main(int argc, char *argv[]) {
   #define BLOCK_SIZE 512
   const char *filename = NULL;
   static char *rambuf[BLOCK_SIZE];
+  uint8 monochrome = 0;
+
   register_start_device();
 
   try_videomode(VIDEOMODE_80COL);
@@ -517,19 +310,18 @@ next_image:
     len += BLOCK_SIZE;
     progress_bar(-1, -1, scrw, len+HGR_LEN, HGR_LEN*2);
   }
-
-  #ifdef __CC65__
-  init_hgr(1);
-  if (is_dhgr) {
-    __asm__("sta $C05E"); //DHIRESON
-  }
-#endif
-
   close(fd);
 
+redisplay:
+  #ifdef __CC65__
+  init_graphics(monochrome, is_dhgr);
+#endif
 again:
   i = tolower(cgetc());
   switch(i) {
+    case 'c':
+      monochrome = !monochrome;
+      goto redisplay;
     case 'p':
       if (is_dhgr)
         dhgr_print();

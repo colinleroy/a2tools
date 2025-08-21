@@ -14,14 +14,15 @@
 ; You should have received a copy of the GNU General Public License
 ; along with this program. If not, see <http://www.gnu.org/licenses/>.
 ;
-        .export  _init_hgr
+        .export  _init_graphics
+        .export  init_graphics
         .export  _init_text
         .export  _hgr_mixon
         .export  _hgr_mixoff
         .export  _hgr_init_done
         .export  _hgr_mix_is_on
 
-        .import  ostype
+        .import  ostype, popa
 
         .constructor DetectLeChatMauveEve, 7
 
@@ -43,7 +44,7 @@ has_eve:        .byte 0
 
         .segment "LOWCODE"
 
-eve_bw:
+eve_hgr_bw:
         lda       has_eve
         beq       :+
         sta       DHIRESOFF   ; For EVE
@@ -52,7 +53,7 @@ eve_bw:
         sta       HR3_ON
 :       rts
 
-eve_color:
+eve_hgr_color:
         lda       has_eve
         beq       :+
         sta       DHIRESOFF   ; For EVE
@@ -61,25 +62,108 @@ eve_color:
         sta       HR3_OFF
 :       rts
 
+; http://www.applelogic.org/files/GSHARDWAREREF.pdf page 82 and 90
+iigs_color:
+        bit       ostype      ; For IIGS
+        bpl       :+
+        lda       $C021       ; Monochrome register bit 7 off
+        and       #$7F
+        sta       $C021
+        lda       $C029       ; NewVideo bit 5 on
+        ora       #%00100000
+        sta       $C029
+:       rts
+
+iigs_bw:
+        bit       ostype      ; For IIGS
+        bpl       :+
+        lda       $C021       ; Monochrome register bit 7 on
+        ora       #$80
+        sta       $C021
+        lda       $C029       ; NewVideo bit 5 off
+        and       #%11011111
+        sta       $C029
+:       rts
+
+; A = DHGR, TOS = MONOCHROME
+_init_graphics:
+        tax
+        jsr       popa
+
+; X = DHGR, A = MONOCHOME
+init_graphics:
+.ifndef DISABLE_DHGR
+        cpx      #1
+        bne      init_hgr
+
+init_dhgr:
+        cmp       #$00
+        beq       @dhgr_color
+
+@dhgr_monochrome:
+        lda       $C050       ; Video7 setup 560x192 1bit
+        lda       $C057
+        lda       $C052
+        sta       $C00C
+        sta       $C05E
+        sta       $C05F
+        sta       $C00C
+        sta       $C05E
+        sta       $C05F
+        sta       $C05E
+        sta       $C00D
+
+        jsr       iigs_color
+        jmp       @dhgr_done
+
+@dhgr_color:
+        lda       $C050       ; Video7 setup 140x192 4bit
+        lda       $C057
+        lda       $C052
+        sta       $C00D
+        sta       $C05E
+        sta       $C05F
+        sta       $C00D
+        sta       $C05E
+        sta       $C05F
+        sta       $C05E
+        sta       $C00D
+
+        jsr       iigs_bw
+
+@dhgr_done:
+        lda       #$20
+        sta       $E6         ; HGRPAGE
+
+        ldx       #1
+        stx       _hgr_init_done
+        dex
+        stx       _hgr_mix_is_on
+        rts
+.endif
+
+
 ; EVE doc, color modes,
 ; https://files.slack.com/files-pri/T1J8S1LGH-F08QEEH8DSL/download/le_chat_mauve_eve_-_manuel_de_reference.pdf?origin_team=T1J8S1LGH
 ; pages 117-118
-_init_hgr:
+init_hgr:
         ldx       ostype
         cpx       #$20        ; No 80col card assumed in II+
-        bcc       @do_init
+        bcc       @hgr_do_init
 
         cmp       #$00
-        beq       @color
+        beq       @hgr_color
 
-@monochrome:
-        jsr       eve_bw
-        bne       @do_init
+@hgr_monochrome:
+        jsr       eve_hgr_bw
+        jsr       iigs_bw
+        jmp       @hgr_do_init
 
-@color:
-        jsr       eve_color
+@hgr_color:
+        jsr       eve_hgr_color
+        jsr       iigs_color
 
-@do_init:
+@hgr_do_init:
         lda       #$20
         sta       $E6         ; HGRPAGE
 
@@ -96,6 +180,8 @@ _init_hgr:
         dex
         stx       _hgr_mix_is_on
         rts
+
+.segment "CODE"
 
 _init_text:
         bit       LOWSCR
@@ -160,7 +246,6 @@ _hgr_mixoff:
         lda     #kSentinelValue
         eor     $400            ; did the value change?
         sta     result          ; if non-zero, Eve was shadowing
-
         stx     $400            ; restore PAGE1X from X
         sta     LOWSCR          ; access PAGE1
         sty     $400            ; restore PAGE1 from Y

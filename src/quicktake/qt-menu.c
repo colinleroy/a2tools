@@ -271,7 +271,7 @@ static void show_thumbnails(uint8 num_pics) {
   }
 
   set_scrollwindow(0, scrh);
-  init_hgr(1);
+  init_graphics(1, 0);
   hgr_mixon();
 
   if (state_load(STATE_PREVIEW, &tmp, NULL) == 0) {
@@ -326,7 +326,7 @@ err_thumb_io:
 }
 
 static void print_welcome(void) {
-  init_hgr(1);
+  init_graphics(1, 0);
   set_scrollwindow(20, scrh);
   hgr_mixon();
   clrscr();

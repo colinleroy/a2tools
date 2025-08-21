@@ -226,6 +226,14 @@ static void handle_document(unsigned char first_byte) {
       LOG("Printer: got %zu bytes...\n", n_bytes);
     }
     imagewriter_loop(c);
+    // if (n_bytes % 10000 == 0) {
+    //   char XOFF = 0x13, XON = 0x11;
+    //   simple_serial_write_fast_fd(aux_ttyfd, &XOFF, 1);
+    //   printf("XOFFing\n");
+    //   sleep(5);
+    //   simple_serial_write_fast_fd(aux_ttyfd, &XON, 1);
+    //   printf("XONing\n");
+    // }
     n_bytes++;
   }
 

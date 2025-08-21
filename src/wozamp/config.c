@@ -119,7 +119,7 @@ void text_config(void) {
   set_scrollwindow(0, NUMROWS);
   init_text();
   config();
-  init_hgr(1);
+  init_graphics(monochrome, 0);
   hgr_mixon();
   clrzone(0, 0, NUMCOLS, 19);
   set_scrollwindow(20, NUMROWS);

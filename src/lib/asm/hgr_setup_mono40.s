@@ -33,6 +33,11 @@ HR3_ON          := $C0B7
 TEXT16_OFF      := $C0B8
 TEXT16_ON       := $C0B9
 
+; FG/BG installer for Video-7 cards
+; https://mirrors.apple2.org.za/ftp.apple.asimov.net/documentation/hardware/video/Video-7%20RGB-SL7.pdf
+; page 41. We use "F/B HIRES mix with 7"
+; AN3 0, TEXT 0, HIRES 1 ($C057), 80COL 0
+
 ; https://prodos8.com/docs/techref/writing-a-prodos-system-program/
 ; If your use involves hi-res graphics, you may protect those areas
 ; of auxiliary memory. If you save a dummy 8K file as the first
