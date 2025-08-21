@@ -133,8 +133,8 @@ serial_slot:      .byte   2
 
         lda     #<_z8530_open
         ldx     #>_z8530_open
-        sta     _serial_open+1
-        stx     _serial_open+2
+        sta     serial_do_open+1
+        stx     serial_do_open+2
 
         lda     #<_z8530_close
         ldx     #>_z8530_close
@@ -186,13 +186,21 @@ serial_slot:      .byte   2
 .segment "CODE"
 
 
+.proc serial_do_open
+        jmp     _acia_open
+.endproc
+
 .proc _serial_open
-        jsr     _acia_open
+        php
+        sei
+        jsr     serial_do_open
+
         cmp     #SER_ERR_OK
         bne     :+
         ldy     #$01
         sty     connected
-:       rts
+:       plp
+        rts
 .endproc
 
 .proc _serial_close
