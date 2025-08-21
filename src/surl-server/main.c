@@ -1331,9 +1331,10 @@ static curl_mime *setup_multipart_upload_request(char method, CURL *curl,
         goto err_out;
       }
 
-      if (!strcasecmp(field_type, "image/hgr")) {
+      if (!strncasecmp(field_type, "image/hgr", strlen("image/hgr"))) {
         size_t png_len;
-        char *png_data = hgr_to_png(field_contents, f_len, 1, &png_len);
+        char mono = (strstr(field_type, "hgr-color") == NULL);
+        char *png_data = hgr_to_png(field_contents, f_len, mono, &png_len);
         free(field_contents);
         field_contents = png_data;
         strcpy(field_type, "image/png");

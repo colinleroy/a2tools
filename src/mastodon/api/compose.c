@@ -85,7 +85,8 @@ char *api_send_hgr_image(char *filename, char *description, char **err, char x, 
   surl_multipart_send_num_fields(1);
   
   /* Send file */
-  surl_multipart_send_field_desc("file", (uint32)to_send, "image/hgr");
+  surl_multipart_send_field_desc("file", (uint32)to_send, 
+      monochrome ? "image/hgr" : "image/hgr-color");
 
   fd = open(filename, O_RDONLY); /* Assume it worked. */
   while ((r = read(fd, send_buf, SEND_BUF_SIZE)) > 0) {

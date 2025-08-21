@@ -362,42 +362,65 @@ static void hgr_color_dither (SDL_Surface *src)
   }
 }
 
+#define RGBTOUINT32(r,g,b) ((r)<< 16 | (g) <<8 | b)
+
+static Uint32 dhgr_pal_in[16];
+static Uint32 dhgr_pal_out[16];
+
+void init_dhgr_pal(void) {
+    /* Modern => DHGR */
+    dhgr_pal_in[0] = RGBTOUINT32(1, 4, 8);
+    dhgr_pal_in[1] = RGBTOUINT32(32, 54, 212);
+    dhgr_pal_in[2] = RGBTOUINT32(51, 111,   0);
+    dhgr_pal_in[3] = RGBTOUINT32(7, 168, 225);
+    dhgr_pal_in[4] = RGBTOUINT32(99,  77,   0);
+    dhgr_pal_in[5] = RGBTOUINT32(126, 126, 126);
+    dhgr_pal_in[6] = RGBTOUINT32(67, 200,   0);
+    dhgr_pal_in[7] = RGBTOUINT32(93, 248, 133);
+    dhgr_pal_in[8] = RGBTOUINT32(148,  12, 125);
+    dhgr_pal_in[9] = RGBTOUINT32(188,  55, 255);
+    dhgr_pal_in[10] = RGBTOUINT32(126, 126, 126);
+    dhgr_pal_in[11] = RGBTOUINT32(158, 172, 255);
+    dhgr_pal_in[12] = RGBTOUINT32(249,  86,  29);
+    dhgr_pal_in[13] = RGBTOUINT32(255, 129, 236);
+    dhgr_pal_in[14] = RGBTOUINT32(221, 206,  23);
+    dhgr_pal_in[15] = RGBTOUINT32(248, 250, 244);
+
+    /* DHGR => Modern */
+    dhgr_pal_out[0] = RGBTOUINT32(0x00, 0x00, 0x00);    // $0 black
+    dhgr_pal_out[1] = RGBTOUINT32(0xdd, 0x00, 0x33);    // $1 red (magenta)
+    dhgr_pal_out[2] = RGBTOUINT32(0x88, 0x55, 0x00);    // $8 brown
+    dhgr_pal_out[3] = RGBTOUINT32(0xff, 0x66, 0x00);    // $9 orange
+    dhgr_pal_out[4] = RGBTOUINT32(0x00, 0x77, 0x22);    // $4 dark green
+    dhgr_pal_out[5] = RGBTOUINT32(0x55, 0x55, 0x55);    // $5 grey1 (dark)
+    dhgr_pal_out[6] = RGBTOUINT32(0x11, 0xdd, 0x00);    // $C green (a/k/a light green)
+    dhgr_pal_out[7] = RGBTOUINT32(0xff, 0xff, 0x00);    // $D yellow
+    dhgr_pal_out[8] = RGBTOUINT32(0x99, 0x00, 0x00);    // $2 dark blue
+    dhgr_pal_out[9] = RGBTOUINT32(0xdd, 0x22, 0xdd);    // $3 purple (violet)
+    dhgr_pal_out[10] = RGBTOUINT32(0xaa, 0xaa, 0xaa);   // $A grey2 (light)
+    dhgr_pal_out[11] = RGBTOUINT32(0xff, 0x99, 0x88);   // $B pink
+    dhgr_pal_out[12] = RGBTOUINT32(0x22, 0x22, 0xff);   // $6 medium blue
+    dhgr_pal_out[13] = RGBTOUINT32(0x66, 0xaa, 0xff);   // $7 light blue
+    dhgr_pal_out[14] = RGBTOUINT32(0x44, 0xff, 0x99);   // $E aqua
+    dhgr_pal_out[15] = RGBTOUINT32(0xff, 0xff, 0xff);   // $F white
+}
+
 static void dhgr_color_dither (SDL_Surface *src)
 {
-  static Uint32 pal1[16];
   Uint32 *p;
   enum DitherType alg = EDIFF;
   int y,x,d,i,bd,bi,dr,dg,db;
   Uint8 pr,pg,pb,r,g,b;
 
-  static int pal_init = 0;
-  if (!pal_init) {
-    pal1[0] = SDL_MapRGB(src->format, 1, 4, 8);
-    pal1[1] = SDL_MapRGB(src->format, 32, 54, 212);
-    pal1[2] = SDL_MapRGB(src->format, 51, 111,   0);
-    pal1[3] = SDL_MapRGB(src->format, 7, 168, 225);
-    pal1[4] = SDL_MapRGB(src->format, 99,  77,   0);
-    pal1[5] = SDL_MapRGB(src->format, 126, 126, 126);
-    pal1[6] = SDL_MapRGB(src->format, 67, 200,   0);
-    pal1[7] = SDL_MapRGB(src->format, 93, 248, 133);
-    pal1[8] = SDL_MapRGB(src->format, 148,  12, 125);
-    pal1[9] = SDL_MapRGB(src->format, 188,  55, 255);
-    pal1[10] = SDL_MapRGB(src->format, 126, 126, 126);
-    pal1[11] = SDL_MapRGB(src->format, 158, 172, 255);
-    pal1[12] = SDL_MapRGB(src->format, 249,  86,  29);
-    pal1[13] = SDL_MapRGB(src->format, 255, 129, 236);
-    pal1[14] = SDL_MapRGB(src->format, 221, 206,  23);
-    pal1[15] = SDL_MapRGB(src->format, 248, 250, 244);
+  init_dhgr_pal();
 
-    pal_init = 1;
-  }
   for (y = 0; y < src->h; y += 1) {
     for (x = 0; x < src->w; x += 1) {
       bd = bi = 0x7fffffff;
       p = sdl_get_pixel32_ref(src, x, y);
 
       for (i = 0; i < 16; ++i) {
-        d = sdl_pixel_dist(src, *p, pal1[i]);
+        d = sdl_pixel_dist(src, *p, dhgr_pal_in[i]);
         if (d < bd) {
           bd = d;
           bi = i;
@@ -407,7 +430,7 @@ static void dhgr_color_dither (SDL_Surface *src)
       /* pixel val */
       SDL_GetRGB(*p, src->format, &r, &g, &b);
       /* palette val */
-      SDL_GetRGB(pal1[bi], src->format, &pr, &pg, &pb);
+      SDL_GetRGB(dhgr_pal_in[bi], src->format, &pr, &pg, &pb);
       /* distance */
       dr = (int)r - (int)pr;
       dg = (int)g - (int)pg;
@@ -628,6 +651,7 @@ char *hgr_to_png(char *hgr_buf, size_t hgr_len, char monochrome, size_t *len)
     0xffffff
   };
 
+
   init_base_addrs();
 
   LOG("HGR: Converting %zu bytes\n", hgr_len);
@@ -683,45 +707,104 @@ char *hgr_to_png(char *hgr_buf, size_t hgr_len, char monochrome, size_t *len)
 
   row = (png_bytep) malloc(3 * width);
 
-  if (!monochrome && !is_dhgr) {
-    for (y=0; y < height; y++){
-      char *ord_hgr = hgr_buf + baseaddr[y];
-      x = 0;
-      do {
-        v1 = *(ord_hgr++);
-        v2 = *(ord_hgr++);
+  if (!monochrome) {
+    if (!is_dhgr) {
+      for (y=0; y < height; y++){
+        char *ord_hgr = hgr_buf + baseaddr[y];
+        x = 0;
+        do {
+          v1 = *(ord_hgr++);
+          v2 = *(ord_hgr++);
 
-        fl1 = (v1 & 0x80) ? 4: 0;
-        fl2 = (v2 & 0x80) ? 4: 0;
+          fl1 = (v1 & 0x80) ? 4: 0;
+          fl2 = (v2 & 0x80) ? 4: 0;
 
-        v = (v1 & 0x7f) + ((v2 & 0x7f) << 7);
+          v = (v1 & 0x7f) + ((v2 & 0x7f) << 7);
 
-        for (ox = 0; ox < 7; ox++) {
-          c = v & 3;
-          v = v >> 2;
+          for (ox = 0; ox < 7; ox++) {
+            c = v & 3;
+            v = v >> 2;
 
-          if (ox < 3) {
-            oc2 = c + fl1;
-            oc1 = oc2;
-          } else if (ox > 3) {
-            oc2 = c + fl2;
-            oc1 = oc2;
-          } else if (ox == 3) {
-            oc1 = c + fl1;
-            oc2 = c + fl2;
+            if (ox < 3) {
+              oc2 = c + fl1;
+              oc1 = oc2;
+            } else if (ox > 3) {
+              oc2 = c + fl2;
+              oc1 = oc2;
+            } else if (ox == 3) {
+              oc1 = c + fl1;
+              oc2 = c + fl2;
+            }
+
+            oc1 = (solid | (c & 1)) ? hgr_col[oc1] : 0;
+            oc2 = (solid | (c & 2)) ? hgr_col[oc2] : 0;
+
+            setRGB(&(row[(x++)*3]), oc1);
+            setRGB(&(row[(x++)*3]), oc2);
+          }
+        } while (x < width);
+        png_write_row(png_ptr, row);
+      }
+    } else {
+      int pixel_bits[4+560+4];
+      int color_buf[560];
+      /* Color DHGR */
+      for (y=0; y < height; y++){
+        char *line_data = hgr_buf + baseaddr[y];
+        int *bitptr = pixel_bits + 4;
+        Uint8 pix4;
+
+        bzero(pixel_bits, sizeof(pixel_bits));
+
+        for (int byte = 0; byte < 560/7; byte++) {
+          Uint8 val;
+
+          if (byte % 2 == 1) {
+            val = *(line_data+0x2000);
+            line_data++;
+          } else {
+            val = *line_data;
           }
 
-          oc1 = (solid | (c & 1)) ? hgr_col[oc1] : 0;
-          oc2 = (solid | (c & 2)) ? hgr_col[oc2] : 0;
-
-          setRGB(&(row[(x++)*3]), oc1);
-          setRGB(&(row[(x++)*3]), oc2);
+          for (int bit = 0; bit < 7; bit++) {
+            *bitptr++ = val & 0x01;
+            val >>= 1;
+          }
         }
-      } while (x < width);
-      png_write_row(png_ptr, row);
+
+        bitptr = pixel_bits + 4;
+
+        for (int idx = 0; idx < 140; idx++) {
+          Uint8 pixval = *bitptr++;
+
+          pixval = (pixval << 1) | (*bitptr++);
+          pixval = (pixval << 1) | (*bitptr++);
+          pixval = (pixval << 1) | (*bitptr++);
+
+          color_buf[idx*4] =
+            color_buf[idx*4 +1] =
+            color_buf[idx*4 +2] =
+            color_buf[idx*4 +3] = pixval;
+        }
+
+        x = 0;
+        init_dhgr_pal();
+        for (int pix = 0; pix < 280; pix++) {
+          int bufpos = pix * 2;
+          int pixel1, pixel2;
+
+          pixel1 = dhgr_pal_out[color_buf[bufpos]];
+          pixel2 = dhgr_pal_out[color_buf[bufpos+1]];
+          setRGB(&(row[(x++)*3]), pixel1);
+          setRGB(&(row[(x++)*3]), pixel2);
+        }
+        
+        png_write_row(png_ptr, row);
+        png_write_row(png_ptr, row);
+      }
     }
   } else {
-    for (y=0; y < height; y++){
+    for (y=0; y < 192; y++){
       char *ord_hgr = hgr_buf + baseaddr[y];
       char sx;
       int pass = 0;
