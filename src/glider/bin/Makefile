@@ -94,11 +94,12 @@ glider_SOURCES := \
 	$(SRC_DIR)/code/load_data.s \
 	$(SRC_DIR)/code/dashboard.s \
 	$(SRC_DIR)/code/scores.s \
-	$(SRC_DIR)/code/hgr_mono40.s \
 	$(SRC_DIR)/code/strings-$(GAME_LANG).s \
 	$(SRC_DIR)/../lib/fastirq.s \
 	$(SRC_DIR)/../lib/asm/hgr_tables.s \
 	$(SRC_DIR)/../lib/asm/hgr.s \
+	$(SRC_DIR)/../lib/asm/hgr_mono40.s \
+	$(SRC_DIR)/../lib/asm/hgr_setup_mono40.s \
 	$(SRC_DIR)/../lib/asm/auxhgr_file.s \
 	$(SRC_DIR)/../lib/asm/bcd.s \
 	$(SRC_DIR)/../lib/extrazp.s \

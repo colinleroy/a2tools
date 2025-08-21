@@ -228,6 +228,7 @@ shflpuck_SOURCES := \
 	../lib/asm/hgr.s \
 	../lib/asm/auxhgr_file.s \
 	../lib/asm/hgr_mono40.s \
+	../lib/asm/hgr_setup_mono40.s \
 	../lib/extrazp.s \
 	../lib/cntoabuf.s \
 	../lib/platform_sleep.s \
@@ -246,6 +247,7 @@ shflpuck_CLCFLAGS = -t $(CC65_TARGET) -I ../lib -Cl \
 	-vm -m shflpuck.map \
 	--asm-include-dir $(shell pwd) \
 	--asm-define MAX_COMPRESSED_DATA_SIZE=$(MAX_COMPRESSED_DATA_SIZE) \
+	--asm-define DISABLE_DHGR \
 	$(UNKILLABLE_CFLAG) \
 	$(DEBUG_OPPONENT_CFLAG)
 

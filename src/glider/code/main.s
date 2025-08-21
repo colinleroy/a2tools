@@ -142,6 +142,7 @@ x_coord_reset_handler:
 .code
 
 .proc _main
+        lda     #1
         jsr     _load_hgr_mono_file
         jsr     _load_lowcode
         jmp     _real_main

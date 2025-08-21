@@ -21,12 +21,10 @@
         .export   _load_barsnd, _backup_barsnd, _restore_barsnd
         .export   _load_hall_of_fame, _load_scores, _save_scores
         .export   _init_text_before_decompress, _cache_working
-        .export   _load_hgr_mono_file
         .export   _print_error, _print_load_error
 
-        .import   hgr_mono_file, _hgr_auxfile
         .import   _open, _read, _write, _close, _memmove, _unlink
-        .import   pushax, popax, _text_mono40, _memset
+        .import   pushax, popax, _text_mono40
         .import   __filetype, __auxtype
 
         .import   _strout
@@ -41,7 +39,7 @@
 
         .importzp tmp1, ptr1
 
-        .destructor unlink_cached_files, 20
+        .destructor unlink_shfl_files, 20
 
         .include  "apple2.inc"
         .include  "fcntl.inc"
@@ -84,32 +82,6 @@
         jsr     read_compressed
         bcs     :+
         inc     lowcode_ok
-:       rts
-.endproc
-
-.proc _load_hgr_mono_file
-        lda     hgr_mono_file
-        beq     :+
-        rts
-
-:       jsr     push_hgr_start        ; Push once for file_io_at size
-        jsr     push_hgr_start        ; Once for file_io_at buffer
-        jsr     push_hgr_start        ; Once for memset dest
-        lda     #$F0                  ; FG white, BG black
-        ldx     #$00
-        jsr     pushax
-        lda     #<$2000
-        ldx     #>$2000
-        jsr     _memset
-
-        lda     #<_hgr_auxfile
-        ldx     #>_hgr_auxfile
-        jsr     set_noncompressed
-        ldy     #(O_WRONLY|O_CREAT)
-        jsr     file_io_at
-        bcs     :+
-        lda     #1
-        sta     hgr_mono_file
 :       rts
 .endproc
 
@@ -540,16 +512,13 @@ no_cache:
         jmp     _load_barsnd
 .endproc
 
-.proc unlink_cached_files
+.proc unlink_shfl_files
         jsr     set_table_backup_file
         jsr     _unlink
         jsr     set_bar_backup_file
         jsr     _unlink
         lda     #<bar_code_backup_name
         ldx     #>bar_code_backup_name
-        jsr     _unlink
-        lda     #<_hgr_auxfile
-        ldx     #>_hgr_auxfile
         jsr     _unlink
         lda     #<barsnd_backup_name
         ldx     #>barsnd_backup_name

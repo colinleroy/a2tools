@@ -39,6 +39,7 @@ no_mouse_str:     .byte "NO MOUSE DETECTED. PRESS A KEY TO EXIT."  ,$00
 
 .proc _init_caches
         ; Load LOWCODE (and splash screen)
+        lda     #1
         jsr     _load_hgr_mono_file
 
         jsr     _load_lowcode

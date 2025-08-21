@@ -15,17 +15,14 @@
 
         .export   _load_level_data, _load_splash_screen
         .export   _load_lowcode, _high_scores_io
-        .export   _load_hgr_mono_file, hgr_mono_file
 
         .import   _open, _read, _write, _close, _memcpy
         .import   pushax, popax
-        .import   __filetype, __auxtype, _hgr_auxfile
+        .import   __filetype, __auxtype
 
         .import   __LOWCODE_START__, __LOWCODE_SIZE__
         .import   __HGR_START__, __LEVEL_SIZE__
-        .import   _decompress_lz4, _memset, _unlink
-
-        .destructor unlink_cached_files, 20
+        .import   _decompress_lz4
 
         .importzp tmp1
 
@@ -251,58 +248,12 @@ uncompress:
         jmp      _data_io
 .endproc
 
-.proc _load_hgr_mono_file
-        lda     hgr_mono_file
-        beq     :+
-        rts
-
-:       lda     #<$2000
-        ldx     #>$2000
-        jsr     pushax        ; Once for memset
-        lda     #$F0
-        ldx     #$00
-        jsr     pushax
-        lda     #<$2000
-        ldx     #>$2000
-        jsr     _memset
-
-        lda       #<_hgr_auxfile
-        sta       filename
-        lda       #>_hgr_auxfile
-        sta       filename+1
-
-        lda      #<$2000
-        sta      destination
-        lda      #>$2000
-        sta      destination+1
-
-        lda      #<$2000
-        sta      size
-        lda      #>$2000
-        sta      size+1
-
-        lda      #<(O_WRONLY|O_CREAT)
-        ldx      #$00
-        jsr      _data_io
-        bcs     :+
-        lda     #1
-        sta     hgr_mono_file
-:       rts
-.endproc
-
-.proc unlink_cached_files
-        lda       #<_hgr_auxfile
-        ldx       #>_hgr_auxfile
-        jmp       _unlink
-.endproc
-
         .bss
 
 filename:      .res 2
 destination:   .res 2
 size:          .res 2
 do_uncompress: .res 1
-hgr_mono_file: .res 1
 
         .data
 
