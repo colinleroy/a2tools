@@ -41,7 +41,7 @@ ammonoid_CLCFLAGS = -t $(TARGET) -I ../lib \
 	-Wl -D,__STACKSIZE__=0x0400 -C ../../config/apple2enh-rtonce.cfg \
 	-vm -m ammonoid.map $(GENERAL_CFLAGS) -O -Cl --start-addr 0x1003
 
-all dist: \
+all: \
 	ammonoid.po
 
 clean:
@@ -68,3 +68,8 @@ upload: all
 	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/ammonoid/ && \
 	cp *.bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/ammonoid/ && \
 	cp *.po /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/disks/
+
+dist: ammonoid.po
+	mkdir -p ../../dist/
+	cp $< ../../dist/
+
