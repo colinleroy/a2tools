@@ -176,7 +176,7 @@ read_metadata_again:
     goto read_metadata_again;
 
   } else if (r == SURL_ANSWER_STREAM_ART) {
-    simple_serial_putc('D');
+    simple_serial_putc(can_dhgr ? 'D':'H');
     surl_read_image_to_screen(HGR_LEN*2);
     simple_serial_putc(SURL_CLIENT_READY);
     goto read_metadata_again;
@@ -407,6 +407,9 @@ void radio_browser_ui(void) {
   }
 
 search_again:
+  init_graphics(monochrome, 0);
+  hgr_mixon();
+
   clrscr();
   print_footer();
   gotoxy(0, 0);

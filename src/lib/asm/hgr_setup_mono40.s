@@ -35,7 +35,7 @@ TEXT16_ON       := $C0B9
 
 ; FG/BG installer for Video-7 cards
 ; https://mirrors.apple2.org.za/ftp.apple.asimov.net/documentation/hardware/video/Video-7%20RGB-SL7.pdf
-; page 41. We use "F/B HIRES mix with 7"
+; page 36 & 41. We use "F/B HIRES mix with 7"
 ; AN3 0, TEXT 0, HIRES 1 ($C057), 80COL 0
 
 ; https://prodos8.com/docs/techref/writing-a-prodos-system-program/

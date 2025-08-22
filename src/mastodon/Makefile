@@ -200,7 +200,7 @@ clean:
 upload: all
 	test -d /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/mastodon/ || \
 	mkdir -p /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/mastodon/ && \
-	cp masto*.bin /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/mastodon/
+	cp masto*.bin IMGLOW /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/mastodon/
 	cp mastodon.po /run/user/1000/gvfs/smb-share\:server\=diskstation.lan\,share\=a2repo/apple2/disks/
 
 

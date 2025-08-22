@@ -25,6 +25,8 @@ imgview_CC65SOURCES := \
 	../lib/asm/malloc0.s \
 	../lib/asm/hgr.s \
 	../lib/asm/auxhgr_file.s \
+	../lib/asm/reserve_auxhgr.s \
+	../lib/asm/unlink_auxhgr.s \
 	../lib/asm/file_select.s \
 	../lib/asm/iw_print.s \
 	../lib/dputc.s \

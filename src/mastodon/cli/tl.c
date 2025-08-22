@@ -771,7 +771,6 @@ static void save_state(void) {
 
   /* Reserve 8kB for AUX HGR page before saving state */
   reserve_auxhgr_file();
-
   fp = fopen(STATE_FILE,"w");
   if (IS_NULL(fp)) {
     return;

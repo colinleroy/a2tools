@@ -48,6 +48,7 @@
 char *url = NULL;
 
 unsigned char scrw = 255, scrh = 255;
+unsigned char monochrome = 1;
 
 char search_str[80] = "";
 
@@ -220,12 +221,13 @@ static void load_video(char *host, InstanceTypeId instance_type, char *id) {
     /* Reload to overwrite DHGR data */
     init_text();
     backup_restore_hgrpage("r");
-    init_graphics(0, 0);
+    init_graphics(monochrome, 0);
     load_hgr_mono_file(2);
     surl_stream_av(captions_url, video_url);
     set_scrollwindow(20, scrh);
 
     init_text();
+    init_graphics(monochrome, 0);
     backup_restore_hgrpage("r");
     hgr_mixon();
     clrscr();
@@ -244,7 +246,7 @@ static void search_results(InstanceTypeId instance_type) {
   static char *video_host;
   int len;
   char c;
-  char is_dhgr = 0, monochrome = 1;
+  char is_dhgr = 0;
 
   load_save_search_json("w");
 reload_search:
@@ -334,6 +336,8 @@ read_kbd:
       backup_restore_hgrpage("r");
       goto reload_search;
     case CH_ESC:
+      init_graphics(monochrome, 0);
+      hgr_mixon();
       return;
     case CH_CURS_LEFT:
       if (cur_line > N_VIDEO_DETAILS-1) {
@@ -507,7 +511,7 @@ int main(void) {
   surl_user_agent = "WozTubes "VERSION"/Apple II";
 
 #ifdef __APPLE2__
-  init_graphics(0, 0);
+  init_graphics(monochrome, 0);
   hgr_mixon();
   set_scrollwindow(20, scrh);
   clrscr();

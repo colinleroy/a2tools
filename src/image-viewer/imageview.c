@@ -220,10 +220,6 @@ static void print_help(void) {
         "Esc: exit - Any other key: toggle help.");
 }
 
-void unlink_page2(void) {
-  unlink(hgr_auxfile);
-}
-
 int main(int argc, char *argv[]) {
   int fd, ramfd;
   static char imgname[FILENAME_MAX];
@@ -236,6 +232,8 @@ int main(int argc, char *argv[]) {
   uint8 monochrome = 0;
 
   register_start_device();
+
+  reserve_auxhgr_file();
 
   try_videomode(VIDEOMODE_80COL);
   screensize(&scrw, &scrh);
@@ -288,11 +286,10 @@ next_image:
 
   len = 0;
 
-  if (has_128k) {
+  if (has_128k && can_dhgr) {
     is_dhgr = (lseek(fd, 0, SEEK_END) == 2*HGR_LEN);
     lseek(fd, 0, SEEK_SET);
     if (is_dhgr && (ramfd = open(hgr_auxfile, O_WRONLY|O_CREAT)) > 0) {
-      atexit(&unlink_page2);
       while (len < HGR_LEN) {
         read(fd, rambuf, BLOCK_SIZE);
         write(ramfd, rambuf, BLOCK_SIZE);

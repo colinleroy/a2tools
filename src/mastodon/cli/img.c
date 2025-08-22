@@ -122,7 +122,8 @@ static void img_display(media *m, char idx, char num_images) {
     gotoxy(0, 22);
     cputs("Loading image...");
 
-    simple_serial_putc(has_128k ? SURL_CMD_DHGR : SURL_CMD_HGR);
+    reserve_auxhgr_file();  /* Sets can_dhgr */
+    simple_serial_putc(has_128k && can_dhgr ? SURL_CMD_DHGR : SURL_CMD_HGR);
     simple_serial_putc(monochrome);
     simple_serial_putc(HGR_SCALE_FULL);
 

@@ -16,6 +16,7 @@ extern const char hgr_auxfile[];
 
 extern char hgr_mix_is_on;
 extern char hgr_init_done;
+extern char can_dhgr;
 
 #ifdef __CC65__
 #define HGR_PAGE  0x2000

@@ -133,8 +133,8 @@ _init_graphics:
 ; X = DHGR, A = MONOCHOME
 init_graphics:
 .ifndef DISABLE_DHGR
-        cpx      #1
-        bne      init_hgr
+        cpx      #0
+        beq      init_hgr
 
 init_dhgr:
         cmp       #$00
@@ -183,6 +183,8 @@ init_hgr:
 
 @hgr_monochrome:
         jsr       eve_hgr_bw
+        ; Video7 BW is done via lib/asm/*mono40*
+        ; It requires 40cols mode :-(
         jsr       iigs_bw
         jmp       @hgr_do_init
 

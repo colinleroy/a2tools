@@ -82,7 +82,7 @@ static void display_image(HGRScale scale) {
   size_t len;
   uint8 is_dhgr = 0;
 
-  simple_serial_putc(has_128k ? SURL_CMD_DHGR:SURL_CMD_HGR);
+  simple_serial_putc(has_128k && can_dhgr ? SURL_CMD_DHGR:SURL_CMD_HGR);
   simple_serial_putc(monochrome);
   simple_serial_putc(scale);
   if (simple_serial_getc() == SURL_ERROR_OK) {
@@ -434,9 +434,9 @@ read_metadata_again:
       simple_serial_putc(SURL_CMD_SKIP);
     } else {
 #ifdef __APPLE2__
-      simple_serial_putc('D');
-      surl_read_image_to_screen(HGR_LEN*2);
-      init_graphics(monochrome, 1);
+      simple_serial_putc(can_dhgr ? 'D':'H');
+      surl_read_image_to_screen(can_dhgr ? HGR_LEN*2 : HGR_LEN);
+      init_graphics(monochrome, can_dhgr);
       hgr_mixon();
 #endif
       simple_serial_putc(SURL_CLIENT_READY);
