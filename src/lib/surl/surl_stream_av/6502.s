@@ -139,7 +139,7 @@
 
 .macro PREPARE_VIDEO_E4
         tya                     ; 2      Get video byte in A
-        cpy     #PAGE_TOGGLE    ; 5      Check for page toggle
+        cpy     #PAGE_TOGGLE    ; 4      Check for page toggle
 .endmacro
 
         .bss

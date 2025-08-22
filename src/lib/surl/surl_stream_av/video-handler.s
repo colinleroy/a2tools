@@ -40,7 +40,7 @@ video_sub:
         .else
         WASTE_4                         ; 18
         .endif
-        adc     #$30                    ; 20    $54/$55 + $30 => sets V flag
+        adc     #$30                    ; 20    $54/$55 + $30 => sets V flag - we may get a base byte next
         JUMP_NEXT_6                     ; 26    Done, go to next duty cycle
 
 @toggle_page:                           ;       Page toggling
