@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <ctype.h>
 #include <errno.h>
+#include <sys/statvfs.h>
 
 #include "clrzone.h"
 #include "path_helper.h"
@@ -132,6 +133,7 @@ static void load_devices(unsigned char pane) {
       continue;
 #endif
     }
+
     DEBUG("got device %d %s\n", n, entry->d_name);
     entry->d_type = 0x0F;
     entry->d_mtime.date.year = 0;
@@ -390,9 +392,14 @@ static void open_directory(unsigned char target_pane) {
     if (exec("IMGVIEW", copy_buf) != 0) {
       info_message("Can not open image.", 1);
     }
-  } else if (entry->d_type == PRODOS_T_BIN || entry->d_type == PRODOS_T_SYS) {
-    if (entry->d_auxtype != 0 && confirm("Execute binary file? (y/N)", 0)) {
+  } else if (entry->d_type == PRODOS_T_BIN && entry->d_auxtype != 0) {
+execbin:
+    if (confirm("Execute binary file? (y/N)", 0)) {
       exec(new_path, NULL);
+    }
+  } else if (entry->d_type == PRODOS_T_SYS) {
+    if (confirm("Execute binary file? (y/N)", 0)) {
+      goto execbin;
     }
   }
 
@@ -525,23 +532,34 @@ static void file_info(void) {
   }
 
   set_logwindow();
-  cprintf("%s: %luB, ",
-         entry->d_name, entry->d_size);
-  if (access & 0x01) {
-    cputs("RD, ");
+  if (entry->d_mtime.date.year) {
+    /* this is a file or dir */
+    cprintf("%s: %luB, ",
+    entry->d_name, entry->d_size);
+    if (access & 0x01) {
+      cputs("RD, ");
+    }
+    if (access & 0x02) {
+      cputs("WR, ");
+    }
+    if (access & 0x40) {
+      cputs("REN, ");
+    }
+    if (access & 0x40) {
+      cputs("DSTR, ");
+    }
+    cprintf("type $%02X/$%04X (%s), ",
+    type, entry->d_auxtype, type_str);
+    print_date(entry);
+  } else {
+    struct statvfs sv;
+    statvfs(entry->d_name, &sv);
+
+    cprintf("%s: %lukB, %lukB free",
+            entry->d_name,
+            (sv.f_bsize*sv.f_blocks) >> 10,
+            (sv.f_bsize*sv.f_bfree) >> 10);
   }
-  if (access & 0x02) {
-    cputs("WR, ");
-  }
-  if (access & 0x40) {
-    cputs("REN, ");
-  }
-  if (access & 0x40) {
-    cputs("DSTR, ");
-  }
-  cprintf("type $%02X/$%04X (%s), ",
-         type, entry->d_auxtype, type_str);
-  print_date(entry);
   cputs("\r\nPress a key to continue.");
   cgetc();
   clrscr();
@@ -864,8 +882,13 @@ void help(void) {
   set_hscrollwindow(0, total_width);
   clrscr();
 
-  cputs("Left/Right: switch active pane\r\n"
-        "Up/Down: scroll in active pane\r\n"
+  cputs("Left/Right: switch active pane\r\n");
+  if (is_iie) {
+    cputs("Up/Down");
+  } else {
+    cputs("U/J");
+  }
+  cputs(          ": scroll in active pane\r\n"
         "Enter: open in active pane\r\n"
         "Esc: close directory in active pane\r\n"
         "Space: select in active pane\r\n"
@@ -909,6 +932,7 @@ static void handle_input(void) {
       return;
     /* Scrollup in current pane */
     case CH_CURS_UP:
+    case 'u':
       if (pane_file_cursor[active_pane] > 0) {
         pane_file_cursor[active_pane]--;
       } else {
@@ -919,6 +943,7 @@ static void handle_input(void) {
       return;
     /* Scrolldown in current pane */
     case CH_CURS_DOWN:
+    case 'j':
       if (pane_file_cursor[active_pane] < pane_num_files[active_pane] - 1) {
         pane_file_cursor[active_pane]++;
       } else {
@@ -975,7 +1000,11 @@ static void handle_input(void) {
 
 void init_filetypes(void) {
   #define SET_FILETYPE(ID, SHORT_STR, STR) { short_filetype[(ID)] = SHORT_STR; filetype[(ID)] = STR; }
-  SET_FILETYPE(0x00, "UNK", "Unknown");
+  uint8 i;
+  do {
+    SET_FILETYPE(i, "UNK", "Unknown");
+  } while (++i);
+
   SET_FILETYPE(0x01, "BAD", "Bad blocks");
   SET_FILETYPE(0x02, "PCD", "Pascal code");
   SET_FILETYPE(0x03, "PTX", "Pascal text");
