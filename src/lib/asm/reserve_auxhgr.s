@@ -1,5 +1,5 @@
         .export     _reserve_auxhgr_file, _write_hgr_to_aux
-        .import     _open, _write, _close, _unlink
+        .import     _open, _write, _close
         .import     _has_128k, auxhgr_created, _hgr_auxfile
         .import     pushax, popax, __filetype
         

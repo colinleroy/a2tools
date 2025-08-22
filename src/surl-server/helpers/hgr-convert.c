@@ -752,7 +752,6 @@ char *hgr_to_png(char *hgr_buf, size_t hgr_len, char monochrome, size_t *len)
       for (y=0; y < height; y++){
         char *line_data = hgr_buf + baseaddr[y];
         int *bitptr = pixel_bits + 4;
-        Uint8 pix4;
 
         bzero(pixel_bits, sizeof(pixel_bits));
 

@@ -37,6 +37,10 @@ HR3_OFF         := $C0B6
 HR3_ON          := $C0B7
 TEXT16_OFF      := $C0B8
 TEXT16_ON       := $C0B9
+AN3_OFF         := $C05E
+AN3_ON          := $C05F
+CLR80VID        := $C00C
+SET80VID        := $C00D
 
 _hgr_init_done: .byte 0
 _hgr_mix_is_on: .byte 0
@@ -47,7 +51,8 @@ has_eve:        .byte 0
 eve_hgr_bw:
         lda       has_eve
         beq       :+
-        sta       DHIRESOFF   ; For EVE
+        sta       AN3_ON
+eve_finish_bw:
         sta       HR1_OFF
         sta       HR2_ON
         sta       HR3_ON
@@ -56,11 +61,46 @@ eve_hgr_bw:
 eve_hgr_color:
         lda       has_eve
         beq       :+
-        sta       DHIRESOFF   ; For EVE
+        sta       AN3_ON
+eve_finish_color:
         sta       HR1_OFF
         sta       HR2_OFF
         sta       HR3_OFF
 :       rts
+
+.ifndef DISABLE_DHGR
+eve_dhgr_bw:
+        lda       has_eve
+        beq       :+
+        sta       AN3_OFF
+        jmp       eve_finish_bw
+:       rts
+
+eve_dhgr_color:
+        lda       has_eve
+        beq       :+
+        sta       AN3_OFF
+        jmp       eve_finish_color
+:       rts
+
+video7_dhgr_bw:
+        sta       CLR80VID    ; Video7 setup 560x192 1bit
+        sta       AN3_OFF
+        sta       AN3_ON
+        sta       AN3_OFF
+        sta       AN3_ON
+        sta       SET80VID
+        rts
+
+video7_dhgr_color:
+        sta       SET80VID  ; Video7 setup 140x192 4bit
+        sta       AN3_OFF
+        sta       AN3_ON
+        sta       AN3_OFF
+        sta       AN3_ON
+        rts
+
+.endif
 
 ; http://www.applelogic.org/files/GSHARDWAREREF.pdf page 82 and 90
 iigs_color:
@@ -69,8 +109,8 @@ iigs_color:
         lda       $C021       ; Monochrome register bit 7 off
         and       #$7F
         sta       $C021
-        lda       $C029       ; NewVideo bit 5 on
-        ora       #%00100000
+        lda       $C029       ; NewVideo bit 5 off = color
+        and       #%11011111
         sta       $C029
 :       rts
 
@@ -80,8 +120,8 @@ iigs_bw:
         lda       $C021       ; Monochrome register bit 7 on
         ora       #$80
         sta       $C021
-        lda       $C029       ; NewVideo bit 5 off
-        and       #%11011111
+        lda       $C029       ; NewVideo bit 5 on
+        ora       #%00100000
         sta       $C029
 :       rts
 
@@ -101,37 +141,24 @@ init_dhgr:
         beq       @dhgr_color
 
 @dhgr_monochrome:
-        lda       $C050       ; Video7 setup 560x192 1bit
-        lda       $C057
-        lda       $C052
-        sta       $C00C
-        sta       $C05E
-        sta       $C05F
-        sta       $C00C
-        sta       $C05E
-        sta       $C05F
-        sta       $C05E
-        sta       $C00D
-
-        jsr       iigs_color
+        lda       TXTCLR
+        lda       HIRES
+        lda       MIXCLR
+        jsr       eve_dhgr_bw
+        jsr       video7_dhgr_bw
+        jsr       iigs_bw
         jmp       @dhgr_done
 
 @dhgr_color:
-        lda       $C050       ; Video7 setup 140x192 4bit
-        lda       $C057
-        lda       $C052
-        sta       $C00D
-        sta       $C05E
-        sta       $C05F
-        sta       $C00D
-        sta       $C05E
-        sta       $C05F
-        sta       $C05E
-        sta       $C00D
-
-        jsr       iigs_bw
+        lda       TXTCLR
+        lda       HIRES
+        lda       MIXCLR
+        jsr       eve_dhgr_color
+        jsr       video7_dhgr_color
+        jsr       iigs_color
 
 @dhgr_done:
+        sta       DHIRESON
         lda       #$20
         sta       $E6         ; HGRPAGE
 
@@ -187,12 +214,6 @@ _init_text:
         bit       LOWSCR
         bit       TXTSET
         bit       LORES
-        bit       DHIRESON    ; Get Video-7 out of weird mode, possibly.
-        bit       DHIRESOFF
-        bit       DHIRESON
-        bit       DHIRESOFF
-        bit       DHIRESON
-        bit       DHIRESOFF
         lda       #0
         sta       _hgr_init_done
         rts
