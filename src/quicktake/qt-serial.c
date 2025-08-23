@@ -121,16 +121,16 @@ uint8 qt_set_flash(uint8 mode) {
     return -1;
 }
 
-uint8 qt_get_picture(uint8 n_pic, FILE *picture, off_t avail) {
+uint8 qt_get_picture(uint8 n_pic, int fd, off_t avail) {
   if (serial_model != QT_MODEL_200)
-    return qt1x0_get_picture(n_pic, picture, avail);
+    return qt1x0_get_picture(n_pic, fd, avail);
   else
-    return qt200_get_picture(n_pic, picture, avail);
+    return qt200_get_picture(n_pic, fd, avail);
 }
 
-uint8 qt_get_thumbnail(uint8 n_pic, FILE *picture, thumb_info *info) {
+uint8 qt_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
   if (serial_model != QT_MODEL_200)
-    return qt1x0_get_thumbnail(n_pic, picture, info);
+    return qt1x0_get_thumbnail(n_pic, fd, info);
   else
     return -1;
 }

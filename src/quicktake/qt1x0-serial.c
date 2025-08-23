@@ -360,7 +360,7 @@ uint8 qt1x0_set_camera_time(uint8 day, uint8 month, uint8 year, uint8 hour, uint
   return send_command(str, sizeof str, 0, 5);
 }
 
-static uint8 receive_data(uint32 size, FILE *fp) {
+static uint8 receive_data(uint32 size, int fd) {
   uint8 y = wherey();
   uint16 i;
   uint8 err = 0;
@@ -378,7 +378,7 @@ static uint8 receive_data(uint32 size, FILE *fp) {
      * batch multiple blocks writes, this isn't faster, on
      * the contrary. */
     simple_serial_read((char *)buffer, BLOCK_SIZE);
-    if (fwrite(buffer, 1, BLOCK_SIZE, fp) < BLOCK_SIZE) {
+    if (write(fd, buffer, BLOCK_SIZE) < BLOCK_SIZE) {
       err = -1;
     }
     DUMP_DATA(buffer, BLOCK_SIZE);
@@ -389,7 +389,7 @@ static uint8 receive_data(uint32 size, FILE *fp) {
   }
 
   simple_serial_read((char *)buffer, rem);
-  if (fwrite(buffer, 1, rem, fp) < rem) {
+  if (write(fd, buffer, rem) < rem) {
     err = -1;
   }
 
@@ -404,7 +404,7 @@ static uint8 receive_data(uint32 size, FILE *fp) {
 #define char_to_n_uint16(buf) (((uint8)((buf)[1]))<<8 | ((uint8)((buf)[0])))
 
 /* Get a picture from the camera to a file */
-uint8 qt1x0_get_picture(uint8 n_pic, FILE *picture, off_t avail) {
+uint8 qt1x0_get_picture(uint8 n_pic, int fd, off_t avail) {
   #define HDR_SKIP       0x04
 
   #define WH_OFFSET      0x220
@@ -478,8 +478,8 @@ uint8 qt1x0_get_picture(uint8 n_pic, FILE *picture, off_t avail) {
   memcpy(buffer+WH_OFFSET+2, (char*)&width, 2);
 
   /* Write the header to file and seek to data offset. */
-  fwrite(buffer, 1, BUFFER_SIZE, picture);
-  fseek(picture, DATA_OFFSET, SEEK_SET);
+  write(fd, buffer, BUFFER_SIZE);
+  lseek(fd, DATA_OFFSET, SEEK_SET);
 
   printf("  Width %u, height %u, %lu bytes (%s)\n",
          ntohs(width), ntohs(height), pic_size_int, format);
@@ -490,14 +490,14 @@ uint8 qt1x0_get_picture(uint8 n_pic, FILE *picture, off_t avail) {
 
   send_photo_data_command(n_pic, pic_size_str);
 
-  return receive_data(pic_size_int, picture);
+  return receive_data(pic_size_int, fd);
 }
 
 #pragma code-name(pop)
 #pragma code-name(push, "LOWCODE")
 
 /* Get a thumnail from the camera to /RAM/THUMBNAIL */
-uint8 qt1x0_get_thumbnail(uint8 n_pic, FILE *picture, thumb_info *info) {
+uint8 qt1x0_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
   uint8 status_line;
 
   /* Seems useless but needed for IIc+ */
@@ -540,7 +540,7 @@ uint8 qt1x0_get_thumbnail(uint8 n_pic, FILE *picture, thumb_info *info) {
   gotoy(status_line+2);
   send_photo_thumbnail_command(n_pic);
 
-  return receive_data(THUMBNAIL_SIZE, picture);
+  return receive_data(THUMBNAIL_SIZE, fd);
 }
 
 /* Delete all pictures from the camera */

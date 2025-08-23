@@ -321,7 +321,7 @@ uint8 qt200_get_information(camera_info *info) {
 
 #pragma code-name(push, "LOWCODE")
 
-uint8 qt200_get_picture(uint8 n_pic, FILE *picture, off_t avail) {
+uint8 qt200_get_picture(uint8 n_pic, int fd, off_t avail) {
   #define TYPE_IDX 1
   #define NUM_PIC_IDX 4
   char data_cmd[] = {0x00,0x02,0x02,0x00,0x00,0x00};
@@ -388,7 +388,7 @@ uint8 qt200_get_picture(uint8 n_pic, FILE *picture, off_t avail) {
 #endif
     return -1;
   }
-  if (fwrite(buffer, 1, response_len, picture) < response_len) {
+  if (write(fd, buffer,response_len) < response_len) {
     err = -1;
   }
   while (response_continues) {
@@ -400,7 +400,7 @@ uint8 qt200_get_picture(uint8 n_pic, FILE *picture, off_t avail) {
       err = -1;
       break;
     }
-    if (fwrite(buffer, 1, response_len, picture) < response_len) {
+    if (write(fd, buffer, response_len) < response_len) {
       err = -1;
     }
   }

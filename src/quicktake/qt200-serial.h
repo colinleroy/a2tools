@@ -13,6 +13,6 @@ uint8 qt200_set_speed(uint16 speed);
 uint8 qt200_get_information(camera_info *info);
 
 /* Camera pictures functions */
-uint8 qt200_get_picture(uint8 n_pic, FILE *picture, off_t avail);
+uint8 qt200_get_picture(uint8 n_pic, int fd, off_t avail);
 
 #endif

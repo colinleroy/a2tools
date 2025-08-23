@@ -86,11 +86,11 @@ void qt_convert_image_with_crop(const char *filename, uint16 sx, uint16 sy, uint
   }
 
   if (imgname[0]) {
-    FILE *fp = fopen(imgname, "rb");
-    if (fp) {
-      fread(magic, 1, 4, fp);
+    int fd = open(imgname, O_RDONLY);
+    if (fd > 0) {
+      read(fd, magic, 4);
       magic[4] = '\0';
-      fclose(fp);
+      close(fd);
     }
 
     reopen_start_device();
@@ -1174,9 +1174,9 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
 
   close(ifd);
 #ifndef __CC65__
-  ifp = fopen("HGR","wb");
-  fwrite((char *)HGR_PAGE, 1, HGR_LEN, ifp);
-  fclose(ifp);
+  ifd = open("HGR", O_WRONLY|O_BINARY);
+  write(ifd, (char *)HGR_PAGE, HGR_LEN);
+  close(ifd);
 #endif
 }
 

@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <sys/statvfs.h>
 
@@ -87,7 +88,7 @@ static void save_picture(uint8 n_pic) {
   char filename[64];
   struct statvfs sv;
   char *dirname;
-  FILE *fp;
+  int fd;
 
   filename[0] = '\0';
 #ifdef __CC65__
@@ -121,10 +122,10 @@ static void save_picture(uint8 n_pic) {
   if (filename[0] == '\0' || filename[strlen(filename) - 1] == '/')
     return;
 
-  fp = fopen(filename, "r");
-  if (fp) {
+  fd = open(filename, O_RDONLY);
+  if (fd > 0) {
     char c;
-    fclose(fp);
+    close(fd);
     cputs("File exists. Overwrite? (y/N)\r\n");
     c = tolower(cgetc());
     if (c != 'y') {
@@ -142,18 +143,18 @@ static void save_picture(uint8 n_pic) {
   sv.f_bsize=512;
 #endif
 
-  fp = fopen(filename, "w");
-  if (!fp) {
+  fd = open(filename, O_WRONLY|O_CREAT);
+  if (fd <= 0) {
     goto err_io;
   }
 
-  if (qt_get_picture(n_pic, fp, sv.f_bfree * sv.f_bsize) == 0) {
+  if (qt_get_picture(n_pic, fd, sv.f_bfree * sv.f_bsize) == 0) {
     uint16 tmp = n_pic;
-    fclose(fp);
+    close(fd);
     state_set(STATE_GET, tmp, NULL);
     qt_convert_image(filename);
   } else {
-    fclose(fp);
+    close(fd);
     unlink(filename);
 err_io:
     cputs("Error saving picture.\r\n");
@@ -264,7 +265,7 @@ static void show_thumbnails(uint8 num_pics) {
   thumb_info info;
   char c = 0;
   char thumb_buf[32];
-  FILE *fp;
+  int fd;
 
   if (num_pics == 0) {
     return;
@@ -284,16 +285,16 @@ static void show_thumbnails(uint8 num_pics) {
       i = 1;
     }
 
-    fp = fopen(THUMBNAIL_NAME, "w");
-    if (!fp) {
+    fd = open(THUMBNAIL_NAME, O_WRONLY|O_CREAT);
+    if (fd <= 0) {
       goto err_thumb_io;
     }
 
     clrscr();
     gotoxy(0,20);
 
-    c = qt_get_thumbnail(i, fp, &info);
-    fclose(fp);
+    c = qt_get_thumbnail(i, fd, &info);
+    close(fd);
 
     if (c != 0) {
 err_thumb_io:
@@ -335,21 +336,21 @@ static void print_welcome(void) {
 }
 
 static void show_about(void) {
-  FILE *fp;
+  int fd;
   size_t r;
 
   reopen_start_device();
-  fp = fopen("about", "r");
-  if (!fp) {
+  fd = open("about", O_RDONLY);
+  if (fd <= 0) {
     return;
   }
   set_scrollwindow(0, scrh);
   clrscr();
-  while((r = fread((char *)buffer, 1, sizeof(buffer) - 1, fp))) {
+  while((r = read(fd, (char *)buffer, sizeof(buffer) - 1))) {
     buffer[r] = '\0';
     printf("%s", buffer);
   }
-  fclose(fp);
+  close(fd);
   cgetc();
 }
 

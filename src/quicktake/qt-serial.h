@@ -52,9 +52,9 @@ extern uint8 serial_model;
 /* Camera interface functions, protocol-agnostic */
 uint8 qt_serial_connect(uint16 speed);
 uint8 qt_get_information(camera_info *info);
-uint8 qt_get_picture(uint8 n_pic, FILE *picture, off_t avail);
+uint8 qt_get_picture(uint8 n_pic, int fd, off_t avail);
 
-uint8 qt_get_thumbnail(uint8 n_pic, FILE *picture, thumb_info *info);
+uint8 qt_get_thumbnail(uint8 n_pic, int fd, thumb_info *info);
 uint8 qt_delete_pictures(void);
 uint8 qt_take_picture(void);
 
