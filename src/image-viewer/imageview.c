@@ -90,8 +90,8 @@ unsigned char print_setup_msg(void) {
     return -1;
 
   clrscr(); gotoxy(0, 20);
-  cprintf("Printing ");
-  progress_bar(wherex(), wherey(), scrw, 0, HGR_HEIGHT);
+  cprintf("Printing\n");
+  progress_bar(0, wherey(), scrw, 0, HGR_HEIGHT);
 
   return 0;
 }
