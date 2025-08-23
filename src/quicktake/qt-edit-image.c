@@ -606,12 +606,12 @@ open_again:
       goto open_again;
     goto start_edit;
   }
-  printf("Saving...\n");
+  printf("Saving...");
 
   /* Save main RAM to fill 8kB */
   if (write_hgr_page_to_file() != 0) {
 write_error:
-    printf("Error. Press a key to continue...\n");
+    printf("\nError. Press a key to continue...\n");
     close(ofd);
     cgetc();
     goto start_edit;
@@ -623,6 +623,7 @@ write_error:
     }
     /* Save AUX RAM at start */
     lseek(ofd, 0x0, SEEK_SET);
+    printf("(This is normal...)");
     copy_aux_hgr_to_main();
     ((char *)HGR_PAGE)[0x78] = 2; // Black and white, 560x192
     if (write_hgr_page_to_file() != 0) {
@@ -634,7 +635,9 @@ write_error:
   }
   close(ofd);
 
+  gotox(0);
   printf("Done. Go back to Edition, View, or main Menu? (E/v/m)");
+
   c = tolower(cgetc());
   if (c == 'v') {
     state_set(STATE_EDIT, src_width, (char *)buffer);
