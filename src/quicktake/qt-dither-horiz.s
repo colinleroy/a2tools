@@ -31,6 +31,7 @@
 
 thumb_buf_ptr         = _zp2p
 img_x                 = _zp4
+; img_y               = _zp5, defined in -common.s
 pixel_val             = _zp6
 pixel_mask            = _zp7
 opt_val               = _zp8
@@ -335,18 +336,16 @@ _do_dither_horiz:
         sta     pixel_val
 
 dither_setup_start:
-        lda     #CENTER_OFFSET
         ldy     #<dither_setup_line_start_landscape
         ldx     #>dither_setup_line_start_landscape
 
-        ora     _is_thumb
+        lda     _is_thumb
         beq     center_done
         lda     #CENTER_OFFSET_THUMB
         ldy     #<dither_reset_img_x
         ldx     #>dither_reset_img_x
 
 center_done:
-        sta     x_center_offset
         sty     next_line_setup+1
         stx     next_line_setup+2
 
@@ -761,5 +760,4 @@ update_pixel_branching:
 pgbar_update:    .res 1
 hgr_start_byte:  .res 1
 hgr_start_mask:  .res 1
-x_center_offset: .res 1
 img_xh:          .res 1

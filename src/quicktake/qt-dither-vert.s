@@ -3,11 +3,10 @@
         .import         _update_progress_bar
         .export         _do_dither_vert
         .import         _load_normal_data
-        .import         _load_thumb_data
 
         .import         _file_height, _file_width
-        .import         _centered_div7_table, _div7_table
-        .import         _centered_mod7_table, _mod7_table
+        .import         _div7_table
+        .import         _mod7_table
         .import         _hgr_baseaddr_l, _hgr_baseaddr_h
         .import         _resize
         .import         _crop_pos
@@ -17,7 +16,7 @@
         .import         _err_buf
         .import         _opt_histogram
         .import         _cur_hgr_row
-        .import         _is_thumb, _load_thumbnail_data
+        .import         _is_thumb
         .import         _angle
         .import         _brighten, _dither_alg
         .import         _kbhit, _cgetc
@@ -25,13 +24,14 @@
 
         .import         pushax, pusha0, _fread, _ifp, subysp
 
-        .importzp       img_y, ptr1, tmp1, tmp2, c_sp, sreg, ptr2
+        .importzp       img_y, ptr1, tmp1, tmp2, c_sp, sreg, ptr2, ptr4
         .importzp       _zp2p, _zp4, _zp5, _zp6, _zp7, _zp8, _zp9, _zp10, _zp11, _zp12ip
 
         .include "apple2.inc"
 
 thumb_buf_ptr         = _zp2p
 img_x                 = _zp4
+; img_y               = _zp5, defined in -common.s
 pixel_val             = _zp6
 pixel_mask            = _zp7
 opt_val               = _zp8
@@ -39,6 +39,7 @@ err2                  = _zp9
 hgr_byte              = _zp10
 cur_hgr_line          = _zp11
 hgr_line              = _zp12ip
+sierra_err_ptr        = ptr4
 
 DITHER_NONE       = 2
 DITHER_BAYER      = 1
@@ -50,10 +51,6 @@ CENTER_OFFSET       = 0
 CENTER_OFFSET_THUMB = 60-12
 
 sierra_safe_err_buf = _err_buf+1
-
-.assert <_centered_div7_table = $00, error ; We count on the table being aligned with idx 12 on a page border
-.assert <_centered_mod7_table = $00, error ; We count on the table being aligned with idx 12 on a page border
-
 
 ; defaults:
 FIRST_PIXEL_HANDLER = dither_sierra
@@ -191,12 +188,6 @@ prepare_dither_sierra:
 prepare_dither_none:          ; Nothing to do here.
 .endmacro
 
-.macro HGR_RESET_PIXEL_MASK
-hgr_reset_mask = *+1
-        lda     #$01                  ; Set init value     ($40 or $01)
-        sta     pixel_mask
-.endmacro
-
 .macro HGR_STORE_PIXEL
         lda     pixel_val
         sta     (hgr_line),y
@@ -259,15 +250,7 @@ store_bayer_y:
 .endmacro
 
 .macro LOAD_DATA
-        lda     _is_thumb
-        beq     load_normal
-        lda     img_y
-        jsr     _load_thumbnail_data
-        jmp     :+
-
-load_normal:
         jsr     _load_normal_data
-:
         ldx     _cur_buf_page+1
         stx     buf_ptr_load+2
         lda     _cur_buf_page
@@ -314,6 +297,10 @@ inc_buf_ptr_high:
 .endmacro
 
 _do_dither_vert:
+        bit     $C083         ; WR-enable LC
+        bit     $C083
+
+        ; jsr     clear_dhgr
         lda     #16
         sta     pgbar_update
 
@@ -333,21 +320,6 @@ _do_dither_vert:
         sta     pixel_val
 
 dither_setup_start:
-        lda     #CENTER_OFFSET
-        ldy     #<dither_setup_line_start_landscape
-        ldx     #>dither_setup_line_start_landscape
-
-        ora     _is_thumb
-        beq     center_done
-        lda     #CENTER_OFFSET_THUMB
-        ldy     #<dither_reset_img_x
-        ldx     #>dither_reset_img_x
-
-center_done:
-        sta     x_center_offset
-        sty     next_line_setup+1
-        stx     next_line_setup+2
-
         jsr     patch_dither_branches
 
         lda     _angle+1
@@ -382,7 +354,6 @@ dither_reset_img_x:                 ; Needed for thumbnails
         ldy     _file_width
         sty     img_x
 
-dither_setup_line_start_landscape:
         ldy     cur_hgr_line
         HGR_SET_LINE_POINTER
 
@@ -412,14 +383,7 @@ next_pixel:
         ; Advance to next HGR pixel after incrementing image X.
         ; The first three bytes are patched according to the rotation of the image.
 img_x_to_hgr:
-        asl     pixel_mask            ; Update pixel mask  (lsr or asl, or bit if inverted coords)
-        bpl     advance_image_byte    ; Check if byte done (bne or bpl)
-        HGR_RESET_PIXEL_MASK
-        ldy     hgr_byte
-        HGR_STORE_PIXEL
-hgr_byte_shift:
-        iny
-        sty     hgr_byte              ; Update hgr byte idx(dec or inc)
+        jmp     get_rotated_hgr_line_from_img_x
 
 advance_image_byte:
         ADVANCE_IMAGE_FAST pixel_handler
@@ -443,12 +407,9 @@ next_line:
         ; Advance to the next HGR line after incrementing image Y.
         ; The first three bytes are patched according to the rotation of the image
 img_y_to_hgr:
-        ldy     cur_hgr_line
-        iny
-        HGR_SET_LINE_POINTER
+        jmp     get_rotated_hgr_byte_from_img_y
+        brk                   ; We should have jumped back to dither_setup_line_start_portrait
 
-next_line_setup:
-        jmp     dither_setup_line_start_landscape
 all_done:
         rts
 
@@ -596,9 +557,6 @@ resize_90_coords:
         sta     img_y_to_hgr+2
 
 end_90_setup:
-        lda     #$01
-        sta     hgr_reset_mask
-
         ldx     #$FF
         stx     x_inverter
         inx
@@ -697,9 +655,6 @@ resize_270_coords:
         sta     img_y_to_hgr+2
 
 end_270_setup:
-        lda     #$40
-        sta     hgr_reset_mask
-
         ldx     #$00
         stx     x_inverter
         dex
@@ -880,8 +835,6 @@ update_pixel_branching:
 
         rts
 
-        .data
-
 crop_shift_90:   .byte 0,        32,       64
 crop_low_90:     .byte 63,       32,       0
 crop_high_90:    .byte (192+63), (192+32), 192
@@ -890,12 +843,9 @@ crop_shift_270:  .byte 0,        32,       63
 crop_low_270:    .byte 0,        32,       63
 crop_high_270:  .byte 192,      (192+32), (192+63)
 
-        .bss
-
 pgbar_update:    .res 1
 hgr_start_byte:  .res 1
 hgr_start_mask:  .res 1
-x_center_offset: .res 1
 
 rotated_y_hgr_column: .res 1
 rotated_x_hgr_line:   .res 1
