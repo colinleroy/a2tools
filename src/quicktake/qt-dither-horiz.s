@@ -1,10 +1,10 @@
         .export         _setup_angle_0
         .export         _setup_angle_180
+        .export         _copy_aux_hgr_to_main
         .import         _update_progress_bar
         .export         _do_dither_horiz
         .import         _load_normal_data
         .import         _load_thumb_data
-
         .import         _file_height, _file_width
         .import         _centered_div7_table
         .import         _centered_mod7_table
@@ -575,6 +575,27 @@ clear_dhgr:
         sta     $C005         ; WRCARDRAM
         jsr     clear_hgr_page
         sta     $C004         ; WRMAINRAM
+        sta     SET80COL
+        rts
+
+_copy_aux_hgr_to_main:
+        sta     CLR80COL
+        sta     $C003         ; RDCARDRAM
+
+        ldx     #$20
+        stx     ptr1+1
+        lda     #$00
+        sta     ptr1
+        tay
+:       lda     (ptr1),y      ; Read from AUX
+        sta     (ptr1),y      ; Write to MAIN
+        iny
+        bne     :-
+        inc     ptr1+1
+        dex
+        bne     :-
+
+        sta     $C002         ; RDMAINRAM
         sta     SET80COL
         rts
 

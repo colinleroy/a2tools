@@ -20,6 +20,8 @@ extern uint8 scrw, scrh;
 
 static uint8 qt1x0_send_ping(void);
 
+#pragma code-name(push, "LOWCODE")
+
 /* Get the ack from the camera */
 static uint8 get_ack(uint8 wait) {
   while (wait--) {
@@ -62,8 +64,6 @@ read:
 
   return buffer[3] == 0xC8 ? QT_MODEL_150 : QT_MODEL_100;
 }
-
-#pragma code-name(push, "LOWCODE")
 
 /* Send our greeting to the camera, and inform it of the speed
  * we aim for
@@ -248,8 +248,6 @@ static uint8 send_photo_thumbnail_command(uint8 pnum) {
   return send_command(str, sizeof str, 1, 5);
 }
 
-#pragma code-name(push, "LC")
-
 /* Gets photo header */
 static uint8 send_photo_header_command(uint8 pnum) {
   //           {????,????,????,FMT?,????,????,PNUM,RESPONSE__SIZE,????}
@@ -276,6 +274,8 @@ static uint8 send_photo_header_command(uint8 pnum) {
 
   return send_command(str, sizeof str, 1, 5);
 }
+
+#pragma code-name(push, "LC")
 
 /* Gets photo data */
 static uint8 send_photo_data_command(uint8 pnum, uint8 *picture_size) {

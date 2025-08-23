@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 #include "dget_text.h"
 #include "extended_conio.h"
@@ -44,7 +45,7 @@ extern uint8 scrw, scrh;
 #define DITHER_THRESHOLD 128U /* Must be 128 for sierra dithering sign check */
 #define DEFAULT_BRIGHTEN 0
 
-FILE *ifp, *ofp;
+int ifd, ofd;
 
 int16 angle = 0;
 uint8 auto_level = 1;
@@ -57,6 +58,7 @@ uint16 crop_start_y = 0, crop_end_y;
 int8 brighten = DEFAULT_BRIGHTEN;
 uint8 x_offset;
 uint8 crop_pos = 1;
+uint8 is_horiz = 0;
 
 static char imgname[FILENAME_MAX];
 #ifdef __CC65__
@@ -135,17 +137,17 @@ static void histogram_equalize(void) {
   uint16 curr_hist = 0;
 
   if (auto_level) {
-    ifp = fopen(HIST_NAME, "r");
-    if (ifp == NULL) {
+    ifd = open(HIST_NAME, O_RDONLY);
+    if (ifd <= 0) {
       goto fallback_std;
     }
 #ifndef __CC65__
-    fread(histogram, sizeof(uint16), 256, ifp);
+    read(ifd, histogram, 256*2);
 #else
-    fread(err_buf, sizeof(uint8), 256, ifp);
-    fread(err_buf+256, sizeof(uint8), 256, ifp);
+    read(ifd, err_buf, 256);
+    read(ifd, err_buf+256, 256);
 #endif
-    fclose(ifp);
+    close(ifd);
 
     cputs("Histogram equalization...\r\n");
 #ifndef __CC65__
@@ -228,8 +230,8 @@ fallback_std:
 uint8 *cur_thumb_data;
 #endif
 
-static void thumb_histogram(FILE *ifp) {
-  uint8 x = 0, read;
+static void thumb_histogram(int ifd) {
+  uint8 x = 0, r_bytes;
   uint16 curr_hist = 0;
 
 #ifndef __CC65__
@@ -238,7 +240,7 @@ static void thumb_histogram(FILE *ifp) {
   bzero(err_buf, sizeof(err_buf));
 #endif
 
-  while ((read = fread(buffer, 1, 255, ifp)) != 0) {
+  while ((r_bytes = read(ifd, buffer, 255)) != 0) {
     cur_thumb_data = buffer;
 #ifndef __CC65__
     do {
@@ -247,7 +249,7 @@ static void thumb_histogram(FILE *ifp) {
       histogram[((v&0xF0))]++;
       cur_thumb_data++;
       x++;
-    } while (x != read);
+    } while (x != r_bytes);
 #else
     __asm__("ldy #0");
     next_byte:
@@ -275,7 +277,7 @@ static void thumb_histogram(FILE *ifp) {
 
     __asm__("ldy %v", x);
     __asm__("iny");
-    __asm__("cpy %v", read);
+    __asm__("cpy %v", r_bytes);
     __asm__("bne %g", next_byte);
 #endif
   }
@@ -387,6 +389,12 @@ static void invert_selection(void) {
   #undef a
   #undef b
 #endif
+}
+
+void copy_aux_hgr_to_main(void);
+
+static unsigned char write_hgr_page_to_file(void) {
+  return (write(ofd, (char *)HGR_PAGE, HGR_LEN) < HGR_LEN);
 }
 
 static uint8 reedit_image(const char *ofname, uint16 src_width) {
@@ -570,7 +578,11 @@ save:
   strcpy((char *)buffer, ofname);
   if ((cp = strrchr ((char *)buffer, '.')))
     *cp = 0;
-  strcat ((char *)buffer, ".hgr");
+  if (is_horiz) {
+    strcat ((char *)buffer, ".dhgr");
+  } else {
+    strcat ((char *)buffer, ".hgr");
+  }
   hgr_mixon();
   cputs("Save to: ");
   dget_text_single((char *)buffer, 63, NULL);
@@ -583,10 +595,12 @@ open_again:
   _filetype = PRODOS_T_FOT;
   _auxtype = HGR_PAGE;
   // https://prodos8.com/docs/technote/ftn/08/
-  ((char *)HGR_PAGE)[0x78] = 0; // Black and white, 280x192
+  if (!is_horiz) {
+    ((char *)HGR_PAGE)[0x78] = 0; // Black and white, 280x192
+  }
 #endif
-  ofp = fopen((char *)buffer, "w");
-  if (ofp == NULL) {
+  ofd = open((char *)buffer, O_RDWR|O_CREAT);
+  if (ofd <= 0) {
     printf("Please insert image floppy for %s, or Escape to return\n", (char *)buffer);
     if (cgetc() != CH_ESC)
       goto open_again;
@@ -594,13 +608,31 @@ open_again:
   }
   printf("Saving...\n");
 
-  if (fwrite((char *)HGR_PAGE, 1, HGR_LEN, ofp) < HGR_LEN) {
+  /* Save main RAM to fill 8kB */
+  if (write_hgr_page_to_file() != 0) {
+write_error:
     printf("Error. Press a key to continue...\n");
-    fclose(ofp);
+    close(ofd);
     cgetc();
     goto start_edit;
   }
-  fclose(ofp);
+  if (is_horiz) {
+    /* Re-save MAIN RAM at 8-16kB */
+    if (write_hgr_page_to_file() != 0) {
+      goto write_error;
+    }
+    /* Save AUX RAM at start */
+    lseek(ofd, 0x0, SEEK_SET);
+    copy_aux_hgr_to_main();
+    ((char *)HGR_PAGE)[0x78] = 2; // Black and white, 560x192
+    if (write_hgr_page_to_file() != 0) {
+      goto write_error;
+    }
+
+    /* And put MAIN back into memory */
+    read(ofd, (char *)HGR_PAGE, HGR_LEN);
+  }
+  close(ofd);
 
   printf("Done. Go back to Edition, View, or main Menu? (E/v/m)");
   c = tolower(cgetc());
@@ -660,7 +692,7 @@ void load_normal_data(void) {
       if (y % 8) {
         cur_buf_page += FILE_WIDTH;
       } else {
-        fread(buffer, 1, BUFFER_SIZE, ifp);
+        read(ifd, buffer, BUFFER_SIZE);
         cur_buf_page = buffer;
       }
 }
@@ -674,7 +706,7 @@ void load_thumbnail_data(uint8 line) {
   /* assume thumbnail at 4bpp and zoom it */
   if (is_qt100) {
     if (!(line & 1)) {
-      fread(buffer, 1, THUMB_WIDTH / 2, ifp);
+      read(ifd, buffer,THUMB_WIDTH / 2);
       /* Unpack */
 #ifndef __CC65__
       uint8 off;
@@ -733,7 +765,7 @@ void load_thumbnail_data(uint8 line) {
     /* Whyyyyyy do they do that */
     if (!(line % 4)) {
       /* Expand the next two lines from 4bpp thumb_buf to 8bpp buffer */
-      fread(thumb_buf, 1, THUMB_WIDTH, ifp);
+      read(ifd, thumb_buf,THUMB_WIDTH);
       orig_in = cur_in = thumb_buf;
       orig_out = cur_out = buffer;
       for (dx = 0; dx < THUMB_WIDTH; dx++) {
@@ -1102,8 +1134,8 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
   clrscr();
   printf("Converting %s (Esc to stop)...\n", ofname);
 
-  ifp = fopen(ifname, "r");
-  if (ifp == NULL) {
+  ifd = open(ifname, O_RDONLY);
+  if (ifd <= 0) {
     printf("Can't open %s\n", ifname);
     return;
   }
@@ -1111,10 +1143,10 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
   bzero(err_buf, sizeof err_buf);
 
   if (is_thumb) {
-    thumb_histogram(ifp);
+    thumb_histogram(ifd);
     /* Re-zero */
     bzero(err_buf, sizeof err_buf);
-    rewind(ifp);
+    lseek(ifd, 0, SEEK_SET);
     dither_alg = DITHER_BAYER;
   }
 
@@ -1124,10 +1156,12 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
   progress_bar(wherex(), wherey(), scrw, 0, file_height);
 
   if (angle == 0 || angle == 180) {
+    is_horiz = 1;
     init_graphics(1, 1);
     hgr_mixon();
     do_dither_horiz();
   } else {
+    is_horiz = 0;
     bzero((char *)HGR_PAGE, HGR_LEN);
     init_graphics(1, 0);
     do_dither_vert();
@@ -1138,7 +1172,7 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
     hgr_mixoff();
   }
 
-  fclose(ifp);
+  close(ifd);
 #ifndef __CC65__
   ifp = fopen("HGR","wb");
   fwrite((char *)HGR_PAGE, 1, HGR_LEN, ifp);

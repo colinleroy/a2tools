@@ -21,7 +21,7 @@
 
         .export         img_y
 
-        .import         pushax, pusha0, _fread, _ifp, subysp
+        .import         pushax, pusha0, _read, _ifd, subysp
 
         .importzp       ptr1, tmp1, tmp2, c_sp, sreg, ptr2
         .importzp       _zp2p, _zp4, _zp5, _zp6, _zp7, _zp8, _zp9, _zp10, _zp11, _zp12ip
@@ -38,17 +38,15 @@ _load_normal_data:
         rts
 
 read_buffer:
+        lda     _ifd
+        ldx     #0
+        jsr     pushax
         lda     #<_buffer
         ldx     #>_buffer
         jsr     pushax
-        lda     #1
-        jsr     pusha0
         lda     #<2048      ; BUFFER_SIZE FIXME
         ldx     #>2048
-        jsr     pushax
-        lda     _ifp
-        ldx     _ifp+1
-        jsr     _fread
+        jsr     _read
         lda     #>_buffer
         sta     _cur_buf_page+1
         rts
