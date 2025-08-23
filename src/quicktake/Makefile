@@ -29,7 +29,9 @@ slowtake_SOURCES := \
 
 slowtake_CC65SOURCES := \
 	../lib/hgr_addrs.s \
-	qt-dither.s \
+	qt-dither-horiz.s \
+	qt-dither-vert.s \
+	qt-dither-common.s \
 	../lib/serial/asm/driver.s \
 	../lib/serial/asm/acia.s \
 	../lib/serial/asm/z8530.s \
@@ -44,6 +46,9 @@ slowtake_CC65SOURCES := \
 	../lib/asm/path_helper.s \
 	../lib/asm/malloc0.s \
 	../lib/asm/hgr.s \
+	../lib/asm/reserve_auxhgr.s \
+	../lib/asm/auxhgr_file.s \
+	../lib/asm/unlink_auxhgr.s \
 	../lib/asm/file_select.s \
 	../lib/dputc.s \
 	../lib/scroll.s \
@@ -71,6 +76,9 @@ qtktconv_SOURCES := \
 
 qtktconv_CC65SOURCES := \
 	qtkt.s \
+	../lib/asm/reserve_auxhgr.s \
+	../lib/asm/auxhgr_file.s \
+	../lib/asm/unlink_auxhgr.s \
 	../lib/asm/path_helper.s \
 	../lib/extrazp.s \
 	../lib/a2_features.s \
@@ -86,6 +94,9 @@ qtknconv_SOURCES := \
 
 qtknconv_CC65SOURCES := \
 	qtk_bithuff.s \
+	../lib/asm/reserve_auxhgr.s \
+	../lib/asm/auxhgr_file.s \
+	../lib/asm/unlink_auxhgr.s \
 	../lib/extrazp.s \
 	../lib/asm/path_helper.s \
 	../lib/mult16x16x32.s \
@@ -105,6 +116,9 @@ jpegconv_SOURCES := \
 jpegconv_CC65SOURCES := \
 	jpeg_arrays.s \
 	jpeg_platform.s \
+	../lib/asm/reserve_auxhgr.s \
+	../lib/asm/auxhgr_file.s \
+	../lib/asm/unlink_auxhgr.s \
 	../lib/mult16x16x16.s \
 	../lib/square_table.s \
 	../lib/asm/path_helper.s \
@@ -138,7 +152,7 @@ qtknconv_CLCFLAGS = -D_CACHE_SIZE=3072 --asm-define CACHE_SIZE=3072 \
 	-DRAW_X_OFFSET=0 -DRAW_Y_OFFSET=0 -DRAW_WIDTH=width \
 	$(CLCFLAGS) -C ../../config/apple2enh-alignbssdata.cfg $(TARGET)-iobuf-0800.o --start-addr 0x1000
 
-jpegconv_CLCFLAGS = -D_CACHE_SIZE=8192 --asm-define CACHE_SIZE=8192 \
+jpegconv_CLCFLAGS = -D_CACHE_SIZE=6144 --asm-define CACHE_SIZE=6144 \
 	-DRAW_X_OFFSET=0 -DRAW_Y_OFFSET=0 -DRAW_WIDTH=width \
 	$(CLCFLAGS) -C ../../config/apple2enh-alignbssdata.cfg $(TARGET)-iobuf-0800.o --start-addr 0x1000
 

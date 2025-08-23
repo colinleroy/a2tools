@@ -453,6 +453,7 @@ int main (int argc, const char **argv)
   register_start_device();
 
 #ifdef __CC65__
+  reserve_auxhgr_file();
   try_videomode(VIDEOMODE_80COL);
   printf("Free memory: %zu/%zuB\n", _heapmaxavail(), _heapmemavail());
 #endif

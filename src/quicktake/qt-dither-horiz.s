@@ -1,41 +1,36 @@
         .export         _setup_angle_0
-        .export         _setup_angle_90
         .export         _setup_angle_180
-        .export         _setup_angle_270
-        .export         _update_progress_bar
-        .export         _do_dither
-        .export         _load_normal_data
+        .import         _update_progress_bar
+        .export         _do_dither_horiz
+        .import         _load_normal_data
         .import         _load_thumb_data
 
-        .import         _progress_bar, _scrw
         .import         _file_height, _file_width
-        .import         _centered_div7_table, _div7_table
-        .import         _centered_mod7_table, _mod7_table
+        .import         _centered_div7_table
+        .import         _centered_mod7_table
         .import         _hgr_baseaddr_l, _hgr_baseaddr_h
-        .import         _first_byte_idx, _resize
-        .import         _x_offset, _crop_pos
 
         .import         _bayer_map, _bayer_map_x, _bayer_map_y
         .import         _end_bayer_map_x, _end_bayer_map_y
         .import         _err_buf
         .import         _opt_histogram
-        .import         _cur_hgr_row
         .import         _is_thumb, _load_thumbnail_data
-        .import         _prev_scaled_dx, _prev_scaled_dy, _angle
+        .import         _angle
         .import         _brighten, _dither_alg
         .import         _kbhit, _cgetc
         .import         _read_buf, _cur_buf_page, _buffer
 
         .import         pushax, pusha0, _fread, _ifp, subysp
 
-        .importzp       ptr1, tmp1, tmp2, c_sp, sreg, ptr2
+        .importzp       img_y, ptr1, tmp1, tmp2, c_sp, sreg, ptr2, ptr4
         .importzp       _zp2p, _zp4, _zp5, _zp6, _zp7, _zp8, _zp9, _zp10, _zp11, _zp12ip
 
         .include "apple2.inc"
 
+        .segment "LC"
+
 thumb_buf_ptr         = _zp2p
 img_x                 = _zp4
-img_y                 = _zp5
 pixel_val             = _zp6
 pixel_mask            = _zp7
 opt_val               = _zp8
@@ -43,6 +38,7 @@ err2                  = _zp9
 hgr_byte              = _zp10
 cur_hgr_line          = _zp11
 hgr_line              = _zp12ip
+sierra_err_ptr        = ptr4
 
 DITHER_NONE       = 2
 DITHER_BAYER      = 1
@@ -53,7 +49,7 @@ DEFAULT_BRIGHTEN  = 0
 CENTER_OFFSET       = 0
 CENTER_OFFSET_THUMB = 60-12
 
-sierra_safe_err_buf = _err_buf+1
+sierra_safe_err_buf = _err_buf+2
 
 .assert <_centered_div7_table = $00, error ; We count on the table being aligned with idx 12 on a page border
 .assert <_centered_mod7_table = $00, error ; We count on the table being aligned with idx 12 on a page border
@@ -120,7 +116,8 @@ reset_bayer_x:
         ; about overflows.
         ldx     #$00
         ldy     img_x
-        lda     sierra_safe_err_buf,y
+
+        lda     (sierra_err_ptr),y
         adc     err2
         bpl     err_pos
         dex
@@ -157,13 +154,13 @@ forward_err:
 
         ; *(cur_err_x_yplus1+img_x)   = err1;
         ldy     img_x
-        sta     sierra_safe_err_buf,y
+        sta     (sierra_err_ptr),y
 
 sierra_err_forward:
-        iny                   ; Patched with iny at setup, if xdir < 0
+        dey                   ; Patched with iny at setup, if xdir < 0
         clc                   ; May be set by ror
-        adc     sierra_safe_err_buf,y
-        sta     sierra_safe_err_buf,y
+        adc     (sierra_err_ptr),y
+        sta     (sierra_err_ptr),y
 .endmacro
 
 ; Load a byte from the file. Must end with byte in A.
@@ -317,7 +314,12 @@ inc_buf_ptr_high:
         rts
 .endmacro
 
-_do_dither:
+_do_dither_horiz:
+        bit     $C083         ; WR-enable LC
+        bit     $C083
+
+        jsr     clear_dhgr
+
         lda     #16
         sta     pgbar_update
 
@@ -328,12 +330,8 @@ _do_dither:
         lda     _file_width
         sta     img_x
 
-        ; Safe init of scaling
-        lda     #100
-        sta     rotated_x_hgr_line
-        sta     rotated_y_hgr_column
-
         lda     #0
+        sta     img_xh
         sta     pixel_val
 
 dither_setup_start:
@@ -368,15 +366,14 @@ angle0:
         jmp     finish_patches
 
 angle90:
-        jsr     _setup_angle_90
-        jmp     finish_patches
+        brk
 
 angle180:
         jsr     _setup_angle_180
         jmp     finish_patches
 
 angle270:
-        jsr     _setup_angle_270
+        brk
 
 finish_patches:
 
@@ -389,14 +386,19 @@ dither_reset_img_x:                 ; Needed for thumbnails
         sty     img_x
 
 dither_setup_line_start_landscape:
+        ldy     #0
+        sty     img_xh
+
         ldy     cur_hgr_line
         HGR_SET_LINE_POINTER
 
-dither_setup_line_start_portrait:
         LINE_PREPARE_DITHER
-
-dither_setup_line_start_portrait_skip_prec:
         LOAD_DATA
+
+        lda     #<sierra_safe_err_buf
+        sta     sierra_err_ptr
+        lda     #>sierra_safe_err_buf
+        sta     sierra_err_ptr+1
 
 pixel_handler:
         LOAD_IMAGE_BYTE
@@ -412,8 +414,13 @@ dither_sierra:
         SIERRA_DITHER_PIXEL
 
 next_pixel:
-        dec     img_x
-        beq     line_done
+        inc     img_x
+        bne     img_x_to_hgr
+        ldy     img_xh
+        bne     line_done
+        iny
+        sty     img_xh
+        inc     sierra_err_ptr+1
 
         ; Advance to next HGR pixel after incrementing image X.
         ; The first three bytes are patched according to the rotation of the image.
@@ -421,14 +428,36 @@ img_x_to_hgr:
         asl     pixel_mask            ; Update pixel mask  (lsr or asl, or bit if inverted coords)
         bpl     advance_image_byte    ; Check if byte done (bne or bpl)
         HGR_RESET_PIXEL_MASK
+
+store_byte:
         ldy     hgr_byte
+        lda     img_x                 ; Check whether we should write MAIN or AUX
+        lsr
+        bcs     store_main
+
+        sta     CLR80COL
+        sta     $C005         ; WRCARDRAM
         HGR_STORE_PIXEL
+        sta     $C004         ; WRMAINRAM
+        sta     SET80COL
+hgr_byte_shift0:
+        jmp     advance_image_byte    ; Don't shift hgr_byte if wrote AUX (at 0°)
+
+store_main:
+        HGR_STORE_PIXEL
+hgr_byte_shift180:
+        jmp     hgr_byte_shift
+
 hgr_byte_shift:
         iny
         sty     hgr_byte              ; Update hgr byte idx(dec or inc)
 
 advance_image_byte:
-        ADVANCE_IMAGE_FAST pixel_handler
+        lda     img_x                 ; Only advance file pointer every two loops
+        lsr
+        bcs    :+
+        jmp    pixel_handler
+:       ADVANCE_IMAGE_SLOW pixel_handler
 
 line_done:
         PROGRESS_BAR_UPDATE line_wrapup
@@ -444,7 +473,11 @@ next_line:
         beq     all_done
 
         ldy     hgr_byte
-        HGR_STORE_PIXEL       ; Store the last pixel of the line
+        sta     CLR80COL      ; Store the last pixel of the line (assume on AUX)
+        sta     $C005         ; WRCARDRAM
+        HGR_STORE_PIXEL
+        sta     $C004         ; WRMAINRAM
+        sta     SET80COL
 
         ; Advance to the next HGR line after incrementing image Y.
         ; The first three bytes are patched according to the rotation of the image
@@ -486,72 +519,6 @@ store_opt:
 dither_after_brighten:
         jmp     $FFFF
 
-_load_normal_data:
-        lda     img_y
-        and     #7
-        beq     read_buffer
-        inc     _cur_buf_page+1
-        rts
-
-read_buffer:
-        lda     #<_buffer
-        ldx     #>_buffer
-        jsr     pushax
-        lda     #1
-        jsr     pusha0
-        lda     #<2048      ; BUFFER_SIZE FIXME
-        ldx     #>2048
-        jsr     pushax
-        lda     _ifp
-        ldx     _ifp+1
-        jsr     _fread
-        lda     #>_buffer
-        sta     _cur_buf_page+1
-        rts
-
-_update_progress_bar:
-        ldy     #10
-        jsr     subysp
-        lda     #$FF
-
-        dey                              ; -1,
-        sta     (c_sp),y
-        dey
-        sta     (c_sp),y
-
-        dey                              ; -1,
-        sta     (c_sp),y
-        dey
-        sta     (c_sp),y
-
-        dey                              ; scrw,
-        lda     #$0
-        sta     (c_sp),y
-        dey
-        lda     _scrw
-        sta     (c_sp),y
-
-        dey                              ; pgbar_state (long)
-        lda     #0
-        sta     (c_sp),y
-        dey
-        sta     (c_sp),y
-        dey
-        sta     (c_sp),y
-        dey
-        lda     #192
-        sec
-        sbc     img_y
-        sta     (c_sp),y
-
-        lda     #$00
-        sta     sreg+1                   ; height (long)
-        sta     sreg
-        lda     _file_height
-        ldx     _file_height+1
-        jmp     _progress_bar
-
-
 ; Rotation setup. Will patch 
 ; - img_x_to_hgr
 ; - img_y_to_hgr
@@ -567,6 +534,8 @@ C_LDY_ZP = $A4
 C_INY    = $C8
 C_DEY    = $88
 C_JMP    = $4C
+C_BCC    = $90
+C_BCS    = $B0
 
 .macro MULT_BY_3_DIV_BY_4
 .scope
@@ -585,25 +554,61 @@ C_JMP    = $4C
 .endscope
 .endmacro
 
+clear_hgr_page:
+        ldx     #$20
+        stx     clear_byte+2
+        lda     #$00
+        tay
+clear_byte:
+        sta     $2000,y
+        iny
+        bne     clear_byte
+        inc     clear_byte+2
+        dex
+        bne     clear_byte
+        rts
+
+clear_dhgr:
+        jsr     clear_hgr_page
+
+        sta     CLR80COL
+        sta     $C005         ; WRCARDRAM
+        jsr     clear_hgr_page
+        sta     $C004         ; WRMAINRAM
+        sta     SET80COL
+        rts
+
 _setup_angle_0:
         ; Set start constants
-        ; Center vertically (for thumbs)
+        ; ; Center vertically (for thumbs)
         lda     #192
         sec
         sbc     img_y
         clc
         lsr
         sta     cur_hgr_line
-
+        ; 
         ; Center horizontally
-        ldx     x_center_offset
-        lda     _centered_div7_table,x
+        ; ldx     x_center_offset
+        ; lda     _centered_div7_table,x
+        lda     #$01
         sta     hgr_start_byte
-        lda     _centered_mod7_table,x
+        ; lda     _centered_mod7_table,x
+        lda     #$40
         sta     hgr_start_mask
 
         lda     #$01
         sta     hgr_reset_mask
+
+        ; Patch hgr byte shifter to increase after writing to main
+        lda     #<advance_image_byte
+        sta     hgr_byte_shift0+1
+        lda     #>advance_image_byte
+        sta     hgr_byte_shift0+2
+        lda     #<hgr_byte_shift
+        sta     hgr_byte_shift180+1
+        lda     #>hgr_byte_shift
+        sta     hgr_byte_shift180+2
 
         ; Patch img_x_to_hgr
         lda     #C_ASL_ZP
@@ -625,119 +630,31 @@ _setup_angle_0:
 
         rts
 
-_setup_angle_90:
-        ; Set start constants for clockwise rotation
-        lda     #0
-        sta     cur_hgr_line
-
-        ldx     _resize
-        bne     resize_90_coords
-no_resize_90_coords:
-        ; The 256x192 will be 192x192, cropped.
-        ; first byte of the image at 236,0
-        ; last byte of first line at 236, 191
-        ; last byte of image at 32, 191
-        ; Center horizontally
-        ldx     #(280-((280-192)/2))
-        lda     _div7_table,x
-        sta     hgr_start_byte
-        lda     _mod7_table,x
-        sta     hgr_start_mask
-
-        ; Insert the inverter before the first step (dithering or brightening)
-        lda     pixel_handler_first_step+1
-        sta     invert_line_done+1
-        lda     pixel_handler_first_step+2
-        sta     invert_line_done+2
-        lda     #<invert_rotated_line
-        sta     pixel_handler_first_step+1
-        lda     #>invert_rotated_line
-        sta     pixel_handler_first_step+2
-
-        ldx     _crop_pos
-        lda     crop_shift_90,x
-        sta     x_shifter
-        lda     crop_low_90,x
-        sta     x_invert_low_bound
-        lda     crop_high_90,x
-        sta     x_invert_high_bound
-
-        lda     #((280-192)/2)
-        sta     y_shifter
-
-        ; Patch img_y_to_hgr
-        lda     #C_JMP
-        sta     img_y_to_hgr
-        lda     #<get_rotated_hgr_byte_from_img_y
-        sta     img_y_to_hgr+1
-        lda     #>get_rotated_hgr_byte_from_img_y
-        sta     img_y_to_hgr+2
-
-        jmp     end_90_setup
-resize_90_coords:
-        ; The 256x192 will be 144x192
-        ; first byte of the image at 212,0
-        ; last byte of first line at 212, 191
-        ; last byte of image at 68, 191
-        ; Center horizontally
-        ldx     #(280-((280-144)/2))
-        lda     _div7_table,x
-        sta     hgr_start_byte
-        lda     _mod7_table,x
-        sta     hgr_start_mask
-
-        ; Insert the scaler before the first step (dithering or brightening)
-        lda     pixel_handler_first_step+1
-        sta     scale_line_done+1
-        lda     pixel_handler_first_step+2
-        sta     scale_line_done+2
-        lda     #<scale_rotated_line
-        sta     pixel_handler_first_step+1
-        lda     #>scale_rotated_line
-        sta     pixel_handler_first_step+2
-
-        lda     #$00
-        sta     y_shifter
-
-        ; Patch img_y_to_hgr
-        lda     #C_JMP
-        sta     img_y_to_hgr
-        lda     #<get_scaled_rotated_hgr_byte_from_img_y
-        sta     img_y_to_hgr+1
-        lda     #>get_scaled_rotated_hgr_byte_from_img_y
-        sta     img_y_to_hgr+2
-
-end_90_setup:
-        lda     #$01
-        sta     hgr_reset_mask
-
-        ldx     #$FF
-        stx     x_inverter
-        inx
-        stx     y_inverter
-
-        ; Patch img_x_to_hgr
-        lda     #C_JMP
-        sta     img_x_to_hgr
-        lda     #<get_rotated_hgr_line_from_img_x
-        sta     img_x_to_hgr+1
-        lda     #>get_rotated_hgr_line_from_img_x
-        sta     img_x_to_hgr+2
-
-        rts
-
 _setup_angle_180:
         ; Set start constants
         lda     #191
         sta     cur_hgr_line
         ; As we don't display thumbnails upside-down,
         ; we are sure to start at column 255
-        lda     _centered_div7_table+255
+        ; lda     _centered_div7_table+255
+        lda     #38
         sta     hgr_start_byte
-        lda     _centered_mod7_table+255
+        ; lda     _centered_mod7_table+255
+        lda     #$01
         sta     hgr_start_mask
         lda     #$40
         sta     hgr_reset_mask
+
+        ; Patch hgr byte shifter to decrease after writing to aux
+        lda     #<hgr_byte_shift
+        sta     hgr_byte_shift0+1
+        lda     #>hgr_byte_shift
+        sta     hgr_byte_shift0+2
+        lda     #<advance_image_byte
+        sta     hgr_byte_shift180+1
+        lda     #>advance_image_byte
+        sta     hgr_byte_shift180+2
+
 
         ; Patch img_x_to_hgr
         lda     #C_LSR_ZP
@@ -758,211 +675,6 @@ _setup_angle_180:
         sta     img_y_to_hgr+2
 
         rts
-
-_setup_angle_270:
-        ; Set start constants for counter-clockwise rotation
-        lda     #191
-        sta     cur_hgr_line
-
-        ldx     _resize
-        bne     resize_270_coords
-no_resize_270_coords:
-        ; The 256x192 will be 192x192, cropped.
-        ; first byte of the image at 44, 191
-        ; last byte of first line at 44, 0
-        ; last byte of image at 236, 0
-        ; Center horizontally
-        ldx     #(((280-192)/2)+1)
-        lda     _div7_table,x
-        sta     hgr_start_byte
-        lda     _mod7_table,x
-        sta     hgr_start_mask
-
-        ; Insert the inverter before the first step (dithering or brightening)
-        lda     pixel_handler_first_step+1
-        sta     invert_line_done+1
-        lda     pixel_handler_first_step+2
-        sta     invert_line_done+2
-        lda     #<invert_rotated_line
-        sta     pixel_handler_first_step+1
-        lda     #>invert_rotated_line
-        sta     pixel_handler_first_step+2
-
-        ldx     _crop_pos
-        lda     crop_shift_270,x
-        sta     x_shifter
-        lda     crop_low_270,x
-        sta     x_invert_low_bound
-        lda     crop_high_270,x
-        sta     x_invert_high_bound
-
-        lda     #17
-        sta     y_shifter
-
-        ; Patch img_y_to_hgr
-        lda     #C_JMP
-        sta     img_y_to_hgr
-        lda     #<get_rotated_hgr_byte_from_img_y
-        sta     img_y_to_hgr+1
-        lda     #>get_rotated_hgr_byte_from_img_y
-        sta     img_y_to_hgr+2
-
-        jmp     end_270_setup
-resize_270_coords:
-        ; The 256x192 will be 144x192
-        ; first byte of the image at 69, 191
-        ; last byte of first line at 69, 0
-        ; last byte of image at 212, 0
-        ; Center horizontally
-        ldx     #((280-144)/2)+1
-        lda     _div7_table,x
-        sta     hgr_start_byte
-        lda     _mod7_table,x
-        sta     hgr_start_mask
-
-        ldx     #60           ; Should be 68, but *3/4 loses precision
-        stx     y_shifter
-
-        ; Insert the scaler before the first step (dithering or brightening)
-        lda     pixel_handler_first_step+1
-        sta     scale_line_done+1
-        lda     pixel_handler_first_step+2
-        sta     scale_line_done+2
-        lda     #<scale_rotated_line
-        sta     pixel_handler_first_step+1
-        lda     #>scale_rotated_line
-        sta     pixel_handler_first_step+2
-
-        ; Patch img_y_to_hgr
-        lda     #C_JMP
-        sta     img_y_to_hgr
-        lda     #<get_scaled_rotated_hgr_byte_from_img_y
-        sta     img_y_to_hgr+1
-        lda     #>get_scaled_rotated_hgr_byte_from_img_y
-        sta     img_y_to_hgr+2
-
-end_270_setup:
-        lda     #$40
-        sta     hgr_reset_mask
-
-        ldx     #$00
-        stx     x_inverter
-        dex
-        stx     y_inverter
-
-        ; Patch img_x_to_hgr
-        lda     #C_JMP
-        sta     img_x_to_hgr
-        lda     #<get_rotated_hgr_line_from_img_x
-        sta     img_x_to_hgr+1
-        lda     #>get_rotated_hgr_line_from_img_x
-        sta     img_x_to_hgr+2
-
-        rts
-
-; Check that scaled coords changed, or skip (either a pixel or a whole line)
-scale_rotated_line:
-        lda     img_x         ; Is it a new line? If not, don't compute scaled Y
-        beq     compute_scaled_y
-        eor     x_inverter
-        MULT_BY_3_DIV_BY_4
-        cmp     rotated_x_hgr_line
-        beq     skip_scaled_x
-        sta     rotated_x_hgr_line
-        jmp     scale_line_done
-
-skip_scaled_x:
-        dec     img_x
-        beq     scale_line_done
-        ADVANCE_IMAGE_FAST scale_rotated_line
-scale_line_done:
-        jmp     $FFFF         ; Patched with next step
-
-compute_scaled_y:
-        lda     img_y         ; Compute new scaled Y
-        eor     y_inverter
-        sec
-        sbc     y_shifter
-        MULT_BY_3_DIV_BY_4
-        cmp     rotated_y_hgr_column
-        beq     skip_scaled_line
-        sta     rotated_y_hgr_column
-        jmp     scale_line_done
-skip_scaled_line:
-        dec     img_y
-        bne     :+
-        jmp     all_done
-:       jmp     dither_setup_line_start_portrait_skip_prec
-
-; Check that current x is not cropped, or skip (either a pixel or a whole line)
-invert_rotated_line:
-        lda     img_x         ; Is it a new line? If yes, compute inverted Y
-        beq     compute_inverted_y
-x_invert_low_bound = *+1
-        cmp     #32
-        bcc     skip_inverted_x
-x_invert_high_bound = *+1
-        cmp     #(192+32)
-        bcs     skip_inverted_x
-        eor     x_inverter
-        sec
-x_shifter = *+1
-        sbc     #32
-        sta     rotated_x_hgr_line
-        jmp     invert_line_done
-
-skip_inverted_x:
-        ldx     img_x
-        dex
-        beq     invert_line_done
-        stx     img_x         ; Store only if non-zero so the main algo can run
-        ADVANCE_IMAGE_FAST invert_rotated_line
-invert_line_done:
-        jmp     $FFFF         ; Patched with next step
-
-compute_inverted_y:
-        lda     img_y         ; Compute new scaled Y
-        clc
-        adc     y_shifter
-        eor     y_inverter
-        sta     rotated_y_hgr_column
-        jmp     invert_line_done
-
-
-; Get HGR byte and mask for a given image Y
-get_scaled_rotated_hgr_byte_from_img_y:
-        ldy     rotated_y_hgr_column
-        lda     _div7_table+68,y ; Base is at X = 68
-        sta     hgr_byte         ; with these computations
-        lda     _mod7_table+68,y ; Same
-        sta     pixel_mask
-        jmp     dither_setup_line_start_portrait
-
-; Get HGR byte and mask for a given image Y
-get_rotated_hgr_byte_from_img_y:
-        ldy     rotated_y_hgr_column
-        lda     _div7_table,y     ; Base is at X = 0
-        sta     hgr_byte          ; with these computations
-        lda     _mod7_table,y     ; Same
-        sta     pixel_mask
-        jmp     dither_setup_line_start_portrait
-
-; Get HGR line for a given image Y
-get_rotated_hgr_line_from_img_x:
-        ; Scale *3/4
-        ldx     rotated_x_hgr_line
-        ldy     hgr_byte      ; Store what we got
-        lda     pixel_val
-        sta     (hgr_line),y
-
-        lda     _hgr_baseaddr_l,x
-        sta     hgr_line
-        lda     _hgr_baseaddr_h,x
-        sta     hgr_line+1
-
-        lda     (hgr_line),y  ; Get the existing value
-        sta     pixel_val     ; as we re-iterate over the same byte
-        jmp     advance_image_byte
 
 patch_dither_branches:
         ; Patch dither branches
@@ -1025,26 +737,8 @@ update_pixel_branching:
 
         rts
 
-        .data
-
-crop_shift_90:   .byte 0,        32,       64
-crop_low_90:     .byte 63,       32,       0
-crop_high_90:    .byte (192+63), (192+32), 192
-
-crop_shift_270:  .byte 0,        32,       63
-crop_low_270:    .byte 0,        32,       63
-crop_high_270:  .byte 192,      (192+32), (192+63)
-
-        .bss
-
 pgbar_update:    .res 1
 hgr_start_byte:  .res 1
 hgr_start_mask:  .res 1
 x_center_offset: .res 1
-
-rotated_y_hgr_column: .res 1
-rotated_x_hgr_line:   .res 1
-
-x_inverter: .res 1
-y_shifter:  .res 1
-y_inverter: .res 1
+img_xh:          .res 1

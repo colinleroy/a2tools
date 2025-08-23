@@ -125,7 +125,6 @@ static uint8 read_response(unsigned char *buf, uint16 len, uint8 expect_header) 
 }
 
 #pragma code-name(pop)
-#pragma code-name(push, "LC")
 
 /* Send a command to the camera */
 static uint8 send_command(const char *cmd, uint8 len, uint8 get_ack, uint8 wait) {
@@ -320,7 +319,6 @@ uint8 qt200_get_information(camera_info *info) {
   return 0;
 }
 
-#pragma code-name(pop)
 #pragma code-name(push, "LOWCODE")
 
 uint8 qt200_get_picture(uint8 n_pic, FILE *picture, off_t avail) {

@@ -44,8 +44,6 @@ extern uint8 scrw, scrh;
 #define DITHER_THRESHOLD 128U /* Must be 128 for sierra dithering sign check */
 #define DEFAULT_BRIGHTEN 0
 
-int8 err_buf[(FILE_WIDTH) * 2];
-
 FILE *ifp, *ofp;
 
 int16 angle = 0;
@@ -115,14 +113,15 @@ void qt_convert_image(const char *filename) {
 }
 
 #ifndef __CC65__
+int8 err_buf[((FILE_WIDTH) * 4) + 8];
 static uint16 histogram[256];
 #else
-static uint8 histogram_low[256];
-static uint8 histogram_high[256];
+int8 err_buf[((FILE_WIDTH) * 4) + 8];
+// static uint8 *histogram_low = err_buf;
+// static uint8 *histogram_high = err_buf + 256;
 #endif
 
 uint8 opt_histogram[256];
-#define NUM_PIXELS 49152U //256*192
 
 #ifndef __CC65__
 uint16 *cur_histogram;
@@ -143,8 +142,8 @@ static void histogram_equalize(void) {
 #ifndef __CC65__
     fread(histogram, sizeof(uint16), 256, ifp);
 #else
-    fread(histogram_low, sizeof(uint8), 256, ifp);
-    fread(histogram_high, sizeof(uint8), 256, ifp);
+    fread(err_buf, sizeof(uint8), 256, ifp);
+    fread(err_buf+256, sizeof(uint8), 256, ifp);
 #endif
     fclose(ifp);
 
@@ -164,12 +163,12 @@ static void histogram_equalize(void) {
     __asm__("ldy #0");
     next_h:
     __asm__("clc");
-    __asm__("lda %v,y", histogram_low);
+    __asm__("lda %v,y", err_buf);
     __asm__("adc %v", curr_hist);
     __asm__("sta %v", curr_hist);
     __asm__("tax"); /* *256 */
 
-    __asm__("lda %v,y", histogram_high);
+    __asm__("lda %v+256,y", err_buf);
     __asm__("adc %v+1", curr_hist);
     __asm__("sta %v+1", curr_hist);
     __asm__("sta sreg"); /* * 256 */
@@ -236,8 +235,7 @@ static void thumb_histogram(FILE *ifp) {
 #ifndef __CC65__
   bzero(histogram, sizeof(histogram));
 #else
-  bzero(histogram_low, sizeof(histogram_low));
-  bzero(histogram_high, sizeof(histogram_high));
+  bzero(err_buf, sizeof(err_buf));
 #endif
 
   while ((read = fread(buffer, 1, 255, ifp)) != 0) {
@@ -262,17 +260,17 @@ static void thumb_histogram(FILE *ifp) {
     __asm__("asl");
 
     __asm__("tax");
-    __asm__("inc %v,x", histogram_low);
+    __asm__("inc %v,x", err_buf);
     __asm__("bne %g", noof22);
-    __asm__("inc %v,x", histogram_high);
+    __asm__("inc %v+256,x", err_buf);
     noof22:
 
     __asm__("tya");
     __asm__("and #$F0");
     __asm__("tax");
-    __asm__("inc %v,x", histogram_low);
+    __asm__("inc %v,x", err_buf);
     __asm__("bne %g", noof23);
-    __asm__("inc %v,x", histogram_high);
+    __asm__("inc %v+256,x", err_buf);
     noof23:
 
     __asm__("ldy %v", x);
@@ -296,10 +294,10 @@ static void thumb_histogram(FILE *ifp) {
     // curr_hist += histogram_low[x]|(histogram_high[x]<<8);
     __asm__("ldx %v", x);
     __asm__("clc");
-    __asm__("lda %v,x", histogram_low);
+    __asm__("lda %v,x", err_buf);
     __asm__("adc %v", curr_hist);
     __asm__("sta %v", curr_hist);
-    __asm__("lda %v,x", histogram_high);
+    __asm__("lda %v+256,x", err_buf);
     __asm__("adc %v+1", curr_hist);
     __asm__("sta %v+1", curr_hist);
     tmp_large = ((uint32)curr_hist * 0xF0);
@@ -645,7 +643,6 @@ uint8 *cur_buf_page;
 uint8 y;
 uint16 dy;
 
-uint8 prev_scaled_dx, prev_scaled_dy;
 uint8 cur_hgr_row;
 uint8 cur_hgr_mod;
 
@@ -1088,7 +1085,8 @@ next_line:
     }
 }
 #else
-void do_dither(void);
+void do_dither_horiz(void);
+void do_dither_vert(void);
 #endif
 
 void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint16 p_height, uint8 serial_model) {
@@ -1122,11 +1120,19 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
 
   hgr_mixon();
   cputs("Rendering... (Press space to toggle menu once done.)\r\n");
-  bzero((char *)HGR_PAGE, HGR_LEN);
 
   progress_bar(wherex(), wherey(), scrw, 0, file_height);
 
-  do_dither();
+  if (angle == 0 || angle == 180) {
+    init_graphics(1, 1);
+    hgr_mixon();
+    do_dither_horiz();
+  } else {
+    bzero((char *)HGR_PAGE, HGR_LEN);
+    init_graphics(1, 0);
+    do_dither_vert();
+  }
+
   progress_bar(-1, -1, scrw, file_height, file_height);
   if (!is_thumb) {
     hgr_mixoff();

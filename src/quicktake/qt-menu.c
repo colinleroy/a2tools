@@ -457,6 +457,8 @@ int main(int argc, char *argv[])
     exit(1);
   }
 
+  reserve_auxhgr_file();
+
   camera_connected = setup(argc, argv);
 menu:
   init_text();
