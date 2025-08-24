@@ -1,6 +1,5 @@
         .export         _setup_angle_0
         .export         _setup_angle_180
-        .export         _copy_aux_hgr_to_main
         .import         _update_progress_bar
         .export         _do_dither_horiz
         .import         _load_normal_data
@@ -434,11 +433,9 @@ store_byte:
         lsr
         bcs     store_main
 
-        sta     CLR80COL
-        sta     $C005         ; WRCARDRAM
+        sta     $C055         ; SETPAGE2
         HGR_STORE_PIXEL
-        sta     $C004         ; WRMAINRAM
-        sta     SET80COL
+        sta     $C054         ; SETPAGE1
 hgr_byte_shift0:
         jmp     advance_image_byte    ; Don't shift hgr_byte if wrote AUX (at 0°)
 
@@ -472,11 +469,9 @@ next_line:
         beq     all_done
 
         ldy     hgr_byte
-        sta     CLR80COL      ; Store the last pixel of the line (assume on AUX)
-        sta     $C005         ; WRCARDRAM
+        sta     $C055         ; SETPAGE2
         HGR_STORE_PIXEL
-        sta     $C004         ; WRMAINRAM
-        sta     SET80COL
+        sta     $C054         ; SETPAGE1
 
         ; Advance to the next HGR line after incrementing image Y.
         ; The first three bytes are patched according to the rotation of the image
@@ -568,34 +563,10 @@ clear_byte:
         rts
 
 clear_dhgr:
+        sta     $C055         ; SETPAGE2
         jsr     clear_hgr_page
-
-        sta     CLR80COL
-        sta     $C005         ; WRCARDRAM
+        sta     $C054         ; SETPAGE1
         jsr     clear_hgr_page
-        sta     $C004         ; WRMAINRAM
-        sta     SET80COL
-        rts
-
-_copy_aux_hgr_to_main:
-        sta     CLR80COL
-        sta     $C003         ; RDCARDRAM
-
-        ldx     #$20
-        stx     ptr1+1
-        lda     #$00
-        sta     ptr1
-        tay
-:       lda     (ptr1),y      ; Read from AUX
-        sta     (ptr1),y      ; Write to MAIN
-        iny
-        bne     :-
-        inc     ptr1+1
-        dex
-        bne     :-
-
-        sta     $C002         ; RDMAINRAM
-        sta     SET80COL
         rts
 
 _setup_angle_0:

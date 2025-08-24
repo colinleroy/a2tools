@@ -393,7 +393,7 @@ static void invert_selection(void) {
 
 void copy_aux_hgr_to_main(void);
 
-static unsigned char write_hgr_page_to_file(void) {
+static unsigned char write_hgr_page_to_file() {
   return (write(ofd, (char *)HGR_PAGE, HGR_LEN) < HGR_LEN);
 }
 
@@ -609,30 +609,28 @@ open_again:
   printf("Saving...");
 
   /* Save main RAM to fill 8kB */
-  if (write_hgr_page_to_file() != 0) {
+  if (is_horiz) {
+    /* AUX */
+    __asm__("sta $C055"); /* SETPAGE2 */
+    if (write_hgr_page_to_file() != 0) {
+      __asm__("sta $C054"); /* SETPAGE1 */
+      goto write_error;
+    }
+    /* MAIN */
+    __asm__("sta $C054"); /* SETPAGE1 */
+    ((char *)HGR_PAGE)[0x78] = 2; // Black and white, 560x192
+    if (write_hgr_page_to_file() != 0) {
+      goto write_error;
+    }
+  }
+  else if (write_hgr_page_to_file() != 0) {
 write_error:
     printf("\nError. Press a key to continue...\n");
     close(ofd);
     cgetc();
     goto start_edit;
   }
-  if (is_horiz) {
-    /* Re-save MAIN RAM at 8-16kB */
-    if (write_hgr_page_to_file() != 0) {
-      goto write_error;
-    }
-    /* Save AUX RAM at start */
-    lseek(ofd, 0x0, SEEK_SET);
-    printf("(This is normal...)");
-    copy_aux_hgr_to_main();
-    ((char *)HGR_PAGE)[0x78] = 2; // Black and white, 560x192
-    if (write_hgr_page_to_file() != 0) {
-      goto write_error;
-    }
 
-    /* And put MAIN back into memory */
-    read(ofd, (char *)HGR_PAGE, HGR_LEN);
-  }
   close(ofd);
 
   gotox(0);

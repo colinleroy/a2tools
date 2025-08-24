@@ -149,9 +149,6 @@ static void save_image(void);
 
 void initconst(void);
 
-#pragma code-name (pop)
-#pragma code-name (push, "LC")
-
 int real_main(int argc, char **argv) {
   media *m = NULL;
   char i, c;
@@ -286,21 +283,19 @@ static void save_image(void) {
       goto out;
     }
 
+    toggle_legend(0);       /* Need to be in hires mode for $C055 to work. */
     if (is_dhgr) {
-      int ramfd = open(hgr_auxfile, O_RDONLY);
-      if (ramfd > 0) {
-        /* Use second main HGR page as temp buf. */
-        if (read(ramfd, (char *)0x4000, HGR_LEN) == HGR_LEN) {
-          write(fd, (char *)0x4000, HGR_LEN);
-        }
-        close(ramfd);
-      }
+      __asm__("sta $C055"); /* Switch on AUX $2000-$3FFF */
+      write(fd, (char *)HGR_PAGE, HGR_LEN);
+      __asm__("sta $C054"); /* Switch on MAIN $2000-$3FFF */
     }
     if (write(fd, (char *)HGR_PAGE, HGR_LEN) == HGR_LEN) {
       cputs("\r\nImage saved. ");
     } else {
       cputs("Can not write to file. ");
     }
+    toggle_legend(1);
+
     close(fd);
     goto out;
   } else {
@@ -320,12 +315,15 @@ out_no_conf:
 
 void initconst(void);
 
+#pragma code-name (pop)
+#pragma code-name (push, "LC")
+
 int main(int argc, char **argv) {
 #ifdef __CC65__
-  /* Leave 0x800-0x1000 for iobuf, and
+  /* Leave 0x800-0xC00 for one iobuf, and
    * load our LOWCODE */
   int fd = open("IMGLOW", O_RDONLY);
-  read(fd, (void *)0x1000, 0x2000-0x1000);
+  read(fd, (void *)0xC00, 0x2000-0xC00);
   close(fd);
 #endif
   real_main(argc, argv);
