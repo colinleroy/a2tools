@@ -11,6 +11,7 @@ void __fastcall__ init_graphics(uint8 mono, uint8 dhgr);
 void __fastcall__ init_text(void);
 void __fastcall__ load_hgr_mono_file(unsigned char pages);
 void __fastcall__ reserve_auxhgr_file(void);
+void __fastcall__ backup_screen_holes(unsigned char start_page);
 
 extern const char hgr_auxfile[];
 

@@ -391,8 +391,6 @@ static void invert_selection(void) {
 #endif
 }
 
-void copy_aux_hgr_to_main(void);
-
 static unsigned char write_hgr_page_to_file() {
   return (write(ofd, (char *)HGR_PAGE, HGR_LEN) < HGR_LEN);
 }
@@ -611,13 +609,13 @@ open_again:
   /* Save main RAM to fill 8kB */
   if (is_horiz) {
     /* AUX */
-    __asm__("sta $C055"); /* SETPAGE2 */
+    backup_screen_holes(0x54);  /* Sets page 2 */
     if (write_hgr_page_to_file() != 0) {
-      __asm__("sta $C054"); /* SETPAGE1 */
+      backup_screen_holes(0x55); /* Sets page 1 */
       goto write_error;
     }
     /* MAIN */
-    __asm__("sta $C054"); /* SETPAGE1 */
+    backup_screen_holes(0x55); /* Sets page 1 */
     ((char *)HGR_PAGE)[0x78] = 2; // Black and white, 560x192
     if (write_hgr_page_to_file() != 0) {
       goto write_error;

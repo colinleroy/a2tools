@@ -285,9 +285,9 @@ static void save_image(void) {
 
     toggle_legend(0);       /* Need to be in hires mode for $C055 to work. */
     if (is_dhgr) {
-      __asm__("sta $C055"); /* Switch on AUX $2000-$3FFF */
+      backup_screen_holes(0x54);  /* Sets page 2 */
       write(fd, (char *)HGR_PAGE, HGR_LEN);
-      __asm__("sta $C054"); /* Switch on MAIN $2000-$3FFF */
+      backup_screen_holes(0x55);  /* Sets page 1 */
     }
     if (write(fd, (char *)HGR_PAGE, HGR_LEN) == HGR_LEN) {
       cputs("\r\nImage saved. ");

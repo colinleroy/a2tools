@@ -49,6 +49,7 @@ slowtake_CC65SOURCES := \
 	../lib/asm/reserve_auxhgr.s \
 	../lib/asm/auxhgr_file.s \
 	../lib/asm/unlink_auxhgr.s \
+	../lib/asm/backup_screen_holes.s \
 	../lib/asm/file_select.s \
 	../lib/dputc.s \
 	../lib/scroll.s \

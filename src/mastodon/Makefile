@@ -67,6 +67,7 @@ mastoimg_CC65SOURCES := \
 	../lib/asm/reserve_auxhgr.s \
 	../lib/asm/unlink_auxhgr.s \
 	../lib/asm/auxhgr_file.s \
+	../lib/asm/backup_screen_holes.s \
 
 mastocli_SOURCES := \
 	api/api.c \
