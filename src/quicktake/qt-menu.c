@@ -448,6 +448,13 @@ static uint8 setup(int argc, char *argv[]) {
 #pragma code-name(pop)
 #pragma code-name(push, "LOWCODE")
 
+void unlink_temp_files(void) {
+  unlink(HIST_NAME);
+  unlink(TMP_NAME);
+  /* Don't unlink AUXHGR, as we want *conv to start writing GREY
+   * *after* that file. */
+}
+
 int main(int argc, char *argv[])
 {
   uint8 choice;
@@ -459,7 +466,7 @@ int main(int argc, char *argv[])
   }
 
   reserve_auxhgr_file();
-
+  atexit(&unlink_temp_files);
   camera_connected = setup(argc, argv);
 menu:
   init_text();

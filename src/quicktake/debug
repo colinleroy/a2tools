@@ -7,4 +7,19 @@ else
 	FLOP2="-flop2 ../../disks/qt100.dsk"
 fi
 
+if [ "$1" = "200" ]; then
+  EXT=JPG
+else
+  EXT=QTK
+fi
+TESTFILE=TEST$1.$EXT
+if [ "$2" != "" ]; then
+  TESTFILE=$2
+  java -jar ../../bin/ac.jar -d ../../disks/qt$1.dsk TEST$1.$EXT
+  
+  echo "Putting $TESTFILE as TEST$1.$EXT"
+  java -jar ../../bin/ac.jar -p ../../disks/qt$1.dsk \
+    TEST$1.$EXT BIN '$2000' < "$TESTFILE"
+fi
+
 make clean all DEBUG_FLOPPY=$TYPE && mame apple2c0 -window -flop1 quicktake.po $FLOP2 -resolution 560x384 -printer null_modem -bitb socket.localhost:2001 -modem null_modem -bitb2 socket.localhost:2000 -nomouse -debug

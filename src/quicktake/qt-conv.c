@@ -492,6 +492,7 @@ try_again:
 
   strcpy (ofname, ifname);
 
+  unlink(TMP_NAME);
   ofd = open (TMP_NAME, O_RDWR|O_CREAT, 00600);
 
   #ifndef __CC65__
@@ -524,6 +525,7 @@ try_again:
   ifd = ofd = -1;
 
   /* Save histogram to /RAM */
+  unlink(HIST_NAME);
   ofd = open(HIST_NAME, O_RDWR|O_CREAT, 00600);
   if (ofd > 0) {
 #ifndef __CC65__

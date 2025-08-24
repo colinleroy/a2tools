@@ -144,8 +144,11 @@ static void histogram_equalize(void) {
 #ifndef __CC65__
     read(ifd, histogram, 256*2);
 #else
-    read(ifd, err_buf, 256);
-    read(ifd, err_buf+256, 256);
+    if (read(ifd, err_buf, 256) < 256 ||
+        read(ifd, err_buf+256, 256) < 256) {
+          close(ifd);
+          goto fallback_std;
+        }
 #endif
     close(ifd);
 
@@ -550,7 +553,7 @@ zoom_level_2:
               goto zoom_level_1;
             break;
           case CH_CURS_RIGHT:
-            if (crop_end_x < 640) {
+            if (crop_end_x + move_offset <= 640) {
               crop_start_x += move_offset;
               crop_end_x += move_offset;
             }
@@ -562,7 +565,7 @@ zoom_level_2:
             }
             break;
           case CH_CURS_DOWN:
-            if (crop_end_y < 480) {
+            if (crop_end_y + move_offset <= 480) {
               crop_start_y += move_offset;
               crop_end_y += move_offset;
             }
@@ -1144,6 +1147,7 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
   ifd = open(ifname, O_RDONLY);
   if (ifd <= 0) {
     printf("Can't open %s\n", ifname);
+    cgetc();
     return;
   }
 
