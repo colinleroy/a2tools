@@ -258,6 +258,7 @@ store_bayer_y:
 .endmacro
 
 .macro LOAD_DATA
+        sta     $C054
         lda     _is_thumb
         beq     load_normal
         lda     img_y
@@ -455,6 +456,7 @@ advance_image_byte:
 :       ADVANCE_IMAGE_SLOW pixel_handler
 
 line_done:
+        sta     $C054
         PROGRESS_BAR_UPDATE line_wrapup
 
 line_wrapup:
