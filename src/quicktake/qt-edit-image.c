@@ -1139,12 +1139,9 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
     return;
   }
 
-  bzero(err_buf, sizeof err_buf);
-
   if (is_thumb) {
     thumb_histogram(ifd);
     /* Re-zero */
-    bzero(err_buf, sizeof err_buf);
     lseek(ifd, 0, SEEK_SET);
     dither_alg = DITHER_BAYER;
   }
@@ -1154,6 +1151,7 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
 
   progress_bar(wherex(), wherey(), scrw, 0, file_height);
 
+  bzero(err_buf, sizeof err_buf);
   if (angle == 0 || angle == 180) {
     is_horiz = 1;
     init_graphics(1, 1);
@@ -1161,8 +1159,8 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
     do_dither_horiz();
   } else {
     is_horiz = 0;
-    bzero((char *)HGR_PAGE, HGR_LEN);
-    init_graphics(1, 0);
+    init_graphics(1, 1);
+    hgr_mixon();
     do_dither_vert();
   }
 

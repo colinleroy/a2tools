@@ -8,6 +8,7 @@
         .import         _centered_div7_table
         .import         _centered_mod7_table
         .import         _hgr_baseaddr_l, _hgr_baseaddr_h
+        .import         clear_dhgr
 
         .import         _bayer_map, _bayer_map_x, _bayer_map_y
         .import         _end_bayer_map_x, _end_bayer_map_y
@@ -80,7 +81,6 @@ positive_b:
         bcc     black_pix_bayer
 
 white_pix_bayer:
-        ldy     hgr_byte
         lda     pixel_val
         ora     pixel_mask
         sta     pixel_val
@@ -139,7 +139,6 @@ check_low:
         bcc     forward_err
 white_pix:
         tax                   ; Backup low byte
-        ldy     hgr_byte
         lda     pixel_val
         ora     pixel_mask
         sta     pixel_val
@@ -153,11 +152,10 @@ forward_err:
         ror     a
 
         ; *(cur_err_x_yplus1+img_x)   = err1;
-        ldy     img_x
         sta     (sierra_err_ptr),y
 
 sierra_err_forward:
-        dey                   ; Patched with iny at setup, if xdir < 0
+        dey
         clc                   ; May be set by ror
         adc     (sierra_err_ptr),y
         sta     (sierra_err_ptr),y
@@ -435,12 +433,13 @@ store_byte:
 
         sta     $C055         ; SETPAGE2
         HGR_STORE_PIXEL
-        sta     $C054         ; SETPAGE1
 hgr_byte_shift0:
         jmp     advance_image_byte    ; Don't shift hgr_byte if wrote AUX (at 0°)
 
 store_main:
+        sta     $C054         ; SETPAGE1
         HGR_STORE_PIXEL
+
 hgr_byte_shift180:
         jmp     hgr_byte_shift
 
@@ -469,9 +468,9 @@ next_line:
         beq     all_done
 
         ldy     hgr_byte
-        sta     $C055         ; SETPAGE2
+        sta     $C055         ; SETPAGE2 - last byte always goes to AUX
         HGR_STORE_PIXEL
-        sta     $C054         ; SETPAGE1
+        ;sta     $C054         ; SETPAGE1
 
         ; Advance to the next HGR line after incrementing image Y.
         ; The first three bytes are patched according to the rotation of the image
@@ -547,27 +546,6 @@ C_BCS    = $B0
         ror     a             ; We have our result
 .endscope
 .endmacro
-
-clear_hgr_page:
-        ldx     #$20
-        stx     clear_byte+2
-        lda     #$00
-        tay
-clear_byte:
-        sta     $2000,y
-        iny
-        bne     clear_byte
-        inc     clear_byte+2
-        dex
-        bne     clear_byte
-        rts
-
-clear_dhgr:
-        sta     $C055         ; SETPAGE2
-        jsr     clear_hgr_page
-        sta     $C054         ; SETPAGE1
-        jsr     clear_hgr_page
-        rts
 
 _setup_angle_0:
         ; Set start constants

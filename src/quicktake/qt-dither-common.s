@@ -18,8 +18,8 @@
         .import         _brighten, _dither_alg
         .import         _kbhit, _cgetc
         .import         _read_buf, _cur_buf_page, _buffer
-
         .export         img_y
+        .export         clear_dhgr
 
         .import         pushax, pusha0, _read, _ifd, subysp
 
@@ -29,6 +29,27 @@
         .include "apple2.inc"
 
 img_y                 = _zp5
+
+clear_hgr_page:
+        ldx     #$20
+        stx     clear_byte+2
+        lda     #$00
+        tay
+clear_byte:
+        sta     $2000,y
+        iny
+        bne     clear_byte
+        inc     clear_byte+2
+        dex
+        bne     clear_byte
+        rts
+
+clear_dhgr:
+        sta     $C055         ; SETPAGE2
+        jsr     clear_hgr_page
+        sta     $C054         ; SETPAGE1
+        jsr     clear_hgr_page
+        rts
 
 _load_normal_data:
         lda     img_y
