@@ -149,7 +149,7 @@ forward_err:
         sta     (sierra_err_ptr),y
 
 sierra_err_forward:
-        dey
+        iny
         clc                   ; May be set by ror
         adc     (sierra_err_ptr),y
         sta     (sierra_err_ptr),y
@@ -405,12 +405,14 @@ dither_sierra:
         SIERRA_DITHER_PIXEL
 
 next_pixel:
-        inc     img_x
+        dec     img_x
         bne     img_x_to_hgr
         ldy     img_xh
         bne     line_done
         iny
         sty     img_xh
+        ldy     _file_width   ; Only needed for thumbnails
+        sty     img_x
         inc     sierra_err_ptr+1
 
         ; Advance to next HGR pixel after incrementing image X.

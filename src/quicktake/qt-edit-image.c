@@ -370,8 +370,6 @@ static void invert_selection(void) {
   lx = (dsx)/7;
   rx = (dex)/7;
 
-  printf("crop %d-%d, dsx %d-%d, lx %d-%d\n",
-         crop_start_x, crop_end_x, dsx, dex, lx, rx);
   if (lx % 2 == 0) {
     __asm__("sta $C055");
   } else {
