@@ -357,33 +357,45 @@ static void invert_selection(void) {
 #endif
 
   /* Scale back, we use 640x480 based crop values but display
-   * them at 256x192
+   * them at 512x192
    */
-  uint16 dsx = crop_start_x * 4 / 10;
-  uint16 dex = crop_end_x * 4 / 10;
+  uint16 dsx = crop_start_x * 8 / 10;
+  uint16 dex = crop_end_x * 8 / 10;
   uint16 dsy = crop_start_y * 4 / 10;
   uint16 dey = crop_end_y * 4 / 10;
 
-  lx = centered_div7_table[dsx];
-  rx = centered_div7_table[dex];
+  dsx += 14;  /* Account for centering */
+  dex += 14;
 
+  lx = (dsx)/7;
+  rx = (dex)/7;
+
+  printf("crop %d-%d, dsx %d-%d, lx %d-%d\n",
+         crop_start_x, crop_end_x, dsx, dex, lx, rx);
+  if (lx % 2 == 0) {
+    __asm__("sta $C055");
+  } else {
+    __asm__("sta $C054");
+  }
   /* Invert horizontal lines */
-  a = (uint8 *)(hgr_baseaddr_l[dsy]|(hgr_baseaddr_h[dsy]<<8)) + lx;
-  b = (uint8 *)(hgr_baseaddr_l[dey]|(hgr_baseaddr_h[dey]<<8)) + lx;
-  for (x = dsx; x < dex; x+=7) {
+  a = (uint8 *)(hgr_baseaddr_l[dsy]|(hgr_baseaddr_h[dsy]<<8)) + lx/2;
+  b = (uint8 *)(hgr_baseaddr_l[dey]|(hgr_baseaddr_h[dey]<<8)) + lx/2;
+  for (x = lx/2; x < rx/2; x++) {
     *a = ~(*a);
     *b = ~(*b);
     a++;
     b++;
   }
+
   /* Invert vertical lines */
-  for (y = dsy + 1; y < dey - 1; y++) {
+  for (y = (dsy + 1); y < dey - 1; y++) {
     uint8 *by = (uint8 *)(hgr_baseaddr_l[y]|(hgr_baseaddr_h[y]<<8));
-    a = by + lx;
-    b = by + rx;
+    a = by + lx/2;
+    b = by + rx/2;
     *a = ~(*a);
     *b = ~(*b);
   }
+  __asm__("sta $C054");
 #ifdef __CC65__
   #undef y
   #undef a
@@ -665,8 +677,6 @@ uint8 is_qt100;
 uint8 first_byte_idx;
 uint16 off_y;
 uint8 off_x;
-uint8 *shifted_div7_table = div7_table + 0;
-uint8 *shifted_mod7_table = mod7_table + 0;
 uint8 end_dx;
 int8 bayer_map_x, bayer_map_y;
 int8 end_bayer_map_x, end_bayer_map_y;

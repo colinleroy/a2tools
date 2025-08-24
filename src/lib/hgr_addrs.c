@@ -14,8 +14,8 @@ uint8 mod7_table[256];
 void init_hgr_base_addrs (void)
 {
   static uint8 y, base_init_done = 0;
-  static uint16 x;
 #ifndef __CC65__
+  static uint16 x;
   uint8 *a, *b, line_of_eight, group_of_eight, group_of_sixtyfour;
 #endif
   if (base_init_done) {
@@ -90,62 +90,6 @@ void init_hgr_base_addrs (void)
   __asm__("iny");
   __asm__("cpy #%b", HGR_HEIGHT);
   __asm__("bne %g", next_y);
-
-
-  /* Precompute /7 and %7 from 0 to HGR_WIDTH */
-  /* ptr2 and ptr3 are left alone by udiv16 */
-  __asm__("lda #<(%v)", div7_table);
-  __asm__("sta ptr2");
-  __asm__("lda #>(%v)", div7_table);
-  __asm__("sta ptr2+1");
-  __asm__("lda #<(%v)", mod7_table);
-  __asm__("sta ptr3");
-  __asm__("lda #>(%v)", mod7_table);
-  __asm__("sta ptr3+1");
-
-  __asm__("lda #0");
-  __asm__("sta %v", x);
-  __asm__("sta %v+1", x);
-  __asm__("sta tmp1");
-  next_x:
-    __asm__("sta ptr1");
-    __asm__("lda %v+1", x);
-    __asm__("sta ptr1+1");
-    __asm__("lda #7");
-    __asm__("sta ptr4");
-    __asm__("lda #0");
-    __asm__("sta ptr4+1");
-    __asm__("jsr udiv16");
-    __asm__("lda ptr1");
-
-    __asm__("ldy tmp1");
-    __asm__("sta (ptr2),y");
-
-    __asm__("lda #1");
-    __asm__("ldx sreg");
-    __asm__("beq %g", no_shift);
-    shift_b:
-    __asm__("asl");
-    __asm__("dex");
-    __asm__("bne %g", shift_b);
-    no_shift:
-    __asm__("sta (ptr3),y");
-
-    __asm__("inc tmp1");
-    __asm__("bne %g", noof8);
-    __asm__("inc ptr2+1");
-    __asm__("inc ptr3+1");
-    noof8:
-  __asm__("inc %v", x);
-  __asm__("bne %g", noof9);
-  __asm__("inc %v+1", x);
-  noof9:
-  __asm__("lda %v", x);
-  __asm__("cmp #<(%w)", HGR_WIDTH);
-  __asm__("bne %g", next_x);
-  __asm__("ldx %v+1", x);
-  __asm__("cpx #>(%w)", HGR_WIDTH);
-  __asm__("bne %g", next_x);
 #endif
 
   base_init_done = 1;

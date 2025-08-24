@@ -5,8 +5,6 @@
         .import         _load_normal_data
         .import         _load_thumb_data
         .import         _file_height, _file_width
-        .import         _centered_div7_table
-        .import         _centered_mod7_table
         .import         _hgr_baseaddr_l, _hgr_baseaddr_h
         .import         clear_dhgr
 
@@ -51,10 +49,6 @@ CENTER_OFFSET       = 0
 CENTER_OFFSET_THUMB = 60-12
 
 sierra_safe_err_buf = _err_buf+2
-
-.assert <_centered_div7_table = $00, error ; We count on the table being aligned with idx 12 on a page border
-.assert <_centered_mod7_table = $00, error ; We count on the table being aligned with idx 12 on a page border
-
 
 ; defaults:
 FIRST_PIXEL_HANDLER = dither_sierra
@@ -558,14 +552,11 @@ _setup_angle_0:
         clc
         lsr
         sta     cur_hgr_line
-        ; 
+
         ; Center horizontally
-        ; ldx     x_center_offset
-        ; lda     _centered_div7_table,x
         lda     #$01
         sta     hgr_start_byte
-        ; lda     _centered_mod7_table,x
-        lda     #$40
+        lda     #$01
         sta     hgr_start_mask
 
         lda     #$01
@@ -605,12 +596,9 @@ _setup_angle_180:
         ; Set start constants
         lda     #191
         sta     cur_hgr_line
-        ; As we don't display thumbnails upside-down,
-        ; we are sure to start at column 255
-        ; lda     _centered_div7_table+255
+
         lda     #38
         sta     hgr_start_byte
-        ; lda     _centered_mod7_table+255
         lda     #$01
         sta     hgr_start_mask
         lda     #$40

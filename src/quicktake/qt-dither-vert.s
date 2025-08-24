@@ -5,8 +5,6 @@
         .import         _load_normal_data
         .import         clear_dhgr
         .import         _file_height, _file_width
-        .import         _div7_table
-        .import         _mod7_table
         .import         _hgr_baseaddr_l, _hgr_baseaddr_h
         .import         _resize
         .import         _crop_pos
@@ -574,7 +572,7 @@ no_resize_90_coords:
         ; first byte of the image at 236,0
         ; last byte of first line at 236, 191
         ; last byte of image at 32, 191
-        lda     #34
+        lda     #33
         sta     hgr_byte
 
         lda     #$40
@@ -590,7 +588,7 @@ resize_90_coords:
         ; first byte of the image at 212,0
         ; last byte of first line at 212, 191
         ; last byte of image at 68, 191
-        lda     #34
+        lda     #30
         sta     hgr_byte
 
         lda     #$40
@@ -649,7 +647,7 @@ resize_270_coords:
         ; first byte of the image at 69, 191
         ; last byte of first line at 69, 0
         ; last byte of image at 212, 0
-        lda     #6
+        lda     #8
         sta     hgr_byte
 
         lda     #$01
