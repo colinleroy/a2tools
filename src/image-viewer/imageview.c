@@ -232,7 +232,7 @@ int main(int argc, char *argv[]) {
   static char cmdline[127];
   #define BLOCK_SIZE 512
   const char *filename = NULL;
-  static char *rambuf[BLOCK_SIZE];
+  static char rambuf[BLOCK_SIZE];
   uint8 monochrome = 0;
 
   register_start_device();
@@ -291,13 +291,16 @@ next_image:
   len = 0;
 
   if (has_128k && can_dhgr) {
+    
     is_dhgr = (lseek(fd, 0, SEEK_END) == 2*HGR_LEN);
     lseek(fd, 0, SEEK_SET);
     if (is_dhgr && (ramfd = open(hgr_auxfile, O_WRONLY|O_CREAT)) > 0) {
       while (len < HGR_LEN) {
         read(fd, rambuf, BLOCK_SIZE);
         write(ramfd, rambuf, BLOCK_SIZE);
-
+        if (len == 0) {
+          monochrome = ((rambuf[0x78] % 2) == 0);
+        }
         len += BLOCK_SIZE;
         progress_bar(-1, -1, scrw, len, HGR_LEN*2);
       }
@@ -308,6 +311,9 @@ next_image:
   len = 0;
   while (len < HGR_LEN) {
     read(fd, (char *)(HGR_PAGE + len), BLOCK_SIZE);
+    if (len == 0 && !is_dhgr) {
+      monochrome = (((char *)HGR_PAGE)[0x78] % 2 == 0);
+    }
     len += BLOCK_SIZE;
     progress_bar(-1, -1, scrw, len+HGR_LEN, HGR_LEN*2);
   }

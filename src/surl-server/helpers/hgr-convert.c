@@ -1206,9 +1206,9 @@ unsigned char *sdl_to_dhgr(const char *filename, char monochrome, char save_prev
 
   // https://prodos8.com/docs/technote/ftn/08/
   if (monochrome) {
-    grbuf[0x78] = 0;
+    grbuf[0x78] = 2;
   } else {
-    grbuf[0x78] = 1;
+    grbuf[0x78] = 3;
   }
   return grbuf;
 }

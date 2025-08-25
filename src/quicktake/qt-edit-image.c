@@ -623,6 +623,7 @@ open_again:
   if (is_horiz) {
     /* AUX */
     backup_screen_holes(0x54);  /* Sets page 2 */
+    ((char *)HGR_PAGE)[0x78] = 2; // Black and white, 560x192
     if (write_hgr_page_to_file() != 0) {
       backup_screen_holes(0x55); /* Sets page 1 */
       goto write_error;
