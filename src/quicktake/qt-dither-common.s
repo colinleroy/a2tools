@@ -1,5 +1,7 @@
         .export         _load_normal_data
         .export         _update_progress_bar
+        .export         _buffer, _err_buf
+
         .import         _load_thumb_data
 
         .import         _progress_bar, _scrw
@@ -10,14 +12,13 @@
 
         .import         _bayer_map, _bayer_map_x, _bayer_map_y
         .import         _end_bayer_map_x, _end_bayer_map_y
-        .import         _err_buf
         .import         _opt_histogram
         .import         _cur_hgr_row
         .import         _is_thumb, _load_thumbnail_data
         .import         _prev_scaled_dx, _prev_scaled_dy, _angle
         .import         _brighten, _dither_alg
         .import         _kbhit, _cgetc
-        .import         _read_buf, _cur_buf_page, _buffer
+        .import         _read_buf, _cur_buf_page
         .export         img_y
         .export         clear_dhgr
 
@@ -113,3 +114,9 @@ _update_progress_bar:
         lda     _file_height
         ldx     _file_height+1
         jmp     _progress_bar
+
+        .bss
+
+.align 256
+_buffer:      .res BUFFER_SIZE
+_err_buf:     .res 1024+2

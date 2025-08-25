@@ -22,7 +22,7 @@
 
         .import         pushax, pusha0, _fread, _ifp, subysp
 
-        .importzp       img_y, ptr1, tmp1, tmp2, c_sp, sreg, ptr2, ptr4
+        .importzp       img_y, tmp1, tmp2, c_sp
         .importzp       _zp2p, _zp4, _zp5, _zp6, _zp7, _zp8, _zp9, _zp10, _zp11, _zp12ip
 
         .include "apple2.inc"
@@ -35,7 +35,6 @@ opt_val               = _zp8
 err2                  = _zp9
 hgr_byte              = _zp10
 hgr_line              = _zp12ip
-sierra_err_ptr        = ptr4
 
 DITHER_NONE       = 2
 DITHER_BAYER      = 1
@@ -43,33 +42,28 @@ DITHER_SIERRA     = 0
 DITHER_THRESHOLD  = $80
 DEFAULT_BRIGHTEN  = 0
 
-CENTER_OFFSET       = 0
-CENTER_OFFSET_THUMB = 60-12
-
-sierra_safe_err_buf = _err_buf+1
-
 ; defaults:
 FIRST_PIXEL_HANDLER = dither_sierra
 LINE_DITHER_SETUP   = prepare_dither_sierra
 
+safe_err_buf = _err_buf+1
 ; dithering macros.
 ; They must end with jmp next_pixel, unless
 ; it's the last one in the loop.
 .macro BAYER_DITHER_PIXEL BRANCH_TO
-        ldy     #$00
         ldx     _bayer_map_x
         lda     _bayer_map,x
         bpl     positive_b
-        dey
+negative_b:
+        adc     opt_val
+        bcc     black_pix_bayer
+        jmp     check_bayer_low
+
 positive_b:
         adc     opt_val
-        tax                   ; Backup low byte
-        tya
-        adc     #0
-
-        bmi     black_pix_bayer
-        bne     white_pix_bayer
-        cpx     #<DITHER_THRESHOLD
+        bcs     white_pix_bayer
+check_bayer_low:
+        cmp     #<DITHER_THRESHOLD
         bcc     black_pix_bayer
 
 white_pix_bayer:
@@ -79,7 +73,6 @@ white_pix_bayer:
 
 black_pix_bayer:
         ; Advance Bayer X
-        ldx     _bayer_map_x
         inx
         cpx     _end_bayer_map_x
         beq     reset_bayer_x
@@ -103,28 +96,25 @@ reset_bayer_x:
 .endmacro
 
 .macro SIERRA_DITHER_PIXEL
-        ; Add the two errors (the one from previous pixel and the one
-        ; from previous line). As they're max 128/2 and 128/4, don't bother
-        ; about overflows.
-        ldx     #$00
         ldy     final_img_x
-        lda     sierra_safe_err_buf,y
+        lda     safe_err_buf+1,y
+
         adc     err2
         bpl     err_pos
-        dex
-
-err_pos:
-      ; Add current pixel value
+err_neg:
         clc
         adc     opt_val
-        bcc     :+
-        cpx     #$00
-        bpl     white_pix     ; High byte not zero? - don't check for neg here, can't happen, it's either 0 or 1
-        jmp     check_low
-:       cpx     #$80          ; is high byte negative? (don't check for positive here, can't happen, it's either $FF or 0)
-        bcs     forward_err
+        bcs     check_low     ; We're not negative anymore
+        sec                   ; Still negative. Put sign into carry
+        bcs     forward_err   ; (= BRA here)
 
-; Must check low byte
+err_pos:
+        ; Add current pixel value
+        clc
+        adc     opt_val
+        bcs     white_pix     ; Overflowed so $FF.
+
+        ; Must check low byte
 check_low:
         cmp     #<DITHER_THRESHOLD
         bcc     forward_err
@@ -143,13 +133,14 @@ forward_err:
         ror     a
 
         ; *(cur_err_x_yplus1+img_x)   = err1;
-        sta     sierra_safe_err_buf,y
+        sta     safe_err_buf+1,y
 
 sierra_err_forward:
-        dey
         clc                   ; May be set by ror
-        adc     sierra_safe_err_buf,y
-        sta     sierra_safe_err_buf,y
+sierra_revert_1:
+        adc     safe_err_buf,y
+sierra_revert_2:
+        sta     safe_err_buf,y
 .endmacro
 
 ; Load a byte from the file. Must end with byte in A.
@@ -562,6 +553,10 @@ _setup_angle_90:
         lda     #C_BIT_ABS
         sta     mirror_x
 
+        lda     #<safe_err_buf
+        sta     sierra_revert_1+1
+        sta     sierra_revert_2+1
+
         ldx     _resize
         bne     resize_90_coords
 no_resize_90_coords:
@@ -616,6 +611,10 @@ _setup_angle_270:
 
         lda     #C_JMP
         sta     mirror_x
+
+        lda     #<(safe_err_buf+2)  ; We iterate lines the other way so
+        sta     sierra_revert_1+1   ; shift the x-1 buffer.
+        sta     sierra_revert_2+1
 
         ldx     _resize
         bne     resize_270_coords

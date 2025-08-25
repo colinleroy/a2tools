@@ -115,10 +115,10 @@ void qt_convert_image(const char *filename) {
 }
 
 #ifndef __CC65__
-int8 err_buf[((FILE_WIDTH) * 4) + 8];
+int8 err_buf[((FILE_WIDTH) * 4) + 2];
 static uint16 histogram[256];
 #else
-int8 err_buf[((FILE_WIDTH) * 4) + 8];
+extern int8 err_buf[((FILE_WIDTH) * 4) + 2];
 // static uint8 *histogram_low = err_buf;
 // static uint8 *histogram_high = err_buf + 256;
 #endif
@@ -367,8 +367,8 @@ static void invert_selection(void) {
   uint16 dsy = crop_start_y * 4 / 10;
   uint16 dey = crop_end_y * 4 / 10;
 
-  dsx += 14;  /* Account for centering */
-  dex += 14;
+  dsx += 21;  /* Account for centering */
+  dex += 21;
 
   lx = (dsx)/7;
   rx = (dex)/7;
@@ -423,11 +423,11 @@ start_edit:
     } else if (angle == 0 && !(src_width % 320)) {
       cputs("; C: Reframe");
     }
-    printf("\nH: Auto-level %s; B: Brighten - D: Darken (Current %s%d)\n",
+    cprintf("\r\nH: Auto-level %s; B: Brighten - D: Darken (Current %s%d)\r\n",
            auto_level ? "off":"on",
            brighten > 0 ? "+":"",
            brighten);
-    printf("Dither with E: Sierra Lite / Y: Bayer / N: No dither (Current: %s)\n"
+    cprintf("Dither with E: Sierra Lite / Y: Bayer / N: No dither (Current: %s)\r\n"
            "S: Save - Escape: Exit - Any other key: Hide help",
            dither_alg == DITHER_BAYER ? "Bayer"
             : dither_alg == DITHER_SIERRA ? "Sierra Lite" : "None");
@@ -510,7 +510,7 @@ crop_again:
           cputs("+: Zoom in; -: Zoom out; ");
         }
         cputs("Arrow keys: Move selection\r\n"
-               "Enter: Reframe; Escape: Cancel");
+               "Enter: Reframe; Escape: Cancel\r\n");
         if (zoom_level) {
           /* Set back pixels at previous crop border */
           invert_selection();
@@ -580,6 +580,7 @@ zoom_level_2:
             hgr_mixon();
         }
         invert_selection();
+        cprintf("Crop: %d,%d - %d,%d", crop_start_x, crop_start_y, crop_end_x, crop_end_y);
         c = cgetc();
         goto crop_again;
       }
@@ -612,12 +613,12 @@ open_again:
 #endif
   ofd = open((char *)buffer, O_RDWR|O_CREAT);
   if (ofd <= 0) {
-    printf("Please insert image floppy for %s, or Escape to return\n", (char *)buffer);
+    cprintf("Please insert image floppy for %s, or Escape to return\r\n", (char *)buffer);
     if (cgetc() != CH_ESC)
       goto open_again;
     goto start_edit;
   }
-  printf("Saving...");
+  cprintf("Saving...");
 
   /* Save main RAM to fill 8kB */
   if (is_horiz) {
@@ -637,7 +638,7 @@ open_again:
   }
   else if (write_hgr_page_to_file() != 0) {
 write_error:
-    printf("\nError. Press a key to continue...\n");
+    cprintf("\r\nError. Press a key to continue...\r\n");
     close(ofd);
     cgetc();
     goto start_edit;
@@ -646,7 +647,7 @@ write_error:
   close(ofd);
 
   gotox(0);
-  printf("Done. Go back to Edition, View, or main Menu? (E/v/m)");
+  cprintf("Done. Go back to Edition, View, or main Menu? (E/v/m)");
 
   c = tolower(cgetc());
   if (c == 'v') {
@@ -1143,11 +1144,11 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
   init_data();
 
   clrscr();
-  printf("Converting %s (Esc to stop)...\n", ofname);
+  cprintf("Converting %s (Esc to stop)...\r\n", ofname);
 
   ifd = open(ifname, O_RDONLY);
   if (ifd <= 0) {
-    printf("Can't open %s\n", ifname);
+    cprintf("Can't open %s\r\n", ifname);
     cgetc();
     return;
   }

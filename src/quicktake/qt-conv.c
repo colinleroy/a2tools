@@ -109,11 +109,11 @@ static uint8 identify(const char *name)
 
   read(ifd, cache_start, CACHE_SIZE);
 
-  printf("Decompressing ");
+  cprintf("Decompressing ");
   if (!memcmp (cache_start, magic, 4)) {
-    printf("QT%s", model);
+    cprintf("QT%s", model);
   } else {
-    printf("- Invalid file.\n");
+    cprintf("- Invalid file.\r\n");
     return -1;
   }
 
@@ -123,7 +123,7 @@ static uint8 identify(const char *name)
     height = src_file_get_uint16();
     width  = src_file_get_uint16();
 
-    printf(" image %s (%dx%d)...\n", name, width, height);
+    cprintf(" image %s (%dx%d)...\r\n", name, width, height);
 
     /* Skip those */
     src_file_get_uint16();
@@ -136,7 +136,7 @@ static uint8 identify(const char *name)
 
   } else if (!memcmp(cache_start, JPEG_EXIF_MAGIC, 4)) {
     /* FIXME QT 200 implied, 640x480 (scaled down) implied, that sucks */
-    printf(" image %s (640x480)...\n", name);
+    cprintf(" image %s (640x480)...\r\n", name);
     width = QT200_JPEG_WIDTH;
     height = QT200_JPEG_HEIGHT;
     cur_cache_ptr = cache_start;
@@ -232,8 +232,8 @@ static void build_scale_table(const char *ofname) {
         last_band_crop = 12;
         break;
       case 128:
-        printf("Can not reframe 128x96 zone of 320x240 image.\n"
-               "Please try again with less zoom.\n");
+        cprintf("Can not reframe 128x96 zone of 320x240 image.\r\n"
+               "Please try again with less zoom.\r\n");
         /* Reset effective width to go back where we were */
         effective_width = 320;
 reload:
@@ -242,7 +242,7 @@ reload:
         break;
       default:
 unsup_width:
-        printf("Unsupported width %d\n", effective_width);
+        cprintf("Unsupported width %d\r\n", effective_width);
         goto reload;
     }
   }
@@ -455,11 +455,11 @@ int main (int argc, const char **argv)
 #ifdef __CC65__
   reserve_auxhgr_file();
   try_videomode(VIDEOMODE_80COL);
-  printf("Free memory: %zu/%zuB\n", _heapmaxavail(), _heapmemavail());
+  cprintf("Free memory: %zu/%zuB\r\n", _heapmaxavail(), _heapmemavail());
 #endif
 
   if (argc < 6) {
-    printf("Missing argument.\n");
+    cputs("Missing argument.\r\n");
     goto out;
   }
 
@@ -473,8 +473,8 @@ int main (int argc, const char **argv)
 
 try_again:
   if ((ifd = open (ifname, O_RDONLY)) < 0) {
-    printf("Please reinsert the disk containing %s,\n"
-           "or press Escape to cancel.\n", ifname);
+    cprintf("Please reinsert the disk containing %s,\r\n"
+           "or press Escape to cancel.\r\n", ifname);
     if (cgetc() == CH_ESC)
       goto out;
     else
@@ -500,7 +500,7 @@ try_again:
   #endif
 
   if (ofd < 0) {
-    printf("Can't open %s\n", TMP_NAME);
+    cprintf("Can't open %s\r\n", TMP_NAME);
     exit(0);
   }
 
@@ -541,7 +541,7 @@ try_again:
 #ifdef __CC65__
   clrscr();
 #endif
-  printf("Done.");
+  cputs("Done.");
 
   reload_menu(ofname);
 #ifndef __CC65__

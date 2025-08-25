@@ -1332,7 +1332,7 @@ void qt_load_raw(uint16 top)
     init_top();
 
     if (width != 640) {
-      printf("Unsupported format\n");
+      cprintf("Unsupported format\r\n");
       return;
     }
   }

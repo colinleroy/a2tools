@@ -26,7 +26,7 @@ uint8 serial_model = QT_MODEL_UNKNOWN;
 FILE *dbgfp = NULL;
 #endif
 
-unsigned char buffer[BUFFER_SIZE];
+extern unsigned char buffer[BUFFER_SIZE];
 
 #pragma code-name(push, "RT_ONCE")
 

@@ -97,7 +97,7 @@ static uint8 send_hello(uint16 speed) {
     return -1;
   }
   if (c != 0x00) {
-    printf("Error ($%02x).\n", c);
+    cprintf("Error ($%02x).\r\n", c);
     return -1;
   }
   buffer[0] = c;
@@ -182,7 +182,7 @@ uint8 qt1x0_set_speed(uint16 speed) {
       return qt1x0_send_ping();
   }
 
-  printf("Setting speed to %u...\n", speed);
+  cprintf("Setting speed to %u...\r\n", speed);
   simple_serial_write(str_speed, sizeof str_speed);
 
   /* get ack */
@@ -481,7 +481,7 @@ uint8 qt1x0_get_picture(uint8 n_pic, int fd, off_t avail) {
   write(fd, buffer, BUFFER_SIZE);
   lseek(fd, DATA_OFFSET, SEEK_SET);
 
-  printf("  Width %u, height %u, %lu bytes (%s)\n",
+  cprintf("  Width %u, height %u, %lu bytes (%s)\r\n",
          ntohs(width), ntohs(height), pic_size_int, format);
 
   gotoxy(0, status_line);
@@ -532,7 +532,7 @@ uint8 qt1x0_get_thumbnail(uint8 n_pic, int fd, thumb_info *info) {
 
   DUMP_START("data");
 
-  printf("  Width %u, height %u, %lu bytes (%s)\n",
+  cprintf("  Width %u, height %u, %lu bytes (%s)\r\n",
          THUMB_WIDTH, THUMB_HEIGHT, THUMBNAIL_SIZE, "thumbnail");
 
   gotoxy(0, status_line);

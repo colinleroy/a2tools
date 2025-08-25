@@ -370,7 +370,7 @@ uint8 qt200_get_picture(uint8 n_pic, int fd, off_t avail) {
   }
 
 
-  printf("  Width 640, height 480, %lu bytes (jpg)\n",
+  cprintf("  Width 640, height 480, %lu bytes (jpg)\r\n",
          picture_size);
 
   DUMP_START("data");

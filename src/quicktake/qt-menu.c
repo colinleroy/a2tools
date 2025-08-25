@@ -38,7 +38,7 @@ char magic[5] = "????";
 static void print_header(void) {
   gotoxy(0, 0);
   if (camera_connected) {
-    printf("%s connected - %d%% battery%s - %02d/%02d/%04d %02d:%02d\n"
+    cprintf("%s connected - %d%% battery%s - %02d/%02d/%04d %02d:%02d\r\n"
            "%d photos taken, %d left, %s, %s flash - ",
           cam_info.name, cam_info.battery_level, cam_info.charging? " (charging)":"",
           cam_info.date.day, cam_info.date.month, cam_info.date.year,
@@ -49,7 +49,7 @@ static void print_header(void) {
     cputs("No camera connected\r\n");
   }
 #ifdef __CC65__
-  printf("Free RAM: %zuB\n", _heapmemavail());
+  cprintf("Free RAM: %zuB\r\n", _heapmemavail());
 #endif
   chline(scrw);
 }
@@ -69,10 +69,10 @@ static uint8 print_menu(void) {
   cputs(  " R. Re-edit a raw picture from floppy\r\n"
            " V. View a converted picture from floppy\r\n");
   if (camera_connected  && serial_model != QT_MODEL_200) {
-    printf(" N. Set camera name\n"
-           " T. Set camera time\n"
-           " Q. Set quality to %s\n"
-           " F. Set flash to %s\n",
+    cprintf(" N. Set camera name\r\n"
+           " T. Set camera time\r\n"
+           " Q. Set quality to %s\r\n"
+           " F. Set flash to %s\r\n",
            qt_get_quality_str((cam_info.quality_mode == QUALITY_HIGH) ? QUALITY_STANDARD:QUALITY_HIGH),
            qt_get_flash_str((cam_info.flash_mode + 1) % 3));
   }
@@ -93,12 +93,12 @@ static void save_picture(uint8 n_pic) {
   filename[0] = '\0';
 #ifdef __CC65__
   clrscr();
-  printf("Saving picture %d\n\n"
+  cprintf("Saving picture %d\r\n\r\n"
 
-        "Make sure to save the picture to a floppy with enough free space.\n"
-        "\n"
-        "Do not use /RAM, which will be used for temporary storage.\n\n"
-        "Please swap disks if needed and press a key.\n\n",
+        "Make sure to save the picture to a floppy with enough free space.\r\n"
+        "\r\n"
+        "Do not use /RAM, which will be used for temporary storage.\r\n\r\n"
+        "Please swap disks if needed and press a key.\r\n\r\n",
       n_pic);
   cgetc();
 
@@ -191,7 +191,7 @@ static void get_one_picture(uint8 num_pics) {
 
   n_pic = atoi(buf);
   if (n_pic < 1 || n_pic > num_pics) {
-    printf("No image %d in camera.\n"
+    cprintf("No image %d in camera.\r\n"
            "Please press a key...", n_pic);
     cgetc();
     return;
@@ -311,7 +311,7 @@ err_thumb_io:
     clrscr();
     gotoxy(0,20);
 
-    printf("%s (%s, flash %s, %02d/%02d/%04d %02d:%02d)\n"
+    cprintf("%s (%s, flash %s, %02d/%02d/%04d %02d:%02d)\r\n"
            "G to get full picture, Escape to exit, any other key to continue",
            thumb_buf, qt_get_quality_str(info.quality_mode),
            info.flash_mode ? "on":"off", info.date.day, info.date.month,
@@ -348,7 +348,7 @@ static void show_about(void) {
   clrscr();
   while((r = read(fd, (char *)buffer, sizeof(buffer) - 1))) {
     buffer[r] = '\0';
-    printf("%s", buffer);
+    cputs(buffer);
   }
   close(fd);
   cgetc();
@@ -422,11 +422,11 @@ static uint8 setup(int argc, char *argv[]) {
   while (qt_serial_connect(target_speed) != 0) {
     char c;
 
-    printf("Please turn the Quicktake off and on. Try again?\n");
+    cprintf("Please turn the Quicktake off and on. Try again?\r\n");
     if (target_speed != 9600)
-      printf("Y: try at %ubps, 9: try at 9600bps, C: configure, N: don't try (Y/9/c/n)\n", target_speed);
+      cprintf("Y: try at %ubps, 9: try at 9600bps, C: configure, N: don't try (Y/9/c/n)\r\n", target_speed);
     else
-      printf("Y: try at %ubps, C: configure, N: don't try (Y/c/n)\n", target_speed);
+      cprintf("Y: try at %ubps, C: configure, N: don't try (Y/c/n)\r\n", target_speed);
 
     c = tolower(cgetc());
     if (c == 'n')

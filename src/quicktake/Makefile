@@ -142,7 +142,7 @@ CFLAGS  = -I ../lib -I . -DCONF_FILE_PATH=\"/etc/a2tools/quicktake.conf\"
 CLCFLAGS = -t $(TARGET) -O -Cl -Wl -D,__STACKSIZE__=0x200 $(GENERAL_CFLAGS) $(debug_CFLAGS) \
 
 slowtake_CLCFLAGS = $(CLCFLAGS) -C ../../config/apple2enh-hgr-alignbss.cfg $(TARGET)-iobuf-0800.o \
-	-DPROGRAM_NAME='"SLOWTAKE"' \
+	-DPROGRAM_NAME='"SLOWTAKE"' -DBUFFER_SIZE=2048 --asm-define BUFFER_SIZE=2048 \
 	--start-addr 0xC00 #One file buffer
 
 qtktconv_CLCFLAGS = -D_CACHE_SIZE=16384 --asm-define CACHE_SIZE=16384 \
