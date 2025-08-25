@@ -322,6 +322,7 @@ int main(int argc, char **argv) {
 #ifdef __CC65__
   /* Leave 0x800-0xC00 for one iobuf, and
    * load our LOWCODE */
+  /* We could get 1kB less disk usage if starting at $1000 */
   int fd = open("IMGLOW", O_RDONLY);
   read(fd, (void *)0xC00, 0x2000-0xC00);
   close(fd);

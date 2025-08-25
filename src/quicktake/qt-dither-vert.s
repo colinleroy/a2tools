@@ -146,7 +146,7 @@ forward_err:
         sta     sierra_safe_err_buf,y
 
 sierra_err_forward:
-        iny
+        dey
         clc                   ; May be set by ror
         adc     sierra_safe_err_buf,y
         sta     sierra_safe_err_buf,y
@@ -562,9 +562,6 @@ _setup_angle_90:
         lda     #C_BIT_ABS
         sta     mirror_x
 
-        lda     #C_DEY
-        sta     sierra_err_forward
-
         ldx     _resize
         bne     resize_90_coords
 no_resize_90_coords:
@@ -619,9 +616,6 @@ _setup_angle_270:
 
         lda     #C_JMP
         sta     mirror_x
-
-        lda     #C_INY
-        sta     sierra_err_forward
 
         ldx     _resize
         bne     resize_270_coords

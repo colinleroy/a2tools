@@ -216,8 +216,12 @@ start_from_first:
 
 static void print_help(void) {
   gotoxy(0, 20);
-  cputs("P: Print to IW II - Space: view next\r\n"
-        "Esc: exit - Any other key: toggle help.");
+  if (has_128k)
+    cputs("P: print to Imagewriter II - C: toggle color - Space: next\r\n"
+          "Esc: exit - Any other key: toggle help.");
+  else
+    cputs("P: print - Space: next - Esc: exit\r\n"
+          "Any other key: show help.");
 }
 
 int main(int argc, char *argv[]) {
