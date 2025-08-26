@@ -348,7 +348,7 @@ static void show_about(void) {
   clrscr();
   while((r = read(fd, (char *)buffer, sizeof(buffer) - 1))) {
     buffer[r] = '\0';
-    cputs(buffer);
+    cputs((char *)buffer);
   }
   close(fd);
   cgetc();

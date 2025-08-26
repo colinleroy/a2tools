@@ -1,6 +1,7 @@
         .export         _load_normal_data
         .export         _update_progress_bar
         .export         _buffer, _err_buf
+        .export         _opt_histogram
 
         .import         _load_thumb_data
 
@@ -12,7 +13,6 @@
 
         .import         _bayer_map, _bayer_map_x, _bayer_map_y
         .import         _end_bayer_map_x, _end_bayer_map_y
-        .import         _opt_histogram
         .import         _cur_hgr_row
         .import         _is_thumb, _load_thumbnail_data
         .import         _prev_scaled_dx, _prev_scaled_dy, _angle
@@ -118,5 +118,8 @@ _update_progress_bar:
         .bss
 
 .align 256
-_buffer:      .res BUFFER_SIZE
-_err_buf:     .res 1024+2
+_buffer:            .res BUFFER_SIZE
+.assert <* = 0, error
+_opt_histogram:     .res 256
+.assert <* = 0, error
+_err_buf:           .res 512+2

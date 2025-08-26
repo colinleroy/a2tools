@@ -47,6 +47,7 @@ FIRST_PIXEL_HANDLER = dither_sierra
 LINE_DITHER_SETUP   = prepare_dither_sierra
 
 safe_err_buf = _err_buf+1
+
 ; dithering macros.
 ; They must end with jmp next_pixel, unless
 ; it's the last one in the loop.
@@ -97,7 +98,7 @@ reset_bayer_x:
 
 .macro SIERRA_DITHER_PIXEL
         ldy     final_img_x
-        lda     safe_err_buf+1,y
+        lda     safe_err_buf,y
 
         adc     err2
         bpl     err_pos
@@ -133,14 +134,14 @@ forward_err:
         ror     a
 
         ; *(cur_err_x_yplus1+img_x)   = err1;
-        sta     safe_err_buf+1,y
+        sta     safe_err_buf,y
 
 sierra_err_forward:
         clc                   ; May be set by ror
 sierra_revert_1:
-        adc     safe_err_buf,y
+        adc     safe_err_buf-1,y
 sierra_revert_2:
-        sta     safe_err_buf,y
+        sta     safe_err_buf-1,y
 .endmacro
 
 ; Load a byte from the file. Must end with byte in A.
@@ -553,7 +554,7 @@ _setup_angle_90:
         lda     #C_BIT_ABS
         sta     mirror_x
 
-        lda     #<safe_err_buf
+        lda     #<(safe_err_buf-1)
         sta     sierra_revert_1+1
         sta     sierra_revert_2+1
 
@@ -612,7 +613,7 @@ _setup_angle_270:
         lda     #C_JMP
         sta     mirror_x
 
-        lda     #<(safe_err_buf+2)  ; We iterate lines the other way so
+        lda     #<(safe_err_buf+1)  ; We iterate lines the other way so
         sta     sierra_revert_1+1   ; shift the x-1 buffer.
         sta     sierra_revert_2+1
 

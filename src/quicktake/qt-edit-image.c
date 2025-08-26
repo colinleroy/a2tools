@@ -115,15 +115,16 @@ void qt_convert_image(const char *filename) {
 }
 
 #ifndef __CC65__
-int8 err_buf[((FILE_WIDTH) * 4) + 2];
+int8 err_buf[512+2];
 static uint16 histogram[256];
+uint8 opt_histogram[256];
 #else
-extern int8 err_buf[((FILE_WIDTH) * 4) + 2];
+extern int8 err_buf[512+2];
+extern uint8 opt_histogram[256];
 // static uint8 *histogram_low = err_buf;
 // static uint8 *histogram_high = err_buf + 256;
 #endif
 
-uint8 opt_histogram[256];
 
 #ifndef __CC65__
 uint16 *cur_histogram;
@@ -144,8 +145,7 @@ static void histogram_equalize(void) {
 #ifndef __CC65__
     read(ifd, histogram, 256*2);
 #else
-    if (read(ifd, err_buf, 256) < 256 ||
-        read(ifd, err_buf+256, 256) < 256) {
+    if (read(ifd, err_buf, 512) < 512) {
           close(ifd);
           goto fallback_std;
         }
@@ -159,9 +159,7 @@ static void histogram_equalize(void) {
     do {
       uint32 tmp;
       curr_hist += *(cur_histogram++);
-      tmp = ((uint32)curr_hist << 8) - curr_hist;
-      tmp >>= 8;  /* / 256 */
-      tmp /= 192; /* / 256/192 */
+      tmp = (curr_hist*255) / (256*192);
       *(cur_opt_histogram++) = tmp;
     } while (++x);
 #else
@@ -171,6 +169,7 @@ static void histogram_equalize(void) {
     __asm__("lda %v,y", err_buf);
     __asm__("adc %v", curr_hist);
     __asm__("sta %v", curr_hist);
+    /* curr_hist*255 done as curr_hist*256 - curr_hist */
     __asm__("tax"); /* *256 */
 
     __asm__("lda %v+256,y", err_buf);
@@ -191,6 +190,7 @@ static void histogram_equalize(void) {
     __asm__("sbc #0");
     __asm__("sta sreg");
 
+    /* /(width*height) done as /width /height */
     /* / 256 */
     __asm__("txa");
     __asm__("ldx sreg");
@@ -243,6 +243,7 @@ static void thumb_histogram(int ifd) {
   bzero(err_buf, sizeof(err_buf));
 #endif
 
+  /* First count values */
   while ((r_bytes = read(ifd, buffer, 255)) != 0) {
     cur_thumb_data = buffer;
 #ifndef __CC65__
@@ -286,6 +287,7 @@ static void thumb_histogram(int ifd) {
   }
   x = 0;
 
+  /* Now equalize */
   do {
     uint32 tmp_large;
     uint16 tmp;
@@ -1166,15 +1168,13 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
   progress_bar(wherex(), wherey(), scrw, 0, file_height);
 
   bzero(err_buf, sizeof err_buf);
+  init_graphics(1, 1);
+  hgr_mixon();
   if (angle == 0 || angle == 180) {
     is_horiz = 1;
-    init_graphics(1, 1);
-    hgr_mixon();
     do_dither_horiz();
   } else {
     is_horiz = 0;
-    init_graphics(1, 1);
-    hgr_mixon();
     do_dither_vert();
   }
 

@@ -17,8 +17,8 @@
         .import         _kbhit, _cgetc
         .import         _cur_buf_page, _buffer
 
-        .importzp       img_y, c_sp, ptr3, ptr4
-        .importzp       _zp2p, _zp4, _zp5, _zp6p, _zp8p, _zp9, _zp10, _zp11, _zp12
+        .importzp       img_y, c_sp
+        .importzp       _zp2p, _zp4, _zp5, _zp6, _zp7, _zp8, _zp9, _zp10, _zp11, _zp12
 
         .include "apple2.inc"
 
@@ -27,13 +27,11 @@
 thumb_buf_ptr         = _zp2p
 img_x                 = _zp4
 ; img_y               = _zp5, defined in -common.s
-pixel_val             = ptr4      ; Will be destroyed by data loading,
-pixel_mask            = ptr4+1    ; which is not a problem as these
-opt_val               = ptr3      ; have a line-long lifespan
-err2                  = ptr3+1    ;
-hgr_byte              = _zp10
-cur_hgr_line          = _zp11
-buffer_pos            = _zp12
+pixel_val             = _zp6
+pixel_mask            = _zp7
+opt_val               = _zp8
+err2                  = _zp9
+cur_hgr_line          = _zp10
 
 DITHER_NONE       = 2
 DITHER_BAYER      = 1
@@ -47,6 +45,8 @@ CENTER_OFFSET_THUMB = 60-12
 ; defaults:
 FIRST_PIXEL_HANDLER = dither_sierra
 LINE_DITHER_SETUP   = prepare_dither_sierra
+
+safe_err_buf = _err_buf+1
 
 ; dithering macros.
 ; They must end with jmp next_pixel, unless
@@ -101,7 +101,7 @@ reset_bayer_x:
         ; from previous line). As they're max 128/2 and 128/4, don't bother
         ; about overflows.
 sierra_buf_1:
-        lda     _err_buf,y
+        lda     safe_err_buf,y
         adc     err2
         bpl     err_pos
 err_neg:
@@ -109,42 +109,42 @@ err_neg:
         adc     opt_val
         bcs     check_low     ; We're not negative anymore
         sec                   ; Still negative. Put sign into carry
-        bcs     forward_err   ; (= BRA here)
+        jmp     forward_err   ; the pixel is black, just forward the error to next line
 
 err_pos:
-        ; Add current pixel value
         clc
         adc     opt_val
-        bcs     white_pix     ; Overflowed so $FF.
+        bcs     white_pix     ; Overflowed so the pixel is white.
 
-        ; Must check low byte
-check_low:
+check_low:                    ; No overflow, must check low byte for threshold
         cmp     #<DITHER_THRESHOLD
-        bcc     forward_err
+        bcc     forward_err   ; Pixel is black!
+
 white_pix:
-        tax                   ; Backup low byte
+        tax                   ; Backup our pixel + err(x+1,y)+err(x,y+1) calculation
         lda     pixel_val
         ora     pixel_mask
         sta     pixel_val
-        txa                   ; Restore low byte
+        txa                   ; Restore it
 
-        cmp     #$80          ; Keep low byte sign for >> (no need to do it where coming from low byte check path, DITHER_THRESHOLD is $80)
-forward_err:
+        cmp     #$80          ; Set carry according to sign (needed when coming from err_pos)
+
+forward_err:                  ; And forward error to next pixels
         ror     a
-        sta     err2
+        sta     err2          ; err/2 for (x+1,y)
         cmp     #$80
         ror     a
 
-        ; *(cur_err_x_yplus1+img_x)   = err1;
 sierra_buf_2:
-        sta     _err_buf,y
+        ; err/4 for x,y+1
+        sta     safe_err_buf,y
 
-sierra_err_forward:
+        ; previous err + err/4 for x-1,y+1
         clc                   ; May be set by ror
 sierra_buf_off_1:
-        adc     _err_buf+1,y
+        adc     safe_err_buf-1,y
 sierra_buf_off_2:
-        sta     _err_buf+1,y
+        sta     safe_err_buf-1,y
 .endmacro
 
 ; Prepare line's dithering
@@ -161,11 +161,11 @@ prepare_dither_bayer:
         jmp     prepare_dither_none
 
 prepare_dither_sierra:
-        ; Reset err buf to start (which is the end as we dec img_x)
-        lda     #>(_err_buf+512)
+        ; Reset err buf to start
+        lda     #>(safe_err_buf)
         sta     sierra_buf_1+2
         sta     sierra_buf_2+2
-        lda     #>(_err_buf+512+1)
+        lda     #>(safe_err_buf-1)
         sta     sierra_buf_off_1+2
         sta     sierra_buf_off_2+2
         ; reset err2
@@ -180,9 +180,6 @@ prepare_dither_none:          ; Nothing to do here.
         sta     _bayer_map_y
         lda     #64
         sta     _end_bayer_map_y
-.endmacro
-
-.macro BAYER_START_LINE
 .endmacro
 
 .macro BAYER_END_LINE
@@ -223,8 +220,8 @@ load_normal:
 :
         ldx     _cur_buf_page+1
         stx     buf_ptr_load+2
-        lda     #0
-        sta     buffer_pos
+        lda     #<(_buffer)
+        sta     buf_ptr_load+1
 .endmacro
 
 .macro PROGRESS_BAR_UPDATE BRANCH_TO
@@ -240,7 +237,7 @@ load_normal:
         jsr     _cgetc
         cmp     #$1B          ; Esc
         bne     BRANCH_TO
-        rts
+        rts                   ; Exit _do_dither_horiz
 .endmacro
 
 _do_dither_horiz:
@@ -287,55 +284,54 @@ angle270:
 
 finish_patches:
 
-        ; Line loop setup
+        ; Initial setup
         BUFFER_INIT
         BAYER_INIT
 
-        lda     _is_thumb           ; Skip one shift of sierra tables for thumbs
+        lda     _is_thumb
         beq     dither_setup_line_start_landscape
-        lda     #1
-        sta     dither_setup_line_start_landscape+1
+        lda     _file_width       ; Patch X bound check for thumbs
+        sta     next_pixel_check+1
 
+; Line loop start
 dither_setup_line_start_landscape:
         ldx     #0
         stx     img_xh
 
-        ; Update line pointer
+        ; Update line pointer high to new line
         ldx     cur_hgr_line
-        lda     _hgr_baseaddr_l,x
-hgr_target_line_low:
-        sta     hgr_line_ptr_0+1    ; Patched by setup_angle_*
         lda     _hgr_baseaddr_h,x
 hgr_target_line_high:
-        sta     hgr_line_ptr_0+2
-        stx     cur_hgr_line
+        sta     hgr_line_ptr_0+2  ; Patched by setup_angle_*
 
-        ; Reset start byte/mask
+        ; Set line pointer low, accounting for start hgr_byte
+        clc
+        lda     _hgr_baseaddr_l,x
+hgr_start_byte = *+1
+        adc      #$00
+hgr_target_line_low:
+        sta     hgr_line_ptr_0+1  ; Patched by setup_angle_*
+
+        ; Reset start mask
 hgr_start_mask = *+1
         lda     #$00
         sta     pixel_mask
 
-hgr_start_byte = *+1
-        lda     #$00
-        sta     hgr_byte
-
         LINE_PREPARE_DITHER
         LOAD_DATA
 
-
-        ldy     _file_width         ; We'll keep Y = img_x as much as possible.
+        ldy     #0                ; We'll keep Y = img_x in the whole row loop.
 
 pixel_handler:
-        ldx     buffer_pos
-buf_ptr_load:
-        lda     _buffer,x
-        tax
-
-        tya                       ; Increment buffer_pos every two DHGR pixels
+        tya                       ; Increment buffer only every two DHGR pixels
         lsr
-        bcc     :+
-        inc     buffer_pos        ; High byte of buf_ptr_load is taken care of by load_data
-:
+pixel_handler_skip_load_dest:     ; Maybe directly patched with bcs dither_sierra if _brigten == 0
+        bcs     pixel_handler_first_step
+
+buf_ptr_load:
+        ldx     _buffer           ; Load, and directly increment the buffer pointer low byte.
+        inc     buf_ptr_load+1    ; High byte is taken care of by load_data on every line.
+
         lda     _opt_histogram,x  ; Get histogram-optimized value
         sta     opt_val
 
@@ -350,26 +346,21 @@ dither_sierra:
         SIERRA_DITHER_PIXEL
 
 next_pixel:
-        cpy     #0
-        beq     increment_high_img_x
-high_x_dec_done:
-        dey                           ; decrement img_x
+        iny
+next_pixel_check:
+        cpy     #0                    ; Explicit check as it will be patched (to 160) for thumbs
+        beq     increment_high_img_x  ; This will exit to line_done after 512 pixels (256*2) or 160 (160*1)
 
         ; Advance to next HGR pixel after incrementing image X.
-        ; The first three bytes are patched according to the rotation of the image.
+        ; The opcodes and targets are patched according to the rotation of the image.
 img_x_to_hgr:
         asl     pixel_mask            ; Update pixel mask  (lsr or asl, or bit if inverted coords)
 check_store_byte:
-        bpl     pixel_handler         ; Check if byte done (bpl or bne) - branch patch by setup
-store_byte:
-        beq     store_byte_0          ; Branch to byte storage (beq, only for 180°
-                                      ; branch not taken at 0° to spare 1 cycle as the
-                                      ; handler is right after)
-
-; ==========================================
-; Remeber this code is not linear. Previous branches got us
-; either to pixel_handler for a new byte or to line_done for
-; a new line.
+        bpl     pixel_handler         ; Check if byte done (bpl or bne, patched)
+store_byte:                           ; It is!
+        beq     store_byte_0          ; Branch (patched) to byte storage
+                                      ; (beq is condition required to the 180° rotation)
+                                      ; but is left as is for 0° rotation as it spares one cycle
 
 store_byte_0:
         lda     #$01                  ; Set init value for mask
@@ -384,16 +375,15 @@ store_byte_0:
                                       ; cleared carry shifting $40 into $80
         sta     $C054,x
 
-        ldx     hgr_byte
         lda     pixel_val
 hgr_line_ptr_0:
-        sta     $FFFF,x
+        sta     $FFFF
         lda     #0
         sta     pixel_val             ; Reset pixel val
 
 inc_check:
-        bvs     pixel_handler    ; Don't shift hgr_byte if wrote AUX (at 0°)
-        inc     hgr_byte
+        bvs     pixel_handler         ; Don't shift hgr_byte if wrote AUX (at 0°)
+        inc     hgr_line_ptr_0+1
         jmp     pixel_handler
 
 ; ===========================================
@@ -412,32 +402,29 @@ store_byte_180:
 
         sta     $C054,x
 
-        ldx     hgr_byte
         lda     pixel_val
 hgr_line_ptr_180:
-        sta     $FFFF,x
+        sta     $FFFF
         lda     #0
         sta     pixel_val             ; Reset pixel val
 
 dec_check:
         bvc     :+                    ; Don't shift hgr_byte if wrote MAIN (at 180°)
-        dec     hgr_byte
+        dec     hgr_line_ptr_180+1
 :       jmp     pixel_handler
 
 ; ===========================================
 
 increment_high_img_x:
         ldx     img_xh
-        cpx     #2
-        beq     line_done             ; Finished the line!
-        inx
-        stx     img_xh
-        ldy     _file_width           ; Only needed for thumbnails - re-set img_x
-        dec     sierra_buf_1+2        ; Bump down to first page
-        dec     sierra_buf_2+2
-        dec     sierra_buf_off_1+2
-        dec     sierra_buf_off_2+2
-        jmp     high_x_dec_done       ; Keep going...
+        bne     line_done             ; Finished the line!
+        inc     img_xh
+        ldy     #0                    ; Only needed for thumbnails - re-set img_x to start
+        inc     sierra_buf_1+2        ; Bump sierra err buf to second page
+        inc     sierra_buf_2+2
+        inc     sierra_buf_off_1+2
+        inc     sierra_buf_off_2+2
+        jmp     img_x_to_hgr          ; Keep going...
 
 ; ===========================================
 
@@ -527,21 +514,21 @@ _setup_angle_0:
 
         ; Center horizontally
         lda     #$02
-        sta     hgr_start_byte
+        ldx     _is_thumb
+        beq     :+
+        lda     #$09
+:       sta     hgr_start_byte
         lda     #$01
         sta     hgr_start_mask
 
         ; Patch img_x_to_hgr
         lda     #C_ASL_ZP
         sta     img_x_to_hgr
-        lda     #pixel_mask
-        sta     img_x_to_hgr+1
 
         ; Patch hgr byte shifter to increase after writing to main
         lda     #C_BPL
         sta     check_store_byte
-        ; lda     #C_BMI
-        ; sta     store_byte
+
         .assert (store_byte_0-store_byte-2) < 127, error ; can't branch
         lda     #<(store_byte_0-store_byte-2)
         sta     store_byte+1
@@ -576,14 +563,11 @@ _setup_angle_180:
         ; Patch img_x_to_hgr
         lda     #C_LSR_ZP
         sta     img_x_to_hgr
-        lda     #pixel_mask
-        sta     img_x_to_hgr+1
 
-        ; Patch hgr byte shifter to deccrease after writing to aux
+        ; Patch hgr byte shifter to decrease after writing to aux
         lda     #C_BNE
         sta     check_store_byte
-        ; lda     #C_BEQ
-        ; sta     store_byte
+
         .assert (store_byte_180-store_byte-2) < 127, error ; can't branch
         lda     #<(store_byte_180-store_byte-2)
         sta     store_byte+1
@@ -663,6 +647,23 @@ dither_is_set:
 update_pixel_branching:
         sta     pixel_handler_first_step+1       ; Update  to either
         stx     pixel_handler_first_step+2       ; the brightener or the ditherer
+
+
+        ; And finally, if brighten == 0 and dither == SIERRA, we can spare one
+        ; jump and we'll take it.
+        .assert (pixel_handler_first_step-pixel_handler_skip_load_dest-2) < 127, error
+        lda     #<(pixel_handler_first_step-pixel_handler_skip_load_dest-2)
+
+        cpy     #0                               ; brighten == 0?
+        bne     :+
+        ldy     _dither_alg                      ; and dither == Sierra?
+        cpy     #DITHER_SIERRA
+        bne     :+
+
+        .assert (dither_sierra-pixel_handler_skip_load_dest-2) < 127, error ; can't branch
+        lda     #<(dither_sierra-pixel_handler_skip_load_dest-2)
+
+:       sta     pixel_handler_skip_load_dest+1
 
         rts
 
