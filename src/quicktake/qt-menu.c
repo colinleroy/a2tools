@@ -26,6 +26,7 @@
 uint8 scrw, scrh;
 uint8 camera_connected;
 camera_info cam_info;
+static unsigned char exec_pass = 0;
 
 #ifdef __CC65__
   #pragma static-locals(push, on)
@@ -152,6 +153,7 @@ static void save_picture(uint8 n_pic) {
     uint16 tmp = n_pic;
     close(fd);
     state_set(STATE_GET, tmp, NULL);
+    exec_pass = 1;
     qt_convert_image(filename);
   } else {
     close(fd);
@@ -259,6 +261,8 @@ static void take_picture(void) {
   cputs("Done!...\r\n");
 }
 
+void clear_dhgr(void);
+
 static void show_thumbnails(uint8 num_pics) {
   uint8 i = 0;
   uint16 tmp;
@@ -306,6 +310,7 @@ err_thumb_io:
     tmp = i;
     state_set(STATE_PREVIEW, tmp, NULL);
     sprintf(thumb_buf, "Thumbnail %d", i);
+    clear_dhgr();
     dither_to_hgr(THUMBNAIL_NAME, thumb_buf, THUMB_WIDTH*2, THUMB_HEIGHT*2, serial_model);
 
     clrscr();
@@ -451,6 +456,10 @@ static uint8 setup(int argc, char *argv[]) {
 void unlink_temp_files(void) {
   unlink(HIST_NAME);
   unlink(TMP_NAME);
+  unlink(THUMBNAIL_NAME);
+  if (!exec_pass) {
+    state_unlink();
+  }
   /* Don't unlink AUXHGR, as we want *conv to start writing GREY
    * *after* that file. */
 }
@@ -542,6 +551,7 @@ menu:
       }
     }
   } else if (choice == 'c') {
+    exec_pass = 1;
     exec("slowtake", NULL);
   }
 

@@ -713,29 +713,37 @@ void load_normal_data(void) {
 #else
 /* in qt-dither.s */
 void load_normal_data(void);
+void clear_dhgr(void);
 #endif
+
+/* The fastest way to iterate when dithering is by dey for full-size pictures.
+ * This means X for thumbnails start at 256-160. Reflect that when loading
+ * thumbnail data to the buffer. */
+#define THUMBNAIL_BUFFER_OFFSET ((256-160)/2)
+#define THUMBNAIL_BUF_START (buffer+THUMBNAIL_BUFFER_OFFSET)
 
 void load_thumbnail_data(uint8 line) {
   uint8 a, b, c, d, dx, i;
   /* assume thumbnail at 4bpp and zoom it */
   if (is_qt100) {
     if (!(line & 1)) {
-      read(ifd, buffer,THUMB_WIDTH / 2);
+      read(ifd, THUMBNAIL_BUF_START, THUMB_WIDTH / 2);
       /* Unpack */
 #ifndef __CC65__
       uint8 off;
       i = 39;
       do {
-        c   = buffer[i];
+        c   = THUMBNAIL_BUF_START[i];
         a   = (c & 0xF0);
         b   = (c << 4);
         off = i * 4;
-        buffer[off++] = a;
-        buffer[off++] = a;
-        buffer[off++] = b;
-        buffer[off] = b;
+        THUMBNAIL_BUF_START[off++] = a;
+        THUMBNAIL_BUF_START[off++] = a;
+        THUMBNAIL_BUF_START[off++] = b;
+        THUMBNAIL_BUF_START[off] = b;
       } while (i--);
 #else
+      thumb_buf_ptr = THUMBNAIL_BUF_START;
       __asm__("ldy #39");
       next_thumb_x:
       __asm__("lda (%v),y", thumb_buf_ptr); /* Load byte at index Y */
@@ -779,9 +787,9 @@ void load_thumbnail_data(uint8 line) {
     /* Whyyyyyy do they do that */
     if (!(line % 4)) {
       /* Expand the next two lines from 4bpp thumb_buf to 8bpp buffer */
-      read(ifd, thumb_buf,THUMB_WIDTH);
+      read(ifd, thumb_buf, THUMB_WIDTH);
       orig_in = cur_in = thumb_buf;
-      orig_out = cur_out = buffer;
+      orig_out = cur_out = THUMBNAIL_BUF_START;
       for (dx = 0; dx < THUMB_WIDTH; dx++) {
         c = *cur_in++;
         a   = (c & 0xF0);
@@ -791,7 +799,7 @@ void load_thumbnail_data(uint8 line) {
       }
 
       /* Reorder bytes from buffer back to thumb_buf */
-      orig_in = cur_in = buffer;
+      orig_in = cur_in = THUMBNAIL_BUF_START;
       orig_out = cur_out = thumb_buf;
       for (i = 0; i < THUMB_WIDTH * 2; ) {
         if (i < THUMB_WIDTH*3/2) {
@@ -816,7 +824,7 @@ void load_thumbnail_data(uint8 line) {
       /* Finally copy the first line of thumb_buf to buffer for display,
        * upscaling horizontally */
       orig_in = cur_in = thumb_buf;
-      orig_out = cur_out = buffer;
+      orig_out = cur_out = THUMBNAIL_BUF_START;
       for (dx = 0; dx < THUMB_WIDTH; dx++) {
         *cur_out = *cur_in;
         cur_out++;
@@ -828,7 +836,7 @@ void load_thumbnail_data(uint8 line) {
       /* Copy the second line of thumb_buf to buffer for display,
        * upscaling horizontally */
       orig_in = cur_in = thumb_buf + THUMB_WIDTH;
-      orig_out = cur_out = buffer;
+      orig_out = cur_out = THUMBNAIL_BUF_START;
       for (dx = 0; dx < THUMB_WIDTH; dx++) {
         *cur_out = *cur_in;
         cur_out++;
@@ -1174,6 +1182,10 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
     is_horiz = 1;
     do_dither_horiz();
   } else {
+    if (is_horiz) {
+      /* From horizontal to vertical, we need to clear borders */
+      clear_dhgr();
+    }
     is_horiz = 0;
     do_dither_vert();
   }
@@ -1198,6 +1210,7 @@ void dither_to_hgr(const char *ifname, const char *ofname, uint16 p_width, uint1
 
 void qt_edit_image(const char *ofname, uint16 src_width) {
   set_scrollwindow(20, scrh);
+  clear_dhgr();
   do {
     if (angle >= 360)
       angle -= 360;

@@ -1,6 +1,6 @@
         .export         _load_normal_data
         .export         _update_progress_bar
-        .export         _buffer, _err_buf
+        .export         _buffer, _err_buf, _line_buf
         .export         _opt_histogram
 
         .import         _load_thumb_data
@@ -20,7 +20,7 @@
         .import         _kbhit, _cgetc
         .import         _read_buf, _cur_buf_page
         .export         img_y
-        .export         clear_dhgr
+        .export         _clear_dhgr
 
         .import         pushax, pusha0, _read, _ifd, subysp
 
@@ -29,9 +29,14 @@
 
         .include "apple2.inc"
 
+        .segment "LC"
+
 img_y                 = _zp5
 
 clear_hgr_page:
+        bit     $C083         ; WR-enable LC, we're gonna patch
+        bit     $C083
+
         ldx     #$20
         stx     clear_byte+2
         lda     #$00
@@ -45,7 +50,7 @@ clear_byte:
         bne     clear_byte
         rts
 
-clear_dhgr:
+_clear_dhgr:
         sta     $C055         ; SETPAGE2
         jsr     clear_hgr_page
         sta     $C054         ; SETPAGE1
@@ -123,3 +128,4 @@ _buffer:            .res BUFFER_SIZE
 _opt_histogram:     .res 256
 .assert <* = 0, error
 _err_buf:           .res 512+2
+_line_buf:          .res 192

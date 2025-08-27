@@ -3,11 +3,12 @@
         .import         _update_progress_bar
         .export         _do_dither_vert
         .import         _load_normal_data
-        .import         clear_dhgr
+
         .import         _file_height, _file_width
         .import         _hgr_baseaddr_l, _hgr_baseaddr_h
         .import         _resize
         .import         _crop_pos
+        .import         _line_buf
 
         .import         _bayer_map, _bayer_map_x, _bayer_map_y
         .import         _end_bayer_map_x, _end_bayer_map_y
@@ -29,7 +30,6 @@
 
 img_x                 = _zp4
 ; img_y               = _zp5, defined in -common.s
-pixel_val             = _zp6
 pixel_mask            = _zp7
 opt_val               = _zp8
 err2                  = _zp9
@@ -68,9 +68,9 @@ check_bayer_low:
         bcc     black_pix_bayer
 
 white_pix_bayer:
-        lda     pixel_val
+        lda     _line_buf,y
         ora     pixel_mask
-        sta     pixel_val
+        sta     _line_buf,y
 
 black_pix_bayer:
         ; Advance Bayer X
@@ -90,14 +90,13 @@ reset_bayer_x:
         lda     opt_val
         cmp     #<DITHER_THRESHOLD
         bcc     :+
-        lda     pixel_val
+        lda     _line_buf,y
         ora     pixel_mask
-        sta     pixel_val
+        sta     _line_buf,y
 :       jmp     BRANCH_TO
 .endmacro
 
 .macro SIERRA_DITHER_PIXEL
-        ldy     final_img_x
         lda     safe_err_buf,y
 
         adc     err2
@@ -121,9 +120,9 @@ check_low:
         bcc     forward_err
 white_pix:
         tax                   ; Backup low byte
-        lda     pixel_val
+        lda     _line_buf,y
         ora     pixel_mask
-        sta     pixel_val
+        sta     _line_buf,y
         txa                   ; Restore low byte
 
         cmp     #$80          ; Keep low byte sign for >> (no need to do it where coming from low byte check path, DITHER_THRESHOLD is $80)
@@ -147,9 +146,9 @@ sierra_revert_2:
 ; Load a byte from the file. Must end with byte in A.
 .macro LOAD_IMAGE_BYTE
 buf_ptr_load:
-        ldy     $FFFF         ; Patched with buf_ptr address
+        ldx     $FFFF         ; Patched with buf_ptr address
         ; opt_val = opt_histogram[*buf_ptr];
-        lda     _opt_histogram,y
+        lda     _opt_histogram,x
         sta     opt_val
 .endmacro
 
@@ -261,13 +260,60 @@ inc_buf_ptr_high:
 .endscope
 .endmacro
 
+; Reset the line buffer
+.macro CLEAR_LINE_BUF
+.scope
+        ldy     #191
+        lda     #0
+:       sta     _line_buf,y
+        dey
+        bne     :-
+        sta     _line_buf
+.endscope
+.endmacro
+
+; Commit the current line buffer to the current DHGR row,
+; and reset it to zero for the next row.
+.macro COMMIT_LINE_BUF
+        lda     cur_page          ; Select correct page
+page_invert = *+1                 ; Page order differs at 90 and 270°
+        eor     #1
+        tax
+        sta     $C054,x
+
+        ldy     #191
+        clc
+next_line_slow:                   ; Init (slowly) the line pointer, based
+        lda     _hgr_baseaddr_l,y ; on current Y line iteration
+        adc     hgr_byte
+        sta     line+1
+        lda     _hgr_baseaddr_h,y
+        sec                       ; For later
+next_line_fast:
+        sta     line+2            ; Or update it quickly, cf down under
+
+        lda     _line_buf,y       ; Get our byte
+line:
+        sta     $FFFF             ; Store it
+        lda     #0
+        sta     _line_buf,y       ; And reset it.
+
+        dey
+        beq     :+                ; Are we done?
+        lda     line+2
+        sbc     #$04              ; Try to decrement line address by $400, and
+        cmp     #$20              ; see if we're still in HGR range.
+        bcs     next_line_fast
+        bcc     next_line_slow    ; Otherwise, reload from Y iterator
+:
+.endmacro
+
 _do_dither_vert:
         bit     $C083         ; WR-enable LC
         bit     $C083
 
-        jsr     clear_dhgr
+        CLEAR_LINE_BUF
 
-        ; jsr     clear_dhgr
         lda     #16
         sta     pgbar_update
 
@@ -282,9 +328,6 @@ _do_dither_vert:
         lda     #100
         sta     last_scaled_img_x
         sta     last_scaled_img_y
-
-        lda     #0
-        sta     pixel_val
 
 dither_setup_start:
         jsr     patch_dither_branches
@@ -302,23 +345,11 @@ dither_setup_start:
 
 
         lda     _angle+1
-        beq     :+
-        jmp     angle270
-:       lda     _angle
-        cmp     #0
-        beq     angle0
-        cmp     #90
-        beq     angle90
-        jmp     angle180
-angle0:
-        brk
+        bne     angle270
 
 angle90:
         jsr     _setup_angle_90
         jmp     finish_patches
-
-angle180:
-        brk
 
 angle270:
         jsr     _setup_angle_270
@@ -366,9 +397,11 @@ hgr_reset_mask = *+1
         lda     #$01                  ; Set init value     ($40 or $01)
         sta     pixel_mask
 
-        dec     cur_page              ; Should we shift the HGR byte or change page?
+        COMMIT_LINE_BUF               ; New seven pixels row finished, commit buffer
+
+        dec     cur_page              ; Should we shift the HGR byte or just change page?
         bpl     line_prepare_dither
-        
+
 hgr_byte_shift:
         inc     hgr_byte
         lda     #1
@@ -376,13 +409,6 @@ hgr_byte_shift:
 
 line_prepare_dither:
         LINE_PREPARE_DITHER
-
-        sta     $C054
-        lda     cur_page
-cur_page_check:
-        beq     :+
-        sta     $C055
-:
 
 pixel_loop_start:
 pixel_handler:
@@ -418,20 +444,11 @@ x_crop_shift = *+1
 mirror_x:
         bit     do_mirror_x
 mirror_x_done:
-        sta     final_img_x
-        tay
-        lda     _hgr_baseaddr_l,y
-        sta     hgr_line
-        lda     _hgr_baseaddr_h,y
-        sta     hgr_line+1
-
-        ldy     hgr_byte
-        lda     (hgr_line),y
-        sta     pixel_val
+        tay                         ; final_img_x now in Y, keep it there for the whole loop
 
 
 pixel_handler_first_step:
-        jmp     FIRST_PIXEL_HANDLER ; Will get patched with the most 
+        jmp     FIRST_PIXEL_HANDLER ; Will get patched with the most
                                     ; direct thing possible
                                     ; (do_brighten, dither_bayer, ...)
 
@@ -440,10 +457,6 @@ pixel_handler_first_step:
 dither_sierra:
         SIERRA_DITHER_PIXEL
 
-dither_done:
-        lda     pixel_val
-        ldy     hgr_byte
-        sta     (hgr_line),y
 next_x:
         inc     img_x
         ADVANCE_IMAGE_SLOW pixel_handler
@@ -459,10 +472,6 @@ advance_bayer_y:
         BAYER_END_LINE
 
 next_line:
-        lda     pixel_val
-        ldy     hgr_byte
-        sta     (hgr_line),y
-
         dec     y_double_loop
         bpl     redo_line
 
@@ -489,9 +498,9 @@ do_mirror_x:
         jmp     mirror_x_done
 
 dither_none:
-        NO_DITHER_PIXEL     dither_done
+        NO_DITHER_PIXEL     next_x
 dither_bayer:
-        BAYER_DITHER_PIXEL  dither_done
+        BAYER_DITHER_PIXEL  next_x
 
 ; Brightening, out of the main code path
 do_brighten:
@@ -512,11 +521,11 @@ store_opt:
 dither_after_brighten:
         jmp     $FFFF
 
-; ; Rotation setup. Will patch 
+; ; Rotation setup. Will patch
 ; ; - img_x_to_hgr
 ; ; - img_y_to_hgr
 ; ; - incs, decs, etc
-; 
+;
 C_ASL_ZP  = $06
 C_LSR_ZP  = $46
 C_BPL     = $10
@@ -529,10 +538,13 @@ C_INY     = $C8
 C_DEY     = $88
 C_JMP     = $4C
 C_BIT_ABS = $2C
-; 
+;
 
 _setup_angle_90:
         ; Set start constants for clockwise rotation
+        lda     #1
+        sta     page_invert
+
         lda     #C_DEC_ZP
         sta     hgr_byte_shift
         lda     #$40
@@ -543,9 +555,6 @@ _setup_angle_90:
 
         lda     #C_BNE
         sta     pixel_mask_check
-
-        lda     #C_BNE
-        sta     cur_page_check
 
         lda     #C_BIT_ABS
         sta     mirror_x
@@ -561,7 +570,7 @@ no_resize_90_coords:
         ; first byte of the image at 236,0
         ; last byte of first line at 236, 191
         ; last byte of image at 32, 191
-        lda     #33
+        lda     #32
         sta     hgr_byte
 
         lda     #$40
@@ -591,6 +600,9 @@ resize_90_coords:
 
 _setup_angle_270:
         ; Set start constants for counter-clockwise rotation
+        lda     #0
+        sta     page_invert
+
         lda     #C_INC_ZP
         sta     hgr_byte_shift
 
@@ -602,9 +614,6 @@ _setup_angle_270:
 
         lda     #C_BPL
         sta     pixel_mask_check
-
-        lda     #C_BEQ
-        sta     cur_page_check
 
         lda     #C_JMP
         sta     mirror_x
@@ -637,7 +646,7 @@ resize_270_coords:
         ; first byte of the image at 69, 191
         ; last byte of first line at 69, 0
         ; last byte of image at 212, 0
-        lda     #8
+        lda     #7
         sta     hgr_byte
 
         lda     #$01
@@ -716,7 +725,6 @@ crop_shift:      .byte 0,        32,       64
 
 pgbar_update:    .res 1
 
-final_img_x:        .res 1
 last_scaled_img_x:  .res 1
 last_scaled_img_y:  .res 1
 
