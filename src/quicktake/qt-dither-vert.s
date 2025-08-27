@@ -57,8 +57,8 @@ safe_err_buf = _err_buf+1
         bpl     positive_b
 negative_b:
         adc     opt_val
-        bcc     black_pix_bayer
-        jmp     check_bayer_low
+        bcs     check_bayer_low
+        jmp     black_pix_bayer
 
 positive_b:
         adc     opt_val
@@ -495,22 +495,18 @@ dither_bayer:
 
 ; Brightening, out of the main code path
 do_brighten:
-        ldx     #0
         lda     _brighten
         bpl     brighten_pos
-        dex
-brighten_pos:
+brighten_neg:
         adc     opt_val
-        bcc     :+
-        inx
-:       cpx     #0
-        beq     store_opt
-        bpl     pos_opt
+        bcs     store_opt
         lda     #0
         jmp     store_opt
-
-pos_opt:
+brighten_pos:
+        adc     opt_val
+        bcc     store_opt
         lda     #$FF
+
 store_opt:
         sta     opt_val
 dither_after_brighten:

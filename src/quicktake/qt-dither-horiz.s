@@ -57,8 +57,8 @@ safe_err_buf = _err_buf+1
         bpl     positive_b
 negative_b:
         adc     opt_val
-        bcc     black_pix_bayer
-        jmp     check_bayer_low
+        bcs     check_bayer_low
+        jmp     black_pix_bayer
 
 positive_b:
         adc     opt_val
@@ -263,7 +263,6 @@ dither_setup_start:
         beq     :+
         jmp     angle270
 :       lda     _angle
-        cmp     #0
         beq     angle0
         cmp     #90
         beq     angle90
@@ -288,10 +287,14 @@ finish_patches:
         BUFFER_INIT
         BAYER_INIT
 
-        lda     _is_thumb
-        beq     dither_setup_line_start_landscape
-        lda     _file_width       ; Patch X bound check for thumbs
-        sta     next_pixel_check+1
+        lda     #0
+        ldx     _is_thumb
+        beq     :+
+        sec
+        sbc     _file_width       ; Patch X bound check for thumbs
+
+:       sta     img_x_init
+        sta     img_x_reinit
 
 ; Line loop start
 dither_setup_line_start_landscape:
@@ -320,6 +323,7 @@ hgr_start_mask = *+1
         LINE_PREPARE_DITHER
         LOAD_DATA
 
+img_x_init = *+1
         ldy     #0                ; We'll keep Y = img_x in the whole row loop.
 
 pixel_handler:
@@ -347,8 +351,6 @@ dither_sierra:
 
 next_pixel:
         iny
-next_pixel_check:
-        cpy     #0                    ; Explicit check as it will be patched (to 160) for thumbs
         beq     increment_high_img_x  ; This will exit to line_done after 512 pixels (256*2) or 160 (160*1)
 
         ; Advance to next HGR pixel after incrementing image X.
@@ -369,20 +371,17 @@ store_byte_0:
         tya                           ; Transfer img_x to A for checking which page
         and     #1                    ; to write to and whether to bump hgr_byte
         tax
-        adc     #$7F                  ; Sets V flag if A=1, for inc check later
-                                      ; DO NOT CHANGE THE V FLAG BEFORE inc_check
-                                      ; Also works because ASL at img_x_to_hgr
-                                      ; cleared carry shifting $40 into $80
+        lsr                           ; Sets carry for inc or not, and A to 0
+
         sta     $C054,x
 
-        lda     pixel_val
+        ldx     pixel_val
 hgr_line_ptr_0:
-        sta     $FFFF
-        lda     #0
+        stx     $FFFF
         sta     pixel_val             ; Reset pixel val
 
 inc_check:
-        bvs     pixel_handler         ; Don't shift hgr_byte if wrote AUX (at 0°)
+        bcs     pixel_handler         ; Don't shift hgr_byte if wrote AUX (at 0°)
         inc     hgr_line_ptr_0+1
         jmp     pixel_handler
 
@@ -395,31 +394,28 @@ store_byte_180:
         tya                           ; Transfer img_x to A for checking which page
         and     #1                    ; to write to and whether to bump hgr_byte
         tax
-        adc     #$7E                  ; Sets V flag if A=1, for dec check later
-                                      ; DO NOT CHANGE THE V FLAG BEFORE dec_check
-                                      ; We add $7E because img_x_to_hgr shifted $01
-                                      ; into the carry, so it is set.
+        lsr                           ; Sets carry for dec or not, and A to 0
 
         sta     $C054,x
 
-        lda     pixel_val
+        ldx     pixel_val
 hgr_line_ptr_180:
-        sta     $FFFF
-        lda     #0
+        stx     $FFFF
         sta     pixel_val             ; Reset pixel val
 
 dec_check:
-        bvc     :+                    ; Don't shift hgr_byte if wrote MAIN (at 180°)
+        bcc     :+                    ; Don't shift hgr_byte if wrote MAIN (at 180°)
         dec     hgr_line_ptr_180+1
 :       jmp     pixel_handler
 
 ; ===========================================
 
 increment_high_img_x:
-        ldx     img_xh
+        ldx     img_xh                ; Test if we finished
         bne     line_done             ; Finished the line!
+img_x_reinit = *+1
+        ldy     #0
         inc     img_xh
-        ldy     #0                    ; Only needed for thumbnails - re-set img_x to start
         inc     sierra_buf_1+2        ; Bump sierra err buf to second page
         inc     sierra_buf_2+2
         inc     sierra_buf_off_1+2
@@ -458,22 +454,18 @@ dither_bayer:
 
 ; Brightening, out of the main code path
 do_brighten:
-        ldx     #0
         lda     _brighten
         bpl     brighten_pos
-        dex
-brighten_pos:
+brighten_neg:
         adc     opt_val
-        bcc     :+
-        inx
-:       cpx     #0
-        beq     store_opt
-        bpl     pos_opt
+        bcs     store_opt
         lda     #0
         jmp     store_opt
-
-pos_opt:
+brighten_pos:
+        adc     opt_val
+        bcc     store_opt
         lda     #$FF
+
 store_opt:
         sta     opt_val
 dither_after_brighten:
@@ -508,7 +500,6 @@ _setup_angle_0:
         lda     #192
         sec
         sbc     img_y
-        clc
         lsr
         sta     cur_hgr_line
 
