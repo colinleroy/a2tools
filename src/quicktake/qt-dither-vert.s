@@ -411,14 +411,14 @@ x_scale:
 mirror_x:                         ; Mirror if needed (patched for 270°)
         jmp     do_mirror_x
 mirror_x_done:
-        tay                       ; final_img_x now in Y, unscaled img_x in X
 
 buf_ptr_load:                     ; Load our byte now
-        lda     $FFFF,x           ; Patched with buf_ptr address
-        tax
+        ldy     $FFFF,x           ; Patched with buf_ptr address
         ; opt_val = opt_histogram[*buf_ptr];
-        lda     _opt_histogram,x
-        sta     opt_val
+        ldx     _opt_histogram,y
+        stx     opt_val
+
+        tay                       ; final_img_x now in Y, unscaled img_x in X
 
 pixel_handler_first_step:
         jmp     FIRST_PIXEL_HANDLER ; Will get patched with the most
