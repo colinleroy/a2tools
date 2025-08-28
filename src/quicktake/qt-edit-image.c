@@ -597,11 +597,7 @@ save:
   strcpy((char *)buffer, ofname);
   if ((cp = strrchr ((char *)buffer, '.')))
     *cp = 0;
-  if (is_horiz) {
-    strcat ((char *)buffer, ".dhgr");
-  } else {
-    strcat ((char *)buffer, ".hgr");
-  }
+  strcat ((char *)buffer, ".dhgr");
   hgr_mixon();
   cputs("Save to: ");
   dget_text_single((char *)buffer, 63, NULL);
@@ -613,12 +609,8 @@ open_again:
 #ifdef __CC65__
   _filetype = PRODOS_T_FOT;
   _auxtype = HGR_PAGE;
-  // https://prodos8.com/docs/technote/ftn/08/
-  if (!is_horiz) {
-    ((char *)HGR_PAGE)[0x78] = 0; // Black and white, 280x192
-  }
 #endif
-  ofd = open((char *)buffer, O_RDWR|O_CREAT);
+  ofd = open((char *)buffer, O_WRONLY|O_CREAT);
   if (ofd <= 0) {
     cprintf("Please insert image floppy for %s, or Escape to return\r\n", (char *)buffer);
     if (cgetc() != CH_ESC)
@@ -628,22 +620,18 @@ open_again:
   cprintf("Saving...");
 
   /* Save main RAM to fill 8kB */
-  if (is_horiz) {
-    /* AUX */
-    backup_screen_holes(0x54);  /* Sets page 2 */
-    ((char *)HGR_PAGE)[0x78] = 2; // Black and white, 560x192
-    if (write_hgr_page_to_file() != 0) {
-      backup_screen_holes(0x55); /* Sets page 1 */
-      goto write_error;
-    }
-    /* MAIN */
+  /* AUX */
+  backup_screen_holes(0x54);  /* Sets page 2 */
+  ((char *)HGR_PAGE)[0x78] = 2; // Black and white, 560x192
+  if (write_hgr_page_to_file() != 0) {
     backup_screen_holes(0x55); /* Sets page 1 */
-    ((char *)HGR_PAGE)[0x78] = 2; // Black and white, 560x192
-    if (write_hgr_page_to_file() != 0) {
-      goto write_error;
-    }
+    goto write_error;
   }
-  else if (write_hgr_page_to_file() != 0) {
+  /* MAIN */
+  backup_screen_holes(0x55); /* Sets page 1 */
+  // https://prodos8.com/docs/technote/ftn/08/
+  ((char *)HGR_PAGE)[0x78] = 2; // Black and white, 560x192
+  if (write_hgr_page_to_file() != 0) {
 write_error:
     cprintf("\r\nError. Press a key to continue...\r\n");
     close(ofd);
