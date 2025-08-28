@@ -410,6 +410,8 @@ static unsigned char write_hgr_page_to_file() {
   return (write(ofd, (char *)HGR_PAGE, HGR_LEN) < HGR_LEN);
 }
 
+void clear_dhgr(void);
+
 static uint8 reedit_image(const char *ofname, uint16 src_width) {
   char c, *cp;
 
@@ -466,6 +468,9 @@ start_edit:
               goto crop_again;
             } else {
               resize = !resize;
+              if (resize) {
+                clear_dhgr();
+              }
             }
             return 1;
           case 'y':
@@ -713,7 +718,6 @@ void load_normal_data(void) {
 #else
 /* in qt-dither.s */
 void load_normal_data(void);
-void clear_dhgr(void);
 #endif
 
 /* The fastest way to iterate when dithering is by dey for full-size pictures.
