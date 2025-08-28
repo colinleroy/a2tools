@@ -50,6 +50,7 @@ _init_features:
         rol                   ; High bit to carry
         ror     _is_iigs      ; carry to flag high bit
 
+        ; https://prodos8.com/docs/techref/writing-a-prodos-system-program/#page96
         lda     MACHID        ; 128k?
         and     #$30
         cmp     #$30

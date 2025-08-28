@@ -619,17 +619,17 @@ open_again:
   }
   cprintf("Saving...");
 
-  /* Save main RAM to fill 8kB */
-  /* AUX */
+  /* Save AUX first */
   backup_screen_holes(0x54);  /* Sets page 2 */
+  // https://prodos8.com/docs/technote/ftn/08/
   ((char *)HGR_PAGE)[0x78] = 2; // Black and white, 560x192
   if (write_hgr_page_to_file() != 0) {
     backup_screen_holes(0x55); /* Sets page 1 */
     goto write_error;
   }
+
   /* MAIN */
   backup_screen_holes(0x55); /* Sets page 1 */
-  // https://prodos8.com/docs/technote/ftn/08/
   ((char *)HGR_PAGE)[0x78] = 2; // Black and white, 560x192
   if (write_hgr_page_to_file() != 0) {
 write_error:
