@@ -24,17 +24,19 @@
         .import         pushax, pusha0, _fread, _ifp, subysp
 
         .importzp       img_y, tmp1, tmp2, c_sp
-        .importzp       _zp2p, _zp4, _zp5, _zp6, _zp7, _zp8, _zp9, _zp10, _zp11, _zp12ip
+        .importzp       _zp2p, _zp4, _zp5, _zp6, _zp7, _zp8, _zp9, _zp10, _zp11, _zp12
 
         .include "apple2.inc"
 
 img_x                 = _zp4
 ; img_y               = _zp5, defined in -common.s
-pixel_mask            = _zp7
-opt_val               = _zp8
-err2                  = _zp9
-hgr_byte              = _zp10
-hgr_line              = _zp12ip
+pixel_mask            = _zp6
+opt_val               = _zp7
+err2                  = _zp8
+hgr_byte              = _zp9
+last_scaled_img_x     = _zp10
+last_scaled_img_y     = _zp11
+y_double_loop         = _zp12
 
 DITHER_NONE       = 2
 DITHER_BAYER      = 1
@@ -52,8 +54,6 @@ safe_err_buf                = _err_buf+1
 mult_three_quarters_table   = _err_buf+257
 
 ; dithering macros.
-; They must end with jmp next_pixel, unless
-; it's the last one in the loop.
 .macro BAYER_DITHER_PIXEL BRANCH_TO
         ldx     _bayer_map_x
         lda     _bayer_map,x
@@ -146,15 +146,6 @@ sierra_revert_2:
         sta     safe_err_buf-1,y
 .endmacro
 
-; Load a byte from the file. Must end with byte in A.
-.macro LOAD_IMAGE_BYTE
-buf_ptr_load:
-        ldx     $FFFF         ; Patched with buf_ptr address
-        ; opt_val = opt_histogram[*buf_ptr];
-        lda     _opt_histogram,x
-        sta     opt_val
-.endmacro
-
 ; Prepare line's dithering
 .macro LINE_PREPARE_DITHER
 line_prepare_dither_handler:
@@ -206,28 +197,12 @@ store_bayer_y:
         sta     _cur_buf_page
 .endmacro
 
-.macro REPOINT_BUFFER
+.macro LOAD_DATA
+        jsr     _load_normal_data
         ldx     _cur_buf_page+1
         stx     buf_ptr_load+2
         lda     _cur_buf_page
         sta     buf_ptr_load+1
-.endmacro
-
-.macro LOAD_DATA
-        jsr     _load_normal_data
-        REPOINT_BUFFER
-.endmacro
-
-.macro ADVANCE_IMAGE_SLOW BRANCH_TO
-.scope
-        inc     buf_ptr_load+1
-        beq     inc_buf_ptr_high
-        jmp     BRANCH_TO
-
-inc_buf_ptr_high:
-        inc     buf_ptr_load+2
-        jmp     BRANCH_TO
-.endscope
 .endmacro
 
 .macro PROGRESS_BAR_UPDATE BRANCH_TO
@@ -342,7 +317,6 @@ dither_setup_start:
         lda     crop_shift,x
         sta     x_crop_shift
 
-
         lda     _angle+1
         bne     angle270
 
@@ -367,19 +341,21 @@ finish_patches:
         sta     y_double_loop
 
 line_loop_start:
-        ldy     _file_width
+x_crop_start = *+1                    ; Set start bound when cropping
+        ldy     #$00
         sty     img_x
 
         ; Compute scaled Y
         lda     img_y
 compute_scaled_y:
-        bit     y_scale_done
+        jmp     y_scale_done          ; Scale? (patched)
+y_scale:
         tax
         lda     mult_three_quarters_table,x
         cmp     last_scaled_img_y
-        bne     :+
+        bne     :+                    ; Different scaled Y, do line
         ldy     y_double_loop
-        beq     :+
+        beq     :+                    ; Same scaled Y but we didn't double the line, do it
         jmp     line_wrapup
 :       sta     last_scaled_img_y
 
@@ -407,43 +383,42 @@ hgr_byte_shift:
 line_prepare_dither:
         LINE_PREPARE_DITHER
 
-pixel_loop_start:
 pixel_handler:
-        LOAD_IMAGE_BYTE
+        ldx     img_x             ; Unscaled X coord - keep into X until buf loaded
+        inc     img_x             ; Increment in advance, for next time
 
-next_pixel:
-        lda     img_x
-x_crop_start = *+1
-        cmp     #$00
-        bcs     compute_scaled_x
-        jmp     next_x
+compute_final_x:
+        jmp     x_crop            ; Scale down or crop? (patched)
 
-        ; Compute scaled X
-compute_scaled_x:
-        bit     x_scale_done
-        tax
-        lda     mult_three_quarters_table,x
-        cmp     last_scaled_img_x
-        bne     x_scale_done
-        jmp     next_x
-
-x_scale_done:
-        sta     last_scaled_img_x
-x_crop_end = *+1
-        cmp     #191
-        bne     shift_x
-        jmp     line_done
-
-shift_x:
-        sec
+x_crop:
+x_crop_end = *+1                  ; Check end bound when cropping
+        cpx     #191
+        beq     line_done
+        txa
+        sec                       ; Shift X when cropping
 x_crop_shift = *+1
         sbc     #$00
+        jmp     mirror_x
 
-mirror_x:
-        bit     do_mirror_x
+x_scale:
+        lda     mult_three_quarters_table,x
+        cmp     last_scaled_img_x
+        beq     pixel_handler     ; Same scaled X as previous, skip it
+        sta     last_scaled_img_x
+        cmp     #191
+        beq     line_done
+
+mirror_x:                         ; Mirror if needed (patched for 270°)
+        jmp     do_mirror_x
 mirror_x_done:
-        tay                         ; final_img_x now in Y, keep it there for the whole loop
+        tay                       ; final_img_x now in Y, unscaled img_x in X
 
+buf_ptr_load:                     ; Load our byte now
+        lda     $FFFF,x           ; Patched with buf_ptr address
+        tax
+        ; opt_val = opt_histogram[*buf_ptr];
+        lda     _opt_histogram,x
+        sta     opt_val
 
 pixel_handler_first_step:
         jmp     FIRST_PIXEL_HANDLER ; Will get patched with the most
@@ -455,9 +430,7 @@ pixel_handler_first_step:
 dither_sierra:
         SIERRA_DITHER_PIXEL
 
-next_x:
-        inc     img_x
-        ADVANCE_IMAGE_SLOW pixel_handler
+        jmp     pixel_handler
 
 line_done:
         sta     $C054
@@ -486,7 +459,6 @@ all_done:
         rts
 
 redo_line:
-        REPOINT_BUFFER
         jmp     line_loop_start
 
 do_mirror_x:
@@ -496,9 +468,9 @@ do_mirror_x:
         jmp     mirror_x_done
 
 dither_none:
-        NO_DITHER_PIXEL     next_x
+        NO_DITHER_PIXEL     pixel_handler
 dither_bayer:
-        BAYER_DITHER_PIXEL  next_x
+        BAYER_DITHER_PIXEL  pixel_handler
 
 ; Brightening, out of the main code path
 do_brighten:
@@ -554,8 +526,10 @@ _setup_angle_90:
         lda     #C_BNE
         sta     pixel_mask_check
 
-        lda     #C_BIT_ABS
-        sta     mirror_x
+        lda     #<mirror_x_done
+        ldx     #>mirror_x_done
+        sta     mirror_x+1
+        stx     mirror_x+2
 
         lda     #<(safe_err_buf-1)
         sta     sierra_revert_1+1
@@ -574,9 +548,15 @@ no_resize_90_coords:
         lda     #$40
         sta     pixel_mask
 
-        lda     #C_JMP
-        sta     compute_scaled_y
-        sta     compute_scaled_x
+        lda     #<y_scale_done
+        ldx     #>y_scale_done
+        sta     compute_scaled_y+1
+        stx     compute_scaled_y+2
+
+        lda     #<x_crop
+        ldx     #>x_crop
+        sta     compute_final_x+1
+        stx     compute_final_x+2
         rts
 
 resize_90_coords:
@@ -590,9 +570,15 @@ resize_90_coords:
         lda     #$40
         sta     pixel_mask
 
-        lda     #C_BIT_ABS
-        sta     compute_scaled_y
-        sta     compute_scaled_x
+        lda     #<y_scale
+        ldx     #>y_scale
+        sta     compute_scaled_y+1
+        stx     compute_scaled_y+2
+
+        lda     #<x_scale
+        ldx     #>x_scale
+        sta     compute_final_x+1
+        stx     compute_final_x+2
 
         rts
 
@@ -613,8 +599,10 @@ _setup_angle_270:
         lda     #C_BPL
         sta     pixel_mask_check
 
-        lda     #C_JMP
-        sta     mirror_x
+        lda     #<do_mirror_x
+        ldx     #>do_mirror_x
+        sta     mirror_x+1
+        stx     mirror_x+2
 
         lda     #<(safe_err_buf+1)  ; We iterate lines the other way so
         sta     sierra_revert_1+1   ; shift the x-1 buffer.
@@ -633,9 +621,15 @@ no_resize_270_coords:
         lda     #$01
         sta     pixel_mask
 
-        lda     #C_JMP
-        sta     compute_scaled_y
-        sta     compute_scaled_x
+        lda     #<y_scale_done
+        ldx     #>y_scale_done
+        sta     compute_scaled_y+1
+        stx     compute_scaled_y+2
+
+        lda     #<x_crop
+        ldx     #>x_crop
+        sta     compute_final_x+1
+        stx     compute_final_x+2
 
         rts
 
@@ -650,9 +644,15 @@ resize_270_coords:
         lda     #$01
         sta     pixel_mask
 
-        lda     #C_BIT_ABS
-        sta     compute_scaled_y
-        sta     compute_scaled_x
+        lda     #<y_scale
+        ldx     #>y_scale
+        sta     compute_scaled_y+1
+        stx     compute_scaled_y+2
+
+        lda     #<x_scale
+        ldx     #>x_scale
+        sta     compute_final_x+1
+        stx     compute_final_x+2
 
         rts
 
@@ -733,8 +733,4 @@ crop_shift:      .byte 0,        32,       64
 
 pgbar_update:    .res 1
 
-last_scaled_img_x:  .res 1
-last_scaled_img_y:  .res 1
-
 cur_page:           .res 1
-y_double_loop:      .res 1
