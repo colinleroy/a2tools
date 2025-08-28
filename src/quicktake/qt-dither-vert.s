@@ -248,18 +248,11 @@ inc_buf_ptr_high:
 
 .macro MULT_BY_3_DIV_BY_4
 .scope
-        sta     tmp2
-        ldx     #0
-        stx     tmp1
-        asl     a
-        rol     tmp1
+        sta     tmp2          ; mult by 1.5
+        lsr     a
+        clc
         adc     tmp2
-        bcc     :+
-        inc     tmp1
-:       lsr     tmp1
-        ror     a
-        lsr     tmp1
-        ror     a             ; We have our result
+        ror     a             ; /2 - is actually good enough
 .endscope
 .endmacro
 
