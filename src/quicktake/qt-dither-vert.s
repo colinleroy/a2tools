@@ -46,7 +46,10 @@ DEFAULT_BRIGHTEN  = 0
 FIRST_PIXEL_HANDLER = dither_sierra
 LINE_DITHER_SETUP   = prepare_dither_sierra
 
-safe_err_buf = _err_buf+1
+safe_err_buf                = _err_buf+1
+; The vertical ditherer only needs one page of Sierra error buffer,
+; use the second one to make multiplications faster.
+mult_three_quarters_table   = _err_buf+257
 
 ; dithering macros.
 ; They must end with jmp next_pixel, unless
@@ -329,6 +332,9 @@ _do_dither_vert:
         sta     last_scaled_img_x
         sta     last_scaled_img_y
 
+        ; Create the three-quarters table
+        jsr     build_mult_table
+
 dither_setup_start:
         jsr     patch_dither_branches
 
@@ -371,14 +377,12 @@ line_loop_start:
         ldy     _file_width
         sty     img_x
 
-        lda     buf_ptr_load+1      ; FIXME REMOVE DEBUG
-        ldx     buf_ptr_load+2
-
         ; Compute scaled Y
         lda     img_y
 compute_scaled_y:
         bit     y_scale_done
-        MULT_BY_3_DIV_BY_4
+        tax
+        lda     mult_three_quarters_table,x
         cmp     last_scaled_img_y
         bne     :+
         ldy     y_double_loop
@@ -424,7 +428,8 @@ x_crop_start = *+1
         ; Compute scaled X
 compute_scaled_x:
         bit     x_scale_done
-        MULT_BY_3_DIV_BY_4
+        tax
+        lda     mult_three_quarters_table,x
         cmp     last_scaled_img_x
         bne     x_scale_done
         jmp     next_x
@@ -717,6 +722,16 @@ update_pixel_branching:
         sta     pixel_handler_first_step+1       ; Update to either
         stx     pixel_handler_first_step+2       ; the brightener or the ditherer
 
+        rts
+
+build_mult_table:
+        ldy      #0
+next:
+        tya
+        MULT_BY_3_DIV_BY_4
+        sta      mult_three_quarters_table,y
+        iny
+        bne      next
         rts
 
 crop_start:      .byte 0,        32,       64
