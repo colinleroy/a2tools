@@ -206,7 +206,8 @@ int print_status(register status *s, char hide, char full) {
       (s->flags & REBLOGGED) ? "*":"", s->n_reblogs,
       (s->flags & FAVOURITED) ? "*":"", s->n_favourites,
       s->n_medias, media_type_str[s->media_type],
-      (s->flags & BOOKMARKED) ? (has_80cols?" - bookmarked":"-bkm"):"             ");
+      (s->flags & BOOKMARKED) ? (has_80cols?" - bookmarked":"-bkm"):"");
+
   CHECK_AND_CRLF();
 
   CHLINE_SAFE();
