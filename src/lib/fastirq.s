@@ -107,8 +107,11 @@ handle_ram_irq:
         stx     x_bck            ; Save X,Y
         sty     y_bck
         jsr     callirq
+
+        bit     machinetype      ; Don't give it back on II/II+
+        bpl     :+
         bcc     give_back_irq
-        ldx     x_bck
+:       ldx     x_bck
         ldy     y_bck
         lda     a_bck
         rti
