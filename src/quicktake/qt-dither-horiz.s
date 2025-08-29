@@ -29,7 +29,8 @@ pixel_val             = _zp6
 pixel_mask            = _zp7
 opt_val               = _zp8
 err_nextx             = _zp9
-cur_hgr_line          = _zp10
+err_nexty             = _zp10
+cur_hgr_line          = _zp11
 
 DITHER_NONE       = 2
 DITHER_BAYER      = 1
@@ -100,7 +101,7 @@ reset_bayer_x:
         ; Add the two errors (the one from previous pixel and the one
         ; from previous line). As they're max 128/2 and 128/4, don't bother
         ; about overflows at that point, but care about the sign.
-sierra_buf_1:
+sierra_buf:
         lda     safe_err_buf,y
         adc     err_nextx
         bpl     err_pos
@@ -135,16 +136,14 @@ forward_err:                  ; And forward error to next pixels
         cmp     #$80
         ror     a
 
-sierra_buf_2:
-        ; err/4 for x,y+1
-        sta     safe_err_buf,y
+        tax                   ; remember err/4 for x,y+1
 
         ; previous err + err/4 for x-1,y+1
         clc                   ; May be set by ror
-sierra_buf_off_1:
-        adc     safe_err_buf-1,y
-sierra_buf_off_2:
+        adc     err_nexty
+sierra_buf_off:
         sta     safe_err_buf-1,y
+        stx     err_nexty     ; store err/4 for x,y+1
 .endmacro
 
 ; Prepare line's dithering
@@ -163,14 +162,13 @@ prepare_dither_bayer:
 prepare_dither_sierra:
         ; Reset err buf to start
         lda     #>(safe_err_buf)
-        sta     sierra_buf_1+2
-        sta     sierra_buf_2+2
+        sta     sierra_buf+2
         lda     #>(safe_err_buf-1)
-        sta     sierra_buf_off_1+2
-        sta     sierra_buf_off_2+2
+        sta     sierra_buf_off+2
         ; reset err_nextx
         lda     #$00
         sta     err_nextx
+        sta     err_nexty
 
 prepare_dither_none:          ; Nothing to do here.
 .endmacro
@@ -269,11 +267,18 @@ finish_patches:
 
         lda     #0
         ldx     _is_thumb
-        beq     :+
-        sec
+        beq     x_init
+
+        tay                       ; Reset line_buf for thumbs in case
+:       sta     _line_buf,y       ; it's already been used to render
+        iny                       ; a full-size picture
+        bne     :-
+
+        sec                       ; Once done,
         sbc     _file_width       ; Patch X bound check for thumbs
 
-:       sta     img_x_init
+x_init:
+        sta     img_x_init
         sta     img_x_reinit
 
 ; Line loop start
@@ -354,10 +359,8 @@ img_x_reinit = *+1
 read_buffer_bump = *+1
         lda     #<(_buffer+$80)       ; Bump the buffer loader to second half of page
         sta     buf_ptr_load+1
-        inc     sierra_buf_1+2        ; Bump sierra err buf to second page
-        inc     sierra_buf_2+2
-        inc     sierra_buf_off_1+2
-        inc     sierra_buf_off_2+2
+        inc     sierra_buf+2        ; Bump sierra err buf to second page
+        inc     sierra_buf_off+2
         jmp     img_x_to_hgr          ; Keep going...
 
 ; ===========================================
