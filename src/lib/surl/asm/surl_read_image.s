@@ -32,7 +32,7 @@ no_dhgr:
         lda     #<$2000
         ldx     #>$2000
         jsr     swapstk
-        jsr     _surl_read_with_barrier ; Read the first (aux) page
+        jsr     _surl_read_with_barrier ; Read the MAIN page
 
 is_dhgr = *+1
         lda     #$FF
