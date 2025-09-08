@@ -453,7 +453,6 @@ static void decode_row(void) {
           __asm__("dec %v+1", col);
           nouf16:
 
-          __asm__("lda %v", col);
           __asm__("ldx %v+1", col);
           __asm__("stx tmp1");
           __asm__("asl a");
@@ -534,10 +533,6 @@ static void decode_row(void) {
           __asm__("jmp %g", tree_done);
 
           tree_not_eight:
-            __asm__("ldx %v+1", col);
-            __asm__("lda %v", col);
-            __asm__("stx tmp1");
-
             /* set cur_buf_prevy from cur_buf_x */
             __asm__("lda %v+1", cur_buf_x);
             __asm__("sec");
@@ -551,8 +546,6 @@ static void decode_row(void) {
             __asm__("asl a");
             __asm__("adc %v+1", huff_10); /* adding to high byte because bidimensional */
             __asm__("sta %v+1", huff_ptr);
-            // __asm__("lda #<%v", huff);
-            // __asm__("sta %v", huff_ptr);
 
             __asm__("lda #2");
             __asm__("sta %v", y);

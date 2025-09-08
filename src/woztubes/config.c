@@ -34,8 +34,6 @@ static FILE *open_config(char *mode) {
   return fp;
 }
 
-#pragma code-name (pop)
-
 static void save_config(void) {
   FILE *fp;
 
@@ -104,6 +102,7 @@ charset_again:
   save_config();
 }
 
+#pragma code-name (pop)
 #pragma code-name(push, "RT_ONCE")
 
 void load_config(void) {

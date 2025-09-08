@@ -148,7 +148,7 @@ char * __fastcall__ dget_text_multi(char *buf, size_t size, cmd_handler_func cmd
   unsigned char sx;
   unsigned char sy, ey;
   size_t k;
-  unsigned char tmp, modifier;
+  unsigned char tmp, modifier = 0;
   char overflowed = 0;
 
   cur_insert = 0;

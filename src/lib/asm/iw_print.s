@@ -83,7 +83,6 @@ hgr_1x:
         lda     #$00
         sta     scale_line
         sta     is_dhgr
-        lda     #$00
         sta     scale_row
         lda     #$08
         sta     inc_line

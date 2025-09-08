@@ -59,6 +59,8 @@ char search_str[80] = "";
 #define SEARCH_SAVE_FILE RAM_SEARCH_SAVE_FILE+5
 
 char *search_save_file = RAM_SEARCH_SAVE_FILE;
+static void load_save_search_json(char *mode);
+static void print_menu(void);
 
 void unlink_tmp(void) {
   unlink(search_save_file);
@@ -83,37 +85,6 @@ static char cmd_cb(char c) {
   }
   cursor(prev_cursor);
   return -1;
-}
-
-static void print_menu(void) {
-  if (is_iieenh) {
-    cputc('A'|0x80);
-    cputs("-C: Configure ; ");
-    cputc('A'|0x80);
-    cputs("-Q: Quit - ");
-    cutoa(_heapmemavail());
-    cputs("B free");
-  } else if (is_iie) {
-    cputs("App-C: Configure; App-Q: Quit");
-  } else {
-    cputs("Ctrl-C: Configure; Ctrl-Q: Quit");
-  }
-}
-
-static void load_save_search_json(char *mode) {
-  FILE *fp = fopen(search_save_file, mode);
-  if (IS_NULL(fp)) {
-    if (mode[0] == 'r')
-      bzero((char *)BUF_8K_ADDR, BUF_8K_SIZE);
-    return;
-  }
-
-  if (mode[0] == 'r') {
-    fread((char *)BUF_8K_ADDR, 1, BUF_8K_SIZE, fp);
-  } else {
-    fwrite((char *)BUF_8K_ADDR, 1, BUF_8K_SIZE, fp);
-  }
-  fclose(fp);
 }
 
 #pragma code-name(pop)
@@ -236,8 +207,6 @@ out:
   free(n_host);
 }
 
-#pragma code-name(push, "LOWCODE")
-
 char **lines = NULL;
 char n_lines;
 char cur_line = 0;
@@ -354,6 +323,38 @@ read_kbd:
   }
 }
 
+#pragma code-name(push, "LOWCODE")
+
+static void print_menu(void) {
+  if (is_iieenh) {
+    cputc('A'|0x80);
+    cputs("-C: Configure ; ");
+    cputc('A'|0x80);
+    cputs("-Q: Quit - ");
+    cutoa(_heapmemavail());
+    cputs("B free");
+  } else if (is_iie) {
+    cputs("App-C: Configure; App-Q: Quit");
+  } else {
+    cputs("Ctrl-C: Configure; Ctrl-Q: Quit");
+  }
+}
+
+static void load_save_search_json(char *mode) {
+  FILE *fp = fopen(search_save_file, mode);
+  if (IS_NULL(fp)) {
+    if (mode[0] == 'r')
+      bzero((char *)BUF_8K_ADDR, BUF_8K_SIZE);
+    return;
+  }
+
+  if (mode[0] == 'r') {
+    fread((char *)BUF_8K_ADDR, 1, BUF_8K_SIZE, fp);
+  } else {
+    fwrite((char *)BUF_8K_ADDR, 1, BUF_8K_SIZE, fp);
+  }
+  fclose(fp);
+}
 
 static void search(char *host, InstanceTypeId instance_type) {
   sprintf((char *)BUF_1K_ADDR,
@@ -381,10 +382,6 @@ static void search(char *host, InstanceTypeId instance_type) {
   }
 }
 
-#ifdef __CC65__
-#pragma code-name (pop)
-#endif
-
 InstanceTypeId global_instance_type;
 
 static void do_ui(void) {
@@ -405,9 +402,8 @@ new_search:
   goto new_search;
 }
 
-#ifdef __CC65__
+#pragma code-name (pop)
 #pragma code-name (push, "RT_ONCE")
-#endif
 
 static int define_instance(void) {
   const surl_response *resp;

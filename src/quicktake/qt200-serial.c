@@ -62,8 +62,6 @@ static void end_session(void) {
   simple_serial_putc(EOT);
 }
 
-#pragma code-name(push, "LOWCODE")
-
 /* Read a reply from the camera */
 static uint8 read_response(unsigned char *buf, uint16 len, uint8 expect_header) {
   uint8 *cur_buf, *end_buf;
@@ -124,7 +122,6 @@ static uint8 read_response(unsigned char *buf, uint16 len, uint8 expect_header) 
   return 0;
 }
 
-#pragma code-name(pop)
 
 /* Send a command to the camera */
 static uint8 send_command(const char *cmd, uint8 len, uint8 get_ack, uint8 wait) {
@@ -168,6 +165,7 @@ static uint8 send_command(const char *cmd, uint8 len, uint8 get_ack, uint8 wait)
 
 static uint16 my_speed = 9600;
 
+#pragma code-name(push, "LOWCODE")
 /* Ping the camera */
 static uint8 qt200_send_ping(void) {
   int c;
@@ -190,6 +188,8 @@ static uint8 qt200_send_ping(void) {
   }
   return 0;
 }
+
+#pragma code-name(pop)
 
 /* Send the speed upgrade command */
 uint8 qt200_set_speed(uint16 speed) {

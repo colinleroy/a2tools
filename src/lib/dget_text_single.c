@@ -89,7 +89,7 @@ char * __fastcall__ dget_text_single(char *buf, size_t size, cmd_handler_func cm
 #endif
   unsigned char sx;
   size_t k;
-  unsigned char modifier;
+  unsigned char modifier = 0;
 
   cur_insert = 0;
   max_insert = 0;
