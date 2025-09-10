@@ -262,12 +262,11 @@ static void decode_row(void) {
       for (tree = 1, col = (WIDTH/2); col; ) {
         huff_ptr = huff[tree];
         tree = (uint8) getbithuff(8);
-
+        printf("col %d\n", col);
         if (tree) {
           col -= 2;
-          cur_buf_x = buf_1 + col;
           if (tree == 8) {
-
+            cur_buf_x = buf_1 + col;
             huff_ptr = huff_18;
             tmp8 = (uint8) getbithuff(8);
             *(cur_buf_x+1) = tmp8 * t;
@@ -280,6 +279,7 @@ static void decode_row(void) {
             *cur_buf_x = tmp8 * t;
 
           } else {
+            cur_buf_x = buf_1 + col;
             cur_buf_prev = cur_buf_x - DATABUF_SIZE;
 
             huff_ptr = (uint16 *)(huff + tree + 10);
@@ -460,16 +460,17 @@ static void decode_row(void) {
           __asm__("asl a");
           __asm__("rol tmp1");
 
+          __asm__("ldx %v", tree);
+          __asm__("cpx #8");
+          __asm__("bne %g", tree_not_eight);
+
+          // tree == 8
           __asm__("clc");
           __asm__("adc #<(%v)", buf_1);
           __asm__("sta %v", cur_buf_x);
           __asm__("lda tmp1");
           __asm__("adc #>(%v)", buf_1);
           __asm__("sta %v+1", cur_buf_x);
-
-          __asm__("lda %v", tree);
-          __asm__("cmp #8");
-          __asm__("bne %g", tree_not_eight);
 
           __asm__("lda #2");
           __asm__("sta %v", y);
@@ -481,7 +482,6 @@ static void decode_row(void) {
 
           __asm__("lda #8");
           __asm__("jsr %v", getbithuff);
-          // __asm__("sta ptr1");
           __asm__("ldx %v", t);
           __asm__("jsr mult8x8r16_direct");
           __asm__("ldy #2");
@@ -492,7 +492,6 @@ static void decode_row(void) {
 
           __asm__("lda #8");
           __asm__("jsr %v", getbithuff);
-          // __asm__("sta ptr1");
           __asm__("ldx %v", t);
           __asm__("jsr mult8x8r16_direct");
           __asm__("ldy #0");
@@ -535,6 +534,13 @@ static void decode_row(void) {
           __asm__("jmp %g", tree_done);
 
           tree_not_eight:
+            //cur_buf_x = buf_1 + col;
+            __asm__("clc");
+            __asm__("adc #<(%v)", buf_1);
+            __asm__("sta %v", cur_buf_x);
+            __asm__("lda tmp1");
+            __asm__("adc #>(%v)", buf_1);
+            __asm__("sta %v+1", cur_buf_x);
             /* set cur_buf_prev from cur_buf_x */
             __asm__("lda %v+1", cur_buf_x);
             __asm__("sec");
