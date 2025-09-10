@@ -1,5 +1,5 @@
 /*
-   QTKN (QuickTake 150/200) decoding algorithm
+   QTKN (QuickTake 150) decoding algorithm
    Copyright 2023, Colin Leroy-Mira <colin@colino.net>
 
    Heavily based on dcraw.c -- Dave Coffin's raw photo decoder
@@ -581,9 +581,9 @@ static void decode_row(void) {
             __asm__("ldy #5");
             __asm__("lda (%v),y", cur_buf_prev);
             __asm__("adc (%v),y", cur_buf_x);
+            __asm__("ror a");
             __asm__("sta tmp1");
             __asm__("txa");
-            __asm__("ror tmp1");
             __asm__("ror a");
 
             __asm__("clc");
@@ -593,9 +593,9 @@ static void decode_row(void) {
             __asm__("lda tmp1");
             __asm__("ldy #3");
             __asm__("adc (%v),y", cur_buf_prev);
+            __asm__("ror a");
             __asm__("sta tmp1");
             __asm__("txa");
-            __asm__("ror tmp1");
             __asm__("ror a");
 
             __asm__("clc");
@@ -637,9 +637,9 @@ static void decode_row(void) {
             __asm__("ldy #3");
             __asm__("lda (%v),y", cur_buf_prev);
             __asm__("adc (%v),y", cur_buf_x);
+            __asm__("ror a");
             __asm__("sta tmp1");
             __asm__("txa");
-            __asm__("ror tmp1");
             __asm__("ror a");
 
             __asm__("clc");
@@ -649,9 +649,9 @@ static void decode_row(void) {
             __asm__("lda tmp1");
             __asm__("iny");
             __asm__("adc (%v),y", cur_buf_prev);
+            __asm__("ror a");
             __asm__("sta tmp1");
             __asm__("txa");
-            __asm__("ror tmp1");
             __asm__("ror a");
 
             /* Store to cur_buf_x */
@@ -743,9 +743,9 @@ static void decode_row(void) {
               __asm__("ldy #5");
               __asm__("lda (%v),y", cur_buf_prev);
               __asm__("adc (%v),y", cur_buf_x);
+              __asm__("ror a");
               __asm__("sta tmp1");
               __asm__("txa");
-              __asm__("ror tmp1");
               __asm__("ror a");
 
               __asm__("clc");
@@ -771,9 +771,9 @@ static void decode_row(void) {
               __asm__("iny");
               __asm__("lda (%v),y", cur_buf_prev);
               __asm__("adc (%v),y", cur_buf_x);
+              __asm__("ror a");
               __asm__("sta tmp1");
               __asm__("txa");
-              __asm__("ror tmp1");
               __asm__("ror a");
 
               __asm__("clc");

@@ -160,7 +160,7 @@ do_huff_h:
         clc
 
 :       stx     ptr1+1
-        ldx     _huff_ptr
+        ldx     #0
         stx     ptr1
 
         tay
