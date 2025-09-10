@@ -63,11 +63,6 @@ static uint16 c, col;
 static uint8 r, nreps, rep, row, y, t, rep_loop, tree;
 
 /* Wastes bytes, but simplifies adds */
-#define USEFUL_DATABUF_SIZE 386
-#define DATABUF_SIZE 512 /* align things */
-static uint16 buf_0[DATABUF_SIZE];
-static uint16 buf_1[DATABUF_SIZE];
-static uint16 buf_2[DATABUF_SIZE];
 
 static uint16 val;
 static int8 tk;
@@ -78,6 +73,12 @@ static uint32 tmp32;
 #endif
 
 #ifdef __CC65__
+#define USEFUL_DATABUF_SIZE 321
+#define DATABUF_SIZE 0x300 /* align things */
+extern uint16 buf_0[DATABUF_SIZE/2];
+extern uint16 buf_1[DATABUF_SIZE/2];
+extern uint16 buf_2[DATABUF_SIZE/2];
+
 #define huff_ptr zp4ip
 #define raw_ptr1 zp6ip
 
@@ -87,6 +88,11 @@ static uint32 tmp32;
 #define cur_buf_xh zp8ip
 #define cur_buf_prevh zp10ip
 #else
+#define USEFUL_DATABUF_SIZE 321
+#define DATABUF_SIZE 512 /* align things */
+static uint16 buf_0[DATABUF_SIZE];
+static uint16 buf_1[DATABUF_SIZE];
+static uint16 buf_2[DATABUF_SIZE];
 uint16 *huff_ptr;
 static uint8 *raw_ptr1;
 static uint16 *cur_buf_prev;
@@ -496,13 +502,13 @@ static void decode_row(void) {
           __asm__("iny");
           __asm__("sta (%v),y", cur_buf_x);
 
-#if DATABUF_SIZE != 512
+#if DATABUF_SIZE != 0x300
 #error Need aligned DATABUF_SIZE
 #endif
 
           __asm__("clc");
           __asm__("lda %v+1", cur_buf_x);
-          __asm__("adc #>%w", 2*(DATABUF_SIZE));
+          __asm__("adc #>%w", DATABUF_SIZE);
           __asm__("sta %v+1", cur_buf_x);
 
           __asm__("lda #8");
@@ -533,7 +539,7 @@ static void decode_row(void) {
             /* set cur_buf_prev from cur_buf_x */
             __asm__("lda %v+1", cur_buf_x);
             __asm__("sec");
-            __asm__("sbc #>%w", DATABUF_SIZE * 2);
+            __asm__("sbc #>%w", DATABUF_SIZE);
             __asm__("sta %v+1", cur_buf_prev);
             __asm__("lda %v", cur_buf_x);
             __asm__("sta %v", cur_buf_prev);
@@ -666,7 +672,7 @@ static void decode_row(void) {
             __asm__("clc");
             __asm__("lda %v+1", cur_buf_x);
             __asm__("sta %v+1", cur_buf_prev);
-            __asm__("adc #>%w", 2*(DATABUF_SIZE));
+            __asm__("adc #>%w", DATABUF_SIZE);
             __asm__("sta %v+1", cur_buf_x);
 
             __asm__("jmp %g", loop2);
@@ -722,7 +728,7 @@ static void decode_row(void) {
               __asm__("adc #>(%v)", buf_0);
               __asm__("sta %v+1", cur_buf_prev);
               // __asm__("clc"); we better not overflow there
-              __asm__("adc #>%w", (DATABUF_SIZE) * 2);
+              __asm__("adc #>%w", DATABUF_SIZE);
               __asm__("sta %v+1", cur_buf_x);
 
               __asm__("lda #2");
@@ -791,7 +797,7 @@ static void decode_row(void) {
               __asm__("clc");
               __asm__("lda %v+1", cur_buf_x);
               __asm__("sta %v+1", cur_buf_prev);
-              __asm__("adc #>%w", 2*(DATABUF_SIZE));
+              __asm__("adc #>%w", DATABUF_SIZE);
               __asm__("sta %v+1", cur_buf_x);
 
               __asm__("jmp %g", loop3);
@@ -852,7 +858,7 @@ static void decode_row(void) {
               /* shift pointer */
               __asm__("clc");
               __asm__("lda %v+1", cur_buf_x);
-              __asm__("adc #>%w", 2*(DATABUF_SIZE));
+              __asm__("adc #>%w", DATABUF_SIZE);
               __asm__("sta %v+1", cur_buf_x);
 
               // *cur_buf_x += tk;

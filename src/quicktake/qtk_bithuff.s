@@ -14,6 +14,7 @@
         .export         _getbithuff
         .export         _cache
         .export         _init_floppy_starter
+        .export         _buf_0, _buf_1, _buf_2
 
 cur_cache_ptr = _prev_ram_irq_vector
 _huff_ptr     = _zp4ip
@@ -21,7 +22,9 @@ _huff_ptr     = _zp4ip
 .segment        "BSS"
 .align 256
 _cache:  .res        CACHE_SIZE,$00
-
+_buf_0:  .res        $300
+_buf_1:  .res        $300
+_buf_2:  .res        $300
 CACHE_END = _cache + CACHE_SIZE
 .assert <CACHE_END = 0, error
 
