@@ -56,8 +56,6 @@ static uint16 val_from_last[256] = {
 };
 
 /* note that each huff[x] share the same low byte addr */
-static uint16 huff[19][256];
-static uint16 *huff_9 = huff[9], *huff_10 = huff[10], *huff_18 = huff[18];
 static int16 x, s, i;
 static uint16 c, col;
 static uint8 r, nreps, rep, row, y, t, rep_loop, tree;
@@ -79,6 +77,8 @@ extern uint16 buf_0[DATABUF_SIZE/2];
 extern uint16 buf_1[DATABUF_SIZE/2];
 extern uint16 buf_2[DATABUF_SIZE/2];
 
+extern uint16 huff[19][256];
+
 #define huff_ptr zp4ip
 #define raw_ptr1 zp6ip
 
@@ -93,6 +93,10 @@ extern uint16 buf_2[DATABUF_SIZE/2];
 static uint16 buf_0[DATABUF_SIZE];
 static uint16 buf_1[DATABUF_SIZE];
 static uint16 buf_2[DATABUF_SIZE];
+
+static uint16 huff[19][256];
+static uint16 *huff_9 = huff[9], *huff_10 = huff[10], *huff_18 = huff[18];
+
 uint16 *huff_ptr;
 static uint8 *raw_ptr1;
 static uint16 *cur_buf_prev;
@@ -441,8 +445,6 @@ static void decode_row(void) {
         __asm__("clc");
         __asm__("adc #>%v", huff);
         __asm__("sta %v+1", huff_ptr);
-        // __asm__("lda #<%v", huff);
-        // __asm__("sta %v", huff_ptr);
 
         __asm__("lda #8");
         __asm__("jsr %v", getbithuff);
@@ -477,9 +479,7 @@ static void decode_row(void) {
           __asm__("lda #2");
           __asm__("sta %v", y);
 
-          // __asm__("lda %v", huff_18);
-          // __asm__("sta %v", huff_ptr);
-          __asm__("lda %v+1", huff_18);
+          __asm__("lda #>(%v+18*256*2)", huff);
           __asm__("sta %v+1", huff_ptr);
 
           __asm__("lda #8");
@@ -547,7 +547,7 @@ static void decode_row(void) {
             //huff_ptr = huff[tree + 10];
             __asm__("lda %v", tree);
             __asm__("asl a");
-            __asm__("adc %v+1", huff_10); /* adding to high byte because bidimensional */
+            __asm__("adc #>(%v+10*256*2)", huff);
             __asm__("sta %v+1", huff_ptr);
 
             __asm__("lda #2");
@@ -685,7 +685,7 @@ static void decode_row(void) {
             __asm__("lda #1"); /* nreps */
             __asm__("jmp %g", check_nreps);
             col_gt1a:
-            __asm__("lda %v+1", huff_9);
+            __asm__("lda #>(%v+9*256*2)", huff);
             __asm__("sta %v+1", huff_ptr);
             __asm__("lda #8");
             __asm__("jsr %v", getbithuff);
@@ -705,7 +705,7 @@ static void decode_row(void) {
 
             // __asm__("lda %v", huff_10);
             // __asm__("sta %v", huff_ptr);
-            __asm__("lda %v+1", huff_10);
+            __asm__("lda #>(%v+10*256*2)", huff);
             __asm__("sta %v+1", huff_ptr);
             do_rep_loop:
               __asm__("dec %v", col);
@@ -1124,7 +1124,7 @@ static void consume_extra(void) {
             col_gt1:
             // __asm__("lda %v", huff_9);
             // __asm__("sta %v", huff_ptr);
-            __asm__("lda %v+1", huff_9);
+            __asm__("lda #>(%v+9*256*2)", huff);
             __asm__("sta %v+1", huff_ptr);
             __asm__("lda #8");
             __asm__("jsr %v", getbithuff);
@@ -1142,7 +1142,7 @@ static void consume_extra(void) {
 
             // __asm__("lda %v", huff_10);
             // __asm__("sta %v", huff_ptr);
-            __asm__("lda %v+1", huff_10);
+            __asm__("lda #>(%v+10*256*2)", huff);
             __asm__("sta %v+1", huff_ptr);
 
             __asm__("ldy #$00");
