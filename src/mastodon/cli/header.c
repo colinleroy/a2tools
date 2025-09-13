@@ -75,7 +75,7 @@ void show_help (list *l, status *root_status, notification *root_notif) {
         " Timelines : H/L/G \r\n"
         " Bookmarks : K     \r\n"
         " Configure : O     \r\n"
-        " Quit:     : Q     \r\n");
+        " Exit:     : X     \r\n");
 
   if (IS_NOT_NULL(root_status)) {
     dputs("Toot commands:     \r\n"
@@ -103,6 +103,9 @@ void show_help (list *l, status *root_status, notification *root_notif) {
       dputs(" Unboost   : B     \r\n");
     } else {
       dputs(" Boost     : B     \r\n");
+    }
+    if (root_status->quotable) {
+      dputs(" Quote     : Q     \r\n");
     }
     if ((flags & BOOKMARKED) != 0) {
       dputs(" Unbookmark: M     \r\n");

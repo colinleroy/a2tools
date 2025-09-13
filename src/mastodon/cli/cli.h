@@ -34,7 +34,7 @@ extern unsigned char SHOW_HELP;
 #define REPLY                'r'
 #define EDIT                 'e'
 #define VOTING               'v'
-#define QUIT                 'q'
+#define EXIT                 'x'
 #define SHOW_QUOTE           't'
 #define DELETE               'd'
 #define BOOKMARK             'm'

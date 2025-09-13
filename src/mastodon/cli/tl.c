@@ -1030,7 +1030,7 @@ inject_cmd:
         shift_posts_up(l);
         limit = 1; /* only print one */
         break;
-      case 'w':
+      case TOGGLE_CW:
         hide_cw = !hide_cw;
         limit = 1; /* print the first one */
         break;
@@ -1123,7 +1123,7 @@ inject_cmd:
       case EDIT:
         cur_action = c;
         return;
-      case 'q':      /* QUIT */
+      case EXIT:
         exit(0);
       default:
         if (!has_80cols && c == SHOW_HELP) {
