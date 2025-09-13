@@ -12,7 +12,6 @@
 #include "compose.h"
 #include "common.h"
 #include "progress_bar.h"
-
 #ifdef __CC65__
 #pragma code-name (push, "LOWCODE")
 #endif
@@ -292,8 +291,8 @@ char *compose_get_status_text(char *status_id) {
 const char compose_poll_durations_hours[] = {1, 6, 12, 24, 48, 72, 168};
 const char *compose_poll_durations_seconds[] = {"3600", "21600", "43200", "86400", "172800", "259200", "604800"};
 
-#define ORG_FRENCH_CHARS "{}@|]\\"
-#define SUB_FRENCH_CHARS "eeau@c"
+static unsigned char ORG_FRENCH_CHARS[] = { ']','|','@','\\','}','{' };
+static unsigned char SUB_FRENCH_CHARS[] = { '@','u','a','c' ,'e','e' };
 
 void compose_sanitize_str(char *s) {
   char *r;
@@ -304,8 +303,9 @@ void compose_sanitize_str(char *s) {
     i = sizeof(ORG_FRENCH_CHARS);
     do {
       i--;
-      while ((r = strchr(s, ORG_FRENCH_CHARS[i])))
+      while ((r = strchr(s, ORG_FRENCH_CHARS[i]))) {
         *r = SUB_FRENCH_CHARS[i];
+      }
     } while (i);
   }
 }
