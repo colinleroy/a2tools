@@ -137,17 +137,23 @@ static void setup_gui(void)
   gotoxy(0, 0);
 
   if (IS_NOT_NULL(ref_status)) {
-    if (compose_mode[0] == 'r') {
-      writable_lines = NUMLINES - COMPOSE_HEIGHT;
-      print_status(ref_status, 0, 0);
+    switch(compose_mode[0]) {
+      case 'r':
+      case 'q':
+        writable_lines = NUMLINES - COMPOSE_HEIGHT;
+        print_status(ref_status, 0, 0);
 
-      /* we want to make sure we'll have one and
-       * only one separator line */
-      gotoxy(0, wherey() - 1);
-      chline(RIGHT_COL_WIDTH);
-      clrzone(wherex(), wherey(), RIGHT_COL_AWIDTH, wherey());
-      dputs("Your reply:\r\n");
-      top = wherey();
+        /* we want to make sure we'll have one and
+         * only one separator line */
+        gotoxy(0, wherey() - 1);
+        chline(RIGHT_COL_WIDTH);
+        clrzone(wherex(), wherey(), RIGHT_COL_AWIDTH, wherey());
+        if (compose_mode[0] == 'r') {
+          dputs("Your reply:\r\n");
+        } else {
+          dputs("Your quote:\r\n");
+        }
+        top = wherey();
     }
   }
   chline(RIGHT_COL_WIDTH);
