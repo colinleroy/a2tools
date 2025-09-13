@@ -191,9 +191,26 @@ static status *api_get_status_rec(char *status_id) {
       if (s->quote_id[0] && strcmp(s->quote_id, s->id)) {
         s->quote = api_get_status_rec(s->quote_id);
         if (IS_NOT_NULL(s->quote)) {
-          char *re = strstr(s->content, "\nRE: https://");
-          if (IS_NOT_NULL(re)) {
-            re[0] = '\0';
+          char *start_re = strstr(s->content, "RE: https://");
+
+          /* Did we find the RE: retrocompatibility link?
+           * It has to be non-null and either at the start of the
+           * buffer or preceded by a \n */
+          if (IS_NOT_NULL(start_re) &&
+              (start_re == s->content || *(start_re-1) == '\n')) {
+            char *end_re = strchr(start_re, '\n');
+            /* We did. Find where it ends */
+            if (IS_NOT_NULL(end_re)) {
+              /* Skip every empty line */
+              do {
+                end_re++;
+              } while(*end_re == '\n');
+
+              /* Move everything after end_re to start_re,
+               * effectively hiding the link. Copy strlen+1
+               * so we copy the terminator. */
+              memmove(start_re, end_re, strlen(end_re)+1);
+            }
           }
         }
       }
