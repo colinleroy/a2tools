@@ -241,9 +241,9 @@ signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medi
   if (surl_response_ok())
     return 0;
 
-  *err = malloc(NUM_CHARS);
+  *err = malloc(512);
   if (IS_NOT_NULL(*err)) {
-    surl_get_json(*err, ".error", translit_charset, SURL_HTMLSTRIP_NONE, NUM_CHARS);
+    surl_get_json(*err, ".error", translit_charset, SURL_HTMLSTRIP_NONE, 511);
   }
   return -1;
 }
@@ -257,9 +257,9 @@ char *compose_get_status_text(char *status_id) {
   if (surl_response_ok()) {
     int r;
     
-    content = malloc0(NUM_CHARS);
+    content = malloc0(512);
 
-    r = surl_get_json(content, ".text", translit_charset, SURL_HTMLSTRIP_NONE, NUM_CHARS);
+    r = surl_get_json(content, ".text", translit_charset, SURL_HTMLSTRIP_NONE, 511);
 
     if (r < 0) {
       free(content);
