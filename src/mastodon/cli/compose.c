@@ -52,7 +52,7 @@ static char should_open_menu = 0;
 static char should_resume_composing = 0;
 
 static status *ref_status = NULL;
-static char *compose_mode = "c";
+static char compose_mode = 'c';
 
 static void update_compose_audience(void) {
   gotoxy(0, top + COMPOSE_FIELD_HEIGHT + 1);
@@ -137,7 +137,7 @@ static void setup_gui(void)
   gotoxy(0, 0);
 
   if (IS_NOT_NULL(ref_status)) {
-    switch(compose_mode[0]) {
+    switch(compose_mode) {
       case 'r':
       case 'q':
         writable_lines = NUMLINES - COMPOSE_HEIGHT;
@@ -148,7 +148,7 @@ static void setup_gui(void)
         gotoxy(0, wherey() - 1);
         chline(RIGHT_COL_WIDTH);
         clrzone(wherex(), wherey(), RIGHT_COL_AWIDTH, wherey());
-        if (compose_mode[0] == 'r') {
+        if (compose_mode == 'r') {
           dputs("Your reply:\r\n");
         } else {
           dputs("Your quote:\r\n");
@@ -449,7 +449,7 @@ static char *handle_compose_input(char *initial_buf) {
   if (IS_NOT_NULL(initial_buf) && initial_buf[0]) {
     int len = min(NUM_CHARS - 3, strlen(initial_buf));
 
-    if (compose_mode[0] == 'r') {
+    if (compose_mode == 'r') {
       int i;
       /* Insert initial_buf as handle to reply to */
       text[0] = arobase;
@@ -515,7 +515,7 @@ try_again:
     clrscr();
     gotoxy(0, 1);
     dputs("Sending toot...\r\n\r\n");
-    r = api_send_toot(compose_mode[0], text, cw, sensitive_medias,
+    r = api_send_toot(compose_mode, text, cw, sensitive_medias,
                       IS_NOT_NULL(ref_status) ? ref_status->id : NULL,
                       media_ids, n_medias,
                       toot_poll, compose_audience,
@@ -597,7 +597,7 @@ int main(int argc, char **argv) {
   set_hscrollwindow(RIGHT_COL_START, RIGHT_COL_WIDTH);
   gotoxy(0, 0);
   if (argc == 7) {
-    compose_mode = argv[5];
+    compose_mode = argv[5][0];
     ref_status = api_get_status(argv[6], 0);
 
     if (IS_NOT_NULL(ref_status)) {
@@ -611,7 +611,7 @@ int main(int argc, char **argv) {
       compose_audience = ref_status->visibility;
 
       /* If editing, set medias from reference status */
-      if (compose_mode[0] == 'e' && ref_status->n_medias > 0) {
+      if (compose_mode == 'e' && ref_status->n_medias > 0) {
         media *medias = api_get_status_media(ref_status->id);
         if (IS_NOT_NULL(medias)) {
           char i;
@@ -637,9 +637,9 @@ int main(int argc, char **argv) {
   }
 
   /* Auto-mention parent toot's sender, unless it's us */
-  if (IS_NOT_NULL(ref_status) && compose_mode[0] == 'r' && strcmp(ref_status->account->id, my_account->id)) {
+  if (IS_NOT_NULL(ref_status) && compose_mode == 'r' && strcmp(ref_status->account->id, my_account->id)) {
     compose_toot(ref_status->account->acct);
-  } else if (compose_mode[0] == 'e') {
+  } else if (compose_mode == 'e') {
     char *orig_status = compose_get_status_text(ref_status->id);
     if (IS_NULL(orig_status)) {
       orig_status = strdup("Can not fetch status");
