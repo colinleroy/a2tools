@@ -30,6 +30,8 @@ account *account_new_from_lines(void) {
 #pragma code-name (push, "LC")
 #endif
 
+unsigned char my_quote_policy = QUOTE_POLICY_NOBODY;
+
 account *api_get_profile(char *id) {
   char n_lines;
 
@@ -40,13 +42,16 @@ account *api_get_profile(char *id) {
   if (!surl_response_ok()) {
     return NULL;
   }
-  if (surl_get_json(gen_buf, ".id,.display_name,.acct,.username", translit_charset, SURL_HTMLSTRIP_NONE, BUF_SIZE) < 0) {
+  if (surl_get_json(gen_buf, ".id,.display_name,.acct,.username,.source.quote_policy//\"n\"",
+                    translit_charset, SURL_HTMLSTRIP_NONE, BUF_SIZE) < 0) {
     return NULL;
   }
-  n_lines = strnsplit_in_place(gen_buf,'\n', lines, 4);
-  if (n_lines < 4) {
+  n_lines = strnsplit_in_place(gen_buf,'\n', lines, 5);
+  if (n_lines < 5) {
     return NULL;
   }
+
+  my_quote_policy = lines[4][0];
   return account_new_from_lines();
 }
 

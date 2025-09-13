@@ -21,7 +21,7 @@ account *my_account = NULL;
 char *key_combo = "Ctrl";
 
 void compose_show_help(void) {
-  #define BTM 4
+  #define BTM 1
   clrzone(0, BTM, LEFT_COL_WIDTH, 23);
 
   if (is_iie) {
@@ -31,21 +31,26 @@ void compose_show_help(void) {
   dputs("Commands:\r\n");
   dputs(key_combo);
   dputs(" +...\r\n"
-        " Send     : S\r\n"
-        " Images   : I\r\n"
-        " CW       : C\r\n"
-        " Poll     : V\r\n"
-        " Cancel   : X\r\n"
+        " Send      : S\r\n"
+        " Images    : I\r\n"
+        " CW        : C\r\n"
+        " Poll      : V\r\n"
+        " Cancel    : X\r\n"
         "\r\n"
         "Set Audience:\r\n");
   dputs(key_combo);
   dputs(" +...\r\n"
-        " Public   : P\r\n"
-        " Unlisted : N\r\n"
-        " Private  : R\r\n"
-        " Mention  : D\r\n"
+        " Public    : P\r\n"
+        " Unlisted  : L\r\n"
+        " Private   : R\r\n"
+        " Direct    : D\r\n"
         "\r\n"
-      );
+        "Quote Policy:\r\n");
+  dputs(key_combo);
+  dputs(" +...\r\n"
+        " Public    : E\r\n"
+        " Followers : F\r\n"
+        " Nobody    : N\r\n");
 
   print_free_ram();
 }
@@ -57,15 +62,10 @@ void compose_print_header(void) {
 
   if (has_80cols) {
     if (IS_NOT_NULL(my_account)) {
-      if (strlen(my_account->display_name) > LEFT_COL_WIDTH)
-        my_account->display_name[LEFT_COL_WIDTH] = '\0';
-
       if (strlen(my_account->username) > LEFT_COL_WIDTH)
         my_account->username[LEFT_COL_WIDTH] = '\0';
 
       gotoxy(0, 0);
-      dputs(my_account->display_name);
-      gotoxy(0, 1);
       dputc(arobase);
       dputs(my_account->username);
     }

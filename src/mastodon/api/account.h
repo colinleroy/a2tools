@@ -13,7 +13,13 @@ typedef struct _account account;
 #define RSHIP_MUTING      (1<<5)
 #define RSHIP_FOLLOW_REQ  (1<<6)
 
+#define QUOTE_POLICY_PUBLIC    'p'
+#define QUOTE_POLICY_FOLLOWERS 'f'
+#define QUOTE_POLICY_NOBODY    'n'
+
 #define MAX_ACCT_FIELDS    4
+
+extern unsigned char my_quote_policy;
 
 struct _account {
   signed char displayed_at;

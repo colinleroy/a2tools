@@ -30,6 +30,14 @@ char *compose_audience_str(char compose_audience) {
   }
 }
 
+char *quote_policy_str(char quote_policy) {
+  switch(quote_policy) {
+    case QUOTE_POLICY_PUBLIC:     return "public";
+    case QUOTE_POLICY_FOLLOWERS:  return "followers";
+    default:                      return "nobody";
+  }
+}
+
 #define FILE_ERROR "Can not open file.\r\n"
 #define NET_ERROR "Network error.\r\n"
 
@@ -154,7 +162,8 @@ static char ref_status_field[SNOWFLAKE_ID_LEN*2];
 
 signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medias,
                           char *ref_toot_id, char **media_ids, char n_medias,
-                          poll *toot_poll, char compose_audience, char **err) {
+                          poll *toot_poll, char compose_audience,
+                          char quote_policy, char **err) {
   int i, o, len;
   char c;
 
@@ -225,12 +234,14 @@ continue_building:
   snprintf(body, 1536, "%s"
                        "%s"
                        "S|visibility\n%s\n"
+                       "S|quote_approval_policy\n%s\n"
                        "B|sensitive\n%s\n"
                        "S|spoiler_text|%s|%s\n%s\n"
                        "S|status|%s|%s\n",
                         ref_status_field,
                         extra_buf,
                         compose_audience_str(compose_audience),
+                        quote_policy_str(quote_policy),
                         sensitive_medias ? "true":"false",
                         TRANSLITCMD, translit_charset, cw,
                         TRANSLITCMD, translit_charset);

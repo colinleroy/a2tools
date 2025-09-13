@@ -43,10 +43,12 @@ char cw[50] = "";
 
 poll *toot_poll = NULL;
 
-#define COMPOSE_HEIGHT 15
+#define COMPOSE_HEIGHT 16
 #define COMPOSE_FIELD_HEIGHT 9
+#define CW_LINE 3
 
 static char compose_audience = COMPOSE_PUBLIC;
+static char quote_policy;
 static char cancelled = 0;
 static char should_open_menu = 0;
 static char should_resume_composing = 0;
@@ -54,17 +56,22 @@ static char should_resume_composing = 0;
 static status *ref_status = NULL;
 static char compose_mode = 'c';
 
-static void update_compose_audience(void) {
+static void update_compose_settings(void) {
   gotoxy(0, top + COMPOSE_FIELD_HEIGHT + 1);
 
   if (has_80cols) {
-    cprintf("Audience: (%c) Public  (%c) Unlisted  (%c) Private  (%c) Mention",
+    cprintf("Audience: (%c) Public  (%c) Unlisted  (%c) Private  (%c) Direct\r\n",
           compose_audience == COMPOSE_PUBLIC ? '*':' ',
           compose_audience == COMPOSE_UNLISTED ? '*':' ',
           compose_audience == COMPOSE_PRIVATE ? '*':' ',
           compose_audience == COMPOSE_MENTION ? '*':' ');
+    cprintf("Allow quotes from: (%c) Public  (%c) Followers  (%c) Nobody",
+          quote_policy == QUOTE_POLICY_PUBLIC ? '*':' ',
+          quote_policy == QUOTE_POLICY_FOLLOWERS ? '*':' ',
+          quote_policy == QUOTE_POLICY_NOBODY ? '*':' ');
 
-    gotoxy(0, top + COMPOSE_FIELD_HEIGHT + 3);
+    /* One line for CW */
+    gotoxy(0, top + COMPOSE_FIELD_HEIGHT + CW_LINE + 1);
     dputs(translit_charset);
     if(translit_charset[0] != 'U') {
       dputs(": Use ");
@@ -74,12 +81,15 @@ static void update_compose_audience(void) {
   } else {
     cprintf("Audience: %s     ",
             compose_audience_str(compose_audience));
+    cprintf("\r\nAllow quotes from: %s     ",
+            quote_policy_str(quote_policy));
+    gotoxy(0, top + COMPOSE_FIELD_HEIGHT + CW_LINE);
   }
   cprintf("\r\nCharacter limit: %d characters.", NUM_CHARS);
 }
 
 static void update_cw(void) {
-  clrzone(0, top + COMPOSE_FIELD_HEIGHT + 2, RIGHT_COL_AWIDTH, top + COMPOSE_FIELD_HEIGHT + 2);
+  clrzone(0, top + COMPOSE_FIELD_HEIGHT + CW_LINE, RIGHT_COL_AWIDTH, top + COMPOSE_FIELD_HEIGHT + CW_LINE);
   if (has_80cols) {
     if (cw[0] == '\0') {
       dputs("( ) ");
@@ -105,12 +115,15 @@ static char dgt_cmd_cb(char c) {
       should_open_menu = c;
       return 1;
 
-    case 'p':    compose_audience = COMPOSE_PUBLIC;   break;
-    case 'r':    compose_audience = COMPOSE_PRIVATE;  break;
-    case 'u':    compose_audience = COMPOSE_UNLISTED; break;
-    case 'm':    compose_audience = COMPOSE_MENTION;  break;
-    case 'n':    compose_audience = COMPOSE_UNLISTED; break;
-    case 'd':    compose_audience = COMPOSE_MENTION;  break;
+    case 'p':    compose_audience = COMPOSE_PUBLIC;     break;
+    case 'r':    compose_audience = COMPOSE_PRIVATE;    break;
+    case 'l':    compose_audience = COMPOSE_UNLISTED;   break;
+    case 'd':    compose_audience = COMPOSE_MENTION;    break;
+
+    case 'e':    quote_policy = QUOTE_POLICY_PUBLIC;    break;
+    case 'f':    quote_policy = QUOTE_POLICY_FOLLOWERS; break;
+    case 'n':    quote_policy = QUOTE_POLICY_NOBODY;    break;
+
     case 'x':    cancelled = 1;                       return 1;
     case 'y':    if (!has_80cols) {
                    should_resume_composing = 1;
@@ -123,7 +136,7 @@ static char dgt_cmd_cb(char c) {
                  }
   }
   set_scrollwindow(0, NUMLINES);
-  update_compose_audience();
+  update_compose_settings();
   update_cw();
   print_free_ram();
   set_scrollwindow(top + 1, top + COMPOSE_FIELD_HEIGHT);
@@ -160,7 +173,7 @@ static void setup_gui(void)
   gotoxy(0, top + COMPOSE_FIELD_HEIGHT);
   chline(RIGHT_COL_WIDTH);
 
-  update_compose_audience();
+  update_compose_settings();
   update_cw();
   print_free_ram();
 
@@ -231,7 +244,7 @@ try_again:
 static void open_cw_menu(void) {
   set_scrollwindow(0, NUMLINES);
 
-  clrzone(0, top + COMPOSE_FIELD_HEIGHT + 2, RIGHT_COL_AWIDTH, top + COMPOSE_FIELD_HEIGHT + 2);
+  clrzone(0, top + COMPOSE_FIELD_HEIGHT + CW_LINE, RIGHT_COL_AWIDTH, top + COMPOSE_FIELD_HEIGHT + CW_LINE);
   dputs("(*) CW: ");
   dget_text_multi(cw, sizeof(cw) - 1, NULL, 0);
   update_cw();
@@ -518,7 +531,7 @@ try_again:
     r = api_send_toot(compose_mode, text, cw, sensitive_medias,
                       IS_NOT_NULL(ref_status) ? ref_status->id : NULL,
                       media_ids, n_medias,
-                      toot_poll, compose_audience,
+                      toot_poll, compose_audience, quote_policy,
                       &err);
     if (r < 0) {
       char t;
@@ -591,8 +604,8 @@ int main(int argc, char **argv) {
   }
 
   compose_print_header();
-
   compose_set_num_chars();
+  quote_policy = my_quote_policy;
 
   set_hscrollwindow(RIGHT_COL_START, RIGHT_COL_WIDTH);
   gotoxy(0, 0);
