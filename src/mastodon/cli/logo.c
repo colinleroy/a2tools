@@ -10,24 +10,24 @@ void print_logo(void) {
     logo =
       "   ***************\r\n"
       " ***      '      ***       WELCOME TO MASTODON\r\n"
+      "***   ***   ***   ***      Version "VERSION"\r\n"
       "***   ***   ***   ***\r\n"
-      "***   ***   ***   ***      (c) Colin Leroy-Mira, 2023\r\n"
-      "***   *********   ***          <https://www.colino.net>\r\n"
-      " *******************\r\n"
-      "  ****************         This program is free software,\r\n"
-      "   ****                    distributed under the GPL v3.\r\n"
+      "***   *********   ***      (c) Colin Leroy-Mira, 2023-2025\r\n"
+      " *******************           <https://www.colino.net>\r\n"
+      "  ****************\r\n"
+      "   ****                    This program is free software.\r\n"
       "     *********'\r\n";
 
-    /* 58 is the width of char *logo */
-    set_hscrollwindow((NUMCOLS - 58) / 2, 58);
+    /* 60 is the max width of char *logo */
+    set_hscrollwindow((NUMCOLS - 60) / 2, 60);
   } else {
     logo =
       "  **********\r\n"
-      " **        **        WELCOME TO\r\n"
-      "**  **  **  **        MASTODON\r\n"
+      " **        **   WELCOME TO MASTODON\r\n"
+      "**  **  **  **  VERSION "VERSION"\r\n"
       "**  **  **  **\r\n"
-      "**  ******  **   (c) Colin Leroy-Mira\r\n"
-      " ************       https://colino.net\r\n"
+      "**  ******  **  (c) Colin Leroy-Mira\r\n"
+      " ************   https://colino.net\r\n"
       "  *********\r\n"
       "   **           This program is GPL v3.\r\n"
       "     ****'\r\n";
