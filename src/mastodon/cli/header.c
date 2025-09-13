@@ -55,13 +55,9 @@ void show_help (list *l, status *root_status, notification *root_notif) {
   char flags = 0;
 
   gotoxy(0, 0);
-  dputs(my_account->display_name);
-  gotoxy(0, 1);
   dputc(arobase);
   dputs(my_account->username);
-
-  #define BTM 2
-  gotoxy(0,BTM);
+  dputs("\r\n");
 
   dputs("General commands:  \r\n"
         " View toot : Enter \r\n"
