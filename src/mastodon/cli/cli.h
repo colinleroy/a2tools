@@ -32,6 +32,7 @@ extern unsigned char SHOW_HELP;
 #define SHOW_PROFILE         'p'
 #define IMAGES               'i'
 #define REPLY                'r'
+#define QUOTE                'q'
 #define EDIT                 'e'
 #define VOTING               'v'
 #define EXIT                 'x'

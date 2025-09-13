@@ -1121,6 +1121,7 @@ inject_cmd:
       case IMAGES:
       case REPLY:
       case EDIT:
+      case QUOTE:
         cur_action = c;
         return;
       case EXIT:
@@ -1320,6 +1321,11 @@ navigate_reuse_list:
       case REPLY:
           if (IS_NOT_NULL(disp_status))
             launch_command("mastowrite", "r", disp_status->id);
+          cur_action = NAVIGATE;
+          break;
+      case QUOTE:
+          if (IS_NOT_NULL(disp_status) && disp_status->quotable)
+            launch_command("mastowrite", "q", disp_status->id);
           cur_action = NAVIGATE;
           break;
       case EDIT:
