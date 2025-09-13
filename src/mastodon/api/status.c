@@ -51,9 +51,10 @@ const char *basic_selector = ".reblog|(.account.id,.account.display_name,.accoun
                                       ".media_attachments[0].type//\"-\","
                                       ".replies_count,.reblogs_count,.favourites_count,"
                                       ".visibility,.reblogged,.favourited,.bookmarked,.poll.id//\"-\","
-                                      ".quote.status.id//.quote.quoted_status.id//\"-\""
+                                      ".quote.status.id//.quote.quoted_status.id//\"-\","
+                                      ".quote_approval.current_user//\"d\""
                                       ")";
-#define BASIC_SELECTOR_NLINES 18
+#define BASIC_SELECTOR_NLINES 19
 
 const char *content_selector       = ".reblog|(.content)";
 
@@ -132,6 +133,11 @@ again:
     /* Quote */
     if (lines[17][0] != '-') {
       id_copy(s->quote_id, lines[17]);
+    }
+
+    /* Quotable */
+    if (lines[18][0] != 'd') /* denied */ {
+      s->quotable = 1;
     }
   } else {
     return -1;

@@ -33,6 +33,7 @@ struct _status {
   char visibility;
   poll *poll;
   status *quote;
+  unsigned char quotable;
 };
 
 void status_free(status *s);
