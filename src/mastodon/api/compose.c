@@ -151,6 +151,7 @@ send_again:
 
 static char body[BODY_SIZE];
 static char extra_buf[EXTRA_BUF_SIZE];
+static char ref_status_field[SNOWFLAKE_ID_LEN*2];
 
 signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medias,
                           char *ref_toot_id, char **media_ids, char n_medias,
@@ -196,21 +197,39 @@ signed char api_send_toot(char mode, char *buffer, char *cw, char sensitive_medi
     extra_buf[0] = '\0';
   }
 
-  snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, STATUS_ENDPOINT"%s%s",
-           mode == 'e' ? "/" : "",
-           mode == 'e' ? ref_toot_id : "");
-  get_surl_for_endpoint(mode == 'e' ? SURL_METHOD_PUT : SURL_METHOD_POST, endpoint_buf);
+  /* Init ref status field to nothing */
+  ref_status_field[0] = '\0';
 
+  switch(mode) {
+    case 'e':
+      /* Edit endpoint is different - PUT to /status/{status_id} */
+      snprintf(endpoint_buf, ENDPOINT_BUF_SIZE, STATUS_ENDPOINT"/%s",
+              ref_toot_id);
+      get_surl_for_endpoint(SURL_METHOD_PUT, endpoint_buf);
+      /* Skip default endpoint */
+      goto continue_building;
+    case 'r':
+      /* Reply - set in_reply_to_id field */
+      sprintf(ref_status_field, "S|in_reply_to_id\n%s\n", ref_toot_id);
+      break;
+    case 'q':
+      /* Quote - set quoted_status_id field */
+      sprintf(ref_status_field, "S|quoted_status_id\n%s\n", ref_toot_id);
+      break;
+  }
+
+  /* Compose, Reply, Quote all use the same endpoint */
+  get_surl_for_endpoint(SURL_METHOD_POST, STATUS_ENDPOINT);
+
+continue_building:
   /* Start of status */
-  snprintf(body, 1536, "%c|in_reply_to_id\n"
-                       "%s\n"
+  snprintf(body, 1536, "%s"
                        "%s"
                        "S|visibility\n%s\n"
                        "B|sensitive\n%s\n"
                        "S|spoiler_text|%s|%s\n%s\n"
                        "S|status|%s|%s\n",
-                        (IS_NOT_NULL(ref_toot_id) && mode == 'r') ? 'S' : 'B',
-                        (IS_NOT_NULL(ref_toot_id) && mode == 'r') ? ref_toot_id : "null",
+                        ref_status_field,
                         extra_buf,
                         compose_audience_str(compose_audience),
                         sensitive_medias ? "true":"false",
