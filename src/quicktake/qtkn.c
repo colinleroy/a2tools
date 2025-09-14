@@ -63,8 +63,8 @@ static uint8 r, nreps, rep, row, y, t, rep_loop, tree;
 /* Wastes bytes, but simplifies adds */
 
 static uint16 val;
-static int8 tk;
 #ifndef __CC65__
+static int8 tk;
 static uint8 tmp8;
 static uint16 tmp16;
 static uint32 tmp32;
@@ -242,6 +242,7 @@ static void init_row(void) {
 
 void init_top(void) {
   static uint8 l, h;
+
   l = 0;
   h = 1;
   for (s = i = 0; i != sizeof src; i += 2) {
@@ -1036,12 +1037,12 @@ static void consume_extra(void) {
 #ifndef __CC65__
     /* Consume RADC tokens but don't care about them. */
     for (c=1; c != 3; c++) {
-      for (tree = 1, col = WIDTH/4; col; ) {
-        huff_num = tree*2;
-        tree = getbithuff(8);
+      for (tree = 2, col = WIDTH/4; col; ) {
+        huff_num = tree;
+        tree = getbithuff(8)*2;
         if (tree) {
           col--;
-          huff_num = (tree + 10)*2;
+          huff_num = (tree + 20);
           getbithuff(8);
           getbithuff(8);
           getbithuff(8);
@@ -1075,16 +1076,13 @@ static void consume_extra(void) {
     __asm__("lda #2");
     __asm__("sta %v", c);
     c_loop:
-      __asm__("lda #1");
+      __asm__("lda #2");
       __asm__("sta %v", tree);
-      __asm__("ldy #$00");
-      __asm__("sty %v+1", tree);
       __asm__("lda #<%w", (WIDTH/4));
       __asm__("sta %v", col);
 
       col_loop2:
         __asm__("lda %v", tree);
-        __asm__("asl a");
         __asm__("clc");
         __asm__("adc #>%v", huff_split);
         __asm__("sta %v", huff_num);
@@ -1093,6 +1091,7 @@ static void consume_extra(void) {
 
         __asm__("lda #8");
         __asm__("jsr %v", getbithuff);
+        __asm__("asl a");
         __asm__("sta %v", tree);
 
         __asm__("beq %g", tree_zero_2);
@@ -1102,9 +1101,7 @@ static void consume_extra(void) {
           //huff_ptr = huff[tree + 10];
           __asm__("lda %v", tree);
           __asm__("clc");
-          __asm__("adc #10");
-          __asm__("asl a");
-          __asm__("adc #>%v", huff_split);
+          __asm__("adc #>(%v+10*256*2)", huff_split);
           __asm__("sta %v", huff_num);
           // __asm__("lda #<%v", huff);
           // __asm__("sta %v", huff_ptr);

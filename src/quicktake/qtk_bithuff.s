@@ -41,6 +41,11 @@ motor_on:.res 1
 .segment        "CODE"
 
 _init_floppy_starter:
+        lda     cur_cache_ptr           ; Init local cache
+        sta     cache_read
+        lda     cur_cache_ptr+1
+        sta     cache_read+1
+
         lda     floppy_motor_on         ; Patch motor_on if we use a floppy
         beq     :+
         sta     start_floppy_motor+1
@@ -49,8 +54,8 @@ _init_floppy_starter:
 :       rts
 
 inc_cache_high:
-        inc     cur_cache_ptr+1
-        ldx     cur_cache_ptr+1
+        inc     cache_read+1
+        ldx     cache_read+1
 
         ; Check for cache almost-end and restart floppy
         ; Consider we have time to handle 256b while the
@@ -77,12 +82,12 @@ start_floppy_motor:
 
         ; Push buffer
         lda     _cache_start+1
-        sta     cur_cache_ptr+1
+        sta     cache_read+1
         sta     (c_sp),y
         dey
 
         lda     _cache_start
-        sta     cur_cache_ptr
+        sta     cache_read
         sta     (c_sp),y
 
         ; Push count (CACHE_SIZE)
@@ -97,18 +102,17 @@ initbithuff:
         stx     _bitbuf+1
         ; _bitbuf low byte will be set below
 
-        ldy     #$00
-        lda     (cur_cache_ptr),y
+cache_read = *+1
+        lda     $FFFF
         sta     _bitbuf
 
-        inc     cur_cache_ptr
-        lda     cur_cache_ptr
+        inc     cache_read
         beq     inc_cache_high
 
 inc_vbits:
         ldy     _vbits
         ldx     plus8,y
-        stx     _vbits
+        stx     _vbits       ; vbits in X for return
 retinc: cpx     #9           ; will be patched with jmp got_vbits
         bcc     initbithuff
         ; Now we're there for the first time, we won't refill more
@@ -129,13 +133,12 @@ _getbithuff:
         bcc     initbithuff
 
 got_vbits:
-        ldy     min16,x       ; shift = 16-vbits
         lda     _bitbuf+1     ; Load the uint16 bitbuf
-        ldx     _bitbuf+0     ; (high byte in A because that's the one we keep)
-
-        stx     tmp4
-        cpy     #$00
+        ldy     min16,x       ; shift = 16-vbits
         beq     lshift_done_h
+
+        ldx     _bitbuf+0     ; (high byte in A because that's the one we keep)
+        stx     tmp4
 
 :       asl     tmp4
         rol     a

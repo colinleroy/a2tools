@@ -49,7 +49,7 @@ uint8 __fastcall__ getbithuff (uint8 n)
   /* tmp is now 0x0000AABB */
 
   tmp <<= shift;
-  /* tmp is now 0x000AABB0 */
+  /* shift max 7, tmp is now 0x000AABB0 */
 
   tmp = (tmp & 0x0000FF00);
   /* tmp is now 0x0000AB00 */
