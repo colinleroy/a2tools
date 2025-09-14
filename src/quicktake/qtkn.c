@@ -72,7 +72,7 @@ static uint32 tmp32;
 
 #ifdef __CC65__
 #define USEFUL_DATABUF_SIZE 321
-#define DATABUF_SIZE 0x300 /* align things */
+#define DATABUF_SIZE 0x400 /* align things */
 extern uint16 buf_0[DATABUF_SIZE/2];
 extern uint16 buf_1[DATABUF_SIZE/2];
 extern uint16 buf_2[DATABUF_SIZE/2];
@@ -88,10 +88,10 @@ extern uint8 huff_num;
 
 #else
 #define USEFUL_DATABUF_SIZE 321
-#define DATABUF_SIZE 512 /* align things */
-static uint16 buf_0[DATABUF_SIZE];
-static uint16 buf_1[DATABUF_SIZE];
-static uint16 buf_2[DATABUF_SIZE];
+#define DATABUF_SIZE 0x400 /* align things */
+static uint16 buf_0[DATABUF_SIZE/2];
+static uint16 buf_1[DATABUF_SIZE/2];
+static uint16 buf_2[DATABUF_SIZE/2];
 
 uint8 huff_split[19*2][256];
 uint8 huff_num;
@@ -131,20 +131,23 @@ static uint8 last = 16;
 #pragma codesize(push, 200)
 #pragma register-vars(push, on)
 
+#define SET_CURBUF_VAL(buf, y, val) do { *(uint16 *)((buf)+(y)) = (val); } while (0)
+#define GET_CURBUF_VAL(buf, y) ((uint16)( *((buf)+(y)) ))
+
 static void init_row(void) {
     cur_buf_0 = buf_0;
 #ifndef __CC65__
     for (i=0; i != USEFUL_DATABUF_SIZE; i++) {
       tmp32 = val;
-      if (*cur_buf_0) {
-        tmp32 *= (*cur_buf_0);
+      if (GET_CURBUF_VAL(cur_buf_0, 0)) {
+        tmp32 *= GET_CURBUF_VAL(cur_buf_0, 0);
         tmp32--;
-        *((uint16 *)cur_buf_0) = tmp32 >> 12;
+        SET_CURBUF_VAL(cur_buf_0, 0, tmp32 >> 12);
       } else {
         // tmp32 *= 0  == 0
         // tmp32--     == 0xFFFF
         // tmp32 >> 12 == 0x0F
-        *((uint16 *)cur_buf_0) = 0x0F;
+        SET_CURBUF_VAL(cur_buf_0, 0, 0x0F);
       }
       cur_buf_0++;
     }
@@ -270,7 +273,7 @@ void init_top(void) {
 
   cur_buf_0 = buf_0;
   for (i=0; i != USEFUL_DATABUF_SIZE; i++) {
-    *cur_buf_0 = 2048;
+    SET_CURBUF_VAL(cur_buf_0, 0, 2048);
     cur_buf_0++;
   }
 }
@@ -286,45 +289,49 @@ static void decode_row(void) {
         if (tree) {
           col--;
           cur_buf_0 = buf_0 + col*2;
-          cur_buf_1 = cur_buf_0 + DATABUF_SIZE;
-          cur_buf_2 = cur_buf_1 + DATABUF_SIZE;
+          cur_buf_1 = cur_buf_0 + DATABUF_SIZE/2;
+          cur_buf_2 = cur_buf_1 + DATABUF_SIZE/2;
           if (tree == 8) {
             huff_num = 18*2;
             tmp8 = (uint8) getbithuff(8);
-            *(cur_buf_1+1) = tmp8 * t;
+            SET_CURBUF_VAL(cur_buf_1, 1, tmp8 * t);
             tmp8 = (uint8) getbithuff(8);
-            *cur_buf_1 = tmp8 * t;
+            SET_CURBUF_VAL(cur_buf_1, 0, tmp8 * t);
             tmp8 = (uint8) getbithuff(8);
-            *(cur_buf_2+1) = tmp8 * t;
+            SET_CURBUF_VAL(cur_buf_2, 1, tmp8 * t);
             tmp8 = (uint8) getbithuff(8);
-            *(cur_buf_2) = tmp8 * t;
+            SET_CURBUF_VAL(cur_buf_2, 0, tmp8 * t);
 
           } else {
             huff_num = (tree+10)*2;
 
             //a
             tk = getbithuff(8);
-            *(cur_buf_1+1) = ((((*(cur_buf_0+2) + *(cur_buf_1+2)) >> 1)
-                              + *(cur_buf_0+1)) >> 1)
-                             + (tk << 4);
+            SET_CURBUF_VAL(cur_buf_1, 1, 
+                            (((((GET_CURBUF_VAL(cur_buf_0, 2) + GET_CURBUF_VAL(cur_buf_1, 2)) >> 1)
+                              + GET_CURBUF_VAL(cur_buf_0, 1)) >> 1)
+                              + (tk << 4)));
 
             /* Second with col - 1*/
             tk = getbithuff(8);
-            *(cur_buf_1) = ((((*(cur_buf_0+1) + *(cur_buf_1+1)) >> 1)
-                              + *(cur_buf_0)) >> 1)
-                             + (tk << 4);
+            SET_CURBUF_VAL(cur_buf_1, 0, 
+                            (((((GET_CURBUF_VAL(cur_buf_0, 1) + GET_CURBUF_VAL(cur_buf_1, 1)) >> 1)
+                              + GET_CURBUF_VAL(cur_buf_0, 0)) >> 1)
+                              + (tk << 4)));
 
             //b
             tk = getbithuff(8);
-            *(cur_buf_2+1) = ((((*(cur_buf_1+2) + *(cur_buf_2+2)) >> 1)
-                              + *(cur_buf_1+1)) >> 1)
-                             + (tk << 4);
+            SET_CURBUF_VAL(cur_buf_2, 1, 
+                            (((((GET_CURBUF_VAL(cur_buf_1, 2) + GET_CURBUF_VAL(cur_buf_2, 2)) >> 1)
+                              + GET_CURBUF_VAL(cur_buf_1, 1)) >> 1)
+                              + (tk << 4)));
 
             /* Second with col - 1*/
             tk = getbithuff(8);
-            *(cur_buf_2) = ((((*(cur_buf_1+1) + *(cur_buf_2+1)) >> 1)
-                              + *(cur_buf_1)) >> 1)
-                             + (tk << 4);
+            SET_CURBUF_VAL(cur_buf_2, 0, 
+                            (((((GET_CURBUF_VAL(cur_buf_1, 1) + GET_CURBUF_VAL(cur_buf_2, 1)) >> 1)
+                              + GET_CURBUF_VAL(cur_buf_1, 0)) >> 1)
+                              + (tk << 4)));
 
           }
         } else {
@@ -346,34 +353,38 @@ static void decode_row(void) {
             do_rep_loop:
               col--;
               cur_buf_0 = buf_0 + col*2;
-              cur_buf_1 = cur_buf_0 + DATABUF_SIZE;
-              cur_buf_2 = cur_buf_1 + DATABUF_SIZE;
+              cur_buf_1 = cur_buf_0 + DATABUF_SIZE/2;
+              cur_buf_2 = cur_buf_1 + DATABUF_SIZE/2;
 
               //c
-              *(cur_buf_1+1) = (((*(cur_buf_0+2)
-                             + *(cur_buf_1+2)) >> 1)
-                             + *(cur_buf_0+1)) >> 1;
+              SET_CURBUF_VAL(cur_buf_1, 1,
+                             (((GET_CURBUF_VAL(cur_buf_0, 2)
+                             + GET_CURBUF_VAL(cur_buf_1, 2)) >> 1)
+                             + GET_CURBUF_VAL(cur_buf_0, 1)) >> 1);
 
-              *cur_buf_1 = (((*(cur_buf_0+1)
-                         + *(cur_buf_1+1)) >> 1)
-                         + *cur_buf_0) >> 1;
+              SET_CURBUF_VAL(cur_buf_1, 0,
+                             (((GET_CURBUF_VAL(cur_buf_0, 1)
+                             + GET_CURBUF_VAL(cur_buf_1, 1)) >> 1)
+                             + GET_CURBUF_VAL(cur_buf_0, 0)) >> 1);
 
               //d
-              *(cur_buf_2+1) = (((*(cur_buf_1+2)
-                             + *(cur_buf_2+2)) >> 1)
-                             + *(cur_buf_1+1)) >> 1;
+              SET_CURBUF_VAL(cur_buf_2, 1,
+                             (((GET_CURBUF_VAL(cur_buf_1, 2)
+                             + GET_CURBUF_VAL(cur_buf_2, 2)) >> 1)
+                             + GET_CURBUF_VAL(cur_buf_1, 1)) >> 1);
 
-              *cur_buf_2 = (((*(cur_buf_1+1)
-                         + *(cur_buf_2+1)) >> 1)
-                         + *cur_buf_1) >> 1;
+              SET_CURBUF_VAL(cur_buf_2, 0,
+                             (((GET_CURBUF_VAL(cur_buf_1, 1)
+                             + GET_CURBUF_VAL(cur_buf_2, 1)) >> 1)
+                             + GET_CURBUF_VAL(cur_buf_1, 0)) >> 1);
 
               if (rep & 1) {
                 tk = getbithuff(8) << 4;
                 //e
-                *cur_buf_0 += tk;
-                *(cur_buf_0+1) += tk;
-                *(cur_buf_1) += tk;
-                *(cur_buf_1+1) += tk;
+                SET_CURBUF_VAL(cur_buf_0, 0, GET_CURBUF_VAL(cur_buf_0, 0)+tk);
+                SET_CURBUF_VAL(cur_buf_0, 1, GET_CURBUF_VAL(cur_buf_0, 1)+tk);
+                SET_CURBUF_VAL(cur_buf_1, 0, GET_CURBUF_VAL(cur_buf_1, 0)+tk);
+                SET_CURBUF_VAL(cur_buf_1, 1, GET_CURBUF_VAL(cur_buf_1, 1)+tk);
               }
             rep++;
             if (rep == rep_loop)
@@ -403,7 +414,7 @@ static void decode_row(void) {
         /* Loop this on Y on 65c02 */
         for (i = 4; i; i--) {
           for (x= 0; x < QUARTER_WIDTH; x+=2) {
-            val = *(cur_buf_1+(x/2)) / t;
+            val = GET_CURBUF_VAL(cur_buf_1, x/2) / t;
 
             if (val > 255)
               val = 255;

@@ -22,9 +22,9 @@ cur_cache_ptr = _prev_ram_irq_vector
 .segment        "BSS"
 .align 256
 _cache:        .res        CACHE_SIZE,$00
-_buf_0:        .res        $300
-_buf_1:        .res        $300
-_buf_2:        .res        $300
+_buf_0:        .res        $400
+_buf_1:        .res        $400
+_buf_2:        .res        $400
 _huff_split:   .res        19*256*2
 CACHE_END = _cache + CACHE_SIZE
 .assert <CACHE_END = 0, error
