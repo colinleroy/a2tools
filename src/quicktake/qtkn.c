@@ -73,33 +73,38 @@ static uint32 tmp32;
 #ifdef __CC65__
 #define USEFUL_DATABUF_SIZE 321
 #define DATABUF_SIZE 0x400 /* align things */
-extern uint16 buf_0[DATABUF_SIZE/2];
-extern uint16 buf_1[DATABUF_SIZE/2];
-extern uint16 buf_2[DATABUF_SIZE/2];
+extern uint8 buf_0[DATABUF_SIZE];
+extern uint8 buf_1[DATABUF_SIZE];
+extern uint8 buf_2[DATABUF_SIZE];
 
 extern uint8 huff_split[19*2][256];
 extern uint8 huff_num;
 
-#define raw_ptr1 zp6ip
+/* Shared with cur_buf_0. Warning don't share with cur_buf1/2 */
+#define raw_ptr1 zp2ip
 
-#define cur_buf_0 zp2ip
-#define cur_buf_1 zp4ip
-#define cur_buf_2 zp12ip
+/* HELL, I said */
+#define cur_buf_0l zp2p
+#define cur_buf_1l zp4p
+#define cur_buf_2l zp6p
+#define cur_buf_0h zp8p
+#define cur_buf_1h zp10p
+#define cur_buf_2h zp12p
 
 #else
 #define USEFUL_DATABUF_SIZE 321
 #define DATABUF_SIZE 0x400 /* align things */
-static uint16 buf_0[DATABUF_SIZE/2];
-static uint16 buf_1[DATABUF_SIZE/2];
-static uint16 buf_2[DATABUF_SIZE/2];
+static uint8 buf_0[DATABUF_SIZE];
+static uint8 buf_1[DATABUF_SIZE];
+static uint8 buf_2[DATABUF_SIZE];
 
 uint8 huff_split[19*2][256];
 uint8 huff_num;
 
 static uint8 *raw_ptr1;
-static uint16 *cur_buf_prev;
 
-static uint16 *cur_buf_0, *cur_buf_1, *cur_buf_2;
+static uint8 *cur_buf_0l, *cur_buf_1l, *cur_buf_2l;
+static uint8 *cur_buf_0h, *cur_buf_1h, *cur_buf_2h;
 
 #endif
 static uint8 *row_idx, *row_idx_plus2;
@@ -131,25 +136,27 @@ static uint8 last = 16;
 #pragma codesize(push, 200)
 #pragma register-vars(push, on)
 
-#define SET_CURBUF_VAL(buf, y, val) do { *(uint16 *)((buf)+(y)) = (val); } while (0)
-#define GET_CURBUF_VAL(buf, y) ((uint16)( *((buf)+(y)) ))
+#define SET_CURBUF_VAL(bufl, bufh, y, val) do { uint16 v = (val); *(uint8 *)((bufl)+(y)) = (v)&0xff; *(uint8 *)((bufh)+(y)) = (v)>>8; } while (0)
+#define GET_CURBUF_VAL(bufl, bufh, y) (((uint8)( *((bufl)+(y)) ))|(((uint8)( *(((bufh))+(y)) ))<<8))
 
 static void init_row(void) {
-    cur_buf_0 = buf_0;
+    cur_buf_0l = buf_0;
+    cur_buf_0h = buf_0+(DATABUF_SIZE/2);
 #ifndef __CC65__
     for (i=0; i != USEFUL_DATABUF_SIZE; i++) {
       tmp32 = val;
-      if (GET_CURBUF_VAL(cur_buf_0, 0)) {
-        tmp32 *= GET_CURBUF_VAL(cur_buf_0, 0);
+      if (GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0)) {
+        tmp32 *= GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0);
         tmp32--;
-        SET_CURBUF_VAL(cur_buf_0, 0, tmp32 >> 12);
+        SET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0, tmp32 >> 12);
       } else {
         // tmp32 *= 0  == 0
         // tmp32--     == 0xFFFF
         // tmp32 >> 12 == 0x0F
-        SET_CURBUF_VAL(cur_buf_0, 0, 0x0F);
+        SET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0, 0x0F);
       }
-      cur_buf_0++;
+      cur_buf_0l++;
+      cur_buf_0h++;
     }
 
     last = t;
@@ -162,11 +169,10 @@ static void init_row(void) {
     setup_curbuf_x:
     __asm__("dec %v", i);
     /* load */
-    __asm__("ldy #$01");
-    __asm__("lda (%v),y", cur_buf_0);
+    __asm__("ldy #$00");
+    __asm__("lda (%v),y", cur_buf_0h);
     __asm__("bne %g", not_null_buf);
-    __asm__("dey");
-    __asm__("lda (%v),y", cur_buf_0);
+    __asm__("lda (%v),y", cur_buf_0l);
     __asm__("beq %g", null_buf);
     not_null_buf:
 
@@ -175,11 +181,10 @@ static void init_row(void) {
     __asm__("lda %v", val);
     __asm__("sta ptr2");
 
-    __asm__("ldy #$01");
-    __asm__("lda (%v),y", cur_buf_0);
+    __asm__("ldy #$00");
+    __asm__("lda (%v),y", cur_buf_0h);
     __asm__("tax");
-    __asm__("dey");
-    __asm__("lda (%v),y", cur_buf_0);
+    __asm__("lda (%v),y", cur_buf_0l);
 
     /* multiply */
     __asm__("jsr mult16x16x32_direct");
@@ -223,17 +228,15 @@ static void init_row(void) {
 
     store_buf:
     __asm__("ldy #$00");
-    __asm__("sta (%v),y", cur_buf_0);
-    __asm__("iny");
+    __asm__("sta (%v),y", cur_buf_0l);
     __asm__("txa");
-    __asm__("sta (%v),y", cur_buf_0);
+    __asm__("sta (%v),y", cur_buf_0h);
 
-    __asm__("clc");
-    __asm__("lda %v", cur_buf_0);
-    __asm__("adc #2");
-    __asm__("sta %v", cur_buf_0);
-    __asm__("bcc %g", noof21);
-    __asm__("inc %v+1", cur_buf_0);
+    __asm__("inc %v", cur_buf_0l);
+    __asm__("inc %v", cur_buf_0h);
+    __asm__("bne %g", noof21);
+    __asm__("inc %v+1", cur_buf_0l);
+    __asm__("inc %v+1", cur_buf_0h);
     noof21:
     __asm__("lda %v", i);
     __asm__("bne %g", setup_curbuf_x);
@@ -271,72 +274,88 @@ void init_top(void) {
     huff_split[18*2+1][c] = (1284 | c) >> 8;
   }
 
-  cur_buf_0 = buf_0;
+  cur_buf_0l = buf_0;
+  cur_buf_0h = buf_0+(DATABUF_SIZE/2);
   for (i=0; i != USEFUL_DATABUF_SIZE; i++) {
-    SET_CURBUF_VAL(cur_buf_0, 0, 2048);
-    cur_buf_0++;
+    SET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0, 2048);
+    cur_buf_0l++;
+    cur_buf_0h++;
   }
 }
 
 static void decode_row(void) {
 #ifndef __CC65__
     for (r=0; r != 2; r++) {
-      buf_1[(WIDTH/2)] = (t << 7);
-      buf_2[(WIDTH/2)] = (t << 7);
-      for (tree = 1, col = (WIDTH/4); col; ) {
+      SET_CURBUF_VAL(buf_1, buf_1+(DATABUF_SIZE/2), (WIDTH/2), (t<<7));
+      SET_CURBUF_VAL(buf_2, buf_2+(DATABUF_SIZE/2), (WIDTH/2), (t<<7));
+
+      col = WIDTH/2;
+      cur_buf_0l = buf_0 + col;
+      cur_buf_0h = cur_buf_0l+(DATABUF_SIZE/2);
+      cur_buf_1l = cur_buf_0l + DATABUF_SIZE;
+      cur_buf_1h = cur_buf_1l+(DATABUF_SIZE/2);
+      cur_buf_2l = cur_buf_1l + DATABUF_SIZE;
+      cur_buf_2h = cur_buf_2l+(DATABUF_SIZE/2);
+      tree = 1;
+
+      while(col) {
         huff_num = tree*2;
         tree = (uint8) getbithuff(8);
         if (tree) {
-          col--;
-          cur_buf_0 = buf_0 + col*2;
-          cur_buf_1 = cur_buf_0 + DATABUF_SIZE/2;
-          cur_buf_2 = cur_buf_1 + DATABUF_SIZE/2;
+          col-=2;
+          cur_buf_0l-=2;
+          cur_buf_0h-=2;
+          cur_buf_1l-=2;
+          cur_buf_1h-=2;
+          cur_buf_2l-=2;
+          cur_buf_2h-=2;
+
           if (tree == 8) {
             huff_num = 18*2;
             tmp8 = (uint8) getbithuff(8);
-            SET_CURBUF_VAL(cur_buf_1, 1, tmp8 * t);
+            SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1, tmp8 * t);
             tmp8 = (uint8) getbithuff(8);
-            SET_CURBUF_VAL(cur_buf_1, 0, tmp8 * t);
+            SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 0, tmp8 * t);
             tmp8 = (uint8) getbithuff(8);
-            SET_CURBUF_VAL(cur_buf_2, 1, tmp8 * t);
+            SET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 1, tmp8 * t);
             tmp8 = (uint8) getbithuff(8);
-            SET_CURBUF_VAL(cur_buf_2, 0, tmp8 * t);
+            SET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 0, tmp8 * t);
 
           } else {
             huff_num = (tree+10)*2;
 
             //a
             tk = getbithuff(8);
-            SET_CURBUF_VAL(cur_buf_1, 1, 
-                            (((((GET_CURBUF_VAL(cur_buf_0, 2) + GET_CURBUF_VAL(cur_buf_1, 2)) >> 1)
-                              + GET_CURBUF_VAL(cur_buf_0, 1)) >> 1)
+            SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1, 
+                            (((((GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 2) + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 2)) >> 1)
+                              + GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 1)) >> 1)
                               + (tk << 4)));
 
             /* Second with col - 1*/
             tk = getbithuff(8);
-            SET_CURBUF_VAL(cur_buf_1, 0, 
-                            (((((GET_CURBUF_VAL(cur_buf_0, 1) + GET_CURBUF_VAL(cur_buf_1, 1)) >> 1)
-                              + GET_CURBUF_VAL(cur_buf_0, 0)) >> 1)
+            SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 0, 
+                            (((((GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 1) + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1)) >> 1)
+                              + GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0)) >> 1)
                               + (tk << 4)));
 
             //b
             tk = getbithuff(8);
-            SET_CURBUF_VAL(cur_buf_2, 1, 
-                            (((((GET_CURBUF_VAL(cur_buf_1, 2) + GET_CURBUF_VAL(cur_buf_2, 2)) >> 1)
-                              + GET_CURBUF_VAL(cur_buf_1, 1)) >> 1)
+            SET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 1, 
+                            (((((GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 2) + GET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 2)) >> 1)
+                              + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1)) >> 1)
                               + (tk << 4)));
 
             /* Second with col - 1*/
             tk = getbithuff(8);
-            SET_CURBUF_VAL(cur_buf_2, 0, 
-                            (((((GET_CURBUF_VAL(cur_buf_1, 1) + GET_CURBUF_VAL(cur_buf_2, 1)) >> 1)
-                              + GET_CURBUF_VAL(cur_buf_1, 0)) >> 1)
+            SET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 0, 
+                            (((((GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1) + GET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 1)) >> 1)
+                              + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 0)) >> 1)
                               + (tk << 4)));
 
           }
         } else {
           do {
-            if (col > 1) {
+            if (col > 2) {
               huff_num = 9*2;
               nreps = getbithuff(8);
               nreps++;
@@ -351,40 +370,43 @@ static void decode_row(void) {
             rep = 0;
             huff_num = 10*2;
             do_rep_loop:
-              col--;
-              cur_buf_0 = buf_0 + col*2;
-              cur_buf_1 = cur_buf_0 + DATABUF_SIZE/2;
-              cur_buf_2 = cur_buf_1 + DATABUF_SIZE/2;
+              col-=2;
+              cur_buf_0l-=2;
+              cur_buf_0h-=2;
+              cur_buf_1l-=2;
+              cur_buf_1h-=2;
+              cur_buf_2l-=2;
+              cur_buf_2h-=2;
 
               //c
-              SET_CURBUF_VAL(cur_buf_1, 1,
-                             (((GET_CURBUF_VAL(cur_buf_0, 2)
-                             + GET_CURBUF_VAL(cur_buf_1, 2)) >> 1)
-                             + GET_CURBUF_VAL(cur_buf_0, 1)) >> 1);
+              SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1,
+                             (((GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 2)
+                             + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 2)) >> 1)
+                             + GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 1)) >> 1);
 
-              SET_CURBUF_VAL(cur_buf_1, 0,
-                             (((GET_CURBUF_VAL(cur_buf_0, 1)
-                             + GET_CURBUF_VAL(cur_buf_1, 1)) >> 1)
-                             + GET_CURBUF_VAL(cur_buf_0, 0)) >> 1);
+              SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 0,
+                             (((GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 1)
+                             + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1)) >> 1)
+                             + GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0)) >> 1);
 
               //d
-              SET_CURBUF_VAL(cur_buf_2, 1,
-                             (((GET_CURBUF_VAL(cur_buf_1, 2)
-                             + GET_CURBUF_VAL(cur_buf_2, 2)) >> 1)
-                             + GET_CURBUF_VAL(cur_buf_1, 1)) >> 1);
+              SET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 1,
+                             (((GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 2)
+                             + GET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 2)) >> 1)
+                             + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1)) >> 1);
 
-              SET_CURBUF_VAL(cur_buf_2, 0,
-                             (((GET_CURBUF_VAL(cur_buf_1, 1)
-                             + GET_CURBUF_VAL(cur_buf_2, 1)) >> 1)
-                             + GET_CURBUF_VAL(cur_buf_1, 0)) >> 1);
+              SET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 0,
+                             (((GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1)
+                             + GET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 1)) >> 1)
+                             + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 0)) >> 1);
 
               if (rep & 1) {
                 tk = getbithuff(8) << 4;
                 //e
-                SET_CURBUF_VAL(cur_buf_0, 0, GET_CURBUF_VAL(cur_buf_0, 0)+tk);
-                SET_CURBUF_VAL(cur_buf_0, 1, GET_CURBUF_VAL(cur_buf_0, 1)+tk);
-                SET_CURBUF_VAL(cur_buf_1, 0, GET_CURBUF_VAL(cur_buf_1, 0)+tk);
-                SET_CURBUF_VAL(cur_buf_1, 1, GET_CURBUF_VAL(cur_buf_1, 1)+tk);
+                SET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0, GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0)+tk);
+                SET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 1, GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 1)+tk);
+                SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 0, GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 0)+tk);
+                SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1, GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1)+tk);
               }
             rep++;
             if (rep == rep_loop)
@@ -394,7 +416,6 @@ static void decode_row(void) {
             goto do_rep_loop;
 
             rep_loop_done:
-            
           } while (nreps == 9);
         }
       }
@@ -404,7 +425,10 @@ static void decode_row(void) {
         raw_ptr1 = row_idx_plus2; //FILE_IDX(row + 2, 0);
       }
 
-      cur_buf_1 = buf_1;
+      uint8 *tl, *th;
+      cur_buf_1l = buf_1;
+      cur_buf_1h = cur_buf_1l + (DATABUF_SIZE/2);
+
       for (y=1; ; y++) {
         #define QUARTER_WIDTH (WIDTH/4)
         #if QUARTER_WIDTH != 160
@@ -414,21 +438,25 @@ static void decode_row(void) {
         /* Loop this on Y on 65c02 */
         for (i = 4; i; i--) {
           for (x= 0; x < QUARTER_WIDTH; x+=2) {
-            val = GET_CURBUF_VAL(cur_buf_1, x/2) / t;
+            val = GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, x/2) / t;
 
             if (val > 255)
               val = 255;
             *(raw_ptr1+(x)) = val;
             *(raw_ptr1+(x+1)) = val;
           }
-          cur_buf_1+=QUARTER_WIDTH/2;
+          cur_buf_1l+=QUARTER_WIDTH/2;
+          cur_buf_1h = cur_buf_1l + (DATABUF_SIZE/2);
           raw_ptr1 += QUARTER_WIDTH;
         }
         if (y == 2)
           break;
-        cur_buf_1 = buf_2;
+        cur_buf_1l = buf_2;
+        cur_buf_1h = cur_buf_1l + (DATABUF_SIZE/2);
+
       }
-      memcpy (buf_0+1, buf_2, (USEFUL_DATABUF_SIZE-1)*2);
+      memcpy (buf_0+1, buf_2, (USEFUL_DATABUF_SIZE-1));
+      memcpy (buf_0+512+1, buf_2+512, (USEFUL_DATABUF_SIZE-1));
     }
 #else
 
@@ -456,9 +484,31 @@ static void decode_row(void) {
       __asm__("lda #1");
       __asm__("sta %v", tree);
 
-      __asm__("lda #<%w", (WIDTH/4));
+      __asm__("lda #<%w", (WIDTH/2));
       __asm__("sta %v", col);
-      __asm__("ldx #0");
+      __asm__("ldx #>%w", (WIDTH/2));
+      __asm__("stx %v+1", col);
+      __asm__("clc");
+      __asm__("adc #<(%v)", buf_0);
+      __asm__("sta %v", cur_buf_0l);
+      __asm__("sta %v", cur_buf_1l);
+      __asm__("sta %v", cur_buf_2l);
+      __asm__("sta %v", cur_buf_0h);
+      __asm__("sta %v", cur_buf_1h);
+      __asm__("sta %v", cur_buf_2h);
+      __asm__("txa");  // init time, high page
+      __asm__("adc #>(%v)", buf_0);
+      __asm__("sta %v+1", cur_buf_0l);
+      __asm__("adc #>%w", DATABUF_SIZE/2);
+      __asm__("sta %v+1", cur_buf_0h);
+      __asm__("adc #>%w", DATABUF_SIZE/2);
+      __asm__("sta %v+1", cur_buf_1l);
+      __asm__("adc #>%w", DATABUF_SIZE/2);
+      __asm__("sta %v+1", cur_buf_1h);
+      __asm__("adc #>%w", DATABUF_SIZE/2);
+      __asm__("sta %v+1", cur_buf_2l);
+      __asm__("adc #>%w", DATABUF_SIZE/2);
+      __asm__("sta %v+1", cur_buf_2h);
 
       col_loop1:
         __asm__("lda %v", tree);
@@ -474,30 +524,25 @@ static void decode_row(void) {
         __asm__("bne %g", tree_not_zero);
         __asm__("jmp %g", tree_zero);
         tree_not_zero:
-          __asm__("dec %v", col);
+          __asm__("sec");
           __asm__("lda %v", col);
-
-          /* col*2 *2 (uint16) */
-          __asm__("ldx #0");
-          __asm__("stx tmp1");
-          __asm__("asl a");
-          __asm__("rol tmp1");
-          __asm__("asl a");
-          __asm__("rol tmp1");
-
-          __asm__("clc");
-          __asm__("adc #<(%v)", buf_0);
-          __asm__("sta %v", cur_buf_0);
-          __asm__("sta %v", cur_buf_1);
-          __asm__("sta %v", cur_buf_2);
-          __asm__("lda tmp1");
-          __asm__("adc #>(%v)", buf_0);
-          __asm__("sta %v+1", cur_buf_0);
-          __asm__("adc #>%w", DATABUF_SIZE);
-          __asm__("sta %v+1", cur_buf_1);
-          __asm__("adc #>%w", DATABUF_SIZE);
-          __asm__("sta %v+1", cur_buf_2);
-          __asm__("adc #>%w", DATABUF_SIZE);
+          __asm__("bne %g", declow);
+          __asm__("dec %v+1", col);
+          __asm__("dec %v+1", cur_buf_0l);
+          __asm__("dec %v+1", cur_buf_1l);
+          __asm__("dec %v+1", cur_buf_2l);
+          __asm__("dec %v+1", cur_buf_0h);
+          __asm__("dec %v+1", cur_buf_1h);
+          __asm__("dec %v+1", cur_buf_2h);
+          declow:
+          __asm__("sbc #2");
+          __asm__("sta %v", col);
+          __asm__("sta %v", cur_buf_0l);
+          __asm__("sta %v", cur_buf_1l);
+          __asm__("sta %v", cur_buf_2l);
+          __asm__("sta %v", cur_buf_0h);
+          __asm__("sta %v", cur_buf_1h);
+          __asm__("sta %v", cur_buf_2h);
 
           __asm__("ldy %v", tree);
           __asm__("cpy #8");
@@ -511,41 +556,37 @@ static void decode_row(void) {
           __asm__("jsr %v", getbithuff);
           __asm__("ldx %v", t);
           __asm__("jsr mult8x8r16_direct");
-          __asm__("ldy #2");
-          __asm__("sta (%v),y", cur_buf_1);
+          __asm__("ldy #1");
+          __asm__("sta (%v),y", cur_buf_1l);
           __asm__("txa");
-          __asm__("iny");
-          __asm__("sta (%v),y", cur_buf_1);
+          __asm__("sta (%v),y", cur_buf_1h);
 
           __asm__("lda #8");
           __asm__("jsr %v", getbithuff);
           __asm__("ldx %v", t);
           __asm__("jsr mult8x8r16_direct");
           __asm__("ldy #0");
-          __asm__("sta (%v),y", cur_buf_1);
+          __asm__("sta (%v),y", cur_buf_1l);
           __asm__("txa");
-          __asm__("iny");
-          __asm__("sta (%v),y", cur_buf_1);
+          __asm__("sta (%v),y", cur_buf_1h);
 
           __asm__("lda #8");
           __asm__("jsr %v", getbithuff);
           __asm__("ldx %v", t);
           __asm__("jsr mult8x8r16_direct");
-          __asm__("ldy #2");
-          __asm__("sta (%v),y", cur_buf_2);
+          __asm__("ldy #1");
+          __asm__("sta (%v),y", cur_buf_2l);
           __asm__("txa");
-          __asm__("iny");
-          __asm__("sta (%v),y", cur_buf_2);
+          __asm__("sta (%v),y", cur_buf_2h);
 
           __asm__("lda #8");
           __asm__("jsr %v", getbithuff);
           __asm__("ldx %v", t);
           __asm__("jsr mult8x8r16_direct");
           __asm__("ldy #0");
-          __asm__("sta (%v),y", cur_buf_2);
+          __asm__("sta (%v),y", cur_buf_2l);
           __asm__("txa");
-          __asm__("iny");
-          __asm__("sta (%v),y", cur_buf_2);
+          __asm__("sta (%v),y", cur_buf_2h);
 
           __asm__("jmp %g", tree_done);
 
@@ -577,25 +618,23 @@ static void decode_row(void) {
             __asm__("sta tmp3");
 
             __asm__("clc");
-            __asm__("ldy #4");
-            __asm__("lda (%v),y", cur_buf_0);
-            __asm__("adc (%v),y", cur_buf_1);
+            __asm__("ldy #2");
+            __asm__("lda (%v),y", cur_buf_0l);
+            __asm__("adc (%v),y", cur_buf_1l);
             __asm__("tax");
-            __asm__("ldy #5");
-            __asm__("lda (%v),y", cur_buf_0);
-            __asm__("adc (%v),y", cur_buf_1);
+            __asm__("lda (%v),y", cur_buf_0h);
+            __asm__("adc (%v),y", cur_buf_1h);
             __asm__("ror a");
             __asm__("sta tmp1");
             __asm__("txa");
             __asm__("ror a");
 
             __asm__("clc");
-            __asm__("ldy #2");
-            __asm__("adc (%v),y", cur_buf_0);
+            __asm__("ldy #1");
+            __asm__("adc (%v),y", cur_buf_0l);
             __asm__("tax");
             __asm__("lda tmp1");
-            __asm__("ldy #3");
-            __asm__("adc (%v),y", cur_buf_0);
+            __asm__("adc (%v),y", cur_buf_0h);
             __asm__("ror a");
             __asm__("sta tmp1");
             __asm__("txa");
@@ -603,13 +642,11 @@ static void decode_row(void) {
 
             __asm__("clc");
             __asm__("adc tmp3");
-            __asm__("ldy #2");
-            __asm__("sta (%v),y", cur_buf_1);
+            __asm__("sta (%v),y", cur_buf_1l);
 
             __asm__("lda tmp1");
             __asm__("adc tmp4");
-            __asm__("ldy #3");
-            __asm__("sta (%v),y", cur_buf_1);
+            __asm__("sta (%v),y", cur_buf_1h);
 
             /* Second with col - 1*/
             __asm__("lda #8");
@@ -633,13 +670,12 @@ static void decode_row(void) {
             __asm__("sta tmp3");
 
             __asm__("clc");
-            __asm__("ldy #2");
-            __asm__("lda (%v),y", cur_buf_0);
-            __asm__("adc (%v),y", cur_buf_1);
+            __asm__("ldy #1");
+            __asm__("lda (%v),y", cur_buf_0l);
+            __asm__("adc (%v),y", cur_buf_1l);
             __asm__("tax");
-            __asm__("ldy #3");
-            __asm__("lda (%v),y", cur_buf_0);
-            __asm__("adc (%v),y", cur_buf_1);
+            __asm__("lda (%v),y", cur_buf_0h);
+            __asm__("adc (%v),y", cur_buf_1h);
             __asm__("ror a");
             __asm__("sta tmp1");
             __asm__("txa");
@@ -647,11 +683,10 @@ static void decode_row(void) {
 
             __asm__("clc");
             __asm__("ldy #0");
-            __asm__("adc (%v),y", cur_buf_0);
+            __asm__("adc (%v),y", cur_buf_0l);
             __asm__("tax");
             __asm__("lda tmp1");
-            __asm__("iny");
-            __asm__("adc (%v),y", cur_buf_0);
+            __asm__("adc (%v),y", cur_buf_0h);
             __asm__("ror a");
             __asm__("sta tmp1");
             __asm__("txa");
@@ -660,13 +695,11 @@ static void decode_row(void) {
             /* Store to cur_buf_x */
             __asm__("clc");
             __asm__("adc tmp3");
-            __asm__("ldy #0");
-            __asm__("sta (%v),y", cur_buf_1);
+            __asm__("sta (%v),y", cur_buf_1l);
 
             __asm__("lda tmp1");
-            __asm__("iny");
             __asm__("adc tmp4");
-            __asm__("sta (%v),y", cur_buf_1);
+            __asm__("sta (%v),y", cur_buf_1h);
 
             //b
             __asm__("lda #8");
@@ -689,25 +722,23 @@ static void decode_row(void) {
             __asm__("sta tmp3");
 
             __asm__("clc");
-            __asm__("ldy #4");
-            __asm__("lda (%v),y", cur_buf_1);
-            __asm__("adc (%v),y", cur_buf_2);
+            __asm__("ldy #2");
+            __asm__("lda (%v),y", cur_buf_1l);
+            __asm__("adc (%v),y", cur_buf_2l);
             __asm__("tax");
-            __asm__("ldy #5");
-            __asm__("lda (%v),y", cur_buf_1);
-            __asm__("adc (%v),y", cur_buf_2);
+            __asm__("lda (%v),y", cur_buf_1h);
+            __asm__("adc (%v),y", cur_buf_2h);
             __asm__("ror a");
             __asm__("sta tmp1");
             __asm__("txa");
             __asm__("ror a");
 
             __asm__("clc");
-            __asm__("ldy #2");
-            __asm__("adc (%v),y", cur_buf_1);
+            __asm__("ldy #1");
+            __asm__("adc (%v),y", cur_buf_1l);
             __asm__("tax");
             __asm__("lda tmp1");
-            __asm__("ldy #3");
-            __asm__("adc (%v),y", cur_buf_1);
+            __asm__("adc (%v),y", cur_buf_1h);
             __asm__("ror a");
             __asm__("sta tmp1");
             __asm__("txa");
@@ -715,13 +746,11 @@ static void decode_row(void) {
 
             __asm__("clc");
             __asm__("adc tmp3");
-            __asm__("ldy #2");
-            __asm__("sta (%v),y", cur_buf_2);
+            __asm__("sta (%v),y", cur_buf_2l);
 
             __asm__("lda tmp1");
             __asm__("adc tmp4");
-            __asm__("ldy #3");
-            __asm__("sta (%v),y", cur_buf_2);
+            __asm__("sta (%v),y", cur_buf_2h);
 
             /* Second with col - 1*/
             __asm__("lda #8");
@@ -744,13 +773,12 @@ static void decode_row(void) {
             __asm__("sta tmp3");
 
             __asm__("clc");
-            __asm__("ldy #2");
-            __asm__("lda (%v),y", cur_buf_1);
-            __asm__("adc (%v),y", cur_buf_2);
+            __asm__("ldy #1");
+            __asm__("lda (%v),y", cur_buf_1l);
+            __asm__("adc (%v),y", cur_buf_2l);
             __asm__("tax");
-            __asm__("ldy #3");
-            __asm__("lda (%v),y", cur_buf_1);
-            __asm__("adc (%v),y", cur_buf_2);
+            __asm__("lda (%v),y", cur_buf_1h);
+            __asm__("adc (%v),y", cur_buf_2h);
             __asm__("ror a");
             __asm__("sta tmp1");
             __asm__("txa");
@@ -758,11 +786,10 @@ static void decode_row(void) {
 
             __asm__("clc");
             __asm__("ldy #0");
-            __asm__("adc (%v),y", cur_buf_1);
+            __asm__("adc (%v),y", cur_buf_1l);
             __asm__("tax");
             __asm__("lda tmp1");
-            __asm__("iny");
-            __asm__("adc (%v),y", cur_buf_1);
+            __asm__("adc (%v),y", cur_buf_1h);
             __asm__("ror a");
             __asm__("sta tmp1");
             __asm__("txa");
@@ -771,20 +798,20 @@ static void decode_row(void) {
             /* Store to cur_buf_x */
             __asm__("clc");
             __asm__("adc tmp3");
-            __asm__("ldy #0");
-            __asm__("sta (%v),y", cur_buf_2);
+            __asm__("sta (%v),y", cur_buf_2l);
 
             __asm__("lda tmp1");
-            __asm__("iny");
             __asm__("adc tmp4");
-            __asm__("sta (%v),y", cur_buf_2);
+            __asm__("sta (%v),y", cur_buf_2h);
 
             __asm__("jmp %g", tree_done);
 
         tree_zero:
           nine_reps_loop:
+            __asm__("ldx %v+1", col);
+            __asm__("bne %g", col_gt1a);
             __asm__("lda %v", col);
-            __asm__("cmp #2");
+            __asm__("cmp #3");
             __asm__("bcs %g", col_gt1a);
             __asm__("lda #1"); /* nreps */
             __asm__("jmp %g", check_nreps);
@@ -807,72 +834,61 @@ static void decode_row(void) {
             __asm__("ldy #$00");
             __asm__("sty %v", rep);
 
-            // __asm__("lda %v", huff_10);
-            // __asm__("sta %v", huff_ptr);
             __asm__("lda #>(%v+10*256*2)", huff_split);
             __asm__("sta %v", huff_num);
             do_rep_loop:
-              __asm__("dec %v", col);
+              __asm__("sec");
               __asm__("lda %v", col);
-              __asm__("ldx #0");
-              __asm__("stx tmp1");
-
-              __asm__("asl a");
-              __asm__("rol tmp1");
-              __asm__("asl a");
-              __asm__("rol tmp1");
-
-              __asm__("clc");
-              __asm__("adc #<(%v)", buf_0);
-              __asm__("sta %v", cur_buf_0);
-              __asm__("sta %v", cur_buf_1);
-              __asm__("sta %v", cur_buf_2);
-              __asm__("lda tmp1");
-              __asm__("adc #>(%v)", buf_0);
-              __asm__("sta %v+1", cur_buf_0);
-              __asm__("adc #>%w", DATABUF_SIZE);
-              __asm__("sta %v+1", cur_buf_1);
-              __asm__("adc #>%w", DATABUF_SIZE);
-              __asm__("sta %v+1", cur_buf_2);
-              __asm__("adc #>%w", DATABUF_SIZE);
+              __asm__("bne %g", declow2);
+              __asm__("dec %v+1", col);
+              __asm__("dec %v+1", cur_buf_0l);
+              __asm__("dec %v+1", cur_buf_1l);
+              __asm__("dec %v+1", cur_buf_2l);
+              __asm__("dec %v+1", cur_buf_0h);
+              __asm__("dec %v+1", cur_buf_1h);
+              __asm__("dec %v+1", cur_buf_2h);
+              declow2:
+              __asm__("sbc #2");
+              __asm__("sta %v", col);
+              __asm__("sta %v", cur_buf_0l);
+              __asm__("sta %v", cur_buf_1l);
+              __asm__("sta %v", cur_buf_2l);
+              __asm__("sta %v", cur_buf_0h);
+              __asm__("sta %v", cur_buf_1h);
+              __asm__("sta %v", cur_buf_2h);
 
               //c
               __asm__("clc");
-              __asm__("ldy #4");
-              __asm__("lda (%v),y", cur_buf_0);
-              __asm__("adc (%v),y", cur_buf_1);
+              __asm__("ldy #2");
+              __asm__("lda (%v),y", cur_buf_0l);
+              __asm__("adc (%v),y", cur_buf_1l);
               __asm__("tax");
-              __asm__("ldy #5");
-              __asm__("lda (%v),y", cur_buf_0);
-              __asm__("adc (%v),y", cur_buf_1);
+              __asm__("lda (%v),y", cur_buf_0h);
+              __asm__("adc (%v),y", cur_buf_1h);
               __asm__("ror a");
               __asm__("sta tmp1");
               __asm__("txa");
               __asm__("ror a");
 
               __asm__("clc");
-              __asm__("ldy #2");
-              __asm__("adc (%v),y", cur_buf_0);
+              __asm__("ldy #1");
+              __asm__("adc (%v),y", cur_buf_0l);
               __asm__("tax");
               __asm__("lda tmp1");
-              __asm__("iny");
-              __asm__("adc (%v),y", cur_buf_0);
+              __asm__("adc (%v),y", cur_buf_0h);
               __asm__("ror a");
-              __asm__("sta (%v),y", cur_buf_1);
+              __asm__("sta (%v),y", cur_buf_1h);
               __asm__("txa");
               __asm__("ror a");
-              __asm__("dey");
-              __asm__("sta (%v),y", cur_buf_1);
+              __asm__("sta (%v),y", cur_buf_1l);
 
               /* Second */
               __asm__("clc");
-              // __asm__("ldy #2");
-              __asm__("lda (%v),y", cur_buf_0);
-              __asm__("adc (%v),y", cur_buf_1);
+              __asm__("lda (%v),y", cur_buf_0l);
+              __asm__("adc (%v),y", cur_buf_1l);
               __asm__("tax");
-              __asm__("iny");
-              __asm__("lda (%v),y", cur_buf_0);
-              __asm__("adc (%v),y", cur_buf_1);
+              __asm__("lda (%v),y", cur_buf_0h);
+              __asm__("adc (%v),y", cur_buf_1h);
               __asm__("ror a");
               __asm__("sta tmp1");
               __asm__("txa");
@@ -880,55 +896,48 @@ static void decode_row(void) {
 
               __asm__("clc");
               __asm__("ldy #0");
-              __asm__("adc (%v),y", cur_buf_0);
+              __asm__("adc (%v),y", cur_buf_0l);
               __asm__("tax");
               __asm__("lda tmp1");
-              __asm__("iny");
-              __asm__("adc (%v),y", cur_buf_0);
+              __asm__("adc (%v),y", cur_buf_0h);
               __asm__("ror a");
-              __asm__("sta (%v),y", cur_buf_1);
+              __asm__("sta (%v),y", cur_buf_1h);
               __asm__("txa");
               __asm__("ror a");
-              __asm__("dey");
-              __asm__("sta (%v),y", cur_buf_1);
+              __asm__("sta (%v),y", cur_buf_1l);
 
               //d
               __asm__("clc");
-              __asm__("ldy #4");
-              __asm__("lda (%v),y", cur_buf_1);
-              __asm__("adc (%v),y", cur_buf_2);
+              __asm__("ldy #2");
+              __asm__("lda (%v),y", cur_buf_1l);
+              __asm__("adc (%v),y", cur_buf_2l);
               __asm__("tax");
-              __asm__("ldy #5");
-              __asm__("lda (%v),y", cur_buf_1);
-              __asm__("adc (%v),y", cur_buf_2);
+              __asm__("lda (%v),y", cur_buf_1h);
+              __asm__("adc (%v),y", cur_buf_2h);
               __asm__("ror a");
               __asm__("sta tmp1");
               __asm__("txa");
               __asm__("ror a");
 
               __asm__("clc");
-              __asm__("ldy #2");
-              __asm__("adc (%v),y", cur_buf_1);
+              __asm__("ldy #1");
+              __asm__("adc (%v),y", cur_buf_1l);
               __asm__("tax");
               __asm__("lda tmp1");
-              __asm__("iny");
-              __asm__("adc (%v),y", cur_buf_1);
+              __asm__("adc (%v),y", cur_buf_1h);
               __asm__("ror a");
-              __asm__("sta (%v),y", cur_buf_2);
+              __asm__("sta (%v),y", cur_buf_2h);
               __asm__("txa");
               __asm__("ror a");
-              __asm__("dey");
-              __asm__("sta (%v),y", cur_buf_2);
+              __asm__("sta (%v),y", cur_buf_2l);
 
               /* Second */
               __asm__("clc");
-              // __asm__("ldy #2");
-              __asm__("lda (%v),y", cur_buf_1);
-              __asm__("adc (%v),y", cur_buf_2);
+              __asm__("lda (%v),y", cur_buf_1l);
+              __asm__("adc (%v),y", cur_buf_2l);
               __asm__("tax");
-              __asm__("iny");
-              __asm__("lda (%v),y", cur_buf_1);
-              __asm__("adc (%v),y", cur_buf_2);
+              __asm__("lda (%v),y", cur_buf_1h);
+              __asm__("adc (%v),y", cur_buf_2h);
               __asm__("ror a");
               __asm__("sta tmp1");
               __asm__("txa");
@@ -936,17 +945,15 @@ static void decode_row(void) {
 
               __asm__("clc");
               __asm__("ldy #0");
-              __asm__("adc (%v),y", cur_buf_1);
+              __asm__("adc (%v),y", cur_buf_1l);
               __asm__("tax");
               __asm__("lda tmp1");
-              __asm__("iny");
-              __asm__("adc (%v),y", cur_buf_1);
+              __asm__("adc (%v),y", cur_buf_1h);
               __asm__("ror a");
-              __asm__("sta (%v),y", cur_buf_2);
+              __asm__("sta (%v),y", cur_buf_2h);
               __asm__("txa");
               __asm__("ror a");
-              __asm__("dey");
-              __asm__("sta (%v),y", cur_buf_2);
+              __asm__("sta (%v),y", cur_buf_2l);
 
               __asm__("lda %v", rep);
               __asm__("and #1");
@@ -975,42 +982,38 @@ static void decode_row(void) {
               //e
               __asm__("clc");
               __asm__("ldy #0");
-              __asm__("adc (%v),y", cur_buf_0);
-              __asm__("sta (%v),y", cur_buf_0);
+              __asm__("adc (%v),y", cur_buf_0l);
+              __asm__("sta (%v),y", cur_buf_0l);
               __asm__("lda tmp4");
-              __asm__("iny");
-              __asm__("adc (%v),y", cur_buf_0);
-              __asm__("sta (%v),y", cur_buf_0);
+              __asm__("adc (%v),y", cur_buf_0h);
+              __asm__("sta (%v),y", cur_buf_0h);
 
               __asm__("clc");
               __asm__("txa");
               __asm__("iny");
-              __asm__("adc (%v),y", cur_buf_0);
-              __asm__("sta (%v),y", cur_buf_0);
+              __asm__("adc (%v),y", cur_buf_0l);
+              __asm__("sta (%v),y", cur_buf_0l);
               __asm__("lda tmp4");
-              __asm__("iny");
-              __asm__("adc (%v),y", cur_buf_0);
-              __asm__("sta (%v),y", cur_buf_0);
+              __asm__("adc (%v),y", cur_buf_0h);
+              __asm__("sta (%v),y", cur_buf_0h);
 
               __asm__("clc");
               __asm__("txa");
               __asm__("ldy #0");
-              __asm__("adc (%v),y", cur_buf_1);
-              __asm__("sta (%v),y", cur_buf_1);
+              __asm__("adc (%v),y", cur_buf_1l);
+              __asm__("sta (%v),y", cur_buf_1l);
               __asm__("lda tmp4");
-              __asm__("iny");
-              __asm__("adc (%v),y", cur_buf_1);
-              __asm__("sta (%v),y", cur_buf_1);
+              __asm__("adc (%v),y", cur_buf_1h);
+              __asm__("sta (%v),y", cur_buf_1h);
 
               __asm__("clc");
               __asm__("txa");
               __asm__("iny");
-              __asm__("adc (%v),y", cur_buf_1);
-              __asm__("sta (%v),y", cur_buf_1);
+              __asm__("adc (%v),y", cur_buf_1l);
+              __asm__("sta (%v),y", cur_buf_1l);
               __asm__("lda tmp4");
-              __asm__("iny");
-              __asm__("adc (%v),y", cur_buf_1);
-              __asm__("sta (%v),y", cur_buf_1);
+              __asm__("adc (%v),y", cur_buf_1h);
+              __asm__("sta (%v),y", cur_buf_1h);
 
             rep_even:
             __asm__("ldx %v", rep);
@@ -1019,6 +1022,10 @@ static void decode_row(void) {
             __asm__("beq %g", rep_loop_done);
             __asm__("stx %v", rep);
             __asm__("lda %v", col);
+            __asm__("beq %g", check_high);
+            __asm__("jmp %g", do_rep_loop);
+            check_high:
+            __asm__("ldx %v+1", col);
             __asm__("beq %g", rep_loop_done);
             __asm__("jmp %g", do_rep_loop);
             rep_loop_done:
@@ -1029,6 +1036,10 @@ static void decode_row(void) {
           nine_reps_loop_done:
         tree_done:
       __asm__("lda %v", col);
+      __asm__("beq %g", check_high2);
+      __asm__("jmp %g", col_loop1);
+      check_high2:
+      __asm__("ldx %v+1", col);
       __asm__("beq %g", col_loop1_done);
       __asm__("jmp %g", col_loop1);
       col_loop1_done:
@@ -1055,9 +1066,13 @@ static void decode_row(void) {
       __asm__("sta %v", y);
 
       __asm__("ldy #<(%v)", buf_1);
-      __asm__("sty %v", cur_buf_1);
+      __asm__("sty %v", cur_buf_1l);
+      __asm__("sty %v", cur_buf_1h);
       __asm__("lda #>(%v)", buf_1);
-      __asm__("sta %v+1", cur_buf_1);
+      __asm__("sta %v+1", cur_buf_1l);
+      __asm__("clc");
+      __asm__("adc #>%w", DATABUF_SIZE/2);
+      __asm__("sta %v+1", cur_buf_1h);
 
       loop5:
         __asm__("lda #4");
@@ -1065,24 +1080,22 @@ static void decode_row(void) {
         x_loop_outer:
         __asm__("ldy #<%b", 0);
         x_loop:
-#if 0 // define for precise divisions
-          __asm__("iny");
-          __asm__("lda (%v),y", cur_buf_1);
-          __asm__("tax");
-          __asm__("dey");
-          __asm__("lda (%v),y", cur_buf_1);
           __asm__("sty tmp1");
+          __asm__("tya");
+          __asm__("lsr a");
+          __asm__("tay");
+#if 0 // define for precise divisions
+          __asm__("lda (%v),y", cur_buf_1h);
+          __asm__("tax");
+          __asm__("lda (%v),y", cur_buf_1l);
           __asm__("jsr pushax");
           __asm__("lda %v", t);
           __asm__("jsr tosudiva0");
           __asm__("ldy tmp1");
 #else
-          __asm__("iny");
-          __asm__("lda (%v),y", cur_buf_1);
+          __asm__("lda (%v),y", cur_buf_1h);
           __asm__("tax");
-          __asm__("dey");
-          __asm__("lda (%v),y", cur_buf_1);
-          __asm__("sty tmp1");
+          __asm__("lda (%v),y", cur_buf_1l);
           __asm__("ldy %v", t);
           __asm__("jsr approx_div16x8_direct");
           __asm__("ldy tmp1");
@@ -1100,12 +1113,15 @@ static void decode_row(void) {
         __asm__("bne %g", x_loop);
 
         __asm__("clc");
-        __asm__("lda %v", cur_buf_1);
-        __asm__("adc #<%w", (WIDTH/4));
-        __asm__("sta %v", cur_buf_1);
-        __asm__("lda %v+1", cur_buf_1);
-        __asm__("adc #>%w", (WIDTH/4));
-        __asm__("sta %v+1", cur_buf_1);
+        __asm__("lda %v", cur_buf_1l);
+        __asm__("adc #<%w", (WIDTH/8));
+        __asm__("sta %v", cur_buf_1l);
+        __asm__("sta %v", cur_buf_1h);
+        __asm__("lda %v+1", cur_buf_1l);
+        __asm__("adc #>%w", (WIDTH/8));
+        __asm__("sta %v+1", cur_buf_1l);
+        __asm__("adc #>%w", DATABUF_SIZE/2);
+        __asm__("sta %v+1", cur_buf_1h);
 
         __asm__("clc");
         __asm__("lda %v", raw_ptr1);
@@ -1127,24 +1143,40 @@ static void decode_row(void) {
         noof22:
 
       __asm__("ldy #<(%v)", buf_2);
-      __asm__("sty %v", cur_buf_1);
+      __asm__("sty %v", cur_buf_1l);
+      __asm__("sty %v", cur_buf_1h);
       __asm__("lda #>(%v)", buf_2);
-      __asm__("sta %v+1", cur_buf_1);
+      __asm__("sta %v+1", cur_buf_1l);
+      __asm__("clc");
+      __asm__("adc #>%w", DATABUF_SIZE/2);
+      __asm__("sta %v+1", cur_buf_1h);
 
         __asm__("jmp %g", loop5);
 
       loop5_done:
       __asm__("clc");
-      __asm__("ldx #>(%v+2)", buf_0); /* cur_buf[0]+1 */
-      __asm__("lda #<(%v+2)", buf_0);
+      __asm__("ldx #>(%v+1)", buf_0); /* cur_buf[0]+1 */
+      __asm__("lda #<(%v+1)", buf_0);
       __asm__("jsr pushax");
 
       __asm__("lda #<(%v)", buf_2); /* curbuf_2 */
       __asm__("ldx #>(%v)", buf_2);
       __asm__("jsr pushax");
 
-      __asm__("lda #<%w", 2*(USEFUL_DATABUF_SIZE-1));
-      __asm__("ldx #>%w", 2*(USEFUL_DATABUF_SIZE-1));
+      __asm__("lda #<%w", (USEFUL_DATABUF_SIZE-1));
+      __asm__("ldx #>%w", (USEFUL_DATABUF_SIZE-1));
+      __asm__("jsr _memcpy");
+
+      __asm__("ldx #>(%v+512+1)", buf_0); /* cur_buf[0]+1 */
+      __asm__("lda #<(%v+512+1)", buf_0);
+      __asm__("jsr pushax");
+
+      __asm__("lda #<(%v+512)", buf_2); /* curbuf_2 */
+      __asm__("ldx #>(%v+512)", buf_2);
+      __asm__("jsr pushax");
+
+      __asm__("lda #<%w", (USEFUL_DATABUF_SIZE-1));
+      __asm__("ldx #>%w", (USEFUL_DATABUF_SIZE-1));
       __asm__("jsr _memcpy");
     // }
     __asm__("dec %v", r);
