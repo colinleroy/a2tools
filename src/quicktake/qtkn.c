@@ -77,9 +77,9 @@ extern uint16 buf_0[DATABUF_SIZE/2];
 extern uint16 buf_1[DATABUF_SIZE/2];
 extern uint16 buf_2[DATABUF_SIZE/2];
 
-extern uint16 huff[19][256];
+extern uint8 huff_split[19*2][256];
+extern uint8 huff_num;
 
-#define huff_ptr zp4ip
 #define raw_ptr1 zp6ip
 
 #define cur_buf_x zp2ip
@@ -94,10 +94,9 @@ static uint16 buf_0[DATABUF_SIZE];
 static uint16 buf_1[DATABUF_SIZE];
 static uint16 buf_2[DATABUF_SIZE];
 
-static uint16 huff[19][256];
-static uint16 *huff_9 = huff[9], *huff_10 = huff[10], *huff_18 = huff[18];
+uint8 huff_split[19*2][256];
+uint8 huff_num;
 
-uint16 *huff_ptr;
 static uint8 *raw_ptr1;
 static uint16 *cur_buf_prev;
 static uint16 *cur_buf_x;
@@ -242,19 +241,28 @@ static void init_row(void) {
 }
 
 void init_top(void) {
+  static uint8 l, h;
+  l = 0;
+  h = 1;
   for (s = i = 0; i != sizeof src; i += 2) {
     r = src[i];
     t = 256 >> r;
     y = src[i+1];
     c = (r << 8 | (uint8) y);
     do {
-      ((uint16 *)(huff))[s] = c;
+      huff_split[l][s & 0xFF] = c & 0xFF;
+      huff_split[h][s & 0xFF] = c >> 8;
       s++;
+      if ((s & 0xFF) == 0) {
+        l += 2;
+        h += 2;
+      }
     } while (--t);
   }
 
   for (c=0; c != 256; c++) {
-    huff[18][c] = (1284 | c);
+    huff_split[18*2][c] = (1284 | c) & 0xFF;
+    huff_split[18*2+1][c] = (1284 | c) >> 8;
   }
 
   cur_buf_x = buf_0;
@@ -270,14 +278,13 @@ static void decode_row(void) {
       buf_1[(WIDTH/2)] = (t << 7);
       buf_2[(WIDTH/2)] = (t << 7);
       for (tree = 1, col = (WIDTH/4); col; ) {
-        huff_ptr = huff[tree];
+        huff_num = tree*2;
         tree = (uint8) getbithuff(8);
-        printf("col %d\n", col);
         if (tree) {
           col--;
           cur_buf_x = buf_1 + col*2;
           if (tree == 8) {
-            huff_ptr = huff_18;
+            huff_num = 18*2;
             tmp8 = (uint8) getbithuff(8);
             *(cur_buf_x+1) = tmp8 * t;
             tmp8 = (uint8) getbithuff(8);
@@ -291,7 +298,7 @@ static void decode_row(void) {
           } else {
             cur_buf_prev = cur_buf_x - DATABUF_SIZE;
 
-            huff_ptr = (uint16 *)(huff + tree + 10);
+            huff_num = (tree+10)*2;
 
             y = 2;
             loop2:
@@ -318,7 +325,7 @@ static void decode_row(void) {
         } else {
           do {
             if (col > 1) {
-              huff_ptr = huff_9;
+              huff_num = 9*2;
               nreps = getbithuff(8);
               nreps++;
             } else {
@@ -330,7 +337,7 @@ static void decode_row(void) {
               rep_loop = nreps;
             }
             rep = 0;
-            huff_ptr = huff_10;
+            huff_num = 10*2;
             do_rep_loop:
               col--;
               cur_buf_prev = buf_0 + col*2;
@@ -404,7 +411,6 @@ static void decode_row(void) {
         }
         if (y == 2)
           break;
-        raw_ptr1++;
         cur_buf_x = buf_2;
       }
       memcpy (buf_0+1, buf_2, (USEFUL_DATABUF_SIZE-1)*2);
@@ -443,8 +449,8 @@ static void decode_row(void) {
         __asm__("lda %v", tree);
         __asm__("asl");
         __asm__("clc");
-        __asm__("adc #>%v", huff);
-        __asm__("sta %v+1", huff_ptr);
+        __asm__("adc #>%v", huff_split);
+        __asm__("sta %v", huff_num);
 
         __asm__("lda #8");
         __asm__("jsr %v", getbithuff);
@@ -479,8 +485,8 @@ static void decode_row(void) {
           __asm__("lda #2");
           __asm__("sta %v", y);
 
-          __asm__("lda #>(%v+18*256*2)", huff);
-          __asm__("sta %v+1", huff_ptr);
+          __asm__("lda #>(%v+18*256*2)", huff_split);
+          __asm__("sta %v", huff_num);
 
           __asm__("lda #8");
           __asm__("jsr %v", getbithuff);
@@ -547,8 +553,8 @@ static void decode_row(void) {
             //huff_ptr = huff[tree + 10];
             __asm__("lda %v", tree);
             __asm__("asl a");
-            __asm__("adc #>(%v+10*256*2)", huff);
-            __asm__("sta %v+1", huff_ptr);
+            __asm__("adc #>(%v+10*256*2)", huff_split);
+            __asm__("sta %v", huff_num);
 
             __asm__("lda #2");
             __asm__("sta %v", y);
@@ -685,8 +691,8 @@ static void decode_row(void) {
             __asm__("lda #1"); /* nreps */
             __asm__("jmp %g", check_nreps);
             col_gt1a:
-            __asm__("lda #>(%v+9*256*2)", huff);
-            __asm__("sta %v+1", huff_ptr);
+            __asm__("lda #>(%v+9*256*2)", huff_split);
+            __asm__("sta %v", huff_num);
             __asm__("lda #8");
             __asm__("jsr %v", getbithuff);
             __asm__("clc");
@@ -705,8 +711,8 @@ static void decode_row(void) {
 
             // __asm__("lda %v", huff_10);
             // __asm__("sta %v", huff_ptr);
-            __asm__("lda #>(%v+10*256*2)", huff);
-            __asm__("sta %v+1", huff_ptr);
+            __asm__("lda #>(%v+10*256*2)", huff_split);
+            __asm__("sta %v", huff_num);
             do_rep_loop:
               __asm__("dec %v", col);
               __asm__("lda %v", col);
@@ -1031,11 +1037,11 @@ static void consume_extra(void) {
     /* Consume RADC tokens but don't care about them. */
     for (c=1; c != 3; c++) {
       for (tree = 1, col = WIDTH/4; col; ) {
-        huff_ptr = huff[tree];
+        huff_num = tree*2;
         tree = getbithuff(8);
         if (tree) {
           col--;
-          huff_ptr = huff[tree + 10];
+          huff_num = (tree + 10)*2;
           getbithuff(8);
           getbithuff(8);
           getbithuff(8);
@@ -1043,7 +1049,7 @@ static void consume_extra(void) {
         } else {
           do {
             if (col > 1) {
-              huff_ptr = huff_9;
+              huff_num = 9*2;
               nreps = getbithuff(8) + 1;
             } else {
               nreps = 1;
@@ -1053,7 +1059,7 @@ static void consume_extra(void) {
             } else {
               rep_loop = nreps;
             }
-            huff_ptr = huff_10;
+            huff_num = 10*2;
             for (rep=0; rep != rep_loop && col; rep++) {
               col--;
               if (rep & 1) {
@@ -1080,8 +1086,8 @@ static void consume_extra(void) {
         __asm__("lda %v", tree);
         __asm__("asl a");
         __asm__("clc");
-        __asm__("adc #>%v", huff);
-        __asm__("sta %v+1", huff_ptr);
+        __asm__("adc #>%v", huff_split);
+        __asm__("sta %v", huff_num);
         // __asm__("lda #<%v", huff);
         // __asm__("sta %v", huff_ptr);
 
@@ -1098,8 +1104,8 @@ static void consume_extra(void) {
           __asm__("clc");
           __asm__("adc #10");
           __asm__("asl a");
-          __asm__("adc #>%v", huff);
-          __asm__("sta %v+1", huff_ptr);
+          __asm__("adc #>%v", huff_split);
+          __asm__("sta %v", huff_num);
           // __asm__("lda #<%v", huff);
           // __asm__("sta %v", huff_ptr);
 
@@ -1124,8 +1130,8 @@ static void consume_extra(void) {
             col_gt1:
             // __asm__("lda %v", huff_9);
             // __asm__("sta %v", huff_ptr);
-            __asm__("lda #>(%v+9*256*2)", huff);
-            __asm__("sta %v+1", huff_ptr);
+            __asm__("lda #>(%v+9*256*2)", huff_split);
+            __asm__("sta %v", huff_num);
             __asm__("lda #8");
             __asm__("jsr %v", getbithuff);
             __asm__("clc");
@@ -1142,8 +1148,8 @@ static void consume_extra(void) {
 
             // __asm__("lda %v", huff_10);
             // __asm__("sta %v", huff_ptr);
-            __asm__("lda #>(%v+10*256*2)", huff);
-            __asm__("sta %v+1", huff_ptr);
+            __asm__("lda #>(%v+10*256*2)", huff_split);
+            __asm__("sta %v", huff_num);
 
             __asm__("ldy #$00");
             __asm__("sty %v", rep);
@@ -1279,18 +1285,6 @@ static void copy_data(void) {
 void qt_load_raw(uint16 top)
 {
   if (top == 0) {
-    // uint16 q;
-    // uint8 d;
-    // for (q = 0; q < 1000; q++) {
-    //   for (d = 1; d < 255; d++) {
-    //     uint16 res = approx_div16x8(q, d);
-    //     uint16 ref = q/d;
-    //     if (res != ref) {
-    //       printf("%d/%d ~= %d (= %d)\n", q, d, res, ref);
-    //     }
-    //   }
-    // }
-    // cgetc();
 #ifdef __CC65__
     init_floppy_starter();
 #endif
@@ -1303,11 +1297,11 @@ void qt_load_raw(uint16 top)
     }
   }
 
-    #ifdef __CC65__
-    // init huff_ptr low byte */
-    __asm__("lda #<%v", huff);
-    __asm__("sta %v", huff_ptr);
-    #endif
+  #ifdef __CC65__
+  huff_num = 0;
+  #else
+  huff_num = 255;
+  #endif
 
   row_idx = raw_image;
   row_idx_plus2 = raw_image + (WIDTH*2);
@@ -1315,11 +1309,9 @@ void qt_load_raw(uint16 top)
   for (row=0; row != BAND_HEIGHT; row+=4) {
     progress_bar(-1, -1, 80*22, (top + row), height);
     #ifdef __CC65__
-    // set huff_ptr high byte to null */
-    __asm__("lda #0");
-    __asm__("sta %v+1", huff_ptr);
+    huff_num = 0;
     #else
-    huff_ptr = NULL;
+    huff_num = 255;
     #endif
     t = getbithuff(6);
     /* Ignore those */

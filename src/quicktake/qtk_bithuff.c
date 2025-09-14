@@ -24,9 +24,9 @@ void initbithuff(void) {
     vbits += 8;
   } while (vbits < 9);
 }
+
 uint8 __fastcall__ getbithuff (uint8 n)
 {
-  uint16 h;
   uint8 c;
   uint8 nbits = n;
 
@@ -61,13 +61,11 @@ uint8 __fastcall__ getbithuff (uint8 n)
   shift = 8-nbits;
   c = (uint8)(tmp >> shift);
 
-  if (huff_ptr) {
-    h = huff_ptr[c];
-    vbits -= h >> 8;
-    c = (uint8) h;
+  if (huff_num != 255) {
+    vbits -= huff_split[huff_num+1][c];
+    return huff_split[huff_num][c];
   } else {
     vbits -= nbits;
+    return c;
   }
-
-  return c;
 }

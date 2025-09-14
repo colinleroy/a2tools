@@ -11,21 +11,21 @@
         .import         _cache_end
         .import         _ifd
         .import         floppy_motor_on
+        .export         _huff_num
         .export         _getbithuff
         .export         _cache
         .export         _init_floppy_starter
-        .export         _buf_0, _buf_1, _buf_2, _huff
+        .export         _buf_0, _buf_1, _buf_2, _huff_split
 
 cur_cache_ptr = _prev_ram_irq_vector
-_huff_ptr     = _zp4ip
 
 .segment        "BSS"
 .align 256
-_cache:  .res        CACHE_SIZE,$00
-_buf_0:  .res        $300
-_buf_1:  .res        $300
-_buf_2:  .res        $300
-_huff:   .res        19*256*2
+_cache:        .res        CACHE_SIZE,$00
+_buf_0:        .res        $300
+_buf_1:        .res        $300
+_buf_2:        .res        $300
+_huff_split:   .res        19*256*2
 CACHE_END = _cache + CACHE_SIZE
 .assert <CACHE_END = 0, error
 
@@ -151,26 +151,18 @@ lshift_done_h:
         dey
         bne     :-              ; Final shift done!
 do_huff_h:
-        ldx     _huff_ptr+1
+        ldx     _huff_num
         beq     no_huff
-
-        asl     a
-        bcc     :+
         inx
-        clc
-
-:       stx     ptr1+1
-        ldx     #0
-        stx     ptr1
-
+        stx     ha+2
         tay
-        iny
         lda     _vbits
         sec
-        sbc     (ptr1),y
+ha:
+        sbc     _huff_split+256,y
         sta     _vbits
-        dey
-        lda     (ptr1),y
+_huff_num = *+2
+        lda     _huff_split,y
         rts
 no_huff:
         tax                     ; backup result

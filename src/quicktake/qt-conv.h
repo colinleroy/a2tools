@@ -62,7 +62,9 @@ extern char *model;
 
 void __fastcall__ src_file_seek(uint32 off);
 
-extern uint16 *huff_ptr;
+// extern uint16 *huff_ptr;
+extern uint8 huff_num;
+extern uint8 huff_split[19*2][256];
 uint8 __fastcall__ getbithuff (uint8 nbits);
 
 void qt_load_raw(uint16 top);
