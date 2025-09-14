@@ -453,7 +453,6 @@ static void decode_row(void) {
           break;
         cur_buf_1l = buf_2;
         cur_buf_1h = cur_buf_1l + (DATABUF_SIZE/2);
-
       }
       memcpy (buf_0+1, buf_2, (USEFUL_DATABUF_SIZE-1));
       memcpy (buf_0+512+1, buf_2+512, (USEFUL_DATABUF_SIZE-1));
@@ -476,10 +475,10 @@ static void decode_row(void) {
       __asm__("ror");
 
       /* Update buf1/2[WIDTH/2] */
-      __asm__("stx %v+%w+1", buf_1, WIDTH);
-      __asm__("stx %v+%w+1", buf_2, WIDTH);
-      __asm__("sta %v+%w", buf_1, WIDTH);
-      __asm__("sta %v+%w", buf_2, WIDTH);
+      __asm__("stx %v+%w+512", buf_1, WIDTH/2);
+      __asm__("stx %v+%w+512", buf_2, WIDTH/2);
+      __asm__("sta %v+%w", buf_1, WIDTH/2);
+      __asm__("sta %v+%w", buf_2, WIDTH/2);
 
       __asm__("lda #1");
       __asm__("sta %v", tree);
@@ -489,26 +488,102 @@ static void decode_row(void) {
       __asm__("ldx #>%w", (WIDTH/2));
       __asm__("stx %v+1", col);
       __asm__("clc");
-      __asm__("adc #<(%v)", buf_0);
-      __asm__("sta %v", cur_buf_0l);
-      __asm__("sta %v", cur_buf_1l);
-      __asm__("sta %v", cur_buf_2l);
-      __asm__("sta %v", cur_buf_0h);
-      __asm__("sta %v", cur_buf_1h);
-      __asm__("sta %v", cur_buf_2h);
-      __asm__("txa");  // init time, high page
-      __asm__("adc #>(%v)", buf_0);
-      __asm__("sta %v+1", cur_buf_0l);
-      __asm__("adc #>%w", DATABUF_SIZE/2);
-      __asm__("sta %v+1", cur_buf_0h);
-      __asm__("adc #>%w", DATABUF_SIZE/2);
-      __asm__("sta %v+1", cur_buf_1l);
-      __asm__("adc #>%w", DATABUF_SIZE/2);
-      __asm__("sta %v+1", cur_buf_1h);
-      __asm__("adc #>%w", DATABUF_SIZE/2);
-      __asm__("sta %v+1", cur_buf_2l);
-      __asm__("adc #>%w", DATABUF_SIZE/2);
-      __asm__("sta %v+1", cur_buf_2h);
+      __asm__("lda #>(%v+512+256)", buf_0);
+      __asm__("sta %g+2", cb0h_off0a);
+      __asm__("sta %g+2", cb0h_off0b);
+      __asm__("sta %g+2", cb0h_off0c);
+      __asm__("sta %g+2", cb0h_off0d);
+      __asm__("sta %g+2", cb0h_off1a);
+      __asm__("sta %g+2", cb0h_off1b);
+      __asm__("sta %g+2", cb0h_off1c);
+      __asm__("sta %g+2", cb0h_off1d);
+      __asm__("sta %g+2", cb0h_off1e);
+      __asm__("sta %g+2", cb0h_off1f);
+      __asm__("sta %g+2", cb0h_off2a);
+      __asm__("sta %g+2", cb0h_off2b);
+      __asm__("lda #>(%v+256)", buf_0);
+      __asm__("sta %g+2", cb0l_off0a);
+      __asm__("sta %g+2", cb0l_off0b);
+      __asm__("sta %g+2", cb0l_off0c);
+      __asm__("sta %g+2", cb0l_off0d);
+      __asm__("sta %g+2", cb0l_off1a);
+      __asm__("sta %g+2", cb0l_off1b);
+      __asm__("sta %g+2", cb0l_off1c);
+      __asm__("sta %g+2", cb0l_off1d);
+      __asm__("sta %g+2", cb0l_off1e);
+      __asm__("sta %g+2", cb0l_off1f);
+      __asm__("sta %g+2", cb0l_off2a);
+      __asm__("sta %g+2", cb0l_off2b);
+
+      __asm__("lda #>(%v+512+256)", buf_1);
+      __asm__("sta %g+2", cb1h_off0a);
+      __asm__("sta %g+2", cb1h_off0b);
+      __asm__("sta %g+2", cb1h_off0c);
+      __asm__("sta %g+2", cb1h_off0d);
+      __asm__("sta %g+2", cb1h_off0e);
+      __asm__("sta %g+2", cb1h_off0f);
+      __asm__("sta %g+2", cb1h_off0g);
+      __asm__("sta %g+2", cb1h_off1a);
+      __asm__("sta %g+2", cb1h_off1b);
+      __asm__("sta %g+2", cb1h_off1c);
+      __asm__("sta %g+2", cb1h_off1d);
+      __asm__("sta %g+2", cb1h_off1e);
+      __asm__("sta %g+2", cb1h_off1f);
+      __asm__("sta %g+2", cb1h_off1g);
+      __asm__("sta %g+2", cb1h_off1h);
+      __asm__("sta %g+2", cb1h_off1i);
+      __asm__("sta %g+2", cb1h_off1j);
+      __asm__("sta %g+2", cb1h_off1k);
+      __asm__("sta %g+2", cb1h_off2a);
+      __asm__("sta %g+2", cb1h_off2b);
+      __asm__("sta %g+2", cb1h_off2c);
+      __asm__("sta %g+2", cb1h_off2d);
+      __asm__("lda #>(%v+256)", buf_1);
+      __asm__("sta %g+2", cb1l_off0a);
+      __asm__("sta %g+2", cb1l_off0b);
+      __asm__("sta %g+2", cb1l_off0c);
+      __asm__("sta %g+2", cb1l_off0d);
+      __asm__("sta %g+2", cb1l_off0e);
+      __asm__("sta %g+2", cb1l_off0f);
+      __asm__("sta %g+2", cb1l_off0g);
+      __asm__("sta %g+2", cb1l_off1a);
+      __asm__("sta %g+2", cb1l_off1b);
+      __asm__("sta %g+2", cb1l_off1c);
+      __asm__("sta %g+2", cb1l_off1d);
+      __asm__("sta %g+2", cb1l_off1e);
+      __asm__("sta %g+2", cb1l_off1f);
+      __asm__("sta %g+2", cb1l_off1g);
+      __asm__("sta %g+2", cb1l_off1h);
+      __asm__("sta %g+2", cb1l_off1i);
+      __asm__("sta %g+2", cb1l_off1j);
+      __asm__("sta %g+2", cb1l_off1k);
+      __asm__("sta %g+2", cb1l_off2a);
+      __asm__("sta %g+2", cb1l_off2b);
+      __asm__("sta %g+2", cb1l_off2c);
+      __asm__("sta %g+2", cb1l_off2d);
+
+      __asm__("lda #>(%v+512+256)", buf_2);
+      __asm__("sta %g+2", cb2h_off0a);
+      __asm__("sta %g+2", cb2h_off0b);
+      __asm__("sta %g+2", cb2h_off0c);
+      __asm__("sta %g+2", cb2h_off1a);
+      __asm__("sta %g+2", cb2h_off1b);
+      __asm__("sta %g+2", cb2h_off1c);
+      __asm__("sta %g+2", cb2h_off1d);
+      __asm__("sta %g+2", cb2h_off1e);
+      __asm__("sta %g+2", cb2h_off2b);
+      __asm__("sta %g+2", cb2h_off2c);
+      __asm__("lda #>(%v+256)", buf_2);
+      __asm__("sta %g+2", cb2l_off0a);
+      __asm__("sta %g+2", cb2l_off0b);
+      __asm__("sta %g+2", cb2l_off0c);
+      __asm__("sta %g+2", cb2l_off1a);
+      __asm__("sta %g+2", cb2l_off1b);
+      __asm__("sta %g+2", cb2l_off1c);
+      __asm__("sta %g+2", cb2l_off1d);
+      __asm__("sta %g+2", cb2l_off1e);
+      __asm__("sta %g+2", cb2l_off2b);
+      __asm__("sta %g+2", cb2l_off2c);
 
       col_loop1:
         __asm__("lda %v", tree);
@@ -528,21 +603,97 @@ static void decode_row(void) {
           __asm__("lda %v", col);
           __asm__("bne %g", declow);
           __asm__("dec %v+1", col);
-          __asm__("dec %v+1", cur_buf_0l);
-          __asm__("dec %v+1", cur_buf_1l);
-          __asm__("dec %v+1", cur_buf_2l);
-          __asm__("dec %v+1", cur_buf_0h);
-          __asm__("dec %v+1", cur_buf_1h);
-          __asm__("dec %v+1", cur_buf_2h);
+          __asm__("dec %g+2", cb0h_off0a);
+          __asm__("dec %g+2", cb0h_off0b);
+          __asm__("dec %g+2", cb0h_off0c);
+          __asm__("dec %g+2", cb0h_off0d);
+          __asm__("dec %g+2", cb0h_off1a);
+          __asm__("dec %g+2", cb0h_off1b);
+          __asm__("dec %g+2", cb0h_off1c);
+          __asm__("dec %g+2", cb0h_off1d);
+          __asm__("dec %g+2", cb0h_off1e);
+          __asm__("dec %g+2", cb0h_off1f);
+          __asm__("dec %g+2", cb0h_off2a);
+          __asm__("dec %g+2", cb0h_off2b);
+          __asm__("dec %g+2", cb0l_off0a);
+          __asm__("dec %g+2", cb0l_off0b);
+          __asm__("dec %g+2", cb0l_off0c);
+          __asm__("dec %g+2", cb0l_off0d);
+          __asm__("dec %g+2", cb0l_off1a);
+          __asm__("dec %g+2", cb0l_off1b);
+          __asm__("dec %g+2", cb0l_off1c);
+          __asm__("dec %g+2", cb0l_off1d);
+          __asm__("dec %g+2", cb0l_off1e);
+          __asm__("dec %g+2", cb0l_off1f);
+          __asm__("dec %g+2", cb0l_off2a);
+          __asm__("dec %g+2", cb0l_off2b);
+          __asm__("dec %g+2", cb1h_off0a);
+          __asm__("dec %g+2", cb1h_off0b);
+          __asm__("dec %g+2", cb1h_off0c);
+          __asm__("dec %g+2", cb1h_off0d);
+          __asm__("dec %g+2", cb1h_off0e);
+          __asm__("dec %g+2", cb1h_off0f);
+          __asm__("dec %g+2", cb1h_off0g);
+          __asm__("dec %g+2", cb1h_off1a);
+          __asm__("dec %g+2", cb1h_off1b);
+          __asm__("dec %g+2", cb1h_off1c);
+          __asm__("dec %g+2", cb1h_off1d);
+          __asm__("dec %g+2", cb1h_off1e);
+          __asm__("dec %g+2", cb1h_off1f);
+          __asm__("dec %g+2", cb1h_off1g);
+          __asm__("dec %g+2", cb1h_off1h);
+          __asm__("dec %g+2", cb1h_off1i);
+          __asm__("dec %g+2", cb1h_off1j);
+          __asm__("dec %g+2", cb1h_off1k);
+          __asm__("dec %g+2", cb1h_off2a);
+          __asm__("dec %g+2", cb1h_off2b);
+          __asm__("dec %g+2", cb1h_off2c);
+          __asm__("dec %g+2", cb1h_off2d);
+          __asm__("dec %g+2", cb1l_off0a);
+          __asm__("dec %g+2", cb1l_off0b);
+          __asm__("dec %g+2", cb1l_off0c);
+          __asm__("dec %g+2", cb1l_off0d);
+          __asm__("dec %g+2", cb1l_off0e);
+          __asm__("dec %g+2", cb1l_off0f);
+          __asm__("dec %g+2", cb1l_off0g);
+          __asm__("dec %g+2", cb1l_off1a);
+          __asm__("dec %g+2", cb1l_off1b);
+          __asm__("dec %g+2", cb1l_off1c);
+          __asm__("dec %g+2", cb1l_off1d);
+          __asm__("dec %g+2", cb1l_off1e);
+          __asm__("dec %g+2", cb1l_off1f);
+          __asm__("dec %g+2", cb1l_off1g);
+          __asm__("dec %g+2", cb1l_off1h);
+          __asm__("dec %g+2", cb1l_off1i);
+          __asm__("dec %g+2", cb1l_off1j);
+          __asm__("dec %g+2", cb1l_off1k);
+          __asm__("dec %g+2", cb1l_off2a);
+          __asm__("dec %g+2", cb1l_off2b);
+          __asm__("dec %g+2", cb1l_off2c);
+          __asm__("dec %g+2", cb1l_off2d);
+          __asm__("dec %g+2", cb2h_off0a);
+          __asm__("dec %g+2", cb2h_off0b);
+          __asm__("dec %g+2", cb2h_off0c);
+          __asm__("dec %g+2", cb2h_off1a);
+          __asm__("dec %g+2", cb2h_off1b);
+          __asm__("dec %g+2", cb2h_off1c);
+          __asm__("dec %g+2", cb2h_off1d);
+          __asm__("dec %g+2", cb2h_off1e);
+          __asm__("dec %g+2", cb2h_off2b);
+          __asm__("dec %g+2", cb2h_off2c);
+          __asm__("dec %g+2", cb2l_off0a);
+          __asm__("dec %g+2", cb2l_off0b);
+          __asm__("dec %g+2", cb2l_off0c);
+          __asm__("dec %g+2", cb2l_off1a);
+          __asm__("dec %g+2", cb2l_off1b);
+          __asm__("dec %g+2", cb2l_off1c);
+          __asm__("dec %g+2", cb2l_off1d);
+          __asm__("dec %g+2", cb2l_off1e);
+          __asm__("dec %g+2", cb2l_off2b);
+          __asm__("dec %g+2", cb2l_off2c);
           declow:
           __asm__("sbc #2");
           __asm__("sta %v", col);
-          __asm__("sta %v", cur_buf_0l);
-          __asm__("sta %v", cur_buf_1l);
-          __asm__("sta %v", cur_buf_2l);
-          __asm__("sta %v", cur_buf_0h);
-          __asm__("sta %v", cur_buf_1h);
-          __asm__("sta %v", cur_buf_2h);
 
           __asm__("ldy %v", tree);
           __asm__("cpy #8");
@@ -556,37 +707,37 @@ static void decode_row(void) {
           __asm__("jsr %v", getbithuff);
           __asm__("ldx %v", t);
           __asm__("jsr mult8x8r16_direct");
-          __asm__("ldy #1");
-          __asm__("sta (%v),y", cur_buf_1l);
+          __asm__("ldy %v", col);
+cb1l_off1a:__asm__("sta $FF01,y");
           __asm__("txa");
-          __asm__("sta (%v),y", cur_buf_1h);
+cb1h_off1a:__asm__("sta $FF01,y");
 
           __asm__("lda #8");
           __asm__("jsr %v", getbithuff);
           __asm__("ldx %v", t);
           __asm__("jsr mult8x8r16_direct");
-          __asm__("ldy #0");
-          __asm__("sta (%v),y", cur_buf_1l);
+          __asm__("ldy %v", col);
+cb1l_off0a:__asm__("sta $FF00,y");
           __asm__("txa");
-          __asm__("sta (%v),y", cur_buf_1h);
+cb1h_off0a:__asm__("sta $FF00,y");
 
           __asm__("lda #8");
           __asm__("jsr %v", getbithuff);
           __asm__("ldx %v", t);
           __asm__("jsr mult8x8r16_direct");
-          __asm__("ldy #1");
-          __asm__("sta (%v),y", cur_buf_2l);
+          __asm__("ldy %v", col);
+cb2l_off1a:__asm__("sta $FF01,y");
           __asm__("txa");
-          __asm__("sta (%v),y", cur_buf_2h);
+cb2h_off1a:__asm__("sta $FF01,y");
 
           __asm__("lda #8");
           __asm__("jsr %v", getbithuff);
           __asm__("ldx %v", t);
           __asm__("jsr mult8x8r16_direct");
-          __asm__("ldy #0");
-          __asm__("sta (%v),y", cur_buf_2l);
+          __asm__("ldy %v", col);
+cb2l_off0a:__asm__("sta $FF00,y");
           __asm__("txa");
-          __asm__("sta (%v),y", cur_buf_2h);
+cb2h_off0a:__asm__("sta $FF00,y");
 
           __asm__("jmp %g", tree_done);
 
@@ -618,23 +769,22 @@ static void decode_row(void) {
             __asm__("sta tmp3");
 
             __asm__("clc");
-            __asm__("ldy #2");
-            __asm__("lda (%v),y", cur_buf_0l);
-            __asm__("adc (%v),y", cur_buf_1l);
+            __asm__("ldy %v", col);
+cb0l_off2a: __asm__("lda $FF02,y");
+cb1l_off2a: __asm__("adc $FF02,y");
             __asm__("tax");
-            __asm__("lda (%v),y", cur_buf_0h);
-            __asm__("adc (%v),y", cur_buf_1h);
+cb0h_off2a: __asm__("lda $FF02,y");
+cb1h_off2a: __asm__("adc $FF02,y");
             __asm__("ror a");
             __asm__("sta tmp1");
             __asm__("txa");
             __asm__("ror a");
 
             __asm__("clc");
-            __asm__("ldy #1");
-            __asm__("adc (%v),y", cur_buf_0l);
+cb0l_off1a: __asm__("adc $FF01,y");
             __asm__("tax");
             __asm__("lda tmp1");
-            __asm__("adc (%v),y", cur_buf_0h);
+cb0h_off1a: __asm__("adc $FF01,y");
             __asm__("ror a");
             __asm__("sta tmp1");
             __asm__("txa");
@@ -642,16 +792,17 @@ static void decode_row(void) {
 
             __asm__("clc");
             __asm__("adc tmp3");
-            __asm__("sta (%v),y", cur_buf_1l);
+cb1l_off1b: __asm__("sta $FF01,y");
 
             __asm__("lda tmp1");
             __asm__("adc tmp4");
-            __asm__("sta (%v),y", cur_buf_1h);
+cb1h_off1b: __asm__("sta $FF01,y");
 
             /* Second with col - 1*/
             __asm__("lda #8");
             __asm__("jsr %v", getbithuff);
             // __asm__("sta %v", tk);
+            __asm__("ldy %v", col);
 
             __asm__("ldx #0");
             __asm__("cmp #0");
@@ -670,23 +821,21 @@ static void decode_row(void) {
             __asm__("sta tmp3");
 
             __asm__("clc");
-            __asm__("ldy #1");
-            __asm__("lda (%v),y", cur_buf_0l);
-            __asm__("adc (%v),y", cur_buf_1l);
+cb0l_off1b: __asm__("lda $FF01,y");
+cb1l_off1c: __asm__("adc $FF01,y");
             __asm__("tax");
-            __asm__("lda (%v),y", cur_buf_0h);
-            __asm__("adc (%v),y", cur_buf_1h);
+cb0h_off1b: __asm__("lda $FF01,y");
+cb1h_off1c: __asm__("adc $FF01,y");
             __asm__("ror a");
             __asm__("sta tmp1");
             __asm__("txa");
             __asm__("ror a");
 
             __asm__("clc");
-            __asm__("ldy #0");
-            __asm__("adc (%v),y", cur_buf_0l);
+cb0l_off0a: __asm__("adc $FF00,y");
             __asm__("tax");
             __asm__("lda tmp1");
-            __asm__("adc (%v),y", cur_buf_0h);
+cb0h_off0a: __asm__("adc $FF00,y");
             __asm__("ror a");
             __asm__("sta tmp1");
             __asm__("txa");
@@ -695,15 +844,16 @@ static void decode_row(void) {
             /* Store to cur_buf_x */
             __asm__("clc");
             __asm__("adc tmp3");
-            __asm__("sta (%v),y", cur_buf_1l);
+cb1l_off0b: __asm__("sta $FF00,y");
 
             __asm__("lda tmp1");
             __asm__("adc tmp4");
-            __asm__("sta (%v),y", cur_buf_1h);
+cb1h_off0b: __asm__("sta $FF00,y");
 
             //b
             __asm__("lda #8");
             __asm__("jsr %v", getbithuff);
+            __asm__("ldy %v", col);
 
             __asm__("ldx #0");
             __asm__("cmp #0");
@@ -722,23 +872,21 @@ static void decode_row(void) {
             __asm__("sta tmp3");
 
             __asm__("clc");
-            __asm__("ldy #2");
-            __asm__("lda (%v),y", cur_buf_1l);
-            __asm__("adc (%v),y", cur_buf_2l);
+cb1l_off2b: __asm__("lda $FF02,y");
+cb2l_off2b: __asm__("adc $FF02,y");
             __asm__("tax");
-            __asm__("lda (%v),y", cur_buf_1h);
-            __asm__("adc (%v),y", cur_buf_2h);
+cb1h_off2b: __asm__("lda $FF02,y");
+cb2h_off2b: __asm__("adc $FF02,y");
             __asm__("ror a");
             __asm__("sta tmp1");
             __asm__("txa");
             __asm__("ror a");
 
             __asm__("clc");
-            __asm__("ldy #1");
-            __asm__("adc (%v),y", cur_buf_1l);
+cb1l_off1d: __asm__("adc $FF01,y");
             __asm__("tax");
             __asm__("lda tmp1");
-            __asm__("adc (%v),y", cur_buf_1h);
+cb1h_off1d: __asm__("adc $FF01,y");
             __asm__("ror a");
             __asm__("sta tmp1");
             __asm__("txa");
@@ -746,15 +894,16 @@ static void decode_row(void) {
 
             __asm__("clc");
             __asm__("adc tmp3");
-            __asm__("sta (%v),y", cur_buf_2l);
+cb2l_off1b: __asm__("sta $FF01,y");
 
             __asm__("lda tmp1");
             __asm__("adc tmp4");
-            __asm__("sta (%v),y", cur_buf_2h);
+cb2h_off1b: __asm__("sta $FF01,y");
 
             /* Second with col - 1*/
             __asm__("lda #8");
             __asm__("jsr %v", getbithuff);
+            __asm__("ldy %v", col);
 
             __asm__("ldx #0");
             __asm__("cmp #0");
@@ -773,23 +922,21 @@ static void decode_row(void) {
             __asm__("sta tmp3");
 
             __asm__("clc");
-            __asm__("ldy #1");
-            __asm__("lda (%v),y", cur_buf_1l);
-            __asm__("adc (%v),y", cur_buf_2l);
+cb1l_off1e: __asm__("lda $FF01,y");
+cb2l_off1c: __asm__("adc $FF01,y");
             __asm__("tax");
-            __asm__("lda (%v),y", cur_buf_1h);
-            __asm__("adc (%v),y", cur_buf_2h);
+cb1h_off1e: __asm__("lda $FF01,y");
+cb2h_off1c: __asm__("adc $FF01,y");
             __asm__("ror a");
             __asm__("sta tmp1");
             __asm__("txa");
             __asm__("ror a");
 
             __asm__("clc");
-            __asm__("ldy #0");
-            __asm__("adc (%v),y", cur_buf_1l);
+cb1l_off0c: __asm__("adc $FF00,y");
             __asm__("tax");
             __asm__("lda tmp1");
-            __asm__("adc (%v),y", cur_buf_1h);
+cb1h_off0c: __asm__("adc $FF00,y");
             __asm__("ror a");
             __asm__("sta tmp1");
             __asm__("txa");
@@ -798,11 +945,11 @@ static void decode_row(void) {
             /* Store to cur_buf_x */
             __asm__("clc");
             __asm__("adc tmp3");
-            __asm__("sta (%v),y", cur_buf_2l);
+cb2l_off0b: __asm__("sta $FF00,y");
 
             __asm__("lda tmp1");
             __asm__("adc tmp4");
-            __asm__("sta (%v),y", cur_buf_2h);
+cb2h_off0b: __asm__("sta $FF00,y");
 
             __asm__("jmp %g", tree_done);
 
@@ -841,119 +988,190 @@ static void decode_row(void) {
               __asm__("lda %v", col);
               __asm__("bne %g", declow2);
               __asm__("dec %v+1", col);
-              __asm__("dec %v+1", cur_buf_0l);
-              __asm__("dec %v+1", cur_buf_1l);
-              __asm__("dec %v+1", cur_buf_2l);
-              __asm__("dec %v+1", cur_buf_0h);
-              __asm__("dec %v+1", cur_buf_1h);
-              __asm__("dec %v+1", cur_buf_2h);
+              __asm__("dec %g+2", cb0h_off0a);
+              __asm__("dec %g+2", cb0h_off0b);
+              __asm__("dec %g+2", cb0h_off0c);
+              __asm__("dec %g+2", cb0h_off0d);
+              __asm__("dec %g+2", cb0h_off1a);
+              __asm__("dec %g+2", cb0h_off1b);
+              __asm__("dec %g+2", cb0h_off1c);
+              __asm__("dec %g+2", cb0h_off1d);
+              __asm__("dec %g+2", cb0h_off1e);
+              __asm__("dec %g+2", cb0h_off1f);
+              __asm__("dec %g+2", cb0h_off2a);
+              __asm__("dec %g+2", cb0h_off2b);
+              __asm__("dec %g+2", cb0l_off0a);
+              __asm__("dec %g+2", cb0l_off0b);
+              __asm__("dec %g+2", cb0l_off0c);
+              __asm__("dec %g+2", cb0l_off0d);
+              __asm__("dec %g+2", cb0l_off1a);
+              __asm__("dec %g+2", cb0l_off1b);
+              __asm__("dec %g+2", cb0l_off1c);
+              __asm__("dec %g+2", cb0l_off1d);
+              __asm__("dec %g+2", cb0l_off1e);
+              __asm__("dec %g+2", cb0l_off1f);
+              __asm__("dec %g+2", cb0l_off2a);
+              __asm__("dec %g+2", cb0l_off2b);
+              __asm__("dec %g+2", cb1h_off0a);
+              __asm__("dec %g+2", cb1h_off0b);
+              __asm__("dec %g+2", cb1h_off0c);
+              __asm__("dec %g+2", cb1h_off0d);
+              __asm__("dec %g+2", cb1h_off0e);
+              __asm__("dec %g+2", cb1h_off0f);
+              __asm__("dec %g+2", cb1h_off0g);
+              __asm__("dec %g+2", cb1h_off1a);
+              __asm__("dec %g+2", cb1h_off1b);
+              __asm__("dec %g+2", cb1h_off1c);
+              __asm__("dec %g+2", cb1h_off1d);
+              __asm__("dec %g+2", cb1h_off1e);
+              __asm__("dec %g+2", cb1h_off1f);
+              __asm__("dec %g+2", cb1h_off1g);
+              __asm__("dec %g+2", cb1h_off1h);
+              __asm__("dec %g+2", cb1h_off1i);
+              __asm__("dec %g+2", cb1h_off1j);
+              __asm__("dec %g+2", cb1h_off1k);
+              __asm__("dec %g+2", cb1h_off2a);
+              __asm__("dec %g+2", cb1h_off2b);
+              __asm__("dec %g+2", cb1h_off2c);
+              __asm__("dec %g+2", cb1h_off2d);
+              __asm__("dec %g+2", cb1l_off0a);
+              __asm__("dec %g+2", cb1l_off0b);
+              __asm__("dec %g+2", cb1l_off0c);
+              __asm__("dec %g+2", cb1l_off0d);
+              __asm__("dec %g+2", cb1l_off0e);
+              __asm__("dec %g+2", cb1l_off0f);
+              __asm__("dec %g+2", cb1l_off0g);
+              __asm__("dec %g+2", cb1l_off1a);
+              __asm__("dec %g+2", cb1l_off1b);
+              __asm__("dec %g+2", cb1l_off1c);
+              __asm__("dec %g+2", cb1l_off1d);
+              __asm__("dec %g+2", cb1l_off1e);
+              __asm__("dec %g+2", cb1l_off1f);
+              __asm__("dec %g+2", cb1l_off1g);
+              __asm__("dec %g+2", cb1l_off1h);
+              __asm__("dec %g+2", cb1l_off1i);
+              __asm__("dec %g+2", cb1l_off1j);
+              __asm__("dec %g+2", cb1l_off1k);
+              __asm__("dec %g+2", cb1l_off2a);
+              __asm__("dec %g+2", cb1l_off2b);
+              __asm__("dec %g+2", cb1l_off2c);
+              __asm__("dec %g+2", cb1l_off2d);
+              __asm__("dec %g+2", cb2h_off0a);
+              __asm__("dec %g+2", cb2h_off0b);
+              __asm__("dec %g+2", cb2h_off0c);
+              __asm__("dec %g+2", cb2h_off1a);
+              __asm__("dec %g+2", cb2h_off1b);
+              __asm__("dec %g+2", cb2h_off1c);
+              __asm__("dec %g+2", cb2h_off1d);
+              __asm__("dec %g+2", cb2h_off1e);
+              __asm__("dec %g+2", cb2h_off2b);
+              __asm__("dec %g+2", cb2h_off2c);
+              __asm__("dec %g+2", cb2l_off0a);
+              __asm__("dec %g+2", cb2l_off0b);
+              __asm__("dec %g+2", cb2l_off0c);
+              __asm__("dec %g+2", cb2l_off1a);
+              __asm__("dec %g+2", cb2l_off1b);
+              __asm__("dec %g+2", cb2l_off1c);
+              __asm__("dec %g+2", cb2l_off1d);
+              __asm__("dec %g+2", cb2l_off1e);
+              __asm__("dec %g+2", cb2l_off2b);
+              __asm__("dec %g+2", cb2l_off2c);
               declow2:
               __asm__("sbc #2");
               __asm__("sta %v", col);
-              __asm__("sta %v", cur_buf_0l);
-              __asm__("sta %v", cur_buf_1l);
-              __asm__("sta %v", cur_buf_2l);
-              __asm__("sta %v", cur_buf_0h);
-              __asm__("sta %v", cur_buf_1h);
-              __asm__("sta %v", cur_buf_2h);
 
               //c
               __asm__("clc");
-              __asm__("ldy #2");
-              __asm__("lda (%v),y", cur_buf_0l);
-              __asm__("adc (%v),y", cur_buf_1l);
+              __asm__("ldy %v", col);
+cb0l_off2b:   __asm__("lda $FF02,y");
+cb1l_off2c:   __asm__("adc $FF02,y");
               __asm__("tax");
-              __asm__("lda (%v),y", cur_buf_0h);
-              __asm__("adc (%v),y", cur_buf_1h);
+cb0h_off2b:   __asm__("lda $FF02,y");
+cb1h_off2c:   __asm__("adc $FF02,y");
               __asm__("ror a");
               __asm__("sta tmp1");
               __asm__("txa");
               __asm__("ror a");
 
               __asm__("clc");
-              __asm__("ldy #1");
-              __asm__("adc (%v),y", cur_buf_0l);
+cb0l_off1c:   __asm__("adc $FF01,y");
               __asm__("tax");
               __asm__("lda tmp1");
-              __asm__("adc (%v),y", cur_buf_0h);
+cb0h_off1c:   __asm__("adc $FF01,y");
               __asm__("ror a");
-              __asm__("sta (%v),y", cur_buf_1h);
+cb1h_off1f:   __asm__("sta $FF01,y");
               __asm__("txa");
               __asm__("ror a");
-              __asm__("sta (%v),y", cur_buf_1l);
+cb1l_off1f:   __asm__("sta $FF01,y");
 
               /* Second */
               __asm__("clc");
-              __asm__("lda (%v),y", cur_buf_0l);
-              __asm__("adc (%v),y", cur_buf_1l);
+cb0l_off1d:   __asm__("lda $FF01,y");
+cb1l_off1g:   __asm__("adc $FF01,y");
               __asm__("tax");
-              __asm__("lda (%v),y", cur_buf_0h);
-              __asm__("adc (%v),y", cur_buf_1h);
+cb0h_off1d:   __asm__("lda $FF01,y");
+cb1h_off1g:   __asm__("adc $FF01,y");
               __asm__("ror a");
               __asm__("sta tmp1");
               __asm__("txa");
               __asm__("ror a");
 
               __asm__("clc");
-              __asm__("ldy #0");
-              __asm__("adc (%v),y", cur_buf_0l);
+cb0l_off0b:   __asm__("adc $FF00,y");
               __asm__("tax");
               __asm__("lda tmp1");
-              __asm__("adc (%v),y", cur_buf_0h);
+cb0h_off0b:   __asm__("adc $FF00,y");
               __asm__("ror a");
-              __asm__("sta (%v),y", cur_buf_1h);
+cb1h_off0d:   __asm__("sta $FF00,y");
               __asm__("txa");
               __asm__("ror a");
-              __asm__("sta (%v),y", cur_buf_1l);
+cb1l_off0d:   __asm__("sta $FF00,y");
 
               //d
               __asm__("clc");
-              __asm__("ldy #2");
-              __asm__("lda (%v),y", cur_buf_1l);
-              __asm__("adc (%v),y", cur_buf_2l);
+cb1l_off2d:   __asm__("lda $FF02,y");
+cb2l_off2c:   __asm__("adc $FF02,y");
               __asm__("tax");
-              __asm__("lda (%v),y", cur_buf_1h);
-              __asm__("adc (%v),y", cur_buf_2h);
+cb1h_off2d:   __asm__("lda $FF02,y");
+cb2h_off2c:   __asm__("adc $FF02,y");
               __asm__("ror a");
               __asm__("sta tmp1");
               __asm__("txa");
               __asm__("ror a");
 
               __asm__("clc");
-              __asm__("ldy #1");
-              __asm__("adc (%v),y", cur_buf_1l);
+cb1l_off1h:   __asm__("adc $FF01,y");
               __asm__("tax");
               __asm__("lda tmp1");
-              __asm__("adc (%v),y", cur_buf_1h);
+cb1h_off1h:   __asm__("adc $FF01,y");
               __asm__("ror a");
-              __asm__("sta (%v),y", cur_buf_2h);
+cb2h_off1d:   __asm__("sta $FF01,y");
               __asm__("txa");
               __asm__("ror a");
-              __asm__("sta (%v),y", cur_buf_2l);
+cb2l_off1d:   __asm__("sta $FF01,y");
 
               /* Second */
               __asm__("clc");
-              __asm__("lda (%v),y", cur_buf_1l);
-              __asm__("adc (%v),y", cur_buf_2l);
+cb1l_off1i:   __asm__("lda $FF01,y");
+cb2l_off1e:   __asm__("adc $FF01,y");
               __asm__("tax");
-              __asm__("lda (%v),y", cur_buf_1h);
-              __asm__("adc (%v),y", cur_buf_2h);
+cb1h_off1i:   __asm__("lda $FF01,y");
+cb2h_off1e:   __asm__("adc $FF01,y");
               __asm__("ror a");
               __asm__("sta tmp1");
               __asm__("txa");
               __asm__("ror a");
 
               __asm__("clc");
-              __asm__("ldy #0");
-              __asm__("adc (%v),y", cur_buf_1l);
+cb1l_off0e:   __asm__("adc $FF00,y");
               __asm__("tax");
               __asm__("lda tmp1");
-              __asm__("adc (%v),y", cur_buf_1h);
+cb1h_off0e:   __asm__("adc $FF00,y");
               __asm__("ror a");
-              __asm__("sta (%v),y", cur_buf_2h);
+cb2h_off0c:   __asm__("sta $FF00,y");
               __asm__("txa");
               __asm__("ror a");
-              __asm__("sta (%v),y", cur_buf_2l);
+cb2l_off0c:   __asm__("sta $FF00,y");
 
               __asm__("lda %v", rep);
               __asm__("and #1");
@@ -981,39 +1199,37 @@ static void decode_row(void) {
 
               //e
               __asm__("clc");
-              __asm__("ldy #0");
-              __asm__("adc (%v),y", cur_buf_0l);
-              __asm__("sta (%v),y", cur_buf_0l);
+cb0l_off0c:   __asm__("adc $FF00,y");
+cb0l_off0d:   __asm__("sta $FF00,y");
               __asm__("lda tmp4");
-              __asm__("adc (%v),y", cur_buf_0h);
-              __asm__("sta (%v),y", cur_buf_0h);
+cb0h_off0c:   __asm__("adc $FF00,y");
+cb0h_off0d:   __asm__("sta $FF00,y");
 
               __asm__("clc");
               __asm__("txa");
               __asm__("iny");
-              __asm__("adc (%v),y", cur_buf_0l);
-              __asm__("sta (%v),y", cur_buf_0l);
+cb0l_off1e:   __asm__("adc $FF01,y");
+cb0l_off1f:   __asm__("sta $FF01,y");
               __asm__("lda tmp4");
-              __asm__("adc (%v),y", cur_buf_0h);
-              __asm__("sta (%v),y", cur_buf_0h);
+cb0h_off1e:   __asm__("adc $FF01,y");
+cb0h_off1f:   __asm__("sta $FF01,y");
 
               __asm__("clc");
               __asm__("txa");
-              __asm__("ldy #0");
-              __asm__("adc (%v),y", cur_buf_1l);
-              __asm__("sta (%v),y", cur_buf_1l);
+cb1l_off0f:   __asm__("adc $FF00,y");
+cb1l_off0g:   __asm__("sta $FF00,y");
               __asm__("lda tmp4");
-              __asm__("adc (%v),y", cur_buf_1h);
-              __asm__("sta (%v),y", cur_buf_1h);
+cb1h_off0f:   __asm__("adc $FF00,y");
+cb1h_off0g:   __asm__("sta $FF00,y");
 
               __asm__("clc");
               __asm__("txa");
               __asm__("iny");
-              __asm__("adc (%v),y", cur_buf_1l);
-              __asm__("sta (%v),y", cur_buf_1l);
+cb1l_off1j:   __asm__("adc $FF01,y");
+cb1l_off1k:   __asm__("sta $FF01,y");
               __asm__("lda tmp4");
-              __asm__("adc (%v),y", cur_buf_1h);
-              __asm__("sta (%v),y", cur_buf_1h);
+cb1h_off1j:   __asm__("adc $FF01,y");
+cb1h_off1k:   __asm__("sta $FF01,y");
 
             rep_even:
             __asm__("ldx %v", rep);
