@@ -101,7 +101,7 @@ qtknconv_CC65SOURCES := \
 	../lib/extrazp.s \
 	../lib/asm/path_helper.s \
 	../lib/mult8x8x16.s \
-	../lib/mult16x16x32.s \
+	../lib/mult16x16x24.s \
 	../lib/approxdiv16x8.s \
 	../lib/square_table.s \
 	../lib/a2_features.s \
@@ -150,7 +150,7 @@ qtktconv_CLCFLAGS = -D_CACHE_SIZE=16384 --asm-define CACHE_SIZE=16384 \
 	-DRAW_X_OFFSET=2 -DRAW_Y_OFFSET=2 -DRAW_WIDTH=645 \
 	$(CLCFLAGS) -C ../../config/apple2enh-alignbssrodata.cfg $(TARGET)-iobuf-0800.o --start-addr 0x1000    #Two file buffers
 
-qtknconv_CLCFLAGS = -D_CACHE_SIZE=2048 --asm-define CACHE_SIZE=2048 \
+qtknconv_CLCFLAGS = -D_CACHE_SIZE=3072 --asm-define CACHE_SIZE=3072 \
 	-DRAW_X_OFFSET=0 -DRAW_Y_OFFSET=0 -DRAW_WIDTH=width \
 	$(CLCFLAGS) -C ../../config/apple2enh-alignbssdata.cfg $(TARGET)-iobuf-0800.o --start-addr 0x1000
 

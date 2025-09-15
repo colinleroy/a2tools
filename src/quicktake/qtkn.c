@@ -36,35 +36,38 @@ uint8 raw_image[RAW_IMAGE_SIZE];
 #define WIDTH 640U
 #define HEIGHT 480U
 
-static uint16 val_from_last[256] = {
-  0x0000, 0x1000, 0x0800, 0x0555, 0x0400, 0x0333, 0x02ab, 0x0249, 0x0200, 0x01c7, 0x019a, 0x0174, 0x0155, 0x013b, 0x0125, 0x0111, 0x0100,
-  0x00f1, 0x00e4, 0x00d8, 0x00cd, 0x00c3, 0x00ba, 0x00b2, 0x00ab, 0x00a4, 0x009e, 0x0098, 0x0092, 0x008d, 0x0089, 0x0084, 0x0080,
-  0x007c, 0x0078, 0x0075, 0x0072, 0x006f, 0x006c, 0x0069, 0x0066, 0x0064, 0x0062, 0x005f, 0x005d, 0x005b, 0x0059, 0x0057, 0x0055,
-  0x0054, 0x0052, 0x0050, 0x004f, 0x004d, 0x004c, 0x004a, 0x0049, 0x0048, 0x0047, 0x0045, 0x0044, 0x0043, 0x0042, 0x0041, 0x0040,
-  0x003f, 0x003e, 0x003d, 0x003c, 0x003b, 0x003b, 0x003a, 0x0039, 0x0038, 0x0037, 0x0037, 0x0036, 0x0035, 0x0035, 0x0034, 0x0033,
-  0x0033, 0x0032, 0x0031, 0x0031, 0x0030, 0x0030, 0x002f, 0x002f, 0x002e, 0x002e, 0x002d, 0x002d, 0x002c, 0x002c, 0x002b, 0x002b,
-  0x002a, 0x002a, 0x0029, 0x0029, 0x0029, 0x0028, 0x0028, 0x0027, 0x0027, 0x0027, 0x0026, 0x0026, 0x0026, 0x0025, 0x0025, 0x0025,
-  0x0024, 0x0024, 0x0024, 0x0023, 0x0023, 0x0023, 0x0022, 0x0022, 0x0022, 0x0022, 0x0021, 0x0021, 0x0021, 0x0021, 0x0020, 0x0020,
-  0x0020, 0x0020, 0x001f, 0x001f, 0x001f, 0x001f, 0x001e, 0x001e, 0x001e, 0x001e, 0x001d, 0x001d, 0x001d, 0x001d, 0x001d, 0x001c,
-  0x001c, 0x001c, 0x001c, 0x001c, 0x001b, 0x001b, 0x001b, 0x001b, 0x001b, 0x001b, 0x001a, 0x001a, 0x001a, 0x001a, 0x001a, 0x001a,
-  0x0019, 0x0019, 0x0019, 0x0019, 0x0019, 0x0019, 0x0019, 0x0018, 0x0018, 0x0018, 0x0018, 0x0018, 0x0018, 0x0018, 0x0017, 0x0017,
-  0x0017, 0x0017, 0x0017, 0x0017, 0x0017, 0x0017, 0x0016, 0x0016, 0x0016, 0x0016, 0x0016, 0x0016, 0x0016, 0x0016, 0x0015, 0x0015,
-  0x0015, 0x0015, 0x0015, 0x0015, 0x0015, 0x0015, 0x0015, 0x0014, 0x0014, 0x0014, 0x0014, 0x0014, 0x0014, 0x0014, 0x0014, 0x0014,
-  0x0014, 0x0014, 0x0013, 0x0013, 0x0013, 0x0013, 0x0013, 0x0013, 0x0013, 0x0013, 0x0013, 0x0013, 0x0013, 0x0012, 0x0012, 0x0012,
-  0x0012, 0x0012, 0x0012, 0x0012, 0x0012, 0x0012, 0x0012, 0x0012, 0x0012, 0x0012, 0x0011, 0x0011, 0x0011, 0x0011, 0x0011, 0x0011,
-  0x0011, 0x0011, 0x0011, 0x0011, 0x0011, 0x0011, 0x0011, 0x0011, 0x0010, 0x0010, 0x0010, 0x0010, 0x0010, 0x0010, 0x0010
+static uint8 val_hi_from_last[17] = {
+  0x00, 0x10, 0x08, 0x05, 0x04, 0x03, 0x02, 0x02, 0x02, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01
+};
+static uint8 val_from_last[256] = {
+  0x00, 0x00, 0x00, 0x55, 0x00, 0x33, 0xab, 0x49, 0x00, 0xc7, 0x9a, 0x74, 0x55, 0x3b, 0x25, 0x11, 0x00,
+  0xf1, 0xe4, 0xd8, 0xcd, 0xc3, 0xba, 0xb2, 0xab, 0xa4, 0x9e, 0x98, 0x92, 0x8d, 0x89, 0x84, 0x80,
+  0x7c, 0x78, 0x75, 0x72, 0x6f, 0x6c, 0x69, 0x66, 0x64, 0x62, 0x5f, 0x5d, 0x5b, 0x59, 0x57, 0x55,
+  0x54, 0x52, 0x50, 0x4f, 0x4d, 0x4c, 0x4a, 0x49, 0x48, 0x47, 0x45, 0x44, 0x43, 0x42, 0x41, 0x40,
+  0x3f, 0x3e, 0x3d, 0x3c, 0x3b, 0x3b, 0x3a, 0x39, 0x38, 0x37, 0x37, 0x36, 0x35, 0x35, 0x34, 0x33,
+  0x33, 0x32, 0x31, 0x31, 0x30, 0x30, 0x2f, 0x2f, 0x2e, 0x2e, 0x2d, 0x2d, 0x2c, 0x2c, 0x2b, 0x2b,
+  0x2a, 0x2a, 0x29, 0x29, 0x29, 0x28, 0x28, 0x27, 0x27, 0x27, 0x26, 0x26, 0x26, 0x25, 0x25, 0x25,
+  0x24, 0x24, 0x24, 0x23, 0x23, 0x23, 0x22, 0x22, 0x22, 0x22, 0x21, 0x21, 0x21, 0x21, 0x20, 0x20,
+  0x20, 0x20, 0x1f, 0x1f, 0x1f, 0x1f, 0x1e, 0x1e, 0x1e, 0x1e, 0x1d, 0x1d, 0x1d, 0x1d, 0x1d, 0x1c,
+  0x1c, 0x1c, 0x1c, 0x1c, 0x1b, 0x1b, 0x1b, 0x1b, 0x1b, 0x1b, 0x1a, 0x1a, 0x1a, 0x1a, 0x1a, 0x1a,
+  0x19, 0x19, 0x19, 0x19, 0x19, 0x19, 0x19, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x17, 0x17,
+  0x17, 0x17, 0x17, 0x17, 0x17, 0x17, 0x16, 0x16, 0x16, 0x16, 0x16, 0x16, 0x16, 0x16, 0x15, 0x15,
+  0x15, 0x15, 0x15, 0x15, 0x15, 0x15, 0x15, 0x14, 0x14, 0x14, 0x14, 0x14, 0x14, 0x14, 0x14, 0x14,
+  0x14, 0x14, 0x13, 0x13, 0x13, 0x13, 0x13, 0x13, 0x13, 0x13, 0x13, 0x13, 0x13, 0x12, 0x12, 0x12,
+  0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x12, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11,
+  0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10
 };
 
 /* note that each huff[x] share the same low byte addr */
 static int16 x, s, i;
-static uint16 c, col;
-static uint8 r, nreps, rep, row, y, t, rep_loop, tree;
+static uint16 c;
+static uint8 r, nreps, row, y, t, rep_loop, tree;
 
 /* Wastes bytes, but simplifies adds */
 
 static uint16 val;
 #ifndef __CC65__
-static int8 tk;
+static int8 tk, tk1, tk2, tk3, tk4;
 static uint8 tmp8;
 static uint16 tmp16;
 static uint32 tmp32;
@@ -80,16 +83,13 @@ extern uint8 buf_2[DATABUF_SIZE];
 extern uint8 huff_split[19*2][256];
 extern uint8 huff_num;
 
-/* Shared with cur_buf_0. Warning don't share with cur_buf1/2 */
 #define raw_ptr1 zp2ip
-
-/* HELL, I said */
-#define cur_buf_0l zp2p
-#define cur_buf_1l zp4p
-#define cur_buf_2l zp6p
-#define cur_buf_0h zp8p
-#define cur_buf_1h zp10p
-#define cur_buf_2h zp12p
+#define cur_buf_0l zp4p
+#define cur_buf_0h zp6p
+#define col zp7
+static uint8 colh;
+// zp8-11 used by bitbuffer
+#define rep zp12
 
 #else
 #define USEFUL_DATABUF_SIZE 321
@@ -97,10 +97,10 @@ extern uint8 huff_num;
 static uint8 buf_0[DATABUF_SIZE];
 static uint8 buf_1[DATABUF_SIZE];
 static uint8 buf_2[DATABUF_SIZE];
-
+static uint16 col;
 uint8 huff_split[19*2][256];
 uint8 huff_num;
-
+uint8 rep;
 static uint8 *raw_ptr1;
 
 static uint8 *cur_buf_0l, *cur_buf_1l, *cur_buf_2l;
@@ -140,15 +140,20 @@ static uint8 last = 16;
 #define GET_CURBUF_VAL(bufl, bufh, y) (((uint8)( *((bufl)+(y)) ))|(((uint8)( *(((bufh))+(y)) ))<<8))
 
 static void init_row(void) {
+#ifndef __CC65__
+    if (last > 17)
+      val = (val_from_last[last] * t) >> 4;
+    else
+      val = ((val_from_last[last]|(val_hi_from_last[last]<<8)) * t) >> 4;
+    last = t;
     cur_buf_0l = buf_0;
     cur_buf_0h = buf_0+(DATABUF_SIZE/2);
-#ifndef __CC65__
-    for (i=0; i != USEFUL_DATABUF_SIZE; i++) {
+    for (i=USEFUL_DATABUF_SIZE-1; i >=0; i--) {
       tmp32 = val;
       if (GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0)) {
         tmp32 *= GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0);
-        tmp32--;
-        SET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0, tmp32 >> 12);
+        // tmp32--;
+        SET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0, tmp32 >> 8);
       } else {
         // tmp32 *= 0  == 0
         // tmp32--     == 0xFFFF
@@ -159,92 +164,87 @@ static void init_row(void) {
       cur_buf_0h++;
     }
 
-    last = t;
 #else
-    __asm__("lda #<%w", USEFUL_DATABUF_SIZE);
-    __asm__("sta %v", i);
+    __asm__("lda #<(%v+256)", buf_0);
+    __asm__("ldx #>(%v+256)", buf_0);
+    __asm__("sta %v", cur_buf_0l);
+    __asm__("stx %v+1", cur_buf_0l);
+    __asm__("lda #<(%v+256+512)", buf_0);
+    __asm__("ldx #>(%v+256+512)", buf_0);
+    __asm__("sta %v", cur_buf_0h);
+    __asm__("stx %v+1", cur_buf_0h);
+
+    __asm__("ldy %v", last);
+    __asm__("cpy #18");
+    __asm__("bcs %g", small_val);
+
+    __asm__("lda %v,y", val_from_last);
+    __asm__("ldx %v,y", val_hi_from_last);
+    __asm__("jsr pushax");
+    __asm__("lda %v", t);
+    __asm__("sta %v", last);
+    __asm__("jsr tosmula0");
+    goto shift_val;
+    small_val:
+    __asm__("lda %v,y", val_from_last);
+    __asm__("ldx %v", t);
+    __asm__("stx %v", last);
+    __asm__("jsr mult8x8r16_direct");
+    shift_val:
+    __asm__("stx ptr2+1");
+    __asm__("lsr ptr2+1");
+    __asm__("ror a");
+    __asm__("lsr ptr2+1");
+    __asm__("ror a");
+    __asm__("lsr ptr2+1");
+    __asm__("ror a");
+    __asm__("lsr ptr2+1");
+    __asm__("ror a");
+    __asm__("sta ptr2");
+
+    __asm__("ldy #<%w", USEFUL_DATABUF_SIZE);
+    __asm__("sty %v", i);
     __asm__("lda #>%w", USEFUL_DATABUF_SIZE);
     __asm__("sta %v+1", i);
 
     setup_curbuf_x:
-    __asm__("dec %v", i);
     /* load */
-    __asm__("ldy #$00");
+    __asm__("dey");
+    __asm__("sty %v", i);
     __asm__("lda (%v),y", cur_buf_0h);
+    __asm__("tax");
     __asm__("bne %g", not_null_buf);
     __asm__("lda (%v),y", cur_buf_0l);
     __asm__("beq %g", null_buf);
     not_null_buf:
 
-    __asm__("ldx %v+1", val);
-    __asm__("stx ptr2+1");
-    __asm__("lda %v", val);
-    __asm__("sta ptr2");
-
-    __asm__("ldy #$00");
-    __asm__("lda (%v),y", cur_buf_0h);
-    __asm__("tax");
     __asm__("lda (%v),y", cur_buf_0l);
 
     /* multiply */
-    __asm__("jsr mult16x16x32_direct");
-
-    /* decrement */
-    __asm__("cmp #0");
-    __asm__("bne %g", nouf12);
-    __asm__("cpx #0");
-    __asm__("bne %g", nouf13);
-    __asm__("ldy sreg");
-    __asm__("bne %g", nouf14);
-    __asm__("dec sreg+1");
-    nouf14:
-    __asm__("dec sreg");
-    nouf13:
-    __asm__("dex");
-    nouf12:
-    // No need to DEC A, we're about to shift right
+    __asm__("jsr mult16x16r24_direct");
 
     /* Shift >> 8 */
     __asm__("txa");
     /* Then 4 , inlined */
-    __asm__("lsr sreg+1");
-    __asm__("ror sreg");
-    __asm__("ror a");
-    __asm__("lsr sreg+1");
-    __asm__("ror sreg");
-    __asm__("ror a");
-    __asm__("lsr sreg+1");
-    __asm__("ror sreg");
-    __asm__("ror a");
-    __asm__("lsr sreg+1");
-    __asm__("ror sreg");
-    __asm__("ror a");
-    __asm__("ldx sreg");
     __asm__("jmp %g", store_buf);
 
     null_buf:
     __asm__("lda #$0F");
     __asm__("ldx #$00");
+    __asm__("stx sreg");
 
     store_buf:
-    __asm__("ldy #$00");
+    __asm__("ldy %v", i);
     __asm__("sta (%v),y", cur_buf_0l);
-    __asm__("txa");
+    __asm__("lda sreg");
     __asm__("sta (%v),y", cur_buf_0h);
 
-    __asm__("inc %v", cur_buf_0l);
-    __asm__("inc %v", cur_buf_0h);
-    __asm__("bne %g", noof21);
-    __asm__("inc %v+1", cur_buf_0l);
-    __asm__("inc %v+1", cur_buf_0h);
-    noof21:
-    __asm__("lda %v", i);
+    __asm__("ldy %v", i);
     __asm__("bne %g", setup_curbuf_x);
+    __asm__("dec %v+1", cur_buf_0l);
+    __asm__("dec %v+1", cur_buf_0h);
     __asm__("dec %v+1", i);
     __asm__("bpl %g", setup_curbuf_x);
-
-    __asm__("lda %v", t);
-    __asm__("sta %v", last);
 #endif
 }
 
@@ -301,6 +301,7 @@ static void decode_row(void) {
       while(col) {
         huff_num = tree*2;
         tree = (uint8) getbithuff(8);
+
         if (tree) {
           col-=2;
           cur_buf_0l-=2;
@@ -325,32 +326,31 @@ static void decode_row(void) {
             huff_num = (tree+10)*2;
 
             //a
-            tk = getbithuff(8);
+            tk1 = getbithuff(8);
+            tk2 = getbithuff(8);
+            tk3 = getbithuff(8);
+            tk4 = getbithuff(8);
             SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1, 
                             (((((GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 2) + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 2)) >> 1)
                               + GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 1)) >> 1)
-                              + (tk << 4)));
-
+                              + (tk1 << 4)));
             /* Second with col - 1*/
-            tk = getbithuff(8);
             SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 0, 
-                            (((((GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 1) + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1)) >> 1)
+                            (((((GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1) + GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 1)) >> 1)
                               + GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0)) >> 1)
-                              + (tk << 4)));
+                              + (tk2 << 4)));
 
             //b
-            tk = getbithuff(8);
             SET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 1, 
                             (((((GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 2) + GET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 2)) >> 1)
                               + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1)) >> 1)
-                              + (tk << 4)));
+                              + (tk3 << 4)));
 
             /* Second with col - 1*/
-            tk = getbithuff(8);
             SET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 0, 
-                            (((((GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1) + GET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 1)) >> 1)
+                            (((((GET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 1) + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1)) >> 1)
                               + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 0)) >> 1)
-                              + (tk << 4)));
+                              + (tk4 << 4)));
 
           }
         } else {
@@ -385,8 +385,8 @@ static void decode_row(void) {
                              + GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 1)) >> 1);
 
               SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 0,
-                             (((GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 1)
-                             + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1)) >> 1)
+                             (((GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1)
+                             + GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 1)) >> 1)
                              + GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0)) >> 1);
 
               //d
@@ -396,8 +396,8 @@ static void decode_row(void) {
                              + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1)) >> 1);
 
               SET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 0,
-                             (((GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1)
-                             + GET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 1)) >> 1)
+                             (((GET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 1)
+                             + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1)) >> 1)
                              + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 0)) >> 1);
 
               if (rep & 1) {
@@ -425,21 +425,20 @@ static void decode_row(void) {
         raw_ptr1 = row_idx_plus2; //FILE_IDX(row + 2, 0);
       }
 
-      uint8 *tl, *th;
       cur_buf_1l = buf_1;
       cur_buf_1h = cur_buf_1l + (DATABUF_SIZE/2);
-
+      
       for (y=1; ; y++) {
         #define QUARTER_WIDTH (WIDTH/4)
         #if QUARTER_WIDTH != 160
         #error Unexpected width
         #endif
-
+      
         /* Loop this on Y on 65c02 */
         for (i = 4; i; i--) {
           for (x= 0; x < QUARTER_WIDTH; x+=2) {
             val = GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, x/2) / t;
-
+      
             if (val > 255)
               val = 255;
             *(raw_ptr1+(x)) = val;
@@ -463,31 +462,26 @@ static void decode_row(void) {
     __asm__("sta %v", r);
     r_loop:
     // for (r=0; r != 2; r++) {
-
-      // __asm__("ldx #0");
-      // __asm__("lda %v", t);
-      // __asm__("jsr aslax7");
-      /* aslax7 inlined */
+      /* t<<7, aslax7 inlined */
       __asm__("lda %v", t);
       __asm__("lsr a");
       __asm__("tax");
       __asm__("lda #0");
       __asm__("ror");
 
-      /* Update buf1/2[WIDTH/2] */
+      /* Update buf1/2[WIDTH/2] = t<<7 */
       __asm__("stx %v+%w+512", buf_1, WIDTH/2);
       __asm__("stx %v+%w+512", buf_2, WIDTH/2);
       __asm__("sta %v+%w", buf_1, WIDTH/2);
       __asm__("sta %v+%w", buf_2, WIDTH/2);
 
-      __asm__("lda #1");
+      __asm__("lda #2");
       __asm__("sta %v", tree);
 
       __asm__("lda #<%w", (WIDTH/2));
       __asm__("sta %v", col);
       __asm__("ldx #>%w", (WIDTH/2));
-      __asm__("stx %v+1", col);
-      __asm__("clc");
+      __asm__("stx %v", colh);
       __asm__("lda #>(%v+512+256)", buf_0);
       __asm__("sta %g+2", cb0h_off0a);
       __asm__("sta %g+2", cb0h_off0b);
@@ -552,7 +546,7 @@ static void decode_row(void) {
       __asm__("sta %g+2", cb1l_off1d);
       __asm__("sta %g+2", cb1l_off1e);
       __asm__("sta %g+2", cb1l_off1f);
-      __asm__("sta %g+2", cb1l_off1g);
+      // __asm__("sta %g+2", cb1l_off1g);
       __asm__("sta %g+2", cb1l_off1h);
       __asm__("sta %g+2", cb1l_off1i);
       __asm__("sta %g+2", cb1l_off1j);
@@ -581,28 +575,25 @@ static void decode_row(void) {
       __asm__("sta %g+2", cb2l_off1b);
       __asm__("sta %g+2", cb2l_off1c);
       __asm__("sta %g+2", cb2l_off1d);
-      __asm__("sta %g+2", cb2l_off1e);
+      // __asm__("sta %g+2", cb2l_off1e);
       __asm__("sta %g+2", cb2l_off2b);
       __asm__("sta %g+2", cb2l_off2c);
 
       col_loop1:
         __asm__("lda %v", tree);
-        __asm__("asl");
         __asm__("clc");
         __asm__("adc #>%v", huff_split);
         __asm__("sta %v", huff_num);
 
         __asm__("lda #8");
         __asm__("jsr %v", getbithuff);
+        __asm__("asl a");
         __asm__("sta %v", tree);
 
         __asm__("bne %g", tree_not_zero);
         __asm__("jmp %g", tree_zero);
-        tree_not_zero:
-          __asm__("sec");
-          __asm__("lda %v", col);
-          __asm__("bne %g", declow);
-          __asm__("dec %v+1", col);
+        dechigh:
+          __asm__("dec %v", colh);
           __asm__("dec %g+2", cb0h_off0a);
           __asm__("dec %g+2", cb0h_off0b);
           __asm__("dec %g+2", cb0h_off0c);
@@ -662,7 +653,7 @@ static void decode_row(void) {
           __asm__("dec %g+2", cb1l_off1d);
           __asm__("dec %g+2", cb1l_off1e);
           __asm__("dec %g+2", cb1l_off1f);
-          __asm__("dec %g+2", cb1l_off1g);
+          // __asm__("dec %g+2", cb1l_off1g);
           __asm__("dec %g+2", cb1l_off1h);
           __asm__("dec %g+2", cb1l_off1i);
           __asm__("dec %g+2", cb1l_off1j);
@@ -688,15 +679,20 @@ static void decode_row(void) {
           __asm__("dec %g+2", cb2l_off1b);
           __asm__("dec %g+2", cb2l_off1c);
           __asm__("dec %g+2", cb2l_off1d);
-          __asm__("dec %g+2", cb2l_off1e);
+          // __asm__("dec %g+2", cb2l_off1e);
           __asm__("dec %g+2", cb2l_off2b);
           __asm__("dec %g+2", cb2l_off2c);
+          __asm__("jmp %g", declow);
+        tree_not_zero:
+          __asm__("sec");
+          __asm__("lda %v", col);
+          __asm__("beq %g", dechigh);
           declow:
           __asm__("sbc #2");
           __asm__("sta %v", col);
 
-          __asm__("ldy %v", tree);
-          __asm__("cpy #8");
+          __asm__("lda %v", tree);
+          __asm__("cmp #16");
           __asm__("bne %g", tree_not_eight);
 
           // tree == 8
@@ -743,30 +739,76 @@ cb2h_off0a:__asm__("sta $FF00,y");
 
           tree_not_eight:
             //huff_ptr = huff[tree + 10];
-            __asm__("lda %v", tree);
-            __asm__("asl a");
             __asm__("adc #>(%v+10*256*2)", huff_split);
             __asm__("sta %v", huff_num);
 
+            // Get the four tk vals in advance
+            __asm__("ldx #0");
+            __asm__("stx tmp2");  // Use only safe ZP vars,
+            __asm__("stx tmp3");  // tmp1 used later, tmp4 used in qtk_bithuff,
+            __asm__("stx ptr4");  // ptr1/2/3 used in read()
+            __asm__("stx ptr4+1");
             //a
             __asm__("lda #8");
             __asm__("jsr %v", getbithuff);
-
-            __asm__("ldx #0");
-            __asm__("cmp #0");
             __asm__("bpl %g", pos1);
-            __asm__("dex");
+            __asm__("dec tmp2");
             pos1:
-            __asm__("stx tmp4");  // tk << 4
             __asm__("asl a");
-            __asm__("rol tmp4");
+            __asm__("rol tmp2");
             __asm__("asl a");
-            __asm__("rol tmp4");
+            __asm__("rol tmp2");
             __asm__("asl a");
-            __asm__("rol tmp4");
+            __asm__("rol tmp2");
             __asm__("asl a");
-            __asm__("rol tmp4");
-            __asm__("sta tmp3");
+            __asm__("rol tmp2");
+            __asm__("sta %g+1", tk1_l);
+
+            __asm__("lda #8");
+            __asm__("jsr %v", getbithuff);
+            __asm__("bpl %g", pos2);
+            __asm__("dec tmp3");
+            pos2:
+            __asm__("asl a");
+            __asm__("rol tmp3");
+            __asm__("asl a");
+            __asm__("rol tmp3");
+            __asm__("asl a");
+            __asm__("rol tmp3");
+            __asm__("asl a");
+            __asm__("rol tmp3");
+            __asm__("sta %g+1", tk2_l);
+
+            __asm__("lda #8");
+            __asm__("jsr %v", getbithuff);
+            __asm__("bpl %g", pos3);
+            __asm__("dec ptr4");
+            pos3:
+            __asm__("asl a");
+            __asm__("rol ptr4");
+            __asm__("asl a");
+            __asm__("rol ptr4");
+            __asm__("asl a");
+            __asm__("rol ptr4");
+            __asm__("asl a");
+            __asm__("rol ptr4");
+            __asm__("sta %g+1", tk3_l);
+
+            __asm__("lda #8");
+            __asm__("jsr %v", getbithuff);
+            __asm__("bpl %g", pos4);
+            __asm__("dec ptr4+1");
+            pos4:
+            __asm__("asl a");
+            __asm__("rol ptr4+1");
+            __asm__("asl a");
+            __asm__("rol ptr4+1");
+            __asm__("asl a");
+            __asm__("rol ptr4+1");
+            __asm__("asl a");
+            __asm__("rol ptr4+1");
+            __asm__("sta %g+1", tk4_l);
+
 
             __asm__("clc");
             __asm__("ldy %v", col);
@@ -791,35 +833,13 @@ cb0h_off1a: __asm__("adc $FF01,y");
             __asm__("ror a");
 
             __asm__("clc");
-            __asm__("adc tmp3");
+tk1_l:      __asm__("adc #$FF");
 cb1l_off1b: __asm__("sta $FF01,y");
-
             __asm__("lda tmp1");
-            __asm__("adc tmp4");
+            __asm__("adc tmp2");
 cb1h_off1b: __asm__("sta $FF01,y");
 
             /* Second with col - 1*/
-            __asm__("lda #8");
-            __asm__("jsr %v", getbithuff);
-            // __asm__("sta %v", tk);
-            __asm__("ldy %v", col);
-
-            __asm__("ldx #0");
-            __asm__("cmp #0");
-            __asm__("bpl %g", pos2);
-            __asm__("dex");
-            pos2:
-            __asm__("stx tmp4");  // tk << 4
-            __asm__("asl a");
-            __asm__("rol tmp4");
-            __asm__("asl a");
-            __asm__("rol tmp4");
-            __asm__("asl a");
-            __asm__("rol tmp4");
-            __asm__("asl a");
-            __asm__("rol tmp4");
-            __asm__("sta tmp3");
-
             __asm__("clc");
 cb0l_off1b: __asm__("lda $FF01,y");
 cb1l_off1c: __asm__("adc $FF01,y");
@@ -843,34 +863,14 @@ cb0h_off0a: __asm__("adc $FF00,y");
 
             /* Store to cur_buf_x */
             __asm__("clc");
-            __asm__("adc tmp3");
+tk2_l:      __asm__("adc #$FF");
 cb1l_off0b: __asm__("sta $FF00,y");
 
             __asm__("lda tmp1");
-            __asm__("adc tmp4");
+            __asm__("adc tmp3");
 cb1h_off0b: __asm__("sta $FF00,y");
 
             //b
-            __asm__("lda #8");
-            __asm__("jsr %v", getbithuff);
-            __asm__("ldy %v", col);
-
-            __asm__("ldx #0");
-            __asm__("cmp #0");
-            __asm__("bpl %g", pos3);
-            __asm__("dex");
-            pos3:
-            __asm__("stx tmp4");  // tk << 4
-            __asm__("asl a");
-            __asm__("rol tmp4");
-            __asm__("asl a");
-            __asm__("rol tmp4");
-            __asm__("asl a");
-            __asm__("rol tmp4");
-            __asm__("asl a");
-            __asm__("rol tmp4");
-            __asm__("sta tmp3");
-
             __asm__("clc");
 cb1l_off2b: __asm__("lda $FF02,y");
 cb2l_off2b: __asm__("adc $FF02,y");
@@ -893,34 +893,14 @@ cb1h_off1d: __asm__("adc $FF01,y");
             __asm__("ror a");
 
             __asm__("clc");
-            __asm__("adc tmp3");
+tk3_l:      __asm__("adc #$FF");
 cb2l_off1b: __asm__("sta $FF01,y");
 
             __asm__("lda tmp1");
-            __asm__("adc tmp4");
+            __asm__("adc ptr4");
 cb2h_off1b: __asm__("sta $FF01,y");
 
             /* Second with col - 1*/
-            __asm__("lda #8");
-            __asm__("jsr %v", getbithuff);
-            __asm__("ldy %v", col);
-
-            __asm__("ldx #0");
-            __asm__("cmp #0");
-            __asm__("bpl %g", pos4);
-            __asm__("dex");
-            pos4:
-            __asm__("stx tmp4");  // tk << 4
-            __asm__("asl a");
-            __asm__("rol tmp4");
-            __asm__("asl a");
-            __asm__("rol tmp4");
-            __asm__("asl a");
-            __asm__("rol tmp4");
-            __asm__("asl a");
-            __asm__("rol tmp4");
-            __asm__("sta tmp3");
-
             __asm__("clc");
 cb1l_off1e: __asm__("lda $FF01,y");
 cb2l_off1c: __asm__("adc $FF01,y");
@@ -944,18 +924,18 @@ cb1h_off0c: __asm__("adc $FF00,y");
 
             /* Store to cur_buf_x */
             __asm__("clc");
-            __asm__("adc tmp3");
+tk4_l:      __asm__("adc #$FF");
 cb2l_off0b: __asm__("sta $FF00,y");
 
             __asm__("lda tmp1");
-            __asm__("adc tmp4");
+            __asm__("adc ptr4+1");
 cb2h_off0b: __asm__("sta $FF00,y");
 
             __asm__("jmp %g", tree_done);
 
         tree_zero:
           nine_reps_loop:
-            __asm__("ldx %v+1", col);
+            __asm__("ldx %v", colh);
             __asm__("bne %g", col_gt1a);
             __asm__("lda %v", col);
             __asm__("cmp #3");
@@ -983,11 +963,11 @@ cb2h_off0b: __asm__("sta $FF00,y");
 
             __asm__("lda #>(%v+10*256*2)", huff_split);
             __asm__("sta %v", huff_num);
+            __asm__("lda %v", col);
             do_rep_loop:
               __asm__("sec");
-              __asm__("lda %v", col);
               __asm__("bne %g", declow2);
-              __asm__("dec %v+1", col);
+              __asm__("dec %v", colh);
               __asm__("dec %g+2", cb0h_off0a);
               __asm__("dec %g+2", cb0h_off0b);
               __asm__("dec %g+2", cb0h_off0c);
@@ -1047,7 +1027,7 @@ cb2h_off0b: __asm__("sta $FF00,y");
               __asm__("dec %g+2", cb1l_off1d);
               __asm__("dec %g+2", cb1l_off1e);
               __asm__("dec %g+2", cb1l_off1f);
-              __asm__("dec %g+2", cb1l_off1g);
+              // __asm__("dec %g+2", cb1l_off1g);
               __asm__("dec %g+2", cb1l_off1h);
               __asm__("dec %g+2", cb1l_off1i);
               __asm__("dec %g+2", cb1l_off1j);
@@ -1073,16 +1053,15 @@ cb2h_off0b: __asm__("sta $FF00,y");
               __asm__("dec %g+2", cb2l_off1b);
               __asm__("dec %g+2", cb2l_off1c);
               __asm__("dec %g+2", cb2l_off1d);
-              __asm__("dec %g+2", cb2l_off1e);
+              // __asm__("dec %g+2", cb2l_off1e);
               __asm__("dec %g+2", cb2l_off2b);
               __asm__("dec %g+2", cb2l_off2c);
               declow2:
               __asm__("sbc #2");
               __asm__("sta %v", col);
+              __asm__("tay");
 
-              //c
               __asm__("clc");
-              __asm__("ldy %v", col);
 cb0l_off2b:   __asm__("lda $FF02,y");
 cb1l_off2c:   __asm__("adc $FF02,y");
               __asm__("tax");
@@ -1106,11 +1085,11 @@ cb1l_off1f:   __asm__("sta $FF01,y");
 
               /* Second */
               __asm__("clc");
-cb0l_off1d:   __asm__("lda $FF01,y");
-cb1l_off1g:   __asm__("adc $FF01,y");
+// cb1l_off1g:   __asm__("lda $FF01,y"); already good
+cb0l_off1d:   __asm__("adc $FF01,y");
               __asm__("tax");
-cb0h_off1d:   __asm__("lda $FF01,y");
-cb1h_off1g:   __asm__("adc $FF01,y");
+cb1h_off1g:   __asm__("lda $FF01,y");
+cb0h_off1d:   __asm__("adc $FF01,y");
               __asm__("ror a");
               __asm__("sta tmp1");
               __asm__("txa");
@@ -1152,11 +1131,11 @@ cb2l_off1d:   __asm__("sta $FF01,y");
 
               /* Second */
               __asm__("clc");
-cb1l_off1i:   __asm__("lda $FF01,y");
-cb2l_off1e:   __asm__("adc $FF01,y");
+// cb2l_off1e:   __asm__("lda $FF01,y");
+cb1l_off1i:   __asm__("adc $FF01,y");
               __asm__("tax");
-cb1h_off1i:   __asm__("lda $FF01,y");
-cb2h_off1e:   __asm__("adc $FF01,y");
+cb2h_off1e:   __asm__("lda $FF01,y");
+cb1h_off1i:   __asm__("adc $FF01,y");
               __asm__("ror a");
               __asm__("sta tmp1");
               __asm__("txa");
@@ -1178,56 +1157,50 @@ cb2l_off0c:   __asm__("sta $FF00,y");
               __asm__("beq %g", rep_even);
 
               // tk = getbithuff(8) << 4;
+              __asm__("ldx #0");
+              __asm__("stx tmp2");
+
               __asm__("lda #8");
               __asm__("jsr %v", getbithuff);
-
-              __asm__("ldx #0");
-              __asm__("cmp #0");
               __asm__("bpl %g", pos5);
-              __asm__("dex");
+              __asm__("dec tmp2");
               pos5:
-              __asm__("stx tmp4");
               __asm__("asl a");
-              __asm__("rol tmp4");
+              __asm__("rol tmp2");
               __asm__("asl a");
-              __asm__("rol tmp4");
+              __asm__("rol tmp2");
               __asm__("asl a");
-              __asm__("rol tmp4");
+              __asm__("rol tmp2");
               __asm__("asl a");
-              __asm__("rol tmp4");
+              __asm__("rol tmp2");
               __asm__("tax");
 
               //e
               __asm__("clc");
 cb0l_off0c:   __asm__("adc $FF00,y");
 cb0l_off0d:   __asm__("sta $FF00,y");
-              __asm__("lda tmp4");
+              __asm__("lda tmp2");
 cb0h_off0c:   __asm__("adc $FF00,y");
 cb0h_off0d:   __asm__("sta $FF00,y");
 
-              __asm__("clc");
               __asm__("txa");
-              __asm__("iny");
 cb0l_off1e:   __asm__("adc $FF01,y");
 cb0l_off1f:   __asm__("sta $FF01,y");
-              __asm__("lda tmp4");
+              __asm__("lda tmp2");
 cb0h_off1e:   __asm__("adc $FF01,y");
 cb0h_off1f:   __asm__("sta $FF01,y");
 
-              __asm__("clc");
               __asm__("txa");
 cb1l_off0f:   __asm__("adc $FF00,y");
 cb1l_off0g:   __asm__("sta $FF00,y");
-              __asm__("lda tmp4");
+              __asm__("lda tmp2");
 cb1h_off0f:   __asm__("adc $FF00,y");
 cb1h_off0g:   __asm__("sta $FF00,y");
 
-              __asm__("clc");
               __asm__("txa");
-              __asm__("iny");
 cb1l_off1j:   __asm__("adc $FF01,y");
 cb1l_off1k:   __asm__("sta $FF01,y");
-              __asm__("lda tmp4");
+              __asm__("lda tmp2");
 cb1h_off1j:   __asm__("adc $FF01,y");
 cb1h_off1k:   __asm__("sta $FF01,y");
 
@@ -1241,8 +1214,9 @@ cb1h_off1k:   __asm__("sta $FF01,y");
             __asm__("beq %g", check_high);
             __asm__("jmp %g", do_rep_loop);
             check_high:
-            __asm__("ldx %v+1", col);
+            __asm__("ldx %v", colh);
             __asm__("beq %g", rep_loop_done);
+            __asm__("tay"); // fix ZERO flag needed at do_rep_loop
             __asm__("jmp %g", do_rep_loop);
             rep_loop_done:
             __asm__("lda %v", nreps);
@@ -1255,7 +1229,7 @@ cb1h_off1k:   __asm__("sta $FF01,y");
       __asm__("beq %g", check_high2);
       __asm__("jmp %g", col_loop1);
       check_high2:
-      __asm__("ldx %v+1", col);
+      __asm__("ldx %v", colh);
       __asm__("beq %g", col_loop1_done);
       __asm__("jmp %g", col_loop1);
       col_loop1_done:
@@ -1282,13 +1256,13 @@ cb1h_off1k:   __asm__("sta $FF01,y");
       __asm__("sta %v", y);
 
       __asm__("ldy #<(%v)", buf_1);
-      __asm__("sty %v", cur_buf_1l);
-      __asm__("sty %v", cur_buf_1h);
+      __asm__("sty %v", cur_buf_0l);
+      __asm__("sty %v", cur_buf_0h);
       __asm__("lda #>(%v)", buf_1);
-      __asm__("sta %v+1", cur_buf_1l);
+      __asm__("sta %v+1", cur_buf_0l);
       __asm__("clc");
       __asm__("adc #>%w", DATABUF_SIZE/2);
-      __asm__("sta %v+1", cur_buf_1h);
+      __asm__("sta %v+1", cur_buf_0h);
 
       loop5:
         __asm__("lda #4");
@@ -1301,17 +1275,17 @@ cb1h_off1k:   __asm__("sta $FF01,y");
           __asm__("lsr a");
           __asm__("tay");
 #if 0 // define for precise divisions
-          __asm__("lda (%v),y", cur_buf_1h);
+          __asm__("lda (%v),y", cur_buf_0h);
           __asm__("tax");
-          __asm__("lda (%v),y", cur_buf_1l);
+          __asm__("lda (%v),y", cur_buf_0l);
           __asm__("jsr pushax");
           __asm__("lda %v", t);
           __asm__("jsr tosudiva0");
           __asm__("ldy tmp1");
 #else
-          __asm__("lda (%v),y", cur_buf_1h);
+          __asm__("lda (%v),y", cur_buf_0h);
           __asm__("tax");
-          __asm__("lda (%v),y", cur_buf_1l);
+          __asm__("lda (%v),y", cur_buf_0l);
           __asm__("ldy %v", t);
           __asm__("jsr approx_div16x8_direct");
           __asm__("ldy tmp1");
@@ -1329,15 +1303,15 @@ cb1h_off1k:   __asm__("sta $FF01,y");
         __asm__("bne %g", x_loop);
 
         __asm__("clc");
-        __asm__("lda %v", cur_buf_1l);
+        __asm__("lda %v", cur_buf_0l);
         __asm__("adc #<%w", (WIDTH/8));
-        __asm__("sta %v", cur_buf_1l);
-        __asm__("sta %v", cur_buf_1h);
-        __asm__("lda %v+1", cur_buf_1l);
+        __asm__("sta %v", cur_buf_0l);
+        __asm__("sta %v", cur_buf_0h);
+        __asm__("lda %v+1", cur_buf_0l);
         __asm__("adc #>%w", (WIDTH/8));
-        __asm__("sta %v+1", cur_buf_1l);
+        __asm__("sta %v+1", cur_buf_0l);
         __asm__("adc #>%w", DATABUF_SIZE/2);
-        __asm__("sta %v+1", cur_buf_1h);
+        __asm__("sta %v+1", cur_buf_0h);
 
         __asm__("clc");
         __asm__("lda %v", raw_ptr1);
@@ -1359,13 +1333,13 @@ cb1h_off1k:   __asm__("sta $FF01,y");
         noof22:
 
       __asm__("ldy #<(%v)", buf_2);
-      __asm__("sty %v", cur_buf_1l);
-      __asm__("sty %v", cur_buf_1h);
+      __asm__("sty %v", cur_buf_0l);
+      __asm__("sty %v", cur_buf_0h);
       __asm__("lda #>(%v)", buf_2);
-      __asm__("sta %v+1", cur_buf_1l);
+      __asm__("sta %v+1", cur_buf_0l);
       __asm__("clc");
       __asm__("adc #>%w", DATABUF_SIZE/2);
-      __asm__("sta %v+1", cur_buf_1h);
+      __asm__("sta %v+1", cur_buf_0h);
 
         __asm__("jmp %g", loop5);
 
@@ -1456,8 +1430,6 @@ static void consume_extra(void) {
         __asm__("clc");
         __asm__("adc #>%v", huff_split);
         __asm__("sta %v", huff_num);
-        // __asm__("lda #<%v", huff);
-        // __asm__("sta %v", huff_ptr);
 
         __asm__("lda #8");
         __asm__("jsr %v", getbithuff);
@@ -1473,8 +1445,6 @@ static void consume_extra(void) {
           __asm__("clc");
           __asm__("adc #>(%v+10*256*2)", huff_split);
           __asm__("sta %v", huff_num);
-          // __asm__("lda #<%v", huff);
-          // __asm__("sta %v", huff_ptr);
 
           __asm__("lda #8");
           __asm__("jsr %v", getbithuff);
@@ -1531,10 +1501,11 @@ static void consume_extra(void) {
             __asm__("jsr %v", getbithuff);
 
             rep_even_2:
-            __asm__("inc %v", rep);
-            __asm__("lda %v", rep);
-            __asm__("cmp %v", rep_loop);
+            __asm__("ldx %v", rep);
+            __asm__("inx");
+            __asm__("cpx %v", rep_loop);
             __asm__("beq %g", rep_loop_2_done);
+            __asm__("stx %v", rep);
             __asm__("lda %v", col);
             __asm__("bne %g", do_rep_loop_2);
 
@@ -1674,7 +1645,9 @@ void qt_load_raw(uint16 top)
   row_idx_plus2 = raw_image + (WIDTH*2);
 
   for (row=0; row != BAND_HEIGHT; row+=4) {
-    progress_bar(-1, -1, 80*22, (top + row), height);
+    if (!(row & 7)) {
+      progress_bar(-1, -1, 80*22, (top + row), height);
+    }
     #ifdef __CC65__
     huff_num = 0;
     #else
@@ -1686,8 +1659,6 @@ void qt_load_raw(uint16 top)
     getbithuff(6);
 
     c = 0;
-
-    val = val_from_last[last] * t;
 
     init_row();
 
