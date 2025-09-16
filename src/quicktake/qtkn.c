@@ -1567,25 +1567,29 @@ static void copy_data(void) {
     y_loop:
 
     __asm__("ldx #4");
-    copy_loop:
     __asm__("lda %v", y);
     __asm__("and #1");
     __asm__("beq %g", even_y);
     __asm__("lda #<%b", (WIDTH/4)-2);
-    __asm__("sta tmp1");
+    __asm__("sta %g+1", end_copy_loop);
     __asm__("ldy #0");
-    __asm__("jmp %g", inner_copy_loop);
+    __asm__("sty %g+1", start_copy_loop);
+    __asm__("jmp %g", copy_loop);
     even_y:
     __asm__("lda #<%b", (WIDTH/4)-1);
+    __asm__("sta %g+1", end_copy_loop);
     __asm__("ldy #1");
-    __asm__("sta tmp1");
-    inner_copy_loop:
+    __asm__("sty %g+1", start_copy_loop);
+    start_copy_loop:
+    __asm__("ldy #$F0");
+    copy_loop:
     __asm__("lda (%v),y", raw_ptr1);
     __asm__("iny");
     __asm__("sta (%v),y", raw_ptr1);
     __asm__("iny");
-    __asm__("cpy tmp1");
-    __asm__("bne %g", inner_copy_loop);
+    end_copy_loop:
+    __asm__("cpy #$F1");
+    __asm__("bne %g", copy_loop);
 
     __asm__("clc");
     __asm__("lda %v", raw_ptr1);
@@ -1596,11 +1600,10 @@ static void copy_data(void) {
     __asm__("sta %v+1", raw_ptr1);
 
     __asm__("dex");
-    __asm__("bne %g", copy_loop);
+    __asm__("bne %g", start_copy_loop);
 
     /* Finish Y loop */
     __asm__("dec %v", y);
-    __asm__("lda %v", y);
     __asm__("bne %g", y_loop);
 
     __asm__("clc");

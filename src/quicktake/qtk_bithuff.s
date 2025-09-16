@@ -62,11 +62,11 @@ inc_cache_high:
         ; Consider we have time to handle 256b while the
         ; drive restarts
         cpx     #(>CACHE_END)-1
-        bne     :+
+        bcc     inc_vbits
 start_floppy_motor:
         sta     motor_on                 ; Patched if on floppy
 
-:       cpx     #(>CACHE_END)
+        cpx     #(>CACHE_END)
         bne     inc_vbits
 
 
@@ -148,20 +148,22 @@ got_vbits:
 
 lshift_done_h:
         ldx     nbits           ; Now we keep the high byte
-        ldy     min8,x          ; and do the final shift
+        cpx     #8
         beq     do_huff_h
+        ldy     min8,x          ; and do the final shift
 
 :       lsr     a
         dey
         bne     :-              ; Final shift done!
 do_huff_h:
+        tay                     ; Backup result/Use as huff index
+        lda     _vbits          ; Prepare for decrement
+        sec
+
         ldx     _huff_num
         beq     no_huff
-        inx
+        inx                     ; high page
         stx     ha+2
-        tay
-        lda     _vbits
-        sec
 ha:
         sbc     _huff_split+256,y
         sta     _vbits
@@ -169,12 +171,9 @@ _huff_num = *+2
         lda     _huff_split,y
         rts
 no_huff:
-        tax                     ; backup result
-        lda     _vbits
-        sec
         sbc     nbits
         sta     _vbits
-        txa
+        tya
         rts
 
 .segment        "DATA"

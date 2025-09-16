@@ -25,6 +25,17 @@ void initbithuff(void) {
   } while (vbits < 9);
 }
 
+uint16 shifts[] = {
+  0xFF00,
+  0x7F00,
+  0x3F00,
+  0x1F00,
+  0x0F00,
+  0x0700,
+  0x0300,
+  0x0100
+};
+
 uint8 __fastcall__ getbithuff (uint8 n)
 {
   uint8 c;
@@ -54,6 +65,7 @@ uint8 __fastcall__ getbithuff (uint8 n)
   tmp = (tmp & 0x0000FF00);
   /* tmp is now 0x0000AB00 */
 
+  // tmp &= shifts[shift];
   tmp >>= 8;
   /* tmp is now 0x000000AB */
 
