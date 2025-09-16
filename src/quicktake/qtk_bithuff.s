@@ -12,11 +12,11 @@
         .import         _ifd
         .import         floppy_motor_on
         .export         _huff_num
-        .export         _getbithuff
+        .export         _getbithuff6, _getbithuff8
         .export         _cache
         .export         _init_floppy_starter
         .export         _buf_0, _buf_1, _buf_2, _huff_split
-        .importzp       _zp8i, _zp10, _zp11
+        .importzp       _zp8i, _zp10, _zp11, _zp12
 cur_cache_ptr = _prev_ram_irq_vector
 
 .segment        "BSS"
@@ -29,10 +29,10 @@ _huff_split:   .res        19*256*2
 CACHE_END = _cache + CACHE_SIZE
 .assert <CACHE_END = 0, error
 
-_bitbuf = _zp8i
-_vbits  = _zp10
-nbits   = _zp11
-
+_bitbuf     = _zp8i
+_vbits      = _zp10
+nbits       = _zp11
+final_shift = _zp12
 motor_on:.res 1
 
 ; ---------------------------------------------------------------
@@ -42,7 +42,18 @@ motor_on:.res 1
 .segment        "CODE"
 
 _init_floppy_starter:
-        lda     cur_cache_ptr           ; Init local cache
+        ldy     #0                      ; Init bitbuf (consider cache full at very start)
+        lda     (cur_cache_ptr),y
+        sta     _bitbuf+1
+        iny
+        lda     (cur_cache_ptr),y
+        sta     _bitbuf
+        lda     #16
+        sta     _vbits
+
+        lda     cur_cache_ptr           ; Init local cache pointer
+        clc
+        adc     #2                      ; Consider no crossing at very start
         sta     cache_read
         lda     cur_cache_ptr+1
         sta     cache_read+1
@@ -54,20 +65,36 @@ _init_floppy_starter:
         sta     start_floppy_motor+2
 :       rts
 
+refill:
+        ldx     _bitbuf
+        stx     _bitbuf+1
+        ; _bitbuf low byte will be set below
+
+cache_read = *+1
+        lda     $FFFF
+        sta     _bitbuf
+
+        ldy     _vbits
+        ldx     plus8,y
+        stx     _vbits       ; vbits in X for return
+
+        inc     cache_read
+        bne     left_right_shift
+
 inc_cache_high:
         inc     cache_read+1
-        ldx     cache_read+1
+        lda     cache_read+1
 
         ; Check for cache almost-end and restart floppy
         ; Consider we have time to handle 256b while the
         ; drive restarts
-        cpx     #(>CACHE_END)-1
-        bcc     inc_vbits
+        cmp     #(>CACHE_END)-1
+        bcc     left_right_shift
 start_floppy_motor:
         sta     motor_on                 ; Patched if on floppy
 
-        cpx     #(>CACHE_END)
-        bne     inc_vbits
+        cmp     #(>CACHE_END)
+        bne     left_right_shift
 
 
         ; Push read fd
@@ -96,48 +123,45 @@ start_floppy_motor:
         ldx     #>CACHE_SIZE
         jsr     _read
         clc
-        jmp     inc_vbits
-
-initbithuff:
-        ldx     _bitbuf
-        stx     _bitbuf+1
-        ; _bitbuf low byte will be set below
-
-cache_read = *+1
-        lda     $FFFF
-        sta     _bitbuf
-
-        inc     cache_read
-        beq     inc_cache_high
-
-inc_vbits:
-        ldy     _vbits
-        ldx     plus8,y
-        stx     _vbits       ; vbits in X for return
-retinc: cpx     #9           ; will be patched with jmp got_vbits
-        bcc     initbithuff
-        ; Now we're there for the first time, we won't refill more
-        ; than one byte at a time. Patch the previous code for
-        ; faster return.
-        lda     #$4C          ; JMP
-        sta     retinc
-        lda     #<got_vbits
-        sta     retinc+1
-        lda     #>got_vbits
-        sta     retinc+2
-        jmp     got_vbits
-
-_getbithuff:
-        sta     nbits
         ldx     _vbits
-        cpx     #9
-        bcc     initbithuff
+        jmp     left_right_shift
 
-got_vbits:
+_getbithuff6:
+        ldy     #6
+        jmp     _getbithuff
+_getbithuff8:
+        ldy     #8
+_getbithuff:
+        sty     nbits
+        ldx     min8,y
+        stx     final_shift
+
+        ldx     _vbits
+        cpx     #12
+        bcs     left_right_shift
+        cpx     #9
+        bcc     refill
+direct_right_shift:
+        txa
+        sec
+        sbc     nbits
+        tay                     ; Can't be zero
+        lda     _bitbuf
+        ldx     _bitbuf+1
+        stx     tmp4
+
+:       lsr     tmp4
+        ror     a
+        dey
+        bne     :-
+        ldy     final_shift
+        and     mask,y
+        jmp     do_huff_h
+
+left_right_shift:
         lda     _bitbuf+1     ; Load the uint16 bitbuf
         ldy     min16,x       ; shift = 16-vbits
         beq     lshift_done_h
-
         ldx     _bitbuf+0     ; (high byte in A because that's the one we keep)
         stx     tmp4
 
@@ -147,14 +171,13 @@ got_vbits:
         bne     :-              ; Now we have 0x000AABB0
 
 lshift_done_h:
-        ldx     nbits           ; Now we keep the high byte
-        cpx     #8
+        ldy     final_shift     ; and do the final shift
         beq     do_huff_h
-        ldy     min8,x          ; and do the final shift
 
 :       lsr     a
         dey
         bne     :-              ; Final shift done!
+
 do_huff_h:
         tay                     ; Backup result/Use as huff index
         lda     _vbits          ; Prepare for decrement
@@ -164,6 +187,7 @@ do_huff_h:
         beq     no_huff
         inx                     ; high page
         stx     ha+2
+
 ha:
         sbc     _huff_split+256,y
         sta     _vbits
@@ -186,3 +210,4 @@ min8:   .repeat 9, I
 plus8:  .repeat 17, I
         .byte 8+(I)
         .endrepeat
+mask:   .byte $FF, $7F, $3F, $1F, $0F, $07, $03, $01, $00

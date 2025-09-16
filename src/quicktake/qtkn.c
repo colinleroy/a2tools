@@ -67,7 +67,8 @@ static uint8 r, nreps, row, y, t, rep_loop, tree;
 
 static uint16 val;
 #ifndef __CC65__
-static int8 tk, tk1, tk2, tk3, tk4;
+static int8 tk;
+static int16 tk1, tk2, tk3, tk4;
 static uint8 tmp8;
 static uint16 tmp16;
 static uint32 tmp32;
@@ -88,8 +89,8 @@ extern uint8 huff_num;
 #define cur_buf_0h zp6p
 #define col zp7
 static uint8 colh;
-// zp8-11 used by bitbuffer
-#define rep zp12
+// zp8-12 used by bitbuffer
+#define rep zp13
 
 #else
 #define USEFUL_DATABUF_SIZE 321
@@ -109,7 +110,7 @@ static uint8 *cur_buf_0h, *cur_buf_1h, *cur_buf_2h;
 #endif
 static uint8 *row_idx, *row_idx_plus2;
 
-static const int8 src[] = {
+static const uint8 src[] = {
   1,1, 2,3, 3,4, 4,2, 5,7, 6,5, 7,6, 7,8,
   1,0, 2,1, 3,3, 4,4, 5,2, 6,7, 7,6, 8,5, 8,8,
   2,1, 2,3, 3,0, 3,2, 3,4, 4,6, 5,5, 6,7, 6,8,
@@ -257,10 +258,10 @@ void init_top(void) {
     r = src[i];
     t = 256 >> r;
     y = src[i+1];
-    c = (r << 8 | (uint8) y);
+
     do {
-      huff_split[l][s & 0xFF] = c & 0xFF;
-      huff_split[h][s & 0xFF] = c >> 8;
+      huff_split[l][s & 0xFF] = (uint8)y;
+      huff_split[h][s & 0xFF] = r;
       s++;
       if ((s & 0xFF) == 0) {
         l += 2;
@@ -326,31 +327,31 @@ static void decode_row(void) {
             huff_num = (tree+10)*2;
 
             //a
-            tk1 = getbithuff(8);
-            tk2 = getbithuff(8);
-            tk3 = getbithuff(8);
-            tk4 = getbithuff(8);
+            tk1 = ((int8)getbithuff(8))<<4;
+            tk2 = ((int8)getbithuff(8))<<4;
+            tk3 = ((int8)getbithuff(8))<<4;
+            tk4 = ((int8)getbithuff(8))<<4;
             SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1, 
                             (((((GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 2) + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 2)) >> 1)
                               + GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 1)) >> 1)
-                              + (tk1 << 4)));
+                              + tk1));
             /* Second with col - 1*/
             SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 0, 
                             (((((GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1) + GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 1)) >> 1)
                               + GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0)) >> 1)
-                              + (tk2 << 4)));
+                              + tk2));
 
             //b
             SET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 1, 
                             (((((GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 2) + GET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 2)) >> 1)
                               + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1)) >> 1)
-                              + (tk3 << 4)));
+                              + tk3));
 
             /* Second with col - 1*/
             SET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 0, 
                             (((((GET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 1) + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1)) >> 1)
                               + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 0)) >> 1)
-                              + (tk4 << 4)));
+                              + tk4));
 
           }
         } else {
@@ -585,8 +586,7 @@ static void decode_row(void) {
         __asm__("adc #>%v", huff_split);
         __asm__("sta %v", huff_num);
 
-        __asm__("lda #8");
-        __asm__("jsr %v", getbithuff);
+        __asm__("jsr %v", getbithuff8);
         __asm__("asl a");
         __asm__("sta %v", tree);
 
@@ -699,8 +699,7 @@ static void decode_row(void) {
           __asm__("lda #>(%v+18*256*2)", huff_split);
           __asm__("sta %v", huff_num);
 
-          __asm__("lda #8");
-          __asm__("jsr %v", getbithuff);
+          __asm__("jsr %v", getbithuff8);
           __asm__("ldx %v", t);
           __asm__("jsr mult8x8r16_direct");
           __asm__("ldy %v", col);
@@ -708,8 +707,7 @@ cb1l_off1a:__asm__("sta $FF01,y");
           __asm__("txa");
 cb1h_off1a:__asm__("sta $FF01,y");
 
-          __asm__("lda #8");
-          __asm__("jsr %v", getbithuff);
+          __asm__("jsr %v", getbithuff8);
           __asm__("ldx %v", t);
           __asm__("jsr mult8x8r16_direct");
           __asm__("ldy %v", col);
@@ -717,8 +715,7 @@ cb1l_off0a:__asm__("sta $FF00,y");
           __asm__("txa");
 cb1h_off0a:__asm__("sta $FF00,y");
 
-          __asm__("lda #8");
-          __asm__("jsr %v", getbithuff);
+          __asm__("jsr %v", getbithuff8);
           __asm__("ldx %v", t);
           __asm__("jsr mult8x8r16_direct");
           __asm__("ldy %v", col);
@@ -726,8 +723,7 @@ cb2l_off1a:__asm__("sta $FF01,y");
           __asm__("txa");
 cb2h_off1a:__asm__("sta $FF01,y");
 
-          __asm__("lda #8");
-          __asm__("jsr %v", getbithuff);
+          __asm__("jsr %v", getbithuff8);
           __asm__("ldx %v", t);
           __asm__("jsr mult8x8r16_direct");
           __asm__("ldy %v", col);
@@ -749,8 +745,7 @@ cb2h_off0a:__asm__("sta $FF00,y");
             __asm__("stx ptr4");  // ptr1/2/3 used in read()
             __asm__("stx ptr4+1");
             //a
-            __asm__("lda #8");
-            __asm__("jsr %v", getbithuff);
+            __asm__("jsr %v", getbithuff8);
             __asm__("bpl %g", pos1);
             __asm__("dec tmp2");
             pos1:
@@ -764,8 +759,7 @@ cb2h_off0a:__asm__("sta $FF00,y");
             __asm__("rol tmp2");
             __asm__("sta %g+1", tk1_l);
 
-            __asm__("lda #8");
-            __asm__("jsr %v", getbithuff);
+            __asm__("jsr %v", getbithuff8);
             __asm__("bpl %g", pos2);
             __asm__("dec tmp3");
             pos2:
@@ -779,8 +773,7 @@ cb2h_off0a:__asm__("sta $FF00,y");
             __asm__("rol tmp3");
             __asm__("sta %g+1", tk2_l);
 
-            __asm__("lda #8");
-            __asm__("jsr %v", getbithuff);
+            __asm__("jsr %v", getbithuff8);
             __asm__("bpl %g", pos3);
             __asm__("dec ptr4");
             pos3:
@@ -794,8 +787,7 @@ cb2h_off0a:__asm__("sta $FF00,y");
             __asm__("rol ptr4");
             __asm__("sta %g+1", tk3_l);
 
-            __asm__("lda #8");
-            __asm__("jsr %v", getbithuff);
+            __asm__("jsr %v", getbithuff8);
             __asm__("bpl %g", pos4);
             __asm__("dec ptr4+1");
             pos4:
@@ -945,8 +937,7 @@ cb2h_off0b: __asm__("sta $FF00,y");
             col_gt1a:
             __asm__("lda #>(%v+9*256*2)", huff_split);
             __asm__("sta %v", huff_num);
-            __asm__("lda #8");
-            __asm__("jsr %v", getbithuff);
+            __asm__("jsr %v", getbithuff8);
             __asm__("clc");
             __asm__("adc #1");
             check_nreps:
@@ -1160,8 +1151,7 @@ cb2l_off0c:   __asm__("sta $FF00,y");
               __asm__("ldx #0");
               __asm__("stx tmp2");
 
-              __asm__("lda #8");
-              __asm__("jsr %v", getbithuff);
+              __asm__("jsr %v", getbithuff8);
               __asm__("bpl %g", pos5);
               __asm__("dec tmp2");
               pos5:
@@ -1215,7 +1205,7 @@ cb1h_off1k:   __asm__("sta $FF01,y");
             __asm__("jmp %g", do_rep_loop);
             check_high:
             __asm__("ldx %v", colh);
-            __asm__("beq %g", rep_loop_done);
+            __asm__("beq %g", col_loop1_done);
             __asm__("tay"); // fix ZERO flag needed at do_rep_loop
             __asm__("jmp %g", do_rep_loop);
             rep_loop_done:
@@ -1431,8 +1421,7 @@ static void consume_extra(void) {
         __asm__("adc #>%v", huff_split);
         __asm__("sta %v", huff_num);
 
-        __asm__("lda #8");
-        __asm__("jsr %v", getbithuff);
+        __asm__("jsr %v", getbithuff8);
         __asm__("asl a");
         __asm__("sta %v", tree);
 
@@ -1441,19 +1430,14 @@ static void consume_extra(void) {
           __asm__("dec %v", col);
 
           //huff_ptr = huff[tree + 10];
-          __asm__("lda %v", tree);
           __asm__("clc");
           __asm__("adc #>(%v+10*256*2)", huff_split);
           __asm__("sta %v", huff_num);
 
-          __asm__("lda #8");
-          __asm__("jsr %v", getbithuff);
-          __asm__("lda #8");
-          __asm__("jsr %v", getbithuff);
-          __asm__("lda #8");
-          __asm__("jsr %v", getbithuff);
-          __asm__("lda #8");
-          __asm__("jsr %v", getbithuff);
+          __asm__("jsr %v", getbithuff8);
+          __asm__("jsr %v", getbithuff8);
+          __asm__("jsr %v", getbithuff8);
+          __asm__("jsr %v", getbithuff8);
 
         __asm__("jmp %g", tree_zero_2_done);
         tree_zero_2:
@@ -1465,12 +1449,9 @@ static void consume_extra(void) {
             __asm__("jmp %g", check_nreps_2);
 
             col_gt1:
-            // __asm__("lda %v", huff_9);
-            // __asm__("sta %v", huff_ptr);
             __asm__("lda #>(%v+9*256*2)", huff_split);
             __asm__("sta %v", huff_num);
-            __asm__("lda #8");
-            __asm__("jsr %v", getbithuff);
+            __asm__("jsr %v", getbithuff8);
             __asm__("clc");
             __asm__("adc #1");
 
@@ -1483,22 +1464,19 @@ static void consume_extra(void) {
             nreps_check_done_2:
             __asm__("sta %v", rep_loop);
 
-            // __asm__("lda %v", huff_10);
-            // __asm__("sta %v", huff_ptr);
             __asm__("lda #>(%v+10*256*2)", huff_split);
             __asm__("sta %v", huff_num);
 
-            __asm__("ldy #$00");
-            __asm__("sty %v", rep);
+            __asm__("ldx #$00");
+            __asm__("stx %v", rep);
             do_rep_loop_2:
             __asm__("dec %v", col);
 
-            __asm__("lda %v", rep);
+            __asm__("txa");
             __asm__("and #1");
             __asm__("beq %g", rep_even_2);
 
-            __asm__("lda #8");
-            __asm__("jsr %v", getbithuff);
+            __asm__("jsr %v", getbithuff8);
 
             rep_even_2:
             __asm__("ldx %v", rep);
@@ -1508,7 +1486,7 @@ static void consume_extra(void) {
             __asm__("stx %v", rep);
             __asm__("lda %v", col);
             __asm__("bne %g", do_rep_loop_2);
-
+            __asm__("beq %g", check_c_loop);
             rep_loop_2_done:
           __asm__("lda %v", nreps);
           __asm__("cmp #9");
@@ -1516,7 +1494,7 @@ static void consume_extra(void) {
         tree_zero_2_done:
       __asm__("lda %v", col);
       __asm__("bne %g", col_loop2);
-
+    check_c_loop:
     __asm__("dec %v", c);
     __asm__("beq %g", c_loop_done);
     __asm__("jmp %g", c_loop);
@@ -1628,6 +1606,8 @@ void qt_load_raw(uint16 top)
   if (top == 0) {
 #ifdef __CC65__
     init_floppy_starter();
+#else
+    initbithuff();
 #endif
     /* Init */
     init_top();
@@ -1653,13 +1633,17 @@ void qt_load_raw(uint16 top)
     }
     #ifdef __CC65__
     huff_num = 0;
+    __asm__("jsr %v", getbithuff6);
+    __asm__("sta %v", t);
+    __asm__("jsr %v", getbithuff6);
+    __asm__("jsr %v", getbithuff6);
     #else
     huff_num = 255;
-    #endif
     t = getbithuff(6);
     /* Ignore those */
     getbithuff(6);
     getbithuff(6);
+    #endif
 
     c = 0;
 
