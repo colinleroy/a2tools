@@ -251,35 +251,24 @@ static void init_row(void) {
 
 void init_top(void) {
   static uint8 l, h;
-  uint8 last, last_set = 0;
 
   l = 0;
   h = 1;
   for (s = i = 0; i != sizeof src; i += 2) {
+    uint8 code = s & 0xFF;
     r = src[i];
     t = 256 >> r;
-    y = src[i+1];
 
-    do {
-      uint8 code = s & 0xFF;
-      // huff_split[l][code] = (uint8)y;
-      // huff_split[h][code] = r;
+    code >>= 8-r;
+    huff_split[l][code] = src[i+1];
+    huff_split[h][code] = r;
+    // printf("huff[%d][%.*b] = %d (r%d)\n", l, r, code, y, r);
 
-      if (y != last || !last_set) {
-        code >>= 8-r;
-        huff_split[l][code] = y;
-        huff_split[h][code] = r;
-        // printf("huff[%d][%.*b] = %d (r%d)\n", l, r, code, y, r);
-        last = y;
-        last_set = 1;
-      }
-
-      s++;
-      if ((s & 0xFF) == 0) {
-        l += 2;
-        h += 2;
-      }
-    } while (--t);
+    if (s >> 8 != (s+t) >> 8) {
+      l += 2;
+      h += 2;
+    }
+    s += t;
   }
 
   for (c=0; c != 256; c++) {
@@ -289,7 +278,6 @@ void init_top(void) {
     // huff_split[18*2+1][c] = r;
 
     huff_split[18*2][c] = y;
-    huff_split[18*2+1][c] = 1;
     // printf("huff[%d][%.*b] = %d (r%d)\n", l, 8, c, y, r);
   }
 
