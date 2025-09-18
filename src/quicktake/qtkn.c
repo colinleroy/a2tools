@@ -249,9 +249,6 @@ static void init_row(void) {
 #endif
 }
 
-uint8 new_huff[19*2][256]; /* codes in low valid in high */
-uint8 minbits[40] = {0};
-
 void init_top(void) {
   static uint8 l, h;
   uint8 last, last_set = 0;
@@ -265,18 +262,14 @@ void init_top(void) {
 
     do {
       uint8 code = s & 0xFF;
-      huff_split[l][code] = (uint8)y;
-      huff_split[h][code] = r;
-
-      if (code == 0) {
-        minbits[l] = r;
-      }
+      // huff_split[l][code] = (uint8)y;
+      // huff_split[h][code] = r;
 
       if (y != last || !last_set) {
         code >>= 8-r;
-        new_huff[l][code] = y;
-        new_huff[h][code] = 1;
-        printf("huff[%d][%.*b] = %d (r%d)\n", l, r, code, y, r);
+        huff_split[l][code] = y;
+        huff_split[h][code] = r;
+        // printf("huff[%d][%.*b] = %d (r%d)\n", l, r, code, y, r);
         last = y;
         last_set = 1;
       }
@@ -292,16 +285,12 @@ void init_top(void) {
   for (c=0; c != 256; c++) {
     y = (1284 | c) & 0xFF;
     r = (1284 | c) >> 8;
+    // huff_split[18*2][c] = y;
+    // huff_split[18*2+1][c] = r;
+
     huff_split[18*2][c] = y;
-    huff_split[18*2+1][c] = r;
-
-    if (c == 0) {
-      minbits[18*2] = r;
-    }
-
-    new_huff[18*2][c] = y;
-    new_huff[18*2+1][c] = 1;
-    printf("huff[%d][%.*b] = %d (r%d)\n", l, 8, c, y, r);
+    huff_split[18*2+1][c] = 1;
+    // printf("huff[%d][%.*b] = %d (r%d)\n", l, 8, c, y, r);
   }
 
   cur_buf_0l = buf_0;
