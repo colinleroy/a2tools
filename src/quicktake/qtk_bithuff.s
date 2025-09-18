@@ -12,11 +12,11 @@
         .import         _ifd
         .import         floppy_motor_on
         .export         _huff_num
-        .export         _getbithuff6, _getbithuff8
+        .export         _getbits6, _getbithuff, _getbithuff36
         .export         _cache
         .export         _init_floppy_starter
         .export         _buf_0, _buf_1, _buf_2, _huff_split
-        .importzp       _zp8i, _zp10, _zp11, _zp12
+        .importzp       _zp8, _zp9, _zp10, _zp11, _zp12
 cur_cache_ptr = _prev_ram_irq_vector
 
 .segment        "BSS"
@@ -25,15 +25,17 @@ _cache:        .res        CACHE_SIZE,$00
 _buf_0:        .res        $400
 _buf_1:        .res        $400
 _buf_2:        .res        $400
-_huff_split:   .res        19*256*2
+_huff_split:   .res        (18*256*2)+256
 CACHE_END = _cache + CACHE_SIZE
 .assert <CACHE_END = 0, error
 
-_bitbuf     = _zp8i
+_bitbuf     = _zp8
+_next       = _zp9
 _vbits      = _zp10
-nbits       = _zp11
-final_shift = _zp12
-motor_on:.res 1
+peek        = _zp11
+readn       = _zp12
+curvbits    = _zp12     ; Shared with readn
+motor_on:    .res 1
 
 ; ---------------------------------------------------------------
 ; unsigned char __near__ __fastcall__ getbithuff (unsigned char n)
@@ -44,11 +46,11 @@ motor_on:.res 1
 _init_floppy_starter:
         ldy     #0                      ; Init bitbuf (consider cache full at very start)
         lda     (cur_cache_ptr),y
-        sta     _bitbuf+1
+        sta     _bitbuf
         iny
         lda     (cur_cache_ptr),y
-        sta     _bitbuf
-        lda     #16
+        sta     _next
+        lda     #8
         sta     _vbits
 
         lda     cur_cache_ptr           ; Init local cache pointer
@@ -65,38 +67,42 @@ _init_floppy_starter:
         sta     start_floppy_motor+2
 :       rts
 
+; Must never destroy A or Y
 refill:
-        ldx     _bitbuf
-        stx     _bitbuf+1
-        ; _bitbuf low byte will be set below
+        ldx     _next
+        stx     _bitbuf
 
 cache_read = *+1
-        lda     $FFFF
-        sta     _bitbuf
+        ldx     $FFFF
+        stx     _next
 
-        ldy     _vbits
-        ldx     plus8,y
-        stx     _vbits       ; vbits in X for return
+        ldx     #7
+        stx     _vbits
 
         inc     cache_read
-        bne     left_right_shift
+        beq     inc_cache_high
+        rts
 
 inc_cache_high:
         inc     cache_read+1
-        lda     cache_read+1
+        ldx     cache_read+1
 
         ; Check for cache almost-end and restart floppy
         ; Consider we have time to handle 256b while the
         ; drive restarts
-        cmp     #(>CACHE_END)-1
-        bcc     left_right_shift
+        cpx     #(>CACHE_END)-1
+        bcs     start_floppy_motor
+        rts
+
 start_floppy_motor:
         sta     motor_on                 ; Patched if on floppy
 
-        cmp     #(>CACHE_END)
-        bne     left_right_shift
-
-
+        cpx     #(>CACHE_END)
+        beq     do_read
+        rts
+do_read:
+        sty     ybck
+        sta     abck
         ; Push read fd
         jsr     decsp4
         ldy     #$03
@@ -123,91 +129,94 @@ start_floppy_motor:
         ldx     #>CACHE_SIZE
         jsr     _read
         clc
-        ldx     _vbits
-        jmp     left_right_shift
+ybck = *+1
+        ldy     #$FF
+abck = *+1
+        lda     #$FF
+        rts
 
-_getbithuff6:
-        ldy     #6
-        jmp     _getbithuff
-_getbithuff8:
-        ldy     #8
+refill6:
+        jsr    refill
+        jmp    cont6
+
+_getbits6:
+        lda    #0
+        ldy    #6
+:       dec    _vbits
+        bmi    refill6
+cont6:  asl    _bitbuf
+        rol    a
+        dey
+        bne    :-
+        rts
+
+refillh:
+        jsr    refill
+        jmp    conth
+
 _getbithuff:
-        sty     nbits
-        ldx     min8,y
-        stx     final_shift
-
-        ldx     _vbits
-        cpx     #12
-        bcs     left_right_shift
-        cpx     #9
-        bcc     refill
-direct_right_shift:
-        txa
-        sec
-        sbc     nbits
-        tay                     ; Can't be zero
-        lda     _bitbuf
-        ldx     _bitbuf+1
-        stx     tmp4
-
-:       lsr     tmp4
-        ror     a
-        dey
-        bne     :-
-        ldy     final_shift
-        and     mask,y
-        jmp     do_huff_h
-
-left_right_shift:
-        lda     _bitbuf+1     ; Load the uint16 bitbuf
-        ldy     min16,x       ; shift = 16-vbits
-        beq     lshift_done_h
-        ldx     _bitbuf+0     ; (high byte in A because that's the one we keep)
-        stx     tmp4
-
-:       asl     tmp4
-        rol     a
-        dey
-        bne     :-              ; Now we have 0x000AABB0
-
-lshift_done_h:
-        ldy     final_shift     ; and do the final shift
-        beq     do_huff_h
-
-:       lsr     a
-        dey
-        bne     :-              ; Final shift done!
-
-do_huff_h:
-        tay                     ; Backup result/Use as huff index
-        lda     _vbits          ; Prepare for decrement
-        sec
-
         ldx     _huff_num
-        beq     no_huff
-        inx                     ; high page
-        stx     ha+2
+        inx
+        stx     hb1
 
-ha:
-        sbc     _huff_split+256,y
-        sta     _vbits
+        lda    #0             ; r = 0
+        sta    readn          ; n = 0
+
+:       inc    readn          ; Read until valid code
+        dec    _vbits
+        bmi    refillh
+conth:  asl    _bitbuf
+        rol    a
+        tax
+        
+hb1 = *+2                     ; Get num bits
+        ldy     _huff_split+256,x
+        cpy     readn
+        bne    :-
+
 _huff_num = *+2
-        lda     _huff_split,y
-        rts
-no_huff:
-        sbc     nbits
-        sta     _vbits
-        tya
+        lda     _huff_split,x
         rts
 
-.segment        "DATA"
-min16:  .repeat 17, I
-        .byte 16-(I)
-        .endrepeat
-min8:   .repeat 9, I
-        .byte 8-(I)
-        .endrepeat
-plus8:  .repeat 17, I
-        .byte 8+(I)
-        .endrepeat
-mask:   .byte $FF, $7F, $3F, $1F, $0F, $07, $03, $01, $00
+refill36:
+        jsr    refill
+        jmp    cont36
+
+_getbithuff36:
+        lda    #0             ; Read and consume 5 bits
+        ldy    #5
+:       dec    _vbits
+        bmi    refill36
+cont36: asl    _bitbuf
+        rol    a
+        dey
+        bne    :-
+
+        ldx    _vbits
+        stx    curvbits
+
+        ldx    _bitbuf        ; Now peek next 3 bits
+        stx    peek
+
+        asl    peek           ; One,
+        rol    a
+
+        dec    curvbits
+        bne    :+
+        ldx    _next
+        stx    peek
+
+:       asl    peek           ; Two,
+        rol    a
+
+        dec    curvbits
+        bne    :+
+        ldx    _next
+        stx    peek
+
+:       asl    peek           ; Three
+        rol    a
+
+        tax                   ; We done
+        lda    _huff_split+36*256,x
+        rts

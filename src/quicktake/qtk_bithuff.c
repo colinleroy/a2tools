@@ -11,8 +11,6 @@ uint8 cache[CACHE_SIZE];
 uint8 bitbuf=0, next = 0;
 uint8 vbits=0;
 
-extern uint8 huff_split[19*2][256]; /* codes in low bits in high */
-
 void initbithuff(void) {
   /* Consider we won't run out of cache there (at the very start). */
     bitbuf = *(cur_cache_ptr++);
@@ -31,82 +29,72 @@ void refill(void) {
 }
 
 uint8 getbit(void) {
-  uint8 r = bitbuf & 0x80 ? 1:0;
-
-  bitbuf <<= 1;
-  vbits--;
+  uint8 r;
   if (vbits == 0) {
     refill();
   }
+  r = bitbuf & 0x80 ? 1:0;
+
+  bitbuf <<= 1;
+  vbits--;
 
   return r;
 }
 
-uint8 __fastcall__ getbithuff (uint8 n) {
+uint8 __fastcall__ getbits6 (void) {
   uint8 r = 0;
-
-  if (n == 6) {
-    /* non-huff */
-    while (n--) {
-      r = (r<<1) | getbit();
-    }
-    // printf("has %8b\n", r);
-    return r;
-  }
-
-  if (huff_num == 36) {
-    uint8 peek;
-    int8 curvbits;
-    /* weird special case, needing 8 bits but consuming 5.
-     * forces us to to 16bit bitbuffer */
-    n = 5;
-    while (n--) {
-      r = (r<<1) | getbit();
-    }
-
-    peek = bitbuf;
-    curvbits = vbits;
-
-    r = (r << 1) | (peek & 0x80 ? 1:0);
-    peek <<= 1;
-    curvbits--;
-    if (curvbits == 0) {
-      peek = next;
-    }
-
-    r = (r << 1) | (peek & 0x80 ? 1:0);
-    peek <<= 1;
-    curvbits--;
-    if (curvbits == 0) {
-      peek = next;
-    }
-
-    r = (r << 1) | (peek & 0x80 ? 1:0);
-    // printf("huff36: value for %08b = %d\n", r, huff_split[huff_num][r]);
-    return huff_split[huff_num][r];
-  }
-  
-  n = huff_split[huff_num+1][0];
-  // printf("bitbuf [%16b] huff %d, get %d bits, ", bitbuf, huff_num, n);
-  if (n > 7) {
-    // printf("(weird.)");
-  }
+  uint8 n = 6;
   while (n--) {
     r = (r<<1) | getbit();
   }
-  // printf("got %8b\n", r);
+  // printf("has %8b\n", r);
+  return r;
+}
 
-  n = huff_split[huff_num+1][0];
-  while (huff_split[huff_num+1][r] != n) {
+uint8 __fastcall__ getbithuff (void) {
+  uint8 r = 0;
+  uint8 n = 0;
+
+  do {
     n++;
-    if (n > 8) {
-      // printf("no valid huff\n");
-      exit(1);
-    }
     // printf(" %8b not valid\n", r);
     r = (r<<1) | getbit();
-  }
+  } while (huff_split[huff_num+1][r] != n);
 
   // printf("value for [%02d][%8b] = %d\n", huff_num, r, huff_split[huff_num][r]);
   return huff_split[huff_num][r];
+}
+
+uint8 __fastcall__ getbithuff36 (void) {
+  uint8 r = 0;
+  uint8 n;
+  uint8 peek;
+  int8 curvbits;
+  /* weird special case, needing 8 bits but consuming 5.
+   * forces us to to 16bit bitbuffer */
+  n = 5;
+  while (n--) {
+    r = (r<<1) | getbit();
+  }
+
+  peek = bitbuf;
+  curvbits = vbits;
+
+  r = (r << 1) | (peek & 0x80 ? 1:0);
+  peek <<= 1;
+  curvbits--;
+  if (curvbits == 0) {
+    peek = next;
+  }
+
+  r = (r << 1) | (peek & 0x80 ? 1:0);
+  peek <<= 1;
+  curvbits--;
+  if (curvbits == 0) {
+    peek = next;
+  }
+
+  r = (r << 1) | (peek & 0x80 ? 1:0);
+  // printf("huff36: value for %08b = %d\n", r, huff_split[huff_num][r]);
+  return huff_split[36][r];
 }
