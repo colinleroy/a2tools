@@ -226,7 +226,6 @@ static void init_row(void) {
 
     /* Shift >> 8 */
     __asm__("txa");
-    /* Then 4 , inlined */
     __asm__("jmp %g", store_buf);
 
     null_buf:

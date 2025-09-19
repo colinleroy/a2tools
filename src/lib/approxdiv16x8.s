@@ -52,20 +52,10 @@ last_mult:
         ; bc_sum = ad(high only)+bc (in A)
         clc
         adc     ad_h
-        bcc     nocarry
-        adc     ac_l
-        tay
-        lda     ac_h
-        adc     #$01
-        tax
-        tya
-        rts
-
-nocarry:
-        adc     ac_l
-        tay
-        lda     ac_h
-        adc     #$00
-        tax
-        tya
-        rts
+        ldx     ac_h
+        bcc     :+
+        inx
+:       adc     ac_l
+        bcc     :+
+        inx
+:       rts

@@ -25,7 +25,7 @@ resH   = tmp2
 
 ; Multiply inputB(ptr2) by AX (X:h, A:L), result in sreg/AX (sreg:h, X:m, A:L)
 mult16x16r24_direct:
-         stx     AhBl+1
+         stx     sreg+1
          sta     BhAl+1
          ldy     #0
          sty     sreg
@@ -40,7 +40,7 @@ AlBl:
 
          ; X is still inputB
 AhBl:
-         lda     #$FF         ; Patched with A high byte
+         lda     sreg+1       ; A high byte
          beq     doBhAl       ; Skip if inputA high is 0
          MULT_AX_STORE_HIGH sreg
          clc
@@ -66,7 +66,7 @@ BhAlRh:  lda     #$FF
 
          ; X still Bh
 BhAh:
-         lda     AhBl+1
+         lda     sreg+1       ; A high byte
          beq     skipBh
          MULT_AX_NO_HIGH
          clc
