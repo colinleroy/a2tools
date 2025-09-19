@@ -67,6 +67,55 @@ _init_floppy_starter:
         sta     start_floppy_motor+2
 :       rts
 
+; refill is optimised to go back as fast as possible to
+; getbithuff (which is hotter than getbit6 and getbithuff36,
+; called respectively 200000, 5000, 360 times). Instead of
+; using jsr with a 6-cycle penalty compared to double-jmps,
+; we'll use double-jmps, and update the return jmp target
+; before and after getbits6/huff36.
+.macro UPDATE_REFILL_RET addr
+        ldx    #<addr
+        stx    refillret+1
+        ldx    #>addr
+        stx    refillret+2
+.endmacro
+refill6:
+        UPDATE_REFILL_RET cont6
+        jmp    refill
+cont6:  UPDATE_REFILL_RET conth
+        jmp    contgb6
+
+_getbits6:
+        lda    #0
+        ldy    #6
+:       dec    _vbits
+        bmi    refill6
+contgb6:asl    _bitbuf
+        rol    a
+        dey
+        bne    :-
+        rts
+
+_getbithuff:
+        lda    #0             ; r = 0
+        sta    readn          ; n = 0
+
+:       inc    readn          ; Read until valid code
+        dec    _vbits
+        bmi    refill
+conth:  asl    _bitbuf
+        rol    a
+        tax
+
+_huff_num_h = *+2             ; Get num bits
+        ldy     _huff_split+256,x
+        cpy     readn
+        bne    :-
+
+_huff_num = *+2
+        lda     _huff_split,x
+        rts
+
 ; Must never destroy A or Y
 refill:
         ldx     _next
@@ -81,7 +130,8 @@ cache_read = *+1
 
         inc     cache_read
         beq     inc_cache_high
-        rts
+refillret:
+        jmp     $FFFF
 
 inc_cache_high:
         inc     cache_read+1
@@ -91,15 +141,13 @@ inc_cache_high:
         ; Consider we have time to handle 256b while the
         ; drive restarts
         cpx     #(>CACHE_END)-1
-        bcs     start_floppy_motor
-        rts
+        bcc     refillret
 
 start_floppy_motor:
         sta     motor_on                 ; Patched if on floppy
 
         cpx     #(>CACHE_END)
-        beq     do_read
-        rts
+        bne     refillret
 do_read:
         sty     ybck
         sta     abck
@@ -133,57 +181,21 @@ ybck = *+1
         ldy     #$FF
 abck = *+1
         lda     #$FF
-        rts
-
-refill6:
-        jsr    refill
-        jmp    cont6
-
-_getbits6:
-        lda    #0
-        ldy    #6
-:       dec    _vbits
-        bmi    refill6
-cont6:  asl    _bitbuf
-        rol    a
-        dey
-        bne    :-
-        rts
-
-refillh:
-        jsr    refill
-        jmp    conth
-
-_getbithuff:
-        lda    #0             ; r = 0
-        sta    readn          ; n = 0
-
-:       inc    readn          ; Read until valid code
-        dec    _vbits
-        bmi    refillh
-conth:  asl    _bitbuf
-        rol    a
-        tax
-
-_huff_num_h = *+2             ; Get num bits
-        ldy     _huff_split+256,x
-        cpy     readn
-        bne    :-
-
-_huff_num = *+2
-        lda     _huff_split,x
-        rts
+        jmp     refillret
 
 refill36:
-        jsr    refill
-        jmp    cont36
+        UPDATE_REFILL_RET cont36
+        jmp    refill
+cont36: UPDATE_REFILL_RET conth
+        jmp    contgb36
 
 _getbithuff36:
         lda    #0             ; Read and consume 5 bits
         ldy    #5
 :       dec    _vbits
         bmi    refill36
-cont36: asl    _bitbuf
+contgb36:
+        asl    _bitbuf
         rol    a
         dey
         bne    :-
