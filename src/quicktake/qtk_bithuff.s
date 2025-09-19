@@ -164,7 +164,7 @@ _getbithuff:
 conth:  asl    _bitbuf
         rol    a
         tax
-        
+
 _huff_num_h = *+2             ; Get num bits
         ldy     _huff_split+256,x
         cpy     readn

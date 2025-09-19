@@ -1,157 +1,86 @@
 
         .importzp       tmp1, tmp2, ptr1, ptr2, sreg
 
-        .import         popax, sqrLow, sqrHigh, invLow, invHigh, popptr1
-        .export         _mult16x16x32, mult16x16x32_direct
+        .import         popax
+        .export         _mult16x16r32, mult16x16r32_direct
 
-; based on the 8 bit multiply of mult57.a (https://sites.google.com/site/h2obsession/programming/6502)
-; then adjusted for 16 bit multiplication by TobyLobster 
-; (https://github.com/TobyLobster/multiply_test/blob/main/tests/mult56.a)
+        .include        "mult8x8x16_macro.inc"
 ;
-; 16 bit x 16 bit unsigned multiply, 32 bit result
-; Average cycles: 267
-; 1210 bytes
+; 16 bit x 16 bit unsigned multiply, 32 bit result, no overflow indication
+; Average cycles: 200
 
-inputA = ptr1
 inputB = ptr2
+resL   = tmp1
+resH   = tmp2
+;  inputA+1          inputA
+;* inputB+1          inputB
+;______
+;   inputB*inputA
+; + inputB*(inputA+1) << 8
+; + (inputB+1)*inputA << 8
+ _mult16x16r32:
+         sta     inputB
+         stx     inputB+1
+         jsr     popax
 
-; ***************************************************************************************
-; 16 bit x 16 bit unsigned multiply, 32 bit result
-;
-; On Entry:
-;   inputA: multiplier   (2 bytes)
-;   inputB: multiplicand (2 bytes)
-;
-; On Exit:
-;   result: product (4 bytes)
+; Multiply inputB(ptr2) by AX (X:h, A:L), result in sreg/AX (sreg:h, X:m, A:L)
+mult16x16r32_direct:
+         stx     AhBl+1
+         sta     BhAl+1
+         ldy     #0
+         sty     sreg
+         sty     sreg+1
 
-_mult16x16x32:
-        sta     inputB
-        stx     inputB+1
-        jsr     popax
+AlBl:
+         ldx     inputB
+         stx     resH         ; init result. If inputB is zero we need to
+         stx     resL         ; do it before skipping. Otherwise they'll
+         beq     doBhAl       ; be overwritten by this first multiplication.
+         MULT_AX_STORE_LOW resL
+         sta     resH
 
-; Expects high byte of inputA in X, low byte of inputA in A
-mult16x16x32_direct:
-        sta     getLow1+1
-        sta     getHigh1+1
-        sta     inputA
-        stx     inputA+1
-        ldx     inputB          ; (a0*b0)
+         ; X is still inputB
+AhBl:
+         lda     #$FF         ; Patched with A high byte
+         beq     doBhAl       ; Skip if inputA high is 0
+         MULT_AX_STORE_HIGH sreg
+         clc
+         adc     resH
+         sta     resH
+         bcc     doBhAl
+         inc     sreg
 
-        sec
-        sbc     inputB
-        bcs     :+
-        sbc     #0
-        eor     #255
+doBhAl:
+         ldx     inputB+1
+         beq     skipBh       ; Skip last two
+BhAl:
+         lda     #$FF         ; Patched with A low byte
+         beq     BhAh
+         MULT_AX_STORE_HIGH BhAlRh+1
+         clc
+         adc     resH
+         sta     resH
 
-:       tay
-getLow1:
-        lda     sqrLow,x        ; Patched
-        sbc     sqrLow,y
-        sta     sta_result+1    ; low byte
-getHigh1:
-        lda     sqrHigh,x       ; Patched
-        sbc     sqrHigh,y
-        sta     sta_tmp_result_1a+1        ; high byte
+BhAlRh:  lda     #$FF
+         adc     sreg
+         sta     sreg
 
-        lda     inputA+1        ; (a1*b0)
-        ldx     inputB
-        sta     getLow2+1
-        sta     getHigh2+1
-        sec
-        sbc     inputB
-        bcs     :+
-        sbc     #0
-        eor     #255
+         bcc     BhAh
+         inc     sreg+1
 
-:       tay
-getLow2:
-        lda     sqrLow,x        ; Patched
-        sbc     sqrLow,y
-        sta     temp1+1
-getHigh2:
-        lda     sqrHigh,x       ; Patched
-        sbc     sqrHigh,y
-        tax
-temp1:
-        lda     #0              ; Patched
+         ; X still Bh
+BhAh:
+         lda     AhBl+1
+         beq     skipBh
+         MULT_AX
+         clc
+         adc     sreg
+         sta     sreg
 
-        clc
-sta_tmp_result_1a:
-        adc     #$FF
-        sta     sta_tmp_result_1b+1
-
-        txa
-        adc     #0
-        sta     sta_tmp_result_2a+1
-
-        lda     inputA          ;(a0*b1)
-        ldx     inputB+1
-        sta     getLow3+1
-        sta     getHigh3+1
-        sec
-        sbc     inputB+1
-        bcs     :+
-        sbc     #0
-        eor     #255
-
-:       tay
-getLow3:
-        lda     sqrLow,x        ; Patched
-        sbc     sqrLow,y
-        sta     temp2+1
-getHigh3:
-        lda     sqrHigh,x       ; Patched
-        sbc     sqrHigh,y
-        tax
-temp2:
-        lda     #0              ; Patched
-
-        clc
-sta_tmp_result_1b:
-        adc     #$FF
-        sta     sta_tmp_result_1c+1
-        txa
-sta_tmp_result_2a:
-        adc     #$FF
-        sta     sta_tmp_result_2b+1
-
-        lda     #0
-        rol                     ; remember the carry for sreg+1
-        sta     sta_tmp_result_3a+1
-
-        lda     inputA+1        ; (a1*b1)
-        ldx     inputB+1
-        sta     getLow4+1
-        sta     getHigh4+1
-        sec
-        sbc     inputB+1
-        bcs     :+
-        sbc     #0
-        eor     #255
-
-:       tay
-getLow4:
-        lda     sqrLow,x        ; Patched
-        sbc     sqrLow,y
-        sta     temp3+1
-getHigh4:
-        lda     sqrHigh,x       ; Patched
-        sbc     sqrHigh,y
-        tax
-temp3:
-        lda     #0              ; Patched
-
-        clc
-sta_tmp_result_2b:
-        adc     #$FF
-        sta     sreg
-        txa
-sta_tmp_result_3a:
-        adc     #$FF
-        sta     sreg+1
-sta_result:
-        lda     #$FF
-sta_tmp_result_1c:
-        ldx     #$FF
-        rts
+         txa
+         adc     sreg+1
+         sta     sreg+1
+skipBh:
+         lda     resL
+         ldx     resH
+         rts
