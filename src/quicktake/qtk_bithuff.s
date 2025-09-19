@@ -16,25 +16,44 @@
         .export         _cache
         .export         _init_floppy_starter
         .export         _buf_0, _buf_1, _buf_2, _huff_split
+        .export         _shiftl4n_l, _shiftl4n_h
+        .export         _shiftl4p_l, _shiftl4p_h
+        .export         _shiftl3
         .importzp       _zp8, _zp9, _zp10, _zp11, _zp12
 cur_cache_ptr = _prev_ram_irq_vector
 
 .segment        "BSS"
 .align 256
 _cache:        .res        CACHE_SIZE,$00
-_buf_0:        .res        $400
-_buf_1:        .res        $400
-_buf_2:        .res        $400
-_huff_split:   .res        (18*256*2)+256
+
+buf0l:         .res        321
+_shiftl4n_l:   .res        191  ; signed shift left 4 table, neg vals, low byte
+buf0h:         .res        321
+_shiftl4n_h:   .res        191  ; signed shift left 4 table, neg vals, high byte
+
+buf1l:         .res        321
+_shiftl4p_l:   .res        191  ; signed shift left 4 table, pos vals, low byte
+buf1h:         .res        321
+_shiftl4p_h:   .res        191  ; signed shift left 4 table, pos vals, high byte
+
+buf2l:         .res        321
+_shiftl3:      .res        32
+_free5:        .res        159
+.assert <* = 0, error
+buf2h:         .res        321
+_free6:        .res        191
+
+_buf_0 = buf0l
+_buf_1 = buf1l
+_buf_2 = buf2l
+
+_huff_split:   .res        (18*256*2)
 CACHE_END = _cache + CACHE_SIZE
 .assert <CACHE_END = 0, error
 
 _bitbuf     = _zp8
-_next       = _zp9
+readn       = _zp9
 _vbits      = _zp10
-peek        = _zp11
-readn       = _zp12
-curvbits    = _zp12     ; Shared with readn
 motor_on:    .res 1
 
 ; ---------------------------------------------------------------
@@ -47,18 +66,14 @@ _init_floppy_starter:
         ldy     #0                      ; Init bitbuf (consider cache full at very start)
         lda     (cur_cache_ptr),y
         sta     _bitbuf
-        iny
-        lda     (cur_cache_ptr),y
-        sta     _next
         lda     #8
         sta     _vbits
 
-        lda     cur_cache_ptr           ; Init local cache pointer
-        clc
-        adc     #2                      ; Consider no crossing at very start
-        sta     cache_read
-        lda     cur_cache_ptr+1
-        sta     cache_read+1
+        ldx     cur_cache_ptr           ; Init local cache pointer
+        inx                             ; Consider no crossing at very start
+        stx     cache_read
+        ldx     cur_cache_ptr+1
+        stx     cache_read+1
 
         lda     floppy_motor_on         ; Patch motor_on if we use a floppy
         beq     :+
@@ -98,32 +113,32 @@ contgb6:asl    _bitbuf
 
 _getbithuff:
         lda    #0             ; r = 0
-        sta    readn          ; n = 0
+        tay                   ; n = 0
 
-:       inc    readn          ; Read until valid code
+:       iny                   ; Read until valid code
         dec    _vbits
         bmi    refill
 conth:  asl    _bitbuf
         rol    a
-        tax
+        sta    bitscheck+1    ; Patch bitcheck address
+                              ; cpy $nnnn,x is impossible so this is faster
 
+bitscheck:
 _huff_num_h = *+2             ; Get num bits
-        ldy     _huff_split+256,x
-        cpy     readn
+        cpy     _huff_split+256
         bne    :-
 
+        tax
 _huff_num = *+2
         lda     _huff_split,x
         rts
 
 ; Must never destroy A or Y
 refill:
-        ldx     _next
-        stx     _bitbuf
 
 cache_read = *+1
         ldx     $FFFF
-        stx     _next
+        stx     _bitbuf
 
         ldx     #7
         stx     _vbits
@@ -200,31 +215,6 @@ contgb36:
         dey
         bne    :-
 
-        ldx    _vbits
-        stx    curvbits
-
-        ldx    _bitbuf        ; Now peek next 3 bits
-        stx    peek
-
-        asl    peek           ; One,
-        rol    a
-
-        dec    curvbits
-        bne    :+
-        ldx    _next
-        stx    peek
-
-:       asl    peek           ; Two,
-        rol    a
-
-        dec    curvbits
-        bne    :+
-        ldx    _next
-        stx    peek
-
-:       asl    peek           ; Three
-        rol    a
-
         tax                   ; We done
-        lda    _huff_split+36*256,x
+        lda    _shiftl3,x
         rts

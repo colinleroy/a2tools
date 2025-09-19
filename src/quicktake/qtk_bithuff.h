@@ -4,7 +4,7 @@
 #include "platform.h"
 
 extern uint8 huff_num;
-extern uint8 huff_split[18*2+1][256];
+extern uint8 huff_split[18*2][256];
 
 void __fastcall__ reset_bitbuff (void);
 uint8 __fastcall__ get_four_bits (void);
