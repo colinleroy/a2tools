@@ -242,7 +242,6 @@ uint8 gNumMCUSRemainingX, gNumMCUSRemainingY;
 uint8 gMCUOrg[6];
 
 //------------------------------------------------------------------------------
-
 void fillInBuf(void)
 {
    // Reserve a few bytes at the beginning of the buffer for putting back ("stuffing") chars.
@@ -268,6 +267,7 @@ uint16 extendOffsets[] = {
 #endif
 
 //------------------------------------------------------------------------------
+#pragma code-name(push, "LC")
 static void huffCreate(uint8* pBits, HuffTable* pHuffTable)
 {
   int8 i = 15;
@@ -319,6 +319,7 @@ static void huffCreate(uint8* pBits, HuffTable* pHuffTable)
       l_pBits++;
    }
 }
+
 //------------------------------------------------------------------------------
 static HuffTable* getHuffTable(uint8 index)
 {
@@ -333,6 +334,8 @@ static HuffTable* getHuffTable(uint8 index)
       default: return 0;
    }
 }
+#pragma code-name(pop)
+
 //------------------------------------------------------------------------------
 static uint8* getHuffVal(uint8 index)
 {
@@ -347,11 +350,14 @@ static uint8* getHuffVal(uint8 index)
       default: return 0;
    }
 }
+
 //------------------------------------------------------------------------------
 static uint16 getMaxHuffCodes(uint8 index)
 {
    return (index < 2) ? 12 : 255;
 }
+
+#pragma code-name(push, "LC")
 
 #define getLong() (getByteNoFF()<<8|getByteNoFF())
 
@@ -413,6 +419,8 @@ static uint8 readDHTMarker(void)
 
    return 0;
 }
+#pragma code-name(pop)
+
 //------------------------------------------------------------------------------
 
 static uint8 readDQTMarker(void)
