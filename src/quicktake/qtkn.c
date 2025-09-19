@@ -259,6 +259,7 @@ static void init_row(void) {
 #endif
 }
 
+#pragma code-name(push, "LC")
 void init_top(void) {
   static uint8 l, h;
 
@@ -308,6 +309,7 @@ void init_top(void) {
     cur_buf_0h++;
   }
 }
+#pragma code-name(pop)
 
 static void decode_row(void) {
 #ifndef __CC65__
@@ -1671,6 +1673,7 @@ static void copy_data(void) {
 #endif
 }
 
+#pragma code-name(push, "LC")
 void qt_load_raw(uint16 top)
 {
   if (top == 0) {
@@ -1725,6 +1728,7 @@ void qt_load_raw(uint16 top)
     copy_data();
   }
 }
+#pragma code-name(pop)
 
 #pragma register-vars(pop)
 #pragma codesize(pop)

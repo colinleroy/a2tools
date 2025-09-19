@@ -155,7 +155,7 @@ inc_cache_high:
         ; Check for cache almost-end and restart floppy
         ; Consider we have time to handle 256b while the
         ; drive restarts
-        cpx     #(>CACHE_END)-1
+        cpx     #(>CACHE_END)-4
         bcc     refillret
 
 start_floppy_motor:
