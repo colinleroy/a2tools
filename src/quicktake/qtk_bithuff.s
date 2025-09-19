@@ -11,7 +11,7 @@
         .import         _cache_end
         .import         _ifd
         .import         floppy_motor_on
-        .export         _huff_num
+        .export         _huff_num, _huff_num_h
         .export         _getbits6, _getbithuff, _getbithuff36
         .export         _cache
         .export         _init_floppy_starter
@@ -155,10 +155,6 @@ refillh:
         jmp    conth
 
 _getbithuff:
-        ldx     _huff_num
-        inx
-        stx     hb1
-
         lda    #0             ; r = 0
         sta    readn          ; n = 0
 
@@ -169,7 +165,7 @@ conth:  asl    _bitbuf
         rol    a
         tax
         
-hb1 = *+2                     ; Get num bits
+_huff_num_h = *+2             ; Get num bits
         ldy     _huff_split+256,x
         cpy     readn
         bne    :-

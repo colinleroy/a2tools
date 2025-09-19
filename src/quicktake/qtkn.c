@@ -82,7 +82,7 @@ extern uint8 buf_1[DATABUF_SIZE];
 extern uint8 buf_2[DATABUF_SIZE];
 
 extern uint8 huff_split[18*2+1][256];
-extern uint8 huff_num;
+extern uint8 huff_num, huff_num_h;
 
 #define raw_ptr1 zp2ip
 #define cur_buf_0l zp4p
@@ -588,6 +588,8 @@ static void decode_row(void) {
         __asm__("clc");
         __asm__("adc #>%v", huff_split);
         __asm__("sta %v", huff_num);
+        __asm__("adc #1");
+        __asm__("sta %v", huff_num_h);
 
         __asm__("jsr %v", getbithuff);
         __asm__("asl a");
@@ -737,6 +739,8 @@ cb2h_off0a:__asm__("sta $FF00,y");
             //huff_ptr = huff[tree + 10];
             __asm__("adc #>(%v+10*256*2)", huff_split);
             __asm__("sta %v", huff_num);
+            __asm__("adc #1");
+            __asm__("sta %v", huff_num_h);
 
             // Get the four tk vals in advance
             __asm__("ldx #0");
@@ -935,8 +939,10 @@ cb2h_off0b: __asm__("sta $FF00,y");
             __asm__("lda #1"); /* nreps */
             __asm__("jmp %g", check_nreps);
             col_gt1a:
-            __asm__("lda #>(%v+9*256*2)", huff_split);
-            __asm__("sta %v", huff_num);
+            __asm__("ldx #>(%v+9*256*2)", huff_split);
+            __asm__("stx %v", huff_num);
+            __asm__("inx");
+            __asm__("stx %v", huff_num_h);
             __asm__("jsr %v", getbithuff);
             __asm__("clc");
             __asm__("adc #1");
@@ -952,8 +958,10 @@ cb2h_off0b: __asm__("sta $FF00,y");
             __asm__("ldy #$00");
             __asm__("sty %v", rep);
 
-            __asm__("lda #>(%v+10*256*2)", huff_split);
-            __asm__("sta %v", huff_num);
+            __asm__("ldx #>(%v+10*256*2)", huff_split);
+            __asm__("stx %v", huff_num);
+            __asm__("inx");
+            __asm__("stx %v", huff_num_h);
             __asm__("lda %v", col);
             do_rep_loop:
               __asm__("sec");
@@ -1427,6 +1435,8 @@ static void consume_extra(void) {
         __asm__("clc");
         __asm__("adc #>%v", huff_split);
         __asm__("sta %v", huff_num);
+        __asm__("adc #1");
+        __asm__("sta %v", huff_num_h);
 
         __asm__("jsr %v", getbithuff);
         __asm__("asl a");
@@ -1449,6 +1459,8 @@ static void consume_extra(void) {
           __asm__("clc");
           __asm__("adc #>(%v+10*256*2)", huff_split);
           __asm__("sta %v", huff_num);
+          __asm__("adc #1");
+          __asm__("sta %v", huff_num_h);
 
           __asm__("jsr %v", getbithuff);
           __asm__("jsr %v", getbithuff);
@@ -1465,8 +1477,10 @@ static void consume_extra(void) {
             __asm__("jmp %g", check_nreps_2);
 
             col_gt1:
-            __asm__("lda #>(%v+9*256*2)", huff_split);
-            __asm__("sta %v", huff_num);
+            __asm__("ldx #>(%v+9*256*2)", huff_split);
+            __asm__("stx %v", huff_num);
+            __asm__("inx");
+            __asm__("stx %v", huff_num_h);
             __asm__("jsr %v", getbithuff);
             __asm__("clc");
             __asm__("adc #1");
@@ -1480,8 +1494,10 @@ static void consume_extra(void) {
             nreps_check_done_2:
             __asm__("sta %v", rep_loop);
 
-            __asm__("lda #>(%v+10*256*2)", huff_split);
-            __asm__("sta %v", huff_num);
+            __asm__("ldx #>(%v+10*256*2)", huff_split);
+            __asm__("stx %v", huff_num);
+            __asm__("inx");
+            __asm__("stx %v", huff_num_h);
 
             __asm__("ldx #$00");
             __asm__("stx %v", rep);
