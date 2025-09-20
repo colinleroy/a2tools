@@ -61,7 +61,7 @@ static uint8 val_from_last[256] = {
 /* note that each huff[x] share the same low byte addr */
 static int16 x, s, i;
 static uint16 c;
-static uint8 r, nreps, row, y, t, rep_loop, tree;
+static uint8 r, nreps, row, y, factor, t, rep_loop, tree;
 
 /* Wastes bytes, but simplifies adds */
 
@@ -162,10 +162,10 @@ static uint8 last = 16;
 static void init_row(void) {
 #ifndef __CC65__
     if (last > 17)
-      val = (val_from_last[last] * t) >> 4;
+      val = (val_from_last[last] * factor) >> 4;
     else
-      val = ((val_from_last[last]|(val_hi_from_last[last]<<8)) * t) >> 4;
-    last = t;
+      val = ((val_from_last[last]|(val_hi_from_last[last]<<8)) * factor) >> 4;
+    last = factor;
     cur_buf_0l = buf_0;
     cur_buf_0h = buf_0+(DATABUF_SIZE/2);
     if (val == 0x100) {
@@ -205,13 +205,13 @@ static void init_row(void) {
     __asm__("lda %v,y", val_from_last);
     __asm__("ldx %v,y", val_hi_from_last);
     __asm__("jsr pushax");
-    __asm__("lda %v", t);
+    __asm__("lda %v", factor);
     __asm__("sta %v", last);
     __asm__("jsr tosmula0");
     goto shift_val;
     small_val:
     __asm__("lda %v,y", val_from_last);
-    __asm__("ldx %v", t);
+    __asm__("ldx %v", factor);
     __asm__("stx %v", last);
     __asm__("jsr mult8x8r16_direct");
     shift_val:
@@ -415,8 +415,8 @@ void init_top(void) {
 static void decode_row(void) {
 #ifndef __CC65__
     for (r=0; r != 2; r++) {
-      SET_CURBUF_VAL(buf_1, buf_1+(DATABUF_SIZE/2), (WIDTH/2), (t<<7));
-      SET_CURBUF_VAL(buf_2, buf_2+(DATABUF_SIZE/2), (WIDTH/2), (t<<7));
+      SET_CURBUF_VAL(buf_1, buf_1+(DATABUF_SIZE/2), (WIDTH/2), (factor<<7));
+      SET_CURBUF_VAL(buf_2, buf_2+(DATABUF_SIZE/2), (WIDTH/2), (factor<<7));
 
       col = WIDTH/2;
       cur_buf_0l = buf_0 + col;
@@ -442,13 +442,13 @@ static void decode_row(void) {
 
           if (tree == 8) {
             tmp8 = (uint8) getdatahuff8();
-            SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1, tmp8 * t);
+            SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1, tmp8 * factor);
             tmp8 = (uint8) getdatahuff8();
-            SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 0, tmp8 * t);
+            SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 0, tmp8 * factor);
             tmp8 = (uint8) getdatahuff8();
-            SET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 1, tmp8 * t);
+            SET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 1, tmp8 * factor);
             tmp8 = (uint8) getdatahuff8();
-            SET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 0, tmp8 * t);
+            SET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 0, tmp8 * factor);
           } else {
             huff_num = tree+1;
 
@@ -567,11 +567,11 @@ static void decode_row(void) {
             if (cur_buf_1h[x/2] & 0x80) {
               val = 0;
             } else {
-              if (t == 48) {
+              if (factor == 48) {
                 val = GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, x/2);
                 val = div48_l[val>>8]|(div48_h[val>>8]<<8);
               } else {
-                val = GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, x/2) / t;
+                val = GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, x/2) / factor;
               }
               if (val > 255)
                 val = 255;
@@ -597,14 +597,14 @@ static void decode_row(void) {
     __asm__("sta %v", r);
     r_loop:
     // for (r=0; r != 2; r++) {
-      /* t<<7, aslax7 inlined */
-      __asm__("lda %v", t);
+      /* factor<<7, aslax7 inlined */
+      __asm__("lda %v", factor);
       __asm__("lsr a");
       __asm__("tax");
       __asm__("lda #0");
       __asm__("ror");
 
-      /* Update buf1/2[WIDTH/2] = t<<7 */
+      /* Update buf1/2[WIDTH/2] = factor<<7 */
       __asm__("stx %v+%w+512", buf_1, WIDTH/2);
       __asm__("stx %v+%w+512", buf_2, WIDTH/2);
       __asm__("sta %v+%w", buf_1, WIDTH/2);
@@ -842,7 +842,7 @@ static void decode_row(void) {
 
           // tree == 8
           __asm__("jsr %v", getdatahuff8);
-          __asm__("ldx %v", t);
+          __asm__("ldx %v", factor);
           __asm__("jsr mult8x8r16_direct");
           __asm__("ldy %v", col);
 cb1l_off1a:__asm__("sta $FF01,y");
@@ -850,7 +850,7 @@ cb1l_off1a:__asm__("sta $FF01,y");
 cb1h_off1a:__asm__("sta $FF01,y");
 
           __asm__("jsr %v", getdatahuff8);
-          __asm__("ldx %v", t);
+          __asm__("ldx %v", factor);
           __asm__("jsr mult8x8r16_direct");
           __asm__("ldy %v", col);
 cb1l_off0a:__asm__("sta $FF00,y");
@@ -858,7 +858,7 @@ cb1l_off0a:__asm__("sta $FF00,y");
 cb1h_off0a:__asm__("sta $FF00,y");
 
           __asm__("jsr %v", getdatahuff8);
-          __asm__("ldx %v", t);
+          __asm__("ldx %v", factor);
           __asm__("jsr mult8x8r16_direct");
           __asm__("ldy %v", col);
 cb2l_off1a:__asm__("sta $FF01,y");
@@ -866,7 +866,7 @@ cb2l_off1a:__asm__("sta $FF01,y");
 cb2h_off1a:__asm__("sta $FF01,y");
 
           __asm__("jsr %v", getdatahuff8);
-          __asm__("ldx %v", t);
+          __asm__("ldx %v", factor);
           __asm__("jsr mult8x8r16_direct");
           __asm__("ldy %v", col);
 cb2l_off0a:__asm__("sta $FF00,y");
@@ -1439,12 +1439,12 @@ cb2h_off1g:   __asm__("sta $FF01,y");
           __asm__("tax");
           __asm__("lda (%v),y", cur_buf_0l);
           __asm__("jsr pushax");
-          __asm__("lda %v", t);
+          __asm__("lda %v", factor);
           __asm__("jsr tosudiva0");
           __asm__("ldy tmp1");
 #else
           __asm__("lda (%v),y", cur_buf_0h);
-          __asm__("ldy %v", t);
+          __asm__("ldy %v", factor);
           __asm__("cpy #48");
           __asm__("bne %g", slowdiv);
           __asm__("tay");
@@ -1849,11 +1849,11 @@ void qt_load_raw(uint16 top)
     }
     #ifdef __CC65__
     __asm__("jsr %v", getbits6);
-    __asm__("sta %v", t);
+    __asm__("sta %v", factor);
     __asm__("jsr %v", getbits6);
     __asm__("jsr %v", getbits6);
     #else
-    t = getbits6();
+    factor = getbits6();
     /* Ignore those */
     getbits6();
     getbits6();
