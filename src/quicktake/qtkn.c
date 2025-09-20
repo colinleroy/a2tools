@@ -164,20 +164,29 @@ static void init_row(void) {
     last = t;
     cur_buf_0l = buf_0;
     cur_buf_0h = buf_0+(DATABUF_SIZE/2);
-    for (i=USEFUL_DATABUF_SIZE-1; i >=0; i--) {
-      tmp32 = val;
-      if (GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0)) {
-        tmp32 *= GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0);
-        tmp32--;
-        SET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0, tmp32 >> 8);
-      } else {
-        // tmp32 *= 0  == 0
-        // tmp32--     == 0xFFFF
-        // tmp32 >> 12 == 0x0F
-        SET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0, 0x0F);
+    if (val == 0x100) {
+      /* do nothing */
+      for (i=USEFUL_DATABUF_SIZE-1; i >=0; i--) {
+        printf("skip mult\n");
       }
-      cur_buf_0l++;
-      cur_buf_0h++;
+    } else if (val == 0xFF) {
+      for (i=USEFUL_DATABUF_SIZE-1; i >=0; i--) {
+        printf("shift right\n");
+        tmp32 = GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0);
+        tmp32 = tmp32 - (tmp32>>8);
+        SET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0, tmp32);
+        cur_buf_0l++;
+        cur_buf_0h++;
+      }
+    } else {
+      for (i=USEFUL_DATABUF_SIZE-1; i >=0; i--) {
+        printf("do mult by %04X\n", val);
+        tmp32 = val * GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0);
+        tmp32 >>= 8;
+        SET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0, tmp32);
+        cur_buf_0l++;
+        cur_buf_0h++;
+      }
     }
 
 #else
@@ -215,15 +224,74 @@ static void init_row(void) {
     __asm__("lsr ptr2+1");
     __asm__("ror a");
     __asm__("lsr ptr2+1");
+    __asm__("ldx ptr2+1");
     __asm__("ror a");
     __asm__("sta ptr2");
 
+    __asm__("bne %g", check0xFF);
+    __asm__("cpx #$01");
+    __asm__("beq %g", init_done); // nothing to do!
+
+    check0xFF:
+    __asm__("cmp #$FF");
+    __asm__("bne %g", slow_mults);
+    __asm__("cpx #$00");
+    __asm__("bne %g", slow_mults);
+    // VAL 0xFF
+    mult_FF:
     __asm__("ldy #<%w", USEFUL_DATABUF_SIZE);
     __asm__("sty %v", i);
     __asm__("lda #>%w", USEFUL_DATABUF_SIZE);
     __asm__("sta %v+1", i);
 
-    setup_curbuf_x:
+    setup_curbuf_x_ff:
+    /* load */
+    __asm__("dey");
+    __asm__("sty %v", i);
+    __asm__("lda (%v),y", cur_buf_0h);
+    __asm__("tax");
+    __asm__("bne %g", not_null_buf_ff);
+    __asm__("lda (%v),y", cur_buf_0l);
+    __asm__("beq %g", null_buf_ff);
+    not_null_buf_ff:
+
+    __asm__("lda (%v),y", cur_buf_0l);
+    // tmp32 in AX
+    __asm__("stx tmp1");
+    __asm__("sec");
+    __asm__("sbc tmp1");
+    __asm__("tay");
+    __asm__("txa");
+    __asm__("sbc #0");
+    __asm__("tax");
+    __asm__("tya");
+    __asm__("jmp %g", store_buf_ff);
+
+    null_buf_ff:
+    __asm__("lda #$0F");
+    __asm__("ldx #$00");
+
+    store_buf_ff:
+    __asm__("ldy %v", i);
+    __asm__("sta (%v),y", cur_buf_0l);
+    __asm__("txa");
+    __asm__("sta (%v),y", cur_buf_0h);
+
+    __asm__("ldy %v", i);
+    __asm__("bne %g", setup_curbuf_x_ff);
+    __asm__("dec %v+1", cur_buf_0l);
+    __asm__("dec %v+1", cur_buf_0h);
+    __asm__("dec %v+1", i);
+    __asm__("bpl %g", setup_curbuf_x_ff);
+    __asm__("jmp %g", init_done);
+
+    slow_mults:
+    __asm__("ldy #<%w", USEFUL_DATABUF_SIZE);
+    __asm__("sty %v", i);
+    __asm__("lda #>%w", USEFUL_DATABUF_SIZE);
+    __asm__("sta %v+1", i);
+
+    setup_curbuf_x_slow:
     /* load */
     __asm__("dey");
     __asm__("sty %v", i);
@@ -255,11 +323,13 @@ static void init_row(void) {
     __asm__("sta (%v),y", cur_buf_0h);
 
     __asm__("ldy %v", i);
-    __asm__("bne %g", setup_curbuf_x);
+    __asm__("bne %g", setup_curbuf_x_slow);
     __asm__("dec %v+1", cur_buf_0l);
     __asm__("dec %v+1", cur_buf_0h);
     __asm__("dec %v+1", i);
-    __asm__("bpl %g", setup_curbuf_x);
+    __asm__("bpl %g", setup_curbuf_x_slow);
+    init_done:
+    __asm__("nop");
 #endif
 }
 
