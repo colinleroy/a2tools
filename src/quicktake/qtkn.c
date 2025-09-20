@@ -159,6 +159,7 @@ static uint8 last = 16;
 #define SET_CURBUF_VAL(bufl, bufh, y, val) do { int16 v = (int16)(val); *(uint8 *)((bufl)+(y)) = (v)&0xff; *(uint8 *)((bufh)+(y)) = (v)>>8; } while (0)
 #define GET_CURBUF_VAL(bufl, bufh, y) ((int16)(((uint8)( *((bufl)+(y)) ))|(((uint8)( *(((bufh))+(y)) ))<<8)))
 
+
 static void init_row(void) {
 #ifndef __CC65__
     if (last > 17)
@@ -168,6 +169,7 @@ static void init_row(void) {
     last = factor;
     cur_buf_0l = buf_0;
     cur_buf_0h = buf_0+(DATABUF_SIZE/2);
+
     if (val == 0x100) {
       /* do nothing */
     } else if (val == 0xFF) {
@@ -226,16 +228,10 @@ static void init_row(void) {
     __asm__("ldx ptr2+1");
     __asm__("ror a");
     __asm__("sta ptr2");
-
-    __asm__("bne %g", check0xFF);
-    __asm__("cpx #$01");
-    __asm__("beq %g", init_done); // nothing to do!
-
-    check0xFF:
     __asm__("cmp #$FF");
-    __asm__("bne %g", slow_mults);
+    __asm__("bne %g", check0x100);
     __asm__("cpx #$00");
-    __asm__("bne %g", slow_mults);
+    __asm__("bne %g", check0x100);
 
     //mult_FF:
     __asm__("ldy #<%w", USEFUL_DATABUF_SIZE);
@@ -283,6 +279,12 @@ static void init_row(void) {
     __asm__("dec %v+1", i);
     __asm__("bpl %g", setup_curbuf_x_ff);
     __asm__("jmp %g", init_done);
+
+    check0x100:
+    __asm__("cpx #$01");
+    __asm__("bne %g", slow_mults);
+    __asm__("cmp #$00");
+    __asm__("beq %g", init_done); // nothing to do!
 
     slow_mults:
     __asm__("ldy #<%w", USEFUL_DATABUF_SIZE);
@@ -332,6 +334,8 @@ static void init_row(void) {
 #endif
 }
 
+static void init_top_b(void);
+#pragma code-name(push, "LC")
 void init_top(void) {
   static uint8 l, h;
 
@@ -376,7 +380,6 @@ void init_top(void) {
     shiftl3[c] = (c<<3)+4;
     // printf("huff[%d][%.*b] = %d (r%d)\n", 36, 5, c, (c<<3)+4, 5);
   }
-
   r = 0;
   do {
     /* 48 is the most common multiplier and later divisor.
@@ -388,6 +391,11 @@ void init_top(void) {
     div48_h[r] = approx >> 8;
     // printf("%d/48 = %d\n", r<<8, div48_l[r]+(div48_h[r]<<8));
   } while (++r);
+
+  init_top_b();
+}
+#pragma code-name(pop)
+void init_top_b(void) {
 
   for (c = 0; c < 256; c++) {
     int8 sc = (int8)c;
@@ -442,6 +450,8 @@ static void decode_row(void) {
 
           if (tree == 8) {
             tmp8 = (uint8) getdatahuff8();
+            /* No need for a lookup table here, it's not done a lot
+             * and is a 8x8 mult anyway */
             SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1, tmp8 * factor);
             tmp8 = (uint8) getdatahuff8();
             SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 0, tmp8 * factor);
