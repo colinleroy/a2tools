@@ -11,14 +11,19 @@
         .import         _cache_end
         .import         _ifd
         .import         floppy_motor_on
-        .export         _huff_num, _huff_num_h
-        .export         _getbits6, _getbithuff, _getbithuff36
+        .export         _huff_numc, _huff_numc_h
+        .export         _huff_numd, _huff_numd_h
+        .export         _getbits6, _getctrlhuff, _getdatahuff, _getdatahuff8
         .export         _cache
         .export         _init_floppy_starter
-        .export         _buf_0, _buf_1, _buf_2, _huff_split
+        .export         _buf_0, _buf_1, _buf_2, _huff_ctrl, _huff_data
         .export         _shiftl4n_l, _shiftl4n_h
         .export         _shiftl4p_l, _shiftl4p_h
         .export         _shiftl3
+        .export         _refill_ret
+        .export         _getctrlhuff_refilled
+        .export         _getdatahuff_refilled
+        .export         _getdatahuff8_refilled
         .importzp       _zp8, _zp9, _zp10, _zp11, _zp12
 cur_cache_ptr = _prev_ram_irq_vector
 
@@ -47,7 +52,8 @@ _buf_0 = buf0l
 _buf_1 = buf1l
 _buf_2 = buf2l
 
-_huff_split:   .res        (18*256*2)
+_huff_ctrl:   .res        (9*256*2)
+_huff_data:   .res        (9*256)
 CACHE_END = _cache + CACHE_SIZE
 .assert <CACHE_END = 0, error
 
@@ -83,54 +89,80 @@ _init_floppy_starter:
 :       rts
 
 ; refill is optimised to go back as fast as possible to
-; getbithuff (which is hotter than getbit6 and getbithuff36,
+; getbithuff (which is hotter than getbit6 and getdatahuff8,
 ; called respectively 200000, 5000, 360 times). Instead of
 ; using jsr with a 6-cycle penalty compared to double-jmps,
 ; we'll use double-jmps, and update the return jmp target
 ; before and after getbits6/huff36.
 .macro UPDATE_REFILL_RET addr
         ldx    #<addr
-        stx    refillret+1
+        stx    _refill_ret+1
         ldx    #>addr
-        stx    refillret+2
+        stx    _refill_ret+2
 .endmacro
-refill6:
-        UPDATE_REFILL_RET cont6
+
+refill_getbits6:
+        UPDATE_REFILL_RET getbits6_refilled
         jmp    refill
-cont6:  UPDATE_REFILL_RET conth
-        jmp    contgb6
 
 _getbits6:
         lda    #0
         ldy    #6
 :       dec    _vbits
-        bmi    refill6
-contgb6:asl    _bitbuf
+        bmi    refill_getbits6
+getbits6_refilled:
+        asl    _bitbuf
         rol    a
         dey
         bne    :-
         rts
 
-_getbithuff:
+
+_getctrlhuff:
         lda    #0             ; r = 0
         tay                   ; n = 0
 
 :       iny                   ; Read until valid code
         dec    _vbits
-        bmi    refill
-conth:  asl    _bitbuf
+        bmi    refill         ; Refill return address updated by caller
+_getctrlhuff_refilled:
+        asl    _bitbuf
         rol    a
-        sta    bitscheck+1    ; Patch bitcheck address
+        sta    bitscheckc+1    ; Patch bitcheck address
                               ; cpy $nnnn,x is impossible so this is faster
 
-bitscheck:
-_huff_num_h = *+2             ; Get num bits
-        cpy     _huff_split+256
+bitscheckc:
+_huff_numc = *+2             ; Get num bits
+        cpy     _huff_ctrl
         bne    :-
 
         tax
-_huff_num = *+2
-        lda     _huff_split,x
+_huff_numc_h = *+2
+        lda     _huff_ctrl+256,x
+        rts
+
+
+_getdatahuff:
+        lda    #0             ; r = 0
+        tay                   ; n = 0
+
+:       iny                   ; Read until valid code
+        dec    _vbits
+        bmi    refill         ; Refill return address updated by caller
+_getdatahuff_refilled:
+        asl    _bitbuf
+        rol    a
+        sta    bitscheckd+1    ; Patch bitcheck address
+                              ; cpy $nnnn,x is impossible so this is faster
+
+bitscheckd:
+_huff_numd = *+2             ; Get num bits
+        cpy     _huff_data
+        bne    :-
+
+        tax
+_huff_numd_h = *+2
+        lda     _huff_data+128,x
         rts
 
 ; Must never destroy A or Y
@@ -145,7 +177,7 @@ cache_read = *+1
 
         inc     cache_read
         beq     inc_cache_high
-refillret:
+_refill_ret:
         jmp     $FFFF
 
 inc_cache_high:
@@ -156,13 +188,13 @@ inc_cache_high:
         ; Consider we have time to handle 256b while the
         ; drive restarts
         cpx     #(>CACHE_END)-4
-        bcc     refillret
+        bcc     _refill_ret
 
 start_floppy_motor:
         sta     motor_on                 ; Patched if on floppy
 
         cpx     #(>CACHE_END)
-        bne     refillret
+        bne     _refill_ret
 do_read:
         sty     ybck
         sta     abck
@@ -196,20 +228,14 @@ ybck = *+1
         ldy     #$FF
 abck = *+1
         lda     #$FF
-        jmp     refillret
+        jmp     _refill_ret
 
-refill36:
-        UPDATE_REFILL_RET cont36
-        jmp    refill
-cont36: UPDATE_REFILL_RET conth
-        jmp    contgb36
-
-_getbithuff36:
+_getdatahuff8:
         lda    #0             ; Read and consume 5 bits
         ldy    #5
 :       dec    _vbits
-        bmi    refill36
-contgb36:
+        bmi    refill         ; Refill return address updated by caller
+_getdatahuff8_refilled:
         asl    _bitbuf
         rol    a
         dey

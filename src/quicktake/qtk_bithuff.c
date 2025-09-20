@@ -51,7 +51,7 @@ uint8 __fastcall__ getbits6 (void) {
   return r;
 }
 
-uint8 __fastcall__ getbithuff (void) {
+uint8 __fastcall__ getctrlhuff (void) {
   uint8 r = 0;
   uint8 n = 0;
 
@@ -59,13 +59,27 @@ uint8 __fastcall__ getbithuff (void) {
     n++;
     // printf(" %8b not valid\n", r);
     r = (r<<1) | getbit();
-  } while (huff_split[huff_num+1][r] != n);
+  } while (huff_ctrl[huff_num][r] != n);
 
   // printf("value for [%02d][%8b] = %d\n", huff_num, r, huff_split[huff_num][r]);
-  return huff_split[huff_num][r];
+  return huff_ctrl[huff_num+1][r];
 }
 
-uint8 __fastcall__ getbithuff36 (void) {
+uint8 __fastcall__ getdatahuff (void) {
+  uint8 r = 0;
+  uint8 n = 0;
+
+  do {
+    n++;
+    // printf(" %8b not valid\n", r);
+    r = (r<<1) | getbit();
+  } while (huff_data[huff_num][r] != n);
+
+  // printf("value for [%02d][%8b] = %d\n", huff_num, r, huff_split[huff_num][r]);
+  return huff_data[huff_num][r+128];
+}
+
+uint8 __fastcall__ getdatahuff8 (void) {
   uint8 r = 0;
   uint8 n = 5;
   while (n--) {
