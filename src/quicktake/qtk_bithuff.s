@@ -19,6 +19,7 @@
         .export         _buf_0, _buf_1, _buf_2, _huff_ctrl, _huff_data
         .export         _shiftl4n_l, _shiftl4n_h
         .export         _shiftl4p_l, _shiftl4p_h
+        .export         _div48_l, _div48_h
         .export         _shiftl3
         .export         _refill_ret
         .export         _getctrlhuff_refilled
@@ -30,6 +31,8 @@ cur_cache_ptr = _prev_ram_irq_vector
 .segment        "BSS"
 .align 256
 _cache:        .res        CACHE_SIZE,$00
+CACHE_END = _cache + CACHE_SIZE
+.assert <CACHE_END = 0, error
 
 buf0l:         .res        321
 _shiftl4n_l:   .res        191  ; signed shift left 4 table, neg vals, low byte
@@ -54,8 +57,10 @@ _buf_2 = buf2l
 
 _huff_ctrl:   .res        (9*256*2)
 _huff_data:   .res        (9*256)
-CACHE_END = _cache + CACHE_SIZE
-.assert <CACHE_END = 0, error
+_div48_l:     .res        256
+_div48_h:     .res        256
+.assert <* = 0, error
+
 
 _bitbuf     = _zp8
 readn       = _zp9

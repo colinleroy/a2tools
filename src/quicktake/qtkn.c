@@ -76,6 +76,8 @@ static uint8 shiftl4p_l[128];
 static uint8 shiftl4p_h[128];
 static uint8 shiftl4n_l[128];
 static uint8 shiftl4n_h[128];
+static uint8 div48_l[256];
+static uint8 div48_h[256];
 uint8 shiftl3[32];
 #endif
 
@@ -91,6 +93,8 @@ extern uint8 shiftl4p_h[128];
 extern uint8 shiftl4n_l[128];
 extern uint8 shiftl4n_h[128];
 extern uint8 shiftl3[32];
+extern uint8 div48_l[256];
+extern uint8 div48_h[256];
 
 extern uint8 huff_ctrl[9*2][256];
 extern uint8 huff_data[9][256];
@@ -166,12 +170,8 @@ static void init_row(void) {
     cur_buf_0h = buf_0+(DATABUF_SIZE/2);
     if (val == 0x100) {
       /* do nothing */
-      for (i=USEFUL_DATABUF_SIZE-1; i >=0; i--) {
-        printf("skip mult\n");
-      }
     } else if (val == 0xFF) {
       for (i=USEFUL_DATABUF_SIZE-1; i >=0; i--) {
-        printf("shift right\n");
         tmp32 = GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0);
         tmp32 = tmp32 - (tmp32>>8);
         SET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0, tmp32);
@@ -180,7 +180,6 @@ static void init_row(void) {
       }
     } else {
       for (i=USEFUL_DATABUF_SIZE-1; i >=0; i--) {
-        printf("do mult by %04X\n", val);
         tmp32 = val * GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0);
         tmp32 >>= 8;
         SET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0, tmp32);
@@ -237,8 +236,8 @@ static void init_row(void) {
     __asm__("bne %g", slow_mults);
     __asm__("cpx #$00");
     __asm__("bne %g", slow_mults);
-    // VAL 0xFF
-    mult_FF:
+
+    //mult_FF:
     __asm__("ldy #<%w", USEFUL_DATABUF_SIZE);
     __asm__("sty %v", i);
     __asm__("lda #>%w", USEFUL_DATABUF_SIZE);
@@ -377,6 +376,18 @@ void init_top(void) {
     shiftl3[c] = (c<<3)+4;
     // printf("huff[%d][%.*b] = %d (r%d)\n", 36, 5, c, (c<<3)+4, 5);
   }
+
+  r = 0;
+  do {
+    /* 48 is the most common multiplier and later divisor.
+     * It is worth it to approximate those divisions HARD
+     * by rounding the numerator to the nearest 256, in order
+     * to have a size-appropriate table. */
+    uint16 approx = (r<<8)/48;
+    div48_l[r] = approx & 0xFF;
+    div48_h[r] = approx >> 8;
+    // printf("%d/48 = %d\n", r<<8, div48_l[r]+(div48_h[r]<<8));
+  } while (++r);
 
   for (c = 0; c < 256; c++) {
     int8 sc = (int8)c;
@@ -556,7 +567,12 @@ static void decode_row(void) {
             if (cur_buf_1h[x/2] & 0x80) {
               val = 0;
             } else {
-              val = GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, x/2) / t;
+              if (t == 48) {
+                val = GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, x/2);
+                val = div48_l[val>>8]|(div48_h[val>>8]<<8);
+              } else {
+                val = GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, x/2) / t;
+              }
               if (val > 255)
                 val = 255;
             }
@@ -1428,10 +1444,18 @@ cb2h_off1g:   __asm__("sta $FF01,y");
           __asm__("ldy tmp1");
 #else
           __asm__("lda (%v),y", cur_buf_0h);
+          __asm__("ldy %v", t);
+          __asm__("cpy #48");
+          __asm__("bne %g", slowdiv);
+          __asm__("tay");
+          __asm__("ldx %v,y", div48_h);
+          __asm__("lda %v,y", div48_l);
+          __asm__("jmp %g", check_clamp);
+          slowdiv:
           __asm__("tax");
           __asm__("lda (%v),y", cur_buf_0l);
-          __asm__("ldy %v", t);
           __asm__("jsr approx_div16x8_direct");
+          check_clamp:
           __asm__("ldy tmp1");
 #endif
           __asm__("cpx #0");
