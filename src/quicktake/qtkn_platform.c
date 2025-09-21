@@ -40,14 +40,6 @@ void init_buf_0(void) {
   memset(buf_0+512, 2048>>8, USEFUL_DATABUF_SIZE);
 }
 
-void init_shiftl3(void) {
-  uint8 c;
-  for (c=0; c != 32; c++) {
-    shiftl3[c] = (c<<3)+4;
-    // printf("huff[%d][%.*b] = %d (r%d)\n", 36, 5, c, (c<<3)+4, 5);
-  }
-}
-
 void init_div48(void) {
   uint8 r = 0;
   do {
@@ -109,7 +101,6 @@ void init_huff(void) {
 
 void init_top(void) {
   init_huff();
-  init_shiftl3();
   init_div48();
   init_buf_0();
   init_shiftl4();

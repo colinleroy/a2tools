@@ -20,7 +20,6 @@
         .export         _shiftl4n_l, _shiftl4n_h
         .export         _shiftl4p_l, _shiftl4p_h
         .export         _div48_l, _div48_h
-        .export         _shiftl3
         .export         _refill_ret
         .export         _getctrlhuff_refilled
         .export         _getdatahuff_refilled
@@ -45,8 +44,7 @@ buf1h:         .res        321
 _shiftl4p_h:   .res        191  ; signed shift left 4 table, pos vals, high byte
 
 buf2l:         .res        321
-_shiftl3:      .res        32
-_free5:        .res        159
+_free5:        .res        191
 .assert <* = 0, error
 buf2h:         .res        321
 _free6:        .res        191
@@ -236,16 +234,18 @@ abck = *+1
         jmp     _refill_ret
 
 _getdatahuff8:
-        lda    #0             ; Read and consume 5 bits
-        ldy    #5
-:       dec    _vbits
-        bmi    refill         ; Refill return address updated by caller
+        lda     #0             ; Read and consume 5 bits
+        ldy     #5
+:       dec     _vbits
+        bmi     refill         ; Refill return address updated by caller
 _getdatahuff8_refilled:
-        asl    _bitbuf
-        rol    a
+        asl     _bitbuf
+        rol     a
         dey
-        bne    :-
+        bne     :-
 
-        tax                   ; We done
-        lda    _shiftl3,x
+        asl
+        asl
+        asl
+        ora     #$04
         rts

@@ -5,7 +5,6 @@
 
         .export       _init_top
         .export       _init_shiftl4
-        .export       _init_shiftl3
         .export       _init_buf_0
         .export       _init_div48
         .export       _init_huff
@@ -26,7 +25,6 @@
         .import       _val_from_last, _val_hi_from_last
         .import       _buf_0, _buf_1, _buf_2
         .import       _div48_l, _div48_h
-        .import       _shiftl3
         .import       _shiftl4n_l, _shiftl4n_h
         .import       _shiftl4p_l, _shiftl4p_h
 
@@ -64,7 +62,6 @@ rept        = _zp13
 
 .proc _init_top
         jsr     _init_huff
-        jsr     _init_shiftl3
         jsr     _init_shiftl4
         jsr     _init_div48
         jmp     _init_buf_0
@@ -90,19 +87,6 @@ neg:    ldx     #$FF
         sta     _shiftl4n_h-128,y
         iny
         bne     :-
-        rts
-.endproc
-
-.proc _init_shiftl3
-        ldy     #31
-:       tya
-        asl
-        asl
-        asl
-        adc     #4
-        sta     _shiftl3,y
-        dey
-        bpl     :-
         rts
 .endproc
 
