@@ -1,6 +1,7 @@
         .export       _copy_data
         .export       _consume_extra
         .export       _init_row
+        .export       _decode_row
 
         .import       _row_idx, _row_idx_plus2
 
@@ -16,11 +17,16 @@
         .import       _huff_data, _huff_ctrl
         .import       _factor, _last
         .import       _val_from_last, _val_hi_from_last
-        .import       _buf_0
+        .import       _buf_0, _buf_1, _buf_2
+        .import       _div48_l, _div48_h
+        .import       _shiftl4n_l, _shiftl4n_h
+        .import       _shiftl4p_l, _shiftl4p_h
 
         .import       mult16x16r24_direct, mult8x8r16_direct
-        .import       tosmula0, pushax
-        .importzp     tmp1, sreg, ptr2
+        .import       approx_div16x8_direct
+        .import       tosmula0, pushax, _memcpy
+
+        .importzp     tmp1, sreg, ptr2, tmp2
         .importzp     _zp2, _zp4, _zp6, _zp7, _zp13
 
 WIDTH               = 640
@@ -361,12 +367,12 @@ not_null_buf:
         txa
         jmp     store_buf
 
-        null_buf:
+null_buf:
         lda     #$0F
         ldx     #$00
         stx     sreg
 
-        store_buf:
+store_buf:
         ldy     wordcnt
         sta     (cur_buf_0l),y
         lda     sreg
@@ -382,9 +388,956 @@ init_done:
         rts
 .endproc
 
+.proc _decode_row
+        lda     #1
+        sta     _r
+r_loop:
+        ;  for (r=0; r != 2; r++) {
+        ;  factor<<7, aslax7 inlined */
+        lda     _factor
+        lsr     a
+        tax
+        lda     #0
+        ror
+
+        ;  Update buf1/2[WIDTH/2] = factor<<7 */
+        stx     _buf_1+(WIDTH/2)+512
+        stx     _buf_2+(WIDTH/2)+512
+        sta     _buf_1+(WIDTH/2)
+        sta     _buf_2+(WIDTH/2)
+
+        lda     #1
+        sta     _tree
+
+        lda     #<(WIDTH/2)
+        sta     _col
+        ldx     #>(WIDTH/2)
+        stx     _colh
+        lda     #>(_buf_0+512+256)
+        sta     cb0h_off0a+2
+        sta     cb0h_off0b+2
+        sta     cb0h_off1a+2
+        sta     cb0h_off1b+2
+        sta     cb0h_off1c+2
+        sta     cb0h_off1d+2
+        sta     cb0h_off2a+2
+        sta     cb0h_off2b+2
+        lda     #>(_buf_0+256)
+        sta     cb0l_off0a+2
+        sta     cb0l_off0b+2
+        sta     cb0l_off1a+2
+        sta     cb0l_off1b+2
+        sta     cb0l_off1c+2
+        sta     cb0l_off1d+2
+        sta     cb0l_off2a+2
+        sta     cb0l_off2b+2
+
+        lda     #>(_buf_1+512+256)
+        sta     cb1h_off0a+2
+        sta     cb1h_off0b+2
+        sta     cb1h_off0c+2
+        sta     cb1h_off0d+2
+        sta     cb1h_off0e+2
+        sta     cb1h_off0f+2
+        sta     cb1h_off0g+2
+        sta     cb1h_off1a+2
+        sta     cb1h_off1b+2
+        sta     cb1h_off1c+2
+        sta     cb1h_off1d+2
+        sta     cb1h_off1e+2
+        sta     cb1h_off1f+2
+        sta     cb1h_off1g+2
+        sta     cb1h_off1h+2
+        sta     cb1h_off1i+2
+        sta     cb1h_off1j+2
+        sta     cb1h_off1k+2
+        sta     cb1h_off2a+2
+        sta     cb1h_off2b+2
+        sta     cb1h_off2c+2
+        sta     cb1h_off2d+2
+        lda     #>(_buf_1+256)
+        sta     cb1l_off0a+2
+        sta     cb1l_off0b+2
+        sta     cb1l_off0c+2
+        sta     cb1l_off0d+2
+        sta     cb1l_off0e+2
+        sta     cb1l_off0f+2
+        sta     cb1l_off0g+2
+        sta     cb1l_off1a+2
+        sta     cb1l_off1b+2
+        sta     cb1l_off1c+2
+        sta     cb1l_off1d+2
+        sta     cb1l_off1e+2
+        sta     cb1l_off1f+2
+        ;  sta cb1l_off1g+2
+        sta     cb1l_off1h+2
+        sta     cb1l_off1i+2
+        sta     cb1l_off1j+2
+        sta     cb1l_off1k+2
+        sta     cb1l_off2a+2
+        sta     cb1l_off2b+2
+        sta     cb1l_off2c+2
+        sta     cb1l_off2d+2
+
+        lda     #>(_buf_2+512+256)
+        sta     cb2h_off0a+2
+        sta     cb2h_off0b+2
+        sta     cb2h_off0c+2
+        sta     cb2h_off0d+2
+        sta     cb2h_off0e+2
+        sta     cb2h_off1a+2
+        sta     cb2h_off1b+2
+        sta     cb2h_off1c+2
+        sta     cb2h_off1d+2
+        sta     cb2h_off1e+2
+        sta     cb2h_off1f+2
+        sta     cb2h_off1g+2
+        sta     cb2h_off2b+2
+        sta     cb2h_off2c+2
+        lda     #>(_buf_2+256)
+        sta     cb2l_off0a+2
+        sta     cb2l_off0b+2
+        sta     cb2l_off0c+2
+        sta     cb2l_off0d+2
+        sta     cb2l_off0e+2
+        sta     cb2l_off1a+2
+        sta     cb2l_off1b+2
+        sta     cb2l_off1c+2
+        sta     cb2l_off1d+2
+        ;  sta cb2l_off1e+2
+        sta     cb2l_off1f+2
+        sta     cb2l_off1g+2
+        sta     cb2l_off2b+2
+        sta     cb2l_off2c+2
+
+col_loop1:
+        lda     _tree
+        asl
+        adc     #>_huff_ctrl
+        sta     _huff_numc
+        adc     #1
+        sta     _huff_numc_h
+        ldx     #<_getctrlhuff_refilled
+        stx     _refill_ret+1
+        ldx     #>_getctrlhuff_refilled
+        stx     _refill_ret+2
+
+        jsr     _getctrlhuff
+        sta     _tree
+
+        bne     tree_not_zero
+        jmp     tree_zero
+tree_not_zero:
+        sec
+        lda     _col
+        bne     declow
+        jsr     dec_buf_pages
+declow:
+        sbc     #2
+        sta     _col
+
+        lda     _tree
+        cmp     #8
+        bne     tree_not_eight
+
+        ldx     #<_getdatahuff8_refilled
+        stx     _refill_ret+1
+        ldx     #>_getdatahuff8_refilled
+        stx     _refill_ret+2
+
+        ;  tree == 8
+        jsr     _getdatahuff8
+        ldx     _factor
+        jsr     mult8x8r16_direct
+        ldy     _col
+cb1l_off1a: 
+        sta     $FF01,y
+        txa
+cb1h_off1a: 
+        sta     $FF01,y
+
+        jsr     _getdatahuff8
+        ldx     _factor
+        jsr     mult8x8r16_direct
+        ldy     _col
+cb1l_off0a: 
+        sta     $FF00,y
+        txa
+cb1h_off0a:
+        sta     $FF00,y
+
+        jsr     _getdatahuff8
+        ldx     _factor
+        jsr     mult8x8r16_direct
+        ldy     _col
+cb2l_off1a:
+        sta     $FF01,y
+        txa
+cb2h_off1a:
+        sta     $FF01,y
+
+        jsr     _getdatahuff8
+        ldx     _factor
+        jsr     mult8x8r16_direct
+        ldy     _col
+cb2l_off0a:
+        sta     $FF00,y
+        txa
+cb2h_off0a:
+        sta     $FF00,y
+
+        jmp     tree_done
+
+tree_not_eight:
+        ; huff_num = tree+1
+        adc     #>(_huff_data+256)
+        sta     _huff_numd
+        sta     _huff_numd_h
+
+        ldx     #<_getdatahuff_refilled
+        stx     _refill_ret+1
+        ldx     #>_getdatahuff_refilled
+        stx     _refill_ret+2
+
+        ;  Get the four tk vals in advance
+        ; a
+        jsr     _getdatahuff
+        tax
+        bpl     pos1
+        lda     _shiftl4n_l-128,x
+        sta     tk1_l+1
+        lda     _shiftl4n_h-128,x
+        jmp     finish_bh1
+pos1:
+        lda     _shiftl4p_l,x
+        sta     tk1_l+1
+        lda     _shiftl4p_h,x
+
+finish_bh1:
+        sta     tk1_h+1
+
+        jsr     _getdatahuff
+        tax
+        bpl     pos2
+        lda     _shiftl4n_l-128,x
+        sta     tk2_l+1
+        lda     _shiftl4n_h-128,x
+        jmp     finish_bh2
+pos2:
+        lda     _shiftl4p_l,x
+        sta     tk2_l+1
+        lda     _shiftl4p_h,x
+
+finish_bh2:
+        sta     tk2_h+1
+
+        jsr     _getdatahuff
+        tax
+        bpl     pos3
+        lda     _shiftl4n_l-128,x
+        sta     tk3_l+1
+        lda     _shiftl4n_h-128,x
+        jmp     finish_bh3
+pos3:
+        lda     _shiftl4p_l,x
+        sta     tk3_l+1
+        lda     _shiftl4p_h,x
+
+finish_bh3:
+        sta     tk3_h+1
+
+        jsr     _getdatahuff
+        tax
+        bpl     pos4
+        lda     _shiftl4n_l-128,x
+        sta     tk4_l+1
+        lda     _shiftl4n_h-128,x
+        jmp     finish_bh4
+pos4:
+        lda     _shiftl4p_l,x
+        sta     tk4_l+1
+        lda     _shiftl4p_h,x
+
+finish_bh4:
+        sta     tk4_h+1
+
+        clc
+        ldy     _col
+cb0l_off2a:
+        lda     $FF02,y
+cb1l_off2a:
+        adc     $FF02,y
+        tax
+cb0h_off2a:
+        lda     $FF02,y
+cb1h_off2a:
+        adc     $FF02,y
+        cmp     #$80
+        ror     a
+        sta     tmp1
+        txa
+        ror     a
+
+        clc
+cb0l_off1a:
+        adc     $FF01,y
+        tax
+        lda     tmp1
+cb0h_off1a:
+        adc     $FF01,y
+        cmp     #$80
+        ror     a
+        sta     tmp1
+        txa
+        ror     a
+
+        clc
+tk1_l:  adc     #$FF
+cb1l_off1b:
+        sta     $FF01,y
+        lda     tmp1
+tk1_h:  adc     #$FF
+cb1h_off1b:
+        sta     $FF01,y
+
+        ;  Second with col - 1*/
+        clc
+cb0l_off1b:
+        lda     $FF01,y
+cb1l_off1c:
+        adc     $FF01,y
+        tax
+cb0h_off1b:
+        lda     $FF01,y
+cb1h_off1c:
+        adc     $FF01,y
+        cmp     #$80
+        ror     a
+        sta     tmp1
+        txa
+        ror     a
+
+        clc
+cb0l_off0a:
+        adc     $FF00,y
+        tax
+        lda     tmp1
+cb0h_off0a:
+        adc     $FF00,y
+        cmp     #$80
+        ror     a
+        sta     tmp1
+        txa
+        ror     a
+
+        ;  Store to cur_buf_x */
+        clc
+tk2_l:  adc     #$FF
+cb1l_off0b:
+        sta     $FF00,y
+
+        lda     tmp1
+tk2_h:  adc     #$FF
+cb1h_off0b:
+        sta     $FF00,y
+
+        ; b
+        clc
+cb1l_off2b:
+        lda     $FF02,y
+cb2l_off2b:
+        adc     $FF02,y
+        tax
+cb1h_off2b:
+        lda     $FF02,y
+cb2h_off2b:
+        adc     $FF02,y
+        cmp     #$80
+        ror     a
+        sta     tmp1
+        txa
+        ror     a
+
+        clc
+cb1l_off1d:
+        adc     $FF01,y
+        tax
+        lda     tmp1
+cb1h_off1d:
+        adc     $FF01,y
+        cmp     #$80
+        ror     a
+        sta     tmp1
+        txa
+        ror     a
+
+        clc
+tk3_l:  adc     #$FF
+cb2l_off1b:
+        sta     $FF01,y
+
+        lda     tmp1
+tk3_h:  adc     #$FF
+cb2h_off1b:
+        sta     $FF01,y
+
+        ;  Second with col - 1*/
+        clc
+cb1l_off1e:
+        lda     $FF01,y
+cb2l_off1c:
+        adc     $FF01,y
+        tax
+cb1h_off1e:
+        lda     $FF01,y
+cb2h_off1c:
+        adc     $FF01,y
+        cmp     #$80
+        ror     a
+        sta     tmp1
+        txa
+        ror     a
+
+        clc
+cb1l_off0c:
+        adc     $FF00,y
+        tax
+        lda     tmp1
+cb1h_off0c:
+        adc     $FF00,y
+        cmp     #$80
+        ror     a
+        sta     tmp1
+        txa
+        ror     a
+
+        ;  Store to cur_buf_x */
+        clc
+tk4_l:  adc     #$FF
+cb2l_off0b:
+        sta     $FF00,y
+
+        lda     tmp1
+tk4_h:  adc     #$FF
+cb2h_off0b:
+        sta     $FF00,y
+
+        jmp     tree_done
+
+tree_zero:
+nine_reps_loop:
+        ldx     _colh
+        bne     col_gt1a
+        lda     _col
+        cmp     #3
+        bcs     col_gt1a
+        lda     #1 ;  nreps */
+        jmp     check_nreps
+col_gt1a:
+        ;  data tree 0
+        ldx     #>(_huff_data)
+        stx     _huff_numd
+        stx     _huff_numd_h
+        ldx     #<_getdatahuff_refilled
+        stx     _refill_ret+1
+        ldx     #>_getdatahuff_refilled
+        stx     _refill_ret+2
+
+        jsr     _getdatahuff
+        clc
+        adc     #1
+check_nreps:
+        sta     _nreps
+
+        cmp     #9
+        bcc     nreps_check_done
+        lda     #8
+nreps_check_done:
+        sta     _rep_loop
+
+        ldy     #$00
+        sty     _rep
+
+        ;  data tree 1
+        ldx     #>(_huff_data+256)
+        stx     _huff_numd
+        stx     _huff_numd_h
+
+        lda     _col
+do_rep_loop:
+        sec
+        bne     declow2
+        jsr     dec_buf_pages
+declow2:
+        sbc     #2
+        sta     _col
+        tay
+
+        clc
+cb0l_off2b:
+        lda     $FF02,y
+cb1l_off2c:
+        adc     $FF02,y
+        tax
+cb0h_off2b:
+        lda     $FF02,y
+cb1h_off2c:
+        adc     $FF02,y
+        cmp     #$80
+        ror     a
+        sta     tmp1
+        txa
+        ror     a
+
+        clc
+cb0l_off1c:
+        adc     $FF01,y
+        tax
+        lda     tmp1
+cb0h_off1c:
+        adc     $FF01,y
+        cmp     #$80
+        ror     a
+cb1h_off1f:
+        sta     $FF01,y
+        txa
+        ror     a
+cb1l_off1f:
+        sta     $FF01,y
+
+        ;  Second */
+        clc
+        ;  cb1l_off1g:   lda     $FF01,y already good
+cb0l_off1d:
+        adc     $FF01,y
+        tax
+cb1h_off1g:
+        lda     $FF01,y
+cb0h_off1d:
+        adc     $FF01,y
+        cmp     #$80
+        ror     a
+        sta     tmp1
+        txa
+        ror     a
+
+        clc
+cb0l_off0b:
+        adc     $FF00,y
+        tax
+        lda     tmp1
+cb0h_off0b:
+        adc     $FF00,y
+        cmp     #$80
+        ror     a
+cb1h_off0d:
+        sta     $FF00,y
+        txa
+        ror     a
+cb1l_off0d:
+        sta     $FF00,y
+
+        ; d
+        clc
+cb1l_off2d:
+        lda     $FF02,y
+cb2l_off2c:
+        adc     $FF02,y
+        tax
+cb1h_off2d:
+        lda     $FF02,y
+cb2h_off2c:
+        adc     $FF02,y
+        cmp     #$80
+        ror     a
+        sta     tmp1
+        txa
+        ror     a
+
+        clc
+cb1l_off1h:
+        adc     $FF01,y
+        tax
+        lda     tmp1
+cb1h_off1h:
+        adc     $FF01,y
+        cmp     #$80
+        ror     a
+cb2h_off1d:
+        sta     $FF01,y
+        txa
+        ror     a
+cb2l_off1d:
+        sta     $FF01,y
+
+        ;  Second */
+        clc
+        ;  cb2l_off1e:   lda     $FF01,y
+cb1l_off1i:
+        adc     $FF01,y
+        tax
+cb2h_off1e:
+        lda     $FF01,y
+cb1h_off1i:
+        adc     $FF01,y
+        cmp     #$80
+        ror     a
+        sta     tmp1
+        txa
+        ror     a
+
+        clc
+cb1l_off0e:
+        adc     $FF00,y
+        tax
+        lda     tmp1
+cb1h_off0e:
+        adc     $FF00,y
+        cmp     #$80
+        ror     a
+cb2h_off0c:
+        sta     $FF00,y
+        txa
+        ror     a
+cb2l_off0c:
+        sta     $FF00,y
+
+        lda     _rep
+        and     #1
+        beq     rep_even
+
+        ;  tk = getbithuff(8) << 4;
+        jsr     _getdatahuff
+        tax
+        bpl     pos5
+        lda     _shiftl4n_h-128,x
+        sta     tmp2
+        lda     _shiftl4n_l-128,x
+        jmp     finish_bh5
+pos5:
+        lda     _shiftl4p_h,x
+        sta     tmp2
+        lda     _shiftl4p_l,x
+finish_bh5:
+        tax
+
+        ; e
+        clc
+cb1l_off0f:
+        adc     $FF00,y
+cb1l_off0g:
+        sta     $FF00,y
+        lda     tmp2
+cb1h_off0f:
+        adc     $FF00,y
+cb1h_off0g:
+        sta     $FF00,y
+
+        txa
+cb1l_off1j:
+        adc     $FF01,y
+cb1l_off1k:
+        sta     $FF01,y
+        lda     tmp2
+cb1h_off1j:
+        adc     $FF01,y
+cb1h_off1k:
+        sta     $FF01,y
+
+        txa
+cb2l_off0d:
+        adc     $FF00,y
+cb2l_off0e:
+        sta     $FF00,y
+        lda     tmp2
+cb2h_off0d:
+        adc     $FF00,y
+cb2h_off0e:
+        sta     $FF00,y
+
+        txa
+cb2l_off1f:
+        adc     $FF01,y
+cb2l_off1g:
+        sta     $FF01,y
+        lda     tmp2
+cb2h_off1f:
+        adc     $FF01,y
+cb2h_off1g:
+        sta     $FF01,y
+
+rep_even:
+        ldx     _rep
+        inx
+        cpx     _rep_loop
+        beq     rep_loop_done
+        stx     _rep
+        lda     _col
+        beq     check_high
+        jmp     do_rep_loop
+check_high:
+        ldx     _colh
+        beq     col_loop1_done
+        tay     ;  fix ZERO flag needed at do_rep_loop
+        jmp     do_rep_loop
+rep_loop_done:
+        lda     _nreps
+        cmp     #9
+        bne     nine_reps_loop_done
+        jmp     nine_reps_loop
+nine_reps_loop_done:
+tree_done:
+        lda     _col
+        beq     check_high2
+        jmp     col_loop1
+check_high2:
+        ldx     _colh
+        beq     col_loop1_done
+        jmp     col_loop1
+col_loop1_done:
+
+        clc
+
+        ldx     _r
+        ;  logic inverted from C because here we dec R */
+        beq     store_plus_2
+
+        lda     _row_idx
+        sta     raw_ptr1
+        lda     _row_idx+1
+        sta     raw_ptr1+1
+        jmp     store_set;
+store_plus_2:
+        lda     _row_idx_plus2
+        sta     raw_ptr1
+        lda     _row_idx_plus2+1
+        sta     raw_ptr1+1
+
+store_set:
+        lda     #2
+        sta     _y
+
+        ldy     #<(_buf_1)
+        sty     cur_buf_0l
+        sty     cur_buf_0h
+        lda     #>(_buf_1)
+        sta     cur_buf_0l+1
+        clc
+        adc     #>(DATABUF_SIZE/2)
+        sta     cur_buf_0h+1
+
+loop5:
+        lda     #4
+        sta     _x
+x_loop_outer:
+        ldy     #0
+x_loop:
+        sty     tmp1
+        tya
+        lsr     a
+        tay
+        lda     (cur_buf_0h),y
+        ldy     _factor
+        cpy     #48
+        bne     slowdiv
+        tay
+        ldx     _div48_h,y
+        lda     _div48_l,y
+        jmp     check_clamp
+slowdiv:
+        tax
+        lda     (cur_buf_0l),y
+        jsr     approx_div16x8_direct
+check_clamp:
+        ldy     tmp1
+        cpx     #0
+        beq     no_val_clamp
+        lda     #$FF
+        cpx     #$80
+        adc     #$0
+
+no_val_clamp:
+        sta     (raw_ptr1),y
+
+        iny
+        iny
+        cpy     #<(WIDTH/4)
+        bne     x_loop
+
+        clc
+        lda     cur_buf_0l
+        adc     #<(WIDTH/8)
+        sta     cur_buf_0l
+        sta     cur_buf_0h
+        lda     cur_buf_0l+1
+        adc     #>(WIDTH/8)
+        sta     cur_buf_0l+1
+        adc     #>(DATABUF_SIZE/2)
+        sta     cur_buf_0h+1
+
+        clc
+        lda     raw_ptr1
+        adc     #<(WIDTH/4)
+        sta     raw_ptr1
+        lda     raw_ptr1+1
+        adc     #>(WIDTH/4)
+        sta     raw_ptr1+1
+
+        dec     _x
+        bne     x_loop_outer
+
+        dec     _y
+        beq     loop5_done
+
+        inc     raw_ptr1
+        bne     :+
+        inc     raw_ptr1+1
+
+:       ldy     #<(_buf_2)
+        sty     cur_buf_0l
+        sty     cur_buf_0h
+        lda     #>(_buf_2)
+        sta     cur_buf_0l+1
+        clc
+        adc     #>(DATABUF_SIZE/2)
+        sta     cur_buf_0h+1
+
+        jmp     loop5
+
+loop5_done:
+        clc
+        ldx     #>(_buf_0+1)    ;  cur_buf[0]+1 */
+        lda     #<(_buf_0+1)
+        jsr     pushax
+
+        lda     #<(_buf_2) ;  curbuf_2 */
+        ldx     #>(_buf_2)
+        jsr     pushax
+
+        lda     #<(USEFUL_DATABUF_SIZE-1)
+        ldx     #>(USEFUL_DATABUF_SIZE-1)
+        jsr     _memcpy
+
+        ldx     #>(_buf_0+512+1) ;  cur_buf[0]+1 */
+        lda     #<(_buf_0+512+1)
+        jsr     pushax
+
+        lda     #<(_buf_2+512) ;  curbuf_2 */
+        ldx     #>(_buf_2+512)
+        jsr     pushax
+
+        lda     #<(USEFUL_DATABUF_SIZE-1)
+        ldx     #>(USEFUL_DATABUF_SIZE-1)
+        jsr     _memcpy
+        ;  }
+        dec     _r
+        bmi     r_loop_done
+        jmp     r_loop
+r_loop_done:
+        rts
+.endproc
+
+.proc dec_buf_pages
+        dec     _colh
+        dec     _decode_row::cb0h_off0a+2
+        dec     _decode_row::cb0h_off0b+2
+        dec     _decode_row::cb0h_off1a+2
+        dec     _decode_row::cb0h_off1b+2
+        dec     _decode_row::cb0h_off1c+2
+        dec     _decode_row::cb0h_off1d+2
+        dec     _decode_row::cb0h_off2a+2
+        dec     _decode_row::cb0h_off2b+2
+        dec     _decode_row::cb0l_off0a+2
+        dec     _decode_row::cb0l_off0b+2
+        dec     _decode_row::cb0l_off1a+2
+        dec     _decode_row::cb0l_off1b+2
+        dec     _decode_row::cb0l_off1c+2
+        dec     _decode_row::cb0l_off1d+2
+        dec     _decode_row::cb0l_off2a+2
+        dec     _decode_row::cb0l_off2b+2
+        dec     _decode_row::cb1h_off0a+2
+        dec     _decode_row::cb1h_off0b+2
+        dec     _decode_row::cb1h_off0c+2
+        dec     _decode_row::cb1h_off0d+2
+        dec     _decode_row::cb1h_off0e+2
+        dec     _decode_row::cb1h_off0f+2
+        dec     _decode_row::cb1h_off0g+2
+        dec     _decode_row::cb1h_off1a+2
+        dec     _decode_row::cb1h_off1b+2
+        dec     _decode_row::cb1h_off1c+2
+        dec     _decode_row::cb1h_off1d+2
+        dec     _decode_row::cb1h_off1e+2
+        dec     _decode_row::cb1h_off1f+2
+        dec     _decode_row::cb1h_off1g+2
+        dec     _decode_row::cb1h_off1h+2
+        dec     _decode_row::cb1h_off1i+2
+        dec     _decode_row::cb1h_off1j+2
+        dec     _decode_row::cb1h_off1k+2
+        dec     _decode_row::cb1h_off2a+2
+        dec     _decode_row::cb1h_off2b+2
+        dec     _decode_row::cb1h_off2c+2
+        dec     _decode_row::cb1h_off2d+2
+        dec     _decode_row::cb1l_off0a+2
+        dec     _decode_row::cb1l_off0b+2
+        dec     _decode_row::cb1l_off0c+2
+        dec     _decode_row::cb1l_off0d+2
+        dec     _decode_row::cb1l_off0e+2
+        dec     _decode_row::cb1l_off0f+2
+        dec     _decode_row::cb1l_off0g+2
+        dec     _decode_row::cb1l_off1a+2
+        dec     _decode_row::cb1l_off1b+2
+        dec     _decode_row::cb1l_off1c+2
+        dec     _decode_row::cb1l_off1d+2
+        dec     _decode_row::cb1l_off1e+2
+        dec     _decode_row::cb1l_off1f+2
+        ;  dec     _decode_row::cb1l_off1g+2
+        dec     _decode_row::cb1l_off1h+2
+        dec     _decode_row::cb1l_off1i+2
+        dec     _decode_row::cb1l_off1j+2
+        dec     _decode_row::cb1l_off1k+2
+        dec     _decode_row::cb1l_off2a+2
+        dec     _decode_row::cb1l_off2b+2
+        dec     _decode_row::cb1l_off2c+2
+        dec     _decode_row::cb1l_off2d+2
+        dec     _decode_row::cb2h_off0a+2
+        dec     _decode_row::cb2h_off0b+2
+        dec     _decode_row::cb2h_off0c+2
+        dec     _decode_row::cb2h_off1a+2
+        dec     _decode_row::cb2h_off1b+2
+        dec     _decode_row::cb2h_off1c+2
+        dec     _decode_row::cb2h_off1d+2
+        dec     _decode_row::cb2h_off1e+2
+        dec     _decode_row::cb2h_off2b+2
+        dec     _decode_row::cb2h_off2c+2
+        dec     _decode_row::cb2l_off0a+2
+        dec     _decode_row::cb2l_off0b+2
+        dec     _decode_row::cb2l_off0c+2
+        dec     _decode_row::cb2l_off1a+2
+        dec     _decode_row::cb2l_off1b+2
+        dec     _decode_row::cb2l_off1c+2
+        dec     _decode_row::cb2l_off1d+2
+        ;  dec     _decode_row::cb2l_off1e+2
+        dec     _decode_row::cb2l_off2b+2
+        dec     _decode_row::cb2l_off2c+2
+
+        dec     _decode_row::cb2l_off0d+2
+        dec     _decode_row::cb2l_off0e+2
+        dec     _decode_row::cb2h_off0d+2
+        dec     _decode_row::cb2h_off0e+2
+        dec     _decode_row::cb2l_off1f+2
+        dec     _decode_row::cb2l_off1g+2
+        dec     _decode_row::cb2h_off1f+2
+        dec     _decode_row::cb2h_off1g+2
+rts
+.endproc
+
 .bss
 
 _c:             .res 1
 _tree:          .res 1
 _rep_loop:      .res 1
 _nreps:         .res 1
+_colh:          .res 1
+_r:             .res 1
+_x:             .res 1
+_y:             .res 1

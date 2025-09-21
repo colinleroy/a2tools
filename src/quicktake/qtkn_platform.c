@@ -7,6 +7,11 @@ extern uint8 last;
 extern uint16 val;
 extern uint8 factor;
 extern uint8 buf_0[DATABUF_SIZE];
+extern uint8 buf_1[DATABUF_SIZE];
+extern uint8 buf_2[DATABUF_SIZE];
+
+extern uint8 div48_l[256];
+extern uint8 div48_h[256];
 
 uint8 *cur_buf_0l, *cur_buf_1l, *cur_buf_2l;
 uint8 *cur_buf_0h, *cur_buf_1h, *cur_buf_2h;
@@ -114,5 +119,193 @@ void init_row(void) {
       tmp32 >>= 8;
       SET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, i, tmp32);
     }
+  }
+}
+
+void decode_row(void) {
+  uint8 r, i, y, rep, nreps, rep_loop, tree, tmp8, x;
+  int8 tk;
+  uint16 tk1, tk2, tk3, tk4;
+  uint16 col;
+
+
+  for (r=0; r != 2; r++) {
+    SET_CURBUF_VAL(buf_1, buf_1+(DATABUF_SIZE/2), (WIDTH/2), (factor<<7));
+    SET_CURBUF_VAL(buf_2, buf_2+(DATABUF_SIZE/2), (WIDTH/2), (factor<<7));
+
+    col = WIDTH/2;
+    cur_buf_0l = buf_0 + col;
+    cur_buf_0h = cur_buf_0l+(DATABUF_SIZE/2);
+    cur_buf_1l = cur_buf_0l + DATABUF_SIZE;
+    cur_buf_1h = cur_buf_1l+(DATABUF_SIZE/2);
+    cur_buf_2l = cur_buf_1l + DATABUF_SIZE;
+    cur_buf_2h = cur_buf_2l+(DATABUF_SIZE/2);
+    tree = 1;
+
+    while(col) {
+      huff_num = tree*2;
+      tree = (uint8) getctrlhuff();
+
+      if (tree) {
+        col-=2;
+        cur_buf_0l-=2;
+        cur_buf_0h-=2;
+        cur_buf_1l-=2;
+        cur_buf_1h-=2;
+        cur_buf_2l-=2;
+        cur_buf_2h-=2;
+
+        if (tree == 8) {
+          tmp8 = (uint8) getdatahuff8();
+          /* No need for a lookup table here, it's not done a lot
+           * and is a 8x8 mult anyway */
+          SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1, tmp8 * factor);
+          tmp8 = (uint8) getdatahuff8();
+          SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 0, tmp8 * factor);
+          tmp8 = (uint8) getdatahuff8();
+          SET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 1, tmp8 * factor);
+          tmp8 = (uint8) getdatahuff8();
+          SET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 0, tmp8 * factor);
+        } else {
+          huff_num = tree+1;
+
+          //a
+          tk1 = ((int8)getdatahuff()) << 4;
+          tk2 = ((int8)getdatahuff()) << 4;
+          tk3 = ((int8)getdatahuff()) << 4;
+          tk4 = ((int8)getdatahuff()) << 4;
+          SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1, 
+                          (((((GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 2) + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 2)) >> 1)
+                            + GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 1)) >> 1)
+                            + tk1));
+
+          /* Second with col - 1*/
+          SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 0, 
+                          (((((GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1) + GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 1)) >> 1)
+                            + GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0)) >> 1)
+                            + tk2));
+
+          //b
+          SET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 1, 
+                          (((((GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 2) + GET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 2)) >> 1)
+                            + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1)) >> 1)
+                            + tk3));
+
+          /* Second with col - 1*/
+          SET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 0, 
+                          (((((GET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 1) + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1)) >> 1)
+                            + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 0)) >> 1)
+                            + tk4));
+        }
+      } else {
+        do {
+          if (col > 2) {
+            huff_num = 0;
+            nreps = getdatahuff();
+            nreps++;
+          } else {
+            nreps = 1;
+          }
+          if (nreps > 8) {
+            rep_loop = 8;
+          } else {
+            rep_loop = nreps;
+          }
+          rep = 0;
+          huff_num = 1;
+          do_rep_loop:
+            col-=2;
+            cur_buf_0l-=2;
+            cur_buf_0h-=2;
+            cur_buf_1l-=2;
+            cur_buf_1h-=2;
+            cur_buf_2l-=2;
+            cur_buf_2h-=2;
+
+            //c
+            SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1,
+                           (((GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 2)
+                           + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 2)) >> 1)
+                           + GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 1)) >> 1);
+
+            SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 0,
+                           (((GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1)
+                           + GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 1)) >> 1)
+                           + GET_CURBUF_VAL(cur_buf_0l, cur_buf_0h, 0)) >> 1);
+
+            //d
+            SET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 1,
+                           (((GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 2)
+                           + GET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 2)) >> 1)
+                           + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1)) >> 1);
+
+            SET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 0,
+                           (((GET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 1)
+                           + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1)) >> 1)
+                           + GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 0)) >> 1);
+
+            if (rep & 1) {
+              tk = getdatahuff() << 4;
+              //e
+              SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 0, GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 0)+tk);
+              SET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1, GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, 1)+tk);
+              SET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 0, GET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 0)+tk);
+              SET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 1, GET_CURBUF_VAL(cur_buf_2l, cur_buf_2h, 1)+tk);
+            }
+          rep++;
+          if (rep == rep_loop)
+            goto rep_loop_done;
+          if (!col)
+            goto rep_loop_done;
+          goto do_rep_loop;
+
+          rep_loop_done:
+        } while (nreps == 9);
+      }
+    }
+    if (r == 0) {
+      raw_ptr1 = row_idx; //FILE_IDX(row, 0);
+    } else {
+      raw_ptr1 = row_idx_plus2; //FILE_IDX(row + 2, 0);
+    }
+
+    cur_buf_1l = buf_1;
+    cur_buf_1h = cur_buf_1l + (DATABUF_SIZE/2);
+    
+    for (y=1; ; y++) {
+      #define QUARTER_WIDTH (WIDTH/4)
+      #if QUARTER_WIDTH != 160
+      #error Unexpected width
+      #endif
+    
+      /* Loop this on Y on 65c02 */
+      for (i = 4; i; i--) {
+        for (x= 0; x < QUARTER_WIDTH; x+=2) {
+          if (cur_buf_1h[x/2] & 0x80) {
+            val = 0;
+          } else {
+            if (factor == 48) {
+              val = GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, x/2);
+              val = div48_l[val>>8]|(div48_h[val>>8]<<8);
+            } else {
+              val = GET_CURBUF_VAL(cur_buf_1l, cur_buf_1h, x/2) / factor;
+            }
+            if (val > 255)
+              val = 255;
+          }
+          *(raw_ptr1+(x)) = val;
+          *(raw_ptr1+(x+1)) = val;
+        }
+        cur_buf_1l+=QUARTER_WIDTH/2;
+        cur_buf_1h = cur_buf_1l + (DATABUF_SIZE/2);
+        raw_ptr1 += QUARTER_WIDTH;
+      }
+      if (y == 2)
+        break;
+      cur_buf_1l = buf_2;
+      cur_buf_1h = cur_buf_1l + (DATABUF_SIZE/2);
+    }
+    memcpy (buf_0+1, buf_2, (USEFUL_DATABUF_SIZE-1));
+    memcpy (buf_0+512+1, buf_2+512, (USEFUL_DATABUF_SIZE-1));
   }
 }
