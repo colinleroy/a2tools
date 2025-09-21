@@ -238,7 +238,7 @@ static void init_top_b(void) {
   }
 }
 
-static void decode_row(void) {
+void decode_row(void) {
 #ifndef __CC65__
     for (r=0; r != 2; r++) {
       SET_CURBUF_VAL(buf_1, buf_1+(DATABUF_SIZE/2), (WIDTH/2), (factor<<7));

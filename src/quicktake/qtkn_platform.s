@@ -44,7 +44,6 @@ _rep       = _zp13
 .endmacro
 
 .proc _copy_data
-        clc
         ldx     _row_idx+1
         ldy     _row_idx
         bne     :+
@@ -56,8 +55,8 @@ _rep       = _zp13
 
         ldy     #4
         sty     tmp1
-y_loop:
 
+y_loop:
         ldx     #4
         lda     tmp1
         and     #1
@@ -240,7 +239,7 @@ c_loop_done:
 .endproc
 
 .proc _init_row
-        lda     #<(_buf_0+256)
+        lda     #<(_buf_0+256)      ; start at second page
         ldx     #>(_buf_0+256)
         sta     cur_buf_0l
         stx     cur_buf_0l+1
@@ -249,11 +248,11 @@ c_loop_done:
         sta     cur_buf_0h
         stx     cur_buf_0h+1
 
-        ldy     _last
+        ldy     _last               ; is last 8bits?
         cpy     #18
         bcs     small_val
 
-        lda     _val_from_last,y
+        lda     _val_from_last,y    ; no, 16x8 mult
         ldx     _val_hi_from_last,y
         jsr     pushax
         lda     _factor
@@ -262,12 +261,12 @@ c_loop_done:
         jmp     shift_val
 
 small_val:
-        lda     _val_from_last,y
+        lda     _val_from_last,y    ; yes, 8x8 mult
         ldx     _factor
         stx     _last
         jsr     mult8x8r16_direct
 shift_val:
-        stx     ptr2+1
+        stx     ptr2+1              ; >> 4
         lsr     ptr2+1
         ror     a
         lsr     ptr2+1
@@ -278,12 +277,12 @@ shift_val:
         ldx     ptr2+1
         ror     a
         sta     ptr2
-        cmp     #$FF
+        cmp     #$FF                ; is multiplier 0xFF?
         bne     check0x100
         cpx     #$00
         bne     check0x100
 
-mult_FF:
+mult_FF:                            ; Yes, loop avoiding mults
         ldy     #<USEFUL_DATABUF_SIZE
         sty     wordcnt
         lda     #>USEFUL_DATABUF_SIZE
@@ -300,7 +299,7 @@ setup_curbuf_x_ff:
         beq     null_buf_ff
 
 not_null_buf_ff:
-        lda     (cur_buf_0l),y
+        lda     (cur_buf_0l),y      ; tmp32 * val(0xFF) = tmp32<<8-tmp32
         ; tmp32 in AX
         stx     tmp1
         sec
@@ -330,13 +329,13 @@ store_buf_ff:
         bpl     setup_curbuf_x_ff
         jmp     init_done
 
-check0x100:
+check0x100:                         ; Is multiplier 0x100?
         cpx     #$01
         bne     slow_mults
         cmp     #$00
-        beq     init_done ; nothing to do!
+        beq     init_done           ; Yes, so nothing to do!
 
-slow_mults:
+slow_mults:                         ; Arbitrary multiplier
         ldy     #<USEFUL_DATABUF_SIZE
         sty     wordcnt
         lda     #>USEFUL_DATABUF_SIZE

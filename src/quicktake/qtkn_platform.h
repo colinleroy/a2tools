@@ -16,5 +16,6 @@ extern uint8 val_from_last[256];
 void copy_data(void);
 void consume_extra(void);
 void init_row(void);
+void decode_row(void);
 
 #endif
